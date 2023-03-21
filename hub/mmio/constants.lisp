@@ -1,4 +1,4 @@
-(module mmu)
+(module mmio)
 
 (defconst
 
