@@ -97,7 +97,7 @@
             (didnt-change HEIGHT_OVER))))
 
 (defconstraint pattern-0 (:guard (standard-regime))
-  (if-zero (eq STACK_PATTERN PATTERN_0_0)
+  (if-zero (eq STACK_PATTERN PATTERN_ZERO_ITEMS)
            (begin
             ;; stack items
             (make-empty-stack-item 1)
@@ -136,7 +136,7 @@
             (eq HEIGHT_NEW (- HEIGHT (* 2 FLAG_1))))))
 
 (defconstraint pattern-3 (:guard (standard-regime))
-  (if-zero (eq STACK_PATTERN PATTERN_THREE_ITEMS)
+  (if-zero (eq STACK_PATTERN PATTERN_STANDARD)
            (begin
             ;; stack items
             (make-stack-item 1 HEIGHT                  1      (+ STACK_STAMP 1))

@@ -93,24 +93,23 @@
                       (is-not-zero (shift TOT 1)))))
 
 ;; 5.
-(defconstraint ram-stamp-not-zero ()
-  (if-not-zero RAM_STAMP
-               (if-zero IS_MICRO
-                        ;; OFFOOB == 0
-                        (if-zero OFFOOB
-                                 (if-eq-else CT 2
-                                             ;; CT == 2
-                                             (will-eq IS_MICRO 1)
-                                             ;; CT != 2
-                                             (begin (inc CT 1)
-                                                    (shift IS_MICRO 1)))
-                                 ;; OFFOOB == 1
-                                 (if-eq-else CT 15
-                                             ;; CT == 15
-                                             (will-eq IS_MICRO 1)
-                                             ;; CT != 15
-                                             (begin (inc CT 1)
-                                                    (shift IS_MICRO 1)))))))
+(defconstraint ram-stamp-not-zero (:guard RAM_STAMP)
+  (if-zero IS_MICRO
+           ;; OFFOOB == 0
+           (if-zero OFFOOB
+                    (if-eq-else CT (- SSMALL 1)
+                                ;; CT == 2
+                                (will-eq IS_MICRO 1)
+                                ;; CT != 2
+                                (begin (inc CT 1)
+                                       (shift IS_MICRO 1)))
+                    ;; OFFOOB == 1
+                    (if-eq-else CT (- LLARGE 1)
+                                ;; CT == 15
+                                (will-eq IS_MICRO 1)
+                                ;; CT != 15
+                                (begin (inc CT 1)
+                                       (shift IS_MICRO 1))))))
 
 ;; 6.
 (defconstraint counter-eq-0-in-micro-writing ()

@@ -1,10 +1,10 @@
 (module hub)
 
 (defconst
-  PATTERN_0_0           0
+  PATTERN_ZERO_ITEMS    0
   PATTERN_ONE_ITEM      1
   PATTERN_TWO_ITEMS     2
-  PATTERN_THREE_ITEMS   3
+  PATTERN_STANDARD      3
   PATTERN_DUP           4
   PATTERN_SWAP          5
   PATTERN_RETURN_REVERT 6
