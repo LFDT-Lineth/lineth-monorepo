@@ -50,7 +50,7 @@
 (defconstraint roob-when-type-2-3 (:guard (+ [MXP_TYPE 2] [MXP_TYPE 3]))
   (if-zero OFFSET_1_HI
     (vanishes ROOB)
-    (is-not-zero ROOB)))
+    (= ROOB 1)))
 
 ;; 2.2.3
 (defconstraint roob-when-mem-4 (:guard [MXP_TYPE 4])
