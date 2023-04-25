@@ -1,15 +1,15 @@
 (module trm)
 
 (defconst
-  BALANCE      31
-  EXTCODESIZE  3b
-  EXTCODECOPY  3c
-  EXTCODEHASH  3f
-  CALL         f1
-  CALLCODE     f2
-  DELEGATECALL f4
-  STATICCALL   fa
-  SELFDESTRUCT ff
+  BALANCE      0x31
+  EXTCODESIZE  0x3b
+  EXTCODECOPY  0x3c
+  EXTCODEHASH  0x3f
+  CALL         0xf1
+  CALLCODE     0xf2
+  DELEGATECALL 0xf4
+  STATICCALL   0xfa
+  SELFDESTRUCT 0xff
   LLARGEMO     15
   THETA        340282366920938463463374607431768211456) ;; note that 340282366920938463463374607431768211456 = 256^16
 
@@ -65,4 +65,4 @@
 ;;    1.5 constraints    ;;
 ;;                       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
+)
