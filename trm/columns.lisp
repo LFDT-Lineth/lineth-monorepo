@@ -13,5 +13,5 @@
     (BYTE_HI :BYTE)
     (BYTE_LO :BYTE)
     ACC_T
-    (SPECIAL_ONE: BOOLEAN)
+    (ONES: BOOLEAN)
 )
