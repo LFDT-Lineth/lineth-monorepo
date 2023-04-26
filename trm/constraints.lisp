@@ -39,7 +39,7 @@
   (begin
    (stamp-constancy STAMP ADDR_HI)
    (stamp-constancy STAMP ADDR_LO)
-   (stamp-constancy STAMP IS_PREC_HI)
+   (stamp-constancy STAMP IS_PREC)
    (stamp-constancy STAMP TRM_ADDR_HI)))
 
 
@@ -53,7 +53,7 @@
   (begin
    (is-binary PBIT)
    (is-binary IS_PREC)
-   (is-binary SPECIAL_ONE)
+   (is-binary ONES)
    (byte-decomposition CT ACC_HI BYTE_HI)
    (byte-decomposition CT ACC_LO BYTE_LO)))
 
