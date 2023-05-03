@@ -3,15 +3,15 @@
 (defcolumns
     STAMP
     CT
-    (PBIT: BOOLEAN)
     ADDR_HI
     ADDR_LO
     ACC_HI
     ACC_LO
+    ACC_T
     TRM_ADDR_HI
-    (IS_PREC: BOOLEAN)
+    (PBIT :BOOLEAN)
+    (IS_PREC :BOOLEAN)
+    (ONES :BOOLEAN)
     (BYTE_HI :BYTE)
     (BYTE_LO :BYTE)
-    ACC_T
-    (ONES: BOOLEAN)
 )
