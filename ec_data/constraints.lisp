@@ -1,8 +1,12 @@
 (module ec_data)
 
 (defconst
-  P_HI 0x30644e72e131a029b85045b68181585d
-  P_LO 0x97816a916871ca8d3c208c16d87cfd47)
+  P_HI          0x30644e72e131a029b85045b68181585d
+  P_LO          0x97816a916871ca8d3c208c16d87cfd47
+  OPCODE_LT     0x10
+  OPCODE_EQ     0x14
+  OPCODE_MULMOD 0x9
+  OPCODE_ADDMOD 0x8)
 
 (defpurefun (if-not-eq X Y Z)
   (if-not-zero (- X Y) Z))
@@ -161,7 +165,6 @@
     (= INDEX 5))))
 
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                               ;;
 ;;    3.6 Byte decompositions    ;;
@@ -196,12 +199,294 @@
 ;;;;;;;;;;;;;;;;;;;;;;
 
 
-;; 3.8.1
+;; 3.8.1.a
 (defconstraint final-hurdle-is-passed-to-pcp ()
   (if-not-eq (next STAMP) STAMP
     (= PCP HURDLE)))
 
-;; 3.8.2
+;; 3.8.1.b
 (defconstraint final-pcp (:domain {-1})
   (= PCP HURDLE))
 
+;; 3.8.2
+(defconstraint initial-hurdle ()
+  (if-not-eq (next STAMP) STAMP
+    (= (next HURDLE) (next COMPARISONS))))
+
+;; 3.8.3
+(defconstraint hurdle-behaviour ()
+  (if-eq (next STAMP) STAMP
+    (begin
+      (if-eq (next CT_MIN) 1 (= (next HURDLE) HURDLE))
+      (if-eq (next CT_MIN) 3 (= (next HURDLE) (* HURDLE (next EQUALITIES))))
+      (if-not-eq (next CT_MIN) 1 (if-not-eq (next CT_MIN) 3 (= (next HURDLE) (* HURDLE (next COMPARISONS))))))))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                       ;;
+;;    3.9 Comaprisons    ;;
+;;                       ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+;; 3.9.1
+(defconstraint hardcodec-comparison ()
+  (if-eq EC_MUL 1
+    (if-eq INDEX 4 
+      (= COMPARISONS 1))))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                       ;;
+;;    3.10 Equalities    ;;
+;;                       ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; 3.10.1
+(defconstraint first-equalities ()
+  (if-eq (shift INDEX 2) 3
+    (= (shift EQUALITIES 2) (+ (next EQUALITIES) EQUALITIES))))
+
+;; 3.10.2
+(defconstraint middle-equalities ()
+  (if-eq INDEX 7
+    (begin
+      (if-eq (+ EC_PAIRING EC_RECOVER) 1 (= EQUALITIES 1))
+      (if-eq EC_ADD 1 (= EQUALITIES (+ (prev EQUALITIES) (shift EQUALITIES -2)))))))
+
+;; 3.10.3
+(defconstraint last-equalities ()
+  (if-eq INDEX 11 (= EQUALITIES 1)))
+
+;; 3.10.4
+(defconstraint pont-infinity ()
+  (if-eq (+ EC_ADD EC_MUL EC_PAIRING) 1
+    (if-zero CT_MIN
+      (if-zero-else (+ LIMB (next LIMB) (shift LIMB 2) (shift LIMB 3))
+        (= (shift EQUALITIES 2) 1)
+        (vanishes (shift EQUALITIES 2))))))
+
+
+;;;;;;;;;;;;;;;;;;;;;;
+;;                  ;;
+;;    3.11 Gnark    ;;
+;;                  ;;
+;;;;;;;;;;;;;;;;;;;;;;
+
+
+;; 3.11.1
+(defconstraint initial-not-on-g2-acc ()
+  (if-not-eq (next STAMP) STAMP
+    (vanishes (next THIS_IS_NOT_ON_G2_ACC))))
+
+;; 3.11.2
+(defconstraint not-on-g2-acc-activation-condition ()
+  (if-eq (next THIS_IS_NOT_ON_G2_ACC) (+ THIS_IS_NOT_ON_G2_ACC 1)
+    (begin
+      (= INDEX 11)
+      (= (next THIS_IS_NOT_ON_G2) 1))))
+
+;; 3.11.3
+(defconstraint not-on-g2-should-trigger-acc ()
+  (if-eq THIS_IS_NOT_ON_G2 1
+    (if-eq INDEX 11
+      (= THIS_IS_NOT_ON_G2_ACC 1))))
+
+;; 3.11.4
+(defconstraint not-on-g2-triggering-condition ()
+  (if-eq (next THIS_IS_NOT_ON_G2) (+ THIS_IS_NOT_ON_G2 1)
+    (begin
+      (= (next EC_PAIRING) 1)
+      (= (next PCP)  1)
+      (= (next INDEX) 4)
+      (= (next THIS_IS_NOT_ON_G2_ACC) 0))))
+
+;; 3.11.5
+(defconstraint not-on-g2-acc-final-value ()
+  (if-not-eq (next STAMP) STAMP
+    (= SOMETHING_WASNT_ON_G2 THIS_IS_NOT_ON_G2_ACC)))
+
+;; 3.11.5-bis
+(defconstraint not-on-g2-acc-final-value-if-last-row (:domain {-1})
+  (= SOMETHING_WASNT_ON_G2 THIS_IS_NOT_ON_G2_ACC))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;
+;;                    ;;
+;;    3.12 Lookups    ;;
+;;                    ;;
+;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+
+(defun (wcp-lookup _shift arg1_hi arg1_lo arg2_hi arg2_lo inst res)
+  (begin
+    (= (shift WCP_ARG1_HI _shift) arg1_hi)
+    (= (shift WCP_ARG1_LO _shift) arg1_lo)
+    (= (shift WCP_ARG2_HI _shift) arg2_hi)
+    (= (shift WCP_ARG2_LO _shift) arg2_lo)
+    (= (shift WCP_INST _shift) inst)
+    (= (shift WCP_RES _shift) res)))
+
+(defun (ext-lookup _shift arg1_hi arg1_lo arg2_hi arg2_lo arg3_hi arg3_lo inst res_hi res_lo)
+  (begin
+    (= (shift EXT_ARG1_HI _shift) arg1_hi)
+    (= (shift EXT_ARG1_LO _shift) arg1_lo)
+    (= (shift EXT_ARG2_HI _shift) arg2_hi)
+    (= (shift EXT_ARG2_LO _shift) arg2_lo)
+    (= (shift EXT_ARG3_HI _shift) arg3_hi)
+    (= (shift EXT_ARG3_LO _shift) arg3_lo)
+    (= (shift EXT_INST _shift) inst)
+    (= (shift EXT_RES_HI _shift) res_hi)
+    (= (shift EXT_RES_LO _shift) res_lo)))
+  
+  
+;; 3.12.1
+(defconstraint lookup-ecpairing-wcp ()
+  (if-eq EC_PAIRING 1
+    (if-zero INDEX
+      (begin
+
+        ;; Comparison of coordinates with p
+        (for u [3]
+          (wcp-lookup
+            u ;; shift
+            (shift LIMB (* 2 u)) ;; arg 1 high
+            (shift LIMB (+ (* 2 u) 1)) ;; arg 1 low
+            P_HI ;; arg 2 high
+            P_LO ;; arg 2 low
+            OPCODE_LT ;; instruction
+            (shift COMPARISONS (+ (* 2 u) 1)))) ;; result
+
+        ;; Comparison of y^2 with x^3 + 3 
+        (for u [1]
+          (wcp-lookup
+            (+ u 4) ;; shift
+            (shift SQUARE (+ 2 (* 4 u))) ;; arg 1 high
+            (shift SQUARE (+ 3 (* 4 u))) ;; arg 1 low
+            (shift CUBE (+ 2 (* 4 u))) ;; arg 2 high
+            (shift CUBE (+ 3 (* 4 u))) ;; arg 2 low
+            OPCODE_EQ ;; instruction
+            (shift COMPARISONS (+ (* 4 u) 1)))))))) ;; result
+
+;; 3.12.2
+(defconstraint lookup-ecpairing-ext ()
+  (if-eq EC_PAIRING 1
+    (if-zero INDEX
+      (begin 
+
+        ;; x^2, y^2 mod p
+        (for u [1]
+          (ext-lookup
+            u ;; shift
+            (shift LIMB (* 2 u)) ;; arg1 high
+            (shift LIMB (+ 1 (* 2 u))) ;; arg1 low
+            (shift LIMB (* 2 u)) ;; arg2 hi
+            (shift LIMB (+ 1 (* 2 u))) ;; arg2 low
+            P_HI ;; arg3 high
+            P_LO ;; arg3 low
+            OPCODE_MULMOD ;; instruction
+            (shift SQUARE (* 2 u)) ;; res high
+            (shift SQUARE (+ 1 (* 2 u))))) ;; res low
+
+        ;; x^3 mod p
+        (ext-lookup
+          2 ;; shift
+          SQUARE ;; arg1 high
+          (next SQUARE) ;; arg1 low
+          LIMB ;; arg2 high
+          (next LIMB) ;; arg2 low
+          P_HI ;; arg3 high
+          P_LO ;; arg3 low
+          OPCODE_MULMOD ;; instruction
+          CUBE ;; res high
+          (next CUBE)) ;; res low
+
+        ;; x^3 + 3 mod p
+        (ext-lookup
+          3 ;; shift
+          CUBE ;; arg1 high
+          (next CUBE) ;; arg1 low
+          0 ;; arg2 high
+          3 ;; arg2 low
+          P_HI ;; arg3 high
+          P_LO ;; arg3 low
+          OPCODE_ADDMOD ;; instruction
+          (shift CUBE 2) ;; res high
+          (shift CUBE 3)))))) ;; res low   
+  
+;; 3.12.3
+(defconstraint lookup-ecadd-wcp ()
+  (if-eq EC_ADD 1
+    (if-zero INDEX
+      (begin
+        ;; Comparison of coordinates with p
+        (for u [3]
+          (wcp-lookup
+            u ;; shift
+            (shift LIMB (* 2 u)) ;; arg 1 high
+            (shift LIMB (+ (* 2 u) 1)) ;; arg 1 low
+            P_HI ;; arg 2 high
+            P_LO ;; arg 2 low
+            OPCODE_LT ;; instruction
+            (shift COMPARISONS (* 2 u)))) ;; result
+
+        ;; Comparison of y^2 with x^3 + 3 
+        (for u [1]
+          (wcp-lookup
+            (+ u 4) ;; shift
+            (shift SQUARE (+ 2 (* 4 u))) ;; arg 1 high
+            (shift SQUARE (+ 3 (* 4 u))) ;; arg 1 low
+            (shift CUBE (+ 2 (* 4 u))) ;; arg 2 high
+            (shift CUBE (+ 3 (* 4 u))) ;; arg 2 low
+            OPCODE_EQ ;; instruction
+            (shift COMPARISONS (+ (* 4 u) 1)))))))) ;; result
+
+;; 3.12.4
+(defconstraint lookup-ecadd-ext ()
+  (if-eq EC_PAIRING 1
+    (if-zero INDEX
+      (begin 
+
+        ;; x^2, y^2, a^2, b^2 mod p
+        (for u [1]
+          (for v [1]
+            (ext-lookup
+              (+ v (* 4 u)) ;; shift
+              (shift LIMB (+ (* 2 v) (* 4 u))) ;; arg1 high
+              (shift LIMB (+ (* 2 v) (* 4 u) 1)) ;; arg1 low
+              (shift LIMB (+ (* 2 v) (* 4 u))) ;; arg2 high
+              (shift LIMB (+ (* 2 v) (* 4 u) 1)) ;; arg2 low
+              P_HI ;; arg3 high
+              P_LO ;; arg3 low
+              OPCODE_MULMOD ;; instruction
+              (shift SQUARE (+ (* 2 v) (* 4 u))) ;; res high
+              (shift SQUARE (+ (* 2 v) (* 4 u) 1))))) ;; res low
+
+        ;; x^3 mod p
+        (for u [1]
+          (ext-lookup
+            (+ 2 (* 4 u)) ;; shift
+            (shift SQUARE (* 4 u)) ;; arg1 high
+            (shift SQUARE (+ (* 4 u) 1)) ;; arg1 low
+            (shift LIMB (* 4 u)) ;; arg2 high
+            (shift LIMB (+ (* 4 u) 1)) ;; arg2 low
+            P_HI ;; arg3 high
+            P_LO ;; arg3 low
+            OPCODE_MULMOD ;; instruction
+            (shift CUBE (* 4 u)) ;; res high
+            (shift CUBE (+ (* 4 u) 1)))) ;; res low
+
+        ;; x^3 + 3 mod p
+        (for u [1]
+          (ext-lookup
+            (+ 3 (* 4 u)) ;; shift
+            (shift CUBE (* 4 u)) ;; arg1 high
+            (shift CUBE (+ (* 4 u) 1)) ;; arg1 low
+            0 ;; arg2 high
+            3 ;; arg2 low
+            P_HI ;; arg3 high
+            P_LO ;; arg3 low
+            OPCODE_ADDMOD ;; instruction
+            (shift CUBE (+ (* 4 u) 2)) ;; res high
+            (shift CUBE (+ (* 4 u) 3)))))))) ;; res low   
