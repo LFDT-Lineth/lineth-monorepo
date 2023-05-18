@@ -37,7 +37,11 @@ WCP := wcp/columns.lisp \
 MXP := mxp/columns.lisp \
 	   mxp/constraints.lisp \
 	   mxp/mxp_into_instruction_decoder.lisp
-	   
+
+EC_DATA := ec_data/columns.lisp \
+	   ec_data/constraints.lisp \
+	   ec_data/ecdata_into_ext.lisp \
+	   	ec_data/ecdata_into_wcp.lisp
 
 TABLES := $(wildcard lookup_tables/tables/*lisp)
 
@@ -51,7 +55,7 @@ MEMORY := $(wildcard hub/mmio/*lisp) \
 RLP := rlp/columns.lisp \
 	  rlp/constraints.lisp
 
-ZKEVM_FILES := ${ROM} ${STACK} ${ALU} ${BIN} ${SHIFT} ${WCP} ${TABLES} ${PUB_DATA} ${MXP} # ${RLP}
+ZKEVM_FILES := ${ROM} ${STACK} ${ALU} ${BIN} ${SHIFT} ${WCP} ${TABLES} ${PUB_DATA} ${MXP} ${EC_DATA}# ${RLP}
 
 zkevm.go: ${ZKEVM_FILES}
 	corset wizard-iop -vv -P define -o $@ ${ZKEVM_FILES}
