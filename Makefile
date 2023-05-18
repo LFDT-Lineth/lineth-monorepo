@@ -41,7 +41,8 @@ MXP := mxp/columns.lisp \
 EC_DATA := ec_data/columns.lisp \
 	   ec_data/constraints.lisp \
 	   ec_data/ecdata_into_ext.lisp \
-	   	ec_data/ecdata_into_wcp.lisp
+	   ec_data/ecdata_into_wcp.lisp \
+	   ec_data/hub_into_ecdata.lisp \
 
 TABLES := $(wildcard lookup_tables/tables/*lisp)
 
