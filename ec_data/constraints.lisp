@@ -1,12 +1,14 @@
 (module ec_data)
 
 (defconst
-  P_HI          0x30644e72e131a029b85045b68181585d
-  P_LO          0x97816a916871ca8d3c208c16d87cfd47
-  OPCODE_LT     0x10
-  OPCODE_EQ     0x14
-  OPCODE_MULMOD 0x9
-  OPCODE_ADDMOD 0x8)
+  P_HI            0x30644e72e131a029b85045b68181585d
+  P_LO            0x97816a916871ca8d3c208c16d87cfd47
+  SECP256K1N_HI   0xffffffffffffffffffffffffffffffff
+  SECP256K1N_LO   0xfffffffffffffffffffffffefffffc2f
+  OPCODE_LT       0x10
+  OPCODE_EQ       0x14
+  OPCODE_MULMOD   0x9
+  OPCODE_ADDMOD   0x8)
 
 (defpurefun (if-not-eq X Y Z)
   (if-not-zero (- X Y) Z))
@@ -370,7 +372,7 @@
             (shift COMPARISONS (+ (* 4 u) 1)))))))) ;; result
 
 ;; 3.12.2
-(defconstraint lookup-ecpairing-ext ()
+(defconstraint lookup-ecpairing-or-ecmul-ext ()
   (if-eq EC_PAIRING 1
     (if-zero INDEX
       (begin 
@@ -490,3 +492,57 @@
             OPCODE_ADDMOD ;; instruction
             (shift CUBE (+ (* 4 u) 2)) ;; res high
             (shift CUBE (+ (* 4 u) 3)))))))) ;; res low   
+
+;; 3.12.5
+(defconstraint lookup-ecmul-wcp ()
+  (if-eq EC_MUL 1
+    (if-zero INDEX
+      (begin
+        ;; Comparison of coordinates with p
+        (for u [3]
+          (wcp-lookup
+            u ;; shift
+            (shift LIMB (* 2 u)) ;; arg 1 high
+            (shift LIMB (+ (* 2 u) 1)) ;; arg 1 low
+            P_HI ;; arg 2 high
+            P_LO ;; arg 2 low
+            OPCODE_LT ;; instruction
+            (shift COMPARISONS (* 2 u)))))))) ;; result
+  
+;; 3.12.6
+(defconstraint lookup-ecrecover-wcp ()
+  (if-eq EC_RECOVER 1
+    (if-zero INDEX
+      (begin
+        ;; Comparison of r and s with secp256k1n
+        (for u [1]
+          (wcp-lookup
+            u ;; shift
+            (shift LIMB (+ (* 2 u) 4)) ;; arg 1 high
+            (shift LIMB (+ (* 2 u) 5)) ;; arg 1 low
+            SECP256K1N_HI ;; arg 2 high
+            SECP256K1N_LO ;; arg 2 low
+            OPCODE_LT ;; instruction
+            (shift COMPARISONS (* 4 u)))) ;; result
+
+        ;; Comparison of r and s with secp256k1n
+        (for u [1]
+          (wcp-lookup
+              (+ u 2) ;; shift
+              0 ;; arg 1 high
+              0 ;; arg 1 low
+              (shift LIMB (+ (* 2 u) 4)) ;; arg 2 high
+              (shift LIMB (+ (* 2 u) 5)) ;; arg 2 low
+              OPCODE_LT ;; instruction
+              (shift COMPARISONS (+ (* 4 u) 2)))) ;; result
+        
+        ;; Comparison of v with 27 and 28
+        (for u [1]
+          (wcp-lookup
+              (+ u 4) ;; shift
+              (shift LIMB 2) ;; arg 1 high
+              (shift LIMB 3) ;; arg 1 low
+              (+ 27 u) ;; arg 2 high
+              (+ 27 u) ;; arg 2 low
+              OPCODE_LT ;; instruction
+              (shift EQUALITIES (+ 1 u)))))))) ;; result
