@@ -452,7 +452,7 @@
 
 ;; 3.12.4
 (defconstraint lookup-ecadd-ext ()
-  (if-eq EC_PAIRING 1
+  (if-eq EC_ADD 1
     (if-zero INDEX
       (begin 
 
