@@ -505,7 +505,7 @@
     (if-zero INDEX
       (begin
         ;; Comparison of coordinates with p
-        (for u [3]
+        (for u [1]
           (wcp-lookup
             u ;; shift
             (shift LIMB (* 2 u)) ;; arg 1 high
@@ -513,7 +513,27 @@
             P_HI ;; arg 2 high
             P_LO ;; arg 2 low
             OPCODE_LT ;; instruction
-            (shift COMPARISONS (* 2 u)))))))) ;; result
+            (shift COMPARISONS (* 2 u))))
+          
+        ;; Comparison of y^2 with x^3 + 3 
+        (wcp-lookup
+          (+ 2) ;; shift
+          (shift SQUARE 2) ;; arg 1 high
+          (shift SQUARE 3) ;; arg 1 low
+          (shift CUBE 2) ;; arg 2 high
+          (shift CUBE 3) ;; arg 2 low
+          OPCODE_LT ;; instruction
+          (shift EQUALITIES 1))
+
+        ;; Comparison of s with 0
+        (wcp-lookup
+          (+ 3) ;; shift
+          (shift LIMB 4) ;; arg 1 high
+          (shift LIMB 5) ;; arg 1 low
+          0 ;; arg 2 high
+          0 ;; arg 2 low
+          OPCODE_EQ ;; instruction
+          (shift EQUALITIES 4)))))) ;; result
   
 ;; 3.12.6
 (defconstraint lookup-ecrecover-wcp ()
