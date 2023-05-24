@@ -522,7 +522,7 @@
           (shift SQUARE 3) ;; arg 1 low
           (shift CUBE 2) ;; arg 2 high
           (shift CUBE 3) ;; arg 2 low
-          OPCODE_LT ;; instruction
+          OPCODE_EQ ;; instruction
           (shift EQUALITIES 1))
 
         ;; Comparison of s with 0
