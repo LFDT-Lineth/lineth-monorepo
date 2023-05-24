@@ -568,7 +568,7 @@
               (+ u 4) ;; shift
               (shift LIMB 2) ;; arg 1 high
               (shift LIMB 3) ;; arg 1 low
-              (+ 27 u) ;; arg 2 high
+              0 ;; arg 2 high
               (+ 27 u) ;; arg 2 low
               OPCODE_LT ;; instruction
               (shift EQUALITIES (+ 1 u)))))))) ;; result
