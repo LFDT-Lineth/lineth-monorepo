@@ -570,5 +570,5 @@
               (shift LIMB 3) ;; arg 1 low
               0 ;; arg 2 high
               (+ 27 u) ;; arg 2 low
-              OPCODE_LT ;; instruction
+              OPCODE_EQ ;; instruction
               (shift EQUALITIES (+ 1 u)))))))) ;; result
