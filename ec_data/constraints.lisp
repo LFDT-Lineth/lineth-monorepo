@@ -260,15 +260,21 @@
 (defconstraint last-equalities ()
   (if-eq INDEX 11 (= EQUALITIES 1)))
 
-;; 3.10.4
-(defconstraint point-infinity ()
-  (if-eq (+ EC_ADD EC_MUL EC_PAIRING) 1
-    (if-zero CT_MIN
+;; 3.10.4.a
+(defconstraint point-infinity-a ()
+  (if-eq (+ EC_MUL EC_PAIRING) 1
+    (if-zero INDEX
       (if-zero-else (+ LIMB (next LIMB) (shift LIMB 2) (shift LIMB 3))
         (= (shift EQUALITIES 2) 1)
         (vanishes (shift EQUALITIES 2))))))
 
-
+;; 3.10.4.b
+(defconstraint point-infinity-b ()
+  (if-eq EC_ADD 1
+    (if-zero CT_MIN
+      (if-zero-else (+ LIMB (next LIMB) (shift LIMB 2) (shift LIMB 3))
+        (= (shift EQUALITIES 2) 1)
+        (vanishes (shift EQUALITIES 2))))))
 ;;;;;;;;;;;;;;;;;;;;;;
 ;;                  ;;
 ;;    3.11 Gnark    ;;
