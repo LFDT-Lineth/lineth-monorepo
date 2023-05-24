@@ -291,7 +291,7 @@
 (defconstraint not-on-g2-acc-activation-condition ()
   (if-eq (next THIS_IS_NOT_ON_G2_ACC) (+ THIS_IS_NOT_ON_G2_ACC 1)
     (begin
-      (= INDEX 11)
+      (= (next INDEX) 11)
       (= (next THIS_IS_NOT_ON_G2) 1))))
 
 ;; 3.11.3
