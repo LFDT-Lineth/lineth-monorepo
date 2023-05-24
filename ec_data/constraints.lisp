@@ -375,7 +375,7 @@
             (shift CUBE (+ 2 (* 4 u))) ;; arg 2 high
             (shift CUBE (+ 3 (* 4 u))) ;; arg 2 low
             OPCODE_EQ ;; instruction
-            (shift COMPARISONS (+ (* 4 u) 1)))))))) ;; result
+            (shift EQUALITIES (+ (* 4 u) 1)))))))) ;; result
 
 ;; 3.12.2
 (defconstraint lookup-ecpairing-or-ecmul-ext ()
@@ -448,7 +448,7 @@
             (shift CUBE (+ 2 (* 4 u))) ;; arg 2 high
             (shift CUBE (+ 3 (* 4 u))) ;; arg 2 low
             OPCODE_EQ ;; instruction
-            (shift COMPARISONS (+ (* 4 u) 1)))))))) ;; result
+            (shift EQUALITIES (+ (* 4 u) 1)))))))) ;; result
 
 ;; 3.12.4
 (defconstraint lookup-ecadd-ext ()
