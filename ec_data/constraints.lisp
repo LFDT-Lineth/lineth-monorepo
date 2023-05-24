@@ -191,7 +191,7 @@
 ;; 3.7.1
 (defconstraint connection-constraints ()
   (if-not-eq (next STAMP) STAMP
-    (= (next STAMP) (+ STAMP 1 (next ACC_DELTA)))))
+    (= (next STAMP) (+ STAMP 1 (shift ACC_DELTA 4)))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;
