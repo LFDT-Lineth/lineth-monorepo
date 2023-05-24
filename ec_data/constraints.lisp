@@ -261,7 +261,7 @@
   (if-eq INDEX 11 (= EQUALITIES 1)))
 
 ;; 3.10.4
-(defconstraint pont-infinity ()
+(defconstraint point-infinity ()
   (if-eq (+ EC_ADD EC_MUL EC_PAIRING) 1
     (if-zero CT_MIN
       (if-zero-else (+ LIMB (next LIMB) (shift LIMB 2) (shift LIMB 3))
