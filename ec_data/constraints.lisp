@@ -326,7 +326,6 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-
 (defun (wcp-lookup _shift arg1_hi arg1_lo arg2_hi arg2_lo inst res)
   (begin
     (= (shift WCP_ARG1_HI _shift) arg1_hi)
@@ -356,7 +355,7 @@
       (begin
 
         ;; Comparison of coordinates with p
-        (for u [3]
+        (for u [5]
           (wcp-lookup
             u ;; shift
             (shift LIMB (* 2 u)) ;; arg 1 high
@@ -364,18 +363,17 @@
             P_HI ;; arg 2 high
             P_LO ;; arg 2 low
             OPCODE_LT ;; instruction
-            (shift COMPARISONS (+ (* 2 u) 1)))) ;; result
+            (shift COMPARISONS (* 2 u)))) ;; result
 
         ;; Comparison of y^2 with x^3 + 3 
-        (for u [1]
-          (wcp-lookup
-            (+ u 4) ;; shift
-            (shift SQUARE (+ 2 (* 4 u))) ;; arg 1 high
-            (shift SQUARE (+ 3 (* 4 u))) ;; arg 1 low
-            (shift CUBE (+ 2 (* 4 u))) ;; arg 2 high
-            (shift CUBE (+ 3 (* 4 u))) ;; arg 2 low
-            OPCODE_EQ ;; instruction
-            (shift EQUALITIES (+ (* 4 u) 1)))))))) ;; result
+        (wcp-lookup
+          6 ;; shift
+          (shift SQUARE 2) ;; arg 1 high
+          (shift SQUARE 3) ;; arg 1 low
+          (shift CUBE 2) ;; arg 2 high
+          (shift CUBE 3) ;; arg 2 low
+          OPCODE_EQ ;; instruction
+          (shift EQUALITIES 1)))))) ;; result
 
 ;; 3.12.2
 (defconstraint lookup-ecpairing-or-ecmul-ext ()
