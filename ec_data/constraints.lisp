@@ -357,7 +357,7 @@
         ;; Comparison of coordinates with p
         (for u [5]
           (wcp-lookup
-            u ;; shift
+            (if-eq-else u 0 0 (if-eq-else u 1 1 (+ u 1))) ;; shift ( = u if u <= 1 else u + 1)
             (shift LIMB (* 2 u)) ;; arg 1 high
             (shift LIMB (+ (* 2 u) 1)) ;; arg 1 low
             P_HI ;; arg 2 high
@@ -367,7 +367,7 @@
 
         ;; Comparison of y^2 with x^3 + 3 
         (wcp-lookup
-          6 ;; shift
+          2 ;; shift
           (shift SQUARE 2) ;; arg 1 high
           (shift SQUARE 3) ;; arg 1 low
           (shift CUBE 2) ;; arg 2 high
@@ -440,7 +440,7 @@
         ;; Comparison of y^2 with x^3 + 3 
         (for u [1]
           (wcp-lookup
-            (+ u 4) ;; shift
+            (+ 2 (* u 3)) ;; shift
             (shift SQUARE (+ 2 (* 4 u))) ;; arg 1 high
             (shift SQUARE (+ 3 (* 4 u))) ;; arg 1 low
             (shift CUBE (+ 2 (* 4 u))) ;; arg 2 high
@@ -515,7 +515,7 @@
           
         ;; Comparison of y^2 with x^3 + 3 
         (wcp-lookup
-          (+ 4) ;; shift
+          (+ 2) ;; shift
           (shift SQUARE 2) ;; arg 1 high
           (shift SQUARE 3) ;; arg 1 low
           (shift CUBE 2) ;; arg 2 high
@@ -525,7 +525,7 @@
 
         ;; Comparison of s with 0
         (wcp-lookup
-          (+ 5) ;; shift
+          (+ 3) ;; shift
           (shift LIMB 4) ;; arg 1 high
           (shift LIMB 5) ;; arg 1 low
           0 ;; arg 2 high
