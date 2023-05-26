@@ -515,7 +515,7 @@
           
         ;; Comparison of y^2 with x^3 + 3 
         (wcp-lookup
-          (+ 2) ;; shift
+          (+ 4) ;; shift
           (shift SQUARE 2) ;; arg 1 high
           (shift SQUARE 3) ;; arg 1 low
           (shift CUBE 2) ;; arg 2 high
@@ -525,7 +525,7 @@
 
         ;; Comparison of s with 0
         (wcp-lookup
-          (+ 3) ;; shift
+          (+ 5) ;; shift
           (shift LIMB 4) ;; arg 1 high
           (shift LIMB 5) ;; arg 1 low
           0 ;; arg 2 high
