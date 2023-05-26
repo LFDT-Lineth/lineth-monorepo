@@ -354,10 +354,21 @@
     (if-zero INDEX
       (begin
 
-        ;; Comparison of coordinates with p
-        (for u [5]
+        ;; Comparison of x and y with p
+        (for u [1]
           (wcp-lookup
-            (if-eq-else u 0 0 (if-eq-else u 1 1 (+ u 1))) ;; shift ( = u if u <= 1 else u + 1)
+            u ;; shift
+            (shift LIMB (* 2 u)) ;; arg 1 high
+            (shift LIMB (+ (* 2 u) 1)) ;; arg 1 low
+            P_HI ;; arg 2 high
+            P_LO ;; arg 2 low
+            OPCODE_LT ;; instruction
+            (shift COMPARISONS (* 2 u)))) ;; result
+
+        ;; Comparison of Im(a), Re(a), Im(b), Re(b) with p
+        (for u [2:5]
+          (wcp-lookup
+            (+ 1 u) ;; shift
             (shift LIMB (* 2 u)) ;; arg 1 high
             (shift LIMB (+ (* 2 u) 1)) ;; arg 1 low
             P_HI ;; arg 2 high
@@ -426,10 +437,21 @@
   (if-eq EC_ADD 1
     (if-zero INDEX
       (begin
-        ;; Comparison of coordinates with p
-        (for u [3]
+        ;; Comparison of x1 and y1 with p
+        (for u [1]
           (wcp-lookup
             u ;; shift
+            (shift LIMB (* 2 u)) ;; arg 1 high
+            (shift LIMB (+ (* 2 u) 1)) ;; arg 1 low
+            P_HI ;; arg 2 high
+            P_LO ;; arg 2 low
+            OPCODE_LT ;; instruction
+            (shift COMPARISONS (* 2 u)))) ;; result
+        
+          ;; Comparison of x2 and y2 with p
+        (for u [2:3]
+          (wcp-lookup
+            (+ 1 u) ;; shift
             (shift LIMB (* 2 u)) ;; arg 1 high
             (shift LIMB (+ (* 2 u) 1)) ;; arg 1 low
             P_HI ;; arg 2 high
