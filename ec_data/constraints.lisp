@@ -442,20 +442,6 @@
           OPCODE_LT ;; instruction
           (shift COMPARISONS (+ (* 2 v) 4))))))) ;; result
   
-;; 4.2.3
-(defconstraint lookup-ecmul-wcp ()
-  (if-eq EC_MUL 1
-    (if-zero INDEX
-      ;; Comparison of s with 0
-      (wcp-lookup
-        (+ 3) ;; shift
-        (shift LIMB 4) ;; arg 1 high
-        (shift LIMB 5) ;; arg 1 low
-        0 ;; arg 2 high
-        0 ;; arg 2 low
-        OPCODE_EQ ;; instruction
-        (shift EQUALITIES 4))))) ;; result
-  
 ;; 4.2.4
 (defconstraint lookup-ecrecover-wcp ()
   (if-eq EC_RECOVER 1
