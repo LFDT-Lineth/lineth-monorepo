@@ -377,7 +377,7 @@
       ;; x^2, y^2 mod p
       (for v [1] ;; v = 0 for x, v = 1 for y
         (ext-lookup
-          (+ (* 2 v) (* 4 u)) ;; shift
+          (+ v (* 4 u)) ;; shift
           (shift LIMB (+ (* 2 v) (* 4 u))) ;; arg1 high
           (shift LIMB (+ (* 2 v) (* 4 u) 1)) ;; arg1 low
           (shift LIMB (+ (* 2 v) (* 4 u))) ;; arg2 hi
