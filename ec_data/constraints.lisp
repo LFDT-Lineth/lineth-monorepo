@@ -347,215 +347,114 @@
     (= (shift EXT_RES_HI _shift) res_hi)
     (= (shift EXT_RES_LO _shift) res_lo)))
   
-  
-;; 3.12.1
-(defconstraint lookup-ecpairing-wcp ()
-  (if-eq EC_PAIRING 1
-    (if-zero INDEX
-      (begin
+(defun (func-c1-ownership u)
+  (begin
+    ;; --------------------- WCP lookup ---------------------
 
-        ;; Comparison of x and y with p
-        (for u [1]
-          (wcp-lookup
-            u ;; shift
-            (shift LIMB (* 2 u)) ;; arg 1 high
-            (shift LIMB (+ (* 2 u) 1)) ;; arg 1 low
-            P_HI ;; arg 2 high
-            P_LO ;; arg 2 low
-            OPCODE_LT ;; instruction
-            (shift COMPARISONS (* 2 u)))) ;; result
+    ;; Comparison of x and y with p
+    (for v [1] ;; v = 0 for x, v = 1 for y
+      (wcp-lookup
+        (+ (* 3 u) v) ;; shift
+        (shift LIMB (+ (* 4 u) (* 2 v))) ;; arg 1 high
+        (shift LIMB (+ (* 4 u) (* 2 v) 1)) ;; arg 1 low
+        P_HI ;; arg 2 high
+        P_LO ;; arg 2 low
+        OPCODE_LT ;; instruction
+        (shift COMPARISONS (+ (* 4 u) (* 2 v))))) ;; result
 
-        ;; Comparison of Im(a), Re(a), Im(b), Re(b) with p
-        (for u [2:5]
-          (wcp-lookup
-            (+ 1 u) ;; shift
-            (shift LIMB (* 2 u)) ;; arg 1 high
-            (shift LIMB (+ (* 2 u) 1)) ;; arg 1 low
-            P_HI ;; arg 2 high
-            P_LO ;; arg 2 low
-            OPCODE_LT ;; instruction
-            (shift COMPARISONS (* 2 u)))) ;; result
+    ;; Comparison of y^2 with x^3 + 3 
+    (wcp-lookup
+      (+ (* 3 u) 2) ;; shift
+      (shift SQUARE (+ (* 4 u) 2)) ;; arg 1 high
+      (shift SQUARE (+ (* 4 u) 3)) ;; arg 1 low
+      (shift CUBE (+ (* 4 u) 2)) ;; arg 2 high
+      (shift CUBE (+ (* 4 u) 3)) ;; arg 2 low
+      OPCODE_EQ ;; instruction
+      (shift EQUALITIES (+ (* 4 u) 1)))
 
-        ;; Comparison of y^2 with x^3 + 3 
-        (wcp-lookup
-          2 ;; shift
-          (shift SQUARE 2) ;; arg 1 high
-          (shift SQUARE 3) ;; arg 1 low
-          (shift CUBE 2) ;; arg 2 high
-          (shift CUBE 3) ;; arg 2 low
-          OPCODE_EQ ;; instruction
-          (shift EQUALITIES 1)))))) ;; result
+      ;; --------------------- EXT lookup ---------------------
 
-;; 3.12.2
-(defconstraint lookup-ecpairing-or-ecmul-ext ()
-  (if-eq EC_PAIRING 1
-    (if-zero INDEX
-      (begin 
-
-        ;; x^2, y^2 mod p
-        (for u [1]
-          (ext-lookup
-            u ;; shift
-            (shift LIMB (* 2 u)) ;; arg1 high
-            (shift LIMB (+ 1 (* 2 u))) ;; arg1 low
-            (shift LIMB (* 2 u)) ;; arg2 hi
-            (shift LIMB (+ 1 (* 2 u))) ;; arg2 low
-            P_HI ;; arg3 high
-            P_LO ;; arg3 low
-            OPCODE_MULMOD ;; instruction
-            (shift SQUARE (* 2 u)) ;; res high
-            (shift SQUARE (+ 1 (* 2 u))))) ;; res low
-
-        ;; x^3 mod p
+      ;; x^2, y^2 mod p
+      (for v [1] ;; v = 0 for x, v = 1 for y
         (ext-lookup
-          2 ;; shift
-          SQUARE ;; arg1 high
-          (next SQUARE) ;; arg1 low
-          LIMB ;; arg2 high
-          (next LIMB) ;; arg2 low
+          (+ (* 2 v) (+ 4 u)) ;; shift
+          (shift LIMB (+ (* 2 v) (+ 4 u))) ;; arg1 high
+          (shift LIMB (+ (* 2 v) (+ 4 u) 1)) ;; arg1 low
+          (shift LIMB (+ (* 2 v) (+ 4 u))) ;; arg2 hi
+          (shift LIMB (+ (* 2 v) (+ 4 u) 1)) ;; arg2 low
           P_HI ;; arg3 high
           P_LO ;; arg3 low
           OPCODE_MULMOD ;; instruction
-          CUBE ;; res high
-          (next CUBE)) ;; res low
+          (shift SQUARE (+ (* 2 v) (+ 4 u))) ;; res high
+          (shift SQUARE (+ (* 2 v) (+ 4 u) 1)))) ;; res low
 
-        ;; x^3 + 3 mod p
-        (ext-lookup
-          3 ;; shift
-          CUBE ;; arg1 high
-          (next CUBE) ;; arg1 low
-          0 ;; arg2 high
-          3 ;; arg2 low
-          P_HI ;; arg3 high
-          P_LO ;; arg3 low
-          OPCODE_ADDMOD ;; instruction
-          (shift CUBE 2) ;; res high
-          (shift CUBE 3)))))) ;; res low   
+      ;; x^3 mod p
+      (ext-lookup
+        (+ 2 (* 4 u)) ;; shift
+        (shift SQUARE (* 4 u)) ;; arg1 high
+        (shift SQUARE (+ (* 4 u) 1)) ;; arg1 low
+        (shift LIMB (* 4 u)) ;; arg2 high
+        (shift LIMB (+ (* 4 u) 1)) ;; arg2 low
+        P_HI ;; arg3 high
+        P_LO ;; arg3 low
+        OPCODE_MULMOD ;; instruction
+        (shift CUBE (* 4 u)) ;; res high
+        (shift CUBE (+ (* 4 u) 1))) ;; res low
+
+      ;; x^3 + 3 mod p
+      (ext-lookup
+        (+ 3 (* 4 u)) ;; shift
+        (shift CUBE (* 4 u)) ;; arg1 high
+        (shift CUBE (+ (* 4 u) 1)) ;; arg1 low
+        0 ;; arg2 high
+        3 ;; arg2 low
+        P_HI ;; arg3 high
+        P_LO ;; arg3 low
+        OPCODE_ADDMOD ;; instruction
+        (shift CUBE (+ (* 4 u) 2)) ;; res high
+        (shift CUBE (+ (* 4 u) 3))))) ;; res low
   
-;; 3.12.3
-(defconstraint lookup-ecadd-wcp ()
-  (if-eq EC_ADD 1
+
+;; 4.2.1
+(defconstraint c1-ownership ()
+  (if-zero INDEX
+    (begin
+      (if-eq (+ EC_ADD EC_MUL EC_PAIRING) 1
+        (func-c1-ownership 0))
+      (if-eq EC_ADD 1
+        (func-c1-ownership 1)))))
+
+;; 4.2.2
+(defconstraint lookup-ecpairing-wcp ()
+  (if-eq EC_PAIRING 1
     (if-zero INDEX
-      (begin
-        ;; Comparison of x1 and y1 with p
-        (for u [1]
-          (wcp-lookup
-            u ;; shift
-            (shift LIMB (* 2 u)) ;; arg 1 high
-            (shift LIMB (+ (* 2 u) 1)) ;; arg 1 low
-            P_HI ;; arg 2 high
-            P_LO ;; arg 2 low
-            OPCODE_LT ;; instruction
-            (shift COMPARISONS (* 2 u)))) ;; result
-        
-          ;; Comparison of x2 and y2 with p
-        (for u [2:3]
-          (wcp-lookup
-            (+ 1 u) ;; shift
-            (shift LIMB (* 2 u)) ;; arg 1 high
-            (shift LIMB (+ (* 2 u) 1)) ;; arg 1 low
-            P_HI ;; arg 2 high
-            P_LO ;; arg 2 low
-            OPCODE_LT ;; instruction
-            (shift COMPARISONS (* 2 u)))) ;; result
+      ;; Comparison of Im(a), Re(a), Im(b), Re(b) with p
+      (for v [2:5]
+        (wcp-lookup
+          (+ 3 v) ;; shift
+          (shift LIMB (+ (* 2 v) 4)) ;; arg 1 high
+          (shift LIMB (+ (* 2 v) 5)) ;; arg 1 low
+          P_HI ;; arg 2 high
+          P_LO ;; arg 2 low
+          OPCODE_LT ;; instruction
+          (shift COMPARISONS (+ (* 2 v) 4))))))) ;; result
 
-        ;; Comparison of y^2 with x^3 + 3 
-        (for u [1]
-          (wcp-lookup
-            (+ 2 (* u 3)) ;; shift
-            (shift SQUARE (+ 2 (* 4 u))) ;; arg 1 high
-            (shift SQUARE (+ 3 (* 4 u))) ;; arg 1 low
-            (shift CUBE (+ 2 (* 4 u))) ;; arg 2 high
-            (shift CUBE (+ 3 (* 4 u))) ;; arg 2 low
-            OPCODE_EQ ;; instruction
-            (shift EQUALITIES (+ (* 4 u) 1)))))))) ;; result
-
-;; 3.12.4
-(defconstraint lookup-ecadd-ext ()
-  (if-eq EC_ADD 1
-    (if-zero INDEX
-      (begin 
-
-        ;; x^2, y^2, a^2, b^2 mod p
-        (for u [1]
-          (for v [1]
-            (ext-lookup
-              (+ v (* 4 u)) ;; shift
-              (shift LIMB (+ (* 2 v) (* 4 u))) ;; arg1 high
-              (shift LIMB (+ (* 2 v) (* 4 u) 1)) ;; arg1 low
-              (shift LIMB (+ (* 2 v) (* 4 u))) ;; arg2 high
-              (shift LIMB (+ (* 2 v) (* 4 u) 1)) ;; arg2 low
-              P_HI ;; arg3 high
-              P_LO ;; arg3 low
-              OPCODE_MULMOD ;; instruction
-              (shift SQUARE (+ (* 2 v) (* 4 u))) ;; res high
-              (shift SQUARE (+ (* 2 v) (* 4 u) 1))))) ;; res low
-
-        ;; x^3 mod p
-        (for u [1]
-          (ext-lookup
-            (+ 2 (* 4 u)) ;; shift
-            (shift SQUARE (* 4 u)) ;; arg1 high
-            (shift SQUARE (+ (* 4 u) 1)) ;; arg1 low
-            (shift LIMB (* 4 u)) ;; arg2 high
-            (shift LIMB (+ (* 4 u) 1)) ;; arg2 low
-            P_HI ;; arg3 high
-            P_LO ;; arg3 low
-            OPCODE_MULMOD ;; instruction
-            (shift CUBE (* 4 u)) ;; res high
-            (shift CUBE (+ (* 4 u) 1)))) ;; res low
-
-        ;; x^3 + 3 mod p
-        (for u [1]
-          (ext-lookup
-            (+ 3 (* 4 u)) ;; shift
-            (shift CUBE (* 4 u)) ;; arg1 high
-            (shift CUBE (+ (* 4 u) 1)) ;; arg1 low
-            0 ;; arg2 high
-            3 ;; arg2 low
-            P_HI ;; arg3 high
-            P_LO ;; arg3 low
-            OPCODE_ADDMOD ;; instruction
-            (shift CUBE (+ (* 4 u) 2)) ;; res high
-            (shift CUBE (+ (* 4 u) 3)))))))) ;; res low   
-
-;; 3.12.5
+  
+;; 4.2.3
 (defconstraint lookup-ecmul-wcp ()
   (if-eq EC_MUL 1
     (if-zero INDEX
-      (begin
-        ;; Comparison of coordinates with p
-        (for u [1]
-          (wcp-lookup
-            u ;; shift
-            (shift LIMB (* 2 u)) ;; arg 1 high
-            (shift LIMB (+ (* 2 u) 1)) ;; arg 1 low
-            P_HI ;; arg 2 high
-            P_LO ;; arg 2 low
-            OPCODE_LT ;; instruction
-            (shift COMPARISONS (* 2 u))))
-          
-        ;; Comparison of y^2 with x^3 + 3 
-        (wcp-lookup
-          (+ 2) ;; shift
-          (shift SQUARE 2) ;; arg 1 high
-          (shift SQUARE 3) ;; arg 1 low
-          (shift CUBE 2) ;; arg 2 high
-          (shift CUBE 3) ;; arg 2 low
-          OPCODE_EQ ;; instruction
-          (shift EQUALITIES 1))
-
-        ;; Comparison of s with 0
-        (wcp-lookup
-          (+ 3) ;; shift
-          (shift LIMB 4) ;; arg 1 high
-          (shift LIMB 5) ;; arg 1 low
-          0 ;; arg 2 high
-          0 ;; arg 2 low
-          OPCODE_EQ ;; instruction
-          (shift EQUALITIES 4)))))) ;; result
+      ;; Comparison of s with 0
+      (wcp-lookup
+        (+ 3) ;; shift
+        (shift LIMB 4) ;; arg 1 high
+        (shift LIMB 5) ;; arg 1 low
+        0 ;; arg 2 high
+        0 ;; arg 2 low
+        OPCODE_EQ ;; instruction
+        (shift EQUALITIES 4))))) ;; result
   
-;; 3.12.6
+;; 4.2.4
 (defconstraint lookup-ecrecover-wcp ()
   (if-eq EC_RECOVER 1
     (if-zero INDEX
