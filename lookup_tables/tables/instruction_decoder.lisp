@@ -4,6 +4,10 @@
     ADD_FLAG
     ADD_MOD_FLAG
     ALPHA
+    ALU_ADD_INST
+    ALU_EXT_INST
+    ALU_MOD_INST
+    ALU_MUL_INST
     ARITHMETIC_INST
     BINARY_INST
     CALLDATACOPY_FLAG
@@ -17,10 +21,12 @@
     FLAG_1
     FLAG_2
     FLAG_3
+    HASH_INST
     INST
     INST_PARAM
     INVALID_INSTRUCTION
-    ;; LOG_FLAG ;; TODO: define & use me
+    JUMP_FLAG
+    LOG_INST
     MOD_FLAG
     MUL_FLAG
     MUL_MOD_FLAG
@@ -36,7 +42,7 @@
     ROM_FLAG
     SDIV_FLAG
     ;; SHA3_INST ;; TODO: define & use me
-    ;; SHIFT_FLAG ;; TODO: define & use me
+    SHIFT_INST
     SIZE
     SMOD_FLAG
     SPECIAL_PC_UPDATE
@@ -55,4 +61,5 @@
     MXP_GWORD
     MXP_GBYTE
     MXP_INST
-    MEMORY_EXPANSION_FLAG)
+    MEMORY_EXPANSION_FLAG
+    WARMTH_FLAG)

@@ -1,4 +1,4 @@
-(module phoney_rlp)
+(module phoneyRLP)
 
 (defcolumns
   TX_NUM
