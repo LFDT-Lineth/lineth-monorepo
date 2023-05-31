@@ -429,7 +429,7 @@
   (if-eq EC_PAIRING 1
     (if-zero INDEX
       ;; Comparison of Im(a), Re(a), Im(b), Re(b) with p
-      (for v [2:5]
+      (for v [3]
         (wcp-lookup
           (+ 3 v) ;; shift
           (shift LIMB (+ (* 2 v) 4)) ;; arg 1 high
