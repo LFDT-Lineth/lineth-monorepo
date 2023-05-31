@@ -51,7 +51,6 @@
 
 (defconstraint binary-and-byte-decompositions ()
   (begin
-   (is-binary PBIT)
    (is-binary IS_PREC)
    (is-binary ONES)
    (byte-decomposition CT ACC_HI BYTE_HI)
@@ -60,8 +59,16 @@
 ;TODO: bytehood constraints
 
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;                       ;;
-;;    1.5 constraints    ;;
-;;                       ;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                                 ;;
+;;    2.3 Pivot bit constraints    ;;
+;;                                 ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defconstraint pivot-bit ()
+  (begin
+   (is-binary PBIT)
+   (if-zero CT
+            (vanishes PBIT)
+            (vanishes (*  (didnt-change PBIT) (- 1 (didnt-change PBIT))))
+            (if-eq CT 12    (=  1   (+  PBIT (prev  PBIT)))))))
