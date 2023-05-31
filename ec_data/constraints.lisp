@@ -244,6 +244,7 @@
 ;;                       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+
 ;; 3.10.1
 (defconstraint first-equalities ()
   (if-eq (shift INDEX 2) 3
@@ -275,6 +276,8 @@
       (if-zero-else (+ LIMB (next LIMB) (shift LIMB 2) (shift LIMB 3))
         (= (shift EQUALITIES 2) 1)
         (vanishes (shift EQUALITIES 2))))))
+
+
 ;;;;;;;;;;;;;;;;;;;;;;
 ;;                  ;;
 ;;    3.11 Gnark    ;;
@@ -348,6 +351,7 @@
     (= (shift EXT_RES_LO _shift) res_lo)))
   
 (defun (func-c1-ownership u)
+  ;; u = 0 for the first point of C1, and u = 1 for the second point (ecAdd only)
   (begin
     ;; --------------------- WCP lookup ---------------------
 
@@ -413,7 +417,6 @@
         OPCODE_ADDMOD ;; instruction
         (shift CUBE (+ (* 4 u) 2)) ;; res high
         (shift CUBE (+ (* 4 u) 3))))) ;; res low
-  
 
 ;; 4.2.1
 (defconstraint c1-ownership ()
@@ -438,7 +441,6 @@
           P_LO ;; arg 2 low
           OPCODE_LT ;; instruction
           (shift COMPARISONS (+ (* 2 v) 4))))))) ;; result
-
   
 ;; 4.2.3
 (defconstraint lookup-ecmul-wcp ()
