@@ -390,7 +390,7 @@
           P_LO ;; arg3 low
           OPCODE_MULMOD ;; instruction
           (shift SQUARE (* 2 v)) ;; res high
-          (shift SQUARE (* 2 v)))) ;; res low
+          (shift SQUARE (+ 1 (* 2 v))))) ;; res low
 
       ;; x^3 mod p
       (ext-lookup
