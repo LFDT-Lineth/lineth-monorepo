@@ -426,19 +426,18 @@
         (*
           (is-not-zero (- (prev STAMP) STAMP))
           (+ EC_MUL EC_PAIRING))
-        ;; 1 if we are seeing a new pairing at row i in a call to ecPairing (not including the first one,
+        ;; 1 if we are seeing a new pairing at row i in a call to ecPairing (potentially not including the first one,
         ;; which is captured by the condition above)
         (*
           EC_PAIRING
-          (- (prev ACC_PAIRINGS)) ACC_PAIRINGS)
+          (- (prev ACC_PAIRINGS) ACC_PAIRINGS))
         ;; 1 if CT_MIN[i] = 0 and EC_ADD[i] = 1, else 0
         (*
           (is-zero CT_MIN)
           EC_ADD))
       
-      ;; if any of the 3 boolean condition above is true, we need to justify (or refute) the membership of a point to C1
+      ;; if any of the 3 condition above is true, we need to justify (or refute) the membership of a point to C1
       (check-c1-membership)))
-
 
 ;; 4.2.2
 (defconstraint lookup-ecpairing-wcp ()
