@@ -35,6 +35,7 @@
   (begin
    (stamp-consitency TYPE)
    (stamp-consitency PCP)
+   (stamp-consitency PRELIMINARY_CHECKS_PASSED)
    (stamp-consitency SOMETHING_WASNT_ON_G2)
    (stamp-consitency TOTAL_PAIRINGS)))
 
@@ -105,7 +106,7 @@
   (if-zero STAMP (begin
                   (vanishes INDEX)
                   (vanishes TYPE)
-                  (vanishes (+ EC_RECOVER EC_ADD EC_MUL EC_PAIRING PCP SOMETHING_WASNT_ON_G2)))))
+                  (vanishes (+ EC_RECOVER EC_ADD EC_MUL EC_PAIRING PCP PRELIMINARY_CHECKS_PASSED SOMETHING_WASNT_ON_G2)))))
 
 ;; 3.5.3)
 (defconstraint first-index-vanishes ()
@@ -322,9 +323,25 @@
   (= SOMETHING_WASNT_ON_G2 THIS_IS_NOT_ON_G2_ACC))
 
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                               ;;
+;;    3.12 AllChecksPassed       ;;
+;;                               ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; 3.12.1
+(defconstraint all-checks-passed-not-pairing()
+  (if-not-zero (+ EC_RECOVER EC_ADD EC_MUL)
+      (= ALL_CHECKS_PASSED PRELIMINARY_CHECKS_PASSED)))
+
+;; 3.12.1
+(defconstraint all-checks-passed-pairing()
+  (if-not-zero EC_PAIRING
+      (= ALL_CHECKS_PASSED (* PRELIMINARY_CHECKS_PASSED (- 1 SOMETHING_WASNT_ON_G2)))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                    ;;
-;;    3.12 Lookups    ;;
+;;    4 Lookups       ;;
 ;;                    ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -418,7 +435,7 @@
         (shift CUBE 2) ;; res high
         (shift CUBE 3)))) ;; res low
 
-;; 4.2.1
+;; 4.1
 (defconstraint c1-membership ()
   (if-not-zero
       (+
@@ -439,7 +456,7 @@
       ;; if any of the 3 condition above is true, we need to justify (or refute) the membership of a point to C1
       (check-c1-membership)))
 
-;; 4.2.2
+;; 4.2
 (defconstraint lookup-ecpairing-wcp ()
   (if-eq EC_PAIRING 1
          (if-zero INDEX
@@ -454,7 +471,7 @@
                         OPCODE_LT ;; instruction
                         (shift COMPARISONS (+ (* 2 v) 4))))))) ;; result
 
-;; 4.2.4
+;; 4.2
 (defconstraint lookup-ecrecover-wcp ()
   (if-eq EC_RECOVER 1
          (if-zero INDEX

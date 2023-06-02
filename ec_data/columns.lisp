@@ -20,6 +20,7 @@
 
 	(HURDLE	:boolean)
 	(PRELIMINARY_CHECKS_PASSED	:boolean)
+	(ALL_CHECKS_PASSED	:boolean)
 
 	SQUARE
 	CUBE
