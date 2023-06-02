@@ -350,24 +350,24 @@
      (= (shift EXT_RES_HI _shift) res_hi)
      (= (shift EXT_RES_LO _shift) res_lo)))
 
-(defun (c1-ownership)
-    ;; u = 0 for the first point of C1, and u = 1 for the second point (ecAdd only)
-    (begin
-     ;; --------------------- WCP lookup ---------------------
+(defun (check-c1-membership)
+  ;; u = 0 for the first point of C1, and u = 1 for the second point (ecAdd only)
+  (begin
+    ;; --------------------- WCP lookup ---------------------
 
-     ;; Comparison of x and y with p
-     (for v [1] ;; v = 0 for x, v = 1 for y
-          (wcp-lookup
-           v ;; shift
-           (shift LIMB (* 2 v)) ;; arg 1 high
-           (shift LIMB (+ (* 2 v) 1)) ;; arg 1 low
-           P_HI ;; arg 2 high
-           P_LO ;; arg 2 low
-           OPCODE_LT ;; instruction
-           (shift COMPARISONS (* 2 v)))) ;; result
+    ;; Comparison of x and y with p
+    (for v [1] ;; v = 0 for x, v = 1 for y
+      (wcp-lookup
+        v ;; shift
+        (shift LIMB (* 2 v)) ;; arg 1 high
+        (shift LIMB (+ (* 2 v) 1)) ;; arg 1 low
+        P_HI ;; arg 2 high
+        P_LO ;; arg 2 low
+        OPCODE_LT ;; instruction
+        (shift COMPARISONS (* 2 v)))) ;; result
 
-     ;; Comparison of y^2 with x^3 + 3
-     (wcp-lookup
+    ;; Comparison of y^2 with x^3 + 3 
+    (wcp-lookup
       2 ;; shift
       (shift SQUARE 2) ;; arg 1 high
       (shift SQUARE 3) ;; arg 1 low
@@ -376,65 +376,69 @@
       OPCODE_EQ ;; instruction
       (shift EQUALITIES 1))
 
-     ;; --------------------- EXT lookup ---------------------
+      ;; --------------------- EXT lookup ---------------------
 
-     ;; x^2, y^2 mod p
-     (for v [1] ;; v = 0 for x, v = 1 for y
-          (ext-lookup
-           v ;; shift
-           (shift LIMB (* 2 v)) ;; arg1 high
-           (shift LIMB (+ (* 2 v) 1)) ;; arg1 low
-           (shift LIMB (* 2 v)) ;; arg2 hi
-           (shift LIMB (+ (* 2 v) 1)) ;; arg2 low
-           P_HI ;; arg3 high
-           P_LO ;; arg3 low
-           OPCODE_MULMOD ;; instruction
-           (shift SQUARE (* 2 v)) ;; res high
-           (shift SQUARE (+ 1 (* 2 v))))) ;; res low
+      ;; x^2, y^2 mod p
+      (for v [1] ;; v = 0 for x, v = 1 for y
+        (ext-lookup
+          v ;; shift
+          (shift LIMB (* 2 v)) ;; arg1 high
+          (shift LIMB (+ (* 2 v) 1)) ;; arg1 low
+          (shift LIMB (* 2 v)) ;; arg2 hi
+          (shift LIMB (+ (* 2 v) 1)) ;; arg2 low
+          P_HI ;; arg3 high
+          P_LO ;; arg3 low
+          OPCODE_MULMOD ;; instruction
+          (shift SQUARE (* 2 v)) ;; res high
+          (shift SQUARE (+ 1 (* 2 v))))) ;; res low
 
-     ;; x^3 mod p
-     (ext-lookup
-      2 ;; shift
-      (shift SQUARE 0) ;; arg1 high
-      (shift SQUARE 1) ;; arg1 low
-      (shift LIMB 0) ;; arg2 high
-      (shift LIMB 1) ;; arg2 low
-      P_HI ;; arg3 high
-      P_LO ;; arg3 low
-      OPCODE_MULMOD ;; instruction
-      (shift CUBE 0) ;; res high
-      (shift CUBE 1)) ;; res low
+      ;; x^3 mod p
+      (ext-lookup
+        2 ;; shift
+        (shift SQUARE 0) ;; arg1 high
+        (shift SQUARE 1) ;; arg1 low
+        (shift LIMB 0) ;; arg2 high
+        (shift LIMB 1) ;; arg2 low
+        P_HI ;; arg3 high
+        P_LO ;; arg3 low
+        OPCODE_MULMOD ;; instruction
+        (shift CUBE 0) ;; res high
+        (shift CUBE 1)) ;; res low
 
-     ;; x^3 + 3 mod p
-     (ext-lookup
-      3 ;; shift
-      (shift CUBE 0) ;; arg1 high
-      (shift CUBE 1) ;; arg1 low
-      0 ;; arg2 high
-      3 ;; arg2 low
-      P_HI ;; arg3 high
-      P_LO ;; arg3 low
-      OPCODE_ADDMOD ;; instruction
-      (shift CUBE 2) ;; res high
-      (shift CUBE 3)))) ;; res low
-
-;; TODO factorize: only one (c1-ownership)
+      ;; x^3 + 3 mod p
+      (ext-lookup
+        3 ;; shift
+        (shift CUBE 0) ;; arg1 high
+        (shift CUBE 1) ;; arg1 low
+        0 ;; arg2 high
+        3 ;; arg2 low
+        P_HI ;; arg3 high
+        P_LO ;; arg3 low
+        OPCODE_ADDMOD ;; instruction
+        (shift CUBE 2) ;; res high
+        (shift CUBE 3)))) ;; res low
 
 ;; 4.2.1
-(defconstraint c1-ownership-first-point-pairing-and-mul ()
-  (if-zero INDEX ;; TODO use STAMP instead
-           (if-eq (+ EC_MUL EC_PAIRING) 1
-                  (c1-ownership))))
+(defconstraint c1-membership ()
+  (if-not-zero
+      (+
+        ;; 1 if STAMP[i-1] != STAMP[i] and [EC_MUL = 1 or EC_PAIRING = 1], else 0
+        (*
+          (is-not-zero (- (prev STAMP) STAMP))
+          (+ EC_MUL EC_PAIRING))
+        ;; 1 if we are seeing a new pairing at row i in a call to ecPairing (not including the first one,
+        ;; which is captured by the condition above)
+        (*
+          EC_PAIRING
+          (- (prev ACC_PAIRINGS)) ACC_PAIRINGS)
+        ;; 1 if CT_MIN[i] = 0 and EC_ADD[i] = 1, else 0
+        (*
+          (is-zero CT_MIN)
+          EC_ADD))
+      
+      ;; if any of the 3 boolean condition above is true, we need to justify (or refute) the membership of a point to C1
+      (check-c1-membership)))
 
-(defconstraint c1-ownership-ec-add ()
-  (if-zero CT_MIN
-           (if-eq EC_ADD 1
-                  (c1-ownership))))
-
-(defconstraint c1-ownership-other-pairings ()
-  (if-eq EC_PAIRING 1
-         (if-eq (+ 1 (prev ACC_PAIRINGS)) ACC_PAIRINGS
-                (c1-ownership))))
 
 ;; 4.2.2
 (defconstraint lookup-ecpairing-wcp ()
