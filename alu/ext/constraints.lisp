@@ -16,23 +16,23 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-(defconstraint first-row (:domain {0}) (vanishes STAMP))
+(defconstraint first-row (:domain {0}) (vanishes! STAMP))
 
 (defconstraint heartbeat ()
-  (begin (* (remains-constant STAMP) (will-inc STAMP 1))
+  (begin (* (will-remain-constant! STAMP) (will-inc! STAMP 1))
          (if-zero STAMP
-                  (begin (vanishes CT)
-                         (vanishes OLI)
-                         (vanishes INST)))
-         (if-not-zero (remains-constant STAMP) (vanishes (next CT)))
+                  (begin (vanishes! CT)
+                         (vanishes! OLI)
+                         (vanishes! INST)))
+         (if-not-zero (will-remain-constant! STAMP) (vanishes! (next CT)))
          (if-not-zero STAMP
                       (begin (if-not-zero OLI
-                                          (will-inc STAMP 1)
+                                          (will-inc! STAMP 1)
                                           (if-eq-else CT MMEDIUMMO
-                                                      (will-inc STAMP 1)
-                                                      (begin (will-inc CT 1)
-                                                             (vanishes (next OLI)))))
-                             (vanishes (* (- INST MULMOD)
+                                                      (will-inc! STAMP 1)
+                                                      (begin (will-inc! CT 1)
+                                                             (vanishes! (next OLI)))))
+                             (vanishes! (* (- INST MULMOD)
                                           (- INST ADDMOD)))))))
 
 (defconstraint last-row (:domain {-1} :guard STAMP)
@@ -159,23 +159,23 @@
 
 (defconstraint bit-1-constraints ()
   (if-not-zero STAMP
-               (begin (if-not-zero (- INST MULMOD) (vanishes BIT_1))
-                      (if-not-zero ARG_1_HI (vanishes BIT_1))
+               (begin (if-not-zero (- INST MULMOD) (vanishes! BIT_1))
+                      (if-not-zero ARG_1_HI (vanishes! BIT_1))
                       (if-zero ARG_1_HI
                                (if-not-zero (- INST ADDMOD)
                                             (if-zero ARG_1_LO
                                                      (= BIT_1 1)
-                                                     (vanishes BIT_1)))))))
+                                                     (vanishes! BIT_1)))))))
 
 (defconstraint bit-2-constraints ()
   (if-not-zero STAMP
-               (begin (if-not-zero (- INST MULMOD) (vanishes BIT_2))
-                      (if-not-zero ARG_2_HI (vanishes BIT_2))
+               (begin (if-not-zero (- INST MULMOD) (vanishes! BIT_2))
+                      (if-not-zero ARG_2_HI (vanishes! BIT_2))
                       (if-zero ARG_2_HI
                                (if-eq INST MULMOD
                                       (if-zero ARG_2_LO
                                                (= BIT_2 1)
-                                               (vanishes BIT_2)))))))
+                                               (vanishes! BIT_2)))))))
 
 (defconstraint oli-constraints ()
   (if-not-zero STAMP (= OLI
@@ -193,8 +193,8 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defconstraint oli-implies-vanishing ()
   (if-not-zero OLI
-               (begin (vanishes RES_HI)
-                      (vanishes RES_LO))))
+               (begin (vanishes! RES_HI)
+                      (vanishes! RES_LO))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;
@@ -351,16 +351,16 @@
                    (+ (Delta_0) (lt_0)))
                 (if-eq-else (C_3) (R_3)
                             (= (eq_3) 1)
-                            (vanishes (eq_3)))
+                            (vanishes! (eq_3)))
                 (if-eq-else (C_2) (R_2)
                             (= (eq_2) 1)
-                            (vanishes (eq_2)))
+                            (vanishes! (eq_2)))
                 (if-eq-else (C_1) (R_1)
                             (= (eq_1) 1)
-                            (vanishes (eq_1)))
+                            (vanishes! (eq_1)))
                 (if-eq-else (C_0) (R_0)
                             (= (eq_0) 1)
-                            (vanishes (eq_0))))))
+                            (vanishes! (eq_0))))))
 
 (defconstraint order ()
                 (if-eq CT MMEDIUMMO
@@ -429,7 +429,7 @@
 
 (defconstraint vanishing-of-very-high-parts ()
   (if-eq CT MMEDIUMMO
-         (vanishes (+  (*  (Q_7)   (C_1))
+         (vanishes! (+  (*  (Q_7)   (C_1))
                        (*  (Q_6)   (C_2))
                        (*  (Q_5)   (C_3))
                        (*  (Q_7)   (C_2))
@@ -503,7 +503,7 @@
                                      (*  THETA   (J_3))
                                      (J_2)))
                              (=  (mu)    (J_4))
-                             (vanishes   (+  (J_5)   (J_6)   (J_7)))))))
+                             (vanishes!   (+  (J_5)   (J_6)   (J_7)))))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

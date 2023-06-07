@@ -1,11 +1,11 @@
 (module hub)
 
 (defun (make-empty-stack-item i)
-    (begin (vanishes [ITEM_HEIGHT i])
-           (vanishes [POP i])
-           (vanishes [VAL_HI i])
-           (vanishes [VAL_LO i])
-           (vanishes [ITEM_STACK_STAMP i])))
+    (begin (vanishes! [ITEM_HEIGHT i])
+           (vanishes! [POP i])
+           (vanishes! [VAL_HI i])
+           (vanishes! [VAL_LO i])
+           (vanishes! [ITEM_STACK_STAMP i])))
 
 (defun (make-stack-item i height pop stamp)
     (begin (eq! [ITEM_HEIGHT i] height)
@@ -28,26 +28,32 @@
   (begin
    (for i [1:4] (make-empty-stack-item i))
    (eq! STACK_STAMP_NEW STACK_STAMP)
-   (vanishes HEIGHT_NEW)))
+   (vanishes! HEIGHT_NEW)))
 
 (defconstraint zero-rows-exp (:guard (is-zero INSTRUCTION_STAMP))
   (begin
-   STACK_STAMP
-   HEIGHT
-   HEIGHT_NEW
-   INSTRUCTION
-   INSTRUCTION_ARGUMENT_HI
-   INSTRUCTION_ARGUMENT_LO
-   STATIC_GAS
-   INST_PARAM
-   TWO_LINES_INSTRUCTION
-   STACK_PATTERN
-   FLAG_1 FLAG_2 FLAG_3
+   (vanishes! STACK_STAMP)
+   (vanishes! HEIGHT)
+   (vanishes! HEIGHT_NEW)
+   (vanishes! INSTRUCTION)
+   (vanishes! INSTRUCTION_ARGUMENT_HI)
+   (vanishes! INSTRUCTION_ARGUMENT_LO)
+   (vanishes! STATIC_GAS)
+   (vanishes! INST_PARAM)
+   (vanishes! TWO_LINES_INSTRUCTION)
+   (vanishes! STACK_PATTERN)
+   (vanishes! FLAG_1)
+   (vanishes! FLAG_2)
+   (vanishes! FLAG_3)
    (for i [1:4] (begin
-                 [ITEM_HEIGHT i]
-                 [VAL_HI i] [VAL_LO i]
-                 [POP i] [ITEM_STACK_STAMP i]))
-   STACK_EXCEPTION STACK_UNDERFLOW_EXCEPTION STACK_OVERFLOW_EXCEPTION))
+                 (vanishes! [ITEM_HEIGHT i])
+                 (vanishes! [VAL_HI i])
+                 (vanishes! [VAL_LO i])
+                 (vanishes! [POP i])
+                 (vanishes! [ITEM_STACK_STAMP i])))
+   (vanishes! STACK_EXCEPTION)
+   (vanishes! STACK_UNDERFLOW_EXCEPTION)
+   (vanishes! STACK_OVERFLOW_EXCEPTION)))
 
 (defconstraint stack-exception-constraints (:guard (* INSTRUCTION_STAMP (is-not-zero STACK_EXCEPTION)))
   (begin
@@ -57,7 +63,7 @@
            STACK_UNDERFLOW_EXCEPTION))
 
    (if-zero (eq! STACK_UNDERFLOW_EXCEPTION 1)
-            (vanishes STACK_OVERFLOW_EXCEPTION))
+            (vanishes! STACK_OVERFLOW_EXCEPTION))
 
    (if-zero STACK_UNDERFLOW_EXCEPTION
             (eq! HEIGHT_OVER
@@ -67,34 +73,34 @@
 
    (eq! STACK_EXCEPTION (+ STACK_OVERFLOW_EXCEPTION STACK_UNDERFLOW_EXCEPTION))))
 
-(defconstraint heartbeat-init (:domain {0}) (vanishes INSTRUCTION_STAMP))
+(defconstraint heartbeat-init (:domain {0}) (vanishes! INSTRUCTION_STAMP))
 
 
 (defconstraint heartbeat ()
   (begin ;; INSTRUCTION_STAMP remains constant or increases by 1
-   (vanishes
-    (*     (remains-constant INSTRUCTION_STAMP)
-           (will-inc INSTRUCTION_STAMP 1)))
+   (vanishes!
+    (*     (will-remain-constant! INSTRUCTION_STAMP)
+           (will-inc! INSTRUCTION_STAMP 1)))
 
    (if-zero TWO_LINES_INSTRUCTION
             ;; TLI == 0
-            (begin (vanishes COUNTER)
-                   (vanishes (next COUNTER)))
+            (begin (vanishes! COUNTER)
+                   (vanishes! (next COUNTER)))
             ;; TLI == 1
             (if-zero COUNTER
-                     (begin (remains-constant INSTRUCTION_STAMP)
-                            (remains-constant INSTRUCTION)
-                            (will-inc COUNTER 1))
-                     (begin (vanishes (next COUNTER))
-                            (will-inc INSTRUCTION_STAMP 1))))))
+                     (begin (will-remain-constant! INSTRUCTION_STAMP)
+                            (will-remain-constant! INSTRUCTION)
+                            (will-inc! COUNTER 1))
+                     (begin (vanishes! (next COUNTER))
+                            (will-inc! INSTRUCTION_STAMP 1))))))
 
 (defconstraint counter-constancies (:guard (standard-regime))
   (if-zero (eq! COUNTER 1)
            (begin
-            (didnt-change HEIGHT)
-            (didnt-change HEIGHT_NEW)
-            (didnt-change HEIGHT_UNDER)
-            (didnt-change HEIGHT_OVER))))
+            (remained-constant! HEIGHT)
+            (remained-constant! HEIGHT_NEW)
+            (remained-constant! HEIGHT_UNDER)
+            (remained-constant! HEIGHT_OVER))))
 
 (defconstraint pattern-0 (:guard (standard-regime))
   (if-zero (eq! STACK_PATTERN PATTERN_ZERO_ITEMS)
@@ -279,18 +285,18 @@
                (if-not-zero (next SRT_HEIGHT_1234)
                             (begin
                              ;; context and height remain unchanged
-                             (if-zero (remains-constant SRT_CN_POW_4)
-                                      (if-zero (remains-constant SRT_HEIGHT_1234)
+                             (if-zero (will-remain-constant! SRT_CN_POW_4)
+                                      (if-zero (will-remain-constant! SRT_HEIGHT_1234)
                                                (begin (if-not-zero (next SRT_POP_1234)
                                                                    (begin
-                                                                    (remains-constant SRT_VAL_HI_1234)
-                                                                    (remains-constant SRT_VAL_LO_1234)))
+                                                                    (will-remain-constant! SRT_VAL_HI_1234)
+                                                                    (will-remain-constant! SRT_VAL_LO_1234)))
                                                       ;; context changes
-                                                      (if-not-zero (remains-constant SRT_CN_POW_4)
-                                                                   (vanishes (next SRT_POP_1234)))
+                                                      (if-not-zero (will-remain-constant! SRT_CN_POW_4)
+                                                                   (vanishes! (next SRT_POP_1234)))
                                                       ;; height changes
-                                                      (if-not-zero (remains-constant SRT_HEIGHT_1234)
-                                                                   (vanishes (next SRT_POP_1234)))
+                                                      (if-not-zero (will-remain-constant! SRT_HEIGHT_1234)
+                                                                   (vanishes! (next SRT_POP_1234)))
                                                       (eq! (+ (next SRT_POP_1234) SRT_POP_1234) 1))))))))
 
 
@@ -321,5 +327,5 @@
 ;;
 ;; (defconstraint stamp-update ()
 ;;   (if-not-zero CONTEXT_NUMBER
-;;                (if-not-zero (remains-constant INSTRUCTION_STAMP)
+;;                (if-not-zero (will-remain-constant! INSTRUCTION_STAMP)
 ;;                             (ex STACK_STAMP_NEW (next STACK_STAMP)))))

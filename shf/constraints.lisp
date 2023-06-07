@@ -18,20 +18,20 @@
 
 
 ;; 2.1.1)
-(defconstraint firstRow (:domain {0}) (vanishes STAMP))
+(defconstraint firstRow (:domain {0}) (vanishes! STAMP))
 
 ;; 2.1.2)
 (defconstraint stampIncrements ()
-  (vanishes (* (will-inc STAMP 0)
-               (will-inc STAMP 1))))
+  (vanishes! (* (will-inc! STAMP 0)
+               (will-inc! STAMP 1))))
 ;; 2.1.3)
 (defconstraint zeroRow ()
-  (if-zero STAMP (vanishes CT))) ;; TODO: more zero columns required ?
+  (if-zero STAMP (vanishes! CT))) ;; TODO: more zero columns required ?
 
 ;; 2.1.4)
 (defconstraint counterReset ()
-  (if-not-zero (remains-constant STAMP)
-               (vanishes (shift CT 1))))
+  (if-not-zero (will-remain-constant! STAMP)
+               (vanishes! (shift CT 1))))
 ;; 2.1.5)
 (defconstraint heartbeat ()
   (if-not-zero STAMP
@@ -41,14 +41,14 @@
                         (if-eq-else CT LIMB_SIZE_MINUS_ONE
                                     ;; 2.1.5.b).(ii)
                                     ;; If CT == LIMB_SIZE_MINUS_ONE (15)
-                                    (will-inc STAMP 1)
+                                    (will-inc! STAMP 1)
                                     ;; 2.1.5.b).(i)
                                     ;; If CT != LIMB_SIZE_MINUS_ONE (15)
-                                    (begin (will-inc CT 1)
-                                           (remains-constant OLI)))
+                                    (begin (will-inc! CT 1)
+                                           (will-remain-constant! OLI)))
                         ;; 2.1.5.a)
                         ;; If OLI == 1
-                        (will-inc STAMP 1))))
+                        (will-inc! STAMP 1))))
 ;; 2.1.6)
 (defconstraint last-row (:domain {-1})
   (if-not-zero STAMP
@@ -57,7 +57,7 @@
 
 ;; counter-constancy constraints
 (defun (counter-constancy ct X)
-    (if-not-zero ct (didnt-change X)))
+    (if-not-zero ct (remained-constant! X)))
 
 ;; counter-constant columns
 (defconstraint counter-constancies ()
@@ -113,14 +113,14 @@
 (defconstraint shift_direction_constraint (:guard STAMP)
   (if-eq-else INST SHL
               ;; INST == SHL => SHD = 0
-              (vanishes SHD)
+              (vanishes! SHD)
               ;; INST != SHL => SHD = 1
               (eq! SHD 1)))
 
 ;; 2.2.3 OLI constraints
 (defconstraint oli_constraints (:guard STAMP)
   (if-zero (* (- INST SAR) ARG_1_HI)
-           (vanishes OLI)
+           (vanishes! OLI)
            (eq! OLI 1)))
 
 ;; 2.2.4 BITS constraints
@@ -169,11 +169,11 @@
          (if-eq-else INST SAR
                      (if-zero ARG_1_HI
                               (if-eq-else ARG_1_LO BYTE_1
-                                          (vanishes KNOWN)
+                                          (vanishes! KNOWN)
                                           (= KNOWN 1))
                               (= KNOWN 1))
                      (if-eq-else ARG_1_LO BYTE_1
-                                 (vanishes KNOWN)
+                                 (vanishes! KNOWN)
                                  (= KNOWN 1)))))
 
 
@@ -242,7 +242,7 @@
                             (= B2_shft (shift B2_init k)))
                         (begin
                             (= B1_shft (shift B2_init (- k LIMB_SIZE)))
-                            (vanishes B2_shft))))))
+                            (vanishes! B2_shft))))))
 
 (defun (right-shift-by
             k ct
@@ -263,7 +263,7 @@
                                 ;; INST == SAR
                                 (= B1_shft (* 255 neg))
                                 ;; INST != SAR
-                                (vanishes B1_shft))
+                                (vanishes! B1_shft))
                             (= B2_shft (shift B1_init (- LIMB_SIZE k))))
                         ;; bit_n == 1
                         (begin
@@ -370,7 +370,7 @@
                             (= BYTE_5 SHB_7_LO))
                         (begin
                             (= BYTE_4 SHB_7_LO)
-                            (vanishes BYTE_5)))
+                            (vanishes! BYTE_5)))
                     ;; SHD == 1
                     (if-zero BIT_B_7
                         (begin
@@ -378,7 +378,7 @@
                             (= BYTE_5 SHB_7_LO))
                         (begin
                             (if-eq-else INST SHR
-                                (vanishes BYTE_4)
+                                (vanishes! BYTE_4)
                                 (= BYTE_4 (* 255 NEG)))
                             (= BYTE_5 SHB_7_HI))))
                 ;; KNOWN == 1
@@ -389,8 +389,8 @@
                         (eq! BYTE_5 (* 255 NEG)))
                     ;; INST != SAR
                     (begin
-                        (vanishes BYTE_4)
-                        (vanishes BYTE_5))
+                        (vanishes! BYTE_4)
+                        (vanishes! BYTE_5))
                     )))
 
 ;; all shift constraints
@@ -409,5 +409,5 @@
 ;; IS_DATA
 (defconstraint is_data ()
             (if-zero STAMP
-                (vanishes IS_DATA)
+                (vanishes! IS_DATA)
                 (eq! IS_DATA 1)))

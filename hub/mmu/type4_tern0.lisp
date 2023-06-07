@@ -19,7 +19,7 @@
 
 
 
-(defun (euclidean-divisions-tern0) 
+(defun (euclidean-divisions-tern0)
                 (begin
                     (=  (+ (* 16 ACC_3) NIB_3)  (+ REFO OFF_2_LO))
                     (=  (+ (* 16 ACC_4) NIB_4)  (+ REFO OFF_2_LO (- SIZE_IMPORTED 1)))
@@ -41,7 +41,7 @@
                         (= BIT_3 1)
                         (= BIT_3 0))
                     (if-zero BIT_3
-                        (vanishes BIT_4)
+                        (vanishes! BIT_4)
                         (=  (+ NIB_5 SIZE_IMPORTED)  (+ (* LLARGE BIT_4) NIB_7 1)))))
 
 (defun (initial-slo-sbo-tlo-tbo-tern0)
@@ -112,7 +112,7 @@
                 (begin
                     (= SLO (prev (+ SLO IS_MICRO)))
                     (if-zero (prev IS_MICRO)
-                        (will-eq TLO (+ TLO ALIGNED BIT_1))
+                        (will-eq! TLO (+ TLO ALIGNED BIT_1))
                         (if-not-zero TOT (inc TLO 1)))
                     (if-zero (prev IS_MICRO)
                         (begin
@@ -121,7 +121,7 @@
                                 (modify-one-limb)
                                 (modify-two-limbs)))
                         (begin
-                            (vanishes SBO)
+                            (vanishes! SBO)
                             (=
                                 (+ TBO NIB_3 (* LLARGE (+ ALIGNED BIT_1)))
                                 (+ NIB_5 LLARGE))

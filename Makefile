@@ -1,3 +1,4 @@
+CORSET=corset
 ROM := rom/columns.lisp \
 	rom/constraints.lisp
 
@@ -61,7 +62,7 @@ PHONEY_RLP := phoney_rlp/column.lisp
 ZKEVM_FILES := ${ROM} ${STACK} ${ALU} ${BIN} ${SHIFT} ${WCP} ${TABLES} ${PUB_DATA} ${MXP} ${EC_DATA} ${RLP} ${PHONEY_RLP} # ${MEMORY}
 
 zkevm.go: ${ZKEVM_FILES}
-	corset wizard-iop -vv -P define -o $@ ${ZKEVM_FILES}
+	${CORSET} wizard-iop -vv -P define -o $@ ${ZKEVM_FILES}
 
 zkevm.bin: ${ZKEVM_FILES}
-	corset compile -vv -o $@ ${ZKEVM_FILES}
+	${CORSET} compile -vv -o $@ ${ZKEVM_FILES}

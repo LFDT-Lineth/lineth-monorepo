@@ -95,7 +95,7 @@
     (if-not-zero yLo
                  (begin (= zHi (- THETA2 yHi 1))
                         (= zLo (- THETA2 yLo)))
-                 (begin (vanishes zLo)
+                 (begin (vanishes! zLo)
                         (if-zero (* yHi (- THETA_SQUARED_OVER_TWO yHi))
                                  (= zHi yHi)
                                  (= zHi (- THETA2 yHi))))))
@@ -107,23 +107,23 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-(defconstraint first-row (:domain {0}) (vanishes STAMP))
+(defconstraint first-row (:domain {0}) (vanishes! STAMP))
 
 (defconstraint heartbeat ()
-  (begin (* (remains-constant STAMP) (will-inc STAMP 1))
+  (begin (* (will-remain-constant! STAMP) (will-inc! STAMP 1))
          (if-zero STAMP
                   (begin
-                   (vanishes CT)
-                   (vanishes OLI)))
-         (if-not-zero (remains-constant STAMP) (vanishes (next CT)))
+                   (vanishes! CT)
+                   (vanishes! OLI)))
+         (if-not-zero (will-remain-constant! STAMP) (vanishes! (next CT)))
          (if-not-zero STAMP
                       (if-not-zero OLI
-                                   (will-inc STAMP 1)
+                                   (will-inc! STAMP 1)
                                    (if-eq-else CT MMEDIUMMO
-                                               (will-inc STAMP 1)
+                                               (will-inc! STAMP 1)
                                                (begin
-                                                (will-inc CT 1)
-                                                (vanishes (next OLI))))))))
+                                                (will-inc! CT 1)
+                                                (vanishes! (next OLI))))))))
 
 (defconstraint last-row (:domain {-1})
   (if-not-zero STAMP
@@ -195,10 +195,10 @@
            (if-zero ARG_2_LO
                     (begin
                      (= OLI 1)
-                     (vanishes RES_HI)
-                     (vanishes RES_LO))
-                    (vanishes OLI))
-           (vanishes OLI)))
+                     (vanishes! RES_HI)
+                     (vanishes! RES_LO))
+                    (vanishes! OLI))
+           (vanishes! OLI)))
 
 
 
@@ -231,7 +231,7 @@
                                     (+ (* THETA2 (alpha)) (* THETA (H_1)) (H_0)))
                                 (=  (+ (* (B_0) (Q_3)) (* (B_1) (Q_2)) (* (B_2) (Q_1)) (* (B_3) (Q_0)))
                                     (H_2))
-                                (vanishes   (+  (* (B_1) (Q_3))
+                                (vanishes!   (+  (* (B_1) (Q_3))
                                                 (* (B_2) (Q_2))
                                                 (* (B_3) (Q_1))
                                                 (* (B_2) (Q_3))
@@ -242,7 +242,7 @@
                                                 (= (A_LO) ARG_1_LO))
                                          (if-zero ARG_1_LO
                                                   (begin (= (A_HI) (- THETA2 ARG_1_HI))
-                                                         (vanishes (A_LO)))
+                                                         (vanishes! (A_LO)))
                                                   (begin (= (A_HI) (- THETA2 ARG_1_HI 1))
                                                          (= (A_LO) (- THETA2 ARG_1_LO)))))
                                 ;; 5.9.5-1 compressed in a single expression
@@ -251,21 +251,21 @@
                                                 (= (B_LO) ARG_2_LO))
                                          (if-zero ARG_2_LO
                                                   (begin (= (B_HI) (- THETA2 ARG_2_HI))
-                                                         (vanishes (B_LO)))
+                                                         (vanishes! (B_LO)))
                                                   (begin (= (B_HI) (- THETA2 ARG_2_HI 1))
                                                          (= (B_LO) (- THETA2 ARG_2_LO)))))
                                 (if-eq-else (B_3) (R_3)
                                             (= (eq_3) 1)
-                                            (vanishes (eq_3)))
+                                            (vanishes! (eq_3)))
                                 (if-eq-else (B_2) (R_2)
                                             (= (eq_2) 1)
-                                            (vanishes (eq_2)))
+                                            (vanishes! (eq_2)))
                                 (if-eq-else (B_1) (R_1)
                                             (= (eq_1) 1)
-                                            (vanishes (eq_1)))
+                                            (vanishes! (eq_1)))
                                 (if-eq-else (B_0) (R_0)
                                             (= (eq_0) 1)
-                                            (vanishes (eq_0)))
+                                            (vanishes! (eq_0)))
                                 (=  1
                                     (+  (lt_3)
                                         (* (eq_3) (lt_2))
@@ -296,7 +296,7 @@
                                                   ;;     (if-zero (R_0)
                                                   ;;         (begin
                                                   ;;             (= RES_HI (- THETA2 (R_HI)))
-                                                  ;;             (vanishes RES_LO))
+                                                  ;;             (vanishes! RES_LO))
                                                   ;;         (begin
                                                   ;;             (= RES_HI (- THETA2 (R_HI) 1))
                                                   ;;             (= RES_LO (- THETA2 (R_LO)))))

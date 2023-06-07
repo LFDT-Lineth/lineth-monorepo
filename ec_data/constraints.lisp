@@ -28,7 +28,7 @@
 
 
 (defun (stamp-consitency X)
-    (if-eq (next STAMP) STAMP (remains-constant X)))
+    (if-eq (next STAMP) STAMP (will-remain-constant! X)))
 
 ;; 3.2.1
 (defconstraint stamp-constancies ()
@@ -89,7 +89,7 @@
 
 ;; 3.4.4
 (defconstraint notOnG2-restarts-zero ()
-  (if-zero INDEX (vanishes THIS_IS_NOT_ON_G2)))
+  (if-zero INDEX (vanishes! THIS_IS_NOT_ON_G2)))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;
@@ -100,41 +100,41 @@
 
 
 ;; 3.5.1)
-(defconstraint first-row (:domain {0}) (vanishes STAMP))
+(defconstraint first-row (:domain {0}) (vanishes! STAMP))
 
 ;; 3.5.2)
 (defconstraint everything-vanish-initially ()
   (if-zero STAMP (begin
-                  (vanishes INDEX)
-                  (vanishes TYPE)
-                  (vanishes (+ EC_RECOVER EC_ADD EC_MUL EC_PAIRING PCP PRELIMINARY_CHECKS_PASSED SOMETHING_WASNT_ON_G2)))))
+                  (vanishes! INDEX)
+                  (vanishes! TYPE)
+                  (vanishes! (+ EC_RECOVER EC_ADD EC_MUL EC_PAIRING PCP PRELIMINARY_CHECKS_PASSED SOMETHING_WASNT_ON_G2)))))
 
 ;; 3.5.3)
-(defconstraint first-index-vanishes ()
-  (if-zero STAMP (vanishes (next INDEX))))
+(defconstraint first-index-vanishes! ()
+  (if-zero STAMP (vanishes! (next INDEX))))
 
 ;; 3.5.4)
 (defconstraint ct-min-heartbeat (:guard STAMP)
   (if-eq-else (next STAMP) STAMP
               (if-eq-else CT_MIN 3
-                          (vanishes (next CT_MIN))
+                          (vanishes! (next CT_MIN))
                           (= (next CT_MIN) (+ CT_MIN 1)))
-              (vanishes (next CT_MIN))))
+              (vanishes! (next CT_MIN))))
 
 ;; 3.5.5)
 (defconstraint index-heartbeat ()
   (begin
    (if-eq EC_PAIRING 1
           (if-eq-else INDEX 11
-                      (vanishes (next INDEX))
+                      (vanishes! (next INDEX))
                       (= (next INDEX) (+ INDEX 1))))
    (if-eq (+ EC_ADD EC_RECOVER) 1
           (if-eq-else INDEX 7
-                      (vanishes (next INDEX))
+                      (vanishes! (next INDEX))
                       (= (next INDEX) (+ INDEX 1))))
    (if-eq EC_MUL 1
           (if-eq-else INDEX 5
-                      (vanishes (next INDEX))
+                      (vanishes! (next INDEX))
                       (= (next INDEX) (+ INDEX 1))))))
 
 ;; 3.5.6)
@@ -143,10 +143,10 @@
                (if-zero-else (next INDEX)
                              (if-eq-else EC_PAIRING 1
                                          (if-eq-else TOTAL_PAIRINGS (+ ACC_PAIRINGS 1)
-                                                     (differ (next STAMP) STAMP)
-                                                     (= (next STAMP) STAMP))
-                                         (differ (next STAMP) STAMP))
-                             (= (next STAMP) STAMP))))
+                                                     (will-change! STAMP)
+                                                     (will-remain-constant! STAMP))
+                                         (will-change! STAMP))
+                             (will-remain-constant! STAMP))))
 
 ;; 3.5.7)
 (defconstraint acc-pairings-behaviour ()
@@ -154,7 +154,7 @@
               (if-eq-else INDEX 11
                           (= (next ACC_PAIRINGS) (+ ACC_PAIRINGS 1))
                           (= (next ACC_PAIRINGS) ACC_PAIRINGS))
-              (vanishes (next ACC_PAIRINGS))))
+              (vanishes! (next ACC_PAIRINGS))))
 
 ;; 3.5.8)
 (defconstraint finalization-constraints (:domain {-1})
@@ -269,7 +269,7 @@
          (if-zero INDEX
                   (if-zero-else (+ LIMB (next LIMB) (shift LIMB 2) (shift LIMB 3))
                                 (= (shift EQUALITIES 2) 1)
-                                (vanishes (shift EQUALITIES 2))))))
+                                (vanishes! (shift EQUALITIES 2))))))
 
 ;; 3.10.4.b
 (defconstraint point-infinity-b ()
@@ -277,7 +277,7 @@
          (if-zero CT_MIN
                   (if-zero-else (+ LIMB (next LIMB) (shift LIMB 2) (shift LIMB 3))
                                 (= (shift EQUALITIES 2) 1)
-                                (vanishes (shift EQUALITIES 2))))))
+                                (vanishes! (shift EQUALITIES 2))))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;
@@ -290,7 +290,7 @@
 ;; 3.11.1
 (defconstraint initial-not-on-g2-acc ()
   (if-not-eq (next STAMP) STAMP
-             (vanishes (next THIS_IS_NOT_ON_G2_ACC))))
+             (vanishes! (next THIS_IS_NOT_ON_G2_ACC))))
 
 ;; 3.11.2
 (defconstraint not-on-g2-acc-activation-condition ()
@@ -439,18 +439,18 @@
 ;; 4.1
 (defconstraint c1-membership ()
   (if-not-zero
-      (+
+      (either
         ;; 1 if STAMP[i-1] != STAMP[i] and [EC_MUL = 1 or EC_PAIRING = 1], else 0
-        (*
+        (and
           (is-not-zero (- (prev STAMP) STAMP))
           (+ EC_MUL EC_PAIRING))
         ;; 1 if we are seeing a new pairing at row i in a call to ecPairing (potentially not including the first one,
         ;; which is captured by the condition above)
-        (*
+        (and
           EC_PAIRING
           (- (prev ACC_PAIRINGS) ACC_PAIRINGS))
         ;; 1 if CT_MIN[i] = 0 and EC_ADD[i] = 1, else 0
-        (*
+        (and
           (is-zero CT_MIN)
           EC_ADD))
 

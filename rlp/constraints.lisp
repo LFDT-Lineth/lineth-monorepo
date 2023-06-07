@@ -26,9 +26,9 @@
 
 ;; returns 0 if we are within the same RLP computation
 (defun (same-instance)
-    (all! (didnt-change ADDR_HI)
-          (didnt-change ADDR_LO)
-          (didnt-change NONCE)))
+    (all! (remained-constant! ADDR_HI)
+          (remained-constant! ADDR_LO)
+          (remained-constant! NONCE)))
 
 ;;
 ;; ADDR_LO accumulation
@@ -56,39 +56,39 @@
    (counter-constancy ct N_BYTES)))
 
 (defconstraint initial-stamp (:domain {0})
-  (vanishes STAMP))
+  (vanishes! STAMP))
 
 (defconstraint stamp-update ()
-  (either! (remains-constant STAMP)
-           (will-inc STAMP 1)))
+  (either! (will-remain-constant! STAMP)
+           (will-inc! STAMP 1)))
 
 (defconstraint zero-counter ()
-  (if-zero STAMP (vanishes ct)))
+  (if-zero STAMP (vanishes! ct)))
 
 (defconstraint counter-reset ()
-  (if-not-zero (remains-constant STAMP)
-               (vanishes (next ct))))
+  (if-not-zero (will-remain-constant! STAMP)
+               (vanishes! (next ct))))
 
 (defconstraint counter-cycle (:guard STAMP)
   (if-eq-else ct 15
-              (will-inc STAMP 1)
-              (will-inc ct 1)))
+              (will-inc! STAMP 1)
+              (will-inc! ct 1)))
 
 ;;
 ;; Needle cycle
 ;;
 (defconstraint needle-start ()
   (if-zero ct
-           (vanishes addr_lo_ndl)))
+           (vanishes! addr_lo_ndl)))
 
 (defconstraint needle-stable-regime ()
   (if-zero (same-instance)
-           (either! (didnt-change addr_lo_ndl)
-                    (did-inc addr_lo_ndl 1))))
+           (either! (remained-constant! addr_lo_ndl)
+                    (did-inc! addr_lo_ndl 1))))
 
 (defconstraint needle-switch-regime (:guard ct)
   (if-eq ct 10
-         (did-inc addr_lo_ndl 1)))
+         (did-inc! addr_lo_ndl 1)))
 
 ;;
 ;; Nonce byte-counting
@@ -104,26 +104,26 @@
 ;;
 (defconstraint out2-shift-start (:guard STAMP)
   (if-zero ct
-           (- out2_shift initial-out2-shift)))
+           (eq! out2_shift initial-out2-shift)))
 
 (defconstraint out2-shift-decrease (:guard STAMP)
   (if-zero (next NONCE_bytes)
            (eq! (next out2_shift) initial-out2-shift)
-           (- (* 256 (next out2_shift))
-              out2_shift)))
+           (eq! (byte-shift (next out2_shift) 1)
+                out2_shift)))
 
 ;; when ct = 1, then in-nonce is zero, because the
 ;; largest possible byte count in the nonce is 8
 ;; (nonce are 64 bits integers)
 (defconstraint in-nonce-start ()
-  (if-zero ct (vanishes in-nonce)))
+  (if-zero ct (vanishes! in-nonce)))
 
 ;; in-nonce can't go back within a cycle
 (defconstraint in-nonce-monotonous ()
-  (if-zero (didnt-change STAMP)
-           (either! (didnt-change in-nonce)
-                    (did-inc in-nonce 1))
-           (vanishes in-nonce)))
+  (if-zero (remained-constant! STAMP)
+           (either! (remained-constant! in-nonce)
+                    (did-inc! in-nonce 1))
+           (vanishes! in-nonce)))
 
 ;; in-nonce must light up at the first non-null byte
 (defconstraint in-nonce ()
@@ -134,13 +134,13 @@
 ;; at the first non-0 NONCE_ax
 (defconstraint nonce-bytes-start-counting ()
   (if-not-zero NONCE_ax
-               (did-inc NONCE_n 1)))
+               (did-inc! NONCE_n 1)))
 
 ;; until the last iteration, the nonce byte counter
 ;; must increase once triggered
 (defconstraint nonce-bytes-monotonous ()
   (if-zero ct
-           (vanishes in-nonce)
+           (vanishes! in-nonce)
            (eq! NONCE_n
                 (+ (prev NONCE_n) in-nonce))))
 

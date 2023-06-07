@@ -29,9 +29,9 @@
                     (begin
                         (running-total x sumx ct)
                         (running-total y sumy ct)
-                        (if-not-zero x (vanishes bytes))    ; (see REMARK)
-                        (if-not-zero y (vanishes bits))     ; (see REMARK)
-                        (if-not-zero (- ct MMEDIUMMO) (remains-constant cst))
+                        (if-not-zero x (vanishes! bytes))    ; (see REMARK)
+                        (if-not-zero y (vanishes! bits))     ; (see REMARK)
+                        (if-not-zero (- ct MMEDIUMMO) (will-remain-constant! cst))
                         (if-not-zero (- ct MMEDIUMMO)
                             (if-not-zero (- 1 x)            ; (see REMARK)
                                 (if-not-zero (next x)       ; (see REMARK)
@@ -63,10 +63,10 @@
                         (is-binary x)
                         (if-zero ct
                             (begin
-                                (vanishes x)
-                                (vanishes sumx)))
+                                (vanishes! x)
+                                (vanishes! sumx)))
                         (if-not-zero (- ct MMEDIUMMO)
                             (begin
-                             (vanishes (* (remains-constant x)
-                                          (will-inc x 1)))
-                             (will-eq sumx (+ sumx (next x)))))))
+                             (vanishes! (* (will-remain-constant! x)
+                                          (will-inc! x 1)))
+                             (will-eq! sumx (+ sumx (next x)))))))
