@@ -22,8 +22,8 @@
 
 ;; 2.1.2)
 (defconstraint stampIncrements ()
-  (vanishes (* (inc STAMP 0)
-               (inc STAMP 1))))
+  (vanishes (* (will-inc STAMP 0)
+               (will-inc STAMP 1))))
 ;; 2.1.3)
 (defconstraint zeroRow ()
   (if-zero STAMP (vanishes CT))) ;; TODO: more zero columns required ?
@@ -41,14 +41,14 @@
                         (if-eq-else CT LIMB_SIZE_MINUS_ONE
                                     ;; 2.1.5.b).(ii)
                                     ;; If CT == LIMB_SIZE_MINUS_ONE (15)
-                                    (inc STAMP 1)
+                                    (will-inc STAMP 1)
                                     ;; 2.1.5.b).(i)
                                     ;; If CT != LIMB_SIZE_MINUS_ONE (15)
-                                    (begin (inc CT 1)
+                                    (begin (will-inc CT 1)
                                            (remains-constant OLI)))
                         ;; 2.1.5.a)
                         ;; If OLI == 1
-                        (inc STAMP 1))))
+                        (will-inc STAMP 1))))
 ;; 2.1.6)
 (defconstraint last-row (:domain {-1})
   (if-not-zero STAMP
@@ -115,13 +115,13 @@
               ;; INST == SHL => SHD = 0
               (vanishes SHD)
               ;; INST != SHL => SHD = 1
-              (eq SHD 1)))
+              (eq! SHD 1)))
 
 ;; 2.2.3 OLI constraints
 (defconstraint oli_constraints (:guard STAMP)
   (if-zero (* (- INST SAR) ARG_1_HI)
            (vanishes OLI)
-           (eq OLI 1)))
+           (eq! OLI 1)))
 
 ;; 2.2.4 BITS constraints
 (defconstraint bits_constraints (:guard STAMP)
@@ -186,8 +186,8 @@
 
 (defun (byte-decomposition ct acc bytes)
             (if-zero ct
-                (eq acc bytes)
-                (eq acc (+ (* 256 (shift acc -1)) bytes))))
+                (eq! acc bytes)
+                (eq! acc (+ (* 256 (shift acc -1)) bytes))))
 
 ;; byte decompositions
 (defconstraint byte_decompositions ()
@@ -385,8 +385,8 @@
                 (if-eq-else INST SAR
                     ;; INST == SAR
                     (begin
-                        (eq BYTE_4 (* 255 NEG))
-                        (eq BYTE_5 (* 255 NEG)))
+                        (eq! BYTE_4 (* 255 NEG))
+                        (eq! BYTE_5 (* 255 NEG)))
                     ;; INST != SAR
                     (begin
                         (vanishes BYTE_4)
@@ -410,4 +410,4 @@
 (defconstraint is_data ()
             (if-zero STAMP
                 (vanishes IS_DATA)
-                (eq IS_DATA 1)))
+                (eq! IS_DATA 1)))

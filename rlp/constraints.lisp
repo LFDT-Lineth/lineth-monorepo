@@ -26,9 +26,9 @@
 
 ;; returns 0 if we are within the same RLP computation
 (defun (same-instance)
-    (all (didnt-change ADDR_HI)
-         (didnt-change ADDR_LO)
-         (didnt-change NONCE)))
+    (all! (didnt-change ADDR_HI)
+          (didnt-change ADDR_LO)
+          (didnt-change NONCE)))
 
 ;;
 ;; ADDR_LO accumulation
@@ -37,12 +37,12 @@
   (if-zero addr_lo_ndl
            ;; ax builds addr_lo_1
            (if-zero ct
-                    (eq addr_lo_1 addr_lo_ax)
-                    (eq addr_lo_1 (+ (* 256 (prev addr_lo_1)) addr_lo_ax)))
+                    (eq! addr_lo_1 addr_lo_ax)
+                    (eq! addr_lo_1 (+ (* 256 (prev addr_lo_1)) addr_lo_ax)))
            ;; ax builds addr_lo_2
            (if-zero (- ct 10)
-                    (eq addr_lo_2 addr_lo_ax)
-                    (eq addr_lo_2 (+ (* 256 (prev addr_lo_2)) addr_lo_ax)))))
+                    (eq! addr_lo_2 addr_lo_ax)
+                    (eq! addr_lo_2 (+ (* 256 (prev addr_lo_2)) addr_lo_ax)))))
 
 ;;
 ;; Counter cycle & stamp
@@ -59,9 +59,8 @@
   (vanishes STAMP))
 
 (defconstraint stamp-update ()
-  (either
-   (remains-constant STAMP)
-   (inc STAMP 1)))
+  (either! (remains-constant STAMP)
+           (will-inc STAMP 1)))
 
 (defconstraint zero-counter ()
   (if-zero STAMP (vanishes ct)))
@@ -72,8 +71,8 @@
 
 (defconstraint counter-cycle (:guard STAMP)
   (if-eq-else ct 15
-              (inc STAMP 1)
-              (inc ct 1)))
+              (will-inc STAMP 1)
+              (will-inc ct 1)))
 
 ;;
 ;; Needle cycle
@@ -84,8 +83,8 @@
 
 (defconstraint needle-stable-regime ()
   (if-zero (same-instance)
-           (either (didnt-change addr_lo_ndl)
-                   (did-inc addr_lo_ndl 1))))
+           (either! (didnt-change addr_lo_ndl)
+                    (did-inc addr_lo_ndl 1))))
 
 (defconstraint needle-switch-regime (:guard ct)
   (if-eq ct 10
@@ -96,9 +95,9 @@
 ;;
 (defconstraint nonce-recomposition ()
   (if-zero ct
-           (eq NONCE_bytes 0)
-           (eq NONCE_bytes (+ (byte-shift (prev NONCE_bytes) 1)
-                              NONCE_ax))))
+           (eq! NONCE_bytes 0)
+           (eq! NONCE_bytes (+ (byte-shift (prev NONCE_bytes) 1)
+                               NONCE_ax))))
 
 ;;
 ;; OUT/2 shift
@@ -109,7 +108,7 @@
 
 (defconstraint out2-shift-decrease (:guard STAMP)
   (if-zero (next NONCE_bytes)
-           (eq (next out2_shift) initial-out2-shift)
+           (eq! (next out2_shift) initial-out2-shift)
            (- (* 256 (next out2_shift))
               out2_shift)))
 
@@ -122,14 +121,14 @@
 ;; in-nonce can't go back within a cycle
 (defconstraint in-nonce-monotonous ()
   (if-zero (didnt-change STAMP)
-           (either (didnt-change in-nonce)
-                   (did-inc in-nonce 1))
+           (either! (didnt-change in-nonce)
+                    (did-inc in-nonce 1))
            (vanishes in-nonce)))
 
 ;; in-nonce must light up at the first non-null byte
 (defconstraint in-nonce ()
   (if-not-zero NONCE_ax
-               (eq in-nonce 1)))
+               (eq! in-nonce 1)))
 
 ;; the nonce byte counter must start counting
 ;; at the first non-0 NONCE_ax
@@ -142,29 +141,29 @@
 (defconstraint nonce-bytes-monotonous ()
   (if-zero ct
            (vanishes in-nonce)
-           (eq NONCE_n
-               (+ (prev NONCE_n) in-nonce))))
+           (eq! NONCE_n
+                (+ (prev NONCE_n) in-nonce))))
 
 ;; zero-nonce still occupies one byte
 (defconstraint byte-count-zerononce ()
   (if-eq ct 15
          (if-zero NONCE
-                  (eq NONCE_n 1))))
+                  (eq! NONCE_n 1))))
 
 ;; validate the bit-decomposition of the nonce LSB
 (defconstraint tn-bit-decomposition ()
   (if-eq ct 15
-         (eq NONCE_ax (reduce + (for i [0:7]
-                                     (* (shift tn (neg i))
-                                        (^ 2 i)))))))
+         (eq! NONCE_ax (reduce + (for i [0:7]
+                                      (* (shift tn (neg i))
+                                         (^ 2 i)))))))
 
 ;;
 ;; Final assembly
 ;;
 (defconstraint byte-count ()
   (if-eq ct 15
-         (eq N_BYTES (+ 1 1 20
-                        (cond-nonce 1 1 (+ 1 NONCE_n))))))
+         (eq! N_BYTES (+ 1 1 20
+                         (cond-nonce 1 1 (+ 1 NONCE_n))))))
 
 (defconstraint check-out-1 ()
   (if-eq ct 15
@@ -172,20 +171,20 @@
                (l2_pos 14)
                (addr_hi_shift 10)
                (addr_lo_1_shift 0))
-           (eq (prev OUT) (+ (byte-shift (+ short-list                      ;; short list encoding of final result
-                                            (+ 1 20)                        ;; encoded address length
-                                            (cond-nonce 1 1 (+ 1 NONCE_n))) ;; encoded nonce length
-                                         l1_pos)
-                             (byte-shift (+ long-number 20) l2_pos) ;; short list encoding for address
-                             (byte-shift ADDR_HI addr_hi_shift)
-                             (byte-shift addr_lo_1 addr_lo_1_shift))))))
+           (eq! (prev OUT) (+ (byte-shift (+ short-list                      ;; short list encoding of final result
+                                             (+ 1 20)                        ;; encoded address length
+                                             (cond-nonce 1 1 (+ 1 NONCE_n))) ;; encoded nonce length
+                                          l1_pos)
+                              (byte-shift (+ long-number 20) l2_pos) ;; short list encoding for address
+                              (byte-shift ADDR_HI addr_hi_shift)
+                              (byte-shift addr_lo_1 addr_lo_1_shift))))))
 
 (defconstraint check-out-2 ()
   (if-eq ct 15
          (let ((addr_lo_2_pos 10)
                (nonce_pos 9))
-           (eq OUT (+ (byte-shift addr_lo_2 addr_lo_2_pos)
-                      (cond-nonce (byte-shift long-number nonce_pos)
-                                  (byte-shift NONCE nonce_pos)
-                                  (+ (byte-shift (+ 0x80 NONCE_n) nonce_pos)
-                                     (* NONCE_bytes out2_shift))))))))
+           (eq! OUT (+ (byte-shift addr_lo_2 addr_lo_2_pos)
+                       (cond-nonce (byte-shift long-number nonce_pos)
+                                   (byte-shift NONCE nonce_pos)
+                                   (+ (byte-shift (+ 0x80 NONCE_n) nonce_pos)
+                                      (* NONCE_bytes out2_shift))))))))

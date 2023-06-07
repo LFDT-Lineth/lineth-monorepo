@@ -24,8 +24,8 @@
 
 ;; 2.1.2)
 (defconstraint stampIncrements ()
-  (vanishes (* (inc STAMP 0)
-               (inc STAMP 1))))
+  (either! (will-inc STAMP 0)
+           (will-inc STAMP 1)))
 
 ;; 2.1.3)
 (defconstraint zeroRow (:guard (is-zero STAMP))
@@ -46,18 +46,18 @@
            (if-eq-else CT LIMB_SIZE_MINUS_ONE
                        ;; 2.1.5.a).(ii)
                        ;; If CT == LIMB_SIZE_MINUS_ONE (i.e. 15)
-                       (inc STAMP 1)
+                       (will-inc STAMP 1)
                        ;; 2.1.5.a).(ii)
                        ;; If CT != LIMB_SIZE_MINUS_ONE (i.e. 15)
-                       (begin (inc CT 1)
+                       (begin (will-inc CT 1)
                               (vanishes (shift OLI 1))))
            ;; 2.1.5.a)
            ;; If OLI == 1
-           (inc STAMP 1)))
+           (will-inc STAMP 1)))
 ;; 2.1.6)
 (defconstraint lastRow (:domain {-1} :guard STAMP)
   (if-zero OLI
-           (eq CT LIMB_SIZE_MINUS_ONE)))
+           (eq! CT LIMB_SIZE_MINUS_ONE)))
 
 ;; stamp constancies
 (defconstraint stamp-constancies ()

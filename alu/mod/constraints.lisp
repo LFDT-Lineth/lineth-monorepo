@@ -110,7 +110,7 @@
 (defconstraint first-row (:domain {0}) (vanishes STAMP))
 
 (defconstraint heartbeat ()
-  (begin (* (remains-constant STAMP) (inc STAMP 1))
+  (begin (* (remains-constant STAMP) (will-inc STAMP 1))
          (if-zero STAMP
                   (begin
                    (vanishes CT)
@@ -118,11 +118,11 @@
          (if-not-zero (remains-constant STAMP) (vanishes (next CT)))
          (if-not-zero STAMP
                       (if-not-zero OLI
-                                   (inc STAMP 1)
+                                   (will-inc STAMP 1)
                                    (if-eq-else CT MMEDIUMMO
-                                               (inc STAMP 1)
+                                               (will-inc STAMP 1)
                                                (begin
-                                                (inc CT 1)
+                                                (will-inc CT 1)
                                                 (vanishes (next OLI))))))))
 
 (defconstraint last-row (:domain {-1})

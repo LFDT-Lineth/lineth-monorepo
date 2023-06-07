@@ -84,8 +84,8 @@
 
 
 ;; 2.3.1
-(defconstraint noop-and-types (:guard (- 1 ROOB)) 
-  (begin 
+(defconstraint noop-and-types (:guard (- 1 ROOB))
+  (begin
     (if-not-zero (+ [MXP_TYPE 1] [MXP_TYPE 2] [MXP_TYPE 3])
       (= NOOP [MXP_TYPE 1]))
     (if-eq [MXP_TYPE 4] 1
@@ -95,7 +95,7 @@
 
 ;; 2.3.2
 (defconstraint noop-consequences (:guard NOOP)
-  (begin 
+  (begin
     (vanishes DELTA_MXPC)
     (= WORDS_NEW WORDS)
     (= MXPC_NEW MXPC)))
@@ -118,16 +118,16 @@
 
 ;; 2.4.2)
 (defconstraint stamp-increments ()
-  (either (remains-constant STAMP)
-               (inc STAMP 1)))
+  (either! (remains-constant STAMP)
+           (will-inc STAMP 1)))
 
 ;; 2.4.3)
 (defconstraint stamp-is-zero ()
   (if-zero STAMP
-    (begin
-      (vanishes (+ ROOB NOOP MXPX))
-      (vanishes CT)
-      (vanishes MXP_INST))))
+           (begin
+            (vanishes (+ ROOB NOOP MXPX))
+            (vanishes CT)
+            (vanishes MXP_INST))))
 
 ;; 2.4.4)
 (defconstraint only-one-type (:guard STAMP)
@@ -136,27 +136,26 @@
 ;; 2.4.5)
 (defconstraint counter-reset ()
   (if-not-zero (remains-constant STAMP)
-    (vanishes (next CT))))
+               (vanishes (next CT))))
 
 ;; 2.4.6)
 (defconstraint roob-or-noop ()
   (if-not-zero (+ ROOB NOOP)
-    (begin
-      (inc STAMP 1)
-      (= MXPX ROOB))))
+               (begin (will-inc STAMP 1)
+                      (= MXPX ROOB))))
 
 ;; 2.4.7
 (defconstraint real-instructions ()
   (if-not-zero STAMP
-    (if-zero ROOB
-      (if-zero NOOP
-        (if-zero MXPX
-          (if-eq-else CT SHORTCYCLE
-            (inc STAMP 1)
-            (inc CT 1))
-          (if-eq-else CT LONGCYCLE
-            (inc STAMP 1)
-            (inc CT 1)))))))
+               (if-zero ROOB
+                        (if-zero NOOP
+                                 (if-zero MXPX
+                                          (if-eq-else CT SHORTCYCLE
+                                                      (will-inc STAMP 1)
+                                                      (will-inc CT 1))
+                                          (if-eq-else CT LONGCYCLE
+                                                      (will-inc STAMP 1)
+                                                      (will-inc CT 1)))))))
 
 ;; 2.4.8
 (defconstraint dont-terminate-mid-instructions (:domain {-1})
@@ -222,7 +221,7 @@
     (begin
       (= MAX_OFFSET_1 (+ OFFSET_1_LO (- SIZE_1_LO 1)))
       (vanishes MAX_OFFSET_2))))
-  
+
 ;; 2.6.4
 (defconstraint max-offset-type-5 (:guard (standard-regime))
   (if-eq [MXP_TYPE 5] 1
@@ -271,7 +270,7 @@
 
 ;; 2.8.2
 (defconstraint offsets-are-small (:guard (* (standard-regime) (offsets-are-in-bounds)))
-  (begin 
+  (begin
     (= [ACC 1] MAX_OFFSET_1)
     (= [ACC 2] MAX_OFFSET_2)))
 
@@ -283,7 +282,7 @@
 
 ;; 2.8.4
 (defconstraint define-max-offset (:guard (* (standard-regime) (offsets-are-in-bounds)))
-  (= MAX_OFFSET 
+  (= MAX_OFFSET
     (+ (* COMP MAX_OFFSET_1)
        (* (- 1 COMP) MAX_OFFSET_2))))
 
@@ -344,7 +343,7 @@
   (begin
     (=
       (* ACC_A ACC_A)
-        (+ 
+        (+
           (* 512 (q))
           (+ (* 256 (prev BYTE_QQ)) BYTE_QQ)))
     (vanishes (* (prev BYTE_QQ) (- 1 (prev BYTE_QQ))))))
@@ -391,4 +390,3 @@
       (begin
         (vanishes (next WORDS_perm))
         (vanishes (next MXPC_perm))))))
-

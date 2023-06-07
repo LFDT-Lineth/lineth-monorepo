@@ -49,7 +49,8 @@
 
 ;; 3.3.1
 (defconstraint exactly-one-type ()
-  (if-not-zero STAMP (eq (+ EC_RECOVER EC_ADD EC_MUL EC_PAIRING) 1)))
+  (if-not-zero STAMP
+               (eq! (+ EC_RECOVER EC_ADD EC_MUL EC_PAIRING) 1)))
 
 ;; 3.3.2
 (defconstraint type-consistency ()
@@ -383,7 +384,7 @@
         OPCODE_LT ;; instruction
         (shift COMPARISONS (* 2 v)))) ;; result
 
-    ;; Comparison of y^2 with x^3 + 3 
+    ;; Comparison of y^2 with x^3 + 3
     (wcp-lookup
       2 ;; shift
       (shift SQUARE 2) ;; arg 1 high
@@ -452,7 +453,7 @@
         (*
           (is-zero CT_MIN)
           EC_ADD))
-      
+
       ;; if any of the 3 condition above is true, we need to justify (or refute) the membership of a point to C1
       (check-c1-membership)))
 

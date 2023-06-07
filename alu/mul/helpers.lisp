@@ -1,6 +1,6 @@
 (module mul)
 
-(defpurefun (set-multiplication  
+(defpurefun (set-multiplication
                 a_3 a_2 a_1 a_0
                 b_3 b_2 b_1 b_0
                 p_3 p_2 p_1 p_0
@@ -22,7 +22,7 @@
                         (+ (* THETA2 mu) (* THETA p_3) p_2))))
 
 
-(defpurefun (prepare-lower-bound-on-two-adicity 
+(defpurefun (prepare-lower-bound-on-two-adicity
                 bytes cst bits
                 x sumx y sumy ct)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -67,6 +67,6 @@
                                 (vanishes sumx)))
                         (if-not-zero (- ct MMEDIUMMO)
                             (begin
-                                (vanishes (*    (remains-constant x)
-                                                (inc x 1)))
-                                (will-eq sumx (+ sumx (next x)))))))
+                             (vanishes (* (remains-constant x)
+                                          (will-inc x 1)))
+                             (will-eq sumx (+ sumx (next x)))))))
