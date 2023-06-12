@@ -59,8 +59,8 @@
   (vanishes! STAMP))
 
 (defconstraint stamp-update ()
-  (either! (will-remain-constant! STAMP)
-           (will-inc! STAMP 1)))
+  (any! (will-remain-constant! STAMP)
+        (will-inc! STAMP 1)))
 
 (defconstraint zero-counter ()
   (if-zero STAMP (vanishes! ct)))
@@ -83,8 +83,8 @@
 
 (defconstraint needle-stable-regime ()
   (if-zero (same-instance)
-           (either! (remained-constant! addr_lo_ndl)
-                    (did-inc! addr_lo_ndl 1))))
+           (any! (remained-constant! addr_lo_ndl)
+                 (did-inc! addr_lo_ndl 1))))
 
 (defconstraint needle-switch-regime (:guard ct)
   (if-eq ct 10
@@ -121,8 +121,8 @@
 ;; in-nonce can't go back within a cycle
 (defconstraint in-nonce-monotonous ()
   (if-zero (remained-constant! STAMP)
-           (either! (remained-constant! in-nonce)
-                    (did-inc! in-nonce 1))
+           (any! (remained-constant! in-nonce)
+                 (did-inc! in-nonce 1))
            (vanishes! in-nonce)))
 
 ;; in-nonce must light up at the first non-null byte

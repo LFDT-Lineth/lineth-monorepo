@@ -24,8 +24,8 @@
 
 ;; 2.1.2)
 (defconstraint stampIncrements ()
-  (either! (will-inc! STAMP 0)
-           (will-inc! STAMP 1)))
+  (any! (will-inc! STAMP 0)
+        (will-inc! STAMP 1)))
 
 ;; 2.1.3)
 (defconstraint zeroRow (:guard (is-zero STAMP))

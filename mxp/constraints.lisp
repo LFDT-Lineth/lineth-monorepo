@@ -118,8 +118,8 @@
 
 ;; 2.4.2)
 (defconstraint stamp-increments ()
-  (either! (will-remain-constant! STAMP)
-           (will-inc! STAMP 1)))
+  (any! (will-remain-constant! STAMP)
+        (will-inc! STAMP 1)))
 
 ;; 2.4.3)
 (defconstraint stamp-is-zero ()

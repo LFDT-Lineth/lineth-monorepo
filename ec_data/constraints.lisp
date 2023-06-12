@@ -439,7 +439,7 @@
 ;; 4.1
 (defconstraint c1-membership ()
   (if-not-zero
-      (either
+      (any
         ;; 1 if STAMP[i-1] != STAMP[i] and [EC_MUL = 1 or EC_PAIRING = 1], else 0
         (and
           (is-not-zero (- (prev STAMP) STAMP))
