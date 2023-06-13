@@ -60,7 +60,8 @@
    (is-binary IS_PREC)
    (is-binary ONES)
    (byte-decomposition CT ACC_HI BYTE_HI)
-   (byte-decomposition CT ACC_LO BYTE_LO)))
+   (byte-decomposition CT ACC_LO BYTE_LO)
+   (byte-decomposition CT ACC_T BYTE_HI)))
 
 ;TODO: bytehood constraints
 
