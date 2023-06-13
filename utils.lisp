@@ -4,15 +4,15 @@
 ;;                ;;
 ;;;;;;;;;;;;;;;;;;;;
 
-(defun (num-zero-implies-zero NUM COL) (if-zero NUM (vanishes COL)))
+(defun (num-zero-implies-zero NUM COL) (if-zero NUM (vanishes! COL)))
 
 (defun (num-non-decreasing NUM)
-                (vanishes (* (remains-constant NUM) (inc NUM 1))))
+                (vanishes! (* (will-remain-constant! NUM) (inc NUM 1))))
 
 (defun (index-grows-or-resets NUM INDEX)
-                (if-zero (remains-constant NUM)
+                (if-zero (will-remain-constant! NUM)
                     (if-not-zero NUM (inc INDEX 1))
-                    (will-eq INDEX 0)))
+                    (will-eq! INDEX 0)))
 
 
 ;;;;;;;;;;;;;;;;;;;;

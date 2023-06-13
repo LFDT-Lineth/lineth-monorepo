@@ -18,15 +18,15 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-(defconstraint stamp-init (:domain {0}) (vanishes STAMP))
+(defconstraint stamp-init (:domain {0}) (vanishes! STAMP))
 
-(defconstraint stamp-update () (vanishes (* (inc STAMP 1) (remains-constant STAMP))))
+(defconstraint stamp-update () (vanishes! (* (will-inc! STAMP 1) (will-remain-constant! STAMP))))
 
 (defconstraint vanishing ()
   (if-zero STAMP
-           (begin (vanishes CT)
-                  (vanishes OLI)
-                  (vanishes INST))))
+           (begin (vanishes! CT)
+                  (vanishes! OLI)
+                  (vanishes! INST))))
 
 (defconstraint stamp-constancies ()
   (begin
@@ -40,25 +40,25 @@
 
 (defconstraint instruction-constraining ()
   (if-not-zero STAMP
-               (vanishes (* (- INST MUL)
+               (vanishes! (* (- INST MUL)
                             (- INST EXP)))))
 
 (defconstraint reset-stuff ()
-  (if-not-zero (remains-constant STAMP)
-               (begin (vanishes (next CT))
-                      (vanishes (next BIT_NUM)))))
+  (if-not-zero (will-remain-constant! STAMP)
+               (begin (vanishes! (next CT))
+                      (vanishes! (next BIT_NUM)))))
 
 (defconstraint oli-last-one-line ()
-  (if-not-zero OLI (inc STAMP 1)))
+  (if-not-zero OLI (will-inc! STAMP 1)))
 
 (defconstraint counter-update (:guard STAMP)
   (if-zero OLI
            (if-not-zero (- CT MMEDIUMMO)
-                        (inc CT 1))))
+                        (will-inc! CT 1))))
 
 (defconstraint  counter-reset ()
   (if-eq CT MMEDIUMMO
-         (vanishes (next CT))))
+         (vanishes! (next CT))))
 
 (defconstraint counter-constancies ()
   (begin
@@ -70,23 +70,23 @@
 
 (defconstraint other-resets ()
   (if-eq CT MMEDIUMMO
-         (begin (if-not-zero (- INST EXP) (inc STAMP 1))    ; i.e. INST == MUL
+         (begin (if-not-zero (- INST EXP) (will-inc! STAMP 1))    ; i.e. INST == MUL
                 (if-not-zero (- INST MUL)                   ; i.e. INST == EXP
                              (if-eq RESV 1
-                                    (inc STAMP 1))))))
+                                    (will-inc! STAMP 1))))))
 
 (defconstraint bit_num-doesnt-reach-oneTwoEight ()
-  (if-eq BIT_NUM ONETWOEIGHT (vanishes 1)))
+  (if-eq BIT_NUM ONETWOEIGHT (vanishes! 1)))
 
 (defconstraint last-row (:domain {-1} :guard STAMP)
   (begin (debug (= OLI 1))
          (= INST EXP)
-         (vanishes ARG_1_HI)
-         (vanishes ARG_1_LO)
-         (vanishes ARG_2_HI)
-         (vanishes ARG_2_LO)
-         (debug (vanishes RES_HI))
-         (debug (vanishes RES_LO))))
+         (vanishes! ARG_1_HI)
+         (vanishes! ARG_1_LO)
+         (vanishes! ARG_2_HI)
+         (vanishes! ARG_2_LO)
+         (debug (vanishes! RES_HI))
+         (debug (vanishes! RES_LO))))
 
 (defun (first-row)
     (if-not-zero (- (prev STAMP) STAMP)
@@ -94,42 +94,42 @@
                         (= EBIT 1)
                         (if-zero ARG_2_HI
                                  (= ESRC 1)
-                                 (vanishes ESRC)))))
+                                 (vanishes! ESRC)))))
 
 ;; exponent-bit-source-is-high-limb applies when ESRC == 0
 (defun (exponent-bit-source-is-high-limb)
-    (begin (remains-constant STAMP)
-           (vanishes (next SNM))
+    (begin (will-remain-constant! STAMP)
+           (vanishes! (next SNM))
            (if-eq-else EACC ARG_2_HI
-                       (begin (will-eq ESRC 1)
-                              (vanishes (next EACC))
-                              (vanishes (next BIT_NUM)))
-                       (begin (vanishes (next ESRC))
-                              (will-eq EACC (* 2 EACC))
-                              (inc BIT_NUM 1)))))
+                       (begin (will-eq! ESRC 1)
+                              (vanishes! (next EACC))
+                              (vanishes! (next BIT_NUM)))
+                       (begin (vanishes! (next ESRC))
+                              (will-eq! EACC (* 2 EACC))
+                              (will-inc! BIT_NUM 1)))))
 
 ;; exponent-bit-source-is-low-limb applies when ESRC == 1
 (defun (exponent-bit-source-is-low-limb)
     (if-not-zero ARG_2_HI
                  (if-eq-else BIT_NUM ONETWOSEVEN
                              ;; (ARG_2_HI != 0) et (BIT_NUM == 127)
-                             (begin (inc STAMP 1)
+                             (begin (will-inc! STAMP 1)
                                     (= EACC ARG_2_LO))
                              ;; (ARG_2_HI != 0) et (BIT_NUM == 127)
-                             (begin (vanishes (next SNM))
-                                    (remains-constant STAMP)
-                                    (will-eq ESRC 1)
-                                    (will-eq EACC (* 2 EACC))
-                                    (inc BIT_NUM 1)))
+                             (begin (vanishes! (next SNM))
+                                    (will-remain-constant! STAMP)
+                                    (will-eq! ESRC 1)
+                                    (will-eq! EACC (* 2 EACC))
+                                    (will-inc! BIT_NUM 1)))
                  (if-eq-else EACC ARG_2_LO
                              ;; (ARG_2_HI == 0) et (EACC == ARG_2_LO)
-                             (inc STAMP 1)
+                             (will-inc! STAMP 1)
                              ;; (ARG_2_HI == 0) et (EACC != ARG_2_LO)
-                             (begin (vanishes (next SNM))
-                                    (remains-constant STAMP)
-                                    (will-eq ESRC 1)
-                                    (will-eq EACC (* 2 EACC))
-                                    (inc BIT_NUM 1)))))
+                             (begin (vanishes! (next SNM))
+                                    (will-remain-constant! STAMP)
+                                    (will-eq! ESRC 1)
+                                    (will-eq! EACC (* 2 EACC))
+                                    (will-inc! BIT_NUM 1)))))
 
 (defun (end-of-cycle)
     (if-zero (- SNM EBIT)
@@ -140,12 +140,12 @@
                       ;; ESRC == 1 i.e. source = low part
                       (exponent-bit-source-is-low-limb))
              ;; SNM != EBIT
-             (begin (remains-constant STAMP)
-                    (inc SNM 1)
-                    (remains-constant EBIT)
-                    (inc EACC 1)
-                    (remains-constant ESRC)
-                    (remains-constant BIT_NUM))))
+             (begin (will-remain-constant! STAMP)
+                    (will-inc! SNM 1)
+                    (will-remain-constant! EBIT)
+                    (will-inc! EACC 1)
+                    (will-remain-constant! ESRC)
+                    (will-remain-constant! BIT_NUM))))
 
 (defconstraint nontrivial-exp-regime-nonzero-result-heartbeat ()
   (if-eq INST EXP
@@ -235,23 +235,23 @@
 
 (defconstraint tiny-base (:guard STAMP)
   (if-not-zero ARG_1_HI
-               (vanishes TINYB)
+               (vanishes! TINYB)
                (if-not-zero (* ARG_1_LO (- 1 ARG_1_LO))
-                            (vanishes TINYB)
+                            (vanishes! TINYB)
                             (= TINYB 1))))
 
 (defconstraint tiny-exponent (:guard STAMP)
   (if-not-zero ARG_2_HI
-               (vanishes TINYE)
+               (vanishes! TINYE)
                (if-not-zero (* ARG_2_LO (- 1 ARG_2_LO))
-                            (vanishes TINYE)
+                            (vanishes! TINYE)
                             (= TINYE 1))))
 
-(defconstraint result-vanishes (:guard STAMP)
+(defconstraint result-vanishes! (:guard STAMP)
   (if-not-zero RES_HI
-               (vanishes RESV)
+               (vanishes! RESV)
                (if-not-zero RES_LO
-                            (vanishes RESV)
+                            (vanishes! RESV)
                             (= RESV 1))))
 
 (defconstraint one-line-instruction (:guard STAMP)
@@ -289,7 +289,7 @@
                                                 ;; TINYE == 1 <=> ARG_2 = ARG_2_LO ∈ {0, 1}
                                                 (begin (if-not-zero (- ARG_2_LO 1)
                                                                     ;; Thus ARG_2_LO != 1 <=> ARG_2_LO == 0
-                                                                    (begin (vanishes RES_HI)
+                                                                    (begin (vanishes! RES_HI)
                                                                            (= RES_LO 1)))
                                                        (if-not-zero ARG_2_LO
                                                                     ;; Thus ARG_2_LO != 0 <=> ARG_2_LO == 1
@@ -378,9 +378,9 @@
 (defun (special-constraints-for-byte-c-0)
     (if-eq-else CT MMEDIUMMO
                 (if-zero (A_0)
-                         (vanishes BYTE_C_0)
+                         (vanishes! BYTE_C_0)
                          (= BYTE_C_0 1))
-                (remains-constant BYTE_C_0)))
+                (will-remain-constant! BYTE_C_0)))
 
 (defun (preparations-for-a-lower-bound-on-the-2-adicity-of-the-base)
     (begin
@@ -482,7 +482,7 @@
                      (alpha) (beta) (eta) (mu)))))
 
 (defun (final-square-and-multiply)
-    (if-not-zero (remains-constant STAMP)
+    (if-not-zero (will-remain-constant! STAMP)
                  (begin (= RES_HI (+ (* THETA (C_3)) (C_2)))
                         (= RES_LO (+ (* THETA (C_1)) (C_0))))))
 

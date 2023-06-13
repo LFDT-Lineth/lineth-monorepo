@@ -22,7 +22,7 @@
   G_TXDATAZERO     4
   G_TXDATANONZERO 16)
 
-(defconstraint tx-num-init (:domain {0}) (vanishes NUM))
+(defconstraint tx-num-init (:domain {0}) (vanishes! NUM))
 (defconstraint tx-num-global () (num-non-decreasing NUM))
 
 (defconstraint index-constraint () (index-grows-or-resets NUM LIMB_INDEX))
@@ -50,23 +50,23 @@
 (defconstraint gas-constraints ()
   (if-not-zero NUM
                ;; NUM[i] != NUM[i + 1]		==>		TOT[i] == RUN[i]
-               (if-not-zero (remains-constant NUM)
+               (if-not-zero (will-remain-constant! NUM)
                             (= RUN TOT))))
 
 (defconstraint update-running-total ()
-  (if-zero (didnt-change NUM)
+  (if-zero (remained-constant! NUM)
            ;; NUM[i] == NUM[i - 1]
            (if-not-zero IS_DATA
                         (if-zero BYTE
                                  (= RUN (+ (prev RUN) G_TXDATAZERO))
                                  (= RUN (+ (prev RUN) G_TXDATANONZERO)))
-                        (didnt-change RUN))
+                        (remained-constant! RUN))
            ;; NUM[i] != NUM[i - 1]
            (if-not-zero IS_DATA
                         (if-zero BYTE
                                  (= RUN G_TXDATAZERO)
                                  (= RUN G_TXDATANONZERO))
-                        (vanishes RUN))))
+                        (vanishes! RUN))))
 
 ; we should impose that (IS_DATA == 0 at a new txn) <=> (cds == 0) <=> (tot == 0)
 

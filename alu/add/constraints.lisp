@@ -14,16 +14,16 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defconstraint first-row (:domain {0})
-                (vanishes STAMP))
+                (vanishes! STAMP))
 
 (defconstraint heartbeat ()
   (begin
-   (* (remains-constant STAMP) (inc STAMP 1))
-   (if-not-zero (remains-constant STAMP) (vanishes (next CT)))
+   (* (will-remain-constant! STAMP) (will-inc! STAMP 1))
+   (if-not-zero (will-remain-constant! STAMP) (vanishes! (next CT)))
    (if-not-zero STAMP
                 (if-eq-else CT LLARGEMO
-                            (inc STAMP 1)
-                            (inc CT 1)))))
+                            (will-inc! STAMP 1)
+                            (will-inc! CT 1)))))
 
 (defconstraint last-row (:domain {-1})
   (if-not-zero STAMP  (= CT LLARGEMO)))
@@ -51,7 +51,7 @@
    (byte-decomposition CT ACC_1 BYTE_1)
    (byte-decomposition CT ACC_2 BYTE_2)))
 
-;TODO: bytehood constraints
+;; TODO: bytehood constraints
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;

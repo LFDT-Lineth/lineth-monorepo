@@ -6,7 +6,7 @@
     INDEX
     LIMB)
 
-(defconstraint heartbeat-init (:domain {0}) (vanishes NUM))
+(defconstraint heartbeat-init (:domain {0}) (vanishes! NUM))
 
 (defconstraint heartbeat-global ()
   (begin

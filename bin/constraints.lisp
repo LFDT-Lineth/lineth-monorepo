@@ -19,22 +19,22 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; 2.1.1)
 (defconstraint firstRow (:domain {0})
-  (vanishes STAMP))
+  (vanishes! STAMP))
 
 ;; 2.1.2)
 (defconstraint stampIncrements ()
-  (vanishes (* (inc STAMP 0)
-               (inc STAMP 1))))
+  (vanishes! (* (will-inc! STAMP 0)
+               (will-inc! STAMP 1))))
 
 ;; 2.1.3)
 (defconstraint zeroRow (:guard (is-zero STAMP))
-  (begin (vanishes OLI)
-         (vanishes CT)))
+  (begin (vanishes! OLI)
+         (vanishes! CT)))
 
 ;; 2.1.4)
 (defconstraint counterReset ()
-  (if-not-zero (remains-constant STAMP)
-               (vanishes (shift CT 1))))
+  (if-not-zero (will-remain-constant! STAMP)
+               (vanishes! (shift CT 1))))
 
 ;; 2.1.5)
 (defconstraint heartbeat ()
@@ -45,18 +45,18 @@
                         (if-eq-else CT LIMB_SIZE_MINUS_ONE
                                     ;; 2.1.5.a).(ii)
                                     ;; If CT == LIMB_SIZE_MINUS_ONE (i.e. 15)
-                                    (inc STAMP 1)
+                                    (will-inc! STAMP 1)
                                     ;; 2.1.5.a).(ii)
                                     ;; If CT != LIMB_SIZE_MINUS_ONE (i.e. 15)
-                                    (begin (inc CT 1)
-                                           (vanishes (shift OLI 1))))
+                                    (begin (will-inc! CT 1)
+                                           (vanishes! (shift OLI 1))))
                         ;; 2.1.5.a)
                         ;; If OLI == 1
-                        (inc STAMP 1))))
+                        (will-inc! STAMP 1))))
 ;; 2.1.6)
 (defconstraint lastRow (:domain {-1} :guard STAMP)
   (if-zero OLI
-           (eq CT LIMB_SIZE_MINUS_ONE)))
+           (eq! CT LIMB_SIZE_MINUS_ONE)))
 
 (defconstraint counter-constancies ()
   (begin
@@ -191,7 +191,7 @@
                     (* 2 (shift BITS -1))
                     BITS)
                    (= SMALL 1)
-                   (vanishes SMALL)))))
+                   (vanishes! SMALL)))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -290,8 +290,8 @@
                (if-not-zero OLI
                             ;; OLI == 1
                             (begin (if-eq INST BYTE
-                                          (begin (vanishes RES_HI)
-                                                 (vanishes RES_LO)))
+                                          (begin (vanishes! RES_HI)
+                                                 (vanishes! RES_LO)))
                                    (if-eq INST SIGNEXTEND
                                           (begin (= RES_HI ARG_2_HI)
                                                  (= RES_LO ARG_2_LO))))
@@ -309,7 +309,7 @@
                                           (begin (= BYTE_5 NOT_BYTE_HI)
                                                  (= BYTE_6 NOT_BYTE_LO)))
                                    (if-eq INST BYTE
-                                          (begin (vanishes RES_HI)
+                                          (begin (vanishes! RES_HI)
                                                  (= RES_LO (* SMALL PIVOT))))
                                    (if-eq INST SIGNEXTEND
                                           (result_signextend))))))
@@ -317,5 +317,5 @@
 ;; IS_DATA
 (defconstraint is_data ()
   (if-zero STAMP
-           (vanishes IS_DATA)
-           (eq IS_DATA 1)))
+           (vanishes! IS_DATA)
+           (eq! IS_DATA 1)))

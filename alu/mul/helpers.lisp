@@ -1,6 +1,6 @@
 (module mul)
 
-(defpurefun (set-multiplication  
+(defpurefun (set-multiplication
                 a_3 a_2 a_1 a_0
                 b_3 b_2 b_1 b_0
                 p_3 p_2 p_1 p_0
@@ -22,16 +22,16 @@
                         (+ (* THETA2 mu) (* THETA p_3) p_2))))
 
 
-(defpurefun (prepare-lower-bound-on-two-adicity 
+(defpurefun (prepare-lower-bound-on-two-adicity
                 bytes cst bits
                 x sumx y sumy ct)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                     (begin
                         (running-total x sumx ct)
                         (running-total y sumy ct)
-                        (if-not-zero x (vanishes bytes))    ; (see REMARK)
-                        (if-not-zero y (vanishes bits))     ; (see REMARK)
-                        (if-not-zero (- ct MMEDIUMMO) (remains-constant cst))
+                        (if-not-zero x (vanishes! bytes))    ; (see REMARK)
+                        (if-not-zero y (vanishes! bits))     ; (see REMARK)
+                        (if-not-zero (- ct MMEDIUMMO) (will-remain-constant! cst))
                         (if-not-zero (- ct MMEDIUMMO)
                             (if-not-zero (- 1 x)            ; (see REMARK)
                                 (if-not-zero (next x)       ; (see REMARK)
@@ -63,10 +63,10 @@
                         (is-binary x)
                         (if-zero ct
                             (begin
-                                (vanishes x)
-                                (vanishes sumx)))
+                                (vanishes! x)
+                                (vanishes! sumx)))
                         (if-not-zero (- ct MMEDIUMMO)
                             (begin
-                                (vanishes (*    (remains-constant x)
-                                                (inc x 1)))
-                                (will-eq sumx (+ sumx (next x)))))))
+                             (vanishes! (* (will-remain-constant! x)
+                                          (will-inc! x 1)))
+                             (will-eq! sumx (+ sumx (next x)))))))

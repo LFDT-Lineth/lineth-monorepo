@@ -20,23 +20,23 @@
 
 
 ;; 2.1.1)
-(defconstraint forst-row (:domain {0}) (vanishes STAMP))
+(defconstraint forst-row (:domain {0}) (vanishes! STAMP))
 
 ;; 2.1.2)
 (defconstraint stampIncrements ()
-  (vanishes (* (inc STAMP 0)
-               (inc STAMP 1))))
+  (any! (will-inc! STAMP 0)
+        (will-inc! STAMP 1)))
 
 ;; 2.1.3)
 (defconstraint zeroRow (:guard (is-zero STAMP))
   (begin
-   (vanishes OLI)
-   (vanishes CT)))
+   (vanishes! OLI)
+   (vanishes! CT)))
 
 ;; 2.1.4)
 (defconstraint counterReset ()
-  (if-not-zero (remains-constant STAMP)
-               (vanishes (next CT))))
+  (if-not-zero (will-remain-constant! STAMP)
+               (vanishes! (next CT))))
 
 ;; 2.1.5)
 (defconstraint heartbeat (:guard STAMP)
@@ -46,18 +46,18 @@
            (if-eq-else CT LIMB_SIZE_MINUS_ONE
                        ;; 2.1.5.a).(ii)
                        ;; If CT == LIMB_SIZE_MINUS_ONE (i.e. 15)
-                       (inc STAMP 1)
+                       (will-inc! STAMP 1)
                        ;; 2.1.5.a).(ii)
                        ;; If CT != LIMB_SIZE_MINUS_ONE (i.e. 15)
-                       (begin (inc CT 1)
-                              (vanishes (shift OLI 1))))
+                       (begin (will-inc! CT 1)
+                              (vanishes! (shift OLI 1))))
            ;; 2.1.5.a)
            ;; If OLI == 1
-           (inc STAMP 1)))
+           (will-inc! STAMP 1)))
 ;; 2.1.6)
 (defconstraint lastRow (:domain {-1} :guard STAMP)
   (if-zero OLI
-           (eq CT LIMB_SIZE_MINUS_ONE)))
+           (eq! CT LIMB_SIZE_MINUS_ONE)))
 
 ;; stamp constancies
 (defconstraint stamp-constancies ()
@@ -132,7 +132,7 @@
    (if-eq INST EQ_ (= OLI 1))
    (if-eq INST ISZERO (= OLI 1))
    (if-not-zero (* (- INST EQ_) (- INST ISZERO))
-                (vanishes OLI))))
+                (vanishes! OLI))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -220,7 +220,7 @@
 
 
 ;; 2.7.1
-(defconstraint result_hi () (vanishes RES_HI))
+(defconstraint result_hi () (vanishes! RES_HI))
 
 ;; 2.7.2
 (defconstraint result_lo (:guard STAMP)

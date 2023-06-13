@@ -1,3 +1,4 @@
+CORSET=corset
 ROM := rom/columns.lisp \
 	rom/constraints.lisp
 
@@ -40,7 +41,12 @@ TRM := trm/columns.lisp \
 MXP := mxp/columns.lisp \
 	   mxp/constraints.lisp \
 	   mxp/mxp_into_instruction_decoder.lisp
-	   
+
+EC_DATA := ec_data/columns.lisp \
+	   ec_data/constraints.lisp \
+	   ec_data/ecdata_into_ext.lisp \
+	   ec_data/ecdata_into_wcp.lisp \
+	   ec_data/hub_into_ecdata.lisp \
 
 TABLES := $(wildcard lookup_tables/tables/*lisp)
 
@@ -54,10 +60,12 @@ MEMORY := $(wildcard hub/mmio/*lisp) \
 RLP := rlp/columns.lisp \
 	  rlp/constraints.lisp
 
-ZKEVM_FILES := ${ROM} ${STACK} ${ALU} ${BIN} ${SHIFT} ${WCP} ${TRM} ${TABLES} ${PUB_DATA} ${MXP} # ${RLP}
+PHONEY_RLP := phoney_rlp/column.lisp
+
+ZKEVM_FILES := ${ROM} ${STACK} ${ALU} ${BIN} ${SHIFT} ${WCP} ${TRM} ${TABLES} ${PUB_DATA} ${MXP} ${EC_DATA} ${RLP} ${PHONEY_RLP} # ${MEMORY}
 
 zkevm.go: ${ZKEVM_FILES}
-	corset wizard-iop -vv -P define -o $@ ${ZKEVM_FILES}
+	${CORSET} wizard-iop -vv -P define -o $@ ${ZKEVM_FILES}
 
 zkevm.bin: ${ZKEVM_FILES}
-	corset compile -vv -o $@ ${ZKEVM_FILES}
+	${CORSET} compile -vv -o $@ ${ZKEVM_FILES}
