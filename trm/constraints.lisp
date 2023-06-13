@@ -60,9 +60,21 @@
    (is-binary ONES)
    (byte-decomposition CT ACC_HI BYTE_HI)
    (byte-decomposition CT ACC_LO BYTE_LO)
-   (byte-decomposition CT ACC_T BYTE_HI)))
+   (byte-decomposition CT ACC_T TRM_ADDR_HI)))
 
-;TODO: bytehood constraints
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                                 ;;
+;;    2.4 Target constraints       ;;
+;;                                 ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defconstraint trm-constraints ()
+  (if-eq CT LLARGEMO
+         (begin (= ADDR_HI ACC_HI)
+                (= ADDR_LO ACC_LO)
+                (= TRM_ADDR_HI ACC_T)
+)))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -75,6 +87,6 @@
   (begin
    (is-binary PBIT)
    (if-zero CT
-            (vanishes PBIT)
-            (vanishes (*  (didnt-change PBIT) (- 1 (didnt-change PBIT))))
-            (if-eq CT 12    (=  1   (+  PBIT (prev  PBIT)))))))
+            (vanishes! PBIT))))
+;;            (vanishes! (*  (will-remain-constant! PBIT) (- 1 (will-remain-constant! PBIT))))))
+;;            (if-eq CT 12    (=  1   (+  PBIT (prev  PBIT)))))))
