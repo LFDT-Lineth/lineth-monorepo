@@ -25,7 +25,13 @@
 (defconstraint heartbeat ()
   (begin
    (* (will-remain-constant! STAMP) (will-inc! STAMP 1))
+   (if-not-zero (will-remain-constant! STAMP) (vanishes! (next ADDR_HI)))
+   (if-not-zero (will-remain-constant! STAMP) (vanishes! (next ADDR_LO)))
+   (if-not-zero (will-remain-constant! STAMP) (vanishes! (next TRM_ADDR_HI)))
+   (if-not-zero (will-remain-constant! STAMP) (vanishes! (next IS_PREC)))
    (if-not-zero (will-remain-constant! STAMP) (vanishes! (next CT)))
+   (if-not-zero (will-remain-constant! STAMP) (vanishes! (next BYTE_HI)))
+   (if-not-zero (will-remain-constant! STAMP) (vanishes! (next BYTE_LO)))
    (if-not-zero STAMP
                 (if-eq-else CT LLARGEMO
                             (will-inc! STAMP 1)
