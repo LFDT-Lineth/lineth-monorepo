@@ -65,7 +65,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                                 ;;
-;;    2.4 Target constraints       ;;
+;;    2.5 Target constraints       ;;
 ;;                                 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -74,6 +74,11 @@
          (begin (= ADDR_HI ACC_HI)
                 (= ADDR_LO ACC_LO)
                 (= TRM_ADDR_HI ACC_T)
+                (if-not-zero (+ TRM_ADDR_HI (- ADDR_LO BYTE_LO))
+                             (= IS_PREC 0))
+                (if-zero (+ TRM_ADDR_HI (- ADDR_LO BYTE_LO))
+                         (if-zero BYTE_LO
+                                  (= IS_PREC 0)))
 )))
 
 
@@ -88,5 +93,6 @@
    (is-binary PBIT)
    (if-zero CT
             (vanishes! PBIT))))
+;; commented out these 2 lines since I can't get it to compile
 ;;            (vanishes! (*  (will-remain-constant! PBIT) (- 1 (will-remain-constant! PBIT))))))
 ;;            (if-eq CT 12    (=  1   (+  PBIT (prev  PBIT)))))))
