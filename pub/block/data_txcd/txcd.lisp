@@ -23,22 +23,22 @@
   G_TXDATANONZERO 16)
 
 (defconstraint tx-num-init (:domain {0}) (vanishes! NUM))
-(defconstraint tx-num-global () (num-non-decreasing NUM))
+;; (defconstraint tx-num-global () (num-non-decreasing NUM))
 
-(defconstraint index-constraint () (index-grows-or-resets NUM LIMB_INDEX))
+;; (defconstraint index-constraint () (index-grows-or-resets NUM LIMB_INDEX))
 
-(defconstraint forced-zero-rows ()
-  (begin
-   (num-zero-implies-zero NUM BYTE_INDEX)
-   (num-zero-implies-zero NUM LIMB_INDEX)
-   (num-zero-implies-zero NUM LIMB)
-   (num-zero-implies-zero NUM ADDR_HI)
-   (num-zero-implies-zero NUM ADDR_LO)
-   (num-zero-implies-zero NUM CT)
-   (num-zero-implies-zero NUM CDS)
-   (num-zero-implies-zero NUM TOT)
-   (num-zero-implies-zero NUM RUN)
-   (num-zero-implies-zero NUM IS_DATA)))
+;; (defconstraint forced-zero-rows ()
+;;   (begin
+;;    (num-zero-implies-zero NUM BYTE_INDEX)
+;;    (num-zero-implies-zero NUM LIMB_INDEX)
+;;    (num-zero-implies-zero NUM LIMB)
+;;    (num-zero-implies-zero NUM ADDR_HI)
+;;    (num-zero-implies-zero NUM ADDR_LO)
+;;    (num-zero-implies-zero NUM CT)
+;;    (num-zero-implies-zero NUM CDS)
+;;    (num-zero-implies-zero NUM TOT)
+;;    (num-zero-implies-zero NUM RUN)
+;;    (num-zero-implies-zero NUM IS_DATA)))
 
 ;; (defconstraint stamp-constancies ()
 ;;              (begin

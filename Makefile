@@ -1,4 +1,4 @@
-CORSET=corset
+CORSET=/Users/franklin/repos/corset/target/release/corset
 ROM := rom/columns.lisp \
 	rom/constraints.lisp
 
@@ -47,8 +47,7 @@ EC_DATA := ec_data/columns.lisp \
 
 TABLES := $(wildcard lookup_tables/tables/*lisp)
 
-PUB_DATA := $(wildcard public_data_commitments/data/*lisp) \
-		$(wildcard public_data_commitments/hash/*lisp)
+PUB_DATA := $(shell find pub/ -iname '*.lisp')
 
 MEMORY := $(wildcard hub/mmio/*lisp) \
 	  $(wildcard hub/mmu/*lisp) \
@@ -59,7 +58,7 @@ RLP := rlp/columns.lisp \
 
 PHONEY_RLP := phoney_rlp/column.lisp
 
-ZKEVM_FILES := ${ROM} ${STACK} ${ALU} ${BIN} ${SHIFT} ${WCP} ${TABLES} ${PUB_DATA} ${MXP} ${EC_DATA} ${RLP} ${PHONEY_RLP} # ${MEMORY}
+ZKEVM_FILES := ${PUB_DATA} ${ROM} ${STACK} ${ALU} ${BIN} ${SHIFT} ${WCP} ${TABLES} ${MXP} ${EC_DATA} ${RLP} ${PHONEY_RLP} # ${MEMORY}
 
 zkevm.go: ${ZKEVM_FILES}
 	${CORSET} wizard-iop -vv -P define -o $@ ${ZKEVM_FILES}
