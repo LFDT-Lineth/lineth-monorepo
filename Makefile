@@ -1,4 +1,4 @@
-CORSET=/Users/franklin/repos/corset/target/release/corset
+CORSET=corset
 ROM := rom/columns.lisp \
 	rom/constraints.lisp
 
