@@ -49,16 +49,16 @@ TABLES := $(wildcard lookup_tables/tables/*lisp)
 
 PUB_DATA := $(shell find pub/ -iname '*.lisp')
 
-MEMORY := $(wildcard hub/mmio/*lisp) \
-	  $(wildcard hub/mmu/*lisp) \
-	  $(wildcard hub/*lisp) \
+MEMORY := $(wildcard hub/mmio/columns.lisp) \
+		  $(wildcard hub/mmu/columns.lisp) \
+		  lookup_tables/mmuID/columns.lisp
 
 RLP := rlp/columns.lisp \
 	  rlp/constraints.lisp
 
 PHONEY_RLP := phoney_rlp/column.lisp
 
-ZKEVM_FILES := ${PUB_DATA} ${ROM} ${STACK} ${ALU} ${BIN} ${SHIFT} ${WCP} ${TABLES} ${MXP} ${EC_DATA} ${RLP} ${PHONEY_RLP} # ${MEMORY}
+ZKEVM_FILES := ${PUB_DATA} ${ROM} ${STACK} ${ALU} ${BIN} ${SHIFT} ${WCP} ${TABLES} ${MXP} ${EC_DATA} ${RLP} ${PHONEY_RLP} ${MEMORY}
 
 zkevm.go: ${ZKEVM_FILES}
 	${CORSET} wizard-iop -vv -P define -o $@ ${ZKEVM_FILES}

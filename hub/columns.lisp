@@ -93,11 +93,11 @@
     TX_NUM
 
     ALU_STAMP
-    BIN_STAMP
+    ;; BIN_STAMP
     RAM_STAMP
-    SHF_STAMP
+    ;; SHF_STAMP
     STO_STAMP
-    WCP_STAMP
+    ;; WCP_STAMP
     ;; WRM_STAMP
 
     (ARITHMETIC_INST		:BOOLEAN)
