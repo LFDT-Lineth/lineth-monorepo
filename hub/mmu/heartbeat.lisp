@@ -3,7 +3,7 @@
 ;; 1.
 (defconstraint ram-stamp-non-decreasing ()
   (if-not-zero (will-remain-constant! RAM_STAMP)
-               (inc RAM_STAMP 1)))
+               (will-inc! RAM_STAMP 1)))
 
 ;; 2.
 (defconstraint ramp-stamp-starts-at-0 (:domain {0}) RAM_STAMP)
@@ -101,14 +101,14 @@
                                 ;; CT == 2
                                 (will-eq! IS_MICRO 1)
                                 ;; CT != 2
-                                (begin (inc CT 1)
+                                (begin (will-inc! CT 1)
                                        (shift IS_MICRO 1)))
                     ;; OFFOOB == 1
                     (if-eq-else CT (- LLARGE 1)
                                 ;; CT == 15
                                 (will-eq! IS_MICRO 1)
                                 ;; CT != 15
-                                (begin (inc CT 1)
+                                (begin (will-inc! CT 1)
                                        (shift IS_MICRO 1))))))
 
 ;; 6.
@@ -129,7 +129,7 @@
 (defconstraint ram-stamp-non-zero-and-tot-zero  ()
   (if-not-zero RAM_STAMP
                (if-zero TOT
-                        (inc RAM_STAMP 1))))
+                        (will-inc! RAM_STAMP 1))))
 
 ;; 10.
 (defconstraint micro-stamp ()

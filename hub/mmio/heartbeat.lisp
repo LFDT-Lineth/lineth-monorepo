@@ -14,7 +14,7 @@
 
 ;; 3
 (defconstraint micro-stamp-non-decreasing ()
-  (if-not-zero (will-remain-constant! MICRO_STAMP) (inc MICRO_STAMP 1)))
+  (if-not-zero (will-remain-constant! MICRO_STAMP) (will-inc! MICRO_STAMP 1)))
 
 ;; 4
 (defconstraint zero-rows ()
@@ -29,15 +29,15 @@
                              (begin (if-eq-else CT 15
                                                 ;; CT == 15
                                                 (begin (will-eq! CT 0)
-                                                       (inc MICRO_STAMP 1))
+                                                       (will-inc! MICRO_STAMP 1))
                                                 ;; CT != 15
                                                 (begin (will-remain-constant! FAST)
                                                        (will-remain-constant! MICRO_STAMP)
-                                                       (inc COUNTER 1))))
+                                                       (will-inc! COUNTER 1))))
                                         ;FAST == 1
                              (begin (vanishes! CT)
                                     (will-remain-constant! CT)
-                                    (inc MICRO_STAMP 1))))
+                                    (will-inc! MICRO_STAMP 1))))
 
 ;; 6
 (defconstraint last-row (:domain {-1} :guard MICRO_STAMP)

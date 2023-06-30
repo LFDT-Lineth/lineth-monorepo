@@ -165,14 +165,14 @@
             ;i
 
             (type4-tern1-data-extraction-no-overlapping)
-            (inc TLO BIT_5)
+            (will-inc! TLO BIT_5)
             (will-eq! TBO NIB_7)
           )
           ;ii
           (begin
 
             (type4-tern1-data-extraction-overlapping)
-            (inc TLO 1)
+            (will-inc! TLO 1)
             (will-eq! TBO NIB_7)
           )
         )
@@ -229,12 +229,12 @@
             (if-zero-else BIT_2
               (begin
                 (type4-tern1-data-extraction-no-overlapping)
-                (inc TLO BIT_5)
+                (will-inc! TLO BIT_5)
                 (will-eq! TBO NIB_7)
               )
               (begin
                 (type4-tern1-data-extraction-overlapping)
-                (inc TLO 1)
+                (will-inc! TLO 1)
                 (will-eq! TBO NIB_7)
               )
             )
