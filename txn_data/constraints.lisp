@@ -172,3 +172,80 @@
 					   (will-eq 
 					     CUM_GAS
 					     (- GLIM REF_AMT))))))
+
+;;;;;;;;;;;;;;;;;;;;;;;
+;;                   ;;
+;;    2.6 Aliases    ;;
+;;                   ;;
+;;;;;;;;;;;;;;;;;;;;;;;
+
+(defun (tx_type)              (DATA_LO))
+(defun (to_addr_hi)           (shift DATA_HI 1))
+(defun (to_addr_lo)           (shift DATA_LO 1))
+(defun (nonce)                (shift DATA_LO 2))
+(defun (is_dep)               (shift DATA_HI 3))
+(defun (value)                (shift DATA_LO 3))
+(defun (data_cost)            (shift DATA_HI 4))
+(defun (data_size)            (shift DATA_LO 4))
+(defun (gas_limit)            (shift DATA_LO 5))
+(defun (gas_price)            (shift DATA_HI 6))
+(defun (max_priority_fee)     (shift DATA_LO 6))
+(defun (max_fee)              (shift DATA_LO 6))
+(defun (num_keys)             (shift DATA_HI 7))
+(defun (num_addr)             (shift DATA_LO 7))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                           ;;
+;;    2.8 Verticalization    ;;
+;;                           ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+(defun (setting_phase_numbers)
+  (begin
+    (vanishes! PHASE)
+;;  (= (shift PHASE 0) 0)
+    (= (shift PHASE 1) 7)
+    (= (shift PHASE 2) 2)
+    (= (shift PHASE 3) 8)
+    (= (shift PHASE 4) 9)
+    (= (shift PHASE 5) 6)
+    ;;
+    (if-not-zero TYPE0 (= (shift PHASE 6)  3))
+    ;;
+    (if-not-zero TYPE1 (= (shift PHASE 6)  3))
+    (if-not-zero TYPE1 (= (shift PHASE 7) 10))
+    ;;
+    (if-not-zero TYPE2 (= (shift PHASE 6)  5))
+    (if-not-zero TYPE2 (= (shift PHASE 7) 10))
+    ))
+
+(defun (data_transfer)
+  (begin
+    (= (tx_type)         (+ TYPE1 TYPE2 TYPE2))
+    (= (nonce)           NONCE)
+    (= (is_dep)          IS_DEP)
+    (= (value)           VALUE)
+    (= (data_size)       DATA_SIZE)
+    (= (gas_limit)       GAS_LIMIT)
+    (if-zero IS_DEP
+	     (begin
+	       (= (to_addr_hi) TO_HI)
+	       (= (to_addr_lo) TO_LO)))
+    ))
+
+(defun (vanishing_data_cells)
+  (begin
+    (vanishes! DATA_HI)
+;;  (vanishes! (shift DATA_HI 0))
+    (vanishes! (shift DATA_HI 2))
+    (vanishes! (shift DATA_HI 5))
+    (if-zero TYPE2
+	         (vanishes! (shift DATA_HI 6)))
+    ))
+
+(defconstraint verticalization (:guard (remained-constant! ABS))
+				       (begin
+					 (setting_phase_numbers)
+					 (data_transfer)
+					 (vanishing_data_cells)))
