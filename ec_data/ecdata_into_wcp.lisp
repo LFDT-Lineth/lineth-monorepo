@@ -1,5 +1,5 @@
 (defplookup plookup-ec_data-into-wcp
-    ;source columns
+    ; target columns
     (
         wcp.ARGUMENT_1_HI
         wcp.ARGUMENT_1_LO
@@ -8,7 +8,7 @@
         wcp.INST
         wcp.RESULT_LO
     )
-    ;target columns
+    ; source columns
     (
         ec_data.WCP_ARG1_HI
         ec_data.WCP_ARG1_LO
