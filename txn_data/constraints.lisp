@@ -22,6 +22,10 @@
 			(will-remain-constant STAMP)
 			(will-inc STAMP 1)))
 
+;; TODO: better solution for the zero column ?
+(defconstraint zerocol-must-be-the-zero-column ()
+	       (vanishes! ZEROCOL)) 
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                     ;;
 ;;    2.1 Heartbeat    ;;
@@ -275,28 +279,28 @@
     (vanishes! WCP_RES_LO)
     ))
 
-;; row i + 1
-(defun (sufficient_gas_limit)
+(defun (upfront_gas_cost_of_transaction)
   (if-not-zero TYPE0
 	       ;; TYPE0 = 1
-	       (begin
-		 (= (shift WCP_ARG_ONE_LO 1)      (gas_limit))
-		 (= (shift WCP_ARG_TWO_LO 1)      (+ (data_cost)
-						     G_transaction
-						     (* (is_dep) G_txcreate)))
-		 (= (shift WCP_INST 1) LT)
-		 (vanishes! (shift WCP_RES_LO 1)))
+	       (+   (data_cost)
+		    G_transaction
+		    (* (is_dep) G_txcreate))
 	       ;; TYPE0 = 0
-	       (begin
-		 (= (shift WCP_ARG_ONE_LO 1)      (gas_limit))
-		 (= (shift WCP_ARG_TWO_LO 1)      (+ (data_cost)
-						     G_transaction
-						     (* (is_dep) G_txcreate)
-						     (* (num_addr) G_accesslistaddress)
-						     (* (num_keys) G_accessliststorage))
-		    (= (shift WCP_INST 1) LT)
-		    (vanishes! (shift WCP_RES_LO 1))))
-	       )
+	       (+   (data_cost)
+		    G_transaction
+		    (* (is_dep) G_txcreate)
+		    (* (num_addr) G_accesslistaddress)
+		    (* (num_keys) G_accessliststorage)))
+
+
+;; row i + 1
+(defun (sufficient_gas_limit)
+  (begin
+    (= (shift WCP_ARG_ONE_LO 1) (gas_limit))
+    (= (shift WCP_ARG_TWO_LO 1) (upfront_gas_cost_of_transaction))
+    (= (shift WCP_INST 1) LT)
+    (vanishes! (shift WCP_RES_LO 1))
+    ))
 
 ;; epsilon is the remainder in the euclidean division of [T_g - g'] by 2
 (defun (epsilon) (- (gas_limit)
@@ -367,3 +371,27 @@
 						  (type_2_comparing_max_fee_and_max_priority_fee)
 						  (type_2_computing_the_effective_gas_price)
 						  ))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                                          ;;
+;;    2.11 Gas and gas price constraints    ;;
+;;                                          ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+(defconstraint comparisons (:guard (remained-constant! ABS))
+	       (begin
+		 ;; constraining INIT_GAS
+		 (= IGAS (- (gas_limit) (shift WCP_ARG_TWO_LO 1)))
+		 ;; constraining REFUND_AMOUNT
+		 (if-zero (shift WCP_RES_LO 3)
+			  (= REF_AMT (+ LEFTOVER_GAS (shift WCP_ARG_TWO_LO 2)))
+			  (= REF_AMT (+ LEFTOVER_GAS REF_CNT)))
+		 ;; constraining GAS_PRICE
+		 (if-zero TYPE2
+			  (= GAS_PRICE (gas_price))
+			  (if-zero (shift WCP_RES_LO 6)
+				   (= GAS_PRICE (+ (max_priority_fee) BASEFEE))
+				   (= GAS_PRICE (max_fee))))
+		 ))
+
