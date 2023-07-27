@@ -1,9 +1,17 @@
 (module txn_data)
 
 (defconst
-	nROWS0 6
-	nROWS1 7
-	nROWS2 7)
+	nROWS0                    6
+	nROWS1                    7
+	nROWS2                    7
+	;;
+	G_transaction         21000
+	G_create              32000
+	G_accesslistaddress    2400
+	G_accessliststorage    1900
+	;;
+	LT                     0x10
+	)
 
 ;; sum of transaction type flags
 (defun (tx_type_sum) (+ TYPE0 TYPE1 TYPE2))
@@ -249,3 +257,113 @@
 					 (setting_phase_numbers)
 					 (data_transfer)
 					 (vanishing_data_cells)))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                       ;;
+;;    2.9 Comparisons    ;;
+;;                       ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+;; row i
+(defun (sufficient_balance)
+  (begin
+    (= WCP_ARG_ONE_LO      IBAL)
+    (= WCP_ARG_TWO_LO      (+ (value) (* (max_fee) (gas_limit))))
+    (= WCP_INST            LT)
+    (vanishes! WCP_RES_LO)
+    ))
+
+;; row i + 1
+(defun (sufficient_gas_limit)
+  (if-not-zero TYPE0
+	       ;; TYPE0 = 1
+	       (begin
+		 (= (shift WCP_ARG_ONE_LO 1)      (gas_limit))
+		 (= (shift WCP_ARG_TWO_LO 1)      (+ (data_cost)
+						     G_transaction
+						     (* (is_dep) G_txcreate)))
+		 (= (shift WCP_INST 1) LT)
+		 (vanishes! (shift WCP_RES_LO 1)))
+	       ;; TYPE0 = 0
+	       (begin
+		 (= (shift WCP_ARG_ONE_LO 1)      (gas_limit))
+		 (= (shift WCP_ARG_TWO_LO 1)      (+ (data_cost)
+						     G_transaction
+						     (* (is_dep) G_txcreate)
+						     (* (num_addr) G_accesslistaddress)
+						     (* (num_keys) G_accessliststorage))
+		    (= (shift WCP_INST 1) LT)
+		    (vanishes! (shift WCP_RES_LO 1))))
+	       )
+
+;; epsilon is the remainder in the euclidean division of [T_g - g'] by 2
+(defun (epsilon) (- (gas_limit)
+		    LEFTOVER_GAS
+		    (shift WCP_ARG_TWO 2)
+		    (shift WCP_ARG_TWO 2)))
+
+;; row i + 2
+(defun (upper_limit_for_refunds)
+  (begin
+    (= (shift WCP_ARG_ONE_LO 2) (- (gas_limit) LEFTOVER_GAS))
+;;  (= (shift WCP_ARG_TWO_LO 2) ???) ;; unknown
+    (= (shift WCP_INST       2) LT)
+    (vanishes! (shift WCP_RES_LO 2))
+    (is-binary (epsilon))
+    ))
+
+;; row i + 3
+(defun (effective_refund)
+  (begin
+    (= (shift WCP_ARG_ONE_LO 3) REF_CNT)
+    (= (shift WCP_ARG_TWO_LO 3) (shift WCP_ARG_TWO_LO 2))
+    (= (shift WCP_INST       3) LT)
+;;  (= (shift WCP_RES_LO     3) ???) ;; unknown
+    ))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; applicable only to type 2 transactions ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; row i + 4
+(defun (type_2_comparing_max_fee_and_basefee)
+  (begin
+    (= (shift WCP_ARG_ONE_LO 4) (max_fee))
+    (= (shift WCP_ARG_TWO_LO 4) BASEFEE)
+    (= (shift WCP_INST       4) LT)
+    (= (shift WCP_RES_LO     4) 0)
+    ))
+
+;; row i + 5
+(defun (type_2_comparing_max_fee_and_max_priority_fee)
+  (begin
+    (= (shift WCP_ARG_ONE_LO 5) (max_fee))
+    (= (shift WCP_ARG_TWO_LO 5) (max_priority_fee))
+    (= (shift WCP_INST       5) LT)
+    (= (shift WCP_RES_LO     5) 0)
+    ))
+
+;; row i + 6
+(defun (type_2_computing_the_effective_gas_price)
+  (begin
+    (= (shift WCP_ARG_ONE_LO 6) (max_fee))
+    (= (shift WCP_ARG_TWO_LO 6) (+ (max_priority_fee)
+				   BASEFEE))
+    (= (shift WCP_INST       6) LT)
+;;  (= (shift WCP_RES_LO     6) ???) ;; unknown
+    ))
+
+(defconstraint comparisons (:guard (remained-constant! ABS))
+				   (begin
+				     (sufficient_balance)
+				     (sufficient_gas_limit)
+				     (upper_limit_for_refunds)
+				     (effective_refund)
+				     (if-not-zero TYPE2
+						  (begin
+						  (type_2_comparing_max_fee_and_basefee)
+						  (type_2_comparing_max_fee_and_max_priority_fee)
+						  (type_2_computing_the_effective_gas_price)
+						  ))))
