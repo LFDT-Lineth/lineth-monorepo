@@ -1,36 +1,42 @@
 (module txn_data)
 
-
 (defcolumns
-  TOT_TX_NUM
+  ABS_TX_NUM_MAX
   ABS_TX_NUM
-  TOT_BATCH_NUM
-  BATCH_NUM
-  BATCH_TX_NUM
-  TX_NUM
+  BTC_NUM_MAX
+  BTC_NUM
+  REL_TX_NUM_MAX
+  REL_TX_NUM
   CT
+  
   FROM_HI
   FROM_LO
   NONCE
   INITIAL_BALANCE
   VALUE
+
   TO_HI
   TO_LO
   IS_DEP
+
   GAS_LIMIT
   INITIAL_GAS
   GAS_PRICE
   BASEFEE
+
   DATA_SIZE
   LEGACY
   ACCESS_SET
   TYPE_TWO
+
   REQUIRES_EVM_EXECUTION
   LEFTOVER_GAS
   REFUND_COUNTER
-  REFUNDED_GAS
+  REFUND_AMOUNT
+
   CUMULATIVE_CONSUMED_GAS
   STATUS_CODE
+
   CODE_FRAGMENT_INDEX
   DATA_HI
   DATA_LO
@@ -40,7 +46,29 @@
   WCP_INST)
 
 (defalias
-  TOT TOT_TX_NUM
-  ABS ABS_TX_NUM
-  BTC BATCH_NUM)
+  ABS_MAX             ABS_TX_NUM_MAX
+  ABS                 ABS_TX_NUM
 
+  BTC_MAX             BTC_NUM_MAX
+  BTC                 BTC_NUM
+
+  REL_MAX             REL_TX_NUM_MAX
+  REL                 REL_TX_NUM
+
+  REQ_EVM             REQUIRES_EVM_EXECUTION
+  CUM_GAS             CUMULATIVE_CONSUMED_GAS
+  CFI                 CODE_FRAGMENT_INDEX
+
+  REF_CNT             REFUND_COUNTER
+  REF_AMT             REFUND_AMOUNT
+  
+  IGAS                INITIAL_GAS
+  IBAL                INITIAL_BALANCE
+
+  GLIM                GAS_LIMIT
+  GPRC                GAS_PRICE
+
+  TYPE0               LEGACY
+  TYPE1               ACCESS_SET
+  TYPE2               TYPE_TWO
+  )
