@@ -6,7 +6,7 @@
 	nROWS2                    7
 	;;
 	G_transaction         21000
-	G_create              32000
+	G_txcreate              32000
 	G_accesslistaddress    2400
 	G_accessliststorage    1900
 	;;
@@ -17,10 +17,10 @@
 (defun (tx_type_sum) (+ TYPE0 TYPE1 TYPE2))
 
 ;; constraint imposing that STAMP[i + 1] ∈ { STAMP[i], 1 + STAMP[i] }
-(depurefun (stamp_progression STAMP)
+(defpurefun (stamp_progression STAMP)
 	   (vanishes! (*
-			(will-remain-constant STAMP)
-			(will-inc STAMP 1)))
+			(will-remain-constant! STAMP)
+			(will-inc! STAMP 1))))
 
 ;; TODO: better solution for the zero column ?
 (defconstraint zerocol-must-be-the-zero-column ()
@@ -150,17 +150,17 @@
 			  (begin
 			    (vanishes! BTC)
 			    (vanishes! REL)
-			    (if-not-zero (will-remain-constant ABS)
+			    (if-not-zero (will-remain-constant! ABS)
 					 (begin
 					   (= BTC 1)
 					   (= REL 1))))
-			  (if-not-zero (will-remain-constant ABS)
+			  (if-not-zero (will-remain-constant! ABS)
 				       (if-not-zero (- REL_MAX REL)
 						    (begin
 						      (will-remain-constant! BTC)
-						      (will-inc REL 1))
+						      (will-inc! REL 1))
 						    (begin
-						      (will-inc BTC 1)
+						      (will-inc! BTC 1)
 						      (= REL 1))
 						    )))))
 
@@ -181,7 +181,7 @@
 		 (if-not-zero (will-inc! BTC 1)
 			      ; BTC[i + 1] != 1 + BTC[i] i.e. BTC[i + 1] == BTC[i]
 			      (if-not-zero (will-remain-constant! ABS)
-					   (will-eq 
+					   (will-eq!
 					     CUM_GAS
 					     (- GLIM REF_AMT))))))
 
@@ -191,7 +191,7 @@
 ;;                   ;;
 ;;;;;;;;;;;;;;;;;;;;;;;
 
-(defun (tx_type)              (DATA_LO))
+(defun (tx_type)              DATA_LO)
 (defun (to_addr_hi)           (shift DATA_HI 1))
 (defun (to_addr_lo)           (shift DATA_LO 1))
 (defun (nonce)                (shift DATA_LO 2))
@@ -290,7 +290,7 @@
 		    G_transaction
 		    (* (is_dep) G_txcreate)
 		    (* (num_addr) G_accesslistaddress)
-		    (* (num_keys) G_accessliststorage)))
+		    (* (num_keys) G_accessliststorage))))
 
 
 ;; row i + 1
@@ -305,8 +305,8 @@
 ;; epsilon is the remainder in the euclidean division of [T_g - g'] by 2
 (defun (epsilon) (- (gas_limit)
 		    LEFTOVER_GAS
-		    (shift WCP_ARG_TWO 2)
-		    (shift WCP_ARG_TWO 2)))
+		    (shift WCP_ARG_TWO_LO 2)
+		    (shift WCP_ARG_TWO_LO 2)))
 
 ;; row i + 2
 (defun (upper_limit_for_refunds)
@@ -379,7 +379,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-(defconstraint comparisons (:guard (remained-constant! ABS))
+(defconstraint gas_and_gas_price (:guard (remained-constant! ABS))
 	       (begin
 		 ;; constraining INIT_GAS
 		 (= IGAS (- (gas_limit) (shift WCP_ARG_TWO_LO 1)))
