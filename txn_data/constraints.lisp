@@ -6,7 +6,7 @@
 	nROWS2                    7
 	;;
 	G_transaction         21000
-	G_txcreate              32000
+	G_txcreate            32000
 	G_accesslistaddress    2400
 	G_accessliststorage    1900
 	;;
