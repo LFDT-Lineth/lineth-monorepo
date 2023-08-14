@@ -45,23 +45,23 @@
                        INST_TYPE
                        (* (- max_CT_CALL max_CT_CALL_OOGX)
                           OOGX))
-                    CT_MAX_CALL)
+                    max_CT_CALL_OOGX)
                  (if-eq-else CT CT_MAX
                              (will-inc! STAMP 1)
                              (will-inc! CT 1))))
-                 ;; (if-zero INST_TYPE
-                 ;;          ;; INST_TYPE = 0 i.e. dealing will CALL-type instructions
-                 ;;          (if-eq-else CT max_ct_CALL
-                 ;;                      ;; CT == max_ct_CALL
-                 ;;                      (will-inc! STAMP 1)
-                 ;;                      ;; CT != max_ct_CALL
-                 ;;                      (will-inc! CT 1))
-                 ;;          ;; INST_TYPE = 1 i.e. dealing will CREATE-type instructions
-                 ;;          (if-eq-else CT max_ct_CREATE
-                 ;;                      ;; CT == max_ct_CREATE
-                 ;;                      (will-inc! STAMP 1)
-                 ;;                      ;; CT != max_ct_CREATE
-                 ;;                      (will-inc! CT 1)))))
+;; (if-zero INST_TYPE
+;;          ;; INST_TYPE = 0 i.e. dealing will CALL-type instructions
+;;          (if-eq-else CT max_ct_CALL
+;;                      ;; CT == max_ct_CALL
+;;                      (will-inc! STAMP 1)
+;;                      ;; CT != max_ct_CALL
+;;                      (will-inc! CT 1))
+;;          ;; INST_TYPE = 1 i.e. dealing will CREATE-type instructions
+;;          (if-eq-else CT max_ct_CREATE
+;;                      ;; CT == max_ct_CREATE
+;;                      (will-inc! STAMP 1)
+;;                      ;; CT != max_ct_CREATE
+;;                      (will-inc! CT 1)))))
 
 (defconstraint final-row (:domain {-1})
                (if-not-zero STAMP
@@ -119,7 +119,7 @@
                  ;
                  (counter-constancy CT CSD)
                  (counter-constancy CT FROM_BALANCE)
-                 (counter-constancy CT FROM_HAS_CODE)
+                 (counter-constancy CT TO_HAS_CODE)
                  (counter-constancy CT TO_NONCE)
                  (counter-constancy CT ABORT)
                  ;
@@ -233,7 +233,7 @@
                         (begin
                           (= GAS_COST (create-gPrelim))
                           (vanishes! GAS_STIPEND)
-                          (vanishes! ABORT)))
+                          (vanishes! ABORT))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                                                  ;;
@@ -245,7 +245,7 @@
 ;; - STAMP[i] != STAMP[i - 1]       <= first row of the instruction
 ;; - INST_TYPE = 0                  <= CALL-type instruction
 (defun (first-row-of-CALL)                       (* (remained-constant! STAMP) (- 1 INST_TYPE)))
-(defun (first-row-of-unexceptional-CREATE)       (* (first-row-of-CALL) (- 1 OOGX)))
+(defun (first-row-of-unexceptional-CALL)         (* (first-row-of-CALL) (- 1 OOGX)))
 (defun (call-valueIsZero)                        (next RES_LO))
 (defun (call-gActual)                            GAS_ACTUAL)
 (defun (call-gAccess)                            (+ (* TO_WARM G_warmaccess)
@@ -308,7 +308,8 @@
                  ))
 
 ;; 
-(defconstraint CALL-type-no-exception (:guard (first-row-of-CALL-unexceptional)
+(defconstraint CALL-type-no-exception (:guard (first-row-of-unexceptional-CALL))
+               (begin
                                               ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                                               ;;   ------------->   row i + 3   ;;
                                               ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -349,7 +350,7 @@
                                               ;; (= (shift RES_LO 6) ...)
                                               (= (shift WCP_FLAG 6) 1)
                                               ;; (vanishes! (shift MOD_FLAG 6))
-                                              )))
+                                              ))
 
 (defconstraint CALL-type-outputs (:guard (first-row-of-CALL))
                ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -367,4 +368,4 @@
                         ;; OOGX == 1
                         (begin
                           (= GAS_COST (call-gPrelim))
-                          (vanishes! GAS_STIPEND))))))
+                          (vanishes! GAS_STIPEND))))
