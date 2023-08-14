@@ -11,10 +11,10 @@
     )
     ; source columns (in STP)
     (
-        (* stp.ARG_ONE_HI   stp.WCP_FLAG)
-        (* stp.ARG_ONE_LO   stp.WCP_FLAG)
+        (* stp.ARG_1_HI     stp.WCP_FLAG)
+        (* stp.ARG_1_LO     stp.WCP_FLAG)
         stp.ZERO
-        (* stp.ARG_TWO_LO   stp.WCP_FLAG)
+        (* stp.ARG_2_LO     stp.WCP_FLAG)
         stp.ZERO
         (* stp.RES_LO       stp.WCP_FLAG)
         (* stp.EXO_INST     stp.WCP_FLAG)

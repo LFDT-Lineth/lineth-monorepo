@@ -11,10 +11,10 @@
     )
     ; source columns (in STP)
     (
-        (* stp.ARG_ONE_HI   stp.MOD_FLAG)
-        (* stp.ARG_ONE_LO   stp.MOD_FLAG)
+        (* stp.ARG_1_HI   stp.MOD_FLAG)
+        (* stp.ARG_1_LO   stp.MOD_FLAG)
         stp.ZERO
-        (* stp.ARG_TWO_LO   stp.MOD_FLAG)
+        (* stp.ARG_2_LO   stp.MOD_FLAG)
         stp.ZERO
         (* stp.RES_LO       stp.MOD_FLAG)
         (* stp.EXO_INST     stp.MOD_FLAG)
