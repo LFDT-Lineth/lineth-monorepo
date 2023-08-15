@@ -29,7 +29,7 @@
   ;;
   (WCP_FLAG                            :BOOLEAN)
   (MOD_FLAG                            :BOOLEAN)
-  EXOGENOUS_MODULE_INSTRUCTION
+  (EXOGENOUS_MODULE_INSTRUCTION        :BYTE) 
   ARG_1_HI
   ARG_1_LO
   ARG_2_LO
