@@ -1,4 +1,4 @@
-(defplookup plookup-ec_data-into-wcp
+(defplookup txn_data_into_wcp
     ; target columns
     (
         wcp.ARGUMENT_1_HI
@@ -10,11 +10,11 @@
     )
     ; source columns
     (
-        ec_data.WCP_ARG1_HI
-        ec_data.WCP_ARG1_LO
-        ec_data.WCP_ARG2_HI
-        ec_data.WCP_ARG2_LO
-        ec_data.WCP_INST
-        ec_data.WCP_RES
+        txn_data.ZEROCOL
+        txn_data.WCP_ARG_ONE_LO
+        txn_data.ZEROCOL
+        txn_data.WCP_ARG_TWO_LO
+        txn_data.WCP_INST
+        txn_data.WCP_RES_LO
     )
 )

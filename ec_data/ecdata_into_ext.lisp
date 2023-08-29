@@ -1,5 +1,5 @@
 (defplookup plookup-ec_data-into-ext
-    ;source columns
+    ; target columns
     (
         ext.ARG_1_HI
         ext.ARG_1_LO
@@ -11,7 +11,7 @@
         ext.RES_HI
         ext.RES_LO
     )
-    ;target columns
+    ; source columns
     (
         ec_data.EXT_ARG1_HI
         ec_data.EXT_ARG1_LO
