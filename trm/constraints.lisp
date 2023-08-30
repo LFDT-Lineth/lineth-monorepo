@@ -96,6 +96,3 @@
    (if-not-zero (- PBIT (prev PBIT))
                 (= (- PBIT (prev PBIT)) 1))
    (if-eq CT 12 (= 1 (+ PBIT (prev PBIT))))))
-;; commented out these 2 lines since I can't get it to compile
-;;            (vanishes! (will-remain-constant! PBIT) (- 1 (will-remain-constant! PBIT))))))
-;;            (if-eq CT 12    (=  1   (+  PBIT (prev PBIT)))))))
