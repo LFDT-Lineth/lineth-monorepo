@@ -48,21 +48,23 @@ EC_DATA := ec_data/columns.lisp \
 	   ec_data/ecdata_into_wcp.lisp \
 	   ec_data/hub_into_ecdata.lisp \
 
+TX_RLP := tx_rlp/columns.lisp \
+		  tx_rlp/constraints.lisp \
+
 TABLES := $(wildcard lookup_tables/tables/*lisp)
 
-PUB_DATA := $(wildcard public_data_commitments/data/*lisp) \
-		$(wildcard public_data_commitments/hash/*lisp)
+PUB_DATA := $(shell find pub/ -iname '*.lisp')
 
-MEMORY := $(wildcard hub/mmio/*lisp) \
-	  $(wildcard hub/mmu/*lisp) \
-	  $(wildcard hub/*lisp) \
+MEMORY := $(wildcard hub/mmio/columns.lisp) \
+		  $(wildcard hub/mmu/columns.lisp) \
+		  lookup_tables/mmuID/columns.lisp
 
 RLP := rlp/columns.lisp \
 	  rlp/constraints.lisp
 
 PHONEY_RLP := phoney_rlp/column.lisp
 
-ZKEVM_FILES := ${ROM} ${STACK} ${ALU} ${BIN} ${SHIFT} ${WCP} ${TRM} ${TABLES} ${PUB_DATA} ${MXP} ${EC_DATA} ${RLP} ${PHONEY_RLP} # ${MEMORY}
+ZKEVM_FILES := ${STACK} ${ALU} ${BIN} ${SHIFT} ${WCP} ${TRM} ${TABLES} ${PUB_DATA} ${MXP} ${EC_DATA} ${RLP} ${PHONEY_RLP} # ${TX_RLP} # ${MEMORY} ${ROM}
 
 zkevm.go: ${ZKEVM_FILES}
 	${CORSET} wizard-iop -vv -P define -o $@ ${ZKEVM_FILES}

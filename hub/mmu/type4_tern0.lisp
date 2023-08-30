@@ -113,7 +113,7 @@
                     (= SLO (prev (+ SLO IS_MICRO)))
                     (if-zero (prev IS_MICRO)
                         (will-eq! TLO (+ TLO ALIGNED BIT_1))
-                        (if-not-zero TOT (inc TLO 1)))
+                        (if-not-zero TOT (will-inc! TLO 1)))
                     (if-zero (prev IS_MICRO)
                         (begin
                             (= SIZE (- LLARGE NIB_3))
