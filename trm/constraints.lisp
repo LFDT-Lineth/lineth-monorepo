@@ -10,6 +10,7 @@
   DELEGATECALL 0xf4
   STATICCALL   0xfa
   SELFDESTRUCT 0xff
+  MAX_PREC_ADDR 9
   LLARGEMO     15)
 
 
@@ -71,17 +72,32 @@
 ;;                                 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(defun (bit-decomposition-associated-with-ONES)
+                (+      ONES
+                        (* (shift -1 ONES) 2)
+                        (* (shift -2 ONES) 4)
+                        (* (shift -3 ONES) 8)
+                        (* (shift -4 ONES) 16)
+                        (* (shift -5 ONES) 32)
+                        (* (shift -6 ONES) 64)
+                        (* (shift -7 ONES) 128)))
+
+
 (defconstraint trm-constraints ()
   (if-eq CT LLARGEMO
          (begin (= ADDR_HI ACC_HI)
-                (= ADDR_LO ACC_LO))))
-;;
-;;                (= TRM_ADDR_HI ACC_T)
-;;                (if-not-zero (+ TRM_ADDR_HI (- ADDR_LO BYTE_LO))
-;;                             (= IS_PREC 0))
-;;                (if-zero (+ TRM_ADDR_HI (- ADDR_LO BYTE_LO))
-;;                         (if-zero BYTE_LO
-;;                                  (= IS_PREC 0)))
+                (= ADDR_LO ACC_LO)
+                (= TRM_ADDR_HI ACC_T)
+                (if-not-zero (+ TRM_ADDR_HI (- ADDR_LO BYTE_LO))
+                             (= IS_PREC 0))
+                (if-zero (+ TRM_ADDR_HI (- ADDR_LO BYTE_LO))
+                         (if-zero BYTE_LO
+                                  (= IS_PREC 0)
+)))))
+;;                                  (= 
+;;                                          (+ (* (- MAX_PREC_ADDR BYTE_LO) (- (* 2 IS_PREC) 1) (- IS_PREC 1)))
+;;                                          (bit-decomposition-associated-with-ONES)))))))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                                 ;;
