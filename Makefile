@@ -35,6 +35,9 @@ WCP := wcp/columns.lisp \
 	   wcp/constraints.lisp \
 	   # wcp/hub_into_wcp.lisp \
 
+TRM := trm/columns.lisp \
+           trm/constraints.lisp
+
 MXP := mxp/columns.lisp \
 	   mxp/constraints.lisp \
 	   mxp/mxp_into_instruction_decoder.lisp
@@ -61,7 +64,7 @@ RLP := rlp/columns.lisp \
 
 PHONEY_RLP := phoney_rlp/column.lisp
 
-ZKEVM_FILES := ${STACK} ${ALU} ${BIN} ${SHIFT} ${WCP} ${TABLES} ${PUB_DATA} ${MXP} ${EC_DATA} ${RLP} ${PHONEY_RLP} # ${TX_RLP} # ${MEMORY} ${ROM}
+ZKEVM_FILES := ${STACK} ${ALU} ${BIN} ${SHIFT} ${WCP} ${TRM} ${TABLES} ${PUB_DATA} ${MXP} ${EC_DATA} ${RLP} ${PHONEY_RLP} # ${TX_RLP} # ${MEMORY} ${ROM}
 
 zkevm.go: ${ZKEVM_FILES}
 	${CORSET} wizard-iop -vv -P define -o $@ ${ZKEVM_FILES}
