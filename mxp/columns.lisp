@@ -19,7 +19,7 @@
 	SIZE_2_HI
 	MAX_OFFSET_1
 	MAX_OFFSET_2
-	COMP
+	(COMP :boolean)
 	MAX_OFFSET
 	(BYTE :byte :array[4])
 	(BYTE_A	:byte)
