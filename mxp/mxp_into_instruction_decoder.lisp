@@ -17,8 +17,8 @@
         [mxp.MXP_TYPE 3]
         [mxp.MXP_TYPE 4]
         [mxp.MXP_TYPE 5]
-        mxp.MXP_GWORD
-        mxp.MXP_GBYTE
-        mxp.MXP_INST
+        mxp.GWORD
+        mxp.GBYTE
+        mxp.INST
     )
 )
