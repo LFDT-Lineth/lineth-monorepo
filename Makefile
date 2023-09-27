@@ -64,9 +64,11 @@ RLP := rlp/columns.lisp \
 
 PHONEY_RLP := phoney_rlp/column.lisp
 
+TXRCPT_RLP := rlp_txrcpt/columns.lisp rlp_txrcpt/constraints.lisp rlp_patterns/constraints.lisp
+
 LIBRARY := rlp_patterns/constraints.lisp
 
-ZKEVM_FILES := ${STACK} ${ALU} ${BIN} ${SHIFT} ${WCP} ${TABLES} ${PUB_DATA} ${MXP} ${EC_DATA} ${RLP} ${PHONEY_RLP} ${RLP_TXN} ${LIBRARY} # ${MEMORY} ${ROM}
+ZKEVM_FILES := ${STACK} ${ALU} ${BIN} ${SHIFT} ${WCP} ${TABLES} ${PUB_DATA} ${MXP} ${EC_DATA} ${RLP} ${PHONEY_RLP} ${RLP_TXN} ${TXRCPT_RLP} ${LIBRARY} # ${MEMORY} ${ROM}
 
 zkevm.go: ${ZKEVM_FILES}
 	${CORSET} wizard-iop -vv -P define -o $@ ${ZKEVM_FILES}

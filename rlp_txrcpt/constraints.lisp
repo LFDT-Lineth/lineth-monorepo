@@ -63,10 +63,11 @@
 
 (defconstraint special-ct-constancy ()
   (if-not-zero (+ (- 1 [PHASE 4]) (- 1 DEPTH_1) IS_PREFIX (- 1 IS_DATA))
-    (counter-constant [INPUT 1])))
+               (counter-constant [INPUT 1])))
 
 (defconstraint ct-incrementings ()
-  (begin (counter-incrementing LC)
+  (begin (if-zero (* IS_DATA IS_PREFIX)
+                  (counter-incrementing LC))
          (counter-incrementing LC_CORRECTION)))
 
 (defconstraint phase3-decrementing ()
@@ -301,7 +302,9 @@
                                 (eq! (prev nBYTES) 4)
                                 (eq! LIMB [INPUT 2])
                                 (eq! nBYTES LLARGE)
-                                (vanishes! (+ (- 1 (next IS_PREFIX)) (- 1 (next IS_TOPIC)) (next IS_DATA))))))))
+                                (vanishes! (+ (- 1 (next IS_PREFIX))
+                                              (- 1 (next IS_TOPIC))
+                                              (next IS_DATA))))))))
 
 (defconstraint phase4-topic-prefix (:guard [PHASE 4])
   (if-eq (* IS_PREFIX IS_TOPIC) 1
@@ -368,7 +371,8 @@
                                                        (next IS_DATA)))))
                          (begin (eq! nSTEP 8)
                                 (if-eq-else LOCAL_SIZE 1
-                                            (begin (rlpPrefixInt [INPUT 3]
+                                            (begin (if-not-eq CT (- nSTEP 2) (vanishes! LC))
+                                                   (rlpPrefixInt [INPUT 3]
                                                                  CT
                                                                  nSTEP
                                                                  DONE
@@ -387,6 +391,7 @@
                                                                  (eq! (* [INPUT 3] (^ 256 LLARGEMO))
                                                                       (next [INPUT 1])))))
                                             (begin (vanishes! LC_CORRECTION)
+                                                   (counter-incrementing LC)
                                                    (rlpPrefixOfByteString [INPUT 1]
                                                                           CT
                                                                           nSTEP
