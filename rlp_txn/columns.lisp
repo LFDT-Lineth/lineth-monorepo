@@ -1,4 +1,4 @@
-(module txRlp)
+(module rlpTxn)
 
 (defcolumns
     ABS_TX_NUM
@@ -9,13 +9,17 @@
     (LX	:boolean)
     INDEX_LT
     INDEX_LX
+    ABS_TX_NUM_INFINY
+    DATA_HI
+    DATA_LO
+    CODE_FRAGMENT_INDEX
+    (REQUIRES_EVM_EXECUTION :boolean)
     (PHASE	:boolean	:array[0:14])
-    (end_phase	:boolean)
+    (PHASE_END	:boolean)
     (TYPE	:byte)
-    (OLI	:boolean)
     (COUNTER	:byte)
     (DONE	:boolean)
-    (number_step	:byte)
+    (nSTEP	:byte)
     (INPUT	:display :bytes :array[2])
     (BYTE :byte :array[2])
     (ACC :display :bytes :array[2])
@@ -23,26 +27,24 @@
     (BIT	:boolean)
     (BIT_ACC	:byte)
     POWER
-    (is_bytesize	:boolean)
-    (is_list	:boolean)
-    (COMP	:boolean)
     RLP_LT_BYTESIZE
     RLP_LX_BYTESIZE
-    (is_padding	:boolean)
-    (is_prefix	:boolean)
-    PHASE_BYTESIZE
+    (LC_CORRECTION	:boolean)
+    (IS_PREFIX	:boolean)
+    PHASE_SIZE
     INDEX_DATA
     DATAGASCOST
     (DEPTH	:boolean	:array[2])
     ADDR_HI
     ADDR_LO
     ACCESS_TUPLE_BYTESIZE
-    nb_Addr
-    nb_Sto
-    nb_Sto_per_Addr)
+    nADDR
+    nKEYS
+    nKEYS_PER_ADDR)
 
 ;; aliases
 (defalias
     CT			COUNTER
     LC          LIMB_CONSTRUCTED
-    P           POWER)
+    P           POWER
+    CFI         CODE_FRAGMENT_INDEX)
