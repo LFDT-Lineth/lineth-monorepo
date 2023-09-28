@@ -64,7 +64,7 @@ RLP := rlp/columns.lisp \
 
 PHONEY_RLP := phoney_rlp/column.lisp
 
-ZKEVM_FILES := ${STACK} ${ALU} ${BIN} ${SHIFT} ${WCP} ${TRM} ${TABLES} ${PUB_DATA} ${MXP} ${EC_DATA} ${RLP} ${PHONEY_RLP} # ${TX_RLP} # ${MEMORY} ${ROM}
+ZKEVM_FILES := ${MXP} ${TABLES}
 
 zkevm.go: ${ZKEVM_FILES}
 	${CORSET} wizard-iop -vv -P define -o $@ ${ZKEVM_FILES}
