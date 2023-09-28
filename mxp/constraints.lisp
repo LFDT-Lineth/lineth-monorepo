@@ -5,8 +5,7 @@
   SHORTCYCLE 3
   LONGCYCLE  16
   TWO_POW_32 4294967296
-  RETURN 0xf3)
-
+  RETURN     0xf3)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                             ;;
@@ -52,15 +51,15 @@
 ;;    2.3 ROOB flag    ;;
 ;;                     ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;
-(defconstraint roob-when-type-1 (:guard [MXP_TYPE 1])
+(defconstraint setting-roob-type-1 (:guard [MXP_TYPE 1])
   (vanishes! ROOB))
 
-(defconstraint roob-when-type-2-3 (:guard (+ [MXP_TYPE 2] [MXP_TYPE 3]))
+(defconstraint setting-roob-type-2-3 (:guard (+ [MXP_TYPE 2] [MXP_TYPE 3]))
   (if-not-zero OFFSET_1_HI
                (= ROOB 1)
                (vanishes! ROOB)))
 
-(defconstraint roob-when-mem-4 (:guard [MXP_TYPE 4])
+(defconstraint setting-roob-type-4 (:guard [MXP_TYPE 4])
   (begin (if-not-zero SIZE_1_HI
                       (= ROOB 1))
          (if-not-zero (* OFFSET_1_HI SIZE_1_LO)
@@ -69,7 +68,7 @@
                   (if-zero (* OFFSET_1_HI SIZE_1_LO)
                            (vanishes! ROOB)))))
 
-(defconstraint roob-when-mem-5 (:guard [MXP_TYPE 5])
+(defconstraint setting-roob-type-5 (:guard [MXP_TYPE 5])
   (begin (if-not-zero SIZE_1_HI
                       (= ROOB 1))
          (if-not-zero SIZE_2_HI
@@ -89,11 +88,11 @@
 ;;    2.4 NOOP flag    ;;
 ;;                     ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;
-(defconstraint noop-and-roob ()
+(defconstraint noop-automatic-vanishing ()
   (if-not-zero ROOB
                (vanishes! NOOP)))
 
-(defconstraint noop-and-types ()
+(defconstraint setting-noop ()
   (if-zero ROOB
            (begin (if-not-zero (+ [MXP_TYPE 1] [MXP_TYPE 2] [MXP_TYPE 3])
                                (= NOOP [MXP_TYPE 1]))
@@ -120,13 +119,13 @@
 (defconstraint stamp-increments ()
   (any! (will-remain-constant! STAMP) (will-inc! STAMP 1)))
 
-(defconstraint stamp-is-zero ()
+(defconstraint automatic-vanishing-when-padding ()
   (if-zero STAMP
            (begin (vanishes! (+ ROOB NOOP MXPX))
                   (vanishes! CT)
                   (vanishes! INST))))
 
-(defconstraint only-one-type (:guard STAMP)
+(defconstraint type-flag-sum (:guard STAMP)
   (= 1
      (reduce + (for i [5] [MXP_TYPE i]))))
 
@@ -134,23 +133,23 @@
   (if-not-zero (will-remain-constant! STAMP)
                (vanishes! (next CT))))
 
-(defconstraint roob-or-noop ()
+(defconstraint stamp-increment-when-roob-or-noop ()
   (if-not-zero (+ ROOB NOOP)
                (begin (will-inc! STAMP 1)
                       (= MXPX ROOB))))
 
-(defconstraint real-instructions ()
+(defconstraint non-trivial-instruction-counter-cycle ()
   (if-not-zero STAMP
                (if-not-zero (+ ROOB NOOP)
-                                 (if-zero MXPX
-                                          (if-eq-else CT SHORTCYCLE
-                                                      (will-inc! STAMP 1)
-                                                      (will-inc! CT 1))
-                                          (if-eq-else CT LONGCYCLE
-                                                      (will-inc! STAMP 1)
-                                                      (will-inc! CT 1))))))
+                            (if-zero MXPX
+                                     (if-eq-else CT SHORTCYCLE
+                                                 (will-inc! STAMP 1)
+                                                 (will-inc! CT 1))
+                                     (if-eq-else CT LONGCYCLE
+                                                 (will-inc! STAMP 1)
+                                                 (will-inc! CT 1))))))
 
-(defconstraint dont-terminate-mid-instructions (:domain {-1})
+(defconstraint final-row (:domain {-1})
   (if-not-zero STAMP
                (if-zero (force-bool (+ ROOB NOOP))
                         (= CT (if-zero MXPX
@@ -174,31 +173,30 @@
 ;;                               ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defun (standing-hypothesis)
-  (* STAMP
-     (- 1 NOOP ROOB))) ;; NOOP + ROOB is binary cf noop section
+  (* STAMP (- 1 NOOP ROOB))) ;; NOOP + ROOB is binary cf noop section
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                       ;;
 ;;    3.1 Max offsets    ;;
 ;;                       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defconstraint max-offset-type-2 (:guard (standing-hypothesis))
+(defconstraint max-offsets-1-and-2-type-2 (:guard (standing-hypothesis))
   (if-eq [MXP_TYPE 2] 1
          (begin (= MAX_OFFSET_1 (+ OFFSET_1_LO 31))
                 (vanishes! MAX_OFFSET_2))))
 
-(defconstraint max-offset-type-3 (:guard (standing-hypothesis))
+(defconstraint max-offsets-1-and-2-type-3 (:guard (standing-hypothesis))
   (if-eq [MXP_TYPE 3] 1
          (begin (= MAX_OFFSET_1 OFFSET_1_LO)
                 (vanishes! MAX_OFFSET_2))))
 
-(defconstraint max-offset-type-4 (:guard (standing-hypothesis))
+(defconstraint max-offsets-1-and-2-type-4 (:guard (standing-hypothesis))
   (if-eq [MXP_TYPE 4] 1
          (begin (= MAX_OFFSET_1
                    (+ OFFSET_1_LO (- SIZE_1_LO 1)))
                 (vanishes! MAX_OFFSET_2))))
 
-(defconstraint max-offset-type-5 (:guard (standing-hypothesis))
+(defconstraint max-offsets-1-and-2-type-5 (:guard (standing-hypothesis))
   (if-eq [MXP_TYPE 5] 1
          (begin (if-zero SIZE_1_LO
                          (vanishes! MAX_OFFSET_1)
@@ -236,27 +234,27 @@
                 (= (prev BYTE_R)
                    (+ (- 256 32) BYTE_R)))))
 
-(defconstraint offsets-are-small (:guard (* (standing-hypothesis) (offsets-are-in-bounds)))
+(defconstraint max-offsets-1-and-2-are-small (:guard (* (standing-hypothesis) (offsets-are-in-bounds)))
   (begin (= [ACC 1] MAX_OFFSET_1)
          (= [ACC 2] MAX_OFFSET_2)))
 
-(defconstraint comp-offsets (:guard (* (standing-hypothesis) (offsets-are-in-bounds)))
+(defconstraint comparing-max-offsets-1-and-2 (:guard (* (standing-hypothesis) (offsets-are-in-bounds)))
   (= (+ [ACC 3] (- 1 COMP))
      (* (- MAX_OFFSET_1 MAX_OFFSET_2)
         (- (* 2 COMP) 1))))
 
-(defconstraint define-max-offset (:guard (* (standing-hypothesis) (offsets-are-in-bounds)))
+(defconstraint defining-max-offset (:guard (* (standing-hypothesis) (offsets-are-in-bounds)))
   (= MAX_OFFSET
      (+ (* COMP MAX_OFFSET_1)
         (* (- 1 COMP) MAX_OFFSET_2))))
 
-(defconstraint define-a (:guard (* (standing-hypothesis) (offsets-are-in-bounds)))
+(defconstraint defining-accA (:guard (* (standing-hypothesis) (offsets-are-in-bounds)))
   (begin (= (+ MAX_OFFSET 1)
             (- (* 32 ACC_A) (shift BYTE_R -2)))
          (= (shift BYTE_R -3)
             (+ (- 256 32) (shift BYTE_R -2)))))
 
-(defconstraint mem-expension-took-place (:guard (* (standing-hypothesis) (offsets-are-in-bounds)))
+(defconstraint mem-expansion-took-place (:guard (* (standing-hypothesis) (offsets-are-in-bounds)))
   (= (+ [ACC 4] EXPANDS)
      (* (- ACC_A WORDS)
         (- (* 2 EXPANDS) 1))))
@@ -266,7 +264,7 @@
 ;;    3.4.2 No expansion event  ;;
 ;;                              ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defconstraint no-extansion (:guard (* (standing-hypothesis) (offsets-are-in-bounds)))
+(defconstraint no-expansion (:guard (* (standing-hypothesis) (offsets-are-in-bounds)))
   (if-zero EXPANDS
            (begin (= WORDS_NEW WORDS)
                   (= C_MEM_NEW C_MEM))))
@@ -279,40 +277,41 @@
 (defun (expansion-happened)
   (* (offsets-are-in-bounds) EXPANDS))
 
-(defconstraint update-words (:guard (* (standing-hypothesis) (expansion-happened)))
+(defconstraint setting-words-new (:guard (* (standing-hypothesis) (expansion-happened)))
   (= WORDS_NEW ACC_A))
 
-(defun (q)
+(defun (large-quotient)
   (+ ACC_Q
      (+ (* TWO_POW_32 (shift BYTE_QQ -2))
         (* (* 256 TWO_POW_32) (shift BYTE_QQ -3)))))
 
-(defconstraint euclidean-div (:guard (* (standing-hypothesis) (expansion-happened)))
+(defconstraint euclidean-division-of-square-of-accA (:guard (* (standing-hypothesis) (expansion-happened)))
   (begin (= (* ACC_A ACC_A)
-            (+ (* 512 (q))
+            (+ (* 512 (large-quotient))
                (+ (* 256 (prev BYTE_QQ))
                   BYTE_QQ)))
          (vanishes! (* (prev BYTE_QQ)
                        (- 1 (prev BYTE_QQ))))))
 
-(defconstraint define-mxpc-new (:guard (* (standing-hypothesis) (expansion-happened)))
+(defconstraint setting-c-mem-new (:guard (* (standing-hypothesis) (expansion-happened)))
   (= C_MEM_NEW
-     (+ (* G_MEM ACC_A) (q))))
+     (+ (* G_MEM ACC_A) (large-quotient))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                          ;;
 ;;    3.4.4 Expansion gas   ;;
 ;;                          ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defconstraint expansion-gas (:guard (* (standing-hypothesis) (offsets-are-in-bounds)))
-  (begin
-    (= QUAD_COST (- C_MEM_NEW C_MEM))
-    (= LIN_COST (+ (* GBYTE SIZE_1_LO)(* GWORD ACC_W)))
-    (if (eq INST RETURN) 
-      (= GAS_MXP (+ QUAD_COST (* DEPLOYS LIN_COST)))
-      (= GAS_MXP (+ QUAD_COST LIN_COST)))
-  )
-)
+(defconstraint setting-quad-cost-and-lin-cost (:guard (* (standing-hypothesis) (offsets-are-in-bounds)))
+  (begin (= QUAD_COST (- C_MEM_NEW C_MEM))
+         (= LIN_COST
+            (+ (* GBYTE SIZE_1_LO) (* GWORD ACC_W)))))
+
+(defconstraint setting-gas-mxp (:guard (* (standing-hypothesis) (offsets-are-in-bounds)))
+  (if (eq INST RETURN)
+      (= GAS_MXP
+         (+ QUAD_COST (* DEPLOYS LIN_COST)))
+      (= GAS_MXP (+ QUAD_COST LIN_COST))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                                    ;;

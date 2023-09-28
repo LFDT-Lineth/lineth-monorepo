@@ -40,7 +40,8 @@ TRM := trm/columns.lisp \
 
 MXP := mxp/columns.lisp \
 	   mxp/constraints.lisp \
-	   mxp/mxp_into_instruction_decoder.lisp
+	   # mxp/lookups/mxp_into_instruction_decoder.lisp \
+           # mxp/lookups/hub_into_mxp.lisp 
 
 EC_DATA := ec_data/columns.lisp \
 	   ec_data/constraints.lisp \

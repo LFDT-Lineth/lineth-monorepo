@@ -7,7 +7,7 @@
 	(ROOB	:boolean)
 	(NOOP	:boolean)
 	(MXPX	:boolean)
-	INST
+	(INST   :display :opcode)
 	(MXP_TYPE :boolean :array[5])
 	GBYTE
 	GWORD
