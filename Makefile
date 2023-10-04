@@ -59,16 +59,14 @@ MEMORY := $(wildcard hub/mmio/columns.lisp) \
 		  $(wildcard hub/mmu/columns.lisp) \
 		  lookup_tables/mmuID/columns.lisp
 
-RLP := rlp/columns.lisp \
-	  rlp/constraints.lisp
+RLP_ADDR := rlpAddr/columns.lisp \
+	  rlpAddr/constraints.lisp
 
-PHONEY_RLP := phoney_rlp/column.lisp
-
-TXRCPT_RLP := rlp_txrcpt/columns.lisp rlp_txrcpt/constraints.lisp rlp_patterns/constraints.lisp
+RLP_TXRCPT := rlp_txrcpt/columns.lisp rlp_txrcpt/constraints.lisp
 
 LIBRARY := rlp_patterns/constraints.lisp
 
-ZKEVM_FILES := ${STACK} ${ALU} ${BIN} ${SHIFT} ${WCP} ${TABLES} ${PUB_DATA} ${MXP} ${EC_DATA} ${RLP} ${PHONEY_RLP} ${RLP_TXN} ${TXRCPT_RLP} ${LIBRARY} # ${MEMORY} ${ROM}
+ZKEVM_FILES := ${STACK} ${ALU} ${BIN} ${SHIFT} ${WCP} ${TABLES} ${PUB_DATA} ${MXP} ${EC_DATA} ${RLP_ADDR} ${RLP_TXN} ${RLP_TXRCPT} ${LIBRARY} # ${MEMORY} ${ROM}
 
 zkevm.go: ${ZKEVM_FILES}
 	${CORSET} wizard-iop -vv -P define -o $@ ${ZKEVM_FILES}

@@ -271,8 +271,8 @@
                      (- (prev RLP_LX_BYTESIZE) (* LC LX nBYTES))))))
 
 (defconstraint lc-correction-nullity ()
-  (if-not-zero (+ [PHASE 0] [PHASE 9] [PHASE 11])
-               (vanishes! LC_CORRECTION)))
+  (if-zero (+ [PHASE 0] [PHASE 9] [PHASE 11])
+           (vanishes! LC_CORRECTION)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                                      ;;
@@ -311,8 +311,8 @@
                               lc
                               nBytes)
   (begin (if-zero input_hi
-                  (byteCountAndPower ct nStep acc_lo byteSize power)
-                  (byteCountAndPower ct nStep acc_hi byteSize power))
+                  (byteCountAndPower ct nStep done acc_lo byteSize power)
+                  (byteCountAndPower ct nStep done acc_hi byteSize power))
          (if-eq done 1
                 (begin (eq! acc_hi input_hi)
                        (eq! acc_lo input_lo)
@@ -332,7 +332,7 @@
                                 (begin (eq! (+ (shift lc -3) (shift lc -2))
                                             1)
                                        (eq! (shift limb -2)
-                                            (* (+ int_short LLARGE byteSize) (^ 256 LLARGE)))
+                                            (* (+ int_short LLARGE byteSize) (^ 256 LLARGEMO)))
                                        (eq! (shift nBytes -2) 1)
                                        (eq! (prev limb) (* input_hi power))
                                        (eq! (prev nBytes) byteSize)
