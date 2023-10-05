@@ -4,18 +4,16 @@
   ;;;; these define the loading scenarios
   ;;(IS_INITCODE :BOOLEAN)
   ;;
-  ;;;; for navigating between code fragments
-  ;;SC_ADDRESS_HI
-  ;;SC_ADDRESS_LO
-  ;;ADDRESS_INDEX
-  ;;CODE_FRAGMENT_INDEX
+  LIMB
+  ADDRESS_HI
+  ADDRESS_LO
   ;;
   ;;;; beating heart of a code fragment
-  ;;COUNTER
+  COUNTER
   ;;(CYCLIC_BIT :BOOLEAN)
   ;;
   ;;;; byte code "metadata"
-  ;;CODESIZE
+  CODESIZE
   ;;CODEHASH_HI
   ;;CODEHASH_LO
   ;;CURRENT_CODEWORD
@@ -32,17 +30,18 @@
   ;;(PUSH_FUNNEL_BIT	:BOOLEAN)
   ;;
   ;;;; related to bytecode itself and padding
-  ;;(PADDED_BYTECODE_BYTE		:BYTE)
+  (PADDED_BYTECODE_BYTE :byte)
   ;;(OPCODE					:BYTE)
   ;;(PADDING_BIT		:BOOLEAN)
   ;;PC
-  ;;(CODESIZE_REACHED	:BOOLEAN)
+  (CODESIZE_REACHED :boolean)
   ;;(IS_BYTECODE		:BOOLEAN)
   CODE_FRAGMENT_INDEX
   PROGRAMME_COUNTER)
 
 (defalias 
   PC  PROGRAMME_COUNTER
-  CFI CODE_FRAGMENT_INDEX)
+  CFI CODE_FRAGMENT_INDEX
+  CT  COUNTER)
 
 
