@@ -140,7 +140,8 @@
 
 (defconstraint non-trivial-instruction-counter-cycle ()
   (if-not-zero STAMP
-               (if-not-zero (+ ROOB NOOP)
+               ;; ROOB + NOOP is binary
+               (if-not-zero (- 1 (+ ROOB NOOP))
                             (if-zero MXPX
                                      (if-eq-else CT SHORTCYCLE
                                                  (will-inc! STAMP 1)
@@ -308,10 +309,10 @@
             (+ (* GBYTE SIZE_1_LO) (* GWORD ACC_W)))))
 
 (defconstraint setting-gas-mxp (:guard (* (standing-hypothesis) (offsets-are-in-bounds)))
-  (if (eq INST RETURN)
-      (= GAS_MXP
-         (+ QUAD_COST (* DEPLOYS LIN_COST)))
-      (= GAS_MXP (+ QUAD_COST LIN_COST))))
+  (if! (eq! INST RETURN)
+       (= GAS_MXP
+          (+ QUAD_COST (* DEPLOYS LIN_COST)))
+       (= GAS_MXP (+ QUAD_COST LIN_COST))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                                    ;;
