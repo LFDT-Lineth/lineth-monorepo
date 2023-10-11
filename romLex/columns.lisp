@@ -7,7 +7,6 @@
   ADDR_LO
   DEP_NUMBER
   (DEP_STATUS :boolean)
-  (IS_INIT :boolean)
   (COMMIT_TO_STATE :boolean)
   (READ_FROM_STATE :boolean))
 
