@@ -17,6 +17,19 @@
 ;;    4.1 Global Constraints    ;;
 ;;                              ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Binarities
+(defconstraint binarities ()
+  (begin (is-binary LC)
+         (is-binary IS_PREFIX)
+         (is-binary LC_CORRECTION)
+         (is-binary PHASE_END)
+         (is-binary DEPTH_1)
+         (is-binary DONE)
+         (is-binary IS_TOPIC)
+         (is-binary IS_DATA)
+         (is-binary BIT)
+         (for k [0 : 4] (is-binary [PHASE k]))))
+
 ;;    4.1.1 Constancy columns  ;;
 ;; Def block-constant
 (defun (block-constant C)

@@ -1,5 +1,6 @@
 CORSET=corset
-ROM := rom/columns.lisp  rom/constraints.lisp
+ROM := rom/columns.lisp  rom/constraints.lisp \
+	   rom/rlpTxn_into_rom.lisp rom/romLex_into_rom.lisp
 
 ROM_LEX := romLex/columns.lisp romLex/constraints.lisp
 
