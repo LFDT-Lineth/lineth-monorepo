@@ -1,6 +1,5 @@
-(defun (non-zero-cfi)
-  (if-not-zero rlpTxn.CODE_FRAGMENT_INDEX
-               1))
+(defun (selector)
+  (* (~ rlpTxn.CODE_FRAGMENT_INDEX) [rlpTxn.PHASE 9] (- 1 rlpTxn.IS_PREFIX) rlpTxn.LC))
 
 (defplookup 
   rlpTxn-into-rom
@@ -13,10 +12,10 @@
   )
   ;source columns
   (
-    rlpTxn.CODE_FRAGMENT_INDEX
-    (* rlpTxn.LIMB (non-zero-cfi))
-    (* rlpTxn.INDEX_DATA (non-zero-cfi))
-    (* rlpTxn.nBYTES (non-zero-cfi))
+    (* rlpTxn.CODE_FRAGMENT_INDEX (selector))
+    (* rlpTxn.LIMB (selector))
+    (* rlpTxn.INDEX_DATA (selector))
+    (* rlpTxn.nBYTES (selector))
   ))
 
 
