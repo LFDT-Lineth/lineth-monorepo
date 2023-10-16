@@ -4,13 +4,13 @@
   (
     rom.CODE_FRAGMENT_INDEX
     rom.CODE_FRAGMENT_INDEX_INFTY
-    rom.CODESIZE
+    rom.CODE_SIZE
   )
   ;source columns
   (
     romLex.CODE_FRAGMENT_INDEX
     romLex.CODE_FRAGMENT_INDEX_INFTY
-    romLex.CODESIZE
+    romLex.CODE_SIZE
   ))
 
 

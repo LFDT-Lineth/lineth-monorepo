@@ -43,7 +43,7 @@
                (or! (remained-constant! X) (did-inc! X 1))))
 
 (defconstraint cfi-constancies ()
-  (cfi-constant CODESIZE))
+  (cfi-constant CODE_SIZE))
 
 (defconstraint cfi-incrementings ()
   (begin (cfi-incrementing CODESIZE_REACHED)
@@ -107,7 +107,7 @@
 
 ;; CODESIZE_REACHED Constraints
 (defconstraint codesizereached-trigger ()
-  (if-eq PC (- CODESIZE 1)
+  (if-eq PC (- CODE_SIZE 1)
          (eq! (+ CODESIZE_REACHED (next CODESIZE_REACHED))
               1)))
 
