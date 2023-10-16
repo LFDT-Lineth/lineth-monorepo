@@ -131,16 +131,27 @@
   (if-eq CT COUNTER_MAX (eq! nBYTES nBYTES_ACC)))
 
 ;; INDEX constraints
-(defconstraint index ()
-  (begin (if-zero CT
-                  (if-zero (* CFI
-                              (- CFI
-                                 (+ (prev CFI) 1)))
-                           (vanishes! INDEX)
-                           (did-inc! INDEX 1)))
-         (if-eq CT LLARGE (did-inc! INDEX 1))
-         (if-not-zero (* CT (- CT LLARGE))
-                      (remained-constant! INDEX))))
+(defconstraint no-cfi-no-index ()
+  (if-zero CFI
+           (vanishes! INDEX)))
+
+(defconstraint new-cfi-reboot-index ()
+  (if-not-zero (- CFI (prev CFI))
+               (vanishes! INDEX)))
+
+(defconstraint new-ct-increment-index ()
+  (if-not-zero (* CFI
+                  (- CFI
+                     (+ (prev CFI) 1))
+                  (- 1 (~ CT)))
+               (did-inc! INDEX 1)))
+
+(defconstraint index-inc-in-middle-padding ()
+  (if-eq CT LLARGE (did-inc! INDEX 1)))
+
+(defconstraint index-quasi-ct-cst ()
+  (if-not-zero (* CT (- CT LLARGE))
+               (remained-constant! INDEX)))
 
 ;; PC constraints
 (defconstraint pc-incrementing (:guard CFI)

@@ -1,8 +1,8 @@
 CORSET=corset
 ROM := rom/columns.lisp  rom/constraints.lisp \
-	   rom/rlpTxn_into_rom.lisp rom/romLex_into_rom.lisp
-
-ROM_LEX := romLex/columns.lisp romLex/constraints.lisp
+ 
+ROM_LEX := romLex/columns.lisp romLex/constraints.lisp \
+	romLex/romLex_into_rom.lisp
 
 STACK := hub/columns.lisp \
 	hub/constraints.lisp
@@ -50,8 +50,8 @@ EC_DATA := ec_data/columns.lisp \
 	   ec_data/ecdata_into_wcp.lisp \
 	   ec_data/hub_into_ecdata.lisp \
 
-RLP_TXN := rlp_txn/columns.lisp \
-		  rlp_txn/constraints.lisp \
+RLP_TXN := rlp_txn/columns.lisp rlp_txn/constraints.lisp \
+		  	rlp_txn/rlpTxn_into_rom.lisp
 
 TABLES := $(wildcard lookup_tables/tables/*lisp)
 
