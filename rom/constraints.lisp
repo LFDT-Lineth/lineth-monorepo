@@ -1,229 +1,206 @@
 (module rom)
 
-(defconst
-  ;; 0xC5D2460186F7233C927E7DB2DCC703C0
-  EMPTY_CODE_HASH_HI 262949717399590921288928019264691438528
-  ;; 0xE500B653CA82273B7BFAD8045D85A470
-  EMPTY_CODE_HASH_LO  304396909071904405792975023732328604784)
+(defconst 
+  PUSH_1         0x60
+  JUMPDEST       0x5b
+  LLARGE         16
+  LLARGEMO       15
+  EVMWORDMO      31
+  INVALID_OPCODE 0xfe)
 
-(defconstraint initialization (:domain {0}) (vanishes! CODE_FRAGMENT_INDEX))
-(defconstraint codesize-reached-origin (:domain {-1}) (eq! CODESIZE_REACHED 1))
-(defconstraint padding-bit-reached (:domain {-1}) (vanishes! PADDING_BIT))
-(defconstraint cycle-finishes (:domain {-1}) (if-not-zero CODE_FRAGMENT_INDEX
-                                                          (begin (eq! COUNTER 15)
-                                                                 (eq! CYCLIC_BIT 1)
-                                                                 (vanishes! PADDED_BYTECODE_BYTE))))
+(defpurefun (if-not-eq A B then)
+  (if-not-zero (- A B)
+               then))
 
-(defun (in-padding) (is-zero CODE_FRAGMENT_INDEX))
-(defun (not-in-padding) CODE_FRAGMENT_INDEX)
+;; Binarity  
+(defconstraint binarities ()
+  (begin (is-binary CODESIZE_REACHED)
+         (is-binary IS_PUSH_DATA)
+         (is-binary PUSH_FUNNEL_BIT)
+         (debug (is-binary IS_PUSH))
+         (debug (is-binary VALID_JUMP_DESTINATION))))
 
-(defconstraint padding (:guard (in-padding))
-  (begin
-   (vanishes! IS_INITCODE)
-   (vanishes! SC_ADDRESS_HI)
-   (vanishes! SC_ADDRESS_LO)
-   (vanishes! ADDRESS_INDEX)
-   (vanishes! COUNTER)
-   (vanishes! CYCLIC_BIT)
-   (vanishes! CODESIZE)
-   (vanishes! CODEHASH_HI)
-   (vanishes! CODEHASH_LO)
-   (vanishes! IS_PUSH)
-   (vanishes! IS_PUSH_DATA)
-   (vanishes! PUSH_PARAMETER)
-   (vanishes! PUSH_PARAMETER_OFFSET)
-   (vanishes! PUSH_VALUE_HI)
-   (vanishes! PUSH_VALUE_LO)
-   (vanishes! PUSH_VALUE_ACC_HI)
-   (vanishes! PUSH_VALUE_ACC_LO)
-   (vanishes! PUSH_FUNNEL_BIT)
-   (vanishes! PADDED_BYTECODE_BYTE)
-   (vanishes! OPCODE)
-   (vanishes! PADDING_BIT)
-   (vanishes! PC)
-   (vanishes! CODESIZE_REACHED)
-   (vanishes! IS_BYTECODE)))
+;; Constancies
+(defun (cfi-constant X)
+  (if-not-eq CFI
+             (+ (prev CFI) 1)
+             (remained-constant! X)))
 
-;; ct <=> COUNTER
-;; cb <=> CYCLIC_BIT
-;; X  <=> some column
-;; X should stay constant on cycles like so:
-;; ct:  ? ? ? 0 1 2 ... 14 15 0 1 2 ... 14 15 ? ? ?
-;; cb:  ? ? ? 0 0 0 ...  0  0 1 1 1 ...  1  1 ? ? ?
-;; X :  ? ? ? x x x ...  x  x x x x ...  x  x ? ? ?
-(defpurefun (fully-counter-constant ct cb X)
-  (if-zero ct
-           ;; ct == 0
-           (if-not-zero cb (remained-constant! X))
-           ;; ct != 0
-           (remained-constant! X)))
+(defun (cfi-incrementing X)
+  (if-not-eq CFI
+             (+ (prev CFI) 1)
+             (or! (remained-constant! X) (did-inc! X 1))))
 
-(defconstraint constancies (:guard (not-in-padding))
-  (begin
-   ;; CYCLIC_BIT is counter constant
-   (if-not-zero (eq! COUNTER 15) (will-remain-constant! CYCLIC_BIT))
-   ;; TODO @Olivier
-   ;; CODE_FRAGMENT_INDEX & PADDING_BIT are fully counter constant
-   (fully-counter-constant COUNTER CYCLIC_BIT CODE_FRAGMENT_INDEX)
-   (fully-counter-constant COUNTER CYCLIC_BIT PADDING_BIT)
-   ;; ADDRESS_INDEX,IS_INITCODE,CODESIZE,CODEHASH_HI, CODEHASH_LO are constant w.r.t. CODE_FRAGMENT_INDEX
-   (stamp-constancy CODE_FRAGMENT_INDEX ADDRESS_INDEX)
-   (stamp-constancy CODE_FRAGMENT_INDEX IS_INITCODE)
-   (stamp-constancy CODE_FRAGMENT_INDEX CODESIZE)
-   (stamp-constancy CODE_FRAGMENT_INDEX CODEHASH_HI)
-   (stamp-constancy CODE_FRAGMENT_INDEX CODEHASH_LO)))
+(defpurefun (counter-constant X ct ctmax)
+  (if-not-eq ct ctmax (will-remain-constant! X)))
 
-(defconstraint automatic (:guard (not-in-padding))
-  (begin (if-zero CODESIZE
-                  (begin (eq! CODEHASH_HI EMPTY_CODE_HASH_HI)
-                         (eq! CODEHASH_LO EMPTY_CODE_HASH_LO)))
-         (if-zero (all! (eq! CODEHASH_HI EMPTY_CODE_HASH_HI)
-                        (eq! CODEHASH_LO EMPTY_CODE_HASH_LO))
-                  (vanishes! CODESIZE))))
+(defun (push-constant X)
+  (if-not-zero COUNTER_PUSH
+               (remained-constant! X)))
 
-(defun (flip x)
-    (will-eq! x (- 1 x)))
+(defun (push-incrementing X)
+  (if-not-zero COUNTER_PUSH
+               (or! (remained-constant! X) (did-inc! X 1))))
 
-(defconstraint counter (:guard (not-in-padding))
-  (if-zero (eq! COUNTER 15)
-           (vanishes! (next COUNTER))
-           (will-inc! COUNTER 1)))
+(defconstraint cfi-constancies ()
+  (cfi-constant CODE_SIZE))
 
-(defconstraint cyclic-bit (:guard (not-in-padding))
-  (if-zero (eq! COUNTER 15)
-           (flip CYCLIC_BIT)))
+(defconstraint cfi-incrementings ()
+  (begin (cfi-incrementing CODESIZE_REACHED)
+         (debug (cfi-incrementing PC))))
 
-(defconstraint address-index (:guard (not-in-padding))
-  (begin (* (will-remain-constant! ADDRESS_INDEX)
-            (will-inc! ADDRESS_INDEX 1))
-         (if-zero (will-remain-constant! SC_ADDRESS_HI)
-                  (if-zero (will-remain-constant! SC_ADDRESS_LO)
-                           (will-remain-constant! ADDRESS_INDEX)))
-         (if-zero (will-remain-constant! ADDRESS_INDEX)
-                  (begin (will-remain-constant! SC_ADDRESS_LO)
-                         (will-remain-constant! SC_ADDRESS_HI)))))
+(defconstraint ct-constancies ()
+  (begin (counter-constant LIMB CT COUNTER_MAX)
+         (counter-constant nBYTES CT COUNTER_MAX)
+         (counter-constant COUNTER_MAX CT COUNTER_MAX)))
 
-(defconstraint is-initcode (:guard (not-in-padding))
-  (if-zero (will-remain-constant! ADDRESS_INDEX)
-           (if-not-zero (will-remain-constant! IS_INITCODE)
-                        (begin (eq! IS_INITCODE 1)
-                               (vanishes! (next IS_INITCODE))))))
+(defconstraint push-constancies ()
+  (begin (push-constant PUSH_PARAMETER)
+         (push-constant PUSH_VALUE_HIGH)
+         (push-constant PUSH_VALUE_LOW)))
 
-(defconstraint code-fragment-index (:guard (not-in-padding))
-  (if-zero (will-remain-constant! ADDRESS_INDEX)
-           (if-zero (will-remain-constant! IS_INITCODE)
-                    (will-remain-constant! CODE_FRAGMENT_INDEX)
-                    (will-inc! CODE_FRAGMENT_INDEX 1))
-           (will-inc! CODE_FRAGMENT_INDEX 1)))
+;; Heartbeat
+(defconstraint initialization (:domain {0})
+  (vanishes! CODE_FRAGMENT_INDEX))
 
-(defconstraint load-and-initcode (:guard (not-in-padding))
-  (if-zero (eq! COUNTER 64)
-           (if-zero (eq! CYCLIC_BIT 1)
-                    (if-zero (will-remain-constant! ADDRESS_INDEX)
-                             (* (will-remain-constant! IS_INITCODE)
-                                (+ 1 (will-remain-constant! IS_INITCODE))))))) ;; the fuck is that...
+(defconstraint cfi-evolving-possibility ()
+  (or! (will-remain-constant! CFI) (will-inc! CFI 1)))
 
-(defconstraint pc (:guard (not-in-padding))
-  (if-zero (will-remain-constant! CODE_FRAGMENT_INDEX)
-           (will-inc! PC 1)
-           (vanishes! (next PC))))
+(defconstraint no-cfi-nothing ()
+  (if-zero CFI
+           (begin (vanishes! CT)
+                  (vanishes! COUNTER_MAX)
+                  (vanishes! PBCB)
+                  (debug (vanishes! IS_PUSH))
+                  (debug (vanishes! IS_PUSH_DATA))
+                  (debug (vanishes! COUNTER_PUSH))
+                  (debug (vanishes! PUSH_PARAMETER))
+                  (debug (vanishes! PROGRAMME_COUNTER)))
+           (begin (debug (or! (eq! COUNTER_MAX LLARGEMO) (eq! COUNTER_MAX EVMWORDMO)))
+                  (if-eq COUNTER_MAX LLARGEMO (will-remain-constant! CFI))
+                  (if-not-eq COUNTER COUNTER_MAX (will-remain-constant! CFI))
+                  (if-eq CT EVMWORDMO (will-inc! CFI 1)))))
 
-(defconstraint codesize-reached (:guard (not-in-padding))
-  (if-zero (will-remain-constant! CODE_FRAGMENT_INDEX)
-           (begin (* (will-remain-constant! CODESIZE_REACHED) (- (will-remain-constant! CODESIZE_REACHED) 1))
-                  (if-zero (next (- CODESIZE (+ PC 1)))
-                           (will-eq! CODESIZE_REACHED (+ CODESIZE_REACHED 1))
-                           (will-remain-constant! CODESIZE_REACHED)))
-           ;; Seemingly buggy for now TODO @Olivier
-           ;; (if-zero (next IS_LOADED)
-           ;;          (vanishes! (next CODESIZE_REACHED))
-           ;;          (if-zero (- (next CODESIZE) 1)
-           ;;                   (vanishes! (- (next CODESIZE_REACHED) 1))
-           ;;                   (vanishes! (next CODESIZE_REACHED))))
-           0))
+(defconstraint counter-evolution ()
+  (if-eq-else CT COUNTER_MAX
+              (vanishes! (next CT))
+              (will-inc! CT 1)))
 
-(defconstraint padding-bit (:guard (not-in-padding))
-  (begin
-   (if-not-zero (will-remain-constant! CODE_FRAGMENT_INDEX)
-                (vanishes! (next (if-not-zero CODESIZE
-                                             (- PADDING_BIT 1)
-                                             PADDING_BIT))))
-   (if-zero (eq! COUNTER 15)
-            (if-zero (eq! CYCLIC_BIT 1)
-                     (begin (if-zero CODESIZE_REACHED
-                                     (eq! PADDING_BIT 1)
-                                     (if-zero (eq! PADDING_BIT 1)
-                                              (vanishes! (next PADDING_BIT))))
-                            (if-zero PADDING_BIT
-                                     (will-inc! CODE_FRAGMENT_INDEX 1)))))))
+(defconstraint finalisation (:domain {-1})
+  (if-not-zero CFI
+               (begin (eq! CT COUNTER_MAX)
+                      (eq! COUNTER_MAX EVMWORDMO)
+                      (eq! CFI CODE_FRAGMENT_INDEX_INFTY))))
 
-(defconstraint is-bytecode (:guard (not-in-padding))
-  (begin
-   (if-zero (will-remain-constant! CODE_FRAGMENT_INDEX)
-            (will-eq! IS_BYTECODE (- 1 CODESIZE_REACHED))
-            (if-zero (next CODESIZE)
-                     (vanishes! (next IS_BYTECODE))
-                     (will-eq! IS_BYTECODE 1)))
-   (if-zero IS_BYTECODE
-            (begin (vanishes! OPCODE)
-                   (vanishes! PADDED_BYTECODE_BYTE)))))
+(defconstraint cfi-infty ()
+  (if-zero CFI
+           (vanishes! CODE_FRAGMENT_INDEX_INFTY)
+           (will-remain-constant! CODE_FRAGMENT_INDEX_INFTY)))
 
-(defconstraint push-funnel-bit (:guard (not-in-padding))
+(defconstraint limb-accumulator ()
+  (begin (if-zero CT
+                  (eq! ACC PBCB)
+                  (eq! ACC
+                       (+ (* 256 (prev ACC))
+                          PBCB)))
+         (if-eq CT COUNTER_MAX (eq! ACC LIMB))))
+
+;; CODESIZE_REACHED Constraints
+(defconstraint codesizereached-trigger ()
+  (if-eq PC (- CODE_SIZE 1)
+         (eq! (+ CODESIZE_REACHED (next CODESIZE_REACHED))
+              1)))
+
+(defconstraint csr-impose-ctmax (:guard CFI)
+  (if-zero CT
+           (if-zero CODESIZE_REACHED
+                    (eq! COUNTER_MAX LLARGEMO)
+                    (eq! COUNTER_MAX EVMWORDMO))))
+
+;; nBytes constraints
+(defconstraint nbytes-acc (:guard CFI)
+  (if-zero CT
+           (if-zero CODESIZE_REACHED
+                    (eq! nBYTES_ACC 1)
+                    (vanishes! nBYTES))
+           (if-zero CODESIZE_REACHED
+                    (did-inc! nBYTES_ACC 1)
+                    (remained-constant! nBYTES_ACC))))
+
+(defconstraint nbytes-collusion ()
+  (if-eq CT COUNTER_MAX (eq! nBYTES nBYTES_ACC)))
+
+;; INDEX constraints
+(defconstraint no-cfi-no-index ()
+  (if-zero CFI
+           (vanishes! INDEX)))
+
+(defconstraint new-cfi-reboot-index ()
+  (if-not-zero (- CFI (prev CFI))
+               (vanishes! INDEX)))
+
+(defconstraint new-ct-increment-index ()
+  (if-not-zero (any! CFI
+                     (did-inc! CFI 1)
+                     (- 1 (~ CT)))
+               (did-inc! INDEX 1)))
+
+(defconstraint index-inc-in-middle-padding ()
+  (if-eq CT LLARGE (did-inc! INDEX 1)))
+
+(defconstraint index-quasi-ct-cst ()
+  (if-not-zero (* CT (- CT LLARGE))
+               (remained-constant! INDEX)))
+
+;; PC constraints
+(defconstraint pc-incrementing (:guard CFI)
+  (if-not-eq (next CFI) (+ CFI 1) (will-inc! PC 1)))
+
+(defconstraint pc-reboot ()
+  (if-not-eq (next CFI)
+             CFI
+             (vanishes! (next PC))))
+
+;; end of CFI (padding rows)
+(defconstraint end-code-no-opcode ()
+  (if-eq CODESIZE_REACHED 1 (vanishes! PBCB)))
+
+;; Constraints Related to PUSHX instructions
+(defconstraint not-a-push-data ()
   (if-zero IS_PUSH_DATA
-           (vanishes! PUSH_FUNNEL_BIT)
-           (begin (if-zero PUSH_PARAMETER_OFFSET
-                           (vanishes! PUSH_FUNNEL_BIT))
-                  (if-zero (eq! PUSH_PARAMETER_OFFSET 16)
-                           (will-dec! PUSH_FUNNEL_BIT 1)))))
+           (begin (vanishes! COUNTER_PUSH)
+                  (eq! OPCODE PBCB))))
 
-(defun (same-code-fragment-not-pushdata)
-    (begin
-     (eq! OPCODE PADDED_BYTECODE_BYTE)
-     (if-zero IS_PUSH
-              (begin (vanishes! PUSH_VALUE_HI)
-                     (vanishes! PUSH_VALUE_LO)
-                     (vanishes! PUSH_VALUE_ACC_HI)
-                     (vanishes! PUSH_VALUE_ACC_LO)
-                     (vanishes! PUSH_PARAMETER_OFFSET)
-                     (vanishes! (next IS_PUSH_DATA)))
-              (begin (will-eq! IS_PUSH_DATA 1)
-                     (will-remain-constant! PUSH_VALUE_HI)
-                     (will-remain-constant! PUSH_VALUE_LO)
-                     (vanishes! PUSH_VALUE_ACC_HI)
-                     (vanishes! PUSH_VALUE_ACC_LO)
-                     (eq! PUSH_PARAMETER_OFFSET PUSH_PARAMETER)
-                     (will-eq! PUSH_PARAMETER_OFFSET (- PUSH_PARAMETER 1))))))
+(defconstraint ispush-ispushdata-exclusivity ()
+  (vanishes! (* IS_PUSH IS_PUSH_DATA)))
 
-(defun (same-code-fragment-pushdata)
-    (begin
-     ;; opcode is zero in push data
-     (vanishes! OPCODE)
-     ;; the push value is built from the accumulators
-     (if-zero PUSH_FUNNEL_BIT
-              (begin (remained-constant! PUSH_VALUE_ACC_HI)
-                     (eq! PUSH_VALUE_ACC_LO (+ PADDED_BYTECODE_BYTE
-                                              (* 256 (prev PUSH_VALUE_ACC_LO)))))
-              (begin (remained-constant! PUSH_VALUE_ACC_LO)
-                     (eq! PUSH_VALUE_ACC_HI (+ PADDED_BYTECODE_BYTE
-                                              (* 256 (prev PUSH_VALUE_ACC_HI))))))
-     ;; skim through the push data
-     (if-zero PUSH_PARAMETER_OFFSET
-              (begin (vanishes! (next IS_PUSH_DATA))
-                     (eq! PUSH_VALUE_HI PUSH_VALUE_ACC_HI)
-                     (eq! PUSH_VALUE_LO PUSH_VALUE_ACC_LO))
-              (begin (will-dec! PUSH_PARAMETER_OFFSET 1)
-                     (will-eq! IS_PUSH_DATA 1)
-                     (will-remain-constant! PUSH_VALUE_HI)
-                     (will-remain-constant! PUSH_VALUE_LO)))))
+(defconstraint ispush-constraint ()
+  (if-not-zero IS_PUSH
+               (begin (vanishes! IS_PUSH_DATA)
+                      (eq! PUSH_PARAMETER
+                           (- OPCODE (- PUSH_1 1)))
+                      (vanishes! PUSH_VALUE_ACC)
+                      (vanishes! (+ PUSH_FUNNEL_BIT (next PUSH_FUNNEL_BIT))))))
 
-(defun (same-code-fragment)
-    (if-zero IS_PUSH_DATA
-             (same-code-fragment-not-pushdata)
-             (same-code-fragment-pushdata)))
+(defconstraint ispushdata-constraint ()
+  (if-not-zero IS_PUSH_DATA
+               (begin (eq! (+ (prev IS_PUSH) (prev IS_PUSH_DATA))
+                           1)
+                      (eq! OPCODE INVALID_OPCODE)
+                      (did-inc! COUNTER_PUSH 1)
+                      (if-zero (- (+ COUNTER_PUSH LLARGE) PUSH_PARAMETER)
+                               (begin (will-inc! PUSH_FUNNEL_BIT 1)
+                                      (eq! PUSH_VALUE_HIGH PUSH_VALUE_ACC))
+                               (if-eq (next IS_PUSH_DATA) 1 (will-remain-constant! PUSH_FUNNEL_BIT)))
+                      (if-zero (- (prev PUSH_FUNNEL_BIT) PUSH_FUNNEL_BIT)
+                               (eq! PUSH_VALUE_ACC
+                                    (+ (* 256 (prev PUSH_VALUE_ACC))
+                                       PBCB))
+                               (eq! PUSH_VALUE_ACC PBCB))
+                      (if-eq COUNTER_PUSH PUSH_PARAMETER
+                             (begin (if-zero PUSH_FUNNEL_BIT
+                                             (vanishes! PUSH_VALUE_HIGH))
+                                    (eq! PUSH_VALUE_ACC PUSH_VALUE_LOW)
+                                    (vanishes! (next IS_PUSH_DATA)))))))
 
-(defconstraint push (:guard (not-in-padding))
-  (if-zero (will-remain-constant! CODE_FRAGMENT_INDEX)
-           (begin (will-inc! PC 1)
-                  (same-code-fragment))
-           (begin (vanishes! IS_PUSH_DATA)
-                  (vanishes! (next (- OPCODE PADDED_BYTECODE_BYTE))))))
+

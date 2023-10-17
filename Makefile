@@ -1,6 +1,9 @@
 CORSET=corset
-ROM := rom/columns.lisp \
-	rom/constraints.lisp
+ROM := rom/columns.lisp  rom/constraints.lisp \
+	# rom/rom_into_instructionDecoder.lisp
+ 
+ROM_LEX := romLex/columns.lisp romLex/constraints.lisp \
+	romLex/romLex_into_rom.lisp
 
 STACK := hub/columns.lisp \
 	hub/constraints.lisp
@@ -48,8 +51,8 @@ EC_DATA := ec_data/columns.lisp \
 	   ec_data/ecdata_into_wcp.lisp \
 	   ec_data/hub_into_ecdata.lisp \
 
-RLP_TXN := rlp_txn/columns.lisp \
-		  rlp_txn/constraints.lisp \
+RLP_TXN := rlp_txn/columns.lisp rlp_txn/constraints.lisp \
+		  	rlp_txn/rlpTxn_into_rom.lisp
 
 TABLES := $(wildcard lookup_tables/tables/*lisp)
 
@@ -66,7 +69,7 @@ RLP_TXRCPT := rlp_txrcpt/columns.lisp rlp_txrcpt/constraints.lisp
 
 LIBRARY := rlp_patterns/constraints.lisp
 
-ZKEVM_FILES := ${STACK} ${ALU} ${BIN} ${SHIFT} ${WCP} ${TABLES} ${PUB_DATA} ${MXP} ${EC_DATA} ${RLP_ADDR} ${RLP_TXN} ${RLP_TXRCPT} ${LIBRARY} # ${MEMORY} ${ROM}
+ZKEVM_FILES := ${STACK} ${ALU} ${BIN} ${SHIFT} ${WCP} ${TABLES} ${PUB_DATA} ${MXP} ${EC_DATA} ${RLP_ADDR} ${RLP_TXN} ${RLP_TXRCPT} ${LIBRARY} ${ROM} ${ROM_LEX} # ${MEMORY} 
 
 zkevm.go: ${ZKEVM_FILES}
 	${CORSET} wizard-iop -vv -P define -o $@ ${ZKEVM_FILES}
