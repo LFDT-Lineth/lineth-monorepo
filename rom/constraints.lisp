@@ -140,10 +140,9 @@
                (vanishes! INDEX)))
 
 (defconstraint new-ct-increment-index ()
-  (if-not-zero (* CFI
-                  (- CFI
-                     (+ (prev CFI) 1))
-                  (- 1 (~ CT)))
+  (if-not-zero (any! CFI
+                     (did-inc! CFI 1)
+                     (- 1 (~ CT)))
                (did-inc! INDEX 1)))
 
 (defconstraint index-inc-in-middle-padding ()
