@@ -3,12 +3,15 @@
 (defcolumns
 	STAMP
 	CN
-	COUNTER
-	(RIDICULOUSLY_OUT_OF_BOUND	:boolean)
+	CT
+	(ROOB	:boolean)
 	(NOOP	:boolean)
-	(MEMORY_EXPANSION_EXCEPTION	:BOOLEAN)
-	MXP_INST
+	(MXPX	:boolean)
+	(INST   :display :opcode)
 	(MXP_TYPE :boolean :array[5])
+	GBYTE
+	GWORD
+	(DEPLOYS :boolean)
 	OFFSET_1_LO
 	OFFSET_2_LO
 	OFFSET_1_HI
@@ -19,8 +22,8 @@
 	SIZE_2_HI
 	MAX_OFFSET_1
 	MAX_OFFSET_2
-	(COMP :boolean)
 	MAX_OFFSET
+	(COMP :boolean)	
 	(BYTE :byte :array[4])
 	(BYTE_A	:byte)
 	(BYTE_W	:byte)
@@ -33,16 +36,9 @@
 	BYTE_R
 	WORDS
 	WORDS_NEW
-	MXPC
-	MXPC_NEW
-	DELTA_MXPC
-	(MEMORY_EXPANSION_EVENT	:boolean)
-	MXP_GBYTE
-	MXP_GWORD)
-
-;; aliases
-(defalias
-	CT			COUNTER
-	ROOB		RIDICULOUSLY_OUT_OF_BOUND
-	MXPX		MEMORY_EXPANSION_EXCEPTION
-	MXPE			MEMORY_EXPANSION_EVENT)
+	C_MEM
+	C_MEM_NEW
+	QUAD_COST
+	LIN_COST
+	GAS_MXP
+	(EXPANDS :boolean))
