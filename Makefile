@@ -1,5 +1,6 @@
 CORSET=corset
-ROM := rom/columns.lisp  rom/constraints.lisp \
+ROM := rom/columns.lisp \
+	rom/constraints.lisp \
 	# rom/rom_into_instructionDecoder.lisp
  
 ROM_LEX := romLex/columns.lisp romLex/constraints.lisp \
@@ -9,14 +10,14 @@ STACK := hub/columns.lisp \
 	hub/constraints.lisp
 
 ALU := alu/add/columns.lisp \
-	   alu/add/constraints.lisp \
-	   alu/ext/columns.lisp \
-	   alu/ext/constraints.lisp \
-	   alu/mod/columns.lisp \
-	   alu/mod/constraints.lisp \
-	   alu/mul/columns.lisp \
-	   alu/mul/constraints.lisp \
-	   alu/mul/helpers.lisp \
+	alu/add/constraints.lisp \
+	alu/ext/columns.lisp \
+	alu/ext/constraints.lisp \
+	alu/mod/columns.lisp \
+	alu/mod/constraints.lisp \
+	alu/mul/columns.lisp \
+	alu/mul/constraints.lisp \
+	alu/mul/helpers.lisp \
 #       alu/add/hub_into_add.lisp \
 #       alu/ext/hub_into_ext.lisp \
 #       alu/mod/hub_into_mod.lisp \
@@ -35,22 +36,22 @@ SHIFT :=  shf/columns.lisp \
 	  # shf/hub_into_shf.lisp \
 
 WCP := wcp/columns.lisp \
-	   wcp/constraints.lisp \
+	wcp/constraints.lisp \
 	   # wcp/hub_into_wcp.lisp \
 
 TRM := trm/columns.lisp \
-           trm/constraints.lisp
+	trm/constraints.lisp
 
 MXP := mxp/columns.lisp \
-	   mxp/constraints.lisp \
-	   # mxp/lookups/mxp_into_instruction_decoder.lisp \
+	mxp/constraints.lisp \
+	# mxp/lookups/mxp_into_instruction_decoder.lisp \
            # mxp/lookups/hub_into_mxp.lisp 
 
 EC_DATA := ec_data/columns.lisp \
-	   ec_data/constraints.lisp \
-	   ec_data/ecdata_into_ext.lisp \
-	   ec_data/ecdata_into_wcp.lisp \
-	   ec_data/hub_into_ecdata.lisp \
+	ec_data/constraints.lisp \
+	ec_data/ecdata_into_ext.lisp \
+	ec_data/ecdata_into_wcp.lisp \
+	ec_data/hub_into_ecdata.lisp \
 
 RLP_TXN := rlp_txn/columns.lisp rlp_txn/constraints.lisp \
 		  	rlp_txn/rlpTxn_into_rom.lisp
@@ -70,10 +71,25 @@ RLP_TXRCPT := rlp_txrcpt/columns.lisp rlp_txrcpt/constraints.lisp
 
 LIBRARY := rlp_patterns/constraints.lisp
 
-ZKEVM_FILES := ${STACK} ${ALU} ${BIN} ${SHIFT} ${WCP} ${TABLES} ${PUB_DATA} ${MXP} ${EC_DATA} ${RLP_ADDR} ${RLP_TXN} ${RLP_TXRCPT} ${LIBRARY} ${ROM} ${ROM_LEX} # ${MEMORY} 
+ZKEVM_MODULES := ${ALU} \
+	${BIN} \
+	${EC_DATA} \
+	${LIBRARY} \
+	${MEMORY} \
+	${MXP} \
+	${PUB_DATA} \
+	${RLP_ADDR} \
+	${RLP_TXN} \
+	${RLP_TXRCPT} \
+	${ROM} \
+	${ROM_LEX} \
+	${SHIFT} \
+	${STACK} \
+	${TABLES} \
+	${WCP} 
 
-zkevm.go: ${ZKEVM_FILES}
-	${CORSET} wizard-iop -vv -P define -o $@ ${ZKEVM_FILES}
+define.go: ${ZKEVM_MODULES}
+	${CORSET} wizard-iop -vv -P define -o $@ ${ZKEVM_MODULES}
 
-zkevm.bin: ${ZKEVM_FILES}
-	${CORSET} compile -vv -o $@ ${ZKEVM_FILES}
+zkevm.bin: ${ZKEVM_MODULES}
+	${CORSET} compile -vv -o $@ ${ZKEVM_MODULES}
