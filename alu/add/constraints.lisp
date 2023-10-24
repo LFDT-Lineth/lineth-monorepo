@@ -18,6 +18,7 @@
 
 (defconstraint heartbeat ()
   (begin
+   (if-zero STAMP (vanishes! CT))
    (* (will-remain-constant! STAMP) (will-inc! STAMP 1))
    (if-not-zero (will-remain-constant! STAMP) (vanishes! (next CT)))
    (if-not-zero STAMP
