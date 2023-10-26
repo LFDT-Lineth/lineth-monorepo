@@ -2,7 +2,7 @@ CORSET=corset
 ROM := rom/columns.lisp \
 	rom/constraints.lisp \
 	# rom/rom_into_instructionDecoder.lisp
- 
+
 ROM_LEX := romLex/columns.lisp romLex/constraints.lisp \
 	romLex/romLex_into_rom.lisp
 
@@ -44,8 +44,8 @@ TRM := trm/columns.lisp \
 
 MXP := mxp/columns.lisp \
 	mxp/constraints.lisp \
-	# mxp/lookups/mxp_into_instruction_decoder.lisp \
-           # mxp/lookups/hub_into_mxp.lisp 
+	mxp/lookups/mxp_into_instruction_decoder.lisp
+		   # mxp/lookups/hub_into_mxp.lisp
 
 EC_DATA := ec_data/columns.lisp \
 	ec_data/constraints.lisp \
@@ -54,7 +54,7 @@ EC_DATA := ec_data/columns.lisp \
 	ec_data/hub_into_ecdata.lisp \
 
 RLP_TXN := rlp_txn/columns.lisp rlp_txn/constraints.lisp \
-		  	rlp_txn/rlpTxn_into_rom.lisp
+			rlp_txn/rlpTxn_into_rom.lisp
 
 TABLES := $(wildcard lookup_tables/tables/*lisp)
 
@@ -86,7 +86,7 @@ ZKEVM_MODULES := ${ALU} \
 	${SHIFT} \
 	${STACK} \
 	${TABLES} \
-	${WCP} 
+	${WCP}
 
 define.go: ${ZKEVM_MODULES}
 	${CORSET} wizard-iop -vv -P define -o $@ ${ZKEVM_MODULES}
