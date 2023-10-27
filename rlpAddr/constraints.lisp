@@ -1,12 +1,5 @@
 (module rlpAddr)
 
-(defconst 
-  create2_shift  0xff ;; create2 first byte
-  list_short     0xc0 ;; RLP prefix for a short list
-  int_short      0x80 ;; RLP prefix for a number > 127
-  const_recipe_1 1
-  const_recipe_2 2)
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                              ;;
 ;;    3.1 Heartbeat    ;;
@@ -116,7 +109,7 @@
 
 (defconstraint setting-recipe-flag ()
   (eq! RECIPE
-       (+ (* const_recipe_1 RECIPE_1) (* const_recipe_2 RECIPE_2))))
+       (+ (* RLPADDR_CONST_RECIPE_1 RECIPE_1) (* RLPADDR_CONST_RECIPE_2 RECIPE_2))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                              ;;
@@ -149,24 +142,24 @@
                 (eq! (+ (shift LC -4) (shift LC -3))
                      1)
                 (eq! (shift LIMB -3)
-                     (* (+ list_short 1 20 ACC_BYTESIZE (- 1 TINY_NON_ZERO_NONCE))
+                     (* (+ LIST_SHORT 1 20 ACC_BYTESIZE (- 1 TINY_NON_ZERO_NONCE))
                         (^ 256 15)))
                 (eq! (shift nBYTES -3) 1)
                 (vanishes! (shift INDEX -3))
                 (eq! (shift LIMB -2)
-                     (+ (* (+ int_short 20) (^ 256 15))
+                     (+ (* (+ INT_SHORT 20) (^ 256 15))
                         (* ADDR_HI (^ 256 11))))
                 (eq! (shift nBYTES -2) 5)
                 (eq! (prev LIMB) ADDR_LO)
                 (eq! (prev nBYTES) 16)
                 (if-zero NONCE
                          (eq! LIMB
-                              (* int_short (^ 256 15)))
+                              (* INT_SHORT (^ 256 15)))
                          (if-eq-else 1 TINY_NON_ZERO_NONCE
                                      (eq! LIMB
                                           (* NONCE (^ 256 15)))
                                      (eq! LIMB
-                                          (+ (* (+ int_short ACC_BYTESIZE) (^ 256 15))
+                                          (+ (* (+ INT_SHORT ACC_BYTESIZE) (^ 256 15))
                                              (* NONCE POWER)))))
                 (eq! nBYTES
                      (+ ACC_BYTESIZE (- 1 TINY_NON_ZERO_NONCE)))
@@ -184,7 +177,7 @@
   (if-eq ct 5
          (begin (eq! (shift LC -5) 1)
                 (eq! (shift LIMB -5)
-                     (+ (* create2_shift (^ 256 15))
+                     (+ (* CREATE2_SHIFT (^ 256 15))
                         (* ADDR_HI (^ 256 11))))
                 (eq! (shift nBYTES -5) 5)
                 (eq! (shift LIMB -4) ADDR_LO)

@@ -10,7 +10,7 @@
   (LIMB_CONSTRUCTED :boolean)
   INDEX
   INDEX_LOCAL
-  (PHASE :boolean :array [0:4])
+  (PHASE :boolean :array [5])
   (PHASE_END :boolean)
   COUNTER
   nSTEP
@@ -37,3 +37,5 @@
   CT COUNTER
   LC LIMB_CONSTRUCTED
   P  POWER)
+
+
