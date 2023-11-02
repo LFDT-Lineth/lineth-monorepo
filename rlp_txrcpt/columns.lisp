@@ -7,28 +7,28 @@
   ABS_LOG_NUM_MAX
   (LIMB :display :bytes)
   (nBYTES :byte)
-  (LIMB_CONSTRUCTED :boolean)
+  (LIMB_CONSTRUCTED :binary)
   INDEX
   INDEX_LOCAL
-  (PHASE :boolean :array [5])
-  (PHASE_END :boolean)
+  (PHASE :binary :array [5])
+  (PHASE_END :binary)
   COUNTER
   nSTEP
-  (DONE :boolean)
+  (DONE :binary)
   TXRCPT_SIZE
   (INPUT :display :bytes :array [4])
   (BYTE :byte :array [4])
   (ACC :display :bytes :array [4])
   ACC_SIZE
-  (BIT :boolean)
+  (BIT :binary)
   (BIT_ACC :byte)
   POWER
-  (IS_PREFIX :boolean)
-  (LC_CORRECTION :boolean)
+  (IS_PREFIX :binary)
+  (LC_CORRECTION :binary)
   PHASE_SIZE
-  (DEPTH_1 :boolean)
-  (IS_TOPIC :boolean)
-  (IS_DATA :boolean)
+  (DEPTH_1 :binary)
+  (IS_TOPIC :binary)
+  (IS_DATA :binary)
   LOG_ENTRY_SIZE
   LOCAL_SIZE)
 

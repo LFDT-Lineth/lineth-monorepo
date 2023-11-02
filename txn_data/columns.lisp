@@ -15,7 +15,7 @@
   VALUE
   TO_HI
   TO_LO
-  (IS_DEP :boolean)
+  (IS_DEP :binary)
   GAS_LIMIT
   INITIAL_GAS
   GAS_PRICE
@@ -24,15 +24,15 @@
   COINBASE_LO
   CALL_DATA_SIZE
   INIT_CODE_SIZE
-  (TYPE0 :boolean)
-  (TYPE1 :boolean)
-  (TYPE2 :boolean)
-  (REQUIRES_EVM_EXECUTION :boolean)
+  (TYPE0 :binary)
+  (TYPE1 :binary)
+  (TYPE2 :binary)
+  (REQUIRES_EVM_EXECUTION :binary)
   LEFTOVER_GAS
   REFUND_COUNTER
   REFUND_AMOUNT
   CUMULATIVE_CONSUMED_GAS
-  (STATUS_CODE :boolean)
+  (STATUS_CODE :binary)
   PHASE_RLP_TXN
   PHASE_RLP_TXNRCPT
   CODE_FRAGMENT_INDEX
@@ -41,7 +41,7 @@
   OUTGOING_RLP_TXNRCPT
   WCP_ARG_ONE_LO
   WCP_ARG_TWO_LO
-  (WCP_RES_LO :boolean)
+  (WCP_RES_LO :binary)
   WCP_INST)
 
 (defalias 

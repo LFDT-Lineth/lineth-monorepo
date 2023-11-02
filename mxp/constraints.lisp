@@ -1,6 +1,6 @@
 (module mxp)
 
-(defconst 
+(defconst
   G_MEM      3 ;; 'G_memory' in Ethereum yellow paper
   SHORTCYCLE 3
   LONGCYCLE  16
@@ -309,7 +309,7 @@
             (+ (* GBYTE SIZE_1_LO) (* GWORD ACC_W)))))
 
 (defconstraint setting-gas-mxp (:guard (* (standing-hypothesis) (offsets-are-in-bounds)))
-  (if! (eq! INST RETURN)
+  (if (eq! INST RETURN)
        (= GAS_MXP
           (+ QUAD_COST (* DEPLOYS LIN_COST)))
        (= GAS_MXP (+ QUAD_COST LIN_COST))))
@@ -319,7 +319,7 @@
 ;;    2.12 Consistency Constraints    ;;
 ;;                                    ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defpermutation 
+(defpermutation
   (CN_perm
    STAMP_perm
    C_MEM_perm
@@ -343,5 +343,3 @@
                                                (= (next C_MEM_perm) C_MEM_NEW_perm)))
                            (begin (vanishes! (next WORDS_perm))
                                   (vanishes! (next C_MEM_perm))))))
-
-

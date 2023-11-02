@@ -3,7 +3,7 @@
 (defcolumns
 	RAM_STAMP 
 	MICRO_INSTRUCTION_STAMP
-	(IS_MICRO_INSTRUCTION :BOOLEAN) 
+	(IS_MICRO_INSTRUCTION :binary) 
 
 	OFF_1_LO
 	OFF_2_HI
@@ -21,15 +21,15 @@
 	CONTEXT_TARGET
 
 	COUNTER
-	(OFFSET_OUT_OF_BOUNDS :BOOLEAN)
+	(OFFSET_OUT_OF_BOUNDS :binary)
 
 	PRECOMPUTATION
 	TERNARY
 	MICRO_INSTRUCTION
-	(EXO_IS_ROM :BOOLEAN)
-	(EXO_IS_LOG :BOOLEAN)
-	(EXO_IS_HASH :BOOLEAN)
-	(EXO_IS_TXCD :BOOLEAN)
+	(EXO_IS_ROM :binary)
+	(EXO_IS_LOG :binary)
+	(EXO_IS_HASH :binary)
+	(EXO_IS_TXCD :binary)
 
 	SOURCE_LIMB_OFFSET
 	SOURCE_BYTE_OFFSET
@@ -37,24 +37,24 @@
 	TARGET_BYTE_OFFSET
 	SIZE
   
-	(NIB_1 :NIBBLE)
-	(NIB_2 :NIBBLE)
-	(NIB_3 :NIBBLE)
-	(NIB_4 :NIBBLE)
-	(NIB_5 :NIBBLE)
-	(NIB_6 :NIBBLE)
-	(NIB_7 :NIBBLE)
-	(NIB_8 :NIBBLE)
-	(NIB_9 :NIBBLE)
+	(NIB_1 :nibble)
+	(NIB_2 :nibble)
+	(NIB_3 :nibble)
+	(NIB_4 :nibble)
+	(NIB_5 :nibble)
+	(NIB_6 :nibble)
+	(NIB_7 :nibble)
+	(NIB_8 :nibble)
+	(NIB_9 :nibble)
 
-    (BYTE_1 :BYTE)
-	(BYTE_2 :BYTE)
-	(BYTE_3 :BYTE)
-	(BYTE_4 :BYTE)
-	(BYTE_5 :BYTE)
-	(BYTE_6 :BYTE)
-	(BYTE_7 :BYTE)
-	(BYTE_8 :BYTE)
+    (BYTE_1 :byte)
+	(BYTE_2 :byte)
+	(BYTE_3 :byte)
+	(BYTE_4 :byte)
+	(BYTE_5 :byte)
+	(BYTE_6 :byte)
+	(BYTE_7 :byte)
+	(BYTE_8 :byte)
 
     ACC_1
     ACC_2
@@ -65,14 +65,14 @@
     ACC_7
     ACC_8
 
-    (BIT_1 :BOOLEAN)
-	(BIT_2 :BOOLEAN)
-	(BIT_3 :BOOLEAN)
-	(BIT_4 :BOOLEAN)
-	(BIT_5 :BOOLEAN)
-	(BIT_6 :BOOLEAN)
-	(BIT_7 :BOOLEAN)
-	(BIT_8 :BOOLEAN)
+    (BIT_1 :binary)
+	(BIT_2 :binary)
+	(BIT_3 :binary)
+	(BIT_4 :binary)
+	(BIT_5 :binary)
+	(BIT_6 :binary)
+	(BIT_7 :binary)
+	(BIT_8 :binary)
 
 	ALIGNED
 	FAST
@@ -88,8 +88,8 @@
 	TOTAL_NUMBER_OF_READS
 	TOTAL_NUMBER_OF_PADDINGS
 
-	(TO_RAM :BOOLEAN)
-	(ERF    :BOOLEAN)
+	(TO_RAM :binary)
+	(ERF    :binary)
 
 	RETURN_OFFSET
 	RETURN_CAPACITY
@@ -99,7 +99,7 @@
 
 	INFO
 
-	(IS_DATA :BOOLEAN))
+	(IS_DATA :binary))
 
 (defalias 
 	CSD				CALL_STACK_DEPTH

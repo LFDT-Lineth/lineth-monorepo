@@ -4,14 +4,14 @@
 	STAMP
 	CN
 	CT
-	(ROOB	:boolean)
-	(NOOP	:boolean)
-	(MXPX	:boolean)
+	(ROOB	:binary)
+	(NOOP	:binary)
+	(MXPX	:binary)
 	(INST   :display :opcode)
-	(MXP_TYPE :boolean :array[5])
+	(MXP_TYPE :binary :array[5])
 	GBYTE
 	GWORD
-	(DEPLOYS :boolean)
+	(DEPLOYS :binary)
 	OFFSET_1_LO
 	OFFSET_2_LO
 	OFFSET_1_HI
@@ -23,7 +23,7 @@
 	MAX_OFFSET_1
 	MAX_OFFSET_2
 	MAX_OFFSET
-	(COMP :boolean)	
+	(COMP :binary)	
 	(BYTE :byte :array[4])
 	(BYTE_A	:byte)
 	(BYTE_W	:byte)
@@ -41,4 +41,4 @@
 	QUAD_COST
 	LIN_COST
 	GAS_MXP
-	(EXPANDS :boolean))
+	(EXPANDS :binary))

@@ -17,9 +17,9 @@
 	VAL_B_NEW
 	VAL_C_NEW
 
-	(BYTE_A :BYTE)
-	(BYTE_B :BYTE)
-	(BYTE_C :BYTE)
+	(BYTE_A :byte)
+	(BYTE_B :byte)
+	(BYTE_C :byte)
 
 	ACC_A
 	ACC_B
@@ -31,7 +31,7 @@
 	CONTEXT_SOURCE
 	CONTEXT_TARGET
 
-	(IS_INIT :BOOLEAN)
+	(IS_INIT :binary)
 
 	SOURCE_LIMB_OFFSET
 	TARGET_LIMB_OFFSET
@@ -39,36 +39,36 @@
 	TARGET_BYTE_OFFSET
 
 	SIZE
-	(FAST :BOOLEAN)
-	(ERF :BOOLEAN)
+	(FAST :binary)
+	(ERF :binary)
 	
 	STACK_VALUE_HIGH
 	STACK_VALUE_LOW
 
-	(STACK_VALUE_LO_BYTE :BYTE)
-	(STACK_VALUE_HI_BYTE :BYTE)
+	(STACK_VALUE_LO_BYTE :byte)
+	(STACK_VALUE_HI_BYTE :byte)
 
 	ACC_VAL_HI
 	ACC_VAL_LO
 
-	(EXO_IS_ROM :BOOLEAN)
-	(EXO_IS_LOG :BOOLEAN)
-	(EXO_IS_HASH :BOOLEAN)		;previously EXO_IS_SHA3
-	(EXO_IS_TXCD :BOOLEAN)
+	(EXO_IS_ROM :binary)
+	(EXO_IS_LOG :binary)
+	(EXO_IS_HASH :binary)		;previously EXO_IS_SHA3
+	(EXO_IS_TXCD :binary)
 
 	INDEX_X
 	VAL_X
-	(BYTE_X :BYTE)
+	(BYTE_X :byte)
 	ACC_X
 
 	TX_NUM
 	LOG_NUM ;to be replaced with a single NUM column
 
-	(BIN_1 :BOOLEAN)
-	(BIN_2 :BOOLEAN)
-	(BIN_3 :BOOLEAN)
-	(BIN_4 :BOOLEAN)
-	(BIN_5 :BOOLEAN)
+	(BIN_1 :binary)
+	(BIN_2 :binary)
+	(BIN_3 :binary)
+	(BIN_4 :binary)
+	(BIN_5 :binary)
 
 	ACC_1
 	ACC_2

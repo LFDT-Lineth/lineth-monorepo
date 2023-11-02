@@ -4,8 +4,8 @@
   STAMP
   CT
   CT_MAX
-  (INSTRUCTION_TYPE                    :BOOLEAN)
-  (CALL_CAN_TRANSFER_VALUE             :BOOLEAN)
+  (INSTRUCTION_TYPE                    :binary)
+  (CALL_CAN_TRANSFER_VALUE             :binary)
   ;;
   GAS_ACTUAL
   GAS_MXP
@@ -17,19 +17,19 @@
   VAL_HI
   VAL_LO
   ;;
-  (TO_EXISTS                           :BOOLEAN)
-  (TO_WARM                             :BOOLEAN)
-  (OUT_OF_GAS_EXCEPTION                :BOOLEAN)
+  (TO_EXISTS                           :binary)
+  (TO_WARM                             :binary)
+  (OUT_OF_GAS_EXCEPTION                :binary)
   ;;
-  (ABORT                               :BOOLEAN)
+  (ABORT                               :binary)
   CALL_STACK_DEPTH
   FROM_BALANCE
   TO_NONCE
-  (TO_HAS_CODE                         :BOOLEAN)
+  (TO_HAS_CODE                         :binary)
   ;;
-  (WCP_FLAG                            :BOOLEAN)
-  (MOD_FLAG                            :BOOLEAN)
-  (EXOGENOUS_MODULE_INSTRUCTION        :BYTE) 
+  (WCP_FLAG                            :binary)
+  (MOD_FLAG                            :binary)
+  (EXOGENOUS_MODULE_INSTRUCTION        :byte) 
   ARG_1_HI
   ARG_1_LO
   ARG_2_LO

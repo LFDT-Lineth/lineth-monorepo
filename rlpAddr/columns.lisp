@@ -3,8 +3,8 @@
 (defcolumns 
   ;; INPUTS
   RECIPE
-  (RECIPE_1 :bool)
-  (RECIPE_2 :bool)
+  (RECIPE_1 :binary)
+  (RECIPE_2 :binary)
   ADDR_HI     ;; hi part (4B)  of the creator address
   ADDR_LO     ;; lo part (16B) "
   DEP_ADDR_HI ;; hi part of the deploed addr
@@ -16,7 +16,7 @@
   KEC_LO
   ;; OUTPUTS
   LIMB        ;; bytes of the output
-  (LC :bool)
+  (LC :binary)
   nBYTES      ;; the number of bytes to read
   INDEX
   ;; Register columns
@@ -26,9 +26,9 @@
   ACC
   ACC_BYTESIZE
   POWER
-  (BIT1 :bool)
+  (BIT1 :binary)
   (BIT_ACC :byte)
-  (TINY_NON_ZERO_NONCE :bool))
+  (TINY_NON_ZERO_NONCE :binary))
 
 ;; aliases
 (defalias 

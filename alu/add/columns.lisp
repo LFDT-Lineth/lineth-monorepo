@@ -10,9 +10,9 @@
     ARG_2_LO
     RES_HI
     RES_LO
-    (BYTE_1 :BYTE)
-    (BYTE_2 :BYTE)
+    (BYTE_1 :byte)
+    (BYTE_2 :byte)
     ACC_1
     ACC_2
-    (OVERFLOW :BOOLEAN)
+    (OVERFLOW :binary)
 )

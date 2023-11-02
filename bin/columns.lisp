@@ -2,7 +2,7 @@
 
 (defcolumns
     BINARY_STAMP
-    (ONE_LINE_INSTRUCTION :BOOLEAN)
+    (ONE_LINE_INSTRUCTION :binary)
     COUNTER
     INST
     ARGUMENT_1_HI
@@ -11,19 +11,19 @@
     ARGUMENT_2_LO
     RESULT_HI
     RESULT_LO
-    (SMALL :BOOLEAN)
-    (BITS :BOOLEAN)
-    (BIT_B_4 :BOOLEAN)
-    (NEG :BOOLEAN)
+    (SMALL :binary)
+    (BITS :binary)
+    (BIT_B_4 :binary)
+    (NEG :binary)
     LOW_4
-    (BIT_1 :BOOLEAN)
+    (BIT_1 :binary)
     PIVOT
-    (BYTE_1 :BYTE)
-    (BYTE_2 :BYTE)
-    (BYTE_3 :BYTE)
-    (BYTE_4 :BYTE)
-    (BYTE_5 :BYTE)
-    (BYTE_6 :BYTE)
+    (BYTE_1 :byte)
+    (BYTE_2 :byte)
+    (BYTE_3 :byte)
+    (BYTE_4 :byte)
+    (BYTE_5 :byte)
+    (BYTE_6 :byte)
     ACC_1
     ACC_2
     ACC_3
@@ -39,7 +39,7 @@
     XOR_BYTE_LO
     NOT_BYTE_HI
     NOT_BYTE_LO
-    (IS_DATA :BOOLEAN))
+    (IS_DATA :binary))
 
 ;; aliases
 (defalias

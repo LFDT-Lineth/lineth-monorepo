@@ -7,9 +7,9 @@
   ADDR_HI
   ADDR_LO
   DEP_NUMBER
-  (DEP_STATUS :boolean)
-  (COMMIT_TO_STATE :boolean)
-  (READ_FROM_STATE :boolean))
+  (DEP_STATUS :binary)
+  (COMMIT_TO_STATE :binary)
+  (READ_FROM_STATE :binary))
 
 (defalias 
   CFI CODE_FRAGMENT_INDEX)

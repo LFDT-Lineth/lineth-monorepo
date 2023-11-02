@@ -3,7 +3,7 @@
 (defcolumns
     SHIFT_STAMP
     COUNTER
-    (ONE_LINE_INSTRUCTION :BOOLEAN)
+    (ONE_LINE_INSTRUCTION :binary)
     ARG_1_HI
     ARG_1_LO
     ARG_2_HI
@@ -11,10 +11,10 @@
     RES_HI
     RES_LO
     INST
-    (SHIFT_DIRECTION :BOOLEAN)
-    (BITS :BOOLEAN)
-    (NEG :BOOLEAN)
-    (KNOWN :BOOLEAN)
+    (SHIFT_DIRECTION :binary)
+    (BITS :binary)
+    (NEG :binary)
+    (KNOWN :binary)
     LEFT_ALIGNED_SUFFIX_HIGH        ;decoded
     RIGHT_ALIGNED_PREFIX_HIGH       ;decoded
     LEFT_ALIGNED_SUFFIX_LOW         ;decoded
@@ -22,20 +22,20 @@
     ONES                            ;decoded
     LOW_3
     MICRO_SHIFT_PARAMETER
-    (BIT_1 :BOOLEAN)
-    (BIT_2 :BOOLEAN)
-    (BIT_3 :BOOLEAN)
-    (BIT_4 :BOOLEAN)
-    (BIT_B_3 :BOOLEAN)
-    (BIT_B_4 :BOOLEAN)
-    (BIT_B_5 :BOOLEAN)
-    (BIT_B_6 :BOOLEAN)
-    (BIT_B_7 :BOOLEAN)
-    (BYTE_1 :BYTE)
-    (BYTE_2 :BYTE)
-    (BYTE_3 :BYTE)
-    (BYTE_4 :BYTE)
-    (BYTE_5 :BYTE)
+    (BIT_1 :binary)
+    (BIT_2 :binary)
+    (BIT_3 :binary)
+    (BIT_4 :binary)
+    (BIT_B_3 :binary)
+    (BIT_B_4 :binary)
+    (BIT_B_5 :binary)
+    (BIT_B_6 :binary)
+    (BIT_B_7 :binary)
+    (BYTE_1 :byte)
+    (BYTE_2 :byte)
+    (BYTE_3 :byte)
+    (BYTE_4 :byte)
+    (BYTE_5 :byte)
     ACC_1
     ACC_2
     ACC_3
@@ -51,7 +51,7 @@
     SHB_6_LO
     SHB_7_HI
     SHB_7_LO
-    (IS_DATA :BOOLEAN)     ;turns on exactly when stamp is non zero
+    (IS_DATA :binary)     ;turns on exactly when stamp is non zero
     )
 
 

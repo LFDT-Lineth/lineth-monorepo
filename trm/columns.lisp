@@ -5,15 +5,15 @@
     ADDR_HI
     ADDR_LO
     TRM_ADDR_HI
-    (IS_PREC :BOOLEAN)
+    (IS_PREC :binary)
     ;;
     CT
-    (BYTE_HI :BYTE)
-    (BYTE_LO :BYTE)
+    (BYTE_HI :byte)
+    (BYTE_LO :byte)
     ACC_HI
     ACC_LO
     ACC_T
     ;;
-    (PBIT :BOOLEAN)
-    (ONES :BOOLEAN)
+    (PBIT :binary)
+    (ONES :binary)
 )

@@ -20,12 +20,12 @@
     INSTRUCTION_ARGUMENT_LO
     BYTECODE_ADDRESS_HI
     BYTECODE_ADDRESS_LO
-    (IS_INITCODE :BOOLEAN)
+    (IS_INITCODE :binary)
     PC
 
     CONTEXT_NUMBER
     MAXIMUM_CONTEXT
-    (CONTEXT_TYPE :BOOLEAN)
+    (CONTEXT_TYPE :binary)
 
     CALLER_CONTEXT
     RETURNER_CONTEXT
@@ -37,12 +37,12 @@
     RETURNDATA_OFFSET
     RETURNDATA_SIZE
 
-    (CONTEXT_REVERTS :BOOLEAN)
-    (CONTEXT_REVERTS_BY_CHOICE :BOOLEAN)
-    (CONTEXT_REVERTS_BY_FORCE :BOOLEAN)
+    (CONTEXT_REVERTS :binary)
+    (CONTEXT_REVERTS_BY_CHOICE :binary)
+    (CONTEXT_REVERTS_BY_FORCE :binary)
     CONTEXT_REVERT_STORAGE_STAMP
-    (CONTEXT_RUNS_OUT_OF_GAS :BOOLEAN)
-    (CONTEXT_ERROR :BOOLEAN)
+    (CONTEXT_RUNS_OUT_OF_GAS :binary)
+    (CONTEXT_ERROR :binary)
 
     CALLSTACK_DEPTH
     VALUE
@@ -50,11 +50,11 @@
     ;; =====================================================================
     ;; INSTRUCTION DECODED FLAGS
     ;;=====================================================================
-    (STATICCALL_FLAG :BOOLEAN)
-    (DELEGATECALL_FLAG :BOOLEAN)
-    (CODECALL_FLAG :BOOLEAN)
-    ;;(JUMP_FLAG :BOOLEAN)
-    ;;(PUSH_FLAG :BOOLEAN)
+    (STATICCALL_FLAG :binary)
+    (DELEGATECALL_FLAG :binary)
+    (CODECALL_FLAG :binary)
+    ;;(JUMP_FLAG :binary)
+    ;;(PUSH_FLAG :binary)
 
     ;; =====================================================================
     ;; STACK STUFF
@@ -68,27 +68,27 @@
     (VAL_LO :array [1:4])
     (VAL_HI :array [1:4])
     (ITEM_STACK_STAMP :array [1:4])
-    (POP :array [1:4] :boolean)
+    (POP :array [1:4] :binary)
 
     ALPHA
     DELTA
     HEIGHT_UNDER
     HEIGHT_OVER
 
-    (STACK_EXCEPTION			:BOOLEAN)
-    (STACK_UNDERFLOW_EXCEPTION	:BOOLEAN)
-    (STACK_OVERFLOW_EXCEPTION	:BOOLEAN)
+    (STACK_EXCEPTION			:binary)
+    (STACK_UNDERFLOW_EXCEPTION	:binary)
+    (STACK_OVERFLOW_EXCEPTION	:binary)
 
     ;; Imported from the ID
     STATIC_GAS
     INST_PARAM
-    (TWO_LINES_INSTRUCTION :BOOLEAN)
+    (TWO_LINES_INSTRUCTION :binary)
     STACK_PATTERN
-    (COUNTER :BOOLEAN)
+    (COUNTER :binary)
 
-    (FLAG_1 :BOOLEAN)
-    (FLAG_2 :BOOLEAN)
-    (FLAG_3 :BOOLEAN)
+    (FLAG_1 :binary)
+    (FLAG_2 :binary)
+    (FLAG_3 :binary)
 
     TX_NUM
 
@@ -100,18 +100,18 @@
     ;; WCP_STAMP
     ;; WRM_STAMP
 
-    (ARITHMETIC_INST		:BOOLEAN)
-    (BINARY_INST            :BOOLEAN)
-    (RAM_INST               :BOOLEAN)
-    (SHIFT_INST             :BOOLEAN)
-    (STORAGE_INST           :BOOLEAN)
-    (WORD_COMPARISON_INST   :BOOLEAN)
-    ;; (WRM_INST			:BOOLEAN)
+    (ARITHMETIC_INST		:binary)
+    (BINARY_INST            :binary)
+    (RAM_INST               :binary)
+    (SHIFT_INST             :binary)
+    (STORAGE_INST           :binary)
+    (WORD_COMPARISON_INST   :binary)
+    ;; (WRM_INST			:binary)
 
-    (ALU_ADD_INST	:BOOLEAN)
-    (ALU_EXT_INST	:BOOLEAN)
-    (ALU_MOD_INST	:BOOLEAN)
-    (ALU_MUL_INST	:BOOLEAN))
+    (ALU_ADD_INST	:binary)
+    (ALU_EXT_INST	:binary)
+    (ALU_MOD_INST	:binary)
+    (ALU_MUL_INST	:binary))
 
 (definterleaved CN_POW_4 (CONTEXT_NUMBER CONTEXT_NUMBER CONTEXT_NUMBER CONTEXT_NUMBER))
 (definterleaved HEIGHT_1234 ([ITEM_HEIGHT 1] [ITEM_HEIGHT 2] [ITEM_HEIGHT 3] [ITEM_HEIGHT 4]))
