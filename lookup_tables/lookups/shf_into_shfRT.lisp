@@ -1,4 +1,4 @@
-(defplookup shf-into-shfRT-hi
+(deflookup shf-into-shfRT-hi
     ;reference columns
     (
         shfRT.BYTE
@@ -19,7 +19,7 @@
     )
 )
 
-(defplookup shf-into-shfRT-lo
+(deflookup shf-into-shfRT-lo
     ;reference columns
     (       
         shfRT.BYTE

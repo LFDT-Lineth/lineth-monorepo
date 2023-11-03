@@ -1,4 +1,4 @@
-(defplookup 
+(deflookup 
   txn_data_into_wcp
   ; target columns
   (

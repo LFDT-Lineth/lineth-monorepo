@@ -1,4 +1,4 @@
-(defplookup stp-into-mod
+(deflookup stp-into-mod
     ; target columns (in MOD)
     (
         mod.ARG_1_HI

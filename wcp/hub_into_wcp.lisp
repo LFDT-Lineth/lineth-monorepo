@@ -1,6 +1,6 @@
 (defun (word-comparison-module-activation-flag) (and hub.WORD_COMPARISON_INST (- 1 hub.STACK_UNDERFLOW_EXCEPTION))) ;; TODO: gas exception
 
-(defplookup hub-into-wcp
+(deflookup hub-into-wcp
     ;reference columns
     (
         wcp.ARG_1_HI

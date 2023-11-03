@@ -1,7 +1,7 @@
 (defun (sel-txnData-to-romLex)
   (* txnData.IS_DEP (~ txnData.INIT_CODE_SIZE)))
 
-(defplookup 
+(deflookup 
   txnData-into-romLex
   ;reference columns
   (

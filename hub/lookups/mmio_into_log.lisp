@@ -1,4 +1,4 @@
-(defplookup plookup-mmio-into-log
+(deflookup lookup-mmio-into-log
     ;source columns
     (
         (* mmio.LOG_NUM mmio.EXO_IS_LOG)

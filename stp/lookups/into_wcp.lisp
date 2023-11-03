@@ -1,4 +1,4 @@
-(defplookup stp-into-wcp
+(deflookup stp-into-wcp
     ; target colums (in WCP)
     (
         wcp.ARG_1_HI

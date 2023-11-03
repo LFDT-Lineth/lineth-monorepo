@@ -7,7 +7,7 @@
      (* 48 rlpTxRcpt.DEPTH_1)
      (* 96 rlpTxRcpt.IS_TOPIC rlpTxRcpt.INDEX_LOCAL)))
 
-(defplookup 
+(deflookup 
   txnData-into-rlpTxnRcpt
   ;reference columns
   (

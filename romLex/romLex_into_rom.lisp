@@ -1,4 +1,4 @@
-(defplookup 
+(deflookup 
   romLex-into-rom
   ;reference columns
   (

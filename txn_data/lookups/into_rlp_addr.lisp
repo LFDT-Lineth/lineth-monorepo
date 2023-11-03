@@ -1,7 +1,7 @@
 (defun (sel-txnData-to-rlpAddr)
   txnData.IS_DEP)
 
-(defplookup 
+(deflookup 
   txnData-into-rlpAddr
   ;reference columns
   (

@@ -1,4 +1,4 @@
-(defplookup mmu-into-mmuID
+(deflookup mmu-into-mmuID
     ;reference columns
     (
         mmuID.INST

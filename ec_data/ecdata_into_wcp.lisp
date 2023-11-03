@@ -1,4 +1,4 @@
-(defplookup plookup-ec_data-into-wcp
+(deflookup lookup-ec_data-into-wcp
     ; target columns
     (
         wcp.ARGUMENT_1_HI

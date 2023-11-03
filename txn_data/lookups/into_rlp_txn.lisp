@@ -1,4 +1,4 @@
-(defplookup 
+(deflookup 
   txnData-into-rlpTxn
   ;reference columns
   (

@@ -26,13 +26,13 @@ ALU := alu/add/columns.lisp \
 BIN := bin/columns.lisp \
 	   bin/constraints.lisp \
 	   $(wildcard lookup_tables/binRT/*lisp) \
-	   lookup_tables/plookups/bin_into_binRT.lisp \
+	   lookup_tables/lookups/bin_into_binRT.lisp \
 	   # bin/hub_into_bin.lisp \
 
 SHIFT :=  shf/columns.lisp \
 	  shf/constraints.lisp \
 	  $(wildcard lookup_tables/shfRT/*lisp) \
-	 lookup_tables/plookups/shf_into_shfRT.lisp \
+	 lookup_tables/lookups/shf_into_shfRT.lisp \
 	  # shf/hub_into_shf.lisp \
 
 WCP := wcp/columns.lisp \

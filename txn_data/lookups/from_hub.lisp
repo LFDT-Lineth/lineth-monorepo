@@ -1,6 +1,6 @@
 ;; TODO once HUB implemented
 ;; (defun (sel))
-(defplookup 
+(deflookup 
   txnData_into_wcp
   ; target columns
   (

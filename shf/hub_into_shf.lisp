@@ -1,6 +1,6 @@
 (defun (shift-activation-flag) (and hub.SHIFT_INST (- 1 hub.STACK_UNDERFLOW_EXCEPTION))) ;; TODO: gas exception
 
-(defplookup hub-into-shf
+(deflookup hub-into-shf
     ;reference columns
     (
         shf.ARG_1_HI

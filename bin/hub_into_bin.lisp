@@ -1,6 +1,6 @@
 (defun (binary-activation-flag) (and hub.BINARY_INST (- 1 hub.STACK_UNDERFLOW_EXCEPTION))) ;; TODO: gas exception
 
-(defplookup hub-into-bin
+(deflookup hub-into-bin
     ;reference columns
     (
         bin.ARG_1_HI

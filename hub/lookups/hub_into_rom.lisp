@@ -1,6 +1,6 @@
 ;; TODO: reinstate hub-into-rom
 
-;; (defplookup hub-into-rom
+;; (deflookup hub-into-rom
 ;;     (
 ;;          rom.PC
 ;;         rom.OPCODE

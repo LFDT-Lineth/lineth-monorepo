@@ -1,4 +1,4 @@
-(defplookup 
+(deflookup 
   rom-into-inst-decoder
   ;reference columns
   (

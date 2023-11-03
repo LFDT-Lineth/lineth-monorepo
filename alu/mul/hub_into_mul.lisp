@@ -1,6 +1,6 @@
 ;; (defun (alu-mul-activation-flag) (and hub.ALU_MUL_INST (- 1 hub.STACK_UNDERFLOW_EXCEPTION))) ;; TODO: gas exception
 
-;; (defplookup hub-into-alu-mul
+;; (deflookup hub-into-alu-mul
 ;;     ;reference columns
 ;;     (
 ;;         mul.ARG_1_HI

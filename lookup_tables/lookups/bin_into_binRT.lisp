@@ -1,4 +1,4 @@
-(defplookup bin-lookup-table-high
+(deflookup bin-lookup-table-high
     ;reference columns
     (
         binRT.BYTE_ARG_1
@@ -21,7 +21,7 @@
     )
 )
 
-(defplookup bin-lookup-table-low
+(deflookup bin-lookup-table-low
     ;reference columns
     (
         binRT.BYTE_ARG_1
