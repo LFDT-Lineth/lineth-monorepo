@@ -1,125 +1,106 @@
 (module trm)
 
-(defconst
-  MAX_PREC_ADDR 9
-  LLARGEMO     15)
-
+(defconst 
+  LLARGEMO 15)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                     ;;
 ;;    2.1 heartbeat    ;;
 ;;                     ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;
-
+;; 1
 (defconstraint first-row (:domain {0})
-               (vanishes! STAMP))
+  (vanishes! STAMP))
+
+;; 3
+(defconstraint null-stamp-null-columns ()
+  (if-zero STAMP
+           (begin (vanishes! ADDR_HI)
+                  (vanishes! ADDR_LO)
+                  (vanishes! TRM_ADDR_HI)
+                  (vanishes! IS_PREC)
+                  (vanishes! CT)
+                  (vanishes! BYTE_HI)
+                  (vanishes! BYTE_LO))))
 
 (defconstraint heartbeat ()
-               (begin
-                 (* (will-remain-constant! STAMP) (will-inc! STAMP 1))
-                 (if-not-zero (will-remain-constant! STAMP) (vanishes! (next CT)))
-                 (if-zero STAMP
-                          (begin
-                            (vanishes! ADDR_HI)
-                            (vanishes! ADDR_LO)
-                            (vanishes! TRM_ADDR_HI)
-                            (vanishes! IS_PREC)
-                            (vanishes! CT)
-                            (vanishes! BYTE_HI)
-                            (vanishes! BYTE_LO)))
-                 (if-not-zero STAMP
-                              (if-eq-else CT LLARGEMO
-                                          (will-inc! STAMP 1)
-                                          (will-inc! CT 1)))))
+  (begin  ;; 2
+         (or! (will-remain-constant! STAMP) (will-inc! STAMP 1))
+         ;; 4
+         (if-not-zero (- (next STAMP) STAMP)
+                      (vanishes! (next CT)))
+         ;; 5
+         (if-not-zero STAMP
+                      (if-eq-else CT LLARGEMO (will-inc! STAMP 1) (will-inc! CT 1)))))
 
+;; 6
 (defconstraint last-row (:domain {-1})
-               (if-not-zero STAMP  (= CT LLARGEMO)))
+  (if-not-zero STAMP
+               (eq! CT LLARGEMO)))
 
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;                           ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                     ;;
 ;;    2.2 stamp constancy    ;;
+;;                     ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;
+(defconstraint stamp-constancies ()
+  (begin (stamp-constancy STAMP ADDR_HI)
+         (stamp-constancy STAMP ADDR_LO)
+         (stamp-constancy STAMP IS_PREC)
+         (stamp-constancy STAMP TRM_ADDR_HI)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                           ;;
+;;    2.3 PBIT constraints   ;;
 ;;                           ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(defconstraint stamp-constancies ()
-               (begin
-                 (stamp-constancy STAMP ADDR_HI)
-                 (stamp-constancy STAMP ADDR_LO)
-                 (stamp-constancy STAMP TRM_ADDR_HI)
-                 (stamp-constancy STAMP IS_PREC)))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;                                 ;;
-;;    2.3 Pivot bit constraints    ;;
-;;                                 ;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(defconstraint pivot-bit ()
-               (begin
-                 (is-binary PBIT)
-                 (if-zero CT
-                          (vanishes! PBIT))
-                 (if-not-zero CT 
-                              (vanishes! (* (remained-constant! PBIT) (did-inc! PBIT 1))))
-                 (if-eq CT 12
-                        (= 1 (+ PBIT (prev PBIT))))))
+(defconstraint pbit-constraint ()
+  (begin (if-zero CT
+                  (vanishes! PBIT)
+                  (or! (remained-constant! PBIT) (did-inc! PBIT 1)))
+         (if-eq CT 12
+                (begin (vanishes! (prev PBIT))
+                       (eq! PBIT 1)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                                                   ;;
-;;    2.4 binary, bytehood and byte decompositions   ;;
+;;    2.4 Byte Decomposition   ;;
 ;;                                                   ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defconstraint byte-decompositions ()
+  (begin (byte-decomposition CT ACC_HI BYTE_HI)
+         (byte-decomposition CT ACC_LO BYTE_LO)
+         (byte-decomposition CT ACC_T (* BYTE_HI PBIT))))
 
-(defconstraint binary-and-byte-decompositions ()
-               (begin
-                 (byte-decomposition CT ACC_HI BYTE_HI)
-                 (byte-decomposition CT ACC_LO BYTE_LO)
-                 (byte-decomposition CT ACC_T (* PBIT BYTE_HI))))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                       ;;
+;;    1.5 target constraints    ;;
+;;                       ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;)
+(defconstraint target-constraint ()
+  (if-eq CT 15
+         (begin (eq! ADDR_HI ACC_HI)
+                (eq! ADDR_LO ACC_LO)
+                (eq! TRM_ADDR_HI ACC_T))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                                  ;;
+;;    2.4 Identifying precompiles   ;;
+;;                                  ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defconstraint is-prec-constraint ()
+  (if-eq CT 15
+         (if-zero (+ TRM_ADDR_HI (- ADDR_LO BYTE_LO))
+                  (if-zero BYTE_LO
+                           (vanishes! IS_PREC)
+                           (eq! (+ (* (- 9 BYTE_LO)
+                                      (- (* 2 IS_PREC) 1))
+                                   (- IS_PREC 1))
+                                (reduce +
+                                        (for k
+                                             [0 : 7]
+                                             (* (^ 2 k)
+                                                (shift ONE (- 0 k)))))))
+                  (vanishes! IS_PREC))))
 
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;                                 ;;
-;;    2.5 Target constraints       ;;
-;;                                 ;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-
-(defconstraint target-constraints ()
-               (if-eq CT LLARGEMO
-                      (begin 
-                        (= ADDR_HI ACC_HI)
-                        (= ADDR_LO ACC_LO)
-                        (= TRM_ADDR_HI ACC_T))))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;                                   ;;
-;;    2.6 Identifying precompiles    ;;
-;;                                   ;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(defun (bit-decomposition-associated-with-ONES) (+ ONES
-                                                   (* (shift ONES -1) 2)
-                                                   (* (shift ONES -2) 4)
-                                                   (* (shift ONES -3) 8)
-                                                   (* (shift ONES -4) 16)
-                                                   (* (shift ONES -5) 32)
-                                                   (* (shift ONES -6) 64)
-                                                   (* (shift ONES -7) 128)))
-
-(defconstraint binaryness ()
-               (begin
-                 (is-binary IS_PREC)
-                 (is-binary ONES)))
-
-(defconstraint identifying-precompiles ()
-               (if-eq CT LLARGEMO
-                      (begin 
-                        (if-not-zero (+ TRM_ADDR_HI (- ADDR_LO BYTE_LO))
-                                     (= IS_PREC 0))
-                        (if-zero (+ TRM_ADDR_HI (- ADDR_LO BYTE_LO))
-                                 (if-zero BYTE_LO
-                                          (= IS_PREC 0)
-                                          (= 
-                                            (+ (* (- MAX_PREC_ADDR BYTE_LO) (- (* 2 IS_PREC) 1) (- IS_PREC 1)))
-                                            (bit-decomposition-associated-with-ONES)))))))

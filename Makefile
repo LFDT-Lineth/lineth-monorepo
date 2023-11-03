@@ -70,6 +70,8 @@ RLP_TXRCPT := rlp_txrcpt/columns.lisp rlp_txrcpt/constraints.lisp
 
 LIBRARY := library/constant.lisp library/rlp_constraints_pattern.lisp
 
+TRM := trm/columns.lisp trm/constraints.lisp
+
 ZKEVM_MODULES := ${LIBRARY} \
 	${ALU} \
 	${BIN} \
@@ -87,6 +89,7 @@ ZKEVM_MODULES := ${LIBRARY} \
 	${TABLES} \
 	${TXN_DATA} \
 	${WCP} \
+	${TRM}
 
 define.go: ${ZKEVM_MODULES}
 	${CORSET} wizard-iop -vv -P define -o $@ ${ZKEVM_MODULES}

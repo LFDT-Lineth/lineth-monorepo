@@ -75,16 +75,16 @@
                   (counter-incrementing LC))
          (counter-incrementing LC_CORRECTION)))
 
-(defconstraint phase3-decrementing ()
+(defconstraint phase4-decrementing ()
   (phase-decrementing [PHASE 4] IS_PREFIX))
 
-(defconstraint phase4-incrementing ()
+(defconstraint phase5-incrementing ()
   (phase-incrementing [PHASE 5] DEPTH_1))
 
 (defconstraint istopic-incrementing ()
   (phase-incrementing IS_TOPIC INDEX_LOCAL))
 
-(defconstraint phase0-constant ()
+(defconstraint phase1-constant ()
   (phase-constancy [PHASE 1] TXRCPT_SIZE))
 
 ;;    4.1.2 Global Phase Constraints    ;;
