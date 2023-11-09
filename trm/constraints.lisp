@@ -38,6 +38,18 @@
   (if-not-zero STAMP
                (eq! CT LLARGEMO)))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                                ;;
+;;    2.3/2 binary constraints    ;;
+;;                                ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defconstraint binary-constraints ()
+  (begin
+   (is-binary IS_PREC)
+   (is-binary PBIT)
+   (is-binary ONE)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                     ;;
 ;;    2.2 stamp constancy    ;;
