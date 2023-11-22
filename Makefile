@@ -72,6 +72,12 @@ LIBRARY := library/constant.lisp library/rlp_constraints_pattern.lisp
 
 TRM := trm/columns.lisp trm/constraints.lisp
 
+LOG_DATA := logData/columns.lisp logData/constraints.lisp \
+	logData/logdata-to-rlprcpt.lisp
+
+LOG_INFO := logInfo/columns.lisp logInfo/constraints.lisp \
+	logInfo/lookups/loginfo-to-rlprcpt.lisp logInfo/lookups/loginfo-to-logdata.lisp
+
 ZKEVM_MODULES := ${LIBRARY} \
 	${ALU} \
 	${BIN} \
@@ -89,7 +95,9 @@ ZKEVM_MODULES := ${LIBRARY} \
 	${TABLES} \
 	${TXN_DATA} \
 	${WCP} \
-	${TRM}
+	${TRM} \
+	${LOG_DATA} \
+	${LOG_INFO}
 
 define.go: ${ZKEVM_MODULES}
 	${CORSET} wizard-iop -vv -P define -o $@ ${ZKEVM_MODULES}
