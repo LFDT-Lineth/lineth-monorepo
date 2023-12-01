@@ -1,371 +1,328 @@
 (module stp)
 
-(defconst
-  DIV                       0x04
-  LT                        0x10
-  GT                        0x11
-  EQ                        0x14
-  ISZERO                    0x15
-  max_CT_CALL                  6
-  max_CT_CALL_OOGX             2
-  ;; CT_MAX_DELTA                 4
-  G_create                 32000
-  G_warmaccess               100
-  G_coldaccountaccess       2600
-  G_callvalue               9000
-  G_newaccount             25000
-  G_callstipend             2300
-  )
-
-;;;;;;;;;;;;;;;;;;;;;;;;;
-;;                     ;;
-;;    2.1 heartbeat    ;;
-;;                     ;;
-;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(defconstraint first-row (:domain {0})
-               (vanishes! STAMP))
-
-(defconstraint stamp-increments ()
-               (vanishes! (* (will-inc! STAMP 1) (will-remain-constant! STAMP))))
-
-(defconstraint initial-vanishings ()
-               (if-zero STAMP
-                        (begin 
-                          (vanishes! CT)
-                          (vanishes! (+ WCP_FLAG MOD_FLAG)))))
-
-(defconstraint counter-reset ()
-               (if-not-zero (will-remain-constant! STAMP)
-                            (vanishes! (next CT))))
-
-(defconstraint heartbeat (:guard STAMP)
-               (begin
-                 (= (+ CT_MAX
-                       INST_TYPE
-                       (* (- max_CT_CALL max_CT_CALL_OOGX)
-                          OOGX))
-                    max_CT_CALL_OOGX)
-                 (if-eq-else CT CT_MAX
-                             (will-inc! STAMP 1)
-                             (will-inc! CT 1))))
-;; (if-zero INST_TYPE
-;;          ;; INST_TYPE = 0 i.e. dealing will CALL-type instructions
-;;          (if-eq-else CT max_ct_CALL
-;;                      ;; CT == max_ct_CALL
-;;                      (will-inc! STAMP 1)
-;;                      ;; CT != max_ct_CALL
-;;                      (will-inc! CT 1))
-;;          ;; INST_TYPE = 1 i.e. dealing will CREATE-type instructions
-;;          (if-eq-else CT max_ct_CREATE
-;;                      ;; CT == max_ct_CREATE
-;;                      (will-inc! STAMP 1)
-;;                      ;; CT != max_ct_CREATE
-;;                      (will-inc! CT 1)))))
-
-(defconstraint final-row (:domain {-1})
-               (if-not-zero STAMP
-                            (if-zero INST_TYPE
-                                     (= CT CT_MAX))))
-;; (= CT max_ct_CALL)       ;; INST_TYPE = 0  <==>  CALL-type instruction
-;; (= CT max_ct_CREATE))))  ;; INST_TYPE = 1  <==>  CREATE-type instruction
-
+(defconst 
+  DIV                 0x04
+  LT                  0x10
+  GT                  0x11
+  EQ                  0x14
+  ISZERO              0x15
+  max_CT_CALL         4
+  max_CT_CALL_OOGX    2
+  G_create            32000
+  G_warmaccess        100
+  G_coldaccountaccess 2600
+  G_callvalue         9000
+  G_newaccount        25000
+  G_callstipend       2300
+  create              0xf0
+  create2             0xf5
+  call                0xf1
+  callcode            0xf2
+  delegatecall        0xf4
+  staticcall          0xfa)
 
 ;;;;;;;;;;;;;;;;;;;;;;
 ;;                  ;;
-;;    2.2 binary    ;;
+;;    2.1 binary    ;;
 ;;                  ;;
 ;;;;;;;;;;;;;;;;;;;;;;
-
-
 (defconstraint binary-constraints ()
-               (begin
-                 (debug (is-binary INST_TYPE))
-                 (debug (is-binary CCTV))
-                 (debug (is-binary TO_EXISTS))
-                 (debug (is-binary TO_WARM))
-                 (debug (is-binary OOGX))
-                 (debug (is-binary TO_HAS_CODE))
-                 (debug (is-binary ABORT))
-                 (is-binary WCP_FLAG)
-                 (is-binary MOD_FLAG)))
+  (begin (debug (is-binary EXISTS))
+         (debug (is-binary WARM))
+         (debug (is-binary OOGX))
+         (is-binary WCP_FLAG)
+         (is-binary MOD_FLAG)
+         (is-binary IS_CREATE)
+         (is-binary IS_CREATE2)
+         (is-binary IS_CALL)
+         (is-binary IS_CALLCODE)
+         (is-binary IS_DELEGATECALL)
+         (is-binary IS_STATICCALL)))
 
 (defconstraint exclusive-flags ()
-               (vanishes! (* WCP_FLAG MOD_FLAG)))
+  (vanishes! (* WCP_FLAG MOD_FLAG)))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                         ;;
+;;    2.2 inst decoding    ;;
+;;                         ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defun (flag_sum)
+  (+ IS_CREATE IS_CREATE2 IS_CALL IS_CALLCODE IS_DELEGATECALL IS_STATICCALL))
+
+(defun (inst_sum)
+  (+ (* create IS_CREATE)
+     (* create2 IS_CREATE2)
+     (* call IS_CALL)
+     (* callcode IS_CALLCODE)
+     (* delegatecall IS_DELEGATECALL)
+     (* staticcall IS_STATICCALL)))
+
+(defconstraint no-stamp-no-flag ()
+  (if-zero STAMP
+           (vanishes! (flag_sum))
+           (eq! (flag_sum) 1)))
+
+(defconstraint inst-flag-relation ()
+  (eq! INSTRUCTION (inst_sum)))
+
+(defun (is_create)
+  (+ IS_CREATE IS_CREATE2))
+
+(defun (is_call)
+  (+ IS_CALL IS_CALLCODE IS_DELEGATECALL IS_STATICCALL))
+
+(defun (cctv)
+  (+ IS_CALL IS_CALLCODE))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                     ;;
+;;    2.3 heartbeat    ;;
+;;                     ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;
+(defconstraint first-row (:domain {0})
+  (vanishes! STAMP))
+
+(defconstraint stamp-increments ()
+  (vanishes! (any! (will-inc! STAMP 1) (will-remain-constant! STAMP))))
+
+(defconstraint initial-vanishings ()
+  (if-zero STAMP
+           (begin (vanishes! CT)
+                  (vanishes! CT_MAX)
+                  (vanishes! (+ WCP_FLAG MOD_FLAG)))))
+
+(defconstraint counter-reset ()
+  (if-not-zero (will-remain-constant! STAMP)
+               (vanishes! (next CT))))
+
+(defconstraint heartbeat (:guard STAMP)
+  (begin (if-eq-else CT CT_MAX (will-inc! STAMP 1) (will-inc! CT 1))
+         (if-zero (is_create)
+                  (if-zero OOGX
+                           (eq! CT_MAX 4)
+                           (eq! CT_MAX 2))
+                  (if-zero OOGX
+                           (eq! CT_MAX 2)
+                           (eq! CT_MAX 1)))))
+
+(defconstraint final-row (:domain {-1})
+  (if-not-zero STAMP
+               (eq! CT CT_MAX)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                       ;;
 ;;    2.4 constancies    ;;
 ;;                       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-
 (defconstraint counter-constancies ()
-               (begin
-                 (counter-constancy CT GAS_ACTUAL)
-                 (counter-constancy CT GAS_MXP)
-                 (counter-constancy CT GAS_COST)
-                 (counter-constancy CT GAS_STIPEND)
-                 ;
-                 (counter-constancy CT GAS_HI)
-                 (counter-constancy CT GAS_LO)
-                 ;
-                 (counter-constancy CT VAL_HI)
-                 (counter-constancy CT VAL_LO)
-                 ;
-                 (counter-constancy CT TO_EXISTS)
-                 (counter-constancy CT TO_WARM)
-                 ;
-                 (counter-constancy CT CSD)
-                 (counter-constancy CT FROM_BALANCE)
-                 (counter-constancy CT TO_HAS_CODE)
-                 (counter-constancy CT TO_NONCE)
-                 (counter-constancy CT ABORT)
-                 ;
-                 (counter-constancy CT OOGX)
-                 (counter-constancy CT INST_TYPE)
-                 (counter-constancy CT CCTV)
-                 (counter-constancy CT CT_MAX)))
+  (begin (counter-constancy CT GAS_ACTUAL)
+         (counter-constancy CT GAS_MXP)
+         (counter-constancy CT GAS_UPFRONT)
+         (counter-constancy CT GAS_STIPEND)
+         ;
+         (counter-constancy CT GAS_HI)
+         (counter-constancy CT GAS_LO)
+         ;
+         (counter-constancy CT VAL_HI)
+         (counter-constancy CT VAL_LO)
+         ;
+         (counter-constancy CT EXISTS)
+         (counter-constancy CT WARM)
+         (counter-constancy CT OOGX)))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                                 ;;
+;;    2.5 vanishing constraints    ;;
+;;                                 ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defconstraint callcode-impose-exists ()
+  (if-not-zero IS_CALLCODE
+               (eq! EXISTS 1)))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;                                                    ;;
-;;    3.2 Constraints for CREATE-type instructions    ;;
-;;                                                    ;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                                                ;;
+;;    3 Constraints for CREATE-type instructions  ;;
+;;                                                ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defun (first-row-of-CREATE)
+  (* (- STAMP (prev STAMP))
+     (is_create)))
 
-(defun (first-row-of-CREATE)                     (* (remained-constant! STAMP) INST_TYPE))
-(defun (first-row-of-unexceptional-CREATE)       (* (first-row-of-CREATE) (- 1 OOGX)))
-(defun (create-gActual)                          GAS_ACTUAL)
-(defun (create-gPrelim)                          (+ GAS_MXP G_create))
-(defun (create-gDiff)                            (- (create-gActual) (create-gPrelim)))
-(defun (create-oneSixtyFourth)                   (shift RES_LO 2))
-(defun (create-LgDiff)                           (- (create-gDiff) (create-oneSixtyFourth)))
-(defun (create-abortSum)                         (+ (- 1 (shift RES_LO 3)) ;; <- evaluates to 1 iff CSD >= 1024
-                                                    (shift RES_LO 4)       ;; <- evaluates to 1 iff CALL_VALUE > FROM_BALANCE
-                                                    (- 1 (shift RES_LO 5)) ;; <- evaluates to 1 iff TO address has nonzero nonce
-                                                    TO_HAS_CODE))          ;; <- evaluates to 1 iff TO address has nonempty code
+(defun (first-row-of-unexceptional-CREATE)
+  (* (first-row-of-CREATE) (- 1 OOGX)))
+
+(defun (create-gActual)
+  GAS_ACTUAL)
+
+(defun (create-gPrelim)
+  (+ GAS_MXP G_create))
+
+(defun (create-gDiff)
+  (- (create-gActual) (create-gPrelim)))
+
+(defun (create-oneSixtyFourth)
+  (shift RES_LO 2))
+
+(defun (create-LgDiff)
+  (- (create-gDiff) (create-oneSixtyFourth)))
 
 ;; common rows of all CREATE instructions
 (defconstraint CREATE-type-common (:guard (first-row-of-CREATE))
-               (begin
-                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-                 ;;   ------------->   row i   ;;
-                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-                 (vanishes! ARG_1_HI)
-                 (= ARG_1_LO (create-gActual))
-                 (vanishes! ARG_2_LO)
-                 (= EXO_INST LT)
-                 (vanishes! RES_LO)
-                 (= WCP_FLAG 1)
-                 ;; (= MOD_FLAG 0)
-                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-                 ;;   ------------->   row i + 1   ;;
-                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-                 (vanishes! (next ARG_1_HI))
-                 (= (next ARG_1_LO) (create-gActual))
-                 (= (next ARG_2_LO) (create-gPrelim))
-                 (= (next EXO_INST) LT)
-                 (= (next RES_LO) OOGX)
-                 (= (next WCP_FLAG) 1)
-                 ;; (= (next MOD_FLAG) 0)
-                 ))
+  (begin  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+         ;;   ------------->   row i   ;;
+         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+         (vanishes! ARG_1_HI)
+         (eq! ARG_1_LO (create-gActual))
+         (vanishes! ARG_2_LO)
+         (eq! EXO_INST LT)
+         (vanishes! RES_LO)
+         (eq! WCP_FLAG 1)
+         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+         ;;   ------------->   row i + 1   ;;
+         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+         (vanishes! (next ARG_1_HI))
+         (eq! (next ARG_1_LO) (create-gActual))
+         (eq! (next ARG_2_LO) (create-gPrelim))
+         (eq! (next EXO_INST) LT)
+         (eq! (next RES_LO) OOGX)
+         (eq! (next WCP_FLAG) 1)))
 
 ;; rows of CREATE instructions that don't produce an OOGX
 (defconstraint CREATE-type-no-exception (:guard (first-row-of-unexceptional-CREATE))
-               (begin
-                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-                 ;;   ------------->   row i + 2   ;;
-                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-                 (vanishes! (shift ARG_1_HI 2))
-                 (= (shift ARG_1_LO 2) (create-gDiff))
-                 (= (shift ARG_2_LO 2) 64)
-                 (= (shift EXO_INST 2) DIV)
-                 ;; (= (shift RES_LO 2) ...)
-                 (vanishes! (shift WCP_FLAG 2))
-                 (= (shift MOD_FLAG 2) (- 1 OOGX))
-                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-                 ;;   ------------->   row i + 3   ;;
-                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-                 (vanishes! (shift ARG_1_HI 3))
-                 (= (shift ARG_1_LO 3) CSD)
-                 (= (shift ARG_2_LO 3) 1024)
-                 (= (shift EXO_INST 3) LT)
-                 ;; (= (shift RES_LO 3) ...)
-                 (= (shift WCP_FLAG 3) 1)
-                 ;; (vanishes! (shift MOD_FLAG 3))
-                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-                 ;;   ------------->   row i + 4   ;;
-                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-                 (= (shift ARG_1_HI 4) VAL_HI)
-                 (= (shift ARG_1_LO 4) VAL_LO)
-                 (= (shift ARG_2_LO 4) FROM_BALANCE)
-                 (= (shift EXO_INST 4) GT)
-                 ;; (= (shift RES_LO 4) ...)
-                 (= (shift WCP_FLAG 4) 1)
-                 ;; (vanishes! (shift MOD_FLAG 4))
-                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-                 ;;   ------------->   row i + 5   ;;
-                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-                 (vanishes! (shift ARG_1_HI 5))
-                 (= (shift ARG_1_LO 5) TO_NONCE)
-                 (vanishes! (shift ARG_2_LO 5))
-                 (= (shift EXO_INST 5) ISZERO)
-                 ;; (= (shift RES_LO 5) ...)
-                 (= (shift WCP_FLAG 5) 1)
-                 ;; (vanishes! (shift MOD_FLAG 5))))
-                 ))
+  (begin  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+         ;;   ------------->   row i + 2   ;;
+         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+         (vanishes! (shift ARG_1_HI 2))
+         (eq! (shift ARG_1_LO 2) (create-gDiff))
+         (eq! (shift ARG_2_LO 2) 64)
+         (eq! (shift EXO_INST 2) DIV)
+         (eq! (shift MOD_FLAG 2) 1)))
 
-(defconstraint CREATE-type-outputs (:guard (first-row-of-unexceptional-CREATE))
-               ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-               ;;   Setting GAS_COST and GAS_STPD   ;;
-               ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-               (if-zero OOGX
-                        ;; OOGX == 0
-                        (begin
-                          (= GAS_COST (+ (create-gPrelim) (create-LgDiff)))
-                          (= GAS_STIPEND (create-LgDiff))
-                          (if-zero (create-abortSum)
-                                   (vanishes! ABORT)
-                                   (= ABORT 1)))
-                        ;; OOGX == 1
-                        (begin
-                          (= GAS_COST (create-gPrelim))
-                          (vanishes! GAS_STIPEND)
-                          (vanishes! ABORT))))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;   Setting GAS_UPFRONT and GAS_STPD   ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defconstraint CREATE-type-outputs (:guard (first-row-of-CREATE))
+  (begin (eq! GAS_UPFRONT (create-gPrelim))
+         (vanishes! GAS_STIPEND)
+         (if-zero OOGX
+                  (eq! GAS_OOPKT
+                       (- (shift ARG_1_LO 2) (shift RES_LO 2)))
+                  (vanishes! GAS_OOPKT))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;                                                  ;;
-;;    3.2 Constraints for CALL-type instructions    ;;
-;;                                                  ;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                                                ;;
+;;    4 Constraints for CALL-type instructions    ;;
+;;                                                ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; all of these definitions implicitly assume that the current row (i) is such that
-;; - STAMP[i] != STAMP[i - 1]       <= first row of the instruction
-;; - INST_TYPE = 0                  <= CALL-type instruction
-(defun (first-row-of-CALL)                       (* (remained-constant! STAMP) (- 1 INST_TYPE)))
-(defun (first-row-of-unexceptional-CALL)         (* (first-row-of-CALL) (- 1 OOGX)))
-(defun (call-valueIsZero)                        (next RES_LO))
-(defun (call-gActual)                            GAS_ACTUAL)
-(defun (call-gAccess)                            (+ (* TO_WARM G_warmaccess)
-                                                    (* (- 1 TO_WARM) G_coldaccountaccess)))
-(defun (call-gCreate)                            (* (- 1 TO_EXISTS)
-                                                    G_newaccount))
-(defun (call-gTransfer)                          (* CCTV
-                                                    (- 1 (call-valueIsZero))
-                                                    G_callvalue))
-(defun (call-gXtra)                              (+ (call-gAccess)
-                                                    (call-gCreate)
-                                                    (call-gTransfer)))
-(defun (call-gPrelim)                            (+ GAS_MXP
-                                                    (call-gXtra)))
-(defun (call-oneSixtyFourths)                    (shift RES_LO 3))
-(defun (call-gDiff)                              (- (call-gActual)
-                                                    (call-gPrelim)))
-(defun (call-stpComp)                            (shift RES_LO 4))
-(defun (call-LgDiff)                             (- (call-gDiff)
-                                                    (call-oneSixtyFourths)))
-(defun (call-gMin)                               (+ (* (- 1 (call-stpComp)) (call-LgDiff))
-                                                    (* (call-stpComp) GAS_LO)))
-(defun (call-abortSum)                           (+ (- 1 (shift RES_LO 5)) ;; <- evaluates to 1 iff CSD >= 1024
-                                                    (shift RES_LO 6)))     ;; <- evaluates to 1 iff CALL_VALUE > FROM_BALANCE
+;; - STAMP[i] !eq! STAMP[i - 1]       <eq! first row of the instruction
+;; - INST_TYPE eq! 0                  <eq! CALL-type instruction
+(defun (first-row-of-CALL)
+  (* (remained-constant! STAMP) (is_call)))
 
+(defun (first-row-of-unexceptional-CALL)
+  (* (first-row-of-CALL) (- 1 OOGX)))
 
-;; common rows of all CREATE instructions
+(defun (call-valueIsZero)
+  (next RES_LO))
+
+(defun (call-gActual)
+  GAS_ACTUAL)
+
+(defun (call-gAccess)
+  (+ (* WARM G_warmaccess)
+     (* (- 1 WARM) G_coldaccountaccess)))
+
+(defun (call-gNewAccount)
+  (* (- 1 EXISTS) G_newaccount))
+
+(defun (call-gTransfer)
+  (* (cctv) (- 1 (call-valueIsZero)) G_callvalue))
+
+(defun (call-gXtra)
+  (+ (call-gAccess) (call-gNewAccount) (call-gTransfer)))
+
+(defun (call-gPrelim)
+  (+ GAS_MXP (call-gXtra)))
+
+(defun (call-oneSixtyFourths)
+  (shift RES_LO 3))
+
+(defun (call-gDiff)
+  (- (call-gActual) (call-gPrelim)))
+
+(defun (call-stpComp)
+  (shift RES_LO 4))
+
+(defun (call-LgDiff)
+  (- (call-gDiff) (call-oneSixtyFourths)))
+
+(defun (call-gMin)
+  (+ (* (- 1 (call-stpComp)) (call-LgDiff))
+     (* (call-stpComp) GAS_LO)))
+
+;; common rows of all CALL instructions
 (defconstraint CALL-type-common (:guard (first-row-of-CALL))
-               (begin
-                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-                 ;;   ------------->   row i   ;;
-                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-                 (vanishes! ARG_1_HI)
-                 (= ARG_1_LO (call-gActual))
-                 (vanishes! ARG_2_LO)
-                 (= EXO_INST LT)
-                 (vanishes! RES_LO)
-                 (= WCP_FLAG 1)
-                 ;; (= MOD_FLAG 0)
-                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-                 ;;   ------------->   row i + 1   ;;
-                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-                 (= (next ARG_1_HI) VAL_HI)
-                 (= (next ARG_1_LO) VAL_LO)
-                 (vanishes! (next ARG_2_LO))
-                 (= (next EXO_INST) ISZERO)
-                 ;; (= (next RES_LO) ...)
-                 (= (next WCP_FLAG) CCTV)
-                 (vanishes! (next MOD_FLAG))
-                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-                 ;;   ------------->   row i + 2   ;;
-                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-                 (vanishes! (shift ARG_1_HI 2))
-                 (= (shift ARG_1_LO 2) (call-gActual))
-                 (= (shift ARG_2_LO 2) (call-gPrelim))
-                 (= (shift EXO_INST 2) LT)
-                 (= (shift RES_LO 2) OOGX)
-                 (= (shift WCP_FLAG 2) 1)
-                 ;; (vanishes! (shift MOD_FLAG 2))
-                 ))
+  (begin  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+         ;;   ------------->   row i   ;;
+         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+         (vanishes! ARG_1_HI)
+         (eq! ARG_1_LO (call-gActual))
+         (vanishes! ARG_2_LO)
+         (eq! EXO_INST LT)
+         (vanishes! RES_LO)
+         (eq! WCP_FLAG 1)
+         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+         ;;   ------------->   row i + 1   ;;
+         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+         (eq! (next ARG_1_HI) VAL_HI)
+         (eq! (next ARG_1_LO) VAL_LO)
+         (vanishes! (next ARG_2_LO))
+         (eq! (next EXO_INST) ISZERO)
+         (eq! (next WCP_FLAG) (cctv))
+         (vanishes! (next MOD_FLAG))
+         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+         ;;   ------------->   row i + 2   ;;
+         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+         (vanishes! (shift ARG_1_HI 2))
+         (eq! (shift ARG_1_LO 2) (call-gActual))
+         (eq! (shift ARG_2_LO 2) (call-gPrelim))
+         (eq! (shift EXO_INST 2) LT)
+         (eq! (shift RES_LO 2) OOGX)
+         (eq! (shift WCP_FLAG 2) 1)))
 
 ;; 
 (defconstraint CALL-type-no-exception (:guard (first-row-of-unexceptional-CALL))
-               (begin
-                                              ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-                                              ;;   ------------->   row i + 3   ;;
-                                              ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-                                              (vanishes! (shift ARG_1_HI 3))
-                                              (if-zero OOGX (= (shift ARG_1_LO 3) (call-gDiff)))
-                                              (= (shift ARG_2_LO 3) 64)
-                                              (= (shift EXO_INST 3) DIV)
-                                              ;; (= (shift RES_LO 3) ...)
-                                              ;; (vanishes! (shift WCP_FLAG 3))
-                                              (= (shift MOD_FLAG 3) 1)
-                                              ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-                                              ;;   ------------->   row i + 4   ;;
-                                              ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-                                              (= (shift ARG_1_HI 4) GAS_HI)
-                                              (= (shift ARG_1_LO 4) GAS_LO)
-                                              (= (shift ARG_2_LO 4) (call-LgDiff))
-                                              (= (shift EXO_INST 4) LT)
-                                              ;; (= (shift RES_LO 4) ...)
-                                              (= (shift WCP_FLAG 4) 1)
-                                              ;; (vanishes! (shift MOD_FLAG 4))
-                                              ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-                                              ;;   ------------->   row i + 5   ;;
-                                              ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-                                              (vanishes! (shift ARG_1_HI 5))
-                                              (= (shift ARG_1_LO 5) CSD)
-                                              (= (shift ARG_2_LO 5) 1024)
-                                              (= (shift EXO_INST 5) LT)
-                                              ;; (= (shift RES_LO 5) ...)
-                                              (= (shift WCP_FLAG 5) 1)
-                                              ;; (vanishes! (shift MOD_FLAG 5))
-                                              ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-                                              ;;   ------------->   row i + 6   ;;
-                                              ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-                                              (= (shift ARG_1_HI 6) VAL_HI)
-                                              (= (shift ARG_1_LO 6) VAL_LO)
-                                              (= (shift ARG_2_LO 6) FROM_BALANCE)
-                                              (= (shift EXO_INST 6) GT)
-                                              ;; (= (shift RES_LO 6) ...)
-                                              (= (shift WCP_FLAG 6) 1)
-                                              ;; (vanishes! (shift MOD_FLAG 6))
-                                              ))
+  (begin  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+         ;;   ------------->   row i + 3   ;;
+         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+         (vanishes! (shift ARG_1_HI 3))
+         (eq! (shift ARG_1_LO 3) (call-gDiff))
+         (eq! (shift ARG_2_LO 3) 64)
+         (eq! (shift EXO_INST 3) DIV)
+         (eq! (shift MOD_FLAG 3) 1)
+         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+         ;;   ------------->   row i + 4   ;;
+         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+         (eq! (shift ARG_1_HI 4) GAS_HI)
+         (eq! (shift ARG_1_LO 4) GAS_LO)
+         (eq! (shift ARG_2_LO 4) (call-LgDiff))
+         (eq! (shift EXO_INST 4) LT)
+         (eq! (shift WCP_FLAG 4) 1)))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;   Setting GAS_UPFRONT and GAS_STPD   ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defconstraint CALL-type-outputs (:guard (first-row-of-CALL))
-               ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-               ;;   Setting GAS_COST and GAS_STPD   ;;
-               ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-               (if-zero OOGX
-                        ;; OOGX == 0
-                        (begin
-                          (= GAS_COST (+ (call-gPrelim) (call-gMin)))
-                          (= GAS_STIPEND (+ (call-gMin)
-                                            (* CCTV (- 1 (call-valueIsZero)) G_callstipend)))
-                          (if-zero (call-abortSum)
-                                   (vanishes! ABORT)
-                                   (= ABORT 1)))
-                        ;; OOGX == 1
-                        (begin
-                          (= GAS_COST (call-gPrelim))
-                          (vanishes! GAS_STIPEND))))
+  (begin (eq! GAS_UPFRONT (call-gPrelim))
+         (if-zero OOGX
+                  (begin (eq! GAS_OOPKT (call-gMin))
+                         (eq! GAS_STIPEND
+                              (* (cctv)
+                                 (- 1 (next RES_LO))
+                                 G_callstipend)))
+                  (begin (vanishes! GAS_OOPKT)
+                         (vanishes! GAS_STIPEND)))))
+
+
