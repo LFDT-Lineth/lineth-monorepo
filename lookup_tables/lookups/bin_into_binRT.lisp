@@ -1,45 +1,38 @@
-(deflookup bin-lookup-table-high
-    ;reference columns
-    (
-        binRT.BYTE_ARG_1
-        binRT.BYTE_ARG_2
-        binRT.AND_BYTE
-        binRT.OR_BYTE
-        binRT.XOR_BYTE
-        binRT.NOT_BYTE
-        binRT.IS_IN_RT
-    )
-    ;source columns 
-    (
-        bin.BYTE_1
-        bin.BYTE_3
-        bin.AND_BYTE_HI
-        bin.OR_BYTE_HI
-        bin.XOR_BYTE_HI
-        bin.NOT_BYTE_HI
-        bin.IS_DATA
-    )
-)
+(defpurefun (selector-bin-to-binRT)
+  (+ bin.IS_AND bin.IS_OR bin.IS_XOR bin.IS_NOT))
 
-(deflookup bin-lookup-table-low
-    ;reference columns
-    (
-        binRT.BYTE_ARG_1
-        binRT.BYTE_ARG_2
-        binRT.AND_BYTE
-        binRT.OR_BYTE
-        binRT.XOR_BYTE
-        binRT.NOT_BYTE
-        binRT.IS_IN_RT
-    )
-    ;source columns 
-    (
-        bin.BYTE_2
-        bin.BYTE_4
-        bin.AND_BYTE_LO
-        bin.OR_BYTE_LO
-        bin.XOR_BYTE_LO
-        bin.NOT_BYTE_LO
-        bin.IS_DATA
-    )
-)
+(deflookup 
+  bin-lookup-table-high
+  ;reference columns
+  (
+    binRT.INST
+    binRT.RESULT_BYTE
+    binRT.INPUT_BYTE_1
+    binRT.INPUT_BYTE_2
+  )
+  ;source columns 
+  (
+    (* bin.INST (selector-bin-to-binRT))
+    (* bin.XXX_BYTE_HI (selector-bin-to-binRT))
+    (* bin.BYTE_1 (selector-bin-to-binRT))
+    (* bin.BYTE_3 (selector-bin-to-binRT))
+  ))
+
+(deflookup 
+  bin-lookup-table-low
+  ;reference columns
+  (
+    binRT.INST
+    binRT.RESULT_BYTE
+    binRT.INPUT_BYTE_1
+    binRT.INPUT_BYTE_2
+  )
+  ;source columns 
+  (
+    (* bin.INST (selector-bin-to-binRT))
+    (* bin.XXX_BYTE_LO (selector-bin-to-binRT))
+    (* bin.BYTE_2 (selector-bin-to-binRT))
+    (* bin.BYTE_4 (selector-bin-to-binRT))
+  ))
+
+
