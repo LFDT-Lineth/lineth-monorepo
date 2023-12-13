@@ -97,7 +97,6 @@ ZKEVM_MODULES := ${ALU} \
 	${STP} \
 	${TABLES} \
 	${TRM} \
-	${TXN_DATA} \
 	${WCP}
 
 define.go: ${ZKEVM_MODULES}
