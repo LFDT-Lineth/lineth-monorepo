@@ -7,7 +7,7 @@
   BTC_NUM
   REL_TX_NUM_MAX
   REL_TX_NUM
-  CT
+  (CT :byte)
   FROM_HI
   FROM_LO
   NONCE
@@ -33,8 +33,8 @@
   REFUND_AMOUNT
   CUMULATIVE_CONSUMED_GAS
   (STATUS_CODE :binary)
-  PHASE_RLP_TXN
-  PHASE_RLP_TXNRCPT
+  (PHASE_RLP_TXN :byte)
+  (PHASE_RLP_TXNRCPT :byte)
   CODE_FRAGMENT_INDEX
   OUTGOING_HI
   OUTGOING_LO
@@ -42,7 +42,7 @@
   WCP_ARG_ONE_LO
   WCP_ARG_TWO_LO
   (WCP_RES_LO :binary)
-  WCP_INST)
+  (WCP_INST :byte :display :opcode))
 
 (defalias 
   ABS_MAX ABS_TX_NUM_MAX

@@ -75,6 +75,10 @@ TABLES := $(wildcard lookup_tables/tables/*lisp)
 
 TRM := trm/columns.lisp trm/constraints.lisp
 
+TXN_DATA := txn_data/columns.lisp txn_data/constraints.lisp \
+	txn_data/lookups/into_rlp_addr.lisp txn_data/lookups/into_rlp_txn.lisp txn_data/lookups/into_rlp_txrcpt.lisp txn_data/lookups/into_rom_lex.lisp txn_data/lookups/into_wcp.lisp \
+	# txn_data/lookups/from_hub.lisp txn_data/lookups/into_btc.lisp 
+
 WCP := wcp/columns.lisp wcp/constraints.lisp \
 	   # wcp/hub_into_wcp.lisp \
 

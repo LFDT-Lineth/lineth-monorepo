@@ -5,7 +5,7 @@
   (ONE_LINE_INSTRUCTION :binary)
   (MLI :binary)
   (COUNTER :byte)
-  (INST :display :opcode)
+  (INST :byte :display :opcode)
   ARGUMENT_1_HI
   ARGUMENT_1_LO
   ARGUMENT_2_HI

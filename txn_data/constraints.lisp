@@ -152,19 +152,20 @@
 ;;    2.5 Cumulative gas    ;;
 ;;                          ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defconstraint cumulative-gas ()
-  (begin (if-zero ABS
-                  (vanishes! CUM_GAS))
-         (if-not-zero (will-remain-constant! BTC)
-                      ; BTC[i + 1] != BTC[i]
-                      (eq! (next CUMULATIVE_CONSUMED_GAS)
-                           (next (- GAS_LIMIT REFUND_AMOUNT))))
-         (if-not-zero (and (will-inc! BTC 1) (will-remain-constant! ABS))
-                      ; BTC[i + 1] != 1 + BTC[i] && ABS[i+1] != ABS[i] i.e. BTC[i + 1] == BTC[i] && ABS[i+1] == ABS[i] +1
-                      (eq! (next CUM_GAS)
-                           (+ CUM_GAS
-                              (next (- GAS_LIMIT REFUND_AMOUNT)))))))
-
+;;TODO reenable this constraint
+;;(defconstraint cumulative-gas ()
+;;  (begin (if-zero ABS
+;;                  (vanishes! CUM_GAS))
+;;         (if-not-zero (will-remain-constant! BTC)
+;;                      ; BTC[i + 1] != BTC[i]
+;;                      (eq! (next CUMULATIVE_CONSUMED_GAS)
+;;                           (next (- GAS_LIMIT REFUND_AMOUNT))))
+;;         (if-not-zero (and (will-inc! BTC 1) (will-remain-constant! ABS))
+;;                      ; BTC[i + 1] != 1 + BTC[i] && ABS[i+1] != ABS[i] i.e. BTC[i + 1] == BTC[i] && ABS[i+1] == ABS[i] +1
+;;                      (eq! (next CUM_GAS)
+;;                           (+ CUM_GAS
+;;                              (next (- GAS_LIMIT REFUND_AMOUNT)))))))
+;;
 ;;;;;;;;;;;;;;;;;;;;;;;
 ;;                   ;;
 ;;    2.6 Aliases    ;;
@@ -263,7 +264,11 @@
          (if-zero TYPE2
                   (vanishes! (shift OUTGOING_HI 6)))))
 
-(defconstraint verticalization (:guard (remained-constant! ABS))
+;; is non-zero for the first row of each tx
+(defun (first-row-trigger)
+  (- ABS (prev ABS)))
+
+(defconstraint verticalization (:guard (first-row-trigger))
   (begin (setting_phase_numbers)
          (data_transfer)
          (vanishing_data_cells)))
@@ -346,7 +351,7 @@
          ;;  (= (shift WCP_RES_LO     6) ???) ;; unknown
          ))
 
-(defconstraint comparisons (:guard (remained-constant! ABS))
+(defconstraint comparisons (:guard (first-row-trigger))
   (begin (sufficient_balance)
          (sufficient_gas_limit)
          (upper_limit_for_refunds)
@@ -361,7 +366,7 @@
 ;;    2.11 Gas and gas price constraints    ;;
 ;;                                          ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defconstraint gas_and_gas_price (:guard (remained-constant! ABS))
+(defconstraint gas_and_gas_price (:guard (first-row-trigger))
   (begin  ;; constraining INIT_GAS
          (= IGAS
             (- (gas_limit) (shift WCP_ARG_TWO_LO 1)))
@@ -382,7 +387,7 @@
 ;;    2.11 Verticalisation for RlpTxnRcpt    ;;
 ;;                                           ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defconstraint verticalisation-rlp-txn-rcpt (:guard (remained-constant! ABS))
+(defconstraint verticalisation-rlp-txn-rcpt (:guard (first-row-trigger))
   (begin (eq! PHASE_RLP_TXNRCPT RLPRECEIPT_SUBPHASE_ID_TYPE)
          (eq! OUTGOING_RLP_TXNRCPT (tx_type))
          (eq! (next PHASE_RLP_TXNRCPT) RLPRECEIPT_SUBPHASE_ID_STATUS_CODE)
