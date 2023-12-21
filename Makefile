@@ -1,4 +1,4 @@
-CORSET=corset
+CORSET ?= corset
 
 ALU := alu/add/columns.lisp \
 	alu/add/constraints.lisp \
