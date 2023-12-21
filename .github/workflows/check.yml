@@ -12,8 +12,13 @@ jobs:
 
     - name: Download Corset
       run: |
-        wget https://github.com/Consensys/corset/releases/download/v9.1.3/corset_v9.1.3_x86_64-unknown-linux-musl.tar.gz
-        tar xvf corset_v9.1.3_x86_64-unknown-linux-musl.tar.gz
+        curl -L \
+        -H "Accept: application/octet-stream" \
+        -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+        -H "X-GitHub-Api-Version: 2022-11-28" \
+        -o corset.tar.gz \
+        https://api.github.com/repos/Consensys/corset/releases/assets/141813824
+        tar xzf corset.tar.gz
         mv corset $HOME
 
     - name: Build the constraint system
