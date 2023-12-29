@@ -41,7 +41,7 @@
   OUTGOING_RLP_TXNRCPT
   WCP_ARG_ONE_LO
   WCP_ARG_TWO_LO
-  (WCP_RES_LO :binary)
+  (WCP_RES :binary)
   (WCP_INST :byte :display :opcode))
 
 (defalias 
