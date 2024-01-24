@@ -1,20 +1,20 @@
 (module shf)
 
 (defcolumns
-    SHIFT_STAMP
-    COUNTER
-    (ONE_LINE_INSTRUCTION :binary)
-    ARG_1_HI
-    ARG_1_LO
-    ARG_2_HI
-    ARG_2_LO
-    RES_HI
-    RES_LO
-    INST
-    (SHIFT_DIRECTION :binary)
-    (BITS :binary)
-    (NEG :binary)
-    (KNOWN :binary)
+    (SHIFT_STAMP :i3)
+    (COUNTER :byte)
+    (ONE_LINE_INSTRUCTION :binary@prove)
+    (ARG_1_HI :i128)
+    (ARG_1_LO :i128)
+    (ARG_2_HI :i128)
+    (ARG_2_LO :i128)
+    (RES_HI :i128)
+    (RES_LO :i128)
+    (INST :byte :display :opcode)
+    (SHIFT_DIRECTION :binary@prove)
+    (BITS :binary@prove)
+    (NEG :binary@prove)
+    (KNOWN :binary@prove)
     LEFT_ALIGNED_SUFFIX_HIGH        ;decoded
     RIGHT_ALIGNED_PREFIX_HIGH       ;decoded
     LEFT_ALIGNED_SUFFIX_LOW         ;decoded
@@ -22,20 +22,20 @@
     ONES                            ;decoded
     LOW_3
     MICRO_SHIFT_PARAMETER
-    (BIT_1 :binary)
-    (BIT_2 :binary)
-    (BIT_3 :binary)
-    (BIT_4 :binary)
-    (BIT_B_3 :binary)
-    (BIT_B_4 :binary)
-    (BIT_B_5 :binary)
-    (BIT_B_6 :binary)
-    (BIT_B_7 :binary)
-    (BYTE_1 :byte)
-    (BYTE_2 :byte)
-    (BYTE_3 :byte)
-    (BYTE_4 :byte)
-    (BYTE_5 :byte)
+    (BIT_1 :binary@prove)
+    (BIT_2 :binary@prove)
+    (BIT_3 :binary@prove)
+    (BIT_4 :binary@prove)
+    (BIT_B_3 :binary@prove)
+    (BIT_B_4 :binary@prove)
+    (BIT_B_5 :binary@prove)
+    (BIT_B_6 :binary@prove)
+    (BIT_B_7 :binary@prove)
+    (BYTE_1 :byte@prove)
+    (BYTE_2 :byte@prove)
+    (BYTE_3 :byte@prove)
+    (BYTE_4 :byte@prove)
+    (BYTE_5 :byte@prove)
     ACC_1
     ACC_2
     ACC_3

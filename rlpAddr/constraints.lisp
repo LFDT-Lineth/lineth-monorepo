@@ -71,18 +71,6 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                              ;;
-;;    3.3 Binary constraints    ;;
-;;                              ;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defconstraint binarity ()
-  (begin (is-binary RECIPE_1)
-         (is-binary RECIPE_2)
-         (is-binary TINY_NON_ZERO_NONCE)
-         (is-binary BIT1)
-         (is-binary LC)))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;                              ;;
 ;;    3.4 Byte and Bit decomposition    ;;
 ;;                              ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

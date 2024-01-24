@@ -9,20 +9,6 @@
 ;;    2.3 Global Constraints    ;;
 ;;                              ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defconstraint boolean-constraint ()
-  (begin (is-binary LIMB_CONSTRUCTED)
-         (is-binary LT)
-         (is-binary LX)
-         (is-binary REQUIRES_EVM_EXECUTION)
-         (for i [14] (is-binary [PHASE i]))
-         (is-binary PHASE_END)
-         (is-binary DONE)
-         (is-binary BIT)
-         (is-binary LC_CORRECTION)
-         (is-binary IS_PREFIX)
-         (is-binary [DEPTH 1])
-         (is-binary [DEPTH 2])))
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                             ;;
 ;;    2.3.1 Constancy columns  ;;

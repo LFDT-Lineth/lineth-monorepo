@@ -1,44 +1,44 @@
 (module wcp)
 
 (defcolumns 
-  WORD_COMPARISON_STAMP
+  (WORD_COMPARISON_STAMP :i32)
   (COUNTER :byte)
   (CT_MAX :byte)
   (INST :byte :display :opcode)
-  ARGUMENT_1_HI
-  ARGUMENT_1_LO
-  ARGUMENT_2_HI
-  ARGUMENT_2_LO
-  (RESULT :binary)
-  (IS_LT :binary)
-  (IS_GT :binary)
-  (IS_SLT :binary)
-  (IS_SGT :binary)
-  (IS_EQ :binary)
-  (IS_ISZERO :binary)
-  (IS_GEQ :binary)
-  (IS_LEQ :binary)
+  (ARGUMENT_1_HI :i128)
+  (ARGUMENT_1_LO :i128)
+  (ARGUMENT_2_HI :i128)
+  (ARGUMENT_2_LO :i128)
+  (RESULT :binary@prove)
+  (IS_LT :binary@prove)
+  (IS_GT :binary@prove)
+  (IS_SLT :binary@prove)
+  (IS_SGT :binary@prove)
+  (IS_EQ :binary@prove)
+  (IS_ISZERO :binary@prove)
+  (IS_GEQ :binary@prove)
+  (IS_LEQ :binary@prove)
   (ONE_LINE_INSTRUCTION :binary)
   (VARIABLE_LENGTH_INSTRUCTION :binary)
-  (BITS :binary)
-  (NEG_1 :binary)
-  (NEG_2 :binary)
-  (BYTE_1 :byte)
-  (BYTE_2 :byte)
-  (BYTE_3 :byte)
-  (BYTE_4 :byte)
-  (BYTE_5 :byte)
-  (BYTE_6 :byte)
-  ACC_1
-  ACC_2
-  ACC_3
-  ACC_4
-  ACC_5
-  ACC_6
-  (BIT_1 :binary)
-  (BIT_2 :binary)
-  (BIT_3 :binary)
-  (BIT_4 :binary))
+  (BITS :binary@prove)
+  (NEG_1 :binary@prove)
+  (NEG_2 :binary@prove)
+  (BYTE_1 :byte@prove)
+  (BYTE_2 :byte@prove)
+  (BYTE_3 :byte@prove)
+  (BYTE_4 :byte@prove)
+  (BYTE_5 :byte@prove)
+  (BYTE_6 :byte@prove)
+  (ACC_1 :i128)
+  (ACC_2 :i128)
+  (ACC_3 :i128)
+  (ACC_4 :i128)
+  (ACC_5 :i128)
+  (ACC_6 :i128)
+  (BIT_1 :binary@prove)
+  (BIT_2 :binary@prove)
+  (BIT_3 :binary@prove)
+  (BIT_4 :binary@prove))
 
 ;; aliases
 (defalias 

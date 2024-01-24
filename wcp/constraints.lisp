@@ -18,24 +18,6 @@
   LLARGE   16
   LLARGEMO 15)
 
-(defconstraint binarities ()
-  (begin (is-binary NEG_1)
-         (is-binary NEG_2)
-         (is-binary RES)
-         (is-binary BITS)
-         (is-binary BIT_1)
-         (is-binary BIT_2)
-         (is-binary BIT_3)
-         (is-binary BIT_4)
-         (is-binary IS_ISZERO)
-         (is-binary IS_EQ)
-         (is-binary IS_LT)
-         (is-binary IS_GT)
-         (is-binary IS_LEQ)
-         (is-binary IS_GEQ)
-         (is-binary IS_SLT)
-         (is-binary IS_SGT)))
-
 (defun (flag-sum)
   (+ (one-line-inst) (variable-length-inst)))
 

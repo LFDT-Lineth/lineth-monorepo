@@ -1,10 +1,5 @@
 (module romLex)
 
-(defconstraint binarities ()
-  (begin (is-binary DEP_STATUS)
-         (is-binary READ_FROM_STATE)
-         (is-binary COMMIT_TO_STATE)))
-
 (defconstraint initialization (:domain {0})
   (vanishes! CODE_FRAGMENT_INDEX))
 

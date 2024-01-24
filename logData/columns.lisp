@@ -1,13 +1,13 @@
 (module logData)
 
 (defcolumns 
-  ABS_LOG_NUM_MAX
-  ABS_LOG_NUM
-  (LOGS_DATA :binary)
-  SIZE_TOTAL
-  SIZE_ACC
-  SIZE_LIMB
-  LIMB
-  INDEX)
+  (ABS_LOG_NUM_MAX :i24)
+  (ABS_LOG_NUM :i24)
+  (LOGS_DATA :binary@prove)
+  (SIZE_TOTAL :i32)
+  (SIZE_ACC :i32)
+  (SIZE_LIMB :byte)
+  (LIMB :i128)
+  (INDEX :i24))
 
 

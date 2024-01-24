@@ -48,8 +48,7 @@
 ;;                                                   ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defconstraint binary-and-byte-decompositions ()
-  (begin (is-binary OVERFLOW)
-         (byte-decomposition CT ACC_1 BYTE_1)
+  (begin (byte-decomposition CT ACC_1 BYTE_1)
          (byte-decomposition CT ACC_2 BYTE_2)))
 
 ;; TODO: bytehood constraints

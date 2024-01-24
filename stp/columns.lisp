@@ -1,21 +1,21 @@
 (module stp)
 
 (defcolumns 
-  STAMP
-  CT
-  CT_MAX
+  (STAMP :i24)
+  (CT :byte)
+  (CT_MAX :byte)
   (INSTRUCTION :byte :display :opcode)
-  (IS_CREATE :binary)
-  (IS_CREATE2 :binary)
-  (IS_CALL :binary)
-  (IS_CALLCODE :binary)
-  (IS_DELEGATECALL :binary)
-  (IS_STATICCALL :binary)
+  (IS_CREATE :binary@prove)
+  (IS_CREATE2 :binary@prove)
+  (IS_CALL :binary@prove)
+  (IS_CALLCODE :binary@prove)
+  (IS_DELEGATECALL :binary@prove)
+  (IS_STATICCALL :binary@prove)
   ;;
-  GAS_HI
-  GAS_LO
-  VAL_HI
-  VAL_LO
+  (GAS_HI :i128)
+  (GAS_LO :i128)
+  (VAL_HI :i128)
+  (VAL_LO :i128)
   ;;
   (EXISTS :binary)
   (WARM :binary)
@@ -30,10 +30,10 @@
   (WCP_FLAG :binary)
   (MOD_FLAG :binary)
   (EXOGENOUS_MODULE_INSTRUCTION :byte :display :opcode)
-  ARG_1_HI
-  ARG_1_LO
-  ARG_2_LO
-  RES_LO)
+  (ARG_1_HI :i128)
+  (ARG_1_LO :i128)
+  (ARG_2_LO :i128)
+  (RES_LO :i128))
 
 (defalias 
   OOGX     OUT_OF_GAS_EXCEPTION

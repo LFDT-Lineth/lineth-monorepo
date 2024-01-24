@@ -82,15 +82,6 @@
   (begin (will-remain-constant! ABS_TXN_NUM_MAX)
          (will-remain-constant! ABS_LOG_NUM_MAX)))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;                              ;;
-;;    2.3 Binary constraints    ;;
-;;                              ;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defconstraint binary-constraints ()
-  (begin (for k [0 : 4] (is-binary [IS_LOG_X k]))
-         (is-binary TXN_EMITS_LOGS)))
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                                             ;;
 ;;    2.3 Instruction and instruction flags    ;;

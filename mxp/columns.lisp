@@ -1,44 +1,46 @@
 (module mxp)
 
-(defcolumns
-	STAMP
-	CN
-	CT
-	(ROOB	:binary)
-	(NOOP	:binary)
-	(MXPX	:binary)
-	(INST   :display :opcode)
-	(MXP_TYPE :binary :array[5])
-	GBYTE
-	GWORD
-	(DEPLOYS :binary)
-	OFFSET_1_LO
-	OFFSET_2_LO
-	OFFSET_1_HI
-	OFFSET_2_HI
-	SIZE_1_LO
-	SIZE_2_LO
-	SIZE_1_HI
-	SIZE_2_HI
-	MAX_OFFSET_1
-	MAX_OFFSET_2
-	MAX_OFFSET
-	(COMP :binary)	
-	(BYTE :byte :array[4])
-	(BYTE_A	:byte)
-	(BYTE_W	:byte)
-	(BYTE_Q	:byte)
-	(ACC :array[4])
-	ACC_A
-	ACC_W
-	ACC_Q
-	BYTE_QQ
-	BYTE_R
-	WORDS
-	WORDS_NEW
-	C_MEM
-	C_MEM_NEW
-	QUAD_COST
-	LIN_COST
-	GAS_MXP
-	(EXPANDS :binary))
+(defcolumns 
+  (STAMP :i32)
+  (CN :i64)
+  (CT :i5)
+  (ROOB :binary@prove)
+  (NOOP :binary@prove)
+  (MXPX :binary@prove)
+  (INST :byte :display :opcode)
+  (MXP_TYPE :binary@prove :array [5])
+  (GBYTE :i64)
+  (GWORD :i64)
+  (DEPLOYS :binary@prove)
+  (OFFSET_1_LO :i128)
+  (OFFSET_2_LO :i128)
+  (OFFSET_1_HI :i128)
+  (OFFSET_2_HI :i128)
+  (SIZE_1_LO :i128)
+  (SIZE_2_LO :i128)
+  (SIZE_1_HI :i128)
+  (SIZE_2_HI :i128)
+  MAX_OFFSET_1
+  MAX_OFFSET_2
+  MAX_OFFSET
+  (COMP :binary@prove)
+  (BYTE :byte@prove :array [4])
+  (BYTE_A :byte@prove)
+  (BYTE_W :byte@prove)
+  (BYTE_Q :byte@prove)
+  (ACC :i136 :array [4])
+  (ACC_A :i136)
+  (ACC_W :i136)
+  (ACC_Q :i136)
+  (BYTE_QQ :byte@prove)
+  (BYTE_R :byte@prove)
+  (WORDS :i64)
+  (WORDS_NEW :i64)
+  (C_MEM :i64)
+  (C_MEM_NEW :i64)
+  (QUAD_COST :i64)
+  (LIN_COST :i64)
+  (GAS_MXP :i64)
+  (EXPANDS :binary@prove))
+
+

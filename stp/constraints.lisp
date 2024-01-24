@@ -21,24 +21,6 @@
   delegatecall        0xf4
   staticcall          0xfa)
 
-;;;;;;;;;;;;;;;;;;;;;;
-;;                  ;;
-;;    2.1 binary    ;;
-;;                  ;;
-;;;;;;;;;;;;;;;;;;;;;;
-(defconstraint binary-constraints ()
-  (begin (debug (is-binary EXISTS))
-         (debug (is-binary WARM))
-         (debug (is-binary OOGX))
-         (is-binary WCP_FLAG)
-         (is-binary MOD_FLAG)
-         (is-binary IS_CREATE)
-         (is-binary IS_CREATE2)
-         (is-binary IS_CALL)
-         (is-binary IS_CALLCODE)
-         (is-binary IS_DELEGATECALL)
-         (is-binary IS_STATICCALL)))
-
 (defconstraint exclusive-flags ()
   (vanishes! (* WCP_FLAG MOD_FLAG)))
 

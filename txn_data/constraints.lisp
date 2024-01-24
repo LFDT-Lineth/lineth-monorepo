@@ -102,19 +102,6 @@
          (transaction-constant STATUS_CODE)
          (transaction-constant CFI)))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;                              ;;
-;;    2.3 Binary constraints    ;;
-;;                              ;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defconstraint binarities ()
-  (begin (is-binary IS_DEP)
-         (is-binary TYPE0)
-         (is-binary TYPE1)
-         (is-binary TYPE2)
-         (is-binary REQUIRES_EVM_EXECUTION)
-         (is-binary STATUS_CODE)))
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                                                ;;
 ;;    2.4 Batch numbers and transaction number    ;;
