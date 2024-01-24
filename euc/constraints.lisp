@@ -21,16 +21,11 @@
   (eq! (~ (- CT MAX_INPUT_LENGTH))
        1))
 
-(defconstraint last-row (:domain {-1})
-  (if-not-zero IOMF
-               (eq! DONE 1)))
-
 (defconstraint counter-constancies ()
   (counter-constancy CT CT_MAX))
 
 (defconstraint byte-decomposition ()
-  (begin (byte-decomposition CT DIVIDEND DIVIDEND_BYTE)
-         (byte-decomposition CT DIVISOR DIVISOR_BYTE)
+  (begin (byte-decomposition CT DIVISOR DIVISOR_BYTE)
          (byte-decomposition CT QUOTIENT QUOTIENT_BYTE)
          (byte-decomposition CT REMAINDER REMAINDER_BYTE)))
 

@@ -10,9 +10,8 @@
   (REMAINDER :i64)
   (CEIL :i64)
   (DONE :binary)
-  (DIVIDEND_BYTE :byte)
-  (DIVISOR_BYTE :byte)
-  (QUOTIENT_BYTE :byte)
-  (REMAINDER_BYTE :byte))
+  (DIVISOR_BYTE :byte@prove)
+  (QUOTIENT_BYTE :byte@prove)
+  (REMAINDER_BYTE :byte@prove))
 
 
