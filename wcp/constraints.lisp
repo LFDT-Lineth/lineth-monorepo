@@ -156,9 +156,9 @@
                                    (- (* (- (* 2 BIT_4) 1)
                                          (- ARG_1_LO ARG_2_LO))
                                       BIT_4)))))
-         (debug (if-eq IS_ISZERO 1
-                       (begin (vanishes! ARG_2_HI)
-                              (vanishes! ARG_2_LO))))))
+         (if-eq IS_ISZERO 1
+                (begin (vanishes! ARG_2_HI)
+                       (vanishes! ARG_2_LO)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                              ;;

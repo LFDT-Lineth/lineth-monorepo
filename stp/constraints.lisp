@@ -260,7 +260,7 @@
          ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
          (eq! (next ARG_1_HI) VAL_HI)
          (eq! (next ARG_1_LO) VAL_LO)
-         (vanishes! (next ARG_2_LO))
+         (debug (vanishes! (next ARG_2_LO)))
          (eq! (next EXO_INST) ISZERO)
          (eq! (next WCP_FLAG) (cctv))
          (vanishes! (next MOD_FLAG))
