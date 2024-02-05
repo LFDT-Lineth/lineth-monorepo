@@ -11,6 +11,7 @@
   G_accessliststorage           1900
   ;;
   LT                            0x10
+  ISZERO                        21
   common_rlp_txn_phase_number_0 0
   common_rlp_txn_phase_number_1 7
   common_rlp_txn_phase_number_2 2
@@ -95,6 +96,7 @@
          (transaction-constant TYPE1)
          (transaction-constant TYPE2)
          (transaction-constant REQ_EVM)
+         (transaction-constant COPY_TXCD_AT_INITIALISATION)
          (transaction-constant LEFTOVER_GAS)
          (transaction-constant REF_CNT)
          (transaction-constant REF_AMT)
@@ -313,28 +315,36 @@
          ;;  (= (shift WCP_RES     3) ???) ;; unknown
          ))
 
+;; row i + 4
+(defun (is-zero-call-data)
+  (begin (eq! (shift WCP_ARG_ONE_LO 4) CALL_DATA_SIZE)
+         (eq! (shift WCP_INST 4) ISZERO)
+         (eq! COPY_TXCD_AT_INITIALISATION
+              (* REQUIRES_EVM_EXECUTION
+                 (- 1 (shift WCP_RES 4))))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; applicable only to type 2 transactions ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; row i + 4
-(defun (type_2_comparing_max_fee_and_basefee)
-  (begin (= (shift WCP_ARG_ONE_LO 4) (max_fee))
-         (= (shift WCP_ARG_TWO_LO 4) BASEFEE)
-         (= (shift WCP_INST 4) LT)
-         (= (shift WCP_RES 4) 0)))
-
 ;; row i + 5
-(defun (type_2_comparing_max_fee_and_max_priority_fee)
+(defun (type_2_comparing_max_fee_and_basefee)
   (begin (= (shift WCP_ARG_ONE_LO 5) (max_fee))
-         (= (shift WCP_ARG_TWO_LO 5) (max_priority_fee))
+         (= (shift WCP_ARG_TWO_LO 5) BASEFEE)
          (= (shift WCP_INST 5) LT)
          (= (shift WCP_RES 5) 0)))
 
 ;; row i + 6
-(defun (type_2_computing_the_effective_gas_price)
+(defun (type_2_comparing_max_fee_and_max_priority_fee)
   (begin (= (shift WCP_ARG_ONE_LO 6) (max_fee))
-         (= (shift WCP_ARG_TWO_LO 6) (+ (max_priority_fee) BASEFEE))
+         (= (shift WCP_ARG_TWO_LO 6) (max_priority_fee))
          (= (shift WCP_INST 6) LT)
+         (= (shift WCP_RES 6) 0)))
+
+;; row i + 7
+(defun (type_2_computing_the_effective_gas_price)
+  (begin (= (shift WCP_ARG_ONE_LO 7) (max_fee))
+         (= (shift WCP_ARG_TWO_LO 7) (+ (max_priority_fee) BASEFEE))
+         (= (shift WCP_INST 7) LT)
          ;;  (= (shift WCP_RES     6) ???) ;; unknown
          ))
 
@@ -343,6 +353,7 @@
          (sufficient_gas_limit)
          (upper_limit_for_refunds)
          (effective_refund)
+         (is-zero-call-data)
          (if-not-zero TYPE2
                       (begin (type_2_comparing_max_fee_and_basefee)
                              (type_2_comparing_max_fee_and_max_priority_fee)
@@ -365,7 +376,7 @@
          ;; constraining GAS_PRICE
          (if-zero TYPE2
                   (= GAS_PRICE (gas_price))
-                  (if-zero (shift WCP_RES 6)
+                  (if-zero (shift WCP_RES 7)
                            (= GAS_PRICE (+ (max_priority_fee) BASEFEE))
                            (= GAS_PRICE (max_fee))))))
 
