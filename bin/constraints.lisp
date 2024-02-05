@@ -17,21 +17,6 @@
            THEN
            ELSE))
 
-;;   2.1 binary constraints   
-;; binary constraints
-(defconstraint binary_constraints ()
-  (begin (is-binary IS_AND)
-         (is-binary IS_OR)
-         (is-binary IS_XOR)
-         (is-binary IS_NOT)
-         (is-binary IS_BYTE)
-         (is-binary IS_SIGNEXTEND)
-         (is-binary SMALL)
-         (is-binary BITS)
-         (is-binary NEG)
-         (is-binary BIT_B_4)
-         (is-binary BIT_1)))
-
 ;; 2.2  Shorthands
 (defun (flag-sum)
   (+ IS_AND IS_OR IS_XOR IS_NOT IS_BYTE IS_SIGNEXTEND))
@@ -60,18 +45,28 @@
 (defconstraint stamp-increments ()
   (vanishes! (* (will-inc! STAMP 0) (will-inc! STAMP 1))))
 
-(defconstraint countereset ()
-  (if-not-zero (will-remain-constant! STAMP)
+(defconstraint new-stamp-reset-ct ()
+  (if-not-zero (- (next STAMP) STAMP)
                (vanishes! (next CT))))
 
-(defconstraint oli-incrementation (:guard OLI)
-  (will-inc! STAMP 1))
+(defconstraint isnot-ctmax ()
+  (if-eq IS_NOT 1 (eq! CT_MAX LLARGEMO)))
 
-(defconstraint mli-incrementation (:guard MLI)
-  (if-eq-else CT LLARGEMO (will-inc! STAMP 1) (will-inc! CT 1)))
+(defconstraint isbyte-ctmax ()
+  (if-eq (+ IS_BYTE IS_SIGNEXTEND) 1
+         (if-zero ARG_1_HI
+                  (eq! CT_MAX LLARGEMO)
+                  (vanishes! CT_MAX))))
+
+(defconstraint ct-small ()
+  (eq! 1
+       (~ (- CT LLARGE))))
+
+(defconstraint countereset (:guard STAMP)
+  (if-eq-else CT CT_MAX (will-inc! STAMP 1) (will-inc! CT 1)))
 
 (defconstraint last-row (:domain {-1})
-  (if-eq MLI 1 (eq! CT LLARGEMO)))
+  (eq! CT CT_MAX))
 
 (defconstraint counter-constancies ()
   (begin (counter-constancy CT ARG_1_HI)
@@ -81,10 +76,12 @@
          (counter-constancy CT RES_HI)
          (counter-constancy CT RES_LO)
          (counter-constancy CT INST)
+         (counter-constancy CT CT_MAX)
          (counter-constancy CT PIVOT)
          (counter-constancy CT BIT_B_4)
          (counter-constancy CT LOW_4)
-         (counter-constancy CT NEG)))
+         (counter-constancy CT NEG)
+         (counter-constancy CT SMALL)))
 
 ;;    2.6 byte decompositions   
 (defconstraint byte_decompositions ()
@@ -97,7 +94,7 @@
 
 ;;    2.7 target constraints    
 (defconstraint target-constraints ()
-  (if-eq CT LLARGEMO
+  (if-eq CT CT_MAX
          (begin (eq! ACC_1 ARG_1_HI)
                 (eq! ACC_2 ARG_1_LO)
                 (eq! ACC_3 ARG_2_HI)
@@ -110,18 +107,8 @@
 ;;    2.8 binary column constraints    ;;
 ;;                                     ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defconstraint set-oli-mli ()
-  (if-zero (+ IS_BYTE IS_SIGNEXTEND)
-           (vanishes! OLI)
-           (if-zero ARG_1_HI
-                    (vanishes! OLI)
-                    (eq! OLI 1))))
-
-(defconstraint oli-mli-exclusivity ()
-  (eq! (+ OLI MLI) (flag-sum)))
-
 ;; 2.8.2 BITS and related columns
-(defconstraint bits-and-related ()
+(defconstraint bits-and-related (:guard (+ IS_BYTE IS_SIGNEXTEND))
   (if-eq CT LLARGEMO
          (begin (eq! PIVOT
                      (+ (* 128 (shift BITS -15))
@@ -150,13 +137,13 @@
                 (eq! NEG (shift BITS -15)))))
 
 ;; 2.8.3 [[1]] constraints
-(defconstraint bit_1 ()
+(defconstraint bit_1 (:guard CT_MAX)
   (begin (if-eq IS_BYTE 1 (plateau-constraint CT BIT_1 LOW_4))
          (if-eq IS_SIGNEXTEND 1
                 (plateau-constraint CT BIT_1 (- LLARGEMO LOW_4)))))
 
 ;; 2.8.4 SMALL constraints
-(defconstraint small ()
+(defconstraint small (:guard (+ IS_BYTE IS_SIGNEXTEND))
   (if-eq CT LLARGEMO
          (if-zero ARG_1_HI
                   (if-eq-else ARG_1_LO (+ (* 16 (shift BITS -4))
@@ -168,27 +155,27 @@
                               (vanishes! SMALL)))))
 
 ;;    2.9 pivot constraints    
-(defconstraint pivot (:guard MLI)
-  (begin (if-not-zero IS_BYTE
-                      (if-zero LOW_4
-                               (if-zero CT
-                                        (if-zero BIT_B_4
-                                                 (eq! PIVOT BYTE_3)
-                                                 (eq! PIVOT BYTE_4)))
-                               (if-zero (+ (prev BIT_1) (- 1 BIT_1))
-                                        (if-zero BIT_B_4
-                                                 (eq! PIVOT BYTE_3)
-                                                 (eq! PIVOT BYTE_4)))))
-         (if-not-zero IS_SIGNEXTEND
-                      (if-eq-else LOW_4 LLARGEMO
-                                  (if-zero CT
-                                           (if-zero BIT_B_4
-                                                    (eq! PIVOT BYTE_4)
-                                                    (eq! PIVOT BYTE_3)))
-                                  (if-zero (+ (prev BIT_1) (- 1 BIT_1))
-                                           (if-zero BIT_B_4
-                                                    (eq! PIVOT BYTE_4)
-                                                    (eq! PIVOT BYTE_3)))))))
+(defconstraint pivot (:guard CT_MAX)
+  (begin (if-eq IS_BYTE 1
+                (if-zero LOW_4
+                         (if-zero CT
+                                  (if-zero BIT_B_4
+                                           (eq! PIVOT BYTE_3)
+                                           (eq! PIVOT BYTE_4)))
+                         (if-zero (+ (prev BIT_1) (- 1 BIT_1))
+                                  (if-zero BIT_B_4
+                                           (eq! PIVOT BYTE_3)
+                                           (eq! PIVOT BYTE_4)))))
+         (if-eq IS_SIGNEXTEND 1
+                (if-eq-else LOW_4 LLARGEMO
+                            (if-zero CT
+                                     (if-zero BIT_B_4
+                                              (eq! PIVOT BYTE_4)
+                                              (eq! PIVOT BYTE_3)))
+                            (if-zero (+ (prev BIT_1) (- 1 BIT_1))
+                                     (if-zero BIT_B_4
+                                              (eq! PIVOT BYTE_4)
+                                              (eq! PIVOT BYTE_3)))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                              ;;
@@ -196,36 +183,36 @@
 ;;                              ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defconstraint is-byte-result (:guard IS_BYTE)
-  (if-eq-else OLI 1
-              (begin (vanishes! RES_HI)
-                     (vanishes! RES_LO))
-              (begin (vanishes! RES_HI)
-                     (eq! RES_LO (* SMALL PIVOT)))))
+  (if-zero CT_MAX
+           (begin (vanishes! RES_HI)
+                  (vanishes! RES_LO))
+           (begin (vanishes! RES_HI)
+                  (eq! RES_LO (* SMALL PIVOT)))))
 
 (defconstraint is-signextend-result (:guard IS_SIGNEXTEND)
-  (if-eq-else OLI 1
-              (begin (eq! RES_HI ARG_2_HI)
-                     (eq! RES_LO ARG_2_LO))
-              (if-zero SMALL
-                       ;; SMALL == 0
-                       (begin (eq! RES_HI ARG_2_HI)
-                              (eq! RES_LO ARG_2_LO))
-                       ;; SMALL == 1
-                       (begin (if-zero BIT_B_4
-                                       ;; b4 == 0
-                                       (begin (eq! BYTE_5 (* NEG 255))
-                                              (if-zero BIT_1
-                                                       ;; [[1]] == 0
-                                                       (eq! BYTE_6 (* NEG 255))
-                                                       ;; [[1]] == 1
-                                                       (eq! BYTE_6 BYTE_4)))
-                                       ;; b4 == 1
-                                       (begin (if-zero BIT_1
-                                                       ;; [[1]] == 0
-                                                       (eq! BYTE_5 (* NEG 255))
-                                                       ;; [[1]] == 1
-                                                       (eq! BYTE_5 BYTE_3))
-                                              (eq! RES_LO ARG_2_LO)))))))
+  (if-zero CT_MAX
+           (begin (eq! RES_HI ARG_2_HI)
+                  (eq! RES_LO ARG_2_LO))
+           (if-zero SMALL
+                    ;; SMALL == 0
+                    (begin (eq! RES_HI ARG_2_HI)
+                           (eq! RES_LO ARG_2_LO))
+                    ;; SMALL == 1
+                    (begin (if-zero BIT_B_4
+                                    ;; b4 == 0
+                                    (begin (eq! BYTE_5 (* NEG 255))
+                                           (if-zero BIT_1
+                                                    ;; [[1]] == 0
+                                                    (eq! BYTE_6 (* NEG 255))
+                                                    ;; [[1]] == 1
+                                                    (eq! BYTE_6 BYTE_4)))
+                                    ;; b4 == 1
+                                    (begin (if-zero BIT_1
+                                                    ;; [[1]] == 0
+                                                    (eq! BYTE_5 (* NEG 255))
+                                                    ;; [[1]] == 1
+                                                    (eq! BYTE_5 BYTE_3))
+                                           (eq! RES_LO ARG_2_LO)))))))
 
 (defconstraint result-via-lookup (:guard (+ IS_AND IS_OR IS_XOR IS_NOT))
   (begin (eq! BYTE_5 XXX_BYTE_HI)
