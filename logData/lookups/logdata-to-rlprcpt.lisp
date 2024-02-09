@@ -6,7 +6,7 @@
   ;reference columns
   (
     rlpTxRcpt.ABS_LOG_NUM
-    (subphaseId-rlp-txrcpt)
+    rlpTxRcpt.PHASE_ID
     rlpTxRcpt.INDEX_LOCAL
     rlpTxRcpt.LIMB
     rlpTxRcpt.nBYTES

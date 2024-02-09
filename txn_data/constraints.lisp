@@ -12,17 +12,18 @@
   ;;
   LT                            0x10
   ISZERO                        21
-  common_rlp_txn_phase_number_0 0
-  common_rlp_txn_phase_number_1 7
-  common_rlp_txn_phase_number_2 2
-  common_rlp_txn_phase_number_3 8
-  common_rlp_txn_phase_number_4 9
-  common_rlp_txn_phase_number_5 6
-  type_0_rlp_txn_phase_number_6 3
-  type_1_rlp_txn_phase_number_6 3
-  type_1_rlp_txn_phase_number_7 10
-  type_2_rlp_txn_phase_number_6 5
-  type_2_rlp_txn_phase_number_7 10)
+  ;; the following should be taken from rlpTxn constant
+  common_rlp_txn_phase_number_0 1
+  common_rlp_txn_phase_number_1 8
+  common_rlp_txn_phase_number_2 3
+  common_rlp_txn_phase_number_3 9
+  common_rlp_txn_phase_number_4 10
+  common_rlp_txn_phase_number_5 7
+  type_0_rlp_txn_phase_number_6 4
+  type_1_rlp_txn_phase_number_6 4
+  type_1_rlp_txn_phase_number_7 11
+  type_2_rlp_txn_phase_number_6 6
+  type_2_rlp_txn_phase_number_7 11)
 
 ;; sum of transaction type flags
 (defun (tx-type-sum)

@@ -28,11 +28,9 @@ EC_DATA := ec_data/columns.lisp \
 
 LIBRARY := library/constant.lisp library/rlp_constraints_pattern.lisp
 
-LOG_DATA := logData/columns.lisp logData/constraints.lisp \
-	logData/logdata-to-rlprcpt.lisp
+LOG_DATA := logData
 
-LOG_INFO := logInfo/columns.lisp logInfo/constraints.lisp \
-	logInfo/lookups/loginfo-to-rlprcpt.lisp logInfo/lookups/loginfo-to-logdata.lisp
+LOG_INFO := logInfo
 
 MEMORY := $(wildcard hub/mmio/columns.lisp) \
 		  $(wildcard hub/mmu/columns.lisp) \
@@ -45,12 +43,11 @@ MXP := mxp/columns.lisp \
 
 PUB_DATA := $(shell find pub/ -iname '*.lisp')
 
-RLP_ADDR := rlpAddr/columns.lisp rlpAddr/constraints.lisp
+RLP_ADDR := rlpAddr
 
-RLP_TXN := rlp_txn/columns.lisp rlp_txn/constraints.lisp \
-			rlp_txn/rlpTxn_into_rom.lisp
+RLP_TXN := rlp_txn
 
-RLP_TXRCPT := rlp_txrcpt/columns.lisp rlp_txrcpt/constraints.lisp			
+RLP_TXRCPT := rlp_txrcpt			
 
 ROM := rom/columns.lisp \
 	rom/constraints.lisp \
@@ -77,9 +74,7 @@ EUC := euc
 
 TRM := trm/columns.lisp trm/constraints.lisp
 
-TXN_DATA := txn_data/columns.lisp txn_data/constraints.lisp \
-	txn_data/lookups/into_rlp_addr.lisp txn_data/lookups/into_rlp_txn.lisp txn_data/lookups/into_rlp_txrcpt.lisp txn_data/lookups/into_rom_lex.lisp txn_data/lookups/into_wcp.lisp \
-	# txn_data/lookups/from_hub.lisp txn_data/lookups/into_btc.lisp 
+TXN_DATA := txn_data 
 
 WCP := wcp/columns.lisp wcp/constraints.lisp \
 	   # wcp/hub_into_wcp.lisp \

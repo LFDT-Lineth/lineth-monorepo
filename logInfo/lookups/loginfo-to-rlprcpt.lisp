@@ -6,7 +6,7 @@
     rlpTxRcpt.ABS_TX_NUM
     rlpTxRcpt.ABS_LOG_NUM_MAX
     rlpTxRcpt.ABS_LOG_NUM
-    (subphaseId-rlp-txrcpt)
+    rlpTxRcpt.PHASE_ID
     [rlpTxRcpt.INPUT 1]
     [rlpTxRcpt.INPUT 2]
   )

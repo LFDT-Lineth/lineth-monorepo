@@ -4,8 +4,7 @@
   (
     rlpTxn.ABS_TX_NUM_INFINY
     rlpTxn.ABS_TX_NUM
-    (reduce +
-            (for i [0 : 14] (* i [rlpTxn.PHASE i])))
+    rlpTxn.PHASE_ID
     rlpTxn.DATA_HI
     rlpTxn.DATA_LO
   )
