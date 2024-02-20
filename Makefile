@@ -81,6 +81,8 @@ WCP := wcp/columns.lisp wcp/constraints.lisp \
 
 MODEXP_DATA := modexpdata/
 
+EXP := exp/columns.lisp exp/constraints.lisp exp/constants.lisp exp/exp-into-wcp.lisp
+
 ZKEVM_MODULES := ${ALU} \
 	${BIN} \
 	${EC_DATA} \
@@ -103,7 +105,8 @@ ZKEVM_MODULES := ${ALU} \
 	${TABLES} \
 	${TRM} \
 	${TXN_DATA} \
-	${WCP}
+	${WCP} \
+	${EXP}
 
 define.go: ${ZKEVM_MODULES}
 	${CORSET} wizard-iop -vv -P define -o $@ ${ZKEVM_MODULES}
