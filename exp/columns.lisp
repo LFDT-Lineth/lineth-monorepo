@@ -30,12 +30,12 @@
    (MANZB :binary@prove)
    (MANZB_ACC :i4)))
 
-(defperspective macro-instruction
+(defperspective macro
 
   ;; selector
   MACRO
 
-  ;; macro-instruction-row columns
+  ;; macro-row columns
   ((EXP_INST :i16)
    (DATA :i128 :array [5])))
 

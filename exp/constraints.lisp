@@ -56,7 +56,7 @@
            (vanishes! (flag_sum_macro))
            (eq! (flag_sum_macro) 1)))
 
-(defconstraint instruction-decoding-exp-inst (:perspective macro-instruction)
+(defconstraint instruction-decoding-exp-inst (:perspective macro)
   (eq! EXP_INST (wght_sum_macro)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -245,13 +245,13 @@
 ;;                    ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;
 (defun (exponent_hi)
-  [macro-instruction/DATA 1])
+  [macro/DATA 1])
 
 (defun (exponent_lo)
-  [macro-instruction/DATA 2])
+  [macro/DATA 2])
 
 (defun (dyn_cost)
-  [macro-instruction/DATA 5])
+  [macro/DATA 5])
 
 (defun (expoennt_byte_length)
   (prev computation/TANZB_ACC))
@@ -262,7 +262,7 @@
 ;;                      ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; 1
-(defconstraint preprocessing-1-exp-log (:perspective macro-instruction :guard IS_EXP_LOG)
+(defconstraint preprocessing-1-exp-log (:perspective macro :guard IS_EXP_LOG)
   (callToISZERO 1 0 (exponent_hi)))
 
 (defun (expn_hi_is_zero)
@@ -273,7 +273,7 @@
 ;;    4.4 Linking       ;;
 ;;        constraints   ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defconstraint linking-constraints-exp-log (:perspective macro-instruction :guard IS_EXP_LOG)
+(defconstraint linking-constraints-exp-log (:perspective macro :guard IS_EXP_LOG)
   (begin (eq! (shift computation/PLT_JMP -1) 16)
          (if-not-zero (expn_hi_is_zero)
                       (eq! (shift computation/RAW_ACC -1) (exponent_lo)))
@@ -285,7 +285,7 @@
 ;;    4.5 Justify          ;;
 ;;        hub prediction   ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defconstraint justify-hub-prediction-exp-log (:perspective macro-instruction :guard IS_EXP_LOG)
+(defconstraint justify-hub-prediction-exp-log (:perspective macro :guard IS_EXP_LOG)
   (if-zero (expn_hi_is_zero)
            (eq! (dyn_cost)
                 (* G_EXPBYTES (+ (expoennt_byte_length) 16)))
@@ -302,19 +302,19 @@
 ;;                    ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;
 (defun (raw_lead_hi)
-  [macro-instruction/DATA 1])
+  [macro/DATA 1])
 
 (defun (raw_lead_lo)
-  [macro-instruction/DATA 2])
+  [macro/DATA 2])
 
 (defun (cds_cutoff)
-  [macro-instruction/DATA 3])
+  [macro/DATA 3])
 
 (defun (ebs_cutoff)
-  [macro-instruction/DATA 4])
+  [macro/DATA 4])
 
 (defun (lead_log)
-  [macro-instruction/DATA 5])
+  [macro/DATA 5])
 
 (defun (trim_acc)
   (shift computation/TRIM_ACC -1))
@@ -331,7 +331,7 @@
 ;;                      ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; 1 
-(defconstraint preprocessing-1-modexp-log (:perspective macro-instruction :guard IS_MODEXP_LOG)
+(defconstraint preprocessing-1-modexp-log (:perspective macro :guard IS_MODEXP_LOG)
   (callToLT 1 0 (cds_cutoff) 0 (ebs_cutoff)))
 
 (defun (comp)
@@ -342,28 +342,28 @@
      (* (ebs_cutoff) (- 1 (comp)))))
 
 ;; 2
-(defconstraint preprocessing-2-modexp-log (:perspective macro-instruction :guard IS_MODEXP_LOG)
+(defconstraint preprocessing-2-modexp-log (:perspective macro :guard IS_MODEXP_LOG)
   (callToLT 2 0 (min_cutoff) 0 17))
 
 (defun (min_cutoff_leq_16)
   (shift preprocessing/WCP_RES 2))
 
 ;; 3
-(defconstraint preprocessing-3-modexp-log (:perspective macro-instruction :guard IS_MODEXP_LOG)
+(defconstraint preprocessing-3-modexp-log (:perspective macro :guard IS_MODEXP_LOG)
   (callToLT 3 0 (ebs_cutoff) 0 17))
 
 (defun (ebs_cutoff_leq_16)
   (shift preprocessing/WCP_RES 3))
 
 ;; 4
-(defconstraint preprocessing-4-modexp-log (:perspective macro-instruction :guard IS_MODEXP_LOG)
+(defconstraint preprocessing-4-modexp-log (:perspective macro :guard IS_MODEXP_LOG)
   (callToISZERO 4 0 (raw_lead_hi)))
 
 (defun (raw_hi_part_is_zero)
   (shift preprocessing/WCP_RES 4))
 
 ;; 5
-(defconstraint preprocessing-5-modexp-log (:perspective macro-instruction :guard IS_MODEXP_LOG)
+(defconstraint preprocessing-5-modexp-log (:perspective macro :guard IS_MODEXP_LOG)
   (callToISZERO 5 0 (padded_base_2_log)))
 
 (defun (padded_base_2_log)
@@ -377,7 +377,7 @@
 ;;    5.4 Linking       ;;
 ;;        constraints   ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defconstraint linking-constraints-modexp-log (:perspective macro-instruction :guard IS_MODEXP_LOG)
+(defconstraint linking-constraints-modexp-log (:perspective macro :guard IS_MODEXP_LOG)
   (begin (if-not-zero (min_cutoff_leq_16)
                       (begin (eq! (shift computation/RAW_ACC -1) (raw_lead_hi))
                              (eq! (shift computation/PLT_JMP -1) (min_cutoff)))
@@ -392,7 +392,7 @@
 ;;    5.5 Justify          ;;
 ;;        hub prediction   ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defconstraint justify-hub-prediction-modexp-log (:perspective macro-instruction :guard IS_MODEXP_LOG)
+(defconstraint justify-hub-prediction-modexp-log (:perspective macro :guard IS_MODEXP_LOG)
   (if-not-zero (trivial_trim)
                (if-not-zero (raw_hi_part_is_zero)
                             (vanishes! (lead_log))
