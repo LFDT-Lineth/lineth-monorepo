@@ -83,7 +83,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; 2.2.2 SHD constraints
 (defconstraint shift_direction_constraint (:guard STAMP)
-  (if-eq-else INST SHL
+  (if-eq-else INST EVM_INST_SHL
               ;; INST == SHL => SHD = 0
               (vanishes! SHD)
               ;; INST != SHL => SHD = 1
@@ -91,7 +91,7 @@
 
 ;; 2.2.3 OLI constraints
 (defconstraint oli_constraints (:guard STAMP)
-  (if-zero (* (- INST SAR) ARG_1_HI)
+  (if-zero (* (- INST EVM_INST_SAR) ARG_1_HI)
            (vanishes! OLI)
            (eq! OLI 1)))
 
@@ -138,7 +138,7 @@
 ;; 2.2.5 KNOWN constraints
 (defconstraint known_constraint ()
   (if-eq CT LLARGEMO
-         (if-eq-else INST SAR
+         (if-eq-else INST EVM_INST_SAR
                      (if-zero ARG_1_HI
                               (if-eq-else ARG_1_LO BYTE_1 (vanishes! KNOWN) (= KNOWN 1))
                               (= KNOWN 1))
@@ -202,7 +202,7 @@
                          (= B2_shft B2_init))
                   (if-zero bit_n
                            ;; bit_n == 0
-                           (begin (if-eq-else inst SAR
+                           (begin (if-eq-else inst EVM_INST_SAR
                                               ;; INST == SAR
                                               (= B1_shft (* 255 neg))
                                               ;; INST != SAR
@@ -237,10 +237,10 @@
            ;; SHD == 1
            (if-zero CT
                     ;; CT == 0
-                    (begin (if-not-zero (- INST SHR)
+                    (begin (if-not-zero (- INST EVM_INST_SHR)
                                         (= SHB_3_HI
                                            (+ (* NEG ONES) RA_HI)))
-                           (if-not-zero (- INST SAR)
+                           (if-not-zero (- INST EVM_INST_SAR)
                                         (= SHB_3_HI RA_HI))
                            (= SHB_3_LO
                               (+ (shift LA_HI LLARGEMO) RA_LO)))
@@ -286,12 +286,12 @@
                     (if-zero BIT_B_7
                              (begin (= BYTE_4 SHB_7_HI)
                                     (= BYTE_5 SHB_7_LO))
-                             (begin (if-eq-else INST SHR
+                             (begin (if-eq-else INST EVM_INST_SHR
                                                 (vanishes! BYTE_4)
                                                 (= BYTE_4 (* 255 NEG)))
                                     (= BYTE_5 SHB_7_HI))))
            ;; KNOWN == 1
-           (if-eq-else INST SAR
+           (if-eq-else INST EVM_INST_SAR
                        ;; INST == SAR
                        (begin (eq! BYTE_4 (* 255 NEG))
                               (eq! BYTE_5 (* 255 NEG)))

@@ -36,7 +36,7 @@
   (begin (if-zero CT
                   (begin (did-inc! ABS_LOG_NUM 1)
                          (eq! CT_MAX
-                              (+ 1 (- INST LOG0)))))
+                              (+ 1 (- INST EVM_INST_LOG0)))))
          (if (eq! CT CT_MAX)
              ;; CT == CT_MAX
              (begin (vanishes! (* (will-inc! ABS_TXN_NUM 1) (will-inc! ABS_LOG_NUM 1)))
@@ -83,7 +83,7 @@
 (defconstraint inst-and-flags ()
   (begin  ;; (eq! INST (reduce + (for k [0 : 4] (* [IS_LOG_X k] [LOG_k_INST k]))))
          (eq! INST
-              (+ (* LOG0 [IS_LOG_X 0]) (* LOG1 [IS_LOG_X 1]) (* LOG2 [IS_LOG_X 2]) (* LOG3 [IS_LOG_X 3]) (* LOG4 [IS_LOG_X 4])))
+              (+ (* EVM_INST_LOG0 [IS_LOG_X 0]) (* EVM_INST_LOG1 [IS_LOG_X 1]) (* EVM_INST_LOG2 [IS_LOG_X 2]) (* EVM_INST_LOG3 [IS_LOG_X 3]) (* EVM_INST_LOG4 [IS_LOG_X 4])))
          (eq! TXN_EMITS_LOGS
               (reduce + (for k [0 : 4] [IS_LOG_X k])))))
 
@@ -96,7 +96,7 @@
   (if-zero CT
            (begin (eq! PHASE RLP_RCPT_SUBPHASE_ID_DATA_SIZE)
                   (eq! DATA_HI DATA_SIZE)
-                  (eq! DATA_LO (- INST LOG0))
+                  (eq! DATA_LO (- INST EVM_INST_LOG0))
                   ;;
                   (eq! (next PHASE) RLP_RCPT_SUBPHASE_ID_ADDR)
                   (eq! (next DATA_HI) ADDR_HI)

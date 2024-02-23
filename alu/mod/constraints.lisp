@@ -376,5 +376,3 @@
                                                               (= RES_LO (Q_LO)))
                                                        ;; sgn_1 != sgn_2
                                                        (set-negative RES_HI RES_LO (Q_HI) (Q_LO)))))))))
-
-

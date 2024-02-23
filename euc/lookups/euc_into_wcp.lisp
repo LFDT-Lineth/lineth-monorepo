@@ -14,9 +14,9 @@
     0
     (* euc.REMAINDER euc.DONE)
     0
-    (* euc.DIVISOR euc.DONE)
-    (* 1 euc.DONE)
-    (* LT euc.DONE)
+    (* euc.DIVISOR   euc.DONE)
+    (* 1             euc.DONE)
+    (* EVM_INST_LT   euc.DONE)
   ))
 
 

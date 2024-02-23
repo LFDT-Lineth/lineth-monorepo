@@ -9,13 +9,13 @@
 (defun (flag-sum)
   (+ IS_AND IS_OR IS_XOR IS_NOT IS_BYTE IS_SIGNEXTEND))
 
-(defun (weight-sum)
-  (+ (* IS_AND AND)
-     (* IS_OR OR)
-     (* IS_XOR XOR)
-     (* IS_NOT NOT)
-     (* IS_BYTE BYTE)
-     (* IS_SIGNEXTEND SIGNEXTEND)))
+(defun  (weight-sum)
+  (+ (* IS_AND        EVM_INST_AND)
+     (* IS_OR         EVM_INST_OR)
+     (* IS_XOR        EVM_INST_XOR)
+     (* IS_NOT        EVM_INST_NOT)
+     (* IS_BYTE       EVM_INST_BYTE)
+     (* IS_SIGNEXTEND EVM_INST_SIGNEXTEND)))
 
 ;; 2.3 Instruction decoding
 (defconstraint no-bin-no-flag ()

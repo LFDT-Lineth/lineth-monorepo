@@ -27,7 +27,7 @@
                                                       (will-inc! STAMP 1)
                                                       (begin (will-inc! CT 1)
                                                              (vanishes! (next OLI)))))
-                             (vanishes! (* (- INST MULMOD) (- INST ADDMOD)))))))
+                             (vanishes! (* (- INST EVM_INST_MULMOD) (- INST EVM_INST_ADDMOD)))))))
 
 (defconstraint last-row (:domain {-1} :guard STAMP)
   (if-zero OLI
@@ -120,24 +120,24 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defconstraint bit-1-constraints ()
   (if-not-zero STAMP
-               (begin (if-not-zero (- INST MULMOD)
+               (begin (if-not-zero (- INST EVM_INST_MULMOD)
                                    (vanishes! BIT_1))
                       (if-not-zero ARG_1_HI
                                    (vanishes! BIT_1))
                       (if-zero ARG_1_HI
-                               (if-not-zero (- INST ADDMOD)
+                               (if-not-zero (- INST EVM_INST_ADDMOD)
                                             (if-zero ARG_1_LO
                                                      (= BIT_1 1)
                                                      (vanishes! BIT_1)))))))
 
 (defconstraint bit-2-constraints ()
   (if-not-zero STAMP
-               (begin (if-not-zero (- INST MULMOD)
+               (begin (if-not-zero (- INST EVM_INST_MULMOD)
                                    (vanishes! BIT_2))
                       (if-not-zero ARG_2_HI
                                    (vanishes! BIT_2))
                       (if-zero ARG_2_HI
-                               (if-eq INST MULMOD
+                               (if-eq INST EVM_INST_MULMOD
                                       (if-zero ARG_2_LO
                                                (= BIT_2 1)
                                                (vanishes! BIT_2)))))))
@@ -587,7 +587,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defconstraint addmod-constraints ()
   (if-eq CT MMEDIUMMO
-         (if-not-zero (- INST MULMOD)
+         (if-not-zero (- INST EVM_INST_MULMOD)
                       (begin (= (+ ARG_1_LO ARG_2_LO)
                                 (+ (* THETA2 (lambda)) (* THETA (J_1)) (J_0)))
                              ;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -603,7 +603,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defconstraint mulmod-constraints ()
   (if-eq CT MMEDIUMMO
-         (if-not-zero (- INST ADDMOD)
+         (if-not-zero (- INST EVM_INST_ADDMOD)
                       (begin (= (+ (* (A_0) (B_0)) (* THETA (H_0)))
                                 (+ (* THETA2 (lambda)) (* THETA (J_1)) (J_0)))
                              ;;;;;;;;;;;;;;;;;;;;;;;;;;;

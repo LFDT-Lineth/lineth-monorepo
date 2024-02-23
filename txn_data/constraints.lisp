@@ -270,7 +270,7 @@
   (begin (= WCP_ARG_ONE_LO IBAL)
          (= WCP_ARG_TWO_LO
             (+ (value) (* (max_fee) (gas_limit))))
-         (= WCP_INST LT)
+         (= WCP_INST EVM_INST_LT)
          (vanishes! WCP_RES)))
 
 (defun (upfront_gas_cost_of_transaction)
@@ -288,7 +288,7 @@
 (defun (sufficient_gas_limit)
   (begin (= (shift WCP_ARG_ONE_LO 1) (gas_limit))
          (= (shift WCP_ARG_TWO_LO 1) (upfront_gas_cost_of_transaction))
-         (= (shift WCP_INST 1) LT)
+         (= (shift WCP_INST 1) EVM_INST_LT)
          (vanishes! (shift WCP_RES 1))))
 
 ;; epsilon is the remainder in the euclidean division of [T_g - g'] by 2
@@ -301,7 +301,7 @@
 (defun (upper_limit_for_refunds)
   (begin (= (shift WCP_ARG_ONE_LO 2) (- (gas_limit) LEFTOVER_GAS))
          ;;  (= (shift WCP_ARG_TWO_LO 2) ???) ;; unknown
-         (= (shift WCP_INST 2) LT)
+         (= (shift WCP_INST 2) EVM_INST_LT)
          (vanishes! (shift WCP_RES 2))
          (is-binary (epsilon))))
 
@@ -309,14 +309,14 @@
 (defun (effective_refund)
   (begin (= (shift WCP_ARG_ONE_LO 3) REF_CNT)
          (= (shift WCP_ARG_TWO_LO 3) (shift WCP_ARG_TWO_LO 2))
-         (= (shift WCP_INST 3) LT)
+         (= (shift WCP_INST 3) EVM_INST_LT)
          ;;  (= (shift WCP_RES     3) ???) ;; unknown
          ))
 
 ;; row i + 4
 (defun (is-zero-call-data)
   (begin (eq! (shift WCP_ARG_ONE_LO 4) CALL_DATA_SIZE)
-         (eq! (shift WCP_INST 4) ISZERO)
+         (eq! (shift WCP_INST 4) EVM_INST_ISZERO)
          (eq! COPY_TXCD_AT_INITIALISATION
               (* REQUIRES_EVM_EXECUTION
                  (- 1 (shift WCP_RES 4))))))
@@ -328,21 +328,21 @@
 (defun (type_2_comparing_max_fee_and_basefee)
   (begin (= (shift WCP_ARG_ONE_LO 5) (max_fee))
          (= (shift WCP_ARG_TWO_LO 5) BASEFEE)
-         (= (shift WCP_INST 5) LT)
+         (= (shift WCP_INST 5) EVM_INST_LT)
          (= (shift WCP_RES 5) 0)))
 
 ;; row i + 6
 (defun (type_2_comparing_max_fee_and_max_priority_fee)
   (begin (= (shift WCP_ARG_ONE_LO 6) (max_fee))
          (= (shift WCP_ARG_TWO_LO 6) (max_priority_fee))
-         (= (shift WCP_INST 6) LT)
+         (= (shift WCP_INST 6) EVM_INST_LT)
          (= (shift WCP_RES 6) 0)))
 
 ;; row i + 7
 (defun (type_2_computing_the_effective_gas_price)
   (begin (= (shift WCP_ARG_ONE_LO 7) (max_fee))
          (= (shift WCP_ARG_TWO_LO 7) (+ (max_priority_fee) BASEFEE))
-         (= (shift WCP_INST 7) LT)
+         (= (shift WCP_INST 7) EVM_INST_LT)
          ;;  (= (shift WCP_RES     6) ???) ;; unknown
          ))
 

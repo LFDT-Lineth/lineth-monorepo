@@ -19,5 +19,3 @@
   (PHASE :byte)
   (DATA_HI :i128)
   (DATA_LO :i128))
-
-

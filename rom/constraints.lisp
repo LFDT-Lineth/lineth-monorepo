@@ -162,7 +162,7 @@
   (if-not-zero IS_PUSH
                (begin (vanishes! IS_PUSH_DATA)
                       (eq! PUSH_PARAMETER
-                           (- OPCODE (- PUSH_1 1)))
+                           (- OPCODE (- EVM_INST_PUSH1 1)))
                       (vanishes! PUSH_VALUE_ACC)
                       (vanishes! (+ PUSH_FUNNEL_BIT (next PUSH_FUNNEL_BIT))))))
 
@@ -170,7 +170,7 @@
   (if-not-zero IS_PUSH_DATA
                (begin (eq! (+ (prev IS_PUSH) (prev IS_PUSH_DATA))
                            1)
-                      (eq! OPCODE INVALID_OPCODE)
+                      (eq! OPCODE EVM_INST_INVALID)
                       (did-inc! COUNTER_PUSH 1)
                       (if-zero (- (+ COUNTER_PUSH LLARGE) PUSH_PARAMETER)
                                (begin (will-inc! PUSH_FUNNEL_BIT 1)

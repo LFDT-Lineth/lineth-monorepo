@@ -30,7 +30,7 @@
          (if-not-zero (will-remain-constant! STAMP)
                       (vanishes! (next CT)))
          (if-not-zero STAMP
-                      (begin (any! (eq! INST ADD) (eq! INST SUB))
+                      (begin (any! (eq! INST EVM_INST_ADD) (eq! INST EVM_INST_SUB))
                              (if-eq-else CT CT_MAX (will-inc! STAMP 1) (will-inc! CT 1))
                              (eq! (~ (* (- CT LLARGE) CT_MAX))
                                   1)))))
@@ -57,17 +57,15 @@
   (if-eq CT CT_MAX
          (begin (eq! RES_HI ACC_1)
                 (eq! RES_LO ACC_2)
-                (if-not-zero (- INST SUB)
+                (if-not-zero (- INST EVM_INST_SUB)
                              (begin (eq! (+ ARG_1_LO ARG_2_LO)
                                          (+ RES_LO (* THETA OVERFLOW)))
                                     (eq! (+ ARG_1_HI ARG_2_HI OVERFLOW)
                                          (+ RES_HI
                                             (* THETA (prev OVERFLOW))))))
-                (if-not-zero (- INST ADD)
+                (if-not-zero (- INST EVM_INST_ADD)
                              (begin (eq! (+ RES_LO ARG_2_LO)
                                          (+ ARG_1_LO (* THETA OVERFLOW)))
                                     (eq! (+ RES_HI ARG_2_HI OVERFLOW)
                                          (+ ARG_1_HI
                                             (* THETA (prev OVERFLOW)))))))))
-
-

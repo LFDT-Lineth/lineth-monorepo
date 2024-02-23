@@ -34,7 +34,7 @@
 
 (defconstraint instruction-constraining ()
   (if-not-zero STAMP
-               (vanishes! (* (- INST MUL) (- INST EXP)))))
+               (vanishes! (* (- INST EVM_INST_MUL) (- INST EVM_INST_EXP)))))
 
 (defconstraint reset-stuff ()
   (if-not-zero (will-remain-constant! STAMP)
@@ -63,9 +63,9 @@
 
 (defconstraint other-resets ()
   (if-eq CT MMEDIUMMO
-         (begin (if-not-zero (- INST EXP)
+         (begin (if-not-zero (- INST EVM_INST_EXP)
                              (will-inc! STAMP 1)) ; i.e. INST == MUL
-                (if-not-zero (- INST MUL)         ; i.e. INST == EXP
+                (if-not-zero (- INST EVM_INST_MUL)         ; i.e. INST == EXP
                              (if-eq RESV 1 (will-inc! STAMP 1))))))
 
 (defconstraint bit_num-doesnt-reach-oneTwoEight ()
@@ -73,7 +73,7 @@
 
 (defconstraint last-row (:domain {-1} :guard STAMP)
   (begin (debug (= OLI 1))
-         (= INST EXP)
+         (= INST EVM_INST_EXP)
          (vanishes! ARG_1_HI)
          (vanishes! ARG_1_LO)
          (vanishes! ARG_2_HI)
@@ -141,7 +141,7 @@
                   (will-remain-constant! BIT_NUM))))
 
 (defconstraint nontrivial-exp-regime-nonzero-result-heartbeat ()
-  (if-eq INST EXP
+  (if-eq INST EVM_INST_EXP
          (if-zero OLI
                   (if-zero RESV
                            (begin (first-row)
@@ -215,7 +215,7 @@
   (if-eq OLI 1
          ;; since OLI != 0 we have STAMP != 0
          ;; thus INST ∈ {MUL, EXP}
-         (begin (if-not-zero (- INST EXP)
+         (begin (if-not-zero (- INST EVM_INST_EXP)
                              ;; i.e. INST == MUL
                              (begin (if-eq TINYE 1
                                            ;; i.e. ARG_2 = ARG_2_LO ∈ {0, 1}
@@ -225,7 +225,7 @@
                                            ;; i.e. ARG_1 = ARG_1_LO ∈ {0, 1}
                                            (begin (= RES_HI (* ARG_1_LO ARG_2_HI))
                                                   (= RES_LO (* ARG_1_LO ARG_2_LO))))))
-                (if-not-zero (- INST MUL)
+                (if-not-zero (- INST EVM_INST_MUL)
                              ;; i.e. INST == EXP
                              (begin (if-eq-else TINYE 1
                                                 ;; TINYE == 1 <=> ARG_2 = ARG_2_LO ∈ {0, 1}
@@ -344,7 +344,7 @@
 (defconstraint nontrivial-mul-regime ()
   (if-eq CT MMEDIUMMO
          ;; i.e. if INST == MUL
-         (if-not-zero (- INST EXP)
+         (if-not-zero (- INST EVM_INST_EXP)
                       ;; byte decomposition constraints
                       (begin (= ARG_1_HI
                                 (+ (* THETA (A_3)) (A_2)))
@@ -443,7 +443,7 @@
   ;; sincde we will later impose RESV == 1 we will have
   ;; STAMP != 0 and thus INST ∈ {MUL, EXP}
   ;; INST != MUL <=> INST == EXP
-  (if-not-zero (- INST MUL)
+  (if-not-zero (- INST EVM_INST_MUL)
                (if-zero OLI
                         (if-not-zero RESV
                                      ;; target constraints
@@ -534,7 +534,7 @@
                          (+ (* THETA (C_1)) (C_0))))))
 
 (defconstraint nontrivial-exp-regime-nonzero-result ()
-  (if-eq INST EXP
+  (if-eq INST EVM_INST_EXP
          (if-zero RESV
                   (if-eq CT MMEDIUMMO
                          (begin (target-arg1)

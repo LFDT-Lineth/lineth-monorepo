@@ -1,11 +1,6 @@
 (module stp)
 
 (defconst 
-  DIV                 0x04
-  LT                  0x10
-  GT                  0x11
-  EQ                  0x14
-  ISZERO              0x15
   max_CT_CALL         4
   max_CT_CALL_OOGX    2
   G_create            32000
@@ -14,12 +9,7 @@
   G_callvalue         9000
   G_newaccount        25000
   G_callstipend       2300
-  create              0xf0
-  create2             0xf5
-  call                0xf1
-  callcode            0xf2
-  delegatecall        0xf4
-  staticcall          0xfa)
+  )
 
 (defconstraint exclusive-flags ()
   (vanishes! (* WCP_FLAG MOD_FLAG)))
@@ -33,12 +23,13 @@
   (+ IS_CREATE IS_CREATE2 IS_CALL IS_CALLCODE IS_DELEGATECALL IS_STATICCALL))
 
 (defun (inst_sum)
-  (+ (* create IS_CREATE)
-     (* create2 IS_CREATE2)
-     (* call IS_CALL)
-     (* callcode IS_CALLCODE)
-     (* delegatecall IS_DELEGATECALL)
-     (* staticcall IS_STATICCALL)))
+  (+ 
+    (* EVM_INST_CREATE       IS_CREATE)
+    (* EVM_INST_CREATE2      IS_CREATE2)
+    (* EVM_INST_CALL         IS_CALL)
+    (* EVM_INST_CALLCODE     IS_CALLCODE)
+    (* EVM_INST_DELEGATECALL IS_DELEGATECALL)
+    (* EVM_INST_STATICCALL   IS_STATICCALL)))
 
 (defconstraint no-stamp-no-flag ()
   (if-zero STAMP
@@ -157,7 +148,7 @@
          (vanishes! ARG_1_HI)
          (eq! ARG_1_LO (create-gActual))
          (vanishes! ARG_2_LO)
-         (eq! EXO_INST LT)
+         (eq! EXO_INST EVM_INST_LT)
          (vanishes! RES_LO)
          (eq! WCP_FLAG 1)
          ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -166,7 +157,7 @@
          (vanishes! (next ARG_1_HI))
          (eq! (next ARG_1_LO) (create-gActual))
          (eq! (next ARG_2_LO) (create-gPrelim))
-         (eq! (next EXO_INST) LT)
+         (eq! (next EXO_INST) EVM_INST_LT)
          (eq! (next RES_LO) OOGX)
          (eq! (next WCP_FLAG) 1)))
 
@@ -178,7 +169,7 @@
          (vanishes! (shift ARG_1_HI 2))
          (eq! (shift ARG_1_LO 2) (create-gDiff))
          (eq! (shift ARG_2_LO 2) 64)
-         (eq! (shift EXO_INST 2) DIV)
+         (eq! (shift EXO_INST 2) EVM_INST_DIV)
          (eq! (shift MOD_FLAG 2) 1)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -252,7 +243,7 @@
          (vanishes! ARG_1_HI)
          (eq! ARG_1_LO (call-gActual))
          (vanishes! ARG_2_LO)
-         (eq! EXO_INST LT)
+         (eq! EXO_INST EVM_INST_LT)
          (vanishes! RES_LO)
          (eq! WCP_FLAG 1)
          ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -261,7 +252,7 @@
          (eq! (next ARG_1_HI) VAL_HI)
          (eq! (next ARG_1_LO) VAL_LO)
          (debug (vanishes! (next ARG_2_LO)))
-         (eq! (next EXO_INST) ISZERO)
+         (eq! (next EXO_INST) EVM_INST_ISZERO)
          (eq! (next WCP_FLAG) (cctv))
          (vanishes! (next MOD_FLAG))
          ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -270,7 +261,7 @@
          (vanishes! (shift ARG_1_HI 2))
          (eq! (shift ARG_1_LO 2) (call-gActual))
          (eq! (shift ARG_2_LO 2) (call-gPrelim))
-         (eq! (shift EXO_INST 2) LT)
+         (eq! (shift EXO_INST 2) EVM_INST_LT)
          (eq! (shift RES_LO 2) OOGX)
          (eq! (shift WCP_FLAG 2) 1)))
 
@@ -282,7 +273,7 @@
          (vanishes! (shift ARG_1_HI 3))
          (eq! (shift ARG_1_LO 3) (call-gDiff))
          (eq! (shift ARG_2_LO 3) 64)
-         (eq! (shift EXO_INST 3) DIV)
+         (eq! (shift EXO_INST 3) EVM_INST_DIV)
          (eq! (shift MOD_FLAG 3) 1)
          ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
          ;;   ------------->   row i + 4   ;;
@@ -290,7 +281,7 @@
          (eq! (shift ARG_1_HI 4) GAS_HI)
          (eq! (shift ARG_1_LO 4) GAS_LO)
          (eq! (shift ARG_2_LO 4) (call-LgDiff))
-         (eq! (shift EXO_INST 4) LT)
+         (eq! (shift EXO_INST 4) EVM_INST_LT)
          (eq! (shift WCP_FLAG 4) 1)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

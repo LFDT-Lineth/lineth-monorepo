@@ -9,14 +9,15 @@
   (+ (one-line-inst) (variable-length-inst)))
 
 (defun (weight-sum)
-  (+ (* LT IS_LT)
-     (* GT IS_GT)
-     (* SLT IS_SLT)
-     (* SGT IS_SGT)
-     (* EQ_ IS_EQ)
-     (* ISZERO IS_ISZERO)
-     (* GEQ IS_GEQ)
-     (* LEQ IS_LEQ)))
+  (+ 
+    (* EVM_INST_LT     IS_LT)
+    (* EVM_INST_GT     IS_GT)
+    (* EVM_INST_SLT    IS_SLT)
+    (* EVM_INST_SGT    IS_SGT)
+    (* EVM_INST_EQ     IS_EQ)
+    (* EVM_INST_ISZERO IS_ISZERO)
+    (* WCP_INST_GEQ    IS_GEQ)
+    (* WCP_INST_LEQ    IS_LEQ)))
 
 (defun (one-line-inst)
   (+ IS_EQ IS_ISZERO))
