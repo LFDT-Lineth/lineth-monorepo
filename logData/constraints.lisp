@@ -1,8 +1,5 @@
 (module logData)
 
-(defconst 
-  LLARGE 16)
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                     ;;
 ;;    2.1 Heartbeat    ;;

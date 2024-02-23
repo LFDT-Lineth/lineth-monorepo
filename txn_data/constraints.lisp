@@ -9,16 +9,13 @@
   G_txcreate                    32000
   G_accesslistaddress           2400
   G_accessliststorage           1900
-  ;;
-  LT                            0x10
-  ISZERO                        21
   ;; the following should be taken from rlpTxn constant
-  common_rlp_txn_phase_number_0 1
-  common_rlp_txn_phase_number_1 8
-  common_rlp_txn_phase_number_2 3
-  common_rlp_txn_phase_number_3 9
-  common_rlp_txn_phase_number_4 10
-  common_rlp_txn_phase_number_5 7
+  COMMON_RLP_TXN_PHASE_NUMBER_0 1
+  COMMON_RLP_TXN_PHASE_NUMBER_1 8
+  COMMON_RLP_TXN_PHASE_NUMBER_2 3
+  COMMON_RLP_TXN_PHASE_NUMBER_3 9
+  COMMON_RLP_TXN_PHASE_NUMBER_4 10
+  COMMON_RLP_TXN_PHASE_NUMBER_5 7
   type_0_rlp_txn_phase_number_6 4
   type_1_rlp_txn_phase_number_6 4
   type_1_rlp_txn_phase_number_7 11
@@ -209,12 +206,12 @@
 ;;                           ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defun (setting_phase_numbers)
-  (begin (= (shift PHASE_RLP_TXN 0) common_rlp_txn_phase_number_0)
-         (= (shift PHASE_RLP_TXN 1) common_rlp_txn_phase_number_1)
-         (= (shift PHASE_RLP_TXN 2) common_rlp_txn_phase_number_2)
-         (= (shift PHASE_RLP_TXN 3) common_rlp_txn_phase_number_3)
-         (= (shift PHASE_RLP_TXN 4) common_rlp_txn_phase_number_4)
-         (= (shift PHASE_RLP_TXN 5) common_rlp_txn_phase_number_5)
+  (begin (= (shift PHASE_RLP_TXN 0) COMMON_RLP_TXN_PHASE_NUMBER_0)
+         (= (shift PHASE_RLP_TXN 1) COMMON_RLP_TXN_PHASE_NUMBER_1)
+         (= (shift PHASE_RLP_TXN 2) COMMON_RLP_TXN_PHASE_NUMBER_2)
+         (= (shift PHASE_RLP_TXN 3) COMMON_RLP_TXN_PHASE_NUMBER_3)
+         (= (shift PHASE_RLP_TXN 4) COMMON_RLP_TXN_PHASE_NUMBER_4)
+         (= (shift PHASE_RLP_TXN 5) COMMON_RLP_TXN_PHASE_NUMBER_5)
          ;;
          (if-not-zero TYPE0
                       (= (shift PHASE_RLP_TXN 6) type_0_rlp_txn_phase_number_6))
@@ -387,11 +384,11 @@
 ;;                                           ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defconstraint verticalisation-rlp-txn-rcpt (:guard (first-row-trigger))
-  (begin (eq! PHASE_RLP_TXNRCPT RLPRECEIPT_SUBPHASE_ID_TYPE)
+  (begin (eq! PHASE_RLP_TXNRCPT RLP_RCPT_SUBPHASE_ID_TYPE)
          (eq! OUTGOING_RLP_TXNRCPT (tx_type))
-         (eq! (next PHASE_RLP_TXNRCPT) RLPRECEIPT_SUBPHASE_ID_STATUS_CODE)
+         (eq! (next PHASE_RLP_TXNRCPT) RLP_RCPT_SUBPHASE_ID_STATUS_CODE)
          (eq! (next OUTGOING_RLP_TXNRCPT) STATUS_CODE)
-         (eq! (shift PHASE_RLP_TXNRCPT 2) RLPRECEIPT_SUBPHASE_ID_CUMUL_GAS)
+         (eq! (shift PHASE_RLP_TXNRCPT 2) RLP_RCPT_SUBPHASE_ID_CUMUL_GAS)
          (eq! (shift OUTGOING_RLP_TXNRCPT 2) CUMULATIVE_CONSUMED_GAS)))
 
 

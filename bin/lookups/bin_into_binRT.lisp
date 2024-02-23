@@ -5,6 +5,7 @@
   bin-lookup-table-high
   ;reference columns
   (
+    binRT.IOMF
     binRT.INST
     binRT.RESULT_BYTE
     binRT.INPUT_BYTE_1
@@ -12,16 +13,18 @@
   )
   ;source columns 
   (
-    (* bin.INST (selector-bin-to-binRT))
-    (* bin.XXX_BYTE_HI (selector-bin-to-binRT))
-    (* bin.BYTE_1 (selector-bin-to-binRT))
-    (* bin.BYTE_3 (selector-bin-to-binRT))
+    (selector-bin-to-binRT)
+    bin.INST
+    bin.XXX_BYTE_HI
+    bin.BYTE_1
+    bin.BYTE_3
   ))
 
 (deflookup 
   bin-lookup-table-low
   ;reference columns
   (
+    binRT.IOMF
     binRT.INST
     binRT.RESULT_BYTE
     binRT.INPUT_BYTE_1
@@ -29,10 +32,11 @@
   )
   ;source columns 
   (
-    (* bin.INST (selector-bin-to-binRT))
-    (* bin.XXX_BYTE_LO (selector-bin-to-binRT))
-    (* bin.BYTE_2 (selector-bin-to-binRT))
-    (* bin.BYTE_4 (selector-bin-to-binRT))
+    (selector-bin-to-binRT)
+    bin.INST
+    bin.XXX_BYTE_LO
+    bin.BYTE_2
+    bin.BYTE_4
   ))
 
 

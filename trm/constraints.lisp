@@ -1,8 +1,5 @@
 (module trm)
 
-(defconst 
-  LLARGEMO 15)
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                     ;;
 ;;    2.1 heartbeat    ;;

@@ -1,13 +1,5 @@
 (module rom)
 
-(defconst 
-  PUSH_1         0x60
-  JUMPDEST       0x5b
-  LLARGE         16
-  LLARGEMO       15
-  EVMWORDMO      31
-  INVALID_OPCODE 0xfe)
-
 (defpurefun (if-not-eq A B then)
   (if (neq A B)
       then))
@@ -68,10 +60,10 @@
                   (debug (vanishes! COUNTER_PUSH))
                   (debug (vanishes! PUSH_PARAMETER))
                   (debug (vanishes! PROGRAMME_COUNTER)))
-           (begin (debug (or! (eq! COUNTER_MAX LLARGEMO) (eq! COUNTER_MAX EVMWORDMO)))
+           (begin (debug (or! (eq! COUNTER_MAX LLARGEMO) (eq! COUNTER_MAX WORD_SIZE_MO)))
                   (if-eq COUNTER_MAX LLARGEMO (will-remain-constant! CFI))
                   (if-not-eq COUNTER COUNTER_MAX (will-remain-constant! CFI))
-                  (if-eq CT EVMWORDMO (will-inc! CFI 1)))))
+                  (if-eq CT WORD_SIZE_MO (will-inc! CFI 1)))))
 
 (defconstraint counter-evolution ()
   (if-eq-else CT COUNTER_MAX
@@ -81,7 +73,7 @@
 (defconstraint finalisation (:domain {-1})
   (if-not-zero CFI
                (begin (eq! CT COUNTER_MAX)
-                      (eq! COUNTER_MAX EVMWORDMO)
+                      (eq! COUNTER_MAX WORD_SIZE_MO)
                       (eq! CFI CODE_FRAGMENT_INDEX_INFTY))))
 
 (defconstraint cfi-infty ()
@@ -107,7 +99,7 @@
   (if-zero CT
            (if-zero CODESIZE_REACHED
                     (eq! COUNTER_MAX LLARGEMO)
-                    (eq! COUNTER_MAX EVMWORDMO))))
+                    (eq! COUNTER_MAX WORD_SIZE_MO))))
 
 ;; nBytes constraints
 (defconstraint nbytes-acc (:guard CFI)

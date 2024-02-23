@@ -1,17 +1,5 @@
 (module bin)
 
-(defconst 
-  ;; opcode values
-  SIGNEXTEND 11
-  AND        22
-  OR         23
-  XOR        24
-  NOT        25
-  BYTE       26
-  ;; constant values
-  LLARGE     16
-  LLARGEMO   15)
-
 (defpurefun (if-eq-else A B THEN ELSE)
   (if-zero (- A B)
            THEN

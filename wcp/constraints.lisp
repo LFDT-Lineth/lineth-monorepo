@@ -5,19 +5,6 @@
            then
            else))
 
-;; opcode values
-(defconst 
-  LEQ      0x0E
-  GEQ      0x0F
-  LT       16
-  GT       17
-  SLT      18
-  SGT      19
-  EQ_      20
-  ISZERO   21
-  LLARGE   16
-  LLARGEMO 15)
-
 (defun (flag-sum)
   (+ (one-line-inst) (variable-length-inst)))
 

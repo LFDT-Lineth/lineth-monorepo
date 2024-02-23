@@ -1,68 +1,59 @@
 (module mmu)
 
-(defconst
+(defconst 
+  ;;
+  ;; MMU NB OF PP ROWS
+  ;;
+  NB_PP_ROWS_MLOAD                                   1
+  NB_PP_ROWS_MSTORE                                  1
+  NB_PP_ROWS_MSTORE8                                 1
+  NB_PP_ROWS_INVALID_CODE_PREFIX                     1
+  NB_PP_ROWS_RIGHT_PADDED_WORD_EXTRACTION            5
+  NB_PP_ROWS_RAM_TO_EXO_WITH_PADDING                 4
+  NB_PP_ROWS_EXO_TO_RAM_TRANSPLANTS                  1
+  NB_PP_ROWS_RAM_TO_RAM_SANS_PADDING                 5
+  NB_PP_ROWS_ANY_TO_RAM_WITH_PADDING_PURE_PADDING    4
+  NB_PP_ROWS_ANY_TO_RAM_WITH_PADDING_SOME_DATA       1
+  NB_PP_ROWS_MODEXP_ZERO                             1
+  NB_PP_ROWS_MODEXP_DATA                             6
+  NB_PP_ROWS_BLAKE                                   2
+  ;;
+  ;; MMU NB OF PP ROWS + 1
+  ;;
+  NB_PP_ROWS_MLOAD_PO                                (+ NB_PP_ROWS_MLOAD 1)
+  NB_PP_ROWS_MSTORE_PO                               (+ NB_PP_ROWS_MSTORE 1)
+  NB_PP_ROWS_MSTORE8_PO                              (+ NB_PP_ROWS_MSTORE8 1)
+  NB_PP_ROWS_INVALID_CODE_PREFIX_PO                  (+ NB_PP_ROWS_INVALID_CODE_PREFIX 1)
+  NB_PP_ROWS_RIGHT_PADDED_WORD_EXTRACTION_PO         (+ NB_PP_ROWS_RIGHT_PADDED_WORD_EXTRACTION 1)
+  NB_PP_ROWS_RAM_TO_EXO_WITH_PADDING_PO              (+ NB_PP_ROWS_RAM_TO_EXO_WITH_PADDING 1)
+  NB_PP_ROWS_EXO_TO_RAM_TRANSPLANTS_PO               (+ NB_PP_ROWS_EXO_TO_RAM_TRANSPLANTS 1)
+  NB_PP_ROWS_RAM_TO_RAM_SANS_PADDING_PO              (+ NB_PP_ROWS_RAM_TO_RAM_SANS_PADDING 1)
+  NB_PP_ROWS_ANY_TO_RAM_WITH_PADDING_PURE_PADDING_PO (+ NB_PP_ROWS_ANY_TO_RAM_WITH_PADDING_PURE_PADDING 1)
+  NB_PP_ROWS_ANY_TO_RAM_WITH_PADDING_SOME_DATA_PO    (+ NB_PP_ROWS_ANY_TO_RAM_WITH_PADDING_SOME_DATA 1)
+  NB_PP_ROWS_MODEXP_ZERO_PO                          (+ NB_PP_ROWS_MODEXP_ZERO 1)
+  NB_PP_ROWS_MODEXP_DATA_PO                          (+ NB_PP_ROWS_MODEXP_DATA 1)
+  NB_PP_ROWS_BLAKE_PO                                (+ NB_PP_ROWS_BLAKE 1)
+  ;;
+  ;; MMU NB OF PP ROWS + 2
+  ;;
+  NB_PP_ROWS_MLOAD_PT                                (+ NB_PP_ROWS_MLOAD 2)
+  NB_PP_ROWS_MSTORE_PT                               (+ NB_PP_ROWS_MSTORE 2)
+  NB_PP_ROWS_RIGHT_PADDED_WORD_EXTRACTION_PT         (+ NB_PP_ROWS_RIGHT_PADDED_WORD_EXTRACTION 2)
+  ;;
+  ;; MMU NB OF micro-processing rows
+  ;;
+  NB_MICRO_ROWS_TOT_MLOAD                            2
+  NB_MICRO_ROWS_TOT_MSTORE                           2
+  NB_MICRO_ROWS_TOT_MSTORE_EIGHT                     1
+  NB_MICRO_ROWS_TOT_INVALID_CODE_PREFIX              1
+  NB_MICRO_ROWS_TOT_RIGHT_PADDED_WORD_EXTRACTION     2
+  ;;NB_MICRO_ROWS_TOT_RAM_TO_EXO_WITH_PADDING              variable
+  ;;NB_MICRO_ROWS_TOT_EXO_TO_RAM_TANSPLANTS                variable
+  ;;NB_MICRO_ROWS_TOT_RAM_TO_RAM_SANS_PADDING              variable
+  ;;NB_MICRO_ROWS_TOT_ANY_TO_RAM_WITH_PADDING_PURE_PADDING variable
+  ;;NB_MICRO_ROWS_TOT_ANY_TO_RAM_WITH_PADDING_SOME_DATA    variable
+  NB_MICRO_ROWS_TOT_MODEXP_ZERO                      32
+  NB_MICRO_ROWS_TOT_MODEXP_DATA                      32
+  NB_MICRO_ROWS_TOT_BLAKE                            2)
 
-	;transplants
-	RamToRam									601
-	ExoToRam 									602
-	RamIsExo 									603
-	KillingOne 									604
-	PushTwoRamToStack							605
-	PushOneRamToStack							606
-	ExceptionalRamToStack3To2FullFast			607
-	PushTwoStackToRam							608									
-	StoreXInAThreeRequired 						609
-	StoreXInB 									610
-	StoreXInC 									611
 
-	;surgeries
-	RamLimbExcision								613
-	RamToRamSlideChunk							614
-	RamToRamSlideOverlappingChunk 				615
-	ExoToRamSlideChunk  						616
-	ExoToRamSlideOverlappingChunk				618
-	PaddedExoFromOne 							619
-	PaddedExoFromTwo 							620
-	FullExoFromTwo 								621
-	FullStackToRam								623
-	LsbFromStackToRAM 							624
-	FirstFastSecondPadded						625
-	FirstPaddedSecondZero						626
-	Exceptional_RamToStack_3To2Full 			627
-	NA_RamToStack_3To2Full						628
-	NA_RamToStack_3To2Padded 					629
-	NA_RamToStack_2To2Padded 					630
-	NA_RamToStack_2To1FullAndZero 				631
-	NA_RamToStack_2To1PaddedAndZero 			632
-	NA_RamToStack_1To1PaddedAndZero 			633
-	
-	; precomputation types
-	type1										100	
-	type2										200
-	type3										300
-	type4CC										401  
-	type4CD										402
-	type4RD										403
-	type5										500
-
-	;admissible values of TERNARY
-	tern0										0
-	tern1										1
-	tern2										2
-
-	CALLDATALOAD								53
-	CALLDATACOPY								55
-	CODECOPY									57
-	EXTCODECOPY									60
-	RETURNDATACOPY								62
-
-	LIMB_SIZE									16
-	SMALL_LIMB_SIZE								4
-	LIMB_SIZE_MINUS_ONE							15
-	SMALL_LIMB_SIZE_MINUS_ONE 					3)
-
-(defalias
-	LLARGE		LIMB_SIZE
-	SSMALL		SMALL_LIMB_SIZE
-	LLARGEMO	LIMB_SIZE_MINUS_ONE
-	SSMALLMO	SMALL_LIMB_SIZE_MINUS_ONE)

@@ -1,12 +1,5 @@
 (module logInfo)
 
-(defconst 
-  LOG0 0xa0
-  LOG1 0xa1
-  LOG2 0xa2
-  LOG3 0xa3
-  LOG4 0xa4)
-
 (defun (if-not-eq A B then)
   (if-not-zero (- A B)
                then))
@@ -101,45 +94,45 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defconstraint verticalization-row-1-and-2 (:guard (reduce + (for k [0 : 4] [IS_LOG_X k])))
   (if-zero CT
-           (begin (eq! PHASE RLPRECEIPT_SUBPHASE_ID_DATA_SIZE)
+           (begin (eq! PHASE RLP_RCPT_SUBPHASE_ID_DATA_SIZE)
                   (eq! DATA_HI DATA_SIZE)
                   (eq! DATA_LO (- INST LOG0))
                   ;;
-                  (eq! (next PHASE) RLPRECEIPT_SUBPHASE_ID_ADDR)
+                  (eq! (next PHASE) RLP_RCPT_SUBPHASE_ID_ADDR)
                   (eq! (next DATA_HI) ADDR_HI)
                   (eq! (next DATA_LO) ADDR_LO))))
 
 (defconstraint verticalization-row-3 (:guard (reduce + (for k [1 : 4] [IS_LOG_X k])))
   (if-zero CT
            (begin (eq! (shift PHASE 2)
-                       (+ RLPRECEIPT_SUBPHASE_ID_TOPIC_BASE RLPRECEIPT_SUBPHASE_ID_TOPIC_DELTA))
+                       (+ RLP_RCPT_SUBPHASE_ID_TOPIC_BASE RLP_RCPT_SUBPHASE_ID_TOPIC_DELTA))
                   (eq! (shift DATA_HI 2) [TOPIC_HI 1])
                   (eq! (shift DATA_LO 2) [TOPIC_LO 1]))))
 
 (defconstraint verticalization-row-4 (:guard (reduce + (for k [2 : 4] [IS_LOG_X k])))
   (if-zero CT
            (begin (eq! (shift PHASE 3)
-                       (+ RLPRECEIPT_SUBPHASE_ID_TOPIC_BASE (* 2 RLPRECEIPT_SUBPHASE_ID_TOPIC_DELTA)))
+                       (+ RLP_RCPT_SUBPHASE_ID_TOPIC_BASE (* 2 RLP_RCPT_SUBPHASE_ID_TOPIC_DELTA)))
                   (eq! (shift DATA_HI 3) [TOPIC_HI 2])
                   (eq! (shift DATA_LO 3) [TOPIC_LO 2]))))
 
 (defconstraint verticalization-row-5 (:guard (reduce + (for k [3 : 4] [IS_LOG_X k])))
   (if-zero CT
            (begin (eq! (shift PHASE 4)
-                       (+ RLPRECEIPT_SUBPHASE_ID_TOPIC_BASE (* 3 RLPRECEIPT_SUBPHASE_ID_TOPIC_DELTA)))
+                       (+ RLP_RCPT_SUBPHASE_ID_TOPIC_BASE (* 3 RLP_RCPT_SUBPHASE_ID_TOPIC_DELTA)))
                   (eq! (shift DATA_HI 4) [TOPIC_HI 3])
                   (eq! (shift DATA_LO 4) [TOPIC_LO 3]))))
 
 (defconstraint verticalization-row-6 (:guard (reduce + (for k [4 : 4] [IS_LOG_X k])))
   (if-zero CT
            (begin (eq! (shift PHASE 5)
-                       (+ RLPRECEIPT_SUBPHASE_ID_TOPIC_BASE (* 4 RLPRECEIPT_SUBPHASE_ID_TOPIC_DELTA)))
+                       (+ RLP_RCPT_SUBPHASE_ID_TOPIC_BASE (* 4 RLP_RCPT_SUBPHASE_ID_TOPIC_DELTA)))
                   (eq! (shift DATA_HI 5) [TOPIC_HI 4])
                   (eq! (shift DATA_LO 5) [TOPIC_LO 4]))))
 
 (defconstraint verticalisation-no-log (:guard ABS_TXN_NUM)
   (if-zero TXN_EMITS_LOGS
-           (begin (eq! PHASE RLPRECEIPT_SUBPHASE_ID_NO_LOG_ENTRY)
+           (begin (eq! PHASE RLP_RCPT_SUBPHASE_ID_NO_LOG_ENTRY)
                   (vanishes! DATA_HI)
                   (vanishes! DATA_LO))))
 

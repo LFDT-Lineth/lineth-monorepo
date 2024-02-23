@@ -1,13 +1,5 @@
 (module shf)
 
-;; opcode values
-(defconst 
-  SHL                 27
-  SHR                 28
-  SAR                 29
-  LIMB_SIZE_MINUS_ONE 15
-  LIMB_SIZE           16)
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                     ;;
 ;;    2.1 heartbeat    ;;
@@ -37,12 +29,12 @@
                (if-zero OLI
                         ;; 2.1.5.b)
                         ;; If OLI == 0
-                        (if-eq-else CT LIMB_SIZE_MINUS_ONE
+                        (if-eq-else CT LLARGEMO
                                     ;; 2.1.5.b).(ii)
-                                    ;; If CT == LIMB_SIZE_MINUS_ONE (15)
+                                    ;; If CT == LLARGEMO (15)
                                     (will-inc! STAMP 1)
                                     ;; 2.1.5.b).(i)
-                                    ;; If CT != LIMB_SIZE_MINUS_ONE (15)
+                                    ;; If CT != LLARGEMO (15)
                                     (begin (will-inc! CT 1)
                                            (will-remain-constant! OLI)))
                         ;; 2.1.5.a)
@@ -53,7 +45,7 @@
 (defconstraint last-row (:domain {-1})
   (if-not-zero STAMP
                (if-zero OLI
-                        (= CT LIMB_SIZE_MINUS_ONE))))
+                        (= CT LLARGEMO))))
 
 ;; counter-constancy constraints
 (defun (counter-constancy ct X)
@@ -117,7 +109,7 @@
                                         (* 4 (shift BITS 5))
                                         (* 2 (shift BITS 6))
                                         (shift BITS 7))))
-                           (if-eq CT LIMB_SIZE_MINUS_ONE
+                           (if-eq CT LLARGEMO
                                   (= BYTE_1
                                      (+ (* 128 (shift BITS -7))
                                         (* 64 (shift BITS -6))
@@ -129,7 +121,7 @@
                                         BITS)))))))
 
 (defconstraint setting_stuff ()
-  (if-eq CT LIMB_SIZE_MINUS_ONE
+  (if-eq CT LLARGEMO
          (begin (= LOW_3
                    (+ (* 4 (shift BITS -2))
                       (* 2 (shift BITS -1))
@@ -145,7 +137,7 @@
 
 ;; 2.2.5 KNOWN constraints
 (defconstraint known_constraint ()
-  (if-eq CT LIMB_SIZE_MINUS_ONE
+  (if-eq CT LLARGEMO
          (if-eq-else INST SAR
                      (if-zero ARG_1_HI
                               (if-eq-else ARG_1_LO BYTE_1 (vanishes! KNOWN) (= KNOWN 1))
@@ -179,7 +171,7 @@
 ;;                             ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defconstraint target_constraints ()
-  (if-eq CT LIMB_SIZE_MINUS_ONE
+  (if-eq CT LLARGEMO
          (begin (= ACC_1 ARG_1_LO)
                 (= ACC_2 ARG_2_HI)
                 (= ACC_3 ARG_2_LO)
@@ -192,7 +184,7 @@
 ;;                               ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defun (left-shift-by k ct bit_b bit_n B1_init B2_init B1_shft B2_shft)
-  (begin (plateau-constraint ct bit_n (- LIMB_SIZE k))
+  (begin (plateau-constraint ct bit_n (- LLARGE k))
          (if-zero bit_b
                   (begin (= B1_shft B1_init)
                          (= B2_shft B2_init))
@@ -200,7 +192,7 @@
                            (begin (= B1_shft (shift B1_init k))
                                   (= B2_shft (shift B2_init k)))
                            (begin (= B1_shft
-                                     (shift B2_init (- k LIMB_SIZE)))
+                                     (shift B2_init (- k LLARGE)))
                                   (vanishes! B2_shft))))))
 
 (defun (right-shift-by k ct neg inst bit_b bit_n B1_init B2_init B1_shft B2_shft)
@@ -216,7 +208,7 @@
                                               ;; INST != SAR
                                               (vanishes! B1_shft))
                                   (= B2_shft
-                                     (shift B1_init (- LIMB_SIZE k))))
+                                     (shift B1_init (- LLARGE k))))
                            ;; bit_n == 1
                            (begin (= B1_shft
                                      (shift B1_init (- 0 k)))
@@ -231,11 +223,11 @@
 (defun (shb_3)
   (if-zero SHD
            ;; SHD == 0
-           (if-eq-else CT LIMB_SIZE_MINUS_ONE
+           (if-eq-else CT LLARGEMO
                        ;; CT == 15
                        (begin (= SHB_3_HI
                                  (+ LA_HI
-                                    (shift RA_LO (- 0 LIMB_SIZE_MINUS_ONE))))
+                                    (shift RA_LO (- 0 LLARGEMO))))
                               (= SHB_3_LO LA_LO))
                        ;; CT != 15
                        (begin (= SHB_3_HI
@@ -251,7 +243,7 @@
                            (if-not-zero (- INST SAR)
                                         (= SHB_3_HI RA_HI))
                            (= SHB_3_LO
-                              (+ (shift LA_HI LIMB_SIZE_MINUS_ONE) RA_LO)))
+                              (+ (shift LA_HI LLARGEMO) RA_LO)))
                     ;; CT != 0
                     (begin (= SHB_3_HI
                               (+ (shift LA_HI (- 0 1))

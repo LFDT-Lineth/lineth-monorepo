@@ -1,99 +1,85 @@
 (module mmio)
 
-(defcolumns
-	CN_A
-	CN_B
-	CN_C
-	
-	INDEX_A
-	INDEX_B
-	INDEX_C
+(defcolumns 
+  (CN_A :i32)
+  (CN_B :i32)
+  (CN_C :i32)
+  (INDEX_A :byte)
+  (INDEX_B :byte)
+  (INDEX_C :byte)
+  (VAL_A :i128)
+  (VAL_B :i128)
+  (VAL_C :i128)
+  (VAL_A_NEW :i128)
+  (VAL_B_NEW :i128)
+  (VAL_C_NEW :i128)
+  (BYTE_A :byte@prove)
+  (BYTE_B :byte@prove)
+  (BYTE_C :byte@prove)
+  (ACC_A :i128)
+  (ACC_B :i128)
+  (ACC_C :i128)
+  (MMIO_STAMP :i32)
+  (MMIO_INSTRUCTION :i16)
+  (CONTEXT_SOURCE :i32)
+  (CONTEXT_TARGET :i32)
+  (SOURCE_LIMB_OFFSET :i32)
+  (TARGET_LIMB_OFFSET :i32)
+  (SOURCE_BYTE_OFFSET :i8)
+  (TARGET_BYTE_OFFSET :i8)
+  (SIZE :i32)
+  (LIMB :i128)
+  (TOTAL_SIZE :i128)
+  (EXO_SUM :i32)
+  (EXO_ID :i32)
+  (KEC_ID :i32)
+  (PHASE :i32)
+  (SUCCESS_BIT :binary)
+  (IS_LIMB_VANISHES :binary@prove)
+  (IS_LIMB_TO_RAM_TRANSPLANT :binary@prove)
+  (IS_LIMB_TO_RAM_ONE_TARGET :binary@prove)
+  (IS_LIMB_TO_RAM_TWO_TARGET :binary@prove)
+  (IS_RAM_TO_LIMB_TRANSPLANT :binary@prove)
+  (IS_RAM_TO_LIMB_ONE_SOURCE :binary@prove)
+  (IS_RAM_TO_LIMB_TWO_SOURCE :binary@prove)
+  (IS_RAM_TO_RAM_TRANSPLANT :binary@prove)
+  (IS_RAM_TO_RAM_PARTIAL :binary@prove)
+  (IS_RAM_TO_RAM_TWO_TARGET :binary@prove)
+  (IS_RAM_TO_RAM_TWO_SOURCE :binary@prove)
+  (IS_RAM_EXCISION :binary@prove)
+  (IS_RAM_VANISHES :binary@prove)
+  (FAST :binary)
+  (SLOW :binary)
+  (EXO_IS_ROM :binary@prove)
+  (EXO_IS_KEC :binary@prove)
+  (EXO_IS_LOG :binary@prove)
+  (EXO_IS_TXCD :binary@prove)
+  (EXO_IS_ECDATA :binary@prove)
+  (EXO_IS_RIPSHA :binary@prove)
+  (EXO_IS_BLAKEMODEXP :binary@prove)
+  (INDEX_X :i32)
+  (BYTE_LIMB :byte@prove)
+  (ACC_LIMB :i128)
+  (BIN_1 :binary)
+  (BIN_2 :binary)
+  (BIN_3 :binary)
+  (BIN_4 :binary)
+  (BIN_5 :binary)
+  (ACC_1 :i128)
+  (ACC_2 :i128)
+  (ACC_3 :i128)
+  (ACC_4 :i128)
+  (POW_256_1 :i128)
+  (POW_256_2 :i128)
+  (COUNTER :i5))
 
-	VAL_A
-	VAL_B
-	VAL_C
+(defalias 
+  CT  COUNTER
+  CNS CONTEXT_SOURCE
+  CNT CONTEXT_TARGET
+  SLO SOURCE_LIMB_OFFSET
+  SBO SOURCE_BYTE_OFFSET
+  TLO TARGET_LIMB_OFFSET
+  TBO TARGET_BYTE_OFFSET)
 
-	VAL_A_NEW
-	VAL_B_NEW
-	VAL_C_NEW
 
-	(BYTE_A :byte)
-	(BYTE_B :byte)
-	(BYTE_C :byte)
-
-	ACC_A
-	ACC_B
-	ACC_C
-
-	MICRO_INSTRUCTION_STAMP
-	MICRO_INSTRUCTION
-
-	CONTEXT_SOURCE
-	CONTEXT_TARGET
-
-	(IS_INIT :binary)
-
-	SOURCE_LIMB_OFFSET
-	TARGET_LIMB_OFFSET
-	SOURCE_BYTE_OFFSET
-	TARGET_BYTE_OFFSET
-
-	SIZE
-	(FAST :binary)
-	(ERF :binary)
-	
-	STACK_VALUE_HIGH
-	STACK_VALUE_LOW
-
-	(STACK_VALUE_LO_BYTE :byte)
-	(STACK_VALUE_HI_BYTE :byte)
-
-	ACC_VAL_HI
-	ACC_VAL_LO
-
-	(EXO_IS_ROM :binary)
-	(EXO_IS_LOG :binary)
-	(EXO_IS_HASH :binary)		;previously EXO_IS_SHA3
-	(EXO_IS_TXCD :binary)
-
-	INDEX_X
-	VAL_X
-	(BYTE_X :byte)
-	ACC_X
-
-	TX_NUM
-	LOG_NUM ;to be replaced with a single NUM column
-
-	(BIN_1 :binary)
-	(BIN_2 :binary)
-	(BIN_3 :binary)
-	(BIN_4 :binary)
-	(BIN_5 :binary)
-
-	ACC_1
-	ACC_2
-	ACC_3
-	ACC_4
-	ACC_5
-	ACC_6
-
-	POW_256_1
-	POW_256_2
-	
-	COUNTER
-)
-
-(defalias
-    MICRO_STAMP     MICRO_INSTRUCTION_STAMP
-    MICRO_INST      MICRO_INSTRUCTION
-    CT              COUNTER
-    CN_S            CONTEXT_SOURCE
-    CN_T            CONTEXT_TARGET
-    SLO             SOURCE_LIMB_OFFSET
-    SBO             SOURCE_BYTE_OFFSET
-    TLO             TARGET_LIMB_OFFSET
-    TBO             TARGET_BYTE_OFFSET
-    VAL_HI          STACK_VALUE_HIGH
-    VAL_LO          STACK_VALUE_LOW
-    BYTE_HI         STACK_VALUE_HI_BYTE
-    BYTE_LO         STACK_VALUE_LO_BYTE)

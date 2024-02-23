@@ -23,7 +23,7 @@ jobs:
         -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
         -H "X-GitHub-Api-Version: 2022-11-28" \
         -o corset.tar.gz \
-        https://api.github.com/repos/Consensys/corset/releases/assets/147491099
+        https://api.github.com/repos/Consensys/corset/releases/assets/151396061
         tar xzf corset.tar.gz
         mv corset $HOME
 

@@ -14,7 +14,7 @@
   ;source columns
   (
     (* logData.ABS_LOG_NUM (sel-logData-to-rlpRcpt))
-    (* RLPRECEIPT_SUBPHASE_ID_DATA_LIMB (sel-logData-to-rlpRcpt))
+    (* RLP_RCPT_SUBPHASE_ID_DATA_LIMB (sel-logData-to-rlpRcpt))
     (* logData.INDEX (sel-logData-to-rlpRcpt))
     (* logData.LIMB (sel-logData-to-rlpRcpt))
     (* logData.SIZE_LIMB (sel-logData-to-rlpRcpt))

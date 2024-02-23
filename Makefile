@@ -14,11 +14,9 @@ ALU := alu/add/columns.lisp \
 #       alu/mod/hub_into_mod.lisp \
 #       alu/mul/hub_into_mul.lisp
 
-BIN := bin/columns.lisp \
-	   bin/constraints.lisp \
-	   $(wildcard lookup_tables/binRT/*lisp) \
-	   lookup_tables/lookups/bin_into_binRT.lisp \
-	   # bin/hub_into_bin.lisp \
+BIN := bin   
+
+CONSTANTS := constants/constants.lisp
 
 EC_DATA := ec_data/columns.lisp \
 	ec_data/constraints.lisp \
@@ -26,15 +24,17 @@ EC_DATA := ec_data/columns.lisp \
 	ec_data/ecdata_into_wcp.lisp \
 	ec_data/hub_into_ecdata.lisp \
 
-LIBRARY := library/constant.lisp library/rlp_constraints_pattern.lisp
+EUC := euc
+
+LIBRARY := library/rlp_constraints_pattern.lisp
 
 LOG_DATA := logData
 
 LOG_INFO := logInfo
 
-MEMORY := $(wildcard hub/mmio/columns.lisp) \
-		  $(wildcard hub/mmu/columns.lisp) \
-		  lookup_tables/mmuID/columns.lisp
+MMU := mmu
+
+MMIO := mmio
 
 MXP := mxp/columns.lisp \
 	mxp/constraints.lisp \
@@ -56,11 +56,7 @@ ROM := rom/columns.lisp \
 ROM_LEX := romLex/columns.lisp romLex/constraints.lisp \
 	romLex/romLex_into_rom.lisp
 
-SHIFT :=  shf/columns.lisp \
-	shf/constraints.lisp \
-	$(wildcard lookup_tables/shfRT/*lisp) \
-	lookup_tables/lookups/shf_into_shfRT.lisp \
-	# shf/hub_into_shf.lisp \	
+SHIFT :=  shf
 
 STACK := hub/columns.lisp \
 	hub/constraints.lisp
@@ -68,9 +64,7 @@ STACK := hub/columns.lisp \
 STP := stp/columns.lisp stp/constraints.lisp \
 	stp/lookups/stp_into_mod.lisp stp/lookups/stp_into_wcp.lisp
 
-TABLES := $(wildcard lookup_tables/tables/*lisp)
-
-EUC := euc
+TABLES := reference_tables/binRT.lisp reference_tables/shfRT.lisp reference_tables/instruction_decoder.lisp 
 
 TRM := trm/columns.lisp trm/constraints.lisp
 
@@ -85,13 +79,16 @@ EXP := exp/columns.lisp exp/constraints.lisp exp/constants.lisp exp/exp-into-wcp
 
 ZKEVM_MODULES := ${ALU} \
 	${BIN} \
+	${BLAKE2f_MODEXP_DATA} \
+	${CONSTANTS} \
 	${EC_DATA} \
 	${EUC} \
+	${EXP} \
 	${LIBRARY} \
 	${LOG_DATA} \
 	${LOG_INFO} \
-	${MEMORY} \
-	${BLAKE2f_MODEXP_DATA} \
+	${MMU} \
+	${MMIO} \
 	${MXP} \
 	${PUB_DATA} \
 	${RLP_ADDR} \
@@ -105,9 +102,8 @@ ZKEVM_MODULES := ${ALU} \
 	${TABLES} \
 	${TRM} \
 	${TXN_DATA} \
-	${WCP} \
-	${EXP}
-
+	${WCP}
+	
 define.go: ${ZKEVM_MODULES}
 	${CORSET} wizard-iop -vv -P define -o $@ ${ZKEVM_MODULES}
 

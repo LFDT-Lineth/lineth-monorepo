@@ -1,6 +1,3 @@
-(defconst 
-  LT 16)
-
 (deflookup 
   euc-into-wcp
   ;reference columns

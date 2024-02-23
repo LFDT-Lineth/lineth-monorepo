@@ -97,7 +97,7 @@
 
 (defconstraint setting-recipe-flag ()
   (eq! RECIPE
-       (+ (* RLPADDR_CONST_RECIPE_1 RECIPE_1) (* RLPADDR_CONST_RECIPE_2 RECIPE_2))))
+       (+ (* RLP_ADDR_RECIPE_1 RECIPE_1) (* RLP_ADDR_RECIPE_2 RECIPE_2))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                              ;;
@@ -130,24 +130,24 @@
                 (eq! (+ (shift LC -4) (shift LC -3))
                      1)
                 (eq! (shift LIMB -3)
-                     (* (+ LIST_SHORT 1 20 ACC_BYTESIZE (- 1 TINY_NON_ZERO_NONCE))
+                     (* (+ RLP_PREFIX_LIST_SHORT 1 20 ACC_BYTESIZE (- 1 TINY_NON_ZERO_NONCE))
                         (^ 256 15)))
                 (eq! (shift nBYTES -3) 1)
                 (vanishes! (shift INDEX -3))
                 (eq! (shift LIMB -2)
-                     (+ (* (+ INT_SHORT 20) (^ 256 15))
+                     (+ (* (+ RLP_PREFIX_INT_SHORT 20) (^ 256 15))
                         (* ADDR_HI (^ 256 11))))
                 (eq! (shift nBYTES -2) 5)
                 (eq! (prev LIMB) ADDR_LO)
                 (eq! (prev nBYTES) 16)
                 (if-zero NONCE
                          (eq! LIMB
-                              (* INT_SHORT (^ 256 15)))
+                              (* RLP_PREFIX_INT_SHORT (^ 256 15)))
                          (if-eq-else 1 TINY_NON_ZERO_NONCE
                                      (eq! LIMB
                                           (* NONCE (^ 256 15)))
                                      (eq! LIMB
-                                          (+ (* (+ INT_SHORT ACC_BYTESIZE) (^ 256 15))
+                                          (+ (* (+ RLP_PREFIX_INT_SHORT ACC_BYTESIZE) (^ 256 15))
                                              (* NONCE POWER)))))
                 (eq! nBYTES
                      (+ ACC_BYTESIZE (- 1 TINY_NON_ZERO_NONCE)))

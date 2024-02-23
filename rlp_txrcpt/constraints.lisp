@@ -219,7 +219,7 @@
          (begin (eq! nSTEP 1)
                 (if-zero [INPUT 1]
                          (eq! LIMB
-                              (* INT_SHORT (^ 256 LLARGEMO)))
+                              (* RLP_PREFIX_INT_SHORT (^ 256 LLARGEMO)))
                          (eq! LIMB
                               (* [INPUT 1] (^ 256 LLARGEMO))))
                 (eq! nBYTES 1)
@@ -241,7 +241,7 @@
                   (eq! PHASE_SIZE 256)
                   (eq! nSTEP 1)
                   (eq! LIMB
-                       (+ (* (+ INT_LONG 2) (^ 256 LLARGEMO))
+                       (+ (* (+ RLP_PREFIX_INT_LONG 2) (^ 256 LLARGEMO))
                           (* PHASE_SIZE (^ 256 13))))
                   (eq! nBYTES 3)
                   (vanishes! INDEX_LOCAL))))
@@ -277,7 +277,7 @@
                   (if-zero [INPUT 1]
                            (begin (eq! nSTEP 1)
                                   (eq! LIMB
-                                       (* LIST_SHORT (^ 256 LLARGEMO)))
+                                       (* RLP_PREFIX_LIST_SHORT (^ 256 LLARGEMO)))
                                   (eq! nBYTES 1)
                                   (eq! PHASE_END 1))
                            (begin (eq! nSTEP 8)
@@ -302,7 +302,7 @@
                   (eq! LC 1)
                   (if-eq DONE 1
                          (begin (eq! (shift LIMB -2)
-                                     (* (+ INT_SHORT 20) (^ 256 LLARGEMO)))
+                                     (* (+ RLP_PREFIX_INT_SHORT 20) (^ 256 LLARGEMO)))
                                 (eq! (shift nBYTES -2) 1)
                                 (eq! (prev LIMB)
                                      (* [INPUT 1] (^ 256 12)))
@@ -319,7 +319,7 @@
                 (eq! nSTEP 1)
                 (if-zero LOCAL_SIZE
                          (begin (eq! LIMB
-                                     (* LIST_SHORT (^ 256 LLARGEMO)))
+                                     (* RLP_PREFIX_LIST_SHORT (^ 256 LLARGEMO)))
                                 (eq! nBYTES 1)
                                 (eq! (next [INPUT 2]) INDEX_LOCAL)
                                 (vanishes! (+ (- 1 (next IS_PREFIX))
@@ -327,10 +327,11 @@
                                               (- 1 (next IS_DATA)))))
                          (begin (if-eq-else LOCAL_SIZE 33
                                             (begin (eq! LIMB
-                                                        (* (+ LIST_SHORT LOCAL_SIZE) (^ 256 LLARGEMO)))
+                                                        (* (+ RLP_PREFIX_LIST_SHORT LOCAL_SIZE)
+                                                           (^ 256 LLARGEMO)))
                                                    (eq! nBYTES 1))
                                             (begin (eq! LIMB
-                                                        (+ (* (+ LIST_LONG 1) (^ 256 LLARGEMO))
+                                                        (+ (* (+ RLP_PREFIX_LIST_LONG 1) (^ 256 LLARGEMO))
                                                            (* LOCAL_SIZE (^ 256 14))))
                                                    (eq! nBYTES 2)))
                                 (vanishes! (+ (next IS_PREFIX)
@@ -346,7 +347,7 @@
                                      (* 2
                                         (+ (shift INDEX_LOCAL -3) 1)))
                                 (eq! (shift LIMB -2)
-                                     (* (+ INT_SHORT 32) (^ 256 LLARGEMO)))
+                                     (* (+ RLP_PREFIX_INT_SHORT 32) (^ 256 LLARGEMO)))
                                 (eq! (shift nBYTES -2) 1)
                                 (eq! (prev LIMB) [INPUT 1])
                                 (eq! (prev nBYTES) LLARGE)
@@ -368,7 +369,7 @@
                          (begin (eq! nSTEP 1)
                                 (vanishes! LC_CORRECTION)
                                 (eq! LIMB
-                                     (* INT_SHORT (^ 256 LLARGEMO)))
+                                     (* RLP_PREFIX_INT_SHORT (^ 256 LLARGEMO)))
                                 (eq! nBYTES 1)
                                 (vanishes! LOG_ENTRY_SIZE)
                                 (if-zero PHASE_SIZE

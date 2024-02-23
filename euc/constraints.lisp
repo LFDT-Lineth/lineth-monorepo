@@ -1,7 +1,7 @@
 (module euc)
 
 (defconst 
-  MAX_INPUT_LENGTH 8)
+  MAX_INPUT_LENGTH MMEDIUM)
 
 (defconstraint first-row (:domain {0})
   (vanishes! IOMF))
