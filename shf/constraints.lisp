@@ -16,7 +16,8 @@
 ;; 2.1.3)
 (defconstraint zeroRow ()
   (if-zero STAMP
-           (vanishes! CT))) ;; TODO: more zero columns required ?
+           (vanishes! IOMF)
+           (eq! IOMF 1)))
 
 ;; 2.1.4)
 (defconstraint counterReset ()
@@ -309,11 +310,5 @@
                                (shb_6)
                                (shb_7)
                                (res_bytes)))))
-
-;; IS_DATA
-(defconstraint is_data ()
-  (if-zero STAMP
-           (vanishes! IS_DATA)
-           (eq! IS_DATA 1)))
 
 
