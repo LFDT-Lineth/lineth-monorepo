@@ -3,7 +3,7 @@
 
 (deflookup 
   txnData-into-rlpAddr
-  ;reference columns
+  ;; target columns
   (
     rlpAddr.ADDR_HI
     rlpAddr.ADDR_LO
@@ -12,7 +12,7 @@
     rlpAddr.NONCE
     rlpAddr.RECIPE_1
   )
-  ;source columns
+  ;; source columns
   (
     (* txnData.FROM_HI (sel-txnData-to-rlpAddr))
     (* txnData.FROM_LO (sel-txnData-to-rlpAddr))

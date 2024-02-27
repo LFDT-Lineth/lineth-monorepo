@@ -179,9 +179,9 @@
   (begin (eq! GAS_UPFRONT (create-gPrelim))
          (vanishes! GAS_STIPEND)
          (if-zero OOGX
-                  (eq! GAS_OOPKT
+                  (eq! GAS_OUT_OF_POCKET
                        (- (shift ARG_1_LO 2) (shift RES_LO 2)))
-                  (vanishes! GAS_OOPKT))))
+                  (vanishes! GAS_OUT_OF_POCKET))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                                                ;;
@@ -290,12 +290,12 @@
 (defconstraint CALL-type-outputs (:guard (first-row-of-CALL))
   (begin (eq! GAS_UPFRONT (call-gPrelim))
          (if-zero OOGX
-                  (begin (eq! GAS_OOPKT (call-gMin))
+                  (begin (eq! GAS_OUT_OF_POCKET (call-gMin))
                          (eq! GAS_STIPEND
                               (* (cctv)
                                  (- 1 (next RES_LO))
                                  G_callstipend)))
-                  (begin (vanishes! GAS_OOPKT)
+                  (begin (vanishes! GAS_OUT_OF_POCKET)
                          (vanishes! GAS_STIPEND)))))
 
 

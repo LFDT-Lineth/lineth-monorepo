@@ -26,12 +26,14 @@
                   (begin (vanishes! INST)
                          (debug (vanishes! CT))
                          (debug (vanishes! CT_MAX))))
-         (any! (will-remain-constant! STAMP) (will-inc! STAMP 1))
+         (vanishes! (any! (will-remain-constant! STAMP) (will-inc! STAMP 1)))
          (if-not-zero (will-remain-constant! STAMP)
                       (vanishes! (next CT)))
          (if-not-zero STAMP
-                      (begin (any! (eq! INST EVM_INST_ADD) (eq! INST EVM_INST_SUB))
-                             (if-eq-else CT CT_MAX (will-inc! STAMP 1) (will-inc! CT 1))
+                      (begin (vanishes! (any! (eq! INST EVM_INST_ADD) (eq! INST EVM_INST_SUB)))
+                             (if (eq CT CT_MAX)
+                                 (will-inc! STAMP 1)
+                                 (will-inc! CT 1))
                              (eq! (~ (* (- CT LLARGE) CT_MAX))
                                   1)))))
 
@@ -69,3 +71,5 @@
                                     (eq! (+ RES_HI ARG_2_HI OVERFLOW)
                                          (+ ARG_1_HI
                                             (* THETA (prev OVERFLOW)))))))))
+
+

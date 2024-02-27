@@ -4,14 +4,14 @@
 
 (deflookup 
   rlpTxn-into-rom
-  ;reference columns
+  ;; target columns
   (
     rom.CODE_FRAGMENT_INDEX
     rom.LIMB
     rom.INDEX
     rom.nBYTES
   )
-  ;source columns
+  ;; source columns
   (
     (* rlpTxn.CODE_FRAGMENT_INDEX (sel-rlpTxn-to-rom))
     (* rlpTxn.LIMB (sel-rlpTxn-to-rom))

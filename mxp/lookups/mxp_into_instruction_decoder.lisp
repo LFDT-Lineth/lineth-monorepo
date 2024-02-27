@@ -1,5 +1,5 @@
 (deflookup lookup-mxp-into-instruction-decoder
-    ;source columns
+    ;; source columns
     (
         instruction-decoder.MXP_TYPE_1
         instruction-decoder.MXP_TYPE_2

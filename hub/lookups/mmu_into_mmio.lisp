@@ -1,5 +1,5 @@
 (deflookup lookup-mmu-into-mmio
-    ;source columns 
+    ;; source columns 
     (
         (* mmu.MICRO_STAMP mmu.IS_MICRO)
         (* mmu.MICRO_INST mmu.IS_MICRO)

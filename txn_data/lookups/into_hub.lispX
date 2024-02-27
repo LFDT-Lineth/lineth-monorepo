@@ -1,4 +1,4 @@
-;; TODO once HUB implemented
+;; TODO transmit (BATCH_NUMBER, ABSOLUTE_TRANSACTION_NUMBER)
 ;; (defun (sel))
 ;;(deflookup 
 ;;  txnData_into_wcp

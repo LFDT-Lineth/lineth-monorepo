@@ -1,6 +1,6 @@
 (deflookup 
   txnData-into-rlpTxn
-  ;reference columns
+  ;; target columns
   (
     rlpTxn.ABS_TX_NUM_INFINY
     rlpTxn.ABS_TX_NUM
@@ -8,7 +8,7 @@
     rlpTxn.DATA_HI
     rlpTxn.DATA_LO
   )
-  ;source columns
+  ;; source columns
   (
     txnData.ABS_TX_NUM_MAX
     txnData.ABS_TX_NUM

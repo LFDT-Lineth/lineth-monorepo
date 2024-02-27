@@ -1,5 +1,5 @@
 (deflookup lookup-mmio-into-log
-    ;source columns
+    ;; source columns
     (
         (* mmio.LOG_NUM mmio.EXO_IS_LOG)
         (* mmio.INDEX_X mmio.EXO_IS_LOG)

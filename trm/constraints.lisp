@@ -12,10 +12,14 @@
 ;; 3
 (defconstraint null-stamp-null-columns ()
   (if-zero STAMP
-           (begin (vanishes! ADDR_HI)
-                  (vanishes! ADDR_LO)
-                  (vanishes! TRM_ADDR_HI)
-                  (vanishes! IS_PREC)
+           
+           
+           
+
+           (begin (vanishes! RAW_ADDRESS_HI)
+                  (vanishes! RAW_ADDRESS_LO)
+                  (vanishes! TRM_ADDRESS_HI)
+                  (vanishes! IS_PRECOMPILE)
                   (vanishes! CT)
                   (vanishes! BYTE_HI)
                   (vanishes! BYTE_LO))))
@@ -41,10 +45,10 @@
 ;;                     ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 (defconstraint stamp-constancies ()
-  (begin (stamp-constancy STAMP ADDR_HI)
-         (stamp-constancy STAMP ADDR_LO)
-         (stamp-constancy STAMP IS_PREC)
-         (stamp-constancy STAMP TRM_ADDR_HI)))
+  (begin (stamp-constancy STAMP RAW_ADDRESS_HI)
+         (stamp-constancy STAMP RAW_ADDRESS_LO)
+         (stamp-constancy STAMP IS_PRECOMPILE)
+         (stamp-constancy STAMP TRM_ADDRESS_HI)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                           ;;
@@ -76,9 +80,9 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;)
 (defconstraint target-constraint ()
   (if-eq CT 15
-         (begin (eq! ADDR_HI ACC_HI)
-                (eq! ADDR_LO ACC_LO)
-                (eq! TRM_ADDR_HI ACC_T))))
+         (begin (eq! RAW_ADDRESS_HI ACC_HI)
+                (eq! RAW_ADDRESS_LO ACC_LO)
+                (eq! TRM_ADDRESS_HI ACC_T))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                                  ;;
@@ -87,17 +91,17 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defconstraint is-prec-constraint ()
   (if-eq CT 15
-         (if-zero (+ TRM_ADDR_HI (- ADDR_LO BYTE_LO))
+         (if-zero (+ TRM_ADDRESS_HI (- RAW_ADDRESS_LO BYTE_LO))
                   (if-zero BYTE_LO
-                           (vanishes! IS_PREC)
+                           (vanishes! IS_PRECOMPILE)
                            (eq! (+ (* (- 9 BYTE_LO)
-                                      (- (* 2 IS_PREC) 1))
-                                   (- IS_PREC 1))
+                                      (- (* 2 IS_PRECOMPILE) 1))
+                                   (- IS_PRECOMPILE 1))
                                 (reduce +
                                         (for k
                                              [0 : 7]
                                              (* (^ 2 k)
                                                 (shift ONE (- 0 k)))))))
-                  (vanishes! IS_PREC))))
+                  (vanishes! IS_PRECOMPILE))))
 
 

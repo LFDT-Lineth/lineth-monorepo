@@ -14,8 +14,8 @@
   (if-zero CFI
            (vanishes! CODE_FRAGMENT_INDEX_INFTY)
            (begin (will-inc! CFI 1)
-                  (will-remain-constant! CODE_FRAGMENT_INDEX_INFTY)
-                  ;;TODO: add lexicographic ordering
-                  )))
+                  (will-remain-constant! CODE_FRAGMENT_INDEX_INFTY))))
+
+;; TODO add lexicographic ordering
 
 

@@ -3,13 +3,13 @@
 
 (deflookup 
   logInfo-into-logdata
-  ;reference columns
+  ;; target columns
   (
     logData.ABS_LOG_NUM_MAX
     logData.ABS_LOG_NUM
     logData.SIZE_TOTAL
   )
-  ;source columns
+  ;; source columns
   (
     (* logInfo.ABS_LOG_NUM_MAX (sel-logInfo-to-logData))
     (* logInfo.ABS_LOG_NUM (sel-logInfo-to-logData))

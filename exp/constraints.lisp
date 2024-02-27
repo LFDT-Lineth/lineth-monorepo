@@ -12,8 +12,7 @@
   (+ IS_EXP_LOG IS_MODEXP_LOG))
 
 (defun (wght_sum_macro)
-  (+ (* EXP_INST_EXPLOG IS_EXP_LOG)
-     (* EXP_INST_MODEXPLOG IS_MODEXP_LOG)))
+  (+ (* EXP_INST_EXPLOG IS_EXP_LOG) (* EXP_INST_MODEXPLOG IS_MODEXP_LOG)))
 
 (defun (maxct_sum)
   (+ (* CMPTN

@@ -2,10 +2,10 @@
 
 (defcolumns 
   (STAMP :i24)
-  (ADDR_HI :i128)
-  (ADDR_LO :i128)
-  (TRM_ADDR_HI :i4)
-  (IS_PREC :binary@prove)
+  (RAW_ADDRESS_HI :i128)
+  (RAW_ADDRESS_LO :i128)
+  (TRM_ADDRESS_HI :i32)
+  (IS_PRECOMPILE :binary@prove)
   ;;
   (CT :byte)
   (ACC_HI :i128)
@@ -15,5 +15,6 @@
   (ONE :binary@prove)
   (BYTE_HI :byte@prove)
   (BYTE_LO :byte@prove))
+
 
 

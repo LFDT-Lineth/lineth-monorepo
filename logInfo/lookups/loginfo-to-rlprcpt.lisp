@@ -1,6 +1,6 @@
 (deflookup 
   logInfo-into-rlpTxnRcpt
-  ;reference columns
+  ;; target columns
   (
     rlpTxRcpt.ABS_TX_NUM_MAX
     rlpTxRcpt.ABS_TX_NUM
@@ -10,7 +10,7 @@
     [rlpTxRcpt.INPUT 1]
     [rlpTxRcpt.INPUT 2]
   )
-  ;source columns
+  ;; source columns
   (
     logInfo.ABS_TXN_NUM_MAX
     logInfo.ABS_TXN_NUM

@@ -40,8 +40,8 @@
 
 (defconstraint push-constancies ()
   (begin (push-constant PUSH_PARAMETER)
-         (push-constant PUSH_VALUE_HIGH)
-         (push-constant PUSH_VALUE_LOW)))
+         (push-constant PUSH_VALUE_HI)
+         (push-constant PUSH_VALUE_LO)))
 
 ;; Heartbeat
 (defconstraint initialization (:domain {0})
@@ -59,8 +59,8 @@
                   (debug (vanishes! IS_PUSH_DATA))
                   (debug (vanishes! COUNTER_PUSH))
                   (debug (vanishes! PUSH_PARAMETER))
-                  (debug (vanishes! PROGRAMME_COUNTER)))
-           (begin (debug (or! (eq! COUNTER_MAX LLARGEMO) (eq! COUNTER_MAX WORD_SIZE_MO)))
+                  (debug (vanishes! PROGRAM_COUNTER)))
+           (begin (debug (or! (eq! COUNTER_MAX LLARGEMO) (eq! COUNTER_MAX EVMWORDMO)))
                   (if-eq COUNTER_MAX LLARGEMO (will-remain-constant! CFI))
                   (if-not-eq COUNTER COUNTER_MAX (will-remain-constant! CFI))
                   (if-eq CT WORD_SIZE_MO (will-inc! CFI 1)))))
@@ -174,7 +174,7 @@
                       (did-inc! COUNTER_PUSH 1)
                       (if-zero (- (+ COUNTER_PUSH LLARGE) PUSH_PARAMETER)
                                (begin (will-inc! PUSH_FUNNEL_BIT 1)
-                                      (eq! PUSH_VALUE_HIGH PUSH_VALUE_ACC))
+                                      (eq! PUSH_VALUE_HI PUSH_VALUE_ACC))
                                (if-eq (next IS_PUSH_DATA) 1 (will-remain-constant! PUSH_FUNNEL_BIT)))
                       (if-zero (- (prev PUSH_FUNNEL_BIT) PUSH_FUNNEL_BIT)
                                (eq! PUSH_VALUE_ACC
@@ -183,8 +183,8 @@
                                (eq! PUSH_VALUE_ACC PBCB))
                       (if-eq COUNTER_PUSH PUSH_PARAMETER
                              (begin (if-zero PUSH_FUNNEL_BIT
-                                             (vanishes! PUSH_VALUE_HIGH))
-                                    (eq! PUSH_VALUE_ACC PUSH_VALUE_LOW)
+                                             (vanishes! PUSH_VALUE_HI))
+                                    (eq! PUSH_VALUE_ACC PUSH_VALUE_LO)
                                     (vanishes! (next IS_PUSH_DATA)))))))
 
 

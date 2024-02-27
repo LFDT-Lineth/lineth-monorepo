@@ -1,0 +1,273 @@
+(module hub_v2)
+
+(defconst
+    RETURNDATACOPY  0x3e
+    SSTORE          0x55
+    RETURN          0xf3)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;                  ;;;;
+;;;;  4 Generalities  ;;;;
+;;;;                  ;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                                        ;;
+;;  4.2 Setting the EXCEPTIONS_AHOY flag  ;;
+;;                                        ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defun (general_exception)
+                (+  stack/OPCX
+                    stack/SUX
+                    stack/SOX
+                    stack/OOGX
+                    stack/MXPX
+                    stack/RDCX
+                    stack/JUMPX
+                    stack/STATICX
+                    stack/SSTOREX
+                    stack/INVPREX
+                    stack/MAXCSX))
+
+(defconstraint exception_ahoy ()
+  (begin
+   (is-binary XAHOY)
+   (is-stamp-constant HUB_STAMP XAHOY)
+   (if-zero TX_EXEC (vanishes! XAHOY))
+   (if-not-zero PEEK_AT_STACK
+                (if-zero (general_exception)
+                         (vanishes! XAHOY)
+                         (eq! XAHOY 1)))))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                                       ;;
+;;  4.3 Consequences of EXCEPTIONS_AHOY  ;;
+;;                                       ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; TODO
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                                            ;;
+;;  4.4 Settling the CMC flag  ;;
+;;                                            ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defconstraint cmc_binary ()
+    (is-binary CMC))
+
+(defconstraint cmc_constancy ()
+    (is-stamp-constant HUB_STAMP CMC))
+
+(defconstraint noexec_nocmc ()
+    (if-zero TX_EXEC
+        (vanishes! CMC)))
+
+(defconstraint cmc_settling (:perspective stack)
+    (if-zero (+ XAHOY HALT_FLAG CALL_FLAG CREATE_FLAG)
+        (vanishes! CMC)
+        (eq! 1 CMC)))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                                          ;;
+;;  4.5 Consequences of CMC  ;;
+;;                                          ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defconstraint cmc_consequences ()
+    (if-eq CMC 1
+        (if-not-zero (- (next HUB_STAMP) HUB_STAMP)
+            (begin
+                (eq! CON 1)
+                (eq! context/UPDATE 1)))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                             ;;
+;;  4.6 General constraints for ABORT and FCOND  ;;
+;;                             ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defconstraint general_abort_fcond_constraint ()
+    (begin
+        (debug is-stamp-constant HUB_STAMP ABORT)
+        (debug is-stamp-constant HUB_STAMP FCOND)
+        (debug is-binary ABORT)
+        (debug is-binary FCOND)
+        (if-zero TX_EXEC
+            (vanishes! (+ ABORT FCOND)))
+        (if-eq XAHOY 1 
+            (vanishes! (+ ABORT FCOND)))
+        (if-eq ABORT 1
+            (vanishes! FCOND))))
+
+(defconstraint general_abort_fcond_constraint_stack_perspective (:perspective stack)
+    (begin
+        (if-zero (+ CALL_FLAG CREATE_FLAG)
+            (vanishes! ABORT))
+        (if-zero CREATE_FLAG
+            (vanishes! FCOND))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                          ;;
+;;  4.7 Gas Check plookup   ;;
+;;                          ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; TODO
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                        ;;
+;;  4.8 Context numbers   ;;
+;;                        ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defconstraint context_numbers_generality (:perspective stack)
+    (begin
+        ;; TODO shouldn't it be in constancies ? 
+        (is-stamp-constant HUB_STAMP CONTEXT_NUMBER)
+        (is-stamp-constant HUB_STAMP CONTEXT_NUMBER_NEW)
+        (any! (eq! CONTEXT_NUMBER_NEW CONTEXT_NUMBER)
+              (eq! CONTEXT_NUMBER_NEW CALLER_CONTEXT_NUMBER)
+              (eq! CONTEXT_NUMBER_NEW (+ HUB_STAMP 1)))
+        (if-not-zero XAHOY
+            (begin
+             (vanishes! GAS_NEXT)
+             (eq! CN_NEW CALLER_CONTEXT_NUMBER)
+             (eq! CN_SELF_REV 1)
+             (eq! CN_REV_STAMP HUB_STAMP)
+             (if-zero CN_NEW
+                (begin
+                 (eq! TRANSACTION_REVERTS 1)
+                 (eq! TX_END_STAMP (+ 1 HUB_STAMP)))))
+            (begin
+             (eq! GAS_NEXT (- GAS_ACTL GAS_COST))
+             (if-not-zero (- (+ HALT_FLAG CREATE_FLAG CALL_FLAG) 1)
+                (eq! CONTEXT_NUMBER_NEW CONTEXT_NUMBER))
+             (if-eq HALT_FLAG 1
+                (eq! CONTEXT_NUMBER_NEW CALLER_CONTEXT_NUMBER))))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                             ;;
+;;  4.9 Context numbers part 2 ;;
+;;                             ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defconstraint context_numnber_generality_part_two (:guard (* (prev TX_EXEC) (- (next HUB_STAMP) HUB_STAMP)))
+    (if-zero (prev CN_NEW)
+        (eq! TX_FINL 1)
+        (begin
+         (eq! TX_EXEC 1)
+         (eq! CONTEXT_NUMBER (prev CONTEXT_NUMBER_NEW))
+         (if-eq (prev CN_NEW) (prev CALLER_CONTEXT_NUMBER)
+            (eq! GAS_ACTL (+ GAS_XPCT (prev GAS_NEXT)))))))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                             ;;
+;;  4.10 Gas transition constraints ;;
+;;                             ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defconstraint gas_transition (:guard (* TX_EXEC (next TX_EXEC) (- (next HUB_STAMP) HUB_STAMP)))
+ (begin
+    (if-eq CN_NEW CONTEXT_NUMBER
+        (begin
+         (eq! (next GAS_XPCT) GAS_NEXT)
+         (eq! (next GAS_ACTL) (next GAS_XPCT))
+         ;; TODO If exception then ... (spec infinished)
+         ))
+    (if-eq CN_NEW CALLER_CONTEXT_NUMBER
+        (eq! (next GAS_ACTL)
+             (+ (next GAS_XPCT)
+                GAS_NEXT)))
+    (if-eq CONTEXT_NUMBER (+ 1 HUB_STAMP)
+        (begin
+        ;; TODO() (spec infinished)
+        (eq! (next GAS_ACTL) (next GAS_XPCT))))))
+
+;; TODO constency on permuted columns (spec infinished)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                               ;;
+;;  4.11 Gas refunds i.e. REFGAS  ;;
+;;                               ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; TODO
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                               ;;
+;;  4.12 Context constants  ;;
+;;                               ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defpermutation
+    (CN_SORTED CODE_ADDRESS_HI_SORTED CODE_ADDRESS_LO_SORTED CODE_DEPLOYMENT_NUMBER_SORTED CODE_DEPLOYMENT_STATUS_SORTED CALLER_CONTEXT_NUMBER_SORTED CN_WILL_REV_SORTED CN_GETS_REV_SORTED CN_SELF_REV_SORTED CONTEXT_REVERT_STAMP_SORTED)
+    ((+ CN) CODE_ADDRESS_HI CODE_ADDRESS_LO CODE_DEPLOYMENT_NUMBER CODE_DEPLOYMENT_STATUS CALLER_CONTEXT_NUMBER CN_WILL_REV CN_GETS_REV CN_SELF_REV CONTEXT_REVERT_STAMP))
+
+(defconstraint context-constancies (:guard CN_SORTED)
+ (if-eq (next CN_SORTED) CN_SORTED
+    (begin
+     (will-remain-constant! CODE_ADDRESS_HI_SORTED)
+     (will-remain-constant! CODE_ADDRESS_LO_SORTED)
+     (will-remain-constant! CODE_DEPLOYMENT_NUMBER_SORTED)
+     (will-remain-constant! CODE_DEPLOYMENT_STATUS_SORTED)
+     (will-remain-constant! CALLER_CONTEXT_NUMBER_SORTED)
+     (will-remain-constant! CN_WILL_REV_SORTED)
+     (will-remain-constant! CN_GETS_REV_SORTED)
+     (will-remain-constant! CN_SELF_REV_SORTED)
+     (will-remain-constant! CONTEXT_REVERT_STAMP_SORTED))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                             ;;
+;;  4.13 Revert data specific constraints  ;;
+;;                             ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defconstraint setting-cn_will_rev ()
+    (if-eq TX_EXEC 1
+        (if-zero (+ CN_GETS_REV CN_SELF_REV)
+            (vanishes! CN_WILL_REV)
+            (eq! CN_WILL_REV 1))))
+
+(defconstraint  setting-cn_gets_rev-null ()
+ (if-zero (+ (prev TX_EXEC)
+             (- 1 TX_EXEC))
+    (vanishes! CN_GETS_REV)))
+
+;; TODO + (A B ) is different to (logical) A and B 
+(defconstraint setting-cn_will_rev-to-one ()
+ (if-zero (+ (- 1 (prev TX_EXEC))
+             (- 1 TX_EXEC)
+             (not (~(eq (prev HUB_STAMP) HUB_STAMP)))
+             (~(eq HUB_STAMP (prev CONTEXT_NUMBER_NEW))))
+    (begin
+     (remained-constant! CN_WILL_REV)
+     (if-zero (+ (- 1 (prev CN_WILL_REV))
+                 CN_SELF_REV)
+        (remained-constant! CN_REV_STAMP)))))
+
+(defconstraint setting-cn_self_rev (:perspective stack)
+ (if-eq CN_NEW CALLER_CONTEXT_NUMBER
+     (if-not-zero (+ XAHOY
+                   (* HALT_FLAG [DEC_FLAG 2]))
+        (begin 
+         (eq! CN_SELF_REV 1)
+         (eq! CN_REV_STAMP HUB_STAMP))
+        (vanishes! CN_SELF_REV))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                             ;;
+;;  4.14 DOM and SUB constraints  ;;
+;;                             ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; TODO

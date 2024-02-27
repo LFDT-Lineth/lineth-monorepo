@@ -3,16 +3,16 @@
 
 (deflookup 
   txnData-into-romLex
-  ;reference columns
+  ;; target columns
   (
     romLex.CODE_FRAGMENT_INDEX
     romLex.CODE_SIZE
-    romLex.ADDR_HI
-    romLex.ADDR_LO
-    romLex.DEP_NUMBER
-    romLex.DEP_STATUS
+    romLex.ADDRESS_HI
+    romLex.ADDRESS_LO
+    romLex.DEPLOYMENT_NUMBER
+    romLex.DEPLOYMENT_STATUS
   )
-  ;source columns
+  ;; source columns
   (
     (* txnData.CODE_FRAGMENT_INDEX (sel-txnData-to-romLex))
     (* txnData.INIT_CODE_SIZE (sel-txnData-to-romLex))

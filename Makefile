@@ -1,18 +1,24 @@
 CORSET ?= corset
 
+HUB_V2 := $(wildcard hub_v2/columns/*lisp) \
+	  $(wildcard hub_v2/constraints/heartbeat/*lisp) \
+	  $(wildcard hub_v2/constraints/generalities/*lisp) \
+	  $(wildcard hub_v2/lookups/*lisp) \
+	  hub_v2/constants.lisp
+
 ALU := alu/add/columns.lisp \
-	alu/add/constraints.lisp \
-	alu/ext/columns.lisp \
-	alu/ext/constraints.lisp \
-	alu/mod/columns.lisp \
-	alu/mod/constraints.lisp \
-	alu/mul/columns.lisp \
-	alu/mul/constraints.lisp \
-	alu/mul/helpers.lisp \
-#       alu/add/hub_into_add.lisp \
-#       alu/ext/hub_into_ext.lisp \
-#       alu/mod/hub_into_mod.lisp \
-#       alu/mul/hub_into_mul.lisp
+       alu/add/constraints.lisp \
+       alu/ext/columns.lisp \
+       alu/ext/constraints.lisp \
+       alu/mod/columns.lisp \
+       alu/mod/constraints.lisp \
+       alu/mul/columns.lisp \
+       alu/mul/constraints.lisp \
+       alu/mul/helpers.lisp
+# alu/add/hub_into_add.lisp \
+	# alu/ext/hub_into_ext.lisp \
+	# alu/mod/hub_into_mod.lisp \
+	# alu/mul/hub_into_mul.lisp
 
 BIN := bin   
 
@@ -77,6 +83,7 @@ ZKEVM_MODULES := ${ALU} \
 	${EC_DATA} \
 	${EUC} \
 	${EXP} \
+	${HUB_V2} \
 	${LIBRARY} \
 	${LOG_DATA} \
 	${LOG_INFO} \

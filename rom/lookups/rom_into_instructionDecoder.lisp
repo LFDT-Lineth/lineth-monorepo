@@ -1,16 +1,16 @@
 (deflookup 
   rom-into-inst-decoder
-  ;reference columns
+  ;; target columns
   (
     instruction-decoder.OPCODE
     instruction-decoder.IS_PUSH
     instruction-decoder.IS_JUMPDEST
   )
-  ;source columns
+  ;; source columns
   (
     rom.OPCODE
     rom.IS_PUSH
-    rom.VALID_JUMP_DESTINATION
+    rom.IS_JUMPDEST
   ))
 
 
