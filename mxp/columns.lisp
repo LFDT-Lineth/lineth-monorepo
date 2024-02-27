@@ -42,5 +42,3 @@
   (LIN_COST :i64)
   (GAS_MXP :i64)
   (EXPANDS :binary@prove))
-
-

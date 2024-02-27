@@ -177,13 +177,19 @@
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BLAKE MODEXP MODULE ;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;                     ;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  MODEXP_PHASE_BASE                             1
-  MODEXP_PHASE_EXPONENT                         2
-  MODEXP_PHASE_MODULUS                          3
-  MODEXP_PHASE_RESULT                           4
-  BLAKE_PHASE_DATA                              5
-  BLAKE_PHASE_PARAMS                            6
-  BLAKE_PHASE_RESULT                            7
+  PHASE_MODEXP_BASE                             1
+  PHASE_MODEXP_EXPONENT                         2
+  PHASE_MODEXP_MODULUS                          3
+  PHASE_MODEXP_RESULT                           4
+  PHASE_BLAKE_DATA                              5
+  PHASE_BLAKE_PARAMS                            6
+  PHASE_BLAKE_RESULT                            7
+  PHASE_KECCAK_DATA                             8
+  PHASE_KECCAK_RESULT                           9
+  PHASE_SHA2_DATA                               10
+  PHASE_SHA2_RESULT                             11
+  PHASE_RIPEMD_DATA                             12
+  PHASE_RIPEMD_RESULT                           13
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;            ;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; MMU MODULE ;;
