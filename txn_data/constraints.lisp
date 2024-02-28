@@ -132,7 +132,7 @@
                                             (begin (will-remain-constant! BTC)
                                                    (will-inc! REL 1))
                                             (begin (will-inc! BTC 1)
-                                                   (= REL 1)))))))
+                                                   (will-eq! REL 1)))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                          ;;
