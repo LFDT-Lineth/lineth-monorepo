@@ -83,7 +83,6 @@ ZKEVM_MODULES := ${ALU} \
 	${EC_DATA} \
 	${EUC} \
 	${EXP} \
-	${HUB_V2} \
 	${LIBRARY} \
 	${LOG_DATA} \
 	${LOG_INFO} \
