@@ -16,6 +16,8 @@
   (INST :byte :display :opcode)
   (IS_LOG_X :binary@prove :array [0:4])
   ;; lookup columns
-  (PHASE :byte)
+  (PHASE :i16)
   (DATA_HI :i128)
   (DATA_LO :i128))
+
+
