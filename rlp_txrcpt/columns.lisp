@@ -1,6 +1,6 @@
 (module rlpTxRcpt)
 
-(defcolumns 
+(defcolumns
   (ABS_TX_NUM :i32)
   (ABS_TX_NUM_MAX :i32)
   (ABS_LOG_NUM :i32)
@@ -12,8 +12,8 @@
   (INDEX_LOCAL :i16)
   (PHASE :binary@prove :array [5])
   (PHASE_END :binary@prove)
-  (COUNTER :i5)
-  (nSTEP :i5)
+  (COUNTER :i32)
+  (nSTEP :i32)
   (DONE :binary)
   (TXRCPT_SIZE :i32)
   (INPUT :i128 :display :bytes :array [4])
@@ -34,9 +34,7 @@
   (PHASE_ID :i16))
 
 ;; aliases
-(defalias 
+(defalias
   CT COUNTER
   LC LIMB_CONSTRUCTED
   P  POWER)
-
-
