@@ -1,0 +1,60 @@
+(module oob)
+
+(defconst 
+  OOB_INST_jump           0x56
+  OOB_INST_jumpi          0x57
+  OOB_INST_rdc            0x3E
+  OOB_INST_cdl            0x35
+  OOB_INST_xcall          0xCC
+  OOB_INST_call           0xCA
+  OOB_INST_create         0xCE
+  OOB_INST_sstore         0x55
+  OOB_INST_deployment     0xF3
+  OOB_INST_ecrecover      0xFF01
+  OOB_INST_sha2           0xFF02
+  OOB_INST_ripemd         0xFF03
+  OOB_INST_identity       0xFF04
+  OOB_INST_ecadd          0xFF06
+  OOB_INST_ecmul          0xFF07
+  OOB_INST_ecpairing      0xFF08
+  OOB_INST_blake_cds      0xFA09
+  OOB_INST_blake_params   0xFB09
+  OOB_INST_modexp_cds     0xFA05
+  OOB_INST_modexp_xbs     0xFB05
+  OOB_INST_modexp_lead    0xFC05
+  OOB_INST_modexp_pricing 0xFD05
+  OOB_INST_modexp_extract 0xFE05
+  CT_MAX_JUMP             0
+  CT_MAX_JUMPI            1
+  CT_MAX_RDC              2
+  CT_MAX_CDL              0
+  CT_MAX_XCALL            0
+  CT_MAX_CALL             2
+  CT_MAX_CREATE           2
+  CT_MAX_SSTORE           0
+  CT_MAX_DEPLOYMENT       0
+  CT_MAX_ECRECOVER        2
+  CT_MAX_SHA2             3
+  CT_MAX_RIPEMD           3
+  CT_MAX_IDENTITY         3
+  CT_MAX_ECADD            2
+  CT_MAX_ECMUL            2
+  CT_MAX_ECPAIRING        4
+  CT_MAX_BLAKE2F_cds      1
+  CT_MAX_BLAKE2F_params   1
+  CT_MAX_MODEXP_cds       2
+  CT_MAX_MODEXP_xbs       2
+  CT_MAX_MODEXP_lead      3
+  CT_MAX_MODEXP_pricing   5
+  CT_MAX_MODEXP_extract   3
+  LT                      0x10
+  ISZERO                  0x15
+  ADD                     0x01
+  DIV                     0x04
+  MOD                     0x06
+  GT                      0x11
+  EQ                      0x14
+  G_CALLSTIPEND           2300
+  G_QUADDIVISOR           3)
+
+
