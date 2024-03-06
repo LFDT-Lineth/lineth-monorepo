@@ -193,13 +193,13 @@
   EXO_SUM_INDEX_ECDATA                          4
   EXO_SUM_INDEX_RIPSHA                          5
   EXO_SUM_INDEX_BLAKEMODEXP                     6
-  EXO_SUM_VALUE_ROM                             (^ 2 EXO_SUM_INDEX_ROM)
-  EXO_SUM_VALUE_KEC                             (^ 2 EXO_SUM_INDEX_KEC)
-  EXO_SUM_VALUE_LOG                             (^ 2 EXO_SUM_INDEX_LOG)
-  EXO_SUM_VALUE_TXCD                            (^ 2 EXO_SUM_INDEX_TXCD)
-  EXO_SUM_VALUE_ECDATA                          (^ 2 EXO_SUM_INDEX_ECDATA)
-  EXO_SUM_VALUE_RIPSHA                          (^ 2 EXO_SUM_INDEX_RIPSHA)
-  EXO_SUM_VALUE_BLAKEMODEXP                     (^ 2 EXO_SUM_INDEX_BLAKEMODEXP)
+  EXO_SUM_WEIGHT_ROM                            (^ 2 EXO_SUM_INDEX_ROM)
+  EXO_SUM_WEIGHT_KEC                            (^ 2 EXO_SUM_INDEX_KEC)
+  EXO_SUM_WEIGHT_LOG                            (^ 2 EXO_SUM_INDEX_LOG)
+  EXO_SUM_WEIGHT_TXCD                           (^ 2 EXO_SUM_INDEX_TXCD)
+  EXO_SUM_WEIGHT_ECDATA                         (^ 2 EXO_SUM_INDEX_ECDATA)
+  EXO_SUM_WEIGHT_RIPSHA                         (^ 2 EXO_SUM_INDEX_RIPSHA)
+  EXO_SUM_WEIGHT_BLAKEMODEXP                    (^ 2 EXO_SUM_INDEX_BLAKEMODEXP)
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;                     ;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BLAKE MODEXP MODULE ;;
