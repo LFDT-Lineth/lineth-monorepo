@@ -1,6 +1,6 @@
 (module mxp)
 
-(defconst
+(defconst 
   G_MEM      3 ;; 'G_memory' in Ethereum yellow paper
   SHORTCYCLE 3
   LONGCYCLE  16
@@ -17,8 +17,10 @@
          (is-binary NOOP)
          (is-binary MXPX)
          (is-binary DEPLOYS)
+         (for i [5] (is-binary [MXP_TYPE i]))
          (is-binary COMP)
-         (is-binary EXPANDS)))
+         (is-binary EXPANDS)
+         (is-binary MTNTOP)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                             ;;
@@ -108,9 +110,22 @@
          (= WORDS_NEW WORDS)
          (= C_MEM_NEW C_MEM)))
 
+;;;;;;;;;;;;;;;;;;;;;;
+;;                  ;;                         
+;;    2.5 MTNTOP    ;;
+;;                  ;;                        
+;;;;;;;;;;;;;;;;;;;;;;
+(defconstraint setting-mtntop ()
+  (if-not-zero [MXP_TYPE 4]
+               (begin (if-not-zero MXPX
+                                   (vanishes! MTNTOP)
+                                   (if-zero SIZE_1_LO
+                                            (vanishes! MTNTOP)
+                                            (eq! MTNTOP 1))))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                     ;;
-;;    2.5 heartbeat    ;;
+;;    2.6 heartbeat    ;;
 ;;                     ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 (defconstraint first-row (:domain {0})
@@ -159,7 +174,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                               ;;
-;;    2.5 Byte decompositions    ;;
+;;    2.7 Byte decompositions    ;;
 ;;                               ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defconstraint byte-decompositions ()
@@ -310,16 +325,16 @@
 
 (defconstraint setting-gas-mxp (:guard (* (standing-hypothesis) (offsets-are-in-bounds)))
   (if (eq! INST RETURN)
-       (= GAS_MXP
-          (+ QUAD_COST (* DEPLOYS LIN_COST)))
-       (= GAS_MXP (+ QUAD_COST LIN_COST))))
+      (= GAS_MXP
+         (+ QUAD_COST (* DEPLOYS LIN_COST)))
+      (= GAS_MXP (+ QUAD_COST LIN_COST))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                                    ;;
 ;;    2.12 Consistency Constraints    ;;
 ;;                                    ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defpermutation
+(defpermutation 
   (CN_perm
    STAMP_perm
    C_MEM_perm
@@ -343,3 +358,5 @@
                                                (= (next C_MEM_perm) C_MEM_NEW_perm)))
                            (begin (vanishes! (next WORDS_perm))
                                   (vanishes! (next C_MEM_perm))))))
+
+
