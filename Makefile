@@ -76,6 +76,8 @@ BLAKE2f_MODEXP_DATA := blake2f_modexp_data/
 
 EXP := exp
 
+GAS := gas/columns.lisp gas/constraints.lisp
+
 ZKEVM_MODULES := ${ALU} \
 	${BIN} \
 	${BLAKE2f_MODEXP_DATA} \
@@ -83,6 +85,7 @@ ZKEVM_MODULES := ${ALU} \
 	${EC_DATA} \
 	${EUC} \
 	${EXP} \
+	${GAS} \
 	${LIBRARY} \
 	${LOG_DATA} \
 	${LOG_INFO} \
@@ -103,9 +106,9 @@ ZKEVM_MODULES := ${ALU} \
 	${TRM} \
 	${TXN_DATA} \
 	${WCP}
-	
+
 define.go: ${ZKEVM_MODULES}
 	${CORSET} wizard-iop -vv -P define -o $@ ${ZKEVM_MODULES}
-
+    
 zkevm.bin: ${ZKEVM_MODULES}
 	${CORSET} compile -vv -o $@ ${ZKEVM_MODULES}
