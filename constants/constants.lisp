@@ -186,13 +186,20 @@
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; EXO SUM ;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;         ;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  EXO_SUM_ROM                                   1
-  EXO_SUM_KEC                                   2
-  EXO_SUM_LOG                                   3
-  EXO_SUM_TXCD                                  4    ;; it is RLP_TXN
-  EXO_SUM_ECDATA                                5
-  EXO_SUM_RIPSHA                                6
-  EXO_SUM_BLAKEMODEXP                           7
+  EXO_SUM_INDEX_ROM                             0
+  EXO_SUM_INDEX_KEC                             1
+  EXO_SUM_INDEX_LOG                             2
+  EXO_SUM_INDEX_TXCD                            3    ;; for the transaction call data as found in RLP_TXN
+  EXO_SUM_INDEX_ECDATA                          4
+  EXO_SUM_INDEX_RIPSHA                          5
+  EXO_SUM_INDEX_BLAKEMODEXP                     6
+  EXO_SUM_VALUE_ROM                             (^ 2 EXO_SUM_INDEX_ROM)
+  EXO_SUM_VALUE_KEC                             (^ 2 EXO_SUM_INDEX_KEC)
+  EXO_SUM_VALUE_LOG                             (^ 2 EXO_SUM_INDEX_LOG)
+  EXO_SUM_VALUE_TXCD                            (^ 2 EXO_SUM_INDEX_TXCD)
+  EXO_SUM_VALUE_ECDATA                          (^ 2 EXO_SUM_INDEX_ECDATA)
+  EXO_SUM_VALUE_RIPSHA                          (^ 2 EXO_SUM_INDEX_RIPSHA)
+  EXO_SUM_VALUE_BLAKEMODEXP                     (^ 2 EXO_SUM_INDEX_BLAKEMODEXP)
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;                     ;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BLAKE MODEXP MODULE ;;
