@@ -319,6 +319,14 @@
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;            ;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   WCP_INST_GEQ                                  0x0E
-  WCP_INST_LEQ                                  0x0F)
+  WCP_INST_LEQ                                  0x0F
+  
+  EMPTY_KECCAK_HI                               0xc5d2460186f7233c927e7db2dcc703c0
+  EMPTY_KECCAK_LO                               0xe500b653ca82273b7bfad8045d85a470  
+  EMPTY_SHA2_HI                                 0xe3b0c44298fc1c149afbf4c8996fb924
+  EMPTY_SHA2_LO                                 0x27ae41e4649b934ca495991b7852b855  
+  EMPTY_RIPEMD_HI                               0x0000000000000000000000009c1185a5
+  EMPTY_RIPEMD_LO                               0xc5e9fc54612808977ee8f548b2258d31
+  )
 
 
