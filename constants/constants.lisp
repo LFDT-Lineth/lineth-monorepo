@@ -320,13 +320,59 @@
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   WCP_INST_GEQ                                  0x0E
   WCP_INST_LEQ                                  0x0F
-  
+
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;                ;;
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; HASH CONSTANTS ;;
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;                ;;
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   EMPTY_KECCAK_HI                               0xc5d2460186f7233c927e7db2dcc703c0
-  EMPTY_KECCAK_LO                               0xe500b653ca82273b7bfad8045d85a470  
+  EMPTY_KECCAK_LO                               0xe500b653ca82273b7bfad8045d85a470
   EMPTY_SHA2_HI                                 0xe3b0c44298fc1c149afbf4c8996fb924
-  EMPTY_SHA2_LO                                 0x27ae41e4649b934ca495991b7852b855  
+  EMPTY_SHA2_LO                                 0x27ae41e4649b934ca495991b7852b855
   EMPTY_RIPEMD_HI                               0x0000000000000000000000009c1185a5
   EMPTY_RIPEMD_LO                               0xc5e9fc54612808977ee8f548b2258d31
-  )
+
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;               ;;
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; GAS CONSTANTS ;;
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;               ;;
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  GAS_CONST_G_ZERO                              0
+  GAS_CONST_G_JUMPDEST                          1
+  GAS_CONST_G_BASE                              2
+  GAS_CONST_G_VERY_LOW                          3
+  GAS_CONST_G_LOW                               5
+  GAS_CONST_G_MID                               8
+  GAS_CONST_G_HIGH                              10
+  GAS_CONST_G_WARM_ACCESS                       100
+  GAS_CONST_G_ACCESS_LIST_ADRESS                2400
+  GAS_CONST_G_ACCESS_LIST_STORAGE               1900
+  GAS_CONST_G_COLD_ACCOUNT_ACCESS               2600
+  GAS_CONST_G_COLDSLOAD                         2100
+  GAS_CONST_G_SSET                              20000
+  GAS_CONST_G_SRESET                            2900
+  REFUND_CONST_R_SCLEAR                         15000
+  REFUND_CONST_R_SELFDESTRUCT                   24000
+  GAS_CONST_G_SELFDESTRUCT                      5000
+  GAS_CONST_G_CREATE                            32000
+  GAS_CONST_G_CODE_DEPOSIT                      200
+  GAS_CONST_G_CALL_VALUE                        9000
+  GAS_CONST_G_CALL_STIPEND                      2300
+  GAS_CONST_G_NEW_ACCOUNT                       25000
+  GAS_CONST_G_EXP                               10
+  GAS_CONST_G_EXP_BYTE                          50
+  GAS_CONST_G_MEMORY                            3
+  GAS_CONST_G_TX_CREATE                         32000
+  GAS_CONST_G_TX_DATA_ZERO                      4
+  GAS_CONST_G_TX_DATA_NONZERO                   16
+  GAS_CONST_G_TRANSACTION                       21000
+  GAS_CONST_G_LOG                               375
+  GAS_CONST_G_LOG_DATA                          8
+  GAS_CONST_G_LOG_TOPIC                         375
+  GAS_CONST_G_KECCAK_256                        30
+  GAS_CONST_G_KECCAK_256_WORD                   6
+  GAS_CONST_G_COPY                              3
+  GAS_CONST_G_BLOCKHASH                         20)
 
 
