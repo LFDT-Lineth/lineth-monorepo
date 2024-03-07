@@ -1,11 +1,11 @@
 (module mxp)
 
 (defconst 
-  G_MEM      3 ;; 'G_memory' in Ethereum yellow paper
+  G_MEM      3 ;; 'G_memory' in Ethereum yellow paper ;; TODO: replace with GAS_CONST_G_XXX
   SHORTCYCLE 3
   LONGCYCLE  16
   TWO_POW_32 4294967296
-  RETURN     0xf3)
+  RETURN     0xf3)   ;; TODO: replace with EVM_INST_RETURN
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                             ;;
