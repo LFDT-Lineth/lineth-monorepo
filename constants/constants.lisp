@@ -393,7 +393,7 @@
   GAS_CONST_G_ACCESS_LIST_ADRESS                2400
   GAS_CONST_G_ACCESS_LIST_STORAGE               1900
   GAS_CONST_G_COLD_ACCOUNT_ACCESS               2600
-  GAS_CONST_G_COLDSLOAD                         2100
+  GAS_CONST_G_COLD_SLOAD                        2100
   GAS_CONST_G_SSET                              20000
   GAS_CONST_G_SRESET                            2900
   REFUND_CONST_R_SCLEAR                         15000
