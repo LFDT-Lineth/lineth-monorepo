@@ -1,4 +1,4 @@
-(module ripsha)
+(module shakira)
 
 (defcolumns
   ( RIPSHA_STAMP         :i32 )
