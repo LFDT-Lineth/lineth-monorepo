@@ -4,9 +4,9 @@
   (CN_A :i32)
   (CN_B :i32)
   (CN_C :i32)
-  (INDEX_A :byte)
-  (INDEX_B :byte)
-  (INDEX_C :byte)
+  (INDEX_A :i32)
+  (INDEX_B :i32)
+  (INDEX_C :i32)
   (VAL_A :i128)
   (VAL_B :i128)
   (VAL_C :i128)
@@ -60,26 +60,19 @@
   (INDEX_X :i32)
   (BYTE_LIMB :byte@prove)
   (ACC_LIMB :i128)
-  (BIN_1 :binary)
-  (BIN_2 :binary)
-  (BIN_3 :binary)
-  (BIN_4 :binary)
-  (BIN_5 :binary)
-  (ACC_1 :i128)
-  (ACC_2 :i128)
-  (ACC_3 :i128)
-  (ACC_4 :i128)
-  (POW_256_1 :i128)
-  (POW_256_2 :i128)
-  (COUNTER :i5))
+  (BIT :binary :array [1:5])
+  (ACC :i128 :array [1:4])
+  (POW_256 :i128 :array [1:2])
+  (COUNTER :i8))
 
 (defalias 
-  CT  COUNTER
-  CNS CONTEXT_SOURCE
-  CNT CONTEXT_TARGET
-  SLO SOURCE_LIMB_OFFSET
-  SBO SOURCE_BYTE_OFFSET
-  TLO TARGET_LIMB_OFFSET
-  TBO TARGET_BYTE_OFFSET)
+  STAMP MMIO_STAMP
+  CT    COUNTER
+  CNS   CONTEXT_SOURCE
+  CNT   CONTEXT_TARGET
+  SLO   SOURCE_LIMB_OFFSET
+  SBO   SOURCE_BYTE_OFFSET
+  TLO   TARGET_LIMB_OFFSET
+  TBO   TARGET_BYTE_OFFSET)
 
 

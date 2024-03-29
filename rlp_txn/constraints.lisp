@@ -169,7 +169,7 @@
                        (eq! (next [PHASE RLP_TXN_PHASE_DATA_VALUE]) 1))
                 (if-eq [PHASE RLP_TXN_PHASE_DATA_VALUE] 1
                        (begin (debug (vanishes! RLP_TXN_PHASE_SIZE))
-                              (vanishes! DATAGASCOST)
+                              (vanishes! DATA_GAS_COST)
                               (if-zero TYPE
                                        (eq! (next [PHASE RLP_TXN_PHASE_BETA_VALUE]) 1)
                                        (eq! (next [PHASE RLP_TXN_PHASE_ACCESS_LIST_VALUE]) 1))))
@@ -477,7 +477,7 @@
                   (if-zero PHASE_SIZE
                            (eq! nSTEP 1)
                            (eq! nSTEP 8))
-                  (eq! DATA_HI DATAGASCOST)
+                  (eq! DATA_HI DATA_GAS_COST)
                   (eq! DATA_LO PHASE_SIZE))))
 
 (defconstraint phaseData-trivialcase (:guard [PHASE RLP_TXN_PHASE_DATA_VALUE])
@@ -493,7 +493,7 @@
 (defconstraint phaseData-rlpprefix (:guard [PHASE RLP_TXN_PHASE_DATA_VALUE])
   (if-not-zero (* IS_PREFIX (- nSTEP 1))
                (begin (will-remain-constant! PHASE_SIZE)
-                      (will-remain-constant! DATAGASCOST)
+                      (will-remain-constant! DATA_GAS_COST)
                       (if-eq-else PHASE_SIZE 1
                                   (begin (rlpPrefixInt [INPUT 1]
                                                        CT
@@ -541,10 +541,10 @@
                   (if-not-zero PHASE_SIZE
                                (begin (will-dec! PHASE_SIZE 1)
                                       (if-zero [BYTE 1]
-                                               (will-dec! DATAGASCOST G_TXDATA_ZERO)
-                                               (will-dec! DATAGASCOST G_TXDATA_NONZERO)))
+                                               (will-dec! DATA_GAS_COST GAS_CONST_G_TX_DATA_ZERO)
+                                               (will-dec! DATA_GAS_COST GAS_CONST_G_TX_DATA_NONZERO)))
                                (begin (will-remain-constant! PHASE_SIZE)
-                                      (will-remain-constant! DATAGASCOST)))
+                                      (will-remain-constant! DATA_GAS_COST)))
                   (if-zero CT
                            (eq! ACC_BYTESIZE 1)
                            (if-not-zero PHASE_SIZE
@@ -561,7 +561,7 @@
                                             (begin (eq! (next nSTEP) 2)
                                                    (vanishes! (- 1 (next LC_CORRECTION)))
                                                    (eq! (next PHASE_SIZE) (shift PHASE_SIZE 2))
-                                                   (eq! (next DATAGASCOST) (shift DATAGASCOST 2)))
+                                                   (eq! (next DATA_GAS_COST) (shift DATA_GAS_COST 2)))
                                             (vanishes! (next LC_CORRECTION))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

@@ -39,6 +39,7 @@
   NB_PP_ROWS_MLOAD_PT                                (+ NB_PP_ROWS_MLOAD 2)
   NB_PP_ROWS_MSTORE_PT                               (+ NB_PP_ROWS_MSTORE 2)
   NB_PP_ROWS_RIGHT_PADDED_WORD_EXTRACTION_PT         (+ NB_PP_ROWS_RIGHT_PADDED_WORD_EXTRACTION 2)
+  NB_PP_ROWS_BLAKE_PT                                (+ NB_PP_ROWS_BLAKE 2)
   ;;
   ;; MMU NB OF micro-processing rows
   ;;

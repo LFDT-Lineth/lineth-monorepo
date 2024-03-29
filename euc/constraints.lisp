@@ -32,7 +32,7 @@
 (defconstraint result (:guard DONE)
   (begin (eq! DIVIDEND
               (+ (* DIVISOR QUOTIENT) REMAINDER))
-         (if-zero REMAINDER
+         (if-zero (* DIVIDEND REMAINDER)
                   (eq! CEIL QUOTIENT)
                   (eq! CEIL (+ QUOTIENT 1)))))
 

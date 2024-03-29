@@ -1,27 +1,5 @@
 (module txnData)
 
-(defconst 
-  nROWS0                        6
-  nROWS1                        7
-  nROWS2                        7
-  ;;
-  G_transaction                 21000
-  G_txcreate                    32000
-  G_accesslistaddress           2400
-  G_accessliststorage           1900
-  ;; the following should be taken from rlpTxn constant
-  COMMON_RLP_TXN_PHASE_NUMBER_0 1
-  COMMON_RLP_TXN_PHASE_NUMBER_1 8
-  COMMON_RLP_TXN_PHASE_NUMBER_2 3
-  COMMON_RLP_TXN_PHASE_NUMBER_3 9
-  COMMON_RLP_TXN_PHASE_NUMBER_4 10
-  COMMON_RLP_TXN_PHASE_NUMBER_5 7
-  type_0_rlp_txn_phase_number_6 4
-  type_1_rlp_txn_phase_number_6 4
-  type_1_rlp_txn_phase_number_7 11
-  type_2_rlp_txn_phase_number_6 6
-  type_2_rlp_txn_phase_number_7 11)
-
 ;; sum of transaction type flags
 (defun (tx-type-sum)
   (+ TYPE0 TYPE1 TYPE2))
@@ -53,11 +31,11 @@
 (defconstraint heartbeat (:guard ABS)
   (begin (= (tx-type-sum) 1)
          (if-not-zero TYPE0
-                      (if-eq-else CT nROWS0 (will-inc! ABS 1) (will-inc! CT 1)))
+                      (if-eq-else CT (- NB_ROWS_TYPE_0 1) (will-inc! ABS 1) (will-inc! CT 1)))
          (if-not-zero TYPE1
-                      (if-eq-else CT nROWS1 (will-inc! ABS 1) (will-inc! CT 1)))
+                      (if-eq-else CT (- NB_ROWS_TYPE_1 1) (will-inc! ABS 1) (will-inc! CT 1)))
          (if-not-zero TYPE2
-                      (if-eq-else CT nROWS2 (will-inc! ABS 1) (will-inc! CT 1)))))
+                      (if-eq-else CT (- NB_ROWS_TYPE_2 1) (will-inc! ABS 1) (will-inc! CT 1)))))
 
 (defconstraint final-row (:domain {-1})
   (begin (= ABS ABS_MAX)
@@ -214,17 +192,17 @@
          (= (shift PHASE_RLP_TXN 5) COMMON_RLP_TXN_PHASE_NUMBER_5)
          ;;
          (if-not-zero TYPE0
-                      (= (shift PHASE_RLP_TXN 6) type_0_rlp_txn_phase_number_6))
+                      (= (shift PHASE_RLP_TXN 6) TYPE_0_RLP_TXN_PHASE_NUMBER_6))
          ;;
          (if-not-zero TYPE1
-                      (= (shift PHASE_RLP_TXN 6) type_1_rlp_txn_phase_number_6))
+                      (= (shift PHASE_RLP_TXN 6) TYPE_1_RLP_TXN_PHASE_NUMBER_6))
          (if-not-zero TYPE1
-                      (= (shift PHASE_RLP_TXN 7) type_1_rlp_txn_phase_number_7))
+                      (= (shift PHASE_RLP_TXN 7) TYPE_1_RLP_TXN_PHASE_NUMBER_7))
          ;;
          (if-not-zero TYPE2
-                      (= (shift PHASE_RLP_TXN 6) type_2_rlp_txn_phase_number_6))
+                      (= (shift PHASE_RLP_TXN 6) TYPE_2_RLP_TXN_PHASE_NUMBER_6))
          (if-not-zero TYPE2
-                      (= (shift PHASE_RLP_TXN 7) type_2_rlp_txn_phase_number_7))))
+                      (= (shift PHASE_RLP_TXN 7) TYPE_2_RLP_TXN_PHASE_NUMBER_7))))
 
 (defun (data_transfer)
   (begin (= (tx_type) (+ TYPE1 TYPE2 TYPE2))
@@ -276,13 +254,13 @@
 (defun (upfront_gas_cost_of_transaction)
   (if-not-zero TYPE0
                ;; TYPE0 = 1
-               (+ (data_cost) G_transaction (* (is_dep) G_txcreate))
+               (+ (data_cost) GAS_CONST_G_TRANSACTION (* (is_dep) GAS_CONST_G_TX_CREATE))
                ;; TYPE0 = 0
                (+ (data_cost)
-                  G_transaction
-                  (* (is_dep) G_txcreate)
-                  (* (num_addr) G_accesslistaddress)
-                  (* (num_keys) G_accessliststorage))))
+                  GAS_CONST_G_TRANSACTION
+                  (* (is_dep) GAS_CONST_G_TX_CREATE)
+                  (* (num_addr) GAS_CONST_G_ACCESS_LIST_ADRESS)
+                  (* (num_keys) GAS_CONST_G_ACCESS_LIST_STORAGE))))
 
 ;; row i + 1
 (defun (sufficient_gas_limit)

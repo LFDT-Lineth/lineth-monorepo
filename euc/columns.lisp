@@ -2,8 +2,8 @@
 
 (defcolumns 
   (IOMF :binary@prove)
-  (CT :byte)
-  (CT_MAX :byte)
+  (CT :i8)
+  (CT_MAX :i8)
   (DIVIDEND :i64)
   (DIVISOR :i64)
   (QUOTIENT :i64)
