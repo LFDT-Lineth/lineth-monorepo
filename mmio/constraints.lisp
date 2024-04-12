@@ -48,9 +48,7 @@
   (force-bool (+ (fast-op-flag-sum) (slow-op-flag-sum))))
 
 (defconstraint no-stamp-no-op ()
-  (if-zero MMIO_STAMP
-           (vanishes! (op-flag-sum))
-           (eq! (op-flag-sum) 1)))
+  (eq! (op-flag-sum) (~ STAMP)))
 
 (defun (weighted-exo-sum)
   (+ (* EXO_SUM_WEIGHT_ROM EXO_IS_ROM)
@@ -62,20 +60,15 @@
      (* EXO_SUM_WEIGHT_BLAKEMODEXP EXO_IS_BLAKEMODEXP)))
 
 (defconstraint exo-sum-decoding ()
-  (eq! EXO_SUM (weighted-exo-sum)))
+  (eq! (weighted-exo-sum) (* (instruction-may-provide-exo-sum) EXO_SUM)))
 
 (defun (instruction-may-provide-exo-sum)
-  (force-bool (+ IS_LIMB_VANISHES
-                 IS_LIMB_TO_RAM_TRANSPLANT
+  (force-bool (+ IS_LIMB_TO_RAM_TRANSPLANT
                  IS_LIMB_TO_RAM_ONE_TARGET
                  IS_LIMB_TO_RAM_TWO_TARGET
                  IS_RAM_TO_LIMB_TRANSPLANT
                  IS_RAM_TO_LIMB_ONE_SOURCE
                  IS_RAM_TO_LIMB_TWO_SOURCE)))
-
-(defconstraint no-exo-when-not-needed ()
-  (if-zero (instruction-may-provide-exo-sum)
-           (vanishes! EXO_SUM)))
 
 ;;
 ;; Heartbeat

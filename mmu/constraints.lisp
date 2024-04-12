@@ -395,7 +395,7 @@
          (vanishes! TOTRZ)
          ;; setting prprc row n°1
          (callToEuc 1 macro/SRC_OFFSET_LO LLARGE)
-         (callToEq 1 0 (shift micro/LIMB NB_PP_ROWS_INVALID_CODE_PREFIX_PO) INVALID_CODE_PREFIX_VALUE)
+         (callToEq 1 0 (shift micro/LIMB NB_PP_ROWS_INVALID_CODE_PREFIX_PO) EIP_3541_MARKER)
          ;; setting the success bit
          (eq! macro/SUCCESS_BIT
               (- 1 (next prprc/WCP_RES)))
@@ -412,7 +412,7 @@
 ;; RIGHT PADDED WORD EXTRACTION
 ;;
 (defun (right-pad-word-extract-second-limb-padded)
-  (- 1 (next prprc/WCP_RES)))
+  (force-bool (- 1 (next prprc/WCP_RES))))
 
 (defun (right-pad-word-extract-extract-size)
   (+ (* (right-pad-word-extract-second-limb-padded) (- macro/REF_SIZE macro/SRC_OFFSET_LO))
@@ -495,25 +495,25 @@
          (vanishes! (shift micro/TBO NB_PP_ROWS_RIGHT_PADDED_WORD_EXTRACTION_PO))
          (eq! (shift micro/LIMB NB_PP_ROWS_RIGHT_PADDED_WORD_EXTRACTION_PO) macro/LIMB_1)
          ;; setting second mmio inst
-         (if-zero (right-pad-word-extract-second-limb-void)
-                  (if-zero (right-pad-word-extract-second-limb-single-source)
-                           (eq! (shift micro/INST NB_PP_ROWS_RIGHT_PADDED_WORD_EXTRACTION_PT)
-                                MMIO_INST_RAM_TO_LIMB_TWO_SOURCE)
-                           (if-zero (right-pad-word-extract-second-limb-padded)
-                                    (eq! (shift micro/INST NB_PP_ROWS_RIGHT_PADDED_WORD_EXTRACTION_PT)
-                                         MMIO_INST_RAM_TO_LIMB_TRANSPLANT)
-                                    (eq! (shift micro/INST NB_PP_ROWS_RIGHT_PADDED_WORD_EXTRACTION_PT)
-                                         MMIO_INST_RAM_TO_LIMB_ONE_SOURCE)))
-                  (begin (eq! (shift micro/INST NB_PP_ROWS_RIGHT_PADDED_WORD_EXTRACTION_PT)
-                              MMIO_INST_LIMB_VANISHES)
-                         (vanishes! macro/LIMB_2)))
+         (if-eq-else (right-pad-word-extract-second-limb-void) 1
+                     (begin (eq! (shift micro/INST NB_PP_ROWS_RIGHT_PADDED_WORD_EXTRACTION_PT)
+                                 MMIO_INST_LIMB_VANISHES)
+                            (vanishes! macro/LIMB_2))
+                     (if-eq-else (right-pad-word-extract-second-limb-single-source) 1
+                                 (if-zero (right-pad-word-extract-second-limb-padded)
+                                          (eq! (shift micro/INST NB_PP_ROWS_RIGHT_PADDED_WORD_EXTRACTION_PT)
+                                               MMIO_INST_RAM_TO_LIMB_TRANSPLANT)
+                                          (eq! (shift micro/INST NB_PP_ROWS_RIGHT_PADDED_WORD_EXTRACTION_PT)
+                                               MMIO_INST_RAM_TO_LIMB_ONE_SOURCE))
+                                 (eq! (shift micro/INST NB_PP_ROWS_RIGHT_PADDED_WORD_EXTRACTION_PT)
+                                      MMIO_INST_RAM_TO_LIMB_TWO_SOURCE)))
          (eq! (shift micro/SIZE NB_PP_ROWS_RIGHT_PADDED_WORD_EXTRACTION_PT)
               (right-pad-word-extract-second-limb-byte-size))
          (eq! (shift micro/SLO NB_PP_ROWS_RIGHT_PADDED_WORD_EXTRACTION_PT)
               (+ (right-pad-word-extract-slo) 1))
          (eq! (shift micro/SBO NB_PP_ROWS_RIGHT_PADDED_WORD_EXTRACTION_PT) (right-pad-word-extract-sbo))
          (vanishes! (shift micro/TBO NB_PP_ROWS_RIGHT_PADDED_WORD_EXTRACTION_PT))
-         (eq! (shift micro/LIMB NB_PP_ROWS_RIGHT_PADDED_WORD_EXTRACTION_PT) macro/LIMB_1)))
+         (eq! (shift micro/LIMB NB_PP_ROWS_RIGHT_PADDED_WORD_EXTRACTION_PT) macro/LIMB_2)))
 
 ;;
 ;; RAM TO EXO WITH PADDING
@@ -562,7 +562,7 @@
          (callToLt 2 0 macro/SIZE macro/REF_SIZE)
          (callToEuc 2 (ram-exo-wpad-padding-size) LLARGE)
          ;; setting prprc row n°3
-         (callToIszero 3 0 prprc/EUC_REM)
+         (callToIszero 3 0 (shift prprc/EUC_REM 3))
          (callToEuc 3 (ram-exo-wpad-extraction-size) LLARGE)
          ;; setting prprc row n°4
          (callToLt 4
@@ -611,7 +611,7 @@
               (shift (ram-exo-wpad-initial-sbo) (- 0 NB_PP_ROWS_RAM_TO_EXO_WITH_PADDING_PO)))))
 
 (defconstraint ram-to-exo-with-padding-last-or-only-common (:guard (* IS_RAM_TO_EXO_WITH_PADDING
-      (force-bool (+ NT_LAST NT_MDDL))))
+      (force-bool (+ NT_LAST NT_ONLY))))
   (begin (eq! micro/SIZE [OUT 1])
          (if-zero [BIN 2]
                   (eq! micro/INST MMIO_INST_RAM_TO_LIMB_TWO_SOURCE)
