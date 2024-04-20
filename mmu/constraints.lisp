@@ -748,25 +748,23 @@
                     (+ (ram-to-ram-sans-pad-middle-sbo) (- (ram-to-ram-sans-pad-last-limb-byte-size) 1))
                     LLARGE)
          (if-zero (ram-to-ram-sans-pad-aligned)
-                  (debug (vanishes! (ram-to-ram-sans-pad-middle-sbo)))
-                  (if-zero (ram-to-ram-sans-pad-first-limb-single-source)
-                           (eq! (ram-to-ram-sans-pad-middle-sbo)
-                                (- (+ (ram-to-ram-sans-pad-initial-sbo)
-                                      (ram-to-ram-sans-pad-first-limb-byte-size))
-                                   LLARGE))
-                           (eq! (ram-to-ram-sans-pad-middle-sbo)
-                                (+ (ram-to-ram-sans-pad-initial-sbo)
-                                   (ram-to-ram-sans-pad-first-limb-byte-size)))))
-         (if-zero (ram-to-ram-sans-pad-totnt-is-one)
-                  (eq! (ram-to-ram-sans-pad-last-limb-single-source)
-                       (force-bool (- 1 (shift prprc/EUC_QUOT 4))))
-                  (eq! (ram-to-ram-sans-pad-last-limb-single-source)
-                       (eq! (ram-to-ram-sans-pad-last-limb-single-source)
-                            (ram-to-ram-sans-pad-first-limb-single-source))))
-         (if-zero (ram-to-ram-sans-pad-aligned)
-                  (eq! (ram-to-ram-sans-pad-initial-slo-increment) 1)
-                  (eq! (ram-to-ram-sans-pad-initial-slo-increment)
-                       (- 1 (ram-to-ram-sans-pad-first-limb-single-source))))
+                  (if-eq-else (ram-to-ram-sans-pad-first-limb-single-source) 1
+                              (eq! (ram-to-ram-sans-pad-middle-sbo)
+                                   (+ (ram-to-ram-sans-pad-initial-sbo)
+                                      (ram-to-ram-sans-pad-first-limb-byte-size)))
+                              (eq! (ram-to-ram-sans-pad-middle-sbo)
+                                   (- (+ (ram-to-ram-sans-pad-initial-sbo)
+                                         (ram-to-ram-sans-pad-first-limb-byte-size))
+                                      LLARGE))))
+         (if-eq-else (ram-to-ram-sans-pad-totnt-is-one) 1
+                     (eq! (ram-to-ram-sans-pad-last-limb-single-source)
+                          (ram-to-ram-sans-pad-first-limb-single-source))
+                     (eq! (ram-to-ram-sans-pad-last-limb-single-source)
+                          (force-bool (- 1 (shift prprc/EUC_QUOT 4)))))
+         (if-eq-else (ram-to-ram-sans-pad-aligned) 1
+                     (eq! (ram-to-ram-sans-pad-initial-slo-increment) 1)
+                     (eq! (ram-to-ram-sans-pad-initial-slo-increment)
+                          (- 1 (ram-to-ram-sans-pad-first-limb-single-source))))
          ;; preprocessing row n°5
          (callToIszero 5 0 (ram-to-ram-sans-pad-initial-tbo))
          (callToEuc 5 (ram-to-ram-sans-pad-last-limb-byte-size) LLARGE)
@@ -806,18 +804,18 @@
                                   (eq! micro/INST MMIO_INST_RAM_TO_RAM_PARTIAL))
                          (eq! micro/INST MMIO_INST_RAM_TO_RAM_TRANSPLANT)))
          (if-eq NT_MDDL 1
-                (begin (if-zero (ram-to-ram-sans-pad-aligned)
-                                (eq! micro/INST MMIO_INST_RAM_TO_RAM_TRANSPLANT)
-                                (eq! micro/INST MMIO_INST_RAM_TO_RAM_TWO_SOURCE))
+                (begin (if-eq-else (ram-to-ram-sans-pad-aligned) 1
+                                   (eq! micro/INST MMIO_INST_RAM_TO_RAM_TRANSPLANT)
+                                   (eq! micro/INST MMIO_INST_RAM_TO_RAM_TWO_SOURCE))
                        (eq! micro/SIZE LLARGE)
                        (eq! micro/SBO (ram-to-ram-sans-pad-middle-sbo))
                        (vanishes! micro/TBO)))
          (if-eq NT_LAST 1
-                (begin (if-zero (ram-to-ram-sans-pad-last-limb-is-fast)
-                                (if-zero (ram-to-ram-sans-pad-last-limb-single-source)
-                                         (eq! micro/INST MMIO_INST_RAM_TO_RAM_TWO_SOURCE)
-                                         (eq! micro/INST MMIO_INST_RAM_TO_RAM_PARTIAL))
-                                (eq! micro/INST MMIO_INST_RAM_TO_RAM_TRANSPLANT))
+                (begin (if-eq-else (ram-to-ram-sans-pad-last-limb-is-fast) 1
+                                   (eq! micro/INST MMIO_INST_RAM_TO_RAM_TRANSPLANT)
+                                   (if-zero (ram-to-ram-sans-pad-last-limb-single-source)
+                                            (eq! micro/INST MMIO_INST_RAM_TO_RAM_TWO_SOURCE)
+                                            (eq! micro/INST MMIO_INST_RAM_TO_RAM_PARTIAL)))
                        (eq! micro/SIZE (ram-to-ram-sans-pad-last-limb-byte-size))
                        (eq! micro/SBO (ram-to-ram-sans-pad-middle-sbo))
                        (vanishes! micro/TBO)))))
@@ -1326,7 +1324,7 @@
          ;; preprocessing row n°4
          (callToLt 4
                    0
-                   (+ (modexp-initial-slo) (- (modexp-first-limb-bytesize) 1))
+                   (+ (modexp-initial-sbo) (- (modexp-first-limb-bytesize) 1))
                    LLARGE)
          (eq! (modexp-first-limb-single-source) (shift prprc/WCP_RES 4))
          ;; preprocessing row n°5
