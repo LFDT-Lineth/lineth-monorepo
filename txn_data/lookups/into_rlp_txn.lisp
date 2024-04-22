@@ -2,11 +2,11 @@
   txnData-into-rlpTxn
   ;; target columns
   (
-    rlpTxn.ABS_TX_NUM_INFINY
-    rlpTxn.ABS_TX_NUM
-    rlpTxn.PHASE_ID
-    rlpTxn.DATA_HI
-    rlpTxn.DATA_LO
+    rlptxn.ABS_TX_NUM_INFINY
+    rlptxn.ABS_TX_NUM
+    rlptxn.PHASE_ID
+    rlptxn.DATA_HI
+    rlptxn.DATA_LO
   )
   ;; source columns
   (

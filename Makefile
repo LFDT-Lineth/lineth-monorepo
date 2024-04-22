@@ -52,11 +52,11 @@ PUB_DATA := $(shell find pub/ -iname '*.lisp')
 
 SHAKIRA := shakira_data
 
-RLP_ADDR := rlpAddr
+RLP_ADDR := rlpaddr
 
-RLP_TXN := rlp_txn
+RLP_TXN := rlptxn
 
-RLP_TXRCPT := rlp_txrcpt			
+RLP_TXRCPT := rlptxrcpt			
 
 ROM := rom
 

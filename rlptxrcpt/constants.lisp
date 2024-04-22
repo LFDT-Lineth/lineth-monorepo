@@ -1,4 +1,4 @@
-(module rlpTxRcpt)
+(module rlptxrcpt)
 
 (defconst 
   SUBPHASE_ID_WEIGHT_IS_PREFIX   6

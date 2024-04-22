@@ -5,11 +5,11 @@
   logData-into-rlpRcpt
   ;reference columns
   (
-    rlpTxRcpt.ABS_LOG_NUM
-    rlpTxRcpt.PHASE_ID
-    rlpTxRcpt.INDEX_LOCAL
-    rlpTxRcpt.LIMB
-    rlpTxRcpt.nBYTES
+    rlptxrcpt.ABS_LOG_NUM
+    rlptxrcpt.PHASE_ID
+    rlptxrcpt.INDEX_LOCAL
+    rlptxrcpt.LIMB
+    rlptxrcpt.nBYTES
   )
   ;source columns
   (

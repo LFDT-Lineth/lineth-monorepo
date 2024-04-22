@@ -1,25 +1,25 @@
-(defun (sel-txnData-to-rlpAddr)
+(defun (sel-txnData-to-rlpaddr)
   txnData.IS_DEP)
 
 (deflookup 
-  txnData-into-rlpAddr
+  txnData-into-rlpaddr
   ;; target columns
   (
-    rlpAddr.ADDR_HI
-    rlpAddr.ADDR_LO
-    rlpAddr.DEP_ADDR_HI
-    rlpAddr.DEP_ADDR_LO
-    rlpAddr.NONCE
-    rlpAddr.RECIPE_1
+    rlpaddr.ADDR_HI
+    rlpaddr.ADDR_LO
+    rlpaddr.DEP_ADDR_HI
+    rlpaddr.DEP_ADDR_LO
+    rlpaddr.NONCE
+    rlpaddr.RECIPE_1
   )
   ;; source columns
   (
-    (* txnData.FROM_HI (sel-txnData-to-rlpAddr))
-    (* txnData.FROM_LO (sel-txnData-to-rlpAddr))
-    (* txnData.TO_HI (sel-txnData-to-rlpAddr))
-    (* txnData.TO_LO (sel-txnData-to-rlpAddr))
-    (* txnData.NONCE (sel-txnData-to-rlpAddr))
-    (* txnData.IS_DEP (sel-txnData-to-rlpAddr))
+    (* txnData.FROM_HI (sel-txnData-to-rlpaddr))
+    (* txnData.FROM_LO (sel-txnData-to-rlpaddr))
+    (* txnData.TO_HI (sel-txnData-to-rlpaddr))
+    (* txnData.TO_LO (sel-txnData-to-rlpaddr))
+    (* txnData.NONCE (sel-txnData-to-rlpaddr))
+    (* txnData.IS_DEP (sel-txnData-to-rlpaddr))
   ))
 
 

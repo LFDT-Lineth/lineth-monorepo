@@ -2,13 +2,13 @@
   logInfo-into-rlpTxnRcpt
   ;; target columns
   (
-    rlpTxRcpt.ABS_TX_NUM_MAX
-    rlpTxRcpt.ABS_TX_NUM
-    rlpTxRcpt.ABS_LOG_NUM_MAX
-    rlpTxRcpt.ABS_LOG_NUM
-    rlpTxRcpt.PHASE_ID
-    [rlpTxRcpt.INPUT 1]
-    [rlpTxRcpt.INPUT 2]
+    rlptxrcpt.ABS_TX_NUM_MAX
+    rlptxrcpt.ABS_TX_NUM
+    rlptxrcpt.ABS_LOG_NUM_MAX
+    rlptxrcpt.ABS_LOG_NUM
+    rlptxrcpt.PHASE_ID
+    [rlptxrcpt.INPUT 1]
+    [rlptxrcpt.INPUT 2]
   )
   ;; source columns
   (

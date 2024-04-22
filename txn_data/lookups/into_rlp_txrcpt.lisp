@@ -2,10 +2,10 @@
   txnData-into-rlpTxnRcpt
   ;; target columns
   (
-    rlpTxRcpt.ABS_TX_NUM_MAX
-    rlpTxRcpt.ABS_TX_NUM
-    rlpTxRcpt.PHASE_ID
-    [rlpTxRcpt.INPUT 1]
+    rlptxrcpt.ABS_TX_NUM_MAX
+    rlptxrcpt.ABS_TX_NUM
+    rlptxrcpt.PHASE_ID
+    [rlptxrcpt.INPUT 1]
   )
   ;; source columns
   (

@@ -1,4 +1,4 @@
-(module rlpTxn)
+(module rlptxn)
 
 (defpurefun (if-not-eq A B then)
   (if-not-zero (- A B)
@@ -115,6 +115,9 @@
   (eq! ABS_TX_NUM
        (+ (prev ABS_TX_NUM)
           (* [PHASE RLP_TXN_PHASE_RLP_PREFIX_VALUE] (remained-constant! [PHASE RLP_TXN_PHASE_RLP_PREFIX_VALUE])))))
+
+(defconstraint set-to-hash-by-prover-flag ()
+  (eq! TO_HASH_BY_PROVER (* LC LX)))
 
 ;; 2.3.2.6
 (defconstraint LT-and-LX ()

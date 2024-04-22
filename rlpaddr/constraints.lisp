@@ -1,8 +1,8 @@
-(module rlpAddr)
+(module rlpaddr)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                              ;;
-;;    3.1 Heartbeat    ;;
+;;    3.1 Heartbeat             ;;
 ;;                              ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defconstraint first-row (:domain {0})

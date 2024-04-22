@@ -1,4 +1,4 @@
-(module rlpTxRcpt)
+(module rlptxrcpt)
 
 (defpurefun (if-not-eq x y then)
   (if-not-zero (- x y)
