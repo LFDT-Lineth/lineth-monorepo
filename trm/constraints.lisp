@@ -12,17 +12,13 @@
 ;; 3
 (defconstraint null-stamp-null-columns ()
   (if-zero STAMP
-           
-           
-           
-
            (begin (vanishes! RAW_ADDRESS_HI)
                   (vanishes! RAW_ADDRESS_LO)
                   (vanishes! TRM_ADDRESS_HI)
                   (vanishes! IS_PRECOMPILE)
-                  (vanishes! CT)
-                  (vanishes! BYTE_HI)
-                  (vanishes! BYTE_LO))))
+                  (debug (vanishes! CT))
+                  (debug (vanishes! BYTE_HI))
+                  (debug (vanishes! BYTE_LO)))))
 
 (defconstraint heartbeat ()
   (begin  ;; 2
@@ -56,12 +52,12 @@
 ;;                           ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defconstraint pbit-constraint ()
-  (begin (if-zero CT
-                  (vanishes! PBIT)
-                  (or! (remained-constant! PBIT) (did-inc! PBIT 1)))
-         (if-eq CT 12
-                (begin (vanishes! (prev PBIT))
-                       (eq! PBIT 1)))))
+  (begin (if-not-zero CT
+                      (or! (remained-constant! PBIT) (did-inc! PBIT 1)))
+         (if-eq CT LLARGEMO
+                (eq! 1
+                     (+ (shift PBIT (- 0 4))
+                        (shift PBIT (- 0 3)))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                                                   ;;
@@ -79,7 +75,7 @@
 ;;                       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;)
 (defconstraint target-constraint ()
-  (if-eq CT 15
+  (if-eq CT LLARGEMO
          (begin (eq! RAW_ADDRESS_HI ACC_HI)
                 (eq! RAW_ADDRESS_LO ACC_LO)
                 (eq! TRM_ADDRESS_HI ACC_T))))
