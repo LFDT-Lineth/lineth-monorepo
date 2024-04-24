@@ -75,7 +75,7 @@
 
 ;; perspective constancy constraint (TODO: in stdlib.lisp)
 (defpurefun ((perspective-constancy :@loob) PERSPECTIVE_SELECTOR X)
-  (if-not-zero (and PERSPECTIVE_SELECTOR (prev PERSPECTIVE_SELECTOR))
+  (if-not-zero (* PERSPECTIVE_SELECTOR (prev PERSPECTIVE_SELECTOR))
                (remained-constant! X)))
 
 (defconstraint computation-constancy (:perspective computation)
@@ -115,11 +115,12 @@
 
 ;; 6
 (defconstraint allowed-transitions ()
-  (if (and (neq STAMP 0) (eq CT CT_MAX))
-      (eq! (+ (* CMPTN (next MACRO))
-              (* MACRO (next PRPRC))
-              (* PRPRC (next CMPTN)))
-           1)))
+  (if-not-zero STAMP
+               (if-eq CT CT_MAX
+                      (eq! (+ (* CMPTN (next MACRO))
+                              (* MACRO (next PRPRC))
+                              (* PRPRC (next CMPTN)))
+                           1))))
 
 ;; 7
 (defconstraint instruction-counter-cycle ()
@@ -195,15 +196,21 @@
 ;;    3.11 Most significant           ;;
 ;;         byte constraints           ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defconstraint most-significant-byte (:perspective computation :guard IS_MODEXP_LOG)
-  (begin (if (and (eq CT 0) (neq TANZB_ACC 0))
-             (eq! MSB TRIM_BYTE))
-         (if (and (neq CT 0)
-                  (and (neq TANZB_ACC 0)
-                       (eq (prev TANZB_ACC) 0)))
-             (eq! MSB TRIM_BYTE))
-         (if (and (eq CT 15) (eq TANZB_ACC 0))
-             (vanishes! MSB))))
+(defconstraint most-significant-byte-start (:perspective computation :guard IS_MODEXP_LOG)
+  (if-zero CT
+           (if-not-zero TANZB_ACC
+                        (eq! MSB TRIM_BYTE))))
+
+(defconstraint most-significant-byte-middle (:perspective computation :guard IS_MODEXP_LOG)
+  (if-not-zero CT
+               (if-not-zero TANZB_ACC
+                            (if-zero (prev TANZB_ACC)
+                                     (eq! MSB TRIM_BYTE)))))
+
+(defconstraint most-significant-byte-end (:perspective computation :guard IS_MODEXP_LOG)
+  (if-eq CT 15
+         (if-zero TANZB_ACC
+                  (vanishes! MSB))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                                    ;;
