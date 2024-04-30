@@ -50,8 +50,6 @@ MXP := mxp
 
 PUB_DATA := $(shell find pub/ -iname '*.lisp')
 
-SHAKIRA := shakira_data
-
 RLP_ADDR := rlpaddr
 
 RLP_TXN := rlptxn
@@ -62,7 +60,7 @@ ROM := rom
 
 ROM_LEX := romLex
 
-SHAKIRA := shakira
+SHAKIRA_DATA := shakiradata
 
 SHIFT :=  shf
 
@@ -96,13 +94,12 @@ ZKEVM_MODULES := ${ALU} \
 	${MMIO} \
 	${MXP} \
 	${PUB_DATA} \
-	${RIPSHA} \
 	${RLP_ADDR} \
 	${RLP_TXN} \
 	${RLP_TXRCPT} \
 	${ROM} \
 	${ROM_LEX} \
-	${SHAKIRA} \
+	${SHAKIRA_DATA} \
 	${SHIFT} \
 	${STACK} \
 	${STP} \
