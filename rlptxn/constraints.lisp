@@ -20,18 +20,18 @@
                (or! (remained-constant! C) (did-inc! C 1))))
 
 ;; Definition phase-constancy.
-(defpurefun (phase-constancy PHASE C)
-  (if-eq (* PHASE (prev PHASE)) 1
-         (remained-constant! C)))
+(defpurefun (phase-constancy phase column)
+  (if-eq (* phase (prev phase)) 1
+         (remained-constant! column)))
 
 ;; Definition phase-incrementing
-(defpurefun (phase-incrementing PHASE C)
-  (if-eq (* PHASE (prev PHASE)) 1
+(defpurefun (phase-incrementing phase C)
+  (if-eq (* phase (prev phase)) 1
          (or! (remained-constant! C) (did-inc! C 1))))
 
 ;; Definition phase-decrementing
-(defpurefun (phase-decrementing PHASE C)
-  (if-eq (* PHASE (prev PHASE)) 1
+(defpurefun (phase-decrementing phase C)
+  (if-eq (* phase (prev phase)) 1
          (or! (remained-constant! C) (did-dec! C 1))))
 
 ;; Definition block-constant
@@ -64,70 +64,124 @@
   (counter-incrementing CT LC_CORRECTION))
 
 (defconstraint counter-incrementing-except-data-prefix ()
-  (if-zero (* [PHASE RLP_TXN_PHASE_DATA_VALUE] IS_PREFIX)
+  (if-zero (* IS_PHASE_DATA IS_PREFIX)
            (counter-incrementing CT LIMB_CONSTRUCTED)))
 
 (defconstraint phaseRlpPrefix-constancy ()
-  (begin (phase-constancy [PHASE RLP_TXN_PHASE_RLP_PREFIX_VALUE] RLP_LT_BYTESIZE)
-         (phase-constancy [PHASE RLP_TXN_PHASE_RLP_PREFIX_VALUE] RLP_LX_BYTESIZE)
-         (phase-constancy [PHASE RLP_TXN_PHASE_RLP_PREFIX_VALUE] DATA_HI)
-         (phase-constancy [PHASE RLP_TXN_PHASE_RLP_PREFIX_VALUE] DATA_LO)))
+  (begin (phase-constancy IS_PHASE_RLP_PREFIX RLP_LT_BYTESIZE)
+         (phase-constancy IS_PHASE_RLP_PREFIX RLP_LX_BYTESIZE)
+         (phase-constancy IS_PHASE_RLP_PREFIX DATA_HI)
+         (phase-constancy IS_PHASE_RLP_PREFIX DATA_LO)))
 
 (defconstraint phaseData-decrementing ()
-  (phase-decrementing [PHASE RLP_TXN_PHASE_DATA_VALUE] IS_PREFIX))
+  (phase-decrementing IS_PHASE_DATA IS_PREFIX))
 
 (defconstraint phasek-constancies ()
-  (for i
-       [3:11]
-       (begin (phase-constancy [PHASE i] DATA_HI)
-              (phase-constancy [PHASE i] DATA_LO))))
+  (begin (phase-constancy IS_PHASE_NONCE DATA_HI)
+         (phase-constancy IS_PHASE_NONCE DATA_LO)
+         (phase-constancy IS_PHASE_GAS_PRICE DATA_HI)
+         (phase-constancy IS_PHASE_GAS_PRICE DATA_LO)
+         (phase-constancy IS_PHASE_MAX_PRIORITY_FEE_PER_GAS DATA_HI)
+         (phase-constancy IS_PHASE_MAX_PRIORITY_FEE_PER_GAS DATA_LO)
+         (phase-constancy IS_PHASE_MAX_FEE_PER_GAS DATA_HI)
+         (phase-constancy IS_PHASE_MAX_FEE_PER_GAS DATA_LO)
+         (phase-constancy IS_PHASE_GAS_LIMIT DATA_HI)
+         (phase-constancy IS_PHASE_GAS_LIMIT DATA_LO)
+         (phase-constancy IS_PHASE_TO DATA_HI)
+         (phase-constancy IS_PHASE_TO DATA_LO)
+         (phase-constancy IS_PHASE_VALUE DATA_HI)
+         (phase-constancy IS_PHASE_VALUE DATA_LO)
+         (phase-constancy IS_PHASE_DATA DATA_HI)
+         (phase-constancy IS_PHASE_DATA DATA_LO)
+         (phase-constancy IS_PHASE_ACCESS_LIST DATA_HI)
+         (phase-constancy IS_PHASE_ACCESS_LIST DATA_LO)))
 
 (defconstraint block-constancies ()
   (block-constant ABS_TX_NUM ABS_TX_NUM_INFINY))
 
-;; 2.3.1.7 (debug 2.3.1.11)
-;; (defconstraint phase9-incrementing ()
-;;   (begin
-;;    (debug (phase-incrementing [PHASE 9] INDEX_DATA))))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                                      ;;
 ;;    2.3.2 Global Phase Constraints    ;;
 ;;                                      ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defun (weighted-flag-sum)
+  (+ (* IS_PHASE_RLP_PREFIX RLP_TXN_PHASE_RLP_PREFIX)
+     (* IS_PHASE_CHAIN_ID RLP_TXN_PHASE_CHAIN_ID)
+     (* IS_PHASE_NONCE RLP_TXN_PHASE_NONCE)
+     (* IS_PHASE_GAS_PRICE RLP_TXN_PHASE_GAS_PRICE)
+     (* IS_PHASE_MAX_PRIORITY_FEE_PER_GAS RLP_TXN_PHASE_MAX_PRIORITY_FEE_PER_GAS)
+     (* IS_PHASE_MAX_FEE_PER_GAS RLP_TXN_PHASE_MAX_FEE_PER_GAS)
+     (* IS_PHASE_GAS_LIMIT RLP_TXN_PHASE_GAS_LIMIT)
+     (* IS_PHASE_TO RLP_TXN_PHASE_TO)
+     (* IS_PHASE_VALUE RLP_TXN_PHASE_VALUE)
+     (* IS_PHASE_DATA RLP_TXN_PHASE_DATA)
+     (* IS_PHASE_ACCESS_LIST RLP_TXN_PHASE_ACCESS_LIST)
+     (* IS_PHASE_BETA RLP_TXN_PHASE_BETA)
+     (* IS_PHASE_Y RLP_TXN_PHASE_Y)
+     (* IS_PHASE_R RLP_TXN_PHASE_R)
+     (* IS_PHASE_S RLP_TXN_PHASE_S)))
+
 (defconstraint phase-id-to-phase-flag ()
-  (eq! PHASE_ID
-       (reduce +
-               (for k [1 : 15] (* k [PHASE k])))))
+  (eq! PHASE (weighted-flag-sum)))
 
 ;; 2.3.2.1
 (defconstraint initial-stamp (:domain {0})
   (vanishes! ABS_TX_NUM))
 
 ;; 2.3.2.2
-(defconstraint ABS_TX_NUM-is-zero ()
-  (if-zero ABS_TX_NUM
-           (vanishes! (reduce + (for i [1 : 15] [PHASE i])))
-           (eq! 1
-                (reduce + (for i [1 : 15] [PHASE i])))))
+(defun (flag-sum)
+  (force-bool (+ IS_PHASE_RLP_PREFIX
+                 IS_PHASE_CHAIN_ID
+                 IS_PHASE_NONCE
+                 IS_PHASE_GAS_PRICE
+                 IS_PHASE_MAX_PRIORITY_FEE_PER_GAS
+                 IS_PHASE_MAX_FEE_PER_GAS
+                 IS_PHASE_GAS_LIMIT
+                 IS_PHASE_TO
+                 IS_PHASE_VALUE
+                 IS_PHASE_DATA
+                 IS_PHASE_ACCESS_LIST
+                 IS_PHASE_BETA
+                 IS_PHASE_Y
+                 IS_PHASE_R
+                 IS_PHASE_S)))
+
+(defconstraint flag-sum-is-one-or-padding ()
+  (eq! (~ ABS_TX_NUM) (flag-sum)))
 
 ;; 2.3.2.4
 (defconstraint ABS_TX_NUM-evolution ()
   (eq! ABS_TX_NUM
        (+ (prev ABS_TX_NUM)
-          (* [PHASE RLP_TXN_PHASE_RLP_PREFIX_VALUE] (remained-constant! [PHASE RLP_TXN_PHASE_RLP_PREFIX_VALUE])))))
+          (* IS_PHASE_RLP_PREFIX (remained-constant! IS_PHASE_RLP_PREFIX)))))
 
 (defconstraint set-to-hash-by-prover-flag ()
   (eq! TO_HASH_BY_PROVER (* LC LX)))
 
 ;; 2.3.2.6
+(defun (flag-sum-lt-and-lx-are-one)
+  (force-bool (+ IS_PHASE_CHAIN_ID
+                 IS_PHASE_NONCE
+                 IS_PHASE_GAS_PRICE
+                 IS_PHASE_MAX_PRIORITY_FEE_PER_GAS
+                 IS_PHASE_MAX_FEE_PER_GAS
+                 IS_PHASE_GAS_LIMIT
+                 IS_PHASE_TO
+                 IS_PHASE_VALUE
+                 IS_PHASE_DATA
+                 IS_PHASE_ACCESS_LIST)))
+
 (defconstraint LT-and-LX ()
-  (if-eq (reduce + (for i [2 : 11] [PHASE i])) 1
+  (if-eq (flag-sum-lt-and-lx-are-one) 1
          (begin (eq! LT 1)
                 (eq! LX 1))))
 
 ;; 2.3.2.7
+(defun (flag-sum-only-lt)
+  (force-bool (+ IS_PHASE_Y IS_PHASE_R IS_PHASE_S)))
+
 (defconstraint LT-only ()
-  (if-eq (reduce + (for i [13 : 15] [PHASE i])) 1
+  (if-eq (flag-sum-only-lt) 1
          (begin (eq! 1 LT)
                 (vanishes! LX))))
 
@@ -137,61 +191,89 @@
            (vanishes! PHASE_END)))
 
 ;; 2.3.2.9
+(defun (weighted-diff-flag-sum)
+  (+ (* (- (next IS_PHASE_RLP_PREFIX) IS_PHASE_RLP_PREFIX)
+        RLP_TXN_PHASE_RLP_PREFIX)
+     (* (- (next IS_PHASE_CHAIN_ID) IS_PHASE_CHAIN_ID)
+        RLP_TXN_PHASE_CHAIN_ID)
+     (* (- (next IS_PHASE_NONCE) IS_PHASE_NONCE)
+        RLP_TXN_PHASE_NONCE)
+     (* (- (next IS_PHASE_GAS_PRICE) IS_PHASE_GAS_PRICE)
+        RLP_TXN_PHASE_GAS_PRICE)
+     (* (- (next IS_PHASE_MAX_PRIORITY_FEE_PER_GAS) IS_PHASE_MAX_PRIORITY_FEE_PER_GAS)
+        RLP_TXN_PHASE_MAX_PRIORITY_FEE_PER_GAS)
+     (* (- (next IS_PHASE_MAX_FEE_PER_GAS) IS_PHASE_MAX_FEE_PER_GAS)
+        RLP_TXN_PHASE_MAX_FEE_PER_GAS)
+     (* (- (next IS_PHASE_GAS_LIMIT) IS_PHASE_GAS_LIMIT)
+        RLP_TXN_PHASE_GAS_LIMIT)
+     (* (- (next IS_PHASE_TO) IS_PHASE_TO)
+        RLP_TXN_PHASE_TO)
+     (* (- (next IS_PHASE_VALUE) IS_PHASE_VALUE)
+        RLP_TXN_PHASE_VALUE)
+     (* (- (next IS_PHASE_DATA) IS_PHASE_DATA)
+        RLP_TXN_PHASE_DATA)
+     (* (- (next IS_PHASE_ACCESS_LIST) IS_PHASE_ACCESS_LIST)
+        RLP_TXN_PHASE_ACCESS_LIST)
+     (* (- (next IS_PHASE_BETA) IS_PHASE_BETA)
+        RLP_TXN_PHASE_BETA)
+     (* (- (next IS_PHASE_Y) IS_PHASE_Y)
+        RLP_TXN_PHASE_Y)
+     (* (- (next IS_PHASE_R) IS_PHASE_R)
+        RLP_TXN_PHASE_R)
+     (* (- (next IS_PHASE_S) IS_PHASE_S)
+        RLP_TXN_PHASE_S)))
+
 (defconstraint no-end-no-changephase (:guard ABS_TX_NUM)
   (if-zero PHASE_END
-           (vanishes! (reduce +
-                              (for i
-                                   [1 : 15]
-                                   (* i
-                                      (- (next [PHASE i]) [PHASE i])))))))
+           (vanishes! (weighted-diff-flag-sum))))
 
 ;; 2.3.2.10
 (defconstraint phase-transition ()
   (if-eq PHASE_END 1
-         (begin (if-eq [PHASE RLP_TXN_PHASE_RLP_PREFIX_VALUE] 1
+         (begin (if-eq IS_PHASE_RLP_PREFIX 1
                        (if-zero TYPE
-                                (eq! (next [PHASE RLP_TXN_PHASE_NONCE_VALUE]) 1)
-                                (eq! (next [PHASE RLP_TXN_PHASE_CHAIN_ID_VALUE]) 1)))
-                (if-eq [PHASE RLP_TXN_PHASE_CHAIN_ID_VALUE] 1
-                       (eq! (next [PHASE RLP_TXN_PHASE_NONCE_VALUE]) 1))
-                (if-eq [PHASE RLP_TXN_PHASE_NONCE_VALUE] 1
+                                (eq! (next IS_PHASE_NONCE) 1)
+                                (eq! (next IS_PHASE_CHAIN_ID) 1)))
+                (if-eq IS_PHASE_CHAIN_ID 1
+                       (eq! (next IS_PHASE_NONCE) 1))
+                (if-eq IS_PHASE_NONCE 1
                        (if-eq-else TYPE 2
-                                   (eq! (next [PHASE RLP_TXN_PHASE_MAX_PRIORITY_FEE_PER_GAS_VALUE]) 1)
-                                   (eq! (next [PHASE RLP_TXN_PHASE_GAS_PRICE_VALUE]) 1)))
-                (if-eq [PHASE RLP_TXN_PHASE_GAS_PRICE_VALUE] 1
-                       (eq! (next [PHASE RLP_TXN_PHASE_GAS_LIMIT_VALUE]) 1))
-                (if-eq [PHASE RLP_TXN_PHASE_MAX_PRIORITY_FEE_PER_GAS_VALUE] 1
-                       (eq! (next [PHASE RLP_TXN_PHASE_MAX_FEE_PER_GAS_VALUE]) 1))
-                (if-eq [PHASE RLP_TXN_PHASE_MAX_FEE_PER_GAS_VALUE] 1
-                       (eq! (next [PHASE RLP_TXN_PHASE_GAS_LIMIT_VALUE]) 1))
-                (if-eq [PHASE RLP_TXN_PHASE_GAS_LIMIT_VALUE] 1
-                       (eq! (next [PHASE RLP_TXN_PHASE_TO_VALUE]) 1))
-                (if-eq [PHASE RLP_TXN_PHASE_TO_VALUE] 1
-                       (eq! (next [PHASE RLP_TXN_PHASE_VALUE_VALUE]) 1))
-                (if-eq [PHASE RLP_TXN_PHASE_VALUE_VALUE] 1
-                       (eq! (next [PHASE RLP_TXN_PHASE_DATA_VALUE]) 1))
-                (if-eq [PHASE RLP_TXN_PHASE_DATA_VALUE] 1
+                                   (eq! (next IS_PHASE_MAX_PRIORITY_FEE_PER_GAS) 1)
+                                   (eq! (next IS_PHASE_GAS_PRICE) 1)))
+                (if-eq IS_PHASE_GAS_PRICE 1
+                       (eq! (next IS_PHASE_GAS_LIMIT) 1))
+                (if-eq IS_PHASE_MAX_PRIORITY_FEE_PER_GAS 1
+                       (eq! (next IS_PHASE_MAX_FEE_PER_GAS) 1))
+                (if-eq IS_PHASE_MAX_FEE_PER_GAS 1
+                       (eq! (next IS_PHASE_GAS_LIMIT) 1))
+                (if-eq IS_PHASE_GAS_LIMIT 1
+                       (eq! (next IS_PHASE_TO) 1))
+                (if-eq IS_PHASE_TO 1
+                       (eq! (next IS_PHASE_VALUE) 1))
+                (if-eq IS_PHASE_VALUE 1
+                       (eq! (next IS_PHASE_DATA) 1))
+                (if-eq IS_PHASE_DATA 1
                        (begin (debug (vanishes! RLP_TXN_PHASE_SIZE))
                               (vanishes! DATA_GAS_COST)
                               (if-zero TYPE
-                                       (eq! (next [PHASE RLP_TXN_PHASE_BETA_VALUE]) 1)
-                                       (eq! (next [PHASE RLP_TXN_PHASE_ACCESS_LIST_VALUE]) 1))))
-                (if-eq [PHASE RLP_TXN_PHASE_ACCESS_LIST_VALUE] 1
+                                       (eq! (next IS_PHASE_BETA) 1)
+                                       (eq! (next IS_PHASE_ACCESS_LIST) 1))))
+                (if-eq IS_PHASE_ACCESS_LIST 1
                        (begin (debug (vanishes! RLP_TXN_PHASE_SIZE))
                               (vanishes! nADDR)
                               (vanishes! nKEYS)
                               (vanishes! nKEYS_PER_ADDR)
-                              (eq! (next [PHASE RLP_TXN_PHASE_Y_VALUE]) 1)))
-                (if-eq [PHASE RLP_TXN_PHASE_BETA_VALUE] 1
-                       (eq! (next [PHASE RLP_TXN_PHASE_R_VALUE]) 1))
-                (if-eq [PHASE RLP_TXN_PHASE_Y_VALUE] 1
-                       (eq! (next [PHASE RLP_TXN_PHASE_R_VALUE]) 1))
-                (if-eq [PHASE RLP_TXN_PHASE_R_VALUE] 1
-                       (eq! (next [PHASE RLP_TXN_PHASE_S_VALUE]) 1))
-                (if-eq [PHASE RLP_TXN_PHASE_S_VALUE] 1
+                              (eq! (next IS_PHASE_Y) 1)))
+                (if-eq IS_PHASE_BETA 1
+                       (eq! (next IS_PHASE_R) 1))
+                (if-eq IS_PHASE_Y 1
+                       (eq! (next IS_PHASE_R) 1))
+                (if-eq IS_PHASE_R 1
+                       (eq! (next IS_PHASE_S) 1))
+                (if-eq IS_PHASE_S 1
                        (begin (vanishes! RLP_LT_BYTESIZE)
                               (vanishes! RLP_LX_BYTESIZE)
-                              (eq! (next [PHASE RLP_TXN_PHASE_RLP_PREFIX_VALUE]) 1))))))
+                              (eq! (next IS_PHASE_RLP_PREFIX) 1))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                             ;;
@@ -244,15 +326,18 @@
                   (vanishes! INDEX_LX))))
 
 ;; 2.3.5.3
+(defun (flag-sum-wo-phase-rlp-prefix)
+  (force-bool (- (flag-sum) IS_PHASE_RLP_PREFIX)))
+
 (defconstraint rlpbytesize-decreasing ()
-  (if-eq 1 (reduce + (for i [2 : 15] [PHASE i]))
+  (if-eq (flag-sum-wo-phase-rlp-prefix) 1
          (begin (eq! RLP_LT_BYTESIZE
                      (- (prev RLP_LT_BYTESIZE) (* LC LT nBYTES)))
                 (eq! RLP_LX_BYTESIZE
                      (- (prev RLP_LX_BYTESIZE) (* LC LX nBYTES))))))
 
 (defconstraint lc-correction-nullity ()
-  (if-zero (+ [PHASE RLP_TXN_PHASE_RLP_PREFIX_VALUE] [PHASE RLP_TXN_PHASE_DATA_VALUE] [PHASE RLP_TXN_PHASE_BETA_VALUE])
+  (if-zero (+ IS_PHASE_RLP_PREFIX IS_PHASE_DATA IS_PHASE_BETA)
            (vanishes! LC_CORRECTION)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -264,7 +349,7 @@
   (if-not-zero ABS_TX_NUM
                (begin (eq! ABS_TX_NUM_INFINY ABS_TX_NUM)
                       (eq! 1 PHASE_END)
-                      (eq! 1 [PHASE RLP_TXN_PHASE_S_VALUE]))))
+                      (eq! 1 IS_PHASE_S))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                             ;;
@@ -378,8 +463,8 @@
 ;;    4.1 Phase 0 : RLP prefix  ;;
 ;;                             ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defconstraint phaseRlpPrefix-bytetypeprefix (:guard [PHASE RLP_TXN_PHASE_RLP_PREFIX_VALUE]);; 4.1.1
-  (if-zero (prev [PHASE RLP_TXN_PHASE_RLP_PREFIX_VALUE])
+(defconstraint phaseRlpPrefix-bytetypeprefix (:guard IS_PHASE_RLP_PREFIX);; 4.1.1
+  (if-zero (prev IS_PHASE_RLP_PREFIX)
            (begin (eq! nSTEP 1)
                   (vanishes! (+ (- 1 LT)         ;;1.b
                                 (- 1 LX)         ;;1.c
@@ -395,22 +480,46 @@
                                   (eq! nBYTES 1)))
                   (eq! DATA_LO TYPE))))
 
-(defconstraint phaseRlpPrefix-rlplt (:guard [PHASE RLP_TXN_PHASE_RLP_PREFIX_VALUE])
+(defconstraint phaseRlpPrefix-rlplt (:guard IS_PHASE_RLP_PREFIX)
   (if-zero (+ (- 1 LT) LX)
            (begin (vanishes! (+ LC_CORRECTION PHASE_END))
                   (eq! [INPUT 1] RLP_LT_BYTESIZE)
                   (eq! nSTEP 8)
-                  (rlpPrefixOfByteString [INPUT 1] CT nSTEP DONE [PHASE RLP_TXN_PHASE_RLP_PREFIX_VALUE] ACC_BYTESIZE POWER BIT [ACC 1] [ACC 2] LC LIMB nBYTES)
+                  (rlpPrefixOfByteString [INPUT 1]
+                                         CT
+                                         nSTEP
+                                         DONE
+                                         IS_PHASE_RLP_PREFIX
+                                         ACC_BYTESIZE
+                                         POWER
+                                         BIT
+                                         [ACC 1]
+                                         [ACC 2]
+                                         LC
+                                         LIMB
+                                         nBYTES)
                   (if-eq DONE 1
                          (vanishes! (+ (next LT)
                                        (- 1 (next LX))))))))
 
-(defconstraint phaseRlpPrefix-rlplx (:guard [PHASE RLP_TXN_PHASE_RLP_PREFIX_VALUE])
+(defconstraint phaseRlpPrefix-rlplx (:guard IS_PHASE_RLP_PREFIX)
   (if-zero (+ LT (- 1 LX))
            (begin (vanishes! LC_CORRECTION)
                   (eq! [INPUT 1] RLP_LX_BYTESIZE)
                   (eq! nSTEP 8)
-                  (rlpPrefixOfByteString [INPUT 1] CT nSTEP DONE [PHASE RLP_TXN_PHASE_RLP_PREFIX_VALUE] ACC_BYTESIZE POWER BIT [ACC 1] [ACC 2] LC LIMB nBYTES)
+                  (rlpPrefixOfByteString [INPUT 1]
+                                         CT
+                                         nSTEP
+                                         DONE
+                                         IS_PHASE_RLP_PREFIX
+                                         ACC_BYTESIZE
+                                         POWER
+                                         BIT
+                                         [ACC 1]
+                                         [ACC 2]
+                                         LC
+                                         LIMB
+                                         nBYTES)
                   (if-eq DONE 1 (eq! PHASE_END 1)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -418,23 +527,37 @@
 ;;    4.2 Phase 1, 2, 3, 4, 5 , 6 , 8 : RLP(integer))  ;;
 ;;                                                     ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defconstraint phaseInteger (:guard (+ (reduce + (for i [2 : 7] [PHASE i]))
-      [PHASE RLP_TXN_PHASE_VALUE_VALUE]))
+(defun (flag-sum-integer-phase)
+  (force-bool (+ IS_PHASE_CHAIN_ID
+                 IS_PHASE_NONCE
+                 IS_PHASE_GAS_PRICE
+                 IS_PHASE_MAX_PRIORITY_FEE_PER_GAS
+                 IS_PHASE_MAX_FEE_PER_GAS
+                 IS_PHASE_GAS_LIMIT
+                 IS_PHASE_VALUE)))
+
+(defun (flag-sum-integer-phase-in-8-rows)
+  (force-bool (- (flag-sum-integer-phase) IS_PHASE_VALUE)))
+
+(defconstraint phaseInteger (:guard (flag-sum-integer-phase))
   (begin (if-zero [INPUT 1]
                   (begin (eq! nSTEP 1)
                          (eq! LIMB
                               (* RLP_PREFIX_INT_SHORT (^ 256 LLARGEMO)))
                          (eq! nBYTES 1))
                   (begin (eq! nSTEP
-                              (+ (* 8
-                                    (reduce + (for i [2 : 7] [PHASE i])))
-                                 (* LLARGE [PHASE RLP_TXN_PHASE_VALUE_VALUE])))
+                              (+ (* 8 (flag-sum-integer-phase-in-8-rows)) (* LLARGE IS_PHASE_VALUE)))
                          (rlpPrefixInt [INPUT 1] CT nSTEP DONE [BYTE 1] [ACC 1] ACC_BYTESIZE POWER BIT BIT_ACC LIMB LC nBYTES)
                          (if-eq DONE 1 (limbShifting [INPUT 1] POWER ACC_BYTESIZE LIMB nBYTES))))
          (if-eq DONE 1
                 (begin (eq! PHASE_END 1)
-                       (if-eq (+ [PHASE RLP_TXN_PHASE_NONCE_VALUE] [PHASE RLP_TXN_PHASE_GAS_PRICE_VALUE] [PHASE RLP_TXN_PHASE_MAX_FEE_PER_GAS_VALUE] [PHASE RLP_TXN_PHASE_GAS_LIMIT_VALUE] [PHASE RLP_TXN_PHASE_VALUE_VALUE]) 1 (eq! DATA_LO [INPUT 1]))
-                       (if-eq [PHASE RLP_TXN_PHASE_MAX_PRIORITY_FEE_PER_GAS_VALUE] 1
+                       (if-eq (+ IS_PHASE_NONCE
+                                 IS_PHASE_GAS_PRICE
+                                 IS_PHASE_MAX_FEE_PER_GAS
+                                 IS_PHASE_GAS_LIMIT
+                                 IS_PHASE_VALUE) 1
+                              (eq! DATA_LO [INPUT 1]))
+                       (if-eq IS_PHASE_MAX_PRIORITY_FEE_PER_GAS 1
                               (eq! (next DATA_HI) [INPUT 1]))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -442,7 +565,7 @@
 ;;    4.3 Phase 7 : Address    ;;
 ;;                             ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defconstraint phaseTo (:guard [PHASE RLP_TXN_PHASE_TO_VALUE])
+(defconstraint phaseTo (:guard IS_PHASE_TO)
   (begin (rlpAddressConstraints [INPUT 1] [INPUT 2] CT)
          (if-eq DONE 1
                 (begin (eq! PHASE_END 1)
@@ -457,7 +580,7 @@
 ;;    4.4 Phase 9 : Data  ;;
 ;;                             ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defconstraint phaseData-indexdata-update (:guard [PHASE RLP_TXN_PHASE_DATA_VALUE])
+(defconstraint phaseData-indexdata-update (:guard IS_PHASE_DATA)
   (if-eq-else IS_PREFIX 1
               (vanishes! INDEX_DATA)
               (if-zero (+ (prev IS_PREFIX)
@@ -466,16 +589,16 @@
                        (did-inc! INDEX_DATA 1)
                        (remained-constant! INDEX_DATA))))
 
-(defconstraint phaseData-nolccorrection-noend (:guard [PHASE RLP_TXN_PHASE_DATA_VALUE])
+(defconstraint phaseData-nolccorrection-noend (:guard IS_PHASE_DATA)
   (if-zero (* LC_CORRECTION (- 1 IS_PREFIX))
            (vanishes! PHASE_END)))
 
-(defconstraint phaseData-endphase (:guard [PHASE RLP_TXN_PHASE_DATA_VALUE])
+(defconstraint phaseData-endphase (:guard IS_PHASE_DATA)
   (if-zero (+ IS_PREFIX (- 1 LC_CORRECTION) (- 1 DONE))
            (eq! PHASE_END 1)))
 
-(defconstraint phaseData-firstrow-initialisation (:guard [PHASE RLP_TXN_PHASE_DATA_VALUE])
-  (if-zero (prev [PHASE RLP_TXN_PHASE_DATA_VALUE])
+(defconstraint phaseData-firstrow-initialisation (:guard IS_PHASE_DATA)
+  (if-zero (prev IS_PHASE_DATA)
            (begin (eq! IS_PREFIX 1)
                   (if-zero PHASE_SIZE
                            (eq! nSTEP 1)
@@ -483,7 +606,7 @@
                   (eq! DATA_HI DATA_GAS_COST)
                   (eq! DATA_LO PHASE_SIZE))))
 
-(defconstraint phaseData-trivialcase (:guard [PHASE RLP_TXN_PHASE_DATA_VALUE])
+(defconstraint phaseData-trivialcase (:guard IS_PHASE_DATA)
   (if-not-zero (* IS_PREFIX (- 8 nSTEP))
                (begin (eq! LIMB
                            (* RLP_PREFIX_INT_SHORT (^ 256 LLARGEMO)))
@@ -493,7 +616,7 @@
                                     (- 1 (next LC_CORRECTION))))
                       (eq! (next nSTEP) 1))))
 
-(defconstraint phaseData-rlpprefix (:guard [PHASE RLP_TXN_PHASE_DATA_VALUE])
+(defconstraint phaseData-rlpprefix (:guard IS_PHASE_DATA)
   (if-not-zero (* IS_PREFIX (- nSTEP 1))
                (begin (will-remain-constant! PHASE_SIZE)
                       (will-remain-constant! DATA_GAS_COST)
@@ -523,7 +646,7 @@
                                                                 CT
                                                                 nSTEP
                                                                 DONE
-                                                                [PHASE RLP_TXN_PHASE_RLP_PREFIX_VALUE]
+                                                                IS_PHASE_RLP_PREFIX
                                                                 ACC_BYTESIZE
                                                                 POWER
                                                                 BIT
@@ -538,7 +661,7 @@
                       (if-eq DONE 1
                              (vanishes! (+ (next IS_PREFIX) (next LC_CORRECTION)))))))
 
-(defconstraint phaseData-dataconcatenation (:guard [PHASE RLP_TXN_PHASE_DATA_VALUE])
+(defconstraint phaseData-dataconcatenation (:guard IS_PHASE_DATA)
   (if-zero (+ IS_PREFIX LC_CORRECTION)
            (begin (eq! nSTEP LLARGE)
                   (if-not-zero PHASE_SIZE
@@ -572,17 +695,17 @@
 ;;    4.5 Phase 10 : AccessList  ;;
 ;;                             ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defconstraint phaseAccessList-stillphase-noend (:guard [PHASE RLP_TXN_PHASE_ACCESS_LIST_VALUE])
+(defconstraint phaseAccessList-stillphase-noend (:guard IS_PHASE_ACCESS_LIST)
   (if-not-zero PHASE_SIZE
                (vanishes! PHASE_END)))
 
-(defconstraint phaseAccessList-endphase (:guard [PHASE RLP_TXN_PHASE_ACCESS_LIST_VALUE])
+(defconstraint phaseAccessList-endphase (:guard IS_PHASE_ACCESS_LIST)
   (if-zero (+ PHASE_SIZE (- 1 DONE))
            (eq! PHASE_END 1)))
 
 ;; 4.5.2.3
-(defconstraint phaseAccessList-firstrow (:guard [PHASE RLP_TXN_PHASE_ACCESS_LIST_VALUE])
-  (if-zero (prev [PHASE RLP_TXN_PHASE_ACCESS_LIST_VALUE])
+(defconstraint phaseAccessList-firstrow (:guard IS_PHASE_ACCESS_LIST)
+  (if-zero (prev IS_PHASE_ACCESS_LIST)
            (begin (eq! DATA_HI nKEYS)
                   (eq! DATA_LO nADDR)
                   (vanishes! (+ (- 1 IS_PREFIX) [DEPTH 1] [DEPTH 2]))
@@ -594,25 +717,49 @@
                                   (eq! nBYTES 1))
                            (eq! nSTEP 8)))))
 
-(defconstraint phaseAccessList-rlpprefix (:guard [PHASE RLP_TXN_PHASE_ACCESS_LIST_VALUE])
+(defconstraint phaseAccessList-rlpprefix (:guard IS_PHASE_ACCESS_LIST)
   (if-not-zero (* (- 1 [DEPTH 1]) nADDR)
-               (begin (rlpPrefixOfByteString [INPUT 1] CT nSTEP DONE [PHASE RLP_TXN_PHASE_ACCESS_LIST_VALUE] ACC_BYTESIZE POWER BIT [ACC 1] [ACC 2] LC LIMB nBYTES)
+               (begin (rlpPrefixOfByteString [INPUT 1]
+                                             CT
+                                             nSTEP
+                                             DONE
+                                             IS_PHASE_ACCESS_LIST
+                                             ACC_BYTESIZE
+                                             POWER
+                                             BIT
+                                             [ACC 1]
+                                             [ACC 2]
+                                             LC
+                                             LIMB
+                                             nBYTES)
                       (if-eq DONE 1
                              (begin (eq! (next IS_PREFIX) 1)
                                     (eq! (next [DEPTH 1]) 1)
                                     (vanishes! (next [DEPTH 2])))))))
 
-(defconstraint phaseAccessList-rlpprefix-tupleitem (:guard [PHASE RLP_TXN_PHASE_ACCESS_LIST_VALUE])
+(defconstraint phaseAccessList-rlpprefix-tupleitem (:guard IS_PHASE_ACCESS_LIST)
   (if-not-zero (* IS_PREFIX [DEPTH 1] (- 1 [DEPTH 2]))
                (begin (eq! [INPUT 1] ACCESS_TUPLE_BYTESIZE)
                       (eq! nSTEP 8)
-                      (rlpPrefixOfByteString [INPUT 1] CT nSTEP DONE [PHASE RLP_TXN_PHASE_ACCESS_LIST_VALUE] ACC_BYTESIZE POWER BIT [ACC 1] [ACC 2] LC LIMB nBYTES)
+                      (rlpPrefixOfByteString [INPUT 1]
+                                             CT
+                                             nSTEP
+                                             DONE
+                                             IS_PHASE_ACCESS_LIST
+                                             ACC_BYTESIZE
+                                             POWER
+                                             BIT
+                                             [ACC 1]
+                                             [ACC 2]
+                                             LC
+                                             LIMB
+                                             nBYTES)
                       (if-eq DONE 1
                              (begin (vanishes! (next IS_PREFIX))
                                     (eq! (next [DEPTH 1]) 1)
                                     (vanishes! (next [DEPTH 2])))))))
 
-(defconstraint phaseAccessList-rlpAddr (:guard [PHASE RLP_TXN_PHASE_ACCESS_LIST_VALUE])
+(defconstraint phaseAccessList-rlpAddr (:guard IS_PHASE_ACCESS_LIST)
   (if-not-zero (* (- 1 IS_PREFIX) [DEPTH 1] (- 1 [DEPTH 2]))
                (begin (eq! [INPUT 1] ADDR_HI)
                       (eq! [INPUT 2] ADDR_LO)
@@ -622,7 +769,7 @@
                              (eq! 1
                                   (* (next IS_PREFIX) (next [DEPTH 1]) (next [DEPTH 2])))))))
 
-(defconstraint phaseAccessList-rlpprefix-listStoKeys (:guard [PHASE RLP_TXN_PHASE_ACCESS_LIST_VALUE])
+(defconstraint phaseAccessList-rlpprefix-listStoKeys (:guard IS_PHASE_ACCESS_LIST)
   (if-not-zero (* IS_PREFIX [DEPTH 1] [DEPTH 2])
                (if-zero nKEYS_PER_ADDR
                         (begin (eq! nSTEP 1)
@@ -635,7 +782,7 @@
                                                       CT
                                                       nSTEP
                                                       DONE
-                                                      [PHASE RLP_TXN_PHASE_ACCESS_LIST_VALUE]
+                                                      IS_PHASE_ACCESS_LIST
                                                       ACC_BYTESIZE
                                                       POWER
                                                       BIT
@@ -645,11 +792,11 @@
                                                       LIMB
                                                       nBYTES)))))
 
-(defconstraint phaseAccessList-rlp-StoKeys (:guard [PHASE RLP_TXN_PHASE_ACCESS_LIST_VALUE])
+(defconstraint phaseAccessList-rlp-StoKeys (:guard IS_PHASE_ACCESS_LIST)
   (if-not-zero (* (- 1 IS_PREFIX) [DEPTH 1] [DEPTH 2])
                (rlpStorageKeyConstraints [INPUT 1] [INPUT 2] CT)))
 
-(defconstraint phaseAccessList-depth2loopintrication (:guard [PHASE RLP_TXN_PHASE_ACCESS_LIST_VALUE])
+(defconstraint phaseAccessList-depth2loopintrication (:guard IS_PHASE_ACCESS_LIST)
   (if-not-zero (* [DEPTH 2] DONE)
                (if-not-zero nKEYS_PER_ADDR
                             (vanishes! (+ (next IS_PREFIX)
@@ -661,7 +808,7 @@
                                                               (- 1 (next [DEPTH 1]))
                                                               (next [DEPTH 2]))))))))
 
-(defconstraint phaseAccessList-sizeupdate (:guard [PHASE RLP_TXN_PHASE_ACCESS_LIST_VALUE])
+(defconstraint phaseAccessList-sizeupdate (:guard IS_PHASE_ACCESS_LIST)
   (if-zero [DEPTH 1]
            (will-remain-constant! PHASE_SIZE)
            (begin (did-dec! PHASE_SIZE (* LC nBYTES))
@@ -674,14 +821,14 @@
                                             (* (- 1 IS_PREFIX) [DEPTH 2])))))))
 
 ;; 4.5.2.14
-(defconstraint phaseAccessList-nKeysperAddr-update (:guard [PHASE RLP_TXN_PHASE_ACCESS_LIST_VALUE])
+(defconstraint phaseAccessList-nKeysperAddr-update (:guard IS_PHASE_ACCESS_LIST)
   (if-zero (+ CT
               (* IS_PREFIX (- 1 [DEPTH 2])))
            (did-dec! nKEYS_PER_ADDR
                      (* (- 1 IS_PREFIX) [DEPTH 2]))))
 
 ;; 4.5.2.15
-(defconstraint phaseAccessList-updateAddrLookUp (:guard [PHASE RLP_TXN_PHASE_ACCESS_LIST_VALUE])
+(defconstraint phaseAccessList-updateAddrLookUp (:guard IS_PHASE_ACCESS_LIST)
   (if-zero (+ [DEPTH 2]
               (- (prev nADDR) nADDR))
            (begin (remained-constant! ADDR_HI)
@@ -692,15 +839,15 @@
 ;;    4.6 Phase 11 : Beta / w  ;;
 ;;                             ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defconstraint phaseBeta-firstrow (:guard [PHASE RLP_TXN_PHASE_BETA_VALUE])
-  (if-zero (prev [PHASE RLP_TXN_PHASE_BETA_VALUE])
+(defconstraint phaseBeta-firstrow (:guard IS_PHASE_BETA)
+  (if-zero (prev IS_PHASE_BETA)
            (begin (vanishes! (+ (- 1 LT) LX))
                   (eq! nSTEP 8))))
 
 (defun (w-minus-two-seven)
   (- [INPUT 1] 27))
 
-(defconstraint phaseBeta-rlp-w (:guard [PHASE RLP_TXN_PHASE_BETA_VALUE])
+(defconstraint phaseBeta-rlp-w (:guard IS_PHASE_BETA)
   (if-not-zero (* LT (- 1 LX))
                (begin (rlpPrefixInt [INPUT 1] CT nSTEP DONE [BYTE 1] [ACC 1] ACC_BYTESIZE POWER BIT BIT_ACC LIMB LC nBYTES)
                       (if-eq DONE 1
@@ -713,7 +860,7 @@
                                                                      (- 1 (next LX))
                                                                      (- 1 (next IS_PREFIX)))))))))))
 
-(defconstraint phaseBeta-rlp-beta (:guard [PHASE RLP_TXN_PHASE_BETA_VALUE])
+(defconstraint phaseBeta-rlp-beta (:guard IS_PHASE_BETA)
   (if-not-zero (* LX IS_PREFIX)
                (begin (eq! nSTEP 8)
                       (rlpPrefixInt [INPUT 1] CT nSTEP DONE [BYTE 1] [ACC 1] ACC_BYTESIZE POWER BIT BIT_ACC LIMB LC nBYTES)
@@ -738,7 +885,7 @@
 ;;    4.7 Phase 12 : y   ;;
 ;;                       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defconstraint phaseY (:guard [PHASE RLP_TXN_PHASE_Y_VALUE])
+(defconstraint phaseY (:guard IS_PHASE_Y)
   (begin (is-binary [INPUT 1])
          (eq! nSTEP 1)
          (if-zero [INPUT 1]
@@ -754,13 +901,13 @@
 ;;    4.8 Phase 13-14 : r & s  ;;
 ;;                             ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defconstraint phaseRandS (:guard (+ [PHASE RLP_TXN_PHASE_R_VALUE] [PHASE RLP_TXN_PHASE_S_VALUE]))
+(defconstraint phaseRandS (:guard (+ IS_PHASE_R IS_PHASE_S))
   (begin (if-zero (+ (~ [INPUT 1]) (~ [INPUT 2]))
                   (begin (eq! nSTEP 1)
                          (eq! LIMB
                               (* RLP_PREFIX_INT_SHORT (^ 256 LLARGEMO)))
                          (eq! nBYTES 1))
-                  (begin (eq! nSTEP 16)
+                  (begin (eq! nSTEP LLARGE)
                          (rlpPrefixLongInt [INPUT 1] [INPUT 2] CT nSTEP DONE [BYTE 1] [BYTE 1] [ACC 1] [ACC 2] ACC_BYTESIZE POWER BIT BIT_ACC LIMB LC nBYTES)))
          (if-eq DONE 1 (eq! PHASE_END 1))))
 

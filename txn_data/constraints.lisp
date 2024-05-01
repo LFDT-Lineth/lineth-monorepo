@@ -1,8 +1,13 @@
 (module txnData)
 
+(defpurefun (if-not-eq A B then else)
+  (if-not-zero (- A B)
+               then
+               else))
+
 ;; sum of transaction type flags
 (defun (tx-type-sum)
-  (+ TYPE0 TYPE1 TYPE2))
+  (force-bool (+ TYPE0 TYPE1 TYPE2)))
 
 ;; constraint imposing that STAMP[i + 1] ∈ { STAMP[i], 1 + STAMP[i] }
 (defpurefun (stamp-progression STAMP)
@@ -15,6 +20,11 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 (defconstraint first-row (:domain {0})
   (vanishes! ABS))
+
+(defconstraint padding-is-padding ()
+  (if-zero ABS
+           (begin (debug (vanishes! CT))
+                  (vanishes! (weight_sum))))) ;;TODO: useless, but in the spec
 
 (defconstraint padding ()
   (if-zero ABS
@@ -29,18 +39,25 @@
                (vanishes! (next CT))))
 
 (defconstraint heartbeat (:guard ABS)
-  (begin (= (tx-type-sum) 1)
-         (if-not-zero TYPE0
-                      (if-eq-else CT (- NB_ROWS_TYPE_0 1) (will-inc! ABS 1) (will-inc! CT 1)))
-         (if-not-zero TYPE1
-                      (if-eq-else CT (- NB_ROWS_TYPE_1 1) (will-inc! ABS 1) (will-inc! CT 1)))
-         (if-not-zero TYPE2
-                      (if-eq-else CT (- NB_ROWS_TYPE_2 1) (will-inc! ABS 1) (will-inc! CT 1)))))
+  (begin (eq! (tx-type-sum) 1)
+         (if-zero TYPE0
+                  (if-eq-else CT (- (+ NB_ROWS_TYPE_1 IS_LAST_TX_OF_BLOCK) 1)
+                              (will-inc! ABS 1)
+                              (will-inc! CT 1))
+                  (if-eq-else CT (- (+ NB_ROWS_TYPE_0 IS_LAST_TX_OF_BLOCK) 1)
+                              (will-inc! ABS 1)
+                              (will-inc! CT 1)))))
 
 (defconstraint final-row (:domain {-1})
-  (begin (= ABS ABS_MAX)
-         (= BTC BTC_MAX)
-         (= REL REL_MAX)))
+  (begin (eq! ABS ABS_MAX)
+         (eq! BTC BTC_MAX)
+         (eq! REL REL_MAX)
+         (if-not-zero TYPE0
+                      (eq! CT NB_ROWS_TYPE_0))
+         (if-not-zero TYPE1
+                      (eq! CT NB_ROWS_TYPE_1))
+         (if-not-zero TYPE2
+                      (eq! CT NB_ROWS_TYPE_2))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                       ;;
@@ -51,34 +68,40 @@
   (if-not-zero CT
                (eq! X (prev X))))
 
+(defun (weight_sum)
+  (+ (* (^ 2 0) IS_DEP)
+     (* (^ 2 1) TYPE0)
+     (* (^ 2 2) TYPE1)
+     (* (^ 2 3) TYPE2)
+     (* (^ 2 4) REQUIRES_EVM_EXECUTION)
+     (* (^ 2 5) COPY_TXCD)
+     (* (^ 2 6) STATUS_CODE)))
+
 (defconstraint constancies ()
-  (begin (transaction-constant BTC)
-         (transaction-constant REL)
-         (transaction-constant FROM_HI)
+  (begin (transaction-constant FROM_HI)
          (transaction-constant FROM_LO)
          (transaction-constant NONCE)
-         (transaction-constant IBAL)
          (transaction-constant VALUE)
+         (transaction-constant GLIM)
          (transaction-constant TO_HI)
          (transaction-constant TO_LO)
-         (transaction-constant IS_DEP)
-         (transaction-constant GLIM)
-         (transaction-constant IGAS)
-         (transaction-constant GPRC)
-         (transaction-constant BASEFEE)
          (transaction-constant CALL_DATA_SIZE)
          (transaction-constant INIT_CODE_SIZE)
-         (transaction-constant TYPE0)
-         (transaction-constant TYPE1)
-         (transaction-constant TYPE2)
-         (transaction-constant REQ_EVM)
-         (transaction-constant COPY_TXCD_AT_INITIALISATION)
-         (transaction-constant LEFTOVER_GAS)
-         (transaction-constant REF_CNT)
-         (transaction-constant REF_AMT)
+         (debug (transaction-constant IGAS))
+         (debug (transaction-constant PRIORITY_FEE_PER_GAS))
+         (debug (transaction-constant GAS_PRICE))
+         (transaction-constant BASEFEE)
+         (transaction-constant COINBASE_HI)
+         (transaction-constant COINBASE_LO)
          (transaction-constant CUM_GAS)
-         (transaction-constant STATUS_CODE)
-         (transaction-constant CFI)))
+         (transaction-constant CFI)
+         (transaction-constant GAS_LEFTOVER)
+         (transaction-constant REF_CNT)
+         (transaction-constant REFUND_EFFECTIVE)
+         (transaction-constant IBAL)
+         (transaction-constant BTC)
+         (transaction-constant REL)
+         (transaction-constant (weight_sum))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                                                ;;
@@ -86,12 +109,15 @@
 ;;                                                ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defconstraint total-number-constancies ()
-  (begin (if-zero ABS
-                  (begin (vanishes! ABS_MAX)
-                         (vanishes! BTC_MAX)
-                         (vanishes! REL_MAX))
-                  (begin (will-remain-constant! ABS_MAX)
-                         (will-remain-constant! BTC_MAX)))
+  (begin (if-not-zero ABS
+                      (begin (will-remain-constant! ABS_MAX)
+                             (will-remain-constant! BTC_MAX))
+                      ;; (begin (vanishes! ABS_MAX)
+                      ;;        (vanishes! BTC_MAX)
+                      ;;        (vanishes! REL_MAX)
+                      ;;        (vanishes! BTC)
+                      ;;        (vanishes! REL))
+                      )
          (if-not-zero (will-inc! BTC 1)
                       (will-remain-constant! REL_MAX))))
 
@@ -106,31 +132,18 @@
                                       (begin (eq! (next BTC) 1)
                                              (eq! (next REL) 1))))
                   (if-not-zero (will-remain-constant! ABS)
-                               (if-not-zero (- REL_MAX REL)
-                                            (begin (will-remain-constant! BTC)
-                                                   (will-inc! REL 1))
-                                            (begin (will-inc! BTC 1)
-                                                   (will-eq! REL 1)))))))
+                               (if-not-eq REL_MAX
+                                          REL
+                                          (begin (will-remain-constant! BTC)
+                                                 (will-inc! REL 1))
+                                          (begin (will-inc! BTC 1)
+                                                 (will-eq! REL 1)))))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;                          ;;
-;;    2.5 Cumulative gas    ;;
-;;                          ;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;TODO reenable this constraint
-;;(defconstraint cumulative-gas ()
-;;  (begin (if-zero ABS
-;;                  (vanishes! CUM_GAS))
-;;         (if-not-zero (will-remain-constant! BTC)
-;;                      ; BTC[i + 1] != BTC[i]
-;;                      (eq! (next CUMULATIVE_CONSUMED_GAS)
-;;                           (next (- GAS_LIMIT REFUND_AMOUNT))))
-;;         (if-not-zero (and (will-inc! BTC 1) (will-remain-constant! ABS))
-;;                      ; BTC[i + 1] != 1 + BTC[i] && ABS[i+1] != ABS[i] i.e. BTC[i + 1] == BTC[i] && ABS[i+1] == ABS[i] +1
-;;                      (eq! (next CUM_GAS)
-;;                           (+ CUM_GAS
-;;                              (next (- GAS_LIMIT REFUND_AMOUNT)))))))
-;;
+(defconstraint set-last-tx-of-block-flag (:guard ABS_TX_NUM)
+  (if-eq-else REL_TX_NUM REL_TX_NUM_MAX
+              (eq! IS_LAST_TX_OF_BLOCK 1)
+              (vanishes! IS_LAST_TX_OF_BLOCK)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;
 ;;                   ;;
 ;;    2.6 Aliases    ;;
@@ -205,22 +218,18 @@
                       (= (shift PHASE_RLP_TXN 7) TYPE_2_RLP_TXN_PHASE_NUMBER_7))))
 
 (defun (data_transfer)
-  (begin (= (tx_type) (+ TYPE1 TYPE2 TYPE2))
-         (= (nonce) NONCE)
-         (= (is_dep) IS_DEP)
-         (= (value) VALUE)
-         (= (optional_to_addr_hi)
-            (* (- 1 IS_DEP) TO_HI))
-         (= (optional_to_addr_lo)
-            (* (- 1 IS_DEP) TO_LO))
-         (if-zero IS_DEP
-                  ;; IS_DEP == 0
-                  (begin (= (data_size) CALL_DATA_SIZE)
-                         (vanishes! INIT_CODE_SIZE))
-                  ;; IS_DEP != 0
-                  (begin (vanishes! CALL_DATA_SIZE)
-                         (= (data_size) INIT_CODE_SIZE)
-                         (= (gas_limit) GAS_LIMIT)))))
+  (begin (eq! (tx_type)
+              (+ TYPE1 (* 2 TYPE2))) ;;(+ (* 0 TYPE0) (* 1 TYPE1) (* 2 TYPE2))
+         (eq! (nonce) NONCE)
+         (eq! (is_dep) IS_DEP)
+         (eq! (value) VALUE)
+         (eq! (optional_to_addr_hi)
+              (* (- 1 IS_DEP) TO_HI))
+         (eq! (optional_to_addr_lo)
+              (* (- 1 IS_DEP) TO_LO))
+         (eq! (* (data_size) (- 1 IS_DEP))
+              CALL_DATA_SIZE)
+         (eq! (* (data_size) IS_DEP) INIT_CODE_SIZE)))
 
 (defun (vanishing_data_cells)
   (begin (vanishes! (shift OUTGOING_HI 0))
@@ -236,7 +245,43 @@
 (defconstraint verticalization (:guard (first-row-trigger))
   (begin (setting_phase_numbers)
          (data_transfer)
-         (vanishing_data_cells)))
+         (debug (vanishing_data_cells))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                       ;;
+;;    2.9 EUC and WCP    ;;
+;;                       ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defconstraint euc-and-wcp-exclusivity ()
+  (vanishes! (* EUC_FLAG WCP_FLAG)))
+
+(defun (small-call-to-LT row arg1 arg2)
+  (begin (eq! (shift WCP_FLAG row) 1)
+         (eq! (shift ARG_ONE_LO row) arg1)
+         (eq! (shift ARG_TWO_LO row) arg2)
+         (eq! (shift INST row) EVM_INST_LT)))
+
+(defun (small-call-to-ISZERO row arg1)
+  (begin (eq! (shift WCP_FLAG row) 1)
+         (eq! (shift ARG_ONE_LO row) arg1)
+         (eq! (shift INST row) EVM_INST_ISZERO)))
+
+(defun (call-to-EUC row arg1 arg2)
+  (begin (eq! (shift EUC_FLAG row) 1)
+         (eq! (shift ARG_ONE_LO row) arg1)
+         (eq! (shift ARG_TWO_LO row) arg2)))
+
+(defun (small-call-to-LEQ row arg1 arg2)
+  (begin (eq! (shift WCP_FLAG row) 1)
+         (eq! (shift ARG_ONE_LO row) arg1)
+         (eq! (shift ARG_TWO_LO row) arg2)
+         (eq! (shift INST row) WCP_INST_LEQ)))
+
+(defun (result-must-be-false row)
+  (vanishes! (shift RES row)))
+
+(defun (result-must-be-true row)
+  (eq! (shift RES row) 1))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                       ;;
@@ -245,84 +290,77 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; row i
 (defun (sufficient_balance)
-  (begin (= WCP_ARG_ONE_LO IBAL)
-         (= WCP_ARG_TWO_LO
-            (+ (value) (* (max_fee) (gas_limit))))
-         (= WCP_INST EVM_INST_LT)
-         (vanishes! WCP_RES)))
+  (begin (small-call-to-LT 0
+                           INITIAL_BALANCE
+                           (+ (value) (* (max_fee) (gas_limit))))
+         (result-must-be-false 0)))
 
+;; row i + 1
 (defun (upfront_gas_cost_of_transaction)
   (if-not-zero TYPE0
                ;; TYPE0 = 1
-               (+ (data_cost) GAS_CONST_G_TRANSACTION (* (is_dep) GAS_CONST_G_TX_CREATE))
+               (legacy_upfront_gas_cost)
                ;; TYPE0 = 0
-               (+ (data_cost)
-                  GAS_CONST_G_TRANSACTION
-                  (* (is_dep) GAS_CONST_G_TX_CREATE)
-                  (* (num_addr) GAS_CONST_G_ACCESS_LIST_ADRESS)
-                  (* (num_keys) GAS_CONST_G_ACCESS_LIST_STORAGE))))
+               (access_upfront_gas_cost)))
 
-;; row i + 1
+(defun (legacy_upfront_gas_cost)
+  (+ (data_cost) GAS_CONST_G_TRANSACTION (* (is_dep) GAS_CONST_G_TX_CREATE)))
+
+(defun (access_upfront_gas_cost)
+  (+ (data_cost)
+     GAS_CONST_G_TRANSACTION
+     (* (is_dep) GAS_CONST_G_TX_CREATE)
+     (* (num_addr) GAS_CONST_G_ACCESS_LIST_ADRESS)
+     (* (num_keys) GAS_CONST_G_ACCESS_LIST_STORAGE)))
+
 (defun (sufficient_gas_limit)
-  (begin (= (shift WCP_ARG_ONE_LO 1) (gas_limit))
-         (= (shift WCP_ARG_TWO_LO 1) (upfront_gas_cost_of_transaction))
-         (= (shift WCP_INST 1) EVM_INST_LT)
-         (vanishes! (shift WCP_RES 1))))
-
-;; epsilon is the remainder in the euclidean division of [T_g - g'] by 2
-(defun (epsilon)
-  (- (gas_limit)
-     (+ LEFTOVER_GAS
-        (* (shift WCP_ARG_TWO_LO 2) 2))))
+  (begin (small-call-to-LT 1 (gas_limit) (upfront_gas_cost_of_transaction))
+         (result-must-be-false 1)))
 
 ;; row i + 2
+;; epsilon is the remainder in the euclidean division of [T_g - g'] by 2
+(defun (execution-gas-cost)
+  (- (gas_limit) GAS_LEFTOVER))
+
 (defun (upper_limit_for_refunds)
-  (begin (= (shift WCP_ARG_ONE_LO 2) (- (gas_limit) LEFTOVER_GAS))
-         ;;  (= (shift WCP_ARG_TWO_LO 2) ???) ;; unknown
-         (= (shift WCP_INST 2) EVM_INST_LT)
-         (vanishes! (shift WCP_RES 2))
-         (is-binary (epsilon))))
+  (begin (call-to-EUC 2 (execution-gas-cost) 2)))
+
+(defun (refund_limit)
+  (shift RES 2))
 
 ;; row i + 3
 (defun (effective_refund)
-  (begin (= (shift WCP_ARG_ONE_LO 3) REF_CNT)
-         (= (shift WCP_ARG_TWO_LO 3) (shift WCP_ARG_TWO_LO 2))
-         (= (shift WCP_INST 3) EVM_INST_LT)
-         ;;  (= (shift WCP_RES     3) ???) ;; unknown
-         ))
+  (small-call-to-LT 3 REF_CNT (refund_limit)))
+
+(defun (get_full_refund)
+  (force-bool (shift RES 3)))
 
 ;; row i + 4
 (defun (is-zero-call-data)
-  (begin (eq! (shift WCP_ARG_ONE_LO 4) CALL_DATA_SIZE)
-         (eq! (shift WCP_INST 4) EVM_INST_ISZERO)
-         (eq! COPY_TXCD_AT_INITIALISATION
-              (* REQUIRES_EVM_EXECUTION
-                 (- 1 (shift WCP_RES 4))))))
+  (small-call-to-ISZERO 4 (data_size)))
+
+(defun (nonzero_data_size)
+  (force-bool (- 1 (shift RES 4))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; applicable only to type 2 transactions ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; row i + 5
 (defun (type_2_comparing_max_fee_and_basefee)
-  (begin (= (shift WCP_ARG_ONE_LO 5) (max_fee))
-         (= (shift WCP_ARG_TWO_LO 5) BASEFEE)
-         (= (shift WCP_INST 5) EVM_INST_LT)
-         (= (shift WCP_RES 5) 0)))
+  (begin (small-call-to-LT 5 (max_fee) BASEFEE)
+         (result-must-be-false 5)))
 
 ;; row i + 6
 (defun (type_2_comparing_max_fee_and_max_priority_fee)
-  (begin (= (shift WCP_ARG_ONE_LO 6) (max_fee))
-         (= (shift WCP_ARG_TWO_LO 6) (max_priority_fee))
-         (= (shift WCP_INST 6) EVM_INST_LT)
-         (= (shift WCP_RES 6) 0)))
+  (begin (small-call-to-LT 6 (max_fee) (max_priority_fee))
+         (result-must-be-false 6)))
 
 ;; row i + 7
 (defun (type_2_computing_the_effective_gas_price)
-  (begin (= (shift WCP_ARG_ONE_LO 7) (max_fee))
-         (= (shift WCP_ARG_TWO_LO 7) (+ (max_priority_fee) BASEFEE))
-         (= (shift WCP_INST 7) EVM_INST_LT)
-         ;;  (= (shift WCP_RES     6) ???) ;; unknown
-         ))
+  (small-call-to-LT 7 (max_fee) (+ (max_priority_fee) BASEFEE)))
+
+(defun (get_full_tip)
+  (force-bool (- 1 (shift RES 7))))
 
 (defconstraint comparisons (:guard (first-row-trigger))
   (begin (sufficient_balance)
@@ -335,30 +373,44 @@
                              (type_2_comparing_max_fee_and_max_priority_fee)
                              (type_2_computing_the_effective_gas_price)))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;                                          ;;
-;;    2.11 Gas and gas price constraints    ;;
-;;                                          ;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defconstraint gas_and_gas_price (:guard (first-row-trigger))
-  (begin  ;; constraining INIT_GAS
-         (= IGAS
-            (- (gas_limit) (shift WCP_ARG_TWO_LO 1)))
-         ;; constraining REFUND_AMOUNT
-         (if-zero (shift WCP_RES 3)
-                  (= REF_AMT
-                     (+ LEFTOVER_GAS (shift WCP_ARG_TWO_LO 2)))
-                  (= REF_AMT (+ LEFTOVER_GAS REF_CNT)))
-         ;; constraining GAS_PRICE
-         (if-zero TYPE2
-                  (= GAS_PRICE (gas_price))
-                  (if-zero (shift WCP_RES 7)
-                           (= GAS_PRICE (+ (max_priority_fee) BASEFEE))
-                           (= GAS_PRICE (max_fee))))))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                                    ;;
+;;    2.11 Setting certain variables  ;;
+;;                                    ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defconstraint setting-gas-init (:guard (first-row-trigger))
+  (if-not-zero TYPE0
+               (eq! GAS_INITIALLY_AVAILABLE (- (gas_limit) (legacy_upfront_gas_cost)))
+               (eq! GAS_INITIALLY_AVAILABLE (- (gas_limit) (access_upfront_gas_cost)))))
+
+(defconstraint setting-gas-price (:guard (first-row-trigger))
+  (if-zero TYPE2
+           (eq! GAS_PRICE (gas_price))
+           (if-not-zero (get_full_tip)
+                        (eq! GAS_PRICE (+ BASEFEE (max_priority_fee)))
+                        (eq! GAS_PRICE (max_fee)))))
+
+(defconstraint setting-priority-fee-per-gas (:guard (first-row-trigger))
+  (if-zero TYPE2
+           (eq! PRIORITY_FEE_PER_GAS (gas_price))
+           (eq! PRIORITY_FEE_PER_GAS (- (gas_price) BASEFEE))))
+
+(defconstraint setting-refund-effective (:guard (first-row-trigger))
+  (if-zero (get_full_refund)
+           (eq! REFUND_EFFECTIVE (+ GAS_LEFTOVER (refund_limit)))
+           (eq! REFUND_EFFECTIVE (+ GAS_LEFTOVER REFUND_COUNTER))))
+
+(defconstraint partially-setting-requires-evm (:guard (first-row-trigger))
+  (if-not-zero IS_DEP
+               (eq! REQUIRES_EVM_EXECUTION (nonzero_data_size))))
+
+(defconstraint setting-copy-txcd (:guard (first-row-trigger))
+  (eq! COPY_TXCD
+       (* (- 1 IS_DEP) REQUIRES_EVM_EXECUTION (nonzero_data_size))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                                           ;;
-;;    2.11 Verticalisation for RlpTxnRcpt    ;;
+;;    2.12 Verticalisation for RlpTxnRcpt    ;;
 ;;                                           ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defconstraint verticalisation-rlp-txn-rcpt (:guard (first-row-trigger))
@@ -367,6 +419,32 @@
          (eq! (next PHASE_RLP_TXNRCPT) RLP_RCPT_SUBPHASE_ID_STATUS_CODE)
          (eq! (next OUTGOING_RLP_TXNRCPT) STATUS_CODE)
          (eq! (shift PHASE_RLP_TXNRCPT 2) RLP_RCPT_SUBPHASE_ID_CUMUL_GAS)
-         (eq! (shift OUTGOING_RLP_TXNRCPT 2) CUMULATIVE_CONSUMED_GAS)))
+         (eq! (shift OUTGOING_RLP_TXNRCPT 2) GAS_CUMULATIVE)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                          ;;
+;;    2.13 Cumulative gas   ;;
+;;                          ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defconstraint cumulative-gas ()
+  (begin (if-zero ABS
+                  (vanishes! GAS_CUMULATIVE))
+         (if-not-zero (will-remain-constant! BTC)
+                      ; BTC[i + 1] != BTC[i]
+                      (eq! (next GAS_CUMULATIVE)
+                           (next (- GAS_LIMIT REFUND_EFFECTIVE))))
+         (if-not-zero (and (will-inc! BTC 1) (will-remain-constant! ABS))
+                      ; BTC[i + 1] != 1 + BTC[i] && ABS[i+1] != ABS[i] i.e. BTC[i + 1] == BTC[i] && ABS[i+1] == ABS[i] +1
+                      (eq! (next GAS_CUMULATIVE)
+                           (+ GAS_CUMULATIVE
+                              (next (- GAS_LIMIT REFUND_EFFECTIVE)))))))
+
+(defconstraint cumulative-gas-comparaison (:guard IS_LAST_TX_OF_BLOCK)
+  (if-not-zero (- ABS_TX_NUM (prev ABS_TX_NUM))
+               (if-zero TYPE0
+                        (begin (small-call-to-LEQ NB_ROWS_TYPE_1 GAS_CUMULATIVE BLOCK_GAS_LIMIT)
+                               (result-must-be-true NB_ROWS_TYPE_1))
+                        (begin (small-call-to-LEQ NB_ROWS_TYPE_0 GAS_CUMULATIVE BLOCK_GAS_LIMIT)
+                               (result-must-be-true NB_ROWS_TYPE_0)))))
 
 

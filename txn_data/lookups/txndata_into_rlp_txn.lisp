@@ -4,7 +4,7 @@
   (
     rlptxn.ABS_TX_NUM_INFINY
     rlptxn.ABS_TX_NUM
-    rlptxn.PHASE_ID
+    rlptxn.PHASE
     rlptxn.DATA_HI
     rlptxn.DATA_LO
   )
