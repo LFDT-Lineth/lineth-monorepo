@@ -75,7 +75,7 @@ TABLES := reference_tables/binRT.lisp \
 
 TRM := trm
 
-TXN_DATA := txn_data 
+TXN_DATA := txndata
 
 WCP := wcp
 
