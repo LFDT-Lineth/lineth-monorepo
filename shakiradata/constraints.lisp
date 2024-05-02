@@ -117,12 +117,12 @@
                (remained-constant! X)))
 
 (defconstraint stamp-constancies ()
-  (begin (ripsha-stamp-constancy ID)
-         (ripsha-stamp-constancy TOTAL_SIZE)))
+  (ripsha-stamp-constancy ID))
 
 (defconstraint index-constancies ()
   (begin (counter-constancy INDEX (phase-sum))
-         (counter-constancy INDEX INDEX_MAX)))
+         (counter-constancy INDEX INDEX_MAX)
+         (counter-constancy INDEX TOTAL_SIZE)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                                  ;;
@@ -206,12 +206,12 @@
 (defconstraint updating-nBYTES_ACC-and-ensuring-full-limbs ()
   (if-eq (prev (is-data)) 1
          (if-eq (is-data) 1
-                (begin (eq! nBYTES LLARGE)
+                (begin (eq! (prev nBYTES) LLARGE)
                        (eq! nBYTES_ACC
                             (+ (prev nBYTES_ACC) nBYTES))))))
 
 (defconstraint achieving-total-size ()
   (if-eq (prev (is-data)) 1
-         (if-eq (is-result) 1 (eq! nBYTES_ACC TOTAL_SIZE))))
-
+         (if-eq (is-result) 1
+                (prev (eq! nBYTES_ACC TOTAL_SIZE)))))
 
