@@ -11,6 +11,7 @@ ALU := alu/add/columns.lisp \
        alu/ext/columns.lisp \
        alu/ext/constraints.lisp \
        alu/mod/columns.lisp \
+	   alu/mod/constants.lisp \
        alu/mod/constraints.lisp \
        alu/mul/columns.lisp \
        alu/mul/constraints.lisp \

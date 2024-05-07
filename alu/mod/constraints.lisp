@@ -1,10 +1,5 @@
 (module mod)
 
-(defconst 
-  THETA                  18446744073709551616                     ;18446744073709551616 = 256^8
-  THETA2                 340282366920938463463374607431768211456  ;340282366920938463463374607431768211456 = 256^16
-  THETA_SQUARED_OVER_TWO 170141183460469231731687303715884105728) ;170141183460469231731687303715884105728 = (1/2)*THETA2
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;                              ;;;;
@@ -156,6 +151,16 @@
      (* THETA (H_2))
      (R_HI)))
 
+;; alisases for decoding inst
+(defun (flag_sum)
+  (force-bool (+ IS_SMOD IS_MOD IS_SDIV IS_DIV)))
+
+(defun (weight_sum)
+  (+ (* EVM_INST_SMOD IS_SMOD) (* EVM_INST_MOD IS_MOD) (* EVM_INST_SDIV IS_SDIV) (* EVM_INST_DIV IS_DIV)))
+
+(defun (signed_inst)
+  (force-bool (+ IS_SMOD IS_SDIV)))
+
 ;; bit decompositions of the most significant bytes
 (defun (bit-dec-msb1)
   (+ (* 128 (shift MSB_1 -7))
@@ -186,9 +191,39 @@
                                (= zHi yHi)
                                (= zHi (- THETA2 yHi))))))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                                ;;
+;;    5.5 instruction decoding    ;;
+;;                                ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defconstraint set-flag-sum ()
+  (eq! (flag_sum) (~ STAMP)))
+
+(defconstraint instruction-decoding ()
+  (eq! INST (weight_sum)))
+
+(defconstraint signed-inst ()
+  (eq! SIGNED (signed_inst)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                                ;;
+;;    5.6 OLI and MLI decoding    ;;
+;;                                ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defconstraint oli-and-mli-exclusivity ()
+  (eq! (force-bool (+ OLI MLI))
+       (flag_sum)))
+
+(defconstraint set-oli-and-mli (:guard STAMP)
+  (if-zero ARG_2_HI
+           (if-zero ARG_2_LO
+                    (eq! OLI 1)
+                    (eq! MLI 1))
+           (eq! MLI 1)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                     ;;
-;;    4.5 heartbeat    ;;
+;;    5.7 heartbeat    ;;
 ;;                     ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 (defconstraint first-row (:domain {0})
@@ -196,23 +231,14 @@
 
 (defconstraint heartbeat ()
   (begin (* (will-remain-constant! STAMP) (will-inc! STAMP 1))
-         (if-zero STAMP
-                  (begin (vanishes! CT)
-                         (vanishes! OLI)))
          (if-not-zero (will-remain-constant! STAMP)
                       (vanishes! (next CT)))
-         (if-not-zero STAMP
-                      (if-not-zero OLI
-                                   (will-inc! STAMP 1)
-                                   (if-eq-else CT MMEDIUMMO
-                                               (will-inc! STAMP 1)
-                                               (begin (will-inc! CT 1)
-                                                      (vanishes! (next OLI))))))))
+         (if-eq OLI 1 (will-inc! STAMP 1))
+         (if-eq MLI 1
+                (if-eq-else CT MMEDIUMMO (will-inc! STAMP 1) (will-inc! CT 1)))))
 
 (defconstraint last-row (:domain {-1})
-  (if-not-zero STAMP
-               (if-zero OLI
-                        (= CT MMEDIUMMO))))
+  (if-eq MLI 1 (eq! CT MMEDIUMMO)))
 
 (defconstraint stamp-constancies ()
   (begin (stamp-constancy STAMP ARG_1_HI)
@@ -225,17 +251,9 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                                                               ;;
-;;    4.6 Binary, bytehood and byte decomposition constraints    ;;
+;;    5.9 Binary, bytehood and byte decomposition constraints    ;;
 ;;                                                               ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defconstraint binary-columns ()
-  (begin (is-binary OLI)
-         (is-binary CMP_1)
-         (is-binary CMP_2)
-         (is-binary MSB_1)
-         (is-binary MSB_2)))
-
-;TODO bytehood constraints!
 (defconstraint byte-decompositions ()
   (begin (byte-decomposition CT ACC_1_3 BYTE_1_3)
          (byte-decomposition CT ACC_1_2 BYTE_1_2)
@@ -263,116 +281,132 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                           ;;
-;;    4.7 OLI constraints    ;;
+;;    5.10 Auto Vanishing    ;;
 ;;                           ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defconstraint oli-constraints (:guard STAMP)
-  (if-zero ARG_2_HI
-           (if-zero ARG_2_LO
-                    (begin (= OLI 1)
-                           (vanishes! RES_HI)
-                           (vanishes! RES_LO))
-                    (vanishes! OLI))
-           (vanishes! OLI)))
+(defconstraint oli-imply-trivial-result ()
+  (if-eq OLI 1
+         (begin (vanishes! RES_HI)
+                (vanishes! RES_LO))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                              ;;
-;;    4.7 target constraints    ;;
+;;    5.12.2 Absolute values    ;;
 ;;                              ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defun (set-absolute-value a_hi a_lo x_hi x_lo sgn)
+  (if-zero sgn
+           (begin (eq! a_hi x_hi)
+                  (eq! a_lo x_lo))
+           (begin (if-zero x_lo
+                           (begin (eq! a_hi (- THETA2 x_hi))
+                                  (vanishes! a_lo))
+                           (begin (eq! a_hi
+                                       (- THETA2 (+ x_hi 1)))
+                                  (eq! a_lo (- THETA2 x_lo)))))))
+
+(defconstraint set-absolute-values ()
+  (if-eq CT MMEDIUMMO
+         (begin (set-absolute-value (A_HI) (A_LO) ARG_1_HI ARG_1_LO (* SIGNED (sgn_1)))
+                (set-absolute-value (B_HI) (B_LO) ARG_2_HI ARG_2_LO (* SIGNED (sgn_2))))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                                 ;;
+;;    5.12.3 target constraints    ;;
+;;                                 ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defconstraint target-constraints (:guard STAMP)
-  (if-zero OLI
-           (if-eq CT MMEDIUMMO
-                  (begin (= ARG_1_HI
-                            (+ (* THETA (ARG1_3)) (ARG1_2)))
-                         (= ARG_2_HI
-                            (+ (* THETA (ARG2_3)) (ARG2_2)))
-                         ;
-                         (= (shift BYTE_1_3 -7) (bit-dec-msb1))
-                         (= (shift BYTE_2_3 -7) (bit-dec-msb2))
-                         ;
-                         (= (+ (Delta_3) (lt_3))
-                            (* (- (* 2 (lt_3)) 1)
-                               (- (B_3) (R_3))))
-                         (= (+ (Delta_2) (lt_2))
-                            (* (- (* 2 (lt_2)) 1)
-                               (- (B_2) (R_2))))
-                         (= (+ (Delta_1) (lt_1))
-                            (* (- (* 2 (lt_1)) 1)
-                               (- (B_1) (R_1))))
-                         (= (+ (Delta_0) (lt_0))
-                            (* (- (* 2 (lt_0)) 1)
-                               (- (B_0) (R_0))))
-                         ;
-                         (= (+ (* (B_0) (Q_1)) (* (B_1) (Q_0)))
-                            (+ (* THETA2 (alpha)) (* THETA (H_1)) (H_0)))
-                         (= (+ (* (B_0) (Q_3)) (* (B_1) (Q_2)) (* (B_2) (Q_1)) (* (B_3) (Q_0)))
-                            (H_2))
-                         (vanishes! (+ (* (B_1) (Q_3))
-                                       (* (B_2) (Q_2))
-                                       (* (B_3) (Q_1))
-                                       (* (B_2) (Q_3))
-                                       (* (B_3) (Q_2))
-                                       (* (B_3) (Q_3))))
-                         (if-zero (* DEC_SIGNED (sgn_1))
-                                  (begin (= (A_HI) ARG_1_HI)
-                                         (= (A_LO) ARG_1_LO))
-                                  (if-zero ARG_1_LO
-                                           (begin (= (A_HI) (- THETA2 ARG_1_HI))
-                                                  (vanishes! (A_LO)))
-                                           (begin (= (A_HI) (- THETA2 ARG_1_HI 1))
-                                                  (= (A_LO) (- THETA2 ARG_1_LO)))))
-                         ;; 5.9.5-1 compressed in a single expression
-                         (if-zero (* DEC_SIGNED (sgn_2))
-                                  (begin (= (B_HI) ARG_2_HI)
-                                         (= (B_LO) ARG_2_LO))
-                                  (if-zero ARG_2_LO
-                                           (begin (= (B_HI) (- THETA2 ARG_2_HI))
-                                                  (vanishes! (B_LO)))
-                                           (begin (= (B_HI) (- THETA2 ARG_2_HI 1))
-                                                  (= (B_LO) (- THETA2 ARG_2_LO)))))
-                         (if-eq-else (B_3) (R_3) (= (eq_3) 1) (vanishes! (eq_3)))
-                         (if-eq-else (B_2) (R_2) (= (eq_2) 1) (vanishes! (eq_2)))
-                         (if-eq-else (B_1) (R_1) (= (eq_1) 1) (vanishes! (eq_1)))
-                         (if-eq-else (B_0) (R_0) (= (eq_0) 1) (vanishes! (eq_0)))
-                         (= 1
-                            (+ (lt_3)
-                               (* (eq_3) (lt_2))
-                               (* (eq_3) (eq_2) (lt_1))
-                               (* (eq_3) (eq_2) (eq_1) (lt_0))))
-                         (if-zero DEC_SIGNED
-                                  ;; ♦SIGNED = 0
-                                  (if-zero DEC_OUTPUT
-                                           ;; ♦OUTPUT = 0
-                                           (begin (= RES_HI (R_HI))
-                                                  (= RES_LO (R_LO)))
-                                           ;; ♦OUTPUT = 1
-                                           (begin (= RES_HI (Q_HI))
-                                                  (= RES_LO (Q_LO))))
-                                  ;; ♦SIGNED = 1
-                                  (if-zero DEC_OUTPUT
-                                           ;; ♦OUTPUT = 0
-                                           (if-zero (sgn_1)
-                                                    ;; sgn_1 = 0
-                                                    (begin (= RES_HI (R_HI))
-                                                           (= RES_LO (R_LO)))
-                                                    ;; sgn_1 = 1
-                                                    (set-negative RES_HI RES_LO (R_HI) (R_LO)))
-                                           ;; (if-zero (R_1)
-                                           ;;     (if-zero (R_0)
-                                           ;;         (begin
-                                           ;;             (= RES_HI (- THETA2 (R_HI)))
-                                           ;;             (vanishes! RES_LO))
-                                           ;;         (begin
-                                           ;;             (= RES_HI (- THETA2 (R_HI) 1))
-                                           ;;             (= RES_LO (- THETA2 (R_LO)))))
-                                           ;;     (begin
-                                           ;;         (= RES_HI (- THETA2 (R_HI) 1))
-                                           ;;         (= RES_LO (- THETA2 (R_LO))))))
-                                           ;; ♦OUTPUT = 1
-                                           (if-eq-else (sgn_1) (sgn_2)
-                                                       ;; sgn_1 == sgn_2
-                                                       (begin (= RES_HI (Q_HI))
-                                                              (= RES_LO (Q_LO)))
-                                                       ;; sgn_1 != sgn_2
-                                                       (set-negative RES_HI RES_LO (Q_HI) (Q_LO)))))))))
+  (if-eq CT MMEDIUMMO
+         (begin (= ARG_1_HI
+                   (+ (* THETA (ARG1_3)) (ARG1_2)))
+                (= ARG_2_HI
+                   (+ (* THETA (ARG2_3)) (ARG2_2)))
+                ;
+                (= (shift BYTE_1_3 -7) (bit-dec-msb1))
+                (= (shift BYTE_2_3 -7) (bit-dec-msb2))
+                ;
+                (= (+ (* (B_0) (Q_1)) (* (B_1) (Q_0)))
+                   (+ (* THETA2 (alpha)) (* THETA (H_1)) (H_0)))
+                (= (+ (* (B_0) (Q_3)) (* (B_1) (Q_2)) (* (B_2) (Q_1)) (* (B_3) (Q_0)))
+                   (H_2))
+                (eq! (+ (* (B_0) (Q_0)) (* THETA (H_0)) (R_LO))
+                     (+ (A_LO) (* THETA2 (beta))))
+                (eq! (A_HI)
+                     (+ (beta)
+                        (H_1)
+                        (* THETA (alpha))
+                        (+ (* (B_0) (Q_2)) (* (B_1) (Q_1)) (* (B_2) (Q_0)))
+                        (* THETA (H_2))
+                        (R_HI)))
+                (vanishes! (+ (* (B_1) (Q_3))
+                              (* (B_2) (Q_2))
+                              (* (B_3) (Q_1))
+                              (* (B_2) (Q_3))
+                              (* (B_3) (Q_2))
+                              (* (B_3) (Q_3)))))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                              ;;
+;;    5.12.4 comp constraint    ;;
+;;                              ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defconstraint comparaison-constraint ()
+  (if-eq CT MMEDIUMMO
+         (begin (eq! (+ (Delta_3) (lt_3))
+                     (* (- (* 2 (lt_3)) 1)
+                        (- (B_3) (R_3))))
+                (eq! (+ (Delta_2) (lt_2))
+                     (* (- (* 2 (lt_2)) 1)
+                        (- (B_2) (R_2))))
+                (eq! (+ (Delta_1) (lt_1))
+                     (* (- (* 2 (lt_1)) 1)
+                        (- (B_1) (R_1))))
+                (eq! (+ (Delta_0) (lt_0))
+                     (* (- (* 2 (lt_0)) 1)
+                        (- (B_0) (R_0))))
+                (if-eq-else (B_3) (R_3) (= (eq_3) 1) (vanishes! (eq_3)))
+                (if-eq-else (B_2) (R_2) (= (eq_2) 1) (vanishes! (eq_2)))
+                (if-eq-else (B_1) (R_1) (= (eq_1) 1) (vanishes! (eq_1)))
+                (if-eq-else (B_0) (R_0) (= (eq_0) 1) (vanishes! (eq_0)))
+                (= 1
+                   (+ (lt_3)
+                      (* (eq_3) (lt_2))
+                      (* (eq_3) (eq_2) (lt_1))
+                      (* (eq_3) (eq_2) (eq_1) (lt_0))))
+                (eq! (+ (* THETA2 (shift CMP_2 -3))
+                        (* THETA ACC_H_1)
+                        ACC_H_0)
+                     (+ (* ACC_B_0 ACC_Q_1) (* ACC_B_1 ACC_Q_0)))
+                (eq! ACC_H_2
+                     (+ (* ACC_B_0 ACC_Q_3) (* ACC_B_1 ACC_Q_2) (* ACC_B_2 ACC_Q_1) (* ACC_B_3 ACC_Q_0))))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                              ;;
+;;    5.12.5 result constraint  ;;
+;;                              ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defconstraint mod-result (:guard IS_MOD)
+  (if-eq CT MMEDIUMMO
+         (begin (eq! RES_HI (R_HI))
+                (eq! RES_LO (R_LO)))))
+
+(defconstraint div-result (:guard IS_DIV)
+  (if-eq CT MMEDIUMMO
+         (begin (eq! RES_HI (Q_HI))
+                (eq! RES_LO (Q_LO)))))
+
+(defconstraint smod-result (:guard IS_SMOD)
+  (if-eq CT MMEDIUMMO
+         (if-zero (sgn_1)
+                  (begin (eq! RES_HI (R_HI))
+                         (eq! RES_LO (R_LO)))
+                  (set-negative RES_HI RES_LO (R_HI) (R_LO)))))
+
+(defconstraint sdiv-result (:guard IS_SDIV)
+  (if-eq CT MMEDIUMMO
+         (if-eq-else (sgn_1) (sgn_2)
+                     (begin (eq! RES_HI (Q_HI))
+                            (eq! RES_LO (Q_LO)))
+                     (set-negative RES_HI RES_LO (Q_HI) (Q_LO)))))
+
+
