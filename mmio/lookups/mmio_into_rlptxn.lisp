@@ -2,11 +2,11 @@
   mmio-into-rlptxn
   ;reference columns
   (
-    rlpTxn.ABS_TX_NUM
-    rlpTxn.LC
-    rlpTxn.PHASE_ID
-    rlpTxn.INDEX_DATA
-    rlpTxn.LIMB
+    rlptxn.ABS_TX_NUM
+    rlptxn.LC
+    rlptxn.PHASE_ID
+    rlptxn.INDEX_DATA
+    rlptxn.LIMB
   )
   ;source columns
   (

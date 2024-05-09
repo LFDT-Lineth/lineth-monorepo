@@ -1,26 +1,26 @@
 ;; TODO transmit (BATCH_NUMBER, ABSOLUTE_TRANSACTION_NUMBER)
 ;; (defun (sel))
 ;;(deflookup 
-;;  txnData_into_wcp
+;;  txndata_into_wcp
 ;;  ; target columns
 ;;  (
-;;    txnData.ABS_TX_NUM_MAX
-;;    txnData.ABS_TX_NUM
-;;    txnData.BTC_NUM
+;;    txndata.ABS_TX_NUM_MAX
+;;    txndata.ABS_TX_NUM
+;;    txndata.BTC_NUM
 ;;    ;;
-;;    txnData.FROM_HI
-;;    txnData.FROM_LO
-;;    txnData.NONCE
-;;    txnData.VALUE
-;;    txnData.INITIAL_BALANCE
+;;    txndata.FROM_HI
+;;    txndata.FROM_LO
+;;    txndata.NONCE
+;;    txndata.VALUE
+;;    txndata.INITIAL_BALANCE
 ;;    ;;
-;;    txnData.TO_HI
-;;    txnData.TO_LO
-;;    txnData.IS_DEP
+;;    txndata.TO_HI
+;;    txndata.TO_LO
+;;    txndata.IS_DEP
 ;;    ;;
-;;    txnData.GAS_LIMIT
-;;    txnData.INIT_GAS
-;;    txnData.
+;;    txndata.GAS_LIMIT
+;;    txndata.INIT_GAS
+;;    txndata.
 ;;  )
 ;;  ; source columns
 ;;  (

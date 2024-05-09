@@ -12,11 +12,11 @@
   ; source columns
   (
     0
-    (* txnData.WCP_FLAG txnData.ARG_ONE_LO)
+    (* txndata.WCP_FLAG txndata.ARG_ONE_LO)
     0
-    (* txnData.WCP_FLAG txnData.ARG_TWO_LO)
-    (* txnData.WCP_FLAG txnData.RES)
-    (* txnData.WCP_FLAG txnData.INST)
+    (* txndata.WCP_FLAG txndata.ARG_TWO_LO)
+    (* txndata.WCP_FLAG txndata.RES)
+    (* txndata.WCP_FLAG txndata.INST)
   ))
 
 

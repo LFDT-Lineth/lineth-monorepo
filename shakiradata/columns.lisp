@@ -1,4 +1,4 @@
-(module shakira)
+(module shakiradata)
 
 (defcolumns 
   (RIPSHA_STAMP :i32)

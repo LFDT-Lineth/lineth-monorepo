@@ -1,4 +1,4 @@
-(module shakira)
+(module shakiradata)
 
 (defconst 
   INDEX_MAX_SHA2_DATA     11

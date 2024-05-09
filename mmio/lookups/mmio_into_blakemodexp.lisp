@@ -2,10 +2,10 @@
   mmio-into-blakemodexp
   ;reference columns
   (
-    blake2f_modexp_data.ID
-    blake2f_modexp_data.PHASE
-    blake2f_modexp_data.INDEX
-    blake2f_modexp_data.LIMB
+    blake2fmodexpdata.ID
+    blake2fmodexpdata.PHASE
+    blake2fmodexpdata.INDEX
+    blake2fmodexpdata.LIMB
   )
   ;source columns
   (

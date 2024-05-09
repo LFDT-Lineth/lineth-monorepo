@@ -2,12 +2,12 @@
 ;  mmio-into-kec
 ;  ;reference columns
 ;  (
-;    shakira.ID
-;    shakira.PHASE
-;    shakira.INDEX
-;    shakira.LIMB
-;    shakira.nBYTES
-;    shakira.TOTAL_SIZE
+;    shakiradata.ID
+;    shakiradata.PHASE
+;    shakiradata.INDEX
+;    shakiradata.LIMB
+;    shakiradata.nBYTES
+;    shakiradata.TOTAL_SIZE
 ;  )
 ;  ;source columns
 ;  (

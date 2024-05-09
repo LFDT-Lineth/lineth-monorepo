@@ -9,10 +9,10 @@
   )
   ; source columns
   (
-    txnData.EUC_FLAG
-    (* txnData.EUC_FLAG txnData.ARG_ONE_LO)
-    (* txnData.EUC_FLAG txnData.ARG_TWO_LO)
-    (* txnData.EUC_FLAG txnData.RES)
+    txndata.EUC_FLAG
+    (* txndata.EUC_FLAG txndata.ARG_ONE_LO)
+    (* txndata.EUC_FLAG txndata.ARG_TWO_LO)
+    (* txndata.EUC_FLAG txndata.RES)
   ))
 
 

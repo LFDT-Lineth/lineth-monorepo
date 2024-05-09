@@ -1,4 +1,4 @@
-(module txnData)
+(module txndata)
 
 (defconst 
   NB_ROWS_TYPE_0                7

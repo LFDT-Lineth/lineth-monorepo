@@ -2,11 +2,11 @@
   mmio-into-logdata
   ;reference columns
   (
-    logData.ABS_LOG_NUM
-    logData.INDEX
-    logData.LIMB
-    logData.SIZE_LIMB
-    logData.SIZE_TOTAL
+    logdata.ABS_LOG_NUM
+    logdata.INDEX
+    logdata.LIMB
+    logdata.SIZE_LIMB
+    logdata.SIZE_TOTAL
   )
   ;source columns
   (

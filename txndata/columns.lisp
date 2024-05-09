@@ -1,4 +1,4 @@
-(module txnData)
+(module txndata)
 
 (defcolumns 
   (ABS_TX_NUM_MAX :i16)

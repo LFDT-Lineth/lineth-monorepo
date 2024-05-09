@@ -23,11 +23,11 @@ ALU := alu/add/columns.lisp \
 
 BIN := bin   
 
-BLAKE2f_MODEXP_DATA := blake2f_modexp_data
+BLAKE2f_MODEXP_DATA := blake2fmodexpdata
 
 CONSTANTS := constants/constants.lisp
 
-EC_DATA := ec_data
+EC_DATA := ecdata
 
 EUC := euc
 
@@ -37,9 +37,9 @@ GAS := gas
 
 LIBRARY := library/rlp_constraints_pattern.lisp
 
-LOG_DATA := logData
+LOG_DATA := logdata
 
-LOG_INFO := logInfo
+LOG_INFO := loginfo
 
 MMU := mmu
 
@@ -59,7 +59,7 @@ RLP_TXRCPT := rlptxrcpt
 
 ROM := rom
 
-ROM_LEX := romLex
+ROM_LEX := romlex
 
 SHAKIRA_DATA := shakiradata
 
@@ -70,9 +70,9 @@ STACK := hub/columns.lisp \
 
 STP := stp
 
-TABLES := reference_tables/binRT.lisp \
-	  reference_tables/shfRT.lisp \
-	  reference_tables/instruction_decoder.lisp 
+TABLES := reftables/bin_reftable.lisp \
+	  reftables/shf_reftable.lisp \
+	  reftables/inst_decoder.lisp
 
 TRM := trm
 

@@ -1,13 +1,13 @@
 (deflookup 
-  shf-into-shfRT-hi
+  shf-into-shfreftable-hi
   ;reference columns
   (
-    shfRT.IOMF
-    shfRT.BYTE1
-    shfRT.MSHP
-    shfRT.LAS
-    shfRT.RAP
-    shfRT.ONES
+    shfreftable.IOMF
+    shfreftable.BYTE1
+    shfreftable.MSHP
+    shfreftable.LAS
+    shfreftable.RAP
+    shfreftable.ONES
   )
   ;source columns 
   (
@@ -20,14 +20,14 @@
   ))
 
 (deflookup 
-  shf-into-shfRT-lo
+  shf-into-shfreftable-lo
   ;reference columns
   (
-    shfRT.IOMF
-    shfRT.BYTE1
-    shfRT.MSHP
-    shfRT.LAS
-    shfRT.RAP
+    shfreftable.IOMF
+    shfreftable.BYTE1
+    shfreftable.MSHP
+    shfreftable.LAS
+    shfreftable.RAP
   )
   ;source columns 
   (

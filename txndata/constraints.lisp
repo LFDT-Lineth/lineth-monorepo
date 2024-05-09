@@ -1,4 +1,4 @@
-(module txnData)
+(module txndata)
 
 (defpurefun (if-not-eq A B then else)
   (if-not-zero (- A B)
