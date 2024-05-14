@@ -20,7 +20,7 @@
   (SMALL :binary@prove)
   (BITS :binary@prove)
   (BIT_B_4 :binary@prove)
-  (LOW_4 :byte@prove)
+  (LOW_4 :byte)
   (NEG :binary@prove)
   (BIT_1 :binary@prove)
   (PIVOT :byte)
