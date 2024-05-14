@@ -12,7 +12,7 @@
   (INDEX :i32)
   (COUNTER :byte)
   (COUNTER_MAX :byte)
-  (PADDED_BYTECODE_BYTE :byte)
+  (PADDED_BYTECODE_BYTE :byte@prove)
   (ACC :i128)
   (IS_PUSH :binary)
   (PUSH_PARAMETER :byte)
