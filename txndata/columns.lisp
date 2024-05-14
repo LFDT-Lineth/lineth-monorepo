@@ -3,8 +3,7 @@
 (defcolumns 
   (ABS_TX_NUM_MAX :i16)
   (ABS_TX_NUM :i16)
-  (BTC_NUM_MAX :i16)
-  (BTC_NUM :i16)
+  (REL_BLOCK :i16)
   (REL_TX_NUM_MAX :i16)
   (REL_TX_NUM :i16)
   (CT :byte)
@@ -53,8 +52,7 @@
 (defalias 
   ABS_MAX ABS_TX_NUM_MAX
   ABS     ABS_TX_NUM
-  BTC_MAX BTC_NUM_MAX
-  BTC     BTC_NUM
+  BLK     REL_BLOCK
   REL_MAX REL_TX_NUM_MAX
   REL     REL_TX_NUM
   REQ_EVM REQUIRES_EVM_EXECUTION

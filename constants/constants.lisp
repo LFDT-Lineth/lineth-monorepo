@@ -56,7 +56,7 @@
   EVM_INST_COINBASE                      0x41
   EVM_INST_TIMESTAMP                     0x42
   EVM_INST_NUMBER                        0x43
-  EVM_INST_DIFFICULTY                    0x44                              ;; PREVRANDAO comes after London
+  EVM_INST_DIFFICULTY                    0x44                              ;; PREVRANDAO comes after London, in Paris
   EVM_INST_GASLIMIT                      0x45
   EVM_INST_CHAINID                       0x46
   EVM_INST_SELFBALANCE                   0x47
@@ -205,12 +205,18 @@
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;           ;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   EIP_3541_MARKER                        0xEF
+  EVM_INST_BLOCKHASH_MAX_HISTORY         256
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;             ;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  LINEA MISC ;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;             ;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  LINEA_BLOCK_GAS_LIMIT                  30000000
+  LINEA_BLOCK_GAS_LIMIT                  61000000
+  LINEA_CHAIN_ID                         0xe708
+  LINEA_GOERLI_CHAIN_ID                  0xe704
+  LINEA_SEPOLIA_CHAIN_ID                 0xe705
+  LINEA_BASE_FEE                         7
+  LINEA_DIFFICULTY                       2
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;               ;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; SIZE / LENGTH ;;

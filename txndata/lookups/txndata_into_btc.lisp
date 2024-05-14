@@ -1,3 +1,0 @@
-;; TODO when BTC implemented
-
-

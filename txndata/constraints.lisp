@@ -50,7 +50,6 @@
 
 (defconstraint final-row (:domain {-1})
   (begin (eq! ABS ABS_MAX)
-         (eq! BTC BTC_MAX)
          (eq! REL REL_MAX)
          (if-not-zero TYPE0
                       (eq! CT NB_ROWS_TYPE_0))
@@ -99,7 +98,7 @@
          (transaction-constant REF_CNT)
          (transaction-constant REFUND_EFFECTIVE)
          (transaction-constant IBAL)
-         (transaction-constant BTC)
+         (transaction-constant BLK)
          (transaction-constant REL)
          (transaction-constant (weight_sum))))
 
@@ -110,33 +109,32 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defconstraint total-number-constancies ()
   (begin (if-not-zero ABS
-                      (begin (will-remain-constant! ABS_MAX)
-                             (will-remain-constant! BTC_MAX))
+                      (will-remain-constant! ABS_MAX)
                       ;; (begin (vanishes! ABS_MAX)
-                      ;;        (vanishes! BTC_MAX)
+                      ;;        (vanishes! BLK_MAX)
                       ;;        (vanishes! REL_MAX)
-                      ;;        (vanishes! BTC)
+                      ;;        (vanishes! BLK)
                       ;;        (vanishes! REL))
                       )
-         (if-not-zero (will-inc! BTC 1)
+         (if-not-zero (will-inc! BLK 1)
                       (will-remain-constant! REL_MAX))))
 
 (defconstraint batch-num-increments ()
-  (stamp-progression BTC))
+  (stamp-progression BLK))
 
 (defconstraint batchNum-txNum-lexicographic ()
   (begin (if-zero ABS
-                  (begin (vanishes! BTC)
+                  (begin (vanishes! BLK)
                          (vanishes! REL)
                          (if-not-zero (will-remain-constant! ABS)
-                                      (begin (eq! (next BTC) 1)
+                                      (begin (eq! (next BLK) 1)
                                              (eq! (next REL) 1))))
                   (if-not-zero (will-remain-constant! ABS)
                                (if-not-eq REL_MAX
                                           REL
-                                          (begin (will-remain-constant! BTC)
+                                          (begin (will-remain-constant! BLK)
                                                  (will-inc! REL 1))
-                                          (begin (will-inc! BTC 1)
+                                          (begin (will-inc! BLK 1)
                                                  (will-eq! REL 1)))))))
 
 (defconstraint set-last-tx-of-block-flag (:guard ABS_TX_NUM)
@@ -429,12 +427,12 @@
 (defconstraint cumulative-gas ()
   (begin (if-zero ABS
                   (vanishes! GAS_CUMULATIVE))
-         (if-not-zero (will-remain-constant! BTC)
-                      ; BTC[i + 1] != BTC[i]
+         (if-not-zero (will-remain-constant! BLK)
+                      ; BLK[i + 1] != BLK[i]
                       (eq! (next GAS_CUMULATIVE)
                            (next (- GAS_LIMIT REFUND_EFFECTIVE))))
-         (if-not-zero (and (will-inc! BTC 1) (will-remain-constant! ABS))
-                      ; BTC[i + 1] != 1 + BTC[i] && ABS[i+1] != ABS[i] i.e. BTC[i + 1] == BTC[i] && ABS[i+1] == ABS[i] +1
+         (if-not-zero (and (will-inc! BLK 1) (will-remain-constant! ABS))
+                      ; BLK[i + 1] != 1 + BLK[i] && ABS[i+1] != ABS[i] i.e. BLK[i + 1] == BLK[i] && ABS[i+1] == ABS[i] +1
                       (eq! (next GAS_CUMULATIVE)
                            (+ GAS_CUMULATIVE
                               (next (- GAS_LIMIT REFUND_EFFECTIVE)))))))

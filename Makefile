@@ -25,6 +25,10 @@ BIN := bin
 
 BLAKE2f_MODEXP_DATA := blake2fmodexpdata
 
+BLOCKDATA := blockdata
+
+BLOCKHASH := blockhash
+
 CONSTANTS := constants/constants.lisp
 
 EC_DATA := ecdata
@@ -83,6 +87,8 @@ WCP := wcp
 ZKEVM_MODULES := ${ALU} \
 	${BIN} \
 	${BLAKE2f_MODEXP_DATA} \
+	${BLOCKDATA} \
+	${BLOCKHASH} \
 	${CONSTANTS} \
 	${EC_DATA} \
 	${EUC} \
