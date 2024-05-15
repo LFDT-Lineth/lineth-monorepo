@@ -2,46 +2,70 @@
 
 (defcolumns 
   (STAMP :i32)
+  (ID :i32)
   (INDEX :byte)
-  (CT_MIN :byte)
   (LIMB :i128)
-  (TYPE :byte)
-  (EC_RECOVER :binary@prove)
-  (EC_ADD :binary@prove)
-  (EC_MUL :binary@prove)
-  (EC_PAIRING :binary@prove)
-  (TOTAL_PAIRINGS :i2)
-  (ACC_PAIRINGS :i2)
-  (COMPARISONS :binary@prove)
-  (EQUALITIES :binary@prove)
+  TOTAL_SIZE
+  (PHASE :i16@prove)
+  INDEX_MAX
+  (SUCCESS_BIT :binary@prove)
+  (IS_ECRECOVER_DATA :binary@prove)
+  (IS_ECRECOVER_RESULT :binary@prove)
+  (IS_ECADD_DATA :binary@prove)
+  (IS_ECADD_RESULT :binary@prove)
+  (IS_ECMUL_DATA :binary@prove)
+  (IS_ECMUL_RESULT :binary@prove)
+  (IS_ECPAIRING_DATA :binary@prove)
+  (IS_ECPAIRING_RESULT :binary@prove)
+  TOTAL_PAIRINGS
+  ACC_PAIRINGS
+  (INTERNAL_CHECKS_PASSED :binary@prove)
   (HURDLE :binary@prove)
-  (PRELIMINARY_CHECKS_PASSED :binary@prove)
-  (ALL_CHECKS_PASSED :binary@prove)
-  (SQUARE :i128)
-  (CUBE :i128)
   (BYTE_DELTA :byte@prove)
-  (ACC_DELTA :i128)
+  (CT :i3@prove)
+  (CT_MAX :i3@prove)
+  (IS_SMALL_POINT :binary@prove)
+  (IS_LARGE_POINT :binary@prove)
+  (NOT_ON_G2 :binary@prove)
+  (NOT_ON_G2_ACC :binary@prove)
+  (NOT_ON_G2_ACC_MAX :binary@prove)
+  (IS_INFINITY :binary@prove)
+  (OVERALL_TRIVIAL_PAIRING :binary@prove)
+  (G2_MEMBERSHIP_TEST_REQUIRED :binary@prove)
+  (ACCEPTABLE_PAIR_OF_POINT_FOR_PAIRING_CIRCUIT :binary@prove)
+  (CIRCUIT_SELECTOR_ECRECOVER :binary@prove)
+  (CIRCUIT_SELECTOR_ECADD :binary@prove)
+  (CIRCUIT_SELECTOR_ECMUL :binary@prove)
+  (CIRCUIT_SELECTOR_ECPAIRING :binary@prove)
+  (CIRCUIT_SELECTOR_G2_MEMBERSHIP :binary@prove)
+  (WCP_FLAG :binary@prove)
   (WCP_ARG1_HI :i128)
   (WCP_ARG1_LO :i128)
   (WCP_ARG2_HI :i128)
   (WCP_ARG2_LO :i128)
-  (WCP_INST :byte :display :opcode)
   (WCP_RES :binary)
+  (WCP_INST :byte :display :opcode)
+  (EXT_FLAG :binary@prove)
   (EXT_ARG1_HI :i128)
   (EXT_ARG1_LO :i128)
   (EXT_ARG2_HI :i128)
   (EXT_ARG2_LO :i128)
   (EXT_ARG3_HI :i128)
   (EXT_ARG3_LO :i128)
-  (EXT_INST :byte :display :opcode)
   (EXT_RES_LO :i128)
   (EXT_RES_HI :i128)
-  (THIS_IS_NOT_ON_G2 :binary@prove)
-  (THIS_IS_NOT_ON_G2_ACC :binary@prove)
-  (SOMETHING_WASNT_ON_G2 :binary@prove))
+  (EXT_INST :byte :display :opcode))
 
 ;; aliases
 (defalias 
-  PCP PRELIMINARY_CHECKS_PASSED)
+  ICP              INTERNAL_CHECKS_PASSED
+  TRIVIAL_PAIRING  OVERALL_TRIVIAL_PAIRING
+  G2MTR            G2_MEMBERSHIP_TEST_REQUIRED
+  ACCPC            ACCEPTABLE_PAIR_OF_POINT_FOR_PAIRING_CIRCUIT
+  CS_ECRECOVER     CIRCUIT_SELECTOR_ECRECOVER
+  CS_ECADD         CIRCUIT_SELECTOR_ECADD
+  CS_ECMUL         CIRCUIT_SELECTOR_ECMUL
+  CS_ECPAIRING     CIRCUIT_SELECTOR_ECPAIRING
+  CS_G2_MEMBERSHIP CIRCUIT_SELECTOR_G2_MEMBERSHIP)
 
 
