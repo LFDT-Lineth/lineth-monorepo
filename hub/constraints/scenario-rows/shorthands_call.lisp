@@ -1,0 +1,301 @@
+(module hub)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                                           ;;
+;;   10.2 SCEN/CALL instruction shorthands   ;;
+;;                                           ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+;;  CALL/externally_owned_account
+(defun (scenario-shorthand-CALL-externally-owned-account)
+  (+ 
+    ;; scenario/CALL_EXCEPTION
+    ;; scenario/CALL_ABORT
+    scenario/CALL_EOA_SUCCESS_CALLER_WILL_REVERT
+    scenario/CALL_EOA_SUCCESS_CALLER_WONT_REVERT
+    ;; scenario/CALL_SMC_FAILURE_CALLER_WILL_REVERT
+    ;; scenario/CALL_SMC_FAILURE_CALLER_WONT_REVERT
+    ;; scenario/CALL_SMC_SUCCESS_CALLER_WILL_REVERT
+    ;; scenario/CALL_SMC_SUCCESS_CALLER_WONT_REVERT
+    ;; scenario/CALL_PRC_FAILURE
+    ;; scenario/CALL_PRC_SUCCESS_CALLER_WILL_REVERT
+    ;; scenario/CALL_PRC_SUCCESS_CALLER_WONT_REVERT
+    ))
+
+;;  CALL/smart_contract
+(defun (scenario-shorthand-CALL-smart-contract)
+  (+ 
+    ;; scenario/CALL_EXCEPTION
+    ;; scenario/CALL_ABORT
+    ;; scenario/CALL_EOA_SUCCESS_CALLER_WILL_REVERT
+    ;; scenario/CALL_EOA_SUCCESS_CALLER_WONT_REVERT
+    scenario/CALL_SMC_FAILURE_CALLER_WILL_REVERT
+    scenario/CALL_SMC_FAILURE_CALLER_WONT_REVERT
+    scenario/CALL_SMC_SUCCESS_CALLER_WILL_REVERT
+    scenario/CALL_SMC_SUCCESS_CALLER_WONT_REVERT
+    ;; scenario/CALL_PRC_FAILURE
+    ;; scenario/CALL_PRC_SUCCESS_CALLER_WILL_REVERT
+    ;; scenario/CALL_PRC_SUCCESS_CALLER_WONT_REVERT
+    ))
+
+;;  CALL/precompile
+(defun (scenario-shorthand-CALL-precompile)
+  (+ 
+    ;; scenario/CALL_EXCEPTION
+    ;; scenario/CALL_ABORT
+    ;; scenario/CALL_EOA_SUCCESS_CALLER_WILL_REVERT
+    ;; scenario/CALL_EOA_SUCCESS_CALLER_WONT_REVERT
+    ;; scenario/CALL_SMC_FAILURE_CALLER_WILL_REVERT
+    ;; scenario/CALL_SMC_FAILURE_CALLER_WONT_REVERT
+    ;; scenario/CALL_SMC_SUCCESS_CALLER_WILL_REVERT
+    ;; scenario/CALL_SMC_SUCCESS_CALLER_WONT_REVERT
+    scenario/CALL_PRC_FAILURE
+    scenario/CALL_PRC_SUCCESS_CALLER_WILL_REVERT
+    scenario/CALL_PRC_SUCCESS_CALLER_WONT_REVERT
+    ))
+
+;;  CALL/entry
+(defun (scenario-shorthand-CALL-entry)
+  (+ 
+    (scenario-shorthand-CALL-externally-owned-account)
+    (scenario-shorthand-CALL-smart-contract)
+    (scenario-shorthand-CALL-precompile)
+    ))
+
+;;  CALL/unexceptional
+(defun (scenario-shorthand-CALL-unexceptional)
+  (+ 
+    scenario/CALL_ABORT
+    (scenario-shorthand-CALL-entry)
+    ))
+
+;;  CALL/sum
+(defun (scenario-shorthand-CALL-sum)
+  (+ 
+    scenario/CALL_EXCEPTION
+    (scenario-shorthand-CALL-unexceptional)
+    ))
+
+;;  CALL/no_precompile
+(defun (scenario-shorthand-CALL-no-precompile)
+  (+ 
+    scenario/CALL_EXCEPTION
+    scenario/CALL_ABORT
+    (scenario-shorthand-CALL-externally-owned-account)
+    (scenario-shorthand-CALL-smart-contract)
+    ))
+
+;;  CALL/precompile_success
+(defun (scenario-shorthand-CALL-precompile-success)
+  (+ 
+    ;; scenario/CALL_EXCEPTION
+    ;; scenario/CALL_ABORT
+    ;; scenario/CALL_EOA_SUCCESS_CALLER_WILL_REVERT
+    ;; scenario/CALL_EOA_SUCCESS_CALLER_WONT_REVERT
+    ;; scenario/CALL_SMC_FAILURE_CALLER_WILL_REVERT
+    ;; scenario/CALL_SMC_FAILURE_CALLER_WONT_REVERT
+    ;; scenario/CALL_SMC_SUCCESS_CALLER_WILL_REVERT
+    ;; scenario/CALL_SMC_SUCCESS_CALLER_WONT_REVERT
+    ;; scenario/CALL_PRC_FAILURE
+    scenario/CALL_PRC_SUCCESS_CALLER_WILL_REVERT
+    scenario/CALL_PRC_SUCCESS_CALLER_WONT_REVERT
+    ))
+
+;;  CALL/execution_known_to_revert
+(defun (scenario-shorthand-CALL-execution-known-to-revert)
+  (+ 
+    ;; scenario/CALL_EXCEPTION
+    ;; scenario/CALL_ABORT
+    scenario/CALL_EOA_SUCCESS_CALLER_WILL_REVERT
+    ;; scenario/CALL_EOA_SUCCESS_CALLER_WONT_REVERT
+    scenario/CALL_SMC_FAILURE_CALLER_WILL_REVERT
+    ;; scenario/CALL_SMC_FAILURE_CALLER_WONT_REVERT
+    scenario/CALL_SMC_SUCCESS_CALLER_WILL_REVERT
+    ;; scenario/CALL_SMC_SUCCESS_CALLER_WONT_REVERT
+    ;; scenario/CALL_PRC_FAILURE
+    scenario/CALL_PRC_SUCCESS_CALLER_WILL_REVERT
+    ;; scenario/CALL_PRC_SUCCESS_CALLER_WONT_REVERT
+    ))
+
+;;  CALL/execution_known_to_not_revert
+(defun (scenario-shorthand-CALL-execution-known-to-not-revert)
+  (+ 
+    ;; scenario/CALL_EXCEPTION
+    ;; scenario/CALL_ABORT
+    ;; scenario/CALL_EOA_SUCCESS_CALLER_WILL_REVERT
+    scenario/CALL_EOA_SUCCESS_CALLER_WONT_REVERT
+    ;; scenario/CALL_SMC_FAILURE_CALLER_WILL_REVERT
+    scenario/CALL_SMC_FAILURE_CALLER_WONT_REVERT
+    ;; scenario/CALL_SMC_SUCCESS_CALLER_WILL_REVERT
+    scenario/CALL_SMC_SUCCESS_CALLER_WONT_REVERT
+    ;; scenario/CALL_PRC_FAILURE
+    ;; scenario/CALL_PRC_SUCCESS_CALLER_WILL_REVERT
+    scenario/CALL_PRC_SUCCESS_CALLER_WONT_REVERT
+    ))
+
+;;  CALL/success
+(defun (scenario-shorthand-CALL-success)
+  (+ 
+    ;; scenario/CALL_EXCEPTION
+    ;; scenario/CALL_ABORT
+    scenario/CALL_EOA_SUCCESS_CALLER_WILL_REVERT
+    scenario/CALL_EOA_SUCCESS_CALLER_WONT_REVERT
+    ;; scenario/CALL_SMC_FAILURE_CALLER_WILL_REVERT
+    ;; scenario/CALL_SMC_FAILURE_CALLER_WONT_REVERT
+    scenario/CALL_SMC_SUCCESS_CALLER_WILL_REVERT
+    scenario/CALL_SMC_SUCCESS_CALLER_WONT_REVERT
+    ;; scenario/CALL_PRC_FAILURE
+    scenario/CALL_PRC_SUCCESS_CALLER_WILL_REVERT
+    scenario/CALL_PRC_SUCCESS_CALLER_WONT_REVERT
+    ))
+
+;;  CALL/smc_success
+(defun (scenario-shorthand-CALL-smc-success)
+  (+ 
+    ;; scenario/CALL_EXCEPTION
+    ;; scenario/CALL_ABORT
+    ;; scenario/CALL_EOA_SUCCESS_CALLER_WILL_REVERT
+    ;; scenario/CALL_EOA_SUCCESS_CALLER_WONT_REVERT
+    ;; scenario/CALL_SMC_FAILURE_CALLER_WILL_REVERT
+    ;; scenario/CALL_SMC_FAILURE_CALLER_WONT_REVERT
+    scenario/CALL_SMC_SUCCESS_CALLER_WILL_REVERT
+    scenario/CALL_SMC_SUCCESS_CALLER_WONT_REVERT
+    ;; scenario/CALL_PRC_FAILURE
+    ;; scenario/CALL_PRC_SUCCESS_CALLER_WILL_REVERT
+    ;; scenario/CALL_PRC_SUCCESS_CALLER_WONT_REVERT
+    ))
+
+;;  CALL/smc_failure
+(defun (scenario-shorthand-CALL-smc-failure)
+  (+ 
+    ;; scenario/CALL_EXCEPTION
+    ;; scenario/CALL_ABORT
+    ;; scenario/CALL_EOA_SUCCESS_CALLER_WILL_REVERT
+    ;; scenario/CALL_EOA_SUCCESS_CALLER_WONT_REVERT
+    scenario/CALL_SMC_FAILURE_CALLER_WILL_REVERT
+    scenario/CALL_SMC_FAILURE_CALLER_WONT_REVERT
+    ;; scenario/CALL_SMC_SUCCESS_CALLER_WILL_REVERT
+    ;; scenario/CALL_SMC_SUCCESS_CALLER_WONT_REVERT
+    ;; scenario/CALL_PRC_FAILURE
+    ;; scenario/CALL_PRC_SUCCESS_CALLER_WILL_REVERT
+    ;; scenario/CALL_PRC_SUCCESS_CALLER_WONT_REVERT
+    ))
+
+;;  CALL/failure
+(defun (scenario-shorthand-CALL-failure)
+  (+ 
+    (scenario-shorthand-CALL-smc-failure)
+    ;; scenario/CALL_EXCEPTION
+    ;; scenario/CALL_ABORT
+    ;; scenario/CALL_EOA_SUCCESS_CALLER_WILL_REVERT
+    ;; scenario/CALL_EOA_SUCCESS_CALLER_WONT_REVERT
+    ;; scenario/CALL_SMC_FAILURE_CALLER_WILL_REVERT
+    ;; scenario/CALL_SMC_FAILURE_CALLER_WONT_REVERT
+    ;; scenario/CALL_SMC_SUCCESS_CALLER_WILL_REVERT
+    ;; scenario/CALL_SMC_SUCCESS_CALLER_WONT_REVERT
+    scenario/CALL_PRC_FAILURE
+    ;; scenario/CALL_PRC_SUCCESS_CALLER_WILL_REVERT
+    ;; scenario/CALL_PRC_SUCCESS_CALLER_WONT_REVERT
+    ))
+
+;;  CALL/no_context_change
+(defun (scenario-shorthand-CALL-no-context-change)
+  (+ 
+    ;; scenario/CALL_EXCEPTION
+    scenario/CALL_ABORT
+    ;; scenario/CALL_EOA_SUCCESS_CALLER_WILL_REVERT
+    ;; scenario/CALL_EOA_SUCCESS_CALLER_WONT_REVERT
+    ;; scenario/CALL_SMC_FAILURE_CALLER_WILL_REVERT
+    ;; scenario/CALL_SMC_FAILURE_CALLER_WONT_REVERT
+    ;; scenario/CALL_SMC_SUCCESS_CALLER_WILL_REVERT
+    ;; scenario/CALL_SMC_SUCCESS_CALLER_WONT_REVERT
+    ;; scenario/CALL_PRC_FAILURE
+    ;; scenario/CALL_PRC_SUCCESS_CALLER_WILL_REVERT
+    ;; scenario/CALL_PRC_SUCCESS_CALLER_WONT_REVERT
+    (scenario-shorthand-CALL-externally-owned-account)
+    (scenario-shorthand-CALL-precompile)
+    ))
+
+;;  CALL/requires_both_accounts_twice
+(defun (scenario-shorthand-CALL-requires-both-accounts-twice)
+  (+ 
+    ;; scenario/CALL_EXCEPTION
+    ;; scenario/CALL_ABORT
+    scenario/CALL_EOA_SUCCESS_CALLER_WILL_REVERT
+    ;; scenario/CALL_EOA_SUCCESS_CALLER_WONT_REVERT
+    scenario/CALL_SMC_FAILURE_CALLER_WILL_REVERT
+    scenario/CALL_SMC_FAILURE_CALLER_WONT_REVERT
+    scenario/CALL_SMC_SUCCESS_CALLER_WILL_REVERT
+    ;; scenario/CALL_SMC_SUCCESS_CALLER_WONT_REVERT
+    ;; scenario/CALL_PRC_FAILURE
+    scenario/CALL_PRC_SUCCESS_CALLER_WILL_REVERT
+    ;; scenario/CALL_PRC_SUCCESS_CALLER_WONT_REVERT
+    ))
+
+;;  CALL/requires_balance_update
+(defun (scenario-shorthand-CALL-requires-balance-update)
+  (+ 
+    (scenario-shorthand-CALL-externally-owned-account)
+    (scenario-shorthand-CALL-smart-contract)
+    (scenario-shorthand-CALL-precompile-success)
+    ;; scenario/CALL_EXCEPTION
+    ;; scenario/CALL_ABORT
+    ;; scenario/CALL_EOA_SUCCESS_CALLER_WILL_REVERT
+    ;; scenario/CALL_EOA_SUCCESS_CALLER_WONT_REVERT
+    ;; scenario/CALL_SMC_FAILURE_CALLER_WILL_REVERT
+    ;; scenario/CALL_SMC_FAILURE_CALLER_WONT_REVERT
+    ;; scenario/CALL_SMC_SUCCESS_CALLER_WILL_REVERT
+    ;; scenario/CALL_SMC_SUCCESS_CALLER_WONT_REVERT
+    ;; scenario/CALL_PRC_FAILURE
+    ;; scenario/CALL_PRC_SUCCESS_CALLER_WILL_REVERT
+    ;; scenario/CALL_PRC_SUCCESS_CALLER_WONT_REVERT
+    ))
+
+;;  CALL/undoes_balance_update_with_failure
+(defun (scenario-shorthand-CALL-undoes-balance-update-with-failure)
+  (+ 
+    ;; scenario/CALL_EXCEPTION
+    ;; scenario/CALL_ABORT
+    ;; scenario/CALL_EOA_SUCCESS_CALLER_WILL_REVERT
+    ;; scenario/CALL_EOA_SUCCESS_CALLER_WONT_REVERT
+    scenario/CALL_SMC_FAILURE_CALLER_WILL_REVERT
+    scenario/CALL_SMC_FAILURE_CALLER_WONT_REVERT
+    ;; scenario/CALL_SMC_SUCCESS_CALLER_WILL_REVERT
+    ;; scenario/CALL_SMC_SUCCESS_CALLER_WONT_REVERT
+    ;; scenario/CALL_PRC_FAILURE
+    ;; scenario/CALL_PRC_SUCCESS_CALLER_WILL_REVERT
+    ;; scenario/CALL_PRC_SUCCESS_CALLER_WONT_REVERT
+    ))
+
+;;  CALL/undoes_balance_update_with_revert
+(defun (scenario-shorthand-CALL-undoes-balance-update-with-revert)
+  (+ 
+    ;; scenario/CALL_EXCEPTION
+    ;; scenario/CALL_ABORT
+    scenario/CALL_EOA_SUCCESS_CALLER_WILL_REVERT
+    ;; scenario/CALL_EOA_SUCCESS_CALLER_WONT_REVERT
+    ;; scenario/CALL_SMC_FAILURE_CALLER_WILL_REVERT
+    ;; scenario/CALL_SMC_FAILURE_CALLER_WONT_REVERT
+    scenario/CALL_SMC_SUCCESS_CALLER_WILL_REVERT
+    ;; scenario/CALL_SMC_SUCCESS_CALLER_WONT_REVERT
+    ;; scenario/CALL_PRC_FAILURE
+    scenario/CALL_PRC_SUCCESS_CALLER_WILL_REVERT
+    ;; scenario/CALL_PRC_SUCCESS_CALLER_WONT_REVERT
+    ))
+
+;; ;;  CALL/
+;; (defun (scenario-shorthand-CALL-)
+;;   (+ 
+;;     scenario/CALL_EXCEPTION
+;;     scenario/CALL_ABORT
+;;     scenario/CALL_EOA_SUCCESS_CALLER_WILL_REVERT
+;;     scenario/CALL_EOA_SUCCESS_CALLER_WONT_REVERT
+;;     scenario/CALL_SMC_FAILURE_CALLER_WILL_REVERT
+;;     scenario/CALL_SMC_FAILURE_CALLER_WONT_REVERT
+;;     scenario/CALL_SMC_SUCCESS_CALLER_WILL_REVERT
+;;     scenario/CALL_SMC_SUCCESS_CALLER_WONT_REVERT
+;;     scenario/CALL_PRC_FAILURE
+;;     scenario/CALL_PRC_SUCCESS_CALLER_WILL_REVERT
+;;     scenario/CALL_PRC_SUCCESS_CALLER_WONT_REVERT
+;;     ))

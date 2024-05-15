@@ -116,12 +116,13 @@
 ;;                  ;;                        
 ;;;;;;;;;;;;;;;;;;;;;;
 (defconstraint setting-mtntop ()
-  (if-not-zero [MXP_TYPE 4]
-               (begin (if-not-zero MXPX
-                                   (vanishes! MTNTOP)
-                                   (if-zero SIZE_1_LO
+               (if-zero [MXP_TYPE 4]
+                        (vanishes! MTNTOP)                               ;; TODO: make this debug
+                        (begin (if-not-zero MXPX
                                             (vanishes! MTNTOP)
-                                            (eq! MTNTOP 1))))))
+                                            (if-zero SIZE_1_LO
+                                                     (vanishes! MTNTOP)
+                                                     (eq! MTNTOP 1))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                     ;;

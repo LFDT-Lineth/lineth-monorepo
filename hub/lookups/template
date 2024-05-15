@@ -1,0 +1,13 @@
+(defun (hub-into-xxx-trigger) )
+
+(deflookup hub-into-xxx
+           ;; target columns
+	   ( 
+	     xxx.
+           )
+           ;; source columns
+	   (
+	     (* hub.                    (hub-into-xxx-trigger))
+           )
+)
+

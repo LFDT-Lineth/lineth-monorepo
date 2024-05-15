@@ -1,10 +1,26 @@
 CORSET ?= corset
 
-HUB_V2 := $(wildcard hub_v2/columns/*lisp) \
-	  $(wildcard hub_v2/constraints/heartbeat/*lisp) \
-	  $(wildcard hub_v2/constraints/generalities/*lisp) \
-	  $(wildcard hub_v2/lookups/*lisp) \
-	  hub_v2/constants.lisp
+HUB :=  $(wildcard hub/columns/*lisp) \
+	$(wildcard hub/constraints/account-rows/*lisp) \
+	$(wildcard hub/constraints/consistency/*lisp) \
+	$(wildcard hub/constraints/context-rows/*lisp) \
+	$(wildcard hub/constraints/generalities/*lisp) \
+	$(wildcard hub/constraints/heartbeat/*lisp) \
+	$(wildcard hub/constraints/instruction-handling/*lisp) \
+	$(wildcard hub/constraints/instruction-handling/halting/*lisp) \
+	$(wildcard hub/constraints/instruction-handling/create/*lisp) \
+	$(wildcard hub/constraints/instruction-handling/copy/*lisp) \
+	$(wildcard hub/constraints/miscellaneous-rows/*lisp) \
+	$(wildcard hub/constraints/scenario-rows/*lisp) \
+	$(wildcard hub/constraints/storage-rows/*lisp) \
+	$(wildcard hub/constraints/tx_skip/*lisp) \
+	$(wildcard hub/constraints/tx_prewarm/*lisp) \
+	$(wildcard hub/constraints/tx_init/*lisp) \
+	$(wildcard hub/constraints/tx_finl/*lisp) \
+	$(wildcard hub/constraints/*lisp) \
+	$(wildcard hub/lookups/*lisp) \
+	$(wildcard hub/constants.lisp) \
+	# hub/constants.lisp
 
 ALU := alu/add/columns.lisp \
        alu/add/constraints.lisp \
@@ -16,10 +32,6 @@ ALU := alu/add/columns.lisp \
        alu/mul/columns.lisp \
        alu/mul/constraints.lisp \
        alu/mul/helpers.lisp
-# alu/add/hub_into_add.lisp \
-	# alu/ext/hub_into_ext.lisp \
-	# alu/mod/hub_into_mod.lisp \
-	# alu/mul/hub_into_mul.lisp
 
 BIN := bin   
 
@@ -53,8 +65,6 @@ MMIO := mmio/columns.lisp #TODO enable the MMIO constraint and lookup
 
 MXP := mxp
 
-PUB_DATA := $(shell find pub/ -iname '*.lisp')
-
 RLP_ADDR := rlpaddr
 
 RLP_TXN := rlptxn
@@ -69,8 +79,7 @@ SHAKIRA_DATA := shakiradata
 
 SHIFT :=  shf
 
-STACK := hub/columns.lisp \
-	 hub/constraints.lisp
+STP := stp
 
 STP := stp
 
@@ -85,35 +94,34 @@ TXN_DATA := txndata
 WCP := wcp
 
 ZKEVM_MODULES := ${ALU} \
-	${BIN} \
-	${BLAKE2f_MODEXP_DATA} \
-	${BLOCKDATA} \
-	${BLOCKHASH} \
-	${CONSTANTS} \
-	${EC_DATA} \
-	${EUC} \
-	${EXP} \
-	${GAS} \
-	${LIBRARY} \
-	${LOG_DATA} \
-	${LOG_INFO} \
-	${MMU} \
-	${MMIO} \
-	${MXP} \
-	${PUB_DATA} \
-	${RLP_ADDR} \
-	${RLP_TXN} \
-	${RLP_TXRCPT} \
-	${ROM} \
-	${ROM_LEX} \
-	${SHAKIRA_DATA} \
-	${SHIFT} \
-	${STACK} \
-	${STP} \
-	${TABLES} \
-	${TRM} \
-	${TXN_DATA} \
-	${WCP}
+		 ${BIN} \
+		 ${BLAKE2f_MODEXP_DATA} \
+		 ${BLOCKDATA} \
+	     ${BLOCKHASH} \
+		 ${CONSTANTS} \
+		 ${EC_DATA} \
+		 ${EUC} \
+		 ${EXP} \
+		 ${GAS} \
+		 ${HUB} \
+		 ${LIBRARY} \
+		 ${LOG_DATA} \
+		 ${LOG_INFO} \
+		 ${MMU} \
+		 ${MMIO} \
+		 ${MXP} \
+		 ${RLP_ADDR} \
+		 ${RLP_TXN} \
+		 ${RLP_TXRCPT} \
+		 ${ROM} \
+		 ${ROM_LEX} \
+		 ${SHAKIRA_DATA} \
+		 ${SHIFT} \
+		 ${STP} \
+		 ${TABLES} \
+		 ${TRM} \
+		 ${TXN_DATA} \
+		 ${WCP}
 
 define.go: ${ZKEVM_MODULES}
 	${CORSET} wizard-iop -vv -P define -o $@ ${ZKEVM_MODULES}

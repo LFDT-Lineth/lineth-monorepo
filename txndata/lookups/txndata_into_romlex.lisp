@@ -1,8 +1,8 @@
-(defun (sel-txndata-to-romLex)
+(defun (sel-txn-data-to-rom-lex)
   (* txndata.IS_DEP (~ txndata.INIT_CODE_SIZE)))
 
 (deflookup 
-  txndata-into-romLex
+  txn-data-into-rom-lex
   ;; target columns
   (
     romlex.CODE_FRAGMENT_INDEX
@@ -14,12 +14,12 @@
   )
   ;; source columns
   (
-    (* txndata.CODE_FRAGMENT_INDEX (sel-txndata-to-romLex))
-    (* txndata.INIT_CODE_SIZE (sel-txndata-to-romLex))
-    (* txndata.TO_HI (sel-txndata-to-romLex))
-    (* txndata.TO_LO (sel-txndata-to-romLex))
-    (sel-txndata-to-romLex)
-    (sel-txndata-to-romLex)
+    (* txndata.CODE_FRAGMENT_INDEX (sel-txn-data-to-rom-lex))
+    (* txndata.INIT_CODE_SIZE (sel-txn-data-to-rom-lex))
+    (* txndata.TO_HI (sel-txn-data-to-rom-lex))
+    (* txndata.TO_LO (sel-txn-data-to-rom-lex))
+    (sel-txn-data-to-rom-lex)
+    (sel-txn-data-to-rom-lex)
   ))
 
 

@@ -1,5 +1,5 @@
 (deflookup 
-  rlpAddr-into-trm
+  rlpaddr-into-trm
   ;reference columns
   (
     trm.RAW_ADDRESS_HI

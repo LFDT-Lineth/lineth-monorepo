@@ -1,5 +1,5 @@
 (deflookup 
-  rom-into-inst-decoder
+  rom-into-instruction-decoder
   ;; target columns
   (
     instdecoder.OPCODE

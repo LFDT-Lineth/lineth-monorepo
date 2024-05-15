@@ -306,15 +306,15 @@
   ;;
   ;;MMU Instructions
   ;;
-  MMU_INST_MLOAD                         0xfe01
-  MMU_INST_MSTORE                        0xfe02
-  MMU_INST_MSTORE8                       EVM_INST_MSTORE8
-  MMU_INST_INVALID_CODE_PREFIX           0xfe00
-  MMU_INST_RIGHT_PADDED_WORD_EXTRACTION  0xfe10
-  MMU_INST_RAM_TO_EXO_WITH_PADDING       0xfe20
-  MMU_INST_EXO_TO_RAM_TRANSPLANTS        0xfe30
-  MMU_INST_RAM_TO_RAM_SANS_PADDING       0xfe40
-  MMU_INST_ANY_TO_RAM_WITH_PADDING       0xfe50
+  MMU_INST_MLOAD                               0xfe01
+  MMU_INST_MSTORE                              0xfe02
+  MMU_INST_MSTORE8                             0xfe03
+  MMU_INST_INVALID_CODE_PREFIX                 0xfe00
+  MMU_INST_RIGHT_PADDED_WORD_EXTRACTION        0xfe10
+  MMU_INST_RAM_TO_EXO_WITH_PADDING             0xfe20
+  MMU_INST_EXO_TO_RAM_TRANSPLANTS              0xfe30
+  MMU_INST_RAM_TO_RAM_SANS_PADDING             0xfe40
+  MMU_INST_ANY_TO_RAM_WITH_PADDING             0xfe50
   ;;MMU_INST_ANY_TO_RAM_WITH_PADDING_SOME_DATA    0xfe51
   ;;MMU_INST_ANY_TO_RAM_WITH_PADDING_PURE_PADDING 0xfe52
   MMU_INST_MODEXP_ZERO                   0xfe60
@@ -346,11 +346,11 @@
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; MXP MODULE ;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;            ;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  MISC_EXP_WEIGHT                        1
-  MISC_MMU_WEIGHT                        2
-  MISC_MXP_WEIGHT                        4
-  MISC_OOB_WEIGHT                        8
-  MISC_STP_WEIGHT                        16
+  MISC_WEIGHT_EXP                        1
+  MISC_WEIGHT_MMU                        2
+  MISC_WEIGHT_MXP                        4
+  MISC_WEIGHT_OOB                        8
+  MISC_WEIGHT_STP                        16
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;            ;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; OOB MODULE ;;
