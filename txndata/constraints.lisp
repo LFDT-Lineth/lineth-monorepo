@@ -321,7 +321,7 @@
   (- (gas_limit) GAS_LEFTOVER))
 
 (defun (upper_limit_for_refunds)
-  (begin (call-to-EUC 2 (execution-gas-cost) 2)))
+  (begin (call-to-EUC 2 (execution-gas-cost) MAX_REFUND_QUOTIENT)))
 
 (defun (refund_limit)
   (shift RES 2))
