@@ -13,7 +13,7 @@
          pc_new_lo           ;; low  part of proposed new program counter
          code_size           ;; code size of byte code currently executing
          ) (begin
-         (eq! (shift misc/OOB_INST             kappa) OOB_INST_jump )
+         (eq! (shift misc/OOB_INST             kappa) OOB_INST_JUMP )
          (eq! (shift [ misc/OOB_DATA 1 ]       kappa) pc_new_hi)
          (eq! (shift [ misc/OOB_DATA 2 ]       kappa) pc_new_lo)
          ;; (eq! (shift [ misc/OOB_DATA 3 ]    kappa) )
@@ -32,7 +32,7 @@
          jump_condition_lo   ;; low  part of jump condition
          code_size           ;; code size of byte code currently executing
          ) (begin
-         (eq! (shift misc/OOB_INST             kappa) OOB_INST_jumpi)
+         (eq! (shift misc/OOB_INST             kappa) OOB_INST_JUMPI)
          (eq! (shift [ misc/OOB_DATA 1 ]       kappa) pc_new_hi)
          (eq! (shift [ misc/OOB_DATA 2 ]       kappa) pc_new_lo)
          (eq! (shift [ misc/OOB_DATA 3 ]       kappa) jump_condition_hi)
@@ -47,7 +47,7 @@
          kappa               ;; offset
          gas_actual          ;; GAS_ACTUAL
          ) (begin
-         (eq! (shift misc/OOB_INST          kappa) OOB_INST_sstore )
+         (eq! (shift misc/OOB_INST          kappa) OOB_INST_SSTORE )
          ;; (eq! (shift [ misc/OOB_DATA 1 ]    kappa) )
          ;; (eq! (shift [ misc/OOB_DATA 2 ]    kappa) )
          ;; (eq! (shift [ misc/OOB_DATA 3 ]    kappa) )
@@ -64,7 +64,7 @@
          offset_lo           ;; offset within call data, low  part
          call_data_size      ;; call data size
          ) (begin
-         (eq! (shift misc/OOB_INST          kappa) OOB_INST_cdl )
+         (eq! (shift misc/OOB_INST          kappa) OOB_INST_CDL )
          (eq! (shift [ misc/OOB_DATA 1 ]    kappa) offset_hi)
          (eq! (shift [ misc/OOB_DATA 2 ]    kappa) offset_lo)
          ;; (eq! (shift [ misc/OOB_DATA 3 ]    kappa) )
@@ -83,7 +83,7 @@
          size_lo                 ;; size of data to copy, low  part
          return_data_size        ;; return data size
          ) (begin
-         (eq! (shift misc/OOB_INST          kappa) OOB_INST_rdc)
+         (eq! (shift misc/OOB_INST          kappa) OOB_INST_RDC)
          (eq! (shift [ misc/OOB_DATA 1 ]    kappa) source_offset_hi)
          (eq! (shift [ misc/OOB_DATA 2 ]    kappa) source_offset_lo)
          (eq! (shift [ misc/OOB_DATA 3 ]    kappa) size_hi)
@@ -99,7 +99,7 @@
          code_size_hi                     ;; code size hi
          code_size_lo                     ;; code size lo
          ) (begin
-         (eq! (shift misc/OOB_INST          kappa)   OOB_INST_deployment )
+         (eq! (shift misc/OOB_INST          kappa)   OOB_INST_DEPLOYMENT )
          (eq! (shift [ misc/OOB_DATA 1 ]    kappa)   code_size_hi)
          (eq! (shift [ misc/OOB_DATA 2 ]    kappa)   code_size_lo)
          ;; (eq! (shift [ misc/OOB_DATA 3 ]    kappa) )
@@ -116,7 +116,7 @@
          value_hi        ;; value (high part)
          value_lo        ;; value (low  part, stack argument of CALL-type instruction)
          ) (begin
-         (eq!    (shift misc/OOB_INST          kappa)   OOB_INST_xcall )
+         (eq!    (shift misc/OOB_INST          kappa)   OOB_INST_XCALL )
          (eq!    (shift [ misc/OOB_DATA 1 ]    kappa)   value_hi       )
          (eq!    (shift [ misc/OOB_DATA 2 ]    kappa)   value_lo       )
          ;; (eq!    (shift [ misc/OOB_DATA 3 ]    kappa) )
@@ -135,7 +135,7 @@
          balance            ;; balance (from caller account)
          call_stack_depth   ;; call stack depth
          ) (begin
-         (eq!    (shift misc/OOB_INST          kappa)   OOB_INST_call   )
+         (eq!    (shift misc/OOB_INST          kappa)   OOB_INST_CALL   )
          (eq!    (shift [ misc/OOB_DATA 1 ]    kappa)   value_hi        )
          (eq!    (shift [ misc/OOB_DATA 2 ]    kappa)   value_lo        )
          (eq!    (shift [ misc/OOB_DATA 3 ]    kappa)   balance         )
@@ -156,7 +156,7 @@
          has_code           ;; callee's HAS_CODE
          call_stack_depth   ;; current call stack depth
          ) (begin
-         (eq!    (shift misc/OOB_INST          kappa)   OOB_INST_create  )
+         (eq!    (shift misc/OOB_INST          kappa)   OOB_INST_CREATE  )
          (eq!    (shift [ misc/OOB_DATA 1 ]    kappa)   value_hi         )
          (eq!    (shift [ misc/OOB_DATA 2 ]    kappa)   value_lo         )
          (eq!    (shift [ misc/OOB_DATA 3 ]    kappa)   balance          )

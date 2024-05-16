@@ -382,7 +382,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 (defun (callToLT k a b c d)
   (begin (eq! (shift WCP_FLAG k) 1)
-         (eq! (shift WCP_INST k) LT)
+         (eq! (shift WCP_INST k) EVM_INST_LT)
          (eq! (shift WCP_ARG1_HI k) a)
          (eq! (shift WCP_ARG1_LO k) b)
          (eq! (shift WCP_ARG2_HI k) c)
@@ -390,7 +390,7 @@
 
 (defun (callToEQ k a b c d)
   (begin (eq! (shift WCP_FLAG k) 1)
-         (eq! (shift WCP_INST k) EQ)
+         (eq! (shift WCP_INST k) EVM_INST_EQ)
          (eq! (shift WCP_ARG1_HI k) a)
          (eq! (shift WCP_ARG1_LO k) b)
          (eq! (shift WCP_ARG2_HI k) c)
@@ -398,7 +398,7 @@
 
 (defun (callToISZERO k a b)
   (begin (eq! (shift WCP_FLAG k) 1)
-         (eq! (shift WCP_INST k) ISZERO)
+         (eq! (shift WCP_INST k) EVM_INST_ISZERO)
          (eq! (shift WCP_ARG1_HI k) a)
          (eq! (shift WCP_ARG1_LO k) b)
          (debug (vanishes! (shift WCP_ARG2_HI k)))
