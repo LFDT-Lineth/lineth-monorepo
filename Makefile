@@ -1,26 +1,25 @@
 CORSET ?= corset
 
-HUB :=  $(wildcard hub/columns/*lisp) \
-	$(wildcard hub/constraints/account-rows/*lisp) \
-	$(wildcard hub/constraints/consistency/*lisp) \
-	$(wildcard hub/constraints/context-rows/*lisp) \
-	$(wildcard hub/constraints/generalities/*lisp) \
-	$(wildcard hub/constraints/heartbeat/*lisp) \
-	$(wildcard hub/constraints/instruction-handling/*lisp) \
-	$(wildcard hub/constraints/instruction-handling/halting/*lisp) \
-	$(wildcard hub/constraints/instruction-handling/create/*lisp) \
-	$(wildcard hub/constraints/instruction-handling/copy/*lisp) \
-	$(wildcard hub/constraints/miscellaneous-rows/*lisp) \
-	$(wildcard hub/constraints/scenario-rows/*lisp) \
-	$(wildcard hub/constraints/storage-rows/*lisp) \
-	$(wildcard hub/constraints/tx_skip/*lisp) \
-	$(wildcard hub/constraints/tx_prewarm/*lisp) \
-	$(wildcard hub/constraints/tx_init/*lisp) \
-	$(wildcard hub/constraints/tx_finl/*lisp) \
-	$(wildcard hub/constraints/*lisp) \
-	$(wildcard hub/lookups/*lisp) \
-	$(wildcard hub/constants.lisp) \
-	# hub/constants.lisp
+HUB :=  $(wildcard hub/columns/*lisp)
+#	$(wildcard hub/constraints/account-rows/*lisp) \
+#	$(wildcard hub/constraints/consistency/*lisp) \
+#	$(wildcard hub/constraints/context-rows/*lisp) \
+#	$(wildcard hub/constraints/generalities/*lisp) \
+#	$(wildcard hub/constraints/heartbeat/*lisp) \
+#	$(wildcard hub/constraints/instruction-handling/*lisp) \
+#	$(wildcard hub/constraints/instruction-handling/halting/*lisp) \
+#	$(wildcard hub/constraints/instruction-handling/create/*lisp) \
+#	$(wildcard hub/constraints/instruction-handling/copy/*lisp) \
+#	$(wildcard hub/constraints/miscellaneous-rows/*lisp) \
+#	$(wildcard hub/constraints/scenario-rows/*lisp) \
+#	$(wildcard hub/constraints/storage-rows/*lisp) \
+#	$(wildcard hub/constraints/tx_skip/*lisp) \
+#	$(wildcard hub/constraints/tx_prewarm/*lisp) \
+#	$(wildcard hub/constraints/tx_init/*lisp) \
+#	$(wildcard hub/constraints/tx_finl/*lisp) \
+#	$(wildcard hub/constraints/*lisp) \
+#	$(wildcard hub/lookups/*lisp) \
+#	$(wildcard hub/constants.lisp) \
 
 ALU := alu/add/columns.lisp \
        alu/add/constraints.lisp \
@@ -81,8 +80,6 @@ SHIFT :=  shf
 
 STP := stp
 
-STP := stp
-
 TABLES := reftables/bin_reftable.lisp \
 	  reftables/shf_reftable.lisp \
 	  reftables/inst_decoder.lisp
@@ -93,6 +90,7 @@ TXN_DATA := txndata
 
 WCP := wcp
 
+# TODO: fix issues with the HUB and include it again in the modules
 ZKEVM_MODULES := ${ALU} \
 		 ${BIN} \
 		 ${BLAKE2f_MODEXP_DATA} \
@@ -103,7 +101,6 @@ ZKEVM_MODULES := ${ALU} \
 		 ${EUC} \
 		 ${EXP} \
 		 ${GAS} \
-		 ${HUB} \
 		 ${LIBRARY} \
 		 ${LOG_DATA} \
 		 ${LOG_INFO} \
@@ -122,6 +119,36 @@ ZKEVM_MODULES := ${ALU} \
 		 ${TRM} \
 		 ${TXN_DATA} \
 		 ${WCP}
+
+#ZKEVM_MODULES := ${ALU} \
+#		 ${BIN} \
+#		 ${BLAKE2f_MODEXP_DATA} \
+#		 ${BLOCKDATA} \
+#	     ${BLOCKHASH} \
+#		 ${CONSTANTS} \
+#		 ${EC_DATA} \
+#		 ${EUC} \
+#		 ${EXP} \
+#		 ${GAS} \
+#		 ${HUB} \
+#		 ${LIBRARY} \
+#		 ${LOG_DATA} \
+#		 ${LOG_INFO} \
+#		 ${MMU} \
+#		 ${MMIO} \
+#		 ${MXP} \
+#		 ${RLP_ADDR} \
+#		 ${RLP_TXN} \
+#		 ${RLP_TXRCPT} \
+#		 ${ROM} \
+#		 ${ROM_LEX} \
+#		 ${SHAKIRA_DATA} \
+#		 ${SHIFT} \
+#		 ${STP} \
+#		 ${TABLES} \
+#		 ${TRM} \
+#		 ${TXN_DATA} \
+#		 ${WCP}
 
 define.go: ${ZKEVM_MODULES}
 	${CORSET} wizard-iop -vv -P define -o $@ ${ZKEVM_MODULES}

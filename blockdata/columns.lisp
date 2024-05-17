@@ -12,8 +12,7 @@
   (COINBASE_LO :i128)
   (BLOCK_GAS_LIMIT :i48)
   (BASEFEE :i48)
-  (BYTE_HI :array [0 : LLARGEMO] :byte@prove)
-  (BYTE_LO :array [0 : LLARGEMO] :byte@prove)
+  (BYTE_HI :array [0:15] :byte@prove)
+  (BYTE_LO :array [0:15] :byte@prove)
   (WCP_FLAG :binary))
-
 

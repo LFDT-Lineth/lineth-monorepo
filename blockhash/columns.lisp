@@ -13,7 +13,5 @@
   (IN_RANGE :binary)
   (BLOCK_HASH_HI :i128)
   (BLOCK_HASH_LO :i128)
-  (BYTE_HI :array [0 : LLARGEMO] :byte@prove)
-  (BYTE_LO :array [0 : LLARGEMO] :byte@prove))
-
-
+  (BYTE_HI :array [0:15] :byte@prove)
+  (BYTE_LO :array [0:15] :byte@prove))
