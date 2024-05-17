@@ -16,11 +16,11 @@
 
 (defun (maxct_sum)
   (+ (* CMPTN
-        (+ (* MAX_CT_CMPTN_EXP_LOG IS_EXP_LOG) (* MAX_CT_CMPTN_MODEXP_LOG IS_MODEXP_LOG)))
+        (+ (* CT_MAX_CMPTN_EXP_LOG IS_EXP_LOG) (* CT_MAX_CMPTN_MODEXP_LOG IS_MODEXP_LOG)))
      (* MACRO
-        (+ (* MAX_CT_MACRO_EXP_LOG IS_EXP_LOG) (* MAX_CT_MACRO_MODEXP_LOG IS_MODEXP_LOG)))
+        (+ (* CT_MAX_MACRO_EXP_LOG IS_EXP_LOG) (* CT_MAX_MACRO_MODEXP_LOG IS_MODEXP_LOG)))
      (* PRPRC
-        (+ (* MAX_CT_PRPRC_EXP_LOG IS_EXP_LOG) (* MAX_CT_PRPRC_MODEXP_LOG IS_MODEXP_LOG)))))
+        (+ (* CT_MAX_PRPRC_EXP_LOG IS_EXP_LOG) (* CT_MAX_PRPRC_MODEXP_LOG IS_MODEXP_LOG)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                             ;;
@@ -219,7 +219,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defun (callToLT k a b c d)
   (begin (eq! (shift preprocessing/WCP_FLAG k) 1)
-         (eq! (shift preprocessing/WCP_INST k) LT)
+         (eq! (shift preprocessing/WCP_INST k) EVM_INST_LT)
          (eq! (shift preprocessing/WCP_ARG_1_HI k) a)
          (eq! (shift preprocessing/WCP_ARG_1_LO k) b)
          (eq! (shift preprocessing/WCP_ARG_2_HI k) c)
@@ -227,7 +227,7 @@
 
 (defun (callToEQ k a b c d)
   (begin (eq! (shift preprocessing/WCP_FLAG k) 1)
-         (eq! (shift preprocessing/WCP_INST k) EQ)
+         (eq! (shift preprocessing/WCP_INST k) EVM_INST_EQ)
          (eq! (shift preprocessing/WCP_ARG_1_HI k) a)
          (eq! (shift preprocessing/WCP_ARG_1_LO k) b)
          (eq! (shift preprocessing/WCP_ARG_2_HI k) c)
@@ -235,7 +235,7 @@
 
 (defun (callToISZERO k a b)
   (begin (eq! (shift preprocessing/WCP_FLAG k) 1)
-         (eq! (shift preprocessing/WCP_INST k) ISZERO)
+         (eq! (shift preprocessing/WCP_INST k) EVM_INST_ISZERO)
          (eq! (shift preprocessing/WCP_ARG_1_HI k) a)
          (eq! (shift preprocessing/WCP_ARG_1_LO k) b)
          (debug (vanishes! (shift preprocessing/WCP_ARG_2_HI k)))
@@ -295,8 +295,8 @@
 (defconstraint justify-hub-prediction-exp-log (:perspective macro :guard IS_EXP_LOG)
   (if-zero (expn_hi_is_zero)
            (eq! (dyn_cost)
-                (* G_EXPBYTES (+ (expoennt_byte_length) 16)))
-           (eq! (dyn_cost) (* G_EXPBYTES (expoennt_byte_length)))))
+                (* GAS_CONST_G_EXP_BYTE (+ (expoennt_byte_length) 16)))
+           (eq! (dyn_cost) (* GAS_CONST_G_EXP_BYTE (expoennt_byte_length)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                    ;;
