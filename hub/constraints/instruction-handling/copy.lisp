@@ -174,12 +174,12 @@
 
 (defconstraint    copy-misc-row-setting-OOB-instruction                                      (:guard    (copy-inst-standard-precondition))
                   (if-not-zero  (shift  misc/OOB_FLAG  ROW_OFFSET_COPY_INST_MISCELLANEOUS_ROW)
-                                (set-OOB-inst-rdc  ROW_OFFSET_COPY_INST_MISCELLANEOUS_ROW
-                                                   (copy-inst-source-offset-hi)
-                                                   (copy-inst-source-offset-lo)
-                                                   (copy-inst-size-hi)
-                                                   (copy-inst-size-lo)
-                                                   (copy-inst-return-data-size))))
+                                (set-OOB-instruction-rdc  ROW_OFFSET_COPY_INST_MISCELLANEOUS_ROW
+                                                          (copy-inst-source-offset-hi)
+                                                          (copy-inst-source-offset-lo)
+                                                          (copy-inst-size-hi)
+                                                          (copy-inst-size-lo)
+                                                          (copy-inst-return-data-size))))
 
 (defconstraint    copy-misc-row-setting-RDCX                                                 (:guard    (copy-inst-standard-precondition))
                   (if-zero  (shift  misc/OOB_FLAG  ROW_OFFSET_COPY_INST_MISCELLANEOUS_ROW)

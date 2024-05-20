@@ -52,5 +52,3 @@
    (WCP_ARG_2_LO :i128)
    (WCP_RES :binary@prove)
    (WCP_INST :byte :display :opcode)))
-
-

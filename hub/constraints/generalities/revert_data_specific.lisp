@@ -112,11 +112,14 @@
                             epsilon_revert
                             sub_offset))
 
-(defun (child-context-reverts-dom-sub-stamps relOffset s child_rev_stamp) (undoing-dom-sub-stamps
-                                                                            relOffset
-                                                                            child_rev_stamp
-                                                                            epsilon_revert
-                                                                            s))
+(defun (revert-wit-child-failure-dom-sub-stamps    relOffset
+                                                   sub_stamp_offset
+                                                   child_rev_stamp)
+  (undoing-dom-sub-stamps    relOffset
+                             child_rev_stamp
+                             epsilon_revert
+                             sub_stamp_offset
+                             ))
 
 (defun (selfdestruct-dom-sub-stamps relOffset) (undoing-dom-sub-stamps
                                                  relOffset

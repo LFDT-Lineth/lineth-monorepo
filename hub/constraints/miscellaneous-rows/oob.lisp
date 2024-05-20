@@ -7,7 +7,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-(defun (set-OOB-inst-jump
+(defun (set-OOB-instruction-jump
          kappa               ;; offset
          pc_new_hi           ;; high part of proposed new program counter
          pc_new_lo           ;; low  part of proposed new program counter
@@ -24,7 +24,7 @@
          ;; (eq! (shift [ misc/OOB_DATA 8 ]    kappa) )
          ))
 
-(defun (set-OOB-inst-jumpi
+(defun (set-OOB-instruction-jumpi
          kappa               ;; offset
          pc_new_hi           ;; high part of proposed new program counter
          pc_new_lo           ;; low  part of proposed new program counter
@@ -43,7 +43,7 @@
          ;; (eq! (shift [ misc/OOB_DATA 8 ]    kappa) )
          ))
 
-(defun (set-OOB-inst-sstore
+(defun (set-OOB-instruction-sstore
          kappa               ;; offset
          gas_actual          ;; GAS_ACTUAL
          ) (begin
@@ -58,7 +58,7 @@
          ;; (eq! (shift [ misc/OOB_DATA 8 ]    kappa) )
          ))
 
-(defun (set-OOB-inst-cdl
+(defun (set-OOB-instruction-cdl
          kappa               ;; row offset
          offset_hi           ;; offset within call data, high part
          offset_lo           ;; offset within call data, low  part
@@ -75,7 +75,7 @@
          ;; (eq! (shift [ misc/OOB_DATA 8 ]    kappa) )
          ))
 
-(defun (set-OOB-inst-rdc
+(defun (set-OOB-instruction-rdc
          kappa                   ;; row offset
          source_offset_hi        ;; offset within call data, high part
          source_offset_lo        ;; offset within call data, low  part
@@ -94,7 +94,7 @@
          ;; (eq! (shift [ misc/OOB_DATA 8 ]    kappa) )
          ))
 
-(defun (set-OOB-inst-deployment
+(defun (set-OOB-instruction-deployment
          kappa                            ;; offset
          code_size_hi                     ;; code size hi
          code_size_lo                     ;; code size lo
@@ -111,7 +111,7 @@
          ))
 
 
-(defun (set-OOB-inst-xcall
+(defun (set-OOB-instruction-xcall
          kappa           ;; offset
          value_hi        ;; value (high part)
          value_lo        ;; value (low  part, stack argument of CALL-type instruction)
@@ -128,7 +128,7 @@
          ))
 
 
-(defun (set-OOB-inst-call
+(defun (set-OOB-instruction-call
          kappa              ;; offset
          value_hi           ;; value   (high part)
          value_lo           ;; value   (low  part, stack argument of CALL-type instruction)
@@ -147,7 +147,7 @@
          ))
 
 
-(defun (set-OOB-inst-create
+(defun (set-OOB-instruction-create
          kappa              ;; offset
          value_hi           ;; value   (high part)
          value_lo           ;; value   (low  part, stack argument of CALL-type instruction)
@@ -174,7 +174,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-(defun (set-OOB-inst-common
+(defun (set-OOB-instruction-common
          kappa                            ;; offset
          common_precompile_oob_inst       ;; relevant OOB instruction
          call_gas                         ;; call gas i.e. gas provided to the precompile
@@ -193,7 +193,7 @@
          ))
 
 
-(defun (set-OOB-inst-modexp-cds
+(defun (set-OOB-instruction-modexp-cds
          kappa                            ;; offset
          cds                              ;; call data size
          ) (begin
@@ -209,7 +209,7 @@
          ))
 
 
-(defun (set-OOB-inst-modexp-xbs
+(defun (set-OOB-instruction-modexp-xbs
          kappa                            ;; offset
          xbs_hi                           ;; high part of some {b,e,m}bs
          xbs_lo                           ;; low  part of some {b,e,m}bs
@@ -228,7 +228,7 @@
          ))
 
 
-(defun (set-OOB-inst-modexp-lead
+(defun (set-OOB-instruction-modexp-lead
          kappa                            ;; offset
          bbs_lo                           ;; low part of bbs (base     byte size)
          cds                              ;; call data size
@@ -246,7 +246,7 @@
          ))
 
 
-(defun (set-OOB-inst-modexp-pricing
+(defun (set-OOB-instruction-modexp-pricing
          kappa                            ;; offset
          call_gas                         ;; call gas i.e. gas provided to the precompile
          r@c                              ;; return at capacity, final argument of any CALL
@@ -265,7 +265,7 @@
          ))
 
 
-(defun (set-OOB-inst-modexp-extract
+(defun (set-OOB-instruction-modexp-extract
          kappa                            ;; offset
          cds                              ;; call data size
          bbs_lo                           ;; low part of bbs (base     byte size)
@@ -284,7 +284,7 @@
          ))
 
 
-(defun (set-OOB-inst-blake-cds
+(defun (set-OOB-instruction-blake-cds
          kappa                            ;; offset
          cds                              ;; call data size
          r@c                              ;; return at capacity, final argument of any CALL
@@ -301,7 +301,7 @@
          ))
 
 
-(defun (set-OOB-inst-blake
+(defun (set-OOB-instruction-blake
          kappa                            ;; offset
          call_gas                         ;; call gas i.e. gas provided to the precompile
          blake_r                          ;; rounds parameter of the call data of BLAKE2f
@@ -323,7 +323,7 @@
 
 
 
-;; (defun (set-OOB-inst-Z
+;; (defun (set-OOB-instruction-Z
 ;;          kappa                            ;; offset
 ;;          ) (begin
 ;;          (eq! (shift misc/OOB_INST            kappa) OOB_INST_ )

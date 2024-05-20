@@ -266,10 +266,10 @@
 (defconstraint   return-instruction---setting-OOB-data              (:guard   (return-instruction---standard-scenario-row))
                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                  (if-not-zero   (shift   misc/OOB_FLAG     RETURN_INSTRUCTION_FIRST_MISC_ROW_OFFSET)
-                                (set-OOB-inst-deployment   RETURN_INSTRUCTION_FIRST_MISC_ROW_OFFSET   ;; offset
-                                                           (return-instruction---size-hi)             ;; code size hi
-                                                           (return-instruction---size-lo)             ;; code size lo
-                                                           )
+                                (set-OOB-instruction-deployment   RETURN_INSTRUCTION_FIRST_MISC_ROW_OFFSET   ;; offset
+                                                                  (return-instruction---size-hi)             ;; code size hi
+                                                                  (return-instruction---size-lo)             ;; code size lo
+                                                                  )
                                 )
                  )
                                                          

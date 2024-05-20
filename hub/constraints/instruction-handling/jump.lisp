@@ -115,17 +115,17 @@
 (defconstraint jump-instruction-the-miscellaneous-row-OOB-instruction       (:guard (jump-instruction-no-stack-exception-and-no-oogx))
                (begin
                  (if-not-zero (jump-instruction-is-jump)
-                              (set-OOB-inst-jump    ROW_OFFSET_FOR_JUMP_NO_OOGX_MISC_ROW
-                                                    (jump-instruction-new-pc-hi)
-                                                    (jump-instruction-new-pc-lo)
-                                                    (jump-instruction-code-size)))
+                              (set-OOB-instruction-jump    ROW_OFFSET_FOR_JUMP_NO_OOGX_MISC_ROW
+                                                           (jump-instruction-new-pc-hi)
+                                                           (jump-instruction-new-pc-lo)
+                                                           (jump-instruction-code-size)))
                  (if-not-zero (jump-instruction-is-jumpi)
-                              (set-OOB-inst-jumpi   ROW_OFFSET_FOR_JUMP_NO_OOGX_MISC_ROW
-                                                    (jump-instruction-new-pc-hi)
-                                                    (jump-instruction-new-pc-lo)
-                                                    (jump-instruction-jump-condition-hi)
-                                                    (jump-instruction-jump-condition-lo)
-                                                    (jump-instruction-code-size)))))
+                              (set-OOB-instruction-jumpi   ROW_OFFSET_FOR_JUMP_NO_OOGX_MISC_ROW
+                                                           (jump-instruction-new-pc-hi)
+                                                           (jump-instruction-new-pc-lo)
+                                                           (jump-instruction-jump-condition-hi)
+                                                           (jump-instruction-jump-condition-lo)
+                                                           (jump-instruction-code-size)))))
 
 
 (defconstraint jump-instruction-setting-PC_NEW-and-JUMP_DESTINATION_VETTING-for-JUMP (:guard (jump-instruction-no-stack-exception-and-no-oogx))

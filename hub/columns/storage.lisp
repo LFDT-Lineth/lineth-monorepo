@@ -7,21 +7,21 @@
 	
 	;; storage-row columns
 	(
-		ADDRESS_HI
-		ADDRESS_LO
-		DEPLOYMENT_NUMBER
-		DEPLOYMENT_NUMBER_INFTY
-		STORAGE_KEY_HI
-		STORAGE_KEY_LO
-		VALUE_ORIG_HI
-		VALUE_ORIG_LO
-		VALUE_CURR_HI
-		VALUE_CURR_LO
-		VALUE_NEXT_HI
-		VALUE_NEXT_LO
+		( ADDRESS_HI                      :i32  )
+		( ADDRESS_LO                      :i128 )
+		( DEPLOYMENT_NUMBER               :i32  ) ;; TODO: vastly exagerated
+		( DEPLOYMENT_NUMBER_INFTY         :i32  ) ;; TODO: vastly exagerated
+		( STORAGE_KEY_HI                  :i128 )
+		( STORAGE_KEY_LO                  :i128 )
+		( VALUE_ORIG_HI                   :i128 )
+		( VALUE_ORIG_LO                   :i128 )
+		( VALUE_CURR_HI                   :i128 )
+		( VALUE_CURR_LO                   :i128 )
+		( VALUE_NEXT_HI                   :i128 )
+		( VALUE_NEXT_LO                   :i128 )
 
-		( WARMTH                        :binary@prove )
-		( WARMTH_NEW                    :binary@prove )
+		( WARMTH                          :binary@prove )
+		( WARMTH_NEW                      :binary@prove )
 
 		( VALUE_ORIG_IS_ZERO              :binary ) ;; @prove not required for any of these since set by hand
 		( VALUE_CURR_IS_ORIG              :binary )
