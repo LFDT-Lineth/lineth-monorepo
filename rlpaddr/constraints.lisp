@@ -41,11 +41,11 @@
   (begin (if-eq RECIPE_1 1 (eq! ct MAX_CT_CREATE))
          (if-eq RECIPE_2 1 (eq! ct MAX_CT_CREATE2))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;                              ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                       ;;
 ;;    3.2 Constancies    ;;
-;;                              ;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                       ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defconstraint stamp-constancies ()
   (begin (stamp-constancy STAMP ADDR_HI)
          (stamp-constancy STAMP ADDR_LO)
@@ -69,11 +69,11 @@
   (begin (ct-incrementing ct INDEX)
          (ct-incrementing ct LC)))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;                              ;;
-;;    3.4 Byte and Bit decomposition    ;;
-;;                              ;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                                     ;;
+;;    3.4 Byte and Bit decomposition   ;;
+;;                                     ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defconstraint byte-bit-decomposition ()
   (if-zero ct
            (begin (eq! ACC BYTE1)
@@ -98,6 +98,16 @@
 (defconstraint setting-recipe-flag ()
   (eq! RECIPE
        (+ (* RLP_ADDR_RECIPE_1 RECIPE_1) (* RLP_ADDR_RECIPE_2 RECIPE_2))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                              ;;
+;;    3.6 SELECTOR_KECCAK_RES   ;;
+;;                              ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defconstraint set-kec-res-selector ()
+  (eq! SELECTOR_KECCAK_RES
+       (* (~ STAMP)
+          (- STAMP (prev STAMP)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                              ;;
@@ -155,7 +165,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                              ;;
-;;    6 RECIPIE2 constraints      ;;
+;;    6 RECIPIE2 constraints    ;;
 ;;                              ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defconstraint index-create2 (:guard RECIPE_2)

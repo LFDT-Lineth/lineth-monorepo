@@ -205,8 +205,9 @@
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;           ;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   EIP_3541_MARKER                        0xEF
-  BLOCKHASH_MAX_HISTORY         256
+  BLOCKHASH_MAX_HISTORY                  256
   MAX_REFUND_QUOTIENT                    5
+  CREATE2_SHIFT                          0xff                              ;; create2 first byte
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;             ;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  LINEA MISC ;;
@@ -283,14 +284,14 @@
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; EC DATA MODULE ;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;                ;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  PHASE_ECRECOVER_DATA          0x010A
-  PHASE_ECRECOVER_RESULT        0x010B
-  PHASE_ECADD_DATA              0x060A
-  PHASE_ECADD_RESULT            0x060B
-  PHASE_ECMUL_DATA              0x070A
-  PHASE_ECMUL_RESULT            0x070B
-  PHASE_ECPAIRING_DATA          0x080A
-  PHASE_ECPAIRING_RESULT        0x080B
+  PHASE_ECRECOVER_DATA                   0x010A
+  PHASE_ECRECOVER_RESULT                 0x010B
+  PHASE_ECADD_DATA                       0x060A
+  PHASE_ECADD_RESULT                     0x060B
+  PHASE_ECMUL_DATA                       0x070A
+  PHASE_ECMUL_RESULT                     0x070B
+  PHASE_ECPAIRING_DATA                   0x080A
+  PHASE_ECPAIRING_RESULT                 0x080B
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;            ;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; EXP MODULE ;;
@@ -306,15 +307,15 @@
   ;;
   ;;MMU Instructions
   ;;
-  MMU_INST_MLOAD                               0xfe01
-  MMU_INST_MSTORE                              0xfe02
-  MMU_INST_MSTORE8                             0xfe03
-  MMU_INST_INVALID_CODE_PREFIX                 0xfe00
-  MMU_INST_RIGHT_PADDED_WORD_EXTRACTION        0xfe10
-  MMU_INST_RAM_TO_EXO_WITH_PADDING             0xfe20
-  MMU_INST_EXO_TO_RAM_TRANSPLANTS              0xfe30
-  MMU_INST_RAM_TO_RAM_SANS_PADDING             0xfe40
-  MMU_INST_ANY_TO_RAM_WITH_PADDING             0xfe50
+  MMU_INST_MLOAD                         0xfe01
+  MMU_INST_MSTORE                        0xfe02
+  MMU_INST_MSTORE8                       0xfe03
+  MMU_INST_INVALID_CODE_PREFIX           0xfe00
+  MMU_INST_RIGHT_PADDED_WORD_EXTRACTION  0xfe10
+  MMU_INST_RAM_TO_EXO_WITH_PADDING       0xfe20
+  MMU_INST_EXO_TO_RAM_TRANSPLANTS        0xfe30
+  MMU_INST_RAM_TO_RAM_SANS_PADDING       0xfe40
+  MMU_INST_ANY_TO_RAM_WITH_PADDING       0xfe50
   ;;MMU_INST_ANY_TO_RAM_WITH_PADDING_SOME_DATA    0xfe51
   ;;MMU_INST_ANY_TO_RAM_WITH_PADDING_PURE_PADDING 0xfe52
   MMU_INST_MODEXP_ZERO                   0xfe60

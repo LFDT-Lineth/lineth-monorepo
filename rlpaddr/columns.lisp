@@ -26,10 +26,11 @@
   (BYTE1 :byte@prove)
   (ACC :i64)
   (ACC_BYTESIZE :byte)
-  POWER
+  (POWER :i128)
   (BIT1 :binary@prove)
   (BIT_ACC :byte)
-  (TINY_NON_ZERO_NONCE :binary@prove))
+  (TINY_NON_ZERO_NONCE :binary@prove)
+  (SELECTOR_KECCAK_RES :binary))
 
 ;; aliases
 (defalias 
