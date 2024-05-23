@@ -91,7 +91,6 @@ TXN_DATA := txndata
 
 WCP := wcp
 
-# TODO: fix issues with the HUB and include it again in the modules
 ZKEVM_MODULES := ${ALU} \
 		 ${BIN} \
 		 ${BLAKE2f_MODEXP_DATA} \
@@ -112,6 +111,7 @@ ZKEVM_MODULES := ${ALU} \
 		 ${RLP_TXRCPT} \
 		 ${ROM} \
 		 ${ROM_LEX} \
+		 ${SHAKIRA_DATA} \
 		 ${SHIFT} \
 		 ${STP} \
 		 ${TABLES} \
@@ -121,37 +121,7 @@ ZKEVM_MODULES := ${ALU} \
 
 # TODO: add later
 # ${GAS} \
-# ${SHAKIRA_DATA} \
-
-#ZKEVM_MODULES := ${ALU} \
-#		 ${BIN} \
-#		 ${BLAKE2f_MODEXP_DATA} \
-#		 ${BLOCKDATA} \
-#	     ${BLOCKHASH} \
-#		 ${CONSTANTS} \
-#		 ${EC_DATA} \
-#		 ${EUC} \
-#		 ${EXP} \
-#		 ${GAS} \
 #		 ${HUB} \
-#		 ${LIBRARY} \
-#		 ${LOG_DATA} \
-#		 ${LOG_INFO} \
-#		 ${MMU} \
-#		 ${MMIO} \
-#		 ${MXP} \
-#		 ${RLP_ADDR} \
-#		 ${RLP_TXN} \
-#		 ${RLP_TXRCPT} \
-#		 ${ROM} \
-#		 ${ROM_LEX} \
-#		 ${SHAKIRA_DATA} \
-#		 ${SHIFT} \
-#		 ${STP} \
-#		 ${TABLES} \
-#		 ${TRM} \
-#		 ${TXN_DATA} \
-#		 ${WCP}
 
 define.go: ${ZKEVM_MODULES}
 	${CORSET} wizard-iop -vv -P define -o $@ ${ZKEVM_MODULES}

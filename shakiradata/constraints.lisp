@@ -72,8 +72,15 @@
                  ;; IS_EXTRA         
                  )))
 
+(defun (is-first-data-row)
+  (force-bool (* (is-data)
+                 (- 1 (prev (is-data))))))
+
+(defun (is-last-data-row)
+  (force-bool (* (id-data) (next (is-result)))))
+
 (defun (flag-sum)
-  (force-bool (+ (is-keccak) (is-sha2) (is-ripemd) IS_EXTRA)))
+  (force-bool (+ (is-keccak) (is-sha2) (is-ripemd))))
 
 (defun (phase-sum)
   (+ (* PHASE_KECCAK_DATA IS_KECCAK_DATA)
@@ -90,8 +97,7 @@
 
 (defun (index-reset-bit)
   (force-bool (+ (* (- 1 (is-data)) (next (is-data)))
-                 (* (- 1 (is-result)) (next (is-result)))
-                 (* (- 1 IS_EXTRA) (next IS_EXTRA)))))
+                 (* (- 1 (is-result)) (next (is-result))))))
 
 (defun (legal-transitions-bit)
   (force-bool (+ (* IS_KECCAK_DATA (next (is-keccak)))
@@ -102,9 +108,7 @@
                  (* IS_SHA2_RESULT (next IS_SHA2_RESULT))
                  (* IS_RIPEMD_RESULT (next IS_RIPEMD_RESULT))
                  ;;
-                 (* (is-result) (next IS_EXTRA))
-                 (* IS_EXTRA
-                    (next (+ IS_EXTRA (is-data)))))))
+                 (* (is-result) (next (is-data))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                         ;;
@@ -136,6 +140,9 @@
                   (eq! (flag-sum) 1))
          (eq! PHASE (phase-sum))))
 
+(defconstraint set-total-size-for-result (:guard (is-result))
+  (eq! TOTAL_SIZE WORD_SIZE))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                       ;;
 ;;    X.3.5 Heartbeat    ;;
@@ -166,34 +173,13 @@
                                   ;; INDEX ≠ INDEX_MAX case
                                   (will-eq! INDEX (+ 1 INDEX))))))
 
-(defconstraint fixed-length-index-max-constraints ()
-  (if (force-bool (+ (is-result) IS_EXTRA))
-      (eq! INDEX_MAX (+ IS_KECCAK_RESULT IS_SHA2_RESULT IS_RIPEMD_RESULT IS_EXTRA IS_EXTRA))))
+(defconstraint fixed-length-index-max-constraints (:guard (is-result))
+  (eq! INDEX_MAX INDEX_MAX_RESULT))
 
-(defconstraint small-ID-increments ()
-  (if-not-zero (will-remain-constant! RIPSHA_STAMP)
-               (will-eq! ID
-                         (+ 1
-                            ID
-                            (+ (* (^ 256 3) (shift DELTA_BYTE 1))
-                               (* (^ 256 2) (shift DELTA_BYTE 2))
-                               (* (^ 256 1) (shift DELTA_BYTE 3))
-                               (* (^ 256 0) (shift DELTA_BYTE 4)))))))
-
-(defconstraint smallness-of-last-nBYTES ()
-  (if-zero (prev IS_EXTRA)
-           (if-not-zero IS_EXTRA
-                        (begin (eq! (shift DELTA_BYTE 1)
-                                    (- (shift nBYTES -3) 1))
-                               (eq! (shift DELTA_BYTE 2)
-                                    (- (+ 240 (shift nBYTES -3))
-                                       1))))))
-
-(defconstraint finalization (:domain {-1})
-  (if-not-zero RIPSHA_STAMP
-               (begin (eq! INDEX INDEX_MAX)
-                      (eq! IS_EXTRA 1))))
-
+;(defconstraint finalization (:domain {-1})  ;;debug end constraint
+;  (if-not-zero RIPSHA_STAMP
+;               (begin (eq! INDEX INDEX_MAX)
+;                      (eq! (is-result) 1))))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                                 ;;
 ;;    X.3.6 nBYTES accumulation    ;;

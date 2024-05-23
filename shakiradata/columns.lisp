@@ -6,9 +6,8 @@
   (PHASE :byte)
   (INDEX :i32)
   (INDEX_MAX :i32)
-  (DELTA_BYTE :byte@prove)
   (LIMB :i128)
-  (nBYTES :byte@prove)
+  (nBYTES :i8)
   (nBYTES_ACC :i32)
   (TOTAL_SIZE :i32)
   (IS_KECCAK_DATA :binary@prove)
@@ -17,7 +16,6 @@
   (IS_SHA2_RESULT :binary@prove)
   (IS_RIPEMD_DATA :binary@prove)
   (IS_RIPEMD_RESULT :binary@prove)
-  (IS_EXTRA :binary@prove)
   (SELECTOR_KECCAK_RES_HI :binary)
   (SELECTOR_KECCAK_RES_LO :binary))
 
