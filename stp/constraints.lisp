@@ -8,8 +8,7 @@
   G_coldaccountaccess 2600
   G_callvalue         9000
   G_newaccount        25000
-  G_callstipend       2300
-  )
+  G_callstipend       2300)
 
 (defconstraint exclusive-flags ()
   (vanishes! (* WCP_FLAG MOD_FLAG)))
@@ -23,13 +22,12 @@
   (+ IS_CREATE IS_CREATE2 IS_CALL IS_CALLCODE IS_DELEGATECALL IS_STATICCALL))
 
 (defun (inst_sum)
-  (+ 
-    (* EVM_INST_CREATE       IS_CREATE)
-    (* EVM_INST_CREATE2      IS_CREATE2)
-    (* EVM_INST_CALL         IS_CALL)
-    (* EVM_INST_CALLCODE     IS_CALLCODE)
-    (* EVM_INST_DELEGATECALL IS_DELEGATECALL)
-    (* EVM_INST_STATICCALL   IS_STATICCALL)))
+  (+ (* EVM_INST_CREATE IS_CREATE)
+     (* EVM_INST_CREATE2 IS_CREATE2)
+     (* EVM_INST_CALL IS_CALL)
+     (* EVM_INST_CALLCODE IS_CALLCODE)
+     (* EVM_INST_DELEGATECALL IS_DELEGATECALL)
+     (* EVM_INST_STATICCALL IS_STATICCALL)))
 
 (defconstraint no-stamp-no-flag ()
   (if-zero STAMP
@@ -89,10 +87,12 @@
 ;;                       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defconstraint counter-constancies ()
-  (begin (counter-constancy CT GAS_ACTUAL)
+  (begin (counter-constancy CT INSTRUCTION)
+         (counter-constancy CT GAS_ACTUAL)
          (counter-constancy CT GAS_MXP)
          (counter-constancy CT GAS_UPFRONT)
          (counter-constancy CT GAS_STIPEND)
+         (counter-constancy CT GAS_OUT_OF_POCKET)
          ;
          (counter-constancy CT GAS_HI)
          (counter-constancy CT GAS_LO)
