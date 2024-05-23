@@ -3,7 +3,7 @@
 (defcolumns 
   (IOMF :binary)
   (BYTE1 :byte)
-  (MSHP :i8)
+  (MSHP :byte)
   (LAS :byte)
   (RAP :byte)
   (ONES :byte))
