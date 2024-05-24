@@ -65,6 +65,8 @@ MMIO := mmio/columns.lisp #TODO enable the MMIO constraint and lookup
 
 MXP := mxp
 
+OOB := oob
+
 RLP_ADDR := rlpaddr
 
 RLP_TXN := rlptxn
@@ -117,6 +119,7 @@ ZKEVM_MODULES := ${ALU} \
 		 ${TABLES} \
 		 ${TRM} \
 		 ${TXN_DATA} \
+		 ${OOB} \
 		 ${WCP}
 
 # TODO: add later

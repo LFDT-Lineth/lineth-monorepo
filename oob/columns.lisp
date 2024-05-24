@@ -35,5 +35,3 @@
   (OUTGOING_INST :byte :display :opcode)
   (OUTGOING_DATA :array [4])
   OUTGOING_RES_LO)
-
-
