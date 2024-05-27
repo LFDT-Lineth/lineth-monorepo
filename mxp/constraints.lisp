@@ -1,12 +1,5 @@
 (module mxp)
 
-(defconst 
-  G_MEM      3 ;; 'G_memory' in Ethereum yellow paper
-  SHORTCYCLE 3
-  LONGCYCLE  16
-  TWO_POW_32 4294967296
-  RETURN     0xf3)
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                             ;;
 ;;    2.1 binary constraints   ;;
@@ -157,10 +150,10 @@
                ;; ROOB + NOOP is binary
                (if-not-zero (- 1 (+ ROOB NOOP))
                             (if-zero MXPX
-                                     (if-eq-else CT SHORTCYCLE
+                                     (if-eq-else CT CT_MAX_NON_TRIVIAL
                                                  (will-inc! STAMP 1)
                                                  (will-inc! CT 1))
-                                     (if-eq-else CT LONGCYCLE
+                                     (if-eq-else CT CT_MAX_NON_TRIVIAL_BUT_MXPX
                                                  (will-inc! STAMP 1)
                                                  (will-inc! CT 1))))))
 
@@ -168,8 +161,8 @@
   (if-not-zero STAMP
                (if-zero (force-bool (+ ROOB NOOP))
                         (eq! CT (if-zero MXPX
-                                      SHORTCYCLE
-                                      LONGCYCLE)))))
+                                      CT_MAX_NON_TRIVIAL
+                                      CT_MAX_NON_TRIVIAL_BUT_MXPX)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                               ;;
@@ -229,7 +222,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defconstraint offsets-out-of-bounds (:guard (standing-hypothesis))
   (if-eq MXPX 1
-         (if-eq CT LONGCYCLE
+         (if-eq CT CT_MAX_NON_TRIVIAL_BUT_MXPX
                 (vanishes! (* (- (- MAX_OFFSET_1 TWO_POW_32) [ACC 1])
                               (- (- MAX_OFFSET_2 TWO_POW_32) [ACC 2]))))))
 
@@ -239,7 +232,7 @@
 ;;                                ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defun (offsets-are-in-bounds)
-  (* (is-zero (- CT SHORTCYCLE))
+  (* (is-zero (- CT CT_MAX_NON_TRIVIAL))
      (- 1 MXPX)))
 
 (defconstraint size-in-evm-words (:guard (* (standing-hypothesis) (offsets-are-in-bounds)))
@@ -310,7 +303,7 @@
 
 (defconstraint setting-c-mem-new (:guard (* (standing-hypothesis) (expansion-happened)))
   (eq! C_MEM_NEW
-       (+ (* G_MEM ACC_A) (large-quotient))))
+       (+ (* GAS_CONST_G_MEMORY ACC_A) (large-quotient))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                          ;;
@@ -323,7 +316,7 @@
               (+ (* GBYTE SIZE_1_LO) (* GWORD ACC_W)))))
 
 (defconstraint setting-gas-mxp (:guard (* (standing-hypothesis) (offsets-are-in-bounds)))
-  (if (eq! INST RETURN)
+  (if (eq! INST EVM_INST_RETURN)
       (eq! GAS_MXP
            (+ QUAD_COST (* DEPLOYS LIN_COST)))
       (eq! GAS_MXP (+ QUAD_COST LIN_COST))))
