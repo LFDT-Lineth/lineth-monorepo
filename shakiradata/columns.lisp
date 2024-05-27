@@ -17,6 +17,7 @@
   (IS_RIPEMD_DATA :binary@prove)
   (IS_RIPEMD_RESULT :binary@prove)
   (SELECTOR_KECCAK_RES_HI :binary)
-  (SELECTOR_KECCAK_RES_LO :binary))
+  (SELECTOR_SHA2_RES_HI :binary)
+  (SELECTOR_RIPEMD_RES_HI :binary))
 
 
