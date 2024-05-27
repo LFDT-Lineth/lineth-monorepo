@@ -16,6 +16,10 @@
            (begin (will-inc! CFI 1)
                   (will-remain-constant! CODE_FRAGMENT_INDEX_INFTY))))
 
+(defconstraint keccak-of-initcode (:guard DEPLOYMENT_STATUS)
+  (begin (eq! CODE_HASH_HI EMPTY_KECCAK_HI)
+         (eq! CODE_HASH_LO EMPTY_KECCAK_LO)))
+
 ;; TODO add lexicographic ordering
 
 

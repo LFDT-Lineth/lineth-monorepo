@@ -56,7 +56,7 @@
   EVM_INST_COINBASE                      0x41
   EVM_INST_TIMESTAMP                     0x42
   EVM_INST_NUMBER                        0x43
-  EVM_INST_DIFFICULTY                    0x44                              ;; PREVRANDAO comes after London, in Paris
+  EVM_INST_DIFFICULTY                    0x44                               ;; PREVRANDAO comes after London, in Paris
   EVM_INST_GASLIMIT                      0x45
   EVM_INST_CHAINID                       0x46
   EVM_INST_SELFBALANCE                   0x47
@@ -207,7 +207,7 @@
   EIP_3541_MARKER                        0xEF
   BLOCKHASH_MAX_HISTORY                  256
   MAX_REFUND_QUOTIENT                    5
-  CREATE2_SHIFT                          0xff                              ;; create2 first byte
+  CREATE2_SHIFT                          0xff                               ;; create2 first byte
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;             ;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  LINEA MISC ;;
@@ -239,7 +239,7 @@
   EXO_SUM_INDEX_ROM                      0
   EXO_SUM_INDEX_KEC                      1
   EXO_SUM_INDEX_LOG                      2
-  EXO_SUM_INDEX_TXCD                     3                                 ;; for the transaction call data as found in RLP_TXN
+  EXO_SUM_INDEX_TXCD                     3                                  ;; for the transaction call data as found in RLP_TXN
   EXO_SUM_INDEX_ECDATA                   4
   EXO_SUM_INDEX_RIPSHA                   5
   EXO_SUM_INDEX_BLAKEMODEXP              6
@@ -255,12 +255,12 @@
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; HASH CONSTANTS ;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;                ;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  EMPTY_KECCAK_HI                        0xc5d2460186f7233c927e7db2dcc703c ;; high part of KECCAK(())
-  EMPTY_KECCAK_LO                        0xe500b653ca82273b7bfad8045d85a47 ;; low  part of KECCAK(())
-  EMPTY_SHA2_HI                          0xe3b0c44298fc1c149afbf4c8996fb92 ;; high part of SHA2-256(())
-  EMPTY_SHA2_LO                          0x27ae41e4649b934ca495991b7852b85 ;; low  part of SHA2-256(())
-  EMPTY_RIPEMD_HI                        0x0000000000000000000000009c1185a ;; high part of RIPEMD-160(())
-  EMPTY_RIPEMD_LO                        0xc5e9fc54612808977ee8f548b2258d3 ;; low  part of RIPEMD-160(())
+  EMPTY_KECCAK_HI                        0xc5d2460186f7233c927e7db2dcc703c0 ;; high part of KECCAK(())
+  EMPTY_KECCAK_LO                        0xe500b653ca82273b7bfad8045d85a470 ;; low  part of KECCAK(())
+  EMPTY_SHA2_HI                          0xe3b0c44298fc1c149afbf4c8996fb924 ;; high part of SHA2-256(())
+  EMPTY_SHA2_LO                          0x27ae41e4649b934ca495991b7852b855 ;; low  part of SHA2-256(())
+  EMPTY_RIPEMD_HI                        0x0000000000000000000000009c1185a5 ;; high part of RIPEMD-160(())
+  EMPTY_RIPEMD_LO                        0xc5e9fc54612808977ee8f548b2258d31 ;; low  part of RIPEMD-160(())
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;                     ;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; BLAKE MODEXP MODULE ;;
@@ -388,10 +388,10 @@
   ;;
   ;; RLP prefix
   ;;
-  RLP_PREFIX_INT_SHORT                   128                               ;;RLP prefix of a short integer (<56 bytes), defined in the EYP.
-  RLP_PREFIX_INT_LONG                    183                               ;;RLP prefix of a long integer (>55 bytes), defined in the EYP.
-  RLP_PREFIX_LIST_SHORT                  192                               ;;RLP prefix of a short list (<56 bytes), defined in the EYP.
-  RLP_PREFIX_LIST_LONG                   247                               ;;RLP prefix of a long list (>55 bytes), defined in the EYP.
+  RLP_PREFIX_INT_SHORT                   128                                ;;RLP prefix of a short integer (<56 bytes), defined in the EYP.
+  RLP_PREFIX_INT_LONG                    183                                ;;RLP prefix of a long integer (>55 bytes), defined in the EYP.
+  RLP_PREFIX_LIST_SHORT                  192                                ;;RLP prefix of a short list (<56 bytes), defined in the EYP.
+  RLP_PREFIX_LIST_LONG                   247                                ;;RLP prefix of a long list (>55 bytes), defined in the EYP.
   ;;
   ;; RLP_TXN Phase
   ;;
@@ -425,8 +425,8 @@
   ;;
   ;; RLP_ADDR 
   ;;
-  RLP_ADDR_RECIPE_1                      1                                 ;; for RlpAddr, used to discriminate between recipe for create
-  RLP_ADDR_RECIPE_2                      2                                 ;; for RlpAddr, used to discriminate between recipe for create
+  RLP_ADDR_RECIPE_1                      1                                  ;; for RlpAddr, used to discriminate between recipe for create
+  RLP_ADDR_RECIPE_2                      2                                  ;; for RlpAddr, used to discriminate between recipe for create
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;                ;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; SHAKIRA MODULE ;;
