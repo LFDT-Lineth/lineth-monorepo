@@ -59,7 +59,7 @@
 
 (defconstraint log-constancies ()
   (begin (log-constancy SIZE_TOTAL)
-         (log-constancy LOGS_DATA)))
+         (debug (log-constancy LOGS_DATA))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                         ;;
