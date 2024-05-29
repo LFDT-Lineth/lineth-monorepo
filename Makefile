@@ -95,13 +95,11 @@ WCP := wcp
 
 ZKEVM_MODULES := ${ALU} \
 		 ${BIN} \
-		 ${BLAKE2f_MODEXP_DATA} \
 		 ${BLOCKDATA} \
 	     ${BLOCKHASH} \
 		 ${CONSTANTS} \
 		 ${EC_DATA} \
 		 ${EUC} \
-		 ${EXP} \
 		 ${LIBRARY} \
 		 ${LOG_DATA} \
 		 ${LOG_INFO} \
@@ -119,15 +117,17 @@ ZKEVM_MODULES := ${ALU} \
 		 ${TABLES} \
 		 ${TRM} \
 		 ${TXN_DATA} \
-		 ${OOB} \
 		 ${WCP}
 
 # TODO: add later
-# ${GAS} \
+#        ${GAS} \
 #		 ${HUB} \
+         ${EXP} \
+         ${BLAKE2f_MODEXP_DATA} \
+         ${OOB} \
 
 define.go: ${ZKEVM_MODULES}
 	${CORSET} wizard-iop -vv -P define -o $@ ${ZKEVM_MODULES}
-    
+
 zkevm.bin: ${ZKEVM_MODULES}
 	${CORSET} compile -vv -o $@ ${ZKEVM_MODULES}
