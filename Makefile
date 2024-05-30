@@ -95,6 +95,7 @@ WCP := wcp
 
 ZKEVM_MODULES := ${ALU} \
 		 ${BIN} \
+         ${BLAKE2f_MODEXP_DATA} \
 		 ${BLOCKDATA} \
 	     ${BLOCKHASH} \
 		 ${CONSTANTS} \
@@ -123,7 +124,6 @@ ZKEVM_MODULES := ${ALU} \
 #        ${GAS} \
 #		 ${HUB} \
          ${EXP} \
-         ${BLAKE2f_MODEXP_DATA} \
          ${OOB} \
 
 define.go: ${ZKEVM_MODULES}
