@@ -118,13 +118,13 @@ ZKEVM_MODULES := ${ALU} \
 		 ${TABLES} \
 		 ${TRM} \
 		 ${TXN_DATA} \
+         ${OOB} \
 		 ${WCP}
 
 # TODO: add later
 #        ${GAS} \
 #		 ${HUB} \
          ${EXP} \
-         ${OOB} \
 
 define.go: ${ZKEVM_MODULES}
 	${CORSET} wizard-iop -vv -P define -o $@ ${ZKEVM_MODULES}
