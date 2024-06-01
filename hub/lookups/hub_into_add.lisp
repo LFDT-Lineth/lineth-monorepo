@@ -1,4 +1,4 @@
-(defun (add-activation-flag)
+(defun (hub-into-add-activation-flag)
   (and (unexceptional-stack-row) hub.stack/ADD_FLAG))
 
 (deflookup 
@@ -15,16 +15,13 @@
   )
   ;; source columns
   (
-    (* [hub.stack/STACK_ITEM_VALUE_HI 1] (add-activation-flag)) ;; arg1
-
-    (* [hub.stack/STACK_ITEM_VALUE_LO 1] (add-activation-flag))
-    (* [hub.stack/STACK_ITEM_VALUE_HI 2] (add-activation-flag)) ;; arg2
-
-    (* [hub.stack/STACK_ITEM_VALUE_LO 2] (add-activation-flag))
-    (* [hub.stack/STACK_ITEM_VALUE_HI 4] (add-activation-flag)) ;; res
-
-    (* [hub.stack/STACK_ITEM_VALUE_LO 4] (add-activation-flag))
-    (* hub.stack/INSTRUCTION (add-activation-flag))
+    (* [hub.stack/STACK_ITEM_VALUE_HI 1] (hub-into-add-activation-flag)) ;; arg1
+    (* [hub.stack/STACK_ITEM_VALUE_LO 1] (hub-into-add-activation-flag))
+    (* [hub.stack/STACK_ITEM_VALUE_HI 2] (hub-into-add-activation-flag)) ;; arg2
+    (* [hub.stack/STACK_ITEM_VALUE_LO 2] (hub-into-add-activation-flag))
+    (* [hub.stack/STACK_ITEM_VALUE_HI 4] (hub-into-add-activation-flag)) ;; result
+    (* [hub.stack/STACK_ITEM_VALUE_LO 4] (hub-into-add-activation-flag))
+    (* hub.stack/INSTRUCTION             (hub-into-add-activation-flag)) ;; instruction
   ))
 
 
