@@ -23,7 +23,7 @@
                   (if-not-zero   PEEK_AT_STACK
                                  (if-not-zero   stack/CREATE_FLAG
                                                 (if-not-zero   (-   1   CT_TLI)
-                                                               (if-not-zero   (-   1   stack/SUX)
+                                                               (if-not-zero   (-   1   stack/SUX    stack/SOX)
                                                                               (begin   (eq!   (shift   PEEK_AT_SCENARIO                  2)   1)
                                                                                        (eq!   (shift   (scenario-shorthand-CREATE-sum)   2)   1)
                                                                                        )

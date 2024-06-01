@@ -1,4 +1,4 @@
-(defun (mod-activation-flag)
+(defun (hub-into-mod-activation-flag)
   (and (unexceptional-stack-row)
        hub.stack/MOD_FLAG))
 
@@ -15,12 +15,12 @@
     )
     ;; source columns
     (
-        (* [hub.stack/STACK_ITEM_VALUE_HI 1]     (mod-activation-flag))   ;; arg1
-        (* [hub.stack/STACK_ITEM_VALUE_LO 1]     (mod-activation-flag))
-        (* [hub.stack/STACK_ITEM_VALUE_HI 3]     (mod-activation-flag))   ;; arg2
-        (* [hub.stack/STACK_ITEM_VALUE_LO 3]     (mod-activation-flag))
-        (* [hub.stack/STACK_ITEM_VALUE_HI 4]     (mod-activation-flag))   ;; res
-        (* [hub.stack/STACK_ITEM_VALUE_LO 4]     (mod-activation-flag))
-        (*  hub.stack/INSTRUCTION                (mod-activation-flag))
+        (* [hub.stack/STACK_ITEM_VALUE_HI 1]     (hub-into-mod-activation-flag))   ;; arg1
+        (* [hub.stack/STACK_ITEM_VALUE_LO 1]     (hub-into-mod-activation-flag))
+        (* [hub.stack/STACK_ITEM_VALUE_HI 3]     (hub-into-mod-activation-flag))   ;; arg2
+        (* [hub.stack/STACK_ITEM_VALUE_LO 3]     (hub-into-mod-activation-flag))
+        (* [hub.stack/STACK_ITEM_VALUE_HI 4]     (hub-into-mod-activation-flag))   ;; res
+        (* [hub.stack/STACK_ITEM_VALUE_LO 4]     (hub-into-mod-activation-flag))
+        (*  hub.stack/INSTRUCTION                (hub-into-mod-activation-flag))
     )
 )

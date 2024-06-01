@@ -22,7 +22,7 @@
 		( HAS_CODE                    :binary@prove ) ;; TODO: demote to debug constraint
 		( HAS_CODE_NEW                :binary@prove ) ;; TODO: demote to debug constraint
 		( CODE_FRAGMENT_INDEX         :i32          )
-		( ROM_LEX_FLAG                :binary@prove )
+		( ROMLEX_FLAG                 :binary@prove )
 		( EXISTS                      :binary@prove ) ;; TODO: demote to debug constraint, already fully constrained
 		( EXISTS_NEW                  :binary@prove ) ;; TODO: demote to debug constraint, already fully constrained
 		( WARMTH                      :binary@prove ) ;; TODO: demote to debug constraint

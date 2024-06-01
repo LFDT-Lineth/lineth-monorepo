@@ -30,7 +30,7 @@
                     (account-same-deployment-number-and-status       CREATE_third_creator_account_row___row_offset)
                     (account-same-marked-for-selfdestruct            CREATE_third_creator_account_row___row_offset)
                     (vanishes!    (shift    account/TRM_FLAG         CREATE_third_creator_account_row___row_offset))
-                    (vanishes!    (shift    account/ROM_LEX_FLAG     CREATE_third_creator_account_row___row_offset))
+                    (vanishes!    (shift    account/ROMLEX_FLAG      CREATE_third_creator_account_row___row_offset))
                     (vanishes!    (shift    account/RLPADDR_FLAG     CREATE_third_creator_account_row___row_offset))    ;; TODO: these 3 bit vanishing constraints could be merged
                     (revert-dom-sub-stamps                           CREATE_third_creator_account_row___row_offset    2)
                     ))
@@ -45,7 +45,7 @@
                     (account-same-deployment-status                  CREATE_third_createe_account_row___row_offset)
                     (account-same-marked-for-selfdestruct            CREATE_third_createe_account_row___row_offset)
                     (vanishes!    (shift    account/TRM_FLAG         CREATE_third_createe_account_row___row_offset))
-                    (vanishes!    (shift    account/ROM_LEX_FLAG     CREATE_third_createe_account_row___row_offset))
+                    (vanishes!    (shift    account/ROMLEX_FLAG      CREATE_third_createe_account_row___row_offset))
                     (vanishes!    (shift    account/RLPADDR_FLAG     CREATE_third_createe_account_row___row_offset))    ;; TODO: these 3 bit vanishing constraints could be merged
                     (revert-dom-sub-stamps                           CREATE_third_createe_account_row___row_offset    3)
                     ))

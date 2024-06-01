@@ -217,24 +217,25 @@
     (scenario-shorthand-CALL-precompile)
     ))
 
-;;  CALL/requires_both_accounts_twice
-(defun (scenario-shorthand-CALL-requires-both-accounts-twice)
+;;  CALL/balance_update_not_required
+(defun (scenario-shorthand-CALL-balance-update-not-required)
   (+ 
-    ;; scenario/CALL_EXCEPTION
-    ;; scenario/CALL_ABORT
-    scenario/CALL_EOA_SUCCESS_CALLER_WILL_REVERT
+    scenario/CALL_EXCEPTION
+    scenario/CALL_ABORT
+    ;; scenario/CALL_EOA_SUCCESS_CALLER_WILL_REVERT
     ;; scenario/CALL_EOA_SUCCESS_CALLER_WONT_REVERT
-    scenario/CALL_SMC_FAILURE_CALLER_WILL_REVERT
-    scenario/CALL_SMC_FAILURE_CALLER_WONT_REVERT
-    scenario/CALL_SMC_SUCCESS_CALLER_WILL_REVERT
+    ;; scenario/CALL_SMC_FAILURE_CALLER_WILL_REVERT
+    ;; scenario/CALL_SMC_FAILURE_CALLER_WONT_REVERT
+    ;; scenario/CALL_SMC_SUCCESS_CALLER_WILL_REVERT
     ;; scenario/CALL_SMC_SUCCESS_CALLER_WONT_REVERT
-    ;; scenario/CALL_PRC_FAILURE
-    scenario/CALL_PRC_SUCCESS_CALLER_WILL_REVERT
+    scenario/CALL_PRC_FAILURE
+    ;; scenario/CALL_PRC_SUCCESS_CALLER_WILL_REVERT
     ;; scenario/CALL_PRC_SUCCESS_CALLER_WONT_REVERT
     ))
 
-;;  CALL/requires_balance_update
-(defun (scenario-shorthand-CALL-requires-balance-update)
+
+;;  CALL/balance_update_required
+(defun (scenario-shorthand-CALL-balance-update-required)
   (+ 
     (scenario-shorthand-CALL-externally-owned-account)
     (scenario-shorthand-CALL-smart-contract)
@@ -252,8 +253,24 @@
     ;; scenario/CALL_PRC_SUCCESS_CALLER_WONT_REVERT
     ))
 
+;;  CALL/requires_both_accounts_twice
+(defun (scenario-shorthand-CALL-requires-both-accounts-twice)
+  (+ 
+    ;; scenario/CALL_EXCEPTION
+    ;; scenario/CALL_ABORT
+    scenario/CALL_EOA_SUCCESS_CALLER_WILL_REVERT
+    ;; scenario/CALL_EOA_SUCCESS_CALLER_WONT_REVERT
+    scenario/CALL_SMC_FAILURE_CALLER_WILL_REVERT
+    scenario/CALL_SMC_FAILURE_CALLER_WONT_REVERT
+    scenario/CALL_SMC_SUCCESS_CALLER_WILL_REVERT
+    ;; scenario/CALL_SMC_SUCCESS_CALLER_WONT_REVERT
+    ;; scenario/CALL_PRC_FAILURE
+    scenario/CALL_PRC_SUCCESS_CALLER_WILL_REVERT
+    ;; scenario/CALL_PRC_SUCCESS_CALLER_WONT_REVERT
+    ))
+
 ;;  CALL/undoes_balance_update_with_failure
-(defun (scenario-shorthand-CALL-undoes-balance-update-with-failure)
+(defun (scenario-shorthand-CALL-balance-update-undone-with-callee-failure)
   (+ 
     ;; scenario/CALL_EXCEPTION
     ;; scenario/CALL_ABORT
@@ -269,7 +286,7 @@
     ))
 
 ;;  CALL/undoes_balance_update_with_revert
-(defun (scenario-shorthand-CALL-undoes-balance-update-with-revert)
+(defun (scenario-shorthand-CALL-balance-update-undone-with-caller-revert)
   (+ 
     ;; scenario/CALL_EXCEPTION
     ;; scenario/CALL_ABORT

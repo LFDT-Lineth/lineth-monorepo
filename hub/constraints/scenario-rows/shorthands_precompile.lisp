@@ -18,8 +18,8 @@
     scenario/PRC_ECMUL
     scenario/PRC_ECPAIRING
     ;; scenario/PRC_BLAKE2f
-    ;; scenario/PRC_SUCCESS_WILL_REVERT
-    ;; scenario/PRC_SUCCESS_WONT_REVERT
+    ;; scenario/PRC_SUCCESS_CALLER_WILL_REVERT
+    ;; scenario/PRC_SUCCESS_CALLER_WONT_REVERT
     ;; scenario/PRC_FAILURE_KNOWN_TO_HUB
     ;; scenario/PRC_FAILURE_KNOWN_TO_RAM
     ))
@@ -48,8 +48,8 @@
     ;; scenario/PRC_ECMUL
     ;; scenario/PRC_ECPAIRING
     ;; scenario/PRC_BLAKE2f
-    ;; scenario/PRC_SUCCESS_WILL_REVERT
-    ;; scenario/PRC_SUCCESS_WONT_REVERT
+    ;; scenario/PRC_SUCCESS_CALLER_WILL_REVERT
+    ;; scenario/PRC_SUCCESS_CALLER_WONT_REVERT
     ;; scenario/PRC_FAILURE_KNOWN_TO_HUB
     ;; scenario/PRC_FAILURE_KNOWN_TO_RAM
     ))
@@ -66,8 +66,8 @@
     ;; scenario/PRC_ECMUL
     ;; scenario/PRC_ECPAIRING
     ;; scenario/PRC_BLAKE2f
-    ;; scenario/PRC_SUCCESS_WILL_REVERT
-    ;; scenario/PRC_SUCCESS_WONT_REVERT
+    ;; scenario/PRC_SUCCESS_CALLER_WILL_REVERT
+    ;; scenario/PRC_SUCCESS_CALLER_WONT_REVERT
     ;; scenario/PRC_FAILURE_KNOWN_TO_HUB
     ;; scenario/PRC_FAILURE_KNOWN_TO_RAM
     ))
@@ -84,8 +84,8 @@
     (*  7  scenario/PRC_ECMUL      )
     (*  8  scenario/PRC_ECPAIRING  )
     (*  9  scenario/PRC_BLAKE2f    )
-    ;; scenario/PRC_SUCCESS_WILL_REVERT
-    ;; scenario/PRC_SUCCESS_WONT_REVERT
+    ;; scenario/PRC_SUCCESS_CALLER_WILL_REVERT
+    ;; scenario/PRC_SUCCESS_CALLER_WONT_REVERT
     ;; scenario/PRC_FAILURE_KNOWN_TO_HUB
     ;; scenario/PRC_FAILURE_KNOWN_TO_RAM
     ))
@@ -102,8 +102,8 @@
     ;; scenario/PRC_ECMUL
     ;; scenario/PRC_ECPAIRING
     ;; scenario/PRC_BLAKE2f
-    ;; scenario/PRC_SUCCESS_WILL_REVERT
-    ;; scenario/PRC_SUCCESS_WONT_REVERT
+    ;; scenario/PRC_SUCCESS_CALLER_WILL_REVERT
+    ;; scenario/PRC_SUCCESS_CALLER_WONT_REVERT
     scenario/PRC_FAILURE_KNOWN_TO_HUB
     scenario/PRC_FAILURE_KNOWN_TO_RAM
     ))
@@ -120,8 +120,8 @@
     ;; scenario/PRC_ECMUL
     ;; scenario/PRC_ECPAIRING
     ;; scenario/PRC_BLAKE2f
-    scenario/PRC_SUCCESS_WILL_REVERT
-    scenario/PRC_SUCCESS_WONT_REVERT
+    scenario/PRC_SUCCESS_CALLER_WILL_REVERT
+    scenario/PRC_SUCCESS_CALLER_WONT_REVERT
     ;; scenario/PRC_FAILURE_KNOWN_TO_HUB
     ;; scenario/PRC_FAILURE_KNOWN_TO_RAM
     ))
@@ -145,8 +145,8 @@
 ;;     scenario/PRC_ECMUL
 ;;     scenario/PRC_ECPAIRING
 ;;     scenario/PRC_BLAKE2f
-;;     scenario/PRC_SUCCESS_WILL_REVERT
-;;     scenario/PRC_SUCCESS_WONT_REVERT
+;;     scenario/PRC_SUCCESS_CALLER_WILL_REVERT
+;;     scenario/PRC_SUCCESS_CALLER_WONT_REVERT
 ;;     scenario/PRC_FAILURE_KNOWN_TO_HUB
 ;;     scenario/PRC_FAILURE_KNOWN_TO_RAM
 ;;     ))

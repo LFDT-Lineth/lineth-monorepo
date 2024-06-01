@@ -173,7 +173,7 @@
                (begin
                  (if-zero     (force-bin (prev stack/STATICX))
                               (begin
-                                (debug (vanishes! (shift account/ROM_LEX_FLAG ROW_OFFSET_FOR_SELFDESTRUCT_FIRST_ACCOUNT_ROW)))
+                                (debug (vanishes! (shift account/ROMLEX_FLAG  ROW_OFFSET_FOR_SELFDESTRUCT_FIRST_ACCOUNT_ROW)))
                                 (debug (vanishes! (shift account/TRM_FLAG     ROW_OFFSET_FOR_SELFDESTRUCT_FIRST_ACCOUNT_ROW)))
                                 (eq!   (selfdestruct-account-address-hi)  (shift account/ADDRESS_HI ROW_OFFSET_FOR_SELFDESTRUCT_FIRST_ACCOUNT_ROW))
                                 (eq!   (selfdestruct-account-address-lo)  (shift account/ADDRESS_LO ROW_OFFSET_FOR_SELFDESTRUCT_FIRST_ACCOUNT_ROW))
@@ -221,7 +221,7 @@
                (begin
                  (if-zero     (force-bin (prev stack/STATICX))
                               (begin
-                                ( debug (eq! (shift account/ROM_LEX_FLAG             ROW_OFFSET_FOR_SELFDESTRUCT_SECOND_ACCOUNT_ROW) 0 ) )
+                                ( debug (eq! (shift account/ROMLEX_FLAG              ROW_OFFSET_FOR_SELFDESTRUCT_SECOND_ACCOUNT_ROW) 0 ) )
                                 (eq!         (shift account/TRM_FLAG                 ROW_OFFSET_FOR_SELFDESTRUCT_SECOND_ACCOUNT_ROW) 1 )
                                 (eq!         (shift account/TRM_RAW_ADDRESS_HI       ROW_OFFSET_FOR_SELFDESTRUCT_SECOND_ACCOUNT_ROW) (selfdestruct-raw-recipient-address-hi))
                                 (eq!         (shift account/ADDRESS_LO               ROW_OFFSET_FOR_SELFDESTRUCT_SECOND_ACCOUNT_ROW) (selfdestruct-raw-recipient-address-lo))
@@ -275,7 +275,7 @@
 
 (defconstraint selfdestruct-first-undoing-row-for-WILL_REVERT-scenario (:guard (selfdestruct-scenario-WILL_REVERT-precondition))
                (begin
-                 (debug (eq! (shift account/ROM_LEX_FLAG      ROW_OFFSET_FOR_SELFDESTRUCT_FIRST_ACCOUNT_UNDOING_ROW) 0))
+                 (debug (eq! (shift account/ROMLEX_FLAG       ROW_OFFSET_FOR_SELFDESTRUCT_FIRST_ACCOUNT_UNDOING_ROW) 0))
                  (debug (eq! (shift account/TRM_FLAG          ROW_OFFSET_FOR_SELFDESTRUCT_FIRST_ACCOUNT_UNDOING_ROW) 0))
                  (account-same-address-as                     ROW_OFFSET_FOR_SELFDESTRUCT_FIRST_ACCOUNT_UNDOING_ROW      ROW_OFFSET_FOR_SELFDESTRUCT_FIRST_ACCOUNT_ROW)
                  (account-undo-balance-update                 ROW_OFFSET_FOR_SELFDESTRUCT_FIRST_ACCOUNT_UNDOING_ROW      ROW_OFFSET_FOR_SELFDESTRUCT_FIRST_ACCOUNT_ROW)
@@ -288,7 +288,7 @@
 
 (defconstraint selfdestruct-second-undoing-row-for-WILL_REVERT-scenario (:guard (selfdestruct-scenario-WILL_REVERT-precondition))
                (begin
-                 (debug (eq! (shift account/ROM_LEX_FLAG      ROW_OFFSET_FOR_SELFDESTRUCT_SECOND_ACCOUNT_UNDOING_ROW) 0))
+                 (debug (eq! (shift account/ROMLEX_FLAG       ROW_OFFSET_FOR_SELFDESTRUCT_SECOND_ACCOUNT_UNDOING_ROW) 0))
                  (debug (eq! (shift account/TRM_FLAG          ROW_OFFSET_FOR_SELFDESTRUCT_SECOND_ACCOUNT_UNDOING_ROW) 0))
                  (account-same-address-as                     ROW_OFFSET_FOR_SELFDESTRUCT_SECOND_ACCOUNT_UNDOING_ROW      ROW_OFFSET_FOR_SELFDESTRUCT_SECOND_ACCOUNT_ROW)
                  (account-undo-balance-update                 ROW_OFFSET_FOR_SELFDESTRUCT_SECOND_ACCOUNT_UNDOING_ROW      ROW_OFFSET_FOR_SELFDESTRUCT_SECOND_ACCOUNT_ROW)
@@ -310,7 +310,7 @@
 
 (defconstraint selfdestruct-first-undoing-row-for-WONT_REVERT_NOT_YET_MARKED-scenario (:guard (selfdestruct-scenario-WILL_REVERT-precondition))
                (begin
-                 (debug (eq! (shift account/ROM_LEX_FLAG          ROW_OFFSET_FOR_SELFDESTRUCT_FIRST_ACCOUNT_UNDOING_ROW) 0))
+                 (debug (eq! (shift account/ROMLEX_FLAG           ROW_OFFSET_FOR_SELFDESTRUCT_FIRST_ACCOUNT_UNDOING_ROW) 0))
                  (debug (eq! (shift account/TRM_FLAG              ROW_OFFSET_FOR_SELFDESTRUCT_FIRST_ACCOUNT_UNDOING_ROW) 0))
                  (account-same-address-as                         ROW_OFFSET_FOR_SELFDESTRUCT_FIRST_ACCOUNT_UNDOING_ROW      ROW_OFFSET_FOR_SELFDESTRUCT_FIRST_ACCOUNT_ROW)
                  (eq!        (shift account/BALANCE_NEW           ROW_OFFSET_FOR_SELFDESTRUCT_FIRST_ACCOUNT_UNDOING_ROW) 0)

@@ -54,4 +54,4 @@
 (defun    (create-instruction---creator-nonce)                (shift   account/NONCE                     CREATE_first_creator_account_row___row_offset))
 (defun    (create-instruction---creator-balance)              (shift   account/BALANCE                   CREATE_first_creator_account_row___row_offset))
 (defun    (create-instruction---deployment-cfi)               (shift   account/CODE_FRAGMENT_INDEX       CREATE_first_createe_account_row___row_offset))
-(defun    (create-instruction---ROMLEX-flag)                  (shift   account/ROM_LEX_FLAG              CREATE_first_createe_account_row___row_offset))
+(defun    (create-instruction---ROMLEX-flag)                  (shift   account/ROMLEX_FLAG               CREATE_first_createe_account_row___row_offset))

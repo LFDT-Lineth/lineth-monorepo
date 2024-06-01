@@ -26,7 +26,7 @@
                     (account-same-warmth                             CREATE_first_creator_account_row___row_offset)
                     (account-same-deployment-number-and-status       CREATE_first_creator_account_row___row_offset)
                     (account-same-marked-for-selfdestruct            CREATE_first_creator_account_row___row_offset)
-                    (vanishes!    (shift    account/ROM_LEX_FLAG     CREATE_first_creator_account_row___row_offset))
+                    (vanishes!    (shift    account/ROMLEX_FLAG      CREATE_first_creator_account_row___row_offset))
                     (vanishes!    (shift    account/TRM_FLAG         CREATE_first_creator_account_row___row_offset))
                     (eq!          (shift    account/RLPADDR_FLAG     CREATE_first_creator_account_row___row_offset)    (create-instruction---trigger_RLPADDR))
                     (standard-dom-sub-stamps    CREATE_first_creator_account_row___row_offset     0)

@@ -314,7 +314,7 @@
                              (eq!  (shift  account/ADDRESS_LO             ROW_OFFSET_CODECOPY_NO_XAHOY_ACCOUNT_ROW)  (shift  context/BYTE_CODE_ADDRESS_LO           ROW_OFFSET_CODECOPY_NO_XAHOY_CONTEXT_ROW))
                              (eq!  (shift  account/DEPLOYMENT_NUMBER      ROW_OFFSET_CODECOPY_NO_XAHOY_ACCOUNT_ROW)  (shift  context/BYTE_CODE_CODE_FRAGMENT_INDEX  ROW_OFFSET_CODECOPY_NO_XAHOY_CONTEXT_ROW))
                              (eq!  (shift  account/CODE_FRAGMENT_INDEX    ROW_OFFSET_CODECOPY_NO_XAHOY_ACCOUNT_ROW)  CODE_FRAGMENT_INDEX)
-                             (eq!  (shift  account/ROM_LEX_FLAG           ROW_OFFSET_CODECOPY_NO_XAHOY_ACCOUNT_ROW)  1)
+                             (eq!  (shift  account/ROMLEX_FLAG            ROW_OFFSET_CODECOPY_NO_XAHOY_ACCOUNT_ROW)  1)
                              (account-same-balance                        ROW_OFFSET_CODECOPY_NO_XAHOY_ACCOUNT_ROW)
                              (account-same-nonce                          ROW_OFFSET_CODECOPY_NO_XAHOY_ACCOUNT_ROW)
                              (account-same-code                           ROW_OFFSET_CODECOPY_NO_XAHOY_ACCOUNT_ROW)
@@ -351,15 +351,15 @@
                                  (account-trim-address  ROW_OFFSET_EXTCODECOPY_OOGX_ACCOUNT_ROW
                                                         (copy-inst-raw-address-hi)
                                                         (copy-inst-raw-address-lo))
-                                 (vanishes!             (shift  account/ROM_LEX_FLAG  ROW_OFFSET_EXTCODECOPY_OOGX_ACCOUNT_ROW))
-                                 (account-same-balance                       ROW_OFFSET_EXTCODECOPY_OOGX_ACCOUNT_ROW)
-                                 (account-same-nonce                         ROW_OFFSET_EXTCODECOPY_OOGX_ACCOUNT_ROW)
-                                 (account-same-code                          ROW_OFFSET_EXTCODECOPY_OOGX_ACCOUNT_ROW)
-                                 (account-same-deployment-number-and-status  ROW_OFFSET_EXTCODECOPY_OOGX_ACCOUNT_ROW)
-                                 (account-same-warmth                        ROW_OFFSET_EXTCODECOPY_OOGX_ACCOUNT_ROW)
-                                 (account-same-marked-for-selfdestruct       ROW_OFFSET_EXTCODECOPY_OOGX_ACCOUNT_ROW)
-                                 (standard-dom-sub-stamps                    ROW_OFFSET_EXTCODECOPY_OOGX_ACCOUNT_ROW
-                                                                             0))
+                                 (vanishes!             (shift  account/ROMLEX_FLAG    ROW_OFFSET_EXTCODECOPY_OOGX_ACCOUNT_ROW))
+                                 (account-same-balance                                 ROW_OFFSET_EXTCODECOPY_OOGX_ACCOUNT_ROW)
+                                 (account-same-nonce                                   ROW_OFFSET_EXTCODECOPY_OOGX_ACCOUNT_ROW)
+                                 (account-same-code                                    ROW_OFFSET_EXTCODECOPY_OOGX_ACCOUNT_ROW)
+                                 (account-same-deployment-number-and-status            ROW_OFFSET_EXTCODECOPY_OOGX_ACCOUNT_ROW)
+                                 (account-same-warmth                                  ROW_OFFSET_EXTCODECOPY_OOGX_ACCOUNT_ROW)
+                                 (account-same-marked-for-selfdestruct                 ROW_OFFSET_EXTCODECOPY_OOGX_ACCOUNT_ROW)
+                                 (standard-dom-sub-stamps                              ROW_OFFSET_EXTCODECOPY_OOGX_ACCOUNT_ROW
+                                                                                       0))
                                ;; context-row i + 3
                                (execution-provides-empty-return-data  ROW_OFFSET_EXTCODECOPY_OOGX_CONTEXT_ROW)))
 
@@ -371,7 +371,7 @@
                                  (account-trim-address  ROW_OFFSET_EXTCODECOPY_OOGX_ACCOUNT_ROW
                                                         (copy-inst-raw-address-hi)
                                                         (copy-inst-raw-address-lo))
-                                 (eq!          (shift  account/ROM_LEX_FLAG  ROW_OFFSET_EXTCODECOPY_NO_XAHOY_REVERT_ACCOUNT_DOING_ROW)  (copy-inst-trigger-CFI))
+                                 (eq!          (shift  account/ROMLEX_FLAG   ROW_OFFSET_EXTCODECOPY_NO_XAHOY_REVERT_ACCOUNT_DOING_ROW)  (copy-inst-trigger-CFI))
                                  (account-same-balance                       ROW_OFFSET_EXTCODECOPY_NO_XAHOY_REVERT_ACCOUNT_DOING_ROW)
                                  (account-same-nonce                         ROW_OFFSET_EXTCODECOPY_NO_XAHOY_REVERT_ACCOUNT_DOING_ROW)
                                  (account-same-code                          ROW_OFFSET_EXTCODECOPY_NO_XAHOY_REVERT_ACCOUNT_DOING_ROW)
@@ -386,7 +386,7 @@
                                (begin
                                  (account-same-address-as ROW_OFFSET_EXTCODECOPY_NO_XAHOY_REVERT_ACCOUNT_UNDOING_ROW
                                                           ROW_OFFSET_EXTCODECOPY_NO_XAHOY_REVERT_ACCOUNT_DOING_ROW  )
-                                 (eq!          (shift  account/ROM_LEX_FLAG    ROW_OFFSET_EXTCODECOPY_NO_XAHOY_REVERT_ACCOUNT_UNDOING_ROW)  (copy-inst-trigger-CFI))
+                                 (eq!          (shift  account/ROMLEX_FLAG     ROW_OFFSET_EXTCODECOPY_NO_XAHOY_REVERT_ACCOUNT_UNDOING_ROW)  (copy-inst-trigger-CFI))
                                  (account-undo-balance-update                  ROW_OFFSET_EXTCODECOPY_NO_XAHOY_REVERT_ACCOUNT_UNDOING_ROW   ROW_OFFSET_EXTCODECOPY_NO_XAHOY_REVERT_ACCOUNT_DOING_ROW)
                                  (account-undo-nonce-update                    ROW_OFFSET_EXTCODECOPY_NO_XAHOY_REVERT_ACCOUNT_UNDOING_ROW   ROW_OFFSET_EXTCODECOPY_NO_XAHOY_REVERT_ACCOUNT_DOING_ROW)
                                  (account-undo-code-update                     ROW_OFFSET_EXTCODECOPY_NO_XAHOY_REVERT_ACCOUNT_UNDOING_ROW   ROW_OFFSET_EXTCODECOPY_NO_XAHOY_REVERT_ACCOUNT_DOING_ROW)
@@ -402,7 +402,7 @@
                                  (account-trim-address  ROW_OFFSET_EXTCODECOPY_NO_XAHOY_NO_REVERT_ACCOUNT_ROW
                                                         (copy-inst-raw-address-hi)
                                                         (copy-inst-raw-address-lo))
-                                 (eq!          (shift  account/ROM_LEX_FLAG  ROW_OFFSET_EXTCODECOPY_NO_XAHOY_NO_REVERT_ACCOUNT_ROW)  (copy-inst-trigger-CFI))
+                                 (eq!          (shift  account/ROMLEX_FLAG   ROW_OFFSET_EXTCODECOPY_NO_XAHOY_NO_REVERT_ACCOUNT_ROW)  (copy-inst-trigger-CFI))
                                  (account-same-balance                       ROW_OFFSET_EXTCODECOPY_NO_XAHOY_NO_REVERT_ACCOUNT_ROW)
                                  (account-same-nonce                         ROW_OFFSET_EXTCODECOPY_NO_XAHOY_NO_REVERT_ACCOUNT_ROW)
                                  (account-same-code                          ROW_OFFSET_EXTCODECOPY_NO_XAHOY_NO_REVERT_ACCOUNT_ROW)

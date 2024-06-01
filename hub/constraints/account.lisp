@@ -197,8 +197,8 @@ kec_void_lo 0x0 ;;TODO
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defconstraint hascode_emptyness (:perspective account)
- (if-eq-else CODE_HASH_HI kec_void_hi
-    (if-eq-else CODE_HASH_LO kec_void_lo
+ (if-eq-else CODE_HASH_HI EMPTY_KECCAK_HI
+    (if-eq-else CODE_HASH_LO EMPTY_KECCAK_LO
         (vanishes! HAS_CODE)
         (eq! HAS_CODE 1))
     (eq! HAS_CODE 1)))

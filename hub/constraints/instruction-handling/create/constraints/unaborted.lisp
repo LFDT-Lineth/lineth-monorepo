@@ -27,7 +27,7 @@
                     ;; warmth            operation done below
                     ;; deployment number operation done below
                     ;; deployment status operation done below
-                    (eq!          (shift    account/ROM_LEX_FLAG     CREATE_first_createe_account_row___row_offset)    (create-instruction---trigger_ROMLEX))
+                    (eq!          (shift    account/ROMLEX_FLAG     CREATE_first_createe_account_row___row_offset)    (create-instruction---trigger_ROMLEX))
                     ;; TRM_FLAG is unknown and, if necessary, imposed elsewhere
                     (vanishes!    (shift    account/RLPADDR_FLAG     CREATE_first_createe_account_row___row_offset))
                     (standard-dom-sub-stamps                         CREATE_first_createe_account_row___row_offset

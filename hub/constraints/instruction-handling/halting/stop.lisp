@@ -56,7 +56,7 @@
 
 (defconstraint stop-first-address-row (:guard (stop-instruction))
                (begin (debug (vanishes!       (shift account/TRM_FLAG     2)))
-                      (debug (vanishes!       (shift account/ROM_LEX_FLAG 2)))
+                      (debug (vanishes!       (shift account/ROMLEX_FLAG  2)))
                       (eq! (shift account/ADDRESS_HI  2) (code-address-hi))
                       (eq! (shift account/ADDRESS_LO  2) (code-address-lo))
                       (account-same-balance    2)
@@ -72,7 +72,7 @@
 
 (defconstraint stop-second-address-row (:guard (stop-instruction))
                (begin (debug (vanishes! (shift account/TRM_FLAG     3)))
-                      (debug (vanishes! (shift account/ROM_LEX_FLAG 3)))
+                      (debug (vanishes! (shift account/ROMLEX_FLAG  3)))
                       (account-same-address-as               3 2)
                       (account-undo-balance-update           3 2)
                       (account-undo-nonce-update             3 2)

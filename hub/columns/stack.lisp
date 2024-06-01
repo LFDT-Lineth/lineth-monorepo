@@ -72,7 +72,6 @@
 
    ;; hash info related
    ( HASH_INFO_FLAG          :binary@prove )
-   ( HASH_INFO_SIZE          :i32  )
    ( HASH_INFO_KECCAK_HI     :i128 )
    ( HASH_INFO_KECCAK_LO     :i128 )
 

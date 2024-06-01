@@ -108,7 +108,5 @@
                     (begin (eq! (keccak-result-hi) EMPTY_KECCAK_HI)
                            (eq! (keccak-result-lo) EMPTY_KECCAK_LO))
                     (begin (eq! (keccak-result-hi) stack/HASH_INFO_KECCAK_HI)
-                           (eq! (keccak-result-lo) stack/HASH_INFO_KECCAK_LO)
-                           (eq! (keccak-size-lo) stack/HASH_INFO_SIZE)))))
-
+                           (eq! (keccak-result-lo) stack/HASH_INFO_KECCAK_LO)))))
 

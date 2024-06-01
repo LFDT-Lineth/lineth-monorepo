@@ -181,10 +181,10 @@
          cds                              ;; call data size
          r@c                              ;; return at capacity, final argument of any CALL
          ) (begin
-         (eq! (shift misc/OOB_INST            kappa) common_precompile_oob_inst )
-         (eq! (shift [ misc/OOB_DATA 1 ]    kappa) call_gas )
-         (eq! (shift [ misc/OOB_DATA 2 ]    kappa) cds      )
-         (eq! (shift [ misc/OOB_DATA 3 ]    kappa) r@c      )
+         (eq!    (shift   misc/OOB_INST        kappa)    common_precompile_oob_inst )
+         (eq!    (shift [ misc/OOB_DATA 1 ]    kappa)    call_gas                   )
+         (eq!    (shift [ misc/OOB_DATA 2 ]    kappa)    cds                        )
+         (eq!    (shift [ misc/OOB_DATA 3 ]    kappa)    r@c                        )
          ;; (eq! (shift [ misc/OOB_DATA 4 ]    kappa) )
          ;; (eq! (shift [ misc/OOB_DATA 5 ]    kappa) )
          ;; (eq! (shift [ misc/OOB_DATA 6 ]    kappa) )
@@ -197,7 +197,7 @@
          kappa                            ;; offset
          cds                              ;; call data size
          ) (begin
-         (eq! (shift misc/OOB_INST            kappa) OOB_INST_modexpCds )
+         (eq! (shift misc/OOB_INST            kappa) OOB_INST_MODEXP_CDS )
          ;; (eq! (shift [ misc/OOB_DATA 1 ]    kappa) )
          (eq! (shift [ misc/OOB_DATA 2 ]    kappa) cds )
          ;; (eq! (shift [ misc/OOB_DATA 3 ]    kappa) )
@@ -216,7 +216,7 @@
          ybs_lo                           ;; low  part of some {b,e,m}bs
          compute_max                      ;; bit indicating whether to compute max(xbs, ybs) or not
          ) (begin
-         (eq! (shift misc/OOB_INST            kappa) OOB_INST_modexpXbs )
+         (eq! (shift misc/OOB_INST            kappa) OOB_INST_MODEXP_XBS )
          (eq! (shift [ misc/OOB_DATA 1 ]    kappa) xbs_hi      )
          (eq! (shift [ misc/OOB_DATA 2 ]    kappa) xbs_lo      )
          (eq! (shift [ misc/OOB_DATA 3 ]    kappa) ybs_lo      )
@@ -234,7 +234,7 @@
          cds                              ;; call data size
          ebs_lo                           ;; low part of ebs (exponent byte size)
          ) (begin
-         (eq! (shift misc/OOB_INST            kappa) OOB_INST_modexpLead )
+         (eq! (shift misc/OOB_INST            kappa) OOB_INST_MODEXP_LEAD )
          (eq! (shift [ misc/OOB_DATA 1 ]    kappa) bbs_lo )
          (eq! (shift [ misc/OOB_DATA 2 ]    kappa) cds    )
          (eq! (shift [ misc/OOB_DATA 3 ]    kappa) ebs_lo )
@@ -253,7 +253,7 @@
          exponent_log                     ;; leading (≤) word log of exponent
          max_mbs_bbs                      ;; call data size
          ) (begin
-         (eq! (shift misc/OOB_INST            kappa) OOB_INST_modexpPricing )
+         (eq! (shift misc/OOB_INST            kappa) OOB_INST_MODEXP_PRICING )
          (eq! (shift [ misc/OOB_DATA 1 ]    kappa) call_gas )
          ;; (eq! (shift [ misc/OOB_DATA 2 ]    kappa) )
          (eq! (shift [ misc/OOB_DATA 3 ]    kappa) r@c )
@@ -272,12 +272,12 @@
          ebs_lo                           ;; low part of ebs (exponent byte size)
          mbs_lo                           ;; low part of mbs (modulus  byte size)
          ) (begin
-         (eq! (shift misc/OOB_INST            kappa) OOB_INST_modexpExtract )
+         (eq!    (shift   misc/OOB_INST        kappa) OOB_INST_MODEXP_EXTRACT )
          ;; (eq! (shift [ misc/OOB_DATA 1 ]    kappa) )
-         (eq! (shift [ misc/OOB_DATA 2 ]    kappa) cds    )
-         (eq! (shift [ misc/OOB_DATA 3 ]    kappa) bbs_lo )
-         (eq! (shift [ misc/OOB_DATA 4 ]    kappa) ebs_lo )
-         (eq! (shift [ misc/OOB_DATA 5 ]    kappa) mbs_lo )
+         (eq!    (shift [ misc/OOB_DATA 2 ]    kappa) cds    )
+         (eq!    (shift [ misc/OOB_DATA 3 ]    kappa) bbs_lo )
+         (eq!    (shift [ misc/OOB_DATA 4 ]    kappa) ebs_lo )
+         (eq!    (shift [ misc/OOB_DATA 5 ]    kappa) mbs_lo )
          ;; (eq! (shift [ misc/OOB_DATA 6 ]    kappa) )
          ;; (eq! (shift [ misc/OOB_DATA 7 ]    kappa) )
          ;; (eq! (shift [ misc/OOB_DATA 8 ]    kappa) )

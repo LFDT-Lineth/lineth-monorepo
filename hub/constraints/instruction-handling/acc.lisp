@@ -104,7 +104,7 @@
                  (begin
                    (if-not-zero (account-instruction-requires-trimming)
                                 (begin
-                                  (eq! account/ROM_LEX_FLAG 1)
+                                  (eq! account/ROMLEX_FLAG 1)
                                   (eq! account/TRM_RAW_ADDRESS_HI [ stack/STACK_ITEM_VALUE_HI 1 ])
                                   (eq! account/ADDRESS_LO         [ stack/STACK_ITEM_VALUE_LO 1 ])
                                   (account-same-balance                         1)
