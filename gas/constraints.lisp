@@ -31,12 +31,12 @@
 ;; 5
 (defconstraint instruction-counter-cycle ()
   (if-not-zero STAMP
-               (if-eq-else CT 7 (will-inc! STAMP 1) (will-inc! CT 1))))
+               (if-eq-else CT CT_MAX (will-inc! STAMP 1) (will-inc! CT 1))))
 
 ;; 6
 (defconstraint final-row (:domain {-1})
   (if-not-zero STAMP
-               (eq! CT 7)))
+               (eq! CT CT_MAX)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                             ;;
@@ -62,7 +62,7 @@
 ;;                               ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defconstraint target-1 ()
-  (if-eq CT 7
+  (if-eq CT CT_MAX
          (begin (eq! [ACC 1] GAS_ACTL)
                 (eq! [ACC 2]
                      (- (* (- (* 2 OOGX) 1)
