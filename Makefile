@@ -137,9 +137,8 @@ ZKEVM_MODULES := ${ALU} \
 		 ${CONSTANTS} \
 		 ${EC_DATA} \
 		 ${EUC} \
-	         ${EXP} \
-	         ${GAS} \
-		 ${HUB} \
+         ${EXP} \
+         ${GAS} \
 		 ${LIBRARY} \
 		 ${LOG_DATA} \
 		 ${LOG_INFO} \
