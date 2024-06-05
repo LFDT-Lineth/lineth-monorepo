@@ -83,7 +83,11 @@
 (defconstraint inst-and-flags ()
   (begin  ;; (eq! INST (reduce + (for k [0 : 4] (* [IS_LOG_X k] [LOG_k_INST k]))))
          (eq! INST
-              (+ (* EVM_INST_LOG0 [IS_LOG_X 0]) (* EVM_INST_LOG1 [IS_LOG_X 1]) (* EVM_INST_LOG2 [IS_LOG_X 2]) (* EVM_INST_LOG3 [IS_LOG_X 3]) (* EVM_INST_LOG4 [IS_LOG_X 4])))
+              (+ (* EVM_INST_LOG0 [IS_LOG_X 0])
+                 (* EVM_INST_LOG1 [IS_LOG_X 1])
+                 (* EVM_INST_LOG2 [IS_LOG_X 2])
+                 (* EVM_INST_LOG3 [IS_LOG_X 3])
+                 (* EVM_INST_LOG4 [IS_LOG_X 4])))
          (eq! TXN_EMITS_LOGS
               (reduce + (for k [0 : 4] [IS_LOG_X k])))))
 
@@ -92,7 +96,22 @@
 ;;    2.6 Verticalization    ;;
 ;;                           ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defconstraint verticalization-row-1-and-2 (:guard (reduce + (for k [0 : 4] [IS_LOG_X k])))
+(defun (is-log0-to-log4)
+  (force-bool (+ (for k [0 : 4] [IS_LOG_X k]))))
+
+(defun (is-log1-to-log4)
+  (force-bool (+ (for k [1 : 4] [IS_LOG_X k]))))
+
+(defun (is-log2-to-log4)
+  (force-bool (+ (for k [2 : 4] [IS_LOG_X k]))))
+
+(defun (is-log3-to-log4)
+  (force-bool (+ [IS_LOG_X 3] [IS_LOG_X 4])))
+
+(defun (is-log4)
+  [IS_LOG_X 4])
+
+(defconstraint verticalization-row-1-and-2 (:guard (is-log0-to-log4))
   (if-zero CT
            (begin (eq! PHASE RLP_RCPT_SUBPHASE_ID_DATA_SIZE)
                   (eq! DATA_HI DATA_SIZE)
@@ -102,28 +121,28 @@
                   (eq! (next DATA_HI) ADDR_HI)
                   (eq! (next DATA_LO) ADDR_LO))))
 
-(defconstraint verticalization-row-3 (:guard (reduce + (for k [1 : 4] [IS_LOG_X k])))
+(defconstraint verticalization-row-3 (:guard (is-log1-to-log4))
   (if-zero CT
            (begin (eq! (shift PHASE 2)
                        (+ RLP_RCPT_SUBPHASE_ID_TOPIC_BASE RLP_RCPT_SUBPHASE_ID_TOPIC_DELTA))
                   (eq! (shift DATA_HI 2) [TOPIC_HI 1])
                   (eq! (shift DATA_LO 2) [TOPIC_LO 1]))))
 
-(defconstraint verticalization-row-4 (:guard (reduce + (for k [2 : 4] [IS_LOG_X k])))
+(defconstraint verticalization-row-4 (:guard (is-log2-to-log4))
   (if-zero CT
            (begin (eq! (shift PHASE 3)
                        (+ RLP_RCPT_SUBPHASE_ID_TOPIC_BASE (* 2 RLP_RCPT_SUBPHASE_ID_TOPIC_DELTA)))
                   (eq! (shift DATA_HI 3) [TOPIC_HI 2])
                   (eq! (shift DATA_LO 3) [TOPIC_LO 2]))))
 
-(defconstraint verticalization-row-5 (:guard (reduce + (for k [3 : 4] [IS_LOG_X k])))
+(defconstraint verticalization-row-5 (:guard (is-log3-to-log4))
   (if-zero CT
            (begin (eq! (shift PHASE 4)
                        (+ RLP_RCPT_SUBPHASE_ID_TOPIC_BASE (* 3 RLP_RCPT_SUBPHASE_ID_TOPIC_DELTA)))
                   (eq! (shift DATA_HI 4) [TOPIC_HI 3])
                   (eq! (shift DATA_LO 4) [TOPIC_LO 3]))))
 
-(defconstraint verticalization-row-6 (:guard (reduce + (for k [4 : 4] [IS_LOG_X k])))
+(defconstraint verticalization-row-6 (:guard (is-log4))
   (if-zero CT
            (begin (eq! (shift PHASE 5)
                        (+ RLP_RCPT_SUBPHASE_ID_TOPIC_BASE (* 4 RLP_RCPT_SUBPHASE_ID_TOPIC_DELTA)))
