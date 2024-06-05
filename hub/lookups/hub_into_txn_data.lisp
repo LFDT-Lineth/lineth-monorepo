@@ -17,7 +17,6 @@
             txndata.IS_DEP
             txndata.TYPE2
             txndata.GAS_PRICE
-            txndata.PRIORITY_FEE_PER_GAS
             txndata.BASEFEE
             txndata.CALL_DATA_SIZE
             txndata.INIT_CODE_SIZE
@@ -47,7 +46,6 @@
             (* hub.transaction/IS_DEPLOYMENT                                        (hub-into-txn-data-trigger))
             (* hub.transaction/IS_TYPE2                                             (hub-into-txn-data-trigger))
             (* hub.transaction/GAS_PRICE                                            (hub-into-txn-data-trigger))
-            (* hub.transaction/PRIORITY_FEE_PER_GAS                                 (hub-into-txn-data-trigger))
             (* hub.transaction/BASEFEE                                              (hub-into-txn-data-trigger))
             (* hub.transaction/CALL_DATA_SIZE                                       (hub-into-txn-data-trigger))
             (* hub.transaction/INIT_CODE_SIZE                                       (hub-into-txn-data-trigger))
