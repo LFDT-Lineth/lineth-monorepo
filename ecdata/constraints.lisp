@@ -92,16 +92,6 @@
 (defconstraint phase ()
   (eq! PHASE (phase_sum)))
 
-;; In the specs this shorthand is defined in different ways in different contexts
-;; Note that (transition_to_result) + (ecrecover_hypothesis) + (ecadd_hypothesis) + (ecmul_hypothesis) + (ecpairing_hypothesis) is 0 or 1
-;; TODO: use the same approach in the specs
-(defun (internal_checks_passed)
-  (+ (* (transition_to_result) HURDLE)
-     (* (ecrecover-hypothesis) (shift HURDLE INDEX_MAX_ECRECOVER_DATA))
-     (* (ecadd-hypothesis) (shift HURDLE INDEX_MAX_ECADD_DATA))
-     (* (ecmul-hypothesis) (shift HURDLE INDEX_MAX_ECMUL_DATA))
-     (* (ecpairing-hypothesis) (shift HURDLE INDEX_MAX_ECPAIRING_DATA_MIN))))
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                             ;;
 ;;  1.3.3 constancy conditions ;;
@@ -224,8 +214,9 @@
            (vanishes! ICP)))
 
 (defconstraint set-icp ()
-  (if-not-zero (transition_to_result)
-               (eq! ICP (internal_checks_passed))))
+  (let ((internal_checks_passed HURDLE))
+       (if-not-zero (transition_to_result)
+                    (eq! ICP internal_checks_passed))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                             ;;
@@ -264,16 +255,16 @@
                         (vanishes! (next TRIVIAL_PAIRING))
                         (eq! (next TRIVIAL_PAIRING) (next IS_INFINITY)))))
 
-;; note: pairing_result_hi \def LIMB_{i+1}
-;; note: pairing_result_lo \def LIMB_{i+2}
 (defconstraint set-pairing-result-when-trivial-pairngs ()
-  (if-not-zero (transition_to_result)
-               (if-not-zero ICP
-                            (if-zero NOT_ON_G2_ACC_MAX
-                                     (if-not-zero TRIVIAL_PAIRING
-                                                  (begin (eq! SUCCESS_BIT 1)
-                                                         (vanishes! (next LIMB))
-                                                         (eq! (shift LIMB 2) 1)))))))
+  (let ((pairing_result_hi (next LIMB))
+        (pairing_result_lo (shift LIMB 2)))
+       (if-not-zero (transition_to_result)
+                    (if-not-zero ICP
+                                 (if-zero NOT_ON_G2_ACC_MAX
+                                          (if-not-zero TRIVIAL_PAIRING
+                                                       (begin (eq! SUCCESS_BIT 1)
+                                                              (vanishes! pairing_result_hi)
+                                                              (eq! pairing_result_lo 1))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                    ;;
@@ -434,12 +425,112 @@
 ;; 1.4.3 C1 membership ;;
 ;;       utilities     ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;
+(defun (callToC1Membership k P_x_hi P_x_lo P_y_hi P_y_lo)
+  (let ((P_x_is_in_range (shift WCP_RES k))
+        (P_y_is_in_range (shift WCP_RES (+ k 1)))
+        (P_satisfies_cubic (shift WCP_RES (+ k 2)))
+        (P_y_square_hi (shift EXT_RES_HI k))
+        (P_y_square_lo (shift EXT_RES_LO k))
+        (P_x_square_hi (shift EXT_RES_HI (+ k 1)))
+        (P_x_square_lo (shift EXT_RES_LO (+ k 1)))
+        (P_x_cube_hi (shift EXT_RES_HI (+ k 2)))
+        (P_x_cube_lo (shift EXT_RES_LO (+ k 2)))
+        (P_x_cube_plus_three_hi (shift EXT_RES_HI (+ k 3)))
+        (P_x_cube_plus_three_lo (shift EXT_RES_LO (+ k 3)))
+        (P_is_in_range (shift HURDLE (+ k 1)))
+        (C1_membership (shift HURDLE k))
+        (large_sum (+ P_x_hi P_x_lo P_y_hi P_y_lo))
+        (P_is_point_at_infinity (shift IS_INFINITY k)))
+       (begin (callToC1MembershipWCP k
+                                     P_x_hi
+                                     P_x_lo
+                                     P_y_hi
+                                     P_y_lo
+                                     P_x_square_hi
+                                     P_x_square_lo
+                                     P_x_cube_plus_three_hi
+                                     P_x_cube_plus_three_lo)
+              (callToC1MembershipEXT k
+                                     P_x_hi
+                                     P_x_lo
+                                     P_y_hi
+                                     P_y_lo
+                                     P_x_square_hi
+                                     P_x_square_lo
+                                     P_x_cube_hi
+                                     P_x_cube_lo)
+              (if-zero P_is_in_range
+                       (vanishes! P_is_point_at_infinity)
+                       (if-zero large_sum
+                                (eq! P_is_point_at_infinity 1)
+                                (vanishes! P_is_point_at_infinity))))))
+
+; TODO: shall we modify the signature of this function in the spec (add last four arguments)?
+(defun (callToC1MembershipWCP k
+                              P_x_hi
+                              P_x_lo
+                              P_y_hi
+                              P_y_lo
+                              P_x_square_hi
+                              P_x_square_lo
+                              P_x_cube_plus_three_hi
+                              P_x_cube_plus_three_lo)
+  (begin (callToLT k P_x_hi P_x_lo P_BN_HI P_BN_LO)
+         (callToLT (+ k 1) P_y_hi P_y_lo P_BN_HI P_BN_LO)
+         (callToEQ (+ k 2) P_x_square_hi P_x_square_lo P_x_cube_plus_three_hi P_x_cube_plus_three_lo)))
+
+; TODO: shall we modify the signature of this function in the spec (add last four arguments)?
+(defun (callToC1MembershipEXT k
+                              P_x_hi
+                              P_x_lo
+                              P_y_hi
+                              P_y_lo
+                              P_x_square_hi
+                              P_x_square_lo
+                              P_x_cube_hi
+                              P_x_cube_lo)
+  (begin (callToMULMOD k P_y_hi P_y_lo P_y_hi P_y_lo P_BN_HI P_BN_LO)
+         (callToMULMOD (+ k 1) P_x_hi P_x_lo P_x_hi P_x_lo P_BN_HI P_BN_LO)
+         (callToMULMOD (+ k 2) P_x_square_hi P_x_square_lo P_x_hi P_x_lo P_BN_HI P_BN_LO)
+         (callToADDMOD (+ k 3) P_x_cube_hi P_x_cube_lo 0 3 P_BN_HI P_BN_LO)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                     ;;
 ;; 1.4.4 Well formed   ;;
 ;;       coordinates   ;;
 ;;       utilities     ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;
+(defun (callToWellFormedCoordinates k
+                                    B_x_Im_hi
+                                    B_x_Im_lo
+                                    B_x_Re_hi
+                                    B_x_Re_lo
+                                    B_y_Im_hi
+                                    B_y_Im_lo
+                                    B_y_Re_hi
+                                    B_y_Re_lo)
+  (let ((B_x_Im_is_in_range (shift WCP_RES k))
+        (B_x_Re_is_in_range (shift WCP_RES (+ k 1)))
+        (B_y_Im_is_in_range (shift WCP_RES (+ k 2)))
+        (B_y_Re_is_in_range (shift WCP_RES (+ k 3)))
+        (B_x_is_in_range (shift HURDLE (+ k 2)))
+        (B_y_is_in_range (shift HURDLE (+ k 1)))
+        (well_formed_coordinates (shift HURDLE k))
+        (B_is_point_at_infinity (shift IS_INFINITY k))
+        (very_large_sum (+ B_x_Im_hi B_x_Im_lo B_x_Re_hi B_x_Re_lo B_y_Im_hi B_y_Im_lo B_y_Re_hi B_y_Re_lo)))
+       (begin (callToLT k B_x_Im_hi B_x_Im_lo P_BN_HI P_BN_LO)
+              (callToLT (+ k 1) B_x_Re_hi B_x_Re_lo P_BN_HI P_BN_LO)
+              (callToLT (+ k 2) B_y_Im_hi B_y_Im_lo P_BN_HI P_BN_LO)
+              (callToLT (+ k 3) B_y_Re_hi B_y_Re_lo P_BN_HI P_BN_LO)
+              (eq! B_x_is_in_range (* B_x_Im_is_in_range B_x_Re_is_in_range))
+              (eq! B_y_is_in_range (* B_y_Im_is_in_range B_y_Re_is_in_range))
+              (eq! well_formed_coordinates (* B_x_is_in_range B_y_is_in_range))
+              (if-zero well_formed_coordinates
+                       (vanishes! B_is_point_at_infinity)
+                       (if-zero very_large_sum
+                                (eq! B_is_point_at_infinity 1)
+                                (vanishes! B_is_point_at_infinity))))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                     ;;
 ;; 1.6 Specialized     ;;
@@ -454,65 +545,38 @@
   (* IS_ECRECOVER_DATA
      (~ (- ID (prev ID)))))
 
-(defun (h_hi)
-  LIMB)
-
-(defun (h_lo)
-  (next LIMB))
-
-(defun (v_hi)
-  (shift LIMB 2))
-
-(defun (v_lo)
-  (shift LIMB 3))
-
-(defun (r_hi)
-  (shift LIMB 4))
-
-(defun (r_lo)
-  (shift LIMB 5))
-
-(defun (s_hi)
-  (shift LIMB 6))
-
-(defun (s_lo)
-  (shift LIMB 7))
-
-(defun (r_is_in_range)
-  WCP_RES)
-
-(defun (r_is_positive)
-  (next WCP_RES))
-
-(defun (s_is_in_range)
-  (shift WCP_RES 2))
-
-(defun (s_is_positive)
-  (shift WCP_RES 3))
-
-(defun (v_is_27)
-  (shift WCP_RES 4))
-
-(defun (v_is_28)
-  (shift WCP_RES 5))
-
 (defconstraint internal-checks-ecrecover (:guard (ecrecover-hypothesis))
-  (begin (callToLT 0 (r_hi) (r_lo) SECP256K1N_HI SECP256K1N_LO)
-         (callToLT 1 0 0 (r_hi) (r_lo))
-         (callToLT 2 (s_hi) (s_lo) SECP256K1N_HI SECP256K1N_LO)
-         (callToLT 3 0 0 (s_hi) (s_lo))
-         (callToEQ 4 (v_hi) (v_lo) 0 27)
-         (callToEQ 5 (v_hi) (v_lo) 0 28)))
+  (let ((h_hi LIMB)
+        (h_lo (next LIMB))
+        (v_hi (shift LIMB 2))
+        (v_lo (shift LIMB 3))
+        (r_hi (shift LIMB 4))
+        (r_lo (shift LIMB 5))
+        (s_hi (shift LIMB 6))
+        (s_lo (shift LIMB 7)))
+       (begin (callToLT 0 r_hi r_lo SECP256K1N_HI SECP256K1N_LO)
+              (callToLT 1 0 0 r_hi r_lo)
+              (callToLT 2 s_hi s_lo SECP256K1N_HI SECP256K1N_LO)
+              (callToLT 3 0 0 s_hi s_lo)
+              (callToEQ 4 v_hi v_lo 0 27)
+              (callToEQ 5 v_hi v_lo 0 28))))
 
 (defconstraint justify-success-bit-ecrecover (:guard (ecrecover-hypothesis))
-  (begin (eq! HURDLE (* (r_is_in_range) (r_is_positive)))
-         (eq! (next HURDLE) (* (s_is_in_range) (s_is_positive)))
-         (eq! (shift HURDLE 2)
-              (* HURDLE (next HURDLE)))
-         (eq! (internal_checks_passed)
-              (* (shift HURDLE 2) (+ (v_is_27) (v_is_28))))
-         (if-zero (internal_checks_passed)
-                  (vanishes! SUCCESS_BIT))))
+  (let ((r_is_in_range WCP_RES)
+        (r_is_positive (next WCP_RES))
+        (s_is_in_range (shift WCP_RES 2))
+        (s_is_positive (shift WCP_RES 3))
+        (v_is_27 (shift WCP_RES 4))
+        (v_is_28 (shift WCP_RES 5))
+        (internal_checks_passed (shift HURDLE INDEX_MAX_ECRECOVER_DATA)))
+       (begin (eq! HURDLE (* r_is_in_range r_is_positive))
+              (eq! (next HURDLE) (* s_is_in_range s_is_positive))
+              (eq! (shift HURDLE 2)
+                   (* HURDLE (next HURDLE)))
+              (eq! internal_checks_passed
+                   (* (shift HURDLE 2) (+ v_is_27 v_is_28)))
+              (if-zero internal_checks_passed
+                       (vanishes! SUCCESS_BIT)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                     ;;
@@ -523,6 +587,25 @@
   (* IS_ECADD_DATA
      (~ (- ID (prev ID)))))
 
+(defconstraint internal-checks-ecadd (:guard (ecadd-hypothesis))
+  (let ((P_x_hi LIMB)
+        (P_x_lo (next LIMB))
+        (P_y_hi (shift LIMB 2))
+        (P_y_lo (shift LIMB 3))
+        (Q_x_hi (shift LIMB 4))
+        (Q_x_lo (shift LIMB 5))
+        (Q_y_hi (shift LIMB 6))
+        (Q_y_lo (shift LIMB 7)))
+       (begin (callToC1Membership 0 P_x_hi P_x_lo P_y_hi P_y_lo)
+              (callToC1Membership 4 Q_x_hi Q_x_lo Q_y_hi Q_y_lo))))
+
+(defconstraint justify-success-bit-ecadd (:guard (ecadd-hypothesis))
+  (let ((C1_membership_first_point HURDLE)
+        (C1_membership_second_point (shift HURDLE 4))
+        (internal_checks_passed (shift HURDLE INDEX_MAX_ECADD_DATA)))
+       (begin (eq! internal_checks_passed (* C1_membership_first_point C1_membership_second_point))
+              (eq! SUCCESS_BIT internal_checks_passed))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                     ;;
 ;; 1.6.3 The ECMUL     ;;
@@ -532,6 +615,21 @@
   (* IS_ECMUL_DATA
      (~ (- ID (prev ID)))))
 
+(defconstraint internal-checks-ecmul (:guard (ecmul-hypothesis))
+  (let ((P_x_hi LIMB)
+        (P_x_lo (next LIMB))
+        (P_y_hi (shift LIMB 2))
+        (P_y_lo (shift LIMB 3))
+        (n_hi (shift LIMB 4))
+        (n_lo (shift LIMB 5)))
+       (begin (callToC1Membership 0 P_x_hi P_x_lo P_y_hi P_y_lo))))
+
+(defconstraint justify-success-bit-ecmul (:guard (ecmul-hypothesis))
+  (let ((C1_membership HURDLE)
+        (internal_checks_passed (shift HURDLE INDEX_MAX_ECMUL_DATA)))
+       (begin (eq! internal_checks_passed C1_membership)
+              (eq! SUCCESS_BIT internal_checks_passed))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                     ;;
 ;; 1.6.4 The ECPAIRING ;;
@@ -540,6 +638,50 @@
 (defun (ecpairing-hypothesis)
   (* IS_ECPAIRING_DATA
      (- ACC_PAIRINGS (prev ACC_PAIRINGS))))
+
+(defconstraint internal-checks-ecpairing (:guard (ecpairing-hypothesis))
+  (let ((A_x_hi LIMB)
+        (A_x_lo (next LIMB))
+        (A_y_hi (shift LIMB 2))
+        (A_y_lo (shift LIMB 3))
+        (B_x_Im_hi (shift LIMB 4))
+        (B_x_Im_lo (shift LIMB 5))
+        (B_x_Re_hi (shift LIMB 6))
+        (B_x_Re_lo (shift LIMB 7))
+        (B_y_Im_hi (shift LIMB 8))
+        (B_y_Im_lo (shift LIMB 9))
+        (B_y_Re_hi (shift LIMB 10))
+        (B_y_Re_lo (shift LIMB 11)))
+       (begin (callToC1Membership 0 A_x_hi A_x_lo A_y_hi A_y_lo)
+              (callToWellFormedCoordinates 4
+                                           B_x_Im_hi
+                                           B_x_Im_lo
+                                           B_x_Re_hi
+                                           B_x_Re_lo
+                                           B_y_Im_hi
+                                           B_y_Im_lo
+                                           B_y_Re_hi
+                                           B_y_Re_lo))))
+
+(defconstraint propagation-of-internal-checks-passed (:guard (ecpairing-hypothesis))
+  (let ((C1_membership HURDLE)
+        (well_formed_coordinates (shift HURDLE 4))
+        (internal_checks_passed (shift HURDLE INDEX_MAX_ECPAIRING_DATA_MIN))
+        (prev_internal_checks_passed (shift HURDLE -1)))
+       (begin (if-zero (- ACC_PAIRINGS 1)
+                       (eq! internal_checks_passed (* C1_membership well_formed_coordinates))
+                       (begin (eq! (shift HURDLE 10) (* C1_membership well_formed_coordinates))
+                              (eq! internal_checks_passed
+                                   (* (shift HURDLE 10) prev_internal_checks_passed)))))))
+
+(defconstraint justify-success-bit-ecpairing (:guard (ecpairing-hypothesis))
+  (begin (if-not-zero SUCCESS_BIT
+                      (begin (eq! ICP 1)
+                             (vanishes! NOT_ON_G2_ACC_MAX)))
+         (if-zero ICP
+                  (vanishes! SUCCESS_BIT))
+         (if-not-zero NOT_ON_G2_ACC_MAX
+                      (vanishes! SUCCESS_BIT))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                     ;;
@@ -565,158 +707,5 @@
 
 (defconstraint g2-membership-circuit-selector ()
   (eq! CS_G2_MEMBERSHIP G2MTR))
-
-;; ;;;;;;;;;;;;;;;;;;;;;;;;
-;; ;;                    ;;
-;; ;;    4 Lookups       ;;
-;; ;;                    ;;
-;; ;;;;;;;;;;;;;;;;;;;;;;;;
-;; (defun (wcp-lookup _shift arg1_hi arg1_lo arg2_hi arg2_lo inst res)
-;;   (begin (= (shift WCP_ARG1_HI _shift) arg1_hi)
-;;          (= (shift WCP_ARG1_LO _shift) arg1_lo)
-;;          (= (shift WCP_ARG2_HI _shift) arg2_hi)
-;;          (= (shift WCP_ARG2_LO _shift) arg2_lo)
-;;          (= (shift WCP_INST _shift) inst)
-;;          (= (shift WCP_RES _shift) res)))
-;; (defun (ext-lookup _shift arg1_hi arg1_lo arg2_hi arg2_lo arg3_hi arg3_lo inst res_hi res_lo)
-;;   (begin (= (shift EXT_ARG1_HI _shift) arg1_hi)
-;;          (= (shift EXT_ARG1_LO _shift) arg1_lo)
-;;          (= (shift EXT_ARG2_HI _shift) arg2_hi)
-;;          (= (shift EXT_ARG2_LO _shift) arg2_lo)
-;;          (= (shift EXT_ARG3_HI _shift) arg3_hi)
-;;          (= (shift EXT_ARG3_LO _shift) arg3_lo)
-;;          (= (shift EXT_INST _shift) inst)
-;;          (= (shift EXT_RES_HI _shift) res_hi)
-;;          (= (shift EXT_RES_LO _shift) res_lo)))
-;; (defun (check-c1-membership)
-;;   ;; u = 0 for the first point of C1, and u = 1 for the second point (ecAdd only)
-;;   (begin ;; --------------------- WCP lookup ---------------------
-;;          ;; Comparison of x and y with p
-;;          (for v
-;;               [1]                                       ;; v = 0 for x, v = 1 for y
-;;               (wcp-lookup v                             ;; shift
-;;                           (shift LIMB (* 2 v))          ;; arg 1 high
-;;                           (shift LIMB
-;;                                  (+ (* 2 v) 1))         ;; arg 1 low
-;;                           P_HI                          ;; arg 2 high
-;;                           P_LO                          ;; arg 2 low
-;;                           OPCODE_LT                     ;; instruction
-;;                           (shift COMPARISONS (* 2 v)))) ;; result
-;;          ;; Comparison of y^2 with x^3 + 3
-;;          (wcp-lookup 2                                  ;; shift
-;;                      (shift SQUARE 2)                   ;; arg 1 high
-;;                      (shift SQUARE 3)                   ;; arg 1 low
-;;                      (shift CUBE 2)                     ;; arg 2 high
-;;                      (shift CUBE 3)                     ;; arg 2 low
-;;                      OPCODE_EQ                          ;; instruction
-;;                      (shift EQUALITIES 1))
-;;          ;; --------------------- EXT lookup ---------------------
-;;          ;; x^2, y^2 mod p
-;;          (for v
-;;               [1]                                       ;; v = 0 for x, v = 1 for y
-;;               (ext-lookup v                             ;; shift
-;;                           (shift LIMB (* 2 v))          ;; arg1 high
-;;                           (shift LIMB
-;;                                  (+ (* 2 v) 1))         ;; arg1 low
-;;                           (shift LIMB (* 2 v))          ;; arg2 hi
-;;                           (shift LIMB
-;;                                  (+ (* 2 v) 1))         ;; arg2 low
-;;                           P_HI                          ;; arg3 high
-;;                           P_LO                          ;; arg3 low
-;;                           OPCODE_MULMOD                 ;; instruction
-;;                           (shift SQUARE (* 2 v))        ;; res high
-;;                           (shift SQUARE
-;;                                  (+ 1 (* 2 v)))))       ;; res low
-;;          ;; x^3 mod p
-;;          (ext-lookup 2                                  ;; shift
-;;                      (shift SQUARE 0)                   ;; arg1 high
-;;                      (shift SQUARE 1)                   ;; arg1 low
-;;                      (shift LIMB 0)                     ;; arg2 high
-;;                      (shift LIMB 1)                     ;; arg2 low
-;;                      P_HI                               ;; arg3 high
-;;                      P_LO                               ;; arg3 low
-;;                      OPCODE_MULMOD                      ;; instruction
-;;                      (shift CUBE 0)                     ;; res high
-;;                      (shift CUBE 1))                    ;; res low
-;;          ;; x^3 + 3 mod p
-;;          (ext-lookup 3                                  ;; shift
-;;                      (shift CUBE 0)                     ;; arg1 high
-;;                      (shift CUBE 1)                     ;; arg1 low
-;;                      0                                  ;; arg2 high
-;;                      3                                  ;; arg2 low
-;;                      P_HI                               ;; arg3 high
-;;                      P_LO                               ;; arg3 low
-;;                      OPCODE_ADDMOD                      ;; instruction
-;;                      (shift CUBE 2)                     ;; res high
-;;                      (shift CUBE 3))))                  ;; res low
-;; ;; 4.1
-;; (defconstraint c1-membership ()
-;;   (if-not-zero (any ;; 1 if STAMP[i-1] != STAMP[i] and [EC_MUL = 1 or EC_PAIRING = 1], else 0
-;;                     (and (is-not-zero (- (prev STAMP) STAMP))
-;;                          (+ EC_MUL EC_PAIRING))
-;;                     ;; 1 if we are seeing a new pairing at row i in a call to ecPairing (potentially not including the first one,
-;;                     ;; which is captured by the condition above)
-;;                     (and EC_PAIRING
-;;                          (- (prev ACC_PAIRINGS) ACC_PAIRINGS))
-;;                     ;; 1 if CT_MIN[i] = 0 and EC_ADD[i] = 1, else 0
-;;                     (and (is-zero CT_MIN) EC_ADD))
-;;                ;; if any of the 3 condition above is true, we need to justify (or refute) the membership of a point to C1
-;;                (check-c1-membership)))
-;; ;; 4.2
-;; (defconstraint lookup-ecpairing-wcp ()
-;;   (if-eq EC_PAIRING 1
-;;          (if-zero INDEX
-;;                   ;; Comparison of Im(a), Re(a), Im(b), Re(b) with p
-;;                   (for v
-;;                        [3]
-;;                        (wcp-lookup (+ 3 v)                    ;; shift
-;;                                    (shift LIMB
-;;                                           (+ (* 2 v) 4))      ;; arg 1 high
-;;                                    (shift LIMB
-;;                                           (+ (* 2 v) 5))      ;; arg 1 low
-;;                                    P_HI                       ;; arg 2 high
-;;                                    P_LO                       ;; arg 2 low
-;;                                    OPCODE_LT                  ;; instruction
-;;                                    (shift COMPARISONS
-;;                                           (+ (* 2 v) 4))))))) ;; result
-;; ;; 4.2
-;; (defconstraint lookup-ecrecover-wcp ()
-;;   (if-eq EC_RECOVER 1
-;;          (if-zero INDEX
-;;                   (begin ;; Comparison of r and s with secp256k1n
-;;                          (for u
-;;                               [1]
-;;                               (wcp-lookup u                                ;; shift
-;;                                           (shift LIMB
-;;                                                  (+ (* 2 u) 4))            ;; arg 1 high
-;;                                           (shift LIMB
-;;                                                  (+ (* 2 u) 5))            ;; arg 1 low
-;;                                           SECP256K1N_HI                    ;; arg 2 high
-;;                                           SECP256K1N_LO                    ;; arg 2 low
-;;                                           OPCODE_LT                        ;; instruction
-;;                                           (shift COMPARISONS (* 4 u))))    ;; result
-;;                          ;; Comparison of r and s with secp256k1n
-;;                          (for u
-;;                               [1]
-;;                               (wcp-lookup (+ u 2)                          ;; shift
-;;                                           0                                ;; arg 1 high
-;;                                           0                                ;; arg 1 low
-;;                                           (shift LIMB
-;;                                                  (+ (* 2 u) 4))            ;; arg 2 high
-;;                                           (shift LIMB
-;;                                                  (+ (* 2 u) 5))            ;; arg 2 low
-;;                                           OPCODE_LT                        ;; instruction
-;;                                           (shift COMPARISONS
-;;                                                  (+ (* 4 u) 2))))          ;; result
-;;                          ;; Comparison of v with 27 and 28
-;;                          (for u
-;;                               [1]
-;;                               (wcp-lookup (+ u 4)                          ;; shift
-;;                                           (shift LIMB 2)                   ;; arg 1 high
-;;                                           (shift LIMB 3)                   ;; arg 1 low
-;;                                           0                                ;; arg 2 high
-;;                                           (+ 27 u)                         ;; arg 2 low
-;;                                           OPCODE_EQ                        ;; instruction
-;;                                           (shift EQUALITIES (+ 1 u)))))))) ;; result
 
 
