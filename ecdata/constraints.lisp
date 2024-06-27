@@ -52,7 +52,6 @@
 (defun (flag_sum)
   (+ (is_ecrecover) (is_ecadd) (is_ecmul) (is_ecpairing)))
 
-;; TODO: use constants in the specs too
 (defun (address_sum)
   (+ (* ECRECOVER (is_ecrecover))
      (* ECADD (is_ecadd))
@@ -101,7 +100,6 @@
   (begin (stamp-constancy STAMP ID)
          (stamp-constancy STAMP SUCCESS_BIT)
          (stamp-constancy STAMP TOTAL_PAIRINGS)
-         (stamp-constancy STAMP NOT_ON_G2_ACC_MAX)
          (stamp-constancy STAMP ICP)
          (stamp-constancy STAMP (address_sum))))
 
@@ -197,12 +195,14 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defconstraint set-acc-pairings-init ()
   (if-zero IS_ECPAIRING_DATA
-           (vanishes! ACC_PAIRINGS)
-           (eq! (next ACC_PAIRINGS) (next IS_ECPAIRING_DATA))))
+           (begin (vanishes! ACC_PAIRINGS)
+                  (eq! (next ACC_PAIRINGS) (next IS_ECPAIRING_DATA)))))
 
+;; TODO: modify in the specs too
 (defconstraint set-acc-pairings-increment ()
   (if-not-zero IS_ECPAIRING_DATA
-               (eq! (next ACC_PAIRINGS) (+ ACC_PAIRINGS (transition_from_large_to_small)))))
+               (eq! (next ACC_PAIRINGS)
+                    (* (next IS_ECPAIRING_DATA) (+ ACC_PAIRINGS (transition_from_large_to_small))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                             ;;
@@ -247,7 +247,7 @@
 
 (defconstraint transition-large-to-small ()
   (if-not-zero (transition_from_large_to_small)
-               (eq! (next TRIVIAL_PAIRING) TRIVIAL_PAIRING)))
+               (will-remain-constant! TRIVIAL_PAIRING)))
 
 (defconstraint transition-small-to-large ()
   (if-not-zero (transition_from_small_to_large)
@@ -334,8 +334,8 @@
 ;;         and NOT_ON_G2_ACC   ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defconstraint large-point-necessary-condition-not-on-g2 ()
-  (if-not-zero IS_LARGE_POINT
-               (eq! NOT_ON_G2 1)))
+  (if-not-zero NOT_ON_G2
+               (eq! IS_LARGE_POINT 1)))
 
 (defconstraint set-not-on-g2-not-on-g2-acc ()
   (if-zero IS_ECPAIRING_DATA
@@ -459,13 +459,16 @@
                                      P_x_square_lo
                                      P_x_cube_hi
                                      P_x_cube_lo)
+              (eq! P_is_in_range (* P_x_is_in_range P_y_is_in_range))
+              (eq! C1_membership
+                   (* P_is_in_range (+ P_is_point_at_infinity P_satisfies_cubic)))
               (if-zero P_is_in_range
                        (vanishes! P_is_point_at_infinity)
                        (if-zero large_sum
                                 (eq! P_is_point_at_infinity 1)
                                 (vanishes! P_is_point_at_infinity))))))
 
-; TODO: shall we modify the signature of this function in the spec (add last four arguments)?
+;; Note: in the specs for simplicity we omit the last four arguments
 (defun (callToC1MembershipWCP k
                               P_x_hi
                               P_x_lo
@@ -477,9 +480,9 @@
                               P_x_cube_plus_three_lo)
   (begin (callToLT k P_x_hi P_x_lo P_BN_HI P_BN_LO)
          (callToLT (+ k 1) P_y_hi P_y_lo P_BN_HI P_BN_LO)
-         (callToEQ (+ k 2) P_x_square_hi P_x_square_lo P_x_cube_plus_three_hi P_x_cube_plus_three_lo)))
+         (callToEQ (+ k 2) P_y_square_hi P_y_square_lo P_x_cube_plus_three_hi P_x_cube_plus_three_lo)))
 
-; TODO: shall we modify the signature of this function in the spec (add last four arguments)?
+;; Note: in the specs for simplicity we omit the last four arguments
 (defun (callToC1MembershipEXT k
                               P_x_hi
                               P_x_lo
