@@ -151,23 +151,22 @@
 
 (defconstraint   tx-init-copying-transaction-call-data                             (:guard (tx-init-precondition))
                  (if-not-zero    (shift misc/MMU_FLAG      TX_INIT_MISCELLANEOUS_ROW_OFFSET)
-                                 (set-MMU-inst-exo-to-ram-transplants
-                                   TX_INIT_MISCELLANEOUS_ROW_OFFSET       ;; offset
-                                   ABS_TX_NUM                             ;; source ID
-                                   (tx-init-call-data-context-number)     ;; target ID
-                                   ;; aux_id                                 ;; auxiliary ID
-                                   ;; src_offset_hi                          ;; source offset high
-                                   ;; src_offset_lo                          ;; source offset low
-                                   ;; tgt_offset_lo                          ;; target offset low
-                                   (tx-init-call-data-size)               ;; size
-                                   ;; ref_offset                             ;; reference offset
-                                   ;; ref_size                               ;; reference size
-                                   ;; success_bit                            ;; success bit
-                                   ;; limb_1                                 ;; limb 1
-                                   ;; limb_2                                 ;; limb 2
-                                   EXO_SUM_WEIGHT_TXCD                    ;; weighted exogenous module flag sum
-                                   RLP_TXN_PHASE_DATA                     ;; phase
-                                   )))
+                                 (set-MMU-instruction-exo-to-ram-transplants    TX_INIT_MISCELLANEOUS_ROW_OFFSET       ;; offset
+                                                                                ABS_TX_NUM                             ;; source ID
+                                                                                (tx-init-call-data-context-number)     ;; target ID
+                                                                                ;; aux_id                                 ;; auxiliary ID
+                                                                                ;; src_offset_hi                          ;; source offset high
+                                                                                ;; src_offset_lo                          ;; source offset low
+                                                                                ;; tgt_offset_lo                          ;; target offset low
+                                                                                (tx-init-call-data-size)               ;; size
+                                                                                ;; ref_offset                             ;; reference offset
+                                                                                ;; ref_size                               ;; reference size
+                                                                                ;; success_bit                            ;; success bit
+                                                                                ;; limb_1                                 ;; limb 1
+                                                                                ;; limb_2                                 ;; limb 2
+                                                                                EXO_SUM_WEIGHT_TXCD                    ;; weighted exogenous module flag sum
+                                                                                RLP_TXN_PHASE_DATA                     ;; phase
+                                                                                )))
 
 (defconstraint   tx-init-initializing-context                                 (:guard (tx-init-precondition))
                  (begin

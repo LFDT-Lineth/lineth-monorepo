@@ -30,7 +30,7 @@
 
 (defconstraint    precompile-processing---IDENTITY-success---2nd-misc-row---setting-MMU-instruction    (:guard    (precompile-processing---IDENTITY---success-precondition))
                   (if-not-zero    (shift    misc/MMU_FLAG    precompile-processing---IDENTITY---2nd-misc-row---row-offset)
-                                  (set-MMU-inst-ram-to-ram-sans-padding
+                                  (set-MMU-instruction-ram-to-ram-sans-padding
                                     precompile-processing---IDENTITY---2nd-misc-row---row-offset               ;; offset
                                     (+    1    HUB_STAMP)                                                    ;; source ID
                                     CONTEXT_NUMBER

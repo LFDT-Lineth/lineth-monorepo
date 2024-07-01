@@ -119,23 +119,22 @@
 
 (defconstraint    create-instruction---setting-the-MMU-instruction                          (:guard    (create-instruction---generic-precondition))
                   (if-not-zero    (shift    misc/MMU_FLAG    CREATE_miscellaneous_row___row_offset)
-                                  (set-MMU-inst-ram-to-exo-with-padding
-                                    CREATE_miscellaneous_row___row_offset               ;; offset
-                                    CONTEXT_NUMBER                                      ;; source ID
-                                    (create-instruction---tgt-id)                       ;; target ID
-                                    (create-instruction---aux-id)                       ;; auxiliary ID
-                                    ;; src_offset_hi                                       ;; source offset high
-                                    (create-instruction---STACK-offset-lo)              ;; source offset low
-                                    ;; tgt_offset_lo                                       ;; target offset low
-                                    (create-instruction---STACK-size-lo)                ;; size
-                                    ;; ref_offset                                          ;; reference offset
-                                    (create-instruction---STACK-size-lo)                ;; reference size
-                                    0                                                   ;; success bit
-                                    ;; limb_1                                              ;; limb 1
-                                    ;; limb_2                                              ;; limb 2
-                                    (create-instruction---exo-sum)                      ;; weighted exogenous module flag sum
-                                    0                                                   ;; phase
-                                    )))
+                                  (set-MMU-instruction-ram-to-exo-with-padding    CREATE_miscellaneous_row___row_offset               ;; offset
+                                                                                  CONTEXT_NUMBER                                      ;; source ID
+                                                                                  (create-instruction---tgt-id)                       ;; target ID
+                                                                                  (create-instruction---aux-id)                       ;; auxiliary ID
+                                                                                  ;; src_offset_hi                                       ;; source offset high
+                                                                                  (create-instruction---STACK-offset-lo)              ;; source offset low
+                                                                                  ;; tgt_offset_lo                                       ;; target offset low
+                                                                                  (create-instruction---STACK-size-lo)                ;; size
+                                                                                  ;; ref_offset                                          ;; reference offset
+                                                                                  (create-instruction---STACK-size-lo)                ;; reference size
+                                                                                  0                                                   ;; success bit
+                                                                                  ;; limb_1                                              ;; limb 1
+                                                                                  ;; limb_2                                              ;; limb 2
+                                                                                  (create-instruction---exo-sum)                      ;; weighted exogenous module flag sum
+                                                                                  0                                                   ;; phase
+                                                                                  )))
 
 (defun    (create-instruction---tgt-id)     (+    (*    (create-instruction---hash-init-code-and-send-to-ROM)    (create-instruction---deployment-cfi))
                                                   (*    (create-instruction---send-init-code-to-ROM)             (create-instruction---deployment-cfi))))

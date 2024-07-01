@@ -72,22 +72,22 @@
                               (keccak-size-lo))) ;; source size low
 
 (defconstraint keccak-MMU-call (:guard (keccak-no-stack-exceptions))
-  (if-not-zero misc/MMU_FLAG
-               (set-MMU-inst-ram-to-exo-with-padding 1                  ;; offset
-                                                     CN                 ;; source ID
-                                                     0                  ;; target ID
-                                                     (+ 1 HUB_STAMP)    ;; auxiliary ID
-                                                     ;; src_offset_hi       ;; source offset high
-                                                     (keccak-offset-lo) ;; source offset low
-                                                     ;; tgt_offset_lo       ;; target offset low
-                                                     (keccak-size-lo)   ;; size
-                                                     ;; ref_offset          ;; reference offset
-                                                     (keccak-size-lo)   ;; reference size
-                                                     0                  ;; success bit
-                                                     ;; limb_1              ;; limb 1
-                                                     ;; limb_2              ;; limb 2
-                                                     EXO_SUM_WEIGHT_KEC ;; weighted exogenous module flag sum
-                                                     0)))               ;; phase
+               (if-not-zero misc/MMU_FLAG
+                            (set-MMU-instruction-ram-to-exo-with-padding    1                  ;; offset
+                                                                            CN                 ;; source ID
+                                                                            0                  ;; target ID
+                                                                            (+ 1 HUB_STAMP)    ;; auxiliary ID
+                                                                            ;; src_offset_hi       ;; source offset high
+                                                                            (keccak-offset-lo) ;; source offset low
+                                                                            ;; tgt_offset_lo       ;; target offset low
+                                                                            (keccak-size-lo)   ;; size
+                                                                            ;; ref_offset          ;; reference offset
+                                                                            (keccak-size-lo)   ;; reference size
+                                                                            0                  ;; success bit
+                                                                            ;; limb_1              ;; limb 1
+                                                                            ;; limb_2              ;; limb 2
+                                                                            EXO_SUM_WEIGHT_KEC ;; weighted exogenous module flag sum
+                                                                            0)))               ;; phase
 
 (defconstraint keccak-transferring-MXPX-to-stack (:guard (keccak-no-stack-exceptions))
   (eq! stack/MXPX (keccak-mxpx)))

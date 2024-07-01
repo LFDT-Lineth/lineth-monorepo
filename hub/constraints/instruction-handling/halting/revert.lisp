@@ -117,23 +117,22 @@
 
 (defconstraint  revert-inst-setting-the-MMU-data                          (:guard (revert-inst-standard-precondition))
                 (if-not-zero  (shift  misc/MMU_FLAG  ROW_OFFSET_REVERT_MISCELLANEOUS_ROW)
-                              (set-MMU-inst-ram-to-ram-sans-padding
-                                ROW_OFFSET_REVERT_MISCELLANEOUS_ROW  ;; row offset
-                                (revert-inst-current-context)        ;; source ID
-                                (revert-inst-caller-context)         ;; target ID
-                                ;; aux_id                               ;; auxiliary ID
-                                ;; src_offset_hi                        ;; source offset high
-                                (revert-inst-offset-lo)              ;; source offset low
-                                ;; tgt_offset_lo                        ;; target offset low
-                                (revert-inst-size-lo)                ;; size
-                                (revert-inst-r@o)                    ;; reference offset
-                                (revert-inst-r@c)                    ;; reference size
-                                ;; success_bit                          ;; success bit
-                                ;; limb_1                               ;; limb 1
-                                ;; limb_2                               ;; limb 2
-                                ;; exo_sum                              ;; weighted exogenous module flag sum
-                                ;; phase                                ;; phase
-                                )))
+                              (set-MMU-instruction-ram-to-ram-sans-padding    ROW_OFFSET_REVERT_MISCELLANEOUS_ROW  ;; row offset
+                                                                              (revert-inst-current-context)        ;; source ID
+                                                                              (revert-inst-caller-context)         ;; target ID
+                                                                              ;; aux_id                               ;; auxiliary ID
+                                                                              ;; src_offset_hi                        ;; source offset high
+                                                                              (revert-inst-offset-lo)              ;; source offset low
+                                                                              ;; tgt_offset_lo                        ;; target offset low
+                                                                              (revert-inst-size-lo)                ;; size
+                                                                              (revert-inst-r@o)                    ;; reference offset
+                                                                              (revert-inst-r@c)                    ;; reference size
+                                                                              ;; success_bit                          ;; success bit
+                                                                              ;; limb_1                               ;; limb 1
+                                                                              ;; limb_2                               ;; limb 2
+                                                                              ;; exo_sum                              ;; weighted exogenous module flag sum
+                                                                              ;; phase                                ;; phase
+                                                                              )))
 
 (defconstraint  revert-inst-setting-the-gas-cost                          (:guard (revert-inst-standard-precondition))
                 (if-not-zero  stack/MXPX

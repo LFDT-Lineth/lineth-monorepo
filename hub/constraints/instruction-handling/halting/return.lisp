@@ -278,7 +278,7 @@
                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                  (begin
                    (if-not-zero   (return-instruction---check-first-byte)
-                                  (set-MMU-inst-invalid-code-prefix    RETURN_INSTRUCTION_FIRST_MISC_ROW_OFFSET       ;; offset
+                                  (set-MMU-instruction-invalid-code-prefix    RETURN_INSTRUCTION_FIRST_MISC_ROW_OFFSET       ;; offset
                                                                        CONTEXT_NUMBER                         ;; source ID
                                                                        ;; tgt_id                              ;; target ID
                                                                        ;; aux_id                              ;; auxiliary ID
@@ -295,7 +295,7 @@
                                                                        ;; phase                               ;; phase
                                                                        ))
                    (if-not-zero   (return-instruction---write-return-data-to-caller-ram)
-                                  (set-MMU-inst-ram-to-ram-sans-padding   RETURN_INSTRUCTION_FIRST_MISC_ROW_OFFSET   ;; offset
+                                  (set-MMU-instruction-ram-to-ram-sans-padding   RETURN_INSTRUCTION_FIRST_MISC_ROW_OFFSET   ;; offset
                                                                           CONTEXT_NUMBER                      ;; source ID
                                                                           CALLER_CONTEXT_NUMBER               ;; target ID
                                                                           ;; aux_id                              ;; auxiliary ID
@@ -475,23 +475,22 @@
                  (eq!   (weighted-MISC-flag-sum    RETURN_INSTRUCTION_SECOND_MISC_ROW_OFFSET_DEPLOY_AND_HASH)    MISC_WEIGHT_MMU))
 
 (defconstraint   return-instruction---setting-the-second-MMU-instruction   (:guard    (return-instruction---nonempty-deployment-scenario))
-                 (set-MMU-inst-ram-to-exo-with-padding
-                   RETURN_INSTRUCTION_SECOND_MISC_ROW_OFFSET_DEPLOY_AND_HASH    ;; offset
-                   CONTEXT_NUMBER                                               ;; source ID
-                   (return-instruction---deployment-code-fragment-index)        ;; target ID
-                   (+   1   HUB_STAMP)                                          ;; auxiliary ID
-                   ;; src_offset_hi                                             ;; source offset high
-                   (return-instruction---offset-lo)                             ;; source offset low
-                   ;; tgt_offset_lo                                             ;; target offset low
-                   (return-instruction---size-lo)                               ;; size
-                   ;; ref_offset                                                ;; reference offset
-                   (return-instruction---size-lo)                               ;; reference size
-                   0                                                            ;; success bit     <==  here: irrelevant
-                   ;; limb_1                                                    ;; limb 1
-                   ;; limb_2                                                    ;; limb 2
-                   (+   EXO_SUM_WEIGHT_ROM   EXO_SUM_WEIGHT_KEC)                ;; weighted exogenous module flag sum
-                   0                                                            ;; phase           <==  here: irrelevant
-                   )
+                 (set-MMU-instruction-ram-to-exo-with-padding    RETURN_INSTRUCTION_SECOND_MISC_ROW_OFFSET_DEPLOY_AND_HASH    ;; offset
+                                                                 CONTEXT_NUMBER                                               ;; source ID
+                                                                 (return-instruction---deployment-code-fragment-index)        ;; target ID
+                                                                 (+   1   HUB_STAMP)                                          ;; auxiliary ID
+                                                                 ;; src_offset_hi                                             ;; source offset high
+                                                                 (return-instruction---offset-lo)                             ;; source offset low
+                                                                 ;; tgt_offset_lo                                             ;; target offset low
+                                                                 (return-instruction---size-lo)                               ;; size
+                                                                 ;; ref_offset                                                ;; reference offset
+                                                                 (return-instruction---size-lo)                               ;; reference size
+                                                                 0                                                            ;; success bit     <==  here: irrelevant
+                                                                 ;; limb_1                                                    ;; limb 1
+                                                                 ;; limb_2                                                    ;; limb 2
+                                                                 (+   EXO_SUM_WEIGHT_ROM   EXO_SUM_WEIGHT_KEC)                ;; weighted exogenous module flag sum
+                                                                 0                                                            ;; phase           <==  here: irrelevant
+                                                                 )
                  )
 
 (defconstraint   return-instruction---first-account-row-for-nonempty-deployments   (:guard   (scenario-shorthand-RETURN-nonempty-deployment))

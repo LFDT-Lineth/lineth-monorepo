@@ -67,41 +67,39 @@
                   (if-not-zero    (shift    misc/MMU_FLAG    precompile-processing---common---1st-misc-row---row-offset)
                                   (begin
                                     (if-not-zero    scenario/PRC_IDENTITY
-                                                    (set-MMU-inst-ram-to-ram-sans-padding
-                                                      precompile-processing---common---1st-misc-row---row-offset   ;; offset
-                                                      CONTEXT_NUMBER                                               ;; source ID
-                                                      (+    1    HUB_STAMP)                                        ;; target ID
-                                                      ;; aux_id                                                    ;; auxiliary ID
-                                                      ;; src_offset_hi                                             ;; source offset high
-                                                      (precompile-processing---dup-cdo)                            ;; source offset low
-                                                      ;; tgt_offset_lo                                             ;; target offset low
-                                                      (precompile-processing---dup-cds)                            ;; size
-                                                      0                                                            ;; reference offset
-                                                      (precompile-processing---dup-cds)                            ;; reference size
-                                                      ;; success_bit                                               ;; success bit
-                                                      ;; limb_1                                                    ;; limb 1
-                                                      ;; limb_2                                                    ;; limb 2
-                                                      ;; exo_sum                                                   ;; weighted exogenous module flag sum
-                                                      ;; phase                                                     ;; phase
-                                                      ))
+                                                    (set-MMU-instruction-ram-to-ram-sans-padding    precompile-processing---common---1st-misc-row---row-offset   ;; offset
+                                                                                                    CONTEXT_NUMBER                                               ;; source ID
+                                                                                                    (+    1    HUB_STAMP)                                        ;; target ID
+                                                                                                    ;; aux_id                                                    ;; auxiliary ID
+                                                                                                    ;; src_offset_hi                                             ;; source offset high
+                                                                                                    (precompile-processing---dup-cdo)                            ;; source offset low
+                                                                                                    ;; tgt_offset_lo                                             ;; target offset low
+                                                                                                    (precompile-processing---dup-cds)                            ;; size
+                                                                                                    0                                                            ;; reference offset
+                                                                                                    (precompile-processing---dup-cds)                            ;; reference size
+                                                                                                    ;; success_bit                                               ;; success bit
+                                                                                                    ;; limb_1                                                    ;; limb 1
+                                                                                                    ;; limb_2                                                    ;; limb 2
+                                                                                                    ;; exo_sum                                                   ;; weighted exogenous module flag sum
+                                                                                                    ;; phase                                                     ;; phase
+                                                                                                    ))
                                     (if-not-zero    (scenario-shorthand-PRC-common-except-identity-address-bit-sum)
-                                                    (set-MMU-inst-ram-to-exo-with-padding
-                                                      precompile-processing---common---1st-misc-row---row-offset   ;; offset
-                                                      CONTEXT_NUMBER                                               ;; source ID
-                                                      (+    1    HUB_STAMP)                                        ;; target ID
-                                                      0                                                            ;; auxiliary ID (here: ∅)
-                                                      ;; src_offset_hi                                                ;; source offset high
-                                                      (precompile-processing---dup-cdo)                            ;; source offset low
-                                                      ;; tgt_offset_lo                                                ;; target offset low
-                                                      (precompile-processing---dup-cds)                            ;; size
-                                                      ;; ref_offset                                                   ;; reference offset
-                                                      (precompile-processing---common---MMU-reference-size)        ;; reference size
-                                                      (precompile-processing---common---MMU-success-bit)           ;; success bit (TODO: ugly self referential constraint ...)
-                                                      ;; limb_1                                                       ;; limb 1
-                                                      ;; limb_2                                                       ;; limb 2
-                                                      (precompile-processing---common---MMU-exo-sum)               ;; weighted exogenous module flag sum
-                                                      (precompile-processing---common---MMU-phase)                 ;; phase
-                                                      ))
+                                                    (set-MMU-instruction-ram-to-exo-with-padding    precompile-processing---common---1st-misc-row---row-offset   ;; offset
+                                                                                                    CONTEXT_NUMBER                                               ;; source ID
+                                                                                                    (+    1    HUB_STAMP)                                        ;; target ID
+                                                                                                    0                                                            ;; auxiliary ID (here: ∅)
+                                                                                                    ;; src_offset_hi                                                ;; source offset high
+                                                                                                    (precompile-processing---dup-cdo)                            ;; source offset low
+                                                                                                    ;; tgt_offset_lo                                                ;; target offset low
+                                                                                                    (precompile-processing---dup-cds)                            ;; size
+                                                                                                    ;; ref_offset                                                   ;; reference offset
+                                                                                                    (precompile-processing---common---MMU-reference-size)        ;; reference size
+                                                                                                    (precompile-processing---common---MMU-success-bit)           ;; success bit (TODO: ugly self referential constraint ...)
+                                                                                                    ;; limb_1                                                       ;; limb 1
+                                                                                                    ;; limb_2                                                       ;; limb 2
+                                                                                                    (precompile-processing---common---MMU-exo-sum)               ;; weighted exogenous module flag sum
+                                                                                                    (precompile-processing---common---MMU-phase)                 ;; phase
+                                                                                                    ))
                                     )
                                   ))
 

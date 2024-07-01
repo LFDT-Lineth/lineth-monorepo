@@ -210,22 +210,22 @@
 
 (defconstraint    copy-misc-row-partially-setting-the-MMU-instruction                        (:guard    (copy-inst-standard-precondition))
                   (if-not-zero  (shift  misc/MMU_FLAG  ROW_OFFSET_COPY_INST_MISCELLANEOUS_ROW)
-                                (set-MMU-inst-any-to-ram-with-padding  ROW_OFFSET_COPY_INST_MISCELLANEOUS_ROW      ;; offset
-                                                                       (copy-inst-source-id)                       ;; source ID
-                                                                       CONTEXT_NUMBER                              ;; target ID
-                                                                       ;; aux_id                                      ;; auxiliary ID
-                                                                       (copy-inst-source-offset-hi)                ;; source offset high
-                                                                       (copy-inst-source-offset-lo)                ;; source offset low
-                                                                       (copy-inst-target-offset-lo)                ;; target offset low
-                                                                       (copy-inst-size-lo)                         ;; size
-                                                                       (copy-inst-reference-offset)                ;; reference offset
-                                                                       (copy-inst-reference-size)                  ;; reference size
-                                                                       ;; success_bit                                 ;; success bit
-                                                                       ;; limb_1                                      ;; limb 1
-                                                                       ;; limb_2                                      ;; limb 2
-                                                                       (copy-inst-exo-sum)                         ;; weighted exogenous module flag sum
-                                                                       ;; phase                                       ;; phase
-                                                                       )))
+                                (set-MMU-instruction-any-to-ram-with-padding    ROW_OFFSET_COPY_INST_MISCELLANEOUS_ROW      ;; offset
+                                                                                (copy-inst-source-id)                       ;; source ID
+                                                                                CONTEXT_NUMBER                              ;; target ID
+                                                                                ;; aux_id                                      ;; auxiliary ID
+                                                                                (copy-inst-source-offset-hi)                ;; source offset high
+                                                                                (copy-inst-source-offset-lo)                ;; source offset low
+                                                                                (copy-inst-target-offset-lo)                ;; target offset low
+                                                                                (copy-inst-size-lo)                         ;; size
+                                                                                (copy-inst-reference-offset)                ;; reference offset
+                                                                                (copy-inst-reference-size)                  ;; reference size
+                                                                                ;; success_bit                                 ;; success bit
+                                                                                ;; limb_1                                      ;; limb 1
+                                                                                ;; limb_2                                      ;; limb 2
+                                                                                (copy-inst-exo-sum)                         ;; weighted exogenous module flag sum
+                                                                                ;; phase                                       ;; phase
+                                                                                )))
 
 (defun  (copy-inst-source-id)  (+  (*  (copy-inst-is-CALLDATACOPY)     (copy-inst-call-data-context))
                                    (*  (copy-inst-is-RETURNDATACOPY)   (copy-inst-return-data-context))
