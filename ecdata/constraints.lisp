@@ -2,12 +2,12 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                                ;;
-;;    1.3 Constraints             ;;
+;;    3.3 Constraints             ;;
 ;;                                ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                                ;;
-;;    1.3.1 Binary constraints    ;;
+;;    3.3.1 Binary constraints    ;;
 ;;                                ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defconstraint binary-constraints ()
@@ -34,7 +34,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                                ;;
-;;    1.3.2 Macro instruction     ;;
+;;    3.3.2 Macro instruction     ;;
 ;;    decoding and shorthands     ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defun (is_ecrecover)
@@ -93,7 +93,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                             ;;
-;;  1.3.3 constancy conditions ;;
+;;  3.3.3 constancy conditions ;;
 ;;                             ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defconstraint stamp-constancy ()
@@ -120,7 +120,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                             ;;
-;;  1.3.4 Setting INDEX_MAX    ;;
+;;  3.3.4 Setting INDEX_MAX    ;;
 ;;                             ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defun (index_max_sum)
@@ -140,7 +140,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                             ;;
-;;  1.3.5 Setting TOTAL_SIZE   ;;
+;;  3.3.5 Setting TOTAL_SIZE   ;;
 ;;                             ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defconstraint set-total-size ()
@@ -156,7 +156,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                                    ;;
-;;  1.3.6 Setting CT, CT_MAX,         ;;
+;;  3.3.6 Setting CT, CT_MAX,         ;;
 ;;  IS_SMALL_POINT and IS_LARGE_POINT ;;
 ;;                                    ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -173,10 +173,18 @@
 (defun (transition_from_large_to_small)
   (* IS_LARGE_POINT (next IS_SMALL_POINT)))
 
+(defun (start-with-small point)
+  (if-zero IS_ECPAIRING_DATA
+           (eq! (next IS_SMALL_POINT) (next IS_ECPAIRING_DATA))))
+
 (defconstraint set-transitions ()
   (if-not-zero (* IS_ECPAIRING_DATA (next IS_ECPAIRING_DATA))
-               (if-zero (- CT CT_MAX)
-                        (eq! (+ (transition_from_small_to_large) (transition_from_large_to_small)) 1))))
+               (begin (debug (if-not-zero (- CT CT_MAX)
+                                          (vanishes! (+ (transition_from_small_to_large)
+                                                        (transition_from_large_to_small)))))
+                      (if-zero (- CT CT_MAX)
+                               (eq! (+ (transition_from_small_to_large) (transition_from_large_to_small))
+                                    1)))))
 
 (defconstraint set-ct-outside-ecpairing-data-and-first-row ()
   (if-zero IS_ECPAIRING_DATA
@@ -190,7 +198,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                             ;;
-;;  1.3.7 Setting ACC_PAIRINGS ;;
+;;  3.3.7 Setting ACC_PAIRINGS ;;
 ;;                             ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defconstraint set-acc-pairings-init ()
@@ -206,7 +214,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                             ;;
-;;  1.3.8 Setting ICP          ;;
+;;  3.3.8 Setting ICP          ;;
 ;;                             ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defconstraint set-icp-padding ()
@@ -218,18 +226,33 @@
        (if-not-zero (transition_to_result)
                     (eq! ICP internal_checks_passed))))
 
+(defconstraint icp-necessary-condition-success-bit ()
+  (debug (if-not-zero SUCCESS_BIT
+                      (eq! ICP 1))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                             ;;
-;;  1.3.9 Setting G2MTR        ;;
-;;                             ;;
+;;  3.3.9 Generalities for     ;;
+;;        G2MTR                ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defconstraint set-g2mtr ()
-  (if-zero IS_LARGE_POINT
-           (vanishes! G2MTR)))
+  (if-not-zero G2MTR
+               (begin (eq! ICP 1)
+                      (eq! IS_LARGE_POINT 1))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                             ;;
+;;  3.3.10 Generalities for     ;;
+;;        ACCPC                ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defconstraint set-accpc ()
+  (if-not-zero ACCPC
+               (begin (eq! SUCCESS_BIT 1)
+                      (eq! (is_ecpairing) 1))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                                  ;;
-;;  1.3.10 Setting TRIVIAL_PAIRING  ;;
+;;  3.3.11 Setting TRIVIAL_PAIRING  ;;
 ;;                                  ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defconstraint set-trivial-pairing-outside-ecpairing-data ()
@@ -268,7 +291,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                    ;;
-;;    1.3.11 Hearbeat ;;
+;;    3.3.12 Hearbeat ;;
 ;;                    ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;
 (defconstraint first-row (:domain {0})
@@ -315,7 +338,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                             ;;
-;;  1.3.13 ID increment        ;;
+;;  3.3.13 ID increment        ;;
 ;;         constraints         ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defconstraint id-increment ()
@@ -330,7 +353,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                             ;;
-;;  1.3.14 Setting NOT_ON_G2   ;;
+;;  3.3.14 Setting NOT_ON_G2   ;;
 ;;         and NOT_ON_G2_ACC   ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defconstraint large-point-necessary-condition-not-on-g2 ()
@@ -363,12 +386,12 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                     ;;
-;; 1.4 Utilities       ;;
+;; 3.4 Utilities       ;;
 ;;                     ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                     ;;
-;; 1.4.1 WCP utilities ;;
+;; 3.4.1 WCP utilities ;;
 ;;                     ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 (defun (callToLT k a b c d)
@@ -397,7 +420,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                     ;;
-;; 1.4.2 EXT utilities ;;
+;; 3.4.2 EXT utilities ;;
 ;;                     ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 (defun (callToADDMOD k a b c d e f)
@@ -422,7 +445,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                     ;;
-;; 1.4.3 C1 membership ;;
+;; 3.4.3 C1 membership ;;
 ;;       utilities     ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 (defun (callToC1Membership k P_x_hi P_x_lo P_y_hi P_y_lo)
@@ -499,7 +522,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                     ;;
-;; 1.4.4 Well formed   ;;
+;; 3.4.4 Well formed   ;;
 ;;       coordinates   ;;
 ;;       utilities     ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -536,12 +559,12 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                     ;;
-;; 1.6 Specialized     ;;
+;; 3.6 Specialized     ;;
 ;;     constraints     ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                     ;;
-;; 1.6.1 The ECRECOVER ;;
+;; 3.6.1 The ECRECOVER ;;
 ;;       case          ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 (defun (ecrecover-hypothesis)
@@ -583,7 +606,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                     ;;
-;; 1.6.2 The ECADD     ;;
+;; 3.6.2 The ECADD     ;;
 ;;       case          ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 (defun (ecadd-hypothesis)
@@ -611,7 +634,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                     ;;
-;; 1.6.3 The ECMUL     ;;
+;; 3.6.3 The ECMUL     ;;
 ;;       case          ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 (defun (ecmul-hypothesis)
@@ -635,7 +658,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                     ;;
-;; 1.6.4 The ECPAIRING ;;
+;; 3.6.4 The ECPAIRING ;;
 ;;       case          ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 (defun (ecpairing-hypothesis)
@@ -679,13 +702,12 @@
 
 (defconstraint justify-success-bit-ecpairing (:guard (ecpairing-hypothesis))
   (begin (if-zero ICP
-                  (vanishes! SUCCESS_BIT))
-         (if-not-zero NOT_ON_G2_ACC_MAX
-                      (vanishes! SUCCESS_BIT))))
+                  (vanishes! SUCCESS_BIT)
+                  (eq! SUCCESS_BIT (- 1 NOT_ON_G2_ACC_MAX)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                     ;;
-;; 1.7 Elliptic curve  ;;
+;; 3.7 Elliptic curve  ;;
 ;;      circuit flags  ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -695,7 +717,8 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defconstraint g2-membership-flags ()
   (if-not-zero NOT_ON_G2_ACC_MAX
-               (begin (eq! G2MTR NOT_ON_G2)
+               (begin (vanishes! ACCPC)
+                      (eq! G2MTR NOT_ON_G2)
                       (if-not-zero G2MTR
                                    (vanishes! IS_INFINITY)))))
 
@@ -707,18 +730,16 @@
 (defconstraint successful-ecpairing-flags (:guard (ecpairing-hypothesis))
   (let ((small_point_is_at_infinity IS_INFINITY)
         (large_point_is_at_infinity (shift IS_INFINITY 4)))
-       (begin (if-not-zero NOT_ON_G2_ACC_MAX
-                           (vanishes! ACCPC))
-              (if-zero NOT_ON_G2_ACC_MAX
-                       (begin (if-not-zero large_point_is_at_infinity
-                                           (begin (vanishes! (shift G2MTR 4))
-                                                  (vanishes! ACCPC))
-                                           (begin (eq! (shift G2MTR 4) small_point_is_at_infinity)
-                                                  (eq! ACCPC (- 1 small_point_is_at_infinity)))))))))
+       (if-zero NOT_ON_G2_ACC_MAX
+                (begin (if-not-zero large_point_is_at_infinity
+                                    (begin (vanishes! (shift G2MTR 4))
+                                           (vanishes! ACCPC))
+                                    (begin (eq! (shift G2MTR 4) small_point_is_at_infinity)
+                                           (eq! ACCPC (- 1 small_point_is_at_infinity))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                     ;;
-;; 1.7.3 Interface for ;;
+;; 3.7.3 Interface for ;;
 ;;       Gnark         ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 (defconstraint ecrecover-circuit-selector ()
@@ -735,5 +756,8 @@
 
 (defconstraint g2-membership-circuit-selector ()
   (eq! CS_G2_MEMBERSHIP G2MTR))
+
+(defconstraint circuit-selectors-sum-binary ()
+  (debug (is-binary (+ CS_ECRECOVER CS_ECADD CS_ECMUL CS_ECPAIRING CS_G2_MEMBERSHIP))))
 
 
