@@ -707,12 +707,14 @@
 (defconstraint successful-ecpairing-flags (:guard (ecpairing-hypothesis))
   (let ((small_point_is_at_infinity IS_INFINITY)
         (large_point_is_at_infinity (shift IS_INFINITY 4)))
-       (if-zero NOT_ON_G2_ACC_MAX
-                (begin (if-not-zero large_point_is_at_infinity
-                                    (begin (vanishes! (shift G2MTR 4))
-                                           (vanishes! ACCPC))
-                                    (begin (eq! (shift G2MTR 4) small_point_is_at_infinity)
-                                           (eq! ACCPC (- 1 small_point_is_at_infinity))))))))
+       (begin (if-not-zero NOT_ON_G2_ACC_MAX
+                           (vanishes! ACCPC))
+              (if-zero NOT_ON_G2_ACC_MAX
+                       (begin (if-not-zero large_point_is_at_infinity
+                                           (begin (vanishes! (shift G2MTR 4))
+                                                  (vanishes! ACCPC))
+                                           (begin (eq! (shift G2MTR 4) small_point_is_at_infinity)
+                                                  (eq! ACCPC (- 1 small_point_is_at_infinity)))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                     ;;
