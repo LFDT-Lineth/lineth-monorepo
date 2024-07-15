@@ -8,7 +8,7 @@
   (LIMB :i128 :display :bytes)
   (nBYTES :i5)
   (LIMB_CONSTRUCTED :binary@prove)
-  (INDEX :i16)
+  (INDEX :i24)
   (INDEX_LOCAL :i16)
   (PHASE :binary@prove :array [5])
   (PHASE_END :binary@prove)
