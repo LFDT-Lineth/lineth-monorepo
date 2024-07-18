@@ -46,7 +46,7 @@
                                                          (precompile-processing---MODEXP---mbs-lo)                             ;; low part of mbs (modulus  byte size)
                                                          ))
 
-;; we deduce some shorthands AT THE END OF THE FILE.
+;; Note: we deduce some shorthands AT THE END OF THE FILE.
 
 (defconstraint    precompile-processing---MODEXP---success-case---base-extraction-row---setting-the-MMU-instruction    (:guard    (precompile-processing---MODEXP---success-case))
                   (if-not-zero    (lets-extract-the-base)
