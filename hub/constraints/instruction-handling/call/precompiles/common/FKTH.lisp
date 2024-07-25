@@ -17,7 +17,7 @@
 
 
 (defun    (precompile-processing---common---FKTH-precondition)    (*    PEEK_AT_SCENARIO
-                                                                        (scenario-shorthand-PRC-common-address-bit-sum)
+                                                                        (scenario-shorthand---PRC---common-address-bit-sum)
                                                                         scenario/PRC_FAILURE_KNOWN_TO_HUB))
 
 (defconstraint    precompile-processing---common---setting-the-context-row-FKTH-case    (:guard (precompile-processing---common---FKTH-precondition))

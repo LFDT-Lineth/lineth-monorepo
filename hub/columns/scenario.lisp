@@ -8,7 +8,8 @@
   ;; scenario columns
   (;; CALL related scenario columns
    (CALL_EXCEPTION                                   :binary@prove)
-   (CALL_ABORT                                       :binary@prove)
+   (CALL_ABORT_WILL_REVERT                           :binary@prove)
+   (CALL_ABORT_WONT_REVERT                           :binary@prove)
    ;; call to precompiles related
    (CALL_PRC_FAILURE                                 :binary@prove)
    (CALL_PRC_SUCCESS_CALLER_WILL_REVERT              :binary@prove)

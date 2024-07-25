@@ -14,7 +14,7 @@
 ;;                                         ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defun    (create-instruction---one-step-reverting-precondition)    (*    PEEK_AT_SCENARIO    (scenario-shorthand-CREATE-simple-revert)))
+(defun    (create-instruction---one-step-reverting-precondition)    (*    PEEK_AT_SCENARIO    (scenario-shorthand---CREATE---simple-revert)))
 
 (defconstraint    create-instruction---undoing-creator-account-operations    (:guard    (create-instruction---one-step-reverting-precondition))
                   (begin

@@ -17,20 +17,20 @@
 
 
 (defun    (precompile-processing---standard-hypothesis)    (*    PEEK_AT_SCENARIO
-                                                                 (scenario-shorthand-PRC-sum)))
+                                                                 (scenario-shorthand---PRC---sum)))
 
 
 (defconstraint    precompile-processing---admissible-failure-scenarios    (:guard (precompile-processing---standard-hypothesis))
                   (begin
-                    (if-not-zero    (scenario-shorthand-PRC-may-only-fail-in-the-HUB)    (vanishes!    scenario/PRC_FAILURE_KNOWN_TO_RAM))
-                    (if-not-zero    (scenario-shorthand-PRC-may-only-fail-in-the-RAM)    (vanishes!    scenario/PRC_FAILURE_KNOWN_TO_HUB))
+                    (if-not-zero    (scenario-shorthand---PRC---may-only-fail-in-the-HUB)    (vanishes!    scenario/PRC_FAILURE_KNOWN_TO_RAM))
+                    (if-not-zero    (scenario-shorthand---PRC---may-only-fail-in-the-RAM)    (vanishes!    scenario/PRC_FAILURE_KNOWN_TO_HUB))
                     ))
 
 (defconstraint    precompile-processing---setting-GAS_NEXT             (:guard (precompile-processing---standard-hypothesis))
                   (begin
                     (eq!    GAS_NEXT    (+    (precompile-processing---dup-caller-gas)
                                               (precompile-processing---prd-return-gas)))
-                    (if-not-zero    (scenario-shorthand-PRC-failure)
+                    (if-not-zero    (scenario-shorthand---PRC---failure)
                                     (vanishes!    (precompile-processing---prd-return-gas)))
                     ))
 

@@ -18,7 +18,7 @@
 
 (defun    (precompile-processing---ECRECOVER---success-precondition)    (*    PEEK_AT_SCENARIO
                                                                               scenario/PRC_ECRECOVER
-                                                                              (scenario-shorthand-PRC-success)))
+                                                                              (scenario-shorthand---PRC---success)))
 
 (defconstraint    precompile-processing---ECRECOVER-success---2nd-misc-row---setting-module-flags       (:guard    (precompile-processing---ECRECOVER---success-precondition))
                   (eq!    (weighted-MISC-flag-sum    precompile-processing---common---2nd-misc-row---row-offset)

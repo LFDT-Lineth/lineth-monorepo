@@ -15,7 +15,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defun    (create-instruction---standard-precondition)    (*    PEEK_AT_SCENARIO
-                                                                (scenario-shorthand-CREATE-sum)))
+                                                                (scenario-shorthand---CREATE---sum)))
 
 (defun    (create-instruction---std-prefix)          (+   PEEK_AT_SCENARIO
                                                           (shift    PEEK_AT_CONTEXT         CREATE_current_context_row___row_offset)

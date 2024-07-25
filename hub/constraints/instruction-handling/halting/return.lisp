@@ -23,12 +23,12 @@
   )
 
 (defun  (return-instruction---standard-scenario-row)  (* PEEK_AT_SCENARIO
-                                                (scenario-shorthand-RETURN-sum)))
+                                                (scenario-shorthand---RETURN---sum)))
 
 (defconstraint   return-instruction---imposing-some-RETURN-scenario    (:guard  (return-instruction---standard-stack-hypothesis))
                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                  (begin  (eq!  (next  PEEK_AT_SCENARIO)             1)
-                         (eq!  (next  (scenario-shorthand-RETURN-sum))  1)
+                         (eq!  (next  (scenario-shorthand---RETURN---sum))  1)
                          )
                  )
 
@@ -105,11 +105,11 @@
 (defconstraint return-instruction---acceptable-exceptions  (:guard  PEEK_AT_SCENARIO)
                ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                (begin
-                 (if-not-zero  (scenario-shorthand-RETURN-message-call)
+                 (if-not-zero  (scenario-shorthand---RETURN---message-call)
                                (eq!  XAHOY
                                      (+  (return-instruction---exception-flag-MXPX)
                                          (return-instruction---exception-flag-OOGX))))
-                 (if-not-zero  (scenario-shorthand-RETURN-deployment)
+                 (if-not-zero  (scenario-shorthand---RETURN---deployment)
                                (eq!  XAHOY
                                      (+  (return-instruction---exception-flag-MXPX)
                                          (return-instruction---exception-flag-OOGX)
@@ -204,13 +204,13 @@
                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                  (begin
                    (eq!  scenario/RETURN_EXCEPTION  XAHOY)
-                   (if-not-zero  (scenario-shorthand-RETURN-unexceptional)
-                                 (eq!  (scenario-shorthand-RETURN-deployment)  (return-instruction---is-deployment)))
-                   (if-not-zero  (scenario-shorthand-RETURN-deployment)
+                   (if-not-zero  (scenario-shorthand---RETURN---unexceptional)
+                                 (eq!  (scenario-shorthand---RETURN---deployment)  (return-instruction---is-deployment)))
+                   (if-not-zero  (scenario-shorthand---RETURN---deployment)
                                  (begin
-                                    (eq!  (scenario-shorthand-RETURN-deployment-will-revert)  CONTEXT_WILL_REVERT)
-                                    (eq!  (scenario-shorthand-RETURN-nonempty-deployment)     (return-instruction---MXP-may-trigger-non-trivial-operation))))
-                   (if-not-zero  (scenario-shorthand-RETURN-message-call)
+                                    (eq!  (scenario-shorthand---RETURN---deployment-will-revert)  CONTEXT_WILL_REVERT)
+                                    (eq!  (scenario-shorthand---RETURN---nonempty-deployment)     (return-instruction---MXP-may-trigger-non-trivial-operation))))
+                   (if-not-zero  (scenario-shorthand---RETURN---message-call)
                                  (if-zero  (return-touch-ram-expression)
                                            ;; touch_ram_expression = 0
                                            (eq!  scenario/RETURN_FROM_MESSAGE_CALL_WONT_TOUCH_RAM  1)
@@ -238,11 +238,11 @@
                )
 
 (defun  (return-instruction---trigger_MXP)                        1)
-(defun  (return-instruction---trigger_OOB)                        (+  (return-instruction---exception-flag-MAXCSX)   (scenario-shorthand-RETURN-nonempty-deployment)))
+(defun  (return-instruction---trigger_OOB)                        (+  (return-instruction---exception-flag-MAXCSX)   (scenario-shorthand---RETURN---nonempty-deployment)))
 (defun  (return-instruction---trigger_MMU)                        (+  (return-instruction---check-first-byte)        (return-instruction---write-return-data-to-caller-ram)))
-(defun  (return-instruction---check-first-byte)                   (+  (return-instruction---exception-flag-ICPX)     (scenario-shorthand-RETURN-nonempty-deployment)))
+(defun  (return-instruction---check-first-byte)                   (+  (return-instruction---exception-flag-ICPX)     (scenario-shorthand---RETURN---nonempty-deployment)))
 (defun  (return-instruction---write-return-data-to-caller-ram)    scenario/RETURN_FROM_MESSAGE_CALL_WILL_TOUCH_RAM)
-(defun  (return-instruction---trigger_HASHINFO)                   (scenario-shorthand-RETURN-nonempty-deployment))
+(defun  (return-instruction---trigger_HASHINFO)                   (scenario-shorthand---RETURN---nonempty-deployment))
 
 (defconstraint   return-instruction---setting-trigger_HASHINFO           (:guard   (return-instruction---standard-scenario-row))
                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -349,7 +349,7 @@
                                                      (return-instruction---MXP-memory-expansion-gas)))))
 
 (defun   (return-instruction---gas-cost-required)   (+  (return-instruction---exception-flag-OOGX)
-                                               (scenario-shorthand-RETURN-unexceptional)))
+                                               (scenario-shorthand---RETURN---unexceptional)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                               ;;
@@ -370,7 +370,7 @@
 ;;                                  ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defun   (return-instruction---message-call-scenario)   (*   PEEK_AT_SCENARIO   (scenario-shorthand-RETURN-message-call)))
+(defun   (return-instruction---message-call-scenario)   (*   PEEK_AT_SCENARIO   (scenario-shorthand---RETURN---message-call)))
 
 (defconstraint   return-instruction---setting-the-callers-new-return-data-message-call-case   (:guard (return-instruction---message-call-scenario))
                  (if-not-zero   (force-bin   (return-instruction---is-root))
@@ -396,9 +396,9 @@
 ;;                                      ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defun   (return-instruction---empty-deployment-scenario)   (*   PEEK_AT_SCENARIO   (scenario-shorthand-RETURN-empty-deployment)))
+(defun   (return-instruction---empty-deployment-scenario)   (*   PEEK_AT_SCENARIO   (scenario-shorthand---RETURN---empty-deployment)))
 
-(defconstraint   return-instruction---first-account-row-for-empty-deployments   (:guard   (scenario-shorthand-RETURN-empty-deployment))
+(defconstraint   return-instruction---first-account-row-for-empty-deployments   (:guard   (scenario-shorthand---RETURN---empty-deployment))
                  (begin
                    (eq!   (shift   account/ADDRESS_HI                         RETURN_INSTRUCTION_EMPTY_DEPLOYMENT_FIRST_ACCOUNT_ROW_OFFSET)    (return-instruction---deployment-address-hi))
                    (eq!   (shift   account/ADDRESS_LO                         RETURN_INSTRUCTION_EMPTY_DEPLOYMENT_FIRST_ACCOUNT_ROW_OFFSET)    (return-instruction---deployment-address-lo))
@@ -423,7 +423,7 @@
                    )
                  )
 
-(defconstraint   return-instruction---second-account-row-for-empty-deployments   (:guard   (scenario-shorthand-RETURN-empty-deployment))
+(defconstraint   return-instruction---second-account-row-for-empty-deployments   (:guard   (scenario-shorthand---RETURN---empty-deployment))
                  (if-not-zero   scenario/RETURN_FROM_DEPLOYMENT_EMPTY_CODE_WILL_REVERT
                                 (begin
                                   (account-same-address-as                     RETURN_INSTRUCTION_EMPTY_DEPLOYMENT_SECOND_ACCOUNT_ROW_OFFSET    RETURN_INSTRUCTION_EMPTY_DEPLOYMENT_FIRST_ACCOUNT_ROW_OFFSET)
@@ -440,7 +440,7 @@
                                 )
                  )
 
-(defconstraint   return-instruction---setting-the-callers-new-return-data-empty-deployments    (:guard   (scenario-shorthand-RETURN-empty-deployment))
+(defconstraint   return-instruction---setting-the-callers-new-return-data-empty-deployments    (:guard   (scenario-shorthand---RETURN---empty-deployment))
                  (begin
                    (if-not-zero   scenario/RETURN_FROM_DEPLOYMENT_EMPTY_CODE_WILL_REVERT
                                   (if-not-zero   (force-bin   (return-instruction---is-root))
@@ -469,7 +469,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-(defun   (return-instruction---nonempty-deployment-scenario)   (*   PEEK_AT_SCENARIO   (scenario-shorthand-RETURN-nonempty-deployment)))
+(defun   (return-instruction---nonempty-deployment-scenario)   (*   PEEK_AT_SCENARIO   (scenario-shorthand---RETURN---nonempty-deployment)))
 
 (defconstraint   return-instruction---setting-the-second-miscellaneous-row-nonempty-deployments   (:guard    (return-instruction---nonempty-deployment-scenario))
                  (eq!   (weighted-MISC-flag-sum    RETURN_INSTRUCTION_SECOND_MISC_ROW_OFFSET_DEPLOY_AND_HASH)    MISC_WEIGHT_MMU))
@@ -493,7 +493,7 @@
                                                                  )
                  )
 
-(defconstraint   return-instruction---first-account-row-for-nonempty-deployments   (:guard   (scenario-shorthand-RETURN-nonempty-deployment))
+(defconstraint   return-instruction---first-account-row-for-nonempty-deployments   (:guard   (scenario-shorthand---RETURN---nonempty-deployment))
                  (begin
                    (eq!   (shift   account/ADDRESS_HI                         RETURN_INSTRUCTION_NONEMPTY_DEPLOYMENT_FIRST_ACCOUNT_ROW_OFFSET)    (return-instruction---deployment-address-hi))
                    (eq!   (shift   account/ADDRESS_LO                         RETURN_INSTRUCTION_NONEMPTY_DEPLOYMENT_FIRST_ACCOUNT_ROW_OFFSET)    (return-instruction---deployment-address-lo))
@@ -517,7 +517,7 @@
                    )
                  )
 
-(defconstraint   return-instruction---second-account-row-for-nonempty-deployments   (:guard   (scenario-shorthand-RETURN-nonempty-deployment))
+(defconstraint   return-instruction---second-account-row-for-nonempty-deployments   (:guard   (scenario-shorthand---RETURN---nonempty-deployment))
                  (if-not-zero   scenario/RETURN_FROM_DEPLOYMENT_NONEMPTY_CODE_WILL_REVERT
                                 (begin
                                   (account-same-address-as                     RETURN_INSTRUCTION_NONEMPTY_DEPLOYMENT_SECOND_ACCOUNT_ROW_OFFSET    RETURN_INSTRUCTION_NONEMPTY_DEPLOYMENT_FIRST_ACCOUNT_ROW_OFFSET)
@@ -534,7 +534,7 @@
                                 )
                  )
 
-(defconstraint   return-instruction---setting-the-callers-new-return-data-nonempty-deployments    (:guard   (scenario-shorthand-RETURN-nonempty-deployment))
+(defconstraint   return-instruction---setting-the-callers-new-return-data-nonempty-deployments    (:guard   (scenario-shorthand---RETURN---nonempty-deployment))
                  (begin
                    (if-not-zero   scenario/RETURN_FROM_DEPLOYMENT_NONEMPTY_CODE_WILL_REVERT
                                   (if-not-zero   (force-bin   (return-instruction---is-root))

@@ -16,7 +16,7 @@
 ;;                                               ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defun    (call-instruction---standard-precondition)    (*    PEEK_AT_SCENARIO    (scenario-shorthand-CALL-sum)))
+(defun    (call-instruction---standard-precondition)    (*    PEEK_AT_SCENARIO    (scenario-shorthand---CALL---sum)))
 
 
 (defconstraint    call-instruction---setting-the-stack-pattern             (:guard    (call-instruction---standard-precondition))
@@ -28,7 +28,7 @@
                   (begin
                     (vanishes!    (call-instruction---STACK-success-bit-hi))
                     (eq!          (call-instruction---STACK-success-bit-lo)
-                                  (scenario-shorthand-CALL-success))
+                                  (scenario-shorthand---CALL---success))
                     ))
 
 (defconstraint    call-instruction---setting-allowable-exceptions          (:guard    (call-instruction---standard-precondition))
@@ -65,7 +65,7 @@
                                                     (call-instruction---STACK-value-hi)            ;; value (high part)
                                                     (call-instruction---STACK-value-lo)            ;; value (low  part, stack argument of CALL-type instruction)
                                                     ))
-                                  (if-not-zero    (scenario-shorthand-CALL-unexceptional)
+                                  (if-not-zero    (scenario-shorthand---CALL---unexceptional)
                                                   (set-OOB-instruction-call
                                                     CALL_misc_row___row_offset                     ;; offset
                                                     (call-instruction---STACK-value-hi)            ;; value   (high part)
@@ -125,47 +125,50 @@
 (defconstraint    call-instruction---setting-the-CALL-scenario-flag        (:guard    (call-instruction---standard-precondition))
                   (begin
                     (eq!             scenario/CALL_EXCEPTION                               XAHOY)
-                    (if-not-zero    (scenario-shorthand-CALL-unexceptional)               (eq!    scenario/CALL_ABORT    (call-instruction---OOB-aborting-condition)))
-                    (if-not-zero    (scenario-shorthand-CALL-entry)                       (begin
-                                                                                            (eq!    (scenario-shorthand-CALL-precompile)                  (call-instruction---callee-is-precompile))
-                                                                                            (eq!    (scenario-shorthand-CALL-externally-owned-account)    (*   (-    1    (call-instruction---callee-is-precompile))
-                                                                                                                                                               (-    1    (call-instruction---callee-has-code))))
-                                                                                            (eq!    (scenario-shorthand-CALL-smart-contract)              (call-instruction---callee-has-code))))
+                    (if-not-zero    (scenario-shorthand---CALL---unexceptional)               (eq!    (scenario-shorthand---CALL---abort)                (call-instruction---OOB-aborting-condition)))
+                    (if-not-zero    (scenario-shorthand---CALL---abort)
+                                    (begin
+                                      (eq!              scenario/CALL_ABORT_WILL_REVERT    (call-instruction---caller-will-revert))
+                                      (debug    (eq!    scenario/CALL_ABORT_WONT_REVERT    (-    1    (call-instruction---caller-will-revert))))))
+                    (if-not-zero    (scenario-shorthand---CALL---entry)
+                                    (begin
+                                      (eq!    (scenario-shorthand---CALL---precompile)                  (call-instruction---callee-is-precompile))
+                                      (eq!    (scenario-shorthand---CALL---externally-owned-account)    (*   (-    1    (call-instruction---callee-is-precompile))
+                                                                                                         (-    1    (call-instruction---callee-has-code))))
+                                      (eq!    (scenario-shorthand---CALL---smart-contract)              (call-instruction---callee-has-code))))
                     (if-not-zero    (+    scenario/CALL_PRC_SUCCESS_CALLER_WILL_REVERT    scenario/CALL_PRC_SUCCESS_CALLER_WONT_REVERT)
                                     (begin  
                                       (eq!              scenario/CALL_PRC_SUCCESS_CALLER_WILL_REVERT               (call-instruction---caller-will-revert))
                                       (debug    (eq!    scenario/CALL_PRC_SUCCESS_CALLER_WONT_REVERT    (-    1    (call-instruction---caller-will-revert))))))
-                    (if-not-zero    (scenario-shorthand-CALL-externally-owned-account)  
+                    (if-not-zero    (scenario-shorthand---CALL---externally-owned-account)  
                                     (begin
                                       (eq!              scenario/CALL_EOA_SUCCESS_CALLER_WILL_REVERT                         (call-instruction---caller-will-revert))
                                       (debug    (eq!    scenario/CALL_EOA_SUCCESS_CALLER_WONT_REVERT    (-    1    (call-instruction---caller-will-revert))))))
-                    (if-not-zero    (scenario-shorthand-CALL-smart-contract)
+                    (if-not-zero    (scenario-shorthand---CALL---smart-contract)
                                     (begin
                                       (eq!                (+    scenario/CALL_SMC_FAILURE_CALLER_WILL_REVERT    scenario/CALL_SMC_SUCCESS_CALLER_WILL_REVERT)
                                                           (call-instruction---caller-will-revert))
                                       (debug    (eq!      (+    scenario/CALL_SMC_FAILURE_CALLER_WONT_REVERT    scenario/CALL_SMC_SUCCESS_CALLER_WONT_REVERT)
                                                           (-    1    call-instruction---caller-will-revert)))
-                                      (eq!                (scenario-shorthand-CALL-smc-failure)               (call-instruction---caller-will-revert))
-                                      (debug    (eq!      (scenario-shorthand-CALL-smc-success)    (-    1    (call-instruction---caller-will-revert))))))
-                    ))
+                                      (eq!                (scenario-shorthand---CALL---smc-failure)               (call-instruction---caller-will-revert))
+                                      (debug    (eq!      (scenario-shorthand---CALL---smc-success)    (-    1    (call-instruction---caller-will-revert))))))))
 
 (defconstraint    call-instruction---setting-the-next-context-number       (:guard    (call-instruction---standard-precondition))
                   (begin
                     (if-not-zero    scenario/CALL_EXCEPTION                        (shift    (next-context-is-caller)     CALL_1st_stack_row___row_offset))
-                    (if-not-zero    (scenario-shorthand-CALL-no-context-change)    (shift    (next-context-is-current)    CALL_1st_stack_row___row_offset))
-                    (if-not-zero    (scenario-shorthand-CALL-smart-contract)       (shift    (next-context-is-new)        CALL_1st_stack_row___row_offset))
-                    ))
+                    (if-not-zero    (scenario-shorthand---CALL---no-context-change)    (shift    (next-context-is-current)    CALL_1st_stack_row___row_offset))
+                    (if-not-zero    (scenario-shorthand---CALL---smart-contract)       (shift    (next-context-is-new)        CALL_1st_stack_row___row_offset))))
 
 (defconstraint    call-instruction---setting-GAS_COST                      (:guard    (call-instruction---standard-precondition))
                   (begin
                     (if-not-zero    (+    (call-instruction---STACK-staticx)
                                           (call-instruction---STACK-mxpx))    (vanishes!    GAS_COST))
                     (if-not-zero    (+    (call-instruction---STACK-oogx)
-                                          scenario/CALL_ABORT
-                                          (scenario-shorthand-CALL-smart-contract)
-                                          (scenario-shorthand-CALL-externally-owned-account)
-                                          (scenario-shorthand-CALL-precompile))    (eq!    GAS_COST    (call-instruction---STP-gas-upfront)))
-                    ))
+                                          (scenario-shorthand---CALL---abort)
+                                          (scenario-shorthand---CALL---smart-contract)
+                                          (scenario-shorthand---CALL---externally-owned-account)
+                                          (scenario-shorthand---CALL---precompile))                ;; TODO: @Olivier: there is still a TODO in the spec here (and the final shorthand isn't included ...)
+                                    (eq!    GAS_COST    (call-instruction---STP-gas-upfront)))))
 
 (defconstraint    call-instruction---setting-GAS_NEXT                      (:guard    (call-instruction---standard-precondition))
                   (begin
@@ -173,15 +176,15 @@
                                           (call-instruction---STACK-mxpx)
                                           (call-instruction---STACK-oogx))
                                     (vanishes!    GAS_NEXT))
-                    (if-not-zero    (+    scenario/CALL_ABORT
-                                          (scenario-shorthand-CALL-externally-owned-account))
+                    (if-not-zero    (+    (scenario-shorthand---CALL---abort)
+                                          (scenario-shorthand---CALL---externally-owned-account))
                                     (eq!    GAS_NEXT
                                             (+    (-    GAS_ACTUAL    (call-instruction---STP-gas-upfront))
                                                   (call-instruction---STP-call-stipend))))
-                    (if-not-zero    (scenario-shorthand-CALL-smart-contract)
+                    (if-not-zero    (scenario-shorthand---CALL---smart-contract)
                                     (eq!    GAS_NEXT
                                             (-    GAS_ACTUAL
                                                   (call-instruction---STP-gas-upfront)
                                                   (call-instruction---STP-gas-paid-out-of-pocket))))
-                    ;; (if-not-zero    (scenario-shorthand-CALL-precompile)    ( ... ))   ;; can't be done here !!!
+                    ;; (if-not-zero    (scenario-shorthand---CALL---precompile)    ( ... ))   ;; can't be done here !!!
                     ))

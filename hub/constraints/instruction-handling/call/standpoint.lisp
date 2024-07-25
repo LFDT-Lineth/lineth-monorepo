@@ -27,7 +27,7 @@
                                                                   (if-not-zero   (-   1   stack/SUX    stack/SOX)
                                                                                  (begin
                                                                                    (eq!    (shift    PEEK_AT_SCENARIO                 2)    1)
-                                                                                   (eq!    (shift    (scenario-shorthand-CALL-sum)    2)    1)
+                                                                                   (eq!    (shift    (scenario-shorthand---CALL---sum)    2)    1)
                                                                                    )
                                                                                  )
                                                                   )
@@ -37,7 +37,7 @@
 
 (defconstraint   call-instruction---backward-setting-CREATE-instruction   ()
                  (if-not-zero    PEEK_AT_SCENARIO
-                                 (if-not-zero    (scenario-shorthand-CALL-sum)
+                                 (if-not-zero    (scenario-shorthand---CALL---sum)
                                                  (begin
                                                    (eq!    (shift    PEEK_AT_STACK                   CALL_1st_stack_row___row_offset)    1)
                                                    (eq!    (shift    stack/CALL_FLAG                 CALL_1st_stack_row___row_offset)    1)

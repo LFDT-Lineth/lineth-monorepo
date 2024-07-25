@@ -9,7 +9,8 @@
 ;; (defconstraint scenario-binarities (:perspective scenario)
 ;;                (begin
 ;;                  (debug (is-binary CALL_EXCEPTION                                   ))
-;;                  (debug (is-binary CALL_ABORT                                       ))
+;;                  (debug (is-binary CALL_ABORT_WILL_REVERT                           ))
+;;                  (debug (is-binary CALL_ABORT_WONT_REVERT                           ))
 ;;                  (debug (is-binary CALL_EOA_SUCCESS_CALLER_WILL_REVERT              ))
 ;;                  (debug (is-binary CALL_EOA_SUCCESS_CALLER_WONT_REVERT              ))
 ;;                  (debug (is-binary CALL_SMC_FAILURE_CALLER_WILL_REVERT              ))
@@ -54,13 +55,13 @@
 (defconstraint only-one-active-scenario (:perspective scenario)
                (is-binary
                  (+
-                   (scenario-shorthand-CALL-sum)
-                   (scenario-shorthand-CREATE-sum)
-                   (scenario-shorthand-PRC-sum)
-                   (scenario-shorthand-RETURN-sum)
-                   (scenario-shorthand-SELFDESTRUCT-sum)
+                   (scenario-shorthand---CALL---sum)
+                   (scenario-shorthand---CREATE---sum)
+                   (scenario-shorthand---PRC---sum)
+                   (scenario-shorthand---RETURN---sum)
+                   (scenario-shorthand---SELFDESTRUCT---sum)
                    )))
 
 (defconstraint   at-most-one-precompile-address-bit-is-active   (:perspective scenario)
-                 (eq!   (scenario-shorthand-PRC-full-address-bit-sum)
-                        (scenario-shorthand-PRC-sum)))
+                 (eq!   (scenario-shorthand---PRC---full-address-bit-sum)
+                        (scenario-shorthand---PRC---sum)))

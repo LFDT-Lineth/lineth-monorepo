@@ -14,7 +14,7 @@
 ;;                                         ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; (defun    (create-instruction---)    (*    PEEK_AT_SCENARIO    (scenario-shorthand-CREATE-)))
+;; (defun    (create-instruction---)    (*    PEEK_AT_SCENARIO    (scenario-shorthand---CREATE---)))
 
 ;; (defconstraint    create-instruction---    (:guard    (create-instruction---))
 

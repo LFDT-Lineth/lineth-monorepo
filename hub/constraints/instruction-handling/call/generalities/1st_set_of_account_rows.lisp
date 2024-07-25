@@ -16,8 +16,8 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defun    (call-instruction---summon-both-account-rows-once-or-more)    (*    PEEK_AT_SCENARIO
-                                                                              (scenario-shorthand-CALL-sum)
-                                                                              (+    (call-instruction---STACK-oogx)    (scenario-shorthand-CALL-unexceptional))))
+                                                                              (scenario-shorthand---CALL---sum)
+                                                                              (+    (call-instruction---STACK-oogx)    (scenario-shorthand---CALL---unexceptional))))
 
 ;; CALLER account
 (defconstraint    call-instruction---1st-caller-account-operation    (:guard (call-instruction---summon-both-account-rows-once-or-more))
@@ -37,11 +37,11 @@
                                                                      0)
                     ))
 
-(defconstraint    call-instruction---1st-caller-account-operation---missing-fields    (:guard (call-instruction---summon-both-account-rows-once-or-more))
+(defconstraint    call-instruction---1st-caller-account-operation---balance-update    (:guard (call-instruction---summon-both-account-rows-once-or-more))
                   (begin
-                    (if-not-zero    (scenario-shorthand-CALL-balance-update-not-required)
+                    (if-not-zero    (scenario-shorthand---CALL---balance-update-not-required)
                                     (account-same-balance            CALL_1st_caller_account_row___row_offset))
-                    (if-not-zero    (scenario-shorthand-CALL-balance-update-required)
+                    (if-not-zero    (scenario-shorthand---CALL---balance-update-required)
                                     (account-decrement-balance-by    CALL_1st_caller_account_row___row_offset    (call-instruction---STACK-value-lo)))
                     ))
 
@@ -58,23 +58,23 @@
                     ;; warmth done below
                     (account-same-deployment-number-and-status       CALL_1st_callee_account_row___row_offset)
                     (account-same-marked-for-selfdestruct            CALL_1st_callee_account_row___row_offset)
-                    (eq!          (shift    account/ROMLEX_FLAG      CALL_1st_callee_account_row___row_offset)    (scenario-shorthand-CALL-smart-contract))
+                    (eq!          (shift    account/ROMLEX_FLAG      CALL_1st_callee_account_row___row_offset)    (scenario-shorthand---CALL---smart-contract))
                     (eq!          (shift    account/TRM_FLAG         CALL_1st_callee_account_row___row_offset)    1)
                     (vanishes!    (shift    account/RLPADDR_FLAG     CALL_1st_callee_account_row___row_offset))
                     (standard-dom-sub-stamps                         CALL_1st_callee_account_row___row_offset
                                                                      1)
                     ))
 
-(defconstraint    call-instruction---1st-callee-account-operation---missing-fields    (:guard (call-instruction---summon-both-account-rows-once-or-more))
+(defconstraint    call-instruction---1st-callee-account-operation---balance-update    (:guard (call-instruction---summon-both-account-rows-once-or-more))
                   (begin
-                    (if-not-zero    (scenario-shorthand-CALL-balance-update-not-required)
-                                    (begin
-                                      (account-same-balance            CALL_1st_callee_account_row___row_offset)
-                                      (account-same-warmth             CALL_1st_callee_account_row___row_offset)
-                                      ))
-                    (if-not-zero    (scenario-shorthand-CALL-balance-update-required)
-                                    (begin
-                                      (account-increment-balance-by    CALL_1st_callee_account_row___row_offset    (call-instruction---STACK-value-lo))
-                                      (account-turn-on-warmth          CALL_1st_callee_account_row___row_offset)
-                                      ))
-                    ))
+                    (if-not-zero    (scenario-shorthand---CALL---balance-update-not-required)
+                                    (account-same-balance            CALL_1st_callee_account_row___row_offset))
+                    (if-not-zero    (scenario-shorthand---CALL---balance-update-required)
+                                    (account-increment-balance-by    CALL_1st_callee_account_row___row_offset    (call-instruction---STACK-value-lo)))))
+
+(defconstraint    call-instruction---1st-callee-account-operation---warmth-update    (:guard (call-instruction---summon-both-account-rows-once-or-more))
+                  (begin
+                    (if-not-zero    (scenario-shorthand---CALL---callee-warmth-update-not-required)
+                                    (account-same-warmth             CALL_1st_callee_account_row___row_offset))
+                    (if-not-zero    (scenario-shorthand---CALL---callee-warmth-update-required)
+                                    (account-turn-on-warmth          CALL_1st_callee_account_row___row_offset))))

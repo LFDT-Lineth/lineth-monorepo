@@ -18,7 +18,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-(defun    (precompile-processing---common---precondition)    (*    PEEK_AT_SCENARIO    (scenario-shorthand-PRC-common-address-bit-sum)))
+(defun    (precompile-processing---common---precondition)    (*    PEEK_AT_SCENARIO    (scenario-shorthand---PRC---common-address-bit-sum)))
 
 
 (defconstraint    precompile-processing---common---setting-MISC-module-flags    (:guard     (precompile-processing---common---precondition))
@@ -83,7 +83,7 @@
                                                                                                     ;; exo_sum                                                   ;; weighted exogenous module flag sum
                                                                                                     ;; phase                                                     ;; phase
                                                                                                     ))
-                                    (if-not-zero    (scenario-shorthand-PRC-common-except-identity-address-bit-sum)
+                                    (if-not-zero    (scenario-shorthand---PRC---common-except-identity-address-bit-sum)
                                                     (set-MMU-instruction-ram-to-exo-with-padding    precompile-processing---common---1st-misc-row---row-offset   ;; offset
                                                                                                     CONTEXT_NUMBER                                               ;; source ID
                                                                                                     (+    1    HUB_STAMP)                                        ;; target ID
@@ -155,7 +155,7 @@
 ;; (defconstraint    precompile-processing---common---debug-constraints-for-automatic-success-bit-vanishing    (:guard    (precompile-processing---common---precondition)))
 
 (defconstraint    precompile-processing---common---justifying-success-scenario    (:guard    (precompile-processing---common---precondition))
-                  (eq!    (scenario-shorthand-PRC-success)
+                  (eq!    (scenario-shorthand---PRC---success)
                           (+    (*    (precompile-processing---common---OOB-hub-success)
                                       (+    scenario/PRC_ECRECOVER
                                             scenario/PRC_SHA2-256
@@ -172,7 +172,7 @@
 (defconstraint    precompile-processing---common---justifying-FAILURE_KNOWN_TO_HUB    (:guard    (precompile-processing---common---precondition))
                   (eq!    scenario/PRC_FAILURE_KNOWN_TO_HUB
                           (*    (-    1    (precompile-processing---common---OOB-hub-success))
-                                (scenario-shorthand-PRC-common-address-bit-sum)
+                                (scenario-shorthand---PRC---common-address-bit-sum)
                                 )))
 
 (defconstraint    precompile-processing---common---justifying-FAILURE_KNOWN_TO_RAM    (:guard    (precompile-processing---common---precondition))
@@ -184,9 +184,9 @@
 
 (defconstraint    precompile-processing---common---justifying-return-gas-prediction    (:guard    (precompile-processing---common---precondition))
                   (begin
-                    (if-not-zero    (scenario-shorthand-PRC-failure)
+                    (if-not-zero    (scenario-shorthand---PRC---failure)
                                     (vanishes!    (precompile-processing---prd-return-gas)))
-                    (if-not-zero    (scenario-shorthand-PRC-success)
+                    (if-not-zero    (scenario-shorthand---PRC---success)
                                     (eq!          (precompile-processing---prd-return-gas)
                                                   (precompile-processing---common---OOB-return-gas)))
                     ))

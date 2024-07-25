@@ -18,7 +18,7 @@
 
 (defun    (precompile-processing---IDENTITY---success-precondition)    (*    PEEK_AT_SCENARIO
                                                                              scenario/PRC_IDENTITY
-                                                                             (scenario-shorthand-PRC-success)))
+                                                                             (scenario-shorthand---PRC---success)))
 
 
 (defconstraint    precompile-processing---IDENTITY-success---2nd-misc-row---setting-module-flags       (:guard    (precompile-processing---IDENTITY---success-precondition))

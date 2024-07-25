@@ -16,7 +16,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-(defconstraint    call-instruction---final-context-row-for-unexceptional-unaborted-SMC-CALLs    (:guard    (*    PEEK_AT_SCENARIO    (scenario-shorthand-CALL-smart-contract)))
+(defconstraint    call-instruction---final-context-row-for-unexceptional-unaborted-SMC-CALLs    (:guard    (*    PEEK_AT_SCENARIO    (scenario-shorthand---CALL---smart-contract)))
                   (begin
                     (if-not-zero    scenario/CALL_SMC_FAILURE_CALLER_WILL_REVERT
                                     (begin

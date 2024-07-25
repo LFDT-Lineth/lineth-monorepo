@@ -14,7 +14,7 @@
 ;;                                  ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defun    (create-instruction---unexceptional-CREATE-precondition)    (*    PEEK_AT_SCENARIO    (scenario-shorthand-CREATE-unexceptional)))
+(defun    (create-instruction---unexceptional-CREATE-precondition)    (*    PEEK_AT_SCENARIO    (scenario-shorthand---CREATE---unexceptional)))
 
 (defconstraint    create-instruction---creator-account-first-encouter    (:guard (create-instruction---unexceptional-CREATE-precondition))
                   (begin
@@ -34,18 +34,18 @@
 
 (defconstraint    create-instruction---creator-balance-update            (:guard (create-instruction---unexceptional-CREATE-precondition))
                   (begin
-                    (if-not-zero    (scenario-shorthand-CREATE-rebuffed)
+                    (if-not-zero    (scenario-shorthand---CREATE---rebuffed)
                                     (account-same-balance    CREATE_first_creator_account_row___row_offset))
-                    (if-not-zero    (scenario-shorthand-CREATE-not-rebuffed)
+                    (if-not-zero    (scenario-shorthand---CREATE---not-rebuffed)
                                     (account-decrement-balance-by     CREATE_first_creator_account_row___row_offset
                                                                       (create-instruction---STACK-value-lo)))
                     ))
 
 (defconstraint    create-instruction---creator-nonce-update              (:guard (create-instruction---unexceptional-CREATE-precondition))
                   (begin
-                    (if-not-zero    (scenario-shorthand-CREATE-no-creator-state-change)
+                    (if-not-zero    (scenario-shorthand---CREATE---no-creator-state-change)
                                     (account-same-nonce         CREATE_first_creator_account_row___row_offset))
-                    (if-not-zero    (scenario-shorthand-CREATE-creator-state-change)
+                    (if-not-zero    (scenario-shorthand---CREATE---creator-state-change)
                                     (account-increment-nonce    CREATE_first_creator_account_row___row_offset))
                     ))
 

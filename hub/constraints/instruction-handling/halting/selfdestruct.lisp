@@ -24,7 +24,7 @@
                                                       (if-not-zero (- 1 stack/SUX stack/SOX)
                                                                    (begin
                                                                      (will-eq! PEEK_AT_SCENARIO                        1)
-                                                                     (will-eq! (scenario-shorthand-SELFDESTRUCT-sum)   1)))))))
+                                                                     (will-eq! (scenario-shorthand---SELFDESTRUCT---sum)   1)))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                       ;;
@@ -69,7 +69,7 @@
 ;;                        ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defun (selfdestruct-scenario-precondition) (* PEEK_AT_SCENARIO (scenario-shorthand-SELFDESTRUCT-sum)))
+(defun (selfdestruct-scenario-precondition) (* PEEK_AT_SCENARIO (scenario-shorthand---SELFDESTRUCT---sum)))
 
 (defconstraint selfdestruct-looking-back (:guard (selfdestruct-scenario-precondition))
                (begin
@@ -90,10 +90,10 @@
                  (if-zero XAHOY
                           (begin
                             (eq! scenario/SELFDESTRUCT_WILL_REVERT             CONTEXT_WILL_REVERT)
-                            (eq! (scenario-shorthand-SELFDESTRUCT-wont-revert) (- 1 CONTEXT_WILL_REVERT))))
+                            (eq! (scenario-shorthand---SELFDESTRUCT---wont-revert) (- 1 CONTEXT_WILL_REVERT))))
                  (if-zero CONTEXT_WILL_REVERT
                           (begin
-                            (eq! (scenario-shorthand-SELFDESTRUCT-wont-revert)    1)
+                            (eq! (scenario-shorthand---SELFDESTRUCT---wont-revert)    1)
                             (eq! scenario/SELFDESTRUCT_WONT_REVERT_ALREADY_MARKED (selfdestruct-is-marked))
                             (eq! scenario/SELFDESTRUCT_WONT_REVERT_NOT_YET_MARKED (- 1 (selfdestruct-is-marked)))))))
 
@@ -212,7 +212,7 @@
                                            (begin
                                              (account-same-balance                      ROW_OFFSET_FOR_SELFDESTRUCT_FIRST_ACCOUNT_ROW)
                                              (account-same-marked-for-selfdestruct      ROW_OFFSET_FOR_SELFDESTRUCT_FIRST_ACCOUNT_ROW)))
-                              (if-not-zero (scenario-shorthand-SELFDESTRUCT-unexceptional)     (account-decrement-balance-by              ROW_OFFSET_FOR_SELFDESTRUCT_FIRST_ACCOUNT_ROW      (selfdestruct-balance)))
+                              (if-not-zero (scenario-shorthand---SELFDESTRUCT---unexceptional)     (account-decrement-balance-by              ROW_OFFSET_FOR_SELFDESTRUCT_FIRST_ACCOUNT_ROW      (selfdestruct-balance)))
                               (if-not-zero scenario/SELFDESTRUCT_WILL_REVERT                   (account-same-marked-for-selfdestruct      ROW_OFFSET_FOR_SELFDESTRUCT_FIRST_ACCOUNT_ROW))
                               (if-not-zero scenario/SELFDESTRUCT_WONT_REVERT_ALREADY_MARKED    (account-same-marked-for-selfdestruct      ROW_OFFSET_FOR_SELFDESTRUCT_FIRST_ACCOUNT_ROW))
                               (if-not-zero scenario/SELFDESTRUCT_WONT_REVERT_NOT_YET_MARKED    (account-mark-account-for-selfdestruct     ROW_OFFSET_FOR_SELFDESTRUCT_FIRST_ACCOUNT_ROW)))))
@@ -239,7 +239,7 @@
                               (begin
                                 (account-same-balance               ROW_OFFSET_FOR_SELFDESTRUCT_SECOND_ACCOUNT_ROW)
                                 (account-same-warmth                ROW_OFFSET_FOR_SELFDESTRUCT_SECOND_ACCOUNT_ROW)))
-                 (if-not-zero (scenario-shorthand-SELFDESTRUCT-unexceptional)
+                 (if-not-zero (scenario-shorthand---SELFDESTRUCT---unexceptional)
                               (begin
                                 (account-turn-on-warmth             ROW_OFFSET_FOR_SELFDESTRUCT_SECOND_ACCOUNT_ROW)
                                 (if-eq-else (selfdestruct-account-address) (selfdestruct-recipient-address)

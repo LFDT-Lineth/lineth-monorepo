@@ -14,14 +14,14 @@
 ;;                                          ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defun    (create-instruction---generic-precondition)    (*    PEEK_AT_SCENARIO    (scenario-shorthand-CREATE-sum)))
+(defun    (create-instruction---generic-precondition)    (*    PEEK_AT_SCENARIO    (scenario-shorthand---CREATE---sum)))
 
 (defconstraint    create-instruction---setting-the-stack-pattern                            (:guard    (create-instruction---generic-precondition))
                   (create-stack-pattern    (create-instruction---is-CREATE2)))
 
 (defconstraint    create-instruction---setting-the-deployment-address-stack-output          (:guard    (create-instruction---generic-precondition))
-                  (begin    (eq!    (create-instruction---STACK-output-hi)    (*    (scenario-shorthand-CREATE-deployment-success)    (create-instruction---createe-address-hi)))
-                            (eq!    (create-instruction---STACK-output-lo)    (*    (scenario-shorthand-CREATE-deployment-success)    (create-instruction---createe-address-lo)))
+                  (begin    (eq!    (create-instruction---STACK-output-hi)    (*    (scenario-shorthand---CREATE---deployment-success)    (create-instruction---createe-address-hi)))
+                            (eq!    (create-instruction---STACK-output-lo)    (*    (scenario-shorthand---CREATE---deployment-success)    (create-instruction---createe-address-lo)))
                             ))
 
 (defconstraint    create-instruction---triggering-the-HASHINFO-lookup-and-settings          (:guard    (create-instruction---generic-precondition))
@@ -99,21 +99,21 @@
 (defconstraint    create-instruction---setting-the-CREATE-scenario                          (:guard    (create-instruction---generic-precondition))
                   (begin
                     (eq!   scenario/CREATE_EXCEPTION    XAHOY)
-                    (if-not-zero    (scenario-shorthand-CREATE-unexceptional)
+                    (if-not-zero    (scenario-shorthand---CREATE---unexceptional)
                                     (begin
                                       (eq!    scenario/CREATE_ABORT                                    (create-instruction---OOB-aborting-condition))
-                                      (eq!    (scenario-shorthand-CREATE-failure-condition)        (create-instruction---OOB-failure-condition) )
-                                      (debug  (eq!    (scenario-shorthand-CREATE-not-rebuffed)     (-    1
+                                      (eq!    (scenario-shorthand---CREATE---failure-condition)        (create-instruction---OOB-failure-condition) )
+                                      (debug  (eq!    (scenario-shorthand---CREATE---not-rebuffed)     (-    1
                                                                                                          (create-instruction---OOB-aborting-condition)
                                                                                                          (create-instruction---OOB-failure-condition))))))
-                    (if-not-zero    (scenario-shorthand-CREATE-creator-state-change)
-                                    (eq!    (scenario-shorthand-CREATE-creator-state-change-will-revert)
+                    (if-not-zero    (scenario-shorthand---CREATE---creator-state-change)
+                                    (eq!    (scenario-shorthand---CREATE---creator-state-change-will-revert)
                                             CONTEXT_WILL_REVERT))
-                    (if-not-zero    (scenario-shorthand-CREATE-not-rebuffed)
-                                    (eq!    (scenario-shorthand-CREATE-not-rebuffed-nonempty-init-code)
+                    (if-not-zero    (scenario-shorthand---CREATE---not-rebuffed)
+                                    (eq!    (scenario-shorthand---CREATE---not-rebuffed-nonempty-init-code)
                                             (create-instruction---MXP-mtntop)))
-                    (if-not-zero    (scenario-shorthand-CREATE-not-rebuffed-nonempty-init-code)
-                                    (eq!    (scenario-shorthand-CREATE-deployment-failure)
+                    (if-not-zero    (scenario-shorthand---CREATE---not-rebuffed-nonempty-init-code)
+                                    (eq!    (scenario-shorthand---CREATE---deployment-failure)
                                             (shift    misc/CCSR_FLAG    CREATE_miscellaneous_row___row_offset)))
                     ))
 
@@ -149,14 +149,14 @@
 (defconstraint    create-instruction---setting-the-next-context-number                      (:guard    (create-instruction---generic-precondition))
                   (begin
                     (if-not-zero    scenario/CREATE_EXCEPTION                                      (next-context-is-caller))
-                    (if-not-zero    (scenario-shorthand-CREATE-no-context-change)                  (next-context-is-current))
-                    (if-not-zero    (scenario-shorthand-CREATE-not-rebuffed-nonempty-init-code)    (next-context-is-new))))
+                    (if-not-zero    (scenario-shorthand---CREATE---no-context-change)                  (next-context-is-current))
+                    (if-not-zero    (scenario-shorthand---CREATE---not-rebuffed-nonempty-init-code)    (next-context-is-new))))
 
 (defconstraint    create-instruction---setting-GAS_COST                                     (:guard    (create-instruction---generic-precondition))
                   (begin
                     (if-not-zero    (+    (create-instruction---STACK-staticx)     (create-instruction---STACK-mxpx))
                                     (vanishes!    GAS_COST))
-                    (if-not-zero    (+    (create-instruction---STACK-oogx)        (scenario-shorthand-CREATE-unexceptional))
+                    (if-not-zero    (+    (create-instruction---STACK-oogx)        (scenario-shorthand---CREATE---unexceptional))
                                     (eq!          GAS_COST    (+    GAS_CONST_G_CREATE
                                                                     (create-instruction---MXP-gas))))
                     ))
@@ -165,11 +165,11 @@
                   (begin
                     (if-not-zero    scenario/CREATE_EXCEPTION
                                     (vanishes!    GAS_NEXT))
-                    (if-not-zero    (scenario-shorthand-CREATE-no-context-change)
+                    (if-not-zero    (scenario-shorthand---CREATE---no-context-change)
                                     (eq!    GAS_NEXT
                                             (-    GAS_ACTUAL
                                                   GAS_COST)))
-                    (if-not-zero    (scenario-shorthand-CREATE-not-rebuffed-nonempty-init-code)
+                    (if-not-zero    (scenario-shorthand---CREATE---not-rebuffed-nonempty-init-code)
                                     (eq!    GAS_NEXT
                                             (-    GAS_ACTUAL
                                                   GAS_COST

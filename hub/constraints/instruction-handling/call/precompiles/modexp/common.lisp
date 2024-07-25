@@ -284,6 +284,6 @@
 
 (defconstraint    precompile-processing---MODEXP---justifying-success-failure-scenarios    (:guard    (precompile-processing---MODEXP---standard-precondition))
                   (begin
-                    (eq!    (scenario-shorthand-PRC-success)            (precompile-processing---MODEXP---ram-success))
+                    (eq!    (scenario-shorthand---PRC---success)            (precompile-processing---MODEXP---ram-success))
                     (eq!    (precompile-processing---prd-return-gas)    (precompile-processing---MODEXP---return-gas))
                     ))

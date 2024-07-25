@@ -16,7 +16,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-(defun    (call-instruction---precompile-entry)    (*    PEEK_AT_SCENARIO    (scenario-shorthand-CALL-precompile)))
+(defun    (call-instruction---precompile-entry)    (*    PEEK_AT_SCENARIO    (scenario-shorthand---CALL---precompile)))
 
 (defun    (call-instruction---NSR-first-half)      (+    (*    (+    CALL___first_half_nsr___prc_failure                1)    scenario/CALL_PRC_FAILURE            )
                                                          (*    (+    CALL___first_half_nsr___prc_success_will_revert    1)    scenario/CALL_PRC_SUCCESS_CALLER_WILL_REVERT)

@@ -18,7 +18,7 @@
 
 (defun    (precompile-processing---MODEXP---success-case)    (*    PEEK_AT_SCENARIO
                                                                    scenario/PRC_MODEXP
-                                                                   (scenario-shorthand-PRC-success)))
+                                                                   (scenario-shorthand---PRC---success)))
 
 (defun    (lets-extract-the-base)            (shift    misc/MMU_FLAG    precompile-processing---MODEXP---misc-row-offset---base-extraction))
 (defun    (lets-extract-the-exponent)        (shift    misc/MMU_FLAG    precompile-processing---MODEXP---misc-row-offset---exponent-extraction))

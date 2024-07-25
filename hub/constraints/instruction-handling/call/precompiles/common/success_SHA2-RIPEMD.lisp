@@ -19,7 +19,7 @@
 (defun    (precompile-processing---SHA2-and-RIPEMD---success-precondition)    (*    PEEK_AT_SCENARIO
                                                                                  (+    scenario/PRC_SHA2-256
                                                                                        scenario/PRC_RIPEMD-160)
-                                                                                 (scenario-shorthand-PRC-success)))
+                                                                                 (scenario-shorthand---PRC---success)))
 
 (defconstraint    precompile-processing---SHA2-and-RIPEMD---success---2nd-misc-row---setting-module-flags       (:guard    (precompile-processing---SHA2-and-RIPEMD---success-precondition))
                   (eq!    (weighted-MISC-flag-sum    precompile-processing---common---2nd-misc-row---row-offset)

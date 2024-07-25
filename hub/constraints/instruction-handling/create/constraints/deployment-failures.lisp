@@ -14,7 +14,7 @@
 ;;                                         ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defun    (create-instruction---deployment-failure-precondition)    (*    PEEK_AT_SCENARIO    (scenario-shorthand-CREATE-deployment-failure)))
+(defun    (create-instruction---deployment-failure-precondition)    (*    PEEK_AT_SCENARIO    (scenario-shorthand---CREATE---deployment-failure)))
 
 (defconstraint    create-instruction---undoing-creator-account-operations-for-deployment-failures    (:guard    (create-instruction---deployment-failure-precondition))
                   (begin
