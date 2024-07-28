@@ -3,7 +3,7 @@
 (defcolumns 
   (STAMP :i32)
   (ID :i32)
-  (INDEX :byte)
+  (INDEX :i16)
   (LIMB :i128)
   TOTAL_SIZE
   (PHASE :i16@prove)
