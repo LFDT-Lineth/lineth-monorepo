@@ -6,13 +6,13 @@
            ;; target columns
 	   ( 
 	     rom.CFI
-	     rom.OPCODE
+	     rom.PC
 	     rom.IS_JUMPDEST
            )
            ;; source columns
 	   (
-	     (* hub.CFI                    (hub-into-rom-jump-destination-vetting-trigger))
-	     (* hub.stack/INSTRUCTION      (hub-into-rom-jump-destination-vetting-trigger))
-	     (* (- 1 hub.stack/JUMPX)      (hub-into-rom-jump-destination-vetting-trigger))
+	     (* hub.CFI                                (hub-into-rom-jump-destination-vetting-trigger))
+	     (* [hub.stack/STACK_ITEM_VALUE_LO 1]      (hub-into-rom-jump-destination-vetting-trigger))
+	     (* (- 1 hub.stack/JUMPX)                  (hub-into-rom-jump-destination-vetting-trigger))
            )
 )

@@ -9,7 +9,6 @@
         wcp.ARG_1_LO
         wcp.ARG_2_HI
         wcp.ARG_2_LO
-        ;; 0
         wcp.RESULT
         wcp.INST
     )
@@ -17,9 +16,8 @@
     (
         (* [hub.stack/STACK_ITEM_VALUE_HI 1]     (hub-into-wcp-activation-flag))
         (* [hub.stack/STACK_ITEM_VALUE_LO 1]     (hub-into-wcp-activation-flag))
-        (* [hub.stack/STACK_ITEM_VALUE_HI 3]     (hub-into-wcp-activation-flag))
-        (* [hub.stack/STACK_ITEM_VALUE_LO 3]     (hub-into-wcp-activation-flag))
-        ;; (* [hub.stack/STACK_ITEM_VALUE_HI 4]     (hub-into-wcp-activation-flag)) ;; TODO: cheaper alternative to setting the HI part to 0 in the HUB
+        (* [hub.stack/STACK_ITEM_VALUE_HI 2]     (hub-into-wcp-activation-flag))
+        (* [hub.stack/STACK_ITEM_VALUE_LO 2]     (hub-into-wcp-activation-flag))
         (* [hub.stack/STACK_ITEM_VALUE_LO 4]     (hub-into-wcp-activation-flag))
         (* hub.stack/INSTRUCTION                 (hub-into-wcp-activation-flag))
     )

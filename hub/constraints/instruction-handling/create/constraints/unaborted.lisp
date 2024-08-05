@@ -30,7 +30,7 @@
                     (eq!          (shift    account/ROMLEX_FLAG     CREATE_first_createe_account_row___row_offset)    (create-instruction---trigger_ROMLEX))
                     ;; TRM_FLAG is unknown and, if necessary, imposed elsewhere
                     (vanishes!    (shift    account/RLPADDR_FLAG     CREATE_first_createe_account_row___row_offset))
-                    (standard-dom-sub-stamps                         CREATE_first_createe_account_row___row_offset
+                    (DOM-SUB-stamps---standard                       CREATE_first_createe_account_row___row_offset
                                                                      1)
                     ))
 

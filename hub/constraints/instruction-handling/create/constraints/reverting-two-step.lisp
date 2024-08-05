@@ -32,7 +32,7 @@
                     (vanishes!    (shift    account/TRM_FLAG         CREATE_third_creator_account_row___row_offset))
                     (vanishes!    (shift    account/ROMLEX_FLAG      CREATE_third_creator_account_row___row_offset))
                     (vanishes!    (shift    account/RLPADDR_FLAG     CREATE_third_creator_account_row___row_offset))    ;; TODO: these 3 bit vanishing constraints could be merged
-                    (revert-dom-sub-stamps                           CREATE_third_creator_account_row___row_offset    2)
+                    (DOM-SUB-stamps---revert-with-current            CREATE_third_creator_account_row___row_offset    2)
                     ))
 
 (defconstraint    create-instruction---undoing-createe-account-operations-failure-will-revert-case    (:guard    (create-instruction---one-step-reverting-precondition))
@@ -47,5 +47,5 @@
                     (vanishes!    (shift    account/TRM_FLAG         CREATE_third_createe_account_row___row_offset))
                     (vanishes!    (shift    account/ROMLEX_FLAG      CREATE_third_createe_account_row___row_offset))
                     (vanishes!    (shift    account/RLPADDR_FLAG     CREATE_third_createe_account_row___row_offset))    ;; TODO: these 3 bit vanishing constraints could be merged
-                    (revert-dom-sub-stamps                           CREATE_third_createe_account_row___row_offset    3)
+                    (DOM-SUB-stamps---revert-with-current            CREATE_third_createe_account_row___row_offset    3)
                     ))

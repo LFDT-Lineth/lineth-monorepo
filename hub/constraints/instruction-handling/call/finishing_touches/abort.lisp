@@ -28,7 +28,7 @@
                     (vanishes!    (shift    account/ROMLEX_FLAG      CALL_2nd_callee_account_row___abort_will_revert___row_offset))
                     (vanishes!    (shift    account/TRM_FLAG         CALL_2nd_callee_account_row___abort_will_revert___row_offset))
                     (vanishes!    (shift    account/RLPADDR_FLAG     CALL_2nd_callee_account_row___abort_will_revert___row_offset))
-                    (revert-dom-sub-stamps                           CALL_2nd_callee_account_row___abort_will_revert___row_offset
+                    (DOM-SUB-stamps---standard                       CALL_2nd_callee_account_row___abort_will_revert___row_offset
                                                                      2)
                     ))
 

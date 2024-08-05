@@ -12,7 +12,7 @@
                (eq! (+ PEEK_AT_ACCOUNT PEEK_AT_STORAGE) 1))
 
 (defconstraint prewarming-dom-sub-stamps              (:guard TX_WARM)
-               (standard-dom-sub-stamps       0
+               (DOM-SUB-stamps---standard     0
                                               0))
 
 (defconstraint prewarming-first-prewarming-row-peeks-into-account        (:guard TX_WARM)

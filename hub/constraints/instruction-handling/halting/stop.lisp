@@ -5,25 +5,25 @@
 (defun (code-address-lo) (next context/BYTE_CODE_ADDRESS_LO))
 (defun (will-revert)     CONTEXT_WILL_REVERT)
 
-(defun (stop-instruction) (* PEEK_AT_STACK
+(defun (stop-instruction---standard-precondition) (* PEEK_AT_STACK
                              stack/HALT_FLAG
                              [ stack/DEC_FLAG 3 ]))
 
-(defconstraint stop-stack-pattern (:guard (stop-instruction))
+(defconstraint stop-instruction---stack-pattern (:guard (stop-instruction---standard-precondition))
                (stack-pattern-0-0))
 
-(defconstraint stop-gas-cost (:guard (stop-instruction))
+(defconstraint stop-instruction---gas-cost (:guard (stop-instruction---standard-precondition))
                (vanishes! GAS_COST))
 
-(defconstraint stop-raises-no-exceptions (:guard (stop-instruction))
+(defconstraint stop-instruction---raises-no-exceptions (:guard (stop-instruction---standard-precondition))
                (vanishes! XAHOY))
 
-(defconstraint stop-first-non-stack-row (:guard (stop-instruction))
+(defconstraint stop-instruction---first-non-stack-row (:guard (stop-instruction---standard-precondition))
                (begin
                  (will-eq!          PEEK_AT_CONTEXT 1)
                  (read-context-data 1 CONTEXT_NUMBER)))
 
-(defconstraint stop-setting-NSR-and-peeking-flags (:guard (stop-instruction))
+(defconstraint stop-instruction---setting-NSR-and-peeking-flags (:guard (stop-instruction---standard-precondition))
                (begin
                  (eq! NSR
                       (+ 2
@@ -54,7 +54,7 @@
                                      (execution-provides-empty-return-data 4))))))
 
 
-(defconstraint stop-first-address-row (:guard (stop-instruction))
+(defconstraint stop-instruction---first-address-row (:guard (*    (stop-instruction---standard-precondition)    (deployment)))
                (begin (debug (vanishes!       (shift account/TRM_FLAG     2)))
                       (debug (vanishes!       (shift account/ROMLEX_FLAG  2)))
                       (eq! (shift account/ADDRESS_HI  2) (code-address-hi))
@@ -68,9 +68,10 @@
                       (account-same-deployment-number 2)
                       (eq!       (shift account/DEPLOYMENT_STATUS     2) 1)
                       (eq!       (shift account/DEPLOYMENT_STATUS_NEW 2) 0)
-                      (standard-dom-sub-stamps 2 0)))
+                      (DOM-SUB-stamps---standard    2
+                                                    0)))
 
-(defconstraint stop-second-address-row (:guard (stop-instruction))
+(defconstraint stop-instruction---second-address-row (:guard (*    (stop-instruction---standard-precondition)    (deployment)    (will-revert)))
                (begin (debug (vanishes! (shift account/TRM_FLAG     3)))
                       (debug (vanishes! (shift account/ROMLEX_FLAG  3)))
                       (account-same-address-as               3 2)
@@ -79,4 +80,4 @@
                       (account-undo-warmth-update            3 2)
                       (account-undo-code-update              3 2)
                       (account-undo-deployment-status-update 3 2)
-                      (revert-dom-sub-stamps                 3 1)))
+                      (DOM-SUB-stamps---revert-with-current  3 1)))

@@ -274,12 +274,6 @@
   PHASE_BLAKE_DATA                       5
   PHASE_BLAKE_PARAMS                     6
   PHASE_BLAKE_RESULT                     7
-  PHASE_KECCAK_DATA                      8
-  PHASE_KECCAK_RESULT                    9
-  PHASE_SHA2_DATA                        10
-  PHASE_SHA2_RESULT                      11
-  PHASE_RIPEMD_DATA                      12
-  PHASE_RIPEMD_RESULT                    13
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;                ;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; EC DATA MODULE ;;

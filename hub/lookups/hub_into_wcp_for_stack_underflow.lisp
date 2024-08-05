@@ -12,7 +12,7 @@
     )
     ;; source columns
     (
-        (* EVM_INST_LT            (hub-into-wcp-for-sux-activation-flag))
+        (* EVM_INST_LT         (hub-into-wcp-for-sux-activation-flag))
         0
         (* hub.HEIGHT          (hub-into-wcp-for-sux-activation-flag))
         0

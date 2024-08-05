@@ -30,4 +30,8 @@
 		( VALUE_NEXT_IS_ZERO              :binary )
 		( VALUE_NEXT_IS_ORIG              :binary )
 		( VALUE_CURR_CHANGES              :binary )
+
+		;; not yet in the spec
+		( UNCONSTRAINED_FIRST             :binary )
+		( UNCONSTRAINED_FINAL             :binary )
 	))

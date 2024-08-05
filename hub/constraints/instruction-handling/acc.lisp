@@ -113,7 +113,7 @@
                                   (account-same-deployment-number-and-status    1)
                                   (account-turn-on-warmth                       1)
                                   (account-same-marked-for-selfdestruct         1)
-                                  (standard-dom-sub-stamps                      1 0)))))
+                                  (DOM-SUB-stamps---standard                    1 0)))))
 
 
 (defconstraint   account-instruction-trimming-case-garnishing-non-stack-row-undo-account-row   (:guard (account-instruction-standard-hypothesis))
@@ -128,7 +128,7 @@
                                                (account-undo-deployment-status-update  2 1)
                                                (account-undo-warmth-update             2 1)
                                                (account-same-marked-for-selfdestruct   2  )
-                                               (revert-dom-sub-stamps                  2 1))))))
+                                               (DOM-SUB-stamps---revert-with-current   2 1))))))
 
 (defconstraint   account-instruction-non-trim-case                                          (:guard (account-instruction-standard-hypothesis))
                  (begin
@@ -142,7 +142,7 @@
                                            (account-same-deployment-number-and-status  2)
                                            (account-turn-on-warmth                     2)
                                            (account-same-marked-for-selfdestruct       2)
-                                           (standard-dom-sub-stamps                    2 0)
+                                           (DOM-SUB-stamps---standard                  2 0)
                                            (if-zero [ stack/DEC_FLAG 4 ]
                                                     ;; DEC_FLAG_4 = 0
                                                     (begin

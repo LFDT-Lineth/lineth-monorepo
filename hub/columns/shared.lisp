@@ -10,7 +10,6 @@
     ( TX_FINL                                   :binary@prove )
     ( HUB_STAMP                                 :i32 )
     ( HUB_STAMP_TRANSACTION_END                 :i32 )           ;; for SELFDESTRUCT
-    ( TRANSACTION_REVERTS                       :binary@prove )   ;; TODO obsolete ?
     ( CONTEXT_MAY_CHANGE                        :binary@prove )
     ( EXCEPTION_AHOY                            :binary@prove )
 

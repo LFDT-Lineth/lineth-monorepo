@@ -14,7 +14,6 @@
 ;;                                            ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                                             ;;
 ;;    X.U.1 Supported instructions and flags   ;;
@@ -22,32 +21,27 @@
 ;;                                             ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(defun (log-inst-instruction)              stack/INSTRUCTION)
+(defun (log-inst-offset-hi)                [stack/STACK_ITEM_VALUE_HI 1])
+(defun (log-inst-offset-lo)                [stack/STACK_ITEM_VALUE_LO 1])
+(defun (log-inst-size-hi)                  [stack/STACK_ITEM_VALUE_HI 2])
+(defun (log-inst-size-lo)                  [stack/STACK_ITEM_VALUE_LO 2])
+(defun (log-inst-standard-hypothesis)      (*    PEEK_AT_STACK
+                                                 stack/LOG_FLAG
+                                                 (-    1    stack/SUX    stack/SOX)
+                                                 (-    1    COUNTER_TLI)))
 
-(defun (log-inst-instruction)        stack/INSTRUCTION)
-(defun (log-inst-offset-hi)        [ stack/STACK_ITEM_VALUE_HI 1 ])
-(defun (log-inst-offset-lo)        [ stack/STACK_ITEM_VALUE_LO 1 ])
-(defun (log-inst-size-hi)          [ stack/STACK_ITEM_VALUE_HI 2 ])
-(defun (log-inst-size-lo)          [ stack/STACK_ITEM_VALUE_LO 2 ])
-
-(defun (log-inst-standard-hypothesis) (* PEEK_AT_STACK
-                                         stack/LOG_FLAG
-                                         (- 1 stack/SUX    stack/SOX)
-                                         (- 1 COUNTER_TLI           )))
-
-(defconst
-  log-context-row-offset                 2
-  log-misc-row-offset                    3
-  log-staticx-context-row-offset         3
-  log-other-x-context-row-offset         4
-  )
-
+(defconst 
+  log-context-row-offset         2
+  log-misc-row-offset            3
+  log-staticx-context-row-offset 3
+  log-other-x-context-row-offset 4)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                        ;;
 ;;    X.U.2 Constraints   ;;
 ;;                        ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
 
 (defconstraint log-inst-setting-the-stack-pattern                        (:guard (log-inst-standard-hypothesis))
                (log-stack-pattern     (- stack/INSTRUCTION EVM_INST_LOG0)
@@ -64,7 +58,7 @@
 
 (defconstraint log-inst-setting-NSR                                      (:guard (log-inst-standard-hypothesis))
                (if-zero (force-bin stack/STATICX)
-                        (eq! NSR (+ 2 NSR))
+                        (eq! NSR (+ 2 CMC))
                         (eq! NSR    2)))
 
 (defconstraint log-inst-setting-the-peeking-flags                        (:guard (log-inst-standard-hypothesis))
@@ -119,7 +113,7 @@
 (defconstraint log-inst-MISC-row-setting-MMU-data                        (:guard (log-inst-standard-hypothesis))
                (if-zero (force-bin stack/STATICX)
                         (if-not-zero (shift misc/MMU_FLAG log-misc-row-offset)
-                                     (set-MMU-instruction-ram-to-exo-with-padding    log-misc-row-offset            ;; offset
+                                     (set-MMU-instruction---ram-to-exo-with-padding    log-misc-row-offset            ;; offset
                                                                                      CONTEXT_NUMBER                 ;; source ID
                                                                                      LOG_INFO_STAMP                 ;; target ID
                                                                                      0                              ;; auxiliary ID

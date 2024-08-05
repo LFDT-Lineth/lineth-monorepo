@@ -101,10 +101,10 @@
 
 (defconstraint stack-ram-inst-setting-OOB-instruction                   (:guard (stack-ram-inst-std-hyp))
                (if-not-zero (stack-ram-inst-is-CDL)
-                            (set-OOB-instruction-cdl     stack-ram-misc-row-offset               ;; row offset
-                                                         (stack-ram-inst-offset-hi)              ;; offset within call data, high part
-                                                         (stack-ram-inst-offset-lo)              ;; offset within call data, low  part
-                                                         (stack-ram-inst-call-data-size))))      ;; call data size
+                            (set-OOB-instruction---cdl     stack-ram-misc-row-offset               ;; row offset
+                                                           (stack-ram-inst-offset-hi)              ;; offset within call data, high part
+                                                           (stack-ram-inst-offset-lo)              ;; offset within call data, low  part
+                                                           (stack-ram-inst-call-data-size))))      ;; call data size
 
 (defconstraint stack-ram-inst-setting-value-for-trivial-CALLDATALOAD    (:guard (stack-ram-inst-std-hyp))
                (if-not-zero (stack-ram-inst-is-CDL)
@@ -126,75 +126,80 @@
 
 (defconstraint stack-ram-inst-setting-MMU-instruction                   (:guard (stack-ram-inst-std-hyp))
                (if-not-zero (shift misc/MMU_FLAG stack-ram-misc-row-offset)
-                            (begin (if-not-zero [ stack/DEC_FLAG 1]
-                                                ;; CALLDATALOAD case
-                                                (set-MMU-instruction-right-padded-word-extraction    stack-ram-misc-row-offset           ;; row offsetet
-                                                                                                     CALLER_CONTEXT_NUMBER               ;; source ID
-                                                                                                     ;; tgt_id                              ;; target ID
-                                                                                                     ;; aux_id                              ;; auxiliary ID
-                                                                                                     ;; src_offset_hi                       ;; source offset high
-                                                                                                     (stack-ram-inst-offset-lo)          ;; source offset low
-                                                                                                     ;; tgt_offset_lo                       ;; target offset low
-                                                                                                     ;; size                                ;; size
-                                                                                                     (stack-ram-inst-call-data-offset)   ;; reference offset
-                                                                                                     (stack-ram-inst-call-data-size)     ;; reference size
-                                                                                                     ;; success_bit                         ;; success bit
-                                                                                                     (stack-ram-inst-value-hi)           ;; limb 1
-                                                                                                     (stack-ram-inst-value-lo)           ;; limb 2
-                                                                                                     ;; exo_sum                             ;; weighted exogenous module flag sum
-                                                                                                     ;; phase                               ;; phase
-                                                                                                     ))
-                                   (if-not-zero [ stack/DEC_FLAG 2]
-                                                ;; MLOAD case
-                                                (set-MMU-instruction-mload    stack-ram-misc-row-offset           ;; offset
-                                                                              CONTEXT_NUMBER                      ;; source ID
-                                                                              ;; tgt_id                              ;; target ID
-                                                                              ;; aux_id                              ;; auxiliary ID
-                                                                              ;; src_offset_hi                       ;; source offset high
-                                                                              (stack-ram-inst-offset-lo)          ;; source offset low
-                                                                              ;; tgt_offset_lo                       ;; target offset low
-                                                                              ;; size                                ;; size
-                                                                              ;; ref_offset                          ;; reference offset
-                                                                              ;; ref_size                            ;; reference size
-                                                                              ;; success_bit                         ;; success bit
-                                                                              (stack-ram-inst-value-hi)           ;; limb 1
-                                                                              (stack-ram-inst-value-lo)           ;; limb 2
-                                                                              ;; exo_sum                             ;; weighted exogenous module flag sum
-                                                                              ;; phase                               ;; phase
-                                                                              ))
-                                   (if-not-zero [ stack/DEC_FLAG 3]
-                                                ;; MSTORE case
-                                                (set-MMU-instruction-mstore    stack-ram-misc-row-offset           ;; offset
-                                                                               ;; src_id                              ;; source ID
-                                                                               CONTEXT_NUMBER                      ;; target ID
-                                                                               ;; aux_id                              ;; auxiliary ID
-                                                                               ;; src_offset_hi                       ;; source offset high
-                                                                               ;; src_offset_lo                       ;; source offset low
-                                                                               (stack-ram-inst-offset-lo)          ;; target offset low
-                                                                               ;; size                                ;; size
-                                                                               ;; ref_offset                          ;; reference offset
-                                                                               ;; ref_size                            ;; reference size
-                                                                               ;; success_bit                         ;; success bit
-                                                                               (stack-ram-inst-value-hi)           ;; limb 1
-                                                                               (stack-ram-inst-value-lo)           ;; limb 2
-                                                                               ;; exo_sum                             ;; weighted exogenous module flag sum
-                                                                               ;; phase                               ;; phase
-                                                                               ))
-                                   (if-not-zero [ stack/DEC_FLAG 4]
-                                                ;; MSTORE8 case
-                                                (set-MMU-instruction-mstore8    stack-ram-misc-row-offset           ;; offset
-                                                                                ;; src_id                              ;; source ID
-                                                                                CONTEXT_NUMBER                      ;; target ID
-                                                                                ;; aux_id                              ;; auxiliary ID
-                                                                                ;; src_offset_hi                       ;; source offset high
-                                                                                ;; src_offset_lo                       ;; source offset low
-                                                                                (stack-ram-inst-offset-lo)          ;; target offset low
-                                                                                ;; size                                ;; size
-                                                                                ;; ref_offset                          ;; reference offset
-                                                                                ;; ref_size                            ;; reference size
-                                                                                ;; success_bit                         ;; success bit
-                                                                                (stack-ram-inst-value-hi)           ;; limb 1
-                                                                                (stack-ram-inst-value-lo)           ;; limb 2
-                                                                                ;; exo_sum                             ;; weighted exogenous module flag sum
-                                                                                ;; phase                               ;; phase
-                                                                                )))))
+                            (begin
+                              ;; CALLDATALOAD case
+                              ;;;;;;;;;;;;;;;;;;;;
+                              (if-not-zero [ stack/DEC_FLAG 1]
+                                           (set-MMU-instruction---right-padded-word-extraction    stack-ram-misc-row-offset           ;; row offset
+                                                                                                  CALLER_CONTEXT_NUMBER               ;; source ID
+                                                                                                  ;; tgt_id                              ;; target ID
+                                                                                                  ;; aux_id                              ;; auxiliary ID
+                                                                                                  ;; src_offset_hi                       ;; source offset high
+                                                                                                  (stack-ram-inst-offset-lo)          ;; source offset low
+                                                                                                  ;; tgt_offset_lo                       ;; target offset low
+                                                                                                  ;; size                                ;; size
+                                                                                                  (stack-ram-inst-call-data-offset)   ;; reference offset
+                                                                                                  (stack-ram-inst-call-data-size)     ;; reference size
+                                                                                                  ;; success_bit                         ;; success bit
+                                                                                                  (stack-ram-inst-value-hi)           ;; limb 1
+                                                                                                  (stack-ram-inst-value-lo)           ;; limb 2
+                                                                                                  ;; exo_sum                             ;; weighted exogenous module flag sum
+                                                                                                  ;; phase                               ;; phase
+                                                                                                  ))
+                              ;; MLOAD case
+                              ;;;;;;;;;;;;;
+                              (if-not-zero [ stack/DEC_FLAG 2]
+                                           (set-MMU-instruction---mload    stack-ram-misc-row-offset           ;; offset
+                                                                           CONTEXT_NUMBER                      ;; source ID
+                                                                           ;; tgt_id                              ;; target ID
+                                                                           ;; aux_id                              ;; auxiliary ID
+                                                                           ;; src_offset_hi                       ;; source offset high
+                                                                           (stack-ram-inst-offset-lo)          ;; source offset low
+                                                                           ;; tgt_offset_lo                       ;; target offset low
+                                                                           ;; size                                ;; size
+                                                                           ;; ref_offset                          ;; reference offset
+                                                                           ;; ref_size                            ;; reference size
+                                                                           ;; success_bit                         ;; success bit
+                                                                           (stack-ram-inst-value-hi)           ;; limb 1
+                                                                           (stack-ram-inst-value-lo)           ;; limb 2
+                                                                           ;; exo_sum                             ;; weighted exogenous module flag sum
+                                                                           ;; phase                               ;; phase
+                                                                           ))
+                              ;; MSTORE case
+                              ;;;;;;;;;;;;;;
+                              (if-not-zero [ stack/DEC_FLAG 3]
+                                           (set-MMU-instruction---mstore    stack-ram-misc-row-offset           ;; offset
+                                                                            ;; src_id                              ;; source ID
+                                                                            CONTEXT_NUMBER                      ;; target ID
+                                                                            ;; aux_id                              ;; auxiliary ID
+                                                                            ;; src_offset_hi                       ;; source offset high
+                                                                            ;; src_offset_lo                       ;; source offset low
+                                                                            (stack-ram-inst-offset-lo)          ;; target offset low
+                                                                            ;; size                                ;; size
+                                                                            ;; ref_offset                          ;; reference offset
+                                                                            ;; ref_size                            ;; reference size
+                                                                            ;; success_bit                         ;; success bit
+                                                                            (stack-ram-inst-value-hi)           ;; limb 1
+                                                                            (stack-ram-inst-value-lo)           ;; limb 2
+                                                                            ;; exo_sum                             ;; weighted exogenous module flag sum
+                                                                            ;; phase                               ;; phase
+                                                                            ))
+                              ;; MSTORE8 case
+                              ;;;;;;;;;;;;;;;
+                              (if-not-zero [ stack/DEC_FLAG 4]
+                                           (set-MMU-instruction---mstore8    stack-ram-misc-row-offset           ;; offset
+                                                                             ;; src_id                              ;; source ID
+                                                                             CONTEXT_NUMBER                      ;; target ID
+                                                                             ;; aux_id                              ;; auxiliary ID
+                                                                             ;; src_offset_hi                       ;; source offset high
+                                                                             ;; src_offset_lo                       ;; source offset low
+                                                                             (stack-ram-inst-offset-lo)          ;; target offset low
+                                                                             ;; size                                ;; size
+                                                                             ;; ref_offset                          ;; reference offset
+                                                                             ;; ref_size                            ;; reference size
+                                                                             ;; success_bit                         ;; success bit
+                                                                             (stack-ram-inst-value-hi)           ;; limb 1
+                                                                             (stack-ram-inst-value-lo)           ;; limb 2
+                                                                             ;; exo_sum                             ;; weighted exogenous module flag sum
+                                                                             ;; phase                               ;; phase
+                                                                             )))))

@@ -39,7 +39,7 @@
                                MISC_WEIGHT_OOB)))
 
 (defconstraint    precompile-processing---MODEXP---success-case---base-extraction-row---setting-the-OOB-instruction-which-decides-which-actual-parameters-to-extract      (:guard    (precompile-processing---MODEXP---success-case))
-                  (set-OOB-instruction-modexp-extract    precompile-processing---MODEXP---misc-row-offset---base-extraction    ;; offset
+                  (set-OOB-instruction---modexp-extract    precompile-processing---MODEXP---misc-row-offset---base-extraction    ;; offset
                                                          (precompile-processing---dup-cds)                                     ;; call data size
                                                          (precompile-processing---MODEXP---bbs-lo)                             ;; low part of bbs (base     byte size)
                                                          (precompile-processing---MODEXP---ebs-lo)                             ;; low part of ebs (exponent byte size)
@@ -52,24 +52,24 @@
                   (if-not-zero    (lets-extract-the-base)
                                   (if-zero    (force-bin    (precompile-processing---MODEXP---extract-base))
                                               ;; extract_base == 0 case:
-                                              (set-MMU-instruction-modexp-zero    precompile-processing---MODEXP---misc-row-offset---base-extraction     ;; offset
-                                                                                  ;; src_id                                                                 ;; source ID
-                                                                                  (+    1    HUB_STAMP)                                                  ;; target ID
-                                                                                  ;; aux_id                                                                 ;; auxiliary ID
-                                                                                  ;; src_offset_hi                                                          ;; source offset high
-                                                                                  ;; src_offset_lo                                                          ;; source offset low
-                                                                                  ;; tgt_offset_lo                                                          ;; target offset low
-                                                                                  ;; size                                                                   ;; size
-                                                                                  ;; ref_offset                                                             ;; reference offset
-                                                                                  ;; ref_size                                                               ;; reference size
-                                                                                  ;; success_bit                                                            ;; success bit
-                                                                                  ;; limb_1                                                                 ;; limb 1
-                                                                                  ;; limb_2                                                                 ;; limb 2
-                                                                                  ;; exo_sum                                                                ;; weighted exogenous module flag sum
-                                                                                  PHASE_MODEXP_BASE                                                      ;; phase
-                                                                                  )
+                                              (set-MMU-instruction---modexp-zero    precompile-processing---MODEXP---misc-row-offset---base-extraction     ;; offset
+                                                                                    ;; src_id                                                                 ;; source ID
+                                                                                    (+    1    HUB_STAMP)                                                  ;; target ID
+                                                                                    ;; aux_id                                                                 ;; auxiliary ID
+                                                                                    ;; src_offset_hi                                                          ;; source offset high
+                                                                                    ;; src_offset_lo                                                          ;; source offset low
+                                                                                    ;; tgt_offset_lo                                                          ;; target offset low
+                                                                                    ;; size                                                                   ;; size
+                                                                                    ;; ref_offset                                                             ;; reference offset
+                                                                                    ;; ref_size                                                               ;; reference size
+                                                                                    ;; success_bit                                                            ;; success bit
+                                                                                    ;; limb_1                                                                 ;; limb 1
+                                                                                    ;; limb_2                                                                 ;; limb 2
+                                                                                    ;; exo_sum                                                                ;; weighted exogenous module flag sum
+                                                                                    PHASE_MODEXP_BASE                                                      ;; phase
+                                                                                    )
                                               ;; extract_base == 1 case:
-                                              (set-MMU-instruction-modexp-data    precompile-processing---MODEXP---misc-row-offset---base-extraction     ;; offset
+                                              (set-MMU-instruction---modexp-data    precompile-processing---MODEXP---misc-row-offset---base-extraction     ;; offset
                                                                                   CONTEXT_NUMBER                                                         ;; source ID
                                                                                   (+    1    HUB_STAMP)                                                  ;; target ID
                                                                                   ;; aux_id                                                                 ;; auxiliary ID
@@ -102,24 +102,24 @@
                   (if-not-zero    (lets-extract-the-exponent)
                                   (if-zero    (force-bin    (precompile-processing---MODEXP---extract-exponent))
                                               ;; extract_exponent == 0 case:
-                                              (set-MMU-instruction-modexp-zero    precompile-processing---MODEXP---misc-row-offset---exponent-extraction     ;; offset
-                                                                                  ;; src_id                                                                     ;; source ID
-                                                                                  (+    1    HUB_STAMP)                                                      ;; target ID
-                                                                                  ;; aux_id                                                                     ;; auxiliary ID
-                                                                                  ;; src_offset_hi                                                              ;; source offset high
-                                                                                  ;; src_offset_lo                                                              ;; source offset low
-                                                                                  ;; tgt_offset_lo                                                              ;; target offset low
-                                                                                  ;; size                                                                       ;; size
-                                                                                  ;; ref_offset                                                                 ;; reference offset
-                                                                                  ;; ref_size                                                                   ;; reference size
-                                                                                  ;; success_bit                                                                ;; success bit
-                                                                                  ;; limb_1                                                                     ;; limb 1
-                                                                                  ;; limb_2                                                                     ;; limb 2
-                                                                                  ;; exo_sum                                                                    ;; weighted exogenous module flag sum
-                                                                                  PHASE_MODEXP_EXPONENT                                                      ;; phase
-                                                                                  )
+                                              (set-MMU-instruction---modexp-zero    precompile-processing---MODEXP---misc-row-offset---exponent-extraction     ;; offset
+                                                                                    ;; src_id                                                                     ;; source ID
+                                                                                    (+    1    HUB_STAMP)                                                      ;; target ID
+                                                                                    ;; aux_id                                                                     ;; auxiliary ID
+                                                                                    ;; src_offset_hi                                                              ;; source offset high
+                                                                                    ;; src_offset_lo                                                              ;; source offset low
+                                                                                    ;; tgt_offset_lo                                                              ;; target offset low
+                                                                                    ;; size                                                                       ;; size
+                                                                                    ;; ref_offset                                                                 ;; reference offset
+                                                                                    ;; ref_size                                                                   ;; reference size
+                                                                                    ;; success_bit                                                                ;; success bit
+                                                                                    ;; limb_1                                                                     ;; limb 1
+                                                                                    ;; limb_2                                                                     ;; limb 2
+                                                                                    ;; exo_sum                                                                    ;; weighted exogenous module flag sum
+                                                                                    PHASE_MODEXP_EXPONENT                                                      ;; phase
+                                                                                    )
                                               ;; extract_exponent == 1 case:
-                                              (set-MMU-instruction-modexp-data    precompile-processing---MODEXP---misc-row-offset---exponent-extraction     ;; offset
+                                              (set-MMU-instruction---modexp-data    precompile-processing---MODEXP---misc-row-offset---exponent-extraction     ;; offset
                                                                                   CONTEXT_NUMBER                                                             ;; source ID
                                                                                   (+    1    HUB_STAMP)                                                      ;; target ID
                                                                                   ;; aux_id                                                                     ;; auxiliary ID
@@ -153,24 +153,24 @@
                   (if-not-zero    (lets-extract-the-modulus)
                                   (if-zero    (force-bin    (precompile-processing---MODEXP---extract-modulus))
                                               ;; extract_exponent == 0 case:
-                                              (set-MMU-instruction-modexp-zero    precompile-processing---MODEXP---misc-row-offset---modulus-extraction     ;; offset
-                                                                                  ;; src_id                                                                    ;; source ID
-                                                                                  (+    1    HUB_STAMP)                                                     ;; target ID
-                                                                                  ;; aux_id                                                                    ;; auxiliary ID
-                                                                                  ;; src_offset_hi                                                             ;; source offset high
-                                                                                  ;; src_offset_lo                                                             ;; source offset low
-                                                                                  ;; tgt_offset_lo                                                             ;; target offset low
-                                                                                  ;; size                                                                      ;; size
-                                                                                  ;; ref_offset                                                                ;; reference offset
-                                                                                  ;; ref_size                                                                  ;; reference size
-                                                                                  ;; success_bit                                                               ;; success bit
-                                                                                  ;; limb_1                                                                    ;; limb 1
-                                                                                  ;; limb_2                                                                    ;; limb 2
-                                                                                  ;; exo_sum                                                                   ;; weighted exogenous module flag sum
-                                                                                  PHASE_MODEXP_MODULUS                                                      ;; phase
-                                                                                  )
+                                              (set-MMU-instruction---modexp-zero    precompile-processing---MODEXP---misc-row-offset---modulus-extraction     ;; offset
+                                                                                    ;; src_id                                                                    ;; source ID
+                                                                                    (+    1    HUB_STAMP)                                                     ;; target ID
+                                                                                    ;; aux_id                                                                    ;; auxiliary ID
+                                                                                    ;; src_offset_hi                                                             ;; source offset high
+                                                                                    ;; src_offset_lo                                                             ;; source offset low
+                                                                                    ;; tgt_offset_lo                                                             ;; target offset low
+                                                                                    ;; size                                                                      ;; size
+                                                                                    ;; ref_offset                                                                ;; reference offset
+                                                                                    ;; ref_size                                                                  ;; reference size
+                                                                                    ;; success_bit                                                               ;; success bit
+                                                                                    ;; limb_1                                                                    ;; limb 1
+                                                                                    ;; limb_2                                                                    ;; limb 2
+                                                                                    ;; exo_sum                                                                   ;; weighted exogenous module flag sum
+                                                                                    PHASE_MODEXP_MODULUS                                                      ;; phase
+                                                                                    )
                                               ;; extract_exponent == 1 case:
-                                              (set-MMU-instruction-modexp-data    precompile-processing---MODEXP---misc-row-offset---modulus-extraction                               ;; offset
+                                              (set-MMU-instruction---modexp-data    precompile-processing---MODEXP---misc-row-offset---modulus-extraction                               ;; offset
                                                                                   CONTEXT_NUMBER                                                                                      ;; source ID
                                                                                   (+    1    HUB_STAMP)                                                                               ;; target ID
                                                                                   ;; aux_id                                                                                              ;; auxiliary ID
@@ -202,22 +202,22 @@
 
 (defconstraint    precompile-processing---MODEXP---success-case---full-result-extraction-row---setting-the-MMU-instruction    (:guard    (precompile-processing---MODEXP---success-case))
                   (if-not-zero    (lets-extract-the-full-result)
-                                  (set-MMU-instruction-exo-to-ram-transplants    precompile-processing---MODEXP---misc-row-offset---full-result-extraction    ;; offset
-                                                                                 (+    1    HUB_STAMP)                                                        ;; source ID
-                                                                                 (+    1    HUB_STAMP)                                                        ;; target ID
-                                                                                 ;; aux_id                                                                       ;; auxiliary ID
-                                                                                 ;; src_offset_hi                                                                ;; source offset high
-                                                                                 ;; src_offset_lo                                                                ;; source offset low
-                                                                                 ;; tgt_offset_lo                                                                ;; target offset low
-                                                                                 512                                                                          ;; size
-                                                                                 ;; ref_offset                                                                   ;; reference offset
-                                                                                 ;; ref_size                                                                     ;; reference size
-                                                                                 ;; success_bit                                                                  ;; success bit
-                                                                                 ;; limb_1                                                                       ;; limb 1
-                                                                                 ;; limb_2                                                                       ;; limb 2
-                                                                                 EXO_SUM_WEIGHT_BLAKEMODEXP                                                   ;; weighted exogenous module flag sum
-                                                                                 PHASE_MODEXP_RESULT                                                          ;; phase
-                                                                                 )))
+                                  (set-MMU-instruction---exo-to-ram-transplants    precompile-processing---MODEXP---misc-row-offset---full-result-extraction    ;; offset
+                                                                                   (+    1    HUB_STAMP)                                                        ;; source ID
+                                                                                   (+    1    HUB_STAMP)                                                        ;; target ID
+                                                                                   ;; aux_id                                                                       ;; auxiliary ID
+                                                                                   ;; src_offset_hi                                                                ;; source offset high
+                                                                                   ;; src_offset_lo                                                                ;; source offset low
+                                                                                   ;; tgt_offset_lo                                                                ;; target offset low
+                                                                                   512                                                                          ;; size
+                                                                                   ;; ref_offset                                                                   ;; reference offset
+                                                                                   ;; ref_size                                                                     ;; reference size
+                                                                                   ;; success_bit                                                                  ;; success bit
+                                                                                   ;; limb_1                                                                       ;; limb 1
+                                                                                   ;; limb_2                                                                       ;; limb 2
+                                                                                   EXO_SUM_WEIGHT_BLAKEMODEXP                                                   ;; weighted exogenous module flag sum
+                                                                                   PHASE_MODEXP_RESULT                                                          ;; phase
+                                                                                   )))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;                                                      ;;
@@ -231,26 +231,26 @@
                          (*    MISC_WEIGHT_MMU
                                (precompile-processing---MODEXP---mbs-nonzero)
                                (precompile-processing---MODEXP---r@c-nonzero)
-                         )))
+                               )))
 
 (defconstraint    precompile-processing---MODEXP---success-case---partial-result-copy-row---setting-the-MMU-instruction    (:guard    (precompile-processing---MODEXP---success-case))
                   (if-not-zero    (lets-partially-copy-the-result)
-                                  (set-MMU-instruction-ram-to-ram-sans-padding    precompile-processing---MODEXP---misc-row-offset---partial-result-transfer    ;; offset
-                                                                                  (+    1    HUB_STAMP)                                                         ;; source ID
-                                                                                  CONTEXT_NUMBER                                                                ;; target ID
-                                                                                  ;; aux_id                                                                        ;; auxiliary ID
-                                                                                  ;; src_offset_hi                                                                 ;; source offset high
-                                                                                  (-    512    (precompile-processing---MODEXP---mbs-lo))                       ;; source offset low
-                                                                                  ;; tgt_offset_lo                                                                 ;; target offset low
-                                                                                  (precompile-processing---MODEXP---mbs-lo)                                     ;; size
-                                                                                  (precompile-processing---dup-r@o)                                             ;; reference offset
-                                                                                  (precompile-processing---dup-r@c)                                             ;; reference size
-                                                                                  ;; success_bit                                                                   ;; success bit
-                                                                                  ;; limb_1                                                                        ;; limb 1
-                                                                                  ;; limb_2                                                                        ;; limb 2
-                                                                                  ;; exo_sum                                                                       ;; weighted exogenous module flag sum
-                                                                                  ;; phase                                                                         ;; phase
-                                                                                  )))
+                                  (set-MMU-instruction---ram-to-ram-sans-padding    precompile-processing---MODEXP---misc-row-offset---partial-result-transfer    ;; offset
+                                                                                    (+    1    HUB_STAMP)                                                         ;; source ID
+                                                                                    CONTEXT_NUMBER                                                                ;; target ID
+                                                                                    ;; aux_id                                                                        ;; auxiliary ID
+                                                                                    ;; src_offset_hi                                                                 ;; source offset high
+                                                                                    (-    512    (precompile-processing---MODEXP---mbs-lo))                       ;; source offset low
+                                                                                    ;; tgt_offset_lo                                                                 ;; target offset low
+                                                                                    (precompile-processing---MODEXP---mbs-lo)                                     ;; size
+                                                                                    (precompile-processing---dup-r@o)                                             ;; reference offset
+                                                                                    (precompile-processing---dup-r@c)                                             ;; reference size
+                                                                                    ;; success_bit                                                                   ;; success bit
+                                                                                    ;; limb_1                                                                        ;; limb 1
+                                                                                    ;; limb_2                                                                        ;; limb 2
+                                                                                    ;; exo_sum                                                                       ;; weighted exogenous module flag sum
+                                                                                    ;; phase                                                                         ;; phase
+                                                                                    )))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;                                              ;;

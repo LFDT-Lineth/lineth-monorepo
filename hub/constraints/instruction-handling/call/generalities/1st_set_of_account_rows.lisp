@@ -33,7 +33,7 @@
                     (vanishes!    (shift    account/ROMLEX_FLAG      CALL_1st_caller_account_row___row_offset))
                     (vanishes!    (shift    account/TRM_FLAG         CALL_1st_caller_account_row___row_offset))
                     (vanishes!    (shift    account/RLPADDR_FLAG     CALL_1st_caller_account_row___row_offset))
-                    (standard-dom-sub-stamps                         CALL_1st_caller_account_row___row_offset
+                    (DOM-SUB-stamps---standard                       CALL_1st_caller_account_row___row_offset
                                                                      0)
                     ))
 
@@ -61,7 +61,7 @@
                     (eq!          (shift    account/ROMLEX_FLAG      CALL_1st_callee_account_row___row_offset)    (scenario-shorthand---CALL---smart-contract))
                     (eq!          (shift    account/TRM_FLAG         CALL_1st_callee_account_row___row_offset)    1)
                     (vanishes!    (shift    account/RLPADDR_FLAG     CALL_1st_callee_account_row___row_offset))
-                    (standard-dom-sub-stamps                         CALL_1st_callee_account_row___row_offset
+                    (DOM-SUB-stamps---standard                       CALL_1st_callee_account_row___row_offset
                                                                      1)
                     ))
 

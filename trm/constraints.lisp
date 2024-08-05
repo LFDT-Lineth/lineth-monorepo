@@ -35,11 +35,11 @@
   (if-not-zero STAMP
                (eq! CT LLARGEMO)))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;
-;;                     ;;
-;;    2.2 stamp constancy    ;;
-;;                     ;;
-;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                          ;;
+;;    2.2 stamp constancy   ;;
+;;                          ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defconstraint stamp-constancies ()
   (begin (stamp-constancy STAMP RAW_ADDRESS_HI)
          (stamp-constancy STAMP RAW_ADDRESS_LO)
@@ -59,21 +59,21 @@
                      (+ (shift PBIT (- 0 4))
                         (shift PBIT (- 0 3)))))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;                                                   ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                             ;;
 ;;    2.4 Byte Decomposition   ;;
-;;                                                   ;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                             ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defconstraint byte-decompositions ()
   (begin (byte-decomposition CT ACC_HI BYTE_HI)
          (byte-decomposition CT ACC_LO BYTE_LO)
          (byte-decomposition CT ACC_T (* BYTE_HI PBIT))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;                       ;;
-;;    1.5 target constraints    ;;
-;;                       ;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                            ;;
+;;    1.5 target constraints  ;;
+;;                            ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defconstraint target-constraint ()
   (if-eq CT LLARGEMO
          (begin (eq! RAW_ADDRESS_HI ACC_HI)
@@ -86,7 +86,7 @@
 ;;                                  ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defconstraint is-prec-constraint ()
-  (if-eq CT 15
+  (if-eq CT LLARGEMO
          (if-zero (+ TRM_ADDRESS_HI (- RAW_ADDRESS_LO BYTE_LO))
                   (if-zero BYTE_LO
                            (vanishes! IS_PRECOMPILE)

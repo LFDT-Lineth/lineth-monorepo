@@ -36,11 +36,11 @@
 (defconstraint    call-instruction---2nd-caller-account-operation---missing-fields    (:guard (call-instruction---summon-both-account-rows-twice-or-more))
                   (begin
                     (if-not-zero    (scenario-shorthand---CALL---balance-update-undone-with-callee-failure)
-                                    (revert-with-child-failure-dom-sub-stamps    CALL_2nd_caller_account_row___row_offset
-                                                                                 2
+                                    (DOM-SUB-stamps---revert-with-child    CALL_2nd_caller_account_row___row_offset
+                                                                           2
                                                                                  (call-instruction---callee-revert-stamp)))
                     (if-not-zero    (scenario-shorthand---CALL---balance-update-undone-with-caller-revert)
-                                    (revert-dom-sub-stamps                       CALL_2nd_caller_account_row___row_offset
+                                    (DOM-SUB-stamps---revert-with-current        CALL_2nd_caller_account_row___row_offset
                                                                                  2))
                     ))
 
@@ -63,9 +63,9 @@
 (defconstraint    call-instruction---2nd-callee-account-operation---missing-fields    (:guard (call-instruction---summon-both-account-rows-twice-or-more))
                   (begin
                     (if-not-zero    (scenario-shorthand---CALL---balance-update-undone-with-callee-failure)
-                                    (begin    (revert-with-child-failure-dom-sub-stamps    CALL_2nd_callee_account_row___row_offset    3    (call-instruction---callee-revert-stamp))
-                                              (account-same-warmth                         CALL_2nd_callee_account_row___row_offset)))
+                                    (begin    (DOM-SUB-stamps---revert-with-child    CALL_2nd_callee_account_row___row_offset    3    (call-instruction---callee-revert-stamp))
+                                              (account-same-warmth                   CALL_2nd_callee_account_row___row_offset)))
                     (if-not-zero    (scenario-shorthand---CALL---balance-update-undone-with-caller-revert)
-                                    (begin    (revert-dom-sub-stamps                       CALL_2nd_callee_account_row___row_offset    3)
+                                    (begin    (DOM-SUB-stamps---revert-with-current        CALL_2nd_callee_account_row___row_offset    3)
                                               (account-undo-warmth-update                  CALL_2nd_callee_account_row___row_offset    CALL_1st_callee_account_row___row_offset)))
                     ))

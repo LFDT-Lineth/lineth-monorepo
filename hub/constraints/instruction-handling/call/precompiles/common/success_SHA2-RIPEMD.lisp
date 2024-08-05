@@ -28,41 +28,39 @@
 (defconstraint    precompile-processing---SHA2-and-RIPEMD---success---2nd-misc-row---setting-MMU-instruction    (:guard    (precompile-processing---SHA2-and-RIPEMD---success-precondition))
                   (begin
                     (if-not-zero    (precompile-processing---common---OOB-empty-call-data)
-                                    (set-MMU-instruction-mstore
-                                      precompile-processing---common---2nd-misc-row---row-offset               ;; offset
-                                      ;; src_id                                                                   ;; source ID
-                                      (+    1    HUB_STAMP)                                                    ;; target ID
-                                      ;; aux_id                                                                   ;; auxiliary ID
-                                      ;; src_offset_hi                                                            ;; source offset high
-                                      ;; src_offset_lo                                                            ;; source offset low
-                                      0                                                                        ;; target offset low
-                                      ;; size                                                                     ;; size
-                                      ;; ref_offset                                                               ;; reference offset
-                                      ;; ref_size                                                                 ;; reference size
-                                      ;; success_bit                                                              ;; success bit
-                                      (precompile-processing---SHA2-and-RIPEMD---relevant-empty-hash-hi)       ;; limb 1
-                                      (precompile-processing---SHA2-and-RIPEMD---relevant-empty-hash-lo)       ;; limb 2
-                                      ;; exo_sum                                                                  ;; weighted exogenous module flag sum
-                                      ;; phase                                                                    ;; phase
-                                      ))
+                                    (set-MMU-instruction---mstore    precompile-processing---common---2nd-misc-row---row-offset               ;; offset
+                                                                     ;; src_id                                                                   ;; source ID
+                                                                     (+    1    HUB_STAMP)                                                    ;; target ID
+                                                                     ;; aux_id                                                                   ;; auxiliary ID
+                                                                     ;; src_offset_hi                                                            ;; source offset high
+                                                                     ;; src_offset_lo                                                            ;; source offset low
+                                                                     0                                                                        ;; target offset low
+                                                                     ;; size                                                                     ;; size
+                                                                     ;; ref_offset                                                               ;; reference offset
+                                                                     ;; ref_size                                                                 ;; reference size
+                                                                     ;; success_bit                                                              ;; success bit
+                                                                     (precompile-processing---SHA2-and-RIPEMD---relevant-empty-hash-hi)       ;; limb 1
+                                                                     (precompile-processing---SHA2-and-RIPEMD---relevant-empty-hash-lo)       ;; limb 2
+                                                                     ;; exo_sum                                                                  ;; weighted exogenous module flag sum
+                                                                     ;; phase                                                                    ;; phase
+                                                                     ))
                     (if-not-zero    (precompile-processing---common---OOB-extract-call-data)
-                                    (set-MMU-instruction-exo-to-ram-transplants
-                                      precompile-processing---common---2nd-misc-row---row-offset               ;; offset
-                                      (+    1    HUB_STAMP)                                                    ;; source ID
-                                      (+    1    HUB_STAMP)                                                    ;; target ID
-                                      ;; aux_id                                                                   ;; auxiliary ID
-                                      ;; src_offset_hi                                                            ;; source offset high
-                                      ;; src_offset_lo                                                            ;; source offset low
-                                      ;; tgt_offset_lo                                                            ;; target offset low
-                                      32                                                                       ;; size
-                                      ;; ref_offset                                                               ;; reference offset
-                                      ;; ref_size                                                                 ;; reference size
-                                      ;; success_bit                                                              ;; success bit
-                                      ;; limb_1                                                                   ;; limb 1
-                                      ;; limb_2                                                                   ;; limb 2
-                                      EXO_SUM_WEIGHT_RIPSHA                                                    ;; weighted exogenous module flag sum
-                                      (precompile-processing---SHA2-and-RIPEMD---result-phase)                 ;; phase
-                                      ))
+                                    (set-MMU-instruction---exo-to-ram-transplants    precompile-processing---common---2nd-misc-row---row-offset               ;; offset
+                                                                                     (+    1    HUB_STAMP)                                                    ;; source ID
+                                                                                     (+    1    HUB_STAMP)                                                    ;; target ID
+                                                                                     ;; aux_id                                                                   ;; auxiliary ID
+                                                                                     ;; src_offset_hi                                                            ;; source offset high
+                                                                                     ;; src_offset_lo                                                            ;; source offset low
+                                                                                     ;; tgt_offset_lo                                                            ;; target offset low
+                                                                                     32                                                                       ;; size
+                                                                                     ;; ref_offset                                                               ;; reference offset
+                                                                                     ;; ref_size                                                                 ;; reference size
+                                                                                     ;; success_bit                                                              ;; success bit
+                                                                                     ;; limb_1                                                                   ;; limb 1
+                                                                                     ;; limb_2                                                                   ;; limb 2
+                                                                                     EXO_SUM_WEIGHT_RIPSHA                                                    ;; weighted exogenous module flag sum
+                                                                                     (precompile-processing---SHA2-and-RIPEMD---result-phase)                 ;; phase
+                                                                                     ))
                     ))
 
 
@@ -82,22 +80,22 @@
 
 (defconstraint    precompile-processing---SHA2-and-RIPEMD---success---3rd-misc-row---setting-MMU-instruction    (:guard    (precompile-processing---SHA2-and-RIPEMD---success-precondition))
                   (if-not-zero    (shift    misc/MMU_FLAG    precompile-processing---common---3rd-misc-row---row-offset)
-                                  (set-MMU-instruction-ram-to-ram-sans-padding    precompile-processing---common---3rd-misc-row---row-offset                 ;; offset
-                                                                                  (+    1    HUB_STAMP)                                                      ;; source ID
-                                                                                  CONTEXT_NUMBER                                                             ;; target ID
-                                                                                  ;; aux_id                                                                     ;; auxiliary ID
-                                                                                  ;; src_offset_hi                                                              ;; source offset high
-                                                                                  0                                                                          ;; source offset low
-                                                                                  ;; tgt_offset_lo                                                              ;; target offset low
-                                                                                  32                                                                         ;; size
-                                                                                  (precompile-processing---dup-r@o)                                          ;; reference offset
-                                                                                  (precompile-processing---dup-r@c)                                          ;; reference size
-                                                                                  ;; success_bit                                                                ;; success bit
-                                                                                  ;; limb_1                                                                     ;; limb 1
-                                                                                  ;; limb_2                                                                     ;; limb 2
-                                                                                  ;; exo_sum                                                                    ;; weighted exogenous module flag sum
-                                                                                  ;; phase                                                                      ;; phase
-                                                                                  )
+                                  (set-MMU-instruction---ram-to-ram-sans-padding    precompile-processing---common---3rd-misc-row---row-offset                 ;; offset
+                                                                                    (+    1    HUB_STAMP)                                                      ;; source ID
+                                                                                    CONTEXT_NUMBER                                                             ;; target ID
+                                                                                    ;; aux_id                                                                     ;; auxiliary ID
+                                                                                    ;; src_offset_hi                                                              ;; source offset high
+                                                                                    0                                                                          ;; source offset low
+                                                                                    ;; tgt_offset_lo                                                              ;; target offset low
+                                                                                    32                                                                         ;; size
+                                                                                    (precompile-processing---dup-r@o)                                          ;; reference offset
+                                                                                    (precompile-processing---dup-r@c)                                          ;; reference size
+                                                                                    ;; success_bit                                                                ;; success bit
+                                                                                    ;; limb_1                                                                     ;; limb 1
+                                                                                    ;; limb_2                                                                     ;; limb 2
+                                                                                    ;; exo_sum                                                                    ;; weighted exogenous module flag sum
+                                                                                    ;; phase                                                                      ;; phase
+                                                                                    )
                                   ))
 
 (defconstraint    precompile-processing---SHA2-and-RIPEMD---success---updating-return-data                (:guard    (precompile-processing---SHA2-and-RIPEMD---success-precondition))

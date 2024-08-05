@@ -9,12 +9,12 @@
 (defun (flag-sum)
   (+ IS_AND IS_OR IS_XOR IS_NOT IS_BYTE IS_SIGNEXTEND))
 
-(defun  (weight-sum)
-  (+ (* IS_AND        EVM_INST_AND)
-     (* IS_OR         EVM_INST_OR)
-     (* IS_XOR        EVM_INST_XOR)
-     (* IS_NOT        EVM_INST_NOT)
-     (* IS_BYTE       EVM_INST_BYTE)
+(defun (weight-sum)
+  (+ (* IS_AND EVM_INST_AND)
+     (* IS_OR EVM_INST_OR)
+     (* IS_XOR EVM_INST_XOR)
+     (* IS_NOT EVM_INST_NOT)
+     (* IS_BYTE EVM_INST_BYTE)
      (* IS_SIGNEXTEND EVM_INST_SIGNEXTEND)))
 
 ;; 2.3 Instruction decoding
@@ -80,8 +80,15 @@
          (byte-decomposition CT ACC_5 BYTE_5)
          (byte-decomposition CT ACC_6 BYTE_6)))
 
-;;    2.7 target constraints    
-(defconstraint target-constraints ()
+;;    2.7 target constraints   
+(defun (requires-byte-decomposition)
+  (+ IS_AND
+     IS_OR
+     IS_XOR
+     IS_NOT
+     (* CT_MAX (+ IS_BYTE IS_SIGNEXTEND))))
+
+(defconstraint target-constraints (:guard (requires-byte-decomposition))
   (if-eq CT CT_MAX
          (begin (eq! ACC_1 ARG_1_HI)
                 (eq! ACC_2 ARG_1_LO)

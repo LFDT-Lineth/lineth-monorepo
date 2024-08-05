@@ -87,14 +87,14 @@
 
 (defconstraint    create-instruction---setting-the-OOB-instruction                          (:guard    (create-instruction---generic-precondition))
                   (if-not-zero    (shift    misc/OOB_FLAG    CREATE_miscellaneous_row___row_offset)
-                                  (set-OOB-instruction-create    CREATE_miscellaneous_row___row_offset         ;; offset
-                                                                 (create-instruction---STACK-value-hi)         ;; value    (high part)
-                                                                 (create-instruction---STACK-value-lo)         ;; value    (low  part,  stack argument of CALL-type instruction)
-                                                                 (create-instruction---creator-balance)        ;; balance  (from caller account)
-                                                                 (create-instruction---createe-nonce)          ;; callee's nonce
-                                                                 (create-instruction---createe-has-code)       ;; callee's HAS_CODE
-                                                                 (create-instruction---current-context-csd)    ;; current  call  stack  depth
-                                                                 )))
+                                  (set-OOB-instruction---create    CREATE_miscellaneous_row___row_offset         ;; offset
+                                                                   (create-instruction---STACK-value-hi)         ;; value    (high part)
+                                                                   (create-instruction---STACK-value-lo)         ;; value    (low  part,  stack argument of CALL-type instruction)
+                                                                   (create-instruction---creator-balance)        ;; balance  (from caller account)
+                                                                   (create-instruction---createe-nonce)          ;; callee's nonce
+                                                                   (create-instruction---createe-has-code)       ;; callee's HAS_CODE
+                                                                   (create-instruction---current-context-csd)    ;; current  call  stack  depth
+                                                                   )))
 
 (defconstraint    create-instruction---setting-the-CREATE-scenario                          (:guard    (create-instruction---generic-precondition))
                   (begin
@@ -104,8 +104,8 @@
                                       (eq!    scenario/CREATE_ABORT                                    (create-instruction---OOB-aborting-condition))
                                       (eq!    (scenario-shorthand---CREATE---failure-condition)        (create-instruction---OOB-failure-condition) )
                                       (debug  (eq!    (scenario-shorthand---CREATE---not-rebuffed)     (-    1
-                                                                                                         (create-instruction---OOB-aborting-condition)
-                                                                                                         (create-instruction---OOB-failure-condition))))))
+                                                                                                             (create-instruction---OOB-aborting-condition)
+                                                                                                             (create-instruction---OOB-failure-condition))))))
                     (if-not-zero    (scenario-shorthand---CREATE---creator-state-change)
                                     (eq!    (scenario-shorthand---CREATE---creator-state-change-will-revert)
                                             CONTEXT_WILL_REVERT))
@@ -119,22 +119,22 @@
 
 (defconstraint    create-instruction---setting-the-MMU-instruction                          (:guard    (create-instruction---generic-precondition))
                   (if-not-zero    (shift    misc/MMU_FLAG    CREATE_miscellaneous_row___row_offset)
-                                  (set-MMU-instruction-ram-to-exo-with-padding    CREATE_miscellaneous_row___row_offset               ;; offset
-                                                                                  CONTEXT_NUMBER                                      ;; source ID
-                                                                                  (create-instruction---tgt-id)                       ;; target ID
-                                                                                  (create-instruction---aux-id)                       ;; auxiliary ID
-                                                                                  ;; src_offset_hi                                       ;; source offset high
-                                                                                  (create-instruction---STACK-offset-lo)              ;; source offset low
-                                                                                  ;; tgt_offset_lo                                       ;; target offset low
-                                                                                  (create-instruction---STACK-size-lo)                ;; size
-                                                                                  ;; ref_offset                                          ;; reference offset
-                                                                                  (create-instruction---STACK-size-lo)                ;; reference size
-                                                                                  0                                                   ;; success bit
-                                                                                  ;; limb_1                                              ;; limb 1
-                                                                                  ;; limb_2                                              ;; limb 2
-                                                                                  (create-instruction---exo-sum)                      ;; weighted exogenous module flag sum
-                                                                                  0                                                   ;; phase
-                                                                                  )))
+                                  (set-MMU-instruction---ram-to-exo-with-padding    CREATE_miscellaneous_row___row_offset               ;; offset
+                                                                                    CONTEXT_NUMBER                                      ;; source ID
+                                                                                    (create-instruction---tgt-id)                       ;; target ID
+                                                                                    (create-instruction---aux-id)                       ;; auxiliary ID
+                                                                                    ;; src_offset_hi                                       ;; source offset high
+                                                                                    (create-instruction---STACK-offset-lo)              ;; source offset low
+                                                                                    ;; tgt_offset_lo                                       ;; target offset low
+                                                                                    (create-instruction---STACK-size-lo)                ;; size
+                                                                                    ;; ref_offset                                          ;; reference offset
+                                                                                    (create-instruction---STACK-size-lo)                ;; reference size
+                                                                                    0                                                   ;; success bit
+                                                                                    ;; limb_1                                              ;; limb 1
+                                                                                    ;; limb_2                                              ;; limb 2
+                                                                                    (create-instruction---exo-sum)                      ;; weighted exogenous module flag sum
+                                                                                    0                                                   ;; phase
+                                                                                    )))
 
 (defun    (create-instruction---tgt-id)     (+    (*    (create-instruction---hash-init-code-and-send-to-ROM)    (create-instruction---deployment-cfi))
                                                   (*    (create-instruction---send-init-code-to-ROM)             (create-instruction---deployment-cfi))))

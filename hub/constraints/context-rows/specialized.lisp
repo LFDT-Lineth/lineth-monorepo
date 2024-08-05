@@ -103,17 +103,15 @@
     (eq! (shift context/RETURN_DATA_SIZE            relative_row_offset)        return_data_size             )))
 
 (defun (execution-provides-empty-return-data    relative_row_offset)
-  (provide-return-data
-    relative_row_offset
-    CALLER_CONTEXT_NUMBER
-    CONTEXT_NUMBER
-    0
-    0))
+  (provide-return-data    relative_row_offset
+                          CALLER_CONTEXT_NUMBER
+                          CONTEXT_NUMBER
+                          0
+                          0))
 
 (defun (nonexecution-provides-empty-return-data    relative_row_offset)
-  (provide-return-data
-    relative_row_offset
-    CONTEXT_NUMBER
-    (+ 1 HUB_STAMP)
-    0
-    0))
+  (provide-return-data     relative_row_offset
+                           CONTEXT_NUMBER
+                           (+ 1 HUB_STAMP)
+                           0
+                           0))

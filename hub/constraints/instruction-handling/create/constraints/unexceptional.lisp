@@ -29,7 +29,8 @@
                     (vanishes!    (shift    account/ROMLEX_FLAG      CREATE_first_creator_account_row___row_offset))
                     (vanishes!    (shift    account/TRM_FLAG         CREATE_first_creator_account_row___row_offset))
                     (eq!          (shift    account/RLPADDR_FLAG     CREATE_first_creator_account_row___row_offset)    (create-instruction---trigger_RLPADDR))
-                    (standard-dom-sub-stamps    CREATE_first_creator_account_row___row_offset     0)
+                    (DOM-SUB-stamps---standard                       CREATE_first_creator_account_row___row_offset
+                                                                     0)
                     ))
 
 (defconstraint    create-instruction---creator-balance-update            (:guard (create-instruction---unexceptional-CREATE-precondition))

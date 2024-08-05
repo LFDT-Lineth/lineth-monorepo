@@ -62,10 +62,10 @@
                               (begin (any! (eq! CN_NEW CN)
                                            (eq! CN_NEW CALLER_CN)
                                            (eq! CN_NEW (+ 1 HUB_STAMP)))
-                                     (if-not-zero (remained-constant HUB_STAMP)
+                                     (if-not-zero (remained-constant! HUB_STAMP)
                                                   (eq! CN (prev CN_NEW)))
                                      (if-zero CMC (eq! CN_NEW CN))
-                                     (if-not-zero (will-remain-constant HUB_STAMP)
+                                     (if-not-zero (will-remain-constant! HUB_STAMP)
                                                   (begin
                                                     (if-not-zero CMC   (eq! PEEK_AT_CONTEXT 1))
                                                     (if-not-zero XAHOY (execution-provides-empty-return-data 0))

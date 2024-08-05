@@ -22,7 +22,7 @@
   (PUSH_VALUE_LO :i128)
   (PUSH_VALUE_ACC :i128)
   (PUSH_FUNNEL_BIT :binary@prove)
-  (OPCODE :byte)
+  (OPCODE :byte :display :opcode)
   (IS_JUMPDEST :binary))
 
 (defalias 

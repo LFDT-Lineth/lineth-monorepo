@@ -30,6 +30,6 @@
                     (vanishes!    (shift    account/ROMLEX_FLAG      CALL_3rd_callee_account_row___row_offset))
                     (vanishes!    (shift    account/TRM_FLAG         CALL_3rd_callee_account_row___row_offset))
                     (vanishes!    (shift    account/RLPADDR_FLAG     CALL_3rd_callee_account_row___row_offset))
-                    (revert-dom-sub-stamps                           CALL_3rd_callee_account_row___row_offset
+                    (DOM-SUB-stamps---revert-with-current            CALL_3rd_callee_account_row___row_offset
                                                                      4)
                     ))

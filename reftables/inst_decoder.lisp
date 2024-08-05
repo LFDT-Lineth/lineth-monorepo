@@ -34,7 +34,6 @@
     (TWO_LINE_INSTRUCTION                  :binary)
     (STATIC_FLAG                           :binary)
     (MXP_FLAG                              :binary)
-    (ADDRESS_TRIMMING_INSTRUCTION          :binary)
     (FLAG_1                                :binary)
     (FLAG_2                                :binary)
     (FLAG_3                                :binary)
@@ -43,63 +42,18 @@
     (DELTA                                 :byte)
     (NB_ADDED                              :byte)
     (NB_REMOVED                            :byte)
-    STATIC_GAS
-
-    ;;
-    ;; Stack settings TODO: they are obsolete I believe
-    ;;
-    (PATTERN_ZERO_ZERO                     :binary)
-    (PATTERN_ONE_ZERO                      :binary)
-    (PATTERN_TWO_ZERO                      :binary)
-    (PATTERN_ZERO_ONE                      :binary)
-    (PATTERN_ONE_ONE                       :binary)
-    (PATTERN_TWO_ONE                       :binary)
-    (PATTERN_THREE_ONE                     :binary)
-    (PATTERN_LOAD_STORE                    :binary)
-    (PATTERN_DUP                           :binary)
-    (PATTERN_SWAP                          :binary)
-    (PATTERN_LOG                           :binary)
-    (PATTERN_COPY                          :binary)
-    (PATTERN_CALL                          :binary)
-    (PATTERN_CREATE                        :binary)
-
-    ;;
-    ;; RAM settings
-    ;;
-    (RAM_ENABLED :binary)
-    (RAM_SOURCE_ROM :binary)
-    (RAM_SOURCE_TXN_DATA :binary)
-    (RAM_SOURCE_RAM :binary)
-    (RAM_SOURCE_STACK :binary)
-    (RAM_SOURCE_EC_DATA :binary)
-    (RAM_SOURCE_EC_INFO :binary)
-    (RAM_SOURCE_MODEXP_DATA :binary)
-    (RAM_SOURCE_HASH_DATA :binary)
-    (RAM_SOURCE_HASH_INFO :binary)
-    (RAM_SOURCE_BLAKE_DATA :binary)
-    (RAM_SOURCE_LOG_DATA :binary)
-    (RAM_TARGET_ROM :binary)
-    (RAM_TARGET_TXN_DATA :binary)
-    (RAM_TARGET_RAM :binary)
-    (RAM_TARGET_STACK :binary)
-    (RAM_TARGET_EC_DATA :binary)
-    (RAM_TARGET_EC_INFO :binary)
-    (RAM_TARGET_MODEXP_DATA :binary)
-    (RAM_TARGET_HASH_DATA :binary)
-    (RAM_TARGET_HASH_INFO :binary)
-    (RAM_TARGET_BLAKE_DATA :binary)
-    (RAM_TARGET_LOG_DATA :binary)
+    (STATIC_GAS                            :i32)
 
     ;;
     ;; Billing settings
     ;;
-    BILLING_PER_WORD
-    BILLING_PER_BYTE
-    (MXP_TYPE_1 :binary)
-    (MXP_TYPE_2 :binary)
-    (MXP_TYPE_3 :binary)
-    (MXP_TYPE_4 :binary)
-    (MXP_TYPE_5 :binary)
+    (BILLING_PER_WORD       :byte)
+    (BILLING_PER_BYTE       :byte)
+    (MXP_TYPE_1             :binary)
+    (MXP_TYPE_2             :binary)
+    (MXP_TYPE_3             :binary)
+    (MXP_TYPE_4             :binary)
+    (MXP_TYPE_5             :binary)
 
     ;;
     ;; ROM columns

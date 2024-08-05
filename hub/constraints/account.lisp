@@ -1,9 +1,5 @@
 (module hub)
 
-(defconst
-kec_void_hi 0x0 ;;TODO
-kec_void_lo 0x0 ;;TODO
-)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                       ;;
 ;;  6.1 Specialized-rows ;; 
@@ -118,8 +114,8 @@ kec_void_lo 0x0 ;;TODO
   (vanishes! NONCE_NEW)
   (vanishes CODE_SIZE_NEW)
   (vanishes! HAS_CODE_NEW)
-  (debug (eq! CODE_HASH_HI_NEW kec_void_hi))
-  (debug (eq! CODE_HASH_LO_NEW kec_void_lo))
+  (debug (eq! CODE_HASH_HI_NEW    EMPTY_KECCAK_HI))
+  (debug (eq! CODE_HASH_LO_NEW    EMPTY_KECCAK_LO))
   (increment_dep_number_h)
   (vanishes! DEPLOYMENT_STATUS_NEW)))
 
@@ -128,8 +124,8 @@ kec_void_lo 0x0 ;;TODO
   (increment_dep_number_h)
   (eq! DEPLOYMENT_STATUS_NEW 1)
   (vanishes! HAS_CODE_NEW)
-  (debug (eq! CODE_HASH_HI_NEW kec_void_hi))
-  (debug (eq! CODE_HASH_LO_NEW kec_void_lo))))
+  (debug (eq! CODE_HASH_HI_NEW    EMPTY_KECCAK_HI))
+  (debug (eq! CODE_HASH_LO_NEW    EMPTY_KECCAK_LO))))
 
 (defun (dep_num_and_status_update_for_deployment_without_code_h)
  (begin
@@ -137,8 +133,8 @@ kec_void_lo 0x0 ;;TODO
   (vanishes! DEPLOYMENT_STATUS_NEW)
   (vanishes! CODE_SIZE_NEW)
   (vanishes HAS_CODE_NEW)
-  (debug (eq! CODE_HASH_HI_NEW kec_void_hi))
-  (debug (eq! CODE_HASH_LO_NEW kec_void_lo))))
+  (debug (eq! CODE_HASH_HI_NEW    EMPTY_KECCAK_HI))
+  (debug (eq! CODE_HASH_LO_NEW    EMPTY_KECCAK_LO))))
 
 ;; Account inspection
 (defun (account_opening_h)
@@ -158,8 +154,8 @@ kec_void_lo 0x0 ;;TODO
   (vanishes! BALANCE_NEW)
   (vanishes! CODE_SIZE_NEW)
   (vanishes! HAS_CODE_NEW)
-  (debug (eq! CODE_HASH_HI_NEW kec_void_hi))
-  (debug (eq! CODE_HASH_LO_NEW kec_void_lo))
+  (debug (eq! CODE_HASH_HI_NEW    EMPTY_KECCAK_HI))
+  (debug (eq! CODE_HASH_LO_NEW    EMPTY_KECCAK_LO))
   fresh_new_dep_num_and_status_h))
 
 (defun (same_addr_as_previously_v)

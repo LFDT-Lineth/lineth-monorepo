@@ -26,94 +26,94 @@
 ;;;;;;;;;;;;;;;;;;
 
 
-(defun (classifier-stateless-instructions) (+ stack/ADD_FLAG
-                                              stack/BIN_FLAG
-                                              stack/EXT_FLAG
-                                              stack/MOD_FLAG
-                                              stack/MUL_FLAG
-                                              stack/SHF_FLAG
-                                              stack/WCP_FLAG ))
-(defun (stateless-instruction-is-exp)   (* stack/MUL_FLAG
-                                           [ stack/DEC_FLAG 2 ]))
-(defun (stateless-instruction-isnt-exp) (+ stack/ADD_FLAG
-                                           stack/BIN_FLAG
-                                           stack/EXT_FLAG
-                                           stack/MOD_FLAG
-                                           stack/SHF_FLAG
-                                           stack/WCP_FLAG
-                                           (* stack/MUL_FLAG [ stack/DEC_FLAG 1 ])))
-(defun (one-arg-stateless-instruction) (* (+ stack/BIN_FLAG stack/WCP_FLAG)
-                                          [ stack/DEC_FLAG 1 ]))
-(defun (two-arg-stateless-instruction) (+ stack/ADD_FLAG 
-                                          (* stack/BIN_FLAG (- 1 [ stack/DEC_FLAG 1 ]))
-                                          stack/MOD_FLAG
-                                          stack/MUL_FLAG
-                                          stack/SHF_FLAG
-                                          (* stack/WCP_FLAG (- 1 [ stack/DEC_FLAG 1 ]))))
-(defun (three-arg-stateless-instruction) stack/EXT_FLAG)
+(defun (stateless-instructions---classifier) (+ stack/ADD_FLAG
+                                                stack/BIN_FLAG
+                                                stack/EXT_FLAG
+                                                stack/MOD_FLAG
+                                                stack/MUL_FLAG
+                                                stack/SHF_FLAG
+                                                stack/WCP_FLAG ))
+(defun (stateless-instruction---is-EXP)   (* stack/MUL_FLAG
+                                             [ stack/DEC_FLAG 2 ]))
+(defun (stateless-instruction---isnt-EXP) (+ stack/ADD_FLAG
+                                             stack/BIN_FLAG
+                                             stack/EXT_FLAG
+                                             stack/MOD_FLAG
+                                             stack/SHF_FLAG
+                                             stack/WCP_FLAG
+                                             (* stack/MUL_FLAG [ stack/DEC_FLAG 1 ])))
+(defun (stateless-instruction---1-argument-instruction) (* (+ stack/BIN_FLAG stack/WCP_FLAG)
+                                                           [ stack/DEC_FLAG 1 ]))
+(defun (stateless-instruction---2-argument-instruction) (+ stack/ADD_FLAG 
+                                                           (* stack/BIN_FLAG (- 1 [ stack/DEC_FLAG 1 ]))
+                                                           stack/MOD_FLAG
+                                                           stack/MUL_FLAG
+                                                           stack/SHF_FLAG
+                                                           (* stack/WCP_FLAG (- 1 [ stack/DEC_FLAG 1 ]))))
+(defun (stateless-instruction---3-argument-instruction) stack/EXT_FLAG)
 
 ;;  Constraints  ;;
 ;;;;;;;;;;;;;;;;;;;
 
-(defun (stateless-precondition) (* PEEK_AT_STACK (- 1 stack/SUX stack/SUX)))
+(defun (stateless-instruction---precondition) (* PEEK_AT_STACK (- 1 stack/SUX stack/SUX)))
 
 ;; TODO: comment out
 ;; sanity check
 (defconstraint add-bin-ext-mod-mul-shf-wcp-safeguard (:guard PEEK_AT_STACK)
                (begin
-                 (eq! (classifier-stateless-instructions)
-                      (+ (stateless-instruction-is-exp)
-                         (stateless-instruction-isnt-exp)))
-                 (eq! (classifier-stateless-instructions)
-                      (+ (one-arg-stateless-instruction)
-                         (two-arg-stateless-instruction)
-                         (three-arg-stateless-instruction)))))
+                 (eq! (stateless-instructions---classifier)
+                      (+ (stateless-instruction---is-EXP)
+                         (stateless-instruction---isnt-EXP)))
+                 (eq! (stateless-instructions---classifier)
+                      (+ (stateless-instruction---1-argument-instruction)
+                         (stateless-instruction---2-argument-instruction)
+                         (stateless-instruction---3-argument-instruction)))))
 
-(defconstraint stateless-stack-pattern (:guard (stateless-precondition))
+(defconstraint stateless-instruction---stack-pattern (:guard (stateless-instruction---precondition))
                (begin
-                 (if-not-zero (one-arg-stateless-instruction)   (stack-pattern-1-1))
-                 (if-not-zero (two-arg-stateless-instruction)   (stack-pattern-2-1))
-                 (if-not-zero (three-arg-stateless-instruction) (stack-pattern-3-1))))
+                 (if-not-zero (stateless-instruction---1-argument-instruction)   (stack-pattern-1-1))
+                 (if-not-zero (stateless-instruction---2-argument-instruction)   (stack-pattern-2-1))
+                 (if-not-zero (stateless-instruction---3-argument-instruction) (stack-pattern-3-1))))
 
-(defconstraint wcp-result-is-binary (:guard (stateless-precondition))
+(defconstraint wcp-result-is-binary (:guard (stateless-instruction---precondition))
                (if-not-zero stack/WCP_FLAG 
                             (begin 
                               (vanishes! [ stack/STACK_ITEM_VALUE_HI 4 ])
                               (debug (is-binary [ stack/STACK_ITEM_VALUE_LO 4 ])))))
 
-(defconstraint stateless-setting-nsr (:guard (stateless-precondition))
-               (if-not-zero (classifier-stateless-instructions)
+(defconstraint stateless-instruction---setting-nsr (:guard (stateless-instruction---precondition))
+               (if-not-zero (stateless-instructions---classifier)
                             (eq! NON_STACK_ROWS
-                                 (+ (stateless-instruction-is-exp) CONTEXT_MAY_CHANGE))))
+                                 (+ (stateless-instruction---is-EXP) CONTEXT_MAY_CHANGE))))
 
-(defconstraint stateless-setting-peeking-flags (:guard (stateless-precondition))
+(defconstraint stateless-instruction---setting-peeking-flags (:guard (stateless-instruction---precondition))
                (begin
-                 (if-not-zero (stateless-instruction-isnt-exp)
+                 (if-not-zero (stateless-instruction---isnt-EXP)
                               (eq! NON_STACK_ROWS
                                    (* CMC (next PEEK_AT_CONTEXT))))
-                 (if-not-zero (stateless-instruction-is-exp)
+                 (if-not-zero (stateless-instruction---is-EXP)
                               (eq! NON_STACK_ROWS
                                    (+ (next PEEK_AT_MISCELLANEOUS)
                                       (* CMC (shift PEEK_AT_CONTEXT 2)))))))
 
-(defconstraint stateless-setting-miscellaneous-flags (:guard (stateless-precondition))
-               (if-not-zero (classifier-stateless-instructions)
+(defconstraint stateless-instruction---setting-miscellaneous-flags (:guard (stateless-instruction---precondition))
+               (if-not-zero (stateless-instruction---is-EXP)
                             (eq! (weighted-MISC-flag-sum 1)
-                                 (* (stateless-instruction-is-exp) MISC_WEIGHT_EXP))))
+                                 MISC_WEIGHT_EXP)))
 
-(defconstraint stateless-setting-exp-arguments (:guard (stateless-precondition))
-               (if-not-zero (stateless-instruction-is-exp)
+(defconstraint stateless-instruction---setting-EXP-arguments (:guard (stateless-instruction---precondition))
+               (if-not-zero (stateless-instruction---is-EXP)
                             (set-EXP-instruction-exp-log
-                              1                                  ;; row offset
+                              1                                ;; row offset
                               [ stack/STACK_ITEM_VALUE_HI 2 ]  ;; exponent high
                               [ stack/STACK_ITEM_VALUE_LO 2 ]  ;; exponent low
                               )))
 
-(defconstraint stateless-gas-cost (:guard (stateless-precondition))
+(defconstraint stateless-instruction---gas-cost (:guard (stateless-instruction---precondition))
                (begin
-                 (if-not-zero (stateless-instruction-isnt-exp)
+                 (if-not-zero (stateless-instruction---isnt-EXP)
                               (eq! GAS_COST stack/STATIC_GAS))
-                 (if-not-zero (stateless-instruction-is-exp)
+                 (if-not-zero (stateless-instruction---is-EXP)
                               (eq! GAS_COST
                                    (+ stack/STATIC_GAS
                                       (next [ misc/EXP_DATA 5 ]))))))
