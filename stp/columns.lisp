@@ -17,15 +17,15 @@
   (VAL_HI :i128)
   (VAL_LO :i128)
   ;;
-  (EXISTS :binary)
-  (WARM :binary)
+  (EXISTS               :binary)
+  (WARM                 :binary)
   (OUT_OF_GAS_EXCEPTION :binary)
   ;;
-  GAS_ACTUAL
-  GAS_MXP
-  GAS_UPFRONT
-  GAS_OUT_OF_POCKET
-  GAS_STIPEND
+  (GAS_ACTUAL           :i48)
+  (GAS_MXP              :i48)
+  (GAS_UPFRONT          :i48)
+  (GAS_OUT_OF_POCKET    :i48)
+  (GAS_STIPEND          :i48)
   ;;
   (WCP_FLAG :binary)
   (MOD_FLAG :binary)
