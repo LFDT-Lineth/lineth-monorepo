@@ -20,9 +20,9 @@
 
 
 (defconstraint    call-instruction---setting-the-stack-pattern             (:guard    (call-instruction---standard-precondition))
-                  (call-stack-pattern    (force-bin    (+    (call-instruction---is-CALL)
-                                                             (call-instruction---is-CALLCODE))))
-                  )
+                  (shift    (call-stack-pattern    (force-bin    (+    (call-instruction---is-CALL---unshifted)
+                                                                       (call-instruction---is-CALLCODE---unshifted))))
+                            CALL_1st_stack_row___row_offset))
 
 (defconstraint    call-instruction---setting-the-success-bit               (:guard    (call-instruction---standard-precondition))
                   (begin

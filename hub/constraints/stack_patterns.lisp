@@ -397,7 +397,7 @@
                     ;; stack item 7;
                     (will-eq! [ stack/STACK_ITEM_HEIGHT 3 ]   (* b (- HEIGHT 2)))
                     (will-eq! [ stack/STACK_ITEM_POP    3 ]      b )
-                    (will-eq! [ stack/STACK_ITEM_STAMP  3 ]   (* b (+ (* MULTIPLIER___STACK_HEIGHT HEIGHT) 2)))
+                    (will-eq! [ stack/STACK_ITEM_STAMP  3 ]   (* b (+ (* MULTIPLIER___STACK_HEIGHT HUB_STAMP) 2)))
                     ;; stack item 8;
                     (dec-scnd-row-stack-item-X-height-by-Y       4 (+ 5 b))
                     (push-scnd-row-stack-item                    4)

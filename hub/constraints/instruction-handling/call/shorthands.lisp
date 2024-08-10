@@ -15,6 +15,8 @@
 ;;                       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(defun    (call-instruction---is-CALL---unshifted)                         [stack/DEC_FLAG  1]                                                 )
+(defun    (call-instruction---is-CALLCODE---unshifted)                     [stack/DEC_FLAG  2]                                                 )
 (defun    (call-instruction---is-CALL)                           (shift    [stack/DEC_FLAG  1]                 CALL_1st_stack_row___row_offset))
 (defun    (call-instruction---is-CALLCODE)                       (shift    [stack/DEC_FLAG  2]                 CALL_1st_stack_row___row_offset))
 (defun    (call-instruction---is-DELEGATECALL)                   (shift    [stack/DEC_FLAG  3]                 CALL_1st_stack_row___row_offset))
