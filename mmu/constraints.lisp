@@ -90,8 +90,8 @@
                (remained-constant! X)))
 
 (defconstraint stamp-constancies ()
-  (begin (for i [5] (stamp-constant [OUT 1]))
-         (for i [5] (stamp-constant [BIN 1]))
+  (begin (for i [5] (stamp-constant [OUT i]))
+         (for i [5] (stamp-constant [BIN i]))
          (stamp-constant (bin-flag-sum))))
 
 (defun (micro-instruction-writing-constant X)
