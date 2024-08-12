@@ -332,6 +332,9 @@
 (defun (nbits_of_leading_byte_excluding_leading_bit)
   (shift computation/MANZB_ACC -2))
 
+(defun (padded_base_2_log)
+  (+ (* 8 (nbytes_excluding_leading_byte)) (nbits_of_leading_byte_excluding_leading_bit)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                      ;;
 ;;    5.3 Preprocessing ;;
@@ -366,18 +369,18 @@
 (defconstraint preprocessing-4-modexp-log (:perspective macro :guard IS_MODEXP_LOG)
   (callToISZERO 4 0 (raw_lead_hi)))
 
-(defun (raw_hi_part_is_zero)
+(defun (raw_lead_hi_is_zero)
   (shift preprocessing/WCP_RES 4))
 
 ;; 5
 (defconstraint preprocessing-5-modexp-log (:perspective macro :guard IS_MODEXP_LOG)
-  (callToISZERO 5 0 (padded_base_2_log)))
+  (callToISZERO 5 0 (trim_acc)))
 
-(defun (padded_base_2_log)
-  (+ (* 8 (nbytes_excluding_leading_byte)) (nbits_of_leading_byte_excluding_leading_bit)))
+(defun (trim_acc_is_zero)
+  (shift preprocessing/WCP_RES 5))
 
 (defun (trivial_trim)
-  (shift preprocessing/WCP_RES 5))
+  (eq! 1 1))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                      ;;
@@ -388,11 +391,12 @@
   (begin (if-not-zero (min_cutoff_leq_16)
                       (begin (eq! (shift computation/RAW_ACC -1) (raw_lead_hi))
                              (eq! (shift computation/PLT_JMP -1) (min_cutoff)))
-                      (begin (if-zero (raw_hi_part_is_zero)
-                                      (begin (eq! (shift computation/RAW_ACC -1) (raw_lead_hi))
-                                             (eq! (shift computation/PLT_JMP -1) 16))
-                                      (begin (eq! (shift computation/RAW_ACC -1) (raw_lead_lo))
-                                             (eq! (shift computation/PLT_JMP -1) (- (min_cutoff) 16))))))))
+                      (begin (if-not-zero (raw_lead_hi_is_zero)
+                                          (begin (eq! (shift computation/RAW_ACC -1) (raw_lead_lo))
+                                                 (eq! (shift computation/PLT_JMP -1) (- (min_cutoff) 16)))
+                                          (begin (eq! (shift computation/RAW_ACC -1) (raw_lead_hi))
+                                                 (eq! (shift computation/PLT_JMP -1) 16)))))
+         (eq! (prev computation/MSB) (prev computation/MSB_ACC))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                         ;;
@@ -400,23 +404,20 @@
 ;;        hub prediction   ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defconstraint justify-hub-prediction-modexp-log (:perspective macro :guard IS_MODEXP_LOG)
-  (if-not-zero (trivial_trim)
-               (if-not-zero (raw_hi_part_is_zero)
+  (if-not-zero (min_cutoff_leq_16)
+               (if-not-zero (trim_acc_is_zero)
                             (vanishes! (lead_log))
-                            (if-not-zero (ebs_cutoff_leq_16)
-                                         (vanishes! (lead_log))
-                                         (eq! (lead_log)
-                                              (* 8 (- (ebs_cutoff) 16)))))
-               (if-not-zero (ebs_cutoff_leq_16)
                             (eq! (lead_log)
                                  (- (padded_base_2_log)
-                                    (* 8 (- 16 (ebs_cutoff)))))
-                            (if-not-zero (raw_hi_part_is_zero)
+                                    (* 8 (- 16 (ebs_cutoff))))))
+               (if-not-zero (raw_lead_hi_is_zero)
+                            (if-not-zero (trim_acc_is_zero)
+                                         (vanishes! (lead_log))
                                          (eq! (lead_log)
                                               (- (padded_base_2_log)
-                                                 (* 8 (- 32 (ebs_cutoff)))))
-                                         (eq! (lead_log)
-                                              (+ (padded_base_2_log)
-                                                 (* 8 (- (ebs_cutoff) 16))))))))
+                                                 (* 8 (- 32 (ebs_cutoff))))))
+                            (eq! (lead_log)
+                                 (+ (padded_base_2_log)
+                                    (* 8 (- (ebs_cutoff) 16)))))))
 
 
