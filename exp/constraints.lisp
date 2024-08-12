@@ -379,9 +379,6 @@
 (defun (trim_acc_is_zero)
   (shift preprocessing/WCP_RES 5))
 
-(defun (trivial_trim)
-  (eq! 1 1))
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                      ;;
 ;;    5.4 Linking       ;;

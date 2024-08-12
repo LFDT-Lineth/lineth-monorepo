@@ -116,7 +116,6 @@ ZKEVM_MODULES := ${ALU} \
 		 ${EUC} \
 		 ${EXP} \
 		 ${GAS} \
-		 ${HUB} \
 		 ${LIBRARY} \
 		 ${LOG_DATA} \
 		 ${LOG_INFO} \
@@ -136,6 +135,8 @@ ZKEVM_MODULES := ${ALU} \
 		 ${TRM} \
 		 ${TXN_DATA} \
 		 ${WCP}
+
+# 		 ${HUB} \
 
 define.go: ${ZKEVM_MODULES}
 	${CORSET} wizard-iop -vv -o $@ ${ZKEVM_MODULES}
