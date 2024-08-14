@@ -391,7 +391,7 @@
 (defconstraint setting-priority-fee-per-gas (:guard (first-row-trigger))
   (if-zero TYPE2
            (eq! PRIORITY_FEE_PER_GAS (gas_price))
-           (eq! PRIORITY_FEE_PER_GAS (- GAS_PRICE BASEFEE))))
+           (eq! PRIORITY_FEE_PER_GAS (- (gas_price) BASEFEE))))
 
 (defconstraint setting-refund-effective (:guard (first-row-trigger))
   (if-zero (get_full_refund)
