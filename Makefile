@@ -114,7 +114,6 @@ ZKEVM_MODULES := ${ALU} \
 		 ${CONSTANTS} \
 		 ${EC_DATA} \
 		 ${EUC} \
-		 ${EXP} \
 		 ${GAS} \
 		 ${LIBRARY} \
 		 ${LOG_DATA} \
@@ -130,13 +129,14 @@ ZKEVM_MODULES := ${ALU} \
 		 ${ROM_LEX} \
 		 ${SHAKIRA_DATA} \
 		 ${SHIFT} \
-		 ${STP} \
 		 ${TABLES} \
 		 ${TRM} \
 		 ${TXN_DATA} \
 		 ${WCP}
 
+#		 ${EXP} \
 # 		 ${HUB} \
+#		 ${STP} \
 
 define.go: ${ZKEVM_MODULES}
 	${CORSET} wizard-iop -vv -o $@ ${ZKEVM_MODULES}
