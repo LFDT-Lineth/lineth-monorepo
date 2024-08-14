@@ -132,9 +132,9 @@ ZKEVM_MODULES := ${ALU} \
 		 ${TABLES} \
 		 ${TRM} \
 		 ${TXN_DATA} \
+		 ${EXP} \
 		 ${WCP}
 
-#		 ${EXP} \
 # 		 ${HUB} \
 #		 ${STP} \
 
