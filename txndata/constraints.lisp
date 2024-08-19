@@ -286,14 +286,21 @@
 ;;    2.9 Comparisons    ;;
 ;;                       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; row i
-(defun (sufficient_balance)
-  (begin (small-call-to-LT 0
+;; row i + comparaison---nonce-row-offset
+(defun (nonce-check)
+  (begin (small-call-to-LT comparaison---nonce-row-offset
                            INITIAL_BALANCE
                            (+ (value) (* (max_fee) (gas_limit))))
-         (result-must-be-false 0)))
+         (result-must-be-true nonce-row-offset)))
 
-;; row i + 1
+;; row i + comparaison---sufficient-gas-row-offset
+(defun (sufficient_balance)
+  (begin (small-call-to-LT comparaison---initial-balance-row-offset
+                           INITIAL_BALANCE
+                           (+ (value) (* (max_fee) (gas_limit))))
+         (result-must-be-false comparaison---initial-balance-row-offset)))
+
+;; row i + comparaison---sufficient-gas-row-offset 
 (defun (upfront_gas_cost_of_transaction)
   (if-not-zero TYPE0
                ;; TYPE0 = 1
@@ -312,56 +319,63 @@
      (* (num_keys) GAS_CONST_G_ACCESS_LIST_STORAGE)))
 
 (defun (sufficient_gas_limit)
-  (begin (small-call-to-LT 1 (gas_limit) (upfront_gas_cost_of_transaction))
-         (result-must-be-false 1)))
+  (begin (small-call-to-LT comparaison---sufficient-gas-row-offset
+                           (gas_limit)
+                           (upfront_gas_cost_of_transaction))
+         (result-must-be-false comparaison---sufficient-gas-row-offset)))
 
-;; row i + 2
+;; row i + comparaison---upper-limit-refunds-row-offset
 ;; epsilon is the remainder in the euclidean division of [T_g - g'] by 2
 (defun (execution-gas-cost)
   (- (gas_limit) GAS_LEFTOVER))
 
 (defun (upper_limit_for_refunds)
-  (begin (call-to-EUC 2 (execution-gas-cost) MAX_REFUND_QUOTIENT)))
+  (begin (call-to-EUC comparaison---upper-limit-refunds-row-offset (execution-gas-cost) MAX_REFUND_QUOTIENT)))
 
 (defun (refund_limit)
-  (shift RES 2))
+  (shift RES comparaison---upper-limit-refunds-row-offset))
 
-;; row i + 3
+;; row i + comparaison---effective-refund-row-offset
 (defun (effective_refund)
-  (small-call-to-LT 3 REF_CNT (refund_limit)))
+  (small-call-to-LT comparaison---effective-refund-row-offset REF_CNT (refund_limit)))
 
 (defun (get_full_refund)
-  (force-bool (shift RES 3)))
+  (force-bool (shift RES comparaison---effective-refund-row-offset)))
 
-;; row i + 4
+;; row i + comparaison---detecting-empty-call-data-row-offset
 (defun (is-zero-call-data)
-  (small-call-to-ISZERO 4 (data_size)))
+  (small-call-to-ISZERO comparaison---detecting-empty-call-data-row-offset (data_size)))
 
 (defun (nonzero_data_size)
-  (force-bool (- 1 (shift RES 4))))
+  (force-bool (- 1 (shift RES comparaison---detecting-empty-call-data-row-offset))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; applicable only to type 2 transactions ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; row i + 5
+;; row i + comparaison---max-fee-and-basefee-row-offset
 (defun (type_2_comparing_max_fee_and_basefee)
-  (begin (small-call-to-LT 5 (max_fee) BASEFEE)
-         (result-must-be-false 5)))
+  (begin (small-call-to-LT comparaison---max-fee-and-basefee-row-offset (max_fee) BASEFEE)
+         (result-must-be-false comparaison---max-fee-and-basefee-row-offset)))
 
-;; row i + 6
+;; row i + comparaison---maxfee-and-max-priority-fee-row-offset
 (defun (type_2_comparing_max_fee_and_max_priority_fee)
-  (begin (small-call-to-LT 6 (max_fee) (max_priority_fee))
-         (result-must-be-false 6)))
+  (begin (small-call-to-LT comparaison---maxfee-and-max-priority-fee-row-offset
+                           (max_fee)
+                           (max_priority_fee))
+         (result-must-be-false comparaison---maxfee-and-max-priority-fee-row-offset)))
 
-;; row i + 7
+;; row i + comparaison---computing-effective-gas-price-row-offset
 (defun (type_2_computing_the_effective_gas_price)
-  (small-call-to-LT 7 (max_fee) (+ (max_priority_fee) BASEFEE)))
+  (small-call-to-LT comparaison---computing-effective-gas-price-row-offset
+                    (max_fee)
+                    (+ (max_priority_fee) BASEFEE)))
 
 (defun (get_full_tip)
-  (force-bool (- 1 (shift RES 7))))
+  (force-bool (- 1 (shift RES comparaison---computing-effective-gas-price-row-offset))))
 
 (defconstraint comparisons (:guard (first-row-trigger))
-  (begin (sufficient_balance)
+  (begin (nonce-check)
+         (sufficient_balance)
          (sufficient_gas_limit)
          (upper_limit_for_refunds)
          (effective_refund)

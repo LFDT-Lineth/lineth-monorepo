@@ -102,7 +102,8 @@ TABLES := reftables/bin_reftable.lisp \
 
 TRM := trm
 
-TXN_DATA := txndata
+# TXN_DATA := txndata
+TXN_DATA := txndata/columns.lisp
 
 WCP := wcp
 
@@ -114,6 +115,7 @@ ZKEVM_MODULES := ${ALU} \
 		 ${CONSTANTS} \
 		 ${EC_DATA} \
 		 ${EUC} \
+		 ${EXP} \
 		 ${GAS} \
 		 ${LIBRARY} \
 		 ${LOG_DATA} \
@@ -132,11 +134,11 @@ ZKEVM_MODULES := ${ALU} \
 		 ${TABLES} \
 		 ${TRM} \
 		 ${TXN_DATA} \
-		 ${EXP} \
 		 ${WCP}
 
 # 		 ${HUB} \
 #		 ${STP} \
+
 
 define.go: ${ZKEVM_MODULES}
 	${CORSET} wizard-iop -vv -o $@ ${ZKEVM_MODULES}
