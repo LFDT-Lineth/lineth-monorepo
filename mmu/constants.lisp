@@ -13,7 +13,7 @@
   NB_PP_ROWS_EXO_TO_RAM_TRANSPLANTS                  1
   NB_PP_ROWS_RAM_TO_RAM_SANS_PADDING                 5
   NB_PP_ROWS_ANY_TO_RAM_WITH_PADDING_PURE_PADDING    4
-  NB_PP_ROWS_ANY_TO_RAM_WITH_PADDING_SOME_DATA       1
+  NB_PP_ROWS_ANY_TO_RAM_WITH_PADDING_SOME_DATA       10
   NB_PP_ROWS_MODEXP_ZERO                             1
   NB_PP_ROWS_MODEXP_DATA                             6
   NB_PP_ROWS_BLAKE                                   2

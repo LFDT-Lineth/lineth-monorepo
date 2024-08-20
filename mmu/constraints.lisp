@@ -839,7 +839,8 @@
   (next prprc/EUC_REM))
 
 (defun (any-to-ram-max-src-offset-or-zero)
-  (* (- 1 (any-to-ram-pure-padd)) (any-to-ram-max-tgt-offset)))
+  (* (- 1 (any-to-ram-pure-padd))
+     (+ macro/SRC_OFFSET_LO (- macro/SIZE 1))))
 
 (defun (any-to-ram-mixed)
   (force-bool (* (- 1 (any-to-ram-pure-padd))
@@ -856,7 +857,7 @@
 
 (defun (any-to-ram-trsf-size)
   (+ (* (any-to-ram-mixed) (- macro/REF_SIZE macro/SRC_OFFSET_LO))
-     (* (any-to-ram-pure-data) macro/REF_SIZE)))
+     (* (any-to-ram-pure-data) macro/SIZE)))
 
 (defun (any-to-ram-padd-size)
   (+ (* (any-to-ram-pure-padd) macro/SIZE)
@@ -872,7 +873,7 @@
          (callToEuc 2 (any-to-ram-max-tgt-offset) LLARGE)
          ;; justifyng the flag
          (eq! IS_ANY_TO_RAM_WITH_PADDING_PURE_PADDING (any-to-ram-pure-padd))
-         (eq! IS_ANY_TO_RAM_WITH_PADDING_SOME_DATA (+ (any-to-ram-mixed) (any-to-ram-pure-padd)))))
+         (eq! IS_ANY_TO_RAM_WITH_PADDING_SOME_DATA (+ (any-to-ram-mixed) (any-to-ram-pure-data)))))
 
 ;;
 ;; PURE PADDING sub case
@@ -896,7 +897,7 @@
   (- LLARGE (any-to-ram-min-tbo)))
 
 (defun (any-to-ram-pure-padding-only-padding-size)
-  (- LLARGE (any-to-ram-padd-size)))
+  (any-to-ram-padd-size))
 
 (defconstraint any-to-ram-pure-padding-prprc (:guard (* MACRO IS_ANY_TO_RAM_WITH_PADDING_PURE_PADDING))
   (begin  ;; setting number of rows
@@ -1053,13 +1054,13 @@
               (+ (- (any-to-ram-some-data-max-slo) (any-to-ram-some-data-min-slo)) 1))
          ;; preprocessing row n°4
          (callToEq 4 0 TOTNT 1)
-         (eq! (any-to-ram-some-data-last-dt-size) (+ (any-to-ram-some-data-min-sbo) 1))
+         (eq! (any-to-ram-some-data-last-dt-size) (+ (any-to-ram-some-data-max-sbo) 1))
          ;; preprocessing row n°5
          (callToEuc 5 (any-to-ram-some-data-min-src-offset) LLARGE)
          (callToEq 5 0 (any-to-ram-min-tbo) (any-to-ram-some-data-min-sbo))
          (eq! (any-to-ram-some-data-aligned) (shift prprc/WCP_RES 5))
          ;; preprocessing row n°6
-         (callToEuc 6 (any-to-ram-some-data-min-src-offset) LLARGE)
+         (callToEuc 6 (any-to-ram-some-data-max-src-offset) LLARGE)
          ;; preprocessing row n°7
          (if-eq (any-to-ram-some-data-totnt-is-one) 1
                 (begin (callToEuc 7
@@ -1071,11 +1072,11 @@
                   (begin (callToEuc 8
                                     (+ (any-to-ram-min-tbo) (- (any-to-ram-some-data-first-dt-size) 1))
                                     LLARGE)
-                         (callToEq 8 0 (shift prprc/EUC_REM 8) LLARGEMO))
-                  (if-zero (any-to-ram-some-data-first-dt-maxes-out-target)
-                           (eq! (any-to-ram-some-data-middle-tbo)
-                                (+ 1 (shift prprc/EUC_REM 8)))
-                           (vanishes! (any-to-ram-some-data-middle-tbo))))
+                         (callToEq 8 0 (shift prprc/EUC_REM 8) LLARGEMO)
+                         (if-zero (any-to-ram-some-data-first-dt-maxes-out-target)
+                                  (eq! (any-to-ram-some-data-middle-tbo)
+                                       (+ 1 (shift prprc/EUC_REM 8)))
+                                  (vanishes! (any-to-ram-some-data-middle-tbo)))))
          ;; preprocessing row n°9
          (if-zero (any-to-ram-some-data-totnt-is-one)
                   (begin (callToEuc 9
