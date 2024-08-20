@@ -94,6 +94,7 @@
                                                                    (create-instruction---createe-nonce)          ;; callee's nonce
                                                                    (create-instruction---createe-has-code)       ;; callee's HAS_CODE
                                                                    (create-instruction---current-context-csd)    ;; current  call  stack  depth
+                                                                   (create-instruction---creator-nonce)          ;; creator account nonce
                                                                    )))
 
 (defconstraint    create-instruction---setting-the-CREATE-scenario                          (:guard    (create-instruction---generic-precondition))

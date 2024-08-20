@@ -14,6 +14,7 @@
 	     [oob.DATA 6]
 	     [oob.DATA 7]
 	     [oob.DATA 8]
+	     [oob.DATA 9]
            )
            ;; source columns
 	   (
@@ -26,5 +27,6 @@
 	     (* [hub.misc/OOB_DATA 6]           (hub-into-oob-trigger))
 	     (* [hub.misc/OOB_DATA 7]           (hub-into-oob-trigger))
 	     (* [hub.misc/OOB_DATA 8]           (hub-into-oob-trigger))
+	     (* [hub.misc/OOB_DATA 9]           (hub-into-oob-trigger))
            )
 )

@@ -52,7 +52,7 @@
 
 		 ;; OOB columns (DONE)
 		 (OOB_INST                 :i32  )
-		 (OOB_DATA                 :array[1:8] :i128 )  ;; TODO: uncomment
+		 (OOB_DATA                 :array[1:9] :i128 )  ;; TODO: uncomment
 
 		 ;; STP columns (DONE)
 		 ( STP_INSTRUCTION               :i32  )   ;; TODO: overkill
