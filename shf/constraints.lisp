@@ -5,48 +5,56 @@
 ;;    2.1 heartbeat    ;;
 ;;                     ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;
-;; 2.1.1)
-(defconstraint firstRow (:domain {0})
-  (vanishes! STAMP))
+;; ;; 2.1.1
+;; (defconstraint    first-row (:domain {0})
+;;                   (vanishes! STAMP))
 
-;; 2.1.2)
-(defconstraint stampIncrements ()
-  (vanishes! (* (will-inc! STAMP 0) (will-inc! STAMP 1))))
+;; 2.1.2
+(defconstraint    stamp-increments ()
+                  (vanishes! (* (will-inc! STAMP 0) (will-inc! STAMP 1))))
 
-;; 2.1.3)
-(defconstraint zeroRow ()
-  (if-zero STAMP
-           (vanishes! IOMF)
-           (eq! IOMF 1)))
+;; 2.1.3 and 4
+(defconstraint    zero-row ()
+                  (if-zero STAMP
+                           (vanishes! IOMF)
+                           (eq!       IOMF 1)))
 
-;; 2.1.4)
-(defconstraint counterReset ()
-  (if-not-zero (will-remain-constant! STAMP)
-               (vanishes! (shift CT 1))))
+;; 2.1.5
+(defconstraint    counter-reset ()
+                  (if-not-zero (will-remain-constant! STAMP)
+                               (vanishes! (shift CT 1))))
 
-;; 2.1.5)
-(defconstraint heartbeat ()
-  (if-not-zero STAMP
-               (if-zero OLI
-                        ;; 2.1.5.b)
-                        ;; If OLI == 0
-                        (if-eq-else CT LLARGEMO
-                                    ;; 2.1.5.b).(ii)
-                                    ;; If CT == LLARGEMO (15)
-                                    (will-inc! STAMP 1)
-                                    ;; 2.1.5.b).(i)
-                                    ;; If CT != LLARGEMO (15)
-                                    (begin (will-inc! CT 1)
-                                           (will-remain-constant! OLI)))
-                        ;; 2.1.5.a)
-                        ;; If OLI == 1
-                        (will-inc! STAMP 1))))
+;; 2.1.6
+(defconstraint    INST-inside-and-outside-of-padding ()
+                  (if-zero    IOMF
+                              (vanishes!    INST)
+                              (vanishes!    (*    (-    INST    EVM_INST_SHL)
+                                                  (-    INST    EVM_INST_SHR)
+                                                  (-    INST    EVM_INST_SAR)))))
 
-;; 2.1.6)
+;; 2.1.7
+(defconstraint    heartbeat ()
+                  (if-not-zero IOMF
+                                 (if-not-zero OLI
+                                              ;; 2.1.5.b
+                                              ;; OLI == 1
+                                              (will-inc!    STAMP    1)
+                                              ;; 2.1.5.c
+                                              ;; OLI == 0
+                                              (if-eq-else CT LLARGEMO
+                                                          ;; 2.1.5.c.ii
+                                                          ;; If CT == LLARGEMO (15)
+                                                          (will-inc!    STAMP    1)
+                                                          ;; 2.1.5.c.i
+                                                          ;; If CT != LLARGEMO (15)
+                                                          (begin (will-inc!    CT    1)
+                                                                 (will-remain-constant! OLI))))))
+
+;; 2.1.8
 (defconstraint last-row (:domain {-1})
-  (if-not-zero STAMP
-               (if-zero OLI
-                        (= CT LLARGEMO))))
+               (if-not-zero STAMP
+                            (if-zero OLI
+                                     (= CT LLARGEMO))))
 
 ;; counter-constancy constraints
 (defun (counter-constancy ct X)
@@ -55,27 +63,27 @@
 
 ;; counter-constant columns
 (defconstraint counter-constancies ()
-  (begin (counter-constancy CT BIT_B_3)
-         (counter-constancy CT BIT_B_4)
-         (counter-constancy CT BIT_B_5)
-         (counter-constancy CT BIT_B_6)
-         (counter-constancy CT BIT_B_7)
-         (counter-constancy CT NEG)
-         (counter-constancy CT SHD)
-         (counter-constancy CT LOW_3)
-         (counter-constancy CT µSHP)
-         (counter-constancy CT OLI)
-         (counter-constancy CT KNOWN)))
+               (begin (counter-constancy CT BIT_B_3)
+                      (counter-constancy CT BIT_B_4)
+                      (counter-constancy CT BIT_B_5)
+                      (counter-constancy CT BIT_B_6)
+                      (counter-constancy CT BIT_B_7)
+                      (counter-constancy CT NEG)
+                      (counter-constancy CT SHD)
+                      (counter-constancy CT LOW_3)
+                      (counter-constancy CT µSHP)
+                      (counter-constancy CT OLI)
+                      (counter-constancy CT KNOWN)))
 
 ;; stamp constancies
 (defconstraint stamp-constancies ()
-  (begin (stamp-constancy STAMP ARG_1_HI)
-         (stamp-constancy STAMP ARG_1_LO)
-         (stamp-constancy STAMP ARG_2_HI)
-         (stamp-constancy STAMP ARG_2_LO)
-         (stamp-constancy STAMP RES_HI)
-         (stamp-constancy STAMP RES_LO)
-         (stamp-constancy STAMP INST)))
+               (begin (stamp-constancy STAMP ARG_1_HI)
+                      (stamp-constancy STAMP ARG_1_LO)
+                      (stamp-constancy STAMP ARG_2_HI)
+                      (stamp-constancy STAMP ARG_2_LO)
+                      (stamp-constancy STAMP RES_HI)
+                      (stamp-constancy STAMP RES_LO)
+                      (stamp-constancy STAMP INST)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                         ;;
@@ -84,66 +92,66 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; 2.2.2 SHD constraints
 (defconstraint shift_direction_constraint (:guard STAMP)
-  (if-eq-else INST EVM_INST_SHL
-              ;; INST == SHL => SHD = 0
-              (vanishes! SHD)
-              ;; INST != SHL => SHD = 1
-              (eq! SHD 1)))
+               (if-eq-else INST EVM_INST_SHL
+                           ;; INST == SHL => SHD = 0
+                           (vanishes! SHD)
+                           ;; INST != SHL => SHD = 1
+                           (eq! SHD 1)))
 
 ;; 2.2.3 OLI constraints
 (defconstraint oli_constraints (:guard STAMP)
-  (if-zero (* (- INST EVM_INST_SAR) ARG_1_HI)
-           (vanishes! OLI)
-           (eq! OLI 1)))
+               (if-zero (* (- INST EVM_INST_SAR) ARG_1_HI)
+                        (vanishes! OLI)
+                        (eq! OLI 1)))
 
 ;; 2.2.4 BITS constraints
 (defconstraint bits_constraints (:guard STAMP)
-  (if-zero OLI
-           (begin (if-zero CT
-                           (begin (= NEG BITS)
-                                  (= BYTE_2
-                                     (+ (* 128 BITS)
-                                        (* 64 (shift BITS 1))
-                                        (* 32 (shift BITS 2))
-                                        (* 16 (shift BITS 3))
-                                        (* 8 (shift BITS 4))
-                                        (* 4 (shift BITS 5))
-                                        (* 2 (shift BITS 6))
-                                        (shift BITS 7))))
-                           (if-eq CT LLARGEMO
-                                  (= BYTE_1
-                                     (+ (* 128 (shift BITS -7))
-                                        (* 64 (shift BITS -6))
-                                        (* 32 (shift BITS -5))
-                                        (* 16 (shift BITS -4))
-                                        (* 8 (shift BITS -3))
-                                        (* 4 (shift BITS -2))
-                                        (* 2 (shift BITS -1))
-                                        BITS)))))))
+               (if-zero OLI
+                        (begin (if-zero CT
+                                        (begin (= NEG BITS)
+                                               (= BYTE_2
+                                                  (+ (* 128 BITS)
+                                                     (* 64 (shift BITS 1))
+                                                     (* 32 (shift BITS 2))
+                                                     (* 16 (shift BITS 3))
+                                                     (* 8 (shift BITS 4))
+                                                     (* 4 (shift BITS 5))
+                                                     (* 2 (shift BITS 6))
+                                                     (shift BITS 7))))
+                                        (if-eq CT LLARGEMO
+                                               (= BYTE_1
+                                                  (+ (* 128 (shift BITS -7))
+                                                     (* 64 (shift BITS -6))
+                                                     (* 32 (shift BITS -5))
+                                                     (* 16 (shift BITS -4))
+                                                     (* 8 (shift BITS -3))
+                                                     (* 4 (shift BITS -2))
+                                                     (* 2 (shift BITS -1))
+                                                     BITS)))))))
 
 (defconstraint setting_stuff ()
-  (if-eq CT LLARGEMO
-         (begin (= LOW_3
-                   (+ (* 4 (shift BITS -2))
-                      (* 2 (shift BITS -1))
-                      BITS))
-                (if-zero SHD
-                         (= µSHP (- 8 LOW_3))
-                         (= µSHP LOW_3))
-                (= BIT_B_3 (shift BITS -3))
-                (= BIT_B_4 (shift BITS -4))
-                (= BIT_B_5 (shift BITS -5))
-                (= BIT_B_6 (shift BITS -6))
-                (= BIT_B_7 (shift BITS -7)))))
+               (if-eq CT LLARGEMO
+                      (begin (= LOW_3
+                                (+ (* 4 (shift BITS -2))
+                                   (* 2 (shift BITS -1))
+                                   BITS))
+                             (if-zero SHD
+                                      (= µSHP (- 8 LOW_3))
+                                      (= µSHP LOW_3))
+                             (= BIT_B_3 (shift BITS -3))
+                             (= BIT_B_4 (shift BITS -4))
+                             (= BIT_B_5 (shift BITS -5))
+                             (= BIT_B_6 (shift BITS -6))
+                             (= BIT_B_7 (shift BITS -7)))))
 
 ;; 2.2.5 KNOWN constraints
 (defconstraint known_constraint ()
-  (if-eq CT LLARGEMO
-         (if-eq-else INST EVM_INST_SAR
-                     (if-zero ARG_1_HI
-                              (if-eq-else ARG_1_LO BYTE_1 (vanishes! KNOWN) (= KNOWN 1))
-                              (= KNOWN 1))
-                     (if-eq-else ARG_1_LO BYTE_1 (vanishes! KNOWN) (= KNOWN 1)))))
+               (if-eq CT LLARGEMO
+                      (if-eq-else INST EVM_INST_SAR
+                                  (if-zero ARG_1_HI
+                                           (if-eq-else ARG_1_LO BYTE_1 (vanishes! KNOWN) (= KNOWN 1))
+                                           (= KNOWN 1))
+                                  (if-eq-else ARG_1_LO BYTE_1 (vanishes! KNOWN) (= KNOWN 1)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                              ;;
@@ -159,11 +167,11 @@
 
 ;; byte decompositions
 (defconstraint byte_decompositions ()
-  (begin (byte-decomposition CT ACC_1 BYTE_1)
-         (byte-decomposition CT ACC_2 BYTE_2)
-         (byte-decomposition CT ACC_3 BYTE_3)
-         (byte-decomposition CT ACC_4 BYTE_4)
-         (byte-decomposition CT ACC_5 BYTE_5)))
+               (begin (byte-decomposition CT ACC_1 BYTE_1)
+                      (byte-decomposition CT ACC_2 BYTE_2)
+                      (byte-decomposition CT ACC_3 BYTE_3)
+                      (byte-decomposition CT ACC_4 BYTE_4)
+                      (byte-decomposition CT ACC_5 BYTE_5)))
 
 ;; bytehood constraints TODO
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -172,12 +180,12 @@
 ;;                             ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defconstraint target_constraints ()
-  (if-eq CT LLARGEMO
-         (begin (= ACC_1 ARG_1_LO)
-                (= ACC_2 ARG_2_HI)
-                (= ACC_3 ARG_2_LO)
-                (= ACC_4 RES_HI)
-                (= ACC_5 RES_LO))))
+               (if-eq CT LLARGEMO
+                      (begin (= ACC_1 ARG_1_LO)
+                             (= ACC_2 ARG_2_HI)
+                             (= ACC_3 ARG_2_LO)
+                             (= ACC_4 RES_HI)
+                             (= ACC_5 RES_LO))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                               ;;
@@ -302,13 +310,13 @@
 
 ;; all shift constraints
 (defconstraint shifted_byte_columns ()
-  (if-not-zero STAMP
-               (if-zero OLI
-                        (begin (shb_3)
-                               (shb_4)
-                               (shb_5)
-                               (shb_6)
-                               (shb_7)
-                               (res_bytes)))))
+               (if-not-zero STAMP
+                            (if-zero OLI
+                                     (begin (shb_3)
+                                            (shb_4)
+                                            (shb_5)
+                                            (shb_6)
+                                            (shb_7)
+                                            (res_bytes)))))
 
 
