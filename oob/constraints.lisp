@@ -639,7 +639,7 @@
   (callToISZERO 2 0 (create---nonce)))
 
 (defconstraint valid-create-future-future-future (:guard (* (standing-hypothesis) (create-hypothesis)))
-  (callToLT 3 0 (create---creator-nonce) 0 18446744073709551615)) ; (create---creator-nonce) < 2^64 - 1
+  (callToLT 3 0 (create---creator-nonce) 0 EIP2681_MAX_NONCE))
 
 (defconstraint justify-hub-predictions-create (:guard (* (standing-hypothesis) (create-hypothesis)))
   (begin (if-zero (create---aborting-conditions-sum)
