@@ -58,6 +58,9 @@
                    (DOM-SUB-stamps---standard                     TX_INIT_SENDER_ACCOUNT_ROW_OFFSET
                                                                   0)))
 
+(defconstraint   tx-initialization---EIP-3607---reject-transactions-from-senders-with-deployed-codey          (:guard (tx-init---standard-precondition))
+                 (vanishes!    (shift    account/HAS_CODE    TX_INIT_SENDER_ACCOUNT_ROW_OFFSET)))
+
 ;; recipient account operation
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
