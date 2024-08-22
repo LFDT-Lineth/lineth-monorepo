@@ -1,7 +1,8 @@
 CORSET ?= corset
 
- HUB :=  $(wildcard hub/columns/*lisp) \
- 	$(wildcard hub/constraints/account-rows/*lisp) \
+ HUB :=  $(wildcard hub/columns/*lisp)
+
+ #	$(wildcard hub/constraints/account-rows/*lisp) \
  	$(wildcard hub/constraints/context-rows/*lisp) \
  	$(wildcard hub/constraints/generalities/*lisp) \
  	$(wildcard hub/constraints/heartbeat/*lisp) \
@@ -117,6 +118,7 @@ ZKEVM_MODULES := ${ALU} \
 		 ${EUC} \
 		 ${EXP} \
 		 ${GAS} \
+ 		 ${HUB} \
 		 ${LIBRARY} \
 		 ${LOG_DATA} \
 		 ${LOG_INFO} \
@@ -136,7 +138,6 @@ ZKEVM_MODULES := ${ALU} \
 		 ${TXN_DATA} \
 		 ${WCP}
 
-# 		 ${HUB} \
 #		 ${STP} \
 
 

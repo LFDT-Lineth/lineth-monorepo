@@ -955,11 +955,12 @@
   (callToLT 2 0 (+ 96 (prc-modexp-lead---ebs)) 0 (prc---cds)))
 
 (defconstraint valid-prc-modexp-lead-future-future-future (:guard (* (standing-hypothesis) (prc-hypothesis) (prc-modexp-lead-hypothesis)))
-  (callToLT 3
-            0
-            (- (prc---cds) (+ 96 (prc-modexp-lead---ebs)))
-            0
-            32))
+  (if-not-zero (prc-modexp-lead---call-data-contains-exponent-bytes)
+               (callToLT 3
+                         0
+                         (- (prc---cds) (+ 96 (prc-modexp-lead---ebs)))
+                         0
+                         32)))
 
 (defconstraint justify-hub-predictions-prc-modexp-lead (:guard (* (standing-hypothesis) (prc-hypothesis) (prc-modexp-lead-hypothesis)))
   (begin (eq! (prc-modexp-lead---load-lead)
