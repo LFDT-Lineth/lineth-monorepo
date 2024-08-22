@@ -20,57 +20,46 @@
 ;;                  (is-binary IS_SHA2_RESULT   )
 ;;                  (is-binary IS_RIPEMD_DATA     )
 ;;                  (is-binary IS_RIPEMD_RESULT   )
-;;                  (is-binary IS_EXTRA         )))
 ;; Shorthands
-(defun (is-keccak)
-  (force-bool (+ IS_KECCAK_DATA
-                 IS_KECCAK_RESULT
-                 ;; IS_SHA2_DATA     
-                 ;; IS_SHA2_RESULT   
-                 ;; IS_RIPEMD_DATA     
-                 ;; IS_RIPEMD_RESULT   
-                 ;; IS_EXTRA         
-                 )))
+(defun    (is-keccak)    (force-bool (+ IS_KECCAK_DATA
+                                        IS_KECCAK_RESULT
+                                        ;; IS_SHA2_DATA     
+                                        ;; IS_SHA2_RESULT   
+                                        ;; IS_RIPEMD_DATA     
+                                        ;; IS_RIPEMD_RESULT   
+                                        )))
 
-(defun (is-sha2)
-  (force-bool (+  ;; IS_KECCAK_DATA
-                 ;; IS_KECCAK_RESULT 
-                 IS_SHA2_DATA
-                 IS_SHA2_RESULT
-                 ;; IS_RIPEMD_DATA     
-                 ;; IS_RIPEMD_RESULT   
-                 ;; IS_EXTRA         
-                 )))
+(defun    (is-sha2)    (force-bool (+  ;; IS_KECCAK_DATA
+                                     ;; IS_KECCAK_RESULT 
+                                     IS_SHA2_DATA
+                                     IS_SHA2_RESULT
+                                     ;; IS_RIPEMD_DATA     
+                                     ;; IS_RIPEMD_RESULT   
+                                     )))
 
-(defun (is-ripemd)
-  (force-bool (+  ;; IS_KECCAK_DATA
-                 ;; IS_KECCAK_RESULT 
-                 ;; IS_SHA2_DATA     
-                 ;; IS_SHA2_RESULT   
-                 IS_RIPEMD_DATA
-                 IS_RIPEMD_RESULT
-                 ;; IS_EXTRA         
-                 )))
+(defun    (is-ripemd)    (force-bool (+  ;; IS_KECCAK_DATA
+                                       ;; IS_KECCAK_RESULT 
+                                       ;; IS_SHA2_DATA     
+                                       ;; IS_SHA2_RESULT   
+                                       IS_RIPEMD_DATA
+                                       IS_RIPEMD_RESULT
+                                       )))
 
-(defun (is-data)
-  (force-bool (+ IS_KECCAK_DATA
-                 ;; IS_KECCAK_RESULT 
-                 IS_SHA2_DATA
-                 ;; IS_SHA2_RESULT   
-                 IS_RIPEMD_DATA
-                 ;; IS_RIPEMD_RESULT   
-                 ;; IS_EXTRA         
-                 )))
+(defun    (is-data)    (force-bool (+ IS_KECCAK_DATA
+                                      ;; IS_KECCAK_RESULT 
+                                      IS_SHA2_DATA
+                                      ;; IS_SHA2_RESULT   
+                                      IS_RIPEMD_DATA
+                                      ;; IS_RIPEMD_RESULT   
+                                      )))
 
-(defun (is-result)
-  (force-bool (+  ;; IS_KECCAK_DATA
-                 IS_KECCAK_RESULT
-                 ;; IS_SHA2_DATA     
-                 IS_SHA2_RESULT
-                 ;; IS_RIPEMD_DATA     
-                 IS_RIPEMD_RESULT
-                 ;; IS_EXTRA         
-                 )))
+(defun    (is-result)    (force-bool (+  ;; IS_KECCAK_DATA
+                                       IS_KECCAK_RESULT
+                                       ;; IS_SHA2_DATA     
+                                       IS_SHA2_RESULT
+                                       ;; IS_RIPEMD_DATA     
+                                       IS_RIPEMD_RESULT
+                                       )))
 
 (defun (is-first-data-row)
   (force-bool (* (is-data)
@@ -82,33 +71,30 @@
 (defun (flag-sum)
   (force-bool (+ (is-keccak) (is-sha2) (is-ripemd))))
 
-(defun (phase-sum)
-  (+ (* PHASE_KECCAK_DATA IS_KECCAK_DATA)
-     (* PHASE_KECCAK_RESULT IS_KECCAK_RESULT)
-     (* PHASE_SHA2_DATA IS_SHA2_DATA)
-     (* PHASE_SHA2_RESULT IS_SHA2_RESULT)
-     (* PHASE_RIPEMD_DATA IS_RIPEMD_DATA)
-     (* PHASE_RIPEMD_RESULT IS_RIPEMD_RESULT)
-     ;; IS_EXTRA         
-     ))
+(defun    (phase-sum)    (+    (* PHASE_KECCAK_DATA     IS_KECCAK_DATA)
+                               (* PHASE_KECCAK_RESULT   IS_KECCAK_RESULT)
+                               (* PHASE_SHA2_DATA       IS_SHA2_DATA)
+                               (* PHASE_SHA2_RESULT     IS_SHA2_RESULT)
+                               (* PHASE_RIPEMD_DATA     IS_RIPEMD_DATA)
+                               (* PHASE_RIPEMD_RESULT   IS_RIPEMD_RESULT)
+                               ))
 
-(defun (stamp-increment)
-  (force-bool (* (- 1 (is-data)) (next (is-data)))))
+(defun    (stamp-increment)    (force-bool    (*    (-    1    (is-data))
+                                                    (next      (is-data)))))
 
 (defun (index-reset-bit)
   (force-bool (+ (* (- 1 (is-data)) (next (is-data)))
                  (* (- 1 (is-result)) (next (is-result))))))
 
-(defun (legal-transitions-bit)
-  (force-bool (+ (* IS_KECCAK_DATA (next (is-keccak)))
-                 (* IS_SHA2_DATA (next (is-sha2)))
-                 (* IS_RIPEMD_DATA (next (is-ripemd)))
-                 ;;
-                 (* IS_KECCAK_RESULT (next IS_KECCAK_RESULT))
-                 (* IS_SHA2_RESULT (next IS_SHA2_RESULT))
-                 (* IS_RIPEMD_RESULT (next IS_RIPEMD_RESULT))
-                 ;;
-                 (* (is-result) (next (is-data))))))
+(defun    (legal-transitions-bit)    (force-bool    (+    (* IS_KECCAK_DATA      (next (is-keccak)))
+                                                          (* IS_SHA2_DATA        (next (is-sha2)))
+                                                          (* IS_RIPEMD_DATA      (next (is-ripemd)))
+                                                          ;;
+                                                          (* IS_KECCAK_RESULT    (next IS_KECCAK_RESULT))
+                                                          (* IS_SHA2_RESULT      (next IS_SHA2_RESULT))
+                                                          (* IS_RIPEMD_RESULT    (next IS_RIPEMD_RESULT))
+                                                          ;;
+                                                          (* (is-result)         (next (is-data))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                         ;;
@@ -116,8 +102,8 @@
 ;;                         ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defun (ripsha-stamp-constancy X)
-  (if-not-zero (- RIPSHA_STAMP
-                  (+ 1 (prev RIPSHA_STAMP)))
+  (if-not-zero (- SHAKIRA_STAMP
+                  (+ 1 (prev SHAKIRA_STAMP)))
                (remained-constant! X)))
 
 (defconstraint stamp-constancies ()
@@ -135,7 +121,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defconstraint decoding-constraints ()
   (begin (debug (is-binary (flag-sum)))
-         (if-zero RIPSHA_STAMP
+         (if-zero SHAKIRA_STAMP
                   (eq! (flag-sum) 0)
                   (eq! (flag-sum) 1))
          (eq! PHASE (phase-sum))))
@@ -149,7 +135,9 @@
 ;;                       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defconstraint initial-vanishing-constraints (:domain {0})
-  (vanishes! RIPSHA_STAMP))
+  (vanishes! SHAKIRA_STAMP))
+
+;; please do not touch: ""
 
 (defconstraint padding-constraints ()
   (if-zero (flag-sum)
@@ -158,14 +146,15 @@
                   (debug (vanishes! INDEX_MAX)))))
 
 (defconstraint stamp-increments ()
-  (will-eq! RIPSHA_STAMP (+ RIPSHA_STAMP (stamp-increment))))
+               (will-eq!    SHAKIRA_STAMP
+                            (+ SHAKIRA_STAMP (stamp-increment))))
 
 (defconstraint index-resetting ()
   (if-eq (index-reset-bit) 1
          (vanishes! (next INDEX))))
 
 (defconstraint evolution-constraints ()
-  (if-not-zero RIPSHA_STAMP
+  (if-not-zero SHAKIRA_STAMP
                (begin (eq! (legal-transitions-bit) 1)
                       (if-eq-else INDEX INDEX_MAX
                                   ;; INDEX = INDEX_MAX case
@@ -177,7 +166,7 @@
   (eq! INDEX_MAX INDEX_MAX_RESULT))
 
 ;(defconstraint finalization (:domain {-1})  ;;debug end constraint
-;  (if-not-zero RIPSHA_STAMP
+;  (if-not-zero SHAKIRA_STAMP
 ;               (begin (eq! INDEX INDEX_MAX)
 ;                      (eq! (is-result) 1))))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -186,7 +175,7 @@
 ;;                                 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defconstraint initializing-nBYTES_ACC ()
-  (if-not-zero (remained-constant! RIPSHA_STAMP)
+  (if-not-zero (remained-constant! SHAKIRA_STAMP)
                (eq! nBYTES nBYTES_ACC)))
 
 (defconstraint updating-nBYTES_ACC-and-ensuring-full-limbs ()
