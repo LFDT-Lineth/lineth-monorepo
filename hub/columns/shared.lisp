@@ -2,7 +2,7 @@
 
 (defcolumns
     ( ABSOLUTE_TRANSACTION_NUMBER               :i16 )   ;; TODO: vastly exagerated
-    ( BATCH_NUMBER                              :i16 )   ;; TODO: vastly exagerated
+    ( RELATIVE_BLOCK_NUMBER                     :i16 )   ;; TODO: vastly exagerated
     ( TX_SKIP                                   :binary@prove )
     ( TX_WARM                                   :binary@prove )
     ( TX_INIT                                   :binary@prove )
@@ -75,7 +75,7 @@
 (defalias
     ;;
     ABS_TX_NUM          ABSOLUTE_TRANSACTION_NUMBER
-    BTC_NUM             BATCH_NUMBER
+    REL_BLK_NUM         RELATIVE_BLOCK_NUMBER
     CMC                 CONTEXT_MAY_CHANGE     
     XAHOY               EXCEPTION_AHOY     
     TX_END_STAMP        HUB_STAMP_TRANSACTION_END

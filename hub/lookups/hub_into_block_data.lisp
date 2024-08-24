@@ -13,7 +13,7 @@
              )
            ;; source columns
            (
-            (* hub.BATCH_NUMBER                   (hub-into-block-data-trigger))
+            (* hub.RELATIVE_BLOCK_NUMBER          (hub-into-block-data-trigger))
             (* hub.stack/INSTRUCTION              (hub-into-block-data-trigger))
             (* [hub.stack/STACK_ITEM_VALUE_HI 4]  (hub-into-block-data-trigger))
             (* [hub.stack/STACK_ITEM_VALUE_LO 4]  (hub-into-block-data-trigger))
