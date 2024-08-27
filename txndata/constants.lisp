@@ -17,14 +17,14 @@
   TYPE_2_RLP_TXN_PHASE_NUMBER_6                          RLP_TXN_PHASE_MAX_FEE_PER_GAS
   TYPE_2_RLP_TXN_PHASE_NUMBER_7                          RLP_TXN_PHASE_ACCESS_LIST
   ;;
-  comparaison---nonce-row-offset                         0
-  comparaison---initial-balance-row-offset               1
-  comparaison---sufficient-gas-row-offset                2
-  comparaison---upper-limit-refunds-row-offset           3
-  comparaison---effective-refund-row-offset              4
-  comparaison---detecting-empty-call-data-row-offset     5
-  comparaison---max-fee-and-basefee-row-offset           6
-  comparaison---maxfee-and-max-priority-fee-row-offset   7
-  comparaison---computing-effective-gas-price-row-offset 8)
+  comparison---nonce-row-offset                         0
+  comparison---initial-balance-row-offset               1
+  comparison---sufficient-gas-row-offset                2
+  comparison---upper-limit-refunds-row-offset           3
+  comparison---effective-refund-row-offset              4
+  comparison---detecting-empty-call-data-row-offset     5
+  comparison---max-fee-and-basefee-row-offset           6
+  comparison---maxfee-and-max-priority-fee-row-offset   7
+  comparison---computing-effective-gas-price-row-offset 8)
 
 

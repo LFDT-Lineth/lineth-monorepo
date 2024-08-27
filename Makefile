@@ -103,8 +103,7 @@ TABLES := reftables/bin_reftable.lisp \
 
 TRM := trm
 
-# TXN_DATA := txndata
-TXN_DATA := txndata/columns.lisp
+TXN_DATA := txndata
 
 WCP := wcp
 

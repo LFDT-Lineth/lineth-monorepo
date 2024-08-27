@@ -286,19 +286,19 @@
 ;;    2.9 Comparisons    ;;
 ;;                       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; row i + comparaison---nonce-row-offset
+;; row i + comparison---nonce-row-offset
 (defun (nonce-check)
-  (begin (small-call-to-LT comparaison---nonce-row-offset NONCE EIP2681_MAX_NONCE)
-         (result-must-be-true nonce-row-offset)))
+  (begin (small-call-to-LT comparison---nonce-row-offset NONCE EIP2681_MAX_NONCE)
+         (result-must-be-true comparison---nonce-row-offset)))
 
-;; row i + comparaison---sufficient-gas-row-offset
+;; row i + comparison---sufficient-gas-row-offset
 (defun (sufficient_balance)
-  (begin (small-call-to-LT comparaison---initial-balance-row-offset
+  (begin (small-call-to-LT comparison---initial-balance-row-offset
                            INITIAL_BALANCE
                            (+ (value) (* (max_fee) (gas_limit))))
-         (result-must-be-false comparaison---initial-balance-row-offset)))
+         (result-must-be-false comparison---initial-balance-row-offset)))
 
-;; row i + comparaison---sufficient-gas-row-offset 
+;; row i + comparison---sufficient-gas-row-offset 
 (defun (upfront_gas_cost_of_transaction)
   (if-not-zero TYPE0
                ;; TYPE0 = 1
@@ -317,59 +317,59 @@
      (* (num_keys) GAS_CONST_G_ACCESS_LIST_STORAGE)))
 
 (defun (sufficient_gas_limit)
-  (begin (small-call-to-LT comparaison---sufficient-gas-row-offset
+  (begin (small-call-to-LT comparison---sufficient-gas-row-offset
                            (gas_limit)
                            (upfront_gas_cost_of_transaction))
-         (result-must-be-false comparaison---sufficient-gas-row-offset)))
+         (result-must-be-false comparison---sufficient-gas-row-offset)))
 
-;; row i + comparaison---upper-limit-refunds-row-offset
+;; row i + comparison---upper-limit-refunds-row-offset
 ;; epsilon is the remainder in the euclidean division of [T_g - g'] by 2
 (defun (execution-gas-cost)
   (- (gas_limit) GAS_LEFTOVER))
 
 (defun (upper_limit_for_refunds)
-  (begin (call-to-EUC comparaison---upper-limit-refunds-row-offset (execution-gas-cost) MAX_REFUND_QUOTIENT)))
+  (begin (call-to-EUC comparison---upper-limit-refunds-row-offset (execution-gas-cost) MAX_REFUND_QUOTIENT)))
 
 (defun (refund_limit)
-  (shift RES comparaison---upper-limit-refunds-row-offset))
+  (shift RES comparison---upper-limit-refunds-row-offset))
 
-;; row i + comparaison---effective-refund-row-offset
+;; row i + comparison---effective-refund-row-offset
 (defun (effective_refund)
-  (small-call-to-LT comparaison---effective-refund-row-offset REF_CNT (refund_limit)))
+  (small-call-to-LT comparison---effective-refund-row-offset REF_CNT (refund_limit)))
 
 (defun (get_full_refund)
-  (force-bool (shift RES comparaison---effective-refund-row-offset)))
+  (force-bool (shift RES comparison---effective-refund-row-offset)))
 
-;; row i + comparaison---detecting-empty-call-data-row-offset
+;; row i + comparison---detecting-empty-call-data-row-offset
 (defun (is-zero-call-data)
-  (small-call-to-ISZERO comparaison---detecting-empty-call-data-row-offset (data_size)))
+  (small-call-to-ISZERO comparison---detecting-empty-call-data-row-offset (data_size)))
 
 (defun (nonzero_data_size)
-  (force-bool (- 1 (shift RES comparaison---detecting-empty-call-data-row-offset))))
+  (force-bool (- 1 (shift RES comparison---detecting-empty-call-data-row-offset))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; applicable only to type 2 transactions ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; row i + comparaison---max-fee-and-basefee-row-offset
+;; row i + comparison---max-fee-and-basefee-row-offset
 (defun (type_2_comparing_max_fee_and_basefee)
-  (begin (small-call-to-LT comparaison---max-fee-and-basefee-row-offset (max_fee) BASEFEE)
-         (result-must-be-false comparaison---max-fee-and-basefee-row-offset)))
+  (begin (small-call-to-LT comparison---max-fee-and-basefee-row-offset (max_fee) BASEFEE)
+         (result-must-be-false comparison---max-fee-and-basefee-row-offset)))
 
-;; row i + comparaison---maxfee-and-max-priority-fee-row-offset
+;; row i + comparison---maxfee-and-max-priority-fee-row-offset
 (defun (type_2_comparing_max_fee_and_max_priority_fee)
-  (begin (small-call-to-LT comparaison---maxfee-and-max-priority-fee-row-offset
+  (begin (small-call-to-LT comparison---maxfee-and-max-priority-fee-row-offset
                            (max_fee)
                            (max_priority_fee))
-         (result-must-be-false comparaison---maxfee-and-max-priority-fee-row-offset)))
+         (result-must-be-false comparison---maxfee-and-max-priority-fee-row-offset)))
 
-;; row i + comparaison---computing-effective-gas-price-row-offset
+;; row i + comparison---computing-effective-gas-price-row-offset
 (defun (type_2_computing_the_effective_gas_price)
-  (small-call-to-LT comparaison---computing-effective-gas-price-row-offset
+  (small-call-to-LT comparison---computing-effective-gas-price-row-offset
                     (max_fee)
                     (+ (max_priority_fee) BASEFEE)))
 
 (defun (get_full_tip)
-  (force-bool (- 1 (shift RES comparaison---computing-effective-gas-price-row-offset))))
+  (force-bool (- 1 (shift RES comparison---computing-effective-gas-price-row-offset))))
 
 (defconstraint comparisons (:guard (first-row-trigger))
   (begin (nonce-check)
@@ -449,7 +449,7 @@
                            (+ GAS_CUMULATIVE
                               (next (- GAS_LIMIT REFUND_EFFECTIVE)))))))
 
-(defconstraint cumulative-gas-comparaison (:guard IS_LAST_TX_OF_BLOCK)
+(defconstraint cumulative-gas-comparison (:guard IS_LAST_TX_OF_BLOCK)
   (if-not-zero (- ABS_TX_NUM (prev ABS_TX_NUM))
                (if-zero TYPE0
                         (begin (small-call-to-LEQ NB_ROWS_TYPE_1 GAS_CUMULATIVE BLOCK_GAS_LIMIT)
