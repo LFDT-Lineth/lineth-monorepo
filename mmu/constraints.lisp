@@ -1107,7 +1107,7 @@
                      (begin (eq! (any-to-ram-some-data-first-padding-size)
                                  (* (any-to-ram-mixed) (- LLARGE (any-to-ram-some-data-first-pbo))))
                             (eq! (any-to-ram-some-data-last-padding-size)
-                                 (* (any-to-ram-mixed) (+ 1 (any-to-ram-some-data-first-pbo))))))
+                                 (* (any-to-ram-mixed) (+ 1 (any-to-ram-some-data-last-pbo))))))
          ;; initialisation
          (eq! (shift micro/CN_S NB_PP_ROWS_ANY_TO_RAM_WITH_PADDING_SOME_DATA_PO)
               (any-to-ram-some-data-micro-cns))
