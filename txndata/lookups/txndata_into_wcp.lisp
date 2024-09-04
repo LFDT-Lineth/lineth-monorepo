@@ -1,5 +1,5 @@
 (deflookup 
-  txn_data_into_wcp
+  txndata-into-wcp
   ; target columns
   (
     wcp.ARGUMENT_1_HI

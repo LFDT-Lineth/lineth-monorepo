@@ -3,7 +3,7 @@
     hub.PEEK_AT_STACK
     hub.stack/HASH_INFO_FLAG))
 
-(deflookup hub-into-shakira
+(deflookup hub-into-shakiradata
 	   ;; target columns
 	   (
 	     shakiradata.PHASE

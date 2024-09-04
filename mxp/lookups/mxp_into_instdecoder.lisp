@@ -1,4 +1,4 @@
-(deflookup lookup-mxp-into-instdecoder
+(deflookup mxp-into-instdecoder
     ;; source columns
     (
         instdecoder.MXP_TYPE_1

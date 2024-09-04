@@ -1,5 +1,5 @@
 (deflookup 
-  blockhash_into_wcp_lex
+  blockhash-into-wcp-lex
   ; target columns
   (
     wcp.ARGUMENT_1_HI

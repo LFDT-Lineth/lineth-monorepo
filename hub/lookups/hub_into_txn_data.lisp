@@ -1,6 +1,6 @@
 (defun (hub-into-txn-data-trigger) hub.PEEK_AT_TRANSACTION)
 
-(deflookup hub-into-txn-data
+(deflookup hub-into-txndata
            ;; target columns
            (
             txndata.ABS_TX_NUM

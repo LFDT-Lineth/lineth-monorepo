@@ -1,5 +1,5 @@
 (deflookup 
-  mmio-into-blakemodexp
+  mmio-into-blake2fmodexpdata
   ;reference columns
   (
     blake2fmodexpdata.ID

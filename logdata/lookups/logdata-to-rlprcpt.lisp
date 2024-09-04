@@ -2,7 +2,7 @@
   logdata.LOGS_DATA)
 
 (deflookup 
-  logdata-into-rlprcpt
+  logdata-into-rlptxrcpt
   ;reference columns
   (
     rlptxrcpt.ABS_LOG_NUM

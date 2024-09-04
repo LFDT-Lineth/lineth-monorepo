@@ -3,7 +3,7 @@
                                         hub.stack/BTC_FLAG
                                         (- 1 [hub.stack/DEC_FLAG 1])))
 
-(deflookup hub-into-block-data
+(deflookup hub-into-blockdata
            ;; target columns
            (
              blockdata.REL_BLOCK

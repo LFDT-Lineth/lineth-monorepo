@@ -1,5 +1,5 @@
 (deflookup 
-  blockhash_into_blockdata
+  blockhash-into-blockdata
   ; target columns
   (
     blockdata.REL_BLOCK

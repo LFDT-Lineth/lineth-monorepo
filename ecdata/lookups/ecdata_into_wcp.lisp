@@ -2,7 +2,7 @@
   ecdata.WCP_FLAG)
 
 (deflookup 
-  lookup-ec_data-into-wcp
+  ecdata-into-wcp
   ; target columns
   (
     wcp.ARGUMENT_1_HI

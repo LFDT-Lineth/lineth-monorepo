@@ -1,7 +1,6 @@
 (defun (hub-into-instruction-decoder-trigger) hub.PEEK_AT_STACK)
 
-(deflookup hub-into-instruction-decoder
-
+(deflookup hub-into-instdecoder
            ;; target columns
 	   ( 
 	     instdecoder.OPCODE

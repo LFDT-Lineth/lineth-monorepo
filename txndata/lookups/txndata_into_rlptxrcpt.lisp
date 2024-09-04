@@ -1,5 +1,5 @@
 (deflookup 
-  txndata-into-rlpTxnRcpt
+  txndata-into-rlptxrcpt
   ;; target columns
   (
     rlptxrcpt.ABS_TX_NUM_MAX

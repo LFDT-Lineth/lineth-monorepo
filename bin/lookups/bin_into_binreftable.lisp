@@ -2,7 +2,7 @@
   (+ bin.IS_AND bin.IS_OR bin.IS_XOR bin.IS_NOT))
 
 (deflookup 
-  bin-lookup-table-high
+  bin-into-binreftable-high
   ;reference columns
   (
     binreftable.INST
@@ -19,7 +19,7 @@
   ))
 
 (deflookup 
-  bin-lookup-table-low
+  bin-into-binreftable-low
   ;reference columns
   (
     binreftable.INST

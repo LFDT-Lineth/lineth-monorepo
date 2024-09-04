@@ -11,7 +11,7 @@
   (force-bool (* (is-data) (next (is-result)))))
 
 (deflookup 
-  shakira-into-wcp-nonzero-last-nbytes
+  shakiradata-into-wcp-nonzero-last-nbytes
   ; target colums (in WCP)
   (
     wcp.ARG_1_HI

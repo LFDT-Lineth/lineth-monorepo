@@ -3,7 +3,7 @@
                  (- blake2fmodexpdata.STAMP (prev blake2fmodexpdata.STAMP)))))
 
 (deflookup 
-  blakemodexp-into-wcp
+  blake2fmodexpdata-into-wcp
   ; target colums (in WCP)
   (
     wcp.ARG_1_HI

@@ -2,7 +2,7 @@
   ecdata.EXT_FLAG)
 
 (deflookup 
-  lookup-ec_data-into-ext
+  ecdata-into-ext
   ; target columns
   (
     ext.ARG_1_HI

@@ -2,7 +2,7 @@
   (* txndata.IS_DEP (~ txndata.INIT_CODE_SIZE)))
 
 (deflookup 
-  txn-data-into-rom-lex
+  txndata-into-romlex
   ;; target columns
   (
     romlex.CODE_FRAGMENT_INDEX

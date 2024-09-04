@@ -1,5 +1,5 @@
 (deflookup 
-  blockdata_into_wcp
+  blockdata-into-wcp
   ; target columns
   (
     wcp.ARGUMENT_1_HI

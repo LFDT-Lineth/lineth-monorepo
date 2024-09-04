@@ -1,5 +1,5 @@
 (deflookup 
-  loginfo-into-rlptxnrcpt
+  loginfo-into-rlptxrcpt
   ;; target columns
   (
     rlptxrcpt.ABS_TX_NUM_MAX

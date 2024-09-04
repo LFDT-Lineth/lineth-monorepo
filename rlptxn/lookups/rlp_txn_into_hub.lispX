@@ -12,7 +12,7 @@
 ;(defun (rlp-txn-depth-2)
 ;  [rlptxn.DEPTH 2])
 (deflookup 
-  rlp-txn-into-hub
+  rlptxn-into-hub
   ;; target columns
   (
     hub.TX_WARM

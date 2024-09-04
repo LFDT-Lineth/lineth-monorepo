@@ -25,7 +25,7 @@
   (* (- 1 rlptxn.IS_PREFIX) rlptxn.IS_PHASE_ACCESS_LIST))
 
 (deflookup 
-  hub-into-rlp-txn
+  hub-into-rlptxn
   ;; target columns
   (
     (* (hub-into-rlp-txn-tgt-selector) rlptxn.REQUIRES_EVM_EXECUTION)

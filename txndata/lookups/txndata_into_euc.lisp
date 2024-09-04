@@ -1,5 +1,5 @@
 (deflookup 
-  txn_data_into_euc
+  txndata-into-euc
   ; target columns
   (
     euc.DONE

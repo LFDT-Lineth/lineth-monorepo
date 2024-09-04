@@ -4,7 +4,7 @@
                                  ;; the following additional term
 	                               ;;      (is-not-zero    hub.account/CODE_SIZE_NEW)))
 
-(deflookup hub-into-rom-lex
+(deflookup hub-into-romlex
            ;; target columns
 	   ( 
 	     romlex.CODE_FRAGMENT_INDEX

@@ -13,7 +13,7 @@
                  (- 1 (prev (is-data))))))
 
 (deflookup 
-  shakira-into-wcp-increasing-id
+  shakiradata-into-wcp-increasing-id
   ; target colums (in WCP)
   (
     wcp.ARG_1_HI

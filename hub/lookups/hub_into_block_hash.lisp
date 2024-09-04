@@ -2,7 +2,7 @@
   (* hub.PEEK_AT_STACK (- 1 hub.XAHOY) hub.stack/BTC_FLAG [hub.stack/DEC_FLAG 1]))
 
 (deflookup 
-  hub-into-block-hash
+  hub-into-blockhash
   ;; target columns
   (
     blockhash.REL_BLOCK

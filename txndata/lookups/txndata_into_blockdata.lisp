@@ -1,5 +1,5 @@
 (deflookup 
-  txndata_into_blockdata
+  txndata-into-blockdata
   ; target columns
   (
     blockdata.REL_BLOCK
