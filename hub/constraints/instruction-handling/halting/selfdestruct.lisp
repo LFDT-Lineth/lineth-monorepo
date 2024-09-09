@@ -26,6 +26,8 @@
                                                                      (will-eq! PEEK_AT_SCENARIO                        1)
                                                                      (will-eq! (scenario-shorthand---SELFDESTRUCT---sum)   1)))))))
 
+;; ""
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                       ;;
 ;;    X.5.4 Shorthands   ;;
@@ -42,8 +44,8 @@
   )
 
 ;; TODO: uncomment
-(defun (selfdestruct-raw-recipient-address-hi)  (shift [stack/STACK_ITEM_VALUE_HI 1] -1))
-(defun (selfdestruct-raw-recipient-address-lo)  (shift [stack/STACK_ITEM_VALUE_LO 1] -1))
+(defun (selfdestruct-raw-recipient-address-hi)  (shift [stack/STACK_ITEM_VALUE_HI 1] -1))   ;; ""
+(defun (selfdestruct-raw-recipient-address-lo)  (shift [stack/STACK_ITEM_VALUE_LO 1] -1))   ;; ""
 ;;
 (defun (selfdestruct-is-static)          (shift context/IS_STATIC                   ROW_OFFSET_FOR_SELFDESTRUCT_FIRST_CONTEXT_ROW))
 (defun (selfdestruct-is-deployment)      (shift context/BYTE_CODE_DEPLOYMENT_STATUS ROW_OFFSET_FOR_SELFDESTRUCT_FIRST_CONTEXT_ROW))
@@ -57,7 +59,7 @@
 ;;
 (defun (selfdestruct-recipient-address-hi)      (shift account/ADDRESS_HI ROW_OFFSET_FOR_SELFDESTRUCT_SECOND_ACCOUNT_ROW))
 (defun (selfdestruct-recipient-address-lo)      (shift account/ADDRESS_LO ROW_OFFSET_FOR_SELFDESTRUCT_SECOND_ACCOUNT_ROW))
-(defun (selfdestruct-recipient-address)         (+ (* (^ 256 LLARGE) (selfdestruct-recipient-address-hi)) (selfdestruct-recipient-address-lo)))
+(defun (selfdestruct-recipient-address)         (+ (* (^ 256 LLARGE) (selfdestruct-recipient-address-hi)) (selfdestruct-recipient-address-lo)))  ;; ""
 (defun (selfdestruct-recipient-trm-flag)        (shift account/TRM_FLAG ROW_OFFSET_FOR_SELFDESTRUCT_SECOND_ACCOUNT_ROW))
 (defun (selfdestruct-recipient-exists)          (shift account/EXISTS   ROW_OFFSET_FOR_SELFDESTRUCT_SECOND_ACCOUNT_ROW))
 (defun (selfdestruct-recipient-warmth)          (shift account/WARMTH   ROW_OFFSET_FOR_SELFDESTRUCT_SECOND_ACCOUNT_ROW))
@@ -79,10 +81,6 @@
 
 (defconstraint selfdestruct-setting-stack-pattern (:guard (selfdestruct-scenario-precondition))
                (prev (stack-pattern-1-0)))
-
-(defconstraint selfdestruct-setting-refund (:guard (selfdestruct-scenario-precondition))
-               (eq! REFUND_COUNTER_NEW (+ REFUND_COUNTER
-                                  (* REFUND_CONST_R_SELFDESTRUCT scenario/SELFDESTRUCT_WONT_REVERT_NOT_YET_MARKED))))
 
 (defconstraint selfdestruct-setting-the-right-scenario (:guard (selfdestruct-scenario-precondition))
                (begin

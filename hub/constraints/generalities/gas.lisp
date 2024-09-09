@@ -16,9 +16,7 @@
                (begin (hub-stamp-constancy GAS_EXPECTED)
                       (hub-stamp-constancy GAS_ACTUAL)
                       (hub-stamp-constancy GAS_COST)
-                      (hub-stamp-constancy GAS_NEXT)
-                      (hub-stamp-constancy REFUND_COUNTER)
-                      (hub-stamp-constancy REFUND_COUNTER_NEW)))
+                      (hub-stamp-constancy GAS_NEXT)))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

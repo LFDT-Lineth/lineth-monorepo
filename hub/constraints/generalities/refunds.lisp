@@ -27,26 +27,30 @@
 ;;                       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defconstraint refunds-vanish-outside-of-execution-rows ()
-               (if-zero TX_EXEC
-                        (begin
-                          (vanishes! REFUND_COUNTER    )
-                          (vanishes! REFUND_COUNTER_NEW))))
+(defconstraint    generalities---gas---refund-column-constancies ()
+                  (begin
+                    (hub-stamp-constancy REFUND_COUNTER)
+                    (hub-stamp-constancy REFUND_COUNTER_NEW)))
 
-(defconstraint refunds-transition-constraints ()
-               (if-not-zero (remained-constant! HUB_STAMP)
-                            (if-not-zero TX_EXEC
-                                         (eq! REFUND_COUNTER (prev REFUND_COUNTER_NEW)))))
+(defconstraint    generalities---gas---refunds-vanish-outside-of-execution-rows ()
+                  (if-zero    TX_EXEC
+                              (begin
+                                (vanishes! REFUND_COUNTER)
+                                (vanishes! REFUND_COUNTER_NEW))))
 
-(defconstraint discard-refunds-if-context-will-revert ()
-               (if-not-zero CN_WILL_REV
-                            (eq! REFUND_COUNTER_NEW REFUND_COUNTER)))
+(defconstraint    generalities---gas---refunds-transition-constraints ()
+                  (if-not-zero    TX_EXEC
+                                  (if-not-zero    (remained-constant! HUB_STAMP)
+                                                  (eq! REFUND_COUNTER (prev REFUND_COUNTER_NEW)))))
 
-(defun (bit-identifying-SSTORE-and-SELFDESTRUCT-instructions) (+ (* stack/STO_FLAG  [stack/DEC_FLAG 1])
-                                                                 (* stack/HALT_FLAG [stack/DEC_FLAG 4])))
+(defconstraint    generalities---gas---discard-refunds-if-context-will-revert ()
+                  (if-not-zero    CN_WILL_REV
+                                  (eq! REFUND_COUNTER_NEW REFUND_COUNTER)))
 
-(defconstraint only-SSTORE-and-SELFDESTRUCT-can-grant-refunds (:perspective stack)
-               (if-zero (force-bool (bit-identifying-SSTORE-and-SELFDESTRUCT-instructions))
-                        (eq! REFUND_COUNTER_NEW REFUND_COUNTER)))
+(defun    (bit-identifying-SSTORE)   (* stack/STO_FLAG  [stack/DEC_FLAG 1]))     ;; ""
+
+(defconstraint    generalities---gas---only-SSTORE-may-grant-refunds (:perspective stack)
+                  (if-zero    (force-bool (bit-identifying-SSTORE))
+                              (eq! REFUND_COUNTER_NEW REFUND_COUNTER)))
 
 ;; the actual REFUND mechanics will be explained with SSTORE and SELFDESTRUCT instructions
