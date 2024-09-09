@@ -34,6 +34,7 @@
     (* hub.misc/STP_GAS_MXP                (hub-into-stp-trigger))
     (* hub.misc/STP_GAS_PAID_OUT_OF_POCKET (hub-into-stp-trigger))
     (* hub.misc/STP_GAS_STIPEND            (hub-into-stp-trigger))
-  ))
+  )
+  )
 
 

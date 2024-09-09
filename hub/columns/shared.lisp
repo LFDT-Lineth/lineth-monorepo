@@ -64,11 +64,6 @@
     ( NON_STACK_ROWS                            :i8 )  ;; maximum value is ~ 20
     ( COUNTER_NSR                               :i8 )  ;; counts from 0, 1 (first "actual" actual value) to NON_STACK_ROWS
 
-    ;; likely to be merged into two columns given the right permutation argument
-    ;; if we do merge them replace them with one pair of columns and make them aliases for that column
-    ( acc_FIRST :binary@prove )     ( acc_FINAL :binary@prove )
-    ( con_FIRST :binary@prove )     ( con_AGAIN :binary@prove )
-    ( sto_FIRST :binary@prove )     ( sto_FINAL :binary@prove )
 )
 
 

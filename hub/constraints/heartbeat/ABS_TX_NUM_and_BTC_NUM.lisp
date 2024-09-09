@@ -14,16 +14,16 @@
                   ;; "initialization" constraints
                   (begin
                     (vanishes! ABSOLUTE_TRANSACTION_NUMBER)
-                    (debug     (vanishes! RELATIVE_BLOCK_NUMBER))))
+                    (vanishes! RELATIVE_BLOCK_NUMBER)))
 
 ;; "increment" constraints
+;; TODO: both are actually DEBUG / TRASH constraints in the HUB spec
 (defconstraint    ABS-and-BLK-constraints---increments       ()
                   (begin
-                    (vanishes!    0) ;; TODO: remove this and allow for pure debug constraints
-                    (debug    (any!      (will-remain-constant!    ABSOLUTE_TRANSACTION_NUMBER)
-                                         (will-inc!                ABSOLUTE_TRANSACTION_NUMBER    1)))
-                    (debug    (any!      (will-remain-constant!    RELATIVE_BLOCK_NUMBER)
-                                         (will-inc!                RELATIVE_BLOCK_NUMBER    1)))))
+                    (any!      (will-remain-constant!    ABSOLUTE_TRANSACTION_NUMBER)
+                               (will-inc!                ABSOLUTE_TRANSACTION_NUMBER    1))
+                    (any!      (will-remain-constant!    RELATIVE_BLOCK_NUMBER)
+                               (will-inc!                RELATIVE_BLOCK_NUMBER          1))))
 
 (defconstraint    ABS-and-BLK-constraints---transaction-constancy ()
                   (transaction-constancy RELATIVE_BLOCK_NUMBER))

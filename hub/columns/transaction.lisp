@@ -7,8 +7,6 @@
 
 	;; transaction-row columns
         (
-                ( BATCH_NUM                    :i32 ) ;; TODO: vastly exagerated
-
                 ;; from account related
                 ( FROM_ADDRESS_HI              :i32  )
                 ( FROM_ADDRESS_LO              :i128 )
