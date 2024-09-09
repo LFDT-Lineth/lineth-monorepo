@@ -208,7 +208,7 @@
                                      (eq! MSB TRIM_BYTE)))))
 
 (defconstraint most-significant-byte-end (:perspective computation :guard IS_MODEXP_LOG)
-  (if-eq CT 15
+  (if-eq CT CT_MAX
          (if-zero TANZB_ACC
                   (vanishes! MSB))))
 
