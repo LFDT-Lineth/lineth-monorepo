@@ -65,9 +65,6 @@
   (force-bool (* (is-data)
                  (- 1 (prev (is-data))))))
 
-(defun (is-last-data-row)
-  (force-bool (* (id-data) (next (is-result)))))
-
 (defun (flag-sum)
   (force-bool (+ (is-keccak) (is-sha2) (is-ripemd))))
 
