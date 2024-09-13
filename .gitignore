@@ -1,3 +1,4 @@
 zkevm.bin
+zkevm_for_reference_tests.bin
 zkevm.go
 *.swp

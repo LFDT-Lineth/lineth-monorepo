@@ -57,6 +57,9 @@ BIN := bin
 
 BLAKE2f_MODEXP_DATA := blake2fmodexpdata
 
+BLOCKDATA_FOR_REFERENCE_TESTS := blockdata/columns.lisp \
+				 blockdata/constants.lisp
+
 BLOCKDATA := blockdata
 
 BLOCKHASH := blockhash
@@ -111,6 +114,17 @@ TRM := trm
 
 TXN_DATA := txndata
 
+TXN_DATA_FOR_REFERENCE_TESTS :=  $(wildcard txndata/*.lisp) \
+				 txndata/lookups/txndata_into_euc.lisp \
+				 txndata/lookups/txndata_into_rlpaddr.lisp \
+				 txndata/lookups/txndata_into_rlptxn.lisp \
+				 txndata/lookups/txndata_into_rlptxrcpt.lisp \
+				 txndata/lookups/txndata_into_romlex.lisp \
+				 txndata/lookups/txndata_into_wcp.lisp
+
+#				 txndata/lookups/txndata_into_blockdata.lisp \
+#				 txndata/lookups/txndata_into_hub.lispX \
+
 WCP := wcp
 
 ZKEVM_MODULES := ${ALU} \
@@ -151,3 +165,39 @@ define.go: ${ZKEVM_MODULES}
 
 zkevm.bin: ${ZKEVM_MODULES}
 	${CORSET} compile -vv -o $@ ${ZKEVM_MODULES}
+
+
+ZKEVM_MODULES_FOR_REFERENCE_TESTS := ${ALU} \
+				     ${BIN} \
+				     ${BLAKE2f_MODEXP_DATA} \
+				     ${BLOCKDATA_FOR_REFERENCE_TESTS} \
+				     ${BLOCKHASH} \
+				     ${CONSTANTS} \
+				     ${EC_DATA} \
+				     ${EUC} \
+				     ${EXP} \
+				     ${GAS} \
+				     ${HUB_COLUMNS} \
+				     ${LIBRARY} \
+				     ${LOG_DATA} \
+				     ${LOG_INFO} \
+				     ${MMU} \
+				     ${MMIO} \
+				     ${MXP} \
+				     ${OOB} \
+				     ${RLP_ADDR} \
+				     ${RLP_TXN} \
+				     ${RLP_TXRCPT} \
+				     ${ROM} \
+				     ${ROM_LEX} \
+				     ${SHAKIRA_DATA} \
+				     ${SHIFT} \
+				     ${STP} \
+				     ${TABLES} \
+				     ${TRM} \
+				     ${TXN_DATA_FOR_REFERENCE_TESTS} \
+				     ${WCP}
+
+
+zkevm_for_reference_tests.bin: ${ZKEVM_MODULES_FOR_REFERENCE_TESTS}
+	${CORSET} compile -vv -o $@ ${ZKEVM_MODULES_FOR_REFERENCE_TESTS}
