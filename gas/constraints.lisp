@@ -103,7 +103,7 @@
 ;; though: it still asserts "smallness" so that it
 ;; should filter out MXPX induced out of gas exceptions.
 (defconstraint asserting-the-gas-cost-is-nonnegative (:guard FIRST)
-  (call-to-LT 1        ;; row shift parameter
+  (call-to-LEQ 1       ;; row shift parameter
               0        ;; arg 1 low
               GAS_COST ;; arg 2 low
               1))      ;; res is TRUE!
