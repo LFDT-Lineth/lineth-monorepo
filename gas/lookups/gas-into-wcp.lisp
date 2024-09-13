@@ -1,4 +1,4 @@
-(defun (wcp-activation-flag)
+(defun (gas-into-wcp-activation-flag)
   gas.IOMF)
 
 (deflookup 
@@ -8,7 +8,7 @@
     wcp.ARG_1_LO
     wcp.ARG_2_HI
     wcp.ARG_2_LO
-    wcp.RES_LO
+    wcp.RES
     wcp.INST
   )
   (
