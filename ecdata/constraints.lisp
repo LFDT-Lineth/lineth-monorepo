@@ -109,6 +109,8 @@
          (counter-constancy CT ACC_PAIRINGS)
          (counter-constancy CT TRIVIAL_PAIRING)
          (counter-constancy CT G2MTR)
+         (counter-constancy CT NOT_ON_G2)
+         (counter-constancy CT NOT_ON_G2_ACC)
          (counter-constancy INDEX PHASE) ;; NOTE: PHASE, NOT_ON_G2_ACC_MAX, INDEX_MAX are said to be index-constant
          (counter-constancy INDEX NOT_ON_G2_ACC_MAX)
          (counter-constancy INDEX INDEX_MAX)))
