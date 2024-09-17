@@ -908,7 +908,7 @@
                               (* RLP_PREFIX_INT_SHORT (^ 256 LLARGEMO)))
                          (eq! nBYTES 1))
                   (begin (eq! nSTEP LLARGE)
-                         (rlpPrefixLongInt [INPUT 1] [INPUT 2] CT nSTEP DONE [BYTE 1] [BYTE 1] [ACC 1] [ACC 2] ACC_BYTESIZE POWER BIT BIT_ACC LIMB LC nBYTES)))
+                         (rlpPrefixLongInt [INPUT 1] [INPUT 2] CT nSTEP DONE [BYTE 1] [BYTE 2] [ACC 1] [ACC 2] ACC_BYTESIZE POWER BIT BIT_ACC LIMB LC nBYTES)))
          (if-eq DONE 1 (eq! PHASE_END 1))))
 
 
