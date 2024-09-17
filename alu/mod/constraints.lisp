@@ -301,8 +301,7 @@
            (begin (if-zero x_lo
                            (begin (eq! a_hi (- THETA2 x_hi))
                                   (vanishes! a_lo))
-                           (begin (eq! a_hi
-                                       (- THETA2 (+ x_hi 1)))
+                           (begin (eq! a_hi (- THETA2 (+ x_hi 1)))
                                   (eq! a_lo (- THETA2 x_lo)))))))
 
 (defconstraint set-absolute-values ()
