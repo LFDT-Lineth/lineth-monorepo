@@ -369,14 +369,14 @@
   (callToISZERO 3 0 (raw_lead_hi)))
 
 (defun (raw_lead_hi_is_zero)
-  (shift preprocessing/WCP_RES 4))
+  (shift preprocessing/WCP_RES 3))
 
 ;; 4
 (defconstraint modexp-log---preprocessing---trim-acc-is-zero (:perspective macro :guard IS_MODEXP_LOG)
   (callToISZERO 4 0 (trim_acc)))
 
 (defun (trim_acc_is_zero)
-  (shift preprocessing/WCP_RES 5))
+  (shift preprocessing/WCP_RES 4))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                      ;;
