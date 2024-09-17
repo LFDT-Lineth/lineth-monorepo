@@ -55,7 +55,7 @@
 ;;  Constraints  ;;
 ;;;;;;;;;;;;;;;;;;;
 
-(defun (stateless-instruction---precondition) (* PEEK_AT_STACK (- 1 stack/SUX stack/SUX)))
+(defun (stateless-instruction---precondition) (* PEEK_AT_STACK (- 1 stack/SUX stack/SOX)))
 
 ;; TODO: comment out
 ;; sanity check
