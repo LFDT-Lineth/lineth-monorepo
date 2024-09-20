@@ -1,4 +1,4 @@
-(defun (add-activation-flag)
+(defun (oob-into-add-activation-flag)
   oob.ADD_FLAG)
 
 (deflookup 
@@ -15,13 +15,13 @@
   )
   ;target columns
   (
-    (* [oob.OUTGOING_DATA 1] (add-activation-flag))
-    (* [oob.OUTGOING_DATA 2] (add-activation-flag))
-    (* [oob.OUTGOING_DATA 3] (add-activation-flag))
-    (* [oob.OUTGOING_DATA 4] (add-activation-flag))
-    (* (next [oob.OUTGOING_DATA 1]) (add-activation-flag))
-    (* (next [oob.OUTGOING_DATA 2]) (add-activation-flag))
-    (* oob.OUTGOING_INST (add-activation-flag))
+    (* [oob.OUTGOING_DATA 1] (oob-into-add-activation-flag))
+    (* [oob.OUTGOING_DATA 2] (oob-into-add-activation-flag))
+    (* [oob.OUTGOING_DATA 3] (oob-into-add-activation-flag))
+    (* [oob.OUTGOING_DATA 4] (oob-into-add-activation-flag))
+    (* (next [oob.OUTGOING_DATA 1]) (oob-into-add-activation-flag))
+    (* (next [oob.OUTGOING_DATA 2]) (oob-into-add-activation-flag))
+    (* oob.OUTGOING_INST (oob-into-add-activation-flag))
   ))
 
 

@@ -1,4 +1,4 @@
-(defun (shf-activation-flag)
+(defun (hub-into-shf-activation-flag)
   (and (unexceptional-stack-row)
        hub.stack/SHF_FLAG))
 
@@ -15,12 +15,12 @@
     )
     ;; source columns
     (
-        (* [hub.stack/STACK_ITEM_VALUE_HI 1]     (shf-activation-flag))
-        (* [hub.stack/STACK_ITEM_VALUE_LO 1]     (shf-activation-flag))
-        (* [hub.stack/STACK_ITEM_VALUE_HI 2]     (shf-activation-flag))
-        (* [hub.stack/STACK_ITEM_VALUE_LO 2]     (shf-activation-flag))
-        (* [hub.stack/STACK_ITEM_VALUE_HI 4]     (shf-activation-flag))
-        (* [hub.stack/STACK_ITEM_VALUE_LO 4]     (shf-activation-flag))
-        (*  hub.stack/INSTRUCTION                (shf-activation-flag))
+        (* [hub.stack/STACK_ITEM_VALUE_HI 1]     (hub-into-shf-activation-flag))
+        (* [hub.stack/STACK_ITEM_VALUE_LO 1]     (hub-into-shf-activation-flag))
+        (* [hub.stack/STACK_ITEM_VALUE_HI 2]     (hub-into-shf-activation-flag))
+        (* [hub.stack/STACK_ITEM_VALUE_LO 2]     (hub-into-shf-activation-flag))
+        (* [hub.stack/STACK_ITEM_VALUE_HI 4]     (hub-into-shf-activation-flag))
+        (* [hub.stack/STACK_ITEM_VALUE_LO 4]     (hub-into-shf-activation-flag))
+        (*  hub.stack/INSTRUCTION                (hub-into-shf-activation-flag))
     )
 )

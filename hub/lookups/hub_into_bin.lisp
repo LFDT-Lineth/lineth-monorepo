@@ -1,4 +1,4 @@
-(defun (bin-activation-flag)
+(defun (hub-into-bin-activation-flag)
   (and (unexceptional-stack-row)
        hub.stack/BIN_FLAG))
 
@@ -15,12 +15,12 @@
     )
     ;; source columns
     (
-        (* [hub.stack/STACK_ITEM_VALUE_HI 1]     (bin-activation-flag))
-        (* [hub.stack/STACK_ITEM_VALUE_LO 1]     (bin-activation-flag))
-        (* [hub.stack/STACK_ITEM_VALUE_HI 2]     (bin-activation-flag))
-        (* [hub.stack/STACK_ITEM_VALUE_LO 2]     (bin-activation-flag))
-        (* [hub.stack/STACK_ITEM_VALUE_HI 4]     (bin-activation-flag))
-        (* [hub.stack/STACK_ITEM_VALUE_LO 4]     (bin-activation-flag))
-        (*  hub.stack/INSTRUCTION                (bin-activation-flag))
+        (* [hub.stack/STACK_ITEM_VALUE_HI 1]     (hub-into-bin-activation-flag))
+        (* [hub.stack/STACK_ITEM_VALUE_LO 1]     (hub-into-bin-activation-flag))
+        (* [hub.stack/STACK_ITEM_VALUE_HI 2]     (hub-into-bin-activation-flag))
+        (* [hub.stack/STACK_ITEM_VALUE_LO 2]     (hub-into-bin-activation-flag))
+        (* [hub.stack/STACK_ITEM_VALUE_HI 4]     (hub-into-bin-activation-flag))
+        (* [hub.stack/STACK_ITEM_VALUE_LO 4]     (hub-into-bin-activation-flag))
+        (*  hub.stack/INSTRUCTION                (hub-into-bin-activation-flag))
     )
 )
