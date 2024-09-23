@@ -140,14 +140,13 @@
 ;; 2.8.4 SMALL constraints
 (defconstraint small (:guard (+ IS_BYTE IS_SIGNEXTEND))
   (if-eq CT LLARGEMO
-         (if-zero ARG_1_HI
-                  (if-eq-else ARG_1_LO (+ (* 16 (shift BITS -4))
-                                 (* 8 (shift BITS -3))
-                                 (* 4 (shift BITS -2))
-                                 (* 2 (shift BITS -1))
-                                 BITS)
-                              (eq! SMALL 1)
-                              (vanishes! SMALL)))))
+         (if-eq-else ARG_1_LO (+ (* 16 (shift BITS -4))
+                        (* 8 (shift BITS -3))
+                        (* 4 (shift BITS -2))
+                        (* 2 (shift BITS -1))
+                        BITS)
+                     (eq! SMALL 1)
+                     (vanishes! SMALL))))
 
 ;;    2.9 pivot constraints    
 (defconstraint pivot (:guard CT_MAX)
