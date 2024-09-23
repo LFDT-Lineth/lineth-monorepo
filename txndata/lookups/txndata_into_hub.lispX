@@ -1,7 +1,7 @@
 (deflookup txndata-into-hub
  ;; target columns
  (
-  hub.BATCH_NUMBER
+  hub.RELATIVE_BLOCK_NUMBER
   hub.ABSOLUTE_TRANSACTION_NUMBER
  )
  ;; source columns
