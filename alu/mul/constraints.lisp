@@ -85,6 +85,7 @@
   (if-not-zero (- (prev STAMP) STAMP)
                (begin (= SNM 1)
                       (= EBIT 1)
+                      (= EACC 1)
                       (if-zero ARG_2_HI
                                (= ESRC 1)
                                (vanishes! ESRC)))))
