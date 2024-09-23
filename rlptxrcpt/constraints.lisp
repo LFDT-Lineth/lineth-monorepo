@@ -289,7 +289,7 @@
                                                        (next IS_DATA)))))))))
 
 (defconstraint phase5-logentryRlpPrefix (:guard [PHASE 5])
-  (if-eq 1 (* DEPTH_1 IS_PREFIX (- 1 IS_TOPIC) (- 1 IS_PREFIX))
+  (if-eq 1 (* DEPTH_1 IS_PREFIX (- 1 IS_TOPIC) (- 1 IS_DATA))
          (begin (eq! [INPUT 1] LOG_ENTRY_SIZE)
                 (eq! nSTEP 8)
                 (rlpPrefixOfByteString [INPUT 1] CT nSTEP DONE [PHASE 5] ACC_SIZE POWER BIT [ACC 1] [ACC 2] LC LIMB nBYTES)
