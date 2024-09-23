@@ -855,7 +855,7 @@
                                     (vanishes! LC_CORRECTION)
                                     (if-eq-else (^ (w-minus-two-seven) 2) (w-minus-two-seven)
                                                 (eq! PHASE_END 1)
-                                                (begin (vanishes! (+ (next PHASE_END)
+                                                (begin (vanishes! (+ PHASE_END
                                                                      (next LT)
                                                                      (- 1 (next LX))
                                                                      (- 1 (next IS_PREFIX)))))))))))
