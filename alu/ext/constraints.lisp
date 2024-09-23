@@ -115,15 +115,13 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                           ;;
-;;    6.7 oli constraints    ;;
+;;    6.7 OLI constraints    ;;
 ;;                           ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defconstraint bit-1-constraints ()
   (if-not-zero STAMP
-               (begin (if-not-zero (- INST EVM_INST_MULMOD)
-                                   (vanishes! BIT_1))
-                      (if-not-zero ARG_1_HI
-                                   (vanishes! BIT_1))
+               (begin (if-not-zero (- INST EVM_INST_MULMOD) (vanishes! BIT_1))
+                      (if-not-zero ARG_1_HI                 (vanishes! BIT_1))
                       (if-zero ARG_1_HI
                                (if-not-zero (- INST EVM_INST_ADDMOD)
                                             (if-zero ARG_1_LO
@@ -132,15 +130,24 @@
 
 (defconstraint bit-2-constraints ()
   (if-not-zero STAMP
-               (begin (if-not-zero (- INST EVM_INST_MULMOD)
-                                   (vanishes! BIT_2))
-                      (if-not-zero ARG_2_HI
-                                   (vanishes! BIT_2))
+               (begin (if-not-zero (- INST EVM_INST_MULMOD)  (vanishes! BIT_2))
+                      (if-not-zero ARG_2_HI                  (vanishes! BIT_2))
                       (if-zero ARG_2_HI
                                (if-eq INST EVM_INST_MULMOD
                                       (if-zero ARG_2_LO
                                                (= BIT_2 1)
                                                (vanishes! BIT_2)))))))
+
+(defconstraint bit-3-constraints ()
+               (if-not-zero STAMP
+                            (begin
+                              (if-not-zero   ARG_3_HI                 
+                                             ;; ARG_3_HI ≠ 0
+                                             (vanishes! BIT_3)
+                                             ;; ARG_3_HI = 0
+                                             (if-not-zero   (*   ARG_3_LO   (-   1   ARG_3_LO))
+                                                            (eq!    BIT_3   0)
+                                                            (eq!    BIT_3   1))))))
 
 (defconstraint oli-constraints ()
   (if-not-zero STAMP
