@@ -4,7 +4,7 @@
   (
     rlptxn.ABS_TX_NUM
     rlptxn.LC
-    rlptxn.PHASE_ID
+    rlptxn.PHASE
     rlptxn.INDEX_DATA
     rlptxn.LIMB
   )

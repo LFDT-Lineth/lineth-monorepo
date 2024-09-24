@@ -178,4 +178,10 @@
                    (isolate-prefix accumulator2 source2_byte bit2 counter)
                    (isolate-chunk accumulator3 target_byte bit3 bit4 counter)
                    (power pow1 bit4 counter)
-                   (antipower pow2 bit2 counter)))
+                   (antipower pow2 bit2 counter)
+                   (if-eq counter LLARGEMO
+                            (eq! target_new
+                                 (+ target
+                                    (* (- (+ (* accumulator1 pow2) accumulator2)
+                                          accumulator3))
+                                       pow1)))))

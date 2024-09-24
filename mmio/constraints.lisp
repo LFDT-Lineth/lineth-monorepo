@@ -123,8 +123,3 @@
          (counter-constancy CT VAL_B_NEW)
          (counter-constancy CT VAL_C_NEW)
          (counter-constancy CT INDEX_X)))
-
-
-
-
-

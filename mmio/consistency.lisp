@@ -34,12 +34,11 @@
    VAL_ABC_NEW)
   )
 
-(defconstraint memory-consistency ()
-  (begin (if-not-zero CN_ABC_SORTED
-                      (if-zero (will-remain-constant! CN_ABC_SORTED)
-                               (if-zero (will-remain-constant! INDEX_ABC_SORTED)
-                                        (if-not-zero (will-remain-constant! MMIO_STAMP_3_SORTED)
-                                                     (will-eq! VAL_ABC_SORTED VAL_ABC_NEW_SORTED)))))
+(defconstraint memory-consistency (:guard CN_ABC_SORTED)
+  (begin (if-zero (will-remain-constant! CN_ABC_SORTED)
+                  (if-zero (will-remain-constant! INDEX_ABC_SORTED)
+                           (if-not-zero (will-remain-constant! MMIO_STAMP_3_SORTED)
+                                        (will-eq! VAL_ABC_SORTED VAL_ABC_NEW_SORTED))))
          (if-not-zero (will-remain-constant! CN_ABC_SORTED)
                       (will-eq! VAL_ABC_SORTED 0))
          (if-not-zero (will-remain-constant! INDEX_ABC_SORTED)
