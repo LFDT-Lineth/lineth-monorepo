@@ -99,7 +99,7 @@
                                (* (^ 256 (- LLARGEMO   6)) (shift [BYTE_LO   6]   ROW_SHIFT_TIMESTAMP))
                                (* (^ 256 (- LLARGEMO   7)) (shift [BYTE_LO   7]   ROW_SHIFT_TIMESTAMP))
                                (* (^ 256 (- LLARGEMO   8)) (shift [BYTE_LO   8]   ROW_SHIFT_TIMESTAMP))
-                               (* (^ 256 (- LLARGEMO   9)) (shift [BYTE_LO   9]   ROW_SHIFT_TIMESTAMP))))))
+                               (* (^ 256 (- LLARGEMO   9)) (shift [BYTE_LO   9]   ROW_SHIFT_TIMESTAMP))))
                  (if-not-zero (- REL_BLOCK 1)
                               (eq! (shift WCP_FLAG ROW_SHIFT_TIMESTAMP) 1))))
 
