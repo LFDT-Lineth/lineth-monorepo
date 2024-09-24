@@ -158,10 +158,12 @@
 (defconstraint ispush-ispushdata-exclusivity ()
   (vanishes! (* IS_PUSH IS_PUSH_DATA)))
 
+(defconstraint ispush-implies-next-pushdata ()
+  (if-not-zero IS_PUSH (eq! (next IS_PUSH_DATA) 1)))
+
 (defconstraint ispush-constraint ()
   (if-not-zero IS_PUSH
-               (begin (vanishes! IS_PUSH_DATA)
-                      (eq! PUSH_PARAMETER
+               (begin (eq! PUSH_PARAMETER
                            (- OPCODE (- EVM_INST_PUSH1 1)))
                       (vanishes! PUSH_VALUE_ACC)
                       (vanishes! (+ PUSH_FUNNEL_BIT (next PUSH_FUNNEL_BIT))))))
