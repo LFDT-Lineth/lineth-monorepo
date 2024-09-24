@@ -4,7 +4,7 @@
   (SHIFT_STAMP                :i32)
   (IOMF                       :binary)
   (COUNTER                    :i8)
-  (ONE_LINE_INSTRUCTION       :binary@prove)
+  (ONE_LINE_INSTRUCTION       :binary)
   (ARG_1_HI                   :i128)
   (ARG_1_LO                   :i128)
   (ARG_2_HI                   :i128)
