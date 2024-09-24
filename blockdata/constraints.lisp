@@ -19,6 +19,9 @@
   (begin (will-remain-constant! FIRST_BLOCK_NUMBER)
          (if-eq-else CT MAX_CT (will-inc! REL_BLOCK 1) (will-inc! CT 1))))
 
+(defconstraint finalization (:domain {-1})
+  (eq! CT MAX_CT))
+
 (defconstraint counter-constancies ()
   (begin (counter-constancy CT REL_TX_NUM_MAX)
          (counter-constancy CT COINBASE_HI)
