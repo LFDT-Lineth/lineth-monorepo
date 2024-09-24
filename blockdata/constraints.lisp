@@ -49,26 +49,27 @@
                                        (* (^ 256 (- LLARGEMO   13))   [BYTE_HI   13])
                                        (* (^ 256 (- LLARGEMO   14))   [BYTE_HI   14])
                                        (* (^ 256 (- LLARGEMO   15))   [BYTE_HI   15])))
-                 (eq!    DATA_LO    (+ (* (^ 256 (- LLARGEMO    0))   [BYTE_HI    0])
-                                       (* (^ 256 (- LLARGEMO    1))   [BYTE_HI    1])
-                                       (* (^ 256 (- LLARGEMO    2))   [BYTE_HI    2])
-                                       (* (^ 256 (- LLARGEMO    3))   [BYTE_HI    3])
-                                       (* (^ 256 (- LLARGEMO    4))   [BYTE_HI    4])
-                                       (* (^ 256 (- LLARGEMO    5))   [BYTE_HI    5])
-                                       (* (^ 256 (- LLARGEMO    6))   [BYTE_HI    6])
-                                       (* (^ 256 (- LLARGEMO    7))   [BYTE_HI    7])
-                                       (* (^ 256 (- LLARGEMO    8))   [BYTE_HI    8])
-                                       (* (^ 256 (- LLARGEMO    9))   [BYTE_HI    9])
-                                       (* (^ 256 (- LLARGEMO   10))   [BYTE_HI   10])
-                                       (* (^ 256 (- LLARGEMO   11))   [BYTE_HI   11])
-                                       (* (^ 256 (- LLARGEMO   12))   [BYTE_HI   12])
-                                       (* (^ 256 (- LLARGEMO   13))   [BYTE_HI   13])
-                                       (* (^ 256 (- LLARGEMO   14))   [BYTE_HI   14])
-                                       (* (^ 256 (- LLARGEMO   15))   [BYTE_HI   15])))))
+                 (eq!    DATA_LO    (+ (* (^ 256 (- LLARGEMO    0))   [BYTE_LO    0])
+                                       (* (^ 256 (- LLARGEMO    1))   [BYTE_LO    1])
+                                       (* (^ 256 (- LLARGEMO    2))   [BYTE_LO    2])
+                                       (* (^ 256 (- LLARGEMO    3))   [BYTE_LO    3])
+                                       (* (^ 256 (- LLARGEMO    4))   [BYTE_LO    4])
+                                       (* (^ 256 (- LLARGEMO    5))   [BYTE_LO    5])
+                                       (* (^ 256 (- LLARGEMO    6))   [BYTE_LO    6])
+                                       (* (^ 256 (- LLARGEMO    7))   [BYTE_LO    7])
+                                       (* (^ 256 (- LLARGEMO    8))   [BYTE_LO    8])
+                                       (* (^ 256 (- LLARGEMO    9))   [BYTE_LO    9])
+                                       (* (^ 256 (- LLARGEMO   10))   [BYTE_LO   10])
+                                       (* (^ 256 (- LLARGEMO   11))   [BYTE_LO   11])
+                                       (* (^ 256 (- LLARGEMO   12))   [BYTE_LO   12])
+                                       (* (^ 256 (- LLARGEMO   13))   [BYTE_LO   13])
+                                       (* (^ 256 (- LLARGEMO   14))   [BYTE_LO   14])
+                                       (* (^ 256 (- LLARGEMO   15))   [BYTE_LO   15])))))
 
-(defconstraint value-constraints---COINBASE (:guard (- REL_BLOCK (prev REL_BLOCK)))
+(defun    (blockdata---first-row-of-new-block)   (-   REL_BLOCK   (prev REL_BLOCK)))
+
+(defconstraint value-constraints---COINBASE (:guard (blockdata---first-row-of-new-block))
                (begin  
-                 ; Coinbase
                  (eq! (shift INST     ROW_SHIFT_COINBASE) EVM_INST_COINBASE)
                  (eq! (shift DATA_HI  ROW_SHIFT_COINBASE) COINBASE_HI)
                  (eq! (shift DATA_LO  ROW_SHIFT_COINBASE) COINBASE_LO)
@@ -85,9 +86,8 @@
                                (* (^ 256 (- LLARGEMO   10)) (shift [BYTE_HI   10]   ROW_SHIFT_COINBASE))
                                (* (^ 256 (- LLARGEMO   11)) (shift [BYTE_HI   11]   ROW_SHIFT_COINBASE))))))
 
-(defconstraint value-constraints---TIMESTAMP (:guard (- REL_BLOCK (prev REL_BLOCK)))
+(defconstraint value-constraints---TIMESTAMP (:guard (blockdata---first-row-of-new-block))
                (begin  
-                 ; TIMESTAMP
                  (eq!       (shift INST     ROW_SHIFT_TIMESTAMP) EVM_INST_TIMESTAMP)
                  (vanishes! (shift DATA_HI  ROW_SHIFT_TIMESTAMP))
                  (vanishes! (+ (* (^ 256 (- LLARGEMO   0)) (shift [BYTE_LO   0]   ROW_SHIFT_TIMESTAMP))
@@ -103,9 +103,8 @@
                  (if-not-zero (- REL_BLOCK 1)
                               (eq! (shift WCP_FLAG ROW_SHIFT_TIMESTAMP) 1))))
 
-(defconstraint value-constraints---NUMBER (:guard (- REL_BLOCK (prev REL_BLOCK)))
+(defconstraint value-constraints---NUMBER (:guard (blockdata---first-row-of-new-block))
                (begin  
-                 ; NUMBER
                  (eq!       (shift INST      ROW_SHIFT_NUMBER) EVM_INST_NUMBER)
                  (vanishes! (shift DATA_HI   ROW_SHIFT_NUMBER))
                  (eq!       (shift DATA_LO   ROW_SHIFT_NUMBER) (+ FIRST_BLOCK_NUMBER (- REL_BLOCK 1)))
@@ -120,32 +119,28 @@
                                (* (^ 256 (- LLARGEMO   8)) (shift [BYTE_LO   8]   ROW_SHIFT_NUMBER))
                                (* (^ 256 (- LLARGEMO   9)) (shift [BYTE_LO   9]   ROW_SHIFT_NUMBER))))))
 
-(defconstraint value-constraints---DIFFICULTY (:guard (- REL_BLOCK (prev REL_BLOCK)))
+(defconstraint value-constraints---DIFFICULTY (:guard (blockdata---first-row-of-new-block))
                (begin  
-                 ; DIIFICULTY
                  (eq!       (shift INST      ROW_SHIFT_DIFFICULTY) EVM_INST_DIFFICULTY)
                  (vanishes! (shift DATA_HI   ROW_SHIFT_DIFFICULTY))
                  (eq!       (shift DATA_LO   ROW_SHIFT_DIFFICULTY) LINEA_DIFFICULTY)))
 
-(defconstraint value-constraints---GASLIMIT (:guard (- REL_BLOCK (prev REL_BLOCK)))
+(defconstraint value-constraints---GASLIMIT (:guard (blockdata---first-row-of-new-block))
                (begin  
-                 ; GASLIMIT
                  (eq!       (shift INST      ROW_SHIFT_GASLIMIT) EVM_INST_GASLIMIT)
                  (vanishes! (shift DATA_HI   ROW_SHIFT_GASLIMIT))
                  (eq!       (shift DATA_LO   ROW_SHIFT_GASLIMIT) LINEA_BLOCK_GAS_LIMIT)
                  (eq!       (shift DATA_LO   ROW_SHIFT_GASLIMIT) BLOCK_GAS_LIMIT)))
 
-(defconstraint value-constraints---CHAINID (:guard (- REL_BLOCK (prev REL_BLOCK)))
+(defconstraint value-constraints---CHAINID (:guard (blockdata---first-row-of-new-block))
                (begin  
-                 ; CHAINID
                  (eq!       (shift INST      ROW_SHIFT_CHAINID) EVM_INST_CHAINID)
                  (vanishes! (shift DATA_HI   ROW_SHIFT_CHAINID))
-                 ;(eq!      (shift DATA_LO   ROW_SHIFT_CHAINID) LINEA_CHAIN_ID)
+                 ;(eq!      (shift DATA_LO   ROW_SHIFT_CHAINID) LINEA_CHAIN_ID) ;; TODO: this needs some fixing
                  ))
 
-(defconstraint value-constraints---BASEFEE (:guard (- REL_BLOCK (prev REL_BLOCK)))
+(defconstraint value-constraints---BASEFEE (:guard (blockdata---first-row-of-new-block))
                (begin  
-                 ; BASEFEE
                  (eq!       (shift INST      ROW_SHIFT_BASEFEE) EVM_INST_BASEFEE)
                  (vanishes! (shift DATA_HI   ROW_SHIFT_BASEFEE))
                  (eq!       (shift DATA_LO   ROW_SHIFT_BASEFEE) LINEA_BASE_FEE)
