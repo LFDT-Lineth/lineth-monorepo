@@ -1,6 +1,10 @@
 (module txndata)
 
 (defconst 
+  CT_MAX_TYPE_0                                         7
+  CT_MAX_TYPE_1                                         8
+  CT_MAX_TYPE_2                                         8
+  ;;
   NB_ROWS_TYPE_0                                         8
   NB_ROWS_TYPE_1                                         9
   NB_ROWS_TYPE_2                                         9
