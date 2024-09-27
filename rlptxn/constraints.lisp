@@ -690,11 +690,11 @@
                                                    (eq! (next DATA_GAS_COST) (shift DATA_GAS_COST 2)))
                                             (vanishes! (next LC_CORRECTION))))))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;                             ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                               ;;
 ;;    4.5 Phase 10 : AccessList  ;;
-;;                             ;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                               ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defconstraint phaseAccessList-stillphase-noend (:guard IS_PHASE_ACCESS_LIST)
   (if-not-zero PHASE_SIZE
                (vanishes! PHASE_END)))
@@ -829,10 +829,11 @@
 
 ;; 4.5.2.15
 (defconstraint phaseAccessList-updateAddrLookUp (:guard IS_PHASE_ACCESS_LIST)
-  (if-zero (+ [DEPTH 2]
-              (- (prev nADDR) nADDR))
-           (begin (remained-constant! ADDR_HI)
-                  (remained-constant! ADDR_LO))))
+  (if-not-zero (* [DEPTH 1]
+                  (- nADDR
+                     (- (prev nADDR) 1)))
+               (begin (remained-constant! ADDR_HI)
+                      (remained-constant! ADDR_LO))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                             ;;
@@ -845,7 +846,12 @@
                   (eq! nSTEP 8))))
 
 (defun (w-minus-two-seven)
-  (- [INPUT 1] 27))
+  (- [INPUT 1] UNPROTECTED_V))
+
+(defun (w-minus-two-beta-minus-protected-base-V)
+  (- [INPUT 1]
+     (+ (* 2 (next [INPUT 1]))
+        PROTECTED_BASE_V)))
 
 (defconstraint phaseBeta-rlp-w (:guard IS_PHASE_BETA)
   (if-not-zero (* LT (- 1 LX))
@@ -858,7 +864,8 @@
                                                 (begin (vanishes! (+ PHASE_END
                                                                      (next LT)
                                                                      (- 1 (next LX))
-                                                                     (- 1 (next IS_PREFIX)))))))))))
+                                                                     (- 1 (next IS_PREFIX))))
+                                                       (is-binary (w-minus-two-beta-minus-protected-base-V)))))))))
 
 (defconstraint phaseBeta-rlp-beta (:guard IS_PHASE_BETA)
   (if-not-zero (* LX IS_PREFIX)

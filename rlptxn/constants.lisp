@@ -1,0 +1,9 @@
+(module rlptxn)
+
+(defconst 
+  UNPROTECTED_V       27
+  UNPROTECTED_V_PO    (+ UNPROTECTED_V 1)
+  PROTECTED_BASE_V    35
+  PROTECTED_BASE_V_PO (+ PROTECTED_BASE_V 1))
+
+
