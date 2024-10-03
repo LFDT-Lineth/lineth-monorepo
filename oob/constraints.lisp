@@ -127,34 +127,6 @@
 ;;                             ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defconstraint binary-constraints ()
-  (begin (is-binary ADD_FLAG)
-         (is-binary MOD_FLAG)
-         (is-binary WCP_FLAG)
-         (is-binary IS_JUMP)
-         (is-binary IS_JUMPI)
-         (is-binary IS_RDC)
-         (is-binary IS_CDL)
-         (is-binary IS_XCALL)
-         (is-binary IS_CALL)
-         (is-binary IS_CREATE)
-         (is-binary IS_SSTORE)
-         (is-binary IS_DEPLOYMENT)
-         (is-binary IS_ECRECOVER)
-         (is-binary IS_SHA2)
-         (is-binary IS_RIPEMD)
-         (is-binary IS_IDENTITY)
-         (is-binary IS_ECADD)
-         (is-binary IS_ECMUL)
-         (is-binary IS_ECPAIRING)
-         (is-binary IS_BLAKE2F_CDS)
-         (is-binary IS_BLAKE2F_PARAMS)
-         (is-binary IS_MODEXP_CDS)
-         (is-binary IS_MODEXP_XBS)
-         (is-binary IS_MODEXP_LEAD)
-         (is-binary IS_MODEXP_EXTRACT)
-         (is-binary IS_MODEXP_PRICING)))
-
 (defconstraint wcp-add-mod-are-exclusive ()
   (is-binary (lookup-sum 0)))
 
@@ -563,7 +535,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defun (prc-common---standard-precondition)   (flag-sum-prc-common))
-(defun (prc---call-gas)                       [DATA 1])
+(defun (prc---callee-gas)                     [DATA 1])
 (defun (prc---cds)                            [DATA 2])
 (defun (prc---r@c)                            [DATA 3])
 (defun (prc---hub-success)                    [DATA 4])
@@ -598,14 +570,14 @@
 (defun (prc-ecrecover-prc-ecadd-prc-ecmul---insufficient-gas)         (shift OUTGOING_RES_LO 2))
 
 (defconstraint prc-ecrecover-prc-ecadd-prc-ecmul---compare-call-gas-against-precompile-cost (:guard (* (assumption---fresh-new-stamp) (prc-ecrecover-prc-ecadd-prc-ecmul---standard-precondition)))
-  (call-to-LT 2 0 (prc---call-gas) 0 (prc-ecrecover-prc-ecadd-prc-ecmul---precompile-cost)))
+  (call-to-LT 2 0 (prc---callee-gas) 0 (prc-ecrecover-prc-ecadd-prc-ecmul---precompile-cost)))
 
 (defconstraint prc-ecrecover-prc-ecadd-prc-ecmul---justify-hub-predictions (:guard (* (assumption---fresh-new-stamp) (prc-ecrecover-prc-ecadd-prc-ecmul---standard-precondition)))
   (begin (eq! (prc---hub-success) (- 1 (prc-ecrecover-prc-ecadd-prc-ecmul---insufficient-gas)))
          (if-zero (prc---hub-success)
                   (vanishes! (prc---return-gas))
                   (eq! (prc---return-gas)
-                       (- (prc---call-gas) (prc-ecrecover-prc-ecadd-prc-ecmul---precompile-cost))))))
+                       (- (prc---callee-gas) (prc-ecrecover-prc-ecadd-prc-ecmul---precompile-cost))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                       ;;
@@ -623,14 +595,14 @@
   (call-to-DIV 2 0 (+ (prc---cds) 31) 0 32))
 
 (defconstraint prc-sha2-prc-ripemd-prc-identity---compare-call-gas-against-precompile-cost (:guard (* (assumption---fresh-new-stamp) (prc-sha2-prc-ripemd-prc-identity---standard-precondition)))
-  (call-to-LT 3 0 (prc---call-gas) 0 (prc-sha2-prc-ripemd-prc-identity---precompile-cost)))
+  (call-to-LT 3 0 (prc---callee-gas) 0 (prc-sha2-prc-ripemd-prc-identity---precompile-cost)))
 
 (defconstraint prc-sha2-prc-ripemd-prc-identity---justify-hub-predictions (:guard (* (assumption---fresh-new-stamp) (prc-sha2-prc-ripemd-prc-identity---standard-precondition)))
   (begin (eq! (prc---hub-success) (- 1 (prc-sha2-prc-ripemd-prc-identity---insufficient-gas)))
          (if-zero (prc---hub-success)
                   (vanishes! (prc---return-gas))
                   (eq! (prc---return-gas)
-                       (- (prc---call-gas) (prc-sha2-prc-ripemd-prc-identity---precompile-cost))))))
+                       (- (prc---callee-gas) (prc-sha2-prc-ripemd-prc-identity---precompile-cost))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                       ;;
@@ -659,7 +631,7 @@
                   (eq! (shift WCP_FLAG 4) 1)
                   (eq! (shift OUTGOING_INST 4) EVM_INST_LT)
                   (vanishes! (shift [OUTGOING_DATA 1] 4))
-                  (eq! (shift [OUTGOING_DATA 2] 4) (prc---call-gas))
+                  (eq! (shift [OUTGOING_DATA 2] 4) (prc---callee-gas))
                   (vanishes! (shift [OUTGOING_DATA 3] 4))
                   (eq! (* (shift [OUTGOING_DATA 4] 4) 192)
                        (prc-ecpairing---precompile-cost192)))))
@@ -670,7 +642,7 @@
          (if-zero (prc---hub-success)
                   (vanishes! (prc---return-gas))
                   (eq! (* (prc---return-gas) 192)
-                       (- (* (prc---call-gas) 192) (prc-ecpairing---precompile-cost192))))))
+                       (- (* (prc---callee-gas) 192) (prc-ecpairing---precompile-cost192))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                         ;;
@@ -834,14 +806,14 @@
   (call-to-LT 4 0 (prc-modexp-pricing---big-quotient) 0 200))
 
 (defconstraint prc-modexp-pricing---compare-call-gas-against-precompile-cost (:guard (* (assumption---fresh-new-stamp) (prc-modexp-pricing---standard-precondition)))
-  (call-to-LT 5 0 (prc---call-gas) 0 (prc-modexp-pricing---precompile-cost)))
+  (call-to-LT 5 0 (prc---callee-gas) 0 (prc-modexp-pricing---precompile-cost)))
 
 (defconstraint prc-modexp-pricing---justify-hub-predictions (:guard (* (assumption---fresh-new-stamp) (prc-modexp-pricing---standard-precondition)))
   (begin (eq! (prc---ram-success)
               (- 1 (shift OUTGOING_RES_LO 5)))
          (if-zero (prc---ram-success)
                   (vanishes! (prc---return-gas))
-                  (eq! (prc---return-gas) (- (prc---call-gas) (prc-modexp-pricing---precompile-cost))))
+                  (eq! (prc---return-gas) (- (prc---callee-gas) (prc-modexp-pricing---precompile-cost))))
          (eq! (prc---r@c-nonzero) (- 1 OUTGOING_RES_LO))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -923,7 +895,7 @@
 
 
 (defconstraint prc-blake-params---compare-call-gas-against-blake-r (:guard (* (assumption---fresh-new-stamp) (prc-blake-params---standard-precondition)))
-  (call-to-LT 0 0 (prc---call-gas) 0 (prc-blake-params---blake-r)))
+  (call-to-LT 0 0 (prc---callee-gas) 0 (prc-blake-params---blake-r)))
 
 (defconstraint prc-blake-params---compare-blake-f-against-blake-f-square (:guard (* (assumption---fresh-new-stamp) (prc-blake-params---standard-precondition)))
   (call-to-EQ 1
@@ -936,7 +908,7 @@
   (begin (eq! (prc---ram-success)
               (* (prc-blake-params---sufficient-gas) (prc-blake-params---f-is-a-bit)))
          (if-not-zero (prc---ram-success)
-                      (eq! (prc---return-gas) (- (prc---call-gas) (prc-blake-params---blake-r)))
+                      (eq! (prc---return-gas) (- (prc---callee-gas) (prc-blake-params---blake-r)))
                       (vanishes! (prc---return-gas)))))
 
 
