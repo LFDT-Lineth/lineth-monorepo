@@ -19,7 +19,9 @@
 ;;                             ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defconstraint counter-constancy ()
-  (begin (counter-constancy CT INST)
+  (begin (counter-constancy CT CN)
+         (counter-constancy CT INST)
+         (counter-constancy CT DEPLOYS)
          (counter-constancy CT OFFSET_1_LO)
          (counter-constancy CT OFFSET_1_HI)
          (counter-constancy CT OFFSET_2_LO)
