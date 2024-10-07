@@ -37,10 +37,10 @@
     (BYTE_H_0 :byte@prove)    (ACC_H_0 :i64)
     ;==========================
     (EXPONENT_BIT               :binary@prove)
-    (EXPONENT_BIT_ACCUMULATOR   :i8)
+    (EXPONENT_BIT_ACCUMULATOR   :i128)
     (EXPONENT_BIT_SOURCE        :binary@prove)
     (SQUARE_AND_MULTIPLY        :binary@prove)
-    (BIT_NUM                    :i8)
+    (BIT_NUM                    :i7)
 )
 
 (defalias
