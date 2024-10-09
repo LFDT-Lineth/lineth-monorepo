@@ -386,18 +386,22 @@
 ;;                          ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defconstraint   cumulative-gas ()
-                 (begin (if-zero ABS
-                                 (vanishes! GAS_CUMULATIVE))
+(defconstraint   cumulative-gas---vanishing-in-padding ()
+                 (if-zero    ABS
+                             (vanishes! GAS_CUMULATIVE)))
+
+(defconstraint   cumulative-gas---initialization-at-block-start ()
                         (if-not-zero (will-remain-constant! BLK)
                                      ; BLK[i + 1] != BLK[i]
                                      (eq! (next GAS_CUMULATIVE)
-                                          (next (- GAS_LIMIT REFUND_EFFECTIVE))))
-                        (if-not-zero (and (will-inc! BLK 1) (will-remain-constant! ABS))
-                                     ; BLK[i + 1] != 1 + BLK[i] && ABS[i+1] != ABS[i] i.e. BLK[i + 1] == BLK[i] && ABS[i+1] == ABS[i] +1
-                                     (eq! (next GAS_CUMULATIVE)
-                                          (+ GAS_CUMULATIVE
-                                             (next (- GAS_LIMIT REFUND_EFFECTIVE)))))))
+                                          (next (- GAS_LIMIT REFUND_EFFECTIVE)))))
+
+(defconstraint   cumulative-gas---update-at-transaction-threshold ()
+                 (if-not-zero    (will-inc! BLK 1)
+                                 (if-not-zero    (will-remain-constant! ABS)
+                                                 ; BLK[i + 1] != 1 + BLK[i] && ABS[i+1] != ABS[i] i.e. BLK[i + 1] == BLK[i] && ABS[i+1] == ABS[i] +1
+                                                 (eq!    (next GAS_CUMULATIVE)
+                                                         (+    GAS_CUMULATIVE (next (- GAS_LIMIT REFUND_EFFECTIVE)))))))
 
 (defconstraint   cumulative-gas-comparison (:guard IS_LAST_TX_OF_BLOCK)
                  (if-not-zero (- ABS_TX_NUM (prev ABS_TX_NUM))

@@ -21,11 +21,11 @@
   (WARM                 :binary)
   (OUT_OF_GAS_EXCEPTION :binary)
   ;;
-  (GAS_ACTUAL           :i48)
-  (GAS_MXP              :i48)
-  (GAS_UPFRONT          :i48)
-  (GAS_OUT_OF_POCKET    :i48)
-  (GAS_STIPEND          :i48)
+  (GAS_ACTUAL           :i64)
+  (GAS_MXP              :i64)
+  (GAS_UPFRONT          :i64)
+  (GAS_OUT_OF_POCKET    :i64)
+  (GAS_STIPEND          :i64)
   ;;
   (WCP_FLAG :binary)
   (MOD_FLAG :binary)
