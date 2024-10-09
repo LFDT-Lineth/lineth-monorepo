@@ -37,7 +37,7 @@
 (defun (account-instruction-decoded-flags-sum)        (+ [ stack/DEC_FLAG 1 ]
                                                          [ stack/DEC_FLAG 2 ]
                                                          [ stack/DEC_FLAG 3 ]
-                                                         [ stack/DEC_FLAG 4 ]))
+                                                         [ stack/DEC_FLAG 4 ])) ;; ""
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -106,7 +106,7 @@
                                 (begin
                                   (eq! account/ROMLEX_FLAG 1)
                                   (eq! account/TRM_RAW_ADDRESS_HI [ stack/STACK_ITEM_VALUE_HI 1 ])
-                                  (eq! account/ADDRESS_LO         [ stack/STACK_ITEM_VALUE_LO 1 ])
+                                  (eq! account/ADDRESS_LO         [ stack/STACK_ITEM_VALUE_LO 1 ]) ;;""
                                   (account-same-balance                         1)
                                   (account-same-nonce                           1)
                                   (account-same-code                            1)
@@ -163,12 +163,12 @@
                    (if-not-zero [ stack/DEC_FLAG 2 ]
                                 (begin
                                   (eq!  [ stack/STACK_ITEM_VALUE_HI 4 ] 0)
-                                  (eq!  [ stack/STACK_ITEM_VALUE_LO 4 ] (shift account/CODE_SIZE 1))))
+                                  (eq!  [ stack/STACK_ITEM_VALUE_LO 4 ] (shift  (* account/CODE_SIZE account/HAS_CODE) 1))))
                    ;;
                    (if-not-zero [ stack/DEC_FLAG 3 ]
                                 (begin
-                                  (eq!  [ stack/STACK_ITEM_VALUE_HI 4 ] (shift account/CODE_HASH_HI 1))
-                                  (eq!  [ stack/STACK_ITEM_VALUE_LO 4 ] (shift account/CODE_HASH_LO 1))))
+                                  (eq!  [ stack/STACK_ITEM_VALUE_HI 4 ] (shift  (* account/CODE_HASH_HI account/EXISTS)  1))
+                                  (eq!  [ stack/STACK_ITEM_VALUE_LO 4 ] (shift  (* account/CODE_HASH_LO account/EXISTS)  1))))
                    ;;
                    (if-not-zero [ stack/DEC_FLAG 4 ]
                                 (begin
