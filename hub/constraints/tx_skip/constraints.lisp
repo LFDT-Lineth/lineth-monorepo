@@ -75,41 +75,38 @@
                       (account-isnt-precompile                    tx-skip---row-offset---recipient-account)
                       (DOM-SUB-stamps---standard                  tx-skip---row-offset---recipient-account 1)))
 
-(defconstraint tx-skip---setting-recipient-account-row-nonce-code-and-deployment-status-for-trivial-message-calls (:guard (tx-skip---precondition))
+(defconstraint tx-skip---recipient-account-row---trivial-message-calls---nonce-code-and-deployment-status- (:guard (tx-skip---precondition))
                (if-zero (tx-skip---is-deployment)
                         ;; deployment ≡ 0 i.e. pure transfers
                         (begin    (account-same-nonce tx-skip---row-offset---recipient-account)
                                   (account-same-code tx-skip---row-offset---recipient-account)
                                   (account-same-deployment-number-and-status tx-skip---row-offset---recipient-account))))
 
-(defconstraint tx-skip---setting-recipient-account-row-nonce-for-trivial-deployments (:guard (tx-skip---precondition))
+(defconstraint tx-skip---recipient-account-row---trivial-deployments---nonce (:guard (tx-skip---precondition))
                (if-not-zero    (tx-skip---is-deployment)
                                ;; deployment ≡ 1 i.e. trivial deployments
                                (begin  ;; nonce
                                  (account-increment-nonce tx-skip---row-offset---recipient-account)
                                  (debug (vanishes! (shift account/NONCE tx-skip---row-offset---recipient-account))))))
 
-(defconstraint tx-skip---setting-recipient-account-row-code-for-trivial-deployments (:guard (tx-skip---precondition))
+(defconstraint tx-skip---recipient-account-row---trivial-deployments---code (:guard (tx-skip---precondition))
                (if-not-zero    (tx-skip---is-deployment)
                                ;; deployment ≡ 1 i.e. trivial deployments
                                (begin  ;; code
-                                 ;; ;; current code
-                                 (debug (eq! (shift account/HAS_CODE tx-skip---row-offset---recipient-account) 0))
-                                 (debug (eq! (shift account/CODE_HASH_HI tx-skip---row-offset---recipient-account)
-                                             EMPTY_KECCAK_HI))
-                                 (debug (eq! (shift account/CODE_HASH_LO tx-skip---row-offset---recipient-account)
-                                             EMPTY_KECCAK_LO))
-                                 (debug (eq! (shift account/CODE_SIZE tx-skip---row-offset---recipient-account) 0))
-                                 ;; ;; updated code
-                                 (eq! (shift account/HAS_CODE_NEW tx-skip---row-offset---recipient-account) 0)
-                                 (debug (eq! (shift account/CODE_HASH_HI tx-skip---row-offset---recipient-account)
-                                             EMPTY_KECCAK_HI))
-                                 (debug (eq! (shift account/CODE_HASH_LO tx-skip---row-offset---recipient-account)
-                                             EMPTY_KECCAK_LO))
-                                 (eq! (shift account/CODE_SIZE tx-skip---row-offset---recipient-account)
-                                      (shift transaction/INIT_CODE_SIZE tx-skip---row-offset---transaction-row)))))
+                                 ;; current code
+                                 (vanishes!         (shift account/HAS_CODE        tx-skip---row-offset---recipient-account))
+                                 (debug    (eq!     (shift account/CODE_HASH_HI    tx-skip---row-offset---recipient-account)    EMPTY_KECCAK_HI))
+                                 (debug    (eq!     (shift account/CODE_HASH_LO    tx-skip---row-offset---recipient-account)    EMPTY_KECCAK_LO))
+                                 (vanishes!         (shift account/CODE_SIZE       tx-skip---row-offset---recipient-account))
+                                 ;; updated code
+                                 (vanishes!         (shift account/HAS_CODE_NEW       tx-skip---row-offset---recipient-account))
+                                 (debug    (eq!     (shift account/CODE_HASH_HI       tx-skip---row-offset---recipient-account)    EMPTY_KECCAK_HI))
+                                 (debug    (eq!     (shift account/CODE_HASH_LO       tx-skip---row-offset---recipient-account)    EMPTY_KECCAK_LO))
+                                 (eq!               (shift account/CODE_SIZE          tx-skip---row-offset---recipient-account)
+                                                    (shift transaction/INIT_CODE_SIZE tx-skip---row-offset---transaction-row))
+                                 (debug (vanishes!  (shift account/CODE_SIZE          tx-skip---row-offset---recipient-account))))))
 
-(defconstraint tx-skip---setting-recipient-account-row-deployment-status-and-number-for-trivial-deployments (:guard (tx-skip---precondition))
+(defconstraint tx-skip---recipient-account-row---trivial-deployments---deployment-status-and-number (:guard (tx-skip---precondition))
                (if-not-zero    (tx-skip---is-deployment)
                                ;; deployment ≡ 1 i.e. trivial deployments
                                (begin  ;; deployment

@@ -86,7 +86,7 @@
 
 ;; message call case
 
-(defconstraint   tx-initialization---setting-recipient-account-row-nonce-code-and-deployment-status-message-call-tx     (:guard (tx-init---standard-precondition))
+(defconstraint   tx-initialization---recipient-account-row---message-call-tx---nonce-code-and-deployment-status     (:guard (tx-init---standard-precondition))
                  (if-zero (tx-initialization---is-deployment)
                           ;; deployment ≡ 0 i.e. smart contract call
                           (begin
@@ -94,7 +94,7 @@
                             (account-same-code                                         tx-init---row-offset---recipient-account-row)
                             (account-same-deployment-number-and-status                 tx-init---row-offset---recipient-account-row))))
 
-(defconstraint   tx-initialization---setting-recipient-account-row-address-trimming-for-message-call-transaction     (:guard (tx-init---standard-precondition))
+(defconstraint   tx-initialization---recipient-account-row---message-call-tx---address-trimming     (:guard (tx-init---standard-precondition))
                  (if-zero (tx-initialization---is-deployment)
                           ;; deployment ≡ 0 i.e. smart contract call
                           ;; trimming address
@@ -104,7 +104,7 @@
 
 ;; deployment case
 
-(defconstraint   tx-initialization---setting-recipient-account-row-nonce-deployment-tx       (:guard (tx-init---standard-precondition))
+(defconstraint   tx-initialization---recipient-account-row---deployment-transaction---nonce       (:guard (tx-init---standard-precondition))
                  (if-not-zero (tx-initialization---is-deployment)
                               ;; deployment ≡ 1 i.e. nontrivial deployments
                               (begin
@@ -112,24 +112,24 @@
                                 (account-increment-nonce                                   tx-init---row-offset---recipient-account-row)
                                 (debug (vanishes! (shift account/NONCE                     tx-init---row-offset---recipient-account-row))))))
 
-(defconstraint   tx-initialization---setting-recipient-account-row-code-deployment-tx       (:guard (tx-init---standard-precondition))
+(defconstraint   tx-initialization---recipient-account-row---deployment-transaction---code       (:guard (tx-init---standard-precondition))
                  (if-not-zero (tx-initialization---is-deployment)
                               ;; deployment ≡ 1 i.e. nontrivial deployments
                               (begin
                                 ;; code
-                                ;; ;; current code
-                                (debug (eq! (shift account/HAS_CODE                        tx-init---row-offset---recipient-account-row) 0))
-                                (debug (eq! (shift account/CODE_HASH_HI                    tx-init---row-offset---recipient-account-row) EMPTY_KECCAK_HI))
-                                (debug (eq! (shift account/CODE_HASH_LO                    tx-init---row-offset---recipient-account-row) EMPTY_KECCAK_LO))
-                                (debug (eq! (shift account/CODE_SIZE                       tx-init---row-offset---recipient-account-row) 0))
-                                ;; ;; updated code
-                                (eq!        (shift account/HAS_CODE_NEW                    tx-init---row-offset---recipient-account-row) 0)
-                                (debug (eq! (shift account/CODE_HASH_HI                    tx-init---row-offset---recipient-account-row) EMPTY_KECCAK_HI))
-                                (debug (eq! (shift account/CODE_HASH_LO                    tx-init---row-offset---recipient-account-row) EMPTY_KECCAK_LO))
-                                (eq!        (shift account/CODE_SIZE                       tx-init---row-offset---recipient-account-row)
-                                            (shift transaction/INIT_CODE_SIZE              tx-init---row-offset---transaction-row)))))
+                                ;; current code
+                                (vanishes!      (shift account/HAS_CODE               tx-init---row-offset---recipient-account-row))
+                                (debug     (eq! (shift account/CODE_HASH_HI           tx-init---row-offset---recipient-account-row) EMPTY_KECCAK_HI))
+                                (debug     (eq! (shift account/CODE_HASH_LO           tx-init---row-offset---recipient-account-row) EMPTY_KECCAK_LO))
+                                (vanishes!      (shift account/CODE_SIZE              tx-init---row-offset---recipient-account-row))
+                                ;; updated code
+                                (vanishes!      (shift account/HAS_CODE_NEW           tx-init---row-offset---recipient-account-row))
+                                (debug     (eq! (shift account/CODE_HASH_HI           tx-init---row-offset---recipient-account-row) EMPTY_KECCAK_HI))
+                                (debug     (eq! (shift account/CODE_HASH_LO           tx-init---row-offset---recipient-account-row) EMPTY_KECCAK_LO))
+                                (eq!            (shift account/CODE_SIZE              tx-init---row-offset---recipient-account-row)
+                                                (shift transaction/INIT_CODE_SIZE     tx-init---row-offset---transaction-row)))))
 
-(defconstraint   tx-initialization---setting-recipient-account-row-deployment-number-and-status-for-deployment-tx       (:guard (tx-init---standard-precondition))
+(defconstraint   tx-initialization---recipient-account-row---deployment-transaction---deployment-number-and-status       (:guard (tx-init---standard-precondition))
                  (if-not-zero (tx-initialization---is-deployment)
                               ;; deployment ≡ 1 i.e. nontrivial deployments
                               (begin
