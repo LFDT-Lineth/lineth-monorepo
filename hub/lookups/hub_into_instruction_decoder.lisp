@@ -21,8 +21,10 @@
 	     instdecoder.FAMILY_ADD
 	     instdecoder.FAMILY_BIN
 	     instdecoder.FAMILY_BATCH
+	     instdecoder.FAMILY_CALL
 	     instdecoder.FAMILY_CONTEXT
 	     instdecoder.FAMILY_COPY
+	     instdecoder.FAMILY_CREATE
 	     instdecoder.FAMILY_DUP
 	     instdecoder.FAMILY_EXT
 	     instdecoder.FAMILY_HALT
@@ -63,8 +65,10 @@
 	     (* hub.stack/ADD_FLAG                    (hub-into-instruction-decoder-trigger))
 	     (* hub.stack/BIN_FLAG                    (hub-into-instruction-decoder-trigger))
 	     (* hub.stack/BTC_FLAG                    (hub-into-instruction-decoder-trigger))
+	     (* hub.stack/CALL_FLAG                   (hub-into-instruction-decoder-trigger))
 	     (* hub.stack/CON_FLAG                    (hub-into-instruction-decoder-trigger))
 	     (* hub.stack/COPY_FLAG                   (hub-into-instruction-decoder-trigger))
+	     (* hub.stack/CREATE_FLAG                 (hub-into-instruction-decoder-trigger))
 	     (* hub.stack/DUP_FLAG                    (hub-into-instruction-decoder-trigger))
 	     (* hub.stack/EXT_FLAG                    (hub-into-instruction-decoder-trigger))
 	     (* hub.stack/HALT_FLAG                   (hub-into-instruction-decoder-trigger))
