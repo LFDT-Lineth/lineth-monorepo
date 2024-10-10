@@ -177,8 +177,7 @@
   GAS_CONST_G_COLD_SLOAD                    2100
   GAS_CONST_G_SSET                          20000
   GAS_CONST_G_SRESET                        2900
-  REFUND_CONST_R_SCLEAR                     15000
-  REFUND_CONST_R_SELFDESTRUCT               24000
+  REFUND_CONST_R_SCLEAR                     4800
   GAS_CONST_G_SELFDESTRUCT                  5000
   GAS_CONST_G_CREATE                        32000
   GAS_CONST_G_CODE_DEPOSIT                  200
