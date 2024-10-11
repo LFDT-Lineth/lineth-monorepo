@@ -100,11 +100,11 @@
                                  (vanishes!         (shift account/CODE_SIZE       tx-skip---row-offset---recipient-account))
                                  ;; updated code
                                  (vanishes!         (shift account/HAS_CODE_NEW       tx-skip---row-offset---recipient-account))
-                                 (debug    (eq!     (shift account/CODE_HASH_HI       tx-skip---row-offset---recipient-account)    EMPTY_KECCAK_HI))
-                                 (debug    (eq!     (shift account/CODE_HASH_LO       tx-skip---row-offset---recipient-account)    EMPTY_KECCAK_LO))
-                                 (eq!               (shift account/CODE_SIZE          tx-skip---row-offset---recipient-account)
+                                 (debug    (eq!     (shift account/CODE_HASH_HI_NEW   tx-skip---row-offset---recipient-account)    EMPTY_KECCAK_HI))
+                                 (debug    (eq!     (shift account/CODE_HASH_LO_NEW   tx-skip---row-offset---recipient-account)    EMPTY_KECCAK_LO))
+                                 (eq!               (shift account/CODE_SIZE_NEW      tx-skip---row-offset---recipient-account)
                                                     (shift transaction/INIT_CODE_SIZE tx-skip---row-offset---transaction-row))
-                                 (debug (vanishes!  (shift account/CODE_SIZE          tx-skip---row-offset---recipient-account))))))
+                                 (debug (vanishes!  (shift account/CODE_SIZE_NEW      tx-skip---row-offset---recipient-account))))))
 
 (defconstraint tx-skip---recipient-account-row---trivial-deployments---deployment-status-and-number (:guard (tx-skip---precondition))
                (if-not-zero    (tx-skip---is-deployment)

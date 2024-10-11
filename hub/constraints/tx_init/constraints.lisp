@@ -124,9 +124,9 @@
                                 (vanishes!      (shift account/CODE_SIZE              tx-init---row-offset---recipient-account-row))
                                 ;; updated code
                                 (vanishes!      (shift account/HAS_CODE_NEW           tx-init---row-offset---recipient-account-row))
-                                (debug     (eq! (shift account/CODE_HASH_HI           tx-init---row-offset---recipient-account-row) EMPTY_KECCAK_HI))
-                                (debug     (eq! (shift account/CODE_HASH_LO           tx-init---row-offset---recipient-account-row) EMPTY_KECCAK_LO))
-                                (eq!            (shift account/CODE_SIZE              tx-init---row-offset---recipient-account-row)
+                                (debug     (eq! (shift account/CODE_HASH_HI_NEW       tx-init---row-offset---recipient-account-row) EMPTY_KECCAK_HI))
+                                (debug     (eq! (shift account/CODE_HASH_LO_NEW       tx-init---row-offset---recipient-account-row) EMPTY_KECCAK_LO))
+                                (eq!            (shift account/CODE_SIZE_NEW          tx-init---row-offset---recipient-account-row)
                                                 (shift transaction/INIT_CODE_SIZE     tx-init---row-offset---transaction-row)))))
 
 (defconstraint   tx-initialization---recipient-account-row---deployment-transaction---deployment-number-and-status       (:guard (tx-init---standard-precondition))
