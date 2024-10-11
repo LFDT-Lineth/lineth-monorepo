@@ -67,7 +67,7 @@
 ;;                                 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defconstraint MXP_STAMP-increments ()
-  (did-inc! MXP_STAMP (* PEEK_AT_MISCELLANEOUS MXP_FLAG)))
+  (did-inc! MXP_STAMP (* PEEK_AT_MISCELLANEOUS misc/MXP_FLAG)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                                 ;;
@@ -75,6 +75,6 @@
 ;;                                 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defconstraint MMU_STAMP-increments ()
-  (did-inc! MMU_STAMP (* PEEK_AT_MISCELLANEOUS MMU_FLAG)))
+  (did-inc! MMU_STAMP (* PEEK_AT_MISCELLANEOUS misc/MMU_FLAG)))
 
 
