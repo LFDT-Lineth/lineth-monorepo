@@ -34,111 +34,52 @@
   ROW_OFFSET_EXTCODECOPY_NO_XAHOY_NO_REVERT_ACCOUNT_ROW      2
   ROW_OFFSET_EXTCODECOPY_NO_XAHOY_ACCOUNT_ROW                2)
 
-(defun (copy-inst-instruction)
-  stack/INSTRUCTION)
+(defun (copy-inst-instruction)       stack/INSTRUCTION)
 
 ;;
-(defun (copy-inst-is-CALLDATACOPY)
-  [stack/DEC_FLAG 1])
-
-(defun (copy-inst-is-RETURNDATACOPY)
-  [stack/DEC_FLAG 2])
-
-(defun (copy-inst-is-CODECOPY)
-  [stack/DEC_FLAG 3])
-
-(defun (copy-inst-is-EXTCODECOPY)
-  [stack/DEC_FLAG 4])
+(defun (copy-inst-is-CALLDATACOPY)      [stack/DEC_FLAG   1])
+(defun (copy-inst-is-RETURNDATACOPY)    [stack/DEC_FLAG   2])
+(defun (copy-inst-is-CODECOPY)          [stack/DEC_FLAG   3])
+(defun (copy-inst-is-EXTCODECOPY)       [stack/DEC_FLAG   4])
+;;
+(defun (copy-inst-target-offset-hi)     [stack/STACK_ITEM_VALUE_HI   1])
+(defun (copy-inst-target-offset-lo)     [stack/STACK_ITEM_VALUE_LO   1])
+(defun (copy-inst-size-hi)              [stack/STACK_ITEM_VALUE_HI   2])
+(defun (copy-inst-size-lo)              [stack/STACK_ITEM_VALUE_LO   2])
+(defun (copy-inst-source-offset-hi)     [stack/STACK_ITEM_VALUE_HI   3])
+(defun (copy-inst-source-offset-lo)     [stack/STACK_ITEM_VALUE_LO   3])
+(defun (copy-inst-raw-address-hi)       [stack/STACK_ITEM_VALUE_HI   4])
+(defun (copy-inst-raw-address-lo)       [stack/STACK_ITEM_VALUE_LO   4])
 
 ;;
-(defun (copy-inst-target-offset-hi)
-  [stack/STACK_ITEM_VALUE_HI 1])
-
-(defun (copy-inst-target-offset-lo)
-  [stack/STACK_ITEM_VALUE_LO 1])
-
-(defun (copy-inst-source-offset-hi)
-  [stack/STACK_ITEM_VALUE_HI 2])
-
-(defun (copy-inst-source-offset-lo)
-  [stack/STACK_ITEM_VALUE_LO 2])
-
-(defun (copy-inst-size-hi)
-  [stack/STACK_ITEM_VALUE_HI 3])
-
-(defun (copy-inst-size-lo)
-  [stack/STACK_ITEM_VALUE_LO 3])
-
-(defun (copy-inst-raw-address-hi)
-  [stack/STACK_ITEM_VALUE_HI 4])
-
-(defun (copy-inst-raw-address-lo)
-  [stack/STACK_ITEM_VALUE_LO 4])
+(defun (copy-inst-OOB-raises-return-data-exception)         (shift [misc/OOB_DATA 7] ROW_OFFSET_COPY_INST_MISCELLANEOUS_ROW)) ;; ""
+(defun (copy-inst-MXP-raises-memory-expansion-exception)    (shift misc/MXP_MXPX ROW_OFFSET_COPY_INST_MISCELLANEOUS_ROW))
+(defun (copy-inst-MXP-memory-expansion-gas)                 (shift misc/MXP_GAS_MXP ROW_OFFSET_COPY_INST_MISCELLANEOUS_ROW))
 
 ;;
-(defun (copy-inst-OOB-raises-return-data-exception)
-  (shift [misc/OOB_DATA 7] ROW_OFFSET_COPY_INST_MISCELLANEOUS_ROW))
-
-(defun (copy-inst-MXP-raises-memory-expansion-exception)
-  (shift misc/MXP_MXPX ROW_OFFSET_COPY_INST_MISCELLANEOUS_ROW))
-
-(defun (copy-inst-MXP-memory-expansion-gas)
-  (shift misc/MXP_GAS_MXP ROW_OFFSET_COPY_INST_MISCELLANEOUS_ROW))
+(defun (copy-inst-call-data-context)    (shift context/CALL_DATA_CONTEXT_NUMBER ROW_OFFSET_CALLDATACOPY_CONTEXT_ROW))
+(defun (copy-inst-call-data-offset)     (shift context/CALL_DATA_OFFSET ROW_OFFSET_CALLDATACOPY_CONTEXT_ROW))
+(defun (copy-inst-call-data-size)       (shift context/CALL_DATA_SIZE ROW_OFFSET_CALLDATACOPY_CONTEXT_ROW))
 
 ;;
-(defun (copy-inst-call-data-context)
-  (shift context/CALL_DATA_CONTEXT_NUMBER ROW_OFFSET_CALLDATACOPY_CONTEXT_ROW))
-
-(defun (copy-inst-call-data-offset)
-  (shift context/CALL_DATA_OFFSET ROW_OFFSET_CALLDATACOPY_CONTEXT_ROW))
-
-(defun (copy-inst-call-data-size)
-  (shift context/CALL_DATA_SIZE ROW_OFFSET_CALLDATACOPY_CONTEXT_ROW))
+(defun (copy-inst-return-data-context)    (shift context/RETURN_DATA_CONTEXT_NUMBER ROW_OFFSET_RETURNDATACOPY_CURRENT_CONTEXT_ROW))
+(defun (copy-inst-return-data-offset)     (shift context/RETURN_DATA_OFFSET ROW_OFFSET_RETURNDATACOPY_CURRENT_CONTEXT_ROW))
+(defun (copy-inst-return-data-size)       (shift context/RETURN_DATA_SIZE ROW_OFFSET_RETURNDATACOPY_CURRENT_CONTEXT_ROW))
 
 ;;
-(defun (copy-inst-return-data-context)
-  (shift context/RETURN_DATA_CONTEXT_NUMBER ROW_OFFSET_RETURNDATACOPY_CURRENT_CONTEXT_ROW))
-
-(defun (copy-inst-return-data-offset)
-  (shift context/RETURN_DATA_OFFSET ROW_OFFSET_RETURNDATACOPY_CURRENT_CONTEXT_ROW))
-
-(defun (copy-inst-return-data-size)
-  (shift context/RETURN_DATA_SIZE ROW_OFFSET_RETURNDATACOPY_CURRENT_CONTEXT_ROW))
+(defun (copy-inst-current-address-code-fragment-index)    (shift account/CODE_FRAGMENT_INDEX ROW_OFFSET_CODECOPY_NO_XAHOY_ACCOUNT_ROW))
+(defun (copy-inst-current-address-code-size)              (shift account/CODE_SIZE ROW_OFFSET_CODECOPY_NO_XAHOY_ACCOUNT_ROW))
 
 ;;
-(defun (copy-inst-current-address-code-fragment-index)
-  (shift account/CODE_FRAGMENT_INDEX ROW_OFFSET_CODECOPY_NO_XAHOY_ACCOUNT_ROW))
-
-(defun (copy-inst-current-address-code-size)
-  (shift account/CODE_SIZE ROW_OFFSET_CODECOPY_NO_XAHOY_ACCOUNT_ROW))
-
-;;
-(defun (copy-inst-exo-address-warmth)
-  (shift account/WARMTH ROW_OFFSET_EXTCODECOPY_NO_XAHOY_ACCOUNT_ROW))
-
-(defun (copy-inst-exo-address-has-code)
-  (shift account/HAS_CODE ROW_OFFSET_EXTCODECOPY_NO_XAHOY_ACCOUNT_ROW))
-
-(defun (copy-inst-exo-address-code-size)
-  (shift account/CODE_SIZE ROW_OFFSET_EXTCODECOPY_NO_XAHOY_ACCOUNT_ROW))
-
-(defun (copy-inst-exo-address-code-fragment-index)
-  (shift account/CODE_FRAGMENT_INDEX ROW_OFFSET_EXTCODECOPY_NO_XAHOY_ACCOUNT_ROW))
-
-(defun (copy-inst-standard-precondition)
-  (* PEEK_AT_STACK stack/COPY_FLAG (- 1 stack/SUX stack/SOX)))
-
-(defun (copy-inst-standard-CALLDATACOPY)
-  (* (copy-inst-standard-precondition) (copy-inst-is-CALLDATACOPY)))
-
-(defun (copy-inst-standard-RETURNDATACOPY)
-  (* (copy-inst-standard-precondition) (copy-inst-is-RETURNDATACOPY)))
-
-(defun (copy-inst-standard-CODECOPY)
-  (* (copy-inst-standard-precondition) (copy-inst-is-CODECOPY)))
-
-(defun (copy-inst-standard-EXTCODECOPY)
-  (* (copy-inst-standard-precondition) (copy-inst-is-EXTCODECOPY)))
+(defun (copy-inst-exo-address-warmth)                 (shift account/WARMTH ROW_OFFSET_EXTCODECOPY_NO_XAHOY_ACCOUNT_ROW))
+(defun (copy-inst-exo-address-has-code)               (shift account/HAS_CODE ROW_OFFSET_EXTCODECOPY_NO_XAHOY_ACCOUNT_ROW))
+(defun (copy-inst-exo-address-code-size)              (shift account/CODE_SIZE ROW_OFFSET_EXTCODECOPY_NO_XAHOY_ACCOUNT_ROW))
+(defun (copy-inst-exo-address-code-fragment-index)    (shift account/CODE_FRAGMENT_INDEX ROW_OFFSET_EXTCODECOPY_NO_XAHOY_ACCOUNT_ROW))
+(defun (copy-inst-standard-precondition)              (* PEEK_AT_STACK stack/COPY_FLAG (- 1 stack/SUX stack/SOX)))
+(defun (copy-inst-standard-CALLDATACOPY)              (* (copy-inst-standard-precondition) (copy-inst-is-CALLDATACOPY)))
+(defun (copy-inst-standard-RETURNDATACOPY)            (* (copy-inst-standard-precondition) (copy-inst-is-RETURNDATACOPY)))
+(defun (copy-inst-standard-CODECOPY)                  (* (copy-inst-standard-precondition) (copy-inst-is-CODECOPY)))
+(defun (copy-inst-standard-EXTCODECOPY)               (* (copy-inst-standard-precondition) (copy-inst-is-EXTCODECOPY)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                                ;;
@@ -219,14 +160,9 @@
           (* MISC_WEIGHT_MXP (copy-inst-trigger_MXP))
           (* MISC_WEIGHT_OOB (copy-inst-trigger_OOB)))))
 
-(defun (copy-inst-trigger_OOB)
-  (copy-inst-is-RETURNDATACOPY))
-
-(defun (copy-inst-trigger_MXP)
-  (- 1 stack/RDCX))
-
-(defun (copy-inst-trigger_MMU)
-  (* (- 1 XAHOY) (shift misc/MXP_MTNTOP ROW_OFFSET_COPY_INST_MISCELLANEOUS_ROW)))
+(defun (copy-inst-trigger_OOB)    (copy-inst-is-RETURNDATACOPY))
+(defun (copy-inst-trigger_MXP)    (- 1 stack/RDCX))
+(defun (copy-inst-trigger_MMU)    (* (- 1 XAHOY) (shift misc/MXP_MTNTOP ROW_OFFSET_COPY_INST_MISCELLANEOUS_ROW)))
 
 (defconstraint copy-misc-row-setting-OOB-instruction (:guard (copy-inst-standard-precondition))
   (if-not-zero (shift misc/OOB_FLAG ROW_OFFSET_COPY_INST_MISCELLANEOUS_ROW)
@@ -424,7 +360,9 @@
                             (execution-provides-empty-return-data ROW_OFFSET_EXTCODECOPY_OOGX_CONTEXT_ROW)))
 
 (defun (copy-inst-trigger-CFI)
-  (* (copy-inst-is-EXTCODECOPY) (copy-inst-trigger_MMU) (copy-inst-exo-address-has-code)))
+  (* (copy-inst-is-EXTCODECOPY)
+     (copy-inst-trigger_MMU)
+     (copy-inst-exo-address-has-code)))
 
 (defconstraint copy-inst-unexceptional-reverted-EXTCODECOPY-doing-account-row (:guard (copy-inst-standard-EXTCODECOPY))
                (if-not-zero (* (- 1 XAHOY) CONTEXT_WILL_REVERT)
@@ -477,5 +415,3 @@
                                    (account-turn-on-warmth ROW_OFFSET_EXTCODECOPY_NO_XAHOY_NO_REVERT_ACCOUNT_ROW)
                                    (account-same-marked-for-selfdestruct ROW_OFFSET_EXTCODECOPY_NO_XAHOY_NO_REVERT_ACCOUNT_ROW)
                                    (DOM-SUB-stamps---standard ROW_OFFSET_EXTCODECOPY_NO_XAHOY_NO_REVERT_ACCOUNT_ROW 0))))
-
-
