@@ -13,11 +13,11 @@
   )
   (
     0
-    (* gas.WCP_ARG1_LO (wcp-activation-flag))
+    (* gas.WCP_ARG1_LO (gas-into-wcp-activation-flag))
     0
-    (* gas.WCP_ARG2_LO (wcp-activation-flag))
-    (* gas.WCP_RES (wcp-activation-flag))
-    (* gas.WCP_INST (wcp-activation-flag))
+    (* gas.WCP_ARG2_LO (gas-into-wcp-activation-flag))
+    (* gas.WCP_RES     (gas-into-wcp-activation-flag))
+    (* gas.WCP_INST    (gas-into-wcp-activation-flag))
   ))
 
 
