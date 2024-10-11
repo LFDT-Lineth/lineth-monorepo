@@ -12,7 +12,6 @@
 (defconstraint dup-setting-NSR (:guard (dup-no-stack-exceptions))
                (eq! NSR CMC))
 
-;; TODO: remove or make debug
 (defconstraint dup-setting-peeking-flags (:guard (dup-no-stack-exceptions))
                (eq! NSR (* CMC (next PEEK_AT_CONTEXT))))
 

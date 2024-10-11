@@ -16,7 +16,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-(defconstraint    call-instruction---setting-up-the-second-phase-of-CALLs-to-precompiles    (:guard    (*    PEEK_AT_SCENARIO    (scenario-shorthand---CALL---precompile)))
+(defconstraint    call-instruction---setting-up-the-second-phase-of-CALLs-to-precompiles    (:guard PEEK_AT_SCENARIO)
                   (begin
                     (if-not-zero    scenario/CALL_PRC_FAILURE
                                     (precompile-scenario-row-setting    CALL_2nd_scenario_row_PRC_failure___row_offset))

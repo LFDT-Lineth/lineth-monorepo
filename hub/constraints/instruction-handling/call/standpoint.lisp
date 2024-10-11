@@ -35,7 +35,7 @@
                                   )
                   )
 
-(defconstraint   call-instruction---backward-setting-CREATE-instruction   ()
+(defconstraint   call-instruction---backward-setting-CALL-instruction   ()
                  (if-not-zero    PEEK_AT_SCENARIO
                                  (if-not-zero    (scenario-shorthand---CALL---sum)
                                                  (begin

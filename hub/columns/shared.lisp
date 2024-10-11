@@ -29,7 +29,7 @@
     ( CALLER_CONTEXT_NUMBER                     :i32 )
 
     ;;
-    ( CONTEXT_WILL_REVERT                       :binary@prove )
+    ( CONTEXT_WILL_REVERT                       :binary )
     ( CONTEXT_GETS_REVERTED                     :binary@prove )
     ( CONTEXT_SELF_REVERTS                      :binary@prove )
     ( CONTEXT_REVERT_STAMP                      :i32 )

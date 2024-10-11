@@ -33,16 +33,13 @@
                     stack/HALT_FLAG))
 
 (defconstraint setting-CMC-and-XAHOY ()
-               (begin (is-binary                                                     CMC)
-                      (is-binary                                                   XAHOY)
-                      (hub-stamp-constancy      (vanishes! (cmc_and_xahoy_weighted_sum)))
+               (begin (hub-stamp-constancy      (vanishes! (cmc_and_xahoy_weighted_sum)))
                       (if-zero TX_EXEC          (vanishes! (cmc_and_xahoy_weighted_sum)))
                       (if-not-zero PEEK_AT_STACK
                                    (begin (eq! (exception_flag_sum) XAHOY)
                                           (if-zero (cmc_sum)
                                                    (eq! CMC 0)
                                                    (eq! CMC 1))))))
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                          ;;
