@@ -3,7 +3,7 @@
 (defcolumns
     (STAMP   :i32)
     (OLI     :binary)
-    (CT      :i4)
+    (CT      :i3)
     (INST    :byte :display :opcode)
     ;
     (ARG_1_HI       :i128)

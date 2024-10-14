@@ -5,11 +5,11 @@
   ;; selector
   PEEK_AT_STACK
   (;; stack items
-   ( STACK_ITEM_HEIGHT       :array [4])
-   ( STACK_ITEM_VALUE_HI     :array [4])
-   ( STACK_ITEM_VALUE_LO     :array [4])
+   ( STACK_ITEM_HEIGHT       :array [4] :i11)   ;; stack items have heights 0 ≤ h ≤ 1024
+   ( STACK_ITEM_VALUE_HI     :array [4] :i128)
+   ( STACK_ITEM_VALUE_LO     :array [4] :i128)
    ( STACK_ITEM_POP          :array [4] :binary@prove)
-   ( STACK_ITEM_STAMP        :array [4])
+   ( STACK_ITEM_STAMP        :array [4] :i36)   ;; STAMP is :i32 and we consider 8 * STAMP + bla with 0 ≤ bla < 8
 
    ;; instruction and instruction decoded flags
    (INSTRUCTION              :display :opcode)
