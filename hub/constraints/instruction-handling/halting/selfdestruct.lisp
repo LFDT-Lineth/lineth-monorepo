@@ -159,11 +159,11 @@
                         (if-zero (selfdestruct-balance)
                                  ;; account has zero balance
                                  (eq! GAS_COST
-                                      (+ GAS_CONST_G_SELFDESTRUCT
+                                      (+ (shift    stack/STATIC_GAS    -1)
                                          (* (- 1 (selfdestruct-recipient-warmth)) GAS_CONST_G_COLD_ACCOUNT_ACCESS)))
                                  ;; account has nonzero balance
                                  (eq! GAS_COST
-                                      (+ GAS_CONST_G_SELFDESTRUCT
+                                      (+ (shift    stack/STATIC_GAS    -1)
                                          (* (- 1 (selfdestruct-recipient-warmth)) GAS_CONST_G_COLD_ACCOUNT_ACCESS)
                                          (* (- 1 (selfdestruct-recipient-exists)) GAS_CONST_G_NEW_ACCOUNT        ))))))
 
