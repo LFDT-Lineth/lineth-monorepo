@@ -79,11 +79,10 @@ MMU :=  $(wildcard mmu/*.lisp) \
 	$(wildcard mmu/instructions/*.lisp) \
 	$(wildcard mmu/instructions/any_to_ram_with_padding/*.lisp)
 
-MMIO := mmio/columns.lisp
+MMIO_COLUMNS := mmio/columns.lisp
 
-# TODO enable the MMIO constraint and lookup
-#	$(wildcard mmio/*lisp) \
-#	$(wildcard mmio/lookups/*lisp) \
+MMIO := $(wildcard mmio/*lisp) \
+	$(wildcard mmio/lookups/*lisp) \
 
 MXP := mxp
 
@@ -140,7 +139,7 @@ ZKEVM_MODULES := ${ALU} \
 		 ${LOG_DATA} \
 		 ${LOG_INFO} \
 		 ${MMU} \
-		 ${MMIO} \
+		 ${MMIO_COLUMNS} \
 		 ${MXP} \
 		 ${OOB} \
 		 ${RLP_ADDR} \
@@ -156,8 +155,9 @@ ZKEVM_MODULES := ${ALU} \
 		 ${TXN_DATA} \
 		 ${WCP}
 
-#		 ${HUB} \
 #		 ${GAS} \
+#		 ${HUB} \
+#                ${MMIO} \
 
 define.go: ${ZKEVM_MODULES}
 	${CORSET} wizard-iop -vv -o $@ ${ZKEVM_MODULES}
@@ -180,7 +180,7 @@ ZKEVM_MODULES_FOR_REFERENCE_TESTS := ${ALU} \
 				     ${LOG_DATA} \
 				     ${LOG_INFO} \
 				     ${MMU} \
-				     ${MMIO} \
+				     ${MMIO_COLUMNS} \
 				     ${MXP} \
 				     ${OOB} \
 				     ${RLP_ADDR} \
@@ -197,8 +197,9 @@ ZKEVM_MODULES_FOR_REFERENCE_TESTS := ${ALU} \
 				     ${WCP}
 
 #				     ${BLOCKDATA} \
-#		 		     ${HUB} \
 #				     ${GAS} \
+#				     ${HUB} \
+#               		     ${MMIO} \
 
 zkevm_for_reference_tests.bin: ${ZKEVM_MODULES_FOR_REFERENCE_TESTS}
 	${CORSET} compile -vv -o $@ ${ZKEVM_MODULES_FOR_REFERENCE_TESTS}

@@ -7,8 +7,8 @@
 	   ( 
 	     gas.GAS_ACTUAL
 	     gas.GAS_COST
-	     gas.XAHOY   ;; TODO @lorenzo: implement GAS module
-	     gas.OOGX
+	     gas.EXCEPTIONS_AHOY
+	     gas.OUT_OF_GAS_EXCEPTION
            )
            ;; source columns
 	   (

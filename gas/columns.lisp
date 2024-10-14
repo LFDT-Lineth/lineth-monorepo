@@ -5,7 +5,7 @@
   (FIRST                                :binary@prove)
   (CT                                   :i3)
   (CT_MAX                               :i3)
-  (GAS_ACTUAL                           :i32)
+  (GAS_ACTUAL                           :i64)
   (GAS_COST                             :i64)
   (EXCEPTIONS_AHOY                      :binary@prove)
   (OUT_OF_GAS_EXCEPTION                 :binary@prove)
