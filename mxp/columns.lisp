@@ -20,9 +20,9 @@
   (SIZE_2_LO :i128)
   (SIZE_1_HI :i128)
   (SIZE_2_HI :i128)
-  MAX_OFFSET_1
-  MAX_OFFSET_2
-  MAX_OFFSET
+  (MAX_OFFSET_1 :i128)
+  (MAX_OFFSET_2 :i128)
+  (MAX_OFFSET   :i128)
   (COMP :binary@prove)
   (BYTE :byte@prove :array [4])
   (BYTE_A :byte@prove)
