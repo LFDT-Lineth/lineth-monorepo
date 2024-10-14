@@ -34,6 +34,8 @@
                  (debug     (hub-stamp-constancy    CN_NEW))
                  (debug     (hub-stamp-constancy    PC))
                  (debug     (hub-stamp-constancy    PC_NEW))
+                 (debug     (hub-stamp-constancy    HEIGHT))
+                 (debug     (hub-stamp-constancy    HEIGHT_NEW))
                  (debug     (hub-stamp-constancy    GAS_EXPECTED))
                  (debug     (hub-stamp-constancy    GAS_ACTUAL))
                  (debug     (hub-stamp-constancy    GAS_COST))
