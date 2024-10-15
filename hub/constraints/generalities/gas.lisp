@@ -12,27 +12,49 @@
 ;;                                   ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defconstraint gas-column-constancies ()
+(defconstraint gas-columns---stamp-constancies ()
                (begin (hub-stamp-constancy GAS_EXPECTED)
                       (hub-stamp-constancy GAS_ACTUAL)
                       (hub-stamp-constancy GAS_COST)
                       (hub-stamp-constancy GAS_NEXT)))
 
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;                                      ;;
-;;   4.4.2 Gas transition constraints   ;;
-;;                                      ;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-
-(defconstraint setting-GAS_NEXT (:guard TX_EXEC)
+;; TODO: should be debug
+(defconstraint gas-columns---automatic-vanishing ()
                (begin
-                 (if-zero XAHOY
-                          (eq!       GAS_NEXT (- GAS_ACTUAL GAS_COST))
-                          (vanishes! GAS_NEXT))))
+                 (if-zero   TX_EXEC
+                            (begin
+                              (vanishes! GAS_EXPECTED)
+                              (vanishes! GAS_ACTUAL)
+                              (vanishes! GAS_COST)
+                              (vanishes! GAS_NEXT)))))
 
-(defconstraint gas-transitions-at-hub-stamp-transition ()
+(defun    (non-oog-exceptions)    (+    stack/SUX
+                                        stack/SOX
+                                        stack/MXPX
+                                        stack/OPCX
+                                        stack/RDCX
+                                        stack/JUMPX
+                                        stack/STATICX
+                                        stack/SSTOREX
+                                        stack/ICPX
+                                        stack/MAXCSX))
+
+(defconstraint gas-columns---GAS_COST-vanishes-for-non-OOG-exceptions (:perspective stack)
+               (if-not-zero   (non-oog-exceptions)
+                              (vanishes!    GAS_COST)))
+
+;; we drop the stack perspective preconditions
+(defconstraint gas-columns---GAS_NEXT-vanishes-in-case-of-an-exception ()
+               (if-not-zero    XAHOY
+                               (vanishes!    GAS_NEXT)))
+
+(defconstraint gas-columns---setting-GAS_NEXT-outside-of-CALLs-and-CREATEs (:perspective stack)
+               (if-zero  XAHOY
+                         (if-zero  (force-bool  (+  stack/CREATE_FLAG  stack/CALL_FLAG))
+                                   (eq!  GAS_NEXT (- GAS_ACTUAL GAS_COST)))))
+
+(defconstraint gas-columns---hub-stamp-transition-constraints ()
                (begin
                  (if-not-zero (will-remain-constant! HUB_STAMP)
                               (if-not-zero TX_EXEC
@@ -42,9 +64,3 @@
                                                           (if-eq CN_NEW CALLER_CN        (eq! (next GAS_ACTUAL) (+ (next GAS_EXPECTED) GAS_NEXT)))
                                                           (if-eq CN_NEW (+ 1 HUB_STAMP)  (eq! (next GAS_ACTUAL) (next GAS_EXPECTED)))))))))
                                                                                            ;; can't define GAS_EXPECTED at this level of generality
-
-;; WARNING
-;; this constraint will likely fail for exceptional instructions that only have static gas costs
-(defconstraint gas-cost-only-matters-in-case-of-OOGX-or-no-exceptions (:perspective stack)
-               (if-zero (force-bin (+ OOGX (- 1 XAHOY)))
-                        (vanishes! GAS_COST)))
