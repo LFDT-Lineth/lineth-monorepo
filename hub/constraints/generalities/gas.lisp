@@ -29,30 +29,15 @@
                               (vanishes! GAS_COST)
                               (vanishes! GAS_NEXT)))))
 
-(defun    (non-oog-exceptions)    (+    stack/SUX
-                                        stack/SOX
-                                        stack/MXPX
-                                        stack/OPCX
-                                        stack/RDCX
-                                        stack/JUMPX
-                                        stack/STATICX
-                                        stack/SSTOREX
-                                        stack/ICPX
-                                        stack/MAXCSX))
-
-(defconstraint gas-columns---GAS_COST-vanishes-for-non-OOG-exceptions (:perspective stack)
-               (if-not-zero   (non-oog-exceptions)
-                              (vanishes!    GAS_COST)))
-
 ;; we drop the stack perspective preconditions
 (defconstraint gas-columns---GAS_NEXT-vanishes-in-case-of-an-exception ()
-               (if-not-zero    XAHOY
-                               (vanishes!    GAS_NEXT)))
+               (if-not-zero   XAHOY
+                              (vanishes!   GAS_NEXT)))
 
 (defconstraint gas-columns---setting-GAS_NEXT-outside-of-CALLs-and-CREATEs (:perspective stack)
-               (if-zero  XAHOY
-                         (if-zero  (force-bool  (+  stack/CREATE_FLAG  stack/CALL_FLAG))
-                                   (eq!  GAS_NEXT (- GAS_ACTUAL GAS_COST)))))
+               (if-zero   XAHOY
+                          (if-zero   (force-bool  (+  stack/CREATE_FLAG  stack/CALL_FLAG))
+                                     (eq!  GAS_NEXT (- GAS_ACTUAL GAS_COST)))))
 
 (defconstraint gas-columns---hub-stamp-transition-constraints ()
                (begin
