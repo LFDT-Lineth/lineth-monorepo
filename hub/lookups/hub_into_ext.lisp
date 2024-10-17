@@ -19,10 +19,10 @@
     (
         (* [hub.stack/STACK_ITEM_VALUE_HI 1]     (hub-into-ext-activation-flag))
         (* [hub.stack/STACK_ITEM_VALUE_LO 1]     (hub-into-ext-activation-flag))
-        (* [hub.stack/STACK_ITEM_VALUE_HI 3]     (hub-into-ext-activation-flag))
-        (* [hub.stack/STACK_ITEM_VALUE_LO 3]     (hub-into-ext-activation-flag))
         (* [hub.stack/STACK_ITEM_VALUE_HI 2]     (hub-into-ext-activation-flag))
         (* [hub.stack/STACK_ITEM_VALUE_LO 2]     (hub-into-ext-activation-flag))
+        (* [hub.stack/STACK_ITEM_VALUE_HI 3]     (hub-into-ext-activation-flag))
+        (* [hub.stack/STACK_ITEM_VALUE_LO 3]     (hub-into-ext-activation-flag))
         (* [hub.stack/STACK_ITEM_VALUE_HI 4]     (hub-into-ext-activation-flag))
         (* [hub.stack/STACK_ITEM_VALUE_LO 4]     (hub-into-ext-activation-flag))
         (*  hub.stack/INSTRUCTION                (hub-into-ext-activation-flag))
