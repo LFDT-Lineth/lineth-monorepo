@@ -8,6 +8,11 @@
 
 (defun    (stack-exceptions)    (force-bool (+ stack/SUX stack/SOX)))
 
+(defconstraint    generalities---stack-height---hub-stamp-constancies   ()
+                  (begin
+                    (hub-stamp-constancy    HEIGHT)
+                    (hub-stamp-constancy    HEIGHT_NEW)))
+
 ;; TODO: this should be debug!
 (defconstraint    generalities---stack-height---automatic-vanishing   ()
                   (if-zero    TX_EXEC
