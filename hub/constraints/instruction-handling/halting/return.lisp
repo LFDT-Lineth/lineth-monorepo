@@ -17,30 +17,25 @@
 
 (defun  (return-instruction---standard-precondition)  (*  PEEK_AT_STACK
                                                           stack/HALT_FLAG
-                                                          [ stack/DEC_FLAG 1 ]
-                                                          (-  1  stack/SUX )
-                                                          ))
+                                                          (halting-instruction---is-RETURN)
+                                                          (-  1  stack/SUX )))
 
 (defun  (return-instruction---standard-scenario-row)  (* PEEK_AT_SCENARIO
-                                                (scenario-shorthand---RETURN---sum)))
+                                                         (scenario-shorthand---RETURN---sum)))
 
 (defconstraint   return-instruction---imposing-some-RETURN-scenario    (:guard  (return-instruction---standard-precondition))
                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-                 (begin  (eq!  (next  PEEK_AT_SCENARIO)             1)
-                         (eq!  (next  (scenario-shorthand---RETURN---sum))  1)
-                         )
-                 )
+                 (begin  (eq!  (next  PEEK_AT_SCENARIO)                     1)
+                         (eq!  (next  (scenario-shorthand---RETURN---sum))  1)))
 
 
 ;; Note: we could pack into a single constraint the last 3 constraints.
 (defconstraint   return-instruction---imposing-the-converse    (:guard  (return-instruction---standard-scenario-row))
                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-                 (begin  (eq!        (prev  PEEK_AT_STACK)         1)
-                         (eq!        (prev  stack/HALT_FLAG)       1)
-                         (eq!        (prev  [ stack/DEC_FLAG 1 ])  1)
-                         (vanishes!  (prev  (+ stack/SUX stack/SOX)))
-                         )
-                 )
+                 (begin  (eq!        (shift   PEEK_AT_STACK                       ROFF_RETURN___STACK_ROW)  1)
+                         (eq!        (shift   stack/HALT_FLAG                     ROFF_RETURN___STACK_ROW)  1)
+                         (eq!        (shift   (halting-instruction---is-RETURN)   ROFF_RETURN___STACK_ROW)  1)
+                         (vanishes!  (shift   (+ stack/SUX stack/SOX)             ROFF_RETURN___STACK_ROW))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                       ;;
@@ -52,48 +47,52 @@
 
 
 (defconst
-  RETURN_INSTRUCTION_STACK_ROW_OFFSET                                          -1
-  RETURN_INSTRUCTION_SCENARIO_ROW_OFFSET                                        0
-  RETURN_INSTRUCTION_CURRENT_CONTEXT_ROW_OFFSET                                 1
-  RETURN_INSTRUCTION_FIRST_MISC_ROW_OFFSET                                      2
-  RETURN_INSTRUCTION_SECOND_MISC_ROW_OFFSET_DEPLOY_AND_HASH                     3
-  RETURN_INSTRUCTION_EMPTY_DEPLOYMENT_FIRST_ACCOUNT_ROW_OFFSET                  3
-  RETURN_INSTRUCTION_EMPTY_DEPLOYMENT_SECOND_ACCOUNT_ROW_OFFSET                 4
-  RETURN_INSTRUCTION_NONEMPTY_DEPLOYMENT_FIRST_ACCOUNT_ROW_OFFSET               4
-  RETURN_INSTRUCTION_NONEMPTY_DEPLOYMENT_SECOND_ACCOUNT_ROW_OFFSET              5
-  RETURN_INSTRUCTION_CALLER_CONTEXT_ROW_OFFSET_EXCEPTION                        3
-  RETURN_INSTRUCTION_CALLER_CONTEXT_ROW_OFFSET_MESSAGE_CALL                     3
-  RETURN_INSTRUCTION_CALLER_CONTEXT_ROW_OFFSET_EMPTY_DEPLOYMENT_WILL_REVERT     5
-  RETURN_INSTRUCTION_CALLER_CONTEXT_ROW_OFFSET_EMPTY_DEPLOYMENT_WONT_REVERT     4
-  RETURN_INSTRUCTION_CALLER_CONTEXT_ROW_OFFSET_NONEMPTY_DEPLOYMENT_WILL_REVERT  6
-  RETURN_INSTRUCTION_CALLER_CONTEXT_ROW_OFFSET_NONEMPTY_DEPLOYMENT_WONT_REVERT  5
+  ROFF_RETURN___STACK_ROW                                        -1
+  ROFF_RETURN___SCENARIO_ROW                                      0
+  ROFF_RETURN___CURRENT_CONTEXT_ROW                               1
+  ROFF_RETURN___1ST_MISC_ROW                                      2
+  ROFF_RETURN___2ND_MISC_ROW___DEPLOY_AND_HASH                    3
+  ROFF_RETURN___EMPTY_DEPLOYMENT___1ST_ACCOUNT_ROW                3
+  ROFF_RETURN___EMPTY_DEPLOYMENT___2ND_ACCOUNT_ROW                4
+  ROFF_RETURN___NONEMPTY_DEPLOYMENT___1ST_ACCOUNT_ROW             4
+  ROFF_RETURN___NONEMPTY_DEPLOYMENT___2ND_ACCOUNT_ROW             5
+  ROFF_RETURN___CALLER_CONTEXT___EXCEPTION                        3
+  ROFF_RETURN___CALLER_CONTEXT___MESSAGE_CALL                     3
+  ROFF_RETURN___CALLER_CONTEXT___EMPTY_DEPLOYMENT_WILL_REVERT     5
+  ROFF_RETURN___CALLER_CONTEXT___EMPTY_DEPLOYMENT_WONT_REVERT     4
+  ROFF_RETURN___CALLER_CONTEXT___NONEMPTY_DEPLOYMENT_WILL_REVERT  6
+  ROFF_RETURN___CALLER_CONTEXT___NONEMPTY_DEPLOYMENT_WONT_REVERT  5
   )
 
 
 
-(defun (return-instruction---instruction)                                (shift   stack/INSTRUCTION                        RETURN_INSTRUCTION_STACK_ROW_OFFSET))
-(defun (return-instruction---exception-flag-MXPX)                        (shift   stack/MXPX                               RETURN_INSTRUCTION_STACK_ROW_OFFSET))
-(defun (return-instruction---exception-flag-OOGX)                        (shift   stack/OOGX                               RETURN_INSTRUCTION_STACK_ROW_OFFSET))
-(defun (return-instruction---exception-flag-MAXCSX)                      (shift   stack/MAXCSX                             RETURN_INSTRUCTION_STACK_ROW_OFFSET))
-(defun (return-instruction---exception-flag-ICPX)                        (shift   stack/ICPX                               RETURN_INSTRUCTION_STACK_ROW_OFFSET))
-(defun (return-instruction---offset-hi)                                  (shift   [ stack/STACK_ITEM_VALUE_HI 1]           RETURN_INSTRUCTION_STACK_ROW_OFFSET))
-(defun (return-instruction---offset-lo)                                  (shift   [ stack/STACK_ITEM_VALUE_LO 1]           RETURN_INSTRUCTION_STACK_ROW_OFFSET))
-(defun (return-instruction---size-hi)                                    (shift   [ stack/STACK_ITEM_VALUE_HI 2]           RETURN_INSTRUCTION_STACK_ROW_OFFSET))
-(defun (return-instruction---size-lo)                                    (shift   [ stack/STACK_ITEM_VALUE_LO 2]           RETURN_INSTRUCTION_STACK_ROW_OFFSET))
-(defun (return-instruction---code-hash-hi)                               (shift   stack/HASH_INFO_KECCAK_HI                RETURN_INSTRUCTION_STACK_ROW_OFFSET))
-(defun (return-instruction---code-hash-lo)                               (shift   stack/HASH_INFO_KECCAK_LO                RETURN_INSTRUCTION_STACK_ROW_OFFSET))
-(defun (return-instruction---is-root)                                    (shift   context/IS_ROOT                          RETURN_INSTRUCTION_CURRENT_CONTEXT_ROW_OFFSET))
-(defun (return-instruction---deployment-address-hi)                      (shift   context/BYTE_CODE_ADDRESS_HI             RETURN_INSTRUCTION_CURRENT_CONTEXT_ROW_OFFSET))
-(defun (return-instruction---deployment-address-lo)                      (shift   context/BYTE_CODE_ADDRESS_LO             RETURN_INSTRUCTION_CURRENT_CONTEXT_ROW_OFFSET))
-(defun (return-instruction---is-deployment)                              (shift   context/BYTE_CODE_DEPLOYMENT_STATUS      RETURN_INSTRUCTION_CURRENT_CONTEXT_ROW_OFFSET))
-(defun (return-instruction---return-at-offset)                           (shift   context/RETURN_AT_OFFSET                 RETURN_INSTRUCTION_CURRENT_CONTEXT_ROW_OFFSET))
-(defun (return-instruction---return-at-capacity)                         (shift   context/RETURN_AT_CAPACITY               RETURN_INSTRUCTION_CURRENT_CONTEXT_ROW_OFFSET))
-(defun (return-instruction---MXP-may-trigger-non-trivial-operation)      (shift   misc/MXP_MTNTOP                          RETURN_INSTRUCTION_FIRST_MISC_ROW_OFFSET))
-(defun (return-instruction---MXP-memory-expansion-gas)                   (shift   misc/MXP_GAS_MXP                         RETURN_INSTRUCTION_FIRST_MISC_ROW_OFFSET))
-(defun (return-instruction---MXP-memory-expansion-exception)             (shift   misc/MXP_MXPX                            RETURN_INSTRUCTION_FIRST_MISC_ROW_OFFSET))
-(defun (return-instruction---MMU-success-bit)                            (shift   misc/MMU_SUCCESS_BIT                     RETURN_INSTRUCTION_FIRST_MISC_ROW_OFFSET))
-(defun (return-instruction---OOB-max-code-size-exception)                (shift   [ misc/OOB_DATA 7 ]                      RETURN_INSTRUCTION_FIRST_MISC_ROW_OFFSET))
-(defun (return-instruction---deployment-code-fragment-index)             (shift   account/CODE_FRAGMENT_INDEX              RETURN_INSTRUCTION_NONEMPTY_DEPLOYMENT_FIRST_ACCOUNT_ROW_OFFSET))
+(defun (return-instruction---instruction)                             (shift   stack/INSTRUCTION                     ROFF_RETURN___STACK_ROW))
+(defun (return-instruction---exception-flag-MXPX)                     (shift   stack/MXPX                            ROFF_RETURN___STACK_ROW))
+(defun (return-instruction---exception-flag-OOGX)                     (shift   stack/OOGX                            ROFF_RETURN___STACK_ROW))
+(defun (return-instruction---exception-flag-MAXCSX)                   (shift   stack/MAXCSX                          ROFF_RETURN___STACK_ROW))
+(defun (return-instruction---exception-flag-ICPX)                     (shift   stack/ICPX                            ROFF_RETURN___STACK_ROW))
+(defun (return-instruction---offset-hi)                               (shift   [ stack/STACK_ITEM_VALUE_HI 1]        ROFF_RETURN___STACK_ROW))
+(defun (return-instruction---offset-lo)                               (shift   [ stack/STACK_ITEM_VALUE_LO 1]        ROFF_RETURN___STACK_ROW))
+(defun (return-instruction---size-hi)                                 (shift   [ stack/STACK_ITEM_VALUE_HI 2]        ROFF_RETURN___STACK_ROW))
+(defun (return-instruction---size-lo)                                 (shift   [ stack/STACK_ITEM_VALUE_LO 2]        ROFF_RETURN___STACK_ROW)) ;; ""
+(defun (return-instruction---code-hash-hi)                            (shift   stack/HASH_INFO_KECCAK_HI             ROFF_RETURN___STACK_ROW))
+(defun (return-instruction---code-hash-lo)                            (shift   stack/HASH_INFO_KECCAK_LO             ROFF_RETURN___STACK_ROW))
+(defun (return-instruction---is-root)                                 (shift   context/IS_ROOT                       ROFF_RETURN___CURRENT_CONTEXT_ROW))
+(defun (return-instruction---deployment-address-hi)                   (shift   context/BYTE_CODE_ADDRESS_HI          ROFF_RETURN___CURRENT_CONTEXT_ROW))
+(defun (return-instruction---deployment-address-lo)                   (shift   context/BYTE_CODE_ADDRESS_LO          ROFF_RETURN___CURRENT_CONTEXT_ROW))
+(defun (return-instruction---is-deployment)                           (shift   context/BYTE_CODE_DEPLOYMENT_STATUS   ROFF_RETURN___CURRENT_CONTEXT_ROW))
+(defun (return-instruction---return-at-offset)                        (shift   context/RETURN_AT_OFFSET              ROFF_RETURN___CURRENT_CONTEXT_ROW))
+(defun (return-instruction---return-at-capacity)                      (shift   context/RETURN_AT_CAPACITY            ROFF_RETURN___CURRENT_CONTEXT_ROW))
+(defun (return-instruction---MXP-memory-expansion-gas)                (shift   misc/MXP_GAS_MXP                      ROFF_RETURN___1ST_MISC_ROW))
+(defun (return-instruction---MXP-memory-expansion-exception)          (shift   misc/MXP_MXPX                         ROFF_RETURN___1ST_MISC_ROW))
+(defun (return-instruction---MXP-may-trigger-non-trivial-operation)   (shift   misc/MXP_MTNTOP                       ROFF_RETURN___1ST_MISC_ROW))
+(defun (return-instruction---MXP-size-1-is-nonzero-and-no-mxpx)       (shift   misc/MXP_SIZE_1_NONZERO_NO_MXPX       ROFF_RETURN___1ST_MISC_ROW))
+(defun (return-instruction---MMU-success-bit)                         (shift   misc/MMU_SUCCESS_BIT                  ROFF_RETURN___1ST_MISC_ROW))
+(defun (return-instruction---OOB-max-code-size-exception)             (shift   [ misc/OOB_DATA 7 ]                   ROFF_RETURN___1ST_MISC_ROW)) ;; ""
+(defun (return-instruction---deployment-code-fragment-index)          (shift   account/CODE_FRAGMENT_INDEX           ROFF_RETURN___NONEMPTY_DEPLOYMENT___1ST_ACCOUNT_ROW))
+
+(defun (return-instruction---type-safe-return-data-offset)            (*       (return-instruction---offset-lo)      (return-instruction---MXP-size-1-is-nonzero-and-no-mxpx)))
+(defun (return-instruction---type-safe-return-data-size)              (return-instruction---size-lo))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                         ;;
@@ -119,9 +118,7 @@
 
 (defconstraint   return-instruction---setting-stack-pattern               (:guard  (return-instruction---standard-scenario-row))
                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-                 (prev (stack-pattern-2-0)
-                       )
-                 )
+                 (shift    (stack-pattern-2-0)   ROFF_RETURN___STACK_ROW))
 
 (defconstraint   return-instruction---setting-NSR               (:guard  (return-instruction---standard-scenario-row))
                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -133,74 +130,79 @@
                            (* 5 scenario/RETURN_FROM_DEPLOYMENT_EMPTY_CODE_WONT_REVERT    )
                            (* 7 scenario/RETURN_FROM_DEPLOYMENT_NONEMPTY_CODE_WILL_REVERT )
                            (* 6 scenario/RETURN_FROM_DEPLOYMENT_NONEMPTY_CODE_WONT_REVERT )
-                           )
-                       )
-                 )
+                           )))
 
 (defconstraint   return-instruction---setting-peeking-flags                   (:guard  (return-instruction---standard-scenario-row))
                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                  (begin
                    (if-not-zero   scenario/RETURN_EXCEPTION
+                                  ;;;;;;;;;;;;;;;;;;;;;;;;;
                                   (eq!  NSR
-                                        (+  (shift  PEEK_AT_SCENARIO        RETURN_INSTRUCTION_SCENARIO_ROW_OFFSET)
-                                            (shift  PEEK_AT_CONTEXT         RETURN_INSTRUCTION_CURRENT_CONTEXT_ROW_OFFSET)
-                                            (shift  PEEK_AT_MISCELLANEOUS   RETURN_INSTRUCTION_FIRST_MISC_ROW_OFFSET)
-                                            (shift  PEEK_AT_CONTEXT         RETURN_INSTRUCTION_CALLER_CONTEXT_ROW_OFFSET_EXCEPTION))))
+                                        (+  (shift  PEEK_AT_SCENARIO        ROFF_RETURN___SCENARIO_ROW)
+                                            (shift  PEEK_AT_CONTEXT         ROFF_RETURN___CURRENT_CONTEXT_ROW)
+                                            (shift  PEEK_AT_MISCELLANEOUS   ROFF_RETURN___1ST_MISC_ROW)
+                                            (shift  PEEK_AT_CONTEXT         ROFF_RETURN___CALLER_CONTEXT___EXCEPTION))))
                    (if-not-zero   scenario/RETURN_FROM_MESSAGE_CALL_WILL_TOUCH_RAM
+                                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                                   (eq!  NSR
-                                        (+  (shift  PEEK_AT_SCENARIO        RETURN_INSTRUCTION_SCENARIO_ROW_OFFSET)
-                                            (shift  PEEK_AT_CONTEXT         RETURN_INSTRUCTION_CURRENT_CONTEXT_ROW_OFFSET)
-                                            (shift  PEEK_AT_MISCELLANEOUS   RETURN_INSTRUCTION_FIRST_MISC_ROW_OFFSET)
-                                            (shift  PEEK_AT_CONTEXT         RETURN_INSTRUCTION_CALLER_CONTEXT_ROW_OFFSET_MESSAGE_CALL))))
+                                        (+  (shift  PEEK_AT_SCENARIO        ROFF_RETURN___SCENARIO_ROW)
+                                            (shift  PEEK_AT_CONTEXT         ROFF_RETURN___CURRENT_CONTEXT_ROW)
+                                            (shift  PEEK_AT_MISCELLANEOUS   ROFF_RETURN___1ST_MISC_ROW)
+                                            (shift  PEEK_AT_CONTEXT         ROFF_RETURN___CALLER_CONTEXT___MESSAGE_CALL))))
                    (if-not-zero   scenario/RETURN_FROM_MESSAGE_CALL_WONT_TOUCH_RAM
+                                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                                   (eq!  NSR
-                                        (+  (shift  PEEK_AT_SCENARIO        RETURN_INSTRUCTION_SCENARIO_ROW_OFFSET)
-                                            (shift  PEEK_AT_CONTEXT         RETURN_INSTRUCTION_CURRENT_CONTEXT_ROW_OFFSET)
-                                            (shift  PEEK_AT_MISCELLANEOUS   RETURN_INSTRUCTION_FIRST_MISC_ROW_OFFSET)
-                                            (shift  PEEK_AT_CONTEXT         RETURN_INSTRUCTION_CALLER_CONTEXT_ROW_OFFSET_MESSAGE_CALL))))
+                                        (+  (shift  PEEK_AT_SCENARIO        ROFF_RETURN___SCENARIO_ROW)
+                                            (shift  PEEK_AT_CONTEXT         ROFF_RETURN___CURRENT_CONTEXT_ROW)
+                                            (shift  PEEK_AT_MISCELLANEOUS   ROFF_RETURN___1ST_MISC_ROW)
+                                            (shift  PEEK_AT_CONTEXT         ROFF_RETURN___CALLER_CONTEXT___MESSAGE_CALL))))
                    (if-not-zero   scenario/RETURN_FROM_DEPLOYMENT_EMPTY_CODE_WILL_REVERT
+                                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                                   (eq!  NSR
-                                        (+  (shift  PEEK_AT_SCENARIO        RETURN_INSTRUCTION_SCENARIO_ROW_OFFSET)
-                                            (shift  PEEK_AT_CONTEXT         RETURN_INSTRUCTION_CURRENT_CONTEXT_ROW_OFFSET)
-                                            (shift  PEEK_AT_MISCELLANEOUS   RETURN_INSTRUCTION_FIRST_MISC_ROW_OFFSET)
-                                            (shift  PEEK_AT_ACCOUNT         RETURN_INSTRUCTION_EMPTY_DEPLOYMENT_FIRST_ACCOUNT_ROW_OFFSET )
-                                            (shift  PEEK_AT_ACCOUNT         RETURN_INSTRUCTION_EMPTY_DEPLOYMENT_SECOND_ACCOUNT_ROW_OFFSET)
-                                            (shift  PEEK_AT_CONTEXT         RETURN_INSTRUCTION_CALLER_CONTEXT_ROW_OFFSET_EMPTY_DEPLOYMENT_WILL_REVERT))))
+                                        (+  (shift  PEEK_AT_SCENARIO        ROFF_RETURN___SCENARIO_ROW)
+                                            (shift  PEEK_AT_CONTEXT         ROFF_RETURN___CURRENT_CONTEXT_ROW)
+                                            (shift  PEEK_AT_MISCELLANEOUS   ROFF_RETURN___1ST_MISC_ROW)
+                                            (shift  PEEK_AT_ACCOUNT         ROFF_RETURN___EMPTY_DEPLOYMENT___1ST_ACCOUNT_ROW)
+                                            (shift  PEEK_AT_ACCOUNT         ROFF_RETURN___EMPTY_DEPLOYMENT___2ND_ACCOUNT_ROW)
+                                            (shift  PEEK_AT_CONTEXT         ROFF_RETURN___CALLER_CONTEXT___EMPTY_DEPLOYMENT_WILL_REVERT))))
                    (if-not-zero   scenario/RETURN_FROM_DEPLOYMENT_EMPTY_CODE_WONT_REVERT
+                                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                                   (eq!  NSR
-                                        (+  (shift  PEEK_AT_SCENARIO        RETURN_INSTRUCTION_SCENARIO_ROW_OFFSET)
-                                            (shift  PEEK_AT_CONTEXT         RETURN_INSTRUCTION_CURRENT_CONTEXT_ROW_OFFSET)
-                                            (shift  PEEK_AT_MISCELLANEOUS   RETURN_INSTRUCTION_FIRST_MISC_ROW_OFFSET)
-                                            (shift  PEEK_AT_ACCOUNT         RETURN_INSTRUCTION_EMPTY_DEPLOYMENT_FIRST_ACCOUNT_ROW_OFFSET )
-                                            (shift  PEEK_AT_CONTEXT         RETURN_INSTRUCTION_CALLER_CONTEXT_ROW_OFFSET_EMPTY_DEPLOYMENT_WONT_REVERT))))
+                                        (+  (shift  PEEK_AT_SCENARIO        ROFF_RETURN___SCENARIO_ROW)
+                                            (shift  PEEK_AT_CONTEXT         ROFF_RETURN___CURRENT_CONTEXT_ROW)
+                                            (shift  PEEK_AT_MISCELLANEOUS   ROFF_RETURN___1ST_MISC_ROW)
+                                            (shift  PEEK_AT_ACCOUNT         ROFF_RETURN___EMPTY_DEPLOYMENT___1ST_ACCOUNT_ROW)
+                                            (shift  PEEK_AT_CONTEXT         ROFF_RETURN___CALLER_CONTEXT___EMPTY_DEPLOYMENT_WONT_REVERT))))
                    (if-not-zero   scenario/RETURN_FROM_DEPLOYMENT_NONEMPTY_CODE_WILL_REVERT
+                                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                                   (eq!  NSR
-                                        (+  (shift  PEEK_AT_SCENARIO        RETURN_INSTRUCTION_SCENARIO_ROW_OFFSET)
-                                            (shift  PEEK_AT_CONTEXT         RETURN_INSTRUCTION_CURRENT_CONTEXT_ROW_OFFSET)
-                                            (shift  PEEK_AT_MISCELLANEOUS   RETURN_INSTRUCTION_FIRST_MISC_ROW_OFFSET)
-                                            (shift  PEEK_AT_MISCELLANEOUS   RETURN_INSTRUCTION_SECOND_MISC_ROW_OFFSET_DEPLOY_AND_HASH)
-                                            (shift  PEEK_AT_ACCOUNT         RETURN_INSTRUCTION_NONEMPTY_DEPLOYMENT_FIRST_ACCOUNT_ROW_OFFSET )
-                                            (shift  PEEK_AT_ACCOUNT         RETURN_INSTRUCTION_NONEMPTY_DEPLOYMENT_SECOND_ACCOUNT_ROW_OFFSET)
-                                            (shift  PEEK_AT_CONTEXT         RETURN_INSTRUCTION_CALLER_CONTEXT_ROW_OFFSET_NONEMPTY_DEPLOYMENT_WILL_REVERT))))
+                                        (+  (shift  PEEK_AT_SCENARIO        ROFF_RETURN___SCENARIO_ROW)
+                                            (shift  PEEK_AT_CONTEXT         ROFF_RETURN___CURRENT_CONTEXT_ROW)
+                                            (shift  PEEK_AT_MISCELLANEOUS   ROFF_RETURN___1ST_MISC_ROW)
+                                            (shift  PEEK_AT_MISCELLANEOUS   ROFF_RETURN___2ND_MISC_ROW___DEPLOY_AND_HASH)
+                                            (shift  PEEK_AT_ACCOUNT         ROFF_RETURN___NONEMPTY_DEPLOYMENT___1ST_ACCOUNT_ROW)
+                                            (shift  PEEK_AT_ACCOUNT         ROFF_RETURN___NONEMPTY_DEPLOYMENT___2ND_ACCOUNT_ROW)
+                                            (shift  PEEK_AT_CONTEXT         ROFF_RETURN___CALLER_CONTEXT___NONEMPTY_DEPLOYMENT_WILL_REVERT))))
                    (if-not-zero   scenario/RETURN_FROM_DEPLOYMENT_NONEMPTY_CODE_WONT_REVERT
+                                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                                   (eq!  NSR
-                                        (+  (shift  PEEK_AT_SCENARIO        RETURN_INSTRUCTION_SCENARIO_ROW_OFFSET)
-                                            (shift  PEEK_AT_CONTEXT         RETURN_INSTRUCTION_CURRENT_CONTEXT_ROW_OFFSET)
-                                            (shift  PEEK_AT_MISCELLANEOUS   RETURN_INSTRUCTION_FIRST_MISC_ROW_OFFSET)
-                                            (shift  PEEK_AT_MISCELLANEOUS   RETURN_INSTRUCTION_SECOND_MISC_ROW_OFFSET_DEPLOY_AND_HASH)
-                                            (shift  PEEK_AT_ACCOUNT         RETURN_INSTRUCTION_NONEMPTY_DEPLOYMENT_FIRST_ACCOUNT_ROW_OFFSET )
-                                            (shift  PEEK_AT_CONTEXT         RETURN_INSTRUCTION_CALLER_CONTEXT_ROW_OFFSET_NONEMPTY_DEPLOYMENT_WONT_REVERT))))
+                                        (+  (shift  PEEK_AT_SCENARIO        ROFF_RETURN___SCENARIO_ROW)
+                                            (shift  PEEK_AT_CONTEXT         ROFF_RETURN___CURRENT_CONTEXT_ROW)
+                                            (shift  PEEK_AT_MISCELLANEOUS   ROFF_RETURN___1ST_MISC_ROW)
+                                            (shift  PEEK_AT_MISCELLANEOUS   ROFF_RETURN___2ND_MISC_ROW___DEPLOY_AND_HASH)
+                                            (shift  PEEK_AT_ACCOUNT         ROFF_RETURN___NONEMPTY_DEPLOYMENT___1ST_ACCOUNT_ROW)
+                                            (shift  PEEK_AT_CONTEXT         ROFF_RETURN___CALLER_CONTEXT___NONEMPTY_DEPLOYMENT_WONT_REVERT))))
                    )
                  )
 
 (defconstraint   return-instruction---first-context-row                   (:guard  (return-instruction---standard-scenario-row))
-                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-                 (read-context-data   RETURN_INSTRUCTION_CURRENT_CONTEXT_ROW_OFFSET
+                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                 (read-context-data   ROFF_RETURN___CURRENT_CONTEXT_ROW
                                       CONTEXT_NUMBER)
                  )
 
 (defconstraint   return-instruction---refining-the-return-scenario        (:guard  (return-instruction---standard-scenario-row))
-                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                  (begin
                    (eq!  scenario/RETURN_EXCEPTION  XAHOY)
                    (if-not-zero  (scenario-shorthand---RETURN---unexceptional)
@@ -215,69 +217,58 @@
                                            (eq!  scenario/RETURN_FROM_MESSAGE_CALL_WONT_TOUCH_RAM  1)
                                            ;; touch_ram_expression ≠ 0
                                            (eq!  scenario/RETURN_FROM_MESSAGE_CALL_WILL_TOUCH_RAM  1)
-                                           )
-                                 )
-                   )
-                 )
+                                           ))))
 
 (defun  (return-touch-ram-expression)  (*  (-  1  (return-instruction---is-root))
                                            (return-instruction---MXP-may-trigger-non-trivial-operation)
                                            (return-instruction---return-at-capacity)
-                                           )
-  )
+                                           ))
 
 (defconstraint return-instruction---setting-the-first-misc-row  (:guard  (return-instruction---standard-scenario-row))
-               ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-               (eq!   (weighted-MISC-flag-sum   RETURN_INSTRUCTION_FIRST_MISC_ROW_OFFSET)
+               ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+               (eq!   (weighted-MISC-flag-sum   ROFF_RETURN___1ST_MISC_ROW)
                       (+   (*   MISC_WEIGHT_MMU   (return-instruction---trigger_MMU))
                            (*   MISC_WEIGHT_MXP   (return-instruction---trigger_MXP))
                            (*   MISC_WEIGHT_OOB   (return-instruction---trigger_OOB))
-                           )
-                      )
-               )
+                           )))
 
 (defun  (return-instruction---trigger_MXP)                        1)
 (defun  (return-instruction---trigger_OOB)                        (+  (return-instruction---exception-flag-MAXCSX)   (scenario-shorthand---RETURN---nonempty-deployment)))
 (defun  (return-instruction---trigger_MMU)                        (+  (return-instruction---check-first-byte)        (return-instruction---write-return-data-to-caller-ram)))
 (defun  (return-instruction---check-first-byte)                   (+  (return-instruction---exception-flag-ICPX)     (scenario-shorthand---RETURN---nonempty-deployment)))
 (defun  (return-instruction---write-return-data-to-caller-ram)    scenario/RETURN_FROM_MESSAGE_CALL_WILL_TOUCH_RAM)
-(defun  (return-instruction---trigger_HASHINFO)                   (scenario-shorthand---RETURN---nonempty-deployment))
+(defun  (return-instruction---trigger_HASHINFO)                   (scenario-shorthand---RETURN---nonempty-deployment)) ;; ""
 
 (defconstraint   return-instruction---setting-trigger_HASHINFO           (:guard   (return-instruction---standard-scenario-row))
-                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-                 (eq!   (shift   stack/HASH_INFO_FLAG   RETURN_INSTRUCTION_STACK_ROW_OFFSET)
+                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                 (eq!   (shift   stack/HASH_INFO_FLAG   ROFF_RETURN___STACK_ROW)
                         (return-instruction---trigger_HASHINFO)
-                        )
-                 )
-
+                        ))
 (defconstraint   return-instruction---setting-MXP-data              (:guard   (return-instruction---standard-scenario-row))
-                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-                 (set-MXP-instruction-type-4   RETURN_INSTRUCTION_FIRST_MISC_ROW_OFFSET   ;; row offset kappa
+                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                 (set-MXP-instruction-type-4   ROFF_RETURN___1ST_MISC_ROW   ;; row offset kappa
                                                (return-instruction---instruction)           ;; instruction
                                                (return-instruction---is-deployment)         ;; bit modifying the behaviour of RETURN pricing
                                                (return-instruction---offset-hi)             ;; offset high
                                                (return-instruction---offset-lo)             ;; offset low
                                                (return-instruction---size-hi)               ;; size high
                                                (return-instruction---size-lo)               ;; size low
-                                               )
-                 )
+                                               ))
 
 (defconstraint   return-instruction---setting-OOB-data              (:guard   (return-instruction---standard-scenario-row))
-                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-                 (if-not-zero   (shift   misc/OOB_FLAG     RETURN_INSTRUCTION_FIRST_MISC_ROW_OFFSET)
-                                (set-OOB-instruction---deployment   RETURN_INSTRUCTION_FIRST_MISC_ROW_OFFSET   ;; offset
+                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                 (if-not-zero   (shift   misc/OOB_FLAG     ROFF_RETURN___1ST_MISC_ROW)
+                                (set-OOB-instruction---deployment   ROFF_RETURN___1ST_MISC_ROW   ;; offset
                                                                     (return-instruction---size-hi)             ;; code size hi
                                                                     (return-instruction---size-lo)             ;; code size lo
-                                                                    )
-                                )
-                 )
+                                                                    )))
 
 
 (defconstraint   return-instruction---setting-MMU-data-first-call   (:guard   (return-instruction---standard-scenario-row))
-                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                  (begin
                    (if-not-zero   (return-instruction---check-first-byte)
-                                  (set-MMU-instruction---invalid-code-prefix    RETURN_INSTRUCTION_FIRST_MISC_ROW_OFFSET       ;; offset
+                                  (set-MMU-instruction---invalid-code-prefix    ROFF_RETURN___1ST_MISC_ROW       ;; offset
                                                                                 CONTEXT_NUMBER                         ;; source ID
                                                                                 ;; tgt_id                              ;; target ID
                                                                                 ;; aux_id                              ;; auxiliary ID
@@ -294,7 +285,7 @@
                                                                                 ;; phase                               ;; phase
                                                                                 ))
                    (if-not-zero   (return-instruction---write-return-data-to-caller-ram)
-                                  (set-MMU-instruction---ram-to-ram-sans-padding   RETURN_INSTRUCTION_FIRST_MISC_ROW_OFFSET   ;; offset
+                                  (set-MMU-instruction---ram-to-ram-sans-padding   ROFF_RETURN___1ST_MISC_ROW   ;; offset
                                                                                    CONTEXT_NUMBER                      ;; source ID
                                                                                    CALLER_CONTEXT_NUMBER               ;; target ID
                                                                                    ;; aux_id                              ;; auxiliary ID
@@ -312,12 +303,12 @@
                                                                                    ))))
 
 (defconstraint   return-instruction---justifying-the-MXPX           (:guard   (return-instruction---standard-scenario-row))
-                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                  (eq!   (return-instruction---exception-flag-MXPX)
                         (return-instruction---MXP-memory-expansion-exception)))
 
 (defconstraint   return-instruction---justifying-the-ICPX           (:guard   (return-instruction---standard-scenario-row))
-                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                  (if-zero   (force-bool   (return-instruction---check-first-byte))
                             ;; check_first_byte ≡ 0
                             (vanishes!    (return-instruction---exception-flag-ICPX))
@@ -326,8 +317,8 @@
                                           (return-instruction---MMU-success-bit))))
 
 (defconstraint   return-instruction---justifying-the-MAXCSX         (:guard   (return-instruction---standard-scenario-row))
-                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-                 (if-zero   (shift   misc/OOB_FLAG   RETURN_INSTRUCTION_FIRST_MISC_ROW_OFFSET)
+                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                 (if-zero   (shift   misc/OOB_FLAG   ROFF_RETURN___1ST_MISC_ROW)
                             ;; no OOB call
                             (vanishes!   (return-instruction---exception-flag-MAXCSX))
                             ;; OOB was called
@@ -335,7 +326,7 @@
                                          (return-instruction---OOB-max-code-size-exception))))
 
 (defconstraint   return-instruction---setting-the-gas-cost          (:guard   (return-instruction---standard-scenario-row))
-                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                  (if-zero   (force-bin   (return-instruction---gas-cost-required))
                             ;; we don't require the computation of gas cost
                             (vanishes!   GAS_COST)
@@ -358,7 +349,7 @@
 ;; redundant
 (defconstraint   return-instruction---resetting-the-caller-contexts-return-data          (:guard   (return-instruction---exception-scenario))
                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-                 (execution-provides-empty-return-data   RETURN_INSTRUCTION_CALLER_CONTEXT_ROW_OFFSET_EXCEPTION))
+                 (execution-provides-empty-return-data   ROFF_RETURN___CALLER_CONTEXT___EXCEPTION))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                                  ;;
@@ -372,19 +363,17 @@
                  (if-not-zero   (force-bin   (return-instruction---is-root))
                                 ;; IS_ROOT = 1
                                 (read-context-data
-                                  RETURN_INSTRUCTION_CALLER_CONTEXT_ROW_OFFSET_MESSAGE_CALL ;; row offset
+                                  ROFF_RETURN___CALLER_CONTEXT___MESSAGE_CALL ;; row offset
                                   CONTEXT_NUMBER                                     ;; context number
                                   )
                                 ;; IS_ROOT = 0
                                 (provide-return-data 
-                                  RETURN_INSTRUCTION_CALLER_CONTEXT_ROW_OFFSET_MESSAGE_CALL ;; row offset
-                                  CALLER_CONTEXT_NUMBER                              ;; receiver context
-                                  CONTEXT_NUMBER                                     ;; provider context
-                                  (return-instruction---offset-lo)                     ;; rdo
-                                  (return-instruction---size-lo)                       ;; rds
-                                  )
-                                )
-                 )
+                                  ROFF_RETURN___CALLER_CONTEXT___MESSAGE_CALL ;; row offset
+                                  CALLER_CONTEXT_NUMBER                                     ;; receiver context
+                                  CONTEXT_NUMBER                                            ;; provider context
+                                  (return-instruction---type-safe-return-data-offset)       ;; (type safe) rdo
+                                  (return-instruction---type-safe-return-data-size)         ;; (type safe) rds
+                                  )))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                                      ;;
@@ -396,66 +385,59 @@
 
 (defconstraint   return-instruction---first-account-row-for-empty-deployments   (:guard   (return-instruction---empty-deployment-scenario))
                  (begin
-                   (eq!   (shift   account/ADDRESS_HI                         RETURN_INSTRUCTION_EMPTY_DEPLOYMENT_FIRST_ACCOUNT_ROW_OFFSET)    (return-instruction---deployment-address-hi))
-                   (eq!   (shift   account/ADDRESS_LO                         RETURN_INSTRUCTION_EMPTY_DEPLOYMENT_FIRST_ACCOUNT_ROW_OFFSET)    (return-instruction---deployment-address-lo))
-                   (account-same-balance                                      RETURN_INSTRUCTION_EMPTY_DEPLOYMENT_FIRST_ACCOUNT_ROW_OFFSET)
-                   (account-same-nonce                                        RETURN_INSTRUCTION_EMPTY_DEPLOYMENT_FIRST_ACCOUNT_ROW_OFFSET)
-                   (eq!   (shift   account/CODE_SIZE_NEW                      RETURN_INSTRUCTION_EMPTY_DEPLOYMENT_FIRST_ACCOUNT_ROW_OFFSET)    (return-instruction---size-lo))
-                   (eq!   (shift   account/CODE_HASH_HI_NEW                   RETURN_INSTRUCTION_EMPTY_DEPLOYMENT_FIRST_ACCOUNT_ROW_OFFSET)    EMPTY_KECCAK_HI)
-                   (eq!   (shift   account/CODE_HASH_LO_NEW                   RETURN_INSTRUCTION_EMPTY_DEPLOYMENT_FIRST_ACCOUNT_ROW_OFFSET)    EMPTY_KECCAK_LO)
-                   (account-same-deployment-number                            RETURN_INSTRUCTION_EMPTY_DEPLOYMENT_FIRST_ACCOUNT_ROW_OFFSET)
-                   (eq!   (shift   account/DEPLOYMENT_STATUS_NEW              RETURN_INSTRUCTION_EMPTY_DEPLOYMENT_FIRST_ACCOUNT_ROW_OFFSET)   0)
-                   (account-same-warmth                                       RETURN_INSTRUCTION_EMPTY_DEPLOYMENT_FIRST_ACCOUNT_ROW_OFFSET)
-                   (account-same-marked-for-selfdestruct                      RETURN_INSTRUCTION_EMPTY_DEPLOYMENT_FIRST_ACCOUNT_ROW_OFFSET)
-                   (vanishes!   (shift   account/ROMLEX_FLAG                  RETURN_INSTRUCTION_EMPTY_DEPLOYMENT_FIRST_ACCOUNT_ROW_OFFSET))
-                   (vanishes!   (shift   account/TRM_FLAG                     RETURN_INSTRUCTION_EMPTY_DEPLOYMENT_FIRST_ACCOUNT_ROW_OFFSET))
-                   (DOM-SUB-stamps---standard                                 RETURN_INSTRUCTION_EMPTY_DEPLOYMENT_FIRST_ACCOUNT_ROW_OFFSET    0)
+                   (eq!   (shift   account/ADDRESS_HI                         ROFF_RETURN___EMPTY_DEPLOYMENT___1ST_ACCOUNT_ROW)    (return-instruction---deployment-address-hi))
+                   (eq!   (shift   account/ADDRESS_LO                         ROFF_RETURN___EMPTY_DEPLOYMENT___1ST_ACCOUNT_ROW)    (return-instruction---deployment-address-lo))
+                   (account-same-balance                                      ROFF_RETURN___EMPTY_DEPLOYMENT___1ST_ACCOUNT_ROW)
+                   (account-same-nonce                                        ROFF_RETURN___EMPTY_DEPLOYMENT___1ST_ACCOUNT_ROW)
+                   (eq!   (shift   account/CODE_SIZE_NEW                      ROFF_RETURN___EMPTY_DEPLOYMENT___1ST_ACCOUNT_ROW)    (return-instruction---size-lo))
+                   (eq!   (shift   account/CODE_HASH_HI_NEW                   ROFF_RETURN___EMPTY_DEPLOYMENT___1ST_ACCOUNT_ROW)    EMPTY_KECCAK_HI)
+                   (eq!   (shift   account/CODE_HASH_LO_NEW                   ROFF_RETURN___EMPTY_DEPLOYMENT___1ST_ACCOUNT_ROW)    EMPTY_KECCAK_LO)
+                   (account-same-deployment-number                            ROFF_RETURN___EMPTY_DEPLOYMENT___1ST_ACCOUNT_ROW)
+                   (eq!   (shift   account/DEPLOYMENT_STATUS_NEW              ROFF_RETURN___EMPTY_DEPLOYMENT___1ST_ACCOUNT_ROW)   0)
+                   (account-same-warmth                                       ROFF_RETURN___EMPTY_DEPLOYMENT___1ST_ACCOUNT_ROW)
+                   (account-same-marked-for-selfdestruct                      ROFF_RETURN___EMPTY_DEPLOYMENT___1ST_ACCOUNT_ROW)
+                   (vanishes!   (shift   account/ROMLEX_FLAG                  ROFF_RETURN___EMPTY_DEPLOYMENT___1ST_ACCOUNT_ROW))
+                   (vanishes!   (shift   account/TRM_FLAG                     ROFF_RETURN___EMPTY_DEPLOYMENT___1ST_ACCOUNT_ROW))
+                   (DOM-SUB-stamps---standard                                 ROFF_RETURN___EMPTY_DEPLOYMENT___1ST_ACCOUNT_ROW    0)
                    ;; debug constraints
-                   (debug   (vanishes!   (shift   account/CODE_SIZE_NEW       RETURN_INSTRUCTION_EMPTY_DEPLOYMENT_FIRST_ACCOUNT_ROW_OFFSET)))
-                   (debug   (eq!         (shift   account/CODE_HASH_HI        RETURN_INSTRUCTION_EMPTY_DEPLOYMENT_FIRST_ACCOUNT_ROW_OFFSET)    EMPTY_KECCAK_HI))
-                   (debug   (eq!         (shift   account/CODE_HASH_LO        RETURN_INSTRUCTION_EMPTY_DEPLOYMENT_FIRST_ACCOUNT_ROW_OFFSET)    EMPTY_KECCAK_LO))
-                   (debug   (eq!         (shift   account/DEPLOYMENT_STATUS   RETURN_INSTRUCTION_EMPTY_DEPLOYMENT_FIRST_ACCOUNT_ROW_OFFSET)    1))
-                   (debug   (account-isnt-precompile                          RETURN_INSTRUCTION_EMPTY_DEPLOYMENT_FIRST_ACCOUNT_ROW_OFFSET))
-                   )
-                 )
+                   (debug   (vanishes!   (shift   account/CODE_SIZE_NEW       ROFF_RETURN___EMPTY_DEPLOYMENT___1ST_ACCOUNT_ROW)))
+                   (debug   (eq!         (shift   account/CODE_HASH_HI        ROFF_RETURN___EMPTY_DEPLOYMENT___1ST_ACCOUNT_ROW)    EMPTY_KECCAK_HI))
+                   (debug   (eq!         (shift   account/CODE_HASH_LO        ROFF_RETURN___EMPTY_DEPLOYMENT___1ST_ACCOUNT_ROW)    EMPTY_KECCAK_LO))
+                   (debug   (eq!         (shift   account/DEPLOYMENT_STATUS   ROFF_RETURN___EMPTY_DEPLOYMENT___1ST_ACCOUNT_ROW)    1))
+                   (debug   (account-isnt-precompile                          ROFF_RETURN___EMPTY_DEPLOYMENT___1ST_ACCOUNT_ROW))
+                   ))
 
 (defconstraint   return-instruction---second-account-row-for-empty-deployments   (:guard   (return-instruction---empty-deployment-scenario))
                  (if-not-zero   scenario/RETURN_FROM_DEPLOYMENT_EMPTY_CODE_WILL_REVERT
                                 (begin
-                                  (account-same-address-as                     RETURN_INSTRUCTION_EMPTY_DEPLOYMENT_SECOND_ACCOUNT_ROW_OFFSET    RETURN_INSTRUCTION_EMPTY_DEPLOYMENT_FIRST_ACCOUNT_ROW_OFFSET)
-                                  (account-undo-balance-update                 RETURN_INSTRUCTION_EMPTY_DEPLOYMENT_SECOND_ACCOUNT_ROW_OFFSET    RETURN_INSTRUCTION_EMPTY_DEPLOYMENT_FIRST_ACCOUNT_ROW_OFFSET)
-                                  (account-undo-nonce-update                   RETURN_INSTRUCTION_EMPTY_DEPLOYMENT_SECOND_ACCOUNT_ROW_OFFSET    RETURN_INSTRUCTION_EMPTY_DEPLOYMENT_FIRST_ACCOUNT_ROW_OFFSET)
-                                  (account-undo-code-update                    RETURN_INSTRUCTION_EMPTY_DEPLOYMENT_SECOND_ACCOUNT_ROW_OFFSET    RETURN_INSTRUCTION_EMPTY_DEPLOYMENT_FIRST_ACCOUNT_ROW_OFFSET)
-                                  (account-undo-deployment-status-update       RETURN_INSTRUCTION_EMPTY_DEPLOYMENT_SECOND_ACCOUNT_ROW_OFFSET    RETURN_INSTRUCTION_EMPTY_DEPLOYMENT_FIRST_ACCOUNT_ROW_OFFSET)
-                                  (account-undo-warmth-update                  RETURN_INSTRUCTION_EMPTY_DEPLOYMENT_SECOND_ACCOUNT_ROW_OFFSET    RETURN_INSTRUCTION_EMPTY_DEPLOYMENT_FIRST_ACCOUNT_ROW_OFFSET)
-                                  (account-same-marked-for-selfdestruct        RETURN_INSTRUCTION_EMPTY_DEPLOYMENT_SECOND_ACCOUNT_ROW_OFFSET)
-                                  (vanishes!   (shift   account/ROMLEX_FLAG    RETURN_INSTRUCTION_EMPTY_DEPLOYMENT_SECOND_ACCOUNT_ROW_OFFSET))
-                                  (vanishes!   (shift   account/TRM_FLAG       RETURN_INSTRUCTION_EMPTY_DEPLOYMENT_SECOND_ACCOUNT_ROW_OFFSET))
-                                  (DOM-SUB-stamps---revert-with-current        RETURN_INSTRUCTION_EMPTY_DEPLOYMENT_SECOND_ACCOUNT_ROW_OFFSET    1)
-                                  )
-                                )
-                 )
+                                  (account-same-address-as                     ROFF_RETURN___EMPTY_DEPLOYMENT___2ND_ACCOUNT_ROW    ROFF_RETURN___EMPTY_DEPLOYMENT___1ST_ACCOUNT_ROW)
+                                  (account-undo-balance-update                 ROFF_RETURN___EMPTY_DEPLOYMENT___2ND_ACCOUNT_ROW    ROFF_RETURN___EMPTY_DEPLOYMENT___1ST_ACCOUNT_ROW)
+                                  (account-undo-nonce-update                   ROFF_RETURN___EMPTY_DEPLOYMENT___2ND_ACCOUNT_ROW    ROFF_RETURN___EMPTY_DEPLOYMENT___1ST_ACCOUNT_ROW)
+                                  (account-undo-code-update                    ROFF_RETURN___EMPTY_DEPLOYMENT___2ND_ACCOUNT_ROW    ROFF_RETURN___EMPTY_DEPLOYMENT___1ST_ACCOUNT_ROW)
+                                  (account-undo-deployment-status-update       ROFF_RETURN___EMPTY_DEPLOYMENT___2ND_ACCOUNT_ROW    ROFF_RETURN___EMPTY_DEPLOYMENT___1ST_ACCOUNT_ROW)
+                                  (account-undo-warmth-update                  ROFF_RETURN___EMPTY_DEPLOYMENT___2ND_ACCOUNT_ROW    ROFF_RETURN___EMPTY_DEPLOYMENT___1ST_ACCOUNT_ROW)
+                                  (account-same-marked-for-selfdestruct        ROFF_RETURN___EMPTY_DEPLOYMENT___2ND_ACCOUNT_ROW)
+                                  (vanishes!   (shift   account/ROMLEX_FLAG    ROFF_RETURN___EMPTY_DEPLOYMENT___2ND_ACCOUNT_ROW))
+                                  (vanishes!   (shift   account/TRM_FLAG       ROFF_RETURN___EMPTY_DEPLOYMENT___2ND_ACCOUNT_ROW))
+                                  (DOM-SUB-stamps---revert-with-current        ROFF_RETURN___EMPTY_DEPLOYMENT___2ND_ACCOUNT_ROW    1)
+                                  )))
 
 (defconstraint   return-instruction---setting-the-callers-new-return-data-empty-deployments    (:guard   (return-instruction---empty-deployment-scenario))
                  (begin
                    (if-not-zero   scenario/RETURN_FROM_DEPLOYMENT_EMPTY_CODE_WILL_REVERT
                                   (if-not-zero   (force-bin   (return-instruction---is-root))
                                                  ;; IS_ROOT  ≡  1
-                                                 (read-context-data                       RETURN_INSTRUCTION_CALLER_CONTEXT_ROW_OFFSET_EMPTY_DEPLOYMENT_WILL_REVERT    CONTEXT_NUMBER)
+                                                 (read-context-data                       ROFF_RETURN___CALLER_CONTEXT___EMPTY_DEPLOYMENT_WILL_REVERT    CONTEXT_NUMBER)
                                                  ;; IS_ROOT  ≡  0
-                                                 (execution-provides-empty-return-data    RETURN_INSTRUCTION_CALLER_CONTEXT_ROW_OFFSET_EMPTY_DEPLOYMENT_WILL_REVERT)
-                                                 )
-                                  )
+                                                 (execution-provides-empty-return-data    ROFF_RETURN___CALLER_CONTEXT___EMPTY_DEPLOYMENT_WILL_REVERT)
+                                                 ))
                    (if-not-zero   scenario/RETURN_FROM_DEPLOYMENT_EMPTY_CODE_WONT_REVERT
                                   (if-not-zero   (force-bin   (return-instruction---is-root))
                                                  ;; IS_ROOT  ≡  1
-                                                 (read-context-data                       RETURN_INSTRUCTION_CALLER_CONTEXT_ROW_OFFSET_EMPTY_DEPLOYMENT_WONT_REVERT    CONTEXT_NUMBER)
+                                                 (read-context-data                       ROFF_RETURN___CALLER_CONTEXT___EMPTY_DEPLOYMENT_WONT_REVERT    CONTEXT_NUMBER)
                                                  ;; IS_ROOT  ≡  0
-                                                 (execution-provides-empty-return-data    RETURN_INSTRUCTION_CALLER_CONTEXT_ROW_OFFSET_EMPTY_DEPLOYMENT_WONT_REVERT)
-                                                 )
-                                  )
-                   )
-                 )
+                                                 (execution-provides-empty-return-data    ROFF_RETURN___CALLER_CONTEXT___EMPTY_DEPLOYMENT_WONT_REVERT)
+                                                 ))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -468,10 +450,10 @@
 (defun   (return-instruction---nonempty-deployment-scenario)   (*   PEEK_AT_SCENARIO   (scenario-shorthand---RETURN---nonempty-deployment)))
 
 (defconstraint   return-instruction---setting-the-second-miscellaneous-row-nonempty-deployments   (:guard    (return-instruction---nonempty-deployment-scenario))
-                 (eq!   (weighted-MISC-flag-sum    RETURN_INSTRUCTION_SECOND_MISC_ROW_OFFSET_DEPLOY_AND_HASH)    MISC_WEIGHT_MMU))
+                 (eq!   (weighted-MISC-flag-sum    ROFF_RETURN___2ND_MISC_ROW___DEPLOY_AND_HASH)    MISC_WEIGHT_MMU))
 
 (defconstraint   return-instruction---setting-the-second-MMU-instruction   (:guard    (return-instruction---nonempty-deployment-scenario))
-                 (set-MMU-instruction---ram-to-exo-with-padding    RETURN_INSTRUCTION_SECOND_MISC_ROW_OFFSET_DEPLOY_AND_HASH    ;; offset
+                 (set-MMU-instruction---ram-to-exo-with-padding    ROFF_RETURN___2ND_MISC_ROW___DEPLOY_AND_HASH    ;; offset
                                                                    CONTEXT_NUMBER                                               ;; source ID
                                                                    (return-instruction---deployment-code-fragment-index)        ;; target ID
                                                                    (+   1   HUB_STAMP)                                          ;; auxiliary ID
@@ -490,62 +472,54 @@
 
 (defconstraint   return-instruction---first-account-row-for-nonempty-deployments   (:guard   (return-instruction---nonempty-deployment-scenario))
                  (begin
-                   (eq!   (shift   account/ADDRESS_HI                         RETURN_INSTRUCTION_NONEMPTY_DEPLOYMENT_FIRST_ACCOUNT_ROW_OFFSET)    (return-instruction---deployment-address-hi))
-                   (eq!   (shift   account/ADDRESS_LO                         RETURN_INSTRUCTION_NONEMPTY_DEPLOYMENT_FIRST_ACCOUNT_ROW_OFFSET)    (return-instruction---deployment-address-lo))
-                   (account-same-balance                                      RETURN_INSTRUCTION_NONEMPTY_DEPLOYMENT_FIRST_ACCOUNT_ROW_OFFSET)
-                   (account-same-nonce                                        RETURN_INSTRUCTION_NONEMPTY_DEPLOYMENT_FIRST_ACCOUNT_ROW_OFFSET)
-                   (eq!   (shift   account/CODE_SIZE_NEW                      RETURN_INSTRUCTION_NONEMPTY_DEPLOYMENT_FIRST_ACCOUNT_ROW_OFFSET)    (return-instruction---size-lo))
-                   (eq!   (shift   account/CODE_HASH_HI_NEW                   RETURN_INSTRUCTION_NONEMPTY_DEPLOYMENT_FIRST_ACCOUNT_ROW_OFFSET)    (return-instruction---code-hash-hi))
-                   (eq!   (shift   account/CODE_HASH_LO_NEW                   RETURN_INSTRUCTION_NONEMPTY_DEPLOYMENT_FIRST_ACCOUNT_ROW_OFFSET)    (return-instruction---code-hash-lo))
-                   (account-same-deployment-number                            RETURN_INSTRUCTION_NONEMPTY_DEPLOYMENT_FIRST_ACCOUNT_ROW_OFFSET)
-                   (vanishes!   (shift   account/DEPLOYMENT_STATUS_NEW        RETURN_INSTRUCTION_NONEMPTY_DEPLOYMENT_FIRST_ACCOUNT_ROW_OFFSET))
-                   (account-same-warmth                                       RETURN_INSTRUCTION_NONEMPTY_DEPLOYMENT_FIRST_ACCOUNT_ROW_OFFSET)
-                   (account-same-marked-for-selfdestruct                      RETURN_INSTRUCTION_NONEMPTY_DEPLOYMENT_FIRST_ACCOUNT_ROW_OFFSET)
-                   (eq!         (shift   account/ROMLEX_FLAG                  RETURN_INSTRUCTION_NONEMPTY_DEPLOYMENT_FIRST_ACCOUNT_ROW_OFFSET)   1)
-                   (vanishes!   (shift   account/TRM_FLAG                     RETURN_INSTRUCTION_NONEMPTY_DEPLOYMENT_FIRST_ACCOUNT_ROW_OFFSET))
-                   (DOM-SUB-stamps---standard                                 RETURN_INSTRUCTION_NONEMPTY_DEPLOYMENT_FIRST_ACCOUNT_ROW_OFFSET    0)
+                   (eq!   (shift   account/ADDRESS_HI                         ROFF_RETURN___NONEMPTY_DEPLOYMENT___1ST_ACCOUNT_ROW)    (return-instruction---deployment-address-hi))
+                   (eq!   (shift   account/ADDRESS_LO                         ROFF_RETURN___NONEMPTY_DEPLOYMENT___1ST_ACCOUNT_ROW)    (return-instruction---deployment-address-lo))
+                   (account-same-balance                                      ROFF_RETURN___NONEMPTY_DEPLOYMENT___1ST_ACCOUNT_ROW)
+                   (account-same-nonce                                        ROFF_RETURN___NONEMPTY_DEPLOYMENT___1ST_ACCOUNT_ROW)
+                   (eq!   (shift   account/CODE_SIZE_NEW                      ROFF_RETURN___NONEMPTY_DEPLOYMENT___1ST_ACCOUNT_ROW)    (return-instruction---size-lo))
+                   (eq!   (shift   account/CODE_HASH_HI_NEW                   ROFF_RETURN___NONEMPTY_DEPLOYMENT___1ST_ACCOUNT_ROW)    (return-instruction---code-hash-hi))
+                   (eq!   (shift   account/CODE_HASH_LO_NEW                   ROFF_RETURN___NONEMPTY_DEPLOYMENT___1ST_ACCOUNT_ROW)    (return-instruction---code-hash-lo))
+                   (account-same-deployment-number                            ROFF_RETURN___NONEMPTY_DEPLOYMENT___1ST_ACCOUNT_ROW)
+                   (vanishes!   (shift   account/DEPLOYMENT_STATUS_NEW        ROFF_RETURN___NONEMPTY_DEPLOYMENT___1ST_ACCOUNT_ROW))
+                   (account-same-warmth                                       ROFF_RETURN___NONEMPTY_DEPLOYMENT___1ST_ACCOUNT_ROW)
+                   (account-same-marked-for-selfdestruct                      ROFF_RETURN___NONEMPTY_DEPLOYMENT___1ST_ACCOUNT_ROW)
+                   (eq!         (shift   account/ROMLEX_FLAG                  ROFF_RETURN___NONEMPTY_DEPLOYMENT___1ST_ACCOUNT_ROW)   1)
+                   (vanishes!   (shift   account/TRM_FLAG                     ROFF_RETURN___NONEMPTY_DEPLOYMENT___1ST_ACCOUNT_ROW))
+                   (DOM-SUB-stamps---standard                                 ROFF_RETURN___NONEMPTY_DEPLOYMENT___1ST_ACCOUNT_ROW    0)
                    ;; debug constraints
-                   (debug   (eq!         (shift   account/CODE_HASH_HI        RETURN_INSTRUCTION_NONEMPTY_DEPLOYMENT_FIRST_ACCOUNT_ROW_OFFSET)    EMPTY_KECCAK_HI))
-                   (debug   (eq!         (shift   account/CODE_HASH_LO        RETURN_INSTRUCTION_NONEMPTY_DEPLOYMENT_FIRST_ACCOUNT_ROW_OFFSET)    EMPTY_KECCAK_LO))
-                   (debug   (eq!         (shift   account/DEPLOYMENT_STATUS   RETURN_INSTRUCTION_NONEMPTY_DEPLOYMENT_FIRST_ACCOUNT_ROW_OFFSET)    1))
-                   (debug   (account-isnt-precompile                          RETURN_INSTRUCTION_NONEMPTY_DEPLOYMENT_FIRST_ACCOUNT_ROW_OFFSET))
-                   )
-                 )
+                   (debug   (eq!         (shift   account/CODE_HASH_HI        ROFF_RETURN___NONEMPTY_DEPLOYMENT___1ST_ACCOUNT_ROW)    EMPTY_KECCAK_HI))
+                   (debug   (eq!         (shift   account/CODE_HASH_LO        ROFF_RETURN___NONEMPTY_DEPLOYMENT___1ST_ACCOUNT_ROW)    EMPTY_KECCAK_LO))
+                   (debug   (eq!         (shift   account/DEPLOYMENT_STATUS   ROFF_RETURN___NONEMPTY_DEPLOYMENT___1ST_ACCOUNT_ROW)    1))
+                   (debug   (account-isnt-precompile                          ROFF_RETURN___NONEMPTY_DEPLOYMENT___1ST_ACCOUNT_ROW))
+                   ))
 
 (defconstraint   return-instruction---second-account-row-for-nonempty-deployments   (:guard   (return-instruction---nonempty-deployment-scenario))
                  (if-not-zero   scenario/RETURN_FROM_DEPLOYMENT_NONEMPTY_CODE_WILL_REVERT
                                 (begin
-                                  (account-same-address-as                     RETURN_INSTRUCTION_NONEMPTY_DEPLOYMENT_SECOND_ACCOUNT_ROW_OFFSET    RETURN_INSTRUCTION_NONEMPTY_DEPLOYMENT_FIRST_ACCOUNT_ROW_OFFSET)
-                                  (account-undo-balance-update                 RETURN_INSTRUCTION_NONEMPTY_DEPLOYMENT_SECOND_ACCOUNT_ROW_OFFSET    RETURN_INSTRUCTION_NONEMPTY_DEPLOYMENT_FIRST_ACCOUNT_ROW_OFFSET)
-                                  (account-undo-nonce-update                   RETURN_INSTRUCTION_NONEMPTY_DEPLOYMENT_SECOND_ACCOUNT_ROW_OFFSET    RETURN_INSTRUCTION_NONEMPTY_DEPLOYMENT_FIRST_ACCOUNT_ROW_OFFSET)
-                                  (account-undo-code-update                    RETURN_INSTRUCTION_NONEMPTY_DEPLOYMENT_SECOND_ACCOUNT_ROW_OFFSET    RETURN_INSTRUCTION_NONEMPTY_DEPLOYMENT_FIRST_ACCOUNT_ROW_OFFSET)
-                                  (account-undo-deployment-status-update       RETURN_INSTRUCTION_NONEMPTY_DEPLOYMENT_SECOND_ACCOUNT_ROW_OFFSET    RETURN_INSTRUCTION_NONEMPTY_DEPLOYMENT_FIRST_ACCOUNT_ROW_OFFSET)
-                                  (account-undo-warmth-update                  RETURN_INSTRUCTION_NONEMPTY_DEPLOYMENT_SECOND_ACCOUNT_ROW_OFFSET    RETURN_INSTRUCTION_NONEMPTY_DEPLOYMENT_FIRST_ACCOUNT_ROW_OFFSET)
-                                  (account-same-marked-for-selfdestruct        RETURN_INSTRUCTION_NONEMPTY_DEPLOYMENT_SECOND_ACCOUNT_ROW_OFFSET)
-                                  (vanishes!   (shift   account/ROMLEX_FLAG    RETURN_INSTRUCTION_NONEMPTY_DEPLOYMENT_SECOND_ACCOUNT_ROW_OFFSET))
-                                  (vanishes!   (shift   account/TRM_FLAG       RETURN_INSTRUCTION_NONEMPTY_DEPLOYMENT_SECOND_ACCOUNT_ROW_OFFSET))
-                                  (DOM-SUB-stamps---revert-with-current        RETURN_INSTRUCTION_NONEMPTY_DEPLOYMENT_SECOND_ACCOUNT_ROW_OFFSET    1)
-                                  )
-                                )
-                 )
+                                  (account-same-address-as                     ROFF_RETURN___NONEMPTY_DEPLOYMENT___2ND_ACCOUNT_ROW    ROFF_RETURN___NONEMPTY_DEPLOYMENT___1ST_ACCOUNT_ROW)
+                                  (account-undo-balance-update                 ROFF_RETURN___NONEMPTY_DEPLOYMENT___2ND_ACCOUNT_ROW    ROFF_RETURN___NONEMPTY_DEPLOYMENT___1ST_ACCOUNT_ROW)
+                                  (account-undo-nonce-update                   ROFF_RETURN___NONEMPTY_DEPLOYMENT___2ND_ACCOUNT_ROW    ROFF_RETURN___NONEMPTY_DEPLOYMENT___1ST_ACCOUNT_ROW)
+                                  (account-undo-code-update                    ROFF_RETURN___NONEMPTY_DEPLOYMENT___2ND_ACCOUNT_ROW    ROFF_RETURN___NONEMPTY_DEPLOYMENT___1ST_ACCOUNT_ROW)
+                                  (account-undo-deployment-status-update       ROFF_RETURN___NONEMPTY_DEPLOYMENT___2ND_ACCOUNT_ROW    ROFF_RETURN___NONEMPTY_DEPLOYMENT___1ST_ACCOUNT_ROW)
+                                  (account-undo-warmth-update                  ROFF_RETURN___NONEMPTY_DEPLOYMENT___2ND_ACCOUNT_ROW    ROFF_RETURN___NONEMPTY_DEPLOYMENT___1ST_ACCOUNT_ROW)
+                                  (account-same-marked-for-selfdestruct        ROFF_RETURN___NONEMPTY_DEPLOYMENT___2ND_ACCOUNT_ROW)
+                                  (vanishes!   (shift   account/ROMLEX_FLAG    ROFF_RETURN___NONEMPTY_DEPLOYMENT___2ND_ACCOUNT_ROW))
+                                  (vanishes!   (shift   account/TRM_FLAG       ROFF_RETURN___NONEMPTY_DEPLOYMENT___2ND_ACCOUNT_ROW))
+                                  (DOM-SUB-stamps---revert-with-current        ROFF_RETURN___NONEMPTY_DEPLOYMENT___2ND_ACCOUNT_ROW    1)
+                                  )))
 
 (defconstraint   return-instruction---setting-the-callers-new-return-data-nonempty-deployments    (:guard   (return-instruction---nonempty-deployment-scenario))
                  (begin
                    (if-not-zero   scenario/RETURN_FROM_DEPLOYMENT_NONEMPTY_CODE_WILL_REVERT
                                   (if-not-zero   (force-bin   (return-instruction---is-root))
                                                  ;; IS_ROOT  ≡  1
-                                                 (read-context-data                       RETURN_INSTRUCTION_CALLER_CONTEXT_ROW_OFFSET_NONEMPTY_DEPLOYMENT_WILL_REVERT    CONTEXT_NUMBER)
+                                                 (read-context-data                       ROFF_RETURN___CALLER_CONTEXT___NONEMPTY_DEPLOYMENT_WILL_REVERT    CONTEXT_NUMBER)
                                                  ;; IS_ROOT  ≡  0
-                                                 (execution-provides-empty-return-data    RETURN_INSTRUCTION_CALLER_CONTEXT_ROW_OFFSET_NONEMPTY_DEPLOYMENT_WILL_REVERT)
-                                                 )
-                                  )
+                                                 (execution-provides-empty-return-data    ROFF_RETURN___CALLER_CONTEXT___NONEMPTY_DEPLOYMENT_WILL_REVERT)
+                                                 ))
                    (if-not-zero   scenario/RETURN_FROM_DEPLOYMENT_NONEMPTY_CODE_WONT_REVERT
                                   (if-not-zero   (force-bin   (return-instruction---is-root))
                                                  ;; IS_ROOT  ≡  1
-                                                 (read-context-data                       RETURN_INSTRUCTION_CALLER_CONTEXT_ROW_OFFSET_NONEMPTY_DEPLOYMENT_WONT_REVERT    CONTEXT_NUMBER)
+                                                 (read-context-data                       ROFF_RETURN___CALLER_CONTEXT___NONEMPTY_DEPLOYMENT_WONT_REVERT    CONTEXT_NUMBER)
                                                  ;; IS_ROOT  ≡  0
-                                                 (execution-provides-empty-return-data    RETURN_INSTRUCTION_CALLER_CONTEXT_ROW_OFFSET_NONEMPTY_DEPLOYMENT_WONT_REVERT)
-                                                 )
-                                  )
-                   )
-                 )
+                                                 (execution-provides-empty-return-data    ROFF_RETURN___CALLER_CONTEXT___NONEMPTY_DEPLOYMENT_WONT_REVERT)))))

@@ -35,9 +35,9 @@
          (call-instruction---new-caller-address-lo)                                               ;; caller address low
          (call-instruction---new-call-value)                                                      ;; call value
          CONTEXT_NUMBER                                                                           ;; caller context
-         (call-instruction---STACK-cdo-lo)                                                        ;; call data offset
-         (call-instruction---STACK-cds-lo)                                                        ;; call data size
-         (call-instruction---STACK-r@o-lo)                                                        ;; return at offset
-         (call-instruction---STACK-r@c-lo)                                                        ;; return at capacity
+         (call-instruction---type-safe-cdo)                                                       ;; call data offset
+         (call-instruction---type-safe-cds)                                                       ;; call data size
+         (call-instruction---type-safe-r@o)                                                       ;; return at offset
+         (call-instruction---type-safe-r@c)                                                       ;; return at capacity
          )
   )

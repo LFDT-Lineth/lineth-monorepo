@@ -5,6 +5,7 @@
 ;;    2.1 binary constraints   ;;
 ;;                             ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defconstraint binary-constraints ()
   (begin (is-binary ROOB)
          (is-binary NOOP)
@@ -18,6 +19,7 @@
 ;;    2.2 counter constancy    ;;
 ;;                             ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defconstraint counter-constancy ()
   (begin (counter-constancy CT CN)
          (counter-constancy CT INST)
@@ -46,6 +48,7 @@
 ;;    2.3 ROOB flag    ;;
 ;;                     ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defconstraint setting-roob-type-1 (:guard [MXP_TYPE 1])
   (vanishes! ROOB))
 
@@ -83,6 +86,7 @@
 ;;    2.4 NOOP flag    ;;
 ;;                     ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defconstraint noop-automatic-vanishing ()
   (if-not-zero ROOB
                (vanishes! NOOP)))
@@ -103,25 +107,61 @@
          (= WORDS_NEW WORDS)
          (= C_MEM_NEW C_MEM)))
 
-;;;;;;;;;;;;;;;;;;;;;;
-;;                  ;;                         
-;;    2.5 MTNTOP    ;;
-;;                  ;;                        
-;;;;;;;;;;;;;;;;;;;;;;
-(defconstraint setting-mtntop ()
-  (if-zero [MXP_TYPE 4]
-           (vanishes! MTNTOP) ;; TODO: make this debug
-           (begin (if-not-zero MXPX
-                               (vanishes! MTNTOP)
-                               (if-zero SIZE_1_LO
-                                        (vanishes! MTNTOP)
-                                        (eq! MTNTOP 1))))))
+;;;;;;;;;;;;;;;;;;;;
+;;                ;;
+;;    2.5 MTNTOP  ;;
+;;                ;;
+;;;;;;;;;;;;;;;;;;;;
 
+(defconstraint setting-mtntop ()
+  (begin 
+    (debug (is-binary MTNTOP))
+    (debug (if-zero [MXP_TYPE 4]
+            (vanishes! MTNTOP)))
+    (if-not-zero MXPX
+            (vanishes! MTNTOP))
+    (if-not-zero [MXP_TYPE 4]
+            (if-zero MXPX
+              (if-zero SIZE_1_LO
+                (vanishes! MTNTOP)
+                (eq! MTNTOP 1))))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                                           ;;
+;;  2.6 The S1NZNOMXPX and S2NZNOMXPX flags  ;;
+;;                                           ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defconstraint setting-s1nznomp-s2nznomp ()
+  (begin
+    (debug (is-binary S1NZNOMXPX))
+    (debug (is-binary S2NZNOMXPX)) 
+    (debug (counter-constancy CT S1NZNOMXPX))
+    (debug (counter-constancy CT S2NZNOMXPX))
+    (if-not-zero MXPX
+      (begin (vanishes! S1NZNOMXPX)
+             (vanishes! S2NZNOMXPX))
+      (begin (if-not-zero SIZE_1_LO 
+                (eq! S1NZNOMXPX 1))
+             (if-not-zero SIZE_1_HI 
+                (eq! S1NZNOMXPX 1))
+             (if-zero SIZE_1_LO 
+                (if-zero SIZE_1_HI 
+                  (vanishes! S1NZNOMXPX)))
+             (if-not-zero SIZE_2_LO 
+                (eq! S2NZNOMXPX 1))
+             (if-not-zero SIZE_2_HI 
+                (eq! S2NZNOMXPX 1))
+             (if-zero SIZE_2_LO 
+                (if-zero SIZE_2_HI 
+                  (vanishes! S2NZNOMXPX)))))))
+  
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                     ;;
-;;    2.5 heartbeat    ;;
+;;    2.7 heartbeat    ;;
 ;;                     ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defconstraint first-row (:domain {0})
   (vanishes! STAMP))
 
@@ -168,9 +208,10 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                               ;;
-;;    2.5 Byte decompositions    ;;
+;;    2.8 Byte decompositions    ;;
 ;;                               ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defconstraint byte-decompositions ()
   (begin (for k [1:4] (byte-decomposition CT [ACC k] [BYTE k]))
          (byte-decomposition CT ACC_A BYTE_A)
@@ -182,6 +223,7 @@
 ;;    Specialized constraints    ;;
 ;;                               ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defun (standing-hypothesis)
   (* STAMP (- 1 NOOP ROOB))) ;; NOOP + ROOB is binary cf noop section
 
@@ -190,6 +232,7 @@
 ;;    3.1 Max offsets    ;;
 ;;                       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defconstraint max-offsets-1-and-2-type-2 (:guard (standing-hypothesis))
   (if-eq [MXP_TYPE 2] 1
          (begin (eq! MAX_OFFSET_1 (+ OFFSET_1_LO 31))
@@ -222,6 +265,7 @@
 ;;    3.2 Offsets are out of bounds    ;;
 ;;                                     ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defconstraint offsets-out-of-bounds (:guard (standing-hypothesis))
   (if-eq MXPX 1
          (if-eq CT CT_MAX_NON_TRIVIAL_BUT_MXPX
@@ -233,6 +277,7 @@
 ;;    3.3 Offsets are in bounds   ;;
 ;;                                ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defun (offsets-are-in-bounds)
   (* (is-zero (- CT CT_MAX_NON_TRIVIAL))
      (- 1 MXPX)))
@@ -274,6 +319,7 @@
 ;;    3.4.2 No expansion event  ;;
 ;;                              ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defconstraint no-expansion (:guard (* (standing-hypothesis) (offsets-are-in-bounds)))
   (if-zero EXPANDS
            (begin (eq! WORDS_NEW WORDS)
@@ -284,6 +330,7 @@
 ;;    3.4.3 Expansion event   ;;
 ;;                            ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defun (expansion-happened)
   (* (offsets-are-in-bounds) EXPANDS))
 
@@ -312,6 +359,7 @@
 ;;    3.4.4 Expansion gas   ;;
 ;;                          ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defconstraint setting-quad-cost-and-lin-cost (:guard (* (standing-hypothesis) (offsets-are-in-bounds)))
   (begin (eq! QUAD_COST (- C_MEM_NEW C_MEM))
          (eq! LIN_COST
@@ -328,6 +376,7 @@
 ;;    2.12 Consistency Constraints    ;;
 ;;                                    ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defpermutation 
   (CN_perm
    STAMP_perm
@@ -352,5 +401,3 @@
                                                (eq! C_MEM_perm (prev C_MEM_NEW_perm))))
                            (begin (vanishes! WORDS_perm)
                                   (vanishes! C_MEM_perm)))))
-
-

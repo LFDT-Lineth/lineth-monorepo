@@ -42,6 +42,13 @@
   (LIN_COST :i64)
   (GAS_MXP :i64)
   (EXPANDS :binary@prove)
-  (MTNTOP :binary@prove))
+  (MTNTOP :binary@prove)
+  (SIZE_1_NONZERO_NO_MXPX :binary)
+  (SIZE_2_NONZERO_NO_MXPX :binary))
+
+  (defalias 
+  S1NZNOMXPX SIZE_1_NONZERO_NO_MXPX
+  S2NZNOMXPX SIZE_2_NONZERO_NO_MXPX)
+
 
 

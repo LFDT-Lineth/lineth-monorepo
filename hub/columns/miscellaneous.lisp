@@ -14,7 +14,7 @@
 
 		 ;; EXP columns (DONE)
 		 ( EXP_INST                :i32 )
-		 ( EXP_DATA                :array [5] :i128 )   ;; TODO: uncomment
+		 ( EXP_DATA                :array [5] :i128 )   ;; ""
 
 		 ;; MMU columns (DONE)
 		 ( MMU_INST                :i32   )
@@ -34,25 +34,26 @@
 		 ( MMU_EXO_SUM             :i32   )
  
 		 ;; MXP colummns      (DONE )
-		 ( MXP_INST                :i32   )
-		 ( MXP_MXPX                :binary@prove ) ;;  ;; TODO: demote to debug constraint, though truly useless
-		 ( MXP_DEPLOYS             :binary@prove ) ;;  ;; TODO: demote to debug constraint
-		 ( MXP_OFFSET_1_HI         :i128 )
-		 ( MXP_OFFSET_1_LO         :i128 )
-		 ( MXP_OFFSET_2_HI         :i128 )
-		 ( MXP_OFFSET_2_LO         :i128 )
-		 ( MXP_SIZE_1_HI           :i128 )
-		 ( MXP_SIZE_1_LO           :i128 )
-		 ( MXP_SIZE_2_HI           :i128 )
-		 ( MXP_SIZE_2_LO           :i128 )
-		 ( MXP_WORDS               :i128 )
-		 ( MXP_GAS_MXP             :i128 )
-		 ( MXP_MTNTOP              :binary@prove ) ;; TODO: demote to :binary
-		                                           ;; MTNTOP ≡ MAY TRIGGER NONTRIVIAL OPERATION (in the MMU)
+		 ( MXP_INST                     :i32   )
+		 ( MXP_MXPX                     :binary@prove ) ;;  ;; TODO: demote to debug constraint, though truly useless
+		 ( MXP_DEPLOYS                  :binary@prove ) ;;  ;; TODO: demote to debug constraint
+		 ( MXP_OFFSET_1_HI              :i128 )
+		 ( MXP_OFFSET_1_LO              :i128 )
+		 ( MXP_OFFSET_2_HI              :i128 )
+		 ( MXP_OFFSET_2_LO              :i128 )
+		 ( MXP_SIZE_1_HI                :i128 )
+		 ( MXP_SIZE_1_LO                :i128 )
+		 ( MXP_SIZE_2_HI                :i128 )
+		 ( MXP_SIZE_2_LO                :i128 )
+		 ( MXP_WORDS                    :i128 )
+		 ( MXP_GAS_MXP                  :i128 )
+		 ( MXP_MTNTOP                   :binary@prove )
+		 ( MXP_SIZE_1_NONZERO_NO_MXPX   :binary@prove )
+		 ( MXP_SIZE_2_NONZERO_NO_MXPX   :binary@prove )
 
 		 ;; OOB columns (DONE)
 		 (OOB_INST                 :i32  )
-		 (OOB_DATA                 :array[1:9] :i128 )  ;; TODO: uncomment
+		 (OOB_DATA                 :array[1:9] :i128 ) ;; ""
 
 		 ;; STP columns (DONE)
 		 ( STP_INSTRUCTION               :i32  )   ;; TODO: overkill

@@ -17,26 +17,31 @@
 
 
 (defconst
-  ROW_OFFSET_REVERT_MISCELLANEOUS_ROW              1
+  ROFF_REVERT___MISC_ROW                       1
   ;;
-  ROW_OFFSET_REVERT_XAHOY_CALLER_CONTEXT_ROW       2
+  ROFF_REVERT___XAHOY_CALLER_CONTEXT_ROW       2
   ;;
-  ROW_OFFSET_REVERT_NO_XAHOY_CURRENT_CONTEXT_ROW   2
-  ROW_OFFSET_REVERT_NO_XAHOY_CALLER_CONTEXT_ROW    3)
+  ROFF_REVERT___NO_XAHOY_CURRENT_CONTEXT_ROW   2
+  ROFF_REVERT___NO_XAHOY_CALLER_CONTEXT_ROW    3)
 
 
 
-(defun  (revert-instruction---instruction)                stack/INSTRUCTION)
-(defun  (revert-instruction---offset-hi)                  [ stack/STACK_ITEM_VALUE_HI 1 ])
-(defun  (revert-instruction---offset-lo)                  [ stack/STACK_ITEM_VALUE_LO 1 ])
-(defun  (revert-instruction---size-hi)                    [ stack/STACK_ITEM_VALUE_HI 2 ])
-(defun  (revert-instruction---size-lo)                    [ stack/STACK_ITEM_VALUE_LO 2 ])
-(defun  (revert-instruction---current-context)            CONTEXT_NUMBER)
-(defun  (revert-instruction---caller-context)             CALLER_CONTEXT_NUMBER)
-(defun  (revert-instruction---MXP-memory-expansion-gas)   (shift  misc/MXP_GAS_MXP             ROW_OFFSET_REVERT_MISCELLANEOUS_ROW))
-(defun  (revert-instruction---current-context-is-root)    (shift  context/IS_ROOT              ROW_OFFSET_REVERT_NO_XAHOY_CURRENT_CONTEXT_ROW))
-(defun  (revert-instruction---r@o)                        (shift  context/RETURN_AT_OFFSET     ROW_OFFSET_REVERT_NO_XAHOY_CURRENT_CONTEXT_ROW))
-(defun  (revert-instruction---r@c)                        (shift  context/RETURN_AT_CAPACITY   ROW_OFFSET_REVERT_NO_XAHOY_CURRENT_CONTEXT_ROW))
+(defun  (revert-instruction---instruction)                         stack/INSTRUCTION)
+(defun  (revert-instruction---offset-hi)                           [ stack/STACK_ITEM_VALUE_HI 1 ])
+(defun  (revert-instruction---offset-lo)                           [ stack/STACK_ITEM_VALUE_LO 1 ])
+(defun  (revert-instruction---size-hi)                             [ stack/STACK_ITEM_VALUE_HI 2 ])
+(defun  (revert-instruction---size-lo)                             [ stack/STACK_ITEM_VALUE_LO 2 ])
+
+(defun  (revert-instruction---current-context)                     CONTEXT_NUMBER)
+(defun  (revert-instruction---caller-context)                      CALLER_CONTEXT_NUMBER)
+(defun  (revert-instruction---MXP-memory-expansion-gas)            (shift   misc/MXP_GAS_MXP                  ROFF_REVERT___MISC_ROW))
+(defun  (revert-instruction---MXP-size-1-is-nonzero-and-no-mxpx)   (shift   misc/MXP_SIZE_1_NONZERO_NO_MXPX   ROFF_REVERT___MISC_ROW))
+(defun  (revert-instruction---current-context-is-root)             (shift   context/IS_ROOT                   ROFF_REVERT___NO_XAHOY_CURRENT_CONTEXT_ROW))
+(defun  (revert-instruction---r@o)                                 (shift   context/RETURN_AT_OFFSET          ROFF_REVERT___NO_XAHOY_CURRENT_CONTEXT_ROW))
+(defun  (revert-instruction---r@c)                                 (shift   context/RETURN_AT_CAPACITY        ROFF_REVERT___NO_XAHOY_CURRENT_CONTEXT_ROW))
+
+(defun  (revert-instruction---type-safe-return-data-offset)        (*       (revert-instruction---offset-lo)  (revert-instruction---MXP-size-1-is-nonzero-and-no-mxpx)))
+(defun  (revert-instruction---type-safe-return-data-size)          (revert-instruction---size-lo)) ;; ""
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                        ;;
@@ -45,9 +50,9 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defun  (revert-instruction---standard-precondition)  (*  PEEK_AT_STACK
-                                                 stack/HALT_FLAG
-                                                 [ stack/DEC_FLAG  2 ]
-                                                 (-  1  stack/SUX  stack/SOX )))
+                                                          stack/HALT_FLAG
+                                                          (halting-instruction---is-REVERT)
+                                                          (-  1  stack/SUX  stack/SOX )))
 
 (defconstraint  revert-instruction---setting-the-stack-pattern                     (:guard (revert-instruction---standard-precondition))
                 (stack-pattern-2-0))
@@ -65,46 +70,46 @@
                 (if-not-zero  XAHOY
                               ;; XAHOY ≡ 1
                               (eq!  NSR
-                                    (+  (shift  PEEK_AT_MISCELLANEOUS    ROW_OFFSET_REVERT_MISCELLANEOUS_ROW            )
-                                        (shift  PEEK_AT_CONTEXT          ROW_OFFSET_REVERT_XAHOY_CALLER_CONTEXT_ROW     )))
+                                    (+  (shift  PEEK_AT_MISCELLANEOUS    ROFF_REVERT___MISC_ROW                )
+                                        (shift  PEEK_AT_CONTEXT          ROFF_REVERT___XAHOY_CALLER_CONTEXT_ROW)))
                               ;; XAHOY ≡ 0
                               (eq! NSR
-                                   (+  (shift  PEEK_AT_MISCELLANEOUS   ROW_OFFSET_REVERT_MISCELLANEOUS_ROW            )
-                                       (shift  PEEK_AT_CONTEXT         ROW_OFFSET_REVERT_NO_XAHOY_CURRENT_CONTEXT_ROW )
-                                       (shift  PEEK_AT_CONTEXT         ROW_OFFSET_REVERT_NO_XAHOY_CALLER_CONTEXT_ROW  )))))
+                                   (+  (shift  PEEK_AT_MISCELLANEOUS   ROFF_REVERT___MISC_ROW                    )
+                                       (shift  PEEK_AT_CONTEXT         ROFF_REVERT___NO_XAHOY_CURRENT_CONTEXT_ROW)
+                                       (shift  PEEK_AT_CONTEXT         ROFF_REVERT___NO_XAHOY_CALLER_CONTEXT_ROW )))))
 
 (defconstraint  revert-instruction---setting-the-context-rows                      (:guard (revert-instruction---standard-precondition))
                 (if-not-zero  XAHOY
                               ;; XAHOY ≡ 1
-                              (execution-provides-empty-return-data      ROW_OFFSET_REVERT_XAHOY_CALLER_CONTEXT_ROW)
+                              (execution-provides-empty-return-data      ROFF_REVERT___XAHOY_CALLER_CONTEXT_ROW)
                               ;; XAHOY ≡ 0
                               (begin
-                                (read-context-data   ROW_OFFSET_REVERT_NO_XAHOY_CURRENT_CONTEXT_ROW
+                                (read-context-data   ROFF_REVERT___NO_XAHOY_CURRENT_CONTEXT_ROW
                                                      (revert-instruction---current-context))
                                 (if-not-zero   (force-bin (revert-instruction---current-context-is-root))
                                                ;; current context IS root
-                                               (read-context-data    ROW_OFFSET_REVERT_NO_XAHOY_CALLER_CONTEXT_ROW
+                                               (read-context-data    ROFF_REVERT___NO_XAHOY_CALLER_CONTEXT_ROW
                                                                      (revert-instruction---caller-context)))
                                 ;; current context ISN'T root
-                                (provide-return-data   ROW_OFFSET_REVERT_NO_XAHOY_CALLER_CONTEXT_ROW      ;; row offset
-                                                       (revert-instruction---caller-context)                       ;; receiver context
-                                                       (revert-instruction---current-context)                      ;; provider context
-                                                       (revert-instruction---offset-lo)                            ;; rdo
-                                                       (revert-instruction---size-lo)                              ;; rds
+                                (provide-return-data   ROFF_REVERT___NO_XAHOY_CALLER_CONTEXT_ROW             ;; row offset
+                                                       (revert-instruction---caller-context)                 ;; receiver context
+                                                       (revert-instruction---current-context)                ;; provider context
+                                                       (revert-instruction---type-safe-return-data-offset)   ;; type safe rdo
+                                                       (revert-instruction---type-safe-return-data-size)     ;; type safe rds
                                                        ))))
 
 (defun  (revert-instruction---trigger_MMU)  (*  (-  1  XAHOY)
-                                       (-  1  (revert-instruction---current-context-is-root))
-                                       (is-not-zero (*  (revert-instruction---size-lo)
-                                                        (revert-instruction---r@c)))))
+                                                (-  1  (revert-instruction---current-context-is-root))
+                                                (is-not-zero (*  (revert-instruction---size-lo)
+                                                                 (revert-instruction---r@c)))))
 
 (defconstraint  revert-instruction---setting-the-miscellaneous-row-module-flags    (:guard (revert-instruction---standard-precondition))
-                (eq!  (weighted-MISC-flag-sum  ROW_OFFSET_REVERT_MISCELLANEOUS_ROW)
+                (eq!  (weighted-MISC-flag-sum  ROFF_REVERT___MISC_ROW)
                       (+  MISC_WEIGHT_MXP
                           (*  MISC_WEIGHT_MMU  (revert-instruction---trigger_MMU)))))
 
 (defconstraint  revert-instruction---setting-the-MXP-data                          (:guard (revert-instruction---standard-precondition))
-                (set-MXP-instruction-type-4 ROW_OFFSET_REVERT_MISCELLANEOUS_ROW   ;; row offset kappa
+                (set-MXP-instruction-type-4 ROFF_REVERT___MISC_ROW   ;; row offset kappa
                                             (revert-instruction---instruction)             ;; instruction
                                             0                                     ;; bit modifying the behaviour of RETURN pricing
                                             (revert-instruction---offset-hi)               ;; offset high
@@ -113,11 +118,11 @@
                                             (revert-instruction---size-lo)))               ;; size low
 
 (defconstraint  revert-instruction---setting-the-MXPX                              (:guard (revert-instruction---standard-precondition))
-                (eq!  stack/MXPX  (shift  misc/MXP_MXPX  ROW_OFFSET_REVERT_MISCELLANEOUS_ROW)))
+                (eq!  stack/MXPX  (shift  misc/MXP_MXPX  ROFF_REVERT___MISC_ROW)))
 
 (defconstraint  revert-instruction---setting-the-MMU-data                          (:guard (revert-instruction---standard-precondition))
-                (if-not-zero  (shift  misc/MMU_FLAG  ROW_OFFSET_REVERT_MISCELLANEOUS_ROW)
-                              (set-MMU-instruction---ram-to-ram-sans-padding    ROW_OFFSET_REVERT_MISCELLANEOUS_ROW  ;; row offset
+                (if-not-zero  (shift  misc/MMU_FLAG  ROFF_REVERT___MISC_ROW)
+                              (set-MMU-instruction---ram-to-ram-sans-padding    ROFF_REVERT___MISC_ROW  ;; row offset
                                                                                 (revert-instruction---current-context)        ;; source ID
                                                                                 (revert-instruction---caller-context)         ;; target ID
                                                                                 ;; aux_id                               ;; auxiliary ID
