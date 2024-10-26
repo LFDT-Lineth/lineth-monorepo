@@ -35,11 +35,11 @@
 
 (defconstraint    precompile-processing---BLAKE2f---setting-the-second-OOB-instruction
                   (:guard    (precompile-processing---BLAKE2f---surviving-the-HUB))
-                  (set-OOB-instruction---blake    precompile-processing---BLAKE2f---misc-row-offset---BLAKE-call-data-extraction    ;; offset
-                                                  (precompile-processing---dup-call-gas)                                            ;; call gas i.e. gas provided to the precompile
-                                                  (precompile-processing---BLAKE2f---r-parameter)                                   ;; rounds parameter of the call data of BLAKE2f
-                                                  (precompile-processing---BLAKE2f---f-parameter)                                   ;; f      parameter of the call data of BLAKE2f ("final block indicator")
-                                                  ))
+                  (set-OOB-instruction---blake-params    precompile-processing---BLAKE2f---misc-row-offset---BLAKE-call-data-extraction    ;; offset
+                                                         (precompile-processing---dup-call-gas)                                            ;; call gas i.e. gas provided to the precompile
+                                                         (precompile-processing---BLAKE2f---r-parameter)                                   ;; rounds parameter of the call data of BLAKE2f
+                                                         (precompile-processing---BLAKE2f---f-parameter)                                   ;; f      parameter of the call data of BLAKE2f ("final block indicator")
+                                                         ))
 
 (defconstraint    precompile-processing---BLAKE2f---setting-the-second-MMU-instruction
                   (:guard    (precompile-processing---BLAKE2f---surviving-the-HUB))

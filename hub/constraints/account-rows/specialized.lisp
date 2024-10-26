@@ -76,13 +76,14 @@
                                                                           (eq! (shift account/DEPLOYMENT_STATUS_NEW  undoAt)  (shift account/DEPLOYMENT_STATUS     doneAt))
                                                                           (eq! (shift account/DEPLOYMENT_STATUS      undoAt)  (shift account/DEPLOYMENT_STATUS_NEW doneAt))))
 
+;; not used in practice
 (defun (account-initiate-for-deployment  relOffset init_code_size  value)
   (begin
     (debug (eq! (shift account/NONCE              relOffset) 0 ) )
     (eq!        (shift account/NONCE_NEW          relOffset) 1 )
     (account-increment-balance-by                 relOffset  value)
     (debug (eq! (shift account/CODE_SIZE          relOffset) 0 ) )
-    (eq!        (shift account/CODE_SIZE_NEW      relOffset) 0 )
+    (eq!        (shift account/CODE_SIZE_NEW      relOffset) init_code_size )
     (debug (eq! (shift account/HAS_CODE           relOffset) 0 ) )
     (debug (eq! (shift account/CODE_HASH_HI       relOffset) EMPTY_KECCAK_HI))
     (debug (eq! (shift account/CODE_HASH_LO       relOffset) EMPTY_KECCAK_LO))
@@ -90,7 +91,8 @@
     (debug (eq! (shift account/CODE_HASH_HI_NEW   relOffset) EMPTY_KECCAK_HI))
     (debug (eq! (shift account/CODE_HASH_LO_NEW   relOffset) EMPTY_KECCAK_LO))
     (account-increment-deployment-number          relOffset)
-    (account-turn-on-deployment-status            relOffset)))
+    (account-turn-on-deployment-status            relOffset)
+    (account-turn-on-warmth                       relOffset)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                                                       ;;
@@ -114,17 +116,24 @@
 (defun (account-viewing kappa) (begin (account-opening      kappa)
                                       (account-same-balance kappa)))
 
-(defun (account-deletion kappa) (begin (shift (vanishes! account/NONCE_NEW)               kappa)
-                                       (shift (vanishes! account/BALANCE_NEW)             kappa)
-                                       (shift (vanishes! account/CODE_SIZE_NEW)           kappa)
-                                       (shift (debug (vanishes! account/HAS_CODE_NEW) )   kappa)
-                                       (shift (eq! account/CODE_HASH_HI EMPTY_KECCAK_HI)  kappa)
-                                       (shift (eq! account/CODE_HASH_LO EMPTY_KECCAK_LO)  kappa)))
+;; never used in practice
+(defun (account-deletion kappa) (begin (vanishes!        (shift account/NONCE_NEW           kappa))
+                                       (vanishes!        (shift account/BALANCE_NEW         kappa))
+                                       (vanishes!        (shift account/CODE_SIZE_NEW       kappa))
+                                       (vanishes!        (shift account/HAS_CODE_NEW        kappa))
+                                       (debug     (eq!   (shift account/CODE_HASH_HI_NEW    kappa)   EMPTY_KECCAK_HI))
+                                       (debug     (eq!   (shift account/CODE_HASH_LO_NEW    kappa)   EMPTY_KECCAK_LO))
+                                       (account-fresh-new-deployment-number-and-status      kappa)))
+
+(defun (account-fresh-new-deployment-number-and-status    kappa) (begin  (account-increment-deployment-number                        kappa)
+                                                                         (vanishes!             (shift account/DEPLOYMENT_STATUS_NEW kappa))
+                                                                         (debug      (vanishes! (shift account/DEPLOYMENT_STATUS     kappa)))))
+
 
 (defun (account-same-address-as  undoAt
                                  doneAt)
   (begin (eq! (shift account/ADDRESS_HI undoAt) (shift account/ADDRESS_HI doneAt))   ;; action performed doneAt many rows from here
-                                                      (eq! (shift account/ADDRESS_LO undoAt) (shift account/ADDRESS_LO doneAt)))) ;; action undone    undoAt many rows from here
+         (eq! (shift account/ADDRESS_LO undoAt) (shift account/ADDRESS_LO doneAt)))) ;; action undone    undoAt many rows from here
 
 (defun (account-same-address-and-deployment-number-as undoAt doneAt) (begin (account-same-address-as undoAt doneAt)
                                                                             (eq! (shift account/DEPLOYMENT_NUMBER undoAt) (shift account/DEPLOYMENT_NUMBER_NEW doneAt))))
@@ -163,19 +172,19 @@
 ;;                                    ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defconstraint account-code-ownership-curr (:perspective account)
-               (if-eq-else account/CODE_HASH_HI EMPTY_KECCAK_HI
-                           (if-eq-else account/CODE_HASH_LO EMPTY_KECCAK_LO
-                                       (eq! account/HAS_CODE 0)
-                                       (eq! account/HAS_CODE 1))
-                           (eq! account/HAS_CODE 1)))
+(defconstraint   account---code-ownership-curr (:perspective account)
+                 (if-eq-else account/CODE_HASH_HI EMPTY_KECCAK_HI
+                             (if-eq-else account/CODE_HASH_LO EMPTY_KECCAK_LO
+                                         (eq! account/HAS_CODE 0)
+                                         (eq! account/HAS_CODE 1))
+                             (eq! account/HAS_CODE 1)))
 
-(defconstraint account-code-ownership-next (:perspective account)
-               (if-eq-else account/CODE_HASH_HI_NEW EMPTY_KECCAK_HI
-                           (if-eq-else account/CODE_HASH_LO_NEW EMPTY_KECCAK_LO
-                                       (eq! account/HAS_CODE_NEW 0)
-                                       (eq! account/HAS_CODE_NEW 1))
-                           (eq! account/HAS_CODE_NEW 1)))
+(defconstraint   account---code-ownership-next (:perspective account)
+                 (if-eq-else account/CODE_HASH_HI_NEW EMPTY_KECCAK_HI
+                             (if-eq-else account/CODE_HASH_LO_NEW EMPTY_KECCAK_LO
+                                         (eq! account/HAS_CODE_NEW 0)
+                                         (eq! account/HAS_CODE_NEW 1))
+                             (eq! account/HAS_CODE_NEW 1)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                                       ;;
@@ -183,27 +192,31 @@
 ;;                                       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defconstraint account-existence-curr (:perspective account)
-               (begin (debug (is-binary account/EXISTS))
-                      (if-not-zero account/NONCE       (eq! account/EXISTS 1))
-                      (if-not-zero account/BALANCE     (eq! account/EXISTS 1))
-                      (if-not-zero account/HAS_CODE    (eq! account/EXISTS 1))
-                      (if-zero account/NONCE
-                               (if-zero account/BALANCE
-                                        (if-zero account/HAS_CODE (eq! account/EXISTS 0))))))
+(defconstraint   account---existence-curr (:perspective account)
+                 (begin (debug (is-binary account/EXISTS))
+                        (if-not-zero account/NONCE       (eq! account/EXISTS 1))
+                        (if-not-zero account/BALANCE     (eq! account/EXISTS 1))
+                        (if-not-zero account/HAS_CODE    (eq! account/EXISTS 1))
+                        (if-zero account/NONCE
+                                 (if-zero account/BALANCE
+                                          (if-zero account/HAS_CODE (eq! account/EXISTS 0))))))
 
-(defconstraint account-existence-next (:perspective account)
-               (begin (debug (is-binary account/EXISTS_NEW))
-                      (if-not-zero account/NONCE_NEW    (eq! account/EXISTS_NEW 1))
-                      (if-not-zero account/BALANCE_NEW  (eq! account/EXISTS_NEW 1))
-                      (if-not-zero account/HAS_CODE_NEW (eq! account/EXISTS_NEW 1))
-                      (if-zero account/NONCE_NEW
-                               (if-zero account/BALANCE_NEW
-                                        (if-zero account/HAS_CODE_NEW (eq! account/EXISTS_NEW 0))))))
+(defconstraint   account---existence-next (:perspective account)
+                 (begin (debug (is-binary account/EXISTS_NEW))
+                        (if-not-zero account/NONCE_NEW    (eq! account/EXISTS_NEW 1))
+                        (if-not-zero account/BALANCE_NEW  (eq! account/EXISTS_NEW 1))
+                        (if-not-zero account/HAS_CODE_NEW (eq! account/EXISTS_NEW 1))
+                        (if-zero account/NONCE_NEW
+                                 (if-zero account/BALANCE_NEW
+                                          (if-zero account/HAS_CODE_NEW (eq! account/EXISTS_NEW 0))))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;                                    ;;
-;;   X.4 Code ownership constraints   ;;
-;;                                    ;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                                     ;;
+;;   X.4 Generalities on ROMLEX_FLAG   ;;
+;;                                     ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+
+(defconstraint   account---the-ROMLEX-lookup-requires-nonzero-code-size (:perspective account)
+                 (if-zero    account/CODE_SIZE_NEW
+                             (vanishes!    account/ROMLEX_FLAG)))

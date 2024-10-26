@@ -24,37 +24,8 @@
 ;; TODO: remove PEEK_AT_STACK -- stack-row-constancy will be used on stack rows where this is already a precondition
 
 
-(defconstraint transaction-constancies () 
-               (begin
-                 (transaction-constancy HUB_STAMP_TRANSACTION_END)))
 
-(defconstraint hub-stamp-constancies () 
+(defconstraint hub-stamp-constancy-of-TLI-and-NSR () 
                (begin
-                 (debug     (hub-stamp-constancy    CN))
-                 (debug     (hub-stamp-constancy    CN_NEW))
-                 (debug     (hub-stamp-constancy    PC))
-                 (debug     (hub-stamp-constancy    PC_NEW))
-                 (debug     (hub-stamp-constancy    HEIGHT))
-                 (debug     (hub-stamp-constancy    HEIGHT_NEW))
-                 (debug     (hub-stamp-constancy    GAS_EXPECTED))
-                 (debug     (hub-stamp-constancy    GAS_ACTUAL))
-                 (debug     (hub-stamp-constancy    GAS_COST))
-                 (debug     (hub-stamp-constancy    GAS_NEXT))
-                 (debug     (hub-stamp-constancy    REFUND_COUNTER))
-                 (debug     (hub-stamp-constancy    REFUND_COUNTER_NEW))
-
                  (hub-stamp-constancy    TLI)
-                 (hub-stamp-constancy    NSR)
-                 (hub-stamp-constancy    CMC)
-                 (hub-stamp-constancy    XAHOY)))
-
-;; ;; @Olivier TODO context-constancy after reordering
-;; ;; context constancies
-;; (defconstraint context-constancies ()
-;;                (begin
-;;                  (context-constancy PERM_CODE_FRAGMENT_INDEX)
-;;                  (context-constancy PERM_CN_WILL_REV)
-;;                  (context-constancy PERM_CN_GETS_REV)
-;;                  (context-constancy PERM_CN_SELF_REV)
-;;                  (context-constancy PERM_CN_REV_STAMP)
-;;                  ))
+                 (hub-stamp-constancy    NSR)))

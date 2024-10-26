@@ -15,5 +15,5 @@
 
 (defconstraint copy-instruction---RETURNDATACOPY---setting-the-context-rows   (:guard (copy-instruction---standard-RETURNDATACOPY))
                (begin
-                 (read-context-data                                             ROW_OFFSET_RETURNDATACOPY_CURRENT_CONTEXT_ROW     CONTEXT_NUMBER)
-                 (if-not-zero   XAHOY   (execution-provides-empty-return-data   ROW_OFFSET_RETURNDATACOPY_CALLER_CONTEXT_ROW  ))))
+                 (read-context-data                                             ROFF_RETURNDATACOPY_CURRENT_CONTEXT_ROW     CONTEXT_NUMBER)
+                 (if-not-zero   XAHOY   (execution-provides-empty-return-data   ROFF_RETURNDATACOPY_CALLER_CONTEXT_ROW  ))))

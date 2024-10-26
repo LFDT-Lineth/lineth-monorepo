@@ -309,11 +309,11 @@
                     (account-same-marked-for-selfdestruct        ROFF_SELFDESTRUCT___ACCOUNT___2ND_UNDOING_ROW)
                     (DOM-SUB-stamps---revert-with-current        ROFF_SELFDESTRUCT___ACCOUNT___2ND_UNDOING_ROW 2)))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;                                                                              ;;
-;;    X.5.6 Undoing rows for scenario/SELFDESTRUCT_WONT_REVERT_NOT_YET_MARKED   ;;
-;;                                                                              ;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                                                                                      ;;
+;;    X.5.6 Account deletion row for scenario/SELFDESTRUCT_WONT_REVERT_NOT_YET_MARKED   ;;
+;;                                                                                      ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defun    (selfdestruct-scenario-WONT_REVERT_NOT_YET_MARKED-precondition) (* PEEK_AT_SCENARIO
                                                                              (scenario/SELFDESTRUCT_WONT_REVERT_NOT_YET_MARKED)))

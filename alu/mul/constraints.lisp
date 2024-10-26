@@ -11,7 +11,8 @@
 ;;    1.3 heartbeat    ;;
 ;;                     ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;
-(defconstraint stamp-init (:domain {0})
+
+(defconstraint stamp-init (:domain {0}) ;; ""
   (vanishes! STAMP))
 
 (defconstraint stamp-update ()
@@ -71,7 +72,7 @@
 (defconstraint bit_num-doesnt-reach-oneTwoEight ()
   (if-eq BIT_NUM ONETWOEIGHT (vanishes! 1)))
 
-(defconstraint last-row (:domain {-1} :guard STAMP)
+(defconstraint last-row (:domain {-1} :guard STAMP) ;; ""
   (begin (debug (= OLI 1))
          (= INST EVM_INST_EXP)
          (vanishes! ARG_1_HI)
@@ -153,6 +154,7 @@
 ;;    1.5 byte decompositions    ;;
 ;;                               ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defconstraint byte-decompositions ()
   (begin (byte-decomposition CT ACC_A_0 BYTE_A_0)
          (byte-decomposition CT ACC_A_1 BYTE_A_1)
@@ -179,6 +181,7 @@
 ;;    1.6 TINYB, TINYE, OLI and RESV constraints    ;;
 ;;                                                  ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defconstraint tiny-base (:guard STAMP)
   (if-not-zero ARG_1_HI
                (vanishes! TINYB)
@@ -209,6 +212,7 @@
 ;;    1.7 trivial regime    ;;
 ;;                          ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defconstraint trivial-regime ()
   ;; TODO: confirm that if-eq treats binary columns intelligently
   ;; otherwise replace with if-not-zero OLI
@@ -247,101 +251,54 @@
 ;;    1.8 aliases    ;;
 ;;                   ;;
 ;;;;;;;;;;;;;;;;;;;;;;;
-(defun (A_3)
-  ACC_A_3)
 
-(defun (A_2)
-  ACC_A_2)
-
-(defun (A_1)
-  ACC_A_1)
-
-(defun (A_0)
-  ACC_A_0)
+(defun (A_3) ACC_A_3)
+(defun (A_2) ACC_A_2)
+(defun (A_1) ACC_A_1)
+(defun (A_0) ACC_A_0)
 
 ;========
-(defun (B_3)
-  ACC_B_3)
-
-(defun (B_2)
-  ACC_B_2)
-
-(defun (B_1)
-  ACC_B_1)
-
-(defun (B_0)
-  ACC_B_0)
+(defun (B_3) ACC_B_3)
+(defun (B_2) ACC_B_2)
+(defun (B_1) ACC_B_1)
+(defun (B_0) ACC_B_0)
 
 ;========
-(defun (C_3)
-  ACC_C_3)
-
-(defun (C_2)
-  ACC_C_2)
-
-(defun (C_1)
-  ACC_C_1)
-
-(defun (C_0)
-  ACC_C_0)
+(defun (C_3) ACC_C_3)
+(defun (C_2) ACC_C_2)
+(defun (C_1) ACC_C_1)
+(defun (C_0) ACC_C_0)
 
 ;========
-(defun (C'_3)
-  (shift ACC_C_3 -8))
-
-(defun (C'_2)
-  (shift ACC_C_2 -8))
-
-(defun (C'_1)
-  (shift ACC_C_1 -8))
-
-(defun (C'_0)
-  (shift ACC_C_0 -8))
+(defun (C'_3) (shift ACC_C_3 -8))
+(defun (C'_2) (shift ACC_C_2 -8))
+(defun (C'_1) (shift ACC_C_1 -8))
+(defun (C'_0) (shift ACC_C_0 -8))
 
 ;========
-(defun (H_3)
-  ACC_H_3)
-
-(defun (H_2)
-  ACC_H_2)
-
-(defun (H_1)
-  ACC_H_1)
-
-(defun (H_0)
-  ACC_H_0)
+(defun (H_3) ACC_H_3)
+(defun (H_2) ACC_H_2)
+(defun (H_1) ACC_H_1)
+(defun (H_0) ACC_H_0)
 
 ;========
-(defun (alpha)
-  (shift BITS -5))
-
-(defun (beta_0)
-  (shift BITS -4))
-
-(defun (beta_1)
-  (shift BITS -3))
-
-(defun (eta)
-  (shift BITS -2))
-
-(defun (mu_0)
-  (shift BITS -1))
-
-(defun (mu_1)
-  BITS)
+(defun (alpha)    (shift BITS -5))
+(defun (beta_0)   (shift BITS -4))
+(defun (beta_1)   (shift BITS -3))
+(defun (eta)      (shift BITS -2))
+(defun (mu_0)     (shift BITS -1))
+(defun (mu_1)            BITS)
 
 ;========
-(defun (beta)
-  (+ (* 2 (beta_1)) (beta_0)))
-
-(defun (mu)
-  (+ (* 2 (mu_1)) (mu_0)))
+(defun (beta) (+ (* 2 (beta_1)) (beta_0)))
+(defun (mu)   (+ (* 2 (mu_1))   (mu_0)))    ;; ""
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                                 ;;
 ;;    1.9 nontrivial MUL regime    ;;
 ;;                                 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defconstraint nontrivial-mul-regime ()
   (if-eq CT MMEDIUMMO
          ;; i.e. if INST == MUL
@@ -386,6 +343,7 @@
 ;;    1.10 nontrivial EXP regime - zero result    ;;
 ;;                                                ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defun (special-constraints-for-byte-c-0)
   (if-eq-else CT MMEDIUMMO
               (if-zero (A_0)
@@ -415,16 +373,11 @@
                                                           BYTE_H_2
                                                           CT))))
 
-(defun (nu2-byte-c-0-equals-1)
-  (+ (* 8 BYTE_H_3) BYTE_H_2))
-
-(defun (nu2-byte-c-0-equals-0)
-  (+ (* 8 BYTE_H_3) BYTE_H_2 (* 8 MMEDIUM)))
-
+(defun (nu2-byte-c-0-equals-1) (+ (* 8 BYTE_H_3) BYTE_H_2))
+(defun (nu2-byte-c-0-equals-0) (+ (* 8 BYTE_H_3) BYTE_H_2 (* 8 MMEDIUM)))
 ;; θ · (B_3 + B_2 + B_1) + B_0
-(defun (test-for-bytehood-of-arg-2)
-  (+ (B_0)
-     (* THETA (+ (B_3) (B_2) (B_1)))))
+(defun (test-for-bytehood-of-arg-2) (+ (B_0)
+                                       (* THETA (+ (B_3) (B_2) (B_1)))))
 
 (defun (proving-the-vanishing-of-exp)
   (if-eq CT MMEDIUMMO
@@ -468,6 +421,7 @@
 ;;    1.11 nontrivial EXP regime - nonzero result    ;;
 ;;                                                   ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defun (target-arg1)
   (begin (= ARG_1_HI
             (+ (* THETA (A_3)) (A_2)))
@@ -542,5 +496,3 @@
                                 (first-square-and-multiply)
                                 (subsequent-square-and-multiply)
                                 (final-square-and-multiply))))))
-
-

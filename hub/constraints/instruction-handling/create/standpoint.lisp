@@ -24,14 +24,8 @@
                                  (if-not-zero   stack/CREATE_FLAG
                                                 (if-not-zero   (-   1   CT_TLI)
                                                                (if-not-zero   (-   1   stack/SUX    stack/SOX)
-                                                                              (begin   (eq!   (shift   PEEK_AT_SCENARIO                  2)   1)
-                                                                                       (eq!   (shift   (scenario-shorthand---CREATE---sum)   2)   1)
-                                                                                       )
-                                                                              )
-                                                               )
-                                                )
-                                 )
-                  )
+                                                                              (begin   (eq!   (shift   PEEK_AT_SCENARIO                      2)   1)
+                                                                                       (eq!   (shift   (scenario-shorthand---CREATE---sum)   2)   1)))))))
 
 (defconstraint   create-instruction---backward-setting-CREATE-instruction   ()
                  (if-not-zero   PEEK_AT_SCENARIO
@@ -39,8 +33,4 @@
                                                (begin    (eq!    (shift    PEEK_AT_STACK       CREATE_first_stack_row___row_offset)    1)
                                                          (eq!    (shift    stack/CREATE_FLAG   CREATE_first_stack_row___row_offset)    1)
                                                          (eq!    (shift    CT_TLI              CREATE_first_stack_row___row_offset)    0)
-                                                         (eq!    (shift    stack/SUX           CREATE_first_stack_row___row_offset)    0)
-                                                         )
-                                               )
-                                )
-                 )
+                                                         (eq!    (shift    stack/SUX           CREATE_first_stack_row___row_offset)    0)))))

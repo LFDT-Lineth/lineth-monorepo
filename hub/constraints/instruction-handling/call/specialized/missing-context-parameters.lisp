@@ -31,10 +31,10 @@
                                                                       (*    (call-instruction---is-DELEGATECALL)    (call-instruction---current-address-lo))
                                                                       (*    (call-instruction---is-STATICCALL)      (call-instruction---callee-address-lo))))
 
-(defun    (call-instruction---new-account-deployment-number)    (+    (*    (call-instruction---is-CALL)            (shift    account/DEPLOYMENT_NUMBER    CALL_1st_caller_account_row___row_offset))
-                                                                      (*    (call-instruction---is-CALLCODE)        (shift    account/DEPLOYMENT_NUMBER    CALL_1st_callee_account_row___row_offset))
-                                                                      (*    (call-instruction---is-DELEGATECALL)    (shift    account/DEPLOYMENT_NUMBER    CALL_1st_callee_account_row___row_offset))
-                                                                      (*    (call-instruction---is-STATICCALL)      (shift    account/DEPLOYMENT_NUMBER    CALL_1st_caller_account_row___row_offset))))
+(defun    (call-instruction---new-account-deployment-number)    (+    (*    (call-instruction---is-CALL)            (shift    account/DEPLOYMENT_NUMBER    CALL_1st_callee_account_row___row_offset))
+                                                                      (*    (call-instruction---is-CALLCODE)        (shift    account/DEPLOYMENT_NUMBER    CALL_1st_caller_account_row___row_offset))
+                                                                      (*    (call-instruction---is-DELEGATECALL)    (shift    account/DEPLOYMENT_NUMBER    CALL_1st_caller_account_row___row_offset))
+                                                                      (*    (call-instruction---is-STATICCALL)      (shift    account/DEPLOYMENT_NUMBER    CALL_1st_callee_account_row___row_offset))))
 
 (defun    (call-instruction---new-caller-address-hi)            (+    (*    (call-instruction---is-CALL)            (call-instruction---current-address-hi))
                                                                       (*    (call-instruction---is-CALLCODE)        (call-instruction---current-address-hi))

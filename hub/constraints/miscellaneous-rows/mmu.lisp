@@ -382,7 +382,7 @@
 
 (defun (set-MMU-instruction---blake     kappa               ;; offset
                                         src_id              ;; source ID
-                                        ;; tgt_id              ;; target ID
+                                        tgt_id              ;; target ID
                                         ;; aux_id              ;; auxiliary ID
                                         ;; src_offset_hi       ;; source offset high
                                         src_offset_lo       ;; source offset low
@@ -398,7 +398,7 @@
                                         ) (begin
                                         (eq! (shift misc/MMU_INST            kappa) MMU_INST_BLAKE )
                                         (eq! (shift misc/MMU_SRC_ID          kappa) src_id )
-                                        ;; (eq! (shift misc/MMU_TGT_ID          kappa) tgt_id )
+                                        (eq! (shift misc/MMU_TGT_ID          kappa) tgt_id )
                                         ;; (eq! (shift misc/MMU_AUX_ID          kappa) aux_id )
                                         ;; (eq! (shift misc/MMU_SRC_OFFSET_HI   kappa) src_offset_hi )
                                         (eq! (shift misc/MMU_SRC_OFFSET_LO   kappa) src_offset_lo )

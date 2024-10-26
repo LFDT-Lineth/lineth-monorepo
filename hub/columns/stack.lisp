@@ -58,7 +58,6 @@
    ( JUMP_DESTINATION_VETTING_REQUIRED :binary@prove )
 
    ;; exception flags
-   ( OPCX                    :binary@prove )
    ( SUX                     :binary@prove )
    ( SOX                     :binary@prove )
    ( MXPX                    :binary@prove )
@@ -69,6 +68,7 @@
    ( SSTOREX                 :binary@prove )
    ( ICPX                    :binary@prove )
    ( MAXCSX                  :binary@prove )
+   ( OPCX                    :binary@prove )
 
    ;; hash info related
    ( HASH_INFO_FLAG          :binary@prove )

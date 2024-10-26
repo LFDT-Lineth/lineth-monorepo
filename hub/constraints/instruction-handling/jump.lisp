@@ -151,4 +151,4 @@
                                                   (eq! stack/JUMPX 1)))
                               (if-not-zero (jump-instruction---JUMPI-must-be-attempted)
                                            (begin (eq! stack/JUMP_DESTINATION_VETTING_REQUIRED 1)
-                                                  (eq! PC_NEW (jump-instruction---new-pc-lo)))))))
+                                                  (if-zero XAHOY (eq! PC_NEW (jump-instruction---new-pc-lo))))))))

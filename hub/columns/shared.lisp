@@ -14,7 +14,6 @@
     ( EXCEPTION_AHOY                            :binary@prove )
 
     ;; extra stamps
-    ( HASH_INFO_STAMP                           :i32 )  ;; TODO: remove
     ( LOG_INFO_STAMP                            :i32 )
     ( MMU_STAMP                                 :i32 )
     ( MXP_STAMP                                 :i32 )

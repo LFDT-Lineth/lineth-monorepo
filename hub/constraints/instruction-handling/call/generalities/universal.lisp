@@ -122,17 +122,19 @@
 
 (defconstraint    call-instruction---setting-the-CALL-scenario-flag        (:guard    (call-instruction---standard-precondition))
                   (begin
-                    (eq!             scenario/CALL_EXCEPTION                               XAHOY)
-                    (if-not-zero    (scenario-shorthand---CALL---unexceptional)               (eq!    (scenario-shorthand---CALL---abort)                (call-instruction---OOB-aborting-condition)))
+                    (eq!             scenario/CALL_EXCEPTION                                  XAHOY)
+                    (if-not-zero    (scenario-shorthand---CALL---unexceptional)
+                                    (eq!    (scenario-shorthand---CALL---abort)
+                                            (call-instruction---OOB-aborting-condition)))
                     (if-not-zero    (scenario-shorthand---CALL---abort)
                                     (begin
-                                      (eq!              scenario/CALL_ABORT_WILL_REVERT    (call-instruction---caller-will-revert))
+                                      (eq!              scenario/CALL_ABORT_WILL_REVERT               (call-instruction---caller-will-revert))
                                       (debug    (eq!    scenario/CALL_ABORT_WONT_REVERT    (-    1    (call-instruction---caller-will-revert))))))
                     (if-not-zero    (scenario-shorthand---CALL---entry)
                                     (begin
                                       (eq!    (scenario-shorthand---CALL---precompile)                  (call-instruction---callee-is-precompile))
                                       (eq!    (scenario-shorthand---CALL---externally-owned-account)    (*   (-    1    (call-instruction---callee-is-precompile))
-                                                                                                         (-    1    (call-instruction---callee-has-code))))
+                                                                                                             (-    1    (call-instruction---callee-has-code))))
                                       (eq!    (scenario-shorthand---CALL---smart-contract)              (call-instruction---callee-has-code))))
                     (if-not-zero    (+    scenario/CALL_PRC_SUCCESS_CALLER_WILL_REVERT    scenario/CALL_PRC_SUCCESS_CALLER_WONT_REVERT)
                                     (begin  
@@ -140,7 +142,7 @@
                                       (debug    (eq!    scenario/CALL_PRC_SUCCESS_CALLER_WONT_REVERT    (-    1    (call-instruction---caller-will-revert))))))
                     (if-not-zero    (scenario-shorthand---CALL---externally-owned-account)  
                                     (begin
-                                      (eq!              scenario/CALL_EOA_SUCCESS_CALLER_WILL_REVERT                         (call-instruction---caller-will-revert))
+                                      (eq!              scenario/CALL_EOA_SUCCESS_CALLER_WILL_REVERT               (call-instruction---caller-will-revert))
                                       (debug    (eq!    scenario/CALL_EOA_SUCCESS_CALLER_WONT_REVERT    (-    1    (call-instruction---caller-will-revert))))))
                     (if-not-zero    (scenario-shorthand---CALL---smart-contract)
                                     (begin
@@ -148,8 +150,8 @@
                                                           (call-instruction---caller-will-revert))
                                       (debug    (eq!      (+    scenario/CALL_SMC_FAILURE_CALLER_WONT_REVERT    scenario/CALL_SMC_SUCCESS_CALLER_WONT_REVERT)
                                                           (-    1    call-instruction---caller-will-revert)))
-                                      (eq!                (scenario-shorthand---CALL---smc-failure)               (call-instruction---caller-will-revert))
-                                      (debug    (eq!      (scenario-shorthand---CALL---smc-success)    (-    1    (call-instruction---caller-will-revert))))))))
+                                      (eq!                (scenario-shorthand---CALL---smc-failure)               (call-instruction---callee-self-reverts))
+                                      (eq!                (scenario-shorthand---CALL---smc-success)    (-    1    (call-instruction---callee-self-reverts)))))))
 
 (defconstraint    call-instruction---setting-the-next-context-number       (:guard    (call-instruction---standard-precondition))
                   (begin

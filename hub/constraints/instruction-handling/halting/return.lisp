@@ -44,8 +44,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-
-
+;; as per usual ROFF ≡ ROW_OFFSET
 (defconst
   ROFF_RETURN___STACK_ROW                                        -1
   ROFF_RETURN___SCENARIO_ROW                                      0
@@ -112,9 +111,7 @@
                                      (+  (return-instruction---exception-flag-MXPX)
                                          (return-instruction---exception-flag-OOGX)
                                          (return-instruction---exception-flag-MAXCSX)
-                                         (return-instruction---exception-flag-ICPX))))
-                 )
-               )
+                                         (return-instruction---exception-flag-ICPX))))))
 
 (defconstraint   return-instruction---setting-stack-pattern               (:guard  (return-instruction---standard-scenario-row))
                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -242,22 +239,23 @@
 (defconstraint   return-instruction---setting-trigger_HASHINFO           (:guard   (return-instruction---standard-scenario-row))
                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                  (eq!   (shift   stack/HASH_INFO_FLAG   ROFF_RETURN___STACK_ROW)
-                        (return-instruction---trigger_HASHINFO)
-                        ))
+                        (return-instruction---trigger_HASHINFO)))
+                        
 (defconstraint   return-instruction---setting-MXP-data              (:guard   (return-instruction---standard-scenario-row))
                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-                 (set-MXP-instruction-type-4   ROFF_RETURN___1ST_MISC_ROW   ;; row offset kappa
-                                               (return-instruction---instruction)           ;; instruction
-                                               (return-instruction---is-deployment)         ;; bit modifying the behaviour of RETURN pricing
-                                               (return-instruction---offset-hi)             ;; offset high
-                                               (return-instruction---offset-lo)             ;; offset low
-                                               (return-instruction---size-hi)               ;; size high
-                                               (return-instruction---size-lo)               ;; size low
-                                               ))
+                 (if-not-zero   (shift   misc/MXP_FLAG        ROFF_RETURN___1ST_MISC_ROW)
+                                (set-MXP-instruction-type-4   ROFF_RETURN___1ST_MISC_ROW   ;; row offset kappa
+                                                              (return-instruction---instruction)           ;; instruction
+                                                              (return-instruction---is-deployment)         ;; bit modifying the behaviour of RETURN pricing
+                                                              (return-instruction---offset-hi)             ;; offset high
+                                                              (return-instruction---offset-lo)             ;; offset low
+                                                              (return-instruction---size-hi)               ;; size high
+                                                              (return-instruction---size-lo)               ;; size low
+                                                              )))
 
 (defconstraint   return-instruction---setting-OOB-data              (:guard   (return-instruction---standard-scenario-row))
                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-                 (if-not-zero   (shift   misc/OOB_FLAG     ROFF_RETURN___1ST_MISC_ROW)
+                 (if-not-zero   (shift   misc/OOB_FLAG              ROFF_RETURN___1ST_MISC_ROW)
                                 (set-OOB-instruction---deployment   ROFF_RETURN___1ST_MISC_ROW   ;; offset
                                                                     (return-instruction---size-hi)             ;; code size hi
                                                                     (return-instruction---size-lo)             ;; code size lo
@@ -291,15 +289,15 @@
                                                                                    ;; aux_id                              ;; auxiliary ID
                                                                                    ;; src_offset_hi                       ;; source offset high
                                                                                    (return-instruction---offset-lo)             ;; source offset low
-                                                                                   ;; tgt_offset_lo                       ;; target offset low
+                                                                                   ;; tgt_offset_lo                                ;; target offset low
                                                                                    (return-instruction---size-lo)               ;; size
                                                                                    (return-instruction---return-at-offset)      ;; reference offset
                                                                                    (return-instruction---return-at-capacity)    ;; reference size
-                                                                                   ;; success_bit                         ;; success bit
-                                                                                   ;; limb_1                              ;; limb 1
-                                                                                   ;; limb_2                              ;; limb 2
-                                                                                   ;; exo_sum                             ;; weighted exogenous module flag sum
-                                                                                   ;; phase                               ;; phase
+                                                                                   ;; success_bit                                  ;; success bit
+                                                                                   ;; limb_1                                       ;; limb 1
+                                                                                   ;; limb_2                                       ;; limb 2
+                                                                                   ;; exo_sum                                      ;; weighted exogenous module flag sum
+                                                                                   ;; phase                                        ;; phase
                                                                                    ))))
 
 (defconstraint   return-instruction---justifying-the-MXPX           (:guard   (return-instruction---standard-scenario-row))
@@ -332,7 +330,7 @@
                             (vanishes!   GAS_COST)
                             ;; we require the computation of gas cost (either OOGX or unexceptional)
                             (eq!   GAS_COST
-                                   (+   stack/STATIC_GAS
+                                   (+   (shift    stack/STATIC_GAS    ROFF_RETURN___STACK_ROW)
                                         (return-instruction---MXP-memory-expansion-gas)))))
 
 (defun   (return-instruction---gas-cost-required)   (+  (return-instruction---exception-flag-OOGX)

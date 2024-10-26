@@ -147,8 +147,9 @@
                    (if-not-zero (account-instruction---touches-foreign-account)
                                 (begin
                                   (eq! (shift account/ROMLEX_FLAG               ROFF_ACC___ACCOUNT_DOING_ROW)   0)
-                                  (eq! (shift account/TRM_RAW_ADDRESS_HI        ROFF_ACC___ACCOUNT_DOING_ROW)   (account-instruction---raw-address-hi))
-                                  (eq! (shift account/ADDRESS_LO                ROFF_ACC___ACCOUNT_DOING_ROW)   (account-instruction---raw-address-lo))
+                                  (account-trim-address                         ROFF_ACC___ACCOUNT_DOING_ROW              ;; row offset
+                                                                                (account-instruction---raw-address-hi)    ;; high part of raw, potentially untrimmed address
+                                                                                (account-instruction---raw-address-lo))   ;; low  part of raw, potentially untrimmed address
                                   (account-same-balance                         ROFF_ACC___ACCOUNT_DOING_ROW)
                                   (account-same-nonce                           ROFF_ACC___ACCOUNT_DOING_ROW)
                                   (account-same-code                            ROFF_ACC___ACCOUNT_DOING_ROW)

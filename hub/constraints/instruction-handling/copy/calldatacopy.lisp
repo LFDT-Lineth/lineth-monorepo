@@ -16,6 +16,6 @@
 
 (defconstraint copy-instruction---CALLDATACOPY---setting-context-row---exceptional-case (:guard (copy-instruction---standard-CALLDATACOPY))
                (if-not-zero XAHOY
-                            (execution-provides-empty-return-data ROW_OFFSET_CALLDATACOPY_CONTEXT_ROW)
-                            (read-context-data ROW_OFFSET_CALLDATACOPY_CONTEXT_ROW CONTEXT_NUMBER)))
+                            (execution-provides-empty-return-data ROFF_CALLDATACOPY_CONTEXT_ROW)
+                            (read-context-data ROFF_CALLDATACOPY_CONTEXT_ROW CONTEXT_NUMBER)))
 

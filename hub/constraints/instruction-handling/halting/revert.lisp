@@ -89,14 +89,14 @@
                                 (if-not-zero   (force-bin (revert-instruction---current-context-is-root))
                                                ;; current context IS root
                                                (read-context-data    ROFF_REVERT___NO_XAHOY_CALLER_CONTEXT_ROW
-                                                                     (revert-instruction---caller-context)))
-                                ;; current context ISN'T root
-                                (provide-return-data   ROFF_REVERT___NO_XAHOY_CALLER_CONTEXT_ROW             ;; row offset
-                                                       (revert-instruction---caller-context)                 ;; receiver context
-                                                       (revert-instruction---current-context)                ;; provider context
-                                                       (revert-instruction---type-safe-return-data-offset)   ;; type safe rdo
-                                                       (revert-instruction---type-safe-return-data-size)     ;; type safe rds
-                                                       ))))
+                                                                     (revert-instruction---caller-context))
+                                               ;; current context ISN'T root
+                                               (provide-return-data   ROFF_REVERT___NO_XAHOY_CALLER_CONTEXT_ROW             ;; row offset
+                                                                      (revert-instruction---caller-context)                 ;; receiver context
+                                                                      (revert-instruction---current-context)                ;; provider context
+                                                                      (revert-instruction---type-safe-return-data-offset)   ;; type safe rdo
+                                                                      (revert-instruction---type-safe-return-data-size)     ;; type safe rds
+                                                                      )))))
 
 (defun  (revert-instruction---trigger_MMU)  (*  (-  1  XAHOY)
                                                 (-  1  (revert-instruction---current-context-is-root))
@@ -125,18 +125,18 @@
                               (set-MMU-instruction---ram-to-ram-sans-padding    ROFF_REVERT___MISC_ROW  ;; row offset
                                                                                 (revert-instruction---current-context)        ;; source ID
                                                                                 (revert-instruction---caller-context)         ;; target ID
-                                                                                ;; aux_id                               ;; auxiliary ID
-                                                                                ;; src_offset_hi                        ;; source offset high
+                                                                                ;; aux_id                                        ;; auxiliary ID
+                                                                                ;; src_offset_hi                                 ;; source offset high
                                                                                 (revert-instruction---offset-lo)              ;; source offset low
-                                                                                ;; tgt_offset_lo                        ;; target offset low
+                                                                                ;; tgt_offset_lo                                 ;; target offset low
                                                                                 (revert-instruction---size-lo)                ;; size
                                                                                 (revert-instruction---r@o)                    ;; reference offset
                                                                                 (revert-instruction---r@c)                    ;; reference size
-                                                                                ;; success_bit                          ;; success bit
-                                                                                ;; limb_1                               ;; limb 1
-                                                                                ;; limb_2                               ;; limb 2
-                                                                                ;; exo_sum                              ;; weighted exogenous module flag sum
-                                                                                ;; phase                                ;; phase
+                                                                                ;; success_bit                                   ;; success bit
+                                                                                ;; limb_1                                        ;; limb 1
+                                                                                ;; limb_2                                        ;; limb 2
+                                                                                ;; exo_sum                                       ;; weighted exogenous module flag sum
+                                                                                ;; phase                                         ;; phase
                                                                                 )))
 
 (defconstraint  revert-instruction---setting-the-gas-cost                          (:guard (revert-instruction---standard-precondition))

@@ -7,30 +7,31 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-(defun (exception_flag_sum)
-                (+  stack/OPCX
-                    stack/SUX
-                    stack/SOX
-                    stack/OOGX
-                    stack/MXPX
-                    stack/RDCX
-                    stack/JUMPX
-                    stack/STATICX
-                    stack/SSTOREX
-                    stack/ICPX
-                    stack/MAXCSX))
+(defun    (exception_flag_sum)    (+ stack/SUX
+                                     stack/SOX
+                                     stack/MXPX
+                                     stack/OOGX
+                                     stack/RDCX
+                                     stack/JUMPX
+                                     stack/STATICX
+                                     stack/SSTOREX
+                                     stack/ICPX
+                                     stack/MAXCSX
+                                     stack/OPCX
+                                     ))
 
-(defun (weighted_exception_flag_sum)
-                (+  (* 1   stack/OPCX)
-                    (* 2   stack/SUX)
-                    (* 4   stack/SOX)
-                    (* 8   stack/OOGX)
-                    (* 16  stack/RDCX)
-                    (* 32  stack/JUMPX)
-                    (* 64  stack/STATICX)
-                    (* 128 stack/SSTOREX)
-                    (* 256 stack/ICPX)
-                    (* 512 stack/MAXCSX)))
+(defun    (weighted_exception_flag_sum)    (+ (*   (^ 2  0)    stack/SUX)
+                                              (*   (^ 2  1)    stack/SOX)
+                                              (*   (^ 2  2)    stack/MXPX)
+                                              (*   (^ 2  3)    stack/OOGX)
+                                              (*   (^ 2  4)    stack/RDCX)
+                                              (*   (^ 2  5)    stack/JUMPX)
+                                              (*   (^ 2  6)    stack/STATICX)
+                                              (*   (^ 2  7)    stack/SSTOREX)
+                                              (*   (^ 2  8)    stack/ICPX)
+                                              (*   (^ 2  9)    stack/MAXCSX)
+                                              (*   (^ 2 10)    stack/OPCX)
+                                              )) ;; ""
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -45,15 +46,16 @@
                (begin
                  (is-binary  SUX     )
                  (is-binary  SOX     )
-                 (is-binary  OOGX    )
                  (is-binary  MXPX    )
-                 (is-binary  OPCX    ) 
+                 (is-binary  OOGX    )
                  (is-binary  RDCX    )
                  (is-binary  JUMPX   )
                  (is-binary  STATICX )
                  (is-binary  SSTOREX )
                  (is-binary  ICPX    )
-                 (is-binary  MAXCSX  )))
+                 (is-binary  MAXCSX  )
+                 (is-binary  OPCX    )
+                 ))
 
 
 (defconstraint exception-flags-are-exclusive (:perspective stack)
@@ -73,13 +75,13 @@
 
 (defconstraint automatic-exception-flag-vanishing (:perspective stack)
                (begin
-                 (eq!            INVALID_FLAG                    OPCX)
-                 (if-zero        MXP_FLAG                        (vanishes! MXPX))
-                 (if-zero        JUMP_FLAG                       (vanishes! JUMPX))
-                 (if-zero        STATIC_FLAG                     (vanishes! STATICX))
-                 (if-not-zero    (-  INSTRUCTION EVM_INST_RETURNDATACOPY) (vanishes! RDCX))
-                 (if-not-zero    (-  INSTRUCTION EVM_INST_SSTORE)         (vanishes! SSTOREX))
-                 (if-not-zero    (-  INSTRUCTION EVM_INST_RETURN)         (vanishes! (+ ICPX MAXCSX)))))
+                 (eq!            INVALID_FLAG                                   OPCX)
+                 (if-zero        MXP_FLAG                                       (vanishes!    MXPX))
+                 (if-zero        JUMP_FLAG                                      (vanishes!    JUMPX))
+                 (if-zero        STATIC_FLAG                                    (vanishes!    STATICX))
+                 (if-not-zero    (-  INSTRUCTION    EVM_INST_RETURNDATACOPY)    (vanishes!    RDCX))
+                 (if-not-zero    (-  INSTRUCTION    EVM_INST_SSTORE)            (vanishes!    SSTOREX))
+                 (if-not-zero    (-  INSTRUCTION    EVM_INST_RETURN)            (vanishes!    (+ ICPX MAXCSX)))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

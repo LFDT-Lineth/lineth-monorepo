@@ -15,32 +15,35 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; NOTE: bytes from the invalid instruction family
-;; (ither not an opcode or the INVALID opcode)
+;; (either not an opcode or the INVALID opcode)
 ;; can't raise stack exceptions
-(defun (invalid-instruction)
+
+(defun (invalid-instruction---standard-hypothesis)
   ;;;;;;;;;;;;;;;;;;;;;;;;;;
   (* PEEK_AT_STACK
      stack/INVALID_FLAG))
 
-(defconstraint invalid-setting-the-stack-pattern (:guard (invalid-instruction))
-               (stack-pattern-0-0))
+(defconstraint    invalid-instruction---setting-the-stack-pattern (:guard (invalid-instruction---standard-hypothesis))
+                  (stack-pattern-0-0))
 
 ;; already enforced in automatic-exception-flag-vanishing constraint
-;; TODO: remove the (vanishes! 0)
-(defconstraint invalid-setting-the-OPCX          (:guard (invalid-instruction))
-               (begin (vanishes! 0)
-                      (debug (eq! stack/OPCX 1))))
+;; TODO: this is debug
+(defconstraint    invalid-instruction---setting-OPCX              (:guard (invalid-instruction---standard-hypothesis))
+                  (eq!    stack/OPCX    stack/INVALID_FLAG))
 
-;; TODO: remove the (vanishes! 0)
-(defconstraint invalid-setting-the-peeking-flags (:guard (invalid-instruction))
-               (begin (vanishes! 0)
-                      (debug (eq! (next PEEK_AT_CONTEXT) 1))
-                      (debug (eq! CMC 1))))
+(defconstraint    invalid-instruction---setting-NSR               (:guard (invalid-instruction---standard-hypothesis))
+                  (eq!    NSR    CMC))
 
-(defconstraint invalid-setting-the-gas-cost      (:guard (invalid-instruction))
-               (eq! GAS_COST stack/STATIC_GAS))
+;; TODO: this is debug
+(defconstraint    invalid-instruction---setting-the-peeking-flags (:guard (invalid-instruction---standard-hypothesis))
+                  (eq!    NSR
+                          (*   CMC   (next PEEK_AT_CONTEXT))))
 
-(defconstraint invalid-debugging-constraints         (:guard (invalid-instruction))
-               (begin
-                 (eq! XAHOY CMC)
-                 (debug (eq! XAHOY stack/OPCX))))
+(defconstraint    invalid-instruction---setting-the-gas-cost      (:guard (invalid-instruction---standard-hypothesis))
+                  (eq!    GAS_COST    stack/STATIC_GAS))
+
+(defconstraint    invalid-instruction---debugging-constraints     (:guard (invalid-instruction---standard-hypothesis))
+                  (begin
+                    (eq!    CMC          1)
+                    (eq!    XAHOY        1)
+                    (eq!    stack/OPCX   1)))

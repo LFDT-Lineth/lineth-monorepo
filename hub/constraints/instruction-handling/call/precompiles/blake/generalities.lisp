@@ -54,23 +54,23 @@
 
 (defconstraint    precompile-processing---BLAKE2f---setting-the-MMU-instruction---parameter-instruction
                   (:guard    (precompile-processing---BLAKE2f---standard-precondition))
-                  (if-not-zero   (shift    misc/MMU_FLAG    precompile-processing---BLAKE2f---misc-row-offset---BLAKE-parameter-extraction)
+                  (if-not-zero   (shift    misc/MMU_FLAG         precompile-processing---BLAKE2f---misc-row-offset---BLAKE-parameter-extraction)
                                  (set-MMU-instruction---blake    precompile-processing---BLAKE2f---misc-row-offset---BLAKE-parameter-extraction   ;; offset
-                                                               CONTEXT_NUMBER                                                                   ;; source ID
-                                                               ;; tgt_id                                                                           ;; target ID
-                                                               ;; aux_id                                                                           ;; auxiliary ID
-                                                               ;; src_offset_hi                                                                    ;; source offset high
-                                                               (+    1    HUB_STAMP)                                                            ;; source offset low
-                                                               ;; tgt_offset_lo                                                                    ;; target offset low
-                                                               ;; size                                                                             ;; size
-                                                               ;; ref_offset                                                                       ;; reference offset
-                                                               ;; ref_size                                                                         ;; reference size
-                                                               ;; (scenario-shorthand---PRC---success)                                             ;; success bit
-                                                               ;; limb_1                                                                           ;; limb 1
-                                                               ;; limb_2                                                                           ;; limb 2
-                                                               ;; exo_sum                                                                          ;; weighted exogenous module flag sum
-                                                               ;; phase                                                                            ;; phase
-                                                               )))
+                                                                 CONTEXT_NUMBER                                                                   ;; source ID
+                                                                 (+    1    HUB_STAMP)                                                            ;; target ID
+                                                                 ;; aux_id                                                                           ;; auxiliary ID
+                                                                 ;; src_offset_hi                                                                    ;; source offset high
+                                                                 (precompile-processing---dup-cdo)                                                ;; source offset low
+                                                                 ;; tgt_offset_lo                                                                    ;; target offset low
+                                                                 ;; size                                                                             ;; size
+                                                                 ;; ref_offset                                                                       ;; reference offset
+                                                                 ;; ref_size                                                                         ;; reference size
+                                                                 ;; (scenario-shorthand---PRC---success)                                             ;; success bit
+                                                                 ;; limb_1                                                                           ;; limb 1
+                                                                 ;; limb_2                                                                           ;; limb 2
+                                                                 ;; exo_sum                                                                          ;; weighted exogenous module flag sum
+                                                                 ;; phase                                                                            ;; phase
+                                                                 )))
 
 (defconstraint    precompile-processing---BLAKE2f---constraining-the-call-success
                   (:guard         (precompile-processing---BLAKE2f---standard-precondition))
