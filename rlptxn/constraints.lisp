@@ -281,7 +281,7 @@
 ;;                             ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; 2.3.3.2 & 2.3.3.3
-(defconstraint cy-imply-done (:guard ABS_TX_NUM)
+(defconstraint ct-imply-done (:guard ABS_TX_NUM)
   (if-eq-else CT (- nSTEP 1) (eq! DONE 1) (vanishes! DONE)))
 
 ;; 2.3.3.4 & 2.3.3.5
