@@ -28,11 +28,6 @@
                           (begin (debug (vanishes! CT))
                                  (vanishes! (weighted-sum-of-binary-columns-for-transaction-constancy))))) ;;TODO: useless, but in the spec
 
-(defconstraint   padding ()
-                 (if-zero ABS
-                          (begin (vanishes! CT)
-                                 (vanishes! (tx-type-sum)))))
-
 (defconstraint   abs-tx-num-increments ()
                  (stamp-progression ABS))
 

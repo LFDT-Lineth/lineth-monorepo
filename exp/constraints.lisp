@@ -19,20 +19,15 @@
 ;;    2.2 binary constraints   ;;
 ;;                             ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defconstraint   binary-constraints ()
-                 (begin (is-binary IS_EXP_LOG)
-                        (is-binary IS_MODEXP_LOG)
-                        (is-binary CMPTN)
-                        (is-binary MACRO)
-                        (is-binary PRPRC)
-                        (is-binary (flag_sum_perspective))
-                        (is-binary (flag_sum_macro))))
+
+;; done with binary@prove in columns.lisp
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                               ;;
 ;;    2.3 Flag sum perspectives  ;;
 ;;                               ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defconstraint   flag-sum-perspective-padding-non-padding ()
                  (if-zero STAMP
                           (vanishes! (flag_sum_perspective))
@@ -43,6 +38,7 @@
 ;;    2.4 Instruction decoding   ;;
 ;;                               ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defconstraint   instruction-decoding-padding-non-padding ()
                  (if-zero STAMP
                           (vanishes! (flag_sum_macro))
@@ -56,6 +52,7 @@
 ;;    2.5 Constancies          ;;
 ;;                             ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defconstraint   stamp-constancy ()
                  (begin (stamp-constancy STAMP IS_EXP_LOG)
                         (stamp-constancy STAMP IS_MODEXP_LOG)))
@@ -79,6 +76,7 @@
 ;;    3.2 heartbeat    ;;
 ;;                     ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;
+
 ;; 1
 (defconstraint   first-row (:domain {0}) (vanishes! STAMP)) ;; ""
 
@@ -130,6 +128,7 @@
 ;;    3.7 Byte decomposition   ;;
 ;;        constraints          ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defconstraint   byte-decompositions (:perspective computation)
                  (begin (byte-decomposition CT RAW_ACC RAW_BYTE)
                         (byte-decomposition CT TRIM_ACC TRIM_BYTE)))
@@ -139,6 +138,7 @@
 ;;    3.8 Bit decomposition   ;;
 ;;        constraints          ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 ;; bit decomposition constraint (TODO: add to stdlib.lisp)
 (defpurefun (bit-decomposition ct acc bits)
             (if-zero ct
@@ -155,6 +155,7 @@
 ;;    3.9 Plateau bit          ;;
 ;;        constraints          ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defconstraint   plateau-constraints (:perspective computation :guard IS_MODEXP_LOG)
                  (plateau-constraint CT PLT_BIT PLT_JMP))
 
@@ -163,6 +164,7 @@
 ;;    3.10 Counting nonzeroness  ;;
 ;;         constraints           ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 ;; non zero bit constraint 
 (defpurefun (non-zero-bit x nzb)
             (if-zero x
@@ -193,6 +195,7 @@
 ;;    3.11 Most significant           ;;
 ;;         byte constraints           ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defconstraint   most-significant-byte-start (:perspective computation :guard IS_MODEXP_LOG)
                  (if-zero CT
                           (if-not-zero TANZB_ACC
@@ -241,6 +244,7 @@
 ;;    4 EXP_LOG       ;;
 ;;                    ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;
+
 ;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                    ;;
 ;;    4.2 Shorthands  ;;
@@ -250,7 +254,7 @@
 (defun (exponent_hi)          [ macro/DATA 1 ])
 (defun (exponent_lo)          [ macro/DATA 2 ])
 (defun (dyn_cost)             [ macro/DATA 5 ]) ;; ""
-(defun (expoennt_byte_length) (prev computation/TANZB_ACC))
+(defun (exponent_byte_length) (prev computation/TANZB_ACC))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                      ;;
@@ -285,19 +289,21 @@
 (defconstraint   exp-log---justify-hub-prediction (:perspective macro :guard IS_EXP_LOG)
                  (if-zero (expn_hi_is_zero)
                           (eq! (dyn_cost)
-                               (* GAS_CONST_G_EXP_BYTE (+ (expoennt_byte_length) 16)))
-                          (eq! (dyn_cost) (* GAS_CONST_G_EXP_BYTE (expoennt_byte_length)))))
+                               (* GAS_CONST_G_EXP_BYTE (+ (exponent_byte_length) 16)))
+                          (eq! (dyn_cost) (* GAS_CONST_G_EXP_BYTE (exponent_byte_length)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                    ;;
 ;;    5 MODEXP_LOG    ;;
 ;;                    ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;
+
 ;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                    ;;
 ;;    5.2 Shorthands  ;;
 ;;                    ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defun (raw_lead_hi)                                 [macro/DATA 1])
 (defun (raw_lead_lo)                                 [macro/DATA 2])
 (defun (cds_cutoff)                                  [macro/DATA 3])
@@ -314,6 +320,7 @@
 ;;    5.3 Preprocessing ;;
 ;;                      ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 ;; 1 
 (defconstraint   modexp-log---preprocessing---cds-cutoff-less-than-ebs-cutoff (:perspective macro :guard IS_MODEXP_LOG)
                  (callToLT 1 0 (cds_cutoff) 0 (ebs_cutoff)))

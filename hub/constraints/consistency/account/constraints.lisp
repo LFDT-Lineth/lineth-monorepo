@@ -34,47 +34,47 @@
                                        acp_AGAIN_IN_TXN   acp_AGAIN_IN_BLK   acp_AGAIN_IN_CNF
                                        acp_FINAL_IN_TXN   acp_FINAL_IN_BLK   acp_FINAL_IN_CNF)))))
 
-(defun    (account-consistency---transtion-conflation)    (+    (prev acp_FINAL_IN_CNF)    acp_FIRST_IN_CNF))
-(defun    (account-consistency---transtion-block)         (+    (prev acp_FINAL_IN_BLK)    acp_FIRST_IN_BLK))
-(defun    (account-consistency---transtion-transaction)   (+    (prev acp_FINAL_IN_TXN)    acp_FIRST_IN_TXN))
-(defun    (account-consistency---transtion-sum)           (+    (account-consistency---transtion-conflation)
-                                                                (account-consistency---transtion-block)
-                                                                (account-consistency---transtion-transaction)))
+(defun    (account-consistency---transition-conflation)    (+    (prev acp_FINAL_IN_CNF)    acp_FIRST_IN_CNF))
+(defun    (account-consistency---transition-block)         (+    (prev acp_FINAL_IN_BLK)    acp_FIRST_IN_BLK))
+(defun    (account-consistency---transition-transaction)   (+    (prev acp_FINAL_IN_TXN)    acp_FIRST_IN_TXN))
+(defun    (account-consistency---transition-sum)           (+    (account-consistency---transition-conflation)
+                                                                (account-consistency---transition-block)
+                                                                (account-consistency---transition-transaction)))
 
 
 (defconstraint    account-consistency---FIRST-AGAIN-FINAL---first-account-row ()
                   (if-zero    (force-bool     (prev acp_PEEK_AT_ACCOUNT))
                               (if-not-zero    (force-bool    acp_PEEK_AT_ACCOUNT)
                                               (if-not-zero   acp_PEEK_AT_ACCOUNT
-                                                             (eq!    (account-consistency---transtion-sum)
+                                                             (eq!    (account-consistency---transition-sum)
                                                                      3)))))
 
 (defun   (account-consistency---repeat-account-row)    (*    (prev    acp_PEEK_AT_ACCOUNT)   acp_PEEK_AT_ACCOUNT))
 
 (defconstraint    account-consistency---FIRST-AGAIN-FINAL---repeat-encounter---conflation-level  (:guard   (account-consistency---repeat-account-row))
                   (if-not-zero  (remained-constant! (acp_full_address))
-                                (eq! (account-consistency---transtion-conflation) 2)
-                                (eq! (account-consistency---transtion-conflation) 0)))
+                                (eq! (account-consistency---transition-conflation) 2)
+                                (eq! (account-consistency---transition-conflation) 0)))
 
 (defconstraint    account-consistency---FIRST-AGAIN-FINAL---repeat-encounter---block-level       (:guard   (account-consistency---repeat-account-row))
                   (begin
-                    (if-not-zero (remained-constant!   (acp_full_address))              (eq! (account-consistency---transtion-block) 2))
-                    (if-not-zero (remained-constant!    acp_REL_BLK_NUM)                (eq! (account-consistency---transtion-block) 2))
+                    (if-not-zero (remained-constant!   (acp_full_address))              (eq! (account-consistency---transition-block) 2))
+                    (if-not-zero (remained-constant!    acp_REL_BLK_NUM)                (eq! (account-consistency---transition-block) 2))
                     (if-zero     (remained-constant!   (acp_full_address))
-                                 (if-zero    (remained-constant!    acp_REL_BLK_NUM)    (eq! (account-consistency---transtion-block) 0)))))
+                                 (if-zero    (remained-constant!    acp_REL_BLK_NUM)    (eq! (account-consistency---transition-block) 0)))))
 
 (defconstraint    account-consistency---FIRST-AGAIN-FINAL---repeat-encounter---transaction-level (:guard   (account-consistency---repeat-account-row))
                   (begin
-                    (if-not-zero (remained-constant!   (acp_full_address))              (eq! (account-consistency---transtion-transaction) 2))
-                    (if-not-zero (remained-constant!    acp_ABS_TX_NUM)                 (eq! (account-consistency---transtion-transaction) 2))
+                    (if-not-zero (remained-constant!   (acp_full_address))              (eq! (account-consistency---transition-transaction) 2))
+                    (if-not-zero (remained-constant!    acp_ABS_TX_NUM)                 (eq! (account-consistency---transition-transaction) 2))
                     (if-zero     (remained-constant!   (acp_full_address))
-                                 (if-zero    (remained-constant!    acp_ABS_TX_NUM)     (eq! (account-consistency---transtion-transaction) 0)))))
+                                 (if-zero    (remained-constant!    acp_ABS_TX_NUM)     (eq! (account-consistency---transition-transaction) 0)))))
 
 (defconstraint    account-consistency---FIRST-AGAIN-FINAL---final-row-with-room-to-spare ()
                   (if-not-zero (prev acp_PEEK_AT_ACCOUNT)
                                (if-zero    (force-bool    acp_PEEK_AT_ACCOUNT)
                                            (eq!    3
-                                                   (account-consistency---transtion-sum)))))
+                                                   (account-consistency---transition-sum)))))
 
 (defconstraint    account-consistency---FIRST-AGAIN-FINAL---final-row-of-the-trace       (:domain {-1})
                   (if-not-zero acp_PEEK_AT_ACCOUNT

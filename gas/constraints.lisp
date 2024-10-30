@@ -6,13 +6,10 @@
 ;;                  ;;
 ;;;;;;;;;;;;;;;;;;;;;;
 (defconstraint binary-constraints ()
-  (begin (is-binary IOMF)
-         (is-binary XAHOY)
-         (is-binary OOGX)
-         (debug (is-binary FIRST))
-         (is-binary WCP_RES) ;; TODO: this isn't necessary, may be removed in the future
-         (if-not-zero OOGX
-                      (eq! XAHOY 1))))
+  (if-not-zero OOGX
+              (eq! XAHOY 1)))
+
+;; others are done with binary@prove in columns.lisp
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                     ;;

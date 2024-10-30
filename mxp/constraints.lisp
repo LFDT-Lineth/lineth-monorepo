@@ -6,13 +6,7 @@
 ;;                             ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defconstraint binary-constraints ()
-  (begin (is-binary ROOB)
-         (is-binary NOOP)
-         (is-binary MXPX)
-         (is-binary DEPLOYS)
-         (is-binary COMP)
-         (is-binary EXPANDS)))
+;; done with binary@prove in columns.lisp
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                             ;;

@@ -10,27 +10,8 @@
 ;;    3.3.1 Binary constraints    ;;
 ;;                                ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defconstraint binary-constraints ()
-  (begin (is-binary IS_ECRECOVER_DATA)
-         (is-binary IS_ECRECOVER_RESULT)
-         (is-binary IS_ECADD_DATA)
-         (is-binary IS_ECADD_RESULT)
-         (is-binary IS_ECMUL_DATA)
-         (is-binary IS_ECMUL_RESULT)
-         (is-binary IS_ECPAIRING_DATA)
-         (is-binary IS_ECPAIRING_RESULT)
-         (is-binary WCP_FLAG)
-         (is-binary EXT_FLAG)
-         (is-binary HURDLE)
-         (is-binary ICP)
-         (is-binary NOT_ON_G2)
-         (is-binary NOT_ON_G2_ACC)
-         (is-binary IS_INFINITY)
-         (is-binary NOT_ON_G2_ACC_MAX)
-         (is-binary IS_SMALL_POINT)
-         (is-binary IS_LARGE_POINT)
-         (is-binary G2MTR)
-         (is-binary TRIVIAL_PAIRING)))
+
+;; done with binary@prove in columns.lisp
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                                ;;
@@ -304,8 +285,10 @@
            (begin (vanishes! INDEX)
                   (vanishes! ID))))
 
-(defconstraint stamp-increments ()
-  (any! (will-remain-constant! STAMP) (will-inc! STAMP 1)))
+(defconstraint stamp-increment-sanity-check ()
+  (begin 
+    (vanishes! 0)
+    (debug (any! (will-remain-constant! STAMP) (will-inc! STAMP 1))))) ;; implied by the constraint below
 
 (defconstraint stamp-increment ()
   (eq! (next STAMP) (+ STAMP (transition_to_data))))

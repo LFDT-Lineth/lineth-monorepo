@@ -56,7 +56,7 @@
                   (vanishes! TOTNT)
                   (did-dec! (+ TOTLZ TOTNT) 1))))
 
-(defconstraint last-row (:domain {-1})
+(defconstraint last-row (:domain {-1}) ;; ""
   (if-not-zero STAMP
                (begin (eq! MICRO 1)
                       (vanishes! TOT))))
@@ -92,7 +92,7 @@
 (defconstraint stamp-constancies ()
   (begin (for i [5] (stamp-constant [OUT i]))
          (for i [5] (stamp-constant [BIN i]))
-         (stamp-constant (bin-flag-sum))))
+         (stamp-constant (bin-flag-sum)))) ;; ""
 
 (defun (micro-instruction-writing-constant X)
   (if-eq MICRO 1
@@ -221,50 +221,60 @@
 ;;
 (defconstraint set-prprc-ct-init (:guard MACRO)
   (eq! (next prprc/CT)
-       (+ (* (- NB_PP_ROWS_MLOAD 1) IS_MLOAD)
-          (* (- NB_PP_ROWS_MSTORE 1) IS_MSTORE)
-          (* (- NB_PP_ROWS_MSTORE8 1) IS_MSTORE8)
-          (* (- NB_PP_ROWS_INVALID_CODE_PREFIX 1) IS_INVALID_CODE_PREFIX)
-          (* (- NB_PP_ROWS_RIGHT_PADDED_WORD_EXTRACTION 1) IS_RIGHT_PADDED_WORD_EXTRACTION)
-          (* (- NB_PP_ROWS_RAM_TO_EXO_WITH_PADDING 1) IS_RAM_TO_EXO_WITH_PADDING)
-          (* (- NB_PP_ROWS_EXO_TO_RAM_TRANSPLANTS 1) IS_EXO_TO_RAM_TRANSPLANTS)
-          (* (- NB_PP_ROWS_RAM_TO_RAM_SANS_PADDING 1) IS_RAM_TO_RAM_SANS_PADDING)
-          (* (- NB_PP_ROWS_ANY_TO_RAM_WITH_PADDING_SOME_DATA 1) IS_ANY_TO_RAM_WITH_PADDING_SOME_DATA)
-          (* (- NB_PP_ROWS_ANY_TO_RAM_WITH_PADDING_PURE_PADDING 1) IS_ANY_TO_RAM_WITH_PADDING_PURE_PADDING)
-          (* (- NB_PP_ROWS_MODEXP_ZERO 1) IS_MODEXP_ZERO)
-          (* (- NB_PP_ROWS_MODEXP_DATA 1) IS_MODEXP_DATA)
-          (* (- NB_PP_ROWS_BLAKE 1) IS_BLAKE))))
+       (+ (* (- NB_PP_ROWS_MLOAD                                   1)    IS_MLOAD)
+          (* (- NB_PP_ROWS_MSTORE                                  1)    IS_MSTORE)
+          (* (- NB_PP_ROWS_MSTORE8                                 1)    IS_MSTORE8)
+          (* (- NB_PP_ROWS_INVALID_CODE_PREFIX                     1)    IS_INVALID_CODE_PREFIX)
+          (* (- NB_PP_ROWS_RIGHT_PADDED_WORD_EXTRACTION            1)    IS_RIGHT_PADDED_WORD_EXTRACTION)
+          (* (- NB_PP_ROWS_RAM_TO_EXO_WITH_PADDING                 1)    IS_RAM_TO_EXO_WITH_PADDING)
+          (* (- NB_PP_ROWS_EXO_TO_RAM_TRANSPLANTS                  1)    IS_EXO_TO_RAM_TRANSPLANTS)
+          (* (- NB_PP_ROWS_RAM_TO_RAM_SANS_PADDING                 1)    IS_RAM_TO_RAM_SANS_PADDING)
+          (* (- NB_PP_ROWS_ANY_TO_RAM_WITH_PADDING_SOME_DATA       1)    IS_ANY_TO_RAM_WITH_PADDING_SOME_DATA)
+          (* (- NB_PP_ROWS_ANY_TO_RAM_WITH_PADDING_PURE_PADDING    1)    IS_ANY_TO_RAM_WITH_PADDING_PURE_PADDING)
+          (* (- NB_PP_ROWS_MODEXP_ZERO                             1)    IS_MODEXP_ZERO)
+          (* (- NB_PP_ROWS_MODEXP_DATA                             1)    IS_MODEXP_DATA)
+          (* (- NB_PP_ROWS_BLAKE                                   1)    IS_BLAKE))))
 
 ;;
 ;; Utilities
 ;;
-(defun (callToEuc row dividend divisor)
-  (begin (eq! (shift prprc/EUC_FLAG row) 1)
-         (eq! (shift prprc/EUC_A row) dividend)
-         (eq! (shift prprc/EUC_B row) divisor)))
+(defun    (callToEuc    row_offset
+                        dividend
+                        divisor)
+  (begin (eq! (shift prprc/EUC_FLAG    row_offset) 1)
+         (eq! (shift prprc/EUC_A       row_offset) dividend)
+         (eq! (shift prprc/EUC_B       row_offset) divisor)))
 
-(defun (callToLt row arg1hi arg1lo arg2lo)
-  (begin (eq! (shift prprc/WCP_FLAG row) 1)
-         (eq! (shift prprc/WCP_INST row) EVM_INST_LT)
-         (eq! (shift prprc/WCP_ARG_1_HI row) arg1hi)
-         (eq! (shift prprc/WCP_ARG_1_LO row) arg1lo)
-         (eq! (shift prprc/WCP_ARG_2_LO row) arg2lo)))
+(defun    (callToLt     row_offset
+                        arg1hi
+                        arg1lo
+                        arg2lo)
+  (begin (eq! (shift prprc/WCP_FLAG        row_offset) 1)
+         (eq! (shift prprc/WCP_INST        row_offset) EVM_INST_LT)
+         (eq! (shift prprc/WCP_ARG_1_HI    row_offset) arg1hi)
+         (eq! (shift prprc/WCP_ARG_1_LO    row_offset) arg1lo)
+         (eq! (shift prprc/WCP_ARG_2_LO    row_offset) arg2lo)))
 
-(defun (callToEq row arg1hi arg1lo arg2lo)
-  (begin (eq! (shift prprc/WCP_FLAG row) 1)
-         (eq! (shift prprc/WCP_INST row) EVM_INST_EQ)
-         (eq! (shift prprc/WCP_ARG_1_HI row) arg1hi)
-         (eq! (shift prprc/WCP_ARG_1_LO row) arg1lo)
-         (eq! (shift prprc/WCP_ARG_2_LO row) arg2lo)))
+(defun    (callToEq     row_offset
+                        arg1hi
+                        arg1lo
+                        arg2lo)
+  (begin (eq! (shift prprc/WCP_FLAG        row_offset) 1)
+         (eq! (shift prprc/WCP_INST        row_offset) EVM_INST_EQ)
+         (eq! (shift prprc/WCP_ARG_1_HI    row_offset) arg1hi)
+         (eq! (shift prprc/WCP_ARG_1_LO    row_offset) arg1lo)
+         (eq! (shift prprc/WCP_ARG_2_LO    row_offset) arg2lo)))
 
-(defun (callToIszero row arg1hi arg1lo)
-  (begin (eq! (shift prprc/WCP_FLAG row) 1)
-         (eq! (shift prprc/WCP_INST row) EVM_INST_ISZERO)
-         (eq! (shift prprc/WCP_ARG_1_HI row) arg1hi)
-         (eq! (shift prprc/WCP_ARG_1_LO row) arg1lo)
-         (debug (vanishes! (shift prprc/WCP_ARG_2_LO row)))))
+(defun    (callToIszero row_offset
+                        arg1hi
+                        arg1lo)
+  (begin (eq!              (shift prprc/WCP_FLAG        row_offset) 1)
+         (eq!              (shift prprc/WCP_INST        row_offset) EVM_INST_ISZERO)
+         (eq!              (shift prprc/WCP_ARG_1_HI    row_offset) arg1hi)
+         (eq!              (shift prprc/WCP_ARG_1_LO    row_offset) arg1lo)
+         (debug (vanishes! (shift prprc/WCP_ARG_2_LO    row_offset)))))
 
-(defun (standard-progression C)
+(defun    (standard-progression C)
   (eq! C
        (* (prev MICRO)
           (+ (prev C) 1))))

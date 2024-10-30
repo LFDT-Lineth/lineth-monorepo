@@ -6,15 +6,16 @@
 ;;                                       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defconstraint peeking-flags-are-binary ()
-               (begin
-                 (is-binary PEEK_AT_ACCOUNT)
-                 (is-binary PEEK_AT_CONTEXT)
-                 (is-binary PEEK_AT_MISCELLANEOUS)
-                 (is-binary PEEK_AT_SCENARIO)
-                 (is-binary PEEK_AT_STACK)
-                 (is-binary PEEK_AT_STORAGE)
-                 (is-binary PEEK_AT_TRANSACTION)))
+;; ;; These consraints are redundant given the :binary@prove tag on these columns
+;; (defconstraint peeking-flags-are-binary ()
+;;                (begin
+;;                  (is-binary PEEK_AT_ACCOUNT)
+;;                  (is-binary PEEK_AT_CONTEXT)
+;;                  (is-binary PEEK_AT_MISCELLANEOUS)
+;;                  (is-binary PEEK_AT_SCENARIO)
+;;                  (is-binary PEEK_AT_STACK)
+;;                  (is-binary PEEK_AT_STORAGE)
+;;                  (is-binary PEEK_AT_TRANSACTION)))
 
 (defun (peeking_flag_sum)
   (+ PEEK_AT_ACCOUNT

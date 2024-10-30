@@ -110,7 +110,7 @@
                            ;; (ARG_2_HI != 0) et (BIT_NUM == 127)
                            (begin (will-inc! STAMP 1)
                                   (= EACC ARG_2_LO))
-                           ;; (ARG_2_HI != 0) et (BIT_NUM == 127)
+                           ;; (ARG_2_HI != 0) et (BIT_NUM != 127)
                            (begin (vanishes! (next SNM))
                                   (will-remain-constant! STAMP)
                                   (will-eq! ESRC 1)

@@ -174,7 +174,6 @@
                 (eq! RES (+ (lt_) (eq_))))
          (if-eq IS_GEQ 1
                 (eq! RES (+ (gt_) (eq_))))
-         (if-eq IS_LT 1 (eq! RES (lt_)))
          (if-eq IS_SLT 1
                 (if-eq-else NEG_1 NEG_2 (eq! RES (lt_)) (eq! RES NEG_1)))
          (if-eq IS_SGT 1

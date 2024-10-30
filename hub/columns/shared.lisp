@@ -41,13 +41,13 @@
     ( HEIGHT_NEW                                :i11 ) ;; same
 
     ;; peeking flags
-    ( PEEK_AT_STACK                             :binary@prove )
-    ( PEEK_AT_CONTEXT                           :binary@prove )
     ( PEEK_AT_ACCOUNT                           :binary@prove )
-    ( PEEK_AT_STORAGE                           :binary@prove )
-    ( PEEK_AT_TRANSACTION                       :binary@prove )
+    ( PEEK_AT_CONTEXT                           :binary@prove )
     ( PEEK_AT_MISCELLANEOUS                     :binary@prove )
     ( PEEK_AT_SCENARIO                          :binary@prove )
+    ( PEEK_AT_STACK                             :binary@prove )
+    ( PEEK_AT_STORAGE                           :binary@prove )
+    ( PEEK_AT_TRANSACTION                       :binary@prove )
 
     ;; gas columns
     ( GAS_EXPECTED                              :i64 )

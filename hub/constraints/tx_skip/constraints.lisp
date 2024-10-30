@@ -118,25 +118,9 @@
 (defconstraint   tx-skip---recipient-is-no-precompile (:guard (tx-skip---precondition))
                  (if-zero    (tx-skip---is-deployment)
                              ;; deployment ≡ 0 i.e. pure transfer
-                             (begin
-                               (account-trim-address       tx-skip---row-offset---recipient-account
-                                                           (shift transaction/TO_ADDRESS_HI tx-skip---row-offset---transaction-row)
-                                                           (shift transaction/TO_ADDRESS_LO tx-skip---row-offset---transaction-row))
-                               (account-isnt-precompile    tx-skip---row-offset---recipient-account))))
-
-;; coinbase account operation
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; (defun (tx-skip---coinbase-fee)
-;;   (if-zero   (force-bin   (shift    transaction/IS_TYPE2          tx-skip---row-offset---transaction-row))
-;;              ;; TYPE 0 / TYPE 1
-;;              (*    (shift      transaction/GAS_PRICE              tx-skip---row-offset---transaction-row)
-;;                    (-    (shift   transaction/GAS_LIMIT           tx-skip---row-offset---transaction-row)
-;;                          (shift   transaction/REFUND_EFFECTIVE    tx-skip---row-offset---transaction-row)))
-;;              ;; TYPE 2
-;;              (*    (-    (shift   transaction/GAS_PRICE           tx-skip---row-offset---transaction-row)
-;;                          (shift   transaction/BASEFEE             tx-skip---row-offset---transaction-row))
-;;                    (-    (shift   transaction/GAS_LIMIT           tx-skip---row-offset---transaction-row)
-;;                          (shift   transaction/REFUND_EFFECTIVE    tx-skip---row-offset---transaction-row)))))
+                             (account-trim-address       tx-skip---row-offset---recipient-account
+                                                         (shift transaction/TO_ADDRESS_HI tx-skip---row-offset---transaction-row)
+                                                         (shift transaction/TO_ADDRESS_LO tx-skip---row-offset---transaction-row))))
 
 (defun    (tx-skip---coinbase-fee)    (shift    (*    transaction/PRIORITY_FEE_PER_GAS    (-    transaction/GAS_LIMIT    transaction/REFUND_EFFECTIVE))
                                                 tx-skip---row-offset---transaction-row))
