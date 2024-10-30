@@ -2,10 +2,8 @@
 
 
 (defcolumns
-  ;; TODO: how do we declare columns of size 4 * x in corset ?
-  ;; stack consistency permutation related; Note these have size 4 * [standard size]
-  ( stkcp_FIRST_CTXT :binary@prove )   ( stkcp_AGAIN_CTXT :binary@prove )
-  ( stkcp_FIRST_SPOT :binary@prove )   ( stkcp_AGAIN_SPOT :binary@prove )
+  ( stkcp_FIRST_CTXT :binary@prove :length 4)   ( stkcp_AGAIN_CTXT :binary@prove :length 4)
+  ( stkcp_FIRST_SPOT :binary@prove :length 4)   ( stkcp_AGAIN_SPOT :binary@prove :length 4)
   )
 
 (definterleaved PEEK_AT_STACK_POW_4   (PEEK_AT_STACK                  PEEK_AT_STACK                  PEEK_AT_STACK                  PEEK_AT_STACK                 ))

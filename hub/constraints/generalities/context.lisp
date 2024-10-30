@@ -61,16 +61,16 @@
                                               (eq! CN_NEW (+ 1 HUB_STAMP)))
                                         (if-not-zero (remained-constant! HUB_STAMP)
                                                      (eq! CN (prev CN_NEW)))
-                                        (if-zero CMC (eq! CN_NEW CN))
-                                        (if-not-zero (will-remain-constant! HUB_STAMP)
-                                                     (begin
-                                                       (if-not-zero CMC   (eq! PEEK_AT_CONTEXT 1))
-                                                       (if-not-zero XAHOY (execution-provides-empty-return-data 0))
-                                                       (if-not-zero TX_EXEC
-                                                                    (if-not-zero CN_NEW
-                                                                                 (eq! (next TX_EXEC) 1)
-                                                                                 (eq! (next TX_FINL) 1)))))
-                                        (if-not-zero XAHOY (eq! CN_NEW CALLER_CN))
-                                        (if-not-zero PEEK_AT_STACK
-                                                     (if-not-zero stack/HALT_FLAG
-                                                                  (eq! CN_NEW CALLER_CN)))))))
+                                        (if-zero CMC (eq! CN_NEW CN))))
+                    (if-not-zero (will-remain-constant! HUB_STAMP)
+                                 (begin
+                                   (if-not-zero CMC   (eq! PEEK_AT_CONTEXT 1))
+                                   (if-not-zero XAHOY (execution-provides-empty-return-data 0))
+                                   (if-not-zero TX_EXEC
+                                                (if-not-zero CN_NEW
+                                                             (eq! (next TX_EXEC) 1)
+                                                             (eq! (next TX_FINL) 1)))))
+                    (if-not-zero XAHOY (eq! CN_NEW CALLER_CN))
+                    (if-not-zero PEEK_AT_STACK
+                                 (if-not-zero stack/HALT_FLAG
+                                              (eq! CN_NEW CALLER_CN)))))

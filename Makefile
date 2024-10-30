@@ -5,11 +5,6 @@ HUB_COLUMNS :=  $(wildcard hub/columns/*lisp)
 HUB :=  $(wildcard hub/columns/*lisp) \
 	$(wildcard hub/constraints/account-rows/*lisp) \
 	$(wildcard hub/constraints/consistency/*lisp) \
-	$(wildcard hub/constraints/consistency/account/*lisp) \
-	$(wildcard hub/constraints/consistency/context/*lisp) \
-	$(wildcard hub/constraints/consistency/execution_environment/*lisp) \
-	$(wildcard hub/constraints/consistency/stack/*lisp) \
-	$(wildcard hub/constraints/consistency/storage/*lisp) \
 	$(wildcard hub/constraints/context-rows/*lisp) \
 	$(wildcard hub/constraints/generalities/*lisp) \
 	$(wildcard hub/constraints/heartbeat/*lisp) \
@@ -40,7 +35,12 @@ HUB :=  $(wildcard hub/columns/*lisp) \
 	hub/constants.lisp
 
 
- # Missing from the above
+# Missing from the above
+# $(wildcard hub/constraints/consistency/account/*lisp) \
+# $(wildcard hub/constraints/consistency/context/*lisp) \
+# $(wildcard hub/constraints/consistency/execution_environment/*lisp) \
+# $(wildcard hub/constraints/consistency/stack/*lisp) \
+# $(wildcard hub/constraints/consistency/storage/*lisp) \
 
 ALU := $(wildcard alu/add/*.lisp) \
        $(wildcard alu/ext/*.lisp) \

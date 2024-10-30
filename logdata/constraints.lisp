@@ -42,7 +42,9 @@
                              (did-inc! INDEX 1)))
          (if-not-zero (will-remain-constant! ABS_LOG_NUM)
                       (begin (eq! SIZE_TOTAL SIZE_ACC)
-                             (vanishes! (next INDEX))))))
+                             (vanishes! (next INDEX))))
+         (debug       (if-eq       SIZE_ACC   SIZE_TOTAL
+                      (will-inc!    ABS_LOG_NUM   1)))))
 
 (defconstraint final-row (:domain {-1} :guard ABS_LOG_NUM)
   (begin (eq! ABS_LOG_NUM ABS_LOG_NUM_MAX)
@@ -53,22 +55,44 @@
 ;;    2.2 Constancies    ;;
 ;;                       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defun   (conflation-constancy   X)
+  (if-not-zero   ABS_LOG_NUM
+                 (will-remain-constant!   X)))
+
+(defconstraint   conflation-constancy-of-ABS_LOG_NUM_MAX   ()
+                 (conflation-constancy   ABS_LOG_NUM_MAX))
+
 (defun (log-constancy X)
-  (if (remained-constant! ABS_LOG_NUM)
-      (remained-constant! X)))
+  (if-not-zero   (did-inc!           ABS_LOG_NUM 1)
+                 (remained-constant! X)))
 
 (defconstraint log-constancies ()
   (begin (log-constancy SIZE_TOTAL)
          (debug (log-constancy LOGS_DATA))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;                         ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                     ;;
 ;;    2.3 LOGS_DATA    ;;
-;;                         ;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                     ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defconstraint log-logs-data-definition ()
   (if-zero SIZE_TOTAL
            (vanishes! LOGS_DATA)
-           (eq! LOGS_DATA 1)))
+           (eq!       LOGS_DATA 1)))
 
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                                     ;;
+;;    2.4 Range check for SIZE_LIMB    ;;
+;;                                     ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defun    (normalized-SIZE_LIMB)
+  (if-zero    ABS_LOG_NUM
+              SIZE_LIMB
+              (- SIZE_LIMB 1)))
+
+;; this constraint enforces in particular that the final value of SIZE_LIMB is in the range [1 , 16]
+(definrange    (normalized-SIZE_LIMB)   16)
