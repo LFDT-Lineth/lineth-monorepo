@@ -225,13 +225,6 @@
                                    (eq!   (shift preprocessing/WCP_ARG_2_HI   k) c)
                                    (eq!   (shift preprocessing/WCP_ARG_2_LO   k) d)))
 
-(defun (callToEQ k a b c d) (begin (eq!   (shift preprocessing/WCP_FLAG       k) 1)
-                                   (eq!   (shift preprocessing/WCP_INST       k) EVM_INST_EQ)
-                                   (eq!   (shift preprocessing/WCP_ARG_1_HI   k) a)
-                                   (eq!   (shift preprocessing/WCP_ARG_1_LO   k) b)
-                                   (eq!   (shift preprocessing/WCP_ARG_2_HI   k) c)
-                                   (eq!   (shift preprocessing/WCP_ARG_2_LO   k) d)))
-
 (defun (callToISZERO k a b) (begin (eq!                (shift preprocessing/WCP_FLAG       k) 1)
                                    (eq!                (shift preprocessing/WCP_INST       k) EVM_INST_ISZERO)
                                    (eq!                (shift preprocessing/WCP_ARG_1_HI   k) a)

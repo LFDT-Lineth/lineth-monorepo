@@ -1,10 +1,5 @@
 (module wcp)
 
-(defpurefun (if-eq-else A B then else)
-  (if-zero (- A B)
-           then
-           else))
-
 (defun (flag-sum)
   (+ (one-line-inst) (variable-length-inst)))
 

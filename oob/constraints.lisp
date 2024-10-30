@@ -199,45 +199,42 @@
 ;;    for populating lookups   ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defun (call-to-ADD k arg_1_hi arg_1_lo arg_2_hi arg_2_lo)
-  (begin (eq! (wght-lookup-sum k) 1)
-         (eq! (shift OUTGOING_INST k) EVM_INST_ADD)
-         (eq! (shift [OUTGOING_DATA 1] k) arg_1_hi)
+;; support function to improve to reduce code duplication in the functions below
+(defun (set-args k arg_1_hi arg_1_lo arg_2_hi arg_2_lo)
+  (begin (eq! (shift [OUTGOING_DATA 1] k) arg_1_hi)
          (eq! (shift [OUTGOING_DATA 2] k) arg_1_lo)
          (eq! (shift [OUTGOING_DATA 3] k) arg_2_hi)
          (eq! (shift [OUTGOING_DATA 4] k) arg_2_lo)))
+
+(defun (call-to-ADD k arg_1_hi arg_1_lo arg_2_hi arg_2_lo)
+  (begin (eq! (wght-lookup-sum k) 1)
+         (eq! (shift OUTGOING_INST k) EVM_INST_ADD)
+         (set-args k arg_1_hi arg_1_lo arg_2_hi arg_2_lo)))
 
 (defun (call-to-DIV k arg_1_hi arg_1_lo arg_2_hi arg_2_lo)
   (begin (eq! (wght-lookup-sum k) 2)
          (eq! (shift OUTGOING_INST k) EVM_INST_DIV)
-         (eq! (shift [OUTGOING_DATA 1] k) arg_1_hi)
-         (eq! (shift [OUTGOING_DATA 2] k) arg_1_lo)
-         (eq! (shift [OUTGOING_DATA 3] k) arg_2_hi)
-         (eq! (shift [OUTGOING_DATA 4] k) arg_2_lo)))
+         (set-args k arg_1_hi arg_1_lo arg_2_hi arg_2_lo)))
 
 (defun (call-to-MOD k arg_1_hi arg_1_lo arg_2_hi arg_2_lo)
   (begin (eq! (wght-lookup-sum k) 2)
          (eq! (shift OUTGOING_INST k) EVM_INST_MOD)
-         (eq! (shift [OUTGOING_DATA 1] k) arg_1_hi)
-         (eq! (shift [OUTGOING_DATA 2] k) arg_1_lo)
-         (eq! (shift [OUTGOING_DATA 3] k) arg_2_hi)
-         (eq! (shift [OUTGOING_DATA 4] k) arg_2_lo)))
+         (set-args k arg_1_hi arg_1_lo arg_2_hi arg_2_lo)))
 
 (defun (call-to-LT k arg_1_hi arg_1_lo arg_2_hi arg_2_lo)
   (begin (eq! (wght-lookup-sum k) 3)
          (eq! (shift OUTGOING_INST k) EVM_INST_LT)
-         (eq! (shift [OUTGOING_DATA 1] k) arg_1_hi)
-         (eq! (shift [OUTGOING_DATA 2] k) arg_1_lo)
-         (eq! (shift [OUTGOING_DATA 3] k) arg_2_hi)
-         (eq! (shift [OUTGOING_DATA 4] k) arg_2_lo)))
+         (set-args k arg_1_hi arg_1_lo arg_2_hi arg_2_lo)))
 
 (defun (call-to-GT k arg_1_hi arg_1_lo arg_2_hi arg_2_lo)
   (begin (eq! (wght-lookup-sum k) 3)
          (eq! (shift OUTGOING_INST k) EVM_INST_GT)
-         (eq! (shift [OUTGOING_DATA 1] k) arg_1_hi)
-         (eq! (shift [OUTGOING_DATA 2] k) arg_1_lo)
-         (eq! (shift [OUTGOING_DATA 3] k) arg_2_hi)
-         (eq! (shift [OUTGOING_DATA 4] k) arg_2_lo)))
+         (set-args k arg_1_hi arg_1_lo arg_2_hi arg_2_lo)))
+
+(defun (call-to-EQ k arg_1_hi arg_1_lo arg_2_hi arg_2_lo)
+  (begin (eq! (wght-lookup-sum k) 3)
+         (eq! (shift OUTGOING_INST k) EVM_INST_EQ)
+         (set-args k arg_1_hi arg_1_lo arg_2_hi arg_2_lo)))
 
 (defun (call-to-ISZERO k arg_1_hi arg_1_lo)
   (begin (eq! (wght-lookup-sum k) 3)
@@ -246,14 +243,6 @@
          (eq! (shift [OUTGOING_DATA 2] k) arg_1_lo)
          (debug (vanishes! (shift [OUTGOING_DATA 3] k)))
          (debug (vanishes! (shift [OUTGOING_DATA 4] k)))))
-
-(defun (call-to-EQ k arg_1_hi arg_1_lo arg_2_hi arg_2_lo)
-  (begin (eq! (wght-lookup-sum k) 3)
-         (eq! (shift OUTGOING_INST k) EVM_INST_EQ)
-         (eq! (shift [OUTGOING_DATA 1] k) arg_1_hi)
-         (eq! (shift [OUTGOING_DATA 2] k) arg_1_lo)
-         (eq! (shift [OUTGOING_DATA 3] k) arg_2_hi)
-         (eq! (shift [OUTGOING_DATA 4] k) arg_2_lo)))
 
 (defun (noCall k)
   (begin (eq! (wght-lookup-sum k) 0)))
@@ -421,8 +410,8 @@
 (defun (deployment---max-code-size-exception)          [DATA 7])
 (defun (deployment---exceeds-max-code-size)            OUTGOING_RES_LO)
 
-(defconstraint deployment---compare-24576-against-code-size (:guard (* (assumption---fresh-new-stamp) (deployment---standard-precondition)))
-  (call-to-LT 0 0 24576 (deployment---code-size-hi) (deployment---code-size-lo)))
+(defconstraint deployment---compare-max-code-size-against-code-size (:guard (* (assumption---fresh-new-stamp) (deployment---standard-precondition)))
+  (call-to-LT 0 0 MAX_CODE_SIZE (deployment---code-size-hi) (deployment---code-size-lo)))
 
 (defconstraint deployment---justify-hub-predictions (:guard (* (assumption---fresh-new-stamp) (deployment---standard-precondition)))
   (eq! (deployment---max-code-size-exception) (deployment---exceeds-max-code-size)))
