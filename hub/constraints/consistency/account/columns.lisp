@@ -1,13 +1,5 @@
 (module hub)
 
-(defcolumns
-  ;; account consistency permutation related
-  ( acp_FIRST_IN_CNF :binary@prove )     ( acp_FIRST_IN_BLK :binary@prove )     ( acp_FIRST_IN_TXN :binary@prove )
-  ( acp_AGAIN_IN_CNF :binary@prove )     ( acp_AGAIN_IN_BLK :binary@prove )     ( acp_AGAIN_IN_TXN :binary@prove )
-  ( acp_FINAL_IN_CNF :binary@prove )     ( acp_FINAL_IN_BLK :binary@prove )     ( acp_FINAL_IN_TXN :binary@prove )
-  ( acp_DEPLOYMENT_NUMBER_FIRST_IN_BLOCK    :i16)
-  ( acp_DEPLOYMENT_NUMBER_FINAL_IN_BLOCK    :i16)
-  )
 
 ;; acp_ ⇔ account consistency permutation
 (defpermutation
@@ -44,6 +36,18 @@
       acp_MARKED_FOR_SELFDESTRUCT_NEW
       acp_TRM_FLAG
       acp_IS_PRECOMPILE
+      ;; permuted versions
+      acp_FIRST_IN_CNF
+      acp_FIRST_IN_BLK
+      acp_FIRST_IN_TXN
+      acp_AGAIN_IN_CNF
+      acp_AGAIN_IN_BLK
+      acp_AGAIN_IN_TXN
+      acp_FINAL_IN_CNF
+      acp_FINAL_IN_BLK
+      acp_FINAL_IN_TXN
+      acp_DEPLOYMENT_NUMBER_FIRST_IN_BLOCK
+      acp_DEPLOYMENT_NUMBER_FINAL_IN_BLOCK
     )
     ;; original columns
     ;;;;;;;;;;;;;;;;;;;
@@ -77,5 +81,21 @@
       account/MARKED_FOR_SELFDESTRUCT_NEW
       account/TRM_FLAG
       account/IS_PRECOMPILE
+      ;; un permuted versions
+      account/FIRST_IN_CNF
+      account/FIRST_IN_BLK
+      account/FIRST_IN_TXN
+      account/AGAIN_IN_CNF
+      account/AGAIN_IN_BLK
+      account/AGAIN_IN_TXN
+      account/FINAL_IN_CNF
+      account/FINAL_IN_BLK
+      account/FINAL_IN_TXN
+      account/DEPLOYMENT_NUMBER_FIRST_IN_BLOCK
+      account/DEPLOYMENT_NUMBER_FINAL_IN_BLOCK
     )
   )
+
+
+
+

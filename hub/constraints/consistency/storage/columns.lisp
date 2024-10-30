@@ -1,14 +1,5 @@
 (module hub)
 
-(defcolumns
-  ;; storage consistency permutation related 
-  ( scp_FIRST_IN_CNF :binary@prove )     ( scp_FIRST_IN_BLK :binary@prove )     ( scp_FIRST_IN_TXN :binary@prove )
-  ( scp_AGAIN_IN_CNF :binary@prove )     ( scp_AGAIN_IN_BLK :binary@prove )     ( scp_AGAIN_IN_TXN :binary@prove )
-  ( scp_FINAL_IN_CNF :binary@prove )     ( scp_FINAL_IN_BLK :binary@prove )     ( scp_FINAL_IN_TXN :binary@prove )
-  ( scp_DEPLOYMENT_NUMBER_FIRST_IN_BLOCK    :i16)
-  ( scp_DEPLOYMENT_NUMBER_FINAL_IN_BLOCK    :i16)
-  )
-
 ;; scp_ ⇔ storage consistency permutation
 (defpermutation 
   ;; permuted columns
@@ -35,6 +26,19 @@
     scp_WARMTH
     scp_WARMTH_NEW
     scp_DEPLOYMENT_NUMBER
+
+    scp_FIRST_IN_CNF
+    scp_FIRST_IN_BLK
+    scp_FIRST_IN_TXN
+    scp_AGAIN_IN_CNF
+    scp_AGAIN_IN_BLK
+    scp_AGAIN_IN_TXN
+    scp_FINAL_IN_CNF
+    scp_FINAL_IN_BLK
+    scp_FINAL_IN_TXN
+    scp_DEPLOYMENT_NUMBER_FIRST_IN_BLOCK
+    scp_DEPLOYMENT_NUMBER_FINAL_IN_BLOCK
+
   )
   ;; original columns
   ;;;;;;;;;;;;;;;;;;;
@@ -59,5 +63,19 @@
     storage/WARMTH
     storage/WARMTH_NEW
     storage/DEPLOYMENT_NUMBER
+
+    storage/FIRST_IN_CNF
+    storage/FIRST_IN_BLK
+    storage/FIRST_IN_TXN
+    storage/AGAIN_IN_CNF
+    storage/AGAIN_IN_BLK
+    storage/AGAIN_IN_TXN
+    storage/FINAL_IN_CNF
+    storage/FINAL_IN_BLK
+    storage/FINAL_IN_TXN
+    storage/DEPLOYMENT_NUMBER_FIRST_IN_BLOCK
+    storage/DEPLOYMENT_NUMBER_FINAL_IN_BLOCK
   )
 )
+
+

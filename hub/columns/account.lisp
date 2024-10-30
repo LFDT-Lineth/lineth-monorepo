@@ -34,19 +34,23 @@
    (DEPLOYMENT_STATUS :binary@prove)           ;; TODO: demote to debug constraint
    (DEPLOYMENT_STATUS_NEW :binary@prove)       ;; TODO: demote to debug constraint
    (DEPLOYMENT_STATUS_INFTY :binary@prove)     ;; TODO: demote to debug constraint
+
    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
    ;;                               ;;
    ;;   TRM module lookup columns   ;;
    ;;                               ;;
    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
    (TRM_FLAG :binary@prove)
    (IS_PRECOMPILE :binary@prove)               ;; TODO: demote to debug constraint
    (TRM_RAW_ADDRESS_HI :i128)
+
    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
    ;;                                   ;;
    ;;   RLPADDR module lookup columns   ;;
    ;;                                   ;;
    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
    (RLPADDR_FLAG :binary@prove)
    (RLPADDR_RECIPE :i8)
    (RLPADDR_DEP_ADDR_HI :i32)
@@ -54,6 +58,20 @@
    (RLPADDR_SALT_HI :i128)
    (RLPADDR_SALT_LO :i128)
    (RLPADDR_KEC_HI :i128)
-   (RLPADDR_KEC_LO :i128)))
+   (RLPADDR_KEC_LO :i128)
+
+   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+   ;;                                          ;;
+   ;;   ACCOUNT consistency temporal columns   ;;
+   ;;                                          ;;
+   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+  ;; the unpermuted columns whose permuted counter-parts will be used in account-consistency-arguments
+  ( FIRST_IN_CNF :binary@prove )     ( FIRST_IN_BLK :binary@prove )     ( FIRST_IN_TXN :binary@prove )
+  ( AGAIN_IN_CNF :binary@prove )     ( AGAIN_IN_BLK :binary@prove )     ( AGAIN_IN_TXN :binary@prove )
+  ( FINAL_IN_CNF :binary@prove )     ( FINAL_IN_BLK :binary@prove )     ( FINAL_IN_TXN :binary@prove )
+  ( DEPLOYMENT_NUMBER_FIRST_IN_BLOCK    :i16)
+  ( DEPLOYMENT_NUMBER_FINAL_IN_BLOCK    :i16)
+   ))
 
 
