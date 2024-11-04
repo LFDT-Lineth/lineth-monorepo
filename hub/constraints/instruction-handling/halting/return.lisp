@@ -358,20 +358,12 @@
 (defun   (return-instruction---message-call-scenario)   (*   PEEK_AT_SCENARIO   (scenario-shorthand---RETURN---message-call)))
 
 (defconstraint   return-instruction---setting-the-callers-new-return-data-message-call-case   (:guard (return-instruction---message-call-scenario))
-                 (if-not-zero   (force-bin   (return-instruction---is-root))
-                                ;; IS_ROOT = 1
-                                (read-context-data
-                                  ROFF_RETURN___CALLER_CONTEXT___MESSAGE_CALL ;; row offset
-                                  CONTEXT_NUMBER                                     ;; context number
-                                  )
-                                ;; IS_ROOT = 0
-                                (provide-return-data 
-                                  ROFF_RETURN___CALLER_CONTEXT___MESSAGE_CALL ;; row offset
-                                  CALLER_CONTEXT_NUMBER                                     ;; receiver context
-                                  CONTEXT_NUMBER                                            ;; provider context
-                                  (return-instruction---type-safe-return-data-offset)       ;; (type safe) rdo
-                                  (return-instruction---type-safe-return-data-size)         ;; (type safe) rds
-                                  )))
+                 (provide-return-data     ROFF_RETURN___CALLER_CONTEXT___MESSAGE_CALL           ;; row offset
+                                          CALLER_CONTEXT_NUMBER                                 ;; receiver context
+                                          CONTEXT_NUMBER                                        ;; provider context
+                                          (return-instruction---type-safe-return-data-offset)   ;; (type safe) rdo
+                                          (return-instruction---type-safe-return-data-size)     ;; (type safe) rds
+                                          ))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                                      ;;

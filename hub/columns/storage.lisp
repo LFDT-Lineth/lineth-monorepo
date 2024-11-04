@@ -31,10 +31,6 @@
 		( VALUE_NEXT_IS_ORIG              :binary )
 		( VALUE_CURR_CHANGES              :binary )
 
-		;; not yet in the spec
-		( UNCONSTRAINED_FIRST             :binary )
-		( UNCONSTRAINED_FINAL             :binary )
-
 		;; storage consistency permutation related
 		( FIRST_IN_CNF :binary@prove )     ( FIRST_IN_BLK :binary@prove )     ( FIRST_IN_TXN :binary@prove )
 		( AGAIN_IN_CNF :binary@prove )     ( AGAIN_IN_BLK :binary@prove )     ( AGAIN_IN_TXN :binary@prove )

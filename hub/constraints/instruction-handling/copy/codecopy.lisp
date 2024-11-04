@@ -6,14 +6,13 @@
 ;;                                   ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defconstraint    copy-instruction---CODECOPY---setting-the-gas-cost
+(defconstraint    copy-instruction---CODECOPY---setting-the-gas-cost---MXPX-case
                   (:guard (copy-instruction---standard-CODECOPY))
-                  (begin (if-not-zero stack/MXPX
-                                      (vanishes! GAS_COST))
-                         (if-not-zero stack/OOGX
-                                      (eq! GAS_COST (+ stack/STATIC_GAS (copy-instruction---MXP-memory-expansion-gas))))
-                         (if-zero XAHOY
-                                  (eq! GAS_COST (+ stack/STATIC_GAS (copy-instruction---MXP-memory-expansion-gas))))))
+                  (if-not-zero stack/MXPX (vanishes! GAS_COST)))
+
+(defconstraint    copy-instruction---CODECOPY---setting-the-gas-cost---no-MXPX-case
+                  (:guard (copy-instruction---standard-CODECOPY))
+                  (if-zero     stack/MXPX (eq!       GAS_COST (+ stack/STATIC_GAS (copy-instruction---MXP-memory-expansion-gas)))))
 
 (defconstraint    copy-instruction---CODECOPY---setting-the-context-row---exceptional-case
                   (:guard (copy-instruction---standard-CODECOPY))

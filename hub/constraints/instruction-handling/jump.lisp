@@ -36,8 +36,8 @@
 (defun (jump-instruction---new-pc-lo)                         [ stack/STACK_ITEM_VALUE_LO 1 ])
 (defun (jump-instruction---jump-condition-hi)                 [ stack/STACK_ITEM_VALUE_HI 2 ])
 (defun (jump-instruction---jump-condition-lo)                 [ stack/STACK_ITEM_VALUE_LO 2 ])
-(defun (jump-instruction---is-jump)                           [ stack/DEC_FLAG 1 ])
-(defun (jump-instruction---is-jumpi)                          [ stack/DEC_FLAG 2 ])
+(defun (jump-instruction---is-JUMP)                           [ stack/DEC_FLAG 1 ])
+(defun (jump-instruction---is-JUMPI)                          [ stack/DEC_FLAG 2 ])
 ;;
 (defun (jump-instruction---code-address-hi)                   (shift  context/BYTE_CODE_ADDRESS_HI  ROW_OFFSET_FOR_JUMP_NO_OOGX_CURRENT_CONTEXT_ROW))
 (defun (jump-instruction---code-address-lo)                   (shift  context/BYTE_CODE_ADDRESS_LO  ROW_OFFSET_FOR_JUMP_NO_OOGX_CURRENT_CONTEXT_ROW))
@@ -49,12 +49,12 @@
 ;;
 (defun (jump-instruction---JUMPI-jump-not-attempted)          (shift  [ misc/OOB_DATA 6 ]           ROW_OFFSET_FOR_JUMP_NO_OOGX_MISC_ROW))
 (defun (jump-instruction---JUMPI-guaranteed-exception)        (shift  [ misc/OOB_DATA 7 ]           ROW_OFFSET_FOR_JUMP_NO_OOGX_MISC_ROW))
-(defun (jump-instruction---JUMPI-must-be-attempted)           (shift  [ misc/OOB_DATA 8 ]           ROW_OFFSET_FOR_JUMP_NO_OOGX_MISC_ROW))
+(defun (jump-instruction---JUMPI-must-be-attempted)           (shift  [ misc/OOB_DATA 8 ]           ROW_OFFSET_FOR_JUMP_NO_OOGX_MISC_ROW)) ;; ""
 
 (defconstraint jump-instruction---setting-the-stack-pattern                   (:guard (jump-instruction---no-stack-exception))
                (begin
-                 (if-not-zero (jump-instruction---is-jump)   (stack-pattern-1-0))
-                 (if-not-zero (jump-instruction---is-jumpi)  (stack-pattern-2-0))))
+                 (if-not-zero (jump-instruction---is-JUMP)   (stack-pattern-1-0))
+                 (if-not-zero (jump-instruction---is-JUMPI)  (stack-pattern-2-0))))
 
 ;; TODO: allow for debug only constraints
 ;; TODO: remove ugly hack
@@ -109,27 +109,28 @@
                  (DOM-SUB-stamps---standard                      ROW_OFFSET_FOR_JUMP_NO_OOGX_ADDRESS_ROW
                                                                  0)))
 
-(defconstraint jump-instruction---the-miscellaneous-row-flags                 (:guard (jump-instruction---no-stack-exception-and-no-oogx))
+(defconstraint jump-instruction---miscellaneous-row---setting-the-module-flags                 (:guard (jump-instruction---no-stack-exception-and-no-oogx))
                (eq! (weighted-MISC-flag-sum   ROW_OFFSET_FOR_JUMP_NO_OOGX_MISC_ROW)    MISC_WEIGHT_OOB))
 
-(defconstraint jump-instruction---the-miscellaneous-row-OOB-instruction       (:guard (jump-instruction---no-stack-exception-and-no-oogx))
-               (begin
-                 (if-not-zero (jump-instruction---is-jump)
+(defconstraint jump-instruction---miscellaneous-row---setting-the-OOB-instruction---JUMP-case       (:guard (jump-instruction---no-stack-exception-and-no-oogx))
+                 (if-not-zero (jump-instruction---is-JUMP)
                               (set-OOB-instruction---jump    ROW_OFFSET_FOR_JUMP_NO_OOGX_MISC_ROW
                                                              (jump-instruction---new-pc-hi)
                                                              (jump-instruction---new-pc-lo)
-                                                             (jump-instruction---code-size)))
-                 (if-not-zero (jump-instruction---is-jumpi)
+                                                             (jump-instruction---code-size))))
+
+(defconstraint jump-instruction---miscellaneous-row---setting-the-OOB-instruction---JUMPI-case       (:guard (jump-instruction---no-stack-exception-and-no-oogx))
+                 (if-not-zero (jump-instruction---is-JUMPI)
                               (set-OOB-instruction---jumpi   ROW_OFFSET_FOR_JUMP_NO_OOGX_MISC_ROW
                                                              (jump-instruction---new-pc-hi)
                                                              (jump-instruction---new-pc-lo)
                                                              (jump-instruction---jump-condition-hi)
                                                              (jump-instruction---jump-condition-lo)
-                                                             (jump-instruction---code-size)))))
+                                                             (jump-instruction---code-size))))
 
 
 (defconstraint jump-instruction---setting-PC_NEW-and-JUMP_DESTINATION_VETTING-for-JUMP (:guard (jump-instruction---no-stack-exception-and-no-oogx))
-               (if-not-zero (jump-instruction---is-jump)
+               (if-not-zero (jump-instruction---is-JUMP)
                             (begin
                               (if-not-zero (jump-instruction---JUMP-guaranteed-exception)
                                            (begin (eq! stack/JUMP_DESTINATION_VETTING_REQUIRED 0)
@@ -140,7 +141,7 @@
 
 
 (defconstraint jump-instruction---setting-PC_NEW-and-JUMP_DESTINATION_VETTING-for-JUMPI (:guard (jump-instruction---no-stack-exception-and-no-oogx))
-               (if-not-zero (jump-instruction---is-jumpi)
+               (if-not-zero (jump-instruction---is-JUMPI)
                             (begin
                               (if-not-zero (jump-instruction---JUMPI-jump-not-attempted)
                                            (begin (eq! stack/JUMP_DESTINATION_VETTING_REQUIRED 0)

@@ -6,11 +6,12 @@
 ;;                                      ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defconstraint copy-instruction---EXTCODECOPY---setting-the-gas-cost (:guard (copy-instruction---standard-EXTCODECOPY))
+(defconstraint copy-instruction---EXTCODECOPY---setting-the-gas-cost---MXPX-case (:guard (copy-instruction---standard-EXTCODECOPY))
                (if-not-zero stack/MXPX
-                            ;; MXPX ≡ 1
-                            (vanishes! GAS_COST)
-                            ;; MXPX ≡ 0
+                            (vanishes! GAS_COST)))
+
+(defconstraint copy-instruction---EXTCODECOPY---setting-the-gas-cost---no-MXPX-case (:guard (copy-instruction---standard-EXTCODECOPY))
+               (if-zero     stack/MXPX
                             (eq! GAS_COST
                                  (+ stack/STATIC_GAS
                                     (copy-instruction---MXP-memory-expansion-gas)

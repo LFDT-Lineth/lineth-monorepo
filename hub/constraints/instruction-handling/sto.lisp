@@ -110,24 +110,29 @@
                                    (DOM-SUB-stamps---standard            3        ;; kappa
                                                                          0))))    ;; c
 
-(defconstraint   storage-instruction---setting-storage-slot-values (:guard (storage-instruction---no-stack-exceptions))
+(defconstraint   storage-instruction---setting-storage-slot-values---doing-for-SLOAD (:guard (storage-instruction---no-stack-exceptions))
                  (if-not-zero    (oogx-or-no-exception)
-                                 (begin
-                                   (if-not-zero (force-bin (storage-instruction---is-SSTORE))
+                                   (if-not-zero (force-bin (storage-instruction---is-SLOAD))
                                                 (begin
                                                   (storage-reading 3)
                                                   (eq! (storage-instruction---loaded-value-hi)     (shift storage/VALUE_CURR_HI 3))
-                                                  (eq! (storage-instruction---loaded-value-lo)     (shift storage/VALUE_CURR_LO 3))))
-                                   (if-not-zero (force-bin (storage-instruction---is-SLOAD))
+                                                  (eq! (storage-instruction---loaded-value-lo)     (shift storage/VALUE_CURR_LO 3))))))
+
+(defconstraint   storage-instruction---setting-storage-slot-values---doing-for-SSTORE (:guard (storage-instruction---no-stack-exceptions))
+                 (if-not-zero    (oogx-or-no-exception)
+                                   (if-not-zero (force-bin (storage-instruction---is-SSTORE))
                                                 (begin
                                                   (eq! (storage-instruction---value-to-store-hi)   (shift storage/VALUE_NEXT_HI 3))
-                                                  (eq! (storage-instruction---value-to-store-lo)   (shift storage/VALUE_NEXT_LO 3))))
+                                                  (eq! (storage-instruction---value-to-store-lo)   (shift storage/VALUE_NEXT_LO 3))))))
+
+(defconstraint   storage-instruction---setting-storage-slot-values---undoing-storage-operation (:guard (storage-instruction---no-stack-exceptions))
+                 (if-not-zero    (oogx-or-no-exception)
                                    (if-not-zero CONTEXT_WILL_REVERT
                                                 (begin
                                                   (storage-same-slot                        4)
                                                   (undo-storage-warmth-and-value-update     4)
-                                                  (DOM-SUB-stamps---revert-with-current     4         ;; kappa
-                                                                                            0))))))   ;; c
+                                                  (DOM-SUB-stamps---revert-with-current     4       ;; kappa
+                                                                                            0)))))  ;; c
 
 (defun    (orig-is-zero)    (shift storage/VALUE_ORIG_IS_ZERO 3))
 (defun    (curr-is-zero)    (shift storage/VALUE_CURR_IS_ZERO 3))

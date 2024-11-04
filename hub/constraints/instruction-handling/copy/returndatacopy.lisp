@@ -6,10 +6,13 @@
 ;;                                         ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defconstraint copy-instruction---RETURNDATACOPY---setting-the-gas-cost       (:guard (copy-instruction---standard-RETURNDATACOPY))
+(defconstraint copy-instruction---RETURNDATACOPY---setting-the-gas-cost---sans-computation       (:guard (copy-instruction---standard-RETURNDATACOPY))
                (begin
                  (if-not-zero   stack/RDCX   (vanishes!   GAS_COST))
-                 (if-not-zero   stack/MXPX   (vanishes!   GAS_COST))
+                 (if-not-zero   stack/MXPX   (vanishes!   GAS_COST))))
+
+(defconstraint copy-instruction---RETURNDATACOPY---setting-the-gas-cost---with-computation       (:guard (copy-instruction---standard-RETURNDATACOPY))
+               (begin
                  (if-not-zero   stack/OOGX   (eq!         GAS_COST    (+ stack/STATIC_GAS (copy-instruction---MXP-memory-expansion-gas))))
                  (if-zero       XAHOY        (eq!         GAS_COST    (+ stack/STATIC_GAS (copy-instruction---MXP-memory-expansion-gas))))))
 
