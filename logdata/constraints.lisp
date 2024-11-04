@@ -90,9 +90,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defun    (normalized-SIZE_LIMB)
-  (if-zero    ABS_LOG_NUM
-              SIZE_LIMB
-              (- SIZE_LIMB 1)))
+  (* LOGS_DATA (- SIZE_LIMB 1)))
 
 ;; this constraint enforces in particular that the final value of SIZE_LIMB is in the range [1 , 16]
 (definrange    (normalized-SIZE_LIMB)   16)
