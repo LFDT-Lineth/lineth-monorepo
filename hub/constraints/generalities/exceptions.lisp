@@ -42,28 +42,29 @@
 
 
 
-(defconstraint exception-flags-are-binary (:perspective stack)
-               (begin
-                 (is-binary  SUX     )
-                 (is-binary  SOX     )
-                 (is-binary  MXPX    )
-                 (is-binary  OOGX    )
-                 (is-binary  RDCX    )
-                 (is-binary  JUMPX   )
-                 (is-binary  STATICX )
-                 (is-binary  SSTOREX )
-                 (is-binary  ICPX    )
-                 (is-binary  MAXCSX  )
-                 (is-binary  OPCX    )
-                 ))
+;; ;; These columns are already marked binary@prove in their respective definitions
+;; (defconstraint   generalities---exceptions---stack-exception-flags-are-binary (:perspective stack)
+;;                  (begin
+;;                    (is-binary  SUX     )
+;;                    (is-binary  SOX     )
+;;                    (is-binary  MXPX    )
+;;                    (is-binary  OOGX    )
+;;                    (is-binary  RDCX    )
+;;                    (is-binary  JUMPX   )
+;;                    (is-binary  STATICX )
+;;                    (is-binary  SSTOREX )
+;;                    (is-binary  ICPX    )
+;;                    (is-binary  MAXCSX  )
+;;                    (is-binary  OPCX    )
+;;                    ))
 
 
-(defconstraint exception-flags-are-exclusive (:perspective stack)
-               (is-binary (exception_flag_sum)))
+(defconstraint   generalities---exceptions---stack-exception-flags-are-exclusive (:perspective stack)
+                 (is-binary (exception_flag_sum)))
 
 
-(defconstraint exception-flags-are-stack-constant (:perspective stack)
-               (stack-row-constancy  (weighted_exception_flag_sum)))
+(defconstraint   generalities---exceptions---exception-flags-are-stack-constant (:perspective stack)
+                 (stack-row-constancy  (weighted_exception_flag_sum)))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -73,15 +74,15 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-(defconstraint automatic-exception-flag-vanishing (:perspective stack)
-               (begin
-                 (eq!            INVALID_FLAG                                   OPCX)
-                 (if-zero        MXP_FLAG                                       (vanishes!    MXPX))
-                 (if-zero        JUMP_FLAG                                      (vanishes!    JUMPX))
-                 (if-zero        STATIC_FLAG                                    (vanishes!    STATICX))
-                 (if-not-zero    (-  INSTRUCTION    EVM_INST_RETURNDATACOPY)    (vanishes!    RDCX))
-                 (if-not-zero    (-  INSTRUCTION    EVM_INST_SSTORE)            (vanishes!    SSTOREX))
-                 (if-not-zero    (-  INSTRUCTION    EVM_INST_RETURN)            (vanishes!    (+ ICPX MAXCSX)))))
+(defconstraint   generalities---exceptions---automatic-stack-exception-flag-vanishing (:perspective stack)
+                 (begin
+                   (eq!            INVALID_FLAG                                   OPCX)
+                   (if-zero        MXP_FLAG                                       (vanishes!    MXPX))
+                   (if-zero        JUMP_FLAG                                      (vanishes!    JUMPX))
+                   (if-zero        STATIC_FLAG                                    (vanishes!    STATICX))
+                   (if-not-zero    (-  INSTRUCTION    EVM_INST_RETURNDATACOPY)    (vanishes!    RDCX))
+                   (if-not-zero    (-  INSTRUCTION    EVM_INST_SSTORE)            (vanishes!    SSTOREX))
+                   (if-not-zero    (-  INSTRUCTION    EVM_INST_RETURN)            (vanishes!    (+ ICPX MAXCSX)))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -91,11 +92,9 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; we deal with those constraints in context.lisp along side CMC
-
-;; (defconstraint exception_ahoy ()
-;;                (begin
-;;                  (is-binary                             XAHOY)
-;;                  (hub-stamp-constancy                   XAHOY)
-;;                  (if-zero TX_EXEC            (vanishes! XAHOY))
-;;                  (if-not-zero PEEK_AT_STACK
-;;                               (eq! (exception_flag_sum) XAHOY))))
+;; (defconstraint   generalities---exceptions---setting-the-EXCEPTIONS_AHOY-flag ()
+;;                  (begin
+;;                    (is-binary                             XAHOY)  ;; column already declared :binary@prove
+;;                    (hub-stamp-constancy                   XAHOY)
+;;                    (if-zero     TX_EXEC             (eq!  XAHOY  0))
+;;                    (if-not-zero PEEK_AT_STACK       (eq!  XAHOY  (exception_flag_sum)))))

@@ -14,9 +14,9 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-;; (defconstraint setting-the-context-may-change-flag ()
+;; (defconstraint generalities---setting-the-CONTEXT_MAY_CHANGE-flag ()
 ;;                (begin
-;;                  (is-binary                             CMC)
+;;                  (is-binary                             CMC)  ;; column already declared :binary@prove
 ;;                  (hub-stamp-constancy                   CMC)
 ;;                  (if-zero TX_EXEC            (vanishes! CMC))
 ;;                  (if-not-zero PEEK_AT_STACK
