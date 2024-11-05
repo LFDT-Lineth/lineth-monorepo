@@ -60,7 +60,6 @@
 ;; TODO: remove ugly hack
 (defconstraint jump-instruction---allowable-exceptions                        (:guard (jump-instruction---no-stack-exception))
                (begin
-                 (vanishes! 0)
                  (debug (eq! XAHOY (+ stack/OOGX stack/JUMPX)))))
 
 
