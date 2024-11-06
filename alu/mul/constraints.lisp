@@ -214,9 +214,6 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defconstraint trivial-regime ()
-  ;; TODO: confirm that if-eq treats binary columns intelligently
-  ;; otherwise replace with if-not-zero OLI
-  ;; with OLI a binary column OLI != 0 <=> OLI == 1
   (if-eq OLI 1
          ;; since OLI != 0 we have STAMP != 0
          ;; thus INST ∈ {MUL, EXP}

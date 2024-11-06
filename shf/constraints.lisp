@@ -173,7 +173,6 @@
                       (byte-decomposition CT ACC_4 BYTE_4)
                       (byte-decomposition CT ACC_5 BYTE_5)))
 
-;; bytehood constraints TODO
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                             ;;
 ;;    2.4 target constraints   ;;

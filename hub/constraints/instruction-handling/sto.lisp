@@ -14,7 +14,6 @@
 (defconstraint   storage-instruction---stack-pattern (:guard (storage-instruction---no-stack-exceptions))
                  (load-store-stack-pattern (storage-instruction---is-SSTORE)))
 
-;; TODO: comment out
 (defconstraint   storage-instruction---valid-exceptions (:guard (storage-instruction---no-stack-exceptions))
                  (begin
                    (if-not-zero    (storage-instruction---is-SLOAD)

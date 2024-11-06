@@ -1,4 +1,3 @@
-;; TODO the selector functiun should be imported from shakira/constraints
 (defun (is-result)
   (force-bool (+  ;; shakiradata.IS_KECCAK_DATA
                  shakiradata.IS_KECCAK_RESULT

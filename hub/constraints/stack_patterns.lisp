@@ -14,10 +14,6 @@
 ;;                               ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; TODO: make debug
-(defconstraint stack-item-pop-flags-are-binary  (:perspective stack)
-                (for k [4]  (is-binary [stack/STACK_ITEM_POP k])))
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                        ;;
 ;;  5.3 emptyStackItem_k  ;;

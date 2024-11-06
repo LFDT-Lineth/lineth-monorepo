@@ -45,16 +45,17 @@
 ;;    1.4 binary, bytehood and byte decompositions   ;;
 ;;                                                   ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defconstraint binary-and-byte-decompositions ()
   (begin (byte-decomposition CT ACC_1 BYTE_1)
          (byte-decomposition CT ACC_2 BYTE_2)))
 
-;; TODO: bytehood constraints
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                       ;;
 ;;    1.5 constraints    ;;
 ;;                       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defconstraint adder-constraints (:guard STAMP)
   (if-eq CT CT_MAX
          (begin (eq! RES_HI ACC_1)
