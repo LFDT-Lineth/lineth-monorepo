@@ -60,7 +60,7 @@
 ;; TODO: remove ugly hack
 (defconstraint jump-instruction---allowable-exceptions                        (:guard (jump-instruction---no-stack-exception))
                (begin
-                 (debug (eq! XAHOY (+ stack/OOGX stack/JUMPX)))))
+                 (eq! XAHOY (+ stack/OOGX stack/JUMPX))))
 
 
 (defconstraint jump-instruction---setting-the-gas-cost                        (:guard (jump-instruction---no-stack-exception))
@@ -69,8 +69,8 @@
 (defconstraint jump-instruction---setting-NSR                                 (:guard (jump-instruction---no-stack-exception))
                (if-not-zero (force-bin stack/OOGX)
                             ;; OOGX = 1
-                            (begin (eq! NSR CMC)
-                                   (debug (eq! NSR 1)))
+                            (begin (eq!        NSR CMC)
+                                   (debug (eq! NSR 1  )))
                             ;; OOGX = 0
                             (eq! NSR (+ 3 CMC))))
 

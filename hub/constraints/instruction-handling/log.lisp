@@ -51,10 +51,9 @@
                                          [ stack/DEC_FLAG 4 ])) ;; ""
 
 (defconstraint    log-instruction---allowable-exceptions                             (:guard (log-instruction---standard-hypothesis))         ;; TODO: solo debug constraint plz
-                  (begin
-                         (debug (eq! XAHOY (+ stack/STATICX
-                                              stack/MXPX
-                                              stack/OOGX)))))
+                  (eq! XAHOY (+ stack/STATICX
+                                stack/MXPX
+                                stack/OOGX)))
 
 (defconstraint    log-instruction---setting-NSR                                      (:guard (log-instruction---standard-hypothesis))
                   (if-zero (force-bin stack/STATICX)
