@@ -266,38 +266,38 @@
                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                  (begin
                    (if-not-zero   (return-instruction---check-first-byte)
-                                  (set-MMU-instruction---invalid-code-prefix    ROFF_RETURN___1ST_MISC_ROW       ;; offset
-                                                                                CONTEXT_NUMBER                         ;; source ID
-                                                                                ;; tgt_id                              ;; target ID
-                                                                                ;; aux_id                              ;; auxiliary ID
-                                                                                ;; src_offset_hi                       ;; source offset high
-                                                                                (return-instruction---offset-lo)             ;; source offset low
-                                                                                ;; tgt_offset_lo                       ;; target offset low
-                                                                                ;; size                                ;; size
-                                                                                ;; ref_offset                          ;; reference offset
-                                                                                ;; ref_size                            ;; reference size
-                                                                                (return-instruction---exception-flag-ICPX)   ;; success bit
-                                                                                ;; limb_1                              ;; limb 1
-                                                                                ;; limb_2                              ;; limb 2
-                                                                                ;; exo_sum                             ;; weighted exogenous module flag sum
-                                                                                ;; phase                               ;; phase
+                                  (set-MMU-instruction---invalid-code-prefix    ROFF_RETURN___1ST_MISC_ROW                        ;; offset
+                                                                                CONTEXT_NUMBER                                    ;; source ID
+                                                                                ;; tgt_id                                         ;; target ID
+                                                                                ;; aux_id                                         ;; auxiliary ID
+                                                                                ;; src_offset_hi                                  ;; source offset high
+                                                                                (return-instruction---offset-lo)                  ;; source offset low
+                                                                                ;; tgt_offset_lo                                  ;; target offset low
+                                                                                ;; size                                           ;; size
+                                                                                ;; ref_offset                                     ;; reference offset
+                                                                                ;; ref_size                                       ;; reference size
+                                                                                (- 1 (return-instruction---exception-flag-ICPX))  ;; success bit; this double negation stuff will be resolved by spec issue #715
+                                                                                ;; limb_1                                         ;; limb 1
+                                                                                ;; limb_2                                         ;; limb 2
+                                                                                ;; exo_sum                                        ;; weighted exogenous module flag sum
+                                                                                ;; phase                                          ;; phase
                                                                                 ))
                    (if-not-zero   (return-instruction---write-return-data-to-caller-ram)
-                                  (set-MMU-instruction---ram-to-ram-sans-padding   ROFF_RETURN___1ST_MISC_ROW   ;; offset
-                                                                                   CONTEXT_NUMBER                      ;; source ID
-                                                                                   CALLER_CONTEXT_NUMBER               ;; target ID
-                                                                                   ;; aux_id                              ;; auxiliary ID
-                                                                                   ;; src_offset_hi                       ;; source offset high
+                                  (set-MMU-instruction---ram-to-ram-sans-padding   ROFF_RETURN___1ST_MISC_ROW                   ;; offset
+                                                                                   CONTEXT_NUMBER                               ;; source ID
+                                                                                   CALLER_CONTEXT_NUMBER                        ;; target ID
+                                                                                   ;; aux_id                                    ;; auxiliary ID
+                                                                                   ;; src_offset_hi                             ;; source offset high
                                                                                    (return-instruction---offset-lo)             ;; source offset low
-                                                                                   ;; tgt_offset_lo                                ;; target offset low
+                                                                                   ;; tgt_offset_lo                             ;; target offset low
                                                                                    (return-instruction---size-lo)               ;; size
                                                                                    (return-instruction---return-at-offset)      ;; reference offset
                                                                                    (return-instruction---return-at-capacity)    ;; reference size
-                                                                                   ;; success_bit                                  ;; success bit
-                                                                                   ;; limb_1                                       ;; limb 1
-                                                                                   ;; limb_2                                       ;; limb 2
-                                                                                   ;; exo_sum                                      ;; weighted exogenous module flag sum
-                                                                                   ;; phase                                        ;; phase
+                                                                                   ;; success_bit                               ;; success bit
+                                                                                   ;; limb_1                                    ;; limb 1
+                                                                                   ;; limb_2                                    ;; limb 2
+                                                                                   ;; exo_sum                                   ;; weighted exogenous module flag sum
+                                                                                   ;; phase                                     ;; phase
                                                                                    ))))
 
 (defconstraint   return-instruction---justifying-the-MXPX           (:guard   (return-instruction---standard-scenario-row))
