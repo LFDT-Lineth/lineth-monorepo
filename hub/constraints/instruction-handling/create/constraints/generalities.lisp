@@ -98,26 +98,37 @@
                                                                    (create-instruction---creator-nonce)          ;; creator account nonce
                                                                    )))
 
-(defconstraint    create-instruction---setting-the-CREATE-scenario                          (:guard    (create-instruction---generic-precondition))
-                  (begin
-                    (eq!   scenario/CREATE_EXCEPTION    XAHOY)
-                    (if-not-zero    (scenario-shorthand---CREATE---unexceptional)
-                                    (begin
-                                      (eq!    scenario/CREATE_ABORT                                    (create-instruction---OOB-aborting-condition))
-                                      (eq!    (scenario-shorthand---CREATE---failure-condition)        (create-instruction---OOB-failure-condition) )
-                                      (debug  (eq!    (scenario-shorthand---CREATE---not-rebuffed)     (-    1
-                                                                                                             (create-instruction---OOB-aborting-condition)
-                                                                                                             (create-instruction---OOB-failure-condition))))))
-                    (if-not-zero    (scenario-shorthand---CREATE---creator-state-change)
-                                    (eq!    (scenario-shorthand---CREATE---creator-state-change-will-revert)
-                                            CONTEXT_WILL_REVERT))
-                    (if-not-zero    (scenario-shorthand---CREATE---not-rebuffed)
-                                    (eq!    (scenario-shorthand---CREATE---not-rebuffed-nonempty-init-code)
-                                            (create-instruction---MXP-mtntop)))
-                    (if-not-zero    (scenario-shorthand---CREATE---not-rebuffed-nonempty-init-code)
-                                    (eq!    (scenario-shorthand---CREATE---deployment-failure)
-                                            (shift    misc/CCSR_FLAG    CREATE_miscellaneous_row___row_offset)))
-                    ))
+(defconstraint    create-instruction---setting-the-CREATE-scenario---exceptional
+                  (:guard    (create-instruction---generic-precondition))
+                  (eq!   scenario/CREATE_EXCEPTION    XAHOY))
+
+(defconstraint    create-instruction---setting-the-CREATE-scenario---unexceptional-generalities
+                  (:guard    (create-instruction---generic-precondition))
+                  (if-not-zero    (scenario-shorthand---CREATE---unexceptional)
+                                  (begin
+                                    (eq!    scenario/CREATE_ABORT                                    (create-instruction---OOB-aborting-condition))
+                                    (eq!    (scenario-shorthand---CREATE---failure-condition)        (create-instruction---OOB-failure-condition) )
+                                    (debug  (eq!    (scenario-shorthand---CREATE---not-rebuffed)     (-    1
+                                                                                                           (create-instruction---OOB-aborting-condition)
+                                                                                                           (create-instruction---OOB-failure-condition)))))))
+
+(defconstraint    create-instruction---setting-the-CREATE-scenario---WILL_REVERT-scenarios
+                  (:guard    (create-instruction---generic-precondition))
+                  (if-not-zero    (scenario-shorthand---CREATE---creator-state-change)
+                                  (eq!    (scenario-shorthand---CREATE---creator-state-change-will-revert)
+                                          CONTEXT_WILL_REVERT)))
+
+(defconstraint    create-instruction---setting-the-CREATE-scenario---not-rebuffed-scenarios
+                  (:guard    (create-instruction---generic-precondition))
+                  (if-not-zero    (scenario-shorthand---CREATE---not-rebuffed)
+                                  (eq!    (scenario-shorthand---CREATE---not-rebuffed-nonempty-init-code)
+                                          (create-instruction---MXP-mtntop))))
+
+(defconstraint    create-instruction---setting-the-CREATE-scenario---not-rebuffed-nonempty-init-code
+                  (:guard    (create-instruction---generic-precondition))
+                  (if-not-zero    (scenario-shorthand---CREATE---not-rebuffed-nonempty-init-code)
+                                  (eq!    (scenario-shorthand---CREATE---deployment-failure)
+                                          (shift    misc/CCSR_FLAG    CREATE_miscellaneous_row___row_offset))))
 
 (defconstraint    create-instruction---setting-the-MMU-instruction                          (:guard    (create-instruction---generic-precondition))
                   (if-not-zero    (shift    misc/MMU_FLAG    CREATE_miscellaneous_row___row_offset)
