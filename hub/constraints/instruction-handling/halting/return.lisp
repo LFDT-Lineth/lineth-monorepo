@@ -412,22 +412,12 @@
                                   (DOM-SUB-stamps---revert-with-current        ROFF_RETURN___EMPTY_DEPLOYMENT___2ND_ACCOUNT_ROW    1)
                                   )))
 
-(defconstraint   return-instruction---setting-the-callers-new-return-data-empty-deployments    (:guard   (return-instruction---empty-deployment-scenario))
+(defconstraint   return-instruction---empty-deployment---squasing-the-creators-return-data    (:guard   (return-instruction---empty-deployment-scenario))
                  (begin
                    (if-not-zero   scenario/RETURN_FROM_DEPLOYMENT_EMPTY_CODE_WILL_REVERT
-                                  (if-not-zero   (force-bin   (return-instruction---is-root))
-                                                 ;; IS_ROOT  ≡  1
-                                                 (read-context-data                       ROFF_RETURN___CALLER_CONTEXT___EMPTY_DEPLOYMENT_WILL_REVERT    CONTEXT_NUMBER)
-                                                 ;; IS_ROOT  ≡  0
-                                                 (execution-provides-empty-return-data    ROFF_RETURN___CALLER_CONTEXT___EMPTY_DEPLOYMENT_WILL_REVERT)
-                                                 ))
+                                  (execution-provides-empty-return-data    ROFF_RETURN___CALLER_CONTEXT___EMPTY_DEPLOYMENT_WILL_REVERT))
                    (if-not-zero   scenario/RETURN_FROM_DEPLOYMENT_EMPTY_CODE_WONT_REVERT
-                                  (if-not-zero   (force-bin   (return-instruction---is-root))
-                                                 ;; IS_ROOT  ≡  1
-                                                 (read-context-data                       ROFF_RETURN___CALLER_CONTEXT___EMPTY_DEPLOYMENT_WONT_REVERT    CONTEXT_NUMBER)
-                                                 ;; IS_ROOT  ≡  0
-                                                 (execution-provides-empty-return-data    ROFF_RETURN___CALLER_CONTEXT___EMPTY_DEPLOYMENT_WONT_REVERT)
-                                                 ))))
+                                  (execution-provides-empty-return-data    ROFF_RETURN___CALLER_CONTEXT___EMPTY_DEPLOYMENT_WONT_REVERT))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -498,18 +488,9 @@
                                   (DOM-SUB-stamps---revert-with-current        ROFF_RETURN___NONEMPTY_DEPLOYMENT___2ND_ACCOUNT_ROW    1)
                                   )))
 
-(defconstraint   return-instruction---setting-the-callers-new-return-data-nonempty-deployments    (:guard   (return-instruction---nonempty-deployment-scenario))
+(defconstraint   return-instruction---nonempty-deployment---squasing-the-creators-return-data    (:guard   (return-instruction---nonempty-deployment-scenario))
                  (begin
                    (if-not-zero   scenario/RETURN_FROM_DEPLOYMENT_NONEMPTY_CODE_WILL_REVERT
-                                  (if-not-zero   (force-bin   (return-instruction---is-root))
-                                                 ;; IS_ROOT  ≡  1
-                                                 (read-context-data                       ROFF_RETURN___CALLER_CONTEXT___NONEMPTY_DEPLOYMENT_WILL_REVERT    CONTEXT_NUMBER)
-                                                 ;; IS_ROOT  ≡  0
-                                                 (execution-provides-empty-return-data    ROFF_RETURN___CALLER_CONTEXT___NONEMPTY_DEPLOYMENT_WILL_REVERT)
-                                                 ))
+                                  (execution-provides-empty-return-data    ROFF_RETURN___CALLER_CONTEXT___NONEMPTY_DEPLOYMENT_WILL_REVERT))
                    (if-not-zero   scenario/RETURN_FROM_DEPLOYMENT_NONEMPTY_CODE_WONT_REVERT
-                                  (if-not-zero   (force-bin   (return-instruction---is-root))
-                                                 ;; IS_ROOT  ≡  1
-                                                 (read-context-data                       ROFF_RETURN___CALLER_CONTEXT___NONEMPTY_DEPLOYMENT_WONT_REVERT    CONTEXT_NUMBER)
-                                                 ;; IS_ROOT  ≡  0
-                                                 (execution-provides-empty-return-data    ROFF_RETURN___CALLER_CONTEXT___NONEMPTY_DEPLOYMENT_WONT_REVERT)))))
+                                  (execution-provides-empty-return-data    ROFF_RETURN___CALLER_CONTEXT___NONEMPTY_DEPLOYMENT_WONT_REVERT))))
