@@ -31,5 +31,3 @@
     (* (is-first-data-row) 1)
     (* (is-first-data-row) EVM_INST_LT)
   ))
-
-

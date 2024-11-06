@@ -14,6 +14,8 @@
 ;;                               ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;; the [stack/STACK_ITEM_POP k] columns are :binary@prove
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                        ;;
 ;;  5.3 emptyStackItem_k  ;;
@@ -33,14 +35,14 @@
 (defun (pop-frst-row-stack-item                          k          ) (= [ stack/STACK_ITEM_POP    k ] 1                                 ))
 (defun (push-frst-row-stack-item                         k          ) (= [ stack/STACK_ITEM_POP    k ] 0                                 ))
 (defun (inc-frst-row-stack-item-X-height-by-Y            k increment) (= [ stack/STACK_ITEM_HEIGHT k ] (+ HEIGHT increment)              ))
-(defun (dec-frst-row-stack-item-X-height-by-Y            k decrement) (= [ stack/STACK_ITEM_HEIGHT k ] (- HEIGHT decrement)              ))
+(defun (dec-frst-row-stack-item-X-height-by-Y            k decrement) (= [ stack/STACK_ITEM_HEIGHT k ] (- HEIGHT decrement)              )) ;; ""
 
 ;; next row
 (defun (set-scnd-row-stack-item-stamp                    k offset   ) (= (next [ stack/STACK_ITEM_STAMP  k ]) (+ (* MULTIPLIER___STACK_STAMP HUB_STAMP) offset)  ))
 (defun (pop-scnd-row-stack-item                          k          ) (= (next [ stack/STACK_ITEM_POP    k ]) 1                                 ))
 (defun (push-scnd-row-stack-item                         k          ) (= (next [ stack/STACK_ITEM_POP    k ]) 0                                 ))
 (defun (inc-scnd-row-stack-item-X-height-by-Y            k increment) (= (next [ stack/STACK_ITEM_HEIGHT k ]) (+ HEIGHT increment)              ))
-(defun (dec-scnd-row-stack-item-X-height-by-Y            k decrement) (= (next [ stack/STACK_ITEM_HEIGHT k ]) (- HEIGHT decrement)              ))
+(defun (dec-scnd-row-stack-item-X-height-by-Y            k decrement) (= (next [ stack/STACK_ITEM_HEIGHT k ]) (- HEIGHT decrement)              )) ;; ""
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                         ;;
@@ -48,7 +50,7 @@
 ;;                         ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defun  (empty-stack-pattern)  (for k [4] (empty-stack-item k)))
+(defun  (empty-stack-pattern)  (for k [4] (empty-stack-item k))) ;; ""
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                          ;;

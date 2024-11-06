@@ -20,6 +20,10 @@
 ;;                             ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;; binary columns are already :binary@prove
+;; and both shorthands (flag_sum_perspective) and (flag_sum_macro)
+;; are de facto binary
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                               ;;
 ;;    2.3 Flag sum perspectives  ;;

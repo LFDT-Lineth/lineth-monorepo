@@ -72,5 +72,3 @@
                                     (eq! (+ RES_HI ARG_2_HI OVERFLOW)
                                          (+ ARG_1_HI
                                             (* THETA (prev OVERFLOW)))))))))
-
-
