@@ -84,15 +84,12 @@
 
 (defconstraint  revert-instruction---setting-the-context-rows---unexceptional                      (:guard (revert-instruction---standard-precondition))
                 (if-zero      XAHOY
-                              (begin
-                                (read-context-data   ROFF_REVERT___NO_XAHOY_CURRENT_CONTEXT_ROW
-                                                     (revert-instruction---current-context))
-                                (provide-return-data   ROFF_REVERT___NO_XAHOY_CALLER_CONTEXT_ROW             ;; row offset
-                                                       (revert-instruction---caller-context)                 ;; receiver context
-                                                       (revert-instruction---current-context)                ;; provider context
-                                                       (revert-instruction---type-safe-return-data-offset)   ;; type safe rdo
-                                                       (revert-instruction---type-safe-return-data-size)     ;; type safe rds
-                                                       ))))
+                              (provide-return-data   ROFF_REVERT___NO_XAHOY_CALLER_CONTEXT_ROW             ;; row offset
+                                                     (revert-instruction---caller-context)                 ;; receiver context
+                                                     (revert-instruction---current-context)                ;; provider context
+                                                     (revert-instruction---type-safe-return-data-offset)   ;; type safe rdo
+                                                     (revert-instruction---type-safe-return-data-size)     ;; type safe rds
+                                                     )))
 
 (defun  (revert-instruction---trigger_MMU)  (*  (-  1  XAHOY)
                                                 (-  1  (revert-instruction---current-context-is-root))
