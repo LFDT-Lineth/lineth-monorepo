@@ -2,17 +2,17 @@
 
 (defcolumns 
   ;; shared columns
-  (STAMP      :i32)
-  (MMIO_STAMP :i32)
+  (STAMP      :i32 :display :dec)
+  (MMIO_STAMP :i32 :display :dec)
   ;; perspective selector
   (MACRO :binary@prove)
   (PRPRC :binary@prove)
   (MICRO :binary@prove)
   ;; OUTPUT OF THE PREPROCESSING
-  (TOT :i32)
-  (TOTLZ :i32)
-  (TOTNT :i32)
-  (TOTRZ :i32)
+  (TOT :i32 :display :dec)
+  (TOTLZ :i32 :display :dec)
+  (TOTNT :i32 :display :dec)
+  (TOTRZ :i32 :display :dec)
   (OUT :i64 :array [5])
   (BIN :binary :array [5])
   ;; MMU INSTRUCTION FLAG
@@ -44,7 +44,7 @@
 
   ;; selector
   MACRO
-  ((INST :i16)
+  ((INST :i16 :display :hex)
    (SRC_ID :i64)
    (TGT_ID :i64)
    (AUX_ID :i64)
@@ -82,20 +82,20 @@
 
   ;; selector
   MICRO
-  ((INST :i16)
-   (SIZE :byte)
-   (SLO :i64)
-   (SBO :byte)
-   (TLO :i64)
-   (TBO :byte)
+  ((INST :i16 :display :hex)
+   (SIZE :byte :display :dec)
+   (SLO :i64 :display :dec)
+   (SBO :byte :display :dec)
+   (TLO :i64 :display :dec)
+   (TBO :byte :display :dec)
    (LIMB :i128)
-   (CN_S :i64)
-   (CN_T :i64)
+   (CN_S :i64 :display :dec)
+   (CN_T :i64 :display :dec)
    (SUCCESS_BIT :binary)
    (EXO_SUM :i32)
    (PHASE :i32)
    (EXO_ID :i32)
    (KEC_ID :i32)
-   (TOTAL_SIZE :i64)))
+   (TOTAL_SIZE :i64 :display :dec)))
 
 

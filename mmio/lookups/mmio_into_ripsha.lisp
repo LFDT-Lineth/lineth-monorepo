@@ -18,4 +18,3 @@
     (* mmio.EXO_IS_RIPSHA mmio.SIZE)
     (* mmio.EXO_IS_RIPSHA mmio.TOTAL_SIZE)
   ))
-;; TODO uncomment i.e. lispX -> lisp

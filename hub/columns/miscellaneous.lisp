@@ -17,7 +17,7 @@
 		 ( EXP_DATA                :array [5] :i128 )   ;; ""
 
 		 ;; MMU columns (DONE)
-		 ( MMU_INST                :i32   )
+		 ( MMU_INST                :i32   :display :hex)
 		 ( MMU_SRC_ID              :i32   )
 		 ( MMU_TGT_ID              :i32   )
 		 ( MMU_AUX_ID              :i32   )

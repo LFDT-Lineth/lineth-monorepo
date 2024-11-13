@@ -3,7 +3,7 @@
 (defcolumns 
   (CODE_FRAGMENT_INDEX :i32)
   (CODE_FRAGMENT_INDEX_INFTY :i32)
-  (CODE_SIZE :i32)
+  (CODE_SIZE :i32 :display :dec)
   (CODESIZE_REACHED :binary@prove)
   (PROGRAM_COUNTER :i32)
   (LIMB :i128)

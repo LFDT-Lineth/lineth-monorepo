@@ -183,5 +183,5 @@
                             (eq! target_new
                                  (+ target
                                     (* (- (+ (* accumulator1 pow2) accumulator2)
-                                          accumulator3))
-                                       pow1)))))
+                                          accumulator3)
+                                       pow1))))))
