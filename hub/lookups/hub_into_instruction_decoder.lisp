@@ -14,8 +14,6 @@
 	     instdecoder.STATIC_FLAG
 	     instdecoder.ALPHA
 	     instdecoder.DELTA
-	     instdecoder.NB_REMOVED
-	     instdecoder.NB_ADDED  
 	     ;;
 	     instdecoder.FAMILY_ACCOUNT
 	     instdecoder.FAMILY_ADD
@@ -58,8 +56,6 @@
 	     (* hub.stack/STATIC_FLAG                 (hub-into-instruction-decoder-trigger))
 	     (* hub.stack/ALPHA                       (hub-into-instruction-decoder-trigger))
 	     (* hub.stack/DELTA                       (hub-into-instruction-decoder-trigger))
-	     (* hub.stack/NB_REMOVED                  (hub-into-instruction-decoder-trigger))
-	     (* hub.stack/NB_ADDED                    (hub-into-instruction-decoder-trigger))
 	     ;;
 	     (* hub.stack/ACC_FLAG                    (hub-into-instruction-decoder-trigger))
 	     (* hub.stack/ADD_FLAG                    (hub-into-instruction-decoder-trigger))

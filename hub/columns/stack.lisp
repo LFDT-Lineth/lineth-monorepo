@@ -49,8 +49,6 @@
    ;; stack popping / pushing parameters
    ( ALPHA                   :byte )
    ( DELTA                   :byte )
-   ( NB_REMOVED              :byte )
-   ( NB_ADDED                :byte )
 
    ;; jump and push related
    ( PUSH_VALUE_HI           :i128 )

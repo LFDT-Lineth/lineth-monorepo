@@ -40,8 +40,6 @@
     (FLAG_4                                :binary)
     (ALPHA                                 :byte)
     (DELTA                                 :byte)
-    (NB_ADDED                              :byte)
-    (NB_REMOVED                            :byte)
     (STATIC_GAS                            :i32)
 
     ;;
