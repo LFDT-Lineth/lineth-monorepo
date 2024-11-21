@@ -63,7 +63,8 @@
   (eq! (weighted-exo-sum) (* (instruction-may-provide-exo-sum) EXO_SUM)))
 
 (defun (instruction-may-provide-exo-sum)
-  (force-bool (+ IS_LIMB_TO_RAM_TRANSPLANT
+  (force-bool (+ IS_LIMB_VANISHES
+                 IS_LIMB_TO_RAM_TRANSPLANT
                  IS_LIMB_TO_RAM_ONE_TARGET
                  IS_LIMB_TO_RAM_TWO_TARGET
                  IS_RAM_TO_LIMB_TRANSPLANT
