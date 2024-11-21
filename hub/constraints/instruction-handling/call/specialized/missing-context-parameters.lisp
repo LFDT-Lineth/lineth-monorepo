@@ -46,7 +46,7 @@
                                                                       (*    (call-instruction---is-DELEGATECALL)    (call-instruction---current-caller-address-lo))
                                                                       (*    (call-instruction---is-STATICCALL)      (call-instruction---current-address-lo))))
 
-(defun    (call-instruction---new-call-value)                   (+    (*    (call-instruction---is-CALL)            (call-instruction---STACK-value-lo)
+(defun    (call-instruction---new-call-value)                   (+    (*    (call-instruction---is-CALL)            (call-instruction---STACK-value-lo))
                                                                       (*    (call-instruction---is-CALLCODE)        (call-instruction---STACK-value-lo))
                                                                       (*    (call-instruction---is-DELEGATECALL)    (call-instruction---current-call-value))
-                                                                      (*    (call-instruction---is-STATICCALL)      0))))
+                                                                      (*    (call-instruction---is-STATICCALL)      0)))

@@ -24,6 +24,10 @@
 ;; and both shorthands (flag_sum_perspective) and (flag_sum_macro)
 ;; are de facto binary
 
+(defconstraint   wcp-flag-vanishes-outside-of-preprocessing-rows ()
+                 (if-zero    PRPRC
+                             (vanishes!    preprocessing/WCP_FLAG)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                               ;;
 ;;    2.3 Flag sum perspectives  ;;

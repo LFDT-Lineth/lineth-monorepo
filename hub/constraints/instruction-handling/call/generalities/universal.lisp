@@ -103,15 +103,15 @@
 
 (defconstraint    call-instruction---setting-STP-instruction-parameters    (:guard    (call-instruction---standard-precondition))
                   (if-not-zero    (shift    misc/STP_FLAG     CALL_misc_row___row_offset)
-                                  (set-STP-instruction-call   CALL_misc_row___row_offset                      ;; relative row offset
-                                                              (call-instruction---STACK-instruction)          ;; instruction
-                                                              (call-instruction---STACK-gas-hi)               ;; max gas allowance argument, high part
-                                                              (call-instruction---STACK-gas-lo)               ;; max gas allowance argument, low  part
-                                                              (call-instruction---STACK-value-hi)             ;; value to transfer, high part
-                                                              (call-instruction---STACK-value-lo)             ;; value to transfer, low  part
-                                                              (call-instruction---callee-exists)              ;; bit indicating target account existence
-                                                              (call-instruction---callee-warmth)              ;; bit indicating target account warmth
-                                                              (call-instruction---MXP-memory-expansion-gas)   ;; memory expansion gas
+                                  (set-STP-instruction-call   CALL_misc_row___row_offset                                           ;; relative row offset
+                                                              (call-instruction---STACK-instruction)                               ;; instruction
+                                                              (call-instruction---STACK-gas-hi)                                    ;; max gas allowance argument, high part
+                                                              (call-instruction---STACK-gas-lo)                                    ;; max gas allowance argument, low  part
+                                                              (call-instruction---STACK-value-hi)                                  ;; value to transfer, high part
+                                                              (call-instruction---STACK-value-lo)                                  ;; value to transfer, low  part
+                                                              (* (call-instruction---callee-exists) (call-instruction---is-CALL))  ;; bit indicating target account existence
+                                                              (call-instruction---callee-warmth)                                   ;; bit indicating target account warmth
+                                                              (call-instruction---MXP-memory-expansion-gas)                        ;; memory expansion gas
                                                               )
                                   ))
 

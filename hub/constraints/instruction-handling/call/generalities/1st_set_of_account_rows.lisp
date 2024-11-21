@@ -42,8 +42,8 @@
                     (if-not-zero    (scenario-shorthand---CALL---balance-update-not-required)
                                     (account-same-balance            CALL_1st_caller_account_row___row_offset))
                     (if-not-zero    (scenario-shorthand---CALL---balance-update-required)
-                                    (account-decrement-balance-by    CALL_1st_caller_account_row___row_offset    (call-instruction---STACK-value-lo)))
-                    ))
+                                    (account-decrement-balance-by    CALL_1st_caller_account_row___row_offset
+                                                                     (* (call-instruction---is-CALL) (call-instruction---STACK-value-lo))))))
 
                   
 ;; CALLEE account
@@ -74,7 +74,8 @@
                     (if-not-zero    (scenario-shorthand---CALL---balance-update-not-required)
                                     (account-same-balance            CALL_1st_callee_account_row___row_offset))
                     (if-not-zero    (scenario-shorthand---CALL---balance-update-required)
-                                    (account-increment-balance-by    CALL_1st_callee_account_row___row_offset    (call-instruction---STACK-value-lo)))))
+                                    (account-increment-balance-by    CALL_1st_callee_account_row___row_offset
+                                                                     (* (call-instruction---is-CALL) (call-instruction---STACK-value-lo))))))
 
 (defconstraint    call-instruction---1st-callee-account-operation---warmth-update    (:guard (call-instruction---summon-both-account-rows-once-or-more))
                   (begin

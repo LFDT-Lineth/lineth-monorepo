@@ -47,10 +47,10 @@
                   (if-not-zero    CN_WILL_REV
                                   (eq! REFUND_COUNTER_NEW REFUND_COUNTER)))
 
-(defun    (bit-identifying-SSTORE)   (* stack/STO_FLAG  [stack/DEC_FLAG 1]))     ;; ""
+(defun    (bit-identifying-SSTORE)   (* stack/STO_FLAG  [stack/DEC_FLAG 2]))     ;; ""
 
 (defconstraint    generalities---gas---only-SSTORE-may-grant-refunds (:perspective stack)
                   (if-zero    (force-bool (bit-identifying-SSTORE))
                               (eq! REFUND_COUNTER_NEW REFUND_COUNTER)))
 
-;; the actual REFUND mechanics will be explained with SSTORE and SELFDESTRUCT instructions
+;; the actual REFUND mechanics for SSTORE will be explained in the storage instruction family section

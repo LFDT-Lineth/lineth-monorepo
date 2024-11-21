@@ -18,7 +18,8 @@
 (defun    (call-instruction---summon-callee-account-thrice)    (*    PEEK_AT_SCENARIO
                                                                      scenario/CALL_SMC_FAILURE_CALLER_WILL_REVERT))
 
-(defconstraint    call-instruction---3rd-callee-account-operation                     (:guard (call-instruction---summon-both-account-rows-twice-or-more))
+(defconstraint    call-instruction---3rd-callee-account-operation
+                  (:guard (call-instruction---summon-callee-account-thrice))
                   (begin
                     (account-same-address-as                         CALL_3rd_callee_account_row___row_offset    CALL_2nd_callee_account_row___row_offset)  ;; we could use 1st instead of 2nd, too.
                     (account-same-balance                            CALL_3rd_callee_account_row___row_offset)
