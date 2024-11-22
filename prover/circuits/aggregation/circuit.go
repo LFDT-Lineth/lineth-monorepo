@@ -64,6 +64,7 @@ func (c *Circuit) Define(api frontend.API) error {
 
 	assertSlicesEqualZEXT(api, piBits[:16*8], field.ToBitsCanonical(&c.PublicInputWitness.Public[1]))
 	assertSlicesEqualZEXT(api, piBits[16*8:], field.ToBitsCanonical(&c.PublicInputWitness.Public[0]))
+	api.AssertIsDifferent(c.PublicInput, 0) // making sure at least one element of the PI circuit's public input is nonzero to justify using incomplete arithmetic
 
 	vks := append(slices.Clone(c.verifyingKeys), c.publicInputVerifyingKey)
 	piVkIndex := len(vks) - 1
@@ -161,14 +162,19 @@ func verifyClaimBatch(api frontend.API, vks []emVkey, claims []proofClaim) error
 
 	var (
 		bvk       = vks[0].BaseVerifyingKey
-		cvks      = make([]emCircVKey, len(vks))
+		cvks      = make([]emCircVKey, len(vks)-1)
 		switches  = make([]frontend.Variable, len(claims))
 		proofs    = make([]emProof, len(claims))
 		witnesses = make([]emWitness, len(claims))
 	)
 
-	for i := range vks {
+	for i := range cvks {
 		cvks[i] = vks[i].CircuitVerifyingKey
+	}
+
+	for i := 1; i < len(vks)-1; i++ { // TODO @Tabaie make sure these don't generate any constraints
+		fmt.Printf("checking base vk #%d/%d\n", i+1, len(vks)-1)
+		assertBaseKeyEquals(api, bvk, vks[i].BaseVerifyingKey)
 	}
 
 	for i := range claims {
@@ -177,9 +183,21 @@ func verifyClaimBatch(api frontend.API, vks []emVkey, claims []proofClaim) error
 		witnesses[i] = claims[i].PublicInput
 	}
 
-	err = verifier.AssertDifferentProofs(bvk, cvks, switches, proofs, witnesses, emPlonk.WithCompleteArithmetic())
-	if err != nil {
+	lastProofI := len(proofs) - 1
+	if err = verifier.AssertDifferentProofs(
+		bvk, cvks,
+		switches[:lastProofI],
+		proofs[:lastProofI],
+		witnesses[:lastProofI],
+		emPlonk.WithCompleteArithmetic(),
+	); err != nil {
 		return fmt.Errorf("AssertDifferentProofs returned an error: %w", err)
+	}
+
+	// The PI proof cannot be batched with the rest because it has more than one public input
+	// complete arithmetic is not necessary here because the circuit is nontrivial and at least one element of the public input is nonzero
+	if err = verifier.AssertProof(vks[len(cvks)], proofs[lastProofI], witnesses[lastProofI]); err != nil {
+		return fmt.Errorf("AssertProof returned an error: %w", err)
 	}
 
 	return nil
@@ -197,4 +215,26 @@ func assertSlicesEqualZEXT(api frontend.API, a, b []frontend.Variable) {
 	for i := len(a); i < len(b); i++ {
 		api.AssertIsEqual(b[i], 0)
 	}
+}
+
+// assertBaseKeyEquals is very aggressive in equality testing between emulated elements. The representations have to be exactly equal, not only equal modulo the group size
+func assertBaseKeyEquals(api frontend.API, a, b emPlonk.BaseVerifyingKey[emFr, emG1, emG2]) {
+
+	internal.AssertSliceEquals(api, a.CosetShift.Limbs, b.CosetShift.Limbs)
+
+	assertG2AffEquals := func(a, b sw_bls12377.G2Affine) {
+		api.AssertIsEqual(a.P.X.A0, b.P.X.A0)
+		api.AssertIsEqual(a.P.X.A1, b.P.X.A1)
+		api.AssertIsEqual(a.P.Y.A0, b.P.Y.A0)
+		api.AssertIsEqual(a.P.Y.A1, b.P.Y.A1)
+	}
+
+	api.AssertIsEqual(a.Kzg.G1.X, b.Kzg.G1.X)
+	api.AssertIsEqual(a.Kzg.G1.Y, b.Kzg.G1.Y)
+	assertG2AffEquals(a.Kzg.G2[0], b.Kzg.G2[0])
+	assertG2AffEquals(a.Kzg.G2[1], b.Kzg.G2[1])
+
+	// NOT CHECKING THE LINE EVALUATIONS
+
+	api.AssertIsEqual(a.NbPublicVariables, b.NbPublicVariables)
 }

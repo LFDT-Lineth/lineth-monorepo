@@ -51,12 +51,16 @@ func (m *SetupManifest) GetInt(key string) (int, error) {
 		return 0, err
 	}
 
-	i, ok := v.(int)
-	if !ok {
-		return 0, fmt.Errorf("flag `%s` is not an int", key)
+	switch x := v.(type) {
+	case int:
+		return x, nil
+	case float64:
+		if i := int(x); float64(i) == x {
+			return i, nil
+		}
 	}
 
-	return i, nil
+	return 0, fmt.Errorf("flag `%s` is not an int", key)
 }
 
 func (m *SetupManifest) GetString(key string) (string, error) {

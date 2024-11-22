@@ -114,12 +114,12 @@ func makePiProof(cfg *config.Config, cf *CollectedFields) (plonk.Proof, witness.
 		return nil, nil, fmt.Errorf("could not extract interconnection circuit public witness: %w", err)
 	}
 
-	proverOpts := emPlonk.GetNativeProverOptions(ecc.BW6_761.ScalarField(), setup.Circuit.Field())
-	verifierOpts := emPlonk.GetNativeVerifierOptions(ecc.BW6_761.ScalarField(), setup.Circuit.Field())
-
 	if err = <-setupErr; err != nil { // wait for setup to load and check for errors
 		return nil, nil, fmt.Errorf("could not load the setup: %w", err)
 	}
+
+	proverOpts := emPlonk.GetNativeProverOptions(ecc.BW6_761.ScalarField(), setup.Circuit.Field())
+	verifierOpts := emPlonk.GetNativeVerifierOptions(ecc.BW6_761.ScalarField(), setup.Circuit.Field())
 
 	proof, err := circuits.ProveCheck(&setup, &assignment, proverOpts, verifierOpts)
 
