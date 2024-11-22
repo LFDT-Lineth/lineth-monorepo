@@ -25,25 +25,33 @@ on:
 jobs:
   coordinator:
     uses: ./.github/workflows/coordinator-testing.yml
-    if: ${{ always() && inputs.coordinator_changed == 'true' }}
+    if: ${{ inputs.coordinator_changed == 'true' }}
     with:
       commit_tag: ${{ inputs.commit_tag }}
     secrets: inherit
 
   prover:
     uses: ./.github/workflows/prover-testing.yml
-    if: ${{ always() && inputs.prover_changed == 'true' }}
+    if: ${{ inputs.prover_changed == 'true' }}
     secrets: inherit
 
   postman:
     uses: ./.github/workflows/postman-testing.yml
-    if: ${{ always() && inputs.postman_changed == 'true' }}
+    if: ${{ inputs.postman_changed == 'true' }}
     secrets: inherit
 
   traces-api-facade:
     uses: ./.github/workflows/traces-api-facade-testing.yml
-    if: ${{ always() && inputs.traces_api_facade_changed == 'true' }}
+    if: ${{ inputs.traces_api_facade_changed == 'true' }}
 
   transaction-exclusion-api:
     uses: ./.github/workflows/transaction-exclusion-api-testing.yml
-    if: ${{ always() && inputs.transaction_exclusion_api_changed == 'true' }}
+    if: ${{ inputs.transaction_exclusion_api_changed == 'true' }}
+  
+  # If all jobs are skipped, the workflow will still succeed.
+  always_succeed:
+    runs-on: ubuntu-latest
+    if: ${{ inputs.coordinator_changed == 'false' && inputs.prover_changed == 'false' && inputs.postman_changed == 'false' && inputs.traces_api_facade_changed == 'false' && inputs.transaction_exclusion_api_changed == 'false' }}
+    steps:
+      - name: Ensure Workflow Success
+        run: echo "All jobs were skipped, but workflow succeeds."
