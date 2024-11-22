@@ -4,6 +4,7 @@
 
 - Node.js v20 or higher
 - Docker v24 or higher
+  - Docker should ideally have ~16GB of Memory and 4+ CPUs to run the entire stack.
 - Docker Compose version v2.19+
 - Make v3.81+
 - Pnpm >=v9.12.2 (https://pnpm.io/installation)
