@@ -18,24 +18,28 @@
                                     (* (copy-instruction---foreign-address-warmth)       GAS_CONST_G_WARM_ACCESS)
                                     (* (- 1 (copy-instruction---foreign-address-warmth)) GAS_CONST_G_COLD_ACCOUNT_ACCESS)))))
 
-(defconstraint copy-instruction---EXTCODECOPY---the-MXPX-case (:guard (copy-instruction---standard-EXTCODECOPY))
-               (if-not-zero stack/MXPX
-                            (execution-provides-empty-return-data ROFF_EXTCODECOPY_MXPX_CONTEXT_ROW)))
+;; ;; completely redundant constraint:
+;; (defconstraint copy-instruction---EXTCODECOPY---the-MXPX-case (:guard (copy-instruction---standard-EXTCODECOPY))
+;;                (begin
+;;                  (debug
+;;                    (if-not-zero stack/MXPX
+;;                                 (execution-provides-empty-return-data    ROFF_EXTCODECOPY_MXPX_CONTEXT_ROW)))))
 
 (defconstraint copy-instruction---EXTCODECOPY---the-OOGX-case (:guard (copy-instruction---standard-EXTCODECOPY))
                (if-not-zero stack/OOGX
-                            ;; account-row i + 2
-                            (begin (account-trim-address                        ROFF_EXTCODECOPY_OOGX_ACCOUNT_ROW (copy-instruction---raw-address-hi) (copy-instruction---raw-address-lo))
-                                   (vanishes! (shift account/ROMLEX_FLAG        ROFF_EXTCODECOPY_OOGX_ACCOUNT_ROW))
-                                   (account-same-balance                        ROFF_EXTCODECOPY_OOGX_ACCOUNT_ROW)
-                                   (account-same-nonce                          ROFF_EXTCODECOPY_OOGX_ACCOUNT_ROW)
-                                   (account-same-code                           ROFF_EXTCODECOPY_OOGX_ACCOUNT_ROW)
-                                   (account-same-deployment-number-and-status   ROFF_EXTCODECOPY_OOGX_ACCOUNT_ROW)
-                                   (account-same-warmth                         ROFF_EXTCODECOPY_OOGX_ACCOUNT_ROW)
-                                   (account-same-marked-for-selfdestruct        ROFF_EXTCODECOPY_OOGX_ACCOUNT_ROW)
-                                   (DOM-SUB-stamps---standard                   ROFF_EXTCODECOPY_OOGX_ACCOUNT_ROW 0))
-                            ;; context-row i + 3
-                            (execution-provides-empty-return-data               ROFF_EXTCODECOPY_OOGX_CONTEXT_ROW)))
+                            (begin
+                              ;; account-row i + 2
+                              (account-trim-address                          ROFF_EXTCODECOPY_OOGX_ACCOUNT_ROW (copy-instruction---raw-address-hi) (copy-instruction---raw-address-lo))
+                              (vanishes! (shift account/ROMLEX_FLAG          ROFF_EXTCODECOPY_OOGX_ACCOUNT_ROW))
+                              (account-same-balance                          ROFF_EXTCODECOPY_OOGX_ACCOUNT_ROW)
+                              (account-same-nonce                            ROFF_EXTCODECOPY_OOGX_ACCOUNT_ROW)
+                              (account-same-code                             ROFF_EXTCODECOPY_OOGX_ACCOUNT_ROW)
+                              (account-same-deployment-number-and-status     ROFF_EXTCODECOPY_OOGX_ACCOUNT_ROW)
+                              (account-same-warmth                           ROFF_EXTCODECOPY_OOGX_ACCOUNT_ROW)
+                              (account-same-marked-for-selfdestruct          ROFF_EXTCODECOPY_OOGX_ACCOUNT_ROW)
+                              (DOM-SUB-stamps---standard                     ROFF_EXTCODECOPY_OOGX_ACCOUNT_ROW 0)
+                              ;; context-row i + 3: redundant constraint ahead
+                              (debug (execution-provides-empty-return-data   ROFF_EXTCODECOPY_OOGX_CONTEXT_ROW)))))
 
 (defun (copy-instruction---trigger-CFI)
   (* (copy-instruction---is-EXTCODECOPY)

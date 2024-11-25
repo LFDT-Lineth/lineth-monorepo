@@ -40,7 +40,7 @@
                                   (account-same-marked-for-selfdestruct      ROFF_CODECOPY_NO_XAHOY_ACCOUNT_ROW)
                                   (DOM-SUB-stamps---standard                 ROFF_CODECOPY_NO_XAHOY_ACCOUNT_ROW 0))))
 
-(defconstraint    copy-instruction---CODECOPY---debug-consistency-constraints
+(defconstraint    copy-instruction---CODECOPY---consistency-constraints---debug
                   (:guard (copy-instruction---standard-CODECOPY))
                   (begin
                     (eq!        (shift account/DEPLOYMENT_NUMBER      ROFF_CODECOPY_NO_XAHOY_ACCOUNT_ROW) (shift context/BYTE_CODE_DEPLOYMENT_NUMBER     ROFF_CODECOPY_NO_XAHOY_CONTEXT_ROW))

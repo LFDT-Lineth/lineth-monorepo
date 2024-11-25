@@ -49,36 +49,52 @@
                                                (eq! CMC 0)
                                                (eq! CMC 1)))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;                          ;;
-;;   4.2.3 Context number   ;;
-;;                          ;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                           ;;
+;;   4.2.3 Context numbers   ;;
+;;                           ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-(defconstraint    generalities---context-number-generalities ()
+(defconstraint    generalities---context-numbers---constancies ()
                   (begin
                     (hub-stamp-constancy CN)
-                    (hub-stamp-constancy CN_NEW)
-                    (if-not-zero TX_INIT
-                                 (begin (vanishes! CN)
-                                        (eq!       CN_NEW (+ 1 HUB_STAMP))))
-                    (if-not-zero TX_EXEC
-                                 (begin (any! (eq! CN_NEW CN)
-                                              (eq! CN_NEW CALLER_CN)
-                                              (eq! CN_NEW (+ 1 HUB_STAMP)))
-                                        (if-not-zero (remained-constant! HUB_STAMP)
-                                                     (eq! CN (prev CN_NEW)))
-                                        (if-zero CMC (eq! CN_NEW CN))))
-                    (if-not-zero (will-remain-constant! HUB_STAMP)
-                                 (begin
-                                   (if-not-zero CMC   (eq! PEEK_AT_CONTEXT 1))
-                                   (if-not-zero XAHOY (execution-provides-empty-return-data 0))
-                                   (if-not-zero TX_EXEC
-                                                (if-not-zero CN_NEW
-                                                             (eq! (next TX_EXEC) 1)
-                                                             (eq! (next TX_FINL) 1)))))
-                    (if-not-zero XAHOY (eq! CN_NEW CALLER_CN))
-                    (if-not-zero PEEK_AT_STACK
-                                 (if-not-zero stack/HALT_FLAG
-                                              (eq! CN_NEW CALLER_CN)))))
+                    (hub-stamp-constancy CN_NEW)))
+
+(defconstraint    generalities---context-numbers---TX_INIT-phase ()
+                  (if-not-zero TX_INIT
+                               (begin (vanishes! CN)
+                                      (eq!       CN_NEW (+ 1 HUB_STAMP)))))
+
+(defconstraint    generalities---context-numbers---TX_EXEC-phase---CN_NEW-value-options ()
+                  (if-not-zero TX_EXEC
+                               (any! (eq! CN_NEW CN)
+                                     (eq! CN_NEW CALLER_CN)
+                                     (eq! CN_NEW (+ 1 HUB_STAMP)))))
+
+(defconstraint    generalities---context-numbers---TX_EXEC-phase---linking-constraint-for-CN-and-CN_NEW ()
+                  (if-not-zero TX_EXEC
+                               (if-not-zero (remained-constant! HUB_STAMP)
+                                            (eq! CN (prev CN_NEW)))))
+
+(defconstraint    generalities---context-numbers---TX_EXEC-phase---CN-may-only-change-if-CMC ()
+                  (if-not-zero TX_EXEC
+                               (if-zero CMC (eq! CN_NEW CN))))
+
+(defconstraint    generalities---context-numbers---at-HUB_STAMP-transitions ()
+                  (if-not-zero (will-remain-constant! HUB_STAMP)
+                               (begin
+                                 (if-not-zero CMC   (eq! PEEK_AT_CONTEXT 1))
+                                 (if-not-zero XAHOY (execution-provides-empty-return-data 0))
+                                 (if-not-zero TX_EXEC
+                                              (if-not-zero CN_NEW
+                                                           (eq! (next TX_EXEC) 1)
+                                                           (eq! (next TX_FINL) 1))))))
+
+(defconstraint    generalities---context-numbers---imposing-CN_NEW-is-CALLER_CN---for-exceptions ()
+                  (if-not-zero XAHOY (eq! CN_NEW CALLER_CN)))
+
+(defconstraint    generalities---context-numbers---imposing-CN_NEW-is-CALLER_CN---for-halting-instrutions ()
+                  (if-not-zero PEEK_AT_STACK
+                               (if-not-zero stack/HALT_FLAG
+                                            (eq! CN_NEW CALLER_CN))))
