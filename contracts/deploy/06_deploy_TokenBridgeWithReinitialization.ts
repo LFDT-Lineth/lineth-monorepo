@@ -7,51 +7,38 @@ import {
   getRequiredEnvVar,
   generateRoleAssignments,
 } from "../common/helpers";
-import { LineaRollup__factory } from "contracts/typechain-types";
+import { TokenBridge__factory } from "contracts/typechain-types";
 import {
-  LINEA_ROLLUP_PAUSE_TYPES_ROLES,
-  LINEA_ROLLUP_UNPAUSE_TYPES_ROLES,
   PAUSE_ALL_ROLE,
-  PAUSE_BLOB_SUBMISSION_ROLE,
-  PAUSE_FINALIZATION_ROLE,
-  PAUSE_L1_L2_ROLE,
-  PAUSE_L2_L1_ROLE,
+  PAUSE_COMPLETE_TOKEN_BRIDGING_ROLE,
+  PAUSE_INITIATE_TOKEN_BRIDGING_ROLE,
+  TOKEN_BRIDGE_PAUSE_TYPES_ROLES,
+  TOKEN_BRIDGE_UNPAUSE_TYPES_ROLES,
   UNPAUSE_ALL_ROLE,
-  UNPAUSE_BLOB_SUBMISSION_ROLE,
-  UNPAUSE_FINALIZATION_ROLE,
-  UNPAUSE_L1_L2_ROLE,
-  UNPAUSE_L2_L1_ROLE,
-  USED_RATE_LIMIT_RESETTER_ROLE,
-  VERIFIER_UNSETTER_ROLE,
+  UNPAUSE_COMPLETE_TOKEN_BRIDGING_ROLE,
+  UNPAUSE_INITIATE_TOKEN_BRIDGING_ROLE,
 } from "contracts/common/constants";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
-  const fallbackOperatorAddress = getRequiredEnvVar("LINEA_ROLLUP_FALLBACK_OPERATOR");
-  const securityCouncilAddress = getRequiredEnvVar("LINEA_ROLLUP_SECURITY_COUNCIL");
+  const securityCouncilAddress = getRequiredEnvVar("TOKENBRIDGE_SECURITY_COUNCIL");
 
   const newRoles = [
     PAUSE_ALL_ROLE,
-    PAUSE_L1_L2_ROLE,
-    PAUSE_L2_L1_ROLE,
     UNPAUSE_ALL_ROLE,
-    UNPAUSE_L1_L2_ROLE,
-    UNPAUSE_L2_L1_ROLE,
-    PAUSE_BLOB_SUBMISSION_ROLE,
-    UNPAUSE_BLOB_SUBMISSION_ROLE,
-    PAUSE_FINALIZATION_ROLE,
-    UNPAUSE_FINALIZATION_ROLE,
-    USED_RATE_LIMIT_RESETTER_ROLE,
-    VERIFIER_UNSETTER_ROLE,
+    PAUSE_INITIATE_TOKEN_BRIDGING_ROLE,
+    UNPAUSE_INITIATE_TOKEN_BRIDGING_ROLE,
+    PAUSE_COMPLETE_TOKEN_BRIDGING_ROLE,
+    UNPAUSE_COMPLETE_TOKEN_BRIDGING_ROLE,
   ];
 
   const newRoleAddresses = generateRoleAssignments(newRoles, securityCouncilAddress, []);
   console.log("New role addresses", newRoleAddresses);
 
   const { deployments } = hre;
-  const contractName = "LineaRollup";
+  const contractName = "TokenBridge";
   const existingContractAddress = await getDeployedContractAddress(contractName, deployments);
 
-  const proxyAddress = getRequiredEnvVar("LINEA_ROLLUP_ADDRESS");
+  const proxyAddress = getRequiredEnvVar("L2_MESSAGE_SERVICE_ADDRESS");
 
   const factory = await ethers.getContractFactory(contractName);
 
@@ -80,11 +67,11 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       [
         proxyAddress,
         newContract,
-        LineaRollup__factory.createInterface().encodeFunctionData("reinitializeLineaRollupV6", [
+        TokenBridge__factory.createInterface().encodeFunctionData("reinitializePauseTypesAndPermissions", [
+          securityCouncilAddress,
           newRoleAddresses,
-          LINEA_ROLLUP_PAUSE_TYPES_ROLES,
-          LINEA_ROLLUP_UNPAUSE_TYPES_ROLES,
-          fallbackOperatorAddress,
+          TOKEN_BRIDGE_PAUSE_TYPES_ROLES,
+          TOKEN_BRIDGE_UNPAUSE_TYPES_ROLES,
         ]),
       ],
     ),
@@ -101,4 +88,4 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 };
 
 export default func;
-func.tags = ["LineaRollupWithReinitialization"];
+func.tags = ["TokenBridgeWithReinitialization"];
