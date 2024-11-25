@@ -9,10 +9,10 @@
 # DATABASE_URL=postgresql://blobscan:s3cr3t@localhost:5432/blobscan_dev?schema=public
 DATABASE_URL=postgresql://postgres:postgres@postgres:5432/blobscan
 
-BLOBSCAN_WEB_TAG=next
-BLOBSCAN_API_TAG=next
-INDEXER_TAG=master
-DENCUN_FORK_SLOT=0
+
+#BLOBSCAN_WEB_TAG=next
+#BLOBSCAN_API_TAG=next
+#INDEXER_TAG=master
 
 
 ############################
@@ -21,9 +21,23 @@ DENCUN_FORK_SLOT=0
 BLOBSCAN_API_PORT=4001
 EXTERNAL_API_PORT=4001
 CHAIN_ID=31648428
+DENCUN_FORK_SLOT=0
 LOG_LEVEL=debug
-NETWORK_NAME=devnet
+REDIS_URI=redis://redis:6379/1
 # SENTRY_DSN_API=
+BLOB_PROPAGATOR_ENABLED=false
+GOOGLE_STORAGE_ENABLED=false
+POSTGRES_STORAGE_ENABLED=true
+SWARM_STORAGE_ENABLED=false
+
+# BEE_ENDPOINT=
+# GOOGLE_STORAGE_BUCKET_NAME=blobscan-test-bucket
+# GOOGLE_STORAGE_PROJECT_ID=blobscan-test-project
+# GOOGLE_SERVICE_KEY=
+# GOOGLE_STORAGE_API_ENDPOINT=http://localhost:4443
+# PRISMA_BATCH_OPERATIONS_MAX_SIZE=
+# FEEDBACK_WEBHOOK_URL=
+
 
 ############################
 #### blobscan indexer APP
@@ -33,60 +47,10 @@ BLOBSCAN_API_ENDPOINT=http://blobscan-api:4001
 BEACON_NODE_ENDPOINT=http://l1-cl-node:4000
 EXECUTION_NODE_ENDPOINT=http://l1-el-node:8545
 RUST_LOG=blob_indexer=info
-
 LOGGER=default
-
 NODE_ENV=development
 
-# SENTRY_DSN_INDEXER=
-
+############################
 ### telemetry
-
 # METRICS_ENABLED=
 # TRACES_ENABLED=
-
-# OTLP_AUTH_USERNAME=
-# OTLP_AUTH_PASSWORD=
-
-# OTEL_EXPORTER_OTLP_PROTOCOL=
-# OTEL_EXPORTER_OTLP_ENDPOINT=
-# OTEL_DIAG_ENABLED=
-
-
-
-### blobscan website
-### NOTE: Just place holder for now. Not used in the project atm
-EXTERNAL_WEB_PORT=3000
-
-# BEE_ENDPOINT=
-
-CHAIN_ID=31648428
-NETWORK_NAME=devnet
-
-# GOOGLE_STORAGE_BUCKET_NAME=blobscan-test-bucket
-# GOOGLE_STORAGE_PROJECT_ID=blobscan-test-project
-# GOOGLE_SERVICE_KEY=
-# GOOGLE_STORAGE_API_ENDPOINT=http://localhost:4443
-
-BLOB_PROPAGATOR_ENABLED=false
-
-GOOGLE_STORAGE_ENABLED=false
-POSTGRES_STORAGE_ENABLED=true
-SWARM_STORAGE_ENABLED=false
-
-REDIS_URI=redis://redis:6379/1
-
-# PRISMA_BATCH_OPERATIONS_MAX_SIZE=
-
-# FEEDBACK_WEBHOOK_URL=
-
-# @see https://next-auth.js.org/configuration/options#nextauth_url
-NEXTAUTH_URL=http://localhost:3000
-
-# You can generate the secret via 'openssl rand -base64 32' on Unix
-# @see https://next-auth.js.org/configuration/options#secret
-SECRET_KEY=supersecret
-NEXT_PUBLIC_NETWORK_NAME=mainnet
-NEXT_PUBLIC_VERCEL_ANALYTICS_ENABLED=false
-NEXT_PUBLIC_BEACON_BASE_URL=https://dora.ethpandaops.io/
-NEXT_PUBLIC_EXPLORER_BASE_URL=https://etherscan.io/

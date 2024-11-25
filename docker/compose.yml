@@ -330,7 +330,7 @@ services:
   coordinator:
     hostname: coordinator
     container_name: coordinator
-    image: consensys/linea-coordinator:${COORDINATOR_TAG:-c4abdd9}
+    image: consensys/linea-coordinator:${COORDINATOR_TAG:-bb7cd3d}
     platform: linux/amd64
     profiles: [ "l2", "debug" ]
     depends_on:
@@ -717,6 +717,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      redis:
+        condition: service_healthy
 
   blobscan-indexer:
     container_name: blobscan-indexer
@@ -740,17 +742,19 @@ services:
     container_name: redis
     hostname: redis
     image: "redis:7.4.1-alpine"
-    command: redis-server /usr/local/etc/redis/redis.conf
     profiles: [ "staterecover" ]
     ports:
       - "6379:6379"
-    volumes:
-      - ./misc/data:/var/lib/redis
-      - ./misc/conf:/usr/local/etc/redis/redis.conf
     environment:
       - REDIS_REPLICATION_MODE=master
       - REDIS_PASSWORD=s3cr3t
       - REDIS_USERNAME=blobscan
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     networks:
       l1network:
         ipv4_address: 10.10.10.205

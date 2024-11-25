@@ -44,15 +44,19 @@ start-l2:
 start-l2-blockchain-only:
 		docker compose -f docker/compose.yml -f docker/compose-local-dev.overrides.yml --profile l2-bc up -d
 
+start-whole-environment: COMPOSE_PROFILES:=l1,l2
 start-whole-environment:
 		# docker compose -f docker/compose.yml -f docker/compose-local-dev.overrides.yml build prover
-		docker compose -f docker/compose.yml -f docker/compose-local-dev.overrides.yml --profile l1 --profile l2 up -d
+		COMPOSE_PROFILES=$(COMPOSE_PROFILES) docker compose -f docker/compose.yml -f docker/compose-local-dev.overrides.yml up -d
 
+
+start-whole-environment-traces-v2: COMPOSE_PROFILES:=l1,l2
 start-whole-environment-traces-v2:
-		docker compose -f docker/compose.yml -f docker/compose-local-dev-traces-v2.overrides.yml --profile l1 --profile l2 up -d
+		COMPOSE_PROFILES=$(COMPOSE_PROFILES) docker compose -f docker/compose.yml -f docker/compose-local-dev-traces-v2.overrides.yml up -d
+
 
 pull-all-images:
-		docker compose -f docker/compose.yml -f docker/compose-local-dev-traces-v2.overrides.yml --profile l1 --profile l2 pull
+		COMPOSE_PROFILES:=l1,l2 docker compose -f docker/compose.yml -f docker/compose-local-dev-traces-v2.overrides.yml pull
 
 pull-images-external-to-monorepo:
 		docker compose -f docker/compose.yml -f docker/compose-local-dev-traces-v2.overrides.yml --profile external-to-monorepo pull
@@ -65,7 +69,8 @@ compile-contracts-no-cache:
 		cd contracts/; \
 		make force-compile
 
-deploy-linea-rollup-v5:
+deploy-linea-rollup: L1_CONTRACT_VERSION:=5
+deploy-linea-rollup:
 		# WARNING: FOR LOCAL DEV ONLY - DO NOT REUSE THESE KEYS ELSEWHERE
 		cd contracts/; \
 		PRIVATE_KEY=$${DEPLOYMENT_PRIVATE_KEY:-0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80} \
@@ -78,22 +83,14 @@ deploy-linea-rollup-v5:
 		LINEA_ROLLUP_RATE_LIMIT_PERIOD=86400 \
 		LINEA_ROLLUP_RATE_LIMIT_AMOUNT=1000000000000000000000 \
 		LINEA_ROLLUP_GENESIS_TIMESTAMP=1683325137 \
-		npx ts-node local-deployments-artifacts/deployPlonkVerifierAndLineaRollupV5.ts
+		npx ts-node local-deployments-artifacts/deployPlonkVerifierAndLineaRollupV$(L1_CONTRACT_VERSION).ts
+
+deploy-linea-rollup-v5:
+		$(MAKE) deploy-linea-rollup L1_CONTRACT_VERSION=5
 
 deploy-linea-rollup-v6:
-		# WARNING: FOR LOCAL DEV ONLY - DO NOT REUSE THESE KEYS ELSEWHERE
-		cd contracts/; \
-		PRIVATE_KEY=$${DEPLOYMENT_PRIVATE_KEY:-0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80} \
-		RPC_URL=http:\\localhost:8445/ \
-		VERIFIER_CONTRACT_NAME=IntegrationTestTrueVerifier \
-		LINEA_ROLLUP_INITIAL_STATE_ROOT_HASH=0x072ead6777750dc20232d1cee8dc9a395c2d350df4bbaa5096c6f59b214dcecd \
-		LINEA_ROLLUP_INITIAL_L2_BLOCK_NUMBER=0 \
-		LINEA_ROLLUP_SECURITY_COUNCIL=0x90F79bf6EB2c4f870365E785982E1f101E93b906 \
-		LINEA_ROLLUP_OPERATORS=$${LINEA_ROLLUP_OPERATORS:-0x70997970C51812dc3A010C7d01b50e0d17dc79C8,0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC} \
-		LINEA_ROLLUP_RATE_LIMIT_PERIOD=86400 \
-		LINEA_ROLLUP_RATE_LIMIT_AMOUNT=1000000000000000000000 \
-		LINEA_ROLLUP_GENESIS_TIMESTAMP=1683325137 \
-		npx ts-node local-deployments-artifacts/deployPlonkVerifierAndLineaRollupV6.ts
+		$(MAKE) deploy-linea-rollup L1_CONTRACT_VERSION=6
+
 
 deploy-l2messageservice:
 		# WARNING: FOR LOCAL DEV ONLY - DO NOT REUSE THESE KEYS ELSEWHERE
@@ -163,28 +160,51 @@ restart-shomei:
 		rm -rf tmp/local/shomei/*
 		docker compose -f docker/compose.yml -f docker/compose-local-dev.overrides.yml up zkbesu-shomei shomei -d
 
+fresh-start-all: COMPOSE_PROFILES:="l1,l2"
+fresh-start-all: L1_CONTRACT_VERSION:=5
 fresh-start-all:
 		make clean-environment
-		make start-all
+		make start-all L1_CONTRACT_VERSION=$(L1_CONTRACT_VERSION) COMPOSE_PROFILES=$(COMPOSE_PROFILES)
 
+fresh-start-all-traces-v2: COMPOSE_PROFILES:="l1,l2"
+fresh-start-all-traces-v2: L1_CONTRACT_VERSION:=5
 fresh-start-all-traces-v2:
 		make clean-environment
-		make start-all-traces-v2
+		$(MAKE) start-all-traces-v2 L1_CONTRACT_VERSION=$(L1_CONTRACT_VERSION) COMPOSE_PROFILES=$(COMPOSE_PROFILES)
 
+start-all: COMPOSE_PROFILES:=l1,l2
+start-all: L1_CONTRACT_VERSION:=5
 start-all:
-		L1_GENESIS_TIME=$(get_future_time) make start-whole-environment
-		make deploy-contracts
+		L1_GENESIS_TIME=$(get_future_time) make start-whole-environment COMPOSE_PROFILES=$(COMPOSE_PROFILES)
+		make deploy-contracts L1_CONTRACT_VERSION=$(L1_CONTRACT_VERSION)
 
+start-all-traces-v2: COMPOSE_PROFILES:="l1,l2"
+start-all-traces-v2: L1_CONTRACT_VERSION:=5
 start-all-traces-v2:
-		L1_GENESIS_TIME=$(get_future_time) make start-whole-environment-traces-v2
-		make deploy-contracts
-		
+		L1_GENESIS_TIME=$(get_future_time) make start-whole-environment-traces-v2 COMPOSE_PROFILES=$(COMPOSE_PROFILES)
+		$(MAKE) deploy-contracts L1_CONTRACT_VERSION=$(L1_CONTRACT_VERSION)
+
+deploy-contracts: L1_CONTRACT_VERSION:=5
 deploy-contracts:
 	cd contracts/; \
 	export L1_NONCE=$$(npx ts-node local-deployments-artifacts/get-wallet-nonce.ts --wallet-priv-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 --rpc-url http://localhost:8445) && \
 	export L2_NONCE=$$(npx ts-node local-deployments-artifacts/get-wallet-nonce.ts --wallet-priv-key 0x1dd171cec7e2995408b5513004e8207fe88d6820aeff0d82463b3e41df251aae --rpc-url http://localhost:8545) && \
 	cd .. && \
-	$(MAKE) -j6 deploy-linea-rollup-v5 deploy-token-bridge-l1 deploy-l1-test-erc20 deploy-l2messageservice deploy-token-bridge-l2 deploy-l2-test-erc20
+	$(MAKE) -j6 deploy-linea-rollup-v$(L1_CONTRACT_VERSION) deploy-token-bridge-l1 deploy-l1-test-erc20 deploy-l2messageservice deploy-token-bridge-l2 deploy-l2-test-erc20
+
+deploy-contracts-minimal: L1_CONTRACT_VERSION:=5
+deploy-contracts-minimal:
+	cd contracts/; \
+	export L1_NONCE=$$(npx ts-node local-deployments-artifacts/get-wallet-nonce.ts --wallet-priv-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 --rpc-url http://localhost:8445) && \
+	export L2_NONCE=$$(npx ts-node local-deployments-artifacts/get-wallet-nonce.ts --wallet-priv-key 0x1dd171cec7e2995408b5513004e8207fe88d6820aeff0d82463b3e41df251aae --rpc-url http://localhost:8545) && \
+	cd .. && \
+	$(MAKE) -j6 deploy-linea-rollup-v$(L1_CONTRACT_VERSION) deploy-l2messageservice
+
+start-all-staterecover: L1_CONTRACT_VERSION:=6
+start-all-staterecover: COMPOSE_PROFILES:=l1,l2,staterecover
+start-all-staterecover:
+		L1_GENESIS_TIME=$(get_future_time) make start-whole-environment COMPOSE_PROFILES=$(COMPOSE_PROFILES)
+		make deploy-contracts-minimal L1_CONTRACT_VERSION=$(L1_CONTRACT_VERSION)
 
 testnet-start-l2:
 		docker compose -f docker/compose.yml -f docker/compose-testnet-sync.overrides.yml --profile l2 up -d
