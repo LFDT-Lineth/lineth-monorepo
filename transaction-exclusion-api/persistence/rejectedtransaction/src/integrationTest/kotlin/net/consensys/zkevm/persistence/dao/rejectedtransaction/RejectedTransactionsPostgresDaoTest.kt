@@ -32,7 +32,7 @@ import kotlin.time.Duration.Companion.seconds
 @ExtendWith(VertxExtension::class)
 class RejectedTransactionsPostgresDaoTest : CleanDbTestSuiteParallel() {
   init {
-    target = "2"
+    target = "3"
   }
 
   override val databaseName = DbHelper.generateUniqueDbName("tx-exclusion-api-rejectedtxns-dao-tests")
@@ -275,26 +275,7 @@ class RejectedTransactionsPostgresDaoTest : CleanDbTestSuiteParallel() {
 
   @Test
   fun `deleteRejectedTransactions returns 2 row deleted as created timestamp exceeds storage window`() {
-    // insert a new rejected transaction
-    performInsertTest(
-      createRejectedTransaction(
-        timestamp = fakeClock.now()
-      )
-    )
-    // advance the fake clock to make its created timestamp exceeds the 10-hours storage window
-    fakeClock.advanceBy(1.hours)
-
-    // insert another rejected transaction with same txHash but different reason
-    performInsertTest(
-      createRejectedTransaction(
-        reasonMessage = "Transaction line count for module EXP=9000 is above the limit 8192",
-        timestamp = fakeClock.now()
-      )
-    )
-    // advance the fake clock to make its created timestamp just within the 10-hours storage window
-    fakeClock.advanceBy(1.hours)
-
-    // insert another rejected transaction with different txHash and reason
+    // insert a new rejected transaction A
     performInsertTest(
       createRejectedTransaction(
         transactionInfo = TransactionInfo(
@@ -307,11 +288,30 @@ class RejectedTransactionsPostgresDaoTest : CleanDbTestSuiteParallel() {
         timestamp = fakeClock.now()
       )
     )
-    // advance the fake clock to make its created timestamp within the 10-hours storage window
-    fakeClock.advanceBy(9.hours)
+    // advance the fake clock to make its created timestamp exceeds the 10-hours storage window
+    fakeClock.advanceBy(1.hours)
 
-    // assert that the total number of rows in the two tables are both three which
-    // implies all the rejected transactions above are present in db
+    // insert another rejected transaction B1
+    performInsertTest(
+      createRejectedTransaction(
+        timestamp = fakeClock.now()
+      )
+    )
+    // advance the fake clock to make its created timestamp exceeds the 10-hours storage window
+    fakeClock.advanceBy(1.hours)
+
+    // insert another rejected transaction B2 with same txHash as B1 but different reason
+    performInsertTest(
+      createRejectedTransaction(
+        reasonMessage = "Transaction line count for module EXP=9000 is above the limit 8192",
+        timestamp = fakeClock.now()
+      )
+    )
+    // advance the fake clock to make its created timestamp stay within the 10-hours storage window
+    fakeClock.advanceBy(10.hours)
+
+    // assert that the total number of rows in the two tables are 3 and 2 respectively
+    // which implies all the rejected transactions above are present in db
     assertThat(rejectedTransactionsTotalRows()).isEqualTo(3)
     assertThat(fullTransactionsTotalRows()).isEqualTo(2)
 
@@ -320,13 +320,13 @@ class RejectedTransactionsPostgresDaoTest : CleanDbTestSuiteParallel() {
       fakeClock.now().minus(10.hours)
     ).get()
 
-    // assert that number of total deleted rows is just one
-    assertThat(deletedRows).isEqualTo(1)
+    // assert that number of total deleted rows in rejected_transactions table is 2
+    assertThat(deletedRows).isEqualTo(2)
 
-    // assert that the total number of rows in the two tables are both two which
-    // implies only the rejected transactions with created timestamp exceeds
-    // the storage window was deleted
-    assertThat(rejectedTransactionsTotalRows()).isEqualTo(2)
-    assertThat(fullTransactionsTotalRows()).isEqualTo(2)
+    // assert that the total number of rows in the two tables are both 1 which
+    // implies only the rejected transaction A and B1 and A's corresponding full transaction
+    // were deleted due to created timestamp exceeds the storage window
+    assertThat(rejectedTransactionsTotalRows()).isEqualTo(1)
+    assertThat(fullTransactionsTotalRows()).isEqualTo(1)
   }
 }

@@ -13,7 +13,7 @@ import org.hyperledger.besu.ethereum.core.encoding.TransactionDecoder
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
 
-const val MAX_REASON_MESSAGE_STR_LEN = 512
+const val MAX_REASON_MESSAGE_STR_LEN = 1024
 
 object ArgumentParser {
   fun getTransactionRLPInRawBytes(transactionRLP: String): ByteArray {

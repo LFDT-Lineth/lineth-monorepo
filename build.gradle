@@ -162,7 +162,7 @@ dockerCompose {
     ]
     useComposeFiles = ["${project.rootDir.path}/docker/compose.yml"]
     waitForHealthyStateTimeout = Duration.ofMinutes(3)
-    waitForTcpPorts = false
+    waitForTcpPorts = true
     removeOrphans = true
     noRecreate = true
     projectName = "docker"

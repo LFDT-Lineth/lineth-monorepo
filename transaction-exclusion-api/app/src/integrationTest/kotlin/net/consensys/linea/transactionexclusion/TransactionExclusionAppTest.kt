@@ -32,7 +32,7 @@ import kotlin.random.Random
 @ExtendWith(VertxExtension::class)
 class TransactionExclusionAppTest : CleanDbTestSuiteParallel() {
   init {
-    target = "2"
+    target = "3"
   }
 
   override var databaseName = DbHelper.generateUniqueDbName("tx-exclusion-api-app-tests")

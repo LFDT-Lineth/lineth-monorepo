@@ -26,8 +26,6 @@ abstract class CleanDbTestSuiteParallel {
 
   private fun createDataSource(databaseName: String): DataSource {
     return PGSimpleDataSource().also {
-      it.ssl = false
-      it.gssEncMode = "disable"
       it.serverNames = arrayOf(host)
       it.portNumbers = intArrayOf(port)
       it.databaseName = databaseName
