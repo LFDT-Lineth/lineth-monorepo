@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 
 	"github.com/consensys/gnark-crypto/ecc"
@@ -37,27 +38,32 @@ func nbConstraints(blobSize int) int {
 	}
 }
 
+var (
+	flagCrawlStep = flag.Int("step", 1000, "the crawl step") // TODO @Tabaie fix mixed metaphor
+	flagStart     = flag.Int("start", blob.MaxUncompressedBytes, "initial size in bytes")
+)
+
 func main() {
 
-	crawlStep := 1000 // TODO bad name; mixed metaphor
-	v := nbConstraints(blob.MaxUncompressedBytes)
-	a, b := blob.MaxUncompressedBytes, blob.MaxUncompressedBytes
+	flag.Parse()
+	v := nbConstraints(*flagStart)
+	a, b := *flagStart, *flagStart
 
 	if v > maxNbConstraints {
 		fmt.Println("crawling downward")
 		for v > maxNbConstraints {
 			b = a
-			a = max(a-crawlStep, 0)
+			a = max(a-*flagCrawlStep, 0)
 			v = nbConstraints(a)
-			crawlStep *= 2
+			*flagCrawlStep *= 2
 		}
 	} else if v < maxNbConstraints {
 		fmt.Println("crawling upward")
 		for v < maxNbConstraints {
 			a = b
-			b += crawlStep
+			b += *flagCrawlStep
 			v = nbConstraints(b)
-			crawlStep *= 2
+			*flagCrawlStep *= 2
 		}
 	}
 	if v == maxNbConstraints {

@@ -25,8 +25,8 @@ const (
 	NbElemsEncodingBytes = 2
 
 	// These also impact the circuit constraints (compile / setup time)
-	MaxUncompressedBytes = 740 * 1024 // defines the max size we can handle for a blob (uncompressed) input
-	MaxUsableBytes       = 32 * 4096  // defines the number of bytes available in a blob
+	MaxUncompressedBytes = 756240    // ~738.5KB defines the max size we can handle for a blob (uncompressed) input
+	MaxUsableBytes       = 32 * 4096 // defines the number of bytes available in a blob
 )
 
 // BlobMaker is a bm for RLP encoded blocks (see EIP-4844).
