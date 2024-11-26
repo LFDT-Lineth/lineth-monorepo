@@ -40,10 +40,11 @@ export function expectEventDirectFromReceiptData(
   transactionReceipt: TransactionReceipt,
   expectedEventName: string,
   expectedEventArgs: undefined[] = [],
+  logIndex: number = 0,
 ) {
   const logSnippet = {
-    topics: transactionReceipt?.logs[0].topics as ReadonlyArray<string>,
-    data: transactionReceipt!.logs[0].data,
+    topics: transactionReceipt?.logs[logIndex].topics as ReadonlyArray<string>,
+    data: transactionReceipt!.logs[logIndex].data,
   };
 
   const event = contract.interface.parseLog(logSnippet);
