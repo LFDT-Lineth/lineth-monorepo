@@ -1,5 +1,5 @@
 import { ethers, network, upgrades } from "hardhat";
-import { tryStoreAddress, tryVerifyContract } from "../../../common/helpers";
+import { tryStoreAddress } from "../../../common/helpers";
 
 export async function deployBridgedTokenBeacon(verbose = false) {
   const BridgedToken = await ethers.getContractFactory("BridgedToken");
@@ -34,9 +34,6 @@ export async function deployBridgedTokenBeacon(verbose = false) {
     // @ts-ignore
     l2TokenBeacon.deployTransaction.hash,
   );
-
-  await tryVerifyContract(await l1TokenBeacon.getAddress());
-  await tryVerifyContract(await l2TokenBeacon.getAddress());
 
   return { l1TokenBeacon, l2TokenBeacon };
 }
