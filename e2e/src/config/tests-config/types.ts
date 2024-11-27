@@ -9,6 +9,7 @@ export type BaseConfig = {
 
 export type L1Config = BaseConfig & {
   lineaRollupAddress: string;
+  lineaRollupProxyAdminAddress: string;
   tokenBridgeAddress: string;
   l1TokenAddress: string;
 };

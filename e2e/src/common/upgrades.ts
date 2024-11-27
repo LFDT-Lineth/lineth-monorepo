@@ -1,4 +1,4 @@
-import { ContractTransactionReceipt, Wallet, ethers } from "ethers";
+import { AbstractSigner, ContractTransactionReceipt, ethers } from "ethers";
 import { ProxyAdmin, ProxyAdmin__factory } from "../typechain";
 
 export function getInitializerData(
@@ -11,7 +11,7 @@ export function getInitializerData(
 }
 
 export async function upgradeContractAndCall(
-  deployer: Wallet,
+  deployer: AbstractSigner,
   proxyAdminContractAddress: string,
   proxyContractAddress: string,
   implementationContractAddress: string,
@@ -24,7 +24,7 @@ export async function upgradeContractAndCall(
 }
 
 export async function upgradeContract(
-  deployer: Wallet,
+  deployer: AbstractSigner,
   proxyAdminContractAddress: string,
   proxyContractAddress: string,
   implementationContractAddress: string,

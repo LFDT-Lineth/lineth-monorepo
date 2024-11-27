@@ -9,6 +9,8 @@ import {
   L2MessageService__factory,
   LineaRollupV5,
   LineaRollupV5__factory,
+  ProxyAdmin,
+  ProxyAdmin__factory,
   TestContract,
   TestContract__factory,
   TestERC20,
@@ -90,6 +92,19 @@ export default class TestSetup {
     }
 
     return lineaRollup;
+  }
+
+  public getLineaRollupProxyAdminContract(signer?: AbstractSigner): ProxyAdmin {
+    const proxyAdmin: ProxyAdmin = ProxyAdmin__factory.connect(
+      this.config.L1.lineaRollupProxyAdminAddress,
+      this.getL1Provider(),
+    );
+
+    if (signer) {
+      return proxyAdmin.connect(signer);
+    }
+
+    return proxyAdmin;
   }
 
   public getL2MessageServiceContract(signer?: Wallet): L2MessageService {
