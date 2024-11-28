@@ -15,23 +15,24 @@ func ExecuteThreadAware(nbIterations int, init ThreadInit, worker Worker, numcpu
 		numcpu = numcpus[0]
 	}
 
-	// The jobs are sent one by one to the workers
-	jobChan := make(chan int, nbIterations)
-	for i := 0; i < nbIterations; i++ {
-		jobChan <- i
-	}
-
 	// The wait group ensures that all the children goroutine have terminated
 	// before we close the
 	wg := sync.WaitGroup{}
 	wg.Add(nbIterations)
+
+	taskCounter := NewAtomicCounter(nbIterations)
 
 	// Each goroutine consumes the jobChan to
 	for p := 0; p < numcpu; p++ {
 		threadID := p
 		go func() {
 			init(threadID)
-			for taskID := range jobChan {
+			for {
+				taskID, ok := taskCounter.Next()
+				if !ok {
+					break
+				}
+
 				worker(taskID, threadID)
 				wg.Done()
 			}
@@ -39,6 +40,4 @@ func ExecuteThreadAware(nbIterations int, init ThreadInit, worker Worker, numcpu
 	}
 
 	wg.Wait()
-	close(jobChan)
-
 }

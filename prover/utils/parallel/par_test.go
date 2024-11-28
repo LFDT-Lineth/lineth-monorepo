@@ -3,6 +3,8 @@ package parallel_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/consensys/linea-monorepo/prover/utils/parallel"
 )
 
@@ -25,4 +27,22 @@ func TestParChunky(t *testing.T) {
 		}
 	}
 
+}
+
+// TestAtomicCounter checks that the atomic counter returns the expected values
+// and that it returns false when the maximum value is reached.
+func TestAtomicCounter(t *testing.T) {
+	n := 5
+	counter := parallel.NewAtomicCounter(n)
+
+	for i := 0; i < n; i++ {
+		value, ok := counter.Next()
+		assert.True(t, ok, "expected ok to be true at iteration %d", i)
+
+		assert.Equal(t, i, value, "expected value to be %d at iteration %d", i, i)
+	}
+
+	// After n iterations, Next should return ok as false
+	_, ok := counter.Next()
+	assert.False(t, ok, "expected ok to be false after reaching the maximum value")
 }

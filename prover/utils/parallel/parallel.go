@@ -14,6 +14,9 @@ func Execute(nbIterations int, work func(int, int), maxCpus ...int) {
 	nbTasks := runtime.GOMAXPROCS(0)
 	if len(maxCpus) == 1 {
 		nbTasks = maxCpus[0]
+		if nbTasks < 1 {
+			nbTasks = 1
+		}
 	}
 	nbIterationsPerCpus := nbIterations / nbTasks
 

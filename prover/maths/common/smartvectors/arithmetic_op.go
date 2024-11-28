@@ -233,7 +233,7 @@ func (productOp) vecIntoVec(res, x []field.Element, coeff int) {
 	default:
 		var tmp field.Element
 		for i := range res {
-			tmp.Exp(x[i], big.NewInt(int64(coeff)))
+			field.ExpToInt(&tmp, x[i], coeff)
 			res[i].Mul(&res[i], &tmp)
 		}
 	}

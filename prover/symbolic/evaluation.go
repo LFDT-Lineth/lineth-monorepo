@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/consensys/gnark/frontend"
+
 	"github.com/consensys/linea-monorepo/prover/maths/common/mempool"
 	sv "github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
@@ -91,7 +92,7 @@ func (b *ExpressionBoard) Evaluate(inputs []sv.SmartVector, p ...mempool.MemPool
 	numChunks := totalSize / MaxChunkSize
 	res := make([]field.Element, totalSize)
 
-	parallel.ExecuteFromChan(numChunks, func(wg *sync.WaitGroup, idChan chan int) {
+	parallel.ExecuteFromChan(numChunks, func(wg *sync.WaitGroup, id *parallel.AtomicCounter) {
 
 		var pool []mempool.MemPool
 		if len(p) > 0 {
@@ -102,7 +103,11 @@ func (b *ExpressionBoard) Evaluate(inputs []sv.SmartVector, p ...mempool.MemPool
 
 		chunkInputs := make([]sv.SmartVector, len(inputs))
 
-		for chunkID := range idChan {
+		for {
+			chunkID, ok := id.Next()
+			if !ok {
+				break
+			}
 
 			var (
 				chunkStart = chunkID * MaxChunkSize

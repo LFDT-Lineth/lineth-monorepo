@@ -6,6 +6,7 @@ import (
 
 	"github.com/consensys/gnark-crypto/ecc/bls12-377/fr"
 	"github.com/consensys/linea-monorepo/prover/utils"
+	"math/bits"
 )
 
 // Element aliases [fr.Element] and represents a field element in the scalar
@@ -88,6 +89,28 @@ func MulR(x Element) Element {
 	var res Element
 	res.Mul(&x, &r)
 	return res
+}
+
+func ExpToInt(z *Element, x Element, k int) *Element {
+	if k == 0 {
+		return z.SetOne()
+	}
+
+	if k < 0 {
+		x.Inverse(&x)
+		k = -k
+	}
+
+	z.Set(&x)
+
+	for i := bits.Len(uint(k)) - 2; i >= 0; i-- {
+		z.Square(z)
+		if (k>>i)&1 == 1 {
+			z.Mul(z, &x)
+		}
+	}
+
+	return z
 }
 
 // PseudoRandom generates a field using a pseudo-random number generator

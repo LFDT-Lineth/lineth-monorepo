@@ -40,7 +40,7 @@ func ReEvaluateOnLargerDomainCoset(poly []field.Element, newLen int) []field.Ele
 	large := vector.ZeroPad(small, newLen)
 	// memoized
 	domainLarge := fft.NewDomain(len(large)).WithCustomCoset(newLen/len(poly), 0)
-	domainLarge.FFT(large, fft.DIF, true)
+	domainLarge.FFT(large, fft.DIF, fft.OnCoset())
 	fft.BitReverse(large)
 
 	return large

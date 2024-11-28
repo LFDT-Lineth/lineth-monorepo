@@ -23,27 +23,27 @@ func ExecuteChunky(nbIterations int, work func(start, stop int), numcpus ...int)
 		return
 	}
 
-	// The jobs are sent one by one to the workers
-	jobChan := make(chan int, nbIterations)
-	for i := 0; i < nbIterations; i++ {
-		jobChan <- i
-	}
-
 	// The wait group ensures that all the children goroutine have terminated
 	// before we close the
 	wg := sync.WaitGroup{}
 	wg.Add(nbIterations)
 
+	taskCounter := NewAtomicCounter(nbIterations)
+
 	// Each goroutine consumes the jobChan to
 	for p := 0; p < numcpu; p++ {
 		go func() {
-			for i := range jobChan {
-				work(i, i+1)
+			for {
+				taskID, ok := taskCounter.Next()
+				if !ok {
+					break
+				}
+
+				work(taskID, taskID+1)
 				wg.Done()
 			}
 		}()
 	}
 
 	wg.Wait()
-	close(jobChan)
 }

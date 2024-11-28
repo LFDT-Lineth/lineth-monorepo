@@ -182,8 +182,8 @@ func TestBatchInterpolationWithConstantVector(t *testing.T) {
 	onCosets[0] = onCoset
 	onCosets[1] = onCoset2
 
-	domain.FFT(onCosets[0], fft.DIF, true)
-	domain.FFT(onCosets[1], fft.DIF, true)
+	domain.FFT(onCosets[0], fft.DIF, fft.OnCoset())
+	domain.FFT(onCosets[1], fft.DIF, fft.OnCoset())
 	fft.BitReverse(onCosets[0])
 	fft.BitReverse(onCosets[1])
 
@@ -230,8 +230,8 @@ func TestBatchInterpolateOnlyConstantVector(t *testing.T) {
 	onCosets[0] = onCoset
 	onCosets[1] = onCoset2
 
-	domain.FFT(onCosets[0], fft.DIF, true)
-	domain.FFT(onCosets[1], fft.DIF, true)
+	domain.FFT(onCosets[0], fft.DIF, fft.OnCoset())
+	domain.FFT(onCosets[1], fft.DIF, fft.OnCoset())
 	fft.BitReverse(onCosets[0])
 	fft.BitReverse(onCosets[1])
 
@@ -289,9 +289,9 @@ func TestBatchInterpolationThreeVectors(t *testing.T) {
 	onCosets[1] = onCoset2
 	onCosets[2] = onCoset3
 
-	domain.FFT(onCosets[0], fft.DIF, true)
-	domain.FFT(onCosets[1], fft.DIF, true)
-	domain.FFT(onCosets[2], fft.DIF, true)
+	domain.FFT(onCosets[0], fft.DIF, fft.OnCoset())
+	domain.FFT(onCosets[1], fft.DIF, fft.OnCoset())
+	domain.FFT(onCosets[2], fft.DIF, fft.OnCoset())
 	fft.BitReverse(onCosets[0])
 	fft.BitReverse(onCosets[1])
 	fft.BitReverse(onCosets[2])

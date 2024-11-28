@@ -25,7 +25,7 @@ func TestReEvalOnCoset(t *testing.T) {
 
 	fft.NewDomain(4).WithCoset().FFT(smaller, fft.DIF)
 	fft.BitReverse(smaller)
-	fft.NewDomain(8).WithCoset().FFT(expectedLarger, fft.DIF, true)
+	fft.NewDomain(8).WithCoset().FFT(expectedLarger, fft.DIF, fft.OnCoset())
 	fft.BitReverse(expectedLarger)
 
 	larger = fastpoly.ReEvaluateOnLargerDomainCoset(smaller, 8)

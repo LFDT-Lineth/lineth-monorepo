@@ -1,6 +1,8 @@
 package fft
 
 import (
+	"github.com/consensys/gnark-crypto/ecc"
+	"github.com/consensys/linea-monorepo/prover/utils/parallel"
 	"math/bits"
 
 	"github.com/consensys/linea-monorepo/prover/maths/field"
@@ -14,19 +16,26 @@ const (
 	DIF
 )
 
+// parallelize threshold for a single butterfly op, if the fft stage is not parallelized already
+const butterflyThreshold = 16
+
 // FFT computes (recursively) the discrete Fourier transform of a and stores the result in a
 // if decimation == DIT (decimation in time), the input must be in bit-reversed order
 // if decimation == DIF (decimation in frequency), the output will be in bit-reversed order
 // if coset if set, the FFT(a) returns the evaluation of a on a coset.
-func (domain *Domain) FFT(a []field.Element, decimation Decimation, coset ...bool) {
+func (domain *Domain) FFT(a []field.Element, decimation Decimation, opts ...Option) {
 
-	_coset := false
-	if len(coset) > 0 {
-		_coset = coset[0]
+	opt := fftOptions(opts...)
+
+	// find the stage where we should stop spawning go routines in our recursive calls
+	// (ie when we have as many go routines running as we have available CPUs)
+	maxSplits := bits.TrailingZeros64(ecc.NextPowerOfTwo(uint64(opt.nbTasks)))
+	if opt.nbTasks == 1 {
+		maxSplits = -1
 	}
 
 	// if coset != 0, scale by coset table
-	if _coset {
+	if opt.coset {
 		scale := func(cosetTable []field.Element) {
 			for i := 0; i < len(a); i++ {
 				a[i].Mul(&a[i], &cosetTable[i])
@@ -42,9 +51,9 @@ func (domain *Domain) FFT(a []field.Element, decimation Decimation, coset ...boo
 
 	switch decimation {
 	case DIF:
-		difFFT(a, domain.Twiddles, 0)
+		difFFT(a, domain.Twiddles, 0, maxSplits, nil, opt.nbTasks)
 	case DIT:
-		ditFFT(a, domain.Twiddles, 0)
+		ditFFT(a, domain.Twiddles, 0, maxSplits, nil, opt.nbTasks)
 	default:
 		panic("not implemented")
 	}
@@ -55,24 +64,28 @@ func (domain *Domain) FFT(a []field.Element, decimation Decimation, coset ...boo
 // if decimation == DIF (decimation in frequency), the output will be in bit-reversed order
 // coset sets the shift of the fft (0 = no shift, standard fft)
 // len(a) must be a power of 2, and w must be a len(a)th root of unity in field F.
-func (domain *Domain) FFTInverse(a []field.Element, decimation Decimation, coset ...bool) {
+func (domain *Domain) FFTInverse(a []field.Element, decimation Decimation, opts ...Option) {
 
-	_coset := false
-	if len(coset) > 0 {
-		_coset = coset[0]
+	opt := fftOptions(opts...)
+
+	// find the stage where we should stop spawning go routines in our recursive calls
+	// (ie when we have as many go routines running as we have available CPUs)
+	maxSplits := bits.TrailingZeros64(ecc.NextPowerOfTwo(uint64(opt.nbTasks)))
+	if opt.nbTasks == 1 {
+		maxSplits = -1
 	}
 
 	switch decimation {
 	case DIF:
-		difFFT(a, domain.TwiddlesInv, 0)
+		difFFT(a, domain.TwiddlesInv, 0, maxSplits, nil, opt.nbTasks)
 	case DIT:
-		ditFFT(a, domain.TwiddlesInv, 0)
+		ditFFT(a, domain.TwiddlesInv, 0, maxSplits, nil, opt.nbTasks)
 	default:
 		panic("not implemented")
 	}
 
 	// scale by CardinalityInv
-	if !_coset {
+	if !opt.coset {
 		for i := 0; i < len(a); i++ {
 			a[i].Mul(&a[i], &domain.CardinalityInv)
 		}
@@ -95,22 +108,30 @@ func (domain *Domain) FFTInverse(a []field.Element, decimation Decimation, coset
 
 }
 
-func difFFT(a []field.Element, twiddles [][]field.Element, stage int) {
+func difFFT(a []field.Element, twiddles [][]field.Element, stage int, maxSplits int, chDone chan struct{}, nbTasks int) {
+	if chDone != nil {
+		defer close(chDone)
+	}
 
 	n := len(a)
 	if n == 1 {
 		return
-	} else if n == 8 {
-		kerDIF8(a, twiddles, stage)
+	} else if n == 256 {
+		kerDIFNP_256(a, twiddles, stage)
 		return
 	}
+
 	m := n >> 1
 
+	parallelButterfly := (m > butterflyThreshold) && (stage < maxSplits)
+
 	// i == 0
-	field.Butterfly(&a[0], &a[m])
-	for i := 1; i < m; i++ {
-		field.Butterfly(&a[i], &a[i+m])
-		a[i+m].Mul(&a[i+m], &twiddles[stage][i])
+	if parallelButterfly {
+		parallel.Execute(m, func(start, end int) {
+			innerDIFWithTwiddles(a, twiddles[stage], start, end, m)
+		}, nbTasks/(1<<(stage)))
+	} else {
+		innerDIFWithTwiddles(a, twiddles[stage], 0, m, m)
 	}
 
 	if m == 1 {
@@ -118,87 +139,128 @@ func difFFT(a []field.Element, twiddles [][]field.Element, stage int) {
 	}
 
 	nextStage := stage + 1
-	difFFT(a[0:m], twiddles, nextStage)
-	difFFT(a[m:n], twiddles, nextStage)
+	if stage < maxSplits {
+		chDone := make(chan struct{}, 1)
+		go difFFT(a[m:n], twiddles, nextStage, maxSplits, chDone, nbTasks)
+		difFFT(a[0:m], twiddles, nextStage, maxSplits, nil, nbTasks)
+		<-chDone
+	} else {
+		difFFT(a[0:m], twiddles, nextStage, maxSplits, nil, nbTasks)
+		difFFT(a[m:n], twiddles, nextStage, maxSplits, nil, nbTasks)
+	}
 }
 
-func ditFFT(a []field.Element, twiddles [][]field.Element, stage int) {
+func ditFFT(a []field.Element, twiddles [][]field.Element, stage int, maxSplits int, chDone chan struct{}, nbTasks int) {
+	if chDone != nil {
+		defer close(chDone)
+	}
 
 	n := len(a)
 	if n == 1 {
 		return
-	} else if n == 8 {
-		kerDIT8(a, twiddles, stage)
+	} else if n == 256 {
+		kerDITNP_256(a, twiddles, stage)
 		return
 	}
+
 	m := n >> 1
+
+	parallelButterfly := (m > butterflyThreshold) && (stage < maxSplits)
 
 	nextStage := stage + 1
 
-	ditFFT(a[0:m], twiddles, nextStage)
-	ditFFT(a[m:n], twiddles, nextStage)
+	if stage < maxSplits {
+		// that's the only time we fire go routines
+		chDone := make(chan struct{}, 1)
+		go ditFFT(a[m:n], twiddles, nextStage, maxSplits, chDone, nbTasks)
+		ditFFT(a[0:m], twiddles, nextStage, maxSplits, nil, nbTasks)
+		<-chDone
+	} else {
+		ditFFT(a[0:m], twiddles, nextStage, maxSplits, nil, nbTasks)
+		ditFFT(a[m:n], twiddles, nextStage, maxSplits, nil, nbTasks)
+	}
 
-	field.Butterfly(&a[0], &a[m])
-	for k := 1; k < m; k++ {
-		a[k+m].Mul(&a[k+m], &twiddles[stage][k])
-		field.Butterfly(&a[k], &a[k+m])
+	if parallelButterfly {
+		parallel.Execute(m, func(start, end int) {
+			innerDITWithTwiddles(a, twiddles[stage], start, end, m)
+		}, nbTasks/(1<<(stage)))
+	} else {
+		innerDITWithTwiddles(a, twiddles[stage], 0, m, m)
 	}
 }
 
-// BitReverse applies the bit-reversal permutation to a.
-// len(a) must be a power of 2 (as in every single function in this file)
-func BitReverse(a []field.Element) {
-	n := uint64(len(a))
-	nn := uint64(64 - bits.TrailingZeros64(n))
-
-	for i := uint64(0); i < n; i++ {
-		irev := bits.Reverse64(i) >> nn
-		if irev > i {
-			a[i], a[irev] = a[irev], a[i]
-		}
+func innerDIFWithTwiddles(a []field.Element, twiddles []field.Element, start, end, m int) {
+	if start == 0 {
+		field.Butterfly(&a[0], &a[m])
+		start++
+	}
+	for i := start; i < end; i++ {
+		field.Butterfly(&a[i], &a[i+m])
+		a[i+m].Mul(&a[i+m], &twiddles[i])
 	}
 }
 
-// kerDIT8 is a kernel that process a FFT of size 8
-func kerDIT8(a []field.Element, twiddles [][]field.Element, stage int) {
-
-	field.Butterfly(&a[0], &a[1])
-	field.Butterfly(&a[2], &a[3])
-	field.Butterfly(&a[4], &a[5])
-	field.Butterfly(&a[6], &a[7])
-	field.Butterfly(&a[0], &a[2])
-	a[3].Mul(&a[3], &twiddles[stage+1][1])
-	field.Butterfly(&a[1], &a[3])
-	field.Butterfly(&a[4], &a[6])
-	a[7].Mul(&a[7], &twiddles[stage+1][1])
-	field.Butterfly(&a[5], &a[7])
-	field.Butterfly(&a[0], &a[4])
-	a[5].Mul(&a[5], &twiddles[stage+0][1])
-	field.Butterfly(&a[1], &a[5])
-	a[6].Mul(&a[6], &twiddles[stage+0][2])
-	field.Butterfly(&a[2], &a[6])
-	a[7].Mul(&a[7], &twiddles[stage+0][3])
-	field.Butterfly(&a[3], &a[7])
+func innerDITWithTwiddles(a []field.Element, twiddles []field.Element, start, end, m int) {
+	if start == 0 {
+		field.Butterfly(&a[0], &a[m])
+		start++
+	}
+	for i := start; i < end; i++ {
+		a[i+m].Mul(&a[i+m], &twiddles[i])
+		field.Butterfly(&a[i], &a[i+m])
+	}
 }
 
-// kerDIF8 is a kernel that process a FFT of size 8
-func kerDIF8(a []field.Element, twiddles [][]field.Element, stage int) {
+func kerDIFNP_256(a []field.Element, twiddles [][]field.Element, stage int) {
+	// code unrolled & generated by internal/generator/fft/template/fft.go.tmpl
 
-	field.Butterfly(&a[0], &a[4])
-	field.Butterfly(&a[1], &a[5])
-	field.Butterfly(&a[2], &a[6])
-	field.Butterfly(&a[3], &a[7])
-	a[5].Mul(&a[5], &twiddles[stage+0][1])
-	a[6].Mul(&a[6], &twiddles[stage+0][2])
-	a[7].Mul(&a[7], &twiddles[stage+0][3])
-	field.Butterfly(&a[0], &a[2])
-	field.Butterfly(&a[1], &a[3])
-	field.Butterfly(&a[4], &a[6])
-	field.Butterfly(&a[5], &a[7])
-	a[3].Mul(&a[3], &twiddles[stage+1][1])
-	a[7].Mul(&a[7], &twiddles[stage+1][1])
-	field.Butterfly(&a[0], &a[1])
-	field.Butterfly(&a[2], &a[3])
-	field.Butterfly(&a[4], &a[5])
-	field.Butterfly(&a[6], &a[7])
+	innerDIFWithTwiddles(a[:256], twiddles[stage+0], 0, 128, 128)
+	for offset := 0; offset < 256; offset += 128 {
+		innerDIFWithTwiddles(a[offset:offset+128], twiddles[stage+1], 0, 64, 64)
+	}
+	for offset := 0; offset < 256; offset += 64 {
+		innerDIFWithTwiddles(a[offset:offset+64], twiddles[stage+2], 0, 32, 32)
+	}
+	for offset := 0; offset < 256; offset += 32 {
+		innerDIFWithTwiddles(a[offset:offset+32], twiddles[stage+3], 0, 16, 16)
+	}
+	for offset := 0; offset < 256; offset += 16 {
+		innerDIFWithTwiddles(a[offset:offset+16], twiddles[stage+4], 0, 8, 8)
+	}
+	for offset := 0; offset < 256; offset += 8 {
+		innerDIFWithTwiddles(a[offset:offset+8], twiddles[stage+5], 0, 4, 4)
+	}
+	for offset := 0; offset < 256; offset += 4 {
+		innerDIFWithTwiddles(a[offset:offset+4], twiddles[stage+6], 0, 2, 2)
+	}
+	for offset := 0; offset < 256; offset += 2 {
+		field.Butterfly(&a[offset], &a[offset+1])
+	}
+}
+
+func kerDITNP_256(a []field.Element, twiddles [][]field.Element, stage int) {
+	// code unrolled & generated by internal/generator/fft/template/fft.go.tmpl
+
+	for offset := 0; offset < 256; offset += 2 {
+		field.Butterfly(&a[offset], &a[offset+1])
+	}
+	for offset := 0; offset < 256; offset += 4 {
+		innerDITWithTwiddles(a[offset:offset+4], twiddles[stage+6], 0, 2, 2)
+	}
+	for offset := 0; offset < 256; offset += 8 {
+		innerDITWithTwiddles(a[offset:offset+8], twiddles[stage+5], 0, 4, 4)
+	}
+	for offset := 0; offset < 256; offset += 16 {
+		innerDITWithTwiddles(a[offset:offset+16], twiddles[stage+4], 0, 8, 8)
+	}
+	for offset := 0; offset < 256; offset += 32 {
+		innerDITWithTwiddles(a[offset:offset+32], twiddles[stage+3], 0, 16, 16)
+	}
+	for offset := 0; offset < 256; offset += 64 {
+		innerDITWithTwiddles(a[offset:offset+64], twiddles[stage+2], 0, 32, 32)
+	}
+	for offset := 0; offset < 256; offset += 128 {
+		innerDITWithTwiddles(a[offset:offset+128], twiddles[stage+1], 0, 64, 64)
+	}
+	innerDITWithTwiddles(a[:256], twiddles[stage+0], 0, 128, 128)
 }

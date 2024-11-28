@@ -2,12 +2,15 @@ package univariates
 
 import (
 	"fmt"
+	ppool "github.com/consensys/linea-monorepo/prover/utils/parallel/pool"
 	"math/big"
 	"reflect"
 	"runtime"
 	"sync"
 
 	"github.com/consensys/gnark/frontend"
+	"github.com/sirupsen/logrus"
+
 	"github.com/consensys/linea-monorepo/prover/maths/common/mempool"
 	"github.com/consensys/linea-monorepo/prover/maths/common/poly"
 	sv "github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
@@ -21,7 +24,6 @@ import (
 	"github.com/consensys/linea-monorepo/prover/utils/gnarkutil"
 	"github.com/consensys/linea-monorepo/prover/utils/parallel"
 	"github.com/consensys/linea-monorepo/prover/utils/profiling"
-	"github.com/sirupsen/logrus"
 )
 
 /*
@@ -242,9 +244,9 @@ func (ctx mptsCtx) accumulateQuotients(run *wizard.ProverRuntime) {
 		mainWg    = &sync.WaitGroup{}
 	)
 
-	mainWg.Add(runtime.NumCPU())
+	mainWg.Add(runtime.GOMAXPROCS(0))
 
-	parallel.ExecuteFromChan(len(ctx.polys), func(wg *sync.WaitGroup, indexChan chan int) {
+	parallel.ExecuteFromChan(len(ctx.polys), func(wg *sync.WaitGroup, index *parallel.AtomicCounter) {
 
 		var (
 			pool = mempool.WrapsWithMemCache(pool)
@@ -256,7 +258,11 @@ func (ctx mptsCtx) accumulateQuotients(run *wizard.ProverRuntime) {
 
 		defer pool.TearDown()
 
-		for i := range indexChan {
+		for {
+			i, ok := index.Next()
+			if !ok {
+				break
+			}
 
 			var (
 				polHandle  = ctx.polys[i]
@@ -378,17 +384,10 @@ func (ctx mptsCtx) claimEvaluation(run *wizard.ProverRuntime) {
 	polys := append(ctx.polys, ctx.Quotients...)
 
 	ys := make([]field.Element, len(polys))
-	parallel.Execute(len(polys), func(start, stop int) {
 
-		maxSize := 0
-		for i := start; i < stop; i++ {
-			maxSize = utils.Max(maxSize, polys[i].Size())
-		}
-
-		for i := start; i < stop; i++ {
-			witness := polys[i].GetColAssignment(run)
-			ys[i] = sv.Interpolate(witness, x)
-		}
+	ppool.ExecutePoolChunky(len(polys), func(i int) {
+		witness := polys[i].GetColAssignment(run)
+		ys[i] = sv.Interpolate(witness, x)
 	})
 
 	run.AssignUnivariate(ctx.EvaluationQuery, x, ys...)

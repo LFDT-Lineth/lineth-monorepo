@@ -31,7 +31,7 @@ func TestInterpolation(t *testing.T) {
 		Test with coset
 	*/
 	onCoset := vector.DeepCopy(randPoly)
-	domain.FFT(onCoset, fft.DIF, true)
+	domain.FFT(onCoset, fft.DIF, fft.OnCoset())
 	fft.BitReverse(onCoset)
 	yOnCoset := Interpolate(onCoset, x, true)
 	require.Equal(t, expectedY.String(), yOnCoset.String())
@@ -75,8 +75,8 @@ func TestBatchInterpolation(t *testing.T) {
 	onCosets[0] = onCoset
 	onCosets[1] = onCoset2
 
-	domain.FFT(onCosets[0], fft.DIF, true)
-	domain.FFT(onCosets[1], fft.DIF, true)
+	domain.FFT(onCosets[0], fft.DIF, fft.OnCoset())
+	domain.FFT(onCosets[1], fft.DIF, fft.OnCoset())
 	fft.BitReverse(onCosets[0])
 	fft.BitReverse(onCosets[1])
 
@@ -127,8 +127,8 @@ func TestBatchInterpolationRootOfUnity(t *testing.T) {
 	onCosets[0] = onCoset
 	onCosets[1] = onCoset2
 
-	domain.FFT(onCosets[0], fft.DIF, true)
-	domain.FFT(onCosets[1], fft.DIF, true)
+	domain.FFT(onCosets[0], fft.DIF, fft.OnCoset())
+	domain.FFT(onCosets[1], fft.DIF, fft.OnCoset())
 	fft.BitReverse(onCosets[0])
 	fft.BitReverse(onCosets[1])
 
