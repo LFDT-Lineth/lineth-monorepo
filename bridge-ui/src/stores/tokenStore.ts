@@ -1,8 +1,8 @@
 import { createWithEqualityFn } from "zustand/traditional";
 import { shallow } from "zustand/vanilla/shallow";
-
-import { config, NetworkTokens, NetworkType, TokenInfo, TokenType } from "@/config";
 import { createJSONStorage, persist } from "zustand/middleware";
+import { config, NetworkTokens, NetworkType, TokenInfo, TokenType } from "@/config";
+import { getTokenConfig } from "@/services/tokenService";
 
 export const defaultTokensConfig: NetworkTokens = {
   MAINNET: [
@@ -94,8 +94,8 @@ export const createTokenStore = (initState: TokenState = defaultInitState) => {
         name: "token-storage", // name of the item in the storage (must be unique)
         storage: createJSONStorage(() => localStorage),
         version: parseInt(config.storage.minVersion),
-        migrate: () => {
-          return defaultInitState;
+        migrate: async () => {
+          return getTokenConfig();
         },
       },
     ),
