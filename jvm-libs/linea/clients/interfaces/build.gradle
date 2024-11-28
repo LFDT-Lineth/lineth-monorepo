@@ -1,0 +1,10 @@
+plugins {
+  id 'net.consensys.zkevm.kotlin-library-conventions'
+  id 'java-test-fixtures'
+}
+
+dependencies {
+  api project(':jvm-libs:linea:core:domain-models')
+  api project(':jvm-libs:generic:extensions:futures')
+  api project(':jvm-libs:generic:extensions:kotlin')
+}

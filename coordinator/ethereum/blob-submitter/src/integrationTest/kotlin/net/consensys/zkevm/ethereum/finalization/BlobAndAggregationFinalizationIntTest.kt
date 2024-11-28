@@ -1,5 +1,6 @@
 package net.consensys.zkevm.ethereum.finalization
 
+import build.linea.contract.l1.LineaContractVersion
 import io.vertx.core.Vertx
 import io.vertx.junit5.Timeout
 import io.vertx.junit5.VertxExtension
@@ -7,7 +8,6 @@ import io.vertx.junit5.VertxTestContext
 import net.consensys.FakeFixedClock
 import net.consensys.linea.ethereum.gaspricing.FakeGasPriceCapProvider
 import net.consensys.linea.testing.submission.loadBlobsAndAggregations
-import net.consensys.zkevm.coordinator.clients.smartcontract.LineaContractVersion
 import net.consensys.zkevm.coordinator.clients.smartcontract.LineaRollupSmartContractClient
 import net.consensys.zkevm.domain.Aggregation
 import net.consensys.zkevm.domain.BlobRecord

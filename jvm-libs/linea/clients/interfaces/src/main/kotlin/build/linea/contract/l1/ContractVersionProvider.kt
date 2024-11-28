@@ -1,4 +1,4 @@
-package net.consensys.zkevm.coordinator.clients.smartcontract
+package build.linea.contract.l1
 
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 

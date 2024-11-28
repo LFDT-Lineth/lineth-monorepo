@@ -7,11 +7,11 @@ import build.linea.staterecover.clients.DataSubmittedV3
 import build.linea.staterecover.clients.FinalizationAndDataEventsV3
 import build.linea.staterecover.clients.LineaRollupSubmissionEventsClient
 import build.linea.web3j.domain.toDomain
+import build.linea.web3j.domain.toWeb3j
 import net.consensys.encodeHex
 import net.consensys.linea.BlockParameter
 import net.consensys.linea.BlockParameter.Companion.toBlockParameter
 import net.consensys.linea.contract.Web3JLogsClient
-import net.consensys.linea.contract.l1.toWeb3j
 import net.consensys.toHexStringUInt256
 import org.web3j.abi.EventEncoder
 import org.web3j.protocol.core.methods.request.EthFilter

@@ -1,5 +1,6 @@
 package net.consensys.zkevm.ethereum
 
+import build.linea.contract.l1.LineaContractVersion
 import com.sksamuel.hoplite.ConfigLoaderBuilder
 import com.sksamuel.hoplite.addFileSource
 import net.consensys.linea.contract.AsyncFriendlyTransactionManager
@@ -10,7 +11,6 @@ import net.consensys.linea.contract.l1.Web3JLineaRollupSmartContractClient
 import net.consensys.linea.contract.l2.L2MessageServiceGasLimitEstimate
 import net.consensys.linea.testing.filesystem.findPathTo
 import net.consensys.linea.web3j.SmartContractErrors
-import net.consensys.zkevm.coordinator.clients.smartcontract.LineaContractVersion
 import net.consensys.zkevm.coordinator.clients.smartcontract.LineaRollupSmartContractClient
 import org.slf4j.LoggerFactory
 import org.web3j.protocol.Web3j

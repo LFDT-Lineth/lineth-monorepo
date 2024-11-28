@@ -1,5 +1,6 @@
 package linea.build.staterecover.clients.smartcontract
 
+import build.linea.contract.l1.LineaContractVersion
 import build.linea.staterecover.clients.DataFinalizedV3
 import build.linea.staterecover.clients.DataSubmittedV3
 import build.linea.staterecover.clients.LineaRollupSubmissionEventsClient
@@ -12,7 +13,6 @@ import net.consensys.linea.contract.Web3JLogsClient
 import net.consensys.linea.testing.submission.AggregationAndBlobs
 import net.consensys.linea.testing.submission.loadBlobsAndAggregationsSortedAndGrouped
 import net.consensys.linea.testing.submission.submitBlobsAndAggregations
-import net.consensys.zkevm.coordinator.clients.smartcontract.LineaContractVersion
 import net.consensys.zkevm.coordinator.clients.smartcontract.LineaRollupSmartContractClient
 import net.consensys.zkevm.domain.Aggregation
 import net.consensys.zkevm.ethereum.ContractsManager

@@ -1,4 +1,4 @@
-package net.consensys.linea.contract.l1
+package build.linea.contract.l1
 
 import build.linea.contract.LineaRollupV5
 import build.linea.contract.LineaRollupV6
@@ -7,8 +7,6 @@ import net.consensys.linea.BlockParameter
 import net.consensys.linea.async.toSafeFuture
 import net.consensys.toBigInteger
 import net.consensys.toULong
-import net.consensys.zkevm.coordinator.clients.smartcontract.LineaContractVersion
-import net.consensys.zkevm.coordinator.clients.smartcontract.LineaRollupSmartContractClientReadOnly
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import org.web3j.crypto.Credentials

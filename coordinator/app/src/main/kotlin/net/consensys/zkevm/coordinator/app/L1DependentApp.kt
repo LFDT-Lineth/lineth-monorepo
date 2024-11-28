@@ -2,6 +2,8 @@ package net.consensys.zkevm.coordinator.app
 
 import build.linea.clients.StateManagerClientV1
 import build.linea.clients.StateManagerV1JsonRpcClient
+import build.linea.contract.l1.LineaRollupSmartContractClientReadOnly
+import build.linea.contract.l1.Web3JLineaRollupSmartContractClientReadOnly
 import io.vertx.core.Vertx
 import kotlinx.datetime.Clock
 import net.consensys.linea.BlockNumberAndHash
@@ -11,7 +13,6 @@ import net.consensys.linea.contract.Web3JL2MessageService
 import net.consensys.linea.contract.Web3JL2MessageServiceLogsClient
 import net.consensys.linea.contract.Web3JLogsClient
 import net.consensys.linea.contract.l1.GenesisStateProvider
-import net.consensys.linea.contract.l1.Web3JLineaRollupSmartContractClientReadOnly
 import net.consensys.linea.ethereum.gaspricing.BoundableFeeCalculator
 import net.consensys.linea.ethereum.gaspricing.FeesCalculator
 import net.consensys.linea.ethereum.gaspricing.FeesFetcher
@@ -52,7 +53,6 @@ import net.consensys.zkevm.coordinator.clients.TracesGeneratorJsonRpcClientV1
 import net.consensys.zkevm.coordinator.clients.TracesGeneratorJsonRpcClientV2
 import net.consensys.zkevm.coordinator.clients.prover.ProverClientFactory
 import net.consensys.zkevm.coordinator.clients.smartcontract.LineaRollupSmartContractClient
-import net.consensys.zkevm.coordinator.clients.smartcontract.LineaRollupSmartContractClientReadOnly
 import net.consensys.zkevm.domain.BlobSubmittedEvent
 import net.consensys.zkevm.domain.BlocksConflation
 import net.consensys.zkevm.domain.FinalizationSubmittedEvent

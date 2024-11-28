@@ -1,8 +1,8 @@
 package net.consensys.linea.contract.l1
 
 import build.linea.contract.LineaRollupV6
+import build.linea.contract.l1.LineaContractVersion
 import net.consensys.toBigInteger
-import net.consensys.zkevm.coordinator.clients.smartcontract.LineaContractVersion
 import net.consensys.zkevm.domain.BlobRecord
 import net.consensys.zkevm.domain.ProofToFinalize
 import org.web3j.abi.TypeReference

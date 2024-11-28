@@ -10,7 +10,7 @@ dependencies {
   implementation(project(':jvm-libs:linea:web3j-extensions'))
   implementation(project(':state-recover:appcore:clients-interfaces'))
   implementation(project(':coordinator:clients:smart-contract-client'))
-   implementation('build.linea:l1-rollup-contract-client:6.0.0-rc2')
+  implementation('build.linea:l1-rollup-contract-client:6.0.0-rc2')
 
   testImplementation(project(':coordinator:core'))
   testImplementation(project(":coordinator:ethereum:test-utils"))

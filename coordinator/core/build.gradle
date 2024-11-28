@@ -9,6 +9,7 @@ dependencies {
   api project(':jvm-libs:linea:core:domain-models')
   api project(':jvm-libs:linea:core:metrics')
   api project(':jvm-libs:linea:core:long-running-service')
+  api project(':jvm-libs:linea:clients:interfaces')
   api project(':jvm-libs:linea:clients:linea-state-manager')
   api project(':jvm-libs:linea:core:traces')
   api project(':jvm-libs:generic:errors')

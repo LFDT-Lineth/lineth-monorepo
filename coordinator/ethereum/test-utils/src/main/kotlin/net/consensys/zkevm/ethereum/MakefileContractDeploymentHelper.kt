@@ -1,8 +1,8 @@
 package net.consensys.zkevm.ethereum
 
+import build.linea.contract.l1.LineaContractVersion
 import net.consensys.linea.async.toSafeFuture
 import net.consensys.linea.testing.filesystem.getPathTo
-import net.consensys.zkevm.coordinator.clients.smartcontract.LineaContractVersion
 import org.apache.logging.log4j.LogManager
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.io.BufferedReader

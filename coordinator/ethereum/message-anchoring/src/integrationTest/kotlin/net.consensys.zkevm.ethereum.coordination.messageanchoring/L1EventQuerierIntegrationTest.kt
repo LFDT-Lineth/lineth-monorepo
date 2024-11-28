@@ -1,6 +1,7 @@
 package net.consensys.zkevm.ethereum.coordination.messageanchoring
 
 import build.linea.contract.LineaRollupV5
+import build.linea.contract.l1.LineaContractVersion
 import io.vertx.core.Vertx
 import io.vertx.junit5.Timeout
 import io.vertx.junit5.VertxExtension
@@ -8,7 +9,6 @@ import io.vertx.junit5.VertxTestContext
 import net.consensys.linea.contract.LineaRollupAsyncFriendly
 import net.consensys.toBigInteger
 import net.consensys.toULong
-import net.consensys.zkevm.coordinator.clients.smartcontract.LineaContractVersion
 import net.consensys.zkevm.ethereum.ContractsManager
 import net.consensys.zkevm.ethereum.Web3jClientManager
 import org.apache.tuweni.bytes.Bytes32
