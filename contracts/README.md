@@ -151,4 +151,19 @@ The above command will trigger the following commands to deploy:
 - deploy-token-bridge-l2 
 - deploy-l2-test-erc20
 
-Note: the deploy-l1-test-erc20 and deploy-l1-test-erc20 commands are executed for use in the end to end tests.
+Note: the deploy-l1-test-erc20 and deploy-l2-test-erc20 commands are executed for use in the end to end tests.
+
+## Installation and testing
+
+To run the solution's tests, coverage and gas reporting, be sure to install pnpm and then
+```
+# Install all the dependencies
+
+pnpm install
+
+pnpm run test
+
+pnpm run test:reportgas
+
+pnpm run coverage
+```
