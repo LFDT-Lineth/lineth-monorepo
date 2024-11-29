@@ -30,7 +30,6 @@ interface AggregationsRepository {
 
   fun getProofsToFinalize(
     fromBlockNumber: Long,
-    status: Aggregation.Status,
     finalEndBlockCreatedBefore: Instant,
     maximumNumberOfProofs: Int
   ): SafeFuture<List<ProofToFinalize>>
@@ -38,8 +37,6 @@ interface AggregationsRepository {
   fun findAggregationProofByEndBlockNumber(
     endBlockNumber: Long
   ): SafeFuture<ProofToFinalize?>
-
-  fun updateAggregationAsProven(aggregation: Aggregation): SafeFuture<Unit>
 
   fun deleteAggregationsUpToEndBlockNumber(endBlockNumberInclusive: Long): SafeFuture<Int>
 

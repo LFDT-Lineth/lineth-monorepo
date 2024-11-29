@@ -1,9 +1,7 @@
 package net.consensys.zkevm.persistence.dao.blob
 
 import kotlinx.datetime.Instant
-import net.consensys.zkevm.coordinator.clients.BlobCompressionProof
 import net.consensys.zkevm.domain.BlobRecord
-import net.consensys.zkevm.domain.BlobStatus
 import net.consensys.zkevm.persistence.db.PersistenceRetryer
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
@@ -33,22 +31,6 @@ class RetryingBlobsPostgresDao(
 
   override fun findBlobByEndBlockNumber(endBlockNumber: ULong): SafeFuture<BlobRecord?> {
     return persistenceRetryer.retryQuery({ delegate.findBlobByEndBlockNumber(endBlockNumber) })
-  }
-
-  override fun updateBlob(
-    startingBlockNumber: ULong,
-    endBlockNumber: ULong,
-    blobStatus: BlobStatus,
-    blobCompressionProof: BlobCompressionProof
-  ): SafeFuture<Int> {
-    return persistenceRetryer.retryQuery({
-      delegate.updateBlob(
-        startingBlockNumber,
-        endBlockNumber,
-        blobStatus,
-        blobCompressionProof
-      )
-    })
   }
 
   override fun deleteBlobsUpToEndBlockNumber(endBlockNumberInclusive: ULong): SafeFuture<Int> {

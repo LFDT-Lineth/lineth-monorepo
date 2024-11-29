@@ -122,7 +122,6 @@ data class BlobRecord(
   val startBlockTime: Instant,
   val endBlockTime: Instant,
   val batchesCount: UInt,
-  val status: BlobStatus,
   val expectedShnarf: ByteArray,
   // Unproven records will have null here
   val blobCompressionProof: BlobCompressionProof? = null
@@ -139,7 +138,6 @@ data class BlobRecord(
     if (startBlockTime != other.startBlockTime) return false
     if (endBlockTime != other.endBlockTime) return false
     if (batchesCount != other.batchesCount) return false
-    if (status != other.status) return false
     if (!expectedShnarf.contentEquals(expectedShnarf)) return false
     if (blobCompressionProof != other.blobCompressionProof) return false
 
@@ -153,7 +151,6 @@ data class BlobRecord(
     result = 31 * result + startBlockTime.hashCode()
     result = 31 * result + endBlockTime.hashCode()
     result = 31 * result + batchesCount.hashCode()
-    result = 31 * result + status.hashCode()
     result = 31 * result + expectedShnarf.contentHashCode()
     result = 31 * result + blobCompressionProof.hashCode()
 

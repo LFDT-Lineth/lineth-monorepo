@@ -34,8 +34,7 @@ object DbQueries {
         record ->
       Batch(
         startBlockNumber = record.getLong("start_block_number").toULong(),
-        endBlockNumber = record.getLong("end_block_number").toULong(),
-        status = dbValueToStatus(record.getInteger("status"))
+        endBlockNumber = record.getLong("end_block_number").toULong()
       )
     }
   }

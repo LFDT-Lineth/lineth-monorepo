@@ -9,7 +9,6 @@ import net.consensys.FakeFixedClock
 import net.consensys.linea.async.get
 import net.consensys.zkevm.domain.Batch
 import net.consensys.zkevm.domain.createBatch
-import net.consensys.zkevm.persistence.dao.batch.persistence.BatchesDao.Companion.batchesDaoTableName
 import net.consensys.zkevm.persistence.db.DbHelper
 import net.consensys.zkevm.persistence.db.DuplicatedRecordException
 import net.consensys.zkevm.persistence.db.test.CleanDbTestSuiteParallel
@@ -34,7 +33,7 @@ class BatchesPostgresDaoTest : CleanDbTestSuiteParallel() {
   private var fakeClockTime = Instant.parse("2023-12-11T00:00:00.000Z")
   private var fakeClock = FakeFixedClock(fakeClockTime)
   private fun batchesContentQuery(): PreparedQuery<RowSet<Row>> =
-    sqlClient.preparedQuery("select * from $batchesDaoTableName")
+    sqlClient.preparedQuery("select * from ${BatchesPostgresDao.batchesTableName}")
 
   private lateinit var batchesDao: BatchesDao
 
@@ -59,8 +58,7 @@ class BatchesPostgresDaoTest : CleanDbTestSuiteParallel() {
     val batch1 =
       Batch(
         expectedStartBlock1,
-        expectedEndBlock1,
-        Batch.Status.Finalized
+        expectedEndBlock1
       )
 
     val dbContent1 =
@@ -71,8 +69,7 @@ class BatchesPostgresDaoTest : CleanDbTestSuiteParallel() {
     val expectedEndBlock2 = 9UL
     val batch2 = Batch(
       expectedStartBlock2,
-      expectedEndBlock2,
-      Batch.Status.Proven
+      expectedEndBlock2
     )
     fakeClock.advanceBy(1.seconds)
 
@@ -93,7 +90,8 @@ class BatchesPostgresDaoTest : CleanDbTestSuiteParallel() {
     assertThat(newlyInsertedRow!!.getLong("start_block_number"))
       .isEqualTo(batch.startBlockNumber.toLong())
     assertThat(newlyInsertedRow.getLong("end_block_number")).isEqualTo(batch.endBlockNumber.toLong())
-    assertThat(newlyInsertedRow.getInteger("status")).isEqualTo(batchStatusToDbValue(batch.status))
+    assertThat(newlyInsertedRow.getInteger("status"))
+      .isEqualTo(BatchesPostgresDao.batchStatusToDbValue(Batch.Status.Proven))
     return dbContent
   }
 
@@ -104,8 +102,7 @@ class BatchesPostgresDaoTest : CleanDbTestSuiteParallel() {
     val batch1 =
       Batch(
         expectedStartBlock1,
-        expectedEndBlock1,
-        Batch.Status.Finalized
+        expectedEndBlock1
       )
 
     val dbContent1 =
@@ -142,13 +139,13 @@ class BatchesPostgresDaoTest : CleanDbTestSuiteParallel() {
   fun `findHighestConsecutiveEndBlockNumberFromBlockNumber ignores records before from block number`() {
     val batches =
       listOf(
-        createBatch(1, 3, Batch.Status.Proven),
+        createBatch(1, 3),
         // Gap, query does not care about gaps
-        createBatch(20, 30, Batch.Status.Proven),
+        createBatch(20, 30),
         // Gap, query does not care about gaps
-        createBatch(31, 32, Batch.Status.Proven),
+        createBatch(31, 32),
         // Gap, query does not care about gaps
-        createBatch(40, 42, Batch.Status.Proven)
+        createBatch(40, 42)
       )
 
     SafeFuture.collectAll(batches.map { batchesDao.saveNewBatch(it) }.stream()).get()
@@ -164,10 +161,10 @@ class BatchesPostgresDaoTest : CleanDbTestSuiteParallel() {
   fun `findHighestConsecutiveBatchByStatus returns highest batch without gaps`() {
     val batches =
       listOf(
-        createBatch(1, 3, Batch.Status.Proven),
-        createBatch(4, 5, Batch.Status.Proven),
-        createBatch(6, 7, Batch.Status.Proven),
-        createBatch(8, 10, Batch.Status.Proven)
+        createBatch(1, 3),
+        createBatch(4, 5),
+        createBatch(6, 7),
+        createBatch(8, 10)
       )
 
     SafeFuture.collectAll(batches.map { batchesDao.saveNewBatch(it) }.stream()).get()
@@ -180,11 +177,11 @@ class BatchesPostgresDaoTest : CleanDbTestSuiteParallel() {
   }
 
   @Test
-  fun `findHighestConsecutiveEndBlockNumberFromBlockNumber returns highest batch without gaps - only one pending`() {
+  fun `findHighestConsecutiveEndBlockNumberFromBlockNumber returns highest batch without gaps`() {
     val batches =
       listOf(
-        createBatch(1, 3, Batch.Status.Finalized),
-        createBatch(4, 5, Batch.Status.Proven)
+        createBatch(1, 3),
+        createBatch(4, 5)
       )
 
     SafeFuture.collectAll(batches.map { batchesDao.saveNewBatch(it) }.stream()).get()
@@ -200,8 +197,8 @@ class BatchesPostgresDaoTest : CleanDbTestSuiteParallel() {
   fun `findHighestConsecutiveEndBlockNumberFromBlockNumber returns null when no relevant batches are found`() {
     val batches =
       listOf(
-        createBatch(1, 3, Batch.Status.Finalized),
-        createBatch(4, 5, Batch.Status.Finalized)
+        createBatch(1, 3),
+        createBatch(4, 5)
       )
 
     SafeFuture.collectAll(batches.map { batchesDao.saveNewBatch(it) }.stream()).get()
@@ -214,36 +211,13 @@ class BatchesPostgresDaoTest : CleanDbTestSuiteParallel() {
   }
 
   @Test
-  fun `setStatus updates all records`() {
-    val batches =
-      listOf(
-        createBatch(1, 3, Batch.Status.Finalized),
-        createBatch(4, 5, Batch.Status.Proven),
-        createBatch(6, 7, Batch.Status.Proven),
-        createBatch(10, 11, Batch.Status.Proven)
-      )
-
-    SafeFuture.collectAll(batches.map { batchesDao.saveNewBatch(it) }.stream()).get()
-    assertThat(
-      batchesDao
-        .setBatchStatusUpToEndBlockNumber(
-          endBlockNumberInclusive = 7L,
-          currentStatus = Batch.Status.Proven,
-          newStatus = Batch.Status.Finalized
-        )
-        .get()
-    )
-      .isEqualTo(2)
-  }
-
-  @Test
   fun `deleteBatchesUpToEndBlockNumber deletes all target records`() {
     val batches =
       listOf(
-        createBatch(1, 3, Batch.Status.Finalized),
-        createBatch(4, 5, Batch.Status.Proven),
-        createBatch(6, 7, Batch.Status.Proven),
-        createBatch(10, 11, Batch.Status.Proven)
+        createBatch(1, 3),
+        createBatch(4, 5),
+        createBatch(6, 7),
+        createBatch(10, 11)
       )
 
     SafeFuture.collectAll(batches.map { batchesDao.saveNewBatch(it) }.stream()).get()
@@ -269,11 +243,9 @@ class BatchesPostgresDaoTest : CleanDbTestSuiteParallel() {
   fun `deleteBatchesUpToEndBlockNumber deletes none of the records`() {
     val batches =
       listOf(
-        createBatch(1, 3, Batch.Status.Finalized),
-        createBatch(4, 5, Batch.Status.Proven),
-        createBatch(6, 7, Batch.Status.Proven),
-        createBatch(8, 9, Batch.Status.Proven),
-        createBatch(10, 11, Batch.Status.Proven)
+        createBatch(1, 3),
+        createBatch(4, 5),
+        createBatch(6, 7)
       )
 
     SafeFuture.collectAll(batches.map { batchesDao.saveNewBatch(it) }.stream()).get()
@@ -292,13 +264,12 @@ class BatchesPostgresDaoTest : CleanDbTestSuiteParallel() {
 
   @Test
   fun `deleteBatchesAfterBlockNumber deletes all target records`() {
-    // The finalized status is just for test purposes this won't be the case in a real network
     val batches =
       listOf(
-        createBatch(1, 3, Batch.Status.Finalized),
-        createBatch(4, 5, Batch.Status.Proven),
-        createBatch(6, 7, Batch.Status.Finalized),
-        createBatch(10, 11, Batch.Status.Proven)
+        createBatch(1, 3),
+        createBatch(4, 5),
+        createBatch(6, 7),
+        createBatch(10, 11)
       )
 
     SafeFuture.collectAll(batches.map { batchesDao.saveNewBatch(it) }.stream()).get()
@@ -327,18 +298,16 @@ class BatchesPostgresDaoTest : CleanDbTestSuiteParallel() {
   fun `deleteBatchesAfterBlockNumber deletes none of the records`() {
     val batches =
       listOf(
-        createBatch(1, 3, Batch.Status.Finalized),
-        createBatch(4, 5, Batch.Status.Finalized),
-        createBatch(6, 7, Batch.Status.Proven),
-        createBatch(8, 9, Batch.Status.Proven),
-        createBatch(10, 11, Batch.Status.Proven)
+        createBatch(1, 3),
+        createBatch(4, 5),
+        createBatch(6, 7)
       )
 
     SafeFuture.collectAll(batches.map { batchesDao.saveNewBatch(it) }.stream()).get()
     assertThat(
       batchesDao
         .deleteBatchesAfterBlockNumber(
-          startingBlockNumberInclusive = 11L
+          startingBlockNumberInclusive = 7L
         )
         .get()
     )

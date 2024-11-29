@@ -30,13 +30,11 @@ class AggregationsRepositoryImpl(
 
   override fun getProofsToFinalize(
     fromBlockNumber: Long,
-    status: Aggregation.Status,
     finalEndBlockCreatedBefore: Instant,
     maximumNumberOfProofs: Int
   ): SafeFuture<List<ProofToFinalize>> {
     return aggregationsPostgresDao.getProofsToFinalize(
       fromBlockNumber,
-      status,
       finalEndBlockCreatedBefore,
       maximumNumberOfProofs
     )
@@ -44,10 +42,6 @@ class AggregationsRepositoryImpl(
 
   override fun findAggregationProofByEndBlockNumber(endBlockNumber: Long): SafeFuture<ProofToFinalize?> {
     return aggregationsPostgresDao.findAggregationProofByEndBlockNumber(endBlockNumber)
-  }
-
-  override fun updateAggregationAsProven(aggregation: Aggregation): SafeFuture<Unit> {
-    return aggregationsPostgresDao.updateAggregationAsProven(aggregation).thenApply { }
   }
 
   override fun deleteAggregationsUpToEndBlockNumber(endBlockNumberInclusive: Long): SafeFuture<Int> {

@@ -6,7 +6,6 @@ import net.consensys.linea.async.AsyncFilter
 import net.consensys.trimToMinutePrecision
 import net.consensys.zkevm.PeriodicPollingService
 import net.consensys.zkevm.coordinator.clients.smartcontract.LineaRollupSmartContractClient
-import net.consensys.zkevm.domain.Aggregation
 import net.consensys.zkevm.domain.BlobRecord
 import net.consensys.zkevm.domain.ProofToFinalize
 import net.consensys.zkevm.ethereum.submission.logUnhandledError
@@ -103,7 +102,6 @@ class AggregationFinalizationCoordinator(
   ): SafeFuture<AggregationData?> {
     return aggregationsRepository.getProofsToFinalize(
       fromBlockNumber = lastFinalizedBlockNumber.toLong() + 1,
-      status = Aggregation.Status.Proven,
       finalEndBlockCreatedBefore = clock.now().minus(config.proofSubmissionDelay),
       maximumNumberOfProofs = 1
     )

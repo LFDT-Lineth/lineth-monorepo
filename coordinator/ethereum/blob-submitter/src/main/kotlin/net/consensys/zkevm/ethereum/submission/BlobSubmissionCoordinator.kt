@@ -9,7 +9,6 @@ import net.consensys.linea.async.AsyncFilter
 import net.consensys.trimToMinutePrecision
 import net.consensys.zkevm.PeriodicPollingService
 import net.consensys.zkevm.coordinator.clients.smartcontract.LineaRollupSmartContractClient
-import net.consensys.zkevm.domain.Aggregation
 import net.consensys.zkevm.domain.BlobRecord
 import net.consensys.zkevm.domain.BlobSubmittedEvent
 import net.consensys.zkevm.domain.ProofToFinalize
@@ -119,7 +118,6 @@ class BlobSubmissionCoordinator(
           } else {
             aggregationsRepository.getProofsToFinalize(
               fromBlockNumber = lastFinalizedBlockNumber.inc().toLong(),
-              status = Aggregation.Status.Proven,
               finalEndBlockCreatedBefore = clock.now().minus(config.proofSubmissionDelay),
               maximumNumberOfProofs = config.maxBlobsToSubmitPerTick.toInt()
             ).thenApply { proofsToFinalize ->

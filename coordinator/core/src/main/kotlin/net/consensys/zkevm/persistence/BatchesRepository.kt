@@ -10,12 +10,6 @@ interface BatchesRepository {
     startingBlockNumberInclusive: Long
   ): SafeFuture<Long?>
 
-  fun setBatchStatusUpToEndBlockNumber(
-    endBlockNumberInclusive: Long,
-    currentStatus: Batch.Status,
-    newStatus: Batch.Status
-  ): SafeFuture<Int>
-
   fun deleteBatchesUpToEndBlockNumber(
     endBlockNumberInclusive: Long
   ): SafeFuture<Int>

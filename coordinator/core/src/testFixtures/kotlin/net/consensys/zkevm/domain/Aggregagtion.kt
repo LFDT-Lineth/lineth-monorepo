@@ -3,7 +3,6 @@ package net.consensys.zkevm.domain
 fun createAggregation(
   startBlockNumber: Long? = null,
   endBlockNumber: Long? = null,
-  status: Aggregation.Status = Aggregation.Status.Proven,
   batchCount: Long = 1,
   aggregationProof: ProofToFinalize? = null
 ): Aggregation {
@@ -19,7 +18,6 @@ fun createAggregation(
   return Aggregation(
     startBlockNumber = _aggregationProof.firstBlockNumber.toULong(),
     endBlockNumber = _aggregationProof.finalBlockNumber.toULong(),
-    status = status,
     batchCount = batchCount.toULong(),
     aggregationProof = _aggregationProof
   )
@@ -28,7 +26,6 @@ fun createAggregation(
 fun createAggregation(
   endBlockNumber: Long,
   parentAggregation: Aggregation,
-  status: Aggregation.Status = Aggregation.Status.Proven,
   batchCount: Long = 1,
   aggregationProof: ProofToFinalize = createProofToFinalize(
     firstBlockNumber = (parentAggregation.endBlockNumber + 1UL).toLong(),
@@ -36,7 +33,6 @@ fun createAggregation(
   )
 ): Aggregation {
   return createAggregation(
-    status = status,
     batchCount = batchCount,
     aggregationProof = aggregationProof
   )

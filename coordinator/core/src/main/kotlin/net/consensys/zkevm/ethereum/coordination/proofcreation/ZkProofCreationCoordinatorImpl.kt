@@ -28,8 +28,7 @@ class ZkProofCreationCoordinatorImpl(
       .thenApply {
         Batch(
           startBlockNumber = startBlockNumber,
-          endBlockNumber = endBlockNumber,
-          status = Batch.Status.Proven
+          endBlockNumber = endBlockNumber
         )
       }
       .whenException {

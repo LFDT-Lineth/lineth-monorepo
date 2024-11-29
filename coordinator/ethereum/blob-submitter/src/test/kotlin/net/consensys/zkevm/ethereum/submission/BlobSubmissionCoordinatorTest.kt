@@ -101,7 +101,7 @@ class BlobSubmissionCoordinatorTest {
 
     whenever(blobsRepository.getConsecutiveBlobsFromBlockNumber(any(), any()))
       .thenReturn(SafeFuture.completedFuture(blobs))
-    whenever(aggregationsRepository.getProofsToFinalize(any(), any(), any(), any()))
+    whenever(aggregationsRepository.getProofsToFinalize(any(), any(), any()))
       .thenReturn(SafeFuture.completedFuture(aggregations.map { it.aggregationProof!! }))
   }
 

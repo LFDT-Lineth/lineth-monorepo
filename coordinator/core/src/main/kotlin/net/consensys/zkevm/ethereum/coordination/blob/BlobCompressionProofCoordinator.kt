@@ -13,7 +13,6 @@ import net.consensys.zkevm.coordinator.clients.BlobCompressionProofRequest
 import net.consensys.zkevm.coordinator.clients.BlobCompressionProverClientV2
 import net.consensys.zkevm.domain.Blob
 import net.consensys.zkevm.domain.BlobRecord
-import net.consensys.zkevm.domain.BlobStatus
 import net.consensys.zkevm.domain.ConflationCalculationResult
 import net.consensys.zkevm.ethereum.coordination.conflation.BlobCreationHandler
 import net.consensys.zkevm.persistence.BlobsRepository
@@ -141,7 +140,6 @@ class BlobCompressionProofCoordinator(
           startBlockTime = blobStartBlockTime,
           endBlockTime = blobEndBlockTime,
           batchesCount = conflations.size.toUInt(),
-          status = BlobStatus.COMPRESSION_PROVEN,
           expectedShnarf = expectedShnarfResult.expectedShnarf,
           blobCompressionProof = blobCompressionProof
         )

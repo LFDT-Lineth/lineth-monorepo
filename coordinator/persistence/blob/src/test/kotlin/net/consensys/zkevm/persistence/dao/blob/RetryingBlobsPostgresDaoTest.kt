@@ -7,7 +7,6 @@ import net.consensys.FakeFixedClock
 import net.consensys.setFirstByteToZero
 import net.consensys.trimToSecondPrecision
 import net.consensys.zkevm.coordinator.clients.BlobCompressionProof
-import net.consensys.zkevm.domain.BlobStatus
 import net.consensys.zkevm.domain.createBlobRecord
 import net.consensys.zkevm.persistence.db.PersistenceRetryer
 import org.junit.jupiter.api.BeforeEach
@@ -33,8 +32,7 @@ class RetryingBlobsPostgresDaoTest {
   private val blobRecord = createBlobRecord(
     startBlockNumber = 0U,
     endBlockNumber = 10U,
-    startBlockTime = now,
-    status = BlobStatus.COMPRESSION_PROVING
+    startBlockTime = now
   )
   private val blobCompressionProof = BlobCompressionProof(
     compressedData = Random.nextBytes(32).setFirstByteToZero(),
@@ -80,9 +78,6 @@ class RetryingBlobsPostgresDaoTest {
     whenever(delegateBlobsDao.findBlobByEndBlockNumber(any()))
       .thenReturn(SafeFuture.completedFuture(blobRecord))
 
-    whenever(delegateBlobsDao.updateBlob(any(), any(), eq(BlobStatus.COMPRESSION_PROVEN), eq(blobCompressionProof)))
-      .thenReturn(SafeFuture.completedFuture(1))
-
     whenever(delegateBlobsDao.deleteBlobsUpToEndBlockNumber(any()))
       .thenReturn(SafeFuture.completedFuture(1))
 
@@ -103,19 +98,6 @@ class RetryingBlobsPostgresDaoTest {
 
     retryingBatchesPostgresDao.findBlobByEndBlockNumber(10U)
     verify(delegateBlobsDao, times(1)).findBlobByEndBlockNumber(any())
-
-    retryingBatchesPostgresDao.updateBlob(
-      0U,
-      10U,
-      BlobStatus.COMPRESSION_PROVEN,
-      blobCompressionProof
-    )
-    verify(delegateBlobsDao, times(1)).updateBlob(
-      any(),
-      any(),
-      eq(BlobStatus.COMPRESSION_PROVEN),
-      eq(blobCompressionProof)
-    )
 
     retryingBatchesPostgresDao.deleteBlobsUpToEndBlockNumber(10U)
     verify(delegateBlobsDao, times(1)).deleteBlobsUpToEndBlockNumber(any())

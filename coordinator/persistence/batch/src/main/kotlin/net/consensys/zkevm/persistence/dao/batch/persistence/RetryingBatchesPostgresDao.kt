@@ -20,20 +20,6 @@ class RetryingBatchesPostgresDao(
     )
   }
 
-  override fun setBatchStatusUpToEndBlockNumber(
-    endBlockNumberInclusive: Long,
-    currentStatus: Batch.Status,
-    newStatus: Batch.Status
-  ): SafeFuture<Int> {
-    return persistenceRetryer.retryQuery({
-      delegate.setBatchStatusUpToEndBlockNumber(
-        endBlockNumberInclusive,
-        currentStatus,
-        newStatus
-      )
-    })
-  }
-
   override fun deleteBatchesUpToEndBlockNumber(endBlockNumberInclusive: Long): SafeFuture<Int> {
     return persistenceRetryer.retryQuery({ delegate.deleteBatchesUpToEndBlockNumber(endBlockNumberInclusive) })
   }

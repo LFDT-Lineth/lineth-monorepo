@@ -1,7 +1,6 @@
 package net.consensys.zkevm.persistence
 
 import kotlinx.datetime.Instant
-import net.consensys.zkevm.coordinator.clients.BlobCompressionProof
 import net.consensys.zkevm.domain.BlobRecord
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
@@ -20,12 +19,6 @@ interface BlobsRepository {
   fun findBlobByEndBlockNumber(
     endBlockNumber: Long
   ): SafeFuture<BlobRecord?>
-
-  fun updateBlobAsProven(
-    startingBlockNumber: ULong,
-    endBlockNumber: ULong,
-    blobCompressionProof: BlobCompressionProof
-  ): SafeFuture<Int>
 
   fun deleteBlobsUpToEndBlockNumber(
     endBlockNumberInclusive: ULong

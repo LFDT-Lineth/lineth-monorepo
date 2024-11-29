@@ -183,7 +183,6 @@ class ProofAggregationCoordinatorServiceTest {
     val aggregation1 = Aggregation(
       startBlockNumber = blobsToAggregate1.startBlockNumber,
       endBlockNumber = blobsToAggregate1.endBlockNumber,
-      status = Aggregation.Status.Proven,
       batchCount = compressionBlobs1.sumOf { it.blobCounters.numberOfBatches }.toULong(),
       aggregationProof = aggregationProof1
     )
@@ -191,7 +190,6 @@ class ProofAggregationCoordinatorServiceTest {
     val aggregation2 = Aggregation(
       startBlockNumber = blobsToAggregate2.startBlockNumber,
       endBlockNumber = blobsToAggregate2.endBlockNumber,
-      status = Aggregation.Status.Proven,
       batchCount = compressionBlobs2.sumOf { it.blobCounters.numberOfBatches }.toULong(),
       aggregationProof = aggregationProof2
     )

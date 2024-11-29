@@ -19,9 +19,27 @@ class BatchesPostgresDao(
 ) : BatchesDao {
   private val log = LogManager.getLogger(this.javaClass.name)
   private val queryLog = SQLQueryLogger(log)
+
+  companion object {
+    /**
+     * WARNING: Existing mappings should not change. Otherwise, can break production, new one can be added
+     * though.
+     */
+    fun batchStatusToDbValue(status: Batch.Status): Int {
+      // using manual mapping to catch errors at compile time instead of runtime
+      return when (status) {
+        Batch.Status.Finalized -> 1
+        Batch.Status.Proven -> 2
+      }
+    }
+
+    @JvmStatic
+    val batchesTableName = "batches"
+  }
+
   private val insertSql =
     """
-      insert into ${BatchesDao.batchesDaoTableName}
+      insert into $batchesTableName
       (created_epoch_milli, start_block_number, end_block_number, status)
       VALUES ($1, $2, $3, $4)
     """
@@ -31,7 +49,7 @@ class BatchesPostgresDao(
     """
       with ranked_versions as (select *,
               dense_rank() over (partition by start_block_number order by end_block_number asc) version_rank
-              from ${BatchesDao.batchesDaoTableName}
+              from $batchesTableName
               order by start_block_number asc),
           previous_ends as (select *,
               lag(end_block_number, 1) over (order by end_block_number asc) as previous_end_block_number
@@ -43,7 +61,7 @@ class BatchesPostgresDao(
               limit 1)
       select end_block_number
       from previous_ends
-      where EXISTS (select 1 from ${BatchesDao.batchesDaoTableName} where start_block_number = $1)
+      where EXISTS (select 1 from $batchesTableName where start_block_number = $1)
         and (previous_ends.previous_end_block_number = previous_ends.start_block_number - 1 or previous_ends.start_block_number = $1)
         and ((select count(1) from first_gapped_batch) = 0 or previous_ends.start_block_number < (select * from first_gapped_batch))
       order by start_block_number desc
@@ -51,23 +69,16 @@ class BatchesPostgresDao(
     """
       .trimIndent()
 
-  private val setStatusSql =
-    """
-        update ${BatchesDao.batchesDaoTableName} set status = $1
-        where end_block_number <= $2 and status = $3
-    """
-      .trimIndent()
-
   private val deleteUptoSql =
     """
-        delete from ${BatchesDao.batchesDaoTableName}
+        delete from $batchesTableName
         where end_block_number <= $1
     """
       .trimIndent()
 
   private val deleteAfterSql =
     """
-        delete from ${BatchesDao.batchesDaoTableName}
+        delete from $batchesTableName
         where start_block_number >= $1
     """
       .trimIndent()
@@ -76,7 +87,6 @@ class BatchesPostgresDao(
     findHighestConsecutiveEndBlockNumberSql
   )
   private val insertQuery = connection.preparedQuery(insertSql)
-  private val setStatusQuery = connection.preparedQuery(setStatusSql)
   private val deleteUptoQuery = connection.preparedQuery(deleteUptoSql)
   private val deleteAfterQuery = connection.preparedQuery(deleteAfterSql)
 
@@ -88,7 +98,7 @@ class BatchesPostgresDao(
         clock.now().toEpochMilliseconds(),
         startBlockNumber,
         endBlockNumber,
-        batchStatusToDbValue(batch.status)
+        batchStatusToDbValue(Batch.Status.Proven)
       )
     queryLog.log(Level.TRACE, insertSql, params)
     return insertQuery.execute(Tuple.tuple(params))
@@ -124,23 +134,6 @@ class BatchesPostgresDao(
           null
         }
       }
-  }
-
-  override fun setBatchStatusUpToEndBlockNumber(
-    endBlockNumberInclusive: Long,
-    currentStatus: Batch.Status,
-    newStatus: Batch.Status
-  ): SafeFuture<Int> {
-    return setStatusQuery
-      .execute(
-        Tuple.of(
-          batchStatusToDbValue(newStatus),
-          endBlockNumberInclusive,
-          batchStatusToDbValue(currentStatus)
-        )
-      )
-      .map { rowSet -> rowSet.rowCount() }
-      .toSafeFuture()
   }
 
   override fun deleteBatchesUpToEndBlockNumber(

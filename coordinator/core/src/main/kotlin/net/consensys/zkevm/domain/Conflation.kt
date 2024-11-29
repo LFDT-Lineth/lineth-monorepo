@@ -24,8 +24,7 @@ data class BlocksConflation(
 
 data class Batch(
   val startBlockNumber: ULong,
-  val endBlockNumber: ULong,
-  val status: Status = Status.Proven
+  val endBlockNumber: ULong
 ) {
   init {
     require(startBlockNumber <= endBlockNumber) {
@@ -42,7 +41,7 @@ data class Batch(
     CommonDomainFunctions.blockIntervalString(startBlockNumber, endBlockNumber)
 
   fun toStringSummary(): String {
-    return "Batch(startBlockNumber=$startBlockNumber, endBlockNumber=$endBlockNumber, status=$status)"
+    return "Batch(startBlockNumber=$startBlockNumber, endBlockNumber=$endBlockNumber)"
   }
 }
 

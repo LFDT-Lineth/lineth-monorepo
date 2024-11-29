@@ -1,9 +1,7 @@
 package net.consensys.zkevm.persistence.dao.blob
 
 import kotlinx.datetime.Instant
-import net.consensys.zkevm.coordinator.clients.BlobCompressionProof
 import net.consensys.zkevm.domain.BlobRecord
-import net.consensys.zkevm.domain.BlobStatus
 import net.consensys.zkevm.persistence.BlobsRepository
 import net.consensys.zkevm.persistence.db.DuplicatedRecordException
 import tech.pegasys.teku.infrastructure.async.SafeFuture
@@ -38,19 +36,6 @@ class BlobsRepositoryImpl(
 
   override fun findBlobByEndBlockNumber(endBlockNumber: Long): SafeFuture<BlobRecord?> {
     return blobsDao.findBlobByEndBlockNumber(endBlockNumber.toULong())
-  }
-
-  override fun updateBlobAsProven(
-    startingBlockNumber: ULong,
-    endBlockNumber: ULong,
-    blobCompressionProof: BlobCompressionProof
-  ): SafeFuture<Int> {
-    return blobsDao.updateBlob(
-      startingBlockNumber,
-      endBlockNumber,
-      BlobStatus.COMPRESSION_PROVEN,
-      blobCompressionProof
-    )
   }
 
   override fun deleteBlobsUpToEndBlockNumber(

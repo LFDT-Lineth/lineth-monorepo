@@ -125,7 +125,6 @@ data class ProofToFinalize(
 data class Aggregation(
   override val startBlockNumber: ULong,
   override val endBlockNumber: ULong,
-  val status: Status,
   val batchCount: ULong,
   val aggregationProof: ProofToFinalize?
 ) : BlockInterval {

@@ -46,7 +46,6 @@ class BlobsPostgresDao(
         startBlockTime = Instant.fromEpochMilliseconds(record.getLong("start_block_timestamp")),
         endBlockTime = Instant.fromEpochMilliseconds(record.getLong("end_block_timestamp")),
         batchesCount = record.getInteger("batches_count").toUInt(),
-        status = dbValueToBlobStatus(record.getInteger("status")),
         expectedShnarf = record.getString("expected_shnarf").decodeHex(),
         blobCompressionProof = blobCompressionProof
       )
@@ -60,17 +59,6 @@ class BlobsPostgresDao(
       return when (status) {
         BlobStatus.COMPRESSION_PROVEN -> 1
         BlobStatus.COMPRESSION_PROVING -> 2
-      }
-    }
-
-    fun dbValueToBlobStatus(value: Int): BlobStatus {
-      return when (value) {
-        1 -> BlobStatus.COMPRESSION_PROVEN
-        2 -> BlobStatus.COMPRESSION_PROVING
-        else ->
-          throw IllegalStateException(
-            "Value '$value' does not map to any ${BlobStatus::class.simpleName}"
-          )
       }
     }
 
@@ -130,13 +118,6 @@ class BlobsPostgresDao(
    """
       .trimIndent()
 
-  private val setBlobHashAndProofAndStatusSql =
-    """
-     update $TableName set blob_hash = $1, status = $2, blob_compression_proof = CAST($3::text as jsonb)
-     where start_block_number = $4 and end_block_number = $5
-   """
-      .trimIndent()
-
   private val deleteUptoSql =
     """
       delete from $TableName
@@ -155,9 +136,6 @@ class BlobsPostgresDao(
   private val selectBlobByStartBlockNumberQuery = connection.preparedQuery(selectBlobByStartBlockNumberSql)
   private val selectBlobByEndBlockNumberQuery = connection.preparedQuery(selectBlobByEndBlockNumberSql)
   private val insertQuery = connection.preparedQuery(insertSql)
-  private val setBlobHashAndProofAndStatusQuery = connection.preparedQuery(
-    setBlobHashAndProofAndStatusSql
-  )
   private val deleteUptoQuery = connection.preparedQuery(deleteUptoSql)
   private val deleteAfterQuery = connection.preparedQuery(deleteAfterSql)
 
@@ -168,7 +146,7 @@ class BlobsPostgresDao(
         blobRecord.startBlockNumber.toLong(),
         blobRecord.endBlockNumber.toLong(),
         blobRecord.blobHash.encodeHex(),
-        blobStatusToDbValue(blobRecord.status),
+        blobStatusToDbValue(BlobStatus.COMPRESSION_PROVEN),
         blobRecord.startBlockTime.toEpochMilliseconds(),
         blobRecord.endBlockTime.toEpochMilliseconds(),
         blobRecord.batchesCount.toInt(),
@@ -192,14 +170,13 @@ class BlobsPostgresDao(
   }
 
   private fun getConsecutiveBlobsFromBlockNumber(
-    startingBlockNumberInclusive: ULong,
-    status: BlobStatus = BlobStatus.COMPRESSION_PROVEN
+    startingBlockNumberInclusive: ULong
   ): SafeFuture<List<BlobRecord>> {
     return selectQuery
       .execute(
         Tuple.of(
           startingBlockNumberInclusive.toLong(),
-          blobStatusToDbValue(status)
+          blobStatusToDbValue(BlobStatus.COMPRESSION_PROVEN)
         )
       )
       .toSafeFuture()
@@ -236,26 +213,6 @@ class BlobsPostgresDao(
       .toSafeFuture()
       .thenApply { rowSet -> rowSet.map(BlobsPostgresDao::parseRecord) }
       .thenApply { blobRecords -> blobRecords.firstOrNull() }
-  }
-
-  override fun updateBlob(
-    startingBlockNumber: ULong,
-    endBlockNumber: ULong,
-    blobStatus: BlobStatus,
-    blobCompressionProof: BlobCompressionProof
-  ): SafeFuture<Int> {
-    return setBlobHashAndProofAndStatusQuery
-      .execute(
-        Tuple.of(
-          blobCompressionProof.dataHash.encodeHex(),
-          blobStatusToDbValue(blobStatus),
-          BlobCompressionProofJsonResponse.fromDomainObject(blobCompressionProof).toJsonString(),
-          startingBlockNumber.toLong(),
-          endBlockNumber.toLong()
-        )
-      )
-      .map { rowSet -> rowSet.rowCount() }
-      .toSafeFuture()
   }
 
   override fun deleteBlobsUpToEndBlockNumber(

@@ -178,7 +178,6 @@ class ProofAggregationCoordinatorService(
         val aggregation = Aggregation(
           startBlockNumber = blobsToAggregate.startBlockNumber,
           endBlockNumber = blobsToAggregate.endBlockNumber,
-          status = Aggregation.Status.Proven,
           batchCount = batchCount.toULong(),
           aggregationProof = aggregationProof
         )
