@@ -37,7 +37,7 @@ prepareDatadir $DATA_DIR $genesisfile
 if [ ${#BOOTNODES} -ge 1 ]; then
 #    bootnode=$(getent hosts $bootnodehost | awk '{print $1}')
     echo "Starting geth connecting to $BOOTNODES"
-    geth --datadir $DATA_DIR \
+    exec geth --datadir $DATA_DIR \
       --networkid $networkid \
       --miner.gasprice $gasprice \
       --miner.gaslimit $gaslimit \
@@ -56,7 +56,7 @@ else
     echo "Starting geth VALIDATOR with BOOTNODE enabled on port '$BOOTNODE_PORT' with '/boot.key'"
     mkdir -p $DATA_DIR/keystore
     cp /keystore/$etherbase.json $DATA_DIR/keystore
-    geth --datadir $DATA_DIR \
+    exec geth --datadir $DATA_DIR \
      --networkid $networkid \
      --miner.etherbase $etherbase \
      --miner.gasprice $gasprice \

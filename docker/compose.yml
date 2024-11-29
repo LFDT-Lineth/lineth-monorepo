@@ -108,8 +108,7 @@ services:
       MAX_TXDATA_BYTES: 30000 #30 KBytes
       ZKGETH_LOWER_GAS_MARGIN_PERCENTS: 120
       ZKGETH_UPPER_GAS_MARGIN_PERCENTS: 300
-    entrypoint: ""
-    command: [ "sh", "/scripts/node.sh", "1337", "/genesis.json", "0x0", "0x1C9C380", "0xF4240" ]
+    entrypoint: [ "sh", "/scripts/node.sh", "1337", "/genesis.json", "0x0", "0x1C9C380", "0xF4240" ]
     volumes:
       - ./geth/scripts:/scripts:ro
       - ./config/linea-local-dev-genesis-PoA.json:/genesis.json:ro
@@ -192,8 +191,7 @@ services:
       MAX_TXDATA_BYTES: 30000 #30 KBytes
       VERSION: "0.2.0"
       TRACES_FILE_EXTENSION: ".json.gz"
-    entrypoint: ""
-    command: [ "sh", "/scripts/node.sh", "1337", "/genesis.json", "0xa", "0x1C9C380", "0xF4240" ]
+    entrypoint: [ "sh", "/scripts/node.sh", "1337", "/genesis.json", "0xa", "0x1C9C380", "0xF4240" ]
     volumes:
       - ./geth/scripts:/scripts:ro
       - ./config/linea-local-dev-genesis-PoA.json:/genesis.json:ro
