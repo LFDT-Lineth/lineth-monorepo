@@ -1,2 +1,4 @@
 node_modules
+lib/forge-std
 contracts/test-contracts
+test/foundry

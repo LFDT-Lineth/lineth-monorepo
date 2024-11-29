@@ -54,3 +54,4 @@ tsconfig.build.tsbuildinfo
 ts-libs/**/lib/**/*.so
 ts-libs/**/lib/**/*.dylib
 contracts/lib/forge-std/
+cache_forge
