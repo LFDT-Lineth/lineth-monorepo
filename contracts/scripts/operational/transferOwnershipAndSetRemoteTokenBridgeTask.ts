@@ -9,15 +9,15 @@ import { getDeployedContractOnNetwork } from "../../common/helpers/readAddress";
     1. Deploy the TokenBridge and BridgedToken contracts on both networks and get the addresses
     2. Run this script on both addresses with the correct variables set.
     *******************************************************************************************
-    GOERLI_PRIVATE_KEY=<key> \
+    SEPOLIA_PRIVATE_KEY=<key> \
     INFURA_API_KEY=<key> \
     npx hardhat transferOwnershipAndSetRemoteTokenBridge \
     --safe-address <address> \
     --remote-token-bridge-address <address> \
     --token-bridge-address <address> \
     --token-bridge-proxy-admin-address <address> \
-    --remote-network goerli \
-    --network linea_goerli
+    --remote-network sepolia \
+    --network linea_sepolia
     *******************************************************************************************
 */
 

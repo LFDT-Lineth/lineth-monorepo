@@ -2,15 +2,15 @@ import { ethers } from "hardhat";
 import { LineaRollupInit__factory, LineaRollup__factory, TimeLock__factory } from "../../typechain-types";
 
 /*******************************USAGE******************************************************************
-GOERLI_PRIVATE_KEY=<your_private_key> \
+SEPOLIA_PRIVATE_KEY=<your_private_key> \
 INFURA_API_KEY=<your_infura_key> \
-npx hardhat run scripts/gnosis/encodingTX2.ts --network goerli
+npx hardhat run scripts/gnosis/encodingTX2.ts --network sepolia
 
 or
 
-LINEA_GOERLI_PRIVATE_KEY=<your_private_key> \
+LINEA_SEPOLIA_PRIVATE_KEY=<your_private_key> \
 INFURA_API_KEY=<your_infura_key> \
-npx hardhat run scripts/gnosis/encodingTX2.ts --network linea_goerli
+npx hardhat run scripts/gnosis/encodingTX2.ts --network linea_sepolia
 *******************************************************************************************************/
 
 //--------------------------------------Config------------------------------------

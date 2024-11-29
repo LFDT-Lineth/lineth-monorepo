@@ -8,12 +8,12 @@ import { getTaskCliOrEnvValue } from "../../common/helpers/environmentHelper";
     *******************************************************************************************
 
     *******************************************************************************************
-    GOERLI_PRIVATE_KEY=<key> \
+    SEPOLIA_PRIVATE_KEY=<key> \
     INFURA_API_KEY=<key> \
     npx hardhat getCurrentFinalizedBlockNumber \
     --contract-type <string> \
     --proxy-address <address> \
-    --network goerli
+    --network sepolia
     *******************************************************************************************
 */
 

@@ -8,14 +8,14 @@ import { getTaskCliOrEnvValue } from "../../common/helpers/environmentHelper";
     *******************************************************************************************
 
     *******************************************************************************************
-    GOERLI_PRIVATE_KEY=<key> \
+    SEPOLIA_PRIVATE_KEY=<key> \
     INFURA_API_KEY=<key> \
     npx hardhat setVerifierAddress \
     --verifier-proof-type <uint256> \
     --proxy-address <address> \
     --verifier-address <address> \
     --verifier-name <string> \
-    --network goerli
+    --network sepolia
     *******************************************************************************************
 */
 

@@ -46,15 +46,15 @@ In a second terminal, run:
 npx hardhat run --network localhost scripts/tokenBridge/test/deployMock.ts
 ```
 
-### On a Goerli Testnet network with mocked messaging service
+### On a Sepolia Testnet network with mocked messaging service
 
 In a terminal, run:
 
 ```shell
-npx hardhat run --network goerli scripts/tokenBridge/test/deployMock.ts
+npx hardhat run --network sepolia scripts/tokenBridge/test/deployMock.ts
 ```
 
-### On Goerli Testnet and Goerli Linea Testnet
+### On Sepolia Testnet and Sepolia Linea Testnet
 
 To deploy the contracts, you will need to run the Bridged Token, Token Bridge, and Token Bridge operational scripts.
 

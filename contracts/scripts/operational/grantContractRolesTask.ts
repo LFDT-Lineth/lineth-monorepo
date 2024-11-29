@@ -10,14 +10,14 @@ import { getTaskCliOrEnvValue } from "../../common/helpers/environmentHelper";
     *******************************************************************************************
     NB: Be sure to have use the roles initially set to the security council EOA before changing
     *******************************************************************************************
-    GOERLI_PRIVATE_KEY=<key> \
+    SEPOLIA_PRIVATE_KEY=<key> \
     INFURA_API_KEY=<key> \
     npx hardhat grantContractRoles \
     --admin-address <address>  \
     --proxy-address <address>  \
     --contract-type <string> \
     --contract-roles <bytes> \
-    --network goerli
+    --network sepolia
     *******************************************************************************************
 */
 

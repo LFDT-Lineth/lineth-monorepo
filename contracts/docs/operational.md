@@ -12,12 +12,12 @@ The command-line arguments will create or replace existing .env (only in memory)
 
 ## Network specific variables
 
-Dependant on which network you are using, a specific network private key needs to be used, as well as the corresponding API Key or RPC URL.  The following table highlights which private key variable will be used per network. Please use the variable that pertains to the network. e.g. for `linea_goerli` use `LINEA_GOERLI_PRIVATE_KEY` (`LINEA_GOERLI_PRIVATE_KEY=<key> INFURA_API_KEY=<key>`)  
+Dependant on which network you are using, a specific network private key needs to be used, as well as the corresponding API Key or RPC URL.  The following table highlights which private key variable will be used per network. Please use the variable that pertains to the network. e.g. for `linea_sepolia` use `LINEA_SEPOLIA_PRIVATE_KEY` (`LINEA_SEPOLIA_PRIVATE_KEY=<key> INFURA_API_KEY=<key>`)  
 
 | Network       | Private key parameter name   | API Key / RPC URL |
 | ------------- | ----------------- | ---- | 
-| goerli    | GOERLI_PRIVATE_KEY    | INFURA_API_KEY  |
-| linea_goerli | LINEA_GOERLI_PRIVATE_KEY   | INFURA_API_KEY  |
+| sepolia    | SEPOLIA_PRIVATE_KEY    | INFURA_API_KEY  |
+| linea_sepolia | LINEA_SEPOLIA_PRIVATE_KEY   | INFURA_API_KEY  |
 | mainnet   | MAINNET_PRIVATE_KEY | INFURA_API_KEY | 
 | linea_mainnet | LINEA_MAINNET_PRIVATE_KEY |  INFURA_API_KEY  | 
 | custom    | CUSTOM_PRIVATE_KEY | CUSTOM_BLOCKCHAIN_URL | 
@@ -44,18 +44,18 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 Base command:
 
 ```shell
-npx hardhat getCurrentFinalizedBlockNumber --network goerli
+npx hardhat getCurrentFinalizedBlockNumber --network sepolia
 ```
 
 Base command with cli arguments:
 
 ```shell
-GOERLI_PRIVATE_KEY=<key> \
+SEPOLIA_PRIVATE_KEY=<key> \
 INFURA_API_KEY=<key> \
 npx hardhat getCurrentFinalizedBlockNumber \
 --contract-type <string> \
 --proxy-address <address> \
---network goerli
+--network sepolia
 ```
 
 (make sure to replace `<key>` with actual values)
@@ -81,20 +81,20 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 
 Base command:
 ```shell
-npx hardhat grantContractRoles --network goerli
+npx hardhat grantContractRoles --network sepolia
 ```
 
 Base command with cli arguments:
 
 ```shell
-GOERLI_PRIVATE_KEY=<key> \
+SEPOLIA_PRIVATE_KEY=<key> \
 INFURA_API_KEY=<key> \
 npx hardhat grantContractRoles \
 --admin-address <address>  \
 --proxy-address <address>  \
 --contract-type <string> \
 --contract-roles <bytes> \
---network goerli
+--network sepolia
 ```
 
 
@@ -121,13 +121,13 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 
 Base command:
 ```shell
-npx hardhat renounceContractRoles --network goerli
+npx hardhat renounceContractRoles --network sepolia
 ```
 
 Base command with cli arguments:
 
 ```shell
-GOERLI_PRIVATE_KEY=<key> \
+SEPOLIA_PRIVATE_KEY=<key> \
 INFURA_API_KEY=<key> \
 npx hardhat renounceContractRoles \
 --old-admin-address <address>  \
@@ -135,7 +135,7 @@ npx hardhat renounceContractRoles \
 --proxy-address <address> \
 --contract-type <string> \
 --contract-roles <bytes> \
---network goerli
+--network sepolia
 ```
 
 
@@ -165,19 +165,19 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 
 Base command:
 ```shell
-npx hardhat setRateLimit --network linea_goerli
+npx hardhat setRateLimit --network linea_sepolia
 ```
 
 Base command with cli arguments:
 
 ```shell
-LINEA_GOERLI_PRIVATE_KEY=<key> \
+LINEA_SEPOLIA_PRIVATE_KEY=<key> \
 INFURA_API_KEY=<key> \
 npx hardhat setRateLimit \
 --message-service-address <address> \
 --message-service-type <string> \
 --withdraw-limit <uint256> \
---network linea_goerli
+--network linea_sepolia
 ```
 
 
@@ -205,20 +205,20 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 Base command:
 
 ```shell
-npx hardhat setVerifierAddress --network goerli
+npx hardhat setVerifierAddress --network sepolia
 ```
 
 Base command with cli arguments:
 
 ```shell
-GOERLI_PRIVATE_KEY=<key> \
+SEPOLIA_PRIVATE_KEY=<key> \
 INFURA_API_KEY=<key> \
 npx hardhat setVerifierAddress \
 --verifier-proof-type <uint256> \
 --proxy-address <address> \
 --verifier-address <address> \
 --verifier-name <string> \
---network goerli
+--network sepolia
 ```
 
 (make sure to replace `<key>` with actual values)
@@ -245,27 +245,27 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 <br />
 
 It should be noted that the `--remote-network` and `--network` fields should point to complementary networks.
-e.g. `--remote-network linea_goerli --network goerli` or vice-versa.
+e.g. `--remote-network linea_sepolia --network sepolia` or vice-versa.
 <br />
 
 Base command:
 
 ```shell
-npx hardhat transferOwnershipAndSetRemoteTokenBridge --safe-address <address> --remote-network goerli --network linea_goerli
+npx hardhat transferOwnershipAndSetRemoteTokenBridge --safe-address <address> --remote-network sepolia --network linea_sepolia
 ```
 
 Base command with cli arguments:
 
 ```shell
-GOERLI_PRIVATE_KEY=<key> \
+SEPOLIA_PRIVATE_KEY=<key> \
 INFURA_API_KEY=<key> \
 npx hardhat transferOwnershipAndSetRemoteTokenBridge \
 --safe-address <address> \
 --remote-token-bridge-address <address> \
 --token-bridge-address <address> \
 --token-bridge-proxy-admin-address <address> \
---remote-network goerli \
---network linea_goerli
+--remote-network sepolia \
+--network linea_sepolia
 ```
 
 (make sure to replace `<key>` with actual values)

@@ -15,7 +15,7 @@ import { getTaskCliOrEnvValue } from "../../common/helpers/environmentHelper";
 
     MAKE SURE THAT THE DEFAULT ADMIN ROLE IS LAST AS IT IS REVOKING/RENOUNCING FROM SELF
     *******************************************************************************************
-    GOERLI_PRIVATE_KEY=<key> \
+    SEPOLIA_PRIVATE_KEY=<key> \
     INFURA_API_KEY=<key> \
     npx hardhat renounceContractRoles \
     --old-admin-address <address>  \
@@ -23,7 +23,7 @@ import { getTaskCliOrEnvValue } from "../../common/helpers/environmentHelper";
     --proxy-address <address> \
     --contract-type <string> \
     --contract-roles <bytes> \
-    --network goerli
+    --network sepolia
     *******************************************************************************************
 */
 

@@ -9,13 +9,13 @@ import { getTaskCliOrEnvValue } from "../../common/helpers/environmentHelper";
     *******************************************************************************************
 
     *******************************************************************************************
-    LINEA_GOERLI_PRIVATE_KEY=<key> \
+    LINEA_SEPOLIA_PRIVATE_KEY=<key> \
     INFURA_API_KEY=<key> \
     npx hardhat setRateLimit \
     --message-service-address <address> \
     --message-service-type <string> \
     --withdraw-limit <uint256> \
-    --network linea_goerli
+    --network linea_sepolia
     *******************************************************************************************
 */
 
