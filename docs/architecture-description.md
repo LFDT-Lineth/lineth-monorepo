@@ -722,7 +722,7 @@ l1RollingHashes(
 The gas price for transaction execution in Linea is computed from L1 gas price.
 
 
-![gas price API](assets/gasPrice.drawio.svgo.svg)
+![gas price API](assets/gasPrice.drawio.svg)
 
 
 Gas price is based on the history of the gas price on L1.
