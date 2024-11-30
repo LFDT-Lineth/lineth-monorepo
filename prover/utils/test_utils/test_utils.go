@@ -7,8 +7,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/consensys/gnark/frontend"
-	snarkHash "github.com/consensys/gnark/std/hash"
 	"hash"
 	"io"
 	"math"
@@ -17,6 +15,9 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/consensys/gnark/frontend"
+	snarkHash "github.com/consensys/gnark/std/hash"
 
 	"github.com/stretchr/testify/require"
 )
@@ -224,7 +225,7 @@ type ReaderHash struct {
 
 func (r *ReaderHash) Write(p []byte) (n int, err error) {
 	if rd := hashReadWrite(r.r); !bytes.Equal(rd, p) {
-		panic(fmt.Errorf("ReaderHash.Write: mismatch %x≠%x", rd, p))
+		panic(fmt.Errorf("ReaderHash.Write: expected %x, encountered %x", rd, p))
 	}
 
 	return r.h.Write(p)
@@ -343,11 +344,14 @@ func (r *ReaderHashSnark) CloseFile() {
 	}
 }
 
-func PrettyPrintHashes(filename string) {
+// PrettyPrintHashes reads a file of hashes and prints them in a human-readable format.
+// if out is nil, it will print to os.Stdout
+func PrettyPrintHashes(in string, out io.Writer) {
 	const printIndexes = false
+	nbResets := 0
 
 	v := make([]any, 0)
-	f, err := os.Open(filename)
+	f, err := os.Open(in)
 	if err != nil {
 		panic(err)
 	}
@@ -360,7 +364,8 @@ func PrettyPrintHashes(filename string) {
 	for _, err = f.Read(length[:]); err == nil; _, err = f.Read(length[:]) {
 		l := int(length[0])*256 + int(length[1])
 		if l == 65535 { // a reset
-			v = append(v, "RESET")
+			v = append(v, fmt.Sprintf("RESET #%d", nbResets))
+			nbResets++
 			i = 0
 			continue
 		}
@@ -384,16 +389,31 @@ func PrettyPrintHashes(filename string) {
 	if err != io.EOF {
 		panic(err)
 	}
-	b, err := json.MarshalIndent(v, "", "  ")
-	if err != nil {
+
+	if out == nil {
+		out = os.Stdout
+	}
+	encoder := json.NewEncoder(out)
+	encoder.SetIndent("", "  ")
+	if err = encoder.Encode(v); err != nil {
 		panic(err)
 	}
-	fmt.Println(string(b))
+}
+
+func PrettyPrintHashesToFile(in, out string) {
+	var t FakeTestingT
+	f, err := os.OpenFile(out, os.O_CREATE|os.O_WRONLY, 0600)
+	require.NoError(t, err)
+	PrettyPrintHashes(in, f)
+	require.NoError(t, err)
 }
 
 func spaceOutFromRight(s string) string {
-	var bb strings.Builder
 	n := len(s) + (len(s)+15)/16 - 1
+	if n < 0 {
+		return ""
+	}
+	var bb strings.Builder
 	bb.Grow(n)
 	remainder := len(s) % 16
 	first := true

@@ -17,7 +17,6 @@ import (
 	"github.com/consensys/gnark/std/lookup/logderivlookup"
 	"github.com/consensys/gnark/std/math/emulated"
 	"github.com/consensys/linea-monorepo/prover/circuits/internal/plonk"
-	"github.com/consensys/linea-monorepo/prover/utils"
 	"golang.org/x/exp/constraints"
 )
 
@@ -630,24 +629,6 @@ func Differences(api frontend.API, s []frontend.Variable) []frontend.Variable {
 	for i := range s {
 		res[i] = api.Sub(s[i], prev)
 		prev = s[i]
-	}
-	return res
-}
-
-func NewSliceOf32Array[T any](values [][32]T, maxLen int) Var32Slice {
-	if maxLen < len(values) {
-		panic("maxLen too small")
-	}
-	res := Var32Slice{
-		Values: make([][32]frontend.Variable, maxLen),
-		Length: len(values),
-	}
-	for i := range values {
-		utils.Copy(res.Values[i][:], values[i][:])
-	}
-	var zeros [32]byte
-	for i := len(values); i < maxLen; i++ {
-		utils.Copy(res.Values[i][:], zeros[:])
 	}
 	return res
 }

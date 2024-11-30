@@ -96,33 +96,33 @@ func (p Aggregation) GetPublicInputHex() string {
 
 // AggregationFPI holds the same info as public_input.Aggregation, except in parsed form
 type AggregationFPI struct {
-	ParentShnarf                [32]byte
-	NbDecompression             uint64
-	InitialStateRootHash        [32]byte
-	LastFinalizedBlockNumber    uint64
-	LastFinalizedBlockTimestamp uint64
-	InitialRollingHash          [32]byte
-	InitialRollingHashNumber    uint64
-	ChainID                     uint64 // for now we're forcing all executions to have the same chain ID
-	L2MessageServiceAddr        types.EthAddress
-	NbL2Messages                uint64 // TODO not used in hash. delete if not necessary
-	L2MsgMerkleTreeRoots        [][32]byte
-	FinalBlockNumber            uint64
-	FinalBlockTimestamp         uint64
-	FinalRollingHash            [32]byte
-	FinalRollingHashNumber      uint64
-	FinalShnarf                 [32]byte
-	L2MsgMerkleTreeDepth        int
+	ParentShnarf                      [32]byte
+	NbDecompression                   uint64
+	InitialStateRootHash              [32]byte
+	LastFinalizedBlockNumber          uint64
+	LastFinalizedBlockTimestamp       uint64
+	LastFinalizedRollingHash          [32]byte
+	LastFinalizedRollingHashMsgNumber uint64
+	ChainID                           uint64 // for now we're forcing all executions to have the same chain ID
+	L2MessageServiceAddr              types.EthAddress
+	NbL2Messages                      uint64 // TODO not used in hash. delete if not necessary
+	L2MsgMerkleTreeRoots              [][32]byte
+	FinalBlockNumber                  uint64
+	FinalBlockTimestamp               uint64
+	FinalRollingHash                  [32]byte
+	FinalRollingHashNumber            uint64
+	FinalShnarf                       [32]byte
+	L2MsgMerkleTreeDepth              int
 }
 
 func (pi *AggregationFPI) ToSnarkType() AggregationFPISnark {
 	s := AggregationFPISnark{
 		AggregationFPIQSnark: AggregationFPIQSnark{
-			LastFinalizedBlockNumber:    pi.LastFinalizedBlockNumber,
-			LastFinalizedBlockTimestamp: pi.LastFinalizedBlockTimestamp,
-			InitialRollingHash:          [32]frontend.Variable{},
-			InitialRollingHashNumber:    pi.InitialRollingHashNumber,
-			InitialStateRootHash:        pi.InitialStateRootHash[:],
+			LastFinalizedBlockNumber:       pi.LastFinalizedBlockNumber,
+			LastFinalizedBlockTimestamp:    pi.LastFinalizedBlockTimestamp,
+			LastFinalizedRollingHash:       [32]frontend.Variable{},
+			LastFinalizedRollingHashNumber: pi.LastFinalizedRollingHashMsgNumber,
+			InitialStateRootHash:           pi.InitialStateRootHash[:],
 
 			NbDecompression:      pi.NbDecompression,
 			ChainID:              pi.ChainID,
@@ -136,7 +136,7 @@ func (pi *AggregationFPI) ToSnarkType() AggregationFPISnark {
 	}
 
 	utils.Copy(s.FinalRollingHash[:], pi.FinalRollingHash[:])
-	utils.Copy(s.InitialRollingHash[:], pi.InitialRollingHash[:])
+	utils.Copy(s.LastFinalizedRollingHash[:], pi.LastFinalizedRollingHash[:])
 	utils.Copy(s.ParentShnarf[:], pi.ParentShnarf[:])
 	utils.Copy(s.FinalShnarf[:], pi.FinalShnarf[:])
 
@@ -148,15 +148,15 @@ func (pi *AggregationFPI) ToSnarkType() AggregationFPISnark {
 }
 
 type AggregationFPIQSnark struct {
-	ParentShnarf                [32]frontend.Variable
-	NbDecompression             frontend.Variable
-	InitialStateRootHash        frontend.Variable
-	LastFinalizedBlockNumber    frontend.Variable
-	LastFinalizedBlockTimestamp frontend.Variable
-	InitialRollingHash          [32]frontend.Variable
-	InitialRollingHashNumber    frontend.Variable
-	ChainID                     frontend.Variable // WARNING: Currently not bound in Sum
-	L2MessageServiceAddr        frontend.Variable // WARNING: Currently not bound in Sum
+	ParentShnarf                   [32]frontend.Variable
+	NbDecompression                frontend.Variable
+	InitialStateRootHash           frontend.Variable
+	LastFinalizedBlockNumber       frontend.Variable
+	LastFinalizedBlockTimestamp    frontend.Variable
+	LastFinalizedRollingHash       [32]frontend.Variable
+	LastFinalizedRollingHashNumber frontend.Variable
+	ChainID                        frontend.Variable // WARNING: Currently not bound in Sum
+	L2MessageServiceAddr           frontend.Variable // WARNING: Currently not bound in Sum
 }
 
 type AggregationFPISnark struct {
@@ -176,16 +176,16 @@ type AggregationFPISnark struct {
 // NewAggregationFPI does NOT set all fields, only the ones covered in public_input.Aggregation
 func NewAggregationFPI(fpi *Aggregation) (s *AggregationFPI, err error) {
 	s = &AggregationFPI{
-		LastFinalizedBlockNumber:    uint64(fpi.LastFinalizedBlockNumber),
-		LastFinalizedBlockTimestamp: uint64(fpi.ParentAggregationLastBlockTimestamp),
-		InitialRollingHashNumber:    uint64(fpi.LastFinalizedL1RollingHashMessageNumber),
-		L2MsgMerkleTreeRoots:        make([][32]byte, len(fpi.L2MsgRootHashes)),
-		FinalBlockNumber:            uint64(fpi.FinalBlockNumber),
-		FinalBlockTimestamp:         uint64(fpi.FinalTimestamp),
-		FinalRollingHashNumber:      uint64(fpi.L1RollingHashMessageNumber),
-		L2MsgMerkleTreeDepth:        fpi.L2MsgMerkleTreeDepth,
-		ChainID:                     fpi.ChainID,
-		L2MessageServiceAddr:        fpi.L2MessageServiceAddr,
+		LastFinalizedBlockNumber:          uint64(fpi.LastFinalizedBlockNumber),
+		LastFinalizedBlockTimestamp:       uint64(fpi.ParentAggregationLastBlockTimestamp),
+		LastFinalizedRollingHashMsgNumber: uint64(fpi.LastFinalizedL1RollingHashMessageNumber),
+		L2MsgMerkleTreeRoots:              make([][32]byte, len(fpi.L2MsgRootHashes)),
+		FinalBlockNumber:                  uint64(fpi.FinalBlockNumber),
+		FinalBlockTimestamp:               uint64(fpi.FinalTimestamp),
+		FinalRollingHashNumber:            uint64(fpi.L1RollingHashMessageNumber),
+		L2MsgMerkleTreeDepth:              fpi.L2MsgMerkleTreeDepth,
+		ChainID:                           fpi.ChainID,
+		L2MessageServiceAddr:              fpi.L2MessageServiceAddr,
 	}
 
 	if err = copyFromHex(s.InitialStateRootHash[:], fpi.ParentStateRootHash); err != nil {
@@ -194,7 +194,7 @@ func NewAggregationFPI(fpi *Aggregation) (s *AggregationFPI, err error) {
 	if err = copyFromHex(s.FinalRollingHash[:], fpi.L1RollingHash); err != nil {
 		return
 	}
-	if err = copyFromHex(s.InitialRollingHash[:], fpi.LastFinalizedL1RollingHash); err != nil {
+	if err = copyFromHex(s.LastFinalizedRollingHash[:], fpi.LastFinalizedL1RollingHash); err != nil {
 		return
 	}
 	if err = copyFromHex(s.ParentShnarf[:], fpi.ParentAggregationFinalShnarf); err != nil {
@@ -221,9 +221,9 @@ func (pi *AggregationFPISnark) Sum(api frontend.API, hash keccak.BlockHasher) [3
 		utils.ToBytes(api, pi.FinalBlockTimestamp),
 		utils.ToBytes(api, pi.LastFinalizedBlockNumber),
 		utils.ToBytes(api, pi.FinalBlockNumber),
-		pi.InitialRollingHash,
+		pi.LastFinalizedRollingHash,
 		pi.FinalRollingHash,
-		utils.ToBytes(api, pi.InitialRollingHashNumber),
+		utils.ToBytes(api, pi.LastFinalizedRollingHashNumber),
 		utils.ToBytes(api, pi.FinalRollingHashNumber),
 		utils.ToBytes(api, pi.L2MsgMerkleTreeDepth),
 		hash.Sum(pi.NbL2MsgMerkleTreeRoots, pi.L2MsgMerkleTreeRoots...),
@@ -237,7 +237,7 @@ func (pi *AggregationFPISnark) Sum(api frontend.API, hash keccak.BlockHasher) [3
 
 func (pi *AggregationFPIQSnark) RangeCheck(api frontend.API) {
 	rc := rangecheck.New(api)
-	for _, v := range append(slices.Clone(pi.InitialRollingHash[:]), pi.ParentShnarf[:]...) {
+	for _, v := range append(slices.Clone(pi.LastFinalizedRollingHash[:]), pi.ParentShnarf[:]...) {
 		rc.Check(v, 8)
 	}
 
@@ -245,7 +245,7 @@ func (pi *AggregationFPIQSnark) RangeCheck(api frontend.API) {
 	// each comparison in turn ensures that its final value is within a reasonable, less than 100 bit range
 	rc.Check(pi.LastFinalizedBlockTimestamp, 64)
 	rc.Check(pi.LastFinalizedBlockNumber, 64)
-	rc.Check(pi.InitialRollingHashNumber, 64)
+	rc.Check(pi.LastFinalizedRollingHashNumber, 64)
 	// not checking L2MsgServiceAddr as its range is never assumed in the pi circuit
 	// not checking NbDecompressions as the NewRange in the pi circuit range checks it; TODO do it here instead
 }

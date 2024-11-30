@@ -33,16 +33,19 @@ func AssignSingleBlockBlob(t require.TestingT) pi_interconnection.Request {
 	assert.NoError(t, err)
 
 	execReq := public_input.Execution{
-		L2MsgHashes:            [][32]byte{internal.Uint64To32Bytes(4)},
-		InitialBlockTimestamp:  7,
-		FinalStateRootHash:     finalStateRootHash,
-		FinalBlockNumber:       9,
-		FinalBlockTimestamp:    10,
-		FinalRollingHash:       internal.Uint64To32Bytes(11),
-		FinalRollingHashNumber: 12,
+		L2MessageHashes:             [][32]byte{internal.Uint64To32Bytes(4)},
+		InitialBlockTimestamp:       7,
+		FinalStateRootHash:          finalStateRootHash,
+		FinalBlockNumber:            9,
+		FinalBlockTimestamp:         10,
+		FinalRollingHashUpdate:      internal.Uint64To32Bytes(11),
+		FinalRollingHashMsgNumber:   9,
+		InitialRollingHashMsgNumber: 9,
+		InitialBlockNumber:          6,
+		InitialStateRootHash:        internal.Uint64To32Bytes(1),
 	}
 
-	merkleRoots := aggregation.PackInMiniTrees(test_utils.BlocksToHex(execReq.L2MsgHashes))
+	merkleRoots := aggregation.PackInMiniTrees(test_utils.BlocksToHex(execReq.L2MessageHashes))
 
 	return pi_interconnection.Request{
 		Decompressions: []blobsubmission.Response{*blobResp},
@@ -56,9 +59,9 @@ func AssignSingleBlockBlob(t require.TestingT) pi_interconnection.Request {
 			LastFinalizedBlockNumber:                5,
 			FinalBlockNumber:                        uint(execReq.FinalBlockNumber),
 			LastFinalizedL1RollingHash:              utils.FmtIntHex32Bytes(7),
-			L1RollingHash:                           utils.HexEncodeToString(execReq.FinalRollingHash[:]),
+			L1RollingHash:                           utils.HexEncodeToString(execReq.FinalRollingHashUpdate[:]),
 			LastFinalizedL1RollingHashMessageNumber: 8,
-			L1RollingHashMessageNumber:              uint(execReq.FinalRollingHashNumber),
+			L1RollingHashMessageNumber:              uint(execReq.FinalRollingHashMsgNumber),
 			L2MsgRootHashes:                         merkleRoots,
 			L2MsgMerkleTreeDepth:                    5,
 		},

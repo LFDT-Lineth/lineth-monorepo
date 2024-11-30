@@ -2,6 +2,7 @@ package execution
 
 import (
 	"bytes"
+	public_input "github.com/consensys/linea-monorepo/prover/public-input"
 	"path"
 
 	"github.com/consensys/linea-monorepo/prover/backend/ethereum"
@@ -9,7 +10,6 @@ import (
 	"github.com/consensys/linea-monorepo/prover/backend/execution/statemanager"
 	"github.com/consensys/linea-monorepo/prover/crypto/mimc"
 
-	"github.com/consensys/linea-monorepo/prover/circuits/execution"
 	"github.com/consensys/linea-monorepo/prover/config"
 	blob "github.com/consensys/linea-monorepo/prover/lib/compressor/blob/v1"
 	"github.com/consensys/linea-monorepo/prover/utils"
@@ -174,14 +174,13 @@ func (req *Request) collectSignatures() ([]ethereum.Signature, [][32]byte) {
 // are functionally useful to contextualize what the proof is proving. This
 // is used by the aggregation circuit to ensure that the execution proofs
 // relate to consecutive Linea block execution.
-func (rsp *Response) FuncInput() *execution.FunctionalPublicInput {
+func (rsp *Response) FuncInput() *public_input.Execution {
 
 	var (
 		firstBlock = &rsp.BlocksData[0]
 		lastBlock  = &rsp.BlocksData[len(rsp.BlocksData)-1]
-		fi         = &execution.FunctionalPublicInput{
+		fi         = &public_input.Execution{
 			L2MessageServiceAddr:  types.EthAddress(rsp.L2BridgeAddress),
-			MaxNbL2MessageHashes:  rsp.MaxNbL2MessageHashes,
 			ChainID:               uint64(rsp.ChainID),
 			FinalBlockTimestamp:   lastBlock.TimeStamp,
 			FinalBlockNumber:      uint64(rsp.FirstBlockNumber + len(rsp.BlocksData) - 1),
@@ -200,10 +199,10 @@ func (rsp *Response) FuncInput() *execution.FunctionalPublicInput {
 			lastRHEvent  = rsp.AllRollingHashEvent[len(rsp.AllRollingHashEvent)-1]
 		)
 
-		fi.InitialRollingHash = firstRHEvent.RollingHash
-		fi.FinalRollingHash = lastRHEvent.RollingHash
-		fi.InitialRollingHashNumber = uint64(firstRHEvent.MessageNumber)
-		fi.FinalRollingHashNumber = uint64(lastRHEvent.MessageNumber)
+		fi.InitialRollingHashUpdate = firstRHEvent.RollingHash
+		fi.FinalRollingHashUpdate = lastRHEvent.RollingHash
+		fi.InitialRollingHashMsgNumber = uint64(firstRHEvent.MessageNumber)
+		fi.FinalRollingHashMsgNumber = uint64(lastRHEvent.MessageNumber)
 	}
 
 	return fi

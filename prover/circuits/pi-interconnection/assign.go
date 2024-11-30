@@ -3,7 +3,6 @@ package pi_interconnection
 import (
 	"bytes"
 	"encoding/base64"
-	"errors"
 	"fmt"
 	"github.com/consensys/linea-monorepo/prover/crypto/mimc"
 	"hash"
@@ -11,7 +10,6 @@ import (
 	"github.com/consensys/gnark-crypto/ecc/bls12-381/fr"
 	"github.com/consensys/linea-monorepo/prover/backend/blobsubmission"
 	decompression "github.com/consensys/linea-monorepo/prover/circuits/blobdecompression/v1"
-	"github.com/consensys/linea-monorepo/prover/circuits/execution"
 	"github.com/consensys/linea-monorepo/prover/circuits/internal"
 	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak"
 	"github.com/consensys/linea-monorepo/prover/lib/compressor/blob"
@@ -35,22 +33,22 @@ func (c *Compiled) Assign(r Request) (a Circuit, err error) {
 	// TODO there is data duplication in the request. Check consistency
 
 	// infer config
-	config, err := c.getConfig()
+	cfg, err := c.getConfig()
 	if err != nil {
 		return
 	}
-	a = allocateCircuit(config)
+	a = allocateCircuit(cfg)
 
-	if len(r.Decompressions) > config.MaxNbDecompression {
-		err = errors.New("number of decompression proofs exceeds maximum")
+	if len(r.Decompressions) > cfg.MaxNbDecompression {
+		err = fmt.Errorf("failing CHECK_DECOMP_LIMIT:\n\t%d decompression proofs exceeds maximum of %d", len(r.Decompressions), cfg.MaxNbDecompression)
 		return
 	}
-	if len(r.Executions) > config.MaxNbExecution {
-		err = errors.New("number of execution proofs exceeds maximum")
+	if len(r.Executions) > cfg.MaxNbExecution {
+		err = fmt.Errorf("failing CHECK_EXEC_LIMIT:\n\t%d execution proofs exceeds maximum of %d", len(r.Executions), cfg.MaxNbExecution)
 		return
 	}
-	if len(r.Decompressions)+len(r.Executions) > config.MaxNbCircuits && config.MaxNbCircuits > 0 {
-		err = errors.New("total number of circuits exceeds maximum")
+	if nbC := len(r.Decompressions) + len(r.Executions); nbC > cfg.MaxNbCircuits && cfg.MaxNbCircuits > 0 {
+		err = fmt.Errorf("failing CHECK_CIRCUIT_LIMIT:\n\t%d circuits exceeds maximum of %d", nbC, cfg.MaxNbCircuits)
 		return
 	}
 
@@ -68,8 +66,9 @@ func (c *Compiled) Assign(r Request) (a Circuit, err error) {
 	}
 	utils.Copy(a.ParentShnarf[:], prevShnarf)
 
+	hshM := mimc.NewMiMC()
 	execDataChecksums := make([][]byte, 0, len(r.Executions))
-	shnarfs := make([][]byte, config.MaxNbDecompression)
+	shnarfs := make([][]byte, cfg.MaxNbDecompression)
 	// Decompression FPI
 	for i, p := range r.Decompressions {
 		var blobData [1024 * 128]byte
@@ -109,7 +108,7 @@ func (c *Compiled) Assign(r Request) (a Circuit, err error) {
 			return
 		}
 		a.DecompressionFPIQ[i] = sfpi.FunctionalPublicInputQSnark
-		if a.DecompressionPublicInput[i], err = fpi.Sum(); err != nil {
+		if a.DecompressionPublicInput[i], err = fpi.Sum(decompression.WithHash(hshM)); err != nil {
 			return
 		}
 
@@ -124,12 +123,12 @@ func (c *Compiled) Assign(r Request) (a Circuit, err error) {
 		}
 
 		if prevShnarf = shnarf.Compute(); !bytes.Equal(prevShnarf, shnarfs[i]) {
-			err = fmt.Errorf("shnarf mismatch, i:%d, shnarf: %x, prevShnarf: %x, ", i, shnarfs[i], prevShnarf)
+			err = fmt.Errorf("decompression %d fails CHECK_SHNARF:\n\texpected: %x, computed: %x, ", i, shnarfs[i], prevShnarf)
 			return
 		}
 	}
 	if len(execDataChecksums) != len(r.Executions) {
-		err = errors.New("number of execution circuits does not match the number of batches in decompression circuits")
+		err = fmt.Errorf("failing CHECK_NB_EXEC:\n\t%d execution circuits but %d batches in decompression circuits", len(r.Executions), len(execDataChecksums))
 		return
 	}
 	var zero [32]byte
@@ -169,127 +168,145 @@ func (c *Compiled) Assign(r Request) (a Circuit, err error) {
 	if err != nil {
 		return
 	}
+
+	// TODO @Tabaie combine the following two checks
 	if len(r.Decompressions) != 0 && !bytes.Equal(shnarfs[len(r.Decompressions)-1], aggregationFPI.FinalShnarf[:]) { // first condition is an edge case for tests
-		err = errors.New("mismatch between decompression/aggregation-supplied shnarfs")
+		err = fmt.Errorf("aggregation fails CHECK_FINAL_SHNARF:\n\tcomputed %x, given %x", shnarfs[len(r.Decompressions)-1], aggregationFPI.FinalShnarf)
+		return
+	}
+	if len(r.Decompressions) == 0 && !bytes.Equal(aggregationFPI.ParentShnarf[:], aggregationFPI.FinalShnarf[:]) {
+		err = fmt.Errorf("aggregation fails CHECK_FINAL_SHNARF:\n\tcomputed %x, given %x", aggregationFPI.ParentShnarf, aggregationFPI.FinalShnarf)
 		return
 	}
 	aggregationFPI.NbDecompression = uint64(len(r.Decompressions))
 	a.AggregationFPIQSnark = aggregationFPI.ToSnarkType().AggregationFPIQSnark
 
-	merkleNbLeaves := 1 << config.L2MsgMerkleDepth
-	maxNbL2MessageHashes := config.L2MsgMaxNbMerkle * merkleNbLeaves
+	merkleNbLeaves := 1 << cfg.L2MsgMerkleDepth
+	maxNbL2MessageHashes := cfg.L2MsgMaxNbMerkle * merkleNbLeaves
 	l2MessageHashes := make([][32]byte, 0, maxNbL2MessageHashes)
 
-	finalRollingHashNum, finalRollingHash := aggregationFPI.InitialRollingHashNumber, aggregationFPI.InitialRollingHash
-	finalBlockTimestamp := aggregationFPI.LastFinalizedBlockTimestamp
+	lastRollingHashUpdate, lastRollingHashMsg := aggregationFPI.LastFinalizedRollingHash, aggregationFPI.LastFinalizedRollingHashMsgNumber
+	lastFinBlockNum, lastFinBlockTs := aggregationFPI.LastFinalizedBlockNumber, aggregationFPI.LastFinalizedBlockTimestamp
+	lastFinalizedStateRootHash := aggregationFPI.InitialStateRootHash
 
-	// Execution FPI
-	executionFPI := execution.FunctionalPublicInput{
-		FinalStateRootHash:   aggregationFPI.InitialStateRootHash,
-		FinalBlockNumber:     aggregationFPI.LastFinalizedBlockNumber,
-		FinalBlockTimestamp:  aggregationFPI.LastFinalizedBlockTimestamp,
-		L2MessageServiceAddr: aggregationFPI.L2MessageServiceAddr,
-		ChainID:              aggregationFPI.ChainID,
-		MaxNbL2MessageHashes: config.ExecutionMaxNbMsg,
-	}
-
-	hshM := mimc.NewMiMC()
 	for i := range a.ExecutionFPIQ {
-		executionFPI.InitialRollingHash = [32]byte{}
-		executionFPI.InitialRollingHashNumber = 0
-		executionFPI.L2MessageHashes = nil
 
-		// pad things correctly to make the circuit's life a bit easier
-		executionFPI.InitialBlockNumber = executionFPI.FinalBlockNumber + 1
-		executionFPI.InitialStateRootHash = executionFPI.FinalStateRootHash
-		executionFPI.InitialBlockTimestamp = executionFPI.FinalBlockTimestamp + 1
+		// padding
+		executionFPI := public_input.Execution{
+			InitialBlockTimestamp: lastFinBlockTs + 1,
+			InitialBlockNumber:    lastFinBlockNum + 1,
+			InitialStateRootHash:  lastFinalizedStateRootHash,
+			FinalStateRootHash:    lastFinalizedStateRootHash,
+			L2MessageServiceAddr:  r.Aggregation.L2MessageServiceAddr,
+			ChainID:               r.Aggregation.ChainID,
+		}
+		executionFPI.FinalBlockNumber = executionFPI.InitialBlockNumber
 		executionFPI.FinalBlockTimestamp = executionFPI.InitialBlockTimestamp
-
-		executionFPI.L2MessageServiceAddr = r.Aggregation.L2MessageServiceAddr
-		executionFPI.ChainID = r.Aggregation.ChainID
-
-		a.ExecutionPublicInput[i] = 0 // unless...
+		a.ExecutionPublicInput[i] = 0 // the aggregation circuit dictates that padded executions must have public input 0
 
 		if i < len(r.Executions) {
-			if initial, final := r.Executions[i].InitialBlockTimestamp, finalBlockTimestamp; initial <= final {
-				err = fmt.Errorf("execution #%d. initial block timestamp is not after the final block timestamp %d≤%d", i, initial, final)
-				return
-			}
-			if initial, final := r.Executions[i].InitialBlockTimestamp, r.Executions[i].FinalBlockTimestamp; initial > final {
-				err = fmt.Errorf("execution #%d. initial block timestamp is after the final block timestamp %d>%d", i, initial, final)
-				return
-			}
-			executionFPI.InitialBlockTimestamp = r.Executions[i].InitialBlockTimestamp
-			executionFPI.FinalRollingHash = r.Executions[i].FinalRollingHash
-			executionFPI.FinalBlockNumber = r.Executions[i].FinalBlockNumber
-			executionFPI.FinalBlockTimestamp = r.Executions[i].FinalBlockTimestamp
-			finalBlockTimestamp = r.Executions[i].FinalBlockTimestamp
-			executionFPI.FinalRollingHash = r.Executions[i].FinalRollingHash
-			executionFPI.FinalRollingHashNumber = r.Executions[i].FinalRollingHashNumber
-			executionFPI.FinalStateRootHash = r.Executions[i].FinalStateRootHash
-
+			executionFPI = r.Executions[i]
 			copy(executionFPI.DataChecksum[:], execDataChecksums[i])
-			executionFPI.L2MessageHashes = r.Executions[i].L2MsgHashes
-
-			l2MessageHashes = append(l2MessageHashes, r.Executions[i].L2MsgHashes...)
-
-			if got, want := &r.Executions[i].L2MessageServiceAddr, &r.Aggregation.L2MessageServiceAddr; *got != *want {
-				err = fmt.Errorf("execution #%d. expected L2 service address %x, encountered %x", i, *want, *got)
-				return
-			}
-			if got, want := executionFPI.ChainID, r.Aggregation.ChainID; got != want {
-				err = fmt.Errorf("execution #%d. expected chain ID %x, encountered %x", i, want, got)
-				return
-			}
-
-			if r.Executions[i].FinalRollingHashNumber != 0 { // if the rolling hash is being updated, record the change
-				executionFPI.InitialRollingHash = finalRollingHash
-				finalRollingHash = r.Executions[i].FinalRollingHash
-				executionFPI.InitialRollingHashNumber = finalRollingHashNum
-				finalRollingHashNum = r.Executions[i].FinalRollingHashNumber
-			}
-
+			// compute the public input
 			a.ExecutionPublicInput[i] = executionFPI.Sum(hshM)
 		}
 
-		if snarkFPI, _err := executionFPI.ToSnarkType(); _err != nil {
-			err = fmt.Errorf("execution #%d: %w", i, _err)
+		if l := len(executionFPI.L2MessageHashes); l > cfg.ExecutionMaxNbMsg {
+			err = fmt.Errorf("execution #%d fails CHECK_MSG_LIMIT:\n\thas %d messages. only %d allowed by config", i, l, cfg.ExecutionMaxNbMsg)
 			return
-		} else {
-			a.ExecutionFPIQ[i] = snarkFPI.FunctionalPublicInputQSnark
+		}
+		l2MessageHashes = append(l2MessageHashes, executionFPI.L2MessageHashes...)
+
+		// consistency checks
+		if initial := executionFPI.InitialStateRootHash; initial != lastFinalizedStateRootHash {
+			err = fmt.Errorf("execution #%d fails CHECK_STATE_CONSEC:\n\tinitial state root hash does not match the last finalized\n\t%x≠%x", i, initial, lastFinalizedStateRootHash)
+			return
+		}
+		if initial := executionFPI.InitialBlockNumber; initial != lastFinBlockNum+1 {
+			err = fmt.Errorf("execution #%d fails CHECK_NUM_CONSEC:\n\tinitial block number %d is not right after to the last finalized %d", i, initial, lastFinBlockNum)
+			return
+		}
+		if got, want := &executionFPI.L2MessageServiceAddr, &r.Aggregation.L2MessageServiceAddr; *got != *want {
+			err = fmt.Errorf("execution #%d fails CHECK_SVC_ADDR:\n\texpected L2 service address %x, encountered %x", i, *want, *got)
+			return
+		}
+		if got, want := executionFPI.ChainID, r.Aggregation.ChainID; got != want {
+			err = fmt.Errorf("execution #%d fails CHECK_CHAIN_ID:\n\texpected %x, encountered %x", i, want, got)
+			return
+		}
+		if initial := executionFPI.InitialBlockTimestamp; initial <= lastFinBlockTs {
+			err = fmt.Errorf("execution #%d fails CHECK_TIME_INCREASE:\n\tinitial block timestamp is not after the final block timestamp from previous execution %d≤%d", i, initial, lastFinBlockTs)
+			return
+		}
+		if first, last := executionFPI.InitialBlockNumber, executionFPI.FinalBlockNumber; first > last {
+			err = fmt.Errorf("execution #%d fails CHECK_NUM_NODECREASE:\n\tinitial block number is greater than the final block number %d>%d", i, first, last)
+			return
+		}
+		if first, last := executionFPI.InitialBlockTimestamp, executionFPI.FinalBlockTimestamp; first > last {
+			err = fmt.Errorf("execution #%d fails CHECK_TIME_NODECREASE:\n\tinitial block timestamp is greater than the final block timestamp %d>%d", i, first, last)
+			return
+		}
+
+		// if there is a first, there shall be a last, no lesser than the first
+		if executionFPI.FinalRollingHashMsgNumber < executionFPI.InitialRollingHashMsgNumber {
+			err = fmt.Errorf("execution #%d fails CHECK_RHASH_NODECREASE:\n\tfinal rolling hash message number %d is less than the initial %d", i, executionFPI.FinalRollingHashMsgNumber, executionFPI.InitialRollingHashMsgNumber)
+			return
+		}
+
+		if (executionFPI.InitialRollingHashMsgNumber == 0) != (executionFPI.FinalRollingHashMsgNumber == 0) {
+			err = fmt.Errorf("execution #%d fails CHECK_RHASH_FIRSTLAST:\n\tif there is a rolling hash update there must be both a first and a last.\n\tfirst update msg num = %d, last update msg num = %d", i, executionFPI.InitialRollingHashMsgNumber, executionFPI.FinalRollingHashMsgNumber)
+			return
+		}
+		// TODO @Tabaie check that if the initial and final rolling hash msg nums were equal then so should the hashes, or decide not to
+
+		// consistency check and record keeping
+		if executionFPI.InitialRollingHashMsgNumber != 0 { // there is an update
+			if executionFPI.InitialRollingHashMsgNumber != lastRollingHashMsg+1 {
+				err = fmt.Errorf("execution #%d fails CHECK_RHASH_CONSEC:\n\tinitial rolling hash message number %d is not right after the last finalized one %d", i, executionFPI.InitialRollingHashMsgNumber, lastRollingHashMsg)
+				return
+			}
+			lastRollingHashMsg = executionFPI.FinalRollingHashMsgNumber
+			lastRollingHashUpdate = executionFPI.FinalRollingHashUpdate
+		}
+
+		lastFinBlockNum, lastFinBlockTs = executionFPI.FinalBlockNumber, executionFPI.FinalBlockTimestamp
+		lastFinalizedStateRootHash = executionFPI.FinalStateRootHash
+
+		// convert to snark type
+		if err = a.ExecutionFPIQ[i].Assign(&executionFPI); err != nil {
+			err = fmt.Errorf("execution #%d: %w", i, err)
+			return
 		}
 	}
-	// consistency check
-	if finalBlockTimestamp != aggregationFPI.FinalBlockTimestamp {
-		err = fmt.Errorf("final block timestamps do not match: execution=%d, aggregation=%d",
-			executionFPI.FinalBlockTimestamp, aggregationFPI.FinalBlockTimestamp)
+	// consistency checks
+	lastExec := &r.Executions[len(r.Executions)-1]
+
+	if lastExec.FinalBlockTimestamp != aggregationFPI.FinalBlockTimestamp {
+		err = fmt.Errorf("aggregation fails CHECK_FINAL_TIME:\n\tfinal block timestamps do not match: execution=%d, aggregation=%d", lastExec.FinalBlockTimestamp, aggregationFPI.FinalBlockTimestamp)
 		return
 	}
-	if executionFPI.FinalBlockNumber != aggregationFPI.FinalBlockNumber {
-		err = fmt.Errorf("final block numbers do not match: execution=%d, aggregation=%d",
-			executionFPI.FinalBlockNumber, aggregationFPI.FinalBlockNumber)
+	if lastExec.FinalBlockNumber != aggregationFPI.FinalBlockNumber {
+		err = fmt.Errorf("aggregation fails CHECK_FINAL_NUM:\n\tfinal block numbers do not match: execution=%d, aggregation=%d", lastExec.FinalBlockNumber, aggregationFPI.FinalBlockNumber)
 		return
 	}
 
-	if finalRollingHash != aggregationFPI.FinalRollingHash {
-		err = fmt.Errorf("final rolling hashes do not match: execution=%x, aggregation=%x",
-			executionFPI.FinalRollingHash, aggregationFPI.FinalRollingHash)
+	if lastRollingHashUpdate != aggregationFPI.FinalRollingHash {
+		err = fmt.Errorf("aggregation fails CHECK_FINAL_RHASH:\n\tfinal rolling hashes do not match: execution=%x, aggregation=%x", lastRollingHashUpdate, aggregationFPI.FinalRollingHash)
 		return
 	}
 
-	if finalRollingHashNum != aggregationFPI.FinalRollingHashNumber {
-		err = fmt.Errorf("final rolling hash numbers do not match: execution=%v, aggregation=%v",
-			executionFPI.FinalRollingHashNumber, aggregationFPI.FinalRollingHashNumber)
+	if lastRollingHashMsg != aggregationFPI.FinalRollingHashNumber {
+		err = fmt.Errorf("aggregation fails CHECK_FINAL_RHASH_NUM:\n\tfinal rolling hash numbers do not match: execution=%v, aggregation=%v", lastRollingHashMsg, aggregationFPI.FinalRollingHashNumber)
 		return
 	}
 
 	if len(l2MessageHashes) > maxNbL2MessageHashes {
-		err = errors.New("too many L2 messages")
+		err = fmt.Errorf("failing CHECK_MSG_TOTAL_LIMIT:\n\ttotal of %d L2 messages, more than the %d allowed by config", len(l2MessageHashes), maxNbL2MessageHashes)
 		return
 	}
 
 	if minNbRoots := (len(l2MessageHashes) + merkleNbLeaves - 1) / merkleNbLeaves; len(r.Aggregation.L2MsgRootHashes) < minNbRoots {
-		err = fmt.Errorf("the %d merkle roots provided are too few to accommodate all %d execution messages. A minimum of %d is needed", len(r.Aggregation.L2MsgRootHashes), len(l2MessageHashes), minNbRoots)
+		err = fmt.Errorf("failing CHECK_MERKLE_CAP0:\n\tthe %d merkle roots provided are too few to accommodate all %d execution messages. A minimum of %d is needed", len(r.Aggregation.L2MsgRootHashes), len(l2MessageHashes), minNbRoots)
 		return
 	}
 
@@ -300,13 +317,13 @@ func (c *Compiled) Assign(r Request) (a Circuit, err error) {
 		}
 		computedRoot := MerkleRoot(&hshK, merkleNbLeaves, l2MessageHashes[i*merkleNbLeaves:min((i+1)*merkleNbLeaves, len(l2MessageHashes))])
 		if !bytes.Equal(expectedRoot[:], computedRoot[:]) {
-			err = errors.New("merkle root mismatch")
+			err = fmt.Errorf("failing CHECK_MERKLE:\n\tcomputed merkle root %x, expected %x", computedRoot, expectedRoot)
 			return
 		}
 	}
 
 	// padding merkle root hashes
-	emptyTree := make([][]byte, config.L2MsgMerkleDepth+1)
+	emptyTree := make([][]byte, cfg.L2MsgMerkleDepth+1)
 	emptyTree[0] = make([]byte, 64)
 	hsh := sha3.NewLegacyKeccak256()
 	for i := 1; i < len(emptyTree); i++ {
@@ -317,15 +334,15 @@ func (c *Compiled) Assign(r Request) (a Circuit, err error) {
 	}
 
 	// pad the merkle roots
-	if len(r.Aggregation.L2MsgRootHashes) > config.L2MsgMaxNbMerkle {
-		err = errors.New("more merkle trees than there is capacity")
+	if len(r.Aggregation.L2MsgRootHashes) > cfg.L2MsgMaxNbMerkle {
+		err = fmt.Errorf("failing CHECK_MERKLE_CAP1:\n\tgiven %d merkle roots, more than the %d allowed by config", len(r.Aggregation.L2MsgRootHashes), cfg.L2MsgMaxNbMerkle)
 		return
 	}
 
-	for i := len(r.Aggregation.L2MsgRootHashes); i < config.L2MsgMaxNbMerkle; i++ {
-		for depth := config.L2MsgMerkleDepth; depth > 0; depth-- {
+	for i := len(r.Aggregation.L2MsgRootHashes); i < cfg.L2MsgMaxNbMerkle; i++ {
+		for depth := cfg.L2MsgMerkleDepth; depth > 0; depth-- {
 			for j := 0; j < 1<<(depth-1); j++ {
-				hshK.Skip(emptyTree[config.L2MsgMerkleDepth-depth])
+				hshK.Skip(emptyTree[cfg.L2MsgMerkleDepth-depth])
 			}
 		}
 	}
@@ -337,6 +354,13 @@ func (c *Compiled) Assign(r Request) (a Circuit, err error) {
 
 	logrus.Infof("generating wizard proof for %d hashes from %d permutations", hshK.NbHashes(), hshK.MaxNbKeccakF())
 	a.Keccak, err = hshK.Assign()
+
+	// These values are currently hard-coded in the circuit
+	// This assignment is then redundant, but it helps with debugging in the test engine
+	// TODO @Tabaie when we remove the hard-coding, this will still run correctly
+	// but would be doubly redundant. We can remove it then.
+	a.ChainID = r.Aggregation.ChainID
+	a.L2MessageServiceAddr = r.Aggregation.L2MessageServiceAddr
 
 	return
 }

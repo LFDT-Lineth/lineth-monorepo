@@ -67,6 +67,26 @@ func makeProof(
 	return circuits.SerializeProofSolidityBn254(proofBn254), nil
 }
 
+func (cf CollectedFields) AggregationPublicInput(cfg *config.Config) public_input.Aggregation {
+	return public_input.Aggregation{
+		FinalShnarf:                             cf.FinalShnarf,
+		ParentAggregationFinalShnarf:            cf.ParentAggregationFinalShnarf,
+		ParentStateRootHash:                     cf.ParentStateRootHash,
+		ParentAggregationLastBlockTimestamp:     cf.ParentAggregationLastBlockTimestamp,
+		FinalTimestamp:                          cf.FinalTimestamp,
+		LastFinalizedBlockNumber:                cf.LastFinalizedBlockNumber,
+		FinalBlockNumber:                        cf.FinalBlockNumber,
+		LastFinalizedL1RollingHash:              cf.LastFinalizedL1RollingHash,
+		L1RollingHash:                           cf.L1RollingHash,
+		LastFinalizedL1RollingHashMessageNumber: cf.LastFinalizedL1RollingHashMessageNumber,
+		L1RollingHashMessageNumber:              cf.L1RollingHashMessageNumber,
+		L2MsgRootHashes:                         cf.L2MsgRootHashes,
+		L2MsgMerkleTreeDepth:                    utils.ToInt(cf.L2MsgTreeDepth),
+		ChainID:                                 uint64(cfg.Layer2.ChainID),
+		L2MessageServiceAddr:                    types.EthAddress(cfg.Layer2.MsgSvcContract),
+	}
+}
+
 func makePiProof(cfg *config.Config, cf *CollectedFields) (plonk.Proof, witness.Witness, error) {
 
 	var setup circuits.Setup
@@ -87,23 +107,7 @@ func makePiProof(cfg *config.Config, cf *CollectedFields) (plonk.Proof, witness.
 	assignment, err := c.Assign(pi_interconnection.Request{
 		Decompressions: cf.DecompressionPI,
 		Executions:     cf.ExecutionPI,
-		Aggregation: public_input.Aggregation{
-			FinalShnarf:                             cf.FinalShnarf,
-			ParentAggregationFinalShnarf:            cf.ParentAggregationFinalShnarf,
-			ParentStateRootHash:                     cf.ParentStateRootHash,
-			ParentAggregationLastBlockTimestamp:     cf.ParentAggregationLastBlockTimestamp,
-			FinalTimestamp:                          cf.FinalTimestamp,
-			LastFinalizedBlockNumber:                cf.LastFinalizedBlockNumber,
-			FinalBlockNumber:                        cf.FinalBlockNumber,
-			LastFinalizedL1RollingHash:              cf.LastFinalizedL1RollingHash,
-			L1RollingHash:                           cf.L1RollingHash,
-			LastFinalizedL1RollingHashMessageNumber: cf.LastFinalizedL1RollingHashMessageNumber,
-			L1RollingHashMessageNumber:              cf.L1RollingHashMessageNumber,
-			L2MsgRootHashes:                         cf.L2MsgRootHashes,
-			L2MsgMerkleTreeDepth:                    utils.ToInt(cf.L2MsgTreeDepth),
-			ChainID:                                 uint64(cfg.Layer2.ChainID),
-			L2MessageServiceAddr:                    types.EthAddress(cfg.Layer2.MsgSvcContract),
-		},
+		Aggregation:    cf.AggregationPublicInput(cfg),
 	})
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not assign the public input circuit: %w", err)

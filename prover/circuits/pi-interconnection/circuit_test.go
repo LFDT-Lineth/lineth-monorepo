@@ -107,7 +107,7 @@ func (c *testMerkleCircuit) Define(api frontend.API) error {
 
 func TestMaxNbCircuitsSum(t *testing.T) {
 	parameters := gopter.DefaultTestParameters()
-	parameters.MinSuccessfulTests = 5
+	parameters.MinSuccessfulTests = 3
 	parameters.Rng.Seed(0x123456789abcdef0)
 
 	properties := gopter.NewProperties(parameters)

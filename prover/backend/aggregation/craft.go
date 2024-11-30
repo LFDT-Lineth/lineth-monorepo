@@ -58,14 +58,13 @@ func collectFields(cfg *config.Config, req *Request) (*CollectedFields, error) {
 	for i, execReqFPath := range req.ExecutionProofs {
 
 		var (
-			po                    = &execution.Response{}
-			l2MessageHashes       []string
-			fpath                 = path.Join(cfg.Execution.DirTo(), execReqFPath)
-			f                     = files.MustRead(fpath)
-			initialBlockTimestamp uint64
+			po              execution.Response
+			l2MessageHashes []string
+			fpath           = path.Join(cfg.Execution.DirTo(), execReqFPath)
+			f               = files.MustRead(fpath)
 		)
 
-		if err := json.NewDecoder(f).Decode(po); err != nil {
+		if err := json.NewDecoder(f).Decode(&po); err != nil {
 			return nil, fmt.Errorf("fields collection, decoding %s, %w", execReqFPath, err)
 		}
 
@@ -85,11 +84,9 @@ func collectFields(cfg *config.Config, req *Request) (*CollectedFields, error) {
 		// This is purposefully overwritten at each iteration over i. We want to
 		// keep the final value.
 		cf.FinalBlockNumber = uint(po.FirstBlockNumber + len(po.BlocksData) - 1)
+		rollingHashUpdateEvents := po.AllRollingHashEvent // check redundant data for discrepancy
 
-		for i, blockdata := range po.BlocksData {
-			if i == 0 {
-				initialBlockTimestamp = blockdata.TimeStamp
-			}
+		for _, blockdata := range po.BlocksData {
 
 			for i := range blockdata.L2ToL1MsgHashes {
 				l2MessageHashes = append(l2MessageHashes, blockdata.L2ToL1MsgHashes[i].Hex())
@@ -101,11 +98,28 @@ func collectFields(cfg *config.Config, req *Request) (*CollectedFields, error) {
 			// The goal is that we want to keep the final value
 			lastRollingHashEvent := blockdata.LastRollingHashUpdatedEvent
 			if lastRollingHashEvent != (bridge.RollingHashUpdated{}) {
+				if len(rollingHashUpdateEvents) == 0 {
+					return nil, fmt.Errorf("data discrepancy: only %d rolling hash update events available in the conflation object, more available in the block data", len(po.AllRollingHashEvent))
+				}
+
+				update := rollingHashUpdateEvents[0]
+				rollingHashUpdateEvents = rollingHashUpdateEvents[1:]
+
+				if lastRollingHashEvent.RollingHash != update.RollingHash {
+					return nil, fmt.Errorf("data discrepancy: rolling hash update from conflation: %x. from block: %x", update.RollingHash, lastRollingHashEvent.RollingHash)
+				}
+				if lastRollingHashEvent.MessageNumber != update.MessageNumber {
+					return nil, fmt.Errorf("data discrepancy: rolling hash message number update from conflation: %d. from block: %d", update.MessageNumber, lastRollingHashEvent.MessageNumber)
+				}
+
 				cf.L1RollingHash = lastRollingHashEvent.RollingHash.Hex()
 				cf.L1RollingHashMessageNumber = uint(lastRollingHashEvent.MessageNumber)
 			}
 
 			cf.FinalTimestamp = uint(blockdata.TimeStamp)
+		}
+		if len(rollingHashUpdateEvents) != 0 {
+			return nil, fmt.Errorf("data discrepancy: %d rolling hash updates in conflation object but only %d collected from blocks", len(po.AllRollingHashEvent), len(po.AllRollingHashEvent)-len(rollingHashUpdateEvents))
 		}
 
 		// Append the proof claim to the list of collected proofs
@@ -116,25 +130,11 @@ func collectFields(cfg *config.Config, req *Request) (*CollectedFields, error) {
 				return nil, fmt.Errorf("could not parse the proof claim for `%v` : %w", fpath, err)
 			}
 			cf.ProofClaims = append(cf.ProofClaims, *pClaim)
-			// TODO make sure this belongs in the if
-			finalBlock := &po.BlocksData[len(po.BlocksData)-1]
-			piq, err := public_input.ExecutionSerializable{
-				InitialBlockTimestamp:  initialBlockTimestamp,
-				L2MsgHashes:            l2MessageHashes,
-				FinalStateRootHash:     finalBlock.RootHash.Hex(),
-				FinalBlockNumber:       uint64(cf.FinalBlockNumber),
-				FinalBlockTimestamp:    finalBlock.TimeStamp,
-				FinalRollingHash:       cf.L1RollingHash,
-				FinalRollingHashNumber: uint64(cf.L1RollingHashMessageNumber),
-				L2MessageServiceAddr:   po.L2BridgeAddress,
-				ChainID:                uint64(po.ChainID),
-			}.Decode()
-			if err != nil {
-				return nil, err
-			}
 
-			if piq.L2MessageServiceAddr != types.EthAddress(cfg.Layer2.MsgSvcContract) {
-				return nil, fmt.Errorf("execution #%d: expected L2 msg service addr %x, encountered %x", i, cfg.Layer2.MsgSvcContract, piq.L2MessageServiceAddr)
+			pi := po.FuncInput()
+
+			if pi.L2MessageServiceAddr != types.EthAddress(cfg.Layer2.MsgSvcContract) {
+				return nil, fmt.Errorf("execution #%d: expected L2 msg service addr %x, encountered %x", i, cfg.Layer2.MsgSvcContract, pi.L2MessageServiceAddr)
 			}
 			if po.ChainID != cfg.Layer2.ChainID {
 				return nil, fmt.Errorf("execution #%d: expected chain ID %x, encountered %x", i, cfg.Layer2.ChainID, po.ChainID)
@@ -145,7 +145,7 @@ func collectFields(cfg *config.Config, req *Request) (*CollectedFields, error) {
 				return nil, fmt.Errorf("execution #%d: public input mismatch: given %x, computed %x", i, po.PublicInput, pi)
 			}
 
-			cf.ExecutionPI = append(cf.ExecutionPI, piq)
+			cf.ExecutionPI = append(cf.ExecutionPI, *pi)
 		}
 
 		allL2MessageHashes = append(allL2MessageHashes, l2MessageHashes...)

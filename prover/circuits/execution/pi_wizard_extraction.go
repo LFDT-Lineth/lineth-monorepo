@@ -20,8 +20,8 @@ func checkPublicInputs(
 ) {
 
 	var (
-		finalRollingHash   = internal.CombineBytesIntoElements(api, gnarkFuncInp.FinalRollingHash)
-		initialRollingHash = internal.CombineBytesIntoElements(api, gnarkFuncInp.InitialRollingHash)
+		finalRollingHash   = internal.CombineBytesIntoElements(api, gnarkFuncInp.FinalRollingHashUpdate)
+		initialRollingHash = internal.CombineBytesIntoElements(api, gnarkFuncInp.InitialRollingHashUpdate)
 		execDataHash       = execDataHash(api, wvc, wizardFuncInp)
 	)
 
@@ -66,7 +66,7 @@ func checkPublicInputs(
 
 	api.AssertIsEqual(
 		wvc.GetLocalPointEvalParams(wizardFuncInp.InitialRollingHashNumber.ID).Y,
-		gnarkFuncInp.InitialRollingHashNumber,
+		gnarkFuncInp.InitialRollingHashMsgNumber,
 	)
 
 	api.AssertIsEqual(
@@ -96,7 +96,7 @@ func checkPublicInputs(
 
 	api.AssertIsEqual(
 		wvc.GetLocalPointEvalParams(wizardFuncInp.FinalRollingHashNumber.ID).Y,
-		gnarkFuncInp.FinalRollingHashNumber,
+		gnarkFuncInp.FinalRollingHashMsgNumber,
 	)
 
 	var (

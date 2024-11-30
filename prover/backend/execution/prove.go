@@ -6,6 +6,7 @@ import (
 	"github.com/consensys/linea-monorepo/prover/circuits/dummy"
 	"github.com/consensys/linea-monorepo/prover/circuits/execution"
 	"github.com/consensys/linea-monorepo/prover/config"
+	public_input "github.com/consensys/linea-monorepo/prover/public-input"
 	"github.com/consensys/linea-monorepo/prover/utils"
 	"github.com/consensys/linea-monorepo/prover/utils/profiling"
 	"github.com/consensys/linea-monorepo/prover/zkevm"
@@ -13,7 +14,7 @@ import (
 )
 
 type Witness struct {
-	FuncInp *execution.FunctionalPublicInput
+	FuncInp *public_input.Execution
 	ZkEVM   *zkevm.Witness
 }
 
@@ -144,7 +145,7 @@ func mustProveAndPass(
 		}
 
 		// TODO: implements the collection of the functional inputs from the prover response
-		return execution.MakeProof(setup, fullZkEvm.WizardIOP, proof, *w.FuncInp), setup.VerifyingKeyDigest()
+		return execution.MakeProof(traces, setup, fullZkEvm.WizardIOP, proof, *w.FuncInp), setup.VerifyingKeyDigest()
 
 	case config.ProverModeBench:
 
