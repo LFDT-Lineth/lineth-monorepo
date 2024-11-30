@@ -1,7 +1,7 @@
 # Linea Operational Scripts
 <br />
 
-This document aims to explain how to run the Linea operational scripts. There are several ways the scripts can be executed dependant if you have an environment file (.env) or not. 
+This document aims to explain how to run the Linea operational scripts. There are several ways the scripts can be executed dependent if you have an environment file (.env) or not. 
 
 Running the script with an .env file set, you will need to make sure that the correct variables are set in the .env file, considering the network that you're deploying on. In this way, when the script is being run, it will take the variables it needs to execute the script from that .env file. 
 
@@ -12,7 +12,7 @@ The command-line arguments will create or replace existing .env (only in memory)
 
 ## Network specific variables
 
-Dependant on which network you are using, a specific network private key needs to be used, as well as the corresponding API Key or RPC URL.  The following table highlights which private key variable will be used per network. Please use the variable that pertains to the network. e.g. for `linea_sepolia` use `LINEA_SEPOLIA_PRIVATE_KEY` (`LINEA_SEPOLIA_PRIVATE_KEY=<key> INFURA_API_KEY=<key>`)  
+dependent on which network you are using, a specific network private key needs to be used, as well as the corresponding API Key or RPC URL.  The following table highlights which private key variable will be used per network. Please use the variable that pertains to the network. e.g. for `linea_sepolia` use `LINEA_SEPOLIA_PRIVATE_KEY` (`LINEA_SEPOLIA_PRIVATE_KEY=<key> INFURA_API_KEY=<key>`)  
 
 | Network       | Private key parameter name   | API Key / RPC URL |
 | ------------- | ----------------- | ---- | 
