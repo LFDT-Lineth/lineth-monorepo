@@ -1,7 +1,7 @@
 # Linea Deployment Scripts
 <br />
 
-This document aims to explain how to get started with deploying the Linea deployment scripts. There are several ways the scripts can be executed dependant on: 
+This document aims to explain how to get started with deploying the Linea deployment scripts. There are several ways the scripts can be executed dependent on: 
 - If you're storing deployment variables in an environment file (.env)
 - If you plan to deploy an individual script which will deploy a single contract.
 - If you plan to deploy a chained deployment script that will include multiple contracts.
@@ -15,7 +15,7 @@ The command-line arguments will create or replace existing .env (only in memory)
 
 Furthermore, you can also specify a general set of variables in the .env file (SAVE_ADDRESS, VERIFY_CONTRACT, SEPOLIA_PRIVATE_KEY, LINEA_SEPOLIA_PRIVATE_KEY, MAINNET_PRIVATE_KEY, LINEA_MAINNET_PRIVATE_KEY, ETHERSCAN_API_KEY, LINEASCAN_API_KEY, INFURA_API_KEY) and provide only the script-specific variables as command-line arguments, when you run each script.
 
-Setting `SAVE_ADDRESS=true` will make the script write a file in the deployments/<network_name>/ folder which stores the contract address, abi and transaction hash.
+Setting `SAVE_ADDRESS=true` will make the script write a file in the deployments/<network_name>/ folder which stores the contract address, ABI and transaction hash.
 <br />
 Setting `VERIFY_CONTRACT=true` will start the verifying stage after the contract is deployed, provided that there is a `ETHERSCAN_API_KEY` or `LINEASCAN_API_KEY` available in the .env or provided as CLI argument.
 
@@ -23,7 +23,7 @@ Setting `VERIFY_CONTRACT=true` will start the verifying stage after the contract
 
 ## Network Specific Variables
 
-Dependant on which network you are using, a specific network private key needs to be used, as well as the corresponding API Key or RPC URL.  Also, dependant on which network you choose, the block explorer used could be different, so the block explorer parameter name might need to be adjusted.  The following table highlights which private key variable will be used per network. Please use the variable that pertains to the network. e.g. for `linea_sepolia` use `LINEA_SEPOLIA_PRIVATE_KEY` (`LINEA_SEPOLIA_PRIVATE_KEY=<key> INFURA_API_KEY=<key>`)  
+Dependent on which network you are using, a specific network private key needs to be used, as well as the corresponding API Key or RPC URL.  Also, dependent on which network you choose, the block explorer used could be different, so the block explorer parameter name might need to be adjusted.  The following table highlights which private key variable will be used per network. Please use the variable that pertains to the network. e.g. for `linea_sepolia` use `LINEA_SEPOLIA_PRIVATE_KEY` (`LINEA_SEPOLIA_PRIVATE_KEY=<key> INFURA_API_KEY=<key>`)  
 
 | Network       | Private key parameter name   | API Key / RPC URL | Block explorer parameter name |
 | ------------- | ----------------- | ---- | ----------------- | 
@@ -62,7 +62,7 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 
 | Parameter name             | Required | Input Value | Description |
 | -------------------------- | -------- | ---------- | ----------- |
-| SAVE_ADDRESS       | false    |true\|false| Saves file with deployment details [address, abi, transaction hash] |
+| SAVE_ADDRESS       | false    |true\|false| Saves file with deployment details [address, ABI, transaction hash] |
 | VERIFY_CONTRACT    | false    |true\|false| Verifies the deployed contract |
 | \**PRIVATE_KEY* | true     | key | Network-specific private key used when deploying the contract |
 | \**BLOCK_EXPLORER_API_KEY*  | false     | key | Network-specific Block Explorer API Key used for verifying deployed contracts. |
@@ -93,7 +93,7 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 
 | Parameter name        | Required | Input value | Description |
 | --------------------- | -------- | -------------- | ----------- |
-| SAVE_ADDRESS       | false    | true\|false | Saves file with deployment details [address, abi, transaction hash] |
+| SAVE_ADDRESS       | false    | true\|false | Saves file with deployment details [address, ABI, transaction hash] |
 | VERIFY_CONTRACT    | false    | true\|false | Verifies the deployed contract |
 | \**PRIVATE_KEY* | true     | key | Network-specific private key used when deploying the contract |
 | \**BLOCK_EXPLORER_API_KEY*  | false     | key | Network-specific Block Explorer API Key used for verifying deployed contracts. |
@@ -130,12 +130,12 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 
 | Parameter name        | Required | Input Value | Description |
 | ------------------ | -------- | ---------- | ----------- |
-| SAVE_ADDRESS       | false    |true\|false| Saves file with deployment details [address, abi, transaction hash] |
+| SAVE_ADDRESS       | false    |true\|false| Saves file with deployment details [address, ABI, transaction hash] |
 | VERIFY_CONTRACT    | false    |true\|false| Verifies the deployed contract |
 | \**PRIVATE_KEY* | true     | key | Network-specific private key used when deploying the contract |
 | \**BLOCK_EXPLORER_API_KEY*  | false     | key | Network-specific Block Explorer API Key used for verifying deployed contracts. |
 | INFURA_API_KEY     | true     | key | Infura API Key. This is required only when deploying contracts to a live network, not required when deploying on a local dev network. |
-| LINEA_VOYAGE_XP_ADMIN_ADDRESS | true     | address | Admin and minter addresss |
+| LINEA_VOYAGE_XP_ADMIN_ADDRESS | true     | address | Admin and minter address  |
 
 <br />
 
@@ -152,7 +152,7 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 
 | Parameter name        | Required | Input Value | Description |
 | ------------------ | -------- | ---------- | ----------- |
-| SAVE_ADDRESS       | false    |true\|false| Saves file with deployment details [address, abi, transaction hash] |
+| SAVE_ADDRESS       | false    |true\|false| Saves file with deployment details [address, ABI, transaction hash] |
 | VERIFY_CONTRACT    | false    |true\|false| Verifies the deployed contract |
 | \**PRIVATE_KEY* | true     | key | Network-specific private key used when deploying the contract |
 | \**BLOCK_EXPLORER_API_KEY*  | false     | key | Network-specific Block Explorer API Key used for verifying deployed contracts. |
@@ -186,7 +186,7 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 
 | Parameter name        | Required | Input Value | Description |
 | ------------------ | -------- | ---------- | ----------- |
-| SAVE_ADDRESS       | false    |true\|false| Saves file with deployment details [address, abi, transaction hash] |
+| SAVE_ADDRESS       | false    |true\|false| Saves file with deployment details [address, ABI, transaction hash] |
 | VERIFY_CONTRACT    | false    |true\|false| Verifies the deployed contract |
 | \**PRIVATE_KEY* | true     | key | Network-specific private key used when deploying the contract |
 | \**BLOCK_EXPLORER_API_KEY*  | false     | key | Network-specific Block Explorer API Key used for verifying deployed contracts. |
@@ -220,7 +220,7 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 
 | Parameter name        | Required | Input Value | Description |
 | --------------------- | -------- | ---------- | ----------- |
-| SAVE_ADDRESS          | false    |true\|false| Saves file with deployment details [address, abi, transaction hash]. |
+| SAVE_ADDRESS          | false    |true\|false| Saves file with deployment details [address, ABI, transaction hash]. |
 | VERIFY_CONTRACT       | false    |true\|false| Verifies the deployed contract. |
 | \**PRIVATE_KEY*       | true     | key | Network-specific private key used when deploying the contract. |
 | \**BLOCK_EXPLORER_API_KEY*  | false     | key | Network-specific Block Explorer API Key used for verifying deployed contracts. |
@@ -254,7 +254,7 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 | CUSTOMTOKENBRIDGE_SYMBOL | true    |string| Token's symbol |
 | CUSTOMTOKENBRIDGE_DECIMALS | true    |uint256| Token's decimals |
 | CUSTOMTOKENBRIDGE_BRIDGE_ADDRESS | true    |address| Token bridge's address|
-| SAVE_ADDRESS          | false    |true\|false| Saves file with deployment details [address, abi, transaction hash]. |
+| SAVE_ADDRESS          | false    |true\|false| Saves file with deployment details [address, ABI, transaction hash]. |
 | VERIFY_CONTRACT       | false    |true\|false| Verifies the deployed contract. |
 | \**PRIVATE_KEY*       | true     | key | Network-specific private key used when deploying the contract. |
 | \**BLOCK_EXPLORER_API_KEY*  | false     | key | Network-specific Block Explorer API Key used for verifying deployed contracts. |
@@ -284,7 +284,7 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 
 | Parameter name        | Required | Input Value | Description |
 | --------------------- | -------- | ---------- | ----------- |
-| SAVE_ADDRESS          | false    |true\|false| Saves file with deployment details [address, abi, transaction hash]. |
+| SAVE_ADDRESS          | false    |true\|false| Saves file with deployment details [address, ABI, transaction hash]. |
 | VERIFY_CONTRACT       | false    |true\|false| Verifies the deployed contract. |
 | \**PRIVATE_KEY*       | true     | key | Network-specific private key used when deploying the contract. |
 | \**BLOCK_EXPLORER_API_KEY*  | false     | key | Network-specific Block Explorer API Key used for verifying deployed contracts. |
@@ -330,7 +330,7 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 
 | Parameter name        | Required | Input Value | Description |
 | ------------------ | -------- | ---------- | ----------- |
-| SAVE_ADDRESS       | false    |true\|false| Saves file with deployment details [address, abi, transaction hash] |
+| SAVE_ADDRESS       | false    |true\|false| Saves file with deployment details [address, ABI, transaction hash] |
 | VERIFY_CONTRACT    | false    |true\|false| Verifies the deployed contract |
 | \**PRIVATE_KEY* | true     | key | Network-specific private key used when deploying the contract |
 | \**BLOCK_EXPLORER_API_KEY*  | false     | key | Network-specific Block Explorer API Key used for verifying deployed contracts. |
@@ -371,7 +371,7 @@ This will run the script that deploys Timelock, L2MessageService contracts.
 
 | Parameter name        | Required | Input Value | Description |
 | ------------------ | -------- | ---------- | ----------- |
-| SAVE_ADDRESS       | false    |true\|false| Saves file with deployment details [address, abi, transaction hash] |
+| SAVE_ADDRESS       | false    |true\|false| Saves file with deployment details [address, ABI, transaction hash] |
 | VERIFY_CONTRACT    | false    |true\|false| Verifies the deployed contract |
 | \**PRIVATE_KEY* | true     | key | Network-specific private key used when deploying the contract |
 | \**BLOCK_EXPLORER_API_KEY*  | false     | key | Network-specific Block Explorer API Key used for verifying deployed contracts. |
@@ -408,7 +408,7 @@ This will run the script that deploys the TokenBridge and BridgedToken contracts
 
 | Parameter name        | Required | Input Value | Description |
 | --------------------- | -------- | ---------- | ----------- |
-| SAVE_ADDRESS          | false    |true\|false| Saves file with deployment details [address, abi, transaction hash]. |
+| SAVE_ADDRESS          | false    |true\|false| Saves file with deployment details [address, ABI, transaction hash]. |
 | VERIFY_CONTRACT       | false    |true\|false| Verifies the deployed contract. |
 | \**PRIVATE_KEY*       | true     | key | Network-specific private key used when deploying the contract. |
 | \**BLOCK_EXPLORER_API_KEY*  | false     | key | Network-specific Block Explorer API Key used for verifying deployed contracts. |
