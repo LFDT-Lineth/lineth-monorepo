@@ -41,14 +41,14 @@ const ClaimingTypeOption: React.FC<ClaimOptionProps> = ({
     />
     <label
       htmlFor={id}
-      className={cn("btn btn-outline normal-case font-normal w-full rounded-full", {
+      className={cn("btn border-none normal-case font-normal w-full rounded-full", {
         "btn-disabled": disabled,
-        "peer-checked:border-primary peer-checked:bg-cardBg peer-checked:text-white": isConnected,
+        "peer-checked:bg-cardBg": isConnected,
       })}
     >
       {label}
       <Tooltip text={tooltip} className="z-[100]">
-        <MdInfo />
+        <MdInfo className="text-icon" />
       </Tooltip>
     </label>
   </div>

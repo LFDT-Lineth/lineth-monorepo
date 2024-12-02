@@ -22,10 +22,10 @@ export function ReceivedAmount({ receivedAmount }: ReceivedAmountProps) {
   const { data: tokenPrices } = useTokenPrices([tokenAddress], fromChain?.id);
 
   return (
-    <div className="flex min-h-20 flex-col gap-2 rounded-lg bg-[#2D2D2D] p-3">
+    <div className="flex min-h-20 flex-col gap-2 rounded-lg bg-backgroundColor p-3">
       {isConnected && (
         <>
-          <span className="text-2xl font-semibold text-white">
+          <span className="text-2xl font-semibold">
             {(parseFloat(receivedAmount || "0") > 0 && formatBalance(receivedAmount)) || 0} {token?.symbol}
           </span>
           {networkType === NetworkType.MAINNET && (

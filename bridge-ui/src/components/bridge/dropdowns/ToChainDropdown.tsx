@@ -40,7 +40,7 @@ export default function ToChainDropdown() {
   if (networkType == NetworkType.SEPOLIA || networkType == NetworkType.MAINNET) {
     return (
       <details className="dropdown relative" ref={detailsRef}>
-        <summary className="flex cursor-pointer items-center gap-2 rounded-full bg-[#2D2D2D] p-2 px-3 text-white">
+        <summary className="flex cursor-pointer items-center gap-2 rounded-full bg-backgroundColor p-2 px-3">
           {toChain && (
             <Image
               src={getChainLogoPath(toChain.id)}
@@ -56,14 +56,14 @@ export default function ToChainDropdown() {
           <svg
             className="size-4 text-card transition-transform"
             fill="none"
-            stroke={"white"}
+            stroke="black"
             viewBox="0 0 24 24"
             xmlns="http://www.w3.org/2000/svg"
           >
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7"></path>
           </svg>
         </summary>
-        <ul className="menu dropdown-content absolute right-0 z-10 mt-2 min-w-max border-2 border-card bg-cardBg p-0 shadow">
+        <ul className="menu dropdown-content absolute right-0 z-10 mt-2 min-w-max bg-backgroundColor p-0 shadow">
           <DropdownItem
             title={
               fromChain?.name ? (fromChain?.name === "Linea Sepolia Testnet" ? "Linea Sepolia" : fromChain?.name) : ""

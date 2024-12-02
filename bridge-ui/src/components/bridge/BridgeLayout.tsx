@@ -30,7 +30,7 @@ export default function BridgeLayout() {
   return (
     <>
       {!isConnected && (
-        <div className="mb-4 min-w-min max-w-lg rounded-lg border-2 border-card bg-cardBg p-2 shadow-lg">
+        <div className="mb-4 min-w-min max-w-lg rounded-lg bg-cardBg p-2 shadow-lg">
           <BridgeExternal />
         </div>
       )}

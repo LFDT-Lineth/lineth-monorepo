@@ -5,8 +5,8 @@ type TransactionDetailRowProps = {
 
 const TransactionDetailRow: React.FC<TransactionDetailRowProps> = ({ label, value }) => (
   <div className="flex items-center">
-    <label className="w-44 text-[#C0C0C0]">{label}</label>
-    <span className="text-[#E5E5E5]">{value}</span>
+    <label className="w-44 text-neutral-600">{label}</label>
+    <span>{value}</span>
   </div>
 );
 

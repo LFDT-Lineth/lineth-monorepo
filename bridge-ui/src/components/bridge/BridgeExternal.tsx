@@ -11,7 +11,7 @@ export function BridgeExternal() {
       className="flex items-center justify-center gap-2 p-2"
     >
       <span>Bridge using Third-Party bridges</span>
-      <MdArrowOutward className="text-primary" />
+      <MdArrowOutward className="text-secondary" />
     </Link>
   );
 }

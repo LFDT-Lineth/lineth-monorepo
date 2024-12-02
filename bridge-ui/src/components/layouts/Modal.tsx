@@ -14,7 +14,7 @@ const Modal: React.FC<ModalProps> = () => {
 
   return (
     <dialog ref={ref} className="modal" onClose={options?.onClose}>
-      <div className={cn("modal-box px-0 bg-cardBg border-card border-2", width)}>
+      <div className={cn("modal-box px-0 bg-cardBg", width)}>
         {options?.showCloseButton && (
           <form method="dialog">
             <button className="btn btn-circle btn-ghost btn-sm absolute right-2 top-2">

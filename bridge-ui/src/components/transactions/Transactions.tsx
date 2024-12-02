@@ -24,28 +24,28 @@ const groupByDay = (transactions: TransactionHistory[]): Record<string, Transact
 
 function SkeletonLoader() {
   return (
-    <div className="flex flex-col gap-8 border-2 border-card bg-cardBg p-4">
+    <div className="flex flex-col gap-8 bg-cardBg p-4">
       {Array.from({ length: 3 }).map((_, groupIndex) => (
         <div key={groupIndex} className="flex flex-col gap-4">
-          <div className="skeleton h-6 w-1/3 bg-card"></div>
+          <div className="skeleton h-6 w-1/3 bg-backgroundColor"></div>
           {Array.from({ length: 2 }).map((_, itemIndex) => (
             <div
               key={itemIndex}
-              className="grid grid-cols-1 items-center gap-0 rounded-lg bg-[#2D2D2D] p-4 text-[#C0C0C0] sm:grid-cols-1 md:grid-cols-6 md:gap-4"
+              className="grid grid-cols-1 items-center gap-0 rounded-lg bg-backgroundColor p-4 sm:grid-cols-1 md:grid-cols-6 md:gap-4"
             >
-              <div className="grid grid-cols-2 gap-4 border-b border-card py-4 md:col-span-2 md:border-none md:p-0">
-                <div className="skeleton h-4 w-1/2 bg-card"></div>
-                <div className="skeleton h-4 w-1/2 bg-card"></div>
+              <div className="grid grid-cols-2 gap-4 border-b border-cardBg py-4 md:col-span-2 md:border-none md:p-0">
+                <div className="skeleton h-4 w-1/2 bg-cardBg"></div>
+                <div className="skeleton h-4 w-1/2 bg-cardBg"></div>
               </div>
               <div className="hidden px-6 md:col-span-2 md:block md:border-x md:border-card">
-                <div className="skeleton h-4 w-full bg-card"></div>
+                <div className="skeleton h-4 w-full bg-cardBg"></div>
               </div>
-              <div className="grid grid-cols-2 items-center gap-4 border-b border-card py-4 md:col-span-2 md:border-none md:p-0">
-                <div className="skeleton h-4 w-1/2 bg-card"></div>
-                <div className="skeleton h-4 w-1/2 bg-card"></div>
+              <div className="grid grid-cols-2 items-center gap-4 border-b border-cardBg py-4 md:col-span-2 md:border-none md:p-0">
+                <div className="skeleton h-4 w-1/2 bg-cardBg"></div>
+                <div className="skeleton h-4 w-1/2 bg-cardBg"></div>
               </div>
               <div className="px-6 pt-4 md:hidden md:pt-0">
-                <div className="skeleton h-4 w-full bg-card"></div>
+                <div className="skeleton h-4 w-full bg-cardBg"></div>
               </div>
             </div>
           ))}
@@ -94,7 +94,7 @@ export function Transactions() {
   }
 
   return (
-    <div className="flex flex-col gap-8 rounded-lg border-2 border-card bg-cardBg p-4">
+    <div className="flex flex-col gap-8 rounded-lg bg-cardBg p-4">
       <RefreshHistoryButton fetchHistory={fetchHistory} isLoading={isLoading} />
       {Object.keys(groupedTransactions).map((date) => (
         <TransactionGroup key={`transaction-group-${date}`} date={date} transactions={groupedTransactions[date]} />

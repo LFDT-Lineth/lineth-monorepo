@@ -41,9 +41,12 @@ export default function TokenDetails({ token, onTokenClick, setValue, clearError
   return (
     <button
       id={`token-details-${token.symbol}-btn`}
-      className={cn("flex items-center justify-between w-full px-4 py-3 bg-transparent border-0 hover:bg-[#262626]", {
-        "btn-disabled": tokenNotFromCurrentLayer,
-      })}
+      className={cn(
+        "flex items-center justify-between w-full px-4 py-3 bg-transparent border-0 hover:bg-primary-light",
+        {
+          "btn-disabled": tokenNotFromCurrentLayer,
+        },
+      )}
       disabled={tokenNotFromCurrentLayer}
       onClick={() => {
         if (networkLayer !== NetworkLayer.UNKNOWN && token && networkType !== NetworkType.WRONG_NETWORK) {
@@ -66,17 +69,17 @@ export default function TokenDetails({ token, onTokenClick, setValue, clearError
       <div className="flex gap-5">
         <Image src={token.image} alt={token.name} width={40} height={40} className="rounded-full" />
         <div className="text-left">
-          <p className="font-semibold text-white">{token.symbol}</p>
-          <p className="text-sm font-normal text-[#C0C0C0]">{token.name}</p>
+          <p className="font-semibold">{token.symbol}</p>
+          <p className="text-sm font-normal text-[#898989]">{token.name}</p>
         </div>
       </div>
       {!tokenNotFromCurrentLayer && (
         <div className="text-right">
-          <p className="font-semibold text-white">
+          <p className="font-semibold">
             {formatBalance(balance)} {token.symbol}
           </p>
           {tokenPrice ? (
-            <p className="text-[#C0C0C0]">
+            <p className="text-[#898989]">
               {(tokenPrice * Number(balance)).toLocaleString("en-US", {
                 style: "currency",
                 currency: "USD",

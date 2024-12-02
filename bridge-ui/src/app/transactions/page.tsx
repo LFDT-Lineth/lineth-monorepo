@@ -10,7 +10,7 @@ export default function TransactionsPage() {
   if (!isConnected) {
     return (
       <div className="m-auto min-w-min max-w-5xl">
-        <div className="flex min-h-80 flex-col items-center justify-center gap-8 rounded-lg border-2 border-card bg-cardBg p-4">
+        <div className="flex min-h-80 flex-col items-center justify-center gap-8 rounded-lg bg-cardBg p-4">
           <span>Please connect your wallet.</span>
           <ConnectButton />
         </div>

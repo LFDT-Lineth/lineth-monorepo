@@ -28,8 +28,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       const variantClasses = {
         primary: "btn-primary",
         secondary: "btn-secondary",
-        outline:
-          "btn-outline border-card text-white border-2 hover:bg-transparent hover:border-card hover:text-white disabled:border-2 disabled:border-card  disabled:bg-transparent",
+        outline: "btn-outline",
         link: "btn-link",
       }[variant];
       const sizeClasses = {

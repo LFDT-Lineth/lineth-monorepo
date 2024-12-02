@@ -1,3 +1,14 @@
+<a name="v1.1.0"></a>
+
+# [v1.1.0] - 2 Dec 2024
+
+# Fix: New bridge UI colors
+
+Description:
+- New bridge UI colors
+
+[Changes][v1.1.0]
+
 <a name="v1.0.0"></a>
 
 # [v1.0.0] - 18 Sep 2024

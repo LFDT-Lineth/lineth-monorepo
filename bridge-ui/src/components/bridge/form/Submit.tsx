@@ -61,8 +61,9 @@ export function Submit({ isLoading = false, isWaitingLoading = false }: SubmitPr
   return isETHTransfer ? (
     <Button
       type="submit"
+      variant="primary"
       className={cn("w-full text-lg font-normal", {
-        "btn-secondary": destinationBalanceTooLow,
+        "bg-yellow border-none hover:bg-yellow": destinationBalanceTooLow,
       })}
       disabled={isButtonDisabled}
       loading={isLoading || isWaitingLoading}
@@ -74,7 +75,7 @@ export function Submit({ isLoading = false, isWaitingLoading = false }: SubmitPr
           className="z-[99] normal-case"
           position="bottom"
         >
-          <MdInfo />
+          <MdInfo className="text-icon" />
         </Tooltip>
       )}
     </Button>
@@ -84,7 +85,7 @@ export function Submit({ isLoading = false, isWaitingLoading = false }: SubmitPr
     <Button
       id="submit-erc-btn"
       className={cn("w-full text-lg font-normal", {
-        "btn-secondary": destinationBalanceTooLow,
+        "bg-yellow border-none hover:bg-yellow": destinationBalanceTooLow,
       })}
       disabled={isButtonDisabled}
       loading={isLoading || isWaitingLoading}
@@ -97,7 +98,7 @@ export function Submit({ isLoading = false, isWaitingLoading = false }: SubmitPr
           className="z-[100] normal-case"
           position="top"
         >
-          <MdInfo />
+          <MdInfo className="text-icon" />
         </Tooltip>
       )}
     </Button>

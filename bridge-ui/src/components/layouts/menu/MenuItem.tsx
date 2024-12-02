@@ -21,8 +21,8 @@ export const MenuItem = ({ title, href, external, Icon, toggleMenu, border }: Me
         target={external ? "_blank" : undefined}
         rel={external ? "noopener noreferrer" : undefined}
         className={cn("flex items-center gap-2 py-3 font-normal text-lg", {
-          "text-primary": pathname === href,
-          "border-r-2 border-primary": pathname === href && border,
+          "text-secondary": pathname === href,
+          "border-r-2 border-secondary": pathname === href && border,
         })}
         onClick={toggleMenu}
       >

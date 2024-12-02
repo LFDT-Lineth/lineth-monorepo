@@ -11,6 +11,7 @@ import { NETWORK_ID_TO_NAME } from "@/utils/constants";
 import { getChainNetworkLayerByChainId } from "@/utils/chainsUtil";
 import { TransactionHistory } from "@/models/history";
 import { MessageWithStatus } from "@/hooks";
+import { cn } from "@/utils/cn";
 
 export enum TransactionStatus {
   READY_TO_CLAIM = "READY_TO_CLAIM",
@@ -45,7 +46,7 @@ function TransactionAmountSection({ amount, decimals, symbol }: { amount: bigint
   return (
     <div className="px-6 md:px-0">
       <div className="text-xs uppercase">Amount</div>
-      <span className="font-semibold text-white">
+      <span className="font-semibold">
         {formatUnits(amount, decimals)} {symbol}
       </span>
     </div>
@@ -57,7 +58,14 @@ export default function TransactionItem({ transaction, message }: TransactionIte
 
   return (
     <div
-      className="grid grid-cols-1 items-center gap-0 rounded-lg bg-[#2D2D2D] p-4 text-[#C0C0C0] hover:cursor-pointer hover:outline hover:outline-1 hover:outline-primary sm:grid-cols-1 md:grid-cols-6 md:gap-4"
+      className={cn(
+        `grid grid-cols-1 items-center gap-0 rounded-lg p-4 hover:cursor-pointer sm:grid-cols-1 md:grid-cols-6 md:gap-4`,
+        {
+          "bg-orange-light hover:opacity-80": message.status === OnChainMessageStatus.UNKNOWN,
+          "bg-primary-light hover:opacity-80": message.status === OnChainMessageStatus.CLAIMABLE,
+          "bg-secondary-light hover:opacity-80": message.status === OnChainMessageStatus.CLAIMED,
+        },
+      )}
       onClick={() => {
         handleShow(<TransactionDetailsModal transaction={transaction} message={message} handleClose={handleClose} />, {
           showCloseButton: true,

@@ -13,7 +13,7 @@ const TransactionConfirmationModal: React.FC<TransactionConfirmationModalProps> 
           Start a new transaction
         </Link>
         <Link
-          className="border-1 btn btn-outline rounded-full border-primary uppercase text-white hover:border-primary hover:bg-cardBg hover:text-white"
+          className="border-1 btn btn-outline rounded-full border-primary uppercase hover:border-primary hover:bg-cardBg hover:text-card"
           href="/transactions"
           onClick={handleClose}
         >

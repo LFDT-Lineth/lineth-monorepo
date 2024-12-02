@@ -26,7 +26,7 @@ export default function Stepper({ steps, activeStep }: StepperProps) {
               )}
             >
               <span
-                className={cn("text-base font-bold text-[#E5E5E5]", {
+                className={cn("text-base font-bold text-card", {
                   "text-cardBg": index < activeStep,
                   "text-primary": index === activeStep,
                 })}
@@ -42,7 +42,7 @@ export default function Stepper({ steps, activeStep }: StepperProps) {
               />
             )}
           </div>
-          <h6 className="text-md mt-2 w-max text-[#C0C0C0]">{step}</h6>
+          <h6 className="text-md mt-2 w-max">{step}</h6>
         </div>
       ))}
     </div>

@@ -41,7 +41,7 @@ export function Wallet() {
   if (isConnected) {
     return (
       <details className="dropdown relative" ref={detailsRef}>
-        <summary className="flex cursor-pointer items-center gap-2 rounded-full border-2 border-card p-2 px-3">
+        <summary className="flex cursor-pointer items-center gap-2 rounded-full bg-cardBg p-2 px-3">
           <Image
             src={"/images/logo/metamask.svg"}
             alt="MetaMask"
@@ -52,7 +52,7 @@ export function Wallet() {
 
           <span className="hidden md:block">{formatAddress(address)}</span>
         </summary>
-        <ul className="menu dropdown-content absolute right-0 z-10 mt-2 min-w-max border-2 border-card bg-cardBg p-0 shadow">
+        <ul className="menu dropdown-content absolute right-0 z-10 mt-2 min-w-max bg-cardBg p-0 shadow">
           <DropdownItem title="Copy address" onClick={handleCopy} />
           <DropdownItem title="Explorer" externalLink={fromChain?.blockExplorers?.default.url} />
           <DropdownItem title="Logout" onClick={() => disconnect()} />

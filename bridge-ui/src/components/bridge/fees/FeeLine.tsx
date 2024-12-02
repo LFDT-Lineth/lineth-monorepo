@@ -10,12 +10,12 @@ interface FeeLineProps {
 }
 
 export const FeeLine: React.FC<FeeLineProps> = ({ label, value, tooltip, tooltipClassName }) => (
-  <div className="flex justify-between text-[#C0C0C0]">
+  <div className="flex justify-between">
     <div className="flex items-center gap-2">
       <span>{label}:</span>
       {tooltip && (
         <Tooltip text={tooltip} className={tooltipClassName}>
-          <MdInfo />
+          <MdInfo className="text-icon" />
         </Tooltip>
       )}
     </div>

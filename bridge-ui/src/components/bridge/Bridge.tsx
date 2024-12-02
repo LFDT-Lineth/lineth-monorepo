@@ -132,16 +132,16 @@ const Bridge = () => {
   return (
     <>
       <form onSubmit={handleSubmit(onSubmit)}>
-        <div className="min-w-min max-w-lg rounded-lg border-2 border-card bg-cardBg p-6 shadow-lg sm:p-4">
+        <div className="min-w-min max-w-lg rounded-lg bg-cardBg p-6 shadow-lg sm:p-4">
           <div
             className={cn({
-              "opacity-30 pointer-events-none": !isConnected,
+              "opacity-40 pointer-events-none": !isConnected,
             })}
           >
             <FromChain />
 
             <div className="mb-8">
-              <div className="grid grid-flow-col items-center gap-2 rounded-lg bg-[#2D2D2D] p-3">
+              <div className="grid grid-flow-col items-center gap-2 rounded-lg bg-backgroundColor p-3">
                 <div className="grid grid-flow-row gap-2">
                   <TokenList />
                   <Balance />
@@ -154,7 +154,7 @@ const Bridge = () => {
 
             <div className="divider my-6 flex justify-center">
               <button
-                className="btn btn-circle w-fit transition-transform duration-200"
+                className="btn btn-circle w-fit border-none bg-transparent shadow-none transition-transform duration-200 hover:border-none hover:bg-transparent hover:shadow-none"
                 onClick={(e) => {
                   e.preventDefault();
                   e.currentTarget.classList.toggle("rotate-180");

@@ -46,7 +46,7 @@ const TransactionDetailsModal: React.FC<TransactionDetailsModalProps> = ({ trans
 
   return (
     <div className="flex flex-col gap-8 px-4">
-      <h2 className="text-xl text-[#E5E5E5]">Transaction details</h2>
+      <h2 className="text-xl">Transaction details</h2>
       <div className="space-y-2">
         <TransactionDetailRow
           label="Date & Time"

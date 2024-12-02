@@ -1,7 +1,7 @@
-import { useMemo } from "react";
 import { fromUnixTime } from "date-fns";
 import { OnChainMessageStatus } from "@consensys/linea-sdk";
 import { NetworkLayer } from "@/config";
+import { cn } from "@/utils/cn";
 
 type TransactionProgressBarProps = {
   status: OnChainMessageStatus;
@@ -96,27 +96,11 @@ const getProgressBarText = (
   return `Est time left ${getRemainingTime(startTime, currentTime, unit, fromChain)}`;
 };
 
-const useProgressBarColor = (status: OnChainMessageStatus): string => {
-  return useMemo(() => {
-    switch (status) {
-      case OnChainMessageStatus.CLAIMABLE:
-        return "progress-secondary";
-      case OnChainMessageStatus.UNKNOWN:
-        return "progress-info";
-      case OnChainMessageStatus.CLAIMED:
-        return "progress-success";
-      default:
-        throw new Error(`Incorrect transaction status: ${status}`);
-    }
-  }, [status]);
-};
-
 export default function TransactionProgressBar({
   status,
   transactionTimestamp,
   fromChain,
 }: TransactionProgressBarProps) {
-  const color = useProgressBarColor(status);
   return (
     <>
       <div className="flex items-center gap-2">
@@ -128,7 +112,11 @@ export default function TransactionProgressBar({
         </span>
       </div>
       <progress
-        className={`progress ${color} min-w-fit rounded-none [&::-webkit-progress-value]:rounded-none`}
+        className={cn("progress min-w-fit rounded-none [&::-webkit-progress-value]:rounded-none", {
+          "progress-warning": status === OnChainMessageStatus.UNKNOWN,
+          "progress-primary": status === OnChainMessageStatus.CLAIMABLE,
+          "progress-secondary": status === OnChainMessageStatus.CLAIMED,
+        })}
         value={getCompletionPercentage(fromUnixTime(Number(transactionTimestamp)), new Date(), status, fromChain)}
         max={100}
       ></progress>

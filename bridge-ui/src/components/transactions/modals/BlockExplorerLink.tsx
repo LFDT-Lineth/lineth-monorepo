@@ -17,7 +17,7 @@ const BlockExplorerLink: React.FC<BlockExplorerLinkProps> = ({ transactionHash, 
       passHref
       target="_blank"
       rel="noopener noreferrer"
-      className="link text-primary"
+      className="link text-secondary"
     >
       {formatHex(transactionHash)}
     </Link>

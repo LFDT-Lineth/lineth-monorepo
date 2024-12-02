@@ -12,10 +12,23 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        primary: "#61DFFF",
-        secondary: "#FF62E6",
+        primary: {
+          light: "#C4F3FF",
+          DEFAULT: "#61DFFF",
+        },
+        secondary: {
+          light: "#EBE2FD",
+          DEFAULT: "#6119EF",
+        },
+        orange: {
+          light: "#FFF1E9",
+          DEFAULT: "#FF8D4C",
+        },
         card: "#505050",
-        cardBg: "#1D1D1D",
+        cardBg: "#FFFFFF",
+        backgroundColor: "var(--background-color)",
+        icon: "#C0C0C0",
+        yellow: "var(--yellow)",
         success: "#C1FF14",
       },
       fontFamily: {
@@ -28,11 +41,11 @@ const config: Config = {
   daisyui: {
     themes: [
       {
-        dark: {
-          ...daisyuiThemes.dark,
+        light: {
+          ...daisyuiThemes.light,
           primary: "#61DFFF",
-          secondary: "#FF62E6",
-          "primary-content": "#000000",
+          secondary: "#6119EF",
+          warning: "#FF8D4C",
           info: "#61DFFF",
           success: "#C1FF14",
         },

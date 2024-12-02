@@ -22,7 +22,7 @@ export default function TokenList() {
           id="token-select-btn"
           type="button"
           variant="outline"
-          className="px-2 py-1 font-normal"
+          className="border-none bg-cardBg px-2 py-1 font-normal hover:bg-cardBg hover:text-card"
           disabled={!isConnected}
           onClick={() =>
             handleShow(<TokenModal setValue={setValue} clearErrors={clearErrors} />, {
@@ -32,7 +32,7 @@ export default function TokenList() {
         >
           <Image src={token.image} alt={token.name} width={25} height={25} className="rounded-full" />
           {token.symbol}
-          <MdKeyboardArrowDown className="text-white" size={20} />
+          <MdKeyboardArrowDown size={20} />
         </Button>
       )}
     </div>

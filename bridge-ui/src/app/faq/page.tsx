@@ -21,7 +21,7 @@ export default function FaqPage() {
               rel="noopener noreferrer"
               passHref
               target="_blank"
-              className="link link-primary"
+              className="link link-secondary"
             >
               MetaMask Support article
             </Link>{" "}
@@ -71,7 +71,7 @@ export default function FaqPage() {
               rel="noopener noreferrer"
               passHref
               target="_blank"
-              className="link link-primary"
+              className="link link-secondary"
             >
               MetaMask Portfolio bridge
             </Link>
@@ -87,7 +87,7 @@ export default function FaqPage() {
               rel="noopener noreferrer"
               passHref
               target="_blank"
-              className="link link-primary"
+              className="link link-secondary"
             >
               here
             </Link>{" "}
@@ -98,7 +98,7 @@ export default function FaqPage() {
               rel="noopener noreferrer"
               passHref
               target="_blank"
-              className="link link-primary"
+              className="link link-secondary"
             >
               liquidity fragmentation
             </Link>{" "}
@@ -121,7 +121,7 @@ export default function FaqPage() {
                 rel="noopener noreferrer"
                 passHref
                 target="_blank"
-                className="link link-primary"
+                className="link link-secondary"
               >
                 Here
               </Link>{" "}
@@ -133,7 +133,7 @@ export default function FaqPage() {
                 rel="noopener noreferrer"
                 passHref
                 target="_blank"
-                className="link link-primary"
+                className="link link-secondary"
               >
                 Here
               </Link>{" "}
@@ -151,7 +151,7 @@ export default function FaqPage() {
               rel="noopener noreferrer"
               passHref
               target="_blank"
-              className="link link-primary"
+              className="link link-secondary"
             >
               Linea help center
             </Link>
@@ -178,7 +178,7 @@ export default function FaqPage() {
               rel="noopener noreferrer"
               passHref
               target="_blank"
-              className="link link-primary"
+              className="link link-secondary"
             >
               View the guide on the MetaMask Help Center
             </Link>
@@ -201,7 +201,7 @@ export default function FaqPage() {
               rel="noopener noreferrer"
               passHref
               target="_blank"
-              className="link link-primary"
+              className="link link-secondary"
             >
               Discord
             </Link>
