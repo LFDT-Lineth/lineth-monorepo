@@ -2,10 +2,10 @@ package circuits
 
 import (
 	"bufio"
-	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"math/big"
@@ -192,21 +192,35 @@ func LoadSetup(cfg *config.Config, circuitID CircuitID) (Setup, error) {
 		return Setup{}, fmt.Errorf("fetching SRS: %w", err)
 	}
 	pk := plonk.NewProvingKey(curveID)
+	var kzgVkFromVk, kzgVkFromSrs io.WriterTo
 	switch pk := pk.(type) {
 	case *plonk_bn254.ProvingKey:
 		pk.Vk = vk.(*plonk_bn254.VerifyingKey)
-		pk.Kzg = srsCanonical.(*kzg254.SRS).Pk
+		srsC := srsCanonical.(*kzg254.SRS)
+		pk.Kzg = srsC.Pk
 		pk.KzgLagrange = srsLagrange.(*kzg254.SRS).Pk
+		kzgVkFromVk = &pk.Vk.Kzg
+		kzgVkFromSrs = &srsC.Vk
 	case *plonk_bls12377.ProvingKey:
 		pk.Vk = vk.(*plonk_bls12377.VerifyingKey)
-		pk.Kzg = srsCanonical.(*kzg377.SRS).Pk
+		srsC := srsCanonical.(*kzg377.SRS)
+		pk.Kzg = srsC.Pk
 		pk.KzgLagrange = srsLagrange.(*kzg377.SRS).Pk
+		kzgVkFromVk = &pk.Vk.Kzg
+		kzgVkFromSrs = &srsC.Vk
 	case *plonk_bw6761.ProvingKey:
 		pk.Vk = vk.(*plonk_bw6761.VerifyingKey)
-		pk.Kzg = srsCanonical.(*kzgbw6.SRS).Pk
+		srsC := srsCanonical.(*kzgbw6.SRS)
+		pk.Kzg = srsC.Pk
 		pk.KzgLagrange = srsLagrange.(*kzgbw6.SRS).Pk
+		kzgVkFromVk = &pk.Vk.Kzg
+		kzgVkFromSrs = &srsC.Vk
 	default:
 		panic("not implemented")
+	}
+
+	if err = utils.WriterstoEqual(kzgVkFromSrs, kzgVkFromVk); err != nil {
+		return Setup{}, fmt.Errorf("verifying key <> SRS mismatch: %w", err)
 	}
 
 	return Setup{
@@ -272,12 +286,13 @@ func readFromFile(path string, into any) error {
 		panic(fmt.Sprintf("unsupported type %T", into))
 	}
 
-	data, err := os.ReadFile(path)
+	f, err := os.Open(path)
 	if err != nil {
 		return fmt.Errorf("opening %q: %w", path, err)
 	}
 
-	if _, err = rFunc(bytes.NewReader(data)); err != nil {
+	_, err = rFunc(f)
+	if err = errors.Join(err, f.Close()); err != nil {
 		return fmt.Errorf("reading %q from disk: %w", path, err)
 	}
 

@@ -1,9 +1,11 @@
 package utils
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -11,6 +13,7 @@ import (
 	"os"
 	"reflect"
 	"strconv"
+	"strings"
 
 	"github.com/consensys/gnark/frontend"
 	"golang.org/x/exp/constraints"
@@ -316,4 +319,127 @@ func WriteToJSON(path string, v interface{}) error {
 	}
 	defer f.Close()
 	return json.NewEncoder(f).Encode(v)
+}
+
+func WriterstoEqual(expected, actual io.WriterTo) error {
+	var bb bytes.Buffer
+	if _, err := expected.WriteTo(&bb); err != nil {
+		return err
+	}
+	ab := bb.Bytes()
+	bb.Reset()
+	if _, err := actual.WriteTo(&bb); err != nil {
+		return err
+	}
+	return BytesEqual(ab, bb.Bytes())
+}
+
+// BytesEqual between byte slices a,b
+// a readable error message would show in case of inequality
+// TODO error options: block size, check forwards or backwards etc
+func BytesEqual(expected, actual []byte) error {
+	if bytes.Equal(expected, actual) {
+		return nil // equality fast path
+	}
+
+	l := min(len(expected), len(actual))
+
+	failure := 0
+	for failure < l {
+		if expected[failure] != actual[failure] {
+			break
+		}
+		failure++
+	}
+
+	if len(expected) == len(actual) && failure == l {
+		panic("bytes.Equal returned false, but could not find a mismatch")
+	}
+
+	// there is a mismatch
+	var sb strings.Builder
+
+	const (
+		radius    = 40
+		blockSize = 32
+	)
+
+	printCentered := func(b []byte) {
+
+		for i := max(failure-radius, 0); i <= failure+radius; i++ {
+			if i%blockSize == 0 && i != failure-radius {
+				sb.WriteString("  ")
+			}
+			if i >= 0 && i < len(b) {
+				sb.WriteString(hex.EncodeToString([]byte{b[i]})) // inefficient, but this whole error printing sub-procedure will not be run more than once
+			} else {
+				sb.WriteString("  ")
+			}
+		}
+	}
+
+	sb.WriteString(fmt.Sprintf("mismatch starting at byte %d\n", failure))
+
+	sb.WriteString("expected: ")
+	printCentered(expected)
+	sb.WriteString("\n")
+
+	sb.WriteString("actual:   ")
+	printCentered(actual)
+	sb.WriteString("\n")
+
+	sb.WriteString("          ")
+	for i := max(failure-radius, 0); i <= failure+radius; {
+		if i%blockSize == 0 && i != failure-radius {
+			s := strconv.Itoa(i)
+			sb.WriteString("  ")
+			sb.WriteString(s)
+			i += len(s) / 2
+			if len(s)%2 != 0 {
+				sb.WriteString(" ")
+				i++
+			}
+		} else {
+			if i == failure {
+				sb.WriteString("^^")
+			} else {
+				sb.WriteString("  ")
+			}
+			i++
+		}
+	}
+
+	sb.WriteString("\n")
+
+	return &BytesEqualError{
+		Index: failure,
+		error: sb.String(),
+	}
+}
+
+type BytesEqualError struct {
+	Index int
+	error string
+}
+
+func (e *BytesEqualError) Error() string {
+	return e.error
+}
+
+func ReadFromFile(path string, to io.ReaderFrom) error {
+	f, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	_, err = to.ReadFrom(f)
+	return errors.Join(err, f.Close())
+}
+
+func WriteToFile(path string, from io.WriterTo) error {
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0600) // TODO @Tabaie option for permissions?
+	if err != nil {
+		return err
+	}
+	_, err = from.WriteTo(f)
+	return errors.Join(err, f.Close())
 }
