@@ -9,7 +9,7 @@ inputs:
   pnpm-version:
     description: 'The version of pnpm to use'
     required: true
-    default: '9.12.2'
+    default: '9.14.4'
   pnpm-install-options:
     description: 'The options to pass to pnpm install'
     required: true
