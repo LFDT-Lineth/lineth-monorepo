@@ -30,7 +30,7 @@ Documentation: [Token Bridge](./docs/linea-token-bridge.md)
 Please see the [Smart Contract Style Guide](./docs/contract-style-guide.md) for in depth smart contract layout and styling.
 
 # Audit reports
-Please see [Audits](./docs/audits.md) for a historical list of all the smart contract audits.
+Please see [Audits](../docs/audits.md#linea-rollup-l2messageservice-and-tokenbridge-smart-contract-audits) for a historical list of all the smart contract audits.
 
 # Development & Testing
 
