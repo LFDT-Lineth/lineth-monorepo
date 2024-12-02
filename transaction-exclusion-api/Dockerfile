@@ -1,22 +1,9 @@
-# BUILDER image
-FROM eclipse-temurin:21-jre-alpine AS builder
-WORKDIR /opt/consensys/linea/transaction-exclusion-api
-
-RUN apk add --no-cache unzip
-
-# copy application
-COPY --from=zip ./transaction-exclusion-api.zip libs/
-RUN unzip libs/transaction-exclusion-api.zip -d libs/ \
-	&& mv libs/transaction-exclusion-api/lib/** libs/ \
-	&& rm -R libs/transaction-exclusion-api/
-
-# FINAL image
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /opt/consensys/linea/transaction-exclusion-api/
 
-RUN mkdir -p /opt/consensys/linea/transaction-exclusion-api/logs/
+RUN mkdir -p logs
 
-COPY --from=builder /opt/consensys/linea/transaction-exclusion-api/libs libs/
+COPY --from=libs ./** libs/
 
 # Build-time metadata as defined at http://label-schema.org
 ARG BUILD_DATE
