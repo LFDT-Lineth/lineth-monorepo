@@ -57,7 +57,7 @@ The main components of Linea are:
 * The provers which generate zk-proof for conflated blocks, kzg commitment and compression proof of the blobs, as well as aggregated proof for multiple conflation and compression proofs.
 
 
-![Diagram of Linea components](assets/zkEVM.drawio.svg)
+![Diagram of Linea components](assets/linea.drawio.svg)
 
 The above diagram shows the flow from transaction to finalization. High level, the flow is as follow:
 (1) the coordinator pulls the latest block from the sequencer,
@@ -719,20 +719,54 @@ l1RollingHashes(
 
 # Gas price setting
 
-The gas price for transaction execution in Linea is computed from L1 gas price.
+Gas pricing on Linea is designed to ensure the following three properties:
+* Sequencer's inclusion logic is aligned to the L1 fee market. This is to avoid exploiting Linea to execute
+transactions for unsustainably low fees
+* The fees charged to Linea's user represent their fair usage of the network. Unlike the vanilla Ethereum
+protocol, gas price on Linea and other rollups is not 2-dimensional (base fee, priority fee). There's at least L1 fees
+(execution fees and blob fees), infrastructural cost (mostly proving, but not only), potential priority fee
+(only when there's a high congestion and there's competition for L2 block space). This is an issue for interoperability,
+because vanilla Ethreum API isn't tailored for this. That's why there's a Besu plugin addressing this issue and
+providing gas price depending on input transaction
+* Linea remains compatible with users running vanilla nodes. Namely, `eth_gasPrice` returns fees guaranteeing that
+99.9% of transactions are includable on Linea.
 
+This is how these challenges were solved technically:
 
 ![gas price API](assets/gasPrice.drawio.svg)
 
+The Coordinator fetches L1 fees data, based on which it will compute gas pricing components. There are 3 of them:
+* Fixed cost. Represents infrastructural cost per unit of L2 gas. Doesn't really depend on the L1, and it's just a
+configuration in the Coordinator
+* Variable cost. Cost of 1 byte of compressed data on L2, which is finalized on L1 contract. Depends on the fees Linea
+pays for finalization, which in turn depends on the L1 blob and execution fee market
+* Legacy cost. Recommended gas price for the vanilla Ethereum API (`eth_gasPrice`)
 
-Gas price is based on the history of the gas price on L1.
+## Gas pricing propagation
+This information is delivered to nodes in 2 ways:
+* it is added to the extraData block field, part of the vanilla Ethereum Protocol
+* via RPC calls (only Geth and Besu are supported and tested)
 
-It uses the geth method `miner_setGasPrice` and the besu method
+### ExtraData
+The Coordinator sends extraData to the Sequencer via `miner_setExtraData`. ExtraData contains all 3 fields mentioned above (fixed cost, variable cost and legacy cost).
+The Sequencer in turn uses this information for inclusion logic, to include only profitable transactions, and it adds last
+received extraData to the next block it seals. This ensures that pricing information is propagated to all the nodes on Linea
+via P2P as a block header's field. And since this info is on all the nodes, they can use this information to figure out,
+what the gas price is for a given transaction that would make it includable on Linea. This currently is possible with Besu +
+Linea plugin with a custom `linea_estimateGas` method.
 
-`miner_setMinGasPrice` to update the gas price of the nodes.
+### Direct RPC calls
+For nodes that are reachable from the Coordinator directly, it's possible to set legacy cost via `miner_setGasPrice` (Geth)
+and `miner_setMinGasPrice` (Besu). Later isn't really used, because extraData driven approach is superior and is
+supported by Besu nodes with Linea plugin
 
-Both methods expect a single parameter: `0x${gasPrice.toString(16)}`
-
+### Ways to compute Legacy cost
+In the Coordinator 2 ways are supported:
+* So called "naive" way. Based on raw L1 fees processed by some formula
+* So called "sample transaction" way. The idea is to take some relatively unprofitable transaction, estimate its
+profitable gas price the same way Sequencer would. Resulting value would be used as a legacy cost. this is configured by
+2 arguments to a profitability function: execution gas and tx compressed size and it may be changed depending on what
+load is there on Linea.
 
 # L1 &lt;-> L2 interactions
 
