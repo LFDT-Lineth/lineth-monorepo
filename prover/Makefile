@@ -47,6 +47,13 @@ zkevm/arithmetization/zkevm.bin: corset
 	cd ../constraints && $(CORSET) make zkevm.bin && mv zkevm.bin ../prover/zkevm/arithmetization
 
 ##
+## Generate `define.go` based on the latest version of corset and the constraints
+##
+wizard: zkevm/define/define.go
+zkevm/define/define.go: corset
+	cd ../constraints && $(CORSET) make -B define.go && mv define.go ../prover/zkevm/arithmetization/define/define.go
+
+##
 ## Generate the setup for the execution prover (to be run with S3 access)
 ##
 setup: bin/prover
