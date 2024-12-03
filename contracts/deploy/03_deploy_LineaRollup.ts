@@ -8,7 +8,6 @@ import {
   tryVerifyContract,
   getDeployedContractAddress,
   tryStoreAddress,
-  validateDeployBranchAndTags,
 } from "../common/helpers";
 import {
   LINEA_ROLLUP_INITIALIZE_SIGNATURE,
@@ -20,7 +19,6 @@ import {
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments } = hre;
-  validateDeployBranchAndTags(hre.network.name);
 
   const contractName = "LineaRollup";
   const verifierName = "PlonkVerifier";

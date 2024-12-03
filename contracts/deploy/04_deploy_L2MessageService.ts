@@ -8,7 +8,6 @@ import {
   tryVerifyContract,
   getDeployedContractAddress,
   tryStoreAddress,
-  validateDeployBranchAndTags,
 } from "../common/helpers";
 import {
   L1_L2_MESSAGE_SETTER_ROLE,
@@ -20,7 +19,6 @@ import {
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments } = hre;
-  validateDeployBranchAndTags(hre.network.name);
 
   const contractName = "L2MessageService";
   const existingContractAddress = await getDeployedContractAddress(contractName, deployments);

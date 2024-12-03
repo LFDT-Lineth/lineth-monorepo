@@ -1,11 +1,10 @@
 import { ethers, upgrades } from "hardhat";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
-import { validateDeployBranchAndTags, tryVerifyContract, getDeployedContractAddress } from "../common/helpers";
+import { tryVerifyContract, getDeployedContractAddress } from "../common/helpers";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments } = hre;
-  validateDeployBranchAndTags(hre.network.name);
 
   const contractName = "L2MessageService";
   const existingContractAddress = await getDeployedContractAddress(contractName, deployments);

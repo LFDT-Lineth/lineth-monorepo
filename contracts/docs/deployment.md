@@ -289,7 +289,7 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 | \**PRIVATE_KEY*       | true     | key | Network-specific private key used when deploying the contract. |
 | \**BLOCK_EXPLORER_API_KEY*  | false     | key | Network-specific Block Explorer API Key used for verifying deployed contracts. |
 | INFURA_API_KEY         | true     | key | Infura API Key. This is required only when deploying contracts to a live network, not required when deploying on a local dev network. |
-| L2_MESSAGE_SERVICE_ADDRESS    | true  | address   | L2 Message Service address used when deploying TokenBridge.    |
+| L2MESSAGESERVICE_ADDRESS    | true  | address   | L2 Message Service address used when deploying TokenBridge.    |
 | LINEA_ROLLUP_ADDRESS         | true    | address       | L1 Rollup address used when deploying Token Bridge.   |
 | REMOTE_CHAIN_ID       | true      |   uint256     | ChainID of the remote (target) network |
 | TOKEN_BRIDGE_L1       | false     |true\|false| If Token Bridge is deployed on L1, TOKEN_BRIDGE_L1 should be set to `true`. Otherwise it should be `false`|
@@ -305,7 +305,7 @@ npx hardhat deploy --network linea_sepolia --tags TokenBridge
 
 Base command with cli arguments:
 ```shell
-SAVE_ADDRESS=true VERIFY_CONTRACT=true LINEASCAN_API_KEY=<key> LINEA_SEPOLIA_PRIVATE_KEY=<key> INFURA_API_KEY=<key> REMOTE_CHAIN_ID=<uint256> TOKEN_BRIDGE_L1=true L1_RESERVED_TOKEN_ADDRESSES=<address> L2_MESSAGE_SERVICE_ADDRESS=<address> LINEA_ROLLUP_ADDRESS=<address> npx hardhat deploy --network linea_sepolia --tags TokenBridge
+SAVE_ADDRESS=true VERIFY_CONTRACT=true LINEASCAN_API_KEY=<key> LINEA_SEPOLIA_PRIVATE_KEY=<key> INFURA_API_KEY=<key> REMOTE_CHAIN_ID=<uint256> TOKEN_BRIDGE_L1=true L1_RESERVED_TOKEN_ADDRESSES=<address> L2MESSAGESERVICE_ADDRESS=<address> LINEA_ROLLUP_ADDRESS=<address> npx hardhat deploy --network linea_sepolia --tags TokenBridge
 ```
 
 (make sure to replace `<value>` `<key>` `<address>` with actual values)
@@ -413,7 +413,7 @@ This will run the script that deploys the TokenBridge and BridgedToken contracts
 | \**PRIVATE_KEY*       | true     | key | Network-specific private key used when deploying the contract. |
 | \**BLOCK_EXPLORER_API_KEY*  | false     | key | Network-specific Block Explorer API Key used for verifying deployed contracts. |
 | INFURA_API_KEY         | true     | key | Infura API Key. This is required only when deploying contracts to a live network, not required when deploying on a local dev network. |
-| L2_MESSAGE_SERVICE_ADDRESS    | true  | address   | L2 Message Service address used when deploying TokenBridge.    |
+| L2MESSAGESERVICE_ADDRESS    | true  | address   | L2 Message Service address used when deploying TokenBridge.    |
 | LINEA_ROLLUP_ADDRESS         | true    | address       | L1 Rollup address used when deploying Token Bridge.   |
 | REMOTE_CHAIN_ID       | true      |   uint256     | ChainID of the remote (target) network |
 | TOKEN_BRIDGE_L1       | false     |true\|false| If Token Bridge is deployed on L1, TOKEN_BRIDGE_L1 should be set to `true`. Otherwise it should be `false`|
@@ -428,7 +428,7 @@ npx hardhat deploy --network linea_sepolia --tags BridgedToken,TokenBridge
 
 Base command with cli arguments:
 ```shell
-SAVE_ADDRESS=true VERIFY_CONTRACT=true LINEASCAN_API_KEY=<key> LINEA_SEPOLIA_PRIVATE_KEY=<key> INFURA_API_KEY=<key> REMOTE_CHAIN_ID=<uint256> TOKEN_BRIDGE_L1=true L1_RESERVED_TOKEN_ADDRESSES=<address>  L2_MESSAGE_SERVICE_ADDRESS=<address> LINEA_ROLLUP_ADDRESS=<address>  npx hardhat deploy --network linea_sepolia --tags BridgedToken,TokenBridge
+SAVE_ADDRESS=true VERIFY_CONTRACT=true LINEASCAN_API_KEY=<key> LINEA_SEPOLIA_PRIVATE_KEY=<key> INFURA_API_KEY=<key> REMOTE_CHAIN_ID=<uint256> TOKEN_BRIDGE_L1=true L1_RESERVED_TOKEN_ADDRESSES=<address>  L2MESSAGESERVICE_ADDRESS=<address> LINEA_ROLLUP_ADDRESS=<address>  npx hardhat deploy --network linea_sepolia --tags BridgedToken,TokenBridge
 ```
 (make sure to replace `<value>` `<key>` `<address>` with actual values)
 

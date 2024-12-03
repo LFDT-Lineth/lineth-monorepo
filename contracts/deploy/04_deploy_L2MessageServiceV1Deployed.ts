@@ -4,18 +4,11 @@ import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import path from "path";
 import { deployUpgradableWithAbiAndByteCode } from "../scripts/hardhat/utils";
-import {
-  tryVerifyContract,
-  getDeployedContractAddress,
-  tryStoreAddress,
-  validateDeployBranchAndTags,
-  getRequiredEnvVar,
-} from "../common/helpers";
+import { tryVerifyContract, getDeployedContractAddress, tryStoreAddress, getRequiredEnvVar } from "../common/helpers";
 import { abi, bytecode } from "./V1/L2MessageServiceV1Deployed.json";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments } = hre;
-  validateDeployBranchAndTags(hre.network.name);
 
   const mainnetDeployedL2MessageServiceCacheFolder = path.resolve("./deploy/V1/L2MessageServiceV1Cache/");
 

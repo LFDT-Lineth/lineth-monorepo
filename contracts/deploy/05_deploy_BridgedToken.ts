@@ -2,16 +2,10 @@ import { ethers, network, upgrades } from "hardhat";
 import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { BridgedToken } from "../typechain-types";
-import {
-  tryVerifyContract,
-  getDeployedContractAddress,
-  tryStoreAddress,
-  validateDeployBranchAndTags,
-} from "../common/helpers";
+import { tryVerifyContract, getDeployedContractAddress, tryStoreAddress } from "../common/helpers";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments } = hre;
-  validateDeployBranchAndTags(hre.network.name);
 
   const contractName = "BridgedToken";
   const existingContractAddress = await getDeployedContractAddress(contractName, deployments);

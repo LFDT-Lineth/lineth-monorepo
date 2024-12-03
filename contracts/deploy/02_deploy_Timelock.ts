@@ -8,12 +8,10 @@ import {
   getRequiredEnvVar,
   tryStoreAddress,
   tryVerifyContractWithConstructorArgs,
-  validateDeployBranchAndTags,
 } from "../common/helpers";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments } = hre;
-  validateDeployBranchAndTags(hre.network.name);
 
   const contractName = "TimeLock";
   const existingContractAddress = await getDeployedContractAddress(contractName, deployments);

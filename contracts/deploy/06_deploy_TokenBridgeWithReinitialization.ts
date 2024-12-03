@@ -25,7 +25,13 @@ import {
 } from "contracts/common/constants";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
-  const securityCouncilAddress = getRequiredEnvVar("TOKENBRIDGE_SECURITY_COUNCIL");
+  let securityCouncilAddress;
+
+  if (process.env.TOKEN_BRIDGE_L1 === "true") {
+    securityCouncilAddress = getRequiredEnvVar("L1_TOKEN_BRIDGE_SECURITY_COUNCIL");
+  } else {
+    securityCouncilAddress = getRequiredEnvVar("L2_TOKEN_BRIDGE_SECURITY_COUNCIL");
+  }
 
   const newRoles = [
     PAUSE_ALL_ROLE,

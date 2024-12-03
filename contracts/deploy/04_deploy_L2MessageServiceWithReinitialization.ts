@@ -40,7 +40,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const contractName = "L2MessageService";
   const existingContractAddress = await getDeployedContractAddress(contractName, deployments);
 
-  const proxyAddress = getRequiredEnvVar("L2_MESSAGE_SERVICE_ADDRESS");
+  const proxyAddress = getRequiredEnvVar("L2MESSAGESERVICE_ADDRESS");
 
   const factory = await ethers.getContractFactory(contractName);
 

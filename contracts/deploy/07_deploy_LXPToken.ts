@@ -7,13 +7,11 @@ import {
   tryVerifyContractWithConstructorArgs,
   getDeployedContractAddress,
   tryStoreAddress,
-  validateDeployBranchAndTags,
   getRequiredEnvVar,
 } from "../common/helpers";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments } = hre;
-  validateDeployBranchAndTags(hre.network.name);
 
   const contractName = "LineaVoyageXP";
   const existingContractAddress = await getDeployedContractAddress(contractName, deployments);

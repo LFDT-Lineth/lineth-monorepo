@@ -6,12 +6,10 @@ import {
   getRequiredEnvVar,
   tryStoreAddress,
   tryVerifyContract,
-  validateDeployBranchAndTags,
 } from "contracts/common/helpers";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments } = hre;
-  validateDeployBranchAndTags(hre.network.name);
 
   const contractName = "LineaRollupV5";
   const verifierName = "PlonkVerifier";

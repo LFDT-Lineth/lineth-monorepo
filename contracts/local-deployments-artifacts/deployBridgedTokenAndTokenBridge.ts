@@ -26,7 +26,7 @@ async function main() {
   const bridgedTokenName = "BridgedToken";
   const tokenBridgeName = "TokenBridge";
 
-  const l2MessageServiceAddress = process.env.L2_MESSAGE_SERVICE_ADDRESS;
+  const l2MessageServiceAddress = process.env.L2MESSAGESERVICE_ADDRESS;
   const lineaRollupAddress = process.env.LINEA_ROLLUP_ADDRESS;
 
   const remoteChainId = getRequiredEnvVar("REMOTE_CHAIN_ID");
