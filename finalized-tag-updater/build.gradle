@@ -32,7 +32,7 @@ dependencies {
   annotationProcessor 'com.google.auto.service:auto-service:1.1.1'
   compileOnly 'com.google.auto.service:auto-service:1.1.1'
   compileOnly 'com.google.auto.service:auto-service-annotations:1.1.1'
-  compileOnly 'io.consensys.linea-besu:plugin-api:24.7-develop-c0029e6'
+  compileOnly 'io.consensys.linea-besu:plugin-api:24.11-delivery39'
   compileOnly 'info.picocli:picocli:4.7.6'
   compileOnly 'io.vertx:vertx-core'
 
@@ -44,10 +44,9 @@ dependencies {
   implementation ("org.web3j:core:${libs.versions.web3j.get()}") {
     exclude group: 'org.slf4j', module: 'slf4j-nop'
   }
-  testImplementation 'io.consensys.linea-besu:plugin-api:24.7-develop-c0029e6'
+  testImplementation 'io.consensys.linea-besu:plugin-api:24.11-delivery39'
   testImplementation 'info.picocli:picocli:4.7.6'
   testImplementation 'io.vertx:vertx-core'
-  testImplementation "org.hyperledger.besu:besu-datatypes:${libs.versions.besu.get()}"
 }
 
 tasks.register('copyShadowJarToLocalBesu', Copy) {

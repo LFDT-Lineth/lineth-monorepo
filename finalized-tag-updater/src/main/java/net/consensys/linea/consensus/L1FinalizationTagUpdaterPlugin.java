@@ -7,6 +7,7 @@ import net.consensys.linea.LineaL1FinalizationUpdaterService;
 import net.consensys.linea.PluginCliOptions;
 import org.hyperledger.besu.plugin.BesuContext;
 import org.hyperledger.besu.plugin.BesuPlugin;
+import org.hyperledger.besu.plugin.ServiceManager;
 import org.hyperledger.besu.plugin.services.BlockchainService;
 import org.hyperledger.besu.plugin.services.PicoCLIOptions;
 
@@ -18,15 +19,15 @@ public class L1FinalizationTagUpdaterPlugin implements BesuPlugin {
 	private LineaL1FinalizationUpdaterService service;
 	private BlockchainService blockchainService;
 
-	@Override
-	public void register(BesuContext context) {
-		final PicoCLIOptions cmdlineOptions = context.getService(PicoCLIOptions.class)
-			.orElseThrow(() -> new IllegalStateException("Failed to obtain PicoCLI options from the BesuContext"));
-		cmdlineOptions.addPicoCLIOptions(CLI_OPTIONS_PREFIX, cliOptions);
+  @Override
+  public void register(final ServiceManager serviceManager) {
+    final PicoCLIOptions cmdlineOptions = serviceManager.getService(PicoCLIOptions.class)
+      .orElseThrow(() -> new IllegalStateException("Failed to obtain PicoCLI options from the BesuContext"));
+    cmdlineOptions.addPicoCLIOptions(CLI_OPTIONS_PREFIX, cliOptions);
 
-		blockchainService = context.getService(BlockchainService.class)
-			.orElseThrow(() -> new RuntimeException("Failed to obtain BlockchainService from the BesuContext."));
-	}
+    blockchainService = serviceManager.getService(BlockchainService.class)
+      .orElseThrow(() -> new RuntimeException("Failed to obtain BlockchainService from the BesuContext."));
+  }
 
 	@Override
 	public void start() {
