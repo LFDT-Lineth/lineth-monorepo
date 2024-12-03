@@ -43,6 +43,7 @@ This project uses the following libraries
 - [Chai](https://www.chaijs.com/) for assertions
 - [GoLang](https://go.dev/) for the compilation of code to autogenerate data for L2 data and proofs (not strictly required)
 - [Docker](https://www.docker.com/) for the local stack to run in
+- [Foundry](https://book.getfoundry.sh/getting-started/installation) for Hardhat to run with `hardhat-foundry` plugin
 
 If you already have an understanding of the tech stack, use our [Get Started](../docs/get-started.md) guide.
 
