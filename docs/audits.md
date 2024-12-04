@@ -26,8 +26,7 @@
 - LineaRollup, L2MessageService and TokenBridge Granular Role Updates: [https://blog.openzeppelin.com/linea-gas-optimizations-audit)](https://blog.openzeppelin.com/linea-gas-optimizations-audit)
 
 **Cyfrin**
-- LineaRollup, L2MessageService and TokenBridge Granular Role Updates: [https://github.com/Cyfrin/cyfrin-audit-reports/blob/main/reports/2024-11-28-cyfrin-linea-v2.0.pdf](https://github.com/Cyfrin/cyfrin-audit-reports/blob/main/reports/2024-11-28-cyfrin-linea-v2.0.pdf)
-
+- LineaRollup, L2MessageService and TokenBridge Granular Role Updates: [https://github.com/Cyfrin/cyfrin-audit-reports/blob/main/reports/2024-12-04-cyfrin-linea-v2.1.pdf](https://github.com/Cyfrin/cyfrin-audit-reports/blob/main/reports/2024-12-04-cyfrin-linea-v2.1.pdf)
 
 ### Fourth Audit Round
 **Diligence**
