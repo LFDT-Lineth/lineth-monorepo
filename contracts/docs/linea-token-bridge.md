@@ -61,7 +61,7 @@ To deploy the contracts, you will need to run the Bridged Token, Token Bridge, a
 You can refer to the following links that describe the usage of these scripts. <br />
 - [Bridged Token Deployment Script](./deployment.md#bridgedtoken) <br />
 - [Token Bridge Deployment Script](./deployment.md#tokenbridge) <br />
-- [Operational Script](./operational.md#transferownershipandsetremotetokenbridge)
+- [Operational Script](./operational.md#setRemoteTokenBridge)
 
 
 All addresses created will be stored in the deployments folder as a separate file. `./contracts/deployment/<network_name>`

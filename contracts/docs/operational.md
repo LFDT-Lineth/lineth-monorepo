@@ -226,7 +226,7 @@ npx hardhat setVerifierAddress \
 <br />
 <br />
 
-### transferOwnershipAndSetRemoteTokenBridge
+### setRemoteTokenBridge
 
 <br />
 Parameters that should be filled either in .env or passed as CLI arguments:
@@ -237,8 +237,6 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 | INFURA_API_KEY     | true     | key | Infura API Key |
 | REMOTE_TOKEN_BRIDGE_ADDRESS   | true  | address   | Token Bridge address deployed on the `--remote-network`. It must be provided as CLI argument using the `--remote-token-bridge-address` flag. If not found, the script will also check .env. variable `TOKEN_BRIDGE_ADDRESS`. If the .env variable doesn't exist, it will also check the `deployments/<remote-network>` folder and try to use that address. Otherwise it will throw an error.  |
 | TOKEN_BRIDGE_ADDRESS  | true  |   address | Token Bridge address deployed on current network. It must be provided as CLI argument using the `--token-bridge-address` flag. If not found, the script will also check .env. variable `TOKEN_BRIDGE_ADDRESS`. If the .env variable doesn't exist, it will also check the `deployments/<network_name>` folder and try to use that address. Otherwise it will throw an error.  |
-| --token-bridge-proxy-admin-address    | true  |   address | TokenBridge Proxy Admin address. If not provided as a CLI argument, the script will also check the `deployments/<network_name>` folder and try to use that address if it exists. Otherwise it will throw an error. |
-| --safe-address    | true  |   address | Safe address. It must be provided as CLI argument using the `--safe-address` flag  otherwise the script will throw an error. |
 | --remote-network  | true  |   string   | Network name. It must be provided as CLI argument using the `--safe-address` flag  otherwise the script will throw an error. |
 
 <br />
@@ -251,7 +249,7 @@ e.g. `--remote-network linea_sepolia --network sepolia` or vice-versa.
 Base command:
 
 ```shell
-npx hardhat transferOwnershipAndSetRemoteTokenBridge --safe-address <address> --remote-network sepolia --network linea_sepolia
+npx hardhat setRemoteTokenBridge --remote-network sepolia --network linea_sepolia
 ```
 
 Base command with cli arguments:
@@ -259,11 +257,9 @@ Base command with cli arguments:
 ```shell
 SEPOLIA_PRIVATE_KEY=<key> \
 INFURA_API_KEY=<key> \
-npx hardhat transferOwnershipAndSetRemoteTokenBridge \
---safe-address <address> \
+npx hardhat setRemoteTokenBridge \
 --remote-token-bridge-address <address> \
 --token-bridge-address <address> \
---token-bridge-proxy-admin-address <address> \
 --remote-network sepolia \
 --network linea_sepolia
 ```

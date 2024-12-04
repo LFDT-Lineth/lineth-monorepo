@@ -12,7 +12,7 @@ import "./scripts/operational/grantContractRolesTask";
 import "./scripts/operational/renounceContractRolesTask";
 import "./scripts/operational/setRateLimitTask";
 import "./scripts/operational/setVerifierAddressTask";
-import "./scripts/operational/transferOwnershipAndSetRemoteTokenBridgeTask";
+import "./scripts/operational/setRemoteTokenBridgeTask";
 import "./scripts/operational/setMessageServiceOnTokenBridgeTask";
 
 import "solidity-docgen";

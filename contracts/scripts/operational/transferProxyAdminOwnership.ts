@@ -11,8 +11,9 @@ import { requireEnv } from "../hardhat/utils";
     NB: Be sure of who owns the Timelock before transferring admin to the
     timelock controller. There is the potential to brick ownership
 
+    
     *******************************************************************************************
-    npx hardhat run --network zkevm_dev scripts/operational/transferProxyAdminOwnership.ts
+    PROXY_ADMIN_OWNER_ADDRESS=0x.. PROXY_ADDRESS=0x.. CONTRACT_TYPE=TokenBridge npx hardhat run --network zkevm_dev scripts/operational/transferProxyAdminOwnership.ts
     *******************************************************************************************
 */
 
