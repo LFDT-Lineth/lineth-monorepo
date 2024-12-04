@@ -228,7 +228,7 @@ jobs:
     if: ${{ always() }}
     runs-on: [self-hosted, ubuntu-20.04, X64, small]
     steps:
-      - uses: strumwolf/delete-deployment-environment@v2
+      - uses: strumwolf/delete-deployment-environment@v3
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           environment: docker-build-and-e2e

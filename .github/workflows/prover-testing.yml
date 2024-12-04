@@ -21,14 +21,14 @@ jobs:
     name: Prover static check
     steps:
     - name: install Go
-      uses: actions/setup-go@v4
+      uses: actions/setup-go@v5
       with:
         go-version: 1.23.x
     - name: checkout code
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
-    - uses: actions/cache@v3
+    - uses: actions/cache@v4
       with:
         path: |
           ~/go/pkg/mod
@@ -42,7 +42,7 @@ jobs:
       working-directory: prover
       run: if [[ -n $(gofmt -l .) ]]; then echo "please run gofmt"; exit 1; fi
     - name: golangci-lint
-      uses: golangci/golangci-lint-action@v3
+      uses: golangci/golangci-lint-action@v6
       with:
           version: v1.61.0
           working-directory: prover
@@ -65,12 +65,12 @@ jobs:
       - staticcheck
     steps:
     - name: install Go
-      uses: actions/setup-go@v4
+      uses: actions/setup-go@v5
       with:
         go-version: ${{ matrix.go-version }}
     - name: checkout code
       uses: actions/checkout@v4
-    - uses: actions/cache@v3
+    - uses: actions/cache@v4
       with:
         path: |
           ~/go/pkg/mod

@@ -29,7 +29,7 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
       - name: Run tests with coverage
-        uses: nick-fields/retry@v2
+        uses: nick-fields/retry@v3
         if: ${{ inputs.coverage }}
         with:
           max_attempts: 2
@@ -38,7 +38,7 @@ jobs:
           command: |
             ./gradlew -V traces-api-facade:app:buildNeeded jacocoRootReport
       - name: Run tests without coverage
-        uses: nick-fields/retry@v2
+        uses: nick-fields/retry@v3
         if: ${{ !inputs.coverage }}
         with:
           max_attempts: 2

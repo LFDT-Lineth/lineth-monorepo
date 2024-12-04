@@ -50,7 +50,7 @@ jobs:
   
   # If all jobs are skipped, the workflow will still succeed.
   always_succeed:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: ${{ inputs.coordinator_changed == 'false' && inputs.prover_changed == 'false' && inputs.postman_changed == 'false' && inputs.traces_api_facade_changed == 'false' && inputs.transaction_exclusion_api_changed == 'false' }}
     steps:
       - name: Ensure Workflow Success

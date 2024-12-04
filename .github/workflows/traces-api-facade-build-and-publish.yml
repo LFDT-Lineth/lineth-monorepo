@@ -91,7 +91,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
       - name: Docker meta
         id: traces-api-facade
-        uses: docker/metadata-action@v3
+        uses: docker/metadata-action@v5
         with:
           images: consensys/linea-traces-api-facade
       - name: Build for testing
