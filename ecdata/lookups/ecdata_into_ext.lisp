@@ -1,7 +1,7 @@
 (defun (ec_data-into-ext-activation-flag)
   ecdata.EXT_FLAG)
 
-(deflookup 
+(deflookup
   ecdata-into-ext
   ; target columns
   (

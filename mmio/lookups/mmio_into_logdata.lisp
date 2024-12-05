@@ -1,4 +1,4 @@
-(deflookup 
+(deflookup
   mmio-into-logdata
   ;reference columns
   (

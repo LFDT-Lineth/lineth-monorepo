@@ -1,6 +1,6 @@
 (module gas)
 
-(defcolumns 
+(defcolumns
   (INPUTS_AND_OUTPUTS_ARE_MEANINGFUL    :binary@prove)
   (FIRST                                :binary@prove)
   (CT                                   :i3)
@@ -14,7 +14,7 @@
   (WCP_INST                             :byte@prove :display :opcode)
   (WCP_RES                              :binary@prove))
 
-(defalias 
+(defalias
   IOMF  INPUTS_AND_OUTPUTS_ARE_MEANINGFUL
   XAHOY EXCEPTIONS_AHOY
   OOGX  OUT_OF_GAS_EXCEPTION)

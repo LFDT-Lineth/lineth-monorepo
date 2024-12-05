@@ -1,4 +1,4 @@
-(deflookup 
+(deflookup
   romlex-into-rom
   ;; target columns
   (

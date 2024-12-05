@@ -10,7 +10,7 @@
   (eq! CONTEXT_NUMBER_NEW
        (+ 1 HUB_STAMP)))
 
-(defun (next-context-is-current) 
+(defun (next-context-is-current)
   (eq! CONTEXT_NUMBER_NEW
        CONTEXT_NUMBER))
 
@@ -94,7 +94,7 @@
                                 return_data_provider_context   ;; provider context
                                 return_data_offset             ;; rdo
                                 return_data_size               ;; rds
-                                ) 
+                                )
   (begin
     (eq! (shift context/UPDATE                      relative_row_offset)        1                            )
     (eq! (shift context/CONTEXT_NUMBER              relative_row_offset)        return_data_receiver_context )

@@ -1,4 +1,4 @@
-(deflookup 
+(deflookup
   rlpaddr-into-trm
   ;reference columns
   (

@@ -4,7 +4,7 @@
 
 (deflookup hub-into-oob
            ;; target columns
-	   ( 
+	   (
 	     oob.OOB_INST
 	     [oob.DATA 1]
 	     [oob.DATA 2]

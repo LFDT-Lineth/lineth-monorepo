@@ -1,6 +1,6 @@
 (module romlex)
 
-(defcolumns 
+(defcolumns
   (CODE_FRAGMENT_INDEX :i32)
   (CODE_FRAGMENT_INDEX_INFTY :i32)
   (CODE_SIZE :i32)
@@ -13,7 +13,7 @@
   (COMMIT_TO_STATE :binary@prove)
   (READ_FROM_STATE :binary@prove))
 
-(defalias 
+(defalias
   CFI CODE_FRAGMENT_INDEX)
 
 

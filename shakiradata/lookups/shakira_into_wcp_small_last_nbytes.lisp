@@ -1,4 +1,4 @@
-(deflookup 
+(deflookup
   shakiradata-into-wcp-small-last-nbytes
   ; target colums (in WCP)
   (

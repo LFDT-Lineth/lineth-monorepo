@@ -1,7 +1,7 @@
 (module hub)
 
 (defcolumns
-  ;; context consistency permutation related 
+  ;; context consistency permutation related
   ( con_FIRST :binary@prove )
   ( con_AGAIN :binary@prove )
   )

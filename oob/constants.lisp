@@ -1,6 +1,6 @@
 (module oob)
 
-(defconst 
+(defconst
   CT_MAX_JUMP           0
   CT_MAX_JUMPI          1
   CT_MAX_RDC            2

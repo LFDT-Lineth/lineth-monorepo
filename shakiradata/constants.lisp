@@ -1,6 +1,6 @@
 (module shakiradata)
 
-(defconst 
+(defconst
   INDEX_MAX_RESULT 1)
 
 

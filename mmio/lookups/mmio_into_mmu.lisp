@@ -13,7 +13,7 @@
      mmio.IS_RAM_EXCISION
      mmio.IS_RAM_VANISHES))
 
-(deflookup 
+(deflookup
   mmio-into-mmu
   ;reference columns
   (

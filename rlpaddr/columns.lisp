@@ -1,6 +1,6 @@
 (module rlpaddr)
 
-(defcolumns 
+(defcolumns
   ;; INPUTS
   (RECIPE :byte)
   (RECIPE_1 :binary@prove)
@@ -33,7 +33,7 @@
   (SELECTOR_KECCAK_RES :binary))
 
 ;; aliases
-(defalias 
+(defalias
   ct COUNTER)
 
 

@@ -1,7 +1,7 @@
 (defun (gas-into-wcp-activation-flag)
   gas.IOMF)
 
-(deflookup 
+(deflookup
   gas-into-wcp
   (
     wcp.ARG_1_HI

@@ -1,7 +1,7 @@
 (defun (sel-txn-data-to-rom-lex)
   (* txndata.IS_DEP (~ txndata.INIT_CODE_SIZE)))
 
-(deflookup 
+(deflookup
   txndata-into-romlex
   ;; target columns
   (

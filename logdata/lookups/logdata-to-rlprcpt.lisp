@@ -1,7 +1,7 @@
 (defpurefun (sel-logdata-to-rlptxnrcpt)
   logdata.LOGS_DATA)
 
-(deflookup 
+(deflookup
   logdata-into-rlptxnrcpt
   ;reference columns
   (

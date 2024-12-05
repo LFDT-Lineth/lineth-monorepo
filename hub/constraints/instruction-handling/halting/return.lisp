@@ -240,7 +240,7 @@
                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                  (eq!   (shift   stack/HASH_INFO_FLAG   ROFF_RETURN___STACK_ROW)
                         (return-instruction---trigger_HASHINFO)))
-                        
+
 (defconstraint   return-instruction---setting-MXP-data              (:guard   (return-instruction---standard-scenario-row))
                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                  (if-not-zero   (shift   misc/MXP_FLAG        ROFF_RETURN___1ST_MISC_ROW)

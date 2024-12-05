@@ -70,8 +70,8 @@
     ;;
     ABS_TX_NUM          ABSOLUTE_TRANSACTION_NUMBER
     REL_BLK_NUM         RELATIVE_BLOCK_NUMBER
-    CMC                 CONTEXT_MAY_CHANGE     
-    XAHOY               EXCEPTION_AHOY     
+    CMC                 CONTEXT_MAY_CHANGE
+    XAHOY               EXCEPTION_AHOY
     TX_END_STAMP        HUB_STAMP_TRANSACTION_END
     GAS_XPCT            GAS_EXPECTED
     GAS_ACTL            GAS_ACTUAL

@@ -1,6 +1,6 @@
 (module logdata)
 
-(defcolumns 
+(defcolumns
   (ABS_LOG_NUM_MAX  :i24)
   (ABS_LOG_NUM      :i24)
   (LOGS_DATA        :binary)

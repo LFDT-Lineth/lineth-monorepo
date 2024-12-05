@@ -1,6 +1,6 @@
 (module euc)
 
-(defconst 
+(defconst
   MAX_INPUT_LENGTH MMEDIUM)
 
 (defconstraint first-row (:domain {0})

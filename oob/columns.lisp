@@ -1,6 +1,6 @@
 (module oob)
 
-(defcolumns 
+(defcolumns
   (STAMP :i32)
   (CT :i3)
   (CT_MAX :i3)

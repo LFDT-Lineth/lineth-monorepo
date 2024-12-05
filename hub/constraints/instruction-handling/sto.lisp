@@ -173,7 +173,7 @@
                                                                  (eq!   GAS_COST   (+ GAS_CONST_G_WARM_ACCESS    (* (cold-slot)    GAS_CONST_G_COLD_SLOAD))))
                                                 (if-not-zero     (next-not-curr)
                                                                  (if-not-zero    (curr-is-orig)
-                                                                                 (if-not-zero    (orig-is-zero) 
+                                                                                 (if-not-zero    (orig-is-zero)
                                                                                                  (eq!   GAS_COST   (+ GAS_CONST_G_SSET     (* (cold-slot)   GAS_CONST_G_COLD_SLOAD)))
                                                                                                  (eq!   GAS_COST   (+ GAS_CONST_G_SRESET   (* (cold-slot)   GAS_CONST_G_COLD_SLOAD))))))))))
 

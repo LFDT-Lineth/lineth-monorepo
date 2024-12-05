@@ -1,7 +1,7 @@
 (defun (hub-into-block-hash-trigger)
   (* hub.PEEK_AT_STACK (- 1 hub.XAHOY) hub.stack/BTC_FLAG [hub.stack/DEC_FLAG 1]))
 
-(deflookup 
+(deflookup
   hub-into-blockhash
   ;; target columns
   (

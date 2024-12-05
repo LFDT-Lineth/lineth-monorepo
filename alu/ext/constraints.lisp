@@ -1,6 +1,6 @@
 (module ext)
 
-(defconst 
+(defconst
   THETA  18446744073709551616                     ;18446744073709551616 = 256^8
   THETA2 340282366920938463463374607431768211456) ;340282366920938463463374607431768211456 = 256^16
 
@@ -141,7 +141,7 @@
 (defconstraint bit-3-constraints ()
                (if-not-zero STAMP
                             (begin
-                              (if-not-zero   ARG_3_HI                 
+                              (if-not-zero   ARG_3_HI
                                              ;; ARG_3_HI ≠ 0
                                              (vanishes! BIT_3)
                                              ;; ARG_3_HI = 0

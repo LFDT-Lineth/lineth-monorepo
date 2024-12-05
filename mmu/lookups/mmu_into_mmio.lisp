@@ -1,4 +1,4 @@
-(deflookup 
+(deflookup
   mmu-into-mmio
   ;reference columns
   (

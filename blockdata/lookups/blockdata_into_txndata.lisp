@@ -1,4 +1,4 @@
-(deflookup 
+(deflookup
   blockdata-into-txndata
   ; target columns
   (

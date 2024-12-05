@@ -1,6 +1,6 @@
 (defun (exp-into-wcp-activation-flag) (* exp.PRPRC exp.preprocessing/WCP_FLAG))
 
-(deflookup 
+(deflookup
   exp-into-wcp
   ;; target columns
   (

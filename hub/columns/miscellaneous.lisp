@@ -32,7 +32,7 @@
 		 ( MMU_LIMB_2              :i128  )
 		 ( MMU_PHASE               :i32   )
 		 ( MMU_EXO_SUM             :i32   )
- 
+
 		 ;; MXP colummns      (DONE )
 		 ( MXP_INST                     :i32   )
 		 ( MXP_MXPX                     :binary@prove ) ;;  ;; TODO: demote to debug constraint, though truly useless
@@ -71,5 +71,5 @@
 
 		 ;; ``truly'' miscellaneous columns
 		 ( CCSR_FLAG                           :binary@prove)  ;; Child Context Self Reverts Flag; ;; TODO: demote to debug constraint
-		 ( CCRS_STAMP                          :i32 )          ;; Child Context Revert Stamp 
+		 ( CCRS_STAMP                          :i32 )          ;; Child Context Revert Stamp
 		 ))

@@ -45,7 +45,7 @@
                                     (account-decrement-balance-by    CALL_1st_caller_account_row___row_offset
                                                                      (* (call-instruction---is-CALL) (call-instruction---STACK-value-lo))))))
 
-                  
+
 ;; CALLEE account
 (defconstraint    call-instruction---1st-callee-account-operation    (:guard (call-instruction---summon-both-account-rows-once-or-more))
                   (begin

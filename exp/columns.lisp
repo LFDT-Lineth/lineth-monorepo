@@ -1,6 +1,6 @@
 (module exp)
 
-(defcolumns 
+(defcolumns
   (CMPTN         :binary@prove)
   (MACRO         :binary@prove)
   (PRPRC         :binary@prove)

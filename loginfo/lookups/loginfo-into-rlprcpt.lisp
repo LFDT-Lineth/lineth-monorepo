@@ -1,4 +1,4 @@
-(deflookup 
+(deflookup
   loginfo-into-rlptxrcpt
   ;; target columns
   (

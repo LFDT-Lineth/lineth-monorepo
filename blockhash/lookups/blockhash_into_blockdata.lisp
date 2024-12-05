@@ -1,4 +1,4 @@
-(deflookup 
+(deflookup
   blockhash-into-blockdata
   ; target columns
   (

@@ -38,7 +38,7 @@
                 ( GAS_LEFTOVER                 :i64 )
                 ( REFUND_COUNTER_INFINITY      :i64 )
                 ( REFUND_EFFECTIVE             :i64 )
-                
+
                 ;; coinbase related
                 ( COINBASE_ADDRESS_HI          :i32  )
                 ( COINBASE_ADDRESS_LO          :i128 )

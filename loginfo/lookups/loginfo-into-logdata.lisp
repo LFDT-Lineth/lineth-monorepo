@@ -1,7 +1,7 @@
 (defpurefun (sel-loginfo-to-logdata)
   loginfo.TXN_EMITS_LOGS)
 
-(deflookup 
+(deflookup
   loginfo-into-logdata
   ;; target columns
   (

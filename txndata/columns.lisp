@@ -1,6 +1,6 @@
 (module txndata)
 
-(defcolumns 
+(defcolumns
   (ABS_TX_NUM_MAX :i16)
   (ABS_TX_NUM :i16)
   (REL_BLOCK :i16)
@@ -49,7 +49,7 @@
   (INST :byte :display :opcode)
   (IS_LAST_TX_OF_BLOCK :binary))
 
-(defalias 
+(defalias
   ABS_MAX ABS_TX_NUM_MAX
   ABS     ABS_TX_NUM
   BLK     REL_BLOCK

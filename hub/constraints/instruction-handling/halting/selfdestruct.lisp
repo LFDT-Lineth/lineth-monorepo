@@ -198,7 +198,7 @@
 
 (defconstraint    selfdestruct-instruction---setting-code-and-deployment-for-the-first-account-row (:guard (selfdestruct-instruction---scenario-precondition))
                   (if-zero     (selfdestruct-instruction---STATICX)
-                               (begin 
+                               (begin
                                  (if-not-zero XAHOY
                                               ;; XAHOY = 1
                                               (begin (account-same-code                             ROFF_SELFDESTRUCT___ACCOUNT___1ST_DOING_ROW)

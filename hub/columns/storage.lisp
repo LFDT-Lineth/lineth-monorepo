@@ -1,10 +1,10 @@
 (module hub)
 
 (defperspective storage
-	
+
 	;; selector
 	PEEK_AT_STORAGE
-	
+
 	;; storage-row columns
 	(
 		( ADDRESS_HI                      :i32  )

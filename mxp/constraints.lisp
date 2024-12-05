@@ -108,7 +108,7 @@
 ;;;;;;;;;;;;;;;;;;;;
 
 (defconstraint setting-mtntop ()
-  (begin 
+  (begin
     (debug (is-binary MTNTOP))
     (debug (if-zero [MXP_TYPE 4]
             (vanishes! MTNTOP)))
@@ -129,27 +129,27 @@
 (defconstraint setting-s1nznomp-s2nznomp ()
   (begin
     (debug (is-binary S1NZNOMXPX))
-    (debug (is-binary S2NZNOMXPX)) 
+    (debug (is-binary S2NZNOMXPX))
     (debug (counter-constancy CT S1NZNOMXPX))
     (debug (counter-constancy CT S2NZNOMXPX))
     (if-not-zero MXPX
       (begin (vanishes! S1NZNOMXPX)
              (vanishes! S2NZNOMXPX))
-      (begin (if-not-zero SIZE_1_LO 
+      (begin (if-not-zero SIZE_1_LO
                 (eq! S1NZNOMXPX 1))
-             (if-not-zero SIZE_1_HI 
+             (if-not-zero SIZE_1_HI
                 (eq! S1NZNOMXPX 1))
-             (if-zero SIZE_1_LO 
-                (if-zero SIZE_1_HI 
+             (if-zero SIZE_1_LO
+                (if-zero SIZE_1_HI
                   (vanishes! S1NZNOMXPX)))
-             (if-not-zero SIZE_2_LO 
+             (if-not-zero SIZE_2_LO
                 (eq! S2NZNOMXPX 1))
-             (if-not-zero SIZE_2_HI 
+             (if-not-zero SIZE_2_HI
                 (eq! S2NZNOMXPX 1))
-             (if-zero SIZE_2_LO 
-                (if-zero SIZE_2_HI 
+             (if-zero SIZE_2_LO
+                (if-zero SIZE_2_HI
                   (vanishes! S2NZNOMXPX)))))))
-  
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                     ;;
 ;;    2.7 heartbeat    ;;
@@ -371,7 +371,7 @@
 ;;                                    ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defpermutation 
+(defpermutation
   (CN_perm
    STAMP_perm
    C_MEM_perm

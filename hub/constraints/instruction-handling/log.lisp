@@ -31,7 +31,7 @@
                                                           (-    1    stack/SUX    stack/SOX)
                                                           (-    1    COUNTER_TLI)))
 
-(defconst 
+(defconst
   ROFF_LOG___CURRENT_CONTEXT_ROW   2
   ROFF_LOG___MISCELLANEOUS_ROW     3
   ROFF_LOG___STATICX_XCONTEXT_ROW  3

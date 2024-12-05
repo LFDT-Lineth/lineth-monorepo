@@ -1,6 +1,6 @@
 (module wcp)
 
-(defcolumns 
+(defcolumns
   (WORD_COMPARISON_STAMP :i32)
   (COUNTER :byte)
   (CT_MAX :byte)
@@ -41,7 +41,7 @@
   (BIT_4 :binary@prove))
 
 ;; aliases
-(defalias 
+(defalias
   STAMP    WORD_COMPARISON_STAMP
   OLI      ONE_LINE_INSTRUCTION
   VLI      VARIABLE_LENGTH_INSTRUCTION

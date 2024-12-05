@@ -2,7 +2,7 @@
 
 (deflookup hub-into-instdecoder
            ;; target columns
-	   ( 
+	   (
 	     instdecoder.OPCODE
 	     instdecoder.STATIC_GAS
 	     instdecoder.TWO_LINE_INSTRUCTION

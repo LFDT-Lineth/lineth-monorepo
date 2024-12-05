@@ -286,7 +286,7 @@
                   (vanishes! ID))))
 
 (defconstraint stamp-increment-sanity-check ()
-  (begin 
+  (begin
     (debug (any! (will-remain-constant! STAMP) (will-inc! STAMP 1))))) ;; implied by the constraint below
 
 (defconstraint stamp-increment ()

@@ -1,4 +1,4 @@
-(deflookup 
+(deflookup
   blockdata-into-wcp
   ; target columns
   (

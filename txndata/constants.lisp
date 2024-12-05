@@ -1,6 +1,6 @@
 (module txndata)
 
-(defconst 
+(defconst
   CT_MAX_TYPE_0                                         7
   CT_MAX_TYPE_1                                         8
   CT_MAX_TYPE_2                                         8

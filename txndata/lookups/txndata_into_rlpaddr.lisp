@@ -1,7 +1,7 @@
 (defun (sel-txndata-to-rlpaddr)
   txndata.IS_DEP)
 
-(deflookup 
+(deflookup
   txndata-into-rlpaddr
   ;; target columns
   (

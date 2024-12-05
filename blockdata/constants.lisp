@@ -1,6 +1,6 @@
 (module blockdata)
 
-(defconst 
+(defconst
   CT_MAX_FOR_BLOCKDATA    6 ;;need to update the lookup into wcp if changed
   ROW_SHIFT_COINBASE      0
   ROW_SHIFT_TIMESTAMP     1

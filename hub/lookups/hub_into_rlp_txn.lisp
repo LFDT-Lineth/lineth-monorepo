@@ -14,7 +14,7 @@
                                               rlptxn.IS_PHASE_ACCESS_LIST
                                               (- 1 rlptxn.IS_PREFIX)))
 
-(deflookup 
+(deflookup
   hub-into-rlptxn
   ;; target columns
   ;; TODO: multiplication by selector likely unnecessary but as we multiply by the same column for the lookup tlptxn into hub ...

@@ -2,7 +2,7 @@
 
 (deflookup hub-into-rom-instruction-fetching
            ;; target columns
-	   ( 
+	   (
 	     rom.CFI
 	     rom.PC
 	     rom.OPCODE

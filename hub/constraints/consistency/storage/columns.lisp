@@ -1,7 +1,7 @@
 (module hub)
 
 ;; scp_ ⇔ storage consistency permutation
-(defpermutation 
+(defpermutation
   ;; permuted columns
   ;; replace scp with storage_consistency_permutation
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

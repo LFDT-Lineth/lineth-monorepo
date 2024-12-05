@@ -137,10 +137,10 @@
                                                                                                              (-    1    (call-instruction---callee-has-code))))
                                       (eq!    (scenario-shorthand---CALL---smart-contract)              (call-instruction---callee-has-code))))
                     (if-not-zero    (+    scenario/CALL_PRC_SUCCESS_CALLER_WILL_REVERT    scenario/CALL_PRC_SUCCESS_CALLER_WONT_REVERT)
-                                    (begin  
+                                    (begin
                                       (eq!              scenario/CALL_PRC_SUCCESS_CALLER_WILL_REVERT               (call-instruction---caller-will-revert))
                                       (debug    (eq!    scenario/CALL_PRC_SUCCESS_CALLER_WONT_REVERT    (-    1    (call-instruction---caller-will-revert))))))
-                    (if-not-zero    (scenario-shorthand---CALL---externally-owned-account)  
+                    (if-not-zero    (scenario-shorthand---CALL---externally-owned-account)
                                     (begin
                                       (eq!              scenario/CALL_EOA_SUCCESS_CALLER_WILL_REVERT               (call-instruction---caller-will-revert))
                                       (debug    (eq!    scenario/CALL_EOA_SUCCESS_CALLER_WONT_REVERT    (-    1    (call-instruction---caller-will-revert))))))

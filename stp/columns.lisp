@@ -1,6 +1,6 @@
 (module stp)
 
-(defcolumns 
+(defcolumns
   (STAMP :i24)
   (CT :byte)
   (CT_MAX :byte)
@@ -35,7 +35,7 @@
   (ARG_2_LO :i128)
   (RES_LO :i128))
 
-(defalias 
+(defalias
   OOGX     OUT_OF_GAS_EXCEPTION
   EXO_INST EXOGENOUS_MODULE_INSTRUCTION)
 

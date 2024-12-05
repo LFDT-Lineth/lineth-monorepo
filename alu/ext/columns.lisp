@@ -19,7 +19,7 @@
     (OF_I   :binary@prove)
     (OF_J   :binary@prove)
     (OF_H   :binary@prove)
-    (OF_RES :binary@prove) 
+    (OF_RES :binary@prove)
     ;
     (BIT_1 :binary@prove)
     (BIT_2 :binary@prove)

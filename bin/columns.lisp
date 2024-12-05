@@ -1,6 +1,6 @@
 (module bin)
 
-(defcolumns 
+(defcolumns
   (STAMP :i32)
   (CT_MAX :byte)
   (COUNTER :byte)
@@ -41,7 +41,7 @@
   (XXX_BYTE_LO :byte))
 
 ;; aliases
-(defalias 
+(defalias
   CT       COUNTER
   ARG_1_HI ARGUMENT_1_HI
   ARG_1_LO ARGUMENT_1_LO

@@ -9,7 +9,7 @@
 (defun (is-final-data-row)
   (force-bool (* (is-data) (next (is-result)))))
 
-(deflookup 
+(deflookup
   shakiradata-into-wcp-nonzero-last-nbytes
   ; target colums (in WCP)
   (

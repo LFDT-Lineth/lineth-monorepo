@@ -14,7 +14,7 @@
 ;;                                    ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defun (storage-reading kappa) 
+(defun (storage-reading kappa)
   (begin (eq! (shift storage/VALUE_CURR_HI kappa) (shift storage/VALUE_NEXT_HI kappa))
          (eq! (shift storage/VALUE_CURR_LO kappa) (shift storage/VALUE_NEXT_LO kappa))))
 

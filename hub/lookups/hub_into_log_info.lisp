@@ -1,7 +1,7 @@
 (defun (hub-into-log-info-trigger)
   (* hub.PEEK_AT_STACK hub.stack/LOG_INFO_FLAG (- 1 hub.CT_TLI)))
 
-(deflookup 
+(deflookup
   hub-into-loginfo
   ;; target columns
   (

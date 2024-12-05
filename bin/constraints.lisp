@@ -71,7 +71,7 @@
          (counter-constancy CT NEG)
          (counter-constancy CT SMALL)))
 
-;;    2.6 byte decompositions   
+;;    2.6 byte decompositions
 (defconstraint byte_decompositions ()
   (begin (byte-decomposition CT ACC_1 BYTE_1)
          (byte-decomposition CT ACC_2 BYTE_2)
@@ -80,7 +80,7 @@
          (byte-decomposition CT ACC_5 BYTE_5)
          (byte-decomposition CT ACC_6 BYTE_6)))
 
-;;    2.7 target constraints   
+;;    2.7 target constraints
 (defun (requires-byte-decomposition)
   (+ IS_AND
      IS_OR
@@ -148,7 +148,7 @@
                      (eq! SMALL 1)
                      (vanishes! SMALL))))
 
-;;    2.9 pivot constraints    
+;;    2.9 pivot constraints
 (defconstraint pivot (:guard CT_MAX)
   (begin (if-eq IS_BYTE 1
                 (if-zero LOW_4

@@ -5,11 +5,11 @@
 
 (deflookup hub-into-romlex
            ;; target columns
-	   ( 
+	   (
 	     romlex.CODE_FRAGMENT_INDEX
 	     romlex.CODE_SIZE
 	     romlex.ADDRESS_HI
-	     romlex.ADDRESS_LO       
+	     romlex.ADDRESS_LO
 	     romlex.DEPLOYMENT_NUMBER
 	     romlex.DEPLOYMENT_STATUS
 	     romlex.CODE_HASH_HI

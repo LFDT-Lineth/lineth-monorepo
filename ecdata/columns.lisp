@@ -1,6 +1,6 @@
 (module ecdata)
 
-(defcolumns 
+(defcolumns
   (STAMP        :i32)
   (ID           :i32)
   (INDEX        :i16)
@@ -62,7 +62,7 @@
   (EXT_INST     :byte :display :opcode))
 
 ;; aliases
-(defalias 
+(defalias
   ICP              INTERNAL_CHECKS_PASSED
   TRIVIAL_PAIRING  OVERALL_TRIVIAL_PAIRING
   G2MTR            G2_MEMBERSHIP_TEST_REQUIRED

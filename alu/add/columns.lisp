@@ -1,6 +1,6 @@
 (module add)
 
-(defcolumns 
+(defcolumns
   (STAMP :i32)
   (CT_MAX :byte)
   (CT :byte)

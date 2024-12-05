@@ -1,4 +1,4 @@
-(deflookup 
+(deflookup
   stp-into-wcp
   ; target colums (in WCP)
   (

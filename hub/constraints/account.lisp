@@ -2,7 +2,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                       ;;
-;;  6.1 Specialized-rows ;; 
+;;  6.1 Specialized-rows ;;
 ;;                       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -35,7 +35,7 @@
  (begin
   (eq! BALANCE (prev BALANCE_NEW))
   (eq! BALANCE_NEW (prev BALANCE))))
-  
+
 (defun (undo_previous_account_balance_update_v)
  (begin
   (eq! BALANCE (shift BALANCE_NEW -2))
@@ -188,7 +188,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                       ;;
-;;  6.2 Code ownership   ;; 
+;;  6.2 Code ownership   ;;
 ;;                       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -198,18 +198,18 @@
         (vanishes! HAS_CODE)
         (eq! HAS_CODE 1))
     (eq! HAS_CODE 1)))
-    
+
 (defconstraint hascode_new_emptyness (:perspective account)
                (if-eq-else    CODE_HASH_HI_NEW    EMPTY_KECCAK_HI
                               (if-eq-else    CODE_HASH_LO_NEW    EMPTY_KECCAK_LO
                                              (eq!    HAS_CODE_NEW 0)
                                              (eq!    HAS_CODE_NEW 1))
                               (eq!    HAS_CODE_NEW    1)))
-    
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                          ;;
-;;  6.3 Account existence   ;; 
+;;  6.3 Account existence   ;;
 ;;                          ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 

@@ -4,7 +4,7 @@
 
 (deflookup hub-into-trm
            ;; target columns
-           ( 
+           (
              trm.TRM_ADDRESS_HI
              trm.RAW_ADDRESS_HI
              trm.RAW_ADDRESS_LO

@@ -1,7 +1,7 @@
 (defun (hub-into-stp-trigger)
   (* hub.PEEK_AT_MISCELLANEOUS hub.misc/STP_FLAG))
 
-(deflookup 
+(deflookup
   hub-into-stp
   ;; target columns
   (

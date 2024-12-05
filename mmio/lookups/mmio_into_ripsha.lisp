@@ -1,4 +1,4 @@
-(deflookup 
+(deflookup
   mmio-into-ripsha
   ;reference columns
   (

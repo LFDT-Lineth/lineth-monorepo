@@ -1,6 +1,6 @@
 (module mul)
 
-(defconst 
+(defconst
   ONETWOEIGHT 128
   ONETWOSEVEN 127
   THETA       18446744073709551616                     ;18446744073709551616 = 256^8

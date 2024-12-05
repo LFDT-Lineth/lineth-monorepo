@@ -1,4 +1,4 @@
-(deflookup 
+(deflookup
   stp-into-mod
   ; target columns (in MOD)
   (

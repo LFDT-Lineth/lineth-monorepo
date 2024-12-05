@@ -1,6 +1,6 @@
 (module mod)
 
-(defcolumns 
+(defcolumns
   (STAMP   :i32)
   (OLI     :binary@prove)
   (MLI     :binary@prove)

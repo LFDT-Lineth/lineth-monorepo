@@ -1,7 +1,7 @@
 (defun (oob-into-mod-activation-flag)
   oob.MOD_FLAG)
 
-(deflookup 
+(deflookup
   oob-into-mod
   ;source columns
   (

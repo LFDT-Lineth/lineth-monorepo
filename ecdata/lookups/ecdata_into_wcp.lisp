@@ -1,7 +1,7 @@
 (defun (ec_data-into-wcp-activation-flag)
   ecdata.WCP_FLAG)
 
-(deflookup 
+(deflookup
   ecdata-into-wcp
   ; target columns
   (

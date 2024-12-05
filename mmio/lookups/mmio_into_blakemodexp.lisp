@@ -1,4 +1,4 @@
-(deflookup 
+(deflookup
   mmio-into-blake2fmodexpdata
   ;reference columns
   (

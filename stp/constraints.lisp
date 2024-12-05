@@ -1,6 +1,6 @@
 (module stp)
 
-(defconst 
+(defconst
   STP_CT_MAX_CALL           4
   STP_CT_MAX_CALL_OOGX      2
   STP_CT_MAX_CREATE         2
@@ -165,7 +165,7 @@
 ;; rows of CREATE instructions that don't produce an OOGX
 (defconstraint    CREATE-type---unexceptional---row-i-plus-2
                   (:guard (first-row-of-unexceptional-CREATE))
-                  (begin  
+                  (begin
                     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                     ;;   ------------->   row i + 2   ;;
                     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

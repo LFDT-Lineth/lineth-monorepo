@@ -1,6 +1,6 @@
 (module trm)
 
-(defcolumns 
+(defcolumns
   (STAMP          :i24)
   (RAW_ADDRESS_HI :i128)
   (RAW_ADDRESS_LO :i128)

@@ -1,6 +1,6 @@
 (module ecdata)
 
-(defconst 
+(defconst
   P_BN_HI                       0x30644e72e131a029b85045b68181585d
   P_BN_LO                       0x97816a916871ca8d3c208c16d87cfd47
   SECP256K1N_HI                 0xffffffffffffffffffffffffffffffff

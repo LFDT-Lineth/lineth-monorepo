@@ -30,7 +30,7 @@
 (defun    (any-to-ram-with-padding---trsf-size)                  (+ (* (any-to-ram-with-padding---mixed) (- macro/REF_SIZE macro/SRC_OFFSET_LO))
                                                                     (* (any-to-ram-with-padding---pure-data) macro/SIZE)))
 (defun    (any-to-ram-with-padding---padd-size)                  (+ (* (any-to-ram-with-padding---pure-padd) macro/SIZE)
-                                                                    (* (any-to-ram-with-padding---mixed)                              
+                                                                    (* (any-to-ram-with-padding---mixed)
                                                                        (- macro/SIZE (- macro/REF_SIZE macro/SRC_OFFSET_LO)))))  ;; ""
 
 (defconstraint    any-to-ram-with-padding---common---1st-preprocessing-row (:guard (* MACRO (is-any-to-ram-with-padding)))

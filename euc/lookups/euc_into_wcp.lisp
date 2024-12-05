@@ -1,4 +1,4 @@
-(deflookup 
+(deflookup
   euc-into-wcp
   ;reference columns
   (

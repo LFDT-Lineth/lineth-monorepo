@@ -10,7 +10,7 @@
   (* TX_SKIP
      (- HUB_STAMP (prev HUB_STAMP))))
 
-(defconst 
+(defconst
   tx-skip---row-offset---sender-account       0
   tx-skip---row-offset---recipient-account    1
   tx-skip---row-offset---coinbase-account     2
@@ -126,7 +126,7 @@
                                                 tx-skip---row-offset---transaction-row))
 
 (defconstraint   tx-skip---setting-coinbase-account-row (:guard (tx-skip---precondition))
-                 (begin 
+                 (begin
                    (eq!    (shift account/ADDRESS_HI tx-skip---row-offset---coinbase-account)
                            (shift transaction/COINBASE_ADDRESS_HI tx-skip---row-offset---transaction-row))
                    (eq!    (shift account/ADDRESS_LO tx-skip---row-offset---coinbase-account)

@@ -25,7 +25,7 @@
 
 
 
-(defconstraint hub-stamp-constancy-of-TLI-and-NSR () 
+(defconstraint hub-stamp-constancy-of-TLI-and-NSR ()
                (begin
                  (hub-stamp-constancy    TLI)
                  (hub-stamp-constancy    NSR)))

@@ -1,10 +1,10 @@
-(defun (hub-into-exp-trigger) 
+(defun (hub-into-exp-trigger)
   (and hub.PEEK_AT_MISCELLANEOUS
        hub.misc/EXP_FLAG))
 
 (deflookup hub-into-exp
            ;; target columns
-           ( 
+           (
              exp.MACRO
              exp.macro/EXP_INST
              [exp.macro/DATA 1]

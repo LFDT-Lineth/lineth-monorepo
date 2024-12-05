@@ -1,4 +1,4 @@
-(deflookup 
+(deflookup
   txndata-into-rlptxn
   ;; target columns
   (

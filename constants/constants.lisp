@@ -1,4 +1,4 @@
-(defconst 
+(defconst
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;                  ;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; EVM INSTRUCTIONS ;;
@@ -419,7 +419,7 @@
   RLP_RCPT_SUBPHASE_ID_DATA_SIZE            83
   RLP_RCPT_SUBPHASE_ID_TOPIC_DELTA          96
   ;;
-  ;; RLP_ADDR 
+  ;; RLP_ADDR
   ;;
   RLP_ADDR_RECIPE_1                         1                                  ;; for RlpAddr, used to discriminate between recipe for create
   RLP_ADDR_RECIPE_2                         2                                  ;; for RlpAddr, used to discriminate between recipe for create

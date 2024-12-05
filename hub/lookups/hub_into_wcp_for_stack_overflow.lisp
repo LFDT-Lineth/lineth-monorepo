@@ -4,7 +4,7 @@
 (defun (projected-height)
   (- (+ hub.HEIGHT hub.stack/ALPHA) hub.stack/DELTA))
 
-(deflookup 
+(deflookup
   hub-into-wcp-for-sox
   ;; target columns
   (

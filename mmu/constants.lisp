@@ -1,6 +1,6 @@
 (module mmu)
 
-(defconst 
+(defconst
   ;;
   ;; MMU NB OF PP ROWS
   ;;

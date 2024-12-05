@@ -1,6 +1,6 @@
 (module mmio)
 
-(defcolumns 
+(defcolumns
   (CN_A :i64 :display :dec)
   (CN_B :i64 :display :dec)
   (CN_C :i64 :display :dec)
@@ -29,7 +29,7 @@
   (TARGET_BYTE_OFFSET :i8 :display :dec)
   (SIZE :i64 :display :dec)
   (LIMB :i128)
-  (TOTAL_SIZE :i64 :display :dec) 
+  (TOTAL_SIZE :i64 :display :dec)
   (EXO_SUM :i32)
   (EXO_ID :i32)
   (KEC_ID :i32)
@@ -65,7 +65,7 @@
   (POW_256 :i128 :array [1:2])
   (COUNTER :i8))
 
-(defalias 
+(defalias
   STAMP MMIO_STAMP
   CT    COUNTER
   CNS   CONTEXT_SOURCE

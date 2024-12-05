@@ -521,7 +521,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                       ;;
 ;; 5.1 Common            ;;
-;; constraints for       ;; 
+;; constraints for       ;;
 ;; precompiles           ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 

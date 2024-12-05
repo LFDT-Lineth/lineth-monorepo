@@ -1,6 +1,6 @@
 (module rom)
 
-(defcolumns 
+(defcolumns
   (CODE_FRAGMENT_INDEX :i32)
   (CODE_FRAGMENT_INDEX_INFTY :i32)
   (CODE_SIZE :i32 :display :dec)
@@ -25,7 +25,7 @@
   (OPCODE :byte :display :opcode)
   (IS_JUMPDEST :binary))
 
-(defalias 
+(defalias
   PC   PROGRAM_COUNTER
   CFI  CODE_FRAGMENT_INDEX
   CT   COUNTER

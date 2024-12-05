@@ -69,7 +69,7 @@
 (defun    (blockdata---first-row-of-new-block)   (-   REL_BLOCK   (prev REL_BLOCK)))
 
 (defconstraint value-constraints---COINBASE (:guard (blockdata---first-row-of-new-block))
-               (begin  
+               (begin
                  (eq! (shift INST     ROW_SHIFT_COINBASE) EVM_INST_COINBASE)
                  (eq! (shift DATA_HI  ROW_SHIFT_COINBASE) COINBASE_HI)
                  (eq! (shift DATA_LO  ROW_SHIFT_COINBASE) COINBASE_LO)
@@ -87,7 +87,7 @@
                                (* (^ 256 (- LLARGEMO   11)) (shift [BYTE_HI   11]   ROW_SHIFT_COINBASE))))))
 
 (defconstraint value-constraints---TIMESTAMP (:guard (blockdata---first-row-of-new-block))
-               (begin  
+               (begin
                  (eq!       (shift INST     ROW_SHIFT_TIMESTAMP) EVM_INST_TIMESTAMP)
                  (vanishes! (shift DATA_HI  ROW_SHIFT_TIMESTAMP))
                  (vanishes! (+ (* (^ 256 (- LLARGEMO   0)) (shift [BYTE_LO   0]   ROW_SHIFT_TIMESTAMP))
@@ -104,7 +104,7 @@
                               (eq! (shift WCP_FLAG ROW_SHIFT_TIMESTAMP) 1))))
 
 (defconstraint value-constraints---NUMBER (:guard (blockdata---first-row-of-new-block))
-               (begin  
+               (begin
                  (eq!       (shift INST      ROW_SHIFT_NUMBER) EVM_INST_NUMBER)
                  (vanishes! (shift DATA_HI   ROW_SHIFT_NUMBER))
                  (eq!       (shift DATA_LO   ROW_SHIFT_NUMBER) (+ FIRST_BLOCK_NUMBER (- REL_BLOCK 1)))
@@ -120,27 +120,27 @@
                                (* (^ 256 (- LLARGEMO   9)) (shift [BYTE_LO   9]   ROW_SHIFT_NUMBER))))))
 
 (defconstraint value-constraints---DIFFICULTY (:guard (blockdata---first-row-of-new-block))
-               (begin  
+               (begin
                  (eq!       (shift INST      ROW_SHIFT_DIFFICULTY) EVM_INST_DIFFICULTY)
                  (vanishes! (shift DATA_HI   ROW_SHIFT_DIFFICULTY))
                  (eq!       (shift DATA_LO   ROW_SHIFT_DIFFICULTY) LINEA_DIFFICULTY)))
 
 (defconstraint value-constraints---GASLIMIT (:guard (blockdata---first-row-of-new-block))
-               (begin  
+               (begin
                  (eq!       (shift INST      ROW_SHIFT_GASLIMIT) EVM_INST_GASLIMIT)
                  (vanishes! (shift DATA_HI   ROW_SHIFT_GASLIMIT))
                  (eq!       (shift DATA_LO   ROW_SHIFT_GASLIMIT) LINEA_BLOCK_GAS_LIMIT)
                  (eq!       (shift DATA_LO   ROW_SHIFT_GASLIMIT) BLOCK_GAS_LIMIT)))
 
 (defconstraint value-constraints---CHAINID (:guard (blockdata---first-row-of-new-block))
-               (begin  
+               (begin
                  (eq!       (shift INST      ROW_SHIFT_CHAINID) EVM_INST_CHAINID)
                  (vanishes! (shift DATA_HI   ROW_SHIFT_CHAINID))
                  ;(eq!      (shift DATA_LO   ROW_SHIFT_CHAINID) LINEA_CHAIN_ID) ;; TODO: this needs some fixing
                  ))
 
 (defconstraint value-constraints---BASEFEE (:guard (blockdata---first-row-of-new-block))
-               (begin  
+               (begin
                  (eq!       (shift INST      ROW_SHIFT_BASEFEE) EVM_INST_BASEFEE)
                  (vanishes! (shift DATA_HI   ROW_SHIFT_BASEFEE))
                  (eq!       (shift DATA_LO   ROW_SHIFT_BASEFEE) LINEA_BASE_FEE)

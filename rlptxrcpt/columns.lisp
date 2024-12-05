@@ -1,6 +1,6 @@
 (module rlptxrcpt)
 
-(defcolumns 
+(defcolumns
   (ABS_TX_NUM       :i32)
   (ABS_TX_NUM_MAX   :i32)
   (ABS_LOG_NUM      :i32)
@@ -34,7 +34,7 @@
   (PHASE_ID         :i16))
 
 ;; aliases
-(defalias 
+(defalias
   CT COUNTER
   LC LIMB_CONSTRUCTED
   P  POWER)

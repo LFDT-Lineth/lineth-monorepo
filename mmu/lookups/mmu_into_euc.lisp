@@ -1,7 +1,7 @@
 (defun (mmu-to-euc-selector)
   (* mmu.PRPRC mmu.prprc/EUC_FLAG))
 
-(deflookup 
+(deflookup
   mmu-into-euc
   ;reference columns
   (

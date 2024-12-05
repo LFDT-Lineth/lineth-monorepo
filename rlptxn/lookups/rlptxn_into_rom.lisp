@@ -2,7 +2,7 @@
 (defun (sel-rlptxn-to-rom)
   (* (~ rlptxn.CODE_FRAGMENT_INDEX) rlptxn.IS_PHASE_DATA (- 1 rlptxn.IS_PREFIX) rlptxn.LC))
 
-(deflookup 
+(deflookup
   rlptxn-into-rom
   ;; target columns
   (

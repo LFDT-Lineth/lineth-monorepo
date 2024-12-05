@@ -1,6 +1,6 @@
 (module mxp)
 
-(defconst 
+(defconst
   CT_MAX_TRIVIAL              0
   CT_MAX_NON_TRIVIAL          3
   CT_MAX_NON_TRIVIAL_BUT_MXPX 16

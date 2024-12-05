@@ -1,6 +1,6 @@
 (module mmu)
 
-(defcolumns 
+(defcolumns
   ;; shared columns
   (STAMP      :i32 :display :dec)
   (MMIO_STAMP :i32 :display :dec)
@@ -29,7 +29,7 @@
   (IS_MODEXP_ZERO                          :binary@prove)
   (IS_MODEXP_DATA                          :binary@prove)
   (IS_BLAKE                                :binary@prove)
-  ;; USED ONLY IN MICRO ROW BUT ARE SHARED 
+  ;; USED ONLY IN MICRO ROW BUT ARE SHARED
   (LZRO     :binary@prove)
   (NT_ONLY  :binary@prove)
   (NT_FIRST :binary@prove)

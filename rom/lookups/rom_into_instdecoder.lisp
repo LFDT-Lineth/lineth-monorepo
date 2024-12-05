@@ -1,4 +1,4 @@
-(deflookup 
+(deflookup
   rom-into-instdecoder
   ;; target columns
   (

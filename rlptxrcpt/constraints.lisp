@@ -40,7 +40,7 @@
   (if-eq (* PHASE (prev PHASE)) 1
          (or! (remained-constant! C) (did-dec! C 1))))
 
-;; Constancies              
+;; Constancies
 (defconstraint block-constancies ()
   (begin (block-constant ABS_TX_NUM_MAX)
          (block-constant ABS_LOG_NUM_MAX)))

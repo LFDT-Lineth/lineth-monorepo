@@ -1,6 +1,6 @@
 (module blake2fmodexpdata)
 
-(defconst 
+(defconst
   INDEX_MAX_MODEXP          31
   INDEX_MAX_MODEXP_BASE     INDEX_MAX_MODEXP
   INDEX_MAX_MODEXP_EXPONENT INDEX_MAX_MODEXP

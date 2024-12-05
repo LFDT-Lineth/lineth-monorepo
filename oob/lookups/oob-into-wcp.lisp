@@ -1,7 +1,7 @@
 (defun (oob-into-wcp-activation-flag)
   oob.WCP_FLAG)
 
-(deflookup 
+(deflookup
   oob-into-wcp
   (
     wcp.ARGUMENT_1_HI

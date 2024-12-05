@@ -1,6 +1,6 @@
 (module mxp)
 
-(defcolumns 
+(defcolumns
   (STAMP :i32)
   (CN :i64)
   (CT :i5)
@@ -46,7 +46,7 @@
   (SIZE_1_NONZERO_NO_MXPX :binary)
   (SIZE_2_NONZERO_NO_MXPX :binary))
 
-  (defalias 
+  (defalias
   S1NZNOMXPX SIZE_1_NONZERO_NO_MXPX
   S2NZNOMXPX SIZE_2_NONZERO_NO_MXPX)
 

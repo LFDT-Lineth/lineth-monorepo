@@ -163,8 +163,8 @@
 (defconst  precompile-processing---nsr-IDENTITY-FKTH        precompile-processing---nsr-standard-failure)
 (defconst  precompile-processing---nsr-IDENTITY-success     4)
 ;; flag sum shorthands
-(defun    (precompile-processing---flag-sum-IDENTITY-FKTH)    (precompile-processing---flag-sum-standard-failure))  
-(defun    (precompile-processing---flag-sum-IDENTITY-success)    
+(defun    (precompile-processing---flag-sum-IDENTITY-FKTH)    (precompile-processing---flag-sum-standard-failure))
+(defun    (precompile-processing---flag-sum-IDENTITY-success)
   (+      (shift    PEEK_AT_SCENARIO         0)
           (shift    PEEK_AT_MISCELLANEOUS    1)
           (shift    PEEK_AT_MISCELLANEOUS    2)
@@ -191,7 +191,7 @@
           (precompile-processing---nsr-MODEXP-success)    (scenario-shorthand---PRC---success)
           ))
 ;; MODEXP non stack rows shorthands
-(defun    (precompile-processing---nsr-MODEXP-FKTR)       (+    
+(defun    (precompile-processing---nsr-MODEXP-FKTR)       (+
                                                             (shift    PEEK_AT_SCENARIO         0                                                                       )
                                                             (shift    PEEK_AT_MISCELLANEOUS    precompile-processing---MODEXP-misc-row---cds---row-offset              )
                                                             (shift    PEEK_AT_MISCELLANEOUS    precompile-processing---MODEXP-misc-row---extract-bbs---offset          )
@@ -202,7 +202,7 @@
                                                             (shift    PEEK_AT_CONTEXT          precompile-processing---MODEXP-context-row---FKTR---row-offset          )
                                                             )
   )
-(defun    (precompile-processing---nsr-MODEXP-success)    (+    
+(defun    (precompile-processing---nsr-MODEXP-success)    (+
                                                             (shift    PEEK_AT_SCENARIO         0                                                                             )
                                                             (shift    PEEK_AT_MISCELLANEOUS    precompile-processing---MODEXP-misc-row---cds---row-offset                    )
                                                             (shift    PEEK_AT_MISCELLANEOUS    precompile-processing---MODEXP-misc-row---extract-bbs---offset                )
@@ -221,7 +221,7 @@
 (defun    (precompile-processing---flag-sum-MODEXP-FKTR)       (precompile-processing---flag-sum-standard-failure))
 (defun    (precompile-processing---flag-sum-MODEXP-success)    (precompile-processing---flag-sum-standard-success))
 ;; NB: the failure scenario FAILURE_KNOWN_TO_HUB is impossible
-(defconst    
+(defconst
   precompile-processing---MODEXP-misc-row---cds---row-offset                      1
   precompile-processing---MODEXP-misc-row---extract-bbs---offset                  2
   precompile-processing---MODEXP-misc-row---extract-ebs---row-offset              3
@@ -236,7 +236,7 @@
 
   precompile-processing---MODEXP-context-row---FKTR---row-offset                  7
   precompile-processing---MODEXP-context-row---success---row-offset              12
-  
+
   precompile-processing---nsr-FKTR                                                8
   precompile-processing---nsr-success                                            13
   )

@@ -9,7 +9,7 @@
 
 (defconstraint context-consistency---perm-cn-first-and-cn-again-constraints ()
                (begin
-                 (eq!   (+    con_AGAIN    con_FIRST) 
+                 (eq!   (+    con_AGAIN    con_FIRST)
                         ccp_PEEK_AT_CONTEXT)
                  (if-zero    (force-bool ccp_PEEK_AT_CONTEXT)
                              (eq!    (next con_FIRST)    (next ccp_PEEK_AT_CONTEXT)))

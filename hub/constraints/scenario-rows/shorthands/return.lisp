@@ -57,7 +57,7 @@
      ))
 
 ;; ;; NOT A CONSTRAINT
-;; (defconstraint  BULLSHIT-making-sure-everything-compiles-scenario-shorthand-RETURNs () 
+;; (defconstraint  BULLSHIT-making-sure-everything-compiles-scenario-shorthand-RETURNs ()
 ;;                (begin  (vanishes! (scenario-shorthand---RETURN---message-call)           )
 ;;                        (vanishes! (scenario-shorthand---RETURN---empty-deployment)       )
 ;;                        (vanishes! (scenario-shorthand---RETURN---nonempty-deployment)    )

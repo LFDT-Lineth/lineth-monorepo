@@ -44,7 +44,7 @@
                                              (* stack/MUL_FLAG [ stack/DEC_FLAG 1 ])))
 (defun (stateless-instruction---1-argument-instruction) (* (+ stack/BIN_FLAG stack/WCP_FLAG)
                                                            [ stack/DEC_FLAG 1 ]))
-(defun (stateless-instruction---2-argument-instruction) (+ stack/ADD_FLAG 
+(defun (stateless-instruction---2-argument-instruction) (+ stack/ADD_FLAG
                                                            (* stack/BIN_FLAG (- 1 [ stack/DEC_FLAG 1 ]))
                                                            stack/MOD_FLAG
                                                            stack/MUL_FLAG
@@ -76,8 +76,8 @@
                  (if-not-zero (stateless-instruction---3-argument-instruction) (stack-pattern-3-1))))
 
 (defconstraint wcp-result-is-binary (:guard (stateless-instruction---precondition))
-               (if-not-zero stack/WCP_FLAG 
-                            (begin 
+               (if-not-zero stack/WCP_FLAG
+                            (begin
                               (vanishes! [ stack/STACK_ITEM_VALUE_HI 4 ])
                               (debug (is-binary [ stack/STACK_ITEM_VALUE_LO 4 ])))))
 

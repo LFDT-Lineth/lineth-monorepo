@@ -49,7 +49,7 @@
                                                                    EXO_SUM_WEIGHT_BLAKEMODEXP                                                              ;; weighted exogenous module flag sum
                                                                    PHASE_BLAKE_RESULT                                                                      ;; phase
                                                                    ))
-                    
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Miscellaneous-row i + 4 ;;

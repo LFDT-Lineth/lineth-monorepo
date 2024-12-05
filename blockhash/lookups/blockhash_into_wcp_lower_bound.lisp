@@ -1,4 +1,4 @@
-(deflookup 
+(deflookup
   blockhash-into-wcp-lower-bound
   ; target columns
   (

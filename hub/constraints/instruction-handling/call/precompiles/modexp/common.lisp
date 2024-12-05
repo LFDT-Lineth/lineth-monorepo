@@ -211,8 +211,8 @@
                                                                   ;; tgt_id                                                                                                     ;; target ID
                                                                   ;; aux_id                                                                                                     ;; auxiliary ID
                                                                   ;; src_offset_hi                                                                                              ;; source offset high
-                                                                  (+    (precompile-processing---dup-cdo)                                                                    
-                                                                        96                                                                                                   
+                                                                  (+    (precompile-processing---dup-cdo)
+                                                                        96
                                                                         (precompile-processing---MODEXP---bbs-lo))                                                              ;; source offset low
                                                                   ;; tgt_offset_lo                                                                                              ;; target offset low
                                                                   ;; size                                                                                                       ;; size

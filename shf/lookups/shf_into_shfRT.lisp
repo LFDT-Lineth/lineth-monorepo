@@ -1,4 +1,4 @@
-(deflookup 
+(deflookup
   shf-into-shfreftable-hi
   ;reference columns
   (
@@ -9,7 +9,7 @@
     shfreftable.RAP
     shfreftable.ONES
   )
-  ;source columns 
+  ;source columns
   (
     shf.IOMF
     shf.BYTE_2
@@ -19,7 +19,7 @@
     shf.ONES
   ))
 
-(deflookup 
+(deflookup
   shf-into-shfreftable-lo
   ;reference columns
   (
@@ -29,7 +29,7 @@
     shfreftable.LAS
     shfreftable.RAP
   )
-  ;source columns 
+  ;source columns
   (
     shf.IOMF
     shf.BYTE_3

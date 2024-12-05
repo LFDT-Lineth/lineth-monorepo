@@ -1,6 +1,6 @@
 (module blockdata)
 
-(defcolumns 
+(defcolumns
   (FIRST_BLOCK_NUMBER :i48)
   (CT :i4)
   (REL_BLOCK           :i10)

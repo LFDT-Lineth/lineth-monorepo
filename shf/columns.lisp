@@ -1,6 +1,6 @@
 (module shf)
 
-(defcolumns 
+(defcolumns
   (SHIFT_STAMP                :i32)
   (IOMF                       :binary)
   (COUNTER                    :i8)
@@ -54,7 +54,7 @@
   (SHB_7_LO                   :byte))
 
 ;; aliases
-(defalias 
+(defalias
   STAMP SHIFT_STAMP
   SHD   SHIFT_DIRECTION
   OLI   ONE_LINE_INSTRUCTION

@@ -1,6 +1,6 @@
 (module euc)
 
-(defcolumns 
+(defcolumns
   (IOMF :binary@prove)
   (CT :i8)
   (CT_MAX :i8)

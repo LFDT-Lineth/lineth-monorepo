@@ -110,7 +110,7 @@
 (defconstraint   tx-finalization---success---justifying-txn-data-prediction---leftover-gas
                  (:guard (tx-finalization---success---precondition))
                  (eq!   (shift transaction/GAS_LEFTOVER              row-offset---tx-finl---success---transaction-row)   (shift   GAS_NEXT         -1)))
-                 
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                             ;;
 ;;   X.3 Transaction FAILURE   ;;

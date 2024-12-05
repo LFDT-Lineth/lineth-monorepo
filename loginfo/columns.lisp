@@ -1,6 +1,6 @@
 (module loginfo)
 
-(defcolumns 
+(defcolumns
   (ABS_TXN_NUM_MAX :i24)
   (ABS_TXN_NUM :i24)
   (TXN_EMITS_LOGS :binary@prove)

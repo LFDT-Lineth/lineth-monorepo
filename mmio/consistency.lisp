@@ -1,26 +1,26 @@
 (module mmio)
 
-(definterleaved 
+(definterleaved
   CN_ABC
   (CN_A CN_B CN_C))
 
-(definterleaved 
+(definterleaved
   INDEX_ABC
   (INDEX_A INDEX_B INDEX_C))
 
-(definterleaved 
+(definterleaved
   MMIO_STAMP_3
   (MMIO_STAMP MMIO_STAMP MMIO_STAMP))
 
-(definterleaved 
+(definterleaved
   VAL_ABC
   (VAL_A VAL_B VAL_C))
 
-(definterleaved 
+(definterleaved
   VAL_ABC_NEW
   (VAL_A_NEW VAL_B_NEW VAL_C_NEW))
 
-(defpermutation 
+(defpermutation
   (CN_ABC_SORTED
    INDEX_ABC_SORTED
    MMIO_STAMP_3_SORTED

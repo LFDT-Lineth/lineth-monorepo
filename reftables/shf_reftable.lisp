@@ -1,6 +1,6 @@
 (module shfreftable)
 
-(defcolumns 
+(defcolumns
   (IOMF :binary)
   (BYTE1 :byte)
   (MSHP :byte)

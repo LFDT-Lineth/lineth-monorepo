@@ -1,6 +1,6 @@
 (module blockhash)
 
-(defcolumns 
+(defcolumns
   (IOMF :binary)
   (BLOCK_NUMBER_HI :i128)
   (BLOCK_NUMBER_LO :i128)

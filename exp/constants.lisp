@@ -1,6 +1,6 @@
 (module exp)
 
-(defconst 
+(defconst
   CT_MAX_CMPTN_EXP_LOG    15
   CT_MAX_MACRO_EXP_LOG    0
   CT_MAX_PRPRC_EXP_LOG    0

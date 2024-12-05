@@ -156,13 +156,13 @@
 ;;         constraints           ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; non zero bit constraint 
+;; non zero bit constraint
 (defpurefun (non-zero-bit x nzb)
             (if-zero x
                      (vanishes! nzb)
                      (eq! nzb 1)))
 
-;; counting nonzeroness constraint 
+;; counting nonzeroness constraint
 (defpurefun (counting-nonzeroness ct nzb_acc nzb)
             (if-zero ct
                      (eq! nzb_acc nzb)
@@ -305,7 +305,7 @@
 ;;                      ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; 1 
+;; 1
 (defconstraint   modexp-log---preprocessing---cds-cutoff-less-than-ebs-cutoff (:perspective macro :guard IS_MODEXP_LOG)
                  (callToLT 1 0 (cds_cutoff) 0 (ebs_cutoff)))
 

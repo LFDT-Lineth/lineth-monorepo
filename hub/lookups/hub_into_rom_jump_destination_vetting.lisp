@@ -4,7 +4,7 @@
 
 (deflookup hub-into-rom-jump-destination-vetting
            ;; target columns
-	   ( 
+	   (
 	     rom.CFI
 	     rom.PC
 	     rom.IS_JUMPDEST

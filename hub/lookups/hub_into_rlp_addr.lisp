@@ -1,11 +1,11 @@
-(defun (hub-into-rlp-addr-trigger) 
+(defun (hub-into-rlp-addr-trigger)
   (and hub.PEEK_AT_ACCOUNT
        hub.account/RLPADDR_FLAG))
 
 ;;
 (deflookup hub-into-rlpaddr
            ;; target columns
-	   ( 
+	   (
 	     rlpaddr.RECIPE
 	     rlpaddr.ADDR_HI
 	     rlpaddr.ADDR_LO

@@ -1,6 +1,6 @@
 (module blake2fmodexpdata)
 
-(defcolumns 
+(defcolumns
   (STAMP                :i10)
   (ID                   :i32)
   (PHASE                :byte)

@@ -26,7 +26,7 @@
                                                   (eq! (next   envcp_PC)             envcp_PC_NEW)
                                                   (eq! (next   envcp_HEIGHT)         envcp_HEIGHT_NEW)
                                                   (eq! (next   envcp_GAS_EXPECTED)   envcp_GAS_NEXT))))))
-                                                                       
+
 (defconstraint execution-environment-consistency---initialization ()
                (if-not-zero (will-remain-constant! envcp_CN)
                             (begin

@@ -42,7 +42,7 @@
 ;; ;; should be redundant
 ;; (defconstraint   block-data-instruction-setting-the-peeking-flags       (:guard (block-data-standard-hypothesis))
 ;;                  (if-not-zero   CMC
-;;                                 (eq!   (next   PEEK_AT_CONTEXT) 
+;;                                 (eq!   (next   PEEK_AT_CONTEXT)
 ;;                                        1)))
 
 (defconstraint   block-data-instruction-setting-the-gas-cost            (:guard (block-data-standard-hypothesis))

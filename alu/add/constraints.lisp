@@ -1,6 +1,6 @@
 (module add)
 
-(defconst 
+(defconst
   THETA 340282366920938463463374607431768211456) ;; note that 340282366920938463463374607431768211456 = 256^16
 
 (defconstraint stamp-constancies ()

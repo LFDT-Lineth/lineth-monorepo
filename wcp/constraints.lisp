@@ -4,7 +4,7 @@
   (+ (one-line-inst) (variable-length-inst)))
 
 (defun (weight-sum)
-  (+ 
+  (+
     (* EVM_INST_LT     IS_LT)
     (* EVM_INST_GT     IS_GT)
     (* EVM_INST_SLT    IS_SLT)

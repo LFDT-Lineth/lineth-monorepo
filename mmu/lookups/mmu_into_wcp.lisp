@@ -1,7 +1,7 @@
 (defun (mmu-to-wcp-selector)
   (* mmu.PRPRC mmu.prprc/WCP_FLAG))
 
-(deflookup 
+(deflookup
   mmu-into-wcp
   ;reference columns
   (

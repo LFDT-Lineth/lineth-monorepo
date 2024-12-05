@@ -2,7 +2,7 @@
   (force-bool (* (~ blake2fmodexpdata.STAMP)
                  (- blake2fmodexpdata.STAMP (prev blake2fmodexpdata.STAMP)))))
 
-(deflookup 
+(deflookup
   blake2fmodexpdata-into-wcp
   ; target colums (in WCP)
   (
