@@ -63,6 +63,19 @@
                                     (eq!    (shift    account/RLPADDR_KEC_LO       CREATE_first_creator_account_row___row_offset)     (create-instruction---init-code-hash-lo))
                                     )))
 
-(defun    (create-instruction---address-computation-recipe)    (+    (*    RLP_ADDR_RECIPE_1    (create-instruction---is-CREATE))
-                                                                     (*    RLP_ADDR_RECIPE_2    (create-instruction---is-CREATE2))
-                                                                     ))
+(defun    (create-instruction---address-computation-recipe)    (+    (*   (create-instruction---is-CREATE)    RLP_ADDR_RECIPE_1)
+                                                                     (*   (create-instruction---is-CREATE2)   RLP_ADDR_RECIPE_2)))
+
+(defun    (create-instruction---init-code-hash-hi)    (*    (create-instruction---is-CREATE2)
+                                                            (if-not-zero    (create-instruction---trigger_HASHINFO)
+                                                                            ;; HASH_INFO required, nonempty code
+                                                                            (create-instruction---HASHINFO-keccak-hi)
+                                                                            ;; HASH_INFO not required, empty code
+                                                                            EMPTY_KECCAK_HI)))
+
+(defun    (create-instruction---init-code-hash-lo)    (*    (create-instruction---is-CREATE2)
+                                                            (if-not-zero    (create-instruction---trigger_HASHINFO)
+                                                                            ;; HASH_INFO needed to be triggered
+                                                                            (create-instruction---HASHINFO-keccak-lo)
+                                                                            ;; HASH_INFO didn't need to be triggered
+                                                                            EMPTY_KECCAK_LO)))
