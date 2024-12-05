@@ -74,7 +74,9 @@
                                                                  (create-instruction---MXP-gas)         ;; memory expansion gas
                                                                  )))
 
-(defconstraint    create-instruction---setting-the-out-of-gas-exception                     (:guard    (create-instruction---generic-precondition))
+(defconstraint    create-instruction---setting-the-out-of-gas-exception
+                  (:guard    (create-instruction---generic-precondition))
+                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                   (if-zero    (shift    misc/STP_FLAG    CREATE_miscellaneous_row___row_offset)
                               ;; STP_FLAG  ≡  0
                               (vanishes!    (create-instruction---STACK-oogx))
@@ -83,10 +85,9 @@
                                             (create-instruction---STP-oogx))
                               ))
 
-(defun    (create-instruction---createe-nonce)       (*    (create-instruction---trigger_RLPADDR)    (shift    account/NONCE       CREATE_first_createe_account_row___row_offset)))
-(defun    (create-instruction---createe-has-code)    (*    (create-instruction---trigger_RLPADDR)    (shift    account/HAS_CODE    CREATE_first_createe_account_row___row_offset)))
-
-(defconstraint    create-instruction---setting-the-OOB-instruction                          (:guard    (create-instruction---generic-precondition))
+(defconstraint    create-instruction---setting-the-OOB-instruction
+                  (:guard    (create-instruction---generic-precondition))
+                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                   (if-not-zero    (shift    misc/OOB_FLAG    CREATE_miscellaneous_row___row_offset)
                                   (set-OOB-instruction---create    CREATE_miscellaneous_row___row_offset         ;; offset
                                                                    (create-instruction---STACK-value-hi)         ;; value    (high part)
@@ -97,6 +98,9 @@
                                                                    (create-instruction---current-context-csd)    ;; current  call  stack  depth
                                                                    (create-instruction---creator-nonce)          ;; creator account nonce
                                                                    )))
+
+(defun    (create-instruction---createe-nonce)       (*    (scenario-shorthand---CREATE---load-createe-account)    (shift    account/NONCE       CREATE_first_createe_account_row___row_offset)))
+(defun    (create-instruction---createe-has-code)    (*    (scenario-shorthand---CREATE---load-createe-account)    (shift    account/HAS_CODE    CREATE_first_createe_account_row___row_offset)))
 
 (defconstraint    create-instruction---setting-the-CREATE-scenario---exceptional
                   (:guard    (create-instruction---generic-precondition))

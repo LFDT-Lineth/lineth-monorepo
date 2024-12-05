@@ -110,6 +110,13 @@
     (scenario-shorthand---CREATE---not-rebuffed)
     ))
 
+;;  CREATE/load_createe_account
+(defun (scenario-shorthand---CREATE---load-createe-account)
+  (+
+    (scenario-shorthand---CREATE---failure-condition)
+    (scenario-shorthand---CREATE---not-rebuffed)
+    ))
+
 ;;  CREATE/no_context_change
 (defun (scenario-shorthand---CREATE---no-context-change)
   (+
