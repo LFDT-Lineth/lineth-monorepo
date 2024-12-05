@@ -50,7 +50,7 @@ jobs:
           GOARCH="amd64" go build -tags=nocorset -buildmode=c-shared -o ./target/${TARGET_DECOMPRESSOR}_${VERSION}_linux_x86_64.so ${SRC_DECOMPRESSOR}
 
       - name: Cache built binaries
-        uses: actions/upload-artifact@master
+        uses: actions/upload-artifact@v4
         with:
           name: linux-artefacts
           path: ./prover/target
@@ -84,7 +84,7 @@ jobs:
           GOARCH="arm64" go build -tags=nocorset -buildmode=c-shared -o ./target/${TARGET_COMPRESSOR}_${VERSION}_linux_arm64.so ${SRC_COMPRESSOR}
           GOARCH="arm64" go build -tags=nocorset -buildmode=c-shared -o ./target/${TARGET_DECOMPRESSOR}_${VERSION}_linux_arm64.so ${SRC_DECOMPRESSOR}
       - name: Cache built binaries
-        uses: actions/upload-artifact@master
+        uses: actions/upload-artifact@v4
         with:
           name: linux-arm64-artefacts
           path: ./prover/target

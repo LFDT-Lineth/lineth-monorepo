@@ -78,7 +78,7 @@ jobs:
         output: sarif-results
         sarif-file: ${{ matrix.language }}-results.sarif
     - name: Upload CodeQL Results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: codeql-results-${{ matrix.language }}
         path: sarif-results
