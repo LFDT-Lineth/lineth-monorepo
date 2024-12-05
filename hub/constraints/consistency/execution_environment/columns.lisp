@@ -1,7 +1,7 @@
 (module hub)
 
 
-;; envcp_ ⇔ execution envionment consistency permutation
+;; envcp_ ⇔ execution environment consistency permutation
 (defpermutation
   ;; permuted columns
   (
