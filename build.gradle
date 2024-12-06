@@ -110,7 +110,6 @@ allprojects {
         }
         // spotless check applied to build.gradle (groovy) files
         groovyGradle {
-          target '**/*.gradle'
           greclipse()
           indentWithSpaces(2)
           endWithNewline()
