@@ -1,5 +1,5 @@
 plugins {
-    id 'net.consensys.zkevm.kotlin-library-conventions'
+  id 'net.consensys.zkevm.kotlin-library-conventions'
 }
 
 dependencies {
@@ -15,8 +15,4 @@ dependencies {
   testImplementation "org.junit.jupiter:junit-jupiter"
   testImplementation "io.vertx:vertx-junit5"
   testImplementation testFixtures(project(':jvm-libs:generic:extensions:kotlin'))
-}
-
-test {
-  useJUnitPlatform()
 }

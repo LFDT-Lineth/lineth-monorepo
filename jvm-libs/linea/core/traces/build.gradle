@@ -1,6 +1,6 @@
 plugins {
-    id 'net.consensys.zkevm.kotlin-common-conventions'
-    id 'java-test-fixtures'
+  id 'net.consensys.zkevm.kotlin-common-conventions'
+  id 'java-test-fixtures'
 }
 
 dependencies {
@@ -12,5 +12,5 @@ dependencies {
 }
 
 jar {
-    dependsOn configurations.runtimeClasspath
+  dependsOn configurations.runtimeClasspath
 }

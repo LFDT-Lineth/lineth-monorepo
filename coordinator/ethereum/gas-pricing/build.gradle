@@ -11,7 +11,3 @@ dependencies {
   testFixturesImplementation "tech.pegasys.teku.internal:async:${libs.versions.teku.get()}"
   testFixturesImplementation project(":coordinator:core")
 }
-
-test {
-  useJUnitPlatform()
-}

@@ -48,11 +48,11 @@ compileKotlin {
 
 task cleanResources(type: Delete) {
   fileTree(project.layout.projectDirectory.dir('src/main/resources'))
-    .filter {
-      it.name.endsWith(".so") || it.name.endsWith(".dll") || it.name.endsWith(".dylib")
-    }.each {
-      delete it
-    }
+      .filter {
+        it.name.endsWith(".so") || it.name.endsWith(".dll") || it.name.endsWith(".dylib")
+      }.each {
+        delete it
+      }
 }
 
 clean.dependsOn cleanResources

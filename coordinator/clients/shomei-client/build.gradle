@@ -3,21 +3,17 @@ plugins {
 }
 
 dependencies {
-    implementation project(':coordinator:core')
-    implementation project(':jvm-libs:generic:extensions:futures')
-    implementation project(':jvm-libs:generic:json-rpc')
-    implementation project(':jvm-libs:linea:metrics:micrometer')
-    implementation project(':jvm-libs:linea:core:traces')
-    implementation project(":jvm-libs:linea:teku-execution-client")
-    implementation "tech.pegasys.teku.internal:unsigned:${libs.versions.teku.get()}"
+  implementation project(':coordinator:core')
+  implementation project(':jvm-libs:generic:extensions:futures')
+  implementation project(':jvm-libs:generic:json-rpc')
+  implementation project(':jvm-libs:linea:metrics:micrometer')
+  implementation project(':jvm-libs:linea:core:traces')
+  implementation project(":jvm-libs:linea:teku-execution-client")
+  implementation "tech.pegasys.teku.internal:unsigned:${libs.versions.teku.get()}"
 
-    api "io.vertx:vertx-core"
+  api "io.vertx:vertx-core"
 
-    testImplementation 'org.junit.jupiter:junit-jupiter'
-    testImplementation "io.vertx:vertx-junit5"
-    testImplementation "com.github.tomakehurst:wiremock-jre8:${libs.versions.wiremock.get()}"
-}
-
-test {
-    useJUnitPlatform()
+  testImplementation 'org.junit.jupiter:junit-jupiter'
+  testImplementation "io.vertx:vertx-junit5"
+  testImplementation "com.github.tomakehurst:wiremock-jre8:${libs.versions.wiremock.get()}"
 }

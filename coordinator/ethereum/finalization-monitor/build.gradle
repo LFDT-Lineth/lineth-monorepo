@@ -21,7 +21,3 @@ dependencies {
   testImplementation(testFixtures(project(":jvm-libs:generic:extensions:kotlin")))
   testImplementation("io.vertx:vertx-junit5")
 }
-
-test {
-  useJUnitPlatform()
-}

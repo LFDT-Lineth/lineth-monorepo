@@ -2,6 +2,8 @@ plugins {
   id 'net.consensys.zkevm.kotlin-library-conventions'
 }
 
+description = "HTTP REST utilities"
+
 dependencies {
   implementation project(":jvm-libs:generic:errors")
   implementation project(':jvm-libs:generic:extensions:futures')
@@ -14,8 +16,4 @@ dependencies {
   testImplementation "io.vertx:vertx-junit5"
   testImplementation "com.github.tomakehurst:wiremock-jre8:${libs.versions.wiremock.get()}"
   testImplementation "io.vertx:vertx-micrometer-metrics"
-}
-
-test {
-  useJUnitPlatform()
 }

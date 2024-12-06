@@ -33,26 +33,24 @@ sourceSets {
   }
 }
 
-task integrationTest(type: Test) {
-  test ->
-    testLogging {
-      events TestLogEvent.FAILED,
+task integrationTest(type: Test) { test ->
+  testLogging {
+    events TestLogEvent.FAILED,
         TestLogEvent.SKIPPED,
         TestLogEvent.STANDARD_ERROR,
         TestLogEvent.STANDARD_OUT
-      exceptionFormat TestExceptionFormat.FULL
-      showCauses true
-      showExceptions true
-      showStackTraces true
-      showStandardStreams false
-    }
-    description = "Runs integration tests."
-    group = "verification"
-    useJUnitPlatform()
+    exceptionFormat TestExceptionFormat.FULL
+    showCauses true
+    showExceptions true
+    showStackTraces true
+    showStandardStreams false
+  }
+  description = "Runs integration tests."
+  group = "verification"
+  useJUnitPlatform()
 
-    classpath = sourceSets.integrationTest.runtimeClasspath
-    testClassesDirs = sourceSets.integrationTest.output.classesDirs
+  classpath = sourceSets.integrationTest.runtimeClasspath
+  testClassesDirs = sourceSets.integrationTest.output.classesDirs
 
-    dependsOn(":localStackPostgresDbOnlyComposeUp")
+  dependsOn(":localStackPostgresDbOnlyComposeUp")
 }
-

@@ -2,6 +2,8 @@ plugins {
   id 'net.consensys.zkevm.kotlin-library-conventions'
 }
 
+description = "Tuweni bytes utilities"
+
 dependencies {
   api "io.tmio:tuweni-bytes:${libs.versions.tuweni.get()}"
   implementation(project(':jvm-libs:generic:extensions:kotlin'))

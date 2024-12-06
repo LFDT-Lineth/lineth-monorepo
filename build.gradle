@@ -44,9 +44,7 @@ allprojects {
       '-Xlint:deprecation',
     ])
     if (!allowCompilationWarnings) {
-      options.compilerArgs.addAll([
-        '-Werror'
-      ])
+      options.compilerArgs.addAll(['-Werror'])
     }
 
     if (!project.path.contains("testing-tools")) {
@@ -110,6 +108,13 @@ allprojects {
             ktlint(libs.versions.ktlint.get().toString()).setEditorConfigPath("$rootDir/.editorconfig")
           }
         }
+        // spotless check applied to build.gradle (groovy) files
+        groovyGradle {
+          target '**/*.gradle'
+          greclipse()
+          indentWithSpaces(2)
+          endWithNewline()
+        }
       }
     }
   }
@@ -143,8 +148,15 @@ dockerCompose {
       // "l1-blockscout",
       // "l2-blockscout"
     ]
-    composeAdditionalArgs = ["--profile", "l1", "--profile", "l2"]
-    useComposeFiles = ["${project.rootDir.path}/docker/compose.yml"]
+    composeAdditionalArgs = [
+      "--profile",
+      "l1",
+      "--profile",
+      "l2"
+    ]
+    useComposeFiles = [
+      "${project.rootDir.path}/docker/compose.yml"
+    ]
     waitForHealthyStateTimeout = Duration.ofMinutes(3)
     waitForTcpPorts = false
     removeOrphans = true
@@ -157,10 +169,10 @@ dockerCompose {
   }
 
   localStackPostgresDbOnly {
-    startedServices = [
-      "postgres"
+    startedServices = ["postgres"]
+    useComposeFiles = [
+      "${project.rootDir.path}/docker/compose.yml"
     ]
-    useComposeFiles = ["${project.rootDir.path}/docker/compose.yml"]
     waitForHealthyStateTimeout = Duration.ofMinutes(3)
     waitForTcpPorts = true
     removeOrphans = true
@@ -183,8 +195,17 @@ dockerCompose {
       // "l1-blockscout",
       // "l2-blockscout"
     ]
-    composeAdditionalArgs = ["--profile", "l1", "--profile", "l2", "--profile", "staterecover"]
-    useComposeFiles = ["${project.rootDir.path}/docker/compose.yml"]
+    composeAdditionalArgs = [
+      "--profile",
+      "l1",
+      "--profile",
+      "l2",
+      "--profile",
+      "staterecover"
+    ]
+    useComposeFiles = [
+      "${project.rootDir.path}/docker/compose.yml"
+    ]
     waitForHealthyStateTimeout = Duration.ofMinutes(3)
     waitForTcpPorts = false
     removeOrphans = true

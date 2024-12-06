@@ -1,6 +1,6 @@
 plugins {
-    id 'net.consensys.zkevm.kotlin-application-conventions'
-    id 'com.github.johnrengelman.shadow' version '7.1.2'
+  id 'net.consensys.zkevm.kotlin-application-conventions'
+  id 'com.github.johnrengelman.shadow' version '7.1.2'
 }
 
 dependencies {
@@ -42,16 +42,16 @@ dependencies {
 }
 
 application {
-    mainClass = 'net.consensys.linea.traces.app.TracesAppMain'
+  mainClass = 'net.consensys.linea.traces.app.TracesAppMain'
 }
 
 jar {
   manifest {
     attributes(
-      'Class-Path': configurations.runtimeClasspath.collect { it.getName() }.findAll {it.endsWith('jar') }.join(' '),
-      'Main-Class': 'net.consensys.linea.traces.app.TracesAppMain',
-      'Multi-Release': 'true'
-    )
+        'Class-Path': configurations.runtimeClasspath.collect { it.getName() }.findAll {it.endsWith('jar') }.join(' '),
+        'Main-Class': 'net.consensys.linea.traces.app.TracesAppMain',
+        'Multi-Release': 'true'
+        )
   }
 }
 
@@ -61,9 +61,12 @@ run {
     "-Dvertx.configurationFile=config/traces-api/vertx.json",
     "-Dlog4j2.configurationFile=config/traces-api/log4j2-dev.xml"
   ] + System.properties.entrySet()
-    .findAll { it.key.startsWith("config") }
-    .collect { "-D${it.key}=${it.value}" }
-  args = ["config/traces-api/traces-app-docker.config.toml", "config/traces-api/traces-app-local-dev.config.overrides.toml"]
+  .findAll { it.key.startsWith("config") }
+  .collect { "-D${it.key}=${it.value}" }
+  args = [
+    "config/traces-api/traces-app-docker.config.toml",
+    "config/traces-api/traces-app-local-dev.config.overrides.toml"
+  ]
 }
 
 test {

@@ -1,0 +1,18 @@
+buildscript {
+  dependencies {
+    classpath(libs.jreleaser)
+  }
+}
+
+plugins {
+  id 'net.consensys.zkevm.kotlin-library-minimal-conventions'
+}
+
+subprojects {
+  def hasSourceFiles = it.fileTree(dir: 'src', includes: ['**/*.java', '**/*.kt']).files.size() > 0
+
+  group="${rootProject.group}.internal"
+  if (hasSourceFiles) {
+    it.apply from: rootProject.file("gradle/publishing.gradle")
+  }
+}

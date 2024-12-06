@@ -32,19 +32,12 @@ sourceSets {
   }
 }
 
-task integrationTest(type: Test) {
-  test ->
-    description = "Runs integration tests."
-    group = "verification"
-    useJUnitPlatform()
-
-    classpath = sourceSets.integrationTest.runtimeClasspath
-    testClassesDirs = sourceSets.integrationTest.output.classesDirs
-    dependsOn(":localStackComposeUp")
-}
-
-
-
-test {
+task integrationTest(type: Test) { test ->
+  description = "Runs integration tests."
+  group = "verification"
   useJUnitPlatform()
+
+  classpath = sourceSets.integrationTest.runtimeClasspath
+  testClassesDirs = sourceSets.integrationTest.output.classesDirs
+  dependsOn(":localStackComposeUp")
 }

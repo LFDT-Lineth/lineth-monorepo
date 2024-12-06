@@ -5,8 +5,8 @@ import java.time.Duration
 import java.time.Instant
 
 void downloadFileUsingWget(
-  String url,
-  String outputFilePath
+    String url,
+    String outputFilePath
 ) {
   println("Downloading ${url} into ${outputFilePath}")
 
@@ -31,9 +31,9 @@ ext.architectureResourceDirMapping = [
 ]
 
 private String downloadAssetIfNotPresent(
-  String libsZipUrl,
-  String releaseTag,
-  String outputDir
+    String libsZipUrl,
+    String releaseTag,
+    String outputDir
 ) {
   def fileName = releaseTag + ".zip"
   def outputFilePath = Path.of(outputDir).resolve(fileName)
@@ -55,7 +55,7 @@ private String downloadAssetIfNotPresent(
 }
 
 def getBinaryResourceFolder(
-  String libFile
+    String libFile
 ) {
   def destResource = architectureResourceDirMapping.find {
     libFile.contains(it.key.toString())
@@ -68,8 +68,8 @@ def getBinaryResourceFolder(
 }
 
 def getBinaryResourceFileName(
-  String libFile,
-  String libName
+    String libFile,
+    String libName
 ) {
   def versionPattern = ~/v\d+\.\d+\.\d+/
   def matcher = versionPattern.matcher(libFile)
@@ -82,9 +82,9 @@ def getBinaryResourceFileName(
 }
 
 def lazyUnzipWithRetry(
-  Path zipFile,
-  Path outputDir = zipFile.parent.resolve(zipFile.getFileName().toString().replaceFirst("\\.zip", "")).toString(),
-  Duration timeout
+    Path zipFile,
+    Path outputDir = zipFile.parent.resolve(zipFile.getFileName().toString().replaceFirst("\\.zip", "")).toString(),
+    Duration timeout
 ) {
   if (outputDir.toFile().exists()) {
     println("Skipping unzip, directory already exists at ${outputDir.toString()}")
@@ -114,51 +114,47 @@ def lazyUnzipWithRetry(
 }
 
 def extractLibToResources(
-  Path zipFile,
-  Path outputUnzipDir,
-  String libName
+    Path zipFile,
+    Path outputUnzipDir,
+    String libName
 ) {
   lazyUnzipWithRetry(zipFile, outputUnzipDir, Duration.ofSeconds(60))
   fileTree(outputUnzipDir.toFile())
-    .filter { it.name.contains(libName) && (it.name.endsWith(".so") || it.name.endsWith(".dylib")) }
-    .each { File file ->
-      def javaResourcesLibDir = getBinaryResourceFolder(file.name)
-      def destResourceFileName = getBinaryResourceFileName(file.name, libName)
-      def destResourcesPath = Path.of(project.layout.projectDirectory
-        .file("src/main/resources/${javaResourcesLibDir}").asFile.absolutePath)
-      def destFilePath = destResourcesPath.resolve(destResourceFileName)
+      .filter { it.name.contains(libName) && (it.name.endsWith(".so") || it.name.endsWith(".dylib")) }
+      .each { File file ->
+        def javaResourcesLibDir = getBinaryResourceFolder(file.name)
+        def destResourceFileName = getBinaryResourceFileName(file.name, libName)
+        def destResourcesPath = Path.of(project.layout.projectDirectory
+            .file("src/main/resources/${javaResourcesLibDir}").asFile.absolutePath)
+        def destFilePath = destResourcesPath.resolve(destResourceFileName)
 
-      if (destFilePath.toFile().exists()) {
-        println("Skipping: ${file} already found at ${destResourcesPath}/${destResourceFileName}")
-      } else {
-        println("Copying ${file} to ${destResourcesPath}/${destResourceFileName}")
-      }
-      copy {
-        from file
-        into destResourcesPath
-        rename {
-          destResourceFileName
+        if (destFilePath.toFile().exists()) {
+          println("Skipping: ${file} already found at ${destResourcesPath}/${destResourceFileName}")
+        } else {
+          println("Copying ${file} to ${destResourcesPath}/${destResourceFileName}")
+        }
+        copy {
+          from file
+          into destResourcesPath
+          rename {
+            destResourceFileName
+          }
         }
       }
-    }
 }
 
 def downloadZipReleaseAndExtractToResources(
-  String libsZipUrl,
-  String releaseTag,
-  String libName,
-  String outputDir
+    String libsZipUrl,
+    String releaseTag,
+    String libName,
+    String outputDir
 ) {
   def zipFile = downloadAssetIfNotPresent(libsZipUrl, releaseTag, outputDir)
   def outputUnzipDir = Path.of(outputDir).resolve(releaseTag)
   extractLibToResources(Path.of(zipFile), outputUnzipDir, libName)
 }
 
-ext.fetchLibFromZip = {
-  String libsZipUrl,
-  String libName,
-  String outputDir
-    ->
-    def releaseTag = libsZipUrl.split("/").last().replace(".zip", "")
-    downloadZipReleaseAndExtractToResources(libsZipUrl, releaseTag, libName, outputDir)
+ext.fetchLibFromZip = { String libsZipUrl, String libName, String outputDir ->
+  def releaseTag = libsZipUrl.split("/").last().replace(".zip", "")
+  downloadZipReleaseAndExtractToResources(libsZipUrl, releaseTag, libName, outputDir)
 }

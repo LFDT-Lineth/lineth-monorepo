@@ -3,7 +3,7 @@
  */
 
 plugins {
-    id 'net.consensys.zkevm.kotlin-library-conventions'
+  id 'net.consensys.zkevm.kotlin-library-conventions'
 }
 
 dependencies {

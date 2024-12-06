@@ -22,7 +22,7 @@ dependencies {
 
 web3jContractWrappers {
   def contractAbi = layout.buildDirectory.dir("${rootProject.projectDir}/contracts/abi").get()
-    .file("L2MessageServiceV1.0.abi").asFile.absolutePath
+      .file("L2MessageServiceV1.0.abi").asFile.absolutePath
 
   contractsPackage = "net.consensys.linea.contract"
   contracts = ["$contractAbi": "L2MessageService"]

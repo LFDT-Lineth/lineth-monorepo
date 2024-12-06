@@ -12,7 +12,3 @@ dependencies {
 
   testImplementation("io.vertx:vertx-junit5")
 }
-
-test {
-  useJUnitPlatform()
-}

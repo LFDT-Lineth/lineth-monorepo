@@ -14,7 +14,6 @@ openApiGenerate {
   configOptions.set([
     dateLibrary: "java8"
   ])
-
 }
 
 application {

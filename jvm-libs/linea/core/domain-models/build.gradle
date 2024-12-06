@@ -7,5 +7,5 @@ dependencies {
 }
 
 jar {
-    dependsOn configurations.runtimeClasspath
+  dependsOn configurations.runtimeClasspath
 }

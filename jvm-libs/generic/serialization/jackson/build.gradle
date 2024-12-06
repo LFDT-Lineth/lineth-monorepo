@@ -2,6 +2,8 @@ plugins {
   id 'net.consensys.zkevm.kotlin-library-conventions'
 }
 
+description = "Jackson SerDe utilities"
+
 dependencies {
   implementation(project(':jvm-libs:generic:extensions:kotlin'))
   api "com.fasterxml.jackson.core:jackson-annotations:${libs.versions.jackson.get()}"

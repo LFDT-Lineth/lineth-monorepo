@@ -3,9 +3,10 @@ plugins {
   id 'java-test-fixtures'
 }
 
+description = "Basic Kotlin types extensions"
+
 dependencies {
   api "org.jetbrains.kotlinx:kotlinx-datetime:${libs.versions.kotlinxDatetime.get()}"
-  testImplementation "io.tmio:tuweni-units:${libs.versions.tuweni.get()}"
 }
 
 jar {

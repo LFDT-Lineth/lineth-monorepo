@@ -1,6 +1,6 @@
 plugins {
-    id 'net.consensys.zkevm.kotlin-library-conventions'
-    id 'java-test-fixtures'
+  id 'net.consensys.zkevm.kotlin-library-conventions'
+  id 'java-test-fixtures'
 }
 
 dependencies {
@@ -38,8 +38,4 @@ dependencies {
   testImplementation(testFixtures(project(':jvm-libs:linea:core:traces')))
   testImplementation(testFixtures(project(':jvm-libs:generic:extensions:kotlin')))
   testImplementation("io.vertx:vertx-junit5")
-}
-
-test {
-  useJUnitPlatform()
 }

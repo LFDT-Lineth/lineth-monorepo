@@ -3,6 +3,8 @@ plugins {
   id 'java-test-fixtures'
 }
 
+description = "Vertx + Postgres backed persistence utilities"
+
 dependencies {
   implementation(project(":jvm-libs:generic:extensions:futures"))
   implementation(project(":jvm-libs:generic:extensions:kotlin"))

@@ -1,4 +1,4 @@
 plugins {
-    id 'net.consensys.zkevm.kotlin-common-conventions'
-    id 'java-library'
+  id 'net.consensys.zkevm.kotlin-common-conventions'
+  id 'java-library'
 }

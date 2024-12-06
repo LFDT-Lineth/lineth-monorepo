@@ -34,27 +34,26 @@ sourceSets {
   }
 }
 
-task integrationTest(type: Test) {
-  test ->
-    description = "Runs integration tests."
-    group = "verification"
-    useJUnitPlatform()
+task integrationTest(type: Test) { test ->
+  description = "Runs integration tests."
+  group = "verification"
+  useJUnitPlatform()
 
-    classpath = sourceSets.integrationTest.runtimeClasspath
-    testClassesDirs = sourceSets.integrationTest.output.classesDirs
+  classpath = sourceSets.integrationTest.runtimeClasspath
+  testClassesDirs = sourceSets.integrationTest.output.classesDirs
 
-    dependsOn(":localStackComposeUp")
-    testLogging {
-      events TestLogEvent.FAILED,
+  dependsOn(":localStackComposeUp")
+  testLogging {
+    events TestLogEvent.FAILED,
         TestLogEvent.SKIPPED,
         TestLogEvent.STANDARD_ERROR,
         TestLogEvent.STARTED,
         TestLogEvent.PASSED
-      exceptionFormat TestExceptionFormat.FULL
-      showCauses true
-      showExceptions true
-      showStackTraces true
-      // set showStandardStreams if you need to see test logs
-      showStandardStreams true
-    }
+    exceptionFormat TestExceptionFormat.FULL
+    showCauses true
+    showExceptions true
+    showStackTraces true
+    // set showStandardStreams if you need to see test logs
+    showStandardStreams true
+  }
 }

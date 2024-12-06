@@ -1,7 +1,9 @@
 plugins {
-    id 'net.consensys.zkevm.kotlin-common-conventions'
-    id 'java-library'
+  id 'net.consensys.zkevm.kotlin-common-conventions'
+  id 'java-library'
 }
+
+description = "Utilities related to futures used in Linea"
 
 dependencies {
   implementation "io.vertx:vertx-core"
@@ -9,5 +11,5 @@ dependencies {
 }
 
 jar {
-    dependsOn configurations.runtimeClasspath
+  dependsOn configurations.runtimeClasspath
 }

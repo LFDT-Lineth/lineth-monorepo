@@ -14,7 +14,7 @@ services:
     command: [ "sh", "/file-downloader.sh", "https://github.com/Consensys/linea-sequencer/releases/download/v0.8.0-rc6.1/linea-sequencer-v0.8.0-rc6.1.jar",  "/linea-besu-sequencer" ]
 
   traces-node:
-    command: ['echo', 'forced exit as replaced by traces-node-v2']
+    entrypoint: ['echo', 'forced exit as replaced by traces-node-v2']
 
   traces-api:
     command: ['echo', 'forced exit as replaced by traces-node-v2']

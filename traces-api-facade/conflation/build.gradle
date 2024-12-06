@@ -1,14 +1,14 @@
 plugins {
-    id 'net.consensys.zkevm.kotlin-library-conventions'
-    id 'idea'
-    id 'application'
+  id 'net.consensys.zkevm.kotlin-library-conventions'
+  id 'idea'
+  id 'application'
 }
 
 dependencies {
-    implementation project(':traces-api-facade:core')
-    implementation "org.jetbrains.kotlin:kotlin-reflect:1.7.20"
-    implementation "com.fasterxml.jackson.core:jackson-annotations:${libs.versions.jackson.get()}"
-    implementation "com.fasterxml.jackson.core:jackson-databind:${libs.versions.jackson.get()}"
+  implementation project(':traces-api-facade:core')
+  implementation "org.jetbrains.kotlin:kotlin-reflect:1.7.20"
+  implementation "com.fasterxml.jackson.core:jackson-annotations:${libs.versions.jackson.get()}"
+  implementation "com.fasterxml.jackson.core:jackson-databind:${libs.versions.jackson.get()}"
 }
 
 application {
