@@ -20,7 +20,7 @@
 
 (defun    (create-instruction---two-step-reverting-precondition)    (*    PEEK_AT_SCENARIO    scenario/CREATE_NONEMPTY_INIT_CODE_FAILURE_WILL_REVERT))
 
-(defconstraint    create-instruction---undoing-creator-account-operations-failure-will-revert-case    (:guard    (create-instruction---one-step-reverting-precondition))
+(defconstraint    create-instruction---undoing-creator-account-operations-failure-will-revert-case    (:guard    (create-instruction---two-step-reverting-precondition))
                   (begin
                     (account-same-address-as                         CREATE_third_creator_account_row___row_offset    CREATE_first_creator_account_row___row_offset)
                     (account-same-balance                            CREATE_third_creator_account_row___row_offset)
@@ -35,7 +35,7 @@
                     (DOM-SUB-stamps---revert-with-current            CREATE_third_creator_account_row___row_offset    2)
                     ))
 
-(defconstraint    create-instruction---undoing-createe-account-operations-failure-will-revert-case    (:guard    (create-instruction---one-step-reverting-precondition))
+(defconstraint    create-instruction---undoing-createe-account-operations-failure-will-revert-case    (:guard    (create-instruction---two-step-reverting-precondition))
                   (begin
                     (account-same-address-as                         CREATE_third_createe_account_row___row_offset    CREATE_first_createe_account_row___row_offset)
                     (account-same-balance                            CREATE_third_createe_account_row___row_offset)
