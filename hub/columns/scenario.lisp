@@ -61,9 +61,9 @@
    (PRC_FAILURE_KNOWN_TO_HUB                         :binary@prove)
    (PRC_FAILURE_KNOWN_TO_RAM                         :binary@prove)
    ;; gas parameters (RETURN_GAS is a prediction)
-   (PRC_CALLER_GAS                                   :i32)
-   (PRC_CALLEE_GAS                                   :i32)
-   (PRC_RETURN_GAS                                   :i32)
+   (PRC_CALLER_GAS                                   :i64)
+   (PRC_CALLEE_GAS                                   :i64)
+   (PRC_RETURN_GAS                                   :i64)
    ;; duplicate values for precompile calls
    (PRC_CDO                                          :i32)
    (PRC_CDS                                          :i32)
