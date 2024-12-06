@@ -1,6 +1,6 @@
 Various variables may undergo changes as we exit, enter or re-enter an execution context. The point of this discussion is to figure out when what changes
 
-Generatl questions:
+General questions:
 - what was done before context exit ?
 - what happens in between context exit and re-entry ?
 - does anything happen between context re-entry and the parent resuming execution ?
@@ -85,7 +85,7 @@ CREATOR:
 
 CREATEE:
 - raising of the creator nonce    (0 → 1)
-- balance update of cretor / createe happens after contextEntry (normal)
+- balance update of creator / createe happens after contextEntry (normal)
 - at contextEnter we don't have the updated accounts (balances / nonces / code)
 
 
