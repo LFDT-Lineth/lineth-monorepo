@@ -6,11 +6,13 @@ on:
       - main
     paths:
       - 'bridge-ui/**'
+      - '!bridge-ui/**/*.md'
   push:
     branches:
       - main
     paths:
       - 'bridge-ui/**'
+      - '!bridge-ui/**/*.md'
 
 jobs:
   publish:
