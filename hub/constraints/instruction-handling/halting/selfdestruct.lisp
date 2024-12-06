@@ -105,49 +105,66 @@
                                (eq! scenario/SELFDESTRUCT_WONT_REVERT_ALREADY_MARKED (selfdestruct-instruction---is-marked))
                                (eq! scenario/SELFDESTRUCT_WONT_REVERT_NOT_YET_MARKED (- 1 (selfdestruct-instruction---is-marked)))))))
 
-(defconstraint    selfdestruct-instruction---setting-NSR-and-peeking-flags (:guard (selfdestruct-instruction---scenario-precondition))
-                  (begin
-                    (if-not-zero (selfdestruct-instruction---STATICX)
-                                 (begin
-                                   (eq! (shift   NSR   ROFF_SELFDESTRUCT___STACK_ROW) 3)
-                                   (eq! (shift   NSR   ROFF_SELFDESTRUCT___STACK_ROW) (+ (shift PEEK_AT_SCENARIO  ROFF_SELFDESTRUCT___SCENARIO_ROW   )
-                                                                                         (shift PEEK_AT_CONTEXT   ROFF_SELFDESTRUCT___1ST_CONTEXT_ROW)
-                                                                                         (shift PEEK_AT_CONTEXT   2)))))
-                    (if-not-zero (selfdestruct-instruction---OOGX)
-                                 (begin
-                                   (eq! (shift   NSR   ROFF_SELFDESTRUCT___STACK_ROW) 5)
-                                   (eq! (shift   NSR   ROFF_SELFDESTRUCT___STACK_ROW) (+ (shift PEEK_AT_SCENARIO  ROFF_SELFDESTRUCT___SCENARIO_ROW           )
-                                                                                         (shift PEEK_AT_CONTEXT   ROFF_SELFDESTRUCT___1ST_CONTEXT_ROW        )
-                                                                                         (shift PEEK_AT_ACCOUNT   ROFF_SELFDESTRUCT___ACCOUNT___1ST_DOING_ROW)
-                                                                                         (shift PEEK_AT_ACCOUNT   ROFF_SELFDESTRUCT___ACCOUNT___2ND_DOING_ROW)
-                                                                                         (shift PEEK_AT_CONTEXT   4)))))
-                    (if-not-zero scenario/SELFDESTRUCT_WILL_REVERT
-                                 (begin
-                                   (eq! (shift   NSR   ROFF_SELFDESTRUCT___STACK_ROW) 7)
-                                   (eq! (shift   NSR   ROFF_SELFDESTRUCT___STACK_ROW) (+ (shift PEEK_AT_SCENARIO  ROFF_SELFDESTRUCT___SCENARIO_ROW             )
-                                                                                         (shift PEEK_AT_CONTEXT   ROFF_SELFDESTRUCT___1ST_CONTEXT_ROW          )
-                                                                                         (shift PEEK_AT_ACCOUNT   ROFF_SELFDESTRUCT___ACCOUNT___1ST_DOING_ROW  )
-                                                                                         (shift PEEK_AT_ACCOUNT   ROFF_SELFDESTRUCT___ACCOUNT___2ND_DOING_ROW  )
-                                                                                         (shift PEEK_AT_ACCOUNT   ROFF_SELFDESTRUCT___ACCOUNT___1ST_UNDOING_ROW)
-                                                                                         (shift PEEK_AT_ACCOUNT   ROFF_SELFDESTRUCT___ACCOUNT___2ND_UNDOING_ROW)
-                                                                                         (shift PEEK_AT_CONTEXT   6)))))
-                    (if-not-zero scenario/SELFDESTRUCT_WONT_REVERT_ALREADY_MARKED
-                                 (begin
-                                   (eq! (shift   NSR   ROFF_SELFDESTRUCT___STACK_ROW) 5)
-                                   (eq! (shift   NSR   ROFF_SELFDESTRUCT___STACK_ROW) (+ (shift PEEK_AT_SCENARIO ROFF_SELFDESTRUCT___SCENARIO_ROW           )
-                                                                                         (shift PEEK_AT_CONTEXT  ROFF_SELFDESTRUCT___1ST_CONTEXT_ROW        )
-                                                                                         (shift PEEK_AT_ACCOUNT  ROFF_SELFDESTRUCT___ACCOUNT___1ST_DOING_ROW)
-                                                                                         (shift PEEK_AT_ACCOUNT  ROFF_SELFDESTRUCT___ACCOUNT___2ND_DOING_ROW)
-                                                                                         (shift PEEK_AT_CONTEXT  4)))))
-                    (if-not-zero scenario/SELFDESTRUCT_WONT_REVERT_NOT_YET_MARKED
-                                 (begin
-                                   (eq! (shift   NSR   ROFF_SELFDESTRUCT___STACK_ROW) 6)
-                                   (eq! (shift   NSR   ROFF_SELFDESTRUCT___STACK_ROW) (+ (shift PEEK_AT_SCENARIO ROFF_SELFDESTRUCT___SCENARIO_ROW           )
-                                                                                         (shift PEEK_AT_CONTEXT  ROFF_SELFDESTRUCT___1ST_CONTEXT_ROW        )
-                                                                                         (shift PEEK_AT_ACCOUNT  ROFF_SELFDESTRUCT___ACCOUNT___1ST_DOING_ROW)
-                                                                                         (shift PEEK_AT_ACCOUNT  ROFF_SELFDESTRUCT___ACCOUNT___2ND_DOING_ROW)
-                                                                                         (shift PEEK_AT_ACCOUNT  ROFF_SELFDESTRUCT___ACCOUNT_DELETION_ROW   )
-                                                                                         (shift PEEK_AT_CONTEXT  5)))))))
+(defconstraint    selfdestruct-instruction---setting-NSR-and-peeking-flags---STATICX-case
+                  (:guard (selfdestruct-instruction---scenario-precondition))
+                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                  (if-not-zero (selfdestruct-instruction---STATICX)
+                               (begin
+                                 (eq! (shift   NSR   ROFF_SELFDESTRUCT___STACK_ROW) 3)
+                                 (eq! (shift   NSR   ROFF_SELFDESTRUCT___STACK_ROW) (+ (shift PEEK_AT_SCENARIO  ROFF_SELFDESTRUCT___SCENARIO_ROW   )
+                                                                                       (shift PEEK_AT_CONTEXT   ROFF_SELFDESTRUCT___1ST_CONTEXT_ROW)
+                                                                                       (shift PEEK_AT_CONTEXT   2))))))
+
+(defconstraint    selfdestruct-instruction---setting-NSR-and-peeking-flags---OOGX-case
+                  (:guard (selfdestruct-instruction---scenario-precondition))
+                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                  (if-not-zero (selfdestruct-instruction---OOGX)
+                               (begin
+                                 (eq! (shift   NSR   ROFF_SELFDESTRUCT___STACK_ROW) 5)
+                                 (eq! (shift   NSR   ROFF_SELFDESTRUCT___STACK_ROW) (+ (shift PEEK_AT_SCENARIO  ROFF_SELFDESTRUCT___SCENARIO_ROW           )
+                                                                                       (shift PEEK_AT_CONTEXT   ROFF_SELFDESTRUCT___1ST_CONTEXT_ROW        )
+                                                                                       (shift PEEK_AT_ACCOUNT   ROFF_SELFDESTRUCT___ACCOUNT___1ST_DOING_ROW)
+                                                                                       (shift PEEK_AT_ACCOUNT   ROFF_SELFDESTRUCT___ACCOUNT___2ND_DOING_ROW)
+                                                                                       (shift PEEK_AT_CONTEXT   4))))))
+
+(defconstraint    selfdestruct-instruction---setting-NSR-and-peeking-flags---WILL_REVERT-case
+                  (:guard (selfdestruct-instruction---scenario-precondition))
+                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                  (if-not-zero scenario/SELFDESTRUCT_WILL_REVERT
+                               (begin
+                                 (eq! (shift   NSR   ROFF_SELFDESTRUCT___STACK_ROW) 7)
+                                 (eq! (shift   NSR   ROFF_SELFDESTRUCT___STACK_ROW) (+ (shift PEEK_AT_SCENARIO  ROFF_SELFDESTRUCT___SCENARIO_ROW             )
+                                                                                       (shift PEEK_AT_CONTEXT   ROFF_SELFDESTRUCT___1ST_CONTEXT_ROW          )
+                                                                                       (shift PEEK_AT_ACCOUNT   ROFF_SELFDESTRUCT___ACCOUNT___1ST_DOING_ROW  )
+                                                                                       (shift PEEK_AT_ACCOUNT   ROFF_SELFDESTRUCT___ACCOUNT___2ND_DOING_ROW  )
+                                                                                       (shift PEEK_AT_ACCOUNT   ROFF_SELFDESTRUCT___ACCOUNT___1ST_UNDOING_ROW)
+                                                                                       (shift PEEK_AT_ACCOUNT   ROFF_SELFDESTRUCT___ACCOUNT___2ND_UNDOING_ROW)
+                                                                                       (shift PEEK_AT_CONTEXT   6))))))
+
+(defconstraint    selfdestruct-instruction---setting-NSR-and-peeking-flags---WONT_REVERT_ALREADY_MARKED-case
+                  (:guard (selfdestruct-instruction---scenario-precondition))
+                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                  (if-not-zero scenario/SELFDESTRUCT_WONT_REVERT_ALREADY_MARKED
+                               (begin
+                                 (eq! (shift   NSR   ROFF_SELFDESTRUCT___STACK_ROW) 5)
+                                 (eq! (shift   NSR   ROFF_SELFDESTRUCT___STACK_ROW) (+ (shift PEEK_AT_SCENARIO ROFF_SELFDESTRUCT___SCENARIO_ROW           )
+                                                                                       (shift PEEK_AT_CONTEXT  ROFF_SELFDESTRUCT___1ST_CONTEXT_ROW        )
+                                                                                       (shift PEEK_AT_ACCOUNT  ROFF_SELFDESTRUCT___ACCOUNT___1ST_DOING_ROW)
+                                                                                       (shift PEEK_AT_ACCOUNT  ROFF_SELFDESTRUCT___ACCOUNT___2ND_DOING_ROW)
+                                                                                       (shift PEEK_AT_CONTEXT  4))))))
+
+(defconstraint    selfdestruct-instruction---setting-NSR-and-peeking-flags---WONT_REVERT_NOT_YET_MARKED-case
+                  (:guard (selfdestruct-instruction---scenario-precondition))
+                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                  (if-not-zero scenario/SELFDESTRUCT_WONT_REVERT_NOT_YET_MARKED
+                               (begin
+                                 (eq! (shift   NSR   ROFF_SELFDESTRUCT___STACK_ROW) 6)
+                                 (eq! (shift   NSR   ROFF_SELFDESTRUCT___STACK_ROW) (+ (shift PEEK_AT_SCENARIO ROFF_SELFDESTRUCT___SCENARIO_ROW           )
+                                                                                       (shift PEEK_AT_CONTEXT  ROFF_SELFDESTRUCT___1ST_CONTEXT_ROW        )
+                                                                                       (shift PEEK_AT_ACCOUNT  ROFF_SELFDESTRUCT___ACCOUNT___1ST_DOING_ROW)
+                                                                                       (shift PEEK_AT_ACCOUNT  ROFF_SELFDESTRUCT___ACCOUNT___2ND_DOING_ROW)
+                                                                                       (shift PEEK_AT_ACCOUNT  ROFF_SELFDESTRUCT___ACCOUNT_DELETION_ROW   )
+                                                                                       (shift PEEK_AT_CONTEXT  5))))))
 
 (defconstraint    selfdestruct-instruction---reading-context-data (:guard (selfdestruct-instruction---scenario-precondition))
                   (read-context-data    ROFF_SELFDESTRUCT___1ST_CONTEXT_ROW       ;; row offset
