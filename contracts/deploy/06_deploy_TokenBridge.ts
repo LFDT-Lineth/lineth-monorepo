@@ -88,7 +88,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const tokenBridge = await upgrades.deployProxy(TokenBridgeFactory, [
     {
-      defaultAdmin: tokenBridgeSecurityCouncil,
+      defaultAdmin: securityCouncilAddress,
       messageService: deployingChainMessageService,
       tokenBeacon: bridgedTokenAddress,
       sourceChainId: chainId,
