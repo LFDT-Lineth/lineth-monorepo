@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 /**
  * Creates a promise that resolves after a specified timeout period.
  *
@@ -39,25 +37,25 @@ export function isEmptyBytes(bytes: string): boolean {
 /**
  * Type guard function to check if a given value is a string.
  *
- * @param {any} value - The value to check.
+ * @param {unknown} value - The value to check.
  * @returns {boolean} `true` if the value is a string, `false` otherwise.
  */
-export function isString(value: any): value is string {
+export function isString(value: unknown): value is string {
   return typeof value === "string";
 }
 
 /**
  * Type guard function to check if a given object is `undefined`.
  *
- * @param {any} obj - The object to check.
+ * @param {unknown} obj - The object to check.
  * @returns {boolean} `true` if the object is undefined, `false` otherwise.
  */
-export const isUndefined = (obj: any): obj is undefined => typeof obj === "undefined";
+export const isUndefined = (obj: unknown): obj is undefined => typeof obj === "undefined";
 
 /**
  * Type guard function to check if a given value is `null`.
  *
- * @param {any} val - The value to check.
+ * @param {unknown} val - The value to check.
  * @returns {boolean} `true` if the value is `null`, `false` otherwise.
  */
-export const isNull = (val: any): val is null => val === null;
+export const isNull = (val: unknown): val is null => val === null;

@@ -1,11 +1,11 @@
-import { MessageProps } from "../../core/entities/Message";
-import { BaseError } from "./Base";
+import { Message } from "../types";
+import { BaseError } from "./BaseError";
 
 export class FeeEstimationError extends BaseError {
   override name = FeeEstimationError.name;
 }
 
-export class GasEstimationError<T extends MessageProps> extends BaseError {
+export class GasEstimationError<T extends Message> extends BaseError {
   override name = GasEstimationError.name;
   public rejectedMessage?: T;
 

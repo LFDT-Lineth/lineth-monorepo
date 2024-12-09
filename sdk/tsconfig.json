@@ -4,6 +4,7 @@
     "lib": ["ES2021", "DOM"],
     "noEmit": false,
     "skipLibCheck": true,
+    "noErrorTruncation": true,
     "strictPropertyInitialization": false,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,

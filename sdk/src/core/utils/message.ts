@@ -1,5 +1,5 @@
 import { MESSAGE_ANCHORED_STATUS, MESSAGE_CLAIMED_STATUS } from "../constants";
-import { OnChainMessageStatus } from "../enums/MessageEnums";
+import { OnChainMessageStatus } from "../enums";
 
 /**
  * Converts a numeric message status code into an enumerated value representing the message's status on the blockchain.

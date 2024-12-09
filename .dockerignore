@@ -1,0 +1,5 @@
+**/node_modules
+**/typechain
+**/tsconfig.build.tsbuildinfo
+**/coverage
+**/dist

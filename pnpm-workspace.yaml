@@ -2,6 +2,7 @@ packages:
   - 'contracts/**'
   - 'e2e/**'
   - 'sdk/**'
+  - 'postman/**'
   - 'operations/**'
   - 'bridge-ui/**'
   - 'ts-libs/**'

@@ -24,4 +24,5 @@ jobs:
         run: |
           pnpm run -F ./ts-libs/linea-native-libs build;
           pnpm run -F ./sdk build;
+          pnpm run -F ./postman test;
           pnpm run -F ./sdk test;

@@ -6,11 +6,12 @@
       "inlineSources": true,
       "noEmit": false,
       "outDir": "dist",
-      "rootDir": ".",
+      "rootDir": "src",
       "sourceMap": true
     },
-    "include": ["./src/**/*.ts", "scripts/**/runPostman.ts"],
+    "include": ["./src/**/*.ts"],
     "exclude": [
       "src/**/*.test.ts",
+      "src/utils/testing/constants/events.ts",
     ]
   }

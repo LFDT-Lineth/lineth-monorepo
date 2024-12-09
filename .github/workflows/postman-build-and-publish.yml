@@ -93,7 +93,7 @@ jobs:
         if: ${{ env.PUSH_IMAGE == 'false' }}
         with:
           context: ./
-          file: ./sdk/Dockerfile
+          file: ./postman/Dockerfile
           platforms: linux/amd64
           load: true
           push: false
@@ -116,7 +116,7 @@ jobs:
         if: ${{ env.PUSH_IMAGE == 'true' || github.event_name == 'workflow_dispatch' }}
         with:
           context: ./
-          file: ./sdk/Dockerfile
+          file: ./postman/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ env.TAGS }}

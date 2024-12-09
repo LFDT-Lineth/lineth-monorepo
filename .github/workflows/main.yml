@@ -52,7 +52,9 @@ jobs:
               - 'docker/compose-local-dev.overrides.yml'
               - 'docker/compose-local-dev-traces-v2.overrides.yml'
             postman:
+              - 'postman/**'
               - 'sdk/**'
+              - 'ts-libs/linea-native-libs/**'
               - '.github/workflows/postman-*.yml'
               - '.github/workflows/build-and-publish.yml'
               - '.github/workflows/main.yml'
@@ -193,7 +195,7 @@ jobs:
     secrets: inherit
 
   run-e2e-tests-geth-tracing:
-    needs: [ store-image-name-and-tags, docker-build, manual-docker-build-and-e2e-tests ]
+    needs: [ store-image-name-and-tags, docker-build, manual-docker-build-and-e2e-tests, filter-commit-changes ]
     # Make this execute for has-changes-requiring-build == 'false' so that we can get to the required job @ which is in reuse-run-e2e-tests.yml
     if: ${{ always() && needs.filter-commit-changes.outputs.has-changes-requiring-build == 'false' || needs.docker-build.result == 'success' }}
     concurrency:

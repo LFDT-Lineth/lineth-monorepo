@@ -9,7 +9,6 @@ import {
   ethers,
   randomBytes,
 } from "ethers";
-import { ILogger } from "../../core/utils/logging/ILogger";
 import {
   TEST_ADDRESS_1,
   TEST_BLOCK_HASH,
@@ -17,54 +16,31 @@ import {
   TEST_CONTRACT_ADDRESS_2,
   TEST_MESSAGE_HASH,
   TEST_TRANSACTION_HASH,
-} from "./constants";
+} from "./constants/common";
 import {
   DEFAULT_ENFORCE_MAX_GAS_FEE,
   DEFAULT_GAS_ESTIMATION_PERCENTILE,
   DEFAULT_L2_MESSAGE_TREE_DEPTH,
-  DEFAULT_MAX_FEE_PER_GAS,
+  DEFAULT_MAX_FEE_PER_GAS_CAP,
   L2_MERKLE_TREE_ADDED_EVENT_SIGNATURE,
   L2_MESSAGING_BLOCK_ANCHORED_EVENT_SIGNATURE,
   MESSAGE_SENT_EVENT_SIGNATURE,
 } from "../../core/constants";
-import { Direction, MessageStatus } from "../../core/enums/MessageEnums";
-import { Message, MessageProps } from "../../core/entities/Message";
-import { SDKMode } from "../../sdk/config";
-import { LineaRollupClient } from "../../clients/blockchain/ethereum/LineaRollupClient";
-import { EthersLineaRollupLogClient } from "../../clients/blockchain/ethereum/EthersLineaRollupLogClient";
-import { EthersL2MessageServiceLogClient } from "../../clients/blockchain/linea/EthersL2MessageServiceLogClient";
-import { L2MessageServiceClient } from "../../clients/blockchain/linea/L2MessageServiceClient";
-import { MessageEntity } from "../../application/postman/persistence/entities/Message.entity";
-import { DefaultGasProvider } from "../../clients/blockchain/gas/DefaultGasProvider";
-import { LineaRollupMessageRetriever } from "../../clients/blockchain/ethereum/LineaRollupMessageRetriever";
-import { MerkleTreeService } from "../../clients/blockchain/ethereum/MerkleTreeService";
-import { L2MessageServiceMessageRetriever } from "../../clients/blockchain/linea/L2MessageServiceMessageRetriever";
-import { LineaGasProvider } from "../../clients/blockchain/gas/LineaGasProvider";
-import { ChainQuerier } from "../../clients/blockchain/ChainQuerier";
-import { L2ChainQuerier } from "../../clients/blockchain/linea/L2ChainQuerier";
-
-export class TestLogger implements ILogger {
-  public readonly name: string;
-
-  constructor(loggerName: string) {
-    this.name = loggerName;
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  public info(error: any): void {}
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  public error(error: any): void {}
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  public warn(error: any): void {}
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  public debug(error: any): void {}
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  public warnOrError(error: any): void {}
-}
+import { Message, SDKMode } from "../../core/types";
+import {
+  LineaRollupClient,
+  EthersLineaRollupLogClient,
+  LineaRollupMessageRetriever,
+  MerkleTreeService,
+} from "../../clients/ethereum";
+import {
+  L2MessageServiceClient,
+  EthersL2MessageServiceLogClient,
+  L2MessageServiceMessageRetriever,
+} from "../../clients/linea";
+import { DefaultGasProvider, GasProvider } from "../../clients/gas";
+import { LineaProvider, Provider } from "../../clients/providers";
+import { Direction } from "../../core/enums";
 
 export const getTestProvider = () => {
   return new JsonRpcProvider("http://localhost:8545");
@@ -185,9 +161,8 @@ export const generateTransactionResponse = (overrides?: Partial<TransactionRespo
   );
 };
 
-export const generateMessage = (overrides?: Partial<MessageProps>): Message => {
-  return new Message({
-    id: 1,
+export const generateMessage = (overrides?: Partial<Message>): Message => {
+  return {
     messageSender: TEST_ADDRESS_1,
     destination: TEST_CONTRACT_ADDRESS_1,
     fee: 10n,
@@ -195,47 +170,19 @@ export const generateMessage = (overrides?: Partial<MessageProps>): Message => {
     messageNonce: 1n,
     calldata: "0x",
     messageHash: TEST_MESSAGE_HASH,
-    contractAddress: TEST_CONTRACT_ADDRESS_2,
-    sentBlockNumber: 100_000,
-    direction: Direction.L1_TO_L2,
-    status: MessageStatus.SENT,
-    claimNumberOfRetry: 0,
-    createdAt: new Date("2023-08-04"),
-    updatedAt: new Date("2023-08-04"),
-    ...overrides,
-  });
-};
-
-export const generateMessageEntity = (overrides?: Partial<MessageEntity>): MessageEntity => {
-  return {
-    id: 1,
-    messageSender: TEST_ADDRESS_1,
-    destination: TEST_CONTRACT_ADDRESS_1,
-    fee: "10",
-    value: "2",
-    messageNonce: 1,
-    calldata: "0x",
-    messageHash: TEST_MESSAGE_HASH,
-    messageContractAddress: TEST_CONTRACT_ADDRESS_2,
-    sentBlockNumber: 100_000,
-    direction: Direction.L1_TO_L2,
-    status: MessageStatus.SENT,
-    claimNumberOfRetry: 0,
-    createdAt: new Date("2023-08-04"),
-    updatedAt: new Date("2023-08-04"),
     ...overrides,
   };
 };
 
 export function generateLineaRollupClient(
-  l1Provider: JsonRpcProvider,
-  l2Provider: JsonRpcProvider,
+  l1Provider: Provider,
+  l2Provider: LineaProvider,
   l1ContractAddress: string,
   l2ContractAddres: string,
   mode: SDKMode,
   signer?: Signer,
   gasFeesOptions?: {
-    maxFeePerGas?: bigint;
+    maxFeePerGasCap?: bigint;
     gasEstimationPercentile?: number;
     enforceMaxGasFee?: boolean;
   },
@@ -249,22 +196,21 @@ export function generateLineaRollupClient(
 } {
   const lineaRollupLogClient = new EthersLineaRollupLogClient(l1Provider, l1ContractAddress);
   const l2MessageServiceLogClient = new EthersL2MessageServiceLogClient(l2Provider, l2ContractAddres);
-  const chainQuerier = new ChainQuerier(l1Provider, signer);
-  const gasProvider = new DefaultGasProvider(chainQuerier, {
-    maxFeePerGas: gasFeesOptions?.maxFeePerGas ?? DEFAULT_MAX_FEE_PER_GAS,
+  const gasProvider = new DefaultGasProvider(l1Provider, {
+    maxFeePerGasCap: gasFeesOptions?.maxFeePerGasCap ?? DEFAULT_MAX_FEE_PER_GAS_CAP,
     gasEstimationPercentile: gasFeesOptions?.gasEstimationPercentile ?? DEFAULT_GAS_ESTIMATION_PERCENTILE,
     enforceMaxGasFee: gasFeesOptions?.enforceMaxGasFee ?? DEFAULT_ENFORCE_MAX_GAS_FEE,
   });
-  const messageRetriever = new LineaRollupMessageRetriever(chainQuerier, lineaRollupLogClient, l1ContractAddress);
+  const messageRetriever = new LineaRollupMessageRetriever(l1Provider, lineaRollupLogClient, l1ContractAddress);
   const merkleTreeService = new MerkleTreeService(
-    chainQuerier,
+    l1Provider,
     l1ContractAddress,
     lineaRollupLogClient,
     l2MessageServiceLogClient,
     DEFAULT_L2_MESSAGE_TREE_DEPTH,
   );
   const lineaRollupClient = new LineaRollupClient(
-    chainQuerier,
+    l1Provider,
     l1ContractAddress,
     lineaRollupLogClient,
     l2MessageServiceLogClient,
@@ -286,36 +232,40 @@ export function generateLineaRollupClient(
 }
 
 export function generateL2MessageServiceClient(
-  l2Provider: JsonRpcProvider,
+  l2Provider: LineaProvider,
   l2ContractAddress: string,
   mode: SDKMode,
   signer?: Signer,
   gasFeesOptions?: {
-    maxFeePerGas?: bigint;
+    maxFeePerGasCap?: bigint;
     gasEstimationPercentile?: number;
     enforceMaxGasFee?: boolean;
+    enableLineaEstimateGas?: boolean;
   },
 ): {
   l2MessageServiceClient: L2MessageServiceClient;
   l2MessageServiceLogClient: EthersL2MessageServiceLogClient;
-  l2ChainQuerier: L2ChainQuerier;
-  gasProvider: LineaGasProvider;
+  gasProvider: GasProvider;
   messageRetriever: L2MessageServiceMessageRetriever;
 } {
   const l2MessageServiceLogClient = new EthersL2MessageServiceLogClient(l2Provider, l2ContractAddress);
-  const l2ChainQuerier = new L2ChainQuerier(l2Provider, signer);
 
-  const gasProvider = new LineaGasProvider(l2ChainQuerier, {
-    maxFeePerGas: gasFeesOptions?.maxFeePerGas ?? DEFAULT_MAX_FEE_PER_GAS,
-    enforceMaxGasFee: gasFeesOptions?.enforceMaxGasFee ?? DEFAULT_ENFORCE_MAX_GAS_FEE,
-  });
   const messageRetriever = new L2MessageServiceMessageRetriever(
-    l2ChainQuerier,
+    l2Provider,
     l2MessageServiceLogClient,
     l2ContractAddress,
   );
+
+  const gasProvider = new GasProvider(l2Provider, {
+    maxFeePerGasCap: gasFeesOptions?.maxFeePerGasCap ?? DEFAULT_MAX_FEE_PER_GAS_CAP,
+    enforceMaxGasFee: gasFeesOptions?.enforceMaxGasFee ?? DEFAULT_ENFORCE_MAX_GAS_FEE,
+    gasEstimationPercentile: gasFeesOptions?.gasEstimationPercentile ?? DEFAULT_GAS_ESTIMATION_PERCENTILE,
+    direction: Direction.L1_TO_L2,
+    enableLineaEstimateGas: gasFeesOptions?.enableLineaEstimateGas ?? false,
+  });
+
   const l2MessageServiceClient = new L2MessageServiceClient(
-    l2ChainQuerier,
+    l2Provider,
     l2ContractAddress,
     messageRetriever,
     gasProvider,
@@ -323,7 +273,7 @@ export function generateL2MessageServiceClient(
     signer,
   );
 
-  return { l2MessageServiceClient, l2MessageServiceLogClient, gasProvider, messageRetriever, l2ChainQuerier };
+  return { l2MessageServiceClient, l2MessageServiceLogClient, gasProvider, messageRetriever };
 }
 
 export const generateL2MessagingBlockAnchoredLog = (l2Block: bigint, overrides?: Partial<ethers.Log>): ethers.Log => {
