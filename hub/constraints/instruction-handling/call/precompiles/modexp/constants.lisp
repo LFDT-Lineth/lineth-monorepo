@@ -23,5 +23,5 @@
   precompile-processing---MODEXP---misc-row-offset---partial-result-transfer       11
 
   precompile-processing---MODEXP---context-row-offset---FKTR                        7
-  precompile-processing---MODEXP---context-row-offset---success                    13
+  precompile-processing---MODEXP---context-row-offset---success                    12
   )
