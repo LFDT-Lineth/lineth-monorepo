@@ -228,7 +228,7 @@ services:
   postman:
     container_name: postman
     hostname: postman
-    image: consensys/linea-postman:${POSTMAN_TAG:-5a6fdf3}
+    image: consensys/linea-postman:${POSTMAN_TAG:-f58c12a}
     profiles: [ "l2", "debug" ]
     platform: linux/amd64
     restart: on-failure
@@ -260,7 +260,7 @@ services:
       MESSAGE_SUBMISSION_TIMEOUT: 300000
       MAX_FETCH_MESSAGES_FROM_DB: 1000
       MAX_NONCE_DIFF: 10000
-      MAX_FEE_PER_GAS: 100000000000
+      MAX_FEE_PER_GAS_CAP: 100000000000
       GAS_ESTIMATION_PERCENTILE: 50
       PROFIT_MARGIN: 0.0
       MAX_NUMBER_OF_RETRIES: 100
@@ -277,6 +277,8 @@ services:
       POSTGRES_USER: "postgres"
       POSTGRES_PASSWORD: "postgres"
       POSTGRES_DB: "postman_db"
+      DB_CLEANER_ENABLED: "false"
+      ENABLE_LINEA_ESTIMATE_GAS: "false"
     networks:
       l1network:
         ipv4_address: 10.10.10.222
