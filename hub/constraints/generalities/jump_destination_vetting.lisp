@@ -6,7 +6,9 @@
 ;;                                          ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defconstraint jump-destination- (:guard PEEK_AT_STACK)
+(defconstraint jump-destination-vetting
+               (:guard PEEK_AT_STACK)
+               ;;;;;;;;;;;;;;;;;;;;;;
                (begin
                  (debug (is-binary stack/JUMP_DESTINATION_VETTING_REQUIRED))
                  (if-zero (force-bin stack/JUMP_FLAG)
