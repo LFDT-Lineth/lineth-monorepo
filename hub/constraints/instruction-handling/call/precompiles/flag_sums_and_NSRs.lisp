@@ -184,42 +184,40 @@
 (defun    (precompile-processing---2nd-half-flag-sum-for-MODEXP)
   (+  (*  (precompile-processing---flag-sum-MODEXP-FKTR)       scenario/PRC_FAILURE_KNOWN_TO_RAM)
       (*  (precompile-processing---flag-sum-MODEXP-success)    (scenario-shorthand---PRC---success))
-          ))
+      ))
 ;; MODEXP non stack rows
-(defun    (precompile-processing---2nd-half-NSR-for-MODEXP)
-  (+  (*  (precompile-processing---nsr-MODEXP-FKTR)       scenario/PRC_FAILURE_KNOWN_TO_RAM)
-      (*  (precompile-processing---nsr-MODEXP-success)    (scenario-shorthand---PRC---success))
-          ))
+(defconst   precompile-processing---MODEXP-nsr-FKTR            8)
+(defconst   precompile-processing---MODEXP-nsr-success        13)
+(defun     (precompile-processing---2nd-half-NSR-for-MODEXP)
+  (+  (*    precompile-processing---MODEXP-nsr-FKTR           scenario/PRC_FAILURE_KNOWN_TO_RAM)
+      (*    precompile-processing---MODEXP-nsr-success        (scenario-shorthand---PRC---success))
+      ))
 ;; MODEXP non stack rows shorthands
-(defun    (precompile-processing---nsr-MODEXP-FKTR)       (+
-                                                            (shift    PEEK_AT_SCENARIO         0                                                                       )
-                                                            (shift    PEEK_AT_MISCELLANEOUS    precompile-processing---MODEXP-misc-row---cds---row-offset              )
-                                                            (shift    PEEK_AT_MISCELLANEOUS    precompile-processing---MODEXP-misc-row---extract-bbs---offset          )
-                                                            (shift    PEEK_AT_MISCELLANEOUS    precompile-processing---MODEXP-misc-row---extract-ebs---row-offset      )
-                                                            (shift    PEEK_AT_MISCELLANEOUS    precompile-processing---MODEXP-misc-row---extract-mbs---row-offset      )
-                                                            (shift    PEEK_AT_MISCELLANEOUS    precompile-processing---MODEXP-misc-row---extract-raw-lead---row-offset )
-                                                            (shift    PEEK_AT_MISCELLANEOUS    precompile-processing---MODEXP-misc-row---pricing---row-offset          )
-                                                            (shift    PEEK_AT_CONTEXT          precompile-processing---MODEXP-context-row---FKTR---row-offset          )
-                                                            )
-  )
-(defun    (precompile-processing---nsr-MODEXP-success)    (+
-                                                            (shift    PEEK_AT_SCENARIO         0                                                                             )
-                                                            (shift    PEEK_AT_MISCELLANEOUS    precompile-processing---MODEXP-misc-row---cds---row-offset                    )
-                                                            (shift    PEEK_AT_MISCELLANEOUS    precompile-processing---MODEXP-misc-row---extract-bbs---offset                )
-                                                            (shift    PEEK_AT_MISCELLANEOUS    precompile-processing---MODEXP-misc-row---extract-ebs---row-offset            )
-                                                            (shift    PEEK_AT_MISCELLANEOUS    precompile-processing---MODEXP-misc-row---extract-mbs---row-offset            )
-                                                            (shift    PEEK_AT_MISCELLANEOUS    precompile-processing---MODEXP-misc-row---extract-raw-lead---row-offset       )
-                                                            (shift    PEEK_AT_MISCELLANEOUS    precompile-processing---MODEXP-misc-row---pricing---row-offset                )
-                                                            (shift    PEEK_AT_MISCELLANEOUS    precompile-processing---MODEXP-misc-row---copy-inputs-base---row-offset       )
-                                                            (shift    PEEK_AT_MISCELLANEOUS    precompile-processing---MODEXP-misc-row---copy-inputs-exponent---row-offset   )
-                                                            (shift    PEEK_AT_MISCELLANEOUS    precompile-processing---MODEXP-misc-row---copy-inputs-modulus---row-offset    )
-                                                            (shift    PEEK_AT_MISCELLANEOUS    precompile-processing---MODEXP-misc-row---full-result-transfer---row-offset   )
-                                                            (shift    PEEK_AT_MISCELLANEOUS    precompile-processing---MODEXP-misc-row---partial-result-copy---row-offset    )
-                                                            (shift    PEEK_AT_CONTEXT          precompile-processing---MODEXP-context-row---success---row-offset             )
-                                                            ))
-;; MODEXP flag sum shorthands
-(defun    (precompile-processing---flag-sum-MODEXP-FKTR)       (precompile-processing---flag-sum-standard-failure))
-(defun    (precompile-processing---flag-sum-MODEXP-success)    (precompile-processing---flag-sum-standard-success))
+(defun    (precompile-processing---flag-sum-MODEXP-FKTR)       (+
+                                                                 (shift    PEEK_AT_SCENARIO         0                                                                       )
+                                                                 (shift    PEEK_AT_MISCELLANEOUS    precompile-processing---MODEXP-misc-row---cds---row-offset              )
+                                                                 (shift    PEEK_AT_MISCELLANEOUS    precompile-processing---MODEXP-misc-row---extract-bbs---offset          )
+                                                                 (shift    PEEK_AT_MISCELLANEOUS    precompile-processing---MODEXP-misc-row---extract-ebs---row-offset      )
+                                                                 (shift    PEEK_AT_MISCELLANEOUS    precompile-processing---MODEXP-misc-row---extract-mbs---row-offset      )
+                                                                 (shift    PEEK_AT_MISCELLANEOUS    precompile-processing---MODEXP-misc-row---extract-raw-lead---row-offset )
+                                                                 (shift    PEEK_AT_MISCELLANEOUS    precompile-processing---MODEXP-misc-row---pricing---row-offset          )
+                                                                 (shift    PEEK_AT_CONTEXT          precompile-processing---MODEXP-context-row---FKTR---row-offset          )
+                                                                 ))
+(defun    (precompile-processing---flag-sum-MODEXP-success)    (+
+                                                                 (shift    PEEK_AT_SCENARIO         0                                                                             )
+                                                                 (shift    PEEK_AT_MISCELLANEOUS    precompile-processing---MODEXP-misc-row---cds---row-offset                    )
+                                                                 (shift    PEEK_AT_MISCELLANEOUS    precompile-processing---MODEXP-misc-row---extract-bbs---offset                )
+                                                                 (shift    PEEK_AT_MISCELLANEOUS    precompile-processing---MODEXP-misc-row---extract-ebs---row-offset            )
+                                                                 (shift    PEEK_AT_MISCELLANEOUS    precompile-processing---MODEXP-misc-row---extract-mbs---row-offset            )
+                                                                 (shift    PEEK_AT_MISCELLANEOUS    precompile-processing---MODEXP-misc-row---extract-raw-lead---row-offset       )
+                                                                 (shift    PEEK_AT_MISCELLANEOUS    precompile-processing---MODEXP-misc-row---pricing---row-offset                )
+                                                                 (shift    PEEK_AT_MISCELLANEOUS    precompile-processing---MODEXP-misc-row---copy-inputs-base---row-offset       )
+                                                                 (shift    PEEK_AT_MISCELLANEOUS    precompile-processing---MODEXP-misc-row---copy-inputs-exponent---row-offset   )
+                                                                 (shift    PEEK_AT_MISCELLANEOUS    precompile-processing---MODEXP-misc-row---copy-inputs-modulus---row-offset    )
+                                                                 (shift    PEEK_AT_MISCELLANEOUS    precompile-processing---MODEXP-misc-row---full-result-transfer---row-offset   )
+                                                                 (shift    PEEK_AT_MISCELLANEOUS    precompile-processing---MODEXP-misc-row---partial-result-copy---row-offset    )
+                                                                 (shift    PEEK_AT_CONTEXT          precompile-processing---MODEXP-context-row---success---row-offset             )
+                                                                 ))
 ;; NB: the failure scenario FAILURE_KNOWN_TO_HUB is impossible
 (defconst
   precompile-processing---MODEXP-misc-row---cds---row-offset                      1
@@ -236,9 +234,6 @@
 
   precompile-processing---MODEXP-context-row---FKTR---row-offset                  7
   precompile-processing---MODEXP-context-row---success---row-offset              12
-
-  precompile-processing---nsr-FKTR                                                8
-  precompile-processing---nsr-success                                            13
   )
 
 
