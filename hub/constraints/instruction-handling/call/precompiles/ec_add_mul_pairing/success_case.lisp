@@ -118,21 +118,21 @@
 (defconstraint    precompile-processing---ECADD_MUL_PAIRING---setting-the-MMU-instruction---partial-return-data-copy
                   (:guard    (precompile-processing---ECADD_MUL_PAIRING---success-case))
                   (if-not-zero    (shift    misc/MMU_FLAG                           precompile-processing---ECADD_MUL_PAIRING---misc-row-offset---partial-return-data-copy)
-                                  (set-MMU-instruction---ram-to-ram-sans-padding    precompile-processing---ECADD_MUL_PAIRING---misc-row-offset---partial-return-data-copy   ;; offset
+                                  (set-MMU-instruction---ram-to-ram-sans-padding    precompile-processing---ECADD_MUL_PAIRING---misc-row-offset---partial-return-data-copy  ;; offset
                                                                                     (+    1    HUB_STAMP)                                                                   ;; source ID
                                                                                     CONTEXT_NUMBER                                                                          ;; target ID
-                                                                                    ;; aux_id                                                                                  ;; auxiliary ID
-                                                                                    ;; src_offset_hi                                                                           ;; source offset high
-                                                                                    (precompile-processing---dup-r@o)                                                       ;; source offset low
-                                                                                    ;; tgt_offset_lo                                                                           ;; target offset low
-                                                                                    (precompile-processing---dup-r@c)                                                       ;; size
-                                                                                    0                                                                                       ;; reference offset
-                                                                                    (precompile-processing---ECADD_MUL_PAIRING---return-data-reference-size)                ;; reference size
-                                                                                    ;; success_bit                                                                             ;; success bit
-                                                                                    ;; limb_1                                                                                  ;; limb 1
-                                                                                    ;; limb_2                                                                                  ;; limb 2
-                                                                                    ;; exo_sum                                                                                 ;; weighted exogenous module flag sum
-                                                                                    ;; phase                                                                                   ;; phase
+                                                                                    ;; aux_id                                                                               ;; auxiliary ID
+                                                                                    ;; src_offset_hi                                                                        ;; source offset high
+                                                                                    0                                                                                       ;; source offset low
+                                                                                    ;; tgt_offset_lo                                                                        ;; target offset low
+                                                                                    (precompile-processing---ECADD_MUL_PAIRING---return-data-reference-size)                ;; size
+                                                                                    (precompile-processing---dup-r@o)                                                       ;; reference offset
+                                                                                    (precompile-processing---dup-r@c)                                                       ;; reference size
+                                                                                    ;; success_bit                                                                          ;; success bit
+                                                                                    ;; limb_1                                                                               ;; limb 1
+                                                                                    ;; limb_2                                                                               ;; limb 2
+                                                                                    ;; exo_sum                                                                              ;; weighted exogenous module flag sum
+                                                                                    ;; phase                                                                                ;; phase
                                                                                     )))
 
 
