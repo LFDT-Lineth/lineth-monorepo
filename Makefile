@@ -69,7 +69,7 @@ compile-contracts-no-cache:
 		cd contracts/; \
 		make force-compile
 
-deploy-linea-rollup: L1_CONTRACT_VERSION:=5
+deploy-linea-rollup: L1_CONTRACT_VERSION:=6
 deploy-linea-rollup:
 		# WARNING: FOR LOCAL DEV ONLY - DO NOT REUSE THESE KEYS ELSEWHERE
 		cd contracts/; \
@@ -161,30 +161,30 @@ restart-shomei:
 		docker compose -f docker/compose.yml -f docker/compose-local-dev.overrides.yml up zkbesu-shomei shomei -d
 
 fresh-start-all: COMPOSE_PROFILES:="l1,l2"
-fresh-start-all: L1_CONTRACT_VERSION:=5
+fresh-start-all: L1_CONTRACT_VERSION:=6
 fresh-start-all:
 		make clean-environment
 		make start-all L1_CONTRACT_VERSION=$(L1_CONTRACT_VERSION) COMPOSE_PROFILES=$(COMPOSE_PROFILES)
 
 fresh-start-all-traces-v2: COMPOSE_PROFILES:="l1,l2"
-fresh-start-all-traces-v2: L1_CONTRACT_VERSION:=5
+fresh-start-all-traces-v2: L1_CONTRACT_VERSION:=6
 fresh-start-all-traces-v2:
 		make clean-environment
 		$(MAKE) start-all-traces-v2 L1_CONTRACT_VERSION=$(L1_CONTRACT_VERSION) COMPOSE_PROFILES=$(COMPOSE_PROFILES)
 
 start-all: COMPOSE_PROFILES:=l1,l2
-start-all: L1_CONTRACT_VERSION:=5
+start-all: L1_CONTRACT_VERSION:=6
 start-all:
 		L1_GENESIS_TIME=$(get_future_time) make start-whole-environment COMPOSE_PROFILES=$(COMPOSE_PROFILES)
 		make deploy-contracts L1_CONTRACT_VERSION=$(L1_CONTRACT_VERSION)
 
 start-all-traces-v2: COMPOSE_PROFILES:="l1,l2"
-start-all-traces-v2: L1_CONTRACT_VERSION:=5
+start-all-traces-v2: L1_CONTRACT_VERSION:=6
 start-all-traces-v2:
 		L1_GENESIS_TIME=$(get_future_time) make start-whole-environment-traces-v2 COMPOSE_PROFILES=$(COMPOSE_PROFILES)
 		$(MAKE) deploy-contracts L1_CONTRACT_VERSION=$(L1_CONTRACT_VERSION)
 
-deploy-contracts: L1_CONTRACT_VERSION:=5
+deploy-contracts: L1_CONTRACT_VERSION:=6
 deploy-contracts:
 	cd contracts/; \
 	export L1_NONCE=$$(npx ts-node local-deployments-artifacts/get-wallet-nonce.ts --wallet-priv-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 --rpc-url http://localhost:8445) && \
@@ -192,7 +192,7 @@ deploy-contracts:
 	cd .. && \
 	$(MAKE) -j6 deploy-linea-rollup-v$(L1_CONTRACT_VERSION) deploy-token-bridge-l1 deploy-l1-test-erc20 deploy-l2messageservice deploy-token-bridge-l2 deploy-l2-test-erc20
 
-deploy-contracts-minimal: L1_CONTRACT_VERSION:=5
+deploy-contracts-minimal: L1_CONTRACT_VERSION:=6
 deploy-contracts-minimal:
 	cd contracts/; \
 	export L1_NONCE=$$(npx ts-node local-deployments-artifacts/get-wallet-nonce.ts --wallet-priv-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 --rpc-url http://localhost:8445) && \

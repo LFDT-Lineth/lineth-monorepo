@@ -46,49 +46,49 @@ describe("Coordinator restart test suite", () => {
       const l1Provider = config.getL1Provider();
       // await for a finalization to happen on L1
       const [dataSubmittedEventsBeforeRestart, dataFinalizedEventsBeforeRestart] = await Promise.all([
-        waitForEvents(lineaRollup, lineaRollup.filters.DataSubmittedV2(), 0, "latest"),
-        waitForEvents(lineaRollup, lineaRollup.filters.DataFinalized(), 0, "latest"),
+        waitForEvents(lineaRollup, lineaRollup.filters.DataSubmittedV3(), 0, "latest"),
+        waitForEvents(lineaRollup, lineaRollup.filters.DataFinalizedV3(), 0, "latest"),
       ]);
 
       const lastDataSubmittedEventBeforeRestart = dataSubmittedEventsBeforeRestart.slice(-1)[0];
       const lastDataFinalizedEventsBeforeRestart = dataFinalizedEventsBeforeRestart.slice(-1)[0];
+
       // Just some sanity checks
       // Check that the coordinator has submitted and finalized data before the restart
-      expect(lastDataSubmittedEventBeforeRestart.args.endBlock).toBeGreaterThan(0n);
-      expect(lastDataFinalizedEventsBeforeRestart.args.lastBlockFinalized).toBeGreaterThan(0n);
+      expect(lastDataSubmittedEventBeforeRestart.blockNumber).toBeGreaterThan(0n);
+      expect(lastDataFinalizedEventsBeforeRestart.args.endBlockNumber).toBeGreaterThan(0n);
 
       await waitForCoordinatorRestart();
 
       const currentBlockNumberAfterRestart = await l1Provider.getBlockNumber();
 
-      console.log("Waiting for DataSubmittedV2 event after coordinator restart...");
-      const [dataSubmittedV2EventAfterRestart] = await waitForEvents(
+      console.log("Waiting for DataSubmittedV3 event after coordinator restart...");
+      const [dataSubmittedV3EventAfterRestart] = await waitForEvents(
         lineaRollup,
-        lineaRollup.filters.DataSubmittedV2(),
+        lineaRollup.filters.DataSubmittedV3(),
         1_000,
         currentBlockNumberAfterRestart,
         "latest",
-        async (events) =>
-          events.filter((event) => event.args.startBlock > lastDataSubmittedEventBeforeRestart.args.endBlock),
+        async (events) => events.filter((event) => event.blockNumber > lastDataSubmittedEventBeforeRestart.blockNumber),
       );
-      console.log(`New DataSubmittedV2 event found: event=${JSON.stringify(dataSubmittedV2EventAfterRestart)}`);
+      console.log(`New DataSubmittedV3 event found: event=${JSON.stringify(dataSubmittedV3EventAfterRestart)}`);
 
       console.log("Waiting for DataFinalized event after coordinator restart...");
       const [dataFinalizedEventAfterRestart] = await waitForEvents(
         lineaRollup,
-        lineaRollup.filters.DataFinalized(),
+        lineaRollup.filters.DataFinalizedV3(),
         1_000,
         currentBlockNumberAfterRestart,
         "latest",
         async (events) =>
           events.filter(
-            (event) => event.args.lastBlockFinalized > lastDataFinalizedEventsBeforeRestart.args.lastBlockFinalized,
+            (event) => event.args.endBlockNumber > lastDataFinalizedEventsBeforeRestart.args.endBlockNumber,
           ),
       );
       console.log(`New DataFinalized event found: event=${JSON.stringify(dataFinalizedEventAfterRestart)}`);
 
-      expect(dataFinalizedEventAfterRestart.args.lastBlockFinalized).toBeGreaterThan(
-        lastDataFinalizedEventsBeforeRestart.args.lastBlockFinalized,
+      expect(dataFinalizedEventAfterRestart.args.endBlockNumber).toBeGreaterThan(
+        lastDataFinalizedEventsBeforeRestart.args.endBlockNumber,
       );
     },
     150_000,

@@ -7,19 +7,8 @@ import {
   wait,
   getBlockByNumberOrBlockTag,
   etherToWei,
-  generateRoleAssignments,
-  convertStringToPaddedHexBytes,
-  getEvents,
 } from "./common/utils";
 import { config } from "./config/tests-config";
-import { deployContract } from "./common/deployments";
-import { LineaRollupV6__factory } from "./typechain";
-import { getInitializerData, upgradeContractAndCall } from "./common/upgrades";
-import {
-  LINEA_ROLLUP_PAUSE_TYPES_ROLES,
-  LINEA_ROLLUP_UNPAUSE_TYPES_ROLES,
-  LINEA_ROLLUP_V6_ROLES,
-} from "./common/constants";
 
 const l1AccountManager = config.getL1AccountManager();
 
@@ -64,11 +53,11 @@ describe("Submission and finalization test suite", () => {
     return { l1Messages, l1Receipts };
   };
 
-  describe("Contracts v5", () => {
+  describe("Contracts v6", () => {
     it.concurrent(
       "Check L2 anchoring",
       async () => {
-        const lineaRollup = config.getLineaRollupContract();
+        const lineaRollupV6 = config.getLineaRollupContract();
         const l2MessageService = config.getL2MessageServiceContract();
 
         const { l1Messages } = await sendMessages();
@@ -87,7 +76,7 @@ describe("Submission and finalization test suite", () => {
         );
 
         const [lastNewMessageRollingHash, lastAnchoredL1MessageNumber] = await Promise.all([
-          lineaRollup.rollingHashes(rollingHashUpdatedEvent.args.messageNumber),
+          lineaRollupV6.rollingHashes(rollingHashUpdatedEvent.args.messageNumber),
           l2MessageService.lastAnchoredL1MessageNumber(),
         ]);
         expect(lastNewMessageRollingHash).toEqual(rollingHashUpdatedEvent.args.rollingHash);
@@ -101,37 +90,27 @@ describe("Submission and finalization test suite", () => {
     it.concurrent(
       "Check L1 data submission and finalization",
       async () => {
-        const lineaRollup = config.getLineaRollupContract();
+        const lineaRollupV6 = config.getLineaRollupContract();
 
-        const [currentL2BlockNumber, startingRootHash] = await Promise.all([
-          lineaRollup.currentL2BlockNumber(),
-          lineaRollup.stateRootHashes(await lineaRollup.currentL2BlockNumber()),
-        ]);
+        const currentL2BlockNumber = await lineaRollupV6.currentL2BlockNumber();
 
-        console.log("Waiting for data submission used to finalize with proof...");
-        // Waiting for data submission starting from migration block number
-        await waitForEvents(
-          lineaRollup,
-          lineaRollup.filters.DataSubmittedV2(undefined, currentL2BlockNumber + 1n),
-          1_000,
-        );
+        console.log("Waiting for DataSubmittedV3 used to finalize with proof...");
+        await waitForEvents(lineaRollupV6, lineaRollupV6.filters.DataSubmittedV3(), 1_000);
 
-        console.log("Waiting for the first DataFinalized event with proof...");
-        // Waiting for first DataFinalized event with proof
+        console.log("Waiting for the first DataFinalizedV3 event with proof...");
         const [dataFinalizedEvent] = await waitForEvents(
-          lineaRollup,
-          lineaRollup.filters.DataFinalized(undefined, startingRootHash),
+          lineaRollupV6,
+          lineaRollupV6.filters.DataFinalizedV3(currentL2BlockNumber + 1n),
           1_000,
         );
 
         const [lastBlockFinalized, newStateRootHash] = await Promise.all([
-          lineaRollup.currentL2BlockNumber(),
-          lineaRollup.stateRootHashes(dataFinalizedEvent.args.lastBlockFinalized),
+          lineaRollupV6.currentL2BlockNumber(),
+          lineaRollupV6.stateRootHashes(dataFinalizedEvent.args.endBlockNumber),
         ]);
 
-        expect(lastBlockFinalized).toBeGreaterThanOrEqual(dataFinalizedEvent.args.lastBlockFinalized);
-        expect(newStateRootHash).toEqual(dataFinalizedEvent.args.finalRootHash);
-        expect(dataFinalizedEvent.args.withProof).toBeTruthy();
+        expect(lastBlockFinalized).toBeGreaterThanOrEqual(dataFinalizedEvent.args.endBlockNumber);
+        expect(newStateRootHash).toEqual(dataFinalizedEvent.args.finalStateRootHash);
 
         console.log("Finalization with proof done.");
       },
@@ -172,109 +151,5 @@ describe("Submission and finalization test suite", () => {
       },
       150_000,
     );
-  });
-
-  describe("LineaRollup v6 upgrade", () => {
-    // note: we cannot move the chain forward by 6 months, so in theory, this could be any address for e2e test purposes
-    const fallbackoperatorAddress = "0xcA11bde05977b3631167028862bE2a173976CA11";
-
-    beforeAll(async () => {
-      const l1DeployerAccount = l1AccountManager.whaleAccount(0);
-      const l1SecurityCouncil = l1AccountManager.whaleAccount(3);
-      const l1Provider = config.getL1Provider();
-      const proxyAdmin = config.getLineaRollupProxyAdminContract(l1DeployerAccount);
-
-      console.log("Deploying LineaRollup v6 implementation contract...");
-      const { maxFeePerGas, maxPriorityFeePerGas } = await l1Provider.getFeeData();
-
-      const lineaRollupV6Implementation = await deployContract(new LineaRollupV6__factory(), l1DeployerAccount, [
-        { maxPriorityFeePerGas, maxFeePerGas },
-      ]);
-
-      console.log("Upgrading LineaRollup contract to V6...");
-      const newRoleAddresses = generateRoleAssignments(LINEA_ROLLUP_V6_ROLES, await l1SecurityCouncil.getAddress(), []);
-
-      const initializerData = getInitializerData(
-        LineaRollupV6__factory.createInterface(),
-        "reinitializeLineaRollupV6",
-        [newRoleAddresses, LINEA_ROLLUP_PAUSE_TYPES_ROLES, LINEA_ROLLUP_UNPAUSE_TYPES_ROLES, fallbackoperatorAddress],
-      );
-
-      await upgradeContractAndCall(
-        l1DeployerAccount,
-        await proxyAdmin.getAddress(),
-        await config.getLineaRollupContract().getAddress(),
-        await lineaRollupV6Implementation.getAddress(),
-        initializerData,
-      );
-    });
-
-    it("Check LineaRollupVersionChanged and FallbackOperatorAddressSet events are emitted", async () => {
-      const lineaRollupAddress = await config.getLineaRollupContract().getAddress();
-      const lineaRollupV6 = LineaRollupV6__factory.connect(lineaRollupAddress, config.getL1Provider());
-
-      console.log("Waiting for FallbackOperatorAddressSet event...");
-      await waitForEvents(
-        lineaRollupV6,
-        lineaRollupV6.filters.FallbackOperatorAddressSet(undefined, fallbackoperatorAddress),
-        1_000,
-      );
-
-      console.log("Waiting for LineaRollupVersionChanged event...");
-      const expectedVersion5Bytes8 = convertStringToPaddedHexBytes("5.0", 8);
-      const expectedVersion6Bytes8 = convertStringToPaddedHexBytes("6.0", 8);
-      await waitForEvents(
-        lineaRollupV6,
-        lineaRollupV6.filters.LineaRollupVersionChanged(expectedVersion5Bytes8, expectedVersion6Bytes8),
-        1_000,
-      );
-    });
-
-    it("Check all new roles have been granted and pauseTypes/unpauseTypes are assigned to specific roles", async () => {
-      const lineaRollupAddress = await config.getLineaRollupContract().getAddress();
-      const l1SecurityCouncilAddress = await l1AccountManager.whaleAccount(3).getAddress();
-
-      const lineaRollupV6 = LineaRollupV6__factory.connect(lineaRollupAddress, config.getL1Provider());
-
-      for (const role of LINEA_ROLLUP_V6_ROLES) {
-        const hasRole = await lineaRollupV6.hasRole(role, l1SecurityCouncilAddress);
-        expect(hasRole).toBeTruthy();
-      }
-
-      const [pauseTypeRoleSetEvents, unPauseTypeRoleSetEvents] = await Promise.all([
-        getEvents(lineaRollupV6, lineaRollupV6.filters.PauseTypeRoleSet()),
-        getEvents(lineaRollupV6, lineaRollupV6.filters.UnPauseTypeRoleSet()),
-      ]);
-
-      expect(pauseTypeRoleSetEvents.length).toEqual(LINEA_ROLLUP_PAUSE_TYPES_ROLES.length);
-      expect(unPauseTypeRoleSetEvents.length).toEqual(LINEA_ROLLUP_UNPAUSE_TYPES_ROLES.length);
-    });
-
-    it("Check L1 data submission and finalization", async () => {
-      const lineaRollupAddress = await config.getLineaRollupContract().getAddress();
-      const lineaRollupV6 = LineaRollupV6__factory.connect(lineaRollupAddress, config.getL1Provider());
-
-      const currentL2BlockNumber = await lineaRollupV6.currentL2BlockNumber();
-
-      console.log("Waiting for DataSubmittedV3 used to finalize with proof...");
-      await waitForEvents(lineaRollupV6, lineaRollupV6.filters.DataSubmittedV3(), 1_000);
-
-      console.log("Waiting for the first DataFinalizedV3 event with proof...");
-      const [dataFinalizedEvent] = await waitForEvents(
-        lineaRollupV6,
-        lineaRollupV6.filters.DataFinalizedV3(currentL2BlockNumber + 1n),
-        1_000,
-      );
-
-      const [lastBlockFinalized, newStateRootHash] = await Promise.all([
-        lineaRollupV6.currentL2BlockNumber(),
-        lineaRollupV6.stateRootHashes(dataFinalizedEvent.args.endBlockNumber),
-      ]);
-
-      expect(lastBlockFinalized).toBeGreaterThanOrEqual(dataFinalizedEvent.args.endBlockNumber);
-      expect(newStateRootHash).toEqual(dataFinalizedEvent.args.finalStateRootHash);
-
-      console.log("Finalization with proof done.");
-    }, 150_000);
   });
 });

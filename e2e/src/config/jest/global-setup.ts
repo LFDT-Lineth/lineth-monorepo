@@ -4,12 +4,29 @@ import { config } from "../tests-config";
 import { deployContract } from "../../common/deployments";
 import { DummyContract__factory, TestContract__factory } from "../../typechain";
 import { etherToWei, sendTransactionsToGenerateTrafficWithInterval } from "../../common/utils";
+import { EMPTY_CONTRACT_CODE } from "../../common/constants";
 
 declare global {
   var stopL2TrafficGeneration: () => void;
 }
 
 export default async (): Promise<void> => {
+  const dummyContractCode = await config.getL1Provider().getCode(config.getL1DummyContractAddress());
+
+  // If this is empty, we have not deployed and prerequisites or configured token bridges.
+  if (dummyContractCode === EMPTY_CONTRACT_CODE) {
+    console.log("Configuring once-off prerequisite contracts");
+    await configureOnceOffPrerequisities();
+  }
+
+  console.log("Generating L2 traffic...");
+  const pollingAccount = await config.getL2AccountManager().generateAccount(etherToWei("200"));
+  const stopPolling = await sendTransactionsToGenerateTrafficWithInterval(pollingAccount, 2_000);
+
+  global.stopL2TrafficGeneration = stopPolling;
+};
+
+async function configureOnceOffPrerequisities() {
   const l1AccountManager = config.getL1AccountManager();
   const l2AccountManager = config.getL2AccountManager();
 
@@ -55,10 +72,4 @@ export default async (): Promise<void> => {
   console.log(`L1 Dummy contract deployed at address: ${await dummyContract.getAddress()}`);
   console.log(`L2 Dummy contract deployed at address: ${await l2DummyContract.getAddress()}`);
   console.log(`L2 Test contract deployed at address: ${await l2TestContract.getAddress()}`);
-
-  console.log("Generating L2 traffic...");
-  const pollingAccount = await config.getL2AccountManager().generateAccount(etherToWei("200"));
-  const stopPolling = await sendTransactionsToGenerateTrafficWithInterval(pollingAccount, 2_000);
-
-  global.stopL2TrafficGeneration = stopPolling;
-};
+}
