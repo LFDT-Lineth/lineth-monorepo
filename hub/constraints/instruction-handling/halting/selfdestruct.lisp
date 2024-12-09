@@ -213,7 +213,9 @@
                                                                  0)
                                    ))))
 
-(defconstraint    selfdestruct-instruction---setting-code-and-deployment-for-the-first-account-row (:guard (selfdestruct-instruction---scenario-precondition))
+(defconstraint    selfdestruct-instruction---setting-code-and-deployment-for-the-first-account-row
+                  (:guard (selfdestruct-instruction---scenario-precondition))
+                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                   (if-zero     (selfdestruct-instruction---STATICX)
                                (begin
                                  (if-not-zero XAHOY
@@ -232,7 +234,9 @@
                                                          (eq!        (shift account/DEPLOYMENT_STATUS_NEW       ROFF_SELFDESTRUCT___ACCOUNT___1ST_DOING_ROW) 0)
                                                          (account-same-deployment-number                        ROFF_SELFDESTRUCT___ACCOUNT___1ST_DOING_ROW)))))))
 
-(defconstraint    selfdestruct-instruction---setting-balance-and-marked-for-SELFDESTRUCT-for-first-account-row (:guard (selfdestruct-instruction---scenario-precondition))
+(defconstraint    selfdestruct-instruction---setting-balance-and-marked-for-SELFDESTRUCT-for-first-account-row
+                  (:guard (selfdestruct-instruction---scenario-precondition))
+                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                   (if-zero     (selfdestruct-instruction---STATICX)
                                (begin
                                  (if-not-zero (selfdestruct-instruction---OOGX)
@@ -244,7 +248,9 @@
                                  (if-not-zero scenario/SELFDESTRUCT_WONT_REVERT_ALREADY_MARKED    (account-same-marked-for-selfdestruct      ROFF_SELFDESTRUCT___ACCOUNT___1ST_DOING_ROW))
                                  (if-not-zero scenario/SELFDESTRUCT_WONT_REVERT_NOT_YET_MARKED    (account-mark-account-for-selfdestruct     ROFF_SELFDESTRUCT___ACCOUNT___1ST_DOING_ROW)))))
 
-(defconstraint    selfdestruct-instruction---generalities-for-the-second-account-row (:guard (selfdestruct-instruction---scenario-precondition))
+(defconstraint    selfdestruct-instruction---generalities-for-the-second-account-row
+                  (:guard (selfdestruct-instruction---scenario-precondition))
+                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                   (begin
                     (if-zero     (selfdestruct-instruction---STATICX)
                                  (begin
@@ -260,7 +266,9 @@
                                    (account-same-marked-for-selfdestruct                ROFF_SELFDESTRUCT___ACCOUNT___2ND_DOING_ROW)
                                    (DOM-SUB-stamps---standard                           ROFF_SELFDESTRUCT___ACCOUNT___2ND_DOING_ROW 1 )))))
 
-(defconstraint    selfdestruct-instruction---balance-and-warmth-for-second-account-row (:guard (selfdestruct-instruction---scenario-precondition))
+(defconstraint    selfdestruct-instruction---balance-and-warmth-for-second-account-row
+                  (:guard (selfdestruct-instruction---scenario-precondition))
+                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                   (begin
                     (if-not-zero (selfdestruct-instruction---OOGX)
                                  (begin
@@ -297,10 +305,11 @@
 ;;                                                               ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defun    (selfdestruct-instruction---scenario-WILL_REVERT-precondition) (* PEEK_AT_SCENARIO
-                                                                            scenario/SELFDESTRUCT_WILL_REVERT))
+(defun    (selfdestruct-instruction---scenario-WILL_REVERT-precondition)    (*    PEEK_AT_SCENARIO    scenario/SELFDESTRUCT_WILL_REVERT))
 
-(defconstraint    selfdestruct-instruction---first-undoing-row-for-WILL_REVERT-scenario (:guard (selfdestruct-instruction---scenario-WILL_REVERT-precondition))
+(defconstraint    selfdestruct-instruction---first-undoing-row-for-WILL_REVERT-scenario
+                  (:guard (selfdestruct-instruction---scenario-WILL_REVERT-precondition))
+                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                   (begin
                     (debug (eq! (shift account/ROMLEX_FLAG       ROFF_SELFDESTRUCT___ACCOUNT___1ST_UNDOING_ROW) 0))
                     (debug (eq! (shift account/TRM_FLAG          ROFF_SELFDESTRUCT___ACCOUNT___1ST_UNDOING_ROW) 0))
@@ -313,7 +322,9 @@
                     (account-same-marked-for-selfdestruct        ROFF_SELFDESTRUCT___ACCOUNT___1ST_UNDOING_ROW)
                     (DOM-SUB-stamps---revert-with-current        ROFF_SELFDESTRUCT___ACCOUNT___1ST_UNDOING_ROW 2)))
 
-(defconstraint    selfdestruct-instruction---second-undoing-row-for-WILL_REVERT-scenario (:guard (selfdestruct-instruction---scenario-WILL_REVERT-precondition))
+(defconstraint    selfdestruct-instruction---second-undoing-row-for-WILL_REVERT-scenario
+                  (:guard (selfdestruct-instruction---scenario-WILL_REVERT-precondition))
+                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                   (begin
                     (debug (eq! (shift account/ROMLEX_FLAG       ROFF_SELFDESTRUCT___ACCOUNT___2ND_UNDOING_ROW) 0))
                     (debug (eq! (shift account/TRM_FLAG          ROFF_SELFDESTRUCT___ACCOUNT___2ND_UNDOING_ROW) 0))
@@ -332,21 +343,22 @@
 ;;                                                                                      ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defun    (selfdestruct-instruction---scenario-WONT_REVERT_NOT_YET_MARKED-precondition) (* PEEK_AT_SCENARIO
-                                                                                           (scenario/SELFDESTRUCT_WONT_REVERT_NOT_YET_MARKED)))
+(defun    (selfdestruct-instruction---scenario-WONT_REVERT_NOT_YET_MARKED-precondition)    (*    PEEK_AT_SCENARIO    scenario/SELFDESTRUCT_WONT_REVERT_NOT_YET_MARKED))
 
-(defconstraint    selfdestruct-instruction---first-undoing-row-for-WONT_REVERT_NOT_YET_MARKED-scenario (:guard (selfdestruct-instruction---scenario-WILL_REVERT-precondition))
+(defconstraint    selfdestruct-instruction---account-deletion-row
+                  (:guard (selfdestruct-instruction---scenario-WONT_REVERT_NOT_YET_MARKED-precondition))
+                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                   (begin
-                    (debug (eq! (shift account/ROMLEX_FLAG           ROFF_SELFDESTRUCT___ACCOUNT___1ST_UNDOING_ROW) 0))
-                    (debug (eq! (shift account/TRM_FLAG              ROFF_SELFDESTRUCT___ACCOUNT___1ST_UNDOING_ROW) 0))
-                    (account-same-address-as                         ROFF_SELFDESTRUCT___ACCOUNT___1ST_UNDOING_ROW      ROFF_SELFDESTRUCT___ACCOUNT___1ST_DOING_ROW)
-                    (eq!        (shift account/BALANCE_NEW           ROFF_SELFDESTRUCT___ACCOUNT___1ST_UNDOING_ROW) 0)
-                    (eq!        (shift account/NONCE_NEW             ROFF_SELFDESTRUCT___ACCOUNT___1ST_UNDOING_ROW) 0)
-                    (account-same-warmth                             ROFF_SELFDESTRUCT___ACCOUNT___1ST_UNDOING_ROW)
-                    (eq!        (shift account/CODE_SIZE_NEW         ROFF_SELFDESTRUCT___ACCOUNT___1ST_UNDOING_ROW) 0)
-                    (eq!        (shift account/CODE_HASH_HI_NEW      ROFF_SELFDESTRUCT___ACCOUNT___1ST_UNDOING_ROW) EMPTY_KECCAK_HI)
-                    (eq!        (shift account/CODE_HASH_LO_NEW      ROFF_SELFDESTRUCT___ACCOUNT___1ST_UNDOING_ROW) EMPTY_KECCAK_LO)
-                    (shift      (eq!   account/DEPLOYMENT_NUMBER_NEW (+ 1 account/DEPLOYMENT_NUMBER))                   ROFF_SELFDESTRUCT___ACCOUNT___1ST_UNDOING_ROW)
-                    (shift      (eq!   account/DEPLOYMENT_STATUS_NEW 0                              )                   ROFF_SELFDESTRUCT___ACCOUNT___1ST_UNDOING_ROW)
-                    (account-same-marked-for-selfdestruct            ROFF_SELFDESTRUCT___ACCOUNT___1ST_UNDOING_ROW)
-                    (selfdestruct-dom-sub-stamps                     ROFF_SELFDESTRUCT___ACCOUNT___1ST_UNDOING_ROW)))
+                    (debug (eq! (shift account/ROMLEX_FLAG           ROFF_SELFDESTRUCT___ACCOUNT_DELETION_ROW) 0))
+                    (debug (eq! (shift account/TRM_FLAG              ROFF_SELFDESTRUCT___ACCOUNT_DELETION_ROW) 0))
+                    (account-same-address-as                         ROFF_SELFDESTRUCT___ACCOUNT_DELETION_ROW      ROFF_SELFDESTRUCT___ACCOUNT___1ST_DOING_ROW)
+                    (eq!        (shift account/BALANCE_NEW           ROFF_SELFDESTRUCT___ACCOUNT_DELETION_ROW) 0)
+                    (eq!        (shift account/NONCE_NEW             ROFF_SELFDESTRUCT___ACCOUNT_DELETION_ROW) 0)
+                    (account-same-warmth                             ROFF_SELFDESTRUCT___ACCOUNT_DELETION_ROW)
+                    (eq!        (shift account/CODE_SIZE_NEW         ROFF_SELFDESTRUCT___ACCOUNT_DELETION_ROW) 0)
+                    (eq!        (shift account/CODE_HASH_HI_NEW      ROFF_SELFDESTRUCT___ACCOUNT_DELETION_ROW) EMPTY_KECCAK_HI)
+                    (eq!        (shift account/CODE_HASH_LO_NEW      ROFF_SELFDESTRUCT___ACCOUNT_DELETION_ROW) EMPTY_KECCAK_LO)
+                    (shift      (eq!   account/DEPLOYMENT_NUMBER_NEW (+ 1 account/DEPLOYMENT_NUMBER))                   ROFF_SELFDESTRUCT___ACCOUNT_DELETION_ROW)
+                    (shift      (eq!   account/DEPLOYMENT_STATUS_NEW 0                              )                   ROFF_SELFDESTRUCT___ACCOUNT_DELETION_ROW)
+                    (account-same-marked-for-selfdestruct            ROFF_SELFDESTRUCT___ACCOUNT_DELETION_ROW)
+                    (selfdestruct-dom-sub-stamps                     ROFF_SELFDESTRUCT___ACCOUNT_DELETION_ROW)))
