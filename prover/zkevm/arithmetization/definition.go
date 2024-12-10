@@ -176,10 +176,11 @@ func (s *schemaScanner) addConstraintInComp(name string, corsetCS schema.Constra
 
 		s.Comp.InsertLocal(0, ifaces.QueryID(name), wExpr)
 
-	case *constraint.RangeConstraint:
+	case *constraint.RangeConstraint[*air.ColumnAccess]:
 
+		bound := cs.Bound()
 		// #nosec G115 -- this bound will not overflow
-		s.Comp.InsertRange(0, ifaces.QueryID(name), s.compColumnByCorsetID(cs.Column()), int(cs.Bound()))
+		s.Comp.InsertRange(0, ifaces.QueryID(name), s.compColumnByCorsetID(cs.Target().Column), int(bound.Uint64()))
 
 	default:
 
