@@ -3,6 +3,8 @@ plugins {
   id 'java-test-fixtures'
 }
 
+description="Linea L1 smart contract client"
+
 dependencies {
   api project(':jvm-libs:linea:core:domain-models')
   api project(':jvm-libs:linea:clients:interfaces')

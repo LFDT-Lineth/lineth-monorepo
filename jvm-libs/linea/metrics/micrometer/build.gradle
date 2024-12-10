@@ -2,6 +2,8 @@ plugins {
   id 'net.consensys.zkevm.kotlin-library-conventions'
 }
 
+description="Micrometer metrics implementation for Linea"
+
 dependencies {
   api "io.vertx:vertx-micrometer-metrics"
   implementation project(':jvm-libs:linea:core:metrics')

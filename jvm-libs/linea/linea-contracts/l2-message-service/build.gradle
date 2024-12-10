@@ -1,7 +1,6 @@
 plugins {
   id 'java-library'
   id 'linea.web3j-codegen'
-  alias(libs.plugins.jreleaser)
 }
 java {
   toolchain {
@@ -11,7 +10,6 @@ java {
 
 description = 'Web3J Java client for Linea L2 Message Service Contract'
 ext.artifactId = 'l2-message-service-contract-client'
-apply from: rootProject.file("gradle/publishing.gradle")
 
 dependencies {
   // this shall be very lightweight dependency, just export the generated sources

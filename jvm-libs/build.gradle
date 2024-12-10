@@ -1,0 +1,33 @@
+buildscript {
+  dependencies {
+    classpath(libs.jreleaser)
+  }
+}
+
+plugins {
+  id 'net.consensys.zkevm.kotlin-library-minimal-conventions'
+}
+
+// These libs are public, so we're commited on their artifactIds and `build.linea` group id, unlike the internal ones
+Set<String> publicApiLibs = [
+  "blob-compressor",
+  "blob-decompressor",
+  "blob-shnarf-calculator",
+  "l1-rollup",
+  "l2-message-service"
+]
+
+subprojects {
+  // Note that artifacts with generated code only will be skipped if :publish is called without preceding :build
+  def hasGeneratedSources = it.fileTree(dir: 'build/generated', includes: ['**/*.java', '**/*.kt']).files.size() > 0
+  def hasSourceFiles = it.fileTree(dir: 'src', includes: ['**/*.java', '**/*.kt']).files.size() > 0
+
+  if (hasSourceFiles || hasGeneratedSources) {
+    // !in operator doesn't work with spotless plugin
+    if (!publicApiLibs.contains(it.name)) {
+      group="${rootProject.group}.internal"
+    }
+
+    it.apply from: rootProject.file("gradle/publishing.gradle")
+  }
+}

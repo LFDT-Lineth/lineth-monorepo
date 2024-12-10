@@ -2,6 +2,8 @@ plugins {
   id 'net.consensys.zkevm.kotlin-library-conventions'
 }
 
+description="Linea Client interface"
+
 dependencies {
   implementation(project(':jvm-libs:generic:extensions:kotlin'))
   implementation(project(':jvm-libs:linea:core:domain-models'))

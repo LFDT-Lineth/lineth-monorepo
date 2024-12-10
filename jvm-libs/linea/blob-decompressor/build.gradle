@@ -1,12 +1,10 @@
 plugins {
   id 'net.consensys.zkevm.kotlin-library-conventions'
   id 'net.consensys.zkevm.linea-native-libs-helper'
-  alias(libs.plugins.jreleaser)
   id 'java-test-fixtures'
 }
 
 description = 'Java JNA wrapper for Linea Blob Decompressor Library implemented in GO Lang'
-apply from: rootProject.file("gradle/publishing.gradle")
 
 dependencies {
   implementation "net.java.dev.jna:jna:${libs.versions.jna.get()}"

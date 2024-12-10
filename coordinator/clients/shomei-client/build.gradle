@@ -7,7 +7,6 @@ dependencies {
   implementation project(':jvm-libs:generic:extensions:futures')
   implementation project(':jvm-libs:generic:json-rpc')
   implementation project(':jvm-libs:linea:metrics:micrometer')
-  implementation project(':jvm-libs:linea:core:traces')
   implementation project(":jvm-libs:linea:teku-execution-client")
   implementation "tech.pegasys.teku.internal:unsigned:${libs.versions.teku.get()}"
 

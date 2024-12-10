@@ -2,6 +2,8 @@ plugins {
   id 'net.consensys.zkevm.kotlin-library-conventions'
 }
 
+description="Linea test utilities for L1 blob submission and Finalization"
+
 dependencies {
   api(project(':jvm-libs:linea:core:domain-models'))
   implementation(project(':jvm-libs:generic:extensions:kotlin'))

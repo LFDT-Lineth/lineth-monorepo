@@ -1,11 +1,9 @@
 plugins {
   id 'net.consensys.zkevm.kotlin-common-minimal-conventions'
   id 'net.consensys.zkevm.linea-native-libs-helper'
-  alias(libs.plugins.jreleaser)
 }
 
 description = 'Java JNA wrapper for Linea Blob Shnarf Calculator implemented in GO Lang'
-apply from: rootProject.file("gradle/publishing.gradle")
 
 dependencies {
   api "net.java.dev.jna:jna:${libs.versions.jna.get()}"
