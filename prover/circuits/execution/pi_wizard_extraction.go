@@ -20,9 +20,9 @@ func checkPublicInputs(
 ) {
 
 	var (
-		finalRollingHash   = internal.CombineBytesIntoElements(api, gnarkFuncInp.FinalRollingHashUpdate)
-		initialRollingHash = internal.CombineBytesIntoElements(api, gnarkFuncInp.InitialRollingHashUpdate)
-		execDataHash       = execDataHash(api, wvc, wizardFuncInp)
+		lastRollingHash  = internal.CombineBytesIntoElements(api, gnarkFuncInp.FinalRollingHashUpdate)
+		firstRollingHash = internal.CombineBytesIntoElements(api, gnarkFuncInp.InitialRollingHashUpdate)
+		execDataHash     = execDataHash(api, wvc, wizardFuncInp)
 	)
 
 	// As we have this issue, the execDataHash will not match what we have in the
@@ -55,18 +55,18 @@ func checkPublicInputs(
 	)
 
 	api.AssertIsEqual(
-		wvc.GetLocalPointEvalParams(wizardFuncInp.InitialRollingHash[0].ID).Y,
-		initialRollingHash[0],
+		wvc.GetLocalPointEvalParams(wizardFuncInp.FirstRollingHashUpdate[0].ID).Y,
+		firstRollingHash[0],
 	)
 
 	api.AssertIsEqual(
-		wvc.GetLocalPointEvalParams(wizardFuncInp.InitialRollingHash[1].ID).Y,
-		initialRollingHash[1],
+		wvc.GetLocalPointEvalParams(wizardFuncInp.FirstRollingHashUpdate[1].ID).Y,
+		firstRollingHash[1],
 	)
 
 	api.AssertIsEqual(
-		wvc.GetLocalPointEvalParams(wizardFuncInp.InitialRollingHashNumber.ID).Y,
-		gnarkFuncInp.InitialRollingHashMsgNumber,
+		wvc.GetLocalPointEvalParams(wizardFuncInp.FirstRollingHashUpdateNumber.ID).Y,
+		gnarkFuncInp.FirstRollingHashUpdateNumber,
 	)
 
 	api.AssertIsEqual(
@@ -85,18 +85,18 @@ func checkPublicInputs(
 	)
 
 	api.AssertIsEqual(
-		wvc.GetLocalPointEvalParams(wizardFuncInp.FinalRollingHash[0].ID).Y,
-		finalRollingHash[0],
+		wvc.GetLocalPointEvalParams(wizardFuncInp.LastRollingHashUpdate[0].ID).Y,
+		lastRollingHash[0],
 	)
 
 	api.AssertIsEqual(
-		wvc.GetLocalPointEvalParams(wizardFuncInp.FinalRollingHash[1].ID).Y,
-		finalRollingHash[1],
+		wvc.GetLocalPointEvalParams(wizardFuncInp.LastRollingHashUpdate[1].ID).Y,
+		lastRollingHash[1],
 	)
 
 	api.AssertIsEqual(
-		wvc.GetLocalPointEvalParams(wizardFuncInp.FinalRollingHashNumber.ID).Y,
-		gnarkFuncInp.FinalRollingHashMsgNumber,
+		wvc.GetLocalPointEvalParams(wizardFuncInp.LastRollingHashUpdateNumber.ID).Y,
+		gnarkFuncInp.LastRollingHashUpdateNumber,
 	)
 
 	var (
@@ -113,12 +113,22 @@ func checkPublicInputs(
 		)
 	)
 
+	// In principle, we should enforce a strict equality between the purported
+	// chainID and the one extracted from the traces. But in case, the executed
+	// block has only legacy transactions (e.g. transactions without a specified
+	// chainID) then the traces will return a chainID of zero.
 	api.AssertIsEqual(
-		api.Div(
+		api.Mul(
 			wvc.GetLocalPointEvalParams(wizardFuncInp.ChainID.ID).Y,
-			twoPow112,
+			api.Sub(
+				api.Div(
+					wvc.GetLocalPointEvalParams(wizardFuncInp.ChainID.ID).Y,
+					twoPow112,
+				),
+				gnarkFuncInp.ChainID,
+			),
 		),
-		gnarkFuncInp.ChainID,
+		0,
 	)
 
 	api.AssertIsEqual(bridgeAddress, gnarkFuncInp.L2MessageServiceAddr)

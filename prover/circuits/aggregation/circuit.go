@@ -173,7 +173,6 @@ func verifyClaimBatch(api frontend.API, vks []emVkey, claims []proofClaim) error
 	}
 
 	for i := 1; i < len(vks)-1; i++ { // TODO @Tabaie make sure these don't generate any constraints
-		fmt.Printf("checking base vk #%d/%d\n", i+1, len(vks)-1)
 		assertBaseKeyEquals(api, bvk, vks[i].BaseVerifyingKey)
 	}
 

@@ -61,7 +61,7 @@ func makeProof(
 
 	proofBn254, err := makeBn254Proof(cfg, circuitID, proofBW6, publicInput)
 	if err != nil {
-		return "", fmt.Errorf("error when running the Bn254 proof: %w", err)
+		return "", fmt.Errorf("error when running the Bn254 proof circuitID=%v %w", circuitID, err)
 	}
 
 	return circuits.SerializeProofSolidityBn254(proofBn254), nil
@@ -105,6 +105,7 @@ func makePiProof(cfg *config.Config, cf *CollectedFields) (plonk.Proof, witness.
 	}
 
 	assignment, err := c.Assign(pi_interconnection.Request{
+		DictPath:       cfg.BlobDecompression.DictPath,
 		Decompressions: cf.DecompressionPI,
 		Executions:     cf.ExecutionPI,
 		Aggregation:    cf.AggregationPublicInput(cfg),
@@ -172,12 +173,11 @@ func makeBw6Proof(
 		numProofClaims              = len(cf.ProofClaims)
 		biggestAvailable            = 0
 		bestSize                    = math.MaxInt
-		bestSetupPos                = -1
 		bestAllowedVkForAggregation []string
 	)
 
 	// first we discover available setups
-	for _, maxNbProofs := range cfg.Aggregation.NumProofs {
+	for setupPos, maxNbProofs := range cfg.Aggregation.NumProofs {
 		biggestAvailable = max(biggestAvailable, maxNbProofs)
 
 		// That's the quickest reject condition we have
@@ -187,11 +187,11 @@ func makeBw6Proof(
 		}
 
 		// read the manifest and the allowed verifying keys digests
-		circuitID := circuits.CircuitID(fmt.Sprintf("%s-%d", string(circuits.AggregationCircuitID), maxNbProofs))
-		setupPath := cfg.PathForSetup(string(circuitID))
+		circuitIDStr := circuits.CircuitID(fmt.Sprintf("%s-%d", string(circuits.AggregationCircuitID), maxNbProofs))
+		setupPath := cfg.PathForSetup(string(circuitIDStr))
 		manifest, err := circuits.ReadSetupManifest(filepath.Join(setupPath, config.ManifestFileName))
 		if err != nil {
-			return nil, 0, fmt.Errorf("could not read the manifest for circuit %v: %w", circuitID, err)
+			return nil, 0, fmt.Errorf("could not read the manifest for circuit %v: %w", circuitIDStr, err)
 		}
 		allowedVkForAggregation, err := manifest.GetStringArray("allowedVkForAggregationDigests")
 		if err != nil {
@@ -205,6 +205,7 @@ func makeBw6Proof(
 		}
 
 		if maxNbProofs <= bestSize {
+			circuitID = setupPos
 			bestSize = maxNbProofs
 			bestAllowedVkForAggregation = allowedVkForAggregation
 		}
@@ -249,12 +250,12 @@ func makeBw6Proof(
 		ActualIndexes: pi_interconnection.InnerCircuitTypesToIndexes(&cfg.PublicInputInterconnection, cf.InnerCircuitTypes),
 	}
 
-	logrus.Infof("running the BW6 prover")
+	logrus.Infof("running the BW6 prover with circuit-ID=%v", circuitID)
 	proofBW6, err := aggregation.MakeProof(&setup, bestSize, cf.ProofClaims, piInfo, piBW6)
 	if err != nil {
 		return nil, 0, fmt.Errorf("could not create BW6 proof: %w", err)
 	}
-	return proofBW6, bestSetupPos, nil
+	return proofBW6, circuitID, nil
 }
 
 func makeBn254Proof(
@@ -279,7 +280,7 @@ func makeBn254Proof(
 		return nil, fmt.Errorf("could not parse the public input: %w", err)
 	}
 
-	logrus.Infof("running the Bn254 prover")
+	logrus.Infof("running the Bn254 prover circuitID=%v", circuitID)
 
 	proofBn254, err := emulation.MakeProof(&setup, circuitID, proofBw6, piBn254)
 	if err != nil {

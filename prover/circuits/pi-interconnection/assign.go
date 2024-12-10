@@ -4,8 +4,9 @@ import (
 	"bytes"
 	"encoding/base64"
 	"fmt"
-	"github.com/consensys/linea-monorepo/prover/crypto/mimc"
 	"hash"
+
+	"github.com/consensys/linea-monorepo/prover/crypto/mimc"
 
 	"github.com/consensys/gnark-crypto/ecc/bls12-381/fr"
 	"github.com/consensys/linea-monorepo/prover/backend/blobsubmission"
@@ -23,6 +24,9 @@ type Request struct {
 	Decompressions []blobsubmission.Response
 	Executions     []public_input.Execution
 	Aggregation    public_input.Aggregation
+	// Path to the compression dictionary. Used to extract the execution data
+	// for each execution.
+	DictPath string
 }
 
 func (c *Compiled) Assign(r Request) (a Circuit, err error) {
@@ -52,9 +56,11 @@ func (c *Compiled) Assign(r Request) (a Circuit, err error) {
 		return
 	}
 
-	dict, err := blob.GetDict() // TODO look up dict based on checksum
+	// @alex: We should pass that as a parameter. And also (@arya) pass a list
+	// of dictionnary because this function.
+	dict, err := blob.GetDict(r.DictPath)
 	if err != nil {
-		return
+		return Circuit{}, fmt.Errorf("could not find the dictionnary: path=%v err=%v", r.DictPath, err)
 	}
 
 	// For Shnarfs and Merkle Roots
@@ -67,6 +73,11 @@ func (c *Compiled) Assign(r Request) (a Circuit, err error) {
 	utils.Copy(a.ParentShnarf[:], prevShnarf)
 
 	hshM := mimc.NewMiMC()
+	// execDataChecksums is a list that we progressively fill to store the mimc
+	// hash of the executionData for every execution (conflation) batch. The
+	// is filled as we process the decompression proofs which store a list of
+	// the corresponding execution data hashes. These are then checked against
+	// the execution proof public inputs.
 	execDataChecksums := make([][]byte, 0, len(r.Executions))
 	shnarfs := make([][]byte, cfg.MaxNbDecompression)
 	// Decompression FPI
@@ -169,15 +180,17 @@ func (c *Compiled) Assign(r Request) (a Circuit, err error) {
 		return
 	}
 
-	// TODO @Tabaie combine the following two checks
+	// TODO @Tabaie combine the following two checks.
 	if len(r.Decompressions) != 0 && !bytes.Equal(shnarfs[len(r.Decompressions)-1], aggregationFPI.FinalShnarf[:]) { // first condition is an edge case for tests
 		err = fmt.Errorf("aggregation fails CHECK_FINAL_SHNARF:\n\tcomputed %x, given %x", shnarfs[len(r.Decompressions)-1], aggregationFPI.FinalShnarf)
 		return
 	}
-	if len(r.Decompressions) == 0 && !bytes.Equal(aggregationFPI.ParentShnarf[:], aggregationFPI.FinalShnarf[:]) {
-		err = fmt.Errorf("aggregation fails CHECK_FINAL_SHNARF:\n\tcomputed %x, given %x", aggregationFPI.ParentShnarf, aggregationFPI.FinalShnarf)
+
+	if len(r.Decompressions) == 0 || len(r.Executions) == 0 {
+		err = fmt.Errorf("aggregation fails NO EXECUTION OR NO COMPRESSION:\n\tnbDecompression %d, nbExecution %d", len(r.Decompressions), len(r.Executions))
 		return
 	}
+
 	aggregationFPI.NbDecompression = uint64(len(r.Decompressions))
 	a.AggregationFPIQSnark = aggregationFPI.ToSnarkType().AggregationFPIQSnark
 
@@ -185,7 +198,7 @@ func (c *Compiled) Assign(r Request) (a Circuit, err error) {
 	maxNbL2MessageHashes := cfg.L2MsgMaxNbMerkle * merkleNbLeaves
 	l2MessageHashes := make([][32]byte, 0, maxNbL2MessageHashes)
 
-	lastRollingHashUpdate, lastRollingHashMsg := aggregationFPI.LastFinalizedRollingHash, aggregationFPI.LastFinalizedRollingHashMsgNumber
+	lastRollingHash, lastRollingHashNumber := aggregationFPI.LastFinalizedRollingHash, aggregationFPI.LastFinalizedRollingHashMsgNumber
 	lastFinBlockNum, lastFinBlockTs := aggregationFPI.LastFinalizedBlockNumber, aggregationFPI.LastFinalizedBlockTimestamp
 	lastFinalizedStateRootHash := aggregationFPI.InitialStateRootHash
 
@@ -226,6 +239,10 @@ func (c *Compiled) Assign(r Request) (a Circuit, err error) {
 			err = fmt.Errorf("execution #%d fails CHECK_NUM_CONSEC:\n\tinitial block number %d is not right after to the last finalized %d", i, initial, lastFinBlockNum)
 			return
 		}
+
+		// This is asserted against a constant in the circuit. Thus we have
+		// different circuit for differents values of the msgSvcAddress and
+		// chainID.
 		if got, want := &executionFPI.L2MessageServiceAddr, &r.Aggregation.L2MessageServiceAddr; *got != *want {
 			err = fmt.Errorf("execution #%d fails CHECK_SVC_ADDR:\n\texpected L2 service address %x, encountered %x", i, *want, *got)
 			return
@@ -238,35 +255,44 @@ func (c *Compiled) Assign(r Request) (a Circuit, err error) {
 			err = fmt.Errorf("execution #%d fails CHECK_TIME_INCREASE:\n\tinitial block timestamp is not after the final block timestamp from previous execution %d≤%d", i, initial, lastFinBlockTs)
 			return
 		}
+
+		// @alex: This check is duplicating a check already done on the execution
+		// proof.
 		if first, last := executionFPI.InitialBlockNumber, executionFPI.FinalBlockNumber; first > last {
 			err = fmt.Errorf("execution #%d fails CHECK_NUM_NODECREASE:\n\tinitial block number is greater than the final block number %d>%d", i, first, last)
 			return
 		}
+
+		// @alex: This check is a duplicate of an execution proof check.
 		if first, last := executionFPI.InitialBlockTimestamp, executionFPI.FinalBlockTimestamp; first > last {
 			err = fmt.Errorf("execution #%d fails CHECK_TIME_NODECREASE:\n\tinitial block timestamp is greater than the final block timestamp %d>%d", i, first, last)
 			return
 		}
 
 		// if there is a first, there shall be a last, no lesser than the first
-		if executionFPI.FinalRollingHashMsgNumber < executionFPI.InitialRollingHashMsgNumber {
-			err = fmt.Errorf("execution #%d fails CHECK_RHASH_NODECREASE:\n\tfinal rolling hash message number %d is less than the initial %d", i, executionFPI.FinalRollingHashMsgNumber, executionFPI.InitialRollingHashMsgNumber)
+		if executionFPI.LastRollingHashUpdateNumber < executionFPI.FirstRollingHashUpdateNumber {
+			err = fmt.Errorf("execution #%d fails CHECK_RHASH_NODECREASE:\n\tfinal rolling hash message number %d is less than the initial %d", i, executionFPI.LastRollingHashUpdateNumber, executionFPI.FirstRollingHashUpdateNumber)
 			return
 		}
 
-		if (executionFPI.InitialRollingHashMsgNumber == 0) != (executionFPI.FinalRollingHashMsgNumber == 0) {
-			err = fmt.Errorf("execution #%d fails CHECK_RHASH_FIRSTLAST:\n\tif there is a rolling hash update there must be both a first and a last.\n\tfirst update msg num = %d, last update msg num = %d", i, executionFPI.InitialRollingHashMsgNumber, executionFPI.FinalRollingHashMsgNumber)
+		// @alex: This check is a duplicate of an execution proof check.
+		if (executionFPI.FirstRollingHashUpdateNumber == 0) != (executionFPI.LastRollingHashUpdateNumber == 0) {
+			err = fmt.Errorf("execution #%d fails CHECK_RHASH_FIRSTLAST:\n\tif there is a rolling hash update there must be both a first and a last.\n\tfirst update msg num = %d, last update msg num = %d", i, executionFPI.FirstRollingHashUpdateNumber, executionFPI.LastRollingHashUpdateNumber)
 			return
 		}
 		// TODO @Tabaie check that if the initial and final rolling hash msg nums were equal then so should the hashes, or decide not to
 
 		// consistency check and record keeping
-		if executionFPI.InitialRollingHashMsgNumber != 0 { // there is an update
-			if executionFPI.InitialRollingHashMsgNumber != lastRollingHashMsg+1 {
-				err = fmt.Errorf("execution #%d fails CHECK_RHASH_CONSEC:\n\tinitial rolling hash message number %d is not right after the last finalized one %d", i, executionFPI.InitialRollingHashMsgNumber, lastRollingHashMsg)
+		if executionFPI.FirstRollingHashUpdateNumber != 0 { // there is an update
+			// @alex: Not sure this check is a duplicate because we already check
+			// that the state root hash is well-propagated and this should be
+			// enough that the rolling hash update events are emitted in sequence.
+			if executionFPI.FirstRollingHashUpdateNumber != lastRollingHashNumber+1 {
+				err = fmt.Errorf("execution #%d fails CHECK_RHASH_CONSEC:\n\tinitial rolling hash message number %d is not right after the last finalized one %d", i, executionFPI.FirstRollingHashUpdateNumber, lastRollingHashNumber)
 				return
 			}
-			lastRollingHashMsg = executionFPI.FinalRollingHashMsgNumber
-			lastRollingHashUpdate = executionFPI.FinalRollingHashUpdate
+			lastRollingHashNumber = executionFPI.LastRollingHashUpdateNumber
+			lastRollingHash = executionFPI.LastRollingHashUpdate
 		}
 
 		lastFinBlockNum, lastFinBlockTs = executionFPI.FinalBlockNumber, executionFPI.FinalBlockTimestamp
@@ -290,13 +316,13 @@ func (c *Compiled) Assign(r Request) (a Circuit, err error) {
 		return
 	}
 
-	if lastRollingHashUpdate != aggregationFPI.FinalRollingHash {
-		err = fmt.Errorf("aggregation fails CHECK_FINAL_RHASH:\n\tfinal rolling hashes do not match: execution=%x, aggregation=%x", lastRollingHashUpdate, aggregationFPI.FinalRollingHash)
+	if lastRollingHash != aggregationFPI.FinalRollingHash {
+		err = fmt.Errorf("aggregation fails CHECK_FINAL_RHASH:\n\tfinal rolling hashes do not match: execution=%x, aggregation=%x", lastRollingHash, aggregationFPI.FinalRollingHash)
 		return
 	}
 
-	if lastRollingHashMsg != aggregationFPI.FinalRollingHashNumber {
-		err = fmt.Errorf("aggregation fails CHECK_FINAL_RHASH_NUM:\n\tfinal rolling hash numbers do not match: execution=%v, aggregation=%v", lastRollingHashMsg, aggregationFPI.FinalRollingHashNumber)
+	if lastRollingHashNumber != aggregationFPI.FinalRollingHashNumber {
+		err = fmt.Errorf("aggregation fails CHECK_FINAL_RHASH_NUM:\n\tfinal rolling hash numbers do not match: execution=%v, aggregation=%v", lastRollingHashNumber, aggregationFPI.FinalRollingHashNumber)
 		return
 	}
 

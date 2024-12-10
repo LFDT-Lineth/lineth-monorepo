@@ -1,9 +1,10 @@
 package public_input
 
 import (
-	"golang.org/x/crypto/sha3"
 	"hash"
 	"slices"
+
+	"golang.org/x/crypto/sha3"
 
 	bn254fr "github.com/consensys/gnark-crypto/ecc/bn254/fr"
 	"github.com/consensys/gnark/frontend"
@@ -105,7 +106,6 @@ type AggregationFPI struct {
 	LastFinalizedRollingHashMsgNumber uint64
 	ChainID                           uint64 // for now we're forcing all executions to have the same chain ID
 	L2MessageServiceAddr              types.EthAddress
-	NbL2Messages                      uint64 // TODO not used in hash. delete if not necessary
 	L2MsgMerkleTreeRoots              [][32]byte
 	FinalBlockNumber                  uint64
 	FinalBlockTimestamp               uint64

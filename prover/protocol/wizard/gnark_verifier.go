@@ -179,39 +179,42 @@ func (c *WizardVerifierCircuit) generateAllRandomCoins(_ frontend.API) {
 			toBeConsumed := c.Spec.Coins.AllKeysAt(currRound - 1)
 			c.Coins.Exists(toBeConsumed...)
 
-			// Make sure that all messages have been written and use them
-			// to update the FS state. Note that we do not need to update
-			// FS using the last round of the prover because he is always
-			// the last one to "talk" in the protocol.
-			toUpdateFS := c.Spec.Columns.AllKeysProofAt(currRound - 1)
-			for _, msg := range toUpdateFS {
+			if !c.Spec.DummyCompiled {
 
-				msgID := c.columnsIDs.MustGet(msg)
-				msgContent := c.Columns[msgID]
+				// Make sure that all messages have been written and use them
+				// to update the FS state. Note that we do not need to update
+				// FS using the last round of the prover because he is always
+				// the last one to "talk" in the protocol.
+				toUpdateFS := c.Spec.Columns.AllKeysProofAt(currRound - 1)
+				for _, msg := range toUpdateFS {
 
-				logrus.Tracef("VERIFIER CIRCUIT : Updating the FS oracle with a message - %v", msg)
-				c.FS.UpdateVec(msgContent)
-			}
+					msgID := c.columnsIDs.MustGet(msg)
+					msgContent := c.Columns[msgID]
 
-			toUpdateFS = c.Spec.Columns.AllKeysPublicInputAt(currRound - 1)
-			for _, msg := range toUpdateFS {
+					logrus.Tracef("VERIFIER CIRCUIT : Updating the FS oracle with a message - %v", msg)
+					c.FS.UpdateVec(msgContent)
+				}
 
-				msgID := c.columnsIDs.MustGet(msg)
-				msgContent := c.Columns[msgID]
+				toUpdateFS = c.Spec.Columns.AllKeysPublicInputAt(currRound - 1)
+				for _, msg := range toUpdateFS {
 
-				logrus.Tracef("VERIFIER CIRCUIT : Updating the FS oracle with public input - %v", msg)
-				c.FS.UpdateVec(msgContent)
-			}
+					msgID := c.columnsIDs.MustGet(msg)
+					msgContent := c.Columns[msgID]
 
-			/*
-				Also include the prover's allegations for all evaluations
-			*/
-			queries := c.Spec.QueriesParams.AllKeysAt(currRound - 1)
-			for _, qName := range queries {
-				// Implicitly, this will panic whenever we start supporting
-				// a new type of query params
-				params := c.GetParams(qName)
-				params.UpdateFS(c.FS)
+					logrus.Tracef("VERIFIER CIRCUIT : Updating the FS oracle with public input - %v", msg)
+					c.FS.UpdateVec(msgContent)
+				}
+
+				/*
+					Also include the prover's allegations for all evaluations
+				*/
+				queries := c.Spec.QueriesParams.AllKeysAt(currRound - 1)
+				for _, qName := range queries {
+					// Implicitly, this will panic whenever we start supporting
+					// a new type of query params
+					params := c.GetParams(qName)
+					params.UpdateFS(c.FS)
+				}
 			}
 		}
 

@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/spf13/viper"
@@ -43,8 +44,15 @@ func TestEnvironment(t *testing.T) {
 			config, err := NewConfigFromFile(file.Name())
 			assert.NoError(err, "when processing %s", file.Name())
 
+			// take the first word of both the match and the environment
+			// sepolia-full -> sepolia
+			var (
+				matchFirst = strings.Split(matches[1], "-")[0]
+				envFirst   = strings.Split(config.Environment, "-")[0]
+			)
+
 			// check that the environment is set
-			assert.Equal(matches[1], config.Environment)
+			assert.Equal(matchFirst, envFirst)
 		})
 	}
 

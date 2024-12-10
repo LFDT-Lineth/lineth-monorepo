@@ -28,11 +28,11 @@ type FunctionalInputExtractor struct {
 
 	// InitialStateRootHash and FinalStateRootHash are resp the initial and
 	// root hash of the state for the
-	InitialStateRootHash, FinalStateRootHash         query.LocalOpening
-	InitialBlockNumber, FinalBlockNumber             query.LocalOpening
-	InitialBlockTimestamp, FinalBlockTimestamp       query.LocalOpening
-	InitialRollingHash, FinalRollingHash             [2]query.LocalOpening
-	InitialRollingHashNumber, FinalRollingHashNumber query.LocalOpening
+	InitialStateRootHash, FinalStateRootHash                  query.LocalOpening
+	InitialBlockNumber, FinalBlockNumber                      query.LocalOpening
+	InitialBlockTimestamp, FinalBlockTimestamp                query.LocalOpening
+	FirstRollingHashUpdate, LastRollingHashUpdate             [2]query.LocalOpening
+	FirstRollingHashUpdateNumber, LastRollingHashUpdateNumber query.LocalOpening
 
 	ChainID                query.LocalOpening
 	NBytesChainID          query.LocalOpening
@@ -53,15 +53,15 @@ func (fie *FunctionalInputExtractor) Run(run *wizard.ProverRuntime) {
 	assignLO(fie.InitialStateRootHash)
 	assignLO(fie.InitialBlockNumber)
 	assignLO(fie.InitialBlockTimestamp)
-	assignLO(fie.InitialRollingHash[0])
-	assignLO(fie.InitialRollingHash[1])
-	assignLO(fie.InitialRollingHashNumber)
+	assignLO(fie.FirstRollingHashUpdate[0])
+	assignLO(fie.FirstRollingHashUpdate[1])
+	assignLO(fie.FirstRollingHashUpdateNumber)
 	assignLO(fie.FinalStateRootHash)
 	assignLO(fie.FinalBlockNumber)
 	assignLO(fie.FinalBlockTimestamp)
-	assignLO(fie.FinalRollingHash[0])
-	assignLO(fie.FinalRollingHash[1])
-	assignLO(fie.FinalRollingHashNumber)
+	assignLO(fie.LastRollingHashUpdate[0])
+	assignLO(fie.LastRollingHashUpdate[1])
+	assignLO(fie.LastRollingHashUpdateNumber)
 	assignLO(fie.ChainID)
 	assignLO(fie.NBytesChainID)
 }

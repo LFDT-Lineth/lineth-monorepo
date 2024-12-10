@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"os"
-	"path/filepath"
-	"strings"
 
 	"github.com/consensys/linea-monorepo/prover/lib/compressor/blob/dictionary"
 	"github.com/consensys/linea-monorepo/prover/lib/compressor/blob/encode"
@@ -25,27 +23,7 @@ func GetVersion(blob []byte) uint16 {
 	return 0
 }
 
-// GetRepoRootPath assumes that current working directory is within the repo
-func GetRepoRootPath() (string, error) {
-	wd, err := os.Getwd()
-	if err != nil {
-		return "", err
-	}
-	const repoName = "linea-monorepo"
-	i := strings.LastIndex(wd, repoName)
-	if i == -1 {
-		return "", errors.New("could not find repo root")
-	}
-	i += len(repoName)
-	return wd[:i], nil
-}
-
-func GetDict() ([]byte, error) {
-	repoRoot, err := GetRepoRootPath()
-	if err != nil {
-		return nil, err
-	}
-	dictPath := filepath.Join(repoRoot, "prover/lib/compressor/compressor_dict.bin")
+func GetDict(dictPath string) ([]byte, error) {
 	return os.ReadFile(dictPath)
 }
 

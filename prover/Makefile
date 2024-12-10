@@ -57,7 +57,7 @@ zkevm/define/define.go: corset
 ## Generate the setup for the execution prover (to be run with S3 access)
 ##
 setup: bin/prover
-	bin/prover setup --config ./config/config-integration-full.toml --dict ./lib/compressor/compressor_dict.bin --assets-dir ./prover-assets
+	bin/prover setup --config ./config/config-sepolia-full.toml --dict ./lib/compressor/compressor_dict.bin --assets-dir ./prover-assets
 
 ##
 ## Copy the prover assets to the S3 bucket (zkuat)
@@ -82,7 +82,7 @@ bin/controller:
 bin/prover:
 	mkdir -p bin
 	rm -f $@
-	go build -o $@ ./cmd/prover
+	go build -tags debug -o $@ ./cmd/prover
 
 ##
 ##	Compiles the state-manager inspector

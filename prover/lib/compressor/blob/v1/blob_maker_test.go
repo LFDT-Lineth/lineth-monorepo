@@ -9,15 +9,15 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/consensys/linea-monorepo/prover/lib/compressor/blob/dictionary"
-	"github.com/consensys/linea-monorepo/prover/lib/compressor/blob/encode"
 	"math/big"
 	"math/rand"
 	"os"
 	"path/filepath"
 	"testing"
 
-	"github.com/consensys/linea-monorepo/prover/lib/compressor/blob"
+	"github.com/consensys/linea-monorepo/prover/lib/compressor/blob/dictionary"
+	"github.com/consensys/linea-monorepo/prover/lib/compressor/blob/encode"
+
 	v1 "github.com/consensys/linea-monorepo/prover/lib/compressor/blob/v1"
 	"github.com/consensys/linea-monorepo/prover/lib/compressor/blob/v1/test_utils"
 
@@ -484,7 +484,7 @@ func BenchmarkWrite(b *testing.B) {
 var testBlocks [][]byte
 
 func init() {
-	rootPath, err := blob.GetRepoRootPath()
+	rootPath, err := test_utils.GetRepoRootPath()
 	if err != nil {
 		panic(err)
 	}

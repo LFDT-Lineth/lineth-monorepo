@@ -11,20 +11,20 @@ import (
 )
 
 type Execution struct {
-	L2MessageServiceAddr        types.EthAddress
-	ChainID                     uint64
-	InitialBlockTimestamp       uint64
-	FinalStateRootHash          [32]byte
-	FinalBlockNumber            uint64
-	FinalBlockTimestamp         uint64
-	FinalRollingHashUpdate      [32]byte
-	FinalRollingHashMsgNumber   uint64
-	InitialRollingHashUpdate    [32]byte
-	InitialRollingHashMsgNumber uint64
-	DataChecksum                [32]byte
-	L2MessageHashes             [][32]byte
-	InitialStateRootHash        [32]byte
-	InitialBlockNumber          uint64
+	L2MessageServiceAddr         types.EthAddress
+	ChainID                      uint64
+	InitialBlockTimestamp        uint64
+	FinalStateRootHash           [32]byte
+	FinalBlockNumber             uint64
+	FinalBlockTimestamp          uint64
+	LastRollingHashUpdate        [32]byte
+	LastRollingHashUpdateNumber  uint64
+	InitialRollingHashUpdate     [32]byte
+	FirstRollingHashUpdateNumber uint64
+	DataChecksum                 [32]byte
+	L2MessageHashes              [][32]byte
+	InitialStateRootHash         [32]byte
+	InitialBlockNumber           uint64
 }
 
 func (pi *Execution) Sum(hsh hash.Hash) []byte {
@@ -47,15 +47,15 @@ func (pi *Execution) Sum(hsh hash.Hash) []byte {
 
 	writeNum(hsh, pi.FinalBlockNumber)
 	writeNum(hsh, pi.FinalBlockTimestamp)
-	hsh.Write(pi.FinalRollingHashUpdate[:16])
-	hsh.Write(pi.FinalRollingHashUpdate[16:])
-	writeNum(hsh, pi.FinalRollingHashMsgNumber)
+	hsh.Write(pi.LastRollingHashUpdate[:16])
+	hsh.Write(pi.LastRollingHashUpdate[16:])
+	writeNum(hsh, pi.LastRollingHashUpdateNumber)
 	hsh.Write(pi.InitialStateRootHash[:])
 	writeNum(hsh, pi.InitialBlockNumber)
 	writeNum(hsh, pi.InitialBlockTimestamp)
 	hsh.Write(pi.InitialRollingHashUpdate[:16])
 	hsh.Write(pi.InitialRollingHashUpdate[16:])
-	writeNum(hsh, pi.InitialRollingHashMsgNumber)
+	writeNum(hsh, pi.FirstRollingHashUpdateNumber)
 	writeNum(hsh, pi.ChainID)
 	hsh.Write(pi.L2MessageServiceAddr[:])
 

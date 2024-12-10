@@ -1,9 +1,10 @@
 package execution
 
 import (
+	"testing"
+
 	public_input "github.com/consensys/linea-monorepo/prover/public-input"
 	"github.com/stretchr/testify/require"
-	"testing"
 
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/std/hash/mimc"
@@ -13,14 +14,14 @@ import (
 
 func TestPIConsistency(t *testing.T) {
 	pi := public_input.Execution{
-		L2MessageHashes:             make([][32]byte, 2),
-		FinalBlockNumber:            4,
-		FinalBlockTimestamp:         5,
-		FinalRollingHashMsgNumber:   6,
-		InitialBlockNumber:          1,
-		InitialBlockTimestamp:       2,
-		InitialRollingHashMsgNumber: 3,
-		ChainID:                     7,
+		L2MessageHashes:              make([][32]byte, 2),
+		FinalBlockNumber:             4,
+		FinalBlockTimestamp:          5,
+		LastRollingHashUpdateNumber:  6,
+		InitialBlockNumber:           1,
+		InitialBlockTimestamp:        2,
+		FirstRollingHashUpdateNumber: 3,
+		ChainID:                      7,
 	}
 
 	utils.FillRange(pi.DataChecksum[:], 10)
@@ -29,7 +30,7 @@ func TestPIConsistency(t *testing.T) {
 	utils.FillRange(pi.InitialStateRootHash[:], 130)
 	utils.FillRange(pi.InitialRollingHashUpdate[:], 170)
 	utils.FillRange(pi.FinalStateRootHash[:], 210)
-	utils.FillRange(pi.FinalRollingHashUpdate[:], 250)
+	utils.FillRange(pi.LastRollingHashUpdate[:], 250)
 	utils.FillRange(pi.L2MessageServiceAddr[:], 40)
 
 	// state root hashes are field elements

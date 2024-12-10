@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -12,7 +13,6 @@ import (
 	"github.com/consensys/compress/lzss"
 	fr381 "github.com/consensys/gnark-crypto/ecc/bls12-381/fr"
 	"github.com/consensys/linea-monorepo/prover/backend/execution"
-	"github.com/consensys/linea-monorepo/prover/lib/compressor/blob"
 	"github.com/consensys/linea-monorepo/prover/lib/compressor/blob/encode"
 	v1 "github.com/consensys/linea-monorepo/prover/lib/compressor/blob/v1"
 	"github.com/stretchr/testify/assert"
@@ -84,7 +84,7 @@ func RandIntn(n int) int { // TODO @Tabaie remove
 func EmptyBlob(t require.TestingT) []byte {
 	var headerB bytes.Buffer
 
-	repoRoot, err := blob.GetRepoRootPath()
+	repoRoot, err := GetRepoRootPath()
 	assert.NoError(t, err)
 	// Init bm
 	bm, err := v1.NewBlobMaker(1000, filepath.Join(repoRoot, "prover/lib/compressor/compressor_dict.bin"))
@@ -151,7 +151,7 @@ func ConsecutiveBlobs(t require.TestingT, n ...int) [][]byte {
 }
 
 func TestBlocksAndBlobMaker(t require.TestingT) ([][]byte, *v1.BlobMaker) {
-	repoRoot, err := blob.GetRepoRootPath()
+	repoRoot, err := GetRepoRootPath()
 	assert.NoError(t, err)
 	testBlocks, err := LoadTestBlocks(filepath.Join(repoRoot, "testdata/prover-v2/prover-execution/requests"))
 	assert.NoError(t, err)
@@ -162,7 +162,31 @@ func TestBlocksAndBlobMaker(t require.TestingT) ([][]byte, *v1.BlobMaker) {
 }
 
 func GetDict(t require.TestingT) []byte {
-	dict, err := blob.GetDict()
+	dict, err := getDictForTest()
 	require.NoError(t, err)
 	return dict
+}
+
+// GetRepoRootPath assumes that current working directory is within the repo
+func GetRepoRootPath() (string, error) {
+	wd, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+	const repoName = "linea-monorepo"
+	i := strings.LastIndex(wd, repoName)
+	if i == -1 {
+		return "", errors.New("could not find repo root")
+	}
+	i += len(repoName)
+	return wd[:i], nil
+}
+
+func getDictForTest() ([]byte, error) {
+	repoRoot, err := GetRepoRootPath()
+	if err != nil {
+		return nil, err
+	}
+	dictPath := filepath.Join(repoRoot, "prover/lib/compressor/compressor_dict.bin")
+	return os.ReadFile(dictPath)
 }

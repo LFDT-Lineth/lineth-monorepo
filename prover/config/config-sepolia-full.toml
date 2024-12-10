@@ -1,0 +1,137 @@
+environment = "sepolia"
+version = "4.0.0"                              # TODO @gbotrel hunt all version definitions.
+assets_dir = "./prover-assets"
+log_level = 4                                  # TODO @gbotrel will be refactored with new logger. 
+
+[controller]
+retry_delays = [0, 1]
+
+[execution]
+prover_mode = "full"
+conflated_traces_dir = "/home/ubuntu/sepolia-testing-full/traces/conflated"
+requests_root_dir = "/home/ubuntu/sepolia-testing-full/prover-execution"
+
+
+[blob_decompression]
+prover_mode = "full"
+requests_root_dir = "/home/ubuntu/sepolia-testing-full/prover-compression"
+dict_path = "lib/compressor/compressor_dict.bin"
+
+[aggregation]
+prover_mode = "full"
+requests_root_dir = "/home/ubuntu/sepolia-testing-full/prover-aggregation"
+num_proofs = [10, 20, 50, 100, 200, 400]
+allowed_inputs = ["execution-dummy", "execution", "execution-large", "blob-decompression-dummy", "blob-decompression-v0", "blob-decompression-v1"]
+verifier_id = 1
+
+[public_input_interconnection]
+max_nb_decompression = 400
+max_nb_execution = 400
+max_nb_circuits = 400
+execution_max_nb_msg = 16
+l2_msg_merkle_depth = 5
+l2_msg_max_nb_merkle = 200
+
+[layer2]
+chain_id = 59141
+message_service_contract = "0x971e727e956690b9957be6d51Ec16E73AcAC83A7"
+
+[traces_limits]
+ADD = 524288
+BIN = 262144
+BLAKE_MODEXP_DATA = 16384
+BLOCK_DATA = 1024
+BLOCK_HASH = 512
+EC_DATA = 262144
+EUC = 65536
+EXP = 8192
+EXT = 1048576
+GAS = 65536
+HUB = 2097152
+LOG_DATA = 65536
+LOG_INFO = 4096
+MMIO = 4194304
+MMU = 4194304
+MOD = 131072
+MUL = 65536
+MXP = 524288
+OOB = 262144
+RLP_ADDR = 4096
+RLP_TXN = 131072
+RLP_TXN_RCPT = 65536
+ROM = 4194304
+ROM_LEX = 1024
+SHAKIRA_DATA = 32768
+SHF = 65536
+STP = 16384
+TRM = 32768
+TXN_DATA = 8192
+WCP = 262144
+PRECOMPILE_ECRECOVER_EFFECTIVE_CALLS = 128
+PRECOMPILE_SHA2_BLOCKS = 671
+PRECOMPILE_RIPEMD_BLOCKS = 671
+PRECOMPILE_MODEXP_EFFECTIVE_CALLS = 4
+PRECOMPILE_ECADD_EFFECTIVE_CALLS = 16384
+PRECOMPILE_ECMUL_EFFECTIVE_CALLS = 32
+PRECOMPILE_ECPAIRING_FINAL_EXPONENTIATIONS = 16
+PRECOMPILE_ECPAIRING_MILLER_LOOPS = 64
+PRECOMPILE_ECPAIRING_G2_MEMBERSHIP_CALLS = 64
+PRECOMPILE_BLAKE_EFFECTIVE_CALLS = 600
+PRECOMPILE_BLAKE_ROUNDS = 600
+BLOCK_KECCAK = 8192
+BLOCK_L1_SIZE = 1000000
+BLOCK_L2_L1_LOGS = 16
+BLOCK_TRANSACTIONS = 200
+BIN_REFERENCE_TABLE = 262144
+SHF_REFERENCE_TABLE = 4096
+INSTRUCTION_DECODER = 512
+
+[traces_limits_large]
+ADD = 1048576
+BIN = 524288
+BLAKE_MODEXP_DATA = 32768
+BLOCK_DATA = 2048
+BLOCK_HASH = 1024
+EC_DATA = 524288
+EUC = 131072
+EXP = 16384
+EXT = 2097152
+GAS = 131072
+HUB = 4194304
+LOG_DATA = 131072
+LOG_INFO = 8192
+MMIO = 8388608
+MMU = 8388608
+MOD = 262144
+MUL = 131072
+MXP = 1048576
+OOB = 524288
+RLP_ADDR = 8192
+RLP_TXN = 262144
+RLP_TXN_RCPT = 131072
+ROM = 8388608
+ROM_LEX = 2048
+SHAKIRA_DATA = 65536
+SHF = 131072
+STP = 32768
+TRM = 65536
+TXN_DATA = 16384
+WCP = 524288
+PRECOMPILE_ECRECOVER_EFFECTIVE_CALLS = 256
+PRECOMPILE_SHA2_BLOCKS = 671
+PRECOMPILE_RIPEMD_BLOCKS = 671
+PRECOMPILE_MODEXP_EFFECTIVE_CALLS = 8
+PRECOMPILE_ECADD_EFFECTIVE_CALLS = 32768
+PRECOMPILE_ECMUL_EFFECTIVE_CALLS = 64
+PRECOMPILE_ECPAIRING_FINAL_EXPONENTIATIONS = 32
+PRECOMPILE_ECPAIRING_MILLER_LOOPS = 128
+PRECOMPILE_ECPAIRING_G2_MEMBERSHIP_CALLS = 128
+PRECOMPILE_BLAKE_EFFECTIVE_CALLS = 600
+PRECOMPILE_BLAKE_ROUNDS = 600
+BLOCK_KECCAK = 8192
+BLOCK_L1_SIZE = 1000000
+BLOCK_L2_L1_LOGS = 16
+BLOCK_TRANSACTIONS = 200
+BIN_REFERENCE_TABLE = 262144
+SHF_REFERENCE_TABLE = 4096
+INSTRUCTION_DECODER = 512

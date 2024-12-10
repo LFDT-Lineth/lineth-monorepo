@@ -2,6 +2,7 @@ package execution
 
 import (
 	"fmt"
+
 	"github.com/consensys/gnark/frontend"
 	gnarkHash "github.com/consensys/gnark/std/hash"
 	"github.com/consensys/gnark/std/rangecheck"
@@ -14,16 +15,16 @@ import (
 // FunctionalPublicInputQSnark the information on this execution that cannot be
 // extracted from other input in the same aggregation batch
 type FunctionalPublicInputQSnark struct {
-	DataChecksum                frontend.Variable
-	L2MessageHashes             L2MessageHashes
-	InitialBlockTimestamp       frontend.Variable
-	FinalStateRootHash          frontend.Variable
-	FinalBlockNumber            frontend.Variable
-	FinalBlockTimestamp         frontend.Variable
-	InitialRollingHashUpdate    [32]frontend.Variable
-	InitialRollingHashMsgNumber frontend.Variable
-	FinalRollingHashUpdate      [32]frontend.Variable
-	FinalRollingHashMsgNumber   frontend.Variable
+	DataChecksum                 frontend.Variable
+	L2MessageHashes              L2MessageHashes
+	InitialBlockTimestamp        frontend.Variable
+	FinalStateRootHash           frontend.Variable
+	FinalBlockNumber             frontend.Variable
+	FinalBlockTimestamp          frontend.Variable
+	InitialRollingHashUpdate     [32]frontend.Variable
+	FirstRollingHashUpdateNumber frontend.Variable
+	FinalRollingHashUpdate       [32]frontend.Variable
+	LastRollingHashUpdateNumber  frontend.Variable
 }
 
 // L2MessageHashes is a wrapper for [Var32Slice] it is use to instantiate the
@@ -123,8 +124,8 @@ func (spiq *FunctionalPublicInputQSnark) RangeCheck(api frontend.API) {
 	rc.Check(spiq.FinalBlockNumber, 64)
 	rc.Check(spiq.FinalBlockTimestamp, 64)
 	rc.Check(spiq.InitialBlockTimestamp, 64)
-	rc.Check(spiq.InitialRollingHashMsgNumber, 64)
-	rc.Check(spiq.FinalRollingHashMsgNumber, 64)
+	rc.Check(spiq.FirstRollingHashUpdateNumber, 64)
+	rc.Check(spiq.LastRollingHashUpdateNumber, 64)
 
 	spiq.L2MessageHashes.RangeCheck(api)
 }
@@ -139,8 +140,8 @@ func (spi *FunctionalPublicInputSnark) Sum(api frontend.API, hsh gnarkHash.Field
 
 	hsh.Reset()
 	hsh.Write(spi.DataChecksum, l2MessagesSum,
-		spi.FinalStateRootHash, spi.FinalBlockNumber, spi.FinalBlockTimestamp, finalRollingHash[0], finalRollingHash[1], spi.FinalRollingHashMsgNumber,
-		spi.InitialStateRootHash, spi.InitialBlockNumber, spi.InitialBlockTimestamp, initialRollingHash[0], initialRollingHash[1], spi.InitialRollingHashMsgNumber,
+		spi.FinalStateRootHash, spi.FinalBlockNumber, spi.FinalBlockTimestamp, finalRollingHash[0], finalRollingHash[1], spi.LastRollingHashUpdateNumber,
+		spi.InitialStateRootHash, spi.InitialBlockNumber, spi.InitialBlockTimestamp, initialRollingHash[0], initialRollingHash[1], spi.FirstRollingHashUpdateNumber,
 		spi.ChainID, spi.L2MessageServiceAddr)
 
 	return hsh.Sum()
@@ -163,10 +164,10 @@ func (spiq *FunctionalPublicInputQSnark) Assign(pi *public_input.Execution) erro
 	spiq.FinalStateRootHash = pi.FinalStateRootHash[:]
 	spiq.FinalBlockNumber = pi.FinalBlockNumber
 	spiq.FinalBlockTimestamp = pi.FinalBlockTimestamp
-	spiq.InitialRollingHashMsgNumber = pi.InitialRollingHashMsgNumber
-	spiq.FinalRollingHashMsgNumber = pi.FinalRollingHashMsgNumber
+	spiq.FirstRollingHashUpdateNumber = pi.FirstRollingHashUpdateNumber
+	spiq.LastRollingHashUpdateNumber = pi.LastRollingHashUpdateNumber
 
-	utils.Copy(spiq.FinalRollingHashUpdate[:], pi.FinalRollingHashUpdate[:])
+	utils.Copy(spiq.FinalRollingHashUpdate[:], pi.LastRollingHashUpdate[:])
 	utils.Copy(spiq.InitialRollingHashUpdate[:], pi.InitialRollingHashUpdate[:])
 
 	return spiq.L2MessageHashes.Assign(pi.L2MessageHashes)

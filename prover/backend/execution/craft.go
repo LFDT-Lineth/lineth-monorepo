@@ -2,8 +2,9 @@ package execution
 
 import (
 	"bytes"
-	public_input "github.com/consensys/linea-monorepo/prover/public-input"
 	"path"
+
+	public_input "github.com/consensys/linea-monorepo/prover/public-input"
 
 	"github.com/consensys/linea-monorepo/prover/backend/ethereum"
 	"github.com/consensys/linea-monorepo/prover/backend/execution/bridge"
@@ -200,9 +201,9 @@ func (rsp *Response) FuncInput() *public_input.Execution {
 		)
 
 		fi.InitialRollingHashUpdate = firstRHEvent.RollingHash
-		fi.FinalRollingHashUpdate = lastRHEvent.RollingHash
-		fi.InitialRollingHashMsgNumber = uint64(firstRHEvent.MessageNumber)
-		fi.FinalRollingHashMsgNumber = uint64(lastRHEvent.MessageNumber)
+		fi.LastRollingHashUpdate = lastRHEvent.RollingHash
+		fi.FirstRollingHashUpdateNumber = uint64(firstRHEvent.MessageNumber)
+		fi.LastRollingHashUpdateNumber = uint64(lastRHEvent.MessageNumber)
 	}
 
 	return fi

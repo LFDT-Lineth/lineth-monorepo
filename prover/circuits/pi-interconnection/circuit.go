@@ -2,9 +2,10 @@ package pi_interconnection
 
 import (
 	"errors"
-	"github.com/sirupsen/logrus"
 	"math/big"
 	"slices"
+
+	"github.com/sirupsen/logrus"
 
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark/constraint"
@@ -83,6 +84,12 @@ func (c *Circuit) Define(api frontend.API) error {
 	nbBatchesSums := rDecompression.PartialSumsF(func(i int) frontend.Variable { return c.DecompressionFPIQ[i].NbBatches })
 	nbExecution := nbBatchesSums[len(nbBatchesSums)-1] // implicit: CHECK_NB_EXEC
 
+	// These two checks prevents constructing a proof where no execution or no
+	// compression proofs are provided. This is to prevent corner cases from
+	// arising.
+	api.AssertIsDifferent(c.NbDecompression, 0)
+	api.AssertIsDifferent(nbExecution, 0)
+
 	if c.MaxNbCircuits > 0 { // CHECK_CIRCUIT_LIMIT
 		api.AssertIsLessOrEqual(api.Add(nbExecution, c.NbDecompression), c.MaxNbCircuits)
 	}
@@ -156,6 +163,9 @@ func (c *Circuit) Define(api frontend.API) error {
 	for i, piq := range c.ExecutionFPIQ {
 		piq.RangeCheck(api) // CHECK_MSG_LIMIT
 
+		// inRange is a binary value indicating that the current execution
+		// being looked at in the current iteration is an actual execution and
+		// not some padding.
 		inRange := rExecution.InRange[i]
 
 		pi := execution.FunctionalPublicInputSnark{
@@ -166,18 +176,18 @@ func (c *Circuit) Define(api frontend.API) error {
 			L2MessageServiceAddr:        c.L2MessageServiceAddr[:], // implicit CHECK_SVC_ADDR
 		}
 
-		comparator.AssertIsLessEq(pi.InitialBlockTimestamp, pi.FinalBlockTimestamp)             // CHECK_TIME_NODECREASE
-		comparator.AssertIsLessEq(pi.InitialBlockNumber, pi.FinalBlockNumber)                   // CHECK_NUM_NODECREASE
-		comparator.AssertIsLess(finalBlockTime, pi.InitialBlockTimestamp)                       // CHECK_TIME_INCREASE
-		comparator.AssertIsLessEq(pi.InitialRollingHashMsgNumber, pi.FinalRollingHashMsgNumber) // CHECK_RHASH_NODECREASE
+		comparator.AssertIsLessEq(pi.InitialBlockTimestamp, pi.FinalBlockTimestamp)                // CHECK_TIME_NODECREASE
+		comparator.AssertIsLessEq(pi.InitialBlockNumber, pi.FinalBlockNumber)                      // CHECK_NUM_NODECREASE
+		comparator.AssertIsLess(finalBlockTime, pi.InitialBlockTimestamp)                          // CHECK_TIME_INCREASE
+		comparator.AssertIsLessEq(pi.FirstRollingHashUpdateNumber, pi.LastRollingHashUpdateNumber) // CHECK_RHASH_NODECREASE
 
-		finalRhMsgNumZero := api.IsZero(piq.FinalRollingHashMsgNumber)
-		api.AssertIsEqual(finalRhMsgNumZero, api.IsZero(piq.InitialRollingHashMsgNumber)) // CHECK_RHASH_FIRSTLAST
+		finalRhMsgNumZero := api.IsZero(piq.LastRollingHashUpdateNumber)
+		api.AssertIsEqual(finalRhMsgNumZero, api.IsZero(piq.FirstRollingHashUpdateNumber)) // CHECK_RHASH_FIRSTLAST
 		rollingHashUpdated := api.Mul(inRange, api.Sub(1, finalRhMsgNumZero))
 
 		// CHECK_RHASH_CONSEC
-		internal.AssertEqualIf(api, rollingHashUpdated, pi.InitialRollingHashMsgNumber, api.Add(finalRollingHashMsgNum, 1))
-		finalRollingHashMsgNum = api.Select(rollingHashUpdated, pi.FinalRollingHashMsgNumber, finalRollingHashMsgNum)
+		internal.AssertEqualIf(api, rollingHashUpdated, pi.FirstRollingHashUpdateNumber, api.Add(finalRollingHashMsgNum, 1))
+		finalRollingHashMsgNum = api.Select(rollingHashUpdated, pi.LastRollingHashUpdateNumber, finalRollingHashMsgNum)
 		copy(finalRollingHash[:], internal.SelectMany(api, rollingHashUpdated, pi.FinalRollingHashUpdate[:], finalRollingHash[:]))
 
 		finalBlockTime = pi.FinalBlockTimestamp
