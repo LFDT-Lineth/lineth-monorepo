@@ -30,13 +30,14 @@
                                LLARGE)
                     (callToEq  1
                                0
-                               (shift micro/LIMB NB_PP_ROWS_INVALID_CODE_PREFIX_PO) EIP_3541_MARKER)))
+                               (shift micro/LIMB NB_PP_ROWS_INVALID_CODE_PREFIX_PO)
+                               EIP_3541_MARKER)))
 
 (defconstraint    invalid-code-prefix---setting-the-success-bit (:guard (* MACRO IS_INVALID_CODE_PREFIX))
                   (begin  ;; setting tot nb of mmio inst
                     ;; setting the success bit
                     (eq! macro/SUCCESS_BIT
-                         (- 1 (next prprc/WCP_RES)))))
+                         (next prprc/WCP_RES))))
 
 (defconstraint    invalid-code-prefix---micro-instruction-writing (:guard (* MACRO IS_INVALID_CODE_PREFIX))
                   (begin  ;; setting tot nb of mmio inst

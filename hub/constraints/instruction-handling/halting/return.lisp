@@ -276,7 +276,7 @@
                                                                                 ;; size                                           ;; size
                                                                                 ;; ref_offset                                     ;; reference offset
                                                                                 ;; ref_size                                       ;; reference size
-                                                                                (- 1 (return-instruction---exception-flag-ICPX))  ;; success bit; this double negation stuff will be resolved by spec issue #715
+                                                                                (return-instruction---exception-flag-ICPX)        ;; success bit; this double negation stuff will be resolved by spec issue #715
                                                                                 ;; limb_1                                         ;; limb 1
                                                                                 ;; limb_2                                         ;; limb 2
                                                                                 ;; exo_sum                                        ;; weighted exogenous module flag sum
@@ -300,13 +300,15 @@
                                                                                    ;; phase                                     ;; phase
                                                                                    ))))
 
-(defconstraint   return-instruction---justifying-the-MXPX           (:guard   (return-instruction---standard-scenario-row))
-                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defconstraint   return-instruction---justifying-the-MXPX
+                 (:guard   (return-instruction---standard-scenario-row))
+                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                  (eq!   (return-instruction---exception-flag-MXPX)
                         (return-instruction---MXP-memory-expansion-exception)))
 
-(defconstraint   return-instruction---justifying-the-ICPX           (:guard   (return-instruction---standard-scenario-row))
-                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defconstraint   return-instruction---justifying-the-ICPX
+                 (:guard   (return-instruction---standard-scenario-row))
+                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                  (if-zero   (force-bool   (return-instruction---check-first-byte))
                             ;; check_first_byte ≡ 0
                             (vanishes!    (return-instruction---exception-flag-ICPX))

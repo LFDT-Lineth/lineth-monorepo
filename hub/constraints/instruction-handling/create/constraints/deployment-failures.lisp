@@ -16,7 +16,9 @@
 
 (defun    (create-instruction---deployment-failure-precondition)    (*    PEEK_AT_SCENARIO    (scenario-shorthand---CREATE---deployment-failure)))
 
-(defconstraint    create-instruction---undoing-creator-account-operations-for-deployment-failures    (:guard    (create-instruction---deployment-failure-precondition))
+(defconstraint    create-instruction---nonempty-deployment-failure---undoing-creator-account-operations
+                  (:guard    (create-instruction---deployment-failure-precondition))
+                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                   (begin
                     (account-same-address-as                         CREATE_second_creator_account_row___row_offset    CREATE_first_creator_account_row___row_offset)
                     (account-undo-balance-update                     CREATE_second_creator_account_row___row_offset    CREATE_first_creator_account_row___row_offset)
@@ -31,7 +33,9 @@
                     (DOM-SUB-stamps---revert-with-child              CREATE_second_creator_account_row___row_offset    0    (create-instruction---createe-revert-stamp))
                     ))
 
-(defconstraint    create-instruction---undoing-createe-account-operations-for-deployment-failures    (:guard    (create-instruction---deployment-failure-precondition))
+(defconstraint    create-instruction---nonempty-deployment-failure---undoing-createe-account-operations
+                  (:guard    (create-instruction---deployment-failure-precondition))
+                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                   (begin
                     (account-same-address-as                         CREATE_second_createe_account_row___row_offset    CREATE_first_createe_account_row___row_offset)
                     (account-undo-balance-update                     CREATE_second_createe_account_row___row_offset    CREATE_first_createe_account_row___row_offset)

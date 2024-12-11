@@ -16,7 +16,7 @@
 
 (defun    (create-instruction---one-step-reverting-precondition)    (*    PEEK_AT_SCENARIO    (scenario-shorthand---CREATE---simple-revert)))
 
-(defconstraint    create-instruction---undoing-creator-account-operations    (:guard    (create-instruction---one-step-reverting-precondition))
+(defconstraint    create-instruction---one-step-reverting---undoing-creator-account-operations    (:guard    (create-instruction---one-step-reverting-precondition))
                   (begin
                     (account-same-address-as                         CREATE_second_creator_account_row___row_offset    CREATE_first_creator_account_row___row_offset)
                     (account-undo-balance-update                     CREATE_second_creator_account_row___row_offset    CREATE_first_creator_account_row___row_offset)
@@ -31,7 +31,7 @@
                     (DOM-SUB-stamps---revert-with-current            CREATE_second_creator_account_row___row_offset    0)
                     ))
 
-(defconstraint    create-instruction---undoing-createe-account-operations    (:guard    (create-instruction---one-step-reverting-precondition))
+(defconstraint    create-instruction---one-step-reverting---undoing-createe-account-operations    (:guard    (create-instruction---one-step-reverting-precondition))
                   (begin
                     (account-same-address-as                         CREATE_second_createe_account_row___row_offset    CREATE_first_createe_account_row___row_offset)
                     (account-undo-balance-update                     CREATE_second_createe_account_row___row_offset    CREATE_first_createe_account_row___row_offset)
