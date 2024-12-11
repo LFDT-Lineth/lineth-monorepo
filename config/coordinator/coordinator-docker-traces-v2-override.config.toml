@@ -15,7 +15,7 @@ eth-api="http://traces-node-v2:8545"
 [traces]
 switch-to-linea-besu=true
 blob-compressor-version="V1_0_1"
-expected-traces-api-version-v2="v0.8.0-rc6"
+expected-traces-api-version-v2="v0.8.0-rc8"
 [traces.counters-v2]
 endpoints=["http://traces-node-v2:8545/"]
 request-limit-per-endpoint=2

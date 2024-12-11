@@ -23,7 +23,7 @@ services:
   sequencer:
     hostname: sequencer
     container_name: sequencer
-    image: consensys/linea-besu:${SEQUENCER_TAG:-24.11-delivery39.1}
+    image: consensys/linea-besu:${SEQUENCER_TAG:-24.12-delivery40}
     profiles: [ "l2", "l2-bc", "debug", "external-to-monorepo" ]
     depends_on:
       linea-besu-sequencer-plugin-downloader:
@@ -121,7 +121,7 @@ services:
   l2-node-besu:
     hostname: l2-node-besu
     container_name: l2-node-besu
-    image: consensys/linea-besu:24.11-delivery39.1
+    image: consensys/linea-besu:24.12-delivery40
     profiles: [ "l2", "l2-bc", "debug", "external-to-monorepo" ]
     depends_on:
       sequencer:
