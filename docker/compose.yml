@@ -73,7 +73,7 @@ services:
   linea-besu-sequencer-plugin-downloader:
     image: busybox:1.36.1
     # profiles: ["l2", "l2-bc"] this works locally but breakes on CI, maybe Docker compose version issue
-    command: [ "sh", "/file-downloader.sh", "https://github.com/Consensys/linea-sequencer/releases/download/v0.1.4-test37/besu-sequencer-plugins-v0.1.4-test37.jar",  "/linea-besu-sequencer" ]
+    command: [ "sh", "/file-downloader.sh", "https://github.com/Consensys/linea-sequencer/releases/download/v0.1.4-test38/besu-sequencer-plugins-v0.1.4-test38.jar",  "/linea-besu-sequencer" ]
     volumes:
       - ./scripts/file-downloader.sh:/file-downloader.sh:ro
       - ../tmp/linea-besu-sequencer/plugins:/linea-besu-sequencer/
