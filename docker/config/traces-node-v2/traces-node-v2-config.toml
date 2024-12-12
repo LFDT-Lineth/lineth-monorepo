@@ -36,6 +36,7 @@ metrics-port=9545
 data-storage-format="BONSAI"
 
 # plugins
+plugins=["TracerReadinessPlugin","TracesEndpointServicePlugin","LineCountsEndpointServicePlugin","CaptureEndpointServicePlugin"]
 plugin-linea-conflated-trace-generation-traces-output-path="/data/traces/v2/conflated"
 plugin-linea-rpc-concurrent-requests-limit=1
 plugin-linea-tracer-readiness-server-host="0.0.0.0"
