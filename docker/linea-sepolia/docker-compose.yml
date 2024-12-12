@@ -71,3 +71,22 @@ services:
       - ./besu-genesis.json:/var/lib/besu/genesis.json:ro
       - ../config/linea-besu-sequencer/log4j.xml:/var/lib/besu/log4j.xml
       - ./static-nodes.json:/var/lib/besu/static-nodes.json
+
+  nethermind-node:
+    hostname: nethermind-node
+    container_name: nethermind-node
+    image: nethermind/nethermind:1.30.0 
+    restart: unless-stopped
+    command:
+      --datadir /nethermind/nethermind_db
+      --config linea-sepolia
+      --JsonRpc.Enabled=true
+      --JsonRpc.Host=0.0.0.0
+      --JsonRpc.Port=8545
+      --Metrics.Enabled=true
+      --Metrics.ExposePort=8008
+    ports:
+      - 8545:8545
+      - 8008:8008
+    volumes:
+      - linea-sepolia:/nethermind/nethermind_db
