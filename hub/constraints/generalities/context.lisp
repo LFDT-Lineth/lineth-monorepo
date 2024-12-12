@@ -94,7 +94,7 @@
 (defconstraint    generalities---context-numbers---imposing-CN_NEW-is-CALLER_CN---for-exceptions ()
                   (if-not-zero XAHOY (eq! CN_NEW CALLER_CN)))
 
-(defconstraint    generalities---context-numbers---imposing-CN_NEW-is-CALLER_CN---for-halting-instrutions ()
+(defconstraint    generalities---context-numbers---imposing-CN_NEW-is-CALLER_CN---for-halting-instructions ()
                   (if-not-zero PEEK_AT_STACK
                                (if-not-zero stack/HALT_FLAG
                                             (eq! CN_NEW CALLER_CN))))

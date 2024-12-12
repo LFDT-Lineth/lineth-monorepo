@@ -83,7 +83,7 @@
                                   0
                                   (right-padded-word-extraction---second-limb-byte-size))))
 
-(defconstraint right-padded-word-extraction---setting-micro-instrution-constant-values (:guard (* MACRO IS_RIGHT_PADDED_WORD_EXTRACTION))
+(defconstraint right-padded-word-extraction---setting-micro-instruction-constant-values (:guard (* MACRO IS_RIGHT_PADDED_WORD_EXTRACTION))
                (begin
                  (eq!       (shift micro/CN_S       NB_PP_ROWS_RIGHT_PADDED_WORD_EXTRACTION_PO) macro/SRC_ID)
                  (vanishes! (shift micro/EXO_SUM    NB_PP_ROWS_RIGHT_PADDED_WORD_EXTRACTION_PO))))
