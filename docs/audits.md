@@ -6,6 +6,7 @@
 * [ZKSecurity.xyz - June 2024 - Wizard's crypto & math](https://www.zksecurity.xyz/reports/consensys-wizard-crypto-math)
 * [OpenZeppelin - June 2024 - gnark PLONK prover and verifier](https://blog.openzeppelin.com/linea-prover-audit)
 * [LeastAuthority - September 2024 - gnark general and GKR](https://github.com/Consensys/gnark/blob/53ce9b74e7ab372aa7358f1eac7fe3d689743f5f/audits/2024-09%20-%20Least%20Authority%20-%20arithm%20and%20GKR.pdf)
+* [LeastAuthority - November 2024 - Linea zkEVM](https://github.com/Consensys/gnark/blob/d9cbd38409edb5cfdbf9daa9dba841ad432feff9/audits/2024-11%20-%20Least%20Authority%20-%20Linea%20zkEVM.pdf)
 ---
 **2023**
 * [Sigma Prime - May 2023 - gnark-crypto KZG (contracted by Ethereum Foundation)](https://github.com/Consensys/gnark/blob/53ce9b74e7ab372aa7358f1eac7fe3d689743f5f/audits/2024-05%20-%20Sigma%20Prime%20-%20kzg.pdf)
