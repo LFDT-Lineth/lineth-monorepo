@@ -99,10 +99,6 @@
                                                                                              (*    PHASE_ECMUL_RESULT            (precompile-processing---ECADD_MUL_PAIRING---nontrivial-ECMUL))
                                                                                              (*    PHASE_ECPAIRING_RESULT        (precompile-processing---ECADD_MUL_PAIRING---nontrivial-ECPAIRING))))
 
-(defun    (precompile-processing---ECADD_MUL_PAIRING---return-data-reference-size)     (+    (*    ECADD_RETURN_DATA_SIZE        (precompile-processing---ECADD_MUL_PAIRING---nontrivial-ECADD))
-                                                                                             (*    ECMUL_RETURN_DATA_SIZE        (precompile-processing---ECADD_MUL_PAIRING---nontrivial-ECMUL))
-                                                                                             (*    ECPAIRING_RETURN_DATA_SIZE    (precompile-processing---ECADD_MUL_PAIRING---nontrivial-ECPAIRING))))
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Miscellaneous-row i + 3 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -134,6 +130,10 @@
                                                                                     ;; exo_sum                                                                              ;; weighted exogenous module flag sum
                                                                                     ;; phase                                                                                ;; phase
                                                                                     )))
+
+(defun    (precompile-processing---ECADD_MUL_PAIRING---return-data-reference-size)     (+    (*    ECADD_RETURN_DATA_SIZE        scenario/PRC_ECADD    )
+                                                                                             (*    ECMUL_RETURN_DATA_SIZE        scenario/PRC_ECMUL    )
+                                                                                             (*    ECPAIRING_RETURN_DATA_SIZE    scenario/PRC_ECPAIRING)))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;
