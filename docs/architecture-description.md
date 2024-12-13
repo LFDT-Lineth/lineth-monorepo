@@ -222,7 +222,7 @@ It checks the total compressed size of the transactions in the batch under const
 
 In case of low activity, the coordinator triggers batch creation after some time out.
 
-Upon batch creation, the coordinator gathers the inputs to create an execution proof, namely: the conflated traces using `linea_generateConflatedTracesToFileV2`, and a Merkle proof for the change of state between the first and the last block of the batch using `rollup_getZkEVMStateMerkleProofV0`.
+Upon batch creation, the coordinator gathers the inputs to create an execution proof request, namely: the conflated traces using `linea_generateConflatedTracesToFileV2`, and a Merkle proof for the change of state between the first and the last block of the batch using `rollup_getZkEVMStateMerkleProofV0`.
 
 The coordinator collects all L2-L1 requests to be included in the batch looking at all logs emitted by `l2MessageServiceAddress` for each block in the batch. The coordinator also collects L1->L2 anchoring message event logs.
 
@@ -471,7 +471,7 @@ Corset is hosted inside the same process as the short running component of the p
   * Reduce the probability of incompatibility between Corset/Prover versions and their input/output formats;
 * Reduce latency of the overall system (rather a beneficial side effect than a driving motivation);
 
-The paragraphs highlights the roles of the different proofs that are generated.
+The paragraphs highlights the roles of the different proofs that are generated. Please refer to the prover backend codebase [here](https://github.com/Consensys/linea-monorepo/tree/main/prover/backend) for details on the objects and attributes for various types of proof requests and responses 
 
 ### Execution proofs
 
@@ -489,8 +489,7 @@ The request file contains this structure:
 
 ```
 ProofRequest
-  zkParentStateRootHash        string
-  keccakParentStateRootHash    string
+  zkParentStateRootHash        bytes32
   conflatedExecutionTracesFile string
   tracesEngineVersion          string
   type2StateManagerVersion     string
@@ -508,15 +507,15 @@ BlockData
 
 ```
 RlpBridgeLogsData
+  address                 string
+  topics                  List[string]
+  data                    string
+  blockNumber             string
+  transactionHash         string
+  transactionIndex        string
+  blockHash               string 
+  logIndex                string
   removed                 boolean
-  logIndex               string
-  transactionIndex string
-  transactionHash  string
-  blockHash        string
-  blockNumber          string
-  address          string
-  data             string
-  topics           List[string]
 ```
 
 The response file contains this file structure:
@@ -524,34 +523,38 @@ The response file contains this file structure:
 ```
 ProofResponse
   proof                               string // hex encoded
-  proverMode                          long
-  verifierIndex                       long   // deprecated
+  proverMode                          string
+  verifierIndex                       uint   // deprecated
   verifyingKeyShaSum                  string // hex encoded
+  blocksData                          List[ResponseBlockData]
   parentStateRootHash                 string // hex encoded
   hasParentStateRootHashMismatch      bool
-  blocksData                          List[ResponseBlockData]
   proverVersion                       string
-  firstBlockNumber                    long
-  debugData                           {
-    …
-    finalHash                         string // hex encoded
-  }
+  firstBlockNumber                    int
+  execDataChecksum                    bytes32
+  chainID                             uint
+  l2BridgeAddress                     [20]byte 
+  maxNbL2MessageHashes                int
+  allRollingHashEvent                 List[RollingHashUpdatedEvent]
+  allL2L1MessageHashes                List[string] // hex encoded
+  publicInput                         bytes32 
 ```
 
 ```
 ResponseBlockData
-  rlpEncodedTransactions              string       // hex encoded
-  l2ToL1Hashes                        List[string] // hex encoded
-  timestamp                           long
-  rootHash                            string       // hex encoded
+  blockHash                           bytes32
+  rlpEncodedTransactions              List[string]       // hex encoded
+  l2ToL1MsgHashes                     List[bytes32] // hex encoded
+  timestamp                           uint64
+  rootHash                            bytes32       // hex encoded
   fromAddresses                       List[string] // hex encoded
-  batchReceptionIndices               List[int]
+  batchReceptionIndices               List[uint16]
   lastRollingHashUpdatedEvent         RollingHashUpdatedEvent
 ```
 
 ```
 RollingHashUpdatedEvent
-   messageNumber                      long
+   messageNumber                      int64
    rollingHash                        string
 ```
 
@@ -577,52 +580,41 @@ Compression proof request file format:
 
 ```
 BlobCompressionProofJsonRequest
-  compressedData       bytes
-  conflationOrder      BlockIntervals
-  prevShnarf           bytes
-  parentStateRootHash  bytes
-  finalStateRootHash   bytes
-  parentDataHash       bytes
-  dataHash             bytes
-  snarkHash            bytes
-  expectedX            bytes
-  expectedY            bytes
-  expectedShnarf       bytes
   eip4844Enabled       boolean
-  commitment           bytes
-  kzgProofContract     bytes
-  kzgProofSidecar      bytes
+  compressedData       string // base64 encoded
+  dataParentHash       string 
+  conflationOrder      ConflationOrder
+  parentStateRootHash  string // hex encoded
+  finalStateRootHash   string // hex encoded
+  prevShnarf           string
 ```
 
 
 ```
-BlockIntervals
-  startingBlockNumber  ULong
-  upperBoundaries      List[ULong]
+ConflationOrder
+  startingBlockNumber  int
+  upperBoundaries      List[int]
 ```
 
 Compression proof response file format:
 
 ```
 BlobCompressionProofJsonResponse
-  compressedData           bytes // The data that are explicitly sent in the blob (i.e. after compression)
-  conflationOrder          BlockIntervals
-  prevShnarf               bytes
-  parentStateRootHash      bytes
-  finalStateRootHash       bytes
-  parentDataHash           bytes
-  dataHash                 bytes
-  snarkHash                bytes
-  expectedX                bytes
-  expectedY                bytes
-  expectedShnarf           bytes
-  decompressionProof       bytes // zkProof of compression and consistency
-  proverVersion            string
-  verifyingKeyShaSum       string
   eip4844Enabled           boolean
-  commitment               bytes
-  kzgProofContract         bytes
-  kzgProofSidecar          bytes
+  dataHash                 string
+  compressedData           string // kzg4844.Blob [131072]byte. The data that are explicitly sent in the blob (i.e. after compression)
+  commitment               string // kzg4844.Commitment [48]byte
+  kzgProofContract         string
+  kzgProofSidecar          string
+  expectedX                string
+  expectedY                string
+  snarkHash                string
+  conflationOrder          ConflationOrder
+  parentStateRootHash      string
+  finalStateRootHash       string
+  parentDataHash           string
+  expectedShnarf           string
+  prevShnarf               string
 ```
 
 ### Aggregation proof
@@ -646,29 +638,31 @@ Inprogress suffix: .inprogress
 AggregationProofJsonRequest
   executionProofs                                     List[String]
   compressionProofs                                   List[String]
-  parentAggregationLastBlockTimestamp                 long
-  parentAggregationLastL1RollingHashMessageNumber     long
+  parentAggregationLastBlockTimestamp                 uint64
   parentAggregationLastL1RollingHash                  string
+  parentAggregationLastL1RollingHashMessageNumber     int
 ```
 
 ```
 ProofToFinalizeJsonResponse
-  aggregatedProof                             bytes
-  aggregatedProverVersion                     string
-  parentStateRootHash                         bytes
-  aggregatedVerifierIndex                     int
-  aggregatedProofPublicInput                  bytes
-  dataHashes                                  List[bytes]
-  dataParentHash                              bytes
-  lastFinalizedBlockNumber                    long
-  finalBlockNumber                            long
-  parentAggregationLastBlockTimestamp         string
-  finalTimestamp                              string
-  l1RollingHash                               bytes
-  l1RollingHashMessageNumber                  long
-  l2MerkleRoots                               List[bytes]
-  l2MerkleTreesDepth                          int
-  l2MessagingBlocksOffsets                    bytes
+  finalShnarf                                string
+  parentAggregationFinalShnarf               string
+  aggregatedProof                            string // hex encoded
+  aggregatedProverVersion                    string // hex encoded
+  aggregatedVerifierIndex                    int
+  aggregatedProofPublicInput                 string
+  dataHashes                                 List[string]
+  dataParentHash                             string
+  parentStateRootHash                        string
+  parentAggregationLastBlockTimestamp        uint 
+  lastFinalizedBlockNumber                   uint
+  finalTimestamp                             uint
+  finalBlockNumber                           uint
+  l1RollingHash                               string
+  l1RollingHashMessageNumber                  uint
+  l2MerkleRoots                               List[string]
+  l2MerkleTreesDepth                          uint 
+  l2MessagingBlocksOffsets                    string
 ```
 
 
