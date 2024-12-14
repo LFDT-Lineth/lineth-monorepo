@@ -72,7 +72,6 @@
 (defun (account-increment-deployment-number        kappa)          (shift (eq! account/DEPLOYMENT_NUMBER_NEW (+ 1 account/DEPLOYMENT_NUMBER)) kappa))
 (defun (account-turn-on-deployment-status          kappa)          (shift (eq! account/DEPLOYMENT_STATUS_NEW (+ 1 account/DEPLOYMENT_STATUS)) kappa))
 (defun (account-undo-deployment-status-update      undoAt doneAt)  (begin (account-same-deployment-number            undoAt)
-                                                                          (eq! (shift account/DEPLOYMENT_NUMBER      undoAt)  (shift account/DEPLOYMENT_NUMBER_NEW doneAt))
                                                                           (eq! (shift account/DEPLOYMENT_STATUS_NEW  undoAt)  (shift account/DEPLOYMENT_STATUS     doneAt))
                                                                           (eq! (shift account/DEPLOYMENT_STATUS      undoAt)  (shift account/DEPLOYMENT_STATUS_NEW doneAt))))
 
