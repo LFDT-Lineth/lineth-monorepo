@@ -199,12 +199,12 @@
                                            (DOM-SUB-stamps---standard                    ROFF_ACC___ACCOUNT_READING_ROW    0)
                                            (if-not-zero (account-instruction---is-CODESIZE)
                                                     (begin
-                                                      (eq!  (shift account/ADDRESS_HI    ROFF_ACC___ACCOUNT_READING_ROW) (account-instruction---account-address-hi))
-                                                      (eq!  (shift account/ADDRESS_LO    ROFF_ACC___ACCOUNT_READING_ROW) (account-instruction---account-address-lo))))
+                                                      (eq!  (shift account/ADDRESS_HI    ROFF_ACC___ACCOUNT_READING_ROW)  (account-instruction---byte-code-address-hi))
+                                                      (eq!  (shift account/ADDRESS_LO    ROFF_ACC___ACCOUNT_READING_ROW)  (account-instruction---byte-code-address-lo))))
                                            (if-not-zero (account-instruction---is-SELFBALANCE)
                                                     (begin
-                                                      (eq!  (shift account/ADDRESS_HI    ROFF_ACC___ACCOUNT_READING_ROW)  (account-instruction---byte-code-address-hi))
-                                                      (eq!  (shift account/ADDRESS_LO    ROFF_ACC___ACCOUNT_READING_ROW)  (account-instruction---byte-code-address-lo)))
+                                                      (eq!  (shift account/ADDRESS_HI    ROFF_ACC___ACCOUNT_READING_ROW)  (account-instruction---account-address-hi))
+                                                      (eq!  (shift account/ADDRESS_LO    ROFF_ACC___ACCOUNT_READING_ROW)  (account-instruction---account-address-lo)))
                                                     ))))))
 
 
