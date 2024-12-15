@@ -80,34 +80,35 @@
 
 (defconstraint   account-instruction---setting-the-stack-pattern
                  (:guard (account-instruction---standard-hypothesis))
-                 ;;
+                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                  (begin
                    (if-not-zero    (account-instruction---touches-foreign-account)    (stack-pattern-1-1))
                    (if-not-zero    (account-instruction---touches-current-account)    (stack-pattern-0-1))))
 
 (defconstraint   account-instruction---setting-allowable-exceptions
                  (:guard (account-instruction---standard-hypothesis))
-                 ;;
+                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                  (begin
                    (eq!    XAHOY stack/OOGX)
                    (debug  (eq! XAHOY CMC))))
 
 (defconstraint   account-instruction---foreign-address-opcode---setting-NSR
                  (:guard (account-instruction---standard-hypothesis))
-                 ;;
+                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                  (if-not-zero    (account-instruction---touches-foreign-account)
                                  (eq!    NSR
                                          (+ 1 (* CONTEXT_WILL_REVERT (+ 1 CMC))))))
 
 (defconstraint   account-instruction---current-address-opcode---setting-NSR
                  (:guard (account-instruction---standard-hypothesis))
+                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                  (if-not-zero    (account-instruction---touches-current-account)
                                  (eq!    NSR
                                          (- 2 CMC))))
 
 (defconstraint   account-instruction---foreign-address-opcode---setting-peeking-flags
                  (:guard (account-instruction---standard-hypothesis))
-                 ;;
+                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                  (if-not-zero (account-instruction---touches-foreign-account)
                               (if-zero CONTEXT_WILL_REVERT
                                        (eq! NSR
@@ -119,7 +120,7 @@
 
 (defconstraint   account-instruction---current-address-opcode---setting-peeking-flags
                  (:guard (account-instruction---standard-hypothesis))
-                 ;;
+                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                  (if-not-zero (account-instruction---touches-current-account)
                               (if-zero XAHOY
                                        (eq! NSR
@@ -130,7 +131,7 @@
 
 (defconstraint   account-instruction---setting-gas-cost
                  (:guard (account-instruction---standard-hypothesis))
-                 ;;
+                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                  (begin
                    (if-not-zero (account-instruction---touches-foreign-account)
                                 (eq! GAS_COST
@@ -142,7 +143,7 @@
 
 (defconstraint   account-instruction---foreign-address-opcode---doing-account-row
                  (:guard (account-instruction---standard-hypothesis))
-                 ;;
+                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                  (begin
                    (if-not-zero (account-instruction---touches-foreign-account)
                                 (begin
@@ -154,14 +155,22 @@
                                   (account-same-nonce                           ROFF_ACC___ACCOUNT_DOING_ROW)
                                   (account-same-code                            ROFF_ACC___ACCOUNT_DOING_ROW)
                                   (account-same-deployment-number-and-status    ROFF_ACC___ACCOUNT_DOING_ROW)
-                                  (account-turn-on-warmth                       ROFF_ACC___ACCOUNT_DOING_ROW)
+                                  ;; (account-turn-on-warmth                       ROFF_ACC___ACCOUNT_DOING_ROW)
                                   (account-same-marked-for-selfdestruct         ROFF_ACC___ACCOUNT_DOING_ROW)
                                   (DOM-SUB-stamps---standard                    ROFF_ACC___ACCOUNT_DOING_ROW    0)))))
+
+(defconstraint   account-instruction---foreign-address-opcode---doing-account-row---warmth-update
+                 (:guard (account-instruction---standard-hypothesis))
+                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                 (if-not-zero   (account-instruction---touches-foreign-account)
+                                (if-not-zero    XAHOY
+                                                (account-turn-on-warmth   ROFF_ACC___ACCOUNT_DOING_ROW)
+                                                (account-same-warmth      ROFF_ACC___ACCOUNT_DOING_ROW))))
 
 
 (defconstraint   account-instruction---foreign-address-opcode---undoing-account-row
                  (:guard (account-instruction---standard-hypothesis))
-                 ;;
+                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                  (begin
                    (if-not-zero (account-instruction---touches-foreign-account)
                                 (if-not-zero CONTEXT_WILL_REVERT
@@ -178,13 +187,14 @@
 
 (defconstraint   account-instruction---current-address-opcode---unexceptional-case---setting-context-row
                  (:guard (account-instruction---standard-hypothesis))
+                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                  (if-not-zero (account-instruction---touches-current-account)
                               (if-zero XAHOY
                                        (read-context-data                                ROFF_ACC___CONTEXT_ROW            CONTEXT_NUMBER))))
 
 (defconstraint   account-instruction---current-address-opcode---unexceptional-case---setting-account-row
                  (:guard (account-instruction---standard-hypothesis))
-                 ;;
+                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                  (begin
                    (if-not-zero (account-instruction---touches-current-account)
                                 (if-zero XAHOY
@@ -218,7 +228,7 @@
 
 (defconstraint   account-instruction---value-constraints---the-BALANCE-case
                  (:guard (account-instruction---unexceptional))
-                 ;;
+                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                  (if-not-zero (account-instruction---is-BALANCE)
                               (begin
                                 (eq!  (account-instruction---result-hi)    0)
@@ -226,7 +236,7 @@
 
 (defconstraint   account-instruction---value-constraints---the-EXTCODESIZE-case
                  (:guard (account-instruction---unexceptional))
-                 ;;
+                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                  (if-not-zero (account-instruction---is-EXTCODESIZE)
                               (begin
                                 (eq!   (account-instruction---result-hi)   0)
@@ -234,7 +244,7 @@
 
 (defconstraint   account-instruction---value-constraints---the-EXTCODEHASH-case
                  (:guard (account-instruction---unexceptional))
-                 ;;
+                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                  (if-not-zero (account-instruction---is-EXTCODEHASH)
                               (begin
                                 (eq!   (account-instruction---result-hi)   (account-instruction---foreign-code-hash-hi))
@@ -242,7 +252,7 @@
 
 (defconstraint   account-instruction---value-constraints---the-CODESIZE-case
                  (:guard (account-instruction---unexceptional))
-                 ;;
+                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                  (if-not-zero (account-instruction---is-CODESIZE)
                               (begin
                                 (eq!   (account-instruction---result-hi)   0)
@@ -250,7 +260,7 @@
 
 (defconstraint   account-instruction---value-constraints---the-SELFBALANCE-case
                  (:guard (account-instruction---unexceptional))
-                 ;;
+                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                  (if-not-zero (account-instruction---is-SELFBALANCE)
                               (begin
                                 (eq!   (account-instruction---result-hi)   0)
