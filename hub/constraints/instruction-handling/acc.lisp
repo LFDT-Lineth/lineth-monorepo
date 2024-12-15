@@ -164,8 +164,9 @@
                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                  (if-not-zero   (account-instruction---touches-foreign-account)
                                 (if-not-zero    XAHOY
-                                                (account-turn-on-warmth   ROFF_ACC___ACCOUNT_DOING_ROW)
-                                                (account-same-warmth      ROFF_ACC___ACCOUNT_DOING_ROW))))
+                                                (account-same-warmth      ROFF_ACC___ACCOUNT_DOING_ROW) ;; XAHOY ≡ 1
+                                                (account-turn-on-warmth   ROFF_ACC___ACCOUNT_DOING_ROW) ;; XAHOY ≡ 0
+                                                )))
 
 
 (defconstraint   account-instruction---foreign-address-opcode---undoing-account-row
