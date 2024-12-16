@@ -4,11 +4,12 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/consensys/linea-monorepo/prover/lib/compressor/blob/dictionary"
-	"github.com/consensys/linea-monorepo/prover/lib/compressor/blob/encode"
 	"os"
 	"slices"
 	"strings"
+
+	"github.com/consensys/linea-monorepo/prover/lib/compressor/blob/dictionary"
+	"github.com/consensys/linea-monorepo/prover/lib/compressor/blob/encode"
 
 	fr381 "github.com/consensys/gnark-crypto/ecc/bls12-381/fr"
 	"github.com/sirupsen/logrus"
@@ -376,7 +377,7 @@ func (bm *BlobMaker) WorstCompressedTxSize(rlpTx []byte) (int, error) {
 
 	// encode the transaction in Linea format.
 	var buf bytes.Buffer
-	if err := encodeTxForCompression(&tx, &buf); err != nil {
+	if err := EncodeTxForCompression(&tx, &buf); err != nil {
 		return -1, fmt.Errorf("failed to encode transaction: %w", err)
 	}
 

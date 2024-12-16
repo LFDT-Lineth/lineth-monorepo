@@ -43,7 +43,7 @@ func EncodeBlockForCompression(block *types.Block, w io.Writer) error {
 	w.Write(blockHash[:])
 
 	for i, tx := range transactions {
-		if err := encodeTxForCompression(tx, w); err != nil {
+		if err := EncodeTxForCompression(tx, w); err != nil {
 			return fmt.Errorf("could not encode transaction #%v: %w", i, err)
 		}
 	}
@@ -52,7 +52,7 @@ func EncodeBlockForCompression(block *types.Block, w io.Writer) error {
 }
 
 // encodeTransaction encodes a single transaction
-func encodeTxForCompression(tx *types.Transaction, w io.Writer) error {
+func EncodeTxForCompression(tx *types.Transaction, w io.Writer) error {
 	if tx == nil {
 		return fmt.Errorf("transactions is nil")
 	}

@@ -7,8 +7,6 @@ import (
 	cRand "crypto/rand"
 	"encoding/binary"
 	"encoding/hex"
-	"errors"
-	"fmt"
 	"math/big"
 	"math/rand"
 	"os"
@@ -29,15 +27,12 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/consensys/compress/lzss"
-	"github.com/consensys/gnark-crypto/ecc/bls12-377/fr"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/trie"
 	"github.com/stretchr/testify/require"
 )
-
-const testDictPath = "../../compressor_dict.bin"
 
 func TestCompressorOneBlock(t *testing.T) { // most basic test just to see if block encoding/decoding works
 	testCompressorSingleSmallBatch(t, testBlocks[1:2])
@@ -501,47 +496,6 @@ func init() {
 		f.Write(testBlocks[i])
 	}
 	f.Close()
-}
-
-func decompressBlob(b []byte) ([][][]byte, error) {
-
-	// we should be able to hash the blob with MiMC with no errors;
-	// this is a good indicator that the blob is valid.
-	if len(b)%fr.Bytes != 0 {
-		return nil, errors.New("invalid blob length; not a multiple of 32")
-	}
-
-	dict, err := os.ReadFile(testDictPath)
-	if err != nil {
-		return nil, fmt.Errorf("can't read dict: %w", err)
-	}
-	dictStore, err := dictionary.SingletonStore(dict, 1)
-	if err != nil {
-		return nil, err
-	}
-	header, _, blocks, err := v1.DecompressBlob(b, dictStore)
-	if err != nil {
-		return nil, fmt.Errorf("can't decompress blob: %w", err)
-	}
-
-	batches := make([][][]byte, len(header.BatchSizes))
-	for i, batchNbBytes := range header.BatchSizes {
-		batches[i] = make([][]byte, 0)
-		batchLenYet := 0
-		for batchLenYet < batchNbBytes {
-			batches[i] = append(batches[i], blocks[0])
-			batchLenYet += len(blocks[0])
-			blocks = blocks[1:]
-		}
-		if batchLenYet != batchNbBytes {
-			return nil, errors.New("invalid batch size")
-		}
-	}
-	if len(blocks) != 0 {
-		return nil, errors.New("not all blocks were consumed")
-	}
-
-	return batches, nil
 }
 
 func signTxFake(tx **types.Transaction) {

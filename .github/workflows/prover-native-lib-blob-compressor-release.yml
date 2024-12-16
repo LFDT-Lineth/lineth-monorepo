@@ -22,7 +22,7 @@ on:
 jobs:
 
   build-linux:
-    runs-on: [self-hosted, ubuntu-20.04, X64, small]
+    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -56,7 +56,7 @@ jobs:
           path: ./prover/target
 
   build-linux-arm64:
-    runs-on: [self-hosted, ubuntu-20.04, ARM64, small]
+    runs-on: gha-runner-scale-set-ubuntu-22.04-arm64-small
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -128,7 +128,7 @@ jobs:
   release_artefacts:
     name: Release artefacts
     needs: [ build-linux, build-linux-arm64, build-mac-os]
-    runs-on: [self-hosted, ubuntu-20.04, ARM64, small]
+    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
     steps:
       - name: Load cached binaries
         uses: actions/download-artifact@v4
