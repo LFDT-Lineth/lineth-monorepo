@@ -2454,6 +2454,18 @@ describe("Linea Rollup contract", () => {
       );
     });
 
+    it("Should fail to accept ETH on the CallForwardingProxy receive function", async () => {
+      await deployCallForwardingProxy(await lineaRollupV5.getAddress());
+      const forwardingProxyAddress = await callForwardingProxy.getAddress();
+
+      const tx = {
+        to: forwardingProxyAddress,
+        value: ethers.parseEther("0.1"),
+      };
+
+      await expectRevertWithReason(admin.sendTransaction(tx), "ETH not accepted");
+    });
+
     it("Should be able to submit blobs and finalize via callforwarding proxy", async () => {
       // Deploy callforwarding proxy
       await deployCallForwardingProxy(await lineaRollupV5.getAddress());

@@ -23,6 +23,9 @@ contract RevertingVerifier is IPlonkVerifier {
       while (usingGas) {
         usingGas = true;
       }
+
+      // silencing the warning - this needs to be external to consume gas.
+      scenario = Scenario.GAS_GUZZLE;
     }
 
     // defaults to EMPTY_REVERT scenario

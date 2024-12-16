@@ -8,21 +8,25 @@ pragma solidity 0.8.26;
  */
 contract CallForwardingProxy {
   /// @notice The underlying target address that is called.
-  address public immutable target;
+  address public immutable TARGET;
 
   constructor(address _target) {
-    target = _target;
+    TARGET = _target;
   }
 
   /**
    * @notice Defaults to, and forwards all calls to the target address.
    */
   fallback() external payable {
-    (bool success, bytes memory data) = target.call{ value: msg.value }(msg.data);
+    (bool success, bytes memory data) = TARGET.call{ value: msg.value }(msg.data);
     require(success, "Call failed");
 
     assembly {
       return(add(data, 0x20), mload(data))
     }
+  }
+
+  receive() external payable {
+    revert("ETH not accepted");
   }
 }

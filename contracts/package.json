@@ -43,7 +43,7 @@
     "dotenv": "16.4.5",
     "edit-json-file": "1.8.0",
     "ethers": "6.12.0",
-    "hardhat": "2.22.11",
+    "hardhat": "2.22.17",
     "hardhat-deploy": "0.12.4",
     "hardhat-storage-layout": "0.1.7",
     "hardhat-tracer": "2.8.2",

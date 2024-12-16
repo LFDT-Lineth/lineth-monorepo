@@ -13,6 +13,7 @@
     "reason-string": "off",
     "check-send-result": "off",
     "no-unused-import": ["error"],
-    "gas-custom-errors": "off"
+    "gas-custom-errors": "off",
+    "no-complex-fallback": "off"
   }
 }
