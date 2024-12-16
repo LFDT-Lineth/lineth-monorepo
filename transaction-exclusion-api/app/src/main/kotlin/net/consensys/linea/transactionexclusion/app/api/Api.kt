@@ -78,7 +78,7 @@ class Api(
       )
       .compose { verticleId: String ->
         jsonRpcServerId = verticleId
-        serverPort = httpServer!!.bindedPort
+        serverPort = httpServer!!.boundPort
         vertx.deployVerticle(observabilityServer).onSuccess { monitorVerticleId ->
           this.observabilityServerId = monitorVerticleId
         }

@@ -5,7 +5,6 @@ import net.consensys.zkevm.coordinator.clients.ExecutionProverClientV2
 import net.consensys.zkevm.domain.Batch
 import net.consensys.zkevm.domain.BlocksConflation
 import net.consensys.zkevm.ethereum.coordination.conflation.BlocksTracesConflated
-import net.consensys.zkevm.toULong
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture
@@ -19,8 +18,8 @@ class ZkProofCreationCoordinatorImpl(
     blocksConflation: BlocksConflation,
     traces: BlocksTracesConflated
   ): SafeFuture<Batch> {
-    val startBlockNumber = blocksConflation.blocks.first().blockNumber.toULong()
-    val endBlockNumber = blocksConflation.blocks.last().blockNumber.toULong()
+    val startBlockNumber = blocksConflation.blocks.first().number.toULong()
+    val endBlockNumber = blocksConflation.blocks.last().number.toULong()
     val blocksConflationInterval = blocksConflation.intervalString()
 
     return executionProverClient

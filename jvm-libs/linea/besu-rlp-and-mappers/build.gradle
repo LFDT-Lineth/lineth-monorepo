@@ -1,0 +1,11 @@
+plugins {
+  id 'net.consensys.zkevm.kotlin-library-conventions'
+}
+
+dependencies {
+  api(project(':jvm-libs:generic:extensions:kotlin'))
+  api(project(':jvm-libs:generic:extensions:futures'))
+  api(project(':jvm-libs:linea:core:domain-models'))
+  api(project(':jvm-libs:linea:besu-libs'))
+  api "io.vertx:vertx-core"
+}

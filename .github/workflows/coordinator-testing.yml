@@ -26,17 +26,19 @@ jobs:
       GITHUB_TOKEN: ${{ secrets._GITHUB_TOKEN_RELEASE_ACCESS }}
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-    runs-on: [self-hosted, ubuntu-22.04, X64, medium]
+    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-large
     name: Coordinator tests
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@8df1039502a15bceb9433410b1a100fbe190c53b #v4.5.0
         with:
           distribution: temurin
           java-version: 21
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        # Configure Gradle for optimal use in GiHub Actions, including caching of downloaded dependencies.
+        # See: https://github.com/gradle/actions/blob/main/setup-gradle/README.md
+        uses: gradle/actions/setup-gradle@cc4fc85e6b35bafd578d5ffbc76a5518407e1af0 #v4.2.1
       - name: Restore cached images
         id: restore-cached-images
         uses: actions/cache/restore@v4.0.2

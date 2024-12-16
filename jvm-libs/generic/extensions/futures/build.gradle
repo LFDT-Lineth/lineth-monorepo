@@ -6,7 +6,7 @@ plugins {
 description = "Utilities related to futures used in Linea"
 
 dependencies {
-  implementation "io.vertx:vertx-core"
+  api "io.vertx:vertx-core"
   testImplementation("io.vertx:vertx-junit5")
 }
 

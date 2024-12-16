@@ -3,6 +3,7 @@ package net.consensys.zkevm.coordinator.clients.prover
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ArrayNode
 import io.vertx.core.Vertx
+import linea.encoding.BlockRLPEncoder
 import net.consensys.encodeHex
 import net.consensys.linea.async.toSafeFuture
 import net.consensys.toBigInteger
@@ -13,11 +14,9 @@ import net.consensys.zkevm.coordinator.clients.L2MessageServiceLogsClient
 import net.consensys.zkevm.coordinator.clients.prover.serialization.JsonSerialization
 import net.consensys.zkevm.domain.ProofIndex
 import net.consensys.zkevm.domain.RlpBridgeLogsData
-import net.consensys.zkevm.encoding.ExecutionPayloadV1Encoder
-import net.consensys.zkevm.encoding.ExecutionPayloadV1RLPEncoderByBesuImplementation
+import net.consensys.zkevm.encoding.BlockEncoder
 import net.consensys.zkevm.fileio.FileReader
 import net.consensys.zkevm.fileio.FileWriter
-import net.consensys.zkevm.toULong
 import org.apache.logging.log4j.LogManager
 import org.web3j.protocol.Web3j
 import org.web3j.protocol.core.DefaultBlockParameter
@@ -37,7 +36,7 @@ data class BatchExecutionProofRequestDto(
 internal class ExecutionProofRequestDataDecorator(
   private val l2MessageServiceLogsClient: L2MessageServiceLogsClient,
   private val l2Web3jClient: Web3j,
-  private val encoder: ExecutionPayloadV1Encoder = ExecutionPayloadV1RLPEncoderByBesuImplementation
+  private val encoder: BlockEncoder = BlockRLPEncoder
 ) : (BatchExecutionProofRequestV1) -> SafeFuture<BatchExecutionProofRequestDto> {
   private fun getBlockStateRootHash(blockNumber: ULong): SafeFuture<String> {
     return l2Web3jClient
@@ -52,13 +51,13 @@ internal class ExecutionProofRequestDataDecorator(
 
   override fun invoke(request: BatchExecutionProofRequestV1): SafeFuture<BatchExecutionProofRequestDto> {
     val bridgeLogsSfList = request.blocks.map { block ->
-      l2MessageServiceLogsClient.getBridgeLogs(blockNumber = block.blockNumber.longValue())
+      l2MessageServiceLogsClient.getBridgeLogs(blockNumber = block.number.toLong())
         .thenApply { block to it }
     }
 
     return SafeFuture.collectAll(bridgeLogsSfList.stream())
       .thenCombine(
-        getBlockStateRootHash(request.blocks.first().blockNumber.toULong() - 1UL)
+        getBlockStateRootHash(request.blocks.first().number.toULong() - 1UL)
       ) { blocksAndBridgeLogs, previousKeccakStateRootHash ->
         BatchExecutionProofRequestDto(
           zkParentStateRootHash = request.type2StateData.zkParentStateRootHash.encodeHex(),

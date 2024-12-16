@@ -14,7 +14,6 @@ dependencies {
   testImplementation("com.fasterxml.jackson.core:jackson-annotations:${libs.versions.jackson.get()}")
   testImplementation("com.fasterxml.jackson.module:jackson-module-kotlin:${libs.versions.jackson.get()}")
   testImplementation "io.tmio:tuweni-units:${libs.versions.tuweni.get()}"
-  testImplementation("tech.pegasys.teku.internal:executionclient:${libs.versions.teku.get()}")
   testImplementation(project(":coordinator:persistence:db-common"))
   testImplementation(testFixtures(project(":coordinator:core")))
   testImplementation(testFixtures(project(":jvm-libs:generic:extensions:kotlin")))

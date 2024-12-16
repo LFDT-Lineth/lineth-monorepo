@@ -1,5 +1,8 @@
 package net.consensys.linea.jsonrpc
 
+import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Ok
@@ -21,6 +24,7 @@ import io.vertx.core.json.Json
 import io.vertx.core.json.JsonArray
 import io.vertx.core.json.JsonObject
 import io.vertx.core.json.jackson.DatabindCodec
+import io.vertx.core.json.jackson.VertxModule
 import io.vertx.ext.auth.User
 import net.consensys.linea.metrics.micrometer.DynamicTagTimerCapture
 import net.consensys.linea.metrics.micrometer.SimpleTimerCapture
@@ -51,12 +55,15 @@ private data class RequestContext(
 class JsonRpcMessageProcessor(
   private val requestsHandler: JsonRpcRequestHandler,
   private val meterRegistry: MeterRegistry,
-  private val requestParser: JsonRpcRequestParser = Companion::parseRequest
+  private val requestParser: JsonRpcRequestParser = Companion::parseRequest,
+  private val log: Logger = LogManager.getLogger(JsonRpcMessageProcessor::class.java),
+  private val responseResultObjectMapper: ObjectMapper = jacksonObjectMapper().registerModules(VertxModule()),
+  private val rpcEnvelopeObjectMapper: ObjectMapper = jacksonObjectMapper()
 ) : JsonRpcMessageHandler {
   init {
     DatabindCodec.mapper().registerKotlinModule()
   }
-  private val log: Logger = LogManager.getLogger(this.javaClass)
+
   private val counterBuilder = Counter.builder("jsonrpc.counter")
   override fun invoke(user: User?, messageJsonStr: String): Future<String> =
     handleMessage(user, messageJsonStr)
@@ -174,7 +181,13 @@ class JsonRpcMessageProcessor(
     return SimpleTimerCapture<String>(meterRegistry, "jsonrpc.serialization.response")
       .setDescription("Time of json response serialization")
       .setTag("method", requestContext.method)
-      .captureTime { Json.encode(requestContext.result.merge()) }
+      .captureTime {
+        val result = requestContext.result.map { successResponse ->
+          val resultJsonNode = responseResultObjectMapper.valueToTree<JsonNode>(successResponse.result)
+          successResponse.copy(result = resultJsonNode)
+        }
+        rpcEnvelopeObjectMapper.writeValueAsString(result.merge())
+      }
   }
 
   private fun handleRequest(

@@ -1,10 +1,10 @@
 package net.consensys.zkevm.ethereum.coordination.conflation
 
+import linea.domain.Block
 import net.consensys.zkevm.domain.Blob
 import net.consensys.zkevm.domain.BlockCounters
 import net.consensys.zkevm.domain.BlocksConflation
 import net.consensys.zkevm.domain.ConflationCalculationResult
-import tech.pegasys.teku.ethereum.executionclient.schema.ExecutionPayloadV1
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 fun interface BlobCreationHandler {
@@ -23,6 +23,6 @@ interface TracesConflationCalculator {
 }
 
 interface ConflationService {
-  fun newBlock(block: ExecutionPayloadV1, blockCounters: BlockCounters)
+  fun newBlock(block: Block, blockCounters: BlockCounters)
   fun onConflatedBatch(consumer: ConflationHandler)
 }

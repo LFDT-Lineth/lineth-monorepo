@@ -2,13 +2,13 @@ package net.consensys.zkevm.ethereum.coordination.aggregation
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import kotlinx.datetime.Instant
+import linea.domain.BlockHeaderSummary
 import net.consensys.ByteArrayExt
 import net.consensys.FakeFixedClock
 import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
 import net.consensys.zkevm.domain.BlobCounters
 import net.consensys.zkevm.domain.BlobsToAggregate
-import net.consensys.zkevm.ethereum.coordination.blockcreation.BlockHeaderSummary
 import net.consensys.zkevm.ethereum.coordination.blockcreation.SafeBlockProvider
 import org.assertj.core.api.Assertions
 import org.assertj.core.api.Assertions.assertThat

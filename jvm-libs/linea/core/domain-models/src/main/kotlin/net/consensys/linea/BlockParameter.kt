@@ -7,7 +7,7 @@ sealed interface BlockParameter {
 
   companion object {
     fun fromNumber(blockNumber: Number): BlockNumber {
-      require(blockNumber.toLong() > 0) { "block number must be greater than 0, value=$blockNumber" }
+      require(blockNumber.toLong() >= 0) { "block number must be greater or equal than 0, value=$blockNumber" }
       return BlockNumber(blockNumber.toLong().toULong())
     }
 

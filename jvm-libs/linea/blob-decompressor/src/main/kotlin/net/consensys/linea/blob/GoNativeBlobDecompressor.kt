@@ -13,7 +13,7 @@ interface BlobDecompressor {
 
 internal class Adapter(
   private val delegate: GoNativeBlobDecompressorJnaBinding,
-  private val maxExpectedCompressionRatio: Int = 10,
+  private val maxExpectedCompressionRatio: Int = 20,
   dictionaries: List<Path>
 ) : BlobDecompressor {
   init {

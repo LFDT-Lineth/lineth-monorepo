@@ -37,8 +37,6 @@ class GasPriceCapProviderImplTest {
   private val adjustmentConstant = 25U
   private val finalizationTargetMaxDelay = 6.hours
   private val gasPriceCapsCoefficient = 1.0.div(1.1)
-  private val historicBaseFeePerBlobGasLowerBound = 200000000uL // 0.2GWei
-  private val initialFixedAvgReward = 100000000uL // 0.1GWei
   private val gasPriceCapCalculator = GasPriceCapCalculatorImpl()
 
   private lateinit var targetBlockTime: Instant

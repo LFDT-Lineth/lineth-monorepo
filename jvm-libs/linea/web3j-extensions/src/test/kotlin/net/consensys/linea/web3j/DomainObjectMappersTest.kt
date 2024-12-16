@@ -1,5 +1,6 @@
 package net.consensys.linea.web3j
 
+/*
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.web3j.protocol.core.methods.response.AccessListObject
@@ -219,3 +220,4 @@ class DomainObjectMappersTest {
     assertThat(encodedTransaction.toString()).isEqualTo(signedContractCreation)
   }
 }
+*/

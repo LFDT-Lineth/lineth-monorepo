@@ -1,9 +1,7 @@
 package net.consensys.zkevm.coordinator.app
 
-import com.fasterxml.jackson.databind.module.SimpleModule
 import io.micrometer.core.instrument.MeterRegistry
 import io.vertx.core.Vertx
-import io.vertx.core.json.jackson.DatabindCodec
 import io.vertx.micrometer.backends.BackendRegistries
 import io.vertx.sqlclient.SqlClient
 import net.consensys.linea.async.toSafeFuture
@@ -32,11 +30,9 @@ import net.consensys.zkevm.persistence.db.PersistenceRetryer
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
-import org.apache.tuweni.bytes.Bytes
 import org.web3j.protocol.Web3j
 import org.web3j.protocol.http.HttpService
 import org.web3j.utils.Async
-import tech.pegasys.teku.ethereum.executionclient.serialization.BytesSerializer
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import kotlin.time.toKotlinDuration
 
@@ -48,12 +44,6 @@ class CoordinatorApp(private val configs: CoordinatorConfig) {
     log.debug("Vertx full configs: {}", vertxConfig)
     log.info("App configs: {}", configs)
 
-    // TODO: adapt JsonMessageProcessor to use custom ObjectMapper
-    // this is just dark magic.
-    val module = SimpleModule()
-    module.addSerializer(Bytes::class.java, BytesSerializer())
-    DatabindCodec.mapper().registerModule(module)
-    // .enable(SerializationFeature.INDENT_OUTPUT)
     Vertx.vertx(vertxConfig)
   }
   private val meterRegistry: MeterRegistry = BackendRegistries.getDefaultNow()

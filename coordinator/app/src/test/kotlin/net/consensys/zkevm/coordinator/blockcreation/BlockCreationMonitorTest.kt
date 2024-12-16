@@ -1,14 +1,24 @@
 package net.consensys.zkevm.coordinator.blockcreation
 
+import build.linea.s11n.jackson.ethApiObjectMapper
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
-import io.vertx.junit5.VertxTestContext
+import linea.domain.Block
+import linea.domain.createBlock
+import linea.domain.toEthGetBlockResponse
+import linea.jsonrpc.TestingJsonRpcServer
+import linea.log4j.configureLoggers
+import linea.web3j.createWeb3jHttpClient
 import net.consensys.ByteArrayExt
-import net.consensys.decodeHex
 import net.consensys.linea.async.get
 import net.consensys.linea.web3j.ExtendedWeb3J
+import net.consensys.linea.web3j.ExtendedWeb3JImpl
+import net.consensys.toHexString
+import net.consensys.toULongFromHex
 import net.consensys.zkevm.ethereum.coordination.blockcreation.BlockCreated
 import net.consensys.zkevm.ethereum.coordination.blockcreation.BlockCreationListener
+import org.apache.logging.log4j.Level
+import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.Awaitility.await
@@ -16,93 +26,86 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
-import org.mockito.ArgumentMatchers.eq
-import org.mockito.Mockito.atLeastOnce
-import org.mockito.kotlin.any
-import org.mockito.kotlin.atLeast
-import org.mockito.kotlin.atMost
-import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
-import org.mockito.kotlin.never
-import org.mockito.kotlin.times
-import org.mockito.kotlin.verify
-import org.mockito.kotlin.whenever
-import org.web3j.protocol.Web3j
-import org.web3j.protocol.core.Request
-import org.web3j.protocol.core.methods.response.EthBlock
-import tech.pegasys.teku.ethereum.executionclient.schema.executionPayloadV1
 import tech.pegasys.teku.infrastructure.async.SafeFuture
-import java.math.BigInteger
+import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
-import kotlin.time.Duration
+import java.util.concurrent.atomic.AtomicLong
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toJavaDuration
 
 @ExtendWith(VertxExtension::class)
 class BlockCreationMonitorTest {
-  private val parentHash = "0x1000000000000000000000000000000000000000000000000000000000000000".decodeHex()
-  private val startingBlockNumberInclusive: Long = 100
-  private val blocksToFetch: Long = 5L
-  private val lastBlockNumberInclusiveToProcess: ULong = startingBlockNumberInclusive.toULong() + 10uL
   private lateinit var log: Logger
-  private lateinit var web3jNativeClientMock: Web3j
   private lateinit var web3jClient: ExtendedWeb3J
-  private lateinit var blockCreationListener: BlockCreationListener
-  private var lastProvenBlock: Long = startingBlockNumberInclusive
+  private lateinit var blockCreationListener: BlockCreationListenerDouble
   private var config: BlockCreationMonitor.Config =
     BlockCreationMonitor.Config(
       pollingInterval = 100.milliseconds,
       blocksToFinalization = 2L,
-      blocksFetchLimit = blocksToFetch,
-      lastL2BlockNumberToProcessInclusive = lastBlockNumberInclusiveToProcess
+      blocksFetchLimit = 500,
+      lastL2BlockNumberToProcessInclusive = null
     )
+  private lateinit var vertx: Vertx
   private val executor = Executors.newSingleThreadScheduledExecutor()
+  private lateinit var lastProvenBlockNumberProvider: LastProvenBlockNumberProviderDouble
   private lateinit var monitor: BlockCreationMonitor
+
+  private lateinit var fakeL2RpcNode: TestingJsonRpcServer
+
+  private class BlockCreationListenerDouble() : BlockCreationListener {
+    val blocksReceived: MutableList<Block> = CopyOnWriteArrayList()
+
+    override fun acceptBlock(blockEvent: BlockCreated): SafeFuture<Unit> {
+      blocksReceived.add(blockEvent.block)
+      return SafeFuture.completedFuture(Unit)
+    }
+  }
+
+  private class LastProvenBlockNumberProviderDouble(
+    initialValue: ULong
+  ) : LastProvenBlockNumberProviderAsync {
+    var lastProvenBlock: AtomicLong = AtomicLong(initialValue.toLong())
+    override fun getLastProvenBlockNumber(): SafeFuture<Long> {
+      return SafeFuture.completedFuture(lastProvenBlock.get())
+    }
+  }
+
+  fun createBlockCreationMonitor(
+    startingBlockNumberExclusive: Long = 99,
+    blockCreationListener: BlockCreationListener = this.blockCreationListener,
+    config: BlockCreationMonitor.Config = this.config
+  ): BlockCreationMonitor {
+    return BlockCreationMonitor(
+      this.vertx,
+      web3jClient,
+      startingBlockNumberExclusive = startingBlockNumberExclusive,
+      blockCreationListener,
+      lastProvenBlockNumberProvider,
+      config
+    )
+  }
 
   @BeforeEach
   fun beforeEach(vertx: Vertx) {
-    val ethGetBlockByNumberMock: Request<Any, EthBlock> = mock {
-      on { sendAsync() } doReturn SafeFuture.completedFuture(EthBlock())
-      on { sendAsync() } doReturn SafeFuture.completedFuture(EthBlock())
-      on { sendAsync() } doReturn SafeFuture.completedFuture(
-        EthBlock().apply {
-          result = EthBlock.Block()
-            .apply {
-              setNumber("0x63")
-              hash = "0x1000000000000000000000000000000000000000000000000000000000000000"
-            }
-        }
-      )
-    }
-
-    web3jNativeClientMock = mock {
-      on { ethGetBlockByNumber(any(), any()) } doReturn ethGetBlockByNumberMock
-    }
-    web3jClient = mock {
-      on { web3jClient } doReturn web3jNativeClientMock
-    }
-    blockCreationListener =
-      mock { on { acceptBlock(any()) } doReturn SafeFuture.completedFuture(Unit) }
-
+    configureLoggers(Level.INFO, "test.client.l2.web3j" to Level.TRACE)
+    this.vertx = vertx
     log = mock()
 
-    val lastProvenBlockNumberProviderAsync = object : LastProvenBlockNumberProviderAsync {
-      override fun getLastProvenBlockNumber(): SafeFuture<Long> {
-        return SafeFuture.completedFuture(lastProvenBlock)
-      }
-    }
-
-    monitor =
-      BlockCreationMonitor(
-        vertx,
-        web3jClient,
-        startingBlockNumberExclusive = startingBlockNumberInclusive - 1,
-        blockCreationListener,
-        lastProvenBlockNumberProviderAsync,
-        config
+    fakeL2RpcNode = TestingJsonRpcServer(
+      vertx = vertx,
+      recordRequestsResponses = true,
+      responseObjectMapper = ethApiObjectMapper
+    )
+    blockCreationListener = BlockCreationListenerDouble()
+    web3jClient = ExtendedWeb3JImpl(
+      createWeb3jHttpClient(
+        rpcUrl = "http://localhost:${fakeL2RpcNode.boundPort}",
+        log = LogManager.getLogger("test.client.l2.web3j")
       )
+    )
+    lastProvenBlockNumberProvider = LastProvenBlockNumberProviderDouble(99u)
   }
 
   @AfterEach
@@ -111,427 +114,259 @@ class BlockCreationMonitorTest {
     vertx.close().get()
   }
 
-  @Test
-  fun `skip blocks after lastBlockNumberInclusiveToProcess`(vertx: Vertx, testContext: VertxTestContext) {
-    val lastProvenBlockNumberProviderAsync = mock<LastProvenBlockNumberProviderAsync>()
-    whenever(lastProvenBlockNumberProviderAsync.getLastProvenBlockNumber()).thenAnswer {
-      SafeFuture.completedFuture((lastBlockNumberInclusiveToProcess - 2uL).toLong())
+  fun createBlocks(
+    startBlockNumber: ULong,
+    numberOfBlocks: Int,
+    startBlockHash: ByteArray = ByteArrayExt.random32(),
+    startBlockParentHash: ByteArray = ByteArrayExt.random32()
+  ): List<Block> {
+    var blockHash = startBlockHash
+    var parentHash = startBlockParentHash
+    return (0..numberOfBlocks).map { i ->
+      createBlock(
+        number = startBlockNumber + i.toULong(),
+        hash = blockHash,
+        parentHash = parentHash
+      ).also {
+        blockHash = ByteArrayExt.random32()
+        parentHash = it.hash
+      }
+    }
+  }
+
+  private fun setupFakeExecutionLayerWithBlocks(blocks: List<Block>) {
+    fakeL2RpcNode.handle("eth_getBlockByNumber") { request ->
+      val blockNumber = ((request.params as List<Any?>)[0] as String).toULongFromHex()
+      blocks.find { it.number == blockNumber }?.toEthGetBlockResponse()
     }
 
-    monitor =
-      BlockCreationMonitor(
-        vertx,
-        web3jClient,
-        startingBlockNumberExclusive = (lastBlockNumberInclusiveToProcess - 2uL).toLong(),
-        blockCreationListener,
-        lastProvenBlockNumberProviderAsync,
-        config
-      )
-    val payload =
-      executionPayloadV1(blockNumber = lastBlockNumberInclusiveToProcess.toLong() - 1, parentHash = parentHash)
-    val payload2 =
-      executionPayloadV1(
-        blockNumber = lastBlockNumberInclusiveToProcess.toLong(),
-        parentHash = payload.blockHash.toArray()
-      )
-    val payload3 =
-      executionPayloadV1(
-        blockNumber = lastBlockNumberInclusiveToProcess.toLong() + 1,
-        parentHash = payload2.blockHash.toArray()
-      )
-
-    val headBlockNumber = lastBlockNumberInclusiveToProcess.toLong() + config.blocksToFinalization
-    whenever(web3jClient.ethBlockNumber())
-      .thenReturn(SafeFuture.completedFuture(BigInteger.valueOf(headBlockNumber)))
-      .thenReturn(SafeFuture.completedFuture(BigInteger.valueOf(headBlockNumber + 1)))
-    whenever(web3jClient.ethGetExecutionPayloadByNumber(any()))
-      .thenReturn(SafeFuture.completedFuture(payload))
-      .thenReturn(SafeFuture.completedFuture(payload2))
-      .thenReturn(SafeFuture.completedFuture(payload3))
-    whenever(blockCreationListener.acceptBlock(any())).thenReturn(SafeFuture.completedFuture(Unit))
-
-    monitor.start().thenApply {
-      await()
-        .untilAsserted {
-          verify(lastProvenBlockNumberProviderAsync, atLeast(3)).getLastProvenBlockNumber()
-          verify(web3jClient).ethGetExecutionPayloadByNumber(eq(lastBlockNumberInclusiveToProcess.toLong() - 1))
-          verify(web3jClient).ethGetExecutionPayloadByNumber(eq(lastBlockNumberInclusiveToProcess.toLong()))
-          verify(web3jClient, never()).ethGetExecutionPayloadByNumber(
-            eq(lastBlockNumberInclusiveToProcess.toLong() + 1)
-          )
-          verify(blockCreationListener, times(1)).acceptBlock(BlockCreated(payload))
-          verify(blockCreationListener, times(1)).acceptBlock(BlockCreated(payload2))
-          verify(blockCreationListener, never()).acceptBlock(BlockCreated(payload3))
-          assertThat(monitor.nexBlockNumberToFetch).isEqualTo(lastBlockNumberInclusiveToProcess.toLong() + 1)
-        }
-      testContext.completeNow()
+    fakeL2RpcNode.handle("eth_blockNumber") { _ ->
+      blocks.last().number.toHexString()
     }
-      .whenException(testContext::failNow)
   }
 
   @Test
-  fun `notifies listener after block is finalized sync`(vertx: Vertx, testContext: VertxTestContext) {
-    val payload =
-      executionPayloadV1(blockNumber = startingBlockNumberInclusive, parentHash = parentHash)
-    val payload2 =
-      executionPayloadV1(
-        blockNumber = startingBlockNumberInclusive + 1,
-        parentHash = payload.blockHash.toArray()
-      )
-    val headBlockNumber = startingBlockNumberInclusive + config.blocksToFinalization
-    whenever(web3jClient.ethBlockNumber())
-      .thenReturn(SafeFuture.completedFuture(BigInteger.valueOf(headBlockNumber)))
-      .thenReturn(SafeFuture.completedFuture(BigInteger.valueOf(headBlockNumber + 1)))
-    whenever(web3jClient.ethGetExecutionPayloadByNumber(any()))
-      .thenReturn(SafeFuture.completedFuture(payload))
-      .thenReturn(SafeFuture.completedFuture(payload2))
-    whenever(blockCreationListener.acceptBlock(any())).thenReturn(SafeFuture.completedFuture(Unit))
-
-    val lastProvenBlockNumberProviderAsync = mock<LastProvenBlockNumberProviderAsync>()
-
-    val monitor =
-      BlockCreationMonitor(
-        vertx,
-        web3jClient,
-        startingBlockNumberExclusive = startingBlockNumberInclusive - 1,
-        blockCreationListener,
-        lastProvenBlockNumberProviderAsync,
-        config
-      )
-    whenever(lastProvenBlockNumberProviderAsync.getLastProvenBlockNumber()).thenAnswer {
-      SafeFuture.completedFuture(lastProvenBlock)
-    }
-    monitor.start().thenApply {
-      await()
-        .untilAsserted {
-          verify(lastProvenBlockNumberProviderAsync, atLeast(3)).getLastProvenBlockNumber()
-          verify(web3jClient).ethGetExecutionPayloadByNumber(eq(startingBlockNumberInclusive))
-          verify(web3jClient).ethGetExecutionPayloadByNumber(eq(startingBlockNumberInclusive + 1))
-          verify(blockCreationListener).acceptBlock(BlockCreated(payload))
-          verify(blockCreationListener).acceptBlock(BlockCreated(payload2))
-          assertThat(monitor.nexBlockNumberToFetch).isEqualTo(startingBlockNumberInclusive + 2)
-        }
-      testContext.completeNow()
-    }
-      .whenException(testContext::failNow)
-  }
-
-  @Test
-  fun `does not notify listener when block is not safely finalized`(testContext: VertxTestContext) {
-    val payload =
-      executionPayloadV1(blockNumber = startingBlockNumberInclusive, parentHash = parentHash)
-    val headBlockNumber = startingBlockNumberInclusive + config.blocksToFinalization - 1
-    whenever(web3jClient.ethBlockNumber())
-      .thenReturn(SafeFuture.completedFuture(BigInteger.valueOf(headBlockNumber)))
-    whenever(web3jClient.ethGetExecutionPayloadByNumber(any()))
-      .thenReturn(SafeFuture.completedFuture(payload))
-    whenever(blockCreationListener.acceptBlock(any())).thenReturn(SafeFuture.completedFuture(Unit))
-
-    monitor.start().thenApply {
-      await()
-        .timeout(1.seconds.toJavaDuration())
-        .untilAsserted {
-          verify(web3jClient, never()).ethGetExecutionPayloadByNumber(any())
-          verify(blockCreationListener, never()).acceptBlock(BlockCreated(payload))
-          assertThat(monitor.nexBlockNumberToFetch).isEqualTo(startingBlockNumberInclusive)
-        }
-      testContext.completeNow()
-    }
-      .whenException(testContext::failNow)
-  }
-
-  @Test
-  fun `when listener throws retries on the next tick and moves on`(testContext: VertxTestContext) {
-    val payload =
-      executionPayloadV1(blockNumber = startingBlockNumberInclusive, parentHash = parentHash)
-    val headBlockNumber = startingBlockNumberInclusive + config.blocksToFinalization + 1
-    whenever(web3jClient.ethBlockNumber())
-      .thenReturn(SafeFuture.completedFuture(BigInteger.valueOf(headBlockNumber)))
-    whenever(web3jClient.ethGetExecutionPayloadByNumber(any()))
-      .thenReturn(SafeFuture.completedFuture(payload))
-
-    whenever(blockCreationListener.acceptBlock(any()))
-      .thenReturn(SafeFuture.failedFuture(Exception("Notification 1 Error")))
-      .thenThrow(RuntimeException("Notification 2 Error"))
-      .thenReturn(SafeFuture.failedFuture(Exception("Notification 3 Error")))
-      .thenReturn(SafeFuture.completedFuture(Unit))
-
-    monitor.start().thenApply {
-      await()
-        .timeout(5.seconds.toJavaDuration())
-        .untilAsserted {
-          verify(blockCreationListener, atLeast(4)).acceptBlock(BlockCreated(payload))
-          assertThat(monitor.nexBlockNumberToFetch).isEqualTo(startingBlockNumberInclusive + 1)
-        }
-      testContext.completeNow()
-    }
-      .whenException(testContext::failNow)
-  }
-
-  @Test
-  fun `is resilient to connection failures`(testContext: VertxTestContext) {
-    val payload =
-      executionPayloadV1(blockNumber = startingBlockNumberInclusive, parentHash = parentHash)
-    val headBlockNumber = startingBlockNumberInclusive + config.blocksToFinalization
-    whenever(web3jClient.ethBlockNumber())
-      .thenReturn(SafeFuture.failedFuture(Exception("ethBlockNumber Error 1")))
-      .thenReturn(SafeFuture.completedFuture(BigInteger.valueOf(headBlockNumber)))
-    whenever(web3jClient.ethGetExecutionPayloadByNumber(any()))
-      .thenReturn(SafeFuture.failedFuture(Exception("ethGetExecutionPayloadByNumber Error 1")))
-      .thenReturn(SafeFuture.completedFuture(payload))
-    whenever(blockCreationListener.acceptBlock(any())).thenReturn(SafeFuture.completedFuture(Unit))
-
-    monitor.start().thenApply {
-      await()
-        .timeout(1.seconds.toJavaDuration())
-        .untilAsserted {
-          verify(blockCreationListener, times(1)).acceptBlock(BlockCreated(payload))
-          assertThat(monitor.nexBlockNumberToFetch).isEqualTo(startingBlockNumberInclusive + 1)
-        }
-      testContext.completeNow()
-    }
-      .whenException(testContext::failNow)
-  }
-
-  @Test
-  fun `should stop when reorg is detected above blocksToFinalization limit - manual intervention necessary`(
-    testContext: VertxTestContext
-  ) {
-    val payload =
-      executionPayloadV1(blockNumber = startingBlockNumberInclusive, parentHash = parentHash)
-    val payload2 =
-      executionPayloadV1(
-        blockNumber = startingBlockNumberInclusive + 1,
-        parentHash = ByteArrayExt.random32()
-      )
-    val headBlockNumber = startingBlockNumberInclusive + config.blocksToFinalization
-    whenever(web3jClient.ethBlockNumber())
-      .thenReturn(SafeFuture.completedFuture(BigInteger.valueOf(headBlockNumber)))
-      .thenReturn(SafeFuture.completedFuture(BigInteger.valueOf(headBlockNumber + 1)))
-    whenever(web3jClient.ethGetExecutionPayloadByNumber(any()))
-      .thenReturn(SafeFuture.completedFuture(payload))
-      .thenReturn(SafeFuture.completedFuture(payload2))
-    whenever(blockCreationListener.acceptBlock(any())).thenReturn(SafeFuture.completedFuture(Unit))
-
-    monitor.start().thenApply {
-      await()
-        .timeout(1.seconds.toJavaDuration())
-        .untilAsserted {
-          verify(blockCreationListener, times(1)).acceptBlock(BlockCreated(payload))
-          verify(blockCreationListener, never()).acceptBlock(BlockCreated(payload2))
-          assertThat(monitor.nexBlockNumberToFetch).isEqualTo(startingBlockNumberInclusive + 1)
-        }
-      testContext.completeNow()
-    }
-      .whenException(testContext::failNow)
-  }
-
-  private fun <V> delay(delay: Duration, action: () -> SafeFuture<V>): SafeFuture<V> {
-    val future = SafeFuture<V>()
-    executor.schedule(
-      { action().propagateTo(future) },
-      delay.inWholeMilliseconds,
-      TimeUnit.MILLISECONDS
+  fun `should stop fetching blocks after lastBlockNumberInclusiveToProcess`() {
+    monitor = createBlockCreationMonitor(
+      startingBlockNumberExclusive = 99,
+      config = config.copy(lastL2BlockNumberToProcessInclusive = 103u)
     )
-    return future
+
+    setupFakeExecutionLayerWithBlocks(createBlocks(startBlockNumber = 99u, numberOfBlocks = 20))
+
+    monitor.start()
+    await()
+      .atMost(20.seconds.toJavaDuration())
+      .untilAsserted {
+        assertThat(blockCreationListener.blocksReceived).isNotEmpty
+        assertThat(blockCreationListener.blocksReceived.last().number).isGreaterThanOrEqualTo(103u)
+      }
+
+    // Wait for a while to make sure no more blocks are fetched
+    await().atLeast(config.pollingInterval.times(3).toJavaDuration())
+
+    assertThat(blockCreationListener.blocksReceived.last().number).isEqualTo(103UL)
   }
 
   @Test
-  fun `should poll in order when response takes longer that polling interval`(testContext: VertxTestContext) {
-    val payload =
-      executionPayloadV1(blockNumber = startingBlockNumberInclusive, parentHash = parentHash)
-    val payload2 =
-      executionPayloadV1(
-        blockNumber = startingBlockNumberInclusive + 1,
-        parentHash = payload.blockHash.toArray()
-      )
-    val headBlockNumber = startingBlockNumberInclusive + config.blocksToFinalization
+  fun `should notify lister only after block is considered final on L2`() {
+    monitor = createBlockCreationMonitor(
+      startingBlockNumberExclusive = 99,
+      config = config.copy(blocksToFinalization = 2, blocksFetchLimit = 500)
+    )
 
-    whenever(web3jClient.ethBlockNumber())
-      .then {
-        delay(config.pollingInterval.times(2)) {
-          SafeFuture.completedFuture(BigInteger.valueOf(headBlockNumber))
+    setupFakeExecutionLayerWithBlocks(createBlocks(startBlockNumber = 99u, numberOfBlocks = 200))
+    fakeL2RpcNode.handle("eth_blockNumber") { _ -> 105UL.toHexString() }
+    // latest eligible conflation is: 105 - 2 = 103, inclusive
+
+    monitor.start()
+    await()
+      .atMost(20.seconds.toJavaDuration())
+      .untilAsserted {
+        assertThat(blockCreationListener.blocksReceived).isNotEmpty
+        assertThat(blockCreationListener.blocksReceived.last().number).isGreaterThanOrEqualTo(103u)
+      }
+    // Wait for a while to make sure no more blocks are fetched
+    await().atLeast(config.pollingInterval.times(3).toJavaDuration())
+    // assert that no more block were sent to the listener
+    assertThat(blockCreationListener.blocksReceived.last().number).isEqualTo(103UL)
+
+    // move chain head forward
+    fakeL2RpcNode.handle("eth_blockNumber") { _ -> 120UL.toHexString() }
+
+    // assert it resumes conflation
+    await()
+      .atMost(20.seconds.toJavaDuration())
+      .untilAsserted {
+        assertThat(blockCreationListener.blocksReceived.last().number).isEqualTo(118UL)
+      }
+  }
+
+  @Test
+  fun `shall retry notify the listener when it throws and keeps block order`() {
+    val fakeBuggyLister = object : BlockCreationListener {
+      var errorCount = 0
+      override fun acceptBlock(blockEvent: BlockCreated): SafeFuture<Unit> {
+        return if (blockEvent.block.number == 105UL && errorCount < 3) {
+          errorCount++
+          throw RuntimeException("Error on block 105")
+        } else {
+          blockCreationListener.acceptBlock(blockEvent)
         }
       }
-      .thenReturn(SafeFuture.completedFuture(BigInteger.valueOf(headBlockNumber + 1)))
-    whenever(web3jClient.ethGetExecutionPayloadByNumber(any()))
-      .then { delay(config.pollingInterval.times(2)) { SafeFuture.completedFuture(payload) } }
-      .thenReturn(SafeFuture.completedFuture(payload2))
-    whenever(blockCreationListener.acceptBlock(any())).thenReturn(SafeFuture.completedFuture(Unit))
-
-    monitor.start().thenApply {
-      await()
-        .untilAsserted {
-          verify(blockCreationListener).acceptBlock(BlockCreated(payload))
-          verify(blockCreationListener).acceptBlock(BlockCreated(payload2))
-          assertThat(monitor.nexBlockNumberToFetch).isEqualTo(startingBlockNumberInclusive + 2)
-        }
-      testContext.completeNow()
     }
-      .whenException(testContext::failNow)
+
+    monitor = createBlockCreationMonitor(
+      startingBlockNumberExclusive = 99,
+      blockCreationListener = fakeBuggyLister,
+      config = config.copy(blocksToFinalization = 2, lastL2BlockNumberToProcessInclusive = 112u)
+    )
+
+    setupFakeExecutionLayerWithBlocks(createBlocks(startBlockNumber = 99u, numberOfBlocks = 20))
+
+    monitor.start()
+    await()
+      .atMost(20.seconds.toJavaDuration())
+      .untilAsserted {
+        assertThat(blockCreationListener.blocksReceived).isNotEmpty
+        assertThat(blockCreationListener.blocksReceived.last().number).isGreaterThanOrEqualTo(110u)
+      }
+
+    // assert it got block only once and in order
+    assertThat(blockCreationListener.blocksReceived.map { it.number }).containsExactly(
+      100UL, 101UL, 102UL, 103UL, 104UL, 105UL, 106UL, 107UL, 108UL, 109UL, 110UL
+    )
+  }
+
+  @Test
+  fun `should be resilient to connection failures`() {
+    monitor = createBlockCreationMonitor(
+      startingBlockNumberExclusive = 99
+    )
+
+    setupFakeExecutionLayerWithBlocks(createBlocks(startBlockNumber = 99u, numberOfBlocks = 200))
+
+    monitor.start()
+    await()
+      .atMost(20.seconds.toJavaDuration())
+      .untilAsserted {
+        assertThat(blockCreationListener.blocksReceived).isNotEmpty
+        assertThat(blockCreationListener.blocksReceived.last().number).isGreaterThanOrEqualTo(103u)
+      }
+    fakeL2RpcNode.stopHttpServer()
+    val lastBlockReceived = blockCreationListener.blocksReceived.last().number
+
+    // Wait for a while to make sure no more blocks are fetched
+    await().atLeast(config.pollingInterval.times(2).toJavaDuration())
+    fakeL2RpcNode.resumeHttpServer()
+    await()
+      .atMost(20.seconds.toJavaDuration())
+      .untilAsserted {
+        assertThat(blockCreationListener.blocksReceived).isNotEmpty
+        assertThat(blockCreationListener.blocksReceived.last().number).isGreaterThan(lastBlockReceived)
+      }
+  }
+
+  @Test
+  fun `should stop when reorg is detected above blocksToFinalization limit - manual intervention necessary`() {
+    monitor = createBlockCreationMonitor(
+      startingBlockNumberExclusive = 99
+    )
+
+    // simulate reorg by changing parent hash of block 105
+    val blocks = createBlocks(startBlockNumber = 99u, numberOfBlocks = 20).map { block: Block ->
+      if (block.number == 105UL) {
+        block.copy(parentHash = ByteArrayExt.random32())
+      } else {
+        block
+      }
+    }
+
+    setupFakeExecutionLayerWithBlocks(blocks)
+
+    monitor.start()
+    await()
+      .atMost(20.seconds.toJavaDuration())
+      .untilAsserted {
+        assertThat(blockCreationListener.blocksReceived).isNotEmpty
+        assertThat(blockCreationListener.blocksReceived.last().number).isGreaterThanOrEqualTo(104UL)
+      }
+
+    // Wait for a while to make sure no more blocks are fetched
+    await().atLeast(config.pollingInterval.times(3).toJavaDuration())
+
+    assertThat(blockCreationListener.blocksReceived.last().number).isEqualTo(104UL)
+  }
+
+  @Test
+  fun `should poll in order when response takes longer that polling interval`() {
+    monitor = createBlockCreationMonitor(
+      startingBlockNumberExclusive = 99,
+      config = config.copy(pollingInterval = 100.milliseconds)
+    )
+
+    val blocks = createBlocks(startBlockNumber = 99u, numberOfBlocks = 20)
+    setupFakeExecutionLayerWithBlocks(blocks)
+    fakeL2RpcNode.responsesArtificialDelay = 600.milliseconds
+
+    monitor.start()
+    await()
+      .atMost(20.seconds.toJavaDuration())
+      .untilAsserted {
+        assertThat(blockCreationListener.blocksReceived).isNotEmpty
+        assertThat(blockCreationListener.blocksReceived.map { it.number }).containsExactly(
+          100UL,
+          101UL,
+          102UL,
+          103UL,
+          104UL,
+          105UL
+        )
+      }
   }
 
   @Test
   fun `start allow 2nd call when already started`() {
+    monitor = createBlockCreationMonitor(
+      startingBlockNumberExclusive = 99
+    )
+    setupFakeExecutionLayerWithBlocks(createBlocks(startBlockNumber = 99u, numberOfBlocks = 5))
     monitor.start().get()
     monitor.start().get()
   }
 
   @Test
-  fun `stop should be idempotent`(testContext: VertxTestContext) {
-    val payload =
-      executionPayloadV1(blockNumber = startingBlockNumberInclusive, parentHash = parentHash)
-    val payload2 =
-      executionPayloadV1(
-        blockNumber = startingBlockNumberInclusive + 1,
-        parentHash = payload.blockHash.toArray()
-      )
-    val headBlockNumber = startingBlockNumberInclusive + config.blocksToFinalization
-    whenever(web3jClient.ethBlockNumber())
-      .thenReturn(SafeFuture.completedFuture(BigInteger.valueOf(headBlockNumber)))
-      .then {
-        delay(config.pollingInterval.times(30)) {
-          SafeFuture.completedFuture(BigInteger.valueOf(headBlockNumber + 1))
-        }
+  fun `should stop fetching blocks when gap is greater than fetch limit and resume upon catchup`() {
+    monitor = createBlockCreationMonitor(
+      startingBlockNumberExclusive = 99,
+      config = config.copy(blocksToFinalization = 0, blocksFetchLimit = 5)
+    )
+
+    setupFakeExecutionLayerWithBlocks(createBlocks(startBlockNumber = 99u, numberOfBlocks = 30))
+    lastProvenBlockNumberProvider.lastProvenBlock.set(105)
+
+    monitor.start()
+    await()
+      .atMost(20.seconds.toJavaDuration())
+      .untilAsserted {
+        assertThat(blockCreationListener.blocksReceived).isNotEmpty
+        assertThat(blockCreationListener.blocksReceived.last().number).isGreaterThanOrEqualTo(110UL)
       }
-    whenever(web3jClient.ethGetExecutionPayloadByNumber(any()))
-      .thenReturn(SafeFuture.completedFuture(payload))
-      .then { delay(config.pollingInterval.times(30)) { SafeFuture.completedFuture(payload2) } }
-    whenever(blockCreationListener.acceptBlock(any())).thenReturn(SafeFuture.completedFuture(Unit))
 
-    monitor.start().thenApply {
-      await()
-        .timeout(1.seconds.toJavaDuration())
-        .untilAsserted {
-          verify(blockCreationListener, times(1)).acceptBlock(any())
-        }
-    }
-      .whenException(testContext::failNow)
+    // Wait for a while to make sure no more blocks are fetched
+    await().atLeast(config.pollingInterval.times(3).toJavaDuration())
 
-    monitor.stop().thenApply {
-      await()
-        .timeout(1.seconds.toJavaDuration())
-        .untilAsserted {
-          verify(blockCreationListener, times(1)).acceptBlock(any())
-        }
-      testContext.completeNow()
-    }
-      .whenException(testContext::failNow)
-  }
+    // it shall remain at 110
+    assertThat(blockCreationListener.blocksReceived.last().number).isEqualTo(110UL)
 
-  @Test
-  fun `block shouldn't be fetched when block gap is greater than fetch limit`(testContext: VertxTestContext) {
-    val payload = executionPayloadV1(blockNumber = startingBlockNumberInclusive, parentHash = parentHash)
-    val payload2 =
-      executionPayloadV1(blockNumber = startingBlockNumberInclusive + 1, parentHash = payload.blockHash.toArray())
-    val payload3 =
-      executionPayloadV1(blockNumber = startingBlockNumberInclusive + 2, parentHash = payload2.blockHash.toArray())
-    val payload4 =
-      executionPayloadV1(blockNumber = startingBlockNumberInclusive + 3, parentHash = payload3.blockHash.toArray())
-    val payload5 =
-      executionPayloadV1(blockNumber = startingBlockNumberInclusive + 4, parentHash = payload4.blockHash.toArray())
-    val payload6 =
-      executionPayloadV1(blockNumber = startingBlockNumberInclusive + 5, parentHash = payload5.blockHash.toArray())
-    val payload7 =
-      executionPayloadV1(blockNumber = startingBlockNumberInclusive + 6, parentHash = payload6.blockHash.toArray())
+    // simulate prover catchup
+    lastProvenBlockNumberProvider.lastProvenBlock.set(120)
 
-    val headBlockNumber = startingBlockNumberInclusive + config.blocksToFinalization
-    whenever(web3jClient.ethGetExecutionPayloadByNumber(any()))
-      .thenReturn(SafeFuture.completedFuture(payload))
-      .then { SafeFuture.completedFuture(payload2) }
-      .then { SafeFuture.completedFuture(payload3) }
-      .then { SafeFuture.completedFuture(payload4) }
-      .then { SafeFuture.completedFuture(payload5) }
-      .then { SafeFuture.completedFuture(payload6) }
-      .then { SafeFuture.completedFuture(payload7) }
-
-    whenever(web3jClient.ethBlockNumber())
-      .thenReturn(SafeFuture.completedFuture(BigInteger.valueOf(headBlockNumber)))
-      .thenReturn(SafeFuture.completedFuture(BigInteger.valueOf(headBlockNumber + 2)))
-      .thenReturn(SafeFuture.completedFuture(BigInteger.valueOf(headBlockNumber + 3)))
-      .thenReturn(SafeFuture.completedFuture(BigInteger.valueOf(headBlockNumber + 4)))
-      .thenReturn(SafeFuture.completedFuture(BigInteger.valueOf(headBlockNumber + 5)))
-      .thenReturn(SafeFuture.completedFuture(BigInteger.valueOf(headBlockNumber + 6)))
-      .thenReturn(SafeFuture.completedFuture(BigInteger.valueOf(headBlockNumber + 7)))
-    whenever(blockCreationListener.acceptBlock(any())).thenReturn(SafeFuture.completedFuture(Unit))
-
-    monitor.start().thenApply {
-      await()
-        .timeout(4.seconds.toJavaDuration())
-        .untilAsserted {
-          verify(blockCreationListener, atLeastOnce()).acceptBlock(any())
-          // Number of invocations should remain at 5 as the blocks are now above the limit
-          verify(blockCreationListener, atMost(6)).acceptBlock(any())
-        }
-      testContext.completeNow()
-    }
-      .whenException(testContext::failNow)
-  }
-
-  @Test
-  fun `last block not fetched until finalization catches up to limit`(vertx: Vertx, testContext: VertxTestContext) {
-    val payload = executionPayloadV1(blockNumber = startingBlockNumberInclusive, parentHash = parentHash)
-    val payload2 = executionPayloadV1(blockNumber = startingBlockNumberInclusive + 1, parentHash = payload.blockHash)
-    val payload3 = executionPayloadV1(blockNumber = startingBlockNumberInclusive + 2, parentHash = payload2.blockHash)
-    val payload4 = executionPayloadV1(blockNumber = startingBlockNumberInclusive + 3, parentHash = payload3.blockHash)
-    val payload5 = executionPayloadV1(blockNumber = startingBlockNumberInclusive + 4, parentHash = payload4.blockHash)
-    val payload6 = executionPayloadV1(blockNumber = startingBlockNumberInclusive + 5, parentHash = payload5.blockHash)
-    val payload7 = executionPayloadV1(blockNumber = startingBlockNumberInclusive + 6, parentHash = payload6.blockHash)
-
-    val headBlockNumber = startingBlockNumberInclusive + config.blocksToFinalization + config.blocksFetchLimit
-    whenever(web3jClient.ethGetExecutionPayloadByNumber(any()))
-      .thenReturn(SafeFuture.completedFuture(payload))
-      .thenReturn(SafeFuture.completedFuture(payload2))
-      .thenReturn(SafeFuture.completedFuture(payload3))
-      .thenReturn(SafeFuture.completedFuture(payload4))
-      .thenReturn(SafeFuture.completedFuture(payload5))
-      .thenReturn(SafeFuture.completedFuture(payload6))
-      .thenReturn(SafeFuture.completedFuture(payload7))
-
-    whenever(web3jClient.ethBlockNumber())
-      .thenReturn(SafeFuture.completedFuture(BigInteger.valueOf(headBlockNumber)))
-      .thenReturn(SafeFuture.completedFuture(BigInteger.valueOf(headBlockNumber + 1)))
-      .thenReturn(SafeFuture.completedFuture(BigInteger.valueOf(headBlockNumber + 2)))
-      .thenReturn(SafeFuture.completedFuture(BigInteger.valueOf(headBlockNumber + 3)))
-      .thenReturn(SafeFuture.completedFuture(BigInteger.valueOf(headBlockNumber + 4)))
-      .thenReturn(SafeFuture.completedFuture(BigInteger.valueOf(headBlockNumber + 5)))
-      .thenReturn(SafeFuture.completedFuture(BigInteger.valueOf(headBlockNumber + 6)))
-    whenever(blockCreationListener.acceptBlock(any())).thenReturn(SafeFuture.completedFuture(Unit))
-
-    val lastProvenBlockNumberProviderAsync = mock<LastProvenBlockNumberProviderAsync>()
-
-    val monitor =
-      BlockCreationMonitor(
-        vertx,
-        web3jClient,
-        startingBlockNumberExclusive = startingBlockNumberInclusive - 1,
-        blockCreationListener,
-        lastProvenBlockNumberProviderAsync,
-        config
-      )
-
-    whenever(lastProvenBlockNumberProviderAsync.getLastProvenBlockNumber()).thenAnswer {
-      SafeFuture.completedFuture(lastProvenBlock)
-    }
-
-    monitor.start().thenApply {
-      await()
-        .timeout(4.seconds.toJavaDuration())
-        .untilAsserted {
-          verify(blockCreationListener, atLeastOnce()).acceptBlock(any())
-          verify(blockCreationListener, times(6)).acceptBlock(any())
-        }
-    }.thenApply {
-      whenever(lastProvenBlockNumberProviderAsync.getLastProvenBlockNumber()).thenAnswer {
-        SafeFuture.completedFuture(lastProvenBlock + 1)
+    // assert it resumes conflation
+    await()
+      .atMost(20.seconds.toJavaDuration())
+      .untilAsserted {
+        assertThat(blockCreationListener.blocksReceived.last().number).isGreaterThanOrEqualTo(125UL)
       }
-      await()
-        .timeout(2.seconds.toJavaDuration())
-        .untilAsserted {
-          verify(blockCreationListener, times(7)).acceptBlock(any())
-        }
-      testContext.completeNow()
-    }
-      .whenException(testContext::failNow)
   }
 }

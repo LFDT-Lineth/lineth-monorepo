@@ -1,27 +1,31 @@
 package net.consensys.zkevm.coordinator.blockcreation
 
-import net.consensys.linea.web3j.ExtendedWeb3J
+import build.linea.web3j.domain.toWeb3j
+import linea.domain.Block
+import linea.web3j.toDomain
+import net.consensys.linea.BlockParameter.Companion.toBlockParameter
+import net.consensys.linea.async.toSafeFuture
 import net.consensys.zkevm.ethereum.coordination.blockcreation.SafeBlockProvider
+import org.web3j.protocol.Web3j
 import org.web3j.protocol.core.DefaultBlockParameterName
-import tech.pegasys.teku.ethereum.executionclient.schema.ExecutionPayloadV1
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 class GethCliqueSafeBlockProvider(
-  private val extendedWeb3j: ExtendedWeb3J,
+  private val web3j: Web3j,
   private val config: Config
 ) : SafeBlockProvider {
   data class Config(
     val blocksToFinalization: Long
   )
 
-  override fun getLatestSafeBlock(): SafeFuture<ExecutionPayloadV1> {
-    return SafeFuture.of(
-      extendedWeb3j.web3jClient
-        .ethGetBlockByNumber(DefaultBlockParameterName.LATEST, false).sendAsync()
-    )
+  override fun getLatestSafeBlock(): SafeFuture<Block> {
+    return web3j
+      .ethGetBlockByNumber(DefaultBlockParameterName.LATEST, false).sendAsync()
+      .toSafeFuture()
       .thenCompose { block ->
         val safeBlockNumber = (block.block.number.toLong() - config.blocksToFinalization).coerceAtLeast(0)
-        extendedWeb3j.ethGetExecutionPayloadByNumber(safeBlockNumber)
+        web3j.ethGetBlockByNumber(safeBlockNumber.toBlockParameter().toWeb3j(), true).sendAsync().toSafeFuture()
       }
+      .thenApply { it.block.toDomain() }
   }
 }

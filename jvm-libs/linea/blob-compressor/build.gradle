@@ -9,6 +9,8 @@ description = 'Java JNA wrapper for Linea Blob Compressor Library implemented in
 dependencies {
   implementation "net.java.dev.jna:jna:${libs.versions.jna.get()}"
   implementation project(":jvm-libs:generic:extensions:kotlin")
+  implementation "org.apache.logging.log4j:log4j-api:${libs.versions.log4j.get()}"
+  implementation "org.apache.logging.log4j:log4j-core:${libs.versions.log4j.get()}"
   testImplementation project(":jvm-libs:linea:blob-shnarf-calculator")
 }
 

@@ -1,11 +1,13 @@
 plugins {
   id 'net.consensys.zkevm.kotlin-common-conventions'
+  id 'java-test-fixtures'
 }
 
 description="Linea domain models"
 
 dependencies {
   implementation project(":jvm-libs:generic:extensions:kotlin")
+  testFixturesApi "org.jetbrains.kotlinx:kotlinx-datetime:${libs.versions.kotlinxDatetime.get()}"
 }
 
 jar {

@@ -6,6 +6,7 @@ import build.linea.contract.l1.LineaRollupSmartContractClientReadOnly
 import build.linea.contract.l1.Web3JLineaRollupSmartContractClientReadOnly
 import io.vertx.core.Vertx
 import kotlinx.datetime.Clock
+import linea.encoding.BlockRLPEncoder
 import net.consensys.linea.BlockNumberAndHash
 import net.consensys.linea.blob.ShnarfCalculatorVersion
 import net.consensys.linea.contract.LineaRollupAsyncFriendly
@@ -56,7 +57,6 @@ import net.consensys.zkevm.coordinator.clients.smartcontract.LineaRollupSmartCon
 import net.consensys.zkevm.domain.BlobSubmittedEvent
 import net.consensys.zkevm.domain.BlocksConflation
 import net.consensys.zkevm.domain.FinalizationSubmittedEvent
-import net.consensys.zkevm.encoding.ExecutionPayloadV1RLPEncoderByBesuImplementation
 import net.consensys.zkevm.ethereum.coordination.EventDispatcher
 import net.consensys.zkevm.ethereum.coordination.HighestConflationTracker
 import net.consensys.zkevm.ethereum.coordination.HighestProvenBatchTracker
@@ -323,7 +323,7 @@ class L1DependentApp(
         lastBlockNumber = lastProcessedBlockNumber,
         clock = Clock.System,
         latestBlockProvider = GethCliqueSafeBlockProvider(
-          l2ExtendedWeb3j,
+          l2ExtendedWeb3j.web3jClient,
           GethCliqueSafeBlockProvider.Config(configs.l2.blocksToFinalization.toLong())
         )
       )
@@ -608,7 +608,7 @@ class L1DependentApp(
         deadlineCheckInterval = configs.proofAggregation.deadlineCheckInterval.toKotlinDuration(),
         aggregationDeadline = configs.proofAggregation.aggregationDeadline.toKotlinDuration(),
         latestBlockProvider = GethCliqueSafeBlockProvider(
-          l2ExtendedWeb3j,
+          l2ExtendedWeb3j.web3jClient,
           GethCliqueSafeBlockProvider.Config(configs.l2.blocksToFinalization.toLong())
         ),
         maxProofsPerAggregation = configs.proofAggregation.aggregationProofsLimit.toUInt(),
@@ -868,7 +868,7 @@ class L1DependentApp(
       conflationService = conflationService,
       tracesCountersClient = tracesCountersClient,
       vertx = vertx,
-      payloadEncoder = ExecutionPayloadV1RLPEncoderByBesuImplementation
+      encoder = BlockRLPEncoder
     )
   }
 
@@ -904,7 +904,7 @@ class L1DependentApp(
     log.info("Resuming conflation from block={} inclusive", lastProcessedBlockNumber + 1UL)
     val blockCreationMonitor = BlockCreationMonitor(
       vertx = vertx,
-      extendedWeb3j = l2ExtendedWeb3j,
+      web3j = l2ExtendedWeb3j,
       startingBlockNumberExclusive = lastProcessedBlockNumber.toLong(),
       blockCreationListener = block2BatchCoordinator,
       lastProvenBlockNumberProviderAsync = lastProvenBlockNumberProvider,

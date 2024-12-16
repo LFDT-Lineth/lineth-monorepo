@@ -34,7 +34,7 @@ class HighestProvenBatchTracker(initialProvenBlockNumber: ULong) :
 class HighestConflationTracker(initialProvenBlockNumber: ULong) :
   MaxLongTracker<BlocksConflation>(initialProvenBlockNumber.toLong()) {
   override fun convertToLong(trackable: BlocksConflation): Long {
-    return trackable.blocks.last().blockNumber.longValue()
+    return trackable.blocks.last().number.toLong()
   }
 }
 

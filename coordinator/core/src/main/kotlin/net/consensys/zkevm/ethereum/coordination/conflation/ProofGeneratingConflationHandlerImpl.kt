@@ -3,12 +3,10 @@ package net.consensys.zkevm.ethereum.coordination.conflation
 import com.github.michaelbull.result.getOrElse
 import com.github.michaelbull.result.runCatching
 import io.vertx.core.Vertx
-import net.consensys.linea.BlockNumberAndHash
 import net.consensys.linea.async.AsyncRetryer
 import net.consensys.zkevm.domain.BlocksConflation
 import net.consensys.zkevm.ethereum.coordination.proofcreation.BatchProofHandler
 import net.consensys.zkevm.ethereum.coordination.proofcreation.ZkProofCreationCoordinator
-import net.consensys.zkevm.toULong
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture
@@ -57,9 +55,7 @@ class ProofGeneratingConflationHandlerImpl(
   }
 
   private fun conflationToProofCreation(conflation: BlocksConflation): SafeFuture<*> {
-    val blockNumbersAndHash = conflation.blocks.map {
-      BlockNumberAndHash(it.blockNumber.toULong(), it.blockHash.toArray())
-    }
+    val blockNumbersAndHash = conflation.blocks.map { it.numberAndHash }
     val blockIntervalString = conflation.conflationResult.intervalString()
     return tracesProductionCoordinator
       .conflateExecutionTraces(blockNumbersAndHash)

@@ -20,4 +20,16 @@ dependencies {
   api("org.hyperledger.besu:plugin-api:${libs.versions.besu.get()}") {
     transitive = false
   }
+
+  api("org.hyperledger.besu.internal:rlp:${libs.versions.besu.get()}") {
+    transitive = false
+  }
+
+  api("io.tmio:tuweni-bytes:${libs.versions.tuweni.get()}") {
+    transitive = false
+  }
+
+  api("io.tmio:tuweni-units:${libs.versions.tuweni.get()}") {
+    transitive = false
+  }
 }

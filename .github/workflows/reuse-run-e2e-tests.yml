@@ -76,7 +76,7 @@ jobs:
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
     outputs:
       tests_outcome: ${{ steps.run_e2e_tests.outcome }}
-    runs-on: [self-hosted, ubuntu-20.04, X64, large]
+    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-large
     steps:
       - name: Setup upterm session
         if: ${{ inputs.e2e-tests-with-ssh }}
@@ -116,13 +116,16 @@ jobs:
             make pull-images-external-to-monorepo
       - name: Download local docker image artifacts
         uses: actions/download-artifact@v4
+        with:
+          pattern: linea-*
       - name: Load Docker images
         run: |
-          gunzip -c /runner/_work/linea-monorepo/linea-monorepo/linea-coordinator/linea-coordinator-docker-image.tar.gz | docker load &&
-          gunzip -c /runner/_work/linea-monorepo/linea-monorepo/linea-postman/linea-postman-docker-image.tar.gz | docker load &&
-          gunzip -c /runner/_work/linea-monorepo/linea-monorepo/linea-prover/linea-prover-docker-image.tar.gz | docker load &&
-          gunzip -c /runner/_work/linea-monorepo/linea-monorepo/linea-traces-api-facade/linea-traces-api-facade-docker-image.tar.gz | docker load &&
-          gunzip -c /runner/_work/linea-monorepo/linea-monorepo/linea-transaction-exclusion-api/linea-transaction-exclusion-api-docker-image.tar.gz | docker load
+          pwd && ls -la && echo "GITHUB_WORKSPACE=$GITHUB_WORKSPACE" &&
+          gunzip -c $GITHUB_WORKSPACE/linea-coordinator/linea-coordinator-docker-image.tar.gz | docker load &&
+          gunzip -c $GITHUB_WORKSPACE/linea-postman/linea-postman-docker-image.tar.gz | docker load &&
+          gunzip -c $GITHUB_WORKSPACE/linea-prover/linea-prover-docker-image.tar.gz | docker load &&
+          gunzip -c $GITHUB_WORKSPACE/linea-traces-api-facade/linea-traces-api-facade-docker-image.tar.gz | docker load &&
+          gunzip -c $GITHUB_WORKSPACE/linea-transaction-exclusion-api/linea-transaction-exclusion-api-docker-image.tar.gz | docker load
         shell: bash
       - name: Spin up fresh environment with geth tracing with retry
         if: ${{ inputs.tracing-engine == 'geth' }}

@@ -20,7 +20,6 @@ dependencies {
   implementation("org.web3j:core:${libs.versions.web3j.get()}") {
     exclude group: "org.slf4j", module: "slf4j-nop"
   }
-  implementation project(":jvm-libs:linea:teku-execution-client")
 
   testImplementation(project(":jvm-libs:linea:testing:l1-blob-and-proof-submission"))
   testImplementation(project(":coordinator:persistence:aggregation"))

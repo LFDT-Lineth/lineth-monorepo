@@ -3,6 +3,11 @@ plugins {
 }
 
 dependencies {
-  implementation project(":jvm-libs:linea:teku-execution-client")
+  implementation project(':jvm-libs:generic:extensions:futures')
+  implementation project(':jvm-libs:linea:core:domain-models')
+  implementation project(':jvm-libs:linea:core:long-running-service')
   implementation project(':jvm-libs:linea:web3j-extensions')
+  implementation project(':jvm-libs:linea:blob-compressor')
+  implementation project(':jvm-libs:linea:blob-decompressor')
+  implementation project(':jvm-libs:linea:besu-rlp-and-mappers')
 }

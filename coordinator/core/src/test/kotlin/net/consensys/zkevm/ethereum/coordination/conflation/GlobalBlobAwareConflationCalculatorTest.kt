@@ -1,6 +1,7 @@
 package net.consensys.zkevm.ethereum.coordination.conflation
 
 import kotlinx.datetime.Instant
+import linea.domain.BlockHeaderSummary
 import net.consensys.ByteArrayExt
 import net.consensys.FakeFixedClock
 import net.consensys.linea.traces.TracesCountersV1
@@ -11,7 +12,6 @@ import net.consensys.zkevm.domain.ConflationCalculationResult
 import net.consensys.zkevm.domain.ConflationTrigger
 import net.consensys.zkevm.ethereum.coordination.blob.BlobCompressor
 import net.consensys.zkevm.ethereum.coordination.blob.FakeBlobCompressor
-import net.consensys.zkevm.ethereum.coordination.blockcreation.BlockHeaderSummary
 import net.consensys.zkevm.ethereum.coordination.blockcreation.SafeBlockProvider
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach

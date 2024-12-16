@@ -1,11 +1,11 @@
 package net.consensys.zkevm.ethereum.coordination.conflation.upgrade
 
+import linea.domain.createBlock
 import net.consensys.linea.traces.TracesCountersV1
 import net.consensys.zkevm.domain.BlocksConflation
 import net.consensys.zkevm.domain.ConflationCalculationResult
 import net.consensys.zkevm.domain.ConflationTrigger
 import net.consensys.zkevm.ethereum.coordination.conflation.ConflationHandler
-import net.consensys.zkevm.toULong
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
@@ -15,7 +15,6 @@ import org.mockito.kotlin.never
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import tech.pegasys.teku.ethereum.executionclient.schema.executionPayloadV1
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 @Suppress("DEPRECATION")
@@ -28,13 +27,12 @@ class SwitchAwareConflationHandlerTest {
   private val switchBlock = 100UL
 
   private fun generateArbitraryConflation(startBlockNumber: ULong, blocksLong: UInt): BlocksConflation {
-    val executionPayloads = (startBlockNumber..startBlockNumber + blocksLong).map {
-      executionPayloadV1(blockNumber = it.toLong(), gasLimit = 20_000_000UL)
-    }
+    val executionPayloads = (startBlockNumber..startBlockNumber + blocksLong)
+      .map { createBlock(number = it) }
 
     val conflationCalculationResult = ConflationCalculationResult(
-      startBlockNumber = executionPayloads.first().blockNumber.toULong(),
-      endBlockNumber = executionPayloads.last().blockNumber.toULong(),
+      startBlockNumber = executionPayloads.first().number.toULong(),
+      endBlockNumber = executionPayloads.last().number.toULong(),
       conflationTrigger = ConflationTrigger.TRACES_LIMIT,
       tracesCounters = TracesCountersV1.EMPTY_TRACES_COUNT
     )

@@ -1,6 +1,9 @@
 package net.consensys.zkevm.coordinator.blockcreation
 
 import io.vertx.core.Vertx
+import linea.domain.Block
+import net.consensys.encodeHex
+import net.consensys.linea.BlockParameter.Companion.toBlockParameter
 import net.consensys.linea.async.AsyncRetryer
 import net.consensys.linea.web3j.ExtendedWeb3J
 import net.consensys.zkevm.PeriodicPollingService
@@ -8,10 +11,6 @@ import net.consensys.zkevm.ethereum.coordination.blockcreation.BlockCreated
 import net.consensys.zkevm.ethereum.coordination.blockcreation.BlockCreationListener
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
-import org.apache.tuweni.bytes.Bytes32
-import org.web3j.protocol.core.DefaultBlockParameter
-import org.web3j.protocol.core.methods.response.EthBlock
-import tech.pegasys.teku.ethereum.executionclient.schema.ExecutionPayloadV1
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
@@ -21,7 +20,7 @@ import kotlin.time.Duration.Companion.days
 
 class BlockCreationMonitor(
   private val vertx: Vertx,
-  private val extendedWeb3j: ExtendedWeb3J,
+  private val web3j: ExtendedWeb3J,
   private val startingBlockNumberExclusive: Long,
   private val blockCreationListener: BlockCreationListener,
   private val lastProvenBlockNumberProviderAsync: LastProvenBlockNumberProviderAsync,
@@ -37,11 +36,11 @@ class BlockCreationMonitor(
     val blocksToFinalization: Long,
     val blocksFetchLimit: Long,
     val startingBlockWaitTimeout: Duration = 14.days,
-    val lastL2BlockNumberToProcessInclusive: ULong?
+    val lastL2BlockNumberToProcessInclusive: ULong? = null
   )
 
   private val _nexBlockNumberToFetch: AtomicLong = AtomicLong(startingBlockNumberExclusive + 1)
-  private val expectedParentBlockHash: AtomicReference<Bytes32> = AtomicReference(null)
+  private val expectedParentBlockHash: AtomicReference<ByteArray> = AtomicReference(null)
   private val reorgDetected: AtomicBoolean = AtomicBoolean(false)
   private var statingBlockAvailabilityFuture: SafeFuture<*>? = null
 
@@ -72,8 +71,8 @@ class BlockCreationMonitor(
         vertx,
         backoffDelay = config.pollingInterval,
         timeout = config.startingBlockWaitTimeout,
-        stopRetriesPredicate = { block: EthBlock ->
-          if (block.block == null) {
+        stopRetriesPredicate = { block: Block? ->
+          if (block == null) {
             log.warn(
               "Block {} not found yet. Retrying in {}",
               startingBlockNumberExclusive,
@@ -82,19 +81,12 @@ class BlockCreationMonitor(
             false
           } else {
             log.info("Block {} found. Resuming block monitor", startingBlockNumberExclusive)
-            expectedParentBlockHash.set(Bytes32.fromHexString(block.block.hash))
+            expectedParentBlockHash.set(block.hash)
             true
           }
         }
       ) {
-        SafeFuture.of(
-          extendedWeb3j.web3jClient
-            .ethGetBlockByNumber(
-              DefaultBlockParameter.valueOf(startingBlockNumberExclusive.toBigInteger()),
-              false
-            )
-            .sendAsync()
-        )
+        web3j.ethGetBlock(startingBlockNumberExclusive.toBlockParameter())
       }
     }
 
@@ -102,7 +94,7 @@ class BlockCreationMonitor(
   }
 
   override fun action(): SafeFuture<*> {
-    log.trace("tick start")
+    log.trace("tick start: nexBlockNumberToFetch={}", nexBlockNumberToFetch)
     return lastProvenBlockNumberProviderAsync.getLastProvenBlockNumber()
       .thenCompose { lastProvenBlockNumber ->
         if (!nextBlockNumberWithinLimit(lastProvenBlockNumber)) {
@@ -119,8 +111,8 @@ class BlockCreationMonitor(
           nexBlockNumberToFetch.toULong() > config.lastL2BlockNumberToProcessInclusive
         ) {
           log.warn(
-            "Stopping Conflation, Blob and Aggregation at lastL2BlockNumberInclusiveToProcess - 1. " +
-              "All blocks unto and including lastL2BlockNumberInclusiveToProcess={} have been processed. " +
+            "stopping conflation at lastL2BlockNumberInclusiveToProcess - 1. " +
+              "All blocks upto and including lastL2BlockNumberInclusiveToProcess={} have been processed. " +
               "nextBlockNumberToFetch={}",
             config.lastL2BlockNumberToProcessInclusive,
             nexBlockNumberToFetch
@@ -128,29 +120,29 @@ class BlockCreationMonitor(
           SafeFuture.COMPLETE
         } else {
           getNetNextSafeBlock()
-            .thenCompose { payload ->
-              if (payload != null) {
-                if (payload.parentHash == expectedParentBlockHash.get()) {
-                  notifyListener(payload)
+            .thenCompose { block ->
+              if (block != null) {
+                if (block.parentHash.contentEquals(expectedParentBlockHash.get())) {
+                  notifyListener(block)
                     .whenSuccess {
                       log.debug(
                         "updating nexBlockNumberToFetch from {} --> {}",
                         _nexBlockNumberToFetch.get(),
                         _nexBlockNumberToFetch.incrementAndGet()
                       )
-                      expectedParentBlockHash.set(payload.blockHash)
+                      expectedParentBlockHash.set(block.hash)
                     }
                 } else {
                   reorgDetected.set(true)
                   log.error(
                     "Shooting down conflation poller, " +
                       "chain reorg detected: block { blockNumber={} hash={} parentHash={} } should have parentHash={}",
-                    payload.blockNumber.longValue(),
-                    payload.blockHash.toHexString().subSequence(0, 8),
-                    payload.parentHash.toHexString().subSequence(0, 8),
-                    expectedParentBlockHash.get().toHexString().subSequence(0, 8)
+                    block.number,
+                    block.hash.encodeHex(),
+                    block.parentHash.encodeHex(),
+                    expectedParentBlockHash.get().encodeHex()
                   )
-                  SafeFuture.failedFuture(IllegalStateException("Reorg detected on block ${payload.blockNumber}"))
+                  SafeFuture.failedFuture(IllegalStateException("Reorg detected on block ${block.number}"))
                 }
               } else {
                 SafeFuture.completedFuture(Unit)
@@ -165,26 +157,28 @@ class BlockCreationMonitor(
       }
   }
 
-  private fun notifyListener(payload: ExecutionPayloadV1): SafeFuture<Unit> {
-    return blockCreationListener.acceptBlock(BlockCreated(payload))
+  private fun notifyListener(payload: Block): SafeFuture<Unit> {
+    log.trace("notifying blockCreationListener: block={}", payload.number)
+    return blockCreationListener
+      .acceptBlock(BlockCreated(payload))
       .thenApply {
         log.debug(
           "blockCreationListener blockNumber={} resolved with success",
-          payload.blockNumber
+          payload.number
         )
       }
       .whenException { throwable ->
         log.warn(
           "Failed to notify blockCreationListener: blockNumber={} errorMessage={}",
-          payload.blockNumber.bigIntegerValue(),
+          payload.number,
           throwable.message,
           throwable
         )
       }
   }
 
-  private fun getNetNextSafeBlock(): SafeFuture<ExecutionPayloadV1?> {
-    return extendedWeb3j
+  private fun getNetNextSafeBlock(): SafeFuture<Block?> {
+    return web3j
       .ethBlockNumber()
       .thenCompose { latestBlockNumber ->
         // Check if is safe to fetch nextWaitingBlockNumber
@@ -192,9 +186,12 @@ class BlockCreationMonitor(
           _nexBlockNumberToFetch.get() + config.blocksToFinalization
         ) {
           val blockNumber = _nexBlockNumberToFetch.get()
-          extendedWeb3j.ethGetExecutionPayloadByNumber(blockNumber)
+          web3j.ethGetBlock(blockNumber.toBlockParameter())
+            .thenPeek { block ->
+              log.trace("requestedBock={} responselock={}", blockNumber, block?.number)
+            }
             .whenException {
-              log.error(
+              log.warn(
                 "eth_getBlockByNumber({}) failed: errorMessage={}",
                 blockNumber,
                 it.message,

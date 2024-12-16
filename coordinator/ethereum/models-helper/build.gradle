@@ -4,13 +4,6 @@ plugins {
 
 dependencies {
   api (project(":coordinator:core"))
-  api project(":jvm-libs:linea:teku-execution-client")
-  implementation "tech.pegasys.teku.internal:bytes:${libs.versions.teku.get()}"
-  implementation "org.hyperledger.besu:besu-datatypes:${libs.versions.besu.get()}"
-  implementation "org.hyperledger.besu:evm:${libs.versions.besu.get()}"
-  implementation "org.hyperledger.besu.internal:rlp:${libs.versions.besu.get()}"
-  implementation "org.hyperledger.besu.internal:core:${libs.versions.besu.get()}"
-  implementation "org.hyperledger.besu:plugin-api:${libs.versions.besu.get()}"
-
-  testImplementation project(":jvm-libs:linea:testing:teku-helper")
+  api project(":jvm-libs:linea:besu-libs")
+  api project(":jvm-libs:linea:besu-rlp-and-mappers")
 }

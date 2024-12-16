@@ -64,7 +64,7 @@ fun ULong.toGWei(): Double = this.toDouble().toGWei()
  * Parses an hexadecimal string as [ULong] number and returns the result.
  * @throws NumberFormatException if the string is not a valid hexadecimal representation of a number.
  */
-fun ULong.Companion.fromHexString(value: String): ULong = value.replace("0x", "").toULong(16)
+fun ULong.Companion.fromHexString(value: String): ULong = value.removePrefix("0x").toULong(16)
 
 fun <T : Comparable<T>> ClosedRange<T>.toIntervalString(): String {
   val size = if (start <= endInclusive) {

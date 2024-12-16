@@ -1,13 +1,13 @@
 package net.consensys.zkevm.ethereum.coordination.conflation
 
 import kotlinx.datetime.Instant
+import linea.domain.createBlock
 import net.consensys.linea.traces.TracesCountersV1
 import net.consensys.linea.traces.fakeTracesCountersV1
 import net.consensys.zkevm.domain.BlockCounters
 import net.consensys.zkevm.domain.BlocksConflation
 import net.consensys.zkevm.domain.ConflationCalculationResult
 import net.consensys.zkevm.domain.ConflationTrigger
-import net.consensys.zkevm.toULong
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.awaitility.Awaitility
@@ -17,7 +17,6 @@ import org.mockito.Mockito.RETURNS_DEEP_STUBS
 import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
-import tech.pegasys.teku.ethereum.executionclient.schema.executionPayloadV1
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.time.Duration
 import java.util.concurrent.Executors
@@ -43,9 +42,9 @@ class ConflationServiceImplTest {
 
   @Test
   fun `emits event with blocks when calculator emits conflation`() {
-    val payload1 = executionPayloadV1(blockNumber = 1, gasLimit = 20_000_000UL)
-    val payload2 = executionPayloadV1(blockNumber = 2, gasLimit = 20_000_000UL)
-    val payload3 = executionPayloadV1(blockNumber = 3, gasLimit = 20_000_000UL)
+    val payload1 = createBlock(number = 1UL, gasLimit = 20_000_000UL)
+    val payload2 = createBlock(number = 2UL, gasLimit = 20_000_000UL)
+    val payload3 = createBlock(number = 3UL, gasLimit = 20_000_000UL)
     val payload1Time = Instant.parse("2021-01-01T00:00:00Z")
     val payloadCounters1 = BlockCounters(
       blockNumber = 1UL,
@@ -100,7 +99,7 @@ class ConflationServiceImplTest {
     val moduleTracesCounter = 10u
     assertThat(numberOfBlocks % numberOfThreads).isEqualTo(0)
     val expectedConflations = numberOfBlocks / conflationBlockLimit.toInt() - 1
-    val blocks = (1..numberOfBlocks).map { executionPayloadV1(blockNumber = it.toLong(), gasLimit = 20_000_000UL) }
+    val blocks = (1UL..numberOfBlocks.toULong()).map { createBlock(number = it, gasLimit = 20_000_000UL) }
     val fixedTracesCounters = fakeTracesCountersV1(moduleTracesCounter)
     val blockTime = Instant.parse("2021-01-01T00:00:00Z")
     val conflationEvents = mutableListOf<BlocksConflation>()
@@ -118,7 +117,7 @@ class ConflationServiceImplTest {
           conflationService.newBlock(
             it,
             BlockCounters(
-              blockNumber = it.blockNumber.toULong(),
+              blockNumber = it.number.toULong(),
               blockTimestamp = blockTime,
               tracesCounters = fixedTracesCounters,
               blockRLPEncoded = ByteArray(0)
@@ -152,13 +151,13 @@ class ConflationServiceImplTest {
     val failingConflationCalculator: TracesConflationCalculator = mock()
     whenever(failingConflationCalculator.newBlock(any())).thenThrow(expectedException)
     conflationService = ConflationServiceImpl(failingConflationCalculator, mock(defaultAnswer = RETURNS_DEEP_STUBS))
-    val block = executionPayloadV1(blockNumber = 1, gasLimit = 20_000_000UL)
+    val block = createBlock(number = 1UL, gasLimit = 20_000_000UL)
 
     assertThatThrownBy {
       conflationService.newBlock(
         block,
         BlockCounters(
-          blockNumber = block.blockNumber.toULong(),
+          blockNumber = block.number.toULong(),
           blockTimestamp = blockTime,
           tracesCounters = fixedTracesCounters,
           blockRLPEncoded = ByteArray(0)

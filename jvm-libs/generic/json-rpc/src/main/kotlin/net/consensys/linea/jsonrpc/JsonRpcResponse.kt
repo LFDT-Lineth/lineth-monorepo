@@ -32,6 +32,7 @@ data class JsonRpcSuccessResponse(
   val result: Any?
 ) : JsonRpcResponse(jsonrpc, id) {
   constructor(id: Any, result: Any?) : this("2.0", id, result)
+  constructor(request: JsonRpcRequest, result: Any?) : this(request.jsonrpc, id = request.id, result)
 }
 
 @JsonPropertyOrder("jsonrpc", "id", "error")
@@ -112,4 +113,6 @@ class JsonRpcErrorResponseException(
   val rpcErrorCode: Int,
   val rpcErrorMessage: String,
   val rpcErrorData: Any? = null
-) : RuntimeException("code=$rpcErrorCode message=$rpcErrorMessage errorData=$rpcErrorData")
+) : RuntimeException("code=$rpcErrorCode message=$rpcErrorMessage errorData=$rpcErrorData") {
+  fun asJsonRpcError(): JsonRpcError = JsonRpcError(rpcErrorCode, rpcErrorMessage, rpcErrorData)
+}

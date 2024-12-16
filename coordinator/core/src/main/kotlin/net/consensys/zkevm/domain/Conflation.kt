@@ -2,24 +2,23 @@ package net.consensys.zkevm.domain
 
 import build.linea.domain.BlockInterval
 import kotlinx.datetime.Instant
+import linea.domain.Block
 import net.consensys.isSortedBy
 import net.consensys.linea.CommonDomainFunctions
 import net.consensys.linea.traces.TracesCounters
-import net.consensys.zkevm.toULong
-import tech.pegasys.teku.ethereum.executionclient.schema.ExecutionPayloadV1
 
 data class BlocksConflation(
-  val blocks: List<ExecutionPayloadV1>,
+  val blocks: List<Block>,
   val conflationResult: ConflationCalculationResult
 ) : BlockInterval {
   init {
-    require(blocks.isSortedBy { it.blockNumber }) { "Blocks list must be sorted by blockNumber" }
+    require(blocks.isSortedBy { it.number }) { "Blocks list must be sorted by blockNumber" }
   }
 
   override val startBlockNumber: ULong
-    get() = blocks.first().blockNumber.toULong()
+    get() = blocks.first().number.toULong()
   override val endBlockNumber: ULong
-    get() = blocks.last().blockNumber.toULong()
+    get() = blocks.last().number.toULong()
 }
 
 data class Batch(
