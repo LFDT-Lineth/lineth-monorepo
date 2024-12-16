@@ -3,7 +3,7 @@ logging="DEBUG"
 data-path="/opt/besu/data"
 data-storage-format="FOREST"
 sync-mode="FULL"
-host-whitelist=["*"]
+host-allowlist=["*"]
 
 min-gas-price=1000000
 tx-pool-min-gas-price=0

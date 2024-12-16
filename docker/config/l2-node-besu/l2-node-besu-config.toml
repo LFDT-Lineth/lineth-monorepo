@@ -1,5 +1,5 @@
 data-path="/opt/besu/data"
-host-whitelist=["*"]
+host-allowlist=["*"]
 sync-mode="FULL"
 p2p-port=30303
 

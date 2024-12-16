@@ -3,7 +3,7 @@ logging="INFO"
 data-path="/opt/besu/data"
 data-storage-format="FOREST"
 sync-mode="FULL"
-host-whitelist=["*"]
+host-allowlist=["*"]
 network-id=31648428
 
 target-gas-limit=30000000
