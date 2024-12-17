@@ -151,6 +151,22 @@ deploy-l2-test-erc20:
 		TEST_ERC20_INITIAL_SUPPLY=100000 \
 		npx ts-node local-deployments-artifacts/deployTestERC20.ts
 
+deploy-l2-evm-opcode-tester:
+		# WARNING: FOR LOCAL DEV ONLY - DO NOT REUSE THESE KEYS ELSEWHERE
+		cd contracts/; \
+		PRIVATE_KEY=0x1dd171cec7e2995408b5513004e8207fe88d6820aeff0d82463b3e41df251aae \
+		RPC_URL=http:\\localhost:8545/ \
+		npx ts-node local-deployments-artifacts/deployLondonEvmTestingFramework.ts
+
+execute-all-opcodes:
+		# WARNING: FOR LOCAL DEV ONLY - DO NOT REUSE THESE KEYS ELSEWHERE
+		cd contracts/; \
+		OPCODE_TEST_CONTRACT_ADDRESS=0x997FC3aF1F193Cbdc013060076c67A13e218980e \
+		NUMBER_OF_RUNS=3 \
+		PRIVATE_KEY=0x1dd171cec7e2995408b5513004e8207fe88d6820aeff0d82463b3e41df251aae \
+		RPC_URL=http:\\localhost:8545/ \
+		npx ts-node local-deployments-artifacts/executeAllOpcodes.ts
+
 fresh-start-l2-blockchain-only:
 		make clean-environment
 		make start-l2-blockchain-only
