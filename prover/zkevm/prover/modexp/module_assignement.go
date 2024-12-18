@@ -1,10 +1,13 @@
 package modexp
 
 import (
+	"os"
+
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	"github.com/consensys/linea-monorepo/prover/utils"
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/common"
+	"github.com/sirupsen/logrus"
 )
 
 // antichamberAssignment is a builder structure used to incrementally compute
@@ -23,9 +26,11 @@ func (mod *Module) Assign(run *wizard.ProverRuntime) {
 	mod.Input.assignIsModexp(run)
 
 	var (
-		isModexp = mod.Input.isModExp.GetColAssignment(run).IntoRegVecSaveAlloc()
-		limbs    = mod.Input.Limbs.GetColAssignment(run).IntoRegVecSaveAlloc()
-		builder  = antichamberAssignment{
+		modexpCountSmall int = 0
+		modexpCountLarge int = 0
+		isModexp             = mod.Input.isModExp.GetColAssignment(run).IntoRegVecSaveAlloc()
+		limbs                = mod.Input.Limbs.GetColAssignment(run).IntoRegVecSaveAlloc()
+		builder              = antichamberAssignment{
 			isActive:    common.NewVectorBuilder(mod.IsActive),
 			isSmall:     common.NewVectorBuilder(mod.IsSmall),
 			isLarge:     common.NewVectorBuilder(mod.IsLarge),
@@ -58,6 +63,12 @@ func (mod *Module) Assign(run *wizard.ProverRuntime) {
 			}
 		}
 
+		if isLarge {
+			modexpCountLarge++
+		} else {
+			modexpCountSmall++
+		}
+
 		for k := 0; k < modexpNumRowsPerInstance; k++ {
 
 			builder.isActive.PushOne()
@@ -73,6 +84,16 @@ func (mod *Module) Assign(run *wizard.ProverRuntime) {
 		}
 
 		currPosition += modexpNumRowsPerInstance
+	}
+
+	if modexpCountSmall > mod.MaxNb256BitsInstances {
+		logrus.Errorf("limit overflow: the modexp (256 bits) count is %v and the limit is %v\n", modexpCountSmall, mod.MaxNb256BitsInstances)
+		os.Exit(77)
+	}
+
+	if modexpCountLarge > mod.MaxNb4096BitsInstances {
+		logrus.Errorf("limit overflow: the modexp (4096 bits) count is %v and the limit is %v\n", modexpCountSmall, mod.MaxNb4096BitsInstances)
+		os.Exit(77)
 	}
 
 	builder.isActive.PadAndAssign(run, field.Zero())
