@@ -8,6 +8,7 @@ import {
   tryVerifyContract,
   getDeployedContractAddress,
   tryStoreAddress,
+  LogContractDeployment,
 } from "../common/helpers";
 import {
   L1_L2_MESSAGE_SETTER_ROLE,
@@ -59,14 +60,11 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       unsafeAllow: ["constructor"],
     },
   );
-  const contractAddress = await contract.getAddress();
-  const txReceipt = await contract.deploymentTransaction()?.wait();
-  if (!txReceipt) {
-    throw "Contract deployment transaction receipt not found.";
-  }
-  console.log(`${contractName} deployed: address=${contractAddress} blockNumber=${txReceipt.blockNumber}`);
 
-  await tryStoreAddress(hre.network.name, contractName, contractAddress, txReceipt.hash);
+  await LogContractDeployment(contractName, contract);
+  const contractAddress = await contract.getAddress();
+
+  await tryStoreAddress(hre.network.name, contractName, contractAddress, contract.deploymentTransaction()!.hash);
 
   await tryVerifyContract(contractAddress);
 };

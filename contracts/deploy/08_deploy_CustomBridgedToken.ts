@@ -34,19 +34,20 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     },
   );
 
-  await customBridgedToken.waitForDeployment();
-  const customBridgedTokenAddress = await customBridgedToken.getAddress();
-
-  const deployTx = customBridgedToken.deploymentTransaction();
-  if (!deployTx) {
-    throw "Contract deployment transaction receipt not found.";
+  const txReceipt = await customBridgedToken.deploymentTransaction()?.wait();
+  if (!txReceipt) {
+    throw "Deployment transaction not found.";
   }
 
-  await tryStoreAddress(network.name, contractName, customBridgedTokenAddress, deployTx.hash);
+  const contractAddress = await customBridgedToken.getAddress();
 
-  console.log(`CustomBridgedToken deployed on ${network.name}, at address:`, customBridgedTokenAddress);
+  console.log(
+    `contract=${contractName} deployed: address=${contractAddress} blockNumber=${txReceipt.blockNumber} chainId=${chainId}`,
+  );
 
-  await tryVerifyContract(customBridgedTokenAddress);
+  await tryStoreAddress(network.name, contractName, contractAddress, txReceipt.hash);
+  await tryVerifyContract(contractAddress);
 };
+
 export default func;
 func.tags = ["CustomBridgedToken"];

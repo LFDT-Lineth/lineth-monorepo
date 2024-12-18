@@ -4,6 +4,7 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { deployFromFactory } from "../scripts/hardhat/utils";
 import { get1559Fees } from "../scripts/utils";
 import {
+  LogContractDeployment,
   getDeployedContractAddress,
   getRequiredEnvVar,
   tryStoreAddress,
@@ -43,16 +44,12 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     adminAddress,
     await get1559Fees(provider),
   );
+
+  await LogContractDeployment(contractName, contract);
   const contractAddress = await contract.getAddress();
 
-  console.log(`${contractName} deployed at ${contractAddress}`);
+  await tryStoreAddress(hre.network.name, contractName, contractAddress, contract.deploymentTransaction()!.hash);
 
-  const deployTx = contract.deploymentTransaction();
-  if (!deployTx) {
-    throw "Deployment transaction not found.";
-  }
-
-  await tryStoreAddress(hre.network.name, contractName, contractAddress, deployTx.hash);
   const args = [minDelay, timeLockProposers?.split(","), timelockExecutors?.split(","), adminAddress];
 
   await tryVerifyContractWithConstructorArgs(

@@ -1,5 +1,9 @@
 import { ethers } from "ethers";
-import { abi as TestERC20Abi, bytecode as TestERC20Bytecode } from "./static-artifacts/TestERC20.json";
+import {
+  contractName as TestERC20ContractName,
+  abi as TestERC20Abi,
+  bytecode as TestERC20Bytecode,
+} from "./static-artifacts/TestERC20.json";
 import { deployContractFromArtifacts } from "../common/helpers/deployments";
 import { get1559Fees } from "../scripts/utils";
 import { getRequiredEnvVar } from "../common/helpers/environment";
@@ -35,7 +39,8 @@ async function main() {
     }
   }
 
-  const testERC20 = await deployContractFromArtifacts(
+  await deployContractFromArtifacts(
+    TestERC20ContractName,
     TestERC20Abi,
     TestERC20Bytecode,
     wallet,
@@ -47,12 +52,6 @@ async function main() {
       gasPrice,
     },
   );
-
-  const testERC20Address = await testERC20.getAddress();
-
-  const chainId = (await provider.getNetwork()).chainId;
-
-  console.log(`testERC20 deployed: address=${testERC20Address} chainId=${chainId}`);
 }
 
 main().catch((error) => {

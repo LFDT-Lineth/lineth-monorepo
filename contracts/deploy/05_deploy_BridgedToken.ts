@@ -2,7 +2,12 @@ import { ethers, network, upgrades } from "hardhat";
 import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { BridgedToken } from "../typechain-types";
-import { tryVerifyContract, getDeployedContractAddress, tryStoreAddress } from "../common/helpers";
+import {
+  tryVerifyContract,
+  getDeployedContractAddress,
+  tryStoreAddress,
+  LogContractDeployment,
+} from "../common/helpers";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments } = hre;
@@ -23,19 +28,18 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const BridgedToken = await ethers.getContractFactory(contractName);
 
   const bridgedToken = (await upgrades.deployBeacon(BridgedToken)) as unknown as BridgedToken;
-  await bridgedToken.waitForDeployment();
+
+  await LogContractDeployment(contractName, bridgedToken);
 
   const bridgedTokenAddress = await bridgedToken.getAddress();
   process.env.BRIDGED_TOKEN_ADDRESS = bridgedTokenAddress;
 
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-ignore
-  const deployTx = bridgedToken.deployTransaction;
-  if (!deployTx) {
-    throw "Contract deployment transaction receipt not found.";
-  }
-
-  await tryStoreAddress(network.name, contractName, bridgedTokenAddress, deployTx.hash);
+  await tryStoreAddress(
+    hre.network.name,
+    contractName,
+    bridgedTokenAddress,
+    bridgedToken.deploymentTransaction()!.hash,
+  );
 
   if (process.env.TOKEN_BRIDGE_L1 === "true") {
     console.log(`L1 BridgedToken beacon deployed on ${network.name}, at address:`, bridgedTokenAddress);

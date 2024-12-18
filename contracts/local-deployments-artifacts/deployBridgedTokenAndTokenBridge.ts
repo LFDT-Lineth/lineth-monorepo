@@ -1,7 +1,20 @@
-import { abi as ProxyAdminAbi, bytecode as ProxyAdminBytecode } from "./static-artifacts/ProxyAdmin.json";
-import { abi as BridgedTokenAbi, bytecode as BridgedTokenBytecode } from "./dynamic-artifacts/BridgedToken.json";
-import { abi as TokenBridgeAbi, bytecode as TokenBridgeBytecode } from "./dynamic-artifacts/TokenBridge.json";
 import {
+  contractName as ProxyAdminContractName,
+  abi as ProxyAdminAbi,
+  bytecode as ProxyAdminBytecode,
+} from "./static-artifacts/ProxyAdmin.json";
+import {
+  contractName as BridgedTokenContractName,
+  abi as BridgedTokenAbi,
+  bytecode as BridgedTokenBytecode,
+} from "./dynamic-artifacts/BridgedToken.json";
+import {
+  contractName as TokenBridgeContractName,
+  abi as TokenBridgeAbi,
+  bytecode as TokenBridgeBytecode,
+} from "./dynamic-artifacts/TokenBridge.json";
+import {
+  contractName as UpgradeableBeaconContractName,
   abi as UpgradeableBeaconAbi,
   bytecode as UpgradeableBeaconBytecode,
 } from "./static-artifacts/UpgradeableBeacon.json";
@@ -23,8 +36,6 @@ import { deployContractFromArtifacts, getInitializerData } from "../common/helpe
 async function main() {
   const ORDERED_NONCE_POST_L2MESSAGESERVICE = 3;
   const ORDERED_NONCE_POST_LINEAROLLUP = 4;
-  const bridgedTokenName = "BridgedToken";
-  const tokenBridgeName = "TokenBridge";
 
   const l2MessageServiceAddress = process.env.L2MESSAGESERVICE_ADDRESS;
   const lineaRollupAddress = process.env.LINEA_ROLLUP_ADDRESS;
@@ -55,10 +66,18 @@ async function main() {
     }
   }
 
+  const tokenBridgeContractImplementationName = "tokenBridgeContractImplementation";
+
   const [bridgedToken, tokenBridgeImplementation, proxyAdmin] = await Promise.all([
-    deployContractFromArtifacts(BridgedTokenAbi, BridgedTokenBytecode, wallet, { nonce: walletNonce }),
-    deployContractFromArtifacts(TokenBridgeAbi, TokenBridgeBytecode, wallet, { nonce: walletNonce + 1 }),
-    deployContractFromArtifacts(ProxyAdminAbi, ProxyAdminBytecode, wallet, { nonce: walletNonce + 2 }),
+    deployContractFromArtifacts(BridgedTokenContractName, BridgedTokenAbi, BridgedTokenBytecode, wallet, {
+      nonce: walletNonce,
+    }),
+    deployContractFromArtifacts(tokenBridgeContractImplementationName, TokenBridgeAbi, TokenBridgeBytecode, wallet, {
+      nonce: walletNonce + 1,
+    }),
+    deployContractFromArtifacts(ProxyAdminContractName, ProxyAdminAbi, ProxyAdminBytecode, wallet, {
+      nonce: walletNonce + 2,
+    }),
   ]);
 
   const bridgedTokenAddress = await bridgedToken.getAddress();
@@ -67,12 +86,10 @@ async function main() {
 
   const chainId = (await provider.getNetwork()).chainId;
 
-  console.log(`${bridgedTokenName} contract deployed at ${bridgedTokenAddress}`);
-  console.log(`${tokenBridgeName} Implementation contract deployed at ${tokenBridgeImplementationAddress}`);
-  console.log(`L1 ProxyAdmin deployed: address=${proxyAdminAddress}`);
   console.log(`Deploying UpgradeableBeacon: chainId=${chainId} bridgedTokenAddress=${bridgedTokenAddress}`);
 
   const beaconProxy = await deployContractFromArtifacts(
+    UpgradeableBeaconContractName,
     UpgradeableBeaconAbi,
     UpgradeableBeaconBytecode,
     wallet,
@@ -114,24 +131,14 @@ async function main() {
     },
   ]);
 
-  const proxyContract = await deployContractFromArtifacts(
+  await deployContractFromArtifacts(
+    TokenBridgeContractName,
     TransparentUpgradeableProxyAbi,
     TransparentUpgradeableProxyBytecode,
     wallet,
     tokenBridgeImplementationAddress,
     proxyAdminAddress,
     initializer,
-  );
-
-  const proxyContractAddress = await proxyContract.getAddress();
-  const txReceipt = await proxyContract.deploymentTransaction()?.wait();
-
-  if (!txReceipt) {
-    throw "Contract deployment transaction receipt not found.";
-  }
-
-  console.log(
-    `${tokenBridgeName} deployed: chainId=${chainId} address=${proxyContractAddress} blockNumber=${txReceipt.blockNumber}`,
   );
 }
 

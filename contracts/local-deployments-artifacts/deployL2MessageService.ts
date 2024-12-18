@@ -1,10 +1,15 @@
 import { ethers } from "ethers";
 import * as dotenv from "dotenv";
 import {
+  contractName as L2MessageServiceContractName,
   abi as L2MessageServiceAbi,
   bytecode as L2MessageServiceBytecode,
 } from "./dynamic-artifacts/L2MessageService.json";
-import { abi as ProxyAdminAbi, bytecode as ProxyAdminBytecode } from "./static-artifacts/ProxyAdmin.json";
+import {
+  contractName as ProxyAdminContractName,
+  abi as ProxyAdminAbi,
+  bytecode as ProxyAdminBytecode,
+} from "./static-artifacts/ProxyAdmin.json";
 import {
   abi as TransparentUpgradeableProxyAbi,
   bytecode as TransparentUpgradeableProxyBytecode,
@@ -38,15 +43,25 @@ async function main() {
     walletNonce = parseInt(process.env.L2_NONCE);
   }
 
+  const l2MessageServiceContractImplementationName = "L2MessageServiceImplementation";
+
   const [l2MessageServiceImplementation, proxyAdmin] = await Promise.all([
-    deployContractFromArtifacts(L2MessageServiceAbi, L2MessageServiceBytecode, wallet, { nonce: walletNonce }),
-    deployContractFromArtifacts(ProxyAdminAbi, ProxyAdminBytecode, wallet, { nonce: walletNonce + 1 }),
+    deployContractFromArtifacts(
+      l2MessageServiceContractImplementationName,
+      L2MessageServiceAbi,
+      L2MessageServiceBytecode,
+      wallet,
+      {
+        nonce: walletNonce,
+      },
+    ),
+    deployContractFromArtifacts(ProxyAdminContractName, ProxyAdminAbi, ProxyAdminBytecode, wallet, {
+      nonce: walletNonce + 1,
+    }),
   ]);
 
   const proxyAdminAddress = await proxyAdmin.getAddress();
   const l2MessageServiceImplementationAddress = await l2MessageServiceImplementation.getAddress();
-
-  console.log(`L2 ProxyAdmin deployed: address=${proxyAdminAddress}`);
 
   const pauseTypeRoles = getEnvVarOrDefault("L2MSGSERVICE_PAUSE_TYPE_ROLES", L2_MESSAGE_SERVICE_PAUSE_TYPES_ROLES);
   const unpauseTypeRoles = getEnvVarOrDefault(
@@ -69,7 +84,8 @@ async function main() {
     unpauseTypeRoles,
   ]);
 
-  const proxyContract = await deployContractFromArtifacts(
+  await deployContractFromArtifacts(
+    L2MessageServiceContractName,
     TransparentUpgradeableProxyAbi,
     TransparentUpgradeableProxyBytecode,
     wallet,
@@ -77,15 +93,6 @@ async function main() {
     proxyAdminAddress,
     initializer,
   );
-
-  const proxyContractAddress = await proxyContract.getAddress();
-  const txReceipt = await proxyContract.deploymentTransaction()?.wait();
-
-  if (!txReceipt) {
-    throw "Contract deployment transaction receipt not found.";
-  }
-
-  console.log(`${messageServiceName} deployed: address=${proxyContractAddress} blockNumber=${txReceipt.blockNumber}`);
 }
 
 main().catch((error) => {

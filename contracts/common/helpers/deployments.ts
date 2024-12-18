@@ -1,4 +1,4 @@
-import { ethers, AbstractSigner, Interface, InterfaceAbi } from "ethers";
+import { ethers, AbstractSigner, Interface, InterfaceAbi, BaseContract } from "ethers";
 
 export function getInitializerData(contractAbi: InterfaceAbi, initializerFunctionName: string, args: unknown[]) {
   const contractInterface = new Interface(contractAbi);
@@ -12,6 +12,7 @@ export function getInitializerData(contractAbi: InterfaceAbi, initializerFunctio
 }
 
 export async function deployContractFromArtifacts(
+  contractName: string,
   abi: ethers.InterfaceAbi,
   bytecode: ethers.BytesLike,
   wallet: AbstractSigner,
@@ -20,5 +21,21 @@ export async function deployContractFromArtifacts(
 ) {
   const factory = new ethers.ContractFactory(abi, bytecode, wallet);
   const contract = await factory.deploy(...args);
-  return contract.waitForDeployment();
+
+  await LogContractDeployment(contractName, contract);
+
+  return contract;
+}
+
+export async function LogContractDeployment(contractName: string, contract: BaseContract) {
+  const txReceipt = await contract.deploymentTransaction()?.wait();
+  if (!txReceipt) {
+    throw "Deployment transaction not found.";
+  }
+
+  const contractAddress = await contract.getAddress();
+  const chainId = (await contract.deploymentTransaction()!.provider.getNetwork()).chainId;
+  console.log(
+    `contract=${contractName} deployed: address=${contractAddress} blockNumber=${txReceipt.blockNumber} chainId=${chainId}`,
+  );
 }

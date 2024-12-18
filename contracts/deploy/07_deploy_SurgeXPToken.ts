@@ -8,6 +8,7 @@ import {
   getDeployedContractAddress,
   tryStoreAddress,
   getRequiredEnvVar,
+  LogContractDeployment,
 } from "../common/helpers";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
@@ -35,19 +36,13 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     transferAddresses,
     await get1559Fees(provider),
   );
+
+  await LogContractDeployment(contractName, contract);
   const contractAddress = await contract.getAddress();
 
-  console.log(`${contractName} deployed at ${contractAddress}`);
-
-  const deployTx = contract.deploymentTransaction();
-  if (!deployTx) {
-    throw "Contract deployment transaction receipt not found.";
-  }
-
-  await tryStoreAddress(hre.network.name, contractName, contractAddress, deployTx.hash);
+  await tryStoreAddress(hre.network.name, contractName, contractAddress, contract.deploymentTransaction()!.hash);
 
   const args = [adminAddress, minterAddress, transferAddresses];
-
   await tryVerifyContractWithConstructorArgs(contractAddress, "contracts/token/LineaSurgeXP.sol:LineaSurgeXP", args);
 };
 export default func;

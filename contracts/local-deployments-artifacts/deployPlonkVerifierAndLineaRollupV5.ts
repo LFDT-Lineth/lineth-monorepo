@@ -3,7 +3,11 @@ import fs from "fs";
 import path from "path";
 import * as dotenv from "dotenv";
 import { abi as LineaRollupV5Abi, bytecode as LineaRollupV5Bytecode } from "./dynamic-artifacts/LineaRollupV5.json";
-import { abi as ProxyAdminAbi, bytecode as ProxyAdminBytecode } from "./static-artifacts/ProxyAdmin.json";
+import {
+  contractName as ProxyAdminContractName,
+  abi as ProxyAdminAbi,
+  bytecode as ProxyAdminBytecode,
+} from "./static-artifacts/ProxyAdmin.json";
 import {
   abi as TransparentUpgradeableProxyAbi,
   bytecode as TransparentUpgradeableProxyBytecode,
@@ -46,7 +50,7 @@ async function main() {
   const lineaRollupTateLimitAmountInWei = getRequiredEnvVar("LINEA_ROLLUP_RATE_LIMIT_AMOUNT");
   const lineaRollupGenesisTimestamp = getRequiredEnvVar("LINEA_ROLLUP_GENESIS_TIMESTAMP");
   const lineaRollupName = "LineaRollupV5";
-
+  const lineaRollupImplementationName = "LineaRollupV5Implementation";
   const verifierArtifacts = findContractArtifacts(path.join(__dirname, "./dynamic-artifacts"), verifierName);
 
   const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
@@ -63,15 +67,15 @@ async function main() {
   }
 
   const [verifier, lineaRollupImplementation, proxyAdmin] = await Promise.all([
-    deployContractFromArtifacts(verifierArtifacts.abi, verifierArtifacts.bytecode, wallet, {
+    deployContractFromArtifacts(verifierName, verifierArtifacts.abi, verifierArtifacts.bytecode, wallet, {
       nonce: walletNonce,
       gasPrice,
     }),
-    deployContractFromArtifacts(LineaRollupV5Abi, LineaRollupV5Bytecode, wallet, {
+    deployContractFromArtifacts(lineaRollupImplementationName, LineaRollupV5Abi, LineaRollupV5Bytecode, wallet, {
       nonce: walletNonce + 1,
       gasPrice,
     }),
-    deployContractFromArtifacts(ProxyAdminAbi, ProxyAdminBytecode, wallet, {
+    deployContractFromArtifacts(ProxyAdminContractName, ProxyAdminAbi, ProxyAdminBytecode, wallet, {
       nonce: walletNonce + 2,
       gasPrice,
     }),
@@ -80,9 +84,6 @@ async function main() {
   const proxyAdminAddress = await proxyAdmin.getAddress();
   const verifierAddress = await verifier.getAddress();
   const lineaRollupImplementationAddress = await lineaRollupImplementation.getAddress();
-
-  console.log(`${verifierName} deployed: address=${verifierAddress}`);
-  console.log(`L1 ProxyAdmin deployed: address=${proxyAdminAddress}`);
 
   const initializer = getInitializerData(LineaRollupV5Abi, "initialize", [
     lineaRollupInitialStateRootHash,
@@ -95,7 +96,8 @@ async function main() {
     lineaRollupGenesisTimestamp,
   ]);
 
-  const proxyContract = await deployContractFromArtifacts(
+  await deployContractFromArtifacts(
+    lineaRollupName,
     TransparentUpgradeableProxyAbi,
     TransparentUpgradeableProxyBytecode,
     wallet,
@@ -104,15 +106,6 @@ async function main() {
     initializer,
     { gasPrice },
   );
-
-  const proxyContractAddress = await proxyContract.getAddress();
-  const txReceipt = await proxyContract.deploymentTransaction()?.wait();
-
-  if (!txReceipt) {
-    throw "Contract deployment transaction receipt not found.";
-  }
-
-  console.log(`${lineaRollupName} deployed: address=${proxyContractAddress} blockNumber=${txReceipt.blockNumber}`);
 }
 
 main().catch((error) => {
