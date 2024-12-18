@@ -566,7 +566,6 @@ func (ctx *Ctx) processStatusPrecomputed() {
 
 			_, ok := ctx.PolynomialsTouchedByTheQuery[name]
 			if !ok {
-				logrus.Warnf("got an unconstrained column: %v -> marking as ignored", name)
 				comp.Columns.MarkAsIgnored(name)
 				continue
 			}

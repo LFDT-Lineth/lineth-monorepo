@@ -1,9 +1,10 @@
 package execution
 
 import (
+	"math/big"
+
 	"github.com/consensys/linea-monorepo/prover/config"
 	public_input "github.com/consensys/linea-monorepo/prover/public-input"
-	"math/big"
 
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark/backend/plonk"
@@ -63,17 +64,23 @@ func assign(
 	proof wizard.Proof,
 	funcInputs public_input.Execution,
 ) CircuitExecution {
-	wizardVerifier := wizard.GetWizardVerifierCircuitAssignment(comp, proof)
 
-	return CircuitExecution{
-		WizardVerifier: *wizardVerifier,
-		FuncInputs: FunctionalPublicInputSnark{
-			FunctionalPublicInputQSnark: FunctionalPublicInputQSnark{
-				L2MessageHashes: L2MessageHashes{Values: make([][32]frontend.Variable, limits.BlockL2L1Logs)}, // TODO use a maximum from config
+	var (
+		wizardVerifier = wizard.GetWizardVerifierCircuitAssignment(comp, proof)
+		res            = CircuitExecution{
+			WizardVerifier: *wizardVerifier,
+			FuncInputs: FunctionalPublicInputSnark{
+				FunctionalPublicInputQSnark: FunctionalPublicInputQSnark{
+					L2MessageHashes: L2MessageHashes{Values: make([][32]frontend.Variable, limits.BlockL2L1Logs)}, // TODO use a maximum from config
+				},
 			},
-		},
-		PublicInput: new(big.Int).SetBytes(funcInputs.Sum(nil)),
-	}
+			PublicInput: new(big.Int).SetBytes(funcInputs.Sum(nil)),
+		}
+	)
+
+	res.FuncInputs.Assign(&funcInputs)
+
+	return res
 }
 
 // Define of the wizard circuit

@@ -287,7 +287,7 @@ func (c *Compiled) Assign(r Request) (a Circuit, err error) {
 			// @alex: Not sure this check is a duplicate because we already check
 			// that the state root hash is well-propagated and this should be
 			// enough that the rolling hash update events are emitted in sequence.
-			if executionFPI.FirstRollingHashUpdateNumber != lastRollingHashNumber+1 {
+			if executionFPI.FirstRollingHashUpdateNumber <= lastRollingHashNumber {
 				err = fmt.Errorf("execution #%d fails CHECK_RHASH_CONSEC:\n\tinitial rolling hash message number %d is not right after the last finalized one %d", i, executionFPI.FirstRollingHashUpdateNumber, lastRollingHashNumber)
 				return
 			}

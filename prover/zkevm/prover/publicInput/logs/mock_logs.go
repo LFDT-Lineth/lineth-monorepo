@@ -39,7 +39,7 @@ type LogColumns struct {
 	AbsLogNum                              ifaces.Column
 	AbsLogNumMax                           ifaces.Column // total number of logs in the conflated batch
 	Ct                                     ifaces.Column // counter column used inside a column segment used for one specific log
-	OutgoingHi, OutgoingLo                 ifaces.Column // the Hi and Lo parts of outgoing data
+	DataHi, DataLo                         ifaces.Column // the Hi and Lo parts of outgoing data
 	TxEmitsLogs                            ifaces.Column
 }
 
@@ -131,8 +131,8 @@ func NewLogColumns(comp *wizard.CompiledIOP, size int, name string) LogColumns {
 		AbsLogNum:    createCol("ABS_LOG_NUM"),
 		AbsLogNumMax: createCol("ABS_LOG_NUM_MAX"),
 		Ct:           createCol("CT"),
-		OutgoingHi:   createCol("OUTGOING_HI"),
-		OutgoingLo:   createCol("OUTGOING_LO"),
+		DataHi:       createCol("OUTGOING_HI"),
+		DataLo:       createCol("OUTGOING_LO"),
 		TxEmitsLogs:  createCol("TX_EMITS_LOGS"),
 	}
 
@@ -160,8 +160,8 @@ func NewLogColumnsAssignmentBuilder(lc *LogColumns) LogColumnsAssignmentBuilder 
 		AbsLogNum:    common.NewVectorBuilder(lc.AbsLogNum),
 		AbsLogNumMax: common.NewVectorBuilder(lc.AbsLogNumMax),
 		Ct:           common.NewVectorBuilder(lc.Ct),
-		OutgoingHi:   common.NewVectorBuilder(lc.OutgoingHi),
-		OutgoingLo:   common.NewVectorBuilder(lc.OutgoingLo),
+		OutgoingHi:   common.NewVectorBuilder(lc.DataHi),
+		OutgoingLo:   common.NewVectorBuilder(lc.DataLo),
 		TxEmitsLogs:  common.NewVectorBuilder(lc.TxEmitsLogs),
 	}
 

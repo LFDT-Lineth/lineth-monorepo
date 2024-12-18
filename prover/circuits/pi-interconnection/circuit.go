@@ -186,7 +186,7 @@ func (c *Circuit) Define(api frontend.API) error {
 		rollingHashUpdated := api.Mul(inRange, api.Sub(1, finalRhMsgNumZero))
 
 		// CHECK_RHASH_CONSEC
-		internal.AssertEqualIf(api, rollingHashUpdated, pi.FirstRollingHashUpdateNumber, api.Add(finalRollingHashMsgNum, 1))
+		internal.AssertIsLessIf(api, rollingHashUpdated, finalRollingHashMsgNum, pi.FirstRollingHashUpdateNumber)
 		finalRollingHashMsgNum = api.Select(rollingHashUpdated, pi.LastRollingHashUpdateNumber, finalRollingHashMsgNum)
 		copy(finalRollingHash[:], internal.SelectMany(api, rollingHashUpdated, pi.FinalRollingHashUpdate[:], finalRollingHash[:]))
 

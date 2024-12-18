@@ -46,8 +46,8 @@ func DefineExtractedData(comp *wizard.CompiledIOP, logCols LogColumns, sel Selec
 	}
 	// the LogColumns we extract data from, and which we will use to check for consistency
 	logsTable := []ifaces.Column{
-		logCols.OutgoingHi,
-		logCols.OutgoingLo,
+		logCols.DataHi,
+		logCols.DataLo,
 	}
 
 	comp.InsertGlobal(
@@ -97,8 +97,8 @@ func DefineExtractedData(comp *wizard.CompiledIOP, logCols LogColumns, sel Selec
 
 // CheckBridgeAddress checks if a row does indeed contain the data corresponding to a the bridge address
 func CheckBridgeAddress(run *wizard.ProverRuntime, lCols LogColumns, sel Selectors, pos int) bool {
-	outHi := lCols.OutgoingHi.GetColAssignmentAt(run, pos)
-	outLo := lCols.OutgoingLo.GetColAssignmentAt(run, pos)
+	outHi := lCols.DataHi.GetColAssignmentAt(run, pos)
+	outLo := lCols.DataLo.GetColAssignmentAt(run, pos)
 	bridgeAddrHi := sel.L2BridgeAddressColHI.GetColAssignmentAt(run, 0)
 	bridgeAddrLo := sel.L2BridgeAddressColLo.GetColAssignmentAt(run, 0)
 	if outHi.Equal(&bridgeAddrHi) && outLo.Equal(&bridgeAddrLo) {
@@ -113,8 +113,8 @@ func CheckFirstTopic(run *wizard.ProverRuntime, lCols LogColumns, pos int, logTy
 	firstTopicBytes := GetFirstTopic(logType) // fixed expected value for the topic on the first topic row
 	firstTopicHi.SetBytes(firstTopicBytes[:16])
 	firstTopicLo.SetBytes(firstTopicBytes[16:])
-	outHi := lCols.OutgoingHi.GetColAssignmentAt(run, pos)
-	outLo := lCols.OutgoingLo.GetColAssignmentAt(run, pos)
+	outHi := lCols.DataHi.GetColAssignmentAt(run, pos)
+	outLo := lCols.DataLo.GetColAssignmentAt(run, pos)
 	if firstTopicHi.Equal(&outHi) && firstTopicLo.Equal(&outLo) {
 		return true
 	}
@@ -155,8 +155,8 @@ func AssignExtractedData(run *wizard.ProverRuntime, lCols LogColumns, sel Select
 	for i := 0; i < lCols.Ct.Size(); i++ {
 		// the following conditional checks if row i contains a message that should be picked
 		if IsPositionTargetMessage(run, lCols, sel, i, logType) {
-			hi := lCols.OutgoingHi.GetColAssignmentAt(run, i)
-			lo := lCols.OutgoingLo.GetColAssignmentAt(run, i)
+			hi := lCols.DataHi.GetColAssignmentAt(run, i)
+			lo := lCols.DataLo.GetColAssignmentAt(run, i)
 			// pick the messages and add them to the msgHi/Lo ExtractedData columns
 			Hi[counter].Set(&hi)
 			Lo[counter].Set(&lo)

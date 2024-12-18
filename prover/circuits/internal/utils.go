@@ -30,6 +30,16 @@ func AssertEqualIf(api frontend.API, cond, a, b frontend.Variable) {
 	api.AssertIsEqual(api.Mul(cond, a), api.Mul(cond, b))
 }
 
+// AssertIsLessIf asserts cond ≠ 0 ⇒ (a < b)
+func AssertIsLessIf(api frontend.API, cond, a, b frontend.Variable) {
+	var (
+		condIsNonZero = api.Sub(1, api.IsZero(cond))
+		a_            = api.Mul(condIsNonZero, api.Add(a, 1))
+		b_            = api.Mul(condIsNonZero, b)
+	)
+	api.AssertIsLessOrEqual(a_, b_)
+}
+
 func SliceToTable(api frontend.API, slice []frontend.Variable) *logderivlookup.Table {
 	table := logderivlookup.New(api)
 	for i := range slice {

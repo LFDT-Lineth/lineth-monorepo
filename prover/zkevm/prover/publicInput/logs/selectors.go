@@ -195,12 +195,12 @@ func NewSelectorColumns(comp *wizard.CompiledIOP, lc LogColumns) Selectors {
 	// selectors that light up when OutgoingHi/OutgoingLo contain the expected first topic data
 	SelectFirstTopicL2L1Hi, ComputeSelectFirstTopicL2L1Hi := dedicated.IsZero(
 		comp,
-		sym.Sub(lc.OutgoingHi, firstTopicL2L1Hi),
+		sym.Sub(lc.DataHi, firstTopicL2L1Hi),
 	)
 
 	SelectFirstTopicL2L1Lo, ComputeSelectFirstTopicL2L1Lo := dedicated.IsZero(
 		comp,
-		sym.Sub(lc.OutgoingLo, firstTopicL2L1Lo),
+		sym.Sub(lc.DataLo, firstTopicL2L1Lo),
 	)
 
 	// compute the expected data in the first topic of a rolling hash log
@@ -212,12 +212,12 @@ func NewSelectorColumns(comp *wizard.CompiledIOP, lc LogColumns) Selectors {
 	// selectors that light up when OutgoingHi/OutgoingLo contain the expected first topic data
 	SelectFirstTopicRollingHi, ComputeSelectFirstTopicRollingHi := dedicated.IsZero(
 		comp,
-		sym.Sub(lc.OutgoingHi, firstTopicRollingHi),
+		sym.Sub(lc.DataHi, firstTopicRollingHi),
 	)
 
 	SelectFirstTopicRollingLo, ComputeSelectFirstTopicRollingLo := dedicated.IsZero(
 		comp,
-		sym.Sub(lc.OutgoingLo, firstTopicRollingLo),
+		sym.Sub(lc.DataLo, firstTopicRollingLo),
 	)
 
 	bridgeAddrColHi := comp.InsertProof(0, ifaces.ColIDf("LOGS_FETCHER_BRIDGE_ADDRESS_HI"), 1)
@@ -229,12 +229,12 @@ func NewSelectorColumns(comp *wizard.CompiledIOP, lc LogColumns) Selectors {
 	// selectors that light up when OutgoingHi/OutgoingLo contain the Hi/Lo parts of the l2BridgeAddress
 	SelectorL2BridgeAddressHi, ComputeSelectorL2BridgeAddressHi := dedicated.IsZero(
 		comp,
-		sym.Sub(lc.OutgoingHi, accessBridgeHi),
+		sym.Sub(lc.DataHi, accessBridgeHi),
 	)
 
 	SelectorL2BridgeAddressLo, ComputeSelectorL2BridgeAddressLo := dedicated.IsZero(
 		comp,
-		sym.Sub(lc.OutgoingLo, accessBridgeLo),
+		sym.Sub(lc.DataLo, accessBridgeLo),
 	)
 
 	// generate the final selector object

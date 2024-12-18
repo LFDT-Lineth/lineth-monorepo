@@ -143,8 +143,11 @@ func mustProveAndPass(
 
 		if setupCfgChecksum != traces.Checksum() {
 			// This check is failing on prod but works locally.
-			// 	utils.Panic("traces checksum in the setup manifest does not match the one in the config")
-			logrus.Warnf("the setup checksum does not match the provided trace limits: provided=%++v", traces)
+			// @alex: since this is a setup-related constraint, it would likely be
+			// more interesting to directly include that information in the setup
+			// instead of the config. That way we are guaranteed to not pass the
+			// wrong value at runtime.
+			utils.Panic("traces checksum in the setup manifest does not match the one in the config")
 		}
 
 		// TODO: implements the collection of the functional inputs from the prover response
