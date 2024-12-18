@@ -9,15 +9,6 @@
 FROM golang:1.22.7-alpine AS go-builder
 
 RUN apk add --no-cache rust cargo bash make
-WORKDIR /usr/src/
-COPY --from=corset . ./corset
-ENV CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse
-ENV CARGO_HOME=/usr/local/cargo
-
-WORKDIR /usr/src/corset/
-
-# Caching our beloved 75sec rust build process.
-RUN cargo build --release
 
 WORKDIR /usr/src/
 COPY --from=prover go.mod .
