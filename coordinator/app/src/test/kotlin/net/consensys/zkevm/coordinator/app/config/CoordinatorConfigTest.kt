@@ -283,7 +283,7 @@ class CoordinatorConfigTest {
       )
     )
     private val stateManagerConfig = StateManagerClientConfig(
-      version = "2.2.0",
+      version = "2.3.0",
       endpoints = listOf(
         URI("http://shomei:8888/").toURL()
       ),

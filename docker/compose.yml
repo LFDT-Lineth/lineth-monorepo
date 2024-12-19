@@ -23,7 +23,7 @@ services:
   sequencer:
     hostname: sequencer
     container_name: sequencer
-    image: consensys/linea-besu-package:${SEQUENCER_TAG:-mainnet-9eb49a8}
+    image: consensys/linea-besu-package:${SEQUENCER_TAG:-mainnet-811f30b}
     profiles: [ "l2", "l2-bc", "debug", "external-to-monorepo" ]
     ports:
       - "8545:8545"
@@ -100,7 +100,7 @@ services:
   l2-node-besu:
     hostname: l2-node-besu
     container_name: l2-node-besu
-    image: consensys/linea-besu-package:${SEQUENCER_TAG:-mainnet-9eb49a8}
+    image: consensys/linea-besu-package:${SEQUENCER_TAG:-mainnet-811f30b}
     profiles: [ "l2", "l2-bc", "debug", "external-to-monorepo" ]
     depends_on:
       sequencer:
@@ -467,13 +467,11 @@ services:
       - l1network
 
   zkbesu-shomei:
-    image: consensys/linea-besu:linea-delivery-27
+    image: consensys/linea-besu-package:${SEQUENCER_TAG:-devnet-811f30b}
     hostname: zkbesu-shomei
     container_name: zkbesu-shomei
     profiles: [ "l2", "l2-bc", "external-to-monorepo" ]
     depends_on:
-      shomei-plugin-downloader:
-        condition: service_completed_successfully
       sequencer:
         condition: service_healthy
     privileged: true
@@ -511,10 +509,9 @@ services:
       - ./config/zkbesu-shomei/zkbesu-config.toml:/var/lib/besu/zkbesu-config.toml:ro
       - ./config/zkbesu-shomei/log4j.xml:/var/lib/besu/log4j.xml:ro
       - ./config/linea-local-dev-genesis-PoA-besu.json/:/var/lib/besu/genesis.json:ro
-      - ../tmp/zkbesu-shomei/plugins:/opt/besu/plugins/
 
   shomei:
-    image: consensys/linea-shomei:2.2.0
+    image: consensys/linea-shomei:2.3.0
     hostname: shomei
     container_name: shomei
     profiles: [ "l2", "l2-bc", "external-to-monorepo" ]
@@ -591,15 +588,6 @@ services:
     volumes:
       - local-dev:/data/
       - ./config/shomei/log4j.xml:/log4j.xml:ro
-
-  shomei-plugin-downloader:
-    container_name: shomei-plugin-downloader
-    profiles: [ "l2", "l2-bc", "external-to-monorepo" ]
-    image: busybox:1.36.1
-    command: [ "sh", "/file-downloader.sh", "https://github.com/Consensys/besu-shomei-plugin/releases/download/v0.3.1/besu-shomei-plugin-v0.3.1.jar",  "/shomei-plugin" ]
-    volumes:
-      - ./scripts/file-downloader.sh:/file-downloader.sh:ro
-      - ../tmp/zkbesu-shomei/plugins:/shomei-plugin/
 
   l2-blockscout:
     container_name: l2-blockscout

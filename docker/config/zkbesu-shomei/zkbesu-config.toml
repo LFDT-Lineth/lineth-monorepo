@@ -34,3 +34,5 @@ metrics-port=9545
 
 # database
 data-storage-format="BONSAI"
+
+plugins=["BesuShomeiRpcPlugin", "ZkTrieLogPlugin"]

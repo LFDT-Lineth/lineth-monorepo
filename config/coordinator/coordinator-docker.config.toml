@@ -67,7 +67,7 @@ polling-interval="PT1S"
 traces-file-creation-wait-timeout="PT2M"
 
 [state-manager]
-version="2.2.0"
+version="2.3.0"
 endpoints=["http://shomei:8888/"]
 request-limit-per-endpoint=2
 request-retry.backoff-delay="PT2S"
