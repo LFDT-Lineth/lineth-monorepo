@@ -2,9 +2,14 @@ package execution
 
 import (
 	"bytes"
+	_ "embed"
+	"fmt"
 	"path"
+	"regexp"
+	"strings"
 
 	public_input "github.com/consensys/linea-monorepo/prover/public-input"
+	"github.com/sirupsen/logrus"
 
 	"github.com/consensys/linea-monorepo/prover/backend/ethereum"
 	"github.com/consensys/linea-monorepo/prover/backend/execution/bridge"
@@ -19,11 +24,25 @@ import (
 	"github.com/consensys/linea-monorepo/prover/zkevm"
 )
 
+// Embed the constraints-versions.txt file at compile time
+//
+//go:embed constraints-versions.txt
+var constraintsVersionsStr string
+
 // Craft prover's functional inputs
 func CraftProverOutput(
 	cfg *config.Config,
 	req *Request,
 ) Response {
+
+	// Split the embedded file contents into a string slice
+	constraintsVersions := strings.Split(strings.TrimSpace(constraintsVersionsStr), "\n")
+
+	// Check the arithmetization version used to generate the trace is contained in the prover request
+	// and fail fast if the constraint version is not supported
+	if err := checkArithmetizationVersion(req.ConflatedExecutionTracesFile, req.TracesEngineVersion, constraintsVersions); err != nil {
+		panic(err.Error())
+	}
 
 	var (
 		l2BridgeAddress = cfg.Layer2.MsgSvcContract
@@ -230,4 +249,40 @@ func mimcHashLooselyPacked(b []byte) types.Bytes32 {
 	var buf [32]byte
 	gnarkutil.ChecksumLooselyPackedBytes(b, buf[:], mimc.NewMiMC())
 	return types.AsBytes32(buf[:])
+}
+
+// verifies the arithmetization version used to generate the trace file against the list of versions
+// specified by the constraints in the file path.
+func checkArithmetizationVersion(traceFileName, tracesEngineVersion string, constraintsVersions []string) error {
+	logrus.Info("Verifying the arithmetization version for generating the trace file is supported by the constraints version")
+	traceFileVersion, err := validateAndExtractVersion(traceFileName)
+	if err != nil {
+		return err
+	}
+
+	if strings.Compare(traceFileVersion, tracesEngineVersion) != 0 {
+		return fmt.Errorf("version specified in the conflated trace file: %s does not match with the trace engine version: %s", traceFileVersion, tracesEngineVersion)
+	}
+
+	for _, version := range constraintsVersions {
+		if version != "" && strings.Compare(traceFileVersion, version) == 0 && strings.Compare(tracesEngineVersion, version) == 0 {
+			return nil
+		}
+	}
+	return fmt.Errorf("unsupported arithmetization version:%s found in the conflated trace file: %s", traceFileVersion, traceFileName)
+}
+
+func validateAndExtractVersion(traceFileName string) (string, error) {
+	logrus.Info("Validating and extracting the version from conflated trace files")
+	// Define the regex pattern with a capturing group for the version part
+	// The pattern accounts for an optional directory path
+	traceFilePattern := `^(?:.*/)?\d+-\d+\.conflated\.(v\d+\.\d+\.\d+-[^.]+)\.lt$`
+	re := regexp.MustCompile(traceFilePattern)
+
+	// Check if the file name matches the pattern and extract the version part
+	matches := re.FindStringSubmatch(traceFileName)
+	if len(matches) > 1 {
+		return matches[1], nil
+	}
+	return "", fmt.Errorf("conflated trace file: %s not in the appropriate format or version not found", traceFileName)
 }

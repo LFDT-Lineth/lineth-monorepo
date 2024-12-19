@@ -42,6 +42,7 @@ func Prove(args ProverArgs) error {
 		if err := readRequest(args.Input, req); err != nil {
 			return fmt.Errorf("could not read the input file (%v): %w", args.Input, err)
 		}
+
 		// we use the large traces in 2 cases;
 		// 1. the user explicitly asked for it (args.Large)
 		// 2. the job contains the large suffix and we are a large machine (cfg.Execution.CanRunLarge)
