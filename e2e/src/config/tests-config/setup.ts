@@ -9,6 +9,8 @@ import {
   L2MessageService__factory,
   LineaRollupV6,
   LineaRollupV6__factory,
+  OpcodeTestContract,
+  OpcodeTestContract__factory,
   ProxyAdmin,
   ProxyAdmin__factory,
   TestContract,
@@ -185,6 +187,7 @@ export default class TestSetup {
 
     return l2BridgedToken;
   }
+
   public getL1DummyContract(signer?: Wallet): DummyContract {
     const dummyContract = DummyContract__factory.connect(this.config.L1.dummyContractAddress, this.getL1Provider());
 
@@ -217,6 +220,19 @@ export default class TestSetup {
     } else {
       return undefined;
     }
+  }
+
+  public getOpcodeTestContract(signer?: Wallet): OpcodeTestContract {
+    const opcodeTestContract = OpcodeTestContract__factory.connect(
+      this.config.L2.opcodeTestContractAddress,
+      this.getL2Provider(),
+    );
+
+    if (signer) {
+      return opcodeTestContract.connect(signer);
+    }
+
+    return opcodeTestContract;
   }
 
   public getL1AccountManager(): AccountManager {

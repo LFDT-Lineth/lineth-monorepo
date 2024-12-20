@@ -2,7 +2,7 @@
 import { ethers } from "ethers";
 import { config } from "../tests-config";
 import { deployContract } from "../../common/deployments";
-import { DummyContract__factory, TestContract__factory } from "../../typechain";
+import { DummyContract__factory, TestContract__factory, OpcodeTestContract__factory } from "../../typechain";
 import { etherToWei, sendTransactionsToGenerateTrafficWithInterval } from "../../common/utils";
 import { EMPTY_CONTRACT_CODE } from "../../common/constants";
 
@@ -45,10 +45,12 @@ async function configureOnceOffPrerequisities() {
   const to = "0x8D97689C9818892B700e27F316cc3E41e17fBeb9";
   const calldata = "0x";
 
-  const [dummyContract, l2DummyContract, l2TestContract] = await Promise.all([
+  const [dummyContract, l2DummyContract, l2TestContract, opcodeTestContract] = await Promise.all([
     deployContract(new DummyContract__factory(), account, [{ nonce: l1AccountNonce }]),
     deployContract(new DummyContract__factory(), l2Account, [{ nonce: l2AccountNonce }]),
     deployContract(new TestContract__factory(), l2Account, [{ nonce: l2AccountNonce + 1 }]),
+    deployContract(new OpcodeTestContract__factory(), l2Account, [{ nonce: l2AccountNonce + 2 }]),
+
     // Send ETH to the LineaRollup contract
     (
       await lineaRollup.sendMessage(to, fee, calldata, {
@@ -72,4 +74,5 @@ async function configureOnceOffPrerequisities() {
   console.log(`L1 Dummy contract deployed at address: ${await dummyContract.getAddress()}`);
   console.log(`L2 Dummy contract deployed at address: ${await l2DummyContract.getAddress()}`);
   console.log(`L2 Test contract deployed at address: ${await l2TestContract.getAddress()}`);
+  console.log(`L2 OpcodeTest contract deployed at address: ${await opcodeTestContract.getAddress()}`);
 }

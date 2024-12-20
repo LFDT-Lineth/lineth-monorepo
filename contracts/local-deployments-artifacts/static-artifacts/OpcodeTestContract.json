@@ -1,0 +1,30 @@
+{
+  "contractName": "OpcodeTestContract",
+  "sourceName": "contracts/test-contracts/OpcodeTestContract.sol",
+  "abi": [
+    {
+      "inputs": [],
+      "name": "getGasLimit",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "setGasLimit",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x608060405234801561001057600080fd5b5060ca8061001f6000396000f3fe6080604052348015600f57600080fd5b506004361060325760003560e01c80631a93d1c31460375780634cb0646714606b575b600080fd5b7fb69ece048aea1886497badfc9449787df15ad9606ca8687d17308088ee5551005460405190815260200160405180910390f35b6092457fb69ece048aea1886497badfc9449787df15ad9606ca8687d17308088ee55510055565b00fea2646970667358221220f82230dc04c092c9aee93769b5ed18533fe22bec8252d3620ff4ff225c7fa92464736f6c63430008130033",
+  "deployedBytecode": "0x6080604052348015600f57600080fd5b506004361060325760003560e01c80631a93d1c31460375780634cb0646714606b575b600080fd5b7fb69ece048aea1886497badfc9449787df15ad9606ca8687d17308088ee5551005460405190815260200160405180910390f35b6092457fb69ece048aea1886497badfc9449787df15ad9606ca8687d17308088ee55510055565b00fea2646970667358221220f82230dc04c092c9aee93769b5ed18533fe22bec8252d3620ff4ff225c7fa92464736f6c63430008130033",
+  "linkReferences": {},
+  "deployedLinkReferences": {}
+}

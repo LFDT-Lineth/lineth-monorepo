@@ -5,6 +5,7 @@ data-storage-format="FOREST"
 sync-mode="FULL"
 host-allowlist=["*"]
 
+# target-gas-limit=30000000
 min-gas-price=1000000
 tx-pool-min-gas-price=0
 max-peers=10
