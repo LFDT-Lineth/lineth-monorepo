@@ -65,6 +65,15 @@ fun EthBlock.TransactionObject.toDomain(): Transaction {
     )
   }
 
+  val chainId = run {
+    this.chainId?.toULong()?.let {
+      when {
+        it == 0UL -> null // Web3j uses 0 for chainId when it's not present
+        else -> it
+      }
+    }
+  }
+
   val domainTx = Transaction(
     nonce = this.nonce.toULong(),
     gasLimit = this.gas.toULong(),
@@ -76,7 +85,7 @@ fun EthBlock.TransactionObject.toDomain(): Transaction {
     v = this.v.toULong(),
     yParity = this.getyParity()?.toULongFromHex(),
     type = mapType(this.type), // Optional field for EIP-2718 typed transactions
-    chainId = this.chainId?.toULong(), // Optional field for EIP-155 transactions
+    chainId = chainId, // Optional field for EIP-155 transactions
     gasPrice = gasPrice, // Optional field for EIP-1559 transactions
     maxFeePerGas = maxFeePerGas, // Optional field for EIP-1559 transactions
     maxPriorityFeePerGas = maxPriorityFeePerGas, // Optional field for EIP-1559 transactions,

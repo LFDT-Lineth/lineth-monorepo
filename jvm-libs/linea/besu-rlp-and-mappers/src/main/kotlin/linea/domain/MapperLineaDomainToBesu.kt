@@ -102,7 +102,7 @@ object MapperLineaDomainToBesu {
   }
 
   fun mapToBesu(tx: linea.domain.Transaction): Transaction {
-    val (recId, chainId) = getRecIdAndChainId(tx)
+    val (recId, recChainId) = getRecIdAndChainId(tx)
     val signature = secp256k1.createSignature(
       tx.r,
       tx.s,
@@ -110,7 +110,7 @@ object MapperLineaDomainToBesu {
     )
 
     val besuType = tx.type.toBesu()
-
+    val chainId = tx.chainId?.toBigInteger() ?: recChainId
     return Transaction.builder()
       .type(tx.type.toBesu())
       .nonce(tx.nonce.toLong())
@@ -119,7 +119,7 @@ object MapperLineaDomainToBesu {
       .to(tx.to?.let { Address.wrap(Bytes.wrap(it)) })
       .value(tx.value.toWei())
       .payload(Bytes.wrap(tx.input))
-      .chainId(tx.chainId?.toBigInteger() ?: chainId)
+      .apply { chainId?.let { chainId(it) } }
       .maxPriorityFeePerGas(tx.maxPriorityFeePerGas?.toWei())
       .maxFeePerGas(tx.maxFeePerGas?.toWei())
       .apply {

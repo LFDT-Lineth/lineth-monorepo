@@ -31,21 +31,21 @@ fun main() {
     )
   configureLoggers(
     listOf(
-      "linea.rlp" to Level.INFO,
-      "test.client.web3j" to Level.INFO,
+      "linea.rlp" to Level.TRACE,
+      "test.client.web3j" to Level.TRACE,
       "test.validator" to Level.INFO
     )
   )
 
   // Sepolia Blocks
-  val startBlockNumber = 930_973UL
+  val startBlockNumber = 7_236_338UL
 //  val startBlockNumber = 5_099_599UL
   // Mainnet Blocks
 //  val startBlockNumber = 10_000_308UL
   runCatching {
     fetcherAndValidate.fetchAndValidateBlocks(
       startBlockNumber = startBlockNumber,
-      endBlockNumber = startBlockNumber + 100_000U,
+      endBlockNumber = startBlockNumber + 1U,
 //      endBlockNumber = startBlockNumber + 0u,
       chuckSize = 1_000U,
       rlpEncodingDecodingOnly = false

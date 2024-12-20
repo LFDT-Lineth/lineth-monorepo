@@ -408,4 +408,71 @@ class EthGetBlockToLineaBlockMapperTest {
       assertThat(txBesu.accessList.getOrNull()).isEmpty()
     }
   }
+
+  @Test
+  fun `should map unprotected or no_chainId transactions`() {
+    val input = """
+      0x1688f0b9000000000000000000000000fb1bffc9d739b8d520daf37df666da4c687191ea000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000189ef999caf00000000000000000000000000000000000000000000000000000000000001e4b63e800d00000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001c0000000000000000000000000017062a1de2fe6b99be3d9d37841fed19f57380400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000050000000000000000000000006dad852ec59e420b4d0f10ec700c2a3193982b8900000000000000000000000080b09aad7351f430d747135631851114d9a29386000000000000000000000000ebb8788f11d5cb1cb42156363ad619eb4bd37e3e000000000000000000000000d200d041015dba3a71931e87a2a02c1a8f9fe374000000000000000000000000732e38862cc96df5573fb075756831f8940d531b000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+    """.trimIndent()
+    val txWeb3j = serialize(
+      """{
+          "blockHash": "0x0733f57cf576ce9b0ca47ea9959c1c7ec7f39d26460439a92893034755fc5a93",
+          "blockNumber": "0x6e6af2",
+          "from": "0xfa2930a9d96e91b0a7e78d9febb7a8c744afd0da",
+          "gas": "0x1e8480",
+          "gasPrice": "0x11e1a300",
+          "hash": "0x7a1bfa2a0c7dd2af549190448330dadc85c459e2851030a6b81fb2ce99286239",
+          "input": "$input",
+          "nonce": "0x1",
+          "r": "0x98cf46978ebd95f2f61780c767b1ad392beaa11b68f0e310728f5be8296e752a",
+          "s": "0x1c621c3046755e5600d73b83a0c28676b02a7dff6b89f76b02f5eddd7817854",
+          "to": "0x4e1dcf7ad4e460cfd30791ccc4f9c8a4f820ec67",
+          "transactionIndex": "0x3",
+          "type": "0x0",
+          "v": "0x1b",
+          "value": "0x0"
+      }
+      """.trimIndent()
+    )
+    val domainTx = txWeb3j.toDomain()
+    assertThat(domainTx).isEqualTo(
+      Transaction(
+        nonce = 0x1UL,
+        gasPrice = 0x11e1a300UL,
+        gasLimit = 0x1e8480UL,
+//        gasLimit = 0x2e8480UL,
+        to = "0x4e1dcf7ad4e460cfd30791ccc4f9c8a4f820ec67".decodeHex(),
+        value = 0x0.toBigInteger(),
+        input = input.decodeHex(),
+        r = "0x98cf46978ebd95f2f61780c767b1ad392beaa11b68f0e310728f5be8296e752a".toBigIntegerFromHex(),
+        s = "0x1c621c3046755e5600d73b83a0c28676b02a7dff6b89f76b02f5eddd7817854".toBigIntegerFromHex(),
+        v = 0x1bUL,
+        yParity = null,
+        type = TransactionType.FRONTIER,
+        chainId = null,
+        maxFeePerGas = null,
+        maxPriorityFeePerGas = null,
+        accessList = null
+      )
+    )
+    domainTx.toBesu().also { besuTx ->
+      assertThat(besuTx.type).isEqualTo(org.hyperledger.besu.datatypes.TransactionType.FRONTIER)
+      assertThat(besuTx.nonce).isEqualTo(0x1L)
+      assertThat(besuTx.gasPrice.getOrNull()).isEqualTo(Wei.of(0x11e1a300UL.toLong()))
+      assertThat(besuTx.gasLimit).isEqualTo(0x1e8480L)
+      assertThat(besuTx.to.getOrNull()).isEqualTo(Address.fromHexString("0x4e1dcf7ad4e460cfd30791ccc4f9c8a4f820ec67"))
+      assertThat(besuTx.value).isEqualTo(Wei.of(0x0))
+      assertThat(besuTx.payload).isEqualTo(Bytes.fromHexString(input))
+      assertThat(besuTx.signature.r).isEqualTo(
+        "0x98cf46978ebd95f2f61780c767b1ad392beaa11b68f0e310728f5be8296e752a".toBigIntegerFromHex()
+      )
+      assertThat(besuTx.signature.s).isEqualTo(
+        "0x1c621c3046755e5600d73b83a0c28676b02a7dff6b89f76b02f5eddd7817854".toBigIntegerFromHex()
+      )
+      assertThat(besuTx.signature.recId).isEqualTo(0)
+      assertThat(besuTx.chainId.getOrNull()).isNull()
+      assertThat(besuTx.maxFeePerGas).isEmpty()
+      assertThat(besuTx.maxPriorityFeePerGas).isEmpty()
+    }
+  }
 }
