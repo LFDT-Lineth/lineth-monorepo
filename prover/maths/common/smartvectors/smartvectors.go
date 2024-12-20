@@ -2,6 +2,7 @@ package smartvectors
 
 import (
 	"fmt"
+	"github.com/consensys/linea-monorepo/prover/maths/field/fext"
 	"math/rand"
 
 	"github.com/consensys/gnark/frontend"
@@ -9,6 +10,8 @@ import (
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/utils"
 )
+
+const conversionError = "smartvector holds field extensions, but a base element was requested"
 
 // SmartVector is an abstraction over vectors of field elements that can be
 // optimized for structured vectors. For instance, if we have a vector of
@@ -27,14 +30,17 @@ type SmartVector interface {
 	// Len returns the length of the SmartVector
 	Len() int
 	// Get returns an entry of the SmartVector at particular position
+	GetBase(int) (field.Element, error)
 	Get(int) field.Element
-	// SubVector returns a subvector of the [SmartVector]. It mirrors slice[start:stop]
+	GetExt(int) fext.Element
+	// SubVector returns a subvector of the [SmartVector]. It mirrors slice[Start:Stop]
 	SubVector(int, int) SmartVector
 	// RotateRight cyclically rotates the SmartVector
 	RotateRight(int) SmartVector
 	// WriteInSlice writes the SmartVector into a slice. The slice must be just
 	// as large as [Len] otherwise the function will panic
 	WriteInSlice([]field.Element)
+	WriteInSliceExt([]fext.Element)
 	// Pretty returns a prettified version of the vector, useful for debugging.
 	Pretty() string
 	// DeepCopy returns a deep-copy of the SmartVector which can be freely
@@ -43,6 +49,8 @@ type SmartVector interface {
 	// IntoRegVecSaveAlloc converts a smart-vector into a normal vec. The
 	// implementation minimizes then number of copies
 	IntoRegVecSaveAlloc() []field.Element
+	IntoRegVecSaveAllocBase() ([]field.Element, error)
+	IntoRegVecSaveAllocExt() []fext.Element
 }
 
 // AllocateRegular returns a newly allocated smart-vector
@@ -84,11 +92,26 @@ func IntoRegVec(s SmartVector) []field.Element {
 	return res
 }
 
+func IntoRegVecExt(s SmartVector) []fext.Element {
+	res := make([]fext.Element, s.Len())
+	s.WriteInSliceExt(res)
+	return res
+}
+
 // IntoGnarkAssignment converts a smart-vector into a gnark assignment
 func IntoGnarkAssignment(sv SmartVector) []frontend.Variable {
 	res := make([]frontend.Variable, sv.Len())
-	for i := range res {
-		res[i] = sv.Get(i)
+	_, err := sv.GetBase(0)
+	if err == nil {
+		for i := range res {
+			elem, _ := sv.GetBase(i)
+			res[i] = elem
+		}
+	} else {
+		for i := range res {
+			elem := sv.GetExt(i)
+			res[i] = elem
+		}
 	}
 	return res
 }
@@ -163,15 +186,48 @@ func Density(v SmartVector) int {
 // if the vector is Padded with zeroes it return the window.
 // Namely, the part without zero pads.
 func Window(v SmartVector) []field.Element {
+	res, err := WindowBase(v)
+	if err != nil {
+		panic(conversionError)
+	}
+	return res
+}
+
+func WindowBase(v SmartVector) ([]field.Element, error) {
 	switch w := v.(type) {
 	case *Constant:
-		return w.IntoRegVecSaveAlloc()
+		return w.IntoRegVecSaveAllocBase()
 	case *PaddedCircularWindow:
-		return w.window
+		return w.window, nil
 	case *Regular:
-		return *w
+		return *w, nil
 	case *Rotated:
-		return w.IntoRegVecSaveAlloc()
+		return w.IntoRegVecSaveAllocBase()
+	default:
+		panic(fmt.Sprintf("unexpected type %T", v))
+	}
+}
+
+func WindowExt(v SmartVector) []fext.Element {
+	switch w := v.(type) {
+	case *Constant:
+		return w.IntoRegVecSaveAllocExt()
+	case *PaddedCircularWindow:
+		temp := make([]fext.Element, len(w.window))
+		for i := 0; i < len(w.window); i++ {
+			elem := w.window[i]
+			temp[i].SetFromBase(&elem)
+		}
+		return temp
+	case *Regular:
+		temp := make([]fext.Element, len(*w))
+		for i := 0; i < len(*w); i++ {
+			elem, _ := w.GetBase(i)
+			temp[i].SetFromBase(&elem)
+		}
+		return temp
+	case *Rotated:
+		return w.IntoRegVecSaveAllocExt()
 	default:
 		panic(fmt.Sprintf("unexpected type %T", v))
 	}

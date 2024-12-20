@@ -127,7 +127,7 @@ func BatchInterpolate(vs []SmartVector, x field.Element, oncoset ...bool) []fiel
 			}
 
 			// non-constant vectors
-			polys[i] = vs[i].IntoRegVecSaveAlloc()
+			polys[i], _ = vs[i].IntoRegVecSaveAllocBase()
 		}
 	})
 

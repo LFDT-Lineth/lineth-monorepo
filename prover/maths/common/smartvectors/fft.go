@@ -49,7 +49,7 @@ func FFT(v SmartVector, decimation fft.Decimation, bitReverse bool, cosetRatio i
 		// The polynomial is the constant polynomial, response does not depends on the decimation
 		// or bitReverse
 		interval := x.interval()
-		if interval.intervalLen == 1 && interval.start() == 0 && x.paddingVal.IsZero() {
+		if interval.IntervalLen == 1 && interval.Start() == 0 && x.paddingVal.IsZero() {
 			// In this case, the response is a constant vector
 			return NewConstant(x.window[0], x.Len())
 		}
@@ -130,7 +130,7 @@ func FFTInverse(v SmartVector, decimation fft.Decimation, bitReverse bool, coset
 		// It's a multiple of the first Lagrange polynomial c * (1 + x + x^2 + x^3 + ...)
 		// The response is (c) = (c/N, c/N, c/N, ...)
 		interval := x.interval()
-		if interval.intervalLen == 1 && interval.start() == 0 && x.paddingVal.IsZero() {
+		if interval.IntervalLen == 1 && interval.Start() == 0 && x.paddingVal.IsZero() {
 			constTerm := field.NewElement(uint64(x.Len()))
 			constTerm.Inverse(&constTerm)
 			constTerm.Mul(&constTerm, &x.window[0])

@@ -101,7 +101,7 @@ func TestSubvectorFuzzy(t *testing.T) {
 				for i := 0; i < stop-start; i++ {
 					expected := v.Get(start + i)
 					actual := sub.Get(i)
-					require.Equal(t, expected.String(), actual.String(), "start %v, stop %v, i %v", start, stop, i)
+					require.Equal(t, expected.String(), actual.String(), "Start %v, Stop %v, i %v", start, stop, i)
 				}
 
 			},

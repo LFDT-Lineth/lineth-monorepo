@@ -1,8 +1,9 @@
-package smartvectors
+package smartvectorsext
 
 import (
-	"github.com/consensys/linea-monorepo/prover/maths/common/mempool"
-	"github.com/consensys/linea-monorepo/prover/maths/field"
+	"github.com/consensys/linea-monorepo/prover/maths/common/mempoolext"
+	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
+	"github.com/consensys/linea-monorepo/prover/maths/field/fext"
 	"github.com/consensys/linea-monorepo/prover/utils"
 )
 
@@ -11,7 +12,7 @@ import (
 //   - The function panics if svecs is empty
 //   - The function panics if the length of coeffs does not match the length of
 //     svecs
-func LinComb(coeffs []int, svecs []SmartVector, p ...mempool.MemPool) SmartVector {
+func LinComb(coeffs []int, svecs []smartvectors.SmartVector, p ...mempoolext.MemPool) smartvectors.SmartVector {
 	// Sanity check : all svec should have the same length
 	length := svecs[0].Len()
 	for i := 0; i < len(svecs); i++ {
@@ -27,7 +28,7 @@ func LinComb(coeffs []int, svecs []SmartVector, p ...mempool.MemPool) SmartVecto
 //   - The function panics if svecs is empty
 //   - The function panics if the length of exponents does not match the length of
 //     svecs
-func Product(exponents []int, svecs []SmartVector, p ...mempool.MemPool) SmartVector {
+func Product(exponents []int, svecs []smartvectors.SmartVector, p ...mempoolext.MemPool) smartvectors.SmartVector {
 	return processOperator(productOp{}, exponents, svecs, p...)
 }
 
@@ -36,7 +37,7 @@ func Product(exponents []int, svecs []SmartVector, p ...mempool.MemPool) SmartVe
 //   - The function panics if svecs is empty
 //   - The function panics if the length of coeffs does not match the length of
 //     svecs
-func processOperator(op operator, coeffs []int, svecs []SmartVector, p ...mempool.MemPool) SmartVector {
+func processOperator(op operator, coeffs []int, svecs []smartvectors.SmartVector, p ...mempoolext.MemPool) smartvectors.SmartVector {
 
 	// There should be as many coeffs than there are vectors
 	if len(coeffs) != len(svecs) {
@@ -86,10 +87,10 @@ func processOperator(op operator, coeffs []int, svecs []SmartVector, p ...mempoo
 	// the constant into the window.
 	if matchedWindow > 0 && matchedConst > 0 {
 		switch w := windowRes.(type) {
-		case *PaddedCircularWindow:
+		case *PaddedCircularWindowExt:
 			op.constTermIntoVec(w.window, &constRes.val)
 			op.constTermIntoConst(&w.paddingVal, &constRes.val)
-		case *Regular:
+		case *RegularExt:
 			op.constTermIntoVec(*w, &constRes.val)
 		}
 	}
@@ -100,7 +101,7 @@ func processOperator(op operator, coeffs []int, svecs []SmartVector, p ...mempoo
 	}
 
 	// Accumulate the regular part of the vector
-	regularRes, matchedRegular := processRegularOnly(op, svecs, coeffs, p...)
+	regularRes, matchedRegular := processRegularOnlyExt(op, svecs, coeffs, p...)
 
 	// Sanity-check : all of the vector should fall into only one of the two
 	// category.
@@ -114,23 +115,23 @@ func processOperator(op operator, coeffs []int, svecs []SmartVector, p ...mempoo
 	case matchedRegular+matchedConst == totalToMatch:
 		// In this case, there are no windowed in the list. This means we only
 		// need to merge the const one into the regular one before returning
-		op.constTermIntoVec(regularRes.Regular, &constRes.val)
+		op.constTermIntoVec(regularRes.RegularExt, &constRes.val)
 		return regularRes
 	default:
 
 		// If windowRes is a regular (can happen if all windows arguments cover the full circle)
-		if w, ok := windowRes.(*Regular); ok {
-			op.vecTermIntoVec(regularRes.Regular, *w)
+		if w, ok := windowRes.(*RegularExt); ok {
+			op.vecTermIntoVec(regularRes.RegularExt, *w)
 			return regularRes
 		}
 
 		// Overwrite window with its casting into an actual circular windows
-		windowRes := windowRes.(*PaddedCircularWindow)
+		windowRes := windowRes.(*PaddedCircularWindowExt)
 
 		// In this case, the constant is already accumulated into the windowed.
 		// Thus, we just have to merge the windowed one into the regular one.
 		interval := windowRes.interval()
-		regvec := regularRes.Regular
+		regvec := regularRes.RegularExt
 		length := len(regvec)
 
 		// The windows rolls over
@@ -151,10 +152,10 @@ func processOperator(op operator, coeffs []int, svecs []SmartVector, p ...mempoo
 
 // Returns the result of the linear combination including only the constant. numMatches denotes
 // the number of Constant smart-vectors found in the list of arguments.
-func processConstOnly(op operator, svecs []SmartVector, coeffs []int) (constRes *Constant, numMatches int) {
-	var constVal field.Element
+func processConstOnly(op operator, svecs []smartvectors.SmartVector, coeffs []int) (constRes *ConstantExt, numMatches int) {
+	var constVal fext.Element
 	for i, svec := range svecs {
-		if cnst, ok := svec.(*Constant); ok {
+		if cnst, ok := svec.(*ConstantExt); ok {
 			if numMatches < 1 {
 				// First one, no need to add it into constVal since constVal is zero
 				op.constIntoTerm(&constVal, &cnst.val, coeffs[i])
@@ -170,5 +171,5 @@ func processConstOnly(op operator, svecs []SmartVector, coeffs []int) (constRes 
 		return nil, 0
 	}
 
-	return &Constant{val: constVal, length: svecs[0].Len()}, numMatches
+	return &ConstantExt{val: constVal, length: svecs[0].Len()}, numMatches
 }

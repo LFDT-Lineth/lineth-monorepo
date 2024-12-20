@@ -6,14 +6,14 @@ import (
 	"github.com/consensys/linea-monorepo/prover/utils"
 )
 
-// circularInterval represents an interval over a discretized circle. The
+// CircularInterval represents an interval over a discretized circle. The
 // discretized circle is assumed to be equipped with an origin point; thus
 // allowing to set a unique coordinate for each point.
 //
 //   - The intervals are "cardinal": meaning that the largest possible interval
 //     is the full-circuit
 //   - The empty interval is considered as invalid and should never be constructed
-type circularInterval struct {
+type CircularInterval struct {
 	// circleSize is the size of the circle
 	circleSize int
 	// istart is the starting point of the interval (included in the interval).
@@ -21,89 +21,89 @@ type circularInterval struct {
 	// istart must always be within the bound of the circle (can't be negative
 	// or be larger or equal to `circleSize`.
 	istart int
-	// intervalLen is length of the interval. Meaning the number of points in
+	// IntervalLen is length of the interval. Meaning the number of points in
 	// the interval
-	intervalLen int
+	IntervalLen int
 }
 
-// ivalWithFullLen returns an interval representing the full-circle.
-func ivalWithFullLen(n int) circularInterval {
+// IvalWithFullLen returns an interval representing the full-circle.
+func IvalWithFullLen(n int) CircularInterval {
 	if n <= 0 {
 		panic("zero or negative length interval is not allowed")
 	}
-	return circularInterval{
+	return CircularInterval{
 		istart:      0,
-		intervalLen: n,
+		IntervalLen: n,
 		circleSize:  n,
 	}
 }
 
-// ivalWithStartLen constructs an interval by passing the start, the len and n
+// IvalWithStartLen constructs an interval by passing the Start, the len and n
 // being the size of the circle.
-func ivalWithStartLen(start, len, n int) circularInterval {
+func IvalWithStartLen(start, len, n int) CircularInterval {
 	// empty length is forbidden
 	if len == 0 {
 		panic("empty interval")
 	}
-	// ensures that start is within bounds
+	// ensures that Start is within bounds
 	if 0 > start || start >= n {
-		panic("start out of bounds")
+		panic("Start out of bounds")
 	}
 	// full length is forbidden
 	if len >= n {
 		panic("full length is forbidden")
 	}
-	return circularInterval{
+	return CircularInterval{
 		circleSize:  n,
 		istart:      start,
-		intervalLen: len,
+		IntervalLen: len,
 	}
 }
 
-// ivalWithStartStop constructs a [circularInterval] by using its starting and
+// IvalWithStartStop constructs a [CircularInterval] by using its starting and
 // stopping points.
-func ivalWithStartStop(start, stop, n int) circularInterval {
+func IvalWithStartStop(start, stop, n int) CircularInterval {
 	// empty interval is forbidden
 	if start == stop {
 		panic("empty interval")
 	}
-	// ensures that start is within bounds
+	// ensures that Start is within bounds
 	if 0 > start || start >= n {
-		panic("start out of bounds")
+		panic("Start out of bounds")
 	}
 	// full length is forbidden
 	if 0 > stop || stop >= n {
-		panic("stop out of bound")
+		panic("Stop out of bound")
 	}
-	return circularInterval{
+	return CircularInterval{
 		circleSize:  n,
 		istart:      start,
-		intervalLen: utils.PositiveMod(stop-start, n),
+		IntervalLen: utils.PositiveMod(stop-start, n),
 	}
 }
 
 // Start returns the starting point (included) of the interval
-func (c circularInterval) start() int {
+func (c CircularInterval) Start() int {
 	return c.istart
 }
 
 // Stop returns the stopping point (excluded) of the interval of the interval
-func (c circularInterval) stop() int {
-	return utils.PositiveMod(c.istart+c.intervalLen, c.circleSize)
+func (c CircularInterval) Stop() int {
+	return utils.PositiveMod(c.istart+c.IntervalLen, c.circleSize)
 }
 
-// doesWrapAround returns true iff the interval rolls over
-func (c circularInterval) doesWrapAround() bool {
-	return c.stop() < c.start()
+// DoesWrapAround returns true iff the interval rolls over
+func (c CircularInterval) DoesWrapAround() bool {
+	return c.Stop() < c.Start()
 }
 
-// isFullCircle returns true of the interval is the full circle
-func (c circularInterval) isFullCircle() bool {
-	return c.intervalLen == c.circleSize
+// IsFullCircle returns true of the interval is the full circle
+func (c CircularInterval) IsFullCircle() bool {
+	return c.IntervalLen == c.circleSize
 }
 
 // Returns true iff `p` is included in the receiver interval
-func (c circularInterval) doesInclude(p int) bool {
+func (c CircularInterval) DoesInclude(p int) bool {
 
 	// forbidden : the point does not belong on the circle
 	if p < 0 || p > c.circleSize {
@@ -111,52 +111,52 @@ func (c circularInterval) doesInclude(p int) bool {
 	}
 
 	// edge-case
-	if c.isFullCircle() {
+	if c.IsFullCircle() {
 		return true
 	}
 
 	// if the interval wraps around the origin point
-	if c.doesWrapAround() {
-		return p < c.stop() || p >= c.start()
+	if c.DoesWrapAround() {
+		return p < c.Stop() || p >= c.Start()
 	}
 
 	// "normal" case
-	return p >= c.start() && p < c.stop()
+	return p >= c.Start() && p < c.Stop()
 }
 
-// doesFullyContain returns true if `c` fully contains `other`
-func (c circularInterval) doesFullyContain(other circularInterval) bool {
+// DoesFullyContain returns true if `c` fully contains `other`
+func (c CircularInterval) DoesFullyContain(other CircularInterval) bool {
 
 	// edge case : c is the complete circle
-	if c.isFullCircle() {
+	if c.IsFullCircle() {
 		return true
 	}
 
 	// edge case : c is not the complete circle but other is
-	if !c.isFullCircle() && other.isFullCircle() {
+	if !c.IsFullCircle() && other.IsFullCircle() {
 		return false
 	}
 
-	if !c.doesWrapAround() {
-		return c.doesInclude(other.start()) &&
-			c.doesInclude(other.stop()-1) &&
-			!other.doesWrapAround()
+	if !c.DoesWrapAround() {
+		return c.DoesInclude(other.Start()) &&
+			c.DoesInclude(other.Stop()-1) &&
+			!other.DoesWrapAround()
 	}
 
 	// Here, we can assume that c wraps around
 
 	// Case : 1, other is on the left arm
-	if !other.doesWrapAround() && other.stop() <= c.stop() {
+	if !other.DoesWrapAround() && other.Stop() <= c.Stop() {
 		return true
 	}
 
 	// Case : 2, other is on the right arm
-	if !other.doesWrapAround() && other.start() >= c.start() {
+	if !other.DoesWrapAround() && other.Start() >= c.Start() {
 		return true
 	}
 
 	// Case 3 : other also wraps around
-	if other.doesWrapAround() && other.start() >= c.start() && other.stop() <= c.stop() {
+	if other.DoesWrapAround() && other.Start() >= c.Start() && other.Stop() <= c.Stop() {
 		return true
 	}
 
@@ -164,22 +164,22 @@ func (c circularInterval) doesFullyContain(other circularInterval) bool {
 }
 
 /*
-tryOverlapWith returns true if the left of `c` touches the right of `other`
+TryOverlapWith returns true if the left of `c` touches the right of `other`
 
-			        c.start-------------c.stop
-							other.start---------other.stop
+			        c.Start-------------c.Stop
+							other.Start---------other.Stop
 
 										OR
 
-		|c.start|-------------|c.stop|
+		|c.Start|-------------|c.Stop|
 
-	    							 |other.start|---------|other.stop|
+	    							 |other.Start|---------|other.Stop|
 
-This also include the edge cases where `other.stop`. Also
+This also include the edge cases where `other.Stop`. Also
 returns the resulting circular interval obtained by connecting
 the two.
 */
-func (c circularInterval) tryOverlapWith(other circularInterval) (ok bool, connected circularInterval) {
+func (c CircularInterval) TryOverlapWith(other CircularInterval) (ok bool, connected CircularInterval) {
 
 	// Sanity-check, both sides should have the same circle size
 	if c.circleSize != other.circleSize {
@@ -191,8 +191,8 @@ func (c circularInterval) tryOverlapWith(other circularInterval) (ok bool, conne
 
 	// There are still edge-cases for when either c or other are the full circle.
 	// Once these cases are eliminated, we process by case enumeration.
-	if c.isFullCircle() || other.isFullCircle() {
-		return true, ivalWithFullLen(n)
+	if c.IsFullCircle() || other.IsFullCircle() {
+		return true, IvalWithFullLen(n)
 	}
 
 	/*
@@ -204,9 +204,9 @@ func (c circularInterval) tryOverlapWith(other circularInterval) (ok bool, conne
 			[o0, o1) represents the interval of 'other'
 	*/
 
-	c1 := utils.PositiveMod(c.stop()-c.start(), n)
-	o0 := utils.PositiveMod(other.start()-c.start(), n)
-	o1 := utils.PositiveMod(other.stop()-c.start(), n)
+	c1 := utils.PositiveMod(c.Stop()-c.Start(), n)
+	o0 := utils.PositiveMod(other.Start()-c.Start(), n)
+	o1 := utils.PositiveMod(other.Stop()-c.Start(), n)
 
 	/*
 		|-----------------c1
@@ -221,7 +221,7 @@ func (c circularInterval) tryOverlapWith(other circularInterval) (ok bool, conne
 		--------o1     o0---------------
 	*/
 	if 0 <= o1 && o1 < o0 && o0 <= c1 {
-		return true, ivalWithFullLen(n)
+		return true, IvalWithFullLen(n)
 	}
 
 	/*
@@ -229,7 +229,7 @@ func (c circularInterval) tryOverlapWith(other circularInterval) (ok bool, conne
 		         o0----------------o1
 	*/
 	if 0 <= o0 && o0 <= c1 && c1 <= o1 {
-		return true, ivalWithStartStop(c.start(), other.stop(), n)
+		return true, IvalWithStartStop(c.Start(), other.Stop(), n)
 	}
 
 	/*
@@ -237,7 +237,7 @@ func (c circularInterval) tryOverlapWith(other circularInterval) (ok bool, conne
 		--------o1              o0--------
 	*/
 	if 0 <= o1 && o1 <= c1 && c1 < o0 {
-		return true, ivalWithStartStop(other.start(), c.stop(), n)
+		return true, IvalWithStartStop(other.Start(), c.Stop(), n)
 	}
 
 	/*
@@ -248,13 +248,13 @@ func (c circularInterval) tryOverlapWith(other circularInterval) (ok bool, conne
 		return true, other
 	}
 
-	return false, circularInterval{}
+	return false, CircularInterval{}
 }
 
 // Returns the smallest windows that covers the entire set
-func smallestCoverInterval(intervals []circularInterval) circularInterval {
+func SmallestCoverInterval(intervals []CircularInterval) CircularInterval {
 	// Deep-copy the inputs to prevent any side effect
-	intervals = append([]circularInterval{}, intervals...)
+	intervals = append([]CircularInterval{}, intervals...)
 
 	if len(intervals) == 0 {
 		panic("no windows passed")
@@ -267,11 +267,11 @@ func smallestCoverInterval(intervals []circularInterval) circularInterval {
 	// First step, we aggregate the windows whose union is a circle arc
 	// into disjoints buckets. Thereafter, we take the complements of the
 	// largest gap between buckets as our result.
-	sort.Slice(intervals, func(i, j int) bool { return intervals[i].start() <= intervals[j].start() })
-	overlaps := []circularInterval{}
+	sort.Slice(intervals, func(i, j int) bool { return intervals[i].Start() <= intervals[j].Start() })
+	overlaps := []CircularInterval{}
 
 	// Then we group the intervals whose union is still an interval. Since
-	// the intervals are now sorted by their "start" argument, it suffices
+	// the intervals are now sorted by their "Start" argument, it suffices
 	// to try and merge each with the next one. It they are not connected on
 	// the right, then the following ones won't either.
 	for i, interval := range intervals {
@@ -285,11 +285,11 @@ func smallestCoverInterval(intervals []circularInterval) circularInterval {
 			panic("inconsistent sizes")
 		}
 
-		// Since the input intervals are sorted by their start at the beginning,
+		// Since the input intervals are sorted by their Start at the beginning,
 		// it suffices to try to merge with the last one.
 		last := overlaps[len(overlaps)-1]
 
-		if ok, newW := last.tryOverlapWith(interval); ok {
+		if ok, newW := last.TryOverlapWith(interval); ok {
 			overlaps[len(overlaps)-1] = newW
 		} else {
 			// Else create a new bucket
@@ -310,7 +310,7 @@ func smallestCoverInterval(intervals []circularInterval) circularInterval {
 
 		last := overlaps[len(overlaps)-1]
 
-		if ok, newW := last.tryOverlapWith(overlaps[0]); ok {
+		if ok, newW := last.TryOverlapWith(overlaps[0]); ok {
 			overlaps[len(overlaps)-1] = newW
 			overlaps = overlaps[1:]
 		} else {
@@ -328,7 +328,7 @@ func smallestCoverInterval(intervals []circularInterval) circularInterval {
 	for i, w := range overlaps {
 
 		nextW := overlaps[(i+1)%len(overlaps)]
-		gap := utils.PositiveMod(nextW.start()-w.stop(), circleSize)
+		gap := utils.PositiveMod(nextW.Start()-w.Stop(), circleSize)
 
 		if gap > maxGap {
 			maxGap = gap
@@ -341,8 +341,8 @@ func smallestCoverInterval(intervals []circularInterval) circularInterval {
 		utils.Panic("Max gap is %v", maxGap)
 	}
 
-	start := overlaps[(posMaxGap+1)%len(overlaps)].start()
-	stop := overlaps[posMaxGap].stop()
-	return ivalWithStartStop(start, stop, circleSize)
+	start := overlaps[(posMaxGap+1)%len(overlaps)].Start()
+	stop := overlaps[posMaxGap].Stop()
+	return IvalWithStartStop(start, stop, circleSize)
 
 }
