@@ -79,7 +79,7 @@ library SparseMerkleProof {
   /**
    * @notice Hash a value using MIMC hash
    * @param _input Value to hash
-   * @return {bytes32} Mimc hash
+   * @return bytes32 Mimc hash
    */
   function mimcHash(bytes calldata _input) external pure returns (bytes32) {
     return Mimc.hash(_input);
@@ -106,7 +106,7 @@ library SparseMerkleProof {
   /**
    * @notice Hash account value
    * @param _value Encoded account value bytes (nonce, balance, storageRoot, mimcCodeHash, keccakCodeHash, codeSize)
-   * @return {bytes32} Account value hash
+   * @return bytes32 Account value hash
    */
   function hashAccountValue(bytes calldata _value) external pure returns (bytes32) {
     Account memory account = _parseAccount(_value);
@@ -128,7 +128,7 @@ library SparseMerkleProof {
   /**
    * @notice Hash storage value
    * @param _value Encoded storage value bytes
-   * @return {bytes32} Storage value hash
+   * @return bytes32 Storage value hash
    */
   function hashStorageValue(bytes32 _value) external pure returns (bytes32) {
     (bytes32 msb, bytes32 lsb) = _splitBytes32(_value);

@@ -1,0 +1,8 @@
+{{! This template is from the solidity-docgen repository - https://github.com/OpenZeppelin/solidity-docgen/blob/f51c722278bef58847214a4d6b0ffd60dcdfa719/src/themes/markdown/page.hbs }}
+{{! We delete the top line `# Solidity API` to make the generated documentation more Docusarus-friendly }}
+{{#each items}}
+{{#hsection}}
+{{>item}}
+{{/hsection}}
+
+{{/each}}

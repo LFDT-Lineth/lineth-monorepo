@@ -18,6 +18,9 @@ on:
       # '!**.md' will not work by itself to exclude *.md files. See https://github.com/orgs/community/discussions/25369
       - '**'
       - '!**.md'
+      - '!**.mdx'
+      - '!**/docs/**'
+      - '!docs/**'
 
 jobs:
   analyze:

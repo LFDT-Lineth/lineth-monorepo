@@ -7,8 +7,10 @@ on:
       - 'testdata/**'
       - 'prover/**'
       - '!contracts/**/*.md'
+      - '!contracts/**/*.mdx'
       - '!testdata/**/*.md'
       - '!prover/**/*.md'
+      - '!**/docs/**'
   push:
     branches:
       - main
@@ -17,8 +19,10 @@ on:
       - 'testdata/**'
       - 'prover/**'
       - '!contracts/**/*.md'
+      - '!contracts/**/*.mdx'
       - '!testdata/**/*.md'
       - '!prover/**/*.md'
+      - '!**/docs/**'
 
 env:
   GOPROXY: "https://proxy.golang.org"
