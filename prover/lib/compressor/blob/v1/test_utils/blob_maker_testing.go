@@ -10,10 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/consensys/compress/lzss"
-	fr381 "github.com/consensys/gnark-crypto/ecc/bls12-381/fr"
 	"github.com/consensys/linea-monorepo/prover/backend/execution"
-	"github.com/consensys/linea-monorepo/prover/lib/compressor/blob/encode"
 	v1 "github.com/consensys/linea-monorepo/prover/lib/compressor/blob/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -79,29 +76,6 @@ func RandIntn(n int) int { // TODO @Tabaie remove
 	var b [8]byte
 	_, _ = rand.Read(b[:])
 	return int(binary.BigEndian.Uint64(b[:]) % uint64(n))
-}
-
-func EmptyBlob(t require.TestingT) []byte {
-	var headerB bytes.Buffer
-
-	repoRoot, err := GetRepoRootPath()
-	assert.NoError(t, err)
-	// Init bm
-	bm, err := v1.NewBlobMaker(1000, filepath.Join(repoRoot, "prover/lib/compressor/compressor_dict.bin"))
-	assert.NoError(t, err)
-
-	if _, err = bm.Header.WriteTo(&headerB); err != nil {
-		panic(err)
-	}
-
-	compressor, err := lzss.NewCompressor(GetDict(t))
-	assert.NoError(t, err)
-
-	var bb bytes.Buffer
-	if _, err = encode.PackAlign(&bb, headerB.Bytes(), fr381.Bits-1, encode.WithAdditionalInput(compressor.Bytes())); err != nil {
-		panic(err)
-	}
-	return bb.Bytes()
 }
 
 func SingleBlockBlob(t require.TestingT) []byte {
