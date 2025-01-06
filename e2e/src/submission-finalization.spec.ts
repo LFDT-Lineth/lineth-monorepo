@@ -21,7 +21,7 @@ describe("Submission and finalization test suite", () => {
     const l1MessageSender = new NonceManager(await l1AccountManager.generateAccount());
     const lineaRollup = config.getLineaRollupContract();
 
-    logger.info("Sending messages on L1");
+    logger.debug("Sending messages on L1...");
 
     // Send L1 messages
     const l1MessagesPromises = [];
@@ -45,7 +45,7 @@ describe("Submission and finalization test suite", () => {
 
     const l1Receipts = await Promise.all(l1MessagesPromises);
 
-    logger.info("Messages sent on L1.");
+    logger.debug("Messages sent on L1.");
 
     // Extract message events
     const l1Messages = getMessageSentEventFromLogs(lineaRollup, l1Receipts);
@@ -65,7 +65,7 @@ describe("Submission and finalization test suite", () => {
         // Wait for the last L1->L2 message to be anchored on L2
         const lastNewL1MessageNumber = l1Messages.slice(-1)[0].messageNumber;
 
-        logger.info("Waiting for the anchoring using rolling hash...");
+        logger.debug(`Waiting for the anchoring using rolling hash... messageNumber=${lastNewL1MessageNumber}`);
         const [rollingHashUpdatedEvent] = await waitForEvents(
           l2MessageService,
           l2MessageService.filters.RollingHashUpdated(),
@@ -82,7 +82,7 @@ describe("Submission and finalization test suite", () => {
         expect(lastNewMessageRollingHash).toEqual(rollingHashUpdatedEvent.args.rollingHash);
         expect(lastAnchoredL1MessageNumber).toEqual(rollingHashUpdatedEvent.args.messageNumber);
 
-        logger.info("New anchoring using rolling hash done.");
+        logger.debug(`New anchoring using rolling hash done. rollingHash=${lastNewMessageRollingHash}`);
       },
       150_000,
     );
@@ -94,10 +94,10 @@ describe("Submission and finalization test suite", () => {
 
         const currentL2BlockNumber = await lineaRollupV6.currentL2BlockNumber();
 
-        logger.info("Waiting for DataSubmittedV3 used to finalize with proof...");
+        logger.debug("Waiting for DataSubmittedV3 used to finalize with proof...");
         await waitForEvents(lineaRollupV6, lineaRollupV6.filters.DataSubmittedV3(), 1_000);
 
-        logger.info("Waiting for the first DataFinalizedV3 event with proof...");
+        logger.debug("Waiting for DataFinalizedV3 event with proof...");
         const [dataFinalizedEvent] = await waitForEvents(
           lineaRollupV6,
           lineaRollupV6.filters.DataFinalizedV3(currentL2BlockNumber + 1n),
@@ -112,7 +112,7 @@ describe("Submission and finalization test suite", () => {
         expect(lastBlockFinalized).toBeGreaterThanOrEqual(dataFinalizedEvent.args.endBlockNumber);
         expect(newStateRootHash).toEqual(dataFinalizedEvent.args.finalStateRootHash);
 
-        logger.info("Finalization with proof done.");
+        logger.debug(`Finalization with proof done. lastFinalizedBlockNumber=${lastBlockFinalized}`);
       },
       150_000,
     );
@@ -122,7 +122,7 @@ describe("Submission and finalization test suite", () => {
       async () => {
         const sequencerEndpoint = config.getSequencerEndpoint();
         if (!sequencerEndpoint) {
-          logger.info('Skipped the "Check L2 safe/finalized tag update on sequencer" test');
+          logger.warn('Skipped the "Check L2 safe/finalized tag update on sequencer" test');
           return;
         }
 
@@ -147,7 +147,7 @@ describe("Submission and finalization test suite", () => {
         expect(safeL2BlockNumber).toBeGreaterThanOrEqual(lastFinalizedL2BlockNumberOnL1);
         expect(finalizedL2BlockNumber).toBeGreaterThanOrEqual(lastFinalizedL2BlockNumberOnL1);
 
-        logger.info("L2 safe/finalized tag update on sequencer done.");
+        logger.debug("L2 safe/finalized tag update on sequencer done.");
       },
       150_000,
     );

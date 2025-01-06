@@ -52,7 +52,7 @@ describe("Bridge ERC20 Tokens L1 -> L2 and L2 -> L1", () => {
     const l1TokenAddress = await l1Token.getAddress();
 
     const allowanceL1Account = await l1Token.allowance(l1Account.address, l1TokenBridgeAddress);
-    logger.info(`Current allowance of L1 account to L1 TokenBridge is ${allowanceL1Account.toString()}`);
+    logger.debug(`Current allowance of L1 account to L1 TokenBridge is ${allowanceL1Account.toString()}`);
 
     logger.debug("Calling the bridgeToken function on the L1 TokenBridge contract");
 
@@ -79,18 +79,18 @@ describe("Bridge ERC20 Tokens L1 -> L2 and L2 -> L1", () => {
     );
 
     const l1TokenBalance = await l1Token.balanceOf(l1Account.address);
-    logger.info(`Token balance of L1 account is ${l1TokenBalance.toString()}`);
+    logger.debug(`Token balance of L1 account is ${l1TokenBalance.toString()}`);
 
     expect(l1TokenBalance).toEqual(0n);
 
-    logger.info("Waiting for MessageSent event on L1.");
+    logger.debug("Waiting for MessageSent event on L1.");
 
     const messageNumber = messageSentEvent[messageSentEventMessageNumberIndex];
     const messageHash = messageSentEvent[messageSentEventMessageHashIndex];
 
-    logger.info(`Message sent on L1. messageHash=${messageHash}`);
+    logger.debug(`Message sent on L1. messageHash=${messageHash}`);
 
-    logger.info("Waiting for anchoring...");
+    logger.debug("Waiting for anchoring...");
 
     const [rollingHashUpdatedEvent] = await waitForEvents(
       l2MessageService,
@@ -106,9 +106,9 @@ describe("Bridge ERC20 Tokens L1 -> L2 and L2 -> L1", () => {
 
     expect(anchoredStatus).toBeGreaterThan(0);
 
-    logger.info(`Message anchored. event=${JSON.stringify(rollingHashUpdatedEvent)}`);
+    logger.debug(`Message anchored. event=${JSON.stringify(rollingHashUpdatedEvent)}`);
 
-    logger.info("Waiting for MessageClaimed event on L2...");
+    logger.debug("Waiting for MessageClaimed event on L2...");
 
     const [claimedEvent] = await waitForEvents(l2MessageService, l2MessageService.filters.MessageClaimed(messageHash));
     expect(claimedEvent).not.toBeNull();
@@ -116,14 +116,14 @@ describe("Bridge ERC20 Tokens L1 -> L2 and L2 -> L1", () => {
     const [newTokenDeployed] = await waitForEvents(l2TokenBridge, l2TokenBridge.filters.NewTokenDeployed());
     expect(newTokenDeployed).not.toBeNull();
 
-    logger.info(`Message claimed on L2. event=${JSON.stringify(claimedEvent)}.`);
+    logger.debug(`Message claimed on L2. event=${JSON.stringify(claimedEvent)}.`);
 
     const l2Token = config.getL2BridgedTokenContract(newTokenDeployed.args.bridgedToken);
 
-    logger.info("Verify the token balance on L2");
+    logger.debug("Verify the token balance on L2");
 
     const l2TokenBalance = await l2Token.balanceOf(l2Account.address);
-    logger.info(`Token balance of L2 account is ${l2TokenBalance.toString()}`);
+    logger.debug(`Token balance of L2 account is ${l2TokenBalance.toString()}`);
 
     expect(l2TokenBalance).toEqual(bridgeAmount);
   });
@@ -163,8 +163,8 @@ describe("Bridge ERC20 Tokens L1 -> L2 and L2 -> L1", () => {
     ]);
 
     const allowanceL2Account = await l2Token.allowance(l2Account.address, l2TokenBridge.getAddress());
-    logger.info(`Current allowance of L2 account to L2 TokenBridge is ${allowanceL2Account.toString()}`);
-    logger.info(`Current balance of  L2 account is ${await l2Token.balanceOf(l2Account)}`);
+    logger.debug(`Current allowance of L2 account to L2 TokenBridge is ${allowanceL2Account.toString()}`);
+    logger.debug(`Current balance of  L2 account is ${await l2Token.balanceOf(l2Account)}`);
 
     logger.debug("Calling the bridgeToken function on the L2 TokenBridge contract");
 
@@ -189,22 +189,22 @@ describe("Bridge ERC20 Tokens L1 -> L2 and L2 -> L1", () => {
     );
     const messageHash = messageSentEvent[messageSentEventMessageHashIndex];
 
-    logger.info("Waiting for L1 MessageClaimed event.");
+    logger.debug("Waiting for L1 MessageClaimed event.");
 
     const [claimedEvent] = await waitForEvents(lineaRollup, lineaRollup.filters.MessageClaimed(messageHash));
     expect(claimedEvent).not.toBeNull();
 
-    logger.info(`Message claimed on L1. event=${JSON.stringify(claimedEvent)}`);
+    logger.debug(`Message claimed on L1. event=${JSON.stringify(claimedEvent)}`);
 
     const [newTokenDeployed] = await waitForEvents(l1TokenBridge, l1TokenBridge.filters.NewTokenDeployed());
     expect(newTokenDeployed).not.toBeNull();
 
     const l1BridgedToken = config.getL1BridgedTokenContract(newTokenDeployed.args.bridgedToken);
 
-    logger.info("Verify the token balance on L1");
+    logger.debug("Verify the token balance on L1");
 
     const l1BridgedTokenBalance = await l1BridgedToken.balanceOf(l1Account.address);
-    logger.info(`Token balance of L1 account is ${l1BridgedTokenBalance.toString()}`);
+    logger.debug(`Token balance of L1 account is ${l1BridgedTokenBalance.toString()}`);
 
     expect(l1BridgedTokenBalance).toEqual(bridgeAmount);
   });

@@ -1,5 +1,8 @@
 import { AbiCoder, AbstractSigner, BaseContract, ContractFactory, Wallet, ethers } from "ethers";
 import { ProxyAdmin__factory, TransparentUpgradeableProxy__factory, ProxyAdmin } from "../typechain";
+import { createTestLogger } from "../config/logger";
+
+const logger = createTestLogger();
 
 export const encodeData = (types: string[], values: unknown[], packed?: boolean) => {
   if (packed) {

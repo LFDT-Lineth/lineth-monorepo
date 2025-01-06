@@ -310,7 +310,7 @@ export async function sendTransactionsToGenerateTrafficWithInterval(
       clearTimeout(timeoutId);
       timeoutId = null;
     }
-    logger.info("Transaction loop stopped.");
+    logger.info("Stopped generating traffic on L2");
   };
 
   sendTransaction();

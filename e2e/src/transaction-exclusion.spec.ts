@@ -30,7 +30,7 @@ describe("Transaction exclusion test suite", () => {
         await l2AccountLocal.sendTransaction(txRequest);
       } catch (err) {
         // This shall return error with traces limit overflow
-        logger.debug(`sendTransaction expected err: ${JSON.stringify(err)}`);
+        logger.debug(`sendTransaction expected. error=${JSON.stringify(err)}`);
       }
 
       expect(rejectedTxHash).toBeDefined();
@@ -41,6 +41,8 @@ describe("Transaction exclusion test suite", () => {
         await wait(1_000);
         getResponse = await transactionExclusionClient.getTransactionExclusionStatusV1(rejectedTxHash!);
       } while (!getResponse?.result);
+
+      logger.debug(`Transaction exclusion status received. response=${JSON.stringify(getResponse.result)}`);
 
       expect(getResponse.result.txHash).toStrictEqual(rejectedTxHash);
       expect(getResponse.result.txRejectionStage).toStrictEqual("RPC");
@@ -67,6 +69,8 @@ describe("Transaction exclusion test suite", () => {
       await wait(1_000);
       getResponse = await transactionExclusionClient.getTransactionExclusionStatusV1(rejectedTxHash);
     } while (!getResponse?.result);
+
+    logger.debug(`Transaction exclusion status received. response=${JSON.stringify(getResponse.result)}`);
 
     expect(getResponse.result.txHash).toStrictEqual(rejectedTxHash);
     expect(getResponse.result.txRejectionStage).toStrictEqual("SEQUENCER");
