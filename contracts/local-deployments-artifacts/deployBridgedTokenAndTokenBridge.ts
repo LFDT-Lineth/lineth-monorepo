@@ -37,15 +37,22 @@ async function main() {
   const ORDERED_NONCE_POST_L2MESSAGESERVICE = 3;
   const ORDERED_NONCE_POST_LINEAROLLUP = 4;
 
+  let securityCouncilAddress;
+
+  if (process.env.TOKEN_BRIDGE_L1 === "true") {
+    securityCouncilAddress = getRequiredEnvVar("L1_TOKEN_BRIDGE_SECURITY_COUNCIL");
+  } else {
+    securityCouncilAddress = getRequiredEnvVar("L2_TOKEN_BRIDGE_SECURITY_COUNCIL");
+  }
+
   const l2MessageServiceAddress = process.env.L2MESSAGESERVICE_ADDRESS;
   const lineaRollupAddress = process.env.LINEA_ROLLUP_ADDRESS;
 
   const remoteChainId = getRequiredEnvVar("REMOTE_CHAIN_ID");
-  const tokenBridgeSecurityCouncil = getRequiredEnvVar("TOKEN_BRIDGE_SECURITY_COUNCIL");
 
   const pauseTypeRoles = getEnvVarOrDefault("TOKEN_BRIDGE_PAUSE_TYPES_ROLES", TOKEN_BRIDGE_PAUSE_TYPES_ROLES);
   const unpauseTypeRoles = getEnvVarOrDefault("TOKEN_BRIDGE_UNPAUSE_TYPES_ROLES", TOKEN_BRIDGE_UNPAUSE_TYPES_ROLES);
-  const defaultRoleAddresses = generateRoleAssignments(TOKEN_BRIDGE_ROLES, tokenBridgeSecurityCouncil, []);
+  const defaultRoleAddresses = generateRoleAssignments(TOKEN_BRIDGE_ROLES, securityCouncilAddress, []);
   const roleAddresses = getEnvVarOrDefault("TOKEN_BRIDGE_ROLE_ADDRESSES", defaultRoleAddresses);
   const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
   const wallet = new ethers.Wallet(process.env.PRIVATE_KEY!, provider);
@@ -53,13 +60,13 @@ async function main() {
   let walletNonce;
 
   if (process.env.TOKEN_BRIDGE_L1 === "true") {
-    if (process.env.L1_NONCE === undefined) {
+    if (!process.env.L1_NONCE) {
       walletNonce = await wallet.getNonce();
     } else {
       walletNonce = parseInt(process.env.L1_NONCE) + ORDERED_NONCE_POST_LINEAROLLUP;
     }
   } else {
-    if (process.env.L2_NONCE === undefined) {
+    if (!process.env.L2_NONCE) {
       walletNonce = await wallet.getNonce();
     } else {
       walletNonce = parseInt(process.env.L2_NONCE) + ORDERED_NONCE_POST_L2MESSAGESERVICE;
@@ -119,7 +126,7 @@ async function main() {
 
   const initializer = getInitializerData(TokenBridgeAbi, "initialize", [
     {
-      defaultAdmin: tokenBridgeSecurityCouncil,
+      defaultAdmin: securityCouncilAddress,
       messageService: deployingChainMessageService,
       tokenBeacon: beaconProxyAddress,
       sourceChainId: chainId,

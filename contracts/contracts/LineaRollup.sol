@@ -33,18 +33,6 @@ contract LineaRollup is
   /// @notice The role required to set/remove  proof verifiers by type.
   bytes32 public constant VERIFIER_UNSETTER_ROLE = keccak256("VERIFIER_UNSETTER_ROLE");
 
-  /// @notice The default genesis shnarf using empty/default hashes and a default state.
-  bytes32 public constant GENESIS_SHNARF =
-    keccak256(
-      abi.encode(
-        EMPTY_HASH,
-        EMPTY_HASH,
-        0x072ead6777750dc20232d1cee8dc9a395c2d350df4bbaa5096c6f59b214dcecd,
-        EMPTY_HASH,
-        EMPTY_HASH
-      )
-    );
-
   /// @dev Value indicating a shnarf exists.
   uint256 internal constant SHNARF_EXISTS_DEFAULT_VALUE = 1;
 
@@ -138,9 +126,16 @@ contract LineaRollup is
     currentL2BlockNumber = _initializationData.initialL2BlockNumber;
     stateRootHashes[_initializationData.initialL2BlockNumber] = _initializationData.initialStateRootHash;
 
-    blobShnarfExists[GENESIS_SHNARF] = SHNARF_EXISTS_DEFAULT_VALUE;
+    bytes32 genesisShnarf = _computeShnarf(
+      EMPTY_HASH,
+      EMPTY_HASH,
+      _initializationData.initialStateRootHash,
+      EMPTY_HASH,
+      EMPTY_HASH
+    );
 
-    currentFinalizedShnarf = GENESIS_SHNARF;
+    blobShnarfExists[genesisShnarf] = SHNARF_EXISTS_DEFAULT_VALUE;
+    currentFinalizedShnarf = genesisShnarf;
     currentFinalizedState = _computeLastFinalizedState(0, EMPTY_HASH, _initializationData.genesisTimestamp);
   }
 
