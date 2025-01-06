@@ -220,6 +220,16 @@ interface ITokenBridge {
   error TokenListEmpty();
 
   /**
+   * @dev Thrown when a chainId provided during initialization is zero.
+   */
+  error ZeroChainIdNotAllowed();
+
+  /**
+   * @dev Thrown when sourceChainId is the same as targetChainId during initialization.
+   */
+  error SourceChainSameAsTargetChain();
+
+  /**
    * @notice Similar to `bridgeToken` function but allows to pass additional
    *   permit data to do the ERC20 approval in a single transaction.
    * @param _token The address of the token to be bridged.

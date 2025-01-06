@@ -175,6 +175,94 @@ describe("TokenBridge", function () {
         "ZeroAddressNotAllowed",
       );
     });
+
+    it("Should revert if one of the initializing parameters is chainId 0", async function () {
+      const { chainIds } = await loadFixture(deployContractsFixture);
+      const TokenBridge = await ethers.getContractFactory("TokenBridge");
+
+      await expectRevertWithCustomError(
+        TokenBridge,
+        upgrades.deployProxy(TokenBridge, [
+          {
+            defaultAdmin: PLACEHOLDER_ADDRESS,
+            messageService: PLACEHOLDER_ADDRESS,
+            tokenBeacon: PLACEHOLDER_ADDRESS,
+            sourceChainId: 0,
+            targetChainId: chainIds[1],
+            reservedTokens: [],
+            roleAddresses: [],
+            pauseTypeRoles: [],
+            unpauseTypeRoles: [],
+          },
+        ]),
+        "ZeroChainIdNotAllowed",
+      );
+
+      await expectRevertWithCustomError(
+        TokenBridge,
+        upgrades.deployProxy(TokenBridge, [
+          {
+            defaultAdmin: PLACEHOLDER_ADDRESS,
+            messageService: PLACEHOLDER_ADDRESS,
+            tokenBeacon: PLACEHOLDER_ADDRESS,
+            sourceChainId: chainIds[0],
+            targetChainId: 0,
+            reservedTokens: [],
+            roleAddresses: [],
+            pauseTypeRoles: [],
+            unpauseTypeRoles: [],
+          },
+        ]),
+        "ZeroChainIdNotAllowed",
+      );
+    });
+
+    it("Should revert if the sourceChainId is the same as the targetChainId", async function () {
+      const { chainIds } = await loadFixture(deployContractsFixture);
+      const TokenBridge = await ethers.getContractFactory("TokenBridge");
+
+      await expectRevertWithCustomError(
+        TokenBridge,
+        upgrades.deployProxy(TokenBridge, [
+          {
+            defaultAdmin: PLACEHOLDER_ADDRESS,
+            messageService: PLACEHOLDER_ADDRESS,
+            tokenBeacon: PLACEHOLDER_ADDRESS,
+            sourceChainId: chainIds[0],
+            targetChainId: chainIds[0],
+            reservedTokens: [],
+            roleAddresses: [],
+            pauseTypeRoles: [],
+            unpauseTypeRoles: [],
+          },
+        ]),
+        "SourceChainSameAsTargetChain",
+      );
+    });
+
+    it("Should revert if the default admin is empty", async function () {
+      const { chainIds } = await loadFixture(deployContractsFixture);
+      const TokenBridge = await ethers.getContractFactory("TokenBridge");
+
+      await expectRevertWithCustomError(
+        TokenBridge,
+        upgrades.deployProxy(TokenBridge, [
+          {
+            defaultAdmin: ADDRESS_ZERO,
+            messageService: PLACEHOLDER_ADDRESS,
+            tokenBeacon: PLACEHOLDER_ADDRESS,
+            sourceChainId: chainIds[0],
+            targetChainId: chainIds[1],
+            reservedTokens: [],
+            roleAddresses: [],
+            pauseTypeRoles: [],
+            unpauseTypeRoles: [],
+          },
+        ]),
+        "ZeroAddressNotAllowed",
+      );
+    });
+
     it("Should return 'NOT_VALID_ENCODING' for invalid data in _returnDataToString", async function () {
       const TestTokenBridgeFactory = await ethers.getContractFactory("TestTokenBridge");
 
