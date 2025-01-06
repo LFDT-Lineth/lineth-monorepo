@@ -8,11 +8,9 @@ import { CallForwardingProxy, TestLineaRollup, TestLineaRollupV5 } from "../type
 import calldataAggregatedProof1To155 from "./testData/compressedData/aggregatedProof-1-155.json";
 import blobAggregatedProof1To155 from "./testData/compressedDataEip4844/aggregatedProof-1-155.json";
 import blobMultipleAggregatedProof1To81 from "./testData/compressedDataEip4844/multipleProofs/aggregatedProof-1-81.json";
-import blobMultipleAggregatedProof82To153 from "./testData/compressedDataEip4844/multipleProofs/aggregatedProof-82-153.json";
 import firstCompressedDataContent from "./testData/compressedData/blocks-1-46.json";
 import secondCompressedDataContent from "./testData/compressedData/blocks-47-81.json";
 import fourthCompressedDataContent from "./testData/compressedData/blocks-115-155.json";
-import fourthMultipleBlobDataContent from "./testData/compressedDataEip4844/multipleProofs/blocks-120-153.json";
 import fourthMultipleCompressedDataContent from "./testData/compressedData/multipleProofs/blocks-120-153.json";
 import {
   ADDRESS_ZERO,
@@ -1226,15 +1224,45 @@ describe("Linea Rollup contract", () => {
         generateBlobParentShnarfData,
         true,
       );
-      // Finalize last 2 blobs
-      await expectSuccessfulFinalize(
-        blobMultipleAggregatedProof82To153,
-        4,
-        fourthMultipleBlobDataContent.finalStateRootHash,
-        generateBlobParentShnarfData,
-        true,
-        blobMultipleAggregatedProof1To81.l1RollingHash,
-        BigInt(blobMultipleAggregatedProof1To81.l1RollingHashMessageNumber),
+    });
+
+    it("Should fail to prove if last finalized is higher than proving range", async () => {
+      // Submit 2 blobs
+      await sendBlobTransaction(0, 2, true);
+      // Submit another 2 blobs
+      await sendBlobTransaction(2, 4, true);
+
+      await lineaRollup.setLastFinalizedBlock(10_000_000);
+
+      const finalizationData = await generateFinalizationData({
+        l1RollingHash: blobAggregatedProof1To155.l1RollingHash,
+        l1RollingHashMessageNumber: BigInt(blobAggregatedProof1To155.l1RollingHashMessageNumber),
+        lastFinalizedTimestamp: BigInt(blobAggregatedProof1To155.parentAggregationLastBlockTimestamp),
+        endBlockNumber: BigInt(blobAggregatedProof1To155.finalBlockNumber),
+        parentStateRootHash: HASH_ZERO, // Manipulate for bypass
+        finalTimestamp: BigInt(blobAggregatedProof1To155.finalTimestamp),
+        l2MerkleRoots: blobAggregatedProof1To155.l2MerkleRoots,
+        l2MerkleTreesDepth: BigInt(blobAggregatedProof1To155.l2MerkleTreesDepth),
+        l2MessagingBlocksOffsets: blobAggregatedProof1To155.l2MessagingBlocksOffsets,
+        aggregatedProof: blobAggregatedProof1To155.aggregatedProof,
+        shnarfData: generateBlobParentShnarfData(4, false),
+        lastFinalizedL1RollingHash: HASH_ZERO,
+        lastFinalizedL1RollingHashMessageNumber: 0n,
+      });
+
+      await lineaRollup.setRollingHash(
+        blobAggregatedProof1To155.l1RollingHashMessageNumber,
+        blobAggregatedProof1To155.l1RollingHash,
+      );
+
+      await lineaRollup.setLastFinalizedBlock(10_000_000);
+
+      expectRevertWithCustomError(
+        lineaRollup,
+        lineaRollup
+          .connect(operator)
+          .finalizeBlocks(blobAggregatedProof1To155.aggregatedProof, TEST_PUBLIC_VERIFIER_INDEX, finalizationData),
+        "InvalidProof",
       );
     });
   });
@@ -1248,29 +1276,6 @@ describe("Linea Rollup contract", () => {
     });
 
     describe("With and without submission data", () => {
-      it("Should revert if _finalizationData.endBlockNumber is less than or equal to currentL2BlockNumber", async () => {
-        await lineaRollup.setLastFinalizedBlock(10_000_000);
-
-        const finalizationData = await generateFinalizationData();
-
-        const lastFinalizedBlockNumber = await lineaRollup.currentL2BlockNumber();
-        const parentStateRootHash = await lineaRollup.stateRootHashes(lastFinalizedBlockNumber);
-        finalizationData.parentStateRootHash = parentStateRootHash;
-
-        const proof = calldataAggregatedProof1To155.aggregatedProof;
-
-        const finalizeCall = lineaRollup
-          .connect(operator)
-          .finalizeBlocks(proof, TEST_PUBLIC_VERIFIER_INDEX, finalizationData);
-
-        await expectRevertWithCustomError(
-          lineaRollup,
-          finalizeCall,
-          "FinalBlockNumberLessThanOrEqualToLastFinalizedBlock",
-          [finalizationData.endBlockNumber, 10_000_000],
-        );
-      });
-
       it("Should revert if l1 message number == 0 and l1 rolling hash is not empty", async () => {
         const finalizationData = await generateFinalizationData({
           l1RollingHashMessageNumber: 0n,

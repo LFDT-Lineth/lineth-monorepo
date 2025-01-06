@@ -490,8 +490,7 @@ contract LineaRollup is
       _finalizationData,
       lastFinalizedShnarf,
       finalShnarf,
-      lastFinalizedBlockNumber,
-      _finalizationData.endBlockNumber
+      lastFinalizedBlockNumber
     );
 
     _verifyProof(publicInput, _proofType, _aggregatedProof);
@@ -507,10 +506,6 @@ contract LineaRollup is
     FinalizationDataV3 calldata _finalizationData,
     uint256 _lastFinalizedBlock
   ) internal returns (bytes32 finalShnarf) {
-    if (_finalizationData.endBlockNumber <= _lastFinalizedBlock) {
-      revert FinalBlockNumberLessThanOrEqualToLastFinalizedBlock(_finalizationData.endBlockNumber, _lastFinalizedBlock);
-    }
-
     _validateL2ComputedRollingHash(_finalizationData.l1RollingHashMessageNumber, _finalizationData.l1RollingHash);
 
     if (
@@ -681,14 +676,12 @@ contract LineaRollup is
    * @param _finalizationData The full finalization data.
    * @param _finalShnarf The final shnarf in the finalization.
    * @param _lastFinalizedBlockNumber The last finalized block number.
-   * @param _endBlockNumber End block number being finalized.
    */
   function _computePublicInput(
     FinalizationDataV3 calldata _finalizationData,
     bytes32 _lastFinalizedShnarf,
     bytes32 _finalShnarf,
-    uint256 _lastFinalizedBlockNumber,
-    uint256 _endBlockNumber
+    uint256 _lastFinalizedBlockNumber
   ) private pure returns (uint256 publicInput) {
     assembly {
       let mPtr := mload(0x40)
@@ -704,7 +697,7 @@ contract LineaRollup is
       mstore(add(mPtr, 0x80), _lastFinalizedBlockNumber)
 
       // _finalizationData.endBlockNumber
-      mstore(add(mPtr, 0xA0), _endBlockNumber)
+      calldatacopy(add(mPtr, 0xA0), add(_finalizationData, 0x20), 0x20)
 
       /**
        * _finalizationData.lastFinalizedL1RollingHash

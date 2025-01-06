@@ -233,11 +233,6 @@ interface ILineaRollup {
   error FinalizationStateIncorrect(bytes32 expected, bytes32 value);
 
   /**
-   * @dev Thrown when the final block number in finalization data is less than or equal to the last finalized block during finalization.
-   */
-  error FinalBlockNumberLessThanOrEqualToLastFinalizedBlock(uint256 finalBlockNumber, uint256 lastFinalizedBlock);
-
-  /**
    * @dev Thrown when the final block state equals the zero hash during finalization.
    */
   error FinalBlockStateEqualsZeroHash();
