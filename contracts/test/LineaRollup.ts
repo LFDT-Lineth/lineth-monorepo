@@ -183,7 +183,7 @@ describe("Linea Rollup contract", () => {
   });
 
   describe("Initialisation", () => {
-    it("Should revert if verifier address is zero address ", async () => {
+    it("Should revert if verifier address is zero address", async () => {
       const initializationData = {
         initialStateRootHash: parentStateRootHash,
         initialL2BlockNumber: INITIAL_MIGRATION_BLOCK,
@@ -206,7 +206,53 @@ describe("Linea Rollup contract", () => {
       await expectRevertWithCustomError(lineaRollup, deployCall, "ZeroAddressNotAllowed");
     });
 
-    it("Should revert if an operator address is zero address ", async () => {
+    it("Should revert if the fallback operator address is zero address", async () => {
+      const initializationData = {
+        initialStateRootHash: parentStateRootHash,
+        initialL2BlockNumber: INITIAL_MIGRATION_BLOCK,
+        genesisTimestamp: GENESIS_L2_TIMESTAMP,
+        defaultVerifier: verifier,
+        rateLimitPeriodInSeconds: ONE_DAY_IN_SECONDS,
+        rateLimitAmountInWei: INITIAL_WITHDRAW_LIMIT,
+        roleAddresses: [...roleAddresses.slice(1)],
+        pauseTypeRoles: LINEA_ROLLUP_PAUSE_TYPES_ROLES,
+        unpauseTypeRoles: LINEA_ROLLUP_UNPAUSE_TYPES_ROLES,
+        fallbackOperator: ADDRESS_ZERO,
+        defaultAdmin: securityCouncil.address,
+      };
+
+      const deployCall = deployUpgradableFromFactory("TestLineaRollup", [initializationData], {
+        initializer: LINEA_ROLLUP_INITIALIZE_SIGNATURE,
+        unsafeAllow: ["constructor"],
+      });
+
+      await expectRevertWithCustomError(lineaRollup, deployCall, "ZeroAddressNotAllowed");
+    });
+
+    it("Should revert if the default admin address is zero address", async () => {
+      const initializationData = {
+        initialStateRootHash: parentStateRootHash,
+        initialL2BlockNumber: INITIAL_MIGRATION_BLOCK,
+        genesisTimestamp: GENESIS_L2_TIMESTAMP,
+        defaultVerifier: verifier,
+        rateLimitPeriodInSeconds: ONE_DAY_IN_SECONDS,
+        rateLimitAmountInWei: INITIAL_WITHDRAW_LIMIT,
+        roleAddresses: [...roleAddresses.slice(1)],
+        pauseTypeRoles: LINEA_ROLLUP_PAUSE_TYPES_ROLES,
+        unpauseTypeRoles: LINEA_ROLLUP_UNPAUSE_TYPES_ROLES,
+        fallbackOperator: fallbackoperatorAddress,
+        defaultAdmin: ADDRESS_ZERO,
+      };
+
+      const deployCall = deployUpgradableFromFactory("TestLineaRollup", [initializationData], {
+        initializer: LINEA_ROLLUP_INITIALIZE_SIGNATURE,
+        unsafeAllow: ["constructor"],
+      });
+
+      await expectRevertWithCustomError(lineaRollup, deployCall, "ZeroAddressNotAllowed");
+    });
+
+    it("Should revert if an operator address is zero address", async () => {
       const initializationData = {
         initialStateRootHash: parentStateRootHash,
         initialL2BlockNumber: INITIAL_MIGRATION_BLOCK,
@@ -229,7 +275,7 @@ describe("Linea Rollup contract", () => {
       await expectRevertWithCustomError(lineaRollup, deployCall, "ZeroAddressNotAllowed");
     });
 
-    it("Should store verifier address in storage ", async () => {
+    it("Should store verifier address in storage", async () => {
       lineaRollup = await loadFixture(deployLineaRollupFixture);
       expect(await lineaRollup.verifiers(0)).to.be.equal(verifier);
     });

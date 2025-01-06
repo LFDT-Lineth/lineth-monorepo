@@ -110,6 +110,10 @@ contract LineaRollup is
 
     __MessageService_init(_initializationData.rateLimitPeriodInSeconds, _initializationData.rateLimitAmountInWei);
 
+    if (_initializationData.defaultAdmin == address(0)) {
+      revert ZeroAddressNotAllowed();
+    }
+
     /**
      * @dev DEFAULT_ADMIN_ROLE is set for the security council explicitly,
      * as the permissions init purposefully does not allow DEFAULT_ADMIN_ROLE to be set.
@@ -119,6 +123,10 @@ contract LineaRollup is
     __Permissions_init(_initializationData.roleAddresses);
 
     verifiers[0] = _initializationData.defaultVerifier;
+
+    if (_initializationData.fallbackOperator == address(0)) {
+      revert ZeroAddressNotAllowed();
+    }
 
     fallbackOperator = _initializationData.fallbackOperator;
     emit FallbackOperatorAddressSet(msg.sender, _initializationData.fallbackOperator);
