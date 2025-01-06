@@ -50,6 +50,7 @@ func fibonacci() (wizard.DefineFunc, wizard.ProverStep) {
 		n := 1 << 3
 		P := build.RegisterCommit(P, n) // overshadows P
 
+		// X[i-1] + X[i-2] - X[i] = 0
 		expr := ifaces.ColumnAsVariable(column.Shift(P, -1)).
 			Add(ifaces.ColumnAsVariable(column.Shift(P, -2))).
 			Sub(ifaces.ColumnAsVariable(P))
@@ -79,7 +80,7 @@ func pythagoreTriplet() (wizard.DefineFunc, wizard.ProverStep) {
 
 		X := build.RegisterCommit(X, n) // overshadows P
 		Y := build.RegisterCommit(Y, n) // overshadows P
-
+		// X[i]^2 + Y[i]^2  - 25 = 0
 		expr := ifaces.ColumnAsVariable(X).Square().
 			Add(ifaces.ColumnAsVariable(Y).Square()).
 			Sub(symbolic.NewConstant(25))
@@ -106,15 +107,25 @@ func testDummyShifted() (wizard.DefineFunc, wizard.ProverStep) {
 	define := func(build *wizard.Builder) {
 		A := build.RegisterCommit(X, 4)
 		B := build.RegisterCommit(Y, 4)
-
-		expr := symbolic.Sub(column.Shift(A, 1),
-			symbolic.Mul(2, column.Shift(B, 1)))
+		// X[i+2] - 2 * Y[i+2] = 0
+		expr := symbolic.Sub(column.Shift(A, 2),
+			symbolic.Mul(2, column.Shift(B, 2)))
 
 		build.InsertGlobal(0, "Q", expr)
 	}
 	Prover := func(run *wizard.ProverRuntime) {
-		x := smartvectors.ForTest(2, 8, 4, 0)
-		y := smartvectors.ForTest(1, 4, 2, 0)
+		// Note that the first two indices of x and y columns below does not satisfy the
+		// constraints. The test still passes because the boundary condition cancellation is by default
+		// set to true for the InsertGlobal() function. The test will fail if we modify the above line
+		// by build.InsertGlobal(0, "Q", expr, true) and set noBoundCancellation to true. In this case,
+		// the columns will behave as circular vectors.
+
+		// Also to observe that the boundary indices here are 0 and 1 because for i = 0 onwards, the constraint starts
+		// looking at index 2, 3, and so on i.e. X[2] = 2*Y[2], X[3] = 2*Y[3].
+		// The boundary indices will be 2 and 3 if we had constraint: X[i-2] - 2 * Y[i-2] = 0, i.e. we could have put
+		// whatever values in those indices and the constraint would be satisfied.
+		x := smartvectors.ForTest(2, 8, 4, 2)
+		y := smartvectors.ForTest(2, 3, 2, 1)
 		run.AssignColumn(X, x)
 		run.AssignColumn(Y, y)
 	}

@@ -70,7 +70,7 @@ func NewGlobalConstraint(id ifaces.QueryID, expr *symbolic.Expression, noBoundCa
 	}
 
 	if len(noBoundCancel) > 0 {
-		utils.Require(len(noBoundCancel) == 1, "there should be only 2 bound cancel got %v", len(noBoundCancel))
+		utils.Require(len(noBoundCancel) == 1, "there should be only 1 bound cancel got %v", len(noBoundCancel))
 		res.NoBoundCancel = noBoundCancel[0]
 	}
 
