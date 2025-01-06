@@ -21,6 +21,12 @@ repositories {
     content { includeGroupAndSubgroups('org.hyperledger.besu') }
   }
   maven {
+    url "https://artifacts.consensys.net/public/linea-besu/maven/"
+    content {
+      includeGroupAndSubgroups('io.consensys')
+    }
+  }
+  maven {
     url "https://artifacts.consensys.net/public/maven/maven/"
   }
   // to allow locally published artifacts to be resolved uncomment enable mavenLocal() below

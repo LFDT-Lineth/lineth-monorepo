@@ -4,6 +4,7 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import kotlinx.datetime.Clock
 import net.consensys.linea.contract.AsyncFriendlyTransactionManager
+import net.consensys.linea.jsonrpc.JsonRpcErrorResponseException
 import net.consensys.linea.testing.filesystem.getPathTo
 import net.consensys.toULong
 import org.apache.logging.log4j.LogManager
@@ -136,35 +137,38 @@ private open class WhaleBasedAccountManager(
       (0..numberOfAccounts).map {
         val randomPrivKey = Bytes.random(32).toHexString().replace("0x", "")
         val newAccount = Account(randomPrivKey, Credentials.create(randomPrivKey).address)
-        val transferResult = whaleTxManager.sendTransaction(
-          /*gasPrice*/ 300_000_000.toBigInteger(),
-          /*gasLimit*/ 21000.toBigInteger(),
-          newAccount.address,
-          "",
-          initialBalanceWei
-        )
-        if (transferResult.hasError()) {
+        val transactionHash = try {
+          retry {
+            whaleTxManager.sendTransaction(
+              /*gasPrice*/ 300_000_000.toBigInteger(),
+              /*gasLimit*/ 21000.toBigInteger(),
+              newAccount.address,
+              "",
+              initialBalanceWei
+            )
+          }
+        } catch (e: Exception) {
           val accountBalance =
             web3jClient.ethGetBalance(whaleAccount.address, DefaultBlockParameterName.LATEST).send().result
           throw RuntimeException(
             "Failed to send funds from accAddress=${whaleAccount.address}, " +
               "accBalance=$accountBalance, " +
               "accPrivKey=0x...${whaleAccount.privateKey.takeLast(8)}, " +
-              "error: ${transferResult.error.asString()}"
+              "error: ${e.message}"
           )
         }
-        newAccount to transferResult
+        newAccount to transactionHash
       }
     }
-    result.forEach { (account, transferTx) ->
+    result.forEach { (account, transactionHash) ->
       log.debug(
         "Waiting for account funding: newAccount={} txHash={} whaleAccount={}",
         account.address,
-        transferTx.transactionHash,
+        transactionHash,
         whaleAccount.address
       )
       web3jClient.waitForTxReceipt(
-        transferTx.transactionHash,
+        transactionHash,
         expectedStatus = "0x1",
         timeout = 40.seconds,
         pollingInterval = 500.milliseconds
@@ -178,10 +182,6 @@ private open class WhaleBasedAccountManager(
       }
     }
     return result.map { it.first }
-  }
-
-  fun Response.Error.asString(): String {
-    return "Response.Error(code=$code, message=$message)"
   }
 
   override fun getTransactionManager(account: Account): AsyncFriendlyTransactionManager {
@@ -231,3 +231,32 @@ object L2AccountManager : AccountManager by WhaleBasedAccountManager(
   genesisFile = getPathTo(System.getProperty("L2_GENESIS", "docker/config/linea-local-dev-genesis.json")),
   log = LogManager.getLogger(L2AccountManager::class.java)
 )
+
+fun <R, T : Response<R>> retry(
+  timeout: Duration = 30.seconds,
+  retryInterval: Duration = 1.seconds,
+  action: () -> T
+): R {
+  val start = Clock.System.now()
+  var response: T? = null
+  var latestError: Exception? = null
+  do {
+    try {
+      response = action()
+      if (response.hasError()) {
+        Thread.sleep(retryInterval.inWholeMilliseconds)
+      }
+    } catch (e: Exception) {
+      latestError = e
+      Thread.sleep(retryInterval.inWholeMilliseconds)
+    }
+  } while (response?.hasError() == true && Clock.System.now() < start + timeout)
+
+  return response?.let {
+    if (it.hasError()) {
+      throw JsonRpcErrorResponseException(it.error.code, it.error.message, it.error.data)
+    } else {
+      it.result
+    }
+  } ?: throw latestError!!
+}

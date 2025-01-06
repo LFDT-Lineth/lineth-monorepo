@@ -3,25 +3,27 @@ plugins {
   id 'java-library'
 }
 
+def besuArtifactGroup="org.hyperledger.besu"
+
 dependencies {
-  api("org.hyperledger.besu:besu-datatypes:${libs.versions.besu.get()}") {
+  api("${besuArtifactGroup}:besu-datatypes:${libs.versions.besu.get()}") {
     transitive = false
   }
-  api("org.hyperledger.besu:evm:${libs.versions.besu.get()}") {
+  api("${besuArtifactGroup}:evm:${libs.versions.besu.get()}") {
     transitive = false
   }
-  api("org.hyperledger.besu.internal:core:${libs.versions.besu.get()}") {
+  api("${besuArtifactGroup}.internal:core:${libs.versions.besu.get()}") {
     transitive = false
   }
-  api("org.hyperledger.besu.internal:algorithms:${libs.versions.besu.get()}") {
-    transitive = false
-  }
-
-  api("org.hyperledger.besu:plugin-api:${libs.versions.besu.get()}") {
+  api("${besuArtifactGroup}.internal:algorithms:${libs.versions.besu.get()}") {
     transitive = false
   }
 
-  api("org.hyperledger.besu.internal:rlp:${libs.versions.besu.get()}") {
+  api("${besuArtifactGroup}:plugin-api:${libs.versions.besu.get()}") {
+    transitive = false
+  }
+
+  api("${besuArtifactGroup}.internal:rlp:${libs.versions.besu.get()}") {
     transitive = false
   }
 

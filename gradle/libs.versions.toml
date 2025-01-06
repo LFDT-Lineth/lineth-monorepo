@@ -8,7 +8,7 @@ jreleaser = {id = "org.jreleaser", version = "1.15.0"}
 jreleaser = { group = "org.jreleaser", name = "jreleaser-gradle-plugin", version = "1.15.0" }
 
 [versions]
-besu = "24.10.0"
+besu = "24.12.2"
 caffeine = "3.1.6"
 hoplite = "2.7.5"
 jackson = "2.18.0"

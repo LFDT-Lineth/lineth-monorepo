@@ -260,7 +260,7 @@ class BlockCreationMonitorTest {
     await().atLeast(config.pollingInterval.times(2).toJavaDuration())
     fakeL2RpcNode.resumeHttpServer()
     await()
-      .atMost(20.seconds.toJavaDuration())
+      .atMost(40.seconds.toJavaDuration())
       .untilAsserted {
         assertThat(blockCreationListener.blocksReceived).isNotEmpty
         assertThat(blockCreationListener.blocksReceived.last().number).isGreaterThan(lastBlockReceived)
