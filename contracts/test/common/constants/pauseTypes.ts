@@ -15,6 +15,7 @@ import {
   UNPAUSE_COMPLETE_TOKEN_BRIDGING_ROLE,
 } from "./roles";
 
+export const UNUSED_PAUSE_TYPE = 0;
 export const GENERAL_PAUSE_TYPE = 1;
 export const L1_L2_PAUSE_TYPE = 2;
 export const L2_L1_PAUSE_TYPE = 3;

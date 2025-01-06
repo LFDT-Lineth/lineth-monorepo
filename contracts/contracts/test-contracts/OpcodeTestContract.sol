@@ -9,8 +9,7 @@ contract OpcodeTestContract {
   }
 
   // keccak256(abi.encode(uint256(keccak256("opcodeTestContract.main")) - 1)) & ~bytes32(uint256(0xff))
-  bytes32 private constant MAIN_STORAGE_SLOT =
-      0xb69ece048aea1886497badfc9449787df15ad9606ca8687d17308088ee555100;
+  bytes32 private constant MAIN_STORAGE_SLOT = 0xb69ece048aea1886497badfc9449787df15ad9606ca8687d17308088ee555100;
 
   function _getMainStorage() private pure returns (MainStorage storage $) {
     assembly {
