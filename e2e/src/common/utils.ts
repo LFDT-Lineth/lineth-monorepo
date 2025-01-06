@@ -12,6 +12,9 @@ import {
   TypedContractMethod,
 } from "../typechain/common";
 import { MessageEvent, SendMessageArgs } from "./types";
+import { createTestLogger } from "../config/logger";
+
+const logger = createTestLogger();
 
 export function etherToWei(amount: string): bigint {
   return ethers.parseEther(amount.toString());
@@ -293,7 +296,7 @@ export async function sendTransactionsToGenerateTrafficWithInterval(
       const tx = await signer.sendTransaction(transactionRequest);
       await tx.wait();
     } catch (error) {
-      console.error("Error sending transaction:", error);
+      logger.error(`Error sending transaction. error=${JSON.stringify(error)}`);
     } finally {
       if (isRunning) {
         timeoutId = setTimeout(sendTransaction, pollingInterval);
@@ -307,7 +310,7 @@ export async function sendTransactionsToGenerateTrafficWithInterval(
       clearTimeout(timeoutId);
       timeoutId = null;
     }
-    console.log("Transaction loop stopped.");
+    logger.info("Transaction loop stopped.");
   };
 
   sendTransaction();
@@ -364,14 +367,14 @@ export const sendMessage = async <T extends LineaRollupV6 | L2MessageService>(
 
 export async function execDockerCommand(command: string, containerName: string): Promise<string> {
   const dockerCommand = `docker ${command} ${containerName}`;
-  console.log(`Executing: ${dockerCommand}...`);
+  logger.info(`Executing ${dockerCommand}...`);
   return new Promise((resolve, reject) => {
     exec(dockerCommand, (error, stdout, stderr) => {
       if (error) {
-        console.error(`Error executing (${dockerCommand}): ${stderr}`);
+        logger.error(`Error executing (${dockerCommand}). error=${stderr}`);
         reject(error);
       }
-      console.log(`Execution success (${dockerCommand}): ${stdout}`);
+      logger.info(`Execution success (${dockerCommand}). output=${stdout}`);
       resolve(stdout);
     });
   });

@@ -42,7 +42,7 @@ describe("Gas limit test suite", () => {
     // Ok to type assertion here, because txReceipt won't be null if it passed above assertion.
     const txBlockNumber = <number>txReceipt?.blockNumber;
 
-    console.log(`Waiting for ${txBlockNumber} to be finalized...`);
+    logger.info(`Waiting for ${txBlockNumber} to be finalized...`);
 
     const isBlockFinalized = await pollForContractMethodReturnValueExceedTarget(
       lineaRollupV6.currentL2BlockNumber,
@@ -60,13 +60,13 @@ describe("Gas limit test suite", () => {
     const account = await l2AccountManager.generateAccount();
     const lineaRollupV6 = config.getLineaRollupContract();
 
-    console.log(`Target block gas limit: ${targetBlockGasLimit}`);
+    logger.info(`Target block gas limit: ${targetBlockGasLimit}`);
 
     while (!isTargetBlockGasLimitReached) {
       const txReceipt = await setGasLimit(account);
       expect(txReceipt?.status).toEqual(1);
       const blockGasLimit = await getGasLimit();
-      console.log("blockGasLimit: ", blockGasLimit);
+      logger.info("blockGasLimit: ", blockGasLimit);
       if (blockGasLimit === targetBlockGasLimit) {
         isTargetBlockGasLimitReached = true;
         // Ok to type assertion here, because txReceipt won't be null if it passed above assertion.
@@ -75,7 +75,7 @@ describe("Gas limit test suite", () => {
       await wait(1000);
     }
 
-    console.log(`Waiting for ${blockNumberToCheckFinalization} to be finalized...`);
+    logger.info(`Waiting for ${blockNumberToCheckFinalization} to be finalized...`);
 
     const isBlockFinalized = await pollForContractMethodReturnValueExceedTarget(
       lineaRollupV6.currentL2BlockNumber,

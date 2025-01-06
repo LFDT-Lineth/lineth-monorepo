@@ -151,7 +151,7 @@ describe("Layer 2 test suite", () => {
         shomeiClient.rollupGetZkEVMBlockNumber(),
         shomeiFrontendClient.rollupGetZkEVMBlockNumber(),
       ]);
-      console.log(`shomeiBlock = ${shomeiBlock}, shomeiFrontendBlock = ${shomeiFrontendBlock}`);
+      logger.debug(`shomeiBlock=${shomeiBlock}, shomeiFrontendBlock=${shomeiFrontendBlock}`);
 
       expect(shomeiBlock).toBeGreaterThan(shomeiFrontendBlock);
     }

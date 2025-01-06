@@ -1,7 +1,9 @@
 import { ethers, NonceManager, Provider, TransactionResponse, Wallet } from "ethers";
 import { Mutex } from "async-mutex";
+import type { Logger } from "winston";
 import Account from "./account";
 import { etherToWei } from "../../../common/utils";
+import { createTestLogger } from "../../../config/logger";
 
 interface IAccountManager {
   whaleAccount(accIndex?: number): NonceManager;
@@ -29,6 +31,7 @@ abstract class AccountManager implements IAccountManager {
   protected provider: Provider;
   protected accountWallets: NonceManager[];
   private whaleAccountMutex: Mutex;
+  private logger: Logger;
 
   constructor(provider: Provider, whaleAccounts: Account[], chainId: number) {
     this.provider = provider;
@@ -38,6 +41,8 @@ abstract class AccountManager implements IAccountManager {
       (account) => new NonceManager(getWallet(this.provider, account.privateKey)),
     );
     this.whaleAccountMutex = new Mutex();
+
+    this.logger = createTestLogger();
   }
 
   selectWhaleAccount(accIndex?: number): { account: Account; accountWallet: NonceManager } {
@@ -65,8 +70,8 @@ abstract class AccountManager implements IAccountManager {
   async generateAccounts(numberOfAccounts: number, initialBalanceWei = etherToWei("10")): Promise<Wallet[]> {
     const { account: whaleAccount, accountWallet: whaleAccountWallet } = this.selectWhaleAccount();
 
-    console.log(
-      `Generating accounts: chainId=${this.chainId} numberOfAccounts=${numberOfAccounts} whaleAccount=${whaleAccount.address}`,
+    this.logger.debug(
+      `Generating accounts... chainId=${this.chainId} numberOfAccounts=${numberOfAccounts} whaleAccount=${whaleAccount.address}`,
     );
 
     const accounts: Account[] = [];
@@ -88,13 +93,13 @@ abstract class AccountManager implements IAccountManager {
       const release = await this.whaleAccountMutex.acquire();
       try {
         const transactionResponse = await whaleAccountWallet.sendTransaction(tx);
-        console.log(
-          `Transaction sent: newAccount=${newAccount.address} txHash=${transactionResponse.hash} whaleAccount=${whaleAccount.address}`,
+        this.logger.debug(
+          `Transaction sent. newAccount=${newAccount.address} txHash=${transactionResponse.hash} whaleAccount=${whaleAccount.address}`,
         );
         transactionResponses.push(transactionResponse);
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (error: any) {
-        console.error(`Failed to fund account ${newAccount.address}: ${error.message}`);
+        logger.error(`Failed to fund account. address=${newAccount.address} error=${error.message}`);
         whaleAccountWallet.reset();
       } finally {
         release();
@@ -103,8 +108,8 @@ abstract class AccountManager implements IAccountManager {
 
     await Promise.all(transactionResponses.map((tx) => tx.wait()));
 
-    console.log(
-      `Accounts funded: newAccounts=${accounts.map((account) => account.address).join(",")} balance=${initialBalanceWei.toString()} wei`,
+    this.logger.debug(
+      `Accounts funded. newAccounts=${accounts.map((account) => account.address).join(",")} balance=${initialBalanceWei.toString()} wei`,
     );
 
     return accounts.map((account) => this.getWallet(account));

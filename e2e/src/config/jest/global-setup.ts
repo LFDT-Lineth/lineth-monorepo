@@ -5,21 +5,20 @@ import { deployContract } from "../../common/deployments";
 import { DummyContract__factory, TestContract__factory, OpcodeTestContract__factory } from "../../typechain";
 import { etherToWei, sendTransactionsToGenerateTrafficWithInterval } from "../../common/utils";
 import { EMPTY_CONTRACT_CODE } from "../../common/constants";
+import { createTestLogger } from "../logger";
 
-declare global {
-  var stopL2TrafficGeneration: () => void;
-}
+const logger = createTestLogger();
 
 export default async (): Promise<void> => {
   const dummyContractCode = await config.getL1Provider().getCode(config.getL1DummyContractAddress());
 
   // If this is empty, we have not deployed and prerequisites or configured token bridges.
   if (dummyContractCode === EMPTY_CONTRACT_CODE) {
-    console.log("Configuring once-off prerequisite contracts");
+    logger.info("Configuring once-off prerequisite contracts");
     await configureOnceOffPrerequisities();
   }
 
-  console.log("Generating L2 traffic...");
+  logger.info("Generating L2 traffic...");
   const pollingAccount = await config.getL2AccountManager().generateAccount(etherToWei("200"));
   const stopPolling = await sendTransactionsToGenerateTrafficWithInterval(pollingAccount, 2_000);
 
@@ -71,8 +70,8 @@ async function configureOnceOffPrerequisities() {
     ).wait(),
   ]);
 
-  console.log(`L1 Dummy contract deployed at address: ${await dummyContract.getAddress()}`);
-  console.log(`L2 Dummy contract deployed at address: ${await l2DummyContract.getAddress()}`);
-  console.log(`L2 Test contract deployed at address: ${await l2TestContract.getAddress()}`);
-  console.log(`L2 OpcodeTest contract deployed at address: ${await opcodeTestContract.getAddress()}`);
+  logger.info(`L1 Dummy contract deployed. address=${await dummyContract.getAddress()}`);
+  logger.info(`L2 Dummy contract deployed. address=${await l2DummyContract.getAddress()}`);
+  logger.info(`L2 Test contract deployed. address=${await l2TestContract.getAddress()}`);
+  logger.info(`L2 OpcodeTest contract deployed. address=${await opcodeTestContract.getAddress()}`);
 }

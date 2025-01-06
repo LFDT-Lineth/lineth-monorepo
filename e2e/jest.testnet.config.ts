@@ -6,8 +6,11 @@ const config: Config = {
   rootDir: "src",
   testRegex: ".spec.ts$",
   verbose: true,
-  maxWorkers: "50%",
+  setupFilesAfterEnv: ["./config/jest/setup.ts"],
   testTimeout: 3 * 60 * 1000,
+  maxConcurrency: 7,
+  maxWorkers: "75%",
+  workerThreads: true,
 };
 
 export default config;
