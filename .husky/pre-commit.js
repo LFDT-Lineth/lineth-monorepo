@@ -43,10 +43,15 @@ const FILE_EXTENSION_FILTERS = {
     [FILE_EXTENSION.SOLIDITY]: "\.sol$",
 };
 
-// File extension => script in package.json to run
+// File extension => script in package.json to run for linting
 const FILE_EXTENSION_LINTING_COMMAND = {
     [FILE_EXTENSION.TYPESCRIPT]: "pnpm run lint:ts:fix",
     [FILE_EXTENSION.SOLIDITY]: "pnpm run lint:sol:fix",
+};
+
+// File extension => script in package.json to run for documentation generation
+const FILE_EXTENSION_DOCUMENTATION_UPDATING_COMMAND = {
+    [FILE_EXTENSION.SOLIDITY]: "pnpm run solidity:docgen",
 };
 
 // Project => Path in monorepo
@@ -95,7 +100,8 @@ function main() {
             process.exit(1);
         }
         const changedFileExtensions = getChangedFileExtensions(folder);
-        executeLinting(folder, changedFileExtensions);
+        executeCommand(folder, changedFileExtensions, FILE_EXTENSION_LINTING_COMMAND);
+        executeCommand(folder, changedFileExtensions, FILE_EXTENSION_DOCUMENTATION_UPDATING_COMMAND);
     }
 
     updateGitIndex();
@@ -180,14 +186,15 @@ function getChangedFileExtensions(_folder) {
 }
 
 /**
- * Execute linting command
- * @param {FOLDER, FILE_EXTENSION[]}
+ * Execute command based on file extension
+ * @param {FOLDER, FILE_EXTENSION[], FILE_EXTENSION_LINTING_COMMAND | FILE_EXTENSION_DOCUMENTATION_UPDATING_COMMAND}
  */
-function executeLinting(_folder, _changedFileExtensions) {
+function executeCommand(_folder, _changedFileExtensions, _command) {
     for (const fileExtension of _changedFileExtensions) {
         const path = FOLDER_PATH[_folder];
-        const cmd = FILE_EXTENSION_LINTING_COMMAND[fileExtension];
-        console.log(`${fileExtension} change found in ${path}, linting...`);
+        const cmd = _command[fileExtension];
+        if (!cmd) return;
+        console.log(`${fileExtension} change found in ${path}, executing command ${cmd}`);
         try {
             // Execute command synchronously and stream output directly to the current stdout
             execSync(`

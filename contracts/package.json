@@ -19,7 +19,8 @@
     "lint:ts:fix": "npx eslint --fix '**/*.{js,ts}'",
     "lint": "pnpm run lint:sol && npm run lint:ts && npm run prettier",
     "lint:fix": "pnpm run lint:sol:fix && npm run lint:ts:fix && npm run prettier:fix",
-    "clean": "rimraf .openzeppelin build cache node_modules typechain-types coverage coverage.json"
+    "clean": "rimraf .openzeppelin build cache node_modules typechain-types coverage coverage.json",
+    "solidity:docgen": "npx hardhat docgen"
   },
   "devDependencies": {
     "@ethereumjs/util": "9.0.3",

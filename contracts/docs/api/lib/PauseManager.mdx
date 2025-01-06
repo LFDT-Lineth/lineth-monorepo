@@ -22,6 +22,20 @@ This is used to unpause all unpausable functions.
 mapping(bytes32 => bool) pauseTypeStatuses
 ```
 
+### onlyUsedPausedTypes
+
+```solidity
+modifier onlyUsedPausedTypes(enum IPauseManager.PauseType _pauseType)
+```
+
+_Modifier to prevent usage of unused PauseType._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _pauseType | enum IPauseManager.PauseType | The PauseType value being checked. Requirements: - The type must not be UNUSED. |
+
 ### whenTypeAndGeneralNotPaused
 
 ```solidity
@@ -105,7 +119,8 @@ function pauseByType(enum IPauseManager.PauseType _pauseType) external
 
 Pauses functionality by specific type.
 
-_Requires the role mapped in `_pauseTypeRoles` for the pauseType._
+_Throws if UNUSED pause type is used.
+Requires the role mapped in `_pauseTypeRoles` for the pauseType._
 
 #### Parameters
 
@@ -121,7 +136,8 @@ function unPauseByType(enum IPauseManager.PauseType _pauseType) external
 
 Unpauses functionality by specific type.
 
-_Requires the role mapped in `_unPauseTypeRoles` for the pauseType._
+_Throws if UNUSED pause type is used.
+Requires the role mapped in `_unPauseTypeRoles` for the pauseType._
 
 #### Parameters
 
@@ -148,4 +164,42 @@ Check if a pause type is enabled.
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | pauseTypeIsPaused | bool | Returns true if the pause type if paused, false otherwise. |
+
+### updatePauseTypeRole
+
+```solidity
+function updatePauseTypeRole(enum IPauseManager.PauseType _pauseType, bytes32 _newRole) external
+```
+
+Update the pause type role mapping.
+
+_Throws if UNUSED pause type is used.
+Throws if role not different.
+PAUSE_ALL_ROLE role is required to execute this function._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _pauseType | enum IPauseManager.PauseType | The pause type value to update. |
+| _newRole | bytes32 | The role to update to. |
+
+### updateUnpauseTypeRole
+
+```solidity
+function updateUnpauseTypeRole(enum IPauseManager.PauseType _pauseType, bytes32 _newRole) external
+```
+
+Update the unpause type role mapping.
+
+_Throws if UNUSED pause type is used.
+Throws if role not different.
+UNPAUSE_ALL_ROLE role is required to execute this function._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _pauseType | enum IPauseManager.PauseType | The pause type value to update. |
+| _newRole | bytes32 | The role to update to. |
 

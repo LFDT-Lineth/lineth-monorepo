@@ -1,9 +1,9 @@
 # `CallForwardingProxy`
 
-### target
+### TARGET
 
 ```solidity
-address target
+address TARGET
 ```
 
 The underlying target address that is called.
@@ -21,4 +21,10 @@ fallback() external payable
 ```
 
 Defaults to, and forwards all calls to the target address.
+
+### receive
+
+```solidity
+receive() external payable
+```
 

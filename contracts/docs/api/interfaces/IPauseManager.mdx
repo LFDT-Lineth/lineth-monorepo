@@ -70,6 +70,22 @@ Emitted when a pause type and its associated role are set in the `_pauseTypeRole
 | pauseType | enum IPauseManager.PauseType | The indexed type of pause. |
 | role | bytes32 | The indexed role associated with the pause type. |
 
+### PauseTypeRoleUpdated
+
+```solidity
+event PauseTypeRoleUpdated(enum IPauseManager.PauseType pauseType, bytes32 role, bytes32 previousRole)
+```
+
+Emitted when a pause type and its associated role are updated in the `_PauseTypeRoles` mapping.
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| pauseType | enum IPauseManager.PauseType | The indexed type of pause. |
+| role | bytes32 | The indexed role associated with the pause type. |
+| previousRole | bytes32 | The indexed previously found role associated with the pause type. |
+
 ### UnPauseTypeRoleSet
 
 ```solidity
@@ -84,6 +100,22 @@ Emitted when an unpause type and its associated role are set in the `_unPauseTyp
 | ---- | ---- | ----------- |
 | unPauseType | enum IPauseManager.PauseType | The indexed type of unpause. |
 | role | bytes32 | The indexed role associated with the unpause type. |
+
+### UnPauseTypeRoleUpdated
+
+```solidity
+event UnPauseTypeRoleUpdated(enum IPauseManager.PauseType unPauseType, bytes32 role, bytes32 previousRole)
+```
+
+Emitted when an unpause type and its associated role are updated in the `_unPauseTypeRoles` mapping.
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| unPauseType | enum IPauseManager.PauseType | The indexed type of unpause. |
+| role | bytes32 | The indexed role associated with the unpause type. |
+| previousRole | bytes32 | The indexed previously found role associated with the unpause type. |
 
 ### IsPaused
 
@@ -101,6 +133,22 @@ error IsNotPaused(enum IPauseManager.PauseType pauseType)
 
 _Thrown when a specific pause type is not paused and expected to be._
 
+### PauseTypeNotUsed
+
+```solidity
+error PauseTypeNotUsed()
+```
+
+_Thrown when the unused paused type is used._
+
+### RolesNotDifferent
+
+```solidity
+error RolesNotDifferent()
+```
+
+_Thrown when trying to update a pause/unpause type role mapping to the existing role._
+
 ### pauseByType
 
 ```solidity
@@ -109,7 +157,8 @@ function pauseByType(enum IPauseManager.PauseType _pauseType) external
 
 Pauses functionality by specific type.
 
-_Requires the role mapped in pauseTypeRoles for the pauseType._
+_Throws if UNUSED pause type is used.
+Requires the role mapped in pauseTypeRoles for the pauseType._
 
 #### Parameters
 
@@ -125,7 +174,8 @@ function unPauseByType(enum IPauseManager.PauseType _pauseType) external
 
 Unpauses functionality by specific type.
 
-_Requires the role mapped in unPauseTypeRoles for the pauseType._
+_Throws if UNUSED pause type is used.
+Requires the role mapped in unPauseTypeRoles for the pauseType._
 
 #### Parameters
 
@@ -152,4 +202,42 @@ Check if a pause type is enabled.
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | pauseTypeIsPaused | bool | Returns true if the pause type if paused, false otherwise. |
+
+### updatePauseTypeRole
+
+```solidity
+function updatePauseTypeRole(enum IPauseManager.PauseType _pauseType, bytes32 _newRole) external
+```
+
+Update the pause type role mapping.
+
+_Throws if UNUSED pause type is used.
+Throws if role not different.
+PAUSE_ALL_ROLE role is required to execute this function._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _pauseType | enum IPauseManager.PauseType | The pause type value to update. |
+| _newRole | bytes32 | The role to update to. |
+
+### updateUnpauseTypeRole
+
+```solidity
+function updateUnpauseTypeRole(enum IPauseManager.PauseType _pauseType, bytes32 _newRole) external
+```
+
+Update the unpause type role mapping.
+
+_Throws if UNUSED pause type is used.
+Throws if role not different.
+UNPAUSE_ALL_ROLE role is required to execute this function._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _pauseType | enum IPauseManager.PauseType | The pause type value to update. |
+| _newRole | bytes32 | The role to update to. |
 
