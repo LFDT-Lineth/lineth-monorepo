@@ -15,11 +15,6 @@ import (
 
 func (ctx *Ctx) Verify(vr *wizard.VerifierRuntime) error {
 
-	// Evaluate explicitly the public columns
-	if err := ctx.explicitPublicEvaluation(vr); err != nil {
-		return err
-	}
-
 	// The skip verification flag may be on, if the current vortex
 	// context get self-recursed. In this case, the verifier does
 	// not need to do anything

@@ -12,7 +12,6 @@ import (
 	"github.com/consensys/linea-monorepo/prover/protocol/query"
 	"github.com/consensys/linea-monorepo/prover/utils"
 	"github.com/consensys/linea-monorepo/prover/utils/collection"
-	"github.com/sirupsen/logrus"
 )
 
 // ProverStep represents an operation to be performed by the prover of a
@@ -120,6 +119,11 @@ type ProverRuntime struct {
 
 	// lock is global lock so that the assignment maps are thread safes
 	lock *sync.Mutex
+
+	// FiatShamirHistory tracks the fiat-shamir state at the beginning of every
+	// round. The first entry is the initial state, the final entry is the final
+	// state.
+	FiatShamirHistory [][2][]field.Element
 }
 
 // Prove is the top-level function that runs the Prover on the user's side. It
@@ -204,14 +208,20 @@ func (c *CompiledIOP) createProver() ProverRuntime {
 
 	// Instantiates an empty Assignment (but link it to the CompiledIOP)
 	runtime := ProverRuntime{
-		Spec:          c,
-		Columns:       collection.NewMapping[ifaces.ColID, ifaces.ColAssignment](),
-		QueriesParams: collection.NewMapping[ifaces.QueryID, ifaces.QueryParams](),
-		Coins:         collection.NewMapping[coin.Name, interface{}](),
-		State:         collection.NewMapping[string, interface{}](),
-		FS:            fs,
-		currRound:     0,
-		lock:          &sync.Mutex{},
+		Spec:              c,
+		Columns:           collection.NewMapping[ifaces.ColID, ifaces.ColAssignment](),
+		QueriesParams:     collection.NewMapping[ifaces.QueryID, ifaces.QueryParams](),
+		Coins:             collection.NewMapping[coin.Name, interface{}](),
+		State:             collection.NewMapping[string, interface{}](),
+		FS:                fs,
+		currRound:         0,
+		lock:              &sync.Mutex{},
+		FiatShamirHistory: make([][2][]field.Element, c.NumRounds()),
+	}
+
+	runtime.FiatShamirHistory[0] = [2][]field.Element{
+		fs.State(),
+		fs.State(),
 	}
 
 	// Pass the precomputed polynomials
@@ -452,6 +462,8 @@ func (run *ProverRuntime) getRandomCoinGeneric(name coin.Name, requestedType coi
 // parameters. This makes all the new coins available in the prover runtime.
 func (run *ProverRuntime) goNextRound() {
 
+	initialState := run.FS.State()
+
 	/*
 		Make sure all issued random coin have been "consumed" by all the prover
 		steps, in the round we are closing. An error occuring here is more likely
@@ -473,11 +485,6 @@ func (run *ProverRuntime) goNextRound() {
 	toBeParametrized := run.Spec.QueriesParams.AllKeysAt(run.currRound)
 	run.QueriesParams.MustExists(toBeParametrized...)
 
-	// Counts the transcript size of the round and the number of field
-	// element generated.
-	initialTranscriptSize := run.FS.TranscriptSize
-	initialNumCoinsGenerated := run.FS.NumCoinGenerated
-
 	if !run.Spec.DummyCompiled {
 
 		/*
@@ -486,13 +493,11 @@ func (run *ProverRuntime) goNextRound() {
 			FS using the last round of the prover because he is always
 			the last one to "talk" in the protocol.
 		*/
-		start := run.FS.TranscriptSize
-		msgsToFS := run.Spec.Columns.AllKeysProofAt(run.currRound)
+		msgsToFS := run.Spec.Columns.AllKeysProofsOrIgnoredButKeptInProverTranscript(run.currRound)
 		for _, msgName := range msgsToFS {
 			instance := run.GetMessage(msgName)
 			run.FS.UpdateSV(instance)
 		}
-		logrus.Debugf("Fiat-shamir round %v - %v proof elements in the transcript", run.currRound, run.FS.TranscriptSize-start)
 
 		/*
 			Make sure that all messages have been written and use them
@@ -500,26 +505,26 @@ func (run *ProverRuntime) goNextRound() {
 			FS using the last round of the prover because he is always
 			the last one to "talk" in the protocol.
 		*/
-		start = run.FS.TranscriptSize
 		msgsToFS = run.Spec.Columns.AllKeysPublicInputAt(run.currRound)
 		for _, msgName := range msgsToFS {
 			instance := run.GetMessage(msgName)
 			run.FS.UpdateSV(instance)
 		}
-		logrus.Debugf("Fiat-shamir round %v - %v public inputs in the transcript", run.currRound, run.FS.TranscriptSize-start)
 
 		/*
 			Also include the prover's allegations for all evaluations
 		*/
-		start = run.FS.TranscriptSize
 		paramsToFS := run.Spec.QueriesParams.AllKeysAt(run.currRound)
 		for _, qName := range paramsToFS {
+			if run.Spec.QueriesParams.IsSkippedFromProverTranscript(qName) {
+				continue
+			}
+
 			// Implicitly, this will panic whenever we start supporting
 			// a new type of query params
 			params := run.QueriesParams.MustGet(qName)
 			params.UpdateFS(run.FS)
 		}
-		logrus.Debugf("Fiat-shamir round %v - %v query params in the transcript", run.currRound, run.FS.TranscriptSize-start)
 	}
 
 	// Increment the number of rounds
@@ -537,9 +542,12 @@ func (run *ProverRuntime) goNextRound() {
 		run.Coins.InsertNew(coin, value)
 	}
 
-	logrus.Debugf("Ran Fiat-Shamir for round %v, transcript size %v (field element), generated %v field elements, total-transcript %v, total-generated %v",
-		run.currRound, run.FS.TranscriptSize-initialTranscriptSize, run.FS.NumCoinGenerated-initialNumCoinsGenerated, run.FS.TranscriptSize, run.FS.NumCoinGenerated,
-	)
+	finalState := run.FS.State()
+
+	run.FiatShamirHistory[run.currRound] = [2][]field.Element{
+		initialState,
+		finalState,
+	}
 }
 
 // runProverSteps runs all the [ProverStep] specified in the underlying

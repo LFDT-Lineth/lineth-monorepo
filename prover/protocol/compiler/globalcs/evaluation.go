@@ -37,7 +37,10 @@ type evaluationProver evaluationCtx
 
 // evaluationVerifier wraps [evaluationCtx] to implement the [wizard.VerifierAction]
 // interface.
-type evaluationVerifier evaluationCtx
+type evaluationVerifier struct {
+	evaluationCtx
+	skipped bool
+}
 
 // declareUnivariateQueries declares the univariate queries over all the quotient
 // shares, making sure that the shares needing to be evaluated over the same
@@ -162,7 +165,7 @@ func (pa evaluationProver) Run(run *wizard.ProverRuntime) {
 }
 
 // Run evaluate the constraint and checks that
-func (ctx evaluationVerifier) Run(run *wizard.VerifierRuntime) error {
+func (ctx *evaluationVerifier) Run(run *wizard.VerifierRuntime) error {
 
 	var (
 		// Will be assigned to "X", the random point at which we check the constraint.
@@ -236,7 +239,7 @@ func (ctx evaluationVerifier) Run(run *wizard.VerifierRuntime) error {
 }
 
 // Verifier step, evaluate the constraint and checks that
-func (ctx evaluationVerifier) RunGnark(api frontend.API, c *wizard.WizardVerifierCircuit) {
+func (ctx *evaluationVerifier) RunGnark(api frontend.API, c *wizard.WizardVerifierCircuit) {
 
 	// Will be assigned to "X", the random point at which we check the constraint.
 	r := c.GetRandomCoinField(ctx.EvalCoin.Name)
@@ -462,4 +465,12 @@ func (ctx evaluationVerifier) recombineQuotientSharesEvaluationGnark(api fronten
 	}
 
 	return recombinedYs
+}
+
+func (ctx *evaluationVerifier) Skip() {
+	ctx.skipped = true
+}
+
+func (ctx *evaluationVerifier) IsSkipped() bool {
+	return ctx.skipped
 }

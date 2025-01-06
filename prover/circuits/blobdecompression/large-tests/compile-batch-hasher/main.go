@@ -28,5 +28,5 @@ type circuit struct {
 
 func (c *circuit) Define(api frontend.API) error {
 	hsh := gkrmimc.NewHasherFactory(api).NewHasher()
-	return v1.CheckBatchesSums(api, &hsh, c.NbBatches, c.BlobPayload[:], c.BatchEnds[:], c.ExpectedSums[:])
+	return v1.CheckBatchesSums(api, hsh, c.NbBatches, c.BlobPayload[:], c.BatchEnds[:], c.ExpectedSums[:])
 }

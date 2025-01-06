@@ -61,7 +61,7 @@ func Compile(blowUpFactor int, options ...VortexOp) func(*wizard.CompiledIOP) {
 		lastRound := comp.NumRounds() - 1
 
 		// Stores a pointer to the cryptographic compiler of Vortex
-		comp.CryptographicCompilerCtx = &ctx
+		comp.PcsCtxs = &ctx
 
 		// Converts the precomputed as verifying key (e.g. send
 		// them to the verifier) in the offline phase if the
@@ -86,6 +86,10 @@ func Compile(blowUpFactor int, options ...VortexOp) func(*wizard.CompiledIOP) {
 		// Registers the prover and verifier steps
 		comp.SubProvers.AppendToInner(lastRound+1, ctx.ComputeLinearComb)
 		comp.SubProvers.AppendToInner(lastRound+2, ctx.OpenSelectedColumns)
+		// This is separated from GnarkVerify because, when doing full-recursion
+		// , we want to recurse this verifier step but not [ctx.Verify] which is
+		// already handled by the self-recursion mechanism.
+		comp.InsertVerifier(lastRound, ctx.explicitPublicEvaluation, ctx.gnarkExplicitPublicEvaluation)
 		comp.InsertVerifier(lastRound+2, ctx.Verify, ctx.GnarkVerify)
 	}
 }

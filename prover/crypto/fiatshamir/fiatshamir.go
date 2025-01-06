@@ -1,9 +1,9 @@
 package fiatshamir
 
 import (
-	"hash"
 	"math"
 
+	"github.com/consensys/gnark-crypto/hash"
 	"github.com/consensys/linea-monorepo/prover/crypto/mimc"
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
@@ -31,7 +31,7 @@ import (
 //
 // https://blog.trailofbits.com/2022/04/18/the-frozen-heart-vulnerability-in-plonk/
 type State struct {
-	hasher           hash.Hash
+	hasher           hash.StateStorer
 	TranscriptSize   int
 	NumCoinGenerated int
 }
@@ -39,8 +39,24 @@ type State struct {
 // NewMiMCFiatShamir constructs a fresh and empty Fiat-Shamir state.
 func NewMiMCFiatShamir() *State {
 	return &State{
-		hasher: mimc.NewMiMC(),
+		hasher: mimc.NewMiMC().(hash.StateStorer),
 	}
+}
+
+// State returns the internal state of the Fiat-Shamir hasher. Only works for
+// MiMC.
+func (s *State) State() []field.Element {
+	_ = s.hasher.Sum(nil)
+	b := s.hasher.State()
+	f := new(field.Element).SetBytes(b)
+	return []field.Element{*f}
+}
+
+// SetState sets the fiat-shamir state to the requested value
+func (s *State) SetState(f []field.Element) {
+	_ = s.hasher.Sum(nil)
+	b := f[0].Bytes()
+	s.hasher.SetState(b[:])
 }
 
 // Update the Fiat-Shamir state with a one or more of field elements. The

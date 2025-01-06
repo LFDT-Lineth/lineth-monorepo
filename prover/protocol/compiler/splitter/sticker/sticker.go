@@ -405,7 +405,7 @@ func (ctx *stickContext) compileFixedEvaluation() {
 		// Filters out only the
 		q, ok := ctx.comp.QueriesParams.Data(qName).(query.LocalOpening)
 		if !ok {
-			utils.Panic("got an uncompilable query %v", qName)
+			utils.Panic("got an uncompilable query name=%v type=%T", qName, q)
 		}
 
 		// Assumption, the query is not over an interleaved column

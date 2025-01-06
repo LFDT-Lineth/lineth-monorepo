@@ -36,7 +36,7 @@ func CompileLogDerivative(comp *wizard.CompiledIOP) {
 		zCatalog = map[[2]int]*zCtx{}
 		zEntries = [][2]int{}
 		// verifier actions
-		va = finalEvaluationCheck{}
+		va = &finalEvaluationCheck{}
 	)
 
 	// Skip the compilation phase if no lookup constraint is being used. Otherwise
@@ -116,7 +116,7 @@ func CompileLogDerivative(comp *wizard.CompiledIOP) {
 		}
 	}
 
-	comp.RegisterVerifierAction(lastRound, &va)
+	comp.RegisterVerifierAction(lastRound, va)
 }
 
 // captureLookupTables inspects comp and look for Inclusion queries that are not

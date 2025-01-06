@@ -20,6 +20,7 @@ type verifierForSize struct {
 	SummationOpening query.LocalOpening
 	// BatchOpening is the challenge used for the linear combination
 	BatchOpening coin.Info
+	skipped      bool
 }
 
 // Run implements [wizard.VerifierAction]
@@ -86,4 +87,12 @@ func (v *verifierForSize) RunGnark(api frontend.API, run *wizard.WizardVerifierC
 	}
 
 	api.AssertIsEqual(expected, actual)
+}
+
+func (v *verifierForSize) Skip() {
+	v.skipped = true
+}
+
+func (v *verifierForSize) IsSkipped() bool {
+	return v.skipped
 }

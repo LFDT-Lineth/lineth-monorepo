@@ -9,7 +9,6 @@ import (
 	"github.com/consensys/linea-monorepo/prover/protocol/query"
 	"github.com/consensys/linea-monorepo/prover/utils"
 	"github.com/consensys/linea-monorepo/prover/utils/collection"
-	"github.com/sirupsen/logrus"
 )
 
 // Proof generically represents a proof obtained from the wizard. This object does not
@@ -69,6 +68,11 @@ type VerifierRuntime struct {
 	// the verifer end up having different state or the same message being
 	// included a second time. Use it externally at your own risks.
 	FS *fiatshamir.State
+
+	// FiatShamirHistory tracks the fiat-shamir state at the beginning of every
+	// round. The first entry is the initial state, the final entry is the final
+	// state.
+	FiatShamirHistory [][2][]field.Element
 }
 
 // Verify verifies a wizard proof. The caller specifies a [CompiledIOP] that
@@ -91,10 +95,12 @@ func Verify(c *CompiledIOP, proof Proof) error {
 		any
 	*/
 	errs := []error{}
-	for _, roundSteps := range runtime.Spec.subVerifiers.Inner() {
+	for _, roundSteps := range runtime.Spec.SubVerifiers.Inner() {
 		for _, step := range roundSteps {
-			if err := step(&runtime); err != nil {
-				errs = append(errs, err)
+			if !step.IsSkipped() {
+				if err := step.Run(&runtime); err != nil {
+					errs = append(errs, err)
+				}
 			}
 		}
 	}
@@ -117,11 +123,12 @@ func (c *CompiledIOP) createVerifier(proof Proof) VerifierRuntime {
 		Instantiate an empty assigment for the verifier
 	*/
 	runtime := VerifierRuntime{
-		Spec:          c,
-		Coins:         collection.NewMapping[coin.Name, interface{}](),
-		Columns:       proof.Messages,
-		QueriesParams: proof.QueriesParams,
-		FS:            fiatshamir.NewMiMCFiatShamir(),
+		Spec:              c,
+		Coins:             collection.NewMapping[coin.Name, interface{}](),
+		Columns:           proof.Messages,
+		QueriesParams:     proof.QueriesParams,
+		FS:                fiatshamir.NewMiMCFiatShamir(),
+		FiatShamirHistory: make([][2][]field.Element, c.NumRounds()),
 	}
 
 	runtime.FS.Update(c.fiatShamirSetup)
@@ -146,14 +153,10 @@ func (c *CompiledIOP) createVerifier(proof Proof) VerifierRuntime {
 func (run *VerifierRuntime) generateAllRandomCoins() {
 
 	for currRound := 0; currRound < run.Spec.NumRounds(); currRound++ {
+
+		initialState := run.FS.State()
+
 		if currRound > 0 {
-			/*
-				Sanity-check : Make sure all issued random coin have been
-				"consumed" by all the verifiers steps, in the round we are
-				"closing"
-			*/
-			toBeConsumed := run.Spec.Coins.AllKeysAt(currRound - 1)
-			run.Coins.MustExists(toBeConsumed...)
 
 			if !run.Spec.DummyCompiled {
 
@@ -166,14 +169,12 @@ func (run *VerifierRuntime) generateAllRandomCoins() {
 				msgsToFS := run.Spec.Columns.AllKeysProofAt(currRound - 1)
 				for _, msgName := range msgsToFS {
 					instance := run.GetColumn(msgName)
-					logrus.Tracef("VERIFIER : Update fiat-shamir with proof message %v", msgName)
 					run.FS.UpdateSV(instance)
 				}
 
 				msgsToFS = run.Spec.Columns.AllKeysPublicInputAt(currRound - 1)
 				for _, msgName := range msgsToFS {
 					instance := run.GetColumn(msgName)
-					logrus.Tracef("VERIFIER : Update fiat-shamir with public input %v", msgName)
 					run.FS.UpdateSV(instance)
 				}
 
@@ -182,9 +183,10 @@ func (run *VerifierRuntime) generateAllRandomCoins() {
 				*/
 				queries := run.Spec.QueriesParams.AllKeysAt(currRound - 1)
 				for _, qName := range queries {
-					// Implicitly, this will panic whenever we start supporting
-					// a new type of query params
-					logrus.Tracef("VERIFIER : Update fiat-shamir with query parameters %v", qName)
+					if run.Spec.QueriesParams.IsSkippedFromVerifierTranscript(qName) {
+						continue
+					}
+
 					params := run.QueriesParams.MustGet(qName)
 					params.UpdateFS(run.FS)
 				}
@@ -197,10 +199,29 @@ func (run *VerifierRuntime) generateAllRandomCoins() {
 		*/
 		toCompute := run.Spec.Coins.AllKeysAt(currRound)
 		for _, coin := range toCompute {
-			logrus.Tracef("VERIFIER : Generate coin %v", coin)
+			if run.Spec.Coins.IsSkippedFromVerifierTranscript(coin) {
+				continue
+			}
+
 			info := run.Spec.Coins.Data(coin)
 			value := info.Sample(run.FS)
 			run.Coins.InsertNew(coin, value)
+		}
+
+		if run.Spec.FiatShamirHooks.Len() > currRound {
+			fsHooks := run.Spec.FiatShamirHooks.MustGet(currRound)
+			for i := range fsHooks {
+				if fsHooks[i].IsSkipped() {
+					continue
+				}
+
+				fsHooks[i].Run(run)
+			}
+		}
+
+		run.FiatShamirHistory[currRound] = [2][]field.Element{
+			initialState,
+			run.FS.State(),
 		}
 	}
 
@@ -357,4 +378,16 @@ func (run VerifierRuntime) GetColumnAt(name ifaces.ColID, pos int) field.Element
 // type.
 func (run *VerifierRuntime) GetParams(name ifaces.QueryID) ifaces.QueryParams {
 	return run.QueriesParams.MustGet(name)
+}
+
+// GetPublicInput returns a public input from its name
+func (run *VerifierRuntime) GetPublicInput(name string) field.Element {
+	allPubs := run.Spec.PublicInputs
+	for i := range allPubs {
+		if allPubs[i].Name == name {
+			return allPubs[i].Acc.GetVal(run)
+		}
+	}
+	utils.Panic("could not find public input nb %v", name)
+	return field.Element{}
 }

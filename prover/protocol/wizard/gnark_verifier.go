@@ -5,6 +5,7 @@ import (
 	"github.com/consensys/linea-monorepo/prover/crypto/fiatshamir"
 	"github.com/consensys/linea-monorepo/prover/crypto/mimc/gkrmimc"
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
+	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/coin"
 	"github.com/consensys/linea-monorepo/prover/protocol/column"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
@@ -80,6 +81,11 @@ type WizardVerifierCircuit struct {
 	// hashes but also the MiMC Vortex column hashes that we use for the
 	// last round of the self-recursion.
 	HasherFactory *gkrmimc.HasherFactory `gnark:"-"`
+
+	// FiatShamirHistory tracks the fiat-shamir state at the beginning of every
+	// round. The first entry is the initial state, the final entry is the final
+	// state.
+	FiatShamirHistory [][2][]frontend.Variable `gnark:"-"`
 }
 
 // AllocateWizardCircuit allocates the inner-slices of the verifier struct from a precompiled IOP. It
@@ -89,7 +95,7 @@ type WizardVerifierCircuit struct {
 // the circuit.
 func AllocateWizardCircuit(comp *CompiledIOP) (*WizardVerifierCircuit, error) {
 
-	res := newWizardVerifierCircuit()
+	res := NewWizardVerifierCircuit()
 
 	for i, colName := range comp.Columns.AllKeys() {
 		// filter the columns by status
@@ -109,9 +115,7 @@ func AllocateWizardCircuit(comp *CompiledIOP) (*WizardVerifierCircuit, error) {
 		size := comp.Columns.GetSize(colName)
 
 		// Allocates the column in the circuit and indexes it
-		colID := len(res.Columns)
-		res.Columns = append(res.Columns, gnarkutil.AllocateSlice(size))
-		res.columnsIDs.InsertNew(colName, colID)
+		res.AllocColumn(colName, size)
 	}
 
 	/*
@@ -129,17 +133,11 @@ func AllocateWizardCircuit(comp *CompiledIOP) (*WizardVerifierCircuit, error) {
 
 		switch qInfo := qInfoIface.(type) {
 		case query.UnivariateEval:
-			// Note that nil is the default value for frontend.Variable
-			res.univariateParamsIDs.InsertNew(qName, len(res.UnivariateParams))
-			res.UnivariateParams = append(res.UnivariateParams, qInfo.GnarkAllocate())
+			res.AllocUnivariateEval(qName, qInfo)
 		case query.InnerProduct:
-			// Note that nil is the default value for frontend.Variable
-			res.innerProductIDs.InsertNew(qName, len(res.InnerProductParams))
-			res.InnerProductParams = append(res.InnerProductParams, qInfo.GnarkAllocate())
+			res.AllocInnerProduct(qName, qInfo)
 		case query.LocalOpening:
-			// Note that nil is the default value for frontend.Variable
-			res.localOpeningIDs.InsertNew(qName, len(res.LocalOpeningParams))
-			res.LocalOpeningParams = append(res.LocalOpeningParams, query.GnarkLocalOpeningParams{})
+			res.AllocLocalOpening(qName, qInfo)
 		}
 	}
 
@@ -154,67 +152,55 @@ func (c *WizardVerifierCircuit) Verify(api frontend.API) {
 	c.HasherFactory = gkrmimc.NewHasherFactory(api)
 	c.FS = fiatshamir.NewGnarkFiatShamir(api, c.HasherFactory)
 	c.FS.Update(c.Spec.fiatShamirSetup)
+	c.FiatShamirHistory = make([][2][]frontend.Variable, c.Spec.NumRounds())
 	c.generateAllRandomCoins(api)
 
-	logrus.Tracef("Generated the coins")
-
-	for _, roundSteps := range c.Spec.gnarkSubVerifiers.Inner() {
+	for _, roundSteps := range c.Spec.SubVerifiers.Inner() {
 		for _, step := range roundSteps {
-			step(api, c)
+			if !step.IsSkipped() {
+				step.RunGnark(api, c)
+			}
 		}
 	}
 }
 
 // generateAllRandomCoins is as [VerifierRuntime.generateAllRandomCoins]. Note that the function
 // does create constraints via the hasher factory that is inside of `c.FS`.
-func (c *WizardVerifierCircuit) generateAllRandomCoins(_ frontend.API) {
+func (c *WizardVerifierCircuit) generateAllRandomCoins(api frontend.API) {
 
 	for currRound := 0; currRound < c.Spec.NumRounds(); currRound++ {
+
+		initialState := c.FS.State()
+
 		if currRound > 0 {
+
+			// Make sure that all messages have been written and use them
+			// to update the FS state. Note that we do not need to update
+			// FS using the last round of the prover because he is always
+			// the last one to "talk" in the protocol.
+			toUpdateFS := c.Spec.Columns.AllKeysProofAt(currRound - 1)
+			for _, msg := range toUpdateFS {
+				msgContent := c.GetColumn(msg)
+				c.FS.UpdateVec(msgContent)
+			}
+
+			toUpdateFS = c.Spec.Columns.AllKeysPublicInputAt(currRound - 1)
+			for _, msg := range toUpdateFS {
+				msgContent := c.GetColumn(msg)
+				c.FS.UpdateVec(msgContent)
+			}
+
 			/*
-				Sanity-check : Make sure all issued random coin have been
-				"consumed" by all the verifiers steps, in the round we are
-				"closing"
+				Also include the prover's allegations for all evaluations
 			*/
-			toBeConsumed := c.Spec.Coins.AllKeysAt(currRound - 1)
-			c.Coins.Exists(toBeConsumed...)
-
-			if !c.Spec.DummyCompiled {
-
-				// Make sure that all messages have been written and use them
-				// to update the FS state. Note that we do not need to update
-				// FS using the last round of the prover because he is always
-				// the last one to "talk" in the protocol.
-				toUpdateFS := c.Spec.Columns.AllKeysProofAt(currRound - 1)
-				for _, msg := range toUpdateFS {
-
-					msgID := c.columnsIDs.MustGet(msg)
-					msgContent := c.Columns[msgID]
-
-					logrus.Tracef("VERIFIER CIRCUIT : Updating the FS oracle with a message - %v", msg)
-					c.FS.UpdateVec(msgContent)
+			queries := c.Spec.QueriesParams.AllKeysAt(currRound - 1)
+			for _, qName := range queries {
+				if c.Spec.QueriesParams.IsSkippedFromVerifierTranscript(qName) {
+					continue
 				}
 
-				toUpdateFS = c.Spec.Columns.AllKeysPublicInputAt(currRound - 1)
-				for _, msg := range toUpdateFS {
-
-					msgID := c.columnsIDs.MustGet(msg)
-					msgContent := c.Columns[msgID]
-
-					logrus.Tracef("VERIFIER CIRCUIT : Updating the FS oracle with public input - %v", msg)
-					c.FS.UpdateVec(msgContent)
-				}
-
-				/*
-					Also include the prover's allegations for all evaluations
-				*/
-				queries := c.Spec.QueriesParams.AllKeysAt(currRound - 1)
-				for _, qName := range queries {
-					// Implicitly, this will panic whenever we start supporting
-					// a new type of query params
-					params := c.GetParams(qName)
-					params.UpdateFS(c.FS)
-				}
+				params := c.GetParams(qName)
+				params.UpdateFS(c.FS)
 			}
 		}
 
@@ -223,8 +209,11 @@ func (c *WizardVerifierCircuit) generateAllRandomCoins(_ frontend.API) {
 		*/
 		toCompute := c.Spec.Coins.AllKeysAt(currRound)
 		for _, coinName := range toCompute {
+			if c.Spec.Coins.IsSkippedFromVerifierTranscript(coinName) {
+				continue
+			}
+
 			info := c.Spec.Coins.Data(coinName)
-			logrus.Tracef("VERIFIER CIRCUIT : Generate a random coin - %v", coinName)
 			switch info.Type {
 			case coin.Field:
 				value := c.FS.RandomField()
@@ -233,6 +222,22 @@ func (c *WizardVerifierCircuit) generateAllRandomCoins(_ frontend.API) {
 				value := c.FS.RandomManyIntegers(info.Size, info.UpperBound)
 				c.Coins.InsertNew(coinName, value)
 			}
+		}
+
+		if c.Spec.FiatShamirHooks.Len() > currRound {
+			fsHooks := c.Spec.FiatShamirHooks.MustGet(currRound)
+			for i := range fsHooks {
+				if fsHooks[i].IsSkipped() {
+					continue
+				}
+
+				fsHooks[i].RunGnark(api, c)
+			}
+		}
+
+		c.FiatShamirHistory[currRound] = [2][]frontend.Variable{
+			initialState,
+			c.FS.State(),
 		}
 	}
 }
@@ -346,9 +351,9 @@ func (c *WizardVerifierCircuit) GetColumnAt(name ifaces.ColID, pos int) frontend
 	return c.GetColumn(name)[pos]
 }
 
-// newWizardVerifierCircuit creates an empty wizard verifier circuit.
+// NewWizardVerifierCircuit creates an empty wizard verifier circuit.
 // Initializes the underlying structs and collections.
-func newWizardVerifierCircuit() *WizardVerifierCircuit {
+func NewWizardVerifierCircuit() *WizardVerifierCircuit {
 	res := &WizardVerifierCircuit{}
 	res.columnsIDs = collection.NewMapping[ifaces.ColID, int]()
 	res.univariateParamsIDs = collection.NewMapping[ifaces.QueryID, int]()
@@ -367,7 +372,7 @@ func newWizardVerifierCircuit() *WizardVerifierCircuit {
 // gnark assignment circuit involving the verification of Wizard proof.
 func GetWizardVerifierCircuitAssignment(comp *CompiledIOP, proof Proof) *WizardVerifierCircuit {
 
-	res := newWizardVerifierCircuit()
+	res := NewWizardVerifierCircuit()
 
 	/*
 		Assigns the messages. Note that the iteration order is made
@@ -411,17 +416,11 @@ func GetWizardVerifierCircuitAssignment(comp *CompiledIOP, proof Proof) *WizardV
 		switch params := paramsIface.(type) {
 
 		case query.UnivariateEvalParams:
-			res.univariateParamsIDs.InsertNew(qName, len(res.UnivariateParams))
-			res.UnivariateParams = append(res.UnivariateParams, params.GnarkAssign())
-
+			res.AssignUnivariateEval(qName, params)
 		case query.InnerProductParams:
-			res.innerProductIDs.InsertNew(qName, len(res.InnerProductParams))
-			res.InnerProductParams = append(res.InnerProductParams, params.GnarkAssign())
-
+			res.AssignInnerProduct(qName, params)
 		case query.LocalOpeningParams:
-			res.localOpeningIDs.InsertNew(qName, len(res.LocalOpeningParams))
-			res.LocalOpeningParams = append(res.LocalOpeningParams, params.GnarkAssign())
-
+			res.AssignLocalOpening(qName, params)
 		default:
 			utils.Panic("unknow type %T", params)
 		}
@@ -444,4 +443,80 @@ func (c *WizardVerifierCircuit) GetParams(id ifaces.QueryID) ifaces.GnarkQueryPa
 		utils.Panic("unexpected type : %T", t)
 	}
 	panic("unreachable")
+}
+
+// AllocColumn inserts a column in the Wizard verifier circuit and is meant
+// to be called at allocation time.
+func (c *WizardVerifierCircuit) AllocColumn(id ifaces.ColID, size int) []frontend.Variable {
+	column := make([]frontend.Variable, size)
+	c.columnsIDs.InsertNew(id, len(c.Columns))
+	c.Columns = append(c.Columns, column)
+	return column
+}
+
+// AssignColumn assigns a column in the Wizard verifier circuit
+func (c *WizardVerifierCircuit) AssignColumn(id ifaces.ColID, sv smartvectors.SmartVector) {
+	column := smartvectors.IntoGnarkAssignment(sv)
+	c.columnsIDs.InsertNew(id, len(c.Columns))
+	c.Columns = append(c.Columns, column)
+}
+
+// AllocUnivariableEval inserts a slot for a univariate query opening in the
+// witness of the verifier circuit.
+func (c *WizardVerifierCircuit) AllocUnivariateEval(qName ifaces.QueryID, qInfo query.UnivariateEval) {
+	// Note that nil is the default value for frontend.Variable
+	c.univariateParamsIDs.InsertNew(qName, len(c.UnivariateParams))
+	c.UnivariateParams = append(c.UnivariateParams, qInfo.GnarkAllocate())
+}
+
+// AllocInnerProduct inserts a slot for an inner-product query opening in the
+// witness of the verifier circuit.
+func (c *WizardVerifierCircuit) AllocInnerProduct(qName ifaces.QueryID, qInfo query.InnerProduct) {
+	// Note that nil is the default value for frontend.Variable
+	c.innerProductIDs.InsertNew(qName, len(c.InnerProductParams))
+	c.InnerProductParams = append(c.InnerProductParams, qInfo.GnarkAllocate())
+}
+
+// AllocLocalOpening inserts a slot for a local position opening in the witness
+// of the verifier circuit.
+func (c *WizardVerifierCircuit) AllocLocalOpening(qName ifaces.QueryID, qInfo query.LocalOpening) {
+	// Note that nil is the default value for frontend.Variable
+	c.localOpeningIDs.InsertNew(qName, len(c.LocalOpeningParams))
+	c.LocalOpeningParams = append(c.LocalOpeningParams, query.GnarkLocalOpeningParams{})
+}
+
+// AssignUnivariableEval inserts a slot for a univariate query opening in the
+// witness of the verifier circuit.
+func (c *WizardVerifierCircuit) AssignUnivariateEval(qName ifaces.QueryID, params query.UnivariateEvalParams) {
+	// Note that nil is the default value for frontend.Variable
+	c.univariateParamsIDs.InsertNew(qName, len(c.UnivariateParams))
+	c.UnivariateParams = append(c.UnivariateParams, params.GnarkAssign())
+}
+
+// AssignInnerProduct inserts a slot for an inner-product query opening in the
+// witness of the verifier circuit.
+func (c *WizardVerifierCircuit) AssignInnerProduct(qName ifaces.QueryID, params query.InnerProductParams) {
+	// Note that nil is the default value for frontend.Variable
+	c.innerProductIDs.InsertNew(qName, len(c.InnerProductParams))
+	c.InnerProductParams = append(c.InnerProductParams, params.GnarkAssign())
+}
+
+// AssignLocalOpening inserts a slot for a local position opening in the witness
+// of the verifier circuit.
+func (c *WizardVerifierCircuit) AssignLocalOpening(qName ifaces.QueryID, params query.LocalOpeningParams) {
+	// Note that nil is the default value for frontend.Variable
+	c.localOpeningIDs.InsertNew(qName, len(c.LocalOpeningParams))
+	c.LocalOpeningParams = append(c.LocalOpeningParams, params.GnarkAssign())
+}
+
+// GetPublicInput returns a public input value from its name
+func (c *WizardVerifierCircuit) GetPublicInput(api frontend.API, name string) frontend.Variable {
+	allPubs := c.Spec.PublicInputs
+	for i := range allPubs {
+		if allPubs[i].Name == name {
+			return allPubs[i].Acc.GetFrontendVariable(api, c)
+		}
+	}
+	utils.Panic("could not find public input nb %v", name)
+	return field.Element{}
 }

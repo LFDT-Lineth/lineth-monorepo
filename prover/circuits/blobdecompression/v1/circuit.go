@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/consensys/linea-monorepo/prover/lib/compressor/blob/dictionary"
-	"github.com/consensys/linea-monorepo/prover/lib/compressor/blob/encode"
 	"hash"
 	"math/big"
+
+	"github.com/consensys/linea-monorepo/prover/lib/compressor/blob/dictionary"
+	"github.com/consensys/linea-monorepo/prover/lib/compressor/blob/encode"
 
 	"github.com/consensys/gnark-crypto/ecc"
 	fr377 "github.com/consensys/gnark-crypto/ecc/bls12-377/fr"
@@ -192,8 +193,7 @@ func (i *FunctionalPublicInputSnark) Sum(api frontend.API, hsh snarkHash.FieldHa
 func (c Circuit) Define(api frontend.API) error {
 	var hsh snarkHash.FieldHasher
 	if c.UseGkrMiMC {
-		h := gkrmimc.NewHasherFactory(api).NewHasher()
-		hsh = &h
+		hsh = gkrmimc.NewHasherFactory(api).NewHasher()
 	} else {
 		if h, err := mimc.NewMiMC(api); err != nil {
 			return err

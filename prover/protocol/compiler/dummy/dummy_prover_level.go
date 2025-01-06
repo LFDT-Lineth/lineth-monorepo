@@ -22,8 +22,6 @@ import (
 // suitable for established unit-tests where we want to analyze the errors.
 func CompileAtProverLvl(comp *wizard.CompiledIOP) {
 
-	comp.DummyCompiled = true
-
 	/*
 		Registers all declared commitments and query parameters
 		as messages in the same round. This steps is only relevant

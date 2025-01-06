@@ -49,7 +49,7 @@ func CompileGrandProduct(comp *wizard.CompiledIOP) {
 	for round := range allProverActions {
 		if len(allProverActions[round]) > 0 {
 			comp.RegisterProverAction(round, allProverActions[round])
-			comp.RegisterVerifierAction(round, VerifierCtx(allProverActions[round]))
+			comp.RegisterVerifierAction(round, &VerifierCtx{Ctxs: allProverActions[round]})
 		}
 	}
 

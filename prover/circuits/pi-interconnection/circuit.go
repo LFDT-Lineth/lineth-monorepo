@@ -98,8 +98,7 @@ func (c *Circuit) Define(api frontend.API) error {
 		hshM hash.FieldHasher
 	)
 	if c.UseGkrMimc {
-		hsh := gkrmimc.NewHasherFactory(api).NewHasher()
-		hshM = &hsh
+		hshM = gkrmimc.NewHasherFactory(api).NewHasher()
 	} else {
 		if hsh, err := mimc.NewMiMC(api); err != nil {
 			return err

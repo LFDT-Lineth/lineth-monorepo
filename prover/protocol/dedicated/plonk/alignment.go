@@ -171,6 +171,8 @@ func (ci *CircuitAlignmentInput) Assign(run *wizard.ProverRuntime, i int) (priva
 	return ci.witnesses[i], ci.witnesses[i], nil
 }
 
+// NumEffWitnesses returns the effective number of Plonk witnesses that are
+// collected from the assignment of the AlignmentModule.
 func (ci *CircuitAlignmentInput) NumEffWitnesses(run *wizard.ProverRuntime) int {
 	ci.prepareWitnesses(run)
 	return ci.numEffWitnesses
@@ -258,6 +260,9 @@ func DefineAlignment(comp *wizard.CompiledIOP, toAlign *CircuitAlignmentInput) *
 	return res
 }
 
+// csIsActive adds the cosntraints ensuring that the [Alignment.IsActive] column
+// is well-formed. Namely, that this is a sequence of 1s followed by a sequence
+// of 0s.
 func (a *Alignment) csIsActive(comp *wizard.CompiledIOP) {
 	// IsActive is binary column
 	comp.InsertGlobal(a.Round, ifaces.QueryIDf("%v_IS_ACTIVE_BINARY", a.Name), symbolic.Mul(a.IsActive, symbolic.Sub(a.IsActive, 1)))
@@ -265,10 +270,16 @@ func (a *Alignment) csIsActive(comp *wizard.CompiledIOP) {
 	comp.InsertGlobal(a.Round, ifaces.QueryIDf("%v_IS_ACTIVE_SWITCH", a.Name), symbolic.Sub(a.IsActive, symbolic.Mul(a.IsActive, column.Shift(a.IsActive, -1))))
 }
 
+// csProjection ensures the data in the [Alignment.Data] column is the same as
+// the data provided by the [Alignment.CircuitInput].
 func (a *Alignment) csProjection(comp *wizard.CompiledIOP) {
 	projection.InsertProjection(comp, ifaces.QueryIDf("%v_PROJECTION", a.Name), []ifaces.Column{a.DataToCircuit}, []ifaces.Column{a.CircuitInput}, a.DataToCircuitMask, a.ActualCircuitInputMask)
 }
 
+// csProjectionSelector constraints that the projection selection
+// [Alignment.ActualCircuitInputMask] is well-formed. This ensures that the
+// imported data are correctly imported "in-front" of the public inputs of the
+// Plonk.
 func (a *Alignment) csProjectionSelector(comp *wizard.CompiledIOP) {
 	// ACTUAL_PI_MASK = IS_ACTIVE * STATIC_PI_MASK
 	comp.InsertGlobal(a.Round, ifaces.QueryIDf("%v_ACTUAL_SUBSET", a.Name), symbolic.Sub(a.ActualCircuitInputMask, symbolic.Mul(a.IsActive, a.FullCircuitInputMask)))
@@ -281,6 +292,8 @@ func (a *Alignment) Assign(run *wizard.ProverRuntime) {
 	a.assignCircMaskOpenings(run)
 }
 
+// assignMasks assigns the [Alignment.IsActive] and the [Alignment.ActualCircuitInputMask]
+// into `run`.
 func (a *Alignment) assignMasks(run *wizard.ProverRuntime) {
 	// we want to assign IS_ACTIVE and ACTUAL_MASK columns. We can construct
 	// them at the same time from the precomputed mask and selector.
@@ -320,7 +333,7 @@ func (a *Alignment) assignMasks(run *wizard.ProverRuntime) {
 	run.AssignColumn(a.ActualCircuitInputMask.GetColID(), smartvectors.NewRegular(actualCircMaskAssignment))
 }
 
-// assignCircMaskOpenings assigns the openings queries over [actualCircMaskAssignment]
+// assignCircMaskOpenings assigns the openings queries over the actualCircMaskAssignment
 func (a *Alignment) assignCircMaskOpenings(run *wizard.ProverRuntime) {
 	for i := range a.circMaskOpenings {
 		v := a.circMaskOpenings[i].Pol.GetColAssignmentAt(run, 0)
@@ -328,7 +341,8 @@ func (a *Alignment) assignCircMaskOpenings(run *wizard.ProverRuntime) {
 	}
 }
 
-// getCircuitMaskValue returns the
+// getCircuitMaskValue returns the static assignment of the precomputed columns
+// to be assigned to [Alignment.FullCircuitInputMask].
 func getCircuitMaskValue(nbPublicInputPerCircuit, nbCircuitInstance int) smartvectors.SmartVector {
 
 	var (
@@ -345,7 +359,8 @@ func getCircuitMaskValue(nbPublicInputPerCircuit, nbCircuitInstance int) smartve
 	return smartvectors.NewRegular(maskValue)
 }
 
-// check the activators are well-set w.r.t to the circuit mask column
+// checkActivators adds the constraints checking the activators are well-set w.r.t
+// to the circuit mask column. See [compilationCtx.Columns.Activators].
 func (ci *Alignment) checkActivators(comp *wizard.CompiledIOP) {
 
 	var (
@@ -366,12 +381,17 @@ func (ci *Alignment) checkActivators(comp *wizard.CompiledIOP) {
 
 	ci.circMaskOpenings = openings
 
-	comp.RegisterVerifierAction(ci.Round, checkActivatorAndMask(*ci))
+	comp.RegisterVerifierAction(ci.Round, &checkActivatorAndMask{Alignment: *ci})
 }
 
-type checkActivatorAndMask Alignment
+// checkActivatorAndMask is an implementation of [wizard.VerifierAction] and is
+// used to embody the verifier checks added by [checkActivators].
+type checkActivatorAndMask struct {
+	Alignment
+	skipped bool
+}
 
-func (c checkActivatorAndMask) Run(run *wizard.VerifierRuntime) error {
+func (c *checkActivatorAndMask) Run(run *wizard.VerifierRuntime) error {
 	for i := range c.circMaskOpenings {
 		var (
 			localOpening = run.GetLocalPointEvalParams(c.circMaskOpenings[i].ID)
@@ -390,7 +410,7 @@ func (c checkActivatorAndMask) Run(run *wizard.VerifierRuntime) error {
 	return nil
 }
 
-func (c checkActivatorAndMask) RunGnark(api frontend.API, run *wizard.WizardVerifierCircuit) {
+func (c *checkActivatorAndMask) RunGnark(api frontend.API, run *wizard.WizardVerifierCircuit) {
 	for i := range c.circMaskOpenings {
 		var (
 			valOpened = run.GetLocalPointEvalParams(c.circMaskOpenings[i].ID).Y
@@ -399,4 +419,12 @@ func (c checkActivatorAndMask) RunGnark(api frontend.API, run *wizard.WizardVeri
 
 		api.AssertIsEqual(valOpened, valActiv)
 	}
+}
+
+func (c *checkActivatorAndMask) Skip() {
+	c.skipped = true
+}
+
+func (c *checkActivatorAndMask) IsSkipped() bool {
+	return c.skipped
 }

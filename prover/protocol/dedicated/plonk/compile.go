@@ -68,7 +68,7 @@ func PlonkCheck(
 		comp.RegisterProverAction(round+1, lroCommitProverAction{compilationCtx: ctx, proverStateLock: &sync.Mutex{}})
 	}
 
-	comp.RegisterVerifierAction(round, checkingActivators(ctx.Columns.Activators))
+	comp.RegisterVerifierAction(round, &checkingActivators{Cols: ctx.Columns.Activators})
 
 	return ctx
 }
@@ -299,20 +299,23 @@ func (ctx *compilationCtx) addCopyConstraint() {
 
 // checkingActivators implements the [wizard.VerifierAction] interface and
 // checks that the [Activators] columns are correctly assigned
-type checkingActivators []ifaces.Column
+type checkingActivators struct {
+	Cols    []ifaces.Column
+	skipped bool
+}
 
-var _ wizard.VerifierAction = checkingActivators{}
+var _ wizard.VerifierAction = &checkingActivators{}
 
-func (ca checkingActivators) Run(run *wizard.VerifierRuntime) error {
-	for i := range ca {
+func (ca *checkingActivators) Run(run *wizard.VerifierRuntime) error {
+	for i := range ca.Cols {
 
-		curr := ca[i].GetColAssignmentAt(run, 0)
+		curr := ca.Cols[i].GetColAssignmentAt(run, 0)
 		if !curr.IsOne() && !curr.IsZero() {
 			return fmt.Errorf("error the activators must be 0 or 1")
 		}
 
-		if i+1 < len(ca) {
-			next := ca[i+1].GetColAssignmentAt(run, 0)
+		if i+1 < len(ca.Cols) {
+			next := ca.Cols[i+1].GetColAssignmentAt(run, 0)
 			if curr.IsZero() && !next.IsZero() {
 				return fmt.Errorf("the activators must never go from 0 to 1")
 			}
@@ -322,15 +325,23 @@ func (ca checkingActivators) Run(run *wizard.VerifierRuntime) error {
 	return nil
 }
 
-func (ca checkingActivators) RunGnark(api frontend.API, run *wizard.WizardVerifierCircuit) {
-	for i := range ca {
+func (ca *checkingActivators) RunGnark(api frontend.API, run *wizard.WizardVerifierCircuit) {
+	for i := range ca.Cols {
 
-		curr := ca[i].GetColAssignmentGnarkAt(run, 0)
+		curr := ca.Cols[i].GetColAssignmentGnarkAt(run, 0)
 		api.AssertIsBoolean(curr)
 
-		if i+1 < len(ca) {
-			next := ca[i+1].GetColAssignmentGnarkAt(run, 0)
+		if i+1 < len(ca.Cols) {
+			next := ca.Cols[i+1].GetColAssignmentGnarkAt(run, 0)
 			api.AssertIsEqual(next, api.Mul(curr, next))
 		}
 	}
+}
+
+func (ca *checkingActivators) Skip() {
+	ca.skipped = true
+}
+
+func (ca *checkingActivators) IsSkipped() bool {
+	return ca.skipped
 }

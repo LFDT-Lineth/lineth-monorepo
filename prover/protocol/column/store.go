@@ -44,6 +44,11 @@ type storedColumnInfo struct {
 	ID ifaces.ColID
 	// Status of the commitment
 	Status Status
+	// IncludeInProverFS states the prover should include the column in his FS
+	// transcript. This is used for columns that are recursed using
+	// FullRecursion. This field is only meaningfull for [Ignored] columns as
+	// they are excluded by default.
+	IncludeInProverFS bool
 }
 
 // AddToRound constructs a [Natural], registers it in the [Store] and returns
@@ -443,4 +448,40 @@ func assertCorrectStatusTransition(old, new Status) {
 	if forbiddenTransition {
 		utils.Panic("attempted the transition %v -> %v, which is forbidden", old.String(), new.String())
 	}
+}
+
+// IgnoreButKeepInProverTranscript marks a column as ignored but also asks that
+// the column stays included in the FS transcript. This is used as part of
+// full-recursion where the commitments to an inner-proofs should not be sent to
+// the verifier but should still play a part in the FS transcript.
+func (s *Store) IgnoreButKeepInProverTranscript(colName ifaces.ColID) {
+	in := s.info(colName)
+	in.Status = Ignored
+	in.IncludeInProverFS = true
+}
+
+// IsIgnoredAndNotKeptInTranscript indicates whether the column can be ignored
+// from the transcript and is used during the Fiat-Shamir randomness generation.
+func (s *Store) IsIgnoredAndNotKeptInTranscript(colName ifaces.ColID) bool {
+	in := s.info(colName)
+	return in.Status == Ignored && !in.IncludeInProverFS
+}
+
+// AllKeysProofsOrIgnoredButKeptInProverTranscript returns the list of the
+// columns to be used as part of the FS transcript.
+func (s *Store) AllKeysProofsOrIgnoredButKeptInProverTranscript(round int) []ifaces.ColID {
+	res := []ifaces.ColID{}
+	rnd := s.byRounds.MustGet(round) // precomputed are always at round zero
+
+	for i, info := range rnd {
+
+		ok := (info.Status == Proof) || (info.Status == Ignored && info.IncludeInProverFS)
+		if !ok {
+			continue
+		}
+
+		res = append(res, rnd[i].ID)
+	}
+
+	return res
 }

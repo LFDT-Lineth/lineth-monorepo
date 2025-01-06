@@ -6,7 +6,6 @@ import (
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/linea-monorepo/prover/crypto/fiatshamir"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
-	"github.com/consensys/linea-monorepo/prover/protocol/column"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/utils"
 )
@@ -29,20 +28,6 @@ func (lop LocalOpeningParams) UpdateFS(fs *fiatshamir.State) {
 
 // Constructs a new local opening query
 func NewLocalOpening(id ifaces.QueryID, pol ifaces.Column) LocalOpening {
-
-	// For simplicity, we enforce the `pol` to be either Natural or Shifted(Natural)
-	// Allegedly, this does not block any-case
-	switch h := pol.(type) {
-	case column.Natural:
-		// allowed
-	case column.Shifted:
-		if _, ok := h.Parent.(column.Natural); !ok {
-			utils.Panic("Unsupported handle should only be a shifted or a natural %v", pol)
-		}
-		// allowed
-	default:
-		utils.Panic("Unsupported handle should only be a shifted %v", pol)
-	}
 
 	if len(pol.GetColID()) == 0 {
 		utils.Panic("Assigned a polynomial name with an empty length")

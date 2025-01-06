@@ -64,6 +64,7 @@ type projectionProverAction struct {
 type projectionVerifierAction struct {
 	Name               ifaces.QueryID
 	HornerA0, HornerB0 query.LocalOpening
+	skipped            bool
 }
 
 // InsertProjection applies a projection query between sets (columnsA, filterA)
@@ -212,7 +213,7 @@ func InsertProjection(
 	pa.HornerB0 = comp.InsertLocalOpening(round, ifaces.QueryIDf("%v_HORNER_B0", queryName), pa.HornerB)
 
 	comp.RegisterProverAction(round, pa)
-	comp.RegisterVerifierAction(round, projectionVerifierAction{HornerA0: pa.HornerA0, HornerB0: pa.HornerB0, Name: queryName})
+	comp.RegisterVerifierAction(round, &projectionVerifierAction{HornerA0: pa.HornerA0, HornerB0: pa.HornerB0, Name: queryName})
 }
 
 // Run implements the [wizard.ProverAction] interface.
@@ -314,7 +315,7 @@ func (pa projectionProverAction) Run(run *wizard.ProverRuntime) {
 }
 
 // Run implements the [wizard.VerifierAction] interface.
-func (va projectionVerifierAction) Run(run *wizard.VerifierRuntime) error {
+func (va *projectionVerifierAction) Run(run *wizard.VerifierRuntime) error {
 
 	var (
 		a = run.GetLocalPointEvalParams(va.HornerA0.ID).Y
@@ -329,7 +330,7 @@ func (va projectionVerifierAction) Run(run *wizard.VerifierRuntime) error {
 }
 
 // RunGnark implements the [wizard.VerifierAction] interface.
-func (va projectionVerifierAction) RunGnark(api frontend.API, run *wizard.WizardVerifierCircuit) {
+func (va *projectionVerifierAction) RunGnark(api frontend.API, run *wizard.WizardVerifierCircuit) {
 
 	var (
 		a = run.GetLocalPointEvalParams(va.HornerA0.ID).Y
@@ -337,6 +338,14 @@ func (va projectionVerifierAction) RunGnark(api frontend.API, run *wizard.Wizard
 	)
 
 	api.AssertIsEqual(a, b)
+}
+
+func (va *projectionVerifierAction) Skip() {
+	va.skipped = true
+}
+
+func (va *projectionVerifierAction) IsSkipped() bool {
+	return va.skipped
 }
 
 // cmptHorner computes a random Horner accumulation of the filtered elements

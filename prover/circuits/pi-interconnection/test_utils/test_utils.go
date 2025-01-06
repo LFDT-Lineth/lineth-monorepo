@@ -48,6 +48,7 @@ func AssignSingleBlockBlob(t require.TestingT) pi_interconnection.Request {
 	merkleRoots := aggregation.PackInMiniTrees(test_utils.BlocksToHex(execReq.L2MessageHashes))
 
 	return pi_interconnection.Request{
+		DictPath:       "../../lib/compressor/compressor_dict.bin",
 		Decompressions: []blobsubmission.Response{*blobResp},
 		Executions:     []public_input.Execution{execReq},
 		Aggregation: public_input.Aggregation{

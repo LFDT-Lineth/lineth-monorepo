@@ -284,10 +284,10 @@ func NewSelfRecursionCxt(comp *wizard.CompiledIOP) SelfRecursionCtx {
 func assertVortexCompiled(comp *wizard.CompiledIOP) *vortex.Ctx {
 	// When we compiled using Vortex, we annotated the compiledIOP
 	// that the current protocol was a result of the
-	ctx := comp.CryptographicCompilerCtx
+	ctx := comp.PcsCtxs
 
 	// Take ownership of the vortex context
-	comp.CryptographicCompilerCtx = nil
+	comp.PcsCtxs = nil
 
 	// Check for non-nilness
 	if ctx == nil {

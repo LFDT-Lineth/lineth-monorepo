@@ -2,6 +2,7 @@ package ecpair
 
 import (
 	"fmt"
+	"math/big"
 
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/std/algebra/emulated/fields_bn254"
@@ -9,9 +10,15 @@ import (
 	"github.com/consensys/gnark/std/evmprecompiles"
 	"github.com/consensys/gnark/std/math/bitslice"
 	"github.com/consensys/gnark/std/math/emulated"
+	"github.com/consensys/gnark/std/math/emulated/emparams"
 )
 
 var fpParams sw_bn254.BaseField
+
+type (
+	fpField   = emulated.Field[emparams.BN254Fp]
+	fpElement = emulated.Element[emparams.BN254Fp]
+)
 
 // G1ElementWizard represents G1 element as Wizard limbs (2 limbs of 128 bits)
 type G1ElementWizard struct {
@@ -126,50 +133,22 @@ func (c *GtElementWizard) ToGtElement(api frontend.API, fp *emulated.Field[sw_bn
 	C1B2YLimbs[2], C1B2YLimbs[3] = bitslice.Partition(api, c.T[22], 64, bitslice.WithNbDigits(128))
 	C1B2YLimbs[0], C1B2YLimbs[1] = bitslice.Partition(api, c.T[23], 64, bitslice.WithNbDigits(128))
 
-	C0B0X := fp.NewElement(C0B0XLimbs)
-	C0B0Y := fp.NewElement(C0B0YLimbs)
-	C0B1X := fp.NewElement(C0B1XLimbs)
-	C0B1Y := fp.NewElement(C0B1YLimbs)
-	C0B2X := fp.NewElement(C0B2XLimbs)
-	C0B2Y := fp.NewElement(C0B2YLimbs)
-	C1B0X := fp.NewElement(C1B0XLimbs)
-	C1B0Y := fp.NewElement(C1B0YLimbs)
-	C1B1X := fp.NewElement(C1B1XLimbs)
-	C1B1Y := fp.NewElement(C1B1YLimbs)
-	C1B2X := fp.NewElement(C1B2XLimbs)
-	C1B2Y := fp.NewElement(C1B2YLimbs)
-
-	T := sw_bn254.GTEl{
-		C0: fields_bn254.E6{
-			B0: fields_bn254.E2{
-				A0: *C0B0X,
-				A1: *C0B0Y,
-			},
-			B1: fields_bn254.E2{
-				A0: *C0B1X,
-				A1: *C0B1Y,
-			},
-			B2: fields_bn254.E2{
-				A0: *C0B2X,
-				A1: *C0B2Y,
-			},
-		},
-		C1: fields_bn254.E6{
-			B0: fields_bn254.E2{
-				A0: *C1B0X,
-				A1: *C1B0Y,
-			},
-			B1: fields_bn254.E2{
-				A0: *C1B1X,
-				A1: *C1B1Y,
-			},
-			B2: fields_bn254.E2{
-				A0: *C1B2X,
-				A1: *C1B2Y,
-			},
-		},
+	e12Tower := [12]*fpElement{
+		fp.NewElement(C0B0XLimbs),
+		fp.NewElement(C0B0YLimbs),
+		fp.NewElement(C0B1XLimbs),
+		fp.NewElement(C0B1YLimbs),
+		fp.NewElement(C0B2XLimbs),
+		fp.NewElement(C0B2YLimbs),
+		fp.NewElement(C1B0XLimbs),
+		fp.NewElement(C1B0YLimbs),
+		fp.NewElement(C1B1XLimbs),
+		fp.NewElement(C1B1YLimbs),
+		fp.NewElement(C1B2XLimbs),
+		fp.NewElement(C1B2YLimbs),
 	}
-	return T
+
+	return intoGtNoTower(fp, e12Tower)
 }
 
 // MultiG2GroupcheckCircuit is a circuit that checks multiple G2 group
@@ -308,4 +287,54 @@ func (c *MillerLoopFinalExpInstance) Check(api frontend.API, fp *emulated.Field[
 	api.AssertIsEqual(c.Expected[0], 0)
 
 	return evmprecompiles.ECPairMillerLoopAndFinalExpCheck(api, &prev, &P, &Q, c.Expected[1])
+}
+
+// intoGtNoTower converts an E12 element as in the outputs of the pairing
+// precompile on Ethereum into a non-tower representation of the same E12
+// element.
+func intoGtNoTower(api *fpField, coordinates [12]*fpElement) sw_bn254.GTEl {
+
+	var (
+		C0B0X = coordinates[0]
+		C0B0Y = coordinates[1]
+		C0B1X = coordinates[2]
+		C0B1Y = coordinates[3]
+		C0B2X = coordinates[4]
+		C0B2Y = coordinates[5]
+		C1B0X = coordinates[6]
+		C1B0Y = coordinates[7]
+		C1B1X = coordinates[8]
+		C1B1Y = coordinates[9]
+		C1B2X = coordinates[10]
+		C1B2Y = coordinates[11]
+	)
+
+	var t *fpElement
+	t = api.MulConst(C0B0Y, big.NewInt(9))
+	c0 := api.Sub(C0B0X, t)
+	t = api.MulConst(C1B0Y, big.NewInt(9))
+	c1 := api.Sub(C1B0X, t)
+	t = api.MulConst(C0B1Y, big.NewInt(9))
+	c2 := api.Sub(C0B1X, t)
+	t = api.MulConst(C1B1Y, big.NewInt(9))
+	c3 := api.Sub(C1B1X, t)
+	t = api.MulConst(C0B2Y, big.NewInt(9))
+	c4 := api.Sub(C0B2X, t)
+	t = api.MulConst(C1B2Y, big.NewInt(9))
+	c5 := api.Sub(C1B2X, t)
+
+	return sw_bn254.GTEl{
+		A0:  *c0,
+		A1:  *c1,
+		A2:  *c2,
+		A3:  *c3,
+		A4:  *c4,
+		A5:  *c5,
+		A6:  *C0B0Y,
+		A7:  *C1B0Y,
+		A8:  *C0B1Y,
+		A9:  *C1B1Y,
+		A10: *C0B2Y,
+		A11: *C1B2Y,
+	}
 }

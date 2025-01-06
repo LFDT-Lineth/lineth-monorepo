@@ -16,13 +16,12 @@ func checkPublicInputs(
 	api frontend.API,
 	wvc *wizard.WizardVerifierCircuit,
 	gnarkFuncInp FunctionalPublicInputSnark,
-	wizardFuncInp publicInput.FunctionalInputExtractor,
 ) {
 
 	var (
 		lastRollingHash  = internal.CombineBytesIntoElements(api, gnarkFuncInp.FinalRollingHashUpdate)
 		firstRollingHash = internal.CombineBytesIntoElements(api, gnarkFuncInp.InitialRollingHashUpdate)
-		execDataHash     = execDataHash(api, wvc, wizardFuncInp)
+		execDataHash     = execDataHash(api, wvc)
 	)
 
 	// As we have this issue, the execDataHash will not match what we have in the
@@ -32,7 +31,7 @@ func checkPublicInputs(
 	shouldBeEqual(api, execDataHash, gnarkFuncInp.DataChecksum)
 
 	api.AssertIsEqual(
-		wvc.GetLocalPointEvalParams(wizardFuncInp.L2MessageHash.ID).Y,
+		wvc.GetPublicInput(api, publicInput.L2MessageHash),
 		// TODO: this operation is done a second time when computing the final
 		// public input which is wasteful although not dramatic (~8000 unused
 		// constraints)
@@ -40,62 +39,62 @@ func checkPublicInputs(
 	)
 
 	api.AssertIsEqual(
-		wvc.GetLocalPointEvalParams(wizardFuncInp.InitialStateRootHash.ID).Y,
+		wvc.GetPublicInput(api, publicInput.InitialStateRootHash),
 		gnarkFuncInp.InitialStateRootHash,
 	)
 
 	api.AssertIsEqual(
-		wvc.GetLocalPointEvalParams(wizardFuncInp.InitialBlockNumber.ID).Y,
+		wvc.GetPublicInput(api, publicInput.InitialBlockNumber),
 		gnarkFuncInp.InitialBlockNumber,
 	)
 
 	api.AssertIsEqual(
-		wvc.GetLocalPointEvalParams(wizardFuncInp.InitialBlockTimestamp.ID).Y,
+		wvc.GetPublicInput(api, publicInput.InitialBlockTimestamp),
 		gnarkFuncInp.InitialBlockTimestamp,
 	)
 
 	api.AssertIsEqual(
-		wvc.GetLocalPointEvalParams(wizardFuncInp.FirstRollingHashUpdate[0].ID).Y,
+		wvc.GetPublicInput(api, publicInput.FirstRollingHashUpdate_0),
 		firstRollingHash[0],
 	)
 
 	api.AssertIsEqual(
-		wvc.GetLocalPointEvalParams(wizardFuncInp.FirstRollingHashUpdate[1].ID).Y,
+		wvc.GetPublicInput(api, publicInput.FirstRollingHashUpdate_1),
 		firstRollingHash[1],
 	)
 
 	api.AssertIsEqual(
-		wvc.GetLocalPointEvalParams(wizardFuncInp.FirstRollingHashUpdateNumber.ID).Y,
+		wvc.GetPublicInput(api, publicInput.FirstRollingHashUpdateNumber),
 		gnarkFuncInp.FirstRollingHashUpdateNumber,
 	)
 
 	api.AssertIsEqual(
-		wvc.GetLocalPointEvalParams(wizardFuncInp.FinalStateRootHash.ID).Y,
+		wvc.GetPublicInput(api, publicInput.FinalStateRootHash),
 		gnarkFuncInp.FinalStateRootHash,
 	)
 
 	api.AssertIsEqual(
-		wvc.GetLocalPointEvalParams(wizardFuncInp.FinalBlockNumber.ID).Y,
+		wvc.GetPublicInput(api, publicInput.FinalBlockNumber),
 		gnarkFuncInp.FinalBlockNumber,
 	)
 
 	api.AssertIsEqual(
-		wvc.GetLocalPointEvalParams(wizardFuncInp.FinalBlockTimestamp.ID).Y,
+		wvc.GetPublicInput(api, publicInput.FinalBlockTimestamp),
 		gnarkFuncInp.FinalBlockTimestamp,
 	)
 
 	api.AssertIsEqual(
-		wvc.GetLocalPointEvalParams(wizardFuncInp.LastRollingHashUpdate[0].ID).Y,
+		wvc.GetPublicInput(api, publicInput.LastRollingHashUpdate_0),
 		lastRollingHash[0],
 	)
 
 	api.AssertIsEqual(
-		wvc.GetLocalPointEvalParams(wizardFuncInp.LastRollingHashUpdate[1].ID).Y,
+		wvc.GetPublicInput(api, publicInput.LastRollingHashUpdate_1),
 		lastRollingHash[1],
 	)
 
 	api.AssertIsEqual(
-		wvc.GetLocalPointEvalParams(wizardFuncInp.LastRollingHashUpdateNumber.ID).Y,
+		wvc.GetPublicInput(api, publicInput.LastRollingHashNumberUpdate),
 		gnarkFuncInp.LastRollingHashUpdateNumber,
 	)
 
@@ -107,9 +106,9 @@ func checkPublicInputs(
 		bridgeAddress = api.Add(
 			api.Mul(
 				twoPow128,
-				wizardFuncInp.L2MessageServiceAddrHi.GetFrontendVariable(api, wvc),
+				wvc.GetPublicInput(api, publicInput.L2MessageServiceAddrHi),
 			),
-			wizardFuncInp.L2MessageServiceAddrLo.GetFrontendVariable(api, wvc),
+			wvc.GetPublicInput(api, publicInput.L2MessageServiceAddrLo),
 		)
 	)
 
@@ -119,10 +118,10 @@ func checkPublicInputs(
 	// chainID) then the traces will return a chainID of zero.
 	api.AssertIsEqual(
 		api.Mul(
-			wvc.GetLocalPointEvalParams(wizardFuncInp.ChainID.ID).Y,
+			wvc.GetPublicInput(api, publicInput.ChainID),
 			api.Sub(
 				api.Div(
-					wvc.GetLocalPointEvalParams(wizardFuncInp.ChainID.ID).Y,
+					wvc.GetPublicInput(api, publicInput.ChainID),
 					twoPow112,
 				),
 				gnarkFuncInp.ChainID,
@@ -141,7 +140,6 @@ func checkPublicInputs(
 func execDataHash(
 	api frontend.API,
 	wvc *wizard.WizardVerifierCircuit,
-	wFuncInp publicInput.FunctionalInputExtractor,
 ) frontend.Variable {
 
 	hsh, err := mimc.NewMiMC(api)
@@ -150,8 +148,8 @@ func execDataHash(
 	}
 
 	hsh.Write(
-		wvc.GetLocalPointEvalParams(wFuncInp.DataNbBytes.ID).Y,
-		wvc.GetLocalPointEvalParams(wFuncInp.DataChecksum.ID).Y,
+		wvc.GetPublicInput(api, publicInput.DataNbBytes),
+		wvc.GetPublicInput(api, publicInput.DataChecksum),
 	)
 
 	return hsh.Sum()

@@ -112,6 +112,7 @@ func TestTinyTwoBatchBlob(t *testing.T) {
 	req := pi_interconnection.Request{
 		Decompressions: []blobsubmission.Response{*blobResp},
 		Executions:     execReq,
+		DictPath:       "../../lib/compressor/compressor_dict.bin",
 		Aggregation: public_input.Aggregation{
 			FinalShnarf:                             blobResp.ExpectedShnarf,
 			ParentAggregationFinalShnarf:            blobReq.PrevShnarf,
@@ -208,6 +209,7 @@ func TestTwoTwoBatchBlobs(t *testing.T) {
 	req := pi_interconnection.Request{
 		Decompressions: []blobsubmission.Response{*blobResp0, *blobResp1},
 		Executions:     execReq,
+		DictPath:       "../../lib/compressor/compressor_dict.bin",
 		Aggregation: public_input.Aggregation{
 			FinalShnarf:                             blobResp1.ExpectedShnarf,
 			ParentAggregationFinalShnarf:            blobReq0.PrevShnarf,

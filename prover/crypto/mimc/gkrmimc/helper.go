@@ -1,6 +1,7 @@
 package gkrmimc
 
 import (
+	"errors"
 	"math/big"
 
 	"github.com/consensys/gnark/frontend"
@@ -70,8 +71,8 @@ type Hasher struct {
 // and will provide the same results for the same usage.
 //
 // However, the hasher should not be used in deferred gnark circuit execution.
-func (f *HasherFactory) NewHasher() Hasher {
-	return Hasher{factory: f, state: frontend.Variable(0)}
+func (f *HasherFactory) NewHasher() *Hasher {
+	return &Hasher{factory: f, state: frontend.Variable(0)}
 }
 
 // Writes fields elements into the hasher; implements [hash.FieldHasher]
@@ -105,6 +106,30 @@ func (h *Hasher) Sum() frontend.Variable {
 	h.data = nil
 	h.state = curr
 	return curr
+}
+
+// SetState manually sets the state of the hasher to the provided value. In the
+// case of MiMC only a single frontend variable is expected to represent the
+// state.
+func (h *Hasher) SetState(newState []frontend.Variable) error {
+
+	if len(h.data) > 0 {
+		return errors.New("the hasher is not in an initial state")
+	}
+
+	if len(newState) != 1 {
+		return errors.New("the MiMC hasher expects a single field element to represent the state")
+	}
+
+	h.state = newState[0]
+	return nil
+}
+
+// State returns the inner-state of the hasher. In the context of MiMC only a
+// single field element is returned.
+func (h *Hasher) State() []frontend.Variable {
+	_ = h.Sum() // to flush the hasher
+	return []frontend.Variable{h.state}
 }
 
 // compress calls returns a frontend.Variable holding the result of applying

@@ -21,6 +21,7 @@ type finalEvaluationCheck struct {
 	Name string
 	// ZOpenings lists all the openings of all the zCtx
 	ZOpenings []query.LocalOpening
+	skipped   bool
 }
 
 // Run implements the [wizard.VerifierAction]
@@ -53,4 +54,12 @@ func (f *finalEvaluationCheck) RunGnark(api frontend.API, run *wizard.WizardVeri
 	}
 
 	api.AssertIsEqual(zSum, 0)
+}
+
+func (f *finalEvaluationCheck) Skip() {
+	f.skipped = true
+}
+
+func (f *finalEvaluationCheck) IsSkipped() bool {
+	return f.skipped
 }

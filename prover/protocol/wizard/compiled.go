@@ -71,28 +71,26 @@ type CompiledIOP struct {
 	// manual checks that the verifier has to perform. This is useful when a check
 	// cannot be represented in term of query but, when possible, queries should
 	// always be preferred to express a relation that the witness must satisfy.
-	subVerifiers collection.VecVec[VerifierStep]
+	SubVerifiers collection.VecVec[VerifierAction]
 
-	// gnarkSubVerifiers does the same as [gnarkSubVerifiers] but in a gnark
-	// circuit. Whenever, the user add a subVerifier function into the compiled
-	// IOP, he should also provide an equivalent gnark function that does
-	// exactly the same thing, but in a gnark circuit. This used when
-	// instantiating a gnark verifier for the sub-protocol.
-	gnarkSubVerifiers collection.VecVec[GnarkVerifierStep]
+	// FiatShamirHooks is an action that is run during the FS sampling. Compared
+	// to a normal verifier action it has the possibility to interact with the
+	// Fiat-Shamir state.
+	FiatShamirHooks collection.VecVec[VerifierAction]
 
 	// Precomputed stores the assignments of all the Precomputed and VerifierKey
 	// polynomials. It is assigned directly when registering a precomputed
 	// column.
 	Precomputed collection.Mapping[ifaces.ColID, ifaces.ColAssignment]
 
-	// CryptographicCompilerCtx stores the compilation context of the last used
+	// PcsCtxs stores the compilation context of the last used
 	// cryptographic compiler. Specifically, it is aimed to store the last
 	// Vortex compilation context (see [github.com/consensys/linea-monorepo/prover/protocol/compiler]) that was used. And
 	// its purpose is to provide the Vortex context to the self-recursion
 	// compilation context; see [github.com/consensys/linea-monorepo/prover/protocol/compiler/selfrecursion]. This allows
 	// the self-recursion context to learn about the columns to use and the
 	// Vortex parameters.
-	CryptographicCompilerCtx any
+	PcsCtxs any
 
 	// DummyCompiled that can be set internally by the compilation, when we are
 	// using the [github.com/consensys/linea-monorepo/prover/protocol/compiler/dummy.Compile] compilation step. This steps
@@ -120,6 +118,10 @@ type CompiledIOP struct {
 	//
 	// For efficiency reasons, the fiatShamirSetup is derived using SHA2.
 	fiatShamirSetup field.Element
+
+	// FunctionalPublic inputs lists the queries representing a public inputs
+	// and their identifiers
+	PublicInputs []PublicInput
 }
 
 // NumRounds returns the total number of prover interactions with the verifier
@@ -478,8 +480,10 @@ func (c *CompiledIOP) InsertPublicInput(round int, name ifaces.ColID, size int) 
 // passing `nil` is fine.
 func (c *CompiledIOP) InsertVerifier(round int, ver VerifierStep, gnarkVer GnarkVerifierStep) {
 	c.assertConsistentRound(round)
-	c.gnarkSubVerifiers.AppendToInner(round, gnarkVer)
-	c.subVerifiers.AppendToInner(round, ver)
+	c.SubVerifiers.AppendToInner(round, &genVerifierAction{
+		run:      ver,
+		runGnark: gnarkVer,
+	})
 }
 
 // InsertRange registers [query.Range] in the CompiledIOP. Namely, it ensures

@@ -19,7 +19,7 @@ import (
 // of the verifier of a protocol calling [State] as it allows having a very
 // similar code for both tasks.
 type GnarkFiatShamir struct {
-	hasher hash.FieldHasher
+	hasher hash.StateStorer
 	// pointer to the gnark-API (also passed to the hasher but behind an
 	// interface). This is needed to perform bit-decomposition.
 	api frontend.API
@@ -30,10 +30,10 @@ type GnarkFiatShamir struct {
 // used in the scope of a [frontend.Define] function.
 func NewGnarkFiatShamir(api frontend.API, factory *gkrmimc.HasherFactory) *GnarkFiatShamir {
 
-	var hasher hash.FieldHasher
+	var hasher hash.StateStorer
 	if factory != nil {
 		h := factory.NewHasher()
-		hasher = &h
+		hasher = h
 	} else {
 		h, err := mimc.NewMiMC(api)
 		if err != nil {
@@ -49,6 +49,34 @@ func NewGnarkFiatShamir(api frontend.API, factory *gkrmimc.HasherFactory) *Gnark
 	return &GnarkFiatShamir{
 		hasher: hasher,
 		api:    api,
+	}
+}
+
+// SetState mutates the fiat-shamir state of
+func (fs *GnarkFiatShamir) SetState(state []frontend.Variable) {
+
+	switch hsh := fs.hasher.(type) {
+	case interface {
+		SetState([]frontend.Variable) error
+	}:
+		if err := hsh.SetState(state); err != nil {
+			panic(err)
+		}
+	default:
+		panic("unexpected hasher type")
+	}
+}
+
+// State mutates the fiat-shamir state of
+func (fs *GnarkFiatShamir) State() []frontend.Variable {
+
+	switch hsh := fs.hasher.(type) {
+	case interface {
+		State() []frontend.Variable
+	}:
+		return hsh.State()
+	default:
+		panic("unexpected hasher type")
 	}
 }
 
