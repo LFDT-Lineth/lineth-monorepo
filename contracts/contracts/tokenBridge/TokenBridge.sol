@@ -11,8 +11,6 @@ import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/
 import { BeaconProxy } from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
-import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-
 import { BridgedToken } from "./BridgedToken.sol";
 import { MessageServiceBase } from "../messageService/MessageServiceBase.sol";
 
@@ -30,7 +28,6 @@ import { Utils } from "../lib/Utils.sol";
  */
 contract TokenBridge is
   ITokenBridge,
-  Initializable,
   ReentrancyGuardUpgradeable,
   AccessControlUpgradeable,
   MessageServiceBase,

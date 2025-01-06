@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity 0.8.26;
 
-import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import { L1MessageServiceV1 } from "./messageService/l1/v1/L1MessageServiceV1.sol";
 import { IZkEvmV2 } from "./interfaces/l1/IZkEvmV2.sol";
@@ -11,7 +10,7 @@ import { IPlonkVerifier } from "./interfaces/l1/IPlonkVerifier.sol";
  * @author ConsenSys Software Inc.
  * @custom:security-contact security-report@linea.build
  */
-abstract contract ZkEvmV2 is Initializable, AccessControlUpgradeable, L1MessageServiceV1, IZkEvmV2 {
+abstract contract ZkEvmV2 is AccessControlUpgradeable, L1MessageServiceV1, IZkEvmV2 {
   uint256 internal constant MODULO_R = 21888242871839275222246405745257275088548364400416034343698204186575808495617;
   bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
 

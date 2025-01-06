@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity 0.8.26;
 
-import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import { L1MessageService } from "./messageService/l1/L1MessageService.sol";
 import { ZkEvmV2 } from "./ZkEvmV2.sol";
@@ -14,14 +13,7 @@ import { Utils } from "./lib/Utils.sol";
  * @author ConsenSys Software Inc.
  * @custom:security-contact security-report@linea.build
  */
-contract LineaRollup is
-  Initializable,
-  AccessControlUpgradeable,
-  ZkEvmV2,
-  L1MessageService,
-  PermissionsManager,
-  ILineaRollup
-{
+contract LineaRollup is AccessControlUpgradeable, ZkEvmV2, L1MessageService, PermissionsManager, ILineaRollup {
   using Utils for *;
 
   /// @notice This is the ABI version and not the reinitialize version.

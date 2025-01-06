@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity 0.8.26;
 
-import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { LineaRollupPauseManager } from "../../../lib/LineaRollupPauseManager.sol";
 import { RateLimiter } from "../../lib/RateLimiter.sol";
 import { L1MessageManagerV1 } from "./L1MessageManagerV1.sol";
@@ -16,7 +15,6 @@ import { MessageHashing } from "../../lib/MessageHashing.sol";
  * @custom:security-contact security-report@linea.build
  */
 abstract contract L1MessageServiceV1 is
-  Initializable,
   RateLimiter,
   L1MessageManagerV1,
   TransientStorageReentrancyGuardUpgradeable,

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity >=0.8.19 <=0.8.26;
 
-import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import { IPauseManager } from "../interfaces/IPauseManager.sol";
 
@@ -10,7 +9,7 @@ import { IPauseManager } from "../interfaces/IPauseManager.sol";
  * @author ConsenSys Software Inc.
  * @custom:security-contact security-report@linea.build
  */
-abstract contract PauseManager is Initializable, IPauseManager, AccessControlUpgradeable {
+abstract contract PauseManager is IPauseManager, AccessControlUpgradeable {
   /// @notice This is used to pause all pausable functions.
   bytes32 public constant PAUSE_ALL_ROLE = keccak256("PAUSE_ALL_ROLE");
 

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity >=0.8.19 <=0.8.26;
 
-import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import { IGenericErrors } from "../interfaces/IGenericErrors.sol";
 import { IPermissionsManager } from "../interfaces/IPermissionsManager.sol";
@@ -11,7 +10,7 @@ import { IPermissionsManager } from "../interfaces/IPermissionsManager.sol";
  * @author ConsenSys Software Inc.
  * @custom:security-contact security-report@linea.build
  */
-abstract contract PermissionsManager is Initializable, AccessControlUpgradeable, IPermissionsManager, IGenericErrors {
+abstract contract PermissionsManager is AccessControlUpgradeable, IPermissionsManager, IGenericErrors {
   /**
    * @notice Sets permissions for a list of addresses and their roles.
    * @param _roleAddresses The list of addresses and roles to assign permissions to.
