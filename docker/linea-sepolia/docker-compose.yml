@@ -1,19 +1,28 @@
 version: "3.9"
 
+# Define named volumes
 volumes:
-  linea-sepolia:
-    name: "linea-sepolia"
+  linea-sepolia-geth:
+    name: "linea-sepolia-geth"
+  linea-sepolia-besu:
+    name: "linea-sepolia-besu"
+  linea-sepolia-erigon:
+    name: "linea-sepolia-erigon"
+  linea-sepolia-nethermind:
+    name: "linea-sepolia-nethermind"
 
 services:
+  # Geth initialization
   geth-init:
     image: ethereum/client-go:v1.11.6
     command:
-    - init
-    - /genesis.json
+      - init
+      - /genesis.json
     volumes:
       - ./genesis.json:/genesis.json:ro
-      - linea-sepolia:/root/.ethereum
+      - linea-sepolia-geth:/root/.ethereum
 
+  # Geth node
   geth-node:
     image: ethereum/client-go:v1.11.6
     pull_policy: always
@@ -23,16 +32,16 @@ services:
       geth-init:
         condition: service_completed_successfully
     command:
-      --networkid=59141
-      --syncmode=snap
-      --http
-      --http.addr='0.0.0.0'
-      --http.port=8545
-      --http.corsdomain='*'
-      --http.api='admin,web3,eth,txpool,net'
-      --http.vhosts='*'
-      --bootnodes="enode://6f20afbe4397e51b717a7c1ad3095e79aee48c835eebd9237a3e8a16951ade1fe0e66e981e30ea269849fcb6ba03d838da37f524fabd2a557474194a2e2604fa@18.221.100.27:31002,enode://ce1e0d8e0500cb5c0ac56bdcdafb2d6320c3a2c5125b5ccf12f5dfc9b47ee74acbcafc32559017613136c9c36a0ce74ba4f83b7fb8244f099f3b15708d9d3129@3.23.75.47:31000,enode://1b026a5eb0ae74300f58987d235ef0e3a550df963345cb3574be3b0b54378bd11f14dfd515a8976f2c2d2826090e9507b8ccc24f896a9ffffffcabcfd996a733@3.129.120.128:31001"
-      --verbosity=3
+      - --networkid=59141
+      - --syncmode=snap
+      - --http
+      - --http.addr=0.0.0.0
+      - --http.port=8545
+      - --http.corsdomain=*
+      - --http.api=admin,web3,eth,txpool,net
+      - --http.vhosts=*
+      - --bootnodes="enode://6f20afbe4397e51b717a7c1ad3095e79aee48c835eebd9237a3e8a16951ade1fe0e66e981e30ea269849fcb6ba03d838da37f524fabd2a557474194a2e2604fa@18.221.100.27:31002,enode://ce1e0d8e0500cb5c0ac56bdcdafb2d6320c3a2c5125b5ccf12f5dfc9b47ee74acbcafc32559017613136c9c36a0ce74ba4f83b7fb8244f099f3b15708d9d3129@3.23.75.47:31000,enode://1b026a5eb0ae74300f58987d235ef0e3a550df963345cb3574be3b0b54378bd11f14dfd515a8976f2c2d2826090e9507b8ccc24f896a9ffffffcabcfd996a733@3.129.120.128:31001"
+      - --verbosity=3
     ports:
       - 30303:30303
       - 30303:30303/udp
@@ -40,15 +49,16 @@ services:
       - 8546:8546
     volumes:
       - ./genesis.json:/genesis.json:ro
-      - linea-sepolia:/root/.ethereum
+      - linea-sepolia-geth:/root/.ethereum
 
+  # Besu node
   besu-node:
     hostname: besu-node
     container_name: besu-node
     image: consensys/linea-besu:${SEQUENCER_TAG:-linea-delivery-17}
     platform: linux/amd64
     healthcheck:
-      test: [ "CMD-SHELL", "bash -c \"[ -f /tmp/pid ]\"" ]
+      test: ["CMD-SHELL", "bash -c '[ -f /tmp/pid ]'"]
       interval: 1s
       timeout: 1s
       retries: 120
@@ -66,12 +76,53 @@ services:
       - --Xrpc-ipc-enabled=true
       - --static-nodes-file=/var/lib/besu/static-nodes.json
     volumes:
-      - ./datadir/:/data
+      - ./datadir:/data
       - ./linea-besu.config.toml:/var/lib/besu/linea-besu.config.toml:ro
       - ./besu-genesis.json:/var/lib/besu/genesis.json:ro
       - ../config/linea-besu-sequencer/log4j.xml:/var/lib/besu/log4j.xml
       - ./static-nodes.json:/var/lib/besu/static-nodes.json
+      - linea-sepolia-besu:/data
 
+  # Erigon initialization
+  erigon-init:
+    image: erigontech/erigon:2.61.0
+    command:
+      - init
+      - /genesis.json
+      - --datadir=/data
+    volumes:
+      - ./genesis.json:/genesis.json:ro
+      - linea-sepolia-erigon:/home/erigon/.local/share/erigon/
+
+  # Erigon node
+  erigon-node:
+    image: erigontech/erigon:2.61.0
+    pull_policy: always
+    restart: unless-stopped
+    stop_grace_period: 30s
+    depends_on:
+      erigon-init:
+        condition: service_completed_successfully
+    command:
+      - --networkid=59141
+      - --prune=hrtc
+      - --http
+      - --http.addr=0.0.0.0
+      - --http.port=8545
+      - --http.corsdomain=*
+      - --http.api=admin,web3,eth,txpool,net
+      - --http.vhosts=*
+      - --bootnodes="enode://6f20afbe4397e51b717a7c1ad3095e79aee48c835eebd9237a3e8a16951ade1fe0e66e981e30ea269849fcb6ba03d838da37f524fabd2a557474194a2e2604fa@18.221.100.27:31002,enode://ce1e0d8e0500cb5c0ac56bdcdafb2d6320c3a2c5125b5ccf12f5dfc9b47ee74acbcafc32559017613136c9c36a0ce74ba4f83b7fb8244f099f3b15708d9d3129@3.23.75.47:31000,enode://1b026a5eb0ae74300f58987d235ef0e3a550df963345cb3574be3b0b54378bd11f14dfd515a8976f2c2d2826090e9507b8ccc24f896a9ffffffcabcfd996a733@3.129.120.128:31001"
+      - --verbosity=3
+    ports:
+      - 30303:30303
+      - 30303:30303/udp
+      - 8545:8545
+    volumes:
+      - ./genesis.json:/genesis.json:ro
+      - linea-sepolia-erigon:/home/erigon/.local/share/erigon/
+  
+  # Nethermind node
   nethermind-node:
     hostname: nethermind-node
     container_name: nethermind-node
@@ -89,4 +140,4 @@ services:
       - 8545:8545
       - 8008:8008
     volumes:
-      - linea-sepolia:/nethermind/nethermind_db
+      - linea-sepolia-nethermind:/nethermind/nethermind_db
