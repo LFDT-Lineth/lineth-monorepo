@@ -37,15 +37,15 @@ type SetupArgs struct {
 	ConfigFile string
 }
 
-var AllCircuits = []string{
-	string(circuits.ExecutionCircuitID),
-	string(circuits.ExecutionLargeCircuitID),
-	string(circuits.BlobDecompressionV0CircuitID),
-	string(circuits.BlobDecompressionV1CircuitID),
-	string(circuits.PublicInputInterconnectionCircuitID),
-	string(circuits.AggregationCircuitID),
-	string(circuits.EmulationCircuitID),
-	string(circuits.EmulationDummyCircuitID), // we want to generate Verifier.sol for this one
+var AllCircuits = []circuits.CircuitID{
+	circuits.ExecutionCircuitID,
+	circuits.ExecutionLargeCircuitID,
+	circuits.BlobDecompressionV0CircuitID,
+	circuits.BlobDecompressionV1CircuitID,
+	circuits.PublicInputInterconnectionCircuitID,
+	circuits.AggregationCircuitID,
+	circuits.EmulationCircuitID,
+	circuits.EmulationDummyCircuitID, // we want to generate Verifier.sol for this one
 }
 
 func Setup(context context.Context, args SetupArgs) error {
@@ -88,7 +88,9 @@ func Setup(context context.Context, args SetupArgs) error {
 
 	// for each circuit, we start by compiling the circuit
 	// then we do a sha sum and compare against the one in the manifest.json
-	for c, setup := range inCircuits {
+	for _, c := range AllCircuits {
+
+		setup := inCircuits[c]
 		if !setup {
 			// we skip aggregation in this first loop since the setup is more complex
 			continue

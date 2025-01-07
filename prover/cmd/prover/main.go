@@ -1,13 +1,14 @@
 package main
 
 import (
+	"os"
+	"strings"
+
 	"github.com/consensys/gnark/logger"
 	"github.com/consensys/linea-monorepo/prover/cmd/prover/cmd"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"os"
-	"strings"
 )
 
 var (
@@ -53,7 +54,7 @@ func init() {
 
 	rootCmd.AddCommand(setupCmd)
 	setupCmd.Flags().BoolVar(&setupArgs.Force, "force", false, "overwrites existing files")
-	setupCmd.Flags().StringVar(&setupArgs.Circuits, "circuits", strings.Join(cmd.AllCircuits, ","), "comma separated list of circuits to setup")
+	setupCmd.Flags().StringVar(&setupArgs.Circuits, "circuits", strings.Join(allCircuitList(), ","), "comma separated list of circuits to setup")
 	setupCmd.Flags().StringVar(&setupArgs.DictPath, "dict", "", "path to the dictionary file used in blob (de)compression")
 	setupCmd.Flags().StringVar(&setupArgs.AssetsDir, "assets-dir", "", "path to the directory where the assets are stored (override conf)")
 
@@ -74,4 +75,14 @@ func cmdSetup(_cmd *cobra.Command, _ []string) error {
 func cmdProve(*cobra.Command, []string) error {
 	proverArgs.ConfigFile = fConfigFile
 	return cmd.Prove(proverArgs)
+}
+
+// allCircuitList returns the list [cmd.AllCircuits] where the circuit id
+// are converted into strings.
+func allCircuitList() []string {
+	res := make([]string, len(cmd.AllCircuits))
+	for i := range res {
+		res[i] = string(cmd.AllCircuits[i])
+	}
+	return res
 }

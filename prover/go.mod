@@ -5,9 +5,10 @@ go 1.22.7
 toolchain go1.23.0
 
 require (
+	github.com/bits-and-blooms/bitset v1.14.3
 	github.com/consensys/bavard v0.1.24
 	github.com/consensys/compress v0.2.5
-	github.com/consensys/gnark v0.11.1-0.20241217141116-f3d91999250b
+	github.com/consensys/gnark v0.11.1-0.20250107100237-2cb190338a01
 	github.com/consensys/gnark-crypto v0.14.1-0.20241217134352-810063550bd4
 	github.com/consensys/go-corset v0.0.0-20241125005324-5cb0c289c021
 	github.com/crate-crypto/go-kzg-4844 v1.1.0
@@ -34,7 +35,6 @@ require (
 	github.com/DataDog/zstd v1.5.5 // indirect
 	github.com/VictoriaMetrics/fastcache v1.12.2 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
-	github.com/bits-and-blooms/bitset v1.14.3 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/btcsuite/btcd/btcec/v2 v2.3.4 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/consensys/linea-monorepo/prover/protocol/column"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	"github.com/consensys/linea-monorepo/prover/utils"
 	"github.com/consensys/linea-monorepo/prover/utils/parallel"
@@ -37,48 +36,6 @@ func CompileAtProverLvl(comp *wizard.CompiledIOP) {
 	*/
 	queriesParamsToCompile := comp.QueriesParams.AllUnignoredKeys()
 	queriesNoParamsToCompile := comp.QueriesNoParams.AllUnignoredKeys()
-
-	for i := 0; i < numRounds; i++ {
-		// Mark all the commitments as messages
-		coms := comp.Columns.AllKeysAt(i)
-		for _, com := range coms {
-			// Check the status of the commitment
-			status := comp.Columns.Status(com)
-
-			if status == column.Ignored {
-				// If the column is ignored, we can just skip it
-				continue
-			}
-
-			if status.IsPublic() {
-				// Nothing specific to do on the prover side
-				continue
-			}
-
-			// Mark them as "public" to the verifier
-			switch status {
-			case column.Precomputed:
-				// send it to the verifier directly as part of the verifying key
-				comp.Columns.SetStatus(com, column.VerifyingKey)
-			case column.Committed:
-				// send it to the verifier directly as part of the proof
-				comp.Columns.SetStatus(com, column.Proof)
-			default:
-				utils.Panic("Unknown status : %v", status.String())
-			}
-		}
-	}
-
-	/*
-		And mark the queries as already compiled
-	*/
-	for _, q := range queriesNoParamsToCompile {
-		comp.QueriesNoParams.MarkAsIgnored(q)
-	}
-
-	for _, q := range queriesParamsToCompile {
-		comp.QueriesParams.MarkAsIgnored(q)
-	}
 
 	/*
 		One step to be run at the end, by verifying every constraint
