@@ -107,7 +107,7 @@ enum class BlobCompressorVersion(val version: String) {
 class GoNativeBlobCompressorFactory {
   companion object {
     private const val DICTIONARY_NAME = "compressor_dict.bin"
-    val dictionaryPath = copyResourceToTmpDir(DICTIONARY_NAME)
+    val dictionaryPath = copyResourceToTmpDir(DICTIONARY_NAME, GoNativeBlobCompressorFactory::class.java.classLoader)
 
     private fun getLibFileName(version: String) = "blob_compressor_jna_$version"
 

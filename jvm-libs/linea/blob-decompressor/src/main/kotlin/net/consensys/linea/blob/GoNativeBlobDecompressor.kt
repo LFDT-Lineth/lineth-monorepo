@@ -87,15 +87,21 @@ enum class BlobDecompressorVersion(val version: String) {
 class GoNativeBlobDecompressorFactory {
   companion object {
     private const val DICTIONARY_NAME = "compressor_dict.bin"
-    private val dictionaryPath = copyResourceToTmpDir(DICTIONARY_NAME)
-
+    private val dictionaryPath = copyResourceToTmpDir(
+      DICTIONARY_NAME,
+      GoNativeBlobDecompressorFactory::class.java.classLoader
+    )
     private fun getLibFileName(version: String) = "blob_decompressor_jna_$version"
 
     fun getInstance(
       version: BlobDecompressorVersion
     ): BlobDecompressor {
+      val libFile = Native.extractFromResourcePath(
+        getLibFileName(version.version),
+        GoNativeBlobDecompressorFactory::class.java.classLoader
+      )
       return Native.load(
-        Native.extractFromResourcePath(getLibFileName(version.version)).toString(),
+        libFile.toString(),
         GoNativeBlobDecompressorJnaLib::class.java
       ).let {
         Adapter(delegate = it, dictionaries = listOf(dictionaryPath))
