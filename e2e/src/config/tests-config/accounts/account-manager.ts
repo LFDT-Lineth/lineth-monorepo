@@ -33,6 +33,9 @@ abstract class AccountManager implements IAccountManager {
   private whaleAccountMutex: Mutex;
   private logger: Logger;
 
+  private readonly MAX_RETRIES = 5;
+  private readonly RETRY_DELAY_MS = 1_000;
+
   constructor(provider: Provider, whaleAccounts: Account[], chainId: number) {
     this.provider = provider;
     this.whaleAccounts = whaleAccounts;
@@ -75,7 +78,7 @@ abstract class AccountManager implements IAccountManager {
     );
 
     const accounts: Account[] = [];
-    const transactionResponses: TransactionResponse[] = [];
+    const transactionPromises: Promise<TransactionResponse>[] = [];
 
     for (let i = 0; i < numberOfAccounts; i++) {
       const randomBytes = ethers.randomBytes(32);
@@ -90,26 +93,59 @@ abstract class AccountManager implements IAccountManager {
         gasLimit: 21000n,
       };
 
-      const release = await this.whaleAccountMutex.acquire();
-      try {
-        const transactionResponse = await whaleAccountWallet.sendTransaction(tx);
-        this.logger.debug(
-          `Transaction sent. newAccount=${newAccount.address} txHash=${transactionResponse.hash} whaleAccount=${whaleAccount.address}`,
+      const sendTransactionWithRetry = async (): Promise<TransactionResponse> => {
+        return this.retry<TransactionResponse>(
+          async () => {
+            const release = await this.whaleAccountMutex.acquire();
+            try {
+              const transactionResponse = await whaleAccountWallet.sendTransaction(tx);
+              this.logger.debug(
+                `Transaction sent. newAccount=${newAccount.address} txHash=${transactionResponse.hash} whaleAccount=${whaleAccount.address}`,
+              );
+              return transactionResponse;
+            } catch (error) {
+              this.logger.warn(
+                `sendTransaction failed for account=${newAccount.address}. Error: ${(error as Error).message}`,
+              );
+              throw error;
+            } finally {
+              release();
+            }
+          },
+          this.MAX_RETRIES,
+          this.RETRY_DELAY_MS,
         );
-        transactionResponses.push(transactionResponse);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      } catch (error: any) {
-        logger.error(`Failed to fund account. address=${newAccount.address} error=${error.message}`);
+      };
+
+      const txPromise = sendTransactionWithRetry().catch((error) => {
+        this.logger.error(
+          `Failed to fund account after ${this.MAX_RETRIES} attempts. address=${newAccount.address} error=${error.message}`,
+        );
         whaleAccountWallet.reset();
-      } finally {
-        release();
-      }
+        return null as unknown as TransactionResponse;
+      });
+
+      transactionPromises.push(txPromise);
     }
 
-    await Promise.all(transactionResponses.map((tx) => tx.wait()));
+    const transactionResponses = await Promise.all(transactionPromises);
+
+    const successfulTransactions = transactionResponses.filter(
+      (txResponse): txResponse is TransactionResponse => txResponse !== null,
+    );
+
+    if (successfulTransactions.length < numberOfAccounts) {
+      this.logger.warn(
+        `Some accounts were not funded successfully. successful=${successfulTransactions.length} expected=${numberOfAccounts}`,
+      );
+    }
+
+    await Promise.all(successfulTransactions.map((tx) => tx.wait()));
 
     this.logger.debug(
-      `Accounts funded. newAccounts=${accounts.map((account) => account.address).join(",")} balance=${initialBalanceWei.toString()} wei`,
+      `${successfulTransactions.length} accounts funded. newAccounts=${accounts
+        .map((account) => account.address)
+        .join(", ")} balance=${initialBalanceWei.toString()} Wei`,
     );
 
     return accounts.map((account) => this.getWallet(account));
@@ -117,6 +153,30 @@ abstract class AccountManager implements IAccountManager {
 
   getWallet(account: Account): Wallet {
     return getWallet(this.provider, account.privateKey);
+  }
+
+  private async retry<T>(fn: () => Promise<T>, retries: number, delayMs: number): Promise<T> {
+    let attempt = 0;
+
+    while (attempt < retries) {
+      try {
+        return await fn();
+      } catch (error) {
+        attempt++;
+        if (attempt >= retries) {
+          this.logger.error(`Operation failed after attempts=${attempt} error=${(error as Error).message}`);
+          throw error;
+        }
+        this.logger.warn(`Attempt ${attempt} failed. Retrying in ${delayMs}ms... error=${(error as Error).message}`);
+        await this.delay(delayMs);
+      }
+    }
+
+    throw new Error("Unexpected error in retry mechanism.");
+  }
+
+  private delay(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 }
 
