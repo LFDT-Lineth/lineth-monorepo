@@ -67,7 +67,7 @@ interface ILineaRollup {
   }
 
   /**
-   * @notice Data stucture for compressed blob data submission.
+   * @notice Data structure for compressed blob data submission.
    * @dev submissionData The supporting data for blob data submission excluding the compressed data.
    * @dev dataEvaluationClaim The data evaluation claim.
    * @dev kzgCommitment The blob KZG commitment.
