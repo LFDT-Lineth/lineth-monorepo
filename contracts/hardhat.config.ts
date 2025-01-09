@@ -154,7 +154,16 @@ const config: HardhatUserConfig = {
     ],
   },
   docgen: {
-    exclude: ["token", "test-contracts", "proxies", "tools", "interfaces/tools", "tokenBridge/mocks", "verifiers"],
+    exclude: [
+      "token",
+      "test-contracts",
+      "proxies",
+      "tools",
+      "interfaces/tools",
+      "tokenBridge/mocks",
+      "tokenBridge/lib/StorageFiller39.sol",
+      "verifiers",
+    ],
     pages: "files",
     outputDir: "docs/api/",
     // For compatibility with docs.linea.build
