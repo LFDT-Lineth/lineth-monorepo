@@ -1,4 +1,4 @@
-import { useWeb3Modal } from "@web3modal/wagmi/react";
+import { useAppKit } from "@reown/appkit/react";
 import { cn } from "@/utils/cn";
 import { Button } from "./ui";
 
@@ -7,7 +7,7 @@ type ConnectButtonProps = {
 };
 
 export default function ConnectButton({ fullWidth }: ConnectButtonProps) {
-  const { open } = useWeb3Modal();
+  const { open } = useAppKit();
   return (
     <Button
       id="wallet-connect-btn"

@@ -1,41 +1,22 @@
-import { defaultWagmiConfig } from "@web3modal/wagmi/react/config";
-import { http, injected } from "@wagmi/core";
+import { http } from "@wagmi/core";
 import { mainnet, sepolia, linea, lineaSepolia } from "@wagmi/core/chains";
-import { walletConnect, coinbaseWallet } from "@wagmi/connectors";
 import { config } from "./config";
+import { WagmiAdapter } from "@reown/appkit-adapter-wagmi";
+import { AppKitNetwork } from "@reown/appkit/networks";
 
 if (!config.walletConnectId) throw new Error("Project ID is not defined");
 
-const metadata = {
-  name: "Linea Bridge",
-  description: `Linea Bridge is a bridge solution, providing secure and efficient cross-chain transactions between Layer 1 and Linea networks.
-  Discover the future of blockchain interaction with Linea Bridge.`,
-  url: "https://bridge.linea.build",
-  icons: [],
-};
+export const chains: [AppKitNetwork, ...AppKitNetwork[]] = [mainnet, sepolia, linea, lineaSepolia];
 
-const chains = [mainnet, sepolia, linea, lineaSepolia] as const;
-
-export const wagmiConfig = defaultWagmiConfig({
-  chains,
+export const wagmiAdapter = new WagmiAdapter({
+  networks: chains,
   projectId: config.walletConnectId,
-  metadata,
   multiInjectedProviderDiscovery: true,
   ssr: true,
-  enableEIP6963: true,
+
   batch: {
     multicall: true,
   },
-  connectors: [
-    walletConnect({
-      projectId: config.walletConnectId,
-      showQrModal: false,
-    }),
-    injected({ shimDisconnect: true }),
-    coinbaseWallet({
-      appName: "Linea Bridge",
-    }),
-  ],
   transports: {
     [mainnet.id]: http(`https://mainnet.infura.io/v3/${process.env.NEXT_PUBLIC_INFURA_ID}`, { batch: true }),
     [sepolia.id]: http(`https://sepolia.infura.io/v3/${process.env.NEXT_PUBLIC_INFURA_ID}`, { batch: true }),
@@ -43,3 +24,5 @@ export const wagmiConfig = defaultWagmiConfig({
     [lineaSepolia.id]: http(`https://linea-sepolia.infura.io/v3/${process.env.NEXT_PUBLIC_INFURA_ID}`, { batch: true }),
   },
 });
+
+export const wagmiConfig = wagmiAdapter.wagmiConfig;
