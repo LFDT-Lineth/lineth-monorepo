@@ -23,7 +23,7 @@ services:
   sequencer:
     hostname: sequencer
     container_name: sequencer
-    image: consensys/linea-besu-package:${SEQUENCER_TAG:-mainnet-811f30b}
+    image: consensys/linea-besu-package:${SEQUENCER_TAG:-mainnet-b297345}
     profiles: [ "l2", "l2-bc", "debug", "external-to-monorepo" ]
     ports:
       - "8545:8545"
