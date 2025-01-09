@@ -1,11 +1,5 @@
 name: Github Release for Finalized-Tag-Updater Besu Plugin
 on:
-  workflow_call:
-    inputs:
-      version:
-        required: true
-        type: string
-
   workflow_dispatch:
     inputs:
       version:

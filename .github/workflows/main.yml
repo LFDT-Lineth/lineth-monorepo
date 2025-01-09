@@ -19,7 +19,6 @@ jobs:
       prover: ${{ steps.filter.outputs.prover }}
       traces-api-facade: ${{ steps.filter.outputs.traces-api-facade }}
       transaction-exclusion-api: ${{ steps.filter.outputs.transaction-exclusion-api }}
-      finalized-tag-updater: ${{ steps.filter.outputs.finalized-tag-updater }}
       has-changes-requiring-build: ${{ steps.filter-out.outputs.has-changes-requiring-build }}
     steps:
       - name: Checkout
@@ -105,14 +104,6 @@ jobs:
               - 'build.gradle'
               - 'gradle.properties'
               - 'settings.gradle'
-            finalized-tag-updater:
-              - 'jvm-libs/linea/core/long-running-service/**'
-              - 'jvm-libs/linea/web3j-extensions/**'
-              - 'jvm-libs/extensions/kotlin/**'
-              - 'jvm-libs/extensions/futures/**'
-              - 'finalized-tag-updater/**'
-              - '.github/workflows/main.yml'
-              - '.github/workflows/finalized-tag-updater-github-release.yml'
       - name: Filter out commit changes
         uses: dorny/paths-filter@v3
         id: filter-out
@@ -173,15 +164,6 @@ jobs:
       traces_api_facade_image_tagged: ${{ needs.check-and-tag-images.outputs.image_tagged_traces_api_facade }}
       transaction_exclusion_api_image_tagged: ${{ needs.check-and-tag-images.outputs.image_tagged_transaction_exclusion_api }}
     secrets: inherit
-
-  # Comment out the auto build and release step below as the plugin release should be
-  # by manual Github action for versioning control
-  # finalized-tag-updater-jar-build-release:
-  #   needs: [ filter-commit-changes ]
-  #   if: ${{ always() && needs.filter-commit-changes.outputs.finalized-tag-updater == 'true' }}
-  #   uses: ./.github/workflows/finalized-tag-updater-github-release.yml
-  #   with:
-  #     version: '0.0.1'
 
   testing:
     needs: [ store-image-name-and-tags, filter-commit-changes, check-and-tag-images ]
