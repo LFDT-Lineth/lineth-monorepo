@@ -51,4 +51,8 @@ contract TestLineaRollup is LineaRollup {
   function setShnarfFinalBlockNumber(bytes32 _shnarf, uint256 _finalBlockNumber) external {
     blobShnarfExists[_shnarf] = _finalBlockNumber;
   }
+
+  function setLastFinalizedState(uint256 _messageNumber, bytes32 _rollingHash, uint256 _timestamp) external {
+    currentFinalizedState = _computeLastFinalizedState(_messageNumber, _rollingHash, _timestamp);
+  }
 }

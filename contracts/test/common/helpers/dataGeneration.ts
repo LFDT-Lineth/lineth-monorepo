@@ -17,6 +17,7 @@ import {
 } from "../types";
 import { generateRandomBytes, range } from "./general";
 import { generateKeccak256 } from "./hashing";
+import * as fs from "fs";
 
 export const generateL2MessagingBlocksOffsets = (start: number, end: number) =>
   `0x${range(start, end)
@@ -79,6 +80,38 @@ export function generateBlobDataSubmission(
     };
     return returnData;
   });
+  return {
+    compressedBlobs,
+    blobDataSubmission,
+    parentShnarf,
+    finalShnarf,
+  };
+}
+
+export function generateBlobDataSubmissionFromFile(filePath: string): {
+  blobDataSubmission: BlobSubmission[];
+  compressedBlobs: string[];
+  parentShnarf: string;
+  finalShnarf: string;
+} {
+  const fileContents = JSON.parse(fs.readFileSync(filePath, "utf-8"));
+
+  const compressedBlobs: string[] = [];
+  const parentShnarf = fileContents.prevShnarf;
+  const finalShnarf = fileContents.expectedShnarf;
+
+  compressedBlobs.push(ethers.hexlify(ethers.decodeBase64(fileContents.compressedData)));
+
+  const blobDataSubmission = [
+    {
+      dataEvaluationClaim: fileContents.expectedY,
+      kzgCommitment: fileContents.commitment,
+      kzgProof: fileContents.kzgProofContract,
+      finalStateRootHash: fileContents.finalStateRootHash,
+      snarkHash: fileContents.snarkHash,
+    },
+  ];
+
   return {
     compressedBlobs,
     blobDataSubmission,
