@@ -23,8 +23,12 @@
 
 ## Linea Rollup, L2MessageService and TokenBridge Smart Contract Audits
 ### Fifth Audit Round (latest)
+
+**Diligence**
+- LineaRollup, L2MessageService and TokenBridge Granular Role Updates: [https://diligence.consensys.io/audits/2024/12/linea-rollup-update/](https://diligence.consensys.io/audits/2024/12/linea-rollup-update/)
+
 **OpenZeppelin**
-- LineaRollup, L2MessageService and TokenBridge Granular Role Updates: [https://blog.openzeppelin.com/linearollup-and-tokenbridge-role-upgrade)](https://blog.openzeppelin.com/linearollup-and-tokenbridge-role-upgrade)
+- LineaRollup, L2MessageService and TokenBridge Granular Role Updates: [https://blog.openzeppelin.com/linearollup-and-tokenbridge-role-upgrade](https://blog.openzeppelin.com/linearollup-and-tokenbridge-role-upgrade)
 
 **Cyfrin**
 - LineaRollup, L2MessageService and TokenBridge Granular Role Updates: [https://github.com/Cyfrin/cyfrin-audit-reports/blob/642b409c207d0e31679467480c3d9b8797b98696/reports/2025-01-06-cyfrin-linea-v2.2.pdf](https://github.com/Cyfrin/cyfrin-audit-reports/blob/642b409c207d0e31679467480c3d9b8797b98696/reports/2025-01-06-cyfrin-linea-v2.2.pdf)
