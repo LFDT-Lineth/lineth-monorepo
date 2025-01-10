@@ -47,7 +47,7 @@
                  (if-not-zero TX_WARM
                               (eq! (next (+ TX_WARM TX_INIT)) 1))
                  (if-not-zero TX_INIT
-                              (if-zero PEEK_AT_TRANSACTION
+                              (if-zero PEEK_AT_CONTEXT
                                        (eq! (next TX_INIT) 1)
                                        (eq! (next TX_EXEC) 1)))
                  (if-not-zero TX_EXEC

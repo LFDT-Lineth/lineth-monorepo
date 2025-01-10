@@ -25,7 +25,15 @@
                                 (will-inc! HUB_STAMP 1))))
 
 (defconstraint   heartbeat---hub-stamp---constancy-during-skipping-phase ()
-                 (if-not-zero (+ TX_SKIP TX_INIT TX_FINL)
+                 (if-not-zero TX_SKIP
+                              (will-eq! HUB_STAMP (+ HUB_STAMP PEEK_AT_TRANSACTION))))
+
+(defconstraint   heartbeat---hub-stamp---constancy-during-initialization-phase ()
+                 (if-not-zero TX_INIT
+                              (will-eq! HUB_STAMP (+ HUB_STAMP PEEK_AT_CONTEXT))))
+
+(defconstraint   heartbeat---hub-stamp---constancy-during-finalization-phase ()
+                 (if-not-zero TX_FINL
                               (will-eq! HUB_STAMP (+ HUB_STAMP PEEK_AT_TRANSACTION))))
 
 (defconstraint   heartbeat---hub-stamp---jumps-at-transaction-boundaries ()

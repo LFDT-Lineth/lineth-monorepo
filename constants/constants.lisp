@@ -222,7 +222,7 @@
   LINEA_DIFFICULTY                          2
   LINEA_MAX_NUMBER_OF_TRANSACTIONS_IN_BATCH 200
   ETHEREUM_GAS_LIMIT_MINIMUM                5000
-  ETHEREUM_GAS_LIMIT_MAXIMUM                0xffffffffffffffffffffffffffffffff ;; maxUint64
+  ETHEREUM_GAS_LIMIT_MAXIMUM                0xffffffffffffffff ;; maxUint64
   LINEA_GAS_LIMIT_MINIMUM                   61000000
   LINEA_GAS_LIMIT_MAXIMUM                   2000000000
   GAS_LIMIT_ADJUSTMENT_FACTOR               1024
