@@ -8,7 +8,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defun (gaslimit-precondition) (* (- 1 (prev IS_GL)) IS_GL))
-(defun (prev-gas-limit)        (shift BLOCK_GAS_LIMIT (* nROWS_DEPTH -1)))
+(defun (prev-gas-limit)        (shift BLOCK_GAS_LIMIT (- 0 nROWS_DEPTH)))
 (defun (curr-GASLIMIT-hi)      (curr-data-hi))
 (defun (curr-GASLIMIT-lo)      (curr-data-lo))
 (defun (prev-GASLIMIT-hi)      (prev-data-hi))

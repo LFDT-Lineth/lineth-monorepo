@@ -5,11 +5,11 @@
   hub-into-blockhash
   ;; target columns
   (
-    blockhash.REL_BLOCK
-    blockhash.BLOCK_NUMBER_HI
-    blockhash.BLOCK_NUMBER_LO
-    blockhash.RES_HI
-    blockhash.RES_LO
+    blockhash.macro/REL_BLOCK
+    blockhash.macro/BLOCKHASH_ARG_HI
+    blockhash.macro/BLOCKHASH_ARG_LO
+    blockhash.macro/BLOCKHASH_RES_HI
+    blockhash.macro/BLOCKHASH_RES_LO
   )
   ;; source columns
   (

@@ -14,7 +14,7 @@
                                     (curr-GASLIMIT-hi)
                                     (curr-GASLIMIT-lo)
                                     0
-                                    LINEA_GAS_LIMIT_MINIMUM))
+                                    GAS_LIMIT_MINIMUM))
 
 (defconstraint   gaslimit---upper-bound---LINEA
                  (:guard (gaslimit-precondition))
@@ -23,4 +23,4 @@
                                     (curr-GASLIMIT-hi)
                                     (curr-GASLIMIT-lo)
                                     0
-                                    LINEA_GAS_LIMIT_MAXIMUM))
+                                    GAS_LIMIT_MAXIMUM))

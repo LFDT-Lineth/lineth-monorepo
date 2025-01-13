@@ -1,90 +1,253 @@
 (module blockhash)
 
-(defconstraint first-row (:domain {0})
-  (vanishes! IOMF))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;                       ;;;;
+;;;;    X. Generalities    ;;;;
+;;;;                       ;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defconstraint heartbeat ()
-  (if-zero IOMF
-           (begin (vanishes! IN_RANGE)
-                  (vanishes! BLOCK_NUMBER_HI)
-                  (vanishes! BLOCK_NUMBER_LO))
-           (begin (eq! IOMF 1)
-                  (eq! (next IOMF) IOMF))))
+;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                     ;;
+;;    X.1 Shorthands   ;;
+;;                     ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defconstraint horizontal-byte-dec ()
-  (begin (eq! BLOCK_HASH_HI
-              (+ (* (^ 256 (- LLARGEMO 0))
-                    [BYTE_HI 0])
-                 (* (^ 256 (- LLARGEMO 1))
-                    [BYTE_HI 1])
-                 (* (^ 256 (- LLARGEMO 2))
-                    [BYTE_HI 2])
-                 (* (^ 256 (- LLARGEMO 3))
-                    [BYTE_HI 3])
-                 (* (^ 256 (- LLARGEMO 4))
-                    [BYTE_HI 4])
-                 (* (^ 256 (- LLARGEMO 5))
-                    [BYTE_HI 5])
-                 (* (^ 256 (- LLARGEMO 6))
-                    [BYTE_HI 6])
-                 (* (^ 256 (- LLARGEMO 7))
-                    [BYTE_HI 7])
-                 (* (^ 256 (- LLARGEMO 8))
-                    [BYTE_HI 8])
-                 (* (^ 256 (- LLARGEMO 9))
-                    [BYTE_HI 9])
-                 (* (^ 256 (- LLARGEMO 10))
-                    [BYTE_HI 10])
-                 (* (^ 256 (- LLARGEMO 11))
-                    [BYTE_HI 11])
-                 (* (^ 256 (- LLARGEMO 12))
-                    [BYTE_HI 12])
-                 (* (^ 256 (- LLARGEMO 13))
-                    [BYTE_HI 13])
-                 (* (^ 256 (- LLARGEMO 14))
-                    [BYTE_HI 14])
-                 (* (^ 256 (- LLARGEMO 15))
-                    [BYTE_HI 15])))
-         (eq! BLOCK_HASH_LO
-              (+ (* (^ 256 (- LLARGEMO 0))
-                    [BYTE_LO 0])
-                 (* (^ 256 (- LLARGEMO 1))
-                    [BYTE_LO 1])
-                 (* (^ 256 (- LLARGEMO 2))
-                    [BYTE_LO 2])
-                 (* (^ 256 (- LLARGEMO 3))
-                    [BYTE_LO 3])
-                 (* (^ 256 (- LLARGEMO 4))
-                    [BYTE_LO 4])
-                 (* (^ 256 (- LLARGEMO 5))
-                    [BYTE_LO 5])
-                 (* (^ 256 (- LLARGEMO 6))
-                    [BYTE_LO 6])
-                 (* (^ 256 (- LLARGEMO 7))
-                    [BYTE_LO 7])
-                 (* (^ 256 (- LLARGEMO 8))
-                    [BYTE_LO 8])
-                 (* (^ 256 (- LLARGEMO 9))
-                    [BYTE_LO 9])
-                 (* (^ 256 (- LLARGEMO 10))
-                    [BYTE_LO 10])
-                 (* (^ 256 (- LLARGEMO 11))
-                    [BYTE_LO 11])
-                 (* (^ 256 (- LLARGEMO 12))
-                    [BYTE_LO 12])
-                 (* (^ 256 (- LLARGEMO 13))
-                    [BYTE_LO 13])
-                 (* (^ 256 (- LLARGEMO 14))
-                    [BYTE_LO 14])
-                 (* (^ 256 (- LLARGEMO 15))
-                    [BYTE_LO 15])))))
+(defun   (flag-sum)         (+  MACRO  PRPRC))
+(defun   (wght-sum)         (+  (*  1  MACRO)
+                                (*  2  PRPRC)))
+(defun   (transition-bit)   (+  (*  (-  1  MACRO)  (next  MACRO))
+                                (*  (-  1  PRPRC)  (next  PRPRC))))
+(defun   (ct-max-sum)       (+  (*  (-  nROWS_MACRO  1)  MACRO)
+                                (*  (-  nROWS_PRPRC  1)  PRPRC)))
 
-(defconstraint constency ()
-  (begin (eq! IN_RANGE (* LOWER_BOUND_CHECK UPPER_BOUND_CHECK))
-         (eq! RES_HI (* IN_RANGE BLOCK_HASH_HI))
-         (eq! RES_LO (* IN_RANGE BLOCK_HASH_LO))
-         (if-zero (remained-constant! BLOCK_NUMBER_LO)
-                  (begin (remained-constant! BLOCK_HASH_HI)
-                         (remained-constant! BLOCK_HASH_LO)))))
+;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                     ;;
+;;    X.2 Binarities   ;;
+;;                     ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; ok via :binary@prove
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                      ;;
+;;    X.3 Constancies   ;;
+;;                      ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defconstraint    constancies   ()
+                  (counter-constancy   CT   (wght-sum)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;
+;;                    ;;
+;;    X.4 Heartbeat   ;;
+;;                    ;;
+;;;;;;;;;;;;;;;;;;;;;;;;
 
 
+(defconstraint   heartbeat---IOMF---unconditional-setting        ()
+                 (eq!    IOMF    (flag-sum)))
+
+(defconstraint   heartbeat---IOMF---initial-vanishing            (:domain {0}) ;; ""
+                 (vanishes!    IOMF))
+
+(defconstraint   heartbeat---IOMF---consequences-of-it-vanishing ()
+                 (if-zero    IOMF
+                             (begin
+                               (vanishes!                CT)
+                               (vanishes!                (next    PRPRC))
+                               (vanishes!                (next    CT))
+                               (debug      (vanishes!    macro/BLOCKHASH_ARG_HI))
+                               (debug      (vanishes!    macro/BLOCKHASH_ARG_LO))
+                               (debug      (vanishes!    macro/BLOCKHASH_VAL_HI))
+                               (debug      (vanishes!    macro/BLOCKHASH_VAL_LO))
+                               (debug      (vanishes!    macro/BLOCKHASH_RES_HI))
+                               (debug      (vanishes!    macro/BLOCKHASH_RES_LO)))))
+
+(defconstraint   heartbeat---IOMF---nondecreasing                ()
+                 (if-not-zero    IOMF
+                                 (will-eq!    IOMF    1)))
+
+(defconstraint   heartbeat---CT_MAX---unconditional-setting      ()
+                 (eq!    CT_MAX    (ct-max-sum)))
+
+(defconstraint   heartbeat---CT---transitions                    ()
+                 (if-not-zero    IOMF
+                                 (if-eq-else    CT   CT_MAX
+                                                ;; CT == CT_MAX case
+                                                (eq!    (transition-bit)    1)
+                                                ;; CT != CT_MAX case
+                                                (will-inc!    CT    1))))
+
+(defconstraint   heartbeat---CT---reset                          ()
+                 (if-not-zero    (transition-bit)
+                                 (vanishes!    (next    CT))))
+
+(defconstraint   heartbeat---finalization                        (:domain {-1}) ;; ""
+                 (if-not-zero    IOMF
+                                 (begin
+                                   (eq!  CT     CT_MAX)
+                                   (eq!  PRPRC  1))))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;                     ;;;;
+;;;;    Y. Processing    ;;;;
+;;;;                     ;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                     ;;
+;;    Y.1 Shorthands   ;;
+;;                     ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defun  (not-first)                          (shift  IOMF                    NEGATIVE_OF_BLOCKHASH_DEPTH))
+(defun  (prev-BH-arg-hi)  (*   (not-first)   (shift  macro/BLOCKHASH_ARG_HI  NEGATIVE_OF_BLOCKHASH_DEPTH)))
+(defun  (prev-BH-arg-lo)  (*   (not-first)   (shift  macro/BLOCKHASH_ARG_LO  NEGATIVE_OF_BLOCKHASH_DEPTH)))
+(defun  (curr-BH-arg-hi)                             macro/BLOCKHASH_ARG_HI                       )
+(defun  (curr-BH-arg-lo)                             macro/BLOCKHASH_ARG_LO                       ) ;; ""
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                       ;;
+;;    Y.4 Module calls   ;;
+;;                       ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defun    (wcp-call-to-LT    relof
+                             arg_1_hi
+                             arg_1_lo
+                             arg_2_hi
+                             arg_2_lo)
+  (begin
+    (eq!   (shift   preprocessing/EXO_ARG_1_HI   relof)   arg_1_hi    )
+    (eq!   (shift   preprocessing/EXO_ARG_1_LO   relof)   arg_1_lo    )
+    (eq!   (shift   preprocessing/EXO_ARG_2_HI   relof)   arg_2_hi    )
+    (eq!   (shift   preprocessing/EXO_ARG_2_LO   relof)   arg_2_lo    )
+    (eq!   (shift   preprocessing/EXO_INST       relof)   EVM_INST_LT )))
+
+(defun    (wcp-call-to-LEQ    relof
+                              arg_1_hi
+                              arg_1_lo
+                              arg_2_hi
+                              arg_2_lo)
+  (begin
+    (eq!  (shift  preprocessing/EXO_ARG_1_HI  relof)  arg_1_hi     )
+    (eq!  (shift  preprocessing/EXO_ARG_1_LO  relof)  arg_1_lo     )
+    (eq!  (shift  preprocessing/EXO_ARG_2_HI  relof)  arg_2_hi     )
+    (eq!  (shift  preprocessing/EXO_ARG_2_LO  relof)  arg_2_lo     )
+    (eq!  (shift  preprocessing/EXO_INST      relof)  WCP_INST_LEQ )))
+
+(defun    (wcp-call-to-EQ    relof
+                             arg_1_hi
+                             arg_1_lo
+                             arg_2_hi
+                             arg_2_lo)
+  (begin
+    (eq!  (shift  preprocessing/EXO_ARG_1_HI  relof)  arg_1_hi    )
+    (eq!  (shift  preprocessing/EXO_ARG_1_LO  relof)  arg_1_lo    )
+    (eq!  (shift  preprocessing/EXO_ARG_2_HI  relof)  arg_2_hi    )
+    (eq!  (shift  preprocessing/EXO_ARG_2_LO  relof)  arg_2_lo    )
+    (eq!  (shift  preprocessing/EXO_INST      relof)  EVM_INST_EQ )))
+
+
+
+(defun    (result-must-be-true    relof)    (eq!  (shift  preprocessing/EXO_RES  relof)  1))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                                 ;;
+;;    Y.5 Processing constraints   ;;
+;;                                 ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defconstraint    processing---row-1---blockhash-argument-monontony
+                  (:guard    MACRO)
+                  ;;;;;;;;;;;;;;;;;
+                  (begin
+                    (wcp-call-to-LEQ        ROFF___BLOCKHASH_arguments___monotony
+                                            (prev-BH-arg-hi)
+                                            (prev-BH-arg-lo)
+                                            (curr-BH-arg-hi)
+                                            (curr-BH-arg-lo))
+                    (result-must-be-true    ROFF___BLOCKHASH_arguments___monotony)))
+
+(defconstraint    processing---row-2---blockhash-argument-equality-test
+                  (:guard    MACRO)
+                  ;;;;;;;;;;;;;;;;;
+                  (wcp-call-to-EQ   ROFF___BLOCKHASH_arguments___equality_test
+                                    (prev-BH-arg-hi)
+                                    (prev-BH-arg-lo)
+                                    (curr-BH-arg-hi)
+                                    (curr-BH-arg-lo)))
+
+(defun    (same-argument)    (shift    preprocessing/EXO_RES    ROFF___BLOCKHASH_arguments___equality_test))
+
+(defconstraint    processing---row-3---ABS-vs-256
+                  (:guard    MACRO)
+                  ;;;;;;;;;;;;;;;;;
+                  (wcp-call-to-LEQ   ROFF___ABS___comparison_to_256
+                                     0
+                                     256
+                                     0
+                                     macro/ABS_BLOCK))
+
+(defun    (minimal-reachable)   (*   (shift   preprocessing/EXO_RES   ROFF___ABS___comparison_to_256)
+                                     (-   macro/ABS_BLOCK   256)))
+
+(defconstraint    processing---row-4---blockhash-argument-vs-max
+                  (:guard    MACRO)
+                  ;;;;;;;;;;;;;;;;;
+                  (wcp-call-to-LT    ROFF___curr_BLOCKHASH_argument___comparison_to_max
+                                     (curr-BH-arg-hi)
+                                     (curr-BH-arg-lo)
+                                     0
+                                     macro/ABS_BLOCK))
+
+(defun    (upper-bound-ok)    (shift    preprocessing/EXO_RES   ROFF___curr_BLOCKHASH_argument___comparison_to_max))
+
+(defconstraint    processing---row-5---blockhash-argument-vs-min
+                  (:guard    MACRO)
+                  ;;;;;;;;;;;;;;;;;
+                  (wcp-call-to-LEQ   ROFF___curr_BLOCKHASH_argument___comparison_to_min
+                                     0
+                                     (minimal-reachable)
+                                     (curr-BH-arg-hi)
+                                     (curr-BH-arg-lo)
+                                     ))
+
+(defun    (lower-bound-ok)    (shift    preprocessing/EXO_RES   ROFF___curr_BLOCKHASH_argument___comparison_to_min))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                             ;;
+;;    Y.6 Result constraints   ;;
+;;                             ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defconstraint    setting-the-result
+                  (:guard    MACRO)
+                  ;;;;;;;;;;;;;;;;;
+                  (begin
+                    (eq!    macro/BLOCKHASH_RES_HI    (*    (arg-in-bounds)   macro/BLOCKHASH_VAL_HI))
+                    (eq!    macro/BLOCKHASH_RES_LO    (*    (arg-in-bounds)   macro/BLOCKHASH_VAL_LO))))
+
+(defun    (arg-in-bounds)    (*    (lower-bound-ok)
+                                   (upper-bound-ok)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;                      ;;;;
+;;;;    Z. Consistency    ;;;;
+;;;;                      ;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defconstraint    consistency ()
+                  (if-not-zero    MACRO
+                                  (if-not-zero    (not-first)
+                                                  (if-not-zero    (same-argument)
+                                                                  (begin
+                                                                    (eq!   macro/BLOCKHASH_VAL_HI    (shift    macro/BLOCKHASH_VAL_HI    NEGATIVE_OF_BLOCKHASH_DEPTH))
+                                                                    (eq!   macro/BLOCKHASH_VAL_LO    (shift    macro/BLOCKHASH_VAL_LO    NEGATIVE_OF_BLOCKHASH_DEPTH)))))))
