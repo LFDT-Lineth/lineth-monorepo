@@ -30,7 +30,7 @@ RUN make bin/controller
 FROM alpine:3
 
 RUN apk add --no-cache bash musl-dev libgcc
-RUN mkdir -p /opt/linea/prover/lib/compressor /data/work /app/logs
+RUN mkdir -p /opt/linea/prover/lib/compressor /app/logs
 
 # Import the LICENSE
 COPY ./LICENSE /opt/linea/prover/
