@@ -60,7 +60,7 @@
                   (debug (vanishes! COUNTER_PUSH))
                   (debug (vanishes! PUSH_PARAMETER))
                   (debug (vanishes! PROGRAM_COUNTER)))
-           (begin (debug (or! (eq! COUNTER_MAX LLARGEMO) (eq! COUNTER_MAX EVMWORDMO)))
+           (begin (debug (or! (eq! COUNTER_MAX LLARGEMO) (eq! COUNTER_MAX WORD_SIZE_MO)))
                   (if-eq COUNTER_MAX LLARGEMO (will-remain-constant! CFI))
                   (if-not-eq COUNTER COUNTER_MAX (will-remain-constant! CFI))
                   (if-eq CT WORD_SIZE_MO (will-inc! CFI 1)))))

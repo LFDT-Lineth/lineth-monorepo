@@ -1,4 +1,5 @@
 CORSET ?= corset
+GO_CORSET ?= go-corset
 
 HUB_COLUMNS :=  $(wildcard hub/columns/*lisp)
 
@@ -175,6 +176,9 @@ define.go: ${ZKEVM_MODULES}
 zkevm.bin: ${ZKEVM_MODULES}
 	${CORSET} compile -vv -o $@ ${ZKEVM_MODULES}
 
+zkevm.go.bin: ${ZKEVM_MODULES}
+	${GO_CORSET} compile -o $@ ${ZKEVM_MODULES}
+
 
 ZKEVM_MODULES_FOR_REFERENCE_TESTS := ${ALU} \
 				     ${BIN} \
@@ -212,6 +216,9 @@ ZKEVM_MODULES_FOR_REFERENCE_TESTS := ${ALU} \
 
 zkevm_for_reference_tests.bin: ${ZKEVM_MODULES_FOR_REFERENCE_TESTS}
 	${CORSET} compile -vv -o $@ ${ZKEVM_MODULES_FOR_REFERENCE_TESTS}
+
+zkevm_for_reference_tests.go.bin: ${ZKEVM_MODULES_FOR_REFERENCE_TESTS}
+	${GO_CORSET} compile -o $@ ${ZKEVM_MODULES_FOR_REFERENCE_TESTS}
 
 
 

@@ -149,7 +149,7 @@
                                       (eq!                (+    scenario/CALL_SMC_FAILURE_CALLER_WILL_REVERT    scenario/CALL_SMC_SUCCESS_CALLER_WILL_REVERT)
                                                           (call-instruction---caller-will-revert))
                                       (debug    (eq!      (+    scenario/CALL_SMC_FAILURE_CALLER_WONT_REVERT    scenario/CALL_SMC_SUCCESS_CALLER_WONT_REVERT)
-                                                          (-    1    call-instruction---caller-will-revert)))
+                                                          (-    1    (call-instruction---caller-will-revert))))
                                       (eq!                (scenario-shorthand---CALL---smc-failure)               (call-instruction---callee-self-reverts))
                                       (eq!                (scenario-shorthand---CALL---smc-success)    (-    1    (call-instruction---callee-self-reverts)))))))
 

@@ -453,8 +453,8 @@
                                      P_x_lo
                                      P_y_hi
                                      P_y_lo
-                                     P_x_square_hi
-                                     P_x_square_lo
+                                     P_y_square_hi
+                                     P_y_square_lo
                                      P_x_cube_plus_three_hi
                                      P_x_cube_plus_three_lo)
               (callToC1MembershipEXT k
@@ -481,8 +481,8 @@
                               P_x_lo
                               P_y_hi
                               P_y_lo
-                              P_x_square_hi
-                              P_x_square_lo
+                              P_y_square_hi
+                              P_y_square_lo
                               P_x_cube_plus_three_hi
                               P_x_cube_plus_three_lo)
   (begin (callToLT k P_x_hi P_x_lo P_BN_HI P_BN_LO)

@@ -280,7 +280,7 @@
                                    (if-eq-else (selfdestruct-instruction---account-address) (selfdestruct-instruction---recipient-address)
                                                ;; self destructing account address = recipient address
                                                (begin
-                                                 (debug (vanishes! account/BALANCE     ROFF_SELFDESTRUCT___ACCOUNT___2ND_DOING_ROW))
+                                                 ;;(debug (vanishes! account/BALANCE     ROFF_SELFDESTRUCT___ACCOUNT___2ND_DOING_ROW))
                                                  (account-same-balance                 ROFF_SELFDESTRUCT___ACCOUNT___2ND_DOING_ROW))
                                                ;; self destructing account address ≠ recipient address
                                                (account-increment-balance-by           ROFF_SELFDESTRUCT___ACCOUNT___2ND_DOING_ROW    (selfdestruct-instruction---balance)))))))

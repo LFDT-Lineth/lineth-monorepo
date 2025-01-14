@@ -1,4 +1,4 @@
-(defpurefun (sel-logdata-to-rlptxnrcpt)
+(defun (sel-logdata-to-rlptxnrcpt)
   logdata.LOGS_DATA)
 
 (deflookup

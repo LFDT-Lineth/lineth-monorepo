@@ -74,10 +74,5 @@
    ( HASH_INFO_KECCAK_LO     :i128 )
 
    ;; log info related
-   (LOG_INFO_FLAG :binary@prove)
-   )
-
-  (defalias
-   INST    INSTRUCTION
-   ))
+   (LOG_INFO_FLAG :binary@prove)))
 

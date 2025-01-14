@@ -1,4 +1,4 @@
-(defpurefun (sel-loginfo-to-logdata)
+(defun (sel-loginfo-to-logdata)
   loginfo.TXN_EMITS_LOGS)
 
 (deflookup

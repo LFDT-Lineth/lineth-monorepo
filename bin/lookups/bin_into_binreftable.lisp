@@ -1,4 +1,4 @@
-(defpurefun (selector-bin-to-binreftable)
+(defun (selector-bin-to-binreftable)
   (+ bin.IS_AND bin.IS_OR bin.IS_XOR bin.IS_NOT))
 
 (deflookup

@@ -1,4 +1,4 @@
-(defpurefun (hub-into-rom-instruction-fetching-trigger) hub.PEEK_AT_STACK)
+(defun (hub-into-rom-instruction-fetching-trigger) hub.PEEK_AT_STACK)
 
 (deflookup hub-into-rom-instruction-fetching
            ;; target columns

@@ -253,13 +253,13 @@
                 (if-eq IS_PHASE_VALUE 1
                        (eq! (next IS_PHASE_DATA) 1))
                 (if-eq IS_PHASE_DATA 1
-                       (begin (debug (vanishes! RLP_TXN_PHASE_SIZE))
+                       (begin ;;(debug (vanishes! RLP_TXN_PHASE_SIZE))
                               (vanishes! DATA_GAS_COST)
                               (if-zero TYPE
                                        (eq! (next IS_PHASE_BETA) 1)
                                        (eq! (next IS_PHASE_ACCESS_LIST) 1))))
                 (if-eq IS_PHASE_ACCESS_LIST 1
-                       (begin (debug (vanishes! RLP_TXN_PHASE_SIZE))
+                       (begin ;;(debug (vanishes! RLP_TXN_PHASE_SIZE))
                               (vanishes! nADDR)
                               (vanishes! nKEYS)
                               (vanishes! nKEYS_PER_ADDR)

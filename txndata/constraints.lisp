@@ -131,7 +131,7 @@
                  (begin (if-zero ABS
                                  (begin (vanishes! BLK)
                                         (vanishes! REL)
-                                        (debug (vanishes! BLK_MAX))
+                                        ;;(debug (vanishes! BLK_MAX))
                                         (debug (vanishes! REL_MAX))
                                         (if-not-zero (will-remain-constant! ABS)
                                                      (begin (eq! (next BLK) 1)

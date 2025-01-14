@@ -30,7 +30,7 @@
 
 (defun    (call-instruction---trigger_ROMLEX)                        (+    (scenario-shorthand---CALL---smart-contract)))
 
-(defun    (call-instruction---call-requires-callee-account)          (+    (shift    misc/STP_FLAG    CALL_misc___row_offset)))
+;; (defun    (call-instruction---call-requires-callee-account)          (+    (shift    misc/STP_FLAG    CALL_misc___row_offset)))
 
 (defun    (call-instruction---call-requires-caller-account)          (+    (scenario-shorthand---CALL---unexceptional)))
 
