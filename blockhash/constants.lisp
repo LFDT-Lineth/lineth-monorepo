@@ -4,7 +4,6 @@
   nROWS_MACRO                                                              1
   nROWS_PRPRC                                                              5
   BLOCKHASH_DEPTH                                (+ nROWS_MACRO nROWS_PRPRC)
-  NEGATIVE_OF_BLOCKHASH_DEPTH                          (- 0 BLOCKHASH_DEPTH)
   ROFF___BLOCKHASH_arguments___monotony                                    1
   ROFF___BLOCKHASH_arguments___equality_test                               2
   ROFF___ABS___comparison_to_256                                           3
