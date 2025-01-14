@@ -477,32 +477,32 @@
 
 ;; Note: in the specs for simplicity we omit the last four arguments
 (defun (callToC1MembershipWCP k
-                              P_x_hi
-                              P_x_lo
-                              P_y_hi
-                              P_y_lo
-                              P_y_square_hi
-                              P_y_square_lo
-                              P_x_cube_plus_three_hi
-                              P_x_cube_plus_three_lo)
-  (begin (callToLT k P_x_hi P_x_lo P_BN_HI P_BN_LO)
-         (callToLT (+ k 1) P_y_hi P_y_lo P_BN_HI P_BN_LO)
-         (callToEQ (+ k 2) P_y_square_hi P_y_square_lo P_x_cube_plus_three_hi P_x_cube_plus_three_lo)))
+                              _P_x_hi
+                              _P_x_lo
+                              _P_y_hi
+                              _P_y_lo
+                              _P_y_square_hi
+                              _P_y_square_lo
+                              _P_x_cube_plus_three_hi
+                              _P_x_cube_plus_three_lo)
+  (begin (callToLT k _P_x_hi _P_x_lo P_BN_HI P_BN_LO)
+         (callToLT (+ k 1) _P_y_hi _P_y_lo P_BN_HI P_BN_LO)
+         (callToEQ (+ k 2) _P_y_square_hi _P_y_square_lo _P_x_cube_plus_three_hi _P_x_cube_plus_three_lo)))
 
 ;; Note: in the specs for simplicity we omit the last four arguments
 (defun (callToC1MembershipEXT k
-                              P_x_hi
-                              P_x_lo
-                              P_y_hi
-                              P_y_lo
-                              P_x_square_hi
-                              P_x_square_lo
-                              P_x_cube_hi
-                              P_x_cube_lo)
-  (begin (callToMULMOD k P_y_hi P_y_lo P_y_hi P_y_lo P_BN_HI P_BN_LO)
-         (callToMULMOD (+ k 1) P_x_hi P_x_lo P_x_hi P_x_lo P_BN_HI P_BN_LO)
-         (callToMULMOD (+ k 2) P_x_square_hi P_x_square_lo P_x_hi P_x_lo P_BN_HI P_BN_LO)
-         (callToADDMOD (+ k 3) P_x_cube_hi P_x_cube_lo 0 3 P_BN_HI P_BN_LO)))
+                              _P_x_hi
+                              _P_x_lo
+                              _P_y_hi
+                              _P_y_lo
+                              _P_x_square_hi
+                              _P_x_square_lo
+                              _P_x_cube_hi
+                              _P_x_cube_lo)
+  (begin (callToMULMOD k _P_y_hi _P_y_lo _P_y_hi _P_y_lo P_BN_HI P_BN_LO)
+         (callToMULMOD (+ k 1) _P_x_hi _P_x_lo _P_x_hi _P_x_lo P_BN_HI P_BN_LO)
+         (callToMULMOD (+ k 2) _P_x_square_hi _P_x_square_lo _P_x_hi _P_x_lo P_BN_HI P_BN_LO)
+         (callToADDMOD (+ k 3) _P_x_cube_hi _P_x_cube_lo 0 3 P_BN_HI P_BN_LO)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                     ;;
