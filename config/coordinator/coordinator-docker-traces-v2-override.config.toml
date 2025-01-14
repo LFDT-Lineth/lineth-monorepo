@@ -18,12 +18,12 @@ blob-compressor-version="V1_0_1"
 expected-traces-api-version-v2="v0.8.0-rc8"
 [traces.counters-v2]
 endpoints=["http://traces-node-v2:8545/"]
-request-limit-per-endpoint=2
+request-limit-per-endpoint=1
 request-retry.backoff-delay="PT1S"
 request-retry.failures-warning-threshold=2
 [traces.conflation-v2]
 endpoints=["http://traces-node-v2:8545/"]
-request-limit-per-endpoint=2
+request-limit-per-endpoint=1
 request-retry.backoff-delay="PT1S"
 request-retry.failures-warning-threshold=2
 

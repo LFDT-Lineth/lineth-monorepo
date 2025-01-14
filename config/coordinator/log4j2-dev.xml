@@ -100,6 +100,10 @@
       <DebouncingFilter/>
       <appender-ref ref="rewrite"/>
     </Logger>
+    <Logger name="net.consensys.linea.ethereum.gaspricing.staticcap" level="ERROR" additivity="false">
+      <DebouncingFilter/>
+      <appender-ref ref="rewrite"/>
+    </Logger>
     <Logger name="net.consensys.zkevm.ethereum.finalization" level="INFO" additivity="false">
       <DebouncingFilter/>
       <appender-ref ref="rewrite"/>
@@ -112,6 +116,10 @@
       <DebouncingFilter/>
       <appender-ref ref="console"/>
     </Logger>
+    <!--    <Logger name="clients.TracesCounters" level="TRACE" additivity="false">-->
+    <!--      <DebouncingFilter/>-->
+    <!--      <appender-ref ref="console"/>-->
+    <!--    </Logger>-->
     <!--    <Logger name="clients.l2" level="DEBUG" additivity="false">-->
     <!--      <appender-ref ref="console"/>-->
     <!--    </Logger>-->

@@ -100,12 +100,12 @@ class CoordinatorConfigTest {
           TracingModuleV2.EC_DATA to 262144u,
           TracingModuleV2.EUC to 65536u,
           TracingModuleV2.EXP to 8192u,
-          TracingModuleV2.EXT to 65536u,
+          TracingModuleV2.EXT to 1048576u,
           TracingModuleV2.GAS to 65536u,
           TracingModuleV2.HUB to 2097152u,
           TracingModuleV2.LOG_DATA to 65536u,
           TracingModuleV2.LOG_INFO to 4096u,
-          TracingModuleV2.MMIO to 2097152u,
+          TracingModuleV2.MMIO to 4194304u,
           TracingModuleV2.MMU to 4194304u,
           TracingModuleV2.MOD to 131072u,
           TracingModuleV2.MUL to 65536u,
@@ -113,18 +113,18 @@ class CoordinatorConfigTest {
           TracingModuleV2.OOB to 262144u,
           TracingModuleV2.RLP_ADDR to 4096u,
           TracingModuleV2.RLP_TXN to 131072u,
-          TracingModuleV2.RLP_TXN_RCPT to 32768u,
-          TracingModuleV2.ROM to 8388608u,
+          TracingModuleV2.RLP_TXN_RCPT to 65536u,
+          TracingModuleV2.ROM to 4194304u,
           TracingModuleV2.ROM_LEX to 1024u,
           TracingModuleV2.SHAKIRA_DATA to 32768u,
           TracingModuleV2.SHF to 65536u,
-          TracingModuleV2.STP to 32768u,
-          TracingModuleV2.TRM to 8192u,
+          TracingModuleV2.STP to 16384u,
+          TracingModuleV2.TRM to 32768u,
           TracingModuleV2.TXN_DATA to 8192u,
           TracingModuleV2.WCP to 262144u,
-          TracingModuleV2.BIN_REFERENCE_TABLE to 196864u,
-          TracingModuleV2.SHF_REFERENCE_TABLE to 4096u,
-          TracingModuleV2.INSTRUCTION_DECODER to 512u,
+          TracingModuleV2.BIN_REFERENCE_TABLE to 4294967295u,
+          TracingModuleV2.SHF_REFERENCE_TABLE to 4294967295u,
+          TracingModuleV2.INSTRUCTION_DECODER to 4294967295u,
           TracingModuleV2.PRECOMPILE_ECRECOVER_EFFECTIVE_CALLS to 128u,
           TracingModuleV2.PRECOMPILE_SHA2_BLOCKS to 671u,
           TracingModuleV2.PRECOMPILE_RIPEMD_BLOCKS to 671u,
@@ -235,7 +235,7 @@ class CoordinatorConfigTest {
 
     private val aggregationConfig = AggregationConfig(
       aggregationProofsLimit = 3,
-      aggregationDeadline = Duration.parse("PT1M"),
+      aggregationDeadline = Duration.parse("PT10S"),
       aggregationCoordinatorPollingInterval = Duration.parse("PT2S"),
       deadlineCheckInterval = Duration.parse("PT8S")
     )
@@ -359,7 +359,7 @@ class CoordinatorConfigTest {
       maxFeePerGasCap = 100000000000u,
       feeHistoryBlockCount = 4U,
       feeHistoryRewardPercentile = 15.0,
-      blocksToFinalization = 2U,
+      blocksToFinalization = 0U,
       lastHashSearchWindow = 25U,
       anchoringReceiptPollingInterval = Duration.parse("PT01S"),
       maxReceiptRetries = 120U
@@ -837,13 +837,14 @@ class CoordinatorConfigTest {
               blobCompressorVersion = BlobCompressorVersion.V1_0_1,
               expectedTracesApiVersionV2 = "v0.8.0-rc8",
               conflationV2 = tracesConfig.conflation.copy(
-                endpoints = listOf(URI("http://traces-node-v2:8545/").toURL())
+                endpoints = listOf(URI("http://traces-node-v2:8545/").toURL()),
+                requestLimitPerEndpoint = 1U
               ),
               countersV2 = TracesConfig.FunctionalityEndpoint(
                 listOf(
                   URI("http://traces-node-v2:8545/").toURL()
                 ),
-                requestLimitPerEndpoint = 2U,
+                requestLimitPerEndpoint = 1U,
                 requestRetry = RequestRetryConfigTomlFriendly(
                   backoffDelay = Duration.parse("PT1S"),
                   failuresWarningThreshold = 2

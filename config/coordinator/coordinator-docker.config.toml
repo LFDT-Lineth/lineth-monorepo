@@ -126,12 +126,11 @@ fee-history-reward-percentile=15
 last-hash-search-window=25
 anchoring-receipt-polling-interval="PT01S"
 max-receipt-retries=120
-# Number of children blocks to wait before considering a block "finalized"
-# and elegible for conflation and
+# Number of children blocks to wait before considering a won't be reverted and elegible for conflation.
 # this a workaround to mitigate Geth fork issues with Clique PoA
 # Coordinator will consider block as finalized after being included in the chain wtih children blocks-to-finalization
-# Recommended minimum of 2
-blocks-to-finalization=2
+# Recommended: Geth sequencer minimum of 2, Besu sequencer minimum of 1, 0 is safe localy
+blocks-to-finalization=0
 
 [blob-submission]
 disabled=true
@@ -153,7 +152,7 @@ proof-submission-delay="PT1S"
 
 [proof-aggregation]
 aggregation-proofs-limit=3
-aggregation-deadline="PT1M"
+aggregation-deadline="PT10S"
 aggregation-coordinator-polling-interval="PT2S"
 deadline-check-interval="PT8S"
 target-end-blocks=[]
