@@ -1,0 +1,10 @@
+##
+# Smart contract error codes from:
+# https://www.notion.so/consensys/Smart-Contracts-Error-Code-Registry-bb4bd68f8ddf4b0ba90000d1136e42ef
+##
+
+[smart-contract-errors]
+# L1 Linea Rollup
+"0f06cd15" = "DataAlreadySubmitted"
+"c01eab56" = "EmptySubmissionData"
+"abefa5e8" = "DataStartingBlockDoesNotMatch"

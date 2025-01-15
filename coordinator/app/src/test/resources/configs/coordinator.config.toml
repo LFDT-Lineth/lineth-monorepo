@@ -1,0 +1,292 @@
+testL1Disabled=false
+
+duplicated-logs-debounce-time="PT15S"
+
+eip4844-switch-l2-block-number=0
+
+[prover]
+fs-inprogress-request-writing-suffix = ".inprogress_coordinator_writing"
+fs-inprogress-proving-suffix-pattern = ".*\\.inprogress\\.prover.*"
+fs-polling-interval = "PT1S"
+fs-polling-timeout = "PT10M"
+[prover.execution]
+fs-requests-directory = "/data/prover/v2/execution/requests"
+fs-responses-directory = "/data/prover/v2/execution/responses"
+[prover.blob-compression]
+fs-requests-directory = "/data/prover/v2/compression/requests"
+fs-responses-directory = "/data/prover/v2/compression/responses"
+[prover.proof-aggregation]
+fs-requests-directory = "/data/prover/v2/aggregation/requests"
+fs-responses-directory = "/data/prover/v2/aggregation/responses"
+#[prover.new]
+#switch-block-number-inclusive=1000
+#[prover.new.execution]
+#fs-requests-directory = "/data/prover/v3/execution/requests"
+#fs-responses-directory = "/data/prover/v3/execution/responses"
+#[prover.new.blob-compression]
+#fs-requests-directory = "/data/prover/v3/compression/requests"
+#fs-responses-directory = "/data/prover/v3/compression/responses"
+#[prover.new.proof-aggregation]
+#fs-requests-directory = "/data/prover/v3/aggregation/requests"
+#fs-responses-directory = "/data/prover/v3/aggregation/responses"
+
+[blob-compression]
+blob-size-limit=102400 # 100KB
+handler-polling-interval="PT1S"
+# default batches limit is  aggregation-proofs-limit -1
+# batches-limit must be less than or equal to aggregation-proofs-limit-1
+batches-limit=1
+
+[zk-traces]
+eth-api="http://traces-node:8545"
+new-block-polling-interval="PT1S"
+
+[traces]
+switch-to-linea-besu=false
+blob-compressor-version="V0_1_0"
+raw-execution-traces-version="0.2.0"
+expected-traces-api-version="0.2.0"
+[traces.counters]
+endpoints=["http://traces-api:8080/"]
+request-limit-per-endpoint=2
+request-retry.backoff-delay="PT1S"
+request-retry.failures-warning-threshold=2
+[traces.conflation]
+endpoints=["http://traces-api:8080/"]
+request-limit-per-endpoint=2
+request-retry.backoff-delay="PT1S"
+request-retry.failures-warning-threshold=2
+
+
+[traces.file-manager]
+traces-file-extension="json.gz"
+raw-traces-directory="/data/traces/raw"
+non-canonical-raw-traces-directory="/data/traces/raw-non-canonical"
+create-non-canonical-directory=true
+polling-interval="PT1S"
+traces-file-creation-wait-timeout="PT2M"
+
+[state-manager]
+version="2.3.0"
+endpoints=["http://shomei:8888/"]
+request-limit-per-endpoint=2
+request-retry.backoff-delay="PT2S"
+request-retry.failures-warning-threshold=2
+
+[type2-state-proof-provider]
+endpoints=["http://shomei-frontend:8888/"]
+request-retry.backoff-delay="PT1S"
+request-retry.failures-warning-threshold=2
+
+[api]
+observability_port=9545
+
+[l1]
+rpc-endpoint="http://l1-el-node:8545"
+zk-evm-contract-address="0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9"
+finalization-polling-interval="PT6S"
+l1-query-block-tag="latest"
+gas-limit=10000000
+fee-history-block-count=10
+fee-history-reward-percentile=15
+# Global caps of maxFeePerGas, maxFeePerBlobGas, and maxPriorityFeePerGas
+# for L1 transactions regardless of L1 dynamic gas price cap is enabled or not
+max-fee-per-gas-cap=100000000000
+max-fee-per-blob-gas-cap=100000000000
+max-priority-fee-per-gas-cap=20000000000
+# The multiplier of global caps for L1 finalization transaction
+# E.g. if set as 2.0, it means the global caps of finalization txn
+# will always be 2 times higher than that of blob submission txn
+gas-price-cap-multiplier-for-finalization=2.0
+# blocks are 2s, this may catch in between blocks
+send-message-event-polling-interval="PT1S"
+# 10 blocks worth at 2s per block
+max-event-scraping-time="PT5S"
+# An optional config to define the L1 block time with default as PT12S
+block-time="PT1S" # set the same as local L1 block time
+block-range-loop-limit=500
+max-messages-to-collect=1000
+finalized-block-tag="latest"
+# reset this once we know what to do on dev/UAT
+earliest-block=0
+genesis-state-root-hash="0x072ead6777750dc20232d1cee8dc9a395c2d350df4bbaa5096c6f59b214dcecd"
+# shnarf for contract V5
+# Keccak256(parentShnarf="0x00...00", snarkHash="0x00...00",
+#   parentStateRootHash="0x072ead6777750dc20232d1cee8dc9a395c2d350df4bbaa5096c6f59b214dcecd",
+#   evaludationClaim="0x00...00", evaludationPoint="0x00...00")
+genesis-shnarf-v5="0x47452a1b9ebadfe02bdd02f580fa1eba17680d57eec968a591644d05d78ee84f"
+
+[l2]
+rpc-endpoint="http://sequencer:8545"
+message-service-address="0xe537D669CA013d86EBeF1D64e40fC74CADC91987"
+gas-limit=10000000
+max-fee-per-gas-cap=100000000000
+fee-history-block-count=4
+fee-history-reward-percentile=15
+last-hash-search-window=25
+anchoring-receipt-polling-interval="PT01S"
+max-receipt-retries=120
+# Number of children blocks to wait before considering a won't be reverted and elegible for conflation.
+# this a workaround to mitigate Geth fork issues with Clique PoA
+# Coordinator will consider block as finalized after being included in the chain wtih children blocks-to-finalization
+# Recommended: Geth sequencer minimum of 2, Besu sequencer minimum of 1, 0 is safe localy
+blocks-to-finalization=0
+
+[blob-submission]
+disabled=true
+db-polling-interval="PT1S"
+max-blobs-to-return=100
+proof-submission-delay="PT1S"
+max-blobs-to-submit-per-tick=10
+# These lower and upper bounds will be effective only if L1 dynamic
+# gas price cap is disabled or during fallback when there's insufficient
+# cached fee history data to compute dynamic gas price caps
+priority-fee-per-gas-upper-bound=2000000000 # 2 GWEI
+priority-fee-per-gas-lower-bound=200000000 # 0.2 GWEI
+
+[aggregation-finalization]
+disabled=false
+db-polling-interval="PT1S"
+max-aggregations-to-finalize-per-tick=1
+proof-submission-delay="PT1S"
+
+[proof-aggregation]
+aggregation-proofs-limit=3
+aggregation-deadline="PT10S"
+aggregation-coordinator-polling-interval="PT2S"
+deadline-check-interval="PT8S"
+target-end-blocks=[]
+
+[finalization-signer]
+# Web3j/Web3signer
+type="Web3j"
+
+[finalization-signer.web3j]
+private-key="0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d"
+
+[finalization-signer.web3signer]
+endpoint="http://web3signer:9000"
+max-pool-size=10
+keep-alive=true
+public-key="ba5734d8f7091719471e7f7ed6b9df170dc70cc661ca05e688601ad984f068b0d67351e5f06073092499336ab0839ef8a521afd334e53807205fa2f08eec74f4"
+
+[data-submission-signer]
+# Web3j/Web3signer
+type="Web3j"
+
+# The account with this private key is in genesis file
+[data-submission-signer.web3j]
+private-key="0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a"
+
+[data-submission-signer.web3signer]
+endpoint="http://web3signer:9000"
+max-pool-size=10
+keep-alive=true
+public-key="9d9031e97dd78ff8c15aa86939de9b1e791066a0224e331bc962a2099a7b1f0464b8bbafe1535f2301c72c2cb3535b172da30b02686ab0393d348614f157fbdb"
+
+[l2-signer]
+# Web3j/Web3signer
+type="Web3j"
+
+[l2-signer.web3j]
+private-key="0x4d01ae6487860981699236a58b68f807ee5f17b12df5740b85cf4c4653be0f55"
+
+[l2-signer.web3signer]
+endpoint="http://web3signer:9000"
+max-pool-size=10
+keep-alive=true
+public-key="4a788ad6fa008beed58de6418369717d7492f37d173d70e2c26d9737e2c6eeae929452ef8602a19410844db3e200a0e73f5208fd76259a8766b73953fc3e7023"
+
+[message-anchoring-service]
+disabled=false
+polling-interval="PT1S"
+max-messages-to-anchor=100
+
+[l2-network-gas-pricing]
+disabled = false
+price-update-interval = "PT12S"
+
+fee-history-block-count = 50
+fee-history-reward-percentile = 15
+
+blob-submission-expected-execution-gas = 213000.0 # Lower to 120k as we improve efficiency
+# Defaults to expected-blob-gas
+#bytes-per-data-submission=131072.0 # 2^17
+l1-blob-gas = 131072 # 2^17
+
+[l2-network-gas-pricing.request-retry]
+max-retries = 3
+timeout = "PT6S"
+backoff-delay = "PT1S"
+failures-warning-threshold = 2
+
+[l2-network-gas-pricing.variable-cost-pricing]
+gas-price-fixed-cost = 3000000
+legacy-fees-multiplier = 1.2
+margin = 4.0
+variable-cost-upper-bound = 10000000001 # ~10 GWEI
+variable-cost-lower-bound = 90000001  # ~0.09 GWEI
+
+[l2-network-gas-pricing.extra-data-pricing-propagation]
+extra-data-update-recipient = "http://sequencer:8545/"
+
+[l2-network-gas-pricing.legacy]
+type="SampleTransaction"
+gas-price-upper-bound = 10000000000 # 10 GWEI
+gas-price-lower-bound = 90000000 # 0.09 GWEI
+
+[l2-network-gas-pricing.json-rpc-pricing-propagation]
+geth-gas-price-update-recipients = [
+  "http://l2-node:8545/"
+]
+besu-gas-price-update-recipients = []
+
+[l1-dynamic-gas-price-cap-service]
+disabled=false
+[l1-dynamic-gas-price-cap-service.gas-price-cap-calculation]
+adjustment-constant=25
+blob-adjustment-constant=25
+finalization-target-max-delay="PT30S"
+gas-fee-percentile-window="PT1M"
+gas-fee-percentile-window-leeway="PT10S"
+gas-fee-percentile=10
+gas-price-caps-check-coefficient=0.9
+# The lower bound of the "historic base fee per blob gas" used in
+# the L1 dynamic gas price cap equation
+historic-base-fee-per-blob-gas-lower-bound=100000000 # 0.1 GWEI
+# An optional config to replace the "historic average reward" used in
+# the L1 dynamic gas price cap equation
+historic-avg-reward-constant=100000000 # 0.1 GWEI
+[l1-dynamic-gas-price-cap-service.fee-history-fetcher]
+fetch-interval="PT1S"
+max-block-count=1000
+reward-percentiles=[10,20,30,40,50,60,70,80,90,100]
+num-of-blocks-before-latest=4
+[l1-dynamic-gas-price-cap-service.fee-history-storage]
+storage-period="PT2M"
+
+[conflation]
+blocks-limit=2
+conflation-deadline="PT6S" # =3*l2_block_time
+conflation-deadline-check-interval="PT3S"
+conflation-deadline-last-block-confirmation-delay="PT2S" # recommended: at least 2 * blockInterval
+
+# This is to prevent inflight trasactions that may change Smart contract state while coordinator is restarted.
+# Queries SMC for last finalised block, and keeps polling until this number of blocks observe the same state.
+# If state is updated meanwhile, it resets counter and restarts the polling.
+consistent-number-of-blocks-on-l1-to-wait=1
+fetch-blocks-limit=4000
+
+[database]
+host="postgres"
+port="5432"
+username="postgres"
+password="postgres"
+schema="linea_coordinator"
+read_pool_size=10
+read_pipelining_limit=10
+transactional_pool_size=10
+
+[persistence-retry]
+#max-retries = 10 commented as can be null
+backoff-delay = "PT1S"

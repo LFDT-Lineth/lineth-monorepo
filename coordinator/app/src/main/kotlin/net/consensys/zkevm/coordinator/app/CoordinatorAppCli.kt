@@ -1,21 +1,6 @@
 package net.consensys.zkevm.coordinator.app
 
-import com.github.michaelbull.result.Err
-import com.github.michaelbull.result.Ok
-import com.github.michaelbull.result.Result
-import com.github.michaelbull.result.get
-import com.github.michaelbull.result.getError
-import com.github.michaelbull.result.onFailure
-import com.sksamuel.hoplite.ConfigLoaderBuilder
-import com.sksamuel.hoplite.addFileSource
-import net.consensys.linea.traces.TracesCountersV1
-import net.consensys.linea.traces.TracesCountersV2
 import net.consensys.zkevm.coordinator.app.config.CoordinatorConfig
-import net.consensys.zkevm.coordinator.app.config.CoordinatorConfigTomlDto
-import net.consensys.zkevm.coordinator.app.config.GasPriceCapTimeOfDayMultipliersConfig
-import net.consensys.zkevm.coordinator.app.config.SmartContractErrorCodesConfig
-import net.consensys.zkevm.coordinator.app.config.TracesLimitsV1ConfigFile
-import net.consensys.zkevm.coordinator.app.config.TracesLimitsV2ConfigFile
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import picocli.CommandLine
@@ -115,13 +100,14 @@ internal constructor(private val errorWriter: PrintWriter, private val startActi
         }
       }
 
-      val configs = validateConfigs(
-        tracesLimitsFile,
-        tracesLimitsV2File,
-        smartContractErrorsFile,
-        gasPriceCapTimeOfDayMultipliersFile,
-        configFiles
-      ) ?: return 1
+      val configs = linea.coordinator.config.loadConfigs(
+        coordinatorConfigFiles = configFiles.map { it.toPath() },
+        tracesLimitsFileV1 = tracesLimitsFile?.toPath(),
+        tracesLimitsFileV2 = tracesLimitsV2File?.toPath(),
+        smartContractErrorsFile = smartContractErrorsFile.toPath(),
+        gasPriceCapTimeOfDayMultipliersFile = gasPriceCapTimeOfDayMultipliersFile.toPath(),
+        logger = logger
+      )
 
       if (checkConfigsOnly) {
         logger.info("All configs are valid. Final configs: {}", configs)
@@ -144,7 +130,7 @@ internal constructor(private val errorWriter: PrintWriter, private val startActi
   }
 
   fun reportUserError(ex: Throwable) {
-    logger.fatal(ex.message, ex)
+    logger.fatal(ex.message)
     errorWriter.println(ex.message)
     printUsage(errorWriter)
   }
@@ -153,97 +139,6 @@ internal constructor(private val errorWriter: PrintWriter, private val startActi
     outputWriter.println()
     outputWriter.println("To display full help:")
     outputWriter.println(COMMAND_NAME + " --help")
-  }
-
-  private fun validateConfigs(
-    tracesLimitsFile: File?,
-    tracesLimitsV2File: File?,
-    smartContractErrorsFile: File,
-    gasPriceCapTimeOfDayMultipliersFile: File,
-    coordinatorConfigFiles: List<File>
-  ): CoordinatorConfig? {
-    var hasConfigError = false
-    val tracesLimitsV1Configs = if (tracesLimitsFile == null) {
-      null
-    } else {
-      loadConfigsOrError<TracesLimitsV1ConfigFile>(listOf(tracesLimitsFile))
-    }
-
-    val tracesLimitsV2Configs = if (tracesLimitsV2File == null) {
-      null
-    } else {
-      loadConfigsOrError<TracesLimitsV2ConfigFile>(listOf(tracesLimitsV2File))
-    }
-
-    val smartContractErrorCodes =
-      loadConfigsOrError<SmartContractErrorCodesConfig>(listOf(smartContractErrorsFile))
-
-    val gasPriceCapTimeOfDayMultipliers =
-      loadConfigsOrError<GasPriceCapTimeOfDayMultipliersConfig>(listOf(gasPriceCapTimeOfDayMultipliersFile))
-
-    val configs = loadConfigsOrError<CoordinatorConfigTomlDto>(coordinatorConfigFiles)
-
-    if (tracesLimitsV1Configs is Err) {
-      hasConfigError = true
-      logger.error("Reading {} failed: {}", tracesLimitsFile, tracesLimitsV1Configs.getError())
-    } else if (tracesLimitsV1Configs is Ok) {
-      runCatching {
-        TracesCountersV1(tracesLimitsV1Configs.get()!!.tracesLimits)
-      }.getOrElse {
-        hasConfigError = true
-        logger.error("Traces limits file {} is incomplete. {}", tracesLimitsFile, it.message)
-      }
-    }
-
-    if (tracesLimitsV2Configs is Err) {
-      hasConfigError = true
-      logger.error("Reading {} failed: {}", tracesLimitsV2File, tracesLimitsV2Configs.getError())
-    } else if (tracesLimitsV2Configs is Ok) {
-      runCatching {
-        TracesCountersV2(tracesLimitsV2Configs.get()!!.tracesLimits)
-      }.getOrElse {
-        hasConfigError = true
-        logger.error("Traces limits file {} is incomplete. {}", tracesLimitsV2File, it.message)
-      }
-    }
-
-    if (smartContractErrorCodes is Err) {
-      hasConfigError = true
-      logger.error("Reading {} failed: {}", smartContractErrorsFile, smartContractErrorCodes.getError())
-    }
-
-    if (gasPriceCapTimeOfDayMultipliers is Err) {
-      hasConfigError = true
-      logger.error(
-        "Reading {} failed: {}",
-        gasPriceCapTimeOfDayMultipliersFile,
-        gasPriceCapTimeOfDayMultipliers.getError()
-      )
-    }
-
-    if (configs is Err) {
-      hasConfigError = true
-      logger.error("Reading {} failed: {}", configFiles, configs.getError())
-    }
-
-    return if (hasConfigError) {
-      null
-    } else {
-      configs.get()?.let { config: CoordinatorConfigTomlDto ->
-        config.copy(
-          conflation = config.conflation.copy(
-            _tracesLimitsV1 = tracesLimitsV1Configs?.get()?.tracesLimits?.let { TracesCountersV1(it) },
-            _tracesLimitsV2 = tracesLimitsV2Configs?.get()?.tracesLimits?.let { TracesCountersV2(it) },
-            _smartContractErrors = smartContractErrorCodes.get()?.smartContractErrors
-          ),
-          l1DynamicGasPriceCapService = config.l1DynamicGasPriceCapService.copy(
-            gasPriceCapCalculation = config.l1DynamicGasPriceCapService.gasPriceCapCalculation.copy(
-              timeOfDayMultipliers = gasPriceCapTimeOfDayMultipliers.get()?.gasPriceCapTimeOfDayMultipliers
-            )
-          )
-        ).reified()
-      }
-    }
   }
 
   /**
@@ -266,30 +161,6 @@ internal constructor(private val errorWriter: PrintWriter, private val startActi
     fun withAction(startAction: StartAction): CoordinatorAppCli {
       val errorWriter = PrintWriter(System.err, true, Charset.defaultCharset())
       return CoordinatorAppCli(errorWriter, startAction)
-    }
-
-    inline fun <reified T : Any> loadConfigs(configFiles: List<File>, errorWriter: PrintWriter): T? {
-      return loadConfigsOrError<T>(configFiles).onFailure { error ->
-        errorWriter.println(error)
-      }.get()
-    }
-
-    inline fun <reified T : Any> loadConfigsOrError(
-      configFiles: List<File>
-    ): Result<T, String> {
-      val confBuilder: ConfigLoaderBuilder = ConfigLoaderBuilder.Companion.empty().addDefaults()
-      for (configFile in configFiles.reversed()) {
-        // files must be added in reverse order for overriding
-        confBuilder.addFileSource(configFile, false)
-      }
-
-      return confBuilder.build().loadConfig<T>(emptyList()).let { config ->
-        if (config.isInvalid()) {
-          Err(config.getInvalidUnsafe().description())
-        } else {
-          Ok(config.getUnsafe())
-        }
-      }
     }
   }
 }

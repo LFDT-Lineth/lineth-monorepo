@@ -1,0 +1,40 @@
+[prover]
+[prover.execution]
+fs-requests-directory = "/data/prover/v3/execution/requests"
+fs-responses-directory = "/data/prover/v3/execution/responses"
+[prover.blob-compression]
+fs-requests-directory = "/data/prover/v3/compression/requests"
+fs-responses-directory = "/data/prover/v3/compression/responses"
+[prover.proof-aggregation]
+fs-requests-directory = "/data/prover/v3/aggregation/requests"
+fs-responses-directory = "/data/prover/v3/aggregation/responses"
+
+[zk-traces]
+eth-api="http://traces-node-v2:8545"
+
+[traces]
+switch-to-linea-besu=true
+blob-compressor-version="V1_0_1"
+expected-traces-api-version-v2="v0.8.0-rc8"
+[traces.counters-v2]
+endpoints=["http://traces-node-v2:8545/"]
+request-limit-per-endpoint=1
+request-retry.backoff-delay="PT1S"
+request-retry.failures-warning-threshold=2
+[traces.conflation-v2]
+endpoints=["http://traces-node-v2:8545/"]
+request-limit-per-endpoint=1
+request-retry.backoff-delay="PT1S"
+request-retry.failures-warning-threshold=2
+
+[l2-network-gas-pricing.json-rpc-pricing-propagation]
+geth-gas-price-update-recipients=[
+  "http://l2-node:8545/"
+]
+
+[l2-network-gas-pricing.legacy.sample-transaction-gas-pricing]
+plain-transfer-cost-multiplier=1.0
+# Ratio of 350 / 29400 is based on data from Mainnet. Only 0.3% of transactions are less profitable than this
+# Meaning 99.7% of transactions will be includable if priced using eth_gasPrice
+compressed-tx-size=350
+expected-gas=29400
