@@ -40,7 +40,7 @@ dependencies {
   implementation project(':jvm-libs:linea:core:long-running-service')
   implementation project(':jvm-libs:generic:extensions:futures')
   implementation project(':jvm-libs:linea:web3j-extensions')
-  implementation 'build.linea:l1-rollup-contract-client:6.0.0-rc2'
+  implementation project(':jvm-libs:linea:clients:linea-l1-contract-client')
   implementation ("org.web3j:core:${libs.versions.web3j.get()}") {
     exclude group: 'org.slf4j', module: 'slf4j-nop'
   }

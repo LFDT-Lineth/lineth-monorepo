@@ -9,7 +9,6 @@ import kotlinx.datetime.Clock
 import linea.encoding.BlockRLPEncoder
 import net.consensys.linea.BlockNumberAndHash
 import net.consensys.linea.blob.ShnarfCalculatorVersion
-import net.consensys.linea.contract.LineaRollupAsyncFriendly
 import net.consensys.linea.contract.Web3JL2MessageService
 import net.consensys.linea.contract.Web3JL2MessageServiceLogsClient
 import net.consensys.linea.contract.Web3JLogsClient
@@ -220,20 +219,19 @@ class L1DependentApp(
     )
   )
 
-  private val l1FinalizationMonitor = run {
-    // To avoid setDefaultBlockParameter clashes
-    val contractClient: LineaRollupSmartContractClientReadOnly = Web3JLineaRollupSmartContractClientReadOnly(
-      contractAddress = configs.l1.zkEvmContractAddress,
-      web3j = l1Web3jClient
-    )
+  private val lineaRollupClient: LineaRollupSmartContractClientReadOnly = Web3JLineaRollupSmartContractClientReadOnly(
+    contractAddress = configs.l1.zkEvmContractAddress,
+    web3j = l1Web3jClient
+  )
 
+  private val l1FinalizationMonitor = run {
     FinalizationMonitorImpl(
       config =
       FinalizationMonitorImpl.Config(
         pollingInterval = configs.l1.finalizationPollingInterval.toKotlinDuration(),
         l1QueryBlockTag = configs.l1.l1QueryBlockTag
       ),
-      contract = contractClient,
+      contract = lineaRollupClient,
       l2Client = l2Web3jClient,
       vertx = vertx
     )
@@ -922,17 +920,9 @@ class L1DependentApp(
   }
 
   private fun lastFinalizedBlock(): SafeFuture<ULong> {
-    val zkEvmClient: LineaRollupAsyncFriendly = instantiateZkEvmContractClient(
-      configs.l1,
-      finalizationTransactionManager,
-      feesFetcher,
-      l1MinPriorityFeeCalculator,
-      l1Web3jClient,
-      smartContractErrors
-    )
     val l1BasedLastFinalizedBlockProvider = L1BasedLastFinalizedBlockProvider(
       vertx,
-      zkEvmClient,
+      lineaRollupClient,
       configs.conflation.consistentNumberOfBlocksOnL1ToWait.toUInt()
     )
     return l1BasedLastFinalizedBlockProvider.getLastFinalizedBlock()

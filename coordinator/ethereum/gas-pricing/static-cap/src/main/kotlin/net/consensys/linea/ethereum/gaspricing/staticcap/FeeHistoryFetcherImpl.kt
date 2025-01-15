@@ -31,7 +31,7 @@ class FeeHistoryFetcherImpl(
   }
 
   private var cacheIsValidForBlockNumber: BigInteger = BigInteger.ZERO
-  private var feesCache: FeeHistory = getRecentFees().get()
+  private lateinit var feesCache: FeeHistory
 
   private fun getRecentFees(): SafeFuture<FeeHistory> {
     val blockNumberFuture = web3jClient.ethBlockNumber().sendAsync()

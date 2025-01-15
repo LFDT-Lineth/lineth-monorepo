@@ -1,54 +1,44 @@
 package net.consensys.zkevm.coordinator.app
 
-import build.linea.contract.LineaRollupV5
+import build.linea.contract.l1.LineaRollupSmartContractClientReadOnly
 import io.vertx.core.Vertx
+import net.consensys.linea.BlockParameter
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.kotlin.doReturn
+import org.mockito.Mockito
+import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
-import org.web3j.protocol.core.RemoteFunctionCall
-import java.math.BigInteger
-import java.util.concurrent.CompletableFuture
+import tech.pegasys.teku.infrastructure.async.SafeFuture
 import kotlin.time.Duration.Companion.milliseconds
 
 class L1BasedLastFinalizedBlockProviderTest {
-  private lateinit var lineaRollupSmartContractWeb3jClient: LineaRollupV5
+  private lateinit var lineaRollupClient: LineaRollupSmartContractClientReadOnly
 
   @BeforeEach
   fun beforeEach() {
-    lineaRollupSmartContractWeb3jClient = mock()
+    lineaRollupClient =
+      mock<LineaRollupSmartContractClientReadOnly>(defaultAnswer = Mockito.RETURNS_DEEP_STUBS)
   }
 
   @Test
   fun `shall wait number of blocks before returning for consistency`() {
-    val replies = listOf(
-      mockRemoteFnCallWithBlockNumber(100),
-      mockRemoteFnCallWithBlockNumber(100),
-      mockRemoteFnCallWithBlockNumber(101),
-      mockRemoteFnCallWithBlockNumber(101),
-      mockRemoteFnCallWithBlockNumber(101),
-      mockRemoteFnCallWithBlockNumber(101)
-    )
-    whenever(lineaRollupSmartContractWeb3jClient.currentL2BlockNumber())
-      .thenReturn(replies[0], *replies.subList(1, replies.size).toTypedArray())
+    val replies = listOf(100UL, 100UL, 101UL, 101UL, 101UL, 101UL)
+    whenever(lineaRollupClient.finalizedL2BlockNumber(eq(BlockParameter.Tag.LATEST)))
+      .thenReturn(
+        SafeFuture.completedFuture(replies[0]),
+        *replies.subList(1, replies.size).map { SafeFuture.completedFuture(it) }.toTypedArray()
+      )
 
     val resumerCalculator = L1BasedLastFinalizedBlockProvider(
       Vertx.vertx(),
-      lineaRollupSmartContractWeb3jClient,
+      lineaRollupClient,
       consistentNumberOfBlocksOnL1 = 3u,
       numberOfRetries = 50u,
       pollingInterval = 10.milliseconds
     )
 
     assertThat(resumerCalculator.getLastFinalizedBlock().get()).isEqualTo(101.toULong())
-  }
-
-  private fun mockRemoteFnCallWithBlockNumber(blockNumber: Long): RemoteFunctionCall<BigInteger> {
-    return mock<RemoteFunctionCall<BigInteger>>() {
-      on { send() } doReturn (BigInteger.valueOf(blockNumber))
-      on { sendAsync() } doReturn (CompletableFuture.completedFuture(BigInteger.valueOf(blockNumber)))
-    }
   }
 }

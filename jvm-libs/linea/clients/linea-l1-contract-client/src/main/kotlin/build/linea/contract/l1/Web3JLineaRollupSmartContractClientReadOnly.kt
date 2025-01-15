@@ -63,8 +63,7 @@ open class Web3JLineaRollupSmartContractClientReadOnly(
     } as T
   }
 
-  protected val smartContractVersionCache: AtomicReference<LineaContractVersion> =
-    AtomicReference(fetchSmartContractVersion().get())
+  private val smartContractVersionCache = AtomicReference<LineaContractVersion>(null)
 
   private fun getSmartContractVersion(): SafeFuture<LineaContractVersion> {
     return if (smartContractVersionCache.get() == LineaContractVersion.V6) {
@@ -73,7 +72,9 @@ open class Web3JLineaRollupSmartContractClientReadOnly(
     } else {
       fetchSmartContractVersion()
         .thenPeek { contractLatestVersion ->
-          if (contractLatestVersion != smartContractVersionCache.get()) {
+          if (smartContractVersionCache.get() != null &&
+            contractLatestVersion != smartContractVersionCache.get()
+          ) {
             log.info(
               "Smart contract upgraded: prevVersion={} upgradedVersion={}",
               smartContractVersionCache.get(),

@@ -1,14 +1,12 @@
 package net.consensys.zkevm.coordinator.app
 
-import build.linea.contract.LineaRollupV5
+import build.linea.contract.l1.LineaRollupSmartContractClientReadOnly
 import io.vertx.core.Vertx
+import net.consensys.linea.BlockParameter
 import net.consensys.linea.async.AsyncRetryer
-import net.consensys.toULong
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
-import org.web3j.protocol.core.DefaultBlockParameterName
 import tech.pegasys.teku.infrastructure.async.SafeFuture
-import java.math.BigInteger
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.time.Duration
@@ -26,7 +24,7 @@ interface LastFinalizedBlockProvider {
  */
 class L1BasedLastFinalizedBlockProvider(
   private val vertx: Vertx,
-  private val lineaRollupSmartContractWeb3jClient: LineaRollupV5,
+  private val lineaRollupSmartContractClient: LineaRollupSmartContractClientReadOnly,
   private val consistentNumberOfBlocksOnL1: UInt,
   private val numberOfRetries: UInt = Int.MAX_VALUE.toUInt(),
   private val pollingInterval: Duration = 2.seconds
@@ -34,42 +32,33 @@ class L1BasedLastFinalizedBlockProvider(
   private val log: Logger = LogManager.getLogger(this::class.java)
 
   override fun getLastFinalizedBlock(): SafeFuture<ULong> {
-    lineaRollupSmartContractWeb3jClient.setDefaultBlockParameter(DefaultBlockParameterName.LATEST)
-
-    return SafeFuture.of(lineaRollupSmartContractWeb3jClient.currentL2BlockNumber().sendAsync())
-      .thenCompose { blockNumber ->
+    val lastObservedBlock = AtomicReference<ULong>(null)
+    val numberOfObservations = AtomicInteger(1)
+    val isConsistentEnough = { lastPolledBlockNumber: ULong ->
+      if (lastPolledBlockNumber == lastObservedBlock.get()) {
+        numberOfObservations.incrementAndGet().toUInt() >= consistentNumberOfBlocksOnL1
+      } else {
         log.info(
-          "Rollup lastFinalizedBlockNumber={} waiting {} blocks for confirmation for no updates",
-          blockNumber,
+          "Rollup finalized block updated from {} to {}, waiting {} blocks for confirmation",
+          lastObservedBlock.get(),
+          lastPolledBlockNumber,
           consistentNumberOfBlocksOnL1
         )
-        val lastObservedBlock = AtomicReference(blockNumber)
-        val numberOfObservations = AtomicInteger(1)
-        val isConsistentEnough = { lasPolledBlockNumber: BigInteger ->
-          if (lasPolledBlockNumber == lastObservedBlock.get()) {
-            numberOfObservations.incrementAndGet().toUInt() >= consistentNumberOfBlocksOnL1
-          } else {
-            log.info(
-              "Rollup finalized block updated from {} to {}, waiting {} blocks for confirmation",
-              blockNumber,
-              lasPolledBlockNumber,
-              consistentNumberOfBlocksOnL1
-            )
-            numberOfObservations.set(1)
-            lastObservedBlock.set(lasPolledBlockNumber)
-            false
-          }
-        }
-
-        AsyncRetryer.retry(
-          vertx,
-          maxRetries = numberOfRetries.toInt(),
-          backoffDelay = pollingInterval,
-          stopRetriesPredicate = isConsistentEnough
-        ) {
-          SafeFuture.of(lineaRollupSmartContractWeb3jClient.currentL2BlockNumber().sendAsync())
-        }
+        numberOfObservations.set(1)
+        lastObservedBlock.set(lastPolledBlockNumber)
+        false
       }
-      .thenApply { it.toULong() }
+    }
+
+    return AsyncRetryer.retry(
+      vertx,
+      maxRetries = numberOfRetries.toInt(),
+      backoffDelay = pollingInterval,
+      stopRetriesPredicate = isConsistentEnough
+    ) {
+      lineaRollupSmartContractClient.finalizedL2BlockNumber(
+        blockParameter = BlockParameter.Tag.LATEST
+      )
+    }
   }
 }

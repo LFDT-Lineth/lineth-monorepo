@@ -1,6 +1,6 @@
 package net.consensys.linea
 
-import build.linea.contract.LineaRollupV5
+import build.linea.contract.l1.Web3JLineaRollupSmartContractClientReadOnly
 import io.vertx.core.Vertx
 import net.consensys.linea.consensus.EngineBlockTagUpdater
 import net.consensys.linea.web3j.okHttpClientBuilder
@@ -8,15 +8,11 @@ import net.consensys.zkevm.LongRunningService
 import net.consensys.zkevm.ethereum.finalization.FinalizationUpdatePoller
 import net.consensys.zkevm.ethereum.finalization.FinalizationUpdatePollerConfig
 import org.apache.logging.log4j.LogManager
-import org.apache.tuweni.bytes.Bytes
 import org.hyperledger.besu.plugin.services.BlockchainService
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import org.web3j.crypto.Credentials
 import org.web3j.protocol.Web3j
 import org.web3j.protocol.http.HttpService
-import org.web3j.tx.gas.StaticGasProvider
-import java.math.BigInteger
 import java.util.concurrent.CompletableFuture
 
 class LineaBesuEngineBlockTagUpdater(private val blockchainService: BlockchainService) : EngineBlockTagUpdater {
@@ -27,7 +23,11 @@ class LineaBesuEngineBlockTagUpdater(private val blockchainService: BlockchainSe
     if (!finalizedBlock.isEmpty) {
       try {
         val blockHash = finalizedBlock.get().blockHeader.blockHash
-        log.info("Linea safe/finalized block update: blockNumber={} blockHash={}", finalizedBlockNumber, blockHash)
+        log.info(
+          "Linea safe/finalized block update: blockNumber={} blockHash={}",
+          finalizedBlockNumber,
+          blockHash
+        )
         blockchainService.setSafeBlock(blockHash)
         blockchainService.setFinalizedBlock(blockHash)
         return true
@@ -86,18 +86,16 @@ class LineaL1FinalizationUpdaterService(
       okHttpClientBuilder(LogManager.getLogger("clients.l1")).build()
     )
   )
-  private val lineaRollup = LineaRollupV5.load(
-    config.l1SmartContractAddress.toHexString(),
-    web3j,
-    Credentials.create(Bytes.random(64).toHexString()),
-    StaticGasProvider(BigInteger.valueOf(50000000000L), BigInteger.valueOf(60000000L))
+  private val lineaRollup = Web3JLineaRollupSmartContractClientReadOnly(
+    contractAddress = config.l1SmartContractAddress.toHexString(),
+    web3j = web3j
   )
   private val updater = LineaL1FinalizationUpdater(engineBlockTagUpdater)
   private val poller = FinalizationUpdatePoller(
     vertx,
     FinalizationUpdatePollerConfig(
       pollingInterval = config.l1PollingInterval,
-      blockTag = "finalized"
+      blockTag = BlockParameter.Tag.FINALIZED
     ),
     lineaRollup,
     updater::handleL1Finalization,
