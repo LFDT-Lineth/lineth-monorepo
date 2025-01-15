@@ -38,7 +38,12 @@ class ProofGeneratingConflationHandlerImpl(
         vertx = vertx,
         backoffDelay = config.conflationAndProofGenerationRetryInterval,
         exceptionConsumer = {
-          log.error("Conflation and proof creation flow failed!", it)
+          // log failure as warning, but keeps on retrying...
+          log.warn(
+            "conflation and proof creation flow failed batch={} errorMessage={}",
+            blockIntervalString,
+            it.message
+          )
         }
       ) {
         conflationToProofCreation(conflation)
@@ -46,7 +51,7 @@ class ProofGeneratingConflationHandlerImpl(
     }.getOrElse { error -> SafeFuture.failedFuture<Unit>(error) }
       .whenException { th ->
         log.error(
-          "Traces conflation or proof failed: batch={} errorMessage={}",
+          "traces conflation or proof request failed: batch={} errorMessage={}",
           blockIntervalString,
           th.message,
           th
@@ -60,8 +65,8 @@ class ProofGeneratingConflationHandlerImpl(
     return tracesProductionCoordinator
       .conflateExecutionTraces(blockNumbersAndHash)
       .whenException { th ->
-        log.error(
-          "Traces conflation failed: batch={} errorMessage={}",
+        log.debug(
+          "traces conflation failed: batch={} errorMessage={}",
           conflation.conflationResult.intervalString(),
           th.message,
           th
@@ -79,7 +84,7 @@ class ProofGeneratingConflationHandlerImpl(
             log.info("execution proof generated: batch={}", blockIntervalString)
           }
           .whenException { th ->
-            log.error(
+            log.debug(
               "execution proof failure: batch={} errorMessage={}",
               blockIntervalString,
               th.message,
