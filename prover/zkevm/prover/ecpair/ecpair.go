@@ -108,11 +108,12 @@ func newECPair(comp *wizard.CompiledIOP, limits *Limits, ecSource *ECPairSource)
 	res.csInstanceIDChangeWhenNewInstance(comp)
 	res.csAccumulatorInit(comp)
 	res.csAccumulatorConsistency(comp)
+	res.csTotalPairs(comp)
 	res.csLastPairToFinalExp(comp)
 	res.csIndexConsistency(comp)
 	res.csAccumulatorMask(comp)
 	// only Unaligned Pairing data or G2 membership data is active at a time
-	res.csExclusiveUnalignedDatas(comp)
+	res.csPairingDataOrMembershipActive(comp)
 	// only to Miller loop or to FinalExp
 	res.csExclusivePairingCircuitMasks(comp)
 
@@ -241,6 +242,7 @@ type UnalignedPairingData struct {
 	ToMillerLoopCircuitMask ifaces.Column
 	ToFinalExpCircuitMask   ifaces.Column
 
+	IsResultOfInstance           ifaces.Column
 	IsFirstLineOfInstance        ifaces.Column
 	IsFirstLineOfPrevAccumulator ifaces.Column
 	IsFirstLineOfCurrAccumulator ifaces.Column
@@ -263,6 +265,7 @@ func newUnalignedPairingData(comp *wizard.CompiledIOP, limits *Limits) *Unaligne
 		IsFirstLineOfInstance:        createCol("IS_FIRST_LINE_OF_INSTANCE"),
 		IsFirstLineOfPrevAccumulator: createCol("IS_FIRST_LINE_OF_PREV_ACC"),
 		IsFirstLineOfCurrAccumulator: createCol("IS_FIRST_LINE_OF_CURR_ACC"),
+		IsResultOfInstance:           createCol("IS_RESULT"),
 		IsAccumulatorPrev:            createCol("IS_ACCUMULATOR_PREV"),
 		IsAccumulatorCurr:            createCol("IS_ACCUMULATOR_CURR"),
 		IsAccumulatorInit:            createCol("IS_ACCUMULATOR_INIT"),

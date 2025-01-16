@@ -20,6 +20,7 @@ type cfg struct {
 	nbRows             int
 	skipPrePaddingZero bool
 	filterOn           ifaces.Column
+	inHex              bool
 }
 
 type Option func(*cfg) error
@@ -45,6 +46,12 @@ func FilterOn(col ifaces.Column) Option {
 		c.filterOn = col
 		return nil
 	}
+}
+
+// InHex sets the CSV printer to print the values in hexadecimal
+func InHex(c *cfg) error {
+	c.inHex = true
+	return nil
 }
 
 type CsvTrace struct {
@@ -110,7 +117,11 @@ func FmtCsv(w io.Writer, run *wizard.ProverRuntime, cols []ifaces.Column, option
 			}
 
 			if assignment[c][r].IsUint64() {
-				fmtVals = append(fmtVals, assignment[c][r].String())
+				if cfg.inHex {
+					fmtVals = append(fmtVals, "0x"+assignment[c][r].Text(16))
+				} else {
+					fmtVals = append(fmtVals, assignment[c][r].String())
+				}
 				continue
 			}
 

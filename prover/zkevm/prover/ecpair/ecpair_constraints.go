@@ -55,8 +55,8 @@ func (ec *ECPair) csProjections(comp *wizard.CompiledIOP) {
 	// we project data from the arithmetization correctly to the unaligned part of the circuit
 	projection.InsertProjection(
 		comp, ifaces.QueryIDf("%v_PROJECTION_PAIRING", nameECPair),
-		[]ifaces.Column{ec.ECPairSource.Limb, ec.ECPairSource.AccPairings, ec.ECPairSource.TotalPairings, ec.ECPairSource.ID},
-		[]ifaces.Column{ec.UnalignedPairingData.Limb, ec.UnalignedPairingData.PairID, ec.UnalignedPairingData.TotalPairs, ec.UnalignedPairingData.InstanceID},
+		[]ifaces.Column{ec.ECPairSource.Limb, ec.ECPairSource.ID, ec.ECPairSource.IsEcPairingResult},
+		[]ifaces.Column{ec.UnalignedPairingData.Limb, ec.UnalignedPairingData.InstanceID, ec.UnalignedPairingData.IsResultOfInstance},
 		ec.ECPairSource.CsEcpairing,
 		ec.UnalignedPairingData.IsPulling,
 	)
@@ -159,6 +159,23 @@ func (ec *ECPair) csAccumulatorConsistency(comp *wizard.CompiledIOP) {
 	)
 }
 
+func (ec *ECPair) csTotalPairs(comp *wizard.CompiledIOP) {
+	// total pairs corresponds to the number of pairs in the instance. for this
+	// we check that when the limb corresponds to the result, then the PairID of
+	// the shifted by two corresponds to the total pairs. the limb corresponds
+	// to the result when its PairID is 0 (for input pairs the indexing starts
+	// from 1).
+	comp.InsertGlobal(
+		roundNr,
+		ifaces.QueryIDf("%v_TOTAL_PAIRS", nameECPair),
+		sym.Mul(
+			ec.UnalignedPairingData.IsActive,
+			ec.UnalignedPairingData.IsResultOfInstance,
+			sym.Sub(ec.UnalignedPairingData.TotalPairs, column.Shift(ec.UnalignedPairingData.PairID, -2)), // we have two limbs for the result, shift by two gets to the input
+		),
+	)
+}
+
 func (ec *ECPair) csLastPairToFinalExp(comp *wizard.CompiledIOP) {
 	// if the last pair then the final exp circuit should be active
 
@@ -191,7 +208,6 @@ func (ec *ECPair) csIndexConsistency(comp *wizard.CompiledIOP) {
 		ifaces.QueryIDf("%v_INDEX_INCREMENT", nameECPair),
 		sym.Mul(
 			ec.UnalignedPairingData.IsActive,
-			sym.Sub(1, ec.UnalignedG2MembershipData.IsPulling, ec.UnalignedG2MembershipData.IsComputed), // we dont use index in the G2 membership check
 			sym.Sub(1, ec.UnalignedPairingData.IsFirstLineOfInstance),
 			sym.Sub(ec.UnalignedPairingData.Index, column.Shift(ec.UnalignedPairingData.Index, -1), 1),
 		),
@@ -276,11 +292,19 @@ func (ec *ECPair) csAccumulatorMask(comp *wizard.CompiledIOP) {
 	)
 }
 
-func (ec *ECPair) csExclusiveUnalignedDatas(comp *wizard.CompiledIOP) {
-	common.MustBeMutuallyExclusiveBinaryFlags(comp, ec.IsActive, []ifaces.Column{
-		ec.UnalignedG2MembershipData.ToG2MembershipCircuitMask,
-		ec.UnalignedPairingData.IsActive,
-	})
+func (ec *ECPair) csPairingDataOrMembershipActive(comp *wizard.CompiledIOP) {
+	// when module is active, then either pairing data or membership data is
+	// active. Can also be both.
+	comp.InsertGlobal(
+		roundNr,
+		ifaces.QueryIDf("%v_PAIRING_OR_MEMBERSHIP_ACTIVE", nameECPair),
+		sym.Add(
+			ec.IsActive,
+			sym.Neg(ec.UnalignedPairingData.IsActive),
+			sym.Neg(ec.UnalignedG2MembershipData.ToG2MembershipCircuitMask),
+			sym.Mul(ec.UnalignedPairingData.IsActive, ec.UnalignedG2MembershipData.ToG2MembershipCircuitMask),
+		),
+	)
 }
 
 func (ec *ECPair) csExclusivePairingCircuitMasks(comp *wizard.CompiledIOP) {

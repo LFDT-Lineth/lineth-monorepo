@@ -1,10 +1,12 @@
 package ecpair
 
 import (
+	"os"
 	"testing"
 
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/dummy"
 	"github.com/consensys/linea-monorepo/prover/protocol/dedicated/plonk"
+	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	"github.com/consensys/linea-monorepo/prover/utils/csvtraces"
 )
@@ -49,16 +51,24 @@ var pairingDataTestCases = []pairingDataTestCase{
 	{
 		// empty input to test edge case and input fillers
 		InputFName:    "testdata/ecpair_empty.csv",
-		ModuleFName:   "",
+		ModuleFName:   "testdata/ecpair_empty_module.csv",
 		NbMillerLoops: 2,
 		NbFinalExps:   2,
 	},
 	{
 		// trace test
 		InputFName:    "testdata/ecpair_trace_input.csv",
-		ModuleFName:   "",
+		ModuleFName:   "testdata/ecpair_trace_module.csv",
 		NbMillerLoops: 2,
 		NbFinalExps:   1,
+	},
+	{
+		// regression test in Linea Sepolia transaction 0x7afcf5eddbe09d85c8d0b1e3608b755b9baed1a59d8589ebcaf50e7603074139
+		InputFName:       "testdata/ecpair_regression_1_input.csv",
+		ModuleFName:      "testdata/ecpair_regression_1_module.csv",
+		NbMillerLoops:    2,
+		NbFinalExps:      1,
+		NbSubgroupChecks: 1,
 	},
 }
 
@@ -149,6 +159,7 @@ func testModule(t *testing.T, tc pairingDataTestCase, withPairingCircuit, withG2
 					"ECPAIR_UNALIGNED_PAIRING_DATA_IS_ACCUMULATOR_PREV",
 					"ECPAIR_UNALIGNED_PAIRING_DATA_IS_FIRST_LINE_OF_CURR_ACC",
 					"ECPAIR_UNALIGNED_PAIRING_DATA_IS_ACCUMULATOR_CURR",
+					"ECPAIR_UNALIGNED_PAIRING_DATA_IS_RESULT",
 					"ECPAIR_UNALIGNED_PAIRING_DATA_LIMB",
 					"ECPAIR_UNALIGNED_PAIRING_DATA_TO_MILLER_LOOP_CIRCUIT",
 					"ECPAIR_UNALIGNED_PAIRING_DATA_TO_FINAL_EXP_CIRCUIT",
@@ -204,4 +215,59 @@ func TestMembership(t *testing.T) {
 	for _, tc := range membershipTestCases {
 		testModule(t, tc, false, false, false, true)
 	}
+}
+
+func writeModule(t *testing.T, run *wizard.ProverRuntime, outFile string, mod *ECPair) {
+	// this is utility function for being able to write the module output to a
+	// file. it is useful for testcase generation. NB! when generating testcase
+	// then manually check the correctness of the file before committing it.
+	w, err := os.Create(outFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer w.Close()
+	csvtraces.FmtCsv(w, run, []ifaces.Column{
+		// // module activation
+		// mod.IsActive,
+
+		// // source
+		// mod.ECPairSource.ID,
+		// mod.ECPairSource.Index,
+		// mod.ECPairSource.Limb,
+		// mod.ECPairSource.SuccessBit,
+		// mod.ECPairSource.AccPairings,
+		// mod.ECPairSource.TotalPairings,
+		// mod.ECPairSource.IsEcPairingData,
+		// mod.ECPairSource.IsEcPairingResult,
+		// mod.ECPairSource.CsEcpairing,
+		// mod.ECPairSource.CsG2Membership,
+
+		// // for pairing module test
+		// mod.UnalignedPairingData.IsActive,
+		// mod.UnalignedPairingData.Index,
+		// mod.UnalignedPairingData.InstanceID,
+		// mod.UnalignedPairingData.IsFirstLineOfInstance,
+		// mod.UnalignedPairingData.IsAccumulatorInit,
+		// mod.UnalignedPairingData.IsFirstLineOfPrevAccumulator,
+		// mod.UnalignedPairingData.IsAccumulatorPrev,
+		// mod.UnalignedPairingData.IsFirstLineOfCurrAccumulator,
+		// mod.UnalignedPairingData.IsAccumulatorCurr,
+		// mod.UnalignedPairingData.IsResultOfInstance,
+		// mod.UnalignedPairingData.IsComputed,
+		// mod.UnalignedPairingData.IsPulling,
+		// mod.UnalignedPairingData.PairID,
+		// mod.UnalignedPairingData.TotalPairs,
+		// mod.UnalignedPairingData.Limb,
+		// mod.UnalignedPairingData.ToMillerLoopCircuitMask,
+		// mod.UnalignedPairingData.ToFinalExpCircuitMask,
+
+		// // for subgroup module module test
+		// mod.UnalignedG2MembershipData.IsComputed,
+		// mod.UnalignedG2MembershipData.IsPulling,
+		// mod.UnalignedG2MembershipData.Limb,
+		// mod.UnalignedG2MembershipData.SuccessBit,
+		// mod.UnalignedG2MembershipData.ToG2MembershipCircuitMask,
+	},
+		[]csvtraces.Option{csvtraces.InHex},
+	)
 }
