@@ -57,7 +57,7 @@ internal class ExecutionProofRequestDataDecorator(
 
     return SafeFuture.collectAll(bridgeLogsSfList.stream())
       .thenCombine(
-        getBlockStateRootHash(request.blocks.first().number.toULong() - 1UL)
+        getBlockStateRootHash(request.blocks.first().number - 1UL)
       ) { blocksAndBridgeLogs, previousKeccakStateRootHash ->
         BatchExecutionProofRequestDto(
           zkParentStateRootHash = request.type2StateData.zkParentStateRootHash.encodeHex(),

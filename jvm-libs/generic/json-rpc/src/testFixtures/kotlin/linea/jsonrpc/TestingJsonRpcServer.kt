@@ -31,7 +31,7 @@ open class TestingJsonRpcServer(
   port: Int = 0,
   val apiPath: String = "/",
   val recordRequestsResponses: Boolean = false,
-  val serverName: String = "FakeJsonRpcServer",
+  val serverName: String = "TestingJsonRpcServer",
   loggerName: String = serverName,
   val vertx: Vertx = Vertx.vertx(),
   val responseObjectMapper: ObjectMapper = jacksonObjectMapper(),

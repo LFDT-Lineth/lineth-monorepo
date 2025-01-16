@@ -14,7 +14,6 @@ object InstantISO8601Serializer : JsonSerializer<Instant>() {
   }
 }
 
-// To uncomment and add the tests when necessary
 object InstantISO8601Deserializer : JsonDeserializer<Instant>() {
   override fun deserialize(p: JsonParser, ctxt: DeserializationContext): Instant {
     return Instant.parse(p.text)

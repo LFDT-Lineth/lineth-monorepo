@@ -6,6 +6,7 @@ group = 'build.linea.staterecover'
 
 dependencies {
   api(project(':jvm-libs:generic:extensions:kotlin'))
+  api(project(':jvm-libs:generic:serialization:jackson'))
   api(project(':jvm-libs:linea:core:domain-models'))
   api(project(':state-recover:appcore:domain-models'))
 }

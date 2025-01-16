@@ -36,7 +36,7 @@ class MinimalInLineJsonRpcLoggerTest {
   fun `logRequest logs request with correct level and format`() {
     minimalInLineJsonRpcLogger.logRequest("testEndpoint", jsonRequestBody)
 
-    verify(logger).log(eq(Level.DEBUG), eq("--> {} {}"), eq("testEndpoint"), eq(jsonRequestBody), eq(null), eq(null))
+    verify(logger).log(eq(Level.DEBUG), eq("--> {} {}"), eq("testEndpoint"), eq(jsonRequestBody))
   }
 
   @Test
@@ -63,8 +63,7 @@ class MinimalInLineJsonRpcLoggerTest {
       eq("<-- {} {} {}"),
       eq("testEndpoint"),
       eq(200),
-      eq(jsonSuccessResponse),
-      eq(null)
+      eq(jsonSuccessResponse)
     )
   }
 
@@ -73,7 +72,7 @@ class MinimalInLineJsonRpcLoggerTest {
     val exception = RuntimeException("Test exception")
     minimalInLineJsonRpcLogger.logResponse("testEndpoint", 500, jsonRequestBody, jsonErrorResponse, exception)
 
-    verify(logger).log(eq(Level.WARN), eq("--> {} {}"), eq("testEndpoint"), eq(jsonRequestBody), eq(null), eq(null))
+    verify(logger).log(eq(Level.WARN), eq("--> {} {}"), eq("testEndpoint"), eq(jsonRequestBody))
     verify(logger).log(
       eq(Level.WARN),
       eq("<-- {} {} {} failed with error={}"),

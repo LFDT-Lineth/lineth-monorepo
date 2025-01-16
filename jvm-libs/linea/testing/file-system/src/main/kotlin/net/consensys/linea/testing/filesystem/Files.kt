@@ -39,5 +39,5 @@ fun getPathTo(
   lookupParentDir: Boolean = true
 ): Path {
   return findPathTo(targetFileOrDir, lookupDir, lookupParentDir)
-    ?: throw IllegalArgumentException("Could not find file or directory in path: $lookupDir or its parent directories")
+    ?: throw IllegalArgumentException("Could not find $targetFileOrDir in path: $lookupDir or its parent directories")
 }

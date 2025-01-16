@@ -1,5 +1,6 @@
 package net.consensys.linea.contract
 
+import build.linea.web3j.Web3JLogsClient
 import net.consensys.toULong
 import net.consensys.zkevm.coordinator.clients.L2MessageServiceLogsClient
 import net.consensys.zkevm.domain.BridgeLogsData

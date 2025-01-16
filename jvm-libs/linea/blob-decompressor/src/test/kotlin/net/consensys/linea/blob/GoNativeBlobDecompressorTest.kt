@@ -7,7 +7,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
 class GoNativeBlobDecompressorTest {
-  private val blobCompressedLimit = 10 * 1024
+  private val blobCompressedLimit = 30 * 1024
   private lateinit var compressor: GoNativeBlobCompressor
   private lateinit var decompressor: BlobDecompressor
 

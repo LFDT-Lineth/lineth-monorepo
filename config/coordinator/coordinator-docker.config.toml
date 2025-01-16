@@ -126,8 +126,8 @@ fee-history-reward-percentile=15
 last-hash-search-window=25
 anchoring-receipt-polling-interval="PT01S"
 max-receipt-retries=120
-# Number of children blocks to wait before considering a won't be reverted and elegible for conflation.
-# this a workaround to mitigate Geth fork issues with Clique PoA
+# Number of children blocks to wait before considering they won't be reverted and elegible for conflation.
+# this is a workaround to mitigate Geth fork issues with Clique PoA
 # Coordinator will consider block as finalized after being included in the chain wtih children blocks-to-finalization
 # Recommended: Geth sequencer minimum of 2, Besu sequencer minimum of 1, 0 is safe localy
 blocks-to-finalization=0
@@ -155,7 +155,7 @@ aggregation-proofs-limit=3
 aggregation-deadline="PT10S"
 aggregation-coordinator-polling-interval="PT2S"
 deadline-check-interval="PT8S"
-target-end-blocks=[]
+#target-end-blocks=[33, 90, 93]
 
 [finalization-signer]
 # Web3j/Web3signer
@@ -266,8 +266,8 @@ num-of-blocks-before-latest=4
 storage-period="PT2M"
 
 [conflation]
-blocks-limit=2
-conflation-deadline="PT6S" # =3*l2_block_time
+blocks-limit=3
+conflation-deadline="PT6S"
 conflation-deadline-check-interval="PT3S"
 conflation-deadline-last-block-confirmation-delay="PT2S" # recommended: at least 2 * blockInterval
 

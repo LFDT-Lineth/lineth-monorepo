@@ -1,9 +1,5 @@
 package build.linea.staterecover.clients.el
 
-import build.linea.staterecover.BlockExtraData
-import build.linea.staterecover.BlockL1RecoveredData
-import build.linea.staterecover.TransactionL1RecoveredData
-import build.linea.staterecover.clients.ExecutionLayerClient
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock.containing
 import com.github.tomakehurst.wiremock.client.WireMock.post
@@ -12,6 +8,11 @@ import com.github.tomakehurst.wiremock.core.WireMockConfiguration
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.vertx.junit5.VertxExtension
 import kotlinx.datetime.Instant
+import linea.staterecover.BlockFromL1RecoveredData
+import linea.staterecover.BlockHeaderFromL1RecoveredData
+import linea.staterecover.ExecutionLayerClient
+import linea.staterecover.StateRecoveryStatus
+import linea.staterecover.TransactionFromL1RecoveredData
 import net.consensys.decodeHex
 import net.consensys.linea.BlockNumberAndHash
 import net.consensys.linea.BlockParameter
@@ -108,7 +109,7 @@ class ExecutionLayerJsonRpcClientTest {
   }
 
   @Test
-  fun `lineaEngineImportBlocksFromBlob`() {
+  fun `lineaImportBlocksFromBlob`() {
     replyRequestWith(
       200,
       """
@@ -119,18 +120,21 @@ class ExecutionLayerJsonRpcClientTest {
       }
       """.trimIndent()
     )
-    val block1 = BlockL1RecoveredData(
-      blockNumber = 0xa001u,
-      blockHash = "0xa011".decodeHex(),
-      coinbase = "0xa022".decodeHex(),
-      blockTimestamp = Instant.parse("2024-07-01T11:22:33Z"),
-      gasLimit = 0x1c9c380u,
-      difficulty = 0u,
-      extraData = BlockExtraData(beneficiary = "0x6265617665726275696c642e6f7267".decodeHex()),
+
+    val block1 = BlockFromL1RecoveredData(
+      header = BlockHeaderFromL1RecoveredData(
+        blockNumber = 0xa001u,
+        blockHash = "0xa011".decodeHex(),
+        coinbase = "0x6265617665726275696c642e6f7267".decodeHex(),
+        blockTimestamp = Instant.fromEpochSeconds(1719828000), // 2024-07-01T11:00:00Z UTC
+        gasLimit = 0x1c9c380u,
+        difficulty = 0u
+      ),
       transactions = listOf(
-        TransactionL1RecoveredData(
+        TransactionFromL1RecoveredData(
           type = 0x01u,
           nonce = 0xb010u,
+          gasPrice = null,
           maxPriorityFeePerGas = "b010011".toBigInteger(16),
           maxFeePerGas = "b0100ff".toBigInteger(16),
           gasLimit = 0xb0100aau,
@@ -139,11 +143,24 @@ class ExecutionLayerJsonRpcClientTest {
           value = 123.toBigInteger(),
           data = "0xb013".decodeHex(),
           accessList = listOf(
-            TransactionL1RecoveredData.AccessTuple(
+            TransactionFromL1RecoveredData.AccessTuple(
               address = "0xb014".decodeHex(),
               storageKeys = listOf("0xb015".decodeHex(), "0xb015".decodeHex())
             )
           )
+        ),
+        TransactionFromL1RecoveredData(
+          type = 0x0u,
+          nonce = 0xb020u,
+          gasPrice = "b0100ff".toBigInteger(16),
+          maxPriorityFeePerGas = null,
+          maxFeePerGas = null,
+          gasLimit = 0xb0100aau,
+          from = "0xb011".decodeHex(),
+          to = "0xb012".decodeHex(),
+          value = 123.toBigInteger(),
+          data = null,
+          accessList = null
         )
       )
     )
@@ -156,16 +173,15 @@ class ExecutionLayerJsonRpcClientTest {
         """{
         "jsonrpc":"2.0",
         "id":"${'$'}{json-unit.any-number}",
-        "method":"linea_engine_importBlocksFromBlob",
+        "method":"linea_importBlocksFromBlob",
         "params":[{
-          "blockNumber": "0xa001",
-          "blockHash": "0xa011",
-          "coinbase": "0xa022",
-          "blockTimestamp": "2024-07-01T11:22:33Z",
-          "gasLimit": "0x1c9c380",
-          "difficulty": "0x0",
-          "extraData": {
-            "beneficiary": "0x6265617665726275696c642e6f7267"
+          "header": {
+            "blockNumber": "0xa001",
+            "blockHash": "0xa011",
+            "coinbase": "0x6265617665726275696c642e6f7267",
+            "blockTimestamp": "0x66827e20",
+            "gasLimit": "0x1c9c380",
+            "difficulty": "0x0"
           },
           "transactions": [{
             "type": "0x01",
@@ -186,8 +202,97 @@ class ExecutionLayerJsonRpcClientTest {
                     ]
                 }
             ]
+        }, {
+            "type": "0x00",
+            "nonce": "0xb020",
+            "gasPrice": "0xb0100ff",
+            "gasLimit": "0xb0100aa",
+            "from": "0xb011",
+            "to": "0xb012",
+            "value": "0x7b"
         }]
       }]
+      }"""
+      )
+  }
+
+  @Test
+  fun `lineaGetStateRecoveryStatus_enabledStatus`() {
+    replyRequestWith(
+      200,
+      """{"jsonrpc": "2.0", "id": 1, "result": { "recoveryStartBlockNumber": "0x5",  "headBlockNumber": "0xa"}}"""
+    )
+
+    assertThat(client.lineaGetStateRecoveryStatus().get())
+      .isEqualTo(
+        StateRecoveryStatus(
+          headBlockNumber = 0xa.toULong(),
+          stateRecoverStartBlockNumber = 0x5.toULong()
+        )
+      )
+
+    val requestJson = wiremock.serveEvents.serveEvents.first().request.bodyAsString
+    assertThatJson(requestJson)
+      .isEqualTo(
+        """{
+        "jsonrpc":"2.0",
+        "id":"${'$'}{json-unit.any-number}",
+        "method":"linea_getStateRecoveryStatus",
+        "params":[]
+      }"""
+      )
+  }
+
+  @Test
+  fun `lineaGetStateRecoveryStatus_disabledStatus`() {
+    replyRequestWith(
+      200,
+      """{"jsonrpc": "2.0", "id": 1, "result": { "recoveryStartBlockNumber": null,  "headBlockNumber": "0xa"}}"""
+    )
+
+    assertThat(client.lineaGetStateRecoveryStatus().get())
+      .isEqualTo(
+        StateRecoveryStatus(
+          headBlockNumber = 0xa.toULong(),
+          stateRecoverStartBlockNumber = null
+        )
+      )
+
+    val requestJson = wiremock.serveEvents.serveEvents.first().request.bodyAsString
+    assertThatJson(requestJson)
+      .isEqualTo(
+        """{
+        "jsonrpc":"2.0",
+        "id":"${'$'}{json-unit.any-number}",
+        "method":"linea_getStateRecoveryStatus",
+        "params":[]
+      }"""
+      )
+  }
+
+  @Test
+  fun `lineaEnableStateRecoveryStatus`() {
+    replyRequestWith(
+      200,
+      """{"jsonrpc": "2.0", "id": 1, "result": { "recoveryStartBlockNumber": "0xff",  "headBlockNumber": "0xa"}}"""
+    )
+
+    assertThat(client.lineaEnableStateRecovery(stateRecoverStartBlockNumber = 5UL).get())
+      .isEqualTo(
+        StateRecoveryStatus(
+          headBlockNumber = 0xa.toULong(),
+          stateRecoverStartBlockNumber = 0xff.toULong()
+        )
+      )
+
+    val requestJson = wiremock.serveEvents.serveEvents.first().request.bodyAsString
+    assertThatJson(requestJson)
+      .isEqualTo(
+        """{
+        "jsonrpc":"2.0",
+        "id":"${'$'}{json-unit.any-number}",
+        "method":"linea_enableStateRecovery",
+        "params":["0x5"]
       }"""
       )
   }

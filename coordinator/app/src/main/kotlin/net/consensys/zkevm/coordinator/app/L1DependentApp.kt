@@ -4,6 +4,7 @@ import build.linea.clients.StateManagerClientV1
 import build.linea.clients.StateManagerV1JsonRpcClient
 import build.linea.contract.l1.LineaRollupSmartContractClientReadOnly
 import build.linea.contract.l1.Web3JLineaRollupSmartContractClientReadOnly
+import build.linea.web3j.Web3JLogsClient
 import io.vertx.core.Vertx
 import kotlinx.datetime.Clock
 import linea.encoding.BlockRLPEncoder
@@ -11,7 +12,6 @@ import net.consensys.linea.BlockNumberAndHash
 import net.consensys.linea.blob.ShnarfCalculatorVersion
 import net.consensys.linea.contract.Web3JL2MessageService
 import net.consensys.linea.contract.Web3JL2MessageServiceLogsClient
-import net.consensys.linea.contract.Web3JLogsClient
 import net.consensys.linea.contract.l1.GenesisStateProvider
 import net.consensys.linea.ethereum.gaspricing.BoundableFeeCalculator
 import net.consensys.linea.ethereum.gaspricing.FeesCalculator

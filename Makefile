@@ -158,10 +158,12 @@ deploy-l2-evm-opcode-tester:
 		RPC_URL=http:\\localhost:8545/ \
 		npx ts-node local-deployments-artifacts/deployLondonEvmTestingFramework.ts
 
-execute-all-opcodes:
+
+evm-opcode-tester-execute-all-opcodes: OPCODE_TEST_CONTRACT_ADDRESS:=0x997FC3aF1F193Cbdc013060076c67A13e218980e
+evm-opcode-tester-execute-all-opcodes:
 		# WARNING: FOR LOCAL DEV ONLY - DO NOT REUSE THESE KEYS ELSEWHERE
 		cd contracts/; \
-		OPCODE_TEST_CONTRACT_ADDRESS=0x997FC3aF1F193Cbdc013060076c67A13e218980e \
+		OPCODE_TEST_CONTRACT_ADDRESS=$(OPCODE_TEST_CONTRACT_ADDRESS) \
 		NUMBER_OF_RUNS=3 \
 		PRIVATE_KEY=0x1dd171cec7e2995408b5513004e8207fe88d6820aeff0d82463b3e41df251aae \
 		RPC_URL=http:\\localhost:8545/ \
@@ -216,11 +218,17 @@ deploy-contracts-minimal:
 	cd .. && \
 	$(MAKE) -j6 deploy-linea-rollup-v$(L1_CONTRACT_VERSION) deploy-l2messageservice
 
-start-all-staterecover: L1_CONTRACT_VERSION:=6
-start-all-staterecover: COMPOSE_PROFILES:=l1,l2,staterecover
-start-all-staterecover:
-		L1_GENESIS_TIME=$(get_future_time) make start-whole-environment COMPOSE_PROFILES=$(COMPOSE_PROFILES)
-		make deploy-contracts-minimal L1_CONTRACT_VERSION=$(L1_CONTRACT_VERSION)
+fresh-start-all-staterecover: COMPOSE_PROFILES:=l1,l2,staterecover
+fresh-start-all-staterecover: L1_CONTRACT_VERSION:=6
+fresh-start-all-staterecover:
+	make clean-environment
+	L1_GENESIS_TIME=$(get_future_time) make start-whole-environment-traces-v2 COMPOSE_PROFILES=$(COMPOSE_PROFILES)
+	$(MAKE) deploy-contracts-minimal L1_CONTRACT_VERSION=$(L1_CONTRACT_VERSION)
+
+fresh-start-staterecover-for-replay-only: COMPOSE_PROFILES:=l1,staterecover
+fresh-start-staterecover-for-replay-only:
+		make clean-environment
+		L1_GENESIS_TIME=$(get_future_time) make start-whole-environment-traces-v2 COMPOSE_PROFILES=$(COMPOSE_PROFILES)
 
 testnet-start-l2:
 		docker compose -f docker/compose.yml -f docker/compose-testnet-sync.overrides.yml --profile l2 up -d

@@ -228,7 +228,7 @@ object L1AccountManager : AccountManager by WhaleBasedAccountManager(
 
 object L2AccountManager : AccountManager by WhaleBasedAccountManager(
   web3jClient = Web3jClientManager.l2Client,
-  genesisFile = getPathTo(System.getProperty("L2_GENESIS", "docker/config/linea-local-dev-genesis.json")),
+  genesisFile = getPathTo(System.getProperty("L2_GENESIS", "docker/config/linea-local-dev-genesis-PoA.json")),
   log = LogManager.getLogger(L2AccountManager::class.java)
 )
 

@@ -26,12 +26,11 @@ class MinimalInLineJsonRpcLogger(
 ) : JsonRpcRequestResponseLogger {
 
   private fun logRequestOnLevel(level: Level, endpoint: String, jsonBody: String, throwable: Throwable?) {
-    val message = if (throwable == null) {
-      "--> {} {}"
+    if (throwable == null) {
+      logger.log(level, "--> {} {}", endpoint, jsonBody)
     } else {
-      "--> {} {} failed with error={}"
+      logger.log(level, "--> {} {} failed with error={}", endpoint, jsonBody, throwable.message, throwable)
     }
-    logger.log(level, message, endpoint, jsonBody, throwable?.message, throwable)
   }
 
   override fun logRequest(endpoint: String, jsonBody: String, throwable: Throwable?) {
@@ -54,19 +53,23 @@ class MinimalInLineJsonRpcLogger(
       logRequestOnLevel(logLevel, maskedEndpoint, requestBody, null)
     }
 
-    val message = if (failureCause == null) {
-      "<-- {} {} {}"
+    if (failureCause == null) {
+      logger.log(
+        logLevel,
+        "<-- {} {} {}",
+        maskedEndpoint,
+        responseStatusCode,
+        responseBody
+      )
     } else {
-      "<-- {} {} {} failed with error={}"
+      logger.log(
+        logLevel,
+        "<-- {} {} {} failed with error={}",
+        maskedEndpoint,
+        responseStatusCode,
+        responseBody,
+        failureCause.message
+      )
     }
-
-    logger.log(
-      logLevel,
-      message,
-      maskedEndpoint,
-      responseStatusCode,
-      responseBody,
-      failureCause?.message
-    )
   }
 }

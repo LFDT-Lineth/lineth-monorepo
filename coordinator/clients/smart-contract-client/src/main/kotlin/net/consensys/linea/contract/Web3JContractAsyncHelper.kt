@@ -254,7 +254,7 @@ class Web3JContractAsyncHelper(
     dynamicMaxFeePerGas: ULong?,
     dynamicMaxFeePerBlobGas: ULong? = null
   ) {
-    val withBlob = maxFeePerBlobGas != null && dynamicMaxFeePerBlobGas != null
+    val withBlob = maxFeePerBlobGas != null || dynamicMaxFeePerBlobGas != null
     log.info(
       "$logMessagePrefix gas price caps: " +
         "blobCarrying=$withBlob " +
@@ -263,8 +263,8 @@ class Web3JContractAsyncHelper(
         "maxFeePerGas=${maxFeePerGas.toGWei()} GWei, " +
         "dynamicMaxFeePerGas=${dynamicMaxFeePerGas?.toGWei()} GWei, " +
         if (withBlob) {
-          "maxFeePerBlobGas=${maxFeePerBlobGas!!.toGWei()} GWei, " +
-            "dynamicMaxFeePerBlobGas=${dynamicMaxFeePerBlobGas!!.toGWei()} GWei"
+          "maxFeePerBlobGas=${maxFeePerBlobGas?.toGWei()} GWei, " +
+            "dynamicMaxFeePerBlobGas=${dynamicMaxFeePerBlobGas?.toGWei()} GWei"
         } else {
           ""
         }

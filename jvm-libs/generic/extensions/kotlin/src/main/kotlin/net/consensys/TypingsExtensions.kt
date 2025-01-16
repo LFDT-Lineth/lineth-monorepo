@@ -66,6 +66,16 @@ fun ULong.toGWei(): Double = this.toDouble().toGWei()
  */
 fun ULong.Companion.fromHexString(value: String): ULong = value.removePrefix("0x").toULong(16)
 
+fun ULongRange.intersection(other: ULongRange): ULongRange {
+  val start = maxOf(this.first, other.first)
+  val end = minOf(this.last, other.last)
+  return if (start <= end) {
+    start..end
+  } else {
+    ULongRange.EMPTY
+  }
+}
+
 fun <T : Comparable<T>> ClosedRange<T>.toIntervalString(): String {
   val size = if (start <= endInclusive) {
     this.endInclusive.toString().toBigDecimal() - this.start.toString().toBigDecimal() + 1.toBigDecimal()

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="warn">
+  <Appenders>
+    <Console name="console" target="SYSTEM_OUT">
+      <PatternLayout pattern="[%-5level] %d{yyyy-MM-dd HH:mm:ss.SSS} %t %c{1} - %msg%n"/>
+    </Console>
+  </Appenders>
+  <Loggers>
+    <Logger name="test.case" level="INFO" additivity="false">
+      <AppenderRef ref="console"/>
+    </Logger>
+    <Logger name="linea.web3j.Web3JLogsSearcher" level="TRACE" additivity="false">
+      <AppenderRef ref="console"/>
+    </Logger>
+    <Root level="info" additivity="false">
+      <appender-ref ref="console"/>
+    </Root>
+  </Loggers>
+</Configuration>

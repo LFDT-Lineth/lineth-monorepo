@@ -185,7 +185,8 @@ class BlobAndAggregationFinalizationIntTest : CleanDbTestSuiteParallel() {
     val blobsEndTime = blobs.last().endBlockTime
     val endTime = if (aggEndTime > blobsEndTime) aggEndTime else blobsEndTime
 
-    fakeClock.setTimeTo(endTime.plus(10.seconds))
+    // submission do the cutoff by minutes, so we need to add 1 minute to the end time
+    fakeClock.setTimeTo(endTime.plus(1.minutes))
 
     blobSubmissionCoordinator.start()
     aggregationFinalizationCoordinator.start()

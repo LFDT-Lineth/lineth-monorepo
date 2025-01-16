@@ -87,7 +87,7 @@ allprojects {
     systemProperty("L1_RPC_URL", "http://localhost:8445")
     systemProperty("L2_RPC_URL", "http://localhost:8545")
     systemProperty("L1_GENESIS", "docker/config/l1-node/el/genesis.json")
-    systemProperty("L2_GENESIS", "docker/config/linea-local-dev-genesis.json")
+    systemProperty("L2_GENESIS", "docker/config/linea-local-dev-genesis-PoA.json")
 
     systemProperties["junit.jupiter.execution.timeout.default"] = "5 m" // 5 minutes
     systemProperties["junit.jupiter.execution.parallel.enabled"] = true
@@ -203,7 +203,8 @@ dockerCompose {
       "staterecover"
     ]
     useComposeFiles = [
-      "${project.rootDir.path}/docker/compose.yml"
+      "${project.rootDir.path}/docker/compose.yml",
+      "${project.rootDir.path}/docker/compose-local-dev-traces-v2.overrides.yml"
     ]
     waitForHealthyStateTimeout = Duration.ofMinutes(3)
     waitForTcpPorts = false

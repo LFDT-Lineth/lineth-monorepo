@@ -1,7 +1,6 @@
 plugins {
   id 'net.consensys.zkevm.kotlin-common-conventions'
   id 'java-library'
-  id 'java-test-fixtures'
 }
 
 description="Web3j extensions for Linea"
@@ -9,17 +8,20 @@ description="Web3j extensions for Linea"
 dependencies {
   api "org.web3j:core:${libs.versions.web3j.get()}"
   api project(':jvm-libs:linea:core:domain-models')
+  api project(':jvm-libs:linea:clients:interfaces')
   api project(':jvm-libs:generic:logging')
+  api project(":jvm-libs:generic:extensions:kotlin")
+  api project(':jvm-libs:generic:extensions:futures')
   api project(':jvm-libs:linea:besu-libs')
-  implementation project(":jvm-libs:generic:extensions:kotlin")
-  implementation project(":jvm-libs:generic:extensions:futures")
   implementation "tech.pegasys.teku.internal:bytes:${libs.versions.teku.get()}"
   implementation "tech.pegasys.teku.internal:jackson:${libs.versions.teku.get()}"
   implementation "tech.pegasys.teku.internal:unsigned:${libs.versions.teku.get()}"
 
+  testImplementation(testFixtures(project(":jvm-libs:generic:json-rpc")))
   testImplementation "org.apache.logging.log4j:log4j-slf4j2-impl:${libs.versions.log4j.get()}"
   testImplementation "com.fasterxml.jackson.core:jackson-annotations:${libs.versions.jackson.get()}"
   testImplementation "com.fasterxml.jackson.core:jackson-databind:${libs.versions.jackson.get()}"
+  testImplementation "com.github.tomakehurst:wiremock-jre8:${libs.versions.wiremock.get()}"
   testImplementation project(":jvm-libs:linea:besu-rlp-and-mappers")
 }
 

@@ -24,6 +24,12 @@ interface BlobCompressor {
   fun getCompressedData(): ByteArray
   fun reset()
 
+  fun getCompressedDataAndReset(): ByteArray {
+    val compressedData = getCompressedData()
+    reset()
+    return compressedData
+  }
+
   data class AppendResult(
     // returns false if last chunk would go over dataLimit. Does  not append last block.
     val blockAppended: Boolean,

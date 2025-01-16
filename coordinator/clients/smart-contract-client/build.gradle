@@ -4,7 +4,7 @@ plugins {
 
 dependencies {
   implementation project(":jvm-libs:generic:extensions:kotlin")
-  implementation project(':jvm-libs:linea:web3j-extensions')
+  api project(':jvm-libs:linea:web3j-extensions')
   api project(':jvm-libs:linea:clients:linea-l1-contract-client')
   api 'build.linea:l2-message-service-contract-client:0.0.1'
 
@@ -15,5 +15,4 @@ dependencies {
   implementation project(path: ':coordinator:core')
   implementation project(path: ':coordinator:ethereum:common')
   testImplementation "io.vertx:vertx-junit5"
-  testImplementation "com.github.tomakehurst:wiremock-jre8:${libs.versions.wiremock.get()}"
 }

@@ -2,8 +2,8 @@
 
 package net.consensys.zkevm.ethereum.submission
 
+import build.linea.web3j.Web3JLogsClient
 import net.consensys.linea.contract.L2MessageService
-import net.consensys.linea.contract.Web3JLogsClient
 import net.consensys.toULong
 import net.consensys.zkevm.ethereum.coordination.conflation.upgrade.SwitchProvider
 import org.apache.logging.log4j.LogManager

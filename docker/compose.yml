@@ -408,6 +408,11 @@ services:
         condition: service_healthy
       l1-node-genesis-generator:
         condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:4000/eth/v1/node/health || exit 1"]
+      interval: 1s
+      timeout: 1s
+      retries: 120
     command: [ "--config-file=/config/config-file.yaml" ]
     volumes:
       - ./config/l1-node/cl/teku.key:/config/keys/teku.key:ro
@@ -644,6 +649,10 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      l1-cl-node:
+        condition: service_healthy
+      l1-el-node:
+        condition: service_healthy
 
   blobscan-indexer:
     container_name: blobscan-indexer
@@ -662,6 +671,10 @@ services:
         condition: service_healthy
       blobscan-api:
         condition: service_started
+      l1-cl-node:
+        condition: service_healthy
+      l1-el-node:
+        condition: service_healthy
 
   redis:
     container_name: redis
@@ -683,6 +696,95 @@ services:
     networks:
       l1network:
         ipv4_address: 10.10.10.205
+
+  zkbesu-shomei-sr:
+    image: consensys/linea-besu-package:${SEQUENCER_TAG:-devnet-811f30b}
+    hostname: zkbesu-shomei-sr
+    container_name: zkbesu-shomei-sr
+    profiles: [ "external-to-monorepo", "staterecover" ]
+    privileged: true
+#    restart: none
+    user: root
+    ports:
+      - "9145:8545" # http
+      - "9146:8546" # websockets
+      - "9150:8550"
+      - "10545:9545"
+    healthcheck:
+      test: [ "CMD-SHELL", "bash -c \"[ -f /tmp/pid ]\"" ]
+      interval: 1s
+      timeout: 1s
+      retries: 120
+    restart: "no"
+    networks:
+      l1network:
+        ipv4_address: 10.10.10.206
+      linea:
+        ipv4_address: 11.11.11.116
+    environment:
+      LOG4J_CONFIGURATION_FILE: /var/lib/besu/log4j.xml
+      L1_ROLLUP_CONTRACT_ADDRESS: ${L1_ROLLUP_CONTRACT_ADDRESS:-0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9}
+    entrypoint:
+      - /bin/bash
+      - -c
+      - |
+        chown -R besu:besu /opt/besu/plugins && \
+        ls -lh /opt/besu/plugins && \
+        sed -i '/^CLASSPATH/c\CLASSPATH=/opt/besu/lib/\*' /opt/besu/bin/besu && \
+        /opt/besu/bin/besu \
+        --config-file=/var/lib/besu/zkbesu-config.toml \
+        --genesis-file=/var/lib/besu/genesis.json \
+        --plugins=BesuShomeiRpcPlugin,ZkTrieLogPlugin,LineaStateRecoverPlugin \
+        --rpc-http-api=ADMIN,DEBUG,NET,ETH,WEB3,PLUGINS,MINER,SHOMEI \
+        --Xbonsai-limit-trie-logs-enabled=false \
+        --plugin-shomei-http-host="11.11.11.117" \
+        --plugin-shomei-http-port=8888 \
+        --plugin-staterecovery-l1-rpc-endpoint=http://l1-el-node:8545 \
+        --plugin-staterecovery-shomei-endpoint=http://shomei-sr:8888 \
+        --plugin-staterecovery-blobscan-endpoint=http://blobscan-api:4001 \
+        --plugin-staterecovery-linea-sequencer-beneficiary-address=0x6d976c9b8ceee705d4fe8699b44e5eb58242f484 \
+        --plugin-staterecovery-overriding-recovery-start-block-number=1 \
+        --plugin-staterecovery-l1-polling-interval=PT1S
+    volumes:
+      - ./config/zkbesu-shomei/zkbesu-config.toml:/var/lib/besu/zkbesu-config.toml:ro
+      - ./config/zkbesu-shomei/log4j-staterecovery.xml:/var/lib/besu/log4j.xml:ro
+      - ./config/linea-local-dev-genesis-PoA-besu.json/:/var/lib/besu/genesis.json:ro
+      - ../state-recover/besu-plugin/build/libs/linea-staterecover-plugin-0.0.1-rc2.jar:/opt/besu/lib/linea-staterecover-plugin-0.0.1-rc2.jar
+      - ../state-recover/besu-plugin/build/libs/linea-staterecover-plugin-0.0.1-rc2.jar:/opt/besu/plugins/linea-staterecover-plugin-0.0.1-rc2.jar
+
+  shomei-sr:
+    image: consensys/linea-shomei:2.3.0
+    hostname: shomei-sr
+    container_name: shomei-sr
+    profiles: [ "external-to-monorepo", "staterecover" ]
+    depends_on:
+      zkbesu-shomei-sr:
+        condition: service_started
+    privileged: true
+    user: root
+    ports:
+      - "8890:8888"
+    healthcheck:
+      test: [ "CMD-SHELL", "bash -c \"[ -f /data/shomei/LOCK ]\"" ]
+      interval: 1s
+      timeout: 1s
+      retries: 60
+    networks:
+      linea:
+        ipv4_address: 11.11.11.117
+    environment:
+      LOG4J_CONFIGURATION_FILE: /log4j.xml
+    command:
+      - --besu-rpc-http-host=11.11.11.116
+      - --besu-rpc-http-port=8545
+      - --rpc-http-host=11.11.11.117
+      - --rpc-http-host-allow-list=*
+      - --rpc-http-port=8888
+      - --min-confirmations-before-importing=0
+      - --trace-start-block-number=0
+    volumes:
+      - ./config/shomei/log4j.xml:/log4j.xml:ro
+  #      - ../tmp/local/shomei:/data/shomei/:z
 
   ########################
   # Observability stack

@@ -21,7 +21,7 @@ dependencies {
   implementation("io.vertx:vertx-web-client:${libs.versions.vertx}")
 
   testImplementation "com.github.tomakehurst:wiremock-jre8:${libs.versions.wiremock.get()}"
-  testImplementation "org.slf4j:slf4j-api:1.7.30"
+  testImplementation "org.slf4j:slf4j-api:${libs.versions.slf4j.get()}"
   testImplementation "org.apache.logging.log4j:log4j-slf4j-impl:${libs.versions.log4j}"
   testImplementation "org.apache.logging.log4j:log4j-core:${libs.versions.log4j}"
 }
