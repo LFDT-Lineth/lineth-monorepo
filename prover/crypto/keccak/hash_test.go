@@ -1,10 +1,11 @@
 package keccak_test
 
 import (
-	"math/rand"
+	"math/rand/v2"
 	"testing"
 
 	"github.com/consensys/linea-monorepo/prover/crypto/keccak"
+	"github.com/consensys/linea-monorepo/prover/utils"
 	"github.com/stretchr/testify/require"
 )
 
@@ -12,14 +13,14 @@ func TestTraces(t *testing.T) {
 
 	numCases := 100
 	// #nosec G404 --we don't need a cryptographic RNG for testing purpose
-	rng := rand.New(rand.NewSource(0))
+	rng := rand.New(rand.NewChaCha8([32]byte{}))
 	maxSize := 1024
 
 	for i := 0; i < numCases; i++ {
 
 		// Populate a random string
-		data := make([]byte, rng.Intn(maxSize))
-		rng.Read(data)
+		data := make([]byte, rng.IntN(maxSize))
+		utils.ReadPseudoRand(rng, data)
 
 		// Initialize an empty trace
 		traces := keccak.PermTraces{}

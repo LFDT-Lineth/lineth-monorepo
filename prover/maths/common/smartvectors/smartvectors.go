@@ -2,8 +2,9 @@ package smartvectors
 
 import (
 	"fmt"
+	"math/rand/v2"
+
 	"github.com/consensys/linea-monorepo/prover/maths/field/fext"
-	"math/rand"
 
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/linea-monorepo/prover/maths/common/vector"

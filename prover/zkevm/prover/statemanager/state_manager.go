@@ -6,6 +6,7 @@ import (
 	"github.com/consensys/linea-monorepo/prover/utils"
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/statemanager/accumulator"
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/statemanager/accumulatorsummary"
+	"github.com/consensys/linea-monorepo/prover/zkevm/prover/statemanager/codehashconsistency"
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/statemanager/mimccodehash"
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/statemanager/statesummary"
 )
@@ -18,6 +19,7 @@ type StateManager struct {
 	accumulatorSummaryConnector accumulatorsummary.Module
 	StateSummary                statesummary.Module // exported because needed by the public input module
 	mimcCodeHash                mimccodehash.Module
+	codeHashConsistency         codehashconsistency.Module
 }
 
 // Settings stores all the setting to construct a StateManager and is passed to
@@ -51,7 +53,7 @@ func NewStateManager(comp *wizard.CompiledIOP, settings Settings) *StateManager 
 	sm.accumulatorSummaryConnector.ConnectToStateSummary(comp, &sm.StateSummary)
 	sm.mimcCodeHash.ConnectToRom(comp, rom(comp), romLex(comp))
 	sm.StateSummary.ConnectToHub(comp, acp(comp), scp(comp))
-	lookupStateSummaryCodeHash(comp, &sm.StateSummary.Account, &sm.mimcCodeHash)
+	sm.codeHashConsistency = codehashconsistency.NewModule(comp, "CODEHASHCONSISTENCY", &sm.StateSummary, &sm.mimcCodeHash)
 
 	return sm
 }
@@ -79,10 +81,7 @@ func NewStateManagerNoHub(comp *wizard.CompiledIOP, settings Settings) *StateMan
 
 	sm.accumulatorSummaryConnector.ConnectToStateSummary(comp, &sm.StateSummary)
 	sm.mimcCodeHash.ConnectToRom(comp, rom(comp), romLex(comp))
-
-	// Waiting for the resolution of the mimc code hash issue
-	//
-	// lookupStateSummaryCodeHash(comp, &sm.StateSummary.Account, &sm.mimcCodeHash)
+	sm.codeHashConsistency = codehashconsistency.NewModule(comp, "CODEHASHCONSISTENCY", &sm.StateSummary, &sm.mimcCodeHash)
 
 	return sm
 }
@@ -95,6 +94,7 @@ func (sm *StateManager) Assign(run *wizard.ProverRuntime, shomeiTraces [][]state
 	sm.accumulator.Assign(run, utils.Join(shomeiTraces...))
 	sm.accumulatorSummaryConnector.Assign(run)
 	sm.mimcCodeHash.Assign(run)
+	sm.codeHashConsistency.Assign(run)
 
 }
 

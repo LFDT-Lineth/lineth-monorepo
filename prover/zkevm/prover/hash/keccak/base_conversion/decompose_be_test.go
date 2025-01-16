@@ -1,13 +1,14 @@
 package base_conversion
 
 import (
-	"math/rand"
+	"math/rand/v2"
 	"testing"
 
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/dummy"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
+	"github.com/consensys/linea-monorepo/prover/utils"
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/common"
 	"github.com/stretchr/testify/assert"
 )
@@ -16,6 +17,8 @@ func makeTestCaseDecomposeBE() (
 	define wizard.DefineFunc,
 	prover wizard.ProverStep,
 ) {
+	// #nosec G404 --we don't need a cryptographic RNG for testing purpose
+	rand := rand.New(utils.NewRandSource(0))
 	size := 16
 	d := &decompositionCtx{}
 	define = func(build *wizard.Builder) {
@@ -35,7 +38,7 @@ func makeTestCaseDecomposeBE() (
 		)
 		for row := 0; row < size; row++ {
 			b := make([]byte, 8)
-			rand.Read(b) //nolint
+			utils.ReadPseudoRand(rand, b)
 			f := *new(field.Element).SetBytes(b)
 			col.PushField(f)
 		}

@@ -3,7 +3,7 @@
 package keccakf
 
 import (
-	"math/rand"
+	"math/rand/v2"
 	"testing"
 
 	"github.com/consensys/linea-monorepo/prover/crypto/keccak"
@@ -90,9 +90,9 @@ func testInputProvider(rnd *rand.Rand, maxNumKeccakf int) InputWitnessProvider {
 
 		for len(res.Blocks) < effNumKeccak {
 			// Each hash is for a random string taking at most 3 permutations
-			streamLen := rnd.Intn(3*keccak.Rate-1) + 1
+			streamLen := rnd.IntN(3*keccak.Rate-1) + 1
 			stream := make([]byte, streamLen)
-			rnd.Read(stream)
+			utils.ReadPseudoRand(rnd, stream)
 
 			for i := 0; i < effNumKeccak; i++ {
 				keccak.Hash(stream, &res)
@@ -119,7 +119,7 @@ func TestTheta(t *testing.T) {
 	maxKeccaf := 10
 
 	// #nosec G404 --we don't need a cryptographic RNG for testing purpose
-	rnd := rand.New(rand.NewSource(0))
+	rnd := rand.New(rand.NewChaCha8([32]byte{}))
 
 	// Every time the prover function is called, the traces will be updated.
 	// Likewise, run will be set by the prover.

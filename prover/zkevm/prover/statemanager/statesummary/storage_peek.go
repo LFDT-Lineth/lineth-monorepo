@@ -16,11 +16,11 @@ import (
 // slot.
 type StoragePeek struct {
 	// StorageKey stores the storage key of the peeked slot
-	Key HiLoColumns
+	Key common.HiLoColumns
 	// OldValue represents the storage value that is being peeked at.
-	OldValue HiLoColumns
+	OldValue common.HiLoColumns
 	// NewValue represents the new value of the storage slot.
-	NewValue HiLoColumns
+	NewValue common.HiLoColumns
 
 	// OldValueIsZero and NewValueIsZero are indicator columns set to 1 when the
 	// old/new value is set to zero and 0 otherwise.
@@ -71,9 +71,9 @@ type StoragePeek struct {
 // unconstrained columns.
 func newStoragePeek(comp *wizard.CompiledIOP, size int, name string) StoragePeek {
 	res := StoragePeek{
-		Key:      newHiLoColumns(comp, size, name+"_KEY"),
-		OldValue: newHiLoColumns(comp, size, name+"_OLD_VALUE"),
-		NewValue: newHiLoColumns(comp, size, name+"_NEW_VALUE"),
+		Key:      common.NewHiLoColumns(comp, size, name+"_KEY"),
+		OldValue: common.NewHiLoColumns(comp, size, name+"_OLD_VALUE"),
+		NewValue: common.NewHiLoColumns(comp, size, name+"_NEW_VALUE"),
 	}
 
 	res.OldValueHash, res.ComputeOldValueHash = common.HashOf(
@@ -128,63 +128,63 @@ func newStoragePeek(comp *wizard.CompiledIOP, size int, name string) StoragePeek
 // storagePeekAssignmentBuilder is a convenience structure storing the column
 // builders relating to a StoragePeek.
 type storagePeekAssignmentBuilder struct {
-	key, oldValue, newValue hiLoAssignmentBuilder
+	key, oldValue, newValue common.HiLoAssignmentBuilder
 }
 
 // newStoragePeekAssignmentBuilder constructs a fresh [storagePeekAssignmentBuilder]
 // with empty columns.
 func newStoragePeekAssignmentBuilder(sp *StoragePeek) storagePeekAssignmentBuilder {
 	return storagePeekAssignmentBuilder{
-		key:      newHiLoAssignmentBuilder(sp.Key),
-		oldValue: newHiLoAssignmentBuilder(sp.OldValue),
-		newValue: newHiLoAssignmentBuilder(sp.NewValue),
+		key:      common.NewHiLoAssignmentBuilder(sp.Key),
+		oldValue: common.NewHiLoAssignmentBuilder(sp.OldValue),
+		newValue: common.NewHiLoAssignmentBuilder(sp.NewValue),
 	}
 }
 
 // pushAllZeroes pushes a zero row onto the receiver
 func (sh *storagePeekAssignmentBuilder) pushAllZeroes() {
-	sh.key.pushZeroes()
-	sh.oldValue.pushZeroes()
-	sh.newValue.pushZeroes()
+	sh.key.PushZeroes()
+	sh.oldValue.PushZeroes()
+	sh.newValue.PushZeroes()
 }
 
 // pushOnlyKey pushes the key onto the the "key" columns builder and zero on
 // the others
 func (sh *storagePeekAssignmentBuilder) pushOnlyKey(key types.FullBytes32) {
-	sh.key.push(key)
-	sh.oldValue.pushZeroes()
-	sh.newValue.pushZeroes()
+	sh.key.Push(key)
+	sh.oldValue.PushZeroes()
+	sh.newValue.PushZeroes()
 }
 
 // pushOnlyOld pushes a row where the keys and the old value are the one provided
 // by the caller and the new value is zero.
 func (sh *storagePeekAssignmentBuilder) pushOnlyOld(key, oldVal types.FullBytes32) {
-	sh.key.push(key)
-	sh.oldValue.push(oldVal)
-	sh.newValue.pushZeroes()
+	sh.key.Push(key)
+	sh.oldValue.Push(oldVal)
+	sh.newValue.PushZeroes()
 }
 
 // pushOnlyNew pushes a row where the key and the new value are the one provided
 // by the caller and the old value is set to zero.
 func (sh *storagePeekAssignmentBuilder) pushOnlyNew(key, newVal types.FullBytes32) {
-	sh.key.push(key)
-	sh.oldValue.pushZeroes()
-	sh.newValue.push(newVal)
+	sh.key.Push(key)
+	sh.oldValue.PushZeroes()
+	sh.newValue.Push(newVal)
 }
 
 // push pushes a row where the key, the old value and the new value are the
 // one provided by the caller.
 func (sh *storagePeekAssignmentBuilder) push(key, oldVal, newVal types.FullBytes32) {
-	sh.key.push(key)
-	sh.oldValue.push(oldVal)
-	sh.newValue.push(newVal)
+	sh.key.Push(key)
+	sh.oldValue.Push(oldVal)
+	sh.newValue.Push(newVal)
 }
 
 // padAssign pads and assigns the columns of the storage peek into `run`.
 func (sh *storagePeekAssignmentBuilder) padAssign(run *wizard.ProverRuntime) {
-	sh.key.padAssign(run, types.FullBytes32{})
-	sh.oldValue.padAssign(run, types.FullBytes32{})
-	sh.newValue.padAssign(run, types.FullBytes32{})
+	sh.key.PadAssign(run, types.FullBytes32{})
+	sh.oldValue.PadAssign(run, types.FullBytes32{})
+	sh.newValue.PadAssign(run, types.FullBytes32{})
 }
 
 // hashOfZeroStorage returns the hash of (0, 0) which is what we use for empty

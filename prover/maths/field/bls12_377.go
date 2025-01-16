@@ -2,11 +2,13 @@ package field
 
 import (
 	"math/big"
-	"math/rand"
+	"math/rand/v2"
+	"unsafe"
+
+	"math/bits"
 
 	"github.com/consensys/gnark-crypto/ecc/bls12-377/fr"
 	"github.com/consensys/linea-monorepo/prover/utils"
-	"math/bits"
 )
 
 // Element aliases [fr.Element] and represents a field element in the scalar
@@ -113,15 +115,36 @@ func ExpToInt(z *Element, x Element, k int) *Element {
 	return z
 }
 
-// PseudoRandom generates a field using a pseudo-random number generator
+// PseudoRand generates a field using a pseudo-random number generator
 func PseudoRand(rng *rand.Rand) Element {
+
 	var (
-		slice  = make([]byte, Bytes)
-		bigInt = &big.Int{}
-		res    = Element{}
+		bigInt    = &big.Int{}
+		res       = Element{}
+		bareU64   = [4]uint64{rng.Uint64(), rng.Uint64(), rng.Uint64(), rng.Uint64()}
+		bareBytes = *(*[32]byte)(unsafe.Pointer(&bareU64))
 	)
-	rng.Read(slice)
-	bigInt.SetBytes(slice).Mod(bigInt, Modulus())
+
+	bigInt.SetBytes(bareBytes[:]).Mod(bigInt, Modulus())
+	res.SetBigInt(bigInt)
+	return res
+}
+
+// PseudoRandTruncated generates a field using a pseudo-random number generator
+func PseudoRandTruncated(rng *rand.Rand, sizeByte int) Element {
+
+	if sizeByte > 32 {
+		utils.Panic("supplied a byteSize larger than 32 (%v), this must be a mistake. Please check that the supplied value is not instead a BIT-size.", sizeByte)
+	}
+
+	var (
+		bigInt    = &big.Int{}
+		res       = Element{}
+		bareU64   = [4]uint64{rng.Uint64(), rng.Uint64(), rng.Uint64(), rng.Uint64()}
+		bareBytes = *(*[32]byte)(unsafe.Pointer(&bareU64))
+	)
+
+	bigInt.SetBytes(bareBytes[:sizeByte]).Mod(bigInt, Modulus())
 	res.SetBigInt(bigInt)
 	return res
 }

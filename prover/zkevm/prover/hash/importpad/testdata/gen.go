@@ -2,10 +2,11 @@ package main
 
 import (
 	"fmt"
-	"math/rand"
+	"math/rand/v2"
 
 	"github.com/consensys/linea-monorepo/prover/backend/files"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
+	"github.com/consensys/linea-monorepo/prover/utils"
 )
 
 func main() {
@@ -16,7 +17,7 @@ func main() {
 		toHash    = make([]field.Element, 32)
 		index     = make([]field.Element, 32)
 		hashNum   = make([]field.Element, 32)
-		rng       = rand.New(rand.NewSource(68768))
+		rng       = rand.New(rand.NewChaCha8([32]byte{}))
 		hashNums  = []int{0, 0, 0, 0, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 0, 0, 0, 0, 0, 0, 0}
 		toHashInt = []int{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0}
 		oF        = files.MustOverwrite("./testdata/input.csv")
@@ -71,7 +72,7 @@ func randLimbs(rng *rand.Rand, nBytes int) field.Element {
 
 	var (
 		resBytes = make([]byte, 16)
-		_, _     = rng.Read(resBytes[:nBytes])
+		_, _     = utils.ReadPseudoRand(rng, resBytes[:nBytes])
 		res      = new(field.Element).SetBytes(resBytes)
 	)
 

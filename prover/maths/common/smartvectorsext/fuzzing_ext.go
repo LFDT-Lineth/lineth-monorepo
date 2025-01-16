@@ -2,12 +2,13 @@ package smartvectorsext
 
 import (
 	"fmt"
+	"math/big"
+	"math/rand/v2"
+
 	"github.com/consensys/linea-monorepo/prover/maths/common/polyext"
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors/vectorext"
 	"github.com/consensys/linea-monorepo/prover/maths/field/fext"
-	"math/big"
-	"math/rand"
 
 	"github.com/consensys/linea-monorepo/prover/utils"
 )
@@ -62,24 +63,24 @@ func newTestBuilder(seed int) *testCaseGen {
 	// Use a deterministic randomness source
 	res := &testCaseGen{seed: seed}
 	// #nosec G404 --we don't need a cryptographic RNG for fuzzing purpose
-	res.gen = rand.New(rand.NewSource(int64(seed)))
+	res.gen = rand.New(utils.NewRandSource(int64(seed)))
 
 	// We should have some quarantee that the length is not too small
 	// for the test generation
-	res.fullLen = 1 << (res.gen.Intn(5) + 3)
-	res.numVec = res.gen.Intn(8) + 1
+	res.fullLen = 1 << (res.gen.IntN(5) + 3)
+	res.numVec = res.gen.IntN(8) + 1
 
 	// In the test, we may restrict the inputs vectors to have a certain type
 	allowedTypes := append([]smartVecType{}, smartVecTypeList...)
 	res.gen.Shuffle(len(allowedTypes), func(i, j int) {
 		allowedTypes[i], allowedTypes[j] = allowedTypes[j], allowedTypes[i]
 	})
-	res.allowedTypes = allowedTypes[:res.gen.Intn(len(allowedTypes)-1)+1]
+	res.allowedTypes = allowedTypes[:res.gen.IntN(len(allowedTypes)-1)+1]
 
 	// Generating the window : it should be roughly half of the total length
 	// this aims at maximizing the coverage.
-	res.windowWithLen = res.gen.Intn(res.fullLen-4)/2 + 2
-	res.windowMustStartAfter = res.gen.Intn(res.fullLen)
+	res.windowWithLen = res.gen.IntN(res.fullLen-4)/2 + 2
+	res.windowMustStartAfter = res.gen.IntN(res.fullLen)
 	return res
 }
 
@@ -105,8 +106,8 @@ func (gen *testCaseGen) NewTestCaseForProd() (tcase testCase) {
 	for i := 0; i < gen.numVec; i++ {
 		// Generate one by one the different vectors
 		val := gen.genValue()
-		tcase.coeffs[i] = gen.gen.Intn(5)
-		chosenType := gen.allowedTypes[gen.gen.Intn(len(gen.allowedTypes))]
+		tcase.coeffs[i] = gen.gen.IntN(5)
+		chosenType := gen.allowedTypes[gen.gen.IntN(len(gen.allowedTypes))]
 		maxType = utils.Max(maxType, chosenType)
 
 		// Update the expected res value
@@ -185,8 +186,8 @@ func (gen *testCaseGen) NewTestCaseForLinComb() (tcase testCase) {
 	for i := 0; i < gen.numVec; i++ {
 		// Generate one by one the different vectors
 		val := gen.genValue()
-		tcase.coeffs[i] = gen.gen.Intn(10) - 5
-		chosenType := gen.allowedTypes[gen.gen.Intn(len(gen.allowedTypes))]
+		tcase.coeffs[i] = gen.gen.IntN(10) - 5
+		chosenType := gen.allowedTypes[gen.gen.IntN(len(gen.allowedTypes))]
 		maxType = utils.Max(maxType, chosenType)
 
 		// Update the expected res value
@@ -259,8 +260,8 @@ func (gen *testCaseGen) NewTestCaseForPolyEval() (tcase testCase) {
 		// Generate one by one the different vectors
 		val := gen.genValue()
 		vals = append(vals, val)
-		tcase.coeffs[i] = gen.gen.Intn(10) - 5
-		chosenType := gen.allowedTypes[gen.gen.Intn(len(gen.allowedTypes))]
+		tcase.coeffs[i] = gen.gen.IntN(10) - 5
+		chosenType := gen.allowedTypes[gen.gen.IntN(len(gen.allowedTypes))]
 		maxType = utils.Max(maxType, chosenType)
 
 		switch chosenType {
@@ -304,7 +305,7 @@ func (gen *testCaseGen) NewTestCaseForPolyEval() (tcase testCase) {
 func (gen *testCaseGen) genValue() fext.Element {
 	// May increase the ceil of the generator to increase the probability to pick
 	// an actually random value.
-	switch gen.gen.Intn(4) {
+	switch gen.gen.IntN(4) {
 	case 0:
 		return fext.Zero()
 	case 1:
@@ -316,9 +317,9 @@ func (gen *testCaseGen) genValue() fext.Element {
 }
 
 func (gen *testCaseGen) genWindow(val, paddingVal fext.Element) *PaddedCircularWindowExt {
-	start := gen.windowMustStartAfter + gen.gen.Intn(gen.windowWithLen)/2
+	start := gen.windowMustStartAfter + gen.gen.IntN(gen.windowWithLen)/2
 	maxStop := gen.windowWithLen + gen.windowMustStartAfter
-	winLen := gen.gen.Intn(maxStop - start)
+	winLen := gen.gen.IntN(maxStop - start)
 	if winLen == 0 {
 		winLen = 1
 	}
@@ -330,6 +331,6 @@ func (gen *testCaseGen) genRegularExt(val fext.Element) *RegularExt {
 }
 
 func (gen *testCaseGen) genRotatedExt(val fext.Element) *RotatedExt {
-	offset := gen.gen.Intn(gen.fullLen)
+	offset := gen.gen.IntN(gen.fullLen)
 	return NewRotatedExt(*gen.genRegularExt(val), offset)
 }

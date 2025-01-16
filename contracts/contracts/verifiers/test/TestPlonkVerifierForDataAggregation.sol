@@ -19,29 +19,28 @@
 pragma solidity 0.8.26;
 
 contract TestPlonkVerifierForDataAggregation {
-  uint256 private constant R_MOD = 21888242871839275222246405745257275088548364400416034343698204186575808495617;
-  uint256 private constant R_MOD_MINUS_ONE =
-    21888242871839275222246405745257275088548364400416034343698204186575808495616;
-  uint256 private constant P_MOD = 21888242871839275222246405745257275088696311157297823662689037894645226208583;
 
+  uint256 private constant R_MOD = 21888242871839275222246405745257275088548364400416034343698204186575808495617;
+  uint256 private constant R_MOD_MINUS_ONE = 21888242871839275222246405745257275088548364400416034343698204186575808495616;
+  uint256 private constant P_MOD = 21888242871839275222246405745257275088696311157297823662689037894645226208583;
+  
   uint256 private constant G2_SRS_0_X_0 = 11559732032986387107991004021392285783925812861821192530917403151452391805634;
   uint256 private constant G2_SRS_0_X_1 = 10857046999023057135944570762232829481370756359578518086990519993285655852781;
   uint256 private constant G2_SRS_0_Y_0 = 4082367875863433681332203403145435568316851327593401208105741076214120093531;
   uint256 private constant G2_SRS_0_Y_1 = 8495653923123431417604973247489272438418190587263600148770280649306958101930;
-
+  
   uint256 private constant G2_SRS_1_X_0 = 15805639136721018565402881920352193254830339253282065586954346329754995870280;
   uint256 private constant G2_SRS_1_X_1 = 19089565590083334368588890253123139704298730990782503769911324779715431555531;
   uint256 private constant G2_SRS_1_Y_0 = 9779648407879205346559610309258181044130619080926897934572699915909528404984;
   uint256 private constant G2_SRS_1_Y_1 = 6779728121489434657638426458390319301070371227460768374343986326751507916979;
-
+  
   uint256 private constant G1_SRS_X = 14312776538779914388377568895031746459131577658076416373430523308756343304251;
   uint256 private constant G1_SRS_Y = 11763105256161367503191792604679297387056316997144156930871823008787082098465;
 
   // ----------------------- vk ---------------------
   uint256 private constant VK_NB_PUBLIC_INPUTS = 1;
   uint256 private constant VK_DOMAIN_SIZE = 16;
-  uint256 private constant VK_INV_DOMAIN_SIZE =
-    20520227692349320520856005386178695395514091625390032197217066424914820464641;
+  uint256 private constant VK_INV_DOMAIN_SIZE = 20520227692349320520856005386178695395514091625390032197217066424914820464641;
   uint256 private constant VK_OMEGA = 14940766826517323942636479241147756311199852622225275649687664389641784935947;
   uint256 private constant VK_QL_COM_X = 3767637989833674092151354229632559107224950590673664856842061399469467338879;
   uint256 private constant VK_QL_COM_Y = 18545409996679466114224178746162553880737296402729089689774308937082946761979;
@@ -53,21 +52,23 @@ contract TestPlonkVerifierForDataAggregation {
   uint256 private constant VK_QO_COM_Y = 10782414695040549646706468913781794882209258381887890407509684555513355143197;
   uint256 private constant VK_QK_COM_X = 309591480144351325314158474719361148480191595146291661238142838254651436989;
   uint256 private constant VK_QK_COM_Y = 12063173869829536468830946547606069911666129778788708678515573607390482939756;
-
+  
   uint256 private constant VK_S1_COM_X = 12287072751694848944507699577006619791724925439540371477056092891137357229312;
   uint256 private constant VK_S1_COM_Y = 2469356406782415219782253630635766217009619642857495098799013714324696399305;
-
+  
   uint256 private constant VK_S2_COM_X = 17261757720471042341269061128759148572672168808566386603388432325173708264418;
   uint256 private constant VK_S2_COM_Y = 20976565876611279190744172824963243461988367679364518747954008723085439460611;
-
+  
   uint256 private constant VK_S3_COM_X = 18758025488249277181117376239193628449359868741625564388668468130204669284937;
   uint256 private constant VK_S3_COM_Y = 15566903578741238761792344329051427316196307361197991677131114502821508927172;
-
+  
   uint256 private constant VK_COSET_SHIFT = 5;
-
+  
+  
   uint256 private constant VK_QCP_0_X = 4559262075452024065272338216146989708834054079507534161096300708463935456394;
   uint256 private constant VK_QCP_0_Y = 1898950104727986554890445533779776634695458253078091580309593009754027486622;
-
+  
+  
   uint256 private constant VK_INDEX_COMMIT_API_0 = 5;
   uint256 private constant VK_NB_CUSTOM_GATES = 1;
 
@@ -77,7 +78,7 @@ contract TestPlonkVerifierForDataAggregation {
   uint256 private constant FIXED_PROOF_SIZE = 0x300;
 
   // offset proof
-
+  
   uint256 private constant PROOF_L_COM_X = 0x0;
   uint256 private constant PROOF_L_COM_Y = 0x20;
   uint256 private constant PROOF_R_COM_X = 0x40;
@@ -121,7 +122,7 @@ contract TestPlonkVerifierForDataAggregation {
   // -------- offset state
 
   // challenges to check the claimed quotient
-
+  
   uint256 private constant STATE_ALPHA = 0x0;
   uint256 private constant STATE_BETA = 0x20;
   uint256 private constant STATE_GAMMA = 0x40;
@@ -152,13 +153,15 @@ contract TestPlonkVerifierForDataAggregation {
   // -------- errors
   uint256 private constant ERROR_STRING_ID = 0x08c379a000000000000000000000000000000000000000000000000000000000; // selector for function Error(string)
 
+  
   // -------- utils (for hash_fr)
-  uint256 private constant HASH_FR_BB = 340282366920938463463374607431768211456; // 2**128
-  uint256 private constant HASH_FR_ZERO_UINT256 = 0;
-  uint8 private constant HASH_FR_LEN_IN_BYTES = 48;
-  uint8 private constant HASH_FR_SIZE_DOMAIN = 11;
-  uint8 private constant HASH_FR_ONE = 1;
-  uint8 private constant HASH_FR_TWO = 2;
+	uint256 private constant HASH_FR_BB = 340282366920938463463374607431768211456; // 2**128
+	uint256 private constant HASH_FR_ZERO_UINT256 = 0;
+	uint8 private constant HASH_FR_LEN_IN_BYTES = 48;
+	uint8 private constant HASH_FR_SIZE_DOMAIN = 11;
+	uint8 private constant HASH_FR_ONE = 1;
+	uint8 private constant HASH_FR_TWO = 2;
+  
 
   // -------- precompiles
   uint8 private constant SHA2 = 0x2;
@@ -166,14 +169,17 @@ contract TestPlonkVerifierForDataAggregation {
   uint8 private constant EC_ADD = 0x6;
   uint8 private constant EC_MUL = 0x7;
   uint8 private constant EC_PAIR = 0x8;
-
+  
   /// Verify a Plonk proof.
   /// Reverts if the proof or the public inputs are malformed.
   /// @param proof serialised plonk proof (using gnark's MarshalSolidity)
   /// @param public_inputs (must be reduced)
   /// @return success true if the proof passes false otherwise
-  function Verify(bytes calldata proof, uint256[] calldata public_inputs) public view returns (bool success) {
+  function Verify(bytes calldata proof, uint256[] calldata public_inputs) 
+  public view returns(bool success) {
+
     assembly {
+
       let mem := mload(0x40)
       let freeMem := add(mem, STATE_LAST_MEM)
 
@@ -305,23 +311,20 @@ contract TestPlonkVerifierForDataAggregation {
       // end errors -------------------------------------------------
 
       // Beginning checks -------------------------------------------------
-
+      
       /// @param s actual number of public inputs
       function check_number_of_public_inputs(s) {
         if iszero(eq(s, VK_NB_PUBLIC_INPUTS)) {
           error_nb_public_inputs()
         }
       }
-
+    
       /// Checks that the public inputs are < R_MOD.
       /// @param s number of public inputs
       /// @param p pointer to the public inputs array
       function check_inputs_size(s, p) {
-        for {
-          let i
-        } lt(i, s) {
-          i := add(i, 1)
-        } {
+        for {let i} lt(i, s) {i:=add(i,1)}
+        {
           if gt(calldataload(p), R_MOD_MINUS_ONE) {
             error_inputs_size()
           }
@@ -332,16 +335,17 @@ contract TestPlonkVerifierForDataAggregation {
       /// Checks if the proof is of the correct size
       /// @param actual_proof_size size of the proof (not the expected size)
       function check_proof_size(actual_proof_size) {
-        let expected_proof_size := add(FIXED_PROOF_SIZE, mul(VK_NB_CUSTOM_GATES, 0x60))
+        let expected_proof_size := add(FIXED_PROOF_SIZE, mul(VK_NB_CUSTOM_GATES,0x60))
         if iszero(eq(actual_proof_size, expected_proof_size)) {
-          error_proof_size()
+         error_proof_size() 
         }
       }
-
+    
       /// Checks if the multiple openings of the polynomials are < R_MOD.
       /// @param aproof pointer to the beginning of the proof
       /// @dev the 'a' prepending proof is to have a local name
       function check_proof_openings_size(aproof) {
+        
         // PROOF_L_AT_ZETA
         let p := add(aproof, PROOF_L_AT_ZETA)
         if gt(calldataload(p), R_MOD_MINUS_ONE) {
@@ -365,7 +369,7 @@ contract TestPlonkVerifierForDataAggregation {
         if gt(calldataload(p), R_MOD_MINUS_ONE) {
           error_proof_openings_size()
         }
-
+        
         // PROOF_S2_AT_ZETA
         p := add(aproof, PROOF_S2_AT_ZETA)
         if gt(calldataload(p), R_MOD_MINUS_ONE) {
@@ -379,18 +383,16 @@ contract TestPlonkVerifierForDataAggregation {
         }
 
         // PROOF_OPENING_QCP_AT_ZETA
-
+        
         p := add(aproof, PROOF_OPENING_QCP_AT_ZETA)
-        for {
-          let i := 0
-        } lt(i, VK_NB_CUSTOM_GATES) {
-          i := add(i, 1)
-        } {
+        for {let i:=0} lt(i, VK_NB_CUSTOM_GATES) {i:=add(i,1)}
+        {
           if gt(calldataload(p), R_MOD_MINUS_ONE) {
             error_proof_openings_size()
           }
           p := add(p, 0x20)
         }
+
       }
       // end checks -------------------------------------------------
 
@@ -412,32 +414,34 @@ contract TestPlonkVerifierForDataAggregation {
       /// and is encoded as a uint256 number n. In basis b = 256, the number looks like this
       /// [0 0 0 .. 0x67 0x61 0x6d, 0x6d, 0x61]. The first non zero entry is at position 27=0x1b
       /// Gamma reduced (the actual challenge) is stored at add(state, state_gamma)
-      function derive_gamma(aproof, nb_pi, pi) -> gamma_not_reduced {
+      function derive_gamma(aproof, nb_pi, pi)->gamma_not_reduced {
+        
         let state := mload(0x40)
         let mPtr := add(state, STATE_LAST_MEM)
 
         mstore(mPtr, FS_GAMMA) // "gamma"
 
-        mstore(add(mPtr, 0x20), VK_S1_COM_X)
-        mstore(add(mPtr, 0x40), VK_S1_COM_Y)
-        mstore(add(mPtr, 0x60), VK_S2_COM_X)
-        mstore(add(mPtr, 0x80), VK_S2_COM_Y)
-        mstore(add(mPtr, 0xa0), VK_S3_COM_X)
-        mstore(add(mPtr, 0xc0), VK_S3_COM_Y)
-        mstore(add(mPtr, 0xe0), VK_QL_COM_X)
-        mstore(add(mPtr, 0x100), VK_QL_COM_Y)
-        mstore(add(mPtr, 0x120), VK_QR_COM_X)
-        mstore(add(mPtr, 0x140), VK_QR_COM_Y)
-        mstore(add(mPtr, 0x160), VK_QM_COM_X)
-        mstore(add(mPtr, 0x180), VK_QM_COM_Y)
-        mstore(add(mPtr, 0x1a0), VK_QO_COM_X)
-        mstore(add(mPtr, 0x1c0), VK_QO_COM_Y)
-        mstore(add(mPtr, 0x1e0), VK_QK_COM_X)
-        mstore(add(mPtr, 0x200), VK_QK_COM_Y)
-
-        mstore(add(mPtr, 0x220), VK_QCP_0_X)
-        mstore(add(mPtr, 0x240), VK_QCP_0_Y)
-
+        
+        mstore(add(mPtr, 0x20), VK_S1_COM_X) 
+        mstore(add(mPtr, 0x40), VK_S1_COM_Y) 
+        mstore(add(mPtr, 0x60), VK_S2_COM_X) 
+        mstore(add(mPtr, 0x80), VK_S2_COM_Y) 
+        mstore(add(mPtr, 0xa0), VK_S3_COM_X) 
+        mstore(add(mPtr, 0xc0), VK_S3_COM_Y) 
+        mstore(add(mPtr, 0xe0), VK_QL_COM_X) 
+        mstore(add(mPtr, 0x100), VK_QL_COM_Y) 
+        mstore(add(mPtr, 0x120), VK_QR_COM_X) 
+        mstore(add(mPtr, 0x140), VK_QR_COM_Y) 
+        mstore(add(mPtr, 0x160), VK_QM_COM_X) 
+        mstore(add(mPtr, 0x180), VK_QM_COM_Y) 
+        mstore(add(mPtr, 0x1a0), VK_QO_COM_X) 
+        mstore(add(mPtr, 0x1c0), VK_QO_COM_Y) 
+        mstore(add(mPtr, 0x1e0), VK_QK_COM_X) 
+        mstore(add(mPtr, 0x200), VK_QK_COM_Y) 
+        
+        mstore(add(mPtr, 0x220), VK_QCP_0_X) 
+        mstore(add(mPtr, 0x240), VK_QCP_0_Y) 
+        
         // public inputs
         let _mPtr := add(mPtr, 0x260)
         let size_pi_in_bytes := mul(nb_pi, 0x20)
@@ -454,7 +458,7 @@ contract TestPlonkVerifierForDataAggregation {
         // + nb_public_inputs*0x20
         // + nb_custom gates*0x40
         let size := add(0x2c5, size_pi_in_bytes)
-
+        
         size := add(size, mul(VK_NB_CUSTOM_GATES, 0x40))
         let l_success := staticcall(gas(), SHA2, add(mPtr, 0x1b), size, mPtr, 0x20) //0x1b -> 000.."gamma"
         if iszero(l_success) {
@@ -469,7 +473,8 @@ contract TestPlonkVerifierForDataAggregation {
       /// @return beta_not_reduced the next challenge, beta, not reduced
       /// @notice the transcript consists of the previous challenge only.
       /// The reduced version of beta is stored at add(state, state_beta)
-      function derive_beta(gamma_not_reduced) -> beta_not_reduced {
+      function derive_beta(gamma_not_reduced)->beta_not_reduced{
+        
         let state := mload(0x40)
         let mPtr := add(mload(0x40), STATE_LAST_MEM)
 
@@ -490,8 +495,9 @@ contract TestPlonkVerifierForDataAggregation {
       /// @return alpha_not_reduced the next challenge, alpha, not reduced
       /// @notice the transcript consists of the previous challenge (beta)
       /// not reduced, the commitments to the wires associated to the QCP_i,
-      /// and the commitment to the grand product polynomial
-      function derive_alpha(aproof, beta_not_reduced) -> alpha_not_reduced {
+      /// and the commitment to the grand product polynomial 
+      function derive_alpha(aproof, beta_not_reduced)->alpha_not_reduced {
+        
         let state := mload(0x40)
         let mPtr := add(mload(0x40), STATE_LAST_MEM)
         let full_size := 0x65 // size("alpha") + 0x20 (previous challenge)
@@ -501,14 +507,14 @@ contract TestPlonkVerifierForDataAggregation {
         let _mPtr := add(mPtr, 0x20)
         mstore(_mPtr, beta_not_reduced)
         _mPtr := add(_mPtr, 0x20)
-
+        
         // Bsb22Commitments
         let proof_bsb_commitments := add(aproof, PROOF_BSB_COMMITMENTS)
         let size_bsb_commitments := mul(0x40, VK_NB_CUSTOM_GATES)
         calldatacopy(_mPtr, proof_bsb_commitments, size_bsb_commitments)
         _mPtr := add(_mPtr, size_bsb_commitments)
         full_size := add(full_size, size_bsb_commitments)
-
+        
         // [Z], the commitment to the grand product polynomial
         calldatacopy(_mPtr, add(aproof, PROOF_GRAND_PRODUCT_COMMITMENT_X), 0x40)
         let l_success := staticcall(gas(), SHA2, add(mPtr, 0x1b), full_size, mPtr, 0x20)
@@ -526,6 +532,7 @@ contract TestPlonkVerifierForDataAggregation {
       /// The transcript consists of the previous challenge and the commitment to
       /// the quotient polynomial h.
       function derive_zeta(aproof, alpha_not_reduced) {
+        
         let state := mload(0x40)
         let mPtr := add(mload(0x40), STATE_LAST_MEM)
 
@@ -550,7 +557,8 @@ contract TestPlonkVerifierForDataAggregation {
       /// @param n number of public inputs
       /// @param mPtr free memory
       /// @return pi_wo_commit public inputs contribution (except the public inputs coming from the custom gate)
-      function sum_pi_wo_api_commit(ins, n, mPtr) -> pi_wo_commit {
+      function sum_pi_wo_api_commit(ins, n, mPtr)->pi_wo_commit {
+        
         let state := mload(0x40)
         let z := mload(add(state, STATE_ZETA))
         let zpnmo := mload(add(state, STATE_ZETA_POWER_N_MINUS_ONE))
@@ -559,16 +567,14 @@ contract TestPlonkVerifierForDataAggregation {
         batch_compute_lagranges_at_z(z, zpnmo, n, li)
 
         let tmp := 0
-        for {
-          let i := 0
-        } lt(i, n) {
-          i := add(i, 1)
-        } {
+        for {let i:=0} lt(i,n) {i:=add(i,1)}
+        {
           tmp := mulmod(mload(li), calldataload(ins), R_MOD)
           pi_wo_commit := addmod(pi_wo_commit, tmp, R_MOD)
           li := add(li, 0x20)
           ins := add(ins, 0x20)
         }
+        
       }
 
       /// batch_compute_lagranges_at_z computes [L_0(z), .., L_{n-1}(z)]
@@ -577,32 +583,27 @@ contract TestPlonkVerifierForDataAggregation {
       /// @param n_pub number of public inputs (number of Lagranges to compute)
       /// @param mPtr pointer to which the results are stored
       function batch_compute_lagranges_at_z(z, zpnmo, n_pub, mPtr) {
-        let zn := mulmod(zpnmo, VK_INV_DOMAIN_SIZE, R_MOD) // 1/n * (ζⁿ - 1)
 
+        let zn := mulmod(zpnmo, VK_INV_DOMAIN_SIZE, R_MOD) // 1/n * (ζⁿ - 1)
+        
         let _w := 1
         let _mPtr := mPtr
-        for {
-          let i := 0
-        } lt(i, n_pub) {
-          i := add(i, 1)
-        } {
-          mstore(_mPtr, addmod(z, sub(R_MOD, _w), R_MOD))
+        for {let i:=0} lt(i,n_pub) {i:=add(i,1)}
+        {
+          mstore(_mPtr, addmod(z,sub(R_MOD, _w), R_MOD))
           _w := mulmod(_w, VK_OMEGA, R_MOD)
           _mPtr := add(_mPtr, 0x20)
         }
         batch_invert(mPtr, n_pub, _mPtr)
         _mPtr := mPtr
         _w := 1
-        for {
-          let i := 0
-        } lt(i, n_pub) {
-          i := add(i, 1)
-        } {
-          mstore(_mPtr, mulmod(mulmod(mload(_mPtr), zn, R_MOD), _w, R_MOD))
+        for {let i:=0} lt(i,n_pub) {i:=add(i,1)}
+        {
+          mstore(_mPtr, mulmod(mulmod(mload(_mPtr), zn , R_MOD), _w, R_MOD))
           _mPtr := add(_mPtr, 0x20)
           _w := mulmod(_w, VK_OMEGA, R_MOD)
         }
-      }
+      } 
 
       /// @notice Montgomery trick for batch inversion mod R_MOD
       /// @param ins pointer to the data to batch invert
@@ -611,11 +612,8 @@ contract TestPlonkVerifierForDataAggregation {
       function batch_invert(ins, nb_ins, mPtr) {
         mstore(mPtr, 1)
         let offset := 0
-        for {
-          let i := 0
-        } lt(i, nb_ins) {
-          i := add(i, 1)
-        } {
+        for {let i:=0} lt(i, nb_ins) {i:=add(i,1)}
+        {
           let prev := mload(add(mPtr, offset))
           let cur := mload(add(ins, offset))
           cur := mulmod(prev, cur, R_MOD)
@@ -624,12 +622,9 @@ contract TestPlonkVerifierForDataAggregation {
         }
         ins := add(ins, sub(offset, 0x20))
         mPtr := add(mPtr, offset)
-        let inv := pow(mload(mPtr), sub(R_MOD, 2), add(mPtr, 0x20))
-        for {
-          let i := 0
-        } lt(i, nb_ins) {
-          i := add(i, 1)
-        } {
+        let inv := pow(mload(mPtr), sub(R_MOD,2), add(mPtr, 0x20))
+        for {let i:=0} lt(i, nb_ins) {i:=add(i,1)}
+        {
           mPtr := sub(mPtr, 0x20)
           let tmp := mload(ins)
           let cur := mulmod(inv, mload(mPtr), R_MOD)
@@ -639,12 +634,14 @@ contract TestPlonkVerifierForDataAggregation {
         }
       }
 
+      
       /// Public inputs (the ones coming from the custom gate) contribution
       /// @param aproof pointer to the proof
       /// @param nb_public_inputs number of public inputs
       /// @param mPtr pointer to free memory
       /// @return pi_commit custom gate public inputs contribution
-      function sum_pi_commit(aproof, nb_public_inputs, mPtr) -> pi_commit {
+      function sum_pi_commit(aproof, nb_public_inputs, mPtr)->pi_commit {
+
         let state := mload(0x40)
         let z := mload(add(state, STATE_ZETA))
         let zpnmo := mload(add(state, STATE_ZETA_POWER_N_MINUS_ONE))
@@ -652,10 +649,14 @@ contract TestPlonkVerifierForDataAggregation {
         let p := add(aproof, PROOF_BSB_COMMITMENTS)
 
         let h_fr, ith_lagrange
-
+       
+        
         h_fr := hash_fr(calldataload(p), calldataload(add(p, 0x20)), mPtr)
         ith_lagrange := compute_ith_lagrange_at_z(z, zpnmo, add(nb_public_inputs, VK_INDEX_COMMIT_API_0), mPtr)
         pi_commit := addmod(pi_commit, mulmod(h_fr, ith_lagrange, R_MOD), R_MOD)
+        
+        
+
       }
 
       /// Computes L_i(zeta) =  ωⁱ/n * (ζⁿ-1)/(ζ-ωⁱ) where:
@@ -663,14 +664,16 @@ contract TestPlonkVerifierForDataAggregation {
       /// @param zpmno ζⁿ-1
       /// @param i i-th lagrange
       /// @param mPtr free memory
-      /// @return res = ωⁱ/n * (ζⁿ-1)/(ζ-ωⁱ)
-      function compute_ith_lagrange_at_z(z, zpnmo, i, mPtr) -> res {
+      /// @return res = ωⁱ/n * (ζⁿ-1)/(ζ-ωⁱ) 
+      function compute_ith_lagrange_at_z(z, zpnmo, i, mPtr)->res {
+
         let w := pow(VK_OMEGA, i, mPtr) // w**i
         i := addmod(z, sub(R_MOD, w), R_MOD) // z-w**i
         w := mulmod(w, VK_INV_DOMAIN_SIZE, R_MOD) // w**i/n
-        i := pow(i, sub(R_MOD, 2), mPtr) // (z-w**i)**-1
+        i := pow(i, sub(R_MOD,2), mPtr) // (z-w**i)**-1
         w := mulmod(w, i, R_MOD) // w**i/n*(z-w)**-1
         res := mulmod(w, zpnmo, R_MOD)
+      
       }
 
       /// @dev https://tools.ietf.org/html/draft-irtf-cfrg-hash-to-curve-06#section-5.2
@@ -678,14 +681,15 @@ contract TestPlonkVerifierForDataAggregation {
       /// @param y y coordinate of a point on Bn254(𝔽_p)
       /// @param mPtr free memory
       /// @return res an element mod R_MOD
-      function hash_fr(x, y, mPtr) -> res {
+      function hash_fr(x, y, mPtr)->res {
+
         // [0x00, .. , 0x00 || x, y, || 0, 48, 0, dst, HASH_FR_SIZE_DOMAIN]
         // <-  64 bytes  ->  <-64b -> <-       1 bytes each     ->
 
         // [0x00, .., 0x00] 64 bytes of zero
         mstore(mPtr, HASH_FR_ZERO_UINT256)
         mstore(add(mPtr, 0x20), HASH_FR_ZERO_UINT256)
-
+    
         // msg =  x || y , both on 32 bytes
         mstore(add(mPtr, 0x40), x)
         mstore(add(mPtr, 0x60), y)
@@ -721,7 +725,7 @@ contract TestPlonkVerifierForDataAggregation {
         // [b0         || one || dst || HASH_FR_SIZE_DOMAIN]
         // <-64bytes ->  <-    1 byte each      ->
         mstore8(add(mPtr, 0x20), HASH_FR_ONE) // 1
-
+        
         mstore8(add(mPtr, 0x21), 0x42) // dst
         mstore8(add(mPtr, 0x22), 0x53)
         mstore8(add(mPtr, 0x23), 0x42)
@@ -773,8 +777,9 @@ contract TestPlonkVerifierForDataAggregation {
         res := mulmod(mload(mPtr), HASH_FR_BB, R_MOD) // <- res = 2**128 * mPtr[:32]
         let b1 := shr(128, mload(add(mPtr, 0x20))) // b1 <- [0, 0, .., 0 ||  b2[:16] ]
         res := addmod(res, b1, R_MOD)
-      }
 
+      }
+      
       // END compute_pi -------------------------------------------------
 
       /// @notice compute α² * 1/n * (ζ{n}-1)/(ζ - 1) where
@@ -782,7 +787,7 @@ contract TestPlonkVerifierForDataAggregation {
       /// * n = vk_domain_size
       /// * ω = vk_omega (generator of the multiplicative cyclic group of order n in (ℤ/rℤ)*)
       /// * ζ = zeta (challenge derived with Fiat Shamir)
-      function compute_alpha_square_lagrange_0() {
+      function compute_alpha_square_lagrange_0() {   
         let state := mload(0x40)
         let mPtr := add(mload(0x40), STATE_LAST_MEM)
 
@@ -822,7 +827,7 @@ contract TestPlonkVerifierForDataAggregation {
         mstore(add(mPtr, 0x100), mload(add(state, STATE_ZETA)))
         mstore(add(mPtr, 0x120), mload(add(state, STATE_GAMMA_KZG)))
         let random := staticcall(gas(), SHA2, mPtr, 0x140, mPtr, 0x20)
-        if iszero(random) {
+        if iszero(random){
           error_random_generation()
         }
         random := mod(mload(mPtr), R_MOD) // use the same variable as we are one variable away from getting stack-too-deep error...
@@ -871,18 +876,18 @@ contract TestPlonkVerifierForDataAggregation {
         mstore(folded_quotients_y, sub(P_MOD, mload(folded_quotients_y)))
 
         mstore(mPtr, mload(folded_digests))
-
-        mstore(add(mPtr, 0x20), mload(add(folded_digests, 0x20)))
-        mstore(add(mPtr, 0x40), G2_SRS_0_X_0) // the 4 lines are the canonical G2 point on BN254
-        mstore(add(mPtr, 0x60), G2_SRS_0_X_1)
-        mstore(add(mPtr, 0x80), G2_SRS_0_Y_0)
-        mstore(add(mPtr, 0xa0), G2_SRS_0_Y_1)
-        mstore(add(mPtr, 0xc0), mload(folded_quotients))
-        mstore(add(mPtr, 0xe0), mload(add(folded_quotients, 0x20)))
-        mstore(add(mPtr, 0x100), G2_SRS_1_X_0)
-        mstore(add(mPtr, 0x120), G2_SRS_1_X_1)
-        mstore(add(mPtr, 0x140), G2_SRS_1_Y_0)
-        mstore(add(mPtr, 0x160), G2_SRS_1_Y_1)
+        
+        mstore(add(mPtr, 0x20), mload(add(folded_digests, 0x20))) 
+        mstore(add(mPtr, 0x40), G2_SRS_0_X_0)  // the 4 lines are the canonical G2 point on BN254
+        mstore(add(mPtr, 0x60), G2_SRS_0_X_1) 
+        mstore(add(mPtr, 0x80), G2_SRS_0_Y_0) 
+        mstore(add(mPtr, 0xa0), G2_SRS_0_Y_1) 
+        mstore(add(mPtr, 0xc0), mload(folded_quotients)) 
+        mstore(add(mPtr, 0xe0), mload(add(folded_quotients, 0x20))) 
+        mstore(add(mPtr, 0x100), G2_SRS_1_X_0) 
+        mstore(add(mPtr, 0x120), G2_SRS_1_X_1) 
+        mstore(add(mPtr, 0x140), G2_SRS_1_Y_0) 
+        mstore(add(mPtr, 0x160), G2_SRS_1_Y_1) 
         check_pairing_kzg(mPtr)
       }
 
@@ -907,6 +912,7 @@ contract TestPlonkVerifierForDataAggregation {
       /// @param aproof pointer to the proof
       /// acc_gamma stores the γⁱ
       function fold_state(aproof) {
+
         let state := mload(0x40)
         let mPtr := add(mload(0x40), STATE_LAST_MEM)
         let mPtr20 := add(mPtr, 0x20)
@@ -943,14 +949,15 @@ contract TestPlonkVerifierForDataAggregation {
         point_acc_mul(state_folded_digests, mPtr, acc_gamma, mPtr40)
         fr_acc_mul_calldata(add(state, STATE_FOLDED_CLAIMED_VALUES), add(aproof, PROOF_S2_AT_ZETA), acc_gamma)
         let poqaz := add(aproof, PROOF_OPENING_QCP_AT_ZETA)
-
+        
         acc_gamma := mulmod(acc_gamma, l_gamma_kzg, R_MOD)
         mstore(mPtr, VK_QCP_0_X)
         mstore(mPtr20, VK_QCP_0_Y)
         point_acc_mul(state_folded_digests, mPtr, acc_gamma, mPtr40)
         fr_acc_mul_calldata(add(state, STATE_FOLDED_CLAIMED_VALUES), poqaz, acc_gamma)
         poqaz := add(poqaz, 0x20)
-      }
+        
+        }
 
       /// @notice generate the challenge (using Fiat Shamir) to fold the opening proofs
       /// at ζ.
@@ -968,22 +975,23 @@ contract TestPlonkVerifierForDataAggregation {
       /// * Z(ζω)
       /// @param aproof pointer to the proof
       function compute_gamma_kzg(aproof) {
+
         let state := mload(0x40)
         let mPtr := add(mload(0x40), STATE_LAST_MEM)
         mstore(mPtr, FS_GAMMA_KZG) // "gamma"
         mstore(add(mPtr, 0x20), mload(add(state, STATE_ZETA)))
-        mstore(add(mPtr, 0x40), mload(add(state, STATE_LINEARISED_POLYNOMIAL_X)))
-        mstore(add(mPtr, 0x60), mload(add(state, STATE_LINEARISED_POLYNOMIAL_Y)))
+        mstore(add(mPtr,0x40), mload(add(state, STATE_LINEARISED_POLYNOMIAL_X)))
+        mstore(add(mPtr,0x60), mload(add(state, STATE_LINEARISED_POLYNOMIAL_Y)))
         calldatacopy(add(mPtr, 0x80), add(aproof, PROOF_L_COM_X), 0xc0)
-        mstore(add(mPtr, 0x140), VK_S1_COM_X)
-        mstore(add(mPtr, 0x160), VK_S1_COM_Y)
-        mstore(add(mPtr, 0x180), VK_S2_COM_X)
-        mstore(add(mPtr, 0x1a0), VK_S2_COM_Y)
-
+        mstore(add(mPtr,0x140), VK_S1_COM_X)
+        mstore(add(mPtr,0x160), VK_S1_COM_Y)
+        mstore(add(mPtr,0x180), VK_S2_COM_X)
+        mstore(add(mPtr,0x1a0), VK_S2_COM_Y)
+        
         let offset := 0x1c0
-
-        mstore(add(mPtr, offset), VK_QCP_0_X)
-        mstore(add(mPtr, add(offset, 0x20)), VK_QCP_0_Y)
+        
+        mstore(add(mPtr,offset), VK_QCP_0_X)
+        mstore(add(mPtr,add(offset, 0x20)), VK_QCP_0_Y)
         offset := add(offset, 0x40)
         mstore(add(mPtr, offset), mload(add(state, STATE_OPENING_LINEARISED_POLYNOMIAL_ZETA)))
         mstore(add(mPtr, add(offset, 0x20)), calldataload(add(aproof, PROOF_L_AT_ZETA)))
@@ -994,23 +1002,18 @@ contract TestPlonkVerifierForDataAggregation {
 
         let _mPtr := add(mPtr, add(offset, 0xc0))
 
+        
         let _poqaz := add(aproof, PROOF_OPENING_QCP_AT_ZETA)
         calldatacopy(_mPtr, _poqaz, mul(VK_NB_CUSTOM_GATES, 0x20))
         _mPtr := add(_mPtr, mul(VK_NB_CUSTOM_GATES, 0x20))
+        
 
         mstore(_mPtr, calldataload(add(aproof, PROOF_GRAND_PRODUCT_AT_ZETA_OMEGA)))
 
         let start_input := 0x1b // 00.."gamma"
-        let size_input := add(0x14, mul(VK_NB_CUSTOM_GATES, 3)) // number of 32bytes elmts = 0x14 (zeta+3*6 for the digests+openings) + 3*VK_NB_CUSTOM_GATES (for the commitments of the selectors) + 1 (opening of Z at ζω)
+        let size_input := add(0x14, mul(VK_NB_CUSTOM_GATES,3)) // number of 32bytes elmts = 0x14 (zeta+3*6 for the digests+openings) + 3*VK_NB_CUSTOM_GATES (for the commitments of the selectors) + 1 (opening of Z at ζω)
         size_input := add(0x5, mul(size_input, 0x20)) // size in bytes: 15*32 bytes + 5 bytes for gamma
-        let check_staticcall := staticcall(
-          gas(),
-          SHA2,
-          add(mPtr, start_input),
-          size_input,
-          add(state, STATE_GAMMA_KZG),
-          0x20
-        )
+        let check_staticcall := staticcall(gas(), SHA2, add(mPtr,start_input), size_input, add(state, STATE_GAMMA_KZG), 0x20)
         if iszero(check_staticcall) {
           error_verify()
         }
@@ -1018,6 +1021,7 @@ contract TestPlonkVerifierForDataAggregation {
       }
 
       function compute_commitment_linearised_polynomial_ec(aproof, s1, s2) {
+        
         let state := mload(0x40)
         let mPtr := add(mload(0x40), STATE_LAST_MEM)
 
@@ -1062,6 +1066,7 @@ contract TestPlonkVerifierForDataAggregation {
           add(mPtr, 0x40)
         )
 
+        
         let qcp_opening_at_zeta := add(aproof, PROOF_OPENING_QCP_AT_ZETA)
         let bsb_commitments := add(aproof, PROOF_BSB_COMMITMENTS)
         for {
@@ -1080,6 +1085,7 @@ contract TestPlonkVerifierForDataAggregation {
           qcp_opening_at_zeta := add(qcp_opening_at_zeta, 0x20)
           bsb_commitments := add(bsb_commitments, 0x40)
         }
+        
 
         mstore(mPtr, VK_S3_COM_X)
         mstore(add(mPtr, 0x20), VK_S3_COM_Y)
@@ -1090,11 +1096,10 @@ contract TestPlonkVerifierForDataAggregation {
         point_acc_mul(add(state, STATE_LINEARISED_POLYNOMIAL_X), mPtr, s2, add(mPtr, 0x40))
 
         point_add(
-          add(state, STATE_LINEARISED_POLYNOMIAL_X),
-          add(state, STATE_LINEARISED_POLYNOMIAL_X),
-          add(state, STATE_FOLDED_H_X),
-          mPtr
-        )
+          add(state, STATE_LINEARISED_POLYNOMIAL_X), 
+          add(state, STATE_LINEARISED_POLYNOMIAL_X), 
+          add(state, STATE_FOLDED_H_X), 
+          mPtr)
       }
 
       /// @notice Compute the commitment to the linearized polynomial equal to
@@ -1161,25 +1166,10 @@ contract TestPlonkVerifierForDataAggregation {
         let mPtr := add(mload(0x40), STATE_LAST_MEM)
         let zeta_power_n_plus_two := pow(mload(add(state, STATE_ZETA)), n_plus_two, mPtr)
         point_mul_calldata(add(state, STATE_FOLDED_H_X), add(aproof, PROOF_H_2_COM_X), zeta_power_n_plus_two, mPtr)
-        point_add_calldata(
-          add(state, STATE_FOLDED_H_X),
-          add(state, STATE_FOLDED_H_X),
-          add(aproof, PROOF_H_1_COM_X),
-          mPtr
-        )
+        point_add_calldata(add(state, STATE_FOLDED_H_X), add(state, STATE_FOLDED_H_X), add(aproof, PROOF_H_1_COM_X), mPtr)
         point_mul(add(state, STATE_FOLDED_H_X), add(state, STATE_FOLDED_H_X), zeta_power_n_plus_two, mPtr)
-        point_add_calldata(
-          add(state, STATE_FOLDED_H_X),
-          add(state, STATE_FOLDED_H_X),
-          add(aproof, PROOF_H_0_COM_X),
-          mPtr
-        )
-        point_mul(
-          add(state, STATE_FOLDED_H_X),
-          add(state, STATE_FOLDED_H_X),
-          mload(add(state, STATE_ZETA_POWER_N_MINUS_ONE)),
-          mPtr
-        )
+        point_add_calldata(add(state, STATE_FOLDED_H_X), add(state, STATE_FOLDED_H_X), add(aproof, PROOF_H_0_COM_X), mPtr)
+          point_mul(add(state, STATE_FOLDED_H_X), add(state, STATE_FOLDED_H_X), mload(add(state, STATE_ZETA_POWER_N_MINUS_ONE)), mPtr)
         let folded_h_y := mload(add(state, STATE_FOLDED_H_Y))
         folded_h_y := sub(P_MOD, folded_h_y)
         mstore(add(state, STATE_FOLDED_H_Y), folded_h_y)
@@ -1189,6 +1179,7 @@ contract TestPlonkVerifierForDataAggregation {
       /// - [ PI(ζ) - α²*L₁(ζ) + α(l(ζ)+β*s1(ζ)+γ)(r(ζ)+β*s2(ζ)+γ)(o(ζ)+γ)*z(ωζ) ]
       /// @param aproof pointer to the proof
       function compute_opening_linearised_polynomial(aproof) {
+        
         let state := mload(0x40)
 
         // (l(ζ)+β*s1(ζ)+γ)
@@ -1224,7 +1215,7 @@ contract TestPlonkVerifierForDataAggregation {
       }
 
       // BEGINNING utils math functions -------------------------------------------------
-
+      
       /// @param dst pointer storing the result
       /// @param p pointer to the first point
       /// @param q pointer to the second point
@@ -1234,7 +1225,7 @@ contract TestPlonkVerifierForDataAggregation {
         mstore(add(mPtr, 0x20), mload(add(p, 0x20)))
         mstore(add(mPtr, 0x40), mload(q))
         mstore(add(mPtr, 0x60), mload(add(q, 0x20)))
-        let l_success := staticcall(gas(), EC_ADD, mPtr, 0x80, dst, 0x40)
+        let l_success := staticcall(gas(),EC_ADD,mPtr,0x80,dst,0x40)
         if iszero(l_success) {
           error_ec_op()
         }
@@ -1259,11 +1250,11 @@ contract TestPlonkVerifierForDataAggregation {
       /// @param src pointer to a point on Bn254(𝔽_p)
       /// @param s scalar
       /// @param mPtr free memory
-      function point_mul(dst, src, s, mPtr) {
-        mstore(mPtr, mload(src))
-        mstore(add(mPtr, 0x20), mload(add(src, 0x20)))
-        mstore(add(mPtr, 0x40), s)
-        let l_success := staticcall(gas(), EC_MUL, mPtr, 0x60, dst, 0x40)
+      function point_mul(dst,src,s, mPtr) {
+        mstore(mPtr,mload(src))
+        mstore(add(mPtr,0x20),mload(add(src,0x20)))
+        mstore(add(mPtr,0x40),s)
+        let l_success := staticcall(gas(),EC_MUL,mPtr,0x60,dst,0x40)
         if iszero(l_success) {
           error_ec_op()
         }
@@ -1288,14 +1279,14 @@ contract TestPlonkVerifierForDataAggregation {
       /// @param src pointer to the point to multiply and add
       /// @param s scalar
       /// @param mPtr free memory
-      function point_acc_mul(dst, src, s, mPtr) {
-        mstore(mPtr, mload(src))
-        mstore(add(mPtr, 0x20), mload(add(src, 0x20)))
-        mstore(add(mPtr, 0x40), s)
-        let l_success := staticcall(gas(), 7, mPtr, 0x60, mPtr, 0x40)
-        mstore(add(mPtr, 0x40), mload(dst))
-        mstore(add(mPtr, 0x60), mload(add(dst, 0x20)))
-        l_success := and(l_success, staticcall(gas(), EC_ADD, mPtr, 0x80, dst, 0x40))
+      function point_acc_mul(dst,src,s, mPtr) {
+        mstore(mPtr,mload(src))
+        mstore(add(mPtr,0x20),mload(add(src,0x20)))
+        mstore(add(mPtr,0x40),s)
+        let l_success := staticcall(gas(),7,mPtr,0x60,mPtr,0x40)
+        mstore(add(mPtr,0x40),mload(dst))
+        mstore(add(mPtr,0x60),mload(add(dst,0x20)))
+        l_success := and(l_success, staticcall(gas(),EC_ADD,mPtr,0x80,dst, 0x40))
         if iszero(l_success) {
           error_ec_op()
         }
@@ -1324,7 +1315,7 @@ contract TestPlonkVerifierForDataAggregation {
       /// @param src pointer to the scalar to multiply and add (on calldata)
       /// @param s scalar
       function fr_acc_mul_calldata(dst, src, s) {
-        let tmp := mulmod(calldataload(src), s, R_MOD)
+        let tmp :=  mulmod(calldataload(src), s, R_MOD)
         mstore(dst, addmod(mload(dst), tmp, R_MOD))
       }
 
@@ -1332,16 +1323,16 @@ contract TestPlonkVerifierForDataAggregation {
       /// @param e exponent
       /// @param mPtr free memory
       /// @return res x ** e mod r
-      function pow(x, e, mPtr) -> res {
+      function pow(x, e, mPtr)->res {
         mstore(mPtr, 0x20)
         mstore(add(mPtr, 0x20), 0x20)
         mstore(add(mPtr, 0x40), 0x20)
         mstore(add(mPtr, 0x60), x)
         mstore(add(mPtr, 0x80), e)
         mstore(add(mPtr, 0xa0), R_MOD)
-        let check_staticcall := staticcall(gas(), MOD_EXP, mPtr, 0xc0, mPtr, 0x20)
+        let check_staticcall := staticcall(gas(),MOD_EXP,mPtr,0xc0,mPtr,0x20)
         if eq(check_staticcall, 0) {
-          error_mod_exp()
+            error_mod_exp()
         }
         res := mload(mPtr)
       }

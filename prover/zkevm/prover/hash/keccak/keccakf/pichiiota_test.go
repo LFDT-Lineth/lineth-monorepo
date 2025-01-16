@@ -3,7 +3,7 @@
 package keccakf
 
 import (
-	"math/rand"
+	"math/rand/v2"
 	"testing"
 
 	"github.com/consensys/linea-monorepo/prover/crypto/keccak"
@@ -141,7 +141,7 @@ func TestPiChiIota(t *testing.T) {
 	maxKeccaf := 10
 
 	// #nosec G404 --we don't need a cryptographic RNG for testing purpose
-	rnd := rand.New(rand.NewSource(0))
+	rnd := rand.New(rand.NewChaCha8([32]byte{}))
 
 	// Every time the prover function is called, the traces will be updated.
 	// Likewise, run will be set by the prover.

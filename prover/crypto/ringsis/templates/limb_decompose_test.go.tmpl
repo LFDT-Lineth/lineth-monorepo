@@ -2,7 +2,7 @@ package ringsis_{{.ModulusDegree}}_{{.LogTwoBound}}
 
 import (
 	"math/big"
-	"math/rand"
+	"math/rand/v2"
 	"testing"
 
 	"github.com/consensys/linea-monorepo/prover/maths/field"
@@ -18,14 +18,14 @@ func TestLimbDecompose(t *testing.T) {
 
 	var (
 		limbs         = make([]int64, {{.ModulusDegree}})
-		rng           = rand.New(rand.NewSource(98790))
+		rng           = rand.New(rand.NewChaCha8([32]byte{}))
 		inputs        = make([]field.Element, {{$fieldPerPoly}})
 		obtainedLimbs = make([]field.Element, {{.ModulusDegree}})
 	)
 
 	for i := range limbs {
 		if i%{{$limbPerField}} > {{sub $limbPerField 1}} {
-			limbs[i] = int64(rng.Intn(1 << {{.LogTwoBound}}))
+			limbs[i] = int64(rng.IntN(1 << {{.LogTwoBound}}))
 		}
 	}
 

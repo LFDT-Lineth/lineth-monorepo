@@ -2,12 +2,13 @@ package testdata
 
 import (
 	"fmt"
-	"math/rand"
+	"math/rand/v2"
 
 	"github.com/consensys/linea-monorepo/prover/backend/files"
 	"github.com/consensys/linea-monorepo/prover/crypto/keccak"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
+	"github.com/consensys/linea-monorepo/prover/utils"
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/common"
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/hash/generic"
 )
@@ -23,7 +24,7 @@ func GenerateAndAssignGenDataModule(run *wizard.ProverRuntime, gdm *generic.GenD
 		toHash  = make([]field.Element, size)
 		index   = make([]field.Element, size)
 		hashNum = make([]field.Element, size)
-		rng     = rand.New(rand.NewSource(68768))
+		rng     = rand.New(rand.NewChaCha8([32]byte{}))
 
 		nByteCol   = common.NewVectorBuilder(gdm.NBytes)
 		limbCol    = common.NewVectorBuilder(gdm.Limb)
@@ -95,7 +96,7 @@ func randNBytes(rng *rand.Rand) (int, field.Element) {
 
 	// nBytesInt must be in 1..=16
 	var (
-		nBytesInt = rng.Int31n(16) + 1
+		nBytesInt = rng.Int32N(16) + 1
 		nBytesF   = field.NewElement(uint64(nBytesInt))
 	)
 
@@ -106,7 +107,7 @@ func randLimbs(rng *rand.Rand, nBytes int) field.Element {
 
 	var (
 		resBytes = make([]byte, 16)
-		_, _     = rng.Read(resBytes[:nBytes])
+		_, _     = utils.ReadPseudoRand(rng, resBytes[:nBytes])
 		res      = new(field.Element).SetBytes(resBytes)
 	)
 

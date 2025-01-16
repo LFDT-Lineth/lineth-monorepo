@@ -2,7 +2,7 @@ package lookup
 
 import (
 	"fmt"
-	"math/rand"
+	"math/rand/v2"
 	"testing"
 
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
@@ -58,7 +58,7 @@ func TestExhaustive(t *testing.T) {
 
 	var (
 		// #nosec G404 -- we don't need a cryptographic PRNG for testing purposes
-		rng          = rand.New(rand.NewSource(43))
+		rng          = rand.New(rand.NewChaCha8([32]byte{}))
 		smallNumbers = smartvectors.ForTest(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15)
 		xorTable     = [3]smartvectors.SmartVector{
 			smartvectors.ForTest(0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3),
@@ -114,7 +114,7 @@ func TestExhaustive(t *testing.T) {
 			for i := range cols {
 				vec := make([]int, size)
 				for j := range vec {
-					vec[j] = rng.Intn(2)
+					vec[j] = rng.IntN(2)
 				}
 				run.AssignColumn(cols[i].GetColID(), smartvectors.ForTest(vec...))
 			}
@@ -126,7 +126,7 @@ func TestExhaustive(t *testing.T) {
 			for i := range cols {
 				vec := make([]int, size)
 				for j := range vec {
-					vec[j] = rng.Intn(4)
+					vec[j] = rng.IntN(4)
 				}
 				run.AssignColumn(cols[i].GetColID(), smartvectors.ForTest(vec...))
 			}
@@ -140,7 +140,7 @@ func TestExhaustive(t *testing.T) {
 			size := cols[0].Size()
 			vecs := [3][]int{}
 			for j := 0; j < size; j++ {
-				x, y := rng.Intn(4), rng.Intn(4)
+				x, y := rng.IntN(4), rng.IntN(4)
 				z := x ^ y
 				vecs[0] = append(vecs[0], x)
 				vecs[1] = append(vecs[1], y)

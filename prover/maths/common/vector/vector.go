@@ -4,7 +4,7 @@ package vector
 
 import (
 	"fmt"
-	"math/rand"
+	"math/rand/v2"
 
 	"github.com/consensys/gnark-crypto/ecc/bls12-377/fr"
 	"github.com/consensys/gnark/frontend"

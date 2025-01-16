@@ -116,16 +116,7 @@ func FmtCsv(w io.Writer, run *wizard.ProverRuntime, cols []ifaces.Column, option
 				allZeroes = false
 			}
 
-			if assignment[c][r].IsUint64() {
-				if cfg.inHex {
-					fmtVals = append(fmtVals, "0x"+assignment[c][r].Text(16))
-				} else {
-					fmtVals = append(fmtVals, assignment[c][r].String())
-				}
-				continue
-			}
-
-			fmtVals = append(fmtVals, "0x"+assignment[c][r].Text(16))
+			fmtVals = append(fmtVals, fmtFieldElement(cfg.inHex, assignment[c][r]))
 		}
 
 		if !allZeroes {
@@ -260,4 +251,32 @@ func (c *CsvTrace) Len() int {
 
 func (c *CsvTrace) LenPadded() int {
 	return utils.NextPowerOfTwo(c.nbRows)
+}
+
+// WritesExplicit format value-provided columns into a csv file. Unlike [FmtCsv]
+// it does not need the columns to be registered as the assignmet of a wizard.
+// It is suitable for test-case generation.
+func WriteExplicit(w io.Writer, names []string, cols [][]field.Element, inHex bool) {
+
+	fmt.Fprintf(w, "%v\n", strings.Join(names, ","))
+
+	for i := range cols[0] {
+
+		row := []string{}
+		for j := range cols {
+			row = append(row, fmtFieldElement(inHex, cols[j][i]))
+		}
+
+		fmt.Fprintf(w, "%v\n", strings.Join(row, ","))
+	}
+
+}
+
+func fmtFieldElement(inHex bool, x field.Element) string {
+
+	if inHex || (x.IsUint64() && x.Uint64() < 1<<10) {
+		return x.String()
+	}
+
+	return "0x" + x.Text(16)
 }

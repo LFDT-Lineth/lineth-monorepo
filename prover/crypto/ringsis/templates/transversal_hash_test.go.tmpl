@@ -2,7 +2,7 @@ package ringsis_{{.ModulusDegree}}_{{.LogTwoBound}}_test
 
 import (
 	"fmt"
-	"math/rand"
+	"math/rand/v2"
 	"testing"
 
 	"github.com/consensys/gnark-crypto/ecc/bls12-377/fr/fft"
@@ -33,7 +33,7 @@ func randomRegularRow(rng *rand.Rand, size int) smartvectors.SmartVector {
 func fullyRandomTestVector(rng *rand.Rand, numRow, numCols int) []smartvectors.SmartVector {
 	list := make([]smartvectors.SmartVector, numRow)
 	for i := range list {
-		coin := rng.Intn(2)
+		coin := rng.IntN(2)
 		switch {
 		case coin == 0:
 			list[i] = randomConstRow(rng, numCols)
@@ -65,7 +65,7 @@ func TestSmartVectorTransversalSisHash(t *testing.T) {
 	var (
 		numReps   = 64
 		numCols   = 16
-		rng       = rand.New(rand.NewSource(786868))
+		rng       = rand.New(rand.NewChaCha8([32]byte{}))
 		domain    = fft.NewDomain({{.ModulusDegree}}, fft.WithShift(wfft.GetOmega({{.ModulusDegree}}*2)))
 		twiddles  = ringsis_{{.ModulusDegree}}_{{.LogTwoBound}}.PrecomputeTwiddlesCoset(domain.Generator, domain.FrMultiplicativeGen)
 		params    = ringsis.Params{LogTwoBound: {{.LogTwoBound}}, LogTwoDegree: {{log2 .ModulusDegree}}}

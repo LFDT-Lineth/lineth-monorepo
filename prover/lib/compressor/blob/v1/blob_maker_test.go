@@ -8,7 +8,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"math/big"
-	"math/rand"
+	"math/rand/v2"
 	"os"
 	"path/filepath"
 	"testing"
@@ -151,7 +151,7 @@ func TestCanWrite(t *testing.T) {
 	cptBlock := 0
 	for i, block := range testBlocks {
 		// get a random from 1 to 5
-		bSize := rand.Intn(3) + 1 // #nosec G404 -- false positive
+		bSize := rand.IntN(3) + 1 // #nosec G404 -- false positive
 
 		if cptBlock > bSize && i%3 == 0 {
 			nbBlocksPerBatch = append(nbBlocksPerBatch, uint16(cptBlock))
@@ -236,7 +236,7 @@ func TestCompressorWithBatches(t *testing.T) {
 	for i, block := range testBlocks {
 		t.Logf("processing block %d over %d", i, len(testBlocks))
 		// get a random from 1 to 5
-		bSize := rand.Intn(5) + 1 // #nosec G404 -- false positive
+		bSize := rand.IntN(5) + 1 // #nosec G404 -- false positive
 
 		if cptBlock > bSize && i%3 == 0 {
 			nbBlocksPerBatch = append(nbBlocksPerBatch, uint16(cptBlock))
@@ -624,8 +624,8 @@ func TestPack(t *testing.T) {
 
 	for i := 0; i < 100; i++ {
 		// create 2 random slices
-		n1 := rand.Intn(100) + 1 // #nosec G404 -- false positive
-		n2 := rand.Intn(100) + 1 // #nosec G404 -- false positive
+		n1 := rand.IntN(100) + 1 // #nosec G404 -- false positive
+		n2 := rand.IntN(100) + 1 // #nosec G404 -- false positive
 
 		s1 := make([]byte, n1)
 		s2 := make([]byte, n2)

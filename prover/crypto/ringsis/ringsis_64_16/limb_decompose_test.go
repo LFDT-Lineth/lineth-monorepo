@@ -4,7 +4,7 @@ package ringsis_64_16
 
 import (
 	"math/big"
-	"math/rand"
+	"math/rand/v2"
 	"testing"
 
 	"github.com/consensys/linea-monorepo/prover/maths/field"
@@ -15,14 +15,14 @@ func TestLimbDecompose(t *testing.T) {
 
 	var (
 		limbs         = make([]int64, 64)
-		rng           = rand.New(rand.NewSource(98790))
+		rng           = rand.New(rand.NewChaCha8([32]byte{}))
 		inputs        = make([]field.Element, 4)
 		obtainedLimbs = make([]field.Element, 64)
 	)
 
 	for i := range limbs {
 		if i%16 > 15 {
-			limbs[i] = int64(rng.Intn(1 << 16))
+			limbs[i] = int64(rng.IntN(1 << 16))
 		}
 	}
 

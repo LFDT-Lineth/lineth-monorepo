@@ -27,12 +27,12 @@ func TestFFTFuzzyDIFDIT(t *testing.T) {
 				v := tcase.svecs[0]
 
 				// Test the consistency of the FFT
-				oncoset := builder.gen.Intn(2) == 0
+				oncoset := builder.gen.IntN(2) == 0
 
 				ratio, cosetID := 0, 0
 				if oncoset {
-					ratio = 1 << builder.gen.Intn(4)
-					cosetID = builder.gen.Intn(ratio)
+					ratio = 1 << builder.gen.IntN(4)
+					cosetID = builder.gen.IntN(ratio)
 				}
 
 				t.Logf("Parameters are (vec %v - ratio %v - cosetID %v", v.Pretty(), ratio, cosetID)
@@ -66,12 +66,12 @@ func TestFFTFuzzyDITDIF(t *testing.T) {
 				v := tcase.svecs[0]
 
 				// Test the consistency of the FFT
-				oncoset := builder.gen.Intn(2) == 0
+				oncoset := builder.gen.IntN(2) == 0
 
 				ratio, cosetID := 0, 0
 				if oncoset {
-					ratio = 1 << builder.gen.Intn(4)
-					cosetID = builder.gen.Intn(ratio)
+					ratio = 1 << builder.gen.IntN(4)
+					cosetID = builder.gen.IntN(ratio)
 				}
 
 				t.Logf("Parameters are (vec %v - ratio %v - cosetID %v", v.Pretty(), ratio, cosetID)
@@ -105,12 +105,12 @@ func TestFFTFuzzyDIFDITBitReverse(t *testing.T) {
 				v := tcase.svecs[0]
 
 				// Test the consistency of the FFT
-				oncoset := builder.gen.Intn(2) == 0
+				oncoset := builder.gen.IntN(2) == 0
 
 				ratio, cosetID := 0, 0
 				if oncoset {
-					ratio = 1 << builder.gen.Intn(4)
-					cosetID = builder.gen.Intn(ratio)
+					ratio = 1 << builder.gen.IntN(4)
+					cosetID = builder.gen.IntN(ratio)
 				}
 
 				t.Logf("Parameters are (vec %v - ratio %v - cosetID %v", v.Pretty(), ratio, cosetID)
@@ -144,12 +144,12 @@ func TestFFTFuzzyDITDIFBitReverse(t *testing.T) {
 				v := tcase.svecs[0]
 
 				// Test the consistency of the FFT
-				oncoset := builder.gen.Intn(2) == 0
+				oncoset := builder.gen.IntN(2) == 0
 
 				ratio, cosetID := 0, 0
 				if oncoset {
-					ratio = 1 << builder.gen.Intn(4)
-					cosetID = builder.gen.Intn(ratio)
+					ratio = 1 << builder.gen.IntN(4)
+					cosetID = builder.gen.IntN(ratio)
 				}
 
 				t.Logf("Parameters are (vec %v - ratio %v - cosetID %v", v.Pretty(), ratio, cosetID)
@@ -183,19 +183,19 @@ func TestFFTFuzzyEvaluation(t *testing.T) {
 				coeffs := tcase.svecs[0]
 
 				// Test the consistency of the FFT
-				oncoset := builder.gen.Intn(2) == 0
+				oncoset := builder.gen.IntN(2) == 0
 
 				ratio, cosetID := 0, 0
 				if oncoset {
-					ratio = 1 << builder.gen.Intn(4)
-					cosetID = builder.gen.Intn(ratio)
+					ratio = 1 << builder.gen.IntN(4)
+					cosetID = builder.gen.IntN(ratio)
 				}
 
 				// ====== With bit reverse ======
 
 				// FFT DIT and IFFT DIF should be the identity
 				evals := FFT(coeffs, fft.DIT, true, ratio, cosetID, nil)
-				i := builder.gen.Intn(coeffs.Len())
+				i := builder.gen.IntN(coeffs.Len())
 				t.Logf("Parameters are (vec %v - ratio %v - cosetID %v - evalAt %v", coeffs.Pretty(), ratio, cosetID, i)
 
 				x := fft.GetOmega(evals.Len())
@@ -235,19 +235,19 @@ func TestFFTFuzzyConsistWithInterpolation(t *testing.T) {
 				coeffs := tcase.svecs[0]
 
 				// Test the consistency of the FFT
-				oncoset := builder.gen.Intn(2) == 0
+				oncoset := builder.gen.IntN(2) == 0
 
 				ratio, cosetID := 0, 0
 				if oncoset {
-					ratio = 1 << builder.gen.Intn(4)
-					cosetID = builder.gen.Intn(ratio)
+					ratio = 1 << builder.gen.IntN(4)
+					cosetID = builder.gen.IntN(ratio)
 				}
 
 				// ====== With bit reverse ======
 
 				// FFT DIT and IFFT DIF should be the identity
 				evals := FFT(coeffs, fft.DIT, true, ratio, cosetID, nil)
-				i := builder.gen.Intn(coeffs.Len())
+				i := builder.gen.IntN(coeffs.Len())
 				t.Logf("Parameters are (vec %v - ratio %v - cosetID %v - evalAt %v", coeffs.Pretty(), ratio, cosetID, i)
 
 				var xCoeff field.Element

@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"math/big"
-	"math/rand"
+	"math/rand/v2"
 
 	"github.com/consensys/linea-monorepo/prover/backend/ethereum"
 	"github.com/consensys/linea-monorepo/prover/backend/execution"
@@ -30,7 +30,7 @@ type RandGen struct {
 // Create a generator from the CLI
 func MakeGeneratorFromCLI() (res RandGen) {
 	// #nosec G404 --we don't need a cryptographic RNG for testing purpose
-	res = RandGen{Rand: *rand.New(rand.NewSource(Seed()))}
+	res = RandGen{Rand: *rand.New(utils.NewRandSource(Seed()))}
 	res.Params.SupTxPerBlock = MaxTxPerBlock() + 1
 	res.Params.SupL2L1LogsPerBlock = MaxL2L1LogsPerBlock() + 1
 	res.Params.SupMsgReceiptPerBlock = MaxL1L2ReceiptPerBlock() + 1
@@ -39,7 +39,7 @@ func MakeGeneratorFromCLI() (res RandGen) {
 
 // Returns an non-zero integer in the range
 func (g *RandGen) PositiveInt(sup int) int {
-	return utils.Max(1, g.Intn(sup))
+	return utils.Max(1, g.IntN(sup))
 }
 
 // Returns a random hex string representing n bytes
@@ -70,7 +70,7 @@ func (g *RandGen) TxRlp(numTxs int) ([]string, []uint16) {
 	var receptionPos []uint16
 
 	// overwrite one of the tx with a receipt confirmation one
-	txPos := g.Intn(numTxs)
+	txPos := g.IntN(numTxs)
 	rlpTxs[txPos] = g.MsgReceiptConfirmationTx()
 	receptionPos = append(receptionPos, utils.ToUint16(txPos))
 
@@ -136,13 +136,13 @@ func (g *RandGen) PopulateBlockData(
 
 func (g *RandGen) Bytes(nb int) []byte {
 	res := make([]byte, nb)
-	g.Read(res)
+	utils.ReadPseudoRand(&g.Rand, res)
 	return res
 }
 
 // Generates a tx of any type
 func (g *RandGen) AnyTypeTxRlp() (res string) {
-	switch g.Intn(3) {
+	switch g.IntN(3) {
 	case 0:
 		res = g.LegacyTxRLP()
 	case 1:
@@ -256,7 +256,7 @@ func (g *RandGen) MsgReceiptConfirmationTx() string {
 
 	// Craft the transaction, randomly from any of
 	var tx ethtypes.TxData
-	switch g.Intn(3) {
+	switch g.IntN(3) {
 	case 0:
 		tx = &ethtypes.LegacyTx{
 			Nonce:    g.Nonce(),
@@ -338,7 +338,7 @@ func (g *RandGen) Nonce() uint64 {
 
 // Generates a random tx value
 func (g *RandGen) Value() *big.Int {
-	return big.NewInt(g.Int63n(1_000_000))
+	return big.NewInt(g.Int64N(1_000_000))
 }
 
 // Generate a random tx gas limit
@@ -348,13 +348,13 @@ func (g *RandGen) Gas() uint64 {
 
 // Generate a random big int
 func (g *RandGen) BigInt(n int64) *big.Int {
-	return big.NewInt(g.Int63n(n))
+	return big.NewInt(g.Int64N(n))
 }
 
 // Generates a list of L2 msg logs
 func (g *RandGen) L2L1MsgHashes() (hashes []types.FullBytes32) {
 	hashes = []types.FullBytes32{}
-	n := g.Intn(g.Params.SupL2L1LogsPerBlock)
+	n := g.IntN(g.Params.SupL2L1LogsPerBlock)
 	for i := 0; i < n; i++ {
 		hashes = append(hashes, types.FullBytes32FromHex(g.HexStringForNBytes(32)))
 	}

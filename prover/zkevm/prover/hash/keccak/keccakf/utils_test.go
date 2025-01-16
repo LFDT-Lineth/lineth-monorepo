@@ -3,7 +3,7 @@
 package keccakf
 
 import (
-	"math/rand"
+	"math/rand/v2"
 	"testing"
 
 	"github.com/consensys/linea-monorepo/prover/maths/field"
@@ -15,7 +15,7 @@ func TestU64FromToBase(t *testing.T) {
 	const numCases int = 100
 
 	// #nosec G404 --we don't need a cryptographic RNG for testing purpose
-	rnd := rand.New(rand.NewSource(0))
+	rnd := rand.New(rand.NewChaCha8([32]byte{}))
 	base1 := field.NewElement(uint64(BaseA))
 	base2 := field.NewElement(uint64(BaseB))
 
@@ -61,7 +61,7 @@ func TestBaseDecomposeRecompose(t *testing.T) {
 	const numCases int = 100
 
 	// #nosec G404 --we don't need a cryptographic RNG for testing purpose
-	rnd := rand.New(rand.NewSource(0))
+	rnd := rand.New(rand.NewChaCha8([32]byte{}))
 	base1 := field.NewElement(uint64(BaseA))
 	base2 := field.NewElement(uint64(BaseB))
 
@@ -93,7 +93,7 @@ func TestDecomposeInSlice(t *testing.T) {
 	const numCases int = 100
 
 	// #nosec G404 --we don't need a cryptographic RNG for testing purpose
-	rnd := rand.New(rand.NewSource(0))
+	rnd := rand.New(rand.NewChaCha8([32]byte{}))
 	base1 := field.NewElement(uint64(BaseA))
 	base2 := field.NewElement(uint64(BaseB))
 

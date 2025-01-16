@@ -2,10 +2,11 @@ package keccak_test
 
 import (
 	"fmt"
-	"math/rand"
+	"math/rand/v2"
 	"testing"
 
 	"github.com/consensys/linea-monorepo/prover/crypto/keccak"
+	"github.com/consensys/linea-monorepo/prover/utils"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
 )
@@ -18,7 +19,7 @@ func TestFullHashAgainstRef(t *testing.T) {
 
 	// Create a deterministic random number generator for reproducibility.
 	// #nosec G404 --we don't need a cryptographic RNG for testing purpose
-	rng := rand.New(rand.NewSource(0))
+	rng := rand.New(rand.NewChaCha8([32]byte{}))
 	refHasher := sha3.NewLegacyKeccak256()
 	numCases := 50
 
@@ -30,7 +31,7 @@ func TestFullHashAgainstRef(t *testing.T) {
 			for _n := 0; _n < numCases; _n++ {
 				// Populate the sample with random values
 				inp := make([]byte, s)
-				_, err := rng.Read(inp)
+				_, err := utils.ReadPseudoRand(rng, inp)
 				require.NoError(t, err)
 
 				// Hash the input stream using the reference hasher
@@ -56,15 +57,15 @@ func TestFullHashAgainstRefFullRand(t *testing.T) {
 
 	// Create a deterministic random number generator for reproducibility.
 	// #nosec G404 --we don't need a cryptographic RNG for testing purpose
-	rng := rand.New(rand.NewSource(0))
+	rng := rand.New(rand.NewChaCha8([32]byte{}))
 	refHasher := sha3.NewLegacyKeccak256()
 	numCases := 500
 	maxSize := 1024
 
 	for _n := 0; _n < numCases; _n++ {
 		// Populate the sample with random values
-		inp := make([]byte, rng.Intn(maxSize))
-		_, err := rng.Read(inp)
+		inp := make([]byte, rng.IntN(maxSize))
+		_, err := utils.ReadPseudoRand(rng, inp)
 		require.NoError(t, err)
 
 		// Hash the input stream using the reference hasher

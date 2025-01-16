@@ -1,7 +1,7 @@
 package packing
 
 import (
-	"math/rand"
+	"math/rand/v2"
 
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
 	"github.com/consensys/linea-monorepo/prover/maths/common/vector"
@@ -27,6 +27,7 @@ func table(t *dataTraceImported, numHash, blockSize, size int) [][]byte {
 		limbs     = make([][][]byte, numHash)
 		nByte     = make([][]int, numHash)
 		isNewHash = make([][]int, numHash)
+		rand      = rand.New(utils.NewRandSource(0)) // nolint
 	)
 
 	// build the stream for each hash.
@@ -39,17 +40,17 @@ func table(t *dataTraceImported, numHash, blockSize, size int) [][]byte {
 		m := size / (numHash * 15)
 		// number of limbs for the current hash
 		// added +1 to prevent edge-cases
-		nlimb := rand.Intn(m) + 1 //nolint
+		nlimb := rand.IntN(m) + 1 //nolint
 
 		s[i] = 0
 		for j := 0; j < nlimb; j++ {
 			// generate random bytes
 			// choose a random length for the slice
-			length := rand.Intn(MAXNBYTE) + 1 //nolint
+			length := rand.IntN(MAXNBYTE) + 1 //nolint
 
 			// generate random bytes
 			slice := make([]byte, length)
-			_, err := rand.Read(slice) //nolint
+			_, err := utils.ReadPseudoRand(rand, slice)
 			if err != nil {
 				logrus.Fatalf("error while generating random bytes: %s", err)
 			}
@@ -77,7 +78,7 @@ func table(t *dataTraceImported, numHash, blockSize, size int) [][]byte {
 			for n > MAXNBYTE {
 				// generate random bytes
 				slice := make([]byte, MAXNBYTE)
-				_, err := rand.Read(slice) //nolint
+				_, err := utils.ReadPseudoRand(rand, slice)
 				if err != nil {
 					logrus.Fatalf("error while generating random bytes: %s", err)
 				}
@@ -93,7 +94,7 @@ func table(t *dataTraceImported, numHash, blockSize, size int) [][]byte {
 			}
 			// generate random bytes
 			slice := make([]byte, n)
-			_, err := rand.Read(slice) //nolint
+			_, err := utils.ReadPseudoRand(rand, slice)
 			if err != nil {
 				logrus.Fatalf("error while generating random bytes: %s", err)
 			}

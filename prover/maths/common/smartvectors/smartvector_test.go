@@ -32,7 +32,7 @@ func TestWriteInSlice(t *testing.T) {
 				}
 
 				// write in a random place of the slice
-				randPos := builder.gen.Intn(v.Len())
+				randPos := builder.gen.IntN(v.Len())
 				slice[randPos].SetRandom()
 				x := v.Get(randPos)
 				require.NotEqual(t, x.String(), randPos, "forbidden shallow copy")
@@ -55,7 +55,7 @@ func TestShiftingTest(t *testing.T) {
 			func(t *testing.T) {
 				v := tcase.svecs[0]
 
-				offset := builder.gen.Intn(v.Len())
+				offset := builder.gen.IntN(v.Len())
 
 				shifted := v.RotateRight(offset)
 				revShifted := v.RotateRight(-offset)
@@ -91,8 +91,8 @@ func TestSubvectorFuzzy(t *testing.T) {
 				v := tcase.svecs[0]
 				length := v.Len()
 				// generate the subvector window
-				stop := 1 + builder.gen.Intn(length-1)
-				start := builder.gen.Intn(stop)
+				stop := 1 + builder.gen.IntN(length-1)
+				start := builder.gen.IntN(stop)
 
 				sub := v.SubVector(start, stop)
 

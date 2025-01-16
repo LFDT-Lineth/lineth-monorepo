@@ -28,7 +28,7 @@ func checkPublicInputs(
 	// functional input (the txnrlp is incorrect). It should be converted into
 	// an [api.AssertIsEqual] once this is resolved.
 	//
-	shouldBeEqual(api, execDataHash, gnarkFuncInp.DataChecksum)
+	api.AssertIsEqual(execDataHash, gnarkFuncInp.DataChecksum)
 
 	api.AssertIsEqual(
 		wvc.GetPublicInput(api, publicInput.L2MessageHash),
@@ -153,11 +153,4 @@ func execDataHash(
 	)
 
 	return hsh.Sum()
-}
-
-// shouldBeEqual is a placeholder dummy function that generate fake constraints
-// as a replacement for what should be an api.AssertIsEqual. If we just commented
-// out the api.AssertIsEqual we might have an unconstrained variable.
-func shouldBeEqual(api frontend.API, a, b frontend.Variable) {
-	_ = api.Sub(a, b)
 }

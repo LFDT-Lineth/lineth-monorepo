@@ -21,7 +21,7 @@ import (
 	"github.com/consensys/gnark-crypto/ecc/bls12-377/fr"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"math/big"
-	"math/rand"
+	"math/rand/v2"
 )
 
 const noQNR = 11

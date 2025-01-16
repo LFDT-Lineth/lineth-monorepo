@@ -2,7 +2,7 @@ package ringsis_64_16_test
 
 import (
 	"fmt"
-	"math/rand"
+	"math/rand/v2"
 	"testing"
 
 	"github.com/consensys/gnark-crypto/ecc/bls12-377/fr/fft"
@@ -11,6 +11,7 @@ import (
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
 	wfft "github.com/consensys/linea-monorepo/prover/maths/fft"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
+	"github.com/consensys/linea-monorepo/prover/utils"
 )
 
 func BenchmarkTransversalHash(b *testing.B) {
@@ -18,7 +19,7 @@ func BenchmarkTransversalHash(b *testing.B) {
 	var (
 		numRow          = 1024
 		numCols         = 1024
-		rng             = rand.New(rand.NewSource(786868)) // nolint
+		rng             = rand.New(utils.NewRandSource(786868)) // nolint
 		domain          = fft.NewDomain(64, fft.WithShift(wfft.GetOmega(64*2)))
 		twiddles        = ringsis_64_16.PrecomputeTwiddlesCoset(domain.Generator, domain.FrMultiplicativeGen)
 		params          = ringsis.Params{LogTwoBound: 16, LogTwoDegree: 6}

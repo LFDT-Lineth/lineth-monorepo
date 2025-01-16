@@ -8,15 +8,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/consensys/linea-monorepo/prover/lib/compressor/blob/dictionary"
-	encodeTesting "github.com/consensys/linea-monorepo/prover/lib/compressor/blob/encode/test_utils"
-	"github.com/consensys/linea-monorepo/prover/utils"
 	"io"
 	"math/big"
-	"math/rand"
+	"math/rand/v2"
 	"os"
 	"slices"
 	"testing"
+
+	"github.com/consensys/linea-monorepo/prover/lib/compressor/blob/dictionary"
+	encodeTesting "github.com/consensys/linea-monorepo/prover/lib/compressor/blob/encode/test_utils"
+	"github.com/consensys/linea-monorepo/prover/utils"
 
 	"github.com/consensys/linea-monorepo/prover/lib/compressor/blob/v0/compress/lzss"
 
@@ -194,7 +195,7 @@ func TestCanWrite(t *testing.T) {
 	cptBlock := 0
 	for i, block := range testBlocks {
 		// get a random from 1 to 5
-		bSize := rand.Intn(3) + 1 // #nosec G404 -- false positive
+		bSize := rand.IntN(3) + 1 // #nosec G404 -- false positive
 
 		if cptBlock > bSize && i%3 == 0 {
 			nbBlocksPerBatch = append(nbBlocksPerBatch, uint16(cptBlock))
@@ -279,7 +280,7 @@ func TestCompressorWithBatches(t *testing.T) {
 	for i, block := range testBlocks {
 		t.Logf("processing block %d over %d", i, len(testBlocks))
 		// get a random from 1 to 5
-		bSize := rand.Intn(5) + 1 // #nosec G404 -- false positive
+		bSize := rand.IntN(5) + 1 // #nosec G404 -- false positive
 
 		if cptBlock > bSize && i%3 == 0 {
 			nbBlocksPerBatch = append(nbBlocksPerBatch, uint16(cptBlock))
@@ -726,17 +727,18 @@ func craftExpandingInput(dict []byte, size int) []byte {
 func TestPack(t *testing.T) {
 	assert := require.New(t)
 	var buf bytes.Buffer
+	var rng = rand.New(rand.NewChaCha8([32]byte{}))
 
 	for i := 0; i < 100; i++ {
 		// create 2 random slices
-		n1 := rand.Intn(100) + 1 // #nosec G404 -- false positive
-		n2 := rand.Intn(100) + 1 // #nosec G404 -- false positive
+		n1 := rng.IntN(100) + 1 // #nosec G404 -- false positive
+		n2 := rng.IntN(100) + 1 // #nosec G404 -- false positive
 
 		s1 := make([]byte, n1)
 		s2 := make([]byte, n2)
 
-		rand.Read(s1)
-		rand.Read(s2)
+		utils.ReadPseudoRand(rng, s1)
+		utils.ReadPseudoRand(rng, s2)
 
 		// pack them
 		buf.Reset()

@@ -4,7 +4,7 @@ package keccakf
 
 import (
 	"fmt"
-	"math/rand"
+	"math/rand/v2"
 	"sync"
 	"testing"
 
@@ -15,6 +15,7 @@ import (
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/permutation"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/specialqueries"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
+	"github.com/consensys/linea-monorepo/prover/utils"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -72,7 +73,7 @@ func keccakfTestingModule(
 func TestKeccakf(t *testing.T) {
 
 	// #nosec G404 --we don't need a cryptographic RNG for testing purpose
-	rng := rand.New(rand.NewSource(0))
+	rng := rand.New(rand.NewChaCha8([32]byte{}))
 	numCases := 15
 	maxNumKeccakf := 5
 	// The -1 is here to prevent the generation of a padding block
@@ -83,9 +84,9 @@ func TestKeccakf(t *testing.T) {
 
 	for i := 0; i < numCases; i++ {
 		// Generate a random piece of data
-		dataSize := rng.Intn(maxInputSize + 1)
+		dataSize := rng.IntN(maxInputSize + 1)
 		data := make([]byte, dataSize)
-		rng.Read(data)
+		utils.ReadPseudoRand(rng, data)
 
 		// Generate permutation traces for the data
 		traces := keccak.PermTraces{}

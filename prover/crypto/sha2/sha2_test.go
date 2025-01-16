@@ -2,9 +2,10 @@ package sha2
 
 import (
 	"crypto/sha256"
-	"math/rand"
+	"math/rand/v2"
 	"testing"
 
+	"github.com/consensys/linea-monorepo/prover/utils"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -18,7 +19,7 @@ func TestHash(t *testing.T) {
 	var (
 		maxSizeByte = 1000
 		// #nosec G404 -- we don't need a cryptographic PRNG for testing purposes
-		rng = rand.New(rand.NewSource(212678))
+		rng = rand.New(rand.NewChaCha8([32]byte{}))
 	)
 
 	for sizeByte := 0; sizeByte < maxSizeByte; sizeByte++ {
@@ -37,7 +38,7 @@ func TestHash(t *testing.T) {
 func genTestCase(rng *rand.Rand, sizeByte int) testCase {
 
 	stream := make([]byte, sizeByte)
-	rng.Read(stream)
+	utils.ReadPseudoRand(rng, stream)
 
 	return testCase{
 		Stream:       stream,

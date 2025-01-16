@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"math/big"
-	"math/rand"
+	"math/rand/v2"
 	"testing"
 
 	"github.com/consensys/linea-monorepo/prover/utils/types"
@@ -64,10 +64,10 @@ func TestReadWriteInt64(t *testing.T) {
 	const nIterations = 100
 
 	// #nosec G404 -- no need for a cryptographically strong PRNG for testing purposes
-	rng := rand.New(rand.NewSource(0))
+	rng := rand.New(rand.NewChaCha8([32]byte{}))
 
 	for _i := 0; _i < nIterations; _i++ {
-		n := rng.Int63()
+		n := rng.Int64()
 		buffer := &bytes.Buffer{}
 		types.WriteInt64On32Bytes(buffer, n)
 		n2, _, err := types.ReadInt64On32Bytes(buffer)
@@ -81,10 +81,10 @@ func TestReadWriteBigInt(t *testing.T) {
 	const nIterations = 100
 
 	// #nosec G404 -- no need for a cryptographically strong PRNG for testing purposes
-	rng := rand.New(rand.NewSource(0))
+	rng := rand.New(rand.NewChaCha8([32]byte{}))
 
 	for _i := 0; _i < nIterations; _i++ {
-		n := big.NewInt(rng.Int63())
+		n := big.NewInt(rng.Int64())
 		buffer := &bytes.Buffer{}
 		types.WriteBigIntOn32Bytes(buffer, n)
 		n2, err := types.ReadBigIntOn32Bytes(buffer)

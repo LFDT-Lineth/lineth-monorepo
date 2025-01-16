@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io"
 	"math/big"
-	"math/rand"
+	"math/rand/v2"
 
 	"github.com/consensys/gnark/std/math/emulated/emparams"
 	"github.com/consensys/linea-monorepo/prover/backend/files"
@@ -29,7 +29,7 @@ var testCases = []struct {
 
 			var (
 				tab  = make([][]*big.Int, 5)
-				rng  = rand.New(rand.NewSource(87987559))
+				rng  = rand.New(rand.NewChaCha8([32]byte{}))
 				inst = createRandomModexp(rng, false)
 			)
 
@@ -43,7 +43,7 @@ var testCases = []struct {
 
 			var (
 				tab  = make([][]*big.Int, 5)
-				rng  = rand.New(rand.NewSource(324480342))
+				rng  = rand.New(rand.NewChaCha8([32]byte{}))
 				inst = createRandomModexp(rng, true)
 			)
 

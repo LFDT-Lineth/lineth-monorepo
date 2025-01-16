@@ -4,7 +4,7 @@ package ringsis_32_8_test
 
 import (
 	"fmt"
-	"math/rand"
+	"math/rand/v2"
 	"testing"
 
 	"github.com/consensys/gnark-crypto/ecc/bls12-377/fr/fft"
@@ -31,7 +31,7 @@ func randomRegularRow(rng *rand.Rand, size int) smartvectors.SmartVector {
 func fullyRandomTestVector(rng *rand.Rand, numRow, numCols int) []smartvectors.SmartVector {
 	list := make([]smartvectors.SmartVector, numRow)
 	for i := range list {
-		coin := rng.Intn(2)
+		coin := rng.IntN(2)
 		switch {
 		case coin == 0:
 			list[i] = randomConstRow(rng, numCols)
@@ -63,7 +63,7 @@ func TestSmartVectorTransversalSisHash(t *testing.T) {
 	var (
 		numReps   = 64
 		numCols   = 16
-		rng       = rand.New(rand.NewSource(786868))
+		rng       = rand.New(rand.NewChaCha8([32]byte{}))
 		domain    = fft.NewDomain(32, fft.WithShift(wfft.GetOmega(32*2)))
 		twiddles  = ringsis_32_8.PrecomputeTwiddlesCoset(domain.Generator, domain.FrMultiplicativeGen)
 		params    = ringsis.Params{LogTwoBound: 8, LogTwoDegree: 5}
