@@ -21,7 +21,7 @@
                                 (*  (-  1  PRPRC)  (next  PRPRC))))
 (defun   (ct-max-sum)       (+  (*  (-  nROWS_MACRO  1)  MACRO)
                                 (*  (-  nROWS_PRPRC  1)  PRPRC)))
-(defun   (negative-of-blockhash-depth)                          (- 0 BLOCKHASH_DEPTH))
+(defpurefun   (negative-of-blockhash-depth)                          (- 0 BLOCKHASH_DEPTH))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                     ;;
