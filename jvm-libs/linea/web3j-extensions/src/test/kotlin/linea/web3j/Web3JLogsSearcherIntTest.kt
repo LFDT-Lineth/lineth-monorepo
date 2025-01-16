@@ -11,6 +11,7 @@ import io.vertx.core.Vertx
 import linea.SearchDirection
 import linea.domain.RetryConfig
 import linea.jsonrpc.TestingJsonRpcServer
+import linea.log4j.configureLoggers
 import net.consensys.encodeHex
 import net.consensys.fromHexString
 import net.consensys.linea.BlockParameter.Companion.toBlockParameter
@@ -18,6 +19,7 @@ import net.consensys.linea.jsonrpc.JsonRpcError
 import net.consensys.linea.jsonrpc.JsonRpcRequest
 import net.consensys.toHexString
 import net.consensys.toHexStringUInt256
+import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -49,6 +51,11 @@ class Web3JLogsSearcherIntTest {
   @BeforeEach
   fun beforeEach() {
     vertx = Vertx.vertx()
+    configureLoggers(
+      rootLevel = Level.INFO,
+      log.name to Level.DEBUG,
+      "test.case.Web3JLogsSearcher" to Level.DEBUG
+    )
   }
 
   @AfterEach
@@ -255,11 +262,19 @@ class Web3JLogsSearcherIntTest {
     targetNumber: ULong
   ): SearchDirection? {
     val number = ULong.fromHexString(ethLog.topics[1].encodeHex())
-    return when {
+    val direction = when {
       number < targetNumber -> SearchDirection.FORWARD
       number > targetNumber -> SearchDirection.BACKWARD
       else -> null
     }
+    log.debug(
+      "EthLog{blockNumber={} number={}} targetNumber={} direction={}",
+      ethLog.blockNumber,
+      number,
+      targetNumber,
+      direction
+    )
+    return direction
   }
 
   @Test
@@ -287,8 +302,9 @@ class Web3JLogsSearcherIntTest {
   }
 
   @Test
-  fun `findLogs searches L1 and returns null when not found - before range`() {
+  fun `findLogs searches L1 and returns null when not found - target before fromBlock`() {
     setupClientWithTestingJsonRpcServer()
+    val logsEvaluated = mutableListOf<ULong>()
 
     logsClient.findLog(
       fromBlock = 100UL.toBlockParameter(),
@@ -297,6 +313,7 @@ class Web3JLogsSearcherIntTest {
       topics = listOf("0xffaabbcc"),
       chunkSize = 10,
       shallContinueToSearch = { ethLog ->
+        logsEvaluated.add(ethLog.blockNumber)
         shallContinueToSearch(ethLog, targetNumber = 89UL)
       }
     )
@@ -304,14 +321,17 @@ class Web3JLogsSearcherIntTest {
       .also { log ->
         assertThat(log).isNull()
         assertThat(TestingJsonRpcServer.callCountByMethod("eth_getLogs")).isBetween(1, 4)
+        assertThat(logsEvaluated).hasSameElementsAs(logsEvaluated.toSet())
       }
   }
 
+  // REFERENCE:
   @Test
-  fun `findLogs searches L1 and returns null when no logs in blockRange`() {
+  fun `findLogs searches L1 and returns null when not found - target expected in chunk that has no logs`() {
     setupClientWithTestingJsonRpcServer(
       subsetOfBlocksWithLogs = listOf(100UL..109UL, 150UL..159UL)
     )
+    val logsEvaluated = mutableListOf<ULong>()
 
     logsClient.findLog(
       fromBlock = 100UL.toBlockParameter(),
@@ -320,18 +340,23 @@ class Web3JLogsSearcherIntTest {
       topics = listOf("0xffaabbcc"),
       chunkSize = 10,
       shallContinueToSearch = { ethLog ->
-        shallContinueToSearch(ethLog, targetNumber = 89UL)
+        shallContinueToSearch(ethLog, targetNumber = 120UL)
       }
     )
       .get()
       .also { log ->
         assertThat(log).isNull()
+        assertThat(logsEvaluated).hasSameElementsAs(logsEvaluated.toSet())
       }
   }
 
   @Test
-  fun `findLogs searches L1 and returns null when not found - after range`() {
-    setupClientWithTestingJsonRpcServer()
+  fun `findLogs searches L1 and returns null when not found - target is after toBlock`() {
+    setupClientWithTestingJsonRpcServer(
+      subsetOfBlocksWithLogs = listOf(100UL..109UL, 150UL..200UL)
+    )
+    val logsEvaluated = mutableListOf<ULong>()
+
     logsClient.findLog(
       fromBlock = 100UL.toBlockParameter(),
       toBlock = 200UL.toBlockParameter(),
@@ -346,14 +371,17 @@ class Web3JLogsSearcherIntTest {
       .also { log ->
         assertThat(log).isNull()
         assertThat(TestingJsonRpcServer.callCountByMethod("eth_getLogs")).isBetween(1, 4)
+        assertThat(logsEvaluated).hasSameElementsAs(logsEvaluated.toSet())
       }
   }
 
+  // REFERECE 2:
   @Test
-  fun `findLogs searches L1 and returns null when range has no logs`() {
+  fun `findLogs searches L1 and returns item when - target found an chunk in the middle`() {
     setupClientWithTestingJsonRpcServer(
-      subsetOfBlocksWithLogs = listOf(10UL..19UL, 50UL..59UL)
+      subsetOfBlocksWithLogs = listOf(10UL..19UL, 30UL..37UL, 50UL..100UL)
     )
+    val logsEvaluated = mutableListOf<ULong>()
     logsClient.findLog(
       fromBlock = 0UL.toBlockParameter(),
       toBlock = 100UL.toBlockParameter(),
@@ -362,13 +390,14 @@ class Web3JLogsSearcherIntTest {
       chunkSize = 5,
       shallContinueToSearch = { ethLog ->
         shallContinueToSearch(ethLog, targetNumber = 35UL)
-          .also { println("log=${ethLog.blockNumber} direction=$it") }
       }
     )
       .get()
       .also { log ->
-        assertThat(log).isNull()
+        assertThat(log).isNotNull()
+        assertThat(ULong.fromHexString(log!!.topics[1].encodeHex())).isEqualTo(35UL)
         assertThat(TestingJsonRpcServer.callCountByMethod("eth_getLogs")).isBetween(1, 11)
+        assertThat(logsEvaluated).hasSameElementsAs(logsEvaluated.toSet())
       }
   }
 

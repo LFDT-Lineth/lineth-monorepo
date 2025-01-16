@@ -8,6 +8,8 @@ dependencies {
   api(project(':jvm-libs:linea:core:domain-models'))
   implementation(project(':jvm-libs:generic:extensions:kotlin'))
   implementation(project(':jvm-libs:linea:testing:file-system'))
+  implementation(project(':jvm-libs:linea:web3j-extensions'))
+  implementation(testFixtures(project(':jvm-libs:linea:web3j-extensions')))
   implementation(project(':coordinator:clients:prover-client:serialization'))
   implementation(testFixtures(project(":coordinator:core")))
 }

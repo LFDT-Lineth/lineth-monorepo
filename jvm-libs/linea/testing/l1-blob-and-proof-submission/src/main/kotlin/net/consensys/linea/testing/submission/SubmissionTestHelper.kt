@@ -1,8 +1,11 @@
 package net.consensys.linea.testing.submission
 
+import linea.web3j.waitForTxReceipt
 import net.consensys.zkevm.coordinator.clients.smartcontract.LineaRollupSmartContractClient
 import net.consensys.zkevm.domain.Aggregation
-import tech.pegasys.teku.infrastructure.async.SafeFuture
+import org.web3j.protocol.Web3j
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.minutes
 
 /**
  * Submits blobs respecting aggregation boundaries
@@ -18,10 +21,9 @@ fun submitBlobs(
   return aggregationsAndBlobs
     .map { (_, aggBlobs) ->
       val blobChunks = aggBlobs.chunked(blobChunksSize)
-      blobChunks.map { blobs -> contractClient.submitBlobs(blobs, gasPriceCaps = null) }
+      blobChunks.map { blobs -> contractClient.submitBlobs(blobs, gasPriceCaps = null).get() }
     }
     .flatten()
-    .let { SafeFuture.collectAll(it.stream()).get() }
 }
 
 /**
@@ -34,13 +36,13 @@ data class SubmissionTxHashes(
   val blobTxHashes: List<String>,
   val aggregationTxHashes: List<String>
 )
+
 fun submitBlobsAndAggregations(
   contractClient: LineaRollupSmartContractClient,
   aggregationsAndBlobs: List<AggregationAndBlobs>,
   blobChunksSize: Int = 6
 ): SubmissionTxHashes {
   val blobSubmissionTxHashes = submitBlobs(contractClient, aggregationsAndBlobs, blobChunksSize)
-
   return aggregationsAndBlobs
     .filter { it.aggregation != null }
     .mapIndexed { index, (aggregation, aggBlobs) ->
@@ -53,8 +55,33 @@ fun submitBlobsAndAggregations(
         parentL1RollingHash = parentAgg?.aggregationProof?.l1RollingHash ?: ByteArray(32),
         parentL1RollingHashMessageNumber = parentAgg?.aggregationProof?.l1RollingHashMessageNumber ?: 0L,
         gasPriceCaps = null
+      ).get()
+    }
+    .let { SubmissionTxHashes(blobSubmissionTxHashes, it) }
+}
+
+fun submitBlobsAndAggregationsAndWaitExecution(
+  contractClient: LineaRollupSmartContractClient,
+  aggregationsAndBlobs: List<AggregationAndBlobs>,
+  blobChunksSize: Int = 6,
+  l1Web3jClient: Web3j,
+  waitTimeout: Duration = 2.minutes
+) {
+  val submissionTxHashes = submitBlobsAndAggregations(
+    contractClient = contractClient,
+    aggregationsAndBlobs = aggregationsAndBlobs,
+    blobChunksSize = blobChunksSize
+  )
+
+  l1Web3jClient.waitForTxReceipt(
+    txHash = submissionTxHashes.aggregationTxHashes.last(),
+    timeout = waitTimeout
+  ).also { txReceipt ->
+    if (txReceipt.status != "0x1") {
+      val lastAggregation = aggregationsAndBlobs.findLast { it.aggregation != null }!!.aggregation!!
+      throw IllegalStateException(
+        "latest finalization=${lastAggregation.intervalString()} failed on L1. receipt=$txReceipt"
       )
     }
-    .let { SafeFuture.collectAll(it.stream()).get() }
-    .let { SubmissionTxHashes(blobSubmissionTxHashes, it) }
+  }
 }

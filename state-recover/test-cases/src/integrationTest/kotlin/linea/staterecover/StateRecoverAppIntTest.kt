@@ -19,11 +19,10 @@ import net.consensys.linea.jsonrpc.client.RequestRetryConfig
 import net.consensys.linea.jsonrpc.client.VertxHttpJsonRpcClientFactory
 import net.consensys.linea.testing.submission.AggregationAndBlobs
 import net.consensys.linea.testing.submission.loadBlobsAndAggregationsSortedAndGrouped
-import net.consensys.linea.testing.submission.submitBlobsAndAggregations
+import net.consensys.linea.testing.submission.submitBlobsAndAggregationsAndWaitExecution
 import net.consensys.zkevm.coordinator.clients.smartcontract.LineaRollupSmartContractClient
 import net.consensys.zkevm.ethereum.ContractsManager
 import net.consensys.zkevm.ethereum.Web3jClientManager
-import net.consensys.zkevm.ethereum.waitForTxReceipt
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
 import org.assertj.core.api.Assertions.assertThat
@@ -169,26 +168,13 @@ class StateRecoverAppIntTest {
   fun `state recovery from genesis`() {
     stateRecoverApp.start().get()
 
-    val submissionTxHashes = submitBlobsAndAggregations(
+    submitBlobsAndAggregationsAndWaitExecution(
       contractClient = contractClientForSubmissions,
       aggregationsAndBlobs = aggregationsAndBlobs,
-      blobChunksSize = 6
+      l1Web3jClient = Web3jClientManager.l1Client
     )
 
     val lastAggregation = aggregationsAndBlobs.findLast { it.aggregation != null }!!.aggregation!!
-    log.info("Waiting for finalization={} tx to be executed on L1", lastAggregation.intervalString())
-    Web3jClientManager.l1Client.waitForTxReceipt(
-      txHash = submissionTxHashes.aggregationTxHashes.last(),
-      timeout = 2.minutes
-    ).also {
-      assertThat(it.status).isEqualTo("0x1")
-        .withFailMessage(
-          "finalization=${lastAggregation.intervalString()} tx failed! " +
-            "replay data is not consistent with L1 state, potential cause: " +
-            "data has L1 -> L2 anchoring messages and misses L1 Rolling Hash: tx=$it"
-        )
-      log.info("finalization={} executed on l1 tx={}", lastAggregation.intervalString(), it)
-    }
     await()
       .atMost(4.minutes.toJavaDuration())
       .untilAsserted {

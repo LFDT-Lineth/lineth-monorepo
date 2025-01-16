@@ -142,11 +142,16 @@ class StateRecoverApp(
         } else {
           lineaContractClient.finalizedL2BlockNumber(blockParameter = config.l1LatestSearchBlock)
             .thenCompose { lastFinalizedBlockNumber ->
-              val stateRecoverStartBlockNumber = lastFinalizedBlockNumber + 1UL
+              val stateRecoverStartBlockNumber = when {
+                status.headBlockNumber >= lastFinalizedBlockNumber -> status.headBlockNumber + 1UL
+                else -> lastFinalizedBlockNumber + 1UL
+              }
               log.info(
-                "Starting enabling recovery mode: stateRecoverStartBlockNumber={} headBlockNumber={}",
+                "Starting enabling recovery mode: stateRecoverStartBlockNumber={} headBlockNumber={} " +
+                  "L1 lastFinalizedBlockNumber={}",
                 stateRecoverStartBlockNumber,
-                status.headBlockNumber
+                status.headBlockNumber,
+                lastFinalizedBlockNumber
               )
               elClient.lineaEnableStateRecovery(stateRecoverStartBlockNumber)
             }.thenApply { }

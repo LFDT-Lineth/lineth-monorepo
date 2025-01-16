@@ -18,8 +18,15 @@ class FakeExecutionLayerClient(
     ?.let { LogManager.getLogger(loggerName) }
     ?: LogManager.getLogger(FakeExecutionLayerClient::class.java)
 
+  private val _importedBlocksInRecoveryMode = mutableListOf<BlockFromL1RecoveredData>()
+
+  val importedBlocksInRecoveryMode: List<BlockFromL1RecoveredData>
+    get() = _importedBlocksInRecoveryMode.toList()
+  val importedBlockNumbersInRecoveryMode: List<ULong>
+    get() = _importedBlocksInRecoveryMode.map { it.header.blockNumber }
+
   @get:Synchronized @set:Synchronized
-  var lastImportedBlock: BlockNumberAndHash = headBlock
+  var headBlock: BlockNumberAndHash = headBlock
 
   @get:Synchronized @set:Synchronized
   var stateRecoverStartBlockNumber = initialStateRecoverStartBlockNumber
@@ -27,7 +34,7 @@ class FakeExecutionLayerClient(
   @get:Synchronized
   val stateRecoverStatus: StateRecoveryStatus
     get() = StateRecoveryStatus(
-      headBlockNumber = lastImportedBlock.number,
+      headBlockNumber = headBlock.number,
       stateRecoverStartBlockNumber = stateRecoverStartBlockNumber
     )
 
@@ -44,7 +51,8 @@ class FakeExecutionLayerClient(
       )
       log.debug("lineaEngineImportBlocksFromBlob(interval=$interval)")
     }
-    lastImportedBlock = blocks.last().let { BlockNumberAndHash(it.header.blockNumber, it.header.blockHash) }
+    _importedBlocksInRecoveryMode.addAll(blocks)
+    headBlock = blocks.last().let { BlockNumberAndHash(it.header.blockNumber, it.header.blockHash) }
     return SafeFuture.completedFuture(Unit)
   }
 
@@ -52,13 +60,13 @@ class FakeExecutionLayerClient(
   override fun getBlockNumberAndHash(
     blockParameter: BlockParameter
   ): SafeFuture<BlockNumberAndHash> {
-    log.debug("getBlockNumberAndHash($blockParameter)")
-    return SafeFuture.completedFuture(lastImportedBlock)
+    log.trace("getBlockNumberAndHash($blockParameter): $headBlock")
+    return SafeFuture.completedFuture(headBlock)
   }
 
   @Synchronized
   override fun lineaGetStateRecoveryStatus(): SafeFuture<StateRecoveryStatus> {
-    log.debug("lineaGetStateRecoveryStatus()= $stateRecoverStatus")
+    log.trace("lineaGetStateRecoveryStatus()= $stateRecoverStatus")
     return SafeFuture.completedFuture(stateRecoverStatus)
   }
 

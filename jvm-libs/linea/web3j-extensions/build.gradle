@@ -1,6 +1,7 @@
 plugins {
   id 'net.consensys.zkevm.kotlin-common-conventions'
   id 'java-library'
+  id 'java-test-fixtures'
 }
 
 description="Web3j extensions for Linea"

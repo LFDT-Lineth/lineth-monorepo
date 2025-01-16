@@ -24,7 +24,6 @@ import org.apache.logging.log4j.LogManager
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import java.net.URI
 import kotlin.time.Duration.Companion.milliseconds
@@ -139,9 +138,8 @@ class StateRecoverSepoliaWithFakeExecutionClientIntTest {
   }
 
   // "Disabled because it is for local testing and debug purposes"
-  @Test
+//  @Test
   fun `simulate recovery from given point`() {
-//    println("L1 is $l1RpcUrl")
     val finalizationEvents = logsSearcher
       .getLogs(
         fromBlock = BlockParameter.Tag.EARLIEST,
@@ -155,7 +153,7 @@ class StateRecoverSepoliaWithFakeExecutionClientIntTest {
     log.info("First finalization event: $firstFinalizationEvent")
     log.info("Latest finalization event: $lastFinalizationEvent")
 
-    executionLayerClient.lastImportedBlock = BlockNumberAndHash(
+    executionLayerClient.headBlock = BlockNumberAndHash(
       number = firstFinalizationEvent.event.startBlockNumber - 1UL,
       hash = ByteArray(32) { 0 }
     )

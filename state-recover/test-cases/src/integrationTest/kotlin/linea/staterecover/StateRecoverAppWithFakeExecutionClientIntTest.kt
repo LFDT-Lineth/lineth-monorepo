@@ -20,11 +20,10 @@ import net.consensys.linea.jsonrpc.client.RequestRetryConfig
 import net.consensys.linea.jsonrpc.client.VertxHttpJsonRpcClientFactory
 import net.consensys.linea.testing.submission.AggregationAndBlobs
 import net.consensys.linea.testing.submission.loadBlobsAndAggregationsSortedAndGrouped
-import net.consensys.linea.testing.submission.submitBlobsAndAggregations
+import net.consensys.linea.testing.submission.submitBlobsAndAggregationsAndWaitExecution
 import net.consensys.zkevm.coordinator.clients.smartcontract.LineaRollupSmartContractClient
 import net.consensys.zkevm.ethereum.ContractsManager
 import net.consensys.zkevm.ethereum.Web3jClientManager
-import net.consensys.zkevm.ethereum.waitForTxReceipt
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
 import org.assertj.core.api.Assertions.assertThat
@@ -33,6 +32,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import java.net.URI
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
@@ -128,7 +128,7 @@ class StateRecoverAppWithFakeExecutionClientIntTest {
       lineaContractClient = lineaContractClient,
       config = StateRecoverApp.Config(
         l1LatestSearchBlock = BlockParameter.Tag.LATEST,
-        l1PollingInterval = 5.seconds,
+        l1PollingInterval = 10.milliseconds,
         executionClientPollingInterval = 1.seconds,
         smartContractAddress = lineaContractClient.getAddress()
       )
@@ -137,6 +137,7 @@ class StateRecoverAppWithFakeExecutionClientIntTest {
     configureLoggers(
       rootLevel = Level.INFO,
       log.name to Level.INFO,
+      "net.consensys.linea.contract.Web3JContractAsyncHelper" to Level.WARN, // silence noisy gasPrice Caps logs
       "test.clients.l1.executionlayer" to Level.DEBUG,
       "test.clients.l1.web3j-default" to Level.INFO,
       "test.clients.l1.state-manager" to Level.INFO,
@@ -144,24 +145,23 @@ class StateRecoverAppWithFakeExecutionClientIntTest {
       "test.clients.l1.linea-contract" to Level.INFO,
       "test.clients.l1.events-fetcher" to Level.INFO,
       "test.clients.l1.blobscan" to Level.INFO,
-      "net.consensys.linea.contract.l1" to Level.INFO
+      "net.consensys.linea.contract.l1" to Level.INFO,
+      "test.fake.clients.l1.fake-execution-layer" to Level.INFO
     )
   }
 
   private fun submitDataToL1ContactAndWaitExecution(
     contractClient: LineaRollupSmartContractClient = contractClientForSubmissions,
     aggregationsAndBlobs: List<AggregationAndBlobs> = this.aggregationsAndBlobs,
-    blobChunksSize: Int = 6
+    blobChunksSize: Int = 6,
+    waitTimeout: Duration = 2.minutes
   ) {
-    val submissionTxHashes = submitBlobsAndAggregations(
+    submitBlobsAndAggregationsAndWaitExecution(
       contractClient = contractClient,
       aggregationsAndBlobs = aggregationsAndBlobs,
-      blobChunksSize = blobChunksSize
-    )
-
-    Web3jClientManager.l1Client.waitForTxReceipt(
-      txHash = submissionTxHashes.aggregationTxHashes.last(),
-      timeout = 2.minutes
+      blobChunksSize = blobChunksSize,
+      waitTimeout = waitTimeout,
+      l1Web3jClient = Web3jClientManager.l1Client
     )
   }
 
@@ -223,14 +223,15 @@ class StateRecoverAppWithFakeExecutionClientIntTest {
       aggregationsAndBlobs = finalizationsBeforeCutOff
     )
 
-    executionLayerClient.lastImportedBlock = BlockNumberAndHash(
+    executionLayerClient.headBlock = BlockNumberAndHash(
       number = 1UL,
       hash = ByteArray(32) { 0 }
     )
 
+    val lastFinalizedBlockNumber = finalizationsBeforeCutOff.last().aggregation!!.endBlockNumber
+    val expectedStateRecoverStartBlockNumber = lastFinalizedBlockNumber + 1UL
     stateRecoverApp.start().get()
 
-    val lastAggregation = aggregationsAndBlobs.findLast { it.aggregation != null }!!.aggregation
     await()
       .atMost(4.minutes.toJavaDuration())
       .pollInterval(1.seconds.toJavaDuration())
@@ -238,15 +239,15 @@ class StateRecoverAppWithFakeExecutionClientIntTest {
         assertThat(executionLayerClient.stateRecoverStatus).isEqualTo(
           StateRecoveryStatus(
             headBlockNumber = 1UL,
-            stateRecoverStartBlockNumber = finalizationsBeforeCutOff.last().aggregation!!.endBlockNumber + 1UL
+            stateRecoverStartBlockNumber = expectedStateRecoverStartBlockNumber
           )
         )
         log.info("stateRecoverStatus={}", executionLayerClient.stateRecoverStatus)
       }
 
     // simulate that execution client has synced up to the last finalized block through P2P network
-    executionLayerClient.lastImportedBlock = BlockNumberAndHash(
-      number = finalizationToResumeFrom.endBlockNumber,
+    executionLayerClient.headBlock = BlockNumberAndHash(
+      number = lastFinalizedBlockNumber,
       hash = ByteArray(32) { 0 }
     )
 
@@ -255,20 +256,88 @@ class StateRecoverAppWithFakeExecutionClientIntTest {
       aggregationsAndBlobs = finalizationsAfterCutOff
     )
 
+    val lastAggregation = aggregationsAndBlobs.findLast { it.aggregation != null }!!.aggregation
     await()
       .atMost(1.minutes.toJavaDuration())
       .pollInterval(1.seconds.toJavaDuration())
       .untilAsserted {
-        assertThat(
-          executionLayerClient.lineaGetStateRecoveryStatus().get()
+        assertThat(executionLayerClient.headBlock.number).isEqualTo(lastAggregation!!.endBlockNumber)
+      }
+
+    // assert it imports correct blocks
+    val importedBlocks = executionLayerClient.importedBlockNumbersInRecoveryMode
+    assertThat(importedBlocks.first()).isEqualTo(expectedStateRecoverStartBlockNumber)
+    assertThat(importedBlocks.last()).isEqualTo(lastAggregation!!.endBlockNumber)
+  }
+
+  @Test
+  fun `when node starts with headblock greater lastFinalizedBlock`() {
+    val finalizationToResumeFrom = aggregationsAndBlobs.get(1).aggregation!!
+    // assert that the finalization event to resume from has at least 1 middle block
+    assertThat(finalizationToResumeFrom.endBlockNumber)
+      .isGreaterThan(finalizationToResumeFrom.startBlockNumber + 1UL)
+      .withFailMessage("finalizationEventToResumeFrom must at least 3 blocks for this test")
+
+    val finalizationsBeforeCutOff = aggregationsAndBlobs
+      .filter { it.aggregation != null }
+      .filter { it.aggregation!!.endBlockNumber < finalizationToResumeFrom.startBlockNumber }
+
+    val finalizationsAfterCutOff = aggregationsAndBlobs
+      .filter { it.aggregation != null }
+      .filter { it.aggregation!!.startBlockNumber >= finalizationToResumeFrom.startBlockNumber }
+
+    log.debug(
+      "finalizations={} finalizationToStartRecoveryFrom={}",
+      aggregationsAndBlobs.map { it.aggregation?.intervalString() },
+      finalizationToResumeFrom.intervalString()
+    )
+
+    submitDataToL1ContactAndWaitExecution(
+      aggregationsAndBlobs = finalizationsBeforeCutOff
+    )
+
+    // set execution layer head block after latest finalization
+    val headBlockNumberAtStart = finalizationsBeforeCutOff.last().aggregation!!.endBlockNumber + 1UL
+    executionLayerClient.headBlock = BlockNumberAndHash(
+      number = headBlockNumberAtStart,
+      hash = ByteArray(32) { 0 }
+    )
+
+    stateRecoverApp.start().get()
+    await()
+      .atMost(2.minutes.toJavaDuration())
+      .pollInterval(1.seconds.toJavaDuration())
+      .untilAsserted {
+        assertThat(executionLayerClient.stateRecoverStatus).isEqualTo(
+          StateRecoveryStatus(
+            headBlockNumber = headBlockNumberAtStart,
+            stateRecoverStartBlockNumber = headBlockNumberAtStart + 1UL
+          )
         )
+        log.debug("stateRecoverStatus={}", executionLayerClient.stateRecoverStatus)
+      }
+
+    // continue finalizing the rest of the aggregations
+    submitDataToL1ContactAndWaitExecution(
+      aggregationsAndBlobs = finalizationsAfterCutOff
+    )
+
+    val lastAggregation = aggregationsAndBlobs.findLast { it.aggregation != null }!!.aggregation
+    await()
+      .atMost(2.minutes.toJavaDuration())
+      .pollInterval(1.seconds.toJavaDuration())
+      .untilAsserted {
+        assertThat(executionLayerClient.stateRecoverStatus)
           .isEqualTo(
             StateRecoveryStatus(
               headBlockNumber = lastAggregation!!.endBlockNumber,
-              stateRecoverStartBlockNumber = finalizationsBeforeCutOff.last().aggregation!!.endBlockNumber + 1UL
+              stateRecoverStartBlockNumber = headBlockNumberAtStart + 1UL
             )
           )
       }
+    // assert it does not try to import blocks behind the head block
+    assertThat(executionLayerClient.importedBlockNumbersInRecoveryMode.minOrNull())
+      .isEqualTo(headBlockNumberAtStart + 1UL)
   }
 
   @Test
@@ -292,7 +361,7 @@ class StateRecoverAppWithFakeExecutionClientIntTest {
         assertThat(stateRecoverApp.stateRootMismatchFound).isTrue()
       }
 
-    assertThat(executionLayerClient.lastImportedBlock.number)
+    assertThat(executionLayerClient.headBlock.number)
       .isEqualTo(aggregationsAndBlobs[1].aggregation!!.endBlockNumber)
   }
 }

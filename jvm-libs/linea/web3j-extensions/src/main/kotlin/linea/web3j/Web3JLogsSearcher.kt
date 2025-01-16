@@ -115,12 +115,15 @@ class Web3JLogsSearcher(
         if (logs.isEmpty()) {
           SearchResult.NoResultsInInterval
         } else {
-          val item = logs.find { shallContinueToSearchPredicate(it) == null }
+          var nextSearchDirection: SearchDirection? = null
+          val item = logs.find {
+            nextSearchDirection = shallContinueToSearchPredicate(it)
+            nextSearchDirection == null
+          }
           if (item != null) {
             SearchResult.ItemFound(item)
           } else {
-            val nextSearchDirection = shallContinueToSearchPredicate(logs.first())!!
-            SearchResult.KeepSearching(nextSearchDirection)
+            SearchResult.KeepSearching(nextSearchDirection!!)
           }
         }
       }
@@ -195,15 +198,25 @@ class Web3JLogsSearcher(
     return if (fromBlock is BlockParameter.BlockNumber && toBlock is BlockParameter.BlockNumber) {
       return SafeFuture.completedFuture(Pair(fromBlock.getNumber(), toBlock.getNumber()))
     } else {
-      SafeFuture.collectAll(
-        web3jClient.ethGetBlockByNumber(fromBlock.toWeb3j(), false).sendAsync().toSafeFuture(),
-        web3jClient.ethGetBlockByNumber(toBlock.toWeb3j(), false).sendAsync().toSafeFuture()
-      ).thenApply { (fromBlockResponse, toBlockResponse) ->
-        Pair(
-          fromBlockResponse.block.number.toULong(),
-          toBlockResponse.block.number.toULong()
-        )
-      }
+      AsyncRetryer.retry(
+        vertx = vertx,
+        backoffDelay = config.backoffDelay,
+        stopRetriesPredicate = { (fromBlockResponse, toBlockResponse) ->
+          fromBlockResponse?.block?.number != null && toBlockResponse?.block?.number != null
+        },
+        action = {
+          SafeFuture.collectAll(
+            web3jClient.ethGetBlockByNumber(fromBlock.toWeb3j(), false).sendAsync().toSafeFuture(),
+            web3jClient.ethGetBlockByNumber(toBlock.toWeb3j(), false).sendAsync().toSafeFuture()
+          )
+        }
+      )
+        .thenApply { (fromBlockResponse, toBlockResponse) ->
+          Pair(
+            fromBlockResponse.block.number.toULong(),
+            toBlockResponse.block.number.toULong()
+          )
+        }
     }
   }
 }

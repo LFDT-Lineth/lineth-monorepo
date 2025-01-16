@@ -3,6 +3,7 @@ package net.consensys.zkevm.ethereum
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import kotlinx.datetime.Clock
+import linea.web3j.waitForTxReceipt
 import net.consensys.linea.contract.AsyncFriendlyTransactionManager
 import net.consensys.linea.jsonrpc.JsonRpcErrorResponseException
 import net.consensys.linea.testing.filesystem.getPathTo

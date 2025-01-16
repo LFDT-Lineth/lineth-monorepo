@@ -18,21 +18,13 @@ class RecoveryModeManager(
 ) :
   BesuEvents.BlockAddedListener {
   private val log: Logger = LogManager.getLogger(RecoveryModeManager::class.java.name)
-  private val triggered = AtomicBoolean(false)
+  private val recoveryModeTriggered = AtomicBoolean(false)
   private var currentBlockNumber: ULong = 0u
   val targetBlockNumber: ULong?
     get() = recoveryStatePersistence.getRecoveryStartBlockNumber()
 
   val headBlockNumber: ULong
     get() = currentBlockNumber
-
-  // Enum representing the states of recovery mode
-  private enum class RecoveryModeState {
-    NORMAL_MODE,
-    RECOVERY_MODE
-  }
-
-  private var recoveryModeState = RecoveryModeState.NORMAL_MODE
 
   /**
    * Called when a block is added.
@@ -43,7 +35,7 @@ class RecoveryModeManager(
   override fun onBlockAdded(addedBlockContext: AddedBlockContext) {
     val blockNumber = addedBlockContext.blockHeader.number
     currentBlockNumber = blockNumber.toULong()
-    if (!triggered.get() && hasReachedTargetBlock()) {
+    if (!recoveryModeTriggered.get() && hasReachedTargetBlock()) {
       switchToRecoveryMode()
     }
   }
@@ -59,7 +51,7 @@ class RecoveryModeManager(
    */
   @Synchronized
   fun setTargetBlockNumber(targetBlockNumber: ULong) {
-    check(!triggered.get()) {
+    check(!recoveryModeTriggered.get()) {
       "Cannot set target block number after recovery mode has been triggered"
     }
     val effectiveRecoveryStartBlockNumber = if (targetBlockNumber <= currentBlockNumber + 1u) {
@@ -81,8 +73,8 @@ class RecoveryModeManager(
 
   /** Switches the node to recovery mode.  */
   private fun switchToRecoveryMode() {
-    check(recoveryModeState == RecoveryModeState.NORMAL_MODE) {
-      "Cannot switch to recovery mode from state: $recoveryModeState"
+    check(!recoveryModeTriggered.get()) {
+      "cannot enable already enabled recovery mode"
     }
     log.warn("Stopping synchronization service")
     synchronizationService.stop()
@@ -97,7 +89,6 @@ class RecoveryModeManager(
       "Switched to state recovery mode at block={}",
       headBlockNumber
     )
-    triggered.set(true)
-    recoveryModeState = RecoveryModeState.RECOVERY_MODE
+    recoveryModeTriggered.set(true)
   }
 }

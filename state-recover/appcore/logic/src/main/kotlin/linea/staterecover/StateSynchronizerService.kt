@@ -5,6 +5,7 @@ import io.vertx.core.Vertx
 import net.consensys.encodeHex
 import net.consensys.linea.BlockNumberAndHash
 import net.consensys.linea.BlockParameter
+import net.consensys.linea.CommonDomainFunctions
 import net.consensys.zkevm.PeriodicPollingService
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
@@ -117,8 +118,14 @@ class StateSynchronizerService(
       .decompress(
         startBlockNumber = dataFinalizedV3.startBlockNumber,
         blobs = dataSubmissions.flatMap { it.blobs }
-      ).thenCompose { decompressedBlocks: List<BlockFromL1RecoveredData> ->
-        log.debug("importing blocks={}", dataFinalizedV3.intervalString())
+      )
+      .thenCompose(this::filterOutBlocksAlreadyImported)
+      .thenCompose { decompressedBlocks: List<BlockFromL1RecoveredData> ->
+        val blockInterval = CommonDomainFunctions.blockIntervalString(
+          decompressedBlocks.first().header.blockNumber,
+          decompressedBlocks.last().header.blockNumber
+        )
+        log.debug("importing blocks={} from finalization={}", blockInterval, dataFinalizedV3.intervalString())
         blockImporterAndStateVerifier
           .importBlocks(decompressedBlocks)
           .thenCompose { importResult ->
@@ -131,6 +138,15 @@ class StateSynchronizerService(
               hash = decompressedBlocks.last().header.blockHash
             )
           }
+      }
+  }
+
+  private fun filterOutBlocksAlreadyImported(
+    blocks: List<BlockFromL1RecoveredData>
+  ): SafeFuture<List<BlockFromL1RecoveredData>> {
+    return elClient.getBlockNumberAndHash(blockParameter = BlockParameter.Tag.LATEST)
+      .thenApply { headBlock ->
+        blocks.dropWhile { it.header.blockNumber <= headBlock.number }
       }
   }
 
