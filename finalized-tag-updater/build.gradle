@@ -13,11 +13,39 @@ repositories {
   }
 }
 
+ext.groupsToIncludeInShadow = [
+  "build.linea.*",
+  "io.micrometer.*",
+  "org.jetbrains.kotlin:kotlin-reflect.*",
+  "org.jetbrains.kotlinx:kotlinx-datetime.*",
+  "tech.pegasys.teku.internal:async",
+  "io.vertx.*",
+  // this can be removed once Besu updates to Vertx 4.12+
+  "com.michael-bull.kotlin-result:kotlin-result.*",
+  "com.fasterxml.jackson.module:jackson-module-kotlin",
+]
+
+def canIncludeLib(String lib) {
+  def allowed = groupsToIncludeInShadow.find { libAllowed ->
+    lib.matches(libAllowed)
+  } != null
+  allowed
+}
+
+
 shadowJar {
   if ("${project.version}" != 'unspecified') {
     archiveClassifier.set('')
     archiveVersion.set("${project.version}")
   }
+
+  dependencies {
+    exclude {dependency ->
+      def shallExclude = !canIncludeLib("${dependency.moduleGroup}:${dependency.moduleName}")
+      shallExclude
+    }
+  }
+
   manifest {
     attributes(
         'Specification-Title': archiveBaseName,
