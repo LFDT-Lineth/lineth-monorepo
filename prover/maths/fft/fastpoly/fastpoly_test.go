@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestMulitplication(t *testing.T) {
+func TestMultiplication(t *testing.T) {
 
 	n := 8
 	// smallN := 6

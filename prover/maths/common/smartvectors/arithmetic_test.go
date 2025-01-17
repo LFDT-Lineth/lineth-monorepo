@@ -15,7 +15,7 @@ import (
 
 func TestFuzzProduct(t *testing.T) {
 
-	for i := 0; i < fuzzIteration; i++ {
+	for i := 0; i < FuzzIteration; i++ {
 		tcase := newTestBuilder(i).NewTestCaseForProd()
 
 		success := t.Run(tcase.name, func(t *testing.T) {
@@ -36,7 +36,7 @@ func TestFuzzProduct(t *testing.T) {
 }
 
 func TestFuzzLinComb(t *testing.T) {
-	for i := 0; i < fuzzIteration; i++ {
+	for i := 0; i < FuzzIteration; i++ {
 		tcase := newTestBuilder(i).NewTestCaseForLinComb()
 
 		success := t.Run(tcase.name, func(t *testing.T) {
@@ -57,7 +57,7 @@ func TestFuzzLinComb(t *testing.T) {
 }
 
 func TestFuzzPolyEval(t *testing.T) {
-	for i := 0; i < fuzzIteration; i++ {
+	for i := 0; i < FuzzIteration; i++ {
 		tcase := newTestBuilder(i).NewTestCaseForPolyEval()
 
 		success := t.Run(tcase.name, func(t *testing.T) {
@@ -80,7 +80,7 @@ func TestFuzzPolyEval(t *testing.T) {
 
 func TestFuzzProductWithPool(t *testing.T) {
 
-	for i := 0; i < fuzzIteration; i++ {
+	for i := 0; i < FuzzIteration; i++ {
 		tcase := newTestBuilder(i).NewTestCaseForProd()
 
 		success := t.Run(tcase.name, func(t *testing.T) {
@@ -107,7 +107,7 @@ func TestFuzzProductWithPool(t *testing.T) {
 
 func TestFuzzProductWithPoolCompare(t *testing.T) {
 
-	for i := 0; i < fuzzIteration; i++ {
+	for i := 0; i < FuzzIteration; i++ {
 		tcase := newTestBuilder(i).NewTestCaseForProd()
 
 		success := t.Run(tcase.name, func(t *testing.T) {
@@ -137,7 +137,7 @@ func TestFuzzProductWithPoolCompare(t *testing.T) {
 
 func TestFuzzLinCombWithPool(t *testing.T) {
 
-	for i := 0; i < fuzzIteration; i++ {
+	for i := 0; i < FuzzIteration; i++ {
 		tcase := newTestBuilder(i).NewTestCaseForLinComb()
 
 		success := t.Run(tcase.name, func(t *testing.T) {
@@ -163,7 +163,7 @@ func TestFuzzLinCombWithPool(t *testing.T) {
 
 func TestFuzzLinCombWithPoolCompare(t *testing.T) {
 
-	for i := 0; i < fuzzIteration; i++ {
+	for i := 0; i < FuzzIteration; i++ {
 		tcase := newTestBuilder(i).NewTestCaseForLinComb()
 
 		success := t.Run(tcase.name, func(t *testing.T) {
@@ -285,7 +285,7 @@ func TestScalarMul(t *testing.T) {
 }
 
 func TestFuzzPolyEvalWithPool(t *testing.T) {
-	for i := 0; i < fuzzIteration; i++ {
+	for i := 0; i < FuzzIteration; i++ {
 		tcase := newTestBuilder(i).NewTestCaseForPolyEval()
 
 		success := t.Run(tcase.name, func(t *testing.T) {
@@ -310,7 +310,7 @@ func TestFuzzPolyEvalWithPool(t *testing.T) {
 }
 
 func TestFuzzPolyEvalWithPoolCompare(t *testing.T) {
-	for i := 0; i < fuzzIteration; i++ {
+	for i := 0; i < FuzzIteration; i++ {
 		tcase := newTestBuilder(i).NewTestCaseForPolyEval()
 
 		success := t.Run(tcase.name, func(t *testing.T) {

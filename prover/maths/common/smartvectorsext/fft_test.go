@@ -1,9 +1,11 @@
 //go:build !race
 
-package smartvectors
+package smartvectorsext
 
 import (
 	"fmt"
+	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
+	"github.com/consensys/linea-monorepo/prover/maths/field/fext"
 	"math/big"
 	"testing"
 
@@ -15,7 +17,7 @@ import (
 
 func TestFFTFuzzyDIFDIT(t *testing.T) {
 
-	for i := 0; i < FuzzIteration; i++ {
+	for i := 0; i < smartvectors.FuzzIteration; i++ {
 		// We reuse the test case generator for linear combinations. We only
 		// care about the first vector.
 		builder := newTestBuilder(i)
@@ -43,7 +45,7 @@ func TestFFTFuzzyDIFDIT(t *testing.T) {
 				actual := FFT(v, fft.DIF, false, ratio, cosetID, nil)
 				actual = FFTInverse(actual, fft.DIT, false, ratio, cosetID, nil)
 
-				xA, xV := actual.Get(0), v.Get(0)
+				xA, xV := actual.GetExt(0), v.GetExt(0)
 				assert.Equal(t, xA.String(), xV.String())
 			},
 		)
@@ -54,7 +56,7 @@ func TestFFTFuzzyDIFDIT(t *testing.T) {
 
 func TestFFTFuzzyDITDIF(t *testing.T) {
 
-	for i := 0; i < FuzzIteration; i++ {
+	for i := 0; i < smartvectors.FuzzIteration; i++ {
 		// We reuse the test case generator for linear combinations. We only
 		// care about the first vector.
 		builder := newTestBuilder(i)
@@ -82,7 +84,7 @@ func TestFFTFuzzyDITDIF(t *testing.T) {
 				actual := FFT(v, fft.DIT, false, ratio, cosetID, nil)
 				actual = FFTInverse(actual, fft.DIF, false, ratio, cosetID, nil)
 
-				xA, xV := actual.Get(0), v.Get(0)
+				xA, xV := actual.GetExt(0), v.GetExt(0)
 				assert.Equal(t, xA.String(), xV.String())
 			},
 		)
@@ -93,7 +95,7 @@ func TestFFTFuzzyDITDIF(t *testing.T) {
 
 func TestFFTFuzzyDIFDITBitReverse(t *testing.T) {
 
-	for i := 0; i < FuzzIteration; i++ {
+	for i := 0; i < smartvectors.FuzzIteration; i++ {
 		// We reuse the test case generator for linear combinations. We only
 		// care about the first vector.
 		builder := newTestBuilder(i)
@@ -121,7 +123,7 @@ func TestFFTFuzzyDIFDITBitReverse(t *testing.T) {
 				actual := FFT(v, fft.DIF, true, ratio, cosetID, nil)
 				actual = FFTInverse(actual, fft.DIT, true, ratio, cosetID, nil)
 
-				xA, xV := actual.Get(0), v.Get(0)
+				xA, xV := actual.GetExt(0), v.GetExt(0)
 				assert.Equal(t, xA.String(), xV.String())
 			},
 		)
@@ -132,7 +134,7 @@ func TestFFTFuzzyDIFDITBitReverse(t *testing.T) {
 
 func TestFFTFuzzyDITDIFBitReverse(t *testing.T) {
 
-	for i := 0; i < FuzzIteration; i++ {
+	for i := 0; i < smartvectors.FuzzIteration; i++ {
 		// We reuse the test case generator for linear combinations. We only
 		// care about the first vector.
 		builder := newTestBuilder(i)
@@ -160,7 +162,7 @@ func TestFFTFuzzyDITDIFBitReverse(t *testing.T) {
 				actual := FFT(v, fft.DIT, true, ratio, cosetID, nil)
 				actual = FFTInverse(actual, fft.DIF, true, ratio, cosetID, nil)
 
-				xA, xV := actual.Get(0), v.Get(0)
+				xA, xV := actual.GetExt(0), v.GetExt(0)
 				assert.Equal(t, xA.String(), xV.String())
 			},
 		)
@@ -171,7 +173,7 @@ func TestFFTFuzzyDITDIFBitReverse(t *testing.T) {
 
 func TestFFTFuzzyEvaluation(t *testing.T) {
 
-	for i := 0; i < FuzzIteration; i++ {
+	for i := 0; i < smartvectors.FuzzIteration; i++ {
 		// We reuse the test case generator for linear combinations. We only
 		// care about the first vector.
 		builder := newTestBuilder(i)
@@ -209,8 +211,9 @@ func TestFFTFuzzyEvaluation(t *testing.T) {
 					x.Mul(&omegacoset, &x)
 				}
 
-				yCoeff := EvalCoeff(coeffs, x)
-				yFFT := evals.Get(i)
+				wrappedX := fext.Element{x, field.Zero()}
+				yCoeff := EvalCoeff(coeffs, wrappedX)
+				yFFT := evals.GetExt(i)
 
 				require.Equal(t, yCoeff.String(), yFFT.String(), "evaluations are %v\n", evals.Pretty())
 
@@ -223,7 +226,7 @@ func TestFFTFuzzyEvaluation(t *testing.T) {
 
 func TestFFTFuzzyConsistWithInterpolation(t *testing.T) {
 
-	for i := 0; i < FuzzIteration; i++ {
+	for i := 0; i < smartvectors.FuzzIteration; i++ {
 		// We reuse the test case generator for linear combinations. We only
 		// care about the first vector.
 		builder := newTestBuilder(i)
@@ -250,7 +253,7 @@ func TestFFTFuzzyConsistWithInterpolation(t *testing.T) {
 				i := builder.gen.IntN(coeffs.Len())
 				t.Logf("Parameters are (vec %v - ratio %v - cosetID %v - evalAt %v", coeffs.Pretty(), ratio, cosetID, i)
 
-				var xCoeff field.Element
+				var xCoeff fext.Element
 				xCoeff.SetInt64(2)
 
 				xVal := xCoeff
@@ -260,7 +263,7 @@ func TestFFTFuzzyConsistWithInterpolation(t *testing.T) {
 					omegacoset.Exp(omegacoset, big.NewInt(int64(cosetID)))
 					mulGen := field.NewElement(field.MultiplicativeGen)
 					omegacoset.Mul(&omegacoset, &mulGen)
-					xVal.Div(&xVal, &omegacoset)
+					xVal.DivByBase(&xVal, &omegacoset)
 				}
 
 				yCoeff := EvalCoeff(coeffs, xCoeff)
@@ -280,7 +283,7 @@ func TestFFTFuzzyConsistWithInterpolation(t *testing.T) {
 func TestFFTBackAndForth(t *testing.T) {
 
 	// This test case is not covered from the above
-	v := NewConstant(field.NewFromString("18761351033005093047639776353077664361612883771785172294598460731350692996243"), 1<<18)
+	v := NewConstantExt(fext.NewFromString("18761351033005093047639776353077664361612883771785172294598460731350692996243"), 1<<18)
 
 	vcoeff := FFTInverse(v, fft.DIF, false, 0, 0, nil)
 	vreeval0 := FFT(vcoeff, fft.DIT, false, 2, 0, nil)

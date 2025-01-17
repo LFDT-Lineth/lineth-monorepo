@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"math/rand/v2"
 
-	"github.com/consensys/linea-monorepo/prover/maths/field/fext"
-
 	"github.com/consensys/gnark/frontend"
+	"github.com/consensys/linea-monorepo/prover/maths/field/fext"
+	"github.com/consensys/linea-monorepo/prover/maths/field/fext/gnarkfext"
 	"github.com/consensys/linea-monorepo/prover/utils"
 )
 
@@ -100,6 +100,30 @@ func ForTest(xs ...int) []fext.Element {
 	res := make([]fext.Element, len(xs))
 	for i, x := range xs {
 		res[i].SetInt64(int64(x))
+	}
+	return res
+}
+
+// ForTestFromVect computes a vector of field extensions,
+// where each field extension is populated using one vector of size [fext.ExtensionDegree]
+func ForTestFromVect(xs ...[fext.ExtensionDegree]int) []fext.Element {
+	res := make([]fext.Element, len(xs))
+	for i, x := range xs {
+		res[i].SetFromVector(x)
+	}
+	return res
+}
+
+// ForTestFromPairs groups the input into pairs. Each pair populates the first two
+// coordinates of a field extension, and the function then
+// returns a vector instantiated these field extension elements.
+func ForTestFromPairs(xs ...int) []fext.Element {
+	if len(xs)%2 != 0 {
+		panic("ForTestFromPairs must receive an even-length input vector")
+	}
+	res := make([]fext.Element, len(xs)/2)
+	for i := 0; i < len(res); i++ {
+		res[i].SetInt64Pair(int64(xs[2*i]), int64(xs[2*i+1]))
 	}
 	return res
 }
@@ -222,10 +246,10 @@ func PowerVec(x fext.Element, n int) []fext.Element {
 // IntoGnarkAssignment converts an array of field.Element into an array of
 // frontend.Variable that can be used to assign a vector of frontend.Variable
 // in a circuit or to generate a vector of constant in the circuit definition.
-func IntoGnarkAssignment(msgData []fext.Element) []frontend.Variable {
-	assignedMsg := []frontend.Variable{}
+func IntoGnarkAssignment(msgData []fext.Element) []gnarkfext.Variable {
+	assignedMsg := []gnarkfext.Variable{}
 	for _, x := range msgData {
-		assignedMsg = append(assignedMsg, frontend.Variable(x))
+		assignedMsg = append(assignedMsg, gnarkfext.Variable{frontend.Variable(x.A0), frontend.Variable(x.A1)})
 	}
 	return assignedMsg
 }

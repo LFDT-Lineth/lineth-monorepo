@@ -4,18 +4,20 @@ package smartvectorsext
 
 import (
 	"fmt"
+	"github.com/consensys/linea-monorepo/prover/maths/common/vectorext"
+	"math/big"
+	"testing"
+
 	"github.com/consensys/linea-monorepo/prover/maths/common/mempoolext"
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
-	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors/vectorext"
 	"github.com/consensys/linea-monorepo/prover/maths/field/fext"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 func TestFuzzProduct(t *testing.T) {
 
-	for i := 0; i < fuzzIteration; i++ {
+	for i := 0; i < smartvectors.FuzzIteration; i++ {
 		tcase := newTestBuilder(i).NewTestCaseForProd()
 
 		success := t.Run(tcase.name, func(t *testing.T) {
@@ -36,7 +38,7 @@ func TestFuzzProduct(t *testing.T) {
 }
 
 func TestFuzzLinComb(t *testing.T) {
-	for i := 0; i < fuzzIteration; i++ {
+	for i := 0; i < smartvectors.FuzzIteration; i++ {
 		tcase := newTestBuilder(i).NewTestCaseForLinComb()
 
 		success := t.Run(tcase.name, func(t *testing.T) {
@@ -57,7 +59,7 @@ func TestFuzzLinComb(t *testing.T) {
 }
 
 func TestFuzzPolyEval(t *testing.T) {
-	for i := 0; i < fuzzIteration; i++ {
+	for i := 0; i < smartvectors.FuzzIteration; i++ {
 		tcase := newTestBuilder(i).NewTestCaseForPolyEval()
 
 		success := t.Run(tcase.name, func(t *testing.T) {
@@ -80,7 +82,7 @@ func TestFuzzPolyEval(t *testing.T) {
 
 func TestFuzzProductWithPool(t *testing.T) {
 
-	for i := 0; i < fuzzIteration; i++ {
+	for i := 0; i < smartvectors.FuzzIteration; i++ {
 		tcase := newTestBuilder(i).NewTestCaseForProd()
 
 		success := t.Run(tcase.name, func(t *testing.T) {
@@ -107,7 +109,7 @@ func TestFuzzProductWithPool(t *testing.T) {
 
 func TestFuzzProductWithPoolCompare(t *testing.T) {
 
-	for i := 0; i < fuzzIteration; i++ {
+	for i := 0; i < smartvectors.FuzzIteration; i++ {
 		tcase := newTestBuilder(i).NewTestCaseForProd()
 
 		success := t.Run(tcase.name, func(t *testing.T) {
@@ -137,7 +139,7 @@ func TestFuzzProductWithPoolCompare(t *testing.T) {
 
 func TestFuzzLinCombWithPool(t *testing.T) {
 
-	for i := 0; i < fuzzIteration; i++ {
+	for i := 0; i < smartvectors.FuzzIteration; i++ {
 		tcase := newTestBuilder(i).NewTestCaseForLinComb()
 
 		success := t.Run(tcase.name, func(t *testing.T) {
@@ -163,7 +165,7 @@ func TestFuzzLinCombWithPool(t *testing.T) {
 
 func TestFuzzLinCombWithPoolCompare(t *testing.T) {
 
-	for i := 0; i < fuzzIteration; i++ {
+	for i := 0; i < smartvectors.FuzzIteration; i++ {
 		tcase := newTestBuilder(i).NewTestCaseForLinComb()
 
 		success := t.Run(tcase.name, func(t *testing.T) {
@@ -193,6 +195,7 @@ func TestFuzzLinCombWithPoolCompare(t *testing.T) {
 func TestOpBasicEdgeCases(t *testing.T) {
 
 	two := fext.NewElement(2, fieldPaddingInt())
+	eight := new(fext.Element).Exp(two, big.NewInt(3))
 
 	testCases := []struct {
 		explainer   string
@@ -207,7 +210,7 @@ func TestOpBasicEdgeCases(t *testing.T) {
 				LeftPadded(vectorext.Repeat(two, 12), two, 16),
 				RightPadded(vectorext.Repeat(two, 12), two, 16),
 			},
-			expectedRes: NewRegularExt(vectorext.Repeat(fext.NewElement(6, fieldPaddingInt()), 16)),
+			expectedRes: NewRegularExt(vectorext.Repeat(fext.NewElement(6, 3*fieldPaddingInt()), 16)),
 			fn:          Add,
 		},
 		{
@@ -217,7 +220,7 @@ func TestOpBasicEdgeCases(t *testing.T) {
 				LeftPadded(vectorext.Repeat(two, 12), two, 16),
 				RightPadded(vectorext.Repeat(two, 12), two, 16),
 			},
-			expectedRes: NewRegularExt(vectorext.Repeat(fext.NewElement(8, fieldPaddingInt()), 16)),
+			expectedRes: NewRegularExt(vectorext.Repeat(*eight, 16)),
 			fn:          Mul,
 		},
 		{
@@ -228,7 +231,7 @@ func TestOpBasicEdgeCases(t *testing.T) {
 				RightPadded(vectorext.Repeat(two, 12), two, 16),
 				NewRegularExt(vectorext.Repeat(two, 16)),
 			},
-			expectedRes: NewRegularExt(vectorext.Repeat(fext.NewElement(8, fieldPaddingInt()), 16)),
+			expectedRes: NewRegularExt(vectorext.Repeat(fext.NewElement(8, 4*fieldPaddingInt()), 16)),
 			fn:          Add,
 		},
 	}
@@ -244,14 +247,18 @@ func TestOpBasicEdgeCases(t *testing.T) {
 }
 
 func TestInnerProduct(t *testing.T) {
+	a := ForTestFromPairs(1, 1, 2, 1, 1, 1, 2, 1, 1, 1)
+	b := ForTestFromPairs(1, 1, -1, 1, 2, 1, -1, 1, 2, 1)
+	sum := new(fext.Element).SetInt64Pair(int64(1+5*fext.RootPowers[1]), 10)
+
 	testCases := []struct {
 		a, b smartvectors.SmartVector
 		y    fext.Element
 	}{
 		{
-			a: ForTestExt(1, 2, 1, 2, 1),
-			b: ForTestExt(1, -1, 2, -1, 2),
-			y: fext.NewElement(1, fieldPaddingInt()),
+			a: a,
+			b: b,
+			y: *sum,
 		},
 	}
 
@@ -271,7 +278,12 @@ func TestScalarMul(t *testing.T) {
 	}{
 		{
 			a: ForTestExt(1, 2, 1, 2, 1),
-			b: fext.NewElement(3, fieldPaddingInt()),
+			b: fext.NewElement(3, 1),
+			y: ForTestFromPairs(3, 1, 6, 2, 3, 1, 6, 2, 3, 1),
+		},
+		{
+			a: ForTestExt(1, 2, 1, 2, 1),
+			b: fext.NewElement(3, 0),
 			y: ForTestExt(3, 6, 3, 6, 3),
 		},
 	}
@@ -285,7 +297,7 @@ func TestScalarMul(t *testing.T) {
 }
 
 func TestFuzzPolyEvalWithPool(t *testing.T) {
-	for i := 0; i < fuzzIteration; i++ {
+	for i := 0; i < smartvectors.FuzzIteration; i++ {
 		tcase := newTestBuilder(i).NewTestCaseForPolyEval()
 
 		success := t.Run(tcase.name, func(t *testing.T) {
@@ -310,7 +322,7 @@ func TestFuzzPolyEvalWithPool(t *testing.T) {
 }
 
 func TestFuzzPolyEvalWithPoolCompare(t *testing.T) {
-	for i := 0; i < fuzzIteration; i++ {
+	for i := 0; i < smartvectors.FuzzIteration; i++ {
 		tcase := newTestBuilder(i).NewTestCaseForPolyEval()
 
 		success := t.Run(tcase.name, func(t *testing.T) {

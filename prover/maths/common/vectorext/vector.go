@@ -122,29 +122,38 @@ func (vector *Vector) AsyncReadFrom(r io.Reader) (int64, error, chan error) {
 		var cptErrors uint64
 		// process the elements in parallel
 		execute(int(sliceLen), func(start, end int) {
-
-			subElems := make([]fr.Element, 2)
 			for i := start; i < end; i++ {
-				// we have to set vector[i]
-				for j := 0; j < 2; j++ {
-					var z fr.Element
-					bstart := (i + j) * frBytes
-					bend := bstart + frBytes
-					b := bSlice[bstart:bend]
-					z[0] = binary.BigEndian.Uint64(b[24:32])
-					z[1] = binary.BigEndian.Uint64(b[16:24])
-					z[2] = binary.BigEndian.Uint64(b[8:16])
-					z[3] = binary.BigEndian.Uint64(b[0:8])
+				var z fr.Element
+				bstart := i * 2 * frBytes
+				bend := bstart + frBytes
+				b := bSlice[bstart:bend]
+				z[0] = binary.BigEndian.Uint64(b[24:32])
+				z[1] = binary.BigEndian.Uint64(b[16:24])
+				z[2] = binary.BigEndian.Uint64(b[8:16])
+				z[3] = binary.BigEndian.Uint64(b[0:8])
 
-					if !fext.SmallerThanModulus(&z) {
-						atomic.AddUint64(&cptErrors, 1)
-						return
-					}
-					fext.ToMont(&z)
-					subElems[j] = z
+				if !fext.SmallerThanModulus(&z) {
+					atomic.AddUint64(&cptErrors, 1)
+					return
 				}
-				zExt := fext.Element{subElems[0], subElems[1]}
-				(*vector)[i] = zExt
+				fext.ToMont(&z)
+				(*vector)[i].A0.Set(&z)
+				// set second coordinate
+				var w fr.Element
+				cstart := (i*2 + 1) * frBytes
+				cend := cstart + frBytes
+				c := bSlice[cstart:cend]
+				w[0] = binary.BigEndian.Uint64(c[24:32])
+				w[1] = binary.BigEndian.Uint64(c[16:24])
+				w[2] = binary.BigEndian.Uint64(c[8:16])
+				w[3] = binary.BigEndian.Uint64(c[0:8])
+
+				if !fext.SmallerThanModulus(&w) {
+					atomic.AddUint64(&cptErrors, 1)
+					return
+				}
+				fext.ToMont(&w)
+				(*vector)[i].A1.Set(&w)
 			}
 		})
 

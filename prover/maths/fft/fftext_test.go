@@ -17,20 +17,18 @@
 package fft
 
 import (
+	"github.com/consensys/linea-monorepo/prover/maths/common/polyext"
+	"github.com/consensys/linea-monorepo/prover/maths/field/fext"
 	"math/big"
 	"strconv"
 	"testing"
-
-	"github.com/consensys/linea-monorepo/prover/maths/common/poly"
-	"github.com/consensys/linea-monorepo/prover/maths/field"
-	"github.com/stretchr/testify/require"
 
 	"github.com/leanovate/gopter"
 	"github.com/leanovate/gopter/gen"
 	"github.com/leanovate/gopter/prop"
 )
 
-func TestFFT(t *testing.T) {
+func TestFFTExt(t *testing.T) {
 	const maxSize = 1 << 10
 
 	nbCosets := 3
@@ -44,21 +42,21 @@ func TestFFT(t *testing.T) {
 	// checks that a random evaluation of a dual function eval(gen**ithpower) is consistent with the FFT result
 	testA := func(ithpower int) bool {
 
-		pol := make([]field.Element, maxSize)
-		backupPol := make([]field.Element, maxSize)
+		pol := make([]fext.Element, maxSize)
+		backupPol := make([]fext.Element, maxSize)
 
 		for i := 0; i < maxSize; i++ {
 			pol[i].SetRandom()
 		}
 		copy(backupPol, pol)
 
-		domainWithPrecompute.FFT(pol, DIF)
-		BitReverse(pol)
+		domainWithPrecompute.FFTExt(pol, DIF)
+		BitReverseExt(pol)
 
 		sample := domainWithPrecompute.Generator
 		sample.Exp(sample, big.NewInt(int64(ithpower)))
 
-		eval := poly.EvalUnivariate(backupPol, sample)
+		eval := polyext.EvalUnivariateBase(backupPol, sample)
 
 		return eval.Equal(&pol[ithpower])
 	}
@@ -70,22 +68,22 @@ func TestFFT(t *testing.T) {
 		// checks that a random evaluation of a dual function eval(gen**ithpower) is consistent with the FFT result
 		func(ithpower int) bool {
 
-			pol := make([]field.Element, maxSize)
-			backupPol := make([]field.Element, maxSize)
+			pol := make([]fext.Element, maxSize)
+			backupPol := make([]fext.Element, maxSize)
 
 			for i := 0; i < maxSize; i++ {
 				pol[i].SetRandom()
 			}
 			copy(backupPol, pol)
 
-			domainWithPrecompute.FFT(pol, DIF, OnCoset())
-			BitReverse(pol)
+			domainWithPrecompute.FFTExt(pol, DIF, OnCoset())
+			BitReverseExt(pol)
 
 			sample := domainWithPrecompute.Generator
 			sample.Exp(sample, big.NewInt(int64(ithpower))).
 				Mul(&sample, &domainWithPrecompute.FrMultiplicativeGen)
 
-			eval := poly.EvalUnivariate(backupPol, sample)
+			eval := polyext.EvalUnivariateBase(backupPol, sample)
 
 			return eval.Equal(&pol[ithpower])
 
@@ -98,21 +96,21 @@ func TestFFT(t *testing.T) {
 		// checks that a random evaluation of a dual function eval(gen**ithpower) is consistent with the FFT result
 		func(ithpower int) bool {
 
-			pol := make([]field.Element, maxSize)
-			backupPol := make([]field.Element, maxSize)
+			pol := make([]fext.Element, maxSize)
+			backupPol := make([]fext.Element, maxSize)
 
 			for i := 0; i < maxSize; i++ {
 				pol[i].SetRandom()
 			}
 			copy(backupPol, pol)
 
-			BitReverse(pol)
-			domainWithPrecompute.FFT(pol, DIT)
+			BitReverseExt(pol)
+			domainWithPrecompute.FFTExt(pol, DIT)
 
 			sample := domainWithPrecompute.Generator
 			sample.Exp(sample, big.NewInt(int64(ithpower)))
 
-			eval := poly.EvalUnivariate(backupPol, sample)
+			eval := polyext.EvalUnivariateBase(backupPol, sample)
 
 			return eval.Equal(&pol[ithpower])
 
@@ -124,18 +122,18 @@ func TestFFT(t *testing.T) {
 
 		func() bool {
 
-			pol := make([]field.Element, maxSize)
-			backupPol := make([]field.Element, maxSize)
+			pol := make([]fext.Element, maxSize)
+			backupPol := make([]fext.Element, maxSize)
 
 			for i := 0; i < maxSize; i++ {
 				pol[i].SetRandom()
 			}
 			copy(backupPol, pol)
 
-			BitReverse(pol)
-			domainWithPrecompute.FFT(pol, DIT)
-			domainWithPrecompute.FFTInverse(pol, DIF)
-			BitReverse(pol)
+			BitReverseExt(pol)
+			domainWithPrecompute.FFTExt(pol, DIT)
+			domainWithPrecompute.FFTInverseExt(pol, DIF)
+			BitReverseExt(pol)
 
 			check := true
 			for i := 0; i < len(pol); i++ {
@@ -149,8 +147,8 @@ func TestFFT(t *testing.T) {
 
 		func() bool {
 
-			pol := make([]field.Element, maxSize)
-			backupPol := make([]field.Element, maxSize)
+			pol := make([]fext.Element, maxSize)
+			backupPol := make([]fext.Element, maxSize)
 
 			for i := 0; i < maxSize; i++ {
 				pol[i].SetRandom()
@@ -161,10 +159,10 @@ func TestFFT(t *testing.T) {
 
 			for i := 1; i <= nbCosets; i++ {
 
-				BitReverse(pol)
-				domainWithPrecompute.FFT(pol, DIT, OnCoset())
-				domainWithPrecompute.FFTInverse(pol, DIF, OnCoset())
-				BitReverse(pol)
+				BitReverseExt(pol)
+				domainWithPrecompute.FFTExt(pol, DIT, OnCoset())
+				domainWithPrecompute.FFTInverseExt(pol, DIF, OnCoset())
+				BitReverseExt(pol)
 
 				for i := 0; i < len(pol); i++ {
 					check = check && pol[i].Equal(&backupPol[i])
@@ -179,16 +177,16 @@ func TestFFT(t *testing.T) {
 
 		func() bool {
 
-			pol := make([]field.Element, maxSize)
-			backupPol := make([]field.Element, maxSize)
+			pol := make([]fext.Element, maxSize)
+			backupPol := make([]fext.Element, maxSize)
 
 			for i := 0; i < maxSize; i++ {
 				pol[i].SetRandom()
 			}
 			copy(backupPol, pol)
 
-			domainWithPrecompute.FFTInverse(pol, DIF)
-			domainWithPrecompute.FFT(pol, DIT)
+			domainWithPrecompute.FFTInverseExt(pol, DIF)
+			domainWithPrecompute.FFTExt(pol, DIT)
 
 			check := true
 			for i := 0; i < len(pol); i++ {
@@ -202,16 +200,16 @@ func TestFFT(t *testing.T) {
 
 		func() bool {
 
-			pol := make([]field.Element, maxSize)
-			backupPol := make([]field.Element, maxSize)
+			pol := make([]fext.Element, maxSize)
+			backupPol := make([]fext.Element, maxSize)
 
 			for i := 0; i < maxSize; i++ {
 				pol[i].SetRandom()
 			}
 			copy(backupPol, pol)
 
-			domainWithPrecompute.FFTInverse(pol, DIF, OnCoset())
-			domainWithPrecompute.FFT(pol, DIT, OnCoset())
+			domainWithPrecompute.FFTInverseExt(pol, DIF, OnCoset())
+			domainWithPrecompute.FFTExt(pol, DIT, OnCoset())
 
 			check := true
 			for i := 0; i < len(pol); i++ {
@@ -225,21 +223,13 @@ func TestFFT(t *testing.T) {
 
 }
 
-func TestOmega(t *testing.T) {
-	n := 4
-	// Test that it returns indeed a root of unity
-	omega := GetOmega(n)
-	omega.Exp(omega, big.NewInt(int64(n)))
-	require.Equal(t, "1", omega.String())
-}
-
 // --------------------------------------------------------------------
 // benches
-func BenchmarkFFT(b *testing.B) {
+func BenchmarkFFTExt(b *testing.B) {
 
 	const maxSize = 1 << 20
 
-	pol := make([]field.Element, maxSize)
+	pol := make([]fext.Element, maxSize)
 	pol[0].SetRandom()
 	for i := 1; i < maxSize; i++ {
 		pol[i] = pol[i-1]
@@ -251,7 +241,7 @@ func BenchmarkFFT(b *testing.B) {
 			domain := NewDomain(sizeDomain).WithCoset()
 			b.ResetTimer()
 			for j := 0; j < b.N; j++ {
-				domain.FFT(pol[:sizeDomain], DIT)
+				domain.FFTExt(pol[:sizeDomain], DIT)
 			}
 		})
 		// b.Run("fft 2**"+strconv.Itoa(i)+"(coset)", func(b *testing.B) {
@@ -265,10 +255,10 @@ func BenchmarkFFT(b *testing.B) {
 
 }
 
-func BenchmarkFFTDITCosetReference(b *testing.B) {
+func BenchmarkFFTDITCosetReferenceExt(b *testing.B) {
 	const maxSize = 1 << 20
 
-	pol := make([]field.Element, maxSize)
+	pol := make([]fext.Element, maxSize)
 	pol[0].SetRandom()
 	for i := 1; i < maxSize; i++ {
 		pol[i] = pol[i-1]
@@ -278,14 +268,14 @@ func BenchmarkFFTDITCosetReference(b *testing.B) {
 
 	b.ResetTimer()
 	for j := 0; j < b.N; j++ {
-		domain.FFT(pol, DIT, OnCoset())
+		domain.FFTExt(pol, DIT, OnCoset())
 	}
 }
 
-func BenchmarkFFTDIFReference(b *testing.B) {
+func BenchmarkFFTDIFReferenceExt(b *testing.B) {
 	const maxSize = 1 << 20
 
-	pol := make([]field.Element, maxSize)
+	pol := make([]fext.Element, maxSize)
 	pol[0].SetRandom()
 	for i := 1; i < maxSize; i++ {
 		pol[i] = pol[i-1]
@@ -295,6 +285,6 @@ func BenchmarkFFTDIFReference(b *testing.B) {
 
 	b.ResetTimer()
 	for j := 0; j < b.N; j++ {
-		domain.FFT(pol, DIF)
+		domain.FFTExt(pol, DIF)
 	}
 }

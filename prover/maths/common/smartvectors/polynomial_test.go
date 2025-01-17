@@ -49,7 +49,7 @@ func TestRuffini(t *testing.T) {
 
 func TestFuzzPolynomial(t *testing.T) {
 
-	for i := 0; i < fuzzIteration; i++ {
+	for i := 0; i < FuzzIteration; i++ {
 
 		// We reuse the test-case generator of lincomb but we only
 		// use the first generated edge-case for each. The fact that

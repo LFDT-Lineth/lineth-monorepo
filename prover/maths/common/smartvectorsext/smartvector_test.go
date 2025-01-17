@@ -1,18 +1,19 @@
 //go:build !race
 
-package smartvectors
+package smartvectorsext
 
 import (
 	"fmt"
+	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
+	"github.com/consensys/linea-monorepo/prover/maths/field/fext"
 	"testing"
 
-	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/utils"
 	"github.com/stretchr/testify/require"
 )
 
 func TestWriteInSlice(t *testing.T) {
-	for i := 0; i < FuzzIteration; i++ {
+	for i := 0; i < smartvectors.FuzzIteration; i++ {
 		// We reuse the test case generator for linear combinations. We only
 		// care about the first vector.
 		builder := newTestBuilder(i)
@@ -23,18 +24,18 @@ func TestWriteInSlice(t *testing.T) {
 			func(t *testing.T) {
 				v := tcase.svecs[0]
 
-				slice := make([]field.Element, v.Len())
-				v.WriteInSlice(slice)
+				slice := make([]fext.Element, v.Len())
+				v.WriteInSliceExt(slice)
 
 				for j := range slice {
-					x := v.Get(j)
+					x := v.GetExt(j)
 					require.Equal(t, x.String(), slice[j].String())
 				}
 
 				// write in a random place of the slice
 				randPos := builder.gen.IntN(v.Len())
 				slice[randPos].SetRandom()
-				x := v.Get(randPos)
+				x := v.GetExt(randPos)
 				require.NotEqual(t, x.String(), randPos, "forbidden shallow copy")
 			},
 		)
@@ -44,7 +45,7 @@ func TestWriteInSlice(t *testing.T) {
 }
 
 func TestShiftingTest(t *testing.T) {
-	for i := 0; i < FuzzIteration; i++ {
+	for i := 0; i < smartvectors.FuzzIteration; i++ {
 		// We reuse the test case generator for linear combinations. We only
 		// care about the first vector.
 		builder := newTestBuilder(i)
@@ -61,9 +62,9 @@ func TestShiftingTest(t *testing.T) {
 				revShifted := v.RotateRight(-offset)
 
 				for i := 0; i < v.Len(); i++ {
-					x := v.Get(i)
-					xR := shifted.Get(utils.PositiveMod(i+offset, v.Len()))
-					xL := revShifted.Get(utils.PositiveMod(i-offset, v.Len()))
+					x := v.GetExt(i)
+					xR := shifted.GetExt(utils.PositiveMod(i+offset, v.Len()))
+					xL := revShifted.GetExt(utils.PositiveMod(i-offset, v.Len()))
 
 					require.Equal(t, x.String(), xL.String())
 					require.Equal(t, x.String(), xR.String())
@@ -78,7 +79,7 @@ func TestShiftingTest(t *testing.T) {
 
 func TestSubvectorFuzzy(t *testing.T) {
 
-	for i := 0; i < FuzzIteration; i++ {
+	for i := 0; i < smartvectors.FuzzIteration; i++ {
 
 		// We reuse the test case generator for linear combinations. We only
 		// care about the first vector.
@@ -99,8 +100,8 @@ func TestSubvectorFuzzy(t *testing.T) {
 				require.Equal(t, stop-start, sub.Len(), "subvector has wrong size")
 
 				for i := 0; i < stop-start; i++ {
-					expected := v.Get(start + i)
-					actual := sub.Get(i)
+					expected := v.GetExt(start + i)
+					actual := sub.GetExt(i)
 					require.Equal(t, expected.String(), actual.String(), "Start %v, Stop %v, i %v", start, stop, i)
 				}
 

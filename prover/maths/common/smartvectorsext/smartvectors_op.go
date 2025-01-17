@@ -4,26 +4,41 @@ import (
 	"fmt"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
-	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors/vectorext"
+	"github.com/consensys/linea-monorepo/prover/maths/common/vectorext"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/maths/field/fext"
+	"github.com/consensys/linea-monorepo/prover/maths/field/fext/gnarkfext"
 	"github.com/consensys/linea-monorepo/prover/utils"
 )
 
-// ForTest returns a witness from a explicit litteral assignement
+// ForTestExt returns a regular smartvector with field extensions of the vector xs
+// The field extensions are simple wrappers of the base field, padded with 0s
 func ForTestExt(xs ...int) smartvectors.SmartVector {
 	return NewRegularExt(vectorext.ForTest(xs...))
+}
+
+// ForTestFromVect computes a regular smartvector of field extensions,
+// where each field extension is populated using one vector of size [fext.ExtensionDegree]
+func ForTestFromVect(xs ...[fext.ExtensionDegree]int) smartvectors.SmartVector {
+	return NewRegularExt(vectorext.ForTestFromVect(xs...))
+}
+
+// ForTestFromPairs groups the inputs into pairs and computes a regular smartvector of
+// field extensions, where each field extension has only the first two coordinates populated.
+func ForTestFromPairs(xs ...int) smartvectors.SmartVector {
+	return NewRegularExt(vectorext.ForTestFromPairs(xs...))
 }
 
 // IntoRegVec converts a smart-vector into a normal vec. The resulting vector
 // is always reallocated and can be safely mutated without side-effects
 // on s.
 func IntoRegVec(s smartvectors.SmartVector) []field.Element {
-	res := make([]field.Element, s.Len())
-	s.WriteInSlice(res)
-	return res
+	panic(conversionError)
 }
 
+// IntoRegVecExt converts a smart-vector into a normal vector of field extensions.
+// The resulting vector is always reallocated and can be safely mutated without side-effects
+// on s.
 func IntoRegVecExt(s smartvectors.SmartVector) []fext.Element {
 	res := make([]fext.Element, s.Len())
 	s.WriteInSliceExt(res)
@@ -31,18 +46,13 @@ func IntoRegVecExt(s smartvectors.SmartVector) []fext.Element {
 }
 
 // IntoGnarkAssignment converts a smart-vector into a gnark assignment
-func IntoGnarkAssignment(sv smartvectors.SmartVector) []frontend.Variable {
-	res := make([]frontend.Variable, sv.Len())
-	_, err := sv.GetBase(0)
-	if err == nil {
-		for i := range res {
-			elem, _ := sv.GetBase(i)
-			res[i] = elem
-		}
-	} else {
-		for i := range res {
-			elem := sv.GetExt(i)
-			res[i] = elem
+func IntoGnarkAssignment(sv smartvectors.SmartVector) []gnarkfext.Variable {
+	res := make([]gnarkfext.Variable, sv.Len())
+	for i := range res {
+		elem := sv.GetExt(i)
+		res[i] = gnarkfext.Variable{
+			A0: frontend.Variable(elem.A0),
+			A1: frontend.Variable(elem.A1),
 		}
 	}
 	return res

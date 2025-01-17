@@ -1,7 +1,8 @@
 package polyext
 
 import (
-	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors/vectorext"
+	"github.com/consensys/linea-monorepo/prover/maths/common/vectorext"
+	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/maths/field/fext"
 	"github.com/consensys/linea-monorepo/prover/utils"
 )
@@ -20,6 +21,11 @@ func EvalUnivariate(pol []fext.Element, x fext.Element) fext.Element {
 		res.Add(&res, &pol[i])
 	}
 	return res
+}
+
+func EvalUnivariateBase(pol []fext.Element, x field.Element) fext.Element {
+	wrappedX := fext.Element{x, field.Zero()}
+	return EvalUnivariate(pol, wrappedX)
 }
 
 // Mul multiplies two polynomials expressed by their coefficients using the
