@@ -20,6 +20,7 @@ import net.consensys.linea.jsonrpc.JsonRpcMessageProcessor
 import net.consensys.linea.jsonrpc.JsonRpcRequest
 import net.consensys.linea.jsonrpc.JsonRpcSuccessResponse
 import net.consensys.linea.jsonrpc.httpserver.HttpJsonRpcServer
+import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture
@@ -60,7 +61,7 @@ open class TestingJsonRpcServer(
       requestHandler = HttpRequestHandler(
         JsonRpcMessageProcessor(
           requestsHandler = this::handleRequest,
-          meterRegistry = SimpleMeterRegistry(),
+          metricsFacade = MicrometerMetricsFacade(registry = SimpleMeterRegistry()),
           log = log,
           responseResultObjectMapper = responseObjectMapper
         )

@@ -27,9 +27,9 @@ class TransactionExclusionServiceV1Impl(
   )
 
   private val txRejectionCounter = metricsFacade.createCounter(
-    LineaMetricsCategory.TX_EXCLUSION_API,
-    "transactions.rejected",
-    "Counter of rejected transactions reported to Transaction Exclusion API service"
+    category = LineaMetricsCategory.TX_EXCLUSION_API,
+    name = "transactions.rejected",
+    description = "Counter of rejected transactions reported to Transaction Exclusion API service"
   )
 
   override fun saveRejectedTransaction(

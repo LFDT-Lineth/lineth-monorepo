@@ -18,6 +18,7 @@ import net.consensys.linea.BlockNumberAndHash
 import net.consensys.linea.BlockParameter
 import net.consensys.linea.jsonrpc.client.RequestRetryConfig
 import net.consensys.linea.jsonrpc.client.VertxHttpJsonRpcClientFactory
+import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
 import net.consensys.zkevm.ethereum.Web3jClientManager.buildWeb3Client
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
@@ -52,7 +53,10 @@ class StateRecoverSepoliaWithFakeExecutionClientIntTest {
 
   @BeforeEach
   fun beforeEach(vertx: Vertx) {
-    val jsonRpcFactory = VertxHttpJsonRpcClientFactory(vertx = vertx, meterRegistry = SimpleMeterRegistry())
+    val jsonRpcFactory = VertxHttpJsonRpcClientFactory(
+      vertx = vertx,
+      metricsFacade = MicrometerMetricsFacade(SimpleMeterRegistry())
+    )
     executionLayerClient = FakeExecutionLayerClient(
       headBlock = BlockNumberAndHash(number = 0uL, hash = ByteArray(32) { 0 }),
       initialStateRecoverStartBlockNumber = null,

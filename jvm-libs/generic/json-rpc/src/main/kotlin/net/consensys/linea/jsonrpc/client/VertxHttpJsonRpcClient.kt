@@ -6,7 +6,6 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.Result
-import io.micrometer.core.instrument.MeterRegistry
 import io.vertx.core.Future
 import io.vertx.core.buffer.Buffer
 import io.vertx.core.http.HttpClient
@@ -19,7 +18,8 @@ import net.consensys.linea.jsonrpc.JsonRpcErrorResponse
 import net.consensys.linea.jsonrpc.JsonRpcRequest
 import net.consensys.linea.jsonrpc.JsonRpcRequestData
 import net.consensys.linea.jsonrpc.JsonRpcSuccessResponse
-import net.consensys.linea.metrics.micrometer.SimpleTimerCapture
+import net.consensys.linea.metrics.MetricsFacade
+import net.consensys.linea.metrics.Tag
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
@@ -29,7 +29,7 @@ import java.net.URL
 class VertxHttpJsonRpcClient(
   private val httpClient: HttpClient,
   private val endpoint: URL,
-  private val meterRegistry: MeterRegistry,
+  private val metricsFacade: MetricsFacade,
   private val requestParamsObjectMapper: ObjectMapper = objectMapper,
   private val responseObjectMapper: ObjectMapper = objectMapper,
   private val log: Logger = LogManager.getLogger(VertxHttpJsonRpcClient::class.java),
@@ -85,14 +85,16 @@ class VertxHttpJsonRpcClient(
           }
         }
 
-      SimpleTimerCapture<Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>>(
-        meterRegistry,
-        "jsonrpc.request"
+      Future.fromCompletionStage(
+        metricsFacade.createSimpleTimer<Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>>(
+          name = "jsonrpc.request",
+          description = "Time of Upstream API JsonRpc Requests",
+          tags = listOf(
+            Tag("endpoint", endpoint.host),
+            Tag("method", request.method)
+          )
+        ).captureTime(requestFuture.toCompletionStage().toCompletableFuture())
       )
-        .setDescription("Time of Upstream API JsonRpc Requests")
-        .setTag("endpoint", endpoint.host)
-        .setTag("method", request.method)
-        .captureTime(requestFuture)
     }
       .onFailure { th -> logRequestFailure(json, th) }
   }

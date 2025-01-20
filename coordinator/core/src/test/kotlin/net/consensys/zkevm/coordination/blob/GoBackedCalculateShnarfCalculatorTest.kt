@@ -1,10 +1,13 @@
 package net.consensys.zkevm.coordination.blob
 
 import build.linea.domain.BlockIntervals
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import net.consensys.decodeHex
 import net.consensys.encodeHex
 import net.consensys.linea.blob.CalculateShnarfResult
 import net.consensys.linea.blob.GoNativeBlobShnarfCalculator
+import net.consensys.linea.metrics.MetricsFacade
+import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
 import net.consensys.zkevm.ethereum.coordination.blob.GoBackedBlobShnarfCalculator
 import net.consensys.zkevm.ethereum.coordination.blob.ShnarfResult
 import org.apache.tuweni.bytes.Bytes32
@@ -22,6 +25,8 @@ import org.mockito.kotlin.whenever
 class GoBackedCalculateShnarfCalculatorTest {
   private lateinit var delegate: GoNativeBlobShnarfCalculator
   private lateinit var calculator: GoBackedBlobShnarfCalculator
+  private val meterRegistry = SimpleMeterRegistry()
+  private val metricsFacade: MetricsFacade = MicrometerMetricsFacade(registry = meterRegistry, "linea")
   private val compressedData = byteArrayOf(0b01001101, 0b01100001, 0b01101110)
   private val compressedDataBase64String = "TWFu"
   private val parentStateRootHash = Bytes32.random().toArray()
@@ -52,7 +57,7 @@ class GoBackedCalculateShnarfCalculatorTest {
   @BeforeEach
   fun beforeEach() {
     delegate = mock()
-    calculator = GoBackedBlobShnarfCalculator(delegate)
+    calculator = GoBackedBlobShnarfCalculator(delegate, metricsFacade)
   }
 
   @Test

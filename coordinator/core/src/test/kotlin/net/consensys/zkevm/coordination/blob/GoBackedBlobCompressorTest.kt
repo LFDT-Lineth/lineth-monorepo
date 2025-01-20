@@ -1,6 +1,9 @@
 package net.consensys.zkevm.coordination.blob
 
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import net.consensys.linea.blob.BlobCompressorVersion
+import net.consensys.linea.metrics.MetricsFacade
+import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
 import net.consensys.zkevm.ethereum.coordination.blob.BlobCompressionException
 import net.consensys.zkevm.ethereum.coordination.blob.GoBackedBlobCompressor
 import org.assertj.core.api.Assertions.assertThat
@@ -17,7 +20,13 @@ class GoBackedBlobCompressorTest {
   companion object {
     private const val DATA_LIMIT = 16 * 1024
     private val TEST_DATA = loadTestData()
-    private val compressor = GoBackedBlobCompressor.getInstance(BlobCompressorVersion.V0_1_0, DATA_LIMIT.toUInt())
+    private val meterRegistry = SimpleMeterRegistry()
+    private val metricsFacade: MetricsFacade = MicrometerMetricsFacade(registry = meterRegistry, "linea")
+    private val compressor = GoBackedBlobCompressor.getInstance(
+      BlobCompressorVersion.V0_1_0,
+      DATA_LIMIT.toUInt(),
+      metricsFacade
+    )
     private fun loadTestData(): Array<ByteArray> {
       val data = GoBackedBlobCompressorTest::class.java.getResourceAsStream("rlp_blocks.bin")!!.readAllBytes()
 

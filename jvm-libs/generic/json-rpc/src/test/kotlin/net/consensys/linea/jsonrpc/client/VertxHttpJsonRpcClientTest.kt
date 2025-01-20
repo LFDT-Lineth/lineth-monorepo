@@ -25,6 +25,8 @@ import net.consensys.linea.jsonrpc.JsonRpcError
 import net.consensys.linea.jsonrpc.JsonRpcErrorResponse
 import net.consensys.linea.jsonrpc.JsonRpcRequestListParams
 import net.consensys.linea.jsonrpc.JsonRpcSuccessResponse
+import net.consensys.linea.metrics.MetricsFacade
+import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
@@ -49,6 +51,7 @@ class VertxHttpJsonRpcClientTest {
   private lateinit var wiremock: WireMockServer
   private val path = "/api/v1?appKey=1234"
   private lateinit var meterRegistry: SimpleMeterRegistry
+  private lateinit var metricsFacade: MetricsFacade
   private val clientOptions =
     HttpClientOptions()
       .setKeepAlive(true)
@@ -63,7 +66,8 @@ class VertxHttpJsonRpcClientTest {
     wiremock.start()
     endpoint = URI(wiremock.baseUrl() + path).toURL()
     meterRegistry = SimpleMeterRegistry()
-    client = VertxHttpJsonRpcClient(vertx.createHttpClient(clientOptions), endpoint, meterRegistry)
+    metricsFacade = MicrometerMetricsFacade(registry = meterRegistry)
+    client = VertxHttpJsonRpcClient(vertx.createHttpClient(clientOptions), endpoint, metricsFacade)
   }
 
   @AfterEach
@@ -294,7 +298,7 @@ class VertxHttpJsonRpcClientTest {
     client = VertxHttpJsonRpcClient(
       vertx.createHttpClient(clientOptions),
       endpoint,
-      meterRegistry,
+      metricsFacade,
       log = log
     )
 
@@ -322,7 +326,7 @@ class VertxHttpJsonRpcClientTest {
     client = VertxHttpJsonRpcClient(
       vertx.createHttpClient(clientOptions),
       endpoint,
-      meterRegistry,
+      metricsFacade,
       log = log
     )
 

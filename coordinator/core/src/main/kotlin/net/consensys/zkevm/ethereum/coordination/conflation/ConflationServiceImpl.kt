@@ -33,9 +33,9 @@ class ConflationServiceImpl(
   internal val blocksToConflate = PriorityBlockingQueue<PayloadAndBlockCounters>()
 
   private val blocksCounter = metricsFacade.createCounter(
-    LineaMetricsCategory.CONFLATION,
-    "blocks.imported",
-    "New blocks arriving to conflation service counter"
+    category = LineaMetricsCategory.CONFLATION,
+    name = "blocks.imported",
+    description = "New blocks arriving to conflation service counter"
   )
 
   init {

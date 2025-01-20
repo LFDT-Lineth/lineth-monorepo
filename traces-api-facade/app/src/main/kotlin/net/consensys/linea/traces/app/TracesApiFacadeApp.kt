@@ -8,6 +8,7 @@ import io.vertx.core.json.jackson.VertxModule
 import io.vertx.micrometer.backends.BackendRegistries
 import net.consensys.linea.TracesConflationServiceV1Impl
 import net.consensys.linea.TracesCountingServiceWithRetry
+import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
 import net.consensys.linea.traces.RawJsonTracesConflator
 import net.consensys.linea.traces.RawJsonTracesCounter
 import net.consensys.linea.traces.RawJsonTracesCounterV0
@@ -81,12 +82,12 @@ class TracesApiFacadeApp(config: AppConfig) {
     )
     this.api =
       Api(
-        config.api,
-        vertx,
-        meterRegistry,
-        semVerValidator,
-        tracesCounterService,
-        tracesConflationService
+        configs = config.api,
+        vertx = vertx,
+        metricsFacade = MicrometerMetricsFacade(meterRegistry),
+        semVerValidator = semVerValidator,
+        tracesCountingService = tracesCounterService,
+        tracesConflationService = tracesConflationService
       )
   }
 

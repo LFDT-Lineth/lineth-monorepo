@@ -10,6 +10,8 @@ import io.vertx.core.json.JsonObject
 import io.vertx.ext.auth.User
 import io.vertx.junit5.VertxExtension
 import io.vertx.junit5.VertxTestContext
+import net.consensys.linea.metrics.MetricsFacade
+import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -21,6 +23,7 @@ private fun <T> Future<T>.get() = this.toCompletionStage().toCompletableFuture()
 class JsonRpcMessageProcessorTest {
   private lateinit var processor: JsonRpcMessageProcessor
   private lateinit var meterRegistry: SimpleMeterRegistry
+  private lateinit var metricsFacade: MetricsFacade
 
   @BeforeEach
   fun setUp() {
@@ -29,7 +32,8 @@ class JsonRpcMessageProcessorTest {
         Future.succeededFuture(Ok(JsonRpcSuccessResponse(jsonRpcRequest.id, JsonObject())))
       }
     meterRegistry = SimpleMeterRegistry()
-    processor = JsonRpcMessageProcessor(fakeRequestHandlerAlwaysSuccess, meterRegistry)
+    metricsFacade = MicrometerMetricsFacade(registry = meterRegistry)
+    processor = JsonRpcMessageProcessor(fakeRequestHandlerAlwaysSuccess, metricsFacade)
   }
 
   @Test
@@ -39,7 +43,7 @@ class JsonRpcMessageProcessorTest {
     val request = buildJsonRpcRequest(method = "eth_blockNumber")
     val processor = JsonRpcMessageProcessor(
       { _, _, _ -> throw RuntimeException("Something went wrong") },
-      meterRegistry
+      metricsFacade
     )
     processor(null, request.toString())
       .onComplete(
@@ -182,7 +186,7 @@ class JsonRpcMessageProcessorTest {
 
     val jsonStr = Json.encode(JsonArray(requests))
 
-    processor = JsonRpcMessageProcessor(fakeRequestHandlerWithSomeFailures, meterRegistry)
+    processor = JsonRpcMessageProcessor(fakeRequestHandlerWithSomeFailures, metricsFacade)
 
     processor(null, jsonStr)
       .onComplete(
@@ -232,7 +236,7 @@ class JsonRpcMessageProcessorTest {
       )
     val singleAsBulk = listOf(buildJsonRpcRequest(id = 10, "read_value"))
 
-    processor = JsonRpcMessageProcessor(fakeRequestHandlerWithSomeFailures, meterRegistry)
+    processor = JsonRpcMessageProcessor(fakeRequestHandlerWithSomeFailures, metricsFacade)
     processor(null, Json.encode(request1)).get()
     processor(null, Json.encode(request2)).get()
     processor(null, Json.encode(request3)).get()

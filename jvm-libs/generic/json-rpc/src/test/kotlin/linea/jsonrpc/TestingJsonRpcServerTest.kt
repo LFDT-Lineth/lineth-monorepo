@@ -11,6 +11,7 @@ import net.consensys.linea.jsonrpc.JsonRpcSuccessResponse
 import net.consensys.linea.jsonrpc.client.JsonRpcV2Client
 import net.consensys.linea.jsonrpc.client.RequestRetryConfig
 import net.consensys.linea.jsonrpc.client.VertxHttpJsonRpcClientFactory
+import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.BeforeEach
@@ -33,7 +34,7 @@ class TestingJsonRpcServerTest {
     )
     val rpcClientFactory = VertxHttpJsonRpcClientFactory(
       vertx = vertx,
-      meterRegistry = SimpleMeterRegistry()
+      metricsFacade = MicrometerMetricsFacade(registry = SimpleMeterRegistry())
     )
     client = rpcClientFactory.createJsonRpcV2Client(
       endpoints = listOf(URI.create("http://localhost:${jsonRpcServer.boundPort}")),

@@ -4,6 +4,9 @@ import net.consensys.encodeHex
 import net.consensys.linea.blob.BlobCompressorVersion
 import net.consensys.linea.blob.GoNativeBlobCompressor
 import net.consensys.linea.blob.GoNativeBlobCompressorFactory
+import net.consensys.linea.metrics.LineaMetricsCategory
+import net.consensys.linea.metrics.MetricsFacade
+import net.consensys.linea.metrics.TimerCapture
 import org.apache.logging.log4j.LogManager
 import kotlin.random.Random
 
@@ -35,7 +38,9 @@ interface BlobCompressor {
 }
 
 class GoBackedBlobCompressor private constructor(
-  internal val goNativeBlobCompressor: GoNativeBlobCompressor
+  internal val goNativeBlobCompressor: GoNativeBlobCompressor,
+  private val dataLimit: UInt,
+  private val metricsFacade: MetricsFacade
 ) : BlobCompressor {
 
   companion object {
@@ -44,7 +49,8 @@ class GoBackedBlobCompressor private constructor(
 
     fun getInstance(
       compressorVersion: BlobCompressorVersion = BlobCompressorVersion.V0_1_0,
-      dataLimit: UInt
+      dataLimit: UInt,
+      metricsFacade: MetricsFacade
     ): GoBackedBlobCompressor {
       if (instance == null) {
         synchronized(this) {
@@ -57,7 +63,7 @@ class GoBackedBlobCompressor private constructor(
             if (!initialized) {
               throw InstantiationException(goNativeBlobCompressor.Error())
             }
-            instance = GoBackedBlobCompressor(goNativeBlobCompressor)
+            instance = GoBackedBlobCompressor(goNativeBlobCompressor, dataLimit, metricsFacade)
           } else {
             throw IllegalStateException("Compressor singleton instance already created")
           }
@@ -69,22 +75,52 @@ class GoBackedBlobCompressor private constructor(
     }
   }
 
+  private val canAppendBlockTimer: TimerCapture<Boolean> = metricsFacade.createSimpleTimer(
+    category = LineaMetricsCategory.BLOB,
+    name = "compressor.canappendblock",
+    description = "Time taken to check if block fits in current blob"
+  )
+  private val appendBlockTimer: TimerCapture<Boolean> = metricsFacade.createSimpleTimer(
+    category = LineaMetricsCategory.BLOB,
+    name = "compressor.appendblock",
+    description = "Time taken to compress block into current blob"
+  )
+  private val compressionRatioHistogram = metricsFacade.createHistogram(
+    category = LineaMetricsCategory.BLOB,
+    name = "block.compression.ratio",
+    description = "Block compression ratio measured in [0.0,1.0]",
+    isRatio = true
+  )
+  private val utilizationRatioHistogram = metricsFacade.createHistogram(
+    category = LineaMetricsCategory.BLOB,
+    name = "data.utilization.ratio",
+    description = "Data utilization ratio of a blob measured in [0.0,1.0]",
+    isRatio = true
+  )
+
   private val log = LogManager.getLogger(GoBackedBlobCompressor::class.java)
 
   override fun canAppendBlock(blockRLPEncoded: ByteArray): Boolean {
-    return goNativeBlobCompressor.CanWrite(blockRLPEncoded, blockRLPEncoded.size)
+    return canAppendBlockTimer.captureTime {
+      goNativeBlobCompressor.CanWrite(blockRLPEncoded, blockRLPEncoded.size)
+    }
   }
 
   override fun appendBlock(blockRLPEncoded: ByteArray): BlobCompressor.AppendResult {
     val compressionSizeBefore = goNativeBlobCompressor.Len()
-    val appended = goNativeBlobCompressor.Write(blockRLPEncoded, blockRLPEncoded.size)
+    val appended = appendBlockTimer.captureTime {
+      goNativeBlobCompressor.Write(blockRLPEncoded, blockRLPEncoded.size)
+    }
     val compressedSizeAfter = goNativeBlobCompressor.Len()
+    val compressionRatio = (1.0 - (compressedSizeAfter - compressionSizeBefore).toDouble() / blockRLPEncoded.size)
+      .also { compressionRatioHistogram.record(it) }
+
     log.trace(
       "block compressed: blockRlpSize={} compressionDataBefore={} compressionDataAfter={} compressionRatio={}",
       blockRLPEncoded.size,
       compressionSizeBefore,
       compressedSizeAfter,
-      1.0 - ((compressedSizeAfter - compressionSizeBefore).toDouble() / blockRLPEncoded.size)
+      compressionRatio
     )
     val error = goNativeBlobCompressor.Error()
     if (error != null) {
@@ -101,6 +137,7 @@ class GoBackedBlobCompressor private constructor(
   override fun getCompressedData(): ByteArray {
     val compressedData = ByteArray(goNativeBlobCompressor.Len())
     goNativeBlobCompressor.Bytes(compressedData)
+    utilizationRatioHistogram.record(goNativeBlobCompressor.Len().toDouble() / dataLimit.toInt())
     return compressedData
   }
 

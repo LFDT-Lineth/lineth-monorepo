@@ -7,6 +7,7 @@ dependencies {
   implementation project(':traces-api-facade:conflation')
   implementation project(':traces-api-facade:core')
   implementation project(':jvm-libs:generic:json-rpc')
+  implementation project(':jvm-libs:linea:core:metrics')
   implementation project(':jvm-libs:linea:metrics:micrometer')
   implementation project(':jvm-libs:generic:extensions:kotlin')
   implementation project(':jvm-libs:generic:extensions:futures')

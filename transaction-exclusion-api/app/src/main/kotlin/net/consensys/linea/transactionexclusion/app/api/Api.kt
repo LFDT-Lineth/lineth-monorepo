@@ -1,6 +1,5 @@
 package net.consensys.linea.transactionexclusion.app.api
 
-import io.micrometer.core.instrument.MeterRegistry
 import io.vertx.core.DeploymentOptions
 import io.vertx.core.Future
 import io.vertx.core.Vertx
@@ -9,6 +8,7 @@ import net.consensys.linea.jsonrpc.JsonRpcMessageHandler
 import net.consensys.linea.jsonrpc.JsonRpcMessageProcessor
 import net.consensys.linea.jsonrpc.JsonRpcRequestRouter
 import net.consensys.linea.jsonrpc.httpserver.HttpJsonRpcServer
+import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.linea.transactionexclusion.TransactionExclusionServiceV1
 import net.consensys.linea.vertx.ObservabilityServer
 
@@ -22,7 +22,7 @@ data class ApiConfig(
 class Api(
   private val configs: ApiConfig,
   private val vertx: Vertx,
-  private val meterRegistry: MeterRegistry,
+  private val metricsFacade: MetricsFacade,
   private val transactionExclusionService: TransactionExclusionServiceV1
 ) {
   private var jsonRpcServerId: String? = null
@@ -49,7 +49,7 @@ class Api(
       )
 
     val messageHandler: JsonRpcMessageHandler =
-      JsonRpcMessageProcessor(JsonRpcRequestRouter(requestHandlersV1), meterRegistry)
+      JsonRpcMessageProcessor(JsonRpcRequestRouter(requestHandlersV1), metricsFacade)
 
     val numberOfVerticles: Int =
       if (configs.numberOfVerticles > 0) {

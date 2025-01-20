@@ -13,6 +13,9 @@ dependencies {
   implementation(project(':state-recover:appcore:clients-interfaces'))
   implementation(project(':state-recover:appcore:domain-models'))
 
+
+  testImplementation project(':jvm-libs:linea:core:metrics')
+  testImplementation project(':jvm-libs:linea:metrics:micrometer')
   testImplementation "com.github.tomakehurst:wiremock-jre8:${libs.versions.wiremock.get()}"
   testImplementation "net.javacrumbs.json-unit:json-unit-assertj:${libs.versions.jsonUnit.get()}"
 }

@@ -16,6 +16,7 @@ import linea.web3j.Web3JLogsSearcher
 import linea.web3j.createWeb3jHttpClient
 import net.consensys.linea.jsonrpc.client.RequestRetryConfig
 import net.consensys.linea.jsonrpc.client.VertxHttpJsonRpcClientFactory
+import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
 import org.apache.logging.log4j.LogManager
 import java.net.URI
 import kotlin.time.Duration.Companion.seconds
@@ -56,7 +57,7 @@ fun createAppAllInProcess(
     ),
     logger = LogManager.getLogger("linea.plugin.staterecover.clients.l1.blob-scan")
   )
-  val jsonRpcClientFactory = VertxHttpJsonRpcClientFactory(vertx, meterRegistry)
+  val jsonRpcClientFactory = VertxHttpJsonRpcClientFactory(vertx, MicrometerMetricsFacade(meterRegistry))
   val stateManagerClient: StateManagerClientV1 = StateManagerV1JsonRpcClient.create(
     rpcClientFactory = jsonRpcClientFactory,
     endpoints = listOf(stateManagerClientEndpoint),

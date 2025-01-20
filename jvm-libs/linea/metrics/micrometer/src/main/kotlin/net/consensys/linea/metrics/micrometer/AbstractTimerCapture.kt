@@ -44,7 +44,7 @@ abstract class AbstractTimerCapture<T> {
     return this
   }
 
-  abstract fun captureTime(f: Callable<T>): T
+  abstract fun captureTime(action: Callable<T>): T
   abstract fun captureTime(f: CompletableFuture<T>): CompletableFuture<T>
   open fun captureTime(f: SafeFuture<T>): SafeFuture<T> {
     captureTime(f.toCompletableFuture())

@@ -15,6 +15,8 @@ import net.consensys.linea.BlockNumberAndHash
 import net.consensys.linea.async.get
 import net.consensys.linea.jsonrpc.client.JsonRpcClient
 import net.consensys.linea.jsonrpc.client.VertxHttpJsonRpcClientFactory
+import net.consensys.linea.metrics.MetricsFacade
+import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
 import org.assertj.core.api.Assertions
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -35,9 +37,9 @@ class ShomeiClientTest {
     wiremock = WireMockServer(WireMockConfiguration.options().dynamicPort())
     wiremock.start()
     meterRegistry = SimpleMeterRegistry()
-
+    val metricsFacade: MetricsFacade = MicrometerMetricsFacade(registry = meterRegistry, "linea")
+    val rpcClientFactory = VertxHttpJsonRpcClientFactory(vertx, metricsFacade)
     fakeShomeiServerURI = URI("http://127.0.0.1:" + wiremock.port()).toURL()
-    val rpcClientFactory = VertxHttpJsonRpcClientFactory(vertx, meterRegistry)
     jsonRpcClient = rpcClientFactory.create(fakeShomeiServerURI)
   }
 

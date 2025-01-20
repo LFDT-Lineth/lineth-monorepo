@@ -3,10 +3,10 @@ package net.consensys.linea.jsonrpc.client
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Result
-import io.micrometer.core.instrument.MeterRegistry
 import io.vertx.core.Vertx
 import io.vertx.core.http.HttpClientOptions
 import io.vertx.core.http.HttpVersion
+import net.consensys.linea.metrics.MetricsFacade
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
@@ -36,7 +36,7 @@ interface JsonRpcClientFactory {
 
 class VertxHttpJsonRpcClientFactory(
   private val vertx: Vertx,
-  private val meterRegistry: MeterRegistry,
+  private val metricsFacade: MetricsFacade,
   private val requestResponseLogLevel: Level = Level.TRACE,
   private val failuresLogLevel: Level = Level.DEBUG,
   private val requestIdSupplier: Supplier<Any> = SequentialIdSupplier.singleton
@@ -62,7 +62,7 @@ class VertxHttpJsonRpcClientFactory(
     return VertxHttpJsonRpcClient(
       httpClient,
       endpoint,
-      meterRegistry,
+      metricsFacade,
       log = log,
       requestParamsObjectMapper = requestObjectMapper,
       responseObjectMapper = responseObjectMapper,

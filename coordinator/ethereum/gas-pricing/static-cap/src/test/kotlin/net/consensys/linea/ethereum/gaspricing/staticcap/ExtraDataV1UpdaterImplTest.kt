@@ -17,6 +17,8 @@ import io.vertx.junit5.VertxTestContext
 import net.consensys.linea.ethereum.gaspricing.MinerExtraDataV1
 import net.consensys.linea.jsonrpc.client.RequestRetryConfig
 import net.consensys.linea.jsonrpc.client.VertxHttpJsonRpcClientFactory
+import net.consensys.linea.metrics.MetricsFacade
+import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -64,7 +66,9 @@ class ExtraDataV1UpdaterImplTest {
     wiremock = WireMockServer(wireMockConfig().dynamicPort())
     wiremock.start()
     sequencerEndpoint = URI("http://localhost:${wiremock.port()}/sequencer/").toURL()
-    jsonRpcClientFactory = VertxHttpJsonRpcClientFactory(vertx, SimpleMeterRegistry())
+    val meterRegistry = SimpleMeterRegistry()
+    val metricsFacade: MetricsFacade = MicrometerMetricsFacade(registry = meterRegistry, "linea")
+    jsonRpcClientFactory = VertxHttpJsonRpcClientFactory(vertx, metricsFacade)
   }
 
   @AfterEach

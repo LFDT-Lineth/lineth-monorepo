@@ -23,7 +23,6 @@ import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.ExtendWith
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.ExecutionException
-import kotlin.random.Random
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toJavaDuration
 
@@ -45,7 +44,6 @@ class BlobsPostgresDaoTest : CleanDbTestSuiteParallel() {
   private val expectedEndBlock = 100UL
   private val expectedStartBlockTime = fakeClock.now().trimToSecondPrecision()
   private val expectedEndBlockTime = fakeClock.now().plus(1200.seconds).trimToMillisecondPrecision()
-  private val expectedShnarf = Random.nextBytes(32)
 
   @BeforeEach
   fun beforeEach() {

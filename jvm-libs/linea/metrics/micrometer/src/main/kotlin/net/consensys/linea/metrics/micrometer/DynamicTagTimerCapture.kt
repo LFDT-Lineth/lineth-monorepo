@@ -3,6 +3,7 @@ package net.consensys.linea.metrics.micrometer
 import io.micrometer.core.instrument.Clock
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.Timer
+import net.consensys.linea.metrics.TimerCapture
 import java.util.concurrent.Callable
 import java.util.concurrent.CompletableFuture
 import java.util.function.Function
@@ -14,41 +15,46 @@ import java.util.function.Function
  * nanosecond-level measurements. Related issue:
  * https://github.com/micrometer-metrics/micrometer/issues/535
  */
-class DynamicTagTimerCapture<Out>(meterRegistry: MeterRegistry, name: String) :
-  AbstractTimerCapture<Out>(meterRegistry, name) {
-  private var extractor: Function<Out, String>? = null
+class DynamicTagTimerCapture<T> : AbstractTimerCapture<T>, TimerCapture<T> {
+  private var extractor: Function<T, String>? = null
   private var extractorOnError: Function<Throwable, String>? = null
   private var tagKey: String? = null
 
-  override fun setDescription(description: String): DynamicTagTimerCapture<Out> {
+  constructor(meterRegistry: MeterRegistry, name: String) : super(meterRegistry, name)
+  constructor(
+    meterRegistry: MeterRegistry,
+    timerBuilder: Timer.Builder
+  ) : super(meterRegistry, timerBuilder)
+
+  override fun setDescription(description: String): DynamicTagTimerCapture<T> {
     super.setDescription(description)
     return this
   }
 
-  override fun setTag(tagKey: String, tagValue: String): DynamicTagTimerCapture<Out> {
+  override fun setTag(tagKey: String, tagValue: String): DynamicTagTimerCapture<T> {
     throw NoSuchMethodException(
       "If you need to set both value and key, please use ${SimpleTimerCapture::class.qualifiedName}"
     )
   }
 
-  override fun setClock(clock: Clock): DynamicTagTimerCapture<Out> {
+  override fun setClock(clock: Clock): DynamicTagTimerCapture<T> {
     super.setClock(clock)
     return this
   }
 
-  fun setTagKey(tagKey: String?): DynamicTagTimerCapture<Out> {
+  fun setTagKey(tagKey: String?): DynamicTagTimerCapture<T> {
     this.tagKey = tagKey
     return this
   }
 
-  fun setTagValueExtractor(extractor: Function<Out, String>): DynamicTagTimerCapture<Out> {
+  fun setTagValueExtractor(extractor: Function<T, String>): DynamicTagTimerCapture<T> {
     this.extractor = extractor
     return this
   }
 
   fun setTagValueExtractorOnError(
     onErrorExtractor: Function<Throwable, String>
-  ): DynamicTagTimerCapture<Out> {
+  ): DynamicTagTimerCapture<T> {
     this.extractorOnError = onErrorExtractor
     return this
   }
@@ -59,10 +65,10 @@ class DynamicTagTimerCapture<Out>(meterRegistry: MeterRegistry, name: String) :
     assert(tagKey != null)
   }
 
-  override fun captureTime(f: CompletableFuture<Out>): CompletableFuture<Out> {
+  override fun captureTime(f: CompletableFuture<T>): CompletableFuture<T> {
     ensureValidState()
     val timerSample = Timer.start(clock)
-    f.whenComplete { result: Out?, error: Throwable? ->
+    f.whenComplete { result: T?, error: Throwable? ->
       val tagValue: String = result?.let(extractor!!::apply) ?: extractorOnError!!.apply(error!!)
       val timer = timerBuilder.tag(tagKey!!, tagValue).register(meterRegistry)
       timerSample.stop(timer)
@@ -70,10 +76,10 @@ class DynamicTagTimerCapture<Out>(meterRegistry: MeterRegistry, name: String) :
     return f
   }
 
-  override fun captureTime(f: Callable<Out>): Out {
+  override fun captureTime(action: Callable<T>): T {
     ensureValidState()
     val timerSample = Timer.start(clock)
-    val result = f.call()
+    val result = action.call()
     val labelValue = extractor!!.apply(result)
     val timer = timerBuilder.tag(tagKey!!, labelValue).register(meterRegistry)
     timerSample.stop(timer)

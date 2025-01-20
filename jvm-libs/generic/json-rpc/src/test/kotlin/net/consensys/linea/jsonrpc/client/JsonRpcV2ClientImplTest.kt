@@ -26,6 +26,8 @@ import io.vertx.core.json.JsonObject
 import io.vertx.junit5.VertxExtension
 import net.consensys.decodeHex
 import net.consensys.linea.jsonrpc.JsonRpcErrorResponseException
+import net.consensys.linea.metrics.MetricsFacade
+import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
 import net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -97,7 +99,8 @@ class JsonRpcV2ClientImplTest {
   fun beforeEach(vertx: Vertx) {
     this.vertx = vertx
     this.meterRegistry = SimpleMeterRegistry()
-    this.factory = VertxHttpJsonRpcClientFactory(vertx, meterRegistry)
+    val metricsFacade: MetricsFacade = MicrometerMetricsFacade(registry = meterRegistry, "linea")
+    this.factory = VertxHttpJsonRpcClientFactory(vertx, metricsFacade)
     this.client = createClientAndSetupWireMockServer()
   }
 

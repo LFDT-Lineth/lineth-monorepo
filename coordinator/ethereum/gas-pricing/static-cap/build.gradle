@@ -13,6 +13,7 @@ dependencies {
 
   testImplementation("io.vertx:vertx-junit5")
   testImplementation "com.github.tomakehurst:wiremock-jre8:${libs.versions.wiremock.get()}"
+  testImplementation project(':jvm-libs:linea:metrics:micrometer')
 
   testImplementation project(':coordinator:clients:smart-contract-client')
 }

@@ -7,6 +7,7 @@ plugins {
 description = "JSON RPC 2.0 utilities"
 
 dependencies {
+  implementation project(":jvm-libs:linea:core:metrics")
   implementation project(":jvm-libs:linea:metrics:micrometer")
   implementation project(":jvm-libs:generic:extensions:futures")
   implementation project(":jvm-libs:generic:extensions:kotlin")

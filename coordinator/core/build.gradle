@@ -17,6 +17,7 @@ dependencies {
   api project(':jvm-libs:generic:extensions:futures')
   api "tech.pegasys.teku.internal:unsigned:${libs.versions.teku.get()}"
   api "org.jetbrains.kotlinx:kotlinx-datetime:${libs.versions.kotlinxDatetime.get()}"
+  implementation project(":jvm-libs:linea:metrics:micrometer")
   implementation "io.vertx:vertx-core"
   // jackson shall never be used in the core module
   // however, it is used already :( but was as transitive through Teku Execution Client

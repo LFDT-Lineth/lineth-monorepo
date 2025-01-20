@@ -10,6 +10,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.data.Offset
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import java.util.concurrent.TimeUnit
 
 class MicrometerMetricsFacadeTest {
   private lateinit var meterRegistry: MeterRegistry
@@ -81,6 +82,9 @@ class MicrometerMetricsFacadeTest {
     val createdHistogram = meterRegistry.find("linea.test.batch.some.metric").summary()
     assertThat(createdHistogram).isNotNull
     assertThat(createdHistogram!!.id.description).isEqualTo("This is a test metric")
+    assertThat(createdHistogram.id.tags).isEqualTo(
+      listOf(ImmutableTag("key1", "value1"), ImmutableTag("key2", "value2"))
+    )
     assertThat(createdHistogram.id.baseUnit).isEqualTo("seconds")
     assertThat(createdHistogram.count()).isEqualTo(0L)
 
@@ -99,5 +103,130 @@ class MicrometerMetricsFacadeTest {
     assertThat(createdHistogram.totalAmount()).isEqualTo(115.0)
     assertThat(createdHistogram.mean()).isCloseTo(38.333, Offset.offset(0.1))
     assertThat(createdHistogram.max()).isEqualTo(100.0)
+  }
+
+  @Test
+  fun `createSimpleTimer creates timer with specified parameters`() {
+    fun mockTimer() {
+      Thread.sleep(200L)
+    }
+
+    val expectedTags = listOf(Tag("key1", "value1"), Tag("key2", "value2"))
+    val timer = metricsFacade.createSimpleTimer<Unit>(
+      name = "some.timer.metric",
+      description = "This is a test metric",
+      tags = expectedTags
+    )
+
+    timer.captureTime(::mockTimer)
+    val createdTimer = meterRegistry.find("linea.test.some.timer.metric").timer()
+    assertThat(createdTimer).isNotNull
+    assertThat(createdTimer!!.id.description).isEqualTo("This is a test metric")
+    assertThat(createdTimer.id.tags).isEqualTo(listOf(ImmutableTag("key1", "value1"), ImmutableTag("key2", "value2")))
+    assertThat(createdTimer.max(TimeUnit.SECONDS)).isGreaterThan(0.2)
+
+    timer.captureTime(::mockTimer)
+    assertThat(createdTimer.totalTime(TimeUnit.SECONDS)).isGreaterThan(0.4)
+    assertThat(createdTimer.mean(TimeUnit.SECONDS)).isGreaterThan(0.2)
+  }
+
+  @Test
+  fun `createDynamicTagTimer creates timer with specified parameters`() {
+    fun mockTimer() {
+      Thread.sleep(200L)
+    }
+
+    val timer = metricsFacade.createDynamicTagTimer<Unit>(
+      name = "some.dynamictag.timer.metric",
+      description = "This is a test metric",
+      tagKey = "key",
+      tagValueExtractorOnError = { "unfound_key" }
+    ) {
+      "value"
+    }
+
+    timer.captureTime(::mockTimer)
+    val createdTimer = meterRegistry.find("linea.test.some.dynamictag.timer.metric").timer()
+    assertThat(createdTimer).isNotNull
+    assertThat(createdTimer!!.id.description).isEqualTo("This is a test metric")
+    assertThat(createdTimer.id.tags).isEqualTo(listOf(ImmutableTag("key", "value")))
+    assertThat(createdTimer.max(TimeUnit.SECONDS)).isGreaterThan(0.2)
+
+    timer.captureTime(::mockTimer)
+    assertThat(createdTimer.totalTime(TimeUnit.SECONDS)).isGreaterThan(0.4)
+    assertThat(createdTimer.mean(TimeUnit.SECONDS)).isGreaterThan(0.2)
+  }
+
+  @Test
+  fun `createGauge creates gauge with correct name when metrics prefix and category are absent`() {
+    val metricMeasureValue = 0L
+    val meterRegistry = SimpleMeterRegistry()
+    val metricsFacade = MicrometerMetricsFacade(meterRegistry)
+    metricsFacade.createGauge(
+      name = "some.gauge.metric",
+      description = "This is a test metric",
+      measurementSupplier = { metricMeasureValue },
+      tags = listOf(Tag("key1", "value1"), Tag("key2", "value2"))
+    )
+    val createdGauge = meterRegistry.find("some.gauge.metric").gauge()
+    assertThat(createdGauge).isNotNull
+  }
+
+  @Test
+  fun `createCounter creates counter with correct name when metrics prefix and category are absent`() {
+    val meterRegistry = SimpleMeterRegistry()
+    val metricsFacade = MicrometerMetricsFacade(meterRegistry)
+    metricsFacade.createCounter(
+      name = "some.counter.metric",
+      description = "This is a test metric",
+      tags = listOf(Tag("key1", "value1"), Tag("key2", "value2"))
+    )
+    val createdCounter = meterRegistry.find("some.counter.metric").counter()
+    assertThat(createdCounter).isNotNull
+  }
+
+  @Test
+  fun `createHistogram creates histogram with correct name when metrics prefix and category are absent`() {
+    val meterRegistry = SimpleMeterRegistry()
+    val metricsFacade = MicrometerMetricsFacade(meterRegistry)
+    metricsFacade.createHistogram(
+      name = "some.histogram.metric",
+      description = "This is a test metric",
+      tags = listOf(Tag("key1", "value1"), Tag("key2", "value2")),
+      baseUnit = "seconds"
+    )
+    val createdHistogram = meterRegistry.find("some.histogram.metric").summary()
+    assertThat(createdHistogram).isNotNull
+  }
+
+  @Test
+  fun `createSimpleTimer creates timer with correct name when metrics prefix and category are absent`() {
+    val meterRegistry = SimpleMeterRegistry()
+    val metricsFacade = MicrometerMetricsFacade(meterRegistry)
+    val timer = metricsFacade.createSimpleTimer<Unit>(
+      name = "some.timer.metric",
+      description = "This is a test metric",
+      tags = listOf(Tag("key1", "value1"), Tag("key2", "value2"))
+    )
+    timer.captureTime {}
+    val createdTimer = meterRegistry.find("some.timer.metric").timer()
+    assertThat(createdTimer).isNotNull
+  }
+
+  @Test
+  fun `createDynamicTagTimer creates timer with correct name when metrics prefix and category are absent`() {
+    val meterRegistry = SimpleMeterRegistry()
+    val metricsFacade = MicrometerMetricsFacade(meterRegistry)
+    val timer = metricsFacade.createDynamicTagTimer<Unit>(
+      name = "some.dynamictag.timer.metric",
+      description = "This is a test metric",
+      tagKey = "key",
+      tagValueExtractorOnError = { "unfound_key" }
+    ) {
+      "value"
+    }
+    timer.captureTime {}
+    val createdTimer = meterRegistry.find("some.dynamictag.timer.metric").timer()
+    assertThat(createdTimer).isNotNull
   }
 }

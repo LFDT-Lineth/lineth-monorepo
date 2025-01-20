@@ -25,6 +25,8 @@ import net.consensys.linea.errors.ErrorResponse
 import net.consensys.linea.jsonrpc.client.JsonRpcClient
 import net.consensys.linea.jsonrpc.client.RequestRetryConfig
 import net.consensys.linea.jsonrpc.client.VertxHttpJsonRpcClientFactory
+import net.consensys.linea.metrics.MetricsFacade
+import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
 import net.consensys.linea.traces.TracesCountersV1
 import net.consensys.linea.traces.TracingModuleV1
 import org.assertj.core.api.Assertions.assertThat
@@ -71,7 +73,8 @@ class TracesGeneratorJsonRpcClientV1Test {
 
     fakeTracesServerUri = URI("http://127.0.0.1:" + wiremock.port()).toURL()
     meterRegistry = SimpleMeterRegistry()
-    val rpcClientFactory = VertxHttpJsonRpcClientFactory(vertx, meterRegistry)
+    val metricsFacade: MetricsFacade = MicrometerMetricsFacade(registry = meterRegistry, "linea")
+    val rpcClientFactory = VertxHttpJsonRpcClientFactory(vertx, metricsFacade)
     vertxHttpJsonRpcClient = rpcClientFactory.createWithRetries(
       fakeTracesServerUri,
       methodsToRetry = TracesGeneratorJsonRpcClientV1.retryableMethods,

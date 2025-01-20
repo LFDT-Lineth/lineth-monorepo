@@ -18,6 +18,7 @@ import net.consensys.linea.BlockNumberAndHash
 import net.consensys.linea.BlockParameter
 import net.consensys.linea.jsonrpc.client.RequestRetryConfig
 import net.consensys.linea.jsonrpc.client.VertxHttpJsonRpcClientFactory
+import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
 import net.consensys.linea.testing.submission.AggregationAndBlobs
 import net.consensys.linea.testing.submission.loadBlobsAndAggregationsSortedAndGrouped
 import net.consensys.linea.testing.submission.submitBlobsAndAggregationsAndWaitExecution
@@ -58,7 +59,10 @@ class StateRecoverAppWithFakeExecutionClientIntTest {
 
   @BeforeEach
   fun beforeEach(vertx: Vertx) {
-    val jsonRpcFactory = VertxHttpJsonRpcClientFactory(vertx = vertx, meterRegistry = SimpleMeterRegistry())
+    val jsonRpcFactory = VertxHttpJsonRpcClientFactory(
+      vertx = vertx,
+      metricsFacade = MicrometerMetricsFacade(SimpleMeterRegistry())
+    )
     aggregationsAndBlobs = loadBlobsAndAggregationsSortedAndGrouped(
       blobsResponsesDir = "$testDataDir/compression/responses",
       aggregationsResponsesDir = "$testDataDir/aggregation/responses"

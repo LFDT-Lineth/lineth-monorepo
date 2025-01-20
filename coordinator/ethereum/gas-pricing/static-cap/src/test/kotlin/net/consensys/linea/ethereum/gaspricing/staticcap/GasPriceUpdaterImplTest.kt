@@ -14,6 +14,8 @@ import io.vertx.junit5.VertxExtension
 import io.vertx.junit5.VertxTestContext
 import net.consensys.linea.jsonrpc.client.RequestRetryConfig
 import net.consensys.linea.jsonrpc.client.VertxHttpJsonRpcClientFactory
+import net.consensys.linea.metrics.MetricsFacade
+import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
 import org.assertj.core.api.Assertions
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -72,9 +74,11 @@ class GasPriceUpdaterImplTest {
       URI("http://localhost:${wiremock.port()}/besu-2/").toURL(),
       URI("http://localhost:${wiremock.port()}/besu-3/").toURL()
     )
+    val meterRegistry = SimpleMeterRegistry()
+    val metricsFacade: MetricsFacade = MicrometerMetricsFacade(registry = meterRegistry, "linea")
     jsonRpcClientFactory = VertxHttpJsonRpcClientFactory(
       vertx,
-      SimpleMeterRegistry()
+      metricsFacade
     )
   }
 

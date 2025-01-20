@@ -380,7 +380,8 @@ class L1DependentApp(
     val compressorVersion = configs.traces.blobCompressorVersion
     val blobCompressor = GoBackedBlobCompressor.getInstance(
       compressorVersion = compressorVersion,
-      dataLimit = configs.blobCompression.blobSizeLimit.toUInt()
+      dataLimit = configs.blobCompression.blobSizeLimit.toUInt(),
+      metricsFacade = metricsFacade
     )
 
     val compressedBlobCalculator = ConflationCalculatorByDataCompressed(
@@ -475,7 +476,10 @@ class L1DependentApp(
       blobsRepository = blobsRepository,
       blobCompressionProverClient = proverClientFactory.blobCompressionProverClient(),
       rollingBlobShnarfCalculator = RollingBlobShnarfCalculator(
-        blobShnarfCalculator = GoBackedBlobShnarfCalculator(blobShnarfCalculatorVersion),
+        blobShnarfCalculator = GoBackedBlobShnarfCalculator(
+          version = blobShnarfCalculatorVersion,
+          metricsFacade = metricsFacade
+        ),
         blobsRepository = blobsRepository,
         genesisShnarf = genesisStateProvider.shnarf
       ),
@@ -518,7 +522,7 @@ class L1DependentApp(
   private val alreadySubmittedBlobsFilter =
     L1ShnarfBasedAlreadySubmittedBlobsFilter(
       lineaRollup = lineaSmartContractClientForDataSubmission,
-      acceptedBlobEndBlockNumberConsumer = { highestAcceptedBlobTracker }
+      acceptedBlobEndBlockNumberConsumer = { highestAcceptedBlobTracker(it) }
     )
 
   private val latestBlobSubmittedBlockNumberTracker = LatestBlobSubmittedBlockNumberTracker(0UL)

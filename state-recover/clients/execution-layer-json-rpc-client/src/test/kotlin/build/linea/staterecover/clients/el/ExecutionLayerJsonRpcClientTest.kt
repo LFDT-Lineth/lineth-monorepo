@@ -18,6 +18,8 @@ import net.consensys.linea.BlockNumberAndHash
 import net.consensys.linea.BlockParameter
 import net.consensys.linea.jsonrpc.client.RequestRetryConfig
 import net.consensys.linea.jsonrpc.client.VertxHttpJsonRpcClientFactory
+import net.consensys.linea.metrics.MetricsFacade
+import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
 import net.javacrumbs.jsonunit.assertj.assertThatJson
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
@@ -40,8 +42,9 @@ class ExecutionLayerJsonRpcClientTest {
     wiremock.start()
 
     meterRegistry = SimpleMeterRegistry()
+    val metricsFacade: MetricsFacade = MicrometerMetricsFacade(registry = meterRegistry, "linea")
     client = ExecutionLayerJsonRpcClient.create(
-      rpcClientFactory = VertxHttpJsonRpcClientFactory(vertx, meterRegistry),
+      rpcClientFactory = VertxHttpJsonRpcClientFactory(vertx, metricsFacade),
       endpoint = URI(wiremock.baseUrl()),
       requestRetryConfig = RequestRetryConfig(
         maxRetries = 3u,

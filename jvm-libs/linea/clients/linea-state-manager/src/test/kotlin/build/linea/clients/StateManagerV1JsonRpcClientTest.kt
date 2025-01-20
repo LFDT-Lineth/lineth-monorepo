@@ -19,6 +19,8 @@ import net.consensys.linea.async.get
 import net.consensys.linea.errors.ErrorResponse
 import net.consensys.linea.jsonrpc.client.RequestRetryConfig
 import net.consensys.linea.jsonrpc.client.VertxHttpJsonRpcClientFactory
+import net.consensys.linea.metrics.MetricsFacade
+import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
 import net.consensys.linea.testing.filesystem.findPathTo
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -54,8 +56,9 @@ class StateManagerV1JsonRpcClientTest {
     wiremock = WireMockServer(options().dynamicPort())
     wiremock.start()
     meterRegistry = SimpleMeterRegistry()
+    val metricsFacade: MetricsFacade = MicrometerMetricsFacade(registry = meterRegistry, "linea")
     stateManagerClient = StateManagerV1JsonRpcClient.create(
-      rpcClientFactory = VertxHttpJsonRpcClientFactory(vertx, meterRegistry),
+      rpcClientFactory = VertxHttpJsonRpcClientFactory(vertx, metricsFacade),
       endpoints = listOf(URI(wiremock.baseUrl())),
       maxInflightRequestsPerClient = 1u,
       requestRetry = RequestRetryConfig(

@@ -39,17 +39,17 @@ class BlobCompressionProofCoordinator(
   private var timerId: Long? = null
   private lateinit var blobPollingAction: Handler<Long>
   private val blobsCounter = metricsFacade.createCounter(
-    LineaMetricsCategory.BLOB,
-    "counter",
-    "New blobs arriving to blob compression proof coordinator"
+    category = LineaMetricsCategory.BLOB,
+    name = "counter",
+    description = "New blobs arriving to blob compression proof coordinator"
   )
 
   init {
     metricsFacade.createGauge(
-      LineaMetricsCategory.BLOB,
-      "compression.queue.size",
-      "Size of blob compression proving queue",
-      { blobsToHandle.size }
+      category = LineaMetricsCategory.BLOB,
+      name = "compression.queue.size",
+      description = "Size of blob compression proving queue",
+      measurementSupplier = { blobsToHandle.size }
     )
   }
 
