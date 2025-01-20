@@ -13,6 +13,7 @@ import com.github.tomakehurst.wiremock.matching.EqualToPattern
 import com.github.tomakehurst.wiremock.matching.RequestPatternBuilder
 import io.micrometer.core.instrument.Tag
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
+import io.vertx.core.Future
 import io.vertx.core.Vertx
 import io.vertx.core.http.HttpClientOptions
 import io.vertx.core.http.HttpVersion
@@ -31,6 +32,7 @@ import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import org.assertj.core.api.Assertions.assertThat
+import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -350,18 +352,23 @@ class VertxHttpJsonRpcClientTest {
   fun makesRequest_measuresRequest() {
     replyRequestWith(JsonObject().put("jsonrpc", "2.0").put("id", "1").put("result", 3))
 
-    client.makeRequest(JsonRpcRequestListParams("2.0", 1, "randomNumber", emptyList())).get()
-    client.makeRequest(JsonRpcRequestListParams("2.0", 1, "randomNumber", emptyList())).get()
-    client.makeRequest(JsonRpcRequestListParams("2.0", 1, "randomNumber", emptyList())).get()
+    val requestsFutures = (1..100).map {
+      client.makeRequest(JsonRpcRequestListParams("2.0", 1, "randomNumber", emptyList()))
+    }
+    Future.all(requestsFutures).get()
 
     val timer =
       meterRegistry.timer(
         "jsonrpc.request",
         listOf(Tag.of("method", "randomNumber"), Tag.of("endpoint", "localhost"))
       )
-
     assertThat(timer).isNotNull
-    assertThat(timer.count()).isEqualTo(3)
+
+    await()
+      .atMost(2, TimeUnit.SECONDS)
+      .untilAsserted {
+        assertThat(timer.count()).isEqualTo(requestsFutures.size.toLong())
+      }
   }
 
   private fun replyRequestWith(jsonRpcResponse: JsonObject) {
