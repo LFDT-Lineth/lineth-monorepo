@@ -82,6 +82,8 @@ jobs:
       COMMIT_TAG: ${{ needs.store_image_name_and_tags.outputs.commit_tag }}
       DEVELOP_TAG: ${{ needs.store_image_name_and_tags.outputs.develop_tag }}
       IMAGE_NAME: consensys/linea-alltools
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
     name: All tools build and push
     steps:
       - name: Checkout
@@ -89,6 +91,7 @@ jobs:
         with:
           submodules: true
       - name: Login to Docker Hub
+        if: ${{ env.DOCKERHUB_USERNAME != '' && env.DOCKERHUB_TOKEN != '' }}
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
