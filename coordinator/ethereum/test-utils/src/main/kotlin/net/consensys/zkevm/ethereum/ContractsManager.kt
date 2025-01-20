@@ -3,6 +3,7 @@ package net.consensys.zkevm.ethereum
 import build.linea.contract.l1.LineaContractVersion
 import com.sksamuel.hoplite.ConfigLoaderBuilder
 import com.sksamuel.hoplite.addFileSource
+import net.consensys.gwei
 import net.consensys.linea.contract.AsyncFriendlyTransactionManager
 import net.consensys.linea.contract.EIP1559GasProvider
 import net.consensys.linea.contract.LineaRollupAsyncFriendly
@@ -64,8 +65,9 @@ interface ContractsManager {
     transactionManager: AsyncFriendlyTransactionManager,
     gasProvider: ContractEIP1559GasProvider = StaticGasProvider(
       L1AccountManager.chainId,
-      maxFeePerGas = 11_000uL,
-      maxPriorityFeePerGas = 10_000uL,
+      maxFeePerGas = 55UL.gwei,
+      maxPriorityFeePerGas = 50UL.gwei,
+      maxFeePerBlobGas = 1_000UL.gwei,
       gasLimit = 1_000_000uL
     ),
     smartContractErrors: SmartContractErrors? = null
@@ -93,8 +95,9 @@ interface ContractsManager {
     transactionManager: AsyncFriendlyTransactionManager,
     gasProvider: ContractEIP1559GasProvider = StaticGasProvider(
       L1AccountManager.chainId,
-      maxFeePerGas = 11_000uL,
-      maxPriorityFeePerGas = 10_000uL,
+      maxFeePerGas = 55UL.gwei,
+      maxPriorityFeePerGas = 50UL.gwei,
+      maxFeePerBlobGas = 1_000UL.gwei,
       gasLimit = 1_000_000uL
     )
   ): LineaRollupAsyncFriendly

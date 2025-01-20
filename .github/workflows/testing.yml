@@ -9,6 +9,9 @@ on:
       coordinator_changed:
         required: true
         type: string
+      staterecovery_changed:
+        required: true
+        type: string
       postman_changed:
         required: true
         type: string
@@ -47,7 +50,14 @@ jobs:
   transaction-exclusion-api:
     uses: ./.github/workflows/transaction-exclusion-api-testing.yml
     if: ${{ inputs.transaction_exclusion_api_changed == 'true' }}
-  
+
+  staterecovery:
+    uses: ./.github/workflows/staterecovery-testing.yml
+    if: ${{ inputs.staterecovery_changed == 'true' }}
+    with:
+      commit_tag: ${{ inputs.commit_tag }}
+    secrets: inherit
+
   # If all jobs are skipped, the workflow will still succeed.
   always_succeed:
     runs-on: ubuntu-24.04

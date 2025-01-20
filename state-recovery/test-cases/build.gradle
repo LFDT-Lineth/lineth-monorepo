@@ -1,0 +1,83 @@
+import org.gradle.api.tasks.testing.logging.TestExceptionFormat
+import org.gradle.api.tasks.testing.logging.TestLogEvent
+
+plugins {
+  id 'net.consensys.zkevm.kotlin-library-conventions'
+}
+
+group = 'build.linea.staterecover'
+
+dependencies {
+  implementation("io.vertx:vertx-core:${libs.versions.vertx.get()}")
+  api(project(':jvm-libs:generic:extensions:kotlin'))
+  api(project(':jvm-libs:linea:core:domain-models'))
+  api(project(':jvm-libs:linea:core:long-running-service'))
+  api(project(':jvm-libs:linea:clients:interfaces'))
+  api(project(':jvm-libs:linea:clients:linea-l1-contract-client'))
+  api(project(':jvm-libs:linea:clients:linea-state-manager'))
+  api(project(':jvm-libs:linea:blob-decompressor'))
+  api(project(':state-recovery:appcore:clients-interfaces'))
+  api(project(':state-recovery:appcore:domain-models'))
+  api(project(':state-recovery:appcore:logic'))
+
+  implementation project(':jvm-libs:linea:besu-libs')
+  implementation(testFixtures(project(':jvm-libs:generic:json-rpc')))
+  implementation(project(':state-recovery:clients:eth-api'))
+  implementation(project(':state-recovery:clients:blobscan-client'))
+  implementation(project(':state-recovery:clients:execution-layer-json-rpc-client'))
+  implementation(project(':coordinator:clients:smart-contract-client'))
+  implementation(project(':jvm-libs:linea:linea-contracts:l1-rollup'))
+  implementation('build.linea:l1-rollup-contract-client:6.0.0')
+  implementation(project(':coordinator:core'))
+  implementation(project(":coordinator:ethereum:test-utils"))
+  implementation(project(":jvm-libs:linea:testing:l1-blob-and-proof-submission"))
+  implementation(testFixtures(project(":jvm-libs:linea:blob-compressor")))
+  testImplementation("io.vertx:vertx-junit5")
+  testImplementation(project(":jvm-libs:linea:metrics:micrometer"))
+}
+
+sourceSets {
+  integrationTest {
+    kotlin {
+      compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath + sourceSets.test.compileClasspath
+      runtimeClasspath += sourceSets.main.output + sourceSets.main.runtimeClasspath + sourceSets.test.runtimeClasspath
+    }
+    compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath + sourceSets.test.compileClasspath
+    runtimeClasspath += sourceSets.main.output + sourceSets.main.runtimeClasspath + sourceSets.test.runtimeClasspath
+  }
+}
+
+test {
+  systemProperty "vertx.parameter.filename", project.projectDir.toPath()
+      .resolve("src/test/resources/vertx-options.json")
+      .toAbsolutePath().toString()
+}
+
+task integrationTest(type: Test) { test ->
+  systemProperty "vertx.parameter.filename", project.projectDir.toPath()
+      .resolve("src/test/resources/vertx-options.json")
+      .toAbsolutePath().toString()
+
+  description = "Runs integration tests."
+  group = "verification"
+  useJUnitPlatform()
+
+  classpath = sourceSets.integrationTest.runtimeClasspath
+  testClassesDirs = sourceSets.integrationTest.output.classesDirs
+
+  dependsOn(":localStackForStateRecoverComposeUp")
+
+  testLogging {
+    events TestLogEvent.FAILED,
+        TestLogEvent.SKIPPED,
+        TestLogEvent.STANDARD_ERROR,
+        TestLogEvent.STARTED,
+        TestLogEvent.PASSED
+    exceptionFormat TestExceptionFormat.FULL
+    showCauses true
+    showExceptions true
+    showStackTraces true
+    // set showStandardStreams if you need to see test logs
+    showStandardStreams true
+  }
+}

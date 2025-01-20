@@ -186,7 +186,6 @@ dockerCompose {
       "l1-node-genesis-generator",
       "l1-el-node",
       "l1-cl-node",
-      "l2-node",
       "blobscan-api",
       "blobscan-indexer",
       "redis",
@@ -200,7 +199,7 @@ dockerCompose {
       "--profile",
       "l2",
       "--profile",
-      "staterecover"
+      "staterecovery"
     ]
     useComposeFiles = [
       "${project.rootDir.path}/docker/compose.yml",

@@ -1,0 +1,72 @@
+plugins {
+  id 'net.consensys.zkevm.kotlin-library-conventions'
+  id 'com.gradleup.shadow' version '8.3.5'
+}
+
+group = 'build.linea.staterecovery'
+archivesBaseName = 'linea-staterecovery-plugin'
+version = '0.0.1-rc2'
+
+dependencies {
+  compileOnly("info.picocli:picocli:${libs.versions.picoli.get()}") {
+    because 'Required for command line parsing. Provided by Besu at runtime.'
+  }
+  implementation "org.jetbrains.kotlin:kotlin-reflect:1.9.21"
+  api(project(":jvm-libs:linea:metrics:micrometer"))
+  api(project(":jvm-libs:generic:serialization:jackson"))
+  api(project(":jvm-libs:linea:clients:linea-l1-contract-client"))
+  api(project(":jvm-libs:linea:web3j-extensions"))
+  api(project(":state-recovery:appcore:logic"))
+  api(project(":state-recovery:clients:blobscan-client"))
+  api(project(":state-recovery:clients:eth-api"))
+  api(project(":state-recovery:clients:execution-layer-json-rpc-client"))
+}
+
+ext.groupsToIncludeInShadow = [
+  "build.linea.*",
+  "io.micrometer.*",
+  "org.jetbrains.kotlin:kotlin-reflect.*",
+  "org.jetbrains.kotlinx:kotlinx-datetime.*",
+  "tech.pegasys.teku.internal:async",
+  "io.vertx.*",
+  // this can be removed once Besu updates to Vertx 4.12+
+  "com.michael-bull.kotlin-result:kotlin-result.*",
+  "com.fasterxml.jackson.module:jackson-module-kotlin",
+]
+
+def canIncludeLib(String lib) {
+  def allowed = groupsToIncludeInShadow.find { libAllowed ->
+    lib.matches(libAllowed)
+  } != null
+  allowed
+}
+
+tasks.create("testLibsInclusion", Task) {
+  //  def lib = "build.linea.internal:kotlin-extensions"
+  doLast {
+    def lib = "com.michael-bull.kotlin-result:kotlin-result"
+    println("Can include $lib: ${canIncludeLib(lib)}")
+  }
+}
+
+shadowJar {
+  if ("${project.version}" != 'unspecified') {
+    archiveClassifier.set('')
+    archiveVersion.set("${project.version}")
+  }
+
+  dependencies {
+    exclude { dependency ->
+      !canIncludeLib("${dependency.moduleGroup}:${dependency.moduleName}")
+    }
+  }
+
+  manifest {
+    attributes(
+        'Specification-Title': archiveBaseName,
+        'Specification-Version': project.version,
+        'Implementation-Title': archiveBaseName,
+        'Implementation-Version': project.version,
+        )
+  }
+}

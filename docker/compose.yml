@@ -334,7 +334,7 @@ services:
     image: postgres:16.0
     hostname: postgres
     container_name: postgres
-    profiles: [ "l2", "debug", "external-to-monorepo", "staterecover" ]
+    profiles: [ "l2", "debug", "external-to-monorepo", "staterecovery" ]
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
@@ -400,7 +400,6 @@ services:
   l1-cl-node:
     container_name: l1-cl-node
     hostname: l1-cl-node
-#    image: consensys/teku:24.2.0
     image: consensys/teku:24.10.3
     profiles: [ "l1", "debug", "external-to-monorepo" ]
     depends_on:
@@ -628,7 +627,7 @@ services:
     hostname: blobscan-api
     image: blossomlabs/blobscan-api:1.1.0
     platform: linux/amd64 # only linux available
-    profiles: [ "staterecover" ]
+    profiles: [ "staterecovery" ]
     ports:
       - "4001:4001"
     env_file: "./config/blobscan/env"
@@ -659,7 +658,7 @@ services:
     hostname: blobscan-indexer
     image: blossomlabs/blobscan-indexer:0.2.1
     platform: linux/amd64 # only linux available
-    profiles: [ "staterecover" ]
+    profiles: [ "staterecovery" ]
     env_file: "./config/blobscan/env"
     networks:
       linea:
@@ -680,7 +679,7 @@ services:
     container_name: redis
     hostname: redis
     image: "redis:7.4.1-alpine"
-    profiles: [ "staterecover" ]
+    profiles: [ "staterecovery" ]
     ports:
       - "6379:6379"
     environment:
@@ -701,7 +700,7 @@ services:
     image: consensys/linea-besu-package:${SEQUENCER_TAG:-devnet-811f30b}
     hostname: zkbesu-shomei-sr
     container_name: zkbesu-shomei-sr
-    profiles: [ "external-to-monorepo", "staterecover" ]
+    profiles: [ "external-to-monorepo", "staterecovery" ]
     privileged: true
 #    restart: none
     user: root
@@ -744,19 +743,19 @@ services:
         --plugin-staterecovery-blobscan-endpoint=http://blobscan-api:4001 \
         --plugin-staterecovery-linea-sequencer-beneficiary-address=0x6d976c9b8ceee705d4fe8699b44e5eb58242f484 \
         --plugin-staterecovery-overriding-recovery-start-block-number=1 \
-        --plugin-staterecovery-l1-polling-interval=PT1S
+        --plugin-staterecovery-l1-polling-interval=PT0.1S
     volumes:
       - ./config/zkbesu-shomei/zkbesu-config.toml:/var/lib/besu/zkbesu-config.toml:ro
       - ./config/zkbesu-shomei/log4j-staterecovery.xml:/var/lib/besu/log4j.xml:ro
       - ./config/linea-local-dev-genesis-PoA-besu.json/:/var/lib/besu/genesis.json:ro
-      - ../state-recover/besu-plugin/build/libs/linea-staterecover-plugin-0.0.1-rc2.jar:/opt/besu/lib/linea-staterecover-plugin-0.0.1-rc2.jar
-      - ../state-recover/besu-plugin/build/libs/linea-staterecover-plugin-0.0.1-rc2.jar:/opt/besu/plugins/linea-staterecover-plugin-0.0.1-rc2.jar
+      - ../state-recovery/besu-plugin/build/libs/linea-staterecovery-plugin-0.0.1-rc2.jar:/opt/besu/lib/linea-staterecovery-plugin-0.0.1-rc2.jar
+      - ../state-recovery/besu-plugin/build/libs/linea-staterecovery-plugin-0.0.1-rc2.jar:/opt/besu/plugins/linea-staterecovery-plugin-0.0.1-rc2.jar
 
   shomei-sr:
     image: consensys/linea-shomei:2.3.0
     hostname: shomei-sr
     container_name: shomei-sr
-    profiles: [ "external-to-monorepo", "staterecover" ]
+    profiles: [ "external-to-monorepo", "staterecovery" ]
     depends_on:
       zkbesu-shomei-sr:
         condition: service_started

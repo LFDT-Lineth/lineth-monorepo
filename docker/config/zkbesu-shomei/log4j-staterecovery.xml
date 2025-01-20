@@ -34,16 +34,16 @@
     <Logger name="io.opentelemetry" level="WARN" additivity="false">
       <AppenderRef ref="Console"/>
     </Logger>
-    <Logger name="linea.staterecover" level="INFO" additivity="false">
+    <Logger name="linea.staterecovery" level="INFO" additivity="false">
       <AppenderRef ref="Console"/>
     </Logger>
-    <Logger name="linea.staterecover.clients.ExecutionLayerInProcessClient" level="TRACE" additivity="false">
+    <Logger name="linea.staterecovery.clients.ExecutionLayerInProcessClient" level="DEBUG" additivity="false">
       <AppenderRef ref="Console"/>
     </Logger>
-    <Logger name="linea.plugin.staterecover.clients.l1" level="DEBUG" additivity="false">
+    <Logger name="linea.plugin.staterecovery.clients.l1" level="DEBUG" additivity="false">
       <AppenderRef ref="Console"/>
     </Logger>
-    <Logger name="linea.plugin.staterecover.clients.l1.transaction-details" level="DEBUG" additivity="false">
+    <Logger name="linea.plugin.staterecovery.clients.l1.transaction-details" level="DEBUG" additivity="false">
       <AppenderRef ref="Console"/>
     </Logger>
     <Root level="${sys:root.log.level}">

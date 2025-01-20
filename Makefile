@@ -28,7 +28,7 @@ clean-testnet-folders:
 		rm -rf tmp/testnet/*
 
 clean-environment:
-		docker compose -f docker/compose.yml -f docker/compose-local-dev-traces-v2.overrides.yml --profile l1 --profile l2 --profile debug --profile staterecover down || true
+		docker compose -f docker/compose.yml -f docker/compose-local-dev-traces-v2.overrides.yml --profile l1 --profile l2 --profile debug --profile staterecovery kill -s 9 || true
 		make clean-local-folders
 		docker network prune -f
 		docker volume rm linea-local-dev linea-logs || true # ignore failure if volumes do not exist already
@@ -47,7 +47,7 @@ start-l2-blockchain-only:
 start-whole-environment: COMPOSE_PROFILES:=l1,l2
 start-whole-environment:
 		# docker compose -f docker/compose.yml -f docker/compose-local-dev.overrides.yml build prover
-		COMPOSE_PROFILES=$(COMPOSE_PROFILES) docker compose -f docker/compose.yml -f docker/compose-local-dev.overrides.yml up -d
+		L1_GENESIS_TIME=$(get_future_time) COMPOSE_PROFILES=$(COMPOSE_PROFILES) docker compose -f docker/compose.yml -f docker/compose-local-dev.overrides.yml up -d
 
 
 start-whole-environment-traces-v2: COMPOSE_PROFILES:=l1,l2
@@ -218,17 +218,22 @@ deploy-contracts-minimal:
 	cd .. && \
 	$(MAKE) -j6 deploy-linea-rollup-v$(L1_CONTRACT_VERSION) deploy-l2messageservice
 
-fresh-start-all-staterecover: COMPOSE_PROFILES:=l1,l2,staterecover
-fresh-start-all-staterecover: L1_CONTRACT_VERSION:=6
-fresh-start-all-staterecover:
+fresh-start-all-staterecovery: COMPOSE_PROFILES:=l1,l2,staterecovery
+fresh-start-all-staterecovery: L1_CONTRACT_VERSION:=6
+fresh-start-all-staterecovery:
 	make clean-environment
 	L1_GENESIS_TIME=$(get_future_time) make start-whole-environment-traces-v2 COMPOSE_PROFILES=$(COMPOSE_PROFILES)
 	$(MAKE) deploy-contracts-minimal L1_CONTRACT_VERSION=$(L1_CONTRACT_VERSION)
 
-fresh-start-staterecover-for-replay-only: COMPOSE_PROFILES:=l1,staterecover
-fresh-start-staterecover-for-replay-only:
-		make clean-environment
-		L1_GENESIS_TIME=$(get_future_time) make start-whole-environment-traces-v2 COMPOSE_PROFILES=$(COMPOSE_PROFILES)
+fresh-start-staterecovery-for-replay-only: COMPOSE_PROFILES:=l1,staterecovery
+fresh-start-staterecovery-for-replay-only:
+	make clean-environment
+	L1_GENESIS_TIME=$(get_future_time) make start-whole-environment-traces-v2 COMPOSE_PROFILES=$(COMPOSE_PROFILES)
+
+staterecovery-replay-from-genesis: L1_ROLLUP_CONTRACT_ADDRESS:=0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9
+staterecovery-replay-from-genesis:
+	docker compose -f docker/compose.yml down zkbesu-shomei-sr shomei-sr
+	L1_ROLLUP_CONTRACT_ADDRESS=$(L1_ROLLUP_CONTRACT_ADDRESS) docker compose -f docker/compose.yml up zkbesu-shomei-sr shomei-sr -d
 
 testnet-start-l2:
 		docker compose -f docker/compose.yml -f docker/compose-testnet-sync.overrides.yml --profile l2 up -d
@@ -291,14 +296,3 @@ restart-coordinator:
 		make stop-coordinator
 		make start-coordinator
 
-start-traces-api:
-		mkdir -p  tmp/local/logs
-		mkdir -p  tmp/local/traces/raw
-		./gradlew traces-api:app:run > tmp/local/logs/traces-app.log & echo "$$!" > tmp/local/traces-app.pid
-
-stop-traces-api:
-		make stop_pid PID_FILE=tmp/local/traces-app.pid
-
-restart-traces-api:
-		make stop-traces-api
-		make start-traces-api

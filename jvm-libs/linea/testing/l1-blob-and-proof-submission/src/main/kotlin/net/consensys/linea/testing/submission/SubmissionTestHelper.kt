@@ -38,17 +38,18 @@ data class SubmissionTxHashes(
 )
 
 fun submitBlobsAndAggregations(
-  contractClient: LineaRollupSmartContractClient,
+  contractClientForBlobSubmission: LineaRollupSmartContractClient,
+  contractClientForAggregationSubmission: LineaRollupSmartContractClient = contractClientForBlobSubmission,
   aggregationsAndBlobs: List<AggregationAndBlobs>,
   blobChunksSize: Int = 6
 ): SubmissionTxHashes {
-  val blobSubmissionTxHashes = submitBlobs(contractClient, aggregationsAndBlobs, blobChunksSize)
+  val blobSubmissionTxHashes = submitBlobs(contractClientForBlobSubmission, aggregationsAndBlobs, blobChunksSize)
   return aggregationsAndBlobs
     .filter { it.aggregation != null }
     .mapIndexed { index, (aggregation, aggBlobs) ->
       aggregation as Aggregation
       val parentAgg = aggregationsAndBlobs.getOrNull(index - 1)?.aggregation
-      contractClient.finalizeBlocks(
+      contractClientForAggregationSubmission.finalizeBlocks(
         aggregation = aggregation.aggregationProof!!,
         aggregationLastBlob = aggBlobs.last(),
         parentShnarf = aggBlobs.first().blobCompressionProof!!.prevShnarf,
@@ -61,14 +62,16 @@ fun submitBlobsAndAggregations(
 }
 
 fun submitBlobsAndAggregationsAndWaitExecution(
-  contractClient: LineaRollupSmartContractClient,
+  contractClientForBlobSubmission: LineaRollupSmartContractClient,
+  contractClientForAggregationSubmission: LineaRollupSmartContractClient = contractClientForBlobSubmission,
   aggregationsAndBlobs: List<AggregationAndBlobs>,
   blobChunksSize: Int = 6,
   l1Web3jClient: Web3j,
   waitTimeout: Duration = 2.minutes
 ) {
   val submissionTxHashes = submitBlobsAndAggregations(
-    contractClient = contractClient,
+    contractClientForBlobSubmission = contractClientForAggregationSubmission,
+    contractClientForAggregationSubmission = contractClientForAggregationSubmission,
     aggregationsAndBlobs = aggregationsAndBlobs,
     blobChunksSize = blobChunksSize
   )

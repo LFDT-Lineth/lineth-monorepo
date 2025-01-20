@@ -1,0 +1,27 @@
+plugins {
+  id 'net.consensys.zkevm.kotlin-library-conventions'
+}
+
+group = 'build.linea.staterecover'
+
+dependencies {
+  api("io.vertx:vertx-core:${libs.versions.vertx.get()}")
+  api(project(':jvm-libs:generic:extensions:kotlin'))
+  api(project(':jvm-libs:generic:logging'))
+  api(project(':jvm-libs:linea:core:domain-models'))
+  api(project(':jvm-libs:linea:core:long-running-service'))
+  api(project(':jvm-libs:linea:clients:interfaces'))
+  api(project(':jvm-libs:linea:clients:linea-state-manager'))
+  api(project(':jvm-libs:linea:blob-decompressor'))
+  api(project(':state-recovery:appcore:clients-interfaces'))
+  api(project(':state-recovery:appcore:domain-models'))
+  api project(':jvm-libs:linea:besu-rlp-and-mappers')
+  api project(':jvm-libs:linea:besu-libs')
+
+  testImplementation(project(":jvm-libs:linea:testing:file-system"))
+  testImplementation(testFixtures(project(":jvm-libs:linea:blob-compressor")))
+  testImplementation("org.bouncycastle:bcprov-jdk18on:1.78.1")
+  testImplementation("org.apache.logging.log4j:log4j-slf4j2-impl:${libs.versions.log4j.get()}") {
+    because "besu libs in the tests use slf4j"
+  }
+}

@@ -15,6 +15,7 @@ jobs:
     name: Filter commit changes
     outputs:
       coordinator: ${{ steps.filter.outputs.coordinator }}
+      staterecovery: ${{ steps.filter.outputs.staterecovery }}
       postman: ${{ steps.filter.outputs.postman }}
       prover: ${{ steps.filter.outputs.prover }}
       traces-api-facade: ${{ steps.filter.outputs.traces-api-facade }}
@@ -50,6 +51,18 @@ jobs:
               - 'docker/compose.yml'
               - 'docker/compose-local-dev.overrides.yml'
               - 'docker/compose-local-dev-traces-v2.overrides.yml'
+            staterecovery:
+              - 'state-recovery/**'
+              - 'buildSrc/**'
+              - 'jvm-libs/**'
+              - 'gradle/**'
+              - 'build.gradle'
+              - 'gradle.properties'
+              - 'settings.gradle'
+              - '.github/workflows/staterecovery-*.yml'
+              - '.github/workflows/main.yml'
+              - '.github/workflows/reuse-*.yml'
+              - 'e2e/**'
             postman:
               - 'postman/**'
               - 'sdk/**'
@@ -172,6 +185,7 @@ jobs:
     with:
       commit_tag: ${{ needs.store-image-name-and-tags.outputs.commit_tag }}
       coordinator_changed: ${{ needs.filter-commit-changes.outputs.coordinator }}
+      staterecovery_changed: ${{ needs.filter-commit-changes.outputs.staterecovery }}
       postman_changed: ${{ needs.filter-commit-changes.outputs.postman }}
       prover_changed: ${{ needs.filter-commit-changes.outputs.prover }}
       traces_api_facade_changed: ${{ needs.filter-commit-changes.outputs.traces-api-facade }}
