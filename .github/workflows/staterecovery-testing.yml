@@ -60,28 +60,35 @@ jobs:
       - name: Staterecovery - Build plugin shadowJar
         run: |
           ./gradlew state-recovery:besu-plugin:shadowJar
+      - name: Login to Docker Hub
+        if: ${{ env.DOCKERHUB_USERNAME != '' && env.DOCKERHUB_TOKEN != '' }}
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Run integration tests
         timeout-minutes: 15
         run: |
           ./gradlew state-recovery:test-cases:integrationTest
-      - name: Run Jacoco
+      - name: Run Jacoco Staterecovery
         run: |
           ./gradlew jacocoRootReport
-      - name: Upload Jacoco test coverage report
-        uses: actions/upload-artifact@v4
-        with:
-          name: jacocoRootReport-${{ env.COMMIT_TAG }}.xml
-          if-no-files-found: error
-          path: |
-            ${{ github.workspace }}/build/reports/jacoco/jacocoRootReport/jacocoRootReport.xml
-      - name: Upload coverage to Codecov
-        if: ${{ env.CODECOV_TOKEN != '' }}
-        uses: codecov/codecov-action@v5
-        with:
-          fail_ci_if_error: true
-          files: ${{ github.workspace }}/build/reports/jacoco/jacocoRootReport/jacocoRootReport.xml
-          flags: kotlin
-          os: linux
-          name: codecov-staterecovery
-          verbose: true
-          token: ${{ secrets.CODECOV_TOKEN }}
+# TMP disable as it conflicts with coordinator report
+#      - name: Upload Jacoco report Staterecovery
+#        uses: actions/upload-artifact@v4
+#        with:
+#          name: jacocoRootReport-${{ env.COMMIT_TAG }}.xml
+#          if-no-files-found: error
+#          path: |
+#            ${{ github.workspace }}/build/reports/jacoco/jacocoRootReport/jacocoRootReport.xml
+#      - name: Upload coverage to Codecov Staterecovery
+#        if: ${{ env.CODECOV_TOKEN != '' }}
+#        uses: codecov/codecov-action@v5
+#        with:
+#          fail_ci_if_error: true
+#          files: ${{ github.workspace }}/build/reports/jacoco/jacocoRootReport/jacocoRootReport.xml
+#          flags: kotlin
+#          os: linux
+#          name: codecov-staterecovery
+#          verbose: true
+#          token: ${{ secrets.CODECOV_TOKEN }}

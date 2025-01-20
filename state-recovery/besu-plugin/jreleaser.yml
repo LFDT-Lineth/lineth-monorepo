@@ -1,0 +1,31 @@
+project:
+  name: staterecovery
+  description: Linea State Recovery Besu Plugin
+  longDescription: Besu Plugin to allow Linea rollup state recovery from L1 Blob data
+  links:
+    homepage: https://github.com/Consensys/linea-monorepo
+  authors:
+    - Linea automations
+  license: APACHE-2.0
+  inceptionYear: '2025'
+  stereotype: NONE
+  java:
+    version: '21'
+    groupId: build.linea
+    artifactId: staterecovery-besu-plugin
+
+release:
+  github:
+    overwrite: true
+    releaseName: 'State Recovery'
+    changelog:
+      enabled: false
+    commitAuthor:
+      name: 'Linea automations'
+      email: 'linea-automations@consensys.net'
+
+distributions:
+  staterecovery:
+    type: SINGLE_JAR
+    artifacts:
+      - path: 'build/libs/{{tagName}}.jar'
