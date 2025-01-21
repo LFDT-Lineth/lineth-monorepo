@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"fmt"
+	"github.com/consensys/linea-monorepo/prover/lib/compressor/blob/dictionary"
 	"hash"
 
 	"github.com/consensys/linea-monorepo/prover/crypto/mimc"
@@ -13,7 +14,6 @@ import (
 	decompression "github.com/consensys/linea-monorepo/prover/circuits/blobdecompression/v1"
 	"github.com/consensys/linea-monorepo/prover/circuits/internal"
 	"github.com/consensys/linea-monorepo/prover/circuits/pi-interconnection/keccak"
-	"github.com/consensys/linea-monorepo/prover/lib/compressor/blob"
 	public_input "github.com/consensys/linea-monorepo/prover/public-input"
 	"github.com/consensys/linea-monorepo/prover/utils"
 	"github.com/sirupsen/logrus"
@@ -24,12 +24,9 @@ type Request struct {
 	Decompressions []blobsubmission.Response
 	Executions     []public_input.Execution
 	Aggregation    public_input.Aggregation
-	// Path to the compression dictionary. Used to extract the execution data
-	// for each execution.
-	DictPath string
 }
 
-func (c *Compiled) Assign(r Request) (a Circuit, err error) {
+func (c *Compiled) Assign(r Request, dictStore dictionary.Store) (a Circuit, err error) {
 	internal.RegisterHints()
 	keccak.RegisterHints()
 	utils.RegisterHints()
@@ -54,13 +51,6 @@ func (c *Compiled) Assign(r Request) (a Circuit, err error) {
 	if nbC := len(r.Decompressions) + len(r.Executions); nbC > cfg.MaxNbCircuits && cfg.MaxNbCircuits > 0 {
 		err = fmt.Errorf("failing CHECK_CIRCUIT_LIMIT:\n\t%d circuits exceeds maximum of %d", nbC, cfg.MaxNbCircuits)
 		return
-	}
-
-	// @alex: We should pass that as a parameter. And also (@arya) pass a list
-	// of dictionnary because this function.
-	dict, err := blob.GetDict(r.DictPath)
-	if err != nil {
-		return Circuit{}, fmt.Errorf("could not find the dictionnary: path=%v err=%v", r.DictPath, err)
 	}
 
 	// For Shnarfs and Merkle Roots
@@ -111,7 +101,7 @@ func (c *Compiled) Assign(r Request) (a Circuit, err error) {
 			fpi  decompression.FunctionalPublicInput
 			sfpi decompression.FunctionalPublicInputSnark
 		)
-		if fpi, err = decompression.AssignFPI(blobData[:], dict, p.Eip4844Enabled, x, y); err != nil {
+		if fpi, _, err = decompression.AssignFPI(blobData[:], dictStore, p.Eip4844Enabled, x, y); err != nil {
 			return
 		}
 		execDataChecksums = append(execDataChecksums, fpi.BatchSums...) // len(execDataChecksums) = index of the first execution associated with the next blob

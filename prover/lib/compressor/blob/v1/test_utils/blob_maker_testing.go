@@ -5,7 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"encoding/json"
-	"errors"
+	"github.com/consensys/linea-monorepo/prover/utils/test_utils"
 	"os"
 	"path/filepath"
 	"strings"
@@ -125,7 +125,7 @@ func ConsecutiveBlobs(t require.TestingT, n ...int) [][]byte {
 }
 
 func TestBlocksAndBlobMaker(t require.TestingT) ([][]byte, *v1.BlobMaker) {
-	repoRoot, err := GetRepoRootPath()
+	repoRoot, err := test_utils.GetRepoRootPath()
 	assert.NoError(t, err)
 	testBlocks, err := LoadTestBlocks(filepath.Join(repoRoot, "testdata/prover-v2/prover-execution/requests"))
 	assert.NoError(t, err)
@@ -141,23 +141,8 @@ func GetDict(t require.TestingT) []byte {
 	return dict
 }
 
-// GetRepoRootPath assumes that current working directory is within the repo
-func GetRepoRootPath() (string, error) {
-	wd, err := os.Getwd()
-	if err != nil {
-		return "", err
-	}
-	const repoName = "linea-monorepo"
-	i := strings.LastIndex(wd, repoName)
-	if i == -1 {
-		return "", errors.New("could not find repo root")
-	}
-	i += len(repoName)
-	return wd[:i], nil
-}
-
 func getDictForTest() ([]byte, error) {
-	repoRoot, err := GetRepoRootPath()
+	repoRoot, err := test_utils.GetRepoRootPath()
 	if err != nil {
 		return nil, err
 	}

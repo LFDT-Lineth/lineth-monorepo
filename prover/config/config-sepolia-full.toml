@@ -1,7 +1,7 @@
 environment = "sepolia"
 version = "4.0.0"                              # TODO @gbotrel hunt all version definitions.
 assets_dir = "./prover-assets"
-log_level = 4                                  # TODO @gbotrel will be refactored with new logger. 
+log_level = 4                                  # TODO @gbotrel will be refactored with new logger.
 
 [controller]
 retry_delays = [0, 1]
@@ -15,7 +15,7 @@ requests_root_dir = "/home/ubuntu/sepolia-testing-full/prover-execution"
 [blob_decompression]
 prover_mode = "full"
 requests_root_dir = "/home/ubuntu/sepolia-testing-full/prover-compression"
-dict_path = "lib/compressor/compressor_dict.bin"
+dict_paths = ["lib/compressor/compressor_dict.bin"]
 
 [aggregation]
 prover_mode = "full"

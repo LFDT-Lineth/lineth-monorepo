@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -32,7 +33,8 @@ import (
 type SetupArgs struct {
 	Force      bool
 	Circuits   string
-	DictPath   string
+	DictPath   string // to be deprecated; only used for compiling v0 blob decompression circuit
+	DictSize   int
 	AssetsDir  string
 	ConfigFile string
 }
@@ -66,7 +68,7 @@ func Setup(context context.Context, args SetupArgs) error {
 	// parse inCircuits
 	inCircuits := make(map[circuits.CircuitID]bool)
 	for _, c := range AllCircuits {
-		inCircuits[circuits.CircuitID(c)] = false
+		inCircuits[c] = false
 	}
 	_inCircuits := strings.Split(args.Circuits, ",")
 	for _, c := range _inCircuits {
@@ -85,6 +87,8 @@ func Setup(context context.Context, args SetupArgs) error {
 	if err != nil {
 		return fmt.Errorf("%s failed to create SRS provider: %w", cmdName, err)
 	}
+	var foundDecompressionV0 bool // this is a temporary mechanism to make sure we phase out the practice
+	// of providing entire dictionaries for setup.
 
 	// for each circuit, we start by compiling the circuit
 	// then we do a sha sum and compare against the one in the manifest.json
@@ -98,7 +102,6 @@ func Setup(context context.Context, args SetupArgs) error {
 		logrus.Infof("setting up %s", c)
 
 		var builder circuits.Builder
-		var dict []byte
 		extraFlags := make(map[string]any)
 
 		// let's compile the circuit.
@@ -111,21 +114,21 @@ func Setup(context context.Context, args SetupArgs) error {
 			extraFlags["cfg_checksum"] = limits.Checksum()
 			zkEvm := zkevm.FullZkEvm(&limits)
 			builder = execution.NewBuilder(zkEvm)
-		case circuits.BlobDecompressionV0CircuitID, circuits.BlobDecompressionV1CircuitID:
-			dict, err = os.ReadFile(args.DictPath)
+
+		case circuits.BlobDecompressionV0CircuitID:
+			dict, err := os.ReadFile(args.DictPath)
 			if err != nil {
 				return fmt.Errorf("%s failed to read dictionary file: %w", cmdName, err)
 			}
+			foundDecompressionV0 = true
+			extraFlags["maxUsableBytes"] = blob_v0.MaxUsableBytes
+			extraFlags["maxUncompressedBytes"] = blob_v0.MaxUncompressedBytes
+			builder = v0.NewBuilder(dict)
+		case circuits.BlobDecompressionV1CircuitID:
+			extraFlags["maxUsableBytes"] = blob_v1.MaxUsableBytes
+			extraFlags["maxUncompressedBytes"] = blob_v1.MaxUncompressedBytes
+			builder = v1.NewBuilder(args.DictSize)
 
-			if c == circuits.BlobDecompressionV0CircuitID {
-				extraFlags["maxUsableBytes"] = blob_v0.MaxUsableBytes
-				extraFlags["maxUncompressedBytes"] = blob_v0.MaxUncompressedBytes
-				builder = v0.NewBuilder(dict)
-			} else if c == circuits.BlobDecompressionV1CircuitID {
-				extraFlags["maxUsableBytes"] = blob_v1.MaxUsableBytes
-				extraFlags["maxUncompressedBytes"] = blob_v1.MaxUncompressedBytes
-				builder = v1.NewBuilder(len(dict))
-			}
 		case circuits.PublicInputInterconnectionCircuitID:
 			builder = pi_interconnection.NewBuilder(cfg.PublicInputInterconnection)
 		case circuits.EmulationDummyCircuitID:
@@ -138,14 +141,10 @@ func Setup(context context.Context, args SetupArgs) error {
 		if err := updateSetup(context, cfg, args.Force, srsProvider, c, builder, extraFlags); err != nil {
 			return err
 		}
-		if dict != nil {
-			// we save the dictionary to disk
-			dictPath := cfg.BlobDecompressionDictPath(string(c))
-			if err := os.WriteFile(dictPath, dict, 0600); err != nil {
-				return fmt.Errorf("%s failed to write dictionary file: %w", cmdName, err)
-			}
-		}
+	}
 
+	if !foundDecompressionV0 && args.DictPath != "" {
+		return errors.New("explicit provision of a dictionary is only allowed for backwards compatibility with v0 blob decompression")
 	}
 
 	if !(inCircuits[circuits.AggregationCircuitID] || inCircuits[circuits.EmulationCircuitID]) {

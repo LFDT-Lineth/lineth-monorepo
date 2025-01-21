@@ -247,7 +247,7 @@ func decompressBlob(b []byte) ([][][]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	header, _, blocks, err := v1.DecompressBlob(b, dictStore)
+	header, _, blocks, _, err := v1.DecompressBlob(b, dictStore)
 	if err != nil {
 		return nil, fmt.Errorf("can't decompress blob: %w", err)
 	}

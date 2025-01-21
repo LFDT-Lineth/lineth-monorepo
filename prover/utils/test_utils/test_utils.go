@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"hash"
 	"io"
@@ -346,4 +347,19 @@ func spaceOutFromRight(s string) string {
 		panic("incorrect size estimation")
 	}
 	return bb.String()
+}
+
+// GetRepoRootPath assumes that current working directory is within the repo
+func GetRepoRootPath() (string, error) {
+	wd, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+	const repoName = "linea-monorepo"
+	i := strings.LastIndex(wd, repoName)
+	if i == -1 {
+		return "", errors.New("could not find repo root")
+	}
+	i += len(repoName)
+	return wd[:i], nil
 }

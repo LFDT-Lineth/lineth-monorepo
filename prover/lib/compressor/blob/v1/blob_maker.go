@@ -115,7 +115,7 @@ func (bm *BlobMaker) Written() int {
 func (bm *BlobMaker) Bytes() []byte {
 	if bm.currentBlobLength > 0 {
 		// sanity check that we can always decompress.
-		header, rawBlocks, _, err := DecompressBlob(bm.currentBlob[:bm.currentBlobLength], bm.dictStore)
+		header, rawBlocks, _, _, err := DecompressBlob(bm.currentBlob[:bm.currentBlobLength], bm.dictStore)
 		if err != nil {
 			var sbb strings.Builder
 			fmt.Fprintf(&sbb, "invalid blob: %v\n", err)
@@ -302,23 +302,22 @@ func (bm *BlobMaker) Equals(other *BlobMaker) bool {
 }
 
 // DecompressBlob decompresses a blob and returns the header and the blocks as they were compressed.
-func DecompressBlob(b []byte, dictStore dictionary.Store) (blobHeader *Header, rawPayload []byte, blocks [][]byte, err error) {
+func DecompressBlob(b []byte, dictStore dictionary.Store) (blobHeader *Header, rawPayload []byte, blocks [][]byte, dict []byte, err error) {
 	// UnpackAlign the blob
 	b, err = encode.UnpackAlign(b, fr381.Bits-1, false)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 
 	// read the header
 	blobHeader = new(Header)
 	read, err := blobHeader.ReadFrom(bytes.NewReader(b))
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("failed to read blob header: %w", err)
+		return nil, nil, nil, nil, fmt.Errorf("failed to read blob header: %w", err)
 	}
 	// retrieve dict
-	dict, err := dictStore.Get(blobHeader.DictChecksum[:], 1)
-	if err != nil {
-		return nil, nil, nil, err
+	if dict, err = dictStore.Get(blobHeader.DictChecksum[:], 1); err != nil {
+		return nil, nil, nil, nil, err
 	}
 
 	b = b[read:]
@@ -326,7 +325,7 @@ func DecompressBlob(b []byte, dictStore dictionary.Store) (blobHeader *Header, r
 	// decompress the data
 	rawPayload, err = lzss.Decompress(b, dict)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("failed to decompress blob body: %w", err)
+		return nil, nil, nil, nil, fmt.Errorf("failed to decompress blob body: %w", err)
 	}
 
 	offset := 0
@@ -335,7 +334,7 @@ func DecompressBlob(b []byte, dictStore dictionary.Store) (blobHeader *Header, r
 		batchOffset := offset
 		for offset < batchOffset+batchLen {
 			if blockLen, err := ScanBlockByteLen(rawPayload[offset:]); err != nil {
-				return nil, nil, nil, err
+				return nil, nil, nil, nil, err
 			} else {
 				blocks = append(blocks, rawPayload[offset:offset+blockLen])
 				offset += blockLen
@@ -343,11 +342,11 @@ func DecompressBlob(b []byte, dictStore dictionary.Store) (blobHeader *Header, r
 		}
 
 		if offset != batchOffset+batchLen {
-			return nil, nil, nil, errors.New("incorrect batch length")
+			return nil, nil, nil, nil, errors.New("incorrect batch length")
 		}
 	}
 
-	return blobHeader, rawPayload, blocks, nil
+	return blobHeader, rawPayload, blocks, dict, nil
 }
 
 // WorstCompressedBlockSize returns the size of the given block, as compressed by an "empty" blob maker.

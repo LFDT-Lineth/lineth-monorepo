@@ -46,7 +46,7 @@ func MakeCS(dict []byte) constraint.ConstraintSystem {
 // Assign the circuit with concrete data. Returns the assigned circuit and the
 // public input computed during the assignment.
 // @alexandre.belling should we instead compute snarkHash independently here? Seems like it doesn't need to be included in the req received by Prove
-func Assign(blobData, dict []byte, eip4844Enabled bool, x [32]byte, y fr381.Element) (assignment frontend.Circuit, publicInput fr.Element, snarkHash []byte, err error) {
+func Assign(blobData []byte, dictStore dictionary.Store, eip4844Enabled bool, x [32]byte, y fr381.Element) (assignment frontend.Circuit, publicInput fr.Element, snarkHash []byte, err error) {
 	const maxCLen = blob.MaxUsableBytes
 	const maxDLen = blob.MaxUncompressedBytes
 
@@ -56,11 +56,6 @@ func Assign(blobData, dict []byte, eip4844Enabled bool, x [32]byte, y fr381.Elem
 		return
 	}
 
-	dictStore, err := dictionary.SingletonStore(dict, 0)
-	if err != nil {
-		err = fmt.Errorf("failed to create dictionary store %w", err)
-		return
-	}
 	header, uncompressedData, _, err := blob.DecompressBlob(blobData, dictStore)
 	if err != nil {
 		err = fmt.Errorf("decompression circuit assignment : could not decompress the data : %w", err)

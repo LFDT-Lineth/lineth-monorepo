@@ -7,6 +7,7 @@ import (
 	cRand "crypto/rand"
 	"encoding/binary"
 	"encoding/hex"
+	"github.com/consensys/linea-monorepo/prover/utils/test_utils"
 	"math/big"
 	"math/rand/v2"
 	"os"
@@ -17,7 +18,7 @@ import (
 	"github.com/consensys/linea-monorepo/prover/lib/compressor/blob/encode"
 
 	v1 "github.com/consensys/linea-monorepo/prover/lib/compressor/blob/v1"
-	"github.com/consensys/linea-monorepo/prover/lib/compressor/blob/v1/test_utils"
+	v1Testing "github.com/consensys/linea-monorepo/prover/lib/compressor/blob/v1/test_utils"
 
 	fr381 "github.com/consensys/gnark-crypto/ecc/bls12-381/fr"
 
@@ -55,7 +56,7 @@ func testCompressorSingleSmallBatch(t *testing.T, blocks [][]byte) {
 	dict, err := os.ReadFile(testDictPath)
 	assert.NoError(t, err)
 	dictStore, err := dictionary.SingletonStore(dict, 1)
-	_, _, blocksBack, err := v1.DecompressBlob(bm.Bytes(), dictStore)
+	_, _, blocksBack, _, err := v1.DecompressBlob(bm.Bytes(), dictStore)
 	assert.NoError(t, err)
 	assert.Equal(t, len(blocks), len(blocksBack), "number of blocks should match")
 	// TODO compare the blocks
@@ -484,7 +485,7 @@ func init() {
 		panic(err)
 	}
 
-	if testBlocks, err = test_utils.LoadTestBlocks(filepath.Join(rootPath, "testdata/prover-v2/prover-execution/requests")); err != nil {
+	if testBlocks, err = v1Testing.LoadTestBlocks(filepath.Join(rootPath, "testdata/prover-v2/prover-execution/requests")); err != nil {
 		panic(err)
 	}
 

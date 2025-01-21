@@ -105,11 +105,10 @@ func makePiProof(cfg *config.Config, cf *CollectedFields) (plonk.Proof, witness.
 	}
 
 	assignment, err := c.Assign(pi_interconnection.Request{
-		DictPath:       cfg.BlobDecompression.DictPath,
 		Decompressions: cf.DecompressionPI,
 		Executions:     cf.ExecutionPI,
 		Aggregation:    cf.AggregationPublicInput(cfg),
-	})
+	}, cfg.BlobDecompressionDictStore(string(circuits.BlobDecompressionV1CircuitID))) // TODO @Tabaie: when there is a version 2, input the compressor version to use here
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not assign the public input circuit: %w", err)
 	}

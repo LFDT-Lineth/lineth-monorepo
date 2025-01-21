@@ -30,7 +30,7 @@ func prepare(t require.TestingT, blobBytes []byte) (c *v1.Circuit, a frontend.Ci
 
 	dictStore, err := dictionary.SingletonStore(blobtestutils.GetDict(t), 1)
 	assert.NoError(t, err)
-	_, payload, _, err := blobcompressorv1.DecompressBlob(blobBytes, dictStore)
+	_, payload, _, dict, err := blobcompressorv1.DecompressBlob(blobBytes, dictStore)
 	assert.NoError(t, err)
 
 	resp, err := blobsubmission.CraftResponse(&blobsubmission.Request{
@@ -50,8 +50,7 @@ func prepare(t require.TestingT, blobBytes []byte) (c *v1.Circuit, a frontend.Ci
 	y.SetBytes(b)
 
 	blobBytes = append(blobBytes, make([]byte, blobcompressorv1.MaxUsableBytes-len(blobBytes))...)
-	dict := blobtestutils.GetDict(t)
-	a, _, snarkHash, err := blobdecompression.Assign(blobBytes, dict, true, x, y)
+	a, _, snarkHash, err := blobdecompression.Assign(blobBytes, dictStore, true, x, y)
 	assert.NoError(t, err)
 
 	_, ok := a.(*v1.Circuit)

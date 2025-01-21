@@ -13,7 +13,7 @@ requests_root_dir = "/data/prover/v3/execution"
 [blob_decompression]
 prover_mode = "dev"
 requests_root_dir = "/data/prover/v3/compression"
-dict_path = "/opt/linea/prover/lib/compressor/compressor_dict.bin"
+dict_paths = ["/opt/linea/prover/lib/compressor/compressor_dict.bin"]
 
 [aggregation]
 prover_mode = "dev"

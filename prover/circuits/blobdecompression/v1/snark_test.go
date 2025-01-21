@@ -55,7 +55,7 @@ func TestParseHeader(t *testing.T) {
 
 	for _, blobData := range blobs {
 
-		header, _, blocks, err := blob.DecompressBlob(blobData, dictStore)
+		header, _, blocks, _, err := blob.DecompressBlob(blobData, dictStore)
 		assert.NoError(t, err)
 
 		assert.LessOrEqual(t, len(blocks), MaxNbBatches, "too many batches")
@@ -347,7 +347,7 @@ func TestDictHash(t *testing.T) {
 	dict := blobtestutils.GetDict(t)
 	dictStore, err := dictionary.SingletonStore(blobtestutils.GetDict(t), 1)
 	assert.NoError(t, err)
-	header, _, _, err := blob.DecompressBlob(blobBytes, dictStore) // a bit roundabout, but the header field is not public
+	header, _, _, _, err := blob.DecompressBlob(blobBytes, dictStore) // a bit roundabout, but the header field is not public
 	assert.NoError(t, err)
 
 	circuit := testDataDictHashCircuit{

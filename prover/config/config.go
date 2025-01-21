@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"github.com/consensys/linea-monorepo/prover/lib/compressor/blob/dictionary"
 	"os"
 	"path"
 	"path/filepath"
@@ -218,13 +219,13 @@ type BlobDecompression struct {
 	// ProverMode stores the kind of prover to use.
 	ProverMode ProverMode `mapstructure:"prover_mode" validate:"required,oneof=dev full"`
 
-	// DictPath is an optional parameters allowing the user to specificy explicitly
-	// where to look for the compression dictionary. If the input is not provided
+	// DictPaths is an optional parameters allowing the user to specify explicitly
+	// where to look for the compression dictionaries. If the input is not provided
 	// then the dictionary will be fetched in <assets_dir>/<version>/<circuitID>/compression_dict.bin.
 	//
 	// We stress that the feature should not be used in production and should
-	// only be used in E2E testing context.
-	DictPath string `mapstructure:"dict_path"`
+	// only be used in E2E testing context. TODO @Tabaie @alexandre.belling revise this warning, seems to no longer apply
+	DictPaths []string `mapstructure:"dict_paths"`
 }
 
 type Aggregation struct {
@@ -280,15 +281,16 @@ type PublicInput struct {
 
 }
 
-// BlobDecompressionDictPath returns the filepath where to look for the blob
-// decompression dictionary file. If provided in the config, the function returns
-// in priority the provided [BlobDecompression.DictPath] or it returns a
+// BlobDecompressionDictStore returns a decompression dictionary store
+// loaded from paths specified in [BlobDecompression.DictPaths].
+// If no such path is provided, it loads one from the
 // prover assets path depending on the provided circuitID.
-func (cfg *Config) BlobDecompressionDictPath(circuitID string) string {
+func (cfg *Config) BlobDecompressionDictStore(circuitID string) dictionary.Store {
 
-	if len(cfg.BlobDecompression.DictPath) > 0 {
-		return cfg.BlobDecompression.DictPath
+	paths := cfg.BlobDecompression.DictPaths
+	if len(paths) == 0 {
+		paths = []string{filepath.Join(cfg.PathForSetup(circuitID), DefaultDictionaryFileName)}
 	}
 
-	return filepath.Join(cfg.PathForSetup(string(circuitID)), DefaultDictionaryFileName)
+	return dictionary.NewStore(paths...)
 }

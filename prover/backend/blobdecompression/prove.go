@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"encoding/base64"
 	"fmt"
-	"os"
-
 	blob_v0 "github.com/consensys/linea-monorepo/prover/lib/compressor/blob/v0"
 	blob_v1 "github.com/consensys/linea-monorepo/prover/lib/compressor/blob/v1"
 
@@ -68,14 +66,9 @@ func Prove(cfg *config.Config, req *Request) (*Response, error) {
 		return nil, fmt.Errorf("unsupported blob version: %v", version)
 	}
 
-	dictPath := cfg.BlobDecompressionDictPath(string(circuitID))
+	logrus.Info("reading dictionaries")
 
-	logrus.Infof("reading the dictionary at %v", dictPath)
-
-	dict, err := os.ReadFile(dictPath)
-	if err != nil {
-		return nil, fmt.Errorf("error reading the dictionary: %w", err)
-	}
+	dictStore := cfg.BlobDecompressionDictStore(string(circuitID))
 
 	// This computes the assignment
 
@@ -88,7 +81,7 @@ func Prove(cfg *config.Config, req *Request) (*Response, error) {
 
 	assignment, pubInput, _snarkHash, err := blobdecompression.Assign(
 		utils.RightPad(blobBytes, expectedMaxUsableBytes),
-		dict,
+		dictStore,
 		req.Eip4844Enabled,
 		xBytes,
 		y,

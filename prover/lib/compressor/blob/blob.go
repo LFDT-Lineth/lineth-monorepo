@@ -23,7 +23,7 @@ func GetVersion(blob []byte) uint16 {
 	return 0
 }
 
-func GetDict(dictPath string) ([]byte, error) {
+func LoadDict(dictPath string) ([]byte, error) {
 	return os.ReadFile(dictPath)
 }
 
@@ -43,7 +43,7 @@ func DecompressBlob(blob []byte, dictStore dictionary.Store) ([]byte, error) {
 		_, _, blocks, err = v0.DecompressBlob(blob, dictStore)
 		blockDecoder = v0.DecodeBlockFromUncompressed
 	case 1:
-		_, _, blocks, err = v1.DecompressBlob(blob, dictStore)
+		_, _, blocks, _, err = v1.DecompressBlob(blob, dictStore)
 		blockDecoder = v1.DecodeBlockFromUncompressed
 	default:
 		return nil, errors.New("unrecognized blob version")
