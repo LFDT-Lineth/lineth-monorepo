@@ -4,8 +4,7 @@ plugins {
 }
 
 group = 'build.linea.staterecovery'
-archivesBaseName = 'linea-staterecovery-plugin'
-version = '0.0.1-rc2'
+archivesBaseName = 'linea-staterecovery-besu-plugin'
 
 dependencies {
   compileOnly("info.picocli:picocli:${libs.versions.picoli.get()}") {
@@ -53,6 +52,8 @@ shadowJar {
   if ("${project.version}" != 'unspecified') {
     archiveClassifier.set('')
     archiveVersion.set("${project.version}")
+  } else {
+    archiveClassifier.set('SNAPSHOT')
   }
 
   dependencies {

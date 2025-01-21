@@ -12,12 +12,12 @@ project:
   java:
     version: '21'
     groupId: build.linea
-    artifactId: staterecovery-besu-plugin
+    artifactId: linea-staterecovery-besu-plugin
 
 release:
   github:
     overwrite: true
-    releaseName: 'State Recovery'
+    releaseName: 'State Recovery {{version}}'
     changelog:
       enabled: false
     commitAuthor:
@@ -28,4 +28,4 @@ distributions:
   staterecovery:
     type: SINGLE_JAR
     artifacts:
-      - path: 'build/libs/{{tagName}}.jar'
+      - path: 'build/libs/linea-staterecovery-besu-plugin-{{version}}.jar'
