@@ -19,8 +19,6 @@ ext.groupsToIncludeInShadow = [
   "org.jetbrains.kotlin:kotlin-reflect.*",
   "org.jetbrains.kotlinx:kotlinx-datetime.*",
   "tech.pegasys.teku.internal:async",
-  "io.vertx.*",
-  // this can be removed once Besu updates to Vertx 4.12+
   "com.michael-bull.kotlin-result:kotlin-result.*",
   "com.fasterxml.jackson.module:jackson-module-kotlin",
 ]

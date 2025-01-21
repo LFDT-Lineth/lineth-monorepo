@@ -6,7 +6,7 @@ plugins {
 //def besuArtifactGroup="org.hyperledger.besu"
 //def besuVersion=libs.versions.besu.get()
 def besuArtifactGroup="io.consensys.linea-besu"
-def besuVersion="24.12-develop-2098dd2"
+def besuVersion="25.1-delivery43"
 
 dependencies {
   api("${besuArtifactGroup}:besu-datatypes:${besuVersion}") {

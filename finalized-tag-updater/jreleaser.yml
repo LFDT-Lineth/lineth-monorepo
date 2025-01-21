@@ -17,7 +17,7 @@ project:
 release:
   github:
     overwrite: true
-    releaseName: 'Finalized Tag Updater'
+    releaseName: 'Finalized Tag Updater {{version}}'
     changelog:
       enabled: false
     commitAuthor:
@@ -28,4 +28,4 @@ distributions:
   finalized-tag-updater:
     type: SINGLE_JAR
     artifacts:
-      - path: 'build/libs/{{tagName}}.jar'
+      - path: 'build/libs/finalized-tag-updater-{{version}}.jar'

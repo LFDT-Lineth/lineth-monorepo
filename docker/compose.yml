@@ -471,7 +471,7 @@ services:
       - l1network
 
   zkbesu-shomei:
-    image: consensys/linea-besu-package:${SEQUENCER_TAG:-devnet-811f30b}
+    image: consensys/linea-besu-package:${SEQUENCER_TAG:-devnet-87bbd7c}
     hostname: zkbesu-shomei
     container_name: zkbesu-shomei
     profiles: [ "l2", "l2-bc", "external-to-monorepo" ]
@@ -697,7 +697,7 @@ services:
         ipv4_address: 10.10.10.205
 
   zkbesu-shomei-sr:
-    image: consensys/linea-besu-package:${SEQUENCER_TAG:-devnet-811f30b}
+    image: consensys/linea-besu-package:${SEQUENCER_TAG:-devnet-87bbd7c}
     hostname: zkbesu-shomei-sr
     container_name: zkbesu-shomei-sr
     profiles: [ "external-to-monorepo", "staterecovery" ]
@@ -728,8 +728,9 @@ services:
       - -c
       - |
         chown -R besu:besu /opt/besu/plugins && \
+        rm /opt/besu/plugins/linea-staterecovery-besu-plugin-v* && \
         ls -lh /opt/besu/plugins && \
-        sed -i '/^CLASSPATH/c\CLASSPATH=/opt/besu/lib/\*' /opt/besu/bin/besu && \
+        sed -i '/^CLASSPATH/c\CLASSPATH=/opt/besu/lib/\*\:/opt/besu/plugins/\*' /opt/besu/bin/besu && \
         /opt/besu/bin/besu \
         --config-file=/var/lib/besu/zkbesu-config.toml \
         --genesis-file=/var/lib/besu/genesis.json \
@@ -748,7 +749,6 @@ services:
       - ./config/zkbesu-shomei/zkbesu-config.toml:/var/lib/besu/zkbesu-config.toml:ro
       - ./config/zkbesu-shomei/log4j-staterecovery.xml:/var/lib/besu/log4j.xml:ro
       - ./config/linea-local-dev-genesis-PoA-besu.json/:/var/lib/besu/genesis.json:ro
-      - ../state-recovery/besu-plugin/build/libs/linea-staterecovery-besu-plugin-SNAPSHOT.jar:/opt/besu/lib/linea-staterecovery-besu-plugin-SNAPSHOT.jar
       - ../state-recovery/besu-plugin/build/libs/linea-staterecovery-besu-plugin-SNAPSHOT.jar:/opt/besu/plugins/linea-staterecovery-besu-plugin-SNAPSHOT.jar
 
   shomei-sr:

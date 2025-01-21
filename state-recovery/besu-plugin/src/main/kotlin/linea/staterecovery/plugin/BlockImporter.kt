@@ -6,9 +6,9 @@ import net.consensys.toBigInteger
 import net.consensys.toULong
 import org.apache.logging.log4j.LogManager
 import org.apache.tuweni.bytes.Bytes32
-import org.hyperledger.besu.datatypes.AccountOverrideMap
 import org.hyperledger.besu.datatypes.Address
 import org.hyperledger.besu.datatypes.Hash
+import org.hyperledger.besu.datatypes.StateOverrideMap
 import org.hyperledger.besu.plugin.data.BlockContext
 import org.hyperledger.besu.plugin.data.BlockHeader
 import org.hyperledger.besu.plugin.data.BlockOverrides
@@ -49,7 +49,7 @@ class BlockImporter(
         parentBlockNumber,
         transactions,
         createOverrides(block),
-        AccountOverrideMap()
+        StateOverrideMap()
       )
 
     log.debug(
@@ -84,7 +84,7 @@ class BlockImporter(
         parentBlockNumber,
         context.blockBody.transactions,
         createOverrides(context.blockHeader),
-        AccountOverrideMap()
+        StateOverrideMap()
       )
     log.debug(
       "simulateAndPersistWorldState result: block={} blockHeader={}",

@@ -32,8 +32,6 @@ clean-environment:
 		make clean-local-folders
 		docker network prune -f
 		docker volume rm linea-local-dev linea-logs || true # ignore failure if volumes do not exist already
-		# Commented out because it's quite time consuming to download the plugin, but it's useful to remember about it
-		#rm -rf tmp/linea-besu-sequencer/plugins/
 
 start-l1:
 		L1_GENESIS_TIME=$(get_future_time) docker compose -f docker/compose.yml -f docker/compose-local-dev.overrides.yml --profile l1 up -d
