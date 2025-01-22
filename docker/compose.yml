@@ -23,7 +23,7 @@ services:
   sequencer:
     hostname: sequencer
     container_name: sequencer
-    image: consensys/linea-besu-package:${SEQUENCER_TAG:-mainnet-b297345}
+    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-mainnet-fc27c01}
     profiles: [ "l2", "l2-bc", "debug", "external-to-monorepo" ]
     ports:
       - "8545:8545"
@@ -100,7 +100,7 @@ services:
   l2-node-besu:
     hostname: l2-node-besu
     container_name: l2-node-besu
-    image: consensys/linea-besu-package:${SEQUENCER_TAG:-mainnet-811f30b}
+    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-mainnet-fc27c01}
     profiles: [ "l2", "l2-bc", "debug", "external-to-monorepo" ]
     depends_on:
       sequencer:
@@ -206,7 +206,7 @@ services:
   postman:
     container_name: postman
     hostname: postman
-    image: consensys/linea-postman:${POSTMAN_TAG:-f58c12a}
+    image: consensys/linea-postman:${POSTMAN_TAG:-1f8647e}
     profiles: [ "l2", "debug" ]
     platform: linux/amd64
     restart: on-failure
@@ -225,7 +225,7 @@ services:
   traces-api:
     hostname: traces-api
     container_name: traces-api
-    image: consensys/linea-traces-api-facade:${TRACES_API_TAG:-e9f2bcc}
+    image: consensys/linea-traces-api-facade:${TRACES_API_TAG:-1f8647e}
     profiles: [ "l2", "debug" ]
     restart: on-failure
     depends_on:
@@ -246,7 +246,7 @@ services:
   transaction-exclusion-api:
     hostname: transaction-exclusion-api
     container_name: transaction-exclusion-api
-    image: consensys/linea-transaction-exclusion-api:${TRANSACTION_EXCLUSION_API_TAG:-8749f92}
+    image: consensys/linea-transaction-exclusion-api:${TRANSACTION_EXCLUSION_API_TAG:-1f8647e}
     profiles: [ "l2", "debug" ]
     restart: on-failure
     depends_on:
@@ -267,7 +267,7 @@ services:
   coordinator:
     hostname: coordinator
     container_name: coordinator
-    image: consensys/linea-coordinator:${COORDINATOR_TAG:-a5119c4}
+    image: consensys/linea-coordinator:${COORDINATOR_TAG:-1f8647e}
     platform: linux/amd64
     profiles: [ "l2", "debug" ]
     depends_on:
@@ -363,7 +363,7 @@ services:
   l1-el-node:
     container_name: l1-el-node
     hostname: l1-el-node
-    image: hyperledger/besu:24.10.0
+    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-mainnet-fc27c01}
     profiles: [ "l1", "debug", "external-to-monorepo" ]
     depends_on:
       l1-node-genesis-generator:
@@ -380,6 +380,7 @@ services:
       - /bin/bash
       - -c
       - |
+        rm -fr /opt/besu/plugins && \
         /opt/besu/bin/besu --config-file=/config/config.toml
     volumes:
       - ./config/l1-node/el/besu.key:/config/keys/besu.key:ro
@@ -400,7 +401,7 @@ services:
   l1-cl-node:
     container_name: l1-cl-node
     hostname: l1-cl-node
-    image: consensys/teku:24.10.3
+    image: consensys/teku:24.12.1
     profiles: [ "l1", "debug", "external-to-monorepo" ]
     depends_on:
       l1-el-node:
@@ -471,7 +472,7 @@ services:
       - l1network
 
   zkbesu-shomei:
-    image: consensys/linea-besu-package:${SEQUENCER_TAG:-devnet-87bbd7c}
+    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-devnet-fc27c01}
     hostname: zkbesu-shomei
     container_name: zkbesu-shomei
     profiles: [ "l2", "l2-bc", "external-to-monorepo" ]
@@ -551,7 +552,7 @@ services:
   #      - ../tmp/local/shomei:/data/shomei/:z
 
   shomei-frontend:
-    image: consensys/linea-shomei:2.2.0
+    image: consensys/linea-shomei:2.3.0
     hostname: shomei-frontend
     container_name: shomei-frontend
     profiles: [ "l2", "l2-bc", "external-to-monorepo" ]
@@ -697,12 +698,11 @@ services:
         ipv4_address: 10.10.10.205
 
   zkbesu-shomei-sr:
-    image: consensys/linea-besu-package:${SEQUENCER_TAG:-devnet-87bbd7c}
+    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-devnet-fc27c01}
     hostname: zkbesu-shomei-sr
     container_name: zkbesu-shomei-sr
     profiles: [ "external-to-monorepo", "staterecovery" ]
     privileged: true
-#    restart: none
     user: root
     ports:
       - "9145:8545" # http
@@ -727,7 +727,6 @@ services:
       - /bin/bash
       - -c
       - |
-        chown -R besu:besu /opt/besu/plugins && \
         rm /opt/besu/plugins/linea-staterecovery-besu-plugin-v* && \
         ls -lh /opt/besu/plugins && \
         sed -i '/^CLASSPATH/c\CLASSPATH=/opt/besu/lib/\*\:/opt/besu/plugins/\*' /opt/besu/bin/besu && \

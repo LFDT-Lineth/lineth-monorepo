@@ -5,12 +5,13 @@ CONFIG_NAME: testnet # needs to exist because of Prysm. Otherwise it conflicts w
 # Genesis
 # ---------------------------------------------------------------
 # `2**14` (= 16,384)
-MIN_GENESIS_ACTIVE_VALIDATOR_COUNT: 4
+MIN_GENESIS_ACTIVE_VALIDATOR_COUNT: 1
 # Mar-01-2021 08:53:32 AM +UTC
 # This is an invalid valid and should be updated when you create the genesis
 MIN_GENESIS_TIME: $GENESIS_TIME
 GENESIS_FORK_VERSION: 0x10000038
-GENESIS_DELAY: 30
+GENESIS_DELAY: 10
+MAX_BLOBS_PER_BLOCK: 18
 
 
 # Forking
@@ -39,7 +40,7 @@ DENEB_FORK_EPOCH: 0
 
 # Time parameters
 # ---------------------------------------------------------------
-# 12 seconds
+# 1 seconds
 SECONDS_PER_SLOT: 1
 # 14 (estimate from Eth1 mainnet)
 SECONDS_PER_ETH1_BLOCK: 1
