@@ -211,7 +211,7 @@ func runCmd(cmd string, job *Job, retry bool) Status {
 	if err != nil {
 		// Failing to start the process can happen for various different
 		// reasons. It can be that the commands contains invalid characters
-		// like "\0". In practice, some of theses errors might be retriable
+		// like "\0". In practice, some of theses errors might be retryable
 		// and remains to see which one can. Until then, they will need to
 		// be manually retried.
 		logrus.Errorf("unexpected : failed to start process %v with error", pname)
@@ -228,7 +228,7 @@ func runCmd(cmd string, job *Job, retry bool) Status {
 		// Here it means, the "os" package could not start the process. It
 		// can happen for many different reasons essentially pertaining to
 		// the initialization of the process. It may be that some of theses
-		// errors are retriables but it remains to see which one. Until then
+		// errors are retryables but it remains to see which one. Until then
 		// we exited with a fatal code and the files will need to be
 		// manually reprocessed.
 		logrus.Errorf("unexpected : got an error trying to lock on %v : %v", pname, err)

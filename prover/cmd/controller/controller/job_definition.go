@@ -202,8 +202,8 @@ func AggregatedDefinition(conf *config.Config) JobDefinition {
 			"{{.Start}}-{{.End}}-{{.ContentHash}}-getZkAggregatedProof.json",
 		),
 
-		// Execution job are at utmost priority
-		Priority: 1,
+		// Aggregation prover executes with the lowest priority
+		Priority: 2,
 
 		// Parameters of the regexp, they can loose in the sense that these
 		// regexp are only called if the `InputFileRegexp` is matched.
