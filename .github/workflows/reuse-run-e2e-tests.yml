@@ -99,7 +99,7 @@ jobs:
           chmod -R a+w tmp/local/traces/v2/conflated
       - name: Restore cached images
         id: restore-cached-images
-        uses: actions/cache/restore@v4.0.2
+        uses: actions/cache/restore@v4.2.0
         with:
           path: ~/docker-images
           key: cached-images
