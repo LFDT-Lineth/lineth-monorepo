@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   store_image_name_and_tags:
-    runs-on: [self-hosted, ubuntu-20.04, X64, small]
+    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
     name: Compute version tags
     env:
       # REF_NAME: ${{ github.ref_name }}

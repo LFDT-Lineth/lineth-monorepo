@@ -11,7 +11,7 @@ jobs:
     uses: ./.github/workflows/reuse-store-image-name-and-tags.yml
 
   filter-commit-changes:
-    runs-on: [self-hosted, ubuntu-20.04, X64, small]
+    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
     name: Filter commit changes
     outputs:
       coordinator: ${{ steps.filter.outputs.coordinator }}
@@ -148,7 +148,7 @@ jobs:
     secrets: inherit
 
   manual-docker-build-and-e2e-tests:
-    runs-on: [self-hosted, ubuntu-20.04, X64, small]
+    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
     needs: [ store-image-name-and-tags, filter-commit-changes, check-and-tag-images ]
     if: ${{ needs.filter-commit-changes.outputs.has-changes-requiring-build == 'true' }}
     environment: ${{ github.ref != 'refs/heads/main' && 'docker-build-and-e2e' || '' }}
@@ -245,7 +245,7 @@ jobs:
   cleanup-deployments:
     needs: [ run-e2e-tests, run-e2e-tests-geth-tracing ]
     if: ${{ always() }}
-    runs-on: [self-hosted, ubuntu-20.04, X64, small]
+    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
     steps:
       - uses: strumwolf/delete-deployment-environment@v3
         with:

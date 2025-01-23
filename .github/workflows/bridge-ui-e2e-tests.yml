@@ -16,7 +16,7 @@ on:
 
 jobs:
   run-e2e-tests:
-    runs-on: [self-hosted, ubuntu-20.04, X64, medium]
+    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-med
     steps:
       - name: Checkout
         uses: actions/checkout@v4

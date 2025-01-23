@@ -9,7 +9,7 @@ concurrency:
 
 jobs:
   run-tests:
-    runs-on: [self-hosted, ubuntu-22.04, X64, large]
+    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-large
     name: Postman & SDK tests
     steps:
       - name: Checkout

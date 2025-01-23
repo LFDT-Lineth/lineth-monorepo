@@ -16,7 +16,7 @@ on:
 
 jobs:
   changes:
-    runs-on: [self-hosted, ubuntu-20.04, X64, small]
+    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
     name: Filter commit changes
     outputs:
       all-tools: ${{ steps.filter.outputs['all-tools'] }}
@@ -39,7 +39,7 @@ jobs:
     uses: ./.github/workflows/reuse-store-image-name-and-tags.yml
 
   check_image_tags_exist:
-    runs-on: [self-hosted, ubuntu-20.04, X64, small]
+    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
     name: Check image tags exist
     needs: [ changes, store_image_name_and_tags ]
     if: ${{ needs.changes.outputs['all-tools'] == 'false' }}
@@ -53,7 +53,7 @@ jobs:
           image_name: consensys/linea-alltools
 
   all-tools-tag-only:
-    runs-on: [self-hosted, ubuntu-20.04, X64, small]
+    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
     name: All tools tag only
     needs: [ changes, store_image_name_and_tags, check_image_tags_exist ]
     if: ${{ github.event_name != 'pull_request' && needs.changes.outputs['all-tools'] == 'false' }}
