@@ -22,7 +22,25 @@
 
 ;; row i + 0
 ;; row i + 1
-;; are ethereum vs. linea dependent, see ethereum.lisp and linea.lisp
+;; are ethereum vs. linea dependent, see constants in ethereum.lisp and linea.lisp
+
+(defconstraint   gaslimit---lower-bound
+                 (:guard (gaslimit-precondition))
+                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                 (wcp-call-to-GEQ   0
+                                    (curr-GASLIMIT-hi)
+                                    (curr-GASLIMIT-lo)
+                                    0
+                                    GAS_LIMIT_MINIMUM))
+
+(defconstraint   gaslimit---upper-bound
+                 (:guard (gaslimit-precondition))
+                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                 (wcp-call-to-LEQ   1
+                                    (curr-GASLIMIT-hi)
+                                    (curr-GASLIMIT-lo)
+                                    0
+                                    GAS_LIMIT_MAXIMUM))
 
 (defconstraint   gaslimit---compute-maximum-deviation
                  (:guard (gaslimit-precondition))
