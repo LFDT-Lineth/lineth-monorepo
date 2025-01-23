@@ -100,17 +100,8 @@ export default function Approve() {
     if (token) {
       const amount = getValues("amount");
       const amountBigInt = parseUnits(amount, token.decimals);
-      let amountToApprove = amountBigInt;
 
-      if (allowance && allowance > 0n) {
-        if (allowance >= amountBigInt) {
-          amountToApprove = allowance - amountBigInt;
-        } else {
-          amountToApprove = amountBigInt - allowance;
-        }
-      }
-
-      writeApprove(amountToApprove, tokenBridgeAddress);
+      writeApprove(amountBigInt, tokenBridgeAddress);
     }
   };
 

@@ -13,7 +13,7 @@ type UseReceivedAmountProps = {
 export function useReceivedAmount({ amount, enoughAllowance, claim }: UseReceivedAmountProps) {
   const [estimatedGasFee, setEstimatedGasFee] = useState<bigint>(0n);
 
-  const { token, tokenBridgeAddress, networkLayer, networkType } = useChainStore((state) => ({
+  const { token, tokenBridgeAddress, networkLayer } = useChainStore((state) => ({
     token: state.token,
     tokenBridgeAddress: state.tokenBridgeAddress,
     networkLayer: state.networkLayer,
@@ -28,7 +28,6 @@ export function useReceivedAmount({ amount, enoughAllowance, claim }: UseReceive
     token,
     claim,
     networkLayer,
-    networkType,
     minimumFee,
   });
 
