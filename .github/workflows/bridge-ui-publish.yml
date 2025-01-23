@@ -5,18 +5,21 @@ on:
     branches:
       - main
     paths:
+      - '.github/workflows/bridge-ui-publish.yml'
       - 'bridge-ui/**'
       - '!bridge-ui/**/*.md'
   push:
     branches:
       - main
     paths:
+      - '.github/workflows/bridge-ui-publish.yml'
       - 'bridge-ui/**'
       - '!bridge-ui/**/*.md'
 
 jobs:
   publish:
-    runs-on: [self-hosted, ubuntu-20.04, X64, small]
+    # ~1 min saved vs small
+    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-med
     env:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}

@@ -46,7 +46,7 @@ jobs:
   pull-and-cache-images:
     needs: [ check-dockerhub-secrets-present, changes ]
     if: ${{ always() && needs.check-dockerhub-secrets-present.outputs.secrets_present == 'true' && needs.changes.outputs.cache_images == 'true' }}
-    runs-on: [self-hosted, ubuntu-20.04, X64, small]
+    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-med
     steps:
       - name: Checkout
         uses: actions/checkout@v4

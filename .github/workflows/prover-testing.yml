@@ -10,7 +10,8 @@ concurrency:
 
 jobs:
   staticcheck:
-    runs-on: [self-hosted, ubuntu-20.04, X64, small]
+    # ~1.5 mins saved vs small
+    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-med
     name: Prover static check
     steps:
     - name: install Go
@@ -52,7 +53,8 @@ jobs:
     strategy:
       matrix:
         go-version: [1.23.x]
-    runs-on: [self-hosted, ubuntu-22.04, X64, large]
+    # ~1 min saved vs large
+    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-xl
     name: Prover testing
     needs:
       - staticcheck

@@ -3,6 +3,7 @@ name: Smart contracts test
 on:
   pull_request:
     paths:
+      - '.github/workflows/run-smc-tests.yml'
       - 'contracts/**'
       - 'testdata/**'
       - 'prover/**'
@@ -15,6 +16,7 @@ on:
     branches:
       - main
     paths:
+      - '.github/workflows/run-smc-tests.yml'
       - 'contracts/**'
       - 'testdata/**'
       - 'prover/**'
@@ -29,7 +31,8 @@ env:
 
 jobs:
   run-contract-tests:
-    runs-on: [self-hosted, ubuntu-20.04, X64, small]
+    # ~2 mins saved vs small
+    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-med
     name: Run smart contracts tests
     env:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

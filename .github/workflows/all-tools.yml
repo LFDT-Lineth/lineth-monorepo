@@ -77,7 +77,8 @@ jobs:
   build-and-publish:
     needs: [ changes, store_image_name_and_tags, all-tools-tag-only ]
     if: ${{ always() && (needs.changes.outputs['all-tools'] == 'true' || needs.all-tools-tag-only.result != 'success' || needs.all-tools-tag-only.outputs.image_tagged != 'true') }}
-    runs-on: [self-hosted, ubuntu-20.04, X64, small]
+    # ~0.5 mins saved vs small
+    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-med
     env:
       COMMIT_TAG: ${{ needs.store_image_name_and_tags.outputs.commit_tag }}
       DEVELOP_TAG: ${{ needs.store_image_name_and_tags.outputs.develop_tag }}

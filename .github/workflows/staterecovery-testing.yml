@@ -27,7 +27,8 @@ jobs:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-large
+    # ~2.5 mins saved vs large
+    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-xl
     name: Staterecovery tests
     steps:
       - name: Checkout
