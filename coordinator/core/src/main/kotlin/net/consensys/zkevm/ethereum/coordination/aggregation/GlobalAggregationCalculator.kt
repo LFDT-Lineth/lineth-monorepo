@@ -7,7 +7,6 @@ import net.consensys.zkevm.domain.BlobCounters
 import net.consensys.zkevm.domain.BlobsToAggregate
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
-import java.lang.IllegalStateException
 import java.util.PriorityQueue
 
 class GlobalAggregationCalculator(

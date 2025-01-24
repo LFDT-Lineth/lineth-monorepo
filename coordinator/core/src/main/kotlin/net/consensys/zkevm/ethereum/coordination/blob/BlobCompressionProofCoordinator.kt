@@ -38,10 +38,21 @@ class BlobCompressionProofCoordinator(
   private val blobsToHandle = LinkedBlockingDeque<Blob>(defaultQueueCapacity)
   private var timerId: Long? = null
   private lateinit var blobPollingAction: Handler<Long>
+
   private val blobsCounter = metricsFacade.createCounter(
     category = LineaMetricsCategory.BLOB,
     name = "counter",
     description = "New blobs arriving to blob compression proof coordinator"
+  )
+  private val blobSizeInBlocksHistogram = metricsFacade.createHistogram(
+    category = LineaMetricsCategory.BLOB,
+    name = "blocks.size",
+    description = "Number of blocks in each blob"
+  )
+  private val blobSizeInBatchesHistogram = metricsFacade.createHistogram(
+    category = LineaMetricsCategory.BLOB,
+    name = "batches.size",
+    description = "Number of batches in each blob"
   )
 
   init {
@@ -167,6 +178,8 @@ class BlobCompressionProofCoordinator(
       blobsToHandle.size,
       blob.conflations.toBlockIntervalsString()
     )
+    blobSizeInBlocksHistogram.record(blob.blocksRange.count().toDouble())
+    blobSizeInBatchesHistogram.record(blob.conflations.size.toDouble())
     blobsToHandle.put(blob)
     log.trace("Blob was added to the handling queue {}", blob)
     return SafeFuture.completedFuture(Unit)
