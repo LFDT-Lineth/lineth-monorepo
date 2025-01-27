@@ -33,7 +33,7 @@ class BlockImporter(
   private fun executeBlockWithTransactionsWithoutSignature(
     block: BlockFromL1RecoveredData
   ): PluginBlockSimulationResult {
-    log.debug(
+    log.trace(
       "simulating import block={} blockHash={}",
       block.header.blockNumber,
       block.header.blockHash.encodeHex()
@@ -52,7 +52,7 @@ class BlockImporter(
         StateOverrideMap()
       )
 
-    log.debug(
+    log.trace(
       " import simulation result: block={} blockHeader={}",
       executedBlockResult.blockHeader.number,
       executedBlockResult.blockHeader
@@ -73,7 +73,7 @@ class BlockImporter(
   }
 
   fun importBlock(context: BlockContext): PluginBlockSimulationResult {
-    log.debug(
+    log.trace(
       "calling simulateAndPersistWorldState block={} blockHeader={}",
       context.blockHeader.number,
       context.blockHeader
@@ -86,7 +86,7 @@ class BlockImporter(
         createOverrides(context.blockHeader),
         StateOverrideMap()
       )
-    log.debug(
+    log.trace(
       "simulateAndPersistWorldState result: block={} blockHeader={}",
       context.blockHeader.number,
       importedBlockResult.blockHeader

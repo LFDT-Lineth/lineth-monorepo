@@ -17,9 +17,6 @@ concurrency:
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
-  cache-docker-images:
-    uses: ./.github/workflows/cache-docker-images.yml
-    secrets: inherit
   run-tests:
     env:
       COMMIT_TAG: ${{ inputs.commit_tag }}
@@ -71,10 +68,20 @@ jobs:
         timeout-minutes: 15
         run: |
           ./gradlew state-recovery:test-cases:integrationTest
-      - name: Run Jacoco Staterecovery
-        run: |
-          ./gradlew jacocoRootReport
+#      - name: Setup upterm session
+#        if: ${{ inputs.e2e-tests-with-ssh }}
+#        uses: lhotari/action-upterm@v1
+#      Stack fails to start in CI - Disable for now
+#      - name: Run E2E tests
+#        timeout-minutes: 15
+#        run: |
+#          mkdir -p tmp/local/
+#          chmod -R a+w tmp/local/
+#          ./gradlew state-recovery:test-cases:e2eTest
 # TMP disable as it conflicts with coordinator report
+#      - name: Run Jacoco Staterecovery
+#        run: |
+#          ./gradlew jacocoRootReport
 #      - name: Upload Jacoco report Staterecovery
 #        uses: actions/upload-artifact@v4
 #        with:

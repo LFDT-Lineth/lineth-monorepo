@@ -5,7 +5,7 @@ import io.vertx.core.Vertx
 import linea.staterecovery.BlockHeaderStaticFields
 import linea.staterecovery.FileBasedRecoveryStatusPersistence
 import linea.staterecovery.RecoveryStatusPersistence
-import linea.staterecovery.StateRecoverApp
+import linea.staterecovery.StateRecoveryApp
 import linea.staterecovery.clients.ExecutionLayerInProcessClient
 import net.consensys.linea.async.get
 import org.apache.logging.log4j.LogManager
@@ -27,14 +27,14 @@ fun <T : BesuService> ServiceManager.getServiceOrThrow(clazz: Class<T>): T {
     .orElseThrow { IllegalStateException("${clazz.name} is not present in BesuContext") }
 }
 
-open class LineaStateRecoverPlugin : BesuPlugin {
-  private val log: Logger = LogManager.getLogger(LineaStateRecoverPlugin::class.java)
+open class LineaStateRecoveryPlugin : BesuPlugin {
+  private val log: Logger = LogManager.getLogger(LineaStateRecoveryPlugin::class.java)
   private val vertx = Vertx.vertx()
   private val cliOptions = PluginCliOptions()
   private lateinit var serviceManager: ServiceManager
   private lateinit var recoveryModeManager: RecoveryModeManager
   private lateinit var recoveryStatusPersistence: RecoveryStatusPersistence
-  private lateinit var stateRecoverApp: StateRecoverApp
+  private lateinit var stateRecoverApp: StateRecoveryApp
 
   override fun register(serviceManager: ServiceManager) {
     log.debug("registering")
@@ -70,7 +70,8 @@ open class LineaStateRecoverPlugin : BesuPlugin {
       p2pService = serviceManager.getServiceOrThrow(P2PService::class.java),
       miningService = serviceManager.getServiceOrThrow(MiningService::class.java),
       recoveryStatePersistence = this.recoveryStatusPersistence,
-      synchronizationService = synchronizationService
+      synchronizationService = synchronizationService,
+      headBlockNumber = blockchainService.chainHeadHeader.number.toULong()
     )
     val simulatorService = serviceManager.getServiceOrThrow(BlockSimulationService::class.java)
     val executionLayerClient = ExecutionLayerInProcessClient.create(
@@ -91,7 +92,7 @@ open class LineaStateRecoverPlugin : BesuPlugin {
         l1RpcEndpoint = config.l1RpcEndpoint,
         blobScanEndpoint = config.blobscanEndpoint,
         blockHeaderStaticFields = blockHeaderStaticFields,
-        appConfig = StateRecoverApp.Config(
+        appConfig = StateRecoveryApp.Config(
           smartContractAddress = config.l1SmartContractAddress.toString(),
           l1LatestSearchBlock = net.consensys.linea.BlockParameter.Tag.LATEST,
           overridingRecoveryStartBlockNumber = config.overridingRecoveryStartBlockNumber,

@@ -3,21 +3,21 @@ package linea.staterecovery
 import build.linea.clients.StateManagerClientV1
 import build.linea.clients.StateManagerV1JsonRpcClient
 import build.linea.contract.l1.LineaContractVersion
-import build.linea.domain.BlockInterval
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
 import linea.log4j.configureLoggers
-import linea.testing.Runner
+import linea.staterecovery.test.assertBesuAndShomeiStateRootMatches
+import linea.staterecovery.test.execCommandAndAssertSuccess
+import linea.staterecovery.test.waitExecutionLayerToBeUpAndRunning
 import linea.web3j.createWeb3jHttpClient
-import net.consensys.linea.BlockParameter
 import net.consensys.linea.jsonrpc.client.RequestRetryConfig
 import net.consensys.linea.jsonrpc.client.VertxHttpJsonRpcClientFactory
 import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
 import net.consensys.linea.testing.submission.AggregationAndBlobs
 import net.consensys.linea.testing.submission.loadBlobsAndAggregationsSortedAndGrouped
 import net.consensys.linea.testing.submission.submitBlobsAndAggregationsAndWaitExecution
-import net.consensys.toULong
+import net.consensys.zkevm.coordinator.clients.smartcontract.LineaRollupSmartContractClient
 import net.consensys.zkevm.ethereum.ContractsManager
 import net.consensys.zkevm.ethereum.LineaRollupDeploymentResult
 import net.consensys.zkevm.ethereum.MakeFileDelegatedContractsManager.connectToLineaRollupContract
@@ -25,24 +25,29 @@ import net.consensys.zkevm.ethereum.MakeFileDelegatedContractsManager.lineaRollu
 import net.consensys.zkevm.ethereum.Web3jClientManager
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
-import org.assertj.core.api.Assertions.assertThat
-import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
+import org.web3j.protocol.Web3j
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.net.URI
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
-import kotlin.time.toJavaDuration
 
 @ExtendWith(VertxExtension::class)
 class StateRecoveryWithRealBesuAndStateManagerIntTest {
   private val log = LogManager.getLogger("test.case.StateRecoverAppWithLocalStackIntTest")
   private lateinit var stateManagerClient: StateManagerClientV1
   private val testDataDir = "testdata/coordinator/prover/v3"
-
+  private val aggregationsAndBlobs: List<AggregationAndBlobs> = loadBlobsAndAggregationsSortedAndGrouped(
+    blobsResponsesDir = "$testDataDir/compression/responses",
+    aggregationsResponsesDir = "$testDataDir/aggregation/responses"
+  )
+  private lateinit var rollupDeploymentResult: LineaRollupDeploymentResult
+  private lateinit var contractClientForBlobSubmission: LineaRollupSmartContractClient
+  private lateinit var contractClientForAggregationSubmission: LineaRollupSmartContractClient
   private val executionLayerUrl = "http://localhost:9145"
   private val stateManagerUrl = "http://localhost:8890"
 
@@ -64,14 +69,10 @@ class StateRecoveryWithRealBesuAndStateManagerIntTest {
       zkStateManagerVersion = "2.3.0",
       logger = LogManager.getLogger("test.clients.l1.state-manager")
     )
-  }
 
-  private lateinit var rollupDeploymentResult: LineaRollupDeploymentResult
-
-  @Test
-  fun setupDeployContractForL2L1StateReplay() {
     configureLoggers(
       rootLevel = Level.INFO,
+      log.name to Level.DEBUG,
       "net.consensys.linea.contract.Web3JContractAsyncHelper" to Level.WARN,
       "test.clients.l1.executionlayer" to Level.INFO,
       "test.clients.l1.web3j-default" to Level.INFO,
@@ -82,72 +83,66 @@ class StateRecoveryWithRealBesuAndStateManagerIntTest {
       "test.clients.l1.blobscan" to Level.INFO,
       "net.consensys.linea.contract.l1" to Level.INFO
     )
-    val aggregationsAndBlobs: List<AggregationAndBlobs> = loadBlobsAndAggregationsSortedAndGrouped(
-      blobsResponsesDir = "$testDataDir/compression/responses",
-      aggregationsResponsesDir = "$testDataDir/aggregation/responses"
-    )
+  }
 
+  @Test
+  @Order(1)
+  fun `should recover status from genesis - seed data replay`() {
     this.rollupDeploymentResult = ContractsManager.get()
-      .deployLineaRollup(numberOfOperators = 2, contractVersion = LineaContractVersion.V6).get()
-    log.info("""LineaRollup address=${rollupDeploymentResult.contractAddress}""")
+      .deployLineaRollup(numberOfOperators = 2, contractVersion = LineaContractVersion.V6)
+      .get()
+    log.info("LineaRollup address={}", rollupDeploymentResult.contractAddress)
+    contractClientForBlobSubmission = rollupDeploymentResult.rollupOperatorClient
+    contractClientForAggregationSubmission = connectToLineaRollupContract(
+      rollupDeploymentResult.contractAddress,
+      // index 0 is the first operator in rollupOperatorClient
+      rollupDeploymentResult.rollupOperators[1].txManager,
+      smartContractErrors = lineaRollupContractErrors
+    )
     log.info("starting stack for recovery of state pushed to L1")
-    val staterecoveryNodesStartFuture = SafeFuture.supplyAsync {
-      Runner.executeCommand(
-        "make staterecovery-replay-from-genesis L1_ROLLUP_CONTRACT_ADDRESS=${rollupDeploymentResult.contractAddress}"
-      )
-    }
+    val staterecoveryNodesStartFuture = execCommandAndAssertSuccess(
+      "make staterecovery-replay-from-block " +
+        "L1_ROLLUP_CONTRACT_ADDRESS=${rollupDeploymentResult.contractAddress} " +
+        "PLUGIN_STATERECOVERY_OVERRIDE_START_BLOCK_NUMBER=1",
+      log = log
+    )
+    val lastAggregationAndBlobs = aggregationsAndBlobs.findLast { it.aggregation != null }!!
+    val lastAggregation = lastAggregationAndBlobs.aggregation!!
+
     val blobsSubmissionFuture = SafeFuture.supplyAsync {
       submitBlobsAndAggregationsAndWaitExecution(
-        contractClientForBlobSubmission = rollupDeploymentResult.rollupOperatorClient,
-        contractClientForAggregationSubmission = connectToLineaRollupContract(
-          rollupDeploymentResult.contractAddress,
-          // index 0 is the first operator in rollupOperatorClient
-          rollupDeploymentResult.rollupOperators[1].txManager,
-          smartContractErrors = lineaRollupContractErrors
-        ),
+        contractClientForBlobSubmission = contractClientForBlobSubmission,
+        contractClientForAggregationSubmission = contractClientForAggregationSubmission,
         aggregationsAndBlobs = aggregationsAndBlobs,
         blobChunksSize = 6,
         l1Web3jClient = Web3jClientManager.l1Client,
         waitTimeout = 4.minutes
       )
+      log.info("finalization={} executed on l1", lastAggregation.intervalString())
     }
     SafeFuture.allOf(staterecoveryNodesStartFuture, blobsSubmissionFuture).get()
 
     val web3jElClient = createWeb3jHttpClient(executionLayerUrl)
 
-    // wait for state-manager to be up and running
-    await()
-      .pollInterval(1.seconds.toJavaDuration())
-      .atMost(5.minutes.toJavaDuration())
-      .untilAsserted {
-        kotlin.runCatching {
-          assertThat(web3jElClient.ethBlockNumber().send().blockNumber.toLong()).isGreaterThanOrEqualTo(0L)
-        }.getOrElse {
-          log.info("waiting for Besu to start, trying to connect to $executionLayerUrl")
-          throw AssertionError("could not connect to $executionLayerUrl", it)
-        }
-      }
+    // wait for Besu to be up and running
+    waitExecutionLayerToBeUpAndRunning(executionLayerUrl, log = log)
 
-    val lastAggregationAndBlobs = aggregationsAndBlobs.findLast { it.aggregation != null }!!
-    val lastAggregation = lastAggregationAndBlobs.aggregation!!
-    await()
-      .untilAsserted {
-        assertThat(
-          rollupDeploymentResult.rollupOperatorClient
-            .finalizedL2BlockNumber(blockParameter = BlockParameter.Tag.LATEST).get()
-        ).isGreaterThanOrEqualTo(lastAggregation.endBlockNumber)
-      }
-    log.info("finalization={} executed on l1", lastAggregation.intervalString())
+    assertBesuAndShomeiStateRootMatches(web3jElClient, stateManagerClient, lastAggregationAndBlobs)
+  }
 
-    val expectedZkEndStateRootHash = lastAggregationAndBlobs.blobs.last().blobCompressionProof!!.finalStateRootHash
-    await()
-      .atMost(5.minutes.toJavaDuration())
-      .untilAsserted {
-        assertThat(web3jElClient.ethBlockNumber().send().blockNumber.toULong())
-          .isGreaterThanOrEqualTo(lastAggregation.endBlockNumber)
-        val blockInterval = BlockInterval(lastAggregation.endBlockNumber, lastAggregation.endBlockNumber)
-        assertThat(stateManagerClient.rollupGetStateMerkleProof(blockInterval).get().zkEndStateRootHash)
-          .isEqualTo(expectedZkEndStateRootHash)
-      }
+  private fun assertBesuAndShomeiStateRootMatches(
+    web3jElClient: Web3j,
+    stateManagerClient: StateManagerClientV1,
+    targetAggregationAndBlobs: AggregationAndBlobs
+  ) {
+    val targetAggregation = targetAggregationAndBlobs.aggregation!!
+    val expectedZkEndStateRootHash = targetAggregationAndBlobs.blobs.last().blobCompressionProof!!.finalStateRootHash
+
+    assertBesuAndShomeiStateRootMatches(
+      web3jElClient,
+      stateManagerClient,
+      targetAggregation.endBlockNumber,
+      expectedZkEndStateRootHash
+    )
   }
 }

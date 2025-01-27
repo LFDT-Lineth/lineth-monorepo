@@ -17,7 +17,7 @@ import java.util.concurrent.CompletableFuture
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
-class StateRecoverApp(
+class StateRecoveryApp(
   private val vertx: Vertx,
   // Driving Ports
   private val lineaContractClient: LineaRollupSmartContractClientReadOnly,

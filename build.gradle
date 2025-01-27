@@ -179,7 +179,7 @@ dockerCompose {
     projectName = "docker"
   }
 
-  localStackForStateRecover {
+  localStackForStateRecovery {
     startedServices = [
       "postgres",
       "sequencer",
@@ -189,9 +189,6 @@ dockerCompose {
       "blobscan-api",
       "blobscan-indexer",
       "redis",
-      // For debug
-      // "l1-blockscout",
-      // "l2-blockscout"
     ]
     composeAdditionalArgs = [
       "--profile",

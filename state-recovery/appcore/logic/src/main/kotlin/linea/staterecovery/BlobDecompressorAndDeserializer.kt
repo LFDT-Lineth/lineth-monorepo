@@ -83,7 +83,7 @@ class BlobDecompressorToDomainV1(
   ): SafeFuture<List<BlockFromL1RecoveredData>> {
     var blockNumber = startBlockNumber
     val startTime = Clock.System.now()
-    logger.debug("start decompressing blobs: startBlockNumber={} {} blobs", startBlockNumber, blobs.size)
+    logger.trace("start decompressing blobs: startBlockNumber={} {} blobs", startBlockNumber, blobs.size)
     val decompressedBlobs = blobs.map { decompressor.decompress(it) }
     return SafeFuture
       .collectAll(decompressedBlobs.map(::decodeBlocksAsync).stream())

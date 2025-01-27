@@ -3,6 +3,7 @@ package linea.testing
 import net.consensys.linea.async.toSafeFuture
 import net.consensys.linea.testing.filesystem.getPathTo
 import org.apache.logging.log4j.LogManager
+import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.io.BufferedReader
 import java.io.File
@@ -12,9 +13,15 @@ import kotlin.time.Duration.Companion.minutes
 
 data class CommandResult(
   val exitCode: Int,
-  val stdOut: List<String>,
-  val stdErr: List<String>
-)
+  val stdOutLines: List<String>,
+  val stdErrLines: List<String>
+) {
+  val isSuccess: Boolean = exitCode == 0
+  val stdOutStr: String
+    get() = stdOutLines.joinToString("\n")
+  val stdErrStr: String
+    get() = stdErrLines.joinToString("\n")
+}
 
 object Runner {
 
@@ -22,9 +29,9 @@ object Runner {
     command: String,
     envVars: Map<String, String> = emptyMap(),
     executionDir: File = getPathTo("Makefile").parent.toFile(),
-    timeout: Duration = 1.minutes
+    timeout: Duration = 1.minutes,
+    log: Logger = LogManager.getLogger(Runner::class.java)
   ): SafeFuture<CommandResult> {
-    val log = LogManager.getLogger("net.consensys.zkevm.ethereum.CommandExecutor")
     val processBuilder = ProcessBuilder("/bin/sh", "-c", command)
     processBuilder.directory(executionDir)
 
@@ -74,5 +81,25 @@ object Runner {
       }
 
     return futureResult.toSafeFuture()
+  }
+
+  fun executeCommandFailOnNonZeroExitCode(
+    command: String,
+    envVars: Map<String, String> = emptyMap(),
+    executionDir: File = getPathTo("Makefile").parent.toFile(),
+    timeout: Duration = 1.minutes,
+    log: Logger = LogManager.getLogger(Runner::class.java)
+  ): SafeFuture<CommandResult> {
+    return executeCommand(command, envVars, executionDir, timeout, log)
+      .thenCompose { execResult ->
+        if (!execResult.isSuccess) {
+          val errorMessage = "command='$command' failed with exitCode=${execResult.exitCode} " +
+            "STDERR=${execResult.stdErrStr}"
+          log.debug(errorMessage)
+          SafeFuture.failedFuture(RuntimeException(errorMessage))
+        } else {
+          SafeFuture.completedFuture(execResult)
+        }
+      }
   }
 }

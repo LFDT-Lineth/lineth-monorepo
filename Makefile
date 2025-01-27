@@ -29,9 +29,10 @@ clean-testnet-folders:
 
 clean-environment:
 		docker compose -f docker/compose.yml -f docker/compose-local-dev-traces-v2.overrides.yml --profile l1 --profile l2 --profile debug --profile staterecovery kill -s 9 || true
+		docker compose -f docker/compose.yml -f docker/compose-local-dev-traces-v2.overrides.yml --profile l1 --profile l2 --profile debug --profile staterecovery down || true
 		make clean-local-folders
-		docker network prune -f
 		docker volume rm linea-local-dev linea-logs || true # ignore failure if volumes do not exist already
+		docker system prune -f || true
 
 start-l1:
 		L1_GENESIS_TIME=$(get_future_time) docker compose -f docker/compose.yml -f docker/compose-local-dev.overrides.yml --profile l1 up -d
@@ -50,8 +51,10 @@ start-whole-environment:
 
 start-whole-environment-traces-v2: COMPOSE_PROFILES:=l1,l2
 start-whole-environment-traces-v2:
-		COMPOSE_PROFILES=$(COMPOSE_PROFILES) docker compose -f docker/compose.yml -f docker/compose-local-dev-traces-v2.overrides.yml up -d
-
+	@if [ -z "$(L1_GENESIS_TIME)" ]; then \
+		L1_GENESIS_TIME=$(get_future_time); \
+	fi; \
+	L1_GENESIS_TIME=$$L1_GENESIS_TIME COMPOSE_PROFILES=$(COMPOSE_PROFILES) docker compose -f docker/compose.yml -f docker/compose-local-dev-traces-v2.overrides.yml up -d
 
 pull-all-images:
 		COMPOSE_PROFILES:=l1,l2 docker compose -f docker/compose.yml -f docker/compose-local-dev-traces-v2.overrides.yml pull
@@ -220,18 +223,19 @@ fresh-start-all-staterecovery: COMPOSE_PROFILES:=l1,l2,staterecovery
 fresh-start-all-staterecovery: L1_CONTRACT_VERSION:=6
 fresh-start-all-staterecovery:
 	make clean-environment
-	L1_GENESIS_TIME=$(get_future_time) make start-whole-environment-traces-v2 COMPOSE_PROFILES=$(COMPOSE_PROFILES)
+	make start-whole-environment-traces-v2 COMPOSE_PROFILES=$(COMPOSE_PROFILES)
 	$(MAKE) deploy-contracts-minimal L1_CONTRACT_VERSION=$(L1_CONTRACT_VERSION)
 
 fresh-start-staterecovery-for-replay-only: COMPOSE_PROFILES:=l1,staterecovery
 fresh-start-staterecovery-for-replay-only:
 	make clean-environment
-	L1_GENESIS_TIME=$(get_future_time) make start-whole-environment-traces-v2 COMPOSE_PROFILES=$(COMPOSE_PROFILES)
+	make start-whole-environment-traces-v2 COMPOSE_PROFILES=$(COMPOSE_PROFILES)
 
-staterecovery-replay-from-genesis: L1_ROLLUP_CONTRACT_ADDRESS:=0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9
-staterecovery-replay-from-genesis:
+staterecovery-replay-from-block: L1_ROLLUP_CONTRACT_ADDRESS:=0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9
+staterecovery-replay-from-block: PLUGIN_STATERECOVERY_OVERRIDE_START_BLOCK_NUMBER:=1
+staterecovery-replay-from-block:
 	docker compose -f docker/compose.yml down zkbesu-shomei-sr shomei-sr
-	L1_ROLLUP_CONTRACT_ADDRESS=$(L1_ROLLUP_CONTRACT_ADDRESS) docker compose -f docker/compose.yml up zkbesu-shomei-sr shomei-sr -d
+	L1_ROLLUP_CONTRACT_ADDRESS=$(L1_ROLLUP_CONTRACT_ADDRESS) PLUGIN_STATERECOVERY_OVERRIDE_START_BLOCK_NUMBER=$(PLUGIN_STATERECOVERY_OVERRIDE_START_BLOCK_NUMBER) docker compose -f docker/compose.yml up zkbesu-shomei-sr shomei-sr -d
 
 testnet-start-l2:
 		docker compose -f docker/compose.yml -f docker/compose-testnet-sync.overrides.yml --profile l2 up -d

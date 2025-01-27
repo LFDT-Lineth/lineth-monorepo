@@ -8,7 +8,7 @@ import io.vertx.core.Vertx
 import io.vertx.micrometer.backends.BackendRegistries
 import linea.staterecovery.BlockHeaderStaticFields
 import linea.staterecovery.ExecutionLayerClient
-import linea.staterecovery.StateRecoverApp
+import linea.staterecovery.StateRecoveryApp
 import linea.staterecovery.TransactionDetailsClient
 import linea.staterecovery.clients.VertxTransactionDetailsClient
 import linea.staterecovery.clients.blobscan.BlobScanClient
@@ -29,8 +29,8 @@ fun createAppAllInProcess(
   l1RpcEndpoint: URI,
   blobScanEndpoint: URI,
   blockHeaderStaticFields: BlockHeaderStaticFields,
-  appConfig: StateRecoverApp.Config
-): StateRecoverApp {
+  appConfig: StateRecoveryApp.Config
+): StateRecoveryApp {
   val lineaContractClient = Web3JLineaRollupSmartContractClientReadOnly(
     contractAddress = appConfig.smartContractAddress,
     web3j = createWeb3jHttpClient(
@@ -78,7 +78,7 @@ fun createAppAllInProcess(
     logger = LogManager.getLogger("linea.plugin.staterecover.clients.l1.transaction-details")
   )
 
-  val app = StateRecoverApp(
+  val app = StateRecoveryApp(
     vertx = vertx,
     lineaContractClient = lineaContractClient,
     ethLogsSearcher = ethLogsSearcher,

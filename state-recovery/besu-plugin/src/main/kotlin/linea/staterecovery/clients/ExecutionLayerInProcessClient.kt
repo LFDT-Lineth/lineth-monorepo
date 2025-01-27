@@ -8,6 +8,7 @@ import linea.staterecovery.plugin.BlockImporter
 import linea.staterecovery.plugin.RecoveryModeManager
 import net.consensys.linea.BlockNumberAndHash
 import net.consensys.linea.BlockParameter
+import net.consensys.linea.CommonDomainFunctions
 import org.apache.logging.log4j.LogManager
 import org.hyperledger.besu.plugin.data.BlockHeader
 import org.hyperledger.besu.plugin.services.BlockSimulationService
@@ -104,7 +105,10 @@ class ExecutionLayerInProcessClient(
     if (log.isTraceEnabled) {
       log.trace("importing blocks from blob: blocks={}", blocks)
     } else {
-      log.debug("importing blocks from blob: blocks={}", blocks.map { it.header.blockNumber })
+      log.debug(
+        "importing blocks from blob: blocks={}",
+        CommonDomainFunctions.blockIntervalString(blocks.first().header.blockNumber, blocks.last().header.blockNumber)
+      )
     }
   }
 }

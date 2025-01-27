@@ -14,17 +14,28 @@ class RecoveryModeManager(
   private val synchronizationService: SynchronizationService,
   private val p2pService: P2PService,
   private val miningService: MiningService,
-  private val recoveryStatePersistence: RecoveryStatusPersistence
+  private val recoveryStatePersistence: RecoveryStatusPersistence,
+  headBlockNumber: ULong
 ) :
   BesuEvents.BlockAddedListener {
   private val log: Logger = LogManager.getLogger(RecoveryModeManager::class.java.name)
   private val recoveryModeTriggered = AtomicBoolean(false)
-  private var currentBlockNumber: ULong = 0u
   val targetBlockNumber: ULong?
     get() = recoveryStatePersistence.getRecoveryStartBlockNumber()
+  var headBlockNumber: ULong = headBlockNumber
+    private set
 
-  val headBlockNumber: ULong
-    get() = currentBlockNumber
+  init {
+    log.info("RecoveryModeManager initializing: headBlockNumber={}", headBlockNumber)
+    if (hasReachedTargetBlock()) {
+      log.info(
+        "enabling recovery mode immediately at blockNumber={} recoveryTargetBlockNumber={}",
+        headBlockNumber,
+        targetBlockNumber
+      )
+      switchToRecoveryMode()
+    }
+  }
 
   /**
    * Called when a block is added.
@@ -34,14 +45,14 @@ class RecoveryModeManager(
   @Synchronized
   override fun onBlockAdded(addedBlockContext: AddedBlockContext) {
     val blockNumber = addedBlockContext.blockHeader.number
-    currentBlockNumber = blockNumber.toULong()
+    headBlockNumber = blockNumber.toULong()
     if (!recoveryModeTriggered.get() && hasReachedTargetBlock()) {
       switchToRecoveryMode()
     }
   }
 
   private fun hasReachedTargetBlock(): Boolean {
-    return currentBlockNumber >= ((targetBlockNumber ?: ULong.MAX_VALUE) - 1u)
+    return (headBlockNumber + 1u) >= (targetBlockNumber ?: ULong.MAX_VALUE)
   }
 
   /**
@@ -51,20 +62,28 @@ class RecoveryModeManager(
    */
   @Synchronized
   fun setTargetBlockNumber(targetBlockNumber: ULong) {
-    check(!recoveryModeTriggered.get()) {
-      "Cannot set target block number after recovery mode has been triggered"
+    if (recoveryModeTriggered.get()) {
+      if (targetBlockNumber == this.targetBlockNumber) {
+        log.info("recovery mode already enabled at blockNumber={}", headBlockNumber)
+        return
+      } else {
+        check(!recoveryModeTriggered.get()) {
+          "recovery mode has already been triggered at block=${this.targetBlockNumber} " +
+            "trying new target=$targetBlockNumber"
+        }
+      }
     }
-    val effectiveRecoveryStartBlockNumber = if (targetBlockNumber <= currentBlockNumber + 1u) {
-      log.warn(
-        "targetBlockNumber={} is less than or equal to headBlockNumber={}" +
-          " enabling recovery mode immediately at blockNumber={}",
-        targetBlockNumber,
-        currentBlockNumber,
-        currentBlockNumber + 1u
 
+    val effectiveRecoveryStartBlockNumber = if (targetBlockNumber <= headBlockNumber + 1u) {
+      val effectiveRecoveryStartBlockNumber = headBlockNumber + 1u
+      log.warn(
+        "enabling recovery mode immediately at blockNumber={} recoveryTargetBlockNumber={} headBlockNumber={}",
+        effectiveRecoveryStartBlockNumber,
+        targetBlockNumber,
+        headBlockNumber
       )
       switchToRecoveryMode()
-      currentBlockNumber + 1u
+      effectiveRecoveryStartBlockNumber
     } else {
       targetBlockNumber
     }

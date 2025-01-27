@@ -44,7 +44,7 @@ import kotlin.time.toJavaDuration
 @ExtendWith(VertxExtension::class)
 class StateRecoveryAppWithFakeExecutionClientIntTest {
   private val log = LogManager.getLogger("test.case.StateRecoverAppWithFakeExecutionClientIntTest")
-  private lateinit var stateRecoverApp: StateRecoverApp
+  private lateinit var stateRecoverApp: StateRecoveryApp
   private lateinit var aggregationsAndBlobs: List<AggregationAndBlobs>
   private lateinit var executionLayerClient: FakeExecutionLayerClient
   private lateinit var fakeStateManagerClient: FakeStateManagerClient
@@ -129,7 +129,7 @@ class StateRecoveryAppWithFakeExecutionClientIntTest {
       logger = LogManager.getLogger("test.clients.l1.blobscan")
     )
 
-    stateRecoverApp = StateRecoverApp(
+    stateRecoverApp = StateRecoveryApp(
       vertx = vertx,
       elClient = executionLayerClient,
       blobFetcher = blobScanClient,
@@ -138,7 +138,7 @@ class StateRecoveryAppWithFakeExecutionClientIntTest {
       transactionDetailsClient = transactionDetailsClient,
       blockHeaderStaticFields = BlockHeaderStaticFields.localDev,
       lineaContractClient = lineaContractClient,
-      config = StateRecoverApp.Config(
+      config = StateRecoveryApp.Config(
         l1LatestSearchBlock = BlockParameter.Tag.LATEST,
         l1PollingInterval = 10.milliseconds,
         executionClientPollingInterval = 1.seconds,

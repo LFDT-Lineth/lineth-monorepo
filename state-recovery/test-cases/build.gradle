@@ -21,6 +21,7 @@ dependencies {
   api(project(':state-recovery:appcore:logic'))
 
   implementation project(':jvm-libs:linea:besu-libs')
+  implementation project(':jvm-libs:linea:testing:file-system')
   implementation(testFixtures(project(':jvm-libs:generic:json-rpc')))
   implementation(project(':state-recovery:clients:eth-api'))
   implementation(project(':state-recovery:clients:blobscan-client'))
@@ -32,6 +33,7 @@ dependencies {
   implementation(project(":coordinator:ethereum:test-utils"))
   implementation(project(":jvm-libs:linea:testing:l1-blob-and-proof-submission"))
   implementation(testFixtures(project(":jvm-libs:linea:blob-compressor")))
+  implementation(testFixtures(project(':jvm-libs:linea:web3j-extensions')))
   testImplementation("io.vertx:vertx-junit5")
   testImplementation(project(":jvm-libs:linea:metrics:micrometer"))
 }
@@ -39,11 +41,19 @@ dependencies {
 sourceSets {
   integrationTest {
     kotlin {
-      compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath + sourceSets.test.compileClasspath
-      runtimeClasspath += sourceSets.main.output + sourceSets.main.runtimeClasspath + sourceSets.test.runtimeClasspath
+      compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath + sourceSets.test.output + sourceSets.test.compileClasspath
+      runtimeClasspath += sourceSets.main.output + sourceSets.main.runtimeClasspath + sourceSets.test.output + sourceSets.test.runtimeClasspath
     }
-    compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath + sourceSets.test.compileClasspath
-    runtimeClasspath += sourceSets.main.output + sourceSets.main.runtimeClasspath + sourceSets.test.runtimeClasspath
+    compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath + sourceSets.test.output + sourceSets.test.compileClasspath
+    runtimeClasspath += sourceSets.main.output + sourceSets.main.runtimeClasspath + sourceSets.test.output + sourceSets.test.runtimeClasspath
+  }
+  e2eTest {
+    kotlin {
+      compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath + sourceSets.test.output + sourceSets.test.compileClasspath
+      runtimeClasspath += sourceSets.main.output + sourceSets.main.runtimeClasspath + sourceSets.test.output + sourceSets.test.runtimeClasspath
+    }
+    compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath + sourceSets.test.output + sourceSets.test.compileClasspath
+    runtimeClasspath += sourceSets.main.output + sourceSets.main.runtimeClasspath + sourceSets.test.output + sourceSets.test.runtimeClasspath
   }
 }
 
@@ -65,7 +75,41 @@ task integrationTest(type: Test) { test ->
   classpath = sourceSets.integrationTest.runtimeClasspath
   testClassesDirs = sourceSets.integrationTest.output.classesDirs
 
-  dependsOn(":localStackForStateRecoverComposeUp")
+  dependsOn(":localStackForStateRecoveryComposeUp")
+
+  testLogging {
+    events TestLogEvent.FAILED,
+        TestLogEvent.SKIPPED,
+        TestLogEvent.STANDARD_ERROR,
+        TestLogEvent.STARTED,
+        TestLogEvent.PASSED
+    exceptionFormat TestExceptionFormat.FULL
+    showCauses true
+    showExceptions true
+    showStackTraces true
+    // set showStandardStreams if you need to see test logs
+    showStandardStreams true
+  }
+}
+
+task e2eTest(type: Test) { test ->
+  outputs.cacheIf { false }
+  systemProperty "vertx.parameter.filename", project.projectDir.toPath()
+      .resolve("src/test/resources/vertx-options.json")
+      .toAbsolutePath().toString()
+
+  description = "Runs e2e tests."
+  group = "verification"
+  useJUnitPlatform()
+
+  classpath = sourceSets.e2eTest.runtimeClasspath
+  testClassesDirs = sourceSets.e2eTest.output.classesDirs
+
+  systemProperties["junit.jupiter.execution.timeout.default"] = "5 m" // 5 minutes
+  systemProperties["junit.jupiter.execution.parallel.enabled"] = false
+  systemProperties["junit.jupiter.execution.parallel.mode.default"] = "concurrent"
+  systemProperties["junit.jupiter.execution.parallel.mode.classes.default"] = "concurrent"
+  maxParallelForks = Math.max(Runtime.runtime.availableProcessors(), 9)
 
   testLogging {
     events TestLogEvent.FAILED,

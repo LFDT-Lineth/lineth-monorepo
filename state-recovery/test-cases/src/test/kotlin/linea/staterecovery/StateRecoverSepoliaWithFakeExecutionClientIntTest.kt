@@ -35,7 +35,7 @@ import kotlin.time.toJavaDuration
 @ExtendWith(VertxExtension::class)
 class StateRecoverSepoliaWithFakeExecutionClientIntTest {
   private val log = LogManager.getLogger("test.case.StateRecoverSepoliaWithFakeExecutionClientIntTest")
-  private lateinit var stateRecoverApp: StateRecoverApp
+  private lateinit var stateRecoverApp: StateRecoveryApp
   private lateinit var logsSearcher: EthLogsSearcher
   private lateinit var executionLayerClient: FakeExecutionLayerClient
   private lateinit var blobFetcher: BlobFetcher
@@ -91,7 +91,7 @@ class StateRecoverSepoliaWithFakeExecutionClientIntTest {
     fakeStateManagerClient = FakeStateManagerClientReadFromL1(
       headBlockNumber = ULong.MAX_VALUE,
       logsSearcher = logsSearcher,
-      contractAddress = StateRecoverApp.Config.lineaSepolia.smartContractAddress
+      contractAddress = StateRecoveryApp.Config.lineaSepolia.smartContractAddress
     )
     transactionDetailsClient = VertxTransactionDetailsClient.create(
       jsonRpcClientFactory = jsonRpcFactory,
@@ -109,10 +109,10 @@ class StateRecoverSepoliaWithFakeExecutionClientIntTest {
         requestResponseLogLevel = Level.INFO,
         failuresLogLevel = Level.DEBUG
       ),
-      contractAddress = StateRecoverApp.Config.lineaSepolia.smartContractAddress
+      contractAddress = StateRecoveryApp.Config.lineaSepolia.smartContractAddress
     )
 
-    stateRecoverApp = StateRecoverApp(
+    stateRecoverApp = StateRecoveryApp(
       vertx = vertx,
       elClient = executionLayerClient,
       blobFetcher = blobFetcher,
@@ -121,7 +121,7 @@ class StateRecoverSepoliaWithFakeExecutionClientIntTest {
       transactionDetailsClient = transactionDetailsClient,
       blockHeaderStaticFields = BlockHeaderStaticFields.localDev,
       lineaContractClient = lineaContractClient,
-      config = StateRecoverApp.Config(
+      config = StateRecoveryApp.Config(
         l1LatestSearchBlock = BlockParameter.Tag.LATEST,
         l1PollingInterval = 5.seconds,
         executionClientPollingInterval = 1.seconds,
