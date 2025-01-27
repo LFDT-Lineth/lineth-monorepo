@@ -1,9 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Configuration status="INFO" monitorInterval="2">
-  <Properties>
-    <Property name="root.log.level">WARN</Property>
-  </Properties>
-
+<Configuration level="INFO" monitorInterval="2">
   <Appenders>
     <Console name="Console" target="SYSTEM_OUT">
       <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSSZZZ} | %t | %-5level | %c{1} | %msg %throwable{short.message}%n" />
@@ -31,7 +27,7 @@
     <Logger name="io.opentelemetry" level="WARN" additivity="false">
       <AppenderRef ref="Console"/>
     </Logger>
-    <Root level="${sys:root.log.level}">
+    <Root level="INFO">
       <AppenderRef ref="Console"/>
     </Root>
   </Loggers>
