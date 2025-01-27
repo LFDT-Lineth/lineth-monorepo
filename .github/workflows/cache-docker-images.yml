@@ -47,30 +47,35 @@ jobs:
     needs: [ check-dockerhub-secrets-present, changes ]
     if: ${{ always() && needs.check-dockerhub-secrets-present.outputs.secrets_present == 'true' && needs.changes.outputs.cache_images == 'true' }}
     runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-med
+    name: Pull and cache images
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Compute docker images hash
+        id: compute-docker-images-hash
+        uses: ./.github/actions/compute-docker-images-hash
+      - name: Create cached docker images folder
+        run: |
+          mkdir -p ~/docker-images-cached
+      - name: Cache common docker images
+        id: cache-common-docker-images
+        uses: actions/cache@v4.2.0
+        with:
+          path: ~/docker-images-cached
+          key: docker-images-cache-${{ steps.compute-docker-images-hash.outputs.docker_images_hash }}
+          lookup-only: true
       - name: Login to Docker Hub
+        if: steps.cache-common-docker-images.outputs.cache-hit != 'true'
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: Pull docker images from compose
-        continue-on-error: true
+      - name: Pull docker images
+        if: steps.cache-common-docker-images.outputs.cache-hit != 'true'
         run: |
           docker compose -f docker/compose.yml -f docker/compose-local-dev-traces-v2.overrides.yml --profile l1 --profile l2 pull
-      - name: Save Docker images
+      - name: Cache docker images
+        if: steps.cache-common-docker-images.outputs.cache-hit != 'true'
         run: |
-          mkdir -p ~/docker-images
-          images=$(docker compose -f docker/compose.yml -f docker/compose-local-dev-traces-v2.overrides.yml --profile l1 --profile l2 config | grep "image:" | awk '{print $2}')
-          for image in $images; do
-            imageFileName=$(echo $image | sed -e 's|.*/||' -e 's|:|-|' -e 's/\./_/g')
-            echo $image - ${imageFileName}
-            docker save $image > ~/docker-images/${imageFileName}.tar
-          done
-      - name: Cache common docker images
-        continue-on-error: true
-        uses: actions/cache/save@v4.2.0
-        with:
-          path: ~/docker-images
-          key: cached-images
+          docker save ${{ steps.compute-docker-images-hash.outputs.docker_images_trimmed }} -o  ~/docker-images-cached/docker-images.tar
+          echo docker-images.tar=$(ls -lh ~/docker-images-cached/docker-images.tar)

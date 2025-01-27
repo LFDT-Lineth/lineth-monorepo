@@ -53,15 +53,10 @@ jobs:
     name: Check image tags exist
     outputs:
       last_commit_tag_exists_coordinator: ${{ steps.check_image_tags_exist_coordinator.outputs.last_commit_tag_exists }}
-      common_ancestor_commit_tag_exists_coordinator: ${{ steps.check_image_tags_exist_coordinator.outputs.common_ancestor_commit_tag_exists }}
       last_commit_tag_exists_postman: ${{ steps.check_image_tags_exist_postman.outputs.last_commit_tag_exists }}
-      common_ancestor_commit_tag_exists_postman: ${{ steps.check_image_tags_exist_postman.outputs.common_ancestor_commit_tag_exists }}
       last_commit_tag_exists_prover: ${{ steps.check_image_tags_exist_prover.outputs.last_commit_tag_exists }}
-      common_ancestor_commit_tag_exists_prover: ${{ steps.check_image_tags_exist_prover.outputs.common_ancestor_commit_tag_exists }}
       last_commit_tag_exists_traces_api_facade: ${{ steps.check_image_tags_exist_traces_api_facade.outputs.last_commit_tag_exists }}
-      common_ancestor_commit_tag_exists_traces_api_facade: ${{ steps.check_image_tags_exist_traces_api_facade.outputs.common_ancestor_commit_tag_exists }}
       last_commit_tag_exists_transaction_exclusion_api: ${{ steps.check_image_tags_exist_transaction_exclusion_api.outputs.last_commit_tag_exists }}
-      common_ancestor_commit_tag_exists_transaction_exclusion_api: ${{ steps.check_image_tags_exist_transaction_exclusion_api.outputs.common_ancestor_commit_tag_exists }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4

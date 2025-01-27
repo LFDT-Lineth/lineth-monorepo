@@ -16,7 +16,7 @@ networks:
       config:
         - subnet: 10.10.10.0/24
 
-# To debug inside the network and volumes
+# To debug inside the network and volumes:
 # docker run --rm -it --network=docker_linea -v=linea-local-dev:/data -v=linea-logs:/logs weibeld/ubuntu-networking bash
 
 services:
