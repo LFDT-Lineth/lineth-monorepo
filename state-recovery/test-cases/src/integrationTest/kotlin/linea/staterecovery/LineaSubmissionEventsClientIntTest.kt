@@ -104,7 +104,7 @@ class LineaSubmissionEventsClientIntTest {
         smartContractErrors = lineaRollupContractErrors
       ),
       aggregationsAndBlobs = aggregationsAndBlobs,
-      blobChunksSize = 6,
+      blobChunksMaxSize = 6,
       l1Web3jClient = Web3jClientManager.l1Client,
       waitTimeout = 4.minutes
     )

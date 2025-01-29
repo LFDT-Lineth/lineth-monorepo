@@ -11,6 +11,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.Awaitility.await
 import org.web3j.protocol.Web3j
 import tech.pegasys.teku.infrastructure.async.SafeFuture
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toJavaDuration
@@ -28,15 +29,16 @@ fun execCommandAndAssertSuccess(
     }
 }
 
-fun assertBesuAndShomeiStateRootMatches(
+fun assertBesuAndShomeiRecoveredAsExpected(
   web3jElClient: Web3j,
   stateManagerClient: StateManagerClientV1,
   expectedBlockNumber: ULong,
-  expectedZkEndStateRootHash: ByteArray
+  expectedZkEndStateRootHash: ByteArray,
+  timeout: Duration = 60.seconds
 ) {
   await()
     .pollInterval(1.seconds.toJavaDuration())
-    .atMost(5.minutes.toJavaDuration())
+    .atMost(timeout.toJavaDuration())
     .untilAsserted {
       assertThat(web3jElClient.ethBlockNumber().send().blockNumber.toULong())
         .isGreaterThanOrEqualTo(expectedBlockNumber)
@@ -49,12 +51,13 @@ fun assertBesuAndShomeiStateRootMatches(
 fun waitExecutionLayerToBeUpAndRunning(
   executionLayerUrl: String,
   expectedHeadBlockNumber: ULong = 0UL,
-  log: Logger
+  log: Logger,
+  timeout: Duration = 2.minutes
 ) {
   val web3jElClient = createWeb3jHttpClient(executionLayerUrl)
   await()
     .pollInterval(1.seconds.toJavaDuration())
-    .atMost(5.minutes.toJavaDuration())
+    .atMost(timeout.toJavaDuration())
     .untilAsserted {
       runCatching {
         assertThat(web3jElClient.ethBlockNumber().send().blockNumber.toULong())

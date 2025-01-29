@@ -64,6 +64,8 @@ test {
 }
 
 task integrationTest(type: Test) { test ->
+  outputs.cacheIf { false }
+  outputs.upToDateWhen { false }
   systemProperty "vertx.parameter.filename", project.projectDir.toPath()
       .resolve("src/test/resources/vertx-options.json")
       .toAbsolutePath().toString()
@@ -94,6 +96,8 @@ task integrationTest(type: Test) { test ->
 
 task e2eTest(type: Test) { test ->
   outputs.cacheIf { false }
+  outputs.upToDateWhen { false }
+
   systemProperty "vertx.parameter.filename", project.projectDir.toPath()
       .resolve("src/test/resources/vertx-options.json")
       .toAbsolutePath().toString()

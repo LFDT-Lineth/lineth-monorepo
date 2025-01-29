@@ -6,7 +6,7 @@
     </Console>
   </Appenders>
   <Loggers>
-    <Logger name="tech.pegasys.teku.ethereum.executionclient" level="TRACE" additivity="false">
+    <Logger name="tech.pegasys.teku.ethereum.executionclient" level="INFO" additivity="false">
       <AppenderRef ref="Console"/>
     </Logger>
     <Logger name="io.opentelemetry" level="WARN" additivity="false">

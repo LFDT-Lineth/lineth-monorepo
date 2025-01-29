@@ -27,6 +27,11 @@ class RecoveryModeManager(
 
   init {
     log.info("RecoveryModeManager initializing: headBlockNumber={}", headBlockNumber)
+    enableRecoveryModeIfNecessary()
+  }
+
+  @Synchronized
+  fun enableRecoveryModeIfNecessary() {
     if (hasReachedTargetBlock()) {
       log.info(
         "enabling recovery mode immediately at blockNumber={} recoveryTargetBlockNumber={}",
@@ -92,9 +97,6 @@ class RecoveryModeManager(
 
   /** Switches the node to recovery mode.  */
   private fun switchToRecoveryMode() {
-    check(!recoveryModeTriggered.get()) {
-      "cannot enable already enabled recovery mode"
-    }
     log.warn("Stopping synchronization service")
     synchronizationService.stop()
 
@@ -105,7 +107,7 @@ class RecoveryModeManager(
     miningService.stop()
 
     log.info(
-      "Switched to state recovery mode at block={}",
+      "switched to state recovery mode at block={}",
       headBlockNumber
     )
     recoveryModeTriggered.set(true)

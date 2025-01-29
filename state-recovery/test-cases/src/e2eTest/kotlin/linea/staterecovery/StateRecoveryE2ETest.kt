@@ -9,7 +9,7 @@ import io.vertx.junit5.VertxExtension
 import kotlinx.datetime.Clock
 import linea.domain.RetryConfig
 import linea.log4j.configureLoggers
-import linea.staterecovery.test.assertBesuAndShomeiStateRootMatches
+import linea.staterecovery.test.assertBesuAndShomeiRecoveredAsExpected
 import linea.staterecovery.test.execCommandAndAssertSuccess
 import linea.staterecovery.test.getFinalizationsOnL1
 import linea.staterecovery.test.getLastFinalizationOnL1
@@ -161,7 +161,7 @@ class StateRecoveryE2ETest {
     execCommandAndAssertSuccess(
       command = "make staterecovery-replay-from-block " +
         "L1_ROLLUP_CONTRACT_ADDRESS=$localStackL1ContractAddress " +
-        "PLUGIN_STATERECOVERY_OVERRIDE_START_BLOCK_NUMBER=$stateRecoveryStartBlockNumber",
+        "STATERECOVERY_OVERRIDE_START_BLOCK_NUMBER=$stateRecoveryStartBlockNumber",
       log = log
     ).get()
     // No Errors should be logged in Besu
@@ -169,7 +169,7 @@ class StateRecoveryE2ETest {
     // wait for Besu to be up and running
     waitExecutionLayerToBeUpAndRunning(executionLayerUrl, log = log)
     // assert besu and shomei could sync through P2P network
-    assertBesuAndShomeiStateRootMatches(
+    assertBesuAndShomeiRecoveredAsExpected(
       web3jElClient,
       stateManagerClient,
       lastFinalizationA.event.endBlockNumber,
@@ -191,7 +191,7 @@ class StateRecoveryE2ETest {
       }
     val lastFinalizationB = getLastFinalizationOnL1(logsSearcher, localStackL1ContractAddress)
     log.info("lastFinalizationB={}", lastFinalizationB.event.intervalString())
-    assertBesuAndShomeiStateRootMatches(
+    assertBesuAndShomeiRecoveredAsExpected(
       web3jElClient,
       stateManagerClient,
       lastFinalizationB.event.endBlockNumber,
@@ -228,7 +228,7 @@ class StateRecoveryE2ETest {
     val lastFinalizationC = getLastFinalizationOnL1(logsSearcher, localStackL1ContractAddress)
     log.info("lastFinalizationC={}", lastFinalizationC.event.intervalString())
 
-    assertBesuAndShomeiStateRootMatches(
+    assertBesuAndShomeiRecoveredAsExpected(
       web3jElClient,
       stateManagerClient,
       lastFinalizationC.event.endBlockNumber,

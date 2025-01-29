@@ -79,7 +79,7 @@ class PluginCliOptions {
       "Tries to force the recovery start block number to the given value. " +
         "This is mean for testing purposes, not production. Must be greater than or equal to 1."
     ],
-    defaultValue = "\${env:PLUGIN_STATERECOVERY_OVERRIDE_START_BLOCK_NUMBER}",
+    defaultValue = "\${env:STATERECOVERY_OVERRIDE_START_BLOCK_NUMBER}",
     required = false
   )
   var overridingRecoveryStartBlockNumber: Long? = null

@@ -726,7 +726,7 @@ services:
     environment:
       LOG4J_CONFIGURATION_FILE: /var/lib/besu/log4j.xml
       L1_ROLLUP_CONTRACT_ADDRESS: ${L1_ROLLUP_CONTRACT_ADDRESS:-0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9}
-      PLUGIN_STATERECOVERY_OVERRIDE_START_BLOCK_NUMBER: ${PLUGIN_STATERECOVERY_OVERRIDE_START_BLOCK_NUMBER:-1}
+      STATERECOVERY_OVERRIDE_START_BLOCK_NUMBER: ${STATERECOVERY_OVERRIDE_START_BLOCK_NUMBER:-1}
     entrypoint:
       - /bin/bash
       - -c
@@ -746,7 +746,7 @@ services:
         --plugin-staterecovery-shomei-endpoint=http://shomei-sr:8888 \
         --plugin-staterecovery-blobscan-endpoint=http://blobscan-api:4001 \
         --plugin-staterecovery-linea-sequencer-beneficiary-address=0x6d976c9b8ceee705d4fe8699b44e5eb58242f484 \
-        --plugin-staterecovery-l1-polling-interval=PT0.1S \
+        --plugin-staterecovery-l1-polling-interval=PT0.01S \
         --bootnodes=enode://14408801a444dafc44afbccce2eb755f902aed3b5743fed787b3c790e021fef28b8c827ed896aa4e8fb46e22bd67c39f994a73768b4b382f8597b0d44370e15d@11.11.11.101:30303
     volumes:
       - ./config/zkbesu-shomei/zkbesu-config.toml:/var/lib/besu/zkbesu-config.toml:ro
