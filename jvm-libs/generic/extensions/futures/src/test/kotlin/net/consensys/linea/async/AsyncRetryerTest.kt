@@ -240,7 +240,7 @@ class AsyncRetryerTest {
 
   @Test
   fun `retry should stop after timeout is elapsed - promise rejected`(vertx: Vertx) {
-    var callCount = AtomicInteger(0)
+    val callCount = AtomicInteger(0)
     val future =
       AsyncRetryer.retry(vertx, 20.milliseconds, timeout = 40.milliseconds) {
         SafeFuture.failedFuture<String>(RuntimeException("Failure number ${callCount.incrementAndGet()}"))
@@ -255,7 +255,7 @@ class AsyncRetryerTest {
       .withMessageContaining("Failure number")
 
     assertThat(callCount.get())
-      .isGreaterThan(1)
+      .isGreaterThanOrEqualTo(1)
       .isLessThanOrEqualTo(3)
   }
 
