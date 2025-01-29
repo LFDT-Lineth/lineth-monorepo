@@ -253,12 +253,12 @@ class BlockCreationMonitorTest {
         assertThat(blockCreationListener.blocksReceived).isNotEmpty
         assertThat(blockCreationListener.blocksReceived.last().number).isGreaterThanOrEqualTo(103u)
       }
-    fakeL2RpcNode.stopHttpServer()
+    fakeL2RpcNode.stopHttpServer().get()
     val lastBlockReceived = blockCreationListener.blocksReceived.last().number
 
     // Wait for a while to make sure no more blocks are fetched
     await().atLeast(config.pollingInterval.times(2).toJavaDuration())
-    fakeL2RpcNode.resumeHttpServer()
+    fakeL2RpcNode.resumeHttpServer().get()
     await()
       .atMost(40.seconds.toJavaDuration())
       .untilAsserted {
