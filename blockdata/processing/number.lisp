@@ -39,7 +39,7 @@
                  (begin
                    (if-not-zero   (is-first-block-in-conflation)
                                   (begin (vanishes!  (curr-NUMBER-hi))
-                                         (vanishes!  (curr-NUMBER-lo))))
+                                         (eq!        (curr-NUMBER-lo)    FIRST_BLOCK_NUMBER)))
                    (if-not-zero   (isnt-first-block-in-conflation)
                                   (begin (eq!  (curr-NUMBER-hi)      (prev-NUMBER-hi))
                                          (eq!  (curr-NUMBER-lo)  (+  (prev-NUMBER-lo)  1))))
