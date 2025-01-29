@@ -110,11 +110,11 @@ finalized-block-tag="latest"
 # reset this once we know what to do on dev/UAT
 earliest-block=0
 genesis-state-root-hash="0x072ead6777750dc20232d1cee8dc9a395c2d350df4bbaa5096c6f59b214dcecd"
-# shnarf for contract V5
+# shnarf for contract V6
 # Keccak256(parentShnarf="0x00...00", snarkHash="0x00...00",
 #   parentStateRootHash="0x072ead6777750dc20232d1cee8dc9a395c2d350df4bbaa5096c6f59b214dcecd",
 #   evaludationClaim="0x00...00", evaludationPoint="0x00...00")
-genesis-shnarf-v5="0x47452a1b9ebadfe02bdd02f580fa1eba17680d57eec968a591644d05d78ee84f"
+genesis-shnarf-v6="0x47452a1b9ebadfe02bdd02f580fa1eba17680d57eec968a591644d05d78ee84f"
 
 [l2]
 rpc-endpoint="http://sequencer:8545"

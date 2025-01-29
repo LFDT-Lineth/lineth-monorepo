@@ -1,6 +1,6 @@
 package net.consensys.zkevm.ethereum.coordination.messageanchoring
 
-import build.linea.contract.LineaRollupV5
+import build.linea.contract.LineaRollupV6
 import io.vertx.core.Vertx
 import net.consensys.linea.async.toSafeFuture
 import net.consensys.toULong
@@ -24,10 +24,10 @@ class L1EventQuerierImpl(
   private val l1Web3jClient: Web3j
 ) : L1EventQuerier {
   companion object {
-    val encodedMessageSentEvent: String = EventEncoder.encode(LineaRollupV5.MESSAGESENT_EVENT)
+    val encodedMessageSentEvent: String = EventEncoder.encode(LineaRollupV6.MESSAGESENT_EVENT)
 
     fun parseMessageSentEventLogs(log: Log): SendMessageEvent {
-      val messageSentEvent = LineaRollupV5.getMessageSentEventFromLog(log)
+      val messageSentEvent = LineaRollupV6.getMessageSentEventFromLog(log)
       return SendMessageEvent(
         Bytes32.wrap(messageSentEvent._messageHash),
         messageSentEvent._nonce.toULong(),

@@ -20,11 +20,9 @@ dependencies {
 web3jContractWrappers {
   def contractsDir = layout.buildDirectory.dir("${rootProject.projectDir}/contracts/abi").get()
   def contractV6Abi = contractsDir.file("LineaRollupV6.0.abi").asFile.absolutePath
-  def contractV5Abi = contractsDir.file("LineaRollupV5.0.abi").asFile.absolutePath
 
   contractsPackage = "build.linea.contract"
   contracts = [
-    "$contractV5Abi": "LineaRollupV5",
     "$contractV6Abi": "LineaRollupV6"
   ]
 }

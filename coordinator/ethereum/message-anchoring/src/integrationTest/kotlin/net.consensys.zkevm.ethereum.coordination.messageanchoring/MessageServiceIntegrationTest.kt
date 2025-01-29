@@ -1,6 +1,6 @@
 package net.consensys.zkevm.ethereum.coordination.messageanchoring
 
-import build.linea.contract.LineaRollupV5
+import build.linea.contract.LineaRollupV6
 import build.linea.contract.l1.LineaContractVersion
 import io.vertx.core.Vertx
 import io.vertx.junit5.Timeout
@@ -49,7 +49,7 @@ class MessageServiceIntegrationTest {
 
   private fun deployContracts() {
     val l1RollupDeploymentResult = ContractsManager.get()
-      .deployLineaRollup(contractVersion = LineaContractVersion.V5)
+      .deployLineaRollup(contractVersion = LineaContractVersion.V6)
       .get()
     @Suppress("DEPRECATION")
     l1ContractLegacyClient = l1RollupDeploymentResult.rollupOperatorClientLegacy
@@ -202,10 +202,10 @@ class MessageServiceIntegrationTest {
         .toSafeFuture()
         .thenApply { transactionReceipt ->
           log.debug("Message has been sent in block {}", transactionReceipt.blockNumber)
-          val eventValues = LineaRollupV5.staticExtractEventParameters(
-            LineaRollupV5.MESSAGESENT_EVENT,
+          val eventValues = LineaRollupV6.staticExtractEventParameters(
+            LineaRollupV6.MESSAGESENT_EVENT,
             transactionReceipt.logs.first { log ->
-              log.topics.contains(EventEncoder.encode(LineaRollupV5.MESSAGESENT_EVENT))
+              log.topics.contains(EventEncoder.encode(LineaRollupV6.MESSAGESENT_EVENT))
             }
           )
           MessageSentResult(

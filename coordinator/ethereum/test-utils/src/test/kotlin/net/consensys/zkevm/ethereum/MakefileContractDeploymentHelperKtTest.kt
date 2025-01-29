@@ -52,8 +52,8 @@ class MakefileContractDeploymentHelperKtTest {
     assertThat(
       getDeployedAddress(
         listOf(
-          "LineaRollupV5.2.1 artifact has been deployed in 1.855172125s ",
-          "contract=LineaRollupV5.2.1 deployed: address=0x8613180dF1485B8b87DEE3BCf31896659eb1a092 blockNumber=1414",
+          "LineaRollup6.2.1 artifact has been deployed in 1.855172125s ",
+          "contract=LineaRollupV6.2.1 deployed: address=0x8613180dF1485B8b87DEE3BCf31896659eb1a092 blockNumber=1414",
           ""
         ),
         lineaRollupAddressPattern

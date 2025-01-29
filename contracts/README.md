@@ -111,7 +111,7 @@ The L2MessageService deploy uses nonce 2 as the following are deployed beforehan
 
 **Deploying the L1 contracts**
 ```
-# This will deploy the Linea Rollup that is currently deployed on Mainnet - the current version is the LineaRollupV5.
+# This will deploy the Linea Rollup that is currently deployed on Mainnet - the current version is the LineaRollupV6.
 # Some end to end tests will test future upgrades to validate the stack remains functional.
 
 # Note: By default a test/placeholder verifier contract is used `IntegrationTestTrueVerifier` if you wish to use a proper verifier, adjust the
@@ -119,10 +119,7 @@ The L2MessageService deploy uses nonce 2 as the following are deployed beforehan
 
 # Be sure to check the parameter values in the Makefile before executing the command.
 
-# Deploy v5
-make deploy-linea-rollup-v5 
-
-# Or deploy v6
+# deploy v6
 make deploy-linea-rollup-v6
 
 make deploy-token-bridge-l1
@@ -145,7 +142,7 @@ make deploy-contracts
 
 The above command will trigger the following commands to deploy:
 
-- deploy-linea-rollup-v5 
+- deploy-linea-rollup-v6 
 - deploy-token-bridge-l1 
 - deploy-l1-test-erc20 
 - deploy-l2messageservice 

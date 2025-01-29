@@ -20,7 +20,6 @@ internal fun buildSubmitBlobsFunction(
   blobs: List<BlobRecord>
 ): Function {
   return when (version) {
-    LineaContractVersion.V5 -> buildSubmitBlobsFunction(blobs)
     LineaContractVersion.V6 -> buildSubmitBlobsFunctionV6(blobs)
   }
 }
@@ -63,21 +62,10 @@ fun buildFinalizeBlocksFunction(
   version: LineaContractVersion,
   aggregationProof: ProofToFinalize,
   aggregationLastBlob: BlobRecord,
-  parentShnarf: ByteArray,
   parentL1RollingHash: ByteArray,
   parentL1RollingHashMessageNumber: Long
 ): Function {
   when (version) {
-    LineaContractVersion.V5 -> {
-      return buildFinalizeBlobsFunction(
-        aggregationProof,
-        aggregationLastBlob,
-        parentShnarf,
-        parentL1RollingHash,
-        parentL1RollingHashMessageNumber
-      )
-    }
-
     LineaContractVersion.V6 -> {
       return buildFinalizeBlockFunctionV6(
         aggregationProof,

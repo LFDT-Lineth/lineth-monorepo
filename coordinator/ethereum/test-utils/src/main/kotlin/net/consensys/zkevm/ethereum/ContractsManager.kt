@@ -57,7 +57,7 @@ interface ContractsManager {
   fun deployRollupAndL2MessageService(
     dataCompressionAndProofAggregationMigrationBlock: ULong = 1000UL,
     numberOfOperators: Int = 1,
-    l1ContractVersion: LineaContractVersion = LineaContractVersion.V5
+    l1ContractVersion: LineaContractVersion = LineaContractVersion.V6
   ): SafeFuture<ContactsDeploymentResult>
 
   fun connectToLineaRollupContract(

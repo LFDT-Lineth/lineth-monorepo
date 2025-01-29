@@ -1,6 +1,5 @@
 package build.linea.contract.l1
 
-import build.linea.contract.LineaRollupV5
 import build.linea.contract.LineaRollupV6
 import net.consensys.encodeHex
 import net.consensys.linea.BlockParameter
@@ -34,8 +33,8 @@ open class Web3JLineaRollupSmartContractClientReadOnly(
   private val log: Logger = LogManager.getLogger(Web3JLineaRollupSmartContractClientReadOnly::class.java)
 ) : LineaRollupSmartContractClientReadOnly {
 
-  protected fun contractClientAtBlock(blockParameter: BlockParameter): LineaRollupV5 {
-    return contractClientAtBlock(blockParameter, LineaRollupV5::class.java)
+  protected fun contractClientAtBlock(blockParameter: BlockParameter): LineaRollupV6 {
+    return contractClientAtBlock(blockParameter, LineaRollupV6::class.java)
   }
 
   protected fun <T : Contract> contractClientAtBlock(blockParameter: BlockParameter, contract: Class<T>): T {
@@ -49,16 +48,6 @@ open class Web3JLineaRollupSmartContractClientReadOnly(
       ).apply {
         this.setDefaultBlockParameter(blockParameter.toWeb3j())
       }
-
-      LineaRollupV5::class.java.isAssignableFrom(contract) -> LineaRollupV5.load(
-        contractAddress,
-        web3j,
-        fakeCredentials,
-        StaticGasProvider(BigInteger.ZERO, BigInteger.ZERO)
-      ).apply {
-        this.setDefaultBlockParameter(blockParameter.toWeb3j())
-      }
-
       else -> throw IllegalArgumentException("Unsupported contract type: ${contract::class.java}")
     } as T
   }
@@ -101,7 +90,7 @@ open class Web3JLineaRollupSmartContractClientReadOnly(
         if (error.cause is ContractCallException) {
           // means that contract does not have CONTRACT_VERSION method available yet
           // so it is still V5, so defaulting to V5
-          SafeFuture.completedFuture(LineaContractVersion.V5)
+          SafeFuture.completedFuture(LineaContractVersion.V6)
         } else {
           SafeFuture.failedFuture(error)
         }
@@ -134,10 +123,10 @@ open class Web3JLineaRollupSmartContractClientReadOnly(
   override fun isBlobShnarfPresent(blockParameter: BlockParameter, shnarf: ByteArray): SafeFuture<Boolean> {
     return getVersion()
       .thenCompose { version ->
-        if (version == LineaContractVersion.V5) {
-          contractClientAtBlock(blockParameter, LineaRollupV5::class.java).shnarfFinalBlockNumbers(shnarf)
-        } else {
-          contractClientAtBlock(blockParameter, LineaRollupV6::class.java).blobShnarfExists(shnarf)
+        when (version!!) {
+          LineaContractVersion.V6 -> contractClientAtBlock(blockParameter, LineaRollupV6::class.java).blobShnarfExists(
+            shnarf
+          )
         }
           .sendAsync()
           .thenApply { it != BigInteger.ZERO }

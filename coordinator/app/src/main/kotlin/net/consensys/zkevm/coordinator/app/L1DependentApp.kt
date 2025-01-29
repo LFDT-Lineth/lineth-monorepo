@@ -446,7 +446,7 @@ class L1DependentApp(
 
   private val genesisStateProvider = GenesisStateProvider(
     configs.l1.genesisStateRootHash,
-    configs.l1.genesisShnarfV5
+    configs.l1.genesisShnarfV6
   )
 
   private val blobCompressionProofCoordinator = run {

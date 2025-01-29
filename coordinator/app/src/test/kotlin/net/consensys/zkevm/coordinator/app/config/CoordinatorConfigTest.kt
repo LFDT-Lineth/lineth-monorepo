@@ -209,7 +209,7 @@ class CoordinatorConfigTest {
       blockRangeLoopLimit = 500U,
       _ethFeeHistoryEndpoint = null,
       _genesisStateRootHash = "0x072ead6777750dc20232d1cee8dc9a395c2d350df4bbaa5096c6f59b214dcecd",
-      _genesisShnarfV5 = "0x47452a1b9ebadfe02bdd02f580fa1eba17680d57eec968a591644d05d78ee84f"
+      _genesisShnarfV6 = "0x47452a1b9ebadfe02bdd02f580fa1eba17680d57eec968a591644d05d78ee84f"
     )
 
     private val l2Config = L2Config(

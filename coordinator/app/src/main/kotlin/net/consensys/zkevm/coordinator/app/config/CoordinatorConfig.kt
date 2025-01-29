@@ -278,15 +278,15 @@ data class L1Config(
   val blockTime: Duration = Duration.parse("PT12S"),
   @ConfigAlias("eth-fee-history-endpoint") private val _ethFeeHistoryEndpoint: URL?,
   @ConfigAlias("genesis-state-root-hash") private val _genesisStateRootHash: String,
-  @ConfigAlias("genesis-shnarf-v5") private val _genesisShnarfV5: String
+  @ConfigAlias("genesis-shnarf-v6") private val _genesisShnarfV6: String
 ) {
   val ethFeeHistoryEndpoint: URL
     get() = _ethFeeHistoryEndpoint ?: rpcEndpoint
 
   val genesisStateRootHash: ByteArray
     get() = _genesisStateRootHash.decodeHex().assertIs32Bytes("genesisStateRootHash")
-  val genesisShnarfV5: ByteArray
-    get() = _genesisShnarfV5.decodeHex().assertIs32Bytes("genesisShnarfV5")
+  val genesisShnarfV6: ByteArray
+    get() = _genesisShnarfV6.decodeHex().assertIs32Bytes("genesisShnarfV6")
 
   val l1QueryBlockTag: BlockParameter.Tag
     get() = BlockParameter.Tag.fromString(_l1QueryBlockTag)

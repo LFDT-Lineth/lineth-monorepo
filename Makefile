@@ -86,12 +86,8 @@ deploy-linea-rollup:
 		LINEA_ROLLUP_GENESIS_TIMESTAMP=1683325137 \
 		npx ts-node local-deployments-artifacts/deployPlonkVerifierAndLineaRollupV$(L1_CONTRACT_VERSION).ts
 
-deploy-linea-rollup-v5:
-		$(MAKE) deploy-linea-rollup L1_CONTRACT_VERSION=5
-
 deploy-linea-rollup-v6:
 		$(MAKE) deploy-linea-rollup L1_CONTRACT_VERSION=6
-
 
 deploy-l2messageservice:
 		# WARNING: FOR LOCAL DEV ONLY - DO NOT REUSE THESE KEYS ELSEWHERE
@@ -243,7 +239,7 @@ testnet-start-l2:
 testnet-start-l2-traces-node-only:
 		docker compose -f docker/compose.yml -f docker/compose-testnet-sync.overries.yml up traces-node -d
 
-testnet-start: start-l1 deploy-linea-rollup-v5 testnet-start-l2
+testnet-start: start-l1 deploy-linea-rollup-v6 testnet-start-l2
 testnet-restart-l2-keep-state:
 		docker compose -f docker/compose.yml -f docker/compose-testnet-sync.overrides.yml rm -f -s -v sequencer traces-node coordinator
 		make testnet-start-l2

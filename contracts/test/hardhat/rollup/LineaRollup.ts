@@ -3,8 +3,8 @@ import { loadFixture, time as networkTime } from "@nomicfoundation/hardhat-netwo
 import { expect } from "chai";
 import { config, ethers, upgrades } from "hardhat";
 import { HardhatNetworkHDAccountsConfig } from "hardhat/types";
-import { BaseContract, Contract, HDNodeWallet, Transaction, Wallet, ZeroAddress } from "ethers";
-import { CallForwardingProxy, TestLineaRollup, TestLineaRollupV5 } from "../../../typechain-types";
+import { BaseContract, Contract, HDNodeWallet, Transaction, Wallet } from "ethers";
+import { CallForwardingProxy, TestLineaRollup } from "../../../typechain-types";
 import calldataAggregatedProof1To155 from "../_testData/compressedData/aggregatedProof-1-155.json";
 import blobAggregatedProof1To155 from "../_testData/compressedDataEip4844/aggregatedProof-1-155.json";
 import blobMultipleAggregatedProof1To81 from "../_testData/compressedDataEip4844/multipleProofs/aggregatedProof-1-81.json";
@@ -32,20 +32,9 @@ import {
   CALLDATA_SUBMISSION_PAUSE_TYPE,
   BLOB_SUBMISSION_PAUSE_TYPE,
   FINALIZATION_PAUSE_TYPE,
-  PAUSE_ALL_ROLE,
   DEFAULT_ADMIN_ROLE,
-  UNPAUSE_ALL_ROLE,
-  PAUSE_BLOB_SUBMISSION_ROLE,
-  UNPAUSE_BLOB_SUBMISSION_ROLE,
-  PAUSE_FINALIZATION_ROLE,
-  UNPAUSE_FINALIZATION_ROLE,
   DEFAULT_LAST_FINALIZED_TIMESTAMP,
   SIX_MONTHS_IN_SECONDS,
-  USED_RATE_LIMIT_RESETTER_ROLE,
-  PAUSE_L1_L2_ROLE,
-  PAUSE_L2_L1_ROLE,
-  UNPAUSE_L1_L2_ROLE,
-  UNPAUSE_L2_L1_ROLE,
   LINEA_ROLLUP_INITIALIZE_SIGNATURE,
 } from "../common/constants";
 import { deployUpgradableFromFactory } from "../common/deployment";
@@ -66,9 +55,7 @@ import {
   generateParentShnarfData,
   generateBlobDataSubmission,
   generateBlobParentShnarfData,
-  convertStringToPaddedHexBytes,
   calculateLastFinalizedState,
-  expectEvents,
   expectEventDirectFromReceiptData,
   generateBlobDataSubmissionFromFile,
 } from "../common/helpers";
@@ -88,7 +75,6 @@ kzg.loadTrustedSetup(`${__dirname}/../_testData/trusted_setup.txt`);
 
 describe("Linea Rollup contract", () => {
   let lineaRollup: TestLineaRollup;
-  let lineaRollupV5: TestLineaRollupV5;
   let revertingVerifier: string;
   let sepoliaFullVerifier: string;
   let callForwardingProxy: CallForwardingProxy;
@@ -164,7 +150,7 @@ describe("Linea Rollup contract", () => {
 
   before(async () => {
     [admin, securityCouncil, operator, nonAuthorizedAccount] = await ethers.getSigners();
-    const securityCouncilAddress = securityCouncil.address;
+    const securityCouncilAddress = await securityCouncil.getAddress();
 
     roleAddresses = generateRoleAssignments(LINEA_ROLLUP_ROLES, securityCouncilAddress, [
       {
@@ -2257,6 +2243,69 @@ describe("Linea Rollup contract", () => {
       const args = [OPERATOR_ROLE, operator.address, operator.address];
       expectEvent(lineaRollup, renounceCall, "RoleRevoked", args);
     });
+
+    it("Should fail to accept ETH on the CallForwardingProxy receive function", async () => {
+      await deployCallForwardingProxy(await lineaRollup.getAddress());
+      const forwardingProxyAddress = await callForwardingProxy.getAddress();
+
+      const tx = {
+        to: forwardingProxyAddress,
+        value: ethers.parseEther("0.1"),
+      };
+
+      await expectRevertWithReason(admin.sendTransaction(tx), "ETH not accepted");
+    });
+
+    it("Should be able to submit blobs and finalize via callforwarding proxy", async () => {
+      await deployCallForwardingProxy(await lineaRollup.getAddress());
+      const forwardingProxyAddress = await callForwardingProxy.getAddress();
+
+      expect(await lineaRollup.currentL2BlockNumber()).to.equal(0);
+
+      // Deploy new LineaRollup implementation
+      const newLineaRollupFactory = await ethers.getContractFactory(
+        "src/_testing/unit/rollup/TestLineaRollup.sol:TestLineaRollup",
+      );
+      const newLineaRollup = await upgrades.upgradeProxy(lineaRollup, newLineaRollupFactory, {
+        unsafeAllowRenames: true,
+      });
+
+      const upgradedContract = await newLineaRollup.waitForDeployment();
+
+      await upgradedContract.reinitializeLineaRollupV6(
+        [],
+        LINEA_ROLLUP_PAUSE_TYPES_ROLES,
+        LINEA_ROLLUP_UNPAUSE_TYPES_ROLES,
+        forwardingProxyAddress,
+      );
+
+      // Grants deployed callforwarding proxy as operator
+      await networkTime.increase(SIX_MONTHS_IN_SECONDS);
+      await expectEvent(
+        upgradedContract,
+        upgradedContract.setFallbackOperator(0n, HASH_ZERO, DEFAULT_LAST_FINALIZED_TIMESTAMP),
+        "FallbackOperatorRoleGranted",
+        [admin.address, forwardingProxyAddress],
+      );
+
+      // Submit 2 blobs
+      await sendBlobTransactionViaCallForwarder(upgradedContract, 0, 2, forwardingProxyAddress);
+      // Submit another 2 blobs
+      await sendBlobTransactionViaCallForwarder(upgradedContract, 2, 4, forwardingProxyAddress);
+
+      // Finalize 4 blobs
+      await expectSuccessfulFinalizeViaCallForwarder(
+        blobAggregatedProof1To155,
+        4,
+        fourthCompressedDataContent.finalStateRootHash,
+        generateBlobParentShnarfData,
+        false,
+        HASH_ZERO,
+        0n,
+        forwardingProxyAddress,
+        upgradedContract,
+      );
+    });
   });
 
   async function sendBlobTransaction(startIndex: number, finalIndex: number, isMultiple: boolean = false) {
@@ -2597,322 +2646,4 @@ describe("Linea Rollup contract", () => {
       ),
     );
   }
-
-  describe("LineaRollup Upgradeable Tests", () => {
-    let newRoleAddresses: { addressWithRole: string; role: string }[];
-
-    async function deployLineaRollupFixture() {
-      const plonkVerifierFactory = await ethers.getContractFactory("TestPlonkVerifierForDataAggregation");
-      const plonkVerifier = await plonkVerifierFactory.deploy();
-      await plonkVerifier.waitForDeployment();
-
-      verifier = await plonkVerifier.getAddress();
-
-      const lineaRollup = (await deployUpgradableFromFactory(
-        "src/_testing/unit/rollup/TestLineaRollupV5.sol:TestLineaRollupV5",
-        [
-          parentStateRootHash,
-          0,
-          verifier,
-          securityCouncil.address,
-          [operator.address],
-          ONE_DAY_IN_SECONDS,
-          INITIAL_WITHDRAW_LIMIT,
-          DEFAULT_LAST_FINALIZED_TIMESTAMP,
-        ],
-        {
-          initializer: "initialize(bytes32,uint256,address,address,address[],uint256,uint256,uint256)",
-          unsafeAllow: ["constructor"],
-        },
-      )) as unknown as TestLineaRollupV5;
-
-      return lineaRollup;
-    }
-
-    before(async () => {
-      const securityCouncilAddress = securityCouncil.address;
-
-      newRoleAddresses = [
-        { addressWithRole: securityCouncilAddress, role: USED_RATE_LIMIT_RESETTER_ROLE },
-        { addressWithRole: securityCouncilAddress, role: VERIFIER_UNSETTER_ROLE },
-        { addressWithRole: securityCouncilAddress, role: PAUSE_ALL_ROLE },
-        { addressWithRole: securityCouncilAddress, role: PAUSE_L1_L2_ROLE },
-        { addressWithRole: securityCouncilAddress, role: PAUSE_L2_L1_ROLE },
-        { addressWithRole: securityCouncilAddress, role: UNPAUSE_ALL_ROLE },
-        { addressWithRole: securityCouncilAddress, role: UNPAUSE_L1_L2_ROLE },
-        { addressWithRole: securityCouncilAddress, role: UNPAUSE_L2_L1_ROLE },
-        { addressWithRole: securityCouncilAddress, role: PAUSE_BLOB_SUBMISSION_ROLE },
-        { addressWithRole: securityCouncilAddress, role: UNPAUSE_BLOB_SUBMISSION_ROLE },
-        { addressWithRole: securityCouncilAddress, role: PAUSE_FINALIZATION_ROLE },
-        { addressWithRole: securityCouncilAddress, role: UNPAUSE_FINALIZATION_ROLE },
-      ];
-    });
-
-    beforeEach(async () => {
-      lineaRollupV5 = await loadFixture(deployLineaRollupFixture);
-
-      // we need to set a non-zero value for the genesis shnarf else it will break on blob submission.
-      const { parentShnarf, snarkHash, finalStateRootHash, dataEvaluationPoint, dataEvaluationClaim } =
-        generateParentShnarfData(0);
-      const genesisShnarf = generateKeccak256(
-        ["bytes32", "bytes32", "bytes32", "bytes32", "bytes32"],
-        [parentShnarf, snarkHash, finalStateRootHash, dataEvaluationPoint, dataEvaluationClaim],
-      );
-
-      await lineaRollupV5.setDefaultShnarfExistValue(genesisShnarf);
-    });
-
-    it("Should revert if fallback operator has address zero", async () => {
-      expect(await lineaRollupV5.currentL2BlockNumber()).to.equal(0);
-
-      // Deploy new implementation
-      const newLineaRollupFactory = await ethers.getContractFactory(
-        "src/_testing/unit/rollup/TestLineaRollup.sol:TestLineaRollup",
-      );
-      const newLineaRollup = await upgrades.upgradeProxy(lineaRollupV5, newLineaRollupFactory, {
-        unsafeAllowRenames: true,
-      });
-      const upgradedContract = await newLineaRollup.waitForDeployment();
-
-      expectRevertWithCustomError(
-        upgradedContract,
-        upgradedContract.reinitializeLineaRollupV6(
-          newRoleAddresses,
-          LINEA_ROLLUP_PAUSE_TYPES_ROLES,
-          LINEA_ROLLUP_UNPAUSE_TYPES_ROLES,
-          ADDRESS_ZERO,
-        ),
-        "ZeroAddressNotAllowed",
-      );
-    });
-
-    it("Should fail to accept ETH on the CallForwardingProxy receive function", async () => {
-      await deployCallForwardingProxy(await lineaRollupV5.getAddress());
-      const forwardingProxyAddress = await callForwardingProxy.getAddress();
-
-      const tx = {
-        to: forwardingProxyAddress,
-        value: ethers.parseEther("0.1"),
-      };
-
-      await expectRevertWithReason(admin.sendTransaction(tx), "ETH not accepted");
-    });
-
-    it("Should be able to submit blobs and finalize via callforwarding proxy", async () => {
-      // Deploy callforwarding proxy
-      await deployCallForwardingProxy(await lineaRollupV5.getAddress());
-      const forwardingProxyAddress = await callForwardingProxy.getAddress();
-
-      expect(await lineaRollupV5.currentL2BlockNumber()).to.equal(0);
-
-      // Deploy new LineaRollup implementation
-      const newLineaRollupFactory = await ethers.getContractFactory(
-        "src/_testing/unit/rollup/TestLineaRollup.sol:TestLineaRollup",
-      );
-      const newLineaRollup = await upgrades.upgradeProxy(lineaRollupV5, newLineaRollupFactory, {
-        unsafeAllowRenames: true,
-      });
-
-      const upgradedContract = await newLineaRollup.waitForDeployment();
-
-      await upgradedContract.reinitializeLineaRollupV6(
-        newRoleAddresses,
-        LINEA_ROLLUP_PAUSE_TYPES_ROLES,
-        LINEA_ROLLUP_UNPAUSE_TYPES_ROLES,
-        forwardingProxyAddress,
-      );
-
-      // Grants deployed callforwarding proxy as operator
-      await networkTime.increase(SIX_MONTHS_IN_SECONDS);
-      await expectEvent(
-        upgradedContract,
-        upgradedContract.setFallbackOperator(0n, HASH_ZERO, DEFAULT_LAST_FINALIZED_TIMESTAMP),
-        "FallbackOperatorRoleGranted",
-        [admin.address, forwardingProxyAddress],
-      );
-
-      // Submit 2 blobs
-      await sendBlobTransactionViaCallForwarder(upgradedContract, 0, 2, forwardingProxyAddress);
-      // Submit another 2 blobs
-      await sendBlobTransactionViaCallForwarder(upgradedContract, 2, 4, forwardingProxyAddress);
-
-      // Finalize 4 blobs
-      await expectSuccessfulFinalizeViaCallForwarder(
-        blobAggregatedProof1To155,
-        4,
-        fourthCompressedDataContent.finalStateRootHash,
-        generateBlobParentShnarfData,
-        false,
-        HASH_ZERO,
-        0n,
-        forwardingProxyAddress,
-        upgradedContract,
-      );
-    });
-
-    it("Should deploy and upgrade the LineaRollup contract expecting LineaRollupVersionChanged", async () => {
-      expect(await lineaRollupV5.currentL2BlockNumber()).to.equal(0);
-
-      // Deploy new implementation
-      const newLineaRollupFactory = await ethers.getContractFactory("src/rollup/LineaRollup.sol:LineaRollup");
-      const newLineaRollup = await upgrades.upgradeProxy(lineaRollupV5, newLineaRollupFactory, {
-        unsafeAllowRenames: true,
-      });
-      const upgradedContract = await newLineaRollup.waitForDeployment();
-
-      const upgradeCall = upgradedContract.reinitializeLineaRollupV6(
-        newRoleAddresses,
-        LINEA_ROLLUP_PAUSE_TYPES_ROLES,
-        LINEA_ROLLUP_UNPAUSE_TYPES_ROLES,
-        fallbackoperatorAddress,
-      );
-
-      const expectedVersion5Bytes8 = convertStringToPaddedHexBytes("5.0", 8);
-      const expectedVersion6Bytes8 = convertStringToPaddedHexBytes("6.0", 8);
-
-      await expectEvent(upgradedContract, upgradeCall, "LineaRollupVersionChanged", [
-        expectedVersion5Bytes8,
-        expectedVersion6Bytes8,
-      ]);
-    });
-
-    it("Should upgrade the LineaRollup contract expecting FallbackOperatorAddressSet", async () => {
-      expect(await lineaRollupV5.currentL2BlockNumber()).to.equal(0);
-
-      // Deploy new implementation
-      const newLineaRollupFactory = await ethers.getContractFactory("src/rollup/LineaRollup.sol:LineaRollup");
-      const newLineaRollup = await upgrades.upgradeProxy(lineaRollupV5, newLineaRollupFactory, {
-        unsafeAllowRenames: true,
-      });
-      const upgradedContract = await newLineaRollup.waitForDeployment();
-      const upgradeCall = upgradedContract.reinitializeLineaRollupV6(
-        newRoleAddresses,
-        LINEA_ROLLUP_PAUSE_TYPES_ROLES,
-        LINEA_ROLLUP_UNPAUSE_TYPES_ROLES,
-        fallbackoperatorAddress,
-      );
-
-      await expectEvent(upgradedContract, upgradeCall, "FallbackOperatorAddressSet", [
-        admin.address,
-        fallbackoperatorAddress,
-      ]);
-    });
-
-    it("Should not be able to call reinitializeLineaRollupV6 when upgraded.", async () => {
-      expect(await lineaRollupV5.currentL2BlockNumber()).to.equal(0);
-
-      // Deploy new implementation
-      const newLineaRollupFactory = await ethers.getContractFactory("src/rollup/LineaRollup.sol:LineaRollup");
-      const newLineaRollup = await upgrades.upgradeProxy(lineaRollupV5, newLineaRollupFactory, {
-        unsafeAllowRenames: true,
-      });
-      const upgradedContract = await newLineaRollup.waitForDeployment();
-      await upgradedContract.reinitializeLineaRollupV6(
-        newRoleAddresses,
-        LINEA_ROLLUP_PAUSE_TYPES_ROLES,
-        LINEA_ROLLUP_UNPAUSE_TYPES_ROLES,
-        fallbackoperatorAddress,
-      );
-
-      const secondCall = upgradedContract.reinitializeLineaRollupV6(
-        newRoleAddresses,
-        LINEA_ROLLUP_PAUSE_TYPES_ROLES,
-        LINEA_ROLLUP_UNPAUSE_TYPES_ROLES,
-        fallbackoperatorAddress,
-      );
-
-      await expectRevertWithReason(secondCall, "Initializable: contract is already initialized");
-    });
-
-    it("Should revert with ZeroAddressNotAllowed when addressWithRole is zero address in reinitializeLineaRollupV6", async () => {
-      // Deploy new implementation
-      const newLineaRollupFactory = await ethers.getContractFactory("src/rollup/LineaRollup.sol:LineaRollup");
-      const newLineaRollup = await upgrades.upgradeProxy(lineaRollupV5, newLineaRollupFactory, {
-        unsafeAllowRenames: true,
-      });
-      const upgradedContract = await newLineaRollup.waitForDeployment();
-      const roleAddresses = [{ addressWithRole: ZeroAddress, role: DEFAULT_ADMIN_ROLE }, ...newRoleAddresses.slice(1)];
-
-      await expectRevertWithCustomError(
-        upgradedContract,
-        upgradedContract.reinitializeLineaRollupV6(
-          roleAddresses,
-          LINEA_ROLLUP_PAUSE_TYPES_ROLES,
-          LINEA_ROLLUP_UNPAUSE_TYPES_ROLES,
-          fallbackoperatorAddress,
-        ),
-        "ZeroAddressNotAllowed",
-      );
-    });
-
-    it("Should set all permissions", async () => {
-      // Deploy new implementation
-      const newLineaRollupFactory = await ethers.getContractFactory("src/rollup/LineaRollup.sol:LineaRollup");
-      const newLineaRollup = await upgrades.upgradeProxy(lineaRollupV5, newLineaRollupFactory, {
-        unsafeAllowRenames: true,
-      });
-      const upgradedContract = await newLineaRollup.waitForDeployment();
-
-      await upgradedContract.reinitializeLineaRollupV6(
-        newRoleAddresses,
-        LINEA_ROLLUP_PAUSE_TYPES_ROLES,
-        LINEA_ROLLUP_UNPAUSE_TYPES_ROLES,
-        fallbackoperatorAddress,
-      );
-
-      for (const { role, addressWithRole } of newRoleAddresses) {
-        expect(await upgradedContract.hasRole(role, addressWithRole)).to.be.true;
-      }
-    });
-
-    it("Should set all pause types and unpause types in mappings and emit events", async () => {
-      // Deploy new implementation
-      const newLineaRollupFactory = await ethers.getContractFactory("src/rollup/LineaRollup.sol:LineaRollup");
-      const newLineaRollup = await upgrades.upgradeProxy(lineaRollupV5, newLineaRollupFactory, {
-        unsafeAllowRenames: true,
-      });
-      const upgradedContract = await newLineaRollup.waitForDeployment();
-
-      const reinitializePromise = upgradedContract.reinitializeLineaRollupV6(
-        newRoleAddresses,
-        LINEA_ROLLUP_PAUSE_TYPES_ROLES,
-        LINEA_ROLLUP_UNPAUSE_TYPES_ROLES,
-        fallbackoperatorAddress,
-      );
-
-      await Promise.all([
-        expectEvents(
-          upgradedContract,
-          reinitializePromise,
-          LINEA_ROLLUP_PAUSE_TYPES_ROLES.map(({ pauseType, role }) => ({
-            name: "PauseTypeRoleSet",
-            args: [pauseType, role],
-          })),
-        ),
-        expectEvents(
-          upgradedContract,
-          reinitializePromise,
-          LINEA_ROLLUP_UNPAUSE_TYPES_ROLES.map(({ pauseType, role }) => ({
-            name: "UnPauseTypeRoleSet",
-            args: [pauseType, role],
-          })),
-        ),
-      ]);
-
-      const pauseTypeRolesMappingSlot = 219;
-      const unpauseTypeRolesMappingSlot = 220;
-
-      for (const { pauseType, role } of LINEA_ROLLUP_PAUSE_TYPES_ROLES) {
-        const slot = generateKeccak256(["uint8", "uint256"], [pauseType, pauseTypeRolesMappingSlot]);
-        const roleInMapping = await ethers.provider.getStorage(upgradedContract.getAddress(), slot);
-        expect(roleInMapping).to.equal(role);
-      }
-
-      for (const { pauseType, role } of LINEA_ROLLUP_UNPAUSE_TYPES_ROLES) {
-        const slot = generateKeccak256(["uint8", "uint256"], [pauseType, unpauseTypeRolesMappingSlot]);
-        const roleInMapping = await ethers.provider.getStorage(upgradedContract.getAddress(), slot);
-        expect(roleInMapping).to.equal(role);
-      }
-    });
-  });
 });

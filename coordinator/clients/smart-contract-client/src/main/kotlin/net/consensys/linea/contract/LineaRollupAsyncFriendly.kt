@@ -1,6 +1,6 @@
 package net.consensys.linea.contract
 
-import build.linea.contract.LineaRollupV5
+import build.linea.contract.LineaRollupV6
 import net.consensys.linea.web3j.AtomicContractEIP1559GasProvider
 import net.consensys.linea.web3j.EIP1559GasFees
 import net.consensys.linea.web3j.SmartContractErrors
@@ -28,7 +28,7 @@ class LineaRollupAsyncFriendly(
   private val asyncTransactionManager: AsyncFriendlyTransactionManager,
   contractGasProvider: ContractGasProvider,
   private val smartContractErrors: SmartContractErrors
-) : LineaRollupV5(
+) : LineaRollupV6(
   contractAddress,
   web3j,
   asyncTransactionManager,
