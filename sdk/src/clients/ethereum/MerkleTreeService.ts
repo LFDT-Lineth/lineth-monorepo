@@ -1,6 +1,5 @@
 import { Block, TransactionReceipt, TransactionRequest, TransactionResponse } from "ethers";
 import { SparseMerkleTreeFactory } from "../../utils/merkleTree/MerkleTreeFactory";
-import { BaseError } from "../../core/errors";
 import {
   ILineaRollupLogClient,
   FinalizationMessagingInfo,
@@ -16,6 +15,7 @@ import {
 import { LineaRollup, LineaRollup__factory } from "../../contracts/typechain";
 import { IProvider } from "../../core/clients/IProvider";
 import { BrowserProvider, Provider } from "../providers";
+import { makeBaseError } from "../../core/errors/utils";
 
 export class MerkleTreeService implements IMerkleTreeService {
   private readonly contract: LineaRollup;
@@ -54,7 +54,7 @@ export class MerkleTreeService implements IMerkleTreeService {
     const [messageEvent] = await this.l2MessageServiceLogClient.getMessageSentEventsByMessageHash({ messageHash });
 
     if (!messageEvent) {
-      throw new BaseError(`Message hash does not exist on L2. Message hash: ${messageHash}`);
+      throw makeBaseError(`Message hash does not exist on L2. Message hash: ${messageHash}`);
     }
 
     const [l2MessagingBlockAnchoredEvent] = await this.lineaRollupLogClient.getL2MessagingBlockAnchoredEvents({
@@ -62,7 +62,7 @@ export class MerkleTreeService implements IMerkleTreeService {
     });
 
     if (!l2MessagingBlockAnchoredEvent) {
-      throw new BaseError(`L2 block number ${messageEvent.blockNumber} has not been finalized on L1.`);
+      throw makeBaseError(`L2 block number ${messageEvent.blockNumber} has not been finalized on L1.`);
     }
 
     const finalizationInfo = await this.getFinalizationMessagingInfo(l2MessagingBlockAnchoredEvent.transactionHash);
@@ -78,7 +78,7 @@ export class MerkleTreeService implements IMerkleTreeService {
     const tree = merkleTreeFactory.createAndAddLeaves(l2messages);
 
     if (!finalizationInfo.l2MerkleRoots.includes(tree.getRoot())) {
-      throw new BaseError("Merkle tree build failed.");
+      throw makeBaseError("Merkle tree build failed.");
     }
 
     return tree.getProof(l2messages.indexOf(messageHash));
@@ -93,7 +93,7 @@ export class MerkleTreeService implements IMerkleTreeService {
     const receipt = await this.provider.getTransactionReceipt(transactionHash);
 
     if (!receipt || receipt.logs.length === 0) {
-      throw new BaseError(`Transaction does not exist or no logs found in this transaction: ${transactionHash}.`);
+      throw makeBaseError(`Transaction does not exist or no logs found in this transaction: ${transactionHash}.`);
     }
 
     let treeDepth = 0;
@@ -114,11 +114,11 @@ export class MerkleTreeService implements IMerkleTreeService {
     }
 
     if (l2MerkleRoots.length === 0) {
-      throw new BaseError(`No L2MerkleRootAdded events found in this transaction.`);
+      throw makeBaseError(`No L2MerkleRootAdded events found in this transaction.`);
     }
 
     if (blocksNumber.length === 0) {
-      throw new BaseError(`No L2MessagingBlocksAnchored events found in this transaction.`);
+      throw makeBaseError(`No L2MessagingBlocksAnchored events found in this transaction.`);
     }
 
     return {
@@ -141,7 +141,7 @@ export class MerkleTreeService implements IMerkleTreeService {
     const events = await this.l2MessageServiceLogClient.getMessageSentEventsByBlockRange(fromBlock, toBlock);
 
     if (events.length === 0) {
-      throw new BaseError(`No MessageSent events found in this block range on L2.`);
+      throw makeBaseError(`No MessageSent events found in this block range on L2.`);
     }
 
     return events.map((event) => event.messageHash);
@@ -161,7 +161,7 @@ export class MerkleTreeService implements IMerkleTreeService {
     const messageHashIndex = messageHashes.indexOf(messageHash);
 
     if (messageHashIndex === -1) {
-      throw new BaseError("Message hash not found in messages.");
+      throw makeBaseError("Message hash not found in messages.");
     }
 
     const start = Math.floor(messageHashIndex / numberOfMessagesInTrees) * numberOfMessagesInTrees;

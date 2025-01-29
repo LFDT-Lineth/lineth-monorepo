@@ -20,6 +20,7 @@ import {
   MessageClaimingPersisterConfig,
 } from "../../core/services/processors/IMessageClaimingPersister";
 import { IMessageDBService } from "../../core/persistence/IMessageDBService";
+import { ErrorParser } from "../../utils/ErrorParser";
 
 export class MessageClaimingPersister implements IMessageClaimingPersister {
   private messageBeingRetry: { message: Message | null; retries: number };
@@ -79,6 +80,7 @@ export class MessageClaimingPersister implements IMessageClaimingPersister {
     try {
       firstPendingMessage = await this.databaseService.getFirstPendingMessage(this.config.direction);
       if (!firstPendingMessage?.claimTxHash) {
+        this.logger.info("No pending message status to update.");
         return;
       }
 
@@ -111,7 +113,13 @@ export class MessageClaimingPersister implements IMessageClaimingPersister {
 
       await this.updateReceiptStatus(firstPendingMessage, receipt);
     } catch (e) {
-      this.logger.error(e);
+      const error = ErrorParser.parseErrorWithMitigation(e);
+      this.logger.error("Error processing message.", {
+        ...(firstPendingMessage ? { messageHash: firstPendingMessage.messageHash } : {}),
+        ...(error?.errorCode ? { errorCode: error.errorCode } : {}),
+        ...(error?.errorMessage ? { errorMessage: error.errorMessage } : {}),
+        ...(error?.data ? { data: error.data } : {}),
+      });
     }
   }
 

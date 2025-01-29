@@ -129,7 +129,10 @@ describe("TestMessageAnchoringProcessor", () => {
       await anchoringProcessor.process();
 
       expect(loggerErrorSpy).toHaveBeenCalledTimes(1);
-      expect(loggerErrorSpy).toHaveBeenCalledWith(error);
+      expect(loggerErrorSpy).toHaveBeenCalledWith("An error occurred while processing messages.", {
+        errorCode: "UNKNOWN_ERROR",
+        errorMessage: error.message,
+      });
       expect(messageRepositoryMockSaveSpy).toHaveBeenCalledTimes(0);
     });
   });

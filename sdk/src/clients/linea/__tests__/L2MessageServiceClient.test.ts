@@ -19,8 +19,7 @@ import {
 import { L2MessageServiceClient } from "../L2MessageServiceClient";
 import { ZERO_ADDRESS } from "../../../core/constants";
 import { OnChainMessageStatus } from "../../../core/enums/message";
-import { GasEstimationError } from "../../../core/errors/GasFeeErrors";
-import { BaseError } from "../../../core/errors";
+import { BaseError, makeBaseError } from "../../../core/errors";
 import { LineaProvider } from "../../providers";
 import { GasProvider } from "../../gas";
 
@@ -107,7 +106,7 @@ describe("TestL2MessageServiceClient", () => {
       jest.spyOn(gasFeeProvider, "getGasFees").mockRejectedValue(new Error("Gas fees estimation failed").message);
 
       await expect(l2MessageServiceClient.estimateClaimGasFees(message)).rejects.toThrow(
-        new GasEstimationError("Gas fees estimation failed", message),
+        makeBaseError("Gas fees estimation failed", message),
       );
     });
 

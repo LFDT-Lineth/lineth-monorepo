@@ -1,6 +1,6 @@
 import { ethers } from "ethers";
-import { BaseError } from "../../core/errors";
 import { GasFees } from "../../core/clients/IGasProvider";
+import { makeBaseError } from "../../core/errors/utils";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Constructor<T = object> = new (...args: any[]) => T;
@@ -22,7 +22,7 @@ export function ProviderMixIn<TBase extends Constructor<ethers.Provider>>(Base: 
       const { maxPriorityFeePerGas, maxFeePerGas } = await this.getFeeData();
 
       if (!maxPriorityFeePerGas || !maxFeePerGas) {
-        throw new BaseError("Error getting fee data");
+        throw makeBaseError("Error getting fee data");
       }
 
       return { maxPriorityFeePerGas, maxFeePerGas };

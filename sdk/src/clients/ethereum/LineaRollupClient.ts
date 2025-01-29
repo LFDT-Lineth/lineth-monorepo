@@ -9,7 +9,6 @@ import {
   ErrorDescription,
 } from "ethers";
 import { LineaRollup, LineaRollup__factory } from "../../contracts/typechain";
-import { BaseError, GasEstimationError } from "../../core/errors";
 import { Message, SDKMode, MessageSent } from "../../core/types";
 import { OnChainMessageStatus } from "../../core/enums";
 import {
@@ -31,6 +30,7 @@ import { GasFees, IEthereumGasProvider } from "../../core/clients/IGasProvider";
 import { IMessageRetriever } from "../../core/clients/IMessageRetriever";
 import { IProvider } from "../../core/clients/IProvider";
 import { BrowserProvider, Provider } from "../providers";
+import { makeBaseError } from "../../core/errors/utils";
 
 export class LineaRollupClient
   implements
@@ -163,7 +163,7 @@ export class LineaRollupClient
     }
 
     if (!signer) {
-      throw new BaseError("Please provide a signer.");
+      throw makeBaseError("Please provide a signer.");
     }
 
     return LineaRollup__factory.connect(contractAddress, signer);
@@ -216,7 +216,7 @@ export class LineaRollupClient
     const [messageEvent] = await this.l2MessageServiceLogClient.getMessageSentEventsByMessageHash({ messageHash });
 
     if (!messageEvent) {
-      throw new BaseError(`Message hash does not exist on L2. Message hash: ${messageHash}`);
+      throw makeBaseError(`Message hash does not exist on L2. Message hash: ${messageHash}`);
     }
 
     const [[l2MessagingBlockAnchoredEvent], isMessageClaimed] = await Promise.all([
@@ -248,7 +248,7 @@ export class LineaRollupClient
     overrides: Overrides = {},
   ): Promise<bigint> {
     if (this.mode === "read-only") {
-      throw new BaseError("'EstimateClaimGas' function not callable using readOnly mode.");
+      throw makeBaseError("'EstimateClaimGas' function not callable using readOnly mode.");
     }
 
     const { messageSender, destination, fee, value, calldata, messageNonce, feeRecipient } = message;
@@ -267,9 +267,8 @@ export class LineaRollupClient
           ...overrides,
         },
       );
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (e: any) {
-      throw new GasEstimationError(e, message);
+    } catch (e) {
+      throw makeBaseError(e, message);
     }
   }
 
@@ -284,7 +283,7 @@ export class LineaRollupClient
     overrides: Overrides = {},
   ): Promise<ContractTransactionResponse> {
     if (this.mode === "read-only") {
-      throw new BaseError("'claim' function not callable using readOnly mode.");
+      throw makeBaseError("'claim' function not callable using readOnly mode.");
     }
 
     const { messageSender, destination, fee, value, calldata, messageNonce, feeRecipient } = message;
@@ -316,7 +315,7 @@ export class LineaRollupClient
     overrides: Overrides = {},
   ): Promise<bigint> {
     if (this.mode === "read-only") {
-      throw new BaseError("'EstimateClaimGasFees' function not callable using readOnly mode.");
+      throw makeBaseError("'EstimateClaimGasFees' function not callable using readOnly mode.");
     }
 
     const { messageSender, destination, fee, value, calldata, messageNonce, feeRecipient } = message;
@@ -344,9 +343,8 @@ export class LineaRollupClient
           ...overrides,
         },
       );
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (e: any) {
-      throw new GasEstimationError(e, message);
+    } catch (e) {
+      throw makeBaseError(e, message);
     }
   }
 
@@ -361,7 +359,7 @@ export class LineaRollupClient
     overrides: Overrides = {},
   ): Promise<ContractTransactionResponse> {
     if (this.mode === "read-only") {
-      throw new BaseError("'claim' function not callable using readOnly mode.");
+      throw makeBaseError("'claim' function not callable using readOnly mode.");
     }
 
     const { messageSender, destination, fee, value, calldata, messageNonce, feeRecipient } = message;
@@ -401,17 +399,17 @@ export class LineaRollupClient
     priceBumpPercent: number = 10,
   ): Promise<TransactionResponse> {
     if (!Number.isInteger(priceBumpPercent)) {
-      throw new Error("'priceBumpPercent' must be an integer");
+      throw makeBaseError("'priceBumpPercent' must be an integer");
     }
 
     if (this.mode === "read-only") {
-      throw new BaseError("'retryTransactionWithHigherFee' function not callable using readOnly mode.");
+      throw makeBaseError("'retryTransactionWithHigherFee' function not callable using readOnly mode.");
     }
 
     const transaction = await this.provider.getTransaction(transactionHash);
 
     if (!transaction) {
-      throw new BaseError(`Transaction with hash ${transactionHash} not found.`);
+      throw makeBaseError(`Transaction with hash ${transactionHash} not found.`);
     }
 
     let maxPriorityFeePerGas;

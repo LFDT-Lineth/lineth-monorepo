@@ -20,11 +20,11 @@ import {
   DEFAULT_L2_MESSAGE_TREE_DEPTH,
   DEFAULT_MAX_FEE_PER_GAS_CAP,
 } from "./core/constants";
-import { BaseError } from "./core/errors";
 import { L1FeeEstimatorOptions, L2FeeEstimatorOptions, LineaSDKOptions, Network, SDKMode } from "./core/types";
 import { NETWORKS } from "./core/constants";
 import { isString } from "./core/utils";
 import { Direction } from "./core/enums";
+import { makeBaseError } from "./core/errors/utils";
 
 export class LineaSDK {
   private network: Network;
@@ -64,7 +64,7 @@ export class LineaSDK {
       const { l1SignerPrivateKeyOrWallet, l2SignerPrivateKeyOrWallet } = options;
 
       if (!l1SignerPrivateKeyOrWallet || !l2SignerPrivateKeyOrWallet) {
-        throw new BaseError("You need to provide both L1 and L2 signer private keys or wallets.");
+        throw makeBaseError("You need to provide both L1 and L2 signer private keys or wallets.");
       }
 
       this.l1Signer = this.getWallet(l1SignerPrivateKeyOrWallet).connect(this.l1Provider);
@@ -108,7 +108,7 @@ export class LineaSDK {
       return new BrowserProvider(l1RpcUrlOrProvider);
     }
 
-    throw new BaseError("Invalid argument: l1RpcUrlOrProvider must be a string or Eip1193Provider");
+    throw makeBaseError("Invalid argument: l1RpcUrlOrProvider must be a string or Eip1193Provider");
   }
 
   /**
@@ -118,7 +118,7 @@ export class LineaSDK {
    */
   public getL1Signer(): Signer {
     if (!this.l1Signer) {
-      throw new BaseError("L1 signer is not available in read-only mode.");
+      throw makeBaseError("L1 signer is not available in read-only mode.");
     }
     return this.l1Signer;
   }
@@ -130,7 +130,7 @@ export class LineaSDK {
    */
   public getL2Signer(): Signer {
     if (!this.l2Signer) {
-      throw new BaseError("L2 signer is not available in read-only mode.");
+      throw makeBaseError("L2 signer is not available in read-only mode.");
     }
     return this.l2Signer;
   }
@@ -176,7 +176,7 @@ export class LineaSDK {
       return new LineaBrowserProvider(l2RpcUrlOrProvider);
     }
 
-    throw new Error("Invalid argument: l2RpcUrlOrProvider must be a string or Eip1193Provider");
+    throw makeBaseError("Invalid argument: l2RpcUrlOrProvider must be a string or Eip1193Provider");
   }
 
   /**
@@ -284,13 +284,13 @@ export class LineaSDK {
   private getContractAddress(contractType: "l1" | "l2", localContractAddress?: string): string {
     if (this.network === "custom") {
       if (!localContractAddress) {
-        throw new BaseError(`You need to provide a ${contractType.toUpperCase()} contract address.`);
+        throw makeBaseError(`You need to provide a ${contractType.toUpperCase()} contract address.`);
       }
       return localContractAddress;
     } else {
       const contractAddress = NETWORKS[this.network][`${contractType}ContractAddress`];
       if (!contractAddress) {
-        throw new BaseError(`Contract address for ${contractType.toUpperCase()} not found in network ${this.network}.`);
+        throw makeBaseError(`Contract address for ${contractType.toUpperCase()} not found in network ${this.network}.`);
       }
       return contractAddress;
     }
@@ -308,7 +308,7 @@ export class LineaSDK {
       return privateKeyOrWallet instanceof Wallet ? privateKeyOrWallet : new Wallet(privateKeyOrWallet);
     } catch (e) {
       if (e instanceof Error && e.message.includes("invalid private key")) {
-        throw new BaseError("Something went wrong when trying to generate Wallet. Please check your private key.");
+        throw makeBaseError("Something went wrong when trying to generate Wallet. Please check your private key.");
       }
       throw e;
     }

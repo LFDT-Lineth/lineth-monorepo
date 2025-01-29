@@ -3,7 +3,6 @@ import {
   Overrides,
   TransactionResponse,
   ContractTransactionResponse,
-  EthersError,
   TransactionReceipt,
   Signer,
   ErrorDescription,
@@ -74,6 +73,7 @@ export class MessageClaimingProcessor implements IMessageClaimingProcessor {
       );
 
       if (!nextMessageToClaim) {
+        this.logger.info("No message to claim found");
         return;
       }
 
@@ -265,7 +265,7 @@ export class MessageClaimingProcessor implements IMessageClaimingProcessor {
    * @returns {Promise<void>} A promise that resolves when the error has been handled.
    */
   private async handleProcessingError(e: unknown, message: Message | null): Promise<void> {
-    const parsedError = ErrorParser.parseErrorWithMitigation(e as EthersError);
+    const parsedError = ErrorParser.parseErrorWithMitigation(e);
 
     if (parsedError?.mitigation && !parsedError.mitigation.shouldRetry && message) {
       message.edit({ status: MessageStatus.NON_EXECUTABLE });
@@ -274,6 +274,7 @@ export class MessageClaimingProcessor implements IMessageClaimingProcessor {
 
     this.logger.warnOrError(e, {
       parsedError,
+      ...(message ? { messageHash: message.messageHash } : {}),
     });
   }
 }

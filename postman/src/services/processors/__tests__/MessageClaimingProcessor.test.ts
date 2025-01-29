@@ -370,6 +370,7 @@ describe("TestMessageClaimingProcessor", () => {
       expect(loggerWarnOrErrorSpy).toHaveBeenCalledTimes(1);
       expect(loggerWarnOrErrorSpy).toHaveBeenCalledWith(actionRejectedError, {
         parsedError: ErrorParser.parseErrorWithMitigation(actionRejectedError as EthersError),
+        messageHash: expectedLoggingMessage.messageHash,
       });
     });
   });

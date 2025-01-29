@@ -15,6 +15,8 @@ import {
   L2ClaimMessageTransactionSizeProcessorConfig,
 } from "../../core/services/processors/IL2ClaimMessageTransactionSizeProcessor";
 import { IL2ClaimTransactionSizeCalculator } from "../../core/services/processors/IL2ClaimTransactionSizeCalculator";
+import { ErrorParser } from "../../utils/ErrorParser";
+import { Message } from "../../core/entities/Message";
 
 export class L2ClaimMessageTransactionSizeProcessor implements IL2ClaimMessageTransactionSizeProcessor {
   /**
@@ -48,6 +50,8 @@ export class L2ClaimMessageTransactionSizeProcessor implements IL2ClaimMessageTr
    * @returns {Promise<void>} A promise that resolves when the processing is complete.
    */
   public async process(): Promise<void> {
+    let message: Message | null = null;
+
     try {
       const messages = await this.databaseService.getNFirstMessagesByStatus(
         MessageStatus.ANCHORED,
@@ -57,10 +61,11 @@ export class L2ClaimMessageTransactionSizeProcessor implements IL2ClaimMessageTr
       );
 
       if (messages.length === 0) {
+        this.logger.info("No anchored messages found to compute transaction size.");
         return;
       }
 
-      const message = messages[0];
+      message = messages[0];
 
       const { gasLimit, maxPriorityFeePerGas, maxFeePerGas } =
         await this.l2MessageServiceClient.estimateClaimGasFees(message);
@@ -86,7 +91,32 @@ export class L2ClaimMessageTransactionSizeProcessor implements IL2ClaimMessageTr
         gasLimit,
       );
     } catch (e) {
-      this.logger.error(e);
+      await this.handleProcessingError(e, message);
     }
+  }
+
+  /**
+   * Handles error that occur during the processing.
+   *
+   * @param {unknown} e - The error that occurred.
+   * @param {Message | null} message - The message object being processed when the error occurred.
+   * @returns {Promise<void>} A promise that resolves when the error has been handled.
+   */
+  private async handleProcessingError(e: unknown, message: Message | null): Promise<void> {
+    const parsedError = ErrorParser.parseErrorWithMitigation(e);
+
+    if (parsedError?.mitigation && !parsedError.mitigation.shouldRetry && message) {
+      message.edit({ status: MessageStatus.NON_EXECUTABLE });
+      await this.databaseService.updateMessage(message);
+      this.logger.warnOrError("Error occurred while processing message transaction size.", {
+        ...parsedError,
+        messageHash: message.messageHash,
+      });
+      return;
+    }
+
+    this.logger.warnOrError("Error occurred while processing message transaction size.", {
+      parsedError,
+    });
   }
 }

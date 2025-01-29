@@ -1,7 +1,7 @@
 import { BlockTag, dataSlice, ethers, toNumber } from "ethers";
 import { BlockExtraData } from "../../core/clients/linea";
 import { GasFees } from "../../core/clients/IGasProvider";
-import { BaseError } from "../../core/errors";
+import { makeBaseError } from "../../core/errors/utils";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Constructor<T = object> = new (...args: any[]) => T;
@@ -21,7 +21,7 @@ function LineaProviderMixIn<TBase extends Constructor<ethers.Provider>>(Base: TB
       const { maxPriorityFeePerGas, maxFeePerGas } = await this.getFeeData();
 
       if (!maxPriorityFeePerGas || !maxFeePerGas) {
-        throw new BaseError("Error getting fee data");
+        throw makeBaseError("Error getting fee data");
       }
 
       return { maxPriorityFeePerGas, maxFeePerGas };

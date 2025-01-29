@@ -30,8 +30,7 @@ import {
 import { LineaRollupClient } from "../LineaRollupClient";
 import { ZERO_ADDRESS } from "../../../core/constants";
 import { OnChainMessageStatus } from "../../../core/enums/message";
-import { GasEstimationError } from "../../../core/errors/GasFeeErrors";
-import { BaseError } from "../../../core/errors";
+import { BaseError, makeBaseError } from "../../../core/errors";
 import { EthersL2MessageServiceLogClient } from "../../linea/EthersL2MessageServiceLogClient";
 import { EthersLineaRollupLogClient } from "../EthersLineaRollupLogClient";
 import { DefaultGasProvider } from "../../gas/DefaultGasProvider";
@@ -231,7 +230,7 @@ describe("TestLineaRollupClient", () => {
       jest.spyOn(gasFeeProvider, "getGasFees").mockRejectedValue(new Error("Gas fees estimation failed").message);
 
       await expect(lineaRollupClient.estimateClaimWithoutProofGas(message)).rejects.toThrow(
-        new GasEstimationError("Gas fees estimation failed", message),
+        makeBaseError("Gas fees estimation failed", message),
       );
     });
 

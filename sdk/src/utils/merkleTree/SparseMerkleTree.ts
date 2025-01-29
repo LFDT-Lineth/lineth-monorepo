@@ -1,5 +1,5 @@
 import { ethers } from "ethers";
-import { BaseError } from "../../core/errors";
+import { makeBaseError } from "../../core/errors";
 import { ZERO_HASH } from "../../core/constants";
 import { Proof } from "../../core/clients/ethereum";
 
@@ -27,7 +27,7 @@ export class SparseMerkleTree {
    */
   constructor(depth: number) {
     if (depth <= 1) {
-      throw new BaseError("Merkle tree depth must be greater than 1");
+      throw makeBaseError("Merkle tree depth must be greater than 1");
     }
     this.depth = depth;
     this.emptyLeaves = this.generateEmptyLeaves(this.depth);
@@ -53,14 +53,14 @@ export class SparseMerkleTree {
    */
   public getProof(key: number): Proof {
     if (key < 0 || key >= Math.pow(2, this.depth)) {
-      throw new BaseError(`Leaf index is out of range`);
+      throw makeBaseError(`Leaf index is out of range`);
     }
 
     const binaryKey = this.keyToBinary(key);
     const leaf = this.getLeaf(key);
 
     if (leaf === this.emptyLeaves[0]) {
-      throw new BaseError(`Leaf does not exist`);
+      throw makeBaseError(`Leaf does not exist`);
     }
 
     return {
@@ -78,7 +78,7 @@ export class SparseMerkleTree {
    */
   public getLeaf(key: number): string {
     if (key < 0 || key >= Math.pow(2, this.depth)) {
-      throw new BaseError("Leaf index is out of range");
+      throw makeBaseError("Leaf index is out of range");
     }
     const binaryKey = this.keyToBinary(key);
     return this.getLeafHelper(this.root, binaryKey, 0);

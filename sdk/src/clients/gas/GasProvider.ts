@@ -4,8 +4,8 @@ import { LineaGasProvider } from "./LineaGasProvider";
 import { IProvider } from "../../core/clients/IProvider";
 import { GasFees, GasProviderConfig, IGasProvider, LineaGasFees } from "../../core/clients/IGasProvider";
 import { Direction } from "../../core/enums";
-import { BaseError } from "../../core/errors";
 import { BrowserProvider, LineaBrowserProvider, LineaProvider, Provider } from "../providers";
+import { makeBaseError } from "../../core/errors/utils";
 
 export class GasProvider implements IGasProvider<TransactionRequest> {
   private defaultGasProvider: DefaultGasProvider;
@@ -50,7 +50,7 @@ export class GasProvider implements IGasProvider<TransactionRequest> {
     if (this.config.direction === Direction.L1_TO_L2) {
       if (this.config.enableLineaEstimateGas) {
         if (!transactionRequest) {
-          throw new BaseError(
+          throw makeBaseError(
             "You need to provide transaction request as param to call the getGasFees function on Linea.",
           );
         }

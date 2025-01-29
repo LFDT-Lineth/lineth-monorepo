@@ -1,9 +1,9 @@
 import { describe, afterEach, jest, it, expect, beforeEach } from "@jest/globals";
 import { MockProxy, mock, mockClear } from "jest-mock-extended";
 import { DefaultGasProvider } from "../DefaultGasProvider";
-import { FeeEstimationError } from "../../../core/errors/GasFeeErrors";
 import { Provider } from "../../providers/provider";
 import { DEFAULT_GAS_ESTIMATION_PERCENTILE } from "../../../core/constants";
+import { makeBaseError } from "../../../core/errors";
 
 const MAX_FEE_PER_GAS = 100_000_000n;
 
@@ -48,7 +48,9 @@ describe("DefaultGasProvider", () => {
           ["0x3b9aca00", "0x59682f00"],
         ],
       });
-      await expect(eip1559GasProvider.getGasFees()).rejects.toThrow(FeeEstimationError);
+      await expect(eip1559GasProvider.getGasFees()).rejects.toThrow(
+        makeBaseError(`Estimated miner tip of ${1271935510} exceeds configured max fee per gas of ${MAX_FEE_PER_GAS}!`),
+      );
       expect(sendSpy).toHaveBeenCalledTimes(1);
     });
 

@@ -25,7 +25,7 @@ export { Provider, BrowserProvider, LineaProvider, LineaBrowserProvider } from "
 export { DefaultGasProvider, GasProvider, LineaGasProvider } from "./clients/gas";
 
 // Core errors
-export { GasEstimationError, FeeEstimationError } from "./core/errors";
+export { makeBaseError, isBaseError } from "./core/errors";
 
 // Contracts types and factories (generated from typechain)
 export { LineaRollup, LineaRollup__factory, L2MessageService, L2MessageService__factory } from "./contracts/typechain";

@@ -18,6 +18,7 @@ import { MessageStatus } from "../../core/enums";
 import { ILogger } from "../../core/utils/logging/ILogger";
 import { IMessageServiceContract } from "../../core/services/contracts/IMessageServiceContract";
 import { IMessageDBService } from "../../core/persistence/IMessageDBService";
+import { ErrorParser } from "../../utils/ErrorParser";
 
 export class MessageAnchoringProcessor implements IMessageAnchoringProcessor {
   private readonly maxFetchMessagesFromDb: number;
@@ -93,7 +94,12 @@ export class MessageAnchoringProcessor implements IMessageAnchoringProcessor {
 
       await this.databaseService.saveMessages(messages);
     } catch (e) {
-      this.logger.error(e);
+      const error = ErrorParser.parseErrorWithMitigation(e);
+      this.logger.error("An error occurred while processing messages.", {
+        errorCode: error?.errorCode,
+        errorMessage: error?.errorMessage,
+        ...(error?.data ? { data: error.data } : {}),
+      });
     }
   }
 }

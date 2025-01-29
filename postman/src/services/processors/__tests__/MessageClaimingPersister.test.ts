@@ -82,7 +82,11 @@ describe("TestMessageClaimingPersister ", () => {
       await messageClaimingPersister.process();
 
       expect(loggerErrorSpy).toHaveBeenCalledTimes(1);
-      expect(loggerErrorSpy).toHaveBeenCalledWith(getTxReceiptError);
+      expect(loggerErrorSpy).toHaveBeenCalledWith("Error processing message.", {
+        messageHash: testPendingMessage.messageHash,
+        errorCode: "UNKNOWN_ERROR",
+        errorMessage: getTxReceiptError.message,
+      });
     });
 
     it("Should log as info and update message as claimed success if successful", async () => {

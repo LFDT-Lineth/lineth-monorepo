@@ -1,8 +1,8 @@
 import { Block, TransactionReceipt, TransactionRequest, TransactionResponse } from "ethers";
-import { FeeEstimationError } from "../../core/errors";
 import { DefaultGasProviderConfig, FeeHistory, GasFees, IEthereumGasProvider } from "../../core/clients/IGasProvider";
 import { IProvider } from "../../core/clients/IProvider";
 import { BrowserProvider, LineaBrowserProvider, LineaProvider, Provider } from "../providers";
+import { makeBaseError } from "../../core/errors/utils";
 
 export class DefaultGasProvider implements IEthereumGasProvider<TransactionRequest> {
   private gasFeesCache: GasFees;
@@ -62,7 +62,7 @@ export class DefaultGasProvider implements IEthereumGasProvider<TransactionReque
     const maxPriorityFeePerGas = this.calculateMaxPriorityFee(feeHistory.reward);
 
     if (maxPriorityFeePerGas > this.config.maxFeePerGasCap) {
-      throw new FeeEstimationError(
+      throw makeBaseError(
         `Estimated miner tip of ${maxPriorityFeePerGas} exceeds configured max fee per gas of ${this.config.maxFeePerGasCap}!`,
       );
     }

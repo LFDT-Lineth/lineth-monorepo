@@ -1,6 +1,6 @@
 import { describe, it, expect } from "@jest/globals";
-import { ErrorCode, EthersError } from "ethers";
-import { GasEstimationError } from "@consensys/linea-sdk";
+import { ErrorCode, makeError } from "ethers";
+import { makeBaseError } from "@consensys/linea-sdk";
 import { ErrorParser } from "../ErrorParser";
 import { DatabaseAccessError } from "../../core/errors";
 import { DatabaseErrorType, DatabaseRepoName } from "../../core/enums";
@@ -9,17 +9,36 @@ import { generateMessage } from "../testing/helpers";
 describe("ErrorParser", () => {
   describe("parseErrorWithMitigation", () => {
     it("should return null when error is null", () => {
-      expect(ErrorParser.parseErrorWithMitigation(null as unknown as EthersError)).toStrictEqual(null);
+      expect(ErrorParser.parseErrorWithMitigation(null)).toStrictEqual(null);
     });
 
-    it("should return NETWORK_ERROR and shouldRetry = true when error code = NETWORK_ERROR", () => {
-      const errorMessage = {
-        code: "NETWORK_ERROR",
-        shortMessage: "any reason",
-      };
+    it("should return UNKNOWN_ERROR and shouldRetry = false when error is not instance of BaseError", () => {
+      expect(ErrorParser.parseErrorWithMitigation(new Error("any reason"))).toStrictEqual({
+        errorMessage: "any reason",
+        errorCode: "UNKNOWN_ERROR",
+        mitigation: {
+          shouldRetry: false,
+        },
+      });
+    });
 
-      expect(ErrorParser.parseErrorWithMitigation(errorMessage as unknown as EthersError)).toStrictEqual({
-        context: "any reason",
+    it("should return UNKNOWN_ERROR and shouldRetry = false when error is instance of BaseError but the underlying error is not an EthersError", () => {
+      expect(ErrorParser.parseErrorWithMitigation(makeBaseError(new Error("any reason")))).toStrictEqual({
+        errorMessage: "any reason",
+        errorCode: "UNKNOWN_ERROR",
+        mitigation: {
+          shouldRetry: false,
+        },
+      });
+    });
+  });
+
+  describe("parseEthersError", () => {
+    it("should return NETWORK_ERROR and shouldRetry = true when error code = NETWORK_ERROR", () => {
+      const error = makeError("any reason", "NETWORK_ERROR");
+
+      expect(ErrorParser.parseEthersError(error)).toStrictEqual({
+        errorMessage: "any reason (code=NETWORK_ERROR, version=6.13.4)",
         errorCode: "NETWORK_ERROR",
         mitigation: {
           shouldRetry: true,
@@ -28,13 +47,10 @@ describe("ErrorParser", () => {
     });
 
     it("should return SERVER_ERROR and shouldRetry = true when error code = SERVER_ERROR", () => {
-      const errorMessage = {
-        code: "SERVER_ERROR",
-        shortMessage: "any reason",
-      };
+      const error = makeError("any reason", "SERVER_ERROR");
 
-      expect(ErrorParser.parseErrorWithMitigation(errorMessage as unknown as EthersError)).toStrictEqual({
-        context: "any reason",
+      expect(ErrorParser.parseEthersError(error)).toStrictEqual({
+        errorMessage: "any reason (code=SERVER_ERROR, version=6.13.4)",
         errorCode: "SERVER_ERROR",
         mitigation: {
           shouldRetry: true,
@@ -43,13 +59,10 @@ describe("ErrorParser", () => {
     });
 
     it("should return TIMEOUT and shouldRetry = true when error code = TIMEOUT", () => {
-      const errorMessage = {
-        code: "TIMEOUT",
-        shortMessage: "any reason",
-      };
+      const error = makeError("any reason", "TIMEOUT");
 
-      expect(ErrorParser.parseErrorWithMitigation(errorMessage as unknown as EthersError)).toStrictEqual({
-        context: "any reason",
+      expect(ErrorParser.parseEthersError(error)).toStrictEqual({
+        errorMessage: "any reason (code=TIMEOUT, version=6.13.4)",
         errorCode: "TIMEOUT",
         mitigation: {
           shouldRetry: true,
@@ -58,13 +71,10 @@ describe("ErrorParser", () => {
     });
 
     it("should return INSUFFICIENT_FUNDS and shouldRetry = true when error code = INSUFFICIENT_FUNDS", () => {
-      const errorMessage = {
-        code: "INSUFFICIENT_FUNDS",
-        shortMessage: "any reason",
-      };
+      const error = makeError("any reason", "INSUFFICIENT_FUNDS");
 
-      expect(ErrorParser.parseErrorWithMitigation(errorMessage as unknown as EthersError)).toStrictEqual({
-        context: "any reason",
+      expect(ErrorParser.parseEthersError(error)).toStrictEqual({
+        errorMessage: "any reason (code=INSUFFICIENT_FUNDS, version=6.13.4)",
         errorCode: "INSUFFICIENT_FUNDS",
         mitigation: {
           shouldRetry: true,
@@ -72,14 +82,11 @@ describe("ErrorParser", () => {
       });
     });
 
-    it("should return REPLACEMENT_UNDERPRICED and shouldRetry = true when error code = NETWOREPLACEMENT_UNDERPRICEDK_ERROR", () => {
-      const errorMessage = {
-        code: "REPLACEMENT_UNDERPRICED",
-        shortMessage: "any reason",
-      };
+    it("should return REPLACEMENT_UNDERPRICED and shouldRetry = true when error code = REPLACEMENT_UNDERPRICED", () => {
+      const error = makeError("any reason", "REPLACEMENT_UNDERPRICED");
 
-      expect(ErrorParser.parseErrorWithMitigation(errorMessage as unknown as EthersError)).toStrictEqual({
-        context: "any reason",
+      expect(ErrorParser.parseEthersError(error)).toStrictEqual({
+        errorMessage: "any reason (code=REPLACEMENT_UNDERPRICED, version=6.13.4)",
         errorCode: "REPLACEMENT_UNDERPRICED",
         mitigation: {
           shouldRetry: true,
@@ -88,13 +95,10 @@ describe("ErrorParser", () => {
     });
 
     it("should return NONCE_EXPIRED and shouldRetry = true when error code = NONCE_EXPIRED", () => {
-      const errorMessage = {
-        code: "NONCE_EXPIRED",
-        shortMessage: "any reason",
-      };
+      const error = makeError("any reason", "NONCE_EXPIRED");
 
-      expect(ErrorParser.parseErrorWithMitigation(errorMessage as unknown as EthersError)).toStrictEqual({
-        context: "any reason",
+      expect(ErrorParser.parseEthersError(error)).toStrictEqual({
+        errorMessage: "any reason (code=NONCE_EXPIRED, version=6.13.4)",
         errorCode: "NONCE_EXPIRED",
         mitigation: {
           shouldRetry: true,
@@ -103,13 +107,10 @@ describe("ErrorParser", () => {
     });
 
     it("should return CALL_EXCEPTION and shouldRetry = true when error code = CALL_EXCEPTION", () => {
-      const errorMessage = {
-        shortMessage: "any reason",
-        code: "CALL_EXCEPTION",
-      };
+      const error = makeError("any reason", "CALL_EXCEPTION");
 
-      expect(ErrorParser.parseErrorWithMitigation(errorMessage as unknown as EthersError)).toStrictEqual({
-        context: "any reason",
+      expect(ErrorParser.parseEthersError(error)).toStrictEqual({
+        errorMessage: "any reason",
         errorCode: "CALL_EXCEPTION",
         mitigation: {
           shouldRetry: true,
@@ -118,18 +119,26 @@ describe("ErrorParser", () => {
     });
 
     it("should return CALL_EXCEPTION and shouldRetry = false when error code = CALL_EXCEPTION with short message as execution reverted", () => {
-      const errorMessage = {
-        shortMessage: "execution reverted",
-        code: "CALL_EXCEPTION",
+      const error = makeError("execution reverted", "CALL_EXCEPTION", {
         info: {
           error: {
             message: "execution reverted for some reason",
           },
         },
-      };
+        reason: "execution reverted",
+        action: "call",
+        data: "0x0123456789abcdef",
+        transaction: {
+          to: null,
+          from: undefined,
+          data: "",
+        },
+        invocation: null,
+        revert: null,
+      });
 
-      expect(ErrorParser.parseErrorWithMitigation(errorMessage as unknown as EthersError)).toStrictEqual({
-        context: "execution reverted for some reason",
+      expect(ErrorParser.parseEthersError(error)).toStrictEqual({
+        errorMessage: "execution reverted for some reason",
         errorCode: "CALL_EXCEPTION",
         mitigation: {
           shouldRetry: false,
@@ -138,19 +147,27 @@ describe("ErrorParser", () => {
     });
 
     it("should return CALL_EXCEPTION and shouldRetry = false when error code = CALL_EXCEPTION with inner error code as 4001", () => {
-      const errorMessage = {
-        shortMessage: "any reason",
-        code: "CALL_EXCEPTION",
+      const error = makeError("any reason", "CALL_EXCEPTION", {
         info: {
           error: {
             message: "execution reverted for some reason",
             code: 4001,
           },
         },
-      };
+        action: "call",
+        data: null,
+        reason: null,
+        transaction: {
+          to: null,
+          from: undefined,
+          data: "",
+        },
+        invocation: null,
+        revert: null,
+      });
 
-      expect(ErrorParser.parseErrorWithMitigation(errorMessage as unknown as EthersError)).toStrictEqual({
-        context: "execution reverted for some reason",
+      expect(ErrorParser.parseEthersError(error)).toStrictEqual({
+        errorMessage: "execution reverted for some reason",
         errorCode: "CALL_EXCEPTION",
         mitigation: {
           shouldRetry: false,
@@ -159,19 +176,27 @@ describe("ErrorParser", () => {
     });
 
     it("should return CALL_EXCEPTION and shouldRetry = false when error code = CALL_EXCEPTION with inner error code as -32603", () => {
-      const errorMessage = {
-        shortMessage: "any reason",
-        code: "CALL_EXCEPTION",
+      const error = makeError("any reason", "CALL_EXCEPTION", {
         info: {
           error: {
             message: "execution reverted for some reason",
             code: -32603,
           },
         },
-      };
+        action: "call",
+        data: null,
+        reason: null,
+        transaction: {
+          to: null,
+          from: undefined,
+          data: "",
+        },
+        invocation: null,
+        revert: null,
+      });
 
-      expect(ErrorParser.parseErrorWithMitigation(errorMessage as unknown as EthersError)).toStrictEqual({
-        context: "execution reverted for some reason",
+      expect(ErrorParser.parseEthersError(error)).toStrictEqual({
+        errorMessage: "execution reverted for some reason",
         errorCode: "CALL_EXCEPTION",
         mitigation: {
           shouldRetry: false,
@@ -180,19 +205,27 @@ describe("ErrorParser", () => {
     });
 
     it("should return CALL_EXCEPTION and shouldRetry = true when error code = CALL_EXCEPTION and inner error code as -32000 and message as gas required exceeds allowance (0)", () => {
-      const errorMessage = {
-        shortMessage: "any reason",
-        code: "CALL_EXCEPTION",
+      const error = makeError("any reason", "CALL_EXCEPTION", {
         info: {
           error: {
             message: "gas required exceeds allowance (0)",
             code: -32000,
           },
         },
-      };
+        action: "call",
+        data: null,
+        reason: null,
+        transaction: {
+          to: null,
+          from: undefined,
+          data: "",
+        },
+        invocation: null,
+        revert: null,
+      });
 
-      expect(ErrorParser.parseErrorWithMitigation(errorMessage as unknown as EthersError)).toStrictEqual({
-        context: "gas required exceeds allowance (0)",
+      expect(ErrorParser.parseEthersError(error)).toStrictEqual({
+        errorMessage: "gas required exceeds allowance (0)",
         errorCode: "CALL_EXCEPTION",
         mitigation: {
           shouldRetry: true,
@@ -201,19 +234,27 @@ describe("ErrorParser", () => {
     });
 
     it("should return CALL_EXCEPTION and shouldRetry = true when error code = CALL_EXCEPTION and inner error code as -32000 and message as max priority fee per gas higher", () => {
-      const errorMessage = {
-        shortMessage: "any reason",
-        code: "CALL_EXCEPTION",
+      const error = makeError("any reason", "CALL_EXCEPTION", {
         info: {
           error: {
             message: "max priority fee per gas higher than max fee per gas",
             code: -32000,
           },
         },
-      };
+        action: "call",
+        data: null,
+        reason: null,
+        transaction: {
+          to: null,
+          from: undefined,
+          data: "",
+        },
+        invocation: null,
+        revert: null,
+      });
 
-      expect(ErrorParser.parseErrorWithMitigation(errorMessage as unknown as EthersError)).toStrictEqual({
-        context: "max priority fee per gas higher than max fee per gas",
+      expect(ErrorParser.parseEthersError(error)).toStrictEqual({
+        errorMessage: "max priority fee per gas higher than max fee per gas",
         errorCode: "CALL_EXCEPTION",
         mitigation: {
           shouldRetry: true,
@@ -222,19 +263,27 @@ describe("ErrorParser", () => {
     });
 
     it("should return CALL_EXCEPTION and shouldRetry = true when error code = CALL_EXCEPTION and inner error code as -32000 and message as max fee per gas less than block base fee", () => {
-      const errorMessage = {
-        shortMessage: "any reason",
-        code: "CALL_EXCEPTION",
+      const error = makeError("any reason", "CALL_EXCEPTION", {
         info: {
           error: {
             message: "max fee per gas less than block base fee",
             code: -32000,
           },
         },
-      };
+        action: "call",
+        data: null,
+        reason: null,
+        transaction: {
+          to: null,
+          from: undefined,
+          data: "",
+        },
+        invocation: null,
+        revert: null,
+      });
 
-      expect(ErrorParser.parseErrorWithMitigation(errorMessage as unknown as EthersError)).toStrictEqual({
-        context: "max fee per gas less than block base fee",
+      expect(ErrorParser.parseEthersError(error)).toStrictEqual({
+        errorMessage: "max fee per gas less than block base fee",
         errorCode: "CALL_EXCEPTION",
         mitigation: {
           shouldRetry: true,
@@ -243,19 +292,27 @@ describe("ErrorParser", () => {
     });
 
     it("should return CALL_EXCEPTION and shouldRetry = true when error code = CALL_EXCEPTION with other inner error", () => {
-      const errorMessage = {
-        shortMessage: "any reason",
-        code: "CALL_EXCEPTION",
+      const error = makeError("any reason", "CALL_EXCEPTION", {
         info: {
           error: {
             message: "invalid method parameters",
             code: -32602,
           },
         },
-      };
+        action: "call",
+        data: null,
+        reason: null,
+        transaction: {
+          to: null,
+          from: undefined,
+          data: "",
+        },
+        invocation: null,
+        revert: null,
+      });
 
-      expect(ErrorParser.parseErrorWithMitigation(errorMessage as unknown as EthersError)).toStrictEqual({
-        context: "any reason",
+      expect(ErrorParser.parseEthersError(error)).toStrictEqual({
+        errorMessage: "any reason",
         errorCode: "CALL_EXCEPTION",
         mitigation: {
           shouldRetry: true,
@@ -264,13 +321,10 @@ describe("ErrorParser", () => {
     });
 
     it("should return ACTION_REJECTED and shouldRetry = false when error code = ACTION_REJECTED", () => {
-      const errorMessage = {
-        shortMessage: "any reason",
-        code: "ACTION_REJECTED",
-      };
+      const error = makeError("any reason", "ACTION_REJECTED");
 
-      expect(ErrorParser.parseErrorWithMitigation(errorMessage as unknown as EthersError)).toStrictEqual({
-        context: "any reason",
+      expect(ErrorParser.parseEthersError(error)).toStrictEqual({
+        errorMessage: "any reason",
         errorCode: "ACTION_REJECTED",
         mitigation: {
           shouldRetry: false,
@@ -279,13 +333,10 @@ describe("ErrorParser", () => {
     });
 
     it("should return UNKNOWN_ERROR and shouldRetry = false when error code = UNKNOWN_ERROR", () => {
-      const errorMessage = {
-        shortMessage: "any reason",
-        code: "UNKNOWN_ERROR",
-      };
+      const error = makeError("any reason", "UNKNOWN_ERROR");
 
-      expect(ErrorParser.parseErrorWithMitigation(errorMessage as unknown as EthersError)).toStrictEqual({
-        context: "any reason",
+      expect(ErrorParser.parseEthersError(error)).toStrictEqual({
+        errorMessage: "any reason",
         errorCode: "UNKNOWN_ERROR",
         mitigation: {
           shouldRetry: false,
@@ -294,11 +345,30 @@ describe("ErrorParser", () => {
     });
 
     it("should return UNKNOWN_ERROR and shouldRetry = false when error = GasEstimationError", () => {
-      const gasEstimationError = new GasEstimationError("Gas estimation failed", generateMessage());
+      const gasEstimationError = makeBaseError(makeError("Gas estimation failed", "UNKNOWN_ERROR"), generateMessage());
 
-      expect(ErrorParser.parseErrorWithMitigation(gasEstimationError as unknown as EthersError)).toStrictEqual({
-        context: "Gas estimation failed",
+      expect(ErrorParser.parseErrorWithMitigation(gasEstimationError)).toStrictEqual({
+        errorMessage: "Gas estimation failed",
         errorCode: "UNKNOWN_ERROR",
+        mitigation: {
+          shouldRetry: false,
+        },
+      });
+    });
+
+    it("should return UNKNOWN_ERROR and shouldRetry = false when error is execution reverted", () => {
+      const error = makeError("Gas estimation failed", "UNKNOWN_ERROR", {
+        error: {
+          code: -32000,
+          message: "execution reverted",
+          data: "0x0123456789abcdef",
+        },
+      });
+
+      expect(ErrorParser.parseEthersError(error)).toStrictEqual({
+        errorMessage: "execution reverted",
+        errorCode: "UNKNOWN_ERROR",
+        data: "0x0123456789abcdef",
         mitigation: {
           shouldRetry: false,
         },
@@ -313,8 +383,8 @@ describe("ErrorParser", () => {
         generateMessage(),
       );
 
-      expect(ErrorParser.parseErrorWithMitigation(databaseAccessError as unknown as EthersError)).toStrictEqual({
-        context: "MessageRepository: insert - Database access failed",
+      expect(ErrorParser.parseErrorWithMitigation(databaseAccessError)).toStrictEqual({
+        errorMessage: "MessageRepository: insert - Database access failed",
         errorCode: "UNKNOWN_ERROR",
         mitigation: {
           shouldRetry: true,
@@ -339,13 +409,10 @@ describe("ErrorParser", () => {
         "OFFCHAIN_FAULT",
       ];
       otherErrorCodes.forEach((errorCode: ErrorCode) => {
-        const errorMessage = {
-          shortMessage: "any reason",
-          code: errorCode,
-        };
+        const error = makeError("any reason", errorCode);
 
-        expect(ErrorParser.parseErrorWithMitigation(errorMessage as unknown as EthersError)).toStrictEqual({
-          context: "any reason",
+        expect(ErrorParser.parseEthersError(error)).toStrictEqual({
+          errorMessage: "any reason",
           errorCode: errorCode,
           mitigation: {
             shouldRetry: true,

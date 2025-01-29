@@ -1,14 +1,8 @@
 import { describe, it } from "@jest/globals";
-import { BaseError } from "../BaseError";
-import { serialize } from "../../utils/serialize";
+import { makeBaseError } from "../utils";
 
 describe("BaseError", () => {
   it("Should log error message when we only pass a short message", () => {
-    expect(serialize(new BaseError("An error message."))).toStrictEqual(
-      serialize({
-        name: "LineaSDKCoreError",
-        message: "An error message.",
-      }),
-    );
+    expect(makeBaseError("An error message.").message).toStrictEqual("An error message.");
   });
 });

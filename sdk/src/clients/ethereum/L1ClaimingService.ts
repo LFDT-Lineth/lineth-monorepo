@@ -11,8 +11,8 @@ import { Cache } from "../../utils/Cache";
 import { ILineaRollupClient } from "../../core/clients/ethereum";
 import { IL2MessageServiceClient, IL2MessageServiceLogClient } from "../../core/clients/linea";
 import { MessageSent, Network } from "../../core/types";
-import { BaseError } from "../../core/errors";
 import { FinalizationMessagingInfo, Proof } from "../../core/clients/ethereum/IMerkleTreeService";
+import { makeBaseError } from "../../core/errors/utils";
 
 export class L1ClaimingService {
   private cache: Cache;
@@ -93,7 +93,7 @@ export class L1ClaimingService {
     });
 
     if (!messageSentEvent) {
-      throw new BaseError(`Message hash does not exist on L2. Message hash: ${messageHash}`);
+      throw makeBaseError(`Message hash does not exist on L2. Message hash: ${messageHash}`);
     }
 
     if (migrationBlock > messageSentEvent.blockNumber) {
