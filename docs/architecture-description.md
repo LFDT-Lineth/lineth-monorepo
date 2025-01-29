@@ -876,7 +876,7 @@ Internally, the message service computes a rolling hash. It’s computed recursi
 
 Linea’s coordinator, which is subscribing to L1 events, detects the L1 finalized (2 epochs to avoid reorgs) cross-chain MessageSent event and anchors it on L2. The coordinator anchors the messages by batches.
 
-Anchoring (Anchoring is the process for placing a "cross-chain validity reference", that must exist for any message to be claimed) of messages is done through the executed via [anchorL1L2MessageHashes](https://github.com/Consensys/zkevm-monorepo/blob/main/contracts/contracts/messageService/l2/L2MessageManager.sol#L35) which is inherited by the [L2MessageService](https://github.com/Consensys/zkevm-monorepo/blob/main/contracts/contracts/messageService/l2/L2MessageService.sol) smart contract.
+Anchoring (Anchoring is the process for placing a "cross-chain validity reference", that must exist for any message to be claimed) of messages is done through the executed via [anchorL1L2MessageHashes](https://github.com/Consensys/linea-monorepo/blob/main/contracts/src/messaging/l2/L2MessageManager.sol#L41) which is inherited by the [L2MessageService](https://github.com/Consensys/linea-monorepo/blob/main/contracts/src/messaging/l2/L2MessageService.sol) smart contract.
 
 To anchor a message, the coordinator collects all L1-L2 message logs from which it gets the message hash, the rolling hash, the nonce (unique message number) and the L1 block number. Note that the L1 block number facilitates the processing but is not anchored on L2.
 

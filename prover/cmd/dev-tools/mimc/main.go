@@ -41,7 +41,7 @@ func main() {
 		constants[i] = mimc.GetConstants()[i].String()
 	}
 
-	f, err := os.Create("../../../../contracts/contracts/lib/Mimc.sol")
+	f, err := os.Create("../../../../contracts/src/libraries/Mimc.sol")
 	if err != nil {
 		log.Fatal("cannot create file: ", err)
 		return

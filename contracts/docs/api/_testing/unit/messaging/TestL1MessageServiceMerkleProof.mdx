@@ -1,0 +1,90 @@
+# `ITestL1MessageService`
+
+### claimMessageWithProof
+
+```solidity
+function claimMessageWithProof(struct IL1MessageService.ClaimMessageWithProofParams _params) external
+```
+
+# `TestL1MessageServiceMerkleProof`
+
+### originalSender
+
+```solidity
+address originalSender
+```
+
+### MessageAlreadyReceived
+
+```solidity
+error MessageAlreadyReceived(bytes32 messageHash)
+```
+
+_Thrown when the message has already been received._
+
+### initialize
+
+```solidity
+function initialize(uint256 _rateLimitPeriod, uint256 _rateLimitAmount, struct IPauseManager.PauseTypeRole[] _pauseTypeRoles, struct IPauseManager.PauseTypeRole[] _unpauseTypeRoles) public
+```
+
+### tryInitialize
+
+```solidity
+function tryInitialize(uint256 _rateLimitPeriod, uint256 _rateLimitAmount) external
+```
+
+### canSendMessage
+
+```solidity
+function canSendMessage(address _to, uint256 _fee, bytes _calldata) external payable
+```
+
+### addL2L1MessageHash
+
+```solidity
+function addL2L1MessageHash(bytes32 _messageHash) external
+```
+
+### setSender
+
+```solidity
+function setSender() external payable
+```
+
+### sendNewMessage
+
+```solidity
+function sendNewMessage() external payable
+```
+
+### doReentryWithParams
+
+```solidity
+function doReentryWithParams(struct IL1MessageService.ClaimMessageWithProofParams _params) external payable
+```
+
+### doReentry
+
+```solidity
+function doReentry() external payable
+```
+
+### addFunds
+
+```solidity
+function addFunds() external payable
+```
+
+### setL2L1MessageToClaimed
+
+```solidity
+function setL2L1MessageToClaimed(uint256 _index) external
+```
+
+### addL2MerkleRoots
+
+```solidity
+function addL2MerkleRoots(bytes32[] _newRoot, uint256 _treeDepth) external
+```
+

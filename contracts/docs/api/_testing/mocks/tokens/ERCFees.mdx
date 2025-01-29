@@ -1,0 +1,48 @@
+## FEES_PERCENTAGE_MULTIPLIER
+
+```solidity
+uint16 FEES_PERCENTAGE_MULTIPLIER
+```
+
+# `ERC20Fees`
+
+### feePercentage
+
+```solidity
+uint16 feePercentage
+```
+
+### constructor
+
+```solidity
+constructor(string _tokenName, string _tokenSymbol, uint16 _feePercentage) public
+```
+
+_Constructor that gives _msgSender() all of existing tokens._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _tokenName | string | string memory token name |
+| _tokenSymbol | string | string memory token symbol |
+| _feePercentage | uint16 | uint16 fee percentage with FEE_PERCENTAGE_MULTIPLIER |
+
+### mint
+
+```solidity
+function mint(address _account, uint256 _amount) public returns (bool)
+```
+
+### _transfer
+
+```solidity
+function _transfer(address _sender, address _recipient, uint256 _amount) internal virtual
+```
+
+### burn
+
+```solidity
+function burn(address _account, uint256 _amount) public returns (bool)
+```
+

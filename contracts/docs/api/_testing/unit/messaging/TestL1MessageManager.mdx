@@ -1,0 +1,52 @@
+# `TestL1MessageManager`
+
+### L1L2MessageNotSent
+
+```solidity
+error L1L2MessageNotSent(bytes32 messageHash)
+```
+
+_Thrown when the L1->L2 message has not been sent._
+
+### MessageAlreadyReceived
+
+```solidity
+error MessageAlreadyReceived(bytes32 messageHash)
+```
+
+_Thrown when the message has already been received._
+
+### addL2L1MessageHash
+
+```solidity
+function addL2L1MessageHash(bytes32 _messageHash) external
+```
+
+_V1_
+
+### updateL2L1MessageStatusToClaimed
+
+```solidity
+function updateL2L1MessageStatusToClaimed(bytes32 _messageHash) external
+```
+
+### setL2L1MessageToClaimed
+
+```solidity
+function setL2L1MessageToClaimed(uint256 _messageNumber) external
+```
+
+_V2_
+
+### addL2MerkleRoots
+
+```solidity
+function addL2MerkleRoots(bytes32[] _newRoot, uint256 _treeDepth) external
+```
+
+### anchorL2MessagingBlocks
+
+```solidity
+function anchorL2MessagingBlocks(bytes _l2MessagingBlocksOffsets, uint256 _currentL2BlockNumber) external
+```
+

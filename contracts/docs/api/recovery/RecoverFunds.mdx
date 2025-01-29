@@ -1,0 +1,47 @@
+# `RecoverFunds`
+
+### FUNCTION_EXECUTOR_ROLE
+
+```solidity
+bytes32 FUNCTION_EXECUTOR_ROLE
+```
+
+### constructor
+
+```solidity
+constructor() public
+```
+
+### initialize
+
+```solidity
+function initialize(address _securityCouncil, address _executorAddress) external
+```
+
+Initialises underlying dependencies and sets initial access control.
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _securityCouncil | address | The address owning the security council role. |
+| _executorAddress | address | The executeExternalCall executor address. |
+
+### executeExternalCall
+
+```solidity
+function executeExternalCall(address _destination, bytes _callData, uint256 _ethValue) external payable
+```
+
+Executes external calls.
+
+_"0x" for calldata can be used for simple ETH transfers._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _destination | address | The address being called. |
+| _callData | bytes | The calldata being sent to the address. |
+| _ethValue | uint256 | Any ETH value being sent. |
+

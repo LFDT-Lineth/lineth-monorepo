@@ -1,0 +1,144 @@
+# `LineaSurgeXP`
+
+### TokenIsSoulBound
+
+```solidity
+error TokenIsSoulBound()
+```
+
+### CallerIsNotContract
+
+```solidity
+error CallerIsNotContract()
+```
+
+### ZeroAddressNotAllowed
+
+```solidity
+error ZeroAddressNotAllowed()
+```
+
+### MINTER_ROLE
+
+```solidity
+bytes32 MINTER_ROLE
+```
+
+### TRANSFER_ROLE
+
+```solidity
+bytes32 TRANSFER_ROLE
+```
+
+### constructor
+
+```solidity
+constructor(address admin, address minter, address[] _initialTransferers) public
+```
+
+### mint
+
+```solidity
+function mint(address _to, uint256 _amount) external
+```
+
+Mints a single token amount for a single recipient.
+
+_Only the MINTER_ROLE can mint these tokens_
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _to | address | The address receiving the token amount. |
+| _amount | uint256 | The amount of token to receive. |
+
+### batchMint
+
+```solidity
+function batchMint(address[] _to, uint256 _amount) external
+```
+
+Mints a single token amount for a multiple recipients.
+
+_Only the MINTER_ROLE can mint these tokens_
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _to | address[] | The addresses receiving the token amount. |
+| _amount | uint256 | The amount of token to receive. |
+
+### batchMintMultiple
+
+```solidity
+function batchMintMultiple(address[] _to, uint256[] _amounts) external
+```
+
+Mints a 1:1 amounts for multiple recipients.
+
+_Only the MINTER_ROLE can mint these tokens_
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _to | address[] | The addresses receiving the token amount. |
+| _amounts | uint256[] | The amounts of token to receive. |
+
+### transfer
+
+```solidity
+function transfer(address _address, uint256 _amount) public virtual returns (bool)
+```
+
+Validates allowed role and caller being contract before calling base transfer.
+
+_Only contracts with TRANSFER_ROLE are allowed to call transfer._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _address | address | The recipient address. |
+| _amount | uint256 | The amount to transfer. |
+
+### transferFrom
+
+```solidity
+function transferFrom(address, address, uint256) public virtual returns (bool)
+```
+
+Overrides and reverts base functions for transferFrom.
+
+### approve
+
+```solidity
+function approve(address, uint256) public virtual returns (bool)
+```
+
+Overrides and reverts base functions for approve.
+
+### increaseAllowance
+
+```solidity
+function increaseAllowance(address, uint256) public virtual returns (bool)
+```
+
+Overrides and reverts base functions for increaseAllowance.
+
+### decreaseAllowance
+
+```solidity
+function decreaseAllowance(address, uint256) public virtual returns (bool)
+```
+
+Overrides and reverts base functions for decreaseAllowance.
+
+### onlyContractCaller
+
+```solidity
+modifier onlyContractCaller()
+```
+

@@ -1,0 +1,53 @@
+# `ITokenMinter`
+
+### mint
+
+```solidity
+function mint(address _to, uint256 _amount) external
+```
+
+Mints a single token amount for a single recipient.
+
+_Only the MINTER_ROLE can mint these tokens_
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _to | address | The address receiving the token amount. |
+| _amount | uint256 | The amount of token to receive. |
+
+### batchMint
+
+```solidity
+function batchMint(address[] _to, uint256 _amount) external
+```
+
+Mints a single token amount for a multiple recipients.
+
+_Only the MINTER_ROLE can mint these tokens_
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _to | address[] | The addresses receiving the token amount. |
+| _amount | uint256 | The amount of token to receive. |
+
+### batchMintMultiple
+
+```solidity
+function batchMintMultiple(address[] _to, uint256[] _amounts) external
+```
+
+Mints a 1:1 amounts for multiple recipients.
+
+_Only the MINTER_ROLE can mint these tokens_
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _to | address[] | The addresses receiving the token amount. |
+| _amounts | uint256[] | The amounts of token to receive. |
+

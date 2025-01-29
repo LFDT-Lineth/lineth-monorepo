@@ -1,0 +1,80 @@
+# `MockERC20WeirdNameSymbol`
+
+### decimals
+
+```solidity
+uint8 decimals
+```
+
+### balanceOf
+
+```solidity
+mapping(address => uint256) balanceOf
+```
+
+### allowance
+
+```solidity
+mapping(address => mapping(address => uint256)) allowance
+```
+
+### Transfer
+
+```solidity
+event Transfer(address from, address to, uint256 value)
+```
+
+### Approval
+
+```solidity
+event Approval(address owner, address spender, uint256 value)
+```
+
+### Mint
+
+```solidity
+event Mint(address account, uint256 value)
+```
+
+### constructor
+
+```solidity
+constructor() public
+```
+
+### name
+
+```solidity
+function name() public pure returns (bytes1)
+```
+
+### symbol
+
+```solidity
+function symbol() public pure returns (bytes1)
+```
+
+### transfer
+
+```solidity
+function transfer(address _to, uint256 _value) public returns (bool)
+```
+
+### approve
+
+```solidity
+function approve(address _spender, uint256 _value) public returns (bool)
+```
+
+### transferFrom
+
+```solidity
+function transferFrom(address _from, address _to, uint256 _value) public returns (bool)
+```
+
+### mint
+
+```solidity
+function mint(address _account, uint256 _value) public returns (bool)
+```
+

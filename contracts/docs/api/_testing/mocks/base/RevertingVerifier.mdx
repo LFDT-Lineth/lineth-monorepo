@@ -1,0 +1,23 @@
+# `RevertingVerifier`
+
+### Scenario
+
+```solidity
+enum Scenario {
+  EMPTY_REVERT,
+  GAS_GUZZLE
+}
+```
+
+### constructor
+
+```solidity
+constructor(enum RevertingVerifier.Scenario _scenario) public
+```
+
+### Verify
+
+```solidity
+function Verify(bytes, uint256[]) external returns (bool)
+```
+

@@ -1,0 +1,1612 @@
+# `IAccessControlUpgradeable`
+
+### RoleAdminChanged
+
+```solidity
+event RoleAdminChanged(bytes32 role, bytes32 previousAdminRole, bytes32 newAdminRole)
+```
+
+_Emitted when `newAdminRole` is set as ``role``'s admin role, replacing `previousAdminRole`
+
+`DEFAULT_ADMIN_ROLE` is the starting admin for all roles, despite
+{RoleAdminChanged} not being emitted signaling this.
+
+_Available since v3.1.__
+
+### RoleGranted
+
+```solidity
+event RoleGranted(bytes32 role, address account, address sender)
+```
+
+_Emitted when `account` is granted `role`.
+
+`sender` is the account that originated the contract call, an admin role
+bearer except when using {AccessControl-_setupRole}._
+
+### RoleRevoked
+
+```solidity
+event RoleRevoked(bytes32 role, address account, address sender)
+```
+
+_Emitted when `account` is revoked `role`.
+
+`sender` is the account that originated the contract call:
+  - if using `revokeRole`, it is the admin role bearer
+  - if using `renounceRole`, it is the role bearer (i.e. `account`)_
+
+### hasRole
+
+```solidity
+function hasRole(bytes32 role, address account) external view returns (bool)
+```
+
+_Returns `true` if `account` has been granted `role`._
+
+### getRoleAdmin
+
+```solidity
+function getRoleAdmin(bytes32 role) external view returns (bytes32)
+```
+
+_Returns the admin role that controls `role`. See {grantRole} and
+{revokeRole}.
+
+To change a role's admin, use {AccessControl-_setRoleAdmin}._
+
+### grantRole
+
+```solidity
+function grantRole(bytes32 role, address account) external
+```
+
+_Grants `role` to `account`.
+
+If `account` had not been already granted `role`, emits a {RoleGranted}
+event.
+
+Requirements:
+
+- the caller must have ``role``'s admin role._
+
+### revokeRole
+
+```solidity
+function revokeRole(bytes32 role, address account) external
+```
+
+_Revokes `role` from `account`.
+
+If `account` had been granted `role`, emits a {RoleRevoked} event.
+
+Requirements:
+
+- the caller must have ``role``'s admin role._
+
+### renounceRole
+
+```solidity
+function renounceRole(bytes32 role, address account) external
+```
+
+_Revokes `role` from the calling account.
+
+Roles are often managed via {grantRole} and {revokeRole}: this function's
+purpose is to provide a mechanism for accounts to lose their privileges
+if they are compromised (such as when a trusted device is misplaced).
+
+If the calling account had been granted `role`, emits a {RoleRevoked}
+event.
+
+Requirements:
+
+- the caller must be `account`._
+
+# `AddressUpgradeable`
+
+### isContract
+
+```solidity
+function isContract(address account) internal view returns (bool)
+```
+
+_Returns true if `account` is a contract.
+
+[IMPORTANT]
+====
+It is unsafe to assume that an address for which this function returns
+false is an externally-owned account (EOA) and not a contract.
+
+Among others, `isContract` will return false for the following
+types of addresses:
+
+ - an externally-owned account
+ - a contract in construction
+ - an address where a contract will be created
+ - an address where a contract lived, but was destroyed
+
+Furthermore, `isContract` will also return true if the target contract within
+the same transaction is already scheduled for destruction by `SELFDESTRUCT`,
+which only has an effect at the end of a transaction.
+====
+
+[IMPORTANT]
+====
+You shouldn't rely on `isContract` to protect against flash loan attacks!
+
+Preventing calls from contracts is highly discouraged. It breaks composability, breaks support for smart wallets
+like Gnosis Safe, and does not provide security since it can be circumvented by calling from a contract
+constructor.
+====_
+
+### sendValue
+
+```solidity
+function sendValue(address payable recipient, uint256 amount) internal
+```
+
+_Replacement for Solidity's `transfer`: sends `amount` wei to
+`recipient`, forwarding all available gas and reverting on errors.
+
+https://eips.ethereum.org/EIPS/eip-1884[EIP1884] increases the gas cost
+of certain opcodes, possibly making contracts go over the 2300 gas limit
+imposed by `transfer`, making them unable to receive funds via
+`transfer`. {sendValue} removes this limitation.
+
+https://consensys.io/diligence/blog/2019/09/stop-using-soliditys-transfer-now/[Learn more].
+
+IMPORTANT: because control is transferred to `recipient`, care must be
+taken to not create reentrancy vulnerabilities. Consider using
+{ReentrancyGuard} or the
+https://solidity.readthedocs.io/en/v0.8.0/security-considerations.html#use-the-checks-effects-interactions-pattern[checks-effects-interactions pattern]._
+
+### functionCall
+
+```solidity
+function functionCall(address target, bytes data) internal returns (bytes)
+```
+
+_Performs a Solidity function call using a low level `call`. A
+plain `call` is an unsafe replacement for a function call: use this
+function instead.
+
+If `target` reverts with a revert reason, it is bubbled up by this
+function (like regular Solidity function calls).
+
+Returns the raw returned data. To convert to the expected return value,
+use https://solidity.readthedocs.io/en/latest/units-and-global-variables.html?highlight=abi.decode#abi-encoding-and-decoding-functions[`abi.decode`].
+
+Requirements:
+
+- `target` must be a contract.
+- calling `target` with `data` must not revert.
+
+_Available since v3.1.__
+
+### functionCall
+
+```solidity
+function functionCall(address target, bytes data, string errorMessage) internal returns (bytes)
+```
+
+_Same as {xref-Address-functionCall-address-bytes-}[`functionCall`], but with
+`errorMessage` as a fallback revert reason when `target` reverts.
+
+_Available since v3.1.__
+
+### functionCallWithValue
+
+```solidity
+function functionCallWithValue(address target, bytes data, uint256 value) internal returns (bytes)
+```
+
+_Same as {xref-Address-functionCall-address-bytes-}[`functionCall`],
+but also transferring `value` wei to `target`.
+
+Requirements:
+
+- the calling contract must have an ETH balance of at least `value`.
+- the called Solidity function must be `payable`.
+
+_Available since v3.1.__
+
+### functionCallWithValue
+
+```solidity
+function functionCallWithValue(address target, bytes data, uint256 value, string errorMessage) internal returns (bytes)
+```
+
+_Same as {xref-Address-functionCallWithValue-address-bytes-uint256-}[`functionCallWithValue`], but
+with `errorMessage` as a fallback revert reason when `target` reverts.
+
+_Available since v3.1.__
+
+### functionStaticCall
+
+```solidity
+function functionStaticCall(address target, bytes data) internal view returns (bytes)
+```
+
+_Same as {xref-Address-functionCall-address-bytes-}[`functionCall`],
+but performing a static call.
+
+_Available since v3.3.__
+
+### functionStaticCall
+
+```solidity
+function functionStaticCall(address target, bytes data, string errorMessage) internal view returns (bytes)
+```
+
+_Same as {xref-Address-functionCall-address-bytes-string-}[`functionCall`],
+but performing a static call.
+
+_Available since v3.3.__
+
+### functionDelegateCall
+
+```solidity
+function functionDelegateCall(address target, bytes data) internal returns (bytes)
+```
+
+_Same as {xref-Address-functionCall-address-bytes-}[`functionCall`],
+but performing a delegate call.
+
+_Available since v3.4.__
+
+### functionDelegateCall
+
+```solidity
+function functionDelegateCall(address target, bytes data, string errorMessage) internal returns (bytes)
+```
+
+_Same as {xref-Address-functionCall-address-bytes-string-}[`functionCall`],
+but performing a delegate call.
+
+_Available since v3.4.__
+
+### verifyCallResultFromTarget
+
+```solidity
+function verifyCallResultFromTarget(address target, bool success, bytes returndata, string errorMessage) internal view returns (bytes)
+```
+
+_Tool to verify that a low level call to smart-contract was successful, and revert (either by bubbling
+the revert reason or using the provided one) in case of unsuccessful call or if target was not a contract.
+
+_Available since v4.8.__
+
+### verifyCallResult
+
+```solidity
+function verifyCallResult(bool success, bytes returndata, string errorMessage) internal pure returns (bytes)
+```
+
+_Tool to verify that a low level call was successful, and revert if it wasn't, either by bubbling the
+revert reason or using the provided one.
+
+_Available since v4.3.__
+
+# `Initializable`
+
+### Initialized
+
+```solidity
+event Initialized(uint8 version)
+```
+
+_Triggered when the contract has been initialized or reinitialized._
+
+### initializer
+
+```solidity
+modifier initializer()
+```
+
+_A modifier that defines a protected initializer function that can be invoked at most once. In its scope,
+`onlyInitializing` functions can be used to initialize parent contracts.
+
+Similar to `reinitializer(1)`, except that functions marked with `initializer` can be nested in the context of a
+constructor.
+
+Emits an {Initialized} event._
+
+### reinitializer
+
+```solidity
+modifier reinitializer(uint8 version)
+```
+
+_A modifier that defines a protected reinitializer function that can be invoked at most once, and only if the
+contract hasn't been initialized to a greater version before. In its scope, `onlyInitializing` functions can be
+used to initialize parent contracts.
+
+A reinitializer may be used after the original initialization step. This is essential to configure modules that
+are added through upgrades and that require initialization.
+
+When `version` is 1, this modifier is similar to `initializer`, except that functions marked with `reinitializer`
+cannot be nested. If one is invoked in the context of another, execution will revert.
+
+Note that versions can jump in increments greater than 1; this implies that if multiple reinitializers coexist in
+a contract, executing them in the right order is up to the developer or operator.
+
+WARNING: setting the version to 255 will prevent any future reinitialization.
+
+Emits an {Initialized} event._
+
+### onlyInitializing
+
+```solidity
+modifier onlyInitializing()
+```
+
+_Modifier to protect an initialization function so that it can only be invoked by functions with the
+{initializer} and {reinitializer} modifiers, directly or indirectly._
+
+### _disableInitializers
+
+```solidity
+function _disableInitializers() internal virtual
+```
+
+_Locks the contract, preventing any future reinitialization. This cannot be part of an initializer call.
+Calling this in the constructor of a contract will prevent that contract from being initialized or reinitialized
+to any version. It is recommended to use this to lock implementation contracts that are designed to be called
+through proxies.
+
+Emits an {Initialized} event the first time it is successfully executed._
+
+### _getInitializedVersion
+
+```solidity
+function _getInitializedVersion() internal view returns (uint8)
+```
+
+_Returns the highest version that has been initialized. See {reinitializer}._
+
+### _isInitializing
+
+```solidity
+function _isInitializing() internal view returns (bool)
+```
+
+_Returns `true` if the contract is currently initializing. See {onlyInitializing}._
+
+# `ContextUpgradeable`
+
+### __Context_init
+
+```solidity
+function __Context_init() internal
+```
+
+### __Context_init_unchained
+
+```solidity
+function __Context_init_unchained() internal
+```
+
+### _msgSender
+
+```solidity
+function _msgSender() internal view virtual returns (address)
+```
+
+### _msgData
+
+```solidity
+function _msgData() internal view virtual returns (bytes)
+```
+
+# `IERC165Upgradeable`
+
+### supportsInterface
+
+```solidity
+function supportsInterface(bytes4 interfaceId) external view returns (bool)
+```
+
+_Returns true if this contract implements the interface defined by
+`interfaceId`. See the corresponding
+https://eips.ethereum.org/EIPS/eip-165#how-interfaces-are-identified[EIP section]
+to learn more about how these ids are created.
+
+This function call must use less than 30 000 gas._
+
+# `ERC165Upgradeable`
+
+### __ERC165_init
+
+```solidity
+function __ERC165_init() internal
+```
+
+### __ERC165_init_unchained
+
+```solidity
+function __ERC165_init_unchained() internal
+```
+
+### supportsInterface
+
+```solidity
+function supportsInterface(bytes4 interfaceId) public view virtual returns (bool)
+```
+
+_See {IERC165-supportsInterface}._
+
+# `MathUpgradeable`
+
+### Rounding
+
+```solidity
+enum Rounding {
+  Down,
+  Up,
+  Zero
+}
+```
+
+### max
+
+```solidity
+function max(uint256 a, uint256 b) internal pure returns (uint256)
+```
+
+_Returns the largest of two numbers._
+
+### min
+
+```solidity
+function min(uint256 a, uint256 b) internal pure returns (uint256)
+```
+
+_Returns the smallest of two numbers._
+
+### average
+
+```solidity
+function average(uint256 a, uint256 b) internal pure returns (uint256)
+```
+
+_Returns the average of two numbers. The result is rounded towards
+zero._
+
+### ceilDiv
+
+```solidity
+function ceilDiv(uint256 a, uint256 b) internal pure returns (uint256)
+```
+
+_Returns the ceiling of the division of two numbers.
+
+This differs from standard division with `/` in that it rounds up instead
+of rounding down._
+
+### mulDiv
+
+```solidity
+function mulDiv(uint256 x, uint256 y, uint256 denominator) internal pure returns (uint256 result)
+```
+
+Calculates floor(x * y / denominator) with full precision. Throws if result overflows a uint256 or denominator == 0
+
+_Original credit to Remco Bloemen under MIT license (https://xn--2-umb.com/21/muldiv)
+with further edits by Uniswap Labs also under MIT license._
+
+### mulDiv
+
+```solidity
+function mulDiv(uint256 x, uint256 y, uint256 denominator, enum MathUpgradeable.Rounding rounding) internal pure returns (uint256)
+```
+
+Calculates x * y / denominator with full precision, following the selected rounding direction.
+
+### sqrt
+
+```solidity
+function sqrt(uint256 a) internal pure returns (uint256)
+```
+
+_Returns the square root of a number. If the number is not a perfect square, the value is rounded down.
+
+Inspired by Henry S. Warren, Jr.'s "Hacker's Delight" (Chapter 11)._
+
+### sqrt
+
+```solidity
+function sqrt(uint256 a, enum MathUpgradeable.Rounding rounding) internal pure returns (uint256)
+```
+
+Calculates sqrt(a), following the selected rounding direction.
+
+### log2
+
+```solidity
+function log2(uint256 value) internal pure returns (uint256)
+```
+
+_Return the log in base 2, rounded down, of a positive value.
+Returns 0 if given 0._
+
+### log2
+
+```solidity
+function log2(uint256 value, enum MathUpgradeable.Rounding rounding) internal pure returns (uint256)
+```
+
+_Return the log in base 2, following the selected rounding direction, of a positive value.
+Returns 0 if given 0._
+
+### log10
+
+```solidity
+function log10(uint256 value) internal pure returns (uint256)
+```
+
+_Return the log in base 10, rounded down, of a positive value.
+Returns 0 if given 0._
+
+### log10
+
+```solidity
+function log10(uint256 value, enum MathUpgradeable.Rounding rounding) internal pure returns (uint256)
+```
+
+_Return the log in base 10, following the selected rounding direction, of a positive value.
+Returns 0 if given 0._
+
+### log256
+
+```solidity
+function log256(uint256 value) internal pure returns (uint256)
+```
+
+_Return the log in base 256, rounded down, of a positive value.
+Returns 0 if given 0.
+
+Adding one to the result gives the number of pairs of hex symbols needed to represent `value` as a hex string._
+
+### log256
+
+```solidity
+function log256(uint256 value, enum MathUpgradeable.Rounding rounding) internal pure returns (uint256)
+```
+
+_Return the log in base 256, following the selected rounding direction, of a positive value.
+Returns 0 if given 0._
+
+# `SignedMathUpgradeable`
+
+### max
+
+```solidity
+function max(int256 a, int256 b) internal pure returns (int256)
+```
+
+_Returns the largest of two signed numbers._
+
+### min
+
+```solidity
+function min(int256 a, int256 b) internal pure returns (int256)
+```
+
+_Returns the smallest of two signed numbers._
+
+### average
+
+```solidity
+function average(int256 a, int256 b) internal pure returns (int256)
+```
+
+_Returns the average of two signed numbers without overflow.
+The result is rounded towards zero._
+
+### abs
+
+```solidity
+function abs(int256 n) internal pure returns (uint256)
+```
+
+_Returns the absolute unsigned value of a signed value._
+
+# `StringsUpgradeable`
+
+### toString
+
+```solidity
+function toString(uint256 value) internal pure returns (string)
+```
+
+_Converts a `uint256` to its ASCII `string` decimal representation._
+
+### toString
+
+```solidity
+function toString(int256 value) internal pure returns (string)
+```
+
+_Converts a `int256` to its ASCII `string` decimal representation._
+
+### toHexString
+
+```solidity
+function toHexString(uint256 value) internal pure returns (string)
+```
+
+_Converts a `uint256` to its ASCII `string` hexadecimal representation._
+
+### toHexString
+
+```solidity
+function toHexString(uint256 value, uint256 length) internal pure returns (string)
+```
+
+_Converts a `uint256` to its ASCII `string` hexadecimal representation with fixed length._
+
+### toHexString
+
+```solidity
+function toHexString(address addr) internal pure returns (string)
+```
+
+_Converts an `address` with fixed length of 20 bytes to its not checksummed ASCII `string` hexadecimal representation._
+
+### equal
+
+```solidity
+function equal(string a, string b) internal pure returns (bool)
+```
+
+_Returns true if the two strings are equal._
+
+# `AccessControlUpgradeable`
+
+### __AccessControl_init
+
+```solidity
+function __AccessControl_init() internal
+```
+
+### __AccessControl_init_unchained
+
+```solidity
+function __AccessControl_init_unchained() internal
+```
+
+### RoleData
+
+```solidity
+struct RoleData {
+  mapping(address => bool) members;
+  bytes32 adminRole;
+}
+```
+
+### DEFAULT_ADMIN_ROLE
+
+```solidity
+bytes32 DEFAULT_ADMIN_ROLE
+```
+
+### onlyRole
+
+```solidity
+modifier onlyRole(bytes32 role)
+```
+
+_Modifier that checks that an account has a specific role. Reverts
+with a standardized message including the required role.
+
+The format of the revert reason is given by the following regular expression:
+
+ /^AccessControl: account (0x[0-9a-f]{40}) is missing role (0x[0-9a-f]{64})$/
+
+_Available since v4.1.__
+
+### supportsInterface
+
+```solidity
+function supportsInterface(bytes4 interfaceId) public view virtual returns (bool)
+```
+
+_See {IERC165-supportsInterface}._
+
+### hasRole
+
+```solidity
+function hasRole(bytes32 role, address account) public view virtual returns (bool)
+```
+
+_Returns `true` if `account` has been granted `role`._
+
+### _checkRole
+
+```solidity
+function _checkRole(bytes32 role) internal view virtual
+```
+
+_Revert with a standard message if `_msgSender()` is missing `role`.
+Overriding this function changes the behavior of the {onlyRole} modifier.
+
+Format of the revert message is described in {_checkRole}.
+
+_Available since v4.6.__
+
+### _checkRole
+
+```solidity
+function _checkRole(bytes32 role, address account) internal view virtual
+```
+
+_Revert with a standard message if `account` is missing `role`.
+
+The format of the revert reason is given by the following regular expression:
+
+ /^AccessControl: account (0x[0-9a-f]{40}) is missing role (0x[0-9a-f]{64})$/_
+
+### getRoleAdmin
+
+```solidity
+function getRoleAdmin(bytes32 role) public view virtual returns (bytes32)
+```
+
+_Returns the admin role that controls `role`. See {grantRole} and
+{revokeRole}.
+
+To change a role's admin, use {_setRoleAdmin}._
+
+### grantRole
+
+```solidity
+function grantRole(bytes32 role, address account) public virtual
+```
+
+_Grants `role` to `account`.
+
+If `account` had not been already granted `role`, emits a {RoleGranted}
+event.
+
+Requirements:
+
+- the caller must have ``role``'s admin role.
+
+May emit a {RoleGranted} event._
+
+### revokeRole
+
+```solidity
+function revokeRole(bytes32 role, address account) public virtual
+```
+
+_Revokes `role` from `account`.
+
+If `account` had been granted `role`, emits a {RoleRevoked} event.
+
+Requirements:
+
+- the caller must have ``role``'s admin role.
+
+May emit a {RoleRevoked} event._
+
+### renounceRole
+
+```solidity
+function renounceRole(bytes32 role, address account) public virtual
+```
+
+_Revokes `role` from the calling account.
+
+Roles are often managed via {grantRole} and {revokeRole}: this function's
+purpose is to provide a mechanism for accounts to lose their privileges
+if they are compromised (such as when a trusted device is misplaced).
+
+If the calling account had been revoked `role`, emits a {RoleRevoked}
+event.
+
+Requirements:
+
+- the caller must be `account`.
+
+May emit a {RoleRevoked} event._
+
+### _setupRole
+
+```solidity
+function _setupRole(bytes32 role, address account) internal virtual
+```
+
+_Grants `role` to `account`.
+
+If `account` had not been already granted `role`, emits a {RoleGranted}
+event. Note that unlike {grantRole}, this function doesn't perform any
+checks on the calling account.
+
+May emit a {RoleGranted} event.
+
+[WARNING]
+====
+This function should only be called from the constructor when setting
+up the initial roles for the system.
+
+Using this function in any other way is effectively circumventing the admin
+system imposed by {AccessControl}.
+====
+
+NOTE: This function is deprecated in favor of {_grantRole}._
+
+### _setRoleAdmin
+
+```solidity
+function _setRoleAdmin(bytes32 role, bytes32 adminRole) internal virtual
+```
+
+_Sets `adminRole` as ``role``'s admin role.
+
+Emits a {RoleAdminChanged} event._
+
+### _grantRole
+
+```solidity
+function _grantRole(bytes32 role, address account) internal virtual
+```
+
+_Grants `role` to `account`.
+
+Internal function without access restriction.
+
+May emit a {RoleGranted} event._
+
+### _revokeRole
+
+```solidity
+function _revokeRole(bytes32 role, address account) internal virtual
+```
+
+_Revokes `role` from `account`.
+
+Internal function without access restriction.
+
+May emit a {RoleRevoked} event._
+
+# `ReentrancyGuardUpgradeable`
+
+### __ReentrancyGuard_init
+
+```solidity
+function __ReentrancyGuard_init() internal
+```
+
+### __ReentrancyGuard_init_unchained
+
+```solidity
+function __ReentrancyGuard_init_unchained() internal
+```
+
+### nonReentrant
+
+```solidity
+modifier nonReentrant()
+```
+
+_Prevents a contract from calling itself, directly or indirectly.
+Calling a `nonReentrant` function from another `nonReentrant`
+function is not supported. It is possible to prevent this from happening
+by making the `nonReentrant` function external, and making it call a
+`private` function that does the actual work._
+
+### _reentrancyGuardEntered
+
+```solidity
+function _reentrancyGuardEntered() internal view returns (bool)
+```
+
+_Returns true if the reentrancy guard is currently set to "entered", which indicates there is a
+`nonReentrant` function in the call stack._
+
+# `IL2MessageManager`
+
+### L1L2MessageHashesAddedToInbox
+
+```solidity
+event L1L2MessageHashesAddedToInbox(bytes32[] messageHashes)
+```
+
+_Emitted when L1->L2 message hashes have been added to L2 storage._
+
+### MessageHashesListLengthHigherThanOneHundred
+
+```solidity
+error MessageHashesListLengthHigherThanOneHundred(uint256 length)
+```
+
+_Thrown when the message hashes list length is higher than one hundred._
+
+### EmptyMessageHashesArray
+
+```solidity
+error EmptyMessageHashesArray()
+```
+
+_Thrown when the message hashes array is empty._
+
+### MessageDoesNotExistOrHasAlreadyBeenClaimed
+
+```solidity
+error MessageDoesNotExistOrHasAlreadyBeenClaimed(bytes32 messageHash)
+```
+
+_Thrown when the message does not exist or has already been claimed._
+
+### addL1L2MessageHashes
+
+```solidity
+function addL1L2MessageHashes(bytes32[] _messageHashes) external
+```
+
+Anchor L1-> L2 message hashes.
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _messageHashes | bytes32[] | New message hashes to anchor on L2. |
+
+# `IPauseManager`
+
+### IsPaused
+
+```solidity
+error IsPaused(bytes32 pauseType)
+```
+
+_Thrown when a specific pause type is paused._
+
+### IsNotPaused
+
+```solidity
+error IsNotPaused(bytes32 pauseType)
+```
+
+_Thrown when a specific pause type is not paused and expected to be._
+
+### Paused
+
+```solidity
+event Paused(address messageSender, bytes32 pauseType)
+```
+
+_Emitted when a pause type is paused._
+
+### UnPaused
+
+```solidity
+event UnPaused(address messageSender, bytes32 pauseType)
+```
+
+_Emitted when a pause type is unpaused._
+
+# `PauseManager`
+
+### PAUSE_MANAGER_ROLE
+
+```solidity
+bytes32 PAUSE_MANAGER_ROLE
+```
+
+### GENERAL_PAUSE_TYPE
+
+```solidity
+bytes32 GENERAL_PAUSE_TYPE
+```
+
+### L1_L2_PAUSE_TYPE
+
+```solidity
+bytes32 L1_L2_PAUSE_TYPE
+```
+
+### L2_L1_PAUSE_TYPE
+
+```solidity
+bytes32 L2_L1_PAUSE_TYPE
+```
+
+### PROVING_SYSTEM_PAUSE_TYPE
+
+```solidity
+bytes32 PROVING_SYSTEM_PAUSE_TYPE
+```
+
+### pauseTypeStatuses
+
+```solidity
+mapping(bytes32 => bool) pauseTypeStatuses
+```
+
+### whenTypeNotPaused
+
+```solidity
+modifier whenTypeNotPaused(bytes32 _pauseType)
+```
+
+_Modifier to make a function callable only when the type is not paused.
+
+Requirements:
+
+- The type must not be paused._
+
+### whenTypePaused
+
+```solidity
+modifier whenTypePaused(bytes32 _pauseType)
+```
+
+_Modifier to make a function callable only when the type is paused.
+
+Requirements:
+
+- The type must not be paused._
+
+### _requireTypePaused
+
+```solidity
+function _requireTypePaused(bytes32 _pauseType) internal view virtual
+```
+
+_Throws if the type is not paused._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _pauseType | bytes32 | The keccak256 pause type being checked. |
+
+### _requireTypeNotPaused
+
+```solidity
+function _requireTypeNotPaused(bytes32 _pauseType) internal view virtual
+```
+
+_Throws if the type is paused._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _pauseType | bytes32 | The keccak256 pause type being checked. |
+
+### pauseByType
+
+```solidity
+function pauseByType(bytes32 _pauseType) external
+```
+
+Pauses functionality by specific type.
+
+_Requires PAUSE_MANAGER_ROLE._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _pauseType | bytes32 | keccak256 pause type. |
+
+### unPauseByType
+
+```solidity
+function unPauseByType(bytes32 _pauseType) external
+```
+
+Unpauses functionality by specific type.
+
+_Requires PAUSE_MANAGER_ROLE._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _pauseType | bytes32 | keccak256 pause type. |
+
+# `L2MessageManager`
+
+### INBOX_STATUS_UNKNOWN
+
+```solidity
+uint8 INBOX_STATUS_UNKNOWN
+```
+
+### INBOX_STATUS_RECEIVED
+
+```solidity
+uint8 INBOX_STATUS_RECEIVED
+```
+
+### INBOX_STATUS_CLAIMED
+
+```solidity
+uint8 INBOX_STATUS_CLAIMED
+```
+
+### L1_L2_MESSAGE_SETTER_ROLE
+
+```solidity
+bytes32 L1_L2_MESSAGE_SETTER_ROLE
+```
+
+### inboxL1L2MessageStatus
+
+```solidity
+mapping(bytes32 => uint256) inboxL1L2MessageStatus
+```
+
+_Mapping to store L1->L2 message hashes status.
+messageHash => messageStatus (0: unknown, 1: received, 2: claimed)._
+
+### __L2MessageManager_init
+
+```solidity
+function __L2MessageManager_init(address _l1l2MessageSetter) internal
+```
+
+Initialises L2 message manager contract.
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _l1l2MessageSetter | address | The address owning the L1_L2_MESSAGE_SETTER_ROLE role. |
+
+### addL1L2MessageHashes
+
+```solidity
+function addL1L2MessageHashes(bytes32[] _messageHashes) external
+```
+
+Add a cross-chain L1->L2 message hashes in storage.
+
+_Only address that has the role 'L1_L2_MESSAGE_SETTER_ROLE' are allowed to call this function._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _messageHashes | bytes32[] | Message hashes array. |
+
+### _updateL1L2MessageStatusToClaimed
+
+```solidity
+function _updateL1L2MessageStatusToClaimed(bytes32 _messageHash) internal
+```
+
+Update the status of L1->L2 message when a user claims a message on L2.
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _messageHash | bytes32 | Hash of the message. |
+
+# `IGenericErrors`
+
+### ZeroAddressNotAllowed
+
+```solidity
+error ZeroAddressNotAllowed()
+```
+
+_Thrown when a parameter is the zero address._
+
+# `IMessageService`
+
+### MessageSent
+
+```solidity
+event MessageSent(address _from, address _to, uint256 _fee, uint256 _value, uint256 _nonce, bytes _calldata, bytes32 _messageHash)
+```
+
+_Emitted when a message is sent.
+We include the message hash to save hashing costs on the rollup._
+
+### MessageClaimed
+
+```solidity
+event MessageClaimed(bytes32 _messageHash)
+```
+
+_Emitted when a message is claimed._
+
+### FeeTooLow
+
+```solidity
+error FeeTooLow()
+```
+
+_Thrown when fees are lower than the minimum fee._
+
+### ValueShouldBeGreaterThanFee
+
+```solidity
+error ValueShouldBeGreaterThanFee()
+```
+
+_Thrown when fees are lower than value._
+
+### ValueSentTooLow
+
+```solidity
+error ValueSentTooLow()
+```
+
+_Thrown when the value sent is less than the fee.
+Value to forward on is msg.value - _fee._
+
+### MessageSendingFailed
+
+```solidity
+error MessageSendingFailed(address destination)
+```
+
+_Thrown when the destination address reverts._
+
+### FeePaymentFailed
+
+```solidity
+error FeePaymentFailed(address recipient)
+```
+
+_Thrown when the recipient address reverts._
+
+### sendMessage
+
+```solidity
+function sendMessage(address _to, uint256 _fee, bytes _calldata) external payable
+```
+
+Sends a message for transporting from the given chain.
+
+_This function should be called with a msg.value = _value + _fee. The fee will be paid on the destination chain._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _to | address | The destination address on the destination chain. |
+| _fee | uint256 | The message service fee on the origin chain. |
+| _calldata | bytes | The calldata used by the destination message service to call the destination contract. |
+
+### claimMessage
+
+```solidity
+function claimMessage(address _from, address _to, uint256 _fee, uint256 _value, address payable _feeRecipient, bytes _calldata, uint256 _nonce) external
+```
+
+Deliver a message to the destination chain.
+Is called automatically by the Postman, dApp or end user.
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _from | address | The msg.sender calling the origin message service. |
+| _to | address | The destination address on the destination chain. |
+| _fee | uint256 | The message service fee on the origin chain. |
+| _value | uint256 | The value to be transferred to the destination address. |
+| _feeRecipient | address payable | Address that will receive the fees. |
+| _calldata | bytes | The calldata used by the destination message service to call/forward to the destination contract. |
+| _nonce | uint256 | Unique message number. |
+
+### sender
+
+```solidity
+function sender() external view returns (address)
+```
+
+Returns the original sender of the message on the origin layer.
+
+#### Return Values
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | address | The original sender of the message on the origin layer. |
+
+# `IRateLimiter`
+
+### RateLimitExceeded
+
+```solidity
+error RateLimitExceeded()
+```
+
+_Thrown when an amount breaches the limit in the period._
+
+### PeriodIsZero
+
+```solidity
+error PeriodIsZero()
+```
+
+_Thrown when the period is initialised to zero._
+
+### LimitIsZero
+
+```solidity
+error LimitIsZero()
+```
+
+_Thrown when the limit is initialised to zero._
+
+### AmountUsedInPeriodReset
+
+```solidity
+event AmountUsedInPeriodReset(address resettingAddress)
+```
+
+_Emitted when the amount in the period is reset to zero._
+
+### LimitAmountChanged
+
+```solidity
+event LimitAmountChanged(address amountChangeBy, uint256 amount, bool amountUsedLoweredToLimit, bool usedAmountResetToZero)
+```
+
+_Emitted when the limit is changed.
+If the current used amount is higher than the new limit, the used amount is lowered to the limit._
+
+### resetRateLimitAmount
+
+```solidity
+function resetRateLimitAmount(uint256 _amount) external
+```
+
+Resets the rate limit amount to the amount specified.
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _amount | uint256 | sets the new limit amount. |
+
+### resetAmountUsedInPeriod
+
+```solidity
+function resetAmountUsedInPeriod() external
+```
+
+Resets the amount used in the period to zero.
+
+# `RateLimiter`
+
+You can use this control numeric limits over a period using timestamp.
+
+### RATE_LIMIT_SETTER_ROLE
+
+```solidity
+bytes32 RATE_LIMIT_SETTER_ROLE
+```
+
+### periodInSeconds
+
+```solidity
+uint256 periodInSeconds
+```
+
+### limitInWei
+
+```solidity
+uint256 limitInWei
+```
+
+### currentPeriodEnd
+
+```solidity
+uint256 currentPeriodEnd
+```
+
+### currentPeriodAmountInWei
+
+```solidity
+uint256 currentPeriodAmountInWei
+```
+
+### __RateLimiter_init
+
+```solidity
+function __RateLimiter_init(uint256 _periodInSeconds, uint256 _limitInWei) internal
+```
+
+Initialises the limits and period for the rate limiter.
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _periodInSeconds | uint256 | The length of the period in seconds. |
+| _limitInWei | uint256 | The limit allowed in the period in Wei. |
+
+### _addUsedAmount
+
+```solidity
+function _addUsedAmount(uint256 _usedAmount) internal
+```
+
+Increments the amount used in the period.
+
+_The amount determining logic is external to this (e.g. fees are included when calling here).
+Reverts if the limit is breached._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _usedAmount | uint256 | The amount used to be added. |
+
+### resetRateLimitAmount
+
+```solidity
+function resetRateLimitAmount(uint256 _amount) external
+```
+
+Resets the rate limit amount.
+
+_If the used amount is higher, it is set to the limit to avoid confusion/issues.
+Only the RATE_LIMIT_SETTER_ROLE is allowed to execute this function.
+Emits the LimitAmountChanged event.
+usedLimitAmountToSet will use the default value of zero if period has expired_
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _amount | uint256 | The amount to reset the limit to. |
+
+### resetAmountUsedInPeriod
+
+```solidity
+function resetAmountUsedInPeriod() external
+```
+
+Resets the amount used to zero.
+
+_Only the RATE_LIMIT_SETTER_ROLE is allowed to execute this function.
+Emits the AmountUsedInPeriodReset event._
+
+# `L2MessageServiceLineaMainnet`
+
+### MINIMUM_FEE_SETTER_ROLE
+
+```solidity
+bytes32 MINIMUM_FEE_SETTER_ROLE
+```
+
+### nextMessageNumber
+
+```solidity
+uint256 nextMessageNumber
+```
+
+### minimumFeeInWei
+
+```solidity
+uint256 minimumFeeInWei
+```
+
+### constructor
+
+```solidity
+constructor() public
+```
+
+### initialize
+
+```solidity
+function initialize(address _securityCouncil, address _l1l2MessageSetter, uint256 _rateLimitPeriod, uint256 _rateLimitAmount) public
+```
+
+Initialises underlying message service dependencies.
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _securityCouncil | address | The address owning the security council role. |
+| _l1l2MessageSetter | address | The address owning the add L1L2MessageHashes functionality. |
+| _rateLimitPeriod | uint256 | The period to rate limit against. |
+| _rateLimitAmount | uint256 | The limit allowed for withdrawing the period. |
+
+### sendMessage
+
+```solidity
+function sendMessage(address _to, uint256 _fee, bytes _calldata) external payable
+```
+
+Adds a message for sending cross-chain and emits a relevant event.
+
+_The message number is preset and only incremented at the end if successful for the next caller._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _to | address | The address the message is intended for. |
+| _fee | uint256 | The fee being paid for the message delivery. |
+| _calldata | bytes | The calldata to pass to the recipient. |
+
+### claimMessage
+
+```solidity
+function claimMessage(address _from, address _to, uint256 _fee, uint256 _value, address payable _feeRecipient, bytes _calldata, uint256 _nonce) external
+```
+
+Claims and delivers a cross-chain message.
+
+__feeRecipient Can be set to address(0) to receive as msg.sender.
+messageSender Is set temporarily when claiming and reset post._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _from | address | The address of the original sender. |
+| _to | address | The address the message is intended for. |
+| _fee | uint256 | The fee being paid for the message delivery. |
+| _value | uint256 | The value to be transferred to the destination address. |
+| _feeRecipient | address payable | The recipient for the fee. |
+| _calldata | bytes | The calldata to pass to the recipient. |
+| _nonce | uint256 | The unique auto generated message number used when sending the message. |
+
+### setMinimumFee
+
+```solidity
+function setMinimumFee(uint256 _feeInWei) external
+```
+
+The Fee Manager sets a minimum fee to address DOS protection.
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _feeInWei | uint256 | New minimum fee in Wei. |
+
+### sender
+
+```solidity
+function sender() external view returns (address)
+```
+
+_The _messageSender address is set temporarily when claiming._
+
+#### Return Values
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | address | _messageSender address. |
+
+### receive
+
+```solidity
+receive() external payable virtual
+```
+
+Function to receive funds for liquidity purposes.
+
+### distributeFees
+
+```solidity
+modifier distributeFees(uint256 _feeInWei, address _to, bytes _calldata, address _feeRecipient)
+```
+
+The unspent fee is refunded if applicable.
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _feeInWei | uint256 | The fee paid for delivery in Wei. |
+| _to | address | The recipient of the message and gas refund. |
+| _calldata | bytes | The calldata of the message. |
+| _feeRecipient | address |  |
+

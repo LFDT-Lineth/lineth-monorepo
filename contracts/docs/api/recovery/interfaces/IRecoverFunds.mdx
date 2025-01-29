@@ -1,0 +1,34 @@
+# `IRecoverFunds`
+
+### ExternalCallFailed
+
+```solidity
+error ExternalCallFailed(address destinationAddress)
+```
+
+_Thrown when the external call failed._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| destinationAddress | address | the destination address called. |
+
+### executeExternalCall
+
+```solidity
+function executeExternalCall(address _destination, bytes _callData, uint256 _ethValue) external payable
+```
+
+Executes external calls.
+
+_"0x" for calldata can be used for simple ETH transfers._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _destination | address | The address being called. |
+| _callData | bytes | The calldata being sent to the address. |
+| _ethValue | uint256 | Any ETH value being sent. |
+

@@ -1,0 +1,26 @@
+# `TestL2MessageManager`
+
+### constructor
+
+```solidity
+constructor() public
+```
+
+### initialize
+
+```solidity
+function initialize(address _pauserManager, address _l1l2MessageSetter, struct IPauseManager.PauseTypeRole[] _pauseTypeRoles, struct IPauseManager.PauseTypeRole[] _unpauseTypeRoles) public
+```
+
+### updateL1L2MessageStatusToClaimed
+
+```solidity
+function updateL1L2MessageStatusToClaimed(bytes32 _messageHash) external
+```
+
+### setLastAnchoredL1MessageNumber
+
+```solidity
+function setLastAnchoredL1MessageNumber(uint256 _messageNumber) external
+```
+

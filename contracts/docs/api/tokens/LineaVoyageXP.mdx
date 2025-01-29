@@ -1,0 +1,111 @@
+# `LineaVoyageXP`
+
+### TokenIsSoulBound
+
+```solidity
+error TokenIsSoulBound()
+```
+
+### MINTER_ROLE
+
+```solidity
+bytes32 MINTER_ROLE
+```
+
+### constructor
+
+```solidity
+constructor(address minter) public
+```
+
+### mint
+
+```solidity
+function mint(address _to, uint256 _amount) external
+```
+
+Mints a single token amount for a single recipient.
+
+_Only the MINTER_ROLE can mint these tokens_
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _to | address | The address receiving the token amount. |
+| _amount | uint256 | The amount of token to receive. |
+
+### batchMint
+
+```solidity
+function batchMint(address[] _to, uint256 _amount) external
+```
+
+Mints a single token amount for a multiple recipients.
+
+_Only the MINTER_ROLE can mint these tokens_
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _to | address[] | The addresses receiving the token amount. |
+| _amount | uint256 | The amount of token to receive. |
+
+### batchMintMultiple
+
+```solidity
+function batchMintMultiple(address[] _to, uint256[] _amounts) external
+```
+
+Mints a 1:1 amounts for multiple recipients.
+
+_Only the MINTER_ROLE can mint these tokens_
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _to | address[] | The addresses receiving the token amount. |
+| _amounts | uint256[] | The amounts of token to receive. |
+
+### transfer
+
+```solidity
+function transfer(address, uint256) public virtual returns (bool)
+```
+
+Overrides and reverts base functions for transfer.
+
+### transferFrom
+
+```solidity
+function transferFrom(address, address, uint256) public virtual returns (bool)
+```
+
+Overrides and reverts base functions for transferFrom.
+
+### approve
+
+```solidity
+function approve(address, uint256) public virtual returns (bool)
+```
+
+Overrides and reverts base functions for approve.
+
+### increaseAllowance
+
+```solidity
+function increaseAllowance(address, uint256) public virtual returns (bool)
+```
+
+Overrides and reverts base functions for increaseAllowance.
+
+### decreaseAllowance
+
+```solidity
+function decreaseAllowance(address, uint256) public virtual returns (bool)
+```
+
+Overrides and reverts base functions for decreaseAllowance.
+

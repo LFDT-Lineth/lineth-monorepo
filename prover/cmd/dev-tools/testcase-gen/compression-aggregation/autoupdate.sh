@@ -16,8 +16,8 @@ bin/compression-aggregation-sample --odir .samples-simple-eip4844/ --spec ./cmd/
 bin/compression-aggregation-sample --odir .samples-multiproof-eip4844/ --spec ./cmd/dev-tools/testcase-gen/compression-aggregation/spec-comp-eip4844-1.json --spec ./cmd/dev-tools/testcase-gen/compression-aggregation/spec-comp-eip4844-1.json --spec ./cmd/dev-tools/testcase-gen/compression-aggregation/spec-agg.json
 bin/compression-aggregation-sample --odir .samples-multiproof-eip4844/ --spec ./cmd/dev-tools/testcase-gen/compression-aggregation/spec-comp-eip4844-2.json --spec ./cmd/dev-tools/testcase-gen/compression-aggregation/spec-comp-eip4844-2.json --spec ./cmd/dev-tools/testcase-gen/compression-aggregation/spec-agg-2.json
 
-SOLTESTDIR=../contracts/test/testData/compressedData
-SOLTESTDIR_EIP4844=../contracts/test/testData/compressedDataEip4844
+SOLTESTDIR=../contracts/test/hardhat/_testData/compressedData
+SOLTESTDIR_EIP4844=../contracts/test/hardhat/_testData/compressedDataEip4844
 
 mkdir -p ${SOLTESTDIR} ${SOLTESTDIR}/multipleProofs  ${SOLTESTDIR}/test
 mkdir -p ${SOLTESTDIR_EIP4844} ${SOLTESTDIR_EIP4844}/multipleProofs  ${SOLTESTDIR_EIP4844}/test
@@ -37,17 +37,17 @@ mv -f .samples-test-eip4844/* ${SOLTESTDIR_EIP4844}/test
 rm -rf .samples-simple-calldata .samples-multiproof-calldata .samples-test-calldata
 rm -rf .samples-simple-eip4844 .samples-multiproof-eip4844 .samples-test-eip4844
 
-sed -i.bak 's/pragma solidity \0.8.24;/pragma solidity 0.8.26;/g' ../contracts/test/testData/compressedData/Verifier1.sol
+sed -i.bak 's/pragma solidity \0.8.24;/pragma solidity 0.8.26;/g' ../contracts/test/hardhat/_testData/compressedData/Verifier1.sol
 
-cp ../contracts/test/testData/compressedData/Verifier1.sol ../contracts/contracts/verifiers/PlonkVerifierForDataAggregation.sol
-sed -i.bak 's/contract PlonkVerifier /contract PlonkVerifierForDataAggregation /g' ../contracts/contracts/verifiers/PlonkVerifierForDataAggregation.sol
+cp ../contracts/test/hardhat/_testData/compressedData/Verifier1.sol ../contracts/src/verifiers/PlonkVerifierForDataAggregation.sol
+sed -i.bak 's/contract PlonkVerifier /contract PlonkVerifierForDataAggregation /g' ../contracts/src/verifiers/PlonkVerifierForDataAggregation.sol
 
-cp ../contracts/test/testData/compressedData/Verifier1.sol ../contracts/contracts/verifiers/test/TestPlonkVerifierForDataAggregation.sol
-sed -i.bak 's/contract PlonkVerifier /contract TestPlonkVerifierForDataAggregation /g' ../contracts/contracts/verifiers/test/TestPlonkVerifierForDataAggregation.sol
+cp ../contracts/test/hardhat/_testData/compressedData/Verifier1.sol ../contracts/src/_testing/unit/verifiers/TestPlonkVerifierForDataAggregation.sol
+sed -i.bak 's/contract PlonkVerifier /contract TestPlonkVerifierForDataAggregation /g' ../contracts/src/_testing/unit/verifiers/TestPlonkVerifierForDataAggregation.sol
 
-rm  ../contracts/contracts/verifiers/test/TestPlonkVerifierForDataAggregation.sol.bak
-rm  ../contracts/contracts/verifiers/PlonkVerifierForDataAggregation.sol.bak
+rm  ../contracts/src/_testing/unit/verifiers/TestPlonkVerifierForDataAggregation.sol.bak
+rm  ../contracts/src/verifiers/PlonkVerifierForDataAggregation.sol.bak
 
 # Remove this artefact from the code. This litters the contracts tests
-rm ../contracts/test/testData/**/Verifier1.*
-rm ../contracts/test/testData/**/**/Verifier1.*
+rm ../contracts/test/hardhat/_testData/**/Verifier1.*
+rm ../contracts/test/hardhat/_testData/**/**/Verifier1.*

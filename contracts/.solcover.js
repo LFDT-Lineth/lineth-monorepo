@@ -1,10 +1,7 @@
 module.exports = {
   skipFiles: [
-    "test-contracts",
-    "verifiers/test",
+    "_testing",
     "proxies",
-    "tokenBridge/mocks",
-    "token/MyToken.sol",
-    "tokenBridge/CustomBridgedToken.sol",
+    "bridging/token/CustomBridgedToken.sol",
   ],
 };

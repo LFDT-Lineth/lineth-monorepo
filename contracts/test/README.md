@@ -15,40 +15,40 @@ In order to make it easy to navigate between the smart contracts themselves and 
 - Folder names are camelCase unless they are the contract name or contract behavior which is TitleCase.
 ```
 # Contracts
-/contracts/contracts/messageService
+/contracts/src/messaging/l1/
 
 # Tests
-/contracts/test/messageService
-/contracts/test/LineaRollup/Finalization.ts
+/contracts/test/hardhat/messaging/l1
+/contracts/test/hardhat/rollup/LineaRollup/Finalization.ts
 ```
 
-- All common or shared utilities and helpers that are test specific should be placed in `/contracts/test/common/`.
+- All common or shared utilities and helpers that are test specific should be placed in `/contracts/test/hardhat/common/`.
 - All common or shared utilities and helpers that are specific across the contracts (e.g. deployment scripts) should be placed in `/contracts/common/`.
 
 ### Test Files
 - Maintain a 1:1 structure with the contract directory for ease of reference.
  Example:
     ```plaintext
-    ./messageService/l1/L1MessageManager.ts
+    ./messaging/l1/L1MessageManager.ts
     ```
 
 - If a contract is complex and requires multiple files to simplify, create a subfolder with individual test files representing behavior.
 
     Example:
     ```plaintext
-    ./LineaRollup/Finalization.ts
-    ./LineaRollup/BlobSubmission.ts
-    ./LineaRollup/CalldataDataSubmission.ts
-    ./LineaRollup/PermissionsOrOtherThings.ts
+    /contracts/src/LineaRollup/Finalization.ts
+    /contracts/src/LineaRollup/BlobSubmission.ts
+    /contracts/src/LineaRollup/CalldataDataSubmission.ts
+    /contracts/src/LineaRollup/PermissionsOrOtherThings.ts
     ```
 
 - Contract-specific or feature-specific helper or utility functions should be in a separate file within a child folder named `helpers/contractName.ts`.
 
     Example:
     ```plaintext
-    ./LineaRollup/Finalization.ts
-    ./LineaRollup/helpers/finalization.ts
-    ./LineaRollup/helpers/blobSubmission.ts
+    /contracts/src/LineaRollup/Finalization.ts
+    /contracts/src/LineaRollup/helpers/finalization.ts
+    /contracts/src/LineaRollup/helpers/blobSubmission.ts
     ```
 
 ### Utilities

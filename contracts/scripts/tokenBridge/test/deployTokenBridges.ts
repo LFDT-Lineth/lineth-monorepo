@@ -3,7 +3,7 @@ import { ethers, upgrades } from "hardhat";
 import { TokenBridge } from "../../../typechain-types";
 import { SupportedChainIds } from "../../../common/supportedNetworks";
 import { deployBridgedTokenBeacon } from "./deployBridgedTokenBeacon";
-import { pauseTypeRoles, unpauseTypeRoles } from "../../../test/common/constants";
+import { pauseTypeRoles, unpauseTypeRoles } from "../../../test/hardhat/common/constants";
 import { generateRoleAssignments } from "contracts/common/helpers";
 import { TOKEN_BRIDGE_ROLES } from "contracts/common/constants";
 

@@ -1,0 +1,3146 @@
+# `IAccessControlUpgradeable`
+
+### RoleAdminChanged
+
+```solidity
+event RoleAdminChanged(bytes32 role, bytes32 previousAdminRole, bytes32 newAdminRole)
+```
+
+_Emitted when `newAdminRole` is set as ``role``'s admin role, replacing `previousAdminRole`
+
+`DEFAULT_ADMIN_ROLE` is the starting admin for all roles, despite
+{RoleAdminChanged} not being emitted signaling this.
+
+_Available since v3.1.__
+
+### RoleGranted
+
+```solidity
+event RoleGranted(bytes32 role, address account, address sender)
+```
+
+_Emitted when `account` is granted `role`.
+
+`sender` is the account that originated the contract call, an admin role
+bearer except when using {AccessControl-_setupRole}._
+
+### RoleRevoked
+
+```solidity
+event RoleRevoked(bytes32 role, address account, address sender)
+```
+
+_Emitted when `account` is revoked `role`.
+
+`sender` is the account that originated the contract call:
+  - if using `revokeRole`, it is the admin role bearer
+  - if using `renounceRole`, it is the role bearer (i.e. `account`)_
+
+### hasRole
+
+```solidity
+function hasRole(bytes32 role, address account) external view returns (bool)
+```
+
+_Returns `true` if `account` has been granted `role`._
+
+### getRoleAdmin
+
+```solidity
+function getRoleAdmin(bytes32 role) external view returns (bytes32)
+```
+
+_Returns the admin role that controls `role`. See {grantRole} and
+{revokeRole}.
+
+To change a role's admin, use {AccessControl-_setRoleAdmin}._
+
+### grantRole
+
+```solidity
+function grantRole(bytes32 role, address account) external
+```
+
+_Grants `role` to `account`.
+
+If `account` had not been already granted `role`, emits a {RoleGranted}
+event.
+
+Requirements:
+
+- the caller must have ``role``'s admin role._
+
+### revokeRole
+
+```solidity
+function revokeRole(bytes32 role, address account) external
+```
+
+_Revokes `role` from `account`.
+
+If `account` had been granted `role`, emits a {RoleRevoked} event.
+
+Requirements:
+
+- the caller must have ``role``'s admin role._
+
+### renounceRole
+
+```solidity
+function renounceRole(bytes32 role, address account) external
+```
+
+_Revokes `role` from the calling account.
+
+Roles are often managed via {grantRole} and {revokeRole}: this function's
+purpose is to provide a mechanism for accounts to lose their privileges
+if they are compromised (such as when a trusted device is misplaced).
+
+If the calling account had been granted `role`, emits a {RoleRevoked}
+event.
+
+Requirements:
+
+- the caller must be `account`._
+
+# `AddressUpgradeable`
+
+### isContract
+
+```solidity
+function isContract(address account) internal view returns (bool)
+```
+
+_Returns true if `account` is a contract.
+
+[IMPORTANT]
+====
+It is unsafe to assume that an address for which this function returns
+false is an externally-owned account (EOA) and not a contract.
+
+Among others, `isContract` will return false for the following
+types of addresses:
+
+ - an externally-owned account
+ - a contract in construction
+ - an address where a contract will be created
+ - an address where a contract lived, but was destroyed
+
+Furthermore, `isContract` will also return true if the target contract within
+the same transaction is already scheduled for destruction by `SELFDESTRUCT`,
+which only has an effect at the end of a transaction.
+====
+
+[IMPORTANT]
+====
+You shouldn't rely on `isContract` to protect against flash loan attacks!
+
+Preventing calls from contracts is highly discouraged. It breaks composability, breaks support for smart wallets
+like Gnosis Safe, and does not provide security since it can be circumvented by calling from a contract
+constructor.
+====_
+
+### sendValue
+
+```solidity
+function sendValue(address payable recipient, uint256 amount) internal
+```
+
+_Replacement for Solidity's `transfer`: sends `amount` wei to
+`recipient`, forwarding all available gas and reverting on errors.
+
+https://eips.ethereum.org/EIPS/eip-1884[EIP1884] increases the gas cost
+of certain opcodes, possibly making contracts go over the 2300 gas limit
+imposed by `transfer`, making them unable to receive funds via
+`transfer`. {sendValue} removes this limitation.
+
+https://consensys.net/diligence/blog/2019/09/stop-using-soliditys-transfer-now/[Learn more].
+
+IMPORTANT: because control is transferred to `recipient`, care must be
+taken to not create reentrancy vulnerabilities. Consider using
+{ReentrancyGuard} or the
+https://solidity.readthedocs.io/en/v0.8.0/security-considerations.html#use-the-checks-effects-interactions-pattern[checks-effects-interactions pattern]._
+
+### functionCall
+
+```solidity
+function functionCall(address target, bytes data) internal returns (bytes)
+```
+
+_Performs a Solidity function call using a low level `call`. A
+plain `call` is an unsafe replacement for a function call: use this
+function instead.
+
+If `target` reverts with a revert reason, it is bubbled up by this
+function (like regular Solidity function calls).
+
+Returns the raw returned data. To convert to the expected return value,
+use https://solidity.readthedocs.io/en/latest/units-and-global-variables.html?highlight=abi.decode#abi-encoding-and-decoding-functions[`abi.decode`].
+
+Requirements:
+
+- `target` must be a contract.
+- calling `target` with `data` must not revert.
+
+_Available since v3.1.__
+
+### functionCall
+
+```solidity
+function functionCall(address target, bytes data, string errorMessage) internal returns (bytes)
+```
+
+_Same as {xref-Address-functionCall-address-bytes-}[`functionCall`], but with
+`errorMessage` as a fallback revert reason when `target` reverts.
+
+_Available since v3.1.__
+
+### functionCallWithValue
+
+```solidity
+function functionCallWithValue(address target, bytes data, uint256 value) internal returns (bytes)
+```
+
+_Same as {xref-Address-functionCall-address-bytes-}[`functionCall`],
+but also transferring `value` wei to `target`.
+
+Requirements:
+
+- the calling contract must have an ETH balance of at least `value`.
+- the called Solidity function must be `payable`.
+
+_Available since v3.1.__
+
+### functionCallWithValue
+
+```solidity
+function functionCallWithValue(address target, bytes data, uint256 value, string errorMessage) internal returns (bytes)
+```
+
+_Same as {xref-Address-functionCallWithValue-address-bytes-uint256-}[`functionCallWithValue`], but
+with `errorMessage` as a fallback revert reason when `target` reverts.
+
+_Available since v3.1.__
+
+### functionStaticCall
+
+```solidity
+function functionStaticCall(address target, bytes data) internal view returns (bytes)
+```
+
+_Same as {xref-Address-functionCall-address-bytes-}[`functionCall`],
+but performing a static call.
+
+_Available since v3.3.__
+
+### functionStaticCall
+
+```solidity
+function functionStaticCall(address target, bytes data, string errorMessage) internal view returns (bytes)
+```
+
+_Same as {xref-Address-functionCall-address-bytes-string-}[`functionCall`],
+but performing a static call.
+
+_Available since v3.3.__
+
+### functionDelegateCall
+
+```solidity
+function functionDelegateCall(address target, bytes data) internal returns (bytes)
+```
+
+_Same as {xref-Address-functionCall-address-bytes-}[`functionCall`],
+but performing a delegate call.
+
+_Available since v3.4.__
+
+### functionDelegateCall
+
+```solidity
+function functionDelegateCall(address target, bytes data, string errorMessage) internal returns (bytes)
+```
+
+_Same as {xref-Address-functionCall-address-bytes-string-}[`functionCall`],
+but performing a delegate call.
+
+_Available since v3.4.__
+
+### verifyCallResultFromTarget
+
+```solidity
+function verifyCallResultFromTarget(address target, bool success, bytes returndata, string errorMessage) internal view returns (bytes)
+```
+
+_Tool to verify that a low level call to smart-contract was successful, and revert (either by bubbling
+the revert reason or using the provided one) in case of unsuccessful call or if target was not a contract.
+
+_Available since v4.8.__
+
+### verifyCallResult
+
+```solidity
+function verifyCallResult(bool success, bytes returndata, string errorMessage) internal pure returns (bytes)
+```
+
+_Tool to verify that a low level call was successful, and revert if it wasn't, either by bubbling the
+revert reason or using the provided one.
+
+_Available since v4.3.__
+
+# `Initializable`
+
+### Initialized
+
+```solidity
+event Initialized(uint8 version)
+```
+
+_Triggered when the contract has been initialized or reinitialized._
+
+### initializer
+
+```solidity
+modifier initializer()
+```
+
+_A modifier that defines a protected initializer function that can be invoked at most once. In its scope,
+`onlyInitializing` functions can be used to initialize parent contracts.
+
+Similar to `reinitializer(1)`, except that functions marked with `initializer` can be nested in the context of a
+constructor.
+
+Emits an {Initialized} event._
+
+### reinitializer
+
+```solidity
+modifier reinitializer(uint8 version)
+```
+
+_A modifier that defines a protected reinitializer function that can be invoked at most once, and only if the
+contract hasn't been initialized to a greater version before. In its scope, `onlyInitializing` functions can be
+used to initialize parent contracts.
+
+A reinitializer may be used after the original initialization step. This is essential to configure modules that
+are added through upgrades and that require initialization.
+
+When `version` is 1, this modifier is similar to `initializer`, except that functions marked with `reinitializer`
+cannot be nested. If one is invoked in the context of another, execution will revert.
+
+Note that versions can jump in increments greater than 1; this implies that if multiple reinitializers coexist in
+a contract, executing them in the right order is up to the developer or operator.
+
+WARNING: setting the version to 255 will prevent any future reinitialization.
+
+Emits an {Initialized} event._
+
+### onlyInitializing
+
+```solidity
+modifier onlyInitializing()
+```
+
+_Modifier to protect an initialization function so that it can only be invoked by functions with the
+{initializer} and {reinitializer} modifiers, directly or indirectly._
+
+### _disableInitializers
+
+```solidity
+function _disableInitializers() internal virtual
+```
+
+_Locks the contract, preventing any future reinitialization. This cannot be part of an initializer call.
+Calling this in the constructor of a contract will prevent that contract from being initialized or reinitialized
+to any version. It is recommended to use this to lock implementation contracts that are designed to be called
+through proxies.
+
+Emits an {Initialized} event the first time it is successfully executed._
+
+### _getInitializedVersion
+
+```solidity
+function _getInitializedVersion() internal view returns (uint8)
+```
+
+_Returns the highest version that has been initialized. See {reinitializer}._
+
+### _isInitializing
+
+```solidity
+function _isInitializing() internal view returns (bool)
+```
+
+_Returns `true` if the contract is currently initializing. See {onlyInitializing}._
+
+# `ContextUpgradeable`
+
+### __Context_init
+
+```solidity
+function __Context_init() internal
+```
+
+### __Context_init_unchained
+
+```solidity
+function __Context_init_unchained() internal
+```
+
+### _msgSender
+
+```solidity
+function _msgSender() internal view virtual returns (address)
+```
+
+### _msgData
+
+```solidity
+function _msgData() internal view virtual returns (bytes)
+```
+
+### _contextSuffixLength
+
+```solidity
+function _contextSuffixLength() internal view virtual returns (uint256)
+```
+
+# `IERC165Upgradeable`
+
+### supportsInterface
+
+```solidity
+function supportsInterface(bytes4 interfaceId) external view returns (bool)
+```
+
+_Returns true if this contract implements the interface defined by
+`interfaceId`. See the corresponding
+https://eips.ethereum.org/EIPS/eip-165#how-interfaces-are-identified[EIP section]
+to learn more about how these ids are created.
+
+This function call must use less than 30 000 gas._
+
+# `ERC165Upgradeable`
+
+### __ERC165_init
+
+```solidity
+function __ERC165_init() internal
+```
+
+### __ERC165_init_unchained
+
+```solidity
+function __ERC165_init_unchained() internal
+```
+
+### supportsInterface
+
+```solidity
+function supportsInterface(bytes4 interfaceId) public view virtual returns (bool)
+```
+
+_See {IERC165-supportsInterface}._
+
+# `MathUpgradeable`
+
+### Rounding
+
+```solidity
+enum Rounding {
+  Down,
+  Up,
+  Zero
+}
+```
+
+### max
+
+```solidity
+function max(uint256 a, uint256 b) internal pure returns (uint256)
+```
+
+_Returns the largest of two numbers._
+
+### min
+
+```solidity
+function min(uint256 a, uint256 b) internal pure returns (uint256)
+```
+
+_Returns the smallest of two numbers._
+
+### average
+
+```solidity
+function average(uint256 a, uint256 b) internal pure returns (uint256)
+```
+
+_Returns the average of two numbers. The result is rounded towards
+zero._
+
+### ceilDiv
+
+```solidity
+function ceilDiv(uint256 a, uint256 b) internal pure returns (uint256)
+```
+
+_Returns the ceiling of the division of two numbers.
+
+This differs from standard division with `/` in that it rounds up instead
+of rounding down._
+
+### mulDiv
+
+```solidity
+function mulDiv(uint256 x, uint256 y, uint256 denominator) internal pure returns (uint256 result)
+```
+
+Calculates floor(x * y / denominator) with full precision. Throws if result overflows a uint256 or denominator == 0
+
+_Original credit to Remco Bloemen under MIT license (https://xn--2-umb.com/21/muldiv)
+with further edits by Uniswap Labs also under MIT license._
+
+### mulDiv
+
+```solidity
+function mulDiv(uint256 x, uint256 y, uint256 denominator, enum MathUpgradeable.Rounding rounding) internal pure returns (uint256)
+```
+
+Calculates x * y / denominator with full precision, following the selected rounding direction.
+
+### sqrt
+
+```solidity
+function sqrt(uint256 a) internal pure returns (uint256)
+```
+
+_Returns the square root of a number. If the number is not a perfect square, the value is rounded down.
+
+Inspired by Henry S. Warren, Jr.'s "Hacker's Delight" (Chapter 11)._
+
+### sqrt
+
+```solidity
+function sqrt(uint256 a, enum MathUpgradeable.Rounding rounding) internal pure returns (uint256)
+```
+
+Calculates sqrt(a), following the selected rounding direction.
+
+### log2
+
+```solidity
+function log2(uint256 value) internal pure returns (uint256)
+```
+
+_Return the log in base 2, rounded down, of a positive value.
+Returns 0 if given 0._
+
+### log2
+
+```solidity
+function log2(uint256 value, enum MathUpgradeable.Rounding rounding) internal pure returns (uint256)
+```
+
+_Return the log in base 2, following the selected rounding direction, of a positive value.
+Returns 0 if given 0._
+
+### log10
+
+```solidity
+function log10(uint256 value) internal pure returns (uint256)
+```
+
+_Return the log in base 10, rounded down, of a positive value.
+Returns 0 if given 0._
+
+### log10
+
+```solidity
+function log10(uint256 value, enum MathUpgradeable.Rounding rounding) internal pure returns (uint256)
+```
+
+_Return the log in base 10, following the selected rounding direction, of a positive value.
+Returns 0 if given 0._
+
+### log256
+
+```solidity
+function log256(uint256 value) internal pure returns (uint256)
+```
+
+_Return the log in base 256, rounded down, of a positive value.
+Returns 0 if given 0.
+
+Adding one to the result gives the number of pairs of hex symbols needed to represent `value` as a hex string._
+
+### log256
+
+```solidity
+function log256(uint256 value, enum MathUpgradeable.Rounding rounding) internal pure returns (uint256)
+```
+
+_Return the log in base 256, following the selected rounding direction, of a positive value.
+Returns 0 if given 0._
+
+# `SignedMathUpgradeable`
+
+### max
+
+```solidity
+function max(int256 a, int256 b) internal pure returns (int256)
+```
+
+_Returns the largest of two signed numbers._
+
+### min
+
+```solidity
+function min(int256 a, int256 b) internal pure returns (int256)
+```
+
+_Returns the smallest of two signed numbers._
+
+### average
+
+```solidity
+function average(int256 a, int256 b) internal pure returns (int256)
+```
+
+_Returns the average of two signed numbers without overflow.
+The result is rounded towards zero._
+
+### abs
+
+```solidity
+function abs(int256 n) internal pure returns (uint256)
+```
+
+_Returns the absolute unsigned value of a signed value._
+
+# `StringsUpgradeable`
+
+### toString
+
+```solidity
+function toString(uint256 value) internal pure returns (string)
+```
+
+_Converts a `uint256` to its ASCII `string` decimal representation._
+
+### toString
+
+```solidity
+function toString(int256 value) internal pure returns (string)
+```
+
+_Converts a `int256` to its ASCII `string` decimal representation._
+
+### toHexString
+
+```solidity
+function toHexString(uint256 value) internal pure returns (string)
+```
+
+_Converts a `uint256` to its ASCII `string` hexadecimal representation._
+
+### toHexString
+
+```solidity
+function toHexString(uint256 value, uint256 length) internal pure returns (string)
+```
+
+_Converts a `uint256` to its ASCII `string` hexadecimal representation with fixed length._
+
+### toHexString
+
+```solidity
+function toHexString(address addr) internal pure returns (string)
+```
+
+_Converts an `address` with fixed length of 20 bytes to its not checksummed ASCII `string` hexadecimal representation._
+
+### equal
+
+```solidity
+function equal(string a, string b) internal pure returns (bool)
+```
+
+_Returns true if the two strings are equal._
+
+# `AccessControlUpgradeable`
+
+### RoleData
+
+```solidity
+struct RoleData {
+  mapping(address => bool) members;
+  bytes32 adminRole;
+}
+```
+
+### DEFAULT_ADMIN_ROLE
+
+```solidity
+bytes32 DEFAULT_ADMIN_ROLE
+```
+
+### onlyRole
+
+```solidity
+modifier onlyRole(bytes32 role)
+```
+
+_Modifier that checks that an account has a specific role. Reverts
+with a standardized message including the required role.
+
+The format of the revert reason is given by the following regular expression:
+
+ /^AccessControl: account (0x[0-9a-f]{40}) is missing role (0x[0-9a-f]{64})$/
+
+_Available since v4.1.__
+
+### __AccessControl_init
+
+```solidity
+function __AccessControl_init() internal
+```
+
+### __AccessControl_init_unchained
+
+```solidity
+function __AccessControl_init_unchained() internal
+```
+
+### supportsInterface
+
+```solidity
+function supportsInterface(bytes4 interfaceId) public view virtual returns (bool)
+```
+
+_See {IERC165-supportsInterface}._
+
+### hasRole
+
+```solidity
+function hasRole(bytes32 role, address account) public view virtual returns (bool)
+```
+
+_Returns `true` if `account` has been granted `role`._
+
+### _checkRole
+
+```solidity
+function _checkRole(bytes32 role) internal view virtual
+```
+
+_Revert with a standard message if `_msgSender()` is missing `role`.
+Overriding this function changes the behavior of the {onlyRole} modifier.
+
+Format of the revert message is described in {_checkRole}.
+
+_Available since v4.6.__
+
+### _checkRole
+
+```solidity
+function _checkRole(bytes32 role, address account) internal view virtual
+```
+
+_Revert with a standard message if `account` is missing `role`.
+
+The format of the revert reason is given by the following regular expression:
+
+ /^AccessControl: account (0x[0-9a-f]{40}) is missing role (0x[0-9a-f]{64})$/_
+
+### getRoleAdmin
+
+```solidity
+function getRoleAdmin(bytes32 role) public view virtual returns (bytes32)
+```
+
+_Returns the admin role that controls `role`. See {grantRole} and
+{revokeRole}.
+
+To change a role's admin, use {_setRoleAdmin}._
+
+### grantRole
+
+```solidity
+function grantRole(bytes32 role, address account) public virtual
+```
+
+_Grants `role` to `account`.
+
+If `account` had not been already granted `role`, emits a {RoleGranted}
+event.
+
+Requirements:
+
+- the caller must have ``role``'s admin role.
+
+May emit a {RoleGranted} event._
+
+### revokeRole
+
+```solidity
+function revokeRole(bytes32 role, address account) public virtual
+```
+
+_Revokes `role` from `account`.
+
+If `account` had been granted `role`, emits a {RoleRevoked} event.
+
+Requirements:
+
+- the caller must have ``role``'s admin role.
+
+May emit a {RoleRevoked} event._
+
+### renounceRole
+
+```solidity
+function renounceRole(bytes32 role, address account) public virtual
+```
+
+_Revokes `role` from the calling account.
+
+Roles are often managed via {grantRole} and {revokeRole}: this function's
+purpose is to provide a mechanism for accounts to lose their privileges
+if they are compromised (such as when a trusted device is misplaced).
+
+If the calling account had been revoked `role`, emits a {RoleRevoked}
+event.
+
+Requirements:
+
+- the caller must be `account`.
+
+May emit a {RoleRevoked} event._
+
+### _setupRole
+
+```solidity
+function _setupRole(bytes32 role, address account) internal virtual
+```
+
+_Grants `role` to `account`.
+
+If `account` had not been already granted `role`, emits a {RoleGranted}
+event. Note that unlike {grantRole}, this function doesn't perform any
+checks on the calling account.
+
+May emit a {RoleGranted} event.
+
+[WARNING]
+====
+This function should only be called from the constructor when setting
+up the initial roles for the system.
+
+Using this function in any other way is effectively circumventing the admin
+system imposed by {AccessControl}.
+====
+
+NOTE: This function is deprecated in favor of {_grantRole}._
+
+### _setRoleAdmin
+
+```solidity
+function _setRoleAdmin(bytes32 role, bytes32 adminRole) internal virtual
+```
+
+_Sets `adminRole` as ``role``'s admin role.
+
+Emits a {RoleAdminChanged} event._
+
+### _grantRole
+
+```solidity
+function _grantRole(bytes32 role, address account) internal virtual
+```
+
+_Grants `role` to `account`.
+
+Internal function without access restriction.
+
+May emit a {RoleGranted} event._
+
+### _revokeRole
+
+```solidity
+function _revokeRole(bytes32 role, address account) internal virtual
+```
+
+_Revokes `role` from `account`.
+
+Internal function without access restriction.
+
+May emit a {RoleRevoked} event._
+
+# `ILineaRollupV5`
+
+### SubmissionDataV2
+
+Supporting data for compressed calldata submission including compressed data.
+
+_finalStateRootHash is used to set state root at the end of the data.
+firstBlockInData is the first block that is included in the data submitted.
+finalBlockInData is the last block that is included in the data submitted.
+snarkHash is the computed hash for compressed data (using a SNARK-friendly hash function) that aggregates per data submission to be used in public input.
+compressedData is the compressed transaction data. It contains ordered data for each L2 block - l2Timestamps, the encoded txData._
+
+```solidity
+struct SubmissionDataV2 {
+  bytes32 finalStateRootHash;
+  uint256 firstBlockInData;
+  uint256 finalBlockInData;
+  bytes32 snarkHash;
+  bytes compressedData;
+}
+```
+
+### SupportingSubmissionDataV2
+
+Supporting data for compressed blob data submission.
+
+_finalStateRootHash is used to set state root at the end of the data.
+firstBlockInData is the first block that is included in the data submitted.
+finalBlockInData is the last block that is included in the data submitted.
+snarkHash is the computed hash for compressed data (using a SNARK-friendly hash function) that aggregates per data submission to be used in public input._
+
+```solidity
+struct SupportingSubmissionDataV2 {
+  bytes32 finalStateRootHash;
+  uint256 firstBlockInData;
+  uint256 finalBlockInData;
+  bytes32 snarkHash;
+}
+```
+
+### ShnarfData
+
+Shnarf data for validating a shnarf.
+
+_parentShnarf is the parent computed shnarf.
+snarkHash is the computed hash for compressed data (using a SNARK-friendly hash function) that aggregates per data submission to be used in public input.
+finalStateRootHash is the final state root hash.
+dataEvaluationPoint is the data evaluation point.
+dataEvaluationClaim is the data evaluation claim._
+
+```solidity
+struct ShnarfData {
+  bytes32 parentShnarf;
+  bytes32 snarkHash;
+  bytes32 finalStateRootHash;
+  bytes32 dataEvaluationPoint;
+  bytes32 dataEvaluationClaim;
+}
+```
+
+### BlobSubmissionData
+
+Data structure for compressed blob data submission.
+
+_submissionData The supporting data for blob data submission excluding the compressed data.
+dataEvaluationClaim The data evaluation claim.
+kzgCommitment The blob KZG commitment.
+kzgProof The blob KZG point proof._
+
+```solidity
+struct BlobSubmissionData {
+  struct ILineaRollupV5.SupportingSubmissionDataV2 submissionData;
+  uint256 dataEvaluationClaim;
+  bytes kzgCommitment;
+  bytes kzgProof;
+}
+```
+
+### FinalizationDataV2
+
+Supporting data for finalization with or without proof.
+
+_NB: the dynamic sized fields are placed last on purpose for efficient keccaking on public input.
+parentStateRootHash is the expected last state root hash finalized.
+lastFinalizedShnarf is the last finalized shnarf for proof continuity checks.
+finalBlockInData is the final block finalizing until.
+shnarfData contains data about the last data submission's shnarf used in finalization.
+lastFinalizedTimestamp is the expected last finalized block's timestamp.
+finalTimestamp is the timestamp of the last block being finalized.
+lastFinalizedL1RollingHash is the last stored L2 computed rolling hash used in finalization.
+l1RollingHash is the calculated rolling hash on L2 that is expected to match L1 at l1RollingHashMessageNumber.
+This value will be used along with the stored last finalized L2 calculated rolling hash in the public input.
+lastFinalizedL1RollingHashMessageNumber is the last stored L2 computed message number used in finalization.
+l1RollingHashMessageNumber is the calculated message number on L2 that is expected to match the existing L1 rolling hash.
+This value will be used along with the stored last finalized L2 calculated message number in the public input.
+l2MerkleTreesDepth is the depth of all l2MerkleRoots.
+l2MerkleRoots is an array of L2 message merkle roots of depth l2MerkleTreesDepth between last finalized block and finalSubmissionData.finalBlockInData.
+l2MessagingBlocksOffsets indicates by offset from currentL2BlockNumber which L2 blocks contain MessageSent events._
+
+```solidity
+struct FinalizationDataV2 {
+  bytes32 parentStateRootHash;
+  bytes32 lastFinalizedShnarf;
+  uint256 finalBlockInData;
+  struct ILineaRollupV5.ShnarfData shnarfData;
+  uint256 lastFinalizedTimestamp;
+  uint256 finalTimestamp;
+  bytes32 lastFinalizedL1RollingHash;
+  bytes32 l1RollingHash;
+  uint256 lastFinalizedL1RollingHashMessageNumber;
+  uint256 l1RollingHashMessageNumber;
+  uint256 l2MerkleTreesDepth;
+  bytes32[] l2MerkleRoots;
+  bytes l2MessagingBlocksOffsets;
+}
+```
+
+### VerifierAddressChanged
+
+```solidity
+event VerifierAddressChanged(address verifierAddress, uint256 proofType, address verifierSetBy, address oldVerifierAddress)
+```
+
+Emitted when a verifier is set for a particular proof type.
+
+_The verifier will be set by an account with the VERIFIER_SETTER_ROLE. Typically the Safe.
+The oldVerifierAddress can be the zero address._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| verifierAddress | address | The indexed new verifier address being set. |
+| proofType | uint256 | The indexed proof type/index that the verifier is mapped to. |
+| verifierSetBy | address | The index address who set the verifier at the mapping. |
+| oldVerifierAddress | address | Indicates the previous address mapped to the proof type. |
+
+### DataSubmittedV2
+
+```solidity
+event DataSubmittedV2(bytes32 shnarf, uint256 startBlock, uint256 endBlock)
+```
+
+Emitted when compressed data is being submitted and verified succesfully on L1.
+
+_Please note, shnarf was previously dataHash and points to the shnarfFinalBlockNumbers mapping._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| shnarf | bytes32 | The indexed shnarf for the data being submitted. |
+| startBlock | uint256 | The indexed L2 block number indicating which block the data starts from. |
+| endBlock | uint256 | The indexed L2 block number indicating which block the data ends on. |
+
+### DataFinalized
+
+```solidity
+event DataFinalized(uint256 lastBlockFinalized, bytes32 startingRootHash, bytes32 finalRootHash, bool withProof)
+```
+
+Emitted when L2 blocks have been finalized on L1.
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| lastBlockFinalized | uint256 | The indexed last L2 block that is finalized in the finalization. |
+| startingRootHash | bytes32 | The indexed initial (also last finalized) L2 state root hash that the finalization is from. |
+| finalRootHash | bytes32 | The indexed L2 state root hash that the current finalization is up until. |
+| withProof | bool | Indicates if the finalization is proven or not. |
+
+### PointEvaluationResponseInvalid
+
+```solidity
+error PointEvaluationResponseInvalid(uint256 fieldElements, uint256 blsCurveModulus)
+```
+
+_Thrown when the point evaluation precompile call return data field(s) are wrong._
+
+### PrecompileReturnDataLengthWrong
+
+```solidity
+error PrecompileReturnDataLengthWrong(uint256 expected, uint256 actual)
+```
+
+_Thrown when the point evaluation precompile call return data length is wrong._
+
+### PointEvaluationFailed
+
+```solidity
+error PointEvaluationFailed()
+```
+
+_Thrown when the point evaluation precompile call returns false._
+
+### EmptyBlobData
+
+```solidity
+error EmptyBlobData()
+```
+
+_Thrown when the blobhash equals to the zero hash._
+
+### EmptyBlobDataAtIndex
+
+```solidity
+error EmptyBlobDataAtIndex(uint256 index)
+```
+
+_Thrown when the blobhash at an index equals to the zero hash._
+
+### BlobSubmissionDataIsMissing
+
+```solidity
+error BlobSubmissionDataIsMissing()
+```
+
+_Thrown when the data for multiple blobs' submission has length zero._
+
+### DataStartingBlockDoesNotMatch
+
+```solidity
+error DataStartingBlockDoesNotMatch(uint256 expected, uint256 actual)
+```
+
+_Thrown when the starting block in the data item is out of sequence with the last block number._
+
+### DataAlreadySubmitted
+
+```solidity
+error DataAlreadySubmitted(bytes32 currentDataHash)
+```
+
+_Thrown when the current data was already submitted._
+
+### LastFinalizedShnarfWrong
+
+```solidity
+error LastFinalizedShnarfWrong(bytes32 expected, bytes32 actual)
+```
+
+_Thrown when the last finalized shnarf does not match the parent finalizing from._
+
+### EmptySubmissionData
+
+```solidity
+error EmptySubmissionData()
+```
+
+_Thrown when submissionData is empty._
+
+### L1RollingHashDoesNotExistOnL1
+
+```solidity
+error L1RollingHashDoesNotExistOnL1(uint256 messageNumber, bytes32 rollingHash)
+```
+
+_Thrown when finalizationData.l1RollingHash does not exist on L1 (Feedback loop)._
+
+### FinalizationStateIncorrect
+
+```solidity
+error FinalizationStateIncorrect(bytes32 expected, bytes32 value)
+```
+
+_Thrown when finalization state does not match._
+
+### FirstBlockGreaterThanFinalBlock
+
+```solidity
+error FirstBlockGreaterThanFinalBlock(uint256 firstBlockNumber, uint256 finalBlockNumber)
+```
+
+_Thrown when the first block is greater than final block in submission data._
+
+### FirstBlockLessThanOrEqualToLastFinalizedBlock
+
+```solidity
+error FirstBlockLessThanOrEqualToLastFinalizedBlock(uint256 firstBlockNumber, uint256 lastFinalizedBlock)
+```
+
+_Thrown when the first block in data is less than or equal to the last finalized block during data submission._
+
+### FinalBlockNumberLessThanOrEqualToLastFinalizedBlock
+
+```solidity
+error FinalBlockNumberLessThanOrEqualToLastFinalizedBlock(uint256 finalBlockNumber, uint256 lastFinalizedBlock)
+```
+
+_Thrown when the final block number in finalization data is less than or equal to the last finalized block during finalization._
+
+### FinalBlockStateEqualsZeroHash
+
+```solidity
+error FinalBlockStateEqualsZeroHash()
+```
+
+_Thrown when the final block state equals the zero hash during finalization._
+
+### FinalizationInTheFuture
+
+```solidity
+error FinalizationInTheFuture(uint256 l2BlockTimestamp, uint256 currentBlockTimestamp)
+```
+
+_Thrown when final l2 block timestamp higher than current block.timestamp during finalization._
+
+### MissingMessageNumberForRollingHash
+
+```solidity
+error MissingMessageNumberForRollingHash(bytes32 rollingHash)
+```
+
+_Thrown when a rolling hash is provided without a corresponding message number._
+
+### MissingRollingHashForMessageNumber
+
+```solidity
+error MissingRollingHashForMessageNumber(uint256 messageNumber)
+```
+
+_Thrown when a message number is provided without a corresponding rolling hash._
+
+### FirstByteIsNotZero
+
+```solidity
+error FirstByteIsNotZero()
+```
+
+_Thrown when the first byte is not zero.
+This is used explicitly with the four bytes in assembly 0x729eebce._
+
+### BytesLengthNotMultipleOf32
+
+```solidity
+error BytesLengthNotMultipleOf32()
+```
+
+_Thrown when bytes length is not a multiple of 32._
+
+### SnarkHashIsZeroHash
+
+```solidity
+error SnarkHashIsZeroHash()
+```
+
+_Thrown when the snarkhash is the zero hash._
+
+### ParentStateRootHashInvalid
+
+```solidity
+error ParentStateRootHashInvalid(bytes32 expected, bytes32 actual)
+```
+
+_Thrown when parent stateRootHash does not match._
+
+### FinalBlockDoesNotMatchShnarfFinalBlock
+
+```solidity
+error FinalBlockDoesNotMatchShnarfFinalBlock(uint256 expected, uint256 actual)
+```
+
+_Thrown when the block being finalized until does not match that of the shnarf data._
+
+### ShnarfAndFinalBlockNumberLengthsMismatched
+
+```solidity
+error ShnarfAndFinalBlockNumberLengthsMismatched(uint256 shnarfsLength, uint256 finalBlockNumbers)
+```
+
+_Thrown when the lengths of the shnarfs array and final block numbers array don't match._
+
+### FinalShnarfWrong
+
+```solidity
+error FinalShnarfWrong(bytes32 expected, bytes32 value)
+```
+
+_Thrown when the computed shnarf does not match what is expected._
+
+### setVerifierAddress
+
+```solidity
+function setVerifierAddress(address _newVerifierAddress, uint256 _proofType) external
+```
+
+Adds or updated the verifier contract address for a proof type.
+
+_VERIFIER_SETTER_ROLE is required to execute._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _newVerifierAddress | address | The address for the verifier contract. |
+| _proofType | uint256 | The proof type being set/updated. |
+
+### unsetVerifierAddress
+
+```solidity
+function unsetVerifierAddress(uint256 _proofType) external
+```
+
+Unset the verifier contract address for a proof type.
+
+_VERIFIER_SETTER_ROLE is required to execute._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _proofType | uint256 | The proof type being set/updated. |
+
+### submitBlobs
+
+```solidity
+function submitBlobs(struct ILineaRollupV5.BlobSubmissionData[] _blobSubmissionData, bytes32 _parentShnarf, bytes32 _finalBlobShnarf) external
+```
+
+Submit one or more EIP-4844 blobs.
+
+_OPERATOR_ROLE is required to execute.
+This should be a blob carrying transaction._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _blobSubmissionData | struct ILineaRollupV5.BlobSubmissionData[] | The data for blob submission including proofs and required polynomials. |
+| _parentShnarf | bytes32 | The parent shnarf used in continuity checks as it includes the parentStateRootHash in its computation. |
+| _finalBlobShnarf | bytes32 | The expected final shnarf post computation of all the blob shnarfs. |
+
+### submitDataAsCalldata
+
+```solidity
+function submitDataAsCalldata(struct ILineaRollupV5.SubmissionDataV2 _submissionData, bytes32 _parentShnarf, bytes32 _expectedShnarf) external
+```
+
+Submit blobs using compressed data via calldata.
+
+_OPERATOR_ROLE is required to execute._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _submissionData | struct ILineaRollupV5.SubmissionDataV2 | The supporting data for compressed data submission including compressed data. |
+| _parentShnarf | bytes32 | The parent shnarf used in continuity checks as it includes the parentStateRootHash in its computation. |
+| _expectedShnarf | bytes32 | The expected shnarf post computation of all the submission. |
+
+### finalizeBlocksWithoutProof
+
+```solidity
+function finalizeBlocksWithoutProof(struct ILineaRollupV5.FinalizationDataV2 _finalizationData) external
+```
+
+Finalize compressed blocks without proof.
+
+_DEFAULT_ADMIN_ROLE is required to execute._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _finalizationData | struct ILineaRollupV5.FinalizationDataV2 | The full finalization data. |
+
+### finalizeBlocksWithProof
+
+```solidity
+function finalizeBlocksWithProof(bytes _aggregatedProof, uint256 _proofType, struct ILineaRollupV5.FinalizationDataV2 _finalizationData) external
+```
+
+Finalize compressed blocks with proof.
+
+_OPERATOR_ROLE is required to execute._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _aggregatedProof | bytes | The aggregated proof. |
+| _proofType | uint256 | The proof type. |
+| _finalizationData | struct ILineaRollupV5.FinalizationDataV2 | The full finalization data. |
+
+# `Utils`
+
+### _efficientKeccak
+
+```solidity
+function _efficientKeccak(bytes32 _left, bytes32 _right) internal pure returns (bytes32 value)
+```
+
+Performs a gas optimized keccak hash.
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _left | bytes32 | Left value. |
+| _right | bytes32 | Right value. |
+
+# `IGenericErrors`
+
+### ZeroAddressNotAllowed
+
+```solidity
+error ZeroAddressNotAllowed()
+```
+
+_Thrown when a parameter is the zero address._
+
+# `IL1MessageService`
+
+### ClaimMessageWithProofParams
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+
+```solidity
+struct ClaimMessageWithProofParams {
+  bytes32[] proof;
+  uint256 messageNumber;
+  uint32 leafIndex;
+  address from;
+  address to;
+  uint256 fee;
+  uint256 value;
+  address payable feeRecipient;
+  bytes32 merkleRoot;
+  bytes data;
+}
+```
+
+### SystemMigrationBlockInitialized
+
+```solidity
+event SystemMigrationBlockInitialized(uint256 systemMigrationBlock)
+```
+
+Emitted when initializing Linea Rollup contract with a system migration block.
+
+### L2MerkleRootDoesNotExist
+
+```solidity
+error L2MerkleRootDoesNotExist()
+```
+
+_Thrown when L2 merkle root does not exist._
+
+### InvalidMerkleProof
+
+```solidity
+error InvalidMerkleProof()
+```
+
+_Thrown when the merkle proof is invalid._
+
+### ProofLengthDifferentThanMerkleDepth
+
+```solidity
+error ProofLengthDifferentThanMerkleDepth(uint256 actual, uint256 expected)
+```
+
+_Thrown when merkle depth doesn't match proof length._
+
+# `BitMaps`
+
+### BitMap
+
+```solidity
+struct BitMap {
+  mapping(uint256 => uint256) _data;
+}
+```
+
+### get
+
+```solidity
+function get(struct BitMaps.BitMap bitmap, uint256 index) internal view returns (bool)
+```
+
+_Returns whether the bit at `index` is set._
+
+### setTo
+
+```solidity
+function setTo(struct BitMaps.BitMap bitmap, uint256 index, bool value) internal
+```
+
+_Sets the bit at `index` to the boolean `value`._
+
+### set
+
+```solidity
+function set(struct BitMaps.BitMap bitmap, uint256 index) internal
+```
+
+_Sets the bit at `index`._
+
+### unset
+
+```solidity
+function unset(struct BitMaps.BitMap bitmap, uint256 index) internal
+```
+
+_Unsets the bit at `index`._
+
+# `IL1MessageManager`
+
+### RollingHashUpdated
+
+```solidity
+event RollingHashUpdated(uint256 messageNumber, bytes32 rollingHash, bytes32 messageHash)
+```
+
+Emitted when a new message is sent and the rolling hash updated.
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| messageNumber | uint256 | The unique indexed message number for the message. |
+| rollingHash | bytes32 | The indexed rolling hash computed for the current message number. |
+| messageHash | bytes32 | The indexed hash of the message parameters. |
+
+### L2MerkleRootAdded
+
+```solidity
+event L2MerkleRootAdded(bytes32 l2MerkleRoot, uint256 treeDepth)
+```
+
+Emitted when the L2 merkle root has been anchored on L1.
+
+_There may be more than one of these in a finalization depending on the amount of L2->L1 messages in the finalization._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| l2MerkleRoot | bytes32 | The indexed L2 Merkle root that has been anchored on L1 Ethereum. |
+| treeDepth | uint256 | The indexed tree depth of the Merkle root. |
+
+### L2MessagingBlockAnchored
+
+```solidity
+event L2MessagingBlockAnchored(uint256 l2Block)
+```
+
+Emitted when the l2 block contains L2 messages during finalization.
+
+_This is used externally in the logic for determining which messages belong to which Merkle root when claiming._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| l2Block | uint256 | The indexed L2 block containing L2 to L1 messages. |
+
+### MessageAlreadyClaimed
+
+```solidity
+error MessageAlreadyClaimed(uint256 messageIndex)
+```
+
+_Thrown when the message has already been claimed._
+
+### L2MerkleRootAlreadyAnchored
+
+```solidity
+error L2MerkleRootAlreadyAnchored(bytes32 merkleRoot)
+```
+
+_Thrown when the L2 merkle root has already been anchored on L1._
+
+### BytesLengthNotMultipleOfTwo
+
+```solidity
+error BytesLengthNotMultipleOfTwo(uint256 bytesLength)
+```
+
+_Thrown when the L2 messaging blocks offsets bytes length is not a multiple of 2._
+
+### isMessageClaimed
+
+```solidity
+function isMessageClaimed(uint256 _messageNumber) external view returns (bool)
+```
+
+Check if the L2->L1 message is claimed or not.
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _messageNumber | uint256 | The message number on L2. |
+
+# `IL1MessageManagerV1`
+
+### L2L1MessageHashAddedToInbox
+
+```solidity
+event L2L1MessageHashAddedToInbox(bytes32 messageHash)
+```
+
+Emitted when L2->L1 message hashes have been added to L1 storage.
+
+_DEPRECATED - This is kept for backwards compatability for external consumers._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| messageHash | bytes32 | The indexed hash of the message parameters. |
+
+### L1L2MessagesReceivedOnL2
+
+```solidity
+event L1L2MessagesReceivedOnL2(bytes32[] messageHashes)
+```
+
+Emitted when L1->L2 messages have been anchored on L2 and updated on L1.
+
+_DEPRECATED - This is kept for backwards compatability for external consumers._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| messageHashes | bytes32[] | The collection of hashes indicating which messages were added on L2. of the message parameters. |
+
+### MessageDoesNotExistOrHasAlreadyBeenClaimed
+
+```solidity
+error MessageDoesNotExistOrHasAlreadyBeenClaimed(bytes32 messageHash)
+```
+
+_Thrown when the message has already been claimed._
+
+# `L1MessageManagerV1`
+
+### INBOX_STATUS_UNKNOWN
+
+```solidity
+uint8 INBOX_STATUS_UNKNOWN
+```
+
+### INBOX_STATUS_RECEIVED
+
+```solidity
+uint8 INBOX_STATUS_RECEIVED
+```
+
+### OUTBOX_STATUS_UNKNOWN
+
+```solidity
+uint8 OUTBOX_STATUS_UNKNOWN
+```
+
+### OUTBOX_STATUS_SENT
+
+```solidity
+uint8 OUTBOX_STATUS_SENT
+```
+
+### OUTBOX_STATUS_RECEIVED
+
+```solidity
+uint8 OUTBOX_STATUS_RECEIVED
+```
+
+### outboxL1L2MessageStatus
+
+```solidity
+mapping(bytes32 => uint256) outboxL1L2MessageStatus
+```
+
+_Mapping to store L1->L2 message hashes status.
+messageHash => messageStatus (0: unknown, 1: sent, 2: received)._
+
+### inboxL2L1MessageStatus
+
+```solidity
+mapping(bytes32 => uint256) inboxL2L1MessageStatus
+```
+
+_Mapping to store L2->L1 message hashes status.
+messageHash => messageStatus (0: unknown, 1: received)._
+
+### _updateL2L1MessageStatusToClaimed
+
+```solidity
+function _updateL2L1MessageStatusToClaimed(bytes32 _messageHash) internal
+```
+
+Update the status of L2->L1 message when a user claims a message on L1.
+
+_The L2->L1 message is removed from storage.
+Due to the nature of the rollup, we should not get a second entry of this._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _messageHash | bytes32 | Hash of the message. |
+
+# `L1MessageManager`
+
+### rollingHashes
+
+```solidity
+mapping(uint256 => bytes32) rollingHashes
+```
+
+### _messageClaimedBitMap
+
+```solidity
+struct BitMaps.BitMap _messageClaimedBitMap
+```
+
+### l2MerkleRootsDepths
+
+```solidity
+mapping(bytes32 => uint256) l2MerkleRootsDepths
+```
+
+### _addRollingHash
+
+```solidity
+function _addRollingHash(uint256 _messageNumber, bytes32 _messageHash) internal
+```
+
+Take an existing message hash, calculates the rolling hash and stores at the message number.
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _messageNumber | uint256 | The current message number being sent. |
+| _messageHash | bytes32 | The hash of the message being sent. |
+
+### _setL2L1MessageToClaimed
+
+```solidity
+function _setL2L1MessageToClaimed(uint256 _messageNumber) internal
+```
+
+Set the L2->L1 message as claimed when a user claims a message on L1.
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _messageNumber | uint256 | The message number on L2. |
+
+### _addL2MerkleRoots
+
+```solidity
+function _addL2MerkleRoots(bytes32[] _newRoots, uint256 _treeDepth) internal
+```
+
+Add the L2 merkle roots to the storage.
+
+_This function is called during block finalization.
+The _treeDepth does not need to be checked to be non-zero as it is,
+already enforced to be non-zero in the circuit, and used in the proof's public input._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _newRoots | bytes32[] | New L2 merkle roots. |
+| _treeDepth | uint256 |  |
+
+### _anchorL2MessagingBlocks
+
+```solidity
+function _anchorL2MessagingBlocks(bytes _l2MessagingBlocksOffsets, uint256 _currentL2BlockNumber) internal
+```
+
+Emit an event for each L2 block containing L2->L1 messages.
+
+_This function is called during block finalization._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _l2MessagingBlocksOffsets | bytes | Is a sequence of uint16 values, where each value plus the last finalized L2 block number. indicates which L2 blocks have L2->L1 messages. |
+| _currentL2BlockNumber | uint256 | Last L2 block number finalized on L1. |
+
+### isMessageClaimed
+
+```solidity
+function isMessageClaimed(uint256 _messageNumber) external view returns (bool)
+```
+
+Check if the L2->L1 message is claimed or not.
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _messageNumber | uint256 | The message number on L2. |
+
+# `IMessageService`
+
+### MessageSent
+
+```solidity
+event MessageSent(address _from, address _to, uint256 _fee, uint256 _value, uint256 _nonce, bytes _calldata, bytes32 _messageHash)
+```
+
+Emitted when a message is sent.
+
+__calldata has the _ because calldata is a reserved word.
+We include the message hash to save hashing costs on the rollup.
+This event is used on both L1 and L2._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _from | address | The indexed sender address of the message (msg.sender). |
+| _to | address | The indexed intended recipient address of the message on the other layer. |
+| _fee | uint256 | The fee being being paid to deliver the message to the recipient in Wei. |
+| _value | uint256 | The value being sent to the recipient in Wei. |
+| _nonce | uint256 | The unique message number. |
+| _calldata | bytes | The calldata being passed to the intended recipient when being called on claiming. |
+| _messageHash | bytes32 | The indexed hash of the message parameters. |
+
+### MessageClaimed
+
+```solidity
+event MessageClaimed(bytes32 _messageHash)
+```
+
+Emitted when a message is claimed.
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _messageHash | bytes32 | The indexed hash of the message that was claimed. |
+
+### FeeTooLow
+
+```solidity
+error FeeTooLow()
+```
+
+_Thrown when fees are lower than the minimum fee._
+
+### ValueSentTooLow
+
+```solidity
+error ValueSentTooLow()
+```
+
+_Thrown when the value sent is less than the fee.
+Value to forward on is msg.value - _fee._
+
+### MessageSendingFailed
+
+```solidity
+error MessageSendingFailed(address destination)
+```
+
+_Thrown when the destination address reverts._
+
+### FeePaymentFailed
+
+```solidity
+error FeePaymentFailed(address recipient)
+```
+
+_Thrown when the recipient address reverts._
+
+### sendMessage
+
+```solidity
+function sendMessage(address _to, uint256 _fee, bytes _calldata) external payable
+```
+
+Sends a message for transporting from the given chain.
+
+_This function should be called with a msg.value = _value + _fee. The fee will be paid on the destination chain._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _to | address | The destination address on the destination chain. |
+| _fee | uint256 | The message service fee on the origin chain. |
+| _calldata | bytes | The calldata used by the destination message service to call the destination contract. |
+
+### claimMessage
+
+```solidity
+function claimMessage(address _from, address _to, uint256 _fee, uint256 _value, address payable _feeRecipient, bytes _calldata, uint256 _nonce) external
+```
+
+Deliver a message to the destination chain.
+Is called by the Postman, dApp or end user.
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _from | address | The msg.sender calling the origin message service. |
+| _to | address | The destination address on the destination chain. |
+| _fee | uint256 | The message service fee on the origin chain. |
+| _value | uint256 | The value to be transferred to the destination address. |
+| _feeRecipient | address payable | Address that will receive the fees. |
+| _calldata | bytes | The calldata used by the destination message service to call/forward to the destination contract. |
+| _nonce | uint256 | Unique message number. |
+
+### sender
+
+```solidity
+function sender() external view returns (address)
+```
+
+Returns the original sender of the message on the origin layer.
+
+#### Return Values
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | address | The original sender of the message on the origin layer. |
+
+# `TransientStorageHelpers`
+
+### tstoreUint256
+
+```solidity
+function tstoreUint256(bytes32 _key, uint256 _value) internal
+```
+
+Internal function that stores a uint256 value at a given key in the EVM's transient storage using the `tstore` opcode.
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _key | bytes32 | The key in the EVM transient storage where the value should be stored. |
+| _value | uint256 | The uint256 value to be stored at the specified key in the EVM transient storage. |
+
+### tloadUint256
+
+```solidity
+function tloadUint256(bytes32 _key) internal view returns (uint256 value)
+```
+
+Internal function that retrieves a uint256 value from the EVM's transient storage using the `tload` opcode.
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _key | bytes32 | The key in the EVM transient storage from which the value should be retrieved. |
+
+#### Return Values
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| value | uint256 | The uint256 value retrieved from the specified key in the EVM transient storage. |
+
+### tstoreAddress
+
+```solidity
+function tstoreAddress(bytes32 _key, address _addr) internal
+```
+
+Internal function that stores an address at a given key in the EVM's transient storage using the `tstore` opcode.
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _key | bytes32 | The key in the EVM transient storage where the value should be stored. |
+| _addr | address | The address to be stored at the specified key in the EVM transient storage. |
+
+### tloadAddress
+
+```solidity
+function tloadAddress(bytes32 _key) internal view returns (address addr)
+```
+
+Internal function that retrieves an address from the EVM's transient storage using the `tload` opcode.
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _key | bytes32 | The key in the EVM transient storage from which the value should be retrieved. |
+
+#### Return Values
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| addr | address | The address retrieved from the specified key in the EVM transient storage. |
+
+# `TransientStorageReentrancyGuardUpgradeable`
+
+### ReentrantCall
+
+```solidity
+error ReentrantCall()
+```
+
+### nonReentrant
+
+```solidity
+modifier nonReentrant()
+```
+
+# `IPauseManager`
+
+### Paused
+
+```solidity
+event Paused(address messageSender, uint256 pauseType)
+```
+
+Emitted when a pause type is paused.
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| messageSender | address | The address performing the pause. |
+| pauseType | uint256 | The indexed pause type that was paused. |
+
+### UnPaused
+
+```solidity
+event UnPaused(address messageSender, uint256 pauseType)
+```
+
+Emitted when a pause type is unpaused.
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| messageSender | address | The address performing the unpause. |
+| pauseType | uint256 | The indexed pause type that was unpaused. |
+
+### IsPaused
+
+```solidity
+error IsPaused(uint256 pauseType)
+```
+
+_Thrown when a specific pause type is paused._
+
+### IsNotPaused
+
+```solidity
+error IsNotPaused(uint256 pauseType)
+```
+
+_Thrown when a specific pause type is not paused and expected to be._
+
+# `PauseManager`
+
+### PAUSE_MANAGER_ROLE
+
+```solidity
+bytes32 PAUSE_MANAGER_ROLE
+```
+
+### GENERAL_PAUSE_TYPE
+
+```solidity
+uint8 GENERAL_PAUSE_TYPE
+```
+
+### L1_L2_PAUSE_TYPE
+
+```solidity
+uint8 L1_L2_PAUSE_TYPE
+```
+
+### L2_L1_PAUSE_TYPE
+
+```solidity
+uint8 L2_L1_PAUSE_TYPE
+```
+
+### PROVING_SYSTEM_PAUSE_TYPE
+
+```solidity
+uint8 PROVING_SYSTEM_PAUSE_TYPE
+```
+
+### pauseTypeStatuses
+
+```solidity
+mapping(bytes32 => bool) pauseTypeStatuses
+```
+
+### whenTypeAndGeneralNotPaused
+
+```solidity
+modifier whenTypeAndGeneralNotPaused(uint8 _pauseType)
+```
+
+_Modifier to make a function callable only when the specific and general types are not paused._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _pauseType | uint8 | The pause type value being checked. Requirements: - The type must not be paused. |
+
+### whenTypeNotPaused
+
+```solidity
+modifier whenTypeNotPaused(uint8 _pauseType)
+```
+
+_Modifier to make a function callable only when the type is not paused._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _pauseType | uint8 | The pause type value being checked. Requirements: - The type must not be paused. |
+
+### _requireTypeAndGeneralNotPaused
+
+```solidity
+function _requireTypeAndGeneralNotPaused(uint8 _pauseType) internal view virtual
+```
+
+_Throws if the specific or general types are paused.
+Checks the specific and general pause types._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _pauseType | uint8 | The pause type value being checked. |
+
+### _requireTypeNotPaused
+
+```solidity
+function _requireTypeNotPaused(uint8 _pauseType) internal view virtual
+```
+
+_Throws if the type is paused.
+Checks the specific pause type._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _pauseType | uint8 | The pause type value being checked. |
+
+### pauseByType
+
+```solidity
+function pauseByType(uint8 _pauseType) external
+```
+
+Pauses functionality by specific type.
+
+_Requires PAUSE_MANAGER_ROLE._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _pauseType | uint8 | The pause type value. |
+
+### unPauseByType
+
+```solidity
+function unPauseByType(uint8 _pauseType) external
+```
+
+Unpauses functionality by specific type.
+
+_Requires PAUSE_MANAGER_ROLE._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _pauseType | uint8 | The pause type value. |
+
+### isPaused
+
+```solidity
+function isPaused(uint8 _pauseType) public view returns (bool)
+```
+
+Check if a pause type is enabled.
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _pauseType | uint8 | The pause type value. |
+
+#### Return Values
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| [0] | bool | boolean True if the pause type if enabled, false otherwise. |
+
+# `IRateLimiter`
+
+### RateLimitInitialized
+
+```solidity
+event RateLimitInitialized(uint256 periodInSeconds, uint256 limitInWei, uint256 currentPeriodEnd)
+```
+
+Emitted when the Rate Limit is initialized.
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| periodInSeconds | uint256 | The time period in seconds the rate limiter has been initialized to. |
+| limitInWei | uint256 | The limit in Wei the rate limiter has been initialized to. |
+| currentPeriodEnd | uint256 | The time the current rate limit period will end. |
+
+### AmountUsedInPeriodReset
+
+```solidity
+event AmountUsedInPeriodReset(address resettingAddress)
+```
+
+Emitted when the amount in the period is reset to zero.
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| resettingAddress | address | The indexed address of who reset the used amount back to zero. |
+
+### LimitAmountChanged
+
+```solidity
+event LimitAmountChanged(address amountChangeBy, uint256 amount, bool amountUsedLoweredToLimit, bool usedAmountResetToZero)
+```
+
+Emitted when the limit is changed.
+
+_If the current used amount is higher than the new limit, the used amount is lowered to the limit.
+amountUsedLoweredToLimit and usedAmountResetToZero cannot be true at the same time._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| amountChangeBy | address | The indexed address of who changed the rate limit. |
+| amount | uint256 | The rate limited amount in Wei that was set. |
+| amountUsedLoweredToLimit | bool | Indicates if the amount used was lowered to the limit to avoid confusion. |
+| usedAmountResetToZero | bool | Indicates if the amount used was set to zero because of the current period expiring. |
+
+### RateLimitExceeded
+
+```solidity
+error RateLimitExceeded()
+```
+
+_Thrown when an amount breaches the limit in the period._
+
+### PeriodIsZero
+
+```solidity
+error PeriodIsZero()
+```
+
+_Thrown when the period is initialised to zero._
+
+### LimitIsZero
+
+```solidity
+error LimitIsZero()
+```
+
+_Thrown when the limit is initialised to zero._
+
+### resetRateLimitAmount
+
+```solidity
+function resetRateLimitAmount(uint256 _amount) external
+```
+
+Resets the rate limit amount to the amount specified.
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _amount | uint256 | sets the new limit amount. |
+
+### resetAmountUsedInPeriod
+
+```solidity
+function resetAmountUsedInPeriod() external
+```
+
+Resets the amount used in the period to zero.
+
+# `RateLimiter`
+
+You can use this control numeric limits over a period using timestamp.
+
+### RATE_LIMIT_SETTER_ROLE
+
+```solidity
+bytes32 RATE_LIMIT_SETTER_ROLE
+```
+
+### periodInSeconds
+
+```solidity
+uint256 periodInSeconds
+```
+
+### limitInWei
+
+```solidity
+uint256 limitInWei
+```
+
+### currentPeriodEnd
+
+```solidity
+uint256 currentPeriodEnd
+```
+
+The time at which the current period ends at.
+
+_Public for ease of consumption._
+
+### currentPeriodAmountInWei
+
+```solidity
+uint256 currentPeriodAmountInWei
+```
+
+Amounts already withdrawn this period.
+
+_Public for ease of consumption._
+
+### __RateLimiter_init
+
+```solidity
+function __RateLimiter_init(uint256 _periodInSeconds, uint256 _limitInWei) internal
+```
+
+Initialises the limits and period for the rate limiter.
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _periodInSeconds | uint256 | The length of the period in seconds. |
+| _limitInWei | uint256 | The limit allowed in the period in Wei. |
+
+### _addUsedAmount
+
+```solidity
+function _addUsedAmount(uint256 _usedAmount) internal
+```
+
+Increments the amount used in the period.
+
+_The amount determining logic is external to this (e.g. fees are included when calling here).
+Reverts if the limit is breached._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _usedAmount | uint256 | The amount used to be added. |
+
+### resetRateLimitAmount
+
+```solidity
+function resetRateLimitAmount(uint256 _amount) external
+```
+
+Resets the rate limit amount.
+
+_If the used amount is higher, it is set to the limit to avoid confusion/issues.
+Only the RATE_LIMIT_SETTER_ROLE is allowed to execute this function.
+Emits the LimitAmountChanged event.
+usedLimitAmountToSet will use the default value of zero if period has expired_
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _amount | uint256 | The amount to reset the limit to. |
+
+### resetAmountUsedInPeriod
+
+```solidity
+function resetAmountUsedInPeriod() external
+```
+
+Resets the amount used to zero.
+
+_Only the RATE_LIMIT_SETTER_ROLE is allowed to execute this function.
+Emits the AmountUsedInPeriodReset event._
+
+# `L1MessageServiceV1`
+
+### nextMessageNumber
+
+```solidity
+uint256 nextMessageNumber
+```
+
+### _messageSender
+
+```solidity
+address _messageSender
+```
+
+_DEPRECATED in favor of new transient storage with `MESSAGE_SENDER_TRANSIENT_KEY` key._
+
+### REFUND_OVERHEAD_IN_GAS
+
+```solidity
+uint256 REFUND_OVERHEAD_IN_GAS
+```
+
+_adding these should not affect storage as they are constants and are stored in bytecode._
+
+### MESSAGE_SENDER_TRANSIENT_KEY
+
+```solidity
+bytes32 MESSAGE_SENDER_TRANSIENT_KEY
+```
+
+### DEFAULT_MESSAGE_SENDER_TRANSIENT_VALUE
+
+```solidity
+address DEFAULT_MESSAGE_SENDER_TRANSIENT_VALUE
+```
+
+### distributeFees
+
+```solidity
+modifier distributeFees(uint256 _feeInWei, address _to, bytes _calldata, address _feeRecipient)
+```
+
+The unspent fee is refunded if applicable.
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _feeInWei | uint256 | The fee paid for delivery in Wei. |
+| _to | address | The recipient of the message and gas refund. |
+| _calldata | bytes | The calldata of the message. |
+| _feeRecipient | address |  |
+
+### claimMessage
+
+```solidity
+function claimMessage(address _from, address _to, uint256 _fee, uint256 _value, address payable _feeRecipient, bytes _calldata, uint256 _nonce) external
+```
+
+Claims and delivers a cross-chain message.
+
+__feeRecipient can be set to address(0) to receive as msg.sender.
+_messageSender is set temporarily when claiming and reset post. Used in sender().
+_messageSender is reset to DEFAULT_SENDER_ADDRESS to be more gas efficient._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _from | address | The address of the original sender. |
+| _to | address | The address the message is intended for. |
+| _fee | uint256 | The fee being paid for the message delivery. |
+| _value | uint256 | The value to be transferred to the destination address. |
+| _feeRecipient | address payable | The recipient for the fee. |
+| _calldata | bytes | The calldata to pass to the recipient. |
+| _nonce | uint256 | The unique auto generated nonce used when sending the message. |
+
+# `SparseMerkleTreeVerifier`
+
+### _verifyMerkleProof
+
+```solidity
+function _verifyMerkleProof(bytes32 _leafHash, bytes32[] _proof, uint32 _leafIndex, bytes32 _root) internal pure returns (bool)
+```
+
+Verify merkle proof
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _leafHash | bytes32 | Leaf hash. |
+| _proof | bytes32[] | Sparse merkle tree proof. |
+| _leafIndex | uint32 | Index of the leaf. |
+| _root | bytes32 | Merkle root. |
+
+### _efficientKeccak
+
+```solidity
+function _efficientKeccak(bytes32 _left, bytes32 _right) internal pure returns (bytes32 value)
+```
+
+Performs a gas optimized keccak hash
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _left | bytes32 | Left value. |
+| _right | bytes32 | Right value. |
+
+# `L1MessageService`
+
+### systemMigrationBlock
+
+```solidity
+uint256 systemMigrationBlock
+```
+
+_This is currently not in use, but is reserved for future upgrades._
+
+### __MessageService_init
+
+```solidity
+function __MessageService_init(address _limitManagerAddress, address _pauseManagerAddress, uint256 _rateLimitPeriod, uint256 _rateLimitAmount) internal
+```
+
+Initialises underlying message service dependencies.
+
+__messageSender is initialised to a non-zero value for gas efficiency on claiming._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _limitManagerAddress | address | The address owning the rate limiting management role. |
+| _pauseManagerAddress | address | The address owning the pause management role. |
+| _rateLimitPeriod | uint256 | The period to rate limit against. |
+| _rateLimitAmount | uint256 | The limit allowed for withdrawing the period. |
+
+### sendMessage
+
+```solidity
+function sendMessage(address _to, uint256 _fee, bytes _calldata) external payable
+```
+
+Adds a message for sending cross-chain and emits MessageSent.
+
+_The message number is preset (nextMessageNumber) and only incremented at the end if successful for the next caller.
+This function should be called with a msg.value = _value + _fee. The fee will be paid on the destination chain._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _to | address | The address the message is intended for. |
+| _fee | uint256 | The fee being paid for the message delivery. |
+| _calldata | bytes | The calldata to pass to the recipient. |
+
+### claimMessageWithProof
+
+```solidity
+function claimMessageWithProof(struct IL1MessageService.ClaimMessageWithProofParams _params) external
+```
+
+Claims and delivers a cross-chain message using merkle proof.
+
+_if merkle depth is empty, it will revert with L2MerkleRootDoesNotExist.
+if merkle depth is different than proof size, it will revert with ProofLengthDifferentThanMerkleDepth._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _params | struct IL1MessageService.ClaimMessageWithProofParams | Collection of claim data with proof and supporting data. |
+
+### sender
+
+```solidity
+function sender() external view returns (address addr)
+```
+
+Claims and delivers a cross-chain message.
+
+_The message sender address is set temporarily in the transient storage when claiming._
+
+#### Return Values
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| addr | address | The message sender address that is stored temporarily in the transient storage when claiming. |
+
+# `IPlonkVerifier`
+
+### Verify
+
+```solidity
+function Verify(bytes _proof, uint256[] _public_inputs) external returns (bool)
+```
+
+Interface for verifier contracts.
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _proof | bytes | The proof used to verify. |
+| _public_inputs | uint256[] | The computed public inputs for the proof verification. |
+
+# `IZkEvmV2`
+
+### BlockFinalized
+
+```solidity
+event BlockFinalized(uint256 blockNumber, bytes32 stateRootHash, bool finalizedWithProof)
+```
+
+Emitted when a L2 block has been finalized on L1.
+
+_DEPRECATED. This has been left for existing consumers._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| blockNumber | uint256 | The indexed L2 block number that is finalized in the finalization. |
+| stateRootHash | bytes32 | The indexed state root hash for the L2 block. |
+| finalizedWithProof | bool | Indicates if the L2 block in the finalization is proven or not. |
+
+### BlocksVerificationDone
+
+```solidity
+event BlocksVerificationDone(uint256 lastBlockFinalized, bytes32 startingRootHash, bytes32 finalRootHash)
+```
+
+Emitted when a L2 blocks have been finalized on L1.
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| lastBlockFinalized | uint256 | The indexed L2 block number the finalization is up until. |
+| startingRootHash | bytes32 | The state root hash the finalization started from. This is the last finalized block's state root. |
+| finalRootHash | bytes32 | The L2 block state root hash the finalization ended on. |
+
+### StartingRootHashDoesNotMatch
+
+```solidity
+error StartingRootHashDoesNotMatch()
+```
+
+_Thrown when the starting rootHash does not match the existing state_
+
+### ProofIsEmpty
+
+```solidity
+error ProofIsEmpty()
+```
+
+_Thrown when zk proof is empty bytes_
+
+### InvalidProofType
+
+```solidity
+error InvalidProofType()
+```
+
+_Thrown when zk proof type is invalid_
+
+### InvalidProof
+
+```solidity
+error InvalidProof()
+```
+
+_Thrown when zk proof is invalid_
+
+# `ZkEvmV2`
+
+### MODULO_R
+
+```solidity
+uint256 MODULO_R
+```
+
+### OPERATOR_ROLE
+
+```solidity
+bytes32 OPERATOR_ROLE
+```
+
+### currentTimestamp
+
+```solidity
+uint256 currentTimestamp
+```
+
+_DEPRECATED in favor of currentFinalizedState hash._
+
+### currentL2BlockNumber
+
+```solidity
+uint256 currentL2BlockNumber
+```
+
+### stateRootHashes
+
+```solidity
+mapping(uint256 => bytes32) stateRootHashes
+```
+
+### verifiers
+
+```solidity
+mapping(uint256 => address) verifiers
+```
+
+### _verifyProof
+
+```solidity
+function _verifyProof(uint256 _publicInputHash, uint256 _proofType, bytes _proof, bytes32 _parentStateRootHash, uint256 _finalizedL2BlockNumber, bytes32 _finalStateRootHash) internal
+```
+
+Verifies the proof with locally computed public inputs.
+
+_If the verifier based on proof type is not found, it reverts with InvalidProofType._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _publicInputHash | uint256 | The full BlockData collection - block, transaction and log data. |
+| _proofType | uint256 | The proof type to determine which verifier contract to use. |
+| _proof | bytes | The proof to be verified with the proof type verifier contract. |
+| _parentStateRootHash | bytes32 | The beginning roothash to start with. |
+| _finalizedL2BlockNumber | uint256 | The final L2 block number being finalized. |
+| _finalStateRootHash | bytes32 | The state root finalized up until. |
+
+# `LineaRollupV5`
+
+### VERIFIER_SETTER_ROLE
+
+```solidity
+bytes32 VERIFIER_SETTER_ROLE
+```
+
+### GENESIS_SHNARF
+
+```solidity
+bytes32 GENESIS_SHNARF
+```
+
+### EMPTY_HASH
+
+```solidity
+bytes32 EMPTY_HASH
+```
+
+### BLS_CURVE_MODULUS
+
+```solidity
+uint256 BLS_CURVE_MODULUS
+```
+
+### POINT_EVALUATION_PRECOMPILE_ADDRESS
+
+```solidity
+address POINT_EVALUATION_PRECOMPILE_ADDRESS
+```
+
+### POINT_EVALUATION_RETURN_DATA_LENGTH
+
+```solidity
+uint256 POINT_EVALUATION_RETURN_DATA_LENGTH
+```
+
+### POINT_EVALUATION_FIELD_ELEMENTS_LENGTH
+
+```solidity
+uint256 POINT_EVALUATION_FIELD_ELEMENTS_LENGTH
+```
+
+### dataFinalStateRootHashes
+
+```solidity
+mapping(bytes32 => bytes32) dataFinalStateRootHashes
+```
+
+_DEPRECATED in favor of the single shnarfFinalBlockNumbers mapping._
+
+### dataParents
+
+```solidity
+mapping(bytes32 => bytes32) dataParents
+```
+
+_DEPRECATED in favor of the single shnarfFinalBlockNumbers mapping._
+
+### dataShnarfHashes
+
+```solidity
+mapping(bytes32 => bytes32) dataShnarfHashes
+```
+
+_DEPRECATED in favor of the single shnarfFinalBlockNumbers mapping._
+
+### dataStartingBlock
+
+```solidity
+mapping(bytes32 => uint256) dataStartingBlock
+```
+
+_DEPRECATED in favor of the single shnarfFinalBlockNumbers mapping._
+
+### dataEndingBlock
+
+```solidity
+mapping(bytes32 => uint256) dataEndingBlock
+```
+
+_DEPRECATED in favor of the single shnarfFinalBlockNumbers mapping._
+
+### currentL2StoredL1MessageNumber
+
+```solidity
+uint256 currentL2StoredL1MessageNumber
+```
+
+_DEPRECATED in favor of currentFinalizedState hash._
+
+### currentL2StoredL1RollingHash
+
+```solidity
+bytes32 currentL2StoredL1RollingHash
+```
+
+_DEPRECATED in favor of currentFinalizedState hash._
+
+### currentFinalizedShnarf
+
+```solidity
+bytes32 currentFinalizedShnarf
+```
+
+### shnarfFinalBlockNumbers
+
+```solidity
+mapping(bytes32 => uint256) shnarfFinalBlockNumbers
+```
+
+_NB: THIS IS THE ONLY MAPPING BEING USED FOR DATA SUBMISSION TRACKING._
+
+### currentFinalizedState
+
+```solidity
+bytes32 currentFinalizedState
+```
+
+_Hash of the L2 computed L1 message number, rolling hash and finalized timestamp._
+
+### constructor
+
+```solidity
+constructor() public
+```
+
+### initialize
+
+```solidity
+function initialize(bytes32 _initialStateRootHash, uint256 _initialL2BlockNumber, address _defaultVerifier, address _securityCouncil, address[] _operators, uint256 _rateLimitPeriodInSeconds, uint256 _rateLimitAmountInWei, uint256 _genesisTimestamp) external
+```
+
+Initializes LineaRollup and underlying service dependencies - used for new networks only.
+
+_DEFAULT_ADMIN_ROLE is set for the security council.
+OPERATOR_ROLE is set for operators.
+Note: This is used for new testnets and local/CI testing, and will not replace existing proxy based contracts._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _initialStateRootHash | bytes32 | The initial hash at migration used for proof verification. |
+| _initialL2BlockNumber | uint256 | The initial block number at migration. |
+| _defaultVerifier | address | The default verifier for rollup proofs. |
+| _securityCouncil | address | The address for the security council performing admin operations. |
+| _operators | address[] | The allowed rollup operators at initialization. |
+| _rateLimitPeriodInSeconds | uint256 | The period in which withdrawal amounts and fees will be accumulated. |
+| _rateLimitAmountInWei | uint256 | The limit allowed for withdrawing in the rate limit period. |
+| _genesisTimestamp | uint256 | The L2 genesis timestamp for first finalization. |
+
+### initializeParentShnarfsAndFinalizedState
+
+```solidity
+function initializeParentShnarfsAndFinalizedState(bytes32[] _shnarfs, uint256[] _finalBlockNumbers) external
+```
+
+Initializes LineaRollup, sets the expected shnarfFinalBlockNumbers final block number(s) and sets finalization state.
+
+_The initialization will only do the last finalized shnarf and the unfinalized shnarfs of unfinalized data submissions.
+Data submission and finalization will be paused temporarily to avoid missing submissions.
+currentFinalizedState will also be initialized with existing storage values._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _shnarfs | bytes32[] | The shnarfs to reset. |
+| _finalBlockNumbers | uint256[] | The final blocks number to reset 1:1 with the shnarfs. |
+
+### setVerifierAddress
+
+```solidity
+function setVerifierAddress(address _newVerifierAddress, uint256 _proofType) external
+```
+
+Adds or updates the verifier contract address for a proof type.
+
+_VERIFIER_SETTER_ROLE is required to execute._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _newVerifierAddress | address | The address for the verifier contract. |
+| _proofType | uint256 | The proof type being set/updated. |
+
+### unsetVerifierAddress
+
+```solidity
+function unsetVerifierAddress(uint256 _proofType) external
+```
+
+Unset the verifier contract address for a proof type.
+
+_VERIFIER_SETTER_ROLE is required to execute._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _proofType | uint256 | The proof type being set/updated. |
+
+### submitBlobs
+
+```solidity
+function submitBlobs(struct ILineaRollupV5.BlobSubmissionData[] _blobSubmissionData, bytes32 _parentShnarf, bytes32 _finalBlobShnarf) external
+```
+
+Submit one or more EIP-4844 blobs.
+
+_OPERATOR_ROLE is required to execute.
+This should be a blob carrying transaction._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _blobSubmissionData | struct ILineaRollupV5.BlobSubmissionData[] | The data for blob submission including proofs and required polynomials. |
+| _parentShnarf | bytes32 | The parent shnarf used in continuity checks as it includes the parentStateRootHash in its computation. |
+| _finalBlobShnarf | bytes32 | The expected final shnarf post computation of all the blob shnarfs. |
+
+### submitDataAsCalldata
+
+```solidity
+function submitDataAsCalldata(struct ILineaRollupV5.SubmissionDataV2 _submissionData, bytes32 _parentShnarf, bytes32 _expectedShnarf) external
+```
+
+Submit blobs using compressed data via calldata.
+
+_OPERATOR_ROLE is required to execute._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _submissionData | struct ILineaRollupV5.SubmissionDataV2 | The supporting data for compressed data submission including compressed data. |
+| _parentShnarf | bytes32 | The parent shnarf used in continuity checks as it includes the parentStateRootHash in its computation. |
+| _expectedShnarf | bytes32 | The expected shnarf post computation of all the submission. |
+
+### _validateSubmissionData
+
+```solidity
+function _validateSubmissionData(struct ILineaRollupV5.SupportingSubmissionDataV2 _submissionData, uint256 _parentFinalBlockNumber, uint256 _lastFinalizedBlockNumber) internal pure
+```
+
+Internal function to validate submission data.
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _submissionData | struct ILineaRollupV5.SupportingSubmissionDataV2 | The supporting data for compressed data submission excluding compressed data. |
+| _parentFinalBlockNumber | uint256 | The final block number for the parent blob. |
+| _lastFinalizedBlockNumber | uint256 | The last finalized block number. |
+
+### _computeLastFinalizedState
+
+```solidity
+function _computeLastFinalizedState(uint256 _messageNumber, bytes32 _rollingHash, uint256 _timestamp) internal pure returns (bytes32 hashedFinalizationState)
+```
+
+Internal function to compute and save the finalization state.
+
+_Using assembly this way is cheaper gas wise._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _messageNumber | uint256 | Is the last L2 computed L1 message number in the finalization. |
+| _rollingHash | bytes32 | Is the last L2 computed L1 rolling hash in the finalization. |
+| _timestamp | uint256 | The final timestamp in the finalization. |
+
+### _computeShnarf
+
+```solidity
+function _computeShnarf(bytes32 _parentShnarf, bytes32 _snarkHash, bytes32 _finalStateRootHash, bytes32 _dataEvaluationPoint, bytes32 _dataEvaluationClaim) internal pure returns (bytes32 shnarf)
+```
+
+Internal function to compute the shnarf more efficiently.
+
+_Using assembly this way is cheaper gas wise._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _parentShnarf | bytes32 | The shnarf of the parent data item. |
+| _snarkHash | bytes32 | Is the computed hash for compressed data (using a SNARK-friendly hash function) that aggregates per data submission to be used in public input. |
+| _finalStateRootHash | bytes32 | The final state root hash of the data being submitted. |
+| _dataEvaluationPoint | bytes32 | The data evaluation point. |
+| _dataEvaluationClaim | bytes32 | The data evaluation claim. |
+
+### _verifyPointEvaluation
+
+```solidity
+function _verifyPointEvaluation(bytes32 _currentDataHash, uint256 _dataEvaluationPoint, uint256 _dataEvaluationClaim, bytes _kzgCommitment, bytes _kzgProof) internal view
+```
+
+Performs point evaluation for the compressed blob.
+
+__dataEvaluationPoint is modular reduced to be lower than the BLS_CURVE_MODULUS for precompile checks._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _currentDataHash | bytes32 | The current blob versioned hash. |
+| _dataEvaluationPoint | uint256 | The data evaluation point. |
+| _dataEvaluationClaim | uint256 | The data evaluation claim. |
+| _kzgCommitment | bytes | The blob KZG commitment. |
+| _kzgProof | bytes | The blob KZG point proof. |
+
+### finalizeBlocksWithProof
+
+```solidity
+function finalizeBlocksWithProof(bytes _aggregatedProof, uint256 _proofType, struct ILineaRollupV5.FinalizationDataV2 _finalizationData) external
+```
+
+Finalize compressed blocks with proof.
+
+_OPERATOR_ROLE is required to execute._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _aggregatedProof | bytes | The aggregated proof. |
+| _proofType | uint256 | The proof type. |
+| _finalizationData | struct ILineaRollupV5.FinalizationDataV2 | The full finalization data. |
+
+### finalizeBlocksWithoutProof
+
+```solidity
+function finalizeBlocksWithoutProof(struct ILineaRollupV5.FinalizationDataV2 _finalizationData) external
+```
+
+Finalize compressed blocks without proof.
+
+_DEFAULT_ADMIN_ROLE is required to execute._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _finalizationData | struct ILineaRollupV5.FinalizationDataV2 | The full finalization data. |
+
+### _finalizeBlocks
+
+```solidity
+function _finalizeBlocks(struct ILineaRollupV5.FinalizationDataV2 _finalizationData, uint256 _lastFinalizedBlock, bool _withProof) internal returns (bytes32 finalShnarf)
+```
+
+Internal function to finalize compressed blocks.
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _finalizationData | struct ILineaRollupV5.FinalizationDataV2 | The full finalization data. |
+| _lastFinalizedBlock | uint256 | The last finalized block. |
+| _withProof | bool | If we are finalizing with a proof. |
+
+#### Return Values
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| finalShnarf | bytes32 | The final computed shnarf in finalizing. |
+
+### _validateL2ComputedRollingHash
+
+```solidity
+function _validateL2ComputedRollingHash(uint256 _rollingHashMessageNumber, bytes32 _rollingHash) internal view
+```
+
+Internal function to validate l1 rolling hash.
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _rollingHashMessageNumber | uint256 | Message number associated with the rolling hash as computed on L2. |
+| _rollingHash | bytes32 | L1 rolling hash as computed on L2. |
+
+### _calculateY
+
+```solidity
+function _calculateY(bytes _data, bytes32 _dataEvaluationPoint) internal pure returns (bytes32 compressedDataComputedY)
+```
+
+Internal function to calculate Y for public input generation.
+
+_Each chunk of 32 bytes must start with a 0 byte.
+The dataEvaluationPoint value is modulo-ed down during the computation and scalar field checking is not needed.
+There is a hard constraint in the circuit to enforce the polynomial degree limit (4096), which will also be enforced with EIP-4844._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _data | bytes | Compressed data from submission data. |
+| _dataEvaluationPoint | bytes32 | The data evaluation point. |
+
+#### Return Values
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| compressedDataComputedY | bytes32 | The Y calculated value using the Horner method. |
+
