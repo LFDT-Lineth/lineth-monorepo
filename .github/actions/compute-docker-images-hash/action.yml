@@ -16,8 +16,8 @@ runs:
       id: compute-docker-images-hash
       shell: bash
       run: |
-        docker_images_traces_v1=$(docker compose -f docker/compose.yml -f docker/compose-local-dev.overrides.yml --profile l1 --profile l2 config 2>/dev/null | grep "image:" | awk '{print $2}')
-        docker_images_traces_v2=$(docker compose -f docker/compose.yml -f docker/compose-local-dev-traces-v2.overrides.yml --profile l1 --profile l2 config 2>/dev/null | grep "image:" | awk '{print $2}')
+        docker_images_traces_v1=$(docker compose -f docker/compose-tracing-v1-ci-extension.yml --profile l1 --profile l2 config 2>/dev/null | grep "image:" | awk '{print $2}')
+        docker_images_traces_v2=$(docker compose -f docker/compose-tracing-v2-ci-extension.yml --profile l1 --profile l2 config 2>/dev/null | grep "image:" | awk '{print $2}')
         docker_images=$(echo "$docker_images_traces_v1 $docker_images_traces_v2")
         docker_images_unique=$(echo $docker_images | xargs -n1 | sort -u)
         docker_images_trimmed=$(echo $docker_images_unique | xargs -n1 | grep -Ev "linea-postman|linea-coordinator|linea-transaction-exclusion-api|linea-traces-api-facade|linea-prover" | xargs)

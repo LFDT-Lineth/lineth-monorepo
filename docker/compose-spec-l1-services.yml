@@ -1,0 +1,88 @@
+services:
+  l1-el-node:
+    container_name: l1-el-node
+    hostname: l1-el-node
+    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-mainnet-fc27c01}
+    profiles: [ "l1", "debug", "external-to-monorepo" ]
+    depends_on:
+      l1-node-genesis-generator:
+        condition: service_completed_successfully
+    healthcheck:
+      test: [ "CMD-SHELL", "bash -c \"[ -f /tmp/pid ]\"" ]
+      interval: 1s
+      timeout: 1s
+      retries: 120
+    environment:
+      LOG4J_CONFIGURATION_FILE: /var/lib/besu/log4j.xml
+      JAVA_OPTS: -Xmx512m -XX:+UnlockExperimentalVMOptions -XX:-UseG1GC -XX:+UseZGC
+    entrypoint:
+      - /bin/bash
+      - -c
+      - |
+        rm -fr /opt/besu/plugins && \
+        /opt/besu/bin/besu --config-file=/config/config.toml
+    volumes:
+      - ./config/l1-node/el/besu.key:/config/keys/besu.key:ro
+      - ./config/l1-node/el/config.toml:/config/config.toml:ro
+      - ./config/l1-node/jwtsecret.txt:/config/jwtsecret.txt:ro
+      - ./config/l1-node/el/log4j.xml:/var/lib/besu/log4j.xml:ro
+      - local-dev:/data
+    ports:
+      - "8445:8545"
+      - "8446:8546"
+      - "8551:8551/tcp"
+      - "30303:30303"
+      - "9001:9001/tcp"
+    networks:
+      l1network:
+        ipv4_address: 10.10.10.201
+
+  l1-cl-node:
+    container_name: l1-cl-node
+    hostname: l1-cl-node
+    image: consensys/teku:25.1.0
+    profiles: [ "l1", "debug", "external-to-monorepo" ]
+    depends_on:
+      l1-el-node:
+        condition: service_started
+      l1-node-genesis-generator:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:4000/eth/v1/node/health || exit 1"]
+      interval: 1s
+      timeout: 1s
+      retries: 120
+    environment:
+      LOG4J_CONFIGURATION_FILE: /config/log4j.xml
+    command: [ "--config-file=/config/config-file.yaml" ]
+    volumes:
+      - ./config/l1-node/cl/teku.key:/config/keys/teku.key:ro
+      - ./config/l1-node/cl/teku-keys:/config/keys/teku-keys:ro
+      - ./config/l1-node/cl/teku-secrets:/config/keys/teku-secrets:ro
+      - ./config/l1-node/jwtsecret.txt:/config/jwtsecret.txt:ro
+      - ./config/l1-node/cl/config.yaml:/config/config-file.yaml:ro
+      - ./config/l1-node/cl/log4j.xml:/config/log4j.xml:ro
+      - local-dev:/data
+    ports:
+      - "9002:9000"
+      - "8008:8008/tcp"
+      - "4003:4000/tcp"
+    networks:
+      l1network:
+        ipv4_address: 10.10.10.202
+
+  l1-node-genesis-generator:
+    build:
+      context: ./config/l1-node/
+    profiles: [ "l1", "debug", "external-to-monorepo" ]
+    command:
+      --genesis-time ${L1_GENESIS_TIME}
+      --l1-genesis /config/l1-genesis.json
+      --network-config /config/network-config.yml
+      --mnemonics /config/mnemonics.yaml
+      --output-dir /data/l1-node-config
+    volumes:
+      - ./config/l1-node/cl/network-config.yml:/config/network-config.yml:ro
+      - ./config/l1-node/cl/mnemonics.yaml:/config/mnemonics.yaml:ro
+      - ./config/l1-node/el/genesis.json:/config/l1-genesis.json
+      - local-dev:/data

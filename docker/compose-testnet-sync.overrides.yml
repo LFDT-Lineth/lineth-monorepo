@@ -1,5 +1,5 @@
 # to use this file run
-# docker compose -f compose.yml -f compose-local-dev.overrides.yml --profile l2 --profile l1 up
+# docker compose -f compose-tracing-v2.yml -f compose-local-dev.overrides.yml --profile l2 --profile l1 up
 volumes:
   testnet-data:
     name: "testnet-data"

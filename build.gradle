@@ -96,6 +96,11 @@ allprojects {
     maxParallelForks = Math.max(Runtime.runtime.availableProcessors(), 9)
   }
 
+  tasks.withType(Test).matching { it.name == 'integrationTest' }.configureEach {
+    outputs.cacheIf { false }
+    outputs.upToDateWhen { false }
+  }
+
   afterEvaluate { subproject ->
     if (hasJavaOrKotlinPlugins(subproject)) {
       subproject.apply plugin: 'com.diffplug.spotless'
@@ -142,7 +147,6 @@ dockerCompose {
       "l1-node-genesis-generator",
       "l1-el-node",
       "l1-cl-node",
-      "l2-node",
       // For debug
       // "l1-blockscout",
       // "l2-blockscout"
@@ -154,7 +158,7 @@ dockerCompose {
       "l2"
     ]
     useComposeFiles = [
-      "${project.rootDir.path}/docker/compose.yml"
+      "${project.rootDir.path}/docker/compose-tracing-v2.yml"
     ]
     waitForHealthyStateTimeout = Duration.ofMinutes(3)
     waitForTcpPorts = false
@@ -170,7 +174,7 @@ dockerCompose {
   localStackPostgresDbOnly {
     startedServices = ["postgres"]
     useComposeFiles = [
-      "${project.rootDir.path}/docker/compose.yml"
+      "${project.rootDir.path}/docker/compose-tracing-v2.yml"
     ]
     waitForHealthyStateTimeout = Duration.ofMinutes(3)
     waitForTcpPorts = true
@@ -199,8 +203,7 @@ dockerCompose {
       "staterecovery"
     ]
     useComposeFiles = [
-      "${project.rootDir.path}/docker/compose.yml",
-      "${project.rootDir.path}/docker/compose-local-dev-traces-v2.overrides.yml"
+      "${project.rootDir.path}/docker/compose-tracing-v2-staterecovery-extension.yml"
     ]
     waitForHealthyStateTimeout = Duration.ofMinutes(3)
     waitForTcpPorts = false

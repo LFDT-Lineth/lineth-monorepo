@@ -1,0 +1,93 @@
+
+volumes:
+  local-dev:
+    name: "linea-local-dev"
+  logs:
+    name: "linea-logs"
+
+networks:
+  linea:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 11.11.11.0/24
+  l1network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.10.10.0/24
+
+# To debug inside the network and volumes
+# docker run --rm -it --network=docker_linea -v=linea-local-dev:/data -v=linea-logs:/logs weibeld/ubuntu-networking bash
+
+services:
+  l1-el-node:
+    extends:
+      file: compose-spec-l1-services.yml
+      service: l1-el-node
+
+  l1-cl-node:
+    extends:
+      file: compose-spec-l1-services.yml
+      service: l1-cl-node
+
+  l1-node-genesis-generator:
+    extends:
+      file: compose-spec-l1-services.yml
+      service: l1-node-genesis-generator
+
+  sequencer:
+    extends:
+      file: compose-spec-l2-services.yml
+      service: sequencer
+    image: consensys/linea-besu-package:devnet-811f30b
+    volumes:
+      - ../config/common/traces-limits-besu-v2.toml:/var/lib/besu/traces-limits.toml:ro
+
+  traces-node-v2:
+    extends:
+      file: compose-spec-l2-services.yml
+      service: traces-node-v2
+
+  prover-v3:
+    extends:
+      file: compose-spec-l2-services.yml
+      service: prover-v3
+    volumes:
+      - ../tmp/local/:/data/
+      - logs:/logs
+      - ./config/prover/v3/prover-config.toml:/opt/linea/prover/config.toml:ro
+      - ../prover/prover-assets:/opt/linea/prover/prover-assets:ro
+
+  coordinator:
+    extends:
+      file: compose-spec-l2-services.yml
+      service: coordinator
+    environment:
+      config__override__l2-network-gas-pricing__json-rpc-pricing-propagation__disabled: true
+      config__override__type2-state-proof-provider__endpoints: # leave empty to disable
+    command: [ 'java', '-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005','-Dvertx.configurationFile=/var/lib/coordinator/vertx-options.json', '-Dlog4j2.configurationFile=/var/lib/coordinator/log4j2-dev.xml', '-jar', 'libs/coordinator.jar', '--traces-limits-v2', 'config/traces-limits-v2.toml', '--smart-contract-errors', 'config/smart-contract-errors.toml', '--gas-price-cap-time-of-day-multipliers', 'config/gas-price-cap-time-of-day-multipliers.toml', 'config/coordinator-docker.config.toml', 'config/coordinator-docker-traces-v2-override.config.toml' ]
+    volumes:
+      - ../config/common/traces-limits-v2.toml:/opt/consensys/linea/coordinator/config/traces-limits-v2.toml:ro
+      - ../config/coordinator/coordinator-docker-traces-v2-override.config.toml:/opt/consensys/linea/coordinator/config/coordinator-docker-traces-v2-override.config.toml:ro
+      - ../tmp/local/:/data/
+
+  web3signer:
+    extends:
+      file: compose-spec-l2-services.yml
+      service: web3signer
+
+  postgres:
+    extends:
+      file: compose-spec-l2-services.yml
+      service: postgres
+
+  zkbesu-shomei:
+    extends:
+      file: compose-spec-l2-services.yml
+      service: zkbesu-shomei
+
+  shomei:
+    extends:
+      file: compose-spec-l2-services.yml
+      service: shomei

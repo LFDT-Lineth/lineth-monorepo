@@ -1,0 +1,31 @@
+include:
+  - compose-tracing-v1.yml
+
+services:
+  l2-node:
+    extends:
+      file: compose-spec-l2-services.yml
+      service: l2-node
+
+  l2-node-besu:
+    extends:
+      file: compose-spec-l2-services.yml
+      service: l2-node-besu
+    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-mainnet-fc27c01}
+    volumes:
+      - ../config/common/traces-limits-besu-v1.toml:/var/lib/besu/traces-limits.toml:ro
+
+  shomei-frontend:
+    extends:
+      file: compose-spec-l2-services.yml
+      service: shomei-frontend
+
+  postman:
+    extends:
+      file: compose-spec-l2-services.yml
+      service: postman
+
+  transaction-exclusion-api:
+    extends:
+      file: compose-spec-l2-services.yml
+      service: transaction-exclusion-api

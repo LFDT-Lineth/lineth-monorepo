@@ -1,0 +1,127 @@
+services:
+  ########################
+  # Block Explorer stack
+  ########################
+  l1-blockscout:
+    container_name: l1-blockscout
+    hostname: l1-blockscout
+    image: blockscout/blockscout:${BLOCKSCOUT_TAG:-5.0.0}
+    profiles: [ "debug" ]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      l1-el-node:
+        condition: service_started
+    command: bash -c "bin/blockscout eval \"Elixir.Explorer.ReleaseTasks.create_and_migrate()\" && bin/blockscout start"
+    env_file:
+      - ../config/blockscout/l1-blockscout.env
+    environment:
+      ETHEREUM_JSONRPC_HTTP_URL: http://l1-el-node:8545/
+      ETHEREUM_JSONRPC_TRACE_URL: http://l1-el-node:8545/
+      ETHEREUM_JSONRPC_WS_URL: ws://l1-el-node:8546/
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/l1_blockscout_db?ssl=false
+      ECTO_USE_SSL: 'false'
+    ports:
+      - "4001:4000"
+    volumes:
+      - ./config/l1-node/el/genesis.json:/app/genesis.json:ro
+    networks:
+      - l1network
+
+  l2-blockscout:
+    container_name: l2-blockscout
+    hostname: l2-blockscout
+    image: blockscout/blockscout:${BLOCKSCOUT_TAG:-5.0.0}
+    profiles: [ "debug" ]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      l2-node:
+        condition: service_started
+    # - smart-contract-verifier not supported for v0.1
+    command: bash -c "bin/blockscout eval \"Elixir.Explorer.ReleaseTasks.create_and_migrate()\" && bin/blockscout start"
+    env_file:
+      - ../config/blockscout/l2-blockscout.env
+    environment:
+      ETHEREUM_JSONRPC_HTTP_URL: http://l2-node:8545/
+      ETHEREUM_JSONRPC_TRACE_URL: http://l2-node:8545/
+      ETHEREUM_JSONRPC_WS_URL: ws://l2-node:8546/
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/l2_blockscout_db?ssl=false
+      ECTO_USE_SSL: 'false'
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./config/linea-local-dev-genesis-PoA.json:/app/genesis.json:ro
+    networks:
+      - linea
+
+  ########################
+  # Observability stack
+  ########################
+  l2-ethstats:
+    container_name: l2-ethstats
+    image: puppeth/ethstats:latest
+    profiles: [ "l2-observability", "debug" ]
+    environment:
+      WS_SECRET: ${WS_SECRET:-dummy-secret}
+    ports:
+      - "3000:3000"
+    restart: on-failure
+    networks:
+      linea:
+        ipv4_address: 11.11.11.200
+
+  loki:
+    container_name: loki
+    hostname: loki
+    image: grafana/loki:2.9.7
+    profiles: [ "observability" ]
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/loki-config.yaml
+    volumes:
+      - ./config/observability/loki-config.yaml:/etc/loki/loki-config.yaml
+    networks:
+      - linea
+
+  promtail:
+    container_name: promtail
+    hostname: promtail
+    image: grafana/promtail:2.9.7 # use same version as loki
+    profiles: [ "observability" ]
+    volumes:
+      - ./config/observability/promtail-config.yaml:/etc/promtail/promtail-config.yaml
+      - ./../tmp/logs/:/var/log/
+    command: -config.file=/etc/promtail/promtail-config.yaml
+    networks:
+      - linea
+
+  prometheus:
+    container_name: prometheus
+    hostname: prometheus
+    image: prom/prometheus:v2.26.0
+    profiles: [ "observability" ]
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./config/observability/prometheus-config.yaml:/etc/prometheus/prometheus-config.yaml
+    command:
+      - '--config.file=/etc/prometheus/prometheus-config.yaml'
+    networks:
+      - linea
+
+  grafana:
+    container_name: grafana
+    hostname: grafana
+    image: grafana/grafana:10.2.2
+    profiles: [ "observability" ]
+    ports:
+      - "3001:3000"
+    volumes:
+      - ./config/observability/grafana.ini:/etc/grafana/grafana.ini
+      - ./config/observability/grafana-datasources:/etc/grafana/provisioning/datasources
+    depends_on:
+      - loki
+    networks:
+      - linea
+

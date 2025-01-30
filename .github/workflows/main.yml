@@ -48,9 +48,7 @@ jobs:
               - 'config/common/traces-limits-v2.toml'
               - 'config/coordinator/**'
               - 'e2e/**'
-              - 'docker/compose.yml'
-              - 'docker/compose-local-dev.overrides.yml'
-              - 'docker/compose-local-dev-traces-v2.overrides.yml'
+              - 'docker/compose-*.yml'
             staterecovery:
               - 'state-recovery/**'
               - 'buildSrc/**'

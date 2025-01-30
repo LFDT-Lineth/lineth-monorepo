@@ -1,0 +1,28 @@
+include:
+  - compose-tracing-v2.yml
+
+services:
+  blobscan-api:
+    extends:
+      file: compose-spec-l2-services.yml
+      service: blobscan-api
+
+  blobscan-indexer:
+    extends:
+      file: compose-spec-l2-services.yml
+      service: blobscan-indexer
+
+  redis:
+    extends:
+      file: compose-spec-l2-services.yml
+      service: redis
+
+  zkbesu-shomei-sr:
+    extends:
+      file: compose-spec-l2-services.yml
+      service: zkbesu-shomei-sr
+
+  shomei-sr:
+    extends:
+      file: compose-spec-l2-services.yml
+      service: shomei-sr
