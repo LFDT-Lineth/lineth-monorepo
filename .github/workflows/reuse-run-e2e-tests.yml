@@ -185,7 +185,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: ${{ failure() && inputs.e2e-tests-logs-dump }}
         with:
-          name: end-2-end-debug-logs
+          name: end-2-end-debug-logs-${{ inputs.tracing-engine }}
           if-no-files-found: error
           path: |
             docker_logs/**/*
