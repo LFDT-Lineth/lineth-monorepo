@@ -16,18 +16,18 @@ docker-pull-images-external-to-monorepo:
 
 clean-local-folders:
 		make clean-smc-folders
-		rm -rf tmp/local/*
+		rm -rf tmp/local/* || true # ignore failure if folders do not exist already
 
 clean-testnet-folders:
 		make clean-smc-folders
-		rm -rf tmp/testnet/*
+		rm -rf tmp/testnet/* || true # ignore failure if folders do not exist already
 
 clean-environment:
-		docker compose -f docker/compose-tracing-v1-ci-extension.yml -f docker/compose-tracing-v2-ci-extension.yml --profile l1 --profile l2 --profile debug --profile staterecovery kill -s 9 || true
-		docker compose -f docker/compose-tracing-v1-ci-extension.yml -f docker/compose-tracing-v2-ci-extension.yml --profile l1 --profile l2 --profile debug --profile staterecovery down || true
-		make clean-local-folders
-		docker volume rm linea-local-dev linea-logs || true # ignore failure if volumes do not exist already
-		docker system prune -f || true
+		docker compose -f docker/compose-tracing-v1-ci-extension.yml -f docker/compose-tracing-v2-ci-extension.yml --profile l1 --profile l2 --profile debug --profile staterecovery kill -s 9 || true;
+		docker compose -f docker/compose-tracing-v1-ci-extension.yml -f docker/compose-tracing-v2-ci-extension.yml --profile l1 --profile l2 --profile debug --profile staterecovery down || true;
+		make clean-local-folders;
+		docker volume rm linea-local-dev linea-logs || true; # ignore failure if volumes do not exist already
+		docker system prune -f || true;
 
 start-env: COMPOSE_PROFILES:=l1,l2
 start-env: CLEAN_PREVIOUS_ENV:=true
@@ -40,8 +40,9 @@ start-env:
   		make clean-environment; \
 	else \
 		echo "Starting stack reusing previous state"; \
-	fi
-	L1_GENESIS_TIME=$(get_future_time) COMPOSE_PROFILES=$(COMPOSE_PROFILES) docker compose -f $(COMPOSE_FILE) up -d
+	fi; \
+	mkdir -p tmp/local; \
+	L1_GENESIS_TIME=$(get_future_time) COMPOSE_PROFILES=$(COMPOSE_PROFILES) docker compose -f $(COMPOSE_FILE) up -d; \
 	if [ "$(SKIP_CONTRACTS_DEPLOYMENT)" = "true" ]; then \
 		echo "Skipping contracts deployment"; \
 	else \
