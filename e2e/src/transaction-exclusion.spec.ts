@@ -16,21 +16,23 @@ describe("Transaction exclusion test suite", () => {
       const l2Account = await l2AccountManager.generateAccount();
       const l2AccountLocal = getWallet(l2Account.privateKey, config.getL2BesuNodeProvider()!);
       const testContract = config.getL2TestContract(l2AccountLocal)!;
+      const txRequest: TransactionRequest = {
+        to: await testContract.getAddress(),
+        data: testContract.interface.encodeFunctionData("testAddmod", [13000, 31]),
+        maxPriorityFeePerGas: etherToWei("0.000000001"), // 1 Gwei
+        maxFeePerGas: etherToWei("0.00000001"), // 10 Gwei
+      };
+      const rejectedTxHash = await getTransactionHash(txRequest, l2AccountLocal);
 
-      // This shall be rejected by the Besu node due to traces module limit overflow
-      let rejectedTxHash;
       try {
-        const txRequest: TransactionRequest = {
-          to: await testContract.getAddress(),
-          data: testContract.interface.encodeFunctionData("testAddmod", [13000, 31]),
-          maxPriorityFeePerGas: etherToWei("0.000000001"), // 1 Gwei
-          maxFeePerGas: etherToWei("0.00000001"), // 10 Gwei
-        };
-        rejectedTxHash = await getTransactionHash(txRequest, l2AccountLocal);
+        // This shall be rejected by the Besu node due to traces module limit overflow
         await l2AccountLocal.sendTransaction(txRequest);
       } catch (err) {
         // This shall return error with traces limit overflow
-        logger.debug(`sendTransaction expected. error=${JSON.stringify(err)}`);
+        logger.debug(`sendTransaction expected rejection: ${JSON.stringify(err)}`);
+        // assert it was indeed rejected by the traces module limit
+        // @ts-expect-error error is not typed
+        expect(err.message).toContain("is above the limit");
       }
 
       expect(rejectedTxHash).toBeDefined();

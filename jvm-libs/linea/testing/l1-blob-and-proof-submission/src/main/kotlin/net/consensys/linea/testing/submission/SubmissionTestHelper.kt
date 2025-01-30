@@ -25,11 +25,11 @@ fun assertTxSuccess(
     timeout = timeout
   ).also { txReceipt ->
     assertThat(txReceipt.status)
-      .isEqualTo("0x1")
       .withFailMessage(
         "submission of $submissionType=${interval.intervalString()}" +
           " failed on L1. receipt=$txReceipt"
       )
+      .isEqualTo("0x1")
   }
 }
 
