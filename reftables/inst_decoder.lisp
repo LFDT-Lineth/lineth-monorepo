@@ -1,7 +1,7 @@
 (module instdecoder)
 
 (defcolumns
-    (OPCODE :display :opcode)
+    (OPCODE :byte :display :opcode)
 
     ;;
     ;; Family flags
