@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0
-pragma solidity 0.8.26;
+pragma solidity ^0.8.26;
 
 /**
  * @title L1 Message manager interface for current functions, events and errors.

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity 0.8.19;
+pragma solidity ^0.8.19;
 
 /**
  * @title L2 Message Service interface for pre-existing functions, events and errors.

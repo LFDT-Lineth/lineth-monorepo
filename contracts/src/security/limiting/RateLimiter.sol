@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0
-pragma solidity >=0.8.19 <=0.8.26;
+pragma solidity ^0.8.19;
 
 import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import { IRateLimiter } from "./interfaces/IRateLimiter.sol";
@@ -10,7 +10,7 @@ import { IRateLimiter } from "./interfaces/IRateLimiter.sol";
  * @notice You can use this control numeric limits over a period using timestamp.
  * @custom:security-contact security-report@linea.build
  */
-contract RateLimiter is IRateLimiter, AccessControlUpgradeable {
+abstract contract RateLimiter is IRateLimiter, AccessControlUpgradeable {
   bytes32 public constant RATE_LIMIT_SETTER_ROLE = keccak256("RATE_LIMIT_SETTER_ROLE");
   bytes32 public constant USED_RATE_LIMIT_RESETTER_ROLE = keccak256("USED_RATE_LIMIT_RESETTER_ROLE");
 

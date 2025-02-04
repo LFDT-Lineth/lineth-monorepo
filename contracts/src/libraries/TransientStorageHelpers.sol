@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0
-pragma solidity 0.8.26;
+pragma solidity ^0.8.26;
 
 /**
  * @title Library that provides helper functions to interact with transient storage.

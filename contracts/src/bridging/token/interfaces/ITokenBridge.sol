@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity 0.8.19;
+pragma solidity ^0.8.19;
 
 import { IPauseManager } from "../../../security/pausing/interfaces/IPauseManager.sol";
 import { IPermissionsManager } from "../../../security/access/interfaces/IPermissionsManager.sol";
