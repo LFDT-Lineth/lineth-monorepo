@@ -1,7 +1,3 @@
 module.exports = {
-  skipFiles: [
-    "_testing",
-    "proxies",
-    "bridging/token/CustomBridgedToken.sol",
-  ],
+  skipFiles: ["_testing", "proxies", "bridging/token/CustomBridgedToken.sol"],
 };

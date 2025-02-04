@@ -122,3 +122,23 @@ evm-opcode-tester-execute-all-opcodes:
 		RPC_URL=http:\\localhost:8545/ \
 		npx ts-node local-deployments-artifacts/executeAllOpcodes.ts
 
+deploy-l2-scenario-testing-proxy:
+		# WARNING: FOR LOCAL DEV ONLY - DO NOT REUSE THESE KEYS ELSEWHERE
+		cd contracts/; \
+		PRIVATE_KEY=0x1dd171cec7e2995408b5513004e8207fe88d6820aeff0d82463b3e41df251aae \
+		RPC_URL=http:\\localhost:8545/ \
+		npx ts-node local-deployments-artifacts/deployLineaScenarioDelegatingProxy.ts
+
+execute-scenario-testing-proxy-scenario: LINEA_SCENARIO_DELEGATING_PROXY_ADDRESS:=0x2f6dAaF8A81AB675fbD37Ca6Ed5b72cf86237453
+execute-scenario-testing-proxy-scenario:
+		# WARNING: FOR LOCAL DEV ONLY - DO NOT REUSE THESE KEYS ELSEWHERE
+		# GAS_LIMIT=452500 will cause it to fail
+		cd contracts/; \
+		LINEA_SCENARIO_DELEGATING_PROXY_ADDRESS=$(LINEA_SCENARIO_DELEGATING_PROXY_ADDRESS) \
+		NUMBER_OF_LOOPS=10000000 \
+		LINEA_SCENARIO=1 \
+		GAS_LIMIT=452500 \
+		PRIVATE_KEY=0x1dd171cec7e2995408b5513004e8207fe88d6820aeff0d82463b3e41df251aae \
+		RPC_URL=http:\\localhost:8545/ \
+		npx ts-node local-deployments-artifacts/executeLineaScenarioDelegatingProxyScenario.ts
+
