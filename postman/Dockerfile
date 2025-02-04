@@ -3,6 +3,9 @@ FROM node:lts-slim AS base
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 
+# Temp fix for the corepack issue described in https://github.com/pnpm/pnpm/issues/9029
+RUN npm i -g corepack@latest
+
 RUN corepack enable
 
 RUN apt-get update \
