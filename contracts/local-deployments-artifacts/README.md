@@ -1,0 +1,3 @@
+This folder contains contract deployment scripts and build artifacts used to speed up tests in other parts of the monorepo (including E2E and coordinator tests). We have plans to store artifacts for contract upgrade tests here also, given we won't have the source Solidity code for the 'old contract to be upgraded' at the time we want to upgrade.
+
+Note that if you change artifact file names, you must change the corresponding typechain imports in `/e2e`

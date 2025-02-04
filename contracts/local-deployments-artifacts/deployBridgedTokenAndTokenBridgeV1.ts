@@ -12,7 +12,7 @@ import {
   contractName as TokenBridgeContractName,
   abi as TokenBridgeAbi,
   bytecode as TokenBridgeBytecode,
-} from "./dynamic-artifacts/TokenBridge.json";
+} from "./dynamic-artifacts/TokenBridgeV1.json";
 import {
   contractName as UpgradeableBeaconContractName,
   abi as UpgradeableBeaconAbi,

@@ -42,7 +42,7 @@ deploy-l2messageservice:
 		L2MSGSERVICE_L1L2_MESSAGE_SETTER=$${L2MSGSERVICE_L1L2_MESSAGE_SETTER:-0xd42e308fc964b71e18126df469c21b0d7bcb86cc} \
 		L2MSGSERVICE_RATE_LIMIT_PERIOD=86400 \
 		L2MSGSERVICE_RATE_LIMIT_AMOUNT=1000000000000000000000 \
-		npx ts-node local-deployments-artifacts/deployL2MessageService.ts
+		npx ts-node local-deployments-artifacts/deployL2MessageServiceV1.ts
 
 deploy-token-bridge-l1:
 		# WARNING: FOR LOCAL DEV ONLY - DO NOT REUSE THESE KEYS ELSEWHERE
@@ -54,7 +54,7 @@ deploy-token-bridge-l1:
 		L1_TOKEN_BRIDGE_SECURITY_COUNCIL=0x90F79bf6EB2c4f870365E785982E1f101E93b906 \
 		L2MESSAGESERVICE_ADDRESS=0xe537D669CA013d86EBeF1D64e40fC74CADC91987 \
 		LINEA_ROLLUP_ADDRESS=0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9 \
-		npx ts-node local-deployments-artifacts/deployBridgedTokenAndTokenBridge.ts
+		npx ts-node local-deployments-artifacts/deployBridgedTokenAndTokenBridgeV1.ts
 
 deploy-token-bridge-l2:
 		# WARNING: FOR LOCAL DEV ONLY - DO NOT REUSE THESE KEYS ELSEWHERE
@@ -67,7 +67,7 @@ deploy-token-bridge-l2:
 		L2_TOKEN_BRIDGE_SECURITY_COUNCIL=0xf17f52151EbEF6C7334FAD080c5704D77216b732 \
 		L2MESSAGESERVICE_ADDRESS=0xe537D669CA013d86EBeF1D64e40fC74CADC91987 \
 		LINEA_ROLLUP_ADDRESS=0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9 \
-		npx ts-node local-deployments-artifacts/deployBridgedTokenAndTokenBridge.ts
+		npx ts-node local-deployments-artifacts/deployBridgedTokenAndTokenBridgeV1.ts
 
 deploy-l1-test-erc20:
 		# WARNING: FOR LOCAL DEV ONLY - DO NOT REUSE THESE KEYS ELSEWHERE

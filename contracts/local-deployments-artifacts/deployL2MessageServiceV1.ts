@@ -4,7 +4,7 @@ import {
   contractName as L2MessageServiceContractName,
   abi as L2MessageServiceAbi,
   bytecode as L2MessageServiceBytecode,
-} from "./dynamic-artifacts/L2MessageService.json";
+} from "./dynamic-artifacts/L2MessageServiceV1.json";
 import {
   contractName as ProxyAdminContractName,
   abi as ProxyAdminAbi,

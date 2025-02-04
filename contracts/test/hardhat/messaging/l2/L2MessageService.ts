@@ -1,7 +1,7 @@
 import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
-import { ethers, upgrades } from "hardhat";
+import { ethers } from "hardhat";
 import { TestL2MessageService, TestReceivingContract } from "../../../../typechain-types";
 import {
   ADDRESS_ZERO,
@@ -34,22 +34,15 @@ import {
   calculateRollingHashFromCollection,
   encodeSendMessage,
   expectEvent,
-  expectEvents,
   expectRevertWithCustomError,
   expectRevertWithReason,
-  generateKeccak256,
   generateKeccak256Hash,
 } from "../../common/helpers";
-import { ZeroAddress } from "ethers";
 import { generateRoleAssignments } from "../../../../common/helpers";
 import {
   L2_MESSAGE_SERVICE_PAUSE_TYPES_ROLES,
   L2_MESSAGE_SERVICE_ROLES,
   L2_MESSAGE_SERVICE_UNPAUSE_TYPES_ROLES,
-  PAUSE_L1_L2_ROLE,
-  PAUSE_L2_L1_ROLE,
-  UNPAUSE_L1_L2_ROLE,
-  UNPAUSE_L2_L1_ROLE,
 } from "../../../../common/constants";
 
 describe("L2MessageService", () => {
@@ -178,23 +171,9 @@ describe("L2MessageService", () => {
       await expectRevertWithReason(deployCall, INITIALIZED_ALREADY_MESSAGE);
     });
 
-    it("Can upgrade existing contract", async () => {
-      const contract = await deployUpgradableFromFactory("L2MessageServiceLineaMainnet", [
-        securityCouncil.address,
-        l1l2MessageSetter.address,
-        ONE_DAY_IN_SECONDS,
-        INITIAL_WITHDRAW_LIMIT,
-      ]);
-
-      const l2MessageServiceFactory = await ethers.getContractFactory("L2MessageService");
-      await upgrades.validateUpgrade(contract, l2MessageServiceFactory);
-
-      const newContract = await upgrades.upgradeProxy(contract, l2MessageServiceFactory);
-
-      const upgradedContract = await newContract.waitForDeployment();
-      await upgrades.validateImplementation(l2MessageServiceFactory);
-
-      expect(await upgradedContract.lastAnchoredL1MessageNumber()).to.equal(0);
+    it.skip("Can upgrade existing contract", async () => {
+      // Deploy V1 from artifact
+      // Deploy V-next when we have it
     });
   });
 
@@ -1426,137 +1405,10 @@ describe("L2MessageService", () => {
     });
   });
 
-  describe("L2MessageService Upgradeable Tests", () => {
-    let newRoleAddresses: { addressWithRole: string; role: string }[];
-
-    async function deployL2MessageServiceFixture() {
-      return deployUpgradableFromFactory(
-        "src/_testing/integration/L2MessageServiceLineaMainnet.sol:L2MessageServiceLineaMainnet",
-        [securityCouncil.address, l1l2MessageSetter.address, ONE_DAY_IN_SECONDS, INITIAL_WITHDRAW_LIMIT],
-      ) as unknown as Promise<TestL2MessageService>;
-    }
-
-    before(async () => {
-      const securityCouncilAddress = securityCouncil.address;
-
-      newRoleAddresses = [
-        { addressWithRole: securityCouncilAddress, role: USED_RATE_LIMIT_RESETTER_ROLE },
-        { addressWithRole: securityCouncilAddress, role: PAUSE_ALL_ROLE },
-        { addressWithRole: securityCouncilAddress, role: PAUSE_L1_L2_ROLE },
-        { addressWithRole: securityCouncilAddress, role: PAUSE_L2_L1_ROLE },
-        { addressWithRole: securityCouncilAddress, role: UNPAUSE_ALL_ROLE },
-        { addressWithRole: securityCouncilAddress, role: UNPAUSE_L1_L2_ROLE },
-        { addressWithRole: securityCouncilAddress, role: UNPAUSE_L2_L1_ROLE },
-      ];
-    });
-
-    beforeEach(async () => {
-      [admin, securityCouncil, l1l2MessageSetter, notAuthorizedAccount, postmanAddress] = await ethers.getSigners();
-      l2MessageService = await loadFixture(deployL2MessageServiceFixture);
-    });
-
-    it("Should deploy and upgrade the L2MessageService contract", async () => {
-      expect(await l2MessageService.nextMessageNumber()).to.equal(1);
-
-      // Deploy new implementation
-      const newL2MessageServiceFactory = await ethers.getContractFactory(
-        "src/messaging/l2/L2MessageService.sol:L2MessageService",
-      );
-      const newL2MessageService = await upgrades.upgradeProxy(l2MessageService, newL2MessageServiceFactory);
-
-      await newL2MessageService.reinitializePauseTypesAndPermissions(
-        newRoleAddresses,
-        L2_MESSAGE_SERVICE_PAUSE_TYPES_ROLES,
-        L2_MESSAGE_SERVICE_UNPAUSE_TYPES_ROLES,
-      );
-
-      expect(await newL2MessageService.nextMessageNumber()).to.equal(1);
-    });
-
-    it("Should revert with ZeroAddressNotAllowed when addressWithRole is zero address in reinitializePauseTypesAndPermissions", async () => {
-      // Deploy new implementation
-      const newL2MessageServiceFactory = await ethers.getContractFactory(
-        "src/messaging/l2/L2MessageService.sol:L2MessageService",
-      );
-      const newL2MessageService = await upgrades.upgradeProxy(l2MessageService, newL2MessageServiceFactory);
-
-      const roleAddresses = [...newRoleAddresses, { addressWithRole: ZeroAddress, role: DEFAULT_ADMIN_ROLE }];
-
-      await expectRevertWithCustomError(
-        newL2MessageService,
-        newL2MessageService.reinitializePauseTypesAndPermissions(
-          roleAddresses,
-          L2_MESSAGE_SERVICE_PAUSE_TYPES_ROLES,
-          L2_MESSAGE_SERVICE_UNPAUSE_TYPES_ROLES,
-        ),
-        "ZeroAddressNotAllowed",
-      );
-    });
-
-    it("Should set all permissions", async () => {
-      // Deploy new implementation
-      const newL2MessageServiceFactory = await ethers.getContractFactory(
-        "src/messaging/l2/L2MessageService.sol:L2MessageService",
-      );
-      const newL2MessageService = await upgrades.upgradeProxy(l2MessageService, newL2MessageServiceFactory);
-
-      await newL2MessageService.reinitializePauseTypesAndPermissions(
-        newRoleAddresses,
-        L2_MESSAGE_SERVICE_PAUSE_TYPES_ROLES,
-        L2_MESSAGE_SERVICE_UNPAUSE_TYPES_ROLES,
-      );
-
-      for (const { role, addressWithRole } of newRoleAddresses) {
-        expect(await newL2MessageService.hasRole(role, addressWithRole)).to.be.true;
-      }
-    });
-
-    it("Should set all pause types and unpause types in mappings and emit events", async () => {
-      // Deploy new implementation
-      const newL2MessageServiceFactory = await ethers.getContractFactory(
-        "src/messaging/l2/L2MessageService.sol:L2MessageService",
-      );
-      const newL2MessageService = await upgrades.upgradeProxy(l2MessageService, newL2MessageServiceFactory);
-
-      const reinitializePromise = newL2MessageService.reinitializePauseTypesAndPermissions(
-        newRoleAddresses,
-        L2_MESSAGE_SERVICE_PAUSE_TYPES_ROLES,
-        L2_MESSAGE_SERVICE_UNPAUSE_TYPES_ROLES,
-      );
-
-      await Promise.all([
-        expectEvents(
-          newL2MessageService,
-          reinitializePromise,
-          L2_MESSAGE_SERVICE_PAUSE_TYPES_ROLES.map(({ pauseType, role }) => ({
-            name: "PauseTypeRoleSet",
-            args: [pauseType, role],
-          })),
-        ),
-        expectEvents(
-          newL2MessageService,
-          reinitializePromise,
-          L2_MESSAGE_SERVICE_UNPAUSE_TYPES_ROLES.map(({ pauseType, role }) => ({
-            name: "UnPauseTypeRoleSet",
-            args: [pauseType, role],
-          })),
-        ),
-      ]);
-
-      const pauseTypeRolesMappingSlot = 167;
-      const unpauseTypeRolesMappingSlot = 168;
-
-      for (const { pauseType, role } of L2_MESSAGE_SERVICE_PAUSE_TYPES_ROLES) {
-        const slot = generateKeccak256(["uint8", "uint256"], [pauseType, pauseTypeRolesMappingSlot]);
-        const roleInMapping = await ethers.provider.getStorage(newL2MessageService.getAddress(), slot);
-        expect(roleInMapping).to.equal(role);
-      }
-
-      for (const { pauseType, role } of L2_MESSAGE_SERVICE_UNPAUSE_TYPES_ROLES) {
-        const slot = generateKeccak256(["uint8", "uint256"], [pauseType, unpauseTypeRolesMappingSlot]);
-        const roleInMapping = await ethers.provider.getStorage(newL2MessageService.getAddress(), slot);
-        expect(roleInMapping).to.equal(role);
-      }
+  describe.skip("L2MessageService Upgradeable Tests", () => {
+    it.skip("Should deploy and upgrade the L2MessageService contract", async () => {
+      // Deploy V1 from artifact
+      // Deploy V-next when we have it
     });
   });
 });

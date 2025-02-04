@@ -1,0 +1,1 @@
+This folder contains smart contract build artifacts that accurately represent the on-chain deployments (as of 31 Jan 2025). We will use the build artifacts in this folder for future contract upgrade tests.

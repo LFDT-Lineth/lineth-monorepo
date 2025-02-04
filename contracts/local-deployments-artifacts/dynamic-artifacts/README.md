@@ -1,0 +1,1 @@
+This folder contains smart contract build artifacts for upgradeable contracts, hence the naming 'dynamic'

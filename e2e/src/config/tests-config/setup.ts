@@ -5,8 +5,8 @@ import {
   BridgedToken__factory,
   DummyContract,
   DummyContract__factory,
-  L2MessageService,
-  L2MessageService__factory,
+  L2MessageServiceV1 as L2MessageService,
+  L2MessageServiceV1__factory as L2MessageService__factory,
   LineaRollupV6,
   LineaRollupV6__factory,
   OpcodeTestContract,
@@ -17,8 +17,8 @@ import {
   TestContract__factory,
   TestERC20,
   TestERC20__factory,
-  TokenBridge,
-  TokenBridge__factory,
+  TokenBridgeV1 as TokenBridge,
+  TokenBridgeV1__factory as TokenBridge__factory,
 } from "../../typechain";
 import { AccountManager } from "./accounts/account-manager";
 
