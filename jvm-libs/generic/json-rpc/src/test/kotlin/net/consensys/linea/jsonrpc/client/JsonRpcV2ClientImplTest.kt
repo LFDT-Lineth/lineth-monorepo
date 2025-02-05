@@ -39,6 +39,7 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.math.BigInteger
 import java.net.ConnectException
 import java.net.URI
+import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.ExecutionException
 import java.util.function.Predicate
 import kotlin.time.Duration
@@ -509,7 +510,7 @@ class JsonRpcV2ClientImplTest {
       // stop the server to simulate connection error
       wiremock.stop()
 
-      val retryPredicateCalls = mutableListOf<Result<String?, Throwable>>()
+      val retryPredicateCalls = CopyOnWriteArrayList<Result<String?, Throwable>>()
 
       val reqFuture = client.makeRequest(
         method = "someMethod",
