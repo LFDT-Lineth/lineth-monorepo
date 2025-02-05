@@ -172,14 +172,14 @@ jobs:
           docker ps -a >> docker_logs/docker_ps.txt || true
           docker logs coordinator --since 1h &>> docker_logs/coordinator.txt || true
           docker logs prover --since 1h &>> docker_logs/prover.txt || true
-          docker logs prover-v3 --since 1h &>> docker_logs/prover-v3.txt; || true
+          docker logs prover-v3 --since 1h &>> docker_logs/prover-v3.txt || true
           docker logs shomei --since 1h &>> docker_logs/shomei.txt || true
           docker logs zkbesu-shomei --since 1h &>> docker_logs/zkbesu-shomei.txt || true
           docker logs shomei-frontend --since 1h &>> docker_logs/shomei-frontend.txt || true
           docker logs postman --since 1h &>> docker_logs/postman.txt || true
-          docker logs traces-node --since 1h &>> docker_logs/traces-node.txt || true || true
-          docker logs traces-node-v2 --since 1h &>> docker_logs/traces-node-v2.txt; || true
-          docker logs l2-node-besu --since 1h &>> docker_logs/l2-node-besu.txt; || true
+          docker logs traces-node --since 1h &>> docker_logs/traces-node.txt || true
+          docker logs traces-node-v2 --since 1h &>> docker_logs/traces-node-v2.txt || true
+          docker logs l2-node-besu --since 1h &>> docker_logs/l2-node-besu.txt || true
           docker logs transaction-exclusion-api --since 1h &>> docker_logs/transaction-exclusion-api.txt || true
           docker logs sequencer --since 1h &>> docker_logs/sequencer.txt || true
       - name: Archive debug logs
