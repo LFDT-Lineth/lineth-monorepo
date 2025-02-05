@@ -89,30 +89,6 @@ staterecovery-replay-from-block:
 	docker compose -f docker/compose-tracing-v2-staterecovery-extension.yml down zkbesu-shomei-sr shomei-sr
 	L1_ROLLUP_CONTRACT_ADDRESS=$(L1_ROLLUP_CONTRACT_ADDRESS) STATERECOVERY_OVERRIDE_START_BLOCK_NUMBER=$(STATERECOVERY_OVERRIDE_START_BLOCK_NUMBER) docker compose -f docker/compose-tracing-v2-staterecovery-extension.yml up zkbesu-shomei-sr shomei-sr -d
 
-##
-# Testnet
-##
-testnet-start-l2:
-		docker compose -f docker/compose-tracing-v2.yml -f docker/compose-testnet-sync.overrides.yml --profile l2 up -d
-
-testnet-start-l2-traces-node-only:
-		docker compose -f docker/compose-tracing-v2.yml -f docker/compose-testnet-sync.overries.yml up traces-node -d
-
-testnet-start: start-l1 deploy-linea-rollup-v6 testnet-start-l2
-testnet-restart-l2-keep-state:
-		docker compose -f docker/compose-tracing-v2.yml -f docker/compose-testnet-sync.overrides.yml rm -f -s -v sequencer traces-node coordinator
-		make testnet-start-l2
-
-testnet-restart-l2-clean-state:
-		docker compose -f docker/compose-tracing-v2.yml -f docker/compose-testnet-sync.overrides.yml rm -f -s -v sequencer traces-node coordinator
-		docker volume rm testnet-data
-		make clean-testnet-folders
-		make testnet-start-l2
-
-testnet-down:
-		docker compose -f docker/compose-tracing-v2.yml -f docker/compose-testnet-sync.overrides.yml --profile l1 --profile l2 down -v
-		make clean-testnet-folders
-
 stop_pid:
 		if [ -f $(PID_FILE) ]; then \
 			kill `cat $(PID_FILE)`; \
