@@ -1,6 +1,4 @@
-(defun (hub-into-gas-trigger)
-  (and hub.PEEK_AT_STACK
-       hub.CMC))
+(defun (hub-into-gas-trigger) (* hub.PEEK_AT_STACK hub.CMC))
 
 (deflookup hub-into-gas
            ;; target columns

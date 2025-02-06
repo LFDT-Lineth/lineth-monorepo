@@ -1,11 +1,6 @@
 (module hub)
 
 
-(defcolumns
-  ( stkcp_FIRST_CTXT :binary@prove :length 4)   ( stkcp_AGAIN_CTXT :binary@prove :length 4)
-  ( stkcp_FIRST_SPOT :binary@prove :length 4)   ( stkcp_AGAIN_SPOT :binary@prove :length 4)
-  )
-
 (definterleaved PEEK_AT_STACK_POW_4   (PEEK_AT_STACK                  PEEK_AT_STACK                  PEEK_AT_STACK                  PEEK_AT_STACK                 ))
 (definterleaved CN_POW_4              (CONTEXT_NUMBER                 CONTEXT_NUMBER                 CONTEXT_NUMBER                 CONTEXT_NUMBER                ))
 (definterleaved STACK_STAMP_1234      ([stack/STACK_ITEM_STAMP    1]  [stack/STACK_ITEM_STAMP    2]  [stack/STACK_ITEM_STAMP    3]  [stack/STACK_ITEM_STAMP    4] ))  ;; ""

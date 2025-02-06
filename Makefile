@@ -1,4 +1,3 @@
-CORSET ?= corset
 GO_CORSET ?= go-corset
 
 HUB_COLUMNS :=  $(wildcard hub/columns/*lisp)
@@ -17,6 +16,12 @@ HUB :=  $(wildcard hub/columns/*lisp) \
 	$(wildcard hub/constraints/instruction-handling/call/precompiles/ec_add_mul_pairing/*lisp) \
 	$(wildcard hub/constraints/instruction-handling/call/precompiles/modexp/*lisp) \
 	$(wildcard hub/constraints/instruction-handling/call/precompiles/blake/*lisp) \
+	$(wildcard hub/constraints/consistency/stack/*lisp) \
+	$(wildcard hub/constraints/consistency/*lisp) \
+	$(wildcard hub/constraints/consistency/account/*lisp) \
+	$(wildcard hub/constraints/consistency/context/*lisp) \
+	$(wildcard hub/constraints/consistency/execution_environment/*lisp) \
+	$(wildcard hub/constraints/consistency/storage/*lisp) \
 	$(wildcard hub/constraints/instruction-handling/copy/*lisp) \
 	$(wildcard hub/constraints/instruction-handling/create/*lisp) \
 	$(wildcard hub/constraints/instruction-handling/create/constraints/*lisp) \
@@ -38,12 +43,6 @@ HUB :=  $(wildcard hub/columns/*lisp) \
 
 
 # Missing from the above
-# $(wildcard hub/constraints/consistency/stack/*lisp) \
-# $(wildcard hub/constraints/consistency/*lisp) \
-# $(wildcard hub/constraints/consistency/account/*lisp) \
-# $(wildcard hub/constraints/consistency/context/*lisp) \
-# $(wildcard hub/constraints/consistency/execution_environment/*lisp) \
-# $(wildcard hub/constraints/consistency/storage/*lisp) \
 
 ALU := $(wildcard alu/add/*.lisp) \
        $(wildcard alu/ext/*.lisp) \
@@ -171,13 +170,7 @@ ZKEVM_MODULES := ${CONSTANTS} \
 
 # ${HUB} \
 
-define.go: ${ZKEVM_MODULES}
-	${CORSET} wizard-iop -vv -o $@ ${ZKEVM_MODULES}
-
 zkevm.bin: ${ZKEVM_MODULES}
-	${CORSET} compile -vv -o $@ ${ZKEVM_MODULES}
-
-zkevm.go.bin: ${ZKEVM_MODULES}
 	${GO_CORSET} compile -o $@ ${ZKEVM_MODULES}
 
 # Corset is order sensitive - to compile, we load the constants first
@@ -212,14 +205,6 @@ ZKEVM_MODULES_FOR_REFERENCE_TESTS := ${CONSTANTS} \
 				     ${TXN_DATA_FOR_REFERENCE_TESTS} \
 				     ${WCP}
 
-#				     ${BLOCKDATA} \
-#				     ${HUB} \
 
 zkevm_for_reference_tests.bin: ${ZKEVM_MODULES_FOR_REFERENCE_TESTS}
-	${CORSET} compile -vv -o $@ ${ZKEVM_MODULES_FOR_REFERENCE_TESTS}
-
-zkevm_for_reference_tests.go.bin: ${ZKEVM_MODULES_FOR_REFERENCE_TESTS}
 	${GO_CORSET} compile -o $@ ${ZKEVM_MODULES_FOR_REFERENCE_TESTS}
-
-
-

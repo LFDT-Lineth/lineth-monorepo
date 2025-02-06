@@ -51,19 +51,25 @@
 
 (defun   (account-consistency---repeat-account-row)    (*    (prev    acp_PEEK_AT_ACCOUNT)   acp_PEEK_AT_ACCOUNT))
 
-(defconstraint    account-consistency---FIRST-AGAIN-FINAL---repeat-encounter---conflation-level  (:guard   (account-consistency---repeat-account-row))
+(defconstraint    account-consistency---FIRST-AGAIN-FINAL---repeat-encounter---conflation-level
+                  (:guard   (account-consistency---repeat-account-row))
+                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                   (if-not-zero  (remained-constant! (acp_full_address))
                                 (eq! (account-consistency---transition-conflation) 2)
                                 (eq! (account-consistency---transition-conflation) 0)))
 
-(defconstraint    account-consistency---FIRST-AGAIN-FINAL---repeat-encounter---block-level       (:guard   (account-consistency---repeat-account-row))
+(defconstraint    account-consistency---FIRST-AGAIN-FINAL---repeat-encounter---block-level
+                  (:guard   (account-consistency---repeat-account-row))
+                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                   (begin
                     (if-not-zero (remained-constant!   (acp_full_address))              (eq! (account-consistency---transition-block) 2))
                     (if-not-zero (remained-constant!    acp_REL_BLK_NUM)                (eq! (account-consistency---transition-block) 2))
                     (if-zero     (remained-constant!   (acp_full_address))
                                  (if-zero    (remained-constant!    acp_REL_BLK_NUM)    (eq! (account-consistency---transition-block) 0)))))
 
-(defconstraint    account-consistency---FIRST-AGAIN-FINAL---repeat-encounter---transaction-level (:guard   (account-consistency---repeat-account-row))
+(defconstraint    account-consistency---FIRST-AGAIN-FINAL---repeat-encounter---transaction-level
+                  (:guard   (account-consistency---repeat-account-row))
+                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                   (begin
                     (if-not-zero (remained-constant!   (acp_full_address))              (eq! (account-consistency---transition-transaction) 2))
                     (if-not-zero (remained-constant!    acp_ABS_TX_NUM)                 (eq! (account-consistency---transition-transaction) 2))
@@ -115,31 +121,68 @@
 ;;                                ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defconstraint    account-consistency---linking---conflation-level  (:guard   acp_AGAIN_IN_CNF)
+
+;-----------------------------;
+;    X.5.5 Conflation level   ;
+;-----------------------------;
+
+(defconstraint    account-consistency---linking---conflation-level---nonce
+                  (:guard   acp_AGAIN_IN_CNF)
+                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                  (eq!   acp_NONCE                     (prev acp_NONCE_NEW)               ))
+
+(defconstraint    account-consistency---linking---conflation-level---balance
+                  (:guard   acp_AGAIN_IN_CNF)
+                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;
                   (begin
-                    (eq!   acp_NONCE                     (prev acp_NONCE_NEW)               )
-                    (eq!   acp_BALANCE                   (prev acp_BALANCE_NEW)             )
+                    (eq!   acp_BALANCE                   (prev acp_BALANCE_NEW)             )))
+
+(defconstraint    account-consistency---linking---conflation-level---code
+                  (:guard   acp_AGAIN_IN_CNF)
+                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                  (begin
                     (eq!   acp_CODE_SIZE                 (prev acp_CODE_SIZE_NEW)           )
                     (eq!   acp_CODE_HASH_HI              (prev acp_CODE_HASH_HI_NEW)        )
                     (eq!   acp_CODE_HASH_LO              (prev acp_CODE_HASH_LO_NEW)        )
-                    (eq!   acp_DEPLOYMENT_NUMBER         (prev acp_DEPLOYMENT_NUMBER_NEW)   )
-                    (eq!   acp_DEPLOYMENT_STATUS         (prev acp_DEPLOYMENT_STATUS_NEW)   )
                     ;;
                     (eq!   acp_IS_PRECOMPILE             (prev acp_IS_PRECOMPILE)           )))
 
-(defconstraint    account-consistency---linking---block-level       (:guard   acp_AGAIN_IN_BLK)
+(defconstraint    account-consistency---linking---conflation-level---deployment-number-and-status
+                  (:guard   acp_AGAIN_IN_CNF)
+                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                  (begin
+                    (eq!   acp_DEPLOYMENT_NUMBER         (prev acp_DEPLOYMENT_NUMBER_NEW)   )
+                    (eq!   acp_DEPLOYMENT_STATUS         (prev acp_DEPLOYMENT_STATUS_NEW)   )))
+
+
+;------------------------;
+;    X.5.5 Block level   ;
+;------------------------;
+
+(defconstraint    account-consistency---linking---block-level
+                  (:guard   acp_AGAIN_IN_BLK)
+                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;
                   (begin
                     (remained-constant!    acp_DEPLOYMENT_NUMBER_FIRST_IN_BLOCK)
                     (remained-constant!    acp_DEPLOYMENT_NUMBER_FINAL_IN_BLOCK)))
 
-(defconstraint    account-consistency---linking---transaction-level (:guard   acp_AGAIN_IN_TXN)
+
+;------------------------------;
+;    X.5.5 Transaction level   ;
+;------------------------------;
+
+(defconstraint    account-consistency---linking---transaction-level
+                  (:guard   acp_AGAIN_IN_TXN)
+                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;
                   (begin
                     (eq!   acp_WARMTH                     (prev    acp_WARMTH_NEW))
                     (eq!   acp_MARKED_FOR_SELFDESTRUCT    (prev    acp_MARKED_FOR_SELFDESTRUCT_NEW))
                     (if-not-zero    acp_MARKED_FOR_SELFDESTRUCT
                                     (eq!    acp_MARKED_FOR_SELFDESTRUCT_NEW    1))))
 
-(defconstraint    account-consistency---linking---for-CFI (:guard    acp_AGAIN_IN_CNF)
+(defconstraint    account-consistency---linking---for-CFI
+                  (:guard    acp_AGAIN_IN_CNF)
+                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                   (if-eq    acp_DEPLOYMENT_NUMBER_NEW    acp_DEPLOYMENT_NUMBER
                             (if-eq    acp_DEPLOYMENT_STATUS_NEW    acp_DEPLOYMENT_STATUS
                                       (remained-constant!    acp_CODE_FRAGMENT_INDEX))))
@@ -162,14 +205,18 @@
 ;;                              ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defconstraint    account-consistency---other---monotony-of-deployment-number (:guard    acp_PEEK_AT_ACCOUNT)
+(defconstraint    account-consistency---other---monotony-of-deployment-number
+                  (:guard    acp_PEEK_AT_ACCOUNT)
+                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                   (any!    (eq!   acp_DEPLOYMENT_NUMBER_NEW    acp_DEPLOYMENT_NUMBER)
                            (eq!   acp_DEPLOYMENT_NUMBER_NEW    (+    1    acp_DEPLOYMENT_NUMBER))))
 
 
-(defconstraint    account-consistency---other---vanishing-constraints-upon-trivial-deployments       (:guard    acp_PEEK_AT_ACCOUNT)
+(defconstraint    account-consistency---other---vanishing-constraints-upon-trivial-deployments
+                  (:guard    acp_PEEK_AT_ACCOUNT)
+                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                   (if-not-zero    (-    acp_DEPLOYMENT_NUMBER_NEW    acp_DEPLOYMENT_NUMBER)
-                                  (if-zero   acp_DEPLOYMENT_NUMBER_NEW
+                                  (if-zero   acp_DEPLOYMENT_STATUS_NEW
                                              (begin
                                                ;; current account state
                                                (vanishes!   acp_DEPLOYMENT_STATUS)
@@ -178,9 +225,11 @@
                                                (eq!         acp_CODE_HASH_HI_NEW    EMPTY_KECCAK_HI)
                                                (eq!         acp_CODE_HASH_LO_NEW    EMPTY_KECCAK_LO)))))
 
-(defconstraint    account-consistency---other---vanishing-constraints-upon-nontrivial-deployments    (:guard    acp_PEEK_AT_ACCOUNT)
+(defconstraint    account-consistency---other---vanishing-constraints-upon-nontrivial-deployments
+                  (:guard    acp_PEEK_AT_ACCOUNT)
+                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                   (if-not-zero    (-    acp_DEPLOYMENT_NUMBER_NEW    acp_DEPLOYMENT_NUMBER)
-                                  (if-not-zero   acp_DEPLOYMENT_NUMBER_NEW
+                                  (if-not-zero   acp_DEPLOYMENT_STATUS_NEW
                                                  (begin
                                                    ;; current account state
                                                    (vanishes!   acp_NONCE)

@@ -59,19 +59,6 @@
    (RLPADDR_SALT_LO     :i128)
    (RLPADDR_KEC_HI      :i128)
    (RLPADDR_KEC_LO      :i128)
-
-   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-   ;;                                          ;;
-   ;;   ACCOUNT consistency temporal columns   ;;
-   ;;                                          ;;
-   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-  ;; the unpermuted columns whose permuted counter-parts will be used in account-consistency-arguments
-  ( FIRST_IN_CNF :binary@prove )     ( FIRST_IN_BLK :binary@prove )     ( FIRST_IN_TXN :binary@prove )
-  ( AGAIN_IN_CNF :binary@prove )     ( AGAIN_IN_BLK :binary@prove )     ( AGAIN_IN_TXN :binary@prove )
-  ( FINAL_IN_CNF :binary@prove )     ( FINAL_IN_BLK :binary@prove )     ( FINAL_IN_TXN :binary@prove )
-  ( DEPLOYMENT_NUMBER_FIRST_IN_BLOCK    :i16)
-  ( DEPLOYMENT_NUMBER_FINAL_IN_BLOCK    :i16)
    ))
 
 

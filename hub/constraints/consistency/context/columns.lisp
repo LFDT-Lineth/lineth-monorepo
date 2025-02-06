@@ -1,11 +1,5 @@
 (module hub)
 
-(defcolumns
-  ;; context consistency permutation related
-  ( con_FIRST :binary@prove )
-  ( con_AGAIN :binary@prove )
-  )
-
 ;; ccp_ ⇔ context consistency permutation
 (defpermutation
     ;; permuted columns
