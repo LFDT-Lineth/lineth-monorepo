@@ -27,6 +27,76 @@ class EthGetBlockToLineaBlockMapperTest {
   }
 
   @Test
+  fun `should map frontier transactions without chainId replay protection and null yParity field`() {
+    val txWeb3j = serialize(
+      """
+      {
+          "blockHash": "0x8de5957e6b5b519eb889a49604e96d7ace847475a9c3ccfaf0acc87e89175d0f",
+          "blockNumber": "0x1",
+          "from": "0x1b9abeec3215d8ade8a33607f2cf0f4f60e5f0d0",
+          "gas": "0x29e2f7",
+          "gasPrice": "0x7",
+          "maxFeePerGas": "0xe",
+          "maxPriorityFeePerGas": "0x0",
+          "hash": "0x09ffe43152572dedf9d4c893b0721692fa20a63d74deb8ff6b9d1ce74c1fd17d",
+          "input": "0x60806040523480156200001157600080fd5b506200001c",
+          "nonce": "0x0",
+          "to": null,
+          "transactionIndex": "0x0",
+          "value": "0x0",
+          "type": "0x2",
+          "accessList": [],
+          "chainId": "0x539",
+          "v": "0x0",
+          "r": "0x1fa31b9272cc67174efb129c2fd2ec5afda122503745beb22bd26e48a42240bb",
+          "s": "0x248c9cdf9352b4a379577c5b44bcb25a5350dc6722fd7b2aec40e193f670e4f4"
+      }
+      """.trimIndent()
+    )
+
+    val domainTx = txWeb3j.toDomain()
+    assertThat(domainTx).isEqualTo(
+      Transaction(
+        nonce = 0x0UL,
+        gasPrice = null,
+        gasLimit = 0x29e2f7UL,
+        to = null,
+        value = 0UL.toBigInteger(),
+        input = "0x60806040523480156200001157600080fd5b506200001c".decodeHex(),
+        r = "0x1fa31b9272cc67174efb129c2fd2ec5afda122503745beb22bd26e48a42240bb".toBigIntegerFromHex(),
+        s = "0x248c9cdf9352b4a379577c5b44bcb25a5350dc6722fd7b2aec40e193f670e4f4".toBigIntegerFromHex(),
+        v = 0UL,
+        yParity = null,
+        type = TransactionType.EIP1559,
+        chainId = 0x539UL,
+        maxFeePerGas = 0xeUL,
+        maxPriorityFeePerGas = 0x0UL,
+        accessList = emptyList()
+      )
+    )
+
+    domainTx.toBesu().also { besuTx ->
+      assertThat(besuTx.type).isEqualTo(org.hyperledger.besu.datatypes.TransactionType.EIP1559)
+      assertThat(besuTx.nonce).isEqualTo(0x0L)
+      assertThat(besuTx.gasPrice.getOrNull()).isNull()
+      assertThat(besuTx.maxFeePerGas.getOrNull()).isEqualTo(Wei.of(0xeL))
+      assertThat(besuTx.maxPriorityFeePerGas.getOrNull()).isEqualTo(Wei.of(0x0L))
+      assertThat(besuTx.gasLimit).isEqualTo(0x29e2f7L)
+      assertThat(besuTx.to.getOrNull()).isNull()
+      assertThat(besuTx.value).isEqualTo(Wei.of(0x0L))
+      assertThat(besuTx.payload).isEqualTo(Bytes.fromHexString("0x60806040523480156200001157600080fd5b506200001c"))
+      assertThat(besuTx.signature.r).isEqualTo(
+        "0x1fa31b9272cc67174efb129c2fd2ec5afda122503745beb22bd26e48a42240bb".toBigIntegerFromHex()
+      )
+      assertThat(besuTx.signature.s).isEqualTo(
+        "0x248c9cdf9352b4a379577c5b44bcb25a5350dc6722fd7b2aec40e193f670e4f4".toBigIntegerFromHex()
+      )
+      assertThat(besuTx.signature.recId).isEqualTo(0)
+      assertThat(besuTx.chainId.getOrNull()).isEqualTo(0x539L)
+    }
+  }
+
+  @Test
   fun `should map frontier transactions`() {
     val txWeb3j = serialize(
       """

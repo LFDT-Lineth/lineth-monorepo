@@ -4,12 +4,12 @@ import io.micrometer.core.instrument.MeterRegistry
 import io.vertx.core.Vertx
 import io.vertx.micrometer.backends.BackendRegistries
 import io.vertx.sqlclient.SqlClient
+import linea.web3j.createWeb3jHttpClient
 import net.consensys.linea.async.toSafeFuture
 import net.consensys.linea.jsonrpc.client.LoadBalancingJsonRpcClient
 import net.consensys.linea.jsonrpc.client.VertxHttpJsonRpcClientFactory
 import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
 import net.consensys.linea.vertx.loadVertxConfig
-import net.consensys.linea.web3j.okHttpClientBuilder
 import net.consensys.zkevm.coordinator.api.Api
 import net.consensys.zkevm.coordinator.app.config.CoordinatorConfig
 import net.consensys.zkevm.coordinator.app.config.DatabaseConfig
@@ -31,9 +31,8 @@ import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import org.web3j.protocol.Web3j
-import org.web3j.protocol.http.HttpService
-import org.web3j.utils.Async
 import tech.pegasys.teku.infrastructure.async.SafeFuture
+import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toKotlinDuration
 
 class CoordinatorApp(private val configs: CoordinatorConfig) {
@@ -60,15 +59,13 @@ class CoordinatorApp(private val configs: CoordinatorConfig) {
     ),
     vertx
   )
-  private val l2Web3jClient: Web3j =
-    Web3j.build(
-      HttpService(
-        configs.l2.rpcEndpoint.toString(),
-        okHttpClientBuilder(LogManager.getLogger("clients.l2")).build()
-      ),
-      1000,
-      Async.defaultExecutorService()
-    )
+  private val l2Web3jClient: Web3j = createWeb3jHttpClient(
+    rpcUrl = configs.zkTraces.ethApi.toString(),
+    log = LogManager.getLogger("clients.l2.eth-api.rpc-node"),
+    pollingInterval = 1.seconds,
+    requestResponseLogLevel = Level.TRACE,
+    failuresLogLevel = Level.DEBUG
+  )
 
   private val persistenceRetryer = PersistenceRetryer(
     vertx = vertx,

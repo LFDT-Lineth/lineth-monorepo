@@ -14,7 +14,8 @@ data class PluginConfig(
   val blobscanEndpoint: URI,
   val shomeiEndpoint: URI,
   val l1PollingInterval: kotlin.time.Duration,
-  val overridingRecoveryStartBlockNumber: ULong? = null
+  val overridingRecoveryStartBlockNumber: ULong? = null,
+  val debugForceSyncStopBlockNumber: ULong? = null
 ) {
   init {
     require(l1PollingInterval >= 1.milliseconds) { "Polling interval=$l1PollingInterval must be greater than 1ms." }
@@ -84,6 +85,17 @@ class PluginCliOptions {
   )
   var overridingRecoveryStartBlockNumber: Long? = null
 
+  @CommandLine.Option(
+    names = ["--$cliOptionsPrefix-debug-force-sync-stop-block-number"],
+    description = [
+      "Forces Besu to stop syncing at the given block number. " +
+        "This is mean for testing purposes, not production. Must be greater than or equal to 1."
+    ],
+    defaultValue = "\${env:STATERECOVERY_DEBUG_FORCE_STOP_SYNC_BLOCK_NUMBER}",
+    required = false
+  )
+  var debugForceSyncStopBlockNumber: Long? = null
+
   fun getConfig(): PluginConfig {
     require(overridingRecoveryStartBlockNumber == null || overridingRecoveryStartBlockNumber!! >= 1) {
       "overridingRecoveryStartBlockNumber=$overridingRecoveryStartBlockNumber must be greater than or equal to 1"
@@ -95,7 +107,8 @@ class PluginCliOptions {
       blobscanEndpoint = blobscanEndpoint,
       shomeiEndpoint = shomeiEndpoint,
       l1PollingInterval = l1PollingInterval.toKotlinDuration(),
-      overridingRecoveryStartBlockNumber = overridingRecoveryStartBlockNumber?.toULong()
+      overridingRecoveryStartBlockNumber = overridingRecoveryStartBlockNumber?.toULong(),
+      debugForceSyncStopBlockNumber = debugForceSyncStopBlockNumber?.toULong()
     )
   }
 

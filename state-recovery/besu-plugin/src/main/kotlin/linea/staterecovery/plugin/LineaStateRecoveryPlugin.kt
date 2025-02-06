@@ -71,7 +71,8 @@ open class LineaStateRecoveryPlugin : BesuPlugin {
       miningService = serviceManager.getServiceOrThrow(MiningService::class.java),
       recoveryStatePersistence = this.recoveryStatusPersistence,
       synchronizationService = synchronizationService,
-      headBlockNumber = blockchainService.chainHeadHeader.number.toULong()
+      headBlockNumber = blockchainService.chainHeadHeader.number.toULong(),
+      debugForceSyncStopBlockNumber = config.debugForceSyncStopBlockNumber
     )
     val simulatorService = serviceManager.getServiceOrThrow(BlockSimulationService::class.java)
     val executionLayerClient = ExecutionLayerInProcessClient.create(
@@ -96,7 +97,8 @@ open class LineaStateRecoveryPlugin : BesuPlugin {
           smartContractAddress = config.l1SmartContractAddress.toString(),
           l1LatestSearchBlock = net.consensys.linea.BlockParameter.Tag.LATEST,
           overridingRecoveryStartBlockNumber = config.overridingRecoveryStartBlockNumber,
-          l1PollingInterval = config.l1PollingInterval
+          l1PollingInterval = config.l1PollingInterval,
+          debugForceSyncStopBlockNumber = config.debugForceSyncStopBlockNumber
         )
       )
     }
@@ -105,17 +107,17 @@ open class LineaStateRecoveryPlugin : BesuPlugin {
     serviceManager
       .getServiceOrThrow(BesuEvents::class.java)
       .addBlockAddedListener(recoveryModeManager)
-    this.stateRecoverApp.start().get()
-    log.info(
-      "started: recoveryStartBlockNumber={}",
-      this.recoveryStatusPersistence.getRecoveryStartBlockNumber()
-    )
   }
 
   override fun afterExternalServicePostMainLoop() {
     // we need to recall this again because Sync and Mining services
     // may have been started after the plugin start
     this.recoveryModeManager.enableRecoveryModeIfNecessary()
+    log.info(
+      "started: recoveryStartBlockNumber={}",
+      this.recoveryStatusPersistence.getRecoveryStartBlockNumber()
+    )
+    this.stateRecoverApp.start().get()
   }
 
   override fun stop() {

@@ -112,7 +112,7 @@
       <DebouncingFilter/>
       <appender-ref ref="rewrite"/>
     </Logger>
-    <Logger name="clients.l1" level="INFO" additivity="false">
+    <Logger name="clients.l2" level="DEBUG" additivity="false">
       <DebouncingFilter/>
       <appender-ref ref="console"/>
     </Logger>

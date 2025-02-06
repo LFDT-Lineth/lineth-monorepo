@@ -24,4 +24,14 @@ class MathExtensionsTest {
       .isInstanceOf(ArithmeticException::class.java)
       .withFailMessage("ULong overflow")
   }
+
+  @Test
+  fun `ULong MultiplyExact`() {
+    assertThat(2UL.multiplyExact(3UL)).isEqualTo(6UL)
+    assertThat(0UL.multiplyExact(123456789UL)).isEqualTo(0UL)
+    assertThat(ULong.MAX_VALUE.multiplyExact(1UL)).isEqualTo(ULong.MAX_VALUE)
+    assertThatThrownBy { ULong.MAX_VALUE.multiplyExact(2UL) }
+      .isInstanceOf(ArithmeticException::class.java)
+      .hasMessage("ULong overflow")
+  }
 }

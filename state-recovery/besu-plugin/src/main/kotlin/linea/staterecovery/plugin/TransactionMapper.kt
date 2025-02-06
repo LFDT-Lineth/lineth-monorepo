@@ -28,21 +28,22 @@ object TransactionMapper {
     chainId: ULong
   ): Transaction {
     val builder = Transaction.builder()
-
     builder
       .sender(Address.fromHexString(transaction.from.encodeHex()))
+      .nonce(transaction.nonce.toLong())
       .gasLimit(transaction.gasLimit.toLong())
       .value(Wei.of(transaction.value))
       .payload(Bytes.wrap())
       .chainId(chainId.toBigInteger())
-
+      // compressed transaction don't have signature,
+      // so we use a dummy signature which is not verified by Besu in RecoveryMode
+      .signature(SECPSignature(BigInteger.ZERO, BigInteger.ZERO, 0.toByte()))
     transaction.data?.let { data -> builder.payload(Bytes.wrap(data)) }
     transaction.to?.let { builder.to(Address.fromHexString(it.encodeHex())) }
     transaction.gasPrice?.let { builder.gasPrice(Wei.of(it)) }
     transaction.maxPriorityFeePerGas?.let { builder.maxPriorityFeePerGas(Wei.of(it)) }
     transaction.maxFeePerGas?.let { builder.maxFeePerGas(Wei.of(it)) }
     transaction.accessList?.let { builder.accessList(mapAccessListEntries(it)) }
-    builder.signature(SECPSignature(BigInteger.ZERO, BigInteger.ZERO, 0.toByte()))
     return builder.build()
   }
 

@@ -585,7 +585,7 @@ services:
         ipv4_address: 10.10.10.205
 
   zkbesu-shomei-sr:
-    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-devnet-fc27c01}
+    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-devnet-7dfb8e3}
     hostname: zkbesu-shomei-sr
     container_name: zkbesu-shomei-sr
     profiles: [ "external-to-monorepo", "staterecovery" ]

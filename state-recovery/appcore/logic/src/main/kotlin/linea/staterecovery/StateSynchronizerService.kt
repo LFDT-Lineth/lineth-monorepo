@@ -3,7 +3,6 @@ package linea.staterecovery
 import build.linea.domain.EthLogEvent
 import io.vertx.core.Vertx
 import net.consensys.encodeHex
-import net.consensys.linea.BlockNumberAndHash
 import net.consensys.linea.BlockParameter
 import net.consensys.linea.CommonDomainFunctions
 import net.consensys.zkevm.PeriodicPollingService
@@ -21,6 +20,7 @@ class StateSynchronizerService(
   private val blobDecompressor: BlobDecompressorAndDeserializer,
   private val blockImporterAndStateVerifier: BlockImporterAndStateVerifier,
   private val pollingInterval: Duration,
+  private val debugForceSyncStopBlockNumber: ULong?,
   private val log: Logger = LogManager.getLogger(StateSynchronizerService::class.java)
 ) : PeriodicPollingService(
   vertx = vertx,
@@ -120,40 +120,55 @@ class StateSynchronizerService(
   private fun updateNodeWithBlobsAndVerifyState(
     dataSubmissions: List<DataSubmittedEventAndBlobs>,
     dataFinalizedV3: DataFinalizedV3
-  ): SafeFuture<BlockNumberAndHash> {
+  ): SafeFuture<Unit> {
     return blobDecompressor
       .decompress(
         startBlockNumber = dataFinalizedV3.startBlockNumber,
         blobs = dataSubmissions.flatMap { it.blobs }
       )
-      .thenCompose(this::filterOutBlocksAlreadyImported)
-      .thenCompose { decompressedBlocks: List<BlockFromL1RecoveredData> ->
-        val blockInterval = CommonDomainFunctions.blockIntervalString(
-          decompressedBlocks.first().header.blockNumber,
-          decompressedBlocks.last().header.blockNumber
-        )
-        log.debug("importing blocks={} from finalization={}", blockInterval, dataFinalizedV3.intervalString())
-        blockImporterAndStateVerifier
-          .importBlocks(decompressedBlocks)
-          .thenCompose { importResult ->
-            log.debug("imported blocks={}", dataFinalizedV3.intervalString())
-            assertStateMatches(importResult, dataFinalizedV3)
-          }
-          .thenApply {
-            BlockNumberAndHash(
-              number = decompressedBlocks.last().header.blockNumber,
-              hash = decompressedBlocks.last().header.blockHash
-            )
-          }
+      .thenCompose(this::filterOutBlocksAlreadyImportedAndBeyondStopSync)
+      .thenCompose { decompressedBlocksToImport: List<BlockFromL1RecoveredData> ->
+        if (decompressedBlocksToImport.isEmpty()) {
+          log.info(
+            "stopping recovery sync: imported all blocks up to debugForceSyncStopBlockNumber={} finalization={}",
+            debugForceSyncStopBlockNumber,
+            dataFinalizedV3.intervalString()
+          )
+          this.stop()
+          SafeFuture.completedFuture(null)
+        } else {
+          importBlocksAndAssertStateroot(decompressedBlocksToImport, dataFinalizedV3)
+        }
       }
   }
 
-  private fun filterOutBlocksAlreadyImported(
+  private fun importBlocksAndAssertStateroot(
+    decompressedBlocksToImport: List<BlockFromL1RecoveredData>,
+    dataFinalizedV3: DataFinalizedV3
+  ): SafeFuture<Unit> {
+    val blockInterval = CommonDomainFunctions.blockIntervalString(
+      decompressedBlocksToImport.first().header.blockNumber,
+      decompressedBlocksToImport.last().header.blockNumber
+    )
+    log.debug("importing blocks={} from finalization={}", blockInterval, dataFinalizedV3.intervalString())
+    return blockImporterAndStateVerifier
+      .importBlocks(decompressedBlocksToImport)
+      .thenCompose { importResult ->
+        log.debug("imported blocks={}", dataFinalizedV3.intervalString())
+        assertStateMatches(importResult, dataFinalizedV3)
+      }
+  }
+
+  private fun filterOutBlocksAlreadyImportedAndBeyondStopSync(
     blocks: List<BlockFromL1RecoveredData>
   ): SafeFuture<List<BlockFromL1RecoveredData>> {
     return elClient.getBlockNumberAndHash(blockParameter = BlockParameter.Tag.LATEST)
       .thenApply { headBlock ->
-        blocks.dropWhile { it.header.blockNumber <= headBlock.number }
+        var filteredBlocks = blocks.dropWhile { it.header.blockNumber <= headBlock.number }
+        if (debugForceSyncStopBlockNumber != null) {
+          filteredBlocks = filteredBlocks.takeWhile { it.header.blockNumber <= debugForceSyncStopBlockNumber }
+        }
+        filteredBlocks
       }
   }
 
@@ -163,20 +178,20 @@ class StateSynchronizerService(
   ): SafeFuture<Unit> {
     return if (importResult.zkStateRootHash.contentEquals(finalizedV3.finalStateRootHash)) {
       log.info(
-        "state recovered up to block={} zkStateRootHash={} finalization={}",
-        importResult.blockNumber,
-        importResult.zkStateRootHash.encodeHex(),
-        finalizedV3.intervalString()
+        "state recovered up to finalization={} zkStateRootHash={}",
+        finalizedV3.intervalString(),
+        importResult.zkStateRootHash.encodeHex()
       )
       SafeFuture.completedFuture(Unit)
     } else {
       log.error(
         "stopping data recovery from L1, stateRootHash mismatch: " +
-          "finalization={} recoveredStateRootHash={} expected block={} to have l1 proven stateRootHash={}",
+          "finalization={} recovered block={} yielded recoveredStateRootHash={} expected to have " +
+          "l1 proven stateRootHash={}",
         finalizedV3.intervalString(),
-        finalizedV3.finalStateRootHash.encodeHex(),
+        importResult.blockNumber,
         importResult.zkStateRootHash.encodeHex(),
-        finalizedV3.endBlockNumber
+        finalizedV3.finalStateRootHash.encodeHex()
       )
       stateRootMismatchFound = true
       this.stop()

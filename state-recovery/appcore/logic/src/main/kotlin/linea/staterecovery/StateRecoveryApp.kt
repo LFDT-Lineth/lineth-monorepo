@@ -43,7 +43,8 @@ class StateRecoveryApp(
      * The block number at which the recovery mode will start overriding the recovery start block number
      * this is meant for testing purposes, not production
      */
-    val overridingRecoveryStartBlockNumber: ULong? = null
+    val overridingRecoveryStartBlockNumber: ULong? = null,
+    val debugForceSyncStopBlockNumber: ULong? = null
   ) {
     companion object {
       val lineaMainnet = Config(
@@ -96,7 +97,8 @@ class StateRecoveryApp(
     transactionDetailsClient = transactionDetailsClient,
     blobDecompressor = blobDecompressor,
     blockImporterAndStateVerifier = blockImporterAndStateVerifier,
-    pollingInterval = config.l1PollingInterval
+    pollingInterval = config.l1PollingInterval,
+    debugForceSyncStopBlockNumber = config.debugForceSyncStopBlockNumber
   )
   val lastSuccessfullyRecoveredFinalization: EthLogEvent<DataFinalizedV3>?
     get() = stateSynchronizerService.lastSuccessfullyProcessedFinalization

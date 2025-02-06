@@ -5,6 +5,7 @@ import kotlinx.datetime.Instant
 import net.consensys.ByteArrayExt
 
 val zeroHash = ByteArray(32) { 0 }
+val zeroAddress = ByteArray(20) { 0 }
 
 fun createBlock(
   number: ULong = 0UL,
@@ -15,7 +16,7 @@ fun createBlock(
   parentHash: ByteArray = ByteArrayExt.random32(),
   stateRoot: ByteArray = ByteArrayExt.random32(),
   receiptsRoot: ByteArray = ByteArrayExt.random32(),
-  logsBloom: ByteArray = ByteArrayExt.random32(),
+  logsBloom: ByteArray = ByteArrayExt.random(size = 256),
   ommersHash: ByteArray = ByteArrayExt.random32(),
   timestamp: Instant = Clock.System.now(),
   extraData: ByteArray = ByteArrayExt.random32(),
@@ -28,7 +29,7 @@ fun createBlock(
     hash = hash,
     parentHash = parentHash,
     ommersHash = ommersHash,
-    miner = zeroHash,
+    miner = zeroAddress,
     stateRoot = stateRoot,
     transactionsRoot = transactionsRoot,
     receiptsRoot = receiptsRoot,

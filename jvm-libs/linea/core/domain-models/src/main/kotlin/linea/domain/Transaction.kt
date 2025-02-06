@@ -59,8 +59,8 @@ data class Transaction(
   val input: ByteArray,
   val r: BigInteger,
   val s: BigInteger,
-  val v: ULong,
-  val yParity: ULong?,
+  val v: ULong?, // is defined if type is FRONTIER
+  val yParity: ULong?, // EIP-2718 yParity is defined for all transactions types after FRONTIER
   val chainId: ULong? = null, // Optional field for EIP-155 transactions
   val gasPrice: ULong?, // null for EIP-1559 transactions
   val maxFeePerGas: ULong? = null, // null for EIP-1559 transactions

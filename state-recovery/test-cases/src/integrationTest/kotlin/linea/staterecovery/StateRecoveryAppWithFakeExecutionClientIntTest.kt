@@ -53,6 +53,10 @@ class StateRecoveryAppWithFakeExecutionClientIntTest {
 
   private lateinit var contractClientForBlobSubmissions: LineaRollupSmartContractClient
   private lateinit var contractClientForAggregationSubmissions: LineaRollupSmartContractClient
+  private lateinit var blobScanClient: BlobScanClient
+  private lateinit var logsSearcher: Web3JLogsSearcher
+  private lateinit var vertx: Vertx
+
   private val testDataDir = run {
     "testdata/coordinator/prover/v3"
   }
@@ -62,6 +66,7 @@ class StateRecoveryAppWithFakeExecutionClientIntTest {
 
   @BeforeEach
   fun beforeEach(vertx: Vertx) {
+    this.vertx = vertx
     val jsonRpcFactory = VertxHttpJsonRpcClientFactory(
       vertx = vertx,
       metricsFacade = MicrometerMetricsFacade(SimpleMeterRegistry())
@@ -98,7 +103,7 @@ class StateRecoveryAppWithFakeExecutionClientIntTest {
       ),
       contractAddress = rollupDeploymentResult.contractAddress
     )
-    val logsSearcher = Web3JLogsSearcher(
+    this.logsSearcher = Web3JLogsSearcher(
       vertx = vertx,
       web3jClient = Web3jClientManager.buildL1Client(
         log = LogManager.getLogger("test.clients.l1.events-fetcher"),
@@ -118,7 +123,7 @@ class StateRecoveryAppWithFakeExecutionClientIntTest {
       rollupDeploymentResult.rollupOperators[1].txManager,
       smartContractErrors = lineaRollupContractErrors
     )
-    val blobScanClient = BlobScanClient.create(
+    this.blobScanClient = BlobScanClient.create(
       vertx = vertx,
       endpoint = URI(blobScanUrl),
       requestRetryConfig = RequestRetryConfig(
@@ -129,6 +134,28 @@ class StateRecoveryAppWithFakeExecutionClientIntTest {
       logger = LogManager.getLogger("test.clients.l1.blobscan")
     )
 
+    instantiateStateRecoveryApp()
+
+    configureLoggers(
+      rootLevel = Level.INFO,
+      log.name to Level.INFO,
+      "linea.testing.submission" to Level.INFO,
+      "net.consensys.linea.contract.Web3JContractAsyncHelper" to Level.WARN, // silence noisy gasPrice Caps logs
+      "test.clients.l1.executionlayer" to Level.DEBUG,
+      "test.clients.l1.web3j-default" to Level.INFO,
+      "test.clients.l1.state-manager" to Level.INFO,
+      "test.clients.l1.transaction-details" to Level.INFO,
+      "test.clients.l1.linea-contract" to Level.INFO,
+      "test.clients.l1.events-fetcher" to Level.INFO,
+      "test.clients.l1.blobscan" to Level.INFO,
+      "net.consensys.linea.contract.l1" to Level.INFO,
+      "test.fake.clients.l1.fake-execution-layer" to Level.INFO
+    )
+  }
+
+  fun instantiateStateRecoveryApp(
+    debugForceSyncStopBlockNumber: ULong? = null
+  ) {
     stateRecoverApp = StateRecoveryApp(
       vertx = vertx,
       elClient = executionLayerClient,
@@ -142,23 +169,9 @@ class StateRecoveryAppWithFakeExecutionClientIntTest {
         l1LatestSearchBlock = BlockParameter.Tag.LATEST,
         l1PollingInterval = 10.milliseconds,
         executionClientPollingInterval = 1.seconds,
-        smartContractAddress = lineaContractClient.getAddress()
+        smartContractAddress = lineaContractClient.getAddress(),
+        debugForceSyncStopBlockNumber = debugForceSyncStopBlockNumber
       )
-    )
-
-    configureLoggers(
-      rootLevel = Level.INFO,
-      log.name to Level.INFO,
-      "net.consensys.linea.contract.Web3JContractAsyncHelper" to Level.WARN, // silence noisy gasPrice Caps logs
-      "test.clients.l1.executionlayer" to Level.DEBUG,
-      "test.clients.l1.web3j-default" to Level.INFO,
-      "test.clients.l1.state-manager" to Level.INFO,
-      "test.clients.l1.transaction-details" to Level.INFO,
-      "test.clients.l1.linea-contract" to Level.INFO,
-      "test.clients.l1.events-fetcher" to Level.INFO,
-      "test.clients.l1.blobscan" to Level.INFO,
-      "net.consensys.linea.contract.l1" to Level.INFO,
-      "test.fake.clients.l1.fake-execution-layer" to Level.INFO
     )
   }
 
@@ -376,5 +389,24 @@ class StateRecoveryAppWithFakeExecutionClientIntTest {
 
     assertThat(executionLayerClient.headBlock.number)
       .isEqualTo(aggregationsAndBlobs[1].aggregation!!.endBlockNumber)
+  }
+
+  @Test
+  fun `should stop synch at forceSyncStopBlockNumber`() {
+    val debugForceSyncStopBlockNumber = aggregationsAndBlobs[2].aggregation!!.startBlockNumber
+    instantiateStateRecoveryApp(debugForceSyncStopBlockNumber = debugForceSyncStopBlockNumber)
+    log.debug("forceSyncStopBlockNumber={}", fakeStateManagerClient)
+
+    stateRecoverApp.start().get()
+    submitDataToL1ContactAndWaitExecution(waitTimeout = 1.minutes)
+
+    await()
+      .atMost(1.minutes.toJavaDuration())
+      .untilAsserted {
+        println(executionLayerClient.headBlock.number)
+        assertThat(executionLayerClient.headBlock.number).isGreaterThanOrEqualTo(debugForceSyncStopBlockNumber)
+      }
+
+    assertThat(executionLayerClient.headBlock.number).isEqualTo(debugForceSyncStopBlockNumber)
   }
 }

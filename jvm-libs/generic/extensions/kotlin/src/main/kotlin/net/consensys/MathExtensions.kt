@@ -22,3 +22,10 @@ class KMath {
 
 fun ULong.plusExact(other: ULong): ULong = KMath.addExact(this, other)
 fun UInt.plusExact(other: UInt): UInt = KMath.addExact(this, other)
+
+fun ULong.multiplyExact(other: ULong): ULong {
+  if (this != 0UL && other != 0UL && ULong.MAX_VALUE / this < other) {
+    throw ArithmeticException("ULong overflow")
+  }
+  return this * other
+}

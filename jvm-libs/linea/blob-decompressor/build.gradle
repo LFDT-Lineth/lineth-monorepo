@@ -12,6 +12,8 @@ dependencies {
 
   testImplementation project(":jvm-libs:linea:blob-compressor")
   testImplementation(testFixtures(project(":jvm-libs:linea:blob-compressor")))
+  testImplementation(testFixtures(project(":jvm-libs:linea:core:domain-models")))
+  testImplementation(project(":jvm-libs:linea:besu-rlp-and-mappers"))
   testImplementation(project(":jvm-libs:linea:testing:file-system"))
   testImplementation("io.tmio:tuweni-bytes:${libs.versions.tuweni.get()}")
   testImplementation(project(":jvm-libs:linea:besu-libs"))

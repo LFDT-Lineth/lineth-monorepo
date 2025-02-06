@@ -6,6 +6,7 @@ import java.math.MathContext
 import java.math.RoundingMode
 
 const val OneGWei = 1_000_000_000L
+const val OneEth = 1_000_000_000_000_000_000L
 val OneGWeiBigDecimal: BigDecimal = BigDecimal.valueOf(OneGWei)
 
 const val OneKWei = 1_000L
@@ -56,7 +57,8 @@ fun ULong.toHexStringUInt256(): String = this.toHexStringPaddedToBitSize(256)
 
 fun ULong.toKWeiUInt(): UInt = this.toDouble().tokWeiUInt()
 
-inline val ULong.gwei: ULong get() = this * OneGWei.toULong()
+inline val ULong.gwei: ULong get() = this.multiplyExact(OneGWei.toULong())
+inline val ULong.eth: ULong get() = this.multiplyExact(OneEth.toULong())
 
 fun ULong.toGWei(): Double = this.toDouble().toGWei()
 

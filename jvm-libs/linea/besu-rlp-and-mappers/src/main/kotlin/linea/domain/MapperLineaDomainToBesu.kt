@@ -6,6 +6,7 @@ import net.consensys.toBigInteger
 import org.apache.tuweni.bytes.Bytes
 import org.apache.tuweni.bytes.Bytes32
 import org.hyperledger.besu.crypto.SECP256K1
+import org.hyperledger.besu.crypto.SECPSignature
 import org.hyperledger.besu.datatypes.AccessListEntry
 import org.hyperledger.besu.datatypes.Address
 import org.hyperledger.besu.datatypes.Hash
@@ -25,6 +26,14 @@ object MapperLineaDomainToBesu {
   private val secp256k1 = SECP256K1()
   private val blockHeaderFunctions = MainnetBlockHeaderFunctions()
 
+  internal fun signature(tx: linea.domain.Transaction, recId: Byte): SECPSignature {
+    return secp256k1.createSignature(
+      tx.r,
+      tx.s,
+      recId
+    )
+  }
+
   fun recIdFromV(v: BigInteger): Pair<Byte, BigInteger?> {
     val recId: Byte
     var chainId: BigInteger? = null
@@ -41,9 +50,9 @@ object MapperLineaDomainToBesu {
 
   fun getRecIdAndChainId(tx: linea.domain.Transaction): Pair<Byte, BigInteger?> {
     if (tx.type == TransactionType.FRONTIER) {
-      return recIdFromV(tx.v.toBigInteger())
+      return recIdFromV(tx.v!!.toBigInteger())
     } else {
-      return tx.v.toByte() to tx.chainId?.toBigInteger()
+      return (tx.yParity ?: tx.v)!!.toByte() to tx.chainId?.toBigInteger()
     }
   }
 
@@ -86,7 +95,7 @@ object MapperLineaDomainToBesu {
       if (th.message?.startsWith("Error mapping transaction to Besu") ?: false) {
         throw th
       } else {
-        throw RuntimeException("Error mapping block to Besu: block=${block.number}", th)
+        throw RuntimeException("Error mapping block=${block.number} to Besu: ${th.message}", th)
       }
     }
   }
@@ -103,16 +112,12 @@ object MapperLineaDomainToBesu {
 
   fun mapToBesu(tx: linea.domain.Transaction): Transaction {
     val (recId, recChainId) = getRecIdAndChainId(tx)
-    val signature = secp256k1.createSignature(
-      tx.r,
-      tx.s,
-      recId
-    )
+    val signature = signature(tx, recId)
 
     val besuType = tx.type.toBesu()
     val chainId = tx.chainId?.toBigInteger() ?: recChainId
     return Transaction.builder()
-      .type(tx.type.toBesu())
+      .type(besuType)
       .nonce(tx.nonce.toLong())
       .apply { tx.gasPrice?.let { gasPrice(it.toWei()) } }
       .gasLimit(tx.gasLimit.toLong())
