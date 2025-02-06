@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0
-pragma solidity 0.8.26;
+pragma solidity 0.8.28;
 
 import { IMessageService } from "../../../messaging/interfaces/IMessageService.sol";
 

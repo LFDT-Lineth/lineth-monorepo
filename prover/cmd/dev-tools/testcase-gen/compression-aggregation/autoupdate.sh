@@ -37,7 +37,7 @@ mv -f .samples-test-eip4844/* ${SOLTESTDIR_EIP4844}/test
 rm -rf .samples-simple-calldata .samples-multiproof-calldata .samples-test-calldata
 rm -rf .samples-simple-eip4844 .samples-multiproof-eip4844 .samples-test-eip4844
 
-sed -i.bak 's/pragma solidity \0.8.24;/pragma solidity 0.8.26;/g' ../contracts/test/hardhat/_testData/compressedData/Verifier1.sol
+sed -i.bak 's/pragma solidity \0.8.26;/pragma solidity 0.8.28;/g' ../contracts/test/hardhat/_testData/compressedData/Verifier1.sol
 
 cp ../contracts/test/hardhat/_testData/compressedData/Verifier1.sol ../contracts/src/verifiers/PlonkVerifierForDataAggregation.sol
 sed -i.bak 's/contract PlonkVerifier /contract PlonkVerifierForDataAggregation /g' ../contracts/src/verifiers/PlonkVerifierForDataAggregation.sol

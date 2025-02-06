@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0
-pragma solidity 0.8.26;
+pragma solidity 0.8.28;
 
 import { LineaRollup } from "../../../rollup/LineaRollup.sol";
 
+/// @custom:oz-upgrades-unsafe-allow missing-initializer
 contract TestLineaRollup is LineaRollup {
   function addRollingHash(uint256 _messageNumber, bytes32 _messageHash) external {
     _addRollingHash(_messageNumber, _messageHash);
