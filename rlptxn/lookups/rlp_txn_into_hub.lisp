@@ -1,11 +1,5 @@
 (defun (rlp-txn-into-hub-src-selector) (* rlptxn.REQUIRES_EVM_EXECUTION rlptxn.IS_PHASE_ACCESS_LIST (- 1 rlptxn.IS_PREFIX)))
 
-(defun (prewarming-phase-address-hi)       (+ (* hub.PEEK_AT_ACCOUNT hub.account/ADDRESS_HI) (* hub.PEEK_AT_STORAGE hub.storage/ADDRESS_HI)))
-(defun (prewarming-phase-address-lo)       (+ (* hub.PEEK_AT_ACCOUNT hub.account/ADDRESS_LO) (* hub.PEEK_AT_STORAGE hub.storage/ADDRESS_LO)))
-(defun (prewarming-phase-storage-key-hi)   (* hub.PEEK_AT_STORAGE hub.storage/STORAGE_KEY_HI))
-(defun (prewarming-phase-storage-key-lo)   (* hub.PEEK_AT_STORAGE hub.storage/STORAGE_KEY_LO))
-(defun (rlp-txn-depth-2)                   [rlptxn.DEPTH 2]) ;; ""
-
 (deflookup 
   rlptxn-into-hub
   ;; target columns
