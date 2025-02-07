@@ -270,6 +270,7 @@ contract OpcodeTester {
     bytes memory fieldsToHashSection1 = abi.encode(
       rollingBlockDetailComputations,
       blockhash(block.number - 1),
+      blockhash(block.number),
       block.basefee,
       block.chainid,
       block.coinbase,
