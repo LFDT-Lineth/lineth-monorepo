@@ -81,6 +81,46 @@ export class RollupGetZkEVMBlockNumberClient {
   }
 }
 
+export class LineaEstimateGasClient {
+  private endpoint: URL;
+
+  public constructor(endpoint: URL) {
+    this.endpoint = endpoint;
+  }
+
+  public async lineaEstimateGas(
+    from: string,
+    to: string,
+    data: string = "0x",
+    value: string = "0x0",
+  ): Promise<{ maxFeePerGas: bigint; maxPriorityFeePerGas: bigint; gasLimit: bigint }> {
+    const request = {
+      method: "post",
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        method: "linea_estimateGas",
+        params: [
+          {
+            from,
+            to,
+            data,
+            value,
+          },
+        ],
+        id: 1,
+      }),
+    };
+    const response = await fetch(this.endpoint, request);
+    const responseJson = await response.json();
+    assert("result" in responseJson);
+    return {
+      maxFeePerGas: BigInt(responseJson.result.baseFeePerGas) + BigInt(responseJson.result.priorityFeePerGas),
+      maxPriorityFeePerGas: BigInt(responseJson.result.priorityFeePerGas),
+      gasLimit: BigInt(responseJson.result.gasLimit),
+    };
+  }
+}
+
 export class TransactionExclusionClient {
   private endpoint: URL;
 

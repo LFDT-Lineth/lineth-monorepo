@@ -45,7 +45,14 @@ plugin-linea-tx-pool-profitability-check-p2p-enabled=false
 plugin-linea-tx-pool-profitability-check-api-enabled=false
 plugin-linea-tx-pool-simulation-check-api-enabled=true
 plugin-linea-tx-pool-simulation-check-p2p-enabled=false
+plugin-linea-extra-data-pricing-enabled=true
+plugin-linea-tx-pool-min-margin="0.8"
+plugin-linea-min-margin="1.0"
+plugin-linea-fixed-gas-cost-wei=30000000
+plugin-linea-variable-gas-cost-wei=1000000000
+plugin-linea-extra-data-set-min-gas-price-enabled=true
 plugin-linea-estimate-gas-compatibility-mode-enabled=false
+plugin-linea-estimate-gas-min-margin="1.2"
 
 Xbonsai-limit-trie-logs-enabled=false
 bonsai-historical-block-limit=1024

@@ -1,13 +1,14 @@
 import { ethers } from "ethers";
 import { describe, expect, it } from "@jest/globals";
 import { config } from "./config/tests-config";
-import { RollupGetZkEVMBlockNumberClient, etherToWei } from "./common/utils";
+import { LineaEstimateGasClient, RollupGetZkEVMBlockNumberClient, etherToWei } from "./common/utils";
 import { TRANSACTION_CALLDATA_LIMIT } from "./common/constants";
 
 const l2AccountManager = config.getL2AccountManager();
 
 describe("Layer 2 test suite", () => {
   const l2Provider = config.getL2Provider();
+  const lineaEstimateGasClient = new LineaEstimateGasClient(config.getL2BesuNodeEndpoint()!);
 
   it.concurrent("Should revert if transaction data size is above the limit", async () => {
     const account = await l2AccountManager.generateAccount();
@@ -26,7 +27,11 @@ describe("Layer 2 test suite", () => {
     const nonce = await l2Provider.getTransactionCount(account.address, "pending");
     logger.debug(`Fetched nonce. nonce=${nonce} account=${account.address}`);
 
-    const { maxPriorityFeePerGas, maxFeePerGas } = await l2Provider.getFeeData();
+    const { maxPriorityFeePerGas, maxFeePerGas } = await lineaEstimateGasClient.lineaEstimateGas(
+      account.address,
+      await dummyContract.getAddress(),
+      dummyContract.interface.encodeFunctionData("setPayload", [ethers.randomBytes(1000)]),
+    );
     logger.debug(`Fetched fee data. maxPriorityFeePerGas=${maxPriorityFeePerGas} maxFeePerGas=${maxFeePerGas}`);
 
     const tx = await dummyContract.connect(account).setPayload(ethers.randomBytes(1000), {

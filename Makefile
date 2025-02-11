@@ -75,13 +75,13 @@ start-env-with-tracing-v1:
 	make start-env COMPOSE_FILE=docker/compose-tracing-v1.yml LINEA_PROTOCOL_CONTRACTS_ONLY=true
 
 start-env-with-tracing-v1-ci:
-	make start-env COMPOSE_FILE=docker/compose-tracing-v1-ci-extension.yml
+	make start-env COMPOSE_FILE=docker/compose-tracing-v1-ci-extension.yml DISABLE_JSON_RPC_PRICING_PROPAGATION=false
 
 start-env-with-tracing-v2:
 	make start-env COMPOSE_FILE=docker/compose-tracing-v2.yml LINEA_PROTOCOL_CONTRACTS_ONLY=true
 
 start-env-with-tracing-v2-ci:
-	make start-env COMPOSE_FILE=docker/compose-tracing-v2-ci-extension.yml
+	make start-env COMPOSE_FILE=docker/compose-tracing-v2-ci-extension.yml DISABLE_JSON_RPC_PRICING_PROPAGATION=false
 
 start-env-with-staterecovery: COMPOSE_PROFILES:=l1,l2,staterecovery
 start-env-with-staterecovery: L1_CONTRACT_VERSION:=6

@@ -76,6 +76,13 @@ export default class TestSetup {
     return this.config.L2.sequencerEndpoint;
   }
 
+  public getL2BesuNodeEndpoint(): URL | undefined {
+    if (!this.isLocalL2Config(this.config.L2)) {
+      return undefined;
+    }
+    return this.config.L2.besuNodeRpcUrl;
+  }
+
   public getTransactionExclusionEndpoint(): URL | undefined {
     if (!this.isLocalL2Config(this.config.L2)) {
       return undefined;

@@ -2,7 +2,7 @@ import { ethers, Wallet } from "ethers";
 import { describe, expect, it } from "@jest/globals";
 import type { Logger } from "winston";
 import { config } from "./config/tests-config";
-import { encodeFunctionCall, etherToWei, waitForEvents } from "./common/utils";
+import { encodeFunctionCall, etherToWei, LineaEstimateGasClient, waitForEvents } from "./common/utils";
 import { MESSAGE_SENT_EVENT_SIGNATURE } from "./common/constants";
 
 async function sendL1ToL2Message(
@@ -71,6 +71,7 @@ async function sendL2ToL1Message(
   const l2Provider = config.getL2Provider();
   const dummyContract = config.getL1DummyContract(l1Account);
   const l2MessageService = config.getL2MessageServiceContract(l2Account);
+  const lineaEstimateGasClient = new LineaEstimateGasClient(config.getL2BesuNodeEndpoint()!);
 
   const valueAndFee = etherToWei("0.001");
   const calldata = withCalldata
@@ -81,7 +82,12 @@ async function sendL2ToL1Message(
   const nonce = await l2Provider.getTransactionCount(l2Account.address, "pending");
   logger.debug(`Fetched nonce. nonce=${nonce} account=${l2Account.address}`);
 
-  const { maxPriorityFeePerGas, maxFeePerGas } = await l2Provider.getFeeData();
+  const { maxPriorityFeePerGas, maxFeePerGas, gasLimit } = await lineaEstimateGasClient.lineaEstimateGas(
+    l2Account.address,
+    await l2MessageService.getAddress(),
+    l2MessageService.interface.encodeFunctionData("sendMessage", [destinationAddress, valueAndFee, calldata]),
+    etherToWei("0.001").toString(16),
+  );
   logger.debug(`Fetched fee data. maxPriorityFeePerGas=${maxPriorityFeePerGas} maxFeePerGas=${maxFeePerGas}`);
 
   const tx = await l2MessageService.sendMessage(destinationAddress, valueAndFee, calldata, {
@@ -89,6 +95,7 @@ async function sendL2ToL1Message(
     nonce,
     maxPriorityFeePerGas,
     maxFeePerGas,
+    gasLimit,
   });
 
   logger.debug(`sendMessage transaction sent. transactionHash=${tx.hash}`);
