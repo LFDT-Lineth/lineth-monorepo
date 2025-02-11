@@ -6,7 +6,7 @@ import { ErrorAndDestructionTesting } from "./ErrorAndDestructionTesting.sol";
 contract OpcodeTester {
   mapping(bytes2 => uint256) public opcodeExecutions;
   address public yulContract;
-  bytes32 rollingBlockDetailComputations;
+  bytes32 public rollingBlockDetailComputations;
 
   // The opcodes are logged here for completeness sake even though not used.
   // NOTE: For looping we make it 2 bytes instead of one, so the real value is actually missing the 00 from 0x0001 (0x01) etc.

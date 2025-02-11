@@ -15,7 +15,7 @@
 */
 
 import { getRequiredEnvVar } from "../common/helpers/environment";
-import { ethers } from "ethers";
+import { TransactionReceipt, ethers } from "ethers";
 import { abi as opcodeTesterAbi } from "./static-artifacts/OpcodeTester.json";
 
 async function main() {
@@ -31,9 +31,19 @@ async function main() {
 
   for (let i = 1; i <= executionRunCount; i++) {
     console.log(`Executing all opcodes for runs ${i} of ${executionRunCount}`);
+    const valueBeforeExecution = await opcodeTester.rollingBlockDetailComputations();
     const executeTx = await opcodeTester.executeAllOpcodes({ gasLimit: 5_000_000 });
-    const receipt = await executeTx.wait();
-    console.log(` - Gas used in run: ${receipt?.gasUsed}`);
+    const receipt: TransactionReceipt = await executeTx.wait();
+    const valueAfterExecution = await opcodeTester.rollingBlockDetailComputations();
+
+    if (valueBeforeExecution == valueAfterExecution) {
+      throw "No state changes were persisted!";
+    }
+
+    console.log(` - Gas used in run: ${receipt?.gasUsed} at block number=${receipt?.blockNumber}`);
+    console.log(
+      ` - State variable rollingBlockDetailComputations changed from=${valueBeforeExecution} to=${valueAfterExecution} `,
+    );
   }
 }
 

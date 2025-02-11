@@ -38,7 +38,7 @@
       "balance": "90000000000000000000001",
       "@WARNING": "FOR LOCAL DEV ONLY - DO NOT REUSE THESE KEYS ELSEWHERE",
       "@privateKey": "8f2a55949038a9610f50fb23b5883af3b4ecb3c3bb792cbcefbd1542c692be63",
-      "@comment": "account 1, can be used as end user"
+      "@comment": "Used for OPCODE testing, do not use elsewhere"
     },
     "627306090abaB3A6e1400e9345bC60c78a8BEf57": {
       "balance": "90000000000000000000002",

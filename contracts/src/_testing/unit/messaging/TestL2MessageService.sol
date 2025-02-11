@@ -3,7 +3,7 @@ pragma solidity 0.8.19;
 
 import { L2MessageService } from "../../../messaging/l2/L2MessageService.sol";
 
-  /// @custom:oz-upgrades-unsafe-allow missing-initializer
+/// @custom:oz-upgrades-unsafe-allow missing-initializer
 contract TestL2MessageService is L2MessageService {
   address public originalSender;
   bool private reentryDone;
