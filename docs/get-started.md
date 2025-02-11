@@ -4,10 +4,10 @@
 
 - Node.js v20 or higher
 - Docker v24 or higher
-  - Docker should ideally have ~16GB of Memory and 4+ CPUs to run the entire stack.
+  - Docker should ideally have ~16 GB of Memory and 4+ CPUs to run the entire stack.
 - Docker Compose version v2.19+
 - Make v3.81+
-- Pnpm >=v9.14.4 (https://pnpm.io/installation)
+- Pnpm v9.14.4 (https://pnpm.io/installation)
 
 ### Run stack locally
 
@@ -17,22 +17,21 @@
 make pnpm-install
 ```
 
-#### Start stack & run E2E tests
+#### Start the stack and run end-to-end tests
 
 ```
-make fresh-start-all
-
+make start-env-with-tracing-v2
 cd e2e
 pnpm run test:e2e:local
 ```
 
-To stop that stack run:
+To stop the stack:
 
 ```
 make clean-enviroment
 ```
 
-While running the end2end tests, you should observe files being generated in `tmp/local/` directory.
+While running the end-to-end tests, you should observe files being generated in `tmp/local/` directory.
 
 ```
 ├── local
@@ -65,7 +64,10 @@ While running the end2end tests, you should observe files being generated in `tm
 
 #### Troubleshooting
 
-- Docker: Sometimes restarting the stack several times may lead to network/state issues. The following commands may help. **Note:** Please be aware that this will permanently remove all docker images, containers and **docker volumes** and any data saved it them.
+Docker: Sometimes restarting the stack several times may lead to network/state issues.
+The following commands may help.
+**Note:** Please be aware this will permanently remove all docker images, containers and **docker volumes**
+and any data saved it them.
 
 ```
 make clean-environment
@@ -74,7 +76,10 @@ docker system prune --volumes
 
 ## Tuning in conflation
 
-For local testing and development conflation deadline is set to 6s `conflation-deadline=PT6S` in `config/coordinator/coordinator-docker.config.toml` file. Hence, only 2 blocks conflation. If you want bigger conflations, increase the deadline accordingly.
+For local testing and development conflation deadline is set to 6s `conflation-deadline=PT6S` in
+`config/coordinator/coordinator-docker.config.toml` file.
+Hence, only a two-block conflation.
+If you want bigger conflations, increase the deadline accordingly.
 
 ## Next steps
 
