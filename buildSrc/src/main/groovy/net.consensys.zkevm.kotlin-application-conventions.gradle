@@ -9,3 +9,14 @@ plugins {
   // Apply the application plugin to add support for building a CLI application in Java.
   id 'application'
 }
+
+tasks.distTar {
+  // we don't use the tar distribution
+  onlyIf { false }
+}
+
+tasks.distZip {
+  // we only need the zip distribution to build the docker image
+  // we explicitly call distZip to build the zip distribution
+  enabled = false
+}

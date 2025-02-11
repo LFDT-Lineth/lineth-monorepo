@@ -29,8 +29,7 @@ dependencies {
   implementation "com.fasterxml.jackson.core:jackson-databind:${libs.versions.jackson.get()}"
   implementation "com.fasterxml.jackson.module:jackson-module-kotlin:${libs.versions.jackson.get()}"
 
-  implementation "org.hyperledger.besu.internal:core:${libs.versions.besu.get()}"
-  implementation "org.hyperledger.besu:plugin-api:${libs.versions.besu.get()}"
+  implementation(project(":jvm-libs:linea:besu-libs"))
 
   api("io.netty:netty-transport-native-epoll:${libs.versions.netty.get()}:linux-x86_64") {
     because "It enables native transport for Linux."

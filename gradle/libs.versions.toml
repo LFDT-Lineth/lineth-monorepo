@@ -19,7 +19,6 @@ restassured = "5.3.0"
 wiremock = "3.0.1"
 
 # Runtime
-besu = "24.12.2"
 blobCompressor = "0.0.4"
 blobShnarfCalculator = "0.0.4"
 bouncycastle = "1.79"

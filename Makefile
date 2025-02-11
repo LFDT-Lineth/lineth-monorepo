@@ -36,17 +36,22 @@ start-env: L1_CONTRACT_VERSION:=6
 start-env: SKIP_CONTRACTS_DEPLOYMENT:=false
 start-env: LINEA_PROTOCOL_CONTRACTS_ONLY:=false
 start-env:
-	if [ "$(CLEAN_PREVIOUS_ENV)" = "true" ]; then \
-  		make clean-environment; \
+	@if [ "$(CLEAN_PREVIOUS_ENV)" = "true" ]; then \
+		$(MAKE) clean-environment; \
 	else \
 		echo "Starting stack reusing previous state"; \
 	fi; \
 	mkdir -p tmp/local; \
 	L1_GENESIS_TIME=$(get_future_time) COMPOSE_PROFILES=$(COMPOSE_PROFILES) docker compose -f $(COMPOSE_FILE) up -d; \
+	while [ "$$(docker compose -f $(COMPOSE_FILE) ps -q l1-el-node | xargs docker inspect -f '{{.State.Health.Status}}')" != "healthy" ] || \
+  			[ "$$(docker compose -f $(COMPOSE_FILE) ps -q sequencer | xargs docker inspect -f '{{.State.Health.Status}}')" != "healthy" ]; do \
+  			sleep 2; \
+  			echo "Checking health status of l1-el-node and sequencer..."; \
+  	done
 	if [ "$(SKIP_CONTRACTS_DEPLOYMENT)" = "true" ]; then \
 		echo "Skipping contracts deployment"; \
 	else \
-		make deploy-contracts L1_CONTRACT_VERSION=$(L1_CONTRACT_VERSION) LINEA_PROTOCOL_CONTRACTS_ONLY=$(LINEA_PROTOCOL_CONTRACTS_ONLY); \
+		$(MAKE) deploy-contracts L1_CONTRACT_VERSION=$(L1_CONTRACT_VERSION) LINEA_PROTOCOL_CONTRACTS_ONLY=$(LINEA_PROTOCOL_CONTRACTS_ONLY); \
 	fi
 
 start-l1:
