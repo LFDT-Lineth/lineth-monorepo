@@ -9,9 +9,7 @@
   (DEPLOYMENT_NUMBER :i16)
   (DEPLOYMENT_STATUS :binary@prove)
   (CODE_HASH_HI :i128 :display :hex)
-  (CODE_HASH_LO :i128 :display :hex)
-  (COMMIT_TO_STATE :binary@prove)
-  (READ_FROM_STATE :binary@prove))
+  (CODE_HASH_LO :i128 :display :hex))
 
 (defalias
   CFI CODE_FRAGMENT_INDEX)
