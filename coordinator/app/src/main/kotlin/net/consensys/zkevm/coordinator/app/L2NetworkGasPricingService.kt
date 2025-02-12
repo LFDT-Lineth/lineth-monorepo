@@ -38,9 +38,8 @@ class L2NetworkGasPricingService(
 
   data class Config(
     val feeHistoryFetcherConfig: FeeHistoryFetcherImpl.Config,
-    val jsonRpcPricingPropagationEnabled: Boolean,
     val legacy: LegacyGasPricingCalculatorConfig,
-    val jsonRpcGasPriceUpdaterConfig: GasPriceUpdaterImpl.Config,
+    val jsonRpcGasPriceUpdaterConfig: GasPriceUpdaterImpl.Config?,
     val jsonRpcPriceUpdateInterval: Duration,
     val extraDataPricingPropagationEnabled: Boolean,
     val extraDataUpdateInterval: Duration,
@@ -82,7 +81,7 @@ class L2NetworkGasPricingService(
   }
 
   private val minMineableFeesPricerService: MinMineableFeesPricerService? =
-    if (config.jsonRpcPricingPropagationEnabled) {
+    if (config.jsonRpcGasPriceUpdaterConfig != null) {
       val l2SetGasPriceUpdater: GasPriceUpdater = GasPriceUpdaterImpl(
         httpJsonRpcClientFactory = httpJsonRpcClientFactory,
         config = config.jsonRpcGasPriceUpdaterConfig

@@ -280,7 +280,6 @@ class CoordinatorConfigTest {
         feeHistoryBlockCount = 50U,
         feeHistoryRewardPercentile = 15.0
       ),
-      jsonRpcPricingPropagationEnabled = true,
       legacy = L2NetworkGasPricingService.LegacyGasPricingCalculatorConfig(
         legacyGasPricingCalculatorBounds = BoundableFeeCalculator.Config(
           feeUpperBound = 10_000_000_000.0,

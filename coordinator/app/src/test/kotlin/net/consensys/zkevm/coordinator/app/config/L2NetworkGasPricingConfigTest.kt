@@ -242,7 +242,6 @@ class L2NetworkGasPricingConfigTest {
           feeHistoryBlockCount = 50U,
           feeHistoryRewardPercentile = 15.0
         ),
-        jsonRpcPricingPropagationEnabled = true,
         legacy = L2NetworkGasPricingService.LegacyGasPricingCalculatorConfig(
           naiveGasPricingCalculatorConfig = GasUsageRatioWeightedAverageFeesCalculator.Config(
             baseFeeCoefficient = 0.1,
@@ -310,7 +309,6 @@ class L2NetworkGasPricingConfigTest {
           feeHistoryBlockCount = 50U,
           feeHistoryRewardPercentile = 15.0
         ),
-        jsonRpcPricingPropagationEnabled = true,
         legacy = L2NetworkGasPricingService.LegacyGasPricingCalculatorConfig(
           naiveGasPricingCalculatorConfig = null,
           legacyGasPricingCalculatorBounds = BoundableFeeCalculator.Config(
@@ -335,6 +333,193 @@ class L2NetworkGasPricingConfigTest {
           ),
           retryConfig = l2NetworkGasPricingRequestretryConfig
         ),
+        jsonRpcPriceUpdateInterval = 12.seconds,
+        extraDataPricingPropagationEnabled = true,
+        extraDataUpdateInterval = 12.seconds,
+        variableFeesCalculatorConfig = VariableFeesCalculator.Config(
+          blobSubmissionExpectedExecutionGas = 213_000u,
+          bytesPerDataSubmission = 131072u,
+          expectedBlobGas = 131072u,
+          margin = 4.0
+        ),
+        variableFeesCalculatorBounds = BoundableFeeCalculator.Config(
+          feeUpperBound = 10_000_000_001.0,
+          feeLowerBound = 90_000_001.0,
+          feeMargin = 0.0
+        ),
+        extraDataCalculatorConfig = MinerExtraDataV1CalculatorImpl.Config(
+          fixedCostInKWei = 3000u,
+          ethGasPriceMultiplier = 1.2
+        ),
+        extraDataUpdaterConfig = ExtraDataV1UpdaterImpl.Config(
+          sequencerEndpoint = URI(/* str = */ "http://sequencer:8545/").toURL(),
+          retryConfig = l2NetworkGasPricingRequestretryConfig
+        )
+      )
+    )
+  }
+
+  @Test
+  fun `Undefined json rpc pricing propagation reification is correct`() {
+    val undefinedJsonRpcPropagation = """
+    [l2-network-gas-pricing]
+    disabled = false
+    price-update-interval = "PT12S"
+
+    fee-history-block-count = 50
+    fee-history-reward-percentile = 15
+
+    blob-submission-expected-execution-gas = 213000.0 # Lower to 120k as we improve efficiency
+    # Defaults to expected-blob-gas
+    #bytes-per-data-submission=131072.0 # 2^17
+    l1-blob-gas = 131072 # 2^17
+
+    [l2-network-gas-pricing.request-retry]
+    max-retries = 3
+    timeout = "PT6S"
+    backoff-delay = "PT1S"
+    failures-warning-threshold = 2
+
+    [l2-network-gas-pricing.variable-cost-pricing]
+    gas-price-fixed-cost = 3000000
+    legacy-fees-multiplier = 1.2
+    margin = 4.0
+    variable-cost-upper-bound = 10000000001 # ~10 GWEI
+    variable-cost-lower-bound = 90000001  # ~0.09 GWEI
+
+    [l2-network-gas-pricing.extra-data-pricing-propagation]
+    extra-data-update-recipient = "http://sequencer:8545/"
+
+    [l2-network-gas-pricing.legacy]
+    type="SampleTransaction"
+    gas-price-upper-bound = 10000000000 # 10 GWEI
+    gas-price-lower-bound = 90000000 # 0.09 GWEI
+    """.trimIndent()
+    val config = parseConfig(undefinedJsonRpcPropagation).reified()
+    val l2NetworkGasPricingRequestretryConfig = RequestRetryConfig(
+      maxRetries = 3u,
+      timeout = 6.seconds,
+      backoffDelay = 1.seconds,
+      failuresWarningThreshold = 2u
+    )
+
+    assertThat(config).isEqualTo(
+      L2NetworkGasPricingService.Config(
+        feeHistoryFetcherConfig = FeeHistoryFetcherImpl.Config(
+          feeHistoryBlockCount = 50U,
+          feeHistoryRewardPercentile = 15.0
+        ),
+        legacy = L2NetworkGasPricingService.LegacyGasPricingCalculatorConfig(
+          naiveGasPricingCalculatorConfig = null,
+          legacyGasPricingCalculatorBounds = BoundableFeeCalculator.Config(
+            10_000_000_000.0,
+            90_000_000.0,
+            0.0
+          ),
+          transactionCostCalculatorConfig = TransactionCostCalculator.Config(
+            sampleTransactionCostMultiplier = 1.0,
+            fixedCostWei = 3000000u,
+            compressedTxSize = 125,
+            expectedGas = 21000
+          )
+        ),
+        jsonRpcGasPriceUpdaterConfig = null,
+        jsonRpcPriceUpdateInterval = 12.seconds,
+        extraDataPricingPropagationEnabled = true,
+        extraDataUpdateInterval = 12.seconds,
+        variableFeesCalculatorConfig = VariableFeesCalculator.Config(
+          blobSubmissionExpectedExecutionGas = 213_000u,
+          bytesPerDataSubmission = 131072u,
+          expectedBlobGas = 131072u,
+          margin = 4.0
+        ),
+        variableFeesCalculatorBounds = BoundableFeeCalculator.Config(
+          feeUpperBound = 10_000_000_001.0,
+          feeLowerBound = 90_000_001.0,
+          feeMargin = 0.0
+        ),
+        extraDataCalculatorConfig = MinerExtraDataV1CalculatorImpl.Config(
+          fixedCostInKWei = 3000u,
+          ethGasPriceMultiplier = 1.2
+        ),
+        extraDataUpdaterConfig = ExtraDataV1UpdaterImpl.Config(
+          sequencerEndpoint = URI(/* str = */ "http://sequencer:8545/").toURL(),
+          retryConfig = l2NetworkGasPricingRequestretryConfig
+        )
+      )
+    )
+  }
+
+  @Test
+  fun `Json rpc pricing propagation can be disabled without complete removal`() {
+    val disabledJsonRpcPricingPropagation = """
+    [l2-network-gas-pricing]
+    disabled = false
+    price-update-interval = "PT12S"
+
+    fee-history-block-count = 50
+    fee-history-reward-percentile = 15
+
+    blob-submission-expected-execution-gas = 213000.0 # Lower to 120k as we improve efficiency
+    # Defaults to expected-blob-gas
+    #bytes-per-data-submission=131072.0 # 2^17
+    l1-blob-gas = 131072 # 2^17
+
+    [l2-network-gas-pricing.request-retry]
+    max-retries = 3
+    timeout = "PT6S"
+    backoff-delay = "PT1S"
+    failures-warning-threshold = 2
+
+    [l2-network-gas-pricing.variable-cost-pricing]
+    gas-price-fixed-cost = 3000000
+    legacy-fees-multiplier = 1.2
+    margin = 4.0
+    variable-cost-upper-bound = 10000000001 # ~10 GWEI
+    variable-cost-lower-bound = 90000001  # ~0.09 GWEI
+
+    [l2-network-gas-pricing.extra-data-pricing-propagation]
+    extra-data-update-recipient = "http://sequencer:8545/"
+
+    [l2-network-gas-pricing.legacy]
+    type="SampleTransaction"
+    gas-price-upper-bound = 10000000000 # 10 GWEI
+    gas-price-lower-bound = 90000000 # 0.09 GWEI
+
+    [l2-network-gas-pricing.json-rpc-pricing-propagation]
+    disabled = true
+    geth-gas-price-update-recipients = []
+    besu-gas-price-update-recipients = []
+    """.trimIndent()
+    val config = parseConfig(disabledJsonRpcPricingPropagation).reified()
+    val l2NetworkGasPricingRequestretryConfig = RequestRetryConfig(
+      maxRetries = 3u,
+      timeout = 6.seconds,
+      backoffDelay = 1.seconds,
+      failuresWarningThreshold = 2u
+    )
+
+    assertThat(config).isEqualTo(
+      L2NetworkGasPricingService.Config(
+        feeHistoryFetcherConfig = FeeHistoryFetcherImpl.Config(
+          feeHistoryBlockCount = 50U,
+          feeHistoryRewardPercentile = 15.0
+        ),
+        legacy = L2NetworkGasPricingService.LegacyGasPricingCalculatorConfig(
+          naiveGasPricingCalculatorConfig = null,
+          legacyGasPricingCalculatorBounds = BoundableFeeCalculator.Config(
+            10_000_000_000.0,
+            90_000_000.0,
+            0.0
+          ),
+          transactionCostCalculatorConfig = TransactionCostCalculator.Config(
+            sampleTransactionCostMultiplier = 1.0,
+            fixedCostWei = 3000000u,
+            compressedTxSize = 125,
+            expectedGas = 21000
+          )
+        ),
+        jsonRpcGasPriceUpdaterConfig = null,
         jsonRpcPriceUpdateInterval = 12.seconds,
         extraDataPricingPropagationEnabled = true,
         extraDataUpdateInterval = 12.seconds,

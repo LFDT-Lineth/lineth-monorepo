@@ -98,7 +98,7 @@ data class L2NetworkGasPricingTomlDto(
 
   val legacy: LegacyGasPricingTomlDto,
   val variableCostPricing: VariableCostPricingTomlDto,
-  val jsonRpcPricingPropagation: JsonRpcPricingPropagationTomlDto,
+  val jsonRpcPricingPropagation: JsonRpcPricingPropagationTomlDto?,
   val extraDataPricingPropagation: ExtraDataPricingPropagationTomlDto
 ) : FeatureToggleable, RequestRetryConfigurable {
   init {
@@ -106,7 +106,7 @@ data class L2NetworkGasPricingTomlDto(
     require(blobSubmissionExpectedExecutionGas > 0) { "blobSubmissionExpectedExecutionGas must be greater than 0" }
     require(l1BlobGas > 0) { "l1BlobGas must be greater than 0" }
 
-    require(disabled || (jsonRpcPricingPropagation.enabled || extraDataPricingPropagation.enabled)) {
+    require(disabled || (jsonRpcPricingPropagation?.enabled == true || extraDataPricingPropagation.enabled)) {
       "There is no point of enabling L2 network gas pricing if " +
         "both jsonRpcPricingPropagation and extraDataPricingPropagation are disabled"
     }
@@ -151,18 +151,22 @@ data class L2NetworkGasPricingTomlDto(
         )
       }
     }
+    val gasPriceUpdaterConfig = if (jsonRpcPricingPropagation?.enabled == true) {
+      GasPriceUpdaterImpl.Config(
+        gethEndpoints = jsonRpcPricingPropagation.gethGasPriceUpdateRecipients,
+        besuEndPoints = jsonRpcPricingPropagation.besuGasPriceUpdateRecipients,
+        retryConfig = requestRetryConfig
+      )
+    } else {
+      null
+    }
     return L2NetworkGasPricingService.Config(
       feeHistoryFetcherConfig = FeeHistoryFetcherImpl.Config(
         feeHistoryBlockCount = feeHistoryBlockCount.toUInt(),
         feeHistoryRewardPercentile = feeHistoryRewardPercentile
       ),
-      jsonRpcPricingPropagationEnabled = jsonRpcPricingPropagation.enabled,
       legacy = legacyGasPricingConfig,
-      jsonRpcGasPriceUpdaterConfig = GasPriceUpdaterImpl.Config(
-        gethEndpoints = jsonRpcPricingPropagation.gethGasPriceUpdateRecipients,
-        besuEndPoints = jsonRpcPricingPropagation.besuGasPriceUpdateRecipients,
-        retryConfig = requestRetryConfig
-      ),
+      jsonRpcGasPriceUpdaterConfig = gasPriceUpdaterConfig,
       jsonRpcPriceUpdateInterval = priceUpdateInterval.toKotlinDuration(),
       extraDataPricingPropagationEnabled = extraDataPricingPropagation.enabled,
       extraDataUpdateInterval = priceUpdateInterval.toKotlinDuration(),
