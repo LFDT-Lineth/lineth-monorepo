@@ -76,7 +76,8 @@ services:
       context: ./config/l1-node/
     profiles: [ "l1", "debug", "external-to-monorepo" ]
     command:
-      --genesis-time ${L1_GENESIS_TIME}
+      --genesis-time ${L1_GENESIS_TIME:-""}
+      --current-time-delay-in-sec 3
       --l1-genesis /config/l1-genesis.json
       --network-config /config/network-config.yml
       --mnemonics /config/mnemonics.yaml

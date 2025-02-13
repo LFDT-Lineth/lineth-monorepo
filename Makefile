@@ -1,16 +1,5 @@
 include makefile-contracts.mk
 
-define get_future_time
-$(shell \
-    OS=$$(uname); \
-    if [ "$$OS" = "Linux" ]; then \
-        date -d '+3 seconds' +%s; \
-    elif [ "$$OS" = "Darwin" ]; then \
-        date -v +3S +%s; \
-    fi \
-)
-endef
-
 docker-pull-images-external-to-monorepo:
 		docker compose -f docker/compose-tracing-v1-ci-extension.yml -f docker/compose-tracing-v2-ci-extension.yml --profile external-to-monorepo pull
 
@@ -42,7 +31,7 @@ start-env:
 		echo "Starting stack reusing previous state"; \
 	fi; \
 	mkdir -p tmp/local; \
-	L1_GENESIS_TIME=$(get_future_time) COMPOSE_PROFILES=$(COMPOSE_PROFILES) docker compose -f $(COMPOSE_FILE) up -d; \
+	COMPOSE_PROFILES=$(COMPOSE_PROFILES) docker compose -f $(COMPOSE_FILE) up -d; \
 	while [ "$$(docker compose -f $(COMPOSE_FILE) ps -q l1-el-node | xargs docker inspect -f '{{.State.Health.Status}}')" != "healthy" ] || \
   			[ "$$(docker compose -f $(COMPOSE_FILE) ps -q sequencer | xargs docker inspect -f '{{.State.Health.Status}}')" != "healthy" ]; do \
   			sleep 2; \

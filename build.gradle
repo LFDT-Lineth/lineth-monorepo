@@ -168,7 +168,6 @@ dockerCompose {
     // without cleaning the volumes
     noRecreate = true
     projectName = "docker"
-    environment.put("L1_GENESIS_TIME", "${Instant.now().plusSeconds(3).getEpochSecond()}")
   }
 
   localStackPostgresDbOnly {
@@ -213,7 +212,6 @@ dockerCompose {
     // without cleaning the volumes
     noRecreate = true
     projectName = "docker"
-    environment.put("L1_GENESIS_TIME", "${Instant.now().plusSeconds(3).getEpochSecond()}")
   }
 }
 
