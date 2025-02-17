@@ -348,25 +348,20 @@ func (ctx naturalizationCtx) Verify(run *wizard.VerifierRuntime) error {
 
 func (ctx naturalizationCtx) GnarkVerify(api frontend.API, c *wizard.WizardVerifierCircuit) {
 
-	logrus.Tracef("verifying naturalization")
-
 	// Get the original query
 	originalQuery := c.GetUnivariateEval(ctx.q.QueryID)
 	originalQueryParams := c.GetUnivariateParams(ctx.q.QueryID)
 
 	// Collect the subqueries and the collection in finalYs evaluations
 	subQueries := []query.UnivariateEval{}
-	subQueriesParamsX := []frontend.Variable{}
-	subQueriesParamsYs := [][]frontend.Variable{}
+	subQueriesParams := []query.GnarkUnivariateEvalParams{}
 	finalYs := collection.NewMapping[string, frontend.Variable]()
 
 	for qID, qName := range ctx.subQueriesNames {
 		subQueries = append(subQueries, c.GetUnivariateEval(qName))
-		params := c.GetUnivariateParams(qName)
-		subQueriesParamsX = append(subQueriesParamsX, params.X)
-		subQueriesParamsYs = append(subQueriesParamsYs, params.Ys)
+		subQueriesParams = append(subQueriesParams, c.GetUnivariateParams(qName))
 		repr := ctx.deduplicatedReprs[qID]
-		for j, derivedY := range subQueriesParamsYs[qID] {
+		for j, derivedY := range subQueriesParams[qID].Ys {
 			finalYs.InsertNew(column.DerivedYRepr(repr, subQueries[qID].Pols[j]), derivedY)
 		}
 	}
@@ -402,8 +397,8 @@ func (ctx naturalizationCtx) GnarkVerify(api frontend.API, c *wizard.WizardVerif
 			}
 			recoveredX := recoveredXs[i]
 			qID := ctx.reprToSubQueryID[subrepr]
-			submittedX := subQueriesParamsX[qID]
-			// Or it is a mismatch between the evaluation queries and the derived query
+			submittedX := subQueriesParams[qID].X
+
 			api.AssertIsEqual(recoveredX, submittedX)
 		}
 
@@ -412,7 +407,5 @@ func (ctx naturalizationCtx) GnarkVerify(api frontend.API, c *wizard.WizardVerif
 		*/
 		recoveredY := column.GnarkVerifyYConsistency(api, originH, "", cachedXs, finalYs)
 		api.AssertIsEqual(recoveredY, originalQueryParams.Ys[originPolID])
-
-		logrus.Tracef("verifying naturalization DONE")
 	}
 }

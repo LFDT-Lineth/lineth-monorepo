@@ -93,7 +93,7 @@ func (s *schemaScanner) scanConstraints() {
 	corsetCSs := s.Schema.Constraints().Collect()
 
 	for _, corsetCS := range corsetCSs {
-		name := fmt.Sprintf("%v", corsetCS)
+		name := fmt.Sprintf("%v", corsetCS.Lisp(s.Schema).String(false))
 		if s.Comp.QueriesNoParams.Exists(ifaces.QueryID(name)) {
 			continue
 		}

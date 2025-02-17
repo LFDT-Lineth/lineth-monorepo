@@ -3,8 +3,9 @@ package circuits
 import (
 	"bytes"
 	"fmt"
-	"github.com/consensys/gnark/backend/witness"
 	"os"
+
+	"github.com/consensys/gnark/backend/witness"
 
 	"github.com/consensys/gnark/backend"
 	"github.com/consensys/gnark/backend/plonk"

@@ -7,7 +7,6 @@ import (
 	public_input "github.com/consensys/linea-monorepo/prover/public-input"
 
 	"github.com/consensys/gnark-crypto/ecc"
-	"github.com/consensys/gnark/backend/plonk"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/linea-monorepo/prover/circuits"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
@@ -104,6 +103,8 @@ func MakeProof(
 	proof, err := circuits.ProveCheck(
 		&setup,
 		&assignment,
+		emPlonk.GetNativeProverOptions(ecc.BW6_761.ScalarField(), setup.Circuit.Field()),
+		emPlonk.GetNativeVerifierOptions(ecc.BW6_761.ScalarField(), setup.Circuit.Field()),
 	)
 
 	if err != nil {
@@ -111,23 +112,6 @@ func MakeProof(
 	}
 
 	logrus.Infof("generated outer-circuit proof `%++v` for input `%v`", proof, assignment.PublicInput.(*big.Int).String())
-
-	// Sanity-check : the proof must pass
-	{
-		pubwitness, err := frontend.NewWitness(
-			&assignment,
-			ecc.BLS12_377.ScalarField(),
-			frontend.PublicOnly(),
-		)
-		if err != nil {
-			panic(err)
-		}
-
-		err = plonk.Verify(proof, setup.VerifyingKey, pubwitness, emPlonk.GetNativeVerifierOptions(ecc.BW6_761.ScalarField(), setup.Circuit.Field()))
-		if err != nil {
-			panic(err)
-		}
-	}
 
 	// Write the serialized proof
 	return circuits.SerializeProofRaw(proof)

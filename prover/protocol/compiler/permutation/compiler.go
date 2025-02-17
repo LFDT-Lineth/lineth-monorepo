@@ -1,12 +1,15 @@
 package permutation
 
 import (
+	"slices"
+
 	"github.com/consensys/linea-monorepo/prover/protocol/coin"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/protocol/query"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizardutils"
 	"github.com/consensys/linea-monorepo/prover/symbolic"
+	"golang.org/x/exp/maps"
 )
 
 // CompileGrandProduct scans `comp`, looking for [query.Permutation] queries and
@@ -40,9 +43,16 @@ func CompileGrandProduct(comp *wizard.CompiledIOP) {
 		dispatchPermutation(comp, zCatalog, round, permutation)
 	}
 
-	for entry, zC := range zCatalog {
+	zCEntriesOrdered, zCsOrdered := mapAsTupleDeterministic(zCatalog)
+
+	for i := range zCEntriesOrdered {
+
+		var (
+			zC    = zCsOrdered[i]
+			round = zCEntriesOrdered[i][0]
+		)
+
 		zC.compile(comp)
-		round := entry[0]
 		allProverActions[round] = append(allProverActions[round], zC)
 	}
 
@@ -107,4 +117,23 @@ func dispatchPermutation(
 			}
 		}
 	}
+}
+
+func mapAsTupleDeterministic(m map[[2]int]*ZCtx) (keys [][2]int, values []*ZCtx) {
+
+	keys = maps.Keys(m)
+	values = make([]*ZCtx, len(keys))
+
+	slices.SortFunc(keys, func(a, b [2]int) int {
+		if a[0] != b[0] {
+			return a[0] - b[0]
+		}
+		return a[1] - b[1]
+	})
+
+	for i := range keys {
+		values[i] = m[keys[i]]
+	}
+
+	return keys, values
 }
