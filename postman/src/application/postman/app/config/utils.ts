@@ -1,3 +1,5 @@
+import { Interface, isAddress } from "ethers";
+import { compileExpression, useDotAccessOperator } from "filtrex";
 import {
   DEFAULT_CALLDATA_ENABLED,
   DEFAULT_EOA_ENABLED,
@@ -17,7 +19,7 @@ import {
   DEFAULT_PROFIT_MARGIN,
   DEFAULT_RETRY_DELAY_IN_SECONDS,
 } from "../../../../core/constants";
-import { PostmanConfig, PostmanOptions } from "./config";
+import { ListenerConfig, PostmanConfig, PostmanOptions } from "./config";
 
 /**
  * @notice Generates the configuration for the Postman service based on provided options.
@@ -36,6 +38,14 @@ export function getConfig(postmanOptions: PostmanOptions): PostmanConfig {
     loggerOptions,
   } = postmanOptions;
 
+  if (l1Options.listener.eventFilters) {
+    validateEventsFiltersConfig(l1Options.listener.eventFilters);
+  }
+
+  if (l2Options.listener.eventFilters) {
+    validateEventsFiltersConfig(l2Options.listener.eventFilters);
+  }
+
   return {
     l1Config: {
       rpcUrl: l1Options.rpcUrl,
@@ -48,6 +58,7 @@ export function getConfig(postmanOptions: PostmanOptions): PostmanConfig {
         maxBlocksToFetchLogs: l1Options.listener.maxBlocksToFetchLogs ?? DEFAULT_MAX_BLOCKS_TO_FETCH_LOGS,
         initialFromBlock: l1Options.listener.initialFromBlock ?? DEFAULT_INITIAL_FROM_BLOCK,
         blockConfirmation: l1Options.listener.blockConfirmation ?? DEFAULT_LISTENER_BLOCK_CONFIRMATIONS,
+        ...(l1Options.listener.eventFilters ? { eventFilters: l1Options.listener.eventFilters } : {}),
       },
       claiming: {
         signerPrivateKey: l1Options.claiming.signerPrivateKey,
@@ -77,6 +88,7 @@ export function getConfig(postmanOptions: PostmanOptions): PostmanConfig {
         maxBlocksToFetchLogs: l2Options.listener.maxBlocksToFetchLogs ?? DEFAULT_MAX_BLOCKS_TO_FETCH_LOGS,
         initialFromBlock: l2Options.listener.initialFromBlock ?? DEFAULT_INITIAL_FROM_BLOCK,
         blockConfirmation: l2Options.listener.blockConfirmation ?? DEFAULT_LISTENER_BLOCK_CONFIRMATIONS,
+        ...(l2Options.listener.eventFilters ? { eventFilters: l2Options.listener.eventFilters } : {}),
       },
       claiming: {
         signerPrivateKey: l2Options.claiming.signerPrivateKey,
@@ -103,4 +115,47 @@ export function getConfig(postmanOptions: PostmanOptions): PostmanConfig {
     },
     loggerOptions,
   };
+}
+
+export function validateEventsFiltersConfig(eventFilters: ListenerConfig["eventFilters"]): void {
+  if (eventFilters?.fromAddressFilter && !isAddress(eventFilters.fromAddressFilter)) {
+    throw new Error(`Invalid fromAddressFilter: ${eventFilters.fromAddressFilter}`);
+  }
+
+  if (eventFilters?.toAddressFilter && !isAddress(eventFilters.toAddressFilter)) {
+    throw new Error(`Invalid toAddressFilter: ${eventFilters.toAddressFilter}`);
+  }
+
+  if (
+    eventFilters?.calldataFilter?.criteriaExpression &&
+    !isValidFiltrexExpression(eventFilters?.calldataFilter?.criteriaExpression)
+  ) {
+    throw new Error(`Invalid calldataFilter expression: ${eventFilters.calldataFilter.criteriaExpression}`);
+  }
+
+  if (
+    eventFilters?.calldataFilter?.calldataFunctionInterface &&
+    !isFunctionInterfaceValid(eventFilters?.calldataFilter?.calldataFunctionInterface)
+  ) {
+    throw new Error(`Invalid calldataFunctionInterface: ${eventFilters?.calldataFilter?.calldataFunctionInterface}`);
+  }
+}
+
+export function isFunctionInterfaceValid(functionInterface: string): boolean {
+  try {
+    const i = new Interface([functionInterface]);
+
+    return i.fragments.length !== 0;
+  } catch (error) {
+    return false;
+  }
+}
+
+export function isValidFiltrexExpression(expression: string): boolean {
+  try {
+    compileExpression(expression, { customProp: useDotAccessOperator });
+    return true;
+  } catch (error) {
+    return false;
+  }
 }

@@ -120,6 +120,7 @@ export class PostmanServiceClient {
         blockConfirmation: config.l1Config.listener.blockConfirmation,
         isEOAEnabled: config.l1Config.isEOAEnabled,
         isCalldataEnabled: config.l1Config.isCalldataEnabled,
+        eventFilters: config.l1Config.listener.eventFilters,
       },
       new WinstonLogger(`L1${MessageSentEventProcessor.name}`, config.loggerOptions),
     );
@@ -245,6 +246,7 @@ export class PostmanServiceClient {
         blockConfirmation: config.l2Config.listener.blockConfirmation,
         isEOAEnabled: config.l2Config.isEOAEnabled,
         isCalldataEnabled: config.l2Config.isCalldataEnabled,
+        eventFilters: config.l2Config.listener.eventFilters,
       },
       new WinstonLogger(`L2${MessageSentEventProcessor.name}`, config.loggerOptions),
     );

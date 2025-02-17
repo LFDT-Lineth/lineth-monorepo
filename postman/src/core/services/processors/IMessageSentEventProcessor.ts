@@ -12,4 +12,12 @@ export type MessageSentEventProcessorConfig = {
   blockConfirmation: number;
   isEOAEnabled: boolean;
   isCalldataEnabled: boolean;
+  eventFilters?: {
+    fromAddressFilter?: string;
+    toAddressFilter?: string;
+    calldataFilter?: {
+      criteriaExpression: string;
+      calldataFunctionInterface: string;
+    };
+  };
 };

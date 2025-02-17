@@ -135,6 +135,36 @@ describe("PostmanServiceClient", () => {
         new Error("Something went wrong when trying to generate Wallet. Please check your private key."),
       );
     });
+
+    it("should throw an error when events filters are not valid", () => {
+      const postmanServiceClientOptionsWithInvalidPrivateKey: PostmanOptions = {
+        ...postmanServiceClientOptions,
+        l1Options: {
+          ...postmanServiceClientOptions.l1Options,
+          listener: {
+            ...postmanServiceClientOptions.l1Options.listener,
+            eventFilters: {
+              fromAddressFilter: "0x",
+            },
+          },
+          claiming: {
+            ...postmanServiceClientOptions.l1Options.claiming,
+            signerPrivateKey: "0x",
+          },
+        },
+        l2Options: {
+          ...postmanServiceClientOptions.l2Options,
+          claiming: {
+            ...postmanServiceClientOptions.l2Options.claiming,
+            signerPrivateKey: "0x",
+          },
+        },
+      };
+
+      expect(() => new PostmanServiceClient(postmanServiceClientOptionsWithInvalidPrivateKey)).toThrow(
+        new Error("Invalid fromAddressFilter: 0x"),
+      );
+    });
   });
 
   describe("connectDatabase", () => {

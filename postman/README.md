@@ -28,6 +28,16 @@ All messages are stored in a configurable Postgres DB.
 - `L1_LISTENER_BLOCK_CONFIRMATION`: Required block confirmations
 - `L1_MAX_BLOCKS_TO_FETCH_LOGS`: Maximum blocks to fetch in one request
 - `L1_MAX_GAS_FEE_ENFORCED`: Enable/disable gas fee enforcement
+- `L1_EVENT_FILTER_FROM_ADDRESS`: Filter events using a from address
+- `L1_EVENT_FILTER_TO_ADDRESS`: Filter events using a to address
+- `L1_EVENT_FILTER_CALLDATA`: MessageSent event calldata filtering criteria expression. See [Filtrex repo](https://github.com/joewalnes/filtrex/tree/master).
+    <br>
+    You can filter by the calldata field:
+    <br>
+    
+    Example:
+    `calldata.funcSignature == "0x6463fb2a" and calldata.params.messageNumber == 85804`,
+- `L1_EVENT_FILTER_CALLDATA_FUNCTION_INTERFACE`: Calldata data function interface following this format: `"function transfer(address to, uint256 amount)"`. Make sure you specify parameters names in order to use syntax like `calldata.params.messageNumber`.
 
 #### L2 Configuration
 - `L2_RPC_URL`: Linea node RPC endpoint
@@ -39,6 +49,16 @@ All messages are stored in a configurable Postgres DB.
 - `L2_MAX_BLOCKS_TO_FETCH_LOGS`: Maximum blocks to fetch in one request
 - `L2_MAX_GAS_FEE_ENFORCED`: Enable/disable gas fee enforcement
 - `L2_MESSAGE_TREE_DEPTH`: Depth of the message Merkle tree
+- `L2_EVENT_FILTER_FROM_ADDRESS`: Filter events using a from address
+- `L2_EVENT_FILTER_TO_ADDRESS`: Filter events using a to address
+- `L2_EVENT_FILTER_CALLDATA`: MessageSent event calldata filtering criteria expression. See [Filtrex repo](https://github.com/joewalnes/filtrex/tree/master).
+    <br>
+    You can filter by the calldata field:
+    <br>
+    
+    Example:
+    `calldata.funcSignature == "0x6463fb2a" and calldata.params.messageNumber == 85804`,
+- `L2_EVENT_FILTER_CALLDATA_FUNCTION_INTERFACE`: Calldata data function interface following this format: `"function transfer(address to, uint256 amount)"`. Make sure you specify parameters names in order to use syntax like `calldata.params.messageNumber`.
 
 #### Message Processing
 - `MESSAGE_SUBMISSION_TIMEOUT`: Timeout for message submission (ms)
@@ -80,7 +100,7 @@ All messages are stored in a configurable Postgres DB.
 
 From the root folder, run the following command:
 ```bash
-make fresh-start-all
+make start-env-with-tracing-v2
 ```
 
 Stop the postman docker container manually.
