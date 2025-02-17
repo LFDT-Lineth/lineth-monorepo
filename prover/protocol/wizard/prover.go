@@ -388,6 +388,10 @@ func (run *ProverRuntime) AssignColumn(name ifaces.ColID, witness ifaces.ColAssi
 		utils.Panic("Witness with non-power of two sizes, should have been caught earlier")
 	}
 
+	// This reduction is a trade-off between runtime and memory. It
+	// costs CPU but can save a significant amount of memory.
+	witness = smartvectors.TryReduceSize(witness)
+
 	// Adds it to the assignments
 	run.Columns.InsertNew(handle.GetColID(), witness)
 }

@@ -265,7 +265,7 @@ func (ss *accountAssignmentBuilder) pushAll(acc types.Account) {
 	} else {
 		ss.balance.PushZero()
 		ss.exists.PushZero()
-		ss.keccakCodeHash.Push(types.FullBytes32(statemanager.LEGACY_KECCAK_EMPTY_CODEHASH))
+		ss.keccakCodeHash.PushZeroes()
 	}
 
 	ss.codeSize.PushInt(int(acc.CodeSize))
@@ -293,7 +293,7 @@ func (ss *accountAssignmentBuilder) pushOverrideStorageRoot(
 	} else {
 		ss.balance.PushZero()
 		ss.exists.PushZero()
-		ss.keccakCodeHash.Push(types.FullBytes32(statemanager.LEGACY_KECCAK_EMPTY_CODEHASH))
+		ss.keccakCodeHash.PushZeroes()
 	}
 
 	ss.codeSize.PushInt(int(acc.CodeSize))

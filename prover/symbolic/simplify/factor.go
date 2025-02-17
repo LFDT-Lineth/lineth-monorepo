@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"sync"
 
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	sym "github.com/consensys/linea-monorepo/prover/symbolic"
@@ -17,7 +18,8 @@ import (
 func factorizeExpression(expr *sym.Expression, iteration int) *sym.Expression {
 	res := expr
 	initEsh := expr.ESHash
-	alreadyWalked := map[field.Element]*sym.Expression{}
+	alreadyWalked := sync.Map{}
+	factorMemo := sync.Map{}
 
 	logrus.Infof("factoring expression : init stats %v", evaluateCostStat(expr))
 
@@ -26,10 +28,9 @@ func factorizeExpression(expr *sym.Expression, iteration int) *sym.Expression {
 		scoreInit := evaluateCostStat(res)
 
 		res = res.ReconstructBottomUp(func(lincomb *sym.Expression, newChildren []*sym.Expression) *sym.Expression {
-
 			// Time save, we reuse the results we got for that particular node.
-			if ret, ok := alreadyWalked[lincomb.ESHash]; ok {
-				return ret
+			if ret, ok := alreadyWalked.Load(lincomb.ESHash); ok {
+				return ret.(*sym.Expression)
 			}
 
 			// Incorporate the new children inside of the expression to account
@@ -55,31 +56,29 @@ func factorizeExpression(expr *sym.Expression, iteration int) *sym.Expression {
 
 				group := findGdChildrenGroup(new)
 
-				logrus.Tracef("found children group: %v\n", group)
-
 				if len(group) < 1 {
-					if k > 0 {
-						logrus.Tracef("finished factoring : %v opportunities", k)
-					}
 					return new
 				}
 
-				logrus.Tracef(
-					"factoring an expression with a set of %v siblings",
-					len(group),
-				)
+				// Memoize the factorLinCompFromGroup result
+				cacheKey := fmt.Sprintf("%v-%v", new.ESHash, group)
 
-				new = factorLinCompFromGroup(new, group)
+				if cachedResult, ok := factorMemo.Load(cacheKey); ok {
+					new = cachedResult.(*sym.Expression)
+
+				} else {
+					new = factorLinCompFromGroup(new, group)
+					factorMemo.Store(cacheKey, new)
+				}
 
 				if len(new.Children) >= prevSize {
-					logrus.Tracef("factorization did not help. stopping")
 					return new
 				}
 
 				prevSize = len(new.Children)
 			}
 
-			logrus.Tracef("finished factoring slow node")
+			alreadyWalked.Store(new.ESHash, new)
 			return new
 		})
 

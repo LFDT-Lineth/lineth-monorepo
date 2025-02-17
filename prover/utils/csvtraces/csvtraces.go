@@ -21,6 +21,7 @@ type cfg struct {
 	skipPrePaddingZero bool
 	filterOn           ifaces.Column
 	inHex              bool
+	renameCols         []string
 }
 
 type Option func(*cfg) error
@@ -52,6 +53,14 @@ func FilterOn(col ifaces.Column) Option {
 func InHex(c *cfg) error {
 	c.inHex = true
 	return nil
+}
+
+// RenameCols rename the columns in the csv
+func RenameCols(s ...string) Option {
+	return func(c *cfg) error {
+		c.renameCols = s
+		return nil
+	}
 }
 
 type CsvTrace struct {
@@ -92,8 +101,16 @@ func FmtCsv(w io.Writer, run *wizard.ProverRuntime, cols []ifaces.Column, option
 		op(&cfg)
 	}
 
+	if cfg.renameCols != nil && len(cfg.renameCols) != len(cols) {
+		utils.Panic("provided %v columns, but also provided %v name replacements", len(cols), len(cfg.renameCols))
+	}
+
 	for i := range cols {
-		header = append(header, string(cols[i].GetColID()))
+		if cfg.renameCols != nil {
+			header = append(header, cfg.renameCols[i])
+		} else {
+			header = append(header, string(cols[i].GetColID()))
+		}
 		assignment = append(assignment, cols[i].GetColAssignment(run).IntoRegVecSaveAlloc())
 	}
 

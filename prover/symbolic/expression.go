@@ -3,6 +3,7 @@ package symbolic
 import (
 	"fmt"
 	"reflect"
+	"sync"
 
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/linea-monorepo/prover/maths/common/mempool"
@@ -244,9 +245,17 @@ func (e *Expression) ReconstructBottomUp(
 	// LinComb or Product or PolyEval. This is an intermediate expression.
 	case LinComb, Product, PolyEval:
 		children := make([]*Expression, len(e.Children))
+		var wg sync.WaitGroup
+		wg.Add(len(e.Children))
+
 		for i, c := range e.Children {
-			children[i] = c.ReconstructBottomUp(constructor)
+			go func(i int, c *Expression) {
+				defer wg.Done()
+				children[i] = c.ReconstructBottomUp(constructor)
+			}(i, c)
 		}
+
+		wg.Wait()
 		return constructor(e, children)
 	}
 

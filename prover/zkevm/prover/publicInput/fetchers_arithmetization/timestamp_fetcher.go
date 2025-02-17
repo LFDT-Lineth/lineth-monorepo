@@ -15,7 +15,9 @@ import (
 )
 
 const (
-	TimestampOffset = -6 // the corresponding offset position for the timestamp
+	// TimestampOffset is the corresponding offset position for the timestamp
+	// since it is a shift, -1 means no offset.
+	TimestampOffset = -12
 )
 
 // TimestampFetcher is a struct used to fetch the timestamps from the arithmetization's BlockDataCols
@@ -28,10 +30,16 @@ type TimestampFetcher struct {
 	Data ifaces.Column
 	// filter on the TimestampFetcher.Data column
 	FilterFetched ifaces.Column
-	// filter on the arithmetization's BlockDataCols
+	// filter on the Arithmetization's columns
+	FilterArith ifaces.Column
+	// filter that selects only timestamp rows from the arithmetization
 	SelectorTimestamp ifaces.Column
 	// prover action to compute SelectorTimestamp
 	ComputeSelectorTimestamp wizard.ProverAction
+	// since there are two timestamp columns, we need to use Ct in order to select only one
+	SelectorCt ifaces.Column
+	// prover action to compute SelectorCt
+	ComputeSelectorCt wizard.ProverAction
 	// the absolute ID of the first block number
 	FirstBlockID ifaces.Column
 	// the absolute ID of the last block number
@@ -47,6 +55,7 @@ func NewTimestampFetcher(comp *wizard.CompiledIOP, name string, bdc *arith.Block
 		Last:          util.CreateCol(name, "LAST", 1, comp),
 		Data:          util.CreateCol(name, "DATA", size, comp),
 		FilterFetched: util.CreateCol(name, "FILTER_FETCHED", size, comp),
+		FilterArith:   util.CreateCol(name, "FILTER_ARITHMETIZATION", size, comp),
 		FirstBlockID:  util.CreateCol(name, "FIRST_BLOCK_ID", 1, comp),
 		LastBlockID:   util.CreateCol(name, "LAST_BLOCK_ID", 1, comp),
 	}
@@ -66,7 +75,7 @@ func ConstrainFirstAndLastBlockID(comp *wizard.CompiledIOP, fetcher *TimestampFe
 		0,
 		ifaces.QueryIDf("%s_%s_%s", name, "FIRST_BLOCK_ID_GLOBAL", fetcher.FirstBlockID.GetColID()),
 		sym.Mul(
-			fetcher.SelectorTimestamp, // select only non-padding, valid rows.
+			fetcher.FilterArith, // select only non-padding, valid rows.
 			sym.Sub(
 				bdc.FirstBlock,
 				accessFirstBlockID,
@@ -113,12 +122,29 @@ func ConstrainFirstAndLastBlockID(comp *wizard.CompiledIOP, fetcher *TimestampFe
 // DefineTimestampFetcher specifies the constraints of the TimestampFetcher with respect to the BlockDataCols
 func DefineTimestampFetcher(comp *wizard.CompiledIOP, fetcher *TimestampFetcher, name string, bdc *arith.BlockDataCols) {
 	timestampField := util.GetTimestampField()
-	// constrain the fetcher.SelectorTimestamp column, which will be the filter for the arithmetization's BlockDataCols
+	// constrain the fetcher.SelectorTimestamp column, which will be used to compute the filter for the arithmetization's BlockDataCols
 	fetcher.SelectorTimestamp, fetcher.ComputeSelectorTimestamp = dedicated.IsZero(
 		comp,
 		sym.Sub(
 			bdc.Inst,
 			timestampField, // check that the Inst field indicates a timestamp row
+		),
+	)
+	// constrain the fetcher.SelectorCt column, which will be used to compute the filter for the arithmetization's BlockDataCols
+	fetcher.SelectorCt, fetcher.ComputeSelectorCt = dedicated.IsZero(
+		comp,
+		ifaces.ColumnAsVariable(bdc.Ct), // pick the spots where Ct=0
+	)
+	// constrain the entire arithmetization filtering column, using SelectorCt and SelectorTimestamp
+	comp.InsertGlobal(
+		0,
+		ifaces.QueryIDf("%s_CONSTRAINT_ARITHMETIZATION_FILTERING_COLUMN", name),
+		sym.Sub(
+			fetcher.FilterArith, // fetcher.FilterArith must be 1 if and only if SelectorCt and SelectorTimestamp are both 1
+			sym.Mul(
+				fetcher.SelectorCt,
+				fetcher.SelectorTimestamp,
+			),
 		),
 	)
 	// set the fetcher columns as public for accessors
@@ -187,7 +213,7 @@ func DefineTimestampFetcher(comp *wizard.CompiledIOP, fetcher *TimestampFetcher,
 		fetcherTable,
 		arithTable,
 		fetcher.FilterFetched,
-		fetcher.SelectorTimestamp, // filter lights up on the arithmetization's BlockDataCols rows that contain timestamp data
+		fetcher.FilterArith, // filter lights up on the arithmetization's BlockDataCols rows that contain timestamp data
 	)
 
 	// constrain the First/Last Block ID counters
@@ -207,6 +233,7 @@ func AssignTimestampFetcher(run *wizard.ProverRuntime, fetcher TimestampFetcher,
 	relBlock := make([]field.Element, size)
 	data := make([]field.Element, size)
 	filterFetched := make([]field.Element, size)
+	filterArith := make([]field.Element, size)
 
 	// counter is used to populate filter.Data and will increment every time we find a new timestamp
 	counter := 0
@@ -214,7 +241,8 @@ func AssignTimestampFetcher(run *wizard.ProverRuntime, fetcher TimestampFetcher,
 	for i := 0; i < size; i++ {
 		// inst is the flag that specifies the row type
 		inst := bdc.Inst.GetColAssignmentAt(run, i)
-		if inst.Equal(&timestampField) {
+		ct := bdc.Ct.GetColAssignmentAt(run, i)
+		if inst.Equal(&timestampField) && ct.IsZero() {
 			// the row type is a timestamp-encoding row
 			timestamp := bdc.DataLo.GetColAssignmentAt(run, i)
 			// in the arithmetization, relBlock is the relative block number inside the conflation
@@ -230,6 +258,8 @@ func AssignTimestampFetcher(run *wizard.ProverRuntime, fetcher TimestampFetcher,
 			// update counters and timestamp data
 			filterFetched[counter].SetOne()
 			relBlock[counter].Set(&fetchedRelBlock)
+			// update the arithmetization filter
+			filterArith[i].SetOne()
 
 			data[counter].Set(&timestamp)
 			counter++
@@ -246,8 +276,11 @@ func AssignTimestampFetcher(run *wizard.ProverRuntime, fetcher TimestampFetcher,
 	run.AssignColumn(fetcher.RelBlock.GetColID(), smartvectors.NewRegular(relBlock))
 	run.AssignColumn(fetcher.Data.GetColID(), smartvectors.NewRegular(data))
 	run.AssignColumn(fetcher.FilterFetched.GetColID(), smartvectors.NewRegular(filterFetched))
+	run.AssignColumn(fetcher.FilterArith.GetColID(), smartvectors.NewRegular(filterArith))
 	run.AssignColumn(fetcher.FirstBlockID.GetColID(), smartvectors.NewRegular([]field.Element{firstBlockID}))
 	run.AssignColumn(fetcher.LastBlockID.GetColID(), smartvectors.NewRegular([]field.Element{lastBlockID}))
 	// assign the SelectorTimestamp using the ComputeSelectorTimestamp prover action
 	fetcher.ComputeSelectorTimestamp.Run(run)
+	// assign the SelectorCt using the ComputeSelectorCt prover action
+	fetcher.ComputeSelectorCt.Run(run)
 }

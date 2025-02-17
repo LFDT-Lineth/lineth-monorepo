@@ -6,6 +6,7 @@ import (
 	"github.com/consensys/linea-monorepo/prover/protocol/query"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	"github.com/consensys/linea-monorepo/prover/utils"
+	"github.com/consensys/linea-monorepo/prover/utils/types"
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/hash/generic"
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/hash/importpad"
 	pack "github.com/consensys/linea-monorepo/prover/zkevm/prover/hash/packing"
@@ -257,7 +258,7 @@ func newPublicInput(
 
 // Assign both a PublicInput and AuxiliaryModules using data from InputModules.
 // The AuxiliaryModules are intermediary modules needed to both define and assign the PublicInput.
-func (pub *PublicInput) Assign(run *wizard.ProverRuntime, l2BridgeAddress common.Address) {
+func (pub *PublicInput) Assign(run *wizard.ProverRuntime, l2BridgeAddress common.Address, blockHashList []types.FullBytes32) {
 
 	var (
 		inp = pub.Inputs
@@ -280,7 +281,7 @@ func (pub *PublicInput) Assign(run *wizard.ProverRuntime, l2BridgeAddress common
 	fetch.AssignTxnDataFetcher(run, aux.txnDataFetcher, inp.TxnData)
 	fetch.AssignRlpTxnFetcher(run, &aux.rlpTxnFetcher, inp.RlpTxn)
 	// assign the ExecutionDataCollector
-	edc.AssignExecutionDataCollector(run, aux.execDataCollector, pub.TimestampFetcher, aux.blockTxnMetadata, aux.txnDataFetcher, aux.rlpTxnFetcher)
+	edc.AssignExecutionDataCollector(run, aux.execDataCollector, pub.TimestampFetcher, aux.blockTxnMetadata, aux.txnDataFetcher, aux.rlpTxnFetcher, blockHashList)
 	aux.execDataCollectorPadding.Run(run)
 	aux.execDataCollectorPacking.Run(run)
 	pub.ExecMiMCHasher.AssignHasher(run)

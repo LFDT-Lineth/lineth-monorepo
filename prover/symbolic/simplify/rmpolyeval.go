@@ -17,20 +17,27 @@ func removePolyEval(e *sym.Expression) *sym.Expression {
 		x := newChildren[0]
 		cs := newChildren[1:]
 
+		if len(cs) == 0 {
+			return oldExpr // Handle edge case where there are no coefficients
+		}
+
 		acc := cs[0]
-		xPowi := x
+
+		// Precompute powers of x
+		powersOfX := make([]*sym.Expression, len(cs))
+		powersOfX[0] = x
+		for i := 1; i < len(cs); i++ {
+			// We don't use the default constructor because it will collapse the
+			// intermediate terms into a single term. The intermediates are useful because
+			// they tell the evaluator to reuse the intermediate terms instead of
+			// computing x^i for every term.
+			powersOfX[i] = sym.NewProduct([]*sym.Expression{powersOfX[i-1], x}, []int{1, 1})
+		}
 
 		for i := 1; i < len(cs); i++ {
 			// Here we want to use the default constructor to ensure that we
 			// will have a merged sum at the end.
-			acc = sym.Add(acc, sym.Mul(xPowi, cs[i]))
-			if i+1 < len(cs) {
-				// We don't use the default construct because it will collapse the
-				// xPowi into a single term. The intermediate are useful because
-				// it tells the evaluator to reuse the intermediate terms instead of
-				// computing x^i for every term.
-				xPowi = sym.NewProduct([]*sym.Expression{xPowi, x}, []int{1, 1})
-			}
+			acc = sym.Add(acc, sym.Mul(powersOfX[i-1], cs[i]))
 		}
 
 		if oldExpr.ESHash != acc.ESHash {

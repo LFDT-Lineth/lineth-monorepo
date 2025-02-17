@@ -100,17 +100,12 @@ func MakeProof(
 ) string {
 
 	assignment := assign(limits, comp, wproof, funcInputs)
-	witness, err := frontend.NewWitness(&assignment, ecc.BLS12_377.ScalarField())
-	if err != nil {
-		panic(err)
-	}
 
-	proof, err := plonk.Prove(
-		setup.Circuit,
-		setup.ProvingKey,
-		witness,
-		emPlonk.GetNativeProverOptions(ecc.BW6_761.ScalarField(), setup.Circuit.Field()),
+	proof, err := circuits.ProveCheck(
+		&setup,
+		&assignment,
 	)
+
 	if err != nil {
 		panic(err)
 	}

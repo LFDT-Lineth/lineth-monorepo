@@ -7,6 +7,7 @@ import (
 	"github.com/consensys/linea-monorepo/prover/backend/ethereum"
 	"github.com/consensys/linea-monorepo/prover/backend/execution/statemanager"
 	"github.com/consensys/linea-monorepo/prover/utils"
+	"github.com/consensys/linea-monorepo/prover/utils/types"
 	"github.com/ethereum/go-ethereum/common"
 )
 
@@ -26,6 +27,8 @@ type Witness struct {
 	TxHashes        [][32]byte
 	L2BridgeAddress common.Address
 	ChainID         uint
+	// BlockHashList is the list of the block-hashes of the proven blocks
+	BlockHashList []types.FullBytes32
 }
 
 // TxSignatureGetter implements the ecdsa.TxSignatureGetter interface

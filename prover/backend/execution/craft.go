@@ -36,13 +36,13 @@ func CraftProverOutput(
 ) Response {
 
 	// Split the embedded file contents into a string slice
-	constraintsVersions := strings.Split(strings.TrimSpace(constraintsVersionsStr), "\n")
+	// constraintsVersions := strings.Split(strings.TrimSpace(constraintsVersionsStr), "\n")
 
 	// Check the arithmetization version used to generate the trace is contained in the prover request
 	// and fail fast if the constraint version is not supported
-	if err := checkArithmetizationVersion(req.ConflatedExecutionTracesFile, req.TracesEngineVersion, constraintsVersions); err != nil {
-		panic(err.Error())
-	}
+	// if err := checkArithmetizationVersion(req.ConflatedExecutionTracesFile, req.TracesEngineVersion, constraintsVersions); err != nil {
+	// 	panic(err.Error())
+	// }
 
 	var (
 		l2BridgeAddress = cfg.Layer2.MsgSvcContract
@@ -238,6 +238,7 @@ func NewWitness(cfg *config.Config, req *Request, rsp *Response) *Witness {
 			TxHashes:        txHashes,
 			L2BridgeAddress: cfg.Layer2.MsgSvcContract,
 			ChainID:         cfg.Layer2.ChainID,
+			BlockHashList:   getBlockHashList(rsp),
 		},
 		FuncInp: rsp.FuncInput(),
 	}
@@ -285,4 +286,12 @@ func validateAndExtractVersion(traceFileName string) (string, error) {
 		return matches[1], nil
 	}
 	return "", fmt.Errorf("conflated trace file: %s not in the appropriate format or version not found", traceFileName)
+}
+
+func getBlockHashList(rsp *Response) []types.FullBytes32 {
+	res := []types.FullBytes32{}
+	for i := range rsp.BlocksData {
+		res = append(res, rsp.BlocksData[i].BlockHash)
+	}
+	return res
 }

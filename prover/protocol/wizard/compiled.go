@@ -166,7 +166,10 @@ func (c *CompiledIOP) InsertCommit(round int, name ifaces.ColID, size int) iface
 //   - if the size of the column is not a power of 2
 //   - if a column using the same name has already been registered
 func (c *CompiledIOP) InsertColumn(round int, name ifaces.ColID, size int, status column.Status) ifaces.Column {
-
+	// Panic if the size is not a power of 2
+	if !utils.IsPowerOfTwo(size) {
+		utils.Panic("Registering column %v with a non power of two size = %v", name, size)
+	}
 	// @alex: this has actually caught a few typos. When wrongly setting an
 	// incorrect but very large size here, it will generate a disproportionate
 	// wizard

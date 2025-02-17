@@ -10,10 +10,11 @@ require (
 	github.com/consensys/compress v0.2.5
 	github.com/consensys/gnark v0.11.1-0.20250107100237-2cb190338a01
 	github.com/consensys/gnark-crypto v0.14.1-0.20241217134352-810063550bd4
-	github.com/consensys/go-corset v0.0.0-20241125005324-5cb0c289c021
+	github.com/consensys/go-corset v0.0.0-20250129030528-04c6bba7ccfd
 	github.com/crate-crypto/go-kzg-4844 v1.1.0
 	github.com/dlclark/regexp2 v1.11.2
 	github.com/fxamacker/cbor/v2 v2.7.0
+	github.com/go-playground/assert/v2 v2.2.0
 	github.com/go-playground/validator/v10 v10.22.0
 	github.com/iancoleman/strcase v0.3.0
 	github.com/icza/bitio v1.1.0

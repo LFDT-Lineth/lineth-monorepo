@@ -7,6 +7,7 @@ import (
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/dummy"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	"github.com/consensys/linea-monorepo/prover/utils"
+	"github.com/consensys/linea-monorepo/prover/utils/types"
 	arith "github.com/consensys/linea-monorepo/prover/zkevm/prover/publicInput/arith_struct"
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/publicInput/logs"
 	util "github.com/consensys/linea-monorepo/prover/zkevm/prover/publicInput/utilities"
@@ -32,6 +33,7 @@ func TestPublicInputDefineAndAssign(t *testing.T) {
 	testLogs, bridgeAddress, _ := logs.GenerateLargeTest()
 	logFullSize := logs.ComputeSize(testLogs[:])
 	logColSize := utils.NextPowerOfTwo(logFullSize)
+	blockHashList := [1 << 10]types.FullBytes32{} // if the test does more than 1 << 10 block-hash it will panic. It can be solved by adding more capacity here
 
 	define := func(b *wizard.Builder) {
 		// Define BlockData, TxnData and RlpTxn
@@ -62,7 +64,7 @@ func TestPublicInputDefineAndAssign(t *testing.T) {
 		inp.StateSummary.Assign(run, shomeiTraces)
 		// Assign the Logs
 		logs.LogColumnsAssign(run, &inp.LogCols, testLogs[:])
-		pub.Assign(run, common.Address(bridgeAddress))
+		pub.Assign(run, common.Address(bridgeAddress), blockHashList[:])
 
 	}
 

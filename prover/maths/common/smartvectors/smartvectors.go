@@ -233,3 +233,50 @@ func WindowExt(v SmartVector) []fext.Element {
 		panic(fmt.Sprintf("unexpected type %T", v))
 	}
 }
+
+// TryReduceSize detects if the input smart-vector can be reduced to a constant
+// smart-vector. It will only apply over the following types: [Regular].
+func TryReduceSize(v SmartVector) SmartVector {
+
+	switch w := v.(type) {
+	case *Constant, *Rotated, *Pooled, *PaddedCircularWindow:
+		return w
+	case *Regular:
+
+		// to detect if a regular vector can be reduced to a constant, we need to
+		// check if all the values are equals. That's an expensive, so we instead
+		// by comparing values that would be likely to be unequal if it was not a
+		// constant. Also, we need to rule out the case where len(*w) because it
+		// is irrelevant to reducing the size.
+		if len(*w) <= 1 {
+			return w
+		}
+
+		if (*w)[0] != (*w)[1] {
+			return w
+		}
+
+		if (*w)[0] != (*w)[len(*w)-1] {
+			return w
+		}
+
+		if (*w)[0] != (*w)[len(*w)/2] {
+			return w
+		}
+
+		// This is expensive check where we check all the values in the vector
+		// to see if they are all equal. This is not the most efficient way to
+		// detect if a vector is a constant but the only reliable one.
+		for i := range *w {
+			if (*w)[i] != (*w)[0] {
+				return w
+			}
+		}
+
+		return NewConstant((*w)[0], len(*w))
+
+	default:
+		panic(fmt.Sprintf("unexpected type %T", v))
+	}
+
+}

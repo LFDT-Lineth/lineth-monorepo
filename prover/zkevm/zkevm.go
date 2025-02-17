@@ -138,7 +138,7 @@ func (z *ZkEvm) prove(input *Witness) (prover wizard.ProverStep) {
 		z.ecmul.Assign(run)
 		z.ecpair.Assign(run)
 		z.sha2.Run(run)
-		z.PublicInput.Assign(run, input.L2BridgeAddress)
+		z.PublicInput.Assign(run, input.L2BridgeAddress, input.BlockHashList)
 	}
 }
 

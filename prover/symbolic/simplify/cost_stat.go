@@ -2,6 +2,7 @@ package simplify
 
 import (
 	"math/bits"
+	"sync"
 
 	sym "github.com/consensys/linea-monorepo/prover/symbolic"
 )
@@ -21,10 +22,21 @@ func (s *costStats) add(cost costStats) {
 // Returns the cost stats of a boarded expression
 func evaluateCostStat(expr *sym.Expression) (s costStats) {
 	board := expr.Board()
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+
 	for i := 1; i < len(board.Nodes); i++ {
-		s_ := evaluateNodeCosts(board.Nodes[i]...)
-		s.add(s_)
+		wg.Add(1)
+		go func(nodes []sym.Node) {
+			defer wg.Done()
+			s_ := evaluateNodeCosts(nodes...)
+			mu.Lock()
+			s.add(s_)
+			mu.Unlock()
+		}(board.Nodes[i])
 	}
+	wg.Wait()
+
 	return s
 }
 

@@ -16,6 +16,7 @@ import (
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	"github.com/consensys/linea-monorepo/prover/symbolic"
 	"github.com/consensys/linea-monorepo/prover/utils"
+	"github.com/sirupsen/logrus"
 )
 
 // schemaScanner is a transient scanner structure whose goal is to port the
@@ -56,7 +57,7 @@ func (s *schemaScanner) scanColumns() {
 	for _, colAssi := range schAssi {
 		if il, isIL := colAssi.(*assignment.Interleaving); isIL {
 			col := il.Columns().Nth(0) // There is only a single column here
-			wName := wizardName(getModuleName(s.Schema, col), col.Name())
+			wName := wizardName(getModuleNameFromColumn(s.Schema, col), col.Name)
 			s.InterleavedColumns[wName] = il
 		}
 	}
@@ -64,19 +65,24 @@ func (s *schemaScanner) scanColumns() {
 	for _, colDecl := range schCol {
 
 		var (
-			name        = wizardName(getModuleName(s.Schema, colDecl), colDecl.Name())
-			ctx         = colDecl.Context()
+			name        = wizardName(getModuleNameFromColumn(s.Schema, colDecl), colDecl.Name)
+			ctx         = colDecl.Context
 			module      = s.Modules[ctx.Module()]
-			moduleLimit = s.LimitMap[module.Name()]
+			moduleLimit = s.LimitMap[module.Name]
 			mult        = ctx.LengthMultiplier()
+			size        = int(mult) * moduleLimit
 		)
 
-		if _, isIL := s.InterleavedColumns[name]; isIL {
-			continue
+		// Adjust the size for interleaved columns and their permuted versions.
+		// Since these are the only columns from corset with a non-power-of-two size.
+		if !utils.IsPowerOfTwo(size) {
+			newSize := utils.NextPowerOfTwo(int(mult) * moduleLimit)
+			logrus.Debug("Adjusting size for column: ", name, " in module: ", module.Name, " from ", size, " to ", newSize)
+			size = newSize
 		}
 
 		// #nosec G115 -- this bound will not overflow
-		s.Comp.InsertCommit(0, ifaces.ColID(name), int(mult)*moduleLimit)
+		s.Comp.InsertCommit(0, ifaces.ColID(name), size)
 	}
 }
 
@@ -103,9 +109,9 @@ func (s *schemaScanner) addConstraintInComp(name string, corsetCS schema.Constra
 	case air.LookupConstraint:
 
 		var (
-			numCol   = len(cs.Sources())
-			cSources = cs.Sources()
-			cTargets = cs.Targets()
+			numCol   = len(cs.Sources)
+			cSources = cs.Sources
+			cTargets = cs.Targets
 			wSources = make([]ifaces.Column, numCol)
 			wTargets = make([]ifaces.Column, numCol)
 		)
@@ -121,9 +127,9 @@ func (s *schemaScanner) addConstraintInComp(name string, corsetCS schema.Constra
 	case *constraint.PermutationConstraint:
 
 		var (
-			numCol   = len(cs.Sources())
-			cSources = cs.Sources()
-			cTargets = cs.Targets()
+			numCol   = len(cs.Sources)
+			cSources = cs.Sources
+			cTargets = cs.Targets
 			wSources = make([]ifaces.Column, numCol)
 			wTargets = make([]ifaces.Column, numCol)
 		)
@@ -139,7 +145,7 @@ func (s *schemaScanner) addConstraintInComp(name string, corsetCS schema.Constra
 	case air.VanishingConstraint:
 
 		var (
-			wExpr  = s.castExpression(cs.Constraint().Expr)
+			wExpr  = s.castExpression(cs.Constraint.Expr)
 			wBoard = wExpr.Board()
 			wMeta  = wBoard.ListVariableMetadata()
 		)
@@ -149,12 +155,12 @@ func (s *schemaScanner) addConstraintInComp(name string, corsetCS schema.Constra
 			return
 		}
 
-		if cs.Domain() == nil {
+		if cs.Domain.IsEmpty() {
 			s.Comp.InsertGlobal(0, ifaces.QueryID(name), wExpr)
 			return
 		}
 
-		domain := *cs.Domain()
+		domain := cs.Domain.Unwrap()
 
 		// This applies the shift to all the leaves of the expression
 		wExpr = wExpr.ReconstructBottomUp(
@@ -178,9 +184,9 @@ func (s *schemaScanner) addConstraintInComp(name string, corsetCS schema.Constra
 
 	case *constraint.RangeConstraint[*air.ColumnAccess]:
 
-		bound := cs.Bound()
+		bound := cs.Bound
 		// #nosec G115 -- this bound will not overflow
-		s.Comp.InsertRange(0, ifaces.QueryID(name), s.compColumnByCorsetID(cs.Target().Column), int(bound.Uint64()))
+		s.Comp.InsertRange(0, ifaces.QueryID(name), s.compColumnByCorsetID(cs.Expr.Column), int(bound.Uint64()))
 
 	default:
 
@@ -246,7 +252,16 @@ func getModuleName(schema *air.Schema, v corsetNamed) string {
 		module   = schema.Modules().Nth(moduleID)
 	)
 
-	return module.Name()
+	return module.Name
+}
+
+func getModuleNameFromColumn(schema *air.Schema, col schema.Column) string {
+	var (
+		moduleID = col.Context.Module()
+		module   = schema.Modules().Nth(moduleID)
+	)
+
+	return module.Name
 }
 
 // wizardName formats a name to be used on the wizard side as an identifier for
@@ -261,7 +276,7 @@ func wizardName(moduleName, objectName string) string {
 func (s *schemaScanner) compColumnByCorsetID(corsetID uint) ifaces.Column {
 	var (
 		cCol  = s.Schema.Columns().Nth(corsetID)
-		cName = ifaces.ColID(wizardName(getModuleName(s.Schema, cCol), cCol.Name()))
+		cName = ifaces.ColID(wizardName(getModuleNameFromColumn(s.Schema, cCol), cCol.Name))
 		wCol  = s.Comp.Columns.GetHandle(cName)
 	)
 	return wCol

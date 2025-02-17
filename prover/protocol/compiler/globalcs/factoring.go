@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"reflect"
+	"sync"
 
 	"github.com/consensys/linea-monorepo/prover/protocol/accessors"
 	"github.com/consensys/linea-monorepo/prover/protocol/serialization"
@@ -13,12 +14,20 @@ import (
 	"github.com/consensys/linea-monorepo/prover/utils"
 )
 
-// factorExpressionList applies [factorExpression] over a list of expression
+// factorExpressionList applies [factorExpression] over a list of expressions
 func factorExpressionList(comp *wizard.CompiledIOP, exprList []*symbolic.Expression) []*symbolic.Expression {
 	res := make([]*symbolic.Expression, len(exprList))
+	var wg sync.WaitGroup
+
 	for i, expr := range exprList {
-		res[i] = factorExpression(comp, expr)
+		wg.Add(1)
+		go func(i int, expr *symbolic.Expression) {
+			defer wg.Done()
+			res[i] = factorExpression(comp, expr)
+		}(i, expr)
 	}
+
+	wg.Wait()
 	return res
 }
 

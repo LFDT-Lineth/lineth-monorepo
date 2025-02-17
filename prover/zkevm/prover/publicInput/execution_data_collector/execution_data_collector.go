@@ -10,6 +10,7 @@ import (
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	sym "github.com/consensys/linea-monorepo/prover/symbolic"
+	"github.com/consensys/linea-monorepo/prover/utils/types"
 	arith "github.com/consensys/linea-monorepo/prover/zkevm/prover/publicInput/arith_struct"
 	fetch "github.com/consensys/linea-monorepo/prover/zkevm/prover/publicInput/fetchers_arithmetization"
 	util "github.com/consensys/linea-monorepo/prover/zkevm/prover/publicInput/utilities"
@@ -138,13 +139,13 @@ const (
 	loadRlp          = 6
 
 	noBytesNoTxn        = 2
-	noBytesTimestamp    = 6
+	noBytesTimestamp    = 4
 	noBytesBlockHash    = 16
 	noBytesSenderAddrHi = 4
 	noBytesSenderAddrLo = 16
 
 	powBytesNoTxn   = "5192296858534827628530496329220096" // 2 bytes when loading NO_TX, 2^(128-2*8)
-	powTimestamp    = "1208925819614629174706176"          // 6 bytes when loading TIMESTAMP, 2^(128-6*8)
+	powTimestamp    = "79228162514264337593543950336"      // 4 bytes when loading TIMESTAMP, 2^(128-4*8)
 	powBlockHash    = "1"                                  // 16 bytes when loading BlockHash, 2^(128-16*8)
 	powSenderAddrHi = "79228162514264337593543950336"      // 4 bytes when loading SENDER ADDR HI, 2^(128-4*8)
 	powSenderAddrLo = "1"                                  // 16 bytes bytes when loading SenderAddrLo, 2^(128-16*8)
@@ -1252,7 +1253,9 @@ func AssignExecutionDataCollector(run *wizard.ProverRuntime,
 	timestamps fetch.TimestampFetcher,
 	metadata fetch.BlockTxnMetadata,
 	txnData fetch.TxnDataFetcher,
-	rlp fetch.RlpTxnFetcher) {
+	rlp fetch.RlpTxnFetcher,
+	blockHashList []types.FullBytes32,
+) {
 	size := edc.Limb.Size()
 	// generate a helper struct that instantiates field element vectors for all our columns
 	vect := NewExecutionDataCollectorVectors(size)
@@ -1299,7 +1302,8 @@ func AssignExecutionDataCollector(run *wizard.ProverRuntime,
 			totalCt++
 
 			// row 2, load the Hi part of the blockhash
-			fetchedBlockhashHi := field.Zero() // TO BE REPLACED LATER
+			var fetchedBlockhashHi field.Element
+			fetchedBlockhashHi.SetBytes(blockHashList[blockCt][:16])
 			vect.IsBlockHashHi[totalCt].SetOne()
 			vect.NoBytes[totalCt].SetInt64(noBytesBlockHash)
 			genericLoadFunction(loadBlockHashHi, fetchedBlockhashHi)
@@ -1307,7 +1311,8 @@ func AssignExecutionDataCollector(run *wizard.ProverRuntime,
 			totalCt++
 
 			// row 3, load the Lo part of the blockhash
-			fetchedBlockhashLo := field.Zero() // TO BE REPLACED LATER
+			var fetchedBlockhashLo field.Element
+			fetchedBlockhashLo.SetBytes(blockHashList[blockCt][16:])
 			vect.IsBlockHashLo[totalCt].SetOne()
 			vect.NoBytes[totalCt].SetInt64(noBytesBlockHash)
 			genericLoadFunction(loadBlockHashLo, fetchedBlockhashLo)

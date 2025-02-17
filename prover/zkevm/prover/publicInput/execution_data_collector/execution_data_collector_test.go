@@ -5,6 +5,7 @@ import (
 
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/dummy"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
+	"github.com/consensys/linea-monorepo/prover/utils/types"
 	arith "github.com/consensys/linea-monorepo/prover/zkevm/prover/publicInput/arith_struct"
 	fetch "github.com/consensys/linea-monorepo/prover/zkevm/prover/publicInput/fetchers_arithmetization"
 	util "github.com/consensys/linea-monorepo/prover/zkevm/prover/publicInput/utilities"
@@ -16,6 +17,7 @@ func TestDefineAndAssignmentExecutionDataCollector(t *testing.T) {
 	ctBlockData := util.InitializeCsv("../testdata/blockdata_mock.csv", t)
 	ctTxnData := util.InitializeCsv("../testdata/txndata_mock.csv", t)
 	ctRlpTxn := util.InitializeCsv("../testdata/rlp_txn_mock.csv", t)
+	blockHashList := [1 << 10]types.FullBytes32{}
 
 	var (
 		edc              ExecutionDataCollector
@@ -56,7 +58,7 @@ func TestDefineAndAssignmentExecutionDataCollector(t *testing.T) {
 		fetch.AssignBlockTxnMetadata(run, btm, txd)
 		fetch.AssignTxnDataFetcher(run, txnDataFetcher, txd)
 		fetch.AssignRlpTxnFetcher(run, &rlpTxnFetcher, rt)
-		AssignExecutionDataCollector(run, edc, timestampFetcher, btm, txnDataFetcher, rlpTxnFetcher)
+		AssignExecutionDataCollector(run, edc, timestampFetcher, btm, txnDataFetcher, rlpTxnFetcher, blockHashList[:])
 	}
 
 	comp := wizard.Compile(define, dummy.Compile)

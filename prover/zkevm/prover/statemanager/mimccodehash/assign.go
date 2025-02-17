@@ -9,30 +9,32 @@ import (
 )
 
 type assignBuilder struct {
-	isActive   []field.Element
-	cfi        []field.Element
-	limb       []field.Element
-	codeHashHi []field.Element
-	codeHashLo []field.Element
-	codeSize   []field.Element
-	isNewHash  []field.Element
-	isHashEnd  []field.Element
-	prevState  []field.Element
-	newState   []field.Element
+	isActive         []field.Element
+	cfi              []field.Element
+	limb             []field.Element
+	codeHashHi       []field.Element
+	codeHashLo       []field.Element
+	codeSize         []field.Element
+	isNewHash        []field.Element
+	isHashEnd        []field.Element
+	prevState        []field.Element
+	newState         []field.Element
+	isNonEmptyKeccak []field.Element
 }
 
 func newAssignmentBuilder(length int) *assignBuilder {
 	return &assignBuilder{
-		isActive:   make([]field.Element, 0, length),
-		cfi:        make([]field.Element, 0, length),
-		limb:       make([]field.Element, 0, length),
-		codeHashHi: make([]field.Element, 0, length),
-		codeHashLo: make([]field.Element, 0, length),
-		codeSize:   make([]field.Element, 0, length),
-		isNewHash:  make([]field.Element, 0, length),
-		isHashEnd:  make([]field.Element, 0, length),
-		prevState:  make([]field.Element, 0, length),
-		newState:   make([]field.Element, 0, length),
+		isActive:         make([]field.Element, 0, length),
+		cfi:              make([]field.Element, 0, length),
+		limb:             make([]field.Element, 0, length),
+		codeHashHi:       make([]field.Element, 0, length),
+		codeHashLo:       make([]field.Element, 0, length),
+		codeSize:         make([]field.Element, 0, length),
+		isNewHash:        make([]field.Element, 0, length),
+		isHashEnd:        make([]field.Element, 0, length),
+		prevState:        make([]field.Element, 0, length),
+		newState:         make([]field.Element, 0, length),
+		isNonEmptyKeccak: make([]field.Element, 0, length),
 	}
 }
 
@@ -194,6 +196,18 @@ func (mh *Module) Assign(run *wizard.ProverRuntime) {
 			// and append only that codehash for which the cfi matches with currCFI
 			for j := 0; j < len(cfiRomLex); j++ {
 				if currCFI == cfiRomLex[j] {
+
+					currIsNonEmptyKeccak := field.One()
+
+					if builder.isHashEnd[i].IsZero() {
+						currIsNonEmptyKeccak = field.Zero()
+					}
+
+					if codeHashHi[j] == emptyKeccakHi && codeHashLo[j] == emptyKeccakLo {
+						currIsNonEmptyKeccak = field.Zero()
+					}
+
+					builder.isNonEmptyKeccak = append(builder.isNonEmptyKeccak, currIsNonEmptyKeccak)
 					builder.codeHashHi = append(builder.codeHashHi, codeHashHi[j])
 					builder.codeHashLo = append(builder.codeHashLo, codeHashLo[j])
 					break
@@ -213,8 +227,12 @@ func (mh *Module) Assign(run *wizard.ProverRuntime) {
 	run.AssignColumn(mh.IsNewHash.GetColID(), smartvectors.RightZeroPadded(builder.isNewHash, mh.inputs.Size))
 	run.AssignColumn(mh.IsHashEnd.GetColID(), smartvectors.RightZeroPadded(builder.isHashEnd, mh.inputs.Size))
 	run.AssignColumn(mh.PrevState.GetColID(), smartvectors.RightZeroPadded(builder.prevState, mh.inputs.Size))
+	run.AssignColumn(mh.IsForConsistency.GetColID(), smartvectors.RightZeroPadded(builder.isNonEmptyKeccak, mh.inputs.Size))
 
 	// Assignment of new state with the zero hash padding
 	newStatePad := mimc.BlockCompression(field.Zero(), field.Zero())
 	run.AssignColumn(mh.NewState.GetColID(), smartvectors.RightPadded(builder.newState, newStatePad, mh.inputs.Size))
+
+	mh.CptIsEmptyKeccakHi.Run(run)
+	mh.CptIsEmptyKeccakLo.Run(run)
 }
