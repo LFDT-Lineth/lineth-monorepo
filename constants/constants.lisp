@@ -198,6 +198,28 @@
   GAS_CONST_G_KECCAK_256_WORD               6
   GAS_CONST_G_COPY                          3
   GAS_CONST_G_BLOCKHASH                     20
+  GAS_CONST_ECRECOVER                       3000
+  GAS_CONST_SHA2                            60
+  GAS_CONST_SHA2_WORD                       12
+  GAS_CONST_RIPEMD                          600
+  GAS_CONST_RIPEMD_WORD                     120
+  GAS_CONST_IDENTITY                        15
+  GAS_CONST_IDENTITY_WORD                   3
+  GAS_CONST_MODEXP                          200 
+  GAS_CONST_ECADD                           150
+  GAS_CONST_ECMUL                           6000
+  GAS_CONST_ECPAIRING                       45000
+  GAS_CONST_ECPAIRING_PAIR                  34000
+  GAS_CONST_BLAKE2_PER_ROUND                1
+
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;               ;;
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; PRECOMPILES   ;;
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;               ;;
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  PRC_ECPAIRING_SIZE                        (* 6 WORD_SIZE)
+  PRC_BLAKE2F_SIZE                          213
+
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;           ;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  EVM MISC ;;

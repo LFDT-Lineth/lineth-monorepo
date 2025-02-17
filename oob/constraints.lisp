@@ -557,7 +557,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defun (prc-ecrecover-prc-ecadd-prc-ecmul---standard-precondition)    (+ IS_ECRECOVER IS_ECADD IS_ECMUL))
-(defun (prc-ecrecover-prc-ecadd-prc-ecmul---precompile-cost)          (+ (* 3000 IS_ECRECOVER) (* 150 IS_ECADD) (* 6000 IS_ECMUL)))
+(defun (prc-ecrecover-prc-ecadd-prc-ecmul---precompile-cost)          (+ (* GAS_CONST_ECRECOVER IS_ECRECOVER) (* GAS_CONST_ECADD IS_ECADD) (* GAS_CONST_ECMUL IS_ECMUL)))
 (defun (prc-ecrecover-prc-ecadd-prc-ecmul---insufficient-gas)         (shift OUTGOING_RES_LO 2))
 
 (defconstraint prc-ecrecover-prc-ecadd-prc-ecmul---compare-call-gas-against-precompile-cost (:guard (* (assumption---fresh-new-stamp) (prc-ecrecover-prc-ecadd-prc-ecmul---standard-precondition)))
@@ -579,8 +579,12 @@
 (defun (prc-sha2-prc-ripemd-prc-identity---standard-precondition)     (+ IS_SHA2 IS_RIPEMD IS_IDENTITY))
 (defun (prc-sha2-prc-ripemd-prc-identity---ceil)                      (shift OUTGOING_RES_LO 2))
 (defun (prc-sha2-prc-ripemd-prc-identity---insufficient-gas)          (shift OUTGOING_RES_LO 3))
-(defun (prc-sha2-prc-ripemd-prc-identity---precompile-cost)           (*    (+ 5 (prc-sha2-prc-ripemd-prc-identity---ceil))
-                                                                            (+ (* 12 IS_SHA2) (* 120 IS_RIPEMD) (* 3 IS_IDENTITY))))
+(defun (prc-sha2-prc-ripemd-prc-identity---sha2-cost)                 (+  GAS_CONST_SHA2       (* GAS_CONST_SHA2_WORD      (prc-sha2-prc-ripemd-prc-identity---ceil))))
+(defun (prc-sha2-prc-ripemd-prc-identity---ripemd-cost)               (+  GAS_CONST_RIPEMD     (* GAS_CONST_RIPEMD_WORD    (prc-sha2-prc-ripemd-prc-identity---ceil))))
+(defun (prc-sha2-prc-ripemd-prc-identity---identity-cost)             (+  GAS_CONST_IDENTITY   (* GAS_CONST_IDENTITY_WORD  (prc-sha2-prc-ripemd-prc-identity---ceil))))
+(defun (prc-sha2-prc-ripemd-prc-identity---precompile-cost)           (+  (*  (prc-sha2-prc-ripemd-prc-identity---sha2-cost)      IS_SHA2    )
+                                                                          (*  (prc-sha2-prc-ripemd-prc-identity---ripemd-cost)    IS_RIPEMD  )
+                                                                          (*  (prc-sha2-prc-ripemd-prc-identity---identity-cost)  IS_IDENTITY)))
 
 (defconstraint prc-sha2-prc-ripemd-prc-identity---div-cds-plus-31-by-32 (:guard (* (assumption---fresh-new-stamp) (prc-sha2-prc-ripemd-prc-identity---standard-precondition)))
   (call-to-DIV 2 0 (+ (prc---cds) 31) 0 32))
@@ -601,21 +605,21 @@
 ;;                       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defun (prc-ecpairing---standard-precondition)     IS_ECPAIRING)
-(defun (prc-ecpairing---remainder)                 (shift OUTGOING_RES_LO 2))
-(defun (prc-ecpairing---is-multiple_192)           (shift OUTGOING_RES_LO 3))
-(defun (prc-ecpairing---insufficient-gas)          (shift OUTGOING_RES_LO 4))
-(defun (prc-ecpairing---precompile-cost192)        (*    (prc-ecpairing---is-multiple_192)
-                                                         (+ (* 45000 192) (* 34000 (prc---cds)))))
+(defun (prc-ecpairing---standard-precondition)                    IS_ECPAIRING)
+(defun (prc-ecpairing---remainder)                                (shift OUTGOING_RES_LO 2))
+(defun (prc-ecpairing---is-multiple_PRC_ECPAIRING_SIZE)           (shift OUTGOING_RES_LO 3))
+(defun (prc-ecpairing---insufficient-gas)                         (shift OUTGOING_RES_LO 4))
+(defun (prc-ecpairing---precompile-cost_PRC_ECPAIRING_SIZE)       (*    (prc-ecpairing---is-multiple_PRC_ECPAIRING_SIZE)
+                                                                  (+ (* GAS_CONST_ECPAIRING PRC_ECPAIRING_SIZE) (* GAS_CONST_ECPAIRING_PAIR (prc---cds)))))
 
-(defconstraint prc-ecpairing---mod-cds-by-192 (:guard (* (assumption---fresh-new-stamp) (prc-ecpairing---standard-precondition)))
-  (call-to-MOD 2 0 (prc---cds) 0 192))
+(defconstraint prc-ecpairing---mod-cds-by-PRC_ECPAIRING_SIZE (:guard (* (assumption---fresh-new-stamp) (prc-ecpairing---standard-precondition)))
+  (call-to-MOD 2 0 (prc---cds) 0 PRC_ECPAIRING_SIZE))
 
 (defconstraint prc-ecpairing---check-remainder-is-zero (:guard (* (assumption---fresh-new-stamp) (prc-ecpairing---standard-precondition)))
   (call-to-ISZERO 3 0 (prc-ecpairing---remainder)))
 
 (defconstraint prc-ecpairing---compare-call-gas-against-precompile-cost (:guard (* (assumption---fresh-new-stamp) (prc-ecpairing---standard-precondition)))
-  (if-zero (prc-ecpairing---is-multiple_192)
+  (if-zero (prc-ecpairing---is-multiple_PRC_ECPAIRING_SIZE)
            (noCall 4)
            (begin (vanishes! (shift ADD_FLAG 4))
                   (vanishes! (shift MOD_FLAG 4))
@@ -624,16 +628,16 @@
                   (vanishes! (shift [OUTGOING_DATA 1] 4))
                   (eq! (shift [OUTGOING_DATA 2] 4) (prc---callee-gas))
                   (vanishes! (shift [OUTGOING_DATA 3] 4))
-                  (eq! (* (shift [OUTGOING_DATA 4] 4) 192)
-                       (prc-ecpairing---precompile-cost192)))))
+                  (eq! (* (shift [OUTGOING_DATA 4] 4) PRC_ECPAIRING_SIZE)
+                       (prc-ecpairing---precompile-cost_PRC_ECPAIRING_SIZE)))))
 
 (defconstraint prc-ecpairing---justify-hub-predictions (:guard (* (assumption---fresh-new-stamp) (prc-ecpairing---standard-precondition)))
   (begin (eq! (prc---hub-success)
-              (* (prc-ecpairing---is-multiple_192) (- 1 (prc-ecpairing---insufficient-gas))))
+              (* (prc-ecpairing---is-multiple_PRC_ECPAIRING_SIZE) (- 1 (prc-ecpairing---insufficient-gas))))
          (if-zero (prc---hub-success)
                   (vanishes! (prc---return-gas))
-                  (eq! (* (prc---return-gas) 192)
-                       (- (* (prc---callee-gas) 192) (prc-ecpairing---precompile-cost192))))))
+                  (eq! (* (prc---return-gas) PRC_ECPAIRING_SIZE)
+                       (- (* (prc---callee-gas) PRC_ECPAIRING_SIZE) (prc-ecpairing---precompile-cost_PRC_ECPAIRING_SIZE))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                         ;;
@@ -763,19 +767,19 @@
 ;;   - pricing             ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defun (prc-modexp-pricing---standard-precondition)   IS_MODEXP_PRICING)
-(defun (prc-modexp-pricing---exponent-log)            [DATA 6])
-(defun (prc-modexp-pricing---max-xbs-ybs)             [DATA 7])
-(defun (prc-modexp-pricing---exponent-log-is-zero)    (next OUTGOING_RES_LO))
-(defun (prc-modexp-pricing---f-of-max)                (*  (shift OUTGOING_RES_LO 2)  (shift OUTGOING_RES_LO 2)))
-(defun (prc-modexp-pricing---big-quotient)            (shift OUTGOING_RES_LO 3))
-(defun (prc-modexp-pricing---big-quotient_LT_200)     (shift OUTGOING_RES_LO 4))
-(defun (prc-modexp-pricing---big-numerator)           (if-zero (prc-modexp-pricing---exponent-log-is-zero)
-                                                               (* (prc-modexp-pricing---f-of-max) (prc-modexp-pricing---exponent-log))
-                                                               (prc-modexp-pricing---f-of-max)))
-(defun (prc-modexp-pricing---precompile-cost)         (if-zero (prc-modexp-pricing---big-quotient_LT_200)
-                                                               (prc-modexp-pricing---big-quotient)
-                                                               200))
+(defun (prc-modexp-pricing---standard-precondition)                IS_MODEXP_PRICING)
+(defun (prc-modexp-pricing---exponent-log)                         [DATA 6])
+(defun (prc-modexp-pricing---max-xbs-ybs)                          [DATA 7])
+(defun (prc-modexp-pricing---exponent-log-is-zero)                 (next OUTGOING_RES_LO))
+(defun (prc-modexp-pricing---f-of-max)                             (*  (shift OUTGOING_RES_LO 2)  (shift OUTGOING_RES_LO 2)))
+(defun (prc-modexp-pricing---big-quotient)                         (shift OUTGOING_RES_LO 3))
+(defun (prc-modexp-pricing---big-quotient_LT_GAS_CONST_MODEXP)     (shift OUTGOING_RES_LO 4))
+(defun (prc-modexp-pricing---big-numerator)                        (if-zero (prc-modexp-pricing---exponent-log-is-zero)
+                                                                            (* (prc-modexp-pricing---f-of-max) (prc-modexp-pricing---exponent-log))
+                                                                            (prc-modexp-pricing---f-of-max)))
+(defun (prc-modexp-pricing---precompile-cost)                      (if-zero (prc-modexp-pricing---big-quotient_LT_GAS_CONST_MODEXP)
+                                                                            (prc-modexp-pricing---big-quotient)
+                                                                            GAS_CONST_MODEXP))
 
 (defconstraint prc-modexp-pricing---check--is-zero (:guard (* (assumption---fresh-new-stamp) (prc-modexp-pricing---standard-precondition)))
   (call-to-ISZERO 0 0 (prc---r@c)))
@@ -793,8 +797,8 @@
 (defconstraint prc-modexp-pricing---div-big-numerator-by-quaddivisor (:guard (* (assumption---fresh-new-stamp) (prc-modexp-pricing---standard-precondition)))
   (call-to-DIV 3 0 (prc-modexp-pricing---big-numerator) 0 G_QUADDIVISOR))
 
-(defconstraint prc-modexp-pricing---compare-big-quotient-against-200 (:guard (* (assumption---fresh-new-stamp) (prc-modexp-pricing---standard-precondition)))
-  (call-to-LT 4 0 (prc-modexp-pricing---big-quotient) 0 200))
+(defconstraint prc-modexp-pricing---compare-big-quotient-against-GAS_CONST_MODEXP (:guard (* (assumption---fresh-new-stamp) (prc-modexp-pricing---standard-precondition)))
+  (call-to-LT 4 0 (prc-modexp-pricing---big-quotient) 0 GAS_CONST_MODEXP))
 
 (defconstraint prc-modexp-pricing---compare-call-gas-against-precompile-cost (:guard (* (assumption---fresh-new-stamp) (prc-modexp-pricing---standard-precondition)))
   (call-to-LT 5 0 (prc---callee-gas) 0 (prc-modexp-pricing---precompile-cost)))
@@ -862,8 +866,8 @@
 (defun (prc-blake-cds---valid-cds)  OUTGOING_RES_LO)
 (defun (prc-blake-cds---r@c-is-zero)   (next OUTGOING_RES_LO))
 
-(defconstraint prc-blake-cds---compare-cds-against-213 (:guard (* (assumption---fresh-new-stamp) (prc-blake-cds---standard-precondition)))
-  (call-to-EQ 0 0 (prc---cds) 0 213))
+(defconstraint prc-blake-cds---compare-cds-against-PRC_BLAKE2F_SIZE (:guard (* (assumption---fresh-new-stamp) (prc-blake-cds---standard-precondition)))
+  (call-to-EQ 0 0 (prc---cds) 0 PRC_BLAKE2F_SIZE))
 
 (defconstraint prc-blake-cds---check--is-zero (:guard (* (assumption---fresh-new-stamp) (prc-blake-cds---standard-precondition)))
   (call-to-ISZERO 1 0 (prc---r@c)))
@@ -886,7 +890,7 @@
 
 
 (defconstraint prc-blake-params---compare-call-gas-against-blake-r (:guard (* (assumption---fresh-new-stamp) (prc-blake-params---standard-precondition)))
-  (call-to-LT 0 0 (prc---callee-gas) 0 (prc-blake-params---blake-r)))
+  (call-to-LT 0 0 (prc---callee-gas) 0 (* GAS_CONST_BLAKE2_PER_ROUND (prc-blake-params---blake-r))))
 
 (defconstraint prc-blake-params---compare-blake-f-against-blake-f-square (:guard (* (assumption---fresh-new-stamp) (prc-blake-params---standard-precondition)))
   (call-to-EQ 1
