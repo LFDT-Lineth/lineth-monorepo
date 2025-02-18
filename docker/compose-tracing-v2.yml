@@ -40,7 +40,7 @@ services:
     extends:
       file: compose-spec-l2-services.yml
       service: sequencer
-    image: consensys/linea-besu-package:devnet-811f30b
+    image: consensys/linea-besu-package:devnet-ceeabfa
     volumes:
       - ../config/common/traces-limits-besu-v2.toml:/var/lib/besu/traces-limits.toml:ro
 
