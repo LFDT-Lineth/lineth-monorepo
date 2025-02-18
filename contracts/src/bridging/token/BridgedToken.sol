@@ -5,7 +5,7 @@ import { ERC20PermitUpgradeable } from "@openzeppelin/contracts-upgradeable/toke
 
 /**
  * @title BridgedToken Contract
- * @notice ERC20 token created when a native token is bridged to a target chain.
+ * @notice ERC-20 token created when a native token is bridged to a target chain.
  * @custom:security-contact security-report@linea.build
  */
 contract BridgedToken is ERC20PermitUpgradeable {
@@ -61,7 +61,7 @@ contract BridgedToken is ERC20PermitUpgradeable {
   }
 
   /**
-   * @dev Overrides ERC20 default function to support tokens with different decimals.
+   * @dev Overrides ERC-20 default function to support tokens with different decimals.
    * @return The number of decimal.
    */
   function decimals() public view override returns (uint8) {

@@ -5,7 +5,7 @@ import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { AccessControl } from "@openzeppelin/contracts/access/AccessControl.sol";
 
 /**
- * @title ERC20 contract for Linea Surge XP (LXP-L) tokens.
+ * @title ERC-20 contract for Linea Surge XP (LXP-L) tokens.
  * @author ConsenSys Software Inc.
  * @custom:security-contact security-report@linea.build
  */

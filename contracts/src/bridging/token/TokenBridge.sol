@@ -22,7 +22,7 @@ import { PermissionsManager } from "../../security/access/PermissionsManager.sol
 import { EfficientLeftRightKeccak } from "../../libraries/EfficientLeftRightKeccak.sol";
 /**
  * @title Linea Canonical Token Bridge
- * @notice Contract to manage cross-chain ERC20 bridging.
+ * @notice Contract to manage cross-chain ERC-20 bridging.
  * @author ConsenSys Software Inc.
  * @custom:security-contact security-report@linea.build
  */
@@ -221,7 +221,7 @@ contract TokenBridge is
   /**
    * @notice This function is the single entry point to bridge tokens to the
    *   other chain, both for native and already bridged tokens. You can use it
-   *   to bridge any ERC20. If the token is bridged for the first time an ERC20
+   *   to bridge any ERC-20. If the token is bridged for the first time an ERC-20
    *   (BridgedToken.sol) will be automatically deployed on the target chain.
    * @dev User should first allow the bridge to transfer tokens on his behalf.
    *   Alternatively, you can use BridgeTokenWithPermit to do so in a single
@@ -233,7 +233,7 @@ contract TokenBridge is
    *   Linea can pause the bridge for security reason. In this case new bridge
    *   transaction would revert.
    * @dev Note: If, when bridging an unbridged token and decimals are unknown,
-   * the call will revert to prevent mismatched decimals. Only those ERC20s,
+   * the call will revert to prevent mismatched decimals. Only those ERC-20s,
    * with a decimals function are supported.
    * @param _token The address of the token to be bridged.
    * @param _amount The amount of the token to be bridged.
@@ -291,7 +291,7 @@ contract TokenBridge is
 
   /**
    * @notice Similar to `bridgeToken` function but allows to pass additional
-   *   permit data to do the ERC20 approval in a single transaction.
+   *   permit data to do the ERC-20 approval in a single transaction.
    * @notice _permit can fail silently, don't rely on this function passing as a form
    *   of authentication
    * @dev There is no need for validation at this level as the validation on pausing,
@@ -482,7 +482,7 @@ contract TokenBridge is
   }
 
   /**
-   * @dev Linea can set a custom ERC20 contract for specific ERC20.
+   * @dev Linea can set a custom ERC-20 contract for specific ERC-20.
    *   For security purpose, Linea can only call this function if the token has
    *   not been bridged yet.
    * @dev SET_CUSTOM_CONTRACT_ROLE is required to execute.
@@ -521,7 +521,7 @@ contract TokenBridge is
   // https://github.com/traderjoe-xyz/joe-core/blob/main/contracts/MasterChefJoeV3.sol#L55-L95
 
   /**
-   * @dev Provides a safe ERC20.name version which returns 'NO_NAME' as fallback string.
+   * @dev Provides a safe ERC-20.name version which returns 'NO_NAME' as fallback string.
    * @param _token The address of the ERC-20 token contract
    * @return tokenName Returns the string of the token name.
    */
@@ -531,7 +531,7 @@ contract TokenBridge is
   }
 
   /**
-   * @dev Provides a safe ERC20.symbol version which returns 'NO_SYMBOL' as fallback string
+   * @dev Provides a safe ERC-20.symbol version which returns 'NO_SYMBOL' as fallback string
    * @param _token The address of the ERC-20 token contract
    * @return symbol Returns the string of the symbol.
    */
@@ -541,7 +541,7 @@ contract TokenBridge is
   }
 
   /**
-   * @notice Provides a safe ERC20.decimals version which reverts when decimals are unknown
+   * @notice Provides a safe ERC-20.decimals version which reverts when decimals are unknown
    *   Note Tokens with (decimals > 255) are not supported
    * @param _token The address of the ERC-20 token contract
    * @return Returns the token's decimals value.
@@ -592,9 +592,9 @@ contract TokenBridge is
   }
 
   /**
-   * @notice Call the token permit method of extended ERC20
+   * @notice Call the token permit method of extended ERC-20
    * @notice Only support tokens implementing ERC-2612
-   * @param _token ERC20 token address
+   * @param _token ERC-20 token address
    * @param _permitData Raw data of the call `permit` of the token
    */
   function _permit(address _token, bytes calldata _permitData) internal {

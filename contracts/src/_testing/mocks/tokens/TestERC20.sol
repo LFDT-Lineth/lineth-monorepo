@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
  * @title TestERC20
- * @dev Simple ERC20 Token example.
+ * @dev Simple ERC-20 Token example.
  */
 
 contract TestERC20 is ERC20, Ownable {

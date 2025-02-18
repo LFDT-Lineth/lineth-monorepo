@@ -5,7 +5,7 @@ import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { AccessControl } from "@openzeppelin/contracts/access/AccessControl.sol";
 
 /**
- * @title Soulbound ERC20 contract for Linea Voyage XP tokens.
+ * @title Soulbound ERC-20 contract for Linea Voyage XP tokens.
  * @author ConsenSys Software Inc.
  * @custom:security-contact security-report@linea.build
  */
