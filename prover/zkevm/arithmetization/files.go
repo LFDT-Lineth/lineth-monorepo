@@ -2,12 +2,14 @@ package arithmetization
 
 import (
 	_ "embed"
+	"encoding/gob"
 	"errors"
 	"fmt"
 	"io"
 
 	"github.com/consensys/go-corset/pkg/air"
 	"github.com/consensys/go-corset/pkg/binfile"
+	"github.com/consensys/go-corset/pkg/corset"
 	"github.com/consensys/go-corset/pkg/schema"
 	"github.com/consensys/go-corset/pkg/trace"
 	"github.com/consensys/go-corset/pkg/trace/lt"
@@ -25,13 +27,20 @@ var zkevmStr string
 // ReadZkEvmBin parses and compiles a "zkevm.bin" into an air.Schema. f is closed
 // at the end of the function call.
 func ReadZkevmBin() (*air.Schema, error) {
-
-	buf := []byte(zkevmStr)
-	hirSchema, err := binfile.HirSchemaFromJson(buf)
+	var (
+		binf binfile.BinaryFile
+		buf  []byte = []byte(zkevmStr)
+	)
+	// TODO: why is only this one needed??
+	gob.Register(binfile.Attribute(&corset.SourceMap{}))
+	// Parse zkbinary file
+	err := binf.UnmarshalBinary(buf)
+	// Sanity check for errors
 	if err != nil {
-		return nil, fmt.Errorf("could not parse the read bytes of the 'zkevm.bin' JSON file into an hir.Schema: %w", err)
+		return nil, fmt.Errorf("could not parse the read bytes of the 'zkevm.bin' file into an hir.Schema: %w", err)
 	}
-
+	// Extract schema
+	hirSchema := &binf.Schema
 	// This performs the corset compilation
 	return hirSchema.LowerToMir().LowerToAir(), nil
 }

@@ -10,7 +10,7 @@ require (
 	github.com/consensys/compress v0.2.5
 	github.com/consensys/gnark v0.11.1-0.20250107100237-2cb190338a01
 	github.com/consensys/gnark-crypto v0.14.1-0.20241217134352-810063550bd4
-	github.com/consensys/go-corset v0.0.0-20250129030528-04c6bba7ccfd
+	github.com/consensys/go-corset v0.0.0-20250217020957-ab7f2d548fa8
 	github.com/crate-crypto/go-kzg-4844 v1.1.0
 	github.com/dlclark/regexp2 v1.11.2
 	github.com/fxamacker/cbor/v2 v2.7.0
@@ -98,6 +98,7 @@ require (
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
+	golang.org/x/term v0.29.0 // indirect
 	golang.org/x/text v0.21.0 // indirect
 	google.golang.org/protobuf v1.34.2 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
@@ -111,6 +112,6 @@ require (
 	github.com/pkg/profile v1.7.0
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	golang.org/x/exp v0.0.0-20240823005443-9b4947da3948
-	golang.org/x/sys v0.28.0 // indirect
+	golang.org/x/sys v0.30.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

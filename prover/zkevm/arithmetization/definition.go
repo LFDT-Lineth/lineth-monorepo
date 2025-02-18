@@ -145,7 +145,7 @@ func (s *schemaScanner) addConstraintInComp(name string, corsetCS schema.Constra
 	case air.VanishingConstraint:
 
 		var (
-			wExpr  = s.castExpression(cs.Constraint.Expr)
+			wExpr  = s.castExpression(cs.Constraint.Term)
 			wBoard = wExpr.Board()
 			wMeta  = wBoard.ListVariableMetadata()
 		)
@@ -196,7 +196,7 @@ func (s *schemaScanner) addConstraintInComp(name string, corsetCS schema.Constra
 
 // castExpression turns a corset expression into a [symbolic.Expression] whose
 // variables are [wizard.CompiledIOP] components.
-func (s *schemaScanner) castExpression(expr air.Expr) *symbolic.Expression {
+func (s *schemaScanner) castExpression(expr air.Term) *symbolic.Expression {
 
 	switch e := expr.(type) {
 
