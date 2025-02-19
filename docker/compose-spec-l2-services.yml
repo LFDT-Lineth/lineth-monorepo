@@ -162,7 +162,7 @@ services:
   traces-node-v2:
     hostname: traces-node-v2
     container_name: traces-node-v2
-    image: consensys/linea-besu-package:devnet-9136b07
+    image: consensys/linea-besu-package:devnet-b9c010b
     profiles: [ "l2", "l2-bc", "debug", "external-to-monorepo" ]
     depends_on:
       sequencer:
