@@ -36,7 +36,7 @@ metrics-port=9545
 data-storage-format="BONSAI"
 
 # plugins
-plugins=["LineaEstimateGasEndpointPlugin","L1FinalizationTagUpdaterPlugin","LineaExtraDataPlugin", "LineaTransactionPoolValidatorPlugin"]
+plugins=["LineaEstimateGasEndpointPlugin","LineaL1FinalizationTagUpdaterPlugin","LineaExtraDataPlugin", "LineaTransactionPoolValidatorPlugin"]
 plugin-linea-module-limit-file-path="/var/lib/besu/traces-limits.toml"
 plugin-linea-deny-list-path="/var/lib/besu/deny-list.txt"
 plugin-linea-l1l2-bridge-contract="0xe537D669CA013d86EBeF1D64e40fC74CADC91987"
@@ -56,3 +56,6 @@ plugin-linea-estimate-gas-min-margin="1.2"
 
 Xbonsai-limit-trie-logs-enabled=false
 bonsai-historical-block-limit=1024
+
+Xin-process-rpc-enabled=true
+Xin-process-rpc-apis=["ETH", "MINER"]

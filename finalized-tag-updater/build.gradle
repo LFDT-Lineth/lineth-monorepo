@@ -4,6 +4,8 @@ plugins {
   id 'com.github.johnrengelman.shadow' version '7.1.2'
 }
 
+archivesBaseName = 'linea-finalized-tag-updater'
+
 repositories {
   maven {
     url "https://artifacts.consensys.net/public/linea-besu/maven/"
@@ -35,6 +37,8 @@ shadowJar {
   if ("${project.version}" != 'unspecified') {
     archiveClassifier.set('')
     archiveVersion.set("${project.version}")
+  } else {
+    archiveClassifier.set('SNAPSHOT')
   }
 
   dependencies {
@@ -55,10 +59,7 @@ shadowJar {
 }
 
 dependencies {
-  annotationProcessor 'com.google.auto.service:auto-service:1.1.1'
-  compileOnly 'com.google.auto.service:auto-service:1.1.1'
-  compileOnly 'com.google.auto.service:auto-service-annotations:1.1.1'
-  compileOnly 'io.consensys.linea-besu:plugin-api:24.11-delivery39'
+  compileOnly project(":jvm-libs:linea:besu-libs")
   compileOnly 'info.picocli:picocli:4.7.6'
   compileOnly 'io.vertx:vertx-core'
 
@@ -76,7 +77,7 @@ dependencies {
 }
 
 tasks.register('copyShadowJarToLocalBesu', Copy) {
-  def jarFileSuffix = "${project.version}" != 'unspecified' ? "${project.version}" : "all"
+  def jarFileSuffix = "${project.version}" != 'unspecified' ? "${project.version}" : "SNAPSHOT"
   def jarFiles = project.getLayout().buildDirectory.dir("libs").get()
       .asFileTree
       .filter { it.name.endsWith("-${jarFileSuffix}.jar") }

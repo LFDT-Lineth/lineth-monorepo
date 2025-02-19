@@ -39,7 +39,7 @@ services:
     extends:
       file: compose-spec-l2-services.yml
       service: sequencer
-    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-mainnet-fc27c01}
+    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-mainnet-f2ff06c}
     volumes:
       - ../config/common/traces-limits-besu-v1.toml:/var/lib/besu/traces-limits.toml:ro
 

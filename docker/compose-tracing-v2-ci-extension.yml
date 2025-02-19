@@ -11,7 +11,7 @@ services:
     extends:
       file: compose-spec-l2-services.yml
       service: l2-node-besu
-    image: consensys/linea-besu-package:devnet-811f30b
+    image: consensys/linea-besu-package:devnet-9136b07
     volumes:
       - ../config/common/traces-limits-besu-v2.toml:/var/lib/besu/traces-limits.toml:ro
 

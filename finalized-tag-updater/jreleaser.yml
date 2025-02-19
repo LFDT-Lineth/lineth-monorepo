@@ -12,12 +12,12 @@ project:
   java:
     version: '21'
     groupId: build.linea
-    artifactId: finalized-tag-updater
+    artifactId: linea-finalized-tag-updater
 
 release:
   github:
     overwrite: true
-    releaseName: 'Finalized Tag Updater {{version}}'
+    releaseName: 'Linea Finalized Tag Updater {{version}}'
     changelog:
       enabled: false
     commitAuthor:
@@ -28,4 +28,4 @@ distributions:
   finalized-tag-updater:
     type: SINGLE_JAR
     artifacts:
-      - path: 'build/libs/finalized-tag-updater-{{version}}.jar'
+      - path: 'build/libs/linea-finalized-tag-updater-{{version}}.jar'

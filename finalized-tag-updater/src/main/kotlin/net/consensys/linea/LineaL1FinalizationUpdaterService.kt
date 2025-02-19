@@ -2,7 +2,7 @@ package net.consensys.linea
 
 import build.linea.contract.l1.Web3JLineaRollupSmartContractClientReadOnly
 import io.vertx.core.Vertx
-import net.consensys.linea.consensus.EngineBlockTagUpdater
+import linea.consensus.EngineBlockTagUpdater
 import net.consensys.linea.web3j.okHttpClientBuilder
 import net.consensys.zkevm.LongRunningService
 import net.consensys.zkevm.ethereum.finalization.FinalizationUpdatePoller
@@ -15,7 +15,8 @@ import org.web3j.protocol.Web3j
 import org.web3j.protocol.http.HttpService
 import java.util.concurrent.CompletableFuture
 
-class LineaBesuEngineBlockTagUpdater(private val blockchainService: BlockchainService) : EngineBlockTagUpdater {
+class LineaBesuEngineBlockTagUpdater(private val blockchainService: BlockchainService) :
+  EngineBlockTagUpdater {
   private val log: Logger = LoggerFactory.getLogger(this::class.java)
   private fun setFinalizedAndSafeBlock(finalizedBlockNumber: Long): Boolean {
     // lookup finalized block by number in local chain
