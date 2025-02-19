@@ -28,6 +28,8 @@ subprojects {
       group="${rootProject.group}.internal"
     }
 
-    it.apply from: rootProject.file("gradle/publishing.gradle")
+    afterEvaluate {
+      it.apply from: rootProject.file("gradle/publishing.gradle")
+    }
   }
 }
