@@ -1,45 +1,8 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import fetch from "node-fetch";
 import * as fs from "fs";
 import * as path from "path";
 import { Open } from "unzipper";
 import { exec } from "child_process";
 import { getBuildConfig } from "./config";
-
-async function downloadAndParseJson(url: string, headers: Record<string, string> = {}): Promise<any> {
-  const response = await fetch(url, {
-    method: "GET",
-    headers: {
-      Accept: "application/json",
-      ...headers,
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to load JSON from ${url}. HTTP error code: ${response.status}`);
-  }
-
-  return await response.json();
-}
-
-async function getReleaseAssetUrl(nativeLibReleaseTag: string): Promise<string> {
-  const urlStr = "https://api.github.com/repos/Consensys/linea-monorepo/releases";
-
-  const json = await downloadAndParseJson(urlStr);
-  const release = json.find((release: any) => release.tag_name === nativeLibReleaseTag);
-
-  if (!release) {
-    const releases = json.map((release: any) => release.tag_name);
-    throw new Error(`Release ${nativeLibReleaseTag} not found! releases: ${releases}`);
-  }
-
-  if (release.assets.length === 0) {
-    throw new Error(`Release ${nativeLibReleaseTag} has no assets!`);
-  }
-
-  const asset = release.assets.find((asset: any) => asset.name.includes(nativeLibReleaseTag));
-  return `https://api.github.com/repos/Consensys/linea-monorepo/releases/assets/${asset.id}`;
-}
 
 async function downloadFileUsingCurl(url: string, outputFilePath: string): Promise<string> {
   const outputDirectory = path.dirname(outputFilePath);
@@ -49,6 +12,7 @@ async function downloadFileUsingCurl(url: string, outputFilePath: string): Promi
   const command = `curl -L -H 'Accept:application/octet-stream' -o ${outputFilePath} ${url}`;
 
   return new Promise((resolve, reject) => {
+    /* eslint-disable @typescript-eslint/no-explicit-any */
     exec(command, (error: any, _: any, stderr: any) => {
       if (error) {
         reject(new Error(`Failed to download file using curl: ${stderr}`));
@@ -68,7 +32,7 @@ const architectureResourceDirMapping: Record<string, string> = {
 };
 
 async function downloadReleaseAsset(nativeLibReleaseTag: string): Promise<string> {
-  const assetReleaseUrl = await getReleaseAssetUrl(nativeLibReleaseTag);
+  const assetReleaseUrl = `https://github.com/Consensys/linea-monorepo/releases/download/${nativeLibReleaseTag}/linea-${nativeLibReleaseTag}.zip`;
   const fileName = `${nativeLibReleaseTag}.zip`;
   const destPath = path.resolve("build", fileName);
   console.log(`Downloading ${fileName} from ${assetReleaseUrl} to ${destPath}`);
