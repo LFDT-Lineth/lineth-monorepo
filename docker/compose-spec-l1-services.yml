@@ -26,6 +26,7 @@ services:
       - ./config/l1-node/el/config.toml:/config/config.toml:ro
       - ./config/l1-node/jwtsecret.txt:/config/jwtsecret.txt:ro
       - ./config/l1-node/el/log4j.xml:/var/lib/besu/log4j.xml:ro
+      - ./config/l1-node/el/genesis.json:/config/genesis.json
       - local-dev:/data
     ports:
       - "8445:8545"
@@ -62,6 +63,7 @@ services:
       - ./config/l1-node/jwtsecret.txt:/config/jwtsecret.txt:ro
       - ./config/l1-node/cl/config.yaml:/config/config-file.yaml:ro
       - ./config/l1-node/cl/log4j.xml:/config/log4j.xml:ro
+      - ./config/l1-node/cl/network-config.yml:/config/network-config.yml:ro
       - local-dev:/data
     ports:
       - "9002:9000"
@@ -72,18 +74,20 @@ services:
         ipv4_address: 10.10.10.202
 
   l1-node-genesis-generator:
-    build:
-      context: ./config/l1-node/
+    image: ethpandaops/ethereum-genesis-generator:pk910-bash-el-genesis-generator
     profiles: [ "l1", "debug", "external-to-monorepo" ]
-    command:
-      --genesis-time ${L1_GENESIS_TIME:-""}
-      --current-time-delay-in-sec 3
-      --l1-genesis /config/l1-genesis.json
-      --network-config /config/network-config.yml
-      --mnemonics /config/mnemonics.yaml
-      --output-dir /data/l1-node-config
+    entrypoint:
+      - /bin/bash
+      - -c
+      - |
+        /usr/local/bin/eth2-testnet-genesis deneb \
+        --config /config/network-config.yml \${L1_GENESIS_TIME:+--timestamp ${L1_GENESIS_TIME} \}
+        --mnemonics /config/mnemonics.yaml \
+        --tranches-dir /data/l1-node-config/tranches \
+        --state-output /data/l1-node-config/genesis.ssz \
+        --eth1-config /config/genesis.json
     volumes:
-      - ./config/l1-node/cl/network-config.yml:/config/network-config.yml:ro
       - ./config/l1-node/cl/mnemonics.yaml:/config/mnemonics.yaml:ro
-      - ./config/l1-node/el/genesis.json:/config/l1-genesis.json
+      - ./config/l1-node/cl/network-config.yml:/config/network-config.yml:ro
+      - ./config/l1-node/el/genesis.json:/config/genesis.json
       - local-dev:/data
