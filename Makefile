@@ -1,6 +1,8 @@
 GO_CORSET ?= go-corset
 GIT_COMMIT := $(shell git rev-parse HEAD)
+GIT_TAGS := $(shell git -P tag --points-at)
 TIMESTAMP := $(shell date)
+GO_CORSET_COMPILE := ${GO_CORSET} compile -Dtags="${GIT_TAGS}" -Dcommit="${GIT_COMMIT}" -Dtimestamp="${TIMESTAMP}"
 
 ALU := alu
 
@@ -107,7 +109,7 @@ ZKEVM_MODULES := ${CONSTANTS} \
 		 ${WCP}
 
 zkevm.bin: ${ZKEVM_MODULES}
-	${GO_CORSET} compile -Dcommit=${GIT_COMMIT}  -Dtimestamp="${TIMESTAMP}" -o $@ ${ZKEVM_MODULES}
+	${GO_CORSET_COMPILE} -o $@ ${ZKEVM_MODULES}
 
 # Corset is order sensitive - to compile, we load the constants first
 ZKEVM_MODULES_FOR_REFERENCE_TESTS := ${CONSTANTS} \
@@ -143,4 +145,4 @@ ZKEVM_MODULES_FOR_REFERENCE_TESTS := ${CONSTANTS} \
 
 
 zkevm_for_reference_tests.bin: ${ZKEVM_MODULES_FOR_REFERENCE_TESTS}
-	${GO_CORSET} compile -Dcommit=${GIT_COMMIT} -Dtimestamp="${TIMESTAMP}" -o $@ ${ZKEVM_MODULES_FOR_REFERENCE_TESTS}
+	${GO_CORSET_COMPILE} -o $@ ${ZKEVM_MODULES_FOR_REFERENCE_TESTS}
