@@ -75,12 +75,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Get version from package.json
-        id: package-version
-        uses: martinbeentjes/npm-get-version-action@master
-        with:
-          path: ./bridge-ui
       
       - name: Setup nodejs environment
         uses: ./.github/actions/setup-nodejs

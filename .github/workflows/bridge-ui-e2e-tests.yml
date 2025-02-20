@@ -6,15 +6,15 @@ on:
       - main
     paths:
       - 'bridge-ui/**'
-      - '!bridge-ui/**/*.md'
       - '.github/workflows/bridge-ui-e2e-tests.yml'
+      - '!bridge-ui/**/*.md'
   push:
     branches:
       - main
     paths:
       - 'bridge-ui/**'
-      - '!bridge-ui/**/*.md'
       - '.github/workflows/bridge-ui-e2e-tests.yml'
+      - '!bridge-ui/**/*.md'
 
 jobs:
   run-e2e-tests:
