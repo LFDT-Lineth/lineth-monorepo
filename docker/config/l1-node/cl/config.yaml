@@ -1,6 +1,6 @@
 #logging: "INFO"
 log-destination: "DEFAULT_BOTH"
-network: "/config/network-config.yml"
+network: "/data/l1-node-config/network-config.yml"
 data-storage-mode: "PRUNE"
 initial-state: "/data/l1-node-config/genesis.ssz"
 

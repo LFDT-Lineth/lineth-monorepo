@@ -26,7 +26,6 @@ services:
       - ./config/l1-node/el/config.toml:/config/config.toml:ro
       - ./config/l1-node/jwtsecret.txt:/config/jwtsecret.txt:ro
       - ./config/l1-node/el/log4j.xml:/var/lib/besu/log4j.xml:ro
-      - ./config/l1-node/el/genesis.json:/config/genesis.json
       - local-dev:/data
     ports:
       - "8445:8545"
@@ -63,7 +62,6 @@ services:
       - ./config/l1-node/jwtsecret.txt:/config/jwtsecret.txt:ro
       - ./config/l1-node/cl/config.yaml:/config/config-file.yaml:ro
       - ./config/l1-node/cl/log4j.xml:/config/log4j.xml:ro
-      - ./config/l1-node/cl/network-config.yml:/config/network-config.yml:ro
       - local-dev:/data
     ports:
       - "9002:9000"
@@ -80,6 +78,7 @@ services:
       - /bin/bash
       - -c
       - |
+        PRAGUE=${PRAGUE} bash /generate-genesis.sh
         /usr/local/bin/eth2-testnet-genesis deneb \
         --config /config/network-config.yml \${L1_GENESIS_TIME:+--timestamp ${L1_GENESIS_TIME} \}
         --mnemonics /config/mnemonics.yaml \
@@ -90,4 +89,5 @@ services:
       - ./config/l1-node/cl/mnemonics.yaml:/config/mnemonics.yaml:ro
       - ./config/l1-node/cl/network-config.yml:/config/network-config.yml:ro
       - ./config/l1-node/el/genesis.json:/config/genesis.json
+      - ./config/l1-node/generate-genesis.sh:/generate-genesis.sh
       - local-dev:/data

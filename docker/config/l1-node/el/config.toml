@@ -1,4 +1,4 @@
-genesis-file="/config/genesis.json"
+genesis-file="/data/l1-node-config/genesis.json"
 logging="INFO"
 data-path="/opt/besu/data"
 data-storage-format="FOREST"
