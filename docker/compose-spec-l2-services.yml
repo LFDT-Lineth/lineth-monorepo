@@ -5,7 +5,7 @@ services:
   sequencer:
     hostname: sequencer
     container_name: sequencer
-    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-mainnet-f2ff06c}
+    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-devnet-395ec6d}
     profiles: [ "l2", "l2-bc", "debug", "external-to-monorepo" ]
     ports:
       - "8545:8545"
@@ -82,7 +82,7 @@ services:
   l2-node-besu:
     hostname: l2-node-besu
     container_name: l2-node-besu
-    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-mainnet-f2ff06c}
+    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-devnet-395ec6d}
     profiles: [ "l2", "l2-bc", "debug", "external-to-monorepo" ]
     depends_on:
       sequencer:
@@ -162,7 +162,7 @@ services:
   traces-node-v2:
     hostname: traces-node-v2
     container_name: traces-node-v2
-    image: consensys/linea-besu-package:devnet-b9c010b
+    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-devnet-395ec6d}
     profiles: [ "l2", "l2-bc", "debug", "external-to-monorepo" ]
     depends_on:
       sequencer:
@@ -367,7 +367,7 @@ services:
       - l1network
 
   zkbesu-shomei:
-    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-devnet-fc27c01}
+    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-devnet-395ec6d}
     hostname: zkbesu-shomei
     container_name: zkbesu-shomei
     profiles: [ "l2", "l2-bc", "external-to-monorepo" ]
@@ -583,7 +583,7 @@ services:
         ipv4_address: 10.10.10.205
 
   zkbesu-shomei-sr:
-    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-devnet-7dfb8e3}
+    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-devnet-395ec6d}
     hostname: zkbesu-shomei-sr
     container_name: zkbesu-shomei-sr
     profiles: [ "external-to-monorepo", "staterecovery" ]
@@ -614,6 +614,7 @@ services:
       - -c
       - |
         (rm /opt/besu/plugins/linea-staterecovery-besu-plugin-v* || true) && \
+        (rm /opt/besu/plugins/finalized-tag-updater-v* || true) && \
         ls -lh /opt/besu/plugins && \
         sed -i '/^CLASSPATH/c\CLASSPATH=/opt/besu/lib/\*\:/opt/besu/plugins/\*' /opt/besu/bin/besu && \
         /opt/besu/bin/besu \
@@ -624,11 +625,13 @@ services:
         --Xbonsai-limit-trie-logs-enabled=false \
         --plugin-shomei-http-host="11.11.11.117" \
         --plugin-shomei-http-port=8888 \
-        --plugin-staterecovery-l1-rpc-endpoint=http://l1-el-node:8545 \
+        --plugin-staterecovery-l1-endpoint=http://l1-el-node:8545 \
+        --plugin-staterecovery-l1-polling-interval=PT1S \
+        --plugin-staterecovery-l1-earliest-search-block=EARLIEST \
+        --plugin-staterecovery-l1-highest-search-block=LATEST \
         --plugin-staterecovery-shomei-endpoint=http://shomei-sr:8888 \
         --plugin-staterecovery-blobscan-endpoint=http://blobscan-api:4001 \
         --plugin-staterecovery-linea-sequencer-beneficiary-address=0x6d976c9b8ceee705d4fe8699b44e5eb58242f484 \
-        --plugin-staterecovery-l1-polling-interval=PT0.01S \
         --bootnodes=enode://14408801a444dafc44afbccce2eb755f902aed3b5743fed787b3c790e021fef28b8c827ed896aa4e8fb46e22bd67c39f994a73768b4b382f8597b0d44370e15d@11.11.11.101:30303
     volumes:
       - ./config/zkbesu-shomei/zkbesu-config.toml:/var/lib/besu/zkbesu-config.toml:ro

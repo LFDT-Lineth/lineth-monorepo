@@ -19,6 +19,7 @@ import org.web3j.protocol.core.methods.request.EthFilter
 import org.web3j.protocol.core.methods.response.EthLog
 import org.web3j.protocol.core.methods.response.Log
 import tech.pegasys.teku.infrastructure.async.SafeFuture
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -35,7 +36,7 @@ class Web3JLogsSearcher(
   val log: Logger = LogManager.getLogger(Web3JLogsSearcher::class.java)
 ) : EthLogsSearcher {
   data class Config(
-    val backoffDelay: Duration = 100.milliseconds,
+    val loopSuccessBackoffDelay: Duration = 1.milliseconds,
     val requestRetryConfig: RetryConfig = RetryConfig()
   )
 
@@ -51,14 +52,21 @@ class Web3JLogsSearcher(
 
     return getAbsoluteBlockNumbers(fromBlock, toBlock)
       .thenCompose { (start, end) ->
-        findLogLoop(
-          start,
-          end,
-          chunkSize,
-          address,
-          topics,
-          shallContinueToSearch
-        )
+        if (start > end) {
+          // this is to prevent edge case when fromBlock number is after toBlock=LATEST/FINALIZED
+          SafeFuture.failedFuture(
+            IllegalStateException("invalid range: fromBlock=$fromBlock is after toBlock=$toBlock ($end)")
+          )
+        } else {
+          findLogLoop(
+            start,
+            end,
+            chunkSize,
+            address,
+            topics,
+            shallContinueToSearch
+          )
+        }
       }
   }
 
@@ -73,22 +81,32 @@ class Web3JLogsSearcher(
     val cursor = SearchCursor(fromBlock, toBlock, chunkSize)
     log.trace("searching between blocks={}", CommonDomainFunctions.blockIntervalString(fromBlock, toBlock))
 
-    var nextChunkToSearch: Pair<ULong, ULong>? = cursor.next(searchDirection = SearchDirection.FORWARD)
+    val nextChunkToSearchRef: AtomicReference<Pair<ULong, ULong>?> =
+      AtomicReference(cursor.next(searchDirection = SearchDirection.FORWARD))
     return AsyncRetryer.retry(
       vertx,
-      backoffDelay = config.backoffDelay,
-      stopRetriesPredicate = { it is SearchResult.ItemFound || nextChunkToSearch == null }
+      backoffDelay = config.loopSuccessBackoffDelay,
+      stopRetriesPredicate = {
+        it is SearchResult.ItemFound || nextChunkToSearchRef.get() == null
+      }
     ) {
-      val (chunkStart, chunkEnd) = nextChunkToSearch!!
-      log.trace("searching in chunk={}", CommonDomainFunctions.blockIntervalString(chunkStart, chunkEnd))
+      log.trace("searching in chunk={}", nextChunkToSearchRef.get())
+      val (chunkStart, chunkEnd) = nextChunkToSearchRef.get()!!
+      val chunkInterval = CommonDomainFunctions.blockIntervalString(chunkStart, chunkEnd)
       findLogInInterval(chunkStart, chunkEnd, address, topics, shallContinueToSearchPredicate)
         .thenPeek { result ->
           if (result is SearchResult.NoResultsInInterval) {
-            nextChunkToSearch = cursor.next(searchDirection = null)
+            nextChunkToSearchRef.set(cursor.next(searchDirection = null))
           } else if (result is SearchResult.KeepSearching) {
             // need to search in the same chunk
-            nextChunkToSearch = cursor.next(searchDirection = result.direction)
+            nextChunkToSearchRef.set(cursor.next(searchDirection = result.direction))
           }
+          log.trace(
+            "search result chunk={} searchResult={} nextChunkToSearch={}",
+            chunkInterval,
+            result,
+            nextChunkToSearchRef.get()
+          )
         }
     }.thenApply { either ->
       when (either) {
@@ -195,27 +213,32 @@ class Web3JLogsSearcher(
     fromBlock: BlockParameter,
     toBlock: BlockParameter
   ): SafeFuture<Pair<ULong, ULong>> {
-    return if (fromBlock is BlockParameter.BlockNumber && toBlock is BlockParameter.BlockNumber) {
-      return SafeFuture.completedFuture(Pair(fromBlock.getNumber(), toBlock.getNumber()))
+    return SafeFuture.collectAll(
+      getBlockParameterNumber(fromBlock),
+      getBlockParameterNumber(toBlock)
+    ).thenApply { (start, end) ->
+      start to end
+    }
+  }
+
+  private fun getBlockParameterNumber(blockParameter: BlockParameter): SafeFuture<ULong> {
+    return if (blockParameter is BlockParameter.BlockNumber) {
+      SafeFuture.completedFuture(blockParameter.getNumber())
+    } else if (blockParameter == BlockParameter.Tag.EARLIEST) {
+      SafeFuture.completedFuture(0UL)
     } else {
       AsyncRetryer.retry(
         vertx = vertx,
-        backoffDelay = config.backoffDelay,
-        stopRetriesPredicate = { (fromBlockResponse, toBlockResponse) ->
-          fromBlockResponse?.block?.number != null && toBlockResponse?.block?.number != null
+        backoffDelay = config.requestRetryConfig.backoffDelay,
+        stopRetriesPredicate = { response ->
+          response?.block?.number != null
         },
         action = {
-          SafeFuture.collectAll(
-            web3jClient.ethGetBlockByNumber(fromBlock.toWeb3j(), false).sendAsync().toSafeFuture(),
-            web3jClient.ethGetBlockByNumber(toBlock.toWeb3j(), false).sendAsync().toSafeFuture()
-          )
+          web3jClient.ethGetBlockByNumber(blockParameter.toWeb3j(), false).sendAsync().toSafeFuture()
         }
       )
-        .thenApply { (fromBlockResponse, toBlockResponse) ->
-          Pair(
-            fromBlockResponse.block.number.toULong(),
-            toBlockResponse.block.number.toULong()
-          )
+        .thenApply { response ->
+          response.block.number.toULong()
         }
     }
   }

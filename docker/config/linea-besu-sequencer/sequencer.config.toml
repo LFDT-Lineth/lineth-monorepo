@@ -4,6 +4,7 @@ data-path="/opt/besu/data"
 data-storage-format="FOREST"
 sync-mode="FULL"
 host-allowlist=["*"]
+revert-reason-enabled=true
 
 # target-gas-limit=30000000
 min-gas-price=1000000

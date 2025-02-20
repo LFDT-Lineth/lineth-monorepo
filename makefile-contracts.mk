@@ -113,11 +113,12 @@ deploy-l2-evm-opcode-tester:
 		npx ts-node local-deployments-artifacts/deployLondonEvmTestingFramework.ts
 
 evm-opcode-tester-execute-all-opcodes: OPCODE_TEST_CONTRACT_ADDRESS:=0xa50a51c09a5c451C52BB714527E1974b686D8e77
+evm-opcode-tester-execute-all-opcodes: NUMBER_OF_RUNS:=3
 evm-opcode-tester-execute-all-opcodes:
 		# WARNING: FOR LOCAL DEV ONLY - DO NOT REUSE THESE KEYS ELSEWHERE
 		cd contracts/; \
 		OPCODE_TEST_CONTRACT_ADDRESS=$(OPCODE_TEST_CONTRACT_ADDRESS) \
-		NUMBER_OF_RUNS=3 \
+		NUMBER_OF_RUNS=$(NUMBER_OF_RUNS) \
 		PRIVATE_KEY=0x8f2a55949038a9610f50fb23b5883af3b4ecb3c3bb792cbcefbd1542c692be63 \
 		RPC_URL=http:\\localhost:8545/ \
 		npx ts-node local-deployments-artifacts/executeAllOpcodes.ts

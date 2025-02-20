@@ -1,5 +1,5 @@
 plugins {
-  id 'net.consensys.zkevm.kotlin-library-conventions'
+  id 'net.consensys.zkevm.kotlin-common-minimal-conventions'
   id 'net.consensys.zkevm.linea-native-libs-helper'
   id 'java-test-fixtures'
 }
@@ -7,8 +7,8 @@ plugins {
 description = 'Java JNA wrapper for Linea Blob Decompressor Library implemented in GO Lang'
 
 dependencies {
-  implementation "net.java.dev.jna:jna:${libs.versions.jna.get()}"
-  implementation project(":jvm-libs:generic:extensions:kotlin")
+  compileOnly "net.java.dev.jna:jna:${libs.versions.jna.get()}"
+  compileOnly project(":jvm-libs:generic:extensions:kotlin")
 
   testImplementation project(":jvm-libs:linea:blob-compressor")
   testImplementation(testFixtures(project(":jvm-libs:linea:blob-compressor")))

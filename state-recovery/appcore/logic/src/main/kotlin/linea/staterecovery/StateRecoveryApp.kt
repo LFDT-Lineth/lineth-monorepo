@@ -2,7 +2,6 @@ package linea.staterecovery
 
 import build.linea.clients.StateManagerClientV1
 import build.linea.contract.l1.LineaRollupSmartContractClientReadOnly
-import build.linea.domain.EthLogEvent
 import io.vertx.core.Vertx
 import linea.EthLogsSearcher
 import net.consensys.linea.BlockParameter
@@ -29,16 +28,16 @@ class StateRecoveryApp(
   private val transactionDetailsClient: TransactionDetailsClient,
   private val blockHeaderStaticFields: BlockHeaderStaticFields,
   // configs
-  private val config: Config = Config.lineaMainnet
+  private val config: Config
 ) : LongRunningService {
   data class Config(
     val smartContractAddress: String,
     val l1EarliestSearchBlock: BlockParameter = BlockParameter.Tag.EARLIEST,
     val l1LatestSearchBlock: BlockParameter = BlockParameter.Tag.FINALIZED,
     val l1PollingInterval: Duration = 12.seconds,
+    val l1getLogsChunkSize: UInt,
     val executionClientPollingInterval: Duration = 1.seconds,
     val blobDecompressorVersion: BlobDecompressorVersion = BlobDecompressorVersion.V1_1_0,
-    val logsBlockChunkSize: UInt = 1000u,
     /**
      * The block number at which the recovery mode will start overriding the recovery start block number
      * this is meant for testing purposes, not production
@@ -52,15 +51,17 @@ class StateRecoveryApp(
         // TODO: set block of V6 Upgrade
         l1EarliestSearchBlock = 1UL.toBlockParameter(),
         l1LatestSearchBlock = BlockParameter.Tag.FINALIZED,
-        executionClientPollingInterval = 10.seconds,
-        l1PollingInterval = 12.seconds
+        l1PollingInterval = 12.seconds,
+        l1getLogsChunkSize = 10_000u,
+        executionClientPollingInterval = 2.seconds
       )
       val lineaSepolia = Config(
         smartContractAddress = "0xb218f8a4bc926cf1ca7b3423c154a0d627bdb7e5",
         l1EarliestSearchBlock = 7164537UL.toBlockParameter(),
         l1LatestSearchBlock = BlockParameter.Tag.FINALIZED,
-        executionClientPollingInterval = 10.seconds,
-        l1PollingInterval = 12.seconds
+        l1PollingInterval = 12.seconds,
+        l1getLogsChunkSize = 10_000u,
+        executionClientPollingInterval = 2.seconds
       )
     }
   }
@@ -70,12 +71,12 @@ class StateRecoveryApp(
       "contract address mismatch: config=${config.smartContractAddress} client=${lineaContractClient.getAddress()}"
     }
   }
+
   private val l1EventsClient = LineaSubmissionEventsClientImpl(
     logsSearcher = ethLogsSearcher,
     smartContractAddress = config.smartContractAddress,
-    l1EarliestSearchBlock = config.l1EarliestSearchBlock,
     l1LatestSearchBlock = config.l1LatestSearchBlock,
-    logsBlockChunkSize = config.logsBlockChunkSize.toInt()
+    logsBlockChunkSize = config.l1getLogsChunkSize.toInt()
   )
   private val log = LogManager.getLogger(this::class.java)
   private val blockImporterAndStateVerifier = BlockImporterAndStateVerifierV1(
@@ -91,6 +92,7 @@ class StateRecoveryApp(
   )
   private val stateSynchronizerService = StateSynchronizerService(
     vertx = vertx,
+    l1EarliestBlockWithFinalizationThatSupportRecovery = config.l1EarliestSearchBlock,
     elClient = elClient,
     submissionEventsClient = l1EventsClient,
     blobsFetcher = blobFetcher,
@@ -100,8 +102,6 @@ class StateRecoveryApp(
     pollingInterval = config.l1PollingInterval,
     debugForceSyncStopBlockNumber = config.debugForceSyncStopBlockNumber
   )
-  val lastSuccessfullyRecoveredFinalization: EthLogEvent<DataFinalizedV3>?
-    get() = stateSynchronizerService.lastSuccessfullyProcessedFinalization
   val stateRootMismatchFound: Boolean
     get() = stateSynchronizerService.stateRootMismatchFound
 
@@ -166,16 +166,25 @@ class StateRecoveryApp(
       vertx = vertx,
       backoffDelay = config.executionClientPollingInterval,
       stopRetriesPredicate = { recoveryStatus ->
-        log.debug(
-          "waiting for node to sync until stateRecoverStartBlockNumber={} headBlockNumber={}",
-          recoveryStatus.stateRecoverStartBlockNumber,
-          recoveryStatus.headBlockNumber
-        )
         // headBlockNumber shall be at least 1 block behind of stateRecoverStartBlockNumber
         // if it is after it means it was already enabled
-        recoveryStatus.stateRecoverStartBlockNumber?.let { startBlockNumber ->
+        val hasReachedTargetBlock = recoveryStatus.stateRecoverStartBlockNumber?.let { startBlockNumber ->
           recoveryStatus.headBlockNumber + 1u >= startBlockNumber
         } ?: false
+        if (hasReachedTargetBlock) {
+          log.info(
+            "node reached recovery target block: stateRecoverStartBlockNumber={} headBlockNumber={}",
+            recoveryStatus.stateRecoverStartBlockNumber,
+            recoveryStatus.headBlockNumber
+          )
+        } else {
+          log.info(
+            "waiting for node to sync until stateRecoverStartBlockNumber={} - 1,  headBlockNumber={}",
+            recoveryStatus.stateRecoverStartBlockNumber,
+            recoveryStatus.headBlockNumber
+          )
+        }
+        hasReachedTargetBlock
       }
     ) {
       elClient.lineaGetStateRecoveryStatus()

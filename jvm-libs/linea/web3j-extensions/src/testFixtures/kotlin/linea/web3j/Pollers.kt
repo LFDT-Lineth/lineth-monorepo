@@ -1,5 +1,7 @@
 package linea.web3j
 
+import org.apache.logging.log4j.LogManager
+import org.apache.logging.log4j.Logger
 import org.web3j.protocol.Web3j
 import org.web3j.protocol.core.methods.response.TransactionReceipt
 import kotlin.jvm.optionals.getOrNull
@@ -18,12 +20,21 @@ fun Web3j.waitForTxReceipt(
   txHash: String,
   expectedStatus: String? = null,
   timeout: Duration = 5.seconds,
-  pollingInterval: Duration = 500.milliseconds
+  pollingInterval: Duration = 500.milliseconds,
+  log: Logger = LogManager.getLogger("linea.web3j.waitForTxReceipt")
 ): TransactionReceipt {
   val waitLimit = System.currentTimeMillis() + timeout.inWholeMilliseconds
+  log.debug("polling tx receipt txHash=$txHash")
   while (System.currentTimeMillis() < waitLimit) {
-    val receipt = this.ethGetTransactionReceipt(txHash).send().transactionReceipt.getOrNull()
+    log.trace("polling tx receipt txHash=$txHash")
+    val receipt = runCatching<TransactionReceipt?> {
+      this.ethGetTransactionReceipt(txHash).send().transactionReceipt.getOrNull()
+    }.onFailure {
+      log.error("polling tx receipt txHash={}", txHash, it)
+    }.getOrNull()
+
     if (receipt != null) {
+      log.debug("tx receipt found: txHash={} receiptStatus={}", txHash, receipt.status)
       if (expectedStatus != null && receipt.status != expectedStatus) {
         throw RuntimeException(
           "Transaction status does not match expected status: " +

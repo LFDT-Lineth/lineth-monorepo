@@ -11,6 +11,22 @@ sealed interface BlockParameter {
       return BlockNumber(blockNumber.toLong().toULong())
     }
 
+    fun parse(input: String): BlockParameter {
+      return try {
+        // Try to parse the input as a tag
+        Tag.fromString(input)
+      } catch (e: IllegalArgumentException) {
+        // If it's not a valid tag, try to parse it as a block number
+        val blockNumber = if (input.startsWith("0x")) {
+          input.drop(2).toULongOrNull(radix = 16)
+        } else {
+          input.toULongOrNull(radix = 10)
+        } ?: throw IllegalArgumentException("Invalid BlockParameter: $input")
+
+        blockNumber.toBlockParameter()
+      }
+    }
+
     // Handy extensions
     fun Number.toBlockParameter(): BlockParameter = fromNumber(this)
     fun UInt.toBlockParameter(): BlockParameter = BlockNumber(this.toULong())
@@ -49,6 +65,10 @@ sealed interface BlockParameter {
 
     override fun getNumber(): ULong {
       return parameter
+    }
+
+    override fun toString(): String {
+      return parameter.toString()
     }
   }
 }

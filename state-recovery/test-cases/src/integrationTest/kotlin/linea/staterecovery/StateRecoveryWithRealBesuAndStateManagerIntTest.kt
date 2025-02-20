@@ -32,7 +32,6 @@ import org.junit.jupiter.api.extension.ExtendWith
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.net.URI
 import kotlin.time.Duration
-import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
@@ -63,8 +62,8 @@ class StateRecoveryWithRealBesuAndStateManagerIntTest {
       endpoints = listOf(URI(stateManagerUrl)),
       maxInflightRequestsPerClient = 1U,
       requestRetry = RequestRetryConfig(
-        backoffDelay = 10.milliseconds,
-        timeout = 2.seconds
+        backoffDelay = 1.seconds,
+        timeout = 4.seconds
       ),
       zkStateManagerVersion = "2.3.0",
       logger = LogManager.getLogger("test.clients.l1.state-manager")
@@ -73,15 +72,8 @@ class StateRecoveryWithRealBesuAndStateManagerIntTest {
     configureLoggers(
       rootLevel = Level.INFO,
       log.name to Level.DEBUG,
-      "net.consensys.linea.contract.Web3JContractAsyncHelper" to Level.WARN,
-      "test.clients.l1.executionlayer" to Level.INFO,
-      "test.clients.l1.web3j-default" to Level.INFO,
       "test.clients.l1.state-manager" to Level.DEBUG,
-      "test.clients.l1.transaction-details" to Level.INFO,
-      "test.clients.l1.linea-contract" to Level.INFO,
-      "test.clients.l1.events-fetcher" to Level.INFO,
-      "test.clients.l1.blobscan" to Level.INFO,
-      "net.consensys.linea.contract.l1" to Level.INFO
+      "test.clients.l1.web3j-default" to Level.DEBUG
     )
   }
 

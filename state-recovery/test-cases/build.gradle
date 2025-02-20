@@ -19,13 +19,14 @@ dependencies {
   api(project(':state-recovery:appcore:clients-interfaces'))
   api(project(':state-recovery:appcore:domain-models'))
   api(project(':state-recovery:appcore:logic'))
+  api(project(':state-recovery:besu-plugin'))
 
+  implementation project(':jvm-libs:generic:vertx-helper')
   implementation project(':jvm-libs:linea:besu-libs')
   implementation project(':jvm-libs:linea:testing:file-system')
   implementation(testFixtures(project(':jvm-libs:generic:json-rpc')))
   implementation(project(':state-recovery:clients:eth-api'))
   implementation(project(':state-recovery:clients:blobscan-client'))
-  implementation(project(':state-recovery:clients:execution-layer-json-rpc-client'))
   implementation(project(':coordinator:clients:smart-contract-client'))
   implementation(project(':jvm-libs:linea:linea-contracts:l1-rollup'))
   implementation('build.linea:l1-rollup-contract-client:6.0.0')
@@ -78,6 +79,8 @@ task integrationTest(type: Test) { test ->
   testClassesDirs = sourceSets.integrationTest.output.classesDirs
 
   dependsOn(":localStackForStateRecoveryComposeUp")
+  // increase default timeout because this tests submit loads of blobs
+  systemProperties["junit.jupiter.execution.timeout.default"] = "10 m" // 10 minutes
 
   testLogging {
     events TestLogEvent.FAILED,
@@ -109,10 +112,8 @@ task e2eTest(type: Test) { test ->
   classpath = sourceSets.e2eTest.runtimeClasspath
   testClassesDirs = sourceSets.e2eTest.output.classesDirs
 
-  systemProperties["junit.jupiter.execution.timeout.default"] = "5 m" // 5 minutes
+  systemProperties["junit.jupiter.execution.timeout.default"] = "10 m" // 10 minutes
   systemProperties["junit.jupiter.execution.parallel.enabled"] = false
-  systemProperties["junit.jupiter.execution.parallel.mode.default"] = "concurrent"
-  systemProperties["junit.jupiter.execution.parallel.mode.classes.default"] = "concurrent"
   maxParallelForks = Math.max(Runtime.runtime.availableProcessors(), 9)
 
   testLogging {

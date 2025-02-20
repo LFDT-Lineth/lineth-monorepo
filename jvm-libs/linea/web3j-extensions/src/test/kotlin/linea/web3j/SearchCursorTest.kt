@@ -75,19 +75,22 @@ class SearchCursorTest {
     val searchCursor = SearchCursor(from = 1uL, to = 100uL, chunkSize = 10)
 
     assertThat(searchCursor.next(null)).isEqualTo(41UL to 50UL)
-    assertThat(searchCursor.next(null)).isEqualTo(1UL to 10UL)
-    assertThat(searchCursor.next(null)).isEqualTo(11UL to 20UL)
-    assertThat(searchCursor.next(null)).isEqualTo(21UL to 30UL)
-    assertThat(searchCursor.next(null)).isEqualTo(31UL to 40UL)
-    assertThat(searchCursor.next(null)).isEqualTo(51UL to 60UL)
-    assertThat(searchCursor.next(null)).isEqualTo(61UL to 70UL)
-    assertThat(searchCursor.next(null)).isEqualTo(71UL to 80UL)
-    assertThat(searchCursor.next(null)).isEqualTo(81UL to 90UL)
     assertThat(searchCursor.next(null)).isEqualTo(91UL to 100UL)
+    assertThat(searchCursor.next(null)).isEqualTo(81UL to 90UL)
+    assertThat(searchCursor.next(null)).isEqualTo(71UL to 80UL)
+    assertThat(searchCursor.next(null)).isEqualTo(61UL to 70UL)
+    assertThat(searchCursor.next(null)).isEqualTo(51UL to 60UL)
+    assertThat(searchCursor.next(null)).isEqualTo(31UL to 40UL)
+    assertThat(searchCursor.next(null)).isEqualTo(21UL to 30UL)
+    assertThat(searchCursor.next(null)).isEqualTo(11UL to 20UL)
+    assertThat(searchCursor.next(null)).isEqualTo(1UL to 10UL)
+    assertThat(searchCursor.next(null)).isNull()
   }
 
   @Test
-  fun `next iterates over chunks when no direction is provided`() {
+  fun `next iterates over all chunks when no direction is provided`() {
+    // This test is somehow redundant to the above one,
+    // but it is easier to read the intent of exhaustion
     val searchCursor = SearchCursor(from = 1uL, to = 100uL, chunkSize = 10)
     val chunks = mutableListOf<Pair<ULong, ULong>>()
     var next = searchCursor.next(searchDirection = null)
@@ -117,8 +120,8 @@ class SearchCursorTest {
 
     assertThat(searchCursor.next(searchDirection = null)).isEqualTo(91UL to 100UL)
 
-    assertThat(searchCursor.next(searchDirection = null)).isEqualTo(1UL to 10UL)
-    assertThat(searchCursor.next(searchDirection = SearchDirection.BACKWARD)).isNull()
+    assertThat(searchCursor.next(searchDirection = null)).isEqualTo(191UL to 200UL)
+    assertThat(searchCursor.next(searchDirection = SearchDirection.FORWARD)).isNull()
   }
 
   @Test
@@ -127,14 +130,12 @@ class SearchCursorTest {
 
     assertThat(searchCursor.next(searchDirection = null)).isEqualTo(91UL to 100UL)
 
-    assertThat(searchCursor.next(searchDirection = null)).isEqualTo(1UL to 10UL)
-    assertThat(searchCursor.next(searchDirection = SearchDirection.FORWARD)).isEqualTo(101UL to 110UL)
-    assertThat(searchCursor.next(searchDirection = SearchDirection.BACKWARD)).isEqualTo(51UL to 60UL)
-    assertThat(searchCursor.next(searchDirection = null)).isEqualTo(11UL to 20UL)
-    // This backward is not technically valid in a typical binary search,
-    // but it is a valid use case for this cursor because when searching for logs
-    // the predicate can try to go back but search chunks are exhausted
-    assertThat(searchCursor.next(searchDirection = SearchDirection.BACKWARD)).isNull()
+    assertThat(searchCursor.next(searchDirection = null)).isEqualTo(191UL to 200UL)
+    // left=0, right=19, mid=9,chunk=190..199 but was already searched,
+    // so will find next unsearched chunk starting backwards: 181..190
+    assertThat(searchCursor.next(searchDirection = SearchDirection.BACKWARD)).isEqualTo(181UL to 190UL)
+    assertThat(searchCursor.next(searchDirection = null)).isEqualTo(171UL to 180UL)
+    assertThat(searchCursor.next(searchDirection = SearchDirection.FORWARD)).isNull()
   }
 
   @Test
@@ -144,12 +145,11 @@ class SearchCursorTest {
     assertThat(searchCursor.next(searchDirection = null)).isEqualTo(91UL to 100UL)
 
     assertThat(searchCursor.next(searchDirection = SearchDirection.FORWARD)).isEqualTo(141UL to 150UL)
-    assertThat(searchCursor.next(searchDirection = SearchDirection.FORWARD)).isEqualTo(171UL to 180UL)
-    assertThat(searchCursor.next(searchDirection = null)).isEqualTo(151UL to 160UL)
+    assertThat(searchCursor.next(searchDirection = null)).isEqualTo(191UL to 200UL)
     // This backward is not technically valid in a typical binary search,
     // but it is a valid use case for this cursor because when searching for logs
     // the predicate can try to go back but search chunks are exhausted
-    assertThat(searchCursor.next(searchDirection = SearchDirection.BACKWARD)).isNull()
+    assertThat(searchCursor.next(searchDirection = SearchDirection.FORWARD)).isNull()
   }
 
   @Test
@@ -170,22 +170,18 @@ class SearchCursorTest {
   }
 
   @Test
-  fun `next iterates follows direction without repeating - forward 3`() {
-    val searchCursor = SearchCursor(from = 0uL, to = 100uL, chunkSize = 5)
+  fun `next iterates follows backward direction without repeating - backward`() {
+    val searchCursor = SearchCursor(from = 0uL, to = 100uL, chunkSize = 10)
     // chunks:
-    // 0..4,   5..9,   10..14, 15..19, 20..24,  25..29, 30..34, 35..39, 40..44, 45..49,
-    // 50..54,
-    // 55..59, 60..64, 65..69, 70..74, 75..79, 80..84, 85..89, 90..94, 95..99, 100..100
-    assertThat(searchCursor.next(searchDirection = null)).isEqualTo(50UL to 54UL)
-    assertThat(searchCursor.next(searchDirection = SearchDirection.BACKWARD)).isEqualTo(20UL to 24UL)
-    assertThat(searchCursor.next(searchDirection = null)).isEqualTo(0UL to 4UL)
-    assertThat(searchCursor.next(searchDirection = null)).isEqualTo(5UL to 9UL)
-    assertThat(searchCursor.next(searchDirection = null)).isEqualTo(10UL to 14UL)
-    assertThat(searchCursor.next(searchDirection = SearchDirection.FORWARD)).isEqualTo(30UL to 34UL)
-    assertThat(searchCursor.next(searchDirection = null)).isEqualTo(15UL to 19UL)
-    assertThat(searchCursor.next(searchDirection = SearchDirection.FORWARD)).isEqualTo(25UL to 29UL)
-    assertThat(searchCursor.next(searchDirection = null)).isEqualTo(35UL to 39UL)
-    assertThat(searchCursor.next(searchDirection = null)).isEqualTo(40UL to 44UL)
-    assertThat(searchCursor.next(searchDirection = null)).isEqualTo(45UL to 49UL)
+    // 0..9,   10..19, 20..29, 30..39, 40..49,
+    // 50..59,
+    // 60..69, 70..79, 80..89, 90..99, 100..100,
+    assertThat(searchCursor.next(searchDirection = null)).isEqualTo(50UL to 59UL)
+    assertThat(searchCursor.next(searchDirection = SearchDirection.BACKWARD)).isEqualTo(20UL to 29UL)
+    assertThat(searchCursor.next(searchDirection = null)).isEqualTo(40UL to 49UL)
+    assertThat(searchCursor.next(searchDirection = null)).isEqualTo(30UL to 39UL)
+    assertThat(searchCursor.next(searchDirection = null)).isEqualTo(10UL to 19UL)
+    assertThat(searchCursor.next(searchDirection = null)).isEqualTo(0UL to 9UL)
+    assertThat(searchCursor.next(searchDirection = null)).isNull()
   }
 }

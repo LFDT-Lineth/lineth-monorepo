@@ -28,6 +28,10 @@ internal class SearchCursor(
   val to: ULong,
   val chunkSize: Int
 ) {
+  init {
+    require(from <= to) { "invalid range: from=$from must be less or equal to=$to" }
+    require(chunkSize > 0) { "chunkSize=$chunkSize must be greater than 0" }
+  }
   private data class Chunk(val interval: Pair<ULong, ULong>, var searched: Boolean = false)
 
   private val searchChunks = rangeChunks(from, to, chunkSize)
@@ -47,7 +51,7 @@ internal class SearchCursor(
         searchChunks[mid] to mid
       } else {
         if (searchDirection == null) {
-          findLeftNextUnsearchedChunkAndUpdateLeftLimit()
+          findRightNextUnsearchedChunkAndUpdateRightLimit()
         } else {
           if (searchDirection == SearchDirection.FORWARD) {
             left = prevCursor!! + 1
@@ -61,7 +65,7 @@ internal class SearchCursor(
             val chunk = searchChunks[mid]
             if (chunk.searched) {
               // we have already searched this chunk, lets find next unsearched
-              findLeftNextUnsearchedChunkAndUpdateLeftLimit()
+              findRightNextUnsearchedChunkAndUpdateRightLimit()
             } else {
               chunk to mid
             }
@@ -75,10 +79,10 @@ internal class SearchCursor(
     }
   }
 
-  private fun findLeftNextUnsearchedChunkAndUpdateLeftLimit(): Pair<Chunk, Int>? {
-    for (i in left..right) {
+  private fun findRightNextUnsearchedChunkAndUpdateRightLimit(): Pair<Chunk, Int>? {
+    for (i in right downTo left) {
       if (!searchChunks[i].searched) {
-        left = i
+        right = i
         return searchChunks[i] to i
       }
     }

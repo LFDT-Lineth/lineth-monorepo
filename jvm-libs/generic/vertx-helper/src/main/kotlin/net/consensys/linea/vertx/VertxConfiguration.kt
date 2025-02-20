@@ -27,6 +27,6 @@ fun loadVertxConfig(): VertxOptions {
   // Close the vert.x instance, we don't need it anymore.
   val retriever = ConfigRetriever.create(vertx, options)
   val parsedOptions = VertxOptions(retriever.config.get())
-  vertx.close()
+  vertx.close().get()
   return parsedOptions
 }

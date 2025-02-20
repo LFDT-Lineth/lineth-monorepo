@@ -46,6 +46,12 @@ class ExecutionLayerInProcessClient(
 
   private val log = LogManager.getLogger(ExecutionLayerInProcessClient::class.java)
 
+  override fun addLookbackHashes(blocksHashes: Map<ULong, ByteArray>): SafeFuture<Unit> {
+    return runCatching { blockImporter.addLookbackHashes(blocksHashes) }
+      .map { SafeFuture.completedFuture(it) }
+      .getOrElse { th -> SafeFuture.failedFuture(th) }
+  }
+
   override fun getBlockNumberAndHash(blockParameter: BlockParameter): SafeFuture<BlockNumberAndHash> {
     val blockHeader: BlockHeader? = when (blockParameter) {
       is BlockParameter.Tag -> when {

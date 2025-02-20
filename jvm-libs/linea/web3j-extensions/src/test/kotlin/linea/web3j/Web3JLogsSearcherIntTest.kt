@@ -75,7 +75,7 @@ class Web3JLogsSearcherIntTest {
       vertx,
       web3jClient,
       config = Web3JLogsSearcher.Config(
-        backoffDelay = 1.milliseconds,
+        loopSuccessBackoffDelay = 1.milliseconds,
         requestRetryConfig = retryConfig
       )
     )
@@ -95,7 +95,7 @@ class Web3JLogsSearcherIntTest {
       vertx,
       web3jClient = Web3j.build(HttpService(URI("http://127.0.0.1:" + TestingJsonRpcServer.boundPort).toString())),
       config = Web3JLogsSearcher.Config(
-        backoffDelay = 1.milliseconds,
+        loopSuccessBackoffDelay = 1.milliseconds,
         requestRetryConfig = retryConfig
       ),
       log = LogManager.getLogger("test.case.Web3JLogsSearcher")
@@ -239,7 +239,7 @@ class Web3JLogsSearcherIntTest {
       vertx,
       web3jClient,
       config = Web3JLogsSearcher.Config(
-        backoffDelay = 1.milliseconds,
+        loopSuccessBackoffDelay = 1.milliseconds,
         requestRetryConfig = RetryConfig.noRetries
       )
     )

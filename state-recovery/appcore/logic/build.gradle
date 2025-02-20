@@ -12,7 +12,8 @@ dependencies {
   api(project(':jvm-libs:linea:core:long-running-service'))
   api(project(':jvm-libs:linea:clients:interfaces'))
   api(project(':jvm-libs:linea:clients:linea-state-manager'))
-  api(project(':jvm-libs:linea:blob-decompressor'))
+  api('build.linea:blob-decompressor:0.0.2')
+
   api(project(':state-recovery:appcore:clients-interfaces'))
   api(project(':state-recovery:appcore:domain-models'))
   api project(':jvm-libs:linea:besu-rlp-and-mappers')

@@ -61,10 +61,20 @@ fun loadBlobsAndAggregations(
 
 fun loadBlobsAndAggregationsSortedAndGrouped(
   blobsResponsesDir: String,
-  aggregationsResponsesDir: String
+  aggregationsResponsesDir: String,
+  ignoreBlobsWithoutAggregation: Boolean = false,
+  numberOfAggregations: Int? = null
 ): List<AggregationAndBlobs> {
-  val (blobs, aggregations) = loadBlobsAndAggregations(blobsResponsesDir, aggregationsResponsesDir)
+  var (blobs, aggregations) = loadBlobsAndAggregations(blobsResponsesDir, aggregationsResponsesDir)
+
+  if (numberOfAggregations != null) {
+    aggregations = aggregations.take(numberOfAggregations)
+  }
+
   return groupBlobsToAggregations(aggregations, blobs)
+    .let {
+      if (ignoreBlobsWithoutAggregation) it.filter { it.aggregation != null } else it
+    }
 }
 
 data class AggregationAndBlobs(

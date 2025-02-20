@@ -78,6 +78,14 @@ fun ULongRange.intersection(other: ULongRange): ULongRange {
   }
 }
 
+fun ULong.minusCoercingUnderflow(other: ULong): ULong {
+  return if (this > other) {
+    this - other
+  } else {
+    0UL
+  }
+}
+
 fun <T : Comparable<T>> ClosedRange<T>.toIntervalString(): String {
   val size = if (start <= endInclusive) {
     this.endInclusive.toString().toBigDecimal() - this.start.toString().toBigDecimal() + 1.toBigDecimal()

@@ -2,9 +2,7 @@ package linea.staterecovery
 
 import build.linea.contract.l1.LineaContractVersion
 import io.vertx.core.Vertx
-import io.vertx.junit5.Timeout
 import io.vertx.junit5.VertxExtension
-import io.vertx.junit5.VertxTestContext
 import linea.domain.RetryConfig
 import linea.log4j.configureLoggers
 import linea.web3j.Web3JLogsSearcher
@@ -21,14 +19,16 @@ import net.consensys.zkevm.ethereum.Web3jClientManager
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.extension.ExtendWith
-import java.util.concurrent.TimeUnit
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.toJavaDuration
 
 @ExtendWith(VertxExtension::class)
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class LineaSubmissionEventsClientIntTest {
   private val testDataDir = "testdata/coordinator/prover/v2/"
   private lateinit var rollupDeploymentResult: LineaRollupDeploymentResult
@@ -49,52 +49,23 @@ class LineaSubmissionEventsClientIntTest {
       "test.clients.l1.executionlayer" to Level.INFO,
       "test.clients.l1.web3j-default" to Level.INFO,
       "test.clients.l1.linea-contract" to Level.INFO,
-      "test.clients.l1.events-fetcher" to Level.INFO
+      "test.clients.l1.events-fetcher" to Level.TRACE
     )
+
     val rollupDeploymentFuture = ContractsManager.get()
       .deployLineaRollup(numberOfOperators = 2, contractVersion = LineaContractVersion.V6)
     // load files from FS while smc deploy
     aggregationsAndBlobs = loadBlobsAndAggregationsSortedAndGrouped(
       blobsResponsesDir = "$testDataDir/compression/responses",
-      aggregationsResponsesDir = "$testDataDir/aggregation/responses"
+      aggregationsResponsesDir = "$testDataDir/aggregation/responses",
+      numberOfAggregations = 7
     )
     // wait smc deployment finishes
     rollupDeploymentResult = rollupDeploymentFuture.get()
-    val eventsFetcherWeb3jClient = Web3jClientManager.buildL1Client(
-      log = LogManager.getLogger("test.clients.l1.events-fetcher"),
-      requestResponseLogLevel = Level.DEBUG,
-      failuresLogLevel = Level.WARN
+    submissionEventsFetcher = createSubmissionEventsClient(
+      vertx = vertx,
+      contractAddress = rollupDeploymentResult.contractAddress
     )
-    submissionEventsFetcher = LineaSubmissionEventsClientImpl(
-      logsSearcher = Web3JLogsSearcher(
-        vertx = vertx,
-        web3jClient = eventsFetcherWeb3jClient,
-        config = Web3JLogsSearcher.Config(
-          backoffDelay = 1.milliseconds,
-          requestRetryConfig = RetryConfig.noRetries
-        )
-      ),
-      smartContractAddress = rollupDeploymentResult.contractAddress,
-      l1EarliestSearchBlock = BlockParameter.Tag.EARLIEST,
-      l1LatestSearchBlock = BlockParameter.Tag.LATEST,
-      logsBlockChunkSize = 100
-    )
-  }
-
-  @Test
-  @Timeout(3, timeUnit = TimeUnit.MINUTES)
-  fun `submission works with contract V6`(
-    vertx: Vertx,
-    testContext: VertxTestContext
-  ) {
-    testSubmission(vertx, testContext)
-  }
-
-  private fun testSubmission(
-    vertx: Vertx,
-    testContext: VertxTestContext
-  ) {
-    setupTest(vertx)
 
     submitBlobsAndAggregationsAndWaitExecution(
       contractClientForBlobSubmission = rollupDeploymentResult.rollupOperatorClient,
@@ -108,7 +79,41 @@ class LineaSubmissionEventsClientIntTest {
       l1Web3jClient = Web3jClientManager.l1Client,
       waitTimeout = 4.minutes
     )
+  }
 
+  private fun createSubmissionEventsClient(
+    vertx: Vertx,
+    contractAddress: String
+  ): LineaRollupSubmissionEventsClient {
+    val log = LogManager.getLogger("test.clients.l1.events-fetcher")
+    val eventsFetcherWeb3jClient = Web3jClientManager.buildL1Client(
+      log = log,
+      requestResponseLogLevel = Level.DEBUG,
+      failuresLogLevel = Level.WARN
+    )
+    return LineaSubmissionEventsClientImpl(
+      logsSearcher = Web3JLogsSearcher(
+        vertx = vertx,
+        web3jClient = eventsFetcherWeb3jClient,
+        config = Web3JLogsSearcher.Config(
+          loopSuccessBackoffDelay = 1.milliseconds,
+          requestRetryConfig = RetryConfig.noRetries
+        ),
+        log = log
+      ),
+      smartContractAddress = contractAddress,
+      l1LatestSearchBlock = BlockParameter.Tag.LATEST,
+      logsBlockChunkSize = 100
+    )
+  }
+
+  @BeforeAll
+  fun beforeAll(vertx: Vertx) {
+    setupTest(vertx)
+  }
+
+  @Test
+  fun `findFinalizationAndDataSubmissionV3Events should find events when blockNumber is aggregation startBlock`() {
     val expectedSubmissionEventsToFind: List<Pair<DataFinalizedV3, List<DataSubmittedV3>>> =
       getExpectedSubmissionEventsFromRecords(aggregationsAndBlobs)
 
@@ -116,8 +121,9 @@ class LineaSubmissionEventsClientIntTest {
       .forEach { (expectedFinalizationEvent, expectedDataSubmittedEvents) ->
         assertThat(
           submissionEventsFetcher
-            .findDataSubmittedV3EventsUntilNextFinalization(
-              l2StartBlockNumberInclusive = expectedFinalizationEvent.startBlockNumber
+            .findFinalizationAndDataSubmissionV3Events(
+              fromL1BlockNumber = BlockParameter.Tag.EARLIEST,
+              finalizationStartBlockNumber = expectedFinalizationEvent.startBlockNumber
             )
         )
           .succeedsWithin(1.minutes.toJavaDuration())
@@ -128,18 +134,36 @@ class LineaSubmissionEventsClientIntTest {
           }
           .isEqualTo(Pair(expectedFinalizationEvent, expectedDataSubmittedEvents))
       }
+  }
 
-    // non happy path
-    val invalidStartBlockNumber = expectedSubmissionEventsToFind.last().first.startBlockNumber + 1UL
+  @Test
+  fun `findFinalizationAndDataSubmissionV3Events should return null when not found`() {
+    val invalidStartBlockNumber = aggregationsAndBlobs[1].aggregation!!.startBlockNumber + 1UL
+
     assertThat(
       submissionEventsFetcher
-        .findDataSubmittedV3EventsUntilNextFinalization(
-          l2StartBlockNumberInclusive = invalidStartBlockNumber
+        .findFinalizationAndDataSubmissionV3Events(
+          fromL1BlockNumber = BlockParameter.Tag.EARLIEST,
+          finalizationStartBlockNumber = invalidStartBlockNumber
         ).get()
     )
       .isNull()
+  }
 
-    testContext.completeNow()
+  @Test
+  fun `findFinalizationAndDataSubmissionV3EventsContainingL2BlockNumber should find events`() {
+    val invalidStartBlockNumber = aggregationsAndBlobs[1].aggregation!!.startBlockNumber + 1UL
+
+    submissionEventsFetcher
+      .findFinalizationAndDataSubmissionV3EventsContainingL2BlockNumber(
+        fromL1BlockNumber = BlockParameter.Tag.EARLIEST,
+        l2BlockNumber = invalidStartBlockNumber
+      ).get()
+      .also { result ->
+        assertThat(result).isNotNull
+        assertThat(result!!.dataFinalizedEvent.event.startBlockNumber)
+          .isEqualTo(aggregationsAndBlobs[1].aggregation!!.startBlockNumber)
+      }
   }
 
   private fun getExpectedSubmissionEventsFromRecords(

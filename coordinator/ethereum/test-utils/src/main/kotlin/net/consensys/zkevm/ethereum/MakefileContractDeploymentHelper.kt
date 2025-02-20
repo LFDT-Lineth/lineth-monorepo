@@ -3,6 +3,7 @@ package net.consensys.zkevm.ethereum
 import build.linea.contract.l1.LineaContractVersion
 import linea.testing.CommandResult
 import linea.testing.Runner
+import org.hyperledger.besu.datatypes.Address
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.regex.Matcher
 import java.util.regex.Pattern
@@ -36,7 +37,13 @@ fun getDeployedAddress(
     ?.let { addressPattern.matcher(it).also { it.find() } }
 
   return matcher
-    ?.let { DeployedContract(it.group(1), it.group(2).toLong()) }
+    ?.let {
+      val address = it.group(1)
+      val deploymentBlockNumber = it.group(2).toLong()
+      // validated address was correctly parsed
+      Address.fromHexString(address)
+      DeployedContract(address, deploymentBlockNumber)
+    }
     ?: throw IllegalStateException("Couldn't extract contract address. Expecting pattern: $addressPattern")
 }
 

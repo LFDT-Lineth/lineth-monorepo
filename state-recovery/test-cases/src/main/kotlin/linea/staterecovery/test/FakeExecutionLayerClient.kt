@@ -39,6 +39,12 @@ class FakeExecutionLayerClient(
     )
 
   @Synchronized
+  override fun addLookbackHashes(blocksHashes: Map<ULong, ByteArray>): SafeFuture<Unit> {
+    // no-op
+    return SafeFuture.completedFuture(Unit)
+  }
+
+  @Synchronized
   override fun lineaEngineImportBlocksFromBlob(
     blocks: List<BlockFromL1RecoveredData>
   ): SafeFuture<Unit> {
