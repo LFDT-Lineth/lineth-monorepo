@@ -7,15 +7,18 @@ on:
     paths:
       - 'bridge-ui/**'
       - '!bridge-ui/**/*.md'
+      - '.github/workflows/bridge-ui-e2e-tests.yml'
   push:
     branches:
       - main
     paths:
       - 'bridge-ui/**'
       - '!bridge-ui/**/*.md'
+      - '.github/workflows/bridge-ui-e2e-tests.yml'
 
 jobs:
   run-e2e-tests:
+    if: github.event.pull_request.head.repo.fork == false
     runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-med
     steps:
       - name: Checkout

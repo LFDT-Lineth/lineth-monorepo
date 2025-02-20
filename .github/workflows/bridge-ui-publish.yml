@@ -18,6 +18,7 @@ on:
 
 jobs:
   publish:
+    if: github.event.pull_request.head.repo.fork == false
     # ~1 min saved vs small
     runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-med
     env:
@@ -65,3 +66,27 @@ jobs:
         env:
           NEXT_PUBLIC_WALLET_CONNECT_ID: ${{ secrets.PUBLIC_WALLET_CONNECT_ID }}
           NEXT_PUBLIC_INFURA_ID: ${{ secrets.PUBLIC_BRIDGE_UI_INFURA_ID }}
+  
+  test-build:
+    if: github.event.pull_request.head.repo.fork == true
+    # ~1 min saved vs small
+    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-med
+    name: Test Build Bridge UI
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Get version from package.json
+        id: package-version
+        uses: martinbeentjes/npm-get-version-action@master
+        with:
+          path: ./bridge-ui
+      
+      - name: Setup nodejs environment
+        uses: ./.github/actions/setup-nodejs
+        with:
+          node-version: 18.17.0
+          pnpm-install-options: '--frozen-lockfile --prefer-offline'
+
+      - name: Test Build Bridge UI
+        run: pnpm run -F bridge-ui build;
