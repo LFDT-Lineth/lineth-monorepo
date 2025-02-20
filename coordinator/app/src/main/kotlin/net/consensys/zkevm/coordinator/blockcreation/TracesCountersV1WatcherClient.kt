@@ -1,7 +1,7 @@
 package net.consensys.zkevm.coordinator.blockcreation
 
 import com.github.michaelbull.result.Result
-import net.consensys.linea.BlockNumberAndHash
+import linea.domain.BlockNumberAndHash
 import net.consensys.linea.errors.ErrorResponse
 import net.consensys.zkevm.coordinator.clients.GetTracesCountersResponse
 import net.consensys.zkevm.coordinator.clients.TracesCountersClientV1

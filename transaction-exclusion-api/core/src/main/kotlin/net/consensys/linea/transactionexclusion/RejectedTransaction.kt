@@ -1,7 +1,7 @@
 package net.consensys.linea.transactionexclusion
 
 import kotlinx.datetime.Instant
-import net.consensys.encodeHex
+import linea.kotlin.encodeHex
 
 data class ModuleOverflow(
   val count: Long,

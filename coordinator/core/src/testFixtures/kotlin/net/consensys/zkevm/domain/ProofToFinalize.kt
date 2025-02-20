@@ -2,8 +2,8 @@ package net.consensys.zkevm.domain
 
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
-import net.consensys.setFirstByteToZero
-import net.consensys.trimToSecondPrecision
+import linea.kotlin.setFirstByteToZero
+import linea.kotlin.trimToSecondPrecision
 import kotlin.random.Random
 import kotlin.time.Duration.Companion.seconds
 

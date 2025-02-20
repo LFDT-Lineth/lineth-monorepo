@@ -1,6 +1,6 @@
 package net.consensys.linea.ethereum.gaspricing.dynamiccap
 
-import net.consensys.linea.FeeHistory
+import linea.domain.FeeHistory
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 interface FeeHistoriesRepository {

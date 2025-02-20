@@ -3,7 +3,7 @@ package net.consensys.zkevm.ethereum.coordination.aggregation
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import kotlinx.datetime.Instant
 import linea.domain.BlockHeaderSummary
-import net.consensys.ByteArrayExt
+import linea.kotlin.ByteArrayExt
 import net.consensys.FakeFixedClock
 import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade

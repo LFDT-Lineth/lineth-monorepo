@@ -1,11 +1,11 @@
 package net.consensys.linea.contract
 
 import build.linea.contract.LineaRollupV6
+import linea.kotlin.toBigInteger
+import linea.kotlin.toULong
 import net.consensys.linea.web3j.AtomicContractEIP1559GasProvider
 import net.consensys.linea.web3j.EIP1559GasFees
 import net.consensys.linea.web3j.SmartContractErrors
-import net.consensys.toBigInteger
-import net.consensys.toULong
 import org.web3j.abi.FunctionEncoder
 import org.web3j.abi.datatypes.Function
 import org.web3j.crypto.Credentials

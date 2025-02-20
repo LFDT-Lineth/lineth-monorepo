@@ -1,9 +1,9 @@
 package net.consensys.linea.nativecompressor
 
 import io.vertx.core.json.JsonObject
+import linea.kotlin.decodeHex
+import linea.kotlin.encodeHex
 import linea.rlp.RLP
-import net.consensys.decodeHex
-import net.consensys.encodeHex
 import net.consensys.linea.testing.filesystem.getPathTo
 import org.hyperledger.besu.ethereum.core.Block
 import java.nio.file.Files

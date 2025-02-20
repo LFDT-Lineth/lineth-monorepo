@@ -1,6 +1,6 @@
 package net.consensys.zkevm.ethereum.coordination.blob
 
-import net.consensys.encodeHex
+import linea.kotlin.encodeHex
 import net.consensys.linea.blob.BlobCompressorVersion
 import net.consensys.linea.blob.GoNativeBlobCompressor
 import net.consensys.linea.blob.GoNativeBlobCompressorFactory

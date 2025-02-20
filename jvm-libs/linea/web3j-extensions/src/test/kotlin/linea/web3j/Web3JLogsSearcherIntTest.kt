@@ -1,6 +1,5 @@
 package linea.web3j
 
-import build.linea.domain.EthLog
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock.aResponse
 import com.github.tomakehurst.wiremock.client.WireMock.containing
@@ -9,16 +8,17 @@ import com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration
 import io.vertx.core.Vertx
 import linea.SearchDirection
+import linea.domain.BlockParameter.Companion.toBlockParameter
+import linea.domain.EthLog
 import linea.domain.RetryConfig
 import linea.jsonrpc.TestingJsonRpcServer
+import linea.kotlin.encodeHex
+import linea.kotlin.fromHexString
+import linea.kotlin.toHexString
+import linea.kotlin.toHexStringUInt256
 import linea.log4j.configureLoggers
-import net.consensys.encodeHex
-import net.consensys.fromHexString
-import net.consensys.linea.BlockParameter.Companion.toBlockParameter
 import net.consensys.linea.jsonrpc.JsonRpcError
 import net.consensys.linea.jsonrpc.JsonRpcRequest
-import net.consensys.toHexString
-import net.consensys.toHexStringUInt256
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
 import org.assertj.core.api.Assertions.assertThat

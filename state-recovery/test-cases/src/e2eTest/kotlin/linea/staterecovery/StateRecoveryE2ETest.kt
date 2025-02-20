@@ -2,12 +2,14 @@ package linea.staterecovery
 
 import build.linea.clients.StateManagerClientV1
 import build.linea.clients.StateManagerV1JsonRpcClient
-import build.linea.domain.EthLogEvent
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
 import kotlinx.datetime.Clock
+import linea.domain.EthLogEvent
 import linea.domain.RetryConfig
+import linea.kotlin.gwei
+import linea.kotlin.toBigInteger
 import linea.log4j.configureLoggers
 import linea.staterecovery.test.assertBesuAndShomeiRecoveredAsExpected
 import linea.staterecovery.test.execCommandAndAssertSuccess
@@ -18,13 +20,10 @@ import linea.testing.Runner
 import linea.web3j.Web3JLogsSearcher
 import linea.web3j.createWeb3jHttpClient
 import linea.web3j.waitForTxReceipt
-import net.consensys.gwei
 import net.consensys.linea.jsonrpc.client.RequestRetryConfig
 import net.consensys.linea.jsonrpc.client.VertxHttpJsonRpcClientFactory
 import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
 import net.consensys.linea.testing.filesystem.getPathTo
-import net.consensys.toBigInteger
-import net.consensys.toULong
 import net.consensys.zkevm.ethereum.L2AccountManager
 import net.consensys.zkevm.ethereum.Web3jClientManager
 import org.apache.logging.log4j.Level

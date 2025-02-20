@@ -1,14 +1,14 @@
 package build.linea.clients
 
-import build.linea.domain.BlockInterval
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ArrayNode
 import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.Result
 import io.vertx.core.json.JsonObject
-import net.consensys.decodeHex
-import net.consensys.fromHexString
+import linea.domain.BlockInterval
+import linea.kotlin.decodeHex
+import linea.kotlin.fromHexString
 import net.consensys.linea.errors.ErrorResponse
 import net.consensys.linea.jsonrpc.JsonRpcErrorResponseException
 import net.consensys.linea.jsonrpc.client.JsonRpcClientFactory

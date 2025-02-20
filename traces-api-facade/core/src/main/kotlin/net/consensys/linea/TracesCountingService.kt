@@ -2,6 +2,7 @@ package net.consensys.linea
 
 import com.github.michaelbull.result.Result
 import com.github.michaelbull.result.flatMap
+import linea.domain.BlockNumberAndHash
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture

@@ -7,7 +7,7 @@ import com.github.tomakehurst.wiremock.http.RequestListener
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
-import net.consensys.encodeHex
+import linea.kotlin.encodeHex
 import net.consensys.linea.async.get
 import net.consensys.linea.jsonrpc.client.RequestRetryConfig
 import org.assertj.core.api.Assertions.assertThat

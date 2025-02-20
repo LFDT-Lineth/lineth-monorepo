@@ -1,8 +1,8 @@
 package linea.test
 
 import io.vertx.core.Vertx
+import linea.domain.CommonDomainFunctions
 import linea.web3j.createWeb3jHttpClient
-import net.consensys.linea.CommonDomainFunctions
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger

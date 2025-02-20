@@ -1,9 +1,9 @@
 package net.consensys.zkevm.ethereum.coordination.aggregation
 
-import build.linea.domain.BlockIntervals
-import build.linea.domain.toBlockIntervalsString
 import io.vertx.core.Vertx
 import kotlinx.datetime.Clock
+import linea.domain.BlockIntervals
+import linea.domain.toBlockIntervalsString
 import net.consensys.linea.metrics.LineaMetricsCategory
 import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.zkevm.LongRunningService

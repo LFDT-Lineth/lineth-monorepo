@@ -1,6 +1,6 @@
 package net.consensys.linea.contract.l1
 
-import net.consensys.encodeHex
+import linea.kotlin.encodeHex
 import net.consensys.zkevm.coordinator.clients.smartcontract.LineaGenesisStateProvider
 
 data class GenesisStateProvider(

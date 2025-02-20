@@ -1,7 +1,7 @@
 package net.consensys.zkevm.coordinator.clients.prover
 
-import build.linea.domain.BlockInterval
 import io.vertx.core.Vertx
+import linea.domain.BlockInterval
 import net.consensys.linea.contract.Web3JL2MessageServiceLogsClient
 import net.consensys.linea.metrics.LineaMetricsCategory
 import net.consensys.linea.metrics.MetricsFacade

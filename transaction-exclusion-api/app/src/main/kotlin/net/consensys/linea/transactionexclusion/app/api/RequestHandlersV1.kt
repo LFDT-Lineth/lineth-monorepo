@@ -10,7 +10,8 @@ import com.github.michaelbull.result.mapError
 import io.vertx.core.Future
 import io.vertx.core.json.JsonObject
 import io.vertx.ext.auth.User
-import net.consensys.encodeHex
+import linea.kotlin.encodeHex
+import linea.kotlin.toHexString
 import net.consensys.linea.async.toVertxFuture
 import net.consensys.linea.jsonrpc.JsonRpcErrorResponse
 import net.consensys.linea.jsonrpc.JsonRpcRequest
@@ -21,7 +22,6 @@ import net.consensys.linea.jsonrpc.JsonRpcSuccessResponse
 import net.consensys.linea.transactionexclusion.RejectedTransaction
 import net.consensys.linea.transactionexclusion.TransactionExclusionServiceV1
 import net.consensys.linea.transactionexclusion.dto.RejectedTransactionJsonDto
-import net.consensys.toHexString
 
 private fun validateIsMapOrListParams(request: JsonRpcRequest): Result<JsonRpcRequest, JsonRpcErrorResponse> {
   if (request.params !is Map<*, *> && request.params !is List<*>) {

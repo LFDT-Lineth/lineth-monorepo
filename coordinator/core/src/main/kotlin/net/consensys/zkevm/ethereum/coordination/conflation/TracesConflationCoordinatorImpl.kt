@@ -3,14 +3,14 @@ package net.consensys.zkevm.ethereum.coordination.conflation
 import build.linea.clients.GetStateMerkleProofRequest
 import build.linea.clients.GetZkEVMStateMerkleProofResponse
 import build.linea.clients.StateManagerClientV1
-import build.linea.domain.BlockInterval
 import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.Result
 import com.github.michaelbull.result.getOrElse
 import com.github.michaelbull.result.map
 import com.github.michaelbull.result.mapBoth
-import net.consensys.linea.BlockNumberAndHash
+import linea.domain.BlockInterval
+import linea.domain.BlockNumberAndHash
 import net.consensys.linea.errors.ErrorResponse
 import net.consensys.zkevm.coordinator.clients.GenerateTracesResponse
 import net.consensys.zkevm.coordinator.clients.TracesConflationClientV1

@@ -1,9 +1,9 @@
 package linea.staterecovery.plugin
 
+import linea.kotlin.encodeHex
+import linea.kotlin.toBigInteger
+import linea.kotlin.toULong
 import linea.staterecovery.BlockFromL1RecoveredData
-import net.consensys.encodeHex
-import net.consensys.toBigInteger
-import net.consensys.toULong
 import org.apache.logging.log4j.LogManager
 import org.apache.tuweni.bytes.Bytes32
 import org.hyperledger.besu.datatypes.Address

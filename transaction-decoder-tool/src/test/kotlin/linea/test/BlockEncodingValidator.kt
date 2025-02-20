@@ -3,11 +3,11 @@ package linea.test
 import io.vertx.core.Vertx
 import linea.blob.GoBackedBlobCompressor
 import linea.domain.Block
+import linea.domain.CommonDomainFunctions
 import linea.domain.toBesu
 import linea.rlp.BesuRlpDecoderAsyncVertxImpl
 import linea.rlp.BesuRlpMainnetEncoderAsyncVertxImpl
 import linea.rlp.RLP
-import net.consensys.linea.CommonDomainFunctions
 import net.consensys.linea.blob.BlobCompressorVersion
 import net.consensys.linea.blob.BlobDecompressorVersion
 import net.consensys.linea.blob.GoNativeBlobDecompressorFactory

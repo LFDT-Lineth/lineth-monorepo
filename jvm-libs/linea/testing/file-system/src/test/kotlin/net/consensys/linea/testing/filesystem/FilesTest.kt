@@ -1,6 +1,6 @@
 package net.consensys.linea.testing.filesystem
 
-import net.consensys.encodeHex
+import linea.kotlin.encodeHex
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import kotlin.random.Random

@@ -4,11 +4,11 @@ import io.vertx.core.Vertx
 import io.vertx.junit5.Timeout
 import io.vertx.junit5.VertxExtension
 import io.vertx.junit5.VertxTestContext
+import linea.kotlin.toHexString
+import linea.kotlin.toULong
 import net.consensys.linea.contract.AsyncFriendlyTransactionManager
 import net.consensys.linea.contract.EIP1559GasProvider
 import net.consensys.linea.contract.l2.L2MessageServiceGasLimitEstimate
-import net.consensys.toHexString
-import net.consensys.toULong
 import org.apache.tuweni.bytes.Bytes32
 import org.assertj.core.api.Assertions
 import org.junit.jupiter.api.Test

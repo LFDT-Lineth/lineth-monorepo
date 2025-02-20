@@ -4,12 +4,12 @@ import io.vertx.core.Vertx
 import io.vertx.junit5.Timeout
 import io.vertx.junit5.VertxExtension
 import io.vertx.junit5.VertxTestContext
-import net.consensys.linea.FeeHistory
+import linea.domain.FeeHistory
+import linea.kotlin.toKWei
 import net.consensys.linea.ethereum.gaspricing.ExtraDataUpdater
 import net.consensys.linea.ethereum.gaspricing.FeesCalculator
 import net.consensys.linea.ethereum.gaspricing.FeesFetcher
 import net.consensys.linea.ethereum.gaspricing.MinerExtraDataV1
-import net.consensys.toKWei
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.extension.ExtendWith

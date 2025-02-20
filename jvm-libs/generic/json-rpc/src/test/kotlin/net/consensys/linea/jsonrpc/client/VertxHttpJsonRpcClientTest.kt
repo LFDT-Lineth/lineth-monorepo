@@ -19,7 +19,7 @@ import io.vertx.core.http.HttpClientOptions
 import io.vertx.core.http.HttpVersion
 import io.vertx.core.json.JsonArray
 import io.vertx.core.json.JsonObject
-import net.consensys.decodeHex
+import linea.kotlin.decodeHex
 import net.consensys.linea.async.get
 import net.consensys.linea.async.toSafeFuture
 import net.consensys.linea.jsonrpc.JsonRpcError

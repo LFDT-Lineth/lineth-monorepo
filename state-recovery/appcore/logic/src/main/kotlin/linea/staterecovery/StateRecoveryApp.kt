@@ -4,8 +4,8 @@ import build.linea.clients.StateManagerClientV1
 import build.linea.contract.l1.LineaRollupSmartContractClientReadOnly
 import io.vertx.core.Vertx
 import linea.EthLogsSearcher
-import net.consensys.linea.BlockParameter
-import net.consensys.linea.BlockParameter.Companion.toBlockParameter
+import linea.domain.BlockParameter
+import linea.domain.BlockParameter.Companion.toBlockParameter
 import net.consensys.linea.async.AsyncRetryer
 import net.consensys.linea.blob.BlobDecompressorVersion
 import net.consensys.linea.blob.GoNativeBlobDecompressorFactory

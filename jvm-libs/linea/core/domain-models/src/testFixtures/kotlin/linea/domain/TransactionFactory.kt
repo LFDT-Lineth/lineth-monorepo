@@ -1,8 +1,8 @@
 package linea.domain
 
-import net.consensys.eth
-import net.consensys.gwei
-import net.consensys.toBigInteger
+import linea.kotlin.eth
+import linea.kotlin.gwei
+import linea.kotlin.toBigInteger
 import org.apache.tuweni.bytes.Bytes
 import org.apache.tuweni.bytes.Bytes32
 import org.hyperledger.besu.crypto.KeyPair

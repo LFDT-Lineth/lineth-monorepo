@@ -5,11 +5,11 @@ import io.vertx.sqlclient.PreparedQuery
 import io.vertx.sqlclient.Row
 import io.vertx.sqlclient.RowSet
 import kotlinx.datetime.Clock
+import linea.kotlin.trimToMillisecondPrecision
+import linea.kotlin.trimToSecondPrecision
 import net.consensys.FakeFixedClock
 import net.consensys.linea.async.get
 import net.consensys.linea.async.toSafeFuture
-import net.consensys.trimToMillisecondPrecision
-import net.consensys.trimToSecondPrecision
 import net.consensys.zkevm.domain.BlobRecord
 import net.consensys.zkevm.domain.BlobStatus
 import net.consensys.zkevm.domain.createBlobRecord

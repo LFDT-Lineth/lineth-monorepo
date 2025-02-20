@@ -2,7 +2,7 @@ package net.consensys.zkevm.ethereum.finalization
 
 import build.linea.contract.l1.Web3JLineaRollupSmartContractClientReadOnly
 import io.vertx.core.Vertx
-import net.consensys.linea.BlockParameter
+import linea.domain.BlockParameter
 import net.consensys.linea.async.AsyncRetryer
 import net.consensys.linea.async.toSafeFuture
 import net.consensys.zkevm.PeriodicPollingService

@@ -2,7 +2,7 @@ package net.consensys.zkevm.coordinator.app
 
 import build.linea.contract.l1.LineaRollupSmartContractClientReadOnly
 import io.vertx.core.Vertx
-import net.consensys.linea.BlockParameter
+import linea.domain.BlockParameter
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test

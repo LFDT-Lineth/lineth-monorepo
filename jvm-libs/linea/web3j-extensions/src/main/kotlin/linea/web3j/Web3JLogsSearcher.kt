@@ -5,13 +5,13 @@ import build.linea.web3j.domain.toWeb3j
 import io.vertx.core.Vertx
 import linea.EthLogsSearcher
 import linea.SearchDirection
+import linea.domain.BlockParameter
+import linea.domain.BlockParameter.Companion.toBlockParameter
+import linea.domain.CommonDomainFunctions
 import linea.domain.RetryConfig
-import net.consensys.linea.BlockParameter
-import net.consensys.linea.BlockParameter.Companion.toBlockParameter
-import net.consensys.linea.CommonDomainFunctions
+import linea.kotlin.toULong
 import net.consensys.linea.async.AsyncRetryer
 import net.consensys.linea.async.toSafeFuture
-import net.consensys.toULong
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import org.web3j.protocol.Web3j
@@ -24,7 +24,7 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 
 private sealed interface SearchResult {
-  data class ItemFound(val log: build.linea.domain.EthLog) : SearchResult
+  data class ItemFound(val log: linea.domain.EthLog) : SearchResult
   data class KeepSearching(val direction: SearchDirection) : SearchResult
   data object NoResultsInInterval : SearchResult
 }
@@ -46,8 +46,8 @@ class Web3JLogsSearcher(
     chunkSize: Int,
     address: String,
     topics: List<String>,
-    shallContinueToSearch: (build.linea.domain.EthLog) -> SearchDirection?
-  ): SafeFuture<build.linea.domain.EthLog?> {
+    shallContinueToSearch: (linea.domain.EthLog) -> SearchDirection?
+  ): SafeFuture<linea.domain.EthLog?> {
     require(chunkSize > 0) { "chunkSize=$chunkSize must be greater than 0" }
 
     return getAbsoluteBlockNumbers(fromBlock, toBlock)
@@ -76,8 +76,8 @@ class Web3JLogsSearcher(
     chunkSize: Int,
     address: String,
     topics: List<String>,
-    shallContinueToSearchPredicate: (build.linea.domain.EthLog) -> SearchDirection?
-  ): SafeFuture<build.linea.domain.EthLog?> {
+    shallContinueToSearchPredicate: (linea.domain.EthLog) -> SearchDirection?
+  ): SafeFuture<linea.domain.EthLog?> {
     val cursor = SearchCursor(fromBlock, toBlock, chunkSize)
     log.trace("searching between blocks={}", CommonDomainFunctions.blockIntervalString(fromBlock, toBlock))
 
@@ -121,7 +121,7 @@ class Web3JLogsSearcher(
     toBlock: ULong,
     address: String,
     topics: List<String>,
-    shallContinueToSearchPredicate: (build.linea.domain.EthLog) -> SearchDirection?
+    shallContinueToSearchPredicate: (linea.domain.EthLog) -> SearchDirection?
   ): SafeFuture<SearchResult> {
     return getLogs(
       fromBlock = fromBlock.toBlockParameter(),
@@ -152,7 +152,7 @@ class Web3JLogsSearcher(
     toBlock: BlockParameter,
     address: String,
     topics: List<String?>
-  ): SafeFuture<List<build.linea.domain.EthLog>> {
+  ): SafeFuture<List<linea.domain.EthLog>> {
     return if (config.requestRetryConfig.isRetryEnabled) {
       AsyncRetryer.retry(
         vertx = vertx,
@@ -172,7 +172,7 @@ class Web3JLogsSearcher(
     toBlock: BlockParameter,
     address: String,
     topics: List<String?>
-  ): SafeFuture<List<build.linea.domain.EthLog>> {
+  ): SafeFuture<List<linea.domain.EthLog>> {
     val ethFilter = EthFilter(
       /*fromBlock*/ fromBlock.toWeb3j(),
       /*toBlock*/ toBlock.toWeb3j(),

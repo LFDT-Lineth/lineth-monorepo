@@ -4,9 +4,8 @@ import io.vertx.core.Future
 import io.vertx.sqlclient.SqlClient
 import io.vertx.sqlclient.Tuple
 import kotlinx.datetime.Clock
-import net.consensys.linea.FeeHistory
+import linea.domain.FeeHistory
 import net.consensys.linea.async.toSafeFuture
-import net.consensys.toULong
 import net.consensys.zkevm.persistence.db.SQLQueryLogger
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager

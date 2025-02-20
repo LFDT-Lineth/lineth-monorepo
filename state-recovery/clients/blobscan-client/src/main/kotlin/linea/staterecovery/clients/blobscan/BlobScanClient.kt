@@ -4,9 +4,9 @@ import io.vertx.core.Vertx
 import io.vertx.core.json.JsonObject
 import io.vertx.ext.web.client.WebClient
 import io.vertx.ext.web.client.WebClientOptions
+import linea.kotlin.decodeHex
+import linea.kotlin.encodeHex
 import linea.staterecovery.BlobFetcher
-import net.consensys.decodeHex
-import net.consensys.encodeHex
 import net.consensys.linea.jsonrpc.client.RequestRetryConfig
 import net.consensys.linea.vertx.setDefaultsFrom
 import org.apache.logging.log4j.LogManager

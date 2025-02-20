@@ -1,7 +1,7 @@
 package net.consensys.linea.vertx
 
-import build.linea.getPortWithSchemeDefaults
 import io.vertx.core.http.HttpClientOptions
+import linea.getPortWithSchemeDefaults
 import java.net.URI
 
 fun <T : HttpClientOptions> T.setDefaultsFrom(uri: URI): T {

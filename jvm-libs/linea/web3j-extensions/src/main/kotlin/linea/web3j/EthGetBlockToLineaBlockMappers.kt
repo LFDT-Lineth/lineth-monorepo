@@ -4,11 +4,11 @@ import linea.domain.AccessListEntry
 import linea.domain.Block
 import linea.domain.Transaction
 import linea.domain.TransactionType
-import net.consensys.decodeHex
-import net.consensys.toBigIntegerFromHex
-import net.consensys.toIntFromHex
-import net.consensys.toULong
-import net.consensys.toULongFromHex
+import linea.kotlin.decodeHex
+import linea.kotlin.toBigIntegerFromHex
+import linea.kotlin.toIntFromHex
+import linea.kotlin.toULong
+import linea.kotlin.toULongFromHex
 import org.web3j.protocol.core.methods.response.EthBlock
 
 fun EthBlock.Block.toDomain(): Block = mapToDomain(this)

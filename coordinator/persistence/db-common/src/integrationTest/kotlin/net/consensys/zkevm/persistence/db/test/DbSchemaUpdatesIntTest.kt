@@ -5,7 +5,7 @@ import io.vertx.junit5.VertxExtension
 import io.vertx.sqlclient.Pool
 import io.vertx.sqlclient.SqlClient
 import kotlinx.datetime.Clock
-import net.consensys.encodeHex
+import linea.kotlin.encodeHex
 import net.consensys.linea.async.get
 import net.consensys.zkevm.persistence.db.Db
 import net.consensys.zkevm.persistence.db.DbHelper

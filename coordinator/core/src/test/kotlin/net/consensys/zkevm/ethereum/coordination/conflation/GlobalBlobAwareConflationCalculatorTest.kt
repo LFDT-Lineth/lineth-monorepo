@@ -2,7 +2,7 @@ package net.consensys.zkevm.ethereum.coordination.conflation
 
 import kotlinx.datetime.Instant
 import linea.domain.BlockHeaderSummary
-import net.consensys.ByteArrayExt
+import linea.kotlin.ByteArrayExt
 import net.consensys.FakeFixedClock
 import net.consensys.linea.traces.TracesCountersV1
 import net.consensys.linea.traces.fakeTracesCountersV1

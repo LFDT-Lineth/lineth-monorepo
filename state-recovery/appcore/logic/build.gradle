@@ -19,6 +19,7 @@ dependencies {
   api project(':jvm-libs:linea:besu-rlp-and-mappers')
   api project(':jvm-libs:linea:besu-libs')
 
+  testImplementation(project(':jvm-libs:linea:blob-decompressor'))
   testImplementation(project(":jvm-libs:linea:testing:file-system"))
   testImplementation(testFixtures(project(":jvm-libs:linea:blob-compressor")))
   testImplementation("org.bouncycastle:bcprov-jdk18on:1.78.1")

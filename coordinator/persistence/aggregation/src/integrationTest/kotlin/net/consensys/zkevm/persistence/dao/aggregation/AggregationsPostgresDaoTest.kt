@@ -1,14 +1,14 @@
 package net.consensys.zkevm.persistence.dao.aggregation
 
-import build.linea.domain.BlockIntervals
 import io.vertx.junit5.VertxExtension
 import io.vertx.sqlclient.Row
 import io.vertx.sqlclient.RowSet
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
+import linea.domain.BlockIntervals
+import linea.kotlin.trimToSecondPrecision
 import net.consensys.FakeFixedClock
 import net.consensys.linea.async.get
-import net.consensys.trimToSecondPrecision
 import net.consensys.zkevm.domain.Aggregation
 import net.consensys.zkevm.domain.Batch
 import net.consensys.zkevm.domain.BlobAndBatchCounters

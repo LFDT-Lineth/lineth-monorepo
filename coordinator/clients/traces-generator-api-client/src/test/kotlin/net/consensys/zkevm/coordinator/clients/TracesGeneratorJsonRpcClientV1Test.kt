@@ -17,9 +17,9 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.vertx.core.Vertx
 import io.vertx.core.json.JsonObject
 import io.vertx.junit5.VertxExtension
-import net.consensys.ByteArrayExt
-import net.consensys.encodeHex
-import net.consensys.linea.BlockNumberAndHash
+import linea.domain.BlockNumberAndHash
+import linea.kotlin.ByteArrayExt
+import linea.kotlin.encodeHex
 import net.consensys.linea.async.get
 import net.consensys.linea.errors.ErrorResponse
 import net.consensys.linea.jsonrpc.client.JsonRpcClient

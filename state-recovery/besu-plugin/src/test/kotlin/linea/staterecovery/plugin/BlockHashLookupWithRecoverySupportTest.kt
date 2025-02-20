@@ -1,7 +1,7 @@
 package linea.staterecovery.plugin
 
-import net.consensys.decodeHex
-import net.consensys.toHexStringUInt256
+import linea.kotlin.decodeHex
+import linea.kotlin.toHexStringUInt256
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.hyperledger.besu.datatypes.Hash

@@ -1,13 +1,13 @@
 package linea.staterecovery.datafetching
 
 import io.vertx.core.Vertx
+import linea.domain.BlockParameter
 import linea.staterecovery.BlobDecompressorAndDeserializer
 import linea.staterecovery.BlobFetcher
 import linea.staterecovery.BlockFromL1RecoveredData
 import linea.staterecovery.FinalizationAndDataEventsV3
 import linea.staterecovery.LineaRollupSubmissionEventsClient
 import linea.staterecovery.TransactionDetailsClient
-import net.consensys.linea.BlockParameter
 import net.consensys.zkevm.PeriodicPollingService
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger

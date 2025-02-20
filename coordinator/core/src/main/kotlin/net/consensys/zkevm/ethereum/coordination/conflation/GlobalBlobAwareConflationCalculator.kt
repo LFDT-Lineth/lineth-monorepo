@@ -1,7 +1,7 @@
 package net.consensys.zkevm.ethereum.coordination.conflation
 
-import build.linea.domain.toBlockIntervalsString
-import net.consensys.linea.CommonDomainFunctions.blockIntervalString
+import linea.domain.CommonDomainFunctions.blockIntervalString
+import linea.domain.toBlockIntervalsString
 import net.consensys.zkevm.domain.Blob
 import net.consensys.zkevm.domain.BlockCounters
 import net.consensys.zkevm.domain.ConflationCalculationResult

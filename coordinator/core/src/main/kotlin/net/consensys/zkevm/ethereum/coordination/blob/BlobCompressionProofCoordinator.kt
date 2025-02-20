@@ -1,11 +1,11 @@
 package net.consensys.zkevm.ethereum.coordination.blob
 
-import build.linea.domain.BlockInterval
-import build.linea.domain.BlockIntervals
-import build.linea.domain.toBlockIntervalsString
 import io.vertx.core.Handler
 import io.vertx.core.Vertx
 import kotlinx.datetime.Instant
+import linea.domain.BlockInterval
+import linea.domain.BlockIntervals
+import linea.domain.toBlockIntervalsString
 import net.consensys.linea.metrics.LineaMetricsCategory
 import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.zkevm.LongRunningService

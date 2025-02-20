@@ -1,6 +1,6 @@
 package net.consensys.linea.ethereum.gaspricing
 
-import net.consensys.linea.FeeHistory
+import linea.domain.FeeHistory
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 

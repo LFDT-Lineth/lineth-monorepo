@@ -614,7 +614,7 @@ services:
       - -c
       - |
         (rm /opt/besu/plugins/linea-staterecovery-besu-plugin-v* || true) && \
-        (rm /opt/besu/plugins/finalized-tag-updater-v* || true) && \
+        (rm /opt/besu/plugins/linea-finalized-tag-updater* || true) && \
         ls -lh /opt/besu/plugins && \
         sed -i '/^CLASSPATH/c\CLASSPATH=/opt/besu/lib/\*\:/opt/besu/plugins/\*' /opt/besu/bin/besu && \
         /opt/besu/bin/besu \

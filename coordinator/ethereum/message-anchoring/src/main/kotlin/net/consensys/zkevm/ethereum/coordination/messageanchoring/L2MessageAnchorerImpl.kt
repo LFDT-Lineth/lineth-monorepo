@@ -1,10 +1,10 @@
 package net.consensys.zkevm.ethereum.coordination.messageanchoring
 
 import io.vertx.core.Vertx
+import linea.kotlin.toBigInteger
 import net.consensys.linea.async.AsyncRetryer
 import net.consensys.linea.async.toSafeFuture
 import net.consensys.linea.contract.L2MessageService
-import net.consensys.toBigInteger
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import org.web3j.protocol.Web3j

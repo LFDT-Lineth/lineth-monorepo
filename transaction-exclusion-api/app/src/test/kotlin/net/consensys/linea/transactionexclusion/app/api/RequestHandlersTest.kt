@@ -5,7 +5,8 @@ import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.get
 import com.github.michaelbull.result.getError
 import io.vertx.core.json.JsonObject
-import net.consensys.encodeHex
+import linea.kotlin.encodeHex
+import linea.kotlin.toHexString
 import net.consensys.linea.async.get
 import net.consensys.linea.jsonrpc.JsonRpcErrorResponse
 import net.consensys.linea.jsonrpc.JsonRpcRequestListParams
@@ -15,7 +16,6 @@ import net.consensys.linea.transactionexclusion.ErrorType
 import net.consensys.linea.transactionexclusion.TransactionExclusionError
 import net.consensys.linea.transactionexclusion.TransactionExclusionServiceV1
 import net.consensys.linea.transactionexclusion.test.defaultRejectedTransaction
-import net.consensys.toHexString
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test

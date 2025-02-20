@@ -1,6 +1,6 @@
 package linea.domain
 
-import net.consensys.encodeHex
+import linea.kotlin.encodeHex
 import java.math.BigInteger
 import java.util.EnumSet
 

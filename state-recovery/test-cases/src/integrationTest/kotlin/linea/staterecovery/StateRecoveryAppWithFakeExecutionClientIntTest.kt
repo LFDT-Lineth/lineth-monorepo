@@ -3,6 +3,8 @@ package linea.staterecovery
 import build.linea.contract.l1.LineaContractVersion
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
+import linea.domain.BlockNumberAndHash
+import linea.domain.BlockParameter
 import linea.domain.RetryConfig
 import linea.log4j.configureLoggers
 import linea.staterecovery.plugin.AppClients
@@ -11,8 +13,6 @@ import linea.staterecovery.test.FakeExecutionLayerClient
 import linea.staterecovery.test.FakeStateManagerClient
 import linea.staterecovery.test.FakeStateManagerClientBasedOnBlobsRecords
 import linea.web3j.createWeb3jHttpClient
-import net.consensys.linea.BlockNumberAndHash
-import net.consensys.linea.BlockParameter
 import net.consensys.linea.testing.submission.AggregationAndBlobs
 import net.consensys.linea.testing.submission.loadBlobsAndAggregationsSortedAndGrouped
 import net.consensys.linea.testing.submission.submitBlobsAndAggregationsAndWaitExecution

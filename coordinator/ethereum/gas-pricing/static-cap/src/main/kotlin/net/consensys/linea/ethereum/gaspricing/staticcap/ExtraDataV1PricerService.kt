@@ -1,10 +1,10 @@
 package net.consensys.linea.ethereum.gaspricing.staticcap
 
 import io.vertx.core.Vertx
+import linea.kotlin.toIntervalString
 import net.consensys.linea.ethereum.gaspricing.ExtraDataUpdater
 import net.consensys.linea.ethereum.gaspricing.FeesFetcher
 import net.consensys.linea.ethereum.gaspricing.MinerExtraDataV1
-import net.consensys.toIntervalString
 import net.consensys.zkevm.PeriodicPollingService
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger

@@ -3,7 +3,7 @@ package net.consensys.zkevm.ethereum.coordination.conflation
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 import linea.domain.BlockHeaderSummary
-import net.consensys.ByteArrayExt
+import linea.kotlin.ByteArrayExt
 import net.consensys.linea.traces.fakeTracesCountersV1
 import net.consensys.zkevm.domain.BlockCounters
 import net.consensys.zkevm.ethereum.coordination.blockcreation.SafeBlockProvider

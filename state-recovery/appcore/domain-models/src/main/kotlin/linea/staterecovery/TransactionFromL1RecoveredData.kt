@@ -1,6 +1,6 @@
 package linea.staterecovery
 
-import net.consensys.encodeHex
+import linea.kotlin.encodeHex
 import java.math.BigInteger
 
 data class TransactionFromL1RecoveredData(

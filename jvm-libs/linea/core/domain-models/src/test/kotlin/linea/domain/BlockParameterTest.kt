@@ -1,6 +1,5 @@
 package linea.domain
 
-import net.consensys.linea.BlockParameter
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test

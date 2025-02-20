@@ -1,8 +1,8 @@
 package net.consensys.linea.transactionexclusion.app.api
 
 import kotlinx.datetime.Instant
-import net.consensys.assertIs32Bytes
-import net.consensys.decodeHex
+import linea.kotlin.assertIs32Bytes
+import linea.kotlin.decodeHex
 import net.consensys.linea.transactionexclusion.ModuleOverflow
 import net.consensys.linea.transactionexclusion.RejectedTransaction
 import net.consensys.linea.transactionexclusion.TransactionInfo

@@ -1,6 +1,6 @@
 package build.linea.tuweni
 
-import net.consensys.toULong
+import linea.kotlin.toULong
 import org.apache.tuweni.bytes.Bytes32
 import java.math.BigInteger
 

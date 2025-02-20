@@ -1,7 +1,7 @@
 package net.consensys.linea.blob
 
-import net.consensys.decodeHex
-import net.consensys.encodeHex
+import linea.kotlin.decodeHex
+import linea.kotlin.encodeHex
 import net.consensys.linea.nativecompressor.CompressorTestData
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertTrue

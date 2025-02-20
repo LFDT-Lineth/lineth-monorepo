@@ -2,13 +2,13 @@ package linea.staterecovery
 
 import build.linea.clients.StateManagerClientV1
 import io.vertx.core.Vertx
+import linea.domain.BlockNumberAndHash
+import linea.domain.BlockParameter
 import linea.domain.RetryConfig
 import linea.log4j.configureLoggers
 import linea.staterecovery.plugin.createAppClients
 import linea.staterecovery.test.FakeExecutionLayerClient
 import linea.staterecovery.test.FakeStateManagerClientReadFromL1
-import net.consensys.linea.BlockNumberAndHash
-import net.consensys.linea.BlockParameter
 import net.consensys.linea.async.get
 import net.consensys.linea.vertx.VertxFactory
 import org.apache.logging.log4j.Level

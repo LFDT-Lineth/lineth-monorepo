@@ -1,7 +1,7 @@
 package net.consensys.zkevm.ethereum.coordination.aggregation
 
-import build.linea.domain.BlockIntervals
 import kotlinx.datetime.Instant
+import linea.domain.BlockIntervals
 import net.consensys.zkevm.domain.BlobAndBatchCounters
 import net.consensys.zkevm.domain.BlobCounters
 import net.consensys.zkevm.persistence.AggregationsRepository

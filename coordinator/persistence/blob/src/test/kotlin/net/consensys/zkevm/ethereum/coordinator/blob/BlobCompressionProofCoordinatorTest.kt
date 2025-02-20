@@ -1,8 +1,8 @@
 package net.consensys.zkevm.ethereum.coordinator.blob
 
-import build.linea.domain.BlockIntervals
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
+import linea.domain.BlockIntervals
 import net.consensys.FakeFixedClock
 import net.consensys.linea.traces.TracesCountersV1
 import net.consensys.zkevm.coordinator.clients.BlobCompressionProof

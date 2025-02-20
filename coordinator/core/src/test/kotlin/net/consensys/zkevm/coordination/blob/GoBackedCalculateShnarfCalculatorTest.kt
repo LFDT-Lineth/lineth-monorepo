@@ -1,9 +1,9 @@
 package net.consensys.zkevm.coordination.blob
 
-import build.linea.domain.BlockIntervals
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
-import net.consensys.decodeHex
-import net.consensys.encodeHex
+import linea.domain.BlockIntervals
+import linea.kotlin.decodeHex
+import linea.kotlin.encodeHex
 import net.consensys.linea.blob.CalculateShnarfResult
 import net.consensys.linea.blob.GoNativeBlobShnarfCalculator
 import net.consensys.linea.metrics.MetricsFacade

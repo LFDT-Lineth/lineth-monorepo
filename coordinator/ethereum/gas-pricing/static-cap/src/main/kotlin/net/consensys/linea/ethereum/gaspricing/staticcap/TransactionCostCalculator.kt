@@ -1,6 +1,6 @@
 package net.consensys.linea.ethereum.gaspricing.staticcap
 
-import net.consensys.linea.FeeHistory
+import linea.domain.FeeHistory
 import net.consensys.linea.ethereum.gaspricing.FeesCalculator
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger

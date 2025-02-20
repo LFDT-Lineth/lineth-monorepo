@@ -6,8 +6,8 @@ import com.fasterxml.jackson.databind.DeserializationContext
 import com.fasterxml.jackson.databind.JsonDeserializer
 import com.fasterxml.jackson.databind.ObjectReader
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
-import net.consensys.linea.FeeHistory
-import net.consensys.linea.uLongFromPrefixedHex
+import linea.domain.FeeHistory
+import linea.domain.uLongFromPrefixedHex
 import org.web3j.protocol.ObjectMapperFactory
 import org.web3j.protocol.Web3jService
 import org.web3j.protocol.core.DefaultBlockParameter

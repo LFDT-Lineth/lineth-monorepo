@@ -1,6 +1,6 @@
 package net.consensys.zkevm.ethereum.gaspricing
 
-import net.consensys.toGWei
+import linea.kotlin.toGWei
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 data class GasPriceCaps(

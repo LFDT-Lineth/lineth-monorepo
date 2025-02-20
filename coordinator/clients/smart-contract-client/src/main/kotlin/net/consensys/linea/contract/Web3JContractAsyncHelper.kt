@@ -1,5 +1,8 @@
 package net.consensys.linea.contract
 
+import linea.kotlin.toBigInteger
+import linea.kotlin.toGWei
+import linea.kotlin.toULong
 import net.consensys.linea.async.toSafeFuture
 import net.consensys.linea.web3j.AtomicContractEIP1559GasProvider
 import net.consensys.linea.web3j.EIP1559GasFees
@@ -8,9 +11,6 @@ import net.consensys.linea.web3j.EIP4844GasProvider
 import net.consensys.linea.web3j.Eip4844Transaction
 import net.consensys.linea.web3j.SmartContractErrors
 import net.consensys.linea.web3j.informativeEthCall
-import net.consensys.toBigInteger
-import net.consensys.toGWei
-import net.consensys.toULong
 import net.consensys.zkevm.ethereum.gaspricing.GasPriceCaps
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger

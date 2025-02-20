@@ -1,6 +1,6 @@
 package net.consensys.linea.testing.submission
 
-import build.linea.domain.BlockInterval
+import linea.domain.BlockInterval
 import linea.web3j.waitForTxReceipt
 import net.consensys.zkevm.coordinator.clients.smartcontract.LineaRollupSmartContractClient
 import net.consensys.zkevm.domain.Aggregation

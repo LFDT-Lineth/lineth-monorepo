@@ -4,8 +4,8 @@ import io.vertx.core.Vertx
 import kotlinx.datetime.Instant
 import linea.blob.BlobCompressor
 import linea.blob.GoBackedBlobCompressor
+import linea.kotlin.encodeHex
 import linea.rlp.RLP
-import net.consensys.encodeHex
 import net.consensys.linea.blob.BlobCompressorVersion
 import net.consensys.linea.blob.BlobDecompressorVersion
 import net.consensys.linea.blob.GoNativeBlobDecompressorFactory

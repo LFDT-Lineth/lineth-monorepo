@@ -1,8 +1,8 @@
 package net.consensys.zkevm.ethereum.submission
 
-import build.linea.domain.BlockIntervalData
-import build.linea.domain.toBlockIntervalsString
 import kotlinx.datetime.Clock
+import linea.domain.BlockIntervalData
+import linea.domain.toBlockIntervalsString
 import net.consensys.zkevm.coordinator.clients.smartcontract.LineaRollupSmartContractClient
 import net.consensys.zkevm.domain.BlobRecord
 import net.consensys.zkevm.domain.BlobSubmittedEvent

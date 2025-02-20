@@ -4,8 +4,8 @@ import build.linea.clients.GetZkEVMStateMerkleProofResponse
 import com.fasterxml.jackson.databind.node.ArrayNode
 import linea.domain.Block
 import linea.domain.createBlock
-import net.consensys.ByteArrayExt
-import net.consensys.encodeHex
+import linea.kotlin.ByteArrayExt
+import linea.kotlin.encodeHex
 import net.consensys.zkevm.coordinator.clients.BatchExecutionProofRequestV1
 import net.consensys.zkevm.coordinator.clients.GenerateTracesResponse
 import net.consensys.zkevm.coordinator.clients.L2MessageServiceLogsClient

@@ -5,8 +5,8 @@ import io.vertx.sqlclient.PreparedQuery
 import io.vertx.sqlclient.Row
 import io.vertx.sqlclient.RowSet
 import kotlinx.datetime.Clock
+import linea.domain.FeeHistory
 import net.consensys.FakeFixedClock
-import net.consensys.linea.FeeHistory
 import net.consensys.linea.async.get
 import net.consensys.zkevm.persistence.db.DbHelper
 import net.consensys.zkevm.persistence.db.test.CleanDbTestSuiteParallel

@@ -1,7 +1,7 @@
 package net.consensys.zkevm.coordinator.clients
 
 import com.github.michaelbull.result.Result
-import net.consensys.linea.BlockNumberAndHash
+import linea.domain.BlockNumberAndHash
 import net.consensys.linea.errors.ErrorResponse
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 

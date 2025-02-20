@@ -1,6 +1,6 @@
 package net.consensys.linea.traces
 
-import net.consensys.KMath
+import linea.kotlin.KMath
 
 /**
  * These operations are immutable. Each operation creates a new instance.

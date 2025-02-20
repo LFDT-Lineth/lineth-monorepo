@@ -1,6 +1,6 @@
 package net.consensys.zkevm.ethereum.coordination.blob
 
-import build.linea.domain.BlockInterval
+import linea.domain.BlockInterval
 import net.consensys.zkevm.coordinator.clients.BlobCompressionProof
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 

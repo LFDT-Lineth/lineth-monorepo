@@ -2,8 +2,8 @@ package net.consensys.linea.transactionexclusion.app.api
 
 import io.vertx.core.json.JsonObject
 import kotlinx.datetime.Instant
-import net.consensys.decodeHex
-import net.consensys.encodeHex
+import linea.kotlin.decodeHex
+import linea.kotlin.encodeHex
 import net.consensys.linea.transactionexclusion.ModuleOverflow
 import net.consensys.linea.transactionexclusion.RejectedTransaction
 import net.consensys.linea.transactionexclusion.test.defaultRejectedTransaction

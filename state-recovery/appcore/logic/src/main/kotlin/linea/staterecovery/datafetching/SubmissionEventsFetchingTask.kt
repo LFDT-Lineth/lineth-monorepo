@@ -1,12 +1,12 @@
 package linea.staterecovery.datafetching
 
-import build.linea.domain.EthLogEvent
 import io.vertx.core.Vertx
+import linea.domain.BlockParameter
+import linea.domain.BlockParameter.Companion.toBlockParameter
+import linea.domain.EthLogEvent
 import linea.staterecovery.DataFinalizedV3
 import linea.staterecovery.FinalizationAndDataEventsV3
 import linea.staterecovery.LineaRollupSubmissionEventsClient
-import net.consensys.linea.BlockParameter
-import net.consensys.linea.BlockParameter.Companion.toBlockParameter
 import net.consensys.zkevm.PeriodicPollingService
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger

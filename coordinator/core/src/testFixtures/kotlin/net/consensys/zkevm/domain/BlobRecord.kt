@@ -1,14 +1,14 @@
 package net.consensys.zkevm.domain
 
-import build.linea.domain.BlockIntervals
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
+import linea.domain.BlockIntervals
+import linea.kotlin.setFirstByteToZero
+import linea.kotlin.trimToSecondPrecision
 import net.consensys.linea.blob.ShnarfCalculatorVersion
 import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
-import net.consensys.setFirstByteToZero
-import net.consensys.trimToSecondPrecision
 import net.consensys.zkevm.coordinator.clients.BlobCompressionProof
 import net.consensys.zkevm.domain.Constants.LINEA_BLOCK_INTERVAL
 import net.consensys.zkevm.ethereum.coordination.blob.BlobShnarfCalculator

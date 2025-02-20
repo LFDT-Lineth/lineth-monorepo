@@ -1,7 +1,7 @@
 package linea.domain
 
 import linea.domain.MapperBesuToLineaDomain.mapToDomain
-import net.consensys.toULong
+import linea.kotlin.toULong
 import org.hyperledger.besu.ethereum.core.Transaction
 import kotlin.jvm.optionals.getOrNull
 

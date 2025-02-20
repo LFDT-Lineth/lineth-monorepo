@@ -1,12 +1,12 @@
 package net.consensys.zkevm.ethereum.coordination.aggregation
 
-import build.linea.domain.BlockIntervals
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.vertx.core.Vertx
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
+import linea.domain.BlockIntervals
+import linea.kotlin.trimToSecondPrecision
 import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
-import net.consensys.trimToSecondPrecision
 import net.consensys.zkevm.coordinator.clients.ProofAggregationProverClientV2
 import net.consensys.zkevm.domain.Aggregation
 import net.consensys.zkevm.domain.BlobAndBatchCounters

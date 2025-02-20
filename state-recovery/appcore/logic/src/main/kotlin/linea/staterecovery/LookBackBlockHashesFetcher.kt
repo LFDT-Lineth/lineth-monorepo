@@ -1,10 +1,10 @@
 package linea.staterecovery
 
-import build.linea.domain.BlockInterval
 import io.vertx.core.Vertx
+import linea.domain.BlockInterval
+import linea.domain.BlockParameter.Companion.toBlockParameter
 import linea.staterecovery.datafetching.SubmissionEventsAndData
 import linea.staterecovery.datafetching.SubmissionsFetchingTask
-import net.consensys.linea.BlockParameter.Companion.toBlockParameter
 import net.consensys.linea.async.AsyncRetryer
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import kotlin.time.Duration.Companion.seconds

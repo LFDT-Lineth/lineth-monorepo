@@ -1,6 +1,6 @@
 package net.consensys.linea.traces.app.api
 
-import net.consensys.fromHexString
+import linea.kotlin.fromHexString
 import net.consensys.linea.jsonrpc.argument.getArgument
 import org.apache.tuweni.bytes.Bytes32
 

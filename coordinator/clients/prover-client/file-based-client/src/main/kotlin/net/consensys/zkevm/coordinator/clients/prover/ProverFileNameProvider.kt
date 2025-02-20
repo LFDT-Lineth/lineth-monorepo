@@ -1,6 +1,6 @@
 package net.consensys.zkevm.coordinator.clients.prover
 
-import net.consensys.encodeHex
+import linea.kotlin.encodeHex
 import net.consensys.zkevm.domain.ProofIndex
 
 open class ProverFileNameProvider(protected val fileNameSuffix: String) {

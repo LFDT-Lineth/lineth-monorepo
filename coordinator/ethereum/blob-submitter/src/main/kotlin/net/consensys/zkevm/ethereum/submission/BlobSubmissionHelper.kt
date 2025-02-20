@@ -1,9 +1,9 @@
 package net.consensys.zkevm.ethereum.submission
 
-import build.linea.domain.BlockInterval
-import build.linea.domain.BlockIntervals
-import build.linea.domain.assertConsecutiveIntervals
-import build.linea.domain.toBlockIntervalsString
+import linea.domain.BlockInterval
+import linea.domain.BlockIntervals
+import linea.domain.assertConsecutiveIntervals
+import linea.domain.toBlockIntervalsString
 import org.apache.logging.log4j.Logger
 import kotlin.math.min
 

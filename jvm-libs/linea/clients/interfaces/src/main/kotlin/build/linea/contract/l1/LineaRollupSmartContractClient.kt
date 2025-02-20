@@ -1,6 +1,6 @@
 package build.linea.contract.l1
 
-import net.consensys.linea.BlockParameter
+import linea.domain.BlockParameter
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 enum class LineaContractVersion : Comparable<LineaContractVersion> {

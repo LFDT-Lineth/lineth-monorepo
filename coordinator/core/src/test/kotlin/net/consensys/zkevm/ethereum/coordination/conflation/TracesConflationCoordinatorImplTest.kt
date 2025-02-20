@@ -3,8 +3,8 @@ package net.consensys.zkevm.ethereum.coordination.conflation
 import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.getError
-import net.consensys.ByteArrayExt
-import net.consensys.linea.BlockNumberAndHash
+import linea.domain.BlockNumberAndHash
+import linea.kotlin.ByteArrayExt
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 

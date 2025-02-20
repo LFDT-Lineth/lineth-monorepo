@@ -1,7 +1,7 @@
 package linea.staterecovery
 
-import build.linea.domain.BlockInterval
-import net.consensys.minusCoercingUnderflow
+import linea.domain.BlockInterval
+import linea.kotlin.minusCoercingUnderflow
 
 fun startBlockToFetchFromL1(
   headBlockNumber: ULong,

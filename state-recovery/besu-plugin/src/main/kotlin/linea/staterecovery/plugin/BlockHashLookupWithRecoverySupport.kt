@@ -1,8 +1,8 @@
 package linea.staterecovery.plugin
 
+import linea.kotlin.encodeHex
 import linea.kotlin.hasSequentialElements
-import net.consensys.encodeHex
-import net.consensys.minusCoercingUnderflow
+import linea.kotlin.minusCoercingUnderflow
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import org.apache.tuweni.bytes.Bytes32

@@ -2,7 +2,6 @@ package net.consensys.zkevm.ethereum.coordination.blob
 
 import build.linea.clients.GetZkEVMStateMerkleProofResponse
 import build.linea.clients.StateManagerClientV1
-import build.linea.domain.BlockIntervals
 import com.fasterxml.jackson.databind.node.ArrayNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.github.michaelbull.result.Ok
@@ -11,7 +10,8 @@ import io.vertx.junit5.VertxExtension
 import io.vertx.junit5.VertxTestContext
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
-import net.consensys.ByteArrayExt
+import linea.domain.BlockIntervals
+import linea.kotlin.ByteArrayExt
 import net.consensys.linea.traces.TracesCountersV1
 import net.consensys.zkevm.coordinator.clients.BlobCompressionProof
 import net.consensys.zkevm.coordinator.clients.BlobCompressionProofRequest

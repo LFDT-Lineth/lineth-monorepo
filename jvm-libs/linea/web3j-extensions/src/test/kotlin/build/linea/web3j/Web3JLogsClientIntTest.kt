@@ -7,8 +7,8 @@ import com.github.tomakehurst.wiremock.client.WireMock.post
 import com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration
 import io.vertx.core.Vertx
-import net.consensys.encodeHex
-import net.consensys.toBigInteger
+import linea.kotlin.encodeHex
+import linea.kotlin.toBigInteger
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.AfterEach

@@ -2,7 +2,7 @@ package net.consensys.zkevm.coordinator.clients.prover
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.vertx.core.Vertx
-import net.consensys.encodeHex
+import linea.kotlin.encodeHex
 import net.consensys.zkevm.coordinator.clients.ProofAggregationProverClientV2
 import net.consensys.zkevm.coordinator.clients.prover.serialization.JsonSerialization
 import net.consensys.zkevm.coordinator.clients.prover.serialization.ProofToFinalizeJsonResponse

@@ -1,8 +1,8 @@
 package net.consensys.linea.contract
 
 import io.vertx.core.Vertx
+import linea.kotlin.toULong
 import net.consensys.linea.async.toSafeFuture
-import net.consensys.toULong
 import net.consensys.zkevm.coordinator.clients.L2MessageServiceClient
 import net.consensys.zkevm.coordinator.clients.L2MessageServiceLogsClient
 import net.consensys.zkevm.domain.L2RollingHashUpdatedEvent

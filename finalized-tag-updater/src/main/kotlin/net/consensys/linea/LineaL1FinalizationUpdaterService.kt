@@ -3,6 +3,7 @@ package net.consensys.linea
 import build.linea.contract.l1.Web3JLineaRollupSmartContractClientReadOnly
 import io.vertx.core.Vertx
 import linea.consensus.EngineBlockTagUpdater
+import linea.domain.BlockParameter
 import net.consensys.linea.web3j.okHttpClientBuilder
 import net.consensys.zkevm.LongRunningService
 import net.consensys.zkevm.ethereum.finalization.FinalizationUpdatePoller

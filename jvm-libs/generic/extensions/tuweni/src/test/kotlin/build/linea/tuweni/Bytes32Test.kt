@@ -1,6 +1,6 @@
 package build.linea.tuweni
 
-import net.consensys.toBigInteger
+import linea.kotlin.toBigInteger
 import org.apache.tuweni.bytes.Bytes32
 import org.apache.tuweni.units.bigints.UInt256
 import org.assertj.core.api.Assertions.assertThat

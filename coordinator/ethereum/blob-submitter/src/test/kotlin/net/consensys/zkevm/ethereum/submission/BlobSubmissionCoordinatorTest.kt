@@ -1,8 +1,8 @@
 package net.consensys.zkevm.ethereum.submission
 
-import build.linea.domain.BlockIntervals
-import build.linea.domain.toBlockIntervals
 import io.vertx.core.Vertx
+import linea.domain.BlockIntervals
+import linea.domain.toBlockIntervals
 import net.consensys.FakeFixedClock
 import net.consensys.linea.async.AsyncFilter
 import net.consensys.zkevm.coordinator.clients.smartcontract.BlockAndNonce

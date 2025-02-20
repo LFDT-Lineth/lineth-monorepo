@@ -7,7 +7,8 @@ import io.restassured.http.ContentType
 import io.restassured.specification.RequestSpecification
 import io.vertx.junit5.VertxExtension
 import kotlinx.datetime.Clock
-import net.consensys.encodeHex
+import linea.kotlin.encodeHex
+import linea.kotlin.trimToMillisecondPrecision
 import net.consensys.linea.async.get
 import net.consensys.linea.transactionexclusion.app.AppConfig
 import net.consensys.linea.transactionexclusion.app.DatabaseConfig
@@ -18,7 +19,6 @@ import net.consensys.linea.transactionexclusion.app.TransactionExclusionApp
 import net.consensys.linea.transactionexclusion.app.api.ApiConfig
 import net.consensys.linea.transactionexclusion.test.defaultRejectedTransaction
 import net.consensys.linea.transactionexclusion.test.rejectedContractDeploymentTransaction
-import net.consensys.trimToMillisecondPrecision
 import net.consensys.zkevm.persistence.db.DbHelper
 import net.consensys.zkevm.persistence.db.test.CleanDbTestSuiteParallel
 import net.javacrumbs.jsonunit.assertj.JsonAssertions.assertThatJson

@@ -1,8 +1,8 @@
 package build.linea.web3j.domain
 
-import build.linea.domain.EthLog
-import net.consensys.decodeHex
-import net.consensys.toULong
+import linea.domain.EthLog
+import linea.kotlin.decodeHex
+import linea.kotlin.toULong
 import org.web3j.protocol.core.methods.response.Log
 
 fun Log.toDomain(): EthLog {

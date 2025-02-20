@@ -7,7 +7,7 @@ import io.vertx.sqlclient.SqlClient
 import io.vertx.sqlclient.Tuple
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
-import net.consensys.encodeHex
+import linea.kotlin.encodeHex
 import net.consensys.linea.async.toSafeFuture
 import net.consensys.linea.transactionexclusion.ModuleOverflow
 import net.consensys.linea.transactionexclusion.RejectedTransaction

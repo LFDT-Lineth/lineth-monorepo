@@ -4,9 +4,9 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ArrayNode
 import io.vertx.core.Vertx
 import linea.encoding.BlockRLPEncoder
-import net.consensys.encodeHex
+import linea.kotlin.encodeHex
+import linea.kotlin.toBigInteger
 import net.consensys.linea.async.toSafeFuture
-import net.consensys.toBigInteger
 import net.consensys.zkevm.coordinator.clients.BatchExecutionProofRequestV1
 import net.consensys.zkevm.coordinator.clients.BatchExecutionProofResponse
 import net.consensys.zkevm.coordinator.clients.ExecutionProverClientV2

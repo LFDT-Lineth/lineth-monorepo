@@ -1,6 +1,7 @@
 package linea
 
-import net.consensys.linea.BlockParameter
+import linea.domain.BlockParameter
+import linea.domain.EthLog
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 enum class SearchDirection {
@@ -20,13 +21,13 @@ interface EthLogsSearcher {
     chunkSize: Int = 1000,
     address: String,
     topics: List<String>,
-    shallContinueToSearch: (build.linea.domain.EthLog) -> SearchDirection? // null means stop searching
-  ): SafeFuture<build.linea.domain.EthLog?>
+    shallContinueToSearch: (EthLog) -> SearchDirection? // null means stop searching
+  ): SafeFuture<EthLog?>
 
   fun getLogs(
     fromBlock: BlockParameter,
     toBlock: BlockParameter,
     address: String,
     topics: List<String?>
-  ): SafeFuture<List<build.linea.domain.EthLog>>
+  ): SafeFuture<List<EthLog>>
 }

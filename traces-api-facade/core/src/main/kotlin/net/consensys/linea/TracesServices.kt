@@ -2,6 +2,7 @@ package net.consensys.linea
 
 import com.github.michaelbull.result.Result
 import io.vertx.core.json.JsonObject
+import linea.domain.BlockNumberAndHash
 import net.consensys.linea.traces.TracesCounters
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 

@@ -1,8 +1,8 @@
 package net.consensys.linea.blob
 
-import build.linea.jvm.ResourcesUtil.copyResourceToTmpDir
 import com.sun.jna.Library
 import com.sun.jna.Native
+import linea.jvm.ResourcesUtil.copyResourceToTmpDir
 import java.nio.file.Path
 
 class DecompressionException(message: String) : RuntimeException(message)

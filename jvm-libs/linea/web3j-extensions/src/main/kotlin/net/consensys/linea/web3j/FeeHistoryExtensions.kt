@@ -1,7 +1,7 @@
 package net.consensys.linea.web3j
 
-import net.consensys.linea.FeeHistory
-import net.consensys.toULong
+import linea.domain.FeeHistory
+import linea.kotlin.toULong
 import org.web3j.protocol.core.methods.response.EthFeeHistory
 
 fun EthFeeHistory.FeeHistory.toLineaDomain(): FeeHistory {

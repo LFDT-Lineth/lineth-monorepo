@@ -4,13 +4,13 @@ import io.vertx.core.Vertx
 import io.vertx.junit5.Timeout
 import io.vertx.junit5.VertxExtension
 import io.vertx.junit5.VertxTestContext
-import net.consensys.linea.BlockParameter
+import linea.domain.BlockParameter
+import linea.kotlin.toBigInteger
 import net.consensys.linea.async.toSafeFuture
 import net.consensys.linea.contract.AsyncFriendlyTransactionManager
 import net.consensys.linea.contract.EIP1559GasProvider
 import net.consensys.linea.contract.L2MessageService
 import net.consensys.linea.contract.LineaRollupAsyncFriendly
-import net.consensys.toBigInteger
 import net.consensys.zkevm.coordinator.clients.smartcontract.LineaRollupSmartContractClient
 import net.consensys.zkevm.ethereum.ContractsManager
 import net.consensys.zkevm.ethereum.Web3jClientManager

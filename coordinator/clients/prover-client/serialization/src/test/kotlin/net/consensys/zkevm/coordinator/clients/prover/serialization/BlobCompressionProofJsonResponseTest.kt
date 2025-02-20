@@ -1,6 +1,6 @@
 package net.consensys.zkevm.coordinator.clients.prover.serialization
 
-import build.linea.domain.BlockIntervals
+import linea.domain.BlockIntervals
 import net.consensys.zkevm.coordinator.clients.prover.serialization.JsonSerialization.proofResponseMapperV1
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test

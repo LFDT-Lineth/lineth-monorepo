@@ -24,7 +24,7 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.vertx.core.Vertx
 import io.vertx.core.json.JsonObject
 import io.vertx.junit5.VertxExtension
-import net.consensys.decodeHex
+import linea.kotlin.decodeHex
 import net.consensys.linea.jsonrpc.JsonRpcErrorResponseException
 import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade

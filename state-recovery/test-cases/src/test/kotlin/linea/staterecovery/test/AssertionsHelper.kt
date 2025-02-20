@@ -1,11 +1,11 @@
 package linea.staterecovery.test
 
 import build.linea.clients.StateManagerClientV1
-import build.linea.domain.BlockInterval
+import linea.domain.BlockInterval
+import linea.kotlin.toULong
 import linea.testing.CommandResult
 import linea.testing.Runner
 import linea.web3j.createWeb3jHttpClient
-import net.consensys.toULong
 import org.apache.logging.log4j.Logger
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.Awaitility.await

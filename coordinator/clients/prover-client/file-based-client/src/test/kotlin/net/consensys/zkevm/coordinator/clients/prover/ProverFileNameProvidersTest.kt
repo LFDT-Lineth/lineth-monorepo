@@ -1,6 +1,6 @@
 package net.consensys.zkevm.coordinator.clients.prover
 
-import net.consensys.decodeHex
+import linea.kotlin.decodeHex
 import net.consensys.zkevm.domain.ProofIndex
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test

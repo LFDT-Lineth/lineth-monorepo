@@ -1,7 +1,7 @@
 package net.consensys.linea.ethereum.gaspricing
 
-import net.consensys.linea.FeeHistory
-import net.consensys.toULong
+import linea.domain.FeeHistory
+import linea.kotlin.toULong
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.doReturn

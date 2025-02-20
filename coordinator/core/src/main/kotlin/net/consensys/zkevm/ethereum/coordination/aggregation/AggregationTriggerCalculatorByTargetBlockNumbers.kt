@@ -1,6 +1,6 @@
 package net.consensys.zkevm.ethereum.coordination.aggregation
 
-import build.linea.domain.BlockInterval
+import linea.domain.BlockInterval
 import net.consensys.zkevm.domain.BlobCounters
 import net.consensys.zkevm.domain.BlobsToAggregate
 import org.apache.logging.log4j.LogManager

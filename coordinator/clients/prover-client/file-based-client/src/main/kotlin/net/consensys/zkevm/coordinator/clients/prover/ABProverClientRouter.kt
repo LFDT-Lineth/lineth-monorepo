@@ -1,6 +1,6 @@
 package net.consensys.zkevm.coordinator.clients.prover
 
-import build.linea.domain.BlockInterval
+import linea.domain.BlockInterval
 import net.consensys.zkevm.coordinator.clients.ProverClient
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 

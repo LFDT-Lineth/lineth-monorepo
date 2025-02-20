@@ -1,7 +1,7 @@
 package net.consensys.zkevm.persistence.db
 
 import io.vertx.sqlclient.Tuple
-import net.consensys.encodeHex
+import linea.kotlin.encodeHex
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.Logger
 

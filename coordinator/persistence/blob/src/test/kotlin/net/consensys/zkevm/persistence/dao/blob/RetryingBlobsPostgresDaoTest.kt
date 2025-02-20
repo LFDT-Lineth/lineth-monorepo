@@ -1,11 +1,11 @@
 package net.consensys.zkevm.persistence.dao.blob
 
-import build.linea.domain.BlockIntervals
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
+import linea.domain.BlockIntervals
+import linea.kotlin.setFirstByteToZero
+import linea.kotlin.trimToSecondPrecision
 import net.consensys.FakeFixedClock
-import net.consensys.setFirstByteToZero
-import net.consensys.trimToSecondPrecision
 import net.consensys.zkevm.coordinator.clients.BlobCompressionProof
 import net.consensys.zkevm.domain.createBlobRecord
 import net.consensys.zkevm.persistence.db.PersistenceRetryer

@@ -1,8 +1,8 @@
 package linea.domain
 
 import linea.domain.MapperLineaDomainToBesu.mapToBesu
-import net.consensys.encodeHex
-import net.consensys.toBigInteger
+import linea.kotlin.encodeHex
+import linea.kotlin.toBigInteger
 import org.apache.tuweni.bytes.Bytes
 import org.apache.tuweni.bytes.Bytes32
 import org.hyperledger.besu.crypto.SECP256K1

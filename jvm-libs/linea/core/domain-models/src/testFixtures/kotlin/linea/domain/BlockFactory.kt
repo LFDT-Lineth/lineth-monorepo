@@ -2,7 +2,7 @@ package linea.domain
 
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
-import net.consensys.ByteArrayExt
+import linea.kotlin.ByteArrayExt
 
 val zeroHash = ByteArray(32) { 0 }
 val zeroAddress = ByteArray(20) { 0 }

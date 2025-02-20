@@ -4,7 +4,7 @@ import com.github.michaelbull.result.getError
 import com.sksamuel.hoplite.Masked
 import linea.coordinator.config.loadConfigs
 import linea.coordinator.config.loadConfigsOrError
-import net.consensys.linea.BlockParameter
+import linea.domain.BlockParameter
 import net.consensys.linea.blob.BlobCompressorVersion
 import net.consensys.linea.ethereum.gaspricing.BoundableFeeCalculator
 import net.consensys.linea.ethereum.gaspricing.staticcap.ExtraDataV1UpdaterImpl

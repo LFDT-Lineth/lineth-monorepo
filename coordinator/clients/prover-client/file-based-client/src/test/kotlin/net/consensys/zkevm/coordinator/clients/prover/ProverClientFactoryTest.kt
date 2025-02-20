@@ -1,12 +1,12 @@
 package net.consensys.zkevm.coordinator.clients.prover
 
-import build.linea.domain.BlockIntervals
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
 import kotlinx.datetime.Clock
-import net.consensys.ByteArrayExt
+import linea.domain.BlockIntervals
+import linea.kotlin.ByteArrayExt
 import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
 import net.consensys.zkevm.domain.ProofIndex

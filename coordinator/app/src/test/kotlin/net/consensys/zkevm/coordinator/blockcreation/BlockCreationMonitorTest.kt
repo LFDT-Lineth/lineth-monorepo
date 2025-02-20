@@ -7,14 +7,14 @@ import linea.domain.Block
 import linea.domain.createBlock
 import linea.domain.toEthGetBlockResponse
 import linea.jsonrpc.TestingJsonRpcServer
+import linea.kotlin.ByteArrayExt
+import linea.kotlin.toHexString
+import linea.kotlin.toULongFromHex
 import linea.log4j.configureLoggers
 import linea.web3j.createWeb3jHttpClient
-import net.consensys.ByteArrayExt
 import net.consensys.linea.async.get
 import net.consensys.linea.web3j.ExtendedWeb3J
 import net.consensys.linea.web3j.ExtendedWeb3JImpl
-import net.consensys.toHexString
-import net.consensys.toULongFromHex
 import net.consensys.zkevm.ethereum.coordination.blockcreation.BlockCreated
 import net.consensys.zkevm.ethereum.coordination.blockcreation.BlockCreationListener
 import org.apache.logging.log4j.Level
@@ -29,7 +29,6 @@ import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.kotlin.mock
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.CopyOnWriteArrayList
-import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
@@ -48,7 +47,6 @@ class BlockCreationMonitorTest {
       lastL2BlockNumberToProcessInclusive = null
     )
   private lateinit var vertx: Vertx
-  private val executor = Executors.newSingleThreadScheduledExecutor()
   private lateinit var lastProvenBlockNumberProvider: LastProvenBlockNumberProviderDouble
   private lateinit var monitor: BlockCreationMonitor
 

@@ -1,13 +1,13 @@
 package net.consensys.zkevm.ethereum.coordination.blob
 
-import build.linea.domain.BlockInterval
-import build.linea.domain.BlockIntervals
 import com.github.michaelbull.result.getOrThrow
 import com.github.michaelbull.result.map
 import com.github.michaelbull.result.onSuccess
 import com.github.michaelbull.result.recover
 import com.github.michaelbull.result.runCatching
-import net.consensys.encodeHex
+import linea.domain.BlockInterval
+import linea.domain.BlockIntervals
+import linea.kotlin.encodeHex
 import net.consensys.zkevm.domain.BlobRecord
 import net.consensys.zkevm.persistence.BlobsRepository
 import org.apache.logging.log4j.LogManager

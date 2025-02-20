@@ -1,6 +1,6 @@
 package linea.web3j
 
-import net.consensys.intersection
+import linea.kotlin.intersection
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 

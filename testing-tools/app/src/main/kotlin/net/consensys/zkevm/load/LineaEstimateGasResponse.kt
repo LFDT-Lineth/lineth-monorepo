@@ -6,7 +6,7 @@ import com.fasterxml.jackson.databind.DeserializationContext
 import com.fasterxml.jackson.databind.JsonDeserializer
 import com.fasterxml.jackson.databind.ObjectReader
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
-import net.consensys.linea.bigIntFromPrefixedHex
+import linea.domain.bigIntFromPrefixedHex
 import org.web3j.protocol.ObjectMapperFactory
 import org.web3j.protocol.core.Response
 import java.io.IOException

@@ -1,6 +1,6 @@
 package linea.staterecovery
 
-import build.linea.domain.BlockInterval
+import linea.domain.BlockInterval
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test

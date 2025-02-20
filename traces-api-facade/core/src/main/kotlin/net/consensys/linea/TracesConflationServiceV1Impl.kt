@@ -5,7 +5,8 @@ import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.Result
 import com.github.michaelbull.result.flatMap
 import io.vertx.core.json.JsonObject
-import net.consensys.linea.CommonDomainFunctions.blockIntervalString
+import linea.domain.BlockNumberAndHash
+import linea.domain.CommonDomainFunctions.blockIntervalString
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture

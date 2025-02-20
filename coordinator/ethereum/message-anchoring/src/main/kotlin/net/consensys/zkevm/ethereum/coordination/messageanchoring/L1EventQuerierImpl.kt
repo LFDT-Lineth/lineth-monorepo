@@ -2,8 +2,8 @@ package net.consensys.zkevm.ethereum.coordination.messageanchoring
 
 import build.linea.contract.LineaRollupV6
 import io.vertx.core.Vertx
+import linea.kotlin.toULong
 import net.consensys.linea.async.toSafeFuture
-import net.consensys.toULong
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import org.apache.tuweni.bytes.Bytes32

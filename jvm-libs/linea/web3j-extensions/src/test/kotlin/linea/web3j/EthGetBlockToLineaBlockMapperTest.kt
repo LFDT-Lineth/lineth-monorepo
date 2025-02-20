@@ -4,9 +4,9 @@ import linea.domain.AccessListEntry
 import linea.domain.Transaction
 import linea.domain.TransactionType
 import linea.domain.toBesu
-import net.consensys.decodeHex
-import net.consensys.toBigInteger
-import net.consensys.toBigIntegerFromHex
+import linea.kotlin.decodeHex
+import linea.kotlin.toBigInteger
+import linea.kotlin.toBigIntegerFromHex
 import org.apache.tuweni.bytes.Bytes
 import org.apache.tuweni.bytes.Bytes32
 import org.assertj.core.api.Assertions.assertThat

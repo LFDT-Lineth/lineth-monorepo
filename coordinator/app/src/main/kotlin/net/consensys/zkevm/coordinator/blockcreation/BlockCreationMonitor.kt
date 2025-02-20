@@ -2,8 +2,8 @@ package net.consensys.zkevm.coordinator.blockcreation
 
 import io.vertx.core.Vertx
 import linea.domain.Block
-import net.consensys.encodeHex
-import net.consensys.linea.BlockParameter.Companion.toBlockParameter
+import linea.domain.BlockParameter.Companion.toBlockParameter
+import linea.kotlin.encodeHex
 import net.consensys.linea.async.AsyncRetryer
 import net.consensys.linea.web3j.ExtendedWeb3J
 import net.consensys.zkevm.PeriodicPollingService

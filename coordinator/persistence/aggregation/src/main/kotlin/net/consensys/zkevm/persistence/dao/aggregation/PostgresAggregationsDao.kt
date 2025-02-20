@@ -1,7 +1,5 @@
 package net.consensys.zkevm.persistence.dao.aggregation
 
-import build.linea.domain.BlockIntervals
-import build.linea.domain.toBlockIntervalsString
 import io.vertx.core.Future
 import io.vertx.pgclient.PgException
 import io.vertx.sqlclient.Row
@@ -9,7 +7,9 @@ import io.vertx.sqlclient.SqlClient
 import io.vertx.sqlclient.Tuple
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
-import net.consensys.decodeHex
+import linea.domain.BlockIntervals
+import linea.domain.toBlockIntervalsString
+import linea.kotlin.decodeHex
 import net.consensys.linea.async.toSafeFuture
 import net.consensys.zkevm.coordinator.clients.prover.serialization.ProofToFinalizeJsonResponse
 import net.consensys.zkevm.domain.Aggregation

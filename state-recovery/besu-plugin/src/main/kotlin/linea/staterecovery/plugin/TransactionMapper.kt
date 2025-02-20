@@ -1,9 +1,9 @@
 package linea.staterecovery.plugin
 
+import linea.kotlin.encodeHex
+import linea.kotlin.toBigInteger
 import linea.staterecovery.TransactionFromL1RecoveredData
 import linea.staterecovery.TransactionFromL1RecoveredData.AccessTuple
-import net.consensys.encodeHex
-import net.consensys.toBigInteger
 import org.apache.tuweni.bytes.Bytes
 import org.hyperledger.besu.crypto.SECPSignature
 import org.hyperledger.besu.datatypes.AccessListEntry

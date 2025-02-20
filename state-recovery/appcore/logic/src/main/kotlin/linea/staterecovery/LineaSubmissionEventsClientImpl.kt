@@ -1,12 +1,12 @@
 package linea.staterecovery
 
-import build.linea.domain.EthLogEvent
 import linea.EthLogsSearcher
 import linea.SearchDirection
-import net.consensys.encodeHex
-import net.consensys.linea.BlockParameter
-import net.consensys.linea.BlockParameter.Companion.toBlockParameter
-import net.consensys.toHexStringUInt256
+import linea.domain.BlockParameter
+import linea.domain.BlockParameter.Companion.toBlockParameter
+import linea.domain.EthLogEvent
+import linea.kotlin.encodeHex
+import linea.kotlin.toHexStringUInt256
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 class LineaSubmissionEventsClientImpl(

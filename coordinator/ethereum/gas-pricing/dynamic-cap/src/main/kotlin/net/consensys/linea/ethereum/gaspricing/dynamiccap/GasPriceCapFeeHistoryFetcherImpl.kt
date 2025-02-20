@@ -1,6 +1,6 @@
 package net.consensys.linea.ethereum.gaspricing.dynamiccap
 
-import net.consensys.linea.FeeHistory
+import linea.domain.FeeHistory
 import net.consensys.linea.web3j.Web3jBlobExtended
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger

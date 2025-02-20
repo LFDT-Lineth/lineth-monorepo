@@ -1,11 +1,11 @@
 package linea.staterecovery.test
 
+import linea.domain.BlockNumberAndHash
+import linea.domain.BlockParameter
+import linea.domain.CommonDomainFunctions
 import linea.staterecovery.BlockFromL1RecoveredData
 import linea.staterecovery.ExecutionLayerClient
 import linea.staterecovery.StateRecoveryStatus
-import net.consensys.linea.BlockNumberAndHash
-import net.consensys.linea.BlockParameter
-import net.consensys.linea.CommonDomainFunctions
 import org.apache.logging.log4j.LogManager
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
