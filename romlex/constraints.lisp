@@ -20,6 +20,5 @@
   (begin (eq! CODE_HASH_HI EMPTY_KECCAK_HI)
          (eq! CODE_HASH_LO EMPTY_KECCAK_LO)))
 
-;; TODO add lexicographic ordering
-
-
+(defsorted cfi-lex-order 
+  ((+ ADDRESS_HI) (+ ADDRESS_LO) (+ DEPLOYMENT_NUMBER) (- DEPLOYMENT_STATUS)))
