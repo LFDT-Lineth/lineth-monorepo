@@ -79,6 +79,8 @@ task integrationTest(type: Test) { test ->
   testClassesDirs = sourceSets.integrationTest.output.classesDirs
 
   dependsOn(":localStackForStateRecoveryComposeUp")
+  maxParallelForks = 1
+  systemProperties["junit.jupiter.execution.parallel.enabled"] = false
   // increase default timeout because this tests submit loads of blobs
   systemProperties["junit.jupiter.execution.timeout.default"] = "10 m" // 10 minutes
 

@@ -65,8 +65,8 @@ class SubmissionsFetchingTaskIntTest {
     aggregationsAndBlobs = loadBlobsAndAggregationsSortedAndGrouped(
       blobsResponsesDir = "$testDataDir/compression/responses",
       aggregationsResponsesDir = "$testDataDir/aggregation/responses",
-      ignoreBlobsWithoutAggregation = true,
-      numberOfAggregations = 7
+      numberOfAggregations = 7,
+      extraBlobsWithoutAggregation = 0
     )
     val rollupDeploymentResult = ContractsManager.get()
       .deployLineaRollup(numberOfOperators = 2, contractVersion = LineaContractVersion.V6).get()
@@ -175,7 +175,7 @@ class SubmissionsFetchingTaskIntTest {
     )
   }
 
-  fun assertSubmissionsAreCorrectlyFetched(
+  private fun assertSubmissionsAreCorrectlyFetched(
     l2StartBlockNumber: ULong,
     debugForceSyncStopBlockNumber: ULong? = null
   ) {

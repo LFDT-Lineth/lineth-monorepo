@@ -51,7 +51,6 @@ object VertxFactory {
       }
       configs.put("metricsOptions", metricsOptions)
     }
-    println(configs)
     return createVertxWithJsonConfigs(configs)
   }
 }

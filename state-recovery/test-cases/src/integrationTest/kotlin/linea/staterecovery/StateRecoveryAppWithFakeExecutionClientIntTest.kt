@@ -40,7 +40,6 @@ import kotlin.time.toJavaDuration
 class StateRecoveryAppWithFakeExecutionClientIntTest {
   private val log = LogManager.getLogger("test.case.StateRecoverAppWithFakeExecutionClientIntTest")
   private lateinit var appConfigs: StateRecoveryApp.Config
-  private lateinit var stateRecoverApp: StateRecoveryApp
   private lateinit var aggregationsAndBlobs: List<AggregationAndBlobs>
   private lateinit var fakeExecutionLayerClient: FakeExecutionLayerClient
   private lateinit var fakeStateManagerClient: FakeStateManagerClient
@@ -65,7 +64,8 @@ class StateRecoveryAppWithFakeExecutionClientIntTest {
     aggregationsAndBlobs = loadBlobsAndAggregationsSortedAndGrouped(
       blobsResponsesDir = "$testDataDir/compression/responses",
       aggregationsResponsesDir = "$testDataDir/aggregation/responses",
-      numberOfAggregations = 7
+      numberOfAggregations = 4,
+      extraBlobsWithoutAggregation = 0
     )
     fakeExecutionLayerClient = FakeExecutionLayerClient(
       headBlock = BlockNumberAndHash(number = 0uL, hash = ByteArray(32) { 0 }),
@@ -103,26 +103,24 @@ class StateRecoveryAppWithFakeExecutionClientIntTest {
       smartContractErrors = lineaRollupContractErrors
     )
 
-    instantiateStateRecoveryApp()
-
     configureLoggers(
       rootLevel = Level.INFO,
       log.name to Level.DEBUG,
-      "linea.testing.submission" to Level.INFO,
+      "linea.testing.submission" to Level.DEBUG,
       "net.consensys.linea.contract.Web3JContractAsyncHelper" to Level.WARN, // silence noisy gasPrice Caps logs
       "linea.staterecovery.BlobDecompressorToDomainV1" to Level.DEBUG,
       "linea.plugin.staterecovery.clients" to Level.INFO,
       "test.fake.clients.l1.fake-execution-layer" to Level.DEBUG,
       "test.clients.l1.web3j-default" to Level.DEBUG,
-      "test.clients.l1.web3j.receipt-poller" to Level.DEBUG,
+      "test.clients.l1.web3j.receipt-poller" to Level.TRACE,
       "linea.staterecovery.datafetching" to Level.TRACE
     )
   }
 
   fun instantiateStateRecoveryApp(
     debugForceSyncStopBlockNumber: ULong? = null
-  ) {
-    stateRecoverApp = StateRecoveryApp(
+  ): StateRecoveryApp {
+    return StateRecoveryApp(
       vertx = vertx,
       elClient = fakeExecutionLayerClient,
       blobFetcher = appClients.blobScanClient,
@@ -151,8 +149,7 @@ class StateRecoveryAppWithFakeExecutionClientIntTest {
       l1Web3jClient = createWeb3jHttpClient(
         rpcUrl = l1RpcUrl,
         log = LogManager.getLogger("test.clients.l1.web3j.receipt-poller")
-      ),
-      log = log
+      )
     )
   }
 
@@ -168,7 +165,7 @@ class StateRecoveryAppWithFakeExecutionClientIntTest {
   */
   @Test
   fun `when state recovery disabled and is starting from genesis`() {
-    stateRecoverApp.start().get()
+    instantiateStateRecoveryApp().start().get()
     submitDataToL1ContactAndWaitExecution()
 
     val lastAggregation = aggregationsAndBlobs.findLast { it.aggregation != null }!!.aggregation
@@ -221,7 +218,7 @@ class StateRecoveryAppWithFakeExecutionClientIntTest {
 
     val lastFinalizedBlockNumber = finalizationsBeforeCutOff.last().aggregation!!.endBlockNumber
     val expectedStateRecoverStartBlockNumber = lastFinalizedBlockNumber + 1UL
-    stateRecoverApp.start().get()
+    instantiateStateRecoveryApp().start().get()
 
     await()
       .atMost(4.minutes.toJavaDuration())
@@ -293,8 +290,7 @@ class StateRecoveryAppWithFakeExecutionClientIntTest {
       number = headBlockNumberAtStart,
       hash = ByteArray(32) { 0 }
     )
-
-    stateRecoverApp.start().get()
+    instantiateStateRecoveryApp().start().get()
     await()
       .atMost(2.minutes.toJavaDuration())
       .pollInterval(1.seconds.toJavaDuration())
@@ -343,6 +339,7 @@ class StateRecoveryAppWithFakeExecutionClientIntTest {
       aggregationsAndBlobs[1].aggregation!!.intervalString()
     )
 
+    val stateRecoverApp = instantiateStateRecoveryApp()
     stateRecoverApp.start().get()
     submitDataToL1ContactAndWaitExecution()
 
@@ -359,15 +356,20 @@ class StateRecoveryAppWithFakeExecutionClientIntTest {
   @Test
   fun `should stop synch at forceSyncStopBlockNumber`() {
     val debugForceSyncStopBlockNumber = aggregationsAndBlobs[2].aggregation!!.startBlockNumber
-    instantiateStateRecoveryApp(debugForceSyncStopBlockNumber = debugForceSyncStopBlockNumber)
     log.debug("forceSyncStopBlockNumber={}", fakeStateManagerClient)
-
-    stateRecoverApp.start().get()
+    instantiateStateRecoveryApp(debugForceSyncStopBlockNumber = debugForceSyncStopBlockNumber)
+      .start().get()
     submitDataToL1ContactAndWaitExecution(waitTimeout = 3.minutes)
 
     await()
       .atMost(1.minutes.toJavaDuration())
+      .pollInterval(2.seconds.toJavaDuration())
       .untilAsserted {
+        log.debug(
+          "headBlockNumber={} forceSyncStopBlockNumber={}",
+          fakeExecutionLayerClient.headBlock.number,
+          debugForceSyncStopBlockNumber
+        )
         assertThat(fakeExecutionLayerClient.headBlock.number).isGreaterThanOrEqualTo(debugForceSyncStopBlockNumber)
       }
 

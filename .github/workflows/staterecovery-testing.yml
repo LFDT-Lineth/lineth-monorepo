@@ -24,7 +24,7 @@ jobs:
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
       # CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     # ~2.5 mins saved vs large
-    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-xl
+    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-large
     name: Staterecovery tests
     steps:
       - name: Checkout
@@ -37,7 +37,7 @@ jobs:
         # Configure Gradle for optimal use in GiHub Actions, including caching of downloaded dependencies.
         # See: https://github.com/gradle/actions/blob/main/setup-gradle/README.md
         uses: gradle/actions/setup-gradle@cc4fc85e6b35bafd578d5ffbc76a5518407e1af0 #v4.2.1
-      # Disable cache for pulling docker images as empirically found that this 
+      # Disable cache for pulling docker images as empirically found that this
       # (retrieving cache and loading docker images) actually increased test time-to-completion
       # - name: Restore cached images
       #   id: restore-cached-images

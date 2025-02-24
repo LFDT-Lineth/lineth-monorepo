@@ -1,0 +1,174 @@
+{
+  "@WARNING": "THIS FILE IS FOR LOCAL DEVELOPMENT ONLY! DO NOT REUSE ELSEWHERE",
+  "config": {
+    "chainId": 1337,
+    "homesteadBlock": 0,
+    "eip150Block": 0,
+    "eip155Block": 0,
+    "eip158Block": 0,
+    "byzantiumBlock": 0,
+    "constantinopleBlock": 0,
+    "petersburgBlock": 0,
+    "istanbulBlock": 0,
+    "berlinBlock": 0,
+    "londonBlock": 0,
+    "clique": {
+      "period": 1,
+      "epoch": 30000
+    }
+  },
+  "coinbase": "0x0000000000000000000000000000000000000000",
+  "difficulty": "0x1",
+  "extraData": "0x00000000000000000000000000000000000000000000000000000000000000006d976c9b8ceee705d4fe8699b44e5eb58242f4840000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+  "gasLimit": "0x77359400",
+  "mixHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+  "nonce": "0x0",
+  "timestamp": "0x645580D1",
+  "baseFeePerGas": "0x7",
+  "@WARNING": "FOR LOCAL DEV ONLY - DO NOT REUSE THESE KEYS ELSEWHERE",
+  "alloc": {
+    "1b9abeec3215d8ade8a33607f2cf0f4f60e5f0d0": {
+      "@WARNING": "FOR LOCAL DEV ONLY - DO NOT REUSE THESE KEYS ELSEWHERE",
+      "privateKey": "0x1dd171cec7e2995408b5513004e8207fe88d6820aeff0d82463b3e41df251aae",
+      "comment": "Contract deployer account",
+      "balance": "90000000000000000000000"
+    },
+    "fe3b557e8fb62b89f4916b721be55ceb828dbd73": {
+      "@WARNING": "FOR LOCAL DEV ONLY - DO NOT REUSE THESE KEYS ELSEWHERE",
+      "privateKey": "8f2a55949038a9610f50fb23b5883af3b4ecb3c3bb792cbcefbd1542c692be63",
+      "comment": "Used for OPCODE testing, do not use elsewhere",
+      "balance": "90000000000000000000001"
+    },
+    "627306090abaB3A6e1400e9345bC60c78a8BEf57": {
+      "@WARNING": "FOR LOCAL DEV ONLY - DO NOT REUSE THESE KEYS ELSEWHERE",
+      "privateKey": "c87509a1c067bbde78beb793e6fa76530b6382a4c0241e5e4a9ec0a0f44dc0d3",
+      "comment": "account 2, can be used as end user",
+      "balance": "90000000000000000000002"
+    },
+    "f17f52151EbEF6C7334FAD080c5704D77216b732": {
+      "@WARNING": "FOR LOCAL DEV ONLY - DO NOT REUSE THESE KEYS ELSEWHERE",
+      "privateKey": "ae6ae8e5ccbfb04590405997ee2d52d2b330726137b875053c36d94e974d162f",
+      "comment": "L2 Security Council",
+      "balance": "90000000000000000000003"
+    },
+    "6d26dcc30a1693043aefa35ed9171c16da53f275": {
+      "@WARNING": "FOR LOCAL DEV ONLY - DO NOT REUSE THESE KEYS ELSEWHERE",
+      "privateKey": "0x47629fbb4a7ad7772b4d1cc92f26b325577b70f1ed5940e1859b92d690f8a2bf",
+      "comment": "account 4, can be used as end user",
+      "balance": "90000000000000000000004"
+    },
+    "e00cad48944330a60bbaedfbf2e0ac97e9762a1e": {
+      "@WARNING": "FOR LOCAL DEV ONLY - DO NOT REUSE THESE KEYS ELSEWHERE",
+      "privateKey": "0x4f78823f38639b9ef15392eb8024ace1d7b991ea820b0dd36a15d14d1a6785",
+      "comment": "account 5, can be used as end user",
+      "balance": "90000000000000000000005"
+    },
+    "2257ae433e214df824eb2ade79d2b305ca61a4f4": {
+      "@WARNING": "FOR LOCAL DEV ONLY - DO NOT REUSE THESE KEYS ELSEWHERE",
+      "privateKey": "0x327456c797d6300e11051c0c19b9dbe480fe57cdfcb8033d313e80c7c2e10369",
+      "comment": "account 6, can be used as end user",
+      "balance": "90000000000000000000006"
+    },
+    "0d4278da2f55cf21a014b7fee0a2cb799ce17ede": {
+      "@WARNING": "FOR LOCAL DEV ONLY - DO NOT REUSE THESE KEYS ELSEWHERE",
+      "privateKey": "0x9ffda2814ee771e0af8018aeea65f9eabd47ea9f2a5b628a4571adeafea692d1",
+      "comment": "account 7, can be used as end user",
+      "balance": "90000000000000000000007"
+    },
+    "994f4c82683f666d13d03a131078f1b94777790c": {
+      "@WARNING": "FOR LOCAL DEV ONLY - DO NOT REUSE THESE KEYS ELSEWHERE",
+      "privateKey": "0xcd3a170ec22b2f3e4aee76356df0c34712db8c24f8d836bce1e4a79299c87053",
+      "comment": "account 8, can be used as end user",
+      "balance": "90000000000000000000008"
+    },
+    "9d14ef14d4c90436a062efd7dc8354a7ded9712e": {
+      "@WARNING": "FOR LOCAL DEV ONLY - DO NOT REUSE THESE KEYS ELSEWHERE",
+      "privateKey": "0x4a954bb197f7a27a5427f29180fbfd0b32ee0344b4f85c8184ca593cf152866a",
+      "comment": "account 9, can be used as end user",
+      "balance": "90000000000000000000009"
+    },
+    "29a6b94168f04956c6fd1a2c3fdd1f6f7c468148": {
+      "@WARNING": "FOR LOCAL DEV ONLY - DO NOT REUSE THESE KEYS ELSEWHERE",
+      "privateKey": "0x745dda33b5d813bda7f52d646a56498c1539290f59d064b13161f84a1f0a7b4b",
+      "comment": "account 10, can be used as end user",
+      "balance": "900000000000000000000010"
+    },
+    "dca74800d7ce103a5e6a3f6028ab0963c46e7422": {
+      "@WARNING": "FOR LOCAL DEV ONLY - DO NOT REUSE THESE KEYS ELSEWHERE",
+      "privateKey": "0x75b9700016469b0d7f12c0d6a0225cd9a59818a4bd1437cf9583ca0ffa1d111a",
+      "comment": "account 11, can be used as end user",
+      "balance": "900000000000000000000011"
+    },
+    "9ad149426800dc9e65754a5ceab6bc1f41cc92a7": {
+      "@WARNING": "FOR LOCAL DEV ONLY - DO NOT REUSE THESE KEYS ELSEWHERE",
+      "privateKey": "0xe08f03f96ff2f4e107a50da222e281db39cd528c8c35e25a17f0a71a4d279da5",
+      "comment": "account 12, can be used as end user",
+      "balance": "900000000000000000000012"
+    },
+    "b3c150df38e91149e260c3233f3121810d4d2976": {
+      "@WARNING": "FOR LOCAL DEV ONLY - DO NOT REUSE THESE KEYS ELSEWHERE",
+      "privateKey": "0x7303d2fadd895018075cbe76d8a700bc65b4a1b8641b97d660533f0e029e3954",
+      "comment": "account 13, can be used as end user",
+      "balance": "900000000000000000000013"
+    },
+    "42232eab8cfd6b489efe79d3bdcc12f07a9fbac6": {
+      "@WARNING": "FOR LOCAL DEV ONLY - DO NOT REUSE THESE KEYS ELSEWHERE",
+      "privateKey": "0xc5453712de35e7dc2c599b5f86df5d4f0de442d86a2865cfe557acd6d131aa6f",
+      "comment": "account 14, can be used as end user",
+      "balance": "900000000000000000000014"
+    },
+    "30b080749e44112c3e679c5e4117dd2d884ec7da": {
+      "@WARNING": "FOR LOCAL DEV ONLY - DO NOT REUSE THESE KEYS ELSEWHERE",
+      "privateKey": "0xa8cc1b4bf5cd228cfe63c1b73a5515721e72b487cf8b82a285023aa0ed1ef839",
+      "comment": "account 15, can be used as end user",
+      "balance": "900000000000000000000015"
+    },
+    "82f93ea98b24441dc3e0b2413cc1cbb02f33d7e5": {
+      "@WARNING": "FOR LOCAL DEV ONLY - DO NOT REUSE THESE KEYS ELSEWHERE",
+      "privateKey": "0x8c1c8a65947b79ef919261364e9044d89ffe26fb764d8cd72db0446d6cf56664",
+      "comment": "account 16, can be used as end user",
+      "balance": "900000000000000000000016"
+    },
+    "bae3c3fcd73ccf7755ec8a10664f218ad6bbc775": {
+      "@WARNING": "FOR LOCAL DEV ONLY - DO NOT REUSE THESE KEYS ELSEWHERE",
+      "privateKey": "0xb35972d9380d1be620a2c61da77f68f127ef248ec55e1bc6033d20a7e13ef3fa",
+      "comment": "account 17, can be used as end user",
+      "balance": "900000000000000000000017"
+    },
+    "54d450f4d728da50f1271a1700b42657940324aa": {
+      "@WARNING": "FOR LOCAL DEV ONLY - DO NOT REUSE THESE KEYS ELSEWHERE",
+      "privateKey": "0x234d87442cf7d43841fbe280febcdfabfb646added67bc19f7e42a5483f614c4",
+      "comment": "account 18, can be used as end user",
+      "balance": "900000000000000000000018"
+    },
+    "d42e308fc964b71e18126df469c21b0d7bcb86cc": {
+      "@WARNING": "FOR LOCAL DEV ONLY - DO NOT REUSE THESE KEYS ELSEWHERE",
+      "privateKey": "0x4d01ae6487860981699236a58b68f807ee5f17b12df5740b85cf4c4653be0f55",
+      "comment": "Message anchorer account",
+      "balance": "900000000000000000000019"
+    },
+    "c8c92fe825d8930b9357c006e0af160dfa727a62": {
+      "@WARNING": "FOR LOCAL DEV ONLY - DO NOT REUSE THESE KEYS ELSEWHERE",
+      "privateKey": "0xfcf854e0a0bc6fd7e97d7050e61a362c915cecd6767a32267b22e8b7af572e58",
+      "comment": "L2 postman account",
+      "balance": "900000000000000000000020"
+    },
+    "0xe537D669CA013d86EBeF1D64e40fC74CADC91987": {
+      "@WARNING": "FOR LOCAL DEV ONLY - DO NOT REUSE THESE KEYS ELSEWHERE",
+      "comment": "account 21, can be used as end user",
+      "balance": "900000000000000000000021"
+    },
+    "8cdcc370846c9f669489227465f80e6cc4ecd050": {
+      "@WARNING": "FOR LOCAL DEV ONLY - DO NOT REUSE THESE KEYS ELSEWHERE",
+      "privateKey": "0xb17202c37cce9498e6f7dcdc1abd207802d09b5eee96677ea219ac867a198b91",
+      "comment": "Account used for smart contract deployment on L1 and L2",
+      "balance": "90000000000000000000000"
+    },
+    "d0584d4d37157f7105a4b41ed8ecbdfafdb2547f": {
+      "@WARNING": "FOR LOCAL DEV ONLY - DO NOT REUSE THESE KEYS ELSEWHERE",
+      "privateKey": "0x202454d1b4e72c41ebf58150030f649648d3cf5590297fb6718e27039ed9c86d",
+      "comment": "Operator account",
+      "balance": "90000000000000000000000"
+    }
+  }
+}

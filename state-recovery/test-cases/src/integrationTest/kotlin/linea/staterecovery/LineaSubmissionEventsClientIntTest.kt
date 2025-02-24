@@ -58,7 +58,8 @@ class LineaSubmissionEventsClientIntTest {
     aggregationsAndBlobs = loadBlobsAndAggregationsSortedAndGrouped(
       blobsResponsesDir = "$testDataDir/compression/responses",
       aggregationsResponsesDir = "$testDataDir/aggregation/responses",
-      numberOfAggregations = 7
+      numberOfAggregations = 7,
+      extraBlobsWithoutAggregation = 3
     )
     // wait smc deployment finishes
     rollupDeploymentResult = rollupDeploymentFuture.get()

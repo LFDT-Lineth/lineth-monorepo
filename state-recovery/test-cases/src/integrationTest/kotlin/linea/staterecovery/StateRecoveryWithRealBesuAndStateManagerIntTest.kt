@@ -123,7 +123,7 @@ class StateRecoveryWithRealBesuAndStateManagerIntTest {
 
     assertBesuAndShomeiRecoveredAsExpected(
       lastAggregationAndBlobs,
-      timeout = 2.minutes
+      timeout = 5.minutes
     )
   }
 

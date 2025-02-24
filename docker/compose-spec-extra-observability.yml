@@ -51,7 +51,7 @@ services:
     ports:
       - "4000:4000"
     volumes:
-      - ./config/linea-local-dev-genesis-PoA.json:/app/genesis.json:ro
+      - ./config/linea-local-dev-genesis-PoA-geth.json:/app/genesis.json:ro
     networks:
       - linea
 

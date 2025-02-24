@@ -72,7 +72,7 @@ services:
     entrypoint: [ "sh", "/scripts/node.sh", "1337", "/genesis.json", "0x0", "0x1C9C380", "0xF4240" ]
     volumes:
       - ./geth/scripts:/scripts:ro
-      - ./config/linea-local-dev-genesis-PoA.json:/genesis.json:ro
+      - ./config/linea-local-dev-genesis-PoA-geth.json:/genesis.json:ro
       - ./geth/geth-l2-node.key:/boot.key:ro
       - local-dev:/data/
     networks:
@@ -153,7 +153,7 @@ services:
     entrypoint: [ "sh", "/scripts/node.sh", "1337", "/genesis.json", "0xa", "0x1C9C380", "0xF4240" ]
     volumes:
       - ./geth/scripts:/scripts:ro
-      - ./config/linea-local-dev-genesis-PoA.json:/genesis.json:ro
+      - ./config/linea-local-dev-genesis-PoA-geth.json:/genesis.json:ro
       - ../tmp/local/:/data/
     networks:
       linea:

@@ -6,7 +6,7 @@ sync-mode="FULL"
 host-allowlist=["*"]
 revert-reason-enabled=true
 
-# target-gas-limit=30000000
+target-gas-limit=2000000000
 min-gas-price=1000000
 tx-pool-min-gas-price=0
 max-peers=10
@@ -60,7 +60,7 @@ plugin-linea-tx-pool-simulation-check-api-enabled=false
 plugin-linea-tx-pool-simulation-check-p2p-enabled=false
 plugin-linea-max-block-calldata-size=109000
 plugin-linea-max-tx-calldata-size=60000
-plugin-linea-max-block-gas=30000000
+plugin-linea-max-block-gas=50000000
 plugin-linea-tx-pool-min-margin="0.8"
 plugin-linea-min-margin="1.0"
 plugin-linea-fixed-gas-cost-wei=30000000

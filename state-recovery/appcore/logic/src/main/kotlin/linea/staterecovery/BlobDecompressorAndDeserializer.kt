@@ -30,7 +30,7 @@ interface BlobDecompressorAndDeserializer {
 
 data class BlockHeaderStaticFields(
   val coinbase: ByteArray,
-  val gasLimit: ULong = 61_000_000UL,
+  val gasLimit: ULong = 2_000_000_000UL,
   val difficulty: ULong = 2UL
 ) {
   companion object {
