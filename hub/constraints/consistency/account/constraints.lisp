@@ -134,18 +134,21 @@
 (defconstraint    account-consistency---linking---conflation-level---balance
                   (:guard   acp_AGAIN_IN_CNF)
                   ;;;;;;;;;;;;;;;;;;;;;;;;;;;
-                  (begin
-                    (eq!   acp_BALANCE                   (prev acp_BALANCE_NEW)             )))
+                  (eq!   acp_BALANCE                   (prev acp_BALANCE_NEW)             ))
 
 (defconstraint    account-consistency---linking---conflation-level---code
                   (:guard   acp_AGAIN_IN_CNF)
                   ;;;;;;;;;;;;;;;;;;;;;;;;;;;
                   (begin
-                    (eq!   acp_CODE_SIZE                 (prev acp_CODE_SIZE_NEW)           )
-                    (eq!   acp_CODE_HASH_HI              (prev acp_CODE_HASH_HI_NEW)        )
-                    (eq!   acp_CODE_HASH_LO              (prev acp_CODE_HASH_LO_NEW)        )
-                    ;;
-                    (eq!   acp_IS_PRECOMPILE             (prev acp_IS_PRECOMPILE)           )))
+                    (eq!          acp_CODE_SIZE          (prev acp_CODE_SIZE_NEW)           )
+                    (eq!          acp_CODE_HASH_HI       (prev acp_CODE_HASH_HI_NEW)        )
+                    (eq!          acp_CODE_HASH_LO       (prev acp_CODE_HASH_LO_NEW)        )
+                    (debug (eq!   acp_EXISTS             (prev acp_EXISTS_NEW)              ))))
+
+(defconstraint    account-consistency---linking---conflation-level---precompile-status
+                  (:guard   acp_AGAIN_IN_CNF)
+                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                  (eq!   acp_IS_PRECOMPILE             (prev acp_IS_PRECOMPILE)           ))
 
 (defconstraint    account-consistency---linking---conflation-level---deployment-number-and-status
                   (:guard   acp_AGAIN_IN_CNF)

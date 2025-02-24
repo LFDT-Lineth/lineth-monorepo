@@ -31,6 +31,8 @@
       acp_CODE_HASH_LO_NEW
       acp_CODE_SIZE
       acp_CODE_SIZE_NEW
+      acp_EXISTS
+      acp_EXISTS_NEW
       acp_WARMTH
       acp_WARMTH_NEW
       acp_DEPLOYMENT_NUMBER
@@ -64,6 +66,8 @@
       account/CODE_HASH_LO_NEW
       account/CODE_SIZE
       account/CODE_SIZE_NEW
+      account/EXISTS
+      account/EXISTS_NEW
       account/WARMTH
       account/WARMTH_NEW
       account/DEPLOYMENT_NUMBER
