@@ -25,7 +25,9 @@ var (
 //
 //export Init
 func Init() {
+	lock.Lock()
 	dictStore = dictionary.NewStore()
+	lock.Unlock()
 }
 
 // LoadDictionaries loads a number of dictionaries into the decompressor
