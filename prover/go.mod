@@ -6,10 +6,9 @@ toolchain go1.23.0
 
 require (
 	github.com/bits-and-blooms/bitset v1.14.3
-	github.com/consensys/bavard v0.1.24
 	github.com/consensys/compress v0.2.5
 	github.com/consensys/gnark v0.11.1-0.20250107100237-2cb190338a01
-	github.com/consensys/gnark-crypto v0.14.1-0.20241217134352-810063550bd4
+	github.com/consensys/gnark-crypto v0.14.1-0.20250117145449-0493a37cc361
 	github.com/consensys/go-corset v0.0.0-20250217020957-ab7f2d548fa8
 	github.com/crate-crypto/go-kzg-4844 v1.1.0
 	github.com/dlclark/regexp2 v1.11.2
@@ -45,6 +44,7 @@ require (
 	github.com/cockroachdb/pebble v1.1.1 // indirect
 	github.com/cockroachdb/redact v1.1.5 // indirect
 	github.com/cockroachdb/tokenbucket v0.0.0-20230807174530-cc333fc44b06 // indirect
+	github.com/consensys/bavard v0.1.25 // indirect
 	github.com/crate-crypto/go-ipa v0.0.0-20240223125850-b1e8a79f509c // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.3.0 // indirect
 	github.com/ethereum/c-kzg-4844 v1.0.3 // indirect

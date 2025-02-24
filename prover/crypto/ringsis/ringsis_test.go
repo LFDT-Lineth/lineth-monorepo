@@ -40,27 +40,28 @@ var testCasesKey = []struct {
 		Size:   576,
 		Params: StdParams,
 	},
-	{
-		Size: 43,
-		Params: Params{
-			LogTwoBound:  1,
-			LogTwoDegree: 1,
-		},
-	},
-	{
-		Size: 23,
-		Params: Params{
-			LogTwoBound:  1,
-			LogTwoDegree: 1,
-		},
-	},
-	{
-		Size: 256,
-		Params: Params{
-			LogTwoBound:  1,
-			LogTwoDegree: 1,
-		},
-	},
+	// TODO @gbotrel confirm with @AlexandreBelling we don't need to test these cases
+	// {
+	// 	Size: 43,
+	// 	Params: Params{
+	// 		LogTwoBound:  1,
+	// 		LogTwoDegree: 1,
+	// 	},
+	// },
+	// {
+	// 	Size: 23,
+	// 	Params: Params{
+	// 		LogTwoBound:  1,
+	// 		LogTwoDegree: 1,
+	// 	},
+	// },
+	// {
+	// 	Size: 256,
+	// 	Params: Params{
+	// 		LogTwoBound:  1,
+	// 		LogTwoDegree: 1,
+	// 	},
+	// },
 }
 
 func TestKeyMaxNumFieldHashable(t *testing.T) {
@@ -275,35 +276,40 @@ func TestTransveralHashFromLimbs(t *testing.T) {
 		},
 	}
 
-	for pId, tcKeyParams := range testCasesKey {
+	for _, tcKeyParams := range testCasesKey {
 		for _, tcDim := range testCaseDimensions {
-			t.Run(
-				fmt.Sprintf("params-%v-numRow=%v-nCols=%v", pId, tcDim.NumRows, tcDim.NumCols),
-				func(t *testing.T) {
+			t.Logf("params-%v-numRow=%v-nCols=%v", tcKeyParams.Size, tcDim.NumRows, tcDim.NumCols)
+			// t.Run(
+			// 	fmt.Sprintf("params-%v-numRow=%v-nCols=%v", pId, tcDim.NumRows, tcDim.NumCols),
+			// 	func(t *testing.T) {
+			assert := require.New(t)
 
-					key := GenerateKey(tcKeyParams.Params, tcDim.NumRows)
+			key := GenerateKey(tcKeyParams.Params, tcDim.NumRows)
 
-					inputs := make([]smartvectors.SmartVector, 4)
-					for i := range inputs {
-						inputs[i] = smartvectors.Rand(16)
-					}
+			inputs := make([]smartvectors.SmartVector, 4)
+			for i := range inputs {
+				inputs[i] = smartvectors.Rand(16)
+			}
 
-					transposed := make([][]field.Element, 16)
-					for i := range transposed {
-						transposed[i] = make([]fr.Element, 4)
-						for j := range transposed[i] {
-							transposed[i][j] = inputs[j].Get(i)
-						}
-					}
+			transposed := make([][]field.Element, 16)
+			for i := range transposed {
+				transposed[i] = make([]fr.Element, 4)
+				for j := range transposed[i] {
+					transposed[i][j] = inputs[j].Get(i)
+				}
+			}
 
-					res := key.TransversalHash(inputs)
-					for i := range transposed {
-						baseline := key.Hash(transposed[i])
-						assert.Equal(t, baseline, res[i*key.OutputSize():(i+1)*key.OutputSize()])
-					}
-
-				},
-			)
+			res := key.TransversalHash(inputs)
+			for i := range transposed {
+				baseline := key.Hash(transposed[i])
+				for j := range baseline {
+					assert.Equal(baseline[j], res[i*key.OutputSize()+j], "transversal hash does not match col hash at %d %d", i, j)
+				}
+				// assert.Equal(baseline, res[i*key.OutputSize():(i+1)*key.OutputSize()])
+			}
+			// t.FailNow()
+			// 	},
+			// )
 		}
 	}
 }

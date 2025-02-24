@@ -18,6 +18,9 @@ import (
 // `field.Element(1, 0, 0, 0)` represent valid field elements.
 type Element = fr.Element
 
+// Vector aliases [fr.Vector] and represents a slice of field elements.
+type Vector = fr.Vector
+
 const (
 	// RootOfUnityOrder is the smallest integer such that
 	// 		[RootOfUnity] ** (2 ** RootOfUnityOrder) == 1
@@ -147,4 +150,8 @@ func PseudoRandTruncated(rng *rand.Rand, sizeByte int) Element {
 	bigInt.SetBytes(bareBytes[:sizeByte]).Mod(bigInt, Modulus())
 	res.SetBigInt(bigInt)
 	return res
+}
+
+func Generator(m uint64) (Element, error) {
+	return fr.Generator(m)
 }
