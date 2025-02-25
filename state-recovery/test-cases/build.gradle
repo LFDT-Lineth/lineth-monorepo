@@ -9,31 +9,20 @@ group = 'build.linea.staterecover'
 
 dependencies {
   implementation("io.vertx:vertx-core:${libs.versions.vertx.get()}")
-  api(project(':jvm-libs:generic:extensions:kotlin'))
-  api(project(':jvm-libs:linea:core:domain-models'))
-  api(project(':jvm-libs:linea:core:long-running-service'))
-  api(project(':jvm-libs:linea:clients:interfaces'))
-  api(project(':jvm-libs:linea:clients:linea-l1-contract-client'))
-  api(project(':jvm-libs:linea:clients:linea-state-manager'))
-  api(project(':jvm-libs:linea:blob-decompressor'))
-  api(project(':state-recovery:appcore:clients-interfaces'))
-  api(project(':state-recovery:appcore:domain-models'))
-  api(project(':state-recovery:appcore:logic'))
-  api(project(':state-recovery:besu-plugin'))
-
-  implementation project(':jvm-libs:generic:vertx-helper')
-  implementation project(':jvm-libs:linea:besu-libs')
-  implementation project(':jvm-libs:linea:testing:file-system')
-  implementation(testFixtures(project(':jvm-libs:generic:json-rpc')))
+  implementation(project(':state-recovery:appcore:logic'))
+  implementation(project(':state-recovery:besu-plugin'))
   implementation(project(':state-recovery:clients:eth-api'))
   implementation(project(':state-recovery:clients:blobscan-client'))
+  implementation('build.linea:l1-rollup-contract-client:6.0.0')
+  implementation project(':jvm-libs:generic:vertx-helper')
+  implementation project(':jvm-libs:generic:extensions:kotlin')
+  implementation project(':jvm-libs:linea:besu-libs')
+  implementation project(':jvm-libs:linea:testing:file-system')
   implementation(project(':coordinator:clients:smart-contract-client'))
   implementation(project(':jvm-libs:linea:linea-contracts:l1-rollup'))
-  implementation('build.linea:l1-rollup-contract-client:6.0.0')
   implementation(project(':coordinator:core'))
   implementation(project(":coordinator:ethereum:test-utils"))
   implementation(project(":jvm-libs:linea:testing:l1-blob-and-proof-submission"))
-  implementation(testFixtures(project(":jvm-libs:linea:blob-compressor")))
   implementation(testFixtures(project(':jvm-libs:linea:web3j-extensions')))
   testImplementation("io.vertx:vertx-junit5")
   testImplementation(project(":jvm-libs:linea:metrics:micrometer"))
@@ -79,8 +68,6 @@ task integrationTest(type: Test) { test ->
   testClassesDirs = sourceSets.integrationTest.output.classesDirs
 
   dependsOn(":localStackForStateRecoveryComposeUp")
-  maxParallelForks = 1
-  systemProperties["junit.jupiter.execution.parallel.enabled"] = false
   // increase default timeout because this tests submit loads of blobs
   systemProperties["junit.jupiter.execution.timeout.default"] = "10 m" // 10 minutes
 

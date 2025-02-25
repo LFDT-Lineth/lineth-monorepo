@@ -12,14 +12,13 @@ dependencies {
   api(project(':jvm-libs:linea:core:long-running-service'))
   api(project(':jvm-libs:linea:clients:interfaces'))
   api(project(':jvm-libs:linea:clients:linea-state-manager'))
-  api('build.linea:blob-decompressor:0.0.2')
+  api('build.linea:blob-decompressor:1.1.1')
 
   api(project(':state-recovery:appcore:clients-interfaces'))
   api(project(':state-recovery:appcore:domain-models'))
   api project(':jvm-libs:linea:besu-rlp-and-mappers')
   api project(':jvm-libs:linea:besu-libs')
 
-  testImplementation(project(':jvm-libs:linea:blob-decompressor'))
   testImplementation(project(":jvm-libs:linea:testing:file-system"))
   testImplementation(testFixtures(project(":jvm-libs:linea:blob-compressor")))
   testImplementation("org.bouncycastle:bcprov-jdk18on:1.78.1")

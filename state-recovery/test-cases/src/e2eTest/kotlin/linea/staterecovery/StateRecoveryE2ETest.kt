@@ -10,6 +10,7 @@ import linea.domain.EthLogEvent
 import linea.domain.RetryConfig
 import linea.kotlin.gwei
 import linea.kotlin.toBigInteger
+import linea.kotlin.toULong
 import linea.log4j.configureLoggers
 import linea.staterecovery.test.assertBesuAndShomeiRecoveredAsExpected
 import linea.staterecovery.test.execCommandAndAssertSuccess

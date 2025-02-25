@@ -25,7 +25,7 @@ class GoNativeBlobDecompressorTest {
   private val compressor: BlobCompressor = GoBackedBlobCompressor
     .getInstance(BlobCompressorVersion.V1_0_1, blobCompressedLimit.toUInt())
   private val decompressor: BlobDecompressor =
-    GoNativeBlobDecompressorFactory.getInstance(BlobDecompressorVersion.V1_1_0)
+    GoNativeBlobDecompressorFactory.getInstance(BlobDecompressorVersion.V1_1_1)
 
   @BeforeEach
   fun beforeEach() {

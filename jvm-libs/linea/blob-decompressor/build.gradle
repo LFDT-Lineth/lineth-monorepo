@@ -23,18 +23,11 @@ jar {
   dependsOn configurations.runtimeClasspath
 }
 
-test {
-  // we cannot have more 1 compressor per JVM, hence we disable parallel execution
-  // because multiple threads would cause issues with the native library
-  systemProperties["junit.jupiter.execution.parallel.enabled"] = false
-  maxParallelForks = 1
-}
-
 def libsZipDownloadOutputDir = project.parent.layout.buildDirectory.asFile.get().absolutePath
 
 task downloadNativeLibs {
   doLast {
-    fetchLibFromZip("https://github.com/Consensys/linea-monorepo/releases/download/blob-libs-v1.1.0-test9/linea-blob-libs-v1.1.0-test9.zip", "blob_decompressor", libsZipDownloadOutputDir)
+    fetchLibFromZip("https://github.com/Consensys/linea-monorepo/releases/download/blob-libs-v1.1.1/linea-blob-libs-v1.1.1.zip", "blob_decompressor", libsZipDownloadOutputDir)
   }
 }
 

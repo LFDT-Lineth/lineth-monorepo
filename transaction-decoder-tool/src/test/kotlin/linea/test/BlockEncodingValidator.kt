@@ -27,7 +27,7 @@ val BLOB_COMPRESSOR_SIZE: UInt = 100u * 1024u * 1024U
 class BlockEncodingValidator(
   val vertx: Vertx,
   val compressorVersion: BlobCompressorVersion = BlobCompressorVersion.V1_0_1,
-  val decompressorVersion: BlobDecompressorVersion = BlobDecompressorVersion.V1_1_0,
+  val decompressorVersion: BlobDecompressorVersion = BlobDecompressorVersion.V1_1_1,
   val blobSizeLimitBytes: UInt = BLOB_COMPRESSOR_SIZE,
   val log: Logger = LogManager.getLogger(BlockEncodingValidator::class.java)
 ) : PeriodicPollingService(vertx, pollingIntervalMs = 1.milliseconds.inWholeMilliseconds, log = log) {
