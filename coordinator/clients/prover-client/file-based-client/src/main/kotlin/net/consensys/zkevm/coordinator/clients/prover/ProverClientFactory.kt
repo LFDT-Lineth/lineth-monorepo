@@ -2,7 +2,6 @@ package net.consensys.zkevm.coordinator.clients.prover
 
 import io.vertx.core.Vertx
 import linea.domain.BlockInterval
-import net.consensys.linea.contract.Web3JL2MessageServiceLogsClient
 import net.consensys.linea.metrics.LineaMetricsCategory
 import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.linea.metrics.micrometer.GaugeAggregator
@@ -10,7 +9,6 @@ import net.consensys.zkevm.coordinator.clients.BlobCompressionProverClientV2
 import net.consensys.zkevm.coordinator.clients.ExecutionProverClientV2
 import net.consensys.zkevm.coordinator.clients.ProofAggregationProverClientV2
 import net.consensys.zkevm.coordinator.clients.ProverClient
-import org.web3j.protocol.Web3j
 
 class ProverClientFactory(
   private val vertx: Vertx,
@@ -45,9 +43,7 @@ class ProverClientFactory(
 
   fun executionProverClient(
     tracesVersion: String,
-    stateManagerVersion: String,
-    l2MessageServiceLogsClient: Web3JL2MessageServiceLogsClient,
-    l2Web3jClient: Web3j
+    stateManagerVersion: String
   ): ExecutionProverClientV2 {
     return createClient(
       proverAConfig = config.proverA.execution,
@@ -58,9 +54,7 @@ class ProverClientFactory(
         config = proverConfig,
         vertx = vertx,
         tracesVersion = tracesVersion,
-        stateManagerVersion = stateManagerVersion,
-        l2MessageServiceLogsClient = l2MessageServiceLogsClient,
-        l2Web3jClient = l2Web3jClient
+        stateManagerVersion = stateManagerVersion
       ).also { executionWaitingResponsesMetric.addReporter(it) }
     }
   }

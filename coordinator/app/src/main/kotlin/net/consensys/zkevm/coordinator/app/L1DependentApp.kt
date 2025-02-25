@@ -399,6 +399,7 @@ class L1DependentApp(
     GlobalBlobAwareConflationCalculator(
       conflationCalculator = globalCalculator,
       blobCalculator = compressedBlobCalculator,
+      metricsFacade = metricsFacade,
       batchesLimit = batchesLimit
     )
   }
@@ -822,15 +823,15 @@ class L1DependentApp(
       )
       val executionProverClient: ExecutionProverClientV2 = proverClientFactory.executionProverClient(
         tracesVersion = configs.traces.rawExecutionTracesVersion,
-        stateManagerVersion = configs.stateManager.version,
-        l2MessageServiceLogsClient = l2MessageServiceLogsClient,
-        l2Web3jClient = l2Web3jClient
+        stateManagerVersion = configs.stateManager.version
       )
 
       val proofGeneratingConflationHandlerImpl = ProofGeneratingConflationHandlerImpl(
         tracesProductionCoordinator = TracesConflationCoordinatorImpl(tracesConflationClient, zkStateClient),
         zkProofProductionCoordinator = ZkProofCreationCoordinatorImpl(
-          executionProverClient = executionProverClient
+          executionProverClient = executionProverClient,
+          l2MessageServiceLogsClient = l2MessageServiceLogsClient,
+          l2Web3jClient = l2Web3jClient
         ),
         batchProofHandler = batchProofHandler,
         vertx = vertx,

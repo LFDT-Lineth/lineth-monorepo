@@ -1,9 +1,14 @@
 package net.consensys.zkevm.ethereum.coordination.conflation
 
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import kotlinx.datetime.Instant
 import linea.domain.BlockHeaderSummary
 import linea.kotlin.ByteArrayExt
 import net.consensys.FakeFixedClock
+import net.consensys.linea.metrics.FakeHistogram
+import net.consensys.linea.metrics.LineaMetricsCategory
+import net.consensys.linea.metrics.MetricsFacade
+import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
 import net.consensys.linea.traces.TracesCountersV1
 import net.consensys.linea.traces.fakeTracesCountersV1
 import net.consensys.zkevm.domain.Blob
@@ -17,6 +22,10 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
+import org.mockito.Mockito.doReturn
+import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
+import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.spy
 import org.mockito.kotlin.whenever
@@ -43,6 +52,17 @@ class GlobalBlobAwareConflationCalculatorTest {
   private lateinit var blobs: MutableList<Blob>
   private val defaultBatchesLimit = 2U
   private val conflationTargetEndBlockNumbers: MutableSet<ULong> = mutableSetOf()
+  private lateinit var metricsFacade: MetricsFacade
+
+  // histogram metrics mocks
+  private lateinit var fakeGasUsedInBlobHistogram: FakeHistogram
+  private lateinit var fakeCompressedDataSizeInBlobHistogram: FakeHistogram
+  private lateinit var fakeUncompressedDataSizeInBlobHistogram: FakeHistogram
+  private lateinit var fakeGasUsedInBatchHistogram: FakeHistogram
+  private lateinit var fakeCompressedDataSizeInBatchHistogram: FakeHistogram
+  private lateinit var fakeUncompressedDataSizeInBatchHistogram: FakeHistogram
+  private lateinit var fakeAvgCompressedTxDataSizeInBatchHistogram: FakeHistogram
+  private lateinit var fakeAvgUncompressedTxDataSizeInBatchHistogram: FakeHistogram
 
   @BeforeEach
   fun beforeEach() {
@@ -55,6 +75,92 @@ class GlobalBlobAwareConflationCalculatorTest {
         SafeFuture.failedFuture(RuntimeException("getLatestSafeBlockHeader not mocked yet"))
       )
     }
+    metricsFacade = spy(MicrometerMetricsFacade(registry = SimpleMeterRegistry()))
+    doReturn(FakeHistogram().also { fakeGasUsedInBlobHistogram = it })
+      .whenever(metricsFacade).createHistogram(
+        eq(LineaMetricsCategory.BLOB),
+        eq("gas"),
+        any(),
+        any(),
+        any(),
+        anyOrNull()
+      )
+    doReturn(FakeHistogram().also { fakeCompressedDataSizeInBlobHistogram = it })
+      .whenever(metricsFacade).createHistogram(
+        eq(LineaMetricsCategory.BLOB),
+        eq("compressed.data.size"),
+        any(),
+        any(),
+        any(),
+        anyOrNull()
+      )
+    doReturn(FakeHistogram().also { fakeUncompressedDataSizeInBlobHistogram = it })
+      .whenever(
+        metricsFacade
+      ).createHistogram(
+        eq(LineaMetricsCategory.BLOB),
+        eq("uncompressed.data.size"),
+        any(),
+        any(),
+        any(),
+        anyOrNull()
+      )
+    doReturn(FakeHistogram().also { fakeGasUsedInBatchHistogram = it })
+      .whenever(
+        metricsFacade
+      ).createHistogram(
+        eq(LineaMetricsCategory.BATCH),
+        eq("gas"),
+        any(),
+        any(),
+        any(),
+        anyOrNull()
+      )
+    doReturn(FakeHistogram().also { fakeCompressedDataSizeInBatchHistogram = it })
+      .whenever(
+        metricsFacade
+      ).createHistogram(
+        eq(LineaMetricsCategory.BATCH),
+        eq("compressed.data.size"),
+        any(),
+        any(),
+        any(),
+        anyOrNull()
+      )
+    doReturn(FakeHistogram().also { fakeUncompressedDataSizeInBatchHistogram = it })
+      .whenever(
+        metricsFacade
+      ).createHistogram(
+        eq(LineaMetricsCategory.BATCH),
+        eq("uncompressed.data.size"),
+        any(),
+        any(),
+        any(),
+        anyOrNull()
+      )
+    doReturn(FakeHistogram().also { fakeAvgCompressedTxDataSizeInBatchHistogram = it })
+      .whenever(
+        metricsFacade
+      ).createHistogram(
+        eq(LineaMetricsCategory.BATCH),
+        eq("avg.compressed.tx.data.size"),
+        any(),
+        any(),
+        any(),
+        anyOrNull()
+      )
+    doReturn(FakeHistogram().also { fakeAvgUncompressedTxDataSizeInBatchHistogram = it })
+      .whenever(
+        metricsFacade
+      ).createHistogram(
+        eq(LineaMetricsCategory.BATCH),
+        eq("avg.uncompressed.tx.data.size"),
+        any(),
+        any(),
+        any(),
+        anyOrNull()
+      )
+
     calculatorByDealine = spy(
       ConflationCalculatorByTimeDeadline(
         config = ConflationCalculatorByTimeDeadline.Config(
@@ -86,7 +192,8 @@ class GlobalBlobAwareConflationCalculatorTest {
     calculator = GlobalBlobAwareConflationCalculator(
       conflationCalculator = globalCalculator,
       blobCalculator = calculatorByDataCompressed,
-      batchesLimit = defaultBatchesLimit
+      batchesLimit = defaultBatchesLimit,
+      metricsFacade = metricsFacade
     )
     conflations = mutableListOf()
     blobs = mutableListOf()
@@ -110,7 +217,9 @@ class GlobalBlobAwareConflationCalculatorTest {
         blockNumber = it,
         blockTimestamp = fakeClockTime,
         tracesCounters = fakeTracesCountersV1(1u),
-        blockRLPEncoded = ByteArray(11)
+        blockRLPEncoded = ByteArray(11),
+        numOfTransactions = 1u,
+        gasUsed = 10uL
       )
     }
     blockCounters.forEach {
@@ -139,6 +248,16 @@ class GlobalBlobAwareConflationCalculatorTest {
     assertThat(blobs[1].conflations).isEqualTo(conflations.subList(1, 2))
     assertThat(blobs[1].startBlockTime).isEqualTo(blockCounters[5].blockTimestamp)
     assertThat(blobs[1].endBlockTime).isEqualTo(blockCounters[9].blockTimestamp)
+
+    // verify histogram metrics
+    assertThat(fakeGasUsedInBlobHistogram.records).isEqualTo(listOf(50.0, 50.0))
+    assertThat(fakeCompressedDataSizeInBlobHistogram.records).isEqualTo(listOf(55.0, 55.0))
+    assertThat(fakeUncompressedDataSizeInBlobHistogram.records).isEqualTo(listOf(55.0, 55.0))
+    assertThat(fakeGasUsedInBatchHistogram.records).isEqualTo(listOf(50.0, 50.0))
+    assertThat(fakeCompressedDataSizeInBatchHistogram.records).isEqualTo(listOf(55.0, 55.0))
+    assertThat(fakeUncompressedDataSizeInBatchHistogram.records).isEqualTo(listOf(55.0, 55.0))
+    assertThat(fakeAvgCompressedTxDataSizeInBatchHistogram.records).isEqualTo(listOf(11.0, 11.0))
+    assertThat(fakeAvgUncompressedTxDataSizeInBatchHistogram.records).isEqualTo(listOf(11.0, 11.0))
   }
 
   @Test
@@ -147,31 +266,51 @@ class GlobalBlobAwareConflationCalculatorTest {
       blockNumber = 1uL,
       blockTimestamp = fakeClockTime,
       tracesCounters = fakeTracesCountersV1(10u),
-      blockRLPEncoded = ByteArray(11)
+      blockRLPEncoded = ByteArray(11),
+      numOfTransactions = 1u,
+      gasUsed = 10uL
     )
     val block2Counters = BlockCounters(
       blockNumber = 2uL,
       blockTimestamp = block1Counters.blockTimestamp.plus(blockTime),
       tracesCounters = fakeTracesCountersV1(10u),
-      blockRLPEncoded = ByteArray(12)
+      blockRLPEncoded = ByteArray(12),
+      numOfTransactions = 1u,
+      gasUsed = 10uL
     )
     val block3Counters = BlockCounters(
       blockNumber = 3uL,
       blockTimestamp = block2Counters.blockTimestamp.plus(blockTime),
       tracesCounters = fakeTracesCountersV1(10u),
-      blockRLPEncoded = ByteArray(83)
+      blockRLPEncoded = ByteArray(83),
+      numOfTransactions = 1u,
+      gasUsed = 10uL
     )
     val block4Counters = BlockCounters(
       blockNumber = 4uL,
       blockTimestamp = block3Counters.blockTimestamp.plus(blockTime),
       tracesCounters = fakeTracesCountersV1(10u),
-      blockRLPEncoded = ByteArray(44)
+      blockRLPEncoded = ByteArray(44),
+      numOfTransactions = 1u,
+      gasUsed = 10uL
     )
 
     calculator.newBlock(block1Counters)
     calculator.newBlock(block2Counters)
+
+    // up till now no batch and blob histogram metrics should be recorded
+    assertThat(fakeGasUsedInBlobHistogram.records).isEmpty()
+    assertThat(fakeCompressedDataSizeInBlobHistogram.records).isEmpty()
+    assertThat(fakeUncompressedDataSizeInBlobHistogram.records).isEmpty()
+    assertThat(fakeGasUsedInBatchHistogram.records).isEmpty()
+    assertThat(fakeCompressedDataSizeInBatchHistogram.records).isEmpty()
+    assertThat(fakeUncompressedDataSizeInBatchHistogram.records).isEmpty()
+    assertThat(fakeAvgCompressedTxDataSizeInBatchHistogram.records).isEmpty()
+    assertThat(fakeAvgUncompressedTxDataSizeInBatchHistogram.records).isEmpty()
+
     // block 3 goes over data limit, so it should emit conflation and blob events
     calculator.newBlock(block3Counters)
+
     // block 4 goes over data limit, so it should emit conflation and blob events
     calculator.newBlock(block4Counters)
     assertThat(calculator.lastBlockNumber).isEqualTo(4uL)
@@ -200,6 +339,16 @@ class GlobalBlobAwareConflationCalculatorTest {
     assertThat(blobs[1].conflations).isEqualTo(conflations.subList(1, 2))
     assertThat(blobs[1].startBlockTime).isEqualTo(block3Counters.blockTimestamp)
     assertThat(blobs[1].endBlockTime).isEqualTo(block3Counters.blockTimestamp)
+
+    // verify batch and blob histogram metrics
+    assertThat(fakeGasUsedInBlobHistogram.records).isEqualTo(listOf(20.0, 10.0))
+    assertThat(fakeCompressedDataSizeInBlobHistogram.records).isEqualTo(listOf(23.0, 83.0))
+    assertThat(fakeUncompressedDataSizeInBlobHistogram.records).isEqualTo(listOf(23.0, 83.0))
+    assertThat(fakeGasUsedInBatchHistogram.records).isEqualTo(listOf(20.0, 10.0))
+    assertThat(fakeCompressedDataSizeInBatchHistogram.records).isEqualTo(listOf(23.0, 83.0))
+    assertThat(fakeUncompressedDataSizeInBatchHistogram.records).isEqualTo(listOf(23.0, 83.0))
+    assertThat(fakeAvgCompressedTxDataSizeInBatchHistogram.records).isEqualTo(listOf(11.0, 83.0))
+    assertThat(fakeAvgUncompressedTxDataSizeInBatchHistogram.records).isEqualTo(listOf(11.0, 83.0))
   }
 
   @Test

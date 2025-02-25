@@ -6,6 +6,7 @@ import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 import linea.domain.BlockIntervals
 import linea.kotlin.trimToSecondPrecision
+import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
 import net.consensys.zkevm.coordinator.clients.ProofAggregationProverClientV2
 import net.consensys.zkevm.domain.Aggregation
@@ -19,9 +20,9 @@ import net.consensys.zkevm.persistence.AggregationsRepository
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.anyLong
-import org.mockito.Mockito.mock
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argThat
+import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import tech.pegasys.teku.infrastructure.async.SafeFuture
@@ -74,7 +75,9 @@ class ProofAggregationCoordinatorServiceTest {
     val mockAggregationCalculator = mock<AggregationCalculator>()
     val mockAggregationsRepository = mock<AggregationsRepository>()
     val mockProofAggregationClient = mock<ProofAggregationProverClientV2>()
-    val aggregationL2StateProvider = mock<AggregationL2StateProvider>()
+    val mockAggregationL2StateProvider = mock<AggregationL2StateProvider>()
+    val meterRegistry = SimpleMeterRegistry()
+    val metricsFacade: MetricsFacade = MicrometerMetricsFacade(registry = meterRegistry)
 
     val config = ProofAggregationCoordinatorService.Config(
       pollingInterval = 10.milliseconds,
@@ -92,8 +95,8 @@ class ProofAggregationCoordinatorServiceTest {
       aggregationsRepository = mockAggregationsRepository,
       consecutiveProvenBlobsProvider = mockAggregationsRepository::findConsecutiveProvenBlobs,
       proofAggregationClient = mockProofAggregationClient,
-      aggregationL2StateProvider = aggregationL2StateProvider,
-      metricsFacade = MicrometerMetricsFacade(registry = SimpleMeterRegistry()),
+      aggregationL2StateProvider = mockAggregationL2StateProvider,
+      metricsFacade = metricsFacade,
       provenAggregationEndBlockNumberConsumer = provenAggregationEndBlockNumberConsumer
     )
     verify(mockAggregationCalculator).onAggregation(proofAggregationCoordinatorService)
@@ -148,7 +151,7 @@ class ProofAggregationCoordinatorServiceTest {
       parentAggregationLastL1RollingHash = ByteArray(32)
     )
 
-    whenever(aggregationL2StateProvider.getAggregationL2State(anyLong()))
+    whenever(mockAggregationL2StateProvider.getAggregationL2State(anyLong()))
       .thenAnswer { SafeFuture.completedFuture(rollingInfo1) }
       .thenAnswer { SafeFuture.completedFuture(rollingInfo2) }
 
@@ -220,6 +223,12 @@ class ProofAggregationCoordinatorServiceTest {
     // First aggregation should Trigger
     proofAggregationCoordinatorService.action().get()
 
+    assertThat(meterRegistry.summary("aggregation.blocks.size").count()).isEqualTo(1)
+    assertThat(meterRegistry.summary("aggregation.batches.size").count()).isEqualTo(1)
+    assertThat(meterRegistry.summary("aggregation.blobs.size").count()).isEqualTo(1)
+    assertThat(meterRegistry.summary("aggregation.blocks.size").max()).isEqualTo(23.0)
+    assertThat(meterRegistry.summary("aggregation.batches.size").max()).isEqualTo(6.0)
+    assertThat(meterRegistry.summary("aggregation.blobs.size").max()).isEqualTo(2.0)
     verify(mockProofAggregationClient).requestProof(proofsToAggregate1)
     verify(mockAggregationsRepository).saveNewAggregation(aggregation1)
     assertThat(provenAggregation).isEqualTo(aggregation1.endBlockNumber)
@@ -227,9 +236,14 @@ class ProofAggregationCoordinatorServiceTest {
     // Second aggregation should Trigger
     proofAggregationCoordinatorService.action().get()
 
+    assertThat(meterRegistry.summary("aggregation.blocks.size").count()).isEqualTo(2)
+    assertThat(meterRegistry.summary("aggregation.batches.size").count()).isEqualTo(2)
+    assertThat(meterRegistry.summary("aggregation.blobs.size").count()).isEqualTo(2)
+    assertThat(meterRegistry.summary("aggregation.blocks.size").max()).isEqualTo(27.0)
+    assertThat(meterRegistry.summary("aggregation.batches.size").max()).isEqualTo(6.0)
+    assertThat(meterRegistry.summary("aggregation.blobs.size").max()).isEqualTo(2.0)
     verify(mockProofAggregationClient).requestProof(proofsToAggregate2)
     verify(mockAggregationsRepository).saveNewAggregation(aggregation2)
-
     assertThat(provenAggregation).isEqualTo(aggregation2.endBlockNumber)
   }
 }

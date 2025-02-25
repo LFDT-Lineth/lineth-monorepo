@@ -76,3 +76,10 @@ interface MetricsFacade {
     tagValueExtractor: Function<T, String>
   ): TimerCapture<T>
 }
+
+class FakeHistogram : Histogram {
+  val records = mutableListOf<Double>()
+  override fun record(data: Double) {
+    records.add(data)
+  }
+}

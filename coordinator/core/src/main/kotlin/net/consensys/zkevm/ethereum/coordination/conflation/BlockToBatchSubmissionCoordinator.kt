@@ -54,7 +54,9 @@ class BlockToBatchSubmissionCoordinator(
             blockNumber = blockEvent.block.number,
             blockTimestamp = Instant.fromEpochSeconds(blockEvent.block.timestamp.toLong()),
             tracesCounters = traces.tracesCounters,
-            blockRLPEncoded = blockRLPEncoded
+            blockRLPEncoded = blockRLPEncoded,
+            numOfTransactions = blockEvent.block.transactions.size.toUInt(),
+            gasUsed = blockEvent.block.gasUsed
           )
         )
       }.whenException { th ->

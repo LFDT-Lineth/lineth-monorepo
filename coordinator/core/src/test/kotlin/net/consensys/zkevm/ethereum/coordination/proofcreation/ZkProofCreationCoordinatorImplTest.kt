@@ -1,16 +1,20 @@
-package net.consensys.zkevm.coordinator.clients.prover
+package net.consensys.zkevm.ethereum.coordination.proofcreation
 
 import build.linea.clients.GetZkEVMStateMerkleProofResponse
 import com.fasterxml.jackson.databind.node.ArrayNode
-import linea.domain.Block
 import linea.domain.createBlock
 import linea.kotlin.ByteArrayExt
 import linea.kotlin.encodeHex
-import net.consensys.zkevm.coordinator.clients.BatchExecutionProofRequestV1
+import net.consensys.linea.traces.fakeTracesCountersV1
+import net.consensys.zkevm.coordinator.clients.BatchExecutionProofResponse
+import net.consensys.zkevm.coordinator.clients.ExecutionProverClientV2
 import net.consensys.zkevm.coordinator.clients.GenerateTracesResponse
 import net.consensys.zkevm.coordinator.clients.L2MessageServiceLogsClient
-import net.consensys.zkevm.domain.RlpBridgeLogsData
-import net.consensys.zkevm.encoding.BlockEncoder
+import net.consensys.zkevm.domain.BlocksConflation
+import net.consensys.zkevm.domain.CommonTestData
+import net.consensys.zkevm.domain.ConflationCalculationResult
+import net.consensys.zkevm.domain.ConflationTrigger
+import net.consensys.zkevm.ethereum.coordination.conflation.BlocksTracesConflated
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -19,35 +23,33 @@ import org.mockito.kotlin.any
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
-import org.mockito.kotlin.spy
 import org.mockito.kotlin.whenever
 import org.web3j.protocol.Web3j
 import org.web3j.protocol.core.methods.response.EthBlock
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import kotlin.random.Random
 
-class ExecutionProofRequestDataDecoratorTest {
+class ZkProofCreationCoordinatorImplTest {
 
   private lateinit var l2MessageServiceLogsClient: L2MessageServiceLogsClient
   private lateinit var l2Web3jClient: Web3j
-  private lateinit var encoder: BlockEncoder
-  private lateinit var requestDatDecorator: ExecutionProofRequestDataDecorator
-  private val fakeEncoder: BlockEncoder = object : BlockEncoder {
-    override fun encode(block: Block): ByteArray {
-      return block.number.toString().toByteArray()
-    }
-  }
+  private lateinit var executionProverClient: ExecutionProverClientV2
+  private lateinit var zkProofCreationCoordinator: ZkProofCreationCoordinator
 
   @BeforeEach
   fun beforeEach() {
     l2MessageServiceLogsClient = mock(defaultAnswer = Mockito.RETURNS_DEEP_STUBS)
     l2Web3jClient = mock<Web3j>(defaultAnswer = Mockito.RETURNS_DEEP_STUBS)
-    encoder = spy(fakeEncoder)
-    requestDatDecorator = ExecutionProofRequestDataDecorator(l2MessageServiceLogsClient, l2Web3jClient, encoder)
+    executionProverClient = mock<ExecutionProverClientV2>(defaultAnswer = Mockito.RETURNS_DEEP_STUBS)
+    zkProofCreationCoordinator = ZkProofCreationCoordinatorImpl(
+      executionProverClient = executionProverClient,
+      l2MessageServiceLogsClient = l2MessageServiceLogsClient,
+      l2Web3jClient = l2Web3jClient
+    )
   }
 
   @Test
-  fun `should decorate data with bridge logs and parent stateRootHash`() {
+  fun `should return batch with correct fields`() {
     val block1 = createBlock(number = 123UL)
     val block2 = createBlock(number = 124UL)
     val type2StateResponse = GetZkEVMStateMerkleProofResponse(
@@ -57,14 +59,10 @@ class ExecutionProofRequestDataDecoratorTest {
       zkStateManagerVersion = "2.0.0"
     )
     val generateTracesResponse = GenerateTracesResponse(
-      tracesFileName = "123-114-conflated-traces.json",
+      tracesFileName = "123-124-conflated-traces.json",
       tracesEngineVersion = "1.0.0"
     )
-    val request = BatchExecutionProofRequestV1(
-      blocks = listOf(block1, block2),
-      tracesResponse = generateTracesResponse,
-      type2StateData = type2StateResponse
-    )
+
     val stateRoot = Random.nextBytes(32).encodeHex()
     whenever(l2Web3jClient.ethGetBlockByNumber(any(), any()).sendAsync())
       .thenAnswer {
@@ -79,26 +77,33 @@ class ExecutionProofRequestDataDecoratorTest {
     whenever(l2MessageServiceLogsClient.getBridgeLogs(eq(block2.number.toLong())))
       .thenReturn(SafeFuture.completedFuture(listOf(CommonTestData.bridgeLogs[1])))
 
-    val requestDto = requestDatDecorator.invoke(request).get()
+    whenever(executionProverClient.requestProof(any()))
+      .thenReturn(
+        SafeFuture.completedFuture(
+          BatchExecutionProofResponse(
+            startBlockNumber = 123UL,
+            endBlockNumber = 124UL
+          )
+        )
+      )
 
-    assertThat(requestDto.keccakParentStateRootHash).isEqualTo(stateRoot)
-    assertThat(requestDto.zkParentStateRootHash).isEqualTo(type2StateResponse.zkParentStateRootHash.encodeHex())
-    assertThat(requestDto.conflatedExecutionTracesFile).isEqualTo("123-114-conflated-traces.json")
-    assertThat(requestDto.tracesEngineVersion).isEqualTo("1.0.0")
-    assertThat(requestDto.type2StateManagerVersion).isEqualTo("2.0.0")
-    assertThat(requestDto.zkStateMerkleProof).isEqualTo(type2StateResponse.zkStateMerkleProof)
-    assertThat(requestDto.blocksData).hasSize(2)
-    assertThat(requestDto.blocksData[0]).isEqualTo(
-      RlpBridgeLogsData(
-        rlp = "123".toByteArray().encodeHex(),
-        bridgeLogs = listOf(CommonTestData.bridgeLogs[0])
+    val batch = zkProofCreationCoordinator.createZkProof(
+      blocksConflation = BlocksConflation(
+        blocks = listOf(block1, block2),
+        conflationResult = ConflationCalculationResult(
+          startBlockNumber = 123UL,
+          endBlockNumber = 124UL,
+          conflationTrigger = ConflationTrigger.TRACES_LIMIT,
+          tracesCounters = fakeTracesCountersV1(0u)
+        )
+      ),
+      traces = BlocksTracesConflated(
+        tracesResponse = generateTracesResponse,
+        zkStateTraces = type2StateResponse
       )
-    )
-    assertThat(requestDto.blocksData[1]).isEqualTo(
-      RlpBridgeLogsData(
-        rlp = "124".toByteArray().encodeHex(),
-        bridgeLogs = listOf(CommonTestData.bridgeLogs[1])
-      )
-    )
+    ).get()
+
+    assertThat(batch.startBlockNumber).isEqualTo(123UL)
+    assertThat(batch.endBlockNumber).isEqualTo(124UL)
   }
 }

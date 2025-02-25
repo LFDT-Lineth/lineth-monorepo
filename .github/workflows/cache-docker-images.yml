@@ -39,9 +39,7 @@ jobs:
           list-files: "json"
           filters: |
             cache_images:
-              - 'docker/compose.yml'
-              - 'docker/compose-local-dev.overrides.yml'
-              - 'docker/compose-local-dev-traces-v2.overrides.yml'
+              - 'docker/compose-*.yml'
 
   pull-and-cache-images:
     needs: [ check-dockerhub-secrets-present, changes ]
@@ -73,7 +71,8 @@ jobs:
       - name: Pull docker images
         if: steps.cache-common-docker-images.outputs.cache-hit != 'true'
         run: |
-          docker compose -f docker/compose.yml -f docker/compose-local-dev-traces-v2.overrides.yml --profile l1 --profile l2 pull
+          COMPOSE_PROFILES=l1,l2 docker compose -f docker/compose-tracing-v1-ci-extension.yml pull && \
+          COMPOSE_PROFILES=l1,l2 docker compose -f docker/compose-tracing-v2-ci-extension.yml pull
       - name: Cache docker images
         if: steps.cache-common-docker-images.outputs.cache-hit != 'true'
         run: |

@@ -1,6 +1,7 @@
 package net.consensys.zkevm.ethereum.coordination.conflation.upgrade
 
 import kotlinx.datetime.Instant
+import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.linea.traces.TracesCountersV1
 import net.consensys.linea.traces.fakeTracesCountersV1
 import net.consensys.zkevm.domain.BlockCounters
@@ -12,6 +13,7 @@ import net.consensys.zkevm.ethereum.coordination.conflation.GlobalBlockConflatio
 import net.consensys.zkevm.ethereum.coordination.conflation.TracesConflationCalculator
 import org.assertj.core.api.Assertions
 import org.junit.jupiter.api.Test
+import org.mockito.Mockito
 import org.mockito.Mockito.clearInvocations
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.spy
@@ -49,7 +51,8 @@ class SwitchAwareCalculatorTest {
         TracesCountersV1.EMPTY_TRACES_COUNT
       ),
       blobCalculator = mockBlobCalculator,
-      batchesLimit = 10U
+      batchesLimit = 10U,
+      metricsFacade = org.mockito.kotlin.mock<MetricsFacade>(defaultAnswer = Mockito.RETURNS_DEEP_STUBS)
     )
     return newCalculator
   }

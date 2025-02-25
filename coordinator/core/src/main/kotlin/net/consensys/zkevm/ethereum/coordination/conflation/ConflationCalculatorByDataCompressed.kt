@@ -42,10 +42,8 @@ class ConflationCalculatorByDataCompressed(
       throw IllegalStateException("Trying to append unvalidated block. Please call checkOverflow first.")
     }
     val appendResult = blobCompressor.appendBlock(blockCounters.blockRLPEncoded)
-    val compressionRatio = 1.0 - (
-      (appendResult.compressedSizeAfter - appendResult.compressedSizeBefore).toDouble() /
-        blockCounters.blockRLPEncoded.size
-      )
+    val compressedDataSize = appendResult.compressedSizeAfter - appendResult.compressedSizeBefore
+    val compressionRatio = 1.0 - compressedDataSize.toDouble().div(blockCounters.blockRLPEncoded.size)
     log.debug(
       "compression result: blockNumber={} blockRlpSize={} blobSizeBefore={} " +
         "blobSizeAfter={} blockCompressionRatio={}",
@@ -80,6 +78,10 @@ class ConflationCalculatorByDataCompressed(
   fun startNewBatch() {
     dataSizeUpToLastBatch = dataSize
     blobCompressor.startNewBatch()
+  }
+
+  fun getCompressedDataSizeInCurrentBatch(): UInt {
+    return dataSize - dataSizeUpToLastBatch
   }
 
   fun getCompressedData(): ByteArray {

@@ -5,12 +5,10 @@ import com.fasterxml.jackson.databind.node.ArrayNode
 import io.vertx.core.Vertx
 import linea.encoding.BlockRLPEncoder
 import linea.kotlin.encodeHex
-import linea.kotlin.toBigInteger
-import net.consensys.linea.async.toSafeFuture
+import linea.kotlin.toHexString
 import net.consensys.zkevm.coordinator.clients.BatchExecutionProofRequestV1
 import net.consensys.zkevm.coordinator.clients.BatchExecutionProofResponse
 import net.consensys.zkevm.coordinator.clients.ExecutionProverClientV2
-import net.consensys.zkevm.coordinator.clients.L2MessageServiceLogsClient
 import net.consensys.zkevm.coordinator.clients.prover.serialization.JsonSerialization
 import net.consensys.zkevm.domain.ProofIndex
 import net.consensys.zkevm.domain.RlpBridgeLogsData
@@ -18,8 +16,6 @@ import net.consensys.zkevm.encoding.BlockEncoder
 import net.consensys.zkevm.fileio.FileReader
 import net.consensys.zkevm.fileio.FileWriter
 import org.apache.logging.log4j.LogManager
-import org.web3j.protocol.Web3j
-import org.web3j.protocol.core.DefaultBlockParameter
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.nio.file.Path
 
@@ -33,45 +29,29 @@ data class BatchExecutionProofRequestDto(
   val blocksData: List<RlpBridgeLogsData>
 )
 
-internal class ExecutionProofRequestDataDecorator(
-  private val l2MessageServiceLogsClient: L2MessageServiceLogsClient,
-  private val l2Web3jClient: Web3j,
+internal class ExecutionProofRequestDtoMapper(
   private val encoder: BlockEncoder = BlockRLPEncoder
 ) : (BatchExecutionProofRequestV1) -> SafeFuture<BatchExecutionProofRequestDto> {
-  private fun getBlockStateRootHash(blockNumber: ULong): SafeFuture<String> {
-    return l2Web3jClient
-      .ethGetBlockByNumber(
-        DefaultBlockParameter.valueOf(blockNumber.toBigInteger()),
-        false
-      )
-      .sendAsync()
-      .thenApply { block -> block.block.stateRoot }
-      .toSafeFuture()
-  }
-
   override fun invoke(request: BatchExecutionProofRequestV1): SafeFuture<BatchExecutionProofRequestDto> {
-    val bridgeLogsSfList = request.blocks.map { block ->
-      l2MessageServiceLogsClient.getBridgeLogs(blockNumber = block.number.toLong())
-        .thenApply { block to it }
+    val blocksData = request.blocks.map { block ->
+      val rlp = encoder.encode(block).encodeHex()
+      val bridgeLogs = request.bridgeLogs.filter {
+        it.blockNumber == block.number.toHexString()
+      }
+      RlpBridgeLogsData(rlp, bridgeLogs)
     }
 
-    return SafeFuture.collectAll(bridgeLogsSfList.stream())
-      .thenCombine(
-        getBlockStateRootHash(request.blocks.first().number - 1UL)
-      ) { blocksAndBridgeLogs, previousKeccakStateRootHash ->
-        BatchExecutionProofRequestDto(
-          zkParentStateRootHash = request.type2StateData.zkParentStateRootHash.encodeHex(),
-          keccakParentStateRootHash = previousKeccakStateRootHash,
-          conflatedExecutionTracesFile = request.tracesResponse.tracesFileName,
-          tracesEngineVersion = request.tracesResponse.tracesEngineVersion,
-          type2StateManagerVersion = request.type2StateData.zkStateManagerVersion,
-          zkStateMerkleProof = request.type2StateData.zkStateMerkleProof,
-          blocksData = blocksAndBridgeLogs.map { (block, bridgeLogs) ->
-            val rlp = encoder.encode(block).encodeHex()
-            RlpBridgeLogsData(rlp, bridgeLogs)
-          }
-        )
-      }
+    return SafeFuture.completedFuture(
+      BatchExecutionProofRequestDto(
+        zkParentStateRootHash = request.type2StateData.zkParentStateRootHash.encodeHex(),
+        keccakParentStateRootHash = request.keccakParentStateRootHash.encodeHex(),
+        conflatedExecutionTracesFile = request.tracesResponse.tracesFileName,
+        tracesEngineVersion = request.tracesResponse.tracesEngineVersion,
+        type2StateManagerVersion = request.type2StateData.zkStateManagerVersion,
+        zkStateMerkleProof = request.type2StateData.zkStateMerkleProof,
+        blocksData = blocksData
+      )
+    )
   }
 }
 
@@ -90,9 +70,7 @@ class FileBasedExecutionProverClientV2(
   config: FileBasedProverConfig,
   private val tracesVersion: String,
   private val stateManagerVersion: String,
-  l2MessageServiceLogsClient: L2MessageServiceLogsClient,
   vertx: Vertx,
-  l2Web3jClient: Web3j,
   jsonObjectMapper: ObjectMapper = JsonSerialization.proofResponseMapperV1,
   executionProofRequestFileNameProvider: ProverFileNameProvider =
     ExecutionProofRequestFileNameProvider(
@@ -114,7 +92,7 @@ class FileBasedExecutionProverClientV2(
     fileReader = FileReader(vertx, jsonObjectMapper, Any::class.java),
     requestFileNameProvider = executionProofRequestFileNameProvider,
     responseFileNameProvider = executionProofResponseFileNameProvider,
-    requestMapper = ExecutionProofRequestDataDecorator(l2MessageServiceLogsClient, l2Web3jClient),
+    requestMapper = ExecutionProofRequestDtoMapper(),
     responseMapper = { throw UnsupportedOperationException("Batch execution proof response shall not be parsed!") },
     proofTypeLabel = "batch",
     log = LogManager.getLogger(FileBasedExecutionProverClientV2::class.java)

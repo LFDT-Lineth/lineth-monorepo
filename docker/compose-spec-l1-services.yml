@@ -78,9 +78,9 @@ services:
       - /bin/bash
       - -c
       - |
-        PRAGUE=${PRAGUE} bash /generate-genesis.sh
+        PRAGUE=${PRAGUE:-} bash /generate-genesis.sh
         /usr/local/bin/eth2-testnet-genesis deneb \
-        --config /config/network-config.yml \${L1_GENESIS_TIME:+--timestamp ${L1_GENESIS_TIME} \}
+        --config /config/network-config.yml \${L1_GENESIS_TIME:+--timestamp ${L1_GENESIS_TIME:-} \}
         --mnemonics /config/mnemonics.yaml \
         --tranches-dir /data/l1-node-config/tranches \
         --state-output /data/l1-node-config/genesis.ssz \

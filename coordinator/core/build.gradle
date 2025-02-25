@@ -12,12 +12,12 @@ dependencies {
   api project(':jvm-libs:linea:clients:interfaces')
   api project(':jvm-libs:linea:clients:linea-state-manager')
   api project(':jvm-libs:linea:core:traces')
+  api project(':jvm-libs:linea:web3j-extensions')
   api project(':jvm-libs:generic:errors')
   api project(':jvm-libs:generic:extensions:kotlin')
   api project(':jvm-libs:generic:extensions:futures')
   api "tech.pegasys.teku.internal:unsigned:${libs.versions.teku.get()}"
   api "org.jetbrains.kotlinx:kotlinx-datetime:${libs.versions.kotlinxDatetime.get()}"
-  implementation project(":jvm-libs:linea:metrics:micrometer")
   implementation "io.vertx:vertx-core"
   // jackson shall never be used in the core module
   // however, it is used already :( but was as transitive through Teku Execution Client
@@ -34,7 +34,7 @@ dependencies {
   testFixturesImplementation("org.web3j:core:${libs.versions.web3j.get()}") {
     exclude group: 'org.slf4j', module: 'slf4j-nop'
   }
-  testImplementation project(':jvm-libs:linea:metrics:micrometer')
+  testFixturesImplementation project(':jvm-libs:linea:metrics:micrometer')
   testImplementation(testFixtures(project(':jvm-libs:linea:core:traces')))
   testImplementation(testFixtures(project(':jvm-libs:generic:extensions:kotlin')))
   testImplementation("io.vertx:vertx-junit5")
