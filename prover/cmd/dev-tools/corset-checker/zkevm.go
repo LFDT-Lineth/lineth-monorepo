@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/consensys/go-corset/pkg/mir"
 	"github.com/consensys/linea-monorepo/prover/config"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	"github.com/consensys/linea-monorepo/prover/zkevm/arithmetization"
@@ -8,9 +9,12 @@ import (
 
 var globalArith *arithmetization.Arithmetization
 
-func MakeDefine(cfg *config.Config) wizard.DefineFunc {
+func MakeDefine(cfg *config.Config, optConfig *mir.OptimisationConfig) wizard.DefineFunc {
 	return func(build *wizard.Builder) {
-		globalArith = arithmetization.NewArithmetization(build, arithmetization.Settings{Limits: &cfg.TracesLimits})
+		globalArith = arithmetization.NewArithmetization(build, arithmetization.Settings{
+			Limits:            &cfg.TracesLimits,
+			OptimisationLevel: optConfig,
+		})
 
 	}
 }

@@ -3,6 +3,7 @@ package zkevm
 import (
 	"sync"
 
+	"github.com/consensys/go-corset/pkg/mir"
 	"github.com/consensys/linea-monorepo/prover/config"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/dummy"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
@@ -29,7 +30,8 @@ func CheckerZkEvm(tl *config.TracesLimits) *ZkEvm {
 	onceCheckerZkEvm.Do(func() {
 		settings := Settings{
 			Arithmetization: arithmetization.Settings{
-				Limits: tl,
+				Limits:            tl,
+				OptimisationLevel: &mir.DEFAULT_OPTIMISATION_LEVEL,
 			},
 			CompilationSuite: checkerCompilationSuite,
 			Metadata: wizard.VersionMetadata{

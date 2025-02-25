@@ -3,6 +3,7 @@ package zkevm
 import (
 	"sync"
 
+	"github.com/consensys/go-corset/pkg/mir"
 	"github.com/consensys/linea-monorepo/prover/config"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/vortex"
@@ -47,7 +48,8 @@ func PartialZkEvm(tl *config.TracesLimits) *ZkEvm {
 		// modules to verify keccak or the state-manager traces.
 		settings := Settings{
 			Arithmetization: arithmetization.Settings{
-				Limits: tl,
+				Limits:            tl,
+				OptimisationLevel: &mir.DEFAULT_OPTIMISATION_LEVEL,
 			},
 			CompilationSuite: partialCompilationSuite,
 			Metadata: wizard.VersionMetadata{

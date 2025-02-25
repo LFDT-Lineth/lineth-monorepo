@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/consensys/go-corset/pkg/air"
+	"github.com/consensys/go-corset/pkg/mir"
 	"github.com/consensys/linea-monorepo/prover/backend/files"
 	"github.com/consensys/linea-monorepo/prover/config"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
@@ -12,6 +13,10 @@ import (
 // Settings specifies the parameters for the arithmetization part of the zkEVM.
 type Settings struct {
 	Limits *config.TracesLimits
+	// OptimisationLevel determines the optimisation level which go-corset will
+	// apply when compiling the zkevm.bin file to AIR constraints.  If in doubt,
+	// use mir.DEFAULT_OPTIMISATION_LEVEL.
+	OptimisationLevel *mir.OptimisationConfig
 }
 
 // Arithmetization exposes all the methods relevant for the user to interact
@@ -26,8 +31,7 @@ type Arithmetization struct {
 // NewArithmetization is the function that declares all the columns and the constraints of
 // the zkEVM in the input builder object.
 func NewArithmetization(builder *wizard.Builder, settings Settings) *Arithmetization {
-
-	schema, errS := ReadZkevmBin()
+	schema, _, errS := ReadZkevmBin(settings.OptimisationLevel)
 	if errS != nil {
 		panic(errS)
 	}

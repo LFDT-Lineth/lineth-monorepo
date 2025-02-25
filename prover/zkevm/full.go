@@ -3,6 +3,7 @@ package zkevm
 import (
 	"sync"
 
+	"github.com/consensys/go-corset/pkg/mir"
 	"github.com/consensys/linea-monorepo/prover/config"
 	"github.com/consensys/linea-monorepo/prover/crypto/ringsis"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler"
@@ -127,7 +128,8 @@ func fullZKEVMWithSuite(tl *config.TracesLimits, suite compilationSuite) *ZkEvm 
 	settings := Settings{
 		CompilationSuite: suite,
 		Arithmetization: arithmetization.Settings{
-			Limits: tl,
+			Limits:            tl,
+			OptimisationLevel: &mir.DEFAULT_OPTIMISATION_LEVEL,
 		},
 		Statemanager: statemanager.Settings{
 			AccSettings: accumulator.Settings{

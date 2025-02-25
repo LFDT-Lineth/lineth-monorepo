@@ -102,6 +102,8 @@ github.com/consensys/gnark-crypto v0.14.1-0.20250117145449-0493a37cc361 h1:7HGt1
 github.com/consensys/gnark-crypto v0.14.1-0.20250117145449-0493a37cc361/go.mod h1:q9s22Y0WIHd9UCBfD+xGeW8wDJ7WAGZZpMrLFqzBzrQ=
 github.com/consensys/go-corset v0.0.0-20250217020957-ab7f2d548fa8 h1:q6LG3JTvcx9OfKKWDS/5xcT0+mO2gHJnKKpy5mdMN+g=
 github.com/consensys/go-corset v0.0.0-20250217020957-ab7f2d548fa8/go.mod h1:rNP3hMR2Sjy5EdQNTHINwaM5kD08E3CSw8CCKhljjO8=
+github.com/consensys/go-corset v0.0.0-20250219023519-757eed939609 h1:UW+f/2XpsFc3FahhhDfK3bvmzpS0LriEm/1NzPctkDU=
+github.com/consensys/go-corset v0.0.0-20250219023519-757eed939609/go.mod h1:rNP3hMR2Sjy5EdQNTHINwaM5kD08E3CSw8CCKhljjO8=
 github.com/coreos/go-semver v0.3.0/go.mod h1:nnelYz7RCh+5ahJtPPxZlU+153eP4D4r3EedlOD2RNk=
 github.com/coreos/go-systemd/v22 v22.3.2/go.mod h1:Y58oyj3AT4RCenI/lSvhwexgC+NSVTIJ3seZv2GcEnc=
 github.com/coreos/go-systemd/v22 v22.5.0/go.mod h1:Y58oyj3AT4RCenI/lSvhwexgC+NSVTIJ3seZv2GcEnc=
