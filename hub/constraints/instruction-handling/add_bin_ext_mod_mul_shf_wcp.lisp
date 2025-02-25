@@ -57,17 +57,16 @@
 
 (defun (stateless-instruction---precondition) (* PEEK_AT_STACK (- 1 stack/SUX stack/SOX)))
 
-;; TODO: comment out
-;; sanity check
-(defconstraint add-bin-ext-mod-mul-shf-wcp-safeguard (:guard PEEK_AT_STACK)
-               (begin
-                 (eq! (stateless-instructions---classifier)
-                      (+ (stateless-instruction---is-EXP)
-                         (stateless-instruction---isnt-EXP)))
-                 (eq! (stateless-instructions---classifier)
-                      (+ (stateless-instruction---1-argument-instruction)
-                         (stateless-instruction---2-argument-instruction)
-                         (stateless-instruction---3-argument-instruction)))))
+;; ;; stupid sanity checks
+;; (defconstraint add-bin-ext-mod-mul-shf-wcp-safeguard (:guard PEEK_AT_STACK)
+;;                (begin
+;;                  (eq! (stateless-instructions---classifier)
+;;                       (+ (stateless-instruction---is-EXP)
+;;                          (stateless-instruction---isnt-EXP)))
+;;                  (eq! (stateless-instructions---classifier)
+;;                       (+ (stateless-instruction---1-argument-instruction)
+;;                          (stateless-instruction---2-argument-instruction)
+;;                          (stateless-instruction---3-argument-instruction)))))
 
 (defconstraint stateless-instruction---stack-pattern (:guard (stateless-instruction---precondition))
                (begin

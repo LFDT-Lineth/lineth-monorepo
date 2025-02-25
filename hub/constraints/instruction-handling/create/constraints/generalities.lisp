@@ -16,7 +16,7 @@
 
 (defun    (create-instruction---generic-precondition)    (*    PEEK_AT_SCENARIO    (scenario-shorthand---CREATE---sum)))
 
-;; TODO: does this monstrosity work ???
+;; monstrous ...
 (defconstraint    create-instruction---setting-the-stack-pattern                            (:guard    (create-instruction---generic-precondition))
                   (shift (create-stack-pattern    (shift (create-instruction---is-CREATE2)  2))  -2))
 

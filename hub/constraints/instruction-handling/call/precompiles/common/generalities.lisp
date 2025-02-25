@@ -56,17 +56,6 @@
 (defun    (precompile-processing---common---OOB-empty-call-data)      (shift    [misc/OOB_DATA    7]    precompile-processing---common---1st-misc-row---row-offset))
 (defun    (precompile-processing---common---OOB-r@c-nonzero)          (shift    [misc/OOB_DATA    8]    precompile-processing---common---1st-misc-row---row-offset)) ;; ""
 
-
-;; TODO: we can remove this if we want, it's purely debug
-(defconstraint    precompile-processing---common---implicitly-true-of-OOB-shorthands---debug    (:guard    (precompile-processing---common---precondition))
-                  (begin
-                    (is-binary    (precompile-processing---common---OOB-hub-success)       )
-                    (is-binary    (precompile-processing---common---OOB-extract-call-data) )
-                    (is-binary    (precompile-processing---common---OOB-r@c-nonzero)       )
-                    (vanishes!    (eq!  (precompile-processing---common---OOB-hub-success)
-                                        (+   (precompile-processing---common---OOB-extract-call-data)
-                                             (precompile-processing---common---OOB-empty-call-data))))))
-
 (defconstraint    precompile-processing---common---setting-MMU-instruction    (:guard    (precompile-processing---common---precondition))
                   (if-not-zero    (shift    misc/MMU_FLAG    precompile-processing---common---1st-misc-row---row-offset)
                                   (begin

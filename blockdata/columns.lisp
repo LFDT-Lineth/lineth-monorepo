@@ -32,7 +32,6 @@
  )
 
  (defalias 
-  ;; TODO: update specs to make these aliases instead of shorthands
   IS_CB   IS_COINBASE
   IS_TS   IS_TIMESTAMP
   IS_NB   IS_NUMBER

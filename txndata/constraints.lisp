@@ -26,7 +26,7 @@
 (defconstraint   padding-is-padding ()
                  (if-zero ABS
                           (begin (debug (vanishes! CT))
-                                 (vanishes! (weighted-sum-of-binary-columns-for-transaction-constancy))))) ;;TODO: useless, but in the spec
+                                 (vanishes! (weighted-sum-of-binary-columns-for-transaction-constancy)))))
 
 (defconstraint   abs-tx-num-increments ()
                  (stamp-progression ABS))

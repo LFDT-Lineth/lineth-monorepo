@@ -47,11 +47,8 @@
                  (if-not-zero   (machine-state-instruction---isnt-JUMPDEST)   (stack-pattern-0-1))
                  (if-not-zero   (machine-state-instruction---is-JUMPDEST)     (stack-pattern-0-0))))
 
-;; TODO: debug shouldn't require another 'non-debug' constraint
 (defconstraint machine-state-instruction---excluding-certain-exceptions (:guard (machine-state-instruction---no-stack-exception))
-               (begin
-                 (eq!          XAHOY   stack/OOGX)
-                 (debug (eq!   XAHOY   CMC))))
+               (eq!   XAHOY   stack/OOGX))
 
 (defconstraint machine-state-instruction---setting-NSR               (:guard (machine-state-instruction---no-stack-exception))
                (eq!    NSR    (+ (machine-state-instruction---is-MSIZE) CMC)))

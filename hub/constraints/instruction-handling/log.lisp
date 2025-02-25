@@ -50,7 +50,7 @@
                                          [ stack/DEC_FLAG 3 ]
                                          [ stack/DEC_FLAG 4 ])) ;; ""
 
-(defconstraint    log-instruction---allowable-exceptions                             (:guard (log-instruction---standard-hypothesis))         ;; TODO: solo debug constraint plz
+(defconstraint    log-instruction---allowable-exceptions                             (:guard (log-instruction---standard-hypothesis))
                   (eq! XAHOY (+ stack/STATICX
                                 stack/MXPX
                                 stack/OOGX)))

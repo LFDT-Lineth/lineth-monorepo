@@ -56,28 +56,24 @@
                  (if-not-zero (jump-instruction---is-JUMP)   (stack-pattern-1-0))
                  (if-not-zero (jump-instruction---is-JUMPI)  (stack-pattern-2-0))))
 
-;; TODO: allow for debug only constraints
-;; TODO: remove ugly hack
 (defconstraint jump-instruction---allowable-exceptions                        (:guard (jump-instruction---no-stack-exception))
-               (begin
-                 (eq! XAHOY (+ stack/OOGX stack/JUMPX))))
+               (eq! XAHOY (+ stack/OOGX stack/JUMPX)))
 
 
 (defconstraint jump-instruction---setting-the-gas-cost                        (:guard (jump-instruction---no-stack-exception))
                (eq! GAS_COST stack/STATIC_GAS))
 
 (defconstraint jump-instruction---setting-NSR                                 (:guard (jump-instruction---no-stack-exception))
-               (if-not-zero (force-bin stack/OOGX)
-                            ;; OOGX = 1
-                            (begin (eq!        NSR CMC)
-                                   (debug (eq! NSR 1  )))
-                            ;; OOGX = 0
-                            (eq! NSR (+ 3 CMC))))
+               (if-not-zero    (force-bin stack/OOGX)
+                               ;; OOGX = 1
+                               (eq!        NSR CMC)
+                               ;; OOGX = 0
+                               (eq! NSR (+ 3 CMC))))
 
 (defconstraint jump-instruction---setting-peeking-flags                       (:guard (jump-instruction---no-stack-exception))
                (if-not-zero (force-bin stack/OOGX)
                             ;; OOGX = 1
-                            (eq! NSR (shift PEEK_AT_CONTEXT  ROW_OFFSET_FOR_JUMP_OOGX_CONTEXT_ROW)) ;; TODO: redundant, make debug
+                            (eq! NSR (shift PEEK_AT_CONTEXT  ROW_OFFSET_FOR_JUMP_OOGX_CONTEXT_ROW))
                             ;; OOGX = 0
                             (eq! NSR (+ (shift PEEK_AT_CONTEXT             ROW_OFFSET_FOR_JUMP_NO_OOGX_CURRENT_CONTEXT_ROW)
                                         (shift PEEK_AT_ACCOUNT             ROW_OFFSET_FOR_JUMP_NO_OOGX_ADDRESS_ROW)

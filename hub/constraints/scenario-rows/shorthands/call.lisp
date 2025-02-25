@@ -235,8 +235,7 @@
     ))
 
 ;;  CALL/callee_warmth_update_not_required
-(defun (scenario-shorthand---CALL---callee-warmth-update-not-required)
-  (+    scenario/CALL_EXCEPTION    0))    ;; TODO: test if removing the (+ ... 0) causes compilation issues; it certainly breaks the syntax highlighting :/
+(defun (scenario-shorthand---CALL---callee-warmth-update-not-required) scenario/CALL_EXCEPTION) ;; ""
 
 ;;  CALL/callee_warmth_update_required
 (defun (scenario-shorthand---CALL---callee-warmth-update-required)
@@ -335,8 +334,8 @@
 ;; (defun (scenario-shorthand---CALL---)
 ;;   (+
 ;;     scenario/CALL_EXCEPTION
-    ;; scenario/CALL_ABORT_WILL_REVERT
-    ;; scenario/CALL_ABORT_WONT_REVERT
+;;     scenario/CALL_ABORT_WILL_REVERT
+;;     scenario/CALL_ABORT_WONT_REVERT
 ;;     scenario/CALL_EOA_SUCCESS_CALLER_WILL_REVERT
 ;;     scenario/CALL_EOA_SUCCESS_CALLER_WONT_REVERT
 ;;     scenario/CALL_SMC_FAILURE_CALLER_WILL_REVERT

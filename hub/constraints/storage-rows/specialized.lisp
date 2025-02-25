@@ -48,18 +48,6 @@
 ;;                                        ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; ;; TODO: make sure that binary@prove in the column declaration
-;; ;; of the storage perspective makes this obsolete
-;; (defconstraint storage-binarities (:perspective storage)
-;;                (begin
-;;                  (is-binary VALUE_ORIG_IS_ZERO)
-;;                  (is-binary VALUE_NEXT_IS_ZERO)
-;;                  (is-binary VALUE_NEXT_IS_CURR)
-;;                  (is-binary VALUE_NEXT_IS_ORIG)
-;;                  (is-binary VALUE_CURR_IS_ZERO)
-;;                  (is-binary VALUE_CURR_IS_ORIG)
-;;                  (is-binary VALUE_CURR_CHANGES)))
-
 (defconstraint setting-storage-binary-flag-VALUE_ORIG_IS_ZERO (:perspective storage)
                (begin
                  (if-not-zero VALUE_ORIG_HI

@@ -11,14 +11,14 @@
                 ( FROM_ADDRESS_HI              :i32  )
                 ( FROM_ADDRESS_LO              :i128 )
                 ( NONCE                        :i64  )
-                ( INITIAL_BALANCE              :i128 ) ;; TODO: vastly exagerated
-                ( VALUE                        :i128 ) ;; TODO: vastly exagerated
+                ( INITIAL_BALANCE              :i128 )
+                ( VALUE                        :i128 )
 
                 ;; to account related
                 ( TO_ADDRESS_HI                :i32  )
                 ( TO_ADDRESS_LO                :i128 )
-                ( REQUIRES_EVM_EXECUTION       :binary@prove ) ;; TODO: demote to debug constraint
-                ( COPY_TXCD                    :binary@prove ) ;; TODO: demote to debug constraint
+                ( REQUIRES_EVM_EXECUTION       :binary )
+                ( COPY_TXCD                    :binary )
                 ( IS_DEPLOYMENT                :binary )
                 ( IS_TYPE2                     :binary )
 
@@ -27,7 +27,7 @@
                 ( GAS_INITIALLY_AVAILABLE      :i64 )
                 ( GAS_PRICE                    :i64 )
                 ( PRIORITY_FEE_PER_GAS         :i64 )
-                ( BASEFEE                      :i64 ) ;; TODO: vastly exagerated for Linea application
+                ( BASEFEE                      :i64 ) ;; in Linea London this is hard-coded to 7 ... but in the reference tests this may be much larger
 
                 ;; call data or init code
                 ( CALL_DATA_SIZE               :i32 )

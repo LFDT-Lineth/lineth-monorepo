@@ -21,10 +21,6 @@
                                                  (if-not-zero     COUNTER_TLI
                                                                   (remained-constant!    col))))
 
-;; TODO: remove PEEK_AT_STACK -- stack-row-constancy will be used on stack rows where this is already a precondition
-
-
-
 (defconstraint hub-stamp-constancy-of-TLI-and-NSR ()
                (begin
                  (hub-stamp-constancy    TLI)

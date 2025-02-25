@@ -4,7 +4,8 @@
 
   ;; selector
   PEEK_AT_STACK
-  (;; stack items
+  (
+  ;; stack items
    ( STACK_ITEM_HEIGHT       :array [4] :i11)   ;; stack items have heights 0 ≤ h ≤ 1024
    ( STACK_ITEM_VALUE_HI     :array [4] :i128)
    ( STACK_ITEM_VALUE_LO     :array [4] :i128)
@@ -13,7 +14,7 @@
 
    ;; instruction and instruction decoded flags
    ( INSTRUCTION             :byte :display :opcode)
-   ( STATIC_GAS              :i32    )  ;; TODO: vastly exagerated, shouldn't carry values greater than 32_000 so :i16 should suffice)
+   ( STATIC_GAS              :i16    ) 
    ( ACC_FLAG                :binary )
    ( ADD_FLAG                :binary )
    ( BIN_FLAG                :binary )

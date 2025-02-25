@@ -293,9 +293,9 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defun  (b-sum-1 b1 b2 b3 b4) (+ b1 b2 b3 b4))
-(defun  (b-sum-2 b2 b3 b4) (+    b2 b3 b4))
-(defun  (b-sum-3 b3 b4) (+       b3 b4))
-(defun  (b-sum-4 b4)             b4 )
+(defun  (b-sum-2 b2 b3 b4)    (+    b2 b3 b4))
+(defun  (b-sum-3 b3 b4)       (+       b3 b4))
+(defun  (b-sum-4 b4)                      b4 )
 
 (defun (log-stack-pattern param (b1 :binary) (b2 :binary) (b3 :binary) (b4 :binary))
                 (begin

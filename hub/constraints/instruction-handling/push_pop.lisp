@@ -20,7 +20,7 @@
                   (:guard (push-pop-instruction---standard-hypothesis))
                   (eq! NSR CMC))
 
-;; TODO: this could be debug ... not sure we want to do it, though
+;; this could be debug ...
 (defconstraint    push-pop-instruction---setting-the-peeking-flags
                   (:guard (push-pop-instruction---standard-hypothesis))
                   (eq! NSR

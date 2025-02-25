@@ -1,15 +1,15 @@
 (module hub)
 
 (defcolumns
-    ( ABSOLUTE_TRANSACTION_NUMBER               :i16 )   ;; TODO: vastly exagerated
-    ( RELATIVE_BLOCK_NUMBER                     :i16 )   ;; TODO: vastly exagerated
+    ( ABSOLUTE_TRANSACTION_NUMBER               :i16 )
+    ( RELATIVE_BLOCK_NUMBER                     :i16 )
     ( TX_SKIP                                   :binary@prove )
     ( TX_WARM                                   :binary@prove )
     ( TX_INIT                                   :binary@prove )
     ( TX_EXEC                                   :binary@prove )
     ( TX_FINL                                   :binary@prove )
     ( HUB_STAMP                                 :i32 )
-    ( HUB_STAMP_TRANSACTION_END                 :i32 )           ;; for SELFDESTRUCT
+    ( HUB_STAMP_TRANSACTION_END                 :i32 )
     ( CONTEXT_MAY_CHANGE                        :binary@prove )
     ( EXCEPTION_AHOY                            :binary@prove )
 
@@ -34,11 +34,11 @@
     ( CONTEXT_REVERT_STAMP                      :i32 )
 
     ;;
-    ( CODE_FRAGMENT_INDEX                       :i32 )
-    ( PROGRAM_COUNTER                           :i32 )
-    ( PROGRAM_COUNTER_NEW                       :i32 )
+    ( CODE_FRAGMENT_INDEX                       :i16 )
+    ( PROGRAM_COUNTER                           :i24 )
+    ( PROGRAM_COUNTER_NEW                       :i24 )
     ( HEIGHT                                    :i11 ) ;; values in the range [0 .. 1024] (inclusive)
-    ( HEIGHT_NEW                                :i11 ) ;; same
+    ( HEIGHT_NEW                                :i11 )
 
     ;; peeking flags
     ( PEEK_AT_ACCOUNT                           :binary@prove )

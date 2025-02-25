@@ -51,7 +51,7 @@
   ROFF_SELFDESTRUCT___ACCOUNT_DELETION_ROW         4
   )
 
-;; TODO: uncomment
+;;
 (defun    (selfdestruct-instruction---raw-recipient-address-hi)  (shift [stack/STACK_ITEM_VALUE_HI 1]       ROFF_SELFDESTRUCT___STACK_ROW))   ;; ""
 (defun    (selfdestruct-instruction---raw-recipient-address-lo)  (shift [stack/STACK_ITEM_VALUE_LO 1]       ROFF_SELFDESTRUCT___STACK_ROW))   ;; ""
 (defun    (selfdestruct-instruction---STATICX)                   (shift stack/STATICX                       ROFF_SELFDESTRUCT___STACK_ROW))

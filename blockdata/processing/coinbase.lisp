@@ -17,8 +17,8 @@
                  (begin (eq!   (curr-COINBASE-hi)   COINBASE_HI)
                         (eq!   (curr-COINBASE-lo)   COINBASE_LO)))
 
-;; TODO: correct spec name
-(defconstraint   coinbase---is-indeed-a-20-byte-integer
+;; ensures that the coinbase is a 20 = 4 + 16 byte integer
+(defconstraint   coinbase---upper-bound
                  (:guard (coinbase-precondition))
                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                  (wcp-call-to-LT    0

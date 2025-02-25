@@ -8,10 +8,10 @@
 		;; context-row columns
 		(
 		 ;; (immutable) context data
-		 ( CONTEXT_NUMBER                    :i32          )
+		 ( CONTEXT_NUMBER                    :i32          ) ;; rmk: deduced from the HUB_STAMP; could likely be reduced to :i24 (i.e. ~ 16M); though: limitless prover ...
 		 ( CALL_STACK_DEPTH                  :i11          ) ;; in the range [0 .. 1024] (inclusive)
-		 ( IS_ROOT                           :binary@prove ) ;; binaryness should be demoted to a debug cosntraint
-		 ( IS_STATIC                         :binary@prove ) ;; binaryness should be demoted to a debug cosntraint
+		 ( IS_ROOT                           :binary@prove ) ;; rmk: set at the creation of the context explicitly to 0 or 1; imposed to be context-constant; the @prove is therefore redundant; we keep it for now as a safet;
+		 ( IS_STATIC                         :binary@prove ) ;; rmk: same remark 
 
 		 ;; (immutable) account
 		 ( ACCOUNT_ADDRESS_HI                :i32  )

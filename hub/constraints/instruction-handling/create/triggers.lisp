@@ -42,7 +42,7 @@
                                                                         (create-instruction---MXP-mtntop)
                                                                         (create-instruction---is-CREATE2)))
 
-(defun    (create-instruction---hash-init-code-and-send-to-ROM)   (*    (scenario-shorthand---CREATE---not-rebuffed-nonempty-init-code)  ;; TODO: undefined control sequence
+(defun    (create-instruction---hash-init-code-and-send-to-ROM)   (*    (scenario-shorthand---CREATE---not-rebuffed-nonempty-init-code)
                                                                         (create-instruction---is-CREATE2)))
 
 (defun    (create-instruction---send-init-code-to-ROM)            (*    (scenario-shorthand---CREATE---not-rebuffed-nonempty-init-code)

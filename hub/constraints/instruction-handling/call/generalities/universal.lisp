@@ -167,7 +167,7 @@
                                           (scenario-shorthand---CALL---abort)
                                           (scenario-shorthand---CALL---smart-contract)
                                           (scenario-shorthand---CALL---externally-owned-account)
-                                          (scenario-shorthand---CALL---precompile))                ;; TODO: @Olivier: there is still a TODO in the spec here (and the final shorthand isn't included ...)
+                                          (scenario-shorthand---CALL---precompile))
                                     (eq!    GAS_COST    (call-instruction---STP-gas-upfront)))))
 
 (defconstraint    call-instruction---setting-GAS_NEXT                      (:guard    (call-instruction---standard-precondition))

@@ -92,7 +92,7 @@
 (defconstraint    copy-instruction---setting-the-stack-pattern (:guard (copy-instruction---standard-precondition))
                   (copy-stack-pattern (copy-instruction---is-EXTCODECOPY)))
 
-(defconstraint    copy-instruction---allowable-exceptions (:guard (copy-instruction---standard-precondition));; TODO: make debug
+(defconstraint    copy-instruction---allowable-exceptions (:guard (copy-instruction---standard-precondition));; could be debug ...
                   (eq! XAHOY
                        (+ (* (copy-instruction---is-RETURNDATACOPY) stack/RDCX) stack/MXPX stack/OOGX)))
 
@@ -171,7 +171,7 @@
 (defconstraint    copy-instruction---misc-row---setting-RDCX (:guard (copy-instruction---standard-precondition))
                   (if-zero (shift misc/OOB_FLAG ROFF_COPY_INST_MISCELLANEOUS_ROW)
                            ;; OOB_FLAG ≡ 0
-                           ;; TODO: zero case is redundant; careful when modifying the constraint (if-zero vs. if-not-zero)
+                           ;; zero case is redundant ...
                            (vanishes! stack/RDCX)
                            ;; OOB_FLAG ≡ 1
                            (eq! stack/RDCX (copy-instruction---OOB-raises-return-data-exception))))
