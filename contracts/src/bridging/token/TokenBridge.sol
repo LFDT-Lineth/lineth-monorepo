@@ -320,7 +320,7 @@ contract TokenBridge is
    * @param _nativeToken The address of the token on its native chain.
    * @param _amount The amount of the token to be received.
    * @param _recipient The address that will receive the tokens.
-   * @param _chainId The token's origin layer chaindId
+   * @param _chainId The token's origin layer chainId
    * @param _tokenMetadata Additional data used to deploy the bridged token if it
    *   doesn't exist already.
    */
@@ -483,7 +483,7 @@ contract TokenBridge is
 
   /**
    * @dev Linea can set a custom ERC-20 contract for specific ERC-20.
-   *   For security purpose, Linea can only call this function if the token has
+   *   For security purposes, Linea can only call this function if the token has
    *   not been bridged yet.
    * @dev SET_CUSTOM_CONTRACT_ROLE is required to execute.
    * @param _nativeToken The address of the token on the source chain.
