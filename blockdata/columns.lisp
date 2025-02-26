@@ -14,7 +14,7 @@
  (INST                :byte :display :opcode)
  (COINBASE_HI         :i32)
  (COINBASE_LO         :i128)
- (BLOCK_GAS_LIMIT     :i64)
+ (BLOCK_GAS_LIMIT     :i32)
  (BASEFEE             :i64)
  (FIRST_BLOCK_NUMBER  :i48)
  (REL_BLOCK           :i16)
