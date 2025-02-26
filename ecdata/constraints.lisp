@@ -189,7 +189,6 @@
            (begin (vanishes! ACC_PAIRINGS)
                   (eq! (next ACC_PAIRINGS) (next IS_ECPAIRING_DATA)))))
 
-;; TODO: modify in the specs too
 (defconstraint set-acc-pairings-increment ()
   (if-not-zero IS_ECPAIRING_DATA
                (eq! (next ACC_PAIRINGS)
