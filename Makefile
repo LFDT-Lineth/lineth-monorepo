@@ -151,7 +151,7 @@ ZKEVM_MODULES_FOR_OLD_REPLAY_TESTS := ${CONSTANTS} \
 				     ${WCP}
 
 
-zkevm_for_reference_tests.bin: ${ZKEVM_MODULES_FOR_OLD_REPLAY_TESTS}
+zkevm_for_old_replay_tests.bin: ${ZKEVM_MODULES_FOR_OLD_REPLAY_TESTS}
 	${GO_CORSET_COMPILE} -o $@ ${ZKEVM_MODULES_FOR_OLD_REPLAY_TESTS}
 
 # Corset is order sensitive - to compile, we load the constants first
@@ -187,5 +187,5 @@ ZKEVM_MODULES_FOR_REFERENCE_TESTS := ${CONSTANTS} \
 				     ${WCP}
 
 
-zkevm_for_old_replay_tests.bin: ${ZKEVM_MODULES_FOR_REFERENCE_TESTS}
+zkevm_for_reference_tests.bin: ${ZKEVM_MODULES_FOR_REFERENCE_TESTS}
 	${GO_CORSET_COMPILE} -o $@ ${ZKEVM_MODULES_FOR_REFERENCE_TESTS}
