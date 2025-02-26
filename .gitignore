@@ -1,5 +1,6 @@
 zkevm.bin
 zkevm.go.bin
 zkevm_for_reference_tests.bin
+zkevm_for_old_replay_tests.bin
 zkevm.go
 *.swp
