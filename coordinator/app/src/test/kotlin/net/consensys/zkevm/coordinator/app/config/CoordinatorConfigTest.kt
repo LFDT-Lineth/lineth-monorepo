@@ -45,8 +45,7 @@ class CoordinatorConfigTest {
       _smartContractErrors = mapOf(
         // L1 Linea Rollup
         "0f06cd15" to "DataAlreadySubmitted",
-        "c01eab56" to "EmptySubmissionData",
-        "abefa5e8" to "DataStartingBlockDoesNotMatch"
+        "c01eab56" to "EmptySubmissionData"
       ),
       fetchBlocksLimit = 4000
     )

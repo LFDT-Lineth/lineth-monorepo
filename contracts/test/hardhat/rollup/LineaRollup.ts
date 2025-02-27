@@ -587,7 +587,7 @@ describe("Linea Rollup contract", () => {
       await expectRevertWithCustomError(lineaRollup, submitDataCall, "DataAlreadySubmitted", [expectedShnarf]);
     });
 
-    it("Should revert with SnarkHashIsZeroHash when snarkHash is zero hash", async () => {
+    it("Should revert when snarkHash is zero hash", async () => {
       const submissionData: CalldataSubmissionData = {
         ...DATA_ONE,
         snarkHash: HASH_ZERO,
@@ -852,7 +852,7 @@ describe("Linea Rollup contract", () => {
       );
     });
 
-    it("Should revert with SnarkHashIsZeroHash when snarkHash is zero hash", async () => {
+    it("Should revert when snarkHash is zero hash", async () => {
       const operatorHDSigner = getWalletForIndex(2);
 
       const lineaRollupAddress = await lineaRollup.getAddress();
