@@ -378,7 +378,7 @@ function completeBridging(address _nativeToken, uint256 _amount, address _recipi
 ```
 
 _It can only be called from the Message Service. To finalize the bridging
-  process, a user or postmen needs to use the `claimMessage` function of the
+  process, a user or postman needs to use the `claimMessage` function of the
   Message Service to trigger the transaction._
 
 #### Parameters
@@ -388,7 +388,7 @@ _It can only be called from the Message Service. To finalize the bridging
 | _nativeToken | address | The address of the token on its native chain. |
 | _amount | uint256 | The amount of the token to be received. |
 | _recipient | address | The address that will receive the tokens. |
-| _chainId | uint256 | The source chainId or target chaindId for this token |
+| _chainId | uint256 | The source chainId or target chainId for this token |
 | _tokenMetadata | bytes | Additional data used to deploy the bridged token if it   doesn't exist already. |
 
 ### confirmDeployment
@@ -490,7 +490,7 @@ function setCustomContract(address _nativeToken, address _targetContract) extern
 ```
 
 _Linea can set a custom ERC-20 contract for specific ERC-20.
-  For security purpose, Linea can only call this function if the token has
+  For security purposes, Linea can only call this function if the token has
   not been bridged yet._
 
 #### Parameters

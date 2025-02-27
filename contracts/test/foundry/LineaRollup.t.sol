@@ -2,15 +2,29 @@
 pragma solidity 0.8.28;
 
 import "forge-std/Test.sol";
-import "../../contracts/LineaRollup.sol";
-import "../../contracts/interfaces/l1/ILineaRollup.sol";
-import "../../contracts/lib/Utils.sol";
-import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+
+import { EfficientLeftRightKeccak } from "src/libraries/EfficientLeftRightKeccak.sol";
+import { LineaRollup } from "src/rollup/LineaRollup.sol";
+import { ILineaRollup } from "src/rollup/interfaces/ILineaRollup.sol";
+
+import { IPauseManager } from "src/security/pausing/interfaces/IPauseManager.sol";
+import { IPermissionsManager } from "src/security/access/interfaces/IPermissionsManager.sol";
+import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import { ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 contract LineaRollupTestHelper is LineaRollup {
   function calculateY(bytes calldata data, bytes32 dataEvaluationPoint) external pure returns (bytes32) {
     return _calculateY(data, dataEvaluationPoint);
+  }
+
+  function computeShnarf(
+    bytes32 _parentShnarf,
+    bytes32 _snarkHash,
+    bytes32 _finalStateRootHash,
+    bytes32 _dataEvaluationPoint,
+    bytes32 _dataEvaluationClaim
+  ) external pure returns (bytes32 shnarf) {
+      return _computeShnarf(_parentShnarf, _snarkHash, _finalStateRootHash, _dataEvaluationPoint, _dataEvaluationClaim);
   }
 }
 
@@ -81,11 +95,17 @@ contract LineaRollupTest is Test {
     // Adjust compressedData to start with 0x00
     submission.compressedData = hex"00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff";
 
-    bytes32 dataEvaluationPoint = Utils._efficientKeccak(submission.snarkHash, keccak256(submission.compressedData));
+    bytes32 dataEvaluationPoint = EfficientLeftRightKeccak._efficientKeccak(submission.snarkHash, keccak256(submission.compressedData));
 
     bytes32 dataEvaluationClaim = lineaRollup.calculateY(submission.compressedData, dataEvaluationPoint);
 
-    bytes32 parentShnarf = lineaRollup.GENESIS_SHNARF();
+    bytes32 parentShnarf = lineaRollup.computeShnarf(
+      0x0,
+      0x0,
+      0x0,
+      0x0,
+      0x0
+    );
 
     bytes32 expectedShnarf = keccak256(
       abi.encodePacked(

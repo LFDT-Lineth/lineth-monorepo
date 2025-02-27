@@ -3,6 +3,7 @@ src = 'src'
 out = 'out'
 libs = ['node_modules', 'lib']
 cache_path  = 'cache_forge'
+foundry_version = "stable"
 
 # Test settings
 match-path = 'test/foundry/*'
