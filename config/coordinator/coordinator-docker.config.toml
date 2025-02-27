@@ -152,7 +152,8 @@ max-receipt-retries=120
 blocks-to-finalization=0
 
 [blob-submission]
-disabled=true
+disabled=false
+use-eth-estimate-gas=false
 db-polling-interval="PT1S"
 max-blobs-to-return=100
 proof-submission-delay="PT1S"
@@ -165,6 +166,7 @@ priority-fee-per-gas-lower-bound=200000000 # 0.2 GWEI
 
 [aggregation-finalization]
 disabled=false
+use-eth-estimate-gas=true
 db-polling-interval="PT1S"
 max-aggregations-to-finalize-per-tick=1
 proof-submission-delay="PT1S"

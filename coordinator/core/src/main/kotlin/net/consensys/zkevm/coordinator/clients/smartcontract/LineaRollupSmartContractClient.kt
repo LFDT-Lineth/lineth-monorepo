@@ -32,7 +32,6 @@ interface LineaRollupSmartContractClient : LineaRollupSmartContractClientReadOnl
   fun finalizeBlocksEthCall(
     aggregation: ProofToFinalize,
     aggregationLastBlob: BlobRecord,
-    parentShnarf: ByteArray,
     parentL1RollingHash: ByteArray,
     parentL1RollingHashMessageNumber: Long
   ): SafeFuture<String?>
@@ -48,7 +47,14 @@ interface LineaRollupSmartContractClient : LineaRollupSmartContractClientReadOnl
   fun finalizeBlocks(
     aggregation: ProofToFinalize,
     aggregationLastBlob: BlobRecord,
-    parentShnarf: ByteArray,
+    parentL1RollingHash: ByteArray,
+    parentL1RollingHashMessageNumber: Long,
+    gasPriceCaps: GasPriceCaps?
+  ): SafeFuture<String>
+
+  fun finalizeBlocksAfterEthCall(
+    aggregation: ProofToFinalize,
+    aggregationLastBlob: BlobRecord,
     parentL1RollingHash: ByteArray,
     parentL1RollingHashMessageNumber: Long,
     gasPriceCaps: GasPriceCaps?

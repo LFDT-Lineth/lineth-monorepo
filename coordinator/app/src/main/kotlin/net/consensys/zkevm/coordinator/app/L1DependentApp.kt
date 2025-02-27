@@ -439,7 +439,8 @@ class L1DependentApp(
       ),
       contractGasProvider = primaryOrFallbackGasProvider,
       web3jClient = l1Web3jClient,
-      smartContractErrors = smartContractErrors
+      smartContractErrors = smartContractErrors,
+      useEthEstimateGas = configs.blobSubmission.useEthEstimateGas
     )
   }
 
@@ -526,44 +527,48 @@ class L1DependentApp(
 
   private val latestBlobSubmittedBlockNumberTracker = LatestBlobSubmittedBlockNumberTracker(0UL)
   private val blobSubmissionCoordinator = run {
-    metricsFacade.createGauge(
-      category = LineaMetricsCategory.BLOB,
-      name = "highest.submitted.on.l1",
-      description = "Highest submitted blob end block number on l1",
-      measurementSupplier = { latestBlobSubmittedBlockNumberTracker.get() }
-    )
+    if (!configs.blobSubmission.enabled) {
+      DisabledLongRunningService
+    } else {
+      metricsFacade.createGauge(
+        category = LineaMetricsCategory.BLOB,
+        name = "highest.submitted.on.l1",
+        description = "Highest submitted blob end block number on l1",
+        measurementSupplier = { latestBlobSubmittedBlockNumberTracker.get() }
+      )
 
-    val blobSubmissionDelayHistogram = metricsFacade.createHistogram(
-      category = LineaMetricsCategory.BLOB,
-      name = "submission.delay",
-      description = "Delay between blob submission and end block timestamps",
-      baseUnit = "seconds"
-    )
+      val blobSubmissionDelayHistogram = metricsFacade.createHistogram(
+        category = LineaMetricsCategory.BLOB,
+        name = "submission.delay",
+        description = "Delay between blob submission and end block timestamps",
+        baseUnit = "seconds"
+      )
 
-    val blobSubmittedEventConsumers: Map<Consumer<BlobSubmittedEvent>, String> = mapOf(
-      Consumer<BlobSubmittedEvent> { blobSubmission ->
-        latestBlobSubmittedBlockNumberTracker(blobSubmission)
-      } to "Submitted Blob Tracker Consumer",
-      Consumer<BlobSubmittedEvent> { blobSubmission ->
-        blobSubmissionDelayHistogram.record(blobSubmission.getSubmissionDelay().toDouble())
-      } to "Blob Submission Delay Consumer"
-    )
+      val blobSubmittedEventConsumers: Map<Consumer<BlobSubmittedEvent>, String> = mapOf(
+        Consumer<BlobSubmittedEvent> { blobSubmission ->
+          latestBlobSubmittedBlockNumberTracker(blobSubmission)
+        } to "Submitted Blob Tracker Consumer",
+        Consumer<BlobSubmittedEvent> { blobSubmission ->
+          blobSubmissionDelayHistogram.record(blobSubmission.getSubmissionDelay().toDouble())
+        } to "Blob Submission Delay Consumer"
+      )
 
-    BlobSubmissionCoordinator.create(
-      config = BlobSubmissionCoordinator.Config(
-        configs.blobSubmission.dbPollingInterval.toKotlinDuration(),
-        configs.blobSubmission.proofSubmissionDelay.toKotlinDuration(),
-        configs.blobSubmission.maxBlobsToSubmitPerTick.toUInt()
-      ),
-      blobsRepository = blobsRepository,
-      aggregationsRepository = aggregationsRepository,
-      lineaSmartContractClient = lineaSmartContractClientForDataSubmission,
-      gasPriceCapProvider = gasPriceCapProviderForDataSubmission,
-      alreadySubmittedBlobsFilter = alreadySubmittedBlobsFilter,
-      blobSubmittedEventDispatcher = EventDispatcher(blobSubmittedEventConsumers),
-      vertx = vertx,
-      clock = Clock.System
-    )
+      BlobSubmissionCoordinator.create(
+        config = BlobSubmissionCoordinator.Config(
+          configs.blobSubmission.dbPollingInterval.toKotlinDuration(),
+          configs.blobSubmission.proofSubmissionDelay.toKotlinDuration(),
+          configs.blobSubmission.maxBlobsToSubmitPerTick.toUInt()
+        ),
+        blobsRepository = blobsRepository,
+        aggregationsRepository = aggregationsRepository,
+        lineaSmartContractClient = lineaSmartContractClientForDataSubmission,
+        gasPriceCapProvider = gasPriceCapProviderForDataSubmission,
+        alreadySubmittedBlobsFilter = alreadySubmittedBlobsFilter,
+        blobSubmittedEventDispatcher = EventDispatcher(blobSubmittedEventConsumers),
+        vertx = vertx,
+        clock = Clock.System
+      )
+    }
   }
 
   private val proofAggregationCoordinatorService: LongRunningService = run {
@@ -656,7 +661,8 @@ class L1DependentApp(
         transactionManager = finalizationTransactionManager,
         contractGasProvider = primaryOrFallbackGasProvider,
         web3jClient = l1Web3jClient,
-        smartContractErrors = smartContractErrors
+        smartContractErrors = smartContractErrors,
+        useEthEstimateGas = configs.aggregationFinalization.useEthEstimateGas
       )
 
       val latestFinalizationSubmittedBlockNumberTracker = LatestFinalizationSubmittedBlockNumberTracker(0UL)

@@ -130,7 +130,6 @@ fun submitBlobsAndAggregationsAndWaitExecution(
       val txHash = contractClientForAggregationSubmission.finalizeBlocks(
         aggregation = aggregation.aggregationProof!!,
         aggregationLastBlob = aggBlobs.last(),
-        parentShnarf = aggBlobs.first().blobCompressionProof!!.prevShnarf,
         parentL1RollingHash = parentAgg?.aggregationProof?.l1RollingHash ?: ByteArray(32),
         parentL1RollingHashMessageNumber = parentAgg?.aggregationProof?.l1RollingHashMessageNumber ?: 0L,
         gasPriceCaps = null

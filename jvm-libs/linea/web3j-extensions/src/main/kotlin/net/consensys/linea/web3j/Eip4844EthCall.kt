@@ -25,7 +25,7 @@ class Eip4844Transaction(
   chainId: Long?,
   maxPriorityFeePerGas: BigInteger?,
   maxFeePerGas: BigInteger?,
-  _maxFeePerBlobGas: BigInteger,
+  _maxFeePerBlobGas: BigInteger?,
   @JsonProperty("blobs")
   @JsonSerialize(contentUsing = BlobSerializer::class)
   val blobs: List<Blob>,
@@ -35,7 +35,7 @@ class Eip4844Transaction(
   val blobVersionedHashes: List<Bytes> = computeVersionedHashesFromBlobs(blobs)
 ) : Transaction(from, nonce, gasPrice, gasLimit, to, value, data, chainId, maxPriorityFeePerGas, maxFeePerGas) {
   @Suppress("Unused")
-  val maxFeePerBlobGas: String = Numeric.encodeQuantity(_maxFeePerBlobGas)
+  val maxFeePerBlobGas: String? = _maxFeePerBlobGas?.let { Numeric.encodeQuantity(it) }
   companion object {
     fun computeVersionedHashesFromBlobs(blobs: List<Blob>): List<Bytes> {
       return blobs.map(BlobUtils::getCommitment).map(BlobUtils::kzgToVersionedHash)
@@ -46,7 +46,7 @@ class Eip4844Transaction(
       to: String,
       data: String,
       blobs: List<Blob>,
-      maxFeePerBlobGas: BigInteger,
+      maxFeePerBlobGas: BigInteger? = null,
       gasLimit: BigInteger?,
       blobVersionedHashes: List<Bytes> = computeVersionedHashesFromBlobs(blobs),
       maxPriorityFeePerGas: BigInteger? = null,

@@ -8,6 +8,7 @@ import net.consensys.zkevm.domain.ProofToFinalize
 import net.consensys.zkevm.ethereum.gaspricing.GasPriceCapProvider
 import net.consensys.zkevm.ethereum.submission.logSubmissionError
 import org.apache.logging.log4j.LogManager
+import org.web3j.tx.exceptions.ContractCallException
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.function.Consumer
 
@@ -42,74 +43,45 @@ class AggregationSubmitterImpl(
     parentL1RollingHash: ByteArray,
     parentL1RollingHashMessageNumber: Long
   ): SafeFuture<String?> {
-    log.debug(
-      "eth_call submitting aggregation={}",
-      aggregationProof.intervalString()
-    )
-    return lineaRollup.finalizeBlocksEthCall(
-      aggregation = aggregationProof,
-      aggregationLastBlob = aggregationEndBlob,
-      parentShnarf = parentShnarf,
-      parentL1RollingHash = parentL1RollingHash,
-      parentL1RollingHashMessageNumber = parentL1RollingHashMessageNumber
-    )
-      .whenException { th -> logAggregationSubmissionError(aggregationProof.intervalString(), th, isEthCall = true) }
-      .thenPeek { result ->
-        log.debug("eth_call valid aggregation={} result={}", aggregationProof.intervalString(), result)
+    log.debug("submitting aggregation={}", aggregationProof.intervalString())
+    return (
+      gasPriceCapProvider?.getGasPriceCaps(aggregationProof.firstBlockNumber)
+        ?: SafeFuture.completedFuture(null)
+      ).thenCompose { gasPriceCaps ->
+      val nonce = lineaRollup.currentNonce()
+      lineaRollup.finalizeBlocksAfterEthCall(
+        aggregation = aggregationProof,
+        aggregationLastBlob = aggregationEndBlob,
+        parentL1RollingHash = parentL1RollingHash,
+        parentL1RollingHashMessageNumber = parentL1RollingHashMessageNumber,
+        gasPriceCaps = gasPriceCaps
+      ).thenPeek { transactionHash ->
+        log.info(
+          "submitted aggregation={} transactionHash={} nonce={} gasPriceCaps={}",
+          aggregationProof.intervalString(),
+          transactionHash,
+          nonce,
+          gasPriceCaps
+        )
+        val aggregationSubmittedEvent = FinalizationSubmittedEvent(
+          aggregationProof = aggregationProof,
+          parentShnarf = parentShnarf,
+          parentL1RollingHash = parentL1RollingHash,
+          parentL1RollingHashMessageNumber = parentL1RollingHashMessageNumber,
+          submissionTimestamp = clock.now(),
+          transactionHash = transactionHash.toByteArray()
+        )
+        aggregationSubmittedEventConsumer.accept(aggregationSubmittedEvent)
       }
-      .thenApply { true }
-      .exceptionally { false }
-      .thenCompose { isEthCallSuccessful ->
-        if (!isEthCallSuccessful) {
-          SafeFuture.completedFuture(null)
-        } else {
-          val nonce = lineaRollup.currentNonce()
-          (
-            gasPriceCapProvider?.getGasPriceCaps(aggregationProof.firstBlockNumber)
-              ?: SafeFuture.completedFuture(null)
-            ).thenCompose { gasPriceCaps ->
-            log.debug(
-              "submitting aggregation={} nonce={} gasPriceCaps={}",
-              aggregationProof.intervalString(),
-              nonce,
-              gasPriceCaps
-            )
-            lineaRollup.finalizeBlocks(
-              aggregation = aggregationProof,
-              aggregationLastBlob = aggregationEndBlob,
-              parentShnarf = parentShnarf,
-              parentL1RollingHash = parentL1RollingHash,
-              parentL1RollingHashMessageNumber = parentL1RollingHashMessageNumber,
-              gasPriceCaps = gasPriceCaps
-            )
-              .whenException { th -> logAggregationSubmissionError(aggregationProof.intervalString(), th) }
-              .thenPeek { transactionHash ->
-                log.info(
-                  "submitted aggregation={} transactionHash={} nonce={} gasPriceCaps={}",
-                  aggregationProof.intervalString(),
-                  transactionHash,
-                  nonce,
-                  gasPriceCaps
-                )
-                val aggregationSubmittedEvent = FinalizationSubmittedEvent(
-                  aggregationProof = aggregationProof,
-                  parentShnarf = parentShnarf,
-                  parentL1RollingHash = parentL1RollingHash,
-                  parentL1RollingHashMessageNumber = parentL1RollingHashMessageNumber,
-                  submissionTimestamp = clock.now(),
-                  transactionHash = transactionHash.toByteArray()
-                )
-                aggregationSubmittedEventConsumer.accept(aggregationSubmittedEvent)
-              }
-          }
-        }
-      }
+    }.whenException { th ->
+      logAggregationSubmissionError(aggregationProof.intervalString(), th)
+    }
   }
 
   private fun logAggregationSubmissionError(
     intervalString: String,
     error: Throwable,
-    isEthCall: Boolean = false
+    isEthCall: Boolean = error.cause is ContractCallException
   ) {
     logSubmissionError(
       log,

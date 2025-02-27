@@ -91,14 +91,16 @@ fun createLineaRollupContractClient(
   transactionManager: AsyncFriendlyTransactionManager,
   contractGasProvider: ContractGasProvider,
   web3jClient: Web3j,
-  smartContractErrors: SmartContractErrors
+  smartContractErrors: SmartContractErrors,
+  useEthEstimateGas: Boolean
 ): LineaRollupSmartContractClient {
   return Web3JLineaRollupSmartContractClient.load(
     contractAddress = l1Config.zkEvmContractAddress,
     web3j = web3jClient,
     transactionManager = transactionManager,
     contractGasProvider = contractGasProvider,
-    smartContractErrors = smartContractErrors
+    smartContractErrors = smartContractErrors,
+    useEthEstimateGas = useEthEstimateGas
   )
 }
 

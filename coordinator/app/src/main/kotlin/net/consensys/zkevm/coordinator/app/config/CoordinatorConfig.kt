@@ -221,6 +221,7 @@ data class BlobSubmissionConfig(
   val maxBlobsToSubmitPerTick: Int = maxBlobsToReturn,
   // defaults to 6, not supported atm, preparatory work
   val targetBlobsToSendPerTransaction: Int = 6,
+  val useEthEstimateGas: Boolean = false,
   override var disabled: Boolean = false
 ) : FeatureToggleable {
   init {
@@ -236,6 +237,7 @@ data class AggregationFinalizationConfig(
   val dbPollingInterval: Duration,
   val maxAggregationsToFinalizePerTick: Int,
   val proofSubmissionDelay: Duration,
+  val useEthEstimateGas: Boolean = false,
   override var disabled: Boolean = false
 ) : FeatureToggleable {
   init {
