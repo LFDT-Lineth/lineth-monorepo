@@ -3,7 +3,7 @@ import assert from "assert";
 import { AbstractSigner, BaseContract, BlockTag, TransactionReceipt, TransactionRequest, Wallet, ethers } from "ethers";
 import path from "path";
 import { exec } from "child_process";
-import { L2MessageServiceV1 as L2MessageService, TokenBridgeV1 as TokenBridge, LineaRollupV6 } from "../typechain";
+import { L2MessageServiceV1 as L2MessageService, TokenBridgeV1_1 as TokenBridge, LineaRollupV6 } from "../typechain";
 import {
   PayableOverrides,
   TypedContractEvent,

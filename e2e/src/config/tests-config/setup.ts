@@ -17,8 +17,8 @@ import {
   TestContract__factory,
   TestERC20,
   TestERC20__factory,
-  TokenBridgeV1 as TokenBridge,
-  TokenBridgeV1__factory as TokenBridge__factory,
+  TokenBridgeV1_1 as TokenBridge,
+  TokenBridgeV1_1__factory as TokenBridge__factory,
 } from "../../typechain";
 import { AccountManager } from "./accounts/account-manager";
 

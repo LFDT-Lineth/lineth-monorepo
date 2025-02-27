@@ -56,7 +56,6 @@ export const UNPAUSE_COMPLETE_TOKEN_BRIDGING_ROLE = generateKeccak256(
   ["UNPAUSE_COMPLETE_TOKEN_BRIDGING_ROLE"],
   true,
 );
-export const SET_REMOTE_TOKENBRIDGE_ROLE = generateKeccak256(["string"], ["SET_REMOTE_TOKENBRIDGE_ROLE"], true);
 export const SET_RESERVED_TOKEN_ROLE = generateKeccak256(["string"], ["SET_RESERVED_TOKEN_ROLE"], true);
 export const REMOVE_RESERVED_TOKEN_ROLE = generateKeccak256(["string"], ["REMOVE_RESERVED_TOKEN_ROLE"], true);
 export const SET_CUSTOM_CONTRACT_ROLE = generateKeccak256(["string"], ["SET_CUSTOM_CONTRACT_ROLE"], true);

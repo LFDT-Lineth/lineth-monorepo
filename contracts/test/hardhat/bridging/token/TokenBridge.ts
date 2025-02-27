@@ -5,7 +5,7 @@ import { deployTokenBridgeWithMockMessaging } from "../../../../scripts/tokenBri
 import { deployTokens } from "../../../../scripts/tokenBridge/test/deployTokens";
 import { BridgedToken, TestTokenBridge } from "../../../../typechain-types";
 import { getPermitData } from "./utils/permitHelper";
-import { Contract, ZeroAddress } from "ethers";
+import { Contract } from "ethers";
 import {
   ADDRESS_ZERO,
   COMPLETE_TOKEN_BRIDGING_PAUSE_TYPE,
@@ -15,7 +15,6 @@ import {
   REMOVE_RESERVED_TOKEN_ROLE,
   SET_CUSTOM_CONTRACT_ROLE,
   SET_MESSAGE_SERVICE_ROLE,
-  SET_REMOTE_TOKENBRIDGE_ROLE,
   SET_RESERVED_TOKEN_ROLE,
   UNPAUSE_INITIATE_TOKEN_BRIDGING_ROLE,
   pauseTypeRoles,
@@ -80,6 +79,7 @@ describe("TokenBridge", function () {
           tokenBeacon: PLACEHOLDER_ADDRESS,
           sourceChainId: chainIds[0],
           targetChainId: chainIds[1],
+          remoteSender: PLACEHOLDER_ADDRESS,
           reservedTokens: [],
           roleAddresses: [],
           pauseTypeRoles: [],
@@ -102,6 +102,7 @@ describe("TokenBridge", function () {
             tokenBeacon: PLACEHOLDER_ADDRESS,
             sourceChainId: chainIds[0],
             targetChainId: chainIds[1],
+            remoteSender: PLACEHOLDER_ADDRESS,
             reservedTokens: [],
             roleAddresses: [],
             pauseTypeRoles: [],
@@ -120,6 +121,7 @@ describe("TokenBridge", function () {
             tokenBeacon: ADDRESS_ZERO,
             sourceChainId: chainIds[0],
             targetChainId: chainIds[1],
+            remoteSender: PLACEHOLDER_ADDRESS,
             reservedTokens: [],
             roleAddresses: [],
             pauseTypeRoles: [],
@@ -138,6 +140,26 @@ describe("TokenBridge", function () {
             tokenBeacon: PLACEHOLDER_ADDRESS,
             sourceChainId: chainIds[0],
             targetChainId: chainIds[1],
+            remoteSender: ADDRESS_ZERO,
+            reservedTokens: [],
+            roleAddresses: [],
+            pauseTypeRoles: [],
+            unpauseTypeRoles: [],
+          },
+        ]),
+        "ZeroAddressNotAllowed",
+      );
+
+      await expectRevertWithCustomError(
+        TokenBridge,
+        upgrades.deployProxy(TokenBridge, [
+          {
+            defaultAdmin: PLACEHOLDER_ADDRESS,
+            messageService: PLACEHOLDER_ADDRESS,
+            tokenBeacon: PLACEHOLDER_ADDRESS,
+            sourceChainId: chainIds[0],
+            targetChainId: chainIds[1],
+            remoteSender: PLACEHOLDER_ADDRESS,
             reservedTokens: [PLACEHOLDER_ADDRESS, ADDRESS_ZERO],
             roleAddresses: [
               { addressWithRole: user.address, role: SET_RESERVED_TOKEN_ROLE },
@@ -159,6 +181,7 @@ describe("TokenBridge", function () {
             tokenBeacon: PLACEHOLDER_ADDRESS,
             sourceChainId: chainIds[0],
             targetChainId: chainIds[1],
+            remoteSender: PLACEHOLDER_ADDRESS,
             reservedTokens: [PLACEHOLDER_ADDRESS],
             roleAddresses: [
               { addressWithRole: ADDRESS_ZERO, role: SET_RESERVED_TOKEN_ROLE },
@@ -185,6 +208,7 @@ describe("TokenBridge", function () {
             tokenBeacon: PLACEHOLDER_ADDRESS,
             sourceChainId: 0,
             targetChainId: chainIds[1],
+            remoteSender: PLACEHOLDER_ADDRESS,
             reservedTokens: [],
             roleAddresses: [],
             pauseTypeRoles: [],
@@ -203,6 +227,7 @@ describe("TokenBridge", function () {
             tokenBeacon: PLACEHOLDER_ADDRESS,
             sourceChainId: chainIds[0],
             targetChainId: 0,
+            remoteSender: PLACEHOLDER_ADDRESS,
             reservedTokens: [],
             roleAddresses: [],
             pauseTypeRoles: [],
@@ -226,6 +251,7 @@ describe("TokenBridge", function () {
             tokenBeacon: PLACEHOLDER_ADDRESS,
             sourceChainId: chainIds[0],
             targetChainId: chainIds[0],
+            remoteSender: PLACEHOLDER_ADDRESS,
             reservedTokens: [],
             roleAddresses: [],
             pauseTypeRoles: [],
@@ -249,6 +275,7 @@ describe("TokenBridge", function () {
             tokenBeacon: PLACEHOLDER_ADDRESS,
             sourceChainId: chainIds[0],
             targetChainId: chainIds[1],
+            remoteSender: PLACEHOLDER_ADDRESS,
             reservedTokens: [],
             roleAddresses: [],
             pauseTypeRoles: [],
@@ -268,6 +295,7 @@ describe("TokenBridge", function () {
         tokenBeacon: PLACEHOLDER_ADDRESS,
         sourceChainId: SupportedChainIds.SEPOLIA,
         targetChainId: SupportedChainIds.LINEA_TESTNET,
+        remoteSender: PLACEHOLDER_ADDRESS,
         reservedTokens: [],
         roleAddresses: [],
         pauseTypeRoles: [],
@@ -740,6 +768,7 @@ describe("TokenBridge", function () {
           sourceChainId: chainIds[0],
           targetChainId: chainIds[1],
           reservedTokens: [CUSTOM_ADDRESS],
+          remoteSender: PLACEHOLDER_ADDRESS,
           roleAddresses: [],
           pauseTypeRoles: pauseTypeRoles,
           unpauseTypeRoles: unpauseTypeRoles,
@@ -945,24 +974,6 @@ describe("TokenBridge", function () {
     });
   });
 
-  describe("setRemoteTokenBridge", function () {
-    it("Should revert if remoteTokenBridge has not been initialized", async function () {
-      const { owner, l1TokenBridge } = await loadFixture(deployContractsFixture);
-      await expect(
-        l1TokenBridge.connect(owner).setRemoteTokenBridge(await l1TokenBridge.getAddress()),
-      ).to.revertedWithCustomError(l1TokenBridge, "RemoteTokenBridgeAlreadySet");
-    });
-
-    it("Should revert if called by non-owner", async function () {
-      const { user, l1TokenBridge } = await loadFixture(deployContractsFixture);
-
-      await expectRevertWithReason(
-        l1TokenBridge.connect(user).setRemoteTokenBridge(await l1TokenBridge.getAddress()),
-        buildAccessErrorMessage(user, SET_REMOTE_TOKENBRIDGE_ROLE),
-      );
-    });
-  });
-
   describe("setDeployed", function () {
     it("Should revert if not called by the messageService", async function () {
       const { user, l1TokenBridge } = await loadFixture(deployContractsFixture);
@@ -985,42 +996,6 @@ describe("TokenBridge", function () {
             l1TokenBridge.interface.encodeFunctionData("setDeployed", [[]]),
           ),
         "SenderNotAuthorized",
-      );
-    });
-  });
-
-  describe("reinitializePauseTypesAndPermissions", function () {
-    it("Should revert with ZeroAddressNotAllowed when addressWithRole is zero address in reinitializePauseTypesAndPermissions", async function () {
-      const { owner, l1TokenBridge } = await loadFixture(deployContractsFixture);
-
-      const roleAddresses = [{ addressWithRole: ZeroAddress, role: SET_RESERVED_TOKEN_ROLE }];
-
-      await expectRevertWithCustomError(
-        l1TokenBridge,
-        l1TokenBridge.reinitializePauseTypesAndPermissions(
-          owner.address,
-          roleAddresses,
-          pauseTypeRoles,
-          unpauseTypeRoles,
-        ),
-        "ZeroAddressNotAllowed",
-      );
-    });
-
-    it("Should revert with ZeroAddressNotAllowed when default admin is zero address", async function () {
-      const { owner, l1TokenBridge } = await loadFixture(deployContractsFixture);
-
-      const roleAddresses = [{ addressWithRole: owner.address, role: SET_RESERVED_TOKEN_ROLE }];
-
-      await expectRevertWithCustomError(
-        l1TokenBridge,
-        l1TokenBridge.reinitializePauseTypesAndPermissions(
-          ZeroAddress, //owner is set to zeroaddress
-          roleAddresses,
-          pauseTypeRoles,
-          unpauseTypeRoles,
-        ),
-        "ZeroAddressNotAllowed",
       );
     });
   });

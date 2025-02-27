@@ -12,7 +12,7 @@ import {
   contractName as TokenBridgeContractName,
   abi as TokenBridgeAbi,
   bytecode as TokenBridgeBytecode,
-} from "./dynamic-artifacts/TokenBridgeV1.json";
+} from "./dynamic-artifacts/TokenBridgeV1_1.json";
 import {
   contractName as UpgradeableBeaconContractName,
   abi as UpgradeableBeaconAbi,
@@ -58,18 +58,29 @@ async function main() {
   const wallet = new ethers.Wallet(process.env.PRIVATE_KEY!, provider);
 
   let walletNonce;
+  let remoteDeployerNonce;
 
   if (process.env.TOKEN_BRIDGE_L1 === "true") {
-    if (!process.env.L1_NONCE) {
-      walletNonce = await wallet.getNonce();
-    } else {
-      walletNonce = parseInt(process.env.L1_NONCE) + ORDERED_NONCE_POST_LINEAROLLUP;
-    }
+    walletNonce = await getL1DeployerNonce();
+    remoteDeployerNonce = await getL2DeployerNonce();
   } else {
-    if (!process.env.L2_NONCE) {
-      walletNonce = await wallet.getNonce();
+    walletNonce = await getL2DeployerNonce();
+    remoteDeployerNonce = await getL1DeployerNonce();
+  }
+
+  async function getL1DeployerNonce(): Promise<number> {
+    if (!process.env.L1_NONCE) {
+      return await wallet.getNonce();
     } else {
-      walletNonce = parseInt(process.env.L2_NONCE) + ORDERED_NONCE_POST_L2MESSAGESERVICE;
+      return parseInt(process.env.L1_NONCE) + ORDERED_NONCE_POST_LINEAROLLUP;
+    }
+  }
+
+  async function getL2DeployerNonce(): Promise<number> {
+    if (!process.env.L2_NONCE) {
+      return await wallet.getNonce();
+    } else {
+      return parseInt(process.env.L2_NONCE) + ORDERED_NONCE_POST_L2MESSAGESERVICE;
     }
   }
 
@@ -109,10 +120,14 @@ async function main() {
   let reservedAddresses = process.env.L2_RESERVED_TOKEN_ADDRESSES
     ? process.env.L2_RESERVED_TOKEN_ADDRESSES.split(",")
     : [];
+  const remoteSender = ethers.getCreateAddress({
+    from: process.env.REMOTE_DEPLOYER_ADDRESS || "",
+    nonce: remoteDeployerNonce + 4,
+  });
 
   if (process.env.TOKEN_BRIDGE_L1 === "true") {
     console.log(
-      `TOKEN_BRIDGE_L1=${process.env.TOKEN_BRIDGE_L1}. Deploying TokenBridge on L1, using L1_RESERVED_TOKEN_ADDRESSES environment variable`,
+      `TOKEN_BRIDGE_L1=${process.env.TOKEN_BRIDGE_L1}. Deploying TokenBridge on L1, using L1_RESERVED_TOKEN_ADDRESSES environment variable and remoteSender=${remoteSender}`,
     );
     deployingChainMessageService = lineaRollupAddress;
     reservedAddresses = process.env.L1_RESERVED_TOKEN_ADDRESSES
@@ -120,7 +135,7 @@ async function main() {
       : [];
   } else {
     console.log(
-      `TOKEN_BRIDGE_L1=${process.env.TOKEN_BRIDGE_L1}. Deploying TokenBridge on L2, using L2_RESERVED_TOKEN_ADDRESSES environment variable`,
+      `TOKEN_BRIDGE_L1=${process.env.TOKEN_BRIDGE_L1}. Deploying TokenBridge on L2, using L2_RESERVED_TOKEN_ADDRESSES environment variable and remoteSender=${remoteSender}`,
     );
   }
 
@@ -131,6 +146,7 @@ async function main() {
       tokenBeacon: beaconProxyAddress,
       sourceChainId: chainId,
       targetChainId: remoteChainId,
+      remoteSender: remoteSender,
       reservedTokens: reservedAddresses,
       roleAddresses,
       pauseTypeRoles,

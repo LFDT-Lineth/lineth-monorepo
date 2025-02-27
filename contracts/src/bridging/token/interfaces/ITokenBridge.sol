@@ -17,6 +17,7 @@ interface ITokenBridge {
    * @param tokenBeacon The address of the tokenBeacon.
    * @param sourceChainId The source chain id of the current layer.
    * @param targetChainId The target chaind id of the targeted layer.
+   * @param remoteSender Address of the remote token bridge.
    * @param reservedTokens The list of reserved tokens to be set.
    * @param roleAddresses The list of addresses and roles to assign permissions to.
    * @param pauseTypeRoles The list of pause types to associate with roles.
@@ -28,6 +29,7 @@ interface ITokenBridge {
     address tokenBeacon;
     uint256 sourceChainId;
     uint256 targetChainId;
+    address remoteSender;
     address[] reservedTokens;
     IPermissionsManager.RoleAddress[] roleAddresses;
     IPauseManager.PauseTypeRole[] pauseTypeRoles;
@@ -293,12 +295,6 @@ interface ITokenBridge {
    * @param _token The address of the token to be set as reserved.
    */
   function setReserved(address _token) external;
-
-  /**
-   * @dev Sets the address of the remote token bridge. Can only be called once.
-   * @param _remoteTokenBridge The address of the remote token bridge to be set.
-   */
-  function setRemoteTokenBridge(address _remoteTokenBridge) external;
 
   /**
    * @dev Removes a token from the reserved list.

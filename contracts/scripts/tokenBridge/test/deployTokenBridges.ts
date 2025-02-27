@@ -19,6 +19,12 @@ export async function deployTokenBridge(messageServiceAddress: string, verbose =
   // Deploying TokenBridges
   const TokenBridgeFactory = await ethers.getContractFactory("TokenBridge");
 
+  await upgrades.deployImplementation(TokenBridgeFactory);
+  // When upgrade OZ contracts to 5.X and Hardhat Upgrades plugin to 3.X, remove the line below (as deployProxyAdmin will be deprecated)
+  await upgrades.deployProxyAdmin(owner);
+
+  // deployProxy will implicitly do deployImplementation and deployProxyAdmin if they have not previously been done.
+  // This will mess with our nonce calculation for the counterfactual address of l2TokenBridge, so we prevent these steps from being handled implicitly in deployProxy.
   const l1TokenBridge = (await upgrades.deployProxy(TokenBridgeFactory, [
     {
       defaultAdmin: owner.address,
@@ -27,6 +33,7 @@ export async function deployTokenBridge(messageServiceAddress: string, verbose =
       sourceChainId: chainIds[0],
       targetChainId: chainIds[1],
       reservedTokens: [],
+      remoteSender: ethers.getCreateAddress({ from: await owner.getAddress(), nonce: 1 + (await owner.getNonce()) }), // Counterfactual address of l2TokenBridge
       roleAddresses: roleAddresses,
       pauseTypeRoles: pauseTypeRoles,
       unpauseTypeRoles: unpauseTypeRoles,
@@ -45,6 +52,7 @@ export async function deployTokenBridge(messageServiceAddress: string, verbose =
       sourceChainId: chainIds[1],
       targetChainId: chainIds[0],
       reservedTokens: [],
+      remoteSender: await l1TokenBridge.getAddress(),
       roleAddresses: roleAddresses,
       pauseTypeRoles: pauseTypeRoles,
       unpauseTypeRoles: unpauseTypeRoles,
@@ -53,13 +61,6 @@ export async function deployTokenBridge(messageServiceAddress: string, verbose =
   await l2TokenBridge.waitForDeployment();
   if (verbose) {
     console.log("L2TokenBridge deployed, at address:", await l2TokenBridge.getAddress());
-  }
-
-  // Setting reciprocal addresses of TokenBridges
-  await l1TokenBridge.setRemoteTokenBridge(await l2TokenBridge.getAddress());
-  await l2TokenBridge.setRemoteTokenBridge(await l1TokenBridge.getAddress());
-  if (verbose) {
-    console.log("Reciprocal addresses of TokenBridges set");
   }
 
   if (verbose) {
