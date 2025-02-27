@@ -136,7 +136,7 @@ describe("Linea Rollup contract", () => {
 
     const lineaRollup = (await deployUpgradableFromFactory("TestLineaRollup", [initializationData], {
       initializer: LINEA_ROLLUP_INITIALIZE_SIGNATURE,
-      unsafeAllow: ["constructor"],
+      unsafeAllow: ["constructor", "incorrect-initializer-order"],
     })) as unknown as TestLineaRollup;
 
     return lineaRollup;
@@ -198,7 +198,7 @@ describe("Linea Rollup contract", () => {
 
       const deployCall = deployUpgradableFromFactory("src/rollup/LineaRollup.sol:LineaRollup", [initializationData], {
         initializer: LINEA_ROLLUP_INITIALIZE_SIGNATURE,
-        unsafeAllow: ["constructor"],
+        unsafeAllow: ["constructor", "incorrect-initializer-order"],
       });
 
       await expectRevertWithCustomError(lineaRollup, deployCall, "ZeroAddressNotAllowed");
@@ -221,7 +221,7 @@ describe("Linea Rollup contract", () => {
 
       const deployCall = deployUpgradableFromFactory("TestLineaRollup", [initializationData], {
         initializer: LINEA_ROLLUP_INITIALIZE_SIGNATURE,
-        unsafeAllow: ["constructor"],
+        unsafeAllow: ["constructor", "incorrect-initializer-order"],
       });
 
       await expectRevertWithCustomError(lineaRollup, deployCall, "ZeroAddressNotAllowed");
@@ -244,7 +244,7 @@ describe("Linea Rollup contract", () => {
 
       const deployCall = deployUpgradableFromFactory("TestLineaRollup", [initializationData], {
         initializer: LINEA_ROLLUP_INITIALIZE_SIGNATURE,
-        unsafeAllow: ["constructor"],
+        unsafeAllow: ["constructor", "incorrect-initializer-order"],
       });
 
       await expectRevertWithCustomError(lineaRollup, deployCall, "ZeroAddressNotAllowed");
@@ -267,7 +267,7 @@ describe("Linea Rollup contract", () => {
 
       const deployCall = deployUpgradableFromFactory("TestLineaRollup", [initializationData], {
         initializer: LINEA_ROLLUP_INITIALIZE_SIGNATURE,
-        unsafeAllow: ["constructor"],
+        unsafeAllow: ["constructor", "incorrect-initializer-order"],
       });
 
       await expectRevertWithCustomError(lineaRollup, deployCall, "ZeroAddressNotAllowed");
@@ -313,7 +313,7 @@ describe("Linea Rollup contract", () => {
         [initializationData],
         {
           initializer: LINEA_ROLLUP_INITIALIZE_SIGNATURE,
-          unsafeAllow: ["constructor"],
+          unsafeAllow: ["constructor", "incorrect-initializer-order"],
         },
       );
 
@@ -340,7 +340,7 @@ describe("Linea Rollup contract", () => {
         [initializationData],
         {
           initializer: LINEA_ROLLUP_INITIALIZE_SIGNATURE,
-          unsafeAllow: ["constructor"],
+          unsafeAllow: ["constructor", "incorrect-initializer-order"],
         },
       );
 
@@ -1560,7 +1560,7 @@ describe("Linea Rollup contract", () => {
 
       const betaV1LineaRollup = (await deployUpgradableFromFactory("TestLineaRollup", [initializationData], {
         initializer: LINEA_ROLLUP_INITIALIZE_SIGNATURE,
-        unsafeAllow: ["constructor"],
+        unsafeAllow: ["constructor", "incorrect-initializer-order"],
       })) as unknown as TestLineaRollup;
 
       await betaV1LineaRollup.setupParentShnarf(betaV1FinalizationData.parentAggregationFinalShnarf);
@@ -2268,6 +2268,7 @@ describe("Linea Rollup contract", () => {
       );
       const newLineaRollup = await upgrades.upgradeProxy(lineaRollup, newLineaRollupFactory, {
         unsafeAllowRenames: true,
+        unsafeAllow: ["incorrect-initializer-order"],
       });
 
       const upgradedContract = await newLineaRollup.waitForDeployment();

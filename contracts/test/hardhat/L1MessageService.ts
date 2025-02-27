@@ -61,21 +61,19 @@ describe("L1MessageService", () => {
   let l2Sender: SignerWithAddress;
 
   async function deployTestL1MessageServiceFixture(): Promise<TestL1MessageService> {
-    return deployUpgradableFromFactory("TestL1MessageService", [
-      ONE_DAY_IN_SECONDS,
-      INITIAL_WITHDRAW_LIMIT,
-      pauseTypeRoles,
-      unpauseTypeRoles,
-    ]) as unknown as Promise<TestL1MessageService>;
+    return deployUpgradableFromFactory(
+      "TestL1MessageService",
+      [ONE_DAY_IN_SECONDS, INITIAL_WITHDRAW_LIMIT, pauseTypeRoles, unpauseTypeRoles],
+      { unsafeAllow: ["incorrect-initializer-order"] },
+    ) as unknown as Promise<TestL1MessageService>;
   }
 
   async function deployL1MessageServiceMerkleFixture(): Promise<TestL1MessageServiceMerkleProof> {
-    return deployUpgradableFromFactory("TestL1MessageServiceMerkleProof", [
-      ONE_DAY_IN_SECONDS,
-      INITIAL_WITHDRAW_LIMIT,
-      pauseTypeRoles,
-      unpauseTypeRoles,
-    ]) as unknown as Promise<TestL1MessageServiceMerkleProof>;
+    return deployUpgradableFromFactory(
+      "TestL1MessageServiceMerkleProof",
+      [ONE_DAY_IN_SECONDS, INITIAL_WITHDRAW_LIMIT, pauseTypeRoles, unpauseTypeRoles],
+      { unsafeAllow: ["incorrect-initializer-order"] },
+    ) as unknown as Promise<TestL1MessageServiceMerkleProof>;
   }
 
   async function deployL1TestRevertFixture(): Promise<TestL1RevertContract> {
@@ -146,7 +144,9 @@ describe("L1MessageService", () => {
     it("Should fail to deploy missing amount", async () => {
       await expectRevertWithCustomError(
         l1MessageService,
-        deployUpgradableFromFactory("TestL1MessageService", [ONE_DAY_IN_SECONDS, 0, pauseTypeRoles, unpauseTypeRoles]),
+        deployUpgradableFromFactory("TestL1MessageService", [ONE_DAY_IN_SECONDS, 0, pauseTypeRoles, unpauseTypeRoles], {
+          unsafeAllow: ["incorrect-initializer-order"],
+        }),
         "LimitIsZero",
       );
     });
@@ -154,12 +154,11 @@ describe("L1MessageService", () => {
     it("Should fail to deploy missing limit period", async () => {
       await expectRevertWithCustomError(
         l1MessageService,
-        deployUpgradableFromFactory("TestL1MessageService", [
-          0,
-          INITIAL_WITHDRAW_LIMIT,
-          pauseTypeRoles,
-          unpauseTypeRoles,
-        ]),
+        deployUpgradableFromFactory(
+          "TestL1MessageService",
+          [0, INITIAL_WITHDRAW_LIMIT, pauseTypeRoles, unpauseTypeRoles],
+          { unsafeAllow: ["incorrect-initializer-order"] },
+        ),
         "PeriodIsZero",
       );
     });

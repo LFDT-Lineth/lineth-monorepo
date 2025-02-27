@@ -153,9 +153,9 @@ contract TokenBridge is
     nonZeroChainId(_initializationData.targetChainId)
     initializer
   {
-    __PauseManager_init(_initializationData.pauseTypeRoles, _initializationData.unpauseTypeRoles);
-    __MessageServiceBase_init(_initializationData.messageService);
     __ReentrancyGuard_init();
+    __MessageServiceBase_init(_initializationData.messageService);
+    __PauseManager_init(_initializationData.pauseTypeRoles, _initializationData.unpauseTypeRoles);
 
     if (_initializationData.defaultAdmin == address(0)) {
       revert ZeroAddressNotAllowed();
