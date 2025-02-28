@@ -4,7 +4,7 @@ The following document serves to be a guide on the best practices for the Linea 
 
 **Note:** some areas might not conform to the practices - feel free to open a PR to have them comply. Work is constantly being done to improve.
 
-The current supported framework is Hardhat and TypeScript testing. Future improvements will include Foundry.
+The current supported framework is Hardhat and TypeScript testing.
 
 ## Folder Structure and Naming Conventions
 

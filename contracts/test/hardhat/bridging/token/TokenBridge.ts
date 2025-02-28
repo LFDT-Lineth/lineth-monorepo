@@ -4,7 +4,7 @@ import { ethers, upgrades } from "hardhat";
 import { deployTokenBridgeWithMockMessaging } from "../../../../scripts/tokenBridge/test/deployTokenBridges";
 import { deployTokens } from "../../../../scripts/tokenBridge/test/deployTokens";
 import { BridgedToken, TestTokenBridge } from "../../../../typechain-types";
-import { getPermitData } from "./utils/permitHelper";
+import { getPermitData } from "./helpers/permitHelper";
 import { Contract } from "ethers";
 import {
   ADDRESS_ZERO,

@@ -8,3 +8,4 @@ export * from "./merkleTree";
 export * from "./calldata";
 export * from "./pauseTypes";
 export * from "./roles";
+export * from "./address";
