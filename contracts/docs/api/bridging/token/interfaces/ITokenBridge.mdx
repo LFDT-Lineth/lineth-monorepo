@@ -9,6 +9,7 @@ struct InitializationData {
   address tokenBeacon;
   uint256 sourceChainId;
   uint256 targetChainId;
+  address remoteSender;
   address[] reservedTokens;
   struct IPermissionsManager.RoleAddress[] roleAddresses;
   struct IPauseManager.PauseTypeRole[] pauseTypeRoles;
@@ -454,20 +455,6 @@ _Linea can reserve tokens. In this case, the token cannot be bridged.
 | Name | Type | Description |
 | ---- | ---- | ----------- |
 | _token | address | The address of the token to be set as reserved. |
-
-### setRemoteTokenBridge
-
-```solidity
-function setRemoteTokenBridge(address _remoteTokenBridge) external
-```
-
-_Sets the address of the remote token bridge. Can only be called once._
-
-#### Parameters
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _remoteTokenBridge | address | The address of the remote token bridge to be set. |
 
 ### removeReserved
 

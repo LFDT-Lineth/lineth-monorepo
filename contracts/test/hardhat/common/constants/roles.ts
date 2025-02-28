@@ -33,6 +33,7 @@ export const VERIFIER_SETTER_ROLE = generateKeccak256(["string"], ["VERIFIER_SET
 export const VERIFIER_UNSETTER_ROLE = generateKeccak256(["string"], ["VERIFIER_UNSETTER_ROLE"], true);
 export const L1_MERKLE_ROOTS_SETTER_ROLE = generateKeccak256(["string"], ["L1_MERKLE_ROOTS_SETTER_ROLE"], true);
 export const L2_MERKLE_ROOTS_SETTER_ROLE = generateKeccak256(["string"], ["L2_MERKLE_ROOTS_SETTER_ROLE"], true);
+export const SECURITY_COUNCIL_ROLE = generateKeccak256(["string"], ["SECURITY_COUNCIL_ROLE"], true);
 export const BAD_STARTING_HASH = generateKeccak256(["string"], ["BAD_STARTING_HASH"], true);
 
 // TokenBridge roles

@@ -5,3 +5,4 @@ export * from "./hashing";
 export * from "./dataGeneration";
 export * from "./dataLoader";
 export * from "./expectations";
+export * from "./time";

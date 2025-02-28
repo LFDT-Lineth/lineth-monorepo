@@ -16,11 +16,44 @@ bytes32 UNPAUSE_ALL_ROLE
 
 This is used to unpause all unpausable functions.
 
-### pauseTypeStatuses
+### SECURITY_COUNCIL_ROLE
 
 ```solidity
-mapping(bytes32 => bool) pauseTypeStatuses
+bytes32 SECURITY_COUNCIL_ROLE
 ```
+
+Role assigned to the security council that enables indefinite pausing and bypassing the cooldown period.
+
+_Is not a pause or unpause role; a specific pause/unpause role is still required for specific pause/unpause types._
+
+### PAUSE_DURATION
+
+```solidity
+uint256 PAUSE_DURATION
+```
+
+Duration of pauses, after which pauses will expire (except by the SECURITY_COUNCIL_ROLE).
+
+### COOLDOWN_DURATION
+
+```solidity
+uint256 COOLDOWN_DURATION
+```
+
+Duration of cooldown after a pause expires, during which no pauses (except by the SECURITY_COUNCIL_ROLE) can be enacted.
+
+_This prevents indefinite pause chaining by a non-SECURITY_COUNCIL_ROLE._
+
+### pauseExpiryTimestamp
+
+```solidity
+uint256 pauseExpiryTimestamp
+```
+
+Unix timestamp of pause expiry.
+
+_pauseExpiryTimestamp applies to all pause types. Pausing with one pause type blocks other pause types from being enacted (unless the SECURITY_COUNCIL_ROLE is used).
+This prevents indefinite pause chaining by a non-SECURITY_COUNCIL_ROLE._
 
 ### onlyUsedPausedTypes
 
@@ -120,7 +153,9 @@ function pauseByType(enum IPauseManager.PauseType _pauseType) external
 Pauses functionality by specific type.
 
 _Throws if UNUSED pause type is used.
-Requires the role mapped in `_pauseTypeRoles` for the pauseType._
+Requires the role mapped in `_pauseTypeRoles` for the pauseType.
+Non-SECURITY_COUNCIL_ROLE can only pause after cooldown has passed.
+SECURITY_COUNCIL_ROLE can pause without cooldown or expiry restrictions._
 
 #### Parameters
 
@@ -137,7 +172,25 @@ function unPauseByType(enum IPauseManager.PauseType _pauseType) external
 Unpauses functionality by specific type.
 
 _Throws if UNUSED pause type is used.
-Requires the role mapped in `_unPauseTypeRoles` for the pauseType._
+Requires the role mapped in `_unPauseTypeRoles` for the pauseType.
+SECURITY_COUNCIL_ROLE unpause will reset the cooldown, enabling non-SECURITY_COUNCIL_ROLE pausing._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _pauseType | enum IPauseManager.PauseType | The pause type value. |
+
+### unPauseByExpiredType
+
+```solidity
+function unPauseByExpiredType(enum IPauseManager.PauseType _pauseType) external
+```
+
+Unpauses a specific pause type when the pause has expired.
+
+_Can be called by anyone.
+Throws if UNUSED pause type is used, or the pause expiry period has not passed._
 
 #### Parameters
 
@@ -175,7 +228,7 @@ Update the pause type role mapping.
 
 _Throws if UNUSED pause type is used.
 Throws if role not different.
-PAUSE_ALL_ROLE role is required to execute this function._
+SECURITY_COUNCIL_ROLE role is required to execute this function._
 
 #### Parameters
 
@@ -194,7 +247,7 @@ Update the unpause type role mapping.
 
 _Throws if UNUSED pause type is used.
 Throws if role not different.
-UNPAUSE_ALL_ROLE role is required to execute this function._
+SECURITY_COUNCIL_ROLE role is required to execute this function._
 
 #### Parameters
 
