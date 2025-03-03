@@ -14,7 +14,7 @@
  (INST                :byte :display :opcode)
  (COINBASE_HI         :i32)
  (COINBASE_LO         :i128)
- (BLOCK_GAS_LIMIT     :i32)
+ (BLOCK_GAS_LIMIT     :i64) ;;i32 is enough for Linea, not for reference tests
  (BASEFEE             :i64)
  (FIRST_BLOCK_NUMBER  :i48)
  (REL_BLOCK           :i16)
