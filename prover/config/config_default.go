@@ -28,6 +28,8 @@ func setDefaultValues() {
 	viper.SetDefault("controller.worker_cmd_tmpl", "prover prove --config {{.ConfFile}} --in {{.InFile}} --out {{.OutFile}}")
 	viper.SetDefault("controller.worker_cmd_large_tmpl", "prover prove --config {{.ConfFile}} --in {{.InFile}} --out {{.OutFile}} --large")
 
+	viper.SetDefault("execution.ignore_compatibility_check", false)
+
 }
 
 func setDefaultPaths() {

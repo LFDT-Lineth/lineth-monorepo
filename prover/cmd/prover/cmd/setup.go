@@ -112,7 +112,7 @@ func Setup(context context.Context, args SetupArgs) error {
 				limits = cfg.TracesLimitsLarge
 			}
 			extraFlags["cfg_checksum"] = limits.Checksum()
-			zkEvm := zkevm.FullZkEvm(&limits)
+			zkEvm := zkevm.FullZkEvm(&limits, cfg)
 			builder = execution.NewBuilder(zkEvm)
 
 		case circuits.BlobDecompressionV0CircuitID:

@@ -12,8 +12,9 @@ var globalArith *arithmetization.Arithmetization
 func MakeDefine(cfg *config.Config, optConfig *mir.OptimisationConfig) wizard.DefineFunc {
 	return func(build *wizard.Builder) {
 		globalArith = arithmetization.NewArithmetization(build, arithmetization.Settings{
-			Limits:            &cfg.TracesLimits,
-			OptimisationLevel: optConfig,
+			Limits:                   &cfg.TracesLimits,
+			OptimisationLevel:        optConfig,
+			IgnoreCompatibilityCheck: &cfg.Execution.IgnoreCompatibilityCheck,
 		})
 
 	}

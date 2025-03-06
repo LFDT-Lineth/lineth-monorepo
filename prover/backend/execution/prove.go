@@ -84,7 +84,7 @@ func mustProveAndPass(
 			// And run the partial-prover with only the main steps. The generated
 			// proof is sanity-checked to ensure that the prover never outputs
 			// invalid proofs.
-			partial := zkevm.FullZkEVMCheckOnly(traces)
+			partial := zkevm.FullZkEVMCheckOnly(traces, cfg)
 			proof := partial.ProveInner(w.ZkEVM)
 			if err := partial.VerifyInner(proof); err != nil {
 				utils.Panic("The prover did not pass: %v", err)
@@ -108,7 +108,7 @@ func mustProveAndPass(
 
 		// Run the full prover to obtain the intermediate proof
 		logrus.Info("Get Full IOP")
-		fullZkEvm := zkevm.FullZkEvm(traces)
+		fullZkEvm := zkevm.FullZkEvm(traces, cfg)
 
 		var (
 			setup       circuits.Setup
@@ -157,7 +157,7 @@ func mustProveAndPass(
 
 		// Run the full prover to obtain the intermediate proof
 		logrus.Info("Get Full IOP")
-		fullZkEvm := zkevm.FullZkEvm(traces)
+		fullZkEvm := zkevm.FullZkEvm(traces, cfg)
 
 		// Generates the inner-proof and sanity-check it so that we ensure that
 		// the prover nevers outputs invalid proofs.
@@ -171,7 +171,7 @@ func mustProveAndPass(
 
 	case config.ProverModeCheckOnly:
 
-		fullZkEvm := zkevm.FullZkEVMCheckOnly(traces)
+		fullZkEvm := zkevm.FullZkEVMCheckOnly(traces, cfg)
 		// this will panic to alert errors, so there is no need to handle or
 		// sanity-check anything.
 		logrus.Infof("Prover starting the prover")

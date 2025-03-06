@@ -22,9 +22,6 @@ func init() {
 }
 
 func getParamsFromCLI() (cfg *config.Config, optConfig *mir.OptimisationConfig, traceFPath string, err error) {
-
-	flag.Parse()
-
 	if len(configFPathCLI) == 0 {
 		return nil, nil, "", fmt.Errorf("could not find the config path, got %++v", configFPathCLI)
 	}
