@@ -20,5 +20,5 @@
   (begin (eq! CODE_HASH_HI EMPTY_KECCAK_HI)
          (eq! CODE_HASH_LO EMPTY_KECCAK_LO)))
 
-(defstrictsorted cfi-strict-lexicographic-order (~ CFI)
+(defstrictsorted cfi-strict-lexicographic-order (prev CFI)
                  ((+ ADDRESS_HI) (+ ADDRESS_LO) (+ DEPLOYMENT_NUMBER) (- DEPLOYMENT_STATUS)))
