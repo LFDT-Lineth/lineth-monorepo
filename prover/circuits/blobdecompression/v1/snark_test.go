@@ -55,24 +55,24 @@ func TestParseHeader(t *testing.T) {
 
 	for _, blobData := range blobs {
 
-		header, _, blocks, _, err := blob.DecompressBlob(blobData, dictStore)
+		r, err := blob.DecompressBlob(blobData, dictStore)
 		assert.NoError(t, err)
 
-		assert.LessOrEqual(t, len(blocks), MaxNbBatches, "too many batches")
+		assert.LessOrEqual(t, len(r.Blocks), MaxNbBatches, "too many batches")
 
 		unpacked, err := encode.UnpackAlign(blobData, fr381.Bits-1, false)
 		require.NoError(t, err)
 
 		assignment := &testParseHeaderCircuit{
 			Blob:      test_utils.PadBytes(unpacked, maxBlobSize),
-			HeaderLen: header.ByteSize(),
-			NbBatches: header.NbBatches(),
+			HeaderLen: r.Header.ByteSize(),
+			NbBatches: r.Header.NbBatches(),
 			BlobLen:   len(unpacked),
 		}
 
 		for i := range assignment.BlocksPerBatch {
-			if i < header.NbBatches() {
-				assignment.BlocksPerBatch[i] = header.BatchSizes[i]
+			if i < r.Header.NbBatches() {
+				assignment.BlocksPerBatch[i] = r.Header.BatchSizes[i]
 			} else {
 				assignment.BlocksPerBatch[i] = 0
 			}
@@ -347,7 +347,7 @@ func TestDictHash(t *testing.T) {
 	dict := blobtestutils.GetDict(t)
 	dictStore, err := dictionary.SingletonStore(blobtestutils.GetDict(t), 1)
 	assert.NoError(t, err)
-	header, _, _, _, err := blob.DecompressBlob(blobBytes, dictStore) // a bit roundabout, but the header field is not public
+	r, err := blob.DecompressBlob(blobBytes, dictStore) // a bit roundabout, but the header field is not public
 	assert.NoError(t, err)
 
 	circuit := testDataDictHashCircuit{
@@ -355,7 +355,7 @@ func TestDictHash(t *testing.T) {
 	}
 	assignment := testDataDictHashCircuit{
 		DictBytes: utils.ToVariableSlice(dict),
-		Checksum:  header.DictChecksum[:],
+		Checksum:  r.Header.DictChecksum[:],
 	}
 
 	assert.NoError(t, test.IsSolved(&circuit, &assignment, ecc.BLS12_377.ScalarField()))

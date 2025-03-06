@@ -56,9 +56,9 @@ func testCompressorSingleSmallBatch(t *testing.T, blocks [][]byte) {
 	dict, err := os.ReadFile(testDictPath)
 	assert.NoError(t, err)
 	dictStore, err := dictionary.SingletonStore(dict, 1)
-	_, _, blocksBack, _, err := v1.DecompressBlob(bm.Bytes(), dictStore)
+	r, err := v1.DecompressBlob(bm.Bytes(), dictStore)
 	assert.NoError(t, err)
-	assert.Equal(t, len(blocks), len(blocksBack), "number of blocks should match")
+	assert.Equal(t, len(blocks), len(r.Blocks), "number of blocks should match")
 	// TODO compare the blocks
 }
 

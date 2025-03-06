@@ -20,7 +20,7 @@ import (
 	emPlonk "github.com/consensys/gnark/std/recursion/plonk"
 )
 
-// Generates a concrete proof for the decompression of the blob
+// Prove generates a concrete proof for the decompression of the blob
 func Prove(cfg *config.Config, req *Request) (*Response, error) {
 
 	// Parsing / validating the request

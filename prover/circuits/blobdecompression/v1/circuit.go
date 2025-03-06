@@ -253,24 +253,24 @@ func AssignFPI(blobBytes []byte, dictStore dictionary.Store, eip4844Enabled bool
 		return
 	}
 
-	header, payload, _, dict, err := blob.DecompressBlob(blobBytes, dictStore)
+	r, err := blob.DecompressBlob(blobBytes, dictStore)
 	if err != nil {
 		return
 	}
 
-	if header.NbBatches() > MaxNbBatches {
-		err = fmt.Errorf("decompression circuit assignment : too many batches in the header : %d. max %d", header.NbBatches(), MaxNbBatches)
+	if r.Header.NbBatches() > MaxNbBatches {
+		err = fmt.Errorf("decompression circuit assignment : too many batches in the header : %d. max %d", r.Header.NbBatches(), MaxNbBatches)
 		return
 	}
-	batchEnds := make([]int, header.NbBatches())
-	if header.NbBatches() > 0 {
-		batchEnds[0] = header.BatchSizes[0]
+	batchEnds := make([]int, r.Header.NbBatches())
+	if r.Header.NbBatches() > 0 {
+		batchEnds[0] = r.Header.BatchSizes[0]
 	}
-	for i := 1; i < len(header.BatchSizes); i++ {
-		batchEnds[i] = batchEnds[i-1] + header.BatchSizes[i]
+	for i := 1; i < len(r.Header.BatchSizes); i++ {
+		batchEnds[i] = batchEnds[i-1] + r.Header.BatchSizes[i]
 	}
 
-	fpi.BatchSums = BatchesChecksumAssign(batchEnds, payload)
+	fpi.BatchSums = BatchesChecksumAssign(batchEnds, r.RawPayload)
 
 	fpi.X = x
 

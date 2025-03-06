@@ -43,7 +43,9 @@ func DecompressBlob(blob []byte, dictStore dictionary.Store) ([]byte, error) {
 		_, _, blocks, err = v0.DecompressBlob(blob, dictStore)
 		blockDecoder = v0.DecodeBlockFromUncompressed
 	case 1:
-		_, _, blocks, _, err = v1.DecompressBlob(blob, dictStore)
+		r, _err := v1.DecompressBlob(blob, dictStore)
+		blocks = r.Blocks
+		err = _err
 		blockDecoder = v1.DecodeBlockFromUncompressed
 	default:
 		return nil, errors.New("unrecognized blob version")

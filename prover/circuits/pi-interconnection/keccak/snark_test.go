@@ -2,6 +2,7 @@ package keccak
 
 import (
 	"fmt"
+	"github.com/consensys/gnark/std/compress"
 	"github.com/consensys/linea-monorepo/prover/circuits/internal/test_utils"
 	"math/big"
 	"testing"
@@ -11,7 +12,6 @@ import (
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/test"
-	"github.com/consensys/linea-monorepo/prover/circuits/blobdecompression/v0/compress"
 	"github.com/consensys/linea-monorepo/prover/circuits/internal"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	"github.com/consensys/linea-monorepo/prover/utils"

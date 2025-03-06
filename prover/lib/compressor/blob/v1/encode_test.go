@@ -247,25 +247,25 @@ func decompressBlob(b []byte) ([][][]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	header, _, blocks, _, err := v1.DecompressBlob(b, dictStore)
+	r, err := v1.DecompressBlob(b, dictStore)
 	if err != nil {
 		return nil, fmt.Errorf("can't decompress blob: %w", err)
 	}
 
-	batches := make([][][]byte, len(header.BatchSizes))
-	for i, batchNbBytes := range header.BatchSizes {
+	batches := make([][][]byte, len(r.Header.BatchSizes))
+	for i, batchNbBytes := range r.Header.BatchSizes {
 		batches[i] = make([][]byte, 0)
 		batchLenYet := 0
 		for batchLenYet < batchNbBytes {
-			batches[i] = append(batches[i], blocks[0])
-			batchLenYet += len(blocks[0])
-			blocks = blocks[1:]
+			batches[i] = append(batches[i], r.Blocks[0])
+			batchLenYet += len(r.Blocks[0])
+			r.Blocks = r.Blocks[1:]
 		}
 		if batchLenYet != batchNbBytes {
 			return nil, errors.New("invalid batch size")
 		}
 	}
-	if len(blocks) != 0 {
+	if len(r.Blocks) != 0 {
 		return nil, errors.New("not all blocks were consumed")
 	}
 
