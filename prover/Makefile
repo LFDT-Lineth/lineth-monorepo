@@ -1,18 +1,14 @@
 # required for `source`
 SHELL := /usr/bin/env bash
-CORSET_ROOT := $(shell pwd)/../corset
-
-CGO_CFLAGS := "-I${CORSET_ROOT}/target/"
-CGO_LDFLAGS := "${CORSET_ROOT}/target/release/libcorset.a -lm -ldl"
-CORSET_FLAGS := CGO_CFLAGS=${CGO_CFLAGS} CGO_LDFLAGS=${CGO_LDFLAGS}
+CORSET_ROOT := $(shell pwd)/../go-corset
 
 VERSION := $(shell git rev-parse --short HEAD)
 
 LINUX_AMD64_FLAGS := CGO_ENABLED=1 CC="x86_64-linux-musl-gcc" CXX="x86_64-linux-musl-g++" GOOS="linux" GOARCH="amd64"
 DARWIN_ARM64_FLAGS := CGO_ENABLED=1 GOOS="linux" GOARCH="arm64"
 
-# Ensure that we are using corset from the monorepo
-CORSET := PATH="${CORSET_ROOT}/target/release":$$PATH
+# Ensure that we are using go-corset from the monorepo
+GO_CORSET := PATH="${CORSET_ROOT}/bin":$$PATH
 
 # these targets are not defined as depending on source files,
 # so they should be recompiled by default “just in case”.
@@ -30,21 +26,28 @@ CORSET := PATH="${CORSET_ROOT}/target/release":$$PATH
 	docker \
 	bin/prover \
 	bin/checker \
-	corset \
+	go-corset \
 	testdata \
 
 
 ##
-## This rule produces both the corset binary and libcorset.a & corset.h for the FFI
+## This rule produces the go-corset binary
 ##
-corset:
-	cd ${CORSET_ROOT} && cargo build --release
+go-corset:
+	cd ${CORSET_ROOT} && make build
 
 ##
-## Build and bundle the Corset trace-expander dependency
+## Build and bundle the go-corset trace-expander dependency
 ##
-zkevm/arithmetization/zkevm.bin: corset
-	cd ../constraints && $(CORSET) make zkevm.bin && mv zkevm.bin ../prover/zkevm/arithmetization
+zkevm/arithmetization/zkevm.bin: go-corset
+	cd ../constraints && $(GO_CORSET) make zkevm.bin && mv zkevm.bin ../prover/zkevm/arithmetization
+
+##
+## zkevm.bin without 2B block gas limit constraint to test old traces
+##
+zkevm/arithmetization/zkevm_for_old_trace.bin: go-corset
+	cd ../constraints && $(GO_CORSET) make zkevm_for_old_replay_tests.bin &&\
+	mv zkevm_for_old_replay_tests.bin ../prover/zkevm/arithmetization/zkevm_for_old_trace.bin
 
 ##
 ## Generate the setup for the execution prover (to be run with S3 access)

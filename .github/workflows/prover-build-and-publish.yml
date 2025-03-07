@@ -96,7 +96,7 @@ jobs:
             RUSTFLAGS="-C target-cpu=x86-64-v3"
           build-contexts: |
             prover=prover/
-            corset=corset/
+            go-corset=go-corset/
             constraints=constraints/
           platforms: linux/amd64
           load: true
@@ -123,7 +123,7 @@ jobs:
             RUSTFLAGS="-C target-cpu=x86-64-v3"
           build-contexts: |
             prover=prover/
-            corset=corset/
+            go-corset=go-corset/
             constraints=constraints/
           platforms: linux/amd64
           load: false
