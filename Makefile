@@ -11,25 +11,11 @@ BIN := bin
 BLAKE2f_MODEXP_DATA := blake2fmodexpdata
 
 # constraints used in prod for LINEA, with linea block gas limit
-BLOCKDATA_FOR_LINEA := $(wildcard blockdata/*.lisp) \
-		       $(wildcard blockdata/processing/*.lisp) \
-		       $(wildcard blockdata/processing/gaslimit/common.lisp) \
-		       $(wildcard blockdata/processing/gaslimit/linea.lisp) \
-		       $(wildcard blockdata/lookups/*.lisp)
-
-# with gaslimit for old replay tests (ie without the constraint BLOCK_GAS_LIMIT = LINEA_BLOCK_GAS_LIMIT = 2 000 000 000)
-BLOCKDATA_FOR_OLD_REPLAY_TESTS := $(wildcard blockdata/*.lisp) \
-				 $(wildcard blockdata/processing/*.lisp) \
-				 $(wildcard blockdata/processing/gaslimit/common.lisp) \
-				 $(wildcard blockdata/processing/gaslimit/old_replay_test.lisp) \
-				 $(wildcard blockdata/lookups/*.lisp)
-
-# with gaslimit for ethereum file (used for reference tests)
-BLOCKDATA_FOR_REFERENCE_TESTS := $(wildcard blockdata/*.lisp) \
-				 $(wildcard blockdata/processing/*.lisp) \
-				 $(wildcard blockdata/processing/gaslimit/common.lisp) \
-				 $(wildcard blockdata/processing/gaslimit/ethereum.lisp) \
-				 $(wildcard blockdata/lookups/*.lisp)
+BLOCKDATA := $(wildcard blockdata/*.lisp) \
+	       $(wildcard blockdata/processing/*.lisp) \
+	       $(wildcard blockdata/processing/gaslimit/common.lisp) \
+	       $(wildcard blockdata/processing/gaslimit/linea.lisp) \
+	       $(wildcard blockdata/lookups/*.lisp)
 
 BLOCKHASH := blockhash
 
@@ -88,7 +74,7 @@ ZKEVM_MODULES := ${CONSTANTS} \
 		 ${ALU} \
 		 ${BIN} \
 		 ${BLAKE2f_MODEXP_DATA} \
-		 ${BLOCKDATA_FOR_LINEA} \
+		 ${BLOCKDATA} \
 		 ${BLOCKHASH} \
 		 ${EC_DATA} \
 		 ${EUC} \
@@ -117,75 +103,3 @@ ZKEVM_MODULES := ${CONSTANTS} \
 
 zkevm.bin: ${ZKEVM_MODULES}
 	${GO_CORSET_COMPILE} -o $@ ${ZKEVM_MODULES}
-
-# Corset is order sensitive - to compile, we load the constants first
-ZKEVM_MODULES_FOR_OLD_REPLAY_TESTS := ${CONSTANTS} \
-					 ${ALU} \
-				     ${BIN} \
-				     ${BLAKE2f_MODEXP_DATA} \
-				     ${BLOCKDATA_FOR_OLD_REPLAY_TESTS} \
-				     ${BLOCKHASH} \
-				     ${EC_DATA} \
-				     ${EUC} \
-				     ${EXP} \
-				     ${GAS} \
-				     ${HUB} \
-				     ${LIBRARY} \
-				     ${LOG_DATA} \
-				     ${LOG_INFO} \
-				     ${MMIO} \
-				     ${MMU} \
-				     ${MXP} \
-				     ${OOB} \
-				     ${RLP_ADDR} \
-				     ${RLP_TXN} \
-				     ${RLP_TXRCPT} \
-				     ${ROM} \
-				     ${ROM_LEX} \
-				     ${SHAKIRA_DATA} \
-				     ${SHIFT} \
-				     ${STP} \
-				     ${TABLES} \
-				     ${TRM} \
-				     ${TXN_DATA} \
-				     ${WCP}
-
-
-zkevm_for_old_replay_tests.bin: ${ZKEVM_MODULES_FOR_OLD_REPLAY_TESTS}
-	${GO_CORSET_COMPILE} -o $@ ${ZKEVM_MODULES_FOR_OLD_REPLAY_TESTS}
-
-# Corset is order sensitive - to compile, we load the constants first
-ZKEVM_MODULES_FOR_REFERENCE_TESTS := ${CONSTANTS} \
-					 ${ALU} \
-				     ${BIN} \
-				     ${BLAKE2f_MODEXP_DATA} \
-				     ${BLOCKDATA_FOR_REFERENCE_TESTS} \
-				     ${BLOCKHASH} \
-				     ${EC_DATA} \
-				     ${EUC} \
-				     ${EXP} \
-				     ${GAS} \
-				     ${HUB} \
-				     ${LIBRARY} \
-				     ${LOG_DATA} \
-				     ${LOG_INFO} \
-				     ${MMIO} \
-				     ${MMU} \
-				     ${MXP} \
-				     ${OOB} \
-				     ${RLP_ADDR} \
-				     ${RLP_TXN} \
-				     ${RLP_TXRCPT} \
-				     ${ROM} \
-				     ${ROM_LEX} \
-				     ${SHAKIRA_DATA} \
-				     ${SHIFT} \
-				     ${STP} \
-				     ${TABLES} \
-				     ${TRM} \
-				     ${TXN_DATA} \
-				     ${WCP}
-
-
-zkevm_for_reference_tests.bin: ${ZKEVM_MODULES_FOR_REFERENCE_TESTS}
-	${GO_CORSET_COMPILE} -o $@ ${ZKEVM_MODULES_FOR_REFERENCE_TESTS}
