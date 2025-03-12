@@ -28,7 +28,7 @@ abstract contract PauseManager is IPauseManager, AccessControlUpgradeable {
   uint256 public constant COOLDOWN_DURATION = 24 hours;
 
   // @dev DEPRECATED. USE _pauseTypeStatusesBitMap INSTEAD
-  mapping(bytes32 pauseType => bool pauseStatus) private pauseTypeStatuses;
+  mapping(bytes32 pauseType => bool pauseStatus) private pauseTypeStatuses_DEPRECATED;
 
   /// @dev The bitmap containing the pause statuses mapped by type.
   uint256 private _pauseTypeStatusesBitMap;

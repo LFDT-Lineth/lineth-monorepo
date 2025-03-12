@@ -47,7 +47,7 @@ describe("Linea Rollup contract: EIP-4844 Blob submission tests", () => {
   let operator: SignerWithAddress;
   let nonAuthorizedAccount: SignerWithAddress;
 
-  const { prevShnarf, parentDataHash, parentStateRootHash } = firstCompressedDataContent;
+  const { prevShnarf } = firstCompressedDataContent;
 
   before(async () => {
     ({ securityCouncil, operator, nonAuthorizedAccount } = await loadFixture(getAccountsFixture));
@@ -57,8 +57,6 @@ describe("Linea Rollup contract: EIP-4844 Blob submission tests", () => {
     ({ lineaRollup } = await loadFixture(deployLineaRollupFixture));
     await lineaRollup.setLastFinalizedBlock(0);
     await lineaRollup.setupParentShnarf(prevShnarf);
-    await lineaRollup.setupParentDataShnarf(parentDataHash, prevShnarf);
-    await lineaRollup.setupParentFinalizedStateRoot(parentDataHash, parentStateRootHash);
   });
 
   it("Should successfully submit blobs", async () => {

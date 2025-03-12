@@ -19,6 +19,7 @@ abstract contract L1MessageManagerV1 is IL1MessageManagerV1 {
   uint8 public constant OUTBOX_STATUS_RECEIVED = 2;
 
   /// @dev DEPRECATED in favor of the rollingHashes mapping on the L1MessageManager for L1 to L2 messaging.
+  /// @dev Cannot be made private because there may be unclaimed messages stored in this data structure.
   mapping(bytes32 messageHash => uint256 messageStatus) public outboxL1L2MessageStatus;
 
   /**

@@ -15,7 +15,7 @@ abstract contract ZkEvmV2 is AccessControlUpgradeable, L1MessageServiceV1, IZkEv
   bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
 
   /// @dev DEPRECATED in favor of currentFinalizedState hash.
-  uint256 public currentTimestamp;
+  uint256 private currentTimestamp_DEPRECATED;
 
   /// @notice The most recent finalized L2 block number.
   uint256 public currentL2BlockNumber;

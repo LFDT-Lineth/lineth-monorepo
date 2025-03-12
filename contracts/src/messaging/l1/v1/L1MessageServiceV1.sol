@@ -27,7 +27,7 @@ abstract contract L1MessageServiceV1 is
   uint256 public nextMessageNumber;
 
   /// @dev DEPRECATED in favor of new transient storage with `MESSAGE_SENDER_TRANSIENT_KEY` key.
-  address internal _messageSender;
+  address private _messageSender_DEPRECATED;
 
   /// @dev Total contract storage is 52 slots including the gap below.
   /// @dev Keep 50 free storage slots for future implementation updates to avoid storage collision.

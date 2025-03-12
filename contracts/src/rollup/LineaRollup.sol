@@ -17,7 +17,7 @@ contract LineaRollup is AccessControlUpgradeable, ZkEvmV2, L1MessageService, Per
   using EfficientLeftRightKeccak for *;
 
   /// @notice This is the ABI version and not the reinitialize version.
-  string public constant CONTRACT_VERSION = "6.0";
+  string public constant CONTRACT_VERSION = "7.0";
 
   /// @notice The role required to set/add  proof verifiers by type.
   bytes32 public constant VERIFIER_SETTER_ROLE = keccak256("VERIFIER_SETTER_ROLE");
@@ -48,20 +48,20 @@ contract LineaRollup is AccessControlUpgradeable, ZkEvmV2, L1MessageService, Per
   uint256 internal constant SIX_MONTHS_IN_SECONDS = (365 / 2) * 24 * 60 * 60;
 
   /// @dev DEPRECATED in favor of the single blobShnarfExists mapping.
-  mapping(bytes32 dataHash => bytes32 finalStateRootHash) public dataFinalStateRootHashes;
+  mapping(bytes32 dataHash => bytes32 finalStateRootHash) private dataFinalStateRootHashes_DEPRECATED;
   /// @dev DEPRECATED in favor of the single blobShnarfExists mapping.
-  mapping(bytes32 dataHash => bytes32 parentHash) public dataParents;
+  mapping(bytes32 dataHash => bytes32 parentHash) private dataParents_DEPRECATED;
   /// @dev DEPRECATED in favor of the single blobShnarfExists mapping.
-  mapping(bytes32 dataHash => bytes32 shnarfHash) public dataShnarfHashes;
+  mapping(bytes32 dataHash => bytes32 shnarfHash) private dataShnarfHashes_DEPRECATED;
   /// @dev DEPRECATED in favor of the single blobShnarfExists mapping.
-  mapping(bytes32 dataHash => uint256 startingBlock) public dataStartingBlock;
+  mapping(bytes32 dataHash => uint256 startingBlock) private dataStartingBlock_DEPRECATED;
   /// @dev DEPRECATED in favor of the single blobShnarfExists mapping.
-  mapping(bytes32 dataHash => uint256 endingBlock) public dataEndingBlock;
+  mapping(bytes32 dataHash => uint256 endingBlock) private dataEndingBlock_DEPRECATED;
 
   /// @dev DEPRECATED in favor of currentFinalizedState hash.
-  uint256 public currentL2StoredL1MessageNumber;
+  uint256 private currentL2StoredL1MessageNumber_DEPRECATED;
   /// @dev DEPRECATED in favor of currentFinalizedState hash.
-  bytes32 public currentL2StoredL1RollingHash;
+  bytes32 private currentL2StoredL1RollingHash_DEPRECATED;
 
   /// @notice Contains the most recent finalized shnarf.
   bytes32 public currentFinalizedShnarf;

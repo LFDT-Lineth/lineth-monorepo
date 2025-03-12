@@ -80,62 +80,6 @@ uint256 SIX_MONTHS_IN_SECONDS
 
 _In practice, when used, this is expected to be a close approximation to 6 months, and is intentional._
 
-### dataFinalStateRootHashes
-
-```solidity
-mapping(bytes32 => bytes32) dataFinalStateRootHashes
-```
-
-_DEPRECATED in favor of the single blobShnarfExists mapping._
-
-### dataParents
-
-```solidity
-mapping(bytes32 => bytes32) dataParents
-```
-
-_DEPRECATED in favor of the single blobShnarfExists mapping._
-
-### dataShnarfHashes
-
-```solidity
-mapping(bytes32 => bytes32) dataShnarfHashes
-```
-
-_DEPRECATED in favor of the single blobShnarfExists mapping._
-
-### dataStartingBlock
-
-```solidity
-mapping(bytes32 => uint256) dataStartingBlock
-```
-
-_DEPRECATED in favor of the single blobShnarfExists mapping._
-
-### dataEndingBlock
-
-```solidity
-mapping(bytes32 => uint256) dataEndingBlock
-```
-
-_DEPRECATED in favor of the single blobShnarfExists mapping._
-
-### currentL2StoredL1MessageNumber
-
-```solidity
-uint256 currentL2StoredL1MessageNumber
-```
-
-_DEPRECATED in favor of currentFinalizedState hash._
-
-### currentL2StoredL1RollingHash
-
-```solidity
-bytes32 currentL2StoredL1RollingHash
-```
-
-_DEPRECATED in favor of currentFinalizedState hash._
-
 ### currentFinalizedShnarf
 
 ```solidity
