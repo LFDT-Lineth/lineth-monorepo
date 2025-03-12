@@ -1,0 +1,39 @@
+package ringsis_{{.ModulusDegree}}_{{.LogTwoBound}}
+
+import (
+	"github.com/consensys/linea-monorepo/prover/maths/field"
+	"math/big"
+)
+
+// PrecomputeTwiddlesCoset precomputes twiddlesCoset from twiddles and coset table
+// it then return all elements in the correct order for the unrolled FFT.
+func PrecomputeTwiddlesCoset(generator, shifter field.Element) []field.Element {
+	toReturn := make([]field.Element, {{sub .ModulusDegree 1}})
+	var r, s field.Element
+	e := new(big.Int){{"\n"}}
+	{{- $n := .ModulusDegree}}
+	{{- $m := div $n 2}}
+	{{- $split := 1}}
+	{{- $split = div $split 1}}
+	{{- $j := 0}}
+	{{- range $step := reverse (iterate 0 (log2 .ModulusDegree))}}
+	s = shifter{{"\n"}}
+	for k := 0; k < {{$step}}; k++ {
+		s.Square(&s)
+	}{{"\n"}}
+	{{- $offset := 0}}
+	{{- range $s := iterate 0 $split}}
+	{{- $exp := bitReverse $split $s}}
+	{{- if eq $exp 0}}
+	toReturn[{{$j}}] = s{{"\n"}}
+	{{- else}}
+	r.Exp(generator, e.SetUint64(uint64(1<<{{$step}}*{{$exp}})))
+	toReturn[{{$j}}].Mul(&r, &s){{"\n"}}
+	{{- end}}
+	{{- $j = add $j 1}}
+	{{- end}}
+
+	{{- $split = mul $split 2}}
+	{{- end}}
+	return toReturn
+}
