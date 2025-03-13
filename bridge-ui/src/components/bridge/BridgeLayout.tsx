@@ -2,6 +2,7 @@
 
 import { useAccount } from "wagmi";
 import { MdWarning } from "react-icons/md";
+import Link from "next/link";
 import Bridge from "../bridge/Bridge";
 import { BridgeExternal } from "./BridgeExternal";
 import { useTokenStore } from "@/stores/tokenStoreProvider";
@@ -39,11 +40,22 @@ export default function BridgeLayout() {
         <div className="mb-4 min-w-min max-w-lg rounded-lg bg-warning p-2 text-warning-content shadow-lg">
           <div className="flex flex-col items-center justify-center gap-2 text-center">
             <MdWarning className="text-lg" />
-            <p>The Linea Sepolia (Testnet) USDC bridge is being upgraded.</p>
             <p>
-              To bridge USDC between Linea and Ethereum, you can use alternative bridge providers. Linea Mainnet is not
-              effected
+              The Linea Mainnet USDC bridge will be paused on Sunday 16th of March 20:00 UTC for an upgrade and will
+              remain paused until CCTP V2 integration is complete.{" "}
+              <Link
+                href="https://www.circle.com/blog/linea-to-become-the-first-bridged-usdc-standard-blockchain-to-upgrade-to-native-usdc"
+                target="_blank"
+                rel="noopener noreferrer"
+                passHref
+                className="link"
+              >
+                See more here.
+              </Link>{" "}
+              All pending messages will be automatically claimed.
             </p>
+            <p>To bridge USDC between Linea and Ethereum, you can use alternative bridge providers.</p>
+            <p>Linea Sepolia (Testnet) is currently being upgraded to support CCTP V2.</p>
           </div>
         </div>
       )}
