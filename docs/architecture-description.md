@@ -59,7 +59,7 @@ The main components of Linea are:
 
 ![Diagram of Linea components](assets/linea.drawio.svg)
 
-The above diagram shows the flow from transaction to finalization. High level, the flow is as follow:
+The above diagram shows the flow from transaction to finalization. High level, the flow is as follows:
 (1) the coordinator pulls the latest block from the sequencer,
 (2) it gets the trace count from the traces API,
 (3) once a batch is ready it generates the conflated traces and gets the state transition,
@@ -213,7 +213,7 @@ The coordinator has a candidate list of blocks to create the next batch. For eve
 
 When the coordinator creates of a batch of blocks, it must ensure that:
 
-* The data of all blocks of a batch can fit in a single blob or in the call data of a single transaction (size limit).
+* The data of all blocks of a batch can fit in a single blob or the call data of a single transaction (size limit).
 * Each batch can be proven in a conflation-proof (trace counts limit).
 
 For each block, the coordinator gets the trace counts by calling a service implementing traces-api `linea_getBlockTracesCountersV2` JSON-RPC method.
@@ -226,9 +226,9 @@ Upon batch creation, the coordinator gathers the inputs to create an execution p
 
 The coordinator collects all L2-L1 requests to be included in the batch looking at all logs emitted by `l2MessageServiceAddress` for each block in the batch. The coordinator also collects L1->L2 anchoring message event logs.
 
-The coordinator creates an execution proof request containing all information required to generate the proof.
+The coordinator creates an execution proof request containing all the information required to generate the proof.
 
-Note: conflation step might be removed in future if aggregation turns out to be enough. However we keep it to optimize the resources of the provers in case of low activities.
+Note: the conflation step might be removed in the future if aggregation turns out to be enough. However we keep it to optimize the resources of the provers in case of low activities.
 
 
 ### Blobs
@@ -243,9 +243,9 @@ Once the proofs are generated, the coordinator sends the blob to L1 with the KZG
 
 Once a blob has been created, the coordinator retrieves a state change merkle proof from the state manager using `rollup_getZkEVMStateMerkleProofV0. `
 
-It then calculates its schnarf using the go calculate schnarf library.
+It then calculates its shnarf using the go calculate shnarf library.
 
-Finally it creates a proof request file for a KZG and a compression proof. This request file contains all required data to generate the proof. The coordinator is responsible to ensure that all data required by the prover is available before creating the request.
+Finally it creates a proof request file for a KZG and a compression proof. This request file contains all the required data to generate the proof. The coordinator is responsible for ensuring that all data required by the prover is available before creating the request.
 
 Once the KZG proof is generated, the coordinator sends a transaction to L1 LineaService with the blob and this proof as described in
 [L1 finalization](#L1_finalization). In addition, it sends merkle tree roots of merkle trees storing L1L2 and L2L1 messages.
@@ -255,7 +255,7 @@ Once the KZG proof is generated, the coordinator sends a transaction to L1 Linea
 
 When sufficiently many batches and blobs have been generated, or after some maximum elapsed time, the coordinator creates a request file for the prover to generate an aggregation proof.
 
-To build a request file, the coordinator needs information on the parent of the first block, its timestamp, the last L1-L2 message number and rolling hash anchored in this parent block. It gets these information using
+To build a request file, the coordinator needs information on the parent of the first block, its timestamp, the last L1-L2 message number and rolling hash anchored in this parent block. It gets this information using
 
 
 ```
@@ -285,11 +285,11 @@ The compressor library is initialized with a data limit parameter and exposes th
 
 `startNewBatch `starts a new batch. Must be called between batches in the same blob
 
-`canWrite `returning true if the cumulative data once compressed has a size smaller than the data limit.
+`canWrite `returns true if the cumulative data once compressed has a size smaller than the data limit.
 
-`write `appends an RLP encoded block to the compressor
+`write `appends an RLP-encoded block to the compressor
 
-From the block, the compressor extract all transactions and format them keeping the following values:
+From the block, the compressor extracts all transactions and formats them keeping the following values:
 
 For `DynamicFeeTxType`
 
@@ -332,11 +332,11 @@ Block
 
 #### Packing
 
-In order to use the EIP4844 KZG commitment pre-compiles, we need to ensure that the blob as stored is a sequence of 32 byte, BLS12-381 scalar field elements. Since the scalar field modulus is a 255-bit number, we can fit 254 bits of arbitrary data in each 32 byte chunk of the blob. This necessary zero padding consumes 1 KB of the blob’s size. The packing mechanism reads more significant bits of every input byte first, and writes to the more significant bits of the field elements first. The input is padded with `0xFF000000…` until it is exactly 127 KB long. This consumes at least another byte and thus gives us exactly 130047 bytes to work with.
+In order to use the EIP4844 KZG commitment pre-compiles, we need to ensure that the blob as stored is a sequence of 32-byte, BLS12-381 scalar field elements. Since the scalar field modulus is a 255-bit number, we can fit 254 bits of arbitrary data in each 32-byte chunk of the blob. This necessary zero padding consumes 1 KB of the blob’s size. The packing mechanism reads more significant bits of every input byte first, and writes to the more significant bits of the field elements first. The input is padded with `0xFF000000…` until it is exactly 127 KB long. This consumes at least another byte and thus gives us exactly 130047 bytes to work with.
 
 #### The Blob
 
-We usually refer to the following data structure as “the blob”, although in actuality it is stored after being packed as described above. The blob consists of compressed payload, following a header containing metadata.
+We usually refer to the following data structure as “the blob”, although in actuality it is stored after being packed as described above. The blob consists of a compressed payload, following a header containing metadata.
 
 Blob header:
 
@@ -344,7 +344,7 @@ Blob header:
 Header
   version      uint16   // of the blob spec; currently 0xffff
   dictChecksum [32]byte
-  nbBatches    uint16   // number of batches in payload
+  nbBatches    uint16   // number of batches in the payload
   batchNbBytes []uint24 // size of each batch in bytes
 ```
 
@@ -360,12 +360,12 @@ Header
 ```
 
 
-The payload that follows (the main bulk of the blob) is a sequence of RLP encoded blocks. The boundary between batches is _not_ marked here, as it is already specified in the blob header.
+The payload that follows (the main bulk of the blob) is a sequence of RLP-encoded blocks. The boundary between batches is _not_ marked here, as it is already specified in the blob header.
 
 
 ## Shnarf calculator
 
-Go library to compute shnarf, commitment and kzg proofs. The library exposes a method `calculateShnarf` as follow:
+Go library to compute shnarf, commitment and kzg proofs. The library exposes a method `calculateShnarf` as follows:
 
 
 ```
@@ -413,9 +413,9 @@ The current implementation of traces-API proactively produces trace files for bl
 
 Trace count works by loading the generated trace file of a block and returning the actual number of lines in the file.
 
-Trace conflation consists in combining multiple trace files with some specific merging.
+Trace conflation consists of combining multiple trace files with some specific merging.
 
-The endpoint exposed by the traces api and used in the flow are:
+The endpoint exposed by the traces-API and used in the flow are:
 
 
 ```
@@ -453,25 +453,25 @@ In testnet, but not in the main Linea Layer, there are instances of provers that
 
 The proof sizes are estimated to be in the order of 2MB to 15MB.
 
-The prover encapsulate two processes:
+The prover encapsulates two processes:
 
-*  One long running that monitors the file system and picks up proof requests.
-*  Another short running one which is instantiated when a request is picked up by the first process.
+*  One long-running that monitors the file system and picks up proof requests.
+*  Another short-running one which is instantiated when a request is picked up by the first process.
 
 The long running process monitor triggers and monitors the short running process. It allows capturing unexpected issues occurring during the proving.
 
 The short running process is further made up of two internal logic components: the traces expander (aka Corset) and the prover itself. Corset is responsible for expanding the execution traces into a format the prover can use before building the proof. The prover relies on the [gnark](https://github.com/ConsenSys/gnark) library for zk-SNARKs implementation.
 
-Corset is hosted inside the same process as the short running component of the prover. Traces are expanded by corset in memory and ingested by the prover directly, without the need for intermediate files to be sent over the network. This was motivated by the following reasons:
+Corset is hosted inside the same process as the short-running component of the prover. Traces are expanded by Corset in memory and ingested by the prover directly, without the need for intermediate files to be sent over the network. This was motivated by the following reasons:
 
 * Simplification of the overall architecture, with one less component to manage/maintain;
 * Expanded traces is the largest file/chunk of data in the system, 100-500MB gzipped atm;
-  * No need to send large file over the network
+  * No need to send large files over the network
   * No need to decompress/deserialize expanded traces in the prover, which can be heavy when traces are large ~5GB;
   * Reduce the probability of incompatibility between Corset/Prover versions and their input/output formats;
 * Reduce latency of the overall system (rather a beneficial side effect than a driving motivation);
 
-The paragraphs highlights the roles of the different proofs that are generated. Please refer to the prover backend codebase [here](https://github.com/Consensys/linea-monorepo/tree/main/prover/backend) for details on the objects and attributes for various types of proof requests and responses 
+The paragraphs highlight the roles of the different proofs that are generated. Please refer to the prover backend codebase [here](https://github.com/Consensys/linea-monorepo/tree/main/prover/backend) for details on the objects and attributes for various types of proof requests and responses 
 
 ### Execution proofs
 
@@ -690,7 +690,7 @@ It is deployed as a HA system with primary and secondary pods. Transactions are 
 
 This is the L2 smart contract message service used to anchor messages submitted to L1.
 
-It is responsible to ensure that messages are claimed at most once.
+It is responsible for ensuring that messages are claimed at most once.
 
 Methods
 
@@ -717,10 +717,10 @@ Gas pricing on Linea is designed to ensure the following three properties:
 * Sequencer's inclusion logic is aligned to the L1 fee market. This is to avoid exploiting Linea to execute
 transactions for unsustainably low fees
 * The fees charged to Linea's user represent their fair usage of the network. Unlike the vanilla Ethereum
-protocol, gas price on Linea and other rollups is not 2-dimensional (base fee, priority fee). There's at least L1 fees
-(execution fees and blob fees), infrastructural cost (mostly proving, but not only), potential priority fee
-(only when there's a high congestion and there's competition for L2 block space). This is an issue for interoperability,
-because vanilla Ethreum API isn't tailored for this. That's why there's a Besu plugin addressing this issue and
+protocol, the gas price on Linea and other rollups is not 2-dimensional (base fee, priority fee). There are at least L1 fees
+(execution fees and blob fees), infrastructural costs (mostly proving, but not only), and a potential priority fee
+(only when there is high congestion and competition for L2 block space). This is an issue for interoperability,
+because vanilla Ethreum API isn't tailored for this. That's why there is a Besu plugin addressing this issue and
 providing gas price depending on input transaction
 * Linea remains compatible with users running vanilla nodes. Namely, `eth_gasPrice` returns fees guaranteeing that
 99.9% of transactions are includable on Linea.
@@ -742,33 +742,21 @@ This information is delivered to nodes in 2 ways:
 * via RPC calls (only Geth and Besu are supported and tested)
 
 ### ExtraData
-The Coordinator sends extraData to the Sequencer via `miner_setExtraData`. ExtraData contains all 3 fields mentioned above (fixed cost, variable cost and legacy cost).
-The Sequencer in turn uses this information for inclusion logic, to include only profitable transactions, and it adds last
-received extraData to the next block it seals. This ensures that pricing information is propagated to all the nodes on Linea
-via P2P as a block header's field. And since this info is on all the nodes, they can use this information to figure out,
-what the gas price is for a given transaction that would make it includable on Linea. This currently is possible with Besu +
-Linea plugin with a custom `linea_estimateGas` method.
+The Coordinator sends extraData to the Sequencer via `miner_setExtraData`. ExtraData contains all 3 fields mentioned above (fixed cost, variable cost and legacy cost). The Sequencer in turn uses this information for inclusion logic, to include only profitable transactions, and it adds the last received extraData to the next block it seals. This ensures that pricing information is propagated to all the nodes on Linea via P2P as a block header's field. And since this info is on all the nodes, they can use this information to figure out, what the gas price is for a given transaction that would make it includable on Linea. This currently is possible with Besu + Linea plugin with a custom `linea_estimateGas` method.
 
 ### Direct RPC calls
-For nodes that are reachable from the Coordinator directly, it's possible to set legacy cost via `miner_setGasPrice` (Geth)
-and `miner_setMinGasPrice` (Besu). Later isn't really used, because extraData driven approach is superior and is
-supported by Besu nodes with Linea plugin
+For nodes that are reachable from the Coordinator directly, it's possible to set legacy cost via `miner_setGasPrice` (Geth) and `miner_setMinGasPrice` (Besu). Later isn't really used, because extraData driven approach is superior and is supported by Besu nodes with Linea plugin
 
 ### Ways to compute Legacy cost
 In the Coordinator 2 ways are supported:
 * So called "naive" way. Based on raw L1 fees processed by some formula
-* So called "sample transaction" way. The idea is to take some relatively unprofitable transaction, estimate its
-profitable gas price the same way Sequencer would. Resulting value would be used as a legacy cost. this is configured by
-2 arguments to a profitability function: execution gas and tx compressed size and it may be changed depending on what
-load is there on Linea.
+* So called "sample transaction" way. The idea is to take some relatively unprofitable transaction, and estimate its profitable gas price in the same way the Sequencer would. The resulting value would be used as a legacy cost. This is configured by 2 arguments to a profitability function: execution gas and tx compressed size and it may be changed depending on what load is there on Linea.
 
 # L1 &lt;-> L2 interactions
 
 There are three types of integration:
 
-
-
-* Block finalization, specific to Linea, it’s used to persist on L1 the state changes happening on L2. This happens in two steps, first blob data and KZG proofs are persisted on L1, then aggregation proofs are sent to L1
+* Block finalization, specific to Linea, is used to persist on L1 the state changes happening on L2. This happens in two steps, first blob data and KZG proofs are persisted on L1, and then aggregation proofs are sent to L1
 * L1 -> L2, typically used to transfer funds from L1 to L2.
 * L2 -> L1, to retrieve funds from L2 back to L1.
 
@@ -784,8 +772,7 @@ A summary of each of them is given below.
 The coordinator submits up to six blobs it generates at once to L1 using eip4844 standard to `v3.1 LineaRollup.submitBlobs` alongside
  the KZG proof. The LineaRollup smart contract verifies the validity of the proofs for the given blob data.
 
-Blob submission can support sending up to six blobs at once. This allows saving cost by amortizing the processing
-overhead over multiple blobs.
+Blob submission can support sending up to six blobs at once. This allows for saving cost by amortizing the processing overhead over multiple blobs.
 
 ```
 submitBlobs(
@@ -799,65 +786,47 @@ Where:
 
 ```
 BlobSubmissionData
-  submissionData SupportingSubmissionDataV2
   dataEvaluationClaim uint256
   kzgCommitment bytes
   kzgProof bytes
-```
-
-and
-
-```
-SupportingSubmissionDataV2
   finalStateRootHash bytes32
-  firstBlockInData uint256
-  finalBlockInData uint256
   snarkHash bytes32
 ```
 
 ### Aggregation
 
-L1 finalization is triggered by the coordinator once an aggregation proof has been generated. This is done by triggering
-a transaction to execute `LineaService.finalizeCompressedBlocksWithProof `method on L1. In the process, the aggregation
+L1 finalization is triggered by the coordinator once an aggregation proof has been generated. This is done by triggering a transaction to execute `LineaService.finalizeBlocks` method on L1. In the process, the aggregation
 proof is sent to L1. Once the transaction is completed on L1, all the blocks are finalized on L2.
 
-The interface use is described bellow labeled with their respective Linea release version.
+The interface use is described below labeled with their respective Linea release version.
 
 ```
-finalizeBlocksWithProof(
+finalizeBlocks(
   aggregatedProof bytes
   proofType uint256
-  finalizationData FinalizationDataV2
+  finalizationData FinalizationDataV3
 )
 ```
 where
 ```
-FinalizationDataV2
-  parentStateRootHash bytes32
-  lastFinalizedShnarf bytes32
-  finalBlockInData uint256
-  shnarfData ShnarfData
-  lastFinalizedTimestamp uint256
-  finalTimestamp uint256
-  lastFinalizedL1RollingHash bytes32
-  l1RollingHash bytes32
-  lastFinalizedL1RollingHashMessageNumber uint256
-  l1RollingHashMessageNumber uint256
-  l2MerkleTreesDepth uint256
-  l2MerkleRoots bytes32[]
-  l2MessagingBlocksOffsets bytes
+FinalizationDataV3
+  parentStateRootHash bytes32;
+  endBlockNumber uint256;
+  shnarfData ShnarfData;
+  lastFinalizedTimestamp uint256;
+  finalTimestamp uint256;
+  lastFinalizedL1RollingHash bytes32;
+  bytes32 l1RollingHash;
+  uint256 lastFinalizedL1RollingHashMessageNumber;
+  uint256 l1RollingHashMessageNumber;
+  uint256 l2MerkleTreesDepth;
+  bytes32[] l2MerkleRoots;
+  bytes l2MessagingBlocksOffsets;
 ```
 
-Note that a method which can be used by the security council is also available to finalize a block without proof:
-```
-finalizeCompressedBlocksWithoutProof(
-  finalizationData FinalizationData
-)
-```
 ## L1 -> L2 messages
 
 Cross-chain operations happen when a user triggers a transaction on L1 by calling the `L1MessageService.sendMessage` method of message service smart contract, where L1MessageService is inherited by the deployed LineaRollup smart contract.
-
 
 ```
 sendMessage(
@@ -866,7 +835,6 @@ sendMessage(
   calldata bytes
 )
 ```
-
 
 Optional ETH value to be transferred can be set when calling the above method.
 
@@ -898,15 +866,15 @@ anchorL1L2MessageHashes(
 
 The rolling hash passed as parameter to this method serves to perform a soft validation that the messages anchored on L2 lead to the expected rolling hash computed on L1. It is used to detect inconsistency early, but it does not provide provable guarantees. The full benefit of the rolling hash is only really realized on L1 finalization as part of the feedback loop.
 
-Checking that the rolling hash and message number matches, ensures that the anchoring is censorship and tamper resistant.
+Checking that the rolling hash and message number match, ensures that the anchoring is censorship and tamper-resistant.
 
 Once the message is anchored on L2, it can then be claimed. Claims can be triggered via a Postman or manually.
 
 The coordinator is the only operator entitled to anchor messages on L2.
 
-Triggering via the Postman service will happen if the initial user asked for it and has prepaid the estimated fees. In this case, if the prepaid fees match the Postman service expectations (profitability based on gas costs etc.), it executes a claim transaction to call the L2 Service Message claimMessage method and the Postman service receives the prepaid estimated fees on L2.
+Triggering via the Postman service will happen if the initial user asks for it and has prepaid the estimated fees. In this case, if the prepaid fees match the Postman service expectations (profitability based on gas costs etc.), it executes a claim transaction to call the L2 Service Message claimMessage method and the Postman service receives the prepaid estimated fees on L2.
 
-Additionally, should the cost to execute the delivery be less than the fee paid, and the difference is cost effective to send to the message recipient, the difference is transferred to the destination user.
+Additionally, should the cost to execute the delivery be less than the fee paid, and the difference is cost-effective to send to the message recipient, the difference is transferred to the destination user.
 
 Claims can also be done manually. In this case, a user will trigger the claim transaction using the L2 Service Message and pay for the required gas fees.
 
@@ -991,12 +959,12 @@ Any party (e.g. via an npm package we provide for the bridge/partners etc) does 
 
 
 1. Takes a message on L2 noting the block the event was fired on.
-2. Finds the event (and transaction hash) where that block was emitted/finalized on L1 using the block number as a filter.
+2. Find the event (and transaction hash) where that block was emitted/finalized on L1 using the block number as a filter.
 3. Retrieves all block numbers from the events in that transaction.
 4. Retrieves the tree depth from the transaction events.
 5. Queries the L2 blocks in that list (or range - lowest-highest) to get all MessageSent events.
-6. Groups all the message hashes from the query into groups based on the tree depth from the Merkle root anchoring events. E.g. depth 5 results in 2^5 (32) hashes. A group will be filled with empty hashes to make 32 if it is partial.
-7. Picks the group for the required message hash and constructs a Merkle proof to claim against using the group's message hashes.
+6. Group all the message hashes from the query into groups based on the tree depth from the Merkle root anchoring events. E.g. depth 5 results in 2^5 (32) hashes. A group will be filled with empty hashes to make 32 if it is partial.
+7. Pick the group for the required message hash and construct a Merkle proof to claim against using the group's message hashes.
 
 
 # Finalized Block Tag on L2
@@ -1005,4 +973,4 @@ For a Linea besu node to support `finalized` tag on Ethereum RPC methods (e.g. `
 
 The plugin periodically calls the L1 Linea rollup contract's `currentL2BlockNumber` method to retrieve the latest proven L2 block number from the current L1 `finalized` block, and set the L2 block number as the `finalized` (and `safe` block number) to the plugin-hosting besu client.
 
-For more information on how to run besu node with plugin, please check out the Besu official [website](https://besu.hyperledger.org/private-networks/concepts/plugins)
+For more information on how to run a besu node with plugin, please check out the Besu official [website](https://besu.hyperledger.org/private-networks/concepts/plugins)
