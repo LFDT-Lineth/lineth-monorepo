@@ -19,6 +19,10 @@ type Witness struct {
 }
 
 func Prove(cfg *config.Config, req *Request, large bool) (*Response, error) {
+
+	// Set MonitorParams before any proving happens
+	profiling.SetMonitorParams(cfg)
+
 	traces := &cfg.TracesLimits
 	if large {
 		traces = &cfg.TracesLimitsLarge
