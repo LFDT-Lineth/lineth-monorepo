@@ -14,6 +14,7 @@
     scp_DOM_STAMP
     scp_SUB_STAMP
     ;;
+    scp_TX_EXEC             ;; needed for the state manager to filter warming row
     scp_ABS_TX_NUM
     scp_REL_BLK_NUM
     scp_VALUE_ORIG_HI
@@ -39,6 +40,7 @@
     (↓ DOM_STAMP )
     (↑ SUB_STAMP )
     ;;
+    TX_EXEC
     ABS_TX_NUM
     REL_BLK_NUM
     storage/VALUE_ORIG_HI
