@@ -97,12 +97,6 @@ jobs:
         run: |
           mkdir -p tmp/local/traces/v2/conflated
           chmod -R a+rw tmp/local/
-      # Disable cache for pulling docker images as empirically found that this
-      # (retrieving cache and loading docker images) actually increased test time-to-completion
-      # - name: Restore cached images
-      #   id: restore-cached-images
-      #   uses: ./.github/actions/restore-docker-images
-      #   continue-on-error: true
       - name: Pull all images with retry
         uses: nick-fields/retry@v3
         with:
