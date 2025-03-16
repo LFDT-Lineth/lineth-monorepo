@@ -19,19 +19,19 @@
 ;;    decoding and shorthands     ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defun (is_ecrecover)
-  (+ IS_ECRECOVER_DATA IS_ECRECOVER_RESULT))
+  (force-bool (+ IS_ECRECOVER_DATA IS_ECRECOVER_RESULT)))
 
 (defun (is_ecadd)
-  (+ IS_ECADD_DATA IS_ECADD_RESULT))
+  (force-bool (+ IS_ECADD_DATA IS_ECADD_RESULT)))
 
 (defun (is_ecmul)
-  (+ IS_ECMUL_DATA IS_ECMUL_RESULT))
+  (force-bool (+ IS_ECMUL_DATA IS_ECMUL_RESULT)))
 
 (defun (is_ecpairing)
-  (+ IS_ECPAIRING_DATA IS_ECPAIRING_RESULT))
+  (force-bool (+ IS_ECPAIRING_DATA IS_ECPAIRING_RESULT)))
 
 (defun (flag_sum)
-  (+ (is_ecrecover) (is_ecadd) (is_ecmul) (is_ecpairing)))
+  (force-bool (+ (is_ecrecover) (is_ecadd) (is_ecmul) (is_ecpairing))))
 
 (defun (address_sum)
   (+ (* ECRECOVER (is_ecrecover))
@@ -50,19 +50,19 @@
      (* PHASE_ECPAIRING_RESULT IS_ECPAIRING_RESULT)))
 
 (defun (is_data)
-  (+ IS_ECRECOVER_DATA IS_ECADD_DATA IS_ECMUL_DATA IS_ECPAIRING_DATA))
+  (force-bool (+ IS_ECRECOVER_DATA IS_ECADD_DATA IS_ECMUL_DATA IS_ECPAIRING_DATA)))
 
 (defun (is_result)
-  (+ IS_ECRECOVER_RESULT IS_ECADD_RESULT IS_ECMUL_RESULT IS_ECPAIRING_RESULT))
+  (force-bool (+ IS_ECRECOVER_RESULT IS_ECADD_RESULT IS_ECMUL_RESULT IS_ECPAIRING_RESULT)))
 
 (defun (transition_to_data)
-  (* (- 1 (is_data)) (next (is_data))))
+  (force-bool (* (- 1 (is_data)) (next (is_data)))))
 
 (defun (transition_to_result)
-  (* (- 1 (is_result)) (next (is_result))))
+  (force-bool (* (- 1 (is_result)) (next (is_result)))))
 
 (defun (transition_bit)
-  (+ (transition_to_data) (transition_to_result)))
+  (force-bool (+ (transition_to_data) (transition_to_result))))
 
 (defconstraint padding ()
   (if-zero STAMP
@@ -230,7 +230,7 @@
 (defconstraint set-accpc ()
   (if-not-zero ACCPC
                (begin (eq! SUCCESS_BIT 1)
-                      (eq! (is_ecpairing) 1))))
+                      (eq! IS_ECPAIRING_DATA 1))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                                  ;;
@@ -238,17 +238,17 @@
 ;;                                  ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defconstraint set-trivial-pairing-outside-ecpairing-data ()
-  (if-zero IS_ECPAIRING_DATA
+  (if-zero (is_ecpairing)
            (vanishes! TRIVIAL_PAIRING)))
 
-;; the constraint below is equivalent:
-;; (defconstraint set-trivial-pairing-init-using-expression ()
-;;   (if-zero (+ (prev IS_ECPAIRING_DATA) (- 1 IS_ECPAIRING_DATA))
-;;            (eq! TRIVIAL_PAIRING 1)))
 (defconstraint set-trivial-pairing-init ()
   (if-zero (prev IS_ECPAIRING_DATA)
            (if-not-zero IS_ECPAIRING_DATA
                         (eq! TRIVIAL_PAIRING 1))))
+
+(defconstraint conditional-index-constancy ()
+  (if-not-zero IS_ECPAIRING_RESULT
+           (counter-constancy INDEX TRIVIAL_PAIRING)))
 
 (defconstraint transition-large-to-small ()
   (if-not-zero (transition_from_large_to_small)
@@ -259,6 +259,10 @@
                (if-zero TRIVIAL_PAIRING
                         (vanishes! (next TRIVIAL_PAIRING))
                         (eq! (next TRIVIAL_PAIRING) (next IS_INFINITY)))))
+
+(defconstraint transition-to-result ()
+  (if-not-zero (transition_to_result)
+               (will-remain-constant! TRIVIAL_PAIRING)))
 
 (defconstraint set-pairing-result-when-trivial-pairngs ()
   (let ((pairing_result_hi (next LIMB))
@@ -735,7 +739,12 @@
   (eq! CS_ECMUL (* ICP (is_ecmul))))
 
 (defconstraint ecpairing-circuit-selector ()
-  (eq! CS_ECPAIRING ACCPC))
+  (begin 
+    (if-not-zero IS_ECPAIRING_DATA (eq! CS_ECPAIRING ACCPC))
+    (if-not-zero IS_ECPAIRING_RESULT (eq! CS_ECPAIRING (* SUCCESS_BIT (- 1 TRIVIAL_PAIRING))))
+    (if-zero (is_ecpairing) (vanishes! CS_ECPAIRING))
+  )
+)
 
 (defconstraint g2-membership-circuit-selector ()
   (eq! CS_G2_MEMBERSHIP G2MTR))
