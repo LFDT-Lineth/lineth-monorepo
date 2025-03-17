@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"fmt"
+
 	blob_v0 "github.com/consensys/linea-monorepo/prover/lib/compressor/blob/v0"
 	blob_v1 "github.com/consensys/linea-monorepo/prover/lib/compressor/blob/v1"
 
@@ -11,6 +12,7 @@ import (
 	fr381 "github.com/consensys/gnark-crypto/ecc/bls12-381/fr"
 	"github.com/consensys/linea-monorepo/prover/circuits"
 	"github.com/consensys/linea-monorepo/prover/circuits/blobdecompression"
+	v1 "github.com/consensys/linea-monorepo/prover/circuits/blobdecompression/v1"
 	"github.com/consensys/linea-monorepo/prover/circuits/dummy"
 	"github.com/consensys/linea-monorepo/prover/config"
 	"github.com/consensys/linea-monorepo/prover/lib/compressor/blob"
@@ -142,6 +144,17 @@ func Prove(cfg *config.Config, req *Request) (*Response, error) {
 		opts := []any{
 			emPlonk.GetNativeProverOptions(ecc.BW6_761.ScalarField(), ecc.BLS12_377.ScalarField()),
 			emPlonk.GetNativeVerifierOptions(ecc.BW6_761.ScalarField(), ecc.BLS12_377.ScalarField()),
+		}
+
+		// Add the MaxUncompressedBytes field
+		// This is actually not required for an assignment
+		// But in case the proof fails, ProveCheck will use
+		// the assignment as a circuit for the test engine
+		switch c := assignment.(type) {
+		case *v1.Circuit:
+			c.MaxBlobPayloadNbBytes = maxUncompressedBytes
+		default:
+			logrus.Warnf("decompression circuit of type %T. test engine might give an incorrect result.", c)
 		}
 
 		// This actually runs the compression prover
