@@ -10,7 +10,7 @@ repositories {
   maven {
     url "https://artifacts.consensys.net/public/linea-besu/maven/"
     content {
-      includeGroupByRegex('io\\.consensys\\..*')
+      includeGroupByRegex('org\\.hyperledger\\..*')
     }
   }
 }
@@ -71,7 +71,7 @@ dependencies {
   implementation ("org.web3j:core:${libs.versions.web3j.get()}") {
     exclude group: 'org.slf4j', module: 'slf4j-nop'
   }
-  testImplementation 'io.consensys.linea-besu:plugin-api:24.11-delivery39'
+  testImplementation 'org.hyperledger.besu:plugin-api:25.2.1-linea1'
   testImplementation 'info.picocli:picocli:4.7.6'
   testImplementation 'io.vertx:vertx-core'
 }

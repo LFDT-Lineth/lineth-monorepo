@@ -3,8 +3,8 @@ plugins {
   id 'java-library'
 }
 
-def besuArtifactGroup="io.consensys.linea-besu"
-def besuVersion="25.2-delivery48"
+def besuArtifactGroup="org.hyperledger.besu"
+def besuVersion="25.2.1-linea1"
 
 dependencies {
   api("${besuArtifactGroup}:besu-datatypes:${besuVersion}") {
