@@ -2,7 +2,6 @@ import { useMemo } from "react";
 import { useReadContract } from "wagmi";
 import { useChainStore } from "@/stores/chainStore";
 import { NetworkLayer } from "@/config";
-import MessageService from "@/abis/MessageService.json";
 import { getChainNetworkLayer } from "@/utils/chainsUtil";
 
 const useMinimumFee = () => {
@@ -15,7 +14,21 @@ const useMinimumFee = () => {
 
   const { data, isLoading, error, queryKey, refetch } = useReadContract({
     address: messageServiceAddress ?? "0x",
-    abi: MessageService.abi,
+    abi: [
+      {
+        inputs: [],
+        name: "minimumFeeInWei",
+        outputs: [
+          {
+            internalType: "uint256",
+            name: "",
+            type: "uint256",
+          },
+        ],
+        stateMutability: "view",
+        type: "function",
+      },
+    ],
     functionName: "minimumFeeInWei",
     chainId: fromChain?.id,
     query: {
