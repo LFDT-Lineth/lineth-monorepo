@@ -9,6 +9,8 @@
 	    (* hub.acp_REL_BLK_NUM                                (hub-into-hub-target-selector))
 	    (* hub.acp_DEPLOYMENT_NUMBER_FIRST_IN_BLOCK           (hub-into-hub-target-selector))
 	    (* hub.acp_DEPLOYMENT_NUMBER_FINAL_IN_BLOCK           (hub-into-hub-target-selector))
+	    (* hub.acp_EXISTS_FIRST_IN_BLOCK                      (hub-into-hub-target-selector))
+	    (* hub.acp_EXISTS_FINAL_IN_BLOCK                      (hub-into-hub-target-selector))
 	    )
 	   ;; source columns
 	   (
@@ -17,6 +19,8 @@
 	    (* hub.scp_REL_BLK_NUM                                (hub-into-hub-source-selector))
 	    (* hub.scp_DEPLOYMENT_NUMBER_FIRST_IN_BLOCK           (hub-into-hub-source-selector))
 	    (* hub.scp_DEPLOYMENT_NUMBER_FINAL_IN_BLOCK           (hub-into-hub-source-selector))
+	    (* hub.scp_EXISTS_FIRST_IN_BLOCK                      (hub-into-hub-source-selector))
+	    (* hub.scp_EXISTS_FINAL_IN_BLOCK                      (hub-into-hub-source-selector))
 	    )
 	   )
 

@@ -107,7 +107,10 @@
                     (vanishes!  acp_DEPLOYMENT_NUMBER)))
 
 (defconstraint    account-consistency---initialization---block-level       (:guard   acp_FIRST_IN_BLK)
-                  (eq!    acp_DEPLOYMENT_NUMBER_FIRST_IN_BLOCK    acp_DEPLOYMENT_NUMBER))
+                  (begin
+                    (eq!    acp_DEPLOYMENT_NUMBER_FIRST_IN_BLOCK    acp_DEPLOYMENT_NUMBER)
+                    (eq!    acp_EXISTS_FIRST_IN_BLOCK               acp_EXISTS           )
+                    ))
 
 (defconstraint    account-consistency---initialization---transaction-level (:guard   acp_FIRST_IN_TXN)
                   (begin
@@ -154,8 +157,9 @@
                   (:guard   acp_AGAIN_IN_CNF)
                   ;;;;;;;;;;;;;;;;;;;;;;;;;;;
                   (begin
-                    (eq!   acp_DEPLOYMENT_NUMBER         (prev acp_DEPLOYMENT_NUMBER_NEW)   )
-                    (eq!   acp_DEPLOYMENT_STATUS         (prev acp_DEPLOYMENT_STATUS_NEW)   )))
+                    (eq!   acp_DEPLOYMENT_NUMBER         (prev acp_DEPLOYMENT_NUMBER_NEW))
+                    (eq!   acp_DEPLOYMENT_STATUS         (prev acp_DEPLOYMENT_STATUS_NEW))
+                    ))
 
 
 ;------------------------;
@@ -167,7 +171,10 @@
                   ;;;;;;;;;;;;;;;;;;;;;;;;;;;
                   (begin
                     (remained-constant!    acp_DEPLOYMENT_NUMBER_FIRST_IN_BLOCK)
-                    (remained-constant!    acp_DEPLOYMENT_NUMBER_FINAL_IN_BLOCK)))
+                    (remained-constant!    acp_DEPLOYMENT_NUMBER_FINAL_IN_BLOCK)
+                    (remained-constant!    acp_EXISTS_FIRST_IN_BLOCK)
+                    (remained-constant!    acp_EXISTS_FINAL_IN_BLOCK)
+                    ))
 
 
 ;------------------------------;
@@ -196,10 +203,17 @@
 ;;                                     ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defconstraint    account-consistency---finalization---block-level       (:guard   acp_FINAL_IN_BLK)
-                  (eq!    acp_DEPLOYMENT_NUMBER_FINAL_IN_BLOCK    acp_DEPLOYMENT_NUMBER_NEW))
+(defconstraint    account-consistency---finalization---block-level
+                  (:guard   acp_FINAL_IN_BLK)
+                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                  (begin
+                    (eq!    acp_DEPLOYMENT_NUMBER_FINAL_IN_BLOCK    acp_DEPLOYMENT_NUMBER_NEW)
+                    (eq!    acp_EXISTS_FINAL_IN_BLOCK               acp_EXISTS_NEW           )
+                    ))
 
-(defconstraint    account-consistency---finalization---transaction-level (:guard   acp_FINAL_IN_TXN)
+(defconstraint    account-consistency---finalization---transaction-level
+                  (:guard   acp_FINAL_IN_TXN)
+                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;
                   (vanishes!    acp_DEPLOYMENT_STATUS_NEW))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

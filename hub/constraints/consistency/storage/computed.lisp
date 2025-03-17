@@ -162,6 +162,61 @@
     )
   )
 
+(defcomputed
+  (scp_EXISTS_FIRST_IN_BLOCK)
+  (map-if
+
+    ;; target perspective and key columns
+    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+    ;; target selector
+    scp_PEEK_AT_STORAGE
+    ;; target key columns
+    scp_ADDRESS_HI
+    scp_ADDRESS_LO
+    scp_REL_BLK_NUM
+
+    ;; source perspective and key/value columns
+    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+    ;; source selector
+    acp_PEEK_AT_ACCOUNT
+    ;; source key columns
+    acp_ADDRESS_HI
+    acp_ADDRESS_LO
+    acp_REL_BLK_NUM
+    ;; source value column
+    acp_EXISTS_FIRST_IN_BLOCK
+    )
+  )
+
+(defcomputed
+  (scp_EXISTS_FINAL_IN_BLOCK)
+  (map-if
+    ;; target perspective and key columns
+    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+    ;; perspective column
+    scp_PEEK_AT_STORAGE
+    ;; target key columns
+    scp_ADDRESS_HI
+    scp_ADDRESS_LO
+    scp_REL_BLK_NUM
+
+    ;; source perspective and key/value columns
+    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+    ;; perspective column
+    acp_PEEK_AT_ACCOUNT
+    ;; source key columns
+    acp_ADDRESS_HI
+    acp_ADDRESS_LO
+    acp_REL_BLK_NUM
+    ;; source value column
+    acp_EXISTS_FINAL_IN_BLOCK
+    )
+  )
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                    ;;

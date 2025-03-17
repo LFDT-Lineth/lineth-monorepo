@@ -84,11 +84,11 @@
                          ))
 
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;                                         ;;
-;; FRIRST/FINAL deployment number in block ;;
-;;                                         ;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                                                       ;;
+;; FRIRST/FINAL deployment number and existence in block ;;
+;;                                                       ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defcomputed
   (acp_DEPLOYMENT_NUMBER_FIRST_IN_BLOCK)
@@ -102,6 +102,20 @@
   (bwd-fill-within      acp_PEEK_AT_ACCOUNT
                         acp_FINAL_IN_BLK
                         acp_DEPLOYMENT_NUMBER_NEW
+                        ))
+
+(defcomputed
+  (acp_EXISTS_FIRST_IN_BLOCK)
+  (fwd-fill-within      acp_PEEK_AT_ACCOUNT
+                        acp_FIRST_IN_BLK
+                        acp_EXISTS
+                        ))
+
+(defcomputed
+  (acp_EXISTS_FINAL_IN_BLOCK)
+  (bwd-fill-within      acp_PEEK_AT_ACCOUNT
+                        acp_FINAL_IN_BLK
+                        acp_EXISTS_NEW
                         ))
 
 
