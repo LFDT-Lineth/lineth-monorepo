@@ -132,6 +132,13 @@
                                    (DOM-SUB-stamps---standard            3        ;; kappa
                                                                          0))))    ;; c
 
+(defconstraint   storage-instruction---1st-logging-of-the-underlying-storage-operation
+                 (:guard (storage-instruction---no-stack-exceptions))
+                 (if-not-zero    (oogx-or-no-exception)
+                                 (begin
+                                   (eq! (shift storage/SLOAD_OPERATION     3) (storage-instruction---is-SLOAD))
+                                   (eq! (shift storage/SSTORE_OPERATION    3) (storage-instruction---is-SSTORE)))))
+
 (defconstraint   storage-instruction---setting-storage-slot-values---doing-for-SLOAD
                  (:guard (storage-instruction---no-stack-exceptions))
                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -163,6 +170,14 @@
                                                 (undo-storage-warmth-and-value-update     4)
                                                 (DOM-SUB-stamps---revert-with-current     4       ;; kappa
                                                                                           0)))))  ;; c
+
+(defconstraint   storage-instruction---2nd-logging-of-the-underlying-storage-operation
+                 (:guard (storage-instruction---no-stack-exceptions))
+                 (if-not-zero    (oogx-or-no-exception)
+                                 (if-not-zero CONTEXT_WILL_REVERT
+                                              (begin
+                                                (eq! (shift storage/SLOAD_OPERATION     4) (storage-instruction---is-SLOAD))
+                                                (eq! (shift storage/SSTORE_OPERATION    4) (storage-instruction---is-SSTORE))))))
 
 (defun    (orig-is-zero)           (shift storage/VALUE_ORIG_IS_ZERO 3))
 (defun    (curr-is-zero)           (shift storage/VALUE_CURR_IS_ZERO 3))

@@ -126,3 +126,12 @@
                (begin
                  (if-not-zero scp_FIRST_IN_TXN (vanishes! scp_WARMTH))
                  (if-not-zero scp_AGAIN_IN_TXN (eq!       scp_WARMTH    (prev    scp_WARMTH_NEW)))))
+
+(defconstraint exclusivity-and-sanity-checks-for-_OPERATION-columns ()
+               (if-not-zero    scp_PEEK_AT_STORAGE
+                               (begin
+                                 (eq!         1
+                                              (+  scp_PREWARMING_OPERATION
+                                                  scp_SLOAD_OPERATION
+                                                  scp_SSTORE_OPERATION))
+                                 (vanishes!   (*  scp_PREWARMING_OPERATION   scp_EXCEPTIONAL_OPERATION)))))

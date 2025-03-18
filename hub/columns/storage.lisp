@@ -29,4 +29,7 @@
 		( VALUE_NEXT_IS_ZERO              :binary )
 		( VALUE_NEXT_IS_ORIG              :binary )
 		( VALUE_CURR_CHANGES              :binary )
+
+		( SLOAD_OPERATION                 :binary@prove )
+		( SSTORE_OPERATION                :binary@prove )
 	))
