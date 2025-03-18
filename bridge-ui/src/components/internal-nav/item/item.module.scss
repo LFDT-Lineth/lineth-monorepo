@@ -1,0 +1,18 @@
+.nav {
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  column-gap: 0.5rem;
+  padding: 0.75rem 1.375rem;
+  background-color: var(--v2-color-white);
+  text-decoration: none;
+  transition: background-color 0.25s ease-in-out;
+
+  &.active {
+    background-color: var(--v2-color-indigo);
+    color: var(--v2-color-white);
+  }
+  &:hover:not(.active) {
+    background-color: var(--v2-color-icterine);
+  }
+}

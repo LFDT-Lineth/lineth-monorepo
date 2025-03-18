@@ -1,0 +1,24 @@
+.content {
+  padding: 1.5rem;
+  background-color: var(--v2-color-white);
+  border-radius: 1.25rem;
+  text-align: center;
+}
+
+.icon {
+  margin-bottom: 0.875rem;
+  display: inline-block;
+
+  svg {
+    color: var(--v2-color-indigo);
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+}
+
+.title {
+  font-weight: 500;
+  margin-bottom: 2.25rem;
+  font-size: 1.25rem;
+  line-height: 1.4;
+}

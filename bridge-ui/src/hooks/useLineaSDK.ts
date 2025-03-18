@@ -1,40 +1,31 @@
 import { useMemo } from "react";
 import { LineaSDK, Network } from "@consensys/linea-sdk";
 import { L1MessageServiceContract, L2MessageServiceContract } from "@consensys/linea-sdk/dist/lib/contracts";
-import { NetworkType } from "@/config";
-import { useChainStore } from "@/stores/chainStore";
+import { useChainStore } from "@/stores";
 
-interface LineaSDKContracts {
+export interface LineaSDKContracts {
   L1: L1MessageServiceContract;
   L2: L2MessageServiceContract;
 }
 
 const useLineaSDK = () => {
-  const networkType = useChainStore((state) => state.networkType);
+  const fromChain = useChainStore.useFromChain();
 
   const { lineaSDK, lineaSDKContracts } = useMemo(() => {
-    const infuraKey = process.env.NEXT_PUBLIC_INFURA_ID;
-    if (!infuraKey) return { lineaSDK: null, lineaSDKContracts: null };
-
     let l1RpcUrl;
     let l2RpcUrl;
-    switch (networkType) {
-      case NetworkType.MAINNET:
-        l1RpcUrl = `https://mainnet.infura.io/v3/${infuraKey}`;
-        l2RpcUrl = `https://linea-mainnet.infura.io/v3/${infuraKey}`;
-        break;
-      case NetworkType.SEPOLIA:
-        l1RpcUrl = `https://sepolia.infura.io/v3/${infuraKey}`;
-        l2RpcUrl = `https://linea-sepolia.infura.io/v3/${infuraKey}`;
-        break;
-      default:
-        return { lineaSDK: null, lineaSDKContracts: null };
+    if (fromChain.testnet) {
+      l1RpcUrl = `https://sepolia.infura.io/v3/${process.env.NEXT_PUBLIC_INFURA_ID}`;
+      l2RpcUrl = `https://linea-sepolia.infura.io/v3/${process.env.NEXT_PUBLIC_INFURA_ID}`;
+    } else {
+      l1RpcUrl = `https://mainnet.infura.io/v3/${process.env.NEXT_PUBLIC_INFURA_ID}`;
+      l2RpcUrl = `https://linea-mainnet.infura.io/v3/${process.env.NEXT_PUBLIC_INFURA_ID}`;
     }
 
     const sdk = new LineaSDK({
       l1RpcUrl,
       l2RpcUrl,
-      network: `linea-${networkType.toLowerCase()}` as Network,
+      network: `linea-${fromChain.testnet ? "sepolia" : "mainnet"}` as Network,
       mode: "read-only",
     });
 
@@ -44,7 +35,7 @@ const useLineaSDK = () => {
     };
 
     return { lineaSDK: sdk, lineaSDKContracts: newLineaSDKContracts };
-  }, [networkType]);
+  }, [fromChain.testnet]);
 
   return { lineaSDK, lineaSDKContracts };
 };

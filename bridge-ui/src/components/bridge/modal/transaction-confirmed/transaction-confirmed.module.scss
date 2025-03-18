@@ -1,0 +1,52 @@
+.modal-inner {
+  padding: 0 1rem 1rem 1rem;
+  font-family: var(--font-atyp-text);
+}
+
+.text {
+  text-align: center;
+  line-height: 1.4;
+  margin-bottom: 1rem;
+}
+
+.list-button {
+  display: flex;
+  gap: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-family: var(--font-atyp);
+
+  flex-direction: column;
+  align-items: center;
+
+  @include bp("tablet") {
+    flex-direction: row;
+    justify-content: space-around;
+  }
+
+  .primary-btn,
+  .secondary-btn {
+    font-size: 0.875rem;
+    text-decoration: none;
+  }
+
+  .primary-btn {
+    padding: 0.75rem 1.5rem;
+    color: var(--v2-color-white);
+    background-color: var(--v2-color-indigo);
+    border-radius: 1.875rem;
+    transition:
+      background-color 0.2s ease,
+      color 0.2s ease;
+
+    &:hover {
+      background-color: var(--v2-color-icterine);
+      color: var(--v2-color-black);
+    }
+  }
+  .secondary-btn {
+    border-radius: 0rem;
+    padding: 0.75rem 0;
+    color: var(--v2-color-navy);
+    border-bottom: 1px solid var(--v2-color-indigo);
+  }
+}

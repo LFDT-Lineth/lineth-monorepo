@@ -1,70 +1,8 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
 
 :root {
-  /* toastify */
-  --toastify-color-success: #7adffd;
-  --toastify-color-progress-success: #7adffd;
-
-  --background-color: #F8F7F2;
-  --yellow: #FFF068;
+  --background-color: #f8f7f2;
 }
 
 body {
   background: var(--background-color);
-}
-
-@layer components {
-  input:-webkit-autofill,
-  input:-webkit-autofill:hover, 
-  input:-webkit-autofill:focus, 
-  input:-webkit-autofill:active{
-    -webkit-box-shadow: 0 0 0 30px var(--background-color) inset !important;
-  }
-
-  .container {
-    @apply mx-auto px-4;
-    max-width: 1280px;
-  }
-
-  .btn-custom {
-    @apply min-h-[2.5rem] h-[2.5rem] px-6;
-  }
-
-  .divider:not(:empty) {
-    gap: 0;
-  }
-
-  .menu-horizontal > li:not(.menu-title) > details > ul {
-    padding: 0;
-  }
-
-  :where(.menu-horizontal > li:not(.menu-title) > details > ul) {
-    border-radius: 0;
-  }
-
-  .tooltip-top::after {
-    border-color: var(--yellow) transparent transparent transparent;
-  }
-  
-  .tooltip-right::after {
-    border-color: transparent var(--yellow) transparent transparent;
-  }
-  
-  .tooltip-bottom::after {
-    border-color: transparent transparent var(--yellow) transparent;
-  }
-  
-  .tooltip-left::after {
-    border-color: transparent transparent transparent var(--yellow);
-  }
-
-  .tooltip:before {
-    border: 1px solid var(--yellow);
-    background-color: var(--yellow);
-    color: #525252;
-    border-radius: 8px;
-    padding: 8px;
-  }
 }

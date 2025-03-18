@@ -1,0 +1,99 @@
+.tooltip-wrapper {
+  display: inline-block;
+  position: relative;
+}
+
+.content-wrapper {
+  cursor: pointer;
+}
+
+.tooltip {
+  position: absolute;
+  padding: 0.75rem 1rem;
+  background-color: var(--v2-color-navy);
+  color: var(--v2-color-white);
+  font-size: 0.875rem;
+  border-radius: 0.5rem;
+  white-space: nowrap;
+  z-index: 1000;
+  opacity: 0;
+  visibility: hidden;
+  transform: scale(0.9);
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+
+  &.visible {
+    opacity: 1;
+    visibility: visible;
+    transform: scale(1);
+  }
+
+  &.top {
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-bottom: 0.5rem;
+    &::after {
+      content: "";
+      position: absolute;
+      bottom: -0.3125rem;
+      left: 50%;
+      transform: translateX(-50%);
+      border-left: 0.375rem solid transparent;
+      border-right: 0.375rem solid transparent;
+      border-top: 0.375rem solid var(--v2-color-navy);
+    }
+  }
+
+  &.bottom {
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-top: 0.5rem;
+    &::after {
+      content: "";
+      position: absolute;
+      top: -0.3125rem;
+      left: 50%;
+      transform: translateX(-50%);
+      border-left: 0.375rem solid transparent;
+      border-right: 0.375rem solid transparent;
+      border-bottom: 0.375rem solid var(--v2-color-navy);
+    }
+  }
+
+  &.left {
+    right: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    margin-right: 0.5rem;
+    &::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      right: -0.3125rem;
+      transform: translateY(-50%);
+      border-top: 0.375rem solid transparent;
+      border-bottom: 0.375rem solid transparent;
+      border-left: 0.375rem solid var(--v2-color-navy);
+    }
+  }
+
+  &.right {
+    left: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    margin-left: 0.5rem;
+    &::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: -0.3125rem;
+      transform: translateY(-50%);
+      border-top: 0.375rem solid transparent;
+      border-bottom: 0.375rem solid transparent;
+      border-right: 0.375rem solid var(--v2-color-navy);
+    }
+  }
+}

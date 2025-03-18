@@ -1,37 +1,92 @@
 "use client";
 
-import { ToastContainer } from "react-toastify";
-import { Header } from "./header";
+import clsx from "clsx";
+import { usePathname } from "next/navigation";
+import { useDynamicContext } from "@/lib/dynamic";
+import Header from "../header";
 import { useInitialiseChain } from "@/hooks";
-import Sidebar from "./Sidebar";
-import { useAccount } from "wagmi";
-import { linea, lineaSepolia, mainnet, sepolia } from "viem/chains";
-import WrongNetwork from "./WrongNetwork";
-import TermsModal from "../terms/TermsModal";
+import { Theme } from "@/types";
+import Image from "next/image";
 
 export function Layout({ children }: { children: React.ReactNode }) {
+  const { sdkHasLoaded } = useDynamicContext();
   useInitialiseChain();
 
-  const { chainId } = useAccount();
+  const pathname = usePathname();
 
-  return chainId &&
-    ![mainnet.id, sepolia.id, linea.id, lineaSepolia.id].includes(chainId as 1 | 11155111 | 59144 | 59141) ? (
-    <WrongNetwork />
-  ) : (
-    <div className="flex min-h-screen flex-col bg-cover bg-no-repeat">
-      <ToastContainer
-        position="top-center"
-        autoClose={2000}
-        hideProgressBar={false}
-        pauseOnFocusLoss={false}
-        theme="dark"
-      />
-      <TermsModal />
-      <Sidebar />
-      <div className="md:ml-64">
-        <Header />
+  if (!sdkHasLoaded) {
+    return (
+      <div className="layout">
+        <div className="container-v2">
+          <Header theme={Theme.navy} />
+          <main>{children}</main>
+        </div>
+        <div>
+          <Image
+            className="left-illustration"
+            src={"/images/illustration/illustration-left.svg"}
+            role="presentation"
+            alt="illustration left"
+            width={300}
+            height={445}
+            priority
+          />
+          <Image
+            className="right-illustration"
+            src={"/images/illustration/illustration-right.svg"}
+            role="presentation"
+            alt="illustration right"
+            width={610}
+            height={842}
+            priority
+          />
+          <Image
+            className={clsx("mobile-illustration", { hidden: pathname === "/faq" })}
+            src={"/images/illustration/illustration-mobile.svg"}
+            role="presentation"
+            alt="illustration mobile"
+            width={428}
+            height={359}
+            priority
+          />
+        </div>
       </div>
-      <main className="m-0 flex-1 p-3 md:ml-64 md:p-10">{children}</main>
+    );
+  }
+
+  return (
+    <div className="layout">
+      <div className="container-v2">
+        <Header theme={Theme.navy} />
+        <main>{children}</main>
+      </div>
+
+      <div>
+        <Image
+          className="left-illustration"
+          src={"/images/illustration/illustration-left.svg"}
+          role="presentation"
+          alt="illustration left"
+          width={300}
+          height={445}
+        />
+        <Image
+          className="right-illustration"
+          src={"/images/illustration/illustration-right.svg"}
+          role="presentation"
+          alt="illustration right"
+          width={610}
+          height={842}
+        />
+        <Image
+          className={clsx("mobile-illustration", { hidden: pathname === "/faq" })}
+          src={"/images/illustration/illustration-mobile.svg"}
+          role="presentation"
+          alt="illustration mobile"
+          width={428}
+          height={359}
+        />
+      </div>
     </div>
   );
 }

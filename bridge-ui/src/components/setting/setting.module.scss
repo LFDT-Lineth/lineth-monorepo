@@ -1,0 +1,63 @@
+.menu-button {
+  background-color: var(--v2-color-white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+
+  svg {
+    width: 1.25rem;
+    height: 1.25rem;
+    transition: color 0.25s ease-in-out;
+  }
+
+  &:hover,
+  &.visible {
+    svg {
+      color: var(--v2-color-indigo);
+    }
+  }
+}
+
+.dropdown-wrapper {
+  position: relative;
+}
+
+.menu-dropdown {
+  position: absolute;
+  visibility: hidden;
+  background-color: var(--v2-color-white);
+  border-radius: 0.625rem;
+  width: 13.625rem;
+  z-index: 2;
+  top: 1.875rem;
+  right: 0;
+  cursor: auto;
+
+  &.visible {
+    visibility: visible;
+  }
+
+  box-shadow: 0 0.1875rem 0.5rem 0 rgba(18, 18, 18, 0.2);
+
+  @include bp("tablet") {
+    left: 0;
+    right: unset;
+  }
+}
+
+.dropdown-list {
+  display: flex;
+  flex-direction: column;
+  row-gap: 0.3125rem;
+
+  .dropdown-item {
+    font-size: 0.875rem;
+    font-family: var(--font-atyp-text);
+    padding: 0.75rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    column-gap: 1rem;
+  }
+}

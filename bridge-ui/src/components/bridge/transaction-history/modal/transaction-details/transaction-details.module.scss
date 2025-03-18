@@ -1,0 +1,56 @@
+.modal-inner {
+  padding: 0 1rem 1rem 1rem;
+}
+
+.list {
+  background-color: var(--v2-color-smoke);
+  border-radius: 0.5rem;
+  margin-bottom: 1rem;
+  font-family: var(--font-atyp-text);
+
+  li {
+    padding: 0.75rem;
+    font-size: 0.875rem;
+    display: flex;
+    justify-content: space-between;
+
+    .date-time {
+      display: flex;
+      gap: 0.5rem;
+
+      & > :first-child {
+        font-weight: 500;
+      }
+    }
+
+    .price {
+      font-weight: 500;
+    }
+
+    .hash {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+
+      a {
+        text-decoration: none;
+        color: var(--v2-color-indigo);
+
+        &:hover {
+          text-decoration: underline;
+        }
+      }
+
+      svg {
+        width: 0.5rem;
+        height: 0.5rem;
+        color: var(--v2-color-silver);
+        transform: rotate(-45deg);
+      }
+    }
+
+    &:not(:last-child) {
+      border-bottom: 1px solid var(--v2-color-silver);
+    }
+  }
+}

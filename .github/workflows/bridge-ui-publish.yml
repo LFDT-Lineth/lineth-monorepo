@@ -61,11 +61,13 @@ jobs:
             ENV_FILE=./bridge-ui/.env.production
             NEXT_PUBLIC_WALLET_CONNECT_ID=${{ secrets.PUBLIC_WALLET_CONNECT_ID }}
             NEXT_PUBLIC_INFURA_ID=${{ secrets.PUBLIC_BRIDGE_UI_INFURA_ID }}
+            NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID=${{ secrets.PUBLIC_DYNAMIC_ENVIRONMENT_ID }}
           cache-from: type=registry,ref=consensys/linea-bridge-ui:buildcache
           cache-to: type=registry,ref=consensys/linea-bridge-ui:buildcache,mode=max
         env:
           NEXT_PUBLIC_WALLET_CONNECT_ID: ${{ secrets.PUBLIC_WALLET_CONNECT_ID }}
           NEXT_PUBLIC_INFURA_ID: ${{ secrets.PUBLIC_BRIDGE_UI_INFURA_ID }}
+          NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID: ${{ secrets.PUBLIC_DYNAMIC_ENVIRONMENT_ID }}
   
   test-build:
     if: github.event.pull_request.head.repo.fork == true

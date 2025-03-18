@@ -1,0 +1,27 @@
+.amount {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  max-width: calc(100% - 8.75rem);
+
+  input {
+    font-family: var(--font-atyp);
+    background-color: var(--v2-color-smoke);
+    font-size: 2rem;
+  }
+
+  .calculated-value {
+    font-size: 0.75rem;
+    color: var(--v2-color-darker-gray);
+    font-family: var(--font-atyp-text);
+    min-height: 0.75rem;
+  }
+}
+
+.title {
+  color: var(--v2-color-black);
+  font-size: 0.875rem;
+  font-weight: 500;
+  font-family: var(--font-atyp-text);
+  margin-bottom: 0.5rem;
+}

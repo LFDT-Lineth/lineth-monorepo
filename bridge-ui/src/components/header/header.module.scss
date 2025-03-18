@@ -1,0 +1,72 @@
+.header {
+  position: relative;
+  z-index: 3;
+  width: calc(100% - 4.5rem);
+  margin-top: 1.875rem;
+  margin-inline: auto;
+  border-radius: 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  @include bp("tablet") {
+    padding: 0.5rem 0.75rem;
+  }
+
+  @include bp("desktop") {
+    padding: 0.5rem 1.875rem;
+  }
+
+  &.default {
+    background-color: var(--v2-color-icterine);
+  }
+
+  &.navy {
+    background-color: var(--v2-color-navy);
+    color: var(--v2-color-cyan);
+
+    .logo path {
+      fill: var(--v2-color-cyan);
+    }
+  }
+
+  &.indigo {
+    background-color: var(--v2-color-indigo);
+    color: var(--v2-color-white);
+
+    .logo path {
+      fill: var(--v2-color-white);
+    }
+  }
+
+  &.tangerine {
+    background-color: var(--v2-color-tangerine);
+    color: var(--v2-color-black);
+
+    .logo path {
+      fill: var(--v2-color-black);
+    }
+  }
+
+  &.cyan {
+    background-color: var(--v2-color-cyan);
+    color: var(--v2-color-navy);
+
+    .logo path {
+      fill: var(--v2-color-navy);
+    }
+  }
+}
+
+.link-to-home {
+  display: flex;
+  align-items: center;
+}
+
+.logo {
+  width: auto;
+  height: 1.625rem;
+  margin-top: -0.4375rem;
+}
+
+@import "./header.mobile.module.scss";

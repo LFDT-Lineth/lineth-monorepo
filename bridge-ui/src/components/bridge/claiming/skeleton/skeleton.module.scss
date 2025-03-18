@@ -1,0 +1,53 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+}
+
+.logo-wrapper {
+  position: relative;
+  width: 2.5rem;
+  height: 2.5rem;
+}
+
+.big {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+}
+
+.small {
+  position: absolute;
+  width: 1rem;
+  height: 1rem;
+  bottom: 0;
+  right: 0;
+  border-radius: 50%;
+  border: 1px solid var(--v2-color-smoke);
+}
+
+.result {
+  display: flex;
+  gap: 0.5rem;
+  margin: 1rem 0;
+}
+
+.value {
+  min-width: 4rem;
+  min-height: 2.5rem;
+  border-radius: 0.375rem;
+}
+
+.estimate {
+  min-width: 4rem;
+  min-height: 1.0625rem;
+  border-radius: 0.375rem;
+}
+
+.bottom {
+  min-height: 1.0625rem;
+  min-width: 7.5rem;
+  border-radius: 0.375rem;
+  margin-top: 0.5rem;
+  display: inline-block;
+  align-self: flex-start;
+}

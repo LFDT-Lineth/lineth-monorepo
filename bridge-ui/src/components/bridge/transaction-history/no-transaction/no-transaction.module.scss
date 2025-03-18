@@ -1,0 +1,50 @@
+.content {
+  padding: 1.5rem;
+  background-color: var(--v2-color-white);
+  border-radius: 1.25rem;
+  text-align: center;
+}
+
+.icon {
+  margin-bottom: 1.5rem;
+  display: inline-block;
+
+  svg {
+    color: var(--v2-color-indigo);
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+}
+
+.title {
+  font-weight: 500;
+  margin-bottom: 1rem;
+  font-size: 1.25rem;
+  line-height: 1.4;
+}
+
+.desc {
+  font-size: 1rem;
+  font-family: var(--font-atyp-text);
+  line-height: 1.4;
+  margin-bottom: 1.5rem;
+}
+
+.link {
+  border-radius: 1.875rem;
+  width: 100%;
+  background-color: var(--v2-color-indigo);
+  color: var(--v2-color-white);
+  font-size: 0.875rem;
+  padding: 0.75rem 0;
+  text-decoration: none;
+  display: block;
+  transition:
+    0.25s color ease-in-out,
+    0.25s background-color ease-in-out;
+
+  &:hover {
+    background-color: var(--v2-color-icterine);
+    color: var(--v2-color-black);
+  }
+}

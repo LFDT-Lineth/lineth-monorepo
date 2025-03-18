@@ -1,0 +1,33 @@
+.wrapper {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.arrow-down-icon {
+  width: 0.75rem;
+  height: 0.75rem;
+  margin-left: 0.5rem;
+}
+
+.token-select-btn {
+  --v2-color-indigo: #ffffff;
+  --v2-color-white: var(--v2-color-black);
+  --v2-color-icterine: #ffffff;
+
+  display: flex;
+  align-items: center;
+  font-family: var(--font-atyp-text);
+  font-size: 0.875rem;
+  cursor: pointer;
+
+  border-radius: 6.25rem;
+  padding: 0.5rem;
+
+  img {
+    margin-right: 0.375rem;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 50%;
+  }  
+}
+

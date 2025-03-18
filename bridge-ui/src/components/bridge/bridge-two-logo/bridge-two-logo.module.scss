@@ -1,0 +1,21 @@
+.logo-wrapper {
+  position: relative;
+  width: 2.5rem;
+  height: 2.5rem;
+}
+
+.big {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+}
+
+.small {
+  position: absolute;
+  width: 1rem;
+  height: 1rem;
+  bottom: 0;
+  right: 0;
+  border-radius: 50%;
+  border: 1px solid var(--v2-color-smoke);
+}

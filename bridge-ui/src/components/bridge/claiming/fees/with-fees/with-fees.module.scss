@@ -1,0 +1,25 @@
+.gas-fees {
+    display: flex;
+    gap: 0.25rem;
+    align-items: center;
+    color: var(--v2-color-darker-gray);
+    cursor: pointer;
+    font-size: inherit;
+
+    img {
+      width: 0.75rem;
+      height: 0.75rem;
+      border-radius: 50%;
+    }
+
+    .estimate-crypto {
+      height: 0.75rem;
+      font-weight: 500;
+    }
+
+    .estimate-amount {
+      height: 0.75rem;
+      color: var(--v2-color-darker-gray);
+      font-weight: 500;
+    }
+}

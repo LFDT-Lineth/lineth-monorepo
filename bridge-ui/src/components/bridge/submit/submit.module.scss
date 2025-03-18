@@ -1,0 +1,22 @@
+.container {
+  display: flex;
+  gap: 1rem;
+}
+
+.wallet-icon {
+  background-color: #6119ef10;
+  color: var(--v2-color-indigo);
+  width: 2.375rem;
+  height: 2.375rem;
+  border-radius: 50%;
+  display: flex;
+  flex-shrink: 0;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+
+  svg {
+    width: 1.1875rem;
+    height: auto;
+  }
+}

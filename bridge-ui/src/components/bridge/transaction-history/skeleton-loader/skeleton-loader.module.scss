@@ -1,0 +1,48 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.skeleton-item {
+  display: grid;
+  grid-template-columns: 1fr;
+  align-items: center;
+  gap: 0;
+  border-radius: 0.625rem;
+  background-color: var(--v2-color-white);
+  padding: 1rem;
+  height: 4.875rem;
+
+  @include bp("tablet") {
+    gap: 0.625rem;
+  }
+}
+
+.skeleton-group {
+  display: flex;
+  column-gap: 2.5rem;
+  row-gap: 0.625rem;
+
+  .skeleton:nth-child(n + 2) {
+    display: none;
+  }
+
+  @include bp("tablet") {
+    .skeleton:nth-child(2) {
+      display: block;
+    }
+  }
+}
+
+.skeleton {
+  height: 0.625rem;
+  border-radius: 0.625rem;
+  width: 100%;
+}

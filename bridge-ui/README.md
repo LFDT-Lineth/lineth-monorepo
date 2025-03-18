@@ -95,13 +95,13 @@ cp .env.template .env
 2. Install packages:
 
 ```shell
-npm i
+pnpm i
 ```
 
 3. Start the development server, execute:
 
 ```shell
-npm run dev
+pnpm dev
 ```
 
 Frontend should be available at: http://localhost:3000

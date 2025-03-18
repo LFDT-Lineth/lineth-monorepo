@@ -1,0 +1,41 @@
+.from {
+  background-color: var(--v2-color-smoke);
+  border-radius: 0.625rem;
+  padding: 1rem;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  transition: box-shadow 0.25s ease-in-out;
+  cursor: pointer;
+
+  img {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+
+  &:hover {
+    box-shadow: inset 0 0 0 0.125rem var(--v2-color-icterine);
+  }
+}
+
+.name {
+  font-family: var(--font-atyp-text);
+  font-size: 0.875rem;
+  color: var(--v2-color-black);
+  text-align: initial;
+  font-weight: 500;
+}
+
+.info {
+  font-family: var(--font-atyp-text);
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  .info-value {
+    font-size: 1rem;
+    font-weight: 500;
+  }
+}

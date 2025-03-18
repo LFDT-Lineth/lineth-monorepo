@@ -1,0 +1,74 @@
+.wrapper {
+  background-color: var(--v2-color-white);
+  border-radius: 0.625rem;
+  padding: 1.5rem;
+}
+
+.headline {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.action {
+  display: flex;
+  gap: 1rem;
+  width: 4rem;
+  height: 2rem;
+  background-color: var(--v2-color-smoke);
+  border-radius: 0.625rem;
+}
+
+.exchange {
+  position: relative;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.from {
+  background-color: var(--v2-color-smoke);
+  border-radius: 0.625rem;
+  padding: 1rem;
+  width: 50%;
+  height: 5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.to {
+  background-color: var(--v2-color-smoke);
+  border-radius: 0.625rem;
+  padding: 1rem;
+  display: flex;
+  width: 50%;
+  height: 5rem;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.amount-wrapper {
+  background-color: var(--v2-color-smoke);
+  border-radius: 0.625rem;
+  padding: 1rem;
+  margin-top: 0.625rem;
+  transition: box-shadow 0.25s ease-in-out;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 6rem;
+}
+
+.connect-btn-wrapper {
+  display: flex;
+  margin-top: 1rem;
+  justify-content: center;
+}
+
+.connect-btn {
+  width: 100%;
+  height: 2.5rem;
+  background-color: var(--v2-color-smoke);
+  border-radius: 1.875rem;
+}

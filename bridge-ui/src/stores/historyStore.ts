@@ -1,15 +1,14 @@
 import { createWithEqualityFn } from "zustand/traditional";
 import { shallow } from "zustand/vanilla/shallow";
 import { createJSONStorage, persist } from "zustand/middleware";
-import { TransactionHistory } from "@/models/history";
 import { config } from "@/config";
-import { isEmptyObject } from "@/utils/utils";
+import { isEmptyObject, BridgeTransaction } from "@/utils";
 
 export type HistoryState = {
   isLoading: boolean;
   history: Record<
     string,
-    { transactions: TransactionHistory[]; lastL1FetchedBlockNumber: bigint; lastL2FetchedBlockNumber: bigint }
+    { transactions: BridgeTransaction[]; lastL1FetchedBlockNumber: bigint; lastL2FetchedBlockNumber: bigint }
   >;
 };
 
@@ -17,11 +16,11 @@ export type HistoryActions = {
   setIsLoading: (isLoading: boolean) => void;
   setTransactions: (
     key: string,
-    transactions: TransactionHistory[],
+    transactions: BridgeTransaction[],
     lastL1FetchedBlockNumber?: bigint,
     lastL2FetchedBlockNumber?: bigint,
   ) => void;
-  getTransactionsByKey: (key: string) => TransactionHistory[];
+  getTransactionsByKey: (key: string) => BridgeTransaction[];
   getFromBlockNumbers: (key: string) => { l1FromBlock: bigint; l2FromBlock: bigint };
 };
 
@@ -70,7 +69,7 @@ export const useHistoryStore = createWithEqualityFn<HistoryStore>()(
     }),
     {
       name: "history-storage",
-      version: parseInt(config.storage.minVersion),
+      version: config.storage.minVersion,
       storage: createJSONStorage(() => localStorage, {
         replacer: (_, value) => {
           if (typeof value === "bigint") value = { __type: "bigint", value: value.toString() };

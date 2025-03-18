@@ -1,43 +1,50 @@
 import { useAccount, useBalance, useReadContract } from "wagmi";
-import { erc20Abi, formatUnits } from "viem";
-import { useChainStore } from "@/stores/chainStore";
+import { erc20Abi } from "viem";
+import { useChainStore } from "@/stores";
+import { isEth } from "@/utils";
+import { Token } from "@/types";
 
-export function useTokenBalance(tokenAddress: `0x${string}` | null | undefined, tokenDecimals = 18) {
+const useTokenBalance = (token: Token) => {
   const { address } = useAccount();
-  const fromChain = useChainStore((state) => state.fromChain);
+  const fromChain = useChainStore.useFromChain();
 
   const ethBalance = useBalance({
-    chainId: fromChain?.id,
+    chainId: fromChain.id,
     address,
     query: {
-      enabled: !!address && !tokenAddress,
+      enabled: !!address && !!isEth(token),
     },
   });
 
   const erc20Balance = useReadContract({
-    address: tokenAddress || "0x",
+    address: token[fromChain.layer] || "0x",
     abi: erc20Abi,
     functionName: "balanceOf",
     args: [address || "0x"],
-    chainId: fromChain?.id,
+    chainId: fromChain.id,
     query: {
-      enabled: !!tokenAddress && !!address,
+      enabled: !isEth(token) && !!address,
     },
   });
 
   const isError = ethBalance.isError || erc20Balance.isError;
   const isLoading = ethBalance.isLoading || erc20Balance.isLoading;
-  const balance = !tokenAddress ? ethBalance.data?.value : erc20Balance.data;
+  const balance = isEth(token) ? ethBalance.data?.value : erc20Balance.data;
   const queryKey = ethBalance.queryKey || erc20Balance.queryKey;
 
   return {
-    balance: formatUnits(balance || 0n, tokenDecimals),
+    balance: balance || 0n,
     isError,
     isLoading,
     queryKey,
     refetch: () => {
-      ethBalance.refetch();
-      erc20Balance.refetch();
+      if (isEth(token)) {
+        ethBalance.refetch();
+      } else {
+        erc20Balance.refetch();
+      }
     },
   };
-}
+};
+
+export default useTokenBalance;

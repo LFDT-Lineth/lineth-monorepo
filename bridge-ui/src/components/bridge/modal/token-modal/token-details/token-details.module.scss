@@ -1,0 +1,57 @@
+.token-wrapper {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  border-radius: 0.3125rem;
+  transition: background-color 0.2s ease-in-out;
+
+  &:hover {
+    background-color: var(--v2-color-light-pink);
+  }
+}
+
+.left {
+  display: flex;
+  gap: 0.5rem;
+  text-align: initial;
+  align-items: center;
+
+  img {
+    width: 2rem;
+    height: 2rem;
+  }
+}
+
+.text-left {
+  font-family: var(--font-atyp-text);
+  align-items: center;
+
+  .token-symbol {
+    font-size: 1rem;
+    font-weight: 500;
+  }
+  .token-name {
+    font-size: 0.875rem;
+    color: var(--v2-color-darker-gray);
+  }
+}
+
+.rìght {
+  text-align: right;
+
+  .balance {
+    font-size: 1rem;
+    font-weight: 500;
+  }
+  .price {
+    font-size: 0.875rem;
+    color: var(--v2-color-darker-gray);
+  }
+}
+
+.not-from-current-layer {
+  text-align: initial;
+  max-width: 11.875rem;
+}

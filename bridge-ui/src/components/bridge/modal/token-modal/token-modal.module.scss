@@ -1,0 +1,45 @@
+.input-wrapper {
+  position: relative;
+  padding: 0 1rem;
+  margin-bottom: 1rem;
+
+  input {
+    font-size: 0.875rem;
+    font-family: var(--font-atyp-text);
+    border: 0.125rem solid var(--v2-color-silver);
+    border-radius: 0.625rem;
+    width: 100%;
+    padding: 1rem 0.75rem 1rem 2.375rem;
+    transition: 0.25s border-color ease-in-out;
+
+    &:focus {
+      border-color: var(--v2-color-icterine);
+    }
+  }
+
+  svg {
+    position: absolute;
+    pointer-events: none;
+    width: 0.75rem;
+    height: 0.75rem;
+    left: 2rem;
+    top: 1.25rem;
+  }
+}
+
+.list-token {
+  display: flex;
+  flex-direction: column;
+  padding: 0 0.3125rem;
+  overflow: auto;
+  height: 70vh;
+  margin-bottom: 1rem;
+
+  @include bp("tablet") {
+    height: 21.875rem;
+  }
+}
+
+.not-found {
+  padding: 0.75rem 1rem;
+}

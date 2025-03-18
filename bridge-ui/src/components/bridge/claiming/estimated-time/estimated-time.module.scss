@@ -1,0 +1,14 @@
+.time {
+    display: flex;
+    gap: 0.25rem;
+    align-items: center;
+    cursor: pointer;
+    color: var(--v2-color-darker-gray);
+    font-size: inherit;
+    font-weight: 500;
+
+    span {
+      color: var(--v2-color-black);
+      height: 0.75rem;
+    }
+}
