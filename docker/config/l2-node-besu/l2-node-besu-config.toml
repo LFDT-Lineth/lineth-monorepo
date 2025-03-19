@@ -21,7 +21,7 @@ rpc-http-max-active-connections=200
 rpc-ws-enabled=true
 rpc-ws-host="0.0.0.0"
 rpc-ws-port=8546
-rpc-ws-api=["ADMIN","TXPOOL","WEB3","ETH","NET","PERM"]
+rpc-ws-api=["ADMIN","TXPOOL","WEB3","ETH","NET","PERM","LINEA"]
 rpc-ws-max-active-connections=200
 
 # graphql
@@ -54,7 +54,7 @@ plugin-linea-extra-data-set-min-gas-price-enabled=true
 plugin-linea-estimate-gas-compatibility-mode-enabled=false
 plugin-linea-estimate-gas-min-margin="1.2"
 
-Xbonsai-limit-trie-logs-enabled=false
+bonsai-limit-trie-logs-enabled=false
 bonsai-historical-block-limit=1024
 
 Xin-process-rpc-enabled=true

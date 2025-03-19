@@ -40,8 +40,6 @@ services:
     extends:
       file: compose-spec-l2-services.yml
       service: sequencer
-    volumes:
-      - ../config/common/traces-limits-besu-v2.toml:/var/lib/besu/traces-limits.toml:ro
 
   traces-node-v2:
     extends:

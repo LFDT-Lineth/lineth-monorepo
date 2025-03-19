@@ -42,6 +42,8 @@ plugin-linea-rpc-concurrent-requests-limit=2
 plugin-linea-tracer-readiness-server-host="0.0.0.0"
 plugin-linea-tracer-readiness-server-port=8548
 plugin-linea-tracer-readiness-max-blocks-behind=5
+plugin-linea-l1l2-bridge-contract="0xe537D669CA013d86EBeF1D64e40fC74CADC91987"
+plugin-linea-l1l2-bridge-topic="e856c2b8bd4eb0027ce32eeaf595c21b0b6b4644b326e5b7bd80a1cf8db72e6c"
 
-Xbonsai-limit-trie-logs-enabled=false
+bonsai-limit-trie-logs-enabled=false
 bonsai-historical-block-limit=1024

@@ -5,7 +5,7 @@ services:
   sequencer:
     hostname: sequencer
     container_name: sequencer
-    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-devnet-547b40e}
+    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-devnet-402ebda}
     profiles: [ "l2", "l2-bc", "debug", "external-to-monorepo" ]
     ports:
       - "8545:8545"
@@ -40,7 +40,7 @@ services:
       - ./config/linea-local-dev-genesis-PoA-besu.json/:/var/lib/besu/genesis.json:ro
       - ./config/linea-besu-sequencer/key:/var/lib/besu/key:ro
       - ./config/linea-besu-sequencer/log4j.xml:/var/lib/besu/log4j.xml:ro
-      - ../config/common/traces-limits-besu-v1.toml:/var/lib/besu/traces-limits.toml:ro
+      - ../config/common/traces-limits-besu-v2.toml:/var/lib/besu/traces-limits.toml:ro
     networks:
       l1network:
       linea:
@@ -82,7 +82,7 @@ services:
   l2-node-besu:
     hostname: l2-node-besu
     container_name: l2-node-besu
-    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-devnet-547b40e}
+    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-devnet-402ebda}
     profiles: [ "l2", "l2-bc", "debug", "external-to-monorepo" ]
     depends_on:
       sequencer:
@@ -119,7 +119,7 @@ services:
       - ./config/linea-besu-sequencer/deny-list.txt:/var/lib/besu/deny-list.txt:ro
       - ./config/l2-node-besu/log4j.xml:/var/lib/besu/log4j.xml:ro
       - ./config/linea-local-dev-genesis-PoA-besu.json/:/var/lib/besu/genesis.json:ro
-      - ../config/common/traces-limits-besu-v1.toml:/var/lib/besu/traces-limits.toml:ro
+      - ../config/common/traces-limits-besu-v2.toml:/var/lib/besu/traces-limits.toml:ro
       - ../tmp/local/:/data/:rw
     networks:
       l1network:
@@ -162,7 +162,7 @@ services:
   traces-node-v2:
     hostname: traces-node-v2
     container_name: traces-node-v2
-    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-devnet-547b40e}
+    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-devnet-402ebda}
     profiles: [ "l2", "l2-bc", "debug", "external-to-monorepo" ]
     depends_on:
       sequencer:
@@ -367,7 +367,7 @@ services:
       - l1network
 
   zkbesu-shomei:
-    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-devnet-547b40e}
+    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-devnet-402ebda}
     hostname: zkbesu-shomei
     container_name: zkbesu-shomei
     profiles: [ "l2", "l2-bc", "external-to-monorepo" ]
@@ -402,7 +402,7 @@ services:
         --genesis-file=/var/lib/besu/genesis.json \
         --plugin-shomei-http-host="11.11.11.114" \
         --plugin-shomei-http-port=8888 \
-        --Xbonsai-limit-trie-logs-enabled=false \
+        --bonsai-limit-trie-logs-enabled=false \
         --bootnodes=enode://14408801a444dafc44afbccce2eb755f902aed3b5743fed787b3c790e021fef28b8c827ed896aa4e8fb46e22bd67c39f994a73768b4b382f8597b0d44370e15d@11.11.11.101:30303
 
     volumes:
@@ -583,7 +583,7 @@ services:
         ipv4_address: 10.10.10.205
 
   zkbesu-shomei-sr:
-    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-devnet-547b40e}
+    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-devnet-402ebda}
     hostname: zkbesu-shomei-sr
     container_name: zkbesu-shomei-sr
     profiles: [ "external-to-monorepo", "staterecovery" ]
@@ -622,7 +622,7 @@ services:
         --genesis-file=/var/lib/besu/genesis.json \
         --plugins=BesuShomeiRpcPlugin,ZkTrieLogPlugin,LineaStateRecoveryPlugin \
         --rpc-http-api=ADMIN,DEBUG,NET,ETH,WEB3,PLUGINS,MINER,SHOMEI \
-        --Xbonsai-limit-trie-logs-enabled=false \
+        --bonsai-limit-trie-logs-enabled=false \
         --plugin-shomei-http-host="11.11.11.117" \
         --plugin-shomei-http-port=8888 \
         --plugin-staterecovery-l1-endpoint=http://l1-el-node:8545 \
