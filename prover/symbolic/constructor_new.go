@@ -27,12 +27,12 @@ func Add(inputs ...any) *Expression {
 
 	exprInputs := intoExprSlice(inputs...)
 
-	res := exprInputs[0]
-	for i := 1; i < len(exprInputs); i++ {
-		res = res.Add(exprInputs[i])
+	magnitudes := make([]int, len(exprInputs))
+	for i := range exprInputs {
+		magnitudes[i] = 1
 	}
 
-	return res
+	return NewLinComb(exprInputs, magnitudes)
 }
 
 // Mul constructs a symbolic expression representing the product of its inputs.
@@ -57,12 +57,12 @@ func Mul(inputs ...any) *Expression {
 
 	exprInputs := intoExprSlice(inputs...)
 
-	res := exprInputs[0]
-	for i := 1; i < len(exprInputs); i++ {
-		res = res.Mul(exprInputs[i])
+	magnitudes := make([]int, len(exprInputs))
+	for i := range exprInputs {
+		magnitudes[i] = 1
 	}
 
-	return res
+	return NewProduct(exprInputs, magnitudes)
 }
 
 // Sub returns a symbolic expression representing the subtraction of `a` by all
@@ -82,16 +82,18 @@ func Sub(a any, bs ...any) *Expression {
 	}
 
 	var (
-		aExpr = intoExpr(a)
-		bExpr = intoExprSlice(bs...)
-		res   = aExpr
+		aExpr      = intoExpr(a)
+		bExpr      = intoExprSlice(bs...)
+		exprInputs = append([]*Expression{aExpr}, bExpr...)
+		magnitudes = make([]int, len(exprInputs))
 	)
 
-	for i := range bExpr {
-		res = res.Sub(bExpr[i])
+	for i := range exprInputs {
+		magnitudes[i] = -1
 	}
+	magnitudes[0] = 1
 
-	return res
+	return NewLinComb(exprInputs, magnitudes)
 }
 
 // Neg returns an expression representing the negation of an expression or of
@@ -119,7 +121,7 @@ func Square(x any) *Expression {
 		return nil
 	}
 
-	return intoExpr(x).Square()
+	return NewProduct([]*Expression{intoExpr(x)}, []int{2})
 }
 
 // Pow returns an expression representing the raising to the power "n" of an

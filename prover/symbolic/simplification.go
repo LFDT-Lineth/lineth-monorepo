@@ -78,20 +78,36 @@ func regroupTerms(magnitudes []int, children []*Expression) (
 // the linear combination. This function is used both for simplifying [LinComb]
 // expressions and for simplifying [Product]. "magnitude" denotes either the
 // coefficient for LinComb or exponents for Product.
+//
+// The function takes ownership of the provided slices.
 func removeZeroCoeffs(magnitudes []int, children []*Expression) (cleanMagnitudes []int, cleanChildren []*Expression) {
 
 	if len(magnitudes) != len(children) {
 		panic("magnitudes and children don't have the same length")
 	}
 
-	cleanChildren = make([]*Expression, 0, len(children))
-	cleanMagnitudes = make([]int, 0, len(children))
-
+	// cleanChildren and cleanMagnitudes are initialized lazily to
+	// avoid unnecessarily allocating memory. The underlying assumption
+	// is that the application will 99% of time never pass zero as a
+	// magnitude.
 	for i, c := range magnitudes {
-		if c != 0 {
+
+		if c == 0 && cleanChildren == nil {
+			cleanChildren = make([]*Expression, i, len(children))
+			cleanMagnitudes = make([]int, i, len(children))
+			copy(cleanChildren, children[:i])
+			copy(cleanMagnitudes, magnitudes[:i])
+		}
+
+		if c != 0 && cleanChildren != nil {
 			cleanMagnitudes = append(cleanMagnitudes, magnitudes[i])
 			cleanChildren = append(cleanChildren, children[i])
 		}
+	}
+
+	if cleanChildren == nil {
+		cleanChildren = children
+		cleanMagnitudes = magnitudes
 	}
 
 	return cleanMagnitudes, cleanChildren
@@ -108,14 +124,16 @@ func removeZeroCoeffs(magnitudes []int, children []*Expression) (cleanMagnitudes
 // The caller passes a target operator which may be any value of type either
 // [LinComb] or [Product]. Any other type yields a panic error.
 func expandTerms(op Operator, magnitudes []int, children []*Expression) (
-	expandedMagnitudes []int,
-	expandedExpression []*Expression,
+	[]int,
+	[]*Expression,
 ) {
 
 	var (
-		opIsProd    bool
-		opIsLinC    bool
-		numChildren = len(children)
+		opIsProd        bool
+		opIsLinC        bool
+		numChildren     = len(children)
+		totalReturnSize = 0
+		needExpand      = false
 	)
 
 	switch op.(type) {
@@ -133,9 +151,34 @@ func expandTerms(op Operator, magnitudes []int, children []*Expression) (
 		panic("incompatible number of children and magnitudes")
 	}
 
-	// The capacity allocation is purely heuristic
-	expandedExpression = make([]*Expression, 0, 2*len(magnitudes))
-	expandedMagnitudes = make([]int, 0, 2*len(magnitudes))
+	// This loops performs a first scan of the children to compute the total
+	// number of elements to allocate.
+	for i, child := range children {
+
+		switch child.Operator.(type) {
+		case Product, *Product:
+			if opIsProd {
+				needExpand = true
+				totalReturnSize += len(children[i].Children)
+				continue
+			}
+		case LinComb, *LinComb:
+			if opIsLinC {
+				needExpand = true
+				totalReturnSize += len(children[i].Children)
+				continue
+			}
+		}
+
+		totalReturnSize++
+	}
+
+	if !needExpand {
+		return magnitudes, children
+	}
+
+	expandedMagnitudes := make([]int, 0, totalReturnSize)
+	expandedExpression := make([]*Expression, 0, totalReturnSize)
 
 	for i := 0; i < numChildren; i++ {
 
@@ -175,7 +218,6 @@ func expandTerms(op Operator, magnitudes []int, children []*Expression) (
 			for k := range child.Children {
 				expandedExpression = append(expandedExpression, child.Children[k])
 				expandedMagnitudes = append(expandedMagnitudes, magnitude*cLinC.Coeffs[k])
-
 			}
 			continue
 		}

@@ -105,7 +105,7 @@ func FullZkEvm(tl *config.TracesLimits, cfg *config.Config) *ZkEvm {
 
 	onceFullZkEvm.Do(func() {
 		// Initialize the Full zkEVM arithmetization
-		fullZkEvm = fullZKEVMWithSuite(tl, fullCompilationSuite, cfg)
+		fullZkEvm = FullZKEVMWithSuite(tl, fullCompilationSuite, cfg)
 	})
 
 	return fullZkEvm
@@ -115,13 +115,16 @@ func FullZkEVMCheckOnly(tl *config.TracesLimits, cfg *config.Config) *ZkEvm {
 
 	onceFullZkEvmCheckOnly.Do(func() {
 		// Initialize the Full zkEVM arithmetization
-		fullZkEvmCheckOnly = fullZKEVMWithSuite(tl, dummyCompilationSuite, cfg)
+		fullZkEvmCheckOnly = FullZKEVMWithSuite(tl, dummyCompilationSuite, cfg)
 	})
 
 	return fullZkEvmCheckOnly
 }
 
-func fullZKEVMWithSuite(tl *config.TracesLimits, suite compilationSuite, cfg *config.Config) *ZkEvm {
+// FullZKEVMWithSuite returns a compiled zkEVM with the given compilation suite.
+// It can be used to benchmark the compilation time of the zkEVM and helps with
+// performance optimization.
+func FullZKEVMWithSuite(tl *config.TracesLimits, suite compilationSuite, cfg *config.Config) *ZkEvm {
 
 	// @Alex: only set mandatory parameters here. aka, the one that are not
 	// actually feature-gated.

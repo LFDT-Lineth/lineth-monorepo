@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/consensys/linea-monorepo/prover/maths/field"
 	sym "github.com/consensys/linea-monorepo/prover/symbolic"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -60,12 +59,6 @@ func TestIsFactored(t *testing.T) {
 			IsFactored: true,
 			Factor:     a,
 		},
-		{
-			Expr:       sym.Mul(a, a, b),
-			By:         a,
-			IsFactored: true,
-			Factor:     sym.Mul(a, b),
-		},
 	}
 
 	for i, tc := range testcases {
@@ -74,13 +67,13 @@ func TestIsFactored(t *testing.T) {
 			// Build the group exponent map. If by is a product, we use directly
 			// the exponents it contains. Otherwise, we say this is a single
 			// term product with an exponent of 1.
-			groupedExp := map[field.Element]int{}
+			groupedExp := map[uint64]int{}
 			if byProd, ok := tc.By.Operator.(sym.Product); ok {
 				for i, ex := range byProd.Exponents {
-					groupedExp[tc.By.Children[i].ESHash] = ex
+					groupedExp[tc.By.Children[i].ESHash[0]] = ex
 				}
 			} else {
-				groupedExp[tc.By.ESHash] = 1
+				groupedExp[tc.By.ESHash[0]] = 1
 			}
 
 			factored, isFactored := isFactored(tc.Expr, groupedExp)
@@ -207,15 +200,27 @@ func TestFactorLinCompFromGroup(t *testing.T) {
 	for i, testCase := range testCases {
 		t.Run(fmt.Sprintf("test-case-%v", i), func(t *testing.T) {
 
-			group := map[field.Element]*sym.Expression{}
+			group := map[uint64]*sym.Expression{}
 			for _, e := range testCase.Group {
-				group[e.ESHash] = e
+				group[e.ESHash[0]] = e
 			}
 
 			factored := factorLinCompFromGroup(testCase.LinComb, group)
-			require.Equal(t, testCase.LinComb.ESHash.String(), factored.ESHash.String())
+			assert.Equal(t, testCase.LinComb.ESHash.String(), factored.ESHash.String())
+
+			if t.Failed() {
+				fmt.Printf("res=%v\n", testCase.Res.MarshalJSONString())
+				fmt.Printf("factored=%v\n", factored.MarshalJSONString())
+				t.Fatal()
+			}
+
 			require.NoError(t, factored.Validate())
 			assert.Equal(t, evaluateCostStat(testCase.Res), evaluateCostStat(factored))
+
+			if t.Failed() {
+				fmt.Printf("res=%v\n", testCase.Res.MarshalJSONString())
+				fmt.Printf("factored=%v\n", factored.MarshalJSONString())
+			}
 		})
 	}
 

@@ -6,6 +6,7 @@ import (
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/utils/collection"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -96,7 +97,7 @@ func TestLCConstruction(t *testing.T) {
 	x := NewDummyVar("x")
 	y := NewDummyVar("y")
 
-	{
+	t.Run("simple-addition", func(t *testing.T) {
 		/*
 			Test t a simple case of addition
 		*/
@@ -108,23 +109,23 @@ func TestLCConstruction(t *testing.T) {
 		require.Equal(t, 2, len(expr1.Operator.(LinComb).Coeffs))
 		require.Equal(t, expr1.Operator.(LinComb).Coeffs[0], 1)
 		require.Equal(t, expr1.Operator.(LinComb).Coeffs[1], 1)
-	}
+	})
 
-	{
+	t.Run("x-y-x", func(t *testing.T) {
 		/*
 			Adding y then substracting x should give back (y)
 		*/
 		expr1 := x.Add(y).Sub(x)
 		require.Equal(t, expr1, y)
-	}
+	})
 
-	{
+	t.Run("(-x)+x+y", func(t *testing.T) {
 		/*
 			Same thing when using Neg
 		*/
 		expr := x.Neg().Add(x).Add(y)
-		require.Equal(t, expr, y)
-	}
+		assert.Equal(t, expr, y)
+	})
 
 }
 
@@ -133,7 +134,7 @@ func TestProductConstruction(t *testing.T) {
 	x := NewDummyVar("x")
 	y := NewDummyVar("y")
 
-	{
+	t.Run("x * y", func(t *testing.T) {
 		/*
 			Test t a simple case of addition
 		*/
@@ -145,9 +146,9 @@ func TestProductConstruction(t *testing.T) {
 		require.Equal(t, 2, len(expr1.Operator.(Product).Exponents))
 		require.Equal(t, expr1.Operator.(Product).Exponents[0], 1)
 		require.Equal(t, expr1.Operator.(Product).Exponents[1], 1)
-	}
+	})
 
-	{
+	t.Run("x * y * x", func(t *testing.T) {
 		/*
 			Adding y then substracting x should give back (y)
 		*/
@@ -158,9 +159,9 @@ func TestProductConstruction(t *testing.T) {
 		require.Equal(t, 2, len(expr1.Operator.(Product).Exponents))
 		require.Equal(t, expr1.Operator.(Product).Exponents[0], 2)
 		require.Equal(t, expr1.Operator.(Product).Exponents[1], 1)
-	}
+	})
 
-	{
+	t.Run("x^2", func(t *testing.T) {
 		/*
 			When we square
 		*/
@@ -169,6 +170,6 @@ func TestProductConstruction(t *testing.T) {
 		require.Equal(t, expr.Children[0], x)
 		require.Equal(t, 1, len(expr.Operator.(Product).Exponents))
 		require.Equal(t, expr.Operator.(Product).Exponents[0], 2)
-	}
+	})
 
 }

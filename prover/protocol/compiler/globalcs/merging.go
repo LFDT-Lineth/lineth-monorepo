@@ -146,19 +146,28 @@ func getBoundCancelledExpression(cs query.GlobalConstraint) *symbolic.Expression
 		domainSize  = cs.DomainSize
 		x           = variables.NewXVar()
 		omega       = fft.GetOmega(domainSize)
+		// factors is a list of expression to multiply to obtain the return expression. It
+		// is initialized with "only" the initial expression and we iteratively add the
+		// terms (X-i) to it. At the end, we call [sym.Mul] a single time. This structure
+		// is important because it [sym.Mul] operates a sequence of optimization routines
+		// that are everytime we call it. In an earlier version, we were calling [sym.Mul]
+		// for every factor and this were making the function have a quadratic/cubic runtime.
+		factors = make([]any, 0, utils.Abs(cancelRange.Max)+utils.Abs(cancelRange.Min)+1)
 	)
 
-	// cancelExprAtPoint cancels the expression at a particular position
-	cancelExprAtPoint := func(expr *symbolic.Expression, i int) *symbolic.Expression {
+	factors = append(factors, res)
+
+	// appendFactor appends an expressions representing $X-\rho^i$ to [factors]
+	appendFactor := func(i int) {
 		var root field.Element
 		root.Exp(omega, big.NewInt(int64(i)))
-		return symbolic.Mul(expr, symbolic.Sub(x, root))
+		factors = append(factors, symbolic.Sub(x, root))
 	}
 
 	if cancelRange.Min < 0 {
 		// Cancels the expression on the range [0, -cancelRange.Min)
 		for i := 0; i < -cancelRange.Min; i++ {
-			res = cancelExprAtPoint(res, i)
+			appendFactor(i)
 		}
 	}
 
@@ -166,11 +175,18 @@ func getBoundCancelledExpression(cs query.GlobalConstraint) *symbolic.Expression
 		// Cancels the expression on the range (N-cancelRange.Max-1, N-1]
 		for i := 0; i < cancelRange.Max; i++ {
 			point := domainSize - i - 1 // point at which we want to cancel the constraint
-			res = cancelExprAtPoint(res, point)
+			appendFactor(point)
 		}
 	}
 
-	return res
+	// When factors is of length 1, it means the expression does not need to be
+	// bound-cancelled and we can directly return the original expression
+	// without calling [sym.Mul].
+	if len(factors) == 1 {
+		return res
+	}
+
+	return symbolic.Mul(factors...)
 }
 
 // getExprRatio computes the ratio of the expression and ceil to the next power

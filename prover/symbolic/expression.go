@@ -1,6 +1,7 @@
 package symbolic
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"sync"
@@ -284,5 +285,14 @@ func (e *Expression) SameWithNewChildren(newChildren []*Expression) *Expression 
 	default:
 		panic("unexpected type: " + reflect.TypeOf(op).String())
 	}
+}
 
+// MarshalJSONString returns a JSON string returns a JSON string representation
+// of the expression.
+func (e *Expression) MarshalJSONString() string {
+	js, jsErr := json.MarshalIndent(e, "", "  ")
+	if jsErr != nil {
+		utils.Panic("failed to marshal expression: %v", jsErr)
+	}
+	return string(js)
 }

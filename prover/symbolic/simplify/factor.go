@@ -1,7 +1,6 @@
 package simplify
 
 import (
-	"errors"
 	"fmt"
 	"math"
 	"sort"
@@ -46,9 +45,9 @@ func factorizeExpression(expr *sym.Expression, iteration int) *sym.Expression {
 			// factoring possibilities. There is also a bound on the loop to
 			// prevent infinite loops.
 			//
-			// The choice of 1000 is purely heuristic and is not meant to be
+			// The choice of 100 is purely heuristic and is not meant to be
 			// actually met.
-			for k := 0; k < 1000; k++ {
+			for k := 0; k < 100; k++ {
 				_, ok := new.Operator.(sym.LinComb)
 				if !ok {
 					return new
@@ -103,13 +102,18 @@ func factorizeExpression(expr *sym.Expression, iteration int) *sym.Expression {
 // children that are already in the children set.
 func rankChildren(
 	parents []*sym.Expression,
-	childrenSet map[field.Element]*sym.Expression,
+	childrenSet map[uint64]*sym.Expression,
 ) []*sym.Expression {
 
 	// List all the grand-children of the expression whose parents are
 	// products and counts the number of occurences by summing the exponents.
-	relevantGdChildrenCnt := map[field.Element]int{}
-	uniqueChildrenList := make([]*sym.Expression, 0)
+	// As an optimization the map is addressed using the first uint64 repr
+	// of the element. We consider this is good enough to avoid collisions.
+	// The risk if it happens is that it gets caught by the validation checks
+	// at the end of the factorization routine. The preallocation value is
+	// purely heuristic to avoid successive allocations.
+	var relevantGdChildrenCnt map[uint64]int
+	var uniqueChildrenList []*sym.Expression
 
 	for _, p := range parents {
 
@@ -127,16 +131,21 @@ func rankChildren(
 
 			// If it's in the group, it does not count. We can't add it a second
 			// time.
-			if _, ok := childrenSet[c.ESHash]; ok {
+			if _, ok := childrenSet[c.ESHash[0]]; ok {
 				continue
 			}
 
-			if _, ok := relevantGdChildrenCnt[c.ESHash]; !ok {
-				relevantGdChildrenCnt[c.ESHash] = 0
+			if relevantGdChildrenCnt == nil {
+				relevantGdChildrenCnt = make(map[uint64]int, len(parents)+2)
+				uniqueChildrenList = make([]*sym.Expression, 0, len(parents)+2)
+			}
+
+			if _, ok := relevantGdChildrenCnt[c.ESHash[0]]; !ok {
+				relevantGdChildrenCnt[c.ESHash[0]] = 0
 				uniqueChildrenList = append(uniqueChildrenList, c)
 			}
 
-			relevantGdChildrenCnt[c.ESHash]++
+			relevantGdChildrenCnt[c.ESHash[0]]++
 		}
 	}
 
@@ -144,7 +153,7 @@ func rankChildren(
 		x := uniqueChildrenList[i].ESHash
 		y := uniqueChildrenList[j].ESHash
 		// We want to a decreasing order
-		return relevantGdChildrenCnt[x] > relevantGdChildrenCnt[y]
+		return relevantGdChildrenCnt[x[0]] > relevantGdChildrenCnt[y[0]]
 	})
 
 	return uniqueChildrenList
@@ -155,76 +164,54 @@ func rankChildren(
 // than one parent. The finding is based on a greedy algorithm. We iteratively
 // add nodes in the group so that the number of common parents decreases as
 // slowly as possible.
-func findGdChildrenGroup(expr *sym.Expression) map[field.Element]*sym.Expression {
+func findGdChildrenGroup(expr *sym.Expression) map[uint64]*sym.Expression {
 
 	curParents := expr.Children
-	childrenSet := map[field.Element]*sym.Expression{}
+	childrenSet := map[uint64]*sym.Expression{}
 
-	for {
-		ranked := rankChildren(curParents, childrenSet)
+	ranked := rankChildren(curParents, childrenSet)
 
-		// Can happen when we have a lincomb of lincomb. Ideally they should be
-		// merged during canonization.
-		if len(ranked) == 0 {
-			return childrenSet
-		}
+	// Can happen when we have a lincomb of lincomb. Ideally they should be
+	// merged during canonization.
+	if len(ranked) == 0 {
+		return childrenSet
+	}
 
-		best := ranked[0]
-		newChildrenSet := copyMap(childrenSet)
-		newChildrenSet[best.ESHash] = best
-		newParents := getCommonProdParentOfCs(newChildrenSet, curParents)
+	for i := range ranked {
+
+		best := ranked[i]
+		childrenSet[best.ESHash[0]] = best
+		curParents = filterParentsWithChildren(curParents, best.ESHash)
 
 		// Can't grow the set anymore
-		if len(newParents) <= 1 {
+		if len(curParents) <= 1 {
+			delete(childrenSet, best.ESHash[0])
 			return childrenSet
 		}
-
-		childrenSet = newChildrenSet
-		curParents = newParents
 
 		logrus.Tracef(
 			"find groups, so far we have %v parents and %v siblings",
 			len(curParents), len(childrenSet))
-
-		// Sanity-check
-		if err := parentsMustHaveAllChildren(curParents, childrenSet); err != nil {
-			panic(err)
-		}
 	}
+
+	return childrenSet
 }
 
-// getCommonProdParentOfCs returns the parents that have all cs as children and
-// that are themselves children of gdp (grandparent). The parents must be of
-// type product however.
-func getCommonProdParentOfCs(
-	cs map[field.Element]*sym.Expression,
+// filterParentsWithChildren returns a filtered list of parents who have at
+// least one child with the given ESHash. The function allocates a new list
+// of parents and returns it without mutating he original list.
+func filterParentsWithChildren(
 	parents []*sym.Expression,
+	childEsh field.Element,
 ) []*sym.Expression {
 
-	res := []*sym.Expression{}
-
+	res := make([]*sym.Expression, 0, len(parents))
 	for _, p := range parents {
-		prod, ok := p.Operator.(sym.Product)
-		if !ok {
-			continue
-		}
-
-		// Account for the fact that p may contain duplicates. So we cannot
-		// just use a counter here.
-		founds := map[field.Element]struct{}{}
-		for i, c := range p.Children {
-			if prod.Exponents[i] == 0 {
-				continue
+		for _, c := range p.Children {
+			if c.ESHash == childEsh {
+				res = append(res, p)
+				break
 			}
-
-			if _, inside := cs[c.ESHash]; inside {
-				// logrus.Tracef("%v contains %v", p.ESHash.String(), c.ESHash.String())
-				founds[c.ESHash] = struct{}{}
-			}
-		}
-
-		if len(founds) == len(cs) {
-			res = append(res, p)
 		}
 	}
 
@@ -235,22 +222,26 @@ func getCommonProdParentOfCs(
 // determine the best common factor.
 func factorLinCompFromGroup(
 	lincom *sym.Expression,
-	group map[field.Element]*sym.Expression,
+	group map[uint64]*sym.Expression,
 ) *sym.Expression {
 
 	var (
+
+		// numTerms indicates the number of children in the linear-combination
+		numTerms = len(lincom.Children)
+
 		lcCoeffs = lincom.Operator.(sym.LinComb).Coeffs
 		// Build the common term by taking the max of the exponents
 		exponentsOfGroup, groupExpr = optimRegroupExponents(lincom.Children, group)
 
 		// Separate the non-factored terms
-		nonFactoredTerms  = []*sym.Expression{}
-		nonFactoredCoeffs = []int{}
+		nonFactoredTerms  = make([]*sym.Expression, 0, numTerms)
+		nonFactoredCoeffs = make([]int, 0, numTerms)
 
 		// The factored terms of the linear combination divided by the common
 		// group factor
-		factoredTerms  = []*sym.Expression{}
-		factoredCoeffs = []int{}
+		factoredTerms  = make([]*sym.Expression, 0, numTerms)
+		factoredCoeffs = make([]int, 0, numTerms)
 	)
 
 	numFactors := 0
@@ -295,7 +286,7 @@ func factorLinCompFromGroup(
 //
 // Fortunately, this is guaranteed if the expression was constructed via
 // [sym.NewLinComb] or [sym.NewProduct] which is almost mandatory.
-func isFactored(e *sym.Expression, exponentsOfGroup map[field.Element]int) (
+func isFactored(e *sym.Expression, exponentsOfGroup map[uint64]int) (
 	factored *sym.Expression,
 	success bool,
 ) {
@@ -310,7 +301,7 @@ func isFactored(e *sym.Expression, exponentsOfGroup map[field.Element]int) (
 
 	numMatches := 0
 	for i, c := range e.Children {
-		eig, found := exponentsOfGroup[c.ESHash]
+		eig, found := exponentsOfGroup[c.ESHash[0]]
 		if !found {
 			continue
 		}
@@ -335,14 +326,14 @@ func isFactored(e *sym.Expression, exponentsOfGroup map[field.Element]int) (
 // have the whole group as children.
 func optimRegroupExponents(
 	parents []*sym.Expression,
-	group map[field.Element]*sym.Expression,
+	group map[uint64]*sym.Expression,
 ) (
-	exponentMap map[field.Element]int,
+	exponentMap map[uint64]int,
 	groupedTerm *sym.Expression,
 ) {
 
-	exponentMap = map[field.Element]int{}
-	canonTermList := make([]*sym.Expression, 0) // built in deterministic order
+	exponentMap = make(map[uint64]int, 16)
+	canonTermList := make([]*sym.Expression, 0, 16) // built in deterministic order
 
 	for _, p := range parents {
 
@@ -354,10 +345,10 @@ func optimRegroupExponents(
 
 		// Used to sanity-check that all the nodes of the group have been
 		// reached through this parent.
-		matched := map[field.Element]int{}
+		matched := make(map[uint64]int, len(p.Children))
 
 		for i, c := range p.Children {
-			if _, ingroup := group[c.ESHash]; !ingroup {
+			if _, ingroup := group[c.ESHash[0]]; !ingroup {
 				continue
 			}
 
@@ -365,16 +356,16 @@ func optimRegroupExponents(
 				panic("The expression is not canonic")
 			}
 
-			_, initialized := exponentMap[c.ESHash]
+			_, initialized := exponentMap[c.ESHash[0]]
 			if !initialized {
 				// Max int is used as a placeholder. It will be replaced anytime
 				// we wall utils.Min(exponentMap[h], n) where n is actually an
 				// exponent.
-				exponentMap[c.ESHash] = math.MaxInt
+				exponentMap[c.ESHash[0]] = math.MaxInt
 				canonTermList = append(canonTermList, c)
 			}
 
-			matched[c.ESHash] = exponents[i]
+			matched[c.ESHash[0]] = exponents[i]
 		}
 
 		if len(matched) != len(group) {
@@ -391,48 +382,8 @@ func optimRegroupExponents(
 
 	canonExponents := []int{}
 	for _, e := range canonTermList {
-		canonExponents = append(canonExponents, exponentMap[e.ESHash])
+		canonExponents = append(canonExponents, exponentMap[e.ESHash[0]])
 	}
 
 	return exponentMap, sym.NewProduct(canonTermList, canonExponents)
-}
-
-// parentsMustHaveAllChildren returns an error if at least one of the parents
-// is missing one children from the set. This function is used internally to
-// enforce invariants throughout the simplification routines.
-func parentsMustHaveAllChildren[T any](
-	parents []*sym.Expression,
-	childrenSet map[field.Element]T,
-) (resErr error) {
-
-	for parentID, p := range parents {
-		// Account for the fact that the node may contain duplicates of the node
-		// we are looking for.
-		founds := map[field.Element]struct{}{}
-		for _, c := range p.Children {
-			if _, ok := childrenSet[c.ESHash]; ok {
-				founds[c.ESHash] = struct{}{}
-			}
-		}
-
-		if len(founds) != len(childrenSet) {
-			resErr = errors.Join(
-				resErr,
-				fmt.Errorf(
-					"parent num %v is incomplete : found = %d/%d",
-					parentID, len(founds), len(childrenSet),
-				),
-			)
-		}
-	}
-
-	return resErr
-}
-
-func copyMap[K comparable, V any](m map[K]V) map[K]V {
-	res := make(map[K]V, len(m))
-	for k, v := range m {
-		res[k] = v
-	}
-	return res
 }
