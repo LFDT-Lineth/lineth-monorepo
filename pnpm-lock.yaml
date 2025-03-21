@@ -245,6 +245,8 @@ importers:
         specifier: 17.7.2
         version: 17.7.2
 
+  contracts/lib/forge-std: {}
+
   e2e:
     devDependencies:
       '@jest/globals':

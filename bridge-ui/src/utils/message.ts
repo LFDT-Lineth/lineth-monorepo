@@ -1,5 +1,5 @@
 import { keccak256, encodeAbiParameters, Address } from "viem";
-import { CCTPV2BridgeMessage, NativeBridgeMessage } from "./history";
+import { CctpV2BridgeMessage, NativeBridgeMessage } from "@/types";
 
 const INBOX_L1L2_MESSAGE_STATUS_MAPPING_SLOT = 176n;
 
@@ -38,7 +38,7 @@ export function computeMessageStorageSlot(messageHash: `0x${string}`) {
   );
 }
 
-export function isNativeBridgeMessage(msg: NativeBridgeMessage | CCTPV2BridgeMessage): msg is NativeBridgeMessage {
+export function isNativeBridgeMessage(msg: NativeBridgeMessage | CctpV2BridgeMessage): msg is NativeBridgeMessage {
   return (
     typeof (msg as NativeBridgeMessage).from === "string" &&
     typeof (msg as NativeBridgeMessage).to === "string" &&
@@ -49,9 +49,10 @@ export function isNativeBridgeMessage(msg: NativeBridgeMessage | CCTPV2BridgeMes
   );
 }
 
-export function isCCTPV2BridgeMessage(msg: NativeBridgeMessage | CCTPV2BridgeMessage): msg is CCTPV2BridgeMessage {
+export function isCctpV2BridgeMessage(msg: NativeBridgeMessage | CctpV2BridgeMessage): msg is CctpV2BridgeMessage {
   return (
-    typeof (msg as CCTPV2BridgeMessage).message === "string" &&
-    typeof (msg as CCTPV2BridgeMessage).attestation === "string"
+    typeof (msg as CctpV2BridgeMessage).nonce === "string" &&
+    typeof (msg as CctpV2BridgeMessage).message === "string" &&
+    typeof (msg as CctpV2BridgeMessage).attestation === "string"
   );
 }

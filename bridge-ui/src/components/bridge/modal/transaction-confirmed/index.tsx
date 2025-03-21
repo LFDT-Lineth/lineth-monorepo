@@ -21,7 +21,7 @@ export default function TransactionConfirmed({ isModalOpen, transactionType, onC
         <p className={styles["text"]}>
           {transactionType === "approve"
             ? "You have successfully approved the token. You can now bridge your token."
-            : "You may now bridge another transaction, check your transaction history, or stay ahead of the curve with thelatest trending tokens."}
+            : "You may now bridge another transaction, check your transaction history, or stay ahead of the curve with the latest trending tokens."}
         </p>
         <div className={styles["list-button"]}>
           <Link

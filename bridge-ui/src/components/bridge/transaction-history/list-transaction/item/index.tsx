@@ -4,8 +4,8 @@ import styles from "./item.module.scss";
 import CheckIcon from "@/assets/icons/check.svg";
 import ClockIcon from "@/assets/icons/clock.svg";
 import BridgeTwoLogo from "@/components/bridge/bridge-two-logo";
-import { BridgeTransaction, getChainLogoPath, formatHex, formatTimestamp } from "@/utils";
-import { TransactionStatus } from "@/types";
+import { getChainLogoPath, formatHex, formatTimestamp } from "@/utils";
+import { BridgeTransaction, TransactionStatus } from "@/types";
 
 type Props = BridgeTransaction & {
   onClick: (code: string) => void;

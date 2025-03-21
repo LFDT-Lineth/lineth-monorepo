@@ -3,13 +3,12 @@ import { erc20Abi } from "viem";
 import { useFormStore, useChainStore } from "@/stores";
 import { isEth } from "@/utils";
 import { isCctp } from "@/utils/tokens";
-import { CCTP_TOKEN_MESSENGER } from "@/utils/cctp";
 
 const useAllowance = () => {
   const { address } = useAccount();
   const token = useFormStore((state) => state.token);
   const fromChain = useChainStore.useFromChain();
-  const spender = !isCctp(token) ? fromChain.tokenBridgeAddress : CCTP_TOKEN_MESSENGER;
+  const spender = !isCctp(token) ? fromChain.tokenBridgeAddress : fromChain.cctpTokenMessengerV2Address;
 
   const {
     data: allowance,

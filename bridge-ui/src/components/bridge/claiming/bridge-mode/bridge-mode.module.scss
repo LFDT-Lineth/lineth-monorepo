@@ -1,0 +1,30 @@
+.container {
+  position: relative;
+  font-family: var(--font-atyp-text);
+
+  .button {
+    width: 100%;
+    padding: 0.25rem 0.5rem;
+    border-radius: 6.25rem;
+    background-color: var(--v2-color-white);
+    display: flex;
+    column-gap: 0.5rem;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    font-size: 0.875rem;
+  }
+    
+  .selected-label {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    line-height: 1;
+  
+    img {
+      width: 1rem;
+      height: 1rem;
+      border-radius: 50%;
+    }
+  }
+}

@@ -1,18 +1,17 @@
 import { useSendTransaction, useWaitForTransactionReceipt } from "wagmi";
 import useClaimTxArgs from "./transaction-args/useClaimTransactionTxArgs";
-import { Chain, TransactionStatus } from "@/types";
-import { CCTPV2BridgeMessage, NativeBridgeMessage } from "@/utils/history";
+import { BridgeTransactionType, CctpV2BridgeMessage, Chain, NativeBridgeMessage, TransactionStatus } from "@/types";
 
 type UseClaimProps = {
   status?: TransactionStatus;
+  type?: BridgeTransactionType;
   fromChain?: Chain;
   toChain?: Chain;
-  args?: NativeBridgeMessage | CCTPV2BridgeMessage;
+  args?: NativeBridgeMessage | CctpV2BridgeMessage;
 };
 
 const useClaim = (props: UseClaimProps) => {
   const transactionArgs = useClaimTxArgs(props);
-
   const { data: hash, sendTransaction, isPending, error, isSuccess } = useSendTransaction();
 
   const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({

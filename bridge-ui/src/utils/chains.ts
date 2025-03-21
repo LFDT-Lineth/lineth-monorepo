@@ -11,13 +11,16 @@ export const generateChain = (chain: ViemChain): Chain => {
     iconPath: config.chains[chain.id].iconPath,
     nativeCurrency: chain.nativeCurrency,
     blockExplorers: chain.blockExplorers,
-    testnet: chain.testnet,
+    // Possibly the wrong assumption to fallback to 'false', but fallback to 'true' makes the app crash mysteriously
+    testnet: Boolean(chain.testnet),
     layer: getChainNetworkLayer(chain.id),
     messageServiceAddress: config.chains[chain.id].messageServiceAddress as Address,
     tokenBridgeAddress: config.chains[chain.id].tokenBridgeAddress as Address,
     gasLimitSurplus: config.chains[chain.id].gasLimitSurplus,
     profitMargin: config.chains[chain.id].profitMargin,
     cctpDomain: config.chains[chain.id].cctpDomain,
+    cctpTokenMessengerV2Address: config.chains[chain.id].cctpTokenMessengerV2Address as Address,
+    cctpMessageTransmitterV2Address: config.chains[chain.id].cctpMessageTransmitterV2Address as Address,
   };
 };
 
@@ -41,7 +44,7 @@ export const getChainNetworkLayer = (chainId: number) => {
 export const getChainLogoPath = (chainId: number) => {
   switch (chainId) {
     case linea.id:
-      return "/images/logo/linea-mainnet.svg";
+      return "/images/logo/linea-rounded.svg";
     case lineaSepolia.id:
       return "/images/logo/linea-sepolia.svg";
     case mainnet.id:

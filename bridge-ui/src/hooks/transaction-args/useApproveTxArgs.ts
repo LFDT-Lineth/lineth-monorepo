@@ -4,7 +4,6 @@ import { encodeFunctionData, erc20Abi } from "viem";
 import { useFormStore, useChainStore } from "@/stores";
 import { isEth } from "@/utils";
 import { isCctp } from "@/utils/tokens";
-import { CCTP_TOKEN_MESSENGER } from "@/utils/cctp";
 
 type UseERC20ApproveTxArgsProps = {
   allowance?: bigint;
@@ -21,7 +20,7 @@ const useApproveTxArgs = ({ allowance }: UseERC20ApproveTxArgsProps) => {
       return;
     }
 
-    const spender = !isCctp(token) ? fromChain.tokenBridgeAddress : CCTP_TOKEN_MESSENGER;
+    const spender = !isCctp(token) ? fromChain.tokenBridgeAddress : fromChain.cctpTokenMessengerV2Address;
 
     return {
       type: "approve",

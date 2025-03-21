@@ -7,9 +7,9 @@ import Modal from "@/components/modal";
 import styles from "./transaction-details.module.scss";
 import Button from "@/components/ui/button";
 import ArrowRightIcon from "@/assets/icons/arrow-right.svg";
-import { useClaim } from "@/hooks";
-import { TransactionStatus } from "@/types";
-import { formatBalance, formatHex, formatTimestamp, BridgeTransaction } from "@/utils";
+import { useClaim, useClaimingTx, useBridgeTransactionMessage } from "@/hooks";
+import { BridgeTransaction, TransactionStatus } from "@/types";
+import { formatBalance, formatHex, formatTimestamp } from "@/utils";
 
 type Props = {
   transaction: BridgeTransaction | undefined;
@@ -24,14 +24,23 @@ export default function TransactionDetails({ transaction, isModalOpen, onCloseMo
   const formattedDate = transaction?.timestamp ? formatTimestamp(Number(transaction.timestamp), "MMM, dd, yyyy") : "";
   const formattedTime = transaction?.timestamp ? formatTimestamp(Number(transaction.timestamp), "ppp") : "";
 
-  const queryClient = useQueryClient();
+  // Hydrate BridgeTransaction.message with params required for claim tx
+  const { message, isLoading: isLoadingClaimTxParams } = useBridgeTransactionMessage(transaction);
+  if (transaction && message) transaction.message = message;
+
+  // Hydrate BridgeTransaction.claimingTx
+  const claimingTx = useClaimingTx(transaction);
+  if (transaction && claimingTx && !transaction?.claimingTx) transaction.claimingTx = claimingTx;
+
   const { claim, isConfirming, isPending, isConfirmed } = useClaim({
     status: transaction?.status,
+    type: transaction?.type,
     fromChain: transaction?.fromChain,
     toChain: transaction?.toChain,
     args: transaction?.message,
   });
 
+  const queryClient = useQueryClient();
   useEffect(() => {
     if (isConfirmed) {
       queryClient.invalidateQueries({ queryKey: ["transactionHistory"], exact: false });
@@ -75,6 +84,10 @@ export default function TransactionDetails({ transaction, isModalOpen, onCloseMo
   }, [initialTransactionReceipt, claimingTransactionReceipt]);
 
   const buttonText = useMemo(() => {
+    if (isLoadingClaimTxParams) {
+      return "Loading Claim Data...";
+    }
+
     if (isPending || isConfirming) {
       return "Waiting for confirmation...";
     }
@@ -88,7 +101,15 @@ export default function TransactionDetails({ transaction, isModalOpen, onCloseMo
     }
 
     return "Claim";
-  }, [isPending, isConfirming, isSwitchingChain, chain?.id, transaction?.toChain.id, transaction?.toChain.name]);
+  }, [
+    isPending,
+    isConfirming,
+    isSwitchingChain,
+    isLoadingClaimTxParams,
+    chain?.id,
+    transaction?.toChain.id,
+    transaction?.toChain.name,
+  ]);
 
   const handleClaim = () => {
     if (transaction?.toChain.id && chain?.id && chain.id !== transaction?.toChain.id) {
@@ -100,6 +121,7 @@ export default function TransactionDetails({ transaction, isModalOpen, onCloseMo
       claim();
     }
   };
+
   return (
     <Modal title="Transaction details" isOpen={isModalOpen} onClose={onCloseModal}>
       <div className={styles["modal-inner"]}>
@@ -150,7 +172,11 @@ export default function TransactionDetails({ transaction, isModalOpen, onCloseMo
           )}
         </ul>
         {transaction?.status === TransactionStatus.READY_TO_CLAIM && (
-          <Button disabled={isPending || isConfirming || isSwitchingChain} onClick={handleClaim} fullWidth>
+          <Button
+            disabled={isLoadingClaimTxParams || isPending || isConfirming || isSwitchingChain}
+            onClick={handleClaim}
+            fullWidth
+          >
             {buttonText}
           </Button>
         )}

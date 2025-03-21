@@ -23,11 +23,13 @@ export type Chain = {
       apiUrl?: string | undefined;
     };
   };
-  testnet?: boolean;
+  testnet: boolean;
   layer: ChainLayer;
   messageServiceAddress: Address;
   tokenBridgeAddress: Address;
   gasLimitSurplus: bigint;
   profitMargin: bigint;
   cctpDomain: number;
+  cctpTokenMessengerV2Address: Address;
+  cctpMessageTransmitterV2Address: Address;
 };

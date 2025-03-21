@@ -67,6 +67,7 @@ export function Web3Provider({ children }: Web3ProviderProps) {
       settings={{
         environmentId: process.env.NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID!,
         walletConnectors: [EthereumWalletConnectors],
+        mobileExperience: "redirect",
         appName: "Linea Bridge",
         cssOverrides,
       }}

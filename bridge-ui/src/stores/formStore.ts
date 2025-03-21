@@ -3,6 +3,7 @@ import { defaultTokensConfig } from "./tokenStore";
 import { createWithEqualityFn } from "zustand/traditional";
 import { shallow } from "zustand/vanilla/shallow";
 import { Token } from "@/types";
+import { isCctp } from "@/utils";
 
 export type FormState = {
   token: Token;
@@ -25,6 +26,8 @@ export type FormActions = {
   setBridgingFees: (bridgingFees: bigint) => void;
   setMinimumFees: (minimumFees: bigint) => void;
   resetForm(): void;
+  // Custom getter function
+  isTokenCanonicalUSDC: () => boolean;
 };
 
 export type FormStore = FormState & FormActions;
@@ -41,11 +44,15 @@ export const defaultInitState: FormState = {
 };
 
 export const createFormStore = (defaultValues?: FormState) =>
-  createWithEqualityFn<FormStore>((set) => {
+  createWithEqualityFn<FormStore>((set, get) => {
     return {
       ...defaultInitState,
       ...defaultValues,
-      setToken: (token) => set({ token }),
+      setToken: (token) => {
+        set({ token });
+        // No auto-claim for CCTP
+        isCctp(token) ? set({ claim: "manual" }) : set({ claim: "auto" });
+      },
       setRecipient: (recipient) => set({ recipient }),
       setAmount: (amount) => set({ amount }),
       setBalance: (balance) => set({ balance }),
@@ -54,5 +61,7 @@ export const createFormStore = (defaultValues?: FormState) =>
       setBridgingFees: (bridgingFees) => set({ bridgingFees }),
       setMinimumFees: (minimumFees) => set({ minimumFees }),
       resetForm: () => set(defaultInitState),
+      // Custom getter function
+      isTokenCanonicalUSDC: () => isCctp(get().token),
     };
   }, shallow);

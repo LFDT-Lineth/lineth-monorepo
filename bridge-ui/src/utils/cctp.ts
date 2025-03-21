@@ -1,21 +1,22 @@
 import MessageTransmitterV2 from "@/abis/MessageTransmitterV2.json";
-import { CCTPMessageReceivedEvent, CctpAttestationMessageStatus, TransactionStatus } from "@/types";
+import { CctpAttestationMessage, Chain, TransactionStatus, CctpAttestationMessageStatus } from "@/types";
 import { GetPublicClientReturnType } from "@wagmi/core";
-import { getAddress } from "viem";
-import { eventCCTPMessageReceived } from "./events";
+import { fetchCctpAttestationByTxHash, reattestCctpV2PreFinalityMessage } from "@/services/cctp";
+import { getPublicClient } from "@wagmi/core";
+import { config as wagmiConfig } from "@/lib/wagmi";
 
-// Contract for sending CCTP message, appears constant for each chain
-export const CCTP_TOKEN_MESSENGER = getAddress("0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA");
 // TODO - Find optimal value
-export const CCTP_TRANSFER_MAX_FEE = 500n;
+export const CCTP_TRANSFER_MAX_FEE_FALLBACK = 5n;
 // 1000 Fast transfer, 2000 Standard transfer
 export const CCTP_MIN_FINALITY_THRESHOLD = 1000;
-// Contract for receiving CCTP message, appears constant for each chain
-export const CCTP_MESSAGE_TRANSMITTER = getAddress("0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275"); // Appears constant for each chain
 
-export const isCCTPNonceUsed = async (client: GetPublicClientReturnType, nonce: string): Promise<boolean> => {
+const isCctpNonceUsed = async (
+  client: GetPublicClientReturnType,
+  nonce: string,
+  cctpMessageTransmitterV2Address: `0x${string}`,
+): Promise<boolean> => {
   const resp = await client?.readContract({
-    address: CCTP_MESSAGE_TRANSMITTER,
+    address: cctpMessageTransmitterV2Address,
     abi: MessageTransmitterV2.abi,
     functionName: "usedNonces",
     args: [nonce],
@@ -24,35 +25,62 @@ export const isCCTPNonceUsed = async (client: GetPublicClientReturnType, nonce: 
   return resp === 1n;
 };
 
-export const getCCTPTransactionStatus = (
-  cctpMessageStatus: CctpAttestationMessageStatus,
-  isNonceUsed: boolean,
-): TransactionStatus => {
-  if (cctpMessageStatus === "pending_confirmations") return TransactionStatus.PENDING;
-  if (!isNonceUsed) return TransactionStatus.READY_TO_CLAIM;
-  return TransactionStatus.COMPLETED;
+const getCctpMessageExpiryBlock = (message: string): bigint => {
+  // See CCTPV2 message format at https://developers.circle.com/stablecoins/message-format
+  const expiryInHex = message.substring(2 + 344 * 2, 2 + 376 * 2);
+  // Return bigint because this is also returned by Viem client.getBlockNumber()
+  return BigInt(parseInt(expiryInHex, 16));
 };
 
-export const getCCTPClaimTx = async (
-  client: GetPublicClientReturnType,
-  status: CctpAttestationMessageStatus,
-  isNonceUsed: boolean,
-  nonce: `0x${string}`,
-): Promise<string | undefined> => {
-  if (!client) return undefined;
-  if (!isNonceUsed) return undefined;
-
-  const messageReceivedEvents = <CCTPMessageReceivedEvent[]>await client.getLogs({
-    event: eventCCTPMessageReceived,
-    // TODO - Find more efficient `fromBlock` param than 'earliest'
-    fromBlock: "earliest",
-    toBlock: "latest",
-    address: CCTP_MESSAGE_TRANSMITTER,
-    args: {
-      nonce: nonce,
-    },
+export const getCctpTransactionStatus = async (
+  toChain: Chain,
+  cctpAttestationMessage: CctpAttestationMessage,
+  nonce: string,
+): Promise<TransactionStatus> => {
+  const toChainClient = getPublicClient(wagmiConfig, {
+    chainId: toChain.id,
   });
+  if (!toChainClient) return TransactionStatus.PENDING;
+  const isNonceUsed = await isCctpNonceUsed(toChainClient, nonce, toChain.cctpMessageTransmitterV2Address);
+  if (isNonceUsed) return TransactionStatus.COMPLETED;
+  const messageExpiryBlock = getCctpMessageExpiryBlock(cctpAttestationMessage.message);
+  // Message has no expiry
+  if (messageExpiryBlock === 0n)
+    return cctpAttestationMessage.status === CctpAttestationMessageStatus.PENDING_CONFIRMATIONS
+      ? TransactionStatus.PENDING
+      : TransactionStatus.READY_TO_CLAIM;
 
-  if (messageReceivedEvents.length === 0) return undefined;
-  return messageReceivedEvents[0].transactionHash;
+  // Message not expired
+  const currentToBlock = await toChainClient.getBlockNumber();
+  if (currentToBlock < messageExpiryBlock)
+    return cctpAttestationMessage.status === CctpAttestationMessageStatus.PENDING_CONFIRMATIONS
+      ? TransactionStatus.PENDING
+      : TransactionStatus.READY_TO_CLAIM;
+
+  // Message has expired, must reattest
+  await reattestCctpV2PreFinalityMessage(nonce, toChain.testnet);
+
+  /**
+   * We will not re-query to get a new message/attestation set here:
+   *
+   * 1.) There is a concrete possibility that the new message status will be 'pending_confirmations', which will be a regression from the old message status of 'completed'
+   * - To avoid this edge case, we will simply deem the transaction status as 'TransactionStatus.PENDING'
+   * - TransactionStatus.PENDING means the user will not be able to claim, hence they have no need for a valid message/attestation set for this Transaction
+   *
+   * 2.) We avoid a CCTP API call that has a concrete possibility of returning a result consistent with TransactionStatus.PENDING anyway
+   * - Even in the case that the new message status is 'complete', the only cost to the user is a page refresh
+   */
+  return TransactionStatus.PENDING;
+};
+
+export const getCctpMessageByTxHash = async (
+  transactionHash: string,
+  fromChainCctpDomain: number,
+  isTestnet: boolean,
+): Promise<CctpAttestationMessage | undefined> => {
+  const attestationApiResp = await fetchCctpAttestationByTxHash(fromChainCctpDomain, transactionHash, isTestnet);
+  if (!attestationApiResp) return;
+  const message = attestationApiResp.messages[0];
+  if (!message) return;
+  return message;
 };

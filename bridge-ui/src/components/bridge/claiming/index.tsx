@@ -7,6 +7,7 @@ import Skeleton from "@/components/bridge/claiming/skeleton";
 import ReceivedAmount from "./received-amount";
 import Fees from "./fees";
 import { useFormStore, useChainStore } from "@/stores";
+import BridgeMode from "./bridge-mode";
 
 export default function Claiming() {
   const fromChain = useChainStore.useFromChain();
@@ -17,6 +18,7 @@ export default function Claiming() {
 
   const amount = useFormStore((state) => state.amount);
   const balance = useFormStore((state) => state.balance);
+  const isTokenCanonicalUSDC = useFormStore((state) => state.isTokenCanonicalUSDC);
 
   const originChainBalanceTooLow = amount && balance < amount;
 
@@ -37,9 +39,15 @@ export default function Claiming() {
       <div className={styles.top}>
         <p className={styles.title}>Receive</p>
         <div className={styles.config}>
-          <button className={styles.setting} type="button" onClick={() => setShowAdvancedSettingsModal(true)}>
-            <SettingIcon />
-          </button>
+          <BridgeMode />
+          {
+            // There is no auto-claiming for USDC via CCTPV2
+            !isTokenCanonicalUSDC() && (
+              <button className={styles.setting} type="button" onClick={() => setShowAdvancedSettingsModal(true)}>
+                <SettingIcon />
+              </button>
+            )
+          }
         </div>
       </div>
 

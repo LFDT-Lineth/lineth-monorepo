@@ -3,8 +3,8 @@ import { useAccount } from "wagmi";
 import { encodeFunctionData, padHex, zeroHash } from "viem";
 import { useFormStore, useChainStore } from "@/stores";
 import { isCctp } from "@/utils/tokens";
-import useCctpDestinationDomain from "./useCctpDestinationDomain";
-import { CCTP_MIN_FINALITY_THRESHOLD, CCTP_TOKEN_MESSENGER, CCTP_TRANSFER_MAX_FEE } from "@/utils/cctp";
+import { useCctpFee, useCctpDestinationDomain } from "./useCctpUtilHooks";
+import { CCTP_MIN_FINALITY_THRESHOLD } from "@/utils";
 
 type UseDepositForBurnTxArgs = {
   allowance?: bigint;
@@ -17,6 +17,7 @@ const useDepositForBurnTxArgs = ({ allowance }: UseDepositForBurnTxArgs) => {
   const token = useFormStore((state) => state.token);
   const amount = useFormStore((state) => state.amount);
   const recipient = useFormStore((state) => state.recipient);
+  const fee = useCctpFee();
 
   return useMemo(() => {
     if (
@@ -35,7 +36,7 @@ const useDepositForBurnTxArgs = ({ allowance }: UseDepositForBurnTxArgs) => {
     return {
       type: "depositForBurn",
       args: {
-        to: CCTP_TOKEN_MESSENGER,
+        to: fromChain.cctpTokenMessengerV2Address,
         data: encodeFunctionData({
           abi: [
             {
@@ -61,7 +62,7 @@ const useDepositForBurnTxArgs = ({ allowance }: UseDepositForBurnTxArgs) => {
             padHex(recipient),
             token[fromChain.layer],
             zeroHash,
-            CCTP_TRANSFER_MAX_FEE,
+            fee,
             CCTP_MIN_FINALITY_THRESHOLD,
           ],
         }),
@@ -69,7 +70,7 @@ const useDepositForBurnTxArgs = ({ allowance }: UseDepositForBurnTxArgs) => {
         chainId: fromChain.id,
       },
     };
-  }, [address, allowance, amount, cctpDestinationDomain, fromChain, recipient, token]);
+  }, [address, allowance, amount, fee, cctpDestinationDomain, fromChain, recipient, token]);
 };
 
 export default useDepositForBurnTxArgs;

@@ -88,20 +88,20 @@ export async function getTokenConfig(): Promise<NetworkTokens> {
   const updatedTokensConfig = { ...defaultTokensConfig };
 
   // Feature toggle, remove when feature toggle no longer needed
-  const filterOutUSDCWhenCCTPNotEnabled = (token: Token) => config.isCCTPEnabled || token.symbol !== "USDC";
+  const filterOutUSDCWhenCctpNotEnabled = (token: Token) => config.isCctpEnabled || token.symbol !== "USDC";
 
   updatedTokensConfig.MAINNET = [
     ...defaultTokensConfig.MAINNET,
     ...(await Promise.all(mainnetTokens.map(async (token: GithubTokenListToken): Promise<Token> => formatToken(token))))
       // Feature toggle, remove .filter expression when feature toggle no longer needed
-      .filter(filterOutUSDCWhenCCTPNotEnabled),
+      .filter(filterOutUSDCWhenCctpNotEnabled),
   ];
 
   updatedTokensConfig.SEPOLIA = [
     ...defaultTokensConfig.SEPOLIA,
     ...(await Promise.all(sepoliaTokens.map((token: GithubTokenListToken): Promise<Token> => formatToken(token))))
       // Feature toggle, remove .filter expression when feature toggle no longer needed
-      .filter(filterOutUSDCWhenCCTPNotEnabled),
+      .filter(filterOutUSDCWhenCctpNotEnabled),
   ];
 
   return updatedTokensConfig;

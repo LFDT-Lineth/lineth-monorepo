@@ -12,6 +12,12 @@ const chainConfigSchema = z.object({
   gasLimitSurplus: z.bigint().positive(),
   profitMargin: z.bigint().positive(),
   cctpDomain: z.number().gte(0).int(),
+  cctpTokenMessengerV2Address: z.string().refine((val) => isAddress(val), {
+    message: "Invalid Ethereum address",
+  }),
+  cctpMessageTransmitterV2Address: z.string().refine((val) => isAddress(val), {
+    message: "Invalid Ethereum address",
+  }),
 });
 
 export const configSchema = z
@@ -22,7 +28,7 @@ export const configSchema = z
       minVersion: z.number().positive().int(),
     }),
     // Feature toggle for CCTPV2 for USDC transfers
-    isCCTPEnabled: z.boolean(),
+    isCctpEnabled: z.boolean(),
   })
   .strict();
 
