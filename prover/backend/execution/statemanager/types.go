@@ -71,6 +71,8 @@ type DecodedTrace struct {
 	// Can be any type of trace in the 5 possible types, for the either the
 	// world-state or an storage-trie.
 	Underlying accumulator.Trace
+	// decides whether the trace should be skipped
+	IsSkipped bool
 }
 
 func (dec *DecodedTrace) UnmarshalJSON(data []byte) error {

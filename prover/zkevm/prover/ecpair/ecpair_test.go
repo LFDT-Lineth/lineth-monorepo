@@ -6,7 +6,6 @@ import (
 
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/dummy"
 	"github.com/consensys/linea-monorepo/prover/protocol/dedicated/plonk"
-	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	"github.com/consensys/linea-monorepo/prover/utils/csvtraces"
 )
@@ -226,48 +225,48 @@ func writeModule(t *testing.T, run *wizard.ProverRuntime, outFile string, mod *E
 		t.Fatal(err)
 	}
 	defer w.Close()
-	csvtraces.FmtCsv(w, run, []ifaces.Column{
-		// // module activation
-		// mod.IsActive,
+	// csvtraces.FmtCsv(w, run, []ifaces.Column{
+	// // module activation
+	// mod.IsActive,
 
-		// // source
-		// mod.ECPairSource.ID,
-		// mod.ECPairSource.Index,
-		// mod.ECPairSource.Limb,
-		// mod.ECPairSource.SuccessBit,
-		// mod.ECPairSource.AccPairings,
-		// mod.ECPairSource.TotalPairings,
-		// mod.ECPairSource.IsEcPairingData,
-		// mod.ECPairSource.IsEcPairingResult,
-		// mod.ECPairSource.CsEcpairing,
-		// mod.ECPairSource.CsG2Membership,
+	// // source
+	// mod.ECPairSource.ID,
+	// mod.ECPairSource.Index,
+	// mod.ECPairSource.Limb,
+	// mod.ECPairSource.SuccessBit,
+	// mod.ECPairSource.AccPairings,
+	// mod.ECPairSource.TotalPairings,
+	// mod.ECPairSource.IsEcPairingData,
+	// mod.ECPairSource.IsEcPairingResult,
+	// mod.ECPairSource.CsEcpairing,
+	// mod.ECPairSource.CsG2Membership,
 
-		// // for pairing module test
-		// mod.UnalignedPairingData.IsActive,
-		// mod.UnalignedPairingData.Index,
-		// mod.UnalignedPairingData.InstanceID,
-		// mod.UnalignedPairingData.IsFirstLineOfInstance,
-		// mod.UnalignedPairingData.IsAccumulatorInit,
-		// mod.UnalignedPairingData.IsFirstLineOfPrevAccumulator,
-		// mod.UnalignedPairingData.IsAccumulatorPrev,
-		// mod.UnalignedPairingData.IsFirstLineOfCurrAccumulator,
-		// mod.UnalignedPairingData.IsAccumulatorCurr,
-		// mod.UnalignedPairingData.IsResultOfInstance,
-		// mod.UnalignedPairingData.IsComputed,
-		// mod.UnalignedPairingData.IsPulling,
-		// mod.UnalignedPairingData.PairID,
-		// mod.UnalignedPairingData.TotalPairs,
-		// mod.UnalignedPairingData.Limb,
-		// mod.UnalignedPairingData.ToMillerLoopCircuitMask,
-		// mod.UnalignedPairingData.ToFinalExpCircuitMask,
+	// // for pairing module test
+	// mod.UnalignedPairingData.IsActive,
+	// mod.UnalignedPairingData.Index,
+	// mod.UnalignedPairingData.InstanceID,
+	// mod.UnalignedPairingData.IsFirstLineOfInstance,
+	// mod.UnalignedPairingData.IsAccumulatorInit,
+	// mod.UnalignedPairingData.IsFirstLineOfPrevAccumulator,
+	// mod.UnalignedPairingData.IsAccumulatorPrev,
+	// mod.UnalignedPairingData.IsFirstLineOfCurrAccumulator,
+	// mod.UnalignedPairingData.IsAccumulatorCurr,
+	// mod.UnalignedPairingData.IsResultOfInstance,
+	// mod.UnalignedPairingData.IsComputed,
+	// mod.UnalignedPairingData.IsPulling,
+	// mod.UnalignedPairingData.PairID,
+	// mod.UnalignedPairingData.TotalPairs,
+	// mod.UnalignedPairingData.Limb,
+	// mod.UnalignedPairingData.ToMillerLoopCircuitMask,
+	// mod.UnalignedPairingData.ToFinalExpCircuitMask,
 
-		// // for subgroup module module test
-		// mod.UnalignedG2MembershipData.IsComputed,
-		// mod.UnalignedG2MembershipData.IsPulling,
-		// mod.UnalignedG2MembershipData.Limb,
-		// mod.UnalignedG2MembershipData.SuccessBit,
-		// mod.UnalignedG2MembershipData.ToG2MembershipCircuitMask,
-	},
-		[]csvtraces.Option{csvtraces.InHex},
-	)
+	// // for subgroup module module test
+	// mod.UnalignedG2MembershipData.IsComputed,
+	// mod.UnalignedG2MembershipData.IsPulling,
+	// mod.UnalignedG2MembershipData.Limb,
+	// mod.UnalignedG2MembershipData.SuccessBit,
+	// mod.UnalignedG2MembershipData.ToG2MembershipCircuitMask,
+	// },
+	// []csvtraces.Option{csvtraces.InHex},
+	// )
 }

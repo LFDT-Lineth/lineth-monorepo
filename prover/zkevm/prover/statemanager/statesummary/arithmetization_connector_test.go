@@ -95,8 +95,6 @@ func defineStateManagerColumns(comp *wizard.CompiledIOP, sampleType int, size in
 		AddressLO:           createCol("ADDRESS_LO"),
 		Nonce:               createCol("NONCE"),
 		NonceNew:            createCol("NONCE_NEW"),
-		MimcCodeHash:        createCol("MimcCodeHash"),
-		MimcCodeHashNew:     createCol("MimcCodeHashNew"),
 		CodeHashHI:          createCol("CodeHashHI"),
 		CodeHashLO:          createCol("CodeHashLO"),
 		CodeHashHINew:       createCol("CodeHashHINew"),
@@ -151,8 +149,6 @@ func (smc *HubColumnSet) assignForTest(run *wizard.ProverRuntime, smVectors *moc
 	assign(smc.AddressLO, smVectors.AddressLO)
 	assign(smc.Nonce, smVectors.Nonce)
 	assign(smc.NonceNew, smVectors.NonceNew)
-	assign(smc.MimcCodeHash, smVectors.MimcCodeHash)
-	assign(smc.MimcCodeHashNew, smVectors.MimcCodeHashNew)
 	assign(smc.CodeHashHI, smVectors.CodeHashHI)
 	assign(smc.CodeHashLO, smVectors.CodeHashLO)
 	assign(smc.CodeHashHINew, smVectors.CodeHashHINew)

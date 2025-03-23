@@ -42,7 +42,8 @@ func (ss *Module) Assign(run *wizard.ProverRuntime, traces [][]statemanager.Deco
 	}
 
 	for batchNumber, ts := range traces {
-		assignmentBuilder.pushBlockTraces(batchNumber, ts)
+		// +1 is to harmonize with the HUB block numbering, which starts from 1
+		assignmentBuilder.pushBlockTraces(batchNumber+1, ts)
 	}
 
 	assignmentBuilder.finalize(run)
@@ -123,7 +124,7 @@ func (ss *stateSummaryAssignmentBuilder) pushBlockTraces(batchNumber int, traces
 			// that situation, the account trace is at the beginning of the
 			// segment. When that happens, we want to be sure that the
 			// storage rows and the account segment arise in the same position.
-			if len(subSegment.storageTraces) > 0 {
+			if actualUnskippedLength(subSegment.storageTraces) > 0 {
 				curSegment[len(curSegment)-1].storageTraces = subSegment.storageTraces
 				subSegment = accountSubSegmentWitness{}
 			}
@@ -144,7 +145,7 @@ func (ss *stateSummaryAssignmentBuilder) pushBlockTraces(batchNumber int, traces
 		subSegment.storageTraces = append(subSegment.storageTraces, trace)
 	}
 
-	if len(subSegment.storageTraces) > 0 {
+	if actualUnskippedLength(subSegment.storageTraces) > 0 {
 		curSegment[len(curSegment)-1].storageTraces = subSegment.storageTraces
 	}
 
@@ -168,6 +169,7 @@ func (ss *stateSummaryAssignmentBuilder) pushAccountSegment(batchNumber int, seg
 			panic("could not get the account address")
 		}
 
+		noOfSkippedStorageTraces := 0
 		for i := range seg.storageTraces {
 
 			var (
@@ -177,77 +179,85 @@ func (ss *stateSummaryAssignmentBuilder) pushAccountSegment(batchNumber int, seg
 
 			_ = oldRoot // TODO golangci-lint thinks oldRoot is otherwise unused, even though it's clearly used in the switch case
 
-			ss.batchNumber.PushInt(batchNumber)
-			ss.account.address.PushAddr(accountAddress)
-			ss.isInitialDeployment.PushBoolean(segID == 0)
-			ss.isFinalDeployment.PushBoolean(segID == len(segment)-1)
-			ss.IsDeleteSegment.PushBoolean(isDeleteSegment)
-			ss.isActive.PushOne()
-			ss.isStorage.PushOne()
-			ss.isEndOfAccountSegment.PushZero()
-			ss.isBeginningOfAccountSegment.PushBoolean(segID == 0 && i == 0)
-			ss.account.initial.pushAll(initialAccount)
-			ss.account.final.pushOverrideStorageRoot(finalAccount, newRoot)
-			ss.worldStateRoot.PushBytes32(initWsRoot)
+			if !seg.storageTraces[i].IsSkipped {
+				// the storage trace is to be kept, and not skipped
+				ss.batchNumber.PushInt(batchNumber)
+				ss.account.address.PushAddr(accountAddress)
+				ss.isInitialDeployment.PushBoolean(segID == 0)
+				ss.isFinalDeployment.PushBoolean(segID == len(segment)-1)
+				ss.IsDeleteSegment.PushBoolean(isDeleteSegment)
+				ss.isActive.PushOne()
+				ss.isStorage.PushOne()
+				ss.isEndOfAccountSegment.PushZero()
+				ss.isBeginningOfAccountSegment.PushBoolean(
+					segID == 0 && i == firstUnskippedIndex(seg.storageTraces),
+				)
+				ss.account.initial.pushAll(initialAccount)
+				ss.account.final.pushOverrideStorageRoot(finalAccount, newRoot)
+				ss.worldStateRoot.PushBytes32(initWsRoot)
 
-			switch t := stoTrace.(type) {
-			case statemanager.ReadZeroTraceST:
-				if isDeleteSegment {
-					/*
-						Special case: the Shomei compactification process automatically sets storage values to zero if the account later gets deleted
-						which might not be the case in the arithmetization
-						in this particular case, for the consistency lookups to work,
-						we fetch and use the last corresponding storage value/block from the arithmetization columns using
-						an ArithmetizationStorageParser
-					*/
-					x := *(&field.Element{}).SetBytes(accountAddress[:])
-					keysAndBlock := KeysAndBlock{
-						address:    x.Bytes(),
-						storageKey: t.Key,
-						block:      batchNumber,
+				switch t := stoTrace.(type) {
+				case statemanager.ReadZeroTraceST:
+					if isDeleteSegment {
+						/*
+							Special case: the Shomei compactification process automatically sets storage values to zero if the account later gets deleted
+							which might not be the case in the arithmetization
+							in this particular case, for the consistency lookups to work,
+							we fetch and use the last corresponding storage value/block from the arithmetization columns using
+							an ArithmetizationStorageParser
+						*/
+						x := *(&field.Element{}).SetBytes(accountAddress[:])
+						keysAndBlock := KeysAndBlock{
+							address:    x.Bytes(),
+							storageKey: t.Key,
+							block:      batchNumber,
+						}
+						arithStorage := ss.arithmetizationStorage.Values[keysAndBlock]
+
+						ss.storage.push(t.Key, types.FullBytes32{}, arithStorage)
+						ss.accumulatorStatement.PushReadZero(oldRoot, hash(t.Key))
+					} else {
+						ss.storage.pushOnlyKey(t.Key)
+						ss.accumulatorStatement.PushReadZero(oldRoot, hash(t.Key))
 					}
-					arithStorage := ss.arithmetizationStorage.Values[keysAndBlock]
+				case statemanager.ReadNonZeroTraceST:
+					if isDeleteSegment {
+						/*
+							Special case, same motivation and fix as in the case of ReadZeroTraceST
+						*/
+						x := *(&field.Element{}).SetBytes(accountAddress[:])
+						keysAndBlock := KeysAndBlock{
+							address:    x.Bytes(),
+							storageKey: t.Key,
+							block:      batchNumber,
+						}
+						arithStorage := ss.arithmetizationStorage.Values[keysAndBlock]
 
-					ss.storage.push(t.Key, types.FullBytes32{}, arithStorage)
-					ss.accumulatorStatement.PushReadZero(oldRoot, hash(t.Key))
-				} else {
-					ss.storage.pushOnlyKey(t.Key)
-					ss.accumulatorStatement.PushReadZero(oldRoot, hash(t.Key))
-				}
-			case statemanager.ReadNonZeroTraceST:
-				if isDeleteSegment {
-					/*
-						Special case, same motivation and fix as in the case of ReadZeroTraceST
-					*/
-					x := *(&field.Element{}).SetBytes(accountAddress[:])
-					keysAndBlock := KeysAndBlock{
-						address:    x.Bytes(),
-						storageKey: t.Key,
-						block:      batchNumber,
+						ss.storage.push(t.Key, t.Value, arithStorage)
+						ss.accumulatorStatement.PushReadNonZero(oldRoot, hash(t.Key), hash(t.Value))
+
+					} else {
+						ss.storage.push(t.Key, t.Value, t.Value)
+						ss.accumulatorStatement.PushReadNonZero(oldRoot, hash(t.Key), hash(t.Value))
 					}
-					arithStorage := ss.arithmetizationStorage.Values[keysAndBlock]
 
-					ss.storage.push(t.Key, t.Value, arithStorage)
-					ss.accumulatorStatement.PushReadNonZero(oldRoot, hash(t.Key), hash(t.Value))
+				case statemanager.InsertionTraceST:
+					ss.storage.pushOnlyNew(t.Key, t.Val)
+					ss.accumulatorStatement.PushInsert(oldRoot, newRoot, hash(t.Key), hash(t.Val))
 
-				} else {
-					ss.storage.push(t.Key, t.Value, t.Value)
-					ss.accumulatorStatement.PushReadNonZero(oldRoot, hash(t.Key), hash(t.Value))
+				case statemanager.UpdateTraceST:
+					ss.storage.push(t.Key, t.OldValue, t.NewValue)
+					ss.accumulatorStatement.PushUpdate(oldRoot, newRoot, hash(t.Key), hash(t.OldValue), hash(t.NewValue))
+
+				case statemanager.DeletionTraceST:
+					ss.storage.pushOnlyOld(t.Key, t.DeletedValue)
+					ss.accumulatorStatement.PushDelete(oldRoot, newRoot, hash(t.Key), hash(t.DeletedValue))
+				default:
+					panic("unknown trace type")
 				}
-
-			case statemanager.InsertionTraceST:
-				ss.storage.pushOnlyNew(t.Key, t.Val)
-				ss.accumulatorStatement.PushInsert(oldRoot, newRoot, hash(t.Key), hash(t.Val))
-
-			case statemanager.UpdateTraceST:
-				ss.storage.push(t.Key, t.OldValue, t.NewValue)
-				ss.accumulatorStatement.PushUpdate(oldRoot, newRoot, hash(t.Key), hash(t.OldValue), hash(t.NewValue))
-
-			case statemanager.DeletionTraceST:
-				ss.storage.pushOnlyOld(t.Key, t.DeletedValue)
-				ss.accumulatorStatement.PushDelete(oldRoot, newRoot, hash(t.Key), hash(t.DeletedValue))
-			default:
-				panic("unknown trace type")
+			} else {
+				// the storage trace is skipped
+				noOfSkippedStorageTraces++
 			}
 		}
 
@@ -259,7 +269,7 @@ func (ss *stateSummaryAssignmentBuilder) pushAccountSegment(batchNumber int, seg
 		ss.isActive.PushOne()
 		ss.isStorage.PushZero()
 		ss.isEndOfAccountSegment.PushBoolean(segID == len(segment)-1)
-		ss.isBeginningOfAccountSegment.PushBoolean(segID == 0 && len(seg.storageTraces) == 0)
+		ss.isBeginningOfAccountSegment.PushBoolean(segID == 0 && actualUnskippedLength(seg.storageTraces) == 0)
 		ss.account.initial.pushAll(initialAccount)
 		ss.account.final.pushAll(finalAccount)
 		ss.worldStateRoot.PushBytes32(finalWsRoot)
@@ -434,4 +444,26 @@ func hash(x io.WriterTo) types.Bytes32 {
 	hasher := mimc.NewMiMC()
 	x.WriteTo(hasher)
 	return types.AsBytes32(hasher.Sum(nil))
+}
+
+// actualUnskippedLength computes the actual number of traces that form the segments
+// meaning it adds up only the unskipped traces
+func actualUnskippedLength(traces []statemanager.DecodedTrace) int {
+	res := 0
+	for _, trace := range traces {
+		if !trace.IsSkipped {
+			res++
+		}
+	}
+	return res
+}
+
+// firstUnskippedIndex returns the index of the first unskipped storage trace.
+func firstUnskippedIndex(traces []statemanager.DecodedTrace) int {
+	for i, trace := range traces {
+		if !trace.IsSkipped {
+			return i
+		}
+	}
+	panic("There are no unskipped storage traces, but that is out of Shomei's expected specifications")
 }

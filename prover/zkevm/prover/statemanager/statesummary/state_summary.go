@@ -1,11 +1,17 @@
 package statesummary
 
 import (
+	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/column"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	sym "github.com/consensys/linea-monorepo/prover/symbolic"
 	"github.com/consensys/linea-monorepo/prover/utils"
+)
+
+const (
+	EMPTYKECCAKCODEHASH_HI = "0xc5d2460186f7233c927e7db2dcc703c0"
+	EMPTYKECCAKCODEHASH_LO = "0xe500b653ca82273b7bfad8045d85a470"
 )
 
 // Module represents the state-summary module. It defines all the columns
@@ -125,7 +131,7 @@ func NewModule(comp *wizard.CompiledIOP, size int) Module {
 	res.csStoragePeek(comp)
 	res.csWorldStateRoot(comp)
 	res.csIsDeletionSegment(comp)
-
+	res.constrainExpectedHubCodeHash(comp)
 	return res
 
 }
@@ -396,8 +402,11 @@ func (ss *Module) csBatchNumber(comp *wizard.CompiledIOP) {
 
 	comp.InsertLocal(
 		0,
-		"STATE_SUMMARY_BATCH_NUMER_START_FROM_ZERO",
-		sym.NewVariable(ss.BatchNumber),
+		"STATE_SUMMARY_BATCH_NUMBER_START_FROM_ONE",
+		sym.Sub(
+			ss.BatchNumber,
+			1,
+		),
 	)
 
 	isZeroWhenInactive(comp, ss.BatchNumber, ss.IsActive)
@@ -925,6 +934,126 @@ func (ss *Module) csAccumulatorRoots(comp *wizard.CompiledIOP) {
 			sym.Sub(
 				ss.Account.Final.StorageRoot,
 				ss.AccumulatorStatement.StateDiff.FinalRoot,
+			),
+		),
+	)
+}
+
+// constrainExpectedHubCodeHash constrains the ExpectedHubCodeHash columns
+// using the KeccakCodeHash information from the state summary
+func (ss *Module) constrainExpectedHubCodeHash(comp *wizard.CompiledIOP) {
+	// if account exists we have the same Keccak code hash
+	// if account does not exist we have the empty code hash in what is expected
+	// from the HUB
+	comp.InsertGlobal(
+		0,
+		"GLOBAL_CONSTRAINT_EXPECTED_HUB_CODEHASH_INITIAL_CASE_EXISTENT_HI",
+		sym.Mul(
+			ss.Account.Initial.Exists,
+			sym.Sub(
+				ss.Account.Initial.KeccakCodeHash.Hi,
+				ss.Account.Initial.ExpectedHubCodeHash.Hi,
+			),
+		),
+	)
+	// initial case Lo, existent accounts
+	comp.InsertGlobal(
+		0,
+		"GLOBAL_CONSTRAINT_EXPECTED_HUB_CODEHASH_INITIAL_CASE_EXISTENT_LO",
+		sym.Mul(
+			ss.Account.Initial.Exists,
+			sym.Sub(
+				ss.Account.Initial.KeccakCodeHash.Lo,
+				ss.Account.Initial.ExpectedHubCodeHash.Lo,
+			),
+		),
+	)
+	// initial case Hi, nonexistent accounts
+	comp.InsertGlobal(
+		0,
+		"GLOBAL_CONSTRAINT_EXPECTED_HUB_CODEHASH_INITIAL_CASE_NON_EXISTENT_HI",
+		sym.Mul(
+			ss.IsActive, // only on the active part of the module
+			sym.Sub(
+				1,
+				ss.Account.Initial.Exists,
+			),
+			sym.Sub(
+				ss.Account.Initial.ExpectedHubCodeHash.Hi,
+				field.NewFromString(EMPTYKECCAKCODEHASH_HI),
+			),
+		),
+	)
+	// initial case Lo, nonexistent accounts
+	comp.InsertGlobal(
+		0,
+		"GLOBAL_CONSTRAINT_EXPECTED_HUB_CODEHASH_INITIAL_CASE_NON_EXISTENT_LO",
+		sym.Mul(
+			ss.IsActive, // only on the active part of the module
+			sym.Sub(
+				1,
+				ss.Account.Initial.Exists,
+			),
+			sym.Sub(
+				ss.Account.Initial.ExpectedHubCodeHash.Lo,
+				field.NewFromString(EMPTYKECCAKCODEHASH_LO),
+			),
+		),
+	)
+
+	// final checks
+	comp.InsertGlobal(
+		0,
+		"GLOBAL_CONSTRAINT_EXPECTED_HUB_CODEHASH_FINALL_CASE_EXISTENT_HI",
+		sym.Mul(
+			ss.Account.Final.Exists,
+			sym.Sub(
+				ss.Account.Final.KeccakCodeHash.Hi,
+				ss.Account.Final.ExpectedHubCodeHash.Hi,
+			),
+		),
+	)
+	// final case Lo, existent accounts
+	comp.InsertGlobal(
+		0,
+		"GLOBAL_CONSTRAINT_EXPECTED_HUB_CODEHASH_FINAL_CASE_EXISTENT_LO",
+		sym.Mul(
+			ss.Account.Final.Exists,
+			sym.Sub(
+				ss.Account.Final.KeccakCodeHash.Lo,
+				ss.Account.Final.ExpectedHubCodeHash.Lo,
+			),
+		),
+	)
+	// final case Hi, nonexistent accounts
+	comp.InsertGlobal(
+		0,
+		"GLOBAL_CONSTRAINT_EXPECTED_HUB_CODEHASH_FINAL_CASE_NON_EXISTENT_HI",
+		sym.Mul(
+			ss.IsActive, // only on the active part of the module
+			sym.Sub(
+				1,
+				ss.Account.Final.Exists,
+			),
+			sym.Sub(
+				ss.Account.Final.ExpectedHubCodeHash.Hi,
+				field.NewFromString(EMPTYKECCAKCODEHASH_HI),
+			),
+		),
+	)
+	// final case Lo, nonexistent accounts
+	comp.InsertGlobal(
+		0,
+		"GLOBAL_CONSTRAINT_EXPECTED_HUB_CODEHASH_FINAL_CASE_NON_EXISTENT_LO",
+		sym.Mul(
+			ss.IsActive, // only on the active part of the module
+			sym.Sub(
+				1,
+				ss.Account.Final.Exists,
+			),
+			sym.Sub(
+				ss.Account.Final.ExpectedHubCodeHash.Lo,
+				field.NewFromString(EMPTYKECCAKCODEHASH_LO),
 			),
 		),
 	)

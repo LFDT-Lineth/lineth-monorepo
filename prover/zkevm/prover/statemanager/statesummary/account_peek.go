@@ -10,6 +10,7 @@ import (
 	sym "github.com/consensys/linea-monorepo/prover/symbolic"
 	"github.com/consensys/linea-monorepo/prover/utils/types"
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/common"
+	types2 "github.com/ethereum/go-ethereum/core/types"
 )
 
 var (
@@ -152,6 +153,9 @@ type Account struct {
 	Exists, Nonce, Balance, MiMCCodeHash, CodeSize, StorageRoot ifaces.Column
 	// KeccakCodeHash stores the keccak code hash of the account.
 	KeccakCodeHash common.HiLoColumns
+	// ExpectedHubCodeHash is almost the same as the KeccakCodeHash, with the difference
+	// than when the account does not exist, it contains the keccak hash of the empty string
+	ExpectedHubCodeHash common.HiLoColumns
 	// HasEmptyCodeHash is an indicator column indicating whether the current
 	// account has an empty codehash
 	HasEmptyCodeHash             ifaces.Column
@@ -179,6 +183,7 @@ func newAccount(comp *wizard.CompiledIOP, size int, name string) Account {
 		CodeSize:                     createCol("CODESIZE"),
 		StorageRoot:                  createCol("STORAGE_ROOT"),
 		KeccakCodeHash:               common.NewHiLoColumns(comp, size, name+"_KECCAK_CODE_HASH"),
+		ExpectedHubCodeHash:          common.NewHiLoColumns(comp, size, name+"_EXPECTED_HUB_CODE_HASH"),
 		ExistsAndHasNonEmptyCodeHash: createCol("EXISTS_AND_NON_EMPTY_CODEHASH"),
 	}
 
@@ -232,6 +237,7 @@ func newAccountPeekAssignmentBuilder(ap *AccountPeek) accountPeekAssignmentBuild
 type accountAssignmentBuilder struct {
 	exists, nonce, balance, miMCCodeHash, codeSize, storageRoot *common.VectorBuilder
 	keccakCodeHash                                              common.HiLoAssignmentBuilder
+	expectedHubCodeHash                                         common.HiLoAssignmentBuilder
 	existsAndHasNonEmptyCodeHash                                *common.VectorBuilder
 }
 
@@ -247,6 +253,7 @@ func newAccountAssignmentBuilder(ap *Account) accountAssignmentBuilder {
 		storageRoot:                  common.NewVectorBuilder(ap.StorageRoot),
 		existsAndHasNonEmptyCodeHash: common.NewVectorBuilder(ap.ExistsAndHasNonEmptyCodeHash),
 		keccakCodeHash:               common.NewHiLoAssignmentBuilder(ap.KeccakCodeHash),
+		expectedHubCodeHash:          common.NewHiLoAssignmentBuilder(ap.ExpectedHubCodeHash),
 	}
 }
 
@@ -262,10 +269,14 @@ func (ss *accountAssignmentBuilder) pushAll(acc types.Account) {
 		ss.balance.PushBytes32(types.LeftPadToBytes32(acc.Balance.Bytes()))
 		ss.exists.PushOne()
 		ss.keccakCodeHash.Push(acc.KeccakCodeHash)
+		// if account exists push the same Keccak code hash
+		ss.expectedHubCodeHash.Push(acc.KeccakCodeHash)
 	} else {
 		ss.balance.PushZero()
 		ss.exists.PushZero()
 		ss.keccakCodeHash.PushZeroes()
+		// if account does not exist push empty codehash
+		ss.expectedHubCodeHash.Push(types.FullBytes32(types2.EmptyCodeHash))
 	}
 
 	ss.codeSize.PushInt(int(acc.CodeSize))
@@ -290,10 +301,14 @@ func (ss *accountAssignmentBuilder) pushOverrideStorageRoot(
 		ss.balance.PushBytes32(types.LeftPadToBytes32(acc.Balance.Bytes()))
 		ss.exists.PushOne()
 		ss.keccakCodeHash.Push(acc.KeccakCodeHash)
+		// if account exists push the same codehash
+		ss.expectedHubCodeHash.Push(acc.KeccakCodeHash)
 	} else {
 		ss.balance.PushZero()
 		ss.exists.PushZero()
 		ss.keccakCodeHash.PushZeroes()
+		// if account does not exist push empty codehash
+		ss.expectedHubCodeHash.Push(types.FullBytes32(types2.EmptyCodeHash))
 	}
 
 	ss.codeSize.PushInt(int(acc.CodeSize))
@@ -310,6 +325,7 @@ func (ss *accountAssignmentBuilder) PadAndAssign(run *wizard.ProverRuntime) {
 	ss.nonce.PadAndAssign(run)
 	ss.balance.PadAndAssign(run)
 	ss.keccakCodeHash.PadAssign(run, types.FullBytes32{})
+	ss.expectedHubCodeHash.PadAssign(run, types.FullBytes32{})
 	ss.miMCCodeHash.PadAndAssign(run)
 	ss.storageRoot.PadAndAssign(run)
 	ss.codeSize.PadAndAssign(run)

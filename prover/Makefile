@@ -43,13 +43,6 @@ zkevm/arithmetization/zkevm.bin: go-corset
 	cd ../constraints && $(GO_CORSET) make zkevm.bin && mv zkevm.bin ../prover/zkevm/arithmetization
 
 ##
-## zkevm.bin without 2B block gas limit constraint to test old traces
-##
-zkevm/arithmetization/zkevm_for_old_trace.bin: go-corset
-	cd ../constraints && $(GO_CORSET) make zkevm_for_old_replay_tests.bin &&\
-	mv zkevm_for_old_replay_tests.bin ../prover/zkevm/arithmetization/zkevm_for_old_trace.bin
-
-##
 ## Generate the setup for the execution prover (to be run with S3 access)
 ##
 setup: bin/prover

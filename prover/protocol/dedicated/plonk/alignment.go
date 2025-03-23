@@ -2,6 +2,7 @@ package plonk
 
 import (
 	"fmt"
+	"os"
 	"sync"
 
 	"github.com/consensys/gnark-crypto/ecc"
@@ -16,6 +17,7 @@ import (
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	"github.com/consensys/linea-monorepo/prover/symbolic"
 	"github.com/consensys/linea-monorepo/prover/utils"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
 	"golang.org/x/sync/errgroup"
 )
@@ -84,8 +86,19 @@ func (ci *CircuitAlignmentInput) NbInstances() int {
 // prepareWitnesses prepares the witnesses for every circuit instance. It is
 // called inside the Once so that we do not prepare the witnesses multiple
 // times. Safe to call multiple times, it is idepotent after first call.
+// The function checks how many instances of the circuit are called and panics
+// if this uncovers an overflow.
 func (ci *CircuitAlignmentInput) prepareWitnesses(run *wizard.ProverRuntime) {
+
 	ci.witnessesOnce.Do(func() {
+
+		if err := ci.checkNbCircuitInvocation(run); err != nil {
+			// Don't use the fatal level here because we want to control the exit code
+			// to be 77.
+			logrus.Errorf("fatal=%v", err)
+			os.Exit(77)
+		}
+
 		if ci.InputFiller == nil {
 			ci.InputFiller = func(_, _ int) field.Element { return field.Zero() }
 		}
@@ -100,6 +113,7 @@ func (ci *CircuitAlignmentInput) prepareWitnesses(run *wizard.ProverRuntime) {
 				totalInputs++
 			}
 		}
+
 		// prepare witness for every circuit instance NB! keep in mind that we only
 		// have public inputs. So the public and private inputs match. Due to
 		// interface definition we have to return both but in practice have only a
@@ -176,6 +190,31 @@ func (ci *CircuitAlignmentInput) Assign(run *wizard.ProverRuntime, i int) (priva
 func (ci *CircuitAlignmentInput) NumEffWitnesses(run *wizard.ProverRuntime) int {
 	ci.prepareWitnesses(run)
 	return ci.numEffWitnesses
+}
+
+// checkNbCircuitInvocation checks that the number of time the circuit is called
+// does not goes above the [maxNbInstance] limit and returns an error if it does.
+func (ci *CircuitAlignmentInput) checkNbCircuitInvocation(run *wizard.ProverRuntime) error {
+
+	var (
+		mask  = ci.DataToCircuitMask.GetColAssignment(run).IntoRegVecSaveAlloc()
+		count = 0
+	)
+
+	for i := range mask {
+		if mask[i].IsOne() {
+			count++
+		}
+	}
+
+	if count > ci.nbPublicInputs*ci.NbCircuitInstances {
+		return fmt.Errorf(
+			"[circuit-alignement] too many inputs circuit=%v nb-public-input-required=%v nb-public-input-per-circuit=%v nb-circuits-available=%v nb-circuit-required=%v",
+			ci.Name, count, ci.nbPublicInputs, ci.NbCircuitInstances, utils.DivCeil(count, ci.nbPublicInputs),
+		)
+	}
+
+	return nil
 }
 
 // Alignment is the prepared structure where the Data field is aligned to gnark

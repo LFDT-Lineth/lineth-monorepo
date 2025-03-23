@@ -176,29 +176,32 @@ func (am *Module) Assign(
 	)
 
 	for _, trace := range traces {
-		switch t := trace.Underlying.(type) {
-		case statemanager.UpdateTraceST:
-			pushUpdateRows(builder, t)
-		case statemanager.UpdateTraceWS:
-			pushUpdateRows(builder, t)
-		case statemanager.InsertionTraceST:
-			pushInsertionRows(builder, t)
-		case statemanager.InsertionTraceWS:
-			pushInsertionRows(builder, t)
-		case statemanager.DeletionTraceST:
-			pushDeletionRows(builder, t)
-		case statemanager.DeletionTraceWS:
-			pushDeletionRows(builder, t)
-		case statemanager.ReadZeroTraceST:
-			pushReadZeroRows(builder, t)
-		case statemanager.ReadZeroTraceWS:
-			pushReadZeroRows(builder, t)
-		case statemanager.ReadNonZeroTraceST:
-			pushReadNonZeroRows(builder, t)
-		case statemanager.ReadNonZeroTraceWS:
-			pushReadNonZeroRows(builder, t)
-		default:
-			utils.Panic("Unexpected type : %T", t)
+		// only assign the traces that are flagged as not to be skipped
+		if !trace.IsSkipped {
+			switch t := trace.Underlying.(type) {
+			case statemanager.UpdateTraceST:
+				pushUpdateRows(builder, t)
+			case statemanager.UpdateTraceWS:
+				pushUpdateRows(builder, t)
+			case statemanager.InsertionTraceST:
+				pushInsertionRows(builder, t)
+			case statemanager.InsertionTraceWS:
+				pushInsertionRows(builder, t)
+			case statemanager.DeletionTraceST:
+				pushDeletionRows(builder, t)
+			case statemanager.DeletionTraceWS:
+				pushDeletionRows(builder, t)
+			case statemanager.ReadZeroTraceST:
+				pushReadZeroRows(builder, t)
+			case statemanager.ReadZeroTraceWS:
+				pushReadZeroRows(builder, t)
+			case statemanager.ReadNonZeroTraceST:
+				pushReadNonZeroRows(builder, t)
+			case statemanager.ReadNonZeroTraceWS:
+				pushReadNonZeroRows(builder, t)
+			default:
+				utils.Panic("Unexpected type : %T", t)
+			}
 		}
 	}
 
