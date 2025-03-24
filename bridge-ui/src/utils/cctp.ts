@@ -5,10 +5,14 @@ import { fetchCctpAttestationByTxHash, reattestCctpV2PreFinalityMessage } from "
 import { getPublicClient } from "@wagmi/core";
 import { config as wagmiConfig } from "@/lib/wagmi";
 
-// TODO - Find optimal value
-export const CCTP_TRANSFER_MAX_FEE_FALLBACK = 5n;
+// Current fast transfer route fee for mainnet
+export const CCTP_TRANSFER_MAX_FEE_FALLBACK = 100n;
 // 1000 Fast transfer, 2000 Standard transfer
 export const CCTP_MIN_FINALITY_THRESHOLD = 1000;
+// https://developers.circle.com/stablecoins/message-format, add 2 for '0x' prefix
+const CCTP_V2_MESSAGE_HEADER_LENGTH = 298;
+const CCTP_V2_EXPIRATION_BLOCK_OFFSET = 2 + 344 * 2;
+const CCTP_V2_EXPIRATION_BLOCK_LENGTH = 64;
 
 const isCctpNonceUsed = async (
   client: GetPublicClientReturnType,
@@ -25,11 +29,16 @@ const isCctpNonceUsed = async (
   return resp === 1n;
 };
 
-const getCctpMessageExpiryBlock = (message: string): bigint => {
+const getCctpMessageExpiryBlock = (message: string): bigint | undefined => {
   // See CCTPV2 message format at https://developers.circle.com/stablecoins/message-format
-  const expiryInHex = message.substring(2 + 344 * 2, 2 + 376 * 2);
+  const expiryInHex = message.substring(
+    CCTP_V2_EXPIRATION_BLOCK_OFFSET,
+    CCTP_V2_EXPIRATION_BLOCK_OFFSET + CCTP_V2_EXPIRATION_BLOCK_LENGTH,
+  );
+  const expiryInInt = parseInt(expiryInHex, 16);
+  if (Number.isNaN(expiryInInt)) return undefined;
   // Return bigint because this is also returned by Viem client.getBlockNumber()
-  return BigInt(parseInt(expiryInHex, 16));
+  return BigInt(expiryInInt);
 };
 
 export const getCctpTransactionStatus = async (
@@ -41,9 +50,12 @@ export const getCctpTransactionStatus = async (
     chainId: toChain.id,
   });
   if (!toChainClient) return TransactionStatus.PENDING;
+  // Attestation/message not yet available
+  if (cctpAttestationMessage.message.length < CCTP_V2_MESSAGE_HEADER_LENGTH) return TransactionStatus.PENDING;
   const isNonceUsed = await isCctpNonceUsed(toChainClient, nonce, toChain.cctpMessageTransmitterV2Address);
   if (isNonceUsed) return TransactionStatus.COMPLETED;
   const messageExpiryBlock = getCctpMessageExpiryBlock(cctpAttestationMessage.message);
+  if (!messageExpiryBlock) return TransactionStatus.PENDING;
   // Message has no expiry
   if (messageExpiryBlock === 0n)
     return cctpAttestationMessage.status === CctpAttestationMessageStatus.PENDING_CONFIRMATIONS
