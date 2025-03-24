@@ -42,7 +42,7 @@ export default function SelectNetwork({ isModalOpen, onCloseModal, onClick, netw
             filteredNetworks.map((network, index: number) => {
               return (
                 <NetworkDetails
-                  key={index}
+                  key={`select-network-${index}`}
                   name={network.name}
                   onClickNetwork={() => {
                     onClick(network);

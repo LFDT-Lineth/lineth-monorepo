@@ -66,6 +66,13 @@ export const config: Config = {
     minVersion: process.env.NEXT_PUBLIC_STORAGE_MIN_VERSION ? parseInt(process.env.NEXT_PUBLIC_STORAGE_MIN_VERSION) : 1,
   },
   isCctpEnabled: process.env.NEXT_PUBLIC_IS_CCTP_ENABLED === "true",
+  infuraApiKey: process.env.NEXT_PUBLIC_INFURA_ID ?? "",
+  dynamicEnvironmentId: process.env.NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID ?? "",
+  lifiApiKey: process.env.NEXT_PUBLIC_LIFI_API_KEY ?? "",
+  tokenListUrls: {
+    mainnet: process.env.NEXT_PUBLIC_MAINNET_TOKEN_LIST ?? "",
+    sepolia: process.env.NEXT_PUBLIC_SEPOLIA_TOKEN_LIST ?? "",
+  },
 };
 
 export async function getConfiguration(): Promise<Config> {

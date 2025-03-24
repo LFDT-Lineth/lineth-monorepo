@@ -4,15 +4,11 @@ import { GetPublicClientReturnType } from "@wagmi/core";
 import { fetchCctpAttestationByTxHash, reattestCctpV2PreFinalityMessage } from "@/services/cctp";
 import { getPublicClient } from "@wagmi/core";
 import { config as wagmiConfig } from "@/lib/wagmi";
-
-// Current fast transfer route fee for mainnet
-export const CCTP_TRANSFER_MAX_FEE_FALLBACK = 100n;
-// 1000 Fast transfer, 2000 Standard transfer
-export const CCTP_MIN_FINALITY_THRESHOLD = 1000;
-// https://developers.circle.com/stablecoins/message-format, add 2 for '0x' prefix
-const CCTP_V2_MESSAGE_HEADER_LENGTH = 298;
-const CCTP_V2_EXPIRATION_BLOCK_OFFSET = 2 + 344 * 2;
-const CCTP_V2_EXPIRATION_BLOCK_LENGTH = 64;
+import {
+  CCTP_V2_EXPIRATION_BLOCK_LENGTH,
+  CCTP_V2_EXPIRATION_BLOCK_OFFSET,
+  CCTP_V2_MESSAGE_HEADER_LENGTH,
+} from "@/constants";
 
 const isCctpNonceUsed = async (
   client: GetPublicClientReturnType,

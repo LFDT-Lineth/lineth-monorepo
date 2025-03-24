@@ -45,8 +45,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
             src={"/images/illustration/illustration-mobile.svg"}
             role="presentation"
             alt="illustration mobile"
-            width={428}
-            height={359}
+            width={0}
+            height={0}
+            style={{ width: "100%", height: "auto", objectFit: "cover" }}
             priority
           />
         </div>
@@ -69,6 +70,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           alt="illustration left"
           width={300}
           height={445}
+          priority
         />
         <Image
           className="right-illustration"
@@ -77,14 +79,17 @@ export function Layout({ children }: { children: React.ReactNode }) {
           alt="illustration right"
           width={610}
           height={842}
+          priority
         />
         <Image
           className={clsx("mobile-illustration", { hidden: pathname === "/faq" })}
           src={"/images/illustration/illustration-mobile.svg"}
           role="presentation"
           alt="illustration mobile"
-          width={428}
-          height={359}
+          width={0}
+          height={0}
+          style={{ width: "100%", height: "auto", objectFit: "cover" }}
+          priority
         />
       </div>
     </div>

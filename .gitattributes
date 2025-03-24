@@ -24,3 +24,5 @@ prover/prover-assets/**/**/**/*.bin binary
 prover/prover-assets/**/**/**/**/*.bin binary
 prover/prover-assets/kzgsrs/* binary
 
+*.woff2 binary
+

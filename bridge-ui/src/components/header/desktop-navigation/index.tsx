@@ -25,7 +25,7 @@ export const DesktopNavigation = ({ menus, theme = Theme.default }: Props) => {
     <nav className={styles["nav-wrapper"]}>
       <ul className={`${styles.navigation} ${styles[theme]}`}>
         {menus.map((menu, index) => (
-          <MenuItem key={index} menu={filterMobileOnly(menu)} />
+          <MenuItem key={`menu-item-${index}`} menu={filterMobileOnly(menu)} />
         ))}
         <li>
           <HeaderConnect />
@@ -87,8 +87,8 @@ function MenuItem({ menu }: MenuItemProps) {
 
           {menu.submenusLeft && (
             <ul className={styles.submenu}>
-              {menu.submenusLeft.map((submenu, key) => (
-                <li className={styles.submenuItem} key={key}>
+              {menu.submenusLeft.map((submenu, index) => (
+                <li className={styles.submenuItem} key={`${menu.name}-submenuleft-{${index}`}>
                   <Link href={submenu.url as string} target={submenu.external ? "_blank" : "_self"}>
                     {submenu.label}
                     {submenu.external && (
@@ -102,7 +102,7 @@ function MenuItem({ menu }: MenuItemProps) {
               {menu.submenusRight && (
                 <ul className={styles.right}>
                   {menu.submenusRight?.submenusLeft?.map((submenu, subIndex) => (
-                    <li className={styles.submenuItem} key={subIndex}>
+                    <li className={styles.submenuItem} key={`${menu.name}-submenuright-submenuleft-${subIndex}`}>
                       <Link
                         href={submenu.url as string}
                         target={submenu.external ? "_blank" : "_self"}

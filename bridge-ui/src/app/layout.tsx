@@ -21,11 +21,11 @@ const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" data-theme="v2">
+    <html lang="en" data-theme="v2" className={clsx(atypFont.variable, atypTextFont.variable)}>
       <title>{metadata.title?.toString()}</title>
       <meta name="description" content={metadata.description?.toString()} key="desc" />
 
-      <body className={clsx(atypFont.variable, atypTextFont.variable, atypFont.className, atypTextFont.className)}>
+      <body>
         <noscript dangerouslySetInnerHTML={{ __html: gtmNoScript }} />
 
         <Providers>
@@ -45,8 +45,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </svg>
       </body>
 
-      <Script id="usabilla" dangerouslySetInnerHTML={{ __html: usabillaBeScript }} />
-      <Script id="gtm" dangerouslySetInnerHTML={{ __html: gtmScript }} />
+      <Script id="usabilla" dangerouslySetInnerHTML={{ __html: usabillaBeScript }} strategy="lazyOnload" />
+      <Script id="gtm" dangerouslySetInnerHTML={{ __html: gtmScript }} strategy="lazyOnload" />
     </html>
   );
 }

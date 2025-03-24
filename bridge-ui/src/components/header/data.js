@@ -244,6 +244,22 @@ export const MENUS = [
         url: "https://linea.build/assets",
         external: true,
       },
+      {
+        __id: "01wv6FiyW8WmBwVSiELs0L",
+        __typename: "link",
+        name: "Privacy Policy",
+        label: "Privacy Policy",
+        url: "https://consensys.io/privacy-notice",
+        external: true,
+      },
+      {
+        __id: "01wv6FiyW8WmBwVSiELs0L",
+        __typename: "link",
+        name: "Terms of service",
+        label: "Terms of service",
+        url: "https://linea.build/terms-of-service",
+        external: true,
+      },
     ],
     submenusRight: {
       __id: "SQOTqw3aK6kNo3oUGGh7W",

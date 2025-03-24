@@ -19,5 +19,3 @@ export const isCctp = (token: Token) => {
     isAddress(token.L2)
   );
 };
-
-export const USDC_SYMBOL = "USDC";

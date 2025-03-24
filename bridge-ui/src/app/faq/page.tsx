@@ -68,7 +68,12 @@ export default function FaqPage() {
 
         <ul className={styles["list"]}>
           {faqList.map((faq, index) => (
-            <FaqItem key={index} data={faq} isOpen={openIndex === index} onToggle={() => handleToggle(index)} />
+            <FaqItem
+              key={`faq-item-${index}`}
+              data={faq}
+              isOpen={openIndex === index}
+              onToggle={() => handleToggle(index)}
+            />
           ))}
         </ul>
       </div>

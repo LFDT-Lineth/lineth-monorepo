@@ -23,12 +23,19 @@ const chainConfigSchema = z.object({
 export const configSchema = z
   .object({
     chains: z.record(z.string().regex(/^\d+$/), chainConfigSchema),
-    walletConnectId: z.string(),
+    walletConnectId: z.string().nonempty(),
     storage: z.object({
       minVersion: z.number().positive().int(),
     }),
     // Feature toggle for CCTPV2 for USDC transfers
     isCctpEnabled: z.boolean(),
+    infuraApiKey: z.string().nonempty(),
+    dynamicEnvironmentId: z.string().nonempty(),
+    lifiApiKey: z.string().nonempty(),
+    tokenListUrls: z.object({
+      mainnet: z.string().trim().url(),
+      sepolia: z.string().trim().url(),
+    }),
   })
   .strict();
 

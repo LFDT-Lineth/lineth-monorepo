@@ -3,7 +3,7 @@
 import { useChainStore } from "@/stores";
 import { getCctpFee } from "@/services/cctp";
 import { useQuery } from "@tanstack/react-query";
-import { CCTP_TRANSFER_MAX_FEE_FALLBACK } from "@/utils/cctp";
+import { CCTP_TRANSFER_MAX_FEE_FALLBACK } from "@/constants";
 
 const useCctpSrcDomain = () => {
   const fromChain = useChainStore.useFromChain();

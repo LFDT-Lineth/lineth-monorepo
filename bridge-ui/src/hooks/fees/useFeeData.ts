@@ -1,7 +1,7 @@
 import { useEstimateFeesPerGas, useWatchBlockNumber } from "wagmi";
-import { SupportedChainId } from "@/lib/wagmi";
+import { SupportedChainIds } from "@/types";
 
-const useFeeData = (chainId: SupportedChainId) => {
+const useFeeData = (chainId: SupportedChainIds) => {
   const { data, refetch } = useEstimateFeesPerGas({ chainId, type: "eip1559" });
 
   useWatchBlockNumber({

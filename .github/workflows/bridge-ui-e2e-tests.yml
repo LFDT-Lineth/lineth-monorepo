@@ -39,6 +39,7 @@ jobs:
           NEXT_PUBLIC_WALLET_CONNECT_ID: ${{ secrets.PUBLIC_WALLET_CONNECT_ID }}
           NEXT_PUBLIC_INFURA_ID: ${{ secrets.PUBLIC_BRIDGE_UI_INFURA_ID }}
           NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID: ${{ secrets.PUBLIC_DYNAMIC_ENVIRONMENT_ID }}
+          NEXT_PUBLIC_LIFI_API_KEY: ${{ secrets.PUBLIC_LIFI_API_KEY }}
 
       - name: Install linux dependencies
         run: |

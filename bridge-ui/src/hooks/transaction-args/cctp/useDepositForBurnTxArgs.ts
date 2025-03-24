@@ -4,7 +4,7 @@ import { encodeFunctionData, padHex, zeroHash } from "viem";
 import { useFormStore, useChainStore } from "@/stores";
 import { isCctp } from "@/utils/tokens";
 import { useCctpFee, useCctpDestinationDomain } from "./useCctpUtilHooks";
-import { CCTP_MIN_FINALITY_THRESHOLD } from "@/utils";
+import { CCTP_MIN_FINALITY_THRESHOLD } from "@/constants";
 
 type UseDepositForBurnTxArgs = {
   allowance?: bigint;

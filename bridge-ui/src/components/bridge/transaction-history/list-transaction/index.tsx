@@ -23,7 +23,7 @@ export default function ListTransaction({ transactions }: Props) {
     <>
       <ul className={styles["list"]}>
         {transactions.map((item, index) => (
-          <Transaction key={`${item.bridgingTx}-${index}`} onClick={handleClickTransaction} {...item} />
+          <Transaction key={`transaction-${item.bridgingTx}-${index}`} onClick={handleClickTransaction} {...item} />
         ))}
       </ul>
       <TransactionDetails

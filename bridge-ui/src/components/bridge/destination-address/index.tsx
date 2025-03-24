@@ -44,7 +44,7 @@ export function DestinationAddress() {
     <div className={styles["destination-address"]}>
       <div className={styles["headline"]}>
         <p className={styles.title}>Send to wallet</p>
-        {address !== inputValue && !error && (
+        {address !== inputValue && !error && isAddress(inputValue) && (
           <Link
             href={`${toChain.blockExplorers?.default.url ?? ""}/address/${inputValue}`}
             target="_blank"

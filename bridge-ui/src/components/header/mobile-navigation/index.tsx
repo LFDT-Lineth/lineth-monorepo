@@ -81,7 +81,7 @@ export const MobileNavigation = ({ menus, theme = "default" }: Props) => {
                 {menus.map((menu, index) => (
                   <li
                     className={clsx(styles.menuItem, { [styles.active]: activeMenu === index })}
-                    key={index}
+                    key={`mobile-menu-item-${index}`}
                     onClick={() => handleToggleMenu(menu, index)}
                   >
                     {menu.url ? (
@@ -107,7 +107,7 @@ export const MobileNavigation = ({ menus, theme = "default" }: Props) => {
                             {menu.submenusLeft.map((submenu, subIndex) => (
                               <li
                                 className={styles.submenuItem}
-                                key={subIndex}
+                                key={`mobile-submenuleft-item-${subIndex}`}
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   handleToggleMenu(submenu, -1);
@@ -128,7 +128,10 @@ export const MobileNavigation = ({ menus, theme = "default" }: Props) => {
                         {menu.submenusRight && (
                           <ul className={`${styles.submenu} ${styles.right}`}>
                             {menu.submenusRight?.submenusLeft?.map((submenu, subIndex) => (
-                              <li className={styles.submenuItem} key={subIndex}>
+                              <li
+                                className={styles.submenuItem}
+                                key={`mobile-submenuright-submenuleft-item-${subIndex}`}
+                              >
                                 <Link
                                   href={submenu.url as string}
                                   target={submenu.external ? "_blank" : "_self"}

@@ -1,7 +1,6 @@
 import { keccak256, encodeAbiParameters, Address } from "viem";
 import { CctpV2BridgeMessage, NativeBridgeMessage } from "@/types";
-
-const INBOX_L1L2_MESSAGE_STATUS_MAPPING_SLOT = 176n;
+import { INBOX_L1L2_MESSAGE_STATUS_MAPPING_SLOT } from "@/constants";
 
 export function computeMessageHash(
   from: Address,

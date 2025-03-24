@@ -1,10 +1,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import UnionIcon from "@/assets/icons/union.svg";
-import LeftIllustration from "./illustration/left.svg";
-import RightIllustration from "./illustration/right.svg";
 import CloseIcon from "@/assets/icons/x-circle.svg";
 import styles from "./top-banner.module.scss";
+import Image from "next/image";
 
 type Props = {
   text: string;
@@ -22,7 +21,16 @@ export default function TopBanner({ text, href }: Props) {
 
   return (
     <div className={styles["banner-wrapper"]}>
-      <LeftIllustration className={styles["left-illustration"]} />
+      <Image
+        className={styles["left-illustration"]}
+        src={"/images/illustration/banner/left.svg"}
+        role="presentation"
+        alt="banner illustration left"
+        width={0}
+        height={0}
+        style={{ width: "56px", height: "100%" }}
+        priority
+      />
       <div className={styles["banner"]}>
         <Link href={href} target="_blank" rel="noopener noreferrer" className={styles["inner"]} passHref>
           <span>{text}</span>
@@ -30,7 +38,16 @@ export default function TopBanner({ text, href }: Props) {
         </Link>
       </div>
       <CloseIcon onClick={handleClose} className={styles["close-icon"]} />
-      <RightIllustration className={styles["right-illustration"]} />
+      <Image
+        className={styles["right-illustration"]}
+        src={"/images/illustration/banner/right.svg"}
+        role="presentation"
+        alt="banner illustration right"
+        width={0}
+        height={0}
+        style={{ width: "221px", height: "100%" }}
+        priority
+      />
     </div>
   );
 }

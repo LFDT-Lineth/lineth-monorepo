@@ -1,17 +1,15 @@
 import { Address } from "viem";
 import { linea, mainnet, Chain as ViemChain, sepolia, lineaSepolia } from "viem/chains";
-import { SupportedChainId } from "@/lib/wagmi";
 import { config } from "@/config";
-import { Chain, ChainLayer } from "@/types";
+import { Chain, ChainLayer, SupportedChainIds } from "@/types";
 
 export const generateChain = (chain: ViemChain): Chain => {
   return {
-    id: chain.id as SupportedChainId,
+    id: chain.id as SupportedChainIds,
     name: chain.id !== lineaSepolia.id ? chain.name : "Linea Sepolia",
     iconPath: config.chains[chain.id].iconPath,
     nativeCurrency: chain.nativeCurrency,
     blockExplorers: chain.blockExplorers,
-    // Possibly the wrong assumption to fallback to 'false', but fallback to 'true' makes the app crash mysteriously
     testnet: Boolean(chain.testnet),
     layer: getChainNetworkLayer(chain.id),
     messageServiceAddress: config.chains[chain.id].messageServiceAddress as Address,

@@ -1,7 +1,9 @@
 import { useMemo } from "react";
 import { LineaSDK, Network } from "@consensys/linea-sdk";
+import { linea, lineaSepolia, mainnet, sepolia } from "viem/chains";
 import { L1MessageServiceContract, L2MessageServiceContract } from "@consensys/linea-sdk/dist/lib/contracts";
 import { useChainStore } from "@/stores";
+import { CHAINS_RPC_URLS } from "@/constants";
 
 export interface LineaSDKContracts {
   L1: L1MessageServiceContract;
@@ -15,11 +17,11 @@ const useLineaSDK = () => {
     let l1RpcUrl;
     let l2RpcUrl;
     if (fromChain.testnet) {
-      l1RpcUrl = `https://sepolia.infura.io/v3/${process.env.NEXT_PUBLIC_INFURA_ID}`;
-      l2RpcUrl = `https://linea-sepolia.infura.io/v3/${process.env.NEXT_PUBLIC_INFURA_ID}`;
+      l1RpcUrl = CHAINS_RPC_URLS[sepolia.id];
+      l2RpcUrl = CHAINS_RPC_URLS[lineaSepolia.id];
     } else {
-      l1RpcUrl = `https://mainnet.infura.io/v3/${process.env.NEXT_PUBLIC_INFURA_ID}`;
-      l2RpcUrl = `https://linea-mainnet.infura.io/v3/${process.env.NEXT_PUBLIC_INFURA_ID}`;
+      l1RpcUrl = CHAINS_RPC_URLS[mainnet.id];
+      l2RpcUrl = CHAINS_RPC_URLS[linea.id];
     }
 
     const sdk = new LineaSDK({

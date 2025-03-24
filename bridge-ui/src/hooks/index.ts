@@ -16,3 +16,4 @@ export { default as useTokenBalance } from "./useTokenBalance";
 export { default as useTokenPrices } from "./useTokenPrices";
 export { default as useTokens } from "./useTokens";
 export { default as useTransactionHistory } from "./useTransactionHistory";
+export { default as useHydrated } from "./useHydrated";

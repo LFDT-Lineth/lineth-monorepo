@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { useChainStore, useTokenStore } from "@/stores";
 import { ChainLayer, Token } from "@/types";
 import { config } from "@/config";
-import { USDC_SYMBOL } from "@/utils";
+import { USDC_SYMBOL } from "@/constants";
 
 const useTokens = (): Token[] => {
   const tokensList = useTokenStore((state) => state.tokensList);

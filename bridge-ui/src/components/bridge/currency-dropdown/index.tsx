@@ -55,7 +55,7 @@ export default function CurrencyDropdown({ disabled }: Props) {
       {isOpen && (
         <div ref={dropdownRef} className={styles.dropdown}>
           {supportedCurrencies.map((option) => (
-            <div key={option.value} onClick={() => handleSelect(option)} className={styles.option}>
+            <div key={`currency-${option.value}`} onClick={() => handleSelect(option)} className={styles.option}>
               <span className={styles.flag}>{option.flag}</span>
               {option.label}
             </div>

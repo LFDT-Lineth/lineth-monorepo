@@ -1,12 +1,10 @@
 "use client";
 
-import { DynamicWagmiConnector, EthereumWalletConnectors, DynamicContextProvider } from "@/lib/dynamic";
 import { ReactNode } from "react";
-import { config } from "@/lib/wagmi";
 import { WagmiProvider } from "wagmi";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-
-const queryClient = new QueryClient();
+import { DynamicWagmiConnector, EthereumWalletConnectors, DynamicContextProvider } from "@/lib/dynamic";
+import { config as wagmiConfig } from "@/lib/wagmi";
+import { config } from "@/config";
 
 type Web3ProviderProps = {
   children: ReactNode;
@@ -65,17 +63,15 @@ export function Web3Provider({ children }: Web3ProviderProps) {
   return (
     <DynamicContextProvider
       settings={{
-        environmentId: process.env.NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID!,
+        environmentId: config.dynamicEnvironmentId,
         walletConnectors: [EthereumWalletConnectors],
         mobileExperience: "redirect",
         appName: "Linea Bridge",
         cssOverrides,
       }}
     >
-      <WagmiProvider config={config}>
-        <QueryClientProvider client={queryClient}>
-          <DynamicWagmiConnector>{children}</DynamicWagmiConnector>
-        </QueryClientProvider>
+      <WagmiProvider config={wagmiConfig}>
+        <DynamicWagmiConnector>{children}</DynamicWagmiConnector>
       </WagmiProvider>
     </DynamicContextProvider>
   );

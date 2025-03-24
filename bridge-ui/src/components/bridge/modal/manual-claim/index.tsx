@@ -1,8 +1,8 @@
 import Modal from "@/components/modal";
 
 import styles from "./manual-claim.module.scss";
-import Link from "next/link";
 import Button from "@/components/ui/button";
+import { useNativeBridgeNavigationStore } from "@/stores";
 
 type Props = {
   isModalOpen: boolean;
@@ -10,12 +10,24 @@ type Props = {
 };
 
 export default function ManualClaim({ isModalOpen, onCloseModal }: Props) {
+  const setIsTransactionHistoryOpen = useNativeBridgeNavigationStore.useSetIsTransactionHistoryOpen();
+
   return (
     <Modal title="Manual claim on destination" isOpen={isModalOpen} onClose={onCloseModal}>
       <div className={styles["modal-inner"]}>
         <p className={styles["text"]}>
           You will need to claim your transaction on the destination chain with an additional transaction that requires
-          ETH on the destination chain. This can be done on the <Link href="/transactions">Transaction page</Link>.
+          ETH on the destination chain. This can be done on the{" "}
+          <Button
+            variant="link"
+            onClick={() => {
+              setIsTransactionHistoryOpen(true);
+              onCloseModal();
+            }}
+          >
+            Transaction page
+          </Button>
+          .
         </p>
         <Button fullWidth onClick={onCloseModal}>
           OK
