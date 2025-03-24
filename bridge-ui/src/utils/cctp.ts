@@ -55,7 +55,7 @@ export const getCctpTransactionStatus = async (
   const isNonceUsed = await isCctpNonceUsed(toChainClient, nonce, toChain.cctpMessageTransmitterV2Address);
   if (isNonceUsed) return TransactionStatus.COMPLETED;
   const messageExpiryBlock = getCctpMessageExpiryBlock(cctpAttestationMessage.message);
-  if (!messageExpiryBlock) return TransactionStatus.PENDING;
+  if (messageExpiryBlock === undefined) return TransactionStatus.PENDING;
   // Message has no expiry
   if (messageExpiryBlock === 0n)
     return cctpAttestationMessage.status === CctpAttestationMessageStatus.PENDING_CONFIRMATIONS
