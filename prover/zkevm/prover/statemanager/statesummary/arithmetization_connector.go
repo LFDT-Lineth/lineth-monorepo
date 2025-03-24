@@ -1,8 +1,9 @@
 package statesummary
 
 import (
-	"github.com/consensys/linea-monorepo/prover/protocol/column"
 	"sync"
+
+	"github.com/consensys/linea-monorepo/prover/protocol/column"
 
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
@@ -256,13 +257,13 @@ func accountIntegrationDefineInitial(comp *wizard.CompiledIOP, ss Module, smc Hu
 		}
 	)
 
-	comp.InsertInclusionDoubleConditional(0,
-		"LOOKUP_STATE_MGR_ARITH_TO_STATE_SUMMARY_INIT_ACCOUNT",
-		stateSummaryTable,
-		arithTable,
-		filterSummary,
-		filterArith,
-	)
+	// comp.InsertInclusionDoubleConditional(0,
+	// 	"LOOKUP_STATE_MGR_ARITH_TO_STATE_SUMMARY_INIT_ACCOUNT",
+	// 	stateSummaryTable,
+	// 	arithTable,
+	// 	filterSummary,
+	// 	filterArith,
+	// )
 
 	comp.InsertInclusionDoubleConditional(0,
 		"LOOKUP_STATE_MGR_ARITH_TO_STATE_SUMMARY_INIT_ACCOUNT_REVERSED",
@@ -375,7 +376,7 @@ func accountIntegrationDefineFinal(comp *wizard.CompiledIOP, ss Module, smc HubC
 		smc.ExistsNew,
 	}
 
-	comp.InsertInclusionDoubleConditional(0, "LOOKUP_STATE_MGR_ARITH_TO_STATE_SUMMARY_FINAL_ACCOUNT", stateSummaryTable, arithTable, filterSummary, filterArith)
+	// comp.InsertInclusionDoubleConditional(0, "LOOKUP_STATE_MGR_ARITH_TO_STATE_SUMMARY_FINAL_ACCOUNT", stateSummaryTable, arithTable, filterSummary, filterArith)
 	comp.InsertInclusionDoubleConditional(0, "LOOKUP_STATE_MGR_ARITH_TO_STATE_SUMMARY_FINAL_ACCOUNT_REVERSED", arithTable, stateSummaryTable, filterArith, filterSummary)
 
 	//isWarmNew := comp.Columns.GetHandle("hub.acp_WARMTH_NEW")
@@ -480,14 +481,14 @@ func storageIntegrationDefineInitial(comp *wizard.CompiledIOP, ss Module, smc Hu
 		smc.ValueLOCurr,
 		smc.BlockNumber,
 	}
-	comp.InsertInclusionDoubleConditional(
-		0,
-		"LOOKUP_STATE_MGR_ARITH_TO_STATE_SUMMARY_INIT_STORAGE",
-		summaryTable,
-		arithTable,
-		filterSummary,
-		filterArith,
-	)
+	// comp.InsertInclusionDoubleConditional(
+	// 	0,
+	// 	"LOOKUP_STATE_MGR_ARITH_TO_STATE_SUMMARY_INIT_STORAGE",
+	// 	summaryTable,
+	// 	arithTable,
+	// 	filterSummary,
+	// 	filterArith,
+	// )
 	comp.InsertInclusionDoubleConditional(
 		0,
 		"LOOKUP_STATE_MGR_ARITH_TO_STATE_SUMMARY_INIT_STORAGE_REVERSE",
@@ -662,13 +663,13 @@ func storageIntegrationDefineFinal(comp *wizard.CompiledIOP, ss Module, smc HubC
 		)
 	)
 
-	comp.InsertInclusionDoubleConditional(0,
-		"LOOKUP_STATE_MGR_ARITH_TO_STATE_SUMMARY_FINAL_STORAGE",
-		summaryTable,
-		arithTable,
-		filterSummary,
-		filterArith,
-	)
+	// comp.InsertInclusionDoubleConditional(0,
+	// 	"LOOKUP_STATE_MGR_ARITH_TO_STATE_SUMMARY_FINAL_STORAGE",
+	// 	summaryTable,
+	// 	arithTable,
+	// 	filterSummary,
+	// 	filterArith,
+	// )
 
 	comp.InsertInclusionDoubleConditional(0,
 		"LOOKUP_STATE_MGR_ARITH_TO_STATE_SUMMARY_FINAL_STORAGE_REVERSED",
