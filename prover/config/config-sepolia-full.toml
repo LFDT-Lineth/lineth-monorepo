@@ -1,5 +1,5 @@
 environment = "sepolia"
-version = "4.0.1"                              # TODO @gbotrel hunt all version definitions.
+version = "5.0.0"                              # TODO @gbotrel hunt all version definitions.
 assets_dir = "./prover-assets"
 log_level = 4                                  # TODO @gbotrel will be refactored with new logger.
 
@@ -40,8 +40,8 @@ message_service_contract = "0x971e727e956690b9957be6d51Ec16E73AcAC83A7"
 ADD = 524288
 BIN = 262144
 BLAKE_MODEXP_DATA = 16384
-BLOCK_DATA = 4096 
-BLOCK_HASH = 512
+BLOCK_DATA = 4096
+BLOCK_HASH = 2048
 EC_DATA = 262144
 EUC = 65536
 EXP = 8192
@@ -91,7 +91,7 @@ ADD = 1048576
 BIN = 524288
 BLAKE_MODEXP_DATA = 32768
 BLOCK_DATA = 8192
-BLOCK_HASH = 1024
+BLOCK_HASH = 4096
 EC_DATA = 524288
 EUC = 131072
 EXP = 16384
