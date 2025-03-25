@@ -5,6 +5,7 @@
 
 [smart-contract-errors]
 # L1 Linea Rollup
+# Generated from `npx ts-node contracts/scripts/operational/getSmartContractErrorsFromABI.ts contracts/local-deployments-artifacts/deployed-artifacts/LineaRollupV6-Deployed-2024-12-03.json`
 "0f06cd15" = "DataAlreadySubmitted"
 "c01eab56" = "EmptySubmissionData"
 "36459fa0" = "L1RollingHashDoesNotExistOnL1"
@@ -29,15 +30,37 @@
 "7907d79b" = "ProofIsEmpty"
 "69ed70ab" = "InvalidProofType"
 "09bde339" = "InvalidProof"
-"c0a71b58" = "IsPaused"
-"18659654" = "IsNotPaused"
 "ca389c44" = "InvalidProofOrProofVerificationRanOutOfGas"
 "6e5424c2" = "ParentBlobNotSubmitted"
 "edeae83c" = "FinalBlobNotSubmitted"
+"8019aff7" = "BlobSubmissionDataEmpty"
+"b05e92fa" = "InvalidMerkleProof"
+"4306cbb1" = "LastFinalizationTimeNotLapsed"
+"f7ec9097" = "LeafIndexOutOfBounds"
+"335a4a90" = "MessageAlreadyClaimed"
+"7f7497e9" = "OnlyNonFallbackOperator"
+"5e3fd6ad" = "ProofLengthDifferentThanMerkleDepth"
+"37ed32e8" = "ReentrantCall"
+"6dfcc650" = "SafeCastOverflowedUintDowncast"
 
 # L2 Message Service
+# Generated from `npx ts-node contracts/scripts/operational/getSmartContractErrorsFromABI.ts contracts/local-deployments-artifacts/deployed-artifacts/L2MessageServiceV1-Deployed-2024-12-03.json`
 "3b174434" = "MessageHashesListLengthHigherThanOneHundred"
 "6446cc9c" = "MessageHashesListLengthIsZero"
 "d39e75f9" = "L1MessageNumberSynchronizationWrong"
 "7557a60a" = "L1RollingHashSynchronizationWrong"
 "36a4bb94" = "FinalRollingHashIsZero"
+"732f9413" = "FeeTooLow"
+
+# Shared Message Service (L1 and L2) Errors
+"a57c4df4" = "FeePaymentFailed"
+"18659654" = "IsNotPaused"
+"c0a71b58" = "IsPaused"
+"d10d72bb" = "LimitIsZero"
+"992d87c3" = "MessageDoesNotExistOrHasAlreadyBeenClaimed"
+"54613443" = "MessageSendingFailed"
+"b5ed5a3b" = "PeriodIsZero"
+"a74c1c5f" = "RateLimitExceeded"
+"b03b6932" = "ValueSentTooLow"
+"8579befe" = "ZeroAddressNotAllowed"
+"0742d053" = "ZeroHashNotAllowed"

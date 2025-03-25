@@ -8,12 +8,12 @@ import "hardhat-storage-layout";
 // import "hardhat-tracer"; // This plugin does not work with the latest hardhat version
 import { HardhatUserConfig } from "hardhat/config";
 import { getBlockchainNode, getL2BlockchainNode } from "./common";
-import "./scripts/operational/getCurrentFinalizedBlockNumberTask";
-import "./scripts/operational/grantContractRolesTask";
-import "./scripts/operational/renounceContractRolesTask";
-import "./scripts/operational/setRateLimitTask";
-import "./scripts/operational/setVerifierAddressTask";
-import "./scripts/operational/setMessageServiceOnTokenBridgeTask";
+import "./scripts/operational/tasks/getCurrentFinalizedBlockNumberTask";
+import "./scripts/operational/tasks/grantContractRolesTask";
+import "./scripts/operational/tasks/renounceContractRolesTask";
+import "./scripts/operational/tasks/setRateLimitTask";
+import "./scripts/operational/tasks/setVerifierAddressTask";
+import "./scripts/operational/tasks/setMessageServiceOnTokenBridgeTask";
 
 import "solidity-docgen";
 

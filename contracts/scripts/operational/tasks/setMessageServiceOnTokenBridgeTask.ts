@@ -1,8 +1,8 @@
 // import { ethers, network, upgrades } from "hardhat";
 import { task } from "hardhat/config";
-import { TokenBridge } from "../../typechain-types";
-import { getTaskCliOrEnvValue } from "../../common/helpers/environmentHelper";
-import { getDeployedContractOnNetwork } from "../../common/helpers/readAddress";
+import { TokenBridge } from "../../../typechain-types";
+import { getTaskCliOrEnvValue } from "../../../common/helpers/environmentHelper";
+import { getDeployedContractOnNetwork } from "../../../common/helpers/readAddress";
 
 /*
     *******************************************************************************************
