@@ -3,6 +3,7 @@ import { Address } from "viem";
 import { config } from "@/config";
 import { SupportedCurrencies, defaultTokensConfig } from "@/stores";
 import { GithubTokenListToken, Token, BridgeProvider, NetworkTokens } from "@/types";
+import { USDC_SYMBOL } from "@/constants";
 
 enum NetworkTypes {
   MAINNET = "MAINNET",
@@ -22,7 +23,9 @@ export async function getTokens(networkTypes: NetworkTypes): Promise<GithubToken
     const tokens = data.tokens as GithubTokenListToken[];
     const bridgedTokens = tokens.filter(
       (token: GithubTokenListToken) =>
-        token.tokenType.includes("canonical-bridge") || token.tokenType.includes("native") || token.symbol === "USDC",
+        token.tokenType.includes("canonical-bridge") ||
+        (token.tokenType.includes("native") && token.extension?.rootAddress !== undefined) ||
+        token.symbol === USDC_SYMBOL,
     );
     return bridgedTokens;
   } catch (error) {
@@ -62,7 +65,7 @@ export async function validateTokenURI(url: string): Promise<string> {
 }
 
 export async function formatToken(token: GithubTokenListToken): Promise<Token> {
-  const bridgeProvider = token.symbol === "USDC" ? BridgeProvider.CCTP : BridgeProvider.NATIVE;
+  const bridgeProvider = token.symbol === USDC_SYMBOL ? BridgeProvider.CCTP : BridgeProvider.NATIVE;
 
   const logoURI = await validateTokenURI(token.logoURI);
 
@@ -71,7 +74,7 @@ export async function formatToken(token: GithubTokenListToken): Promise<Token> {
     name: token.name,
     symbol: token.symbol,
     decimals: token.decimals,
-    L1: token?.extension?.rootAddress ?? null,
+    L1: token.extension.rootAddress,
     L2: token.address,
     image: logoURI,
     isDefault: true,
@@ -88,7 +91,7 @@ export async function getTokenConfig(): Promise<NetworkTokens> {
   const updatedTokensConfig = { ...defaultTokensConfig };
 
   // Feature toggle, remove when feature toggle no longer needed
-  const filterOutUSDCWhenCctpNotEnabled = (token: Token) => config.isCctpEnabled || token.symbol !== "USDC";
+  const filterOutUSDCWhenCctpNotEnabled = (token: Token) => config.isCctpEnabled || token.symbol !== USDC_SYMBOL;
 
   updatedTokensConfig.MAINNET = [
     ...defaultTokensConfig.MAINNET,

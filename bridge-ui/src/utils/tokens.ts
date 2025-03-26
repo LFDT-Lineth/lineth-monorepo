@@ -1,5 +1,6 @@
-import { BridgeProvider, Token } from "@/types";
 import { isAddress, isAddressEqual, zeroAddress } from "viem";
+import { USDC_SYMBOL } from "@/constants";
+import { BridgeProvider, Token } from "@/types";
 
 export const isEth = (token: Token) => {
   return (
@@ -14,7 +15,7 @@ export const isCctp = (token: Token) => {
   return (
     !isEth(token) &&
     token.bridgeProvider === BridgeProvider.CCTP &&
-    token.symbol === "USDC" &&
+    token.symbol === USDC_SYMBOL &&
     isAddress(token.L1) &&
     isAddress(token.L2)
   );
