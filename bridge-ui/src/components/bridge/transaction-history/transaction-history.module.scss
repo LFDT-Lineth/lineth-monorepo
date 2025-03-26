@@ -20,11 +20,21 @@
     .action {
       display: flex;
       gap: 1rem;
-  
-      .go-back-icon {
-        width: 1.25rem;
-        height: 1.25rem;
-        color: var(--v2-color-black);
-      }
+
+      .go-back-button {
+        width: 2.5rem;
+        height: 2.5rem;
+        padding: 0.5rem;
+        border-radius: 100%;
+        &:hover {
+          background-color: var(--v2-color-smoke);
+        }
+
+        .go-back-icon {
+          width: 1.5rem;
+          height: 1.5rem;
+          color: var(--v2-color-black);
+        }
+      }      
     }
   }

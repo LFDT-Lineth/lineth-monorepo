@@ -6,8 +6,8 @@
 .wallet-icon {
   background-color: #6119ef10;
   color: var(--v2-color-indigo);
-  width: 2.375rem;
-  height: 2.375rem;
+  width: 3rem;
+  height: 3rem;
   border-radius: 50%;
   display: flex;
   flex-shrink: 0;
@@ -16,7 +16,11 @@
   cursor: pointer;
 
   svg {
-    width: 1.1875rem;
+    width: 1.5rem;
     height: auto;
   }
+}
+
+.submit-button {
+  line-height: 1.5rem !important;
 }

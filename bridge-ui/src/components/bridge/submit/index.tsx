@@ -82,6 +82,7 @@ export function Submit({ setIsDestinationAddressOpen }: Props) {
     <>
       <div className={styles.container}>
         <Button
+          className={styles["submit-button"]}
           onClick={() => {
             if (fromChain.id !== chainId) {
               switchChain({ chainId: fromChain.id });

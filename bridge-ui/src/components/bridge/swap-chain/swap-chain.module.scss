@@ -1,12 +1,13 @@
 .swap-chain {
   width: 2rem;
   height: 2rem;
+  font-size: 1rem;
   background-color: var(--v2-color-smoke);
   display: flex;
   justify-content: center;
   align-items: center;
   border-radius: 100%;
-  border: 0.125rem solid var(--v2-color-white);
+  outline: 0.3rem solid var(--v2-color-white);
   transition:
     transform,
     background-color 0.2s ease;
@@ -25,7 +26,7 @@
 }
 
 .arrow-icon {
-  width: 0.75rem;
+  width: 1rem;
   height: auto;
   color: var(--v2-color-black);
 }

@@ -52,6 +52,7 @@ export default function BridgeForm() {
         <div className={styles.headline}>
           <div className={styles["action"]}>
             <Button
+              className={styles["transaction-button"]}
               variant="link"
               onClick={() => {
                 setIsBridgeOpen(false);
@@ -63,33 +64,35 @@ export default function BridgeForm() {
             <Setting />
           </div>
         </div>
-        <div className={styles["exchange"]}>
-          <FromChain />
-          <div className={styles["swap-chain-container"]}>
-            <SwapChain />
+        <div className={styles["content"]}>
+          <div className={styles["exchange"]}>
+            <FromChain />
+            <div className={styles["swap-chain-container"]}>
+              <SwapChain />
+            </div>
+            <ToChain />
           </div>
-          <ToChain />
-        </div>
-        <div className={styles["amount-wrapper"]}>
-          <Amount />
-          <div className={styles["right"]}>
-            <TokenList />
+          <div className={styles["amount-wrapper"]}>
+            <Amount />
+            <div className={styles["right"]}>
+              <TokenList />
+            </div>
           </div>
-        </div>
-        <Claiming />
-        {isDestinationAddressOpen && (
-          <div className={styles["destination-address-wrapper"]}>
-            <DestinationAddress />
-          </div>
-        )}
-        <div className={styles["connect-btn-wrapper"]}>
-          {isConnected ? (
-            <Submit setIsDestinationAddressOpen={() => setIsDestinationAddressOpen((prev) => !prev)} />
-          ) : (
-            <ConnectButton fullWidth text={"Connect wallet"} />
+          <Claiming />
+          {isDestinationAddressOpen && (
+            <div className={styles["destination-address-wrapper"]}>
+              <DestinationAddress />
+            </div>
           )}
+          <div className={styles["connect-btn-wrapper"]}>
+            {isConnected ? (
+              <Submit setIsDestinationAddressOpen={() => setIsDestinationAddressOpen((prev) => !prev)} />
+            ) : (
+              <ConnectButton fullWidth text={"Connect wallet"} />
+            )}
+          </div>
+          <FaqHelp isMobile />
         </div>
-        <FaqHelp isMobile />
       </div>
       <FaqHelp />
     </>

@@ -1,8 +1,9 @@
 .wrapper {
-  margin-top: 0.625rem;
+  margin-top: 1rem;
   background-color: var(--v2-color-smoke);
   border-radius: 0.625rem;
   padding: 1rem;
+  height: 8.8rem;
   transition: box-shadow 0.25s ease-in-out;
 
   &:hover {

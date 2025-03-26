@@ -23,6 +23,7 @@ export default function TransactionHistory() {
         <div className={styles.headline}>
           <div className={styles["action"]}>
             <Button
+              className={styles["go-back-button"]}
               variant="link"
               onClick={() => {
                 setIsTransactionHistoryOpen(false);
@@ -44,6 +45,7 @@ export default function TransactionHistory() {
       <div className={styles.headline}>
         <div className={styles["action"]}>
           <Button
+            className={styles["go-back-button"]}
             variant="link"
             onClick={() => {
               setIsTransactionHistoryOpen(false);

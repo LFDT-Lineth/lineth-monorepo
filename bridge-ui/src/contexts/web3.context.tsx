@@ -65,6 +65,7 @@ export function Web3Provider({ children }: Web3ProviderProps) {
       settings={{
         environmentId: config.dynamicEnvironmentId,
         walletConnectors: [EthereumWalletConnectors],
+        initialAuthenticationMode: "connect-only",
         mobileExperience: "redirect",
         appName: "Linea Bridge",
         cssOverrides,
