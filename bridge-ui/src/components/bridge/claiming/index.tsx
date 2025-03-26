@@ -1,7 +1,8 @@
+import { useEffect, useState } from "react";
+import { useAccount } from "wagmi";
 import BridgeTwoLogo from "@/components/bridge/bridge-two-logo";
 import styles from "./claiming.module.scss";
 import SettingIcon from "@/assets/icons/setting.svg";
-import { useEffect, useState } from "react";
 import AdvancedSettings from "@/components/bridge/modal/advanced-settings";
 import Skeleton from "@/components/bridge/claiming/skeleton";
 import ReceivedAmount from "./received-amount";
@@ -10,6 +11,7 @@ import { useFormStore, useChainStore } from "@/stores";
 import BridgeMode from "./bridge-mode";
 
 export default function Claiming() {
+  const { isConnected } = useAccount();
   const fromChain = useChainStore.useFromChain();
   const toChain = useChainStore.useToChain();
 
@@ -32,7 +34,7 @@ export default function Claiming() {
   }, [amount]);
 
   if (!amount || amount <= 0n) return null;
-  if (originChainBalanceTooLow) return null;
+  if (isConnected && originChainBalanceTooLow) return null;
 
   return (
     <div className={styles["wrapper"]}>

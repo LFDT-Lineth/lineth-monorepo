@@ -1,17 +1,17 @@
 import { useMemo } from "react";
-import { useAccount } from "wagmi";
 import { encodeFunctionData } from "viem";
 import { useFormStore, useChainStore } from "@/stores";
 import TokenBridge from "@/abis/TokenBridge.json";
-import { isEth } from "@/utils";
+import { isEth, isNull, isUndefined, isUndefinedOrNull, isZero } from "@/utils";
 import { BridgeProvider, ChainLayer } from "@/types";
+import { DEFAULT_ADDRESS_FOR_NON_CONNECTED_USER } from "@/constants";
 
 type UseERC20BridgeTxArgsProps = {
+  isConnected: boolean;
   allowance?: bigint;
 };
 
-const useERC20BridgeTxArgs = ({ allowance }: UseERC20BridgeTxArgsProps) => {
-  const { address } = useAccount();
+const useERC20BridgeTxArgs = ({ isConnected, allowance }: UseERC20BridgeTxArgsProps) => {
   const fromChain = useChainStore.useFromChain();
   const token = useFormStore((state) => state.token);
   const amount = useFormStore((state) => state.amount);
@@ -20,19 +20,17 @@ const useERC20BridgeTxArgs = ({ allowance }: UseERC20BridgeTxArgsProps) => {
   const bridgingFees = useFormStore((state) => state.bridgingFees);
   const claim = useFormStore((state) => state.claim);
 
+  const toAddress = isConnected ? recipient : DEFAULT_ADDRESS_FOR_NON_CONNECTED_USER;
+
   return useMemo(() => {
     if (
-      !address ||
-      !fromChain ||
-      !token ||
-      !amount ||
-      allowance === undefined ||
-      allowance < amount ||
-      !recipient ||
-      (minimumFees === 0n && fromChain.layer === ChainLayer.L2) ||
-      ((bridgingFees === null || bridgingFees === undefined) && fromChain.layer === ChainLayer.L1) ||
-      (bridgingFees === 0n && claim === "auto") ||
       isEth(token) ||
+      isNull(amount) ||
+      (isConnected && (isUndefined(allowance) || allowance < amount)) ||
+      !toAddress ||
+      (isZero(minimumFees) && fromChain.layer === ChainLayer.L2) ||
+      (isUndefinedOrNull(bridgingFees) && fromChain.layer === ChainLayer.L1) ||
+      (isZero(bridgingFees) && claim === "auto") ||
       token.bridgeProvider !== BridgeProvider.NATIVE
     ) {
       return;
@@ -45,13 +43,13 @@ const useERC20BridgeTxArgs = ({ allowance }: UseERC20BridgeTxArgsProps) => {
         data: encodeFunctionData({
           abi: TokenBridge.abi,
           functionName: "bridgeToken",
-          args: [token[fromChain.layer], amount, recipient],
+          args: [token[fromChain.layer], amount, toAddress],
         }),
         value: minimumFees + bridgingFees,
         chainId: fromChain.id,
       },
     };
-  }, [address, allowance, amount, bridgingFees, claim, fromChain, minimumFees, recipient, token]);
+  }, [allowance, amount, bridgingFees, claim, fromChain, minimumFees, toAddress, token, isConnected]);
 };
 
 export default useERC20BridgeTxArgs;

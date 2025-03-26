@@ -5,6 +5,7 @@ import { useFormStore, useChainStore } from "@/stores";
 import { isCctp } from "@/utils/tokens";
 import { useCctpFee, useCctpDestinationDomain } from "./useCctpUtilHooks";
 import { CCTP_MIN_FINALITY_THRESHOLD } from "@/constants";
+import { isNull, isUndefined } from "@/utils";
 
 type UseDepositForBurnTxArgs = {
   allowance?: bigint;
@@ -20,16 +21,7 @@ const useDepositForBurnTxArgs = ({ allowance }: UseDepositForBurnTxArgs) => {
   const fee = useCctpFee();
 
   return useMemo(() => {
-    if (
-      !address ||
-      !fromChain ||
-      !token ||
-      !amount ||
-      allowance === undefined ||
-      allowance < amount ||
-      !recipient ||
-      !isCctp(token)
-    ) {
+    if (!address || isNull(amount) || isUndefined(allowance) || allowance < amount || !recipient || !isCctp(token)) {
       return;
     }
 

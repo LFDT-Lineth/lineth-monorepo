@@ -5,12 +5,9 @@ import { useState } from "react";
 import { useChainStore } from "@/stores";
 import { useChains } from "@/hooks";
 import { Chain } from "@/types";
-import { useIsLoggedIn } from "@/lib/dynamic";
 
 export default function FromChain() {
   const [isModalOpen, setIsModalOpen] = useState(false);
-
-  const isLoggedIn = useIsLoggedIn();
 
   const chains = useChains();
   const fromChain = useChainStore.useFromChain();
@@ -41,7 +38,7 @@ export default function FromChain() {
 
   return (
     <>
-      <button onClick={openModal} className={styles["from"]} type="button" disabled={!isLoggedIn}>
+      <button onClick={openModal} className={styles["from"]} type="button">
         <div className={styles["name"]}>From</div>
         <div className={styles["info"]}>
           {fromChain?.iconPath && (

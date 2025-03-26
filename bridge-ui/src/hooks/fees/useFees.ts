@@ -8,7 +8,7 @@ import useTokenPrices from "../useTokenPrices";
 import { useFormStore, useChainStore } from "@/stores";
 
 const useFees = () => {
-  const { address } = useAccount();
+  const { address, isConnected } = useAccount();
   const fromChain = useChainStore.useFromChain();
   const toChain = useChainStore.useToChain();
   useMinimumFee();
@@ -21,12 +21,15 @@ const useFees = () => {
   const amount = useFormStore((state) => state.amount);
 
   const gasFeesResult = useGasFees({
+    token,
+    isConnected,
     address,
     fromChain,
     amount: amount ?? 0n,
   });
 
   const { bridgingFees, isLoading: isBridgingFeeLoading } = useBridgingFee({
+    isConnected,
     account: address,
     token,
     amount: amount ?? 0n,

@@ -1,13 +1,16 @@
 import { useMemo } from "react";
-import { useAccount } from "wagmi";
 import { encodeFunctionData } from "viem";
 import { useFormStore, useChainStore } from "@/stores";
 import MessageService from "@/abis/MessageService.json";
-import { isEth } from "@/utils";
+import { isEth, isUndefinedOrNull, isZero } from "@/utils";
 import { BridgeProvider, ChainLayer } from "@/types";
+import { DEFAULT_ADDRESS_FOR_NON_CONNECTED_USER } from "@/constants";
 
-const useEthBridgeTxArgs = () => {
-  const { address } = useAccount();
+type UseEthBridgeTxArgsProps = {
+  isConnected: boolean;
+};
+
+const useEthBridgeTxArgs = ({ isConnected }: UseEthBridgeTxArgsProps) => {
   const fromChain = useChainStore.useFromChain();
   const token = useFormStore((state) => state.token);
   const amount = useFormStore((state) => state.amount);
@@ -16,16 +19,15 @@ const useEthBridgeTxArgs = () => {
   const bridgingFees = useFormStore((state) => state.bridgingFees);
   const claim = useFormStore((state) => state.claim);
 
+  const toAddress = isConnected ? recipient : DEFAULT_ADDRESS_FOR_NON_CONNECTED_USER;
+
   return useMemo(() => {
     if (
-      !address ||
-      !fromChain ||
-      !token ||
       !amount ||
-      !recipient ||
-      (minimumFees === 0n && fromChain.layer === ChainLayer.L2) ||
-      ((bridgingFees === null || bridgingFees === undefined) && fromChain.layer === ChainLayer.L1) ||
-      (bridgingFees === 0n && claim === "auto") ||
+      !toAddress ||
+      (isZero(minimumFees) && fromChain.layer === ChainLayer.L2) ||
+      (isUndefinedOrNull(bridgingFees) && fromChain.layer === ChainLayer.L1) ||
+      (isZero(bridgingFees) && claim === "auto") ||
       !isEth(token) ||
       token.bridgeProvider !== BridgeProvider.NATIVE
     ) {
@@ -39,13 +41,13 @@ const useEthBridgeTxArgs = () => {
         data: encodeFunctionData({
           abi: MessageService.abi,
           functionName: "sendMessage",
-          args: [recipient, minimumFees + bridgingFees, "0x"],
+          args: [toAddress, minimumFees + bridgingFees, "0x"],
         }),
         value: amount + minimumFees + bridgingFees,
         chainId: fromChain.id,
       },
     };
-  }, [address, fromChain, token, amount, recipient, minimumFees, bridgingFees, claim]);
+  }, [fromChain, token, amount, toAddress, minimumFees, bridgingFees, claim]);
 };
 
 export default useEthBridgeTxArgs;

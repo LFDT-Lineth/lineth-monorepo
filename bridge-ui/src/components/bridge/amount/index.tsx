@@ -1,7 +1,6 @@
 import { ChangeEvent, useEffect, useState } from "react";
 import { useAccount } from "wagmi";
 import { formatUnits, parseUnits } from "viem";
-import { useIsLoggedIn } from "@/lib/dynamic";
 import { useTokenPrices } from "@/hooks";
 import { useChainStore, useConfigStore, useFormStore } from "@/stores";
 import styles from "./amount.module.scss";
@@ -13,7 +12,6 @@ export function Amount() {
   const currency = useConfigStore((state) => state.currency);
   const fromChain = useChainStore.useFromChain();
   const { address } = useAccount();
-  const isLoggedIn = useIsLoggedIn();
 
   const amount = useFormStore((state) => state.amount);
   const token = useFormStore((state) => state.token);
@@ -98,7 +96,6 @@ export function Amount() {
     <div className={styles["amount"]}>
       <p className={styles.title}>Send</p>
       <input
-        disabled={!isLoggedIn}
         id="amount-input"
         type="text"
         autoCorrect="off"

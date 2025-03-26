@@ -10,6 +10,7 @@ import { useDevice, useTokenPrices, useTokens } from "@/hooks";
 import { useTokenStore, useChainStore, useConfigStore } from "@/stores";
 import { Token } from "@/types";
 import { safeGetAddress, isEmptyObject, isEth } from "@/utils";
+import { useAccount } from "wagmi";
 
 interface TokenModalProps {
   isModalOpen: boolean;
@@ -17,6 +18,7 @@ interface TokenModalProps {
 }
 
 export default function TokenModal({ isModalOpen, onCloseModal }: TokenModalProps) {
+  const { isConnected } = useAccount();
   const tokensList = useTokens();
   const setSelectedToken = useTokenStore((state) => state.setSelectedToken);
   const fromChain = useChainStore.useFromChain();
@@ -105,6 +107,7 @@ export default function TokenModal({ isModalOpen, onCloseModal }: TokenModalProp
           {filteredTokens.length > 0 ? (
             filteredTokens.map((token: Token, index: number) => (
               <TokenDetails
+                isConnected={isConnected}
                 token={token}
                 onTokenClick={handleTokenClick}
                 key={`token-details-${token.symbol}-${index}`}

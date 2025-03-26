@@ -12,7 +12,6 @@ export default function Skeleton() {
         <div className={clsx(styles.value, "pulsating")} />
       </div>
       <div className={clsx(styles.estimate, "pulsating")} />
-      <div className={clsx(styles.bottom, "pulsating")} />
     </div>
   );
 }

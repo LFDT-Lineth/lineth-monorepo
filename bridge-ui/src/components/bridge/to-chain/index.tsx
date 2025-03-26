@@ -5,7 +5,6 @@ import { useState } from "react";
 import { useChainStore } from "@/stores";
 import { useChains } from "@/hooks";
 import { Chain } from "@/types";
-import { useIsLoggedIn } from "@/lib/dynamic";
 
 export default function ToChain() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -16,7 +15,6 @@ export default function ToChain() {
 
   const setFromChain = useChainStore.useSetFromChain();
   const setToChain = useChainStore.useSetToChain();
-  const isLoggedIn = useIsLoggedIn();
 
   const openModal = () => setIsModalOpen(true);
   const closeModal = () => setIsModalOpen(false);
@@ -38,7 +36,7 @@ export default function ToChain() {
 
   return (
     <>
-      <button onClick={openModal} className={styles["to"]} type="button" disabled={!isLoggedIn}>
+      <button onClick={openModal} className={styles["to"]} type="button">
         <div className={styles["name"]}>To</div>
         <div className={styles["info"]}>
           {toChain?.iconPath && (

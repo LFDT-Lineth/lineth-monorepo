@@ -39,13 +39,10 @@ const useEthBridgingFee = ({
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey,
     enabled:
-      !!token &&
       isEth(token) &&
       token.bridgeProvider === BridgeProvider.NATIVE &&
       fromChain.layer === ChainLayer.L1 &&
       !!account &&
-      !!fromChain &&
-      !!toChain &&
       !!nextMessageNumber &&
       !!amount &&
       !!recipient &&

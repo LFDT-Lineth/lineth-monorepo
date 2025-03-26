@@ -12,6 +12,7 @@ import {
   TransactionStatus,
 } from "@/types";
 import { isCctpV2BridgeMessage, isNativeBridgeMessage } from "@/utils/message";
+import { isUndefined } from "@/utils";
 
 type UseClaimTxArgsProps = {
   status?: TransactionStatus;
@@ -41,8 +42,8 @@ const useClaimTxArgs = ({ status, type, fromChain, toChain, args }: UseClaimTxAr
           !isNativeBridgeMessage(args) ||
           !args.from ||
           !args.to ||
-          args.fee === undefined ||
-          args.value === undefined ||
+          isUndefined(args.fee) ||
+          isUndefined(args.value) ||
           !args.nonce ||
           !args.calldata ||
           !args.messageHash ||

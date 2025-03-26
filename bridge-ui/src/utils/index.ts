@@ -5,5 +5,5 @@ export { formatAddress, formatBalance, formatHex, formatTimestamp, safeGetAddres
 export { fetchTransactionsHistory } from "./history";
 export { computeMessageHash, computeMessageStorageSlot, isCctpV2BridgeMessage, isNativeBridgeMessage } from "./message";
 export { isEth, isCctp } from "./tokens";
-export { isEmptyObject } from "./utils";
+export { isEmptyObject, isNull, isUndefined, isZero, isUndefinedOrNull } from "./utils";
 export { getCctpTransactionStatus, getCctpMessageByTxHash } from "./cctp";
