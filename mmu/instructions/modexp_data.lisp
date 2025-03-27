@@ -130,7 +130,7 @@
 (defconstraint modexp-data---mmio-instruction-writting (:guard IS_MODEXP_DATA)
                (begin (if-eq MICRO 1 (standard-progression micro/TLO))
                       (if-eq (zero-row) 1 (eq! micro/INST MMIO_INST_LIMB_VANISHES))
-                      (if-eq (force-bool (+ NT_ONLY NT_FIRST)) 1
+                      (if-eq (force-bin (+ NT_ONLY NT_FIRST)) 1
                              (begin (if-zero (modexp-data---first-limb-single-source)
                                              (eq! micro/INST MMIO_INST_RAM_TO_LIMB_TWO_SOURCE)
                                              (eq! micro/INST MMIO_INST_RAM_TO_LIMB_ONE_SOURCE))

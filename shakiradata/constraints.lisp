@@ -13,15 +13,15 @@
 ;;                                ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defun    (shakira---is-keccak)    (force-bool (+ IS_KECCAK_DATA
-                                                  IS_KECCAK_RESULT
-                                                  ;; IS_SHA2_DATA
-                                                  ;; IS_SHA2_RESULT
-                                                  ;; IS_RIPEMD_DATA
-                                                  ;; IS_RIPEMD_RESULT
-                                                  )))
+(defun    (shakira---is-keccak)    (force-bin (+ IS_KECCAK_DATA
+                                                 IS_KECCAK_RESULT
+                                                 ;; IS_SHA2_DATA
+                                                 ;; IS_SHA2_RESULT
+                                                 ;; IS_RIPEMD_DATA
+                                                 ;; IS_RIPEMD_RESULT
+                                                 )))
 
-(defun    (shakira---is-sha2)    (force-bool (+  ;; IS_KECCAK_DATA
+(defun    (shakira---is-sha2)    (force-bin (+ ;; IS_KECCAK_DATA
                                                ;; IS_KECCAK_RESULT
                                                IS_SHA2_DATA
                                                IS_SHA2_RESULT
@@ -29,7 +29,7 @@
                                                ;; IS_RIPEMD_RESULT
                                                )))
 
-(defun    (shakira---is-ripemd)    (force-bool (+  ;; IS_KECCAK_DATA
+(defun    (shakira---is-ripemd)    (force-bin (+ ;; IS_KECCAK_DATA
                                                  ;; IS_KECCAK_RESULT
                                                  ;; IS_SHA2_DATA
                                                  ;; IS_SHA2_RESULT
@@ -37,15 +37,15 @@
                                                  IS_RIPEMD_RESULT
                                                  )))
 
-(defun    (shakira---is-data)    (force-bool (+ IS_KECCAK_DATA
-                                                ;; IS_KECCAK_RESULT
-                                                IS_SHA2_DATA
-                                                ;; IS_SHA2_RESULT
-                                                IS_RIPEMD_DATA
-                                                ;; IS_RIPEMD_RESULT
-                                                )))
+(defun    (shakira---is-data)    (force-bin (+ IS_KECCAK_DATA
+                                               ;; IS_KECCAK_RESULT
+                                               IS_SHA2_DATA
+                                               ;; IS_SHA2_RESULT
+                                               IS_RIPEMD_DATA
+                                               ;; IS_RIPEMD_RESULT
+                                               )))
 
-(defun    (shakira---is-result)    (force-bool (+  ;; IS_KECCAK_DATA
+(defun    (shakira---is-result)    (force-bin (+ ;; IS_KECCAK_DATA
                                                  IS_KECCAK_RESULT
                                                  ;; IS_SHA2_DATA
                                                  IS_SHA2_RESULT
@@ -54,11 +54,11 @@
                                                  )))
 
 (defun (shakira---is-first-data-row)
-  (force-bool (* (shakira---is-data)
+  (force-bin (* (shakira---is-data)
                  (- 1 (prev (shakira---is-data))))))
 
 (defun (flag-sum)
-  (force-bool (+ (shakira---is-keccak) (shakira---is-sha2) (shakira---is-ripemd))))
+  (force-bin (+ (shakira---is-keccak) (shakira---is-sha2) (shakira---is-ripemd))))
 
 (defun    (phase-sum)    (+    (* PHASE_KECCAK_DATA     IS_KECCAK_DATA)
                                (* PHASE_KECCAK_RESULT   IS_KECCAK_RESULT)
@@ -68,14 +68,14 @@
                                (* PHASE_RIPEMD_RESULT   IS_RIPEMD_RESULT)
                                ))
 
-(defun    (stamp-increment)    (force-bool    (*    (-    1    (shakira---is-data))
+(defun    (stamp-increment)    (force-bin    (*    (-    1    (shakira---is-data))
                                                     (next      (shakira---is-data)))))
 
 (defun (index-reset-bit)
-  (force-bool (+ (* (- 1 (shakira---is-data))   (next (shakira---is-data)))
+  (force-bin (+ (* (- 1 (shakira---is-data))   (next (shakira---is-data)))
                  (* (- 1 (shakira---is-result)) (next (shakira---is-result))))))
 
-(defun    (legal-transitions-bit)    (force-bool    (+    (* IS_KECCAK_DATA      (next (shakira---is-keccak)))
+(defun    (legal-transitions-bit)    (force-bin    (+    (* IS_KECCAK_DATA      (next (shakira---is-keccak)))
                                                           (* IS_SHA2_DATA        (next (shakira---is-sha2)))
                                                           (* IS_RIPEMD_DATA      (next (shakira---is-ripemd)))
                                                           ;;

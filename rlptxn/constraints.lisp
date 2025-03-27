@@ -130,21 +130,21 @@
 
 ;; 2.3.2.2
 (defun (flag-sum)
-  (force-bool (+ IS_PHASE_RLP_PREFIX
-                 IS_PHASE_CHAIN_ID
-                 IS_PHASE_NONCE
-                 IS_PHASE_GAS_PRICE
-                 IS_PHASE_MAX_PRIORITY_FEE_PER_GAS
-                 IS_PHASE_MAX_FEE_PER_GAS
-                 IS_PHASE_GAS_LIMIT
-                 IS_PHASE_TO
-                 IS_PHASE_VALUE
-                 IS_PHASE_DATA
-                 IS_PHASE_ACCESS_LIST
-                 IS_PHASE_BETA
-                 IS_PHASE_Y
-                 IS_PHASE_R
-                 IS_PHASE_S)))
+  (force-bin (+ IS_PHASE_RLP_PREFIX
+                IS_PHASE_CHAIN_ID
+                IS_PHASE_NONCE
+                IS_PHASE_GAS_PRICE
+                IS_PHASE_MAX_PRIORITY_FEE_PER_GAS
+                IS_PHASE_MAX_FEE_PER_GAS
+                IS_PHASE_GAS_LIMIT
+                IS_PHASE_TO
+                IS_PHASE_VALUE
+                IS_PHASE_DATA
+                IS_PHASE_ACCESS_LIST
+                IS_PHASE_BETA
+                IS_PHASE_Y
+                IS_PHASE_R
+                IS_PHASE_S)))
 
 (defconstraint flag-sum-is-one-or-padding ()
   (eq! (~ ABS_TX_NUM) (flag-sum)))
@@ -160,7 +160,7 @@
 
 ;; 2.3.2.6
 (defun (flag-sum-lt-and-lx-are-one)
-  (force-bool (+ IS_PHASE_CHAIN_ID
+  (force-bin (+ IS_PHASE_CHAIN_ID
                  IS_PHASE_NONCE
                  IS_PHASE_GAS_PRICE
                  IS_PHASE_MAX_PRIORITY_FEE_PER_GAS
@@ -178,7 +178,7 @@
 
 ;; 2.3.2.7
 (defun (flag-sum-only-lt)
-  (force-bool (+ IS_PHASE_Y IS_PHASE_R IS_PHASE_S)))
+  (force-bin (+ IS_PHASE_Y IS_PHASE_R IS_PHASE_S)))
 
 (defconstraint LT-only ()
   (if-eq (flag-sum-only-lt) 1
@@ -327,7 +327,7 @@
 
 ;; 2.3.5.3
 (defun (flag-sum-wo-phase-rlp-prefix)
-  (force-bool (- (flag-sum) IS_PHASE_RLP_PREFIX)))
+  (force-bin (- (flag-sum) IS_PHASE_RLP_PREFIX)))
 
 (defconstraint rlpbytesize-decreasing ()
   (if-eq (flag-sum-wo-phase-rlp-prefix) 1
@@ -528,16 +528,16 @@
 ;;                                                     ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defun (flag-sum-integer-phase)
-  (force-bool (+ IS_PHASE_CHAIN_ID
-                 IS_PHASE_NONCE
-                 IS_PHASE_GAS_PRICE
-                 IS_PHASE_MAX_PRIORITY_FEE_PER_GAS
-                 IS_PHASE_MAX_FEE_PER_GAS
-                 IS_PHASE_GAS_LIMIT
-                 IS_PHASE_VALUE)))
+  (force-bin (+ IS_PHASE_CHAIN_ID
+                IS_PHASE_NONCE
+                IS_PHASE_GAS_PRICE
+                IS_PHASE_MAX_PRIORITY_FEE_PER_GAS
+                IS_PHASE_MAX_FEE_PER_GAS
+                IS_PHASE_GAS_LIMIT
+                IS_PHASE_VALUE)))
 
 (defun (flag-sum-integer-phase-in-8-rows)
-  (force-bool (- (flag-sum-integer-phase) IS_PHASE_VALUE)))
+  (force-bin (- (flag-sum-integer-phase) IS_PHASE_VALUE)))
 
 (defconstraint phaseInteger (:guard (flag-sum-integer-phase))
   (begin (if-zero [INPUT 1]

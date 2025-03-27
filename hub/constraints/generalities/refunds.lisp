@@ -50,7 +50,7 @@
 (defun    (bit-identifying-SSTORE)   (* stack/STO_FLAG  [stack/DEC_FLAG 2]))     ;; ""
 
 (defconstraint    generalities---gas---only-SSTORE-may-grant-refunds (:perspective stack)
-                  (if-zero    (force-bool (bit-identifying-SSTORE))
+                  (if-zero    (force-bin (bit-identifying-SSTORE))
                               (eq! REFUND_COUNTER_NEW REFUND_COUNTER)))
 
 ;; the actual REFUND mechanics for SSTORE will be explained in the storage instruction family section

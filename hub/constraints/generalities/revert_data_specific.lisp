@@ -42,14 +42,14 @@
                                 (* XAHOY    stack/HALT_FLAG [stack/DEC_FLAG 2]))) ;; ""
 
 (defconstraint recording-self-induced-revert (:perspective stack)
-               (if-not-zero (force-bool (self_revert_trigger))
+               (if-not-zero (force-bin (self_revert_trigger))
                             (begin
                               (eq! CN_SELF_REV 1)
                               (eq! CN_REV_STAMP HUB_STAMP))))
 
 (defconstraint recording-unexceptional-halting-instruction (:perspective stack)
                (if-not-zero HALT_FLAG
-                            (if-zero (force-bool (self_revert_trigger))
+                            (if-zero (force-bin (self_revert_trigger))
                                      (vanishes! CN_SELF_REV))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

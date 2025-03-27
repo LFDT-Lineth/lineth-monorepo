@@ -7,7 +7,7 @@
 (defun (num-zero-implies-zero NUM COL) (if-zero NUM (vanishes! COL)))
 
 (defun (num-non-decreasing NUM)
-                (vanishes! (* (will-remain-constant! NUM) (inc NUM 1))))
+                (or! (will-remain-constant! NUM) (inc NUM 1)))
 
 (defun (index-grows-or-resets NUM INDEX)
                 (if-zero (will-remain-constant! NUM)

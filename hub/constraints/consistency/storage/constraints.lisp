@@ -26,7 +26,7 @@
 ;; TODO: remove when we migrate to the unified permutation argument
 (defconstraint storage-consistency---FIRST-AGAIN-FINAL---automatic-vanishing ()
                (begin
-                 (if-zero (force-bool scp_PEEK_AT_STORAGE)
+                 (if-zero (force-bin scp_PEEK_AT_STORAGE)
                           (vanishes! (+
                                        scp_FIRST_IN_TXN   scp_FIRST_IN_BLK   scp_FIRST_IN_CNF
                                        scp_AGAIN_IN_TXN   scp_AGAIN_IN_BLK   scp_AGAIN_IN_CNF
@@ -40,8 +40,8 @@
                                                                 (storage-consistency---transtion-transaction)))
 
 (defconstraint    storage-consistency---FIRST-AGAIN-FINAL---first-storage-row ()
-                  (if-zero    (force-bool     (prev scp_PEEK_AT_STORAGE))
-                              (if-not-zero    (force-bool    scp_PEEK_AT_STORAGE)
+                  (if-zero    (force-bin      (prev scp_PEEK_AT_STORAGE))
+                              (if-not-zero    (force-bin    scp_PEEK_AT_STORAGE)
                                               (if-not-zero   scp_PEEK_AT_STORAGE
                                                              (eq!    (storage-consistency---transtion-sum)
                                                                      3)))))
@@ -71,7 +71,7 @@
 
 (defconstraint    storage-consistency---FIRST-AGAIN-FINAL---final-row-with-room-to-spare ()
                   (if-not-zero (prev scp_PEEK_AT_STORAGE)
-                               (if-zero    (force-bool    scp_PEEK_AT_STORAGE)
+                               (if-zero    (force-bin    scp_PEEK_AT_STORAGE)
                                            (eq!    3
                                                    (storage-consistency---transtion-sum)))))
 

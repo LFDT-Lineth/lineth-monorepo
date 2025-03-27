@@ -76,7 +76,7 @@
 (defun (stamp-decrementing X)
   (if-not-zero (- STAMP
                   (+ (prev STAMP) 1))
-               (any! (remained-constant! X) (did-dec! X 1))))
+               (or! (remained-constant! X) (did-dec! X 1))))
 
 (defconstraint stamp-decrementings ()
   (begin (stamp-decrementing TOT)
@@ -127,22 +127,22 @@
      (* 13 IS_BLAKE)))
 
 (defun (is-any-to-ram-with-padding)
-  (force-bool (+    IS_ANY_TO_RAM_WITH_PADDING_SOME_DATA
-                    IS_ANY_TO_RAM_WITH_PADDING_PURE_PADDING)))
+  (force-bin (+    IS_ANY_TO_RAM_WITH_PADDING_SOME_DATA
+                   IS_ANY_TO_RAM_WITH_PADDING_PURE_PADDING)))
 
 (defun (inst-flag-sum)
-  (force-bool (+ IS_MLOAD
-                 IS_MSTORE
-                 IS_MSTORE8
-                 IS_INVALID_CODE_PREFIX
-                 IS_RIGHT_PADDED_WORD_EXTRACTION
-                 IS_RAM_TO_EXO_WITH_PADDING
-                 IS_EXO_TO_RAM_TRANSPLANTS
-                 IS_RAM_TO_RAM_SANS_PADDING
-                 (is-any-to-ram-with-padding)
-                 IS_MODEXP_ZERO
-                 IS_MODEXP_DATA
-                 IS_BLAKE)))
+  (force-bin (+ IS_MLOAD
+                IS_MSTORE
+                IS_MSTORE8
+                IS_INVALID_CODE_PREFIX
+                IS_RIGHT_PADDED_WORD_EXTRACTION
+                IS_RAM_TO_EXO_WITH_PADDING
+                IS_EXO_TO_RAM_TRANSPLANTS
+                IS_RAM_TO_RAM_SANS_PADDING
+                (is-any-to-ram-with-padding)
+                IS_MODEXP_ZERO
+                IS_MODEXP_DATA
+                IS_BLAKE)))
 
 (defun (weight-flag-sum)
   (+ (* MMU_INST_MLOAD IS_MLOAD)
@@ -168,9 +168,9 @@
 ;; Micro Instruction writing row types
 ;;
 
-(defun    (ntrv-row)    (force-bool (+ NT_ONLY NT_FIRST NT_MDDL NT_LAST)))
-(defun    (rzro-row)    (force-bool (+ RZ_ONLY RZ_FIRST RZ_MDDL RZ_LAST)))
-(defun    (zero-row)    (force-bool (+ LZRO (rzro-row))))
+(defun    (ntrv-row)    (force-bin (+ NT_ONLY NT_FIRST NT_MDDL NT_LAST)))
+(defun    (rzro-row)    (force-bin (+ RZ_ONLY RZ_FIRST RZ_MDDL RZ_LAST)))
+(defun    (zero-row)    (force-bin (+ LZRO (rzro-row))))
 
 (defconstraint sum-row-flag ()
   (eq! (+ LZRO (ntrv-row) (rzro-row)) MICRO))

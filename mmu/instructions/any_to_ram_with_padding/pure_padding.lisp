@@ -80,7 +80,7 @@
                                        (any-to-ram-with-padding---pure-padding---only-padding-size)))))
 
 (defconstraint    any-to-ram-with-padding---pure-padding---paying-forward (:guard IS_ANY_TO_RAM_WITH_PADDING_PURE_PADDING)
-                  (if-eq (force-bool (+ RZ_MDDL RZ_LAST)) 1
+                  (if-eq (force-bin (+ RZ_MDDL RZ_LAST)) 1
                          (begin (did-inc!  micro/TLO 1)
                                 (vanishes! micro/TBO))))
 

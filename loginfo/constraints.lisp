@@ -22,8 +22,8 @@
                   (vanishes! CT))))
 
 (defconstraint number-increments ()
-  (begin (any! (will-remain-constant! ABS_TXN_NUM) (will-inc! ABS_TXN_NUM 1))
-         (any! (will-remain-constant! ABS_LOG_NUM) (will-inc! ABS_LOG_NUM 1))))
+  (begin (or! (will-remain-constant! ABS_TXN_NUM) (will-inc! ABS_TXN_NUM 1))
+         (or! (will-remain-constant! ABS_LOG_NUM) (will-inc! ABS_LOG_NUM 1))))
 
 (defconstraint no-logs-transaction (:guard ABS_TXN_NUM)
   (if-zero TXN_EMITS_LOGS
@@ -37,9 +37,9 @@
                   (begin (did-inc! ABS_LOG_NUM 1)
                          (eq! CT_MAX
                               (+ 1 (- INST EVM_INST_LOG0)))))
-         (if (eq! CT CT_MAX)
+         (if-eq-else CT CT_MAX
              ;; CT == CT_MAX
-             (begin (vanishes! (* (will-inc! ABS_TXN_NUM 1) (will-inc! ABS_LOG_NUM 1)))
+             (begin (or! (will-inc! ABS_TXN_NUM 1) (will-inc! ABS_LOG_NUM 1))
                     (will-inc! ABS_LOG_NUM (next TXN_EMITS_LOGS)))
              ;; CT != CT_MAX
              (will-inc! CT 1))))
@@ -97,16 +97,16 @@
 ;;                           ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defun (is-log0-to-log4)
-  (force-bool (reduce + (for k [0 : 4] [IS_LOG_X k]))))
+  (force-bin (reduce + (for k [0 : 4] [IS_LOG_X k]))))
 
 (defun (is-log1-to-log4)
-  (force-bool (reduce + (for k [1 : 4] [IS_LOG_X k]))))
+  (force-bin (reduce + (for k [1 : 4] [IS_LOG_X k]))))
 
 (defun (is-log2-to-log4)
-  (force-bool (reduce + (for k [2 : 4] [IS_LOG_X k]))))
+  (force-bin (reduce + (for k [2 : 4] [IS_LOG_X k]))))
 
 (defun (is-log3-to-log4)
-  (force-bool (+ [IS_LOG_X 3] [IS_LOG_X 4])))
+  (force-bin (+ [IS_LOG_X 3] [IS_LOG_X 4])))
 
 (defun (is-log4)
   [IS_LOG_X 4])

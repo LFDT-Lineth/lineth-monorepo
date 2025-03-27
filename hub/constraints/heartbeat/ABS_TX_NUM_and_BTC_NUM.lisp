@@ -22,7 +22,7 @@
 ;; "increment" constraints
 (defconstraint    ABS-and-BLK-constraints---increments       ()
                   (begin
-                    (any!      (will-remain-constant!    ABSOLUTE_TRANSACTION_NUMBER)
-                               (will-inc!                ABSOLUTE_TRANSACTION_NUMBER    1))
-                    (any!      (will-remain-constant!    RELATIVE_BLOCK_NUMBER)
-                               (will-inc!                RELATIVE_BLOCK_NUMBER          1)))) ;; rmk: same remark
+                    (or!      (will-remain-constant!    ABSOLUTE_TRANSACTION_NUMBER)
+                              (will-inc!                ABSOLUTE_TRANSACTION_NUMBER    1))
+                    (or!      (will-remain-constant!    RELATIVE_BLOCK_NUMBER)
+                              (will-inc!                RELATIVE_BLOCK_NUMBER          1)))) ;; rmk: same remark

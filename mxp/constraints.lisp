@@ -98,8 +98,8 @@
 (defconstraint noop-consequences (:guard NOOP)
   (begin (vanishes! QUAD_COST)
          (vanishes! LIN_COST)
-         (= WORDS_NEW WORDS)
-         (= C_MEM_NEW C_MEM)))
+         (eq! WORDS_NEW WORDS)
+         (eq! C_MEM_NEW C_MEM)))
 
 ;;;;;;;;;;;;;;;;;;;;
 ;;                ;;
@@ -160,7 +160,7 @@
   (vanishes! STAMP))
 
 (defconstraint stamp-increments ()
-  (any! (will-remain-constant! STAMP) (will-inc! STAMP 1)))
+  (or! (will-remain-constant! STAMP) (will-inc! STAMP 1)))
 
 (defconstraint automatic-vanishing-when-padding ()
   (if-zero STAMP
@@ -195,7 +195,7 @@
 
 (defconstraint final-row (:domain {-1})
   (if-not-zero STAMP
-               (if-zero (force-bool (+ ROOB NOOP))
+               (if-zero (force-bin (+ ROOB NOOP))
                         (eq! CT (if-zero MXPX
                                       CT_MAX_NON_TRIVIAL
                                       CT_MAX_NON_TRIVIAL_BUT_MXPX)))))
@@ -263,8 +263,8 @@
 (defconstraint offsets-out-of-bounds (:guard (standing-hypothesis))
   (if-eq MXPX 1
          (if-eq CT CT_MAX_NON_TRIVIAL_BUT_MXPX
-                (vanishes! (* (- (- MAX_OFFSET_1 TWO_POW_32) [ACC 1])
-                              (- (- MAX_OFFSET_2 TWO_POW_32) [ACC 2]))))))
+                (or! (eq! (- MAX_OFFSET_1 TWO_POW_32) [ACC 1])
+                     (eq! (- MAX_OFFSET_2 TWO_POW_32) [ACC 2])))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                                ;;
@@ -341,8 +341,8 @@
               (+ (* 512 (large-quotient))
                  (+ (* 256 (prev BYTE_QQ))
                     BYTE_QQ)))
-         (vanishes! (* (prev BYTE_QQ)
-                       (- 1 (prev BYTE_QQ))))))
+         (or! (eq! 0 (prev BYTE_QQ))
+              (eq! 1 (prev BYTE_QQ)))))
 
 (defconstraint setting-c-mem-new (:guard (* (standing-hypothesis) (expansion-happened)))
   (eq! C_MEM_NEW
@@ -360,7 +360,7 @@
               (+ (* GBYTE SIZE_1_LO) (* GWORD ACC_W)))))
 
 (defconstraint setting-gas-mxp (:guard (* (standing-hypothesis) (offsets-are-in-bounds)))
-  (if (eq! INST EVM_INST_RETURN)
+  (if-eq-else INST EVM_INST_RETURN
       (eq! GAS_MXP
            (+ QUAD_COST (* DEPLOYS LIN_COST)))
       (eq! GAS_MXP (+ QUAD_COST LIN_COST))))

@@ -36,8 +36,8 @@
                                                                           (* (- 1 (ram-to-ram-sans-padding---totnt-is-one)) (- LLARGE (ram-to-ram-sans-padding---initial-tbo)))))
 (defun    (ram-to-ram-sans-padding---first-limb-single-source)      (shift prprc/WCP_RES 4))
 (defun    (ram-to-ram-sans-padding---init-tbo-is-zero)              (shift prprc/WCP_RES 5))
-(defun    (ram-to-ram-sans-padding---last-limb-is-full)             (force-bool (shift prprc/EUC_QUOT 5)))
-(defun    (ram-to-ram-sans-padding---first-limb-is-fast)            (force-bool (* (ram-to-ram-sans-padding---aligned) (ram-to-ram-sans-padding---init-tbo-is-zero)))) ;;""
+(defun    (ram-to-ram-sans-padding---last-limb-is-full)             (force-bin (shift prprc/EUC_QUOT 5)))
+(defun    (ram-to-ram-sans-padding---first-limb-is-fast)            (force-bin (* (ram-to-ram-sans-padding---aligned) (ram-to-ram-sans-padding---init-tbo-is-zero)))) ;;""
 
 (defconstraint    ram-to-ram-sans-padding---setting-some-TOTs (:guard (* MACRO IS_RAM_TO_RAM_SANS_PADDING))
                   (begin
@@ -108,7 +108,7 @@
                                 (eq! (ram-to-ram-sans-padding---last-limb-single-source)
                                      (ram-to-ram-sans-padding---first-limb-single-source))
                                 (eq! (ram-to-ram-sans-padding---last-limb-single-source)
-                                     (force-bool (- 1 (shift prprc/EUC_QUOT 4)))))
+                                     (force-bin (- 1 (shift prprc/EUC_QUOT 4)))))
                     (if-eq-else (ram-to-ram-sans-padding---aligned) 1
                                 (eq! (ram-to-ram-sans-padding---initial-slo-increment) 1)
                                 (eq! (ram-to-ram-sans-padding---initial-slo-increment)
@@ -139,7 +139,7 @@
                          (eq! (shift micro/TBO NB_PP_ROWS_RAM_TO_RAM_SANS_PADDING_PO) (ram-to-ram-sans-padding---initial-tbo))))
 
 (defconstraint    ram-to-ram-sans-padding---mmio-instruction-writting (:guard IS_RAM_TO_RAM_SANS_PADDING)
-                  (begin (if-eq (force-bool (+ NT_FIRST NT_MDDL)) 1
+                  (begin (if-eq (force-bin (+ NT_FIRST NT_MDDL)) 1
                                 (will-inc! micro/TLO 1))
                          (if-eq NT_FIRST 1
                                 (eq! (next micro/SLO) (+ micro/SLO (ram-to-ram-sans-padding---initial-slo-increment))))

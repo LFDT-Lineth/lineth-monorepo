@@ -13,7 +13,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;                                  ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defun    (right-padded-word-extraction---second-limb-padded)           (force-bool (- 1 (next prprc/WCP_RES))))
+(defun    (right-padded-word-extraction---second-limb-padded)           (force-bin (- 1 (next prprc/WCP_RES))))
 (defun    (right-padded-word-extraction---extract-size)                 (+    (* (right-padded-word-extraction---second-limb-padded) (- macro/REF_SIZE macro/SRC_OFFSET_LO))
                                                                               (* (- 1 (right-padded-word-extraction---second-limb-padded)) WORD_SIZE)))
 (defun    (right-padded-word-extraction---first-limb-padded)            (shift prprc/WCP_RES 2))
@@ -24,7 +24,7 @@
                                                                                     (* (right-padded-word-extraction---first-limb-padded) 0)))))
 (defun    (right-padded-word-extraction---first-limb-byte-size)         (+    (* (- 1 (right-padded-word-extraction---first-limb-padded)) LLARGE)
                                                                               (* (right-padded-word-extraction---first-limb-padded) (right-padded-word-extraction---extract-size))))
-(defun    (right-padded-word-extraction---first-limb-is-full)           (force-bool (shift prprc/EUC_QUOT 2)))
+(defun    (right-padded-word-extraction---first-limb-is-full)           (force-bin (shift prprc/EUC_QUOT 2)))
 (defun    (right-padded-word-extraction---aligned)                      (next    prprc/WCP_RES))
 (defun    (right-padded-word-extraction---slo)                          (shift   prprc/EUC_QUOT   3))
 (defun    (right-padded-word-extraction---sbo)                          (shift   prprc/EUC_REM    3))

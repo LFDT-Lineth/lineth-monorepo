@@ -309,7 +309,7 @@
 (defconstraint   return-instruction---justifying-the-ICPX
                  (:guard   (return-instruction---standard-scenario-row))
                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-                 (if-zero   (force-bool   (return-instruction---check-first-byte))
+                 (if-zero   (force-bin    (return-instruction---check-first-byte))
                             ;; check_first_byte ≡ 0
                             (vanishes!    (return-instruction---exception-flag-ICPX))
                             ;; check_first_byte ≡ 1

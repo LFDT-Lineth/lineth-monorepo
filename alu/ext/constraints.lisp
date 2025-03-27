@@ -13,7 +13,7 @@
   (vanishes! STAMP))
 
 (defconstraint heartbeat ()
-  (begin (* (will-remain-constant! STAMP) (will-inc! STAMP 1))
+  (begin (or! (will-remain-constant! STAMP) (will-inc! STAMP 1))
          (if-zero STAMP
                   (begin (vanishes! CT)
                          (vanishes! OLI)
@@ -27,11 +27,11 @@
                                                       (will-inc! STAMP 1)
                                                       (begin (will-inc! CT 1)
                                                              (vanishes! (next OLI)))))
-                             (vanishes! (* (- INST EVM_INST_MULMOD) (- INST EVM_INST_ADDMOD)))))))
+                             (or! (eq! INST EVM_INST_MULMOD) (eq! INST EVM_INST_ADDMOD))))))
 
 (defconstraint last-row (:domain {-1} :guard STAMP)
   (if-zero OLI
-           (= CT MMEDIUMMO)))
+           (eq! CT MMEDIUMMO)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                             ;;
@@ -125,7 +125,7 @@
                       (if-zero ARG_1_HI
                                (if-not-zero (- INST EVM_INST_ADDMOD)
                                             (if-zero ARG_1_LO
-                                                     (= BIT_1 1)
+                                                     (eq! BIT_1 1)
                                                      (vanishes! BIT_1)))))))
 
 (defconstraint bit-2-constraints ()
@@ -135,7 +135,7 @@
                       (if-zero ARG_2_HI
                                (if-eq INST EVM_INST_MULMOD
                                       (if-zero ARG_2_LO
-                                               (= BIT_2 1)
+                                               (eq! BIT_2 1)
                                                (vanishes! BIT_2)))))))
 
 (defconstraint bit-3-constraints ()
@@ -151,7 +151,7 @@
 
 (defconstraint oli-constraints ()
   (if-not-zero STAMP
-               (= OLI
+               (eq! OLI
                   (- (+ BIT_1 BIT_2 BIT_3 (* BIT_1 BIT_2 BIT_3))
                      (+ (* BIT_1 BIT_2) (* BIT_2 BIT_3) (* BIT_3 BIT_1))))))
 
@@ -476,14 +476,14 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defconstraint target-constraints ()
   (if-eq CT MMEDIUMMO
-         (begin (= (A_HI) ARG_1_HI)
-                (= (A_LO) ARG_1_LO)
-                (= (B_HI) ARG_2_HI)
-                (= (B_LO) ARG_2_LO)
-                (= (C_HI) ARG_3_HI)
-                (= (C_LO) ARG_3_LO)
-                (= (R_HI) RES_HI)
-                (= (R_LO) RES_LO))))
+         (begin (eq! (A_HI) ARG_1_HI)
+                (eq! (A_LO) ARG_1_LO)
+                (eq! (B_HI) ARG_2_HI)
+                (eq! (B_LO) ARG_2_LO)
+                (eq! (C_HI) ARG_3_HI)
+                (eq! (C_LO) ARG_3_LO)
+                (eq! (R_HI) RES_HI)
+                (eq! (R_LO) RES_LO))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                                     ;;
@@ -492,26 +492,26 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defconstraint comparisons ()
   (if-eq CT MMEDIUMMO
-         (begin (= (* (- (* 2 (lt_3)) 1)
+         (begin (eq! (* (- (* 2 (lt_3)) 1)
                       (- (C_3) (R_3)))
                    (+ (Delta_3) (lt_3)))
-                (= (* (- (* 2 (lt_2)) 1)
+                (eq! (* (- (* 2 (lt_2)) 1)
                       (- (C_2) (R_2)))
                    (+ (Delta_2) (lt_2)))
-                (= (* (- (* 2 (lt_1)) 1)
+                (eq! (* (- (* 2 (lt_1)) 1)
                       (- (C_1) (R_1)))
                    (+ (Delta_1) (lt_1)))
-                (= (* (- (* 2 (lt_0)) 1)
+                (eq! (* (- (* 2 (lt_0)) 1)
                       (- (C_0) (R_0)))
                    (+ (Delta_0) (lt_0)))
-                (if-eq-else (C_3) (R_3) (= (eq_3) 1) (vanishes! (eq_3)))
-                (if-eq-else (C_2) (R_2) (= (eq_2) 1) (vanishes! (eq_2)))
-                (if-eq-else (C_1) (R_1) (= (eq_1) 1) (vanishes! (eq_1)))
-                (if-eq-else (C_0) (R_0) (= (eq_0) 1) (vanishes! (eq_0))))))
+                (if-eq-else (C_3) (R_3) (eq! (eq_3) 1) (vanishes! (eq_3)))
+                (if-eq-else (C_2) (R_2) (eq! (eq_2) 1) (vanishes! (eq_2)))
+                (if-eq-else (C_1) (R_1) (eq! (eq_1) 1) (vanishes! (eq_1)))
+                (if-eq-else (C_0) (R_0) (eq! (eq_0) 1) (vanishes! (eq_0))))))
 
 (defconstraint order ()
   (if-eq CT MMEDIUMMO
-         (= 1
+         (eq! 1
             (+ (lt_3)
                (* (eq_3) (lt_2))
                (* (eq_3) (eq_2) (lt_1))
@@ -524,22 +524,22 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defconstraint auxiliary-products-of-arguments ()
   (if-eq CT MMEDIUMMO
-         (begin (= (+ (* (A_1) (B_0)) (* (A_0) (B_1)))
+         (begin (eq! (+ (* (A_1) (B_0)) (* (A_0) (B_1)))
                    (+ (* THETA2 (alpha)) (* THETA (H_1)) (H_0)))
-                (= (+ (* (A_3) (B_0)) (* (A_2) (B_1)) (* (A_1) (B_2)) (* (A_0) (B_3)))
+                (eq! (+ (* (A_3) (B_0)) (* (A_2) (B_1)) (* (A_1) (B_2)) (* (A_0) (B_3)))
                    (+ (* THETA2 (beta)) (* THETA (H_3)) (H_2)))
-                (= (+ (* (A_3) (B_2)) (* (A_2) (B_3)))
+                (eq! (+ (* (A_3) (B_2)) (* (A_2) (B_3)))
                    (+ (* THETA2 (gamma)) (* THETA (H_5)) (H_4))))))
 
 (defconstraint auxiliary-computations-for-euclidean-division ()
   (if-eq CT MMEDIUMMO
-         (begin (= (+ (* (Q_1) (C_0)) (* (Q_0) (C_1)))
+         (begin (eq! (+ (* (Q_1) (C_0)) (* (Q_0) (C_1)))
                    (+ (* THETA2 (sigma)) (* THETA (I_1)) (I_0)))
-                (= (+ (* (Q_3) (C_0)) (* (Q_2) (C_1)) (* (Q_1) (C_2)) (* (Q_0) (C_3)))
+                (eq! (+ (* (Q_3) (C_0)) (* (Q_2) (C_1)) (* (Q_1) (C_2)) (* (Q_0) (C_3)))
                    (+ (* THETA2 (tau)) (* THETA (I_3)) (I_2)))
-                (= (+ (* (Q_5) (C_0)) (* (Q_4) (C_1)) (* (Q_3) (C_2)) (* (Q_2) (C_3)))
+                (eq! (+ (* (Q_5) (C_0)) (* (Q_4) (C_1)) (* (Q_3) (C_2)) (* (Q_2) (C_3)))
                    (+ (* THETA2 (rho)) (* THETA (I_5)) (I_4)))
-                (= (+ (* (Q_7) (C_0)) (* (Q_6) (C_1)) (* (Q_5) (C_2)) (* (Q_4) (C_3)))
+                (eq! (+ (* (Q_7) (C_0)) (* (Q_6) (C_1)) (* (Q_5) (C_2)) (* (Q_4) (C_3)))
                    (I_6)))))
 
 (defconstraint vanishing-of-very-high-parts ()
@@ -553,10 +553,10 @@
 
 (defconstraint euclidean-division-per-se ()
   (if-eq CT MMEDIUMMO
-         (begin (= (+ (* (Q_0) (C_0)) (* THETA (I_0)) (* THETA (R_1)) (R_0))
+         (begin (eq! (+ (* (Q_0) (C_0)) (* THETA (I_0)) (* THETA (R_1)) (R_0))
                    (+ (* THETA2 (phi)) (* THETA (J_1)) (J_0)))
                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
-                (= (+ (phi)
+                (eq! (+ (phi)
                       (I_1)
                       (* THETA (sigma))
                       (* (Q_2) (C_0))
@@ -567,7 +567,7 @@
                       (R_2))
                    (+ (* THETA2 (psi)) (* THETA (J_3)) (J_2)))
                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
-                (= (+ (psi)
+                (eq! (+ (psi)
                       (I_3)
                       (* THETA (tau))
                       (* (Q_4) (C_0))
@@ -577,7 +577,7 @@
                       (* THETA (I_4)))
                    (+ (* THETA2 (chi)) (* THETA (J_5)) (J_4)))
                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
-                (= (+ (chi)
+                (eq! (+ (chi)
                       (I_5)
                       (* THETA (rho))
                       (* (Q_6) (C_0))
@@ -595,12 +595,12 @@
 (defconstraint addmod-constraints ()
   (if-eq CT MMEDIUMMO
          (if-not-zero (- INST EVM_INST_MULMOD)
-                      (begin (= (+ ARG_1_LO ARG_2_LO)
+                      (begin (eq! (+ ARG_1_LO ARG_2_LO)
                                 (+ (* THETA2 (lambda)) (* THETA (J_1)) (J_0)))
                              ;;;;;;;;;;;;;;;;;;;;;;;;;;;
-                             (= (+ (lambda) ARG_1_HI ARG_2_HI)
+                             (eq! (+ (lambda) ARG_1_HI ARG_2_HI)
                                 (+ (* THETA2 (mu)) (* THETA (J_3)) (J_2)))
-                             (= (mu) (J_4))
+                             (eq! (mu) (J_4))
                              (vanishes! (+ (J_5) (J_6) (J_7)))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -611,10 +611,10 @@
 (defconstraint mulmod-constraints ()
   (if-eq CT MMEDIUMMO
          (if-not-zero (- INST EVM_INST_ADDMOD)
-                      (begin (= (+ (* (A_0) (B_0)) (* THETA (H_0)))
+                      (begin (eq! (+ (* (A_0) (B_0)) (* THETA (H_0)))
                                 (+ (* THETA2 (lambda)) (* THETA (J_1)) (J_0)))
                              ;;;;;;;;;;;;;;;;;;;;;;;;;;;
-                             (= (+ (lambda)
+                             (eq! (+ (lambda)
                                    (H_1)
                                    (* THETA (alpha))
                                    (* (A_2) (B_0))
@@ -623,7 +623,7 @@
                                    (* THETA (H_2)))
                                 (+ (* THETA2 (mu)) (* THETA (J_3)) (J_2)))
                              ;;;;;;;;;;;;;;;;;;;;;;;;;;;
-                             (= (+ (mu)
+                             (eq! (+ (mu)
                                    (H_3)
                                    (* THETA (beta))
                                    (* (A_3) (B_1))
@@ -632,7 +632,7 @@
                                    (* THETA (H_4)))
                                 (+ (* THETA2 (nu)) (* THETA (J_5)) (J_4)))
                              ;;;;;;;;;;;;;;;;;;;;;;;;;;;
-                             (= (+ (nu) (H_5) (* THETA (gamma)) (* (A_3) (B_3)))
+                             (eq! (+ (nu) (H_5) (* THETA (gamma)) (* (A_3) (B_3)))
                                 (+ (* THETA (J_7)) (J_6)))))))
 
 

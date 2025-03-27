@@ -73,9 +73,9 @@
 
 (defconstraint    generalities---context-numbers---TX_EXEC-phase---CN_NEW-value-options ()
                   (if-not-zero TX_EXEC
-                               (any! (eq! CN_NEW CN)
-                                     (eq! CN_NEW CALLER_CN)
-                                     (eq! CN_NEW (+ 1 HUB_STAMP)))))
+                               (or! (eq! CN_NEW CN)
+                                    (eq! CN_NEW CALLER_CN)
+                                    (eq! CN_NEW (+ 1 HUB_STAMP)))))
 
 (defconstraint    generalities---context-numbers---TX_EXEC-phase---linking-constraint-for-CN-and-CN_NEW ()
                   (if-not-zero TX_EXEC

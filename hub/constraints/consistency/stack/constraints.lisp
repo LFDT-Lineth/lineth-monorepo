@@ -14,7 +14,7 @@
                   (begin
                     (eq!    (+    stkcp_FIRST_CTXT    stkcp_AGAIN_CTXT)    stkcp_PEEK_AT_STACK_POW_4)
                     (eq!    (+    stkcp_FIRST_SPOT    stkcp_AGAIN_SPOT)    stkcp_PEEK_AT_STACK_POW_4)
-                    (if-zero    (force-bool    stkcp_PEEK_AT_STACK_POW_4)
+                    (if-zero    (force-bin    stkcp_PEEK_AT_STACK_POW_4)
                                 (eq!   (next    (+    stkcp_FIRST_CTXT    stkcp_FIRST_SPOT))
                                        (next    (*    stkcp_PEEK_AT_STACK_POW_4    2))))
                     (if-not-zero    stkcp_PEEK_AT_STACK_POW_4
@@ -31,7 +31,7 @@
 (defconstraint    stack-consistency---first-and-repeat-encounter-of-context ()
                   (begin
                     (if-not-zero    stkcp_FIRST_CTXT    (vanishes!   stkcp_HEIGHT_1234))
-                    (if-not-zero    stkcp_AGAIN_CTXT    (any!        (remained-constant!    stkcp_HEIGHT_1234)
+                    (if-not-zero    stkcp_AGAIN_CTXT    (or!        (remained-constant!    stkcp_HEIGHT_1234)
                                                                      (did-inc!    stkcp_HEIGHT_1234   1)))))
 
 

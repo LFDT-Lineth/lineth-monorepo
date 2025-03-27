@@ -47,7 +47,7 @@
   (vanishes! STAMP))
 
 (defconstraint stamp-increments ()
-  (any! (will-remain-constant! STAMP) (will-inc! STAMP 1)))
+  (or! (will-remain-constant! STAMP) (will-inc! STAMP 1)))
 
 (defconstraint counter-reset ()
   (if-not-zero (will-remain-constant! STAMP)

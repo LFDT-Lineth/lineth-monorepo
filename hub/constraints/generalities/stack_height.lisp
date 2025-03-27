@@ -6,7 +6,7 @@
 ;;                                                    ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defun    (stack-exceptions)    (force-bool (+ stack/SUX stack/SOX)))
+(defun    (stack-exceptions)    (force-bin (+ stack/SUX stack/SOX)))
 
 (defconstraint    generalities---stack-height---hub-stamp-constancies   ()
                   (begin

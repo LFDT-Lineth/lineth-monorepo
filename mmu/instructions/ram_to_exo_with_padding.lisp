@@ -125,7 +125,7 @@
                     (eq! micro/SBO
                          (shift (ram-to-exo-with-padding---initial-sbo) (- 0 NB_PP_ROWS_RAM_TO_EXO_WITH_PADDING_PO)))))
 
-(defconstraint    ram-to-exo-with-padding---last-or-only-common (:guard (* IS_RAM_TO_EXO_WITH_PADDING (force-bool (+ NT_LAST NT_ONLY))))
+(defconstraint    ram-to-exo-with-padding---last-or-only-common (:guard (* IS_RAM_TO_EXO_WITH_PADDING (force-bin (+ NT_LAST NT_ONLY))))
                   (begin
                     (eq! micro/SIZE [OUT 1])
                     (if-zero [BIN 2]

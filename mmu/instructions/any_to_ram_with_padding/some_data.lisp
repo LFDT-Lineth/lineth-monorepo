@@ -35,9 +35,9 @@
 (defun    (any-to-ram-with-padding---some-data---max-src-offset)                    (+ (any-to-ram-with-padding---some-data---min-src-offset) (- (any-to-ram-with-padding---trsf-size) 1)))
 (defun    (any-to-ram-with-padding---some-data---max-slo)                           (shift prprc/EUC_QUOT 6))
 (defun    (any-to-ram-with-padding---some-data---max-sbo)                           (shift prprc/EUC_REM 6))
-(defun    (any-to-ram-with-padding---some-data---only-dt-single-target)             (force-bool (- 1 (shift prprc/EUC_QUOT 7))))
+(defun    (any-to-ram-with-padding---some-data---only-dt-single-target)             (force-bin (- 1 (shift prprc/EUC_QUOT 7))))
 (defun    (any-to-ram-with-padding---some-data---only-dt-maxes-out-target)          (shift prprc/WCP_RES 7))
-(defun    (any-to-ram-with-padding---some-data---first-dt-single-target)            (force-bool (- 1 (shift prprc/EUC_QUOT 8))))
+(defun    (any-to-ram-with-padding---some-data---first-dt-single-target)            (force-bin (- 1 (shift prprc/EUC_QUOT 8))))
 (defun    (any-to-ram-with-padding---some-data---first-dt-maxes-out-target)         (shift prprc/WCP_RES 8))
 (defun    (any-to-ram-with-padding---some-data---last-dt-maxes-out-target)          (shift prprc/WCP_RES 9))
 (defun    (any-to-ram-with-padding---some-data---first-padding-offset)              (+ (any-to-ram-with-padding---min-tgt-offset) (any-to-ram-with-padding---trsf-size)))
@@ -220,12 +220,12 @@
                                                             (eq! micro/INST MMIO_INST_LIMB_TO_RAM_TWO_TARGET)
                                                             (eq! micro/INST MMIO_INST_LIMB_TO_RAM_ONE_TARGET)))
                                        (eq! micro/SIZE (any-to-ram-with-padding---some-data---last-dt-size))))
-                         (if-eq (force-bool (+ RZ_FIRST RZ_ONLY)) 1
+                         (if-eq (force-bin (+ RZ_FIRST RZ_ONLY)) 1
                                 (begin (eq! micro/INST MMIO_INST_RAM_EXCISION)
                                        (eq! micro/SIZE (any-to-ram-with-padding---some-data---first-padding-size))
                                        (did-inc! micro/TLO (any-to-ram-with-padding---some-data---tlo-increment-at-transition))
                                        (eq! micro/TBO (any-to-ram-with-padding---some-data---first-pbo))))
-                         (if-eq (force-bool (+ RZ_FIRST RZ_MDDL)) 1
+                         (if-eq (force-bin (+ RZ_FIRST RZ_MDDL)) 1
                                 (begin (will-inc! micro/TLO 1)
                                        (vanishes! (next micro/TBO))))
                          (if-eq RZ_MDDL 1 (eq! micro/INST MMIO_INST_RAM_VANISHES))

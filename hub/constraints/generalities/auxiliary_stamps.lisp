@@ -44,7 +44,7 @@
 
 (defconstraint   generalities---auxiliary-stamps---LOG_INFO_STAMP-increments ()
                  (begin
-                   (debug (any! (remained-constant! LOG_INFO_STAMP) (did-inc! LOG_INFO_STAMP 1)))
+                   (debug (or! (remained-constant! LOG_INFO_STAMP) (did-inc! LOG_INFO_STAMP 1)))
                    (if-not-zero (remained-constant! HUB_STAMP)
                                 (did-inc! LOG_INFO_STAMP (* PEEK_AT_STACK stack/LOG_INFO_FLAG)))))
 

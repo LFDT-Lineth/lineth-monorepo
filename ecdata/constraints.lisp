@@ -19,19 +19,19 @@
 ;;    decoding and shorthands     ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defun (is_ecrecover)
-  (force-bool (+ IS_ECRECOVER_DATA IS_ECRECOVER_RESULT)))
+  (force-bin (+ IS_ECRECOVER_DATA IS_ECRECOVER_RESULT)))
 
 (defun (is_ecadd)
-  (force-bool (+ IS_ECADD_DATA IS_ECADD_RESULT)))
+  (force-bin (+ IS_ECADD_DATA IS_ECADD_RESULT)))
 
 (defun (is_ecmul)
-  (force-bool (+ IS_ECMUL_DATA IS_ECMUL_RESULT)))
+  (force-bin (+ IS_ECMUL_DATA IS_ECMUL_RESULT)))
 
 (defun (is_ecpairing)
-  (force-bool (+ IS_ECPAIRING_DATA IS_ECPAIRING_RESULT)))
+  (force-bin (+ IS_ECPAIRING_DATA IS_ECPAIRING_RESULT)))
 
 (defun (flag_sum)
-  (force-bool (+ (is_ecrecover) (is_ecadd) (is_ecmul) (is_ecpairing))))
+  (force-bin (+ (is_ecrecover) (is_ecadd) (is_ecmul) (is_ecpairing))))
 
 (defun (address_sum)
   (+ (* ECRECOVER (is_ecrecover))
@@ -50,19 +50,19 @@
      (* PHASE_ECPAIRING_RESULT IS_ECPAIRING_RESULT)))
 
 (defun (is_data)
-  (force-bool (+ IS_ECRECOVER_DATA IS_ECADD_DATA IS_ECMUL_DATA IS_ECPAIRING_DATA)))
+  (force-bin (+ IS_ECRECOVER_DATA IS_ECADD_DATA IS_ECMUL_DATA IS_ECPAIRING_DATA)))
 
 (defun (is_result)
-  (force-bool (+ IS_ECRECOVER_RESULT IS_ECADD_RESULT IS_ECMUL_RESULT IS_ECPAIRING_RESULT)))
+  (force-bin (+ IS_ECRECOVER_RESULT IS_ECADD_RESULT IS_ECMUL_RESULT IS_ECPAIRING_RESULT)))
 
 (defun (transition_to_data)
-  (force-bool (* (- 1 (is_data)) (next (is_data)))))
+  (force-bin (* (- 1 (is_data)) (next (is_data)))))
 
 (defun (transition_to_result)
-  (force-bool (* (- 1 (is_result)) (next (is_result)))))
+  (force-bin (* (- 1 (is_result)) (next (is_result)))))
 
 (defun (transition_bit)
-  (force-bool (+ (transition_to_data) (transition_to_result))))
+  (force-bin (+ (transition_to_data) (transition_to_result))))
 
 (defconstraint padding ()
   (if-zero STAMP
@@ -98,7 +98,7 @@
 
 (defconstraint pair-of-points-constancy ()
   (if-not-zero ACC_PAIRINGS
-               (if (will-remain-constant! ACC_PAIRINGS)
+               (if-zero (will-remain-constant! ACC_PAIRINGS)
                    (will-remain-constant! ACCPC))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -290,7 +290,7 @@
 
 (defconstraint stamp-increment-sanity-check ()
   (begin
-    (debug (any! (will-remain-constant! STAMP) (will-inc! STAMP 1))))) ;; implied by the constraint below
+    (debug (or! (will-remain-constant! STAMP) (will-inc! STAMP 1))))) ;; implied by the constraint below
 
 (defconstraint stamp-increment ()
   (eq! (next STAMP) (+ STAMP (transition_to_data))))

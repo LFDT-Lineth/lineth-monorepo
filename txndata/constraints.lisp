@@ -6,13 +6,13 @@
                          else))
 
 ;; sum of transaction type flags
-(defun (tx-type-sum) (force-bool (+ TYPE0
-                                    TYPE1
-                                    TYPE2)))
+(defun (tx-type-sum) (force-bin (+ TYPE0
+                                   TYPE1
+                                   TYPE2)))
 
 ;; constraint imposing that STAMP[i + 1] ∈ { STAMP[i], 1 + STAMP[i] }
 (defpurefun (stamp-progression STAMP)
-            (vanishes! (any! (will-remain-constant! STAMP) (will-inc! STAMP 1))))
+            (or! (will-remain-constant! STAMP) (will-inc! STAMP 1)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                     ;;
@@ -177,20 +177,20 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defun (setting_phase_numbers)
-  (begin (= (shift PHASE_RLP_TXN 0) COMMON_RLP_TXN_PHASE_NUMBER_0)
-         (= (shift PHASE_RLP_TXN 1) COMMON_RLP_TXN_PHASE_NUMBER_1)
-         (= (shift PHASE_RLP_TXN 2) COMMON_RLP_TXN_PHASE_NUMBER_2)
-         (= (shift PHASE_RLP_TXN 3) COMMON_RLP_TXN_PHASE_NUMBER_3)
-         (= (shift PHASE_RLP_TXN 4) COMMON_RLP_TXN_PHASE_NUMBER_4)
-         (= (shift PHASE_RLP_TXN 5) COMMON_RLP_TXN_PHASE_NUMBER_5)
+  (begin (eq! (shift PHASE_RLP_TXN 0) COMMON_RLP_TXN_PHASE_NUMBER_0)
+         (eq! (shift PHASE_RLP_TXN 1) COMMON_RLP_TXN_PHASE_NUMBER_1)
+         (eq! (shift PHASE_RLP_TXN 2) COMMON_RLP_TXN_PHASE_NUMBER_2)
+         (eq! (shift PHASE_RLP_TXN 3) COMMON_RLP_TXN_PHASE_NUMBER_3)
+         (eq! (shift PHASE_RLP_TXN 4) COMMON_RLP_TXN_PHASE_NUMBER_4)
+         (eq! (shift PHASE_RLP_TXN 5) COMMON_RLP_TXN_PHASE_NUMBER_5)
          ;;
-         (if-not-zero TYPE0 (= (shift PHASE_RLP_TXN 6) TYPE_0_RLP_TXN_PHASE_NUMBER_6))
+         (if-not-zero TYPE0 (eq! (shift PHASE_RLP_TXN 6) TYPE_0_RLP_TXN_PHASE_NUMBER_6))
          ;;
-         (if-not-zero TYPE1 (= (shift PHASE_RLP_TXN 6) TYPE_1_RLP_TXN_PHASE_NUMBER_6))
-         (if-not-zero TYPE1 (= (shift PHASE_RLP_TXN 7) TYPE_1_RLP_TXN_PHASE_NUMBER_7))
+         (if-not-zero TYPE1 (eq! (shift PHASE_RLP_TXN 6) TYPE_1_RLP_TXN_PHASE_NUMBER_6))
+         (if-not-zero TYPE1 (eq! (shift PHASE_RLP_TXN 7) TYPE_1_RLP_TXN_PHASE_NUMBER_7))
          ;;
-         (if-not-zero TYPE2 (= (shift PHASE_RLP_TXN 6) TYPE_2_RLP_TXN_PHASE_NUMBER_6))
-         (if-not-zero TYPE2 (= (shift PHASE_RLP_TXN 7) TYPE_2_RLP_TXN_PHASE_NUMBER_7))))
+         (if-not-zero TYPE2 (eq! (shift PHASE_RLP_TXN 6) TYPE_2_RLP_TXN_PHASE_NUMBER_6))
+         (if-not-zero TYPE2 (eq! (shift PHASE_RLP_TXN 7) TYPE_2_RLP_TXN_PHASE_NUMBER_7))))
 
 (defun (data_transfer)
   (begin (eq! (tx_type)                       (+ TYPE1 (* 2 TYPE2))) ;;(+ (* 0 TYPE0) (* 1 TYPE1) (* 2 TYPE2))
@@ -226,7 +226,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defconstraint   euc-and-wcp-exclusivity ()
-                 (vanishes! (* EUC_FLAG WCP_FLAG)))
+                 (or! (eq! EUC_FLAG 0) (eq! WCP_FLAG 0)))
 
 (defun (small-call-to-LT row arg1 arg2)
   (begin (eq! (shift WCP_FLAG row) 1)
@@ -300,12 +300,12 @@
 (defconstraint    comparison---final-refund-counter-vs-refund-limit    (:guard (first-row-of-new-transaction))
                   (small-call-to-LT    row-offset---effective-refund-comparison REF_CNT (refund_limit)))
 
-(defun (get_full_refund) (force-bool (shift RES row-offset---effective-refund-comparison)))
+(defun (get_full_refund) (force-bin (shift RES row-offset---effective-refund-comparison)))
 
 (defconstraint    comparison---detect-empty-data-in-transaction    (:guard (first-row-of-new-transaction))
                   (small-call-to-ISZERO    row-offset---detecting-empty-call-data-comparison (data_size)))
 
-(defun (nonzero-data-size) (force-bool (- 1 (shift RES row-offset---detecting-empty-call-data-comparison))))
+(defun (nonzero-data-size) (force-bin (- 1 (shift RES row-offset---detecting-empty-call-data-comparison))))
 
 (defconstraint    comparison---comparing-the-maximum-gas-price-against-the-basefee    (:guard (first-row-of-new-transaction))
                   (begin
@@ -327,7 +327,7 @@
 (defconstraint    comparison-for-type-2---computing-the-effective-gas-price         (:guard    (*   (first-row-of-new-transaction)   TYPE2))
                   (small-call-to-LEQ   row-offset---computing-effective-gas-price-comparison (+ (max_priority_fee) BASEFEE) (max_fee)))
 
-(defun (get_full_tip) (force-bool (shift RES row-offset---computing-effective-gas-price-comparison)))
+(defun (get_full_tip) (force-bin (shift RES row-offset---computing-effective-gas-price-comparison)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                                    ;;

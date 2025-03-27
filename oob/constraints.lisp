@@ -176,7 +176,7 @@
                   (vanishes! (+ (lookup-sum 0) (flag-sum))))))
 
 (defconstraint stamp-increments ()
-  (any! (remained-constant! STAMP) (did-inc! STAMP 1)))
+  (or! (remained-constant! STAMP) (did-inc! STAMP 1)))
 
 (defconstraint counter-reset ()
   (if-not-zero (remained-constant! STAMP)
@@ -696,7 +696,7 @@
   (call-to-ISZERO 2 0 (prc-modexp-xbs---xbs-lo)))
 
 (defconstraint additional-prc-modexp-xbs (:guard (* (assumption---fresh-new-stamp) (prc-modexp-xbs---standard-precondition)))
-  (begin (vanishes! (* (prc-modexp-xbs---compute-max) (- 1 (prc-modexp-xbs---compute-max))))
+  (begin (or! (eq! 0 (prc-modexp-xbs---compute-max)) (eq! 1 (prc-modexp-xbs---compute-max)))
          (eq! (prc-modexp-xbs---compo-to_512) 1)))
 
 (defconstraint prc-modexp-xbs---justify-hub-predictions (:guard (* (assumption---fresh-new-stamp) (prc-modexp-xbs---standard-precondition)))

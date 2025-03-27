@@ -12,10 +12,10 @@
                             (vanishes! PC_NEW))))
 
 (defconstraint   generalities---program-counter---PC_NEW-vanishes-upon-stack-exception (:guard PEEK_AT_STACK)
-                 (if-not-zero    (force-bool   (+    stack/SUX    stack/SOX))
+                 (if-not-zero    (force-bin   (+    stack/SUX    stack/SOX))
                                  (vanishes!    PC_NEW)))
 
 (defconstraint   generalities---program-counter---automatic-update (:guard PEEK_AT_STACK)
-                 (if-zero    (force-bool   (+    stack/SUX    stack/SOX))
+                 (if-zero    (force-bin   (+    stack/SUX    stack/SOX))
                              (if-zero    (force-bin (+ stack/PUSHPOP_FLAG stack/JUMP_FLAG))
                                          (eq! PC_NEW (+ 1 PC)))))

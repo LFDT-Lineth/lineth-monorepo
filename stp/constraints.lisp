@@ -8,7 +8,7 @@
   )
 
 (defconstraint exclusive-flags ()
-  (vanishes! (* WCP_FLAG MOD_FLAG)))
+  (or! (eq! WCP_FLAG 0) (eq! MOD_FLAG 0)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                         ;;
@@ -50,7 +50,7 @@
   (vanishes! STAMP))
 
 (defconstraint stamp-increments ()
-  (vanishes! (any! (will-inc! STAMP 1) (will-remain-constant! STAMP))))
+  (or! (will-inc! STAMP 1) (will-remain-constant! STAMP)))
 
 (defconstraint initial-vanishings ()
   (if-zero STAMP

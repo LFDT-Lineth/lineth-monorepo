@@ -9,7 +9,7 @@
   (vanishes! STAMP))
 
 (defconstraint no-stamp-no-things ()
-  (if-zero (force-bool (+ RECIPE_1 RECIPE_2))
+  (if-zero (force-bin (+ RECIPE_1 RECIPE_2))
            (begin (debug (vanishes! ct))
                   (vanishes! ADDR_HI)
                   (vanishes! ADDR_LO)
@@ -23,9 +23,8 @@
                   (debug (vanishes! BIT1)))))
 
 (defconstraint stamp-increments ()
-  (vanishes! (* (~ (- STAMP (prev STAMP)))
-                (~ (- STAMP
-                      (+ (prev STAMP) 1))))))
+  (or! (eq! STAMP (prev STAMP))
+       (eq! STAMP (+ (prev STAMP) 1))))
 
 (defconstraint ct-reset ()
   (if-not-zero (remained-constant! STAMP)
@@ -62,8 +61,8 @@
 
 (defpurefun (ct-incrementing ct X)
   (if-not-zero ct
-               (vanishes! (* (~ (remained-constant! X))
-                             (~ (did-inc! X 1))))))
+               (or! (remained-constant! X)
+                    (did-inc! X 1))))
 
 (defconstraint ct-incrementings ()
   (begin (ct-incrementing ct INDEX)

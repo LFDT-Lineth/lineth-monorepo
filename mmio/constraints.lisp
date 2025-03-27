@@ -22,30 +22,30 @@
   (eq! MMIO_INSTRUCTION (mmio_inst_weight)))
 
 (defun (fast-op-flag-sum)
-  (force-bool (+ IS_LIMB_VANISHES
-                 IS_LIMB_TO_RAM_TRANSPLANT
-                 IS_RAM_TO_LIMB_TRANSPLANT
-                 IS_RAM_TO_RAM_TRANSPLANT
-                 IS_RAM_VANISHES)))
+  (force-bin (+ IS_LIMB_VANISHES
+                IS_LIMB_TO_RAM_TRANSPLANT
+                IS_RAM_TO_LIMB_TRANSPLANT
+                IS_RAM_TO_RAM_TRANSPLANT
+                IS_RAM_VANISHES)))
 
 (defconstraint fast-op ()
   (eq! FAST (fast-op-flag-sum)))
 
 (defun (slow-op-flag-sum)
-  (force-bool (+ IS_LIMB_TO_RAM_ONE_TARGET
-                 IS_LIMB_TO_RAM_TWO_TARGET
-                 IS_RAM_TO_LIMB_ONE_SOURCE
-                 IS_RAM_TO_LIMB_TWO_SOURCE
-                 IS_RAM_TO_RAM_PARTIAL
-                 IS_RAM_TO_RAM_TWO_TARGET
-                 IS_RAM_TO_RAM_TWO_SOURCE
-                 IS_RAM_EXCISION)))
+  (force-bin (+ IS_LIMB_TO_RAM_ONE_TARGET
+                IS_LIMB_TO_RAM_TWO_TARGET
+                IS_RAM_TO_LIMB_ONE_SOURCE
+                IS_RAM_TO_LIMB_TWO_SOURCE
+                IS_RAM_TO_RAM_PARTIAL
+                IS_RAM_TO_RAM_TWO_TARGET
+                IS_RAM_TO_RAM_TWO_SOURCE
+                IS_RAM_EXCISION)))
 
 (defconstraint slow-op ()
   (eq! SLOW (slow-op-flag-sum)))
 
 (defun (op-flag-sum)
-  (force-bool (+ (fast-op-flag-sum) (slow-op-flag-sum))))
+  (force-bin (+ (fast-op-flag-sum) (slow-op-flag-sum))))
 
 (defconstraint no-stamp-no-op ()
   (eq! (op-flag-sum) (~ STAMP)))
@@ -63,13 +63,13 @@
   (eq! (weighted-exo-sum) (* (instruction-may-provide-exo-sum) EXO_SUM)))
 
 (defun (instruction-may-provide-exo-sum)
-  (force-bool (+ IS_LIMB_VANISHES
-                 IS_LIMB_TO_RAM_TRANSPLANT
-                 IS_LIMB_TO_RAM_ONE_TARGET
-                 IS_LIMB_TO_RAM_TWO_TARGET
-                 IS_RAM_TO_LIMB_TRANSPLANT
-                 IS_RAM_TO_LIMB_ONE_SOURCE
-                 IS_RAM_TO_LIMB_TWO_SOURCE)))
+  (force-bin (+ IS_LIMB_VANISHES
+                IS_LIMB_TO_RAM_TRANSPLANT
+                IS_LIMB_TO_RAM_ONE_TARGET
+                IS_LIMB_TO_RAM_TWO_TARGET
+                IS_RAM_TO_LIMB_TRANSPLANT
+                IS_RAM_TO_LIMB_ONE_SOURCE
+                IS_RAM_TO_LIMB_TWO_SOURCE)))
 
 ;;
 ;; Heartbeat
@@ -78,7 +78,7 @@
   (vanishes! MMIO_STAMP))
 
 (defconstraint stamp-increment ()
-  (any! (will-remain-constant! STAMP) (will-inc! STAMP 1)))
+  (or! (will-remain-constant! STAMP) (will-inc! STAMP 1)))
 
 (defconstraint stamp-reset-ct ()
   (if-not-zero (- STAMP (prev STAMP))

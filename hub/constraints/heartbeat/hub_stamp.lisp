@@ -11,8 +11,8 @@
                              (vanishes! HUB_STAMP)))
 
 (defconstraint   heartbeat---hub-stamp---0-1-increments ()
-                 (any! (will-remain-constant! HUB_STAMP)
-                       (will-inc!             HUB_STAMP 1)))
+                 (or! (will-remain-constant! HUB_STAMP)
+                      (will-inc!             HUB_STAMP 1)))
 
 (defconstraint   heartbeat---hub-stamp---jumps-at-transaction-phase-boundaries ()
                  (let ((tx_phase_transition_bit (+ (* (- 1 TX_SKIP) (next TX_SKIP))

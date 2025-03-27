@@ -31,18 +31,18 @@
                     (vanishes! [ stack/STACK_ITEM_STAMP    k ])))
 
 ;; current row
-(defun (set-frst-row-stack-item-stamp                    k offset   ) (= [ stack/STACK_ITEM_STAMP  k ] (+ (* MULTIPLIER___STACK_STAMP HUB_STAMP) offset)  ))
-(defun (pop-frst-row-stack-item                          k          ) (= [ stack/STACK_ITEM_POP    k ] 1                                 ))
-(defun (push-frst-row-stack-item                         k          ) (= [ stack/STACK_ITEM_POP    k ] 0                                 ))
-(defun (inc-frst-row-stack-item-X-height-by-Y            k increment) (= [ stack/STACK_ITEM_HEIGHT k ] (+ HEIGHT increment)              ))
-(defun (dec-frst-row-stack-item-X-height-by-Y            k decrement) (= [ stack/STACK_ITEM_HEIGHT k ] (- HEIGHT decrement)              )) ;; ""
+(defun (set-frst-row-stack-item-stamp                    k offset   ) (eq! [ stack/STACK_ITEM_STAMP  k ] (+ (* MULTIPLIER___STACK_STAMP HUB_STAMP) offset)  ))
+(defun (pop-frst-row-stack-item                          k          ) (eq! [ stack/STACK_ITEM_POP    k ] 1                                 ))
+(defun (push-frst-row-stack-item                         k          ) (eq! [ stack/STACK_ITEM_POP    k ] 0                                 ))
+(defun (inc-frst-row-stack-item-X-height-by-Y            k increment) (eq! [ stack/STACK_ITEM_HEIGHT k ] (+ HEIGHT increment)              ))
+(defun (dec-frst-row-stack-item-X-height-by-Y            k decrement) (eq! [ stack/STACK_ITEM_HEIGHT k ] (- HEIGHT decrement)              )) ;; ""
 
 ;; next row
-(defun (set-scnd-row-stack-item-stamp                    k offset   ) (= (next [ stack/STACK_ITEM_STAMP  k ]) (+ (* MULTIPLIER___STACK_STAMP HUB_STAMP) offset)  ))
-(defun (pop-scnd-row-stack-item                          k          ) (= (next [ stack/STACK_ITEM_POP    k ]) 1                                 ))
-(defun (push-scnd-row-stack-item                         k          ) (= (next [ stack/STACK_ITEM_POP    k ]) 0                                 ))
-(defun (inc-scnd-row-stack-item-X-height-by-Y            k increment) (= (next [ stack/STACK_ITEM_HEIGHT k ]) (+ HEIGHT increment)              ))
-(defun (dec-scnd-row-stack-item-X-height-by-Y            k decrement) (= (next [ stack/STACK_ITEM_HEIGHT k ]) (- HEIGHT decrement)              )) ;; ""
+(defun (set-scnd-row-stack-item-stamp                    k offset   ) (eq! (next [ stack/STACK_ITEM_STAMP  k ]) (+ (* MULTIPLIER___STACK_STAMP HUB_STAMP) offset)  ))
+(defun (pop-scnd-row-stack-item                          k          ) (eq! (next [ stack/STACK_ITEM_POP    k ]) 1                                 ))
+(defun (push-scnd-row-stack-item                         k          ) (eq! (next [ stack/STACK_ITEM_POP    k ]) 0                                 ))
+(defun (inc-scnd-row-stack-item-X-height-by-Y            k increment) (eq! (next [ stack/STACK_ITEM_HEIGHT k ]) (+ HEIGHT increment)              ))
+(defun (dec-scnd-row-stack-item-X-height-by-Y            k decrement) (eq! (next [ stack/STACK_ITEM_HEIGHT k ]) (- HEIGHT decrement)              )) ;; ""
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                         ;;
@@ -61,7 +61,7 @@
 (defun (stack-pattern-0-0)
     (begin
      (empty-stack-pattern)
-     (debug (= HEIGHT_NEW HEIGHT))))
+     (debug (eq! HEIGHT_NEW HEIGHT))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                          ;;
@@ -82,7 +82,7 @@
                     ;; stack item 4:
                     (empty-stack-item 4)
                     ;; height update;
-                    (debug (=  HEIGHT_NEW  (- HEIGHT 1)))))
+                    (debug (eq!  HEIGHT_NEW  (- HEIGHT 1)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                          ;;
@@ -105,7 +105,7 @@
                     ;; stack item 4:
                     (empty-stack-item 4)
                     ;; height update;
-                    (debug (=  HEIGHT_NEW  (- HEIGHT 2)))))
+                    (debug (eq!  HEIGHT_NEW  (- HEIGHT 2)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                          ;;
@@ -126,7 +126,7 @@
                     (push-frst-row-stack-item                    4)
                     (set-frst-row-stack-item-stamp               4 0)
                     ;; height update;
-                    (debug (=  HEIGHT_NEW  (+  HEIGHT 1)))))
+                    (debug (eq!  HEIGHT_NEW  (+  HEIGHT 1)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                          ;;
@@ -149,7 +149,7 @@
                     (push-frst-row-stack-item                    4)
                     (set-frst-row-stack-item-stamp               4 1)
                     ;; height update;
-                    (debug (=  HEIGHT_NEW  HEIGHT))))
+                    (debug (eq!  HEIGHT_NEW  HEIGHT))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                           ;;
@@ -174,7 +174,7 @@
                     (push-frst-row-stack-item                    4)
                     (set-frst-row-stack-item-stamp               4 2)
                     ;; height update;
-                    (debug (=  HEIGHT_NEW  (- HEIGHT  1)))))
+                    (debug (eq!  HEIGHT_NEW  (- HEIGHT  1)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                           ;;
@@ -201,7 +201,7 @@
                     (push-frst-row-stack-item                    4)
                     (set-frst-row-stack-item-stamp               4 3)
                     ;; height update;
-                    (debug (=  HEIGHT_NEW  (- HEIGHT  2)))))
+                    (debug (eq!  HEIGHT_NEW  (- HEIGHT  2)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                                 ;;
@@ -221,10 +221,10 @@
                     (empty-stack-item 3)
                     ;; stack item 4:
                     (dec-frst-row-stack-item-X-height-by-Y       4 b)
-                    (= [ stack/STACK_ITEM_POP                    4 ]  b)
+                    (eq! [ stack/STACK_ITEM_POP                    4 ]  b)
                     (set-frst-row-stack-item-stamp               4 1)
                     ;; height update;
-                    (debug (=  HEIGHT_NEW  (- HEIGHT b b)))))
+                    (debug (eq!  HEIGHT_NEW  (- HEIGHT b b)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                               ;;
@@ -242,18 +242,18 @@
                     (dec-frst-row-stack-item-X-height-by-Y       2 param)
                     (push-frst-row-stack-item                    2)
                     (set-frst-row-stack-item-stamp               2 1)
-                    (=  [ stack/STACK_ITEM_VALUE_HI 2 ]  [ stack/STACK_ITEM_VALUE_HI 1 ])
-                    (=  [ stack/STACK_ITEM_VALUE_LO 2 ]  [ stack/STACK_ITEM_VALUE_LO 1 ])
+                    (eq!  [ stack/STACK_ITEM_VALUE_HI 2 ]  [ stack/STACK_ITEM_VALUE_HI 1 ])
+                    (eq!  [ stack/STACK_ITEM_VALUE_LO 2 ]  [ stack/STACK_ITEM_VALUE_LO 1 ])
                     ;; stack item 3:
                     (empty-stack-item 3)
                     ;; stack item 4:
                     (inc-frst-row-stack-item-X-height-by-Y       4 1)
                     (push-frst-row-stack-item                    4)
                     (set-frst-row-stack-item-stamp               4 2)
-                    (=  [ stack/STACK_ITEM_VALUE_HI 4 ]  [ stack/STACK_ITEM_VALUE_HI 1 ])
-                    (=  [ stack/STACK_ITEM_VALUE_LO 4 ]  [ stack/STACK_ITEM_VALUE_LO 1 ])
+                    (eq!  [ stack/STACK_ITEM_VALUE_HI 4 ]  [ stack/STACK_ITEM_VALUE_HI 1 ])
+                    (eq!  [ stack/STACK_ITEM_VALUE_LO 4 ]  [ stack/STACK_ITEM_VALUE_LO 1 ])
                     ;; height update;
-                    (debug (=  HEIGHT_NEW  (+  HEIGHT  1)))))
+                    (debug (eq!  HEIGHT_NEW  (+  HEIGHT  1)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                                ;;
@@ -275,16 +275,16 @@
                     (dec-frst-row-stack-item-X-height-by-Y       3 param)
                     (push-frst-row-stack-item                    3)
                     (set-frst-row-stack-item-stamp               3 2)
-                    (=  [ stack/STACK_ITEM_VALUE_HI 3 ]  [ stack/STACK_ITEM_VALUE_HI 2 ])
-                    (=  [ stack/STACK_ITEM_VALUE_LO 3 ]  [ stack/STACK_ITEM_VALUE_LO 2 ])
+                    (eq!  [ stack/STACK_ITEM_VALUE_HI 3 ]  [ stack/STACK_ITEM_VALUE_HI 2 ])
+                    (eq!  [ stack/STACK_ITEM_VALUE_LO 3 ]  [ stack/STACK_ITEM_VALUE_LO 2 ])
                     ;; stack item 4:
                     (inc-frst-row-stack-item-X-height-by-Y       4 0)
                     (push-frst-row-stack-item                    4)
                     (set-frst-row-stack-item-stamp               4 3)
-                    (=  [ stack/STACK_ITEM_VALUE_HI 4 ]  [ stack/STACK_ITEM_VALUE_HI 1 ])
-                    (=  [ stack/STACK_ITEM_VALUE_LO 4 ]  [ stack/STACK_ITEM_VALUE_LO 1 ])
+                    (eq!  [ stack/STACK_ITEM_VALUE_HI 4 ]  [ stack/STACK_ITEM_VALUE_HI 1 ])
+                    (eq!  [ stack/STACK_ITEM_VALUE_LO 4 ]  [ stack/STACK_ITEM_VALUE_LO 1 ])
                     ;; height update;
-                    (debug (=  HEIGHT_NEW  HEIGHT))))
+                    (debug (eq!  HEIGHT_NEW  HEIGHT))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                                                ;;
@@ -312,7 +312,7 @@
                     ;; stack item 4:
                     (empty-stack-item 4)
                     ;; height update;
-                    (debug (=  HEIGHT_NEW  (- HEIGHT  param 2)))
+                    (debug (eq!  HEIGHT_NEW  (- HEIGHT  param 2)))
                     ;; stack item 5:
                     (will-eq! [ stack/STACK_ITEM_HEIGHT 1 ]       (* (b-sum-1 b1 b2 b3 b4) (- HEIGHT 2)))
                     (will-eq! [ stack/STACK_ITEM_POP    1 ]          (b-sum-1 b1 b2 b3 b4))
@@ -351,11 +351,11 @@
                     (pop-frst-row-stack-item                     3)
                     (set-frst-row-stack-item-stamp               3 3)
                     ;; stack item 4:
-                    (=  [ stack/STACK_ITEM_HEIGHT   4 ]  (* b HEIGHT))
-                    (=  [ stack/STACK_ITEM_POP      4 ]     b)
-                    (=  [ stack/STACK_ITEM_STAMP    4 ]  (* b MULTIPLIER___STACK_STAMP HUB_STAMP))
+                    (eq!  [ stack/STACK_ITEM_HEIGHT   4 ]  (* b HEIGHT))
+                    (eq!  [ stack/STACK_ITEM_POP      4 ]     b)
+                    (eq!  [ stack/STACK_ITEM_STAMP    4 ]  (* b MULTIPLIER___STACK_STAMP HUB_STAMP))
                     ;; height update;
-                    (debug (=  HEIGHT_NEW  (- HEIGHT  3 b)))
+                    (debug (eq!  HEIGHT_NEW  (- HEIGHT  3 b)))
                     ))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -383,7 +383,7 @@
                     (pop-frst-row-stack-item                     4)
                     (set-frst-row-stack-item-stamp               4 6)
                     ;; height update;
-                    (debug (=  HEIGHT_NEW  (- HEIGHT  5 b)))
+                    (debug (eq!  HEIGHT_NEW  (- HEIGHT  5 b)))
                     ;; stack item 5;
                     (dec-scnd-row-stack-item-X-height-by-Y       1 0)
                     (pop-scnd-row-stack-item                     1)
@@ -426,7 +426,7 @@
                     ;; stack item 4:
                     (empty-stack-item 4)
                     ;; height update;
-                    (debug (= HEIGHT_NEW (- HEIGHT 2 b)))
+                    (debug (eq! HEIGHT_NEW (- HEIGHT 2 b)))
                     ;; stack item 5;
                     (next (empty-stack-item 1))
                     ;; stack item 6;

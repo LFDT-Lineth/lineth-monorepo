@@ -35,7 +35,7 @@
 
 (defconstraint    gas-columns---setting-GAS_NEXT-outside-of-CALLs-and-CREATEs (:perspective stack)
                   (if-zero   XAHOY
-                             (if-zero   (force-bool  (+  stack/CREATE_FLAG  stack/CALL_FLAG))
+                             (if-zero   (force-bin  (+  stack/CREATE_FLAG  stack/CALL_FLAG))
                                         (eq!  GAS_NEXT (- GAS_ACTUAL GAS_COST)))))
 
 (defun    (hub-stamp-transition-within-TX_EXEC)   (*   (will-remain-constant! HUB_STAMP)

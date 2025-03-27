@@ -1,15 +1,15 @@
 (defun (is-data)
-  (force-bool (+ shakiradata.IS_KECCAK_DATA
-                 ;; IS_KECCAK_RESULT
-                 shakiradata.IS_SHA2_DATA
-                 ;; IS_SHA2_RESULT
-                 shakiradata.IS_RIPEMD_DATA
-                 ;; IS_RIPEMD_RESULT
-                 )))
+  (force-bin (+ shakiradata.IS_KECCAK_DATA
+                ;; IS_KECCAK_RESULT
+                shakiradata.IS_SHA2_DATA
+                ;; IS_SHA2_RESULT
+                shakiradata.IS_RIPEMD_DATA
+                ;; IS_RIPEMD_RESULT
+                )))
 
 (defun (is-first-data-row)
-  (force-bool (* (is-data)
-                 (- 1 (prev (is-data))))))
+  (force-bin (* (is-data)
+                (- 1 (prev (is-data))))))
 
 (deflookup
   shakiradata-into-wcp-increasing-id

@@ -31,7 +31,7 @@
 ;;                         stack/OOGX))
 
 (defconstraint   block-data-instruction-setting-the-stack-pattern       (:guard (block-data-standard-hypothesis))
-                 (if-zero   (force-bool   [stack/DEC_FLAG   1])
+                 (if-zero   (force-bin   [stack/DEC_FLAG   1])
                             (stack-pattern-0-1)
                             (stack-pattern-1-1)))
 

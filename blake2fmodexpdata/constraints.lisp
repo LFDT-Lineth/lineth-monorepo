@@ -51,14 +51,14 @@
                   (vanishes! (next INDEX)))))
 
 (defun (stamp-increment)
-  (force-bool (+ (* (- 1 IS_MODEXP_BASE) (next IS_MODEXP_BASE))
+  (force-bin  (+ (* (- 1 IS_MODEXP_BASE) (next IS_MODEXP_BASE))
                  (* (- 1 IS_BLAKE_DATA) (next IS_BLAKE_DATA)))))
 
 (defconstraint stamp-increases ()
   (will-inc! STAMP (stamp-increment)))
 
 (defun (transition-bit)
-  (force-bool (+ (* IS_MODEXP_BASE (next IS_MODEXP_EXPONENT))
+  (force-bin  (+ (* IS_MODEXP_BASE (next IS_MODEXP_EXPONENT))
                  (* IS_MODEXP_EXPONENT (next IS_MODEXP_MODULUS))
                  (* IS_MODEXP_MODULUS (next IS_MODEXP_RESULT))
                  (* IS_MODEXP_RESULT

@@ -9,16 +9,16 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                 (begin
                     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-                    (=  (+ (* a_1 b_0) (* a_0 b_1))
+                    (eq!  (+ (* a_1 b_0) (* a_0 b_1))
                         (+ (* THETA2 alpha) (* THETA h_1) h_0))
                     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-                    (=  (+ (* a_3 b_0) (* a_2 b_1) (* a_1 b_2) (* a_0 b_3))
+                    (eq!  (+ (* a_3 b_0) (* a_2 b_1) (* a_1 b_2) (* a_0 b_3))
                         (+ (* THETA2 beta) (* THETA h_3) h_2))
                     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-                    (=  (+ (* a_0 b_0) (* THETA h_0))
+                    (eq!  (+ (* a_0 b_0) (* THETA h_0))
                         (+ (* THETA2 eta) (* THETA p_1) p_0))
                     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-                    (=  (+ eta h_1 (* THETA alpha) (* a_2 b_0) (* a_1 b_1) (* a_0 b_2) (* THETA h_2))
+                    (eq!  (+ eta h_1 (* THETA alpha) (* a_2 b_0) (* a_1 b_1) (* a_0 b_2) (* THETA h_2))
                         (+ (* THETA2 mu) (* THETA p_3) p_2))))
 
 
@@ -35,12 +35,12 @@
                         (if-not-zero (- ct MMEDIUMMO)
                             (if-not-zero (- 1 x)            ; (see REMARK)
                                 (if-not-zero (next x)       ; (see REMARK)
-                                    (= cst bytes))))
+                                    (eq! cst bytes))))
                         (if-eq ct MMEDIUMMO
                             (begin
                                 (if-not-zero (- 1 x)        ; (see REMARK)
-                                    (= cst bytes))
-                                (= cst (bit-decomposition-of-byte bits))))))
+                                    (eq! cst bytes))
+                                (eq! cst (bit-decomposition-of-byte bits))))))
 ;; REMARK:
 ;; within the scope of prepare-lower-bound-on-two-adicity
 ;; the running-total applies so that x and y are forced to
@@ -67,6 +67,5 @@
                                 (vanishes! sumx)))
                         (if-not-zero (- ct MMEDIUMMO)
                             (begin
-                             (vanishes! (* (will-remain-constant! x)
-                                          (will-inc! x 1)))
+                             (or! (will-remain-constant! x) (will-inc! x 1))
                              (will-eq! sumx (+ sumx (next x)))))))

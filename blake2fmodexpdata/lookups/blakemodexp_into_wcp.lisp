@@ -1,6 +1,6 @@
 (defun (blake2fmodexpdata-into-wcp-oob-into-wcp-activation-flag)
-  (force-bool (* (~ blake2fmodexpdata.STAMP)
-                 (- blake2fmodexpdata.STAMP (prev blake2fmodexpdata.STAMP)))))
+  (force-bin (* (~ blake2fmodexpdata.STAMP)
+                (- blake2fmodexpdata.STAMP (prev blake2fmodexpdata.STAMP)))))
 
 (deflookup
   blake2fmodexpdata-into-wcp

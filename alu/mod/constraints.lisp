@@ -67,9 +67,9 @@
                           (* THETA2 (beta))))
 
 ;; alisases for decoding inst
-(defun   (flag_sum)      (force-bool (+ IS_SMOD IS_MOD IS_SDIV IS_DIV)))
+(defun   (flag_sum)      (force-bin (+ IS_SMOD IS_MOD IS_SDIV IS_DIV)))
 (defun   (weight_sum)    (+ (* EVM_INST_SMOD IS_SMOD) (* EVM_INST_MOD IS_MOD) (* EVM_INST_SDIV IS_SDIV) (* EVM_INST_DIV IS_DIV)))
-(defun   (signed_inst)   (force-bool (+ IS_SMOD IS_SDIV)))
+(defun   (signed_inst)   (force-bin (+ IS_SMOD IS_SDIV)))
 
 ;; bit decompositions of the most significant bytes
 (defun   (bit-dec-msb1)   (+ (* 128 (shift MSB_1 -7))
@@ -92,12 +92,12 @@
 
 (defun (set-negative zHi zLo yHi yLo)
   (if-not-zero yLo
-               (begin (= zHi (- THETA2 yHi 1))
-                      (= zLo (- THETA2 yLo)))
+               (begin (eq! zHi (- THETA2 yHi 1))
+                      (eq! zLo (- THETA2 yLo)))
                (begin (vanishes! zLo)
                       (if-zero (* yHi (- THETA_SQUARED_OVER_TWO yHi))
-                               (= zHi yHi)
-                               (= zHi (- THETA2 yHi))))))
+                               (eq! zHi yHi)
+                               (eq! zHi (- THETA2 yHi))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                                ;;
@@ -121,7 +121,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defconstraint oli-and-mli-exclusivity ()
-  (eq! (force-bool (+ OLI MLI))
+  (eq! (force-bin (+ OLI MLI))
        (flag_sum)))
 
 (defconstraint set-oli-and-mli (:guard STAMP)
@@ -141,7 +141,7 @@
   (vanishes! STAMP))
 
 (defconstraint heartbeat ()
-  (begin (* (will-remain-constant! STAMP) (will-inc! STAMP 1))
+  (begin (or! (will-remain-constant! STAMP) (will-inc! STAMP 1))
          (if-not-zero (will-remain-constant! STAMP)
                       (vanishes! (next CT)))
          (if-eq OLI 1 (will-inc! STAMP 1))
@@ -231,17 +231,17 @@
 
 (defconstraint target-constraints (:guard STAMP)
   (if-eq CT MMEDIUMMO
-         (begin (= ARG_1_HI
+         (begin (eq! ARG_1_HI
                    (+ (* THETA (ARG1_3)) (ARG1_2)))
-                (= ARG_2_HI
+                (eq! ARG_2_HI
                    (+ (* THETA (ARG2_3)) (ARG2_2)))
                 ;
-                (= (shift BYTE_1_3 -7) (bit-dec-msb1))
-                (= (shift BYTE_2_3 -7) (bit-dec-msb2))
+                (eq! (shift BYTE_1_3 -7) (bit-dec-msb1))
+                (eq! (shift BYTE_2_3 -7) (bit-dec-msb2))
                 ;
-                (= (+ (* (B_0) (Q_1)) (* (B_1) (Q_0)))
+                (eq! (+ (* (B_0) (Q_1)) (* (B_1) (Q_0)))
                    (+ (* THETA2 (alpha)) (* THETA (H_1)) (H_0)))
-                (= (+ (* (B_0) (Q_3)) (* (B_1) (Q_2)) (* (B_2) (Q_1)) (* (B_3) (Q_0)))
+                (eq! (+ (* (B_0) (Q_3)) (* (B_1) (Q_2)) (* (B_2) (Q_1)) (* (B_3) (Q_0)))
                    (H_2))
                 (vanishes! (+ (* (B_1) (Q_3))
                               (* (B_2) (Q_2))
@@ -270,11 +270,11 @@
                 (eq! (+ (Delta_0) (lt_0))
                      (* (- (* 2 (lt_0)) 1)
                         (- (B_0) (R_0))))
-                (if-eq-else (B_3) (R_3) (= (eq_3) 1) (vanishes! (eq_3)))
-                (if-eq-else (B_2) (R_2) (= (eq_2) 1) (vanishes! (eq_2)))
-                (if-eq-else (B_1) (R_1) (= (eq_1) 1) (vanishes! (eq_1)))
-                (if-eq-else (B_0) (R_0) (= (eq_0) 1) (vanishes! (eq_0)))
-                (= 1
+                (if-eq-else (B_3) (R_3) (eq! (eq_3) 1) (vanishes! (eq_3)))
+                (if-eq-else (B_2) (R_2) (eq! (eq_2) 1) (vanishes! (eq_2)))
+                (if-eq-else (B_1) (R_1) (eq! (eq_1) 1) (vanishes! (eq_1)))
+                (if-eq-else (B_0) (R_0) (eq! (eq_0) 1) (vanishes! (eq_0)))
+                (eq! 1
                    (+ (lt_3)
                       (* (eq_3) (lt_2))
                       (* (eq_3) (eq_2) (lt_1))

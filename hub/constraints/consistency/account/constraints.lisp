@@ -28,7 +28,7 @@
 
 (defconstraint account-consistency---FIRST-AGAIN-FINAL---automatic-vanishing ()
                (begin
-                 (if-zero (force-bool acp_PEEK_AT_ACCOUNT)
+                 (if-zero (force-bin acp_PEEK_AT_ACCOUNT)
                           (vanishes! (+
                                        acp_FIRST_IN_TXN   acp_FIRST_IN_BLK   acp_FIRST_IN_CNF
                                        acp_AGAIN_IN_TXN   acp_AGAIN_IN_BLK   acp_AGAIN_IN_CNF
@@ -43,8 +43,8 @@
 
 
 (defconstraint    account-consistency---FIRST-AGAIN-FINAL---first-account-row ()
-                  (if-zero    (force-bool     (prev acp_PEEK_AT_ACCOUNT))
-                              (if-not-zero    (force-bool    acp_PEEK_AT_ACCOUNT)
+                  (if-zero    (force-bin      (prev acp_PEEK_AT_ACCOUNT))
+                              (if-not-zero    (force-bin    acp_PEEK_AT_ACCOUNT)
                                               (if-not-zero   acp_PEEK_AT_ACCOUNT
                                                              (eq!    (account-consistency---transition-sum)
                                                                      3)))))
@@ -78,7 +78,7 @@
 
 (defconstraint    account-consistency---FIRST-AGAIN-FINAL---final-row-with-room-to-spare ()
                   (if-not-zero (prev acp_PEEK_AT_ACCOUNT)
-                               (if-zero    (force-bool    acp_PEEK_AT_ACCOUNT)
+                               (if-zero    (force-bin    acp_PEEK_AT_ACCOUNT)
                                            (eq!    3
                                                    (account-consistency---transition-sum)))))
 
@@ -225,8 +225,8 @@
 (defconstraint    account-consistency---other---monotony-of-deployment-number
                   (:guard    acp_PEEK_AT_ACCOUNT)
                   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-                  (any!    (eq!   acp_DEPLOYMENT_NUMBER_NEW    acp_DEPLOYMENT_NUMBER)
-                           (eq!   acp_DEPLOYMENT_NUMBER_NEW    (+    1    acp_DEPLOYMENT_NUMBER))))
+                  (or!    (eq!   acp_DEPLOYMENT_NUMBER_NEW    acp_DEPLOYMENT_NUMBER)
+                          (eq!   acp_DEPLOYMENT_NUMBER_NEW    (+    1    acp_DEPLOYMENT_NUMBER))))
 
 
 (defconstraint    account-consistency---other---vanishing-constraints-upon-trivial-deployments
