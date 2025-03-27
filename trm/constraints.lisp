@@ -6,98 +6,131 @@
 ;;                     ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; 1
-(defconstraint first-row (:domain {0})
-  (vanishes! STAMP))
+(defconstraint first-row (:domain {0}) ;; ""
+  (vanishes! IOMF))
+
+(defconstraint iomf-increment ()
+ (or! (will-remain-constant! IOMF) (will-inc! IOMF 1)))
 
 ;; 3
-(defconstraint null-stamp-null-columns ()
-  (if-zero STAMP
+(defconstraint automatic-vanishing-constraints-along-padding-rows ()
+  (if-zero IOMF
            (begin (vanishes! RAW_ADDRESS_HI)
                   (vanishes! RAW_ADDRESS_LO)
                   (vanishes! TRM_ADDRESS_HI)
                   (vanishes! IS_PRECOMPILE)
-                  (debug (vanishes! CT))
-                  (debug (vanishes! BYTE_HI))
-                  (debug (vanishes! BYTE_LO)))))
+                  (vanishes! (next CT))
+                  (debug (vanishes! CT)))))
 
-(defconstraint heartbeat ()
-  (begin  ;; 2
-         (or! (will-remain-constant! STAMP) (will-inc! STAMP 1))
-         ;; 4
-         (if-not-zero (- (next STAMP) STAMP)
-                      (vanishes! (next CT)))
-         ;; 5
-         (if-not-zero STAMP
-                      (if-eq-else CT LLARGEMO (will-inc! STAMP 1) (will-inc! CT 1)))))
+(defconstraint constraining-FIRST (:guard IOMF)
+               (begin
+                 (if-zero            CT (eq! FIRST 1))
+                 (debug (if-not-zero CT (eq! FIRST 0)))))
 
-;; 6
-(defconstraint last-row (:domain {-1})
-  (if-not-zero STAMP
-               (eq! CT LLARGEMO)))
+(defconstraint counter-cycle-constraints (:guard IOMF)
+               (if-zero (- TRM_CT_MAX CT)
+                        ;; CT = CT MAX
+                        (vanishes! (next CT))
+                        ;; CT != CT MAX
+                        (will-inc! CT 1)))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;                          ;;
-;;    2.2 stamp constancy   ;;
-;;                          ;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defconstraint stamp-constancies ()
-  (begin (stamp-constancy STAMP RAW_ADDRESS_HI)
-         (stamp-constancy STAMP RAW_ADDRESS_LO)
-         (stamp-constancy STAMP IS_PRECOMPILE)
-         (stamp-constancy STAMP TRM_ADDRESS_HI)))
+(defconstraint finalization-constraint (:domain {-1} :guard IOMF) ;;""
+               (eq! CT TRM_CT_MAX))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;                           ;;
-;;    2.3 PBIT constraints   ;;
-;;                           ;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defconstraint pbit-constraint ()
-  (begin (if-not-zero CT
-                      (or! (remained-constant! PBIT) (did-inc! PBIT 1)))
-         (if-eq CT LLARGEMO
-                (eq! 1
-                     (+ (shift PBIT (- 0 4))
-                        (shift PBIT (- 0 3)))))))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                              ;;
+;;    2.2 counter constancies   ;;
+;;                              ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;                             ;;
-;;    2.4 Byte Decomposition   ;;
-;;                             ;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defconstraint byte-decompositions ()
-  (begin (byte-decomposition CT ACC_HI BYTE_HI)
-         (byte-decomposition CT ACC_LO BYTE_LO)
-         (byte-decomposition CT ACC_T (* BYTE_HI PBIT))))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;                            ;;
-;;    1.5 target constraints  ;;
-;;                            ;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defconstraint target-constraint ()
-  (if-eq CT LLARGEMO
-         (begin (eq! RAW_ADDRESS_HI ACC_HI)
-                (eq! RAW_ADDRESS_LO ACC_LO)
-                (eq! TRM_ADDRESS_HI ACC_T))))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;                                  ;;
-;;    2.4 Identifying precompiles   ;;
-;;                                  ;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defconstraint is-prec-constraint ()
-  (if-eq CT LLARGEMO
-         (if-zero (+ TRM_ADDRESS_HI (- RAW_ADDRESS_LO BYTE_LO))
-                  (if-zero BYTE_LO
-                           (vanishes! IS_PRECOMPILE)
-                           (eq! (+ (* (- 9 BYTE_LO)
-                                      (- (* 2 IS_PRECOMPILE) 1))
-                                   (- IS_PRECOMPILE 1))
-                                (reduce +
-                                        (for k
-                                             [0 : 7]
-                                             (* (^ 2 k)
-                                                (shift ONE (- 0 k)))))))
-                  (vanishes! IS_PRECOMPILE))))
+(defconstraint counter-constancies ()
+  (begin (counter-constancy CT RAW_ADDRESS_HI)
+         (counter-constancy CT RAW_ADDRESS_LO)
+         (counter-constancy CT TRM_ADDRESS_HI)
+         (counter-constancy CT IS_PRECOMPILE)
+         ))
 
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                       ;;
+;;    2.4 computations   ;;
+;;                       ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defun (wcpcall   offset
+                  inst
+                  arg1hi
+                  arg1lo
+                  arg2hi
+                  arg2lo)
+  (begin (eq! (shift INST     offset) inst)
+         (eq! (shift ARG_1_HI offset) arg1hi)
+         (eq! (shift ARG_1_LO offset) arg1lo)
+         (eq! (shift ARG_2_HI offset) arg2hi)
+         (eq! (shift ARG_2_LO offset) arg2lo)))
+
+(defun (result-is-true offset)
+  (eq! (shift RES offset) 1))
+
+;;
+;; Processing row n°0
+;;
+(defconstraint trimmed-address-is-20-bytes-integer (:guard FIRST)
+               (begin
+                 (wcpcall ROW_OFFSET_ADDRESS
+                          EVM_INST_LT
+                          TRM_ADDRESS_HI
+                          RAW_ADDRESS_LO
+                          TWOFIFTYSIX_TO_THE_FOUR
+                          0)
+                 (result-is-true ROW_OFFSET_ADDRESS)))
+
+;;
+;; Processing row n°1
+;;
+(defconstraint leading-bytes-is-twelve-bytes (:guard FIRST)
+  (begin
+  (eq!        (shift  INST      ROW_OFFSET_ADDRESS_TRM) WCP_INST_LEQ)
+  (vanishes!  (shift  ARG_1_HI  ROW_OFFSET_ADDRESS_TRM))
+;;            (shift  ARG_1_LO  ROW_OFFSET_ADDRESS_TRM)   ;; it is what it ... later on: (leading-bytes)
+  (vanishes!  (shift  ARG_2_HI  ROW_OFFSET_ADDRESS_TRM))
+  (eq!        (shift  ARG_2_LO  ROW_OFFSET_ADDRESS_TRM) TWOFIFTYSIX_TO_THE_TWELVE_MO)
+  (result-is-true ROW_OFFSET_ADDRESS_TRM)))
+
+(defun  (leading-bytes)  (shift ARG_1_LO ROW_OFFSET_ADDRESS_TRM))
+
+(defconstraint address-decomposition-constraint (:guard FIRST)
+               (eq! RAW_ADDRESS_HI
+                    (+ (* TWOFIFTYSIX_TO_THE_FOUR (leading-bytes))
+                       TRM_ADDRESS_HI)))
+
+;;
+;; Processing row n°2
+;;
+(defconstraint iszero-check-for-address (:guard FIRST)
+  (begin
+  (eq!  (shift  INST      ROW_OFFSET_NON_ZERO_ADDR)  EVM_INST_ISZERO)
+  (eq!  (shift  ARG_1_HI  ROW_OFFSET_NON_ZERO_ADDR)  TRM_ADDRESS_HI)
+  (eq!  (shift  ARG_1_LO  ROW_OFFSET_NON_ZERO_ADDR)  RAW_ADDRESS_LO)
+  ))
+
+(defun (address-is-zero)    (shift  RES  ROW_OFFSET_NON_ZERO_ADDR))
+(defun (address-is-nonzero) (- 1 (address-is-zero)))
+
+;;
+;; Processing row n°3
+;;
+(defconstraint address-is-prc-range (:guard FIRST)
+               (wcpcall   ROW_OFFSET_PRC_ADDR
+                          WCP_INST_LEQ
+                          TRM_ADDRESS_HI
+                          RAW_ADDRESS_LO
+                          0
+                          MAX_PRC_ADDRESS))
+
+(defun (address-at-most-max-PRC)    (shift  RES  ROW_OFFSET_PRC_ADDR))
+
+(defconstraint justifying-the-precompile-flag (:guard FIRST)
+               (eq! IS_PRECOMPILE
+                    (* (address-is-nonzero)
+                       (address-at-most-max-PRC))))
