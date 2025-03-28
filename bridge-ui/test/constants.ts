@@ -1,4 +1,3 @@
-import "dotenv/config";
 import { formatEther, formatUnits } from "viem";
 
 export const METAMASK_SEED_PHRASE = process.env.E2E_TEST_SEED_PHRASE;
@@ -15,6 +14,10 @@ export const LINEA_SEPOLIA_NETWORK = {
 };
 
 export const TEST_URL = "http://localhost:3000/";
-export const SEPOLIA_NETWORK_NAME = "Sepolia";
-export const WEI_AMOUNT = formatEther(BigInt(1)).toString();
-export const USDC_AMOUNT = formatUnits(BigInt(1), 6).toString();
+export const WEI_AMOUNT = formatEther(1n).toString();
+// Must be > minimum CCTP fee
+export const USDC_AMOUNT = formatUnits(10n, 6).toString();
+export const ETH_SYMBOL = "ETH";
+export const USDC_SYMBOL = "USDC";
+
+export const POLLING_INTERVAL = 250;

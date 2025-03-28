@@ -21,7 +21,7 @@ export default function ListTransaction({ transactions }: Props) {
   };
   return (
     <>
-      <ul className={styles["list"]}>
+      <ul className={styles["list"]} data-testid="native-bridge-transaction-history-list">
         {transactions.map((item, index) => (
           <Transaction key={`transaction-${item.bridgingTx}-${index}`} onClick={handleClickTransaction} {...item} />
         ))}

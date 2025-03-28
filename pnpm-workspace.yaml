@@ -6,3 +6,4 @@ packages:
   - 'operations/**'
   - 'bridge-ui/**'
   - 'ts-libs/**'
+  - '!contracts/lib/**'

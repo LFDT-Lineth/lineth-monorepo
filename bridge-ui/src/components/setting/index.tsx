@@ -3,13 +3,17 @@ import styles from "./setting.module.scss";
 import clsx from "clsx";
 import SettingIcon from "@/assets/icons/setting.svg";
 import ToggleSwitch from "@/components/ui/toggle-switch";
-import { useEffect, useRef, useState } from "react";
+import { HTMLAttributes, useEffect, useRef, useState } from "react";
 import CurrencyDropdown from "@/components/bridge/currency-dropdown";
 import { useConfigStore, useChainStore, useFormStore } from "@/stores";
 import { useChains } from "@/hooks";
 import { ChainLayer } from "@/types";
 
-export default function Setting() {
+interface SettingProps extends HTMLAttributes<HTMLDivElement> {
+  "data-testid": string;
+}
+
+export default function Setting(props: SettingProps) {
   const dropdownRef = useRef<HTMLDivElement | null>(null);
   const [isDropdownVisible, setDropdownVisible] = useState<boolean>(false);
   const setShowTestnet = useConfigStore.useSetShowTestnet();
@@ -56,6 +60,7 @@ export default function Setting() {
             [styles["visible"]]: isDropdownVisible,
           })}
           onClick={toggleDropdown}
+          data-testid={props["data-testid"]}
         >
           <SettingIcon />
         </div>
@@ -76,6 +81,7 @@ export default function Setting() {
                 onChange={(checked) => {
                   setShowTestnet(checked);
                 }}
+                data-testid="native-bridge-test-network-toggle"
               />
             </li>
           </ul>

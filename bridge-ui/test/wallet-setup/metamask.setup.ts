@@ -1,5 +1,6 @@
-import { MetaMask, defineWalletSetup, getExtensionId } from "@synthetixio/synpress";
 import { LINEA_SEPOLIA_NETWORK, METAMASK_PASSWORD, METAMASK_SEED_PHRASE, TEST_PRIVATE_KEY } from "../constants";
+import { defineWalletSetup } from "@synthetixio/synpress";
+import { MetaMask, getExtensionId } from "@synthetixio/synpress/playwright";
 
 export default defineWalletSetup(METAMASK_PASSWORD, async (context, walletPage) => {
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -8,7 +9,6 @@ export default defineWalletSetup(METAMASK_PASSWORD, async (context, walletPage) 
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
   //@ts-ignore
   const metamask = new MetaMask(context, walletPage, METAMASK_PASSWORD, extensionId);
-
   await metamask.importWallet(METAMASK_SEED_PHRASE);
   await metamask.importWalletFromPrivateKey(TEST_PRIVATE_KEY);
 

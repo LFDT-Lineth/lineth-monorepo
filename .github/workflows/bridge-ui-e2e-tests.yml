@@ -24,28 +24,41 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # Use for testing workflow only (and not publish to Docker)
+      - uses: actions/cache@v4.2.0
+        with:
+          path: |
+            ~/.npm
+            ~/.cache/ms-playwright
+            ~/_work/.pnpm-store/v3
+            ${{ github.workspace }}/bridge-ui/.next/cache
+            ${{ github.workspace }}/bridge-ui/.cache-synpress
+          key: ${{ runner.os }}-bridge-ui-${{ hashFiles('**/pnpm-lock.yaml') }}-${{ hashFiles('**/bridge-ui/src/**/*.js', '**/bridge-ui/src/**/*.ts', '**/bridge-ui/src/**/*.tsx') }}
+          restore-keys: |
+            ${{ runner.os }}-bridge-ui-${{ hashFiles('**/pnpm-lock.yaml') }}-
+
       - name: Setup nodejs environment
         uses: ./.github/actions/setup-nodejs
         with:
-          node-version: 18.17.0
+          node-version: 20.17.0
           pnpm-install-options: '--frozen-lockfile --prefer-offline'
 
       - name: Install Playwright
-        run: pnpm dlx playwright@1.45.3 install --with-deps
+        run: pnpm dlx playwright@1.51.1 install --with-deps chromium
 
       - name: Build Bridge UI
-        run: pnpm run -F bridge-ui build;
+        run: pnpm run -F bridge-ui build
         env:
           NEXT_PUBLIC_WALLET_CONNECT_ID: ${{ secrets.PUBLIC_WALLET_CONNECT_ID }}
           NEXT_PUBLIC_INFURA_ID: ${{ secrets.PUBLIC_BRIDGE_UI_INFURA_ID }}
-          NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID: ${{ secrets.PUBLIC_DYNAMIC_ENVIRONMENT_ID }}
+          NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID: ${{ secrets.PUBLIC_DYNAMIC_SANDBOX_ENVIRONMENT_ID }}
           NEXT_PUBLIC_LIFI_API_KEY: ${{ secrets.PUBLIC_LIFI_API_KEY }}
 
       - name: Install linux dependencies
         run: |
           sudo apt-get install --no-install-recommends -y xvfb
 
-      - name: Build synpress cache
+      - name: Initialize Metamask testing fixture
         run: xvfb-run pnpm run -F bridge-ui build:cache
         env:
           E2E_TEST_PRIVATE_KEY: ${{ secrets.BRIDGE_UI_E2E_TESTS_PRIVATE_KEY }}
@@ -53,9 +66,21 @@ jobs:
           E2E_TEST_WALLET_PASSWORD: "TestPassword!"
           NEXT_PUBLIC_INFURA_ID: ${{ secrets.PUBLIC_BRIDGE_UI_INFURA_ID }}
 
-      - name: Run tests
+      - name: Run unit tests
+        run: DOTENV_CONFIG_PATH=.env.production pnpm run -F bridge-ui test:unit
+        env:
+          # Can run unit tests in parallel
+          CI: "false"
+          NEXT_PUBLIC_INFURA_ID: ${{ secrets.PUBLIC_BRIDGE_UI_INFURA_ID }}
+          NEXT_PUBLIC_LIFI_API_KEY: "placeholder"
+          NEXT_PUBLIC_WALLET_CONNECT_ID: "placeholder"
+          NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID: "placeholder"
+
+      # Prerequisite - Testing wallet must have >0 ETH and USDC on Sepolia
+      - name: Run E2E tests
         run: xvfb-run pnpm run -F bridge-ui test:e2e:headful
         env:
+          # Do not run E2E tests in parallel. Especially blockchain tx where nonces can collide.
           CI: "true"
           E2E_TEST_PRIVATE_KEY: ${{ secrets.BRIDGE_UI_E2E_TESTS_PRIVATE_KEY }}
           E2E_TEST_SEED_PHRASE: "test test test test test test test test test test test junk"

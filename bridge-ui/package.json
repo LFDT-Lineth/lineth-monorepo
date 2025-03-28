@@ -7,17 +7,20 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
-    "lint:fix": "pnpm run lint:ts:fix",
+    "lint": "next lint && pnpm run lint:test",
+    "lint:test": "npx eslint 'test/**/*.{js,ts}'",
+    "lint:fix": "pnpm run lint:ts:fix && pnpm run lint:test:ts:fix",
     "lint:ts:fix": "next lint --fix",
+    "lint:test:ts:fix": "npx eslint --fix 'test/**/*.{js,ts}'",
     "clean": "rimraf node_modules .next .next-env.d.ts",
     "install:playwright": "playwright install --with-deps",
     "build:cache": "synpress",
     "build:cache:force": "synpress --force",
     "build:cache:headless": "synpress --headless",
-    "test:e2e:headful": "playwright test",
-    "test:e2e:headless": "HEADLESS=true playwright test",
-    "test:e2e:headless:ui": "HEADLESS=true playwright test --ui"
+    "test:unit": "HEADLESS=true playwright test src",
+    "test:e2e:headful": "playwright test test/e2e",
+    "test:e2e:headless": "HEADLESS=true playwright test test/e2e",
+    "test:e2e:headless:ui": "HEADLESS=true playwright test test/e2e --ui"
   },
   "dependencies": {
     "@consensys/linea-sdk": "0.3.0",
@@ -48,15 +51,16 @@
     "zustand": "4.5.4"
   },
   "devDependencies": {
-    "@playwright/test": "1.45.3",
+    "@playwright/test": "1.51.1",
     "@svgr/webpack": "8.1.0",
-    "@synthetixio/synpress": "4.0.0-alpha.7",
+    "@synthetixio/synpress": "4.0.10",
     "@types/fs-extra": "11.0.4",
     "@types/react": "18.3.11",
     "@types/react-dom": "18.3.0",
     "autoprefixer": "10.4.21",
     "dotenv": "16.4.7",
     "eslint-config-next": "14.2.15",
+    "nock": "14.0.1",
     "postcss": "8.5.3"
   }
 }

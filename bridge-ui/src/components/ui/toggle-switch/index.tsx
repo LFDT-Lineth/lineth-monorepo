@@ -8,7 +8,7 @@ type Props = {
   disabled?: boolean;
 };
 
-export default function ToggleSwitch({ checked = false, onChange, disabled }: Props) {
+export default function ToggleSwitch({ checked = false, onChange, disabled, ...rest }: Props) {
   const [isChecked, setIsChecked] = useState<boolean>(checked);
 
   useEffect(() => {
@@ -32,7 +32,7 @@ export default function ToggleSwitch({ checked = false, onChange, disabled }: Pr
       })}
     >
       <input type="checkbox" checked={isChecked} onChange={handleChange} disabled={disabled} />
-      <span className={styles["slider"]} />
+      <span className={styles["slider"]} {...rest} />
     </label>
   );
 }

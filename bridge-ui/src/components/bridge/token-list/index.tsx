@@ -16,7 +16,11 @@ export default function TokenList() {
   return (
     <div className={styles["wrapper"]}>
       {token && (
-        <Button className={styles["token-select-btn"]} onClick={openModal}>
+        <Button
+          className={styles["token-select-btn"]}
+          onClick={openModal}
+          data-testid="native-bridge-open-token-list-modal"
+        >
           <Image src={token.image} alt={token.name} width={24} height={24} />
           {token.symbol}
           <CaretDownIcon className={styles["arrow-down-icon"]} />

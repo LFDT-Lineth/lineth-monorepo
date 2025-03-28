@@ -46,6 +46,7 @@ export default function TokenDetails({ isConnected, token, onTokenClick, tokenPr
   return (
     <button
       id={`token-details-${token.symbol}-btn`}
+      data-testid={`token-details-${token.symbol.toLowerCase()}-btn`}
       className={styles["token-wrapper"]}
       type="button"
       disabled={tokenNotFromCurrentLayer}
@@ -60,7 +61,7 @@ export default function TokenDetails({ isConnected, token, onTokenClick, tokenPr
       </div>
       {isConnected && !tokenNotFromCurrentLayer && (
         <div className={styles.rìght}>
-          <p className={styles["balance"]}>
+          <p className={styles["balance"]} data-testid={`token-details-${token.symbol.toLowerCase()}-amount`}>
             {formatBalance(formattedBalance, 8)} {token.symbol}
           </p>
           {totalValue !== undefined && (

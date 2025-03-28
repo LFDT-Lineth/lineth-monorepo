@@ -42,7 +42,7 @@ export default function ReceivedAmount() {
 
   return (
     <div className={styles.value}>
-      <p className={styles.crypto}>
+      <p className={styles.crypto} data-testid="received-amount-text">
         {formatBalance(receivedAmount, 6)} {token.symbol}
       </p>
       {tokenPrices?.[token[fromChain.layer].toLowerCase()] &&

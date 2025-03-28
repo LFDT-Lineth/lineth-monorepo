@@ -58,10 +58,11 @@ export default function BridgeForm() {
                 setIsBridgeOpen(false);
                 setIsTransactionHistoryOpen(true);
               }}
+              data-testid="native-bridge-transaction-history-icon"
             >
               <TransactionPaperIcon className={styles["transaction-icon"]} />
             </Button>
-            <Setting />
+            <Setting data-testid="native-bridge-form-settings-icon" />
           </div>
         </div>
         <div className={styles["content"]}>

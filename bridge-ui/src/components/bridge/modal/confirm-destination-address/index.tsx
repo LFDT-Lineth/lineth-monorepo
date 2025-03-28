@@ -32,7 +32,7 @@ export default function ConfirmDestinationAddress({ isModalOpen, recipient, onCl
           {formatAddress(recipient)}
           <UnionIcon />
         </Link>
-        <Button fullWidth onClick={onConfirm}>
+        <Button fullWidth onClick={onConfirm} data-testid="confirm-and-bridge-btn">
           Confirm and bridge
         </Button>
       </div>

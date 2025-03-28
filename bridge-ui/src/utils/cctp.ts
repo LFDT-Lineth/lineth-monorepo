@@ -1,13 +1,13 @@
-import MessageTransmitterV2 from "@/abis/MessageTransmitterV2.json";
+import MessageTransmitterV2 from "@/abis/MessageTransmitterV2.json" assert { type: "json" };
 import { CctpAttestationMessage, Chain, TransactionStatus, CctpAttestationMessageStatus } from "@/types";
 import { GetPublicClientReturnType } from "@wagmi/core";
 import { fetchCctpAttestationByTxHash, reattestCctpV2PreFinalityMessage } from "@/services/cctp";
 import { getPublicClient } from "@wagmi/core";
 import { config as wagmiConfig } from "@/lib/wagmi";
 import {
+  CCTP_V2_MESSAGE_HEADER_LENGTH,
   CCTP_V2_EXPIRATION_BLOCK_LENGTH,
   CCTP_V2_EXPIRATION_BLOCK_OFFSET,
-  CCTP_V2_MESSAGE_HEADER_LENGTH,
 } from "@/constants";
 
 const isCctpNonceUsed = async (
@@ -25,12 +25,14 @@ const isCctpNonceUsed = async (
   return resp === 1n;
 };
 
-const getCctpMessageExpiryBlock = (message: string): bigint | undefined => {
+export const getCctpMessageExpiryBlock = (message: string): bigint | undefined => {
   // See CCTPV2 message format at https://developers.circle.com/stablecoins/message-format
   const expiryInHex = message.substring(
     CCTP_V2_EXPIRATION_BLOCK_OFFSET,
     CCTP_V2_EXPIRATION_BLOCK_OFFSET + CCTP_V2_EXPIRATION_BLOCK_LENGTH,
   );
+  // Should be 32-bytes
+  if (expiryInHex.length !== 64) return undefined;
   const expiryInInt = parseInt(expiryInHex, 16);
   if (Number.isNaN(expiryInInt)) return undefined;
   // Return bigint because this is also returned by Viem client.getBlockNumber()

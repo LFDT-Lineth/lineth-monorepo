@@ -88,10 +88,10 @@ importers:
         version: 1.9.2
       next:
         specifier: 14.2.25
-        version: 14.2.25(@babel/core@7.25.7)(@playwright/test@1.45.3)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(sass@1.86.0)
+        version: 14.2.25(@babel/core@7.25.7)(@playwright/test@1.51.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(sass@1.86.0)
       next-seo:
         specifier: 6.6.0
-        version: 6.6.0(next@14.2.25(@babel/core@7.25.7)(@playwright/test@1.45.3)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(sass@1.86.0))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+        version: 6.6.0(next@14.2.25(@babel/core@7.25.7)(@playwright/test@1.51.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(sass@1.86.0))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       pino-pretty:
         specifier: 13.0.0
         version: 13.0.0
@@ -124,14 +124,14 @@ importers:
         version: 4.5.4(@types/react@18.3.11)(react@18.3.1)
     devDependencies:
       '@playwright/test':
-        specifier: 1.45.3
-        version: 1.45.3
+        specifier: 1.51.1
+        version: 1.51.1
       '@svgr/webpack':
         specifier: 8.1.0
         version: 8.1.0(typescript@5.4.5)
       '@synthetixio/synpress':
-        specifier: 4.0.0-alpha.7
-        version: 4.0.0-alpha.7(@playwright/test@1.45.3)(bufferutil@4.0.8)(playwright-core@1.45.3)(postcss@8.5.3)(ts-node@10.9.2(@types/node@22.7.5)(typescript@5.4.5))(typescript@5.4.5)(utf-8-validate@5.0.10)(zod@3.24.2)
+        specifier: 4.0.10
+        version: 4.0.10(@depay/solana-web3.js@1.27.0)(@depay/web3-blockchains@9.6.7)(@playwright/test@1.51.1)(bufferutil@4.0.8)(ethers@6.13.4(bufferutil@4.0.8)(utf-8-validate@5.0.10))(playwright-core@1.51.1)(postcss@8.5.3)(ts-node@10.9.2(@types/node@22.7.5)(typescript@5.4.5))(typescript@5.4.5)(utf-8-validate@5.0.10)(zod@3.24.2)
       '@types/fs-extra':
         specifier: 11.0.4
         version: 11.0.4
@@ -150,6 +150,9 @@ importers:
       eslint-config-next:
         specifier: 14.2.15
         version: 14.2.15(eslint@8.57.0)(typescript@5.4.5)
+      nock:
+        specifier: 14.0.1
+        version: 14.0.1
       postcss:
         specifier: 8.5.3
         version: 8.5.3
@@ -247,8 +250,6 @@ importers:
       yargs:
         specifier: 17.7.2
         version: 17.7.2
-
-  contracts/lib/forge-std: {}
 
   e2e:
     devDependencies:
@@ -1290,8 +1291,20 @@ packages:
     resolution: {integrity: sha512-RqVsm/aURJ2npRm0/0qr/GiMdBsGSbRA2GpzG75Vy7qODYScbYjA/CitMjhw9ktzGjiFN9oh/ooq9GBjPIhEdA==}
     engines: {node: '>=10'}
 
-  '@depay/web3-mock@14.17.0':
-    resolution: {integrity: sha512-0WCIpHqGUTPmOb5l3iN+4wCY+P3nHnGWd3uyWB+Wrt5DygS6MWI2b50gwtSCgYUCfgmEv9KlRuCnHDC4TDKCeA==}
+  '@depay/web3-client@10.18.6':
+    resolution: {integrity: sha512-JeUAZ04/dsIra1ao3mvqAdVhRf4U1YxSoH0mE+XxhcXPgLC7KQTzH6oCLp07tAmoxholEL2cf5Oo20n6q1fZ/w==}
+    engines: {node: '>=16'}
+    peerDependencies:
+      '@depay/solana-web3.js': ^1.25.1
+      '@depay/web3-blockchains': ^9.3.6
+      ethers: ^5.7.1
+
+  '@depay/web3-mock-evm@14.19.1':
+    resolution: {integrity: sha512-Gx5n87gwya5dGv4JwDdlJFWshLbM9nDj6co8Z25FTf7/xKsTUD1en971B2QweXqZJxYadnumOPb+n19lgRofpQ==}
+    engines: {node: '>=16'}
+
+  '@depay/web3-mock@14.19.1':
+    resolution: {integrity: sha512-bBM1J0EWDWXJKVPtzo8YrX7fbGwUATYWN8kaJniQU2z5V+UK3kVhjQi+en0JMF9cCjinkERK7MqoZLaYR+cb+Q==}
     engines: {node: '>=16'}
 
   '@dynamic-labs/assert-package-version@4.9.5':
@@ -2283,6 +2296,10 @@ packages:
     resolution: {integrity: sha512-z10PF9JV6SbjFq+/rYabM+8CVlMokgl8RFGvieSGNTmrkQanfHn+15XBrhG3BgUfvmTeSeyShfOHpG0i9zEdcg==}
     deprecated: Motion One for Vue is deprecated. Use Oku Motion instead https://oku-ui.com/motion
 
+  '@mswjs/interceptors@0.37.6':
+    resolution: {integrity: sha512-wK+5pLK5XFmgtH3aQ2YVvA3HohS3xqV/OxuVOdNx9Wpnz7VE/fnC+e1A7ln6LFYeck7gOJ/dsZV6OLplOtAJ2w==}
+    engines: {node: '>=18'}
+
   '@mui/core-downloads-tracker@6.4.8':
     resolution: {integrity: sha512-vjP4+A1ybyCRhDZC7r5EPWu/gLseFZxaGyPdDl94vzVvk6Yj6gahdaqcjbhkaCrJjdZj90m3VioltWPAnWF/zw==}
 
@@ -2669,6 +2686,15 @@ packages:
     peerDependencies:
       '@oclif/core': '>= 3.0.0'
 
+  '@open-draft/deferred-promise@2.2.0':
+    resolution: {integrity: sha512-CecwLWx3rhxVQF6V4bAgPS5t+So2sTbPgAzafKkVizyi7tlwpcFpdFqq+wqF2OwNBmqFuu6tOyouTuxgpMfzmA==}
+
+  '@open-draft/logger@0.3.0':
+    resolution: {integrity: sha512-X2g45fzhxH238HKO4xbSr7+wBS8Fvw6ixhTDuvLd5mqh6bJJCFAPwU9mPDxbcrRtfxv4u5IHCEH77BmxvXmmxQ==}
+
+  '@open-draft/until@2.1.0':
+    resolution: {integrity: sha512-U69T3ItWHvLwGg5eJ0n3I62nWuE6ilHlmz7zM0npLBRvPRd7e6NYmg54vvRtP5mZG7kZqZCFVdsTWo7BPtBujg==}
+
   '@openzeppelin/contracts-upgradeable@4.9.6':
     resolution: {integrity: sha512-m4iHazOsOCv1DgM7eD7GupTJ+NFVujRZt1wzddDPSVGpWdKq1SKkla5htKG7+IS4d2XOCtzkUNwRZ7Vq5aEUMA==}
 
@@ -2799,8 +2825,8 @@ packages:
     resolution: {integrity: sha512-cq8o4cWH0ibXh9VGi5P20Tu9XF/0fFXl9EUinr9QfTM7a7p0oTA4iJRCQWppXR1Pg8dSM0UCItCkPwsk9qWWYA==}
     engines: {node: ^12.20.0 || ^14.18.0 || >=16.0.0}
 
-  '@playwright/test@1.45.3':
-    resolution: {integrity: sha512-UKF4XsBfy+u3MFWEH44hva1Q8Da28G6RFtR2+5saw+jgAFQV5yYnB1fu68Mz7fO+5GJF3wgwAIs0UelU8TxFrA==}
+  '@playwright/test@1.51.1':
+    resolution: {integrity: sha512-nM+kEaTSAoVlXmMPH10017vn3FSiFqr/bh4fKg9vmAdMfd9SDqRZNvPSiAHADc/itWak+qPvMPZQOPwCBW7k7Q==}
     engines: {node: '>=18'}
     hasBin: true
 
@@ -3340,32 +3366,32 @@ packages:
   '@swc/helpers@0.5.5':
     resolution: {integrity: sha512-KGYxvIOXcceOAbEk4bi/dVLEK9z8sZ0uBB3Il5b1rhfClSpcX0yfRO0KmTkqR2cnQDymwLB+25ZyMzICg/cm/A==}
 
-  '@synthetixio/ethereum-wallet-mock@0.0.1-alpha.7':
-    resolution: {integrity: sha512-afyAVC2b39OC/mxfVeISFQ7TVleS15GYeCPte6VrdFYWi/2SXPml6myAZx9FlRqRlyaPLhRrtRRjdno44S6/6Q==}
+  '@synthetixio/ethereum-wallet-mock@0.0.11':
+    resolution: {integrity: sha512-J/8hyHoh5lG5vIQ9iNVApyKKRCMRMqEmuv97s6zZVmqe/gJR0+cSWW+mnYHXcIiWZ82WLYnr4TK4OssqZ/4C3w==}
     peerDependencies:
-      '@playwright/test': 1.44.0
+      '@playwright/test': '*'
 
-  '@synthetixio/synpress-cache@0.0.1-alpha.7':
-    resolution: {integrity: sha512-vIR8f4XMJSKsSezmloT8A0yuEZON+Ovbkoy/5ELcrfLFORW1Ssu2pjOioWGgQEVZBCdGTQ4wVIWmo8MbvCrAqA==}
+  '@synthetixio/synpress-cache@0.0.11':
+    resolution: {integrity: sha512-5blQD9RQ/LF6buuNAhok/ouHm0Ch4sNas40J7rWVXrim6UA5sCAHPFfSVdavKpBURGN8t6Zce2+uiZs0srbtwA==}
     hasBin: true
     peerDependencies:
-      playwright-core: 1.44.0
+      playwright-core: 1.48.2
 
-  '@synthetixio/synpress-core@0.0.1-alpha.7':
-    resolution: {integrity: sha512-El23vK/FlYiliT2JworRc8zXGVdUIvzxwzWtGMZwC/KOKy0RGgNA7rQfwc3VSPhp1ceUd4w3uIRtv6Ccjo8WbA==}
+  '@synthetixio/synpress-core@0.0.11':
+    resolution: {integrity: sha512-IZtA0KfG1qO0JJVzswTLT6VBmteut7NvqbUcVaEOL12FBPIaZCglyd7gdyTkUCWusp7sHuSA/Bysre0OaBnuQg==}
     peerDependencies:
-      '@playwright/test': 1.44.0
+      '@playwright/test': '*'
 
-  '@synthetixio/synpress-metamask@0.0.1-alpha.7':
-    resolution: {integrity: sha512-xzBsF5wnak25uw7ZO9RJEmCuMtT03W9pyDaEpO7T1VkDcZT8MBxKHs9vR4UKqHHd9IPKXc9EvsUJ/oSwW4saKQ==}
+  '@synthetixio/synpress-metamask@0.0.11':
+    resolution: {integrity: sha512-nYNtFYolyeus0WqTqEot6xikyHzSXb/bSK9NP4aQ5vhKFkT6KR+8EjC9G4QKZ/+lM0alBJfvu2BOLDnYtKEOAw==}
     peerDependencies:
-      '@playwright/test': 1.44.0
+      '@playwright/test': '*'
 
-  '@synthetixio/synpress@4.0.0-alpha.7':
-    resolution: {integrity: sha512-hdVV+LR/aCO+o7FyeJiFxJ+o797mDqNqkh+huz3Ic4LDbTW18HkLKwLwUzRKt8ngIOf60K/PFL9QyBLujTc76g==}
+  '@synthetixio/synpress@4.0.10':
+    resolution: {integrity: sha512-UXHGb9lylznEdXtDw5TYFR095XsMh5I2iqAHRUfaYgYRJlm+MQAlnFINqREt7g52VqFJ1EzyCeIgrs6Aufk+/g==}
     hasBin: true
     peerDependencies:
-      '@playwright/test': 1.44.0
+      '@playwright/test': '*'
 
   '@szmarczak/http-timer@4.0.6':
     resolution: {integrity: sha512-4BAffykYOgO+5nzBWYwE3W90sBgLJoUPRWWcL8wlyiM8IB8ipJz3UMJ9KXQd1RKQXpKp8Tutn80HZtWsu2u76w==}
@@ -6568,6 +6594,9 @@ packages:
     resolution: {integrity: sha512-5KoIu2Ngpyek75jXodFvnafB6DJgr3u8uuK0LEZJjrU19DrMD3EVERaR8sjz8CCGgpZvxPl9SuE1GMVPFHx1mw==}
     engines: {node: '>= 0.4'}
 
+  is-node-process@1.2.0:
+    resolution: {integrity: sha512-Vg4o6/fqPxIjtxgUH5QLJhwZ7gW5diGCVlXpuUfELC62CuxM1iHcRe51f2W1FDy04Ai4KJkagKjx3XaqyfRKXw==}
+
   is-number-object@1.0.7:
     resolution: {integrity: sha512-k1U0IRzLMo7ZlYIfzRu23Oh6MiIFasgpb9X76eqfFZAqwH44UI4KTBvBYIZ1dSL9ZzChTB9ShHfLkR4pdW5krQ==}
     engines: {node: '>= 0.4'}
@@ -7576,6 +7605,10 @@ packages:
     resolution: {integrity: sha512-WDD0bdg9mbq6F4mRxEYcPWwfA1vxd0mrvKOyxI7Xj/atfRHVeutzuWByG//jfm4uPzp0y4Kj051EORCBSQMycw==}
     engines: {node: '>=12.0.0'}
 
+  nock@14.0.1:
+    resolution: {integrity: sha512-IJN4O9pturuRdn60NjQ7YkFt6Rwei7ZKaOwb1tvUIIqTgeD0SDDAX3vrqZD4wcXczeEy/AsUXxpGpP/yHqV7xg==}
+    engines: {node: '>=18.20.0 <20 || >=20.12.1'}
+
   node-abi@3.68.0:
     resolution: {integrity: sha512-7vbj10trelExNjFSBm5kTvZXXa7pZyKWx9RCKIyqe6I9Ev3IzGpQoqBP3a+cOdxY+pWj6VkP28n/2wWysBHD/A==}
     engines: {node: '>=10'}
@@ -7884,6 +7917,9 @@ packages:
     resolution: {integrity: sha512-D2FR03Vir7FIu45XBY20mTb+/ZSWB00sjU9jdQXt83gDrI4Ztz5Fs7/yy74g2N5SVQY4xY1qDr4rNddwYRVX0g==}
     engines: {node: '>=0.10.0'}
 
+  outvariant@1.4.3:
+    resolution: {integrity: sha512-+Sl2UErvtsoajRDKCE5/dBz4DIvHXQQnAxtQTF04OJxY0+DyZXSo5P5Bb7XYWOh81syohlYL24hbDwxedPUJCA==}
+
   ox@0.6.7:
     resolution: {integrity: sha512-17Gk/eFsFRAZ80p5eKqv89a57uXjd3NgIf1CaXojATPBuujVc/fQSVhBeAU9JCRB+k7J50WQAyWTxK19T9GgbA==}
     peerDependencies:
@@ -8113,13 +8149,13 @@ packages:
   pkg-types@1.2.1:
     resolution: {integrity: sha512-sQoqa8alT3nHjGuTjuKgOnvjo4cljkufdtLMnO2LBP/wRwuDlo1tkaEdMxCRhyGRPacv/ztlZgDPm2b7FAmEvw==}
 
-  playwright-core@1.45.3:
-    resolution: {integrity: sha512-+ym0jNbcjikaOwwSZycFbwkWgfruWvYlJfThKYAlImbxUgdWFO2oW70ojPm4OpE4t6TAo2FY/smM+hpVTtkhDA==}
+  playwright-core@1.51.1:
+    resolution: {integrity: sha512-/crRMj8+j/Nq5s8QcvegseuyeZPxpQCZb6HNk3Sos3BlZyAknRjoyJPFWkpNn8v0+P3WiwqFF8P+zQo4eqiNuw==}
     engines: {node: '>=18'}
     hasBin: true
 
-  playwright@1.45.3:
-    resolution: {integrity: sha512-QhVaS+lpluxCaioejDZ95l4Y4jSFCsBvl2UZkpeXlzxmqS+aABr5c82YmfMHrL6x27nvrvykJAFpkzT2eWdJww==}
+  playwright@1.51.1:
+    resolution: {integrity: sha512-kkx+MB2KQRkyxjYPc3a0wLZZoDczmppyGJIvQ43l+aZihkaVvmu/21kiyaHeHjiFxjxNNFnUncKmcGIyOojsaw==}
     engines: {node: '>=18'}
     hasBin: true
 
@@ -8257,6 +8293,10 @@ packages:
 
   prop-types@15.8.1:
     resolution: {integrity: sha512-oj87CgZICdulUohogVAR7AjlC0327U4el4L6eAvOqCeudMDVU0NThNaV+b9Df4dXgSP1gXMTnPdhfe/2qDH5cg==}
+
+  propagate@2.0.1:
+    resolution: {integrity: sha512-vGrhOavPSTz4QVNuBNdcNXePNdNMaO1xj9yBeH1ScQPjk/rhg9sSlCXPhMkFuaNNW/syTvYqsnbIJxMBfRbbag==}
+    engines: {node: '>= 8'}
 
   proper-lockfile@4.1.2:
     resolution: {integrity: sha512-TjNPblN4BwAWMXU8s9AEz4JmQxnD1NNL7bNOY/AKUzyamc379FWASUhc/K1pL2noVb+XmZKLL68cjzLsiOAMaA==}
@@ -9042,6 +9082,9 @@ packages:
   streamsearch@1.1.0:
     resolution: {integrity: sha512-Mcc5wHehp9aXz1ax6bZUyY5afg9u2rv5cqQI3mRrYkGC8rW2hM02jWuwjtL++LS5qinSyhj2QfLyNsuc+VsExg==}
     engines: {node: '>=10.0.0'}
+
+  strict-event-emitter@0.5.1:
+    resolution: {integrity: sha512-vMgjE/GGEPEFnhFub6pa4FmJBRBVOLpIII2hvCZ8Kzb7K0hlHo7mQv6xYrBvCL2LtAIBwFUK8wvuJgTVSQ5MFQ==}
 
   strict-uri-encode@1.1.0:
     resolution: {integrity: sha512-R3f198pcvnB+5IpnBlRkphuE9n46WyVl8I39W/ZUTZLz4nqSP/oLYUrcnJrw462Ds8he4YKMov2efsTIw1BDGQ==}
@@ -11497,7 +11540,21 @@ snapshots:
 
   '@depay/web3-blockchains@9.6.7': {}
 
-  '@depay/web3-mock@14.17.0(bufferutil@4.0.8)(utf-8-validate@5.0.10)':
+  '@depay/web3-client@10.18.6(@depay/solana-web3.js@1.27.0)(@depay/web3-blockchains@9.6.7)(ethers@6.13.4(bufferutil@4.0.8)(utf-8-validate@5.0.10))':
+    dependencies:
+      '@depay/solana-web3.js': 1.27.0
+      '@depay/web3-blockchains': 9.6.7
+      ethers: 6.13.4(bufferutil@4.0.8)(utf-8-validate@5.0.10)
+
+  '@depay/web3-mock-evm@14.19.1(bufferutil@4.0.8)(utf-8-validate@5.0.10)':
+    dependencies:
+      '@depay/web3-blockchains': 9.6.7
+      ethers: 5.7.2(bufferutil@4.0.8)(utf-8-validate@5.0.10)
+    transitivePeerDependencies:
+      - bufferutil
+      - utf-8-validate
+
+  '@depay/web3-mock@14.19.1(bufferutil@4.0.8)(utf-8-validate@5.0.10)':
     dependencies:
       '@depay/solana-web3.js': 1.27.0
       '@depay/web3-blockchains': 9.6.7
@@ -13027,6 +13084,15 @@ snapshots:
       '@motionone/dom': 10.18.0
       tslib: 2.7.0
 
+  '@mswjs/interceptors@0.37.6':
+    dependencies:
+      '@open-draft/deferred-promise': 2.2.0
+      '@open-draft/logger': 0.3.0
+      '@open-draft/until': 2.1.0
+      is-node-process: 1.2.0
+      outvariant: 1.4.3
+      strict-event-emitter: 0.5.1
+
   '@mui/core-downloads-tracker@6.4.8': {}
 
   '@mui/icons-material@6.0.2(@mui/material@6.4.8(@emotion/react@11.14.0(@types/react@18.3.11)(react@18.3.1))(@emotion/styled@11.14.0(@emotion/react@11.14.0(@types/react@18.3.11)(react@18.3.1))(@types/react@18.3.11)(react@18.3.1))(@types/react@18.3.11)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(@types/react@18.3.11)(react@18.3.1)':
@@ -13408,6 +13474,15 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  '@open-draft/deferred-promise@2.2.0': {}
+
+  '@open-draft/logger@0.3.0':
+    dependencies:
+      is-node-process: 1.2.0
+      outvariant: 1.4.3
+
+  '@open-draft/until@2.1.0': {}
+
   '@openzeppelin/contracts-upgradeable@4.9.6': {}
 
   '@openzeppelin/contracts@4.9.6': {}
@@ -13558,9 +13633,9 @@ snapshots:
 
   '@pkgr/core@0.1.1': {}
 
-  '@playwright/test@1.45.3':
+  '@playwright/test@1.51.1':
     dependencies:
-      playwright: 1.45.3
+      playwright: 1.51.1
 
   '@pnpm/config.env-replace@1.1.0': {}
 
@@ -14448,19 +14523,24 @@ snapshots:
       '@swc/counter': 0.1.3
       tslib: 2.7.0
 
-  '@synthetixio/ethereum-wallet-mock@0.0.1-alpha.7(@playwright/test@1.45.3)(bufferutil@4.0.8)(typescript@5.4.5)(utf-8-validate@5.0.10)(zod@3.24.2)':
+  '@synthetixio/ethereum-wallet-mock@0.0.11(@depay/solana-web3.js@1.27.0)(@depay/web3-blockchains@9.6.7)(@playwright/test@1.51.1)(bufferutil@4.0.8)(ethers@6.13.4(bufferutil@4.0.8)(utf-8-validate@5.0.10))(typescript@5.4.5)(utf-8-validate@5.0.10)(zod@3.24.2)':
     dependencies:
-      '@depay/web3-mock': 14.17.0(bufferutil@4.0.8)(utf-8-validate@5.0.10)
-      '@playwright/test': 1.45.3
-      '@synthetixio/synpress-core': 0.0.1-alpha.7(@playwright/test@1.45.3)
+      '@depay/web3-client': 10.18.6(@depay/solana-web3.js@1.27.0)(@depay/web3-blockchains@9.6.7)(ethers@6.13.4(bufferutil@4.0.8)(utf-8-validate@5.0.10))
+      '@depay/web3-mock': 14.19.1(bufferutil@4.0.8)(utf-8-validate@5.0.10)
+      '@depay/web3-mock-evm': 14.19.1(bufferutil@4.0.8)(utf-8-validate@5.0.10)
+      '@playwright/test': 1.51.1
+      '@synthetixio/synpress-core': 0.0.11(@playwright/test@1.51.1)
       viem: 2.9.9(bufferutil@4.0.8)(typescript@5.4.5)(utf-8-validate@5.0.10)(zod@3.24.2)
     transitivePeerDependencies:
+      - '@depay/solana-web3.js'
+      - '@depay/web3-blockchains'
       - bufferutil
+      - ethers
       - typescript
       - utf-8-validate
       - zod
 
-  '@synthetixio/synpress-cache@0.0.1-alpha.7(playwright-core@1.45.3)(postcss@8.5.3)(ts-node@10.9.2(@types/node@22.7.5)(typescript@5.4.5))(typescript@5.4.5)':
+  '@synthetixio/synpress-cache@0.0.11(playwright-core@1.51.1)(postcss@8.5.3)(ts-node@10.9.2(@types/node@22.7.5)(typescript@5.4.5))(typescript@5.4.5)':
     dependencies:
       axios: 1.6.7
       chalk: 5.3.0
@@ -14469,7 +14549,7 @@ snapshots:
       fs-extra: 11.2.0
       glob: 10.3.10
       gradient-string: 2.0.2
-      playwright-core: 1.45.3
+      playwright-core: 1.51.1
       progress: 2.0.3
       tsup: 8.0.2(postcss@8.5.3)(ts-node@10.9.2(@types/node@22.7.5)(typescript@5.4.5))(typescript@5.4.5)
       unzipper: 0.10.14
@@ -14483,15 +14563,15 @@ snapshots:
       - ts-node
       - typescript
 
-  '@synthetixio/synpress-core@0.0.1-alpha.7(@playwright/test@1.45.3)':
+  '@synthetixio/synpress-core@0.0.11(@playwright/test@1.51.1)':
     dependencies:
-      '@playwright/test': 1.45.3
+      '@playwright/test': 1.51.1
 
-  '@synthetixio/synpress-metamask@0.0.1-alpha.7(@playwright/test@1.45.3)(bufferutil@4.0.8)(playwright-core@1.45.3)(postcss@8.5.3)(ts-node@10.9.2(@types/node@22.7.5)(typescript@5.4.5))(typescript@5.4.5)(utf-8-validate@5.0.10)':
+  '@synthetixio/synpress-metamask@0.0.11(@playwright/test@1.51.1)(bufferutil@4.0.8)(playwright-core@1.51.1)(postcss@8.5.3)(ts-node@10.9.2(@types/node@22.7.5)(typescript@5.4.5))(typescript@5.4.5)(utf-8-validate@5.0.10)':
     dependencies:
-      '@playwright/test': 1.45.3
-      '@synthetixio/synpress-cache': 0.0.1-alpha.7(playwright-core@1.45.3)(postcss@8.5.3)(ts-node@10.9.2(@types/node@22.7.5)(typescript@5.4.5))(typescript@5.4.5)
-      '@synthetixio/synpress-core': 0.0.1-alpha.7(@playwright/test@1.45.3)
+      '@playwright/test': 1.51.1
+      '@synthetixio/synpress-cache': 0.0.11(playwright-core@1.51.1)(postcss@8.5.3)(ts-node@10.9.2(@types/node@22.7.5)(typescript@5.4.5))(typescript@5.4.5)
+      '@synthetixio/synpress-core': 0.0.11(@playwright/test@1.51.1)
       '@viem/anvil': 0.0.7(bufferutil@4.0.8)(utf-8-validate@5.0.10)
       fs-extra: 11.2.0
       zod: 3.22.4
@@ -14507,18 +14587,21 @@ snapshots:
       - typescript
       - utf-8-validate
 
-  '@synthetixio/synpress@4.0.0-alpha.7(@playwright/test@1.45.3)(bufferutil@4.0.8)(playwright-core@1.45.3)(postcss@8.5.3)(ts-node@10.9.2(@types/node@22.7.5)(typescript@5.4.5))(typescript@5.4.5)(utf-8-validate@5.0.10)(zod@3.24.2)':
+  '@synthetixio/synpress@4.0.10(@depay/solana-web3.js@1.27.0)(@depay/web3-blockchains@9.6.7)(@playwright/test@1.51.1)(bufferutil@4.0.8)(ethers@6.13.4(bufferutil@4.0.8)(utf-8-validate@5.0.10))(playwright-core@1.51.1)(postcss@8.5.3)(ts-node@10.9.2(@types/node@22.7.5)(typescript@5.4.5))(typescript@5.4.5)(utf-8-validate@5.0.10)(zod@3.24.2)':
     dependencies:
-      '@playwright/test': 1.45.3
-      '@synthetixio/ethereum-wallet-mock': 0.0.1-alpha.7(@playwright/test@1.45.3)(bufferutil@4.0.8)(typescript@5.4.5)(utf-8-validate@5.0.10)(zod@3.24.2)
-      '@synthetixio/synpress-cache': 0.0.1-alpha.7(playwright-core@1.45.3)(postcss@8.5.3)(ts-node@10.9.2(@types/node@22.7.5)(typescript@5.4.5))(typescript@5.4.5)
-      '@synthetixio/synpress-core': 0.0.1-alpha.7(@playwright/test@1.45.3)
-      '@synthetixio/synpress-metamask': 0.0.1-alpha.7(@playwright/test@1.45.3)(bufferutil@4.0.8)(playwright-core@1.45.3)(postcss@8.5.3)(ts-node@10.9.2(@types/node@22.7.5)(typescript@5.4.5))(typescript@5.4.5)(utf-8-validate@5.0.10)
+      '@playwright/test': 1.51.1
+      '@synthetixio/ethereum-wallet-mock': 0.0.11(@depay/solana-web3.js@1.27.0)(@depay/web3-blockchains@9.6.7)(@playwright/test@1.51.1)(bufferutil@4.0.8)(ethers@6.13.4(bufferutil@4.0.8)(utf-8-validate@5.0.10))(typescript@5.4.5)(utf-8-validate@5.0.10)(zod@3.24.2)
+      '@synthetixio/synpress-cache': 0.0.11(playwright-core@1.51.1)(postcss@8.5.3)(ts-node@10.9.2(@types/node@22.7.5)(typescript@5.4.5))(typescript@5.4.5)
+      '@synthetixio/synpress-core': 0.0.11(@playwright/test@1.51.1)
+      '@synthetixio/synpress-metamask': 0.0.11(@playwright/test@1.51.1)(bufferutil@4.0.8)(playwright-core@1.51.1)(postcss@8.5.3)(ts-node@10.9.2(@types/node@22.7.5)(typescript@5.4.5))(typescript@5.4.5)(utf-8-validate@5.0.10)
     transitivePeerDependencies:
+      - '@depay/solana-web3.js'
+      - '@depay/web3-blockchains'
       - '@microsoft/api-extractor'
       - '@swc/core'
       - bufferutil
       - debug
+      - ethers
       - playwright-core
       - postcss
       - supports-color
@@ -18810,6 +18893,8 @@ snapshots:
 
   is-negative-zero@2.0.3: {}
 
+  is-node-process@1.2.0: {}
+
   is-number-object@1.0.7:
     dependencies:
       has-tostringtag: 1.0.2
@@ -20193,15 +20278,15 @@ snapshots:
 
   neo-async@2.6.2: {}
 
-  next-seo@6.6.0(next@14.2.25(@babel/core@7.25.7)(@playwright/test@1.45.3)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(sass@1.86.0))(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
+  next-seo@6.6.0(next@14.2.25(@babel/core@7.25.7)(@playwright/test@1.51.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(sass@1.86.0))(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
     dependencies:
-      next: 14.2.25(@babel/core@7.25.7)(@playwright/test@1.45.3)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(sass@1.86.0)
+      next: 14.2.25(@babel/core@7.25.7)(@playwright/test@1.51.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(sass@1.86.0)
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
 
   next-tick@1.1.0: {}
 
-  next@14.2.25(@babel/core@7.25.7)(@playwright/test@1.45.3)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(sass@1.86.0):
+  next@14.2.25(@babel/core@7.25.7)(@playwright/test@1.51.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(sass@1.86.0):
     dependencies:
       '@next/env': 14.2.25
       '@swc/helpers': 0.5.5
@@ -20222,7 +20307,7 @@ snapshots:
       '@next/swc-win32-arm64-msvc': 14.2.25
       '@next/swc-win32-ia32-msvc': 14.2.25
       '@next/swc-win32-x64-msvc': 14.2.25
-      '@playwright/test': 1.45.3
+      '@playwright/test': 1.51.1
       sass: 1.86.0
     transitivePeerDependencies:
       - '@babel/core'
@@ -20234,6 +20319,12 @@ snapshots:
       tslib: 2.7.0
 
   nocache@3.0.4: {}
+
+  nock@14.0.1:
+    dependencies:
+      '@mswjs/interceptors': 0.37.6
+      json-stringify-safe: 5.0.1
+      propagate: 2.0.1
 
   node-abi@3.68.0:
     dependencies:
@@ -20480,6 +20571,8 @@ snapshots:
 
   os-tmpdir@1.0.2: {}
 
+  outvariant@1.4.3: {}
+
   ox@0.6.7(typescript@5.4.5)(zod@3.24.2):
     dependencies:
       '@adraffy/ens-normalize': 1.11.0
@@ -20718,11 +20811,11 @@ snapshots:
       mlly: 1.7.2
       pathe: 1.1.2
 
-  playwright-core@1.45.3: {}
+  playwright-core@1.51.1: {}
 
-  playwright@1.45.3:
+  playwright@1.51.1:
     dependencies:
-      playwright-core: 1.45.3
+      playwright-core: 1.51.1
     optionalDependencies:
       fsevents: 2.3.2
 
@@ -20846,6 +20939,8 @@ snapshots:
       loose-envify: 1.4.0
       object-assign: 4.1.1
       react-is: 16.13.1
+
+  propagate@2.0.1: {}
 
   proper-lockfile@4.1.2:
     dependencies:
@@ -21833,6 +21928,8 @@ snapshots:
   stream-shift@1.0.3: {}
 
   streamsearch@1.1.0: {}
+
+  strict-event-emitter@0.5.1: {}
 
   strict-uri-encode@1.1.0: {}
 
