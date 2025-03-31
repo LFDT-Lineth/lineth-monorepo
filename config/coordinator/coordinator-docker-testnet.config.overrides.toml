@@ -6,10 +6,6 @@
 #engine-api="http://traces-node:8550"
 #eth-api="http://traces-node:8545"
 
-[zk-traces]
-eth-api="http://traces-node:8545"
-new-block-polling-interval="PT0S"
-
 # Config of Traces API Facade endpoint
 [traces]
 endpoints=["http://traces-api:8080/"]

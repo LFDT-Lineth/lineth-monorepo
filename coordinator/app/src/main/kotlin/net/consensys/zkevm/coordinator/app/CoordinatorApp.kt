@@ -60,7 +60,7 @@ class CoordinatorApp(private val configs: CoordinatorConfig) {
     vertx
   )
   private val l2Web3jClient: Web3j = createWeb3jHttpClient(
-    rpcUrl = configs.zkTraces.ethApi.toString(),
+    rpcUrl = configs.l2.rpcEndpoint.toString(),
     log = LogManager.getLogger("clients.l2.eth-api.rpc-node"),
     pollingInterval = 1.seconds,
     requestResponseLogLevel = Level.TRACE,

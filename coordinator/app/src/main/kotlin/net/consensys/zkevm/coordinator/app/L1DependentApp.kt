@@ -120,7 +120,7 @@ class L1DependentApp(
   private val batchesRepository: BatchesRepository,
   private val blobsRepository: BlobsRepository,
   private val aggregationsRepository: AggregationsRepository,
-  private val l1FeeHistoriesRepository: FeeHistoriesRepositoryWithCache,
+  l1FeeHistoriesRepository: FeeHistoriesRepositoryWithCache,
   private val smartContractErrors: SmartContractErrors,
   private val metricsFacade: MetricsFacade
 ) : LongRunningService {
@@ -154,13 +154,6 @@ class L1DependentApp(
 
   )
   private val l1Web3jService = Web3jBlobExtended(HttpService(configs.l1.ethFeeHistoryEndpoint.toString()))
-  private val l2ZkTracesWeb3jClient: Web3j = createWeb3jHttpClient(
-    rpcUrl = configs.zkTraces.ethApi.toString(),
-    log = LogManager.getLogger("clients.l2.eth-api.tracer-node"),
-    pollingInterval = 1.seconds,
-    requestResponseLogLevel = org.apache.logging.log4j.Level.TRACE,
-    failuresLogLevel = org.apache.logging.log4j.Level.DEBUG
-  )
 
   private val l1ChainId = l1Web3jClient.ethChainId().send().chainId.toLong()
 
@@ -175,7 +168,7 @@ class L1DependentApp(
     metricsFacade = metricsFacade
   )
 
-  private val l2ExtendedWeb3j = ExtendedWeb3JImpl(l2ZkTracesWeb3jClient)
+  private val l2ExtendedWeb3j = ExtendedWeb3JImpl(l2Web3jClient)
 
   private val finalizationTransactionManager = createTransactionManager(
     vertx,
@@ -916,7 +909,7 @@ class L1DependentApp(
       blockCreationListener = block2BatchCoordinator,
       lastProvenBlockNumberProviderAsync = lastProvenBlockNumberProvider,
       config = BlockCreationMonitor.Config(
-        pollingInterval = configs.zkTraces.newBlockPollingInterval.toKotlinDuration(),
+        pollingInterval = configs.l2.newBlockPollingInterval.toKotlinDuration(),
         blocksToFinalization = configs.l2.blocksToFinalization.toLong(),
         blocksFetchLimit = configs.conflation.fetchBlocksLimit.toLong(),
         // We need to add 1 to l2InclusiveBlockNumberToStopAndFlushAggregation because conflation calculator requires

@@ -29,7 +29,6 @@ aggregation-coordinator-polling-interval="PT2S"
 deadline-check-interval="PT8S"
 #target-end-blocks=[33, 90, 93]
 
-
 [prover]
 fs-inprogress-request-writing-suffix = ".inprogress_coordinator_writing"
 fs-inprogress-proving-suffix-pattern = ".*\\.inprogress\\.prover.*"
@@ -55,10 +54,6 @@ fs-responses-directory = "/data/prover/v2/aggregation/responses"
 #[prover.new.proof-aggregation]
 #fs-requests-directory = "/data/prover/v3/aggregation/requests"
 #fs-responses-directory = "/data/prover/v3/aggregation/responses"
-
-[zk-traces]
-eth-api="http://traces-node:8545"
-new-block-polling-interval="PT1S"
 
 [traces]
 switch-to-linea-besu=false
@@ -150,6 +145,7 @@ max-receipt-retries=120
 # Coordinator will consider block as finalized after being included in the chain wtih children blocks-to-finalization
 # Recommended: Geth sequencer minimum of 2, Besu sequencer minimum of 1, 0 is safe localy
 blocks-to-finalization=0
+new-block-polling-interval="PT1S"
 
 [blob-submission]
 disabled=false

@@ -44,7 +44,7 @@ class BlockCreationMonitor(
   private val reorgDetected: AtomicBoolean = AtomicBoolean(false)
   private var statingBlockAvailabilityFuture: SafeFuture<*>? = null
 
-  val nexBlockNumberToFetch: Long
+  private val nexBlockNumberToFetch: Long
     get() = _nexBlockNumberToFetch.get()
 
   override fun handleError(error: Throwable) {

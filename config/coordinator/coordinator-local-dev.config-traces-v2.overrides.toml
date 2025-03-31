@@ -9,9 +9,6 @@ fs-responses-directory = "tmp/local/prover/v3/compression/responses"
 fs-requests-directory = "tmp/local/prover/v3/aggregation/requests"
 fs-responses-directory = "tmp/local/prover/v3/aggregation/responses"
 
-[zk-traces]
-eth-api="http://127.0.0.1:8745"
-
 [dynamic-gas-price-service]
 geth-gas-price-update-recipients=[
   "http://127.0.0.1:8845"

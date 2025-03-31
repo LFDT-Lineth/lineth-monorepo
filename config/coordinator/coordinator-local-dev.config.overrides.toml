@@ -21,9 +21,6 @@ fs-responses-directory = "tmp/local/prover/v2/compression/responses"
 fs-requests-directory = "tmp/local/prover/v2/aggregation/requests"
 fs-responses-directory = "tmp/local/prover/v2/aggregation/responses"
 
-[zk-traces]
-eth-api="http://127.0.0.1:8645"
-
 # Config of Traces API Facade endpoint
 [traces]
 [traces.counters]
