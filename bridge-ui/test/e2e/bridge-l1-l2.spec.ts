@@ -6,7 +6,7 @@ const test = testWithSynpress(advancedFixtures);
 
 const { expect, describe } = test;
 
-// To consider in a later ticket - Bridge ERC20 tokens case when ERC20 token is available in Sepolia token list
+// There are known lines causing flaky E2E tests in this test suite, these are annotated by 'bridge-ui-known-flaky-line'
 describe("L1 > L2 via Native Bridge", () => {
   test("should successfully go to the bridge UI page", async ({ page }) => {
     const pageUrl = page.url();
@@ -52,6 +52,39 @@ describe("L1 > L2 via Native Bridge", () => {
     // Should have Sepolia text visible
     const sepoliaText = page.getByText("Sepolia").first();
     await expect(sepoliaText).toBeVisible();
+  });
+
+  test("should not be able to approve on the wrong network", async ({
+    page,
+    metamask,
+    connectMetamaskToDapp,
+    clickNativeBridgeButton,
+    openNativeBridgeFormSettings,
+    toggleShowTestNetworksInNativeBridgeForm,
+    selectTokenAndInputAmount,
+    switchToEthereumMainnet,
+  }) => {
+    await connectMetamaskToDapp();
+    await clickNativeBridgeButton();
+    await openNativeBridgeFormSettings();
+    await toggleShowTestNetworksInNativeBridgeForm();
+
+    await switchToEthereumMainnet();
+    await selectTokenAndInputAmount(USDC_SYMBOL, USDC_AMOUNT);
+
+    // Should have 'Switch to Sepolia' network button visible and enabled
+    const switchBtn = page.getByRole("button", {name: "Switch to Sepolia", exact: true});
+    await expect(switchBtn).toBeVisible();
+    await expect(switchBtn).toBeEnabled();
+
+    // Do network switch
+    await switchBtn.click();
+    await metamask.approveSwitchNetwork();
+
+    // After network switch, should have 'Approve Token' button visible and enabled
+    const approvalButton = page.getByRole("button", { name: "Approve Token", exact: true });
+    await expect(approvalButton).toBeVisible();
+    await expect(approvalButton).toBeEnabled();
   });
 
   test("should be able to initiate bridging ETH from L1 to L2 in testnet", async ({

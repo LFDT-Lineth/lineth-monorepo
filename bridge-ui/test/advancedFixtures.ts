@@ -28,6 +28,7 @@ export const test = metaMaskFixtures(setup).extend<{
   waitForTransactionToConfirm: () => Promise<void>;
   confirmTransactionAndWaitForInclusion: () => Promise<void>;
   switchToLineaSepolia: () => Promise<void>;
+  switchToEthereumMainnet: () => Promise<void>;
 
   // Composite Bridge UI + Metamask Actions
   doTokenApprovalIfNeeded: () => Promise<void>;
@@ -140,8 +141,8 @@ export const test = metaMaskFixtures(setup).extend<{
 
       const activityButton = metamask.page.locator("button", { hasText: "Activity" });
       await activityButton.waitFor();
-      // Sometimes a "What's new" modal pops up on Metamask. We assume this becomes visible at the same time as the Activity button
-      // This modal causes flaky tests because it appears unpredictably, and blocks other actions.
+      // bridge-ui-known-flaky-line - Sometimes and unpredictably a "What's new" modal pops up on Metamask. This modal blocks other actions.
+      // We assume that the this button is available at the same time that the Activity button becomes available
       const gotItButton = metamask.page.locator("button", { hasText: "Got it" });
       if (await gotItButton.isVisible()) await gotItButton.click();
       // Click Activity button
@@ -169,6 +170,11 @@ export const test = metaMaskFixtures(setup).extend<{
       await metamask.switchNetwork(LINEA_SEPOLIA_NETWORK.name, true);
     });
   },
+  switchToEthereumMainnet: async ({ metamask }, use) => {
+    await use(async () => {
+      await metamask.switchNetwork("Ethereum Mainnet", false);
+    });
+  },
 
   // Composite Bridge UI + Metamask Actions
   doTokenApprovalIfNeeded: async ({ page, metamask, waitForTransactionToConfirm }, use) => {
@@ -179,6 +185,7 @@ export const test = metaMaskFixtures(setup).extend<{
       await approvalButton.click();
 
       // Handle Metamask approval UI
+      // bridge-ui-known-flaky-line - Once seen Metamask stuck here on approval screen in CI
       await metamask.approveTokenPermission();
       await waitForTransactionToConfirm();
 

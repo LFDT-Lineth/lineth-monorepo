@@ -27,15 +27,19 @@ jobs:
       # Use for testing workflow only (and not publish to Docker)
       - uses: actions/cache@v4.2.0
         with:
+          # This workflow requires a ~1GB cache
           path: |
             ~/.npm
             ~/.cache/ms-playwright
             ~/_work/.pnpm-store/v3
             ${{ github.workspace }}/bridge-ui/.next/cache
             ${{ github.workspace }}/bridge-ui/.cache-synpress
-          key: ${{ runner.os }}-bridge-ui-${{ hashFiles('**/pnpm-lock.yaml') }}-${{ hashFiles('**/bridge-ui/src/**/*.js', '**/bridge-ui/src/**/*.ts', '**/bridge-ui/src/**/*.tsx') }}
+          # Don't make cache key too specific as
+          # i.) Risk exceeding Github cache storage limit (10GB)
+          # ii.) Add ~3 minutes to each workflow run to save cache for a new cache key
+          key: ${{ runner.os }}-bridge-ui-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
-            ${{ runner.os }}-bridge-ui-${{ hashFiles('**/pnpm-lock.yaml') }}-
+            ${{ runner.os }}-bridge-ui-${{ hashFiles('**/pnpm-lock.yaml') }}
 
       - name: Setup nodejs environment
         uses: ./.github/actions/setup-nodejs

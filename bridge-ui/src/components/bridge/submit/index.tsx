@@ -33,12 +33,31 @@ export function Submit({ isDestinationAddressOpen, setIsDestinationAddressOpen }
   const chainId = useChainId();
   const { switchChain, isPending: isSwitchingChain } = useSwitchChain();
 
+  const needChainSwitch = useMemo(() => {
+    return fromChain.id !== chainId;
+  }, [fromChain.id, chainId]);
+
   const disabled = useMemo(() => {
+    if (needChainSwitch) return false;
     const originChainBalanceTooLow = amount && balance < amount;
     return originChainBalanceTooLow || !amount || amount <= 0n || isPending || isConfirming || isSwitchingChain;
-  }, [amount, balance, isConfirming, isPending, isSwitchingChain]);
+  }, [amount, balance, isConfirming, isPending, isSwitchingChain, needChainSwitch]);
 
   const buttonText = useMemo(() => {
+    // Do not prompt user for action when in a loading state
+    if (isPending || isConfirming) {
+      return "Waiting for confirmation...";
+    }
+
+    if (isSwitchingChain) {
+      return "Switching chain...";
+    }
+
+    // Do not let user do actions with wallet connected to wrong chain
+    if (needChainSwitch) {
+      return `Switch to ${fromChain.name}`;
+    }
+
     if (!amount || amount <= 0n) {
       return "Enter an amount";
     }
@@ -48,34 +67,12 @@ export function Submit({ isDestinationAddressOpen, setIsDestinationAddressOpen }
       return "Insufficient funds";
     }
 
-    if (isPending || isConfirming) {
-      return "Waiting for confirmation...";
-    }
-
-    if (isSwitchingChain) {
-      return "Switching chain...";
-    }
-
     if (transactionType === "approve") {
       return "Approve Token";
     }
 
-    if (fromChain.id !== chainId) {
-      return `Switch to ${fromChain.name}`;
-    }
-
     return "Bridge";
-  }, [
-    amount,
-    balance,
-    chainId,
-    fromChain.id,
-    fromChain.name,
-    isConfirming,
-    isPending,
-    isSwitchingChain,
-    transactionType,
-  ]);
+  }, [amount, balance, fromChain.name, isConfirming, isPending, isSwitchingChain, transactionType, needChainSwitch]);
 
   useEffect(() => {
     if (isConfirmed) {
@@ -90,7 +87,7 @@ export function Submit({ isDestinationAddressOpen, setIsDestinationAddressOpen }
           <Button
             className={styles["submit-button"]}
             onClick={() => {
-              if (fromChain.id !== chainId) {
+              if (needChainSwitch) {
                 switchChain({ chainId: fromChain.id });
               } else {
                 if (transactionType !== "approve") {
