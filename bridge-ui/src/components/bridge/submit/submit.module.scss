@@ -19,6 +19,11 @@
     width: 1.5rem;
     height: auto;
   }
+
+  &.active {
+    background-color: var(--v2-color-indigo);
+    color: white;
+  }
 }
 
 .submit-button {

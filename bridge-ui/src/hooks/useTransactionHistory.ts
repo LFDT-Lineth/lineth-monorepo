@@ -33,7 +33,7 @@ const useTransactionHistory = () => {
         tokens,
         historyStoreActions,
       }),
-    staleTime: 1000 * 60 * 2,
+    staleTime: 1000 * 60 * 0.5,
   });
 
   return {

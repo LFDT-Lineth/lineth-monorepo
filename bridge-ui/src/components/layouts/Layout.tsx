@@ -7,6 +7,8 @@ import Header from "../header";
 import { useInitialiseChain } from "@/hooks";
 import { Theme } from "@/types";
 import Image from "next/image";
+import styles from "./layout.module.scss";
+import InternalNav from "../internal-nav";
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const { sdkHasLoaded } = useDynamicContext();
@@ -19,7 +21,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <div className="layout">
         <div className="container-v2">
           <Header theme={Theme.navy} />
-          <main>{children}</main>
+          <main>
+            <div className={styles["content-wrapper"]}>
+              <InternalNav />
+            </div>
+            {children}
+          </main>
         </div>
         <div>
           <Image
@@ -59,7 +66,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
     <div className="layout">
       <div className="container-v2">
         <Header theme={Theme.navy} />
-        <main>{children}</main>
+        <main>
+          <div className={styles["content-wrapper"]}>
+            <InternalNav />
+          </div>
+          {children}
+        </main>
       </div>
 
       <div>

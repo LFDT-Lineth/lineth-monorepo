@@ -1,5 +1,6 @@
 import { MouseEventHandler, useEffect, useMemo, useState } from "react";
-import { useChainId, useSwitchChain } from "wagmi";
+import { useAccount, useChainId, useSwitchChain } from "wagmi";
+import clsx from "clsx";
 import Button from "@/components/ui/button";
 import WalletIcon from "@/assets/icons/wallet.svg";
 import styles from "./submit.module.scss";
@@ -7,12 +8,16 @@ import { useFormStore, useChainStore } from "@/stores";
 import { useBridge } from "@/hooks";
 import TransactionConfirmed from "../modal/transaction-confirmed";
 import ConfirmDestinationAddress from "../modal/confirm-destination-address";
+import ConnectButton from "@/components/connect-button";
 
 type Props = {
+  isDestinationAddressOpen: boolean;
   setIsDestinationAddressOpen: MouseEventHandler<HTMLButtonElement>;
 };
 
-export function Submit({ setIsDestinationAddressOpen }: Props) {
+export function Submit({ isDestinationAddressOpen, setIsDestinationAddressOpen }: Props) {
+  const { address, isConnected } = useAccount();
+
   const [showTransactionConfirmedModal, setShowTransactionConfirmedModal] = useState<boolean>(false);
   const [showConfirmDestinationAddressModal, setShowConfirmDestinationAddressModal] = useState<boolean>(false);
 
@@ -81,25 +86,35 @@ export function Submit({ setIsDestinationAddressOpen }: Props) {
   return (
     <>
       <div className={styles.container}>
-        <Button
-          className={styles["submit-button"]}
-          onClick={() => {
-            if (fromChain.id !== chainId) {
-              switchChain({ chainId: fromChain.id });
-            } else {
-              if (transactionType !== "approve") {
-                setShowConfirmDestinationAddressModal(true);
+        {isConnected ? (
+          <Button
+            className={styles["submit-button"]}
+            onClick={() => {
+              if (fromChain.id !== chainId) {
+                switchChain({ chainId: fromChain.id });
               } else {
-                bridge?.();
+                if (transactionType !== "approve") {
+                  setShowConfirmDestinationAddressModal(true);
+                } else {
+                  bridge?.();
+                }
               }
-            }
-          }}
-          disabled={disabled}
-          fullWidth
+            }}
+            disabled={disabled}
+            fullWidth
+          >
+            {buttonText}
+          </Button>
+        ) : (
+          <ConnectButton fullWidth text={"Connect wallet"} />
+        )}
+        <button
+          type="button"
+          className={clsx(styles["wallet-icon"], {
+            [styles["active"]]: isDestinationAddressOpen || (recipient !== address && isConnected),
+          })}
+          onClick={setIsDestinationAddressOpen}
         >
-          {buttonText}
-        </Button>
-        <button type="button" className={styles["wallet-icon"]} onClick={setIsDestinationAddressOpen}>
           <WalletIcon />
         </button>
       </div>

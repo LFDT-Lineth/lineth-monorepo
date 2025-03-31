@@ -1,6 +1,6 @@
 import { ChangeEvent, useEffect, useState } from "react";
 import { useAccount } from "wagmi";
-import { isAddress } from "viem";
+import { Address, isAddress } from "viem";
 import clsx from "clsx";
 import Link from "next/link";
 import styles from "./destination-address.module.scss";
@@ -9,14 +9,41 @@ import { useChainStore, useFormStore } from "@/stores";
 import { ChainLayer } from "@/types";
 import ArrowRightIcon from "@/assets/icons/arrow-right.svg";
 
+function formatMessage({
+  address,
+  inputValue,
+  error,
+}: {
+  address?: Address;
+  inputValue: string;
+  error: string | null;
+}) {
+  if (error) {
+    return error;
+  }
+
+  if (address !== inputValue) {
+    return "Editing the destination address can result in loss of your funds. Make sure you control this address.";
+  }
+
+  return "This is your connected address";
+}
+
 export function DestinationAddress() {
-  const { address } = useAccount();
+  const { address, isConnected } = useAccount();
 
   const toChain = useChainStore.useToChain();
   const recipient = useFormStore((state) => state.recipient);
   const setRecipient = useFormStore((state) => state.setRecipient);
   const [inputValue, setInputValue] = useState(recipient);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if ((!recipient || recipient === "0x") && address && isConnected) {
+      setInputValue(address);
+      setRecipient(address);
+    }
+  }, [address, recipient, setRecipient, isConnected]);
 
   useEffect(() => {
     if (inputValue && !isAddress(inputValue)) {
@@ -88,11 +115,7 @@ export function DestinationAddress() {
           [styles["error"]]: error,
         })}
       >
-        {error
-          ? error.toString()
-          : address !== inputValue
-            ? "Editing the destination address can result in loss of your funds. Make sure you control this address."
-            : "This is your connected address"}
+        {formatMessage({ address, inputValue, error })}
       </p>
     </div>
   );

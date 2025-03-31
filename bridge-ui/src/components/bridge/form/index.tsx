@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAccount } from "wagmi";
-import ConnectButton from "@/components/connect-button";
+import { useDynamicEvents } from "@/lib/dynamic";
 import FaqHelp from "@/components/bridge/faq-help";
 import TokenList from "@/components/bridge/token-list";
 import { Amount } from "@/components/bridge/amount";
@@ -14,7 +14,7 @@ import TransactionPaperIcon from "@/assets/icons/transaction-paper.svg";
 import Setting from "@/components/setting";
 import { DestinationAddress } from "../destination-address";
 import Button from "../../ui/button";
-import { useNativeBridgeNavigationStore, useChainStore, useFormStore } from "@/stores";
+import { useChainStore, useFormStore, useNativeBridgeNavigationStore } from "@/stores";
 import { useTokenBalance } from "@/hooks";
 import { ChainLayer } from "@/types";
 
@@ -23,17 +23,24 @@ export default function BridgeForm() {
   const setIsTransactionHistoryOpen = useNativeBridgeNavigationStore.useSetIsTransactionHistoryOpen();
   const setIsBridgeOpen = useNativeBridgeNavigationStore.useSetIsBridgeOpen();
 
-  const { isConnected, address } = useAccount();
+  const { address } = useAccount();
   const fromChain = useChainStore.useFromChain();
   const token = useFormStore((state) => state.token);
   const setRecipient = useFormStore((state) => state.setRecipient);
   const setBalance = useFormStore((state) => state.setBalance);
   const setClaim = useFormStore((state) => state.setClaim);
+  const resetForm = useFormStore((state) => state.resetForm);
+
   const { balance, refetch } = useTokenBalance(token);
 
   useEffect(() => {
     refetch();
   }, [refetch, token]);
+
+  useDynamicEvents("logout", async () => {
+    resetForm();
+    setIsDestinationAddressOpen(false);
+  });
 
   useEffect(() => {
     setBalance(balance);
@@ -86,11 +93,10 @@ export default function BridgeForm() {
             </div>
           )}
           <div className={styles["connect-btn-wrapper"]}>
-            {isConnected ? (
-              <Submit setIsDestinationAddressOpen={() => setIsDestinationAddressOpen((prev) => !prev)} />
-            ) : (
-              <ConnectButton fullWidth text={"Connect wallet"} />
-            )}
+            <Submit
+              isDestinationAddressOpen={isDestinationAddressOpen}
+              setIsDestinationAddressOpen={() => setIsDestinationAddressOpen((prev) => !prev)}
+            />
           </div>
           <FaqHelp isMobile />
         </div>
