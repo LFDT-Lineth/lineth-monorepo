@@ -43,6 +43,10 @@ export function DestinationAddress() {
       setInputValue(address);
       setRecipient(address);
     }
+    if (!isConnected && (!recipient || recipient === "0x")) {
+      setInputValue("" as Address);
+      setRecipient("" as Address);
+    }
   }, [address, recipient, setRecipient, isConnected]);
 
   useEffect(() => {
@@ -94,18 +98,20 @@ export function DestinationAddress() {
           onChange={handleChange}
           className={clsx(styles.input, {
             [styles["error"]]: error,
+            [styles["not-connected"]]: !isConnected,
           })}
         />
-
-        <button
-          type="button"
-          className={clsx(styles.reset, {
-            [styles["show"]]: inputValue !== address,
-          })}
-          onClick={handleResetInput}
-        >
-          <XCircleIcon />
-        </button>
+        {isConnected && (
+          <button
+            type="button"
+            className={clsx(styles.reset, {
+              [styles["show"]]: inputValue !== address,
+            })}
+            onClick={handleResetInput}
+          >
+            <XCircleIcon />
+          </button>
+        )}
       </div>
 
       <p
