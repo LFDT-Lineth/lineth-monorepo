@@ -37,6 +37,16 @@ class RetryingPostgresAggregationsDao(
     )
   }
 
+  override fun findHighestConsecutiveEndBlockNumber(
+    fromBlockNumber: Long
+  ): SafeFuture<Long?> {
+    return persistenceRetryer.retryQuery(
+      {
+        delegate.findHighestConsecutiveEndBlockNumber(fromBlockNumber)
+      }
+    )
+  }
+
   override fun findAggregationProofByEndBlockNumber(endBlockNumber: Long): SafeFuture<ProofToFinalize?> {
     return persistenceRetryer.retryQuery({ delegate.findAggregationProofByEndBlockNumber(endBlockNumber) })
   }

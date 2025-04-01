@@ -163,13 +163,7 @@ class FeeHistoriesPostgresDao(
       .execute(Tuple.tuple(params))
       .toSafeFuture()
       .thenApply { rowSet ->
-        if (rowSet.size() > 0) {
-          rowSet.first().getDouble("percentile_value")?.run {
-            this.toULong()
-          }
-        } else {
-          null
-        }
+        rowSet.firstOrNull()?.getDouble("percentile_value")?.toULong()
       }
   }
 
@@ -186,13 +180,7 @@ class FeeHistoriesPostgresDao(
       .execute(Tuple.tuple(params))
       .toSafeFuture()
       .thenApply { rowSet ->
-        if (rowSet.size() > 0) {
-          rowSet.first().getDouble("percentile_value")?.run {
-            this.toULong()
-          }
-        } else {
-          null
-        }
+        rowSet.firstOrNull()?.getDouble("percentile_value")?.toULong()
       }
   }
 
@@ -209,13 +197,7 @@ class FeeHistoriesPostgresDao(
       .execute(Tuple.tuple(params))
       .toSafeFuture()
       .thenApply { rowSet ->
-        if (rowSet.size() > 0) {
-          rowSet.first().getDouble("avg_reward")?.run {
-            this.toULong()
-          }
-        } else {
-          null
-        }
+        rowSet.firstOrNull()?.getDouble("avg_reward")?.toULong()
       }
   }
 
@@ -226,11 +208,7 @@ class FeeHistoriesPostgresDao(
       .execute(Tuple.tuple(params))
       .toSafeFuture()
       .thenApply { rowSet ->
-        if (rowSet.size() > 0) {
-          rowSet.first().getLong("highest_block_number")
-        } else {
-          null
-        }
+        rowSet.firstOrNull()?.getLong("highest_block_number")
       }
   }
 
@@ -247,11 +225,7 @@ class FeeHistoriesPostgresDao(
       .execute(Tuple.tuple(params))
       .toSafeFuture()
       .thenApply { rowSet ->
-        if (rowSet.size() > 0) {
-          rowSet.first().getLong("fee_history_count").toInt()
-        } else {
-          0
-        }
+        rowSet.firstOrNull()?.getLong("fee_history_count")?.toInt() ?: 0
       }
   }
 

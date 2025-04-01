@@ -40,6 +40,12 @@ class AggregationsRepositoryImpl(
     )
   }
 
+  override fun findHighestConsecutiveEndBlockNumber(
+    fromBlockNumber: Long
+  ): SafeFuture<Long?> {
+    return aggregationsPostgresDao.findHighestConsecutiveEndBlockNumber(fromBlockNumber)
+  }
+
   override fun findAggregationProofByEndBlockNumber(endBlockNumber: Long): SafeFuture<ProofToFinalize?> {
     return aggregationsPostgresDao.findAggregationProofByEndBlockNumber(endBlockNumber)
   }

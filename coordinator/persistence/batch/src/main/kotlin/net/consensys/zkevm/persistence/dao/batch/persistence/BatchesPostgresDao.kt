@@ -128,11 +128,7 @@ class BatchesPostgresDao(
       .execute(Tuple.tuple(params))
       .toSafeFuture()
       .thenApply { rowSet ->
-        if (rowSet.size() > 0) {
-          rowSet.first().getLong("end_block_number")
-        } else {
-          null
-        }
+        rowSet.firstOrNull()?.getLong("end_block_number")
       }
   }
 

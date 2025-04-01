@@ -35,6 +35,7 @@ class L1DependentAppTest {
     val blobsRepository = mock<BlobsRepository>()
     val aggregationsRepository = mock<AggregationsRepository>()
     val lastProcessedBlock = 100uL
+    val lastConsecutiveAggregatedBlockNumber = 80uL
 
     whenever(batchesRepository.deleteBatchesAfterBlockNumber(anyLong()))
       .thenReturn(SafeFuture.completedFuture(0))
@@ -43,14 +44,17 @@ class L1DependentAppTest {
     whenever(aggregationsRepository.deleteAggregationsAfterBlockNumber(anyLong()))
       .thenReturn(SafeFuture.completedFuture(0))
 
-    L1DependentApp.cleanupDbDataAfterLastProcessedBlock(
+    L1DependentApp.cleanupDbDataAfterBlockNumbers(
       lastProcessedBlockNumber = lastProcessedBlock,
+      lastConsecutiveAggregatedBlockNumber = lastConsecutiveAggregatedBlockNumber,
       batchesRepository = batchesRepository,
       blobsRepository = blobsRepository,
       aggregationsRepository = aggregationsRepository
     ).get()
     verify(batchesRepository).deleteBatchesAfterBlockNumber((lastProcessedBlock + 1uL).toLong())
     verify(blobsRepository).deleteBlobsAfterBlockNumber(lastProcessedBlock + 1uL)
-    verify(aggregationsRepository).deleteAggregationsAfterBlockNumber((lastProcessedBlock + 1uL).toLong())
+    verify(aggregationsRepository).deleteAggregationsAfterBlockNumber(
+      (lastConsecutiveAggregatedBlockNumber + 1uL).toLong()
+    )
   }
 }

@@ -151,7 +151,6 @@ class L1DependentApp(
     rpcUrl = configs.l1.rpcEndpoint.toString(),
     log = LogManager.getLogger("clients.l1.eth-api"),
     pollingInterval = 1.seconds
-
   )
   private val l1Web3jService = Web3jBlobExtended(HttpService(configs.l1.ethFeeHistoryEndpoint.toString()))
 
@@ -296,6 +295,10 @@ class L1DependentApp(
 
   private val lastFinalizedBlock = lastFinalizedBlock().get()
   private val lastProcessedBlockNumber = resumeConflationFrom(
+    aggregationsRepository,
+    lastFinalizedBlock
+  ).get()
+  private val lastConsecutiveAggregatedBlockNumber = resumeAggregationFrom(
     aggregationsRepository,
     lastFinalizedBlock
   ).get()
@@ -611,7 +614,7 @@ class L1DependentApp(
           GethCliqueSafeBlockProvider.Config(configs.l2.blocksToFinalization.toLong())
         ),
         maxProofsPerAggregation = configs.proofAggregation.aggregationProofsLimit.toUInt(),
-        startBlockNumberInclusive = lastFinalizedBlock + 1u,
+        startBlockNumberInclusive = lastConsecutiveAggregatedBlockNumber + 1u,
         aggregationsRepository = aggregationsRepository,
         consecutiveProvenBlobsProvider = maxBlobEndBlockNumberTracker,
         proofAggregationClient = proverClientFactory.proofAggregationProverClient(),
@@ -1046,8 +1049,9 @@ class L1DependentApp(
   }
 
   override fun start(): CompletableFuture<Unit> {
-    return cleanupDbDataAfterLastProcessedBlock(
+    return cleanupDbDataAfterBlockNumbers(
       lastProcessedBlockNumber = lastProcessedBlockNumber,
+      lastConsecutiveAggregatedBlockNumber = lastConsecutiveAggregatedBlockNumber,
       batchesRepository = batchesRepository,
       blobsRepository = blobsRepository,
       aggregationsRepository = aggregationsRepository
@@ -1088,8 +1092,9 @@ class L1DependentApp(
 
   companion object {
 
-    fun cleanupDbDataAfterLastProcessedBlock(
+    fun cleanupDbDataAfterBlockNumbers(
       lastProcessedBlockNumber: ULong,
+      lastConsecutiveAggregatedBlockNumber: ULong,
       batchesRepository: BatchesRepository,
       blobsRepository: BlobsRepository,
       aggregationsRepository: AggregationsRepository
@@ -1098,7 +1103,7 @@ class L1DependentApp(
       val cleanupBatches = batchesRepository.deleteBatchesAfterBlockNumber(blockNumberInclusiveToDeleteFrom.toLong())
       val cleanupBlobs = blobsRepository.deleteBlobsAfterBlockNumber(blockNumberInclusiveToDeleteFrom)
       val cleanupAggregations = aggregationsRepository
-        .deleteAggregationsAfterBlockNumber(blockNumberInclusiveToDeleteFrom.toLong())
+        .deleteAggregationsAfterBlockNumber((lastConsecutiveAggregatedBlockNumber + 1u).toLong())
 
       return SafeFuture.allOf(cleanupBatches, cleanupBlobs, cleanupAggregations)
     }
@@ -1119,6 +1124,17 @@ class L1DependentApp(
           } else {
             lastFinalizedBlock
           }
+        }
+    }
+
+    fun resumeAggregationFrom(
+      aggregationsRepository: AggregationsRepository,
+      lastFinalizedBlock: ULong
+    ): SafeFuture<ULong> {
+      return aggregationsRepository
+        .findHighestConsecutiveEndBlockNumber(lastFinalizedBlock.toLong() + 1)
+        .thenApply { highestEndBlockNumber ->
+          highestEndBlockNumber?.toULong() ?: lastFinalizedBlock
         }
     }
 

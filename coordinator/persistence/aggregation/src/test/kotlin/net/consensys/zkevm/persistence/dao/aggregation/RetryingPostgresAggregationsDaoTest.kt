@@ -73,6 +73,13 @@ class RetryingPostgresAggregationsDaoTest {
     )
       .thenReturn(SafeFuture.completedFuture(listOf(aggregationProof)))
 
+    whenever(
+      delegateAggregationsDao.findHighestConsecutiveEndBlockNumber(
+        eq(0L)
+      )
+    )
+      .thenReturn(SafeFuture.completedFuture(10L))
+
     whenever(delegateAggregationsDao.findAggregationProofByEndBlockNumber(eq(10L)))
       .thenReturn(SafeFuture.completedFuture(aggregationProof))
 
@@ -101,6 +108,9 @@ class RetryingPostgresAggregationsDaoTest {
       eq(createdBeforeInstant),
       eq(1)
     )
+
+    retryingAggregationsPostgresDao.findHighestConsecutiveEndBlockNumber(0L)
+    verify(delegateAggregationsDao, times(1)).findConsecutiveProvenBlobs(eq(0L))
 
     retryingAggregationsPostgresDao.findAggregationProofByEndBlockNumber(10L)
     verify(delegateAggregationsDao, times(1)).findAggregationProofByEndBlockNumber(eq(10L))
