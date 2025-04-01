@@ -62,6 +62,7 @@ jobs:
             NEXT_PUBLIC_INFURA_ID=${{ env.NEXT_PUBLIC_INFURA_ID }}
             NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID=${{ env.NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID }}
             NEXT_PUBLIC_LIFI_API_KEY=${{ env.NEXT_PUBLIC_LIFI_API_KEY }}
+            NEXT_PUBLIC_ONRAMPER_API_KEY=${{ env.NEXT_PUBLIC_ONRAMPER_API_KEY }}
           cache-from: type=registry,ref=consensys/linea-bridge-ui:buildcache
           cache-to: type=registry,ref=consensys/linea-bridge-ui:buildcache,mode=max
         env:
@@ -69,6 +70,7 @@ jobs:
           NEXT_PUBLIC_INFURA_ID: ${{ secrets.PUBLIC_BRIDGE_UI_INFURA_ID }}
           NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID: ${{ secrets.PUBLIC_DYNAMIC_ENVIRONMENT_ID }}
           NEXT_PUBLIC_LIFI_API_KEY: ${{ secrets.PUBLIC_LIFI_API_KEY }}
+          NEXT_PUBLIC_ONRAMPER_API_KEY: ${{ secrets.PUBLIC_ONRAMPER_API_KEY }}
   
   test-build:
     if: github.event.pull_request.head.repo.fork == true

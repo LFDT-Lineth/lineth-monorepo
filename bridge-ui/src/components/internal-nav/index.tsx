@@ -13,6 +13,10 @@ const NavData = [
     title: "Native Bridge",
     href: "/native-bridge",
   },
+  {
+    title: "Buy",
+    href: "/buy",
+  },
 ];
 
 export default function InternalNav() {
