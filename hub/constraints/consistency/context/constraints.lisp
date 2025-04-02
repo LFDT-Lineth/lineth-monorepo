@@ -15,9 +15,9 @@
                              (eq!    (next con_FIRST)    (next ccp_PEEK_AT_CONTEXT)))
                  (if-not-zero  ccp_PEEK_AT_CONTEXT
                                (if-not-zero (next    ccp_PEEK_AT_CONTEXT)
-                                            (if-not-zero    (will-remain-constant!   ccp_CONTEXT_NUMBER)
-                                                            (will-eq! con_FIRST 1)
-                                                            (will-eq! con_AGAIN 1))))))
+                                            (if-not    (will-remain-constant!   ccp_CONTEXT_NUMBER)
+                                                       (will-eq! con_FIRST 1)
+                                                       (will-eq! con_AGAIN 1))))))
 
 (defconstraint context-consistency---context-data-immutability ()
                (if-not-zero (next con_AGAIN)

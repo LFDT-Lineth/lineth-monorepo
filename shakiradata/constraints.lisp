@@ -168,8 +168,8 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defconstraint initializing-nBYTES_ACC ()
-  (if-not-zero (remained-constant! SHAKIRA_STAMP)
-               (eq! nBYTES nBYTES_ACC)))
+  (if-not (remained-constant! SHAKIRA_STAMP)
+          (eq! nBYTES nBYTES_ACC)))
 
 (defconstraint updating-nBYTES_ACC-and-ensuring-full-limbs ()
   (if-eq (prev  (shakira---is-data)) 1
@@ -181,7 +181,7 @@
 (defconstraint achieving-total-size ()
   (if-eq (prev (shakira---is-data)) 1
          (if-eq (shakira---is-result) 1
-                (prev (eq! nBYTES_ACC TOTAL_SIZE)))))
+                (eq! (prev nBYTES_ACC) (prev TOTAL_SIZE)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                                 ;;

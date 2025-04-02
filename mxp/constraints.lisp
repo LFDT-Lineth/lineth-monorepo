@@ -173,8 +173,8 @@
        (reduce + (for i [5] [MXP_TYPE i]))))
 
 (defconstraint counter-reset ()
-  (if-not-zero (will-remain-constant! STAMP)
-               (vanishes! (next CT))))
+  (if-not (will-remain-constant! STAMP)
+          (vanishes! (next CT))))
 
 (defconstraint stamp-increment-when-roob-or-noop ()
   (if-not-zero (+ ROOB NOOP)

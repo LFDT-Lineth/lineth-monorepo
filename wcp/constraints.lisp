@@ -50,8 +50,8 @@
   (or! (will-remain-constant! STAMP) (will-inc! STAMP 1)))
 
 (defconstraint counter-reset ()
-  (if-not-zero (will-remain-constant! STAMP)
-               (vanishes! (next CT))))
+  (if-not (will-remain-constant! STAMP)
+          (vanishes! (next CT))))
 
 (defconstraint setting-ct-max ()
   (if-eq OLI 1 (vanishes! CT_MAX)))

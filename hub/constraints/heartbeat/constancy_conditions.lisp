@@ -10,8 +10,8 @@
 
 ;; the following constraint allows to express stamp constancy for stamps that may only increment by 0 or 1
 (defun (constancy-wrt-0-1-increments-stamp stamp  col)
-  (if-not-zero (did-inc! stamp 1)
-               (remained-constant! col)))
+  (if-not (did-inc! stamp 1)
+          (remained-constant! col)))
 
 ;; usecases thereof
 (defun (batch-constancy        col) (constancy-wrt-0-1-increments-stamp    RELATIVE_BLOCK_NUMBER          col))

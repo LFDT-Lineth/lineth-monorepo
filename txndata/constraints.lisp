@@ -32,8 +32,8 @@
                  (stamp-progression ABS))
 
 (defconstraint   new-stamp-reboot-ct ()
-                 (if-not-zero (will-remain-constant! ABS)
-                              (vanishes! (next CT))))
+                 (if-not (will-remain-constant! ABS)
+                         (vanishes! (next CT))))
 
 (defconstraint   transactions-have-a-single-type (:guard ABS) (eq! (tx-type-sum) 1))
 
@@ -121,8 +121,8 @@
                                      ;;        (vanishes! BLK)
                                      ;;        (vanishes! REL))
                                      )
-                        (if-not-zero (will-inc! BLK 1)
-                                     (will-remain-constant! REL_MAX))))
+                        (if-not (will-inc! BLK 1)
+                                (will-remain-constant! REL_MAX))))
 
 (defconstraint   block-number-increments ()
                  (stamp-progression BLK))
@@ -133,16 +133,16 @@
                                         (vanishes! REL)
                                         ;;(debug (vanishes! BLK_MAX))
                                         (debug (vanishes! REL_MAX))
-                                        (if-not-zero (will-remain-constant! ABS)
-                                                     (begin (eq! (next BLK) 1)
-                                                            (eq! (next REL) 1))))
-                                 (if-not-zero (will-remain-constant! ABS)
-                                              (if-not-eq REL_MAX
-                                                         REL
-                                                         (begin (will-remain-constant! BLK)
-                                                                (will-inc! REL 1))
-                                                         (begin (will-inc! BLK 1)
-                                                                (will-eq! REL 1)))))))
+                                        (if-not (will-remain-constant! ABS)
+                                                (begin (eq! (next BLK) 1)
+                                                       (eq! (next REL) 1))))
+                                 (if-not (will-remain-constant! ABS)
+                                         (if-not-eq REL_MAX
+                                                    REL
+                                                    (begin (will-remain-constant! BLK)
+                                                           (will-inc! REL 1))
+                                                    (begin (will-inc! BLK 1)
+                                                           (will-eq! REL 1)))))))
 
 (defconstraint   set-last-tx-of-block-flag (:guard ABS_TX_NUM)
                  (if-eq-else REL_TX_NUM REL_TX_NUM_MAX
@@ -389,17 +389,17 @@
                              (vanishes! GAS_CUMULATIVE)))
 
 (defconstraint   cumulative-gas---initialization-at-block-start ()
-                        (if-not-zero (will-remain-constant! BLK)
-                                     ; BLK[i + 1] != BLK[i]
-                                     (eq! (next GAS_CUMULATIVE)
-                                          (next (- GAS_LIMIT REFUND_EFFECTIVE)))))
+                        (if-not (will-remain-constant! BLK)
+                                ; BLK[i + 1] != BLK[i]
+                                (eq! (next GAS_CUMULATIVE)
+                                     (next (- GAS_LIMIT REFUND_EFFECTIVE)))))
 
 (defconstraint   cumulative-gas---update-at-transaction-threshold ()
-                 (if-not-zero    (will-inc! BLK 1)
-                                 (if-not-zero    (will-remain-constant! ABS)
+                 (if-not    (will-inc! BLK 1)
+                            (if-not    (will-remain-constant! ABS)
                                                  ; BLK[i + 1] != 1 + BLK[i] && ABS[i+1] != ABS[i] i.e. BLK[i + 1] == BLK[i] && ABS[i+1] == ABS[i] +1
-                                                 (eq!    (next GAS_CUMULATIVE)
-                                                         (+    GAS_CUMULATIVE (next (- GAS_LIMIT REFUND_EFFECTIVE)))))))
+                                            (eq!    (next GAS_CUMULATIVE)
+                                                    (+    GAS_CUMULATIVE (next (- GAS_LIMIT REFUND_EFFECTIVE)))))))
 
 (defconstraint   cumulative-gas-comparison (:guard IS_LAST_TX_OF_BLOCK)
                  (if-not-zero (- ABS_TX_NUM (prev ABS_TX_NUM))

@@ -1,9 +1,5 @@
 (module rlptxn)
 
-(defpurefun (if-not-eq A B then)
-  (if-not-zero (- A B)
-               then))
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                              ;;
 ;;    2.3 Global Constraints    ;;
@@ -315,15 +311,15 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; 2.3.5.1 & 2.3.5.2
 (defconstraint init-index ()
-  (if-zero (remained-constant! ABS_TX_NUM)
-           (begin (eq! INDEX_LT
-                       (+ (prev INDEX_LT)
-                          (* (prev LC) (prev LT))))
-                  (eq! INDEX_LX
-                       (+ (prev INDEX_LX)
-                          (* (prev LC) (prev LX)))))
-           (begin (vanishes! INDEX_LT)
-                  (vanishes! INDEX_LX))))
+  (if (remained-constant! ABS_TX_NUM)
+      (begin (eq! INDEX_LT
+                   (+ (prev INDEX_LT)
+                      (* (prev LC) (prev LT))))
+             (eq! INDEX_LX
+                   (+ (prev INDEX_LX)
+                      (* (prev LC) (prev LX)))))
+      (begin (vanishes! INDEX_LT)
+             (vanishes! INDEX_LX))))
 
 ;; 2.3.5.3
 (defun (flag-sum-wo-phase-rlp-prefix)

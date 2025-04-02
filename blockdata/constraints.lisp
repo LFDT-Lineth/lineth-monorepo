@@ -57,8 +57,8 @@
                                  (vanishes! (next CT)))))
 
 (defconstraint   heartbeat---first-instruction-is-coinbase ()
-                 (if-not-zero    (will-remain-constant!    IOMF)
-                                 (will-eq!                 IS_CB 1)))
+                 (if-not    (will-remain-constant!    IOMF)
+                            (will-eq!                 IS_CB 1)))
 
 (defconstraint   heartbeat---counter-reset-at-phase-entry ()
                  (if-not-zero (phase-entry)

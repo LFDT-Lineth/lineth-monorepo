@@ -98,7 +98,7 @@
 
 (defconstraint pair-of-points-constancy ()
   (if-not-zero ACC_PAIRINGS
-               (if-zero (will-remain-constant! ACC_PAIRINGS)
+               (if (will-remain-constant! ACC_PAIRINGS)
                    (will-remain-constant! ACCPC))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

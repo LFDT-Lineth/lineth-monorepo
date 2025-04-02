@@ -120,10 +120,10 @@
                (vanishes! INDEX)))
 
 (defconstraint new-ct-increment-index ()
-  (if-not-zero (or! (eq! CFI 0)
-                    (did-inc! CFI 1)
-                    (neq! CT 0))
-               (did-inc! INDEX 1)))
+  (if-not (or! (eq! CFI 0)
+               (did-inc! CFI 1)
+               (neq! CT 0))
+          (did-inc! INDEX 1)))
 
 (defconstraint index-inc-in-middle-padding ()
   (if-eq CT LLARGE (did-inc! INDEX 1)))

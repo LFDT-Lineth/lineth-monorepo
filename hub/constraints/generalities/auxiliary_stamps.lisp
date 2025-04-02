@@ -45,8 +45,8 @@
 (defconstraint   generalities---auxiliary-stamps---LOG_INFO_STAMP-increments ()
                  (begin
                    (debug (or! (remained-constant! LOG_INFO_STAMP) (did-inc! LOG_INFO_STAMP 1)))
-                   (if-not-zero (remained-constant! HUB_STAMP)
-                                (did-inc! LOG_INFO_STAMP (* PEEK_AT_STACK stack/LOG_INFO_FLAG)))))
+                   (if-not (remained-constant! HUB_STAMP)
+                           (did-inc! LOG_INFO_STAMP (* PEEK_AT_STACK stack/LOG_INFO_FLAG)))))
 
 (defconstraint   generalities---auxiliary-stamps---necessary-conditions-for-LOG_INFO_FLAG-to-be-on (:perspective stack)
                  (begin (debug (is-binary LOG_INFO_FLAG))

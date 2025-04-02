@@ -21,14 +21,14 @@
 (defconstraint execution-environment-consistency---linking ()
                (if-not-zero envcp_CN
                             (if-eq (next envcp_CN) envcp_CN
-                                   (if-not-zero (will-remain-constant! envcp_HUB_STAMP)
-                                                (begin
-                                                  (eq! (next   envcp_PC)             envcp_PC_NEW)
-                                                  (eq! (next   envcp_HEIGHT)         envcp_HEIGHT_NEW)
-                                                  (eq! (next   envcp_GAS_EXPECTED)   envcp_GAS_NEXT))))))
+                                   (if-not (will-remain-constant! envcp_HUB_STAMP)
+                                           (begin
+                                             (eq! (next   envcp_PC)             envcp_PC_NEW)
+                                             (eq! (next   envcp_HEIGHT)         envcp_HEIGHT_NEW)
+                                             (eq! (next   envcp_GAS_EXPECTED)   envcp_GAS_NEXT))))))
 
 (defconstraint execution-environment-consistency---initialization ()
-               (if-not-zero (will-remain-constant! envcp_CN)
-                            (begin
-                              (vanishes! (next envcp_PC))
-                              (vanishes! (next envcp_HEIGHT)))))
+               (if-not (will-remain-constant! envcp_CN)
+                       (begin
+                         (vanishes! (next envcp_PC))
+                         (vanishes! (next envcp_HEIGHT)))))

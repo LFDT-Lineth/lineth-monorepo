@@ -37,14 +37,14 @@
                               (will-eq! HUB_STAMP (+ HUB_STAMP PEEK_AT_TRANSACTION))))
 
 (defconstraint   heartbeat---hub-stamp---jumps-at-transaction-boundaries ()
-                 (if-not-zero (will-remain-constant! ABS_TX_NUM)
-                                     (will-inc! HUB_STAMP 1)))
+                 (if-not (will-remain-constant! ABS_TX_NUM)
+                         (will-inc! HUB_STAMP 1)))
 
 (defconstraint   heartbeat---hub-stamp---increments-during-execution-phase ()
                  (if-not-zero TX_EXEC
-                              (begin (if-not-zero (remained-constant! HUB_STAMP)
-                                                  (begin (vanishes! COUNTER_TLI)
-                                                         (vanishes! COUNTER_NSR)))
+                              (begin (if-not (remained-constant! HUB_STAMP)
+                                             (begin (vanishes! COUNTER_TLI)
+                                                    (vanishes! COUNTER_NSR)))
                                      (if-zero COUNTER_NSR
                                               (eq! PEEK_AT_STACK 1)
                                               (vanishes! PEEK_AT_STACK))

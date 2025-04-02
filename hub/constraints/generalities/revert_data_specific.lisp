@@ -65,13 +65,13 @@
                                          (vanishes! CN_GETS_REV))))
 
 (defconstraint child-context-inherits-parent-rollback ()
-               (if-not-zero (remained-constant! HUB_STAMP)
-                            (if-not-zero (prev TX_EXEC)
-                                         (if-not-zero TX_EXEC
-                                                      (if-eq (prev CONTEXT_NUMBER_NEW) HUB_STAMP
-                                                             (begin
-                                                               (eq! CN_GETS_REV (prev CN_WILL_REV))
-                                                               (if-zero CN_SELF_REV (remained-constant! CN_REV_STAMP))))))))
+               (if-not (remained-constant! HUB_STAMP)
+                       (if-not-zero (prev TX_EXEC)
+                                    (if-not-zero TX_EXEC
+                                                 (if-eq (prev CONTEXT_NUMBER_NEW) HUB_STAMP
+                                                        (begin
+                                                           (eq! CN_GETS_REV (prev CN_WILL_REV))
+                                                           (if-zero CN_SELF_REV (remained-constant! CN_REV_STAMP))))))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

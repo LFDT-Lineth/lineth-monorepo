@@ -18,8 +18,8 @@
                   (begin (vanishes! CT)
                          (vanishes! OLI)
                          (vanishes! INST)))
-         (if-not-zero (will-remain-constant! STAMP)
-                      (vanishes! (next CT)))
+         (if-not (will-remain-constant! STAMP)
+                 (vanishes! (next CT)))
          (if-not-zero STAMP
                       (begin (if-not-zero OLI
                                           (will-inc! STAMP 1)

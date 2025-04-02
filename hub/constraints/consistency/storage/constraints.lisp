@@ -50,24 +50,24 @@
 
 (defconstraint    storage-consistency---FIRST-AGAIN-FINAL---repeat-storage-row---change-in-storage-slot  (:guard   (storage-consistency---repeat-storage-row))
                   (begin
-                    (if-not-zero (remained-constant!   (scp_full_address))    (eq! (storage-consistency---transtion-sum)   6))
-                    (if-not-zero (remained-constant!   scp_STORAGE_KEY_HI)    (eq! (storage-consistency---transtion-sum)   6))
-                    (if-not-zero (remained-constant!   scp_STORAGE_KEY_LO)    (eq! (storage-consistency---transtion-sum)   6))))
+                    (if-not (remained-constant!   (scp_full_address))    (eq! (storage-consistency---transtion-sum)   6))
+                    (if-not (remained-constant!   scp_STORAGE_KEY_HI)    (eq! (storage-consistency---transtion-sum)   6))
+                    (if-not (remained-constant!   scp_STORAGE_KEY_LO)    (eq! (storage-consistency---transtion-sum)   6))))
 
 (defconstraint    storage-consistency---FIRST-AGAIN-FINAL---repeat-storage-row---no-change-in-storage-slot  (:guard   (storage-consistency---repeat-storage-row))
-                  (if-zero (remained-constant!   (scp_full_address))
-                           (if-zero (remained-constant!   scp_STORAGE_KEY_HI)
-                                    (if-zero (remained-constant!   scp_STORAGE_KEY_LO)
-                                             (eq! (storage-consistency---transtion-conflation) 0)))))
+                  (if (remained-constant!   (scp_full_address))
+                      (if (remained-constant!   scp_STORAGE_KEY_HI)
+                          (if (remained-constant!   scp_STORAGE_KEY_LO)
+                              (eq! (storage-consistency---transtion-conflation) 0)))))
 
 (defconstraint    storage-consistency---FIRST-AGAIN-FINAL---repeat-encounter-of-storage-slot    (:guard    (*   scp_PEEK_AT_STORAGE    (-   1   scp_FIRST_IN_CNF)))
                   (begin
-                    (if-not-zero    (remained-constant!    scp_REL_BLK_NUM)
-                                    (eq!    (storage-consistency---transtion-block)   2)
-                                    (eq!    (storage-consistency---transtion-block)   0))
-                    (if-not-zero    (remained-constant!    scp_ABS_TX_NUM)
-                                    (eq!    (storage-consistency---transtion-transaction)   2)
-                                    (eq!    (storage-consistency---transtion-transaction)   0))))
+                    (if-not    (remained-constant!    scp_REL_BLK_NUM)
+                               (eq!    (storage-consistency---transtion-block)   2)
+                               (eq!    (storage-consistency---transtion-block)   0))
+                    (if-not    (remained-constant!    scp_ABS_TX_NUM)
+                               (eq!    (storage-consistency---transtion-transaction)   2)
+                               (eq!    (storage-consistency---transtion-transaction)   0))))
 
 (defconstraint    storage-consistency---FIRST-AGAIN-FINAL---final-row-with-room-to-spare ()
                   (if-not-zero (prev scp_PEEK_AT_STORAGE)
@@ -111,16 +111,16 @@
                               (vanishes! scp_VALUE_CURR_LO))))
 
 (defconstraint storage-consistency---resetting-of-storage-values-after-deployments---again (:guard   scp_AGAIN_IN_CNF)
-               (if-not-zero   (remained-constant!   scp_DEPLOYMENT_NUMBER)
-                              (begin
-                                (vanishes! scp_VALUE_CURR_HI)
-                                (vanishes! scp_VALUE_CURR_LO))))
+               (if-not   (remained-constant!   scp_DEPLOYMENT_NUMBER)
+                         (begin
+                            (vanishes! scp_VALUE_CURR_HI)
+                            (vanishes! scp_VALUE_CURR_LO))))
 
 (defconstraint storage-consistency---persisting-of-storage-values (:guard   scp_AGAIN_IN_CNF)
-               (if-zero   (remained-constant!   scp_DEPLOYMENT_NUMBER)
-                          (begin
-                            (eq!   scp_VALUE_CURR_HI   (prev   scp_VALUE_NEXT_HI))
-                            (eq!   scp_VALUE_CURR_LO   (prev   scp_VALUE_NEXT_LO)))))
+               (if   (remained-constant!   scp_DEPLOYMENT_NUMBER)
+                     (begin
+                       (eq!   scp_VALUE_CURR_HI   (prev   scp_VALUE_NEXT_HI))
+                       (eq!   scp_VALUE_CURR_LO   (prev   scp_VALUE_NEXT_LO)))))
 
 (defconstraint setting-and-resetting-storage-key-warmth ()
                (begin

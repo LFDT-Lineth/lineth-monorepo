@@ -28,8 +28,8 @@
                           (eq! (transaction_phase_sum) 1))))
 
 (defconstraint first-phase-of-new-transaction ()
-               (if-not-zero (remained-constant! ABS_TX_NUM)
-                            (eq! (+ TX_SKIP TX_WARM TX_INIT) 1)))
+               (if-not (remained-constant! ABS_TX_NUM)
+                       (eq! (+ TX_SKIP TX_WARM TX_INIT) 1)))
 
 (defconstraint abs-tx-num-increments ()
                (if-not-zero ABS_TX_NUM

@@ -21,8 +21,8 @@
   (or! (remained-constant! ABS_LOG_NUM) (did-inc! ABS_LOG_NUM 1)))
 
 (defconstraint index-reset ()
-  (if-not-zero (remained-constant! ABS_LOG_NUM)
-               (vanishes! INDEX)))
+  (if-not (remained-constant! ABS_LOG_NUM)
+          (vanishes! INDEX)))
 
 (defconstraint log-logs-no-data (:guard ABS_LOG_NUM)
   (if-zero LOGS_DATA
@@ -33,16 +33,16 @@
                   (did-inc! ABS_LOG_NUM 1))))
 
 (defconstraint log-logs-data (:guard LOGS_DATA)
-  (begin (if-not-zero (remained-constant! ABS_LOG_NUM)
-                      (eq! SIZE_ACC SIZE_LIMB))
-         (if-not-zero (did-inc! ABS_LOG_NUM 1)
-                      (begin (eq! SIZE_ACC
+  (begin (if-not (remained-constant! ABS_LOG_NUM)
+                 (eq! SIZE_ACC SIZE_LIMB))
+         (if-not (did-inc! ABS_LOG_NUM 1)
+                 (begin (eq! SIZE_ACC
                                   (+ (prev SIZE_ACC) SIZE_LIMB))
                              (debug (eq! SIZE_LIMB LLARGE))
                              (did-inc! INDEX 1)))
-         (if-not-zero (will-remain-constant! ABS_LOG_NUM)
-                      (begin (eq! SIZE_TOTAL SIZE_ACC)
-                             (vanishes! (next INDEX))))
+         (if-not (will-remain-constant! ABS_LOG_NUM)
+                 (begin (eq! SIZE_TOTAL SIZE_ACC)
+                        (vanishes! (next INDEX))))
          (debug       (if-eq       SIZE_ACC   SIZE_TOTAL
                       (will-inc!    ABS_LOG_NUM   1)))))
 
@@ -64,8 +64,8 @@
                  (conflation-constancy   ABS_LOG_NUM_MAX))
 
 (defun (log-constancy X)
-  (if-not-zero   (did-inc!           ABS_LOG_NUM 1)
-                 (remained-constant! X)))
+  (if-not   (did-inc!           ABS_LOG_NUM 1)
+            (remained-constant! X)))
 
 (defconstraint log-constancies ()
   (begin (log-constancy SIZE_TOTAL)

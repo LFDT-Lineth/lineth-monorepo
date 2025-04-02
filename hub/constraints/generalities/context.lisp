@@ -79,19 +79,19 @@
 
 (defconstraint    generalities---context-numbers---TX_EXEC-phase---linking-constraint-for-CN-and-CN_NEW ()
                   (if-not-zero TX_EXEC
-                               (if-not-zero (remained-constant! HUB_STAMP)
-                                            (eq! CN (prev CN_NEW)))))
+                               (if-not (remained-constant! HUB_STAMP)
+                                       (eq! CN (prev CN_NEW)))))
 
 (defconstraint    generalities---context-numbers---TX_EXEC-phase---CN-may-only-change-if-CMC ()
                   (if-not-zero TX_EXEC
                                (if-zero CMC (eq! CN_NEW CN))))
 
 (defconstraint    generalities---context-numbers---at-HUB_STAMP-transitions ()
-                  (if-not-zero (will-remain-constant! HUB_STAMP)
-                               (begin
-                                 (if-not-zero CMC   (eq! PEEK_AT_CONTEXT 1))
-                                 (if-not-zero XAHOY (execution-provides-empty-return-data 0))
-                                 (if-not-zero TX_EXEC
+                  (if-not (will-remain-constant! HUB_STAMP)
+                          (begin
+                             (if-not-zero CMC   (eq! PEEK_AT_CONTEXT 1))
+                             (if-not-zero XAHOY (execution-provides-empty-return-data 0))
+                             (if-not-zero TX_EXEC
                                               (if-not-zero CN_NEW
                                                            (eq! (next TX_EXEC) 1)
                                                            (eq! (next TX_FINL) 1))))))

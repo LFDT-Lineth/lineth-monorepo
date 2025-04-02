@@ -38,9 +38,9 @@
                (or! (eq! INST EVM_INST_MUL) (eq! INST EVM_INST_EXP))))
 
 (defconstraint reset-stuff ()
-  (if-not-zero (will-remain-constant! STAMP)
-               (begin (vanishes! (next CT))
-                      (vanishes! (next BIT_NUM)))))
+  (if-not (will-remain-constant! STAMP)
+          (begin (vanishes! (next CT))
+                 (vanishes! (next BIT_NUM)))))
 
 (defconstraint oli-last-one-line ()
   (if-not-zero OLI
@@ -479,11 +479,11 @@
                                       (mu)))))
 
 (defun (final-square-and-multiply)
-  (if-not-zero (will-remain-constant! STAMP)
-               (begin (eq! RES_HI
-                         (+ (* THETA (C_3)) (C_2)))
-                      (eq! RES_LO
-                         (+ (* THETA (C_1)) (C_0))))))
+  (if-not (will-remain-constant! STAMP)
+          (begin (eq! RES_HI
+                     (+ (* THETA (C_3)) (C_2)))
+                 (eq! RES_LO
+                     (+ (* THETA (C_1)) (C_0))))))
 
 (defconstraint nontrivial-exp-regime-nonzero-result ()
   (if-eq INST EVM_INST_EXP

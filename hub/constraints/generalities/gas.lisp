@@ -38,22 +38,22 @@
                              (if-zero   (force-bin  (+  stack/CREATE_FLAG  stack/CALL_FLAG))
                                         (eq!  GAS_NEXT (- GAS_ACTUAL GAS_COST)))))
 
-(defun    (hub-stamp-transition-within-TX_EXEC)   (*   (will-remain-constant! HUB_STAMP)
-                                                       TX_EXEC
-                                                       (next TX_EXEC)))
+(defun    (hub-stamp-transition-within-TX_EXEC)   (or! (will-remain-constant! HUB_STAMP)
+                                                       (eq! TX_EXEC 0)
+                                                       (eq! (next TX_EXEC) 0)))
 
 (defconstraint    gas-columns---hub-stamp-transition-constraints---no-context-change ()
-                  (if-not-zero (hub-stamp-transition-within-TX_EXEC)
-                               (if-eq    CN_NEW    CN
-                                         (eq! (next GAS_ACTUAL) (next GAS_EXPECTED)))))
+                  (if-not (hub-stamp-transition-within-TX_EXEC)
+                            (if-eq    CN_NEW    CN
+                                      (eq! (next GAS_ACTUAL) (next GAS_EXPECTED)))))
 
 (defconstraint    gas-columns---hub-stamp-transition-constraints---re-entering-parent-context ()
-                  (if-not-zero (hub-stamp-transition-within-TX_EXEC)
-                               (if-eq    CN_NEW    CALLER_CN
-                                         (eq! (next GAS_ACTUAL) (+ (next GAS_EXPECTED) GAS_NEXT)))))
+                  (if-not (hub-stamp-transition-within-TX_EXEC)
+                            (if-eq    CN_NEW    CALLER_CN
+                                      (eq! (next GAS_ACTUAL) (+ (next GAS_EXPECTED) GAS_NEXT)))))
 
 (defconstraint    gas-columns---hub-stamp-transition-constraints---entering-child-context ()
-                  (if-not-zero (hub-stamp-transition-within-TX_EXEC)
-                               (if-eq    CN_NEW    (+ 1 HUB_STAMP)
-                                         (eq! (next GAS_ACTUAL) (next GAS_EXPECTED)))))
+                  (if-not (hub-stamp-transition-within-TX_EXEC)
+                            (if-eq    CN_NEW    (+ 1 HUB_STAMP)
+                                      (eq! (next GAS_ACTUAL) (next GAS_EXPECTED)))))
 ;; can't define GAS_EXPECTED at this level of generality

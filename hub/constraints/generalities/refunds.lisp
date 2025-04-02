@@ -40,8 +40,8 @@
 
 (defconstraint    generalities---gas---refunds-transition-constraints ()
                   (if-not-zero    TX_EXEC
-                                  (if-not-zero    (remained-constant! HUB_STAMP)
-                                                  (eq! REFUND_COUNTER (prev REFUND_COUNTER_NEW)))))
+                                  (if-not    (remained-constant! HUB_STAMP)
+                                             (eq! REFUND_COUNTER (prev REFUND_COUNTER_NEW)))))
 
 (defconstraint    generalities---gas---discard-refunds-if-context-will-revert ()
                   (if-not-zero    CN_WILL_REV

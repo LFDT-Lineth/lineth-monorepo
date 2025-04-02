@@ -27,8 +27,8 @@
                          (debug (vanishes! CT))
                          (debug (vanishes! CT_MAX))))
          (or! (will-remain-constant! STAMP) (will-inc! STAMP 1))
-         (if-not-zero (will-remain-constant! STAMP)
-                      (vanishes! (next CT)))
+         (if-not (will-remain-constant! STAMP)
+                 (vanishes! (next CT)))
          (if-not-zero STAMP
                       (begin (or! (eq! INST EVM_INST_ADD) (eq! INST EVM_INST_SUB))
                              (if-eq-else CT CT_MAX

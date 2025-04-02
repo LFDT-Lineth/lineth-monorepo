@@ -27,8 +27,8 @@
        (eq! STAMP (+ (prev STAMP) 1))))
 
 (defconstraint ct-reset ()
-  (if-not-zero (remained-constant! STAMP)
-               (vanishes! ct)))
+  (if-not (remained-constant! STAMP)
+          (vanishes! ct)))
 
 (defconstraint ct-increment ()
   (begin (if-eq RECIPE_1 1
