@@ -1,6 +1,6 @@
 (defun (hub-into-mul-activation-flag)
-  (and (unexceptional-stack-row)
-       hub.stack/MUL_FLAG))
+  (* (unexceptional-stack-row)
+      hub.stack/MUL_FLAG))
 
 (deflookup hub-into-mul
     ;; target columns

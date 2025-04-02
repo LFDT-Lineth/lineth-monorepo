@@ -1,6 +1,6 @@
 (defun (hub-into-exp-trigger)
-  (and hub.PEEK_AT_MISCELLANEOUS
-       hub.misc/EXP_FLAG))
+  (* hub.PEEK_AT_MISCELLANEOUS
+     hub.misc/EXP_FLAG))
 
 (deflookup hub-into-exp
            ;; target columns

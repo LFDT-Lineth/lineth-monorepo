@@ -47,8 +47,7 @@
                   (vanishes! CT_MAX))))
 
 (defconstraint ct-small ()
-  (eq! 1
-       (~ (- CT LLARGE))))
+  (neq! CT LLARGE))
 
 (defconstraint countereset (:guard STAMP)
   (if-eq-else CT CT_MAX (will-inc! STAMP 1) (will-inc! CT 1)))

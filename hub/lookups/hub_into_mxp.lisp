@@ -1,5 +1,5 @@
 (defun (hub-into-mxp-trigger)
-  (and hub.PEEK_AT_MISCELLANEOUS hub.misc/MXP_FLAG))
+  (* hub.PEEK_AT_MISCELLANEOUS hub.misc/MXP_FLAG))
 
 (deflookup
   hub-into-mxp

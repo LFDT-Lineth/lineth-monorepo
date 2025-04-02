@@ -1,6 +1,6 @@
 (defun (hub-into-shf-activation-flag)
-  (and (unexceptional-stack-row)
-       hub.stack/SHF_FLAG))
+  (* (unexceptional-stack-row)
+      hub.stack/SHF_FLAG))
 
 (deflookup hub-into-shf
     ;; target columns

@@ -1,6 +1,6 @@
 (defun (hub-into-rom-lex-trigger)
-  (and hub.PEEK_AT_ACCOUNT
-       hub.account/ROMLEX_FLAG))
+  (* hub.PEEK_AT_ACCOUNT
+     hub.account/ROMLEX_FLAG))
 
 
 (deflookup hub-into-romlex

@@ -1,5 +1,5 @@
 (defun (hub-into-mmu-trigger)
-  (and hub.PEEK_AT_MISCELLANEOUS hub.misc/MMU_FLAG))
+  (* hub.PEEK_AT_MISCELLANEOUS hub.misc/MMU_FLAG))
 
 (deflookup
   hub-into-mmu

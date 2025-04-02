@@ -1,5 +1,5 @@
 (defun (hub-into-add-activation-flag)
-  (and (unexceptional-stack-row) hub.stack/ADD_FLAG))
+  (* (unexceptional-stack-row) hub.stack/ADD_FLAG))
 
 (deflookup
   hub-into-add

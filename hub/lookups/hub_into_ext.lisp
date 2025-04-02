@@ -1,6 +1,6 @@
 (defun (hub-into-ext-activation-flag)
-  (and (unexceptional-stack-row)
-       hub.stack/EXT_FLAG))
+  (* (unexceptional-stack-row)
+      hub.stack/EXT_FLAG))
 
 (deflookup hub-into-ext
     ;; target columns

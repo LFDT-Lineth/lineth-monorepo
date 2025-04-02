@@ -1,6 +1,6 @@
 (defun (hub-into-wcp-activation-flag)
-  (and (unexceptional-stack-row)
-       hub.stack/WCP_FLAG))
+  (* (unexceptional-stack-row)
+      hub.stack/WCP_FLAG))
 
 (deflookup hub-into-wcp
     ;; target columns

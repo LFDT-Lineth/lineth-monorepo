@@ -1,6 +1,6 @@
 (defun (hub-into-trm-trigger)
-  (and hub.PEEK_AT_ACCOUNT
-       hub.account/TRM_FLAG))
+  (* hub.PEEK_AT_ACCOUNT
+     hub.account/TRM_FLAG))
 
 (deflookup hub-into-trm
            ;; target columns

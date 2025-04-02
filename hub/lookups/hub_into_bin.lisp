@@ -1,6 +1,6 @@
 (defun (hub-into-bin-activation-flag)
-  (and (unexceptional-stack-row)
-       hub.stack/BIN_FLAG))
+  (* (unexceptional-stack-row)
+      hub.stack/BIN_FLAG))
 
 (deflookup hub-into-bin
     ;; target columns

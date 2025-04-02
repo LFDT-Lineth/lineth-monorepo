@@ -1,6 +1,6 @@
 (defun (hub-into-rlp-addr-trigger)
-  (and hub.PEEK_AT_ACCOUNT
-       hub.account/RLPADDR_FLAG))
+  (* hub.PEEK_AT_ACCOUNT
+     hub.account/RLPADDR_FLAG))
 
 ;;
 (deflookup hub-into-rlpaddr

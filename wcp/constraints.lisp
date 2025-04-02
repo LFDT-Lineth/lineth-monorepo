@@ -60,8 +60,7 @@
   (if-eq-else CT CT_MAX (will-inc! STAMP 1) (will-inc! CT 1)))
 
 (defconstraint ct-upper-bond ()
-  (eq! (~ (- LLARGE CT))
-       1))
+  (neq! CT LLARGE))
 
 (defconstraint lastRow (:domain {-1})
   (eq! CT CT_MAX))

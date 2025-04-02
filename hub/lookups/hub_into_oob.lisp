@@ -1,6 +1,6 @@
 (defun (hub-into-oob-trigger)
-  (and hub.PEEK_AT_MISCELLANEOUS
-       hub.misc/OOB_FLAG))
+  (* hub.PEEK_AT_MISCELLANEOUS
+     hub.misc/OOB_FLAG))
 
 (deflookup hub-into-oob
            ;; target columns
