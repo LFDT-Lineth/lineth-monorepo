@@ -1,0 +1,108 @@
+name: Codecov coverage report upload for PRs from external forks
+
+on:
+  workflow_run:
+    workflows: [main]
+    types:
+      - completed
+
+jobs:
+  filter-commit-changes:
+    if: github.event.pull_request.head.repo.full_name != 'Consensys/linea-monorepo'
+    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
+    name: Filter commit changes
+    outputs:
+      coordinator: ${{ steps.filter.outputs.coordinator }}
+      smart-contracts: ${{ steps.filter.outputs.smart-contracts }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Filter commit changes
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          base: ${{ github.ref }}
+          list-files: "json"
+          filters: |
+            coordinator:
+              - 'coordinator/**'
+              - 'testdata/**'
+              - 'buildSrc/**'
+              - 'jvm-libs/**'
+              - 'gradle/**'
+              - 'build.gradle'
+              - 'gradle.properties'
+              - 'settings.gradle'
+              - '.github/workflows/coordinator-*.yml'
+              - '.github/workflows/build-and-publish.yml'
+              - '.github/workflows/main.yml'
+              - '.github/workflows/reuse-*.yml'
+              - 'config/common/traces-limits-v1.toml'
+              - 'config/common/traces-limits-v2.toml'
+              - 'config/coordinator/**'
+              - 'e2e/**'
+              - 'docker/compose-*.yml'
+            smart-contracts:
+              - 'contracts/**'
+              - 'testdata/**'
+              - 'prover/**'
+              - '.github/workflows/main.yml'
+              - '.github/workflows/run-smc-tests.yml'
+
+  upload-codecov-coordinator:
+    needs: [ filter-commit-changes ]
+    if: ${{ needs.filter-commit-changes.outputs.coordinator == 'true' }}
+    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
+    name: upload-codecov-coordinator
+    env:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Compute and save COMMIT_TAG
+        run: |
+          echo COMMIT_TAG=$(git rev-parse --short "$GITHUB_SHA") >> $GITHUB_ENV
+      - name: Download Jacoco test coverage report (from coordinator-testing.yml)
+        uses: actions/download-artifact@v4
+        with:
+          name: jacocoRootReport-${{ env.COMMIT_TAG }}.xml
+          path: |
+            ${{ github.workspace }}/jacocoRootReport.xml
+      - uses: codecov/codecov-action@v5
+        with:
+          fail_ci_if_error: true
+          files: ${{ github.workspace }}/jacocoRootReport.xml
+          flags: kotlin
+          os: linux
+          name: codecov-coordinator
+          verbose: true
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+  upload-codecov-smart-contracts:
+    needs: [ filter-commit-changes ]
+    if: ${{ needs.filter-commit-changes.outputs.smart-contracts == 'true' }}
+    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
+    name: upload-codecov-smart-contracts
+    env:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Compute and save COMMIT_TAG
+        run: |
+          echo COMMIT_TAG=$(git rev-parse --short "$GITHUB_SHA") >> $GITHUB_ENV
+      - name: Download smart contract coverage report (from run-smc.tests.yml)
+        uses: actions/download-artifact@v4
+        with:
+          name: smart-contract-coverage-${{ env.COMMIT_TAG }}.json
+          path: |
+            ${{ github.workspace }}/coverage-final.json
+      - uses: codecov/codecov-action@v5
+        with:
+          fail_ci_if_error: true
+          files: ${{ github.workspace }}/coverage-final.json
+          flags: hardhat
+          os: linux
+          name: codecov-contracts
+          verbose: true
+          token: ${{ secrets.CODECOV_TOKEN }}
