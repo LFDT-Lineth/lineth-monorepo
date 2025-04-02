@@ -496,6 +496,12 @@ data class GasPriceCapTimeOfDayMultipliersConfig(val gasPriceCapTimeOfDayMultipl
 
 data class Type2StateProofProviderConfig(
   val endpoints: List<URL>,
+  val l1QueryBlockTag: BlockParameter.Tag = BlockParameter.Tag.LATEST,
+  val l1PollingInterval: Duration = Duration.ofSeconds(12),
+  val l1RequestRetry: RequestRetryConfigTomlFriendly = RequestRetryConfigTomlFriendly(
+    backoffDelay = Duration.ofSeconds(1),
+    failuresWarningThreshold = 3
+  ),
   override val requestRetry: RequestRetryConfigTomlFriendly
 ) : RequestRetryConfigurable
 

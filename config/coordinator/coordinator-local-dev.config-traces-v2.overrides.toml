@@ -23,3 +23,11 @@ endpoints=["http://127.0.0.1:8745"]
 
 [traces.conflation-v2]
 endpoints=["http://127.0.0.1:8745"]
+
+[type2-state-proof-provider]
+endpoints=[]
+
+[l2-network-gas-pricing.json-rpc-pricing-propagation]
+disabled=true
+geth-gas-price-update-recipients=[]
+besu-gas-price-update-recipients=["http://127.0.0.1:9045"]

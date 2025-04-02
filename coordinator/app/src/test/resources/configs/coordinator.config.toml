@@ -73,6 +73,10 @@ request-retry.failures-warning-threshold=2
 endpoints=["http://shomei-frontend:8888/"]
 request-retry.backoff-delay="PT1S"
 request-retry.failures-warning-threshold=2
+l1-query-block-tag="SAFE"
+l1-polling-interval="PT6S"
+l1-request-retry.backoff-delay="PT0.5S"
+l1-request-retry.failures-warning-threshold=20
 
 [api]
 observability_port=9545

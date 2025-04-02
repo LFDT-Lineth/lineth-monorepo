@@ -68,3 +68,6 @@ endpoints = ["http://127.0.0.1:8889/"]
 
 [conflation]
 #switch-block-number=20
+
+[type2-state-proof-provider]
+endpoints=[]

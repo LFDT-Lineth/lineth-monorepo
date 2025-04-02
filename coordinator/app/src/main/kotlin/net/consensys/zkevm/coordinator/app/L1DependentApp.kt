@@ -40,6 +40,7 @@ import net.consensys.linea.web3j.SmartContractErrors
 import net.consensys.linea.web3j.Web3jBlobExtended
 import net.consensys.zkevm.LongRunningService
 import net.consensys.zkevm.coordinator.app.config.CoordinatorConfig
+import net.consensys.zkevm.coordinator.app.config.Type2StateProofProviderConfig
 import net.consensys.zkevm.coordinator.blockcreation.BatchesRepoBasedLastProvenBlockNumberProvider
 import net.consensys.zkevm.coordinator.blockcreation.BlockCreationMonitor
 import net.consensys.zkevm.coordinator.blockcreation.GethCliqueSafeBlockProvider
@@ -226,6 +227,14 @@ class L1DependentApp(
       vertx = vertx
     )
   }
+
+  private val l1FinalizationHandlerForShomeiRpc: LongRunningService = setupL1FinalizationMonitorForShomeiFrontend(
+    type2StateProofProviderConfig = configs.type2StateProofProvider,
+    httpJsonRpcClientFactory = httpJsonRpcClientFactory,
+    lineaRollupClient = lineaRollupClient,
+    l2Web3jClient = l2Web3jClient,
+    vertx = vertx
+  )
 
   private val gasPriceCapProvider =
     if (configs.l1DynamicGasPriceCapService.enabled) {
@@ -875,20 +884,6 @@ class L1DependentApp(
     )
   }
 
-  private val finalizedBlockNotifier = run {
-    val log = LogManager.getLogger("clients.ForkChoiceUpdaterShomeiClient")
-    val type2StateProofProviderClients = configs.type2StateProofProvider.endpoints.map {
-      ShomeiClient(
-        vertx = vertx,
-        rpcClient = httpJsonRpcClientFactory.create(it, log = log),
-        retryConfig = configs.type2StateProofProvider.requestRetryConfig,
-        log = log
-      )
-    }
-
-    ForkChoiceUpdaterImpl(type2StateProofProviderClients)
-  }
-
   private val lastProvenBlockNumberProvider = run {
     val lastProvenConsecutiveBatchBlockNumberProvider = BatchesRepoBasedLastProvenBlockNumberProvider(
       lastProcessedBlockNumber.toLong(),
@@ -1023,29 +1018,23 @@ class L1DependentApp(
     )
   }
 
-  private val blockFinalizationHandlerMap = mapOf(
-    "finalized records cleanup" to RecordsCleanupFinalizationHandler(
-      batchesRepository = batchesRepository,
-      blobsRepository = blobsRepository,
-      aggregationsRepository = aggregationsRepository
-    ),
-    "type 2 state proof provider finalization updates" to FinalizationHandler {
-      finalizedBlockNotifier.updateFinalizedBlock(
-        BlockNumberAndHash(it.blockNumber, it.blockHash.toArray())
-      )
-    },
-    "last_proven_block_provider" to FinalizationHandler { update: FinalizationMonitor.FinalizationUpdate ->
-      lastProvenBlockNumberProvider.updateLatestL1FinalizedBlock(update.blockNumber.toLong())
-    },
-    "highest_accepted_finalization_on_l1" to FinalizationHandler { update: FinalizationMonitor.FinalizationUpdate ->
-      highestAcceptedFinalizationTracker(update.blockNumber)
-    }
-  )
-
   init {
-    blockFinalizationHandlerMap.forEach { (handlerName, handler) ->
-      l1FinalizationMonitor.addFinalizationHandler(handlerName, handler)
-    }
+    mapOf(
+      "last_proven_block_provider" to FinalizationHandler { update: FinalizationMonitor.FinalizationUpdate ->
+        lastProvenBlockNumberProvider.updateLatestL1FinalizedBlock(update.blockNumber.toLong())
+      },
+      "finalized records cleanup" to RecordsCleanupFinalizationHandler(
+        batchesRepository = batchesRepository,
+        blobsRepository = blobsRepository,
+        aggregationsRepository = aggregationsRepository
+      ),
+      "highest_accepted_finalization_on_l1" to FinalizationHandler { update: FinalizationMonitor.FinalizationUpdate ->
+        highestAcceptedFinalizationTracker(update.blockNumber)
+      }
+    )
+      .forEach { (handlerName, handler) ->
+        l1FinalizationMonitor.addFinalizationHandler(handlerName, handler)
+      }
   }
 
   override fun start(): CompletableFuture<Unit> {
@@ -1057,6 +1046,7 @@ class L1DependentApp(
       aggregationsRepository = aggregationsRepository
     )
       .thenCompose { l1FinalizationMonitor.start() }
+      .thenCompose { l1FinalizationHandlerForShomeiRpc.start() }
       .thenCompose { blobSubmissionCoordinator.start() }
       .thenCompose { aggregationFinalizationCoordinator.start() }
       .thenCompose { proofAggregationCoordinatorService.start() }
@@ -1075,6 +1065,7 @@ class L1DependentApp(
   override fun stop(): CompletableFuture<Unit> {
     return SafeFuture.allOf(
       l1FinalizationMonitor.stop(),
+      l1FinalizationHandlerForShomeiRpc.stop(),
       blobSubmissionCoordinator.stop(),
       aggregationFinalizationCoordinator.stop(),
       proofAggregationCoordinatorService.stop(),
@@ -1143,6 +1134,52 @@ class L1DependentApp(
         true -> TracesCountersV2.EMPTY_TRACES_COUNT
         false -> TracesCountersV1.EMPTY_TRACES_COUNT
       }
+    }
+
+    fun setupL1FinalizationMonitorForShomeiFrontend(
+      type2StateProofProviderConfig: Type2StateProofProviderConfig?,
+      httpJsonRpcClientFactory: VertxHttpJsonRpcClientFactory,
+      lineaRollupClient: LineaRollupSmartContractClientReadOnly,
+      l2Web3jClient: Web3j,
+      vertx: Vertx
+    ): LongRunningService {
+      if (type2StateProofProviderConfig == null || type2StateProofProviderConfig.endpoints.isEmpty()) {
+        return DisabledLongRunningService
+      }
+
+      val finalizedBlockNotifier = run {
+        val log = LogManager.getLogger("clients.ForkChoiceUpdaterShomeiClient")
+        val type2StateProofProviderClients = type2StateProofProviderConfig.endpoints.map {
+          ShomeiClient(
+            vertx = vertx,
+            rpcClient = httpJsonRpcClientFactory.create(it, log = log),
+            retryConfig = type2StateProofProviderConfig.requestRetryConfig,
+            log = log
+          )
+        }
+
+        ForkChoiceUpdaterImpl(type2StateProofProviderClients)
+      }
+
+      val l1FinalizationMonitor =
+        FinalizationMonitorImpl(
+          config =
+          FinalizationMonitorImpl.Config(
+            pollingInterval = type2StateProofProviderConfig.l1PollingInterval.toKotlinDuration(),
+            l1QueryBlockTag = type2StateProofProviderConfig.l1QueryBlockTag
+          ),
+          contract = lineaRollupClient,
+          l2Client = l2Web3jClient,
+          vertx = vertx
+        )
+
+      l1FinalizationMonitor.addFinalizationHandler("type 2 state proof provider finalization updates", {
+        finalizedBlockNotifier.updateFinalizedBlock(
+          BlockNumberAndHash(it.blockNumber, it.blockHash.toArray())
+        )
+      })
+
+      return l1FinalizationMonitor
     }
   }
 }
