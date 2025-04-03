@@ -1,0 +1,46 @@
+name: get-has-changes-requiring-e2e-testing
+
+on:
+  workflow_call:
+    inputs:
+      has_changes_requiring_build:
+        required: true
+        type: string
+      # Next 3 variables are required to determine if the only file changes that have occurred are in `/contracts` but not `/contracts/local-deployment-artifacts`
+      contracts_excluding_local_deployment_artifacts:
+        required: true
+        type: string
+      changed_file_count:
+        required: false
+        type: string
+      contracts_excluding_local_deployment_artifacts_count:
+        required: false
+        type: string
+    outputs:
+      has-changes-requiring-e2e-testing:
+        value: ${{ jobs.get-has-changes-requiring-e2e-testing.outputs.has_changes_requiring_e2e_testing }}
+
+jobs:
+  get-has-changes-requiring-e2e-testing:
+    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
+    outputs:
+      has_changes_requiring_e2e_testing: ${{ steps.eval.outputs.has_changes_requiring_e2e_testing }}
+    steps:
+      - name: Evaluate Toggle State
+        id: eval
+        shell: bash
+        run: |
+          has_changes_requiring_build=${{ inputs.has_changes_requiring_build }}
+          contracts_excluding_local_deployment_artifacts=${{ inputs.contracts_excluding_local_deployment_artifacts }}
+          changed_file_count=${{ inputs.changed_file_count }}
+          contracts_excluding_local_deployment_artifacts_count=${{ inputs.contracts_excluding_local_deployment_artifacts_count }}
+          HAS_CHANGES_REQUIRING_E2E_TESTING="true"
+
+          if [[ "$has_changes_requiring_build" == "false" ]]; then
+            HAS_CHANGES_REQUIRING_E2E_TESTING="false"
+          elif [[ "$contracts_excluding_local_deployment_artifacts" == "true" && "$changed_file_count" == "$contracts_excluding_local_deployment_artifacts_count" ]]; then
+            HAS_CHANGES_REQUIRING_E2E_TESTING="false"
+          fi
+
+          echo "has_changes_requiring_e2e_testing=$HAS_CHANGES_REQUIRING_E2E_TESTING"
+          echo "has_changes_requiring_e2e_testing=$HAS_CHANGES_REQUIRING_E2E_TESTING" >> $GITHUB_OUTPUT
