@@ -1,7 +1,7 @@
 "use client";
 
 import { zeroAddress } from "viem";
-import { useDynamicContext } from "@dynamic-labs/sdk-react-core";
+import { useDynamicContext, useIsLoggedIn } from "@/lib/dynamic";
 import { ChainId, LiFiWidget, WidgetSkeleton, type WidgetConfig } from "@/lib/lifi";
 import { ClientOnly } from "../client-only";
 import atypTextFont from "@/assets/fonts/atypText";
@@ -125,6 +125,7 @@ const widgetConfig: Partial<WidgetConfig> = {
   hiddenUI: ["appearance", "language"],
   sdkConfig: {
     rpcUrls: {
+      [ChainId.SOL]: [CHAINS_RPC_URLS[ChainId.SOL]],
       [ChainId.ETH]: [CHAINS_RPC_URLS[ChainId.ETH]],
       [ChainId.LNA]: [CHAINS_RPC_URLS[ChainId.LNA]],
       [ChainId.ARB]: [CHAINS_RPC_URLS[ChainId.ARB]],
@@ -143,7 +144,6 @@ const widgetConfig: Partial<WidgetConfig> = {
   chains: {
     deny: [
       ChainId.BTC,
-      ChainId.SOL,
       ChainId.PZE,
       ChainId.MOR,
       ChainId.FUS,
@@ -170,7 +170,8 @@ const widgetConfig: Partial<WidgetConfig> = {
 };
 
 export function Widget() {
-  const { setShowAuthFlow } = useDynamicContext();
+  const { setShowAuthFlow, setShowDynamicUserProfile } = useDynamicContext();
+  const isLoggedIn = useIsLoggedIn();
 
   return (
     <div>
@@ -180,7 +181,7 @@ export function Widget() {
             ...widgetConfig,
             walletConfig: {
               onConnect() {
-                setShowAuthFlow(true);
+                isLoggedIn ? setShowDynamicUserProfile(true) : setShowAuthFlow(true);
               },
             },
           }}

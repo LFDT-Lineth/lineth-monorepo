@@ -53,7 +53,9 @@ export const CHAINS = [
   zksync,
 ] as const;
 
-export const CHAINS_IDS = CHAINS.map((chain) => chain.id);
+const SOLANA_CHAIN = 1151111081099710 as const;
+
+export const CHAINS_IDS = [...CHAINS.map((chain) => chain.id), SOLANA_CHAIN];
 
 export const CHAINS_RPC_URLS: Record<(typeof CHAINS_IDS)[number], string> = {
   [mainnet.id]: `https://mainnet.infura.io/v3/${config.infuraApiKey}`,
@@ -80,6 +82,7 @@ export const CHAINS_RPC_URLS: Record<(typeof CHAINS_IDS)[number], string> = {
   [sei.id]: `https://evm-rpc.sei-apis.com`,
   [sonic.id]: `https://rpc.soniclabs.com`,
   [zksync.id]: `https://zksync-mainnet.infura.io/v3/${config.infuraApiKey}`,
+  [SOLANA_CHAIN]: `https://solana-mainnet.g.alchemy.com/v2/${config.alchemyApiKey}`,
 };
 
 export const NATIVE_BRIDGE_SUPPORTED_CHAIN_IDS = [mainnet.id, linea.id, lineaSepolia.id, sepolia.id] as const;

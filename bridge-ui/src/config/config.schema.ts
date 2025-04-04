@@ -30,6 +30,7 @@ export const configSchema = z
     // Feature toggle for CCTPV2 for USDC transfers
     isCctpEnabled: z.boolean(),
     infuraApiKey: z.string().nonempty(),
+    alchemyApiKey: z.string().nonempty(),
     dynamicEnvironmentId: z.string().nonempty(),
     lifiApiKey: z.string().nonempty(),
     onRamperApiKey: z.string().nonempty(),

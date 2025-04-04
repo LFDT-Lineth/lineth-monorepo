@@ -67,6 +67,7 @@ export const config: Config = {
   },
   isCctpEnabled: process.env.NEXT_PUBLIC_IS_CCTP_ENABLED === "true",
   infuraApiKey: process.env.NEXT_PUBLIC_INFURA_ID ?? "",
+  alchemyApiKey: process.env.NEXT_PUBLIC_ALCHEMY_ID ?? "",
   dynamicEnvironmentId: process.env.NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID ?? "",
   lifiApiKey: process.env.NEXT_PUBLIC_LIFI_API_KEY ?? "",
   onRamperApiKey: process.env.NEXT_PUBLIC_ONRAMPER_API_KEY ?? "",
