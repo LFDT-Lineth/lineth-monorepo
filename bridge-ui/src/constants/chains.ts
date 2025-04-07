@@ -82,7 +82,7 @@ export const CHAINS_RPC_URLS: Record<(typeof CHAINS_IDS)[number], string> = {
   [sei.id]: `https://evm-rpc.sei-apis.com`,
   [sonic.id]: `https://rpc.soniclabs.com`,
   [zksync.id]: `https://zksync-mainnet.infura.io/v3/${config.infuraApiKey}`,
-  [SOLANA_CHAIN]: `https://solana-mainnet.g.alchemy.com/v2/${config.alchemyApiKey}`,
+  [SOLANA_CHAIN]: `https://old-light-county.solana-mainnet.quiknode.pro/${config.quickNodeApiKey}`,
 };
 
 export const NATIVE_BRIDGE_SUPPORTED_CHAIN_IDS = [mainnet.id, linea.id, lineaSepolia.id, sepolia.id] as const;
