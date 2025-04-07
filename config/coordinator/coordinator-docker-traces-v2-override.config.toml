@@ -12,7 +12,7 @@ fs-responses-directory = "/data/prover/v3/aggregation/responses"
 [traces]
 switch-to-linea-besu=true
 blob-compressor-version="V1_0_1"
-expected-traces-api-version-v2="beta-v2.1-rc8"
+expected-traces-api-version-v2="beta-v2.1-rc14"
 [traces.counters-v2]
 endpoints=["http://traces-node-v2:8545/"]
 request-limit-per-endpoint=1

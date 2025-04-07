@@ -31,7 +31,11 @@ open class FakeStateManagerClient(
   open fun getStateRootHash(blockNumber: ULong): SafeFuture<ByteArray> {
     return blocksStateRootHashes[blockNumber]
       ?.let { SafeFuture.completedFuture(it) }
-      ?: SafeFuture.failedFuture(RuntimeException("StateRootHash not found for block=$blockNumber"))
+      ?: SafeFuture.failedFuture(
+        RuntimeException(
+          "StateRootHash not found for block=$blockNumber. available blocks: ${blocksStateRootHashes.keys}"
+        )
+      )
   }
 
   override fun rollupGetHeadBlockNumber(): SafeFuture<ULong> {

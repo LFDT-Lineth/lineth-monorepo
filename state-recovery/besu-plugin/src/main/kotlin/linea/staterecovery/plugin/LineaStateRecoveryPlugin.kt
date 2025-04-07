@@ -58,8 +58,8 @@ open class LineaStateRecoveryPlugin : BesuPlugin {
     val blockchainService = serviceManager.getServiceOrThrow(BlockchainService::class.java)
     val blockHeaderStaticFields = BlockHeaderStaticFields(
       coinbase = config.lineaSequencerBeneficiaryAddress.toArray(),
-      gasLimit = blockchainService.chainHeadHeader.gasLimit.toULong(),
-      difficulty = 2UL // Note, this will need to change once we move to QBFT
+      gasLimit = config.lineaBlockGasLimit,
+      difficulty = config.lineaBlockDifficulty
     )
     this.recoveryStatusPersistence = FileBasedRecoveryStatusPersistence(
       serviceManager.getServiceOrThrow(BesuConfiguration::class.java)

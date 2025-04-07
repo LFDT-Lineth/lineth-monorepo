@@ -10,6 +10,8 @@ import kotlin.time.toKotlinDuration
 
 data class PluginConfig(
   val lineaSequencerBeneficiaryAddress: Address,
+  val lineaBlockGasLimit: ULong,
+  val lineaBlockDifficulty: ULong,
   val l1SmartContractAddress: Address,
   val l1Endpoint: URI,
   val l1PollingInterval: kotlin.time.Duration,
@@ -36,15 +38,6 @@ class PluginCliOptions {
   }
 
   @CommandLine.Option(
-    names = ["--$cliOptionsPrefix-l1-smart-contract-address"],
-    description = ["L1 smart contract address"],
-    required = true,
-    converter = [AddressConverter::class],
-    defaultValue = "\${env:L1_ROLLUP_CONTRACT_ADDRESS}"
-  )
-  lateinit var l1SmartContractAddress: Address
-
-  @CommandLine.Option(
     names = ["--$cliOptionsPrefix-linea-sequencer-beneficiary-address"],
     description = ["Linea sequencer beneficiary address"],
     required = true,
@@ -52,6 +45,31 @@ class PluginCliOptions {
     defaultValue = "\${env:LINEA_SEQUENCER_BENEFICIARY_ADDRESS}"
   )
   lateinit var lineaSequencerBeneficiaryAddress: Address
+
+  @CommandLine.Option(
+    names = ["--$cliOptionsPrefix-linea-block-gas-limit"],
+    description = ["Linea Block gas limit. Default 2B (2_000_000_000)"],
+    required = false,
+    defaultValue = "\${env:LINEA_BLOCK_GAS_LIMIT}"
+  )
+  var lineaBlockGasLimit: Long = 2_000_000_000L
+
+  @CommandLine.Option(
+    names = ["--$cliOptionsPrefix-linea-block-difficulty"],
+    description = ["Linea Block difficulty. Default 2"],
+    required = false,
+    defaultValue = "\${env:LINEA_BLOCK_DIFFICULTY}"
+  )
+  var lineaBlockDifficulty: Long = 2
+
+  @CommandLine.Option(
+    names = ["--$cliOptionsPrefix-l1-smart-contract-address"],
+    description = ["L1 smart contract address"],
+    required = true,
+    converter = [AddressConverter::class],
+    defaultValue = "\${env:L1_ROLLUP_CONTRACT_ADDRESS}"
+  )
+  lateinit var l1SmartContractAddress: Address
 
   @CommandLine.Option(
     names = ["--$cliOptionsPrefix-l1-endpoint"],
@@ -205,8 +223,17 @@ class PluginCliOptions {
     require(overridingRecoveryStartBlockNumber == null || overridingRecoveryStartBlockNumber!! >= 1) {
       "overridingRecoveryStartBlockNumber=$overridingRecoveryStartBlockNumber must be greater than or equal to 1"
     }
+    require(lineaBlockGasLimit > 0) {
+      "lineaBlockGasLimit=$lineaBlockGasLimit must be greater than 0"
+    }
+    require(lineaBlockDifficulty >= 0) {
+      "lineaBlockDifficulty=$lineaBlockDifficulty must be greater than or equal to 0"
+    }
+
     return PluginConfig(
       lineaSequencerBeneficiaryAddress = lineaSequencerBeneficiaryAddress,
+      lineaBlockGasLimit = lineaBlockGasLimit.toULong(),
+      lineaBlockDifficulty = lineaBlockDifficulty.toULong(),
       l1SmartContractAddress = l1SmartContractAddress,
       l1Endpoint = l1RpcEndpoint,
       l1PollingInterval = l1PollingInterval.toKotlinDuration(),

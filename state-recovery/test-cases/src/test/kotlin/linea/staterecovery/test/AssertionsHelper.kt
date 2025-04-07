@@ -18,10 +18,11 @@ import kotlin.time.toJavaDuration
 
 fun execCommandAndAssertSuccess(
   command: String,
+  timeout: Duration = 1.minutes,
   log: Logger
 ): SafeFuture<CommandResult> {
   return Runner
-    .executeCommandFailOnNonZeroExitCode(command, log = log)
+    .executeCommandFailOnNonZeroExitCode(command, timeout = timeout, log = log)
     .thenPeek { execResult ->
       log.debug("STDOUT: {}", execResult.stdOutStr)
       log.debug("STDERR: {}", execResult.stdErrStr)
