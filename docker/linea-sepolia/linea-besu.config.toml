@@ -4,7 +4,7 @@ logging="INFO"
 data-path="/opt/besu/data"
 
 # Sync mode and data layer implementation
-sync-mode="X_SNAP"
+sync-mode="SNAP"
 data-storage-format="BONSAI"
 Xbonsai-full-flat-db-enabled=true
 
