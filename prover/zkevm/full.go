@@ -26,10 +26,14 @@ import (
 )
 
 var (
-	fullZkEvm              *ZkEvm
-	fullZkEvmCheckOnly     *ZkEvm
-	onceFullZkEvm          = sync.Once{}
-	onceFullZkEvmCheckOnly = sync.Once{}
+	fullZkEvm               *ZkEvm
+	fullZkEvmCheckOnly      *ZkEvm
+	fullZkEvmSetup          *ZkEvm
+	fullZkEvmSetupLarge     *ZkEvm
+	onceFullZkEvm           = sync.Once{}
+	onceFullZkEvmCheckOnly  = sync.Once{}
+	onceFullZkEvmSetup      = sync.Once{}
+	onceFullZkEvmSetupLarge = sync.Once{}
 
 	// This is the SIS instance, that has been found to minimize the overhead of
 	// recursion. It is changed w.r.t to the estimated because the estimated one
@@ -119,6 +123,20 @@ func FullZkEVMCheckOnly(tl *config.TracesLimits, cfg *config.Config) *ZkEvm {
 	})
 
 	return fullZkEvmCheckOnly
+}
+
+func FullZkEvmSetup(tl *config.TracesLimits, cfg *config.Config) *ZkEvm {
+	onceFullZkEvmSetup.Do(func() {
+		fullZkEvmSetup = FullZKEVMWithSuite(tl, fullCompilationSuite, cfg)
+	})
+	return fullZkEvmSetup
+}
+
+func FullZkEvmSetupLarge(tl *config.TracesLimits, cfg *config.Config) *ZkEvm {
+	onceFullZkEvmSetupLarge.Do(func() {
+		fullZkEvmSetupLarge = FullZKEVMWithSuite(tl, fullCompilationSuite, cfg)
+	})
+	return fullZkEvmSetupLarge
 }
 
 // FullZKEVMWithSuite returns a compiled zkEVM with the given compilation suite.

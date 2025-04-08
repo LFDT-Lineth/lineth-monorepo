@@ -99,20 +99,23 @@ func Setup(context context.Context, args SetupArgs) error {
 			// we skip aggregation in this first loop since the setup is more complex
 			continue
 		}
-		logrus.Infof("setting up %s", c)
+		logrus.Infof("Setting up %s", c)
 
 		var builder circuits.Builder
 		extraFlags := make(map[string]any)
 
 		// let's compile the circuit.
 		switch c {
-		case circuits.ExecutionCircuitID, circuits.ExecutionLargeCircuitID:
+		case circuits.ExecutionCircuitID:
 			limits := cfg.TracesLimits
-			if c == circuits.ExecutionLargeCircuitID {
-				limits = cfg.TracesLimitsLarge
-			}
 			extraFlags["cfg_checksum"] = limits.Checksum()
-			zkEvm := zkevm.FullZkEvm(&limits, cfg)
+			zkEvm := zkevm.FullZkEvmSetup(&limits, cfg)
+			builder = execution.NewBuilder(zkEvm)
+
+		case circuits.ExecutionLargeCircuitID:
+			limits := cfg.TracesLimitsLarge
+			extraFlags["cfg_checksum"] = limits.Checksum()
+			zkEvm := zkevm.FullZkEvmSetupLarge(&limits, cfg)
 			builder = execution.NewBuilder(zkEvm)
 
 		case circuits.BlobDecompressionV0CircuitID:
@@ -270,7 +273,7 @@ func updateSetup(ctx context.Context, cfg *config.Config, force bool, srsProvide
 	}
 
 	// compile the circuit
-	logrus.Infof("compiling %s", circuit)
+	logrus.Infof("Compiling %s", circuit)
 	ccs, err := builder.Compile()
 	if err != nil {
 		return fmt.Errorf("failed to compile circuit %s: %w", circuit, err)
@@ -279,33 +282,38 @@ func updateSetup(ctx context.Context, cfg *config.Config, force bool, srsProvide
 	// derive the asset paths
 	setupPath := cfg.PathForSetup(string(circuit))
 	manifestPath := filepath.Join(setupPath, config.ManifestFileName)
+	logrus.Infof("Manifest path: %s", manifestPath)
 
+	// check if setup can be skipped
 	if !force {
-		// we may want to skip setup if the files already exist
-		// and the checksums match
-		// read manifest if already exists
 		if manifest, err := circuits.ReadSetupManifest(manifestPath); err == nil {
 			circuitDigest, err := circuits.CircuitDigest(ccs)
 			if err != nil {
 				return fmt.Errorf("failed to compute circuit digest for circuit %s: %w", circuit, err)
 			}
 
+			logrus.Infof("Manifest checksum: %s, Computed circuit digest: %s", manifest.Checksums.Circuit, circuitDigest)
 			if manifest.Checksums.Circuit == circuitDigest {
-				logrus.Infof("skipping %s (already setup)", circuit)
+				logrus.Infof("Skipping %s (already setup)", circuit)
 				return nil
 			}
 		}
 	}
 
 	// run the actual setup
-	logrus.Infof("plonk setup for %s", circuit)
+	logrus.Infof("Plonk setup for %s", circuit)
 	setup, err := circuits.MakeSetup(ctx, circuit, ccs, srsProvider, extraFlags)
 	if err != nil {
 		return fmt.Errorf("failed to setup circuit %s: %w", circuit, err)
 	}
 
-	logrus.Infof("writing assets for %s", circuit)
-	return setup.WriteTo(setupPath)
+	// write the assets
+	err = setup.WriteTo(setupPath)
+	if err != nil {
+		return fmt.Errorf("failed to write assets for circuit %s: %w", circuit, err)
+	}
+	logrus.Infof("Successfully wrote circuit %s to %s", circuit, setupPath)
+	return nil
 }
 
 // listOfChecksums Computes a list of SHA256 checksums for a list of assets, the result is given
