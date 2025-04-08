@@ -4,11 +4,21 @@ import styles from "./item.module.scss";
 import CheckIcon from "@/assets/icons/check.svg";
 import ClockIcon from "@/assets/icons/clock.svg";
 import BridgeTwoLogo from "@/components/bridge/bridge-two-logo";
-import { getChainLogoPath, formatHex, formatTimestamp } from "@/utils";
-import { BridgeTransaction, TransactionStatus } from "@/types";
+import { getChainLogoPath, formatHex, formatTimestamp, isCctp } from "@/utils";
+import { BridgeTransaction, Chain, ChainLayer, Token, TransactionStatus } from "@/types";
 
 type Props = BridgeTransaction & {
   onClick: (code: string) => void;
+};
+
+const getEstimatedTime = (fromChain: Chain, token: Token) => {
+  if (isCctp(token)) {
+    return "22 secs - 19 mins";
+  }
+  if (fromChain.layer === ChainLayer.L1) {
+    return "20 mins";
+  }
+  return "8 - 32 hours";
 };
 
 export default function Transaction({
@@ -22,7 +32,7 @@ export default function Transaction({
   onClick,
 }: Props) {
   const formatedTxHash = formatHex(bridgingTx);
-  const estimatedTime = "20 mins";
+  const estimatedTime = getEstimatedTime(fromChain, token);
 
   const renderStatus = () => {
     switch (status) {
@@ -30,21 +40,21 @@ export default function Transaction({
         return (
           <>
             <CheckIcon />
-            <div>Completed</div>
+            <span>Completed</span>
           </>
         );
       case TransactionStatus.READY_TO_CLAIM:
         return (
           <>
             <CheckIcon />
-            <div>Ready to claim</div>
+            <span>Ready to claim</span>
           </>
         );
       case TransactionStatus.PENDING:
         return (
           <>
             <ClockIcon />
-            <div>{estimatedTime}</div>
+            <span>{estimatedTime}</span>
           </>
         );
 

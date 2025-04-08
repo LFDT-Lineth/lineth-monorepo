@@ -1,6 +1,5 @@
 "use client";
 
-import { zeroAddress } from "viem";
 import { useDynamicContext, useIsLoggedIn } from "@/lib/dynamic";
 import { ChainId, LiFiWidget, WidgetSkeleton, type WidgetConfig } from "@/lib/lifi";
 import { ClientOnly } from "../client-only";
@@ -13,10 +12,6 @@ const widgetConfig: Partial<WidgetConfig> = {
   subvariant: "default",
   appearance: "light",
   integrator: "Linea",
-  fromChain: ChainId.ETH,
-  fromToken: zeroAddress,
-  toChain: ChainId.LNA,
-  toToken: zeroAddress,
   theme: {
     palette: {
       primary: {
