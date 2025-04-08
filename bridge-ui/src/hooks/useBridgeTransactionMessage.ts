@@ -50,8 +50,8 @@ const useBridgeTransactionMessage = (
   }
 
   const { data, isLoading } = useQuery({
-    // TODO - Do we need to account for undefined props here? Otherwise caching behaviour is not as expected?
-    queryKey: ["useBridgeTransactionMessage", transaction?.bridgingTx, transaction?.toChain?.id],
+    // transaction.status must be a cache key. PENDING -> Don't have correct params, READY_TO_CLAIM -> Have correct params
+    queryKey: ["useBridgeTransactionMessage", transaction?.bridgingTx, transaction?.toChain?.id, transaction?.status],
     queryFn: async () => getBridgeTransactionMessage(transaction),
   });
 
