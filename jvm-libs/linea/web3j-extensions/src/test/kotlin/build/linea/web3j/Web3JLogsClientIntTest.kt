@@ -9,6 +9,7 @@ import com.github.tomakehurst.wiremock.core.WireMockConfiguration
 import io.vertx.core.Vertx
 import linea.kotlin.encodeHex
 import linea.kotlin.toBigInteger
+import linea.web3j.Web3JLogsClient
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.AfterEach

@@ -1,10 +1,10 @@
 package net.consensys.zkevm.ethereum.coordination.messageanchoring
 
 import build.linea.contract.LineaRollupV6
-import build.linea.contract.l1.LineaContractVersion
 import io.vertx.core.Vertx
 import io.vertx.junit5.Timeout
 import io.vertx.junit5.VertxExtension
+import linea.contract.l1.LineaContractVersion
 import linea.kotlin.toBigInteger
 import linea.kotlin.toULong
 import net.consensys.linea.async.toSafeFuture

@@ -1,9 +1,9 @@
 package linea.staterecovery
 
 import build.linea.clients.StateManagerClientV1
-import build.linea.contract.l1.LineaRollupSmartContractClientReadOnly
 import io.vertx.core.Vertx
 import linea.EthLogsSearcher
+import linea.contract.l1.LineaRollupSmartContractClientReadOnly
 import linea.domain.BlockParameter
 import linea.domain.BlockParameter.Companion.toBlockParameter
 import net.consensys.linea.async.AsyncRetryer

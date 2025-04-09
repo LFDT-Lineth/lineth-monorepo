@@ -1,6 +1,7 @@
 package net.consensys.zkevm.coordinator.app
 
 import io.vertx.core.Vertx
+import linea.web3j.Web3jBlobExtended
 import net.consensys.linea.ethereum.gaspricing.BoundableFeeCalculator
 import net.consensys.linea.ethereum.gaspricing.FeesCalculator
 import net.consensys.linea.ethereum.gaspricing.FeesFetcher
@@ -15,7 +16,6 @@ import net.consensys.linea.ethereum.gaspricing.staticcap.MinerExtraDataV1Calcula
 import net.consensys.linea.ethereum.gaspricing.staticcap.TransactionCostCalculator
 import net.consensys.linea.ethereum.gaspricing.staticcap.VariableFeesCalculator
 import net.consensys.linea.jsonrpc.client.VertxHttpJsonRpcClientFactory
-import net.consensys.linea.web3j.Web3jBlobExtended
 import net.consensys.zkevm.LongRunningService
 import org.apache.logging.log4j.LogManager
 import org.web3j.protocol.Web3j

@@ -1,7 +1,7 @@
 package net.consensys.zkevm.ethereum.submission
 
-import build.linea.contract.l1.ContractVersionProvider
-import build.linea.contract.l1.LineaContractVersion
+import linea.contract.l1.ContractVersionProvider
+import linea.contract.l1.LineaContractVersion
 import linea.domain.BlockInterval
 import net.consensys.linea.async.AsyncFilter
 import org.apache.logging.log4j.LogManager

@@ -1,7 +1,7 @@
 package net.consensys.zkevm.ethereum.coordination.proofcreation
 
-import build.linea.web3j.domain.toWeb3j
 import linea.domain.BlockParameter.Companion.toBlockParameter
+import linea.web3j.domain.toWeb3j
 import net.consensys.linea.async.toSafeFuture
 import net.consensys.zkevm.coordinator.clients.BatchExecutionProofRequestV1
 import net.consensys.zkevm.coordinator.clients.ExecutionProverClientV2

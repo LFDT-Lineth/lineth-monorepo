@@ -1,6 +1,7 @@
 package net.consensys.linea.web3j
 
 import linea.domain.FeeHistory
+import linea.web3j.domain.toLineaDomain
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.web3j.protocol.core.methods.response.EthFeeHistory

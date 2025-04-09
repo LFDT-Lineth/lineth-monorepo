@@ -1,4 +1,4 @@
-package build.linea.web3j.domain
+package linea.web3j.domain
 
 import linea.domain.BlockParameter
 import linea.kotlin.toBigInteger

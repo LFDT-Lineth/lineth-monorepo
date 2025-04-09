@@ -1,6 +1,8 @@
 package build.linea.contract.l1
 
 import build.linea.contract.LineaRollupV6
+import linea.contract.l1.LineaContractVersion
+import linea.contract.l1.LineaRollupSmartContractClientReadOnly
 import linea.domain.BlockParameter
 import linea.kotlin.encodeHex
 import linea.kotlin.toBigInteger

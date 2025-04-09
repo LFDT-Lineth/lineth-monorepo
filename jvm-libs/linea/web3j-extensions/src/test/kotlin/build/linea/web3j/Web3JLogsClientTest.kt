@@ -1,6 +1,7 @@
 package build.linea.web3j
 
 import io.vertx.core.Vertx
+import linea.web3j.Web3JLogsClient
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach

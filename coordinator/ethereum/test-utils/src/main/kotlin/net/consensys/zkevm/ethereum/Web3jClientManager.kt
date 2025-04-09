@@ -1,6 +1,6 @@
 package net.consensys.zkevm.ethereum
 
-import net.consensys.linea.web3j.okHttpClientBuilder
+import linea.web3j.okhttp.okHttpClientBuilder
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger

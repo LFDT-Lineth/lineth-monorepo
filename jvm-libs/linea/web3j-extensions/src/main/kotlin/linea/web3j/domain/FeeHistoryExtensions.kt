@@ -1,4 +1,4 @@
-package net.consensys.linea.web3j
+package linea.web3j.domain
 
 import linea.domain.FeeHistory
 import linea.kotlin.toULong

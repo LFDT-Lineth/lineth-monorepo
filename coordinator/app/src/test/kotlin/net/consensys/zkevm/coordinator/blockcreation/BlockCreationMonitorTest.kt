@@ -11,10 +11,10 @@ import linea.kotlin.ByteArrayExt
 import linea.kotlin.toHexString
 import linea.kotlin.toULongFromHex
 import linea.log4j.configureLoggers
+import linea.web3j.ExtendedWeb3J
+import linea.web3j.ExtendedWeb3JImpl
 import linea.web3j.createWeb3jHttpClient
 import net.consensys.linea.async.get
-import net.consensys.linea.web3j.ExtendedWeb3J
-import net.consensys.linea.web3j.ExtendedWeb3JImpl
 import net.consensys.zkevm.ethereum.coordination.blockcreation.BlockCreated
 import net.consensys.zkevm.ethereum.coordination.blockcreation.BlockCreationListener
 import org.apache.logging.log4j.Level

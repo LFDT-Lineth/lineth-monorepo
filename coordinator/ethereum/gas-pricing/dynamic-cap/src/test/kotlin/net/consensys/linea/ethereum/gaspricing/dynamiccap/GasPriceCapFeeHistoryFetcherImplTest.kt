@@ -3,8 +3,8 @@ package net.consensys.linea.ethereum.gaspricing.dynamiccap
 import io.vertx.junit5.Timeout
 import io.vertx.junit5.VertxExtension
 import io.vertx.junit5.VertxTestContext
-import net.consensys.linea.web3j.EthFeeHistoryBlobExtended
-import net.consensys.linea.web3j.Web3jBlobExtended
+import linea.web3j.EthFeeHistoryBlobExtended
+import linea.web3j.Web3jBlobExtended
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows

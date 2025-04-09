@@ -1,7 +1,7 @@
 package net.consensys.linea.contract.l1
 
 import build.linea.contract.LineaRollupV6
-import build.linea.contract.l1.LineaContractVersion
+import linea.contract.l1.LineaContractVersion
 import linea.kotlin.toBigInteger
 import net.consensys.zkevm.domain.BlobRecord
 import net.consensys.zkevm.domain.ProofToFinalize

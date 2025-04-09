@@ -1,5 +1,6 @@
 package net.consensys.linea.web3j
 
+import linea.web3j.Web3jBlobExtended
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.web3j.protocol.core.DefaultBlockParameter

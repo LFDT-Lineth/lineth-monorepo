@@ -6,6 +6,7 @@ import linea.domain.BlockParameter
 import linea.domain.assertIsValidAddress
 import linea.kotlin.assertIs32Bytes
 import linea.kotlin.decodeHex
+import linea.web3j.SmartContractErrors
 import net.consensys.linea.blob.BlobCompressorVersion
 import net.consensys.linea.ethereum.gaspricing.dynamiccap.MAX_FEE_HISTORIES_STORAGE_PERIOD
 import net.consensys.linea.ethereum.gaspricing.dynamiccap.MAX_FEE_HISTORY_BLOCK_COUNT
@@ -18,7 +19,6 @@ import net.consensys.linea.traces.TracesCountersV1
 import net.consensys.linea.traces.TracesCountersV2
 import net.consensys.linea.traces.TracingModuleV1
 import net.consensys.linea.traces.TracingModuleV2
-import net.consensys.linea.web3j.SmartContractErrors
 import net.consensys.zkevm.coordinator.app.L2NetworkGasPricingService
 import net.consensys.zkevm.coordinator.clients.prover.ProversConfig
 import java.math.BigInteger

@@ -1,10 +1,10 @@
 package net.consensys.linea.ethereum.gaspricing
 
 import linea.kotlin.toBigInteger
-import net.consensys.linea.web3j.AtomicContractEIP1559GasProvider
-import net.consensys.linea.web3j.EIP1559GasFees
-import net.consensys.linea.web3j.EIP4844GasFees
-import net.consensys.linea.web3j.EIP4844GasProvider
+import linea.web3j.gas.AtomicContractEIP1559GasProvider
+import linea.web3j.gas.EIP1559GasFees
+import linea.web3j.gas.EIP4844GasFees
+import linea.web3j.gas.EIP4844GasProvider
 import java.math.BigInteger
 import kotlin.math.min
 

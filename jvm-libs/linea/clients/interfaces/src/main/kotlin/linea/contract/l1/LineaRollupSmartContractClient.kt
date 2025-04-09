@@ -1,4 +1,4 @@
-package build.linea.contract.l1
+package linea.contract.l1
 
 import linea.domain.BlockParameter
 import tech.pegasys.teku.infrastructure.async.SafeFuture

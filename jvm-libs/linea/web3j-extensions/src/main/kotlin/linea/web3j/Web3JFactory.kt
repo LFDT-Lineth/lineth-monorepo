@@ -1,6 +1,6 @@
 package linea.web3j
 
-import net.consensys.linea.web3j.okHttpClientBuilder
+import linea.web3j.okhttp.okHttpClientBuilder
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.Logger
 import org.web3j.protocol.Web3j

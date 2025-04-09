@@ -2,11 +2,11 @@
 
 package net.consensys.zkevm.coordinator.app
 
-import build.linea.web3j.Web3JLogsClient
 import io.vertx.junit5.Timeout
 import io.vertx.junit5.VertxExtension
 import io.vertx.junit5.VertxTestContext
 import linea.kotlin.toULong
+import linea.web3j.Web3JLogsClient
 import net.consensys.linea.contract.EIP1559GasProvider
 import net.consensys.linea.contract.L2MessageService
 import net.consensys.zkevm.ethereum.coordination.conflation.upgrade.SwitchProvider

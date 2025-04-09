@@ -1,4 +1,4 @@
-package build.linea.web3j.domain
+package linea.web3j.domain
 
 import linea.domain.EthLog
 import linea.kotlin.decodeHex

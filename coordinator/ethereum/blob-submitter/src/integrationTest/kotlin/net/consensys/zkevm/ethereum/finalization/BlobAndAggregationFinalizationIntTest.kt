@@ -1,10 +1,10 @@
 package net.consensys.zkevm.ethereum.finalization
 
-import build.linea.contract.l1.LineaContractVersion
 import io.vertx.core.Vertx
 import io.vertx.junit5.Timeout
 import io.vertx.junit5.VertxExtension
 import io.vertx.junit5.VertxTestContext
+import linea.contract.l1.LineaContractVersion
 import net.consensys.FakeFixedClock
 import net.consensys.linea.ethereum.gaspricing.FakeGasPriceCapProvider
 import net.consensys.linea.testing.submission.loadBlobsAndAggregations

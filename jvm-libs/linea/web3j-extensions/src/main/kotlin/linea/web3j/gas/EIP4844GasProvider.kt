@@ -1,4 +1,4 @@
-package net.consensys.linea.web3j
+package linea.web3j.gas
 
 import org.web3j.tx.gas.ContractEIP1559GasProvider
 

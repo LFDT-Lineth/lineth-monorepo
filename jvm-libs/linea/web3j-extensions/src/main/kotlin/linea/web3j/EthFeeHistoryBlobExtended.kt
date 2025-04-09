@@ -1,4 +1,4 @@
-package net.consensys.linea.web3j
+package linea.web3j
 
 import com.fasterxml.jackson.core.JsonParser
 import com.fasterxml.jackson.core.JsonToken

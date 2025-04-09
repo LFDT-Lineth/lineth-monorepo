@@ -2,13 +2,16 @@ package net.consensys.zkevm.coordinator.app
 
 import build.linea.clients.StateManagerClientV1
 import build.linea.clients.StateManagerV1JsonRpcClient
-import build.linea.contract.l1.LineaRollupSmartContractClientReadOnly
 import build.linea.contract.l1.Web3JLineaRollupSmartContractClientReadOnly
-import build.linea.web3j.Web3JLogsClient
 import io.vertx.core.Vertx
 import kotlinx.datetime.Clock
+import linea.contract.l1.LineaRollupSmartContractClientReadOnly
 import linea.domain.BlockNumberAndHash
 import linea.encoding.BlockRLPEncoder
+import linea.web3j.ExtendedWeb3JImpl
+import linea.web3j.SmartContractErrors
+import linea.web3j.Web3JLogsClient
+import linea.web3j.Web3jBlobExtended
 import linea.web3j.createWeb3jHttpClient
 import net.consensys.linea.blob.ShnarfCalculatorVersion
 import net.consensys.linea.contract.Web3JL2MessageService
@@ -35,9 +38,6 @@ import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.linea.traces.TracesCounters
 import net.consensys.linea.traces.TracesCountersV1
 import net.consensys.linea.traces.TracesCountersV2
-import net.consensys.linea.web3j.ExtendedWeb3JImpl
-import net.consensys.linea.web3j.SmartContractErrors
-import net.consensys.linea.web3j.Web3jBlobExtended
 import net.consensys.zkevm.LongRunningService
 import net.consensys.zkevm.coordinator.app.config.CoordinatorConfig
 import net.consensys.zkevm.coordinator.app.config.Type2StateProofProviderConfig

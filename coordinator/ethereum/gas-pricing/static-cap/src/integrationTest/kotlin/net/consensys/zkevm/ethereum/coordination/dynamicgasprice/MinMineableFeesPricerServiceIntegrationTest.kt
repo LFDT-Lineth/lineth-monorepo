@@ -7,6 +7,7 @@ import io.vertx.junit5.VertxExtension
 import io.vertx.junit5.VertxTestContext
 import linea.kotlin.toHexString
 import linea.kotlin.toULong
+import linea.web3j.Web3jBlobExtended
 import net.consensys.linea.contract.AsyncFriendlyTransactionManager
 import net.consensys.linea.ethereum.gaspricing.BoundableFeeCalculator
 import net.consensys.linea.ethereum.gaspricing.FeesCalculator
@@ -20,7 +21,6 @@ import net.consensys.linea.jsonrpc.client.RequestRetryConfig
 import net.consensys.linea.jsonrpc.client.VertxHttpJsonRpcClientFactory
 import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
-import net.consensys.linea.web3j.Web3jBlobExtended
 import org.apache.tuweni.bytes.Bytes
 import org.assertj.core.api.Assertions
 import org.junit.jupiter.api.AfterAll

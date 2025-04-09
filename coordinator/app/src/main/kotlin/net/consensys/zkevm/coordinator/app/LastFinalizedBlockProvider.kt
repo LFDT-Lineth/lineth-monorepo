@@ -1,7 +1,7 @@
 package net.consensys.zkevm.coordinator.app
 
-import build.linea.contract.l1.LineaRollupSmartContractClientReadOnly
 import io.vertx.core.Vertx
+import linea.contract.l1.LineaRollupSmartContractClientReadOnly
 import linea.domain.BlockParameter
 import net.consensys.linea.async.AsyncRetryer
 import org.apache.logging.log4j.LogManager

@@ -1,8 +1,8 @@
 package linea.staterecovery
 
-import build.linea.contract.l1.LineaContractVersion
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
+import linea.contract.l1.LineaContractVersion
 import linea.domain.BlockNumberAndHash
 import linea.domain.BlockParameter
 import linea.domain.RetryConfig

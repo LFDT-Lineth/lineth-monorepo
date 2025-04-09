@@ -1,6 +1,7 @@
 package net.consensys.linea.web3j
 
 import linea.domain.Constants
+import linea.web3j.domain.Eip4844Transaction
 import org.apache.tuweni.bytes.Bytes
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test

@@ -1,10 +1,10 @@
 package net.consensys.linea.contract.l2
 
+import linea.web3j.SmartContractErrors
+import linea.web3j.informativeEthCall
 import net.consensys.linea.contract.AsyncFriendlyTransactionManager
 import net.consensys.linea.contract.EIP1559GasProvider
 import net.consensys.linea.contract.L2MessageService
-import net.consensys.linea.web3j.SmartContractErrors
-import net.consensys.linea.web3j.informativeEthCall
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import org.web3j.abi.FunctionEncoder

@@ -3,7 +3,7 @@ package net.consensys.linea.ethereum.gaspricing.dynamiccap
 import io.vertx.junit5.VertxExtension
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
-import net.consensys.linea.web3j.ExtendedWeb3J
+import linea.web3j.ExtendedWeb3J
 import net.consensys.zkevm.ethereum.gaspricing.GasPriceCaps
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach

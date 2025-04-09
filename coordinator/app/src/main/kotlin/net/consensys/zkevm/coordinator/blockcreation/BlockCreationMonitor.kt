@@ -4,8 +4,8 @@ import io.vertx.core.Vertx
 import linea.domain.Block
 import linea.domain.BlockParameter.Companion.toBlockParameter
 import linea.kotlin.encodeHex
+import linea.web3j.ExtendedWeb3J
 import net.consensys.linea.async.AsyncRetryer
-import net.consensys.linea.web3j.ExtendedWeb3J
 import net.consensys.zkevm.PeriodicPollingService
 import net.consensys.zkevm.ethereum.coordination.blockcreation.BlockCreated
 import net.consensys.zkevm.ethereum.coordination.blockcreation.BlockCreationListener

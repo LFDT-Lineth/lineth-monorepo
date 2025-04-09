@@ -1,4 +1,4 @@
-package net.consensys.linea.web3j
+package linea.web3j.okhttp
 
 import net.consensys.linea.logging.JsonRpcRequestResponseLogger
 import net.consensys.linea.logging.MinimalInLineJsonRpcLogger

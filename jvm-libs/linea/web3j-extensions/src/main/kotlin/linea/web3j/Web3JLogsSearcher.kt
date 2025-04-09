@@ -1,7 +1,5 @@
 package linea.web3j
 
-import build.linea.web3j.domain.toDomain
-import build.linea.web3j.domain.toWeb3j
 import io.vertx.core.Vertx
 import linea.EthLogsSearcher
 import linea.SearchDirection
@@ -10,6 +8,8 @@ import linea.domain.BlockParameter.Companion.toBlockParameter
 import linea.domain.CommonDomainFunctions
 import linea.domain.RetryConfig
 import linea.kotlin.toULong
+import linea.web3j.domain.toDomain
+import linea.web3j.domain.toWeb3j
 import net.consensys.linea.async.AsyncRetryer
 import net.consensys.linea.async.toSafeFuture
 import org.apache.logging.log4j.LogManager

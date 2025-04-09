@@ -1,6 +1,6 @@
 package net.consensys.zkevm.ethereum
 
-import build.linea.contract.l1.LineaContractVersion
+import linea.contract.l1.LineaContractVersion
 import linea.testing.CommandResult
 import linea.testing.Runner
 import org.hyperledger.besu.datatypes.Address

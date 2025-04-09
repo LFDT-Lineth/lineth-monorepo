@@ -1,4 +1,4 @@
-package net.consensys.linea.web3j
+package linea.web3j.domain
 
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.core.JsonGenerator

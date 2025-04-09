@@ -1,4 +1,4 @@
-package net.consensys.linea.web3j
+package linea.web3j
 
 import org.web3j.protocol.Web3j
 import org.web3j.protocol.core.DefaultBlockParameterName

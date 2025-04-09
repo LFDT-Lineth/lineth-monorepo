@@ -1,6 +1,6 @@
 package net.consensys.linea.contract
 
-import net.consensys.linea.web3j.padBlobForEip4844Submission
+import linea.web3j.padBlobForEip4844Submission
 import org.web3j.crypto.Blob
 import org.web3j.protocol.core.Response
 import org.web3j.protocol.exceptions.TransactionException

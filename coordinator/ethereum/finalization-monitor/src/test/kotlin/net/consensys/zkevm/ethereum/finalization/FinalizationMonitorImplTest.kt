@@ -1,9 +1,9 @@
 package net.consensys.zkevm.ethereum.finalization
 
-import build.linea.contract.l1.LineaRollupSmartContractClientReadOnly
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
 import io.vertx.junit5.VertxTestContext
+import linea.contract.l1.LineaRollupSmartContractClientReadOnly
 import linea.domain.BlockParameter
 import linea.kotlin.ByteArrayExt
 import linea.kotlin.encodeHex
