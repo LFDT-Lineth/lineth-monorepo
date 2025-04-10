@@ -18,7 +18,7 @@ export async function getTokens(networkTypes: NetworkTypes): Promise<GithubToken
       url = config.tokenListUrls.sepolia;
     }
 
-    const response = await fetch(url);
+    const response = await fetch(url, { next: { revalidate: 60 } });
     const data = await response.json();
     const tokens = data.tokens as GithubTokenListToken[];
     const bridgedTokens = tokens.filter(
