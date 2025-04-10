@@ -9,6 +9,7 @@ import atypFont from "@/assets/fonts/atyp";
 import atypTextFont from "@/assets/fonts/atypText";
 import "./globals.css";
 import "../scss/app.scss";
+import FirstVisitModal from "@/components/modal/first-time-visit";
 
 const metadata: Metadata = {
   title: "Linea Bridge",
@@ -43,6 +44,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </symbol>
           </defs>
         </svg>
+        <FirstVisitModal />
       </body>
 
       <Script id="usabilla" dangerouslySetInnerHTML={{ __html: usabillaBeScript }} strategy="lazyOnload" />

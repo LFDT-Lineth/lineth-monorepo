@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+"use client";
+import { useCallback, useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import Modal from "@/components/modal";
 import styles from "./first-time-visit.module.scss";
 import Button from "@/components/ui/button";
@@ -7,6 +9,12 @@ import LineaIcon from "@/assets/logos/linea.svg";
 import CloseIcon from "@/assets/icons/close.svg";
 
 type ModalType = "all-bridges" | "native-bridge" | "buy";
+
+const pathToModalType: Record<string, ModalType> = {
+  "/": "all-bridges",
+  "/native-bridge": "native-bridge",
+  "/buy": "buy",
+};
 
 type FirstTimeModalDataType = {
   title: string;
@@ -76,30 +84,37 @@ const modalData: Record<ModalType, FirstTimeModalDataType> = {
   },
 };
 
-export default function FirstVisitModal({ type }: { type: ModalType }) {
+export default function FirstVisitModal() {
+  const pathname = usePathname();
   const [showModal, setShowModal] = useState(false);
   const [shouldRenderModal, setShouldRenderModal] = useState(false);
 
-  const data = useMemo(() => modalData[type], [type]);
+  const modalType = pathToModalType[pathname];
+  const data = modalType ? modalData[modalType] : null;
 
   useEffect(() => {
-    if (typeof window !== "undefined" && localStorage.getItem(`hasVisited-${type}`) !== "true") {
+    if (!modalType) return;
+
+    const key = `hasVisited-${modalType}`;
+    if (localStorage.getItem(key) !== "true") {
       setShowModal(true);
       setShouldRenderModal(true);
     }
-  }, [type]);
+  }, [modalType]);
 
   const handleClose = useCallback(() => {
+    if (!modalType) return;
+
     setShowModal(false);
     setTimeout(() => {
       setShouldRenderModal(false);
     }, 300);
-    if (typeof window !== "undefined") {
-      localStorage.setItem(`hasVisited-${type}`, "true");
-    }
-  }, [type]);
+    localStorage.setItem(`hasVisited-${modalType}`, "true");
+  }, [modalType]);
 
-  return shouldRenderModal ? <BaseModal isModalOpen={showModal} onCloseModal={handleClose} data={data} /> : null;
+  if (!shouldRenderModal || !data) return null;
+
+  return <BaseModal isModalOpen={showModal} onCloseModal={handleClose} data={data} />;
 }
 
 type BaseModalProps = {
