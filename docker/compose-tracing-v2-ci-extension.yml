@@ -11,6 +11,10 @@ services:
     extends:
       file: compose-spec-l2-services.yml
       service: l2-node-besu
+    environment:
+      BESU_PLUGIN_LINEA_BUNDLES_FORWARD_URLS: "http://sequencer:8545"
+      BESU_PLUGIN_LINEA_BUNDLES_FORWARD_RETRY_DELAY: 1000
+      BESU_PLUGIN_LINEA_BUNDLES_FORWARD_TIMEOUT: 5000
     volumes:
       - ../config/common/traces-limits-besu-v2.toml:/var/lib/besu/traces-limits.toml:ro
 

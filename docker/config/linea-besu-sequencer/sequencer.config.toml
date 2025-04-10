@@ -28,7 +28,7 @@ rpc-http-max-active-connections=20000
 rpc-ws-enabled=true
 rpc-ws-host="0.0.0.0"
 rpc-ws-port=8546
-rpc-ws-api=["ADMIN","DEBUG","NET","ETH","CLIQUE","MINER","WEB3","TRACE"]
+rpc-ws-api=["ADMIN","DEBUG","NET","ETH","CLIQUE","MINER","WEB3","TRACE","LINEA"]
 rpc-ws-max-active-connections=200
 
 # graphql
@@ -47,7 +47,7 @@ api-gas-and-priority-fee-upper-bound-coefficient=300
 poa-block-txs-selection-max-time=1000
 
 # plugins
-plugins=["LineaEstimateGasEndpointPlugin","LineaL1FinalizationTagUpdaterPlugin","LineaExtraDataPlugin","LineaTransactionPoolValidatorPlugin"]
+plugins=["LineaEstimateGasEndpointPlugin","LineaL1FinalizationTagUpdaterPlugin","LineaExtraDataPlugin","LineaTransactionPoolValidatorPlugin","LineaBundleEndpointsPlugin","LineaSetExtraDataEndpointPlugin","LineaTransactionSelectorPlugin"]
 plugin-linea-module-limit-file-path="/var/lib/besu/traces-limits.toml"
 plugin-linea-deny-list-path="/var/lib/besu/deny-list.txt"
 plugin-linea-estimate-gas-compatibility-mode-enabled=false

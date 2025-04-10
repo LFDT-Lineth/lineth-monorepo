@@ -5,7 +5,7 @@ services:
   sequencer:
     hostname: sequencer
     container_name: sequencer
-    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-devnet-02eb1e1}
+    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-devnet-aa00a36}
     profiles: [ "l2", "l2-bc", "debug", "external-to-monorepo" ]
     ports:
       - "8545:8545"
@@ -82,7 +82,7 @@ services:
   l2-node-besu:
     hostname: l2-node-besu
     container_name: l2-node-besu
-    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-devnet-02eb1e1}
+    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-devnet-aa00a36}
     profiles: [ "l2", "l2-bc", "debug", "external-to-monorepo" ]
     depends_on:
       sequencer:
@@ -162,7 +162,7 @@ services:
   traces-node-v2:
     hostname: traces-node-v2
     container_name: traces-node-v2
-    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-devnet-02eb1e1}
+    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-devnet-aa00a36}
     profiles: [ "l2", "l2-bc", "debug", "external-to-monorepo" ]
     depends_on:
       sequencer:
@@ -226,7 +226,7 @@ services:
   prover-v3: # prover compatible with the traces from zkbesu
     container_name: prover-v3
     hostname: prover-v3
-    image: consensys/linea-prover:${PROVER_TAG:-cd7228e}
+    image: consensys/linea-prover:${PROVER_TAG:-811743b}
     platform: linux/amd64
     # to avoid spinning up on CI for now
     profiles: [ "l2" ]
@@ -247,7 +247,7 @@ services:
   postman:
     container_name: postman
     hostname: postman
-    image: consensys/linea-postman:${POSTMAN_TAG:-cd7228e}
+    image: consensys/linea-postman:${POSTMAN_TAG:-811743b}
     profiles: [ "l2", "debug" ]
     platform: linux/amd64
     restart: on-failure
@@ -266,7 +266,7 @@ services:
   traces-api:
     hostname: traces-api
     container_name: traces-api
-    image: consensys/linea-traces-api-facade:${TRACES_API_TAG:-cd7228e}
+    image: consensys/linea-traces-api-facade:${TRACES_API_TAG:-811743b}
     profiles: [ "l2", "debug" ]
     restart: on-failure
     depends_on:
@@ -287,7 +287,7 @@ services:
   coordinator:
     hostname: coordinator
     container_name: coordinator
-    image: consensys/linea-coordinator:${COORDINATOR_TAG:-29db47d}
+    image: consensys/linea-coordinator:${COORDINATOR_TAG:-811743b}
     platform: linux/amd64
     profiles: [ "l2", "debug" ]
     depends_on:
@@ -367,7 +367,7 @@ services:
       - l1network
 
   zkbesu-shomei:
-    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-devnet-02eb1e1}
+    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-devnet-aa00a36}
     hostname: zkbesu-shomei
     container_name: zkbesu-shomei
     profiles: [ "l2", "l2-bc", "external-to-monorepo" ]
@@ -490,7 +490,7 @@ services:
   transaction-exclusion-api:
     hostname: transaction-exclusion-api
     container_name: transaction-exclusion-api
-    image: consensys/linea-transaction-exclusion-api:${TRANSACTION_EXCLUSION_API_TAG:-cd7228e}
+    image: consensys/linea-transaction-exclusion-api:${TRANSACTION_EXCLUSION_API_TAG:-811743b}
     profiles: [ "l2", "debug" ]
     restart: on-failure
     depends_on:
@@ -583,7 +583,7 @@ services:
         ipv4_address: 10.10.10.205
 
   zkbesu-shomei-sr:
-    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-devnet-02eb1e1}
+    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-devnet-aa00a36}
     hostname: zkbesu-shomei-sr
     container_name: zkbesu-shomei-sr
     profiles: [ "external-to-monorepo", "staterecovery" ]

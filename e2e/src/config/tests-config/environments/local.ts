@@ -50,8 +50,6 @@ const config: Config = {
     shomeiFrontendEndpoint: SHOMEI_FRONTEND_ENDPOINT,
     sequencerEndpoint: SEQUENCER_ENDPOINT,
     transactionExclusionEndpoint: TRANSACTION_EXCLUSION_ENDPOINT,
-    // Nonce 11
-    opcodeTestContractAddress: "0xFCc2155b495B6Bf6701eb322D3a97b7817898306",
   },
 };
 

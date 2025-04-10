@@ -40,6 +40,8 @@ services:
       file: compose-spec-l2-services.yml
       service: sequencer
     image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-mainnet-402ebda}
+    environment:
+      BESU_PLUGINS: "LineaEstimateGasEndpointPlugin,LineaL1FinalizationTagUpdaterPlugin,LineaExtraDataPlugin,LineaTransactionPoolValidatorPlugin"
     volumes:
       - ../config/common/traces-limits-besu-v1.toml:/var/lib/besu/traces-limits.toml:ro
 

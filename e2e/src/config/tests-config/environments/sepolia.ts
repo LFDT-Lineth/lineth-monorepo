@@ -48,7 +48,6 @@ const config: Config = {
       L2_CHAIN_ID,
     ),
     dummyContractAddress: "",
-    opcodeTestContractAddress: "",
   },
 };
 

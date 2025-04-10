@@ -2,8 +2,12 @@
 import { ethers } from "ethers";
 import { config } from "../tests-config";
 import { deployContract } from "../../common/deployments";
-import { DummyContract__factory, TestContract__factory, OpcodeTestContract__factory } from "../../typechain";
-import { etherToWei, sendTransactionsToGenerateTrafficWithInterval } from "../../common/utils";
+import { DummyContract__factory, TestContract__factory } from "../../typechain";
+import {
+  etherToWei,
+  isSendBundleMethodNotFound,
+  sendTransactionsToGenerateTrafficWithInterval,
+} from "../../common/utils";
 import { EMPTY_CONTRACT_CODE } from "../../common/constants";
 import { createTestLogger } from "../logger";
 
@@ -17,6 +21,8 @@ export default async (): Promise<void> => {
     logger.info("Configuring once-off prerequisite contracts");
     await configureOnceOffPrerequisities();
   }
+
+  process.env.SHOULD_SKIP_BUNDLE_TESTS = (await isSendBundleMethodNotFound(config.getL2BesuNodeEndpoint()!)).toString();
 
   logger.info("Generating L2 traffic...");
   const pollingAccount = await config.getL2AccountManager().generateAccount(etherToWei("200"));
@@ -36,11 +42,10 @@ async function configureOnceOffPrerequisities() {
   const to = "0x8D97689C9818892B700e27F316cc3E41e17fBeb9";
   const calldata = "0x";
 
-  const [dummyContract, l2DummyContract, l2TestContract, opcodeTestContract] = await Promise.all([
+  const [dummyContract, l2DummyContract, l2TestContract] = await Promise.all([
     deployContract(new DummyContract__factory(), account, [{ nonce: l1AccountNonce }]),
     deployContract(new DummyContract__factory(), l2Account, [{ nonce: l2AccountNonce }]),
     deployContract(new TestContract__factory(), l2Account, [{ nonce: l2AccountNonce + 1 }]),
-    deployContract(new OpcodeTestContract__factory(), l2Account, [{ nonce: l2AccountNonce + 2 }]),
 
     // Send ETH to the LineaRollup contract
     (
@@ -55,5 +60,4 @@ async function configureOnceOffPrerequisities() {
   logger.info(`L1 Dummy contract deployed. address=${await dummyContract.getAddress()}`);
   logger.info(`L2 Dummy contract deployed. address=${await l2DummyContract.getAddress()}`);
   logger.info(`L2 Test contract deployed. address=${await l2TestContract.getAddress()}`);
-  logger.info(`L2 OpcodeTest contract deployed. address=${await opcodeTestContract.getAddress()}`);
 }
