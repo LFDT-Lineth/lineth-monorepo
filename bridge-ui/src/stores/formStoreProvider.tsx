@@ -3,6 +3,7 @@
 import { type ReactNode, createContext, useRef, useContext } from "react";
 import { useStore } from "zustand";
 import { FormState, type FormStore, createFormStore } from "./formStore";
+import { isUndefined } from "@/utils";
 
 export type FormStoreApi = ReturnType<typeof createFormStore>;
 
@@ -15,7 +16,7 @@ export interface FormStoreProviderProps {
 
 export function FormStoreProvider({ children, initialState }: FormStoreProviderProps) {
   const storeRef = useRef<FormStoreApi>();
-  if (!storeRef.current) {
+  if (isUndefined(storeRef.current)) {
     storeRef.current = createFormStore(initialState);
   }
 
@@ -25,7 +26,7 @@ export function FormStoreProvider({ children, initialState }: FormStoreProviderP
 export const useFormStore = <T,>(selector: (store: FormStore) => T): T => {
   const formStoreContext = useContext(FormStoreContext);
 
-  if (!formStoreContext) {
+  if (isUndefined(formStoreContext)) {
     throw new Error(`useFormStore must be used within TokenStoreProvider`);
   }
 

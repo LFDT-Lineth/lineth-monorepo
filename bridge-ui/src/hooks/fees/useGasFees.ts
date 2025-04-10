@@ -3,7 +3,7 @@ import { useEstimateGas } from "wagmi";
 import { Chain, Token } from "@/types";
 import useFeeData from "./useFeeData";
 import { useTransactionArgs } from "../transaction-args";
-import { isCctp, isEth } from "@/utils";
+import { isCctp, isEth, isUndefined } from "@/utils";
 import { DEFAULT_ADDRESS_FOR_NON_CONNECTED_USER } from "@/constants";
 
 type UseGasFeesProps = {
@@ -18,7 +18,7 @@ const BRIDGE_TOKEN_GAS_LIMIT = 133_000n;
 const DEPOSIT_FOR_BURN_GAS_LIMIT = 112_409n;
 
 function computeGasFees(token: Token, isConnected: boolean, estimatedGas?: bigint, feeData?: bigint) {
-  if (!feeData) return null;
+  if (isUndefined(feeData)) return null;
 
   if (isConnected) {
     return estimatedGas ? estimatedGas * feeData : null;

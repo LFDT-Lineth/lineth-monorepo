@@ -12,7 +12,7 @@ import {
   TransactionStatus,
 } from "@/types";
 import { isCctpV2BridgeMessage, isNativeBridgeMessage } from "@/utils/message";
-import { isUndefined } from "@/utils";
+import { isUndefined, isUndefinedOrEmptyString } from "@/utils";
 
 type UseClaimTxArgsProps = {
   status?: TransactionStatus;
@@ -27,7 +27,15 @@ const useClaimTxArgs = ({ status, type, fromChain, toChain, args }: UseClaimTxAr
 
   return useMemo(() => {
     // Missing props
-    if (!address || !status || !type || !fromChain || !toChain || !args) return;
+    if (
+      isUndefinedOrEmptyString(address) ||
+      isUndefined(status) ||
+      isUndefined(type) ||
+      isUndefined(fromChain) ||
+      isUndefined(toChain) ||
+      isUndefined(args)
+    )
+      return;
 
     // Must be 'READY_TO_CLAIM' status
     if (status !== TransactionStatus.READY_TO_CLAIM) return;
@@ -40,14 +48,15 @@ const useClaimTxArgs = ({ status, type, fromChain, toChain, args }: UseClaimTxAr
       case BridgeTransactionType.ETH:
         if (
           !isNativeBridgeMessage(args) ||
-          !args.from ||
-          !args.to ||
+          isUndefinedOrEmptyString(args.from) ||
+          isUndefinedOrEmptyString(args.to) ||
           isUndefined(args.fee) ||
           isUndefined(args.value) ||
-          !args.nonce ||
-          !args.calldata ||
-          !args.messageHash ||
-          (!args.proof && toChain.layer === ChainLayer.L1)
+          isUndefined(args.nonce) ||
+          args.nonce === 0n ||
+          isUndefinedOrEmptyString(args.calldata) ||
+          isUndefinedOrEmptyString(args.messageHash) ||
+          (isUndefined(args.proof) && toChain.layer === ChainLayer.L1)
         ) {
           return;
         }
@@ -82,7 +91,11 @@ const useClaimTxArgs = ({ status, type, fromChain, toChain, args }: UseClaimTxAr
 
         break;
       case BridgeTransactionType.USDC:
-        if (!isCctpV2BridgeMessage(args) || !args.attestation || !args.message) {
+        if (
+          !isCctpV2BridgeMessage(args) ||
+          isUndefinedOrEmptyString(args.attestation) ||
+          isUndefinedOrEmptyString(args.message)
+        ) {
           return;
         }
         toAddress = toChain.cctpMessageTransmitterV2Address;

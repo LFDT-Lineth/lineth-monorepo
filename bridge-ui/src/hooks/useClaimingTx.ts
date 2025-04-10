@@ -4,6 +4,7 @@ import { config as wagmiConfig } from "@/lib/wagmi";
 import { isNativeBridgeMessage, isCctpV2BridgeMessage } from "@/utils/message";
 import { useQuery } from "@tanstack/react-query";
 import { getNativeBridgeMessageClaimedTxHash } from "@/utils";
+import { isUndefinedOrEmptyString, isUndefined } from "@/utils";
 
 const useClaimingTx = (transaction: BridgeTransaction | undefined): string | undefined => {
   // queryFn for useQuery cannot return undefined - https://tanstack.com/query/latest/docs/framework/react/reference/useQuery
@@ -13,17 +14,17 @@ const useClaimingTx = (transaction: BridgeTransaction | undefined): string | und
     queryFn: async () => getClaimTx(transaction),
   });
 
-  if (!data || data === "") return;
+  if (isUndefinedOrEmptyString(data)) return;
   return data;
 };
 
 export default useClaimingTx;
 
 async function getClaimTx(transaction: BridgeTransaction | undefined): Promise<string> {
-  if (!transaction) return "";
+  if (isUndefined(transaction)) return "";
   if (transaction?.claimingTx) return "";
   const { status, type, toChain, message } = transaction;
-  if (!status || !type || !toChain || !message) return "";
+  if (isUndefined(status) || isUndefined(type) || isUndefined(toChain) || isUndefined(message)) return "";
   // Not completed -> no existing claim tx
   if (status !== TransactionStatus.COMPLETED) return "";
 
@@ -49,7 +50,7 @@ async function getClaimTx(transaction: BridgeTransaction | undefined): Promise<s
       );
     }
     case BridgeTransactionType.USDC: {
-      if (!isCctpV2BridgeMessage(message) || !message.nonce) return "";
+      if (!isCctpV2BridgeMessage(message) || isUndefinedOrEmptyString(message.nonce)) return "";
       const messageReceivedEvents = await toChainClient.getLogs({
         event: CctpMessageReceivedAbiEvent,
         fromBlock: "earliest",

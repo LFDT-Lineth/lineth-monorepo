@@ -9,6 +9,7 @@ import {
   CCTP_V2_EXPIRATION_BLOCK_LENGTH,
   CCTP_V2_EXPIRATION_BLOCK_OFFSET,
 } from "@/constants";
+import { isUndefined } from "@/utils/utils";
 
 const isCctpNonceUsed = async (
   client: GetPublicClientReturnType,
@@ -47,7 +48,7 @@ export const getCctpTransactionStatus = async (
   const toChainClient = getPublicClient(wagmiConfig, {
     chainId: toChain.id,
   });
-  if (!toChainClient) return TransactionStatus.PENDING;
+  if (isUndefined(toChainClient)) return TransactionStatus.PENDING;
   // Attestation/message not yet available
   if (cctpAttestationMessage.message.length < CCTP_V2_MESSAGE_HEADER_LENGTH) return TransactionStatus.PENDING;
   const isNonceUsed = await isCctpNonceUsed(toChainClient, nonce, toChain.cctpMessageTransmitterV2Address);
@@ -89,8 +90,8 @@ export const getCctpMessageByTxHash = async (
   isTestnet: boolean,
 ): Promise<CctpAttestationMessage | undefined> => {
   const attestationApiResp = await fetchCctpAttestationByTxHash(fromChainCctpDomain, transactionHash, isTestnet);
-  if (!attestationApiResp) return;
+  if (isUndefined(attestationApiResp)) return;
   const message = attestationApiResp.messages[0];
-  if (!message) return;
+  if (isUndefined(message)) return;
   return message;
 };

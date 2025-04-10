@@ -5,6 +5,7 @@ import MessageService from "@/abis/MessageService.json";
 import { computeMessageHash, computeMessageStorageSlot } from "./message";
 import { Chain, Token } from "@/types";
 import { config } from "@/lib/wagmi";
+import { isUndefined } from "@/utils";
 
 interface EstimationParams {
   address: Address;
@@ -113,12 +114,12 @@ export async function estimateERC20GasFee({
   const destinationChainPublicClient = getPublicClient(config, {
     chainId: toChain.id,
   });
-  if (!destinationChainPublicClient) return 0n;
+  if (isUndefined(destinationChainPublicClient)) return 0n;
 
   const originChainPublicClient = getPublicClient(config, {
     chainId: fromChain.id,
   });
-  if (!originChainPublicClient) return 0n;
+  if (isUndefined(originChainPublicClient)) return 0n;
 
   const { tokenAddress, chainId, tokenMetadata } = await prepareERC20TokenParams(
     originChainPublicClient,
@@ -175,7 +176,7 @@ export async function estimateEthGasFee({
   const destinationChainPublicClient = getPublicClient(config, {
     chainId: toChain.id,
   });
-  if (!destinationChainPublicClient) return 0n;
+  if (isUndefined(destinationChainPublicClient)) return 0n;
 
   const messageHash = computeMessageHash(address, recipient, 0n, amount, nextMessageNumber, "0x");
 

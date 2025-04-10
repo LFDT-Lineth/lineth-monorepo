@@ -2,8 +2,8 @@
 
 import { type ReactNode, createContext, useRef, useContext } from "react";
 import { useStore } from "zustand";
-
 import { TokenState, type TokenStore, createTokenStore } from "./tokenStore";
+import { isUndefined } from "@/utils";
 
 export type TokenStoreApi = ReturnType<typeof createTokenStore>;
 
@@ -16,7 +16,7 @@ export interface TokenStoreProviderProps {
 
 export function TokenStoreProvider({ children, initialState }: TokenStoreProviderProps) {
   const storeRef = useRef<TokenStoreApi>();
-  if (!storeRef.current) {
+  if (isUndefined(storeRef.current)) {
     storeRef.current = createTokenStore(initialState);
   }
 
@@ -26,7 +26,7 @@ export function TokenStoreProvider({ children, initialState }: TokenStoreProvide
 export const useTokenStore = <T,>(selector: (store: TokenStore) => T): T => {
   const tokenStoreContext = useContext(TokenStoreContext);
 
-  if (!tokenStoreContext) {
+  if (isUndefined(tokenStoreContext)) {
     throw new Error(`useTokenStore must be used within TokenStoreProvider`);
   }
 

@@ -4,6 +4,7 @@ import { config } from "@/config";
 import { SupportedCurrencies, defaultTokensConfig } from "@/stores";
 import { GithubTokenListToken, Token, BridgeProvider, NetworkTokens } from "@/types";
 import { USDC_SYMBOL } from "@/constants";
+import { isUndefined } from "@/utils";
 
 enum NetworkTypes {
   MAINNET = "MAINNET",
@@ -39,7 +40,7 @@ export async function fetchTokenPrices(
   currency: SupportedCurrencies,
   chainId?: number,
 ): Promise<Record<string, number>> {
-  if (!chainId) {
+  if (isUndefined(chainId)) {
     return {};
   }
 

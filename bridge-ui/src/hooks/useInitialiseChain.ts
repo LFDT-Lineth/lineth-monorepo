@@ -4,6 +4,7 @@ import { useChainStore } from "@/stores";
 import { config } from "@/lib/wagmi";
 import useChains from "./useChains";
 import { Chain } from "@/types";
+import { isUndefined } from "@/utils";
 
 const useInitialiseChain = () => {
   const chains = useChains();
@@ -15,7 +16,7 @@ const useInitialiseChain = () => {
       onChange(account) {
         const chain = chains.find((chain: Chain) => chain.id === account?.chain?.id);
 
-        if (!chain) {
+        if (isUndefined(chain)) {
           return;
         }
 

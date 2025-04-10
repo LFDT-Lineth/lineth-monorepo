@@ -2,7 +2,7 @@ import { Address } from "viem";
 import { getPublicClient } from "@wagmi/core";
 import { config as wagmiConfig } from "@/lib/wagmi";
 import { BridgeTransaction, BridgeTransactionType, Chain, Token, CctpDepositForBurnAbiEvent } from "@/types";
-import { isCctp, getCctpMessageByTxHash, getCctpTransactionStatus } from "@/utils";
+import { isCctp, getCctpMessageByTxHash, getCctpTransactionStatus, isUndefined } from "@/utils";
 import { DepositForBurnLogEvent } from "@/types/events";
 import { HistoryActionsForCompleteTxCaching } from "@/stores";
 import { getCompleteTxStoreKey } from "./getCompleteTxStoreKey";
@@ -46,10 +46,10 @@ export async function fetchCctpBridgeEvents(
       if (isBlockTooOld(fromBlock)) return;
 
       const token = tokens.find((token) => isCctp(token));
-      if (!token) return;
+      if (isUndefined(token)) return;
 
       const cctpMessage = await getCctpMessageByTxHash(transactionHash, fromChain.cctpDomain, fromChain.testnet);
-      if (!cctpMessage) return;
+      if (isUndefined(cctpMessage)) return;
       const nonce = cctpMessage.eventNonce;
       const status = await getCctpTransactionStatus(toChain, cctpMessage, nonce);
 

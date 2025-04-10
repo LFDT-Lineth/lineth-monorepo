@@ -3,13 +3,14 @@ import { useChainStore, useTokenStore } from "@/stores";
 import { ChainLayer, Token } from "@/types";
 import { config } from "@/config";
 import { USDC_SYMBOL } from "@/constants";
+import { isUndefined } from "@/utils";
 
 const useTokens = (): Token[] => {
   const tokensList = useTokenStore((state) => state.tokensList);
   const fromChain = useChainStore.useFromChain();
 
   return useMemo(() => {
-    if (!fromChain) return [];
+    if (isUndefined(fromChain)) return [];
 
     if (fromChain.testnet) {
       if (fromChain.layer !== ChainLayer.L2) {
