@@ -1,16 +1,14 @@
 "use client";
 
-import useFirstVisitModal from "@/hooks/useFirstVisitModal";
 import styles from "./page.module.scss";
 import { Widget } from "@/components/lifi/widget";
+import FirstVisitModal from "@/components/modal/first-time-visit";
 
 export default function Page() {
-  const modal = useFirstVisitModal({ type: "all-bridges" });
-
   return (
     <section className={styles["content-wrapper"]}>
       <Widget />
-      {modal}
+      <FirstVisitModal type="all-bridges" />
     </section>
   );
 }

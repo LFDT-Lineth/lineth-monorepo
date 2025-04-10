@@ -2,15 +2,13 @@
 
 import BridgeLayout from "@/components/bridge/bridge-layout";
 import styles from "./page.module.scss";
-import useFirstVisitModal from "@/hooks/useFirstVisitModal";
+import FirstVisitModal from "@/components/modal/first-time-visit";
 
 export default function Home() {
-  const modal = useFirstVisitModal({ type: "native-bridge" });
-
   return (
     <section className={styles["content-wrapper"]}>
       <BridgeLayout />
-      {modal}
+      <FirstVisitModal type="native-bridge" />
     </section>
   );
 }
