@@ -1,5 +1,5 @@
 import { Page } from "@playwright/test";
-import { POLLING_INTERVAL } from "../constants";
+import { POLLING_INTERVAL, PAGE_TIMEOUT } from "../constants";
 
 export async function selectTokenAndWaitForBalance(tokenSymbol: string, page: Page) {
   const openModalBtn = page.getByTestId("native-bridge-open-token-list-modal");
@@ -9,10 +9,9 @@ export async function selectTokenAndWaitForBalance(tokenSymbol: string, page: Pa
   console.log(`Fetching token balance for ${tokenSymbol}`);
 
   // Timeout implementation
-  const fetchTokenBalanceTimeout = 5000;
   let fetchTokenTimeUsed = 0;
   while ((await tokenBalance.textContent()) === `0 ${tokenSymbol}`) {
-    if (fetchTokenTimeUsed >= fetchTokenBalanceTimeout)
+    if (fetchTokenTimeUsed >= PAGE_TIMEOUT)
       throw `Could not find any balance for ${tokenSymbol}, does the testing wallet have funds?`;
     await page.waitForTimeout(POLLING_INTERVAL);
     fetchTokenTimeUsed += POLLING_INTERVAL;

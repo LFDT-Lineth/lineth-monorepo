@@ -1,8 +1,9 @@
-import { metaMaskFixtures } from "@synthetixio/synpress/playwright";
+import { metaMaskFixtures, getExtensionId } from "@synthetixio/synpress/playwright";
 import setup from "./wallet-setup/metamask.setup";
-import { Locator } from "@playwright/test";
+import { Locator, Page } from "@playwright/test";
 import { getNativeBridgeTransactionsCountImpl, selectTokenAndWaitForBalance } from "./utils";
-import { LINEA_SEPOLIA_NETWORK, POLLING_INTERVAL } from "./constants";
+import { LINEA_SEPOLIA_NETWORK, PAGE_TIMEOUT, POLLING_INTERVAL } from "./constants";
+import next from "next";
 /**
  * NB: There is an issue with Synpress `metaMaskFixtures` extension functions wherein extension functions
  * may not be able to reuse other extension functions. This is especially the case when advanced operations
@@ -25,6 +26,8 @@ export const test = metaMaskFixtures(setup).extend<{
 
   // Metamask Actions - Should be ok to reuse within other fixture functions
   connectMetamaskToDapp: () => Promise<void>;
+  openMetamaskActivityPage: () => Promise<void>;
+  submitERC20ApprovalTx: () => Promise<void>;
   waitForTransactionToConfirm: () => Promise<void>;
   confirmTransactionAndWaitForInclusion: () => Promise<void>;
   switchToLineaSepolia: () => Promise<void>;
@@ -134,7 +137,7 @@ export const test = metaMaskFixtures(setup).extend<{
       await page.bringToFront();
     });
   },
-  waitForTransactionToConfirm: async ({ metamask }, use) => {
+  openMetamaskActivityPage: async ({ metamask }, use) => {
     await use(async () => {
       await metamask.page.bringToFront();
       await metamask.page.reload();
@@ -147,7 +150,45 @@ export const test = metaMaskFixtures(setup).extend<{
       if (await gotItButton.isVisible()) await gotItButton.click();
       // Click Activity button
       await activityButton.click();
-
+    });
+  },
+  // We use this instead of metamask.approveTokenPermission because we found the original method flaky
+  submitERC20ApprovalTx: async ({ context, page, metamask }, use) => {
+    await use(async () => {
+      // Need to wait for Metamask Notification page to exist, does not exist immediately after clicking 'Approve' button.
+      // In Synpress source code, they use this logic in every method interacting with the Metamask notification page.
+      const extensionId = await getExtensionId(context, "MetaMask");
+      const notificationPageUrl = `chrome-extension://${extensionId}/notification.html`;
+      while (
+        metamask.page
+          .context()
+          .pages()
+          .find((page) => page.url().includes(notificationPageUrl)) === undefined
+      ) {
+        await page.waitForTimeout(POLLING_INTERVAL);
+      }
+      const notificationPage = metamask.page
+        .context()
+        .pages()
+        .find((page) => page.url().includes(notificationPageUrl)) as Page;
+      await notificationPage.waitForLoadState("domcontentloaded", { timeout: PAGE_TIMEOUT });
+      await notificationPage.waitForLoadState("networkidle", { timeout: PAGE_TIMEOUT });
+      await metamask.page.reload();
+      // Unsure if commented out below are required to mitigate flakiness
+      // await metamask.page.waitForLoadState("domcontentloaded", { timeout: PAGE_TIMEOUT });
+      // await metamask.page.waitForLoadState("networkidle", { timeout: PAGE_TIMEOUT });
+      const nextBtn = metamask.page.getByRole("button", { name: "Next", exact: true });
+      // Unsure if commented out below are required to mitigate flakiness
+      // await expect(nextBtn).toBeVisible();
+      // await expect(nextBtn).toBeEnabled();
+      await nextBtn.click();
+      const approveMMBtn = metamask.page.getByRole("button", { name: "Approve", exact: true });
+      await approveMMBtn.click();
+    });
+  },
+  waitForTransactionToConfirm: async ({ metamask, openMetamaskActivityPage }, use) => {
+    await use(async () => {
+      await openMetamaskActivityPage();
       let txCount = await metamask.page
         .locator(metamask.homePage.selectors.activityTab.pendingApprovedTransactions)
         .count();
@@ -177,7 +218,7 @@ export const test = metaMaskFixtures(setup).extend<{
   },
 
   // Composite Bridge UI + Metamask Actions
-  doTokenApprovalIfNeeded: async ({ page, metamask, waitForTransactionToConfirm }, use) => {
+  doTokenApprovalIfNeeded: async ({ page, submitERC20ApprovalTx, waitForTransactionToConfirm }, use) => {
     await use(async () => {
       // Check if approval required
       const approvalButton = page.getByRole("button", { name: "Approve Token", exact: true });
@@ -185,8 +226,7 @@ export const test = metaMaskFixtures(setup).extend<{
       await approvalButton.click();
 
       // Handle Metamask approval UI
-      // bridge-ui-known-flaky-line - Once seen Metamask stuck here on approval screen in CI
-      await metamask.approveTokenPermission();
+      await submitERC20ApprovalTx();
       await waitForTransactionToConfirm();
 
       // Close 'Transaction successful' modal

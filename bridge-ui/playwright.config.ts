@@ -3,7 +3,7 @@ import "dotenv/config";
 
 export default defineConfig({
   testDir: ".",
-  testMatch: '**/*.spec.ts',
+  testMatch: "**/*.spec.ts",
   // Timeout for tests that don't involve blockchain transactions
   timeout: 40_000,
   fullyParallel: true,
@@ -12,10 +12,10 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: process.env.CI
     ? [
-      ["html", { open: "never", outputFolder: `playwright-report-${process.env.HEADLESS ? "headless" : "headful"}` }],
-      ["list"]
-    ]
-    : [["html"],["list"]],
+        ["html", { open: "never", outputFolder: `playwright-report-${process.env.HEADLESS ? "headless" : "headful"}` }],
+        ["list"],
+      ]
+    : [["html"], ["list"]],
   use: {
     baseURL: "http://localhost:3000",
     trace: process.env.CI ? "on" : "retain-on-failure",
