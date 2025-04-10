@@ -12,9 +12,10 @@ type Props = {
   title: string;
   isDrawer?: boolean;
   size?: "md" | "lg";
+  modalHeader?: JSX.Element;
 };
 
-const Modal = ({ isOpen, onClose, children, title, isDrawer = false, size = "md" }: Props) => {
+const Modal = ({ isOpen, onClose, children, title, isDrawer = false, size = "md", modalHeader }: Props) => {
   const [mounted, setMounted] = useState<boolean>(false);
 
   useEffect(() => {
@@ -65,12 +66,14 @@ const Modal = ({ isOpen, onClose, children, title, isDrawer = false, size = "md"
             transition={{ duration: 0.2 }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className={styles.heading}>
-              <div className={styles.title}>{title}</div>
-              <div className={styles["close-icon"]} onClick={onClose} role="button">
-                <CloseIcon />
+            {modalHeader || (
+              <div className={styles.heading}>
+                <div className={styles.title}>{title}</div>
+                <div className={styles["close-icon"]} onClick={onClose} role="button">
+                  <CloseIcon />
+                </div>
               </div>
-            </div>
+            )}
             {children}
           </motion.div>
         </motion.div>
