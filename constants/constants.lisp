@@ -75,6 +75,7 @@
   EVM_INST_GAS                              0x5A
   EVM_INST_JUMPDEST                         0x5B
   ;; Push Operations
+  EVM_INST_PUSH0                            0x5F ;; post Shanghai
   EVM_INST_PUSH1                            0x60
   EVM_INST_PUSH2                            0x61
   EVM_INST_PUSH3                            0x62
