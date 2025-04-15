@@ -93,8 +93,6 @@ request-retry.backoff-delay="PT1S"
 request-retry.failures-warning-threshold=2
 l1-query-block-tag="LATEST"
 l1-polling-interval="PT12S"
-l1-request-retry.backoff-delay="PT1S"
-l1-request-retry.failures-warning-threshold=2
 
 [api]
 observability_port=9545
@@ -119,7 +117,7 @@ gas-price-cap-multiplier-for-finalization=2.0
 # blocks are 2s, this may catch in between blocks
 send-message-event-polling-interval="PT1S"
 # 10 blocks worth at 2s per block
-max-event-scraping-time="PT5S"
+max-event-scraping-time="PT5S" # use by message anchoring service
 # An optional config to define the L1 block time with default as PT12S
 block-time="PT1S" # set the same as local L1 block time
 block-range-loop-limit=500

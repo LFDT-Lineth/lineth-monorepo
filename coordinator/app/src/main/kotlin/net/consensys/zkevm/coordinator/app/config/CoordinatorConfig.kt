@@ -498,10 +498,6 @@ data class Type2StateProofProviderConfig(
   val endpoints: List<URL>,
   val l1QueryBlockTag: BlockParameter.Tag = BlockParameter.Tag.LATEST,
   val l1PollingInterval: Duration = Duration.ofSeconds(12),
-  val l1RequestRetry: RequestRetryConfigTomlFriendly = RequestRetryConfigTomlFriendly(
-    backoffDelay = Duration.ofSeconds(1),
-    failuresWarningThreshold = 3
-  ),
   override val requestRetry: RequestRetryConfigTomlFriendly
 ) : RequestRetryConfigurable
 
@@ -556,7 +552,8 @@ data class CoordinatorConfigTomlDto(
     api = api,
     l2Signer = l2Signer,
     messageAnchoringService = messageAnchoringService,
-    l2NetworkGasPricingService = if (!testL1Disabled) l2NetworkGasPricing.reified() else null,
+    l2NetworkGasPricingService =
+    if (testL1Disabled || l2NetworkGasPricing.disabled) null else l2NetworkGasPricing.reified(),
     l1DynamicGasPriceCapService = l1DynamicGasPriceCapService,
     testL1Disabled = testL1Disabled,
     proversConfig = prover.reified()

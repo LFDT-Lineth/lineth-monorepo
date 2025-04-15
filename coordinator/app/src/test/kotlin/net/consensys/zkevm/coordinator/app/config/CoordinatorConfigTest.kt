@@ -136,11 +136,7 @@ class CoordinatorConfigTest {
         failuresWarningThreshold = 2
       ),
       l1QueryBlockTag = BlockParameter.Tag.SAFE,
-      l1PollingInterval = Duration.parse("PT6S"),
-      l1RequestRetry = RequestRetryConfigTomlFriendly(
-        backoffDelay = Duration.parse("PT0.5S"),
-        failuresWarningThreshold = 20
-      )
+      l1PollingInterval = Duration.parse("PT6S")
     )
     private val stateManagerConfig = StateManagerClientConfig(
       version = "2.3.0",
