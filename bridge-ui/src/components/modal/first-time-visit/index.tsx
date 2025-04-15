@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
+import { useConfigStore } from "@/stores";
 import Modal from "@/components/modal";
 import styles from "./first-time-visit.module.scss";
 import Button from "@/components/ui/button";
@@ -8,9 +9,9 @@ import Image from "next/image";
 import LineaIcon from "@/assets/logos/linea.svg";
 import CloseIcon from "@/assets/icons/close.svg";
 
-type ModalType = "all-bridges" | "native-bridge" | "buy";
+export type VisitedModalType = "all-bridges" | "native-bridge" | "buy";
 
-const pathToModalType: Record<string, ModalType> = {
+const pathToModalType: Record<string, VisitedModalType> = {
   "/": "all-bridges",
   "/native-bridge": "native-bridge",
   "/buy": "buy",
@@ -29,7 +30,7 @@ type FirstTimeModalDataType = {
   };
 };
 
-const modalData: Record<ModalType, FirstTimeModalDataType> = {
+const modalData: Record<VisitedModalType, FirstTimeModalDataType> = {
   "all-bridges": {
     title: "Welcome to the Linea Bridge!",
     description: "Move your funds to Linea through the fastest route, at the lowest cost, and with no extra fees!",
@@ -88,19 +89,21 @@ export default function FirstVisitModal() {
   const pathname = usePathname();
   const [showModal, setShowModal] = useState(false);
   const [shouldRenderModal, setShouldRenderModal] = useState(false);
+  const rehydrated = useConfigStore.useRehydrated();
+  const visited = useConfigStore.useVisitedModal();
+  const setVisitedModal = useConfigStore.useSetVisitedModal();
 
   const modalType = pathToModalType[pathname];
   const data = modalType ? modalData[modalType] : null;
 
   useEffect(() => {
-    if (!modalType) return;
+    if (!modalType || !rehydrated) return;
 
-    const key = `hasVisited-${modalType}`;
-    if (localStorage.getItem(key) !== "true") {
+    if (!visited[modalType]) {
       setShowModal(true);
       setShouldRenderModal(true);
     }
-  }, [modalType]);
+  }, [modalType, visited, rehydrated]);
 
   const handleClose = useCallback(() => {
     if (!modalType) return;
@@ -109,8 +112,8 @@ export default function FirstVisitModal() {
     setTimeout(() => {
       setShouldRenderModal(false);
     }, 300);
-    localStorage.setItem(`hasVisited-${modalType}`, "true");
-  }, [modalType]);
+    setVisitedModal(modalType);
+  }, [modalType, setVisitedModal]);
 
   if (!shouldRenderModal || !data) return null;
 
