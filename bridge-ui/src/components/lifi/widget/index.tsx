@@ -4,7 +4,7 @@ import { useDynamicContext, useIsLoggedIn } from "@/lib/dynamic";
 import { ChainId, LiFiWidget, WidgetSkeleton, type WidgetConfig } from "@/lib/lifi";
 import { ClientOnly } from "../client-only";
 import atypTextFont from "@/assets/fonts/atypText";
-import { CHAINS_RPC_URLS } from "@/constants";
+import { CHAINS_RPC_URLS, ETH_SYMBOL } from "@/constants";
 import { config } from "@/config";
 
 const widgetConfig: Partial<WidgetConfig> = {
@@ -12,6 +12,8 @@ const widgetConfig: Partial<WidgetConfig> = {
   subvariant: "default",
   appearance: "light",
   integrator: "Linea",
+  toChain: ChainId.LNA,
+  toToken: ETH_SYMBOL,
   theme: {
     palette: {
       primary: {

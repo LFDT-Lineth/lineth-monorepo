@@ -3,7 +3,7 @@ import { Address } from "viem";
 import { config } from "@/config";
 import { SupportedCurrencies, defaultTokensConfig } from "@/stores";
 import { GithubTokenListToken, Token, BridgeProvider, NetworkTokens } from "@/types";
-import { USDC_SYMBOL } from "@/constants";
+import { PRIORITY_SYMBOLS, USDC_SYMBOL } from "@/constants";
 import { isUndefined } from "@/utils";
 
 enum NetworkTypes {
@@ -84,29 +84,49 @@ export async function formatToken(token: GithubTokenListToken): Promise<Token> {
 }
 
 export async function getTokenConfig(): Promise<NetworkTokens> {
-  const [mainnetTokens, sepoliaTokens] = await Promise.all([
-    getTokens(NetworkTypes.MAINNET),
-    getTokens(NetworkTypes.SEPOLIA),
-  ]);
-
   const updatedTokensConfig = { ...defaultTokensConfig };
 
   // Feature toggle, remove when feature toggle no longer needed
   const filterOutUSDCWhenCctpNotEnabled = (token: Token) => config.isCctpEnabled || token.symbol !== USDC_SYMBOL;
 
-  updatedTokensConfig.MAINNET = [
-    ...defaultTokensConfig.MAINNET,
-    ...(await Promise.all(mainnetTokens.map(async (token: GithubTokenListToken): Promise<Token> => formatToken(token))))
-      // Feature toggle, remove .filter expression when feature toggle no longer needed
-      .filter(filterOutUSDCWhenCctpNotEnabled),
-  ];
+  // Sort the tokens to put priority tokens first
+  const sortPriorityTokensFirst = (tokens: Token[]): Token[] => {
+    const priority: Token[] = [];
+    const rest: Token[] = [];
 
-  updatedTokensConfig.SEPOLIA = [
-    ...defaultTokensConfig.SEPOLIA,
-    ...(await Promise.all(sepoliaTokens.map((token: GithubTokenListToken): Promise<Token> => formatToken(token))))
-      // Feature toggle, remove .filter expression when feature toggle no longer needed
-      .filter(filterOutUSDCWhenCctpNotEnabled),
-  ];
+    for (const token of tokens) {
+      if (PRIORITY_SYMBOLS.includes(token.symbol)) {
+        // Avoid duplicates
+        if (!priority.find((t) => t.symbol === token.symbol)) {
+          priority.push(token);
+        }
+      } else {
+        rest.push(token);
+      }
+    }
+
+    return [...priority, ...rest];
+  };
+
+  const enrichTokens = async (tokens: GithubTokenListToken[], defaultList: Token[]): Promise<Token[]> => {
+    const formatted = await Promise.all(tokens.map(formatToken));
+    // Feature toggle, remove .filter expression when feature toggle no longer needed
+    const allTokens = [...defaultList, ...formatted.filter(filterOutUSDCWhenCctpNotEnabled)];
+    return sortPriorityTokensFirst(allTokens);
+  };
+
+  const [mainnetTokens, sepoliaTokens] = await Promise.all([
+    getTokens(NetworkTypes.MAINNET),
+    getTokens(NetworkTypes.SEPOLIA),
+  ]);
+
+  const [mainnet, sepolia] = await Promise.all([
+    enrichTokens(mainnetTokens, defaultTokensConfig.MAINNET),
+    enrichTokens(sepoliaTokens, defaultTokensConfig.SEPOLIA),
+  ]);
+
+  updatedTokensConfig.MAINNET = mainnet;
+  updatedTokensConfig.SEPOLIA = sepolia;
 
   return updatedTokensConfig;
 }
