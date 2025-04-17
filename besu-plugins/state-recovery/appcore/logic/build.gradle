@@ -14,8 +14,8 @@ dependencies {
   api(project(':jvm-libs:linea:clients:linea-state-manager'))
   api('build.linea:blob-decompressor:1.1.1')
 
-  api(project(':state-recovery:appcore:clients-interfaces'))
-  api(project(':state-recovery:appcore:domain-models'))
+  api(project(':besu-plugins:state-recovery:appcore:clients-interfaces'))
+  api(project(':besu-plugins:state-recovery:appcore:domain-models'))
   api project(':jvm-libs:linea:besu-rlp-and-mappers')
   api project(':jvm-libs:linea:besu-libs')
 

@@ -8,5 +8,5 @@ dependencies {
   api(project(':jvm-libs:generic:extensions:kotlin'))
   api(project(':jvm-libs:generic:serialization:jackson'))
   api(project(':jvm-libs:linea:core:domain-models'))
-  api(project(':state-recovery:appcore:domain-models'))
+  api(project(':besu-plugins:state-recovery:appcore:domain-models'))
 }

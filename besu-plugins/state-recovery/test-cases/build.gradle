@@ -9,10 +9,10 @@ group = 'build.linea.staterecover'
 
 dependencies {
   implementation("io.vertx:vertx-core:${libs.versions.vertx.get()}")
-  implementation(project(':state-recovery:appcore:logic'))
-  implementation(project(':state-recovery:besu-plugin'))
-  implementation(project(':state-recovery:clients:eth-api'))
-  implementation(project(':state-recovery:clients:blobscan-client'))
+  implementation(project(':besu-plugins:state-recovery:appcore:logic'))
+  implementation(project(':besu-plugins:state-recovery:besu-plugin'))
+  implementation(project(':besu-plugins:state-recovery:clients:eth-api'))
+  implementation(project(':besu-plugins:state-recovery:clients:blobscan-client'))
   implementation('build.linea:l1-rollup-contract-client:6.0.0')
   implementation project(':jvm-libs:generic:vertx-helper')
   implementation project(':jvm-libs:generic:extensions:kotlin')

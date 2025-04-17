@@ -7,5 +7,5 @@ dependencies {
   implementation(project(':jvm-libs:linea:web3j-extensions'))
   implementation(project(':jvm-libs:generic:serialization:jackson'))
   api(project(':jvm-libs:generic:json-rpc'))
-  implementation(project(':state-recovery:appcore:clients-interfaces'))
+  implementation(project(':besu-plugins:state-recovery:appcore:clients-interfaces'))
 }

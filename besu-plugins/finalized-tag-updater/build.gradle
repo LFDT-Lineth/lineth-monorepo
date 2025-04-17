@@ -71,19 +71,6 @@ dependencies {
   implementation ("org.web3j:core:${libs.versions.web3j.get()}") {
     exclude group: 'org.slf4j', module: 'slf4j-nop'
   }
-  testImplementation 'org.hyperledger.besu:plugin-api:25.2.1-linea1'
   testImplementation 'info.picocli:picocli:4.7.6'
   testImplementation 'io.vertx:vertx-core'
-}
-
-tasks.register('copyShadowJarToLocalBesu', Copy) {
-  def jarFileSuffix = "${project.version}" != 'unspecified' ? "${project.version}" : "SNAPSHOT"
-  def jarFiles = project.getLayout().buildDirectory.dir("libs").get()
-      .asFileTree
-      .filter { it.name.endsWith("-${jarFileSuffix}.jar") }
-      .files
-  if (jarFiles.size() > 0) {
-    from jarFiles[0]
-    into file("$rootDir/tmp/linea-besu-sequencer/plugins")
-  }
 }

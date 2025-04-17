@@ -5,7 +5,7 @@ on:
       pluginName:
         required: true
         type: string
-        description: 'plugin name used for the tag name, e.g staterecovery'
+        description: 'plugin name used for the tag name, e.g linea-staterecovery'
       workspaceModulePath:
         required: true
         type: string
@@ -56,22 +56,22 @@ jobs:
 
       - name: Build
         run: |
-          GRAGLE_PATH=:$(echo "${{inputs.workspaceModulePath}}" | sed 's/\//:/g')
+          GRAGLE_PATH=:$(echo "besu-plugins/${{inputs.workspaceModulePath}}" | sed 's/\//:/g')
           echo $GRAGLE_PATH
           ./gradlew $GRAGLE_PATH:shadowJar -Pversion=v${{inputs.version}}
-          ls -lh ${{inputs.workspaceModulePath}}/build/libs
+          ls -lh besu-plugins/${{inputs.workspaceModulePath}}/build/libs
 
       - name: Release to GitHub
         uses: jreleaser/release-action@v2
         with:
-          arguments: full-release --git-root-search --basedir=${{ github.workspace }}/${{inputs.workspaceModulePath}} -P=version=v${{inputs.version}}
+          arguments: full-release --git-root-search --basedir=${{github.workspace}}/besu-plugins/${{inputs.workspaceModulePath}} -P=version=v${{inputs.version}}
         env:
-          GITHUB_TOKEN: ${{ secrets._GITHUB_TOKEN_RELEASE_ACCESS }}
+          GITHUB_TOKEN: ${{secrets._GITHUB_TOKEN_RELEASE_ACCESS}}
           JRELEASER_TAG_NAME: ${{inputs.pluginName}}-v${{inputs.version}}
           JRELEASER_PROJECT_VERSION: ${{inputs.version}}
-          JRELEASER_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          JRELEASER_GITHUB_USERNAME: ${{ github.actor }}
-          JRELEASER_GITHUB_EMAIL: ${{ github.actor }}@users.noreply.github.com
+          JRELEASER_GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+          JRELEASER_GITHUB_USERNAME: ${{github.actor}}
+          JRELEASER_GITHUB_EMAIL: ${{github.actor}}@users.noreply.github.com
 
       # Persist logs
       - name: JReleaser release output

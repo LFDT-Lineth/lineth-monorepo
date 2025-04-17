@@ -17,7 +17,7 @@ dependencies {
   implementation(project(':jvm-libs:linea:clients:linea-state-manager'))
   implementation(project(':jvm-libs:linea:core:domain-models'))
   implementation(project(':jvm-libs:linea:core:long-running-service'))
-  implementation(project(':state-recovery:appcore:clients-interfaces'))
+  implementation(project(':besu-plugins:state-recovery:appcore:clients-interfaces'))
   implementation("io.vertx:vertx-web-client:${libs.versions.vertx}")
 
   testImplementation "com.github.tomakehurst:wiremock-jre8:${libs.versions.wiremock.get()}"
