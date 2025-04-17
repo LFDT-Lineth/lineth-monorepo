@@ -62,20 +62,21 @@ export async function sendBlobTransaction(
   expectEventDirectFromReceiptData(lineaRollup as BaseContract, receipt!, "DataSubmittedV3", expectedEventArgs);
 }
 
-export async function sendBlobTransactionFromFile(
+export async function sendVersionedBlobTransactionFromFile(
   lineaRollup: TestLineaRollup,
   filePath: string,
-  betaV1LineaRollup: TestLineaRollup,
+  versionedLineaRollup: TestLineaRollup,
+  versionFolderName: string,
 ) {
   const operatorHDSigner = getWalletForIndex(2);
-  const lineaRollupAddress = await betaV1LineaRollup.getAddress();
+  const lineaRollupAddress = await versionedLineaRollup.getAddress();
 
   const {
     blobDataSubmission: blobSubmission,
     compressedBlobs: compressedBlobs,
     parentShnarf: parentShnarf,
     finalShnarf: finalShnarf,
-  } = generateBlobDataSubmissionFromFile(path.resolve(__dirname, "../../_testData/betaV1", filePath));
+  } = generateBlobDataSubmissionFromFile(path.resolve(__dirname, `../../_testData/${versionFolderName}`, filePath));
 
   const encodedCall = lineaRollup.interface.encodeFunctionData("submitBlobs", [
     blobSubmission,
@@ -157,9 +158,10 @@ export async function sendBlobTransactionViaCallForwarder(
   expectEventDirectFromReceiptData(lineaRollupUpgraded as BaseContract, receipt!, "DataSubmittedV3", expectedEventArgs);
 }
 
-export function getBetaV1BlobFiles(): string[] {
+// "betaV1" getBetaV1BlobFiles
+export function getVersionedBlobFiles(versionFolderName: string): string[] {
   // Read all files in the folder
-  const files = fs.readdirSync(path.resolve(__dirname, "../../_testData/betaV1"));
+  const files = fs.readdirSync(path.resolve(__dirname, `../../_testData/${versionFolderName}`));
 
   // Map files to their ranges and filter invalid ones
   const filesWithRanges = files

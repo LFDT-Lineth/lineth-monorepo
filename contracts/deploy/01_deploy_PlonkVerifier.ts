@@ -38,7 +38,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     ethers.AbiCoder.defaultAbiCoder().encode(["address", "uint256"], [contractAddress, verifierIndex]),
   ]);
 
-  console.log("", setVerifierAddress);
+  console.log("setVerifierAddress calldata:", setVerifierAddress);
 
   await tryVerifyContract(contractAddress);
 };

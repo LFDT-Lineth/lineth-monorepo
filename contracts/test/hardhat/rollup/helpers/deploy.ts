@@ -29,6 +29,27 @@ export async function deployPlonkVerifierSepoliaFull(): Promise<string> {
   return await verifier.getAddress();
 }
 
+export async function deployPlonkVerifierMainnetFull(): Promise<string> {
+  const plonkVerifierMainnetFull = await ethers.getContractFactory("PlonkVerifierMainnetFull");
+  const verifier = await plonkVerifierMainnetFull.deploy();
+  await verifier.waitForDeployment();
+  return await verifier.getAddress();
+}
+
+export async function deployPlonkVerifierDev(): Promise<string> {
+  const plonkVerifierDev = await ethers.getContractFactory("PlonkVerifierDev");
+  const verifier = await plonkVerifierDev.deploy();
+  await verifier.waitForDeployment();
+  return await verifier.getAddress();
+}
+
+export async function deployPlonkVerifierForMultiTypeDataAggregation(): Promise<string> {
+  const plonkVerifier = await ethers.getContractFactory("PlonkVerifierForMultiTypeDataAggregation");
+  const verifier = await plonkVerifier.deploy();
+  await verifier.waitForDeployment();
+  return await verifier.getAddress();
+}
+
 export async function deployCallForwardingProxy(target: string): Promise<CallForwardingProxy> {
   const callForwardingProxyFactory = await ethers.getContractFactory("CallForwardingProxy");
   const callForwardingProxy = await callForwardingProxyFactory.deploy(target);
