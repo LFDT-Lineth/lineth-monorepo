@@ -1,9 +1,9 @@
 import { metaMaskFixtures, getExtensionId } from "@synthetixio/synpress/playwright";
-import setup from "./wallet-setup/metamask.setup";
 import { Locator, Page } from "@playwright/test";
+import setup from "./wallet-setup/metamask.setup";
 import { getNativeBridgeTransactionsCountImpl, selectTokenAndWaitForBalance } from "./utils";
 import { LINEA_SEPOLIA_NETWORK, PAGE_TIMEOUT, POLLING_INTERVAL } from "./constants";
-import next from "next";
+
 /**
  * NB: There is an issue with Synpress `metaMaskFixtures` extension functions wherein extension functions
  * may not be able to reuse other extension functions. This is especially the case when advanced operations
@@ -14,6 +14,7 @@ import next from "next";
  */
 export const test = metaMaskFixtures(setup).extend<{
   // Bridge UI Actions
+  clickFirstVisitModalConfirmButton: () => Promise<void>;
   clickNativeBridgeButton: () => Promise<Locator>;
   openNativeBridgeTransactionHistory: () => Promise<void>;
   closeNativeBridgeTransactionHistory: () => Promise<void>;
@@ -38,6 +39,14 @@ export const test = metaMaskFixtures(setup).extend<{
   doInitiateBridgeTransaction: () => Promise<void>;
   doClaimTransaction: () => Promise<void>;
 }>({
+  clickFirstVisitModalConfirmButton: async ({ page }, use) => {
+    await use(async () => {
+      const confirmButton = page.getByTestId("first-visit-modal-confirm-btn");
+      await expect(confirmButton).toBeVisible();
+      await expect(confirmButton).toBeEnabled();
+      await confirmButton.click();
+    });
+  },
   // Bridge UI Actions
   clickNativeBridgeButton: async ({ page }, use) => {
     await use(async () => {
@@ -124,6 +133,8 @@ export const test = metaMaskFixtures(setup).extend<{
   // Metamask Actions - Should be ok to reuse within other fixture functions
   connectMetamaskToDapp: async ({ page, metamask }, use) => {
     await use(async () => {
+      await page.waitForLoadState("domcontentloaded", { timeout: PAGE_TIMEOUT });
+
       // Click Connect button
       const connectBtn = page.getByRole("button", { name: "Connect", exact: true }).first();
       await connectBtn.click();
@@ -155,6 +166,7 @@ export const test = metaMaskFixtures(setup).extend<{
   // We use this instead of metamask.approveTokenPermission because we found the original method flaky
   submitERC20ApprovalTx: async ({ context, page, metamask }, use) => {
     await use(async () => {
+      metamask.approveTokenPermission;
       // Need to wait for Metamask Notification page to exist, does not exist immediately after clicking 'Approve' button.
       // In Synpress source code, they use this logic in every method interacting with the Metamask notification page.
       const extensionId = await getExtensionId(context, "MetaMask");

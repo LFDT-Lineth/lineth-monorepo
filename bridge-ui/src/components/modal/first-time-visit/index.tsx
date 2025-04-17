@@ -148,7 +148,7 @@ function BaseModal({ isModalOpen, onCloseModal, data }: BaseModalProps) {
           ))}
         </ol>
         {extraText && <p className={styles.extra}>{extraText}</p>}
-        <Button fullWidth onClick={onCloseModal}>
+        <Button data-testid="first-visit-modal-confirm-btn" fullWidth onClick={onCloseModal}>
           {btnText}
         </Button>
       </div>
