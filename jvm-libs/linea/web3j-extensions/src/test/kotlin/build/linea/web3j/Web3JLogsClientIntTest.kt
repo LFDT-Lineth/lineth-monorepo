@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package build.linea.web3j
 
 import com.github.tomakehurst.wiremock.WireMockServer

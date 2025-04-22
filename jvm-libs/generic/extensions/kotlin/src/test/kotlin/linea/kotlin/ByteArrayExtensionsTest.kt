@@ -2,6 +2,7 @@ package linea.kotlin
 
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import kotlin.random.Random
 
@@ -119,5 +120,50 @@ class ByteArrayExtensionsTest {
     val max = ByteArray(32) { 0xff.toByte() }
     assertThat(max.toULongFromLast8Bytes()).isEqualTo(ULong.MAX_VALUE)
     assertThat(max.apply { set(31, 0xfe.toByte()) }.toULongFromLast8Bytes()).isEqualTo(ULong.MAX_VALUE - 1UL)
+  }
+
+  @Nested
+  inner class PadLeft {
+    @Test
+    fun `should return the same array if size is already equal to target size`() {
+      val original = byteArrayOf(0x1, 0x2, 0x3)
+      val result = original.padLeft(3)
+      assertThat(result).isEqualTo(original)
+    }
+
+    @Test
+    fun `should return the same array if size is larger than target size`() {
+      val original = byteArrayOf(0x1, 0x2, 0x3)
+      val result = original.padLeft(2)
+      assertThat(result).isEqualTo(original)
+    }
+
+    @Test
+    fun `should pad with default value 0x0 when target size is larger`() {
+      val original = byteArrayOf(0x1, 0x2, 0x3)
+      val result = original.padLeft(6)
+      assertThat(result).isEqualTo(byteArrayOf(0x0, 0x0, 0x0, 0x1, 0x2, 0x3))
+    }
+
+    @Test
+    fun `should pad with custom value when target size is larger`() {
+      val original = byteArrayOf(0x1, 0x2, 0x3)
+      val result = original.padLeft(6, padding = 0xFF.toByte())
+      assertThat(result).isEqualTo(byteArrayOf(0xFF.toByte(), 0xFF.toByte(), 0xFF.toByte(), 0x1, 0x2, 0x3))
+    }
+
+    @Test
+    fun `should handle empty array and pad to target size`() {
+      val original = byteArrayOf()
+      val result = original.padLeft(4)
+      assertThat(result).isEqualTo(byteArrayOf(0x0, 0x0, 0x0, 0x0))
+    }
+
+    @Test
+    fun `should handle empty array and pad with custom value`() {
+      val original = byteArrayOf()
+      val result = original.padLeft(4, padding = 0xAA.toByte())
+      assertThat(result).isEqualTo(byteArrayOf(0xAA.toByte(), 0xAA.toByte(), 0xAA.toByte(), 0xAA.toByte()))
+    }
   }
 }

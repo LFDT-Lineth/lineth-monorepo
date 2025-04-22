@@ -1,4 +1,4 @@
-package linea.web3j
+package linea.ethapi.cursor
 
 import linea.SearchDirection
 
@@ -23,7 +23,7 @@ internal fun rangeChunks(
  * so the search predicate cannot tell what direction to go next, so we need to flag the chunk as searched and try the
  * next chunk.
  */
-internal class SearchCursor(
+internal class BinarySearchCursor(
   val from: ULong,
   val to: ULong,
   val chunkSize: Int

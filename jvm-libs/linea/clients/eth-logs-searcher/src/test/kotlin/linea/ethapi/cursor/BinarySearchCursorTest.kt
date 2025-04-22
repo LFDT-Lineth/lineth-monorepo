@@ -1,10 +1,10 @@
-package linea.web3j
+package linea.ethapi.cursor
 
 import linea.SearchDirection
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
-class SearchCursorTest {
+class BinarySearchCursorTest {
 
   @Test
   fun `should calculate range chunks correctly`() {
@@ -29,21 +29,21 @@ class SearchCursorTest {
   @Test
   fun `next starts in the middle regardless of direction`() {
     assertThat(
-      SearchCursor(
+      BinarySearchCursor(
         from = 1uL,
         to = 100uL,
         chunkSize = 10
       ).next(searchDirection = null)
     ).isEqualTo(41UL to 50UL)
     assertThat(
-      SearchCursor(
+      BinarySearchCursor(
         from = 1uL,
         to = 100uL,
         chunkSize = 10
       ).next(searchDirection = SearchDirection.FORWARD)
     ).isEqualTo(41UL to 50UL)
     assertThat(
-      SearchCursor(
+      BinarySearchCursor(
         from = 1uL,
         to = 100uL,
         chunkSize = 10
@@ -53,7 +53,7 @@ class SearchCursorTest {
 
   @Test
   fun `next follows binary search when direction is FORWARD`() {
-    val searchCursor = SearchCursor(from = 1uL, to = 100uL, chunkSize = 10)
+    val searchCursor = BinarySearchCursor(from = 1uL, to = 100uL, chunkSize = 10)
 
     assertThat(searchCursor.next(SearchDirection.FORWARD)).isEqualTo(41UL to 50UL)
     assertThat(searchCursor.next(SearchDirection.FORWARD)).isEqualTo(71UL to 80UL)
@@ -63,7 +63,7 @@ class SearchCursorTest {
 
   @Test
   fun `next follows binary search when direction is BACKWARD`() {
-    val searchCursor = SearchCursor(from = 1uL, to = 100uL, chunkSize = 10)
+    val searchCursor = BinarySearchCursor(from = 1uL, to = 100uL, chunkSize = 10)
 
     assertThat(searchCursor.next(SearchDirection.BACKWARD)).isEqualTo(41UL to 50UL)
     assertThat(searchCursor.next(SearchDirection.BACKWARD)).isEqualTo(11UL to 20UL)
@@ -72,7 +72,7 @@ class SearchCursorTest {
 
   @Test
   fun `next follows binary search when direction is null`() {
-    val searchCursor = SearchCursor(from = 1uL, to = 100uL, chunkSize = 10)
+    val searchCursor = BinarySearchCursor(from = 1uL, to = 100uL, chunkSize = 10)
 
     assertThat(searchCursor.next(null)).isEqualTo(41UL to 50UL)
     assertThat(searchCursor.next(null)).isEqualTo(91UL to 100UL)
@@ -91,7 +91,7 @@ class SearchCursorTest {
   fun `next iterates over all chunks when no direction is provided`() {
     // This test is somehow redundant to the above one,
     // but it is easier to read the intent of exhaustion
-    val searchCursor = SearchCursor(from = 1uL, to = 100uL, chunkSize = 10)
+    val searchCursor = BinarySearchCursor(from = 1uL, to = 100uL, chunkSize = 10)
     val chunks = mutableListOf<Pair<ULong, ULong>>()
     var next = searchCursor.next(searchDirection = null)
 
@@ -116,7 +116,7 @@ class SearchCursorTest {
 
   @Test
   fun `next iterates over chunks when no direction is provided and follows direction when provided`() {
-    val searchCursor = SearchCursor(from = 1uL, to = 200uL, chunkSize = 10)
+    val searchCursor = BinarySearchCursor(from = 1uL, to = 200uL, chunkSize = 10)
 
     assertThat(searchCursor.next(searchDirection = null)).isEqualTo(91UL to 100UL)
 
@@ -126,7 +126,7 @@ class SearchCursorTest {
 
   @Test
   fun `next iterates follows direction without repeating`() {
-    val searchCursor = SearchCursor(from = 1uL, to = 200uL, chunkSize = 10)
+    val searchCursor = BinarySearchCursor(from = 1uL, to = 200uL, chunkSize = 10)
 
     assertThat(searchCursor.next(searchDirection = null)).isEqualTo(91UL to 100UL)
 
@@ -140,7 +140,7 @@ class SearchCursorTest {
 
   @Test
   fun `next iterates follows direction without repeating - forward`() {
-    val searchCursor = SearchCursor(from = 1uL, to = 200uL, chunkSize = 10)
+    val searchCursor = BinarySearchCursor(from = 1uL, to = 200uL, chunkSize = 10)
 
     assertThat(searchCursor.next(searchDirection = null)).isEqualTo(91UL to 100UL)
 
@@ -154,7 +154,7 @@ class SearchCursorTest {
 
   @Test
   fun `next iterates follows direction without repeating - forward 2`() {
-    val searchCursor = SearchCursor(from = 1uL, to = 200uL, chunkSize = 10)
+    val searchCursor = BinarySearchCursor(from = 1uL, to = 200uL, chunkSize = 10)
 
     assertThat(searchCursor.next(searchDirection = null)).isEqualTo(91UL to 100UL)
 
@@ -171,7 +171,7 @@ class SearchCursorTest {
 
   @Test
   fun `next iterates follows backward direction without repeating - backward`() {
-    val searchCursor = SearchCursor(from = 0uL, to = 100uL, chunkSize = 10)
+    val searchCursor = BinarySearchCursor(from = 0uL, to = 100uL, chunkSize = 10)
     // chunks:
     // 0..9,   10..19, 20..29, 30..39, 40..49,
     // 50..59,

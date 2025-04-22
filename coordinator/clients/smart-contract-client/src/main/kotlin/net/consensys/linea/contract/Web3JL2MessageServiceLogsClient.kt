@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package net.consensys.linea.contract
 
 import linea.kotlin.toULong

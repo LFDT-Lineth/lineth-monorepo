@@ -14,6 +14,7 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
+@Deprecated("use EthLogs or EthLogsSearcher instead")
 class Web3JLogsClient(
   val vertx: Vertx,
   val web3jClient: Web3j,

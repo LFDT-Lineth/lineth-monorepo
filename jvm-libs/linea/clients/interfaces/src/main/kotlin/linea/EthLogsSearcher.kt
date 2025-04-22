@@ -1,15 +1,18 @@
 package linea
 
+import linea.domain.BlockInterval
 import linea.domain.BlockParameter
 import linea.domain.EthLog
+import linea.ethapi.EthLogsClient
 import tech.pegasys.teku.infrastructure.async.SafeFuture
+import kotlin.time.Duration
 
 enum class SearchDirection {
   FORWARD,
   BACKWARD
 }
 
-interface EthLogsSearcher {
+interface EthLogsSearcher : EthLogsClient {
   /**
    * Shall search for the Log until shallContinueToSearchPredicate returns null.
    * if fromBlock..toBlock range is too large, it shall break into smaller chunks
@@ -24,10 +27,21 @@ interface EthLogsSearcher {
     shallContinueToSearch: (EthLog) -> SearchDirection? // null means stop searching
   ): SafeFuture<EthLog?>
 
-  fun getLogs(
+  data class LogSearchResult(
+    val logs: List<EthLog>,
+    override val startBlockNumber: ULong,
+    override val endBlockNumber: ULong
+  ) : BlockInterval {
+    val isEmpty: Boolean = logs.isEmpty()
+  }
+
+  fun getLogsRollingForward(
     fromBlock: BlockParameter,
     toBlock: BlockParameter,
     address: String,
-    topics: List<String?>
-  ): SafeFuture<List<EthLog>>
+    topics: List<String?>,
+    chunkSize: UInt = 1000u,
+    searchTimeout: Duration,
+    logsLimit: UInt? = null
+  ): SafeFuture<LogSearchResult>
 }

@@ -10,7 +10,6 @@ import linea.domain.BlockNumberAndHash
 import linea.encoding.BlockRLPEncoder
 import linea.web3j.ExtendedWeb3JImpl
 import linea.web3j.SmartContractErrors
-import linea.web3j.Web3JLogsClient
 import linea.web3j.Web3jBlobExtended
 import linea.web3j.createWeb3jHttpClient
 import net.consensys.linea.blob.ShnarfCalculatorVersion
@@ -157,10 +156,14 @@ class L1DependentApp(
 
   private val l1ChainId = l1Web3jClient.ethChainId().send().chainId.toLong()
 
-  private val l2MessageServiceLogsClient = Web3JL2MessageServiceLogsClient(
-    logsClient = Web3JLogsClient(vertx, l2Web3jClient),
-    l2MessageServiceAddress = configs.l2.messageServiceAddress
-  )
+  private val l2MessageServiceLogsClient = run {
+    @Suppress("DEPRECATION")
+    val logsClient = linea.web3j.Web3JLogsClient(vertx, l2Web3jClient)
+    Web3JL2MessageServiceLogsClient(
+      logsClient = logsClient,
+      l2MessageServiceAddress = configs.l2.messageServiceAddress
+    )
+  }
 
   private val proverClientFactory = ProverClientFactory(
     vertx = vertx,

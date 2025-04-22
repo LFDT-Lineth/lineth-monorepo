@@ -15,8 +15,15 @@ fun ULong.toGWei(): Double = this.toDouble().toGWei()
  */
 fun ULong.Companion.fromHexString(value: String): ULong = value.removePrefix("0x").toULong(16)
 fun ULong.toBigInteger(): BigInteger = BigInteger(this.toString())
-fun ULong.toHexString(): String = "0x${this.toString(16)}"
-fun ULong.toHexStringPaddedToBitSize(targetBitSize: Int): String {
+fun ULong.toHexString(hexPrefix: Boolean = true): String = this.toString(16).let {
+  if (hexPrefix) {
+    "0x$it"
+  } else {
+    "$it"
+  }
+}
+
+fun ULong.toHexStringPaddedToBitSize(targetBitSize: Int, hexPrefix: Boolean = true): String {
   require(targetBitSize % 4 == 0) { "targetBitSize=$targetBitSize should be a multiple of 4" }
   val targetNumberOfHexDigits = targetBitSize / 4
   val rawHex = this.toString(16)
@@ -24,12 +31,20 @@ fun ULong.toHexStringPaddedToBitSize(targetBitSize: Int): String {
     val requiredBits = rawHex.length * 4
     "Number $this needs ${rawHex.length} hex digits ($requiredBits bits), targetBitSize=$targetBitSize"
   }
-  return "0x${rawHex.padStart(targetNumberOfHexDigits, '0')}"
-}
-fun ULong.toHexStringPaddedToByteSize(targetByteSize: Int): String =
-  this.toHexStringPaddedToBitSize(targetByteSize * 8)
+  val hex = rawHex.padStart(targetNumberOfHexDigits, '0')
 
-fun ULong.toHexStringUInt256(): String = this.toHexStringPaddedToBitSize(256)
+  return if (hexPrefix) {
+    "0x$hex"
+  } else {
+    hex
+  }
+}
+
+fun ULong.toHexStringPaddedToByteSize(targetByteSize: Int, hexPrefix: Boolean = true): String =
+  this.toHexStringPaddedToBitSize(targetByteSize * 8, hexPrefix)
+
+fun ULong.toHexStringUInt256(hexPrefix: Boolean = true): String =
+  this.toHexStringPaddedToBitSize(256, hexPrefix)
 
 fun List<ULong>.hasSequentialElements(): Boolean {
   if (this.size < 2) return true // A list with less than 2 elements is trivially continuous

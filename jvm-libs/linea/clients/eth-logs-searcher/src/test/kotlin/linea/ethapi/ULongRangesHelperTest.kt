@@ -1,4 +1,4 @@
-package linea.web3j
+package linea.ethapi
 
 import linea.kotlin.intersection
 import org.assertj.core.api.Assertions.assertThat

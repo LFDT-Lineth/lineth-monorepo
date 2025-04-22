@@ -3,7 +3,10 @@ package linea.domain
 import kotlinx.datetime.Instant
 import linea.kotlin.encodeHex
 
-data class Block(
+typealias Block = BlockData<Transaction>
+typealias BlockWithTxHashes = BlockData<ByteArray>
+
+data class BlockData<TxData>(
   val number: ULong,
   val hash: ByteArray,
   val parentHash: ByteArray,
@@ -21,13 +24,23 @@ data class Block(
   val mixHash: ByteArray,
   val nonce: ULong,
   val baseFeePerGas: ULong? = null, // Optional field for EIP-1559 blocks
-  val transactions: List<Transaction> = emptyList(), // List of transaction hashes
+  val transactions: List<TxData> = emptyList(), // List of transaction hashes
   val ommers: List<ByteArray> = emptyList() // List of uncle block hashes
 ) {
   companion object {
     // companion object  to allow static extension functions
   }
 
+  init {
+    if (transactions.isNotEmpty()) {
+      require(transactions.first() is Transaction || transactions.first() is ByteArray) {
+        "Invalid transaction type ${transactions.first()!!::class.java}. Supported types Transaction or ByteArray."
+      }
+    }
+  }
+
+  private val isTransactionHashOnly: Boolean
+    get() = transactions.isNotEmpty() && transactions.first() is ByteArray
   val numberAndHash = BlockNumberAndHash(this.number, this.hash)
   val headerSummary = BlockHeaderSummary(this.number, this.hash, Instant.fromEpochSeconds(this.timestamp.toLong()))
 
@@ -35,7 +48,7 @@ data class Block(
     if (this === other) return true
     if (javaClass != other?.javaClass) return false
 
-    other as Block
+    other as BlockData<*>
 
     if (number != other.number) return false
     if (!hash.contentEquals(other.hash)) return false
@@ -54,7 +67,16 @@ data class Block(
     if (!mixHash.contentEquals(other.mixHash)) return false
     if (nonce != other.nonce) return false
     if (baseFeePerGas != other.baseFeePerGas) return false
-    if (transactions != other.transactions) return false
+    if (!transactions.zip(other.transactions).all { (thisTx, otherTx) ->
+      when {
+        thisTx is ByteArray && otherTx is ByteArray -> thisTx.contentEquals(otherTx)
+        thisTx is Transaction && otherTx is Transaction -> thisTx == otherTx
+        else -> false
+      }
+    }
+    ) {
+      return false
+    }
     if (ommers != other.ommers) return false
     if (numberAndHash != other.numberAndHash) return false
     if (headerSummary != other.headerSummary) return false
@@ -80,7 +102,13 @@ data class Block(
     result = 31 * result + mixHash.contentHashCode()
     result = 31 * result + nonce.hashCode()
     result = 31 * result + (baseFeePerGas?.hashCode() ?: 0)
-    result = 31 * result + transactions.hashCode()
+    result = 31 * result + transactions.fold(0) { acc, tx ->
+      acc * 31 + when (tx) {
+        is ByteArray -> tx.contentHashCode()
+        is Transaction -> tx.hashCode()
+        else -> 0
+      }
+    }
     result = 31 * result + ommers.hashCode()
     result = 31 * result + numberAndHash.hashCode()
     result = 31 * result + headerSummary.hashCode()
@@ -88,6 +116,11 @@ data class Block(
   }
 
   override fun toString(): String {
+    val txStr = if (isTransactionHashOnly) {
+      transactions.joinToString(prefix = "[", postfix = "]") { (it as ByteArray).encodeHex() }
+    } else {
+      transactions.joinToString(prefix = "[", postfix = "]") { it.toString() }
+    }
     return "Block(" +
       "number=$number, " +
       "hash=${hash.encodeHex()}, " +
@@ -106,7 +139,7 @@ data class Block(
       "mixHash=${mixHash.encodeHex()}, " +
       "nonce=$nonce, " +
       "baseFeePerGas=$baseFeePerGas, " +
-      "transactions=$transactions, " +
+      "transactions=$txStr, " +
       "ommers=$ommers" + ")"
   }
 }

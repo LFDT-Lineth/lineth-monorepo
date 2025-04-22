@@ -16,6 +16,14 @@ fun ByteArray.setFirstByteToZero(): ByteArray {
   return this
 }
 
+fun ByteArray.padLeft(targetSize: Int, padding: Byte = 0x0): ByteArray {
+  if (this.size >= targetSize) return this
+  val paddedArray = ByteArray(targetSize) { padding }
+  // Copies the original array to the rightmost part
+  this.copyInto(paddedArray, destinationOffset = targetSize - this.size)
+  return paddedArray
+}
+
 /**
  * Slices the ByteArray into sliceSize bytes chunks and returns the sliceNumber-th chunk.
  */

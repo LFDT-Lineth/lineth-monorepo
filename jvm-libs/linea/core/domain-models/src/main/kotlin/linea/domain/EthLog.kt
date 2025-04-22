@@ -54,12 +54,20 @@ data class EthLog(
       "blockHash=${blockHash.encodeHex()}, " +
       "blockNumber=$blockNumber, " +
       "address=${address.encodeHex()}, " +
-      "data=${data.encodeHex()}, " +
-      "topics=${topics.map { it.encodeHex() }})"
+      "topics=${topics.map { it.encodeHex() }}, " +
+      "data=${data.encodeHex()}"
   }
 }
 
 data class EthLogEvent<E>(
   val event: E,
   val log: EthLog
-)
+) : Comparable<EthLogEvent<E>> {
+  override fun compareTo(other: EthLogEvent<E>): Int {
+    return when {
+      this.log.blockNumber != other.log.blockNumber -> this.log.blockNumber.compareTo(other.log.blockNumber)
+      this.log.logIndex != other.log.logIndex -> this.log.logIndex.compareTo(other.log.logIndex)
+      else -> 0
+    }
+  }
+}

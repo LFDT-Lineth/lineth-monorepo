@@ -2,11 +2,11 @@ package linea.staterecovery.test
 
 import linea.domain.BlockParameter
 import linea.domain.EthLogEvent
+import linea.ethapi.EthLogsSearcherImpl
 import linea.staterecovery.DataFinalizedV3
-import linea.web3j.Web3JLogsSearcher
 
 fun getLastFinalizationOnL1(
-  logsSearcher: Web3JLogsSearcher,
+  logsSearcher: EthLogsSearcherImpl,
   contractAddress: String
 ): EthLogEvent<DataFinalizedV3> {
   return getFinalizationsOnL1(logsSearcher, contractAddress)
@@ -15,7 +15,7 @@ fun getLastFinalizationOnL1(
 }
 
 fun getFinalizationsOnL1(
-  logsSearcher: Web3JLogsSearcher,
+  logsSearcher: EthLogsSearcherImpl,
   contractAddress: String
 ): List<EthLogEvent<DataFinalizedV3>> {
   return logsSearcher.getLogs(

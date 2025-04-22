@@ -8,6 +8,7 @@ import io.vertx.junit5.VertxExtension
 import kotlinx.datetime.Clock
 import linea.domain.EthLogEvent
 import linea.domain.RetryConfig
+import linea.ethapi.EthLogsSearcherImpl
 import linea.kotlin.gwei
 import linea.kotlin.toBigInteger
 import linea.kotlin.toULong
@@ -18,8 +19,8 @@ import linea.staterecovery.test.getFinalizationsOnL1
 import linea.staterecovery.test.getLastFinalizationOnL1
 import linea.staterecovery.test.waitExecutionLayerToBeUpAndRunning
 import linea.testing.Runner
-import linea.web3j.Web3JLogsSearcher
 import linea.web3j.createWeb3jHttpClient
+import linea.web3j.ethapi.createEthApiClient
 import linea.web3j.waitForTxReceipt
 import net.consensys.linea.jsonrpc.client.RequestRetryConfig
 import net.consensys.linea.jsonrpc.client.VertxHttpJsonRpcClientFactory
@@ -120,16 +121,20 @@ class StateRecoveryE2ETest {
     assertThat(getBesuErrorLogs()).isEmpty()
 
     val localStackL1ContractAddress = "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9"
-    val logsSearcher = Web3JLogsSearcher(
+    val logsSearcher = EthLogsSearcherImpl(
       vertx = vertx,
-      web3jClient = Web3jClientManager.buildL1Client(
-        log = LogManager.getLogger("test.clients.l1.events-fetcher"),
-        requestResponseLogLevel = Level.TRACE,
-        failuresLogLevel = Level.WARN
+      ethApiClient = createEthApiClient(
+        web3jClient =
+        Web3jClientManager.buildL1Client(
+          log = LogManager.getLogger("test.clients.l1.events-fetcher"),
+          requestResponseLogLevel = Level.TRACE,
+          failuresLogLevel = Level.WARN
+        ),
+        requestRetryConfig = RetryConfig.noRetries,
+        vertx = null
       ),
-      Web3JLogsSearcher.Config(
-        loopSuccessBackoffDelay = 1.milliseconds,
-        requestRetryConfig = RetryConfig.noRetries
+      EthLogsSearcherImpl.Config(
+        loopSuccessBackoffDelay = 1.milliseconds
       ),
       log = LogManager.getLogger("test.clients.l1.events-fetcher")
     )

@@ -95,7 +95,7 @@ class SubmissionsFetchingTaskIntTest {
       "linea.plugin.staterecovery.clients" to Level.DEBUG,
       "test.clients.l1.web3j-default" to Level.DEBUG,
       "test.clients.l1.web3j.receipt-poller" to Level.DEBUG,
-      "linea.staterecovery.datafetching" to Level.DEBUG
+      "linea.staterecovery.datafetching" to Level.INFO
     )
     submitDataToL1ContactAndWaitExecution()
   }

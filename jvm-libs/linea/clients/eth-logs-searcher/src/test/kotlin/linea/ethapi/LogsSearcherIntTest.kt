@@ -1,4 +1,4 @@
-package linea.web3j
+package linea.ethapi
 
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock.aResponse
@@ -17,6 +17,7 @@ import linea.kotlin.fromHexString
 import linea.kotlin.toHexString
 import linea.kotlin.toHexStringUInt256
 import linea.log4j.configureLoggers
+import linea.web3j.ethapi.createEthApiClient
 import net.consensys.linea.jsonrpc.JsonRpcError
 import net.consensys.linea.jsonrpc.JsonRpcRequest
 import org.apache.logging.log4j.Level
@@ -39,9 +40,9 @@ internal data class EthGetLogsRequest(
   val address: List<String>
 )
 
-class Web3JLogsSearcherIntTest {
+class EthLogsSearcherImplIntTest {
   private lateinit var web3jClient: Web3j
-  private lateinit var logsClient: Web3JLogsSearcher
+  private lateinit var logsClient: EthLogsSearcherImpl
   private lateinit var vertx: Vertx
   private lateinit var wireMockServer: WireMockServer
   private lateinit var TestingJsonRpcServer: TestingJsonRpcServer
@@ -71,12 +72,15 @@ class Web3JLogsSearcherIntTest {
 
     web3jClient = Web3j.build(HttpService(URI("http://127.0.0.1:" + wireMockServer.port()).toURL().toString()))
     vertx = Vertx.vertx()
-    logsClient = Web3JLogsSearcher(
+    logsClient = EthLogsSearcherImpl(
       vertx,
-      web3jClient,
-      config = Web3JLogsSearcher.Config(
-        loopSuccessBackoffDelay = 1.milliseconds,
-        requestRetryConfig = retryConfig
+      ethApiClient = createEthApiClient(
+        web3jClient = web3jClient,
+        requestRetryConfig = retryConfig,
+        vertx = vertx
+      ),
+      config = EthLogsSearcherImpl.Config(
+        loopSuccessBackoffDelay = 1.milliseconds
       )
     )
   }
@@ -91,12 +95,15 @@ class Web3JLogsSearcherIntTest {
       recordRequestsResponses = true
     )
     setUpFakeLogsServerToHandleEthLogs(TestingJsonRpcServer, subsetOfBlocksWithLogs)
-    logsClient = Web3JLogsSearcher(
-      vertx,
-      web3jClient = Web3j.build(HttpService(URI("http://127.0.0.1:" + TestingJsonRpcServer.boundPort).toString())),
-      config = Web3JLogsSearcher.Config(
-        loopSuccessBackoffDelay = 1.milliseconds,
+    logsClient = EthLogsSearcherImpl(
+      vertx = vertx,
+      ethApiClient = createEthApiClient(
+        vertx = vertx,
+        web3jClient = Web3j.build(HttpService(URI("http://127.0.0.1:" + TestingJsonRpcServer.boundPort).toString())),
         requestRetryConfig = retryConfig
+      ),
+      config = EthLogsSearcherImpl.Config(
+        loopSuccessBackoffDelay = 1.milliseconds
       ),
       log = LogManager.getLogger("test.case.Web3JLogsSearcher")
     )
@@ -235,12 +242,15 @@ class Web3JLogsSearcherIntTest {
     val randomHostname = "nowhere-${Random.nextBytes(20).encodeHex()}.local"
     web3jClient = Web3j.build(HttpService("http://$randomHostname:1234"))
     vertx = Vertx.vertx()
-    logsClient = Web3JLogsSearcher(
+    logsClient = EthLogsSearcherImpl(
       vertx,
-      web3jClient,
-      config = Web3JLogsSearcher.Config(
-        loopSuccessBackoffDelay = 1.milliseconds,
-        requestRetryConfig = RetryConfig.noRetries
+      createEthApiClient(
+        web3jClient,
+        requestRetryConfig = RetryConfig.noRetries,
+        vertx = null
+      ),
+      config = EthLogsSearcherImpl.Config(
+        loopSuccessBackoffDelay = 1.milliseconds
       )
     )
 
@@ -428,8 +438,8 @@ class Web3JLogsSearcherIntTest {
       )
       return mapOf(
         "address" to "0x",
-        "blockHash" to "${blockNumber.toULong().toHexStringUInt256()}",
-        "blockNumber" to "${blockNumber.toULong().toHexString()}",
+        "blockHash" to blockNumber.toULong().toHexStringUInt256(),
+        "blockNumber" to blockNumber.toULong().toHexString(),
         "data" to "0x",
         "logIndex" to "0x0",
         "removed" to false,

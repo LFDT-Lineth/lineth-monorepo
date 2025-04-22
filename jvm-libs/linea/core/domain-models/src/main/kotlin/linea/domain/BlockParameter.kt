@@ -11,6 +11,8 @@ sealed interface BlockParameter {
       return BlockNumber(blockNumber.toLong().toULong())
     }
 
+    fun fromNumber(blockNumber: ULong): BlockNumber = BlockNumber(blockNumber)
+
     fun parse(input: String): BlockParameter {
       return try {
         // Try to parse the input as a tag

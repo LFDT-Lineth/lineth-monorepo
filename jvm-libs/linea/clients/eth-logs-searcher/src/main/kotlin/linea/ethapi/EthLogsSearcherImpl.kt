@@ -1,43 +1,39 @@
-package linea.web3j
+package linea.ethapi
 
 import io.vertx.core.Vertx
+import kotlinx.datetime.Clock
 import linea.EthLogsSearcher
 import linea.SearchDirection
 import linea.domain.BlockParameter
 import linea.domain.BlockParameter.Companion.toBlockParameter
 import linea.domain.CommonDomainFunctions
-import linea.domain.RetryConfig
-import linea.kotlin.toULong
-import linea.web3j.domain.toDomain
-import linea.web3j.domain.toWeb3j
+import linea.domain.EthLog
+import linea.ethapi.cursor.BinarySearchCursor
+import linea.ethapi.cursor.ConsecutiveSearchCursor
 import net.consensys.linea.async.AsyncRetryer
-import net.consensys.linea.async.toSafeFuture
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
-import org.web3j.protocol.Web3j
-import org.web3j.protocol.core.methods.request.EthFilter
-import org.web3j.protocol.core.methods.response.EthLog
-import org.web3j.protocol.core.methods.response.Log
 import tech.pegasys.teku.infrastructure.async.SafeFuture
+import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 
 private sealed interface SearchResult {
-  data class ItemFound(val log: linea.domain.EthLog) : SearchResult
+  data class ItemFound(val log: EthLog) : SearchResult
   data class KeepSearching(val direction: SearchDirection) : SearchResult
   data object NoResultsInInterval : SearchResult
 }
 
-class Web3JLogsSearcher(
+class EthLogsSearcherImpl(
   val vertx: Vertx,
-  val web3jClient: Web3j,
+  val ethApiClient: EthApiClient,
   val config: Config = Config(),
-  val log: Logger = LogManager.getLogger(Web3JLogsSearcher::class.java)
-) : EthLogsSearcher {
+  val clock: Clock = Clock.System,
+  val log: Logger = LogManager.getLogger(EthLogsSearcherImpl::class.java)
+) : EthLogsSearcher, EthLogsClient by ethApiClient {
   data class Config(
-    val loopSuccessBackoffDelay: Duration = 1.milliseconds,
-    val requestRetryConfig: RetryConfig = RetryConfig()
+    val loopSuccessBackoffDelay: Duration = 1.milliseconds
   )
 
   override fun findLog(
@@ -46,8 +42,8 @@ class Web3JLogsSearcher(
     chunkSize: Int,
     address: String,
     topics: List<String>,
-    shallContinueToSearch: (linea.domain.EthLog) -> SearchDirection?
-  ): SafeFuture<linea.domain.EthLog?> {
+    shallContinueToSearch: (EthLog) -> SearchDirection?
+  ): SafeFuture<EthLog?> {
     require(chunkSize > 0) { "chunkSize=$chunkSize must be greater than 0" }
 
     return getAbsoluteBlockNumbers(fromBlock, toBlock)
@@ -58,7 +54,7 @@ class Web3JLogsSearcher(
             IllegalStateException("invalid range: fromBlock=$fromBlock is after toBlock=$toBlock ($end)")
           )
         } else {
-          findLogLoop(
+          findLogWithBinarySearch(
             start,
             end,
             chunkSize,
@@ -70,15 +66,109 @@ class Web3JLogsSearcher(
       }
   }
 
-  private fun findLogLoop(
+  override fun getLogsRollingForward(
+    fromBlock: BlockParameter,
+    toBlock: BlockParameter,
+    address: String,
+    topics: List<String?>,
+    chunkSize: UInt,
+    searchTimeout: Duration,
+    logsLimit: UInt?
+  ): SafeFuture<EthLogsSearcher.LogSearchResult> {
+    require(chunkSize > 0u) { "chunkSize=$chunkSize must be greater than 0" }
+
+    return getAbsoluteBlockNumbers(fromBlock, toBlock)
+      .thenCompose { (start, end) ->
+        if (start > end) {
+          // this is to prevent edge case when fromBlock number is after toBlock=LATEST/FINALIZED
+          SafeFuture.failedFuture(
+            IllegalStateException("invalid range: fromBlock=$fromBlock is after toBlock=$toBlock ($end)")
+          )
+        } else {
+          getLogsLoopingForward(
+            start,
+            end,
+            address,
+            topics,
+            chunkSize,
+            searchTimeout,
+            logsLimit
+          )
+        }
+      }
+  }
+
+  private fun getLogsLoopingForward(
+    fromBlock: ULong,
+    toBlock: ULong,
+    address: String,
+    topics: List<String?>,
+    chunkSize: UInt,
+    searchTimeout: Duration,
+    logsLimit: UInt?
+  ): SafeFuture<EthLogsSearcher.LogSearchResult> {
+    val cursor = ConsecutiveSearchCursor(fromBlock, toBlock, chunkSize.toInt(), SearchDirection.FORWARD)
+
+    val logsCollected: MutableList<EthLog> = CopyOnWriteArrayList()
+    val startTime = clock.now()
+    val lastSearchedChunk = AtomicReference<ULongRange>(null)
+
+    return AsyncRetryer.retry(
+      vertx,
+      backoffDelay = config.loopSuccessBackoffDelay,
+      stopRetriesPredicate = {
+        val enoughLogsCollected = logsCollected.size >= (logsLimit?.toInt() ?: Int.MAX_VALUE)
+        val collectionTimeoutElapsed = (clock.now() - startTime) >= searchTimeout
+        val noMoreChunksToCollect = !cursor.hasNext()
+
+        enoughLogsCollected || collectionTimeoutElapsed || noMoreChunksToCollect
+      }
+    ) {
+      val chunk = cursor.next()
+      val chunkInterval = CommonDomainFunctions.blockIntervalString(chunk.start, chunk.endInclusive)
+
+      log.trace("searching in chunk={}", chunkInterval)
+
+      getLogs(chunk.start.toBlockParameter(), chunk.endInclusive.toBlockParameter(), address, topics)
+        .thenPeek { result ->
+          lastSearchedChunk.set(chunk)
+          logsCollected.addAll(result)
+          log.trace(
+            "logs collected: chunk={} logsCount={}",
+            chunkInterval,
+            result.size
+          )
+        }
+    }
+      .thenApply {
+        val endBlockNumber = lastSearchedChunk.get().endInclusive
+        val logs = logsCollected.toList()
+        log.debug(
+          "getLogsRollingForward: fromBlock={} toBlock={} effectiveEndBlock={} address={} topics={} logsCount={}",
+          fromBlock,
+          toBlock,
+          endBlockNumber,
+          address,
+          topics.joinToString(", ") { it ?: "null" },
+          logs.size
+        )
+        EthLogsSearcher.LogSearchResult(
+          logs = logs,
+          startBlockNumber = fromBlock,
+          endBlockNumber = endBlockNumber
+        )
+      }
+  }
+
+  private fun findLogWithBinarySearch(
     fromBlock: ULong,
     toBlock: ULong,
     chunkSize: Int,
     address: String,
     topics: List<String>,
-    shallContinueToSearchPredicate: (linea.domain.EthLog) -> SearchDirection?
-  ): SafeFuture<linea.domain.EthLog?> {
-    val cursor = SearchCursor(fromBlock, toBlock, chunkSize)
+    shallContinueToSearchPredicate: (EthLog) -> SearchDirection?
+  ): SafeFuture<EthLog?> {
+    val cursor = BinarySearchCursor(fromBlock, toBlock, chunkSize)
     log.trace("searching between blocks={}", CommonDomainFunctions.blockIntervalString(fromBlock, toBlock))
 
     val nextChunkToSearchRef: AtomicReference<Pair<ULong, ULong>?> =
@@ -121,7 +211,7 @@ class Web3JLogsSearcher(
     toBlock: ULong,
     address: String,
     topics: List<String>,
-    shallContinueToSearchPredicate: (linea.domain.EthLog) -> SearchDirection?
+    shallContinueToSearchPredicate: (EthLog) -> SearchDirection?
   ): SafeFuture<SearchResult> {
     return getLogs(
       fromBlock = fromBlock.toBlockParameter(),
@@ -147,68 +237,6 @@ class Web3JLogsSearcher(
       }
   }
 
-  override fun getLogs(
-    fromBlock: BlockParameter,
-    toBlock: BlockParameter,
-    address: String,
-    topics: List<String?>
-  ): SafeFuture<List<linea.domain.EthLog>> {
-    return if (config.requestRetryConfig.isRetryEnabled) {
-      AsyncRetryer.retry(
-        vertx = vertx,
-        backoffDelay = config.requestRetryConfig.backoffDelay,
-        timeout = config.requestRetryConfig.timeout,
-        maxRetries = config.requestRetryConfig.maxRetries?.toInt()
-      ) {
-        getLogsInternal(fromBlock, toBlock, address, topics)
-      }
-    } else {
-      getLogsInternal(fromBlock, toBlock, address, topics)
-    }
-  }
-
-  private fun getLogsInternal(
-    fromBlock: BlockParameter,
-    toBlock: BlockParameter,
-    address: String,
-    topics: List<String?>
-  ): SafeFuture<List<linea.domain.EthLog>> {
-    val ethFilter = EthFilter(
-      /*fromBlock*/ fromBlock.toWeb3j(),
-      /*toBlock*/ toBlock.toWeb3j(),
-      /*address*/ address
-    ).apply {
-      topics.forEach { addSingleTopic(it) }
-    }
-
-    return web3jClient
-      .ethGetLogs(ethFilter)
-      .sendAsync()
-      .toSafeFuture()
-      .thenCompose {
-        if (it.hasError()) {
-          SafeFuture.failedFuture(
-            RuntimeException(
-              "json-rpc error: code=${it.error.code} message=${it.error.message} " +
-                "data=${it.error.data}"
-            )
-          )
-        } else {
-          val logs = if (it.logs != null) {
-            @Suppress("UNCHECKED_CAST")
-            (it.logs as List<EthLog.LogResult<Log>>)
-              .map { logResult ->
-                logResult.get().toDomain()
-              }
-          } else {
-            emptyList()
-          }
-
-          SafeFuture.completedFuture(logs)
-        }
-      }
-  }
-
   private fun getAbsoluteBlockNumbers(
     fromBlock: BlockParameter,
     toBlock: BlockParameter
@@ -227,18 +255,12 @@ class Web3JLogsSearcher(
     } else if (blockParameter == BlockParameter.Tag.EARLIEST) {
       SafeFuture.completedFuture(0UL)
     } else {
-      AsyncRetryer.retry(
-        vertx = vertx,
-        backoffDelay = config.requestRetryConfig.backoffDelay,
-        stopRetriesPredicate = { response ->
-          response?.block?.number != null
-        },
-        action = {
-          web3jClient.ethGetBlockByNumber(blockParameter.toWeb3j(), false).sendAsync().toSafeFuture()
-        }
-      )
-        .thenApply { response ->
-          response.block.number.toULong()
+      ethApiClient.getBlockByNumberWithoutTransactionsData(blockParameter)
+        .thenApply { block ->
+          if (block == null) {
+            throw IllegalStateException("block not found for blockParameter=$blockParameter")
+          }
+          block.number
         }
     }
   }
