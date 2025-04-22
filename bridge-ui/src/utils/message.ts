@@ -1,6 +1,7 @@
 import { keccak256, encodeAbiParameters, Address } from "viem";
-import { CctpV2BridgeMessage, NativeBridgeMessage } from "@/types";
+import { CctpV2BridgeMessage, Chain, ChainLayer, NativeBridgeMessage, Token } from "@/types";
 import { INBOX_L1L2_MESSAGE_STATUS_MAPPING_SLOT } from "@/constants";
+import { isCctp } from "./tokens";
 
 export function computeMessageHash(
   from: Address,
@@ -55,3 +56,24 @@ export function isCctpV2BridgeMessage(msg: NativeBridgeMessage | CctpV2BridgeMes
     typeof (msg as CctpV2BridgeMessage).attestation === "string"
   );
 }
+
+export type GetEstimatedTimeTextOptions = {
+  withSpaceAroundHyphen: boolean;
+  isAbbreviatedTimeUnit?: boolean;
+};
+
+export const getEstimatedTimeText = (fromChain: Chain, token: Token, opts: GetEstimatedTimeTextOptions) => {
+  const { withSpaceAroundHyphen, isAbbreviatedTimeUnit } = opts;
+  const spaceChar = withSpaceAroundHyphen ? " " : "";
+  const hourUnit = isAbbreviatedTimeUnit ? "hrs" : "hour";
+  const minuteUnit = isAbbreviatedTimeUnit ? "mins" : "minute";
+  const secondUnit = isAbbreviatedTimeUnit ? "secs" : "second";
+
+  if (isCctp(token)) {
+    return `22 ${secondUnit}${spaceChar}-${spaceChar}19 ${minuteUnit}`;
+  }
+  if (fromChain.layer === ChainLayer.L1) {
+    return `20 ${minuteUnit}`;
+  }
+  return `8${spaceChar}-${spaceChar}32 ${hourUnit}`;
+};

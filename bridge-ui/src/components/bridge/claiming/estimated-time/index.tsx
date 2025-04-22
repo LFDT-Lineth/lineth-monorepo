@@ -2,27 +2,22 @@ import { useState } from "react";
 import EstimatedTimeModal from "../../modal/estimated-time";
 import ClockIcon from "@/assets/icons/clock.svg";
 import styles from "./estimated-time.module.scss";
-import { useChainStore } from "@/stores";
-import { ChainLayer } from "@/types";
+import { useChainStore, useFormStore } from "@/stores";
+import { getEstimatedTimeText } from "@/utils";
 
 export default function EstimatedTime() {
   const fromChain = useChainStore.useFromChain();
+  const token = useFormStore((state) => state.token);
   const [showEstimatedTimeModal, setShowEstimatedTimeModal] = useState<boolean>(false);
-
-  const estimatedTime = fromChain.layer === ChainLayer.L1 ? "~ 20 mins" : "~ 8-32 hours";
-  const estimatedTimeType = fromChain.layer === ChainLayer.L1 ? "deposit" : "withdraw";
+  const estimatedTimeText = `~${getEstimatedTimeText(fromChain, token, { withSpaceAroundHyphen: false, isAbbreviatedTimeUnit: true })}`;
 
   return (
     <>
       <button type="button" className={styles.time} onClick={() => setShowEstimatedTimeModal(true)}>
         <ClockIcon />
-        <span>{estimatedTime}</span>
+        <span>{estimatedTimeText}</span>
       </button>
-      <EstimatedTimeModal
-        type={estimatedTimeType}
-        isModalOpen={showEstimatedTimeModal}
-        onCloseModal={() => setShowEstimatedTimeModal(false)}
-      />
+      <EstimatedTimeModal isModalOpen={showEstimatedTimeModal} onCloseModal={() => setShowEstimatedTimeModal(false)} />
     </>
   );
 }
