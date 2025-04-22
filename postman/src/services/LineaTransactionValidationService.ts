@@ -55,6 +55,7 @@ export class LineaTransactionValidationService implements ITransactionValidation
    *   hasZeroFee: boolean;
    *   isUnderPriced: boolean;
    *   isRateLimitExceeded: boolean;
+   *   isForSponsorship: boolean;
    *   estimatedGasLimit: bigint | null;
    *   threshold: number;
    *   maxPriorityFeePerGas: bigint;
@@ -68,6 +69,7 @@ export class LineaTransactionValidationService implements ITransactionValidation
     hasZeroFee: boolean;
     isUnderPriced: boolean;
     isRateLimitExceeded: boolean;
+    isForSponsorship: boolean;
     estimatedGasLimit: bigint | null;
     threshold: number;
     maxPriorityFeePerGas: bigint;
@@ -83,11 +85,17 @@ export class LineaTransactionValidationService implements ITransactionValidation
     const isUnderPriced = await this.isUnderPriced(gasLimit, message.fee, message.compressedTransactionSize!);
     const hasZeroFee = this.hasZeroFee(message);
     const isRateLimitExceeded = await this.isRateLimitExceeded(message.fee, message.value);
+    const isForSponsorship = this.isForSponsorship(
+      gasLimit,
+      this.config.isPostmanSponsorshipEnabled,
+      this.config.maxPostmanSponsorGasLimit,
+    );
 
     return {
       hasZeroFee,
       isUnderPriced,
       isRateLimitExceeded,
+      isForSponsorship,
       estimatedGasLimit,
       threshold,
       maxPriorityFeePerGas,
@@ -145,6 +153,23 @@ export class LineaTransactionValidationService implements ITransactionValidation
    */
   private async isRateLimitExceeded(messageFee: bigint, messageValue: bigint): Promise<boolean> {
     return this.l2MessageServiceClient.isRateLimitExceeded(messageFee, messageValue);
+  }
+
+  /**
+   * Determines if the claim transaction is for sponsorship
+   *
+   * @param {bigint} gasLimit - The gas limit for the transaction.
+   * @param {boolean} isPostmanSponsorshipEnabled - `true` if Postman sponsorship is enabled, `false` otherwise
+   * @param {bigint} maxPostmanSponsorGasLimit - Maximum gas limit for sponsored Postman claim transactions
+   * @returns {boolean} `true` if the message is for sponsorsing, `false` otherwise.
+   */
+  private isForSponsorship(
+    gasLimit: bigint,
+    isPostmanSponsorshipEnabled: boolean,
+    maxPostmanSponsorGasLimit: bigint,
+  ): boolean {
+    if (!isPostmanSponsorshipEnabled) return false;
+    return gasLimit < maxPostmanSponsorGasLimit;
   }
 
   /**

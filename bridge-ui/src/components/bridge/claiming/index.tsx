@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useAccount } from "wagmi";
 import BridgeTwoLogo from "@/components/bridge/bridge-two-logo";
 import styles from "./claiming.module.scss";
@@ -9,6 +9,8 @@ import ReceivedAmount from "./received-amount";
 import Fees from "./fees";
 import { useFormStore, useChainStore } from "@/stores";
 import BridgeMode from "./bridge-mode";
+import { ChainLayer } from "@/types";
+import { isCctp } from "@/utils";
 
 export default function Claiming() {
   const { isConnected } = useAccount();
@@ -20,7 +22,7 @@ export default function Claiming() {
 
   const amount = useFormStore((state) => state.amount);
   const balance = useFormStore((state) => state.balance);
-  const isTokenCanonicalUSDC = useFormStore((state) => state.isTokenCanonicalUSDC);
+  const token = useFormStore((state) => state.token);
 
   const originChainBalanceTooLow = amount && balance < amount;
 
@@ -33,6 +35,15 @@ export default function Claiming() {
     return () => clearTimeout(timeout);
   }, [amount]);
 
+  // Do not allow user to go to AdvancedSettings modal, when they have no choice of ClaimType anyway
+  const showSettingIcon = useMemo(() => {
+    if (fromChain.layer === ChainLayer.L2) return false;
+    // No auto-claiming for USDC via CCTPV2
+    if (isCctp(token)) return false;
+    if (loading) return false;
+    return true;
+  }, [fromChain, token, loading]);
+
   if (!amount || amount <= 0n) return null;
   if (isConnected && originChainBalanceTooLow) return null;
 
@@ -42,14 +53,11 @@ export default function Claiming() {
         <p className={styles.title}>Receive</p>
         <div className={styles.config}>
           <BridgeMode />
-          {
-            // There is no auto-claiming for USDC via CCTPV2
-            !isTokenCanonicalUSDC() && (
-              <button className={styles.setting} type="button" onClick={() => setShowAdvancedSettingsModal(true)}>
-                <SettingIcon />
-              </button>
-            )
-          }
+          {showSettingIcon && (
+            <button className={styles.setting} type="button" onClick={() => setShowAdvancedSettingsModal(true)}>
+              <SettingIcon />
+            </button>
+          )}
         </div>
       </div>
 

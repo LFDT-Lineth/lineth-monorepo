@@ -10,17 +10,18 @@ async function sendL1ToL2Message(
   {
     l1Account,
     l2Account,
+    fee = 0n,
     withCalldata = false,
   }: {
     l1Account: Wallet;
     l2Account: Wallet;
+    fee: bigint;
     withCalldata: boolean;
   },
 ) {
   const dummyContract = config.getL2DummyContract(l2Account);
   const lineaRollup = config.getLineaRollupContract(l1Account);
 
-  const valueAndFee = etherToWei("1.1");
   const calldata = withCalldata
     ? encodeFunctionCall(dummyContract.interface, "setPayload", [ethers.randomBytes(100)])
     : "0x";
@@ -36,8 +37,8 @@ async function sendL1ToL2Message(
   const nonce = await l1Provider.getTransactionCount(l1Account.address, "pending");
   logger.debug(`Fetched nonce. nonce=${nonce} account=${l1Account.address}`);
 
-  const tx = await lineaRollup.sendMessage(destinationAddress, valueAndFee, calldata, {
-    value: valueAndFee,
+  const tx = await lineaRollup.sendMessage(destinationAddress, fee, calldata, {
+    value: fee,
     nonce,
     maxPriorityFeePerGas,
     maxFeePerGas,
@@ -61,10 +62,12 @@ async function sendL2ToL1Message(
   {
     l1Account,
     l2Account,
+    fee = 0n,
     withCalldata = false,
   }: {
     l1Account: Wallet;
     l2Account: Wallet;
+    fee: bigint;
     withCalldata: boolean;
   },
 ) {
@@ -73,7 +76,6 @@ async function sendL2ToL1Message(
   const l2MessageService = config.getL2MessageServiceContract(l2Account);
   const lineaEstimateGasClient = new LineaEstimateGasClient(config.getL2BesuNodeEndpoint()!);
 
-  const valueAndFee = etherToWei("0.001");
   const calldata = withCalldata
     ? encodeFunctionCall(dummyContract.interface, "setPayload", [ethers.randomBytes(100)])
     : "0x";
@@ -85,13 +87,13 @@ async function sendL2ToL1Message(
   const { maxPriorityFeePerGas, maxFeePerGas, gasLimit } = await lineaEstimateGasClient.lineaEstimateGas(
     l2Account.address,
     await l2MessageService.getAddress(),
-    l2MessageService.interface.encodeFunctionData("sendMessage", [destinationAddress, valueAndFee, calldata]),
+    l2MessageService.interface.encodeFunctionData("sendMessage", [destinationAddress, fee, calldata]),
     etherToWei("0.001").toString(16),
   );
   logger.debug(`Fetched fee data. maxPriorityFeePerGas=${maxPriorityFeePerGas} maxFeePerGas=${maxFeePerGas}`);
 
-  const tx = await l2MessageService.sendMessage(destinationAddress, valueAndFee, calldata, {
-    value: valueAndFee,
+  const tx = await l2MessageService.sendMessage(destinationAddress, fee, calldata, {
+    value: fee,
     nonce,
     maxPriorityFeePerGas,
     maxFeePerGas,
@@ -117,14 +119,19 @@ const l2AccountManager = config.getL2AccountManager();
 
 describe("Messaging test suite", () => {
   it.concurrent(
-    "Should send a transaction with calldata to L1 message service, be successfully claimed it on L2",
+    "Should send a transaction with fee and calldata to L1 message service, be successfully claimed it on L2",
     async () => {
       const [l1Account, l2Account] = await Promise.all([
         l1AccountManager.generateAccount(),
         l2AccountManager.generateAccount(),
       ]);
 
-      const { tx, receipt } = await sendL1ToL2Message(logger, { l1Account, l2Account, withCalldata: true });
+      const { tx, receipt } = await sendL1ToL2Message(logger, {
+        l1Account,
+        l2Account,
+        fee: etherToWei("1.1"),
+        withCalldata: true,
+      });
 
       const [messageSentEvent] = receipt.logs.filter((log) => log.topics[0] === MESSAGE_SENT_EVENT_SIGNATURE);
       const messageHash = messageSentEvent.topics[3];
@@ -146,14 +153,53 @@ describe("Messaging test suite", () => {
   );
 
   it.concurrent(
-    "Should send a transaction without calldata to L1 message service, be successfully claimed it on L2",
+    "Should send a transaction with fee and without calldata to L1 message service, be successfully claimed it on L2",
     async () => {
       const [l1Account, l2Account] = await Promise.all([
         l1AccountManager.generateAccount(),
         l2AccountManager.generateAccount(),
       ]);
 
-      const { tx, receipt } = await sendL1ToL2Message(logger, { l1Account, l2Account, withCalldata: false });
+      const { tx, receipt } = await sendL1ToL2Message(logger, {
+        l1Account,
+        l2Account,
+        fee: etherToWei("1.1"),
+        withCalldata: false,
+      });
+
+      const [messageSentEvent] = receipt.logs.filter((log) => log.topics[0] === MESSAGE_SENT_EVENT_SIGNATURE);
+      const messageHash = messageSentEvent.topics[3];
+      logger.debug(`L1 message sent. messageHash=${messageHash} transactionHash=${tx.hash}`);
+
+      logger.debug(`Waiting for MessageClaimed event on L2. messageHash=${messageHash}`);
+      const l2MessageService = config.getL2MessageServiceContract();
+      const [messageClaimedEvent] = await waitForEvents(
+        l2MessageService,
+        l2MessageService.filters.MessageClaimed(messageHash),
+      );
+      expect(messageClaimedEvent).toBeDefined();
+      logger.debug(
+        `Message claimed on L2. messageHash=${messageClaimedEvent.args._messageHash} transactionHash=${messageClaimedEvent.transactionHash}`,
+      );
+    },
+    100_000,
+  );
+
+  // Test that Postman sponsoring works for L1->L2
+  it.concurrent(
+    "Should send a transaction without fee and without calldata to L1 message service, be successfully claimed it on L2",
+    async () => {
+      const [l1Account, l2Account] = await Promise.all([
+        l1AccountManager.generateAccount(),
+        l2AccountManager.generateAccount(),
+      ]);
+
+      const { tx, receipt } = await sendL1ToL2Message(logger, {
+        l1Account,
+        l2Account,
+        fee: 0n,
+        withCalldata: false,
+      });
 
       const [messageSentEvent] = receipt.logs.filter((log) => log.topics[0] === MESSAGE_SENT_EVENT_SIGNATURE);
       const messageHash = messageSentEvent.topics[3];
@@ -174,7 +220,7 @@ describe("Messaging test suite", () => {
   );
 
   it.concurrent(
-    "Should send a transaction with calldata to L2 message service, be successfully claimed it on L1",
+    "Should send a transaction with with fee and calldata to L2 message service, be successfully claimed it on L1",
     async () => {
       const [l1Account, l2Account] = await Promise.all([
         l1AccountManager.generateAccount(),
@@ -182,7 +228,12 @@ describe("Messaging test suite", () => {
       ]);
 
       const lineaRollup = config.getLineaRollupContract();
-      const { tx, receipt } = await sendL2ToL1Message(logger, { l1Account, l2Account, withCalldata: true });
+      const { tx, receipt } = await sendL2ToL1Message(logger, {
+        l1Account,
+        l2Account,
+        fee: etherToWei("0.001"),
+        withCalldata: true,
+      });
 
       const [messageSentEvent] = receipt.logs.filter((log) => log.topics[0] === MESSAGE_SENT_EVENT_SIGNATURE);
       const messageHash = messageSentEvent.topics[3];
@@ -211,7 +262,7 @@ describe("Messaging test suite", () => {
   );
 
   it.concurrent(
-    "Should send a transaction without calldata to L2 message service, be successfully claimed it on L1",
+    "Should send a transaction with fee and without calldata to L2 message service, be successfully claimed it on L1",
     async () => {
       const [l1Account, l2Account] = await Promise.all([
         l1AccountManager.generateAccount(),
@@ -219,7 +270,12 @@ describe("Messaging test suite", () => {
       ]);
 
       const lineaRollup = config.getLineaRollupContract();
-      const { tx, receipt } = await sendL2ToL1Message(logger, { l1Account, l2Account, withCalldata: false });
+      const { tx, receipt } = await sendL2ToL1Message(logger, {
+        l1Account,
+        l2Account,
+        fee: etherToWei("0.001"),
+        withCalldata: false,
+      });
 
       const [messageSentEvent] = receipt.logs.filter((log) => log.topics[0] === MESSAGE_SENT_EVENT_SIGNATURE);
       const messageHash = messageSentEvent.topics[3];

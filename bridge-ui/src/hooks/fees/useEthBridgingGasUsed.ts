@@ -1,59 +1,56 @@
 import { Address } from "viem";
 import { useQuery } from "@tanstack/react-query";
-import { BridgeProvider, Chain, ChainLayer, Token } from "@/types";
-import { estimateERC20GasFee, isEth } from "@/utils";
+import { BridgeProvider, Chain, ChainLayer, ClaimType, Token } from "@/types";
+import { estimateEthBridgingGasUsed, isEth } from "@/utils";
 
-type UseERC20BridgingFeeProps = {
+type UseEthBridgingFeeProps = {
   account?: Address;
   recipient: Address;
   amount: bigint;
-  token: Token;
   fromChain: Chain;
   toChain: Chain;
   nextMessageNumber: bigint;
-  claimingType: "auto" | "manual";
+  token: Token;
+  claimingType: ClaimType;
 };
 
-const useERC20BridgingFee = ({
-  account,
+const useEthBridgingGasUsed = ({
   token,
+  account,
+  recipient,
+  amount,
   fromChain,
   toChain,
   nextMessageNumber,
-  recipient,
-  amount,
   claimingType,
-}: UseERC20BridgingFeeProps) => {
+}: UseEthBridgingFeeProps) => {
   const queryKey = [
-    "erc20BridgingFee",
+    "ethBridgingFee",
     account,
-    token,
+    token.symbol,
     fromChain.id,
     toChain.id,
     nextMessageNumber?.toString(),
     amount?.toString(),
     recipient,
+    claimingType,
   ];
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey,
     enabled:
-      !!token &&
-      !isEth(token) &&
+      isEth(token) &&
       token.bridgeProvider === BridgeProvider.NATIVE &&
       fromChain.layer === ChainLayer.L1 &&
       !!account &&
-      !!fromChain &&
-      !!toChain &&
       !!nextMessageNumber &&
       !!amount &&
       !!recipient &&
-      claimingType === "auto",
+      (claimingType === ClaimType.AUTO_PAID || claimingType === ClaimType.AUTO_SPONSORED),
     queryFn: async () =>
-      await estimateERC20GasFee({
+      await estimateEthBridgingGasUsed({
         address: account!,
         recipient,
-        token,
         amount,
         nextMessageNumber,
         fromChain,
@@ -65,4 +62,4 @@ const useERC20BridgingFee = ({
   return { data, isLoading, isError, refetch };
 };
 
-export default useERC20BridgingFee;
+export default useEthBridgingGasUsed;

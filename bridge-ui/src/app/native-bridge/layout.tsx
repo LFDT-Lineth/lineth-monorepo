@@ -3,7 +3,7 @@
 import { useTokens } from "@/hooks";
 import { useAccount } from "wagmi";
 import { FormState, FormStoreProvider, useChainStore } from "@/stores";
-import { ChainLayer } from "@/types";
+import { ChainLayer, ClaimType } from "@/types";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { address } = useAccount();
@@ -12,7 +12,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   const initialFormState: FormState = {
     token: tokens[0],
-    claim: fromChain?.layer === ChainLayer.L1 ? "auto" : "manual",
+    claim: fromChain?.layer === ChainLayer.L1 ? ClaimType.AUTO_SPONSORED : ClaimType.MANUAL,
     amount: null,
     minimumFees: 0n,
     gasFees: 0n,

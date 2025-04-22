@@ -22,11 +22,6 @@ export interface IMessageRepository<ContractTransactionResponse> {
     messageStatuses: MessageStatus[],
     maxRetry: number,
     retryDelay: number,
-    feeEstimationOptions: {
-      minimumMargin: number;
-      extraDataVariableCost: number;
-      extraDataFixedCost: number;
-    },
   ): Promise<Message | null>;
   getLatestMessageSent(direction: Direction, contractAddress: string): Promise<Message | null>;
   getNFirstMessagesByStatus(

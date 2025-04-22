@@ -3,7 +3,7 @@ import { getPublicClient } from "@wagmi/core";
 import TokenBridge from "@/abis/TokenBridge.json";
 import MessageService from "@/abis/MessageService.json";
 import { computeMessageHash, computeMessageStorageSlot } from "./message";
-import { Chain, Token } from "@/types";
+import { Chain, ClaimType, Token } from "@/types";
 import { config } from "@/lib/wagmi";
 import { isUndefined } from "@/utils";
 
@@ -14,7 +14,7 @@ interface EstimationParams {
   nextMessageNumber: bigint;
   fromChain: Chain;
   toChain: Chain;
-  claimingType: "auto" | "manual";
+  claimingType: ClaimType;
 }
 
 /**
@@ -75,7 +75,7 @@ async function prepareERC20TokenParams(
 /**
  * Generic helper to call gas estimation.
  */
-async function estimateGasFee(
+async function estimateClaimMessageGasUsed(
   publicClient: ReturnType<typeof getPublicClient>,
   contractAddress: Address,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -99,7 +99,7 @@ async function estimateGasFee(
 /**
  * Estimates the gas fee for bridging an ERC20 token.
  */
-export async function estimateERC20GasFee({
+export async function estimateERC20BridgingGasUsed({
   address,
   recipient,
   amount,
@@ -109,7 +109,7 @@ export async function estimateERC20GasFee({
   token,
   claimingType,
 }: EstimationParams & { token: Token }): Promise<bigint> {
-  if (claimingType === "manual") return 0n;
+  if (claimingType === ClaimType.MANUAL) return 0n;
 
   const destinationChainPublicClient = getPublicClient(config, {
     chainId: toChain.id,
@@ -157,13 +157,19 @@ export async function estimateERC20GasFee({
     nextMessageNumber,
   ];
 
-  return estimateGasFee(destinationChainPublicClient, toChain.messageServiceAddress, argsArray, stateOverride, address);
+  return estimateClaimMessageGasUsed(
+    destinationChainPublicClient,
+    toChain.messageServiceAddress,
+    argsArray,
+    stateOverride,
+    address,
+  );
 }
 
 /**
  * Estimates the gas fee for bridging ETH.
  */
-export async function estimateEthGasFee({
+export async function estimateEthBridgingGasUsed({
   address,
   recipient,
   amount,
@@ -171,7 +177,7 @@ export async function estimateEthGasFee({
   toChain,
   claimingType,
 }: EstimationParams): Promise<bigint> {
-  if (claimingType === "manual") return 0n;
+  if (claimingType === ClaimType.MANUAL) return 0n;
 
   const destinationChainPublicClient = getPublicClient(config, {
     chainId: toChain.id,
@@ -185,5 +191,11 @@ export async function estimateEthGasFee({
 
   const argsArray = [address, recipient, 0n, amount, zeroAddress, "0x", nextMessageNumber];
 
-  return estimateGasFee(destinationChainPublicClient, toChain.messageServiceAddress, argsArray, stateOverride, address);
+  return estimateClaimMessageGasUsed(
+    destinationChainPublicClient,
+    toChain.messageServiceAddress,
+    argsArray,
+    stateOverride,
+    address,
+  );
 }

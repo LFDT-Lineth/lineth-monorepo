@@ -8,6 +8,7 @@ export interface ITransactionValidationService {
     hasZeroFee: boolean;
     isUnderPriced: boolean;
     isRateLimitExceeded: boolean;
+    isForSponsorship: boolean;
     estimatedGasLimit: bigint | null;
     threshold: number;
     maxPriorityFeePerGas: bigint;
@@ -18,4 +19,6 @@ export interface ITransactionValidationService {
 export type TransactionValidationServiceConfig = {
   profitMargin: number;
   maxClaimGasLimit: bigint;
+  isPostmanSponsorshipEnabled: boolean;
+  maxPostmanSponsorGasLimit: bigint;
 };

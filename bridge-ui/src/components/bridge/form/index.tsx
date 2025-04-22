@@ -16,7 +16,7 @@ import { DestinationAddress } from "../destination-address";
 import Button from "../../ui/button";
 import { useChainStore, useFormStore, useNativeBridgeNavigationStore } from "@/stores";
 import { useTokenBalance } from "@/hooks";
-import { ChainLayer } from "@/types";
+import { ChainLayer, ClaimType } from "@/types";
 
 export default function BridgeForm() {
   const [isDestinationAddressOpen, setIsDestinationAddressOpen] = useState(false);
@@ -49,7 +49,7 @@ export default function BridgeForm() {
     }
 
     if (fromChain.layer === ChainLayer.L2) {
-      setClaim("manual");
+      setClaim(ClaimType.MANUAL);
     }
   }, [balance, address, fromChain.layer, setBalance, setRecipient, setClaim]);
 

@@ -2,7 +2,7 @@ import Modal from "@/components/modal";
 import CheckShieldIcon from "@/assets/icons/check-shield.svg";
 import styles from "./advanced-settings.module.scss";
 import ToggleSwitch from "@/components/ui/toggle-switch";
-import { ChainLayer } from "@/types";
+import { ChainLayer, ClaimType } from "@/types";
 import { useFormStore, useChainStore } from "@/stores";
 
 type Props = {
@@ -33,12 +33,12 @@ export default function AdvancedSettings({ isModalOpen, onCloseModal }: Props) {
           <div className={styles.toggle}>
             <ToggleSwitch
               disabled={fromChain?.layer === ChainLayer.L2}
-              checked={claim === "manual"}
+              checked={claim === ClaimType.MANUAL}
               onChange={(checked) => {
                 if (checked) {
-                  setClaim("manual");
+                  setClaim(ClaimType.MANUAL);
                 } else {
-                  setClaim("auto");
+                  setClaim(ClaimType.AUTO_PAID);
                 }
               }}
             />

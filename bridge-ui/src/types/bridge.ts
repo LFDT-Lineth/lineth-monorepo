@@ -28,6 +28,15 @@ export enum BridgeTransactionType {
   USDC = "USDC",
 }
 
+export enum ClaimType {
+  // Only for L1 -> L2, sponsored by the Postman
+  AUTO_SPONSORED = "AUTO_SPONSORED",
+  // Only for L1 -> L2, practically this will only be available when the L2 token contract does not exist (costing ~460K gas to claimMessage on L2).
+  AUTO_PAID = "AUTO_PAID",
+  // L2 -> L1 must be MANUAL
+  MANUAL = "MANUAL",
+}
+
 // BridgeTransaction object that is populated when user opens "TransactionHistory" component, and is passed to child components.
 export interface BridgeTransaction {
   type: BridgeTransactionType;

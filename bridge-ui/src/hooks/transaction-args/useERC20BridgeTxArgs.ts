@@ -3,7 +3,7 @@ import { encodeFunctionData } from "viem";
 import { useFormStore, useChainStore } from "@/stores";
 import TokenBridge from "@/abis/TokenBridge.json";
 import { isEth, isNull, isUndefined, isUndefinedOrNull, isZero, isUndefinedOrEmptyString } from "@/utils";
-import { BridgeProvider, ChainLayer } from "@/types";
+import { BridgeProvider, ChainLayer, ClaimType } from "@/types";
 import { DEFAULT_ADDRESS_FOR_NON_CONNECTED_USER } from "@/constants";
 
 type UseERC20BridgeTxArgsProps = {
@@ -30,7 +30,7 @@ const useERC20BridgeTxArgs = ({ isConnected, allowance }: UseERC20BridgeTxArgsPr
       isUndefinedOrEmptyString(toAddress) ||
       (isZero(minimumFees) && fromChain.layer === ChainLayer.L2) ||
       (isUndefinedOrNull(bridgingFees) && fromChain.layer === ChainLayer.L1) ||
-      (isZero(bridgingFees) && claim === "auto") ||
+      (isZero(bridgingFees) && claim === ClaimType.AUTO_PAID) ||
       token.bridgeProvider !== BridgeProvider.NATIVE
     ) {
       return;

@@ -62,6 +62,10 @@ async function main() {
         maxClaimGasLimit: process.env.MAX_CLAIM_GAS_LIMIT ? BigInt(process.env.MAX_CLAIM_GAS_LIMIT) : undefined,
         maxTxRetries: process.env.MAX_TX_RETRIES ? parseInt(process.env.MAX_TX_RETRIES) : undefined,
         isMaxGasFeeEnforced: process.env.L1_MAX_GAS_FEE_ENFORCED === "true",
+        isPostmanSponsorshipEnabled: process.env.L2_L1_ENABLE_POSTMAN_SPONSORING === "true",
+        maxPostmanSponsorGasLimit: process.env.MAX_POSTMAN_SPONSOR_GAS_LIMIT
+          ? BigInt(process.env.MAX_POSTMAN_SPONSOR_GAS_LIMIT)
+          : undefined,
       },
     },
     l2Options: {
@@ -120,6 +124,10 @@ async function main() {
         maxClaimGasLimit: process.env.MAX_CLAIM_GAS_LIMIT ? BigInt(process.env.MAX_CLAIM_GAS_LIMIT) : undefined,
         maxTxRetries: process.env.MAX_TX_RETRIES ? parseInt(process.env.MAX_TX_RETRIES) : undefined,
         isMaxGasFeeEnforced: process.env.L2_MAX_GAS_FEE_ENFORCED === "true",
+        isPostmanSponsorshipEnabled: process.env.L1_L2_ENABLE_POSTMAN_SPONSORING === "true",
+        maxPostmanSponsorGasLimit: process.env.MAX_POSTMAN_SPONSOR_GAS_LIMIT
+          ? BigInt(process.env.MAX_POSTMAN_SPONSOR_GAS_LIMIT)
+          : undefined,
       },
       l2MessageTreeDepth: process.env.L2_MESSAGE_TREE_DEPTH ? parseInt(process.env.L2_MESSAGE_TREE_DEPTH) : undefined,
       enableLineaEstimateGas: process.env.ENABLE_LINEA_ESTIMATE_GAS === "true",

@@ -6,6 +6,7 @@ import useMinimumFee from "./useMinimumFee";
 import useBridgingFee from "./useBridgingFee";
 import useTokenPrices from "../useTokenPrices";
 import { useFormStore, useChainStore } from "@/stores";
+import { ClaimType } from "@/types";
 import { isZero, isUndefined } from "@/utils";
 
 const useFees = () => {
@@ -57,7 +58,14 @@ const useFees = () => {
         fiatValue: getFiatValue(gasFeesResult.gasFees),
       });
 
-      if (claim === "auto" && bridgingFees) {
+      if (claim === ClaimType.AUTO_SPONSORED) {
+        feesArray.push({
+          name: `${toChain.name} fee`,
+          fee: 0n,
+          fiatValue: null,
+        });
+      }
+      if (claim === ClaimType.AUTO_PAID && bridgingFees) {
         feesArray.push({
           name: `${toChain.name} fee`,
           fee: bridgingFees,

@@ -70,6 +70,7 @@ All messages are stored in a configurable Postgres DB.
 - `MAX_NUMBER_OF_RETRIES`: Maximum retry attempts
 - `RETRY_DELAY_IN_SECONDS`: Delay between retries
 - `MAX_CLAIM_GAS_LIMIT`: Maximum gas limit for claim transactions
+- `MAX_POSTMAN_SPONSOR_GAS_LIMIT`: Maximum gas limit for sponsored Postman claim transactions
 
 #### Feature Flags
 - `L1_L2_EOA_ENABLED`: Enable L1->L2 EOA messages
@@ -80,6 +81,8 @@ All messages are stored in a configurable Postgres DB.
 - `L2_L1_AUTO_CLAIM_ENABLED`: Enable auto-claiming for L2->L1 messages
 - `ENABLE_LINEA_ESTIMATE_GAS`: Enable `linea_estimateGas`endpoint usage for L2 chain gas fees estimation
 - `DB_CLEANER_ENABLED`: Enable DB cleaning to delete old claimed messages
+- `L1_L2_ENABLE_POSTMAN_SPONSORING`: Enable L1->L2 Postman sponsoring for claiming messages
+- `L2_L1_ENABLE_POSTMAN_SPONSORING`: Enable L2->L1 Postman sponsoring for claiming messages
 
 #### DB cleaning
 - `DB_CLEANING_INTERVAL`: DB cleaning polling interval (ms)

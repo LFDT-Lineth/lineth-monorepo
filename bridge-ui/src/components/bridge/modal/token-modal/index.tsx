@@ -7,9 +7,9 @@ import SearchIcon from "@/assets/icons/search.svg";
 import styles from "./token-modal.module.scss";
 import TokenDetails from "./token-details";
 import { useDevice, useTokenPrices, useTokens } from "@/hooks";
-import { useTokenStore, useChainStore, useConfigStore } from "@/stores";
-import { Token } from "@/types";
-import { safeGetAddress, isEmptyObject, isEth } from "@/utils";
+import { useTokenStore, useChainStore, useConfigStore, useFormStore } from "@/stores";
+import { ChainLayer, ClaimType, Token } from "@/types";
+import { safeGetAddress, isEmptyObject, isEth, isCctp } from "@/utils";
 import { useAccount } from "wagmi";
 
 interface TokenModalProps {
@@ -21,6 +21,7 @@ export default function TokenModal({ isModalOpen, onCloseModal }: TokenModalProp
   const { isConnected } = useAccount();
   const tokensList = useTokens();
   const setSelectedToken = useTokenStore((state) => state.setSelectedToken);
+  const setClaim = useFormStore((state) => state.setClaim);
   const fromChain = useChainStore.useFromChain();
   const currency = useConfigStore((state) => state.currency);
   const { isMobile } = useDevice();
@@ -60,12 +61,19 @@ export default function TokenModal({ isModalOpen, onCloseModal }: TokenModalProp
 
   const { data: tokenPrices } = useTokenPrices(tokenAddresses, chainId);
 
+  // Set default claim type for token selection here.
   const handleTokenClick = useCallback(
     (token: Token) => {
       setSelectedToken(token);
+      // For L2->L1, there is only manual claiming. This is set in the parent component BridgeForm, and we take care here to not override it.
+      if (fromChain.layer === ChainLayer.L1) {
+        if (isCctp(token)) setClaim(ClaimType.MANUAL);
+        // Initial claim type is AUTO_SPONSORED, this can change when bridge fee computed in useBridgingFee
+        else setClaim(ClaimType.AUTO_SPONSORED);
+      }
       onCloseModal();
     },
-    [onCloseModal, setSelectedToken],
+    [onCloseModal, setSelectedToken, setClaim, fromChain.layer],
   );
 
   const getTokenPrice = useCallback(

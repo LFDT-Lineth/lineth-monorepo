@@ -3,6 +3,8 @@ import { L1NetworkConfig, L2NetworkConfig } from "../../application/postman/app/
 import { Message, MessageProps } from "../../core/entities/Message";
 import { MessageStatus } from "../../core/enums";
 import {
+  DEFAULT_ENABLE_POSTMAN_SPONSORING,
+  DEFAULT_MAX_POSTMAN_SPONSOR_GAS_LIMIT,
   DEFAULT_INITIAL_FROM_BLOCK,
   DEFAULT_L2_MESSAGE_TREE_DEPTH,
   DEFAULT_LISTENER_BLOCK_CONFIRMATIONS,
@@ -201,6 +203,8 @@ export const testL1NetworkConfig: L1NetworkConfig = {
     retryDelayInSeconds: DEFAULT_RETRY_DELAY_IN_SECONDS,
     maxClaimGasLimit: DEFAULT_MAX_CLAIM_GAS_LIMIT,
     maxTxRetries: DEFAULT_MAX_TX_RETRIES,
+    isPostmanSponsorshipEnabled: DEFAULT_ENABLE_POSTMAN_SPONSORING,
+    maxPostmanSponsorGasLimit: DEFAULT_MAX_POSTMAN_SPONSOR_GAS_LIMIT,
   },
   listener: {
     pollingInterval: 4000,
@@ -228,6 +232,8 @@ export const testL2NetworkConfig: L2NetworkConfig = {
     maxNumberOfRetries: DEFAULT_MAX_NUMBER_OF_RETRIES,
     retryDelayInSeconds: DEFAULT_RETRY_DELAY_IN_SECONDS,
     maxTxRetries: DEFAULT_MAX_TX_RETRIES,
+    isPostmanSponsorshipEnabled: DEFAULT_ENABLE_POSTMAN_SPONSORING,
+    maxPostmanSponsorGasLimit: DEFAULT_MAX_POSTMAN_SPONSOR_GAS_LIMIT,
   },
   listener: {
     pollingInterval: 100,

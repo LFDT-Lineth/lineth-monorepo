@@ -1,6 +1,6 @@
 export { getNativeBridgeMessageClaimedTxHash } from "./events";
 export { generateChain, generateChains, getChainLogoPath, getChainNetworkLayer } from "./chains";
-export { estimateEthGasFee, estimateERC20GasFee } from "./fees";
+export { estimateEthBridgingGasUsed, estimateERC20BridgingGasUsed } from "./fees";
 export { formatAddress, formatBalance, formatHex, formatTimestamp, safeGetAddress } from "./format";
 export { fetchTransactionsHistory } from "./history";
 export * from "./message";

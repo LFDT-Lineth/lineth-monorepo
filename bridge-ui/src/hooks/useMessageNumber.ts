@@ -1,10 +1,10 @@
 import { useReadContract } from "wagmi";
 import MessageService from "@/abis/MessageService.json";
-import { Chain, ChainLayer } from "@/types";
+import { Chain, ChainLayer, ClaimType } from "@/types";
 
 type UseMessageNumberProps = {
   fromChain: Chain;
-  claimingType: "auto" | "manual";
+  claimingType: ClaimType;
 };
 
 const useMessageNumber = ({ fromChain, claimingType }: UseMessageNumberProps) => {
@@ -14,7 +14,7 @@ const useMessageNumber = ({ fromChain, claimingType }: UseMessageNumberProps) =>
     functionName: "nextMessageNumber",
     chainId: fromChain.id,
     query: {
-      enabled: fromChain.layer === ChainLayer.L1 && claimingType === "auto",
+      enabled: fromChain.layer === ChainLayer.L1 && claimingType === ClaimType.AUTO_PAID,
     },
   });
   return data as bigint;

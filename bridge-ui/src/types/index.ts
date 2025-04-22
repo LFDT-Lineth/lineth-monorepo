@@ -26,4 +26,5 @@ export {
   type CctpV2BridgeMessage,
   type BridgeTransaction,
   BridgeTransactionType,
+  ClaimType,
 } from "./bridge";

@@ -3,7 +3,7 @@ import { encodeFunctionData } from "viem";
 import { useFormStore, useChainStore } from "@/stores";
 import MessageService from "@/abis/MessageService.json";
 import { isEth, isUndefinedOrNull, isZero, isUndefinedOrEmptyString } from "@/utils";
-import { BridgeProvider, ChainLayer } from "@/types";
+import { BridgeProvider, ChainLayer, ClaimType } from "@/types";
 import { DEFAULT_ADDRESS_FOR_NON_CONNECTED_USER } from "@/constants";
 
 type UseEthBridgeTxArgsProps = {
@@ -28,7 +28,7 @@ const useEthBridgeTxArgs = ({ isConnected }: UseEthBridgeTxArgsProps) => {
       isUndefinedOrEmptyString(toAddress) ||
       (isZero(minimumFees) && fromChain.layer === ChainLayer.L2) ||
       (isUndefinedOrNull(bridgingFees) && fromChain.layer === ChainLayer.L1) ||
-      (isZero(bridgingFees) && claim === "auto") ||
+      (isZero(bridgingFees) && claim === ClaimType.AUTO_PAID) ||
       !isEth(token) ||
       token.bridgeProvider !== BridgeProvider.NATIVE
     ) {

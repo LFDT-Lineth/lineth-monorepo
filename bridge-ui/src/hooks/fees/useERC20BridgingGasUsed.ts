@@ -1,56 +1,59 @@
 import { Address } from "viem";
 import { useQuery } from "@tanstack/react-query";
-import { BridgeProvider, Chain, ChainLayer, Token } from "@/types";
-import { estimateEthGasFee, isEth } from "@/utils";
+import { BridgeProvider, Chain, ChainLayer, ClaimType, Token } from "@/types";
+import { estimateERC20BridgingGasUsed, isEth } from "@/utils";
 
-type UseEthBridgingFeeProps = {
+type UseERC20BridgingFeeProps = {
   account?: Address;
   recipient: Address;
   amount: bigint;
+  token: Token;
   fromChain: Chain;
   toChain: Chain;
   nextMessageNumber: bigint;
-  token: Token;
-  claimingType: "auto" | "manual";
+  claimingType: ClaimType;
 };
 
-const useEthBridgingFee = ({
-  token,
+const useERC20BridgingGasUsed = ({
   account,
-  recipient,
-  amount,
+  token,
   fromChain,
   toChain,
   nextMessageNumber,
+  recipient,
+  amount,
   claimingType,
-}: UseEthBridgingFeeProps) => {
+}: UseERC20BridgingFeeProps) => {
   const queryKey = [
-    "ethBridgingFee",
+    "erc20BridgingFee",
     account,
-    token.symbol,
+    token,
     fromChain.id,
     toChain.id,
     nextMessageNumber?.toString(),
     amount?.toString(),
     recipient,
-    claimingType,
   ];
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey,
     enabled:
-      isEth(token) &&
+      !!token &&
+      !isEth(token) &&
       token.bridgeProvider === BridgeProvider.NATIVE &&
       fromChain.layer === ChainLayer.L1 &&
       !!account &&
+      !!fromChain &&
+      !!toChain &&
       !!nextMessageNumber &&
       !!amount &&
       !!recipient &&
-      claimingType === "auto",
+      (claimingType === ClaimType.AUTO_PAID || claimingType === ClaimType.AUTO_SPONSORED),
     queryFn: async () =>
-      await estimateEthGasFee({
+      await estimateERC20BridgingGasUsed({
         address: account!,
         recipient,
+        token,
         amount,
         nextMessageNumber,
         fromChain,
@@ -62,4 +65,4 @@ const useEthBridgingFee = ({
   return { data, isLoading, isError, refetch };
 };
 
-export default useEthBridgingFee;
+export default useERC20BridgingGasUsed;

@@ -9,8 +9,7 @@ import { isUndefinedOrEmptyString, isUndefined } from "@/utils";
 const useClaimingTx = (transaction: BridgeTransaction | undefined): string | undefined => {
   // queryFn for useQuery cannot return undefined - https://tanstack.com/query/latest/docs/framework/react/reference/useQuery
   const { data } = useQuery({
-    // TODO - Do we need to account for undefined props here? Otherwise caching behaviour is not as expected?
-    queryKey: ["useClaimingTx", transaction?.bridgingTx, transaction?.toChain?.id],
+    queryKey: ["useClaimingTx", transaction?.bridgingTx, transaction?.toChain?.id, transaction?.status],
     queryFn: async () => getClaimTx(transaction),
   });
 

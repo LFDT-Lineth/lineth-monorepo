@@ -10,6 +10,7 @@ export async function selectTokenAndWaitForBalance(tokenSymbol: string, page: Pa
 
   // Timeout implementation
   let fetchTokenTimeUsed = 0;
+  // bridge-ui-known-flaky-line - Sometimes the RPC call to get ETH/ERC20 balance fails
   while ((await tokenBalance.textContent()) === `0 ${tokenSymbol}`) {
     if (fetchTokenTimeUsed >= PAGE_TIMEOUT)
       throw `Could not find any balance for ${tokenSymbol}, does the testing wallet have funds?`;

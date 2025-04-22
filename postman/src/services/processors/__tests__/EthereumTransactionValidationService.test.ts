@@ -17,9 +17,11 @@ import {
   testMessage,
 } from "../../../utils/testing/constants";
 import {
+  DEFAULT_ENABLE_POSTMAN_SPONSORING,
   DEFAULT_GAS_ESTIMATION_PERCENTILE,
   DEFAULT_MAX_CLAIM_GAS_LIMIT,
   DEFAULT_MAX_FEE_PER_GAS_CAP,
+  DEFAULT_MAX_POSTMAN_SPONSOR_GAS_LIMIT,
   DEFAULT_PROFIT_MARGIN,
 } from "../../../core/constants";
 import { EthereumTransactionValidationService } from "../../EthereumTransactionValidationService";
@@ -57,6 +59,8 @@ describe("EthereumTransactionValidationService", () => {
     lineaTransactionValidationService = new EthereumTransactionValidationService(lineaRollupClient, gasProvider, {
       profitMargin: DEFAULT_PROFIT_MARGIN,
       maxClaimGasLimit: DEFAULT_MAX_CLAIM_GAS_LIMIT,
+      isPostmanSponsorshipEnabled: DEFAULT_ENABLE_POSTMAN_SPONSORING,
+      maxPostmanSponsorGasLimit: DEFAULT_MAX_POSTMAN_SPONSOR_GAS_LIMIT,
     });
 
     jest.spyOn(gasProvider, "getGasFees").mockResolvedValueOnce({
@@ -82,6 +86,7 @@ describe("EthereumTransactionValidationService", () => {
         estimatedGasLimit: estimatedGasLimit,
         hasZeroFee: true,
         isRateLimitExceeded: false,
+        isForSponsorship: false,
         isUnderPriced: true,
         maxFeePerGas: DEFAULT_MAX_FEE_PER_GAS,
         maxPriorityFeePerGas: DEFAULT_MAX_FEE_PER_GAS,
@@ -102,6 +107,7 @@ describe("EthereumTransactionValidationService", () => {
         hasZeroFee: false,
         isRateLimitExceeded: false,
         isUnderPriced: true,
+        isForSponsorship: false,
         maxFeePerGas: DEFAULT_MAX_FEE_PER_GAS,
         maxPriorityFeePerGas: DEFAULT_MAX_FEE_PER_GAS,
         threshold: 0,
@@ -120,6 +126,7 @@ describe("EthereumTransactionValidationService", () => {
         hasZeroFee: false,
         isRateLimitExceeded: false,
         isUnderPriced: true,
+        isForSponsorship: false,
         maxFeePerGas: DEFAULT_MAX_FEE_PER_GAS,
         maxPriorityFeePerGas: DEFAULT_MAX_FEE_PER_GAS,
         threshold: 0,
@@ -138,6 +145,7 @@ describe("EthereumTransactionValidationService", () => {
         hasZeroFee: false,
         isRateLimitExceeded: true,
         isUnderPriced: true,
+        isForSponsorship: false,
         maxFeePerGas: DEFAULT_MAX_FEE_PER_GAS,
         maxPriorityFeePerGas: DEFAULT_MAX_FEE_PER_GAS,
         threshold: 0,
@@ -157,9 +165,54 @@ describe("EthereumTransactionValidationService", () => {
         hasZeroFee: false,
         isRateLimitExceeded: false,
         isUnderPriced: false,
+        isForSponsorship: false,
         maxFeePerGas: DEFAULT_MAX_FEE_PER_GAS,
         maxPriorityFeePerGas: DEFAULT_MAX_FEE_PER_GAS,
         threshold: 2000000000000000,
+      });
+    });
+
+    it("When isPostmanSponsorshipEnabled is false, should return transaction evaluation criteria with isForSponsorship = false", async () => {
+      const estimatedGasLimit = 50_000n;
+      jest.spyOn(lineaRollupClient, "estimateClaimGas").mockResolvedValueOnce(estimatedGasLimit);
+      jest.spyOn(lineaRollupClient, "isRateLimitExceeded").mockResolvedValueOnce(false);
+      testMessage.fee = 0n;
+
+      const criteria = await lineaTransactionValidationService.evaluateTransaction(testMessage);
+
+      expect(criteria.isForSponsorship).toBe(false);
+    });
+
+    describe("isPostmanSponsorshipEnabled is true", () => {
+      beforeEach(() => {
+        lineaTransactionValidationService = new EthereumTransactionValidationService(lineaRollupClient, gasProvider, {
+          profitMargin: DEFAULT_PROFIT_MARGIN,
+          maxClaimGasLimit: DEFAULT_MAX_CLAIM_GAS_LIMIT,
+          isPostmanSponsorshipEnabled: true,
+          maxPostmanSponsorGasLimit: DEFAULT_MAX_POSTMAN_SPONSOR_GAS_LIMIT,
+        });
+      });
+
+      it("When gas limit < sponsor threshold, should return transaction evaluation criteria with isForSponsorship = true", async () => {
+        const estimatedGasLimit = DEFAULT_MAX_POSTMAN_SPONSOR_GAS_LIMIT - 1n;
+        jest.spyOn(lineaRollupClient, "estimateClaimGas").mockResolvedValueOnce(estimatedGasLimit);
+        jest.spyOn(lineaRollupClient, "isRateLimitExceeded").mockResolvedValueOnce(false);
+        testMessage.fee = 0n;
+
+        const criteria = await lineaTransactionValidationService.evaluateTransaction(testMessage);
+
+        expect(criteria.isForSponsorship).toBe(true);
+      });
+
+      it("When gas limit > sponsor threshold, should return transaction evaluation criteria with isForSponsorship = false", async () => {
+        const estimatedGasLimit = DEFAULT_MAX_POSTMAN_SPONSOR_GAS_LIMIT + 1n;
+        jest.spyOn(lineaRollupClient, "estimateClaimGas").mockResolvedValueOnce(estimatedGasLimit);
+        jest.spyOn(lineaRollupClient, "isRateLimitExceeded").mockResolvedValueOnce(false);
+
+        testMessage.fee = 0n;
+        const criteria = await lineaTransactionValidationService.evaluateTransaction(testMessage);
+
+        expect(criteria.isForSponsorship).toBe(false);
       });
     });
   });

@@ -3,6 +3,7 @@ import ManualClaim from "../manual-claim";
 import EstimatedTime from "../estimated-time";
 import WithFees from "./with-fees";
 import { useFormStore, useChainStore } from "@/stores";
+import { ClaimType } from "@/types";
 
 export default function Fees() {
   const fromChain = useChainStore.useFromChain();
@@ -13,7 +14,7 @@ export default function Fees() {
       <div className={styles.estimate}>
         <WithFees iconPath={fromChain.iconPath} />
         <EstimatedTime />
-        {claim === "manual" && <ManualClaim />}
+        {claim === ClaimType.MANUAL && <ManualClaim />}
       </div>
     </>
   );
