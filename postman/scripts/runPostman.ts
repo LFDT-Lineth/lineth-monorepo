@@ -153,8 +153,11 @@ async function main() {
         ? parseInt(process.env.DB_DAYS_BEFORE_NOW_TO_DELETE)
         : undefined,
     },
+    apiOptions: {
+      port: process.env.API_PORT ? parseInt(process.env.API_PORT) : undefined,
+    },
   });
-  await client.connectDatabase();
+  await client.connectServices();
   client.startAllServices();
 }
 

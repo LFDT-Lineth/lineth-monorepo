@@ -16,6 +16,7 @@ export type PostmanOptions = {
   databaseOptions: DBOptions;
   databaseCleanerOptions?: DBCleanerOptions;
   loggerOptions?: LoggerOptions;
+  apiOptions?: ApiOptions;
 };
 
 /**
@@ -29,6 +30,7 @@ export type PostmanConfig = {
   databaseOptions: DBOptions;
   databaseCleanerConfig: DBCleanerConfig;
   loggerOptions?: LoggerOptions;
+  apiConfig: ApiConfig;
 };
 
 /**
@@ -113,3 +115,9 @@ export type ListenerOptions = {
 
 export type ListenerConfig = Required<Omit<ListenerOptions, "eventFilters">> &
   Partial<Pick<ListenerOptions, "eventFilters">>;
+
+export type ApiOptions = {
+  port?: number;
+};
+
+export type ApiConfig = Required<ApiOptions>;

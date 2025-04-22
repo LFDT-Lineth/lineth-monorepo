@@ -302,6 +302,13 @@ export class TypeOrmMessageRepository<TransactionResponse extends ContractTransa
           claimTxHash: tx.hash,
         },
       );
+
+      // Store updated entity in the queryRunner to access it in the afterTransactionCommit hook
+      entityManager.queryRunner!.data.updatedEntity = {
+        previousStatus: message.status,
+        newStatus: MessageStatus.PENDING,
+        direction: message.direction,
+      };
     });
   }
 }

@@ -38,6 +38,7 @@ export function getConfig(postmanOptions: PostmanOptions): PostmanConfig {
     databaseOptions,
     databaseCleanerOptions,
     loggerOptions,
+    apiOptions,
   } = postmanOptions;
 
   if (l1Options.listener.eventFilters) {
@@ -124,6 +125,9 @@ export function getConfig(postmanOptions: PostmanOptions): PostmanConfig {
       daysBeforeNowToDelete: databaseCleanerOptions?.daysBeforeNowToDelete ?? 14,
     },
     loggerOptions,
+    apiConfig: {
+      port: apiOptions?.port ?? 3000,
+    },
   };
 }
 

@@ -251,6 +251,8 @@ services:
     profiles: [ "l2", "debug" ]
     platform: linux/amd64
     restart: on-failure
+    ports:
+      - "9090:3000"
     depends_on:
       sequencer:
         condition: service_healthy

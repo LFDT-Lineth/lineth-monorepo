@@ -236,15 +236,17 @@ export class MessageClaimingProcessor implements IMessageClaimingProcessor {
     maxFeePerGas: bigint,
   ): Promise<boolean> {
     if (isUnderPriced) {
-      this.logger.warn(
-        "Fee underpriced found in this message: messageHash=%s messageInfo=%s transactionGasLimit=%s maxFeePerGas=%s",
-        message.messageHash,
-        message.toString(),
-        estimatedGasLimit?.toString(),
-        maxFeePerGas.toString(),
-      );
-      message.edit({ status: MessageStatus.FEE_UNDERPRICED });
-      await this.databaseService.updateMessage(message);
+      if (message.status !== MessageStatus.FEE_UNDERPRICED) {
+        this.logger.warn(
+          "Fee underpriced found in this message: messageHash=%s messageInfo=%s transactionGasLimit=%s maxFeePerGas=%s",
+          message.messageHash,
+          message.toString(),
+          estimatedGasLimit?.toString(),
+          maxFeePerGas.toString(),
+        );
+        message.edit({ status: MessageStatus.FEE_UNDERPRICED });
+        await this.databaseService.updateMessage(message);
+      }
       return true;
     }
     return false;

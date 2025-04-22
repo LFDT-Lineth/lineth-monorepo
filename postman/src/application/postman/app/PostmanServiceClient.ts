@@ -11,7 +11,7 @@ import {
   MessageSentEventProcessor,
   L2ClaimMessageTransactionSizeProcessor,
 } from "../../../services/processors";
-import { PostmanOptions } from "./config/config";
+import { PostmanConfig, PostmanOptions } from "./config/config";
 import { DB } from "../persistence/dataSource";
 import {
   MessageSentEventPoller,
@@ -26,6 +26,9 @@ import { L2ClaimTransactionSizeCalculator } from "../../../services/L2ClaimTrans
 import { LineaTransactionValidationService } from "../../../services/LineaTransactionValidationService";
 import { EthereumTransactionValidationService } from "../../../services/EthereumTransactionValidationService";
 import { getConfig } from "./config/utils";
+import { Api } from "../api/Api";
+import { MessageStatusSubscriber } from "../persistence/subscribers/MessageStatusSubscriber";
+import { MessageMetricsService } from "../api/metrics/MessageMetricsService";
 
 export class PostmanServiceClient {
   // L1 -> L2 flow
@@ -49,6 +52,8 @@ export class PostmanServiceClient {
 
   private l1L2AutoClaimEnabled: boolean;
   private l2L1AutoClaimEnabled: boolean;
+  private api: Api;
+  private config: PostmanConfig;
 
   /**
    * Initializes a new instance of the PostmanServiceClient.
@@ -57,6 +62,7 @@ export class PostmanServiceClient {
    */
   constructor(options: PostmanOptions) {
     const config = getConfig(options);
+    this.config = config;
 
     this.logger = new WinstonLogger(PostmanServiceClient.name, config.loggerOptions);
     this.l1L2AutoClaimEnabled = config.l1L2AutoClaimEnabled;
@@ -359,10 +365,50 @@ export class PostmanServiceClient {
   }
 
   /**
-   * Initializes the database connection using the configuration provided.
+   * Initializes the database connection.
    */
-  public async connectDatabase() {
-    await this.db.initialize();
+  public async initializeDatabase(): Promise<void> {
+    try {
+      await this.db.initialize();
+      this.logger.info("Database connection established successfully.");
+    } catch (error) {
+      this.logger.error("Failed to connect to the database.", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Initializes metrics, registers subscribers, and configures the API.
+   * This method expects the database to be connected.
+   */
+  public async initializeMetricsAndApi(): Promise<void> {
+    try {
+      const metricService = new MessageMetricsService(this.db.manager);
+      await metricService.initialize();
+
+      const messageStatusSubscriber = new MessageStatusSubscriber(
+        metricService,
+        new WinstonLogger(MessageStatusSubscriber.name),
+      );
+      this.db.subscribers.push(messageStatusSubscriber);
+
+      // Initialize or reinitialize the API using the metrics service.
+      this.api = new Api({ port: this.config.apiConfig.port }, metricService, new WinstonLogger(Api.name));
+
+      this.logger.info("Metrics and API have been initialized successfully.");
+    } catch (error) {
+      this.logger.error("Failed to initialize metrics or API.", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Connects services by first initializing the database and then setting up metrics and the API.
+   */
+  public async connectServices(): Promise<void> {
+    // Database initialization must happen before metrics initialization
+    await this.initializeDatabase();
+    await this.initializeMetricsAndApi();
   }
 
   /**
@@ -388,6 +434,8 @@ export class PostmanServiceClient {
 
     // Database Cleaner
     this.databaseCleaningPoller.start();
+
+    this.api.start();
 
     this.logger.info("All listeners and message deliverers have been started.");
   }
@@ -415,6 +463,8 @@ export class PostmanServiceClient {
 
     // Database Cleaner
     this.databaseCleaningPoller.stop();
+
+    this.api.stop();
 
     this.logger.info("All listeners and message deliverers have been stopped.");
   }
