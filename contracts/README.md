@@ -9,7 +9,14 @@ The Linea Rollup, which contains the L1MessageService, is the smart contract tha
 - Anchoring of L2 message Merkle roots to allow later claiming.
 - Claiming of messages sent from L2 to Ethereum mainnet (L1).
 - Submission of L2 compressed data using EIP-4844 blobs or via calldata.
-- Finalization of L2 state on L1 using a Zero Knowledge Proof.
+- Finalization of L2 state on L1 using a Zero Knowledge Proof verified via a Plonk verifier contract.
+
+## Verifiers
+A Plonk based verifier contract is responsible for: 
+- verifying the Zero Knowledge proof that proves correct
+  - L2 transaction execution.
+  - L2 state transition.
+  - The data submitted in the blobs align with the proven L2 state and execution.
 
 ## L2MessageService
 The L2MessageService is the L2 smart contract that is responsible for:
