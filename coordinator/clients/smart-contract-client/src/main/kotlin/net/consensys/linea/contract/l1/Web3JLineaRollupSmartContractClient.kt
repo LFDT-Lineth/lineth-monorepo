@@ -1,10 +1,10 @@
 package net.consensys.linea.contract.l1
 
 import build.linea.contract.LineaRollupV6
-import build.linea.contract.l1.Web3JLineaRollupSmartContractClientReadOnly
+import linea.contract.l1.Web3JLineaRollupSmartContractClientReadOnly
 import linea.kotlin.toULong
 import linea.web3j.SmartContractErrors
-import net.consensys.linea.contract.AsyncFriendlyTransactionManager
+import linea.web3j.transactionmanager.AsyncFriendlyTransactionManager
 import net.consensys.linea.contract.Web3JContractAsyncHelper
 import net.consensys.linea.contract.throwExceptionIfJsonRpcErrorReturned
 import net.consensys.zkevm.coordinator.clients.smartcontract.BlockAndNonce

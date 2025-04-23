@@ -5,10 +5,10 @@ import com.sksamuel.hoplite.addFileSource
 import linea.contract.l1.LineaContractVersion
 import linea.kotlin.gwei
 import linea.web3j.SmartContractErrors
-import net.consensys.linea.contract.AsyncFriendlyTransactionManager
-import net.consensys.linea.contract.EIP1559GasProvider
+import linea.web3j.gas.EIP1559GasProvider
+import linea.web3j.gas.StaticGasProvider
+import linea.web3j.transactionmanager.AsyncFriendlyTransactionManager
 import net.consensys.linea.contract.LineaRollupAsyncFriendly
-import net.consensys.linea.contract.StaticGasProvider
 import net.consensys.linea.contract.l1.Web3JLineaRollupSmartContractClient
 import net.consensys.linea.contract.l2.L2MessageServiceGasLimitEstimate
 import net.consensys.linea.testing.filesystem.findPathTo

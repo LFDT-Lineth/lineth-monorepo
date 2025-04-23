@@ -6,6 +6,7 @@ import linea.kotlin.toULong
 import linea.web3j.SmartContractErrors
 import linea.web3j.gas.AtomicContractEIP1559GasProvider
 import linea.web3j.gas.EIP1559GasFees
+import linea.web3j.transactionmanager.AsyncFriendlyTransactionManager
 import org.web3j.abi.FunctionEncoder
 import org.web3j.abi.datatypes.Function
 import org.web3j.crypto.Credentials

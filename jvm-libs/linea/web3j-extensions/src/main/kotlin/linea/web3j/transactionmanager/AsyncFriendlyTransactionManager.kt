@@ -1,6 +1,6 @@
-package net.consensys.linea.contract
+package linea.web3j.transactionmanager
 
-import net.consensys.zkevm.ethereum.error.handling.SubmissionException
+import linea.web3j.requestAsync
 import org.apache.logging.log4j.LogManager
 import org.web3j.abi.datatypes.Function
 import org.web3j.crypto.Blob
@@ -71,24 +71,11 @@ class AsyncFriendlyTransactionManager : RawTransactionManager {
       ?.let { DefaultBlockParameter.valueOf(blockNumber) }
       ?: DefaultBlockParameterName.LATEST
 
-    val ethGetTransactionCount = web3j.ethGetTransactionCount(
+    return web3j.ethGetTransactionCount(
       fromAddress,
       blockParameter
     )
-      .sendAsync()
-
-    return SafeFuture.of(ethGetTransactionCount).thenApply { response ->
-      when (response.hasError()) {
-        true -> {
-          val e = response.error
-          throw SubmissionException(
-            "eth_GetTransactionCount failed: blockNumber=$blockNumber, message='${e.message}'",
-            Throwable()
-          )
-        }
-        false -> setNonce(response.transactionCount)
-      }
-    }
+      .requestAsync { setNonce(it.drop(2).toBigInteger(16)) }
   }
 
   fun currentNonce(): BigInteger {

@@ -1,11 +1,7 @@
-package net.consensys.linea.contract
+package linea.web3j.gas
 
 import linea.kotlin.gwei
 import linea.kotlin.toBigInteger
-import linea.web3j.gas.AtomicContractEIP1559GasProvider
-import linea.web3j.gas.EIP1559GasFees
-import linea.web3j.gas.EIP4844GasFees
-import linea.web3j.gas.EIP4844GasProvider
 import java.math.BigInteger
 
 // this class is mainly intended to be used for testing purposes

@@ -2,10 +2,10 @@ package net.consensys.zkevm.coordinator.app
 
 import build.linea.clients.StateManagerClientV1
 import build.linea.clients.StateManagerV1JsonRpcClient
-import build.linea.contract.l1.Web3JLineaRollupSmartContractClientReadOnly
 import io.vertx.core.Vertx
 import kotlinx.datetime.Clock
 import linea.contract.l1.LineaRollupSmartContractClientReadOnly
+import linea.contract.l1.Web3JLineaRollupSmartContractClientReadOnly
 import linea.domain.BlockNumberAndHash
 import linea.encoding.BlockRLPEncoder
 import linea.web3j.ExtendedWeb3JImpl

@@ -1,9 +1,9 @@
 package net.consensys.linea.contract.l2
 
 import linea.web3j.SmartContractErrors
+import linea.web3j.gas.EIP1559GasProvider
 import linea.web3j.informativeEthCall
-import net.consensys.linea.contract.AsyncFriendlyTransactionManager
-import net.consensys.linea.contract.EIP1559GasProvider
+import linea.web3j.transactionmanager.AsyncFriendlyTransactionManager
 import net.consensys.linea.contract.L2MessageService
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger

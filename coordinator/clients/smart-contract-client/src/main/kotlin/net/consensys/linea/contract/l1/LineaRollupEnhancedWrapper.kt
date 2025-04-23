@@ -1,7 +1,7 @@
 package net.consensys.linea.contract.l1
 
 import build.linea.contract.LineaRollupV6
-import net.consensys.linea.contract.AsyncFriendlyTransactionManager
+import linea.web3j.transactionmanager.AsyncFriendlyTransactionManager
 import net.consensys.linea.contract.Web3JContractAsyncHelper
 import org.web3j.abi.datatypes.Function
 import org.web3j.protocol.Web3j

@@ -1,6 +1,6 @@
 package net.consensys.zkevm.ethereum
 
-import net.consensys.linea.contract.AsyncFriendlyTransactionManager
+import linea.web3j.transactionmanager.AsyncFriendlyTransactionManager
 import net.consensys.linea.contract.LineaRollupAsyncFriendly
 import org.web3j.crypto.Credentials
 import org.web3j.protocol.Web3j

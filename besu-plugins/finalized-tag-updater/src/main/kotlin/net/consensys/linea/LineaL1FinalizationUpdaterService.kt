@@ -1,8 +1,8 @@
 package net.consensys.linea
 
-import build.linea.contract.l1.Web3JLineaRollupSmartContractClientReadOnly
 import io.vertx.core.Vertx
 import linea.consensus.EngineBlockTagUpdater
+import linea.contract.l1.Web3JLineaRollupSmartContractClientReadOnly
 import linea.domain.BlockParameter
 import linea.web3j.okhttp.okHttpClientBuilder
 import net.consensys.zkevm.LongRunningService

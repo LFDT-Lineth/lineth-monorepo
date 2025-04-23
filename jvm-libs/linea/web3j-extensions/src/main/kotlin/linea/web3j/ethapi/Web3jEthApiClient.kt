@@ -7,7 +7,9 @@ import linea.domain.EthLog
 import linea.ethapi.EthApiClient
 import linea.web3j.domain.toDomain
 import linea.web3j.domain.toWeb3j
+import linea.web3j.handleError
 import linea.web3j.mapToDomainWithTxHashes
+import linea.web3j.requestAsync
 import linea.web3j.toDomain
 import net.consensys.linea.async.toSafeFuture
 import org.web3j.protocol.Web3j
@@ -23,37 +25,16 @@ class Web3jEthApiClient(
   val web3jClient: Web3j
 ) : EthApiClient {
 
-  private fun <T> handleError(
-    response: org.web3j.protocol.core.Response<T>
-  ): SafeFuture<T> {
-    return if (response.hasError()) {
-      SafeFuture.failedFuture(
-        RuntimeException(
-          "json-rpc error: code=${response.error.code} message=${response.error.message} " +
-            "data=${response.error.data}"
-        )
-      )
-    } else {
-      SafeFuture.completedFuture(response.result)
-    }
-  }
-
   override fun getBlockByNumber(blockParameter: BlockParameter): SafeFuture<Block?> {
     return web3jClient
       .ethGetBlockByNumber(blockParameter.toWeb3j(), true)
-      .sendAsync()
-      .thenCompose(::handleError)
-      .thenApply { block -> block?.toDomain() }
-      .toSafeFuture()
+      .requestAsync { block -> block?.toDomain() }
   }
 
   override fun getBlockByNumberWithoutTransactionsData(blockParameter: BlockParameter): SafeFuture<BlockWithTxHashes?> {
     return web3jClient
       .ethGetBlockByNumber(blockParameter.toWeb3j(), false)
-      .sendAsync()
-      .thenCompose(::handleError)
-      .thenApply { block -> block?.let(::mapToDomainWithTxHashes) }
-      .toSafeFuture()
+      .requestAsync { block -> block?.let(::mapToDomainWithTxHashes) }
   }
 
   override fun getLogs(

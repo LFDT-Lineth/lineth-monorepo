@@ -4,7 +4,7 @@ import io.vertx.core.Vertx
 import io.vertx.junit5.Timeout
 import io.vertx.junit5.VertxExtension
 import io.vertx.junit5.VertxTestContext
-import net.consensys.linea.contract.AsyncFriendlyTransactionManager
+import linea.web3j.transactionmanager.AsyncFriendlyTransactionManager
 import net.consensys.linea.contract.L2MessageService
 import net.consensys.zkevm.coordinator.clients.smartcontract.LineaRollupSmartContractClient
 import org.apache.tuweni.bytes.Bytes32

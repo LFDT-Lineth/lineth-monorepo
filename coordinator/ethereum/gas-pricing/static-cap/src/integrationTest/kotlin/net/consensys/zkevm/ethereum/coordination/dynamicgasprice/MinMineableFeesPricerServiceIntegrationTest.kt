@@ -8,7 +8,7 @@ import io.vertx.junit5.VertxTestContext
 import linea.kotlin.toHexString
 import linea.kotlin.toULong
 import linea.web3j.Web3jBlobExtended
-import net.consensys.linea.contract.AsyncFriendlyTransactionManager
+import linea.web3j.transactionmanager.AsyncFriendlyTransactionManager
 import net.consensys.linea.ethereum.gaspricing.BoundableFeeCalculator
 import net.consensys.linea.ethereum.gaspricing.FeesCalculator
 import net.consensys.linea.ethereum.gaspricing.FeesFetcher

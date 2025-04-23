@@ -3,7 +3,7 @@ package net.consensys.zkevm.ethereum.coordination.messageanchoring
 import io.vertx.core.Vertx
 import linea.contract.l1.LineaRollupSmartContractClientReadOnly
 import linea.domain.BlockParameter
-import net.consensys.linea.contract.AsyncFriendlyTransactionManager
+import linea.web3j.transactionmanager.AsyncFriendlyTransactionManager
 import net.consensys.linea.contract.L2MessageService
 import net.consensys.zkevm.PeriodicPollingService
 import org.apache.logging.log4j.LogManager

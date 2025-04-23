@@ -11,6 +11,7 @@ import linea.web3j.gas.EIP4844GasFees
 import linea.web3j.gas.EIP4844GasProvider
 import linea.web3j.getRevertReason
 import linea.web3j.informativeEthCall
+import linea.web3j.transactionmanager.AsyncFriendlyTransactionManager
 import net.consensys.linea.async.toSafeFuture
 import net.consensys.zkevm.domain.BlobRecord
 import net.consensys.zkevm.ethereum.gaspricing.GasPriceCaps

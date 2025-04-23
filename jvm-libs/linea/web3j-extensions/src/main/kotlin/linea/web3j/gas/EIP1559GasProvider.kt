@@ -1,11 +1,9 @@
-package net.consensys.linea.contract
+package linea.web3j.gas
 
 import linea.kotlin.toBigInteger
 import linea.kotlin.toIntervalString
 import linea.web3j.domain.blocksRange
 import linea.web3j.domain.toLineaDomain
-import linea.web3j.gas.AtomicContractEIP1559GasProvider
-import linea.web3j.gas.EIP1559GasFees
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import org.web3j.protocol.Web3j

@@ -4,8 +4,8 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import kotlinx.datetime.Clock
 import linea.kotlin.toULong
+import linea.web3j.transactionmanager.AsyncFriendlyTransactionManager
 import linea.web3j.waitForTxReceipt
-import net.consensys.linea.contract.AsyncFriendlyTransactionManager
 import net.consensys.linea.jsonrpc.JsonRpcErrorResponseException
 import net.consensys.linea.testing.filesystem.getPathTo
 import org.apache.logging.log4j.LogManager
