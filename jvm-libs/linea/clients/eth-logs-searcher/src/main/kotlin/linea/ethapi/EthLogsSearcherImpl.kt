@@ -73,7 +73,7 @@ class EthLogsSearcherImpl(
     topics: List<String?>,
     chunkSize: UInt,
     searchTimeout: Duration,
-    logsLimit: UInt?
+    stopAfterTargetLogsCount: UInt?
   ): SafeFuture<EthLogsSearcher.LogSearchResult> {
     require(chunkSize > 0u) { "chunkSize=$chunkSize must be greater than 0" }
 
@@ -92,7 +92,7 @@ class EthLogsSearcherImpl(
             topics,
             chunkSize,
             searchTimeout,
-            logsLimit
+            stopAfterTargetLogsCount
           )
         }
       }

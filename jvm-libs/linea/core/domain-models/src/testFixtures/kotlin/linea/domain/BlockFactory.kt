@@ -3,6 +3,7 @@ package linea.domain
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 import linea.kotlin.ByteArrayExt
+import kotlin.random.Random
 
 val zeroHash = ByteArray(32) { 0 }
 val zeroAddress = ByteArray(20) { 0 }
@@ -104,5 +105,29 @@ fun Block?.toEthGetBlockResponse(
     size = size,
     totalDifficulty = totalDifficulty,
     transactions = emptyList<ByteArray>()
+  )
+}
+
+fun Block.toBlockWithRandomTxHashes(): BlockWithTxHashes {
+  return BlockWithTxHashes(
+    number = number,
+    hash = hash,
+    parentHash = parentHash,
+    ommersHash = ommersHash,
+    miner = miner,
+    stateRoot = stateRoot,
+    transactionsRoot = transactionsRoot,
+    receiptsRoot = receiptsRoot,
+    logsBloom = logsBloom,
+    difficulty = difficulty,
+    gasLimit = gasLimit,
+    gasUsed = gasUsed,
+    timestamp = timestamp,
+    extraData = extraData,
+    mixHash = mixHash,
+    nonce = nonce,
+    baseFeePerGas = baseFeePerGas,
+    transactions = transactions.map { Random.nextBytes(32) },
+    ommers = emptyList()
   )
 }

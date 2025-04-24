@@ -113,6 +113,7 @@ class SubmissionsFetchingTask(
     ).thenCompose { super.start() }
   }
 
+  @Synchronized
   override fun stop(): SafeFuture<Unit> {
     return SafeFuture.allOf(
       submissionEventsFetchingTask.stop(),

@@ -1,0 +1,17 @@
+plugins {
+  id 'net.consensys.zkevm.kotlin-library-conventions'
+}
+
+dependencies {
+  implementation project(':jvm-libs:generic:vertx-helper')
+  implementation project(':jvm-libs:generic:extensions:futures')
+  implementation project(':jvm-libs:linea:clients:interfaces')
+  implementation project(':jvm-libs:linea:clients:eth-logs-searcher')
+  implementation project(':coordinator:core')
+  implementation project(':coordinator:clients:smart-contract-client')
+  implementation project(':coordinator:ethereum:common')
+
+  testImplementation project(':coordinator:ethereum:test-utils')
+  testImplementation testFixtures(project(':jvm-libs:linea:core:domain-models'))
+  testImplementation testFixtures(project(':jvm-libs:linea:clients:interfaces'))
+}

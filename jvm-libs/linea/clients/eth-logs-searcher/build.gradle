@@ -3,7 +3,7 @@ plugins {
   id 'java-test-fixtures'
 }
 
-description="Interfaces for interaction with Linea Smart Contract"
+description = "Client to search/find logs in a Ethereum network"
 
 dependencies {
   api project(':jvm-libs:linea:core:domain-models')
@@ -15,6 +15,7 @@ dependencies {
   testImplementation project(':jvm-libs:generic:logging')
   testImplementation project(':jvm-libs:linea:web3j-extensions')
   testImplementation(testFixtures(project(":jvm-libs:generic:json-rpc")))
+  testImplementation(testFixtures(project(':jvm-libs:linea:clients:interfaces')))
   testImplementation "org.apache.logging.log4j:log4j-slf4j2-impl:${libs.versions.log4j.get()}"
   testImplementation "com.fasterxml.jackson.core:jackson-annotations:${libs.versions.jackson.get()}"
   testImplementation "com.fasterxml.jackson.core:jackson-databind:${libs.versions.jackson.get()}"

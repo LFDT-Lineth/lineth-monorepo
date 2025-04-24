@@ -50,7 +50,7 @@ class LineaSubmissionEventsClientIntTest {
       "test.clients.l1.executionlayer" to Level.INFO,
       "test.clients.l1.web3j-default" to Level.INFO,
       "test.clients.l1.linea-contract" to Level.INFO,
-      "test.clients.l1.events-fetcher" to Level.TRACE
+      "test.clients.l1.events-fetcher" to Level.DEBUG
     )
 
     val rollupDeploymentFuture = ContractsManager.get()

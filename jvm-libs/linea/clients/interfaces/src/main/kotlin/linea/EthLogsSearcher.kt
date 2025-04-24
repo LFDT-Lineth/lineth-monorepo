@@ -35,6 +35,10 @@ interface EthLogsSearcher : EthLogsClient {
     val isEmpty: Boolean = logs.isEmpty()
   }
 
+  /**
+   * Fetches logs from L1 in chunks of chunkSize starting at fromBlock to toBlock.
+   * It stops fetching logs when searchTimeout or stopAfterTargetLogsCount is reached.
+   */
   fun getLogsRollingForward(
     fromBlock: BlockParameter,
     toBlock: BlockParameter,
@@ -42,6 +46,6 @@ interface EthLogsSearcher : EthLogsClient {
     topics: List<String?>,
     chunkSize: UInt = 1000u,
     searchTimeout: Duration,
-    logsLimit: UInt? = null
+    stopAfterTargetLogsCount: UInt? = null
   ): SafeFuture<LogSearchResult>
 }

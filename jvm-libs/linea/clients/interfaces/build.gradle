@@ -9,4 +9,6 @@ dependencies {
   api project(':jvm-libs:linea:core:domain-models')
   api project(':jvm-libs:generic:extensions:futures')
   api project(':jvm-libs:generic:extensions:kotlin')
+
+  testFixturesApi(testFixtures(project(':jvm-libs:linea:core:domain-models')))
 }
