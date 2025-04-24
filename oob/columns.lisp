@@ -4,7 +4,7 @@
   (STAMP :i32)
   (CT :i3)
   (CT_MAX :i3)
-  (DATA :i128 :array [9]) ;; XXXXXX 9 -> 10
+  (DATA :i128 :array [10]) ;; TODO: only 9 for LONDON
   (OOB_INST :i16)
   (IS_JUMP :binary@prove)
   (IS_JUMPI :binary@prove)
@@ -12,7 +12,7 @@
   (IS_CDL :binary@prove)
   (IS_XCALL :binary@prove)
   (IS_CALL :binary@prove)
-  ;; (IS_XCREATE :binary@prove) ;; XXXXXX
+  (IS_XCREATE :binary@prove) ;; TODO: not in LONDON
   (IS_CREATE :binary@prove)
   (IS_SSTORE :binary@prove)
   (IS_DEPLOYMENT :binary@prove)
