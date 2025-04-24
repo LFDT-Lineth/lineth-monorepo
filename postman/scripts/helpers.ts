@@ -1,6 +1,6 @@
 import { ethers } from "ethers";
 
-export async function encodeSendMessage(
+export function encodeSendMessage(
   sender: string,
   receiver: string,
   fee: bigint,

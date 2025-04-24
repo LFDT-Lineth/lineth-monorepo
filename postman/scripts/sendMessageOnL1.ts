@@ -165,7 +165,7 @@ const main = async (args: typeof argv) => {
 
   const messageHashesToAnchor: string[] = [];
   for (let i = startCounter; i < nextMessageCounter; i++) {
-    const messageHash = await encodeSendMessage(
+    const messageHash = encodeSendMessage(
       l1Signer.address,
       args.to,
       BigInt(args.fee.toString()),
