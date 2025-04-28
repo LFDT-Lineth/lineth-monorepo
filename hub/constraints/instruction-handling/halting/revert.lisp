@@ -91,15 +91,18 @@
                                                      (revert-instruction---type-safe-return-data-size)     ;; type safe rds
                                                      )))
 
-(defun  (revert-instruction---trigger_MMU)  (*  (-  1  XAHOY)
-                                                (-  1  (revert-instruction---current-context-is-root))
-                                                (is-not-zero (*  (revert-instruction---size-lo)
-                                                                 (revert-instruction---r@c)))))
-
 (defconstraint  revert-instruction---setting-the-miscellaneous-row-module-flags    (:guard (revert-instruction---standard-precondition))
-                (eq!  (weighted-MISC-flag-sum  ROFF_REVERT___MISC_ROW)
-                      (+  MISC_WEIGHT_MXP
-                          (*  MISC_WEIGHT_MMU  (revert-instruction---trigger_MMU)))))
+  (let ((FLAG (weighted-MISC-flag-sum  ROFF_REVERT___MISC_ROW)))
+    ;;
+    (if (or!
+         (eq! XAHOY 1)
+         (eq! (revert-instruction---current-context-is-root) 1)
+         (eq! (revert-instruction---size-lo) 0)
+         (eq! (revert-instruction---r@c) 0))
+        ;; trigger_MMU == 0
+        (eq! FLAG MISC_WEIGHT_MXP)
+        ;; trigger_MMU == 1
+        (eq! FLAG (+ MISC_WEIGHT_MXP MISC_WEIGHT_MMU)))))
 
 (defconstraint  revert-instruction---setting-the-MXP-data                          (:guard (revert-instruction---standard-precondition))
                 (set-MXP-instruction-type-4 ROFF_REVERT___MISC_ROW   ;; row offset kappa

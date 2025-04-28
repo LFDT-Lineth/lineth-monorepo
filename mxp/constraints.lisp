@@ -90,10 +90,13 @@
            (begin (if-not-zero (+ [MXP_TYPE 1] [MXP_TYPE 2] [MXP_TYPE 3])
                                (eq! NOOP [MXP_TYPE 1]))
                   (if-eq [MXP_TYPE 4] 1
-                         (eq! NOOP (is-zero SIZE_1_LO)))
+                         (if (eq! SIZE_1_LO 0)
+                             (eq! NOOP 1)
+                             (eq! NOOP 0)))
                   (if-eq [MXP_TYPE 5] 1
-                         (eq! NOOP
-                              (* (is-zero SIZE_1_LO) (is-zero SIZE_2_LO)))))))
+                         (if (and! (eq! SIZE_1_LO 0) (eq! SIZE_2_LO 0))
+                             (eq! NOOP 1)
+                             (eq! NOOP 0))))))
 
 (defconstraint noop-consequences (:guard NOOP)
   (begin (vanishes! QUAD_COST)
@@ -273,8 +276,8 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defun (offsets-are-in-bounds)
-  (* (is-zero (- CT CT_MAX_NON_TRIVIAL))
-     (- 1 MXPX)))
+  (if (eq! CT CT_MAX_NON_TRIVIAL)
+      (- 1 MXPX) 0))
 
 (defconstraint size-in-evm-words (:guard (* (standing-hypothesis) (offsets-are-in-bounds)))
   (if-eq [MXP_TYPE 4] 1

@@ -1,10 +1,5 @@
 (module bin)
 
-(defpurefun (if-eq-else A B THEN ELSE)
-  (if-zero (- A B)
-           THEN
-           ELSE))
-
 ;; 2.2  Shorthands
 (defun (flag-sum)
   (+ IS_AND IS_OR IS_XOR IS_NOT IS_BYTE IS_SIGNEXTEND))

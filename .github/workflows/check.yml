@@ -15,7 +15,7 @@ jobs:
 
     - name: Install Go Corset
       shell: bash
-      run: go install github.com/consensys/go-corset/cmd/go-corset@v1.0.7
+      run: go install github.com/consensys/go-corset/cmd/go-corset@v1.1.1
 
     - name: Build Constraints
       run: make -B zkevm.bin

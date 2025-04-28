@@ -1,9 +1,5 @@
 (module rlptxrcpt)
 
-(defpurefun (if-not-eq x y then)
-  (if-not-zero (- x y)
-               then))
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                              ;;
 ;;    4.1 Global Constraints    ;;
@@ -96,9 +92,11 @@
                 (reduce + (for i [5] [PHASE i])))))
 
 (defconstraint ABS_TX_NUM-evolution ()
-  (eq! ABS_TX_NUM
-       (+ (prev ABS_TX_NUM)
-          (* [PHASE 1] (remained-constant! [PHASE 1])))))
+  (if (or! (eq! [PHASE 1] 0) (remained-constant! [PHASE 1]))
+           ;; no change
+           (remained-constant! ABS_TX_NUM)
+           ;; increment
+           (did-inc! ABS_TX_NUM 1)))
 
 (defconstraint ABS_LOG_NUM-evolution ()
   (if-zero (+ (- 1 [PHASE 5]) (- 1 DEPTH_1) (- 1 IS_PREFIX) IS_TOPIC IS_DATA CT)

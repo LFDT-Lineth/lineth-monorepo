@@ -192,7 +192,7 @@
 ;;                                                ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defun (call---first-row-common)                 (*    (remained-constant! STAMP) (is_call)))
+(defun (call---first-row-common)                 (*    (remained-constant STAMP) (is_call)))
 (defun (call---first-row-unexceptional)          (*    (call---first-row-common) (- 1 OOGX)))
 
 

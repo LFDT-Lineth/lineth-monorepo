@@ -1,10 +1,5 @@
 (module txndata)
 
-(defpurefun (if-not-eq A B then else)
-            (if-not-zero (- A B)
-                         then
-                         else))
-
 ;; sum of transaction type flags
 (defun (tx-type-sum) (force-bin (+ TYPE0
                                    TYPE1

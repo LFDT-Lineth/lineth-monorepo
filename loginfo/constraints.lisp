@@ -1,9 +1,5 @@
 (module loginfo)
 
-(defun (if-not-eq A B then)
-  (if-not-zero (- A B)
-               then))
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                     ;;
 ;;    2.1 Heartbeat    ;;

@@ -147,9 +147,11 @@
 
 ;; 2.3.2.4
 (defconstraint ABS_TX_NUM-evolution ()
-  (eq! ABS_TX_NUM
-       (+ (prev ABS_TX_NUM)
-          (* IS_PHASE_RLP_PREFIX (remained-constant! IS_PHASE_RLP_PREFIX)))))
+  (if (or! (eq! IS_PHASE_RLP_PREFIX 0) (remained-constant! IS_PHASE_RLP_PREFIX))
+           ;; no change
+           (remained-constant! ABS_TX_NUM)
+           ;; increment
+           (did-inc! ABS_TX_NUM 1)))
 
 (defconstraint set-to-hash-by-prover-flag ()
   (eq! TO_HASH_BY_PROVER (* LC LX)))
