@@ -7,11 +7,9 @@ import linea.domain.EthLog
 import linea.ethapi.EthApiClient
 import linea.web3j.domain.toDomain
 import linea.web3j.domain.toWeb3j
-import linea.web3j.handleError
 import linea.web3j.mapToDomainWithTxHashes
 import linea.web3j.requestAsync
 import linea.web3j.toDomain
-import net.consensys.linea.async.toSafeFuture
 import org.web3j.protocol.Web3j
 import org.web3j.protocol.core.methods.request.EthFilter
 import org.web3j.protocol.core.methods.response.Log
@@ -28,13 +26,13 @@ class Web3jEthApiClient(
   override fun getBlockByNumber(blockParameter: BlockParameter): SafeFuture<Block?> {
     return web3jClient
       .ethGetBlockByNumber(blockParameter.toWeb3j(), true)
-      .requestAsync { block -> block?.toDomain() }
+      .requestAsync { resp -> resp.block?.toDomain() }
   }
 
   override fun getBlockByNumberWithoutTransactionsData(blockParameter: BlockParameter): SafeFuture<BlockWithTxHashes?> {
     return web3jClient
       .ethGetBlockByNumber(blockParameter.toWeb3j(), false)
-      .requestAsync { block -> block?.let(::mapToDomainWithTxHashes) }
+      .requestAsync { resp -> resp.block?.let(::mapToDomainWithTxHashes) }
   }
 
   override fun getLogs(
@@ -53,13 +51,10 @@ class Web3jEthApiClient(
 
     return web3jClient
       .ethGetLogs(ethFilter)
-      .sendAsync()
-      .toSafeFuture()
-      .thenCompose(::handleError)
-      .thenApply { logsResponse ->
-        if (logsResponse != null) {
+      .requestAsync { logsResponse ->
+        if (logsResponse.logs != null) {
           @Suppress("UNCHECKED_CAST")
-          (logsResponse as List<org.web3j.protocol.core.methods.response.EthLog.LogResult<Log>>)
+          (logsResponse.logs as List<org.web3j.protocol.core.methods.response.EthLog.LogResult<Log>>)
             .map { logResult -> logResult.get().toDomain() }
         } else {
           emptyList()

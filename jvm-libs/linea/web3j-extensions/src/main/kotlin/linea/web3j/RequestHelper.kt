@@ -1,31 +1,40 @@
 package linea.web3j
 
 import net.consensys.linea.async.toSafeFuture
+import org.web3j.protocol.core.RemoteFunctionCall
 import org.web3j.protocol.core.Request
 import org.web3j.protocol.core.Response
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
-fun <T> handleError(
-  response: Response<T>
-): SafeFuture<T> {
+fun <Resp> rejectOnJsonRpcError(
+  rpcMethod: String,
+  response: Resp
+): SafeFuture<Resp>
+  where Resp : Response<*> {
   return if (response.hasError()) {
     SafeFuture.failedFuture(
       RuntimeException(
-        "json-rpc error: code=${response.error.code} message=${response.error.message} " +
-          "data=${response.error.data}"
+        "$rpcMethod failed with JsonRpcError " +
+          "code=${response.error.code} message=${response.error.message} data=${response.error.data}"
       )
     )
   } else {
-    SafeFuture.completedFuture(response.result)
+    SafeFuture.completedFuture(response)
   }
 }
 
 fun <Resp, RespT, T> Request<*, Resp>.requestAsync(
-  mapperFn: (RespT) -> T
+  mapperFn: (Resp) -> T
 ): SafeFuture<T>
   where Resp : Response<RespT> {
   return this.sendAsync()
-    .thenCompose(::handleError)
+    .thenCompose { response -> rejectOnJsonRpcError(this.method, response) }
+    .toSafeFuture()
+    .thenApply(mapperFn)
+}
+
+fun <R, T> RemoteFunctionCall<R>.requestAsync(mapperFn: (R) -> T): SafeFuture<T> {
+  return sendAsync()
     .toSafeFuture()
     .thenApply(mapperFn)
 }

@@ -148,7 +148,7 @@ class EthLogsSearcherImplIntTest {
       ).get()
     }
       .hasCauseInstanceOf(RuntimeException::class.java)
-      .hasMessageContaining("json-rpc error: code=-32000 message=Error: unable to retrieve logs")
+      .hasMessageContaining("eth_getLogs failed with JsonRpcError code=-32000 message=Error: unable to retrieve logs")
   }
 
   @Test

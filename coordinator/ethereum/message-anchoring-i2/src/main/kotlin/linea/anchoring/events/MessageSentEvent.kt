@@ -5,6 +5,7 @@ import linea.domain.EthLogEvent
 import linea.kotlin.encodeHex
 import linea.kotlin.sliceOf32
 import linea.kotlin.toULongFromLast8Bytes
+import java.math.BigInteger
 
 /**
  * @notice Emitted when a message is sent.
@@ -29,11 +30,11 @@ event MessageSent(
 );
  */
 data class MessageSentEvent(
+  val messageNumber: ULong, // Unique message number
   val from: ByteArray, // Address of the sender
   val to: ByteArray, // Address of the recipient
-  val fee: ULong, // Fee paid in Wei
-  val value: ULong, // Value sent in Wei
-  val messageNumber: ULong, // Unique message number
+  val fee: BigInteger, // Fee paid in Wei
+  val value: BigInteger, // Value sent in Wei
   val calldata: ByteArray, // Calldata passed to the recipient
   val messageHash: ByteArray // Hash of the message parameters
 ) : Comparable<MessageSentEvent> {
@@ -43,12 +44,12 @@ data class MessageSentEvent(
     fun fromEthLog(ethLog: EthLog): EthLogEvent<MessageSentEvent> {
       return EthLogEvent(
         event = MessageSentEvent(
+          messageNumber = ethLog.data.sliceOf32(sliceNumber = 2).toULongFromLast8Bytes(),
           from = ethLog.topics[1].sliceArray(12..31),
           to = ethLog.topics[2].sliceArray(12..31),
-          fee = ethLog.data.sliceOf32(sliceNumber = 0).toULongFromLast8Bytes(),
-          value = ethLog.data.sliceOf32(sliceNumber = 1).toULongFromLast8Bytes(),
-          messageNumber = ethLog.data.sliceOf32(sliceNumber = 3).toULongFromLast8Bytes(),
-          calldata = ethLog.data.sliceArray(32 * 4..ethLog.data.size - 1),
+          fee = BigInteger(ethLog.data.sliceOf32(sliceNumber = 0)),
+          value = BigInteger(ethLog.data.sliceOf32(sliceNumber = 1)),
+          calldata = ethLog.data.sliceArray(32 * 3..ethLog.data.size - 1),
           messageHash = ethLog.topics[3]
         ),
         log = ethLog
@@ -86,11 +87,11 @@ data class MessageSentEvent(
 
   override fun toString(): String {
     return "MessageSentEvent(" +
+      "messageNumber=$messageNumber, " +
       "from=${from.encodeHex()}, " +
       "to=${to.encodeHex()}, " +
       "fee=$fee, " +
       "value=$value, " +
-      "nonce=$messageNumber, " +
       "calldata=${calldata.encodeHex()}, " +
       "messageHash=${messageHash.encodeHex()}" +
       ")"

@@ -79,7 +79,7 @@ internal class L1MessageSentEventsFetcher(
           ),
           result.intervalString()
         )
-        result.logs.map(MessageSentEvent::fromEthLog)
+        events
       }
     }
   }

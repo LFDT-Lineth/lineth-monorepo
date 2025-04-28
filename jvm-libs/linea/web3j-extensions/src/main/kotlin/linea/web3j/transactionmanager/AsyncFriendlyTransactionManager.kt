@@ -75,7 +75,7 @@ class AsyncFriendlyTransactionManager : RawTransactionManager {
       fromAddress,
       blockParameter
     )
-      .requestAsync { setNonce(it.drop(2).toBigInteger(16)) }
+      .requestAsync { setNonce(it.transactionCount) }
   }
 
   fun currentNonce(): BigInteger {

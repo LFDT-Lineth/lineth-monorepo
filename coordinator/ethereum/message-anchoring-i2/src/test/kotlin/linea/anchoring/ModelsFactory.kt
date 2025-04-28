@@ -35,7 +35,6 @@ fun createMessageSentEthLogV1(
       "0x" +
         fee.toHexStringUInt256(hexPrefix = false) +
         value.toHexStringUInt256(hexPrefix = false) +
-        "0000000000000000000000000000000000000000000000000000000000000000" + // padding
         messageNumber.toHexStringUInt256(hexPrefix = false) +
         calldata.encodeHex(prefix = false) // calldata
       ).decodeHex(),
