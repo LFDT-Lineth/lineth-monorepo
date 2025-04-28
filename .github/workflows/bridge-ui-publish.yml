@@ -54,6 +54,7 @@ jobs:
         with:
           context: .
           file: ./bridge-ui/Dockerfile
+          platforms: linux/amd64,linux/arm64
           push: ${{ env.DOCKERHUB_USERNAME != '' && env.DOCKERHUB_TOKEN != '' }}
           tags: consensys/linea-bridge-ui:${{ env.DOCKER_TAG }}
           build-args: |
