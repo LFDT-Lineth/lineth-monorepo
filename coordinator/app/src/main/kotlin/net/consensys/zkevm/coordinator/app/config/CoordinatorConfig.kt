@@ -90,7 +90,7 @@ interface RetryConfig {
 data class RequestRetryConfigTomlFriendly(
   override val maxRetries: Int? = null,
   override val timeout: Duration? = null,
-  override val backoffDelay: Duration,
+  override val backoffDelay: Duration = 1.milliseconds.toJavaDuration(),
   val failuresWarningThreshold: Int = 0
 ) : RetryConfig {
   init {
@@ -98,16 +98,39 @@ data class RequestRetryConfigTomlFriendly(
       require(maxRetries > 0) { "maxRetries must be greater than zero. value=$maxRetries" }
     }
     timeout?.also {
-      require(timeout.toKotlinDuration() > 0.milliseconds) { "timeout must be >= 1ms. value=$timeout" }
+      require(timeout.toKotlinDuration() > 1.milliseconds) { "timeout must be >= 1ms. value=$timeout" }
+    }
+    require(backoffDelay.toMillis() > 0) { "backoffDelay must be >= 1ms. value=$backoffDelay" }
+    require(failuresWarningThreshold >= 0) {
+      "failuresWarningThreshold must be greater than or equal to 0. value=$failuresWarningThreshold"
     }
   }
 
-  internal val asDomain = RequestRetryConfig(
+  internal val asJsonRpcRetryConfig = RequestRetryConfig(
     maxRetries = maxRetries?.toUInt(),
     timeout = timeout?.toKotlinDuration(),
     backoffDelay = backoffDelay.toKotlinDuration(),
     failuresWarningThreshold = failuresWarningThreshold.toUInt()
   )
+
+  internal val asDomain: linea.domain.RetryConfig = linea.domain.RetryConfig(
+    maxRetries = maxRetries?.toUInt(),
+    timeout = timeout?.toKotlinDuration(),
+    backoffDelay = backoffDelay.toKotlinDuration(),
+    failuresWarningThreshold = failuresWarningThreshold.toUInt()
+  )
+
+  companion object {
+    fun endlessRetry(
+      backoffDelay: Duration,
+      failuresWarningThreshold: Int
+    ) = RequestRetryConfigTomlFriendly(
+      maxRetries = null,
+      timeout = null,
+      backoffDelay = backoffDelay,
+      failuresWarningThreshold = failuresWarningThreshold
+    )
+  }
 }
 
 data class PersistenceRetryConfig(
@@ -119,7 +142,7 @@ data class PersistenceRetryConfig(
 internal interface RequestRetryConfigurable {
   val requestRetry: RequestRetryConfigTomlFriendly
   val requestRetryConfig: RequestRetryConfig
-    get() = requestRetry.asDomain
+    get() = requestRetry.asJsonRpcRetryConfig
 }
 
 data class BlobCompressionConfig(
@@ -356,16 +379,6 @@ interface FeatureToggleable {
     get() = !disabled
 }
 
-data class MessageAnchoringServiceConfig(
-  val pollingInterval: Duration,
-  val maxMessagesToAnchor: UInt,
-  override var disabled: Boolean = false
-) : FeatureToggleable {
-  init {
-    require(maxMessagesToAnchor > 0u) { "maxMessagesToAnchor must be greater than 0" }
-  }
-}
-
 data class L1DynamicGasPriceCapServiceConfig(
   val gasPriceCapCalculation: GasPriceCapCalculation,
   val feeHistoryFetcher: FeeHistoryFetcher,
@@ -527,7 +540,7 @@ data class CoordinatorConfigTomlDto(
   val conflation: ConflationConfig,
   val api: ApiConfig,
   val l2Signer: SignerConfig,
-  val messageAnchoringService: MessageAnchoringServiceConfig,
+  val messageAnchoring: MessageAnchoringConfigTomlDto = MessageAnchoringConfigTomlDto(),
   val l2NetworkGasPricing: L2NetworkGasPricingTomlDto,
   val l1DynamicGasPriceCapService: L1DynamicGasPriceCapServiceConfig,
   val testL1Disabled: Boolean = false,
@@ -551,7 +564,10 @@ data class CoordinatorConfigTomlDto(
     conflation = conflation,
     api = api,
     l2Signer = l2Signer,
-    messageAnchoringService = messageAnchoringService,
+    messageAnchoring = messageAnchoring.reified(
+      l1DefaultEndpoint = l1.rpcEndpoint,
+      l2DefaultEndpoint = l2.rpcEndpoint
+    ),
     l2NetworkGasPricingService =
     if (testL1Disabled || l2NetworkGasPricing.disabled) null else l2NetworkGasPricing.reified(),
     l1DynamicGasPriceCapService = l1DynamicGasPriceCapService,
@@ -578,7 +594,7 @@ data class CoordinatorConfig(
   val conflation: ConflationConfig,
   val api: ApiConfig,
   val l2Signer: SignerConfig,
-  val messageAnchoringService: MessageAnchoringServiceConfig,
+  val messageAnchoring: MessageAnchoringConfig,
   val l2NetworkGasPricingService: L2NetworkGasPricingService.Config?,
   val l1DynamicGasPriceCapService: L1DynamicGasPriceCapServiceConfig,
   val testL1Disabled: Boolean = false,
@@ -603,7 +619,7 @@ data class CoordinatorConfig(
     }
 
     if (testL1Disabled) {
-      messageAnchoringService.disabled = true
+      messageAnchoring.disabled = true
       l1DynamicGasPriceCapService.disabled = true
     }
   }

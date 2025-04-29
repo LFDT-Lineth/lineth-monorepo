@@ -35,3 +35,14 @@ plain-transfer-cost-multiplier=1.0
 # Meaning 99.7% of transactions will be includable if priced using eth_gasPrice
 compressed-tx-size=350
 expected-gas=29400
+
+[message-anchoring]
+disabled = false
+l1-endpoint = "http://l1-endpoint-for-anchoring:8545"
+l2-endpoint = "http://l2-endpoint-for-anchoring:8545"
+l1-highest-block-tag="LATEST"
+l1-event-polling-interval="PT1S"
+anchoring-tick-interval = "PT1S"
+[message-anchoring.l1-request-retries]
+max-retries = 10
+failures-warning-threshold = 1

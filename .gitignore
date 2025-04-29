@@ -12,6 +12,7 @@
 .externalToolBuilders/
 .gradle/
 .idea/
+.java-version
 .vscode
 .loadpath
 .metadata

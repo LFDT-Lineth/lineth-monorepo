@@ -23,6 +23,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.api.assertThrows
+import org.mockito.kotlin.timeout
 import java.math.BigInteger
 import java.net.URI
 import java.nio.file.Path
@@ -30,6 +31,7 @@ import java.nio.file.Paths
 import java.time.Duration
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.toJavaDuration
 
 class CoordinatorConfigTest {
   companion object {
@@ -262,11 +264,6 @@ class CoordinatorConfigTest {
       web3j = Web3jConfig(Masked("0x4d01ae6487860981699236a58b68f807ee5f17b12df5740b85cf4c4653be0f55"))
     )
 
-    private val messageAnchoringServiceConfig = MessageAnchoringServiceConfig(
-      pollingInterval = Duration.parse("PT1S"),
-      maxMessagesToAnchor = 100U
-    )
-
     private val l2NetworkGasPricingRequestRetryConfig = RequestRetryConfig(
       maxRetries = 3u,
       timeout = 6.seconds,
@@ -367,7 +364,10 @@ class CoordinatorConfigTest {
       conflation = conflationConfig,
       api = apiConfig,
       l2Signer = l2SignerConfig,
-      messageAnchoringService = messageAnchoringServiceConfig,
+      messageAnchoring = MessageAnchoringConfigTomlDto().reified(
+        l1DefaultEndpoint = l1Config.rpcEndpoint,
+        l2DefaultEndpoint = l2Config.rpcEndpoint
+      ),
       l2NetworkGasPricingService = l2NetworkGasPricingServiceConfig,
       l1DynamicGasPriceCapService = l1DynamicGasPriceCapServiceConfig,
       proversConfig = proversConfig
@@ -498,6 +498,20 @@ class CoordinatorConfigTest {
               responsesDirectory = Path.of("/data/prover/v3/aggregation/responses")
             )
           )
+        ),
+        messageAnchoring = MessageAnchoringConfigTomlDto().copy(
+          l1Endpoint = URI("http://l1-endpoint-for-anchoring:8545").toURL(),
+          l2Endpoint = URI("http://l2-endpoint-for-anchoring:8545").toURL(),
+          l1HighestBlockTag = BlockParameter.Tag.LATEST,
+          l1EventPollingInterval = 1.seconds.toJavaDuration(),
+          anchoringTickInterval = 1.seconds.toJavaDuration(),
+          l1RequestRetries = RequestRetryConfigTomlFriendly(
+            maxRetries = 10,
+            failuresWarningThreshold = 1
+          )
+        ).reified(
+          l1DefaultEndpoint = l1Config.rpcEndpoint,
+          l2DefaultEndpoint = l2Config.rpcEndpoint
         )
       )
 

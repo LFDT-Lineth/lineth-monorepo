@@ -4,11 +4,11 @@ import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import linea.domain.gas.GasPriceCaps
 import linea.kotlin.toGWei
 import linea.kotlin.toULong
 import linea.web3j.ExtendedWeb3J
 import net.consensys.zkevm.ethereum.gaspricing.GasPriceCapProvider
-import net.consensys.zkevm.ethereum.gaspricing.GasPriceCaps
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture

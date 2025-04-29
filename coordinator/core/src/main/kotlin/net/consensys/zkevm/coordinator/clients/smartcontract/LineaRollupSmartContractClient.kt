@@ -1,9 +1,9 @@
 package net.consensys.zkevm.coordinator.clients.smartcontract
 
 import linea.contract.l1.LineaRollupSmartContractClientReadOnly
+import linea.domain.gas.GasPriceCaps
 import net.consensys.zkevm.domain.BlobRecord
 import net.consensys.zkevm.domain.ProofToFinalize
-import net.consensys.zkevm.ethereum.gaspricing.GasPriceCaps
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 data class BlockAndNonce(

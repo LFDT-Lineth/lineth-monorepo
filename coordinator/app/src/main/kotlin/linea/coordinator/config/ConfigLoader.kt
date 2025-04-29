@@ -9,6 +9,7 @@ import com.sksamuel.hoplite.ConfigLoaderBuilder
 import com.sksamuel.hoplite.addPathSource
 import net.consensys.linea.traces.TracesCountersV1
 import net.consensys.linea.traces.TracesCountersV2
+import net.consensys.zkevm.coordinator.app.config.BlockParameterDecoder
 import net.consensys.zkevm.coordinator.app.config.CoordinatorConfig
 import net.consensys.zkevm.coordinator.app.config.CoordinatorConfigTomlDto
 import net.consensys.zkevm.coordinator.app.config.GasPriceCapTimeOfDayMultipliersConfig
@@ -22,7 +23,10 @@ import java.nio.file.Path
 inline fun <reified T : Any> loadConfigsOrError(
   configFiles: List<Path>
 ): Result<T, String> {
-  val confBuilder: ConfigLoaderBuilder = ConfigLoaderBuilder.Companion.empty().addDefaults()
+  val confBuilder: ConfigLoaderBuilder = ConfigLoaderBuilder.Companion
+    .empty()
+    .addDefaults()
+    .addDecoder(BlockParameterDecoder())
   for (configFile in configFiles.reversed()) {
     // files must be added in reverse order for overriding
     confBuilder.addPathSource(configFile, false)

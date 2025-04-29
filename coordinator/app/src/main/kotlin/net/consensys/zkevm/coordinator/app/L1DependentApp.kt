@@ -4,14 +4,17 @@ import build.linea.clients.StateManagerClientV1
 import build.linea.clients.StateManagerV1JsonRpcClient
 import io.vertx.core.Vertx
 import kotlinx.datetime.Clock
+import linea.anchoring.MessageAnchoringApp
 import linea.contract.l1.LineaRollupSmartContractClientReadOnly
 import linea.contract.l1.Web3JLineaRollupSmartContractClientReadOnly
+import linea.contract.l2.Web3JL2MessageServiceSmartContractClient
 import linea.domain.BlockNumberAndHash
 import linea.encoding.BlockRLPEncoder
 import linea.web3j.ExtendedWeb3JImpl
 import linea.web3j.SmartContractErrors
 import linea.web3j.Web3jBlobExtended
 import linea.web3j.createWeb3jHttpClient
+import linea.web3j.ethapi.createEthApiClient
 import net.consensys.linea.blob.ShnarfCalculatorVersion
 import net.consensys.linea.contract.Web3JL2MessageService
 import net.consensys.linea.contract.Web3JL2MessageServiceLogsClient
@@ -127,7 +130,7 @@ class L1DependentApp(
   private val log = LogManager.getLogger(this::class.java)
 
   init {
-    if (configs.messageAnchoringService.disabled) {
+    if (configs.messageAnchoring.disabled) {
       log.warn("Message anchoring service is disabled")
     }
     if (configs.l2NetworkGasPricingService == null) {
@@ -141,12 +144,6 @@ class L1DependentApp(
     l2Web3jClient
   )
 
-  private val l2MessageService = instantiateL2MessageServiceContractClient(
-    configs.l2,
-    l2TransactionManager,
-    l2Web3jClient,
-    smartContractErrors
-  )
   private val l1Web3jClient = createWeb3jHttpClient(
     rpcUrl = configs.l1.rpcEndpoint.toString(),
     log = LogManager.getLogger("clients.l1.eth-api"),
@@ -931,26 +928,41 @@ class L1DependentApp(
     return l1BasedLastFinalizedBlockProvider.getLastFinalizedBlock()
   }
 
-  private val messageAnchoringApp: L1toL2MessageAnchoringApp? =
-    if (configs.messageAnchoringService.enabled) {
-      L1toL2MessageAnchoringApp(
-        vertx,
-        L1toL2MessageAnchoringApp.Config(
-          configs.l1,
-          configs.l2,
-          configs.finalizationSigner,
-          configs.l2Signer,
-          configs.messageAnchoringService
-        ),
-        l1Web3jClient,
-        l2Web3jClient,
-        smartContractErrors,
-        l2MessageService,
-        l2TransactionManager
+  private val messageAnchoringApp: LongRunningService = if (configs.messageAnchoring.enabled
+  ) {
+    MessageAnchoringApp(
+      vertx = vertx,
+      config = MessageAnchoringApp.Config(
+        l1RequestRetryConfig = configs.messageAnchoring.l1RequestRetryConfig,
+        l1PollingInterval = configs.messageAnchoring.l1EventPollingInterval,
+        l1SuccessBackoffDelay = configs.messageAnchoring.l1SuccessBackoffDelay,
+        l1ContractAddress = configs.l1.zkEvmContractAddress,
+        l1EventPollingTimeout = configs.messageAnchoring.l1EventPollingTimeout,
+        l1EventSearchBlockChunk = configs.messageAnchoring.l1EventSearchBlockChunk,
+        l2HighestBlockTag = configs.messageAnchoring.l2HighestBlockTag,
+        anchoringTickInterval = configs.messageAnchoring.anchoringTickInterval,
+        messageQueueCapacity = configs.messageAnchoring.messageQueueCapacity,
+        maxMessagesToAnchorPerL2Transaction = configs.messageAnchoring.maxMessagesToAnchorPerL2Transaction
+      ),
+      l1EthApiClient = createEthApiClient(
+        web3jClient = l1Web3jClient,
+        requestRetryConfig = null,
+        vertx = vertx
+      ),
+      l2MessageService = Web3JL2MessageServiceSmartContractClient.create(
+        web3jClient = l2Web3jClient,
+        contractAddress = configs.l2.messageServiceAddress,
+        gasLimit = configs.l2.gasLimit,
+        maxFeePerGasCap = configs.l2.maxFeePerGasCap,
+        feeHistoryBlockCount = configs.l2.feeHistoryBlockCount,
+        feeHistoryRewardPercentile = configs.l2.feeHistoryRewardPercentile,
+        transactionManager = l2TransactionManager,
+        smartContractErrors = smartContractErrors
       )
-    } else {
-      null
-    }
+    )
+  } else {
+    DisabledLongRunningService
+  }
 
   private val l2NetworkGasPricingService: L2NetworkGasPricingService? =
     if (configs.l2NetworkGasPricingService != null) {
@@ -1053,7 +1065,7 @@ class L1DependentApp(
       .thenCompose { blobSubmissionCoordinator.start() }
       .thenCompose { aggregationFinalizationCoordinator.start() }
       .thenCompose { proofAggregationCoordinatorService.start() }
-      .thenCompose { messageAnchoringApp?.start() ?: SafeFuture.completedFuture(Unit) }
+      .thenCompose { messageAnchoringApp.start() }
       .thenCompose { l2NetworkGasPricingService?.start() ?: SafeFuture.completedFuture(Unit) }
       .thenCompose { l1FeeHistoryCachingService.start() }
       .thenCompose { deadlineConflationCalculatorRunnerOld.start() }
@@ -1072,7 +1084,7 @@ class L1DependentApp(
       blobSubmissionCoordinator.stop(),
       aggregationFinalizationCoordinator.stop(),
       proofAggregationCoordinatorService.stop(),
-      messageAnchoringApp?.stop() ?: SafeFuture.completedFuture(Unit),
+      messageAnchoringApp.stop(),
       l2NetworkGasPricingService?.stop() ?: SafeFuture.completedFuture(Unit),
       l1FeeHistoryCachingService.stop(),
       blockCreationMonitor.stop(),

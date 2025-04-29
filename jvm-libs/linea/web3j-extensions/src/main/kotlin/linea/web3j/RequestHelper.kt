@@ -23,10 +23,10 @@ fun <Resp> rejectOnJsonRpcError(
   }
 }
 
-fun <Resp, RespT, T> Request<*, Resp>.requestAsync(
+fun <Resp, T> Request<*, Resp>.requestAsync(
   mapperFn: (Resp) -> T
 ): SafeFuture<T>
-  where Resp : Response<RespT> {
+  where Resp : Response<*> {
   return this.sendAsync()
     .thenCompose { response -> rejectOnJsonRpcError(this.method, response) }
     .toSafeFuture()

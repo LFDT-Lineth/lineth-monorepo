@@ -2,7 +2,7 @@ package linea.anchoring.clients
 
 import io.vertx.core.Vertx
 import linea.EthLogsSearcher
-import linea.anchoring.events.MessageSentEvent
+import linea.contract.events.MessageSentEvent
 import linea.contract.l2.L2MessageServiceSmartContractClient
 import linea.domain.BlockParameter
 import net.consensys.zkevm.PeriodicPollingService

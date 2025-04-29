@@ -209,10 +209,16 @@ max-pool-size=10
 keep-alive=true
 public-key="4a788ad6fa008beed58de6418369717d7492f37d173d70e2c26d9737e2c6eeae929452ef8602a19410844db3e200a0e73f5208fd76259a8766b73953fc3e7023"
 
-[message-anchoring-service]
-disabled=false
-polling-interval="PT1S"
-max-messages-to-anchor=100
+[message-anchoring]
+disabled = false
+l1-highest-block-tag="LATEST"
+l2-highest-block-tag="LATEST"
+l1-event-polling-interval="PT1S"
+anchoring-tick-interval = "PT1S"
+[message-anchoring.l1-request-retries]
+failures-warning-threshold = 1
+[message-anchoring.l2-request-retries]
+failures-warning-threshold = 1
 
 [l2-network-gas-pricing]
 disabled = false

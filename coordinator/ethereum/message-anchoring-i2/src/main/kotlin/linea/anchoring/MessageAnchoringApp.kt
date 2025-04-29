@@ -3,7 +3,7 @@ package linea.anchoring
 import io.vertx.core.Vertx
 import linea.EthLogsSearcher
 import linea.anchoring.clients.L1MessageSentEventsPoller
-import linea.anchoring.events.MessageSentEvent
+import linea.contract.events.MessageSentEvent
 import linea.contract.l2.L2MessageServiceSmartContractClient
 import linea.domain.BlockParameter
 import linea.domain.RetryConfig

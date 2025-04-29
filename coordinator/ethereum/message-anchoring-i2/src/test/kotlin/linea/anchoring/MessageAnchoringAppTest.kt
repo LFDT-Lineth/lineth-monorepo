@@ -2,10 +2,11 @@ package linea.anchoring
 
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
-import linea.anchoring.events.L1RollingHashUpdatedEvent
-import linea.anchoring.events.L2RollingHashUpdatedEvent
-import linea.anchoring.events.MessageSentEvent
 import linea.anchoring.fakes.FakeL2MessageService
+import linea.contract.events.L1RollingHashUpdatedEvent
+import linea.contract.events.L2RollingHashUpdatedEvent
+import linea.contract.events.MessageSentEvent
+import linea.contrat.events.L1MessageSentV1EthLogs
 import linea.domain.BlockParameter
 import linea.domain.RetryConfig
 import linea.ethapi.FakeEthApiClient
@@ -255,7 +256,7 @@ class MessageAnchoringAppTest {
     l1BlocksWithMessages.forEach { blockNumber ->
       repeat(numberOfMessagesPerBlock) {
         ethLogs.add(
-          createL1MessageSentV1Logs(
+          linea.contrat.events.createL1MessageSentV1Logs(
             blockNumber = blockNumber,
             contractAddress = L1_CONTRACT_ADDRESS,
             messageNumber = messageNumber,

@@ -2,16 +2,15 @@ package net.consensys.linea.contract.l1
 
 import build.linea.contract.LineaRollupV6
 import linea.contract.l1.Web3JLineaRollupSmartContractClientReadOnly
+import linea.domain.gas.GasPriceCaps
 import linea.kotlin.toULong
 import linea.web3j.SmartContractErrors
 import linea.web3j.transactionmanager.AsyncFriendlyTransactionManager
 import net.consensys.linea.contract.Web3JContractAsyncHelper
-import net.consensys.linea.contract.throwExceptionIfJsonRpcErrorReturned
 import net.consensys.zkevm.coordinator.clients.smartcontract.BlockAndNonce
 import net.consensys.zkevm.coordinator.clients.smartcontract.LineaRollupSmartContractClient
 import net.consensys.zkevm.domain.BlobRecord
 import net.consensys.zkevm.domain.ProofToFinalize
-import net.consensys.zkevm.ethereum.gaspricing.GasPriceCaps
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import org.web3j.crypto.Credentials
@@ -133,7 +132,11 @@ class Web3JLineaRollupSmartContractClient internal constructor(
     return getVersion()
       .thenCompose { version ->
         val function = buildSubmitBlobsFunction(version, blobs)
-        web3jContractHelper.executeBlobEthCall(function, blobs, gasPriceCaps)
+        web3jContractHelper.executeBlobEthCall(
+          function = function,
+          blobs = blobs.map { it.blobCompressionProof!!.compressedData },
+          gasPriceCaps = gasPriceCaps
+        )
       }
   }
 
@@ -153,11 +156,9 @@ class Web3JLineaRollupSmartContractClient internal constructor(
           parentL1RollingHash,
           parentL1RollingHashMessageNumber
         )
-        web3jContractHelper.sendTransactionAsync(function, BigInteger.ZERO, gasPriceCaps)
-          .thenApply { result ->
-            throwExceptionIfJsonRpcErrorReturned("eth_sendRawTransaction", result)
-            result.transactionHash
-          }
+        web3jContractHelper
+          .sendTransactionAsync(function, BigInteger.ZERO, gasPriceCaps)
+          .thenApply { result -> result.transactionHash }
       }
   }
 
@@ -197,10 +198,7 @@ class Web3JLineaRollupSmartContractClient internal constructor(
           parentL1RollingHashMessageNumber
         )
         web3jContractHelper.sendTransactionAfterEthCallAsync(function, BigInteger.ZERO, gasPriceCaps)
-          .thenApply { result ->
-            throwExceptionIfJsonRpcErrorReturned("eth_sendRawTransaction", result)
-            result.transactionHash
-          }
+          .thenApply { result -> result.transactionHash }
       }
   }
 }

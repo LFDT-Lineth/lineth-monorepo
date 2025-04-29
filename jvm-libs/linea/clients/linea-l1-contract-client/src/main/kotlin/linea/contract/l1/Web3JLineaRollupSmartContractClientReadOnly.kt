@@ -5,12 +5,12 @@ import linea.domain.BlockParameter
 import linea.kotlin.encodeHex
 import linea.kotlin.toBigInteger
 import linea.kotlin.toULong
+import linea.web3j.domain.toWeb3j
 import net.consensys.linea.async.toSafeFuture
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import org.web3j.crypto.Credentials
 import org.web3j.protocol.Web3j
-import org.web3j.protocol.core.DefaultBlockParameter
 import org.web3j.tx.Contract
 import org.web3j.tx.exceptions.ContractCallException
 import org.web3j.tx.gas.StaticGasProvider
@@ -19,13 +19,6 @@ import java.math.BigInteger
 import java.util.concurrent.atomic.AtomicReference
 
 private val fakeCredentials = Credentials.create(ByteArray(32).encodeHex())
-
-fun BlockParameter.toWeb3j(): DefaultBlockParameter {
-  return when (this) {
-    is BlockParameter.Tag -> DefaultBlockParameter.valueOf(this.getTag())
-    is BlockParameter.BlockNumber -> DefaultBlockParameter.valueOf(this.getNumber().toBigInteger())
-  }
-}
 
 open class Web3JLineaRollupSmartContractClientReadOnly(
   val web3j: Web3j,
