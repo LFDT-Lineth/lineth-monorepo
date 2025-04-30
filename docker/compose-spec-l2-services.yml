@@ -5,7 +5,7 @@ services:
   sequencer:
     hostname: sequencer
     container_name: sequencer
-    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-devnet-aa00a36}
+    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-sepolia-3e31c8f}
     profiles: [ "l2", "l2-bc", "debug", "external-to-monorepo" ]
     ports:
       - "8545:8545"
@@ -82,7 +82,7 @@ services:
   l2-node-besu:
     hostname: l2-node-besu
     container_name: l2-node-besu
-    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-devnet-aa00a36}
+    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-sepolia-3e31c8f}
     profiles: [ "l2", "l2-bc", "debug", "external-to-monorepo" ]
     depends_on:
       sequencer:
@@ -162,7 +162,7 @@ services:
   traces-node-v2:
     hostname: traces-node-v2
     container_name: traces-node-v2
-    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-devnet-aa00a36}
+    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-sepolia-3e31c8f}
     profiles: [ "l2", "l2-bc", "debug", "external-to-monorepo" ]
     depends_on:
       sequencer:
@@ -369,7 +369,7 @@ services:
       - l1network
 
   zkbesu-shomei:
-    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-devnet-aa00a36}
+    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-sepolia-3e31c8f}
     hostname: zkbesu-shomei
     container_name: zkbesu-shomei
     profiles: [ "l2", "l2-bc", "external-to-monorepo" ]
@@ -585,7 +585,7 @@ services:
         ipv4_address: 10.10.10.205
 
   zkbesu-shomei-sr:
-    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-devnet-aa00a36}
+    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-sepolia-3e31c8f}
     hostname: zkbesu-shomei-sr
     container_name: zkbesu-shomei-sr
     profiles: [ "external-to-monorepo", "staterecovery" ]
