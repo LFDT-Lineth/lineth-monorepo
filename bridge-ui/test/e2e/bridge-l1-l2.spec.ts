@@ -119,11 +119,14 @@ describe("L1 > L2 via Native Bridge", () => {
       toggleShowTestNetworksInNativeBridgeForm,
       selectTokenAndInputAmount,
       openGasFeeModal,
+      clickFirstVisitModalConfirmButton,
     }) => {
       test.setTimeout(60_000);
 
+      await clickFirstVisitModalConfirmButton();
       await connectMetamaskToDapp();
       await clickNativeBridgeButton();
+      await clickFirstVisitModalConfirmButton();
       await openNativeBridgeFormSettings();
       await toggleShowTestNetworksInNativeBridgeForm();
 
@@ -154,11 +157,14 @@ describe("L1 > L2 via Native Bridge", () => {
       toggleShowTestNetworksInNativeBridgeForm,
       selectTokenAndInputAmount,
       openGasFeeModal,
+      clickFirstVisitModalConfirmButton,
     }) => {
       test.setTimeout(60_000);
 
+      await clickFirstVisitModalConfirmButton();
       await connectMetamaskToDapp();
       await clickNativeBridgeButton();
+      await clickFirstVisitModalConfirmButton();
       await openNativeBridgeFormSettings();
       await toggleShowTestNetworksInNativeBridgeForm();
 
@@ -179,11 +185,14 @@ describe("L1 > L2 via Native Bridge", () => {
       selectTokenAndInputAmount,
       openGasFeeModal,
       switchToLineaSepolia,
+      clickFirstVisitModalConfirmButton,
     }) => {
       test.setTimeout(60_000);
 
+      await clickFirstVisitModalConfirmButton();
       await connectMetamaskToDapp();
       await clickNativeBridgeButton();
+      await clickFirstVisitModalConfirmButton();
       await openNativeBridgeFormSettings();
       await toggleShowTestNetworksInNativeBridgeForm();
 
