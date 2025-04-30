@@ -13,9 +13,6 @@ dependencies {
   implementation "io.vertx:vertx-core"
   implementation "io.vertx:vertx-web-client"
   implementation "io.vertx:vertx-lang-kotlin"
-  implementation("org.web3j:core:${libs.versions.web3j.get()}") {
-    exclude group: 'org.slf4j', module: 'slf4j-nop'
-  }
 
   testImplementation "io.vertx:vertx-junit5"
   testImplementation "com.github.tomakehurst:wiremock-jre8:${libs.versions.wiremock.get()}"
