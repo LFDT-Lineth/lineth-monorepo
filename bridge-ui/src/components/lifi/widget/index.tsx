@@ -11,7 +11,6 @@ const widgetConfig: Partial<WidgetConfig> = {
   variant: "compact",
   subvariant: "default",
   appearance: "light",
-  integrator: "Linea",
   toChain: ChainId.LNA,
   toToken: ETH_SYMBOL,
   theme: {
@@ -182,7 +181,7 @@ export function Widget() {
               },
             },
           }}
-          integrator="linea"
+          integrator={config.lifiIntegrator}
         />
       </ClientOnly>
     </div>

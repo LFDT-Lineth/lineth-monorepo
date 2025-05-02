@@ -58,6 +58,7 @@ jobs:
           NEXT_PUBLIC_QUICKNODE_ID: ${{ secrets.PUBLIC_BRIDGE_UI_QUICKNODE_ID }}
           NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID: ${{ secrets.PUBLIC_DYNAMIC_SANDBOX_ENVIRONMENT_ID }}
           NEXT_PUBLIC_LIFI_API_KEY: ${{ secrets.PUBLIC_LIFI_API_KEY }}
+          NEXT_PUBLIC_LIFI_INTEGRATOR_NAME: ${{ secrets.PUBLIC_LIFI_INTEGRATOR_NAME }}
           NEXT_PUBLIC_ONRAMPER_API_KEY: ${{ secrets.PUBLIC_ONRAMPER_API_KEY }}
 
       - name: Install linux dependencies
@@ -79,6 +80,7 @@ jobs:
           CI: "false"
           NEXT_PUBLIC_INFURA_ID: ${{ secrets.PUBLIC_BRIDGE_UI_INFURA_ID }}
           NEXT_PUBLIC_LIFI_API_KEY: "placeholder"
+          NEXT_PUBLIC_LIFI_INTEGRATOR_NAME: "placeholder"
           NEXT_PUBLIC_WALLET_CONNECT_ID: "placeholder"
           NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID: "placeholder"
           NEXT_PUBLIC_QUICKNODE_ID: "placeholder"
