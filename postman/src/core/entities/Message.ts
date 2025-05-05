@@ -24,6 +24,7 @@ export type MessageProps = {
   claimLastRetriedAt?: Date;
   claimGasEstimationThreshold?: number;
   compressedTransactionSize?: number;
+  isForSponsorship?: boolean;
   createdAt?: Date;
   updatedAt?: Date;
 };
@@ -74,6 +75,7 @@ export class Message {
   public claimLastRetriedAt?: Date;
   public claimGasEstimationThreshold?: number;
   public compressedTransactionSize?: number;
+  public isForSponsorship: boolean = false;
   public createdAt?: Date;
   public updatedAt?: Date;
 
@@ -100,6 +102,7 @@ export class Message {
     this.claimLastRetriedAt = props.claimLastRetriedAt;
     this.claimGasEstimationThreshold = props.claimGasEstimationThreshold;
     this.compressedTransactionSize = props.compressedTransactionSize;
+    this.isForSponsorship = props.isForSponsorship ?? false;
     this.createdAt = props.createdAt;
     this.updatedAt = props.updatedAt;
   }
@@ -122,6 +125,7 @@ export class Message {
     if (newMessage.claimGasEstimationThreshold)
       this.claimGasEstimationThreshold = newMessage.claimGasEstimationThreshold;
     if (newMessage.compressedTransactionSize) this.compressedTransactionSize = newMessage.compressedTransactionSize;
+    if (newMessage.isForSponsorship !== undefined) this.isForSponsorship = newMessage.isForSponsorship;
 
     this.updatedAt = new Date();
   }
@@ -143,6 +147,6 @@ export class Message {
       this.claimGasEstimationThreshold
     }, compressedTransactionSize=${
       this.compressedTransactionSize
-    }, createdAt=${this.createdAt?.toISOString()}, updatedAt=${this.updatedAt?.toISOString()})`;
+    }, isForSponsorship=${this.isForSponsorship}, createdAt=${this.createdAt?.toISOString()}, updatedAt=${this.updatedAt?.toISOString()})`;
   }
 }

@@ -28,9 +28,16 @@ import { EthereumTransactionValidationService } from "../../../services/Ethereum
 import { getConfig } from "./config/utils";
 import { Api } from "../api/Api";
 import { MessageStatusSubscriber } from "../persistence/subscribers/MessageStatusSubscriber";
-import { MessageMetricsService } from "../api/metrics/MessageMetricsService";
-
+import { SingletonMetricsService } from "../api/metrics/SingletonMetricsService";
+import { MessageMetricsUpdater } from "../api/metrics/MessageMetricsUpdater";
+import { IMessageMetricsUpdater, IMetricsService, ISponsorshipMetricsUpdater } from "postman/src/core/metrics";
+import { SponsorshipMetricsUpdater } from "../api/metrics/SponsorshipMetricsUpdater";
 export class PostmanServiceClient {
+  // Metrics services
+  private singletonMetricsService: IMetricsService;
+  private messageMetricsUpdater: IMessageMetricsUpdater;
+  private sponsorshipMetricsUpdater: ISponsorshipMetricsUpdater;
+
   // L1 -> L2 flow
   private l1MessageSentEventPoller: IPoller;
   private l2MessageAnchoringPoller: IPoller;
@@ -113,6 +120,11 @@ export class PostmanServiceClient {
     const messageRepository = new TypeOrmMessageRepository(this.db);
     const lineaMessageDBService = new LineaMessageDBService(messageRepository);
     const ethereumMessageDBService = new EthereumMessageDBService(l1GasProvider, messageRepository);
+
+    // Metrics services
+    this.singletonMetricsService = new SingletonMetricsService();
+    this.messageMetricsUpdater = new MessageMetricsUpdater(this.db.manager, this.singletonMetricsService);
+    this.sponsorshipMetricsUpdater = new SponsorshipMetricsUpdater(this.singletonMetricsService);
 
     // L1 -> L2 flow
 
@@ -205,6 +217,7 @@ export class PostmanServiceClient {
     const l2MessageClaimingPersister = new MessageClaimingPersister(
       lineaMessageDBService,
       l2MessageServiceClient,
+      this.sponsorshipMetricsUpdater,
       l2Provider,
       {
         direction: Direction.L1_TO_L2,
@@ -329,6 +342,7 @@ export class PostmanServiceClient {
     const l1MessageClaimingPersister = new MessageClaimingPersister(
       ethereumMessageDBService,
       lineaRollupClient,
+      this.sponsorshipMetricsUpdater,
       l1Provider,
       {
         direction: Direction.L2_TO_L1,
@@ -377,23 +391,27 @@ export class PostmanServiceClient {
     }
   }
 
+  public async initializeMetrics(): Promise<void> {}
+
   /**
    * Initializes metrics, registers subscribers, and configures the API.
    * This method expects the database to be connected.
    */
   public async initializeMetricsAndApi(): Promise<void> {
     try {
-      const metricService = new MessageMetricsService(this.db.manager);
-      await metricService.initialize();
-
+      await this.messageMetricsUpdater.initialize();
       const messageStatusSubscriber = new MessageStatusSubscriber(
-        metricService,
+        this.messageMetricsUpdater,
         new WinstonLogger(MessageStatusSubscriber.name),
       );
       this.db.subscribers.push(messageStatusSubscriber);
 
       // Initialize or reinitialize the API using the metrics service.
-      this.api = new Api({ port: this.config.apiConfig.port }, metricService, new WinstonLogger(Api.name));
+      this.api = new Api(
+        { port: this.config.apiConfig.port },
+        this.singletonMetricsService,
+        new WinstonLogger(Api.name),
+      );
 
       this.logger.info("Metrics and API have been initialized successfully.");
     } catch (error) {

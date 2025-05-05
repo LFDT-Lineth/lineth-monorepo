@@ -85,11 +85,7 @@ export class LineaTransactionValidationService implements ITransactionValidation
     const isUnderPriced = await this.isUnderPriced(gasLimit, message.fee, message.compressedTransactionSize!);
     const hasZeroFee = this.hasZeroFee(message);
     const isRateLimitExceeded = await this.isRateLimitExceeded(message.fee, message.value);
-    const isForSponsorship = this.isForSponsorship(
-      gasLimit,
-      this.config.isPostmanSponsorshipEnabled,
-      this.config.maxPostmanSponsorGasLimit,
-    );
+    const isForSponsorship = this.isForSponsorship(gasLimit, hasZeroFee, isUnderPriced);
 
     return {
       hasZeroFee,
@@ -159,17 +155,17 @@ export class LineaTransactionValidationService implements ITransactionValidation
    * Determines if the claim transaction is for sponsorship
    *
    * @param {bigint} gasLimit - The gas limit for the transaction.
-   * @param {boolean} isPostmanSponsorshipEnabled - `true` if Postman sponsorship is enabled, `false` otherwise
-   * @param {bigint} maxPostmanSponsorGasLimit - Maximum gas limit for sponsored Postman claim transactions
-   * @returns {boolean} `true` if the message is for sponsorsing, `false` otherwise.
+   * @param {boolean} hasZeroFee - `true` if the message has zero fee, `false` otherwise.
+   * @param {boolean} isUnderPriced - `true` if the transaction is underpriced, `false` otherwise.
+   * @returns {boolean} `true` if the message is for sponsoring, `false` otherwise.
    */
-  private isForSponsorship(
-    gasLimit: bigint,
-    isPostmanSponsorshipEnabled: boolean,
-    maxPostmanSponsorGasLimit: bigint,
-  ): boolean {
-    if (!isPostmanSponsorshipEnabled) return false;
-    return gasLimit < maxPostmanSponsorGasLimit;
+  private isForSponsorship(gasLimit: bigint, hasZeroFee: boolean, isUnderPriced: boolean): boolean {
+    if (!this.config.isPostmanSponsorshipEnabled) return false;
+    if (gasLimit > this.config.maxPostmanSponsorGasLimit) return false;
+    if (hasZeroFee) return true;
+    if (isUnderPriced) return true;
+    // The message would be claimed regardless of sponsorship settings
+    return false;
   }
 
   /**

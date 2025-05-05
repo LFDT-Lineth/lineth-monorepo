@@ -110,6 +110,11 @@ Stop the postman docker container manually.
 
 #### Run the postman locally:
 
+Before the postman can be run and tested locally, we must build the monorepo projects linea-sdk and linea-native-libs
+```bash
+NATIVE_LIBS_RELEASE_TAG=blob-libs-v1.0.1 pnpm run -F linea-native-libs build && pnpm run -F linea-sdk build
+```
+
 From the postman folder run the following commands:
 
 ```bash
@@ -132,6 +137,16 @@ pnpm run build
 # Run unit tests
 pnpm run test
 ```
+
+### Database migrations
+
+Create an empty DB migration file with <NAME>
+
+```bash
+MIGRATION_NAME=<NAME> pnpm run migration:create
+```
+
+We will then implement the migration code manually. We omit scripts for TypeORM migration generation because the CLI tool is unable to generate correct migration code in our case.
 
 ## License
 

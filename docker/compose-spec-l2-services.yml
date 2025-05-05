@@ -247,7 +247,7 @@ services:
   postman:
     container_name: postman
     hostname: postman
-    image: consensys/linea-postman:${POSTMAN_TAG:-811743b}
+    image: consensys/linea-postman:${POSTMAN_TAG:-b021601}
     profiles: [ "l2", "debug" ]
     platform: linux/amd64
     restart: on-failure

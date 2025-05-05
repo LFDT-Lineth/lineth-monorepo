@@ -1,18 +1,12 @@
 import { Counter, Gauge } from "prom-client";
-import { LineaPostmanMetrics } from "../../../../../core/metrics/IMetricsService";
-import { MetricsService } from "../MetricsService";
+import { IMetricsService, LineaPostmanMetrics } from "../../../../../core/metrics/IMetricsService";
+import { SingletonMetricsService } from "../SingletonMetricsService";
 
-class TestMetricService extends MetricsService {
-  constructor() {
-    super();
-  }
-}
-
-describe("MetricsService", () => {
-  let metricService: TestMetricService;
+describe("SingletonMetricsService", () => {
+  let metricService: IMetricsService;
 
   beforeEach(() => {
-    metricService = new TestMetricService();
+    metricService = new SingletonMetricsService();
   });
 
   it("should create a counter", () => {

@@ -21,6 +21,7 @@ import {
 } from "../../core/services/processors/IMessageClaimingPersister";
 import { IMessageDBService } from "../../core/persistence/IMessageDBService";
 import { ErrorParser } from "../../utils/ErrorParser";
+import { ISponsorshipMetricsUpdater } from "../../core/metrics";
 
 export class MessageClaimingPersister implements IMessageClaimingPersister {
   private messageBeingRetry: { message: Message | null; retries: number };
@@ -30,6 +31,7 @@ export class MessageClaimingPersister implements IMessageClaimingPersister {
    *
    * @param {IMessageDBService} databaseService - An instance of a class implementing the `IMessageDBService` interface, used for storing and retrieving message data.
    * @param {IMessageServiceContract} messageServiceContract - An instance of a class implementing the `IMessageServiceContract` interface, used to interact with the blockchain contract.
+   * @param {ISponsorshipMetricsUpdater} sponsorshipMetricsUpdater - An instance of a class implementing the `ISponsorshipMetricsUpdater` interface, update sponsorship metrics for Prometheus monitoring.
    * @param {IProvider} provider - An instance of a class implementing the `IProvider` interface, used to query blockchain data.
    * @param {MessageClaimingPersisterConfig} config - Configuration for network-specific settings, including transaction submission timeout and maximum transaction retries.
    * @param {ILogger} logger - An instance of a class implementing the `ILogger` interface, used for logging messages.
@@ -43,6 +45,7 @@ export class MessageClaimingPersister implements IMessageClaimingPersister {
       ContractTransactionResponse,
       ErrorDescription
     >,
+    private readonly sponsorshipMetricsUpdater: ISponsorshipMetricsUpdater,
     private readonly provider: IProvider<
       TransactionReceipt,
       Block,
@@ -85,33 +88,31 @@ export class MessageClaimingPersister implements IMessageClaimingPersister {
       }
 
       const receipt = await this.provider.getTransactionReceipt(firstPendingMessage.claimTxHash);
-      if (!receipt) {
-        if (this.isMessageExceededSubmissionTimeout(firstPendingMessage)) {
-          this.logger.warn("Retrying to claim message: messageHash=%s", firstPendingMessage.messageHash);
+      if (receipt) {
+        await this.updateReceiptStatus(firstPendingMessage, receipt);
+      } else {
+        if (!this.isMessageExceededSubmissionTimeout(firstPendingMessage)) return;
+        this.logger.warn("Retrying to claim message: messageHash=%s", firstPendingMessage.messageHash);
 
-          if (
-            !this.messageBeingRetry.message ||
-            this.messageBeingRetry.message.messageHash !== firstPendingMessage.messageHash
-          ) {
-            this.messageBeingRetry = { message: firstPendingMessage, retries: 0 };
-          }
-
-          const transactionReceipt = await this.retryTransaction(
-            firstPendingMessage.claimTxHash,
-            firstPendingMessage.messageHash,
-          );
-          if (transactionReceipt) {
-            this.logger.warn(
-              "Retried claim message transaction succeed: messageHash=%s transactionHash=%s",
-              firstPendingMessage.messageHash,
-              transactionReceipt.hash,
-            );
-          }
+        if (
+          !this.messageBeingRetry.message ||
+          this.messageBeingRetry.message.messageHash !== firstPendingMessage.messageHash
+        ) {
+          this.messageBeingRetry = { message: firstPendingMessage, retries: 0 };
         }
-        return;
-      }
 
-      await this.updateReceiptStatus(firstPendingMessage, receipt);
+        const retryTransactionReceipt = await this.retryTransaction(
+          firstPendingMessage.claimTxHash,
+          firstPendingMessage.messageHash,
+        );
+        if (!retryTransactionReceipt) return;
+        this.logger.warn(
+          "Retried claim message transaction succeed: messageHash=%s transactionHash=%s",
+          firstPendingMessage.messageHash,
+          retryTransactionReceipt.hash,
+        );
+        await this.updateReceiptStatus(firstPendingMessage, retryTransactionReceipt);
+      }
     } catch (e) {
       const error = ErrorParser.parseErrorWithMitigation(e);
       this.logger.error("Error processing message.", {
@@ -157,13 +158,6 @@ export class MessageClaimingPersister implements IMessageClaimingPersister {
 
       const tx = await this.messageServiceContract.retryTransactionWithHigherFee(transactionHash);
 
-      const receipt = await tx.wait();
-      if (!receipt) {
-        throw new BaseError(
-          `RetryTransaction: Transaction receipt not found after retry transaction. transactionHash=${tx.hash}`,
-        );
-      }
-
       this.messageBeingRetry.message?.edit({
         claimTxGasLimit: parseInt(tx.gasLimit.toString()),
         claimTxMaxFeePerGas: tx.maxFeePerGas ?? undefined,
@@ -175,6 +169,12 @@ export class MessageClaimingPersister implements IMessageClaimingPersister {
       });
       await this.databaseService.updateMessage(this.messageBeingRetry.message!);
 
+      const receipt = await tx.wait();
+      if (!receipt) {
+        throw new BaseError(
+          `RetryTransaction: Transaction receipt not found after retry transaction. transactionHash=${tx.hash}`,
+        );
+      }
       return receipt;
     } catch (e) {
       this.logger.error(
@@ -227,8 +227,15 @@ export class MessageClaimingPersister implements IMessageClaimingPersister {
       return;
     }
 
-    message.edit({ status: MessageStatus.CLAIMED_SUCCESS });
+    message.edit({
+      status: MessageStatus.CLAIMED_SUCCESS,
+    });
     await this.databaseService.updateMessage(message);
+    if (message.isForSponsorship)
+      await this.sponsorshipMetricsUpdater.incrementSponsorshipFeePaid(
+        BigInt(receipt.gasPrice) * BigInt(receipt.gasUsed),
+        message.direction,
+      );
     this.logger.info(
       "Message has been SUCCESSFULLY claimed: messageHash=%s transactionHash=%s",
       message.messageHash,

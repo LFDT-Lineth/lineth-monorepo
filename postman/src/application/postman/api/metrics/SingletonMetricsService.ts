@@ -2,10 +2,13 @@ import { Counter, Gauge, MetricObjectWithValues, MetricValue, Registry } from "p
 import { IMetricsService, LineaPostmanMetrics } from "../../../../core/metrics/IMetricsService";
 
 /**
+ * Take care to instantiate as a singleton because there should be only be one instance of prom-client Registry
+ * TODO - Implement Singleton pattern for this class
+ *
  * MetricsService class that implements the IMetricsService interface.
  * This class provides methods to create and manage Prometheus metrics.
  */
-export abstract class MetricsService implements IMetricsService {
+export class SingletonMetricsService implements IMetricsService {
   private readonly registry: Registry;
   private readonly counters: Map<LineaPostmanMetrics, Counter<string>>;
   private readonly gauges: Map<LineaPostmanMetrics, Gauge<string>>;
@@ -57,8 +60,11 @@ export abstract class MetricsService implements IMetricsService {
     }
 
     const metricData = await counter.get();
-    const metricValueWithMatchingLabels = this.findMetricValueWithExactMatchingLabels(metricData, labels);
-    return metricValueWithMatchingLabels?.value;
+    const aggregatedMetricValueWithMatchingLabels = this.aggregateMetricValuesWithExactMatchingLabels(
+      metricData,
+      labels,
+    );
+    return aggregatedMetricValueWithMatchingLabels?.value;
   }
 
   /**
@@ -97,8 +103,11 @@ export abstract class MetricsService implements IMetricsService {
     }
 
     const metricData = await gauge.get();
-    const metricValueWithMatchingLabels = this.findMetricValueWithExactMatchingLabels(metricData, labels);
-    return metricValueWithMatchingLabels?.value;
+    const aggregatedMetricValueWithMatchingLabels = this.aggregateMetricValuesWithExactMatchingLabels(
+      metricData,
+      labels,
+    );
+    return aggregatedMetricValueWithMatchingLabels?.value;
   }
 
   /**
@@ -143,10 +152,21 @@ export abstract class MetricsService implements IMetricsService {
     }
   }
 
-  private findMetricValueWithExactMatchingLabels(
+  private aggregateMetricValuesWithExactMatchingLabels(
     metricData: MetricObjectWithValues<MetricValue<string>>,
     labels: Record<string, string>,
   ): MetricValue<string> | undefined {
-    return metricData.values.find((value) => Object.entries(labels).every(([key, val]) => value.labels[key] === val));
+    // It is possible to have multiple metric objects with exact matching labels, e.g. if we query for 2 out of the 3 labels being used.
+    // Hence we should merge all metric objects, and remove labels that were not queried from the merged metric object.
+    const matchingMetricObjects = metricData.values.filter((value) =>
+      Object.entries(labels).every(([key, val]) => value.labels[key] === val),
+    );
+    if (matchingMetricObjects.length === 0) return undefined;
+    const mergedMetricObject: MetricValue<string> = {
+      value: 0,
+      labels,
+    };
+    matchingMetricObjects.forEach((m) => (mergedMetricObject.value += m.value));
+    return mergedMetricObject;
   }
 }

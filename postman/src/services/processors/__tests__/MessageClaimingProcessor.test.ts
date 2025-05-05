@@ -424,6 +424,7 @@ describe("TestMessageClaimingProcessor", () => {
         ...testAnchoredMessage,
         claimGasEstimationThreshold: 10000000000,
         updatedAt: mockedDate,
+        isForSponsorship: false,
       });
       await messageClaimingProcessor.process();
 
@@ -451,6 +452,7 @@ describe("TestMessageClaimingProcessor", () => {
       const expectedLoggingMessage = new Message({
         ...testZeroFeeAnchoredMessage,
         updatedAt: mockedDate,
+        isForSponsorship: true,
       });
 
       await messageClaimingProcessor.process();
@@ -479,6 +481,7 @@ describe("TestMessageClaimingProcessor", () => {
         ...testUnderpricedAnchoredMessage,
         claimGasEstimationThreshold: 10,
         updatedAt: mockedDate,
+        isForSponsorship: true,
       });
 
       await messageClaimingProcessor.process();

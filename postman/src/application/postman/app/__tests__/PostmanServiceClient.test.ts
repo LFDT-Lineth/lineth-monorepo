@@ -27,7 +27,7 @@ import { TypeOrmMessageRepository } from "../../persistence/repositories/TypeOrm
 import { L2ClaimMessageTransactionSizePoller } from "../../../../services/pollers/L2ClaimMessageTransactionSizePoller";
 import { DEFAULT_MAX_CLAIM_GAS_LIMIT } from "../../../../core/constants";
 import { MessageStatusSubscriber } from "../../persistence/subscribers/MessageStatusSubscriber";
-import { MessageMetricsService } from "../../api/metrics/MessageMetricsService";
+import { MessageMetricsUpdater } from "../../api/metrics/MessageMetricsUpdater";
 import { Api } from "../../api/Api";
 
 jest.mock("ethers", () => {
@@ -176,7 +176,7 @@ describe("PostmanServiceClient", () => {
 
   describe("connectServices", () => {
     it("should initialize API and database", async () => {
-      jest.spyOn(MessageMetricsService.prototype, "initialize").mockResolvedValueOnce();
+      jest.spyOn(MessageMetricsUpdater.prototype, "initialize").mockResolvedValueOnce();
       const initializeSpy = jest.spyOn(DataSource.prototype, "initialize").mockResolvedValue(
         new DataSource({
           type: "postgres",
@@ -217,7 +217,7 @@ describe("PostmanServiceClient", () => {
       jest.spyOn(TypeOrmMessageRepository.prototype, "getLatestMessageSent").mockImplementationOnce(jest.fn());
       jest.spyOn(Api.prototype, "start").mockImplementationOnce(jest.fn());
 
-      jest.spyOn(MessageMetricsService.prototype, "initialize").mockResolvedValueOnce();
+      jest.spyOn(MessageMetricsUpdater.prototype, "initialize").mockResolvedValueOnce();
       await postmanServiceClient.initializeMetricsAndApi();
 
       postmanServiceClient.startAllServices();
@@ -237,7 +237,7 @@ describe("PostmanServiceClient", () => {
       jest.spyOn(DatabaseCleaningPoller.prototype, "stop").mockImplementationOnce(jest.fn());
       jest.spyOn(Api.prototype, "stop").mockImplementationOnce(jest.fn());
 
-      jest.spyOn(MessageMetricsService.prototype, "initialize").mockResolvedValueOnce();
+      jest.spyOn(MessageMetricsUpdater.prototype, "initialize").mockResolvedValueOnce();
       await postmanServiceClient.initializeMetricsAndApi();
 
       postmanServiceClient.stopAllServices();
