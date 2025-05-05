@@ -38,11 +38,11 @@ const faqList = [
   },
   {
     title: "How long does the bridging take?",
-    content: `<div><p>This depends on the direction of your bridge:</p><ul><li>Deposit (L1 -&gt; L2): Approximately 20 minutes.</li><li>Withdrawal (L2 -&gt; L1): Between 8 and 32 hours. The L2 transaction must be finalized on Ethereum Mainnet before you can claim your funds.</li></ul></div>`,
+    content: `<div><p>This depends on the direction of your bridge:</p><ul><li>Deposit (L1 -&gt; L2): Approximately 20 minutes.</li><li>Withdrawal (L2 -&gt; L1): Between 2 and 16 hours. The L2 transaction must be finalized on Ethereum Mainnet before you can claim your funds.</li></ul></div>`,
   },
   {
     title: "Can I speed up my transaction?",
-    content: `<div><p>Yes, although it's not a method we recommend for beginners. <a rel="noopener noreferrer" target="_blank" href="https://support.linea.build/bridging/can-i-speed-up-bridge-transfers-on-the-linea-bridge">View the guide on the MetaMask Help Center</a>.</p><p>Note that this only speeds up your submission of the bridge transaction. It does not actually speed up the bridging process itself that you initiate with this transaction — you cannot speed up the 8-32 hour waiting time for a withdrawal.</p></div>`,
+    content: `<div><p>Yes, although it's not a method we recommend for beginners. <a rel="noopener noreferrer" target="_blank" href="https://support.linea.build/bridging/can-i-speed-up-bridge-transfers-on-the-linea-bridge">View the guide on the MetaMask Help Center</a>.</p><p>Note that this only speeds up your submission of the bridge transaction. It does not actually speed up the bridging process itself that you initiate with this transaction — you cannot speed up the 2-16 hour waiting time for a withdrawal.</p></div>`,
   },
   {
     title: "Where can I access support?",
