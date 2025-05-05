@@ -59,7 +59,6 @@ export async function isSendBundleMethodNotFound(rpcEndpoint: URL, targetBlockNu
   } catch (err) {
     if (err instanceof Error) {
       if (err.message === "Method not found") {
-        // Bundle request doesn't support in traces-v1 besu nodes
         return true;
       }
     }

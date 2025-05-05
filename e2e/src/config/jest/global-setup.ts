@@ -3,11 +3,7 @@ import { ethers } from "ethers";
 import { config } from "../tests-config";
 import { deployContract } from "../../common/deployments";
 import { DummyContract__factory, TestContract__factory } from "../../typechain";
-import {
-  etherToWei,
-  isSendBundleMethodNotFound,
-  sendTransactionsToGenerateTrafficWithInterval,
-} from "../../common/utils";
+import { etherToWei, sendTransactionsToGenerateTrafficWithInterval } from "../../common/utils";
 import { EMPTY_CONTRACT_CODE } from "../../common/constants";
 import { createTestLogger } from "../logger";
 
@@ -21,8 +17,6 @@ export default async (): Promise<void> => {
     logger.info("Configuring once-off prerequisite contracts");
     await configureOnceOffPrerequisities();
   }
-
-  process.env.SHOULD_SKIP_BUNDLE_TESTS = (await isSendBundleMethodNotFound(config.getL2BesuNodeEndpoint()!)).toString();
 
   logger.info("Generating L2 traffic...");
   const pollingAccount = await config.getL2AccountManager().generateAccount(etherToWei("200"));

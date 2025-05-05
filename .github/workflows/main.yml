@@ -19,7 +19,6 @@ jobs:
       staterecovery: ${{ steps.filter.outputs.staterecovery }}
       postman: ${{ steps.filter.outputs.postman }}
       prover: ${{ steps.filter.outputs.prover }}
-      traces-api-facade: ${{ steps.filter.outputs.traces-api-facade }}
       transaction-exclusion-api: ${{ steps.filter.outputs.transaction-exclusion-api }}
       has-changes-requiring-build: ${{ steps.exclusion-filter.outputs.has-changes-requiring-build }}
       contracts-excluding-local-deployment-artifacts: ${{ steps.exclusion-filter.outputs.contracts-excluding-local-deployment-artifacts }}
@@ -82,26 +81,6 @@ jobs:
               - '.github/workflows/main.yml'
               - '.github/workflows/reuse-*.yml'
               - 'constraints'
-            traces-api-facade:
-              - 'traces-api-facade/**'
-              - 'jvm-libs/linea/core/domain-models/**'
-              - 'jvm-libs/linea/core/traces/**'
-              - 'jvm-libs/linea/core/metrics/**'
-              - 'jvm-libs/generic/json-rpc/**'
-              - 'jvm-libs/generic/extensions/kotlin/**'
-              - 'jvm-libs/generic/extensions/futures/**'
-              - 'jvm-libs/generic/vertx-helper/**'
-              - 'jvm-libs/linea/metrics/**'
-              - 'config/common/traces-limits-v1.toml'
-              - '.github/workflows/traces-api-facade-*.yml'
-              - '.github/workflows/build-and-publish.yml'
-              - '.github/workflows/main.yml'
-              - '.github/workflows/reuse-*.yml'
-              - 'buildSrc/**'
-              - 'gradle/**'
-              - 'build.gradle'
-              - 'gradle.properties'
-              - 'settings.gradle'
             transaction-exclusion-api:
               - 'transaction-exclusion-api/**'
               - 'jvm-libs/generic/extensions/futures/**'
@@ -159,7 +138,6 @@ jobs:
       coordinator_changed: ${{ needs.filter-commit-changes.outputs.coordinator }}
       postman_changed: ${{ needs.filter-commit-changes.outputs.postman }}
       prover_changed: ${{ needs.filter-commit-changes.outputs.prover }}
-      traces_api_facade_changed: ${{ needs.filter-commit-changes.outputs.traces-api-facade }}
       transaction_exclusion_api_changed: ${{ needs.filter-commit-changes.outputs.transaction-exclusion-api }}
     secrets: inherit
 
@@ -174,7 +152,6 @@ jobs:
       prover_changed: ${{ needs.filter-commit-changes.outputs.prover }}
       smart_contracts_changed: ${{ needs.filter-commit-changes.outputs.smart-contracts }}
       staterecovery_changed: ${{ needs.filter-commit-changes.outputs.staterecovery }}
-      traces_api_facade_changed: ${{ needs.filter-commit-changes.outputs.traces-api-facade }}
       transaction_exclusion_api_changed: ${{ needs.filter-commit-changes.outputs.transaction-exclusion-api }}
     secrets: inherit
 
@@ -209,28 +186,11 @@ jobs:
       coordinator_changed: ${{ needs.filter-commit-changes.outputs.coordinator }}
       postman_changed: ${{ needs.filter-commit-changes.outputs.postman }}
       prover_changed: ${{ needs.filter-commit-changes.outputs.prover }}
-      traces_api_facade_changed: ${{ needs.filter-commit-changes.outputs.traces-api-facade }}
       transaction_exclusion_api_changed: ${{ needs.filter-commit-changes.outputs.transaction-exclusion-api }}
       coordinator_image_tagged: ${{ needs.check-and-tag-images.outputs.image_tagged_coordinator }}
       postman_image_tagged: ${{ needs.check-and-tag-images.outputs.image_tagged_postman }}
       prover_image_tagged: ${{ needs.check-and-tag-images.outputs.image_tagged_prover }}
-      traces_api_facade_image_tagged: ${{ needs.check-and-tag-images.outputs.image_tagged_traces_api_facade }}
       transaction_exclusion_api_image_tagged: ${{ needs.check-and-tag-images.outputs.image_tagged_transaction_exclusion_api }}
-    secrets: inherit
-
-  run-e2e-tests-geth-tracing:
-    needs: [ store-image-name-and-tags, docker-build, get-has-changes-requiring-e2e-testing, manual-docker-build-and-e2e-tests ]
-    # Make this execute for has-changes-requiring-e2e-testing == 'false' so that we can get to the required job @ which is in reuse-run-e2e-tests.yml
-    if: ${{ always() && needs.get-has-changes-requiring-e2e-testing.outputs.has-changes-requiring-e2e-testing == 'false' || needs.docker-build.result == 'success' }}
-    concurrency:
-      group: run-e2e-tests-geth-tracing-${{ github.workflow }}-${{ github.ref }}
-      cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
-    uses: ./.github/workflows/reuse-run-e2e-tests.yml
-    with:
-      commit_tag: ${{ needs.store-image-name-and-tags.outputs.commit_tag }}
-      tracing-engine: 'geth'
-      e2e-tests-logs-dump: true
-      has-changes-requiring-e2e-testing: ${{ needs.get-has-changes-requiring-e2e-testing.outputs.has-changes-requiring-e2e-testing }}
     secrets: inherit
 
   run-e2e-tests:
@@ -243,14 +203,13 @@ jobs:
     uses: ./.github/workflows/reuse-run-e2e-tests.yml
     with:
       commit_tag: ${{ needs.store-image-name-and-tags.outputs.commit_tag }}
-      tracing-engine: 'besu'
       e2e-tests-logs-dump: true
       has-changes-requiring-e2e-testing: ${{ needs.get-has-changes-requiring-e2e-testing.outputs.has-changes-requiring-e2e-testing }}
     secrets: inherit
 
   publish-images-after-run-tests-success-on-main:
-    needs: [ store-image-name-and-tags, testing, run-e2e-tests, run-e2e-tests-geth-tracing ]
-    if: ${{ always() && github.ref == 'refs/heads/main' && needs.testing.result == 'success' && needs.run-e2e-tests.outputs.tests_outcome == 'success' && needs.run-e2e-tests-geth-tracing.outputs.tests_outcome == 'success' }}
+    needs: [ store-image-name-and-tags, testing, run-e2e-tests ]
+    if: ${{ always() && github.ref == 'refs/heads/main' && needs.testing.result == 'success' && needs.run-e2e-tests.outputs.tests_outcome == 'success' }}
     uses: ./.github/workflows/build-and-publish.yml
     with:
       push_image: true
@@ -259,17 +218,15 @@ jobs:
       coordinator_changed: ${{ needs.filter-commit-changes.outputs.coordinator }}
       postman_changed: ${{ needs.filter-commit-changes.outputs.postman }}
       prover_changed: ${{ needs.filter-commit-changes.outputs.prover }}
-      traces_api_facade_changed: ${{ needs.filter-commit-changes.outputs.traces-api-facade }}
       transaction_exclusion_api_changed: ${{ needs.filter-commit-changes.outputs.transaction-exclusion-api }}
       coordinator_image_tagged: ${{ needs.check-and-tag-images.outputs.image_tagged_coordinator }}
       postman_image_tagged: ${{ needs.check-and-tag-images.outputs.image_tagged_postman }}
       prover_image_tagged: ${{ needs.check-and-tag-images.outputs.image_tagged_prover }}
-      traces_api_facade_image_tagged: ${{ needs.check-and-tag-images.outputs.image_tagged_traces_api_facade }}
       transaction_exclusion_api_image_tagged: ${{ needs.check-and-tag-images.outputs.image_tagged_transaction_exclusion_api }}
     secrets: inherit
 
   cleanup-deployments:
-    needs: [ run-e2e-tests, run-e2e-tests-geth-tracing ]
+    needs: [ run-e2e-tests ]
     if: ${{ always() }}
     runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
     steps:

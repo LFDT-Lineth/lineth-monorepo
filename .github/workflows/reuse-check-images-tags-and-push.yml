@@ -20,9 +20,6 @@ on:
       prover_changed:
         required: true
         type: string
-      traces_api_facade_changed:
-        required: true
-        type: string
       transaction_exclusion_api_changed:
         required: true
         type: string
@@ -33,8 +30,6 @@ on:
         value: ${{ jobs.image_tag_push.outputs.image_tagged_prover }}
       image_tagged_postman:
         value: ${{ jobs.image_tag_push.outputs.image_tagged_postman }}
-      image_tagged_traces_api_facade:
-        value: ${{ jobs.image_tag_push.outputs.image_tagged_traces_api_facade }}
       image_tagged_transaction_exclusion_api:
         value: ${{ jobs.image_tag_push.outputs.image_tagged_transaction_exclusion_api }}
     secrets:
@@ -55,7 +50,6 @@ jobs:
       last_commit_tag_exists_coordinator: ${{ steps.check_image_tags_exist_coordinator.outputs.last_commit_tag_exists }}
       last_commit_tag_exists_postman: ${{ steps.check_image_tags_exist_postman.outputs.last_commit_tag_exists }}
       last_commit_tag_exists_prover: ${{ steps.check_image_tags_exist_prover.outputs.last_commit_tag_exists }}
-      last_commit_tag_exists_traces_api_facade: ${{ steps.check_image_tags_exist_traces_api_facade.outputs.last_commit_tag_exists }}
       last_commit_tag_exists_transaction_exclusion_api: ${{ steps.check_image_tags_exist_transaction_exclusion_api.outputs.last_commit_tag_exists }}
     steps:
       - name: Checkout
@@ -85,14 +79,6 @@ jobs:
           last_commit_tag: ${{ inputs.last_commit_tag }}
           image_name: consensys/linea-prover
 
-      - name: Check image tags exist for traces-api-facade
-        uses: ./.github/actions/check-image-tags-exist
-        if: ${{ inputs.traces_api_facade_changed == 'false' }}
-        id: check_image_tags_exist_traces_api_facade
-        with:
-          last_commit_tag: ${{ inputs.last_commit_tag }}
-          image_name: consensys/linea-traces-api-facade
-      
       - name: Check image tags exist for transaction-exclusion-api
         uses: ./.github/actions/check-image-tags-exist
         if: ${{ inputs.transaction_exclusion_api_changed == 'false' }}
@@ -110,7 +96,6 @@ jobs:
       image_tagged_coordinator: ${{ steps.image_tag_push_coordinator.outputs.image_tagged }}
       image_tagged_prover: ${{ steps.image_tag_push_prover.outputs.image_tagged }}
       image_tagged_postman: ${{ steps.image_tag_push_postman.outputs.image_tagged }}
-      image_tagged_traces_api_facade: ${{ steps.image_tag_push_traces_api_facade.outputs.image_tagged }}
       image_tagged_transaction_exclusion_api: ${{ steps.image_tag_push_transaction_exclusion_api.outputs.image_tagged }}
     steps:
       - name: Checkout
@@ -152,19 +137,6 @@ jobs:
           develop_tag: ${{ inputs.develop_tag }}
           image_name: consensys/linea-prover
           last_commit_tag_exists: ${{ needs.check_image_tags_exist.outputs.last_commit_tag_exists_prover }}
-          docker_username: ${{ secrets.DOCKERHUB_USERNAME }}
-          docker_password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Tag and push traces api facade image
-        id: image_tag_push_traces_api_facade
-        uses: ./.github/actions/image-tag-and-push
-        if: ${{ inputs.traces_api_facade_changed == 'false' }}
-        with:
-          commit_tag: ${{ inputs.commit_tag }}
-          last_commit_tag: ${{ inputs.last_commit_tag }}
-          develop_tag: ${{ inputs.develop_tag }}
-          image_name: consensys/linea-traces-api-facade
-          last_commit_tag_exists: ${{ needs.check_image_tags_exist.outputs.last_commit_tag_exists_traces_api_facade }}
           docker_username: ${{ secrets.DOCKERHUB_USERNAME }}
           docker_password: ${{ secrets.DOCKERHUB_TOKEN }}
 

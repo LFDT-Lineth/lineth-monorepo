@@ -1,6 +1,0 @@
-input_traces_directory = "tmp/local/traces/raw"
-output_traces_directory = "tmp/local/traces/v1/conflated"
-traces_version = "0.2.0"
-
-[api]
-port = 8081

@@ -10,12 +10,7 @@ import {
 } from "./common/utils";
 import { ethers, TransactionRequest } from "ethers";
 
-const describeIf = shouldSkipBundleTests ? describe.skip : describe;
-if (shouldSkipBundleTests) {
-  logger.info("Skip bundle tests due to tracing-v1 besu nodes");
-}
-
-describeIf("Send bundle test suite", () => {
+describe("Send bundle test suite", () => {
   const l2AccountManager = config.getL2AccountManager();
   const lineaCancelBundleClient = new LineaBundleClient(config.getSequencerEndpoint()!);
   const lineaSendBundleClient = new LineaBundleClient(config.getL2BesuNodeEndpoint()!);

@@ -22,9 +22,6 @@ on:
       prover_changed:
         required: true
         type: string
-      traces_api_facade_changed:
-        required: true
-        type: string
       transaction_exclusion_api_changed:
         required: true
         type: string
@@ -35,9 +32,6 @@ on:
         required: true
         type: string
       postman_image_tagged:
-        required: true
-        type: string
-      traces_api_facade_image_tagged:
         required: true
         type: string
       transaction_exclusion_api_image_tagged:
@@ -77,16 +71,6 @@ jobs:
       commit_tag: ${{ inputs.commit_tag }}
       develop_tag: ${{ inputs.develop_tag }}
       image_name: consensys/linea-postman
-      push_image: ${{ inputs.push_image }}
-    secrets: inherit
-
-  traces-api-facade:
-    uses: ./.github/workflows/traces-api-facade-build-and-publish.yml
-    if: ${{ always() && (inputs.traces_api_facade_changed == 'true' || inputs.traces_api_facade_image_tagged != 'true') }}
-    with:
-      commit_tag: ${{ inputs.commit_tag }}
-      develop_tag: ${{ inputs.develop_tag }}
-      image_name: consensys/linea-traces-api-facade
       push_image: ${{ inputs.push_image }}
     secrets: inherit
 

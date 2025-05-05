@@ -6,10 +6,6 @@ on:
         description: 'The commit tag to use'
         required: true
         type: string
-      tracing-engine:
-        description: Variable option for running tests against [besu] or [geth] stack
-        required: true
-        type: string
       e2e-tests-with-ssh:
         description: Run end to end tests with ability to ssh into environment
         required: false
@@ -28,10 +24,6 @@ on:
   workflow_call:
     inputs:
       commit_tag:
-        required: true
-        type: string
-      tracing-engine:
-        description: Variable option for running tests against [besu] or [geth] stack
         required: true
         type: string
       e2e-tests-with-ssh:
@@ -69,7 +61,6 @@ jobs:
       COORDINATOR_TAG: ${{ inputs.commit_tag }}
       POSTMAN_TAG: ${{ inputs.commit_tag }}
       PROVER_TAG: ${{ inputs.commit_tag }}
-      TRACES_API_TAG: ${{ inputs.commit_tag }}
       TRANSACTION_EXCLUSION_API_TAG: ${{ inputs.commit_tag }}
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -116,23 +107,9 @@ jobs:
           gunzip -c $GITHUB_WORKSPACE/linea-coordinator/linea-coordinator-docker-image.tar.gz | docker load &&
           gunzip -c $GITHUB_WORKSPACE/linea-postman/linea-postman-docker-image.tar.gz | docker load &&
           gunzip -c $GITHUB_WORKSPACE/linea-prover/linea-prover-docker-image.tar.gz | docker load &&
-          gunzip -c $GITHUB_WORKSPACE/linea-traces-api-facade/linea-traces-api-facade-docker-image.tar.gz | docker load &&
           gunzip -c $GITHUB_WORKSPACE/linea-transaction-exclusion-api/linea-transaction-exclusion-api-docker-image.tar.gz | docker load
         shell: bash
-      - name: Spin up fresh environment with geth tracing with retry
-        if: ${{ inputs.tracing-engine == 'geth' }}
-        uses: nick-fields/retry@v3
-        with:
-          max_attempts: 10
-          retry_on: error
-          retry_wait_seconds: 30
-          timeout_minutes: 10
-          command: |
-            make start-env-with-tracing-v1-ci CLEAN_PREVIOUS_ENV=false
-          on_retry_command: |
-            make clean-environment
       - name: Spin up fresh environment with besu tracing with retry
-        if: ${{ inputs.tracing-engine == 'besu' }}
         uses: nick-fields/retry@v3
         with:
           max_attempts: 10
@@ -165,13 +142,11 @@ jobs:
           find tmp/local/ >> docker_logs/files_in_shared_dir.txt || true
           docker ps -a >> docker_logs/docker_ps.txt || true
           docker logs coordinator --since 1h &>> docker_logs/coordinator.txt || true
-          docker logs prover --since 1h &>> docker_logs/prover.txt || true
           docker logs prover-v3 --since 1h &>> docker_logs/prover-v3.txt || true
           docker logs shomei --since 1h &>> docker_logs/shomei.txt || true
           docker logs zkbesu-shomei --since 1h &>> docker_logs/zkbesu-shomei.txt || true
           docker logs shomei-frontend --since 1h &>> docker_logs/shomei-frontend.txt || true
           docker logs postman --since 1h &>> docker_logs/postman.txt || true
-          docker logs traces-node --since 1h &>> docker_logs/traces-node.txt || true
           docker logs traces-node-v2 --since 1h &>> docker_logs/traces-node-v2.txt || true
           docker logs l2-node-besu --since 1h &>> docker_logs/l2-node-besu.txt || true
           docker logs transaction-exclusion-api --since 1h &>> docker_logs/transaction-exclusion-api.txt || true
@@ -180,7 +155,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: ${{ failure() && inputs.e2e-tests-logs-dump }}
         with:
-          name: end-2-end-debug-logs-${{ inputs.tracing-engine }}
+          name: end-2-end-debug-logs
           if-no-files-found: error
           path: |
             docker_logs/**/*

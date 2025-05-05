@@ -1,5 +1,0 @@
-# This file is empty, partly because we have not determined what should be the
-# the exact configuration of the prover-compression yet. We leave it as a placeholder.
-# NOTE: It will be passed to the prover-compression, but it will not be opened by the
-# command.
-dev_mode = true

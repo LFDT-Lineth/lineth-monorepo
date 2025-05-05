@@ -1,7 +1,7 @@
 include makefile-contracts.mk
 
 docker-pull-images-external-to-monorepo:
-		docker compose -f docker/compose-tracing-v1-ci-extension.yml -f docker/compose-tracing-v2-ci-extension.yml --profile external-to-monorepo pull
+		docker compose -f docker/compose-tracing-v2-ci-extension.yml --profile external-to-monorepo pull
 
 clean-local-folders:
 		make clean-smc-folders
@@ -12,8 +12,8 @@ clean-testnet-folders:
 		rm -rf tmp/testnet/* || true # ignore failure if folders do not exist already
 
 clean-environment:
-		docker compose -f docker/compose-tracing-v1-ci-extension.yml -f docker/compose-tracing-v2-ci-extension.yml -f docker/compose-tracing-v2-staterecovery-extension.yml --profile l1 --profile l2 --profile debug --profile staterecovery kill -s 9 || true;
-		docker compose -f docker/compose-tracing-v1-ci-extension.yml -f docker/compose-tracing-v2-ci-extension.yml -f docker/compose-tracing-v2-staterecovery-extension.yml --profile l1 --profile l2 --profile debug --profile staterecovery down || true;
+		docker compose -f docker/compose-tracing-v2-ci-extension.yml -f docker/compose-tracing-v2-staterecovery-extension.yml --profile l1 --profile l2 --profile debug --profile staterecovery kill -s 9 || true;
+		docker compose -f docker/compose-tracing-v2-ci-extension.yml -f docker/compose-tracing-v2-staterecovery-extension.yml --profile l1 --profile l2 --profile debug --profile staterecovery down || true;
 		make clean-local-folders;
 		docker volume rm linea-local-dev linea-logs || true; # ignore failure if volumes do not exist already
 		docker system prune -f || true;
@@ -60,12 +60,6 @@ fresh-start-l2-blockchain-only:
 ## Creating new targets to avoid conflicts with existing targets
 ## Redundant targets above will cleanup once this get's merged
 ##
-start-env-with-tracing-v1:
-	make start-env COMPOSE_FILE=docker/compose-tracing-v1.yml LINEA_PROTOCOL_CONTRACTS_ONLY=true
-
-start-env-with-tracing-v1-ci:
-	make start-env COMPOSE_FILE=docker/compose-tracing-v1-ci-extension.yml DISABLE_JSON_RPC_PRICING_PROPAGATION=false
-
 start-env-with-tracing-v2:
 	make start-env COMPOSE_FILE=docker/compose-tracing-v2.yml LINEA_PROTOCOL_CONTRACTS_ONLY=true
 

@@ -18,9 +18,6 @@ on:
       prover_changed:
         required: true
         type: string
-      traces_api_facade_changed:
-        required: true
-        type: string
       transaction_exclusion_api_changed:
         required: true
         type: string
@@ -47,10 +44,6 @@ jobs:
     if: ${{ inputs.postman_changed == 'true' }}
     secrets: inherit
 
-  traces-api-facade:
-    uses: ./.github/workflows/traces-api-facade-testing.yml
-    if: ${{ inputs.traces_api_facade_changed == 'true' }}
-
   transaction-exclusion-api:
     uses: ./.github/workflows/transaction-exclusion-api-testing.yml
     if: ${{ inputs.transaction_exclusion_api_changed == 'true' }}
@@ -71,7 +64,7 @@ jobs:
   # If all jobs are skipped, the workflow will still succeed.
   always_succeed:
     runs-on: ubuntu-24.04
-    if: ${{ inputs.coordinator_changed == 'false' && inputs.prover_changed == 'false' && inputs.postman_changed == 'false' && inputs.traces_api_facade_changed == 'false' && inputs.transaction_exclusion_api_changed == 'false' }}
+    if: ${{ inputs.coordinator_changed == 'false' && inputs.prover_changed == 'false' && inputs.postman_changed == 'false' && inputs.transaction_exclusion_api_changed == 'false' }}
     steps:
       - name: Ensure Workflow Success
         run: echo "All jobs were skipped, but workflow succeeds."
