@@ -1,9 +1,15 @@
 name: Smart contracts test
 
-on: workflow_call
+on:
+  workflow_call:
+    inputs:
+      commit_tag:
+        required: true
+        type: string
 
 env:
   GOPROXY: "https://proxy.golang.org"
+  COMMIT_TAG: ${{ inputs.commit_tag }}
 
 jobs:
   run-contract-tests:
@@ -48,10 +54,6 @@ jobs:
 
       - name: Run smart contracts tests and generate coverage report
         run: pnpm -F contracts run coverage
-
-      - name: Compute and save COMMIT_TAG
-        run: |
-          echo COMMIT_TAG=$(git rev-parse --short "$GITHUB_SHA") >> $GITHUB_ENV
 
       - name: Upload coverage report
         uses: actions/upload-artifact@v4

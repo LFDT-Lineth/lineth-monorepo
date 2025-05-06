@@ -14,9 +14,23 @@ jobs:
     outputs:
       coordinator: ${{ steps.filter.outputs.coordinator }}
       smart-contracts: ${{ steps.filter.outputs.smart-contracts }}
+      commit-tag: ${{ steps.get-commit-tag.outputs.COMMIT_TAG }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Get commit tag
+        shell: bash
+        id: get-commit-tag
+        # COMMIT_TAG will be the commit SHA of the workflow run that triggered this workflow
+        # - For a new commit on a PR branch, COMMIT_TAG = head of PR branch
+        #
+        # Note that we cannot use GITHUB_SHA here because it will always reference the head of main branch
+        # Since we intend for this workflow to run only for PRs from an external fork, we want COMMIT_TAG to match the PR branch head
+        run: |
+          echo "COMMIT_TAG=$(git rev-parse --short ${{ github.event.workflow_run.head_sha }})" >> $GITHUB_OUTPUT
+      - name: Show commit tag
+        run: |
+          echo "COMMIT_TAG: ${{ steps.get-commit-tag.outputs.COMMIT_TAG }}"
       - name: Filter commit changes
         uses: dorny/paths-filter@v3
         id: filter
@@ -57,15 +71,10 @@ jobs:
     env:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Compute and save COMMIT_TAG
-        run: |
-          echo COMMIT_TAG=$(git rev-parse --short "$GITHUB_SHA") >> $GITHUB_ENV
       - name: Download Jacoco test coverage report (from coordinator-testing.yml)
         uses: actions/download-artifact@v4
         with:
-          name: jacocoRootReport-${{ env.COMMIT_TAG }}.xml
+          name: jacocoRootReport-${{ needs.filter-commit-changes.outputs.commit-tag }}.xml
           path: |
             ${{ github.workspace }}/jacocoRootReport.xml
       - uses: codecov/codecov-action@v5
@@ -86,15 +95,10 @@ jobs:
     env:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Compute and save COMMIT_TAG
-        run: |
-          echo COMMIT_TAG=$(git rev-parse --short "$GITHUB_SHA") >> $GITHUB_ENV
       - name: Download smart contract coverage report (from run-smc.tests.yml)
         uses: actions/download-artifact@v4
         with:
-          name: smart-contract-coverage-${{ env.COMMIT_TAG }}.json
+          name: smart-contract-coverage-${{ needs.filter-commit-changes.outputs.commit-tag }}.json
           path: |
             ${{ github.workspace }}/coverage-final.json
       - uses: codecov/codecov-action@v5

@@ -59,6 +59,8 @@ jobs:
   smart-contracts:
     uses: ./.github/workflows/run-smc-tests.yml
     if: ${{ inputs.smart_contracts_changed == 'true' }}
+    with:
+      commit_tag: ${{ inputs.commit_tag }}
     secrets: inherit
 
   # If all jobs are skipped, the workflow will still succeed.
