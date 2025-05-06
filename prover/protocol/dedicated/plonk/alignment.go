@@ -134,7 +134,7 @@ func (ci *CircuitAlignmentInput) prepareWitnesses(run *wizard.ProverRuntime) {
 				return ci.witnesses[ii].Fill(ci.nbPublicInputs, 0, witnessFillers[ii])
 			})
 		}
-		go func() {
+		wg.Go(func() error {
 			var filled int
 			for j := 0; j < dataCol.Len(); j++ {
 				mask := maskCol.Get(j)
@@ -144,7 +144,7 @@ func (ci *CircuitAlignmentInput) prepareWitnesses(run *wizard.ProverRuntime) {
 				data := dataCol.Get(j)
 				select {
 				case <-ctx.Done():
-					return
+					return nil
 				case witnessFillers[filled/ci.nbPublicInputs] <- data:
 				}
 				filled++
@@ -160,7 +160,7 @@ func (ci *CircuitAlignmentInput) prepareWitnesses(run *wizard.ProverRuntime) {
 			for filled < ci.nbPublicInputs*ci.NbCircuitInstances {
 				select {
 				case <-ctx.Done():
-					return
+					return nil
 				case witnessFillers[filled/ci.nbPublicInputs] <- ci.InputFiller(filled/ci.nbPublicInputs, filled%ci.nbPublicInputs):
 				}
 				filled++
@@ -168,7 +168,9 @@ func (ci *CircuitAlignmentInput) prepareWitnesses(run *wizard.ProverRuntime) {
 					close(witnessFillers[(filled-1)/ci.nbPublicInputs])
 				}
 			}
-		}()
+
+			return nil
+		})
 		if err := wg.Wait(); err != nil {
 			utils.Panic("fill witness: %v", err.Error())
 			return
