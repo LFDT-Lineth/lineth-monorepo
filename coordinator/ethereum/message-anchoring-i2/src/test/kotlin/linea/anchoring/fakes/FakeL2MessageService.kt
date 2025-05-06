@@ -17,6 +17,9 @@ class FakeL2MessageService(
   private var lastAnchoredL1MessageNumber: ULong = 0uL
   private var lastAnchoredRollingHash: ByteArray = ByteArray(0)
 
+  @get:Synchronized @set:Synchronized
+  var forceAnchoringFailures: Boolean = false
+
   override fun getAddress(): String = contractAddress
 
   @Synchronized
@@ -47,6 +50,9 @@ class FakeL2MessageService(
     require((finalMessageNumber - startingMessageNumber + 1UL).toInt() == messageHashes.size) {
       "finalMessageNumber=$finalMessageNumber - startingMessageNumber=$startingMessageNumber + 1UL " +
         "must be equal to messageHashes.size=${messageHashes.size}"
+    }
+    if (forceAnchoringFailures) {
+      return SafeFuture.failedFuture(RuntimeException("FakeL2MessageService: forced anchoring failure"))
     }
 
     lastAnchoredL1MessageNumber = finalMessageNumber

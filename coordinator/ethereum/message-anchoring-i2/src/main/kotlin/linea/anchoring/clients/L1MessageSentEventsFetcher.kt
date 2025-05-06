@@ -41,7 +41,7 @@ internal class L1MessageSentEventsFetcher(
 
   fun findL1MessageSentEvents(
     startingMessageNumber: ULong,
-    messagesToFetch: UInt,
+    targetMessagesToFetch: UInt,
     fetchTimeout: Duration,
     blockChunkSize: UInt
   ): SafeFuture<List<EthLogEvent<MessageSentEvent>>> {
@@ -67,7 +67,7 @@ internal class L1MessageSentEventsFetcher(
         ),
         chunkSize = blockChunkSize,
         searchTimeout = fetchTimeout,
-        stopAfterTargetLogsCount = messagesToFetch
+        stopAfterTargetLogsCount = targetMessagesToFetch
       ).thenApply { result ->
         lastSearch.set(LastSearch(result.endBlockNumber, startingMessageNumber))
         val events = result.logs.map(MessageSentEvent::fromEthLog)

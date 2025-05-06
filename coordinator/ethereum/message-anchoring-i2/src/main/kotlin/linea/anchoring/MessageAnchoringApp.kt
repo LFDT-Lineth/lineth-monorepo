@@ -10,10 +10,9 @@ import linea.domain.RetryConfig
 import linea.ethapi.EthApiClient
 import linea.ethapi.EthLogsSearcherImpl
 import net.consensys.zkevm.LongRunningService
-import org.apache.logging.log4j.LogManager
-import org.apache.logging.log4j.Logger
+import java.util.Deque
 import java.util.concurrent.CompletableFuture
-import java.util.concurrent.PriorityBlockingQueue
+import java.util.concurrent.LinkedBlockingDeque
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
@@ -21,9 +20,8 @@ import kotlin.time.Duration.Companion.seconds
 class MessageAnchoringApp(
   private val vertx: Vertx,
   private val config: Config,
-  private val l1EthApiClient: EthApiClient,
-  private val l2MessageService: L2MessageServiceSmartContractClient,
-  private val log: Logger = LogManager.getLogger(MessageAnchoringApp::class.java)
+  l1EthApiClient: EthApiClient,
+  private val l2MessageService: L2MessageServiceSmartContractClient
 ) : LongRunningService {
   data class Config(
     val l1RequestRetryConfig: RetryConfig,
@@ -45,7 +43,9 @@ class MessageAnchoringApp(
       config = EthLogsSearcherImpl.Config(loopSuccessBackoffDelay = config.l1SuccessBackoffDelay)
     )
 
-  private val eventsQueue = PriorityBlockingQueue<MessageSentEvent>(config.messageQueueCapacity.toInt())
+  private val eventsQueue: Deque<MessageSentEvent> = LinkedBlockingDeque()
+  internal val eventsQueueSize: Int
+    get() = eventsQueue.size
 
   private val l1EventsPoller = run {
     L1MessageSentEventsPoller(

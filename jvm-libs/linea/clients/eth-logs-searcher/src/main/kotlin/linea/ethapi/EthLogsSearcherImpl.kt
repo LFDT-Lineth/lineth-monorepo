@@ -55,12 +55,12 @@ class EthLogsSearcherImpl(
           )
         } else {
           findLogWithBinarySearch(
-            start,
-            end,
-            chunkSize,
-            address,
-            topics,
-            shallContinueToSearch
+            fromBlock = start,
+            toBlock = end,
+            chunkSize = chunkSize,
+            address = address,
+            topics = topics,
+            shallContinueToSearchPredicate = shallContinueToSearch
           )
         }
       }
@@ -86,13 +86,13 @@ class EthLogsSearcherImpl(
           )
         } else {
           getLogsLoopingForward(
-            start,
-            end,
-            address,
-            topics,
-            chunkSize,
-            searchTimeout,
-            stopAfterTargetLogsCount
+            fromBlock = start,
+            toBlock = end,
+            address = address,
+            topics = topics,
+            chunkSize = chunkSize,
+            searchTimeout = searchTimeout,
+            logsSoftLimit = stopAfterTargetLogsCount
           )
         }
       }
@@ -105,7 +105,7 @@ class EthLogsSearcherImpl(
     topics: List<String?>,
     chunkSize: UInt,
     searchTimeout: Duration,
-    logsLimit: UInt?
+    logsSoftLimit: UInt?
   ): SafeFuture<EthLogsSearcher.LogSearchResult> {
     val cursor = ConsecutiveSearchCursor(fromBlock, toBlock, chunkSize.toInt(), SearchDirection.FORWARD)
 
@@ -117,7 +117,7 @@ class EthLogsSearcherImpl(
       vertx,
       backoffDelay = config.loopSuccessBackoffDelay,
       stopRetriesPredicate = {
-        val enoughLogsCollected = logsCollected.size >= (logsLimit?.toInt() ?: Int.MAX_VALUE)
+        val enoughLogsCollected = logsCollected.size >= (logsSoftLimit?.toInt() ?: Int.MAX_VALUE)
         val collectionTimeoutElapsed = (clock.now() - startTime) >= searchTimeout
         val noMoreChunksToCollect = !cursor.hasNext()
 

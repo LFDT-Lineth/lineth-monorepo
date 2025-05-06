@@ -9,7 +9,7 @@ import net.consensys.zkevm.PeriodicPollingService
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture
-import java.util.concurrent.PriorityBlockingQueue
+import java.util.Deque
 import kotlin.time.Duration
 
 class L1MessageSentEventsPoller(
@@ -17,7 +17,7 @@ class L1MessageSentEventsPoller(
   pollingInterval: Duration,
   private val l1SmartContractAddress: String,
   private val l1EventsSearcher: EthLogsSearcher,
-  private val eventsQueue: PriorityBlockingQueue<MessageSentEvent>,
+  private val eventsQueue: Deque<MessageSentEvent>,
   private val eventsQueueMaxCapacity: Int,
   private val l2MessageService: L2MessageServiceSmartContractClient,
   private val l1MessagesSentFetchLimit: UInt,
@@ -38,7 +38,7 @@ class L1MessageSentEventsPoller(
   )
 
   private fun nextMessageNumberToFetchFromL1(): SafeFuture<ULong> {
-    val queueLastMessage = eventsQueue.lastOrNull()
+    val queueLastMessage = eventsQueue.peekLast()
     if (queueLastMessage != null) {
       return SafeFuture.completedFuture(queueLastMessage.messageNumber.inc())
     } else {
@@ -55,7 +55,11 @@ class L1MessageSentEventsPoller(
     val remainingCapacity = queueRemainingCapacity()
 
     if (remainingCapacity == 0) {
-      log.debug("MessageSent event queue is full, skipping fetching new events")
+      log.debug(
+        "skipping fetching MessageSent events: queueSize={} reached targetCapacity={}",
+        eventsQueue.size,
+        eventsQueueMaxCapacity
+      )
       return SafeFuture.completedFuture(null)
     }
 
@@ -63,7 +67,7 @@ class L1MessageSentEventsPoller(
       .thenCompose { nextMessageNumberToFetchFromL1 ->
         eventsFetcher.findL1MessageSentEvents(
           startingMessageNumber = nextMessageNumberToFetchFromL1,
-          messagesToFetch = l1MessagesSentFetchLimit.coerceAtMost(remainingCapacity.toUInt()),
+          targetMessagesToFetch = l1MessagesSentFetchLimit.coerceAtMost(remainingCapacity.toUInt()),
           fetchTimeout = l1MessagesSentFetchTimeout,
           blockChunkSize = l1BlockSearchChuck
         )
