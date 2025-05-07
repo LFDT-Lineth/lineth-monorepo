@@ -10,6 +10,10 @@ const NavData = [
     href: "/",
   },
   {
+    title: "CEX",
+    href: "/layerswap",
+  },
+  {
     title: "Native Bridge",
     href: "/native-bridge",
   },
