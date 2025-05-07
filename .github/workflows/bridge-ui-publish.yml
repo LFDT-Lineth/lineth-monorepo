@@ -94,3 +94,5 @@ jobs:
 
       - name: Test Build Bridge UI
         run: pnpm run -F bridge-ui build;
+        env:
+          NODE_OPTIONS: --max-old-space-size=8192 # Temporary fix for out of memory error
