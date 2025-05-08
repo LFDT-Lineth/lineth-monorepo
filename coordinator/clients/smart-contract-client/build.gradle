@@ -6,13 +6,12 @@ dependencies {
   implementation project(":jvm-libs:generic:extensions:kotlin")
   api project(':jvm-libs:linea:web3j-extensions')
   api project(':jvm-libs:linea:clients:linea-l1-contract-client')
-  api 'build.linea:l2-message-service-contract-client:0.0.1'
-
   api ("org.web3j:core:${libs.versions.web3j.get()}") {
     exclude group: 'org.slf4j', module: 'slf4j-nop'
   }
   implementation "io.vertx:vertx-core"
-  implementation project(path: ':coordinator:core')
-  implementation project(path: ':coordinator:ethereum:common')
+  implementation project(':coordinator:core')
+  implementation project(':coordinator:ethereum:common')
+
   testImplementation "io.vertx:vertx-junit5"
 }

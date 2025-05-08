@@ -1,8 +1,8 @@
 package net.consensys.linea.web3j
 
 import linea.domain.Constants
+import linea.kotlin.decodeHex
 import linea.web3j.domain.Eip4844Transaction
-import org.apache.tuweni.bytes.Bytes
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.web3j.crypto.Blob
@@ -16,7 +16,6 @@ class Eip4844TransactionTest {
   @Test
   fun canBeSerializedCorrectly() {
     val blobByteArray = ByteArray(Constants.Eip4844BlobSize)
-    val blobVersionHashes = "0x010657f37554c781402a22917dee2f75def7ab966d7b770905398eba3c444014"
     val eip4844Transaction = Eip4844Transaction(
       from = "0x123",
       nonce = BigInteger.valueOf(1),
@@ -30,7 +29,7 @@ class Eip4844TransactionTest {
       maxFeePerGas = BigInteger.valueOf(8),
       _maxFeePerBlobGas = BigInteger.valueOf(9),
       blobs = listOf(Blob(blobByteArray)),
-      blobVersionedHashes = listOf(Bytes.fromHexString(blobVersionHashes))
+      blobVersionedHashes = listOf("0x010657f37554c781402a22917dee2f75def7ab966d7b770905398eba3c444014".decodeHex())
     )
 
     val serializedBlob = Numeric.toHexString(blobByteArray)

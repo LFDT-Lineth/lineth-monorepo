@@ -18,7 +18,6 @@ import linea.web3j.transactionmanager.AsyncFriendlyTransactionManager
 import net.consensys.linea.async.toSafeFuture
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
-import org.apache.tuweni.bytes.Bytes
 import org.web3j.abi.FunctionEncoder
 import org.web3j.abi.datatypes.Function
 import org.web3j.crypto.Blob
@@ -54,7 +53,7 @@ class Web3JContractAsyncHelper(
   private fun getGasLimit(
     function: Function,
     blobs: List<Blob>? = null,
-    blobVersionedHashes: List<Bytes>? = null
+    blobVersionedHashes: List<ByteArray>? = null
   ): SafeFuture<BigInteger> {
     return if (useEthEstimateGas) {
       getEthEstimatedGas(
@@ -72,7 +71,7 @@ class Web3JContractAsyncHelper(
   private fun getEthEstimatedGas(
     encodedFunction: String,
     blobs: List<Blob>? = null,
-    blobVersionedHashes: List<Bytes>? = null
+    blobVersionedHashes: List<ByteArray>? = null
   ): SafeFuture<BigInteger?> {
     return if (blobs != null && blobVersionedHashes != null) {
       createEip4844FunctionCallTransaction(encodedFunction, blobs, blobVersionedHashes)
@@ -121,7 +120,7 @@ class Web3JContractAsyncHelper(
   private fun createEip4844FunctionCallTransaction(
     encodedFunction: String,
     blobs: List<Blob>,
-    blobVersionedHashes: List<Bytes>
+    blobVersionedHashes: List<ByteArray>
   ): Eip4844Transaction {
     return Eip4844Transaction.createFunctionCallTransaction(
       from = transactionManager.fromAddress,
@@ -142,7 +141,8 @@ class Web3JContractAsyncHelper(
     gasPriceCaps: GasPriceCaps? = null
   ): SafeFuture<Eip4844Transaction> {
     require(blobs.size in 1..6) { "Blobs size=${blobs.size} must be between 1 and 6." }
-    val blobVersionedHashes = blobs.map { BlobUtils.kzgToVersionedHash(BlobUtils.getCommitment(it)) }
+    val blobVersionedHashes = blobs
+      .map { BlobUtils.kzgToVersionedHash(BlobUtils.getCommitment(it)).toArray() }
     return getGasLimit(function, blobs, blobVersionedHashes)
       .thenApply { gasLimit ->
         val (_, maxFeePerBlobGas) = getEip4844GasFees()
@@ -304,7 +304,8 @@ class Web3JContractAsyncHelper(
     blobs: List<Blob>,
     gasPriceCaps: GasPriceCaps? = null
   ): SafeFuture<EthSendTransaction> {
-    val blobVersionedHashes = blobs.map { BlobUtils.kzgToVersionedHash(BlobUtils.getCommitment(it)) }
+    val blobVersionedHashes = blobs
+      .map { BlobUtils.kzgToVersionedHash(BlobUtils.getCommitment(it)).toArray() }
     return getGasLimit(function, blobs, blobVersionedHashes)
       .thenCompose { gasLimit ->
         val eip4844GasProvider = contractGasProvider as EIP4844GasProvider

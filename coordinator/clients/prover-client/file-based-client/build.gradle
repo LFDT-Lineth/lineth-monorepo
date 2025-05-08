@@ -24,6 +24,7 @@ dependencies {
   implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${libs.versions.jackson.get()}")
 
   testImplementation testFixtures(project(':coordinator:core'))
+  testImplementation testFixtures(project(':jvm-libs:linea:clients:interfaces'))
   testImplementation testFixtures(project(':jvm-libs:linea:core:domain-models'))
   testImplementation "io.vertx:vertx-junit5"
 }

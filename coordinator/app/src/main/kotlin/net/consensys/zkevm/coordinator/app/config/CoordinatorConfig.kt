@@ -95,12 +95,14 @@ data class RequestRetryConfigTomlFriendly(
 ) : RetryConfig {
   init {
     maxRetries?.also {
-      require(maxRetries > 0) { "maxRetries must be greater than zero. value=$maxRetries" }
+      require(maxRetries >= 1) { "maxRetries must be >=1. value=$maxRetries" }
     }
     timeout?.also {
-      require(timeout.toKotlinDuration() > 1.milliseconds) { "timeout must be >= 1ms. value=$timeout" }
+      require(timeout.toKotlinDuration() >= 1.milliseconds) { "timeout must be >= 1ms. value=$timeout" }
     }
-    require(backoffDelay.toMillis() > 0) { "backoffDelay must be >= 1ms. value=$backoffDelay" }
+    require(backoffDelay.toKotlinDuration() >= 1.milliseconds) {
+      "backoffDelay must be >= 1ms. value=$backoffDelay"
+    }
     require(failuresWarningThreshold >= 0) {
       "failuresWarningThreshold must be greater than or equal to 0. value=$failuresWarningThreshold"
     }

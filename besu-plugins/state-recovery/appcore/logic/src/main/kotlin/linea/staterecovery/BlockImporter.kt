@@ -42,17 +42,19 @@ class BlockImporterAndStateVerifierV1(
   private val stateManagerImportTimeoutPerBlock: Duration
 ) : BlockImporterAndStateVerifier {
   override fun importBlocks(blocks: List<BlockFromL1RecoveredData>): SafeFuture<ImportResult> {
+    val sortedBlocks = blocks.sortedBy { it.header.blockNumber }
+    val lastBlockNumber = sortedBlocks.last().header.blockNumber
     return elClient
-      .lineaEngineImportBlocksFromBlob(blocks)
+      .lineaEngineImportBlocksFromBlob(sortedBlocks)
       .thenCompose {
         getBlockStateRootHash(
-          blockNumber = blocks.last().header.blockNumber,
+          blockNumber = lastBlockNumber,
           timeout = stateManagerImportTimeoutPerBlock.times(blocks.size)
         )
       }
       .thenApply { stateRootHash ->
         ImportResult(
-          blockNumber = blocks.last().header.blockNumber,
+          blockNumber = lastBlockNumber,
           zkStateRootHash = stateRootHash
         )
       }

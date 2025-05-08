@@ -2,10 +2,10 @@ package linea.anchoring
 
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
-import linea.anchoring.fakes.FakeL2MessageService
 import linea.contract.events.L1RollingHashUpdatedEvent
 import linea.contract.events.L2RollingHashUpdatedEvent
 import linea.contract.events.MessageSentEvent
+import linea.contract.l2.FakeL2MessageService
 import linea.contrat.events.L1MessageSentV1EthLogs
 import linea.domain.BlockParameter
 import linea.domain.RetryConfig

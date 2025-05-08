@@ -1,11 +1,13 @@
 package linea.contract.l2
 
+import linea.contract.events.ContractInitializedEvent
 import linea.domain.BlockParameter
 import linea.kotlin.encodeHex
 import linea.kotlin.toBigInteger
 import linea.kotlin.toULong
 import linea.web3j.SmartContractErrors
 import linea.web3j.domain.toWeb3j
+import linea.web3j.ethapi.Web3jEthApiClient
 import linea.web3j.gas.EIP1559GasProvider
 import linea.web3j.requestAsync
 import linea.web3j.transactionmanager.AsyncFriendlyTransactionManager
@@ -65,6 +67,7 @@ class Web3JL2MessageServiceSmartContractClient(
   }
   private val fakeCredentials = Credentials.create(ByteArray(32).encodeHex())
   private val smartContractVersionCache = AtomicReference<L2MessageServiceSmartContractVersion>(null)
+  private val deploymentBlockNumberCache = AtomicReference<ULong>(0UL)
 
   private fun <T : Contract> contractClientAtBlock(blockParameter: BlockParameter, contract: Class<T>): T {
     @Suppress("UNCHECKED_CAST")
@@ -116,6 +119,26 @@ class Web3JL2MessageServiceSmartContractClient(
 
   override fun getAddress(): String = contractAddress
   override fun getVersion(): SafeFuture<L2MessageServiceSmartContractVersion> = getSmartContractVersion()
+  override fun getDeploymentBlock(): SafeFuture<ULong> {
+    if (deploymentBlockNumberCache.get() != 0UL) {
+      return SafeFuture.completedFuture(deploymentBlockNumberCache.get())
+    } else {
+      return Web3jEthApiClient(web3j)
+        .getLogs(
+          fromBlock = BlockParameter.Tag.EARLIEST,
+          toBlock = BlockParameter.Tag.LATEST,
+          address = contractAddress,
+          topics = listOf(ContractInitializedEvent.topic)
+        ).thenApply { logs ->
+          if (logs.isEmpty()) {
+            throw IllegalStateException("No contract initialized event found: contractAddress=$contractAddress")
+          }
+          val blockNumber = logs.minByOrNull { it.blockNumber }!!.blockNumber
+          deploymentBlockNumberCache.set(blockNumber)
+          blockNumber
+        }
+    }
+  }
 
   override fun getLastAnchoredL1MessageNumber(block: BlockParameter): SafeFuture<ULong> {
     return contractClientAtBlock(block, L2MessageService::class.java)

@@ -1,35 +1,50 @@
 package net.consensys.zkevm.ethereum.coordination.proofcreation
 
+import linea.contract.events.L1L2MessageHashesAddedToInboxEvent
+import linea.contract.events.L2RollingHashUpdatedEvent
+import linea.contract.events.MessageSentEvent
 import linea.domain.BlockParameter.Companion.toBlockParameter
-import linea.web3j.domain.toWeb3j
-import net.consensys.linea.async.toSafeFuture
+import linea.domain.EthLog
+import linea.ethapi.EthApiClient
 import net.consensys.zkevm.coordinator.clients.BatchExecutionProofRequestV1
 import net.consensys.zkevm.coordinator.clients.ExecutionProverClientV2
-import net.consensys.zkevm.coordinator.clients.L2MessageServiceLogsClient
 import net.consensys.zkevm.domain.Batch
 import net.consensys.zkevm.domain.BlocksConflation
 import net.consensys.zkevm.ethereum.coordination.conflation.BlocksTracesConflated
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
-import org.web3j.protocol.Web3j
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 class ZkProofCreationCoordinatorImpl(
   private val executionProverClient: ExecutionProverClientV2,
-  private val l2MessageServiceLogsClient: L2MessageServiceLogsClient,
-  private val l2Web3jClient: Web3j
+  private val messageServiceAddress: String,
+  private val l2EthApiClient: EthApiClient
 ) : ZkProofCreationCoordinator {
   private val log: Logger = LogManager.getLogger(this::class.java)
+  private val messageEventsTopics: List<String> = listOf(
+    MessageSentEvent.topic,
+    L1L2MessageHashesAddedToInboxEvent.topic,
+    L2RollingHashUpdatedEvent.topic
+  )
 
-  private fun getBlockStateRootHash(blockNumber: ULong): SafeFuture<String> {
-    return l2Web3jClient
-      .ethGetBlockByNumber(
-        blockNumber.toBlockParameter().toWeb3j(),
-        false
-      )
-      .sendAsync()
-      .thenApply { block -> block.block.stateRoot }
-      .toSafeFuture()
+  private fun getBlockStateRootHash(blockNumber: ULong): SafeFuture<ByteArray> {
+    return l2EthApiClient
+      .getBlockByNumberWithoutTransactionsData(blockNumber.toBlockParameter())
+      .thenApply { block -> block.stateRoot }
+  }
+
+  private fun getBridgeLogs(blockNumber: ULong): SafeFuture<List<EthLog>> {
+    return messageEventsTopics
+      .map { messageEventTopic ->
+        l2EthApiClient.getLogs(
+          fromBlock = blockNumber.toBlockParameter(),
+          toBlock = blockNumber.toBlockParameter(),
+          address = messageServiceAddress,
+          topics = listOf(messageEventTopic)
+        )
+      }.let {
+        SafeFuture.collectAll(it.stream()).thenApply { it.flatten() }
+      }
   }
 
   override fun createZkProof(
@@ -40,7 +55,7 @@ class ZkProofCreationCoordinatorImpl(
     val endBlockNumber = blocksConflation.blocks.last().number
     val blocksConflationInterval = blocksConflation.intervalString()
     val bridgeLogsListFutures = blocksConflation.blocks.map { block ->
-      l2MessageServiceLogsClient.getBridgeLogs(blockNumber = block.number.toLong())
+      getBridgeLogs(block.number)
     }
 
     return getBlockStateRootHash(blocksConflation.startBlockNumber - 1UL)
@@ -53,7 +68,7 @@ class ZkProofCreationCoordinatorImpl(
                 bridgeLogs = bridgeLogsList.flatten(),
                 tracesResponse = traces.tracesResponse,
                 type2StateData = traces.zkStateTraces,
-                keccakParentStateRootHash = previousKeccakStateRootHash.encodeToByteArray()
+                keccakParentStateRootHash = previousKeccakStateRootHash
               )
             ).thenApply {
               Batch(

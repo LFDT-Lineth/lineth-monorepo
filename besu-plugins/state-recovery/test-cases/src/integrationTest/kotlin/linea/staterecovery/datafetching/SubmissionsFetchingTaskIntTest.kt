@@ -93,8 +93,8 @@ class SubmissionsFetchingTaskIntTest {
       "net.consensys.linea.contract.Web3JContractAsyncHelper" to Level.WARN, // silence noisy gasPrice Caps logs
       "linea.staterecovery.BlobDecompressorToDomainV1" to Level.DEBUG,
       "linea.plugin.staterecovery.clients" to Level.DEBUG,
-      "test.clients.l1.web3j-default" to Level.DEBUG,
-      "test.clients.l1.web3j.receipt-poller" to Level.DEBUG,
+      "test.clients.l1.web3j-default" to Level.INFO,
+      "test.clients.l1.web3j.receipt-poller" to Level.INFO,
       "linea.staterecovery.datafetching" to Level.INFO
     )
     submitDataToL1ContactAndWaitExecution()

@@ -256,12 +256,7 @@ class EthLogsSearcherImpl(
       SafeFuture.completedFuture(0UL)
     } else {
       ethApiClient.getBlockByNumberWithoutTransactionsData(blockParameter)
-        .thenApply { block ->
-          if (block == null) {
-            throw IllegalStateException("block not found for blockParameter=$blockParameter")
-          }
-          block.number
-        }
+        .thenApply { block -> block.number }
     }
   }
 }

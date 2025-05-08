@@ -8,6 +8,7 @@ plugins {
 
 dependencies {
   implementation project(':coordinator:core')
+  implementation "org.web3j:core:${libs.versions.web3j.get()}"
   implementation project(':jvm-libs:generic:http-rest')
 
   implementation "io.vertx:vertx-core"

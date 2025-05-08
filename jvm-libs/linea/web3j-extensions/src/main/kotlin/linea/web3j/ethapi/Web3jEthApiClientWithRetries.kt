@@ -28,12 +28,14 @@ class Web3jEthApiClientWithRetries(
     )
   }
 
-  override fun getBlockByNumber(blockParameter: BlockParameter): SafeFuture<Block?> {
-    return retry { ethApiClient.getBlockByNumber(blockParameter) }
+  override fun findBlockByNumber(blockParameter: BlockParameter): SafeFuture<Block?> {
+    return retry { ethApiClient.findBlockByNumber(blockParameter) }
   }
 
-  override fun getBlockByNumberWithoutTransactionsData(blockParameter: BlockParameter): SafeFuture<BlockWithTxHashes?> {
-    return retry { ethApiClient.getBlockByNumberWithoutTransactionsData(blockParameter) }
+  override fun findBlockByNumberWithoutTransactionsData(
+    blockParameter: BlockParameter
+  ): SafeFuture<BlockWithTxHashes?> {
+    return retry { ethApiClient.findBlockByNumberWithoutTransactionsData(blockParameter) }
   }
 
   override fun getLogs(

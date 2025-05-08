@@ -9,7 +9,6 @@ import org.junit.jupiter.api.RepeatedTest
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.io.TempDir
-import tech.pegasys.teku.infrastructure.unsigned.UInt64
 import java.io.FileNotFoundException
 import java.nio.file.Files
 import java.nio.file.Path
@@ -43,25 +42,25 @@ class TracesFilesManagerTest {
     Files.createDirectories(tracesDir)
 
     val block1TracesFileName = TracesFiles.rawTracesFileNameSupplierV1(
-      UInt64.ONE.longValue().toULong(),
+      1UL,
       block1Hash,
       tracesVersion,
       tracesFileExtension
     )
     val block2TracesFile1Name = TracesFiles.rawTracesFileNameSupplierV1(
-      UInt64.valueOf(2).longValue().toULong(),
+      2UL,
       block2Hash1,
       tracesVersion,
       tracesFileExtension
     )
     val block2TracesFile2Name = TracesFiles.rawTracesFileNameSupplierV1(
-      UInt64.valueOf(2).longValue().toULong(),
+      2UL,
       block2Hash2,
       tracesVersion,
       tracesFileExtension
     )
     val block20TracesFileName = TracesFiles.rawTracesFileNameSupplierV1(
-      UInt64.valueOf(20).longValue().toULong(),
+      20UL,
       block2Hash1,
       tracesVersion,
       tracesFileExtension

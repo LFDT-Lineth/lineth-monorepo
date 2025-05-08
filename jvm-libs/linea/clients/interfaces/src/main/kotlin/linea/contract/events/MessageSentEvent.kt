@@ -21,8 +21,8 @@ import java.math.BigInteger
  *  address indexed _from,
  *  address indexed _to,
  *  uint256 _fee,
- *  uint256 _value, // messageNumber
- *  uint256 _nonce,
+ *  uint256 _value,
+ *  uint256 _nonce, // messageNumber
  *  bytes _calldata,
  *  bytes32 indexed _messageHash
  * );

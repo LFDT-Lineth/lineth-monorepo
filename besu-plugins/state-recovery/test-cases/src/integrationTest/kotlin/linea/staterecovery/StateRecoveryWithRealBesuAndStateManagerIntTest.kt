@@ -72,6 +72,7 @@ class StateRecoveryWithRealBesuAndStateManagerIntTest {
     configureLoggers(
       rootLevel = Level.INFO,
       log.name to Level.DEBUG,
+      "net.consensys.linea.contract.Web3JContractAsyncHelper" to Level.WARN, // silence noisy gasPrice Caps logs
       "test.clients.l1.state-manager" to Level.DEBUG,
       "test.clients.l1.web3j-default" to Level.DEBUG
     )

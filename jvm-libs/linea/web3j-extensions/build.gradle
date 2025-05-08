@@ -14,9 +14,7 @@ dependencies {
   api project(":jvm-libs:generic:extensions:kotlin")
   api project(':jvm-libs:generic:extensions:futures')
   api project(':jvm-libs:linea:besu-libs')
-  implementation "tech.pegasys.teku.internal:bytes:${libs.versions.teku.get()}"
-  implementation "tech.pegasys.teku.internal:jackson:${libs.versions.teku.get()}"
-  implementation "tech.pegasys.teku.internal:unsigned:${libs.versions.teku.get()}"
+  api project(':jvm-libs:generic:serialization:jackson')
 
   testImplementation(testFixtures(project(":jvm-libs:generic:json-rpc")))
   testImplementation "org.apache.logging.log4j:log4j-slf4j2-impl:${libs.versions.log4j.get()}"

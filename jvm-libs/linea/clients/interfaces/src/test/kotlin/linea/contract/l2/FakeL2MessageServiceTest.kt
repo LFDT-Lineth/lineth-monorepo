@@ -1,4 +1,4 @@
-package linea.anchoring.fakes
+package linea.contract.l2
 
 import linea.domain.BlockParameter
 import linea.kotlin.decodeHex

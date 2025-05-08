@@ -10,6 +10,7 @@ enum class L2MessageServiceSmartContractVersion : Comparable<L2MessageServiceSma
 
 interface L2MessageServiceSmartContractClientReadOnly : ContractVersionProvider<L2MessageServiceSmartContractVersion> {
   fun getAddress(): String
+  fun getDeploymentBlock(): SafeFuture<ULong>
   fun getLastAnchoredL1MessageNumber(block: BlockParameter): SafeFuture<ULong>
   fun getRollingHashByL1MessageNumber(
     block: BlockParameter,

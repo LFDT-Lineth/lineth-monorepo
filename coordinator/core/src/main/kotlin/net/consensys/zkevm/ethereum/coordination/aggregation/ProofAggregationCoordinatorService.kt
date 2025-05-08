@@ -2,13 +2,14 @@ package net.consensys.zkevm.ethereum.coordination.aggregation
 
 import io.vertx.core.Vertx
 import kotlinx.datetime.Clock
+import linea.contract.l2.L2MessageServiceSmartContractClientReadOnly
 import linea.domain.BlockIntervals
 import linea.domain.toBlockIntervalsString
+import linea.ethapi.EthApiClient
 import net.consensys.linea.metrics.LineaMetricsCategory
 import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.zkevm.LongRunningService
 import net.consensys.zkevm.PeriodicPollingService
-import net.consensys.zkevm.coordinator.clients.L2MessageServiceClient
 import net.consensys.zkevm.coordinator.clients.ProofAggregationProverClientV2
 import net.consensys.zkevm.domain.Aggregation
 import net.consensys.zkevm.domain.BlobAndBatchCounters
@@ -19,7 +20,6 @@ import net.consensys.zkevm.ethereum.coordination.blockcreation.SafeBlockProvider
 import net.consensys.zkevm.persistence.AggregationsRepository
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
-import org.web3j.protocol.Web3j
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.function.Consumer
@@ -230,8 +230,8 @@ class ProofAggregationCoordinatorService(
       aggregationsRepository: AggregationsRepository,
       consecutiveProvenBlobsProvider: ConsecutiveProvenBlobsProvider,
       proofAggregationClient: ProofAggregationProverClientV2,
-      l2web3jClient: Web3j,
-      l2MessageServiceClient: L2MessageServiceClient,
+      l2EthApiClient: EthApiClient,
+      l2MessageService: L2MessageServiceSmartContractClientReadOnly,
       aggregationDeadlineDelay: Duration,
       targetEndBlockNumbers: List<ULong>,
       metricsFacade: MetricsFacade,
@@ -283,9 +283,8 @@ class ProofAggregationCoordinatorService(
         consecutiveProvenBlobsProvider = consecutiveProvenBlobsProvider,
         proofAggregationClient = proofAggregationClient,
         aggregationL2StateProvider = AggregationL2StateProviderImpl(
-          vertx = vertx,
-          l2web3jClient = l2web3jClient,
-          l2MessageServiceClient = l2MessageServiceClient
+          ethApiClient = l2EthApiClient,
+          messageService = l2MessageService
         ),
         provenAggregationEndBlockNumberConsumer = provenAggregationEndBlockNumberConsumer
       )

@@ -12,29 +12,14 @@ dependencies {
   api project(':jvm-libs:linea:clients:interfaces')
   api project(':jvm-libs:linea:clients:linea-state-manager')
   api project(':jvm-libs:linea:core:traces')
-  api project(':jvm-libs:linea:web3j-extensions')
   api project(':jvm-libs:generic:errors')
   api project(':jvm-libs:generic:extensions:kotlin')
   api project(':jvm-libs:generic:extensions:futures')
-  api "tech.pegasys.teku.internal:unsigned:${libs.versions.teku.get()}"
   api "org.jetbrains.kotlinx:kotlinx-datetime:${libs.versions.kotlinxDatetime.get()}"
-  implementation "io.vertx:vertx-core"
-  // jackson shall never be used in the core module
-  // however, it is used already :( but was as transitive through Teku Execution Client
-  // necessary atm because of Type2StateManagerClient interface
-  implementation "com.fasterxml.jackson.core:jackson-databind:${libs.versions.jackson.get()}"
-  // jackson shall never be used in the core module
-  // TODO: refactor dependencies/interfaces that use it
-  implementation("org.web3j:core:${libs.versions.web3j.get()}") {
-    exclude group: 'org.slf4j', module: 'slf4j-nop'
-  }
 
-  testFixturesApi "org.jetbrains.kotlinx:kotlinx-datetime:${libs.versions.kotlinxDatetime.get()}"
-  testFixturesApi testFixtures(project(':jvm-libs:linea:core:domain-models'))
-  testFixturesImplementation("org.web3j:core:${libs.versions.web3j.get()}") {
-    exclude group: 'org.slf4j', module: 'slf4j-nop'
-  }
   testFixturesImplementation project(':jvm-libs:linea:metrics:micrometer')
+  testImplementation(project(':jvm-libs:generic:logging'))
+  testImplementation(testFixtures(project(':jvm-libs:linea:clients:interfaces')))
   testImplementation(testFixtures(project(':jvm-libs:linea:core:traces')))
   testImplementation(testFixtures(project(':jvm-libs:generic:extensions:kotlin')))
   testImplementation("io.vertx:vertx-junit5")

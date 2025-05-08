@@ -1,5 +1,6 @@
 package linea.web3j.domain
 
+import build.linea.s11n.jackson.ByteArrayToHexSerializer
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.databind.JsonSerializer
@@ -10,7 +11,6 @@ import org.web3j.crypto.Blob
 import org.web3j.crypto.BlobUtils
 import org.web3j.protocol.core.methods.request.Transaction
 import org.web3j.utils.Numeric
-import tech.pegasys.teku.infrastructure.jackson.deserializers.bytes.BytesSerializer
 import java.math.BigInteger
 import java.util.*
 
@@ -31,14 +31,18 @@ class Eip4844Transaction(
   val blobs: List<Blob>,
   @Suppress("Unused")
   @JsonProperty("blobVersionedHashes")
-  @JsonSerialize(contentUsing = BytesSerializer::class)
-  val blobVersionedHashes: List<Bytes> = computeVersionedHashesFromBlobs(blobs)
+  @JsonSerialize(contentUsing = ByteArrayToHexSerializer::class)
+  val blobVersionedHashes: List<ByteArray> = computeVersionedHashesFromBlobs(blobs)
 ) : Transaction(from, nonce, gasPrice, gasLimit, to, value, data, chainId, maxPriorityFeePerGas, maxFeePerGas) {
   @Suppress("Unused")
   val maxFeePerBlobGas: String? = _maxFeePerBlobGas?.let { Numeric.encodeQuantity(it) }
+
   companion object {
-    fun computeVersionedHashesFromBlobs(blobs: List<Blob>): List<Bytes> {
-      return blobs.map(BlobUtils::getCommitment).map(BlobUtils::kzgToVersionedHash)
+    fun computeVersionedHashesFromBlobs(blobs: List<Blob>): List<ByteArray> {
+      return blobs
+        .map(BlobUtils::getCommitment)
+        .map(BlobUtils::kzgToVersionedHash)
+        .map(Bytes::toArray)
     }
 
     fun createFunctionCallTransaction(
@@ -48,7 +52,7 @@ class Eip4844Transaction(
       blobs: List<Blob>,
       maxFeePerBlobGas: BigInteger? = null,
       gasLimit: BigInteger?,
-      blobVersionedHashes: List<Bytes> = computeVersionedHashesFromBlobs(blobs),
+      blobVersionedHashes: List<ByteArray> = computeVersionedHashesFromBlobs(blobs),
       maxPriorityFeePerGas: BigInteger? = null,
       maxFeePerGas: BigInteger? = null
     ): Eip4844Transaction {

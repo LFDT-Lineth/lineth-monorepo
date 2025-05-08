@@ -23,13 +23,15 @@ class Web3jEthApiClient(
   val web3jClient: Web3j
 ) : EthApiClient {
 
-  override fun getBlockByNumber(blockParameter: BlockParameter): SafeFuture<Block?> {
+  override fun findBlockByNumber(blockParameter: BlockParameter): SafeFuture<Block?> {
     return web3jClient
       .ethGetBlockByNumber(blockParameter.toWeb3j(), true)
       .requestAsync { resp -> resp.block?.toDomain() }
   }
 
-  override fun getBlockByNumberWithoutTransactionsData(blockParameter: BlockParameter): SafeFuture<BlockWithTxHashes?> {
+  override fun findBlockByNumberWithoutTransactionsData(
+    blockParameter: BlockParameter
+  ): SafeFuture<BlockWithTxHashes?> {
     return web3jClient
       .ethGetBlockByNumber(blockParameter.toWeb3j(), false)
       .requestAsync { resp -> resp.block?.let(::mapToDomainWithTxHashes) }

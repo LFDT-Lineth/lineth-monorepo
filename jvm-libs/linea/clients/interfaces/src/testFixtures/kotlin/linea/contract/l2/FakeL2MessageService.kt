@@ -1,7 +1,5 @@
-package linea.anchoring.fakes
+package linea.contract.l2
 
-import linea.contract.l2.L2MessageServiceSmartContractClient
-import linea.contract.l2.L2MessageServiceSmartContractVersion
 import linea.domain.BlockParameter
 import linea.kotlin.encodeHex
 import tech.pegasys.teku.infrastructure.async.SafeFuture
@@ -9,6 +7,7 @@ import kotlin.random.Random
 
 class FakeL2MessageService(
   val contractAddress: String = Random.nextBytes(20).encodeHex(),
+  val contractDeployBlock: ULong = 0uL,
   var contractVersion: L2MessageServiceSmartContractVersion = L2MessageServiceSmartContractVersion.V1
 ) : L2MessageServiceSmartContractClient {
   private val anchoredMessageHashes: MutableList<ByteArray> = mutableListOf()
@@ -21,6 +20,7 @@ class FakeL2MessageService(
   var forceAnchoringFailures: Boolean = false
 
   override fun getAddress(): String = contractAddress
+  override fun getDeploymentBlock(): SafeFuture<ULong> = SafeFuture.completedFuture(contractDeployBlock)
 
   @Synchronized
   override fun getVersion(): SafeFuture<L2MessageServiceSmartContractVersion> =
