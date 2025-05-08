@@ -22,6 +22,7 @@ data class PluginConfig(
   val l1RequestRetryConfig: RetryConfig,
   val blobscanEndpoint: URI,
   val blobScanRequestRetryConfig: RetryConfig,
+  val blobscanRequestRatelimitBackoffDelay: kotlin.time.Duration?,
   val shomeiEndpoint: URI,
   val overridingRecoveryStartBlockNumber: ULong? = null,
   val debugForceSyncStopBlockNumber: ULong? = null
@@ -178,6 +179,13 @@ class PluginCliOptions {
   var blobscanRequestRetryBackoffDelay: java.time.Duration = java.time.Duration.ofSeconds(1)
 
   @CommandLine.Option(
+    names = ["--$cliOptionsPrefix-blobscan-ratelimit-backoff-delay"],
+    description = ["blobscan api retry ratelimit backoff delay, default is disabled"],
+    required = false
+  )
+  var blobscanRequestRatelimitBackoffDelay: java.time.Duration? = null
+
+  @CommandLine.Option(
     names = ["--$cliOptionsPrefix-blobscan-retry-timeout"],
     description = [
       "Blobscan api stop retrying as soon as timeout has elapsed or limit is reached.",
@@ -252,6 +260,7 @@ class PluginCliOptions {
         timeout = blobscanRequestRetryTimeout?.toKotlinDuration(),
         maxRetries = blobscanRequestRetryLimit?.toUInt()
       ),
+      blobscanRequestRatelimitBackoffDelay = blobscanRequestRatelimitBackoffDelay?.toKotlinDuration(),
       shomeiEndpoint = shomeiEndpoint,
       overridingRecoveryStartBlockNumber = overridingRecoveryStartBlockNumber?.toULong(),
       debugForceSyncStopBlockNumber = debugForceSyncStopBlockNumber?.toULong()

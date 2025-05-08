@@ -80,7 +80,7 @@ internal class SequentialAsyncActionRetryer<T>(
       require(maxRetries > 0) { "maxRetries must be greater than zero. value=$maxRetries" }
     }
     timeout?.also {
-      require(timeout > 0.milliseconds) { "timeout must be >= 1ms. value=$timeout" }
+      require(timeout >= 1.milliseconds) { "timeout must be >= 1ms. value=$timeout" }
     }
     initialDelay?.also {
       require(initialDelay >= 1.milliseconds) { "initialDelay must be >= 1ms. value=$initialDelay" }

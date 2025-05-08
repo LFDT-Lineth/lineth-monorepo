@@ -103,6 +103,7 @@ open class LineaStateRecoveryPlugin : BesuPlugin {
         l1RequestRetryConfig = config.l1RequestRetryConfig,
         blobScanEndpoint = config.blobscanEndpoint,
         blobScanRequestRetryConfig = config.blobScanRequestRetryConfig,
+        blobscanRequestRatelimitBackoffDelay = config.blobscanRequestRatelimitBackoffDelay,
         blockHeaderStaticFields = blockHeaderStaticFields,
         appConfig = StateRecoveryApp.Config(
           smartContractAddress = config.l1SmartContractAddress.toString(),

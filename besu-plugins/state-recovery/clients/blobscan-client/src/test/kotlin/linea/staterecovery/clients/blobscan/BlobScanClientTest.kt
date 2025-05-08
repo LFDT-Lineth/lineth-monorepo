@@ -7,9 +7,9 @@ import com.github.tomakehurst.wiremock.http.RequestListener
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
+import linea.domain.RetryConfig
 import linea.kotlin.encodeHex
 import net.consensys.linea.async.get
-import net.consensys.linea.jsonrpc.client.RequestRetryConfig
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.AfterEach
@@ -52,7 +52,7 @@ class BlobScanClientTest {
     blobScanClient = BlobScanClient.create(
       vertx = vertx,
       endpoint = URI(wiremock.baseUrl()),
-      requestRetryConfig = RequestRetryConfig(
+      requestRetryConfig = RetryConfig(
         backoffDelay = 10.milliseconds,
         maxRetries = 5u,
         timeout = 5.seconds

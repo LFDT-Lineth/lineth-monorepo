@@ -16,30 +16,34 @@ import org.apache.logging.log4j.LogManager
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.Awaitility.await
 import java.net.URI
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toJavaDuration
 
-class TestRunner(
+private val infuraAppKey = System.getenv("INFURA_PROJECT_ID")
+  .also {
+    require(it.isNotEmpty()) { "Please define INFURA_APP_KEY environment variable" }
+  }
+
+open class TestRunner(
   private val vertx: Vertx = VertxFactory.createVertx(),
+  private val smartContractAddress: String,
   private val l2RecoveryStartBlockNumber: ULong,
+  private val l1RpcUrl: String,
+  private val blobScanUrl: String,
+  private val blobScanRatelimitBackoffDelay: Duration? = 1.seconds,
   private val debugForceSyncStopBlockNumber: ULong = ULong.MAX_VALUE
 ) {
   private val log = LogManager.getLogger("test.case.TestRunner")
-  private val infuraAppKey = System.getenv("INFURA_PROJECT_ID")
-    .also {
-      require(it.isNotEmpty()) { "Please define INFURA_APP_KEY environment variable" }
-    }
-  private val l1RpcUrl = "https://sepolia.infura.io/v3/$infuraAppKey"
-  private val blobScanUrl = "https://api.sepolia.blobscan.com/"
   val appConfig = StateRecoveryApp.Config(
     // l1EarliestSearchBlock = 7236630UL.toBlockParameter(),
     l1EarliestSearchBlock = BlockParameter.Tag.EARLIEST,
     l1LatestSearchBlock = BlockParameter.Tag.LATEST,
     l1PollingInterval = 5.seconds,
     executionClientPollingInterval = 1.seconds,
-    smartContractAddress = StateRecoveryApp.Config.lineaSepolia.smartContractAddress,
+    smartContractAddress = smartContractAddress,
     l1getLogsChunkSize = 10_000u,
     debugForceSyncStopBlockNumber = debugForceSyncStopBlockNumber
   )
@@ -50,7 +54,8 @@ class TestRunner(
     l1SuccessBackoffDelay = 1.milliseconds,
     l1RequestRetryConfig = RetryConfig(backoffDelay = 1.seconds, maxRetries = 1u),
     blobScanEndpoint = URI(blobScanUrl),
-    blobScanRequestRetryConfig = RetryConfig(backoffDelay = 10.milliseconds, timeout = 5.seconds),
+    blobScanRequestRetryConfig = RetryConfig(backoffDelay = 10.milliseconds, timeout = 2.minutes),
+    blobscanRequestRateLimitBackoffDelay = blobScanRatelimitBackoffDelay,
     stateManagerClientEndpoint = URI("http://it-does-not-matter:5432")
   )
   private val fakeExecutionLayerClient = FakeExecutionLayerClient(
@@ -79,8 +84,9 @@ class TestRunner(
     configureLoggers(
       rootLevel = Level.INFO,
       "linea.staterecovery" to Level.TRACE,
-      "linea.plugin.staterecovery" to Level.DEBUG,
-      "linea.plugin.staterecovery.clients.l1.logs-searcher" to Level.TRACE
+      "linea.plugin.staterecovery" to Level.INFO,
+      "linea.plugin.staterecovery.clients.l1.blob-scan" to Level.TRACE,
+      "linea.plugin.staterecovery.clients.l1.logs-searcher" to Level.INFO
     )
   }
 
@@ -102,10 +108,18 @@ class TestRunner(
 }
 
 fun main() {
-  TestRunner(
-    l2RecoveryStartBlockNumber = 7313000UL,
-    debugForceSyncStopBlockNumber = 7313050UL
-  ).run(
-    timeout = 10.minutes
+  val mainnetTestRunner = TestRunner(
+    smartContractAddress = StateRecoveryApp.Config.lineaMainnet.smartContractAddress,
+    l2RecoveryStartBlockNumber = 18_504_528UL,
+    l1RpcUrl = "https://mainnet.infura.io/v3/$infuraAppKey",
+    blobScanUrl = "https://api.blobscan.com/",
+    blobScanRatelimitBackoffDelay = 1.seconds
   )
+  // val sepoliaTestRunner = TestRunner(
+  //   l1RpcUrl = "https://sepolia.infura.io/v3/$infuraAppKey",
+  //   blobScanUrl = "https://api.sepolia.blobscan.com/",
+  //   l2RecoveryStartBlockNumber = 7313000UL,
+  // )
+
+  mainnetTestRunner.run(timeout = 10.minutes)
 }
