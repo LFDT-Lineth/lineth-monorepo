@@ -40,7 +40,7 @@ import { config } from "dotenv";
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
 import { sanitizePrivKey } from "./cli";
-import { ContractTransactionReceipt, Wallet, JsonRpcProvider } from "ethers";
+import { Wallet, JsonRpcProvider, ContractTransactionResponse } from "ethers";
 import { LineaRollup, LineaRollup__factory } from "@consensys/linea-sdk";
 import { SendMessageArgs } from "./types";
 import { encodeSendMessage } from "./helpers";
@@ -134,7 +134,7 @@ const sendMessage = async (
   messageNonce: bigint,
   senderNonce: number,
   logString: string,
-): Promise<ContractTransactionReceipt | null> => {
+): Promise<ContractTransactionResponse> => {
   const lineaRollup = LineaRollup__factory.connect(L1_MESSAGE_SERVICE_ADDRESS[deploymentEnv], sender) as LineaRollup;
   const tx = await lineaRollup.sendMessage(args.to, args.fee, args.calldata, { value: args.fee, nonce: senderNonce });
   const messageHash = encodeSendMessage(
@@ -147,21 +147,22 @@ const sendMessage = async (
   );
 
   console.log(`Sent message with messageHash=${messageHash}. ${logString}`);
-  return await tx.wait();
+  return tx;
 };
 
 const sendMessages = async (deploymentEnv: DeploymentEnv, sender: Wallet, testScenarios: TestScenario[]) => {
   const nextSenderNonce = await sender.getNonce();
   const nextMessageCounter = await getMessageCounter(deploymentEnv, sender);
 
-  const sendMessagePromises: Promise<ContractTransactionReceipt | null>[] = testScenarios.map((s, i) => {
+  // If we send concurrently, we have high risk of sending nonces out of order
+  for (let i = 0; i < testScenarios.length; i++) {
+    const s = testScenarios[i];
     const functionArgs: SendMessageArgs = {
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       to: sender.address,
       fee: s.fee,
       calldata: s.calldata,
     };
-    return sendMessage(
+    await sendMessage(
       deploymentEnv,
       sender,
       functionArgs,
@@ -169,8 +170,7 @@ const sendMessages = async (deploymentEnv: DeploymentEnv, sender: Wallet, testSc
       nextSenderNonce + i,
       s.logString,
     );
-  });
-  await Promise.all(sendMessagePromises);
+  }
 };
 
 const getMessageCounter = async (deploymentEnv: DeploymentEnv, signer: Wallet) => {
