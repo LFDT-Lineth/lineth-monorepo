@@ -15,7 +15,7 @@ requests_root_dir = "/home/ubuntu/testing-sepolia-0.8.0-rc8.1/prover-execution"
 [blob_decompression]
 prover_mode = "full"
 requests_root_dir = "/home/ubuntu/testing-sepolia-0.8.0-rc8.1/prover-compression"
-dict_paths = ["lib/compressor/compressor_dict.bin"]
+dict_paths = ["lib/compressor/compressor_dict.bin", "lib/compressor/dict/25-04-21.bin"]
 
 [aggregation]
 prover_mode = "full"

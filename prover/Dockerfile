@@ -35,8 +35,9 @@ RUN mkdir -p /opt/linea/prover/lib/compressor /app/logs
 # Import the LICENSE
 COPY ./LICENSE /opt/linea/prover/
 
-# Copy the blob compressor dictionary
+# Copy the blob compressor dictionaries
 COPY --from=go-builder /usr/src/prover/lib/compressor/compressor_dict.bin /opt/linea/prover/lib/compressor/
+COPY --from=go-builder /usr/src/prover/lib/compressor/dict/25-04-21.bin /opt/linea/prover/lib/compressor/dict/
 
 # Import the prover
 COPY --from=go-builder /usr/src/prover/bin/prover /opt/linea/prover/prover
