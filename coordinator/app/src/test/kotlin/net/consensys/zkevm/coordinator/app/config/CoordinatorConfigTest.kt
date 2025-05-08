@@ -524,7 +524,7 @@ class CoordinatorConfigTest {
       configFiles = listOf(pathToResource("configs/coordinator.config.toml"))
     )
 
-    assertThat(configsResult.getError()).contains("'extraField': Missing from config")
+    assertThat(configsResult.getError()).contains("'extraField': Missing String from config")
   }
 
   @Test

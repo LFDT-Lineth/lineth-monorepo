@@ -16,5 +16,5 @@ dependencies {
   implementation "io.vertx:vertx-lang-kotlin"
 
   testImplementation "io.vertx:vertx-junit5"
-  testImplementation "com.github.tomakehurst:wiremock-jre8:${libs.versions.wiremock.get()}"
+  testImplementation "org.wiremock:wiremock:${libs.versions.wiremock.get()}"
 }

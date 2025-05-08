@@ -3,10 +3,8 @@ import org.gradle.api.tasks.testing.logging.TestLogEvent
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 import java.time.Duration
-import java.time.Instant
 
 plugins {
-  id 'net.consensys.zkevm.linea-contracts-helper'
   alias(libs.plugins.spotless)
   alias(libs.plugins.docker)
 }

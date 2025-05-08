@@ -27,7 +27,7 @@ class FileMonitorTest {
 
   @AfterEach
   fun tearDown(vertx: Vertx) {
-    vertx.fileSystem().deleteRecursiveBlocking(tmpDirectory.toString(), true)
+    vertx.fileSystem().deleteRecursiveBlocking(tmpDirectory.toString())
     val vertxStopFuture = vertx.close()
     vertxStopFuture.get()
   }
