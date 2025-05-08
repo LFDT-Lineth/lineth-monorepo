@@ -57,15 +57,10 @@ class VertxHttpRequestRateLimiterAndRetryTest {
     assertThat(baseReqSender.requestsTimesDiffs.size).isGreaterThanOrEqualTo(10)
 
     // lenient assertion to avoid flakiness in the tests due to clock drift/precision
-    val lenientRateLimitBackoffDelay = rateLimitBackoffDelay - 1.milliseconds
     baseReqSender.requestsTimesDiffs
       .drop(1)
-      .forEachIndexed { index, delay ->
-        assertThat(delay)
-          .isGreaterThanOrEqualTo(lenientRateLimitBackoffDelay)
-          .withFailMessage {
-            "request $index time=$delay must be greater than rateLimitBackoffDelay=$rateLimitBackoffDelay"
-          }
+      .forEach { delay ->
+        assertThat(delay).isGreaterThanOrEqualTo(rateLimitBackoffDelay)
       }
   }
 }

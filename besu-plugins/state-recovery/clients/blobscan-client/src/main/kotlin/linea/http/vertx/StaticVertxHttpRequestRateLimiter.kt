@@ -64,10 +64,6 @@ class StaticVertxHttpRequestRateLimiter(
   }
 
   private fun fireRequest(requestAndFutureResponse: RequestAndFutureResponse) {
-    synchronized(this) {
-      lastRequestFiredTime = monotonicClock.markNow()
-    }
-
     requestSender.makeRequest(requestAndFutureResponse.request)
       .handle { response, error ->
         if (error != null) {
@@ -76,6 +72,8 @@ class StaticVertxHttpRequestRateLimiter(
           requestAndFutureResponse.future.complete(response)
         }
       }
+
+    lastRequestFiredTime = monotonicClock.markNow()
   }
 
   @Synchronized
@@ -97,9 +95,8 @@ class StaticVertxHttpRequestRateLimiter(
         rateLimitBackoffDelay - lastRequestFiredTime.elapsedNow(),
         requestLogFormatter.toLogString(request)
       )
-      synchronized(this) {
-        requestQueue.add(req)
-      }
+
+      requestQueue.add(req)
     }
 
     return req.future
