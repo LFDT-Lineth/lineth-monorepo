@@ -34,6 +34,8 @@ jobs:
       versions_env: ${{ steps.filter.outputs.versions-env }}
       linea_configs: ${{ steps.filter.outputs.linea-configs }}
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
       - name: Filter commit changes
         uses: dorny/paths-filter@v3
         id: filter
