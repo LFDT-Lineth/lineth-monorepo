@@ -117,7 +117,7 @@ jobs:
         uses: ./.github/actions/linea-besu-package/assemble
         with:
           release_tag_prefix: ${{ inputs.release_tag_prefix }}
-          compile_release_notes: ${{ inputs.push_image }}
+          compile_release_notes: true
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3

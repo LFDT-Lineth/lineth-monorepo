@@ -61,5 +61,5 @@ jobs:
       release_tag_prefix: ${{ inputs.release_tag_prefix }}
       run_test: true
       run_e2e_test: ${{ github.event_name == 'workflow_dispatch' || needs.filter-commit-changes.outputs.versions_env == 'true' }}
-      push_image: ${{ github.event_name == 'workflow_dispatch' || needs.filter-commit-changes.outputs.versions_env == 'true' || needs.filter-commit-changes.outputs.linea_configs == 'true' }}
+      push_image: ${{ github.event_name == 'workflow_dispatch' && (needs.filter-commit-changes.outputs.versions_env == 'true' || needs.filter-commit-changes.outputs.linea_configs == 'true') }}
     secrets: inherit
