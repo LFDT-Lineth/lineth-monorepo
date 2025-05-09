@@ -5,8 +5,8 @@ import linea.domain.BlockHeaderSummary
 import linea.kotlin.ByteArrayExt
 import net.consensys.FakeFixedClock
 import net.consensys.linea.metrics.MetricsFacade
-import net.consensys.linea.traces.TracesCountersV1
-import net.consensys.linea.traces.fakeTracesCountersV1
+import net.consensys.linea.traces.TracesCountersV2
+import net.consensys.linea.traces.fakeTracesCountersV2
 import net.consensys.zkevm.domain.BlockCounters
 import net.consensys.zkevm.domain.ConflationCalculationResult
 import net.consensys.zkevm.domain.ConflationTrigger
@@ -68,15 +68,15 @@ class GlobalBlockConflationCalculatorIntTest {
     }
 
     calculatorByTraces = ConflationCalculatorByExecutionTraces(
-      tracesCountersLimit = fakeTracesCountersV1(100u),
-      emptyTracesCounters = TracesCountersV1.EMPTY_TRACES_COUNT,
+      tracesCountersLimit = fakeTracesCountersV2(100u),
+      emptyTracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT,
       metricsFacade = mock<MetricsFacade>(defaultAnswer = Mockito.RETURNS_DEEP_STUBS)
     )
     globalCalculator = GlobalBlockConflationCalculator(
       lastBlockNumber = lastBlockNumber,
       syncCalculators = listOf(calculatorByTraces, calculatorByData),
       deferredTriggerConflationCalculators = listOf(calculatorByDealine),
-      emptyTracesCounters = TracesCountersV1.EMPTY_TRACES_COUNT
+      emptyTracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT
     )
     globalCalculator.onConflatedBatch { trigger ->
       conflations.add(trigger)
@@ -90,13 +90,13 @@ class GlobalBlockConflationCalculatorIntTest {
     val block1Counters = BlockCounters(
       blockNumber = 1uL,
       blockTimestamp = fakeClock.now(),
-      tracesCounters = fakeTracesCountersV1(101u),
+      tracesCounters = fakeTracesCountersV2(101u),
       blockRLPEncoded = ByteArray(10)
     )
     val block2Counters = BlockCounters(
       blockNumber = 2uL,
       blockTimestamp = fakeClock.now(),
-      tracesCounters = fakeTracesCountersV1(10u),
+      tracesCounters = fakeTracesCountersV2(10u),
       blockRLPEncoded = ByteArray(10)
     )
     globalCalculator.newBlock(block1Counters)
@@ -119,13 +119,13 @@ class GlobalBlockConflationCalculatorIntTest {
     val block1Counters = BlockCounters(
       blockNumber = 1uL,
       blockTimestamp = fakeClock.now(),
-      tracesCounters = fakeTracesCountersV1(60u),
+      tracesCounters = fakeTracesCountersV2(60u),
       blockRLPEncoded = ByteArray(10)
     )
     val block2Counters = BlockCounters(
       blockNumber = 2uL,
       blockTimestamp = fakeClock.now(),
-      tracesCounters = fakeTracesCountersV1(50u),
+      tracesCounters = fakeTracesCountersV2(50u),
       blockRLPEncoded = ByteArray(20)
     )
     globalCalculator.newBlock(block1Counters)
@@ -148,19 +148,19 @@ class GlobalBlockConflationCalculatorIntTest {
     val block1Counters = BlockCounters(
       blockNumber = 1uL,
       blockTimestamp = fakeClock.now(),
-      tracesCounters = fakeTracesCountersV1(50u),
+      tracesCounters = fakeTracesCountersV2(50u),
       blockRLPEncoded = ByteArray(10)
     )
     val block2Counters = BlockCounters(
       blockNumber = 2uL,
       blockTimestamp = fakeClock.now(),
-      tracesCounters = fakeTracesCountersV1(50u),
+      tracesCounters = fakeTracesCountersV2(50u),
       blockRLPEncoded = ByteArray(20)
     )
     val block3Counters = BlockCounters(
       blockNumber = 3uL,
       blockTimestamp = fakeClock.now(),
-      tracesCounters = fakeTracesCountersV1(10u),
+      tracesCounters = fakeTracesCountersV2(10u),
       blockRLPEncoded = ByteArray(20)
     )
     globalCalculator.newBlock(block1Counters)
@@ -184,19 +184,19 @@ class GlobalBlockConflationCalculatorIntTest {
     val block1Counters = BlockCounters(
       blockNumber = 1uL,
       blockTimestamp = fakeClock.now(),
-      tracesCounters = fakeTracesCountersV1(10u),
+      tracesCounters = fakeTracesCountersV2(10u),
       blockRLPEncoded = ByteArray(500)
     )
     val block2Counters = BlockCounters(
       blockNumber = 2uL,
       blockTimestamp = fakeClock.now(),
-      tracesCounters = fakeTracesCountersV1(20u),
+      tracesCounters = fakeTracesCountersV2(20u),
       blockRLPEncoded = ByteArray(480)
     )
     val block3Counters = BlockCounters(
       blockNumber = 3uL,
       blockTimestamp = fakeClock.now(),
-      tracesCounters = fakeTracesCountersV1(20u),
+      tracesCounters = fakeTracesCountersV2(20u),
       blockRLPEncoded = ByteArray(21)
     )
     globalCalculator.newBlock(block1Counters)
@@ -220,46 +220,46 @@ class GlobalBlockConflationCalculatorIntTest {
     val block1Counters = BlockCounters(
       blockNumber = 1uL,
       blockTimestamp = fakeClock.now(),
-      tracesCounters = fakeTracesCountersV1(101u),
+      tracesCounters = fakeTracesCountersV2(101u),
       blockRLPEncoded = ByteArray(100)
     )
     // block with data in size limit
     val block2Counters = BlockCounters(
       blockNumber = 2uL,
       blockTimestamp = fakeClock.now(),
-      tracesCounters = fakeTracesCountersV1(20u),
+      tracesCounters = fakeTracesCountersV2(20u),
       blockRLPEncoded = ByteArray(1_000)
     )
 
     val block3Counters = BlockCounters(
       blockNumber = 3uL,
       blockTimestamp = fakeClock.now(),
-      tracesCounters = fakeTracesCountersV1(30u),
+      tracesCounters = fakeTracesCountersV2(30u),
       blockRLPEncoded = ByteArray(300)
     )
     val block4Counters = BlockCounters(
       blockNumber = 4uL,
       blockTimestamp = fakeClock.now(),
-      tracesCounters = fakeTracesCountersV1(70u),
+      tracesCounters = fakeTracesCountersV2(70u),
       blockRLPEncoded = ByteArray(400)
     )
     // will trigger traces overflow
     val block5Counters = BlockCounters(
       blockNumber = 5uL,
       blockTimestamp = fakeClock.now(),
-      tracesCounters = fakeTracesCountersV1(10u),
+      tracesCounters = fakeTracesCountersV2(10u),
       blockRLPEncoded = ByteArray(100)
     )
     val block6Counters = BlockCounters(
       blockNumber = 6uL,
       blockTimestamp = fakeClock.now(),
-      tracesCounters = fakeTracesCountersV1(10u),
+      tracesCounters = fakeTracesCountersV2(10u),
       blockRLPEncoded = ByteArray(100)
     )
     val block7Counters = BlockCounters(
       blockNumber = 7uL,
       blockTimestamp = fakeClock.now(),
-      tracesCounters = fakeTracesCountersV1(10u),
+      tracesCounters = fakeTracesCountersV2(10u),
       blockRLPEncoded = ByteArray(100)
     )
 

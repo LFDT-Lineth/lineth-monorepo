@@ -49,7 +49,6 @@ jobs:
               - '.github/workflows/build-and-publish.yml'
               - '.github/workflows/main.yml'
               - '.github/workflows/reuse-*.yml'
-              - 'config/common/traces-limits-v1.toml'
               - 'config/common/traces-limits-v2.toml'
               - 'config/coordinator/**'
               - 'e2e/**'

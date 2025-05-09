@@ -41,7 +41,6 @@ data class BlockData<TxData>(
 
   private val isTransactionHashOnly: Boolean
     get() = transactions.isNotEmpty() && transactions.first() is ByteArray
-  val numberAndHash = BlockNumberAndHash(this.number, this.hash)
   val headerSummary = BlockHeaderSummary(this.number, this.hash, Instant.fromEpochSeconds(this.timestamp.toLong()))
 
   override fun equals(other: Any?): Boolean {
@@ -78,7 +77,6 @@ data class BlockData<TxData>(
       return false
     }
     if (ommers != other.ommers) return false
-    if (numberAndHash != other.numberAndHash) return false
     if (headerSummary != other.headerSummary) return false
 
     return true
@@ -110,7 +108,6 @@ data class BlockData<TxData>(
       }
     }
     result = 31 * result + ommers.hashCode()
-    result = 31 * result + numberAndHash.hashCode()
     result = 31 * result + headerSummary.hashCode()
     return result
   }

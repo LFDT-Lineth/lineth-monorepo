@@ -8,7 +8,7 @@ import linea.domain.Block
 import net.consensys.linea.async.toSafeFuture
 import net.consensys.linea.errors.ErrorResponse
 import net.consensys.zkevm.coordinator.clients.GetTracesCountersResponse
-import net.consensys.zkevm.coordinator.clients.TracesCountersClientV1
+import net.consensys.zkevm.coordinator.clients.TracesCountersClientV2
 import net.consensys.zkevm.coordinator.clients.TracesServiceErrorType
 import net.consensys.zkevm.domain.BlockCounters
 import net.consensys.zkevm.encoding.BlockEncoder
@@ -21,7 +21,7 @@ import java.util.concurrent.Callable
 
 class BlockToBatchSubmissionCoordinator(
   private val conflationService: ConflationService,
-  private val tracesCountersClient: TracesCountersClientV1,
+  private val tracesCountersClient: TracesCountersClientV2,
   private val vertx: Vertx,
   private val encoder: BlockEncoder,
   private val log: Logger = LogManager.getLogger(BlockToBatchSubmissionCoordinator::class.java)
@@ -30,7 +30,7 @@ class BlockToBatchSubmissionCoordinator(
     block: Block
   ): SafeFuture<GetTracesCountersResponse> {
     return tracesCountersClient
-      .rollupGetTracesCounters(block.numberAndHash)
+      .getTracesCounters(block.number)
       .thenCompose { result ->
         when (result) {
           is Err<ErrorResponse<TracesServiceErrorType>> -> {

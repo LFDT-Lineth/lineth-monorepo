@@ -12,7 +12,7 @@ import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 import linea.domain.BlockIntervals
 import linea.kotlin.ByteArrayExt
-import net.consensys.linea.traces.TracesCountersV1
+import net.consensys.linea.traces.TracesCountersV2
 import net.consensys.zkevm.coordinator.clients.BlobCompressionProof
 import net.consensys.zkevm.coordinator.clients.BlobCompressionProofRequest
 import net.consensys.zkevm.coordinator.clients.BlobCompressionProverClientV2
@@ -191,7 +191,7 @@ class BlobCompressionProofCoordinatorIntTest : CleanDbTestSuiteParallel() {
             startBlockNumber = currentBlockNumber,
             endBlockNumber = endBlockNumber,
             conflationTrigger = ConflationTrigger.TRACES_LIMIT,
-            tracesCounters = TracesCountersV1.EMPTY_TRACES_COUNT
+            tracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT
           )
         ),
         compressedData = Random.nextBytes(128),
@@ -224,19 +224,19 @@ class BlobCompressionProofCoordinatorIntTest : CleanDbTestSuiteParallel() {
           startBlockNumber = blobEventStartBlock,
           endBlockNumber = blobEventEndBlock,
           conflationTrigger = ConflationTrigger.TRACES_LIMIT,
-          tracesCounters = TracesCountersV1.EMPTY_TRACES_COUNT
+          tracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT
         ),
         ConflationCalculationResult(
           startBlockNumber = blobEventEndBlock + 1UL,
           endBlockNumber = blobEventEndBlock + 200UL,
           conflationTrigger = ConflationTrigger.TRACES_LIMIT,
-          tracesCounters = TracesCountersV1.EMPTY_TRACES_COUNT
+          tracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT
         ),
         ConflationCalculationResult(
           startBlockNumber = blobEventEndBlock + 201UL,
           endBlockNumber = blobEventEndBlock + 300UL,
           conflationTrigger = ConflationTrigger.TRACES_LIMIT,
-          tracesCounters = TracesCountersV1.EMPTY_TRACES_COUNT
+          tracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT
         )
       ),
       compressedData = Random.nextBytes(128),
@@ -284,7 +284,7 @@ class BlobCompressionProofCoordinatorIntTest : CleanDbTestSuiteParallel() {
           startBlockNumber = blobEventStartBlock,
           endBlockNumber = blobEventEndBlock,
           conflationTrigger = ConflationTrigger.TRACES_LIMIT,
-          tracesCounters = TracesCountersV1.EMPTY_TRACES_COUNT
+          tracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT
         )
       ),
       compressedData = Random.nextBytes(128),

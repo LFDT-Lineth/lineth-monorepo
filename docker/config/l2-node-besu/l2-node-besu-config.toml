@@ -53,6 +53,9 @@ plugin-linea-variable-gas-cost-wei=1000000000
 plugin-linea-extra-data-set-min-gas-price-enabled=true
 plugin-linea-estimate-gas-compatibility-mode-enabled=false
 plugin-linea-estimate-gas-min-margin="1.2"
+plugin-linea-bundles-forward-urls=["http://sequencer:8545"]
+plugin-linea-bundles-forward-retry-delay=1000
+plugin-linea-bundles-forward-timeout=5000
 
 bonsai-limit-trie-logs-enabled=false
 bonsai-historical-block-limit=1024

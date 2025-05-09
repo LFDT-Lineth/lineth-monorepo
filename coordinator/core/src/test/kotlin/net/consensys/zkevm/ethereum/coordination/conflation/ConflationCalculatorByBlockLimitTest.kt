@@ -1,8 +1,8 @@
 package net.consensys.zkevm.ethereum.coordination.conflation
 
 import kotlinx.datetime.Instant
-import net.consensys.linea.traces.TracesCountersV1
-import net.consensys.linea.traces.fakeTracesCountersV1
+import net.consensys.linea.traces.TracesCountersV2
+import net.consensys.linea.traces.fakeTracesCountersV2
 import net.consensys.zkevm.domain.BlockCounters
 import net.consensys.zkevm.domain.ConflationTrigger
 import org.assertj.core.api.Assertions.assertThat
@@ -19,7 +19,7 @@ class ConflationCalculatorByBlockLimitTest {
 
   @Test
   fun `should accumulate blockCounting`() {
-    val counters = ConflationCounters.empty(TracesCountersV1.EMPTY_TRACES_COUNT)
+    val counters = ConflationCounters.empty(TracesCountersV2.EMPTY_TRACES_COUNT)
     calculator.copyCountersTo(counters)
     assertThat(counters.blockCount).isEqualTo(0u)
     calculator.appendBlock(blockCounters(1))
@@ -48,7 +48,7 @@ class ConflationCalculatorByBlockLimitTest {
     return BlockCounters(
       blockNumber = blockNumber.toULong(),
       blockTimestamp = Instant.parse("2021-01-01T00:00:00.000Z"),
-      tracesCounters = fakeTracesCountersV1(blockNumber.toUInt()),
+      tracesCounters = fakeTracesCountersV2(blockNumber.toUInt()),
       blockRLPEncoded = ByteArray(0)
     )
   }

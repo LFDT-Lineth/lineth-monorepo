@@ -4,7 +4,7 @@ import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
 import linea.domain.BlockIntervals
 import net.consensys.FakeFixedClock
-import net.consensys.linea.traces.TracesCountersV1
+import net.consensys.linea.traces.TracesCountersV2
 import net.consensys.zkevm.coordinator.clients.BlobCompressionProof
 import net.consensys.zkevm.coordinator.clients.BlobCompressionProofRequest
 import net.consensys.zkevm.coordinator.clients.BlobCompressionProverClientV2
@@ -30,7 +30,6 @@ import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import tech.pegasys.teku.infrastructure.async.SafeFuture
-import java.lang.RuntimeException
 import kotlin.random.Random
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
@@ -109,7 +108,7 @@ class BlobCompressionProofCoordinatorTest {
           startBlockNumber = expectedStartBlock,
           endBlockNumber = expectedEndBlock,
           conflationTrigger = ConflationTrigger.TRACES_LIMIT,
-          tracesCounters = TracesCountersV1.EMPTY_TRACES_COUNT
+          tracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT
         )
       ),
       compressedData = Random.nextBytes(128),
@@ -185,7 +184,7 @@ class BlobCompressionProofCoordinatorTest {
           startBlockNumber = 1uL,
           endBlockNumber = 10uL,
           conflationTrigger = ConflationTrigger.TRACES_LIMIT,
-          tracesCounters = TracesCountersV1.EMPTY_TRACES_COUNT
+          tracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT
         )
       ),
       compressedData = Random.nextBytes(128),
@@ -199,7 +198,7 @@ class BlobCompressionProofCoordinatorTest {
           startBlockNumber = 11uL,
           endBlockNumber = 20uL,
           conflationTrigger = ConflationTrigger.TRACES_LIMIT,
-          tracesCounters = TracesCountersV1.EMPTY_TRACES_COUNT
+          tracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT
         )
       ),
       compressedData = Random.nextBytes(128),

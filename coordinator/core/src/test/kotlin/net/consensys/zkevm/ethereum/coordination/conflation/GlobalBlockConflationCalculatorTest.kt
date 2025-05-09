@@ -1,8 +1,8 @@
 package net.consensys.zkevm.ethereum.coordination.conflation
 
 import kotlinx.datetime.Instant
-import net.consensys.linea.traces.TracesCountersV1
-import net.consensys.linea.traces.fakeTracesCountersV1
+import net.consensys.linea.traces.TracesCountersV2
+import net.consensys.linea.traces.fakeTracesCountersV2
 import net.consensys.zkevm.domain.BlockCounters
 import net.consensys.zkevm.domain.ConflationCalculationResult
 import net.consensys.zkevm.domain.ConflationTrigger
@@ -24,18 +24,18 @@ class GlobalBlockConflationCalculatorTest {
   private lateinit var calculatorByTraces: ConflationCalculator
   private lateinit var globalCalculator: GlobalBlockConflationCalculator
   private val lastBlockNumber: ULong = 0uL
-  private val fakeCountersAfterConflation = fakeTracesCountersV1(123u)
+  private val fakeCountersAfterConflation = fakeTracesCountersV2(123u)
   private val fakeDataSizeAfterConflation = 123u
   val block1Counters = BlockCounters(
     blockNumber = 1uL,
     blockTimestamp = Instant.parse("2023-12-11T00:00:00.000Z"),
-    tracesCounters = fakeTracesCountersV1(10u),
+    tracesCounters = fakeTracesCountersV2(10u),
     blockRLPEncoded = ByteArray(0)
   )
   val block2Counters = BlockCounters(
     blockNumber = 2uL,
     blockTimestamp = Instant.parse("2023-12-11T00:00:02.000Z"),
-    tracesCounters = fakeTracesCountersV1(20u),
+    tracesCounters = fakeTracesCountersV2(20u),
     blockRLPEncoded = ByteArray(0)
   )
 
@@ -70,7 +70,7 @@ class GlobalBlockConflationCalculatorTest {
       lastBlockNumber = lastBlockNumber,
       syncCalculators = listOf(calculatorByTraces, calculatorByData),
       deferredTriggerConflationCalculators = listOf(calculatorByDealine),
-      emptyTracesCounters = TracesCountersV1.EMPTY_TRACES_COUNT
+      emptyTracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT
     )
     conflations = mutableListOf<ConflationCalculationResult>()
     globalCalculator.onConflatedBatch { trigger ->
@@ -86,7 +86,7 @@ class GlobalBlockConflationCalculatorTest {
         lastBlockNumber = lastBlockNumber,
         syncCalculators = listOf(calculatorByTraces, calculatorByData, calculatorByDealine),
         deferredTriggerConflationCalculators = listOf(calculatorByDealine),
-        emptyTracesCounters = TracesCountersV1.EMPTY_TRACES_COUNT
+        emptyTracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT
       )
     }.isInstanceOf(IllegalArgumentException::class.java)
       .hasMessageContaining("calculators must not contain duplicates")

@@ -4,7 +4,7 @@ import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 import linea.domain.BlockHeaderSummary
 import linea.kotlin.ByteArrayExt
-import net.consensys.linea.traces.fakeTracesCountersV1
+import net.consensys.linea.traces.fakeTracesCountersV2
 import net.consensys.zkevm.domain.BlockCounters
 import net.consensys.zkevm.ethereum.coordination.blockcreation.SafeBlockProvider
 import org.apache.logging.log4j.Logger
@@ -191,7 +191,7 @@ class ConflationCalculatorByTimeDeadlineTest {
     return BlockCounters(
       blockNumber = blockNumber,
       blockTimestamp = timestamp,
-      tracesCounters = fakeTracesCountersV1(1u),
+      tracesCounters = fakeTracesCountersV2(1u),
       blockRLPEncoded = ByteArray(0)
     )
   }

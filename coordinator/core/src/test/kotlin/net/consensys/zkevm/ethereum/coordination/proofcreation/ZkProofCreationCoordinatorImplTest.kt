@@ -9,7 +9,7 @@ import linea.ethapi.FakeEthApiClient
 import linea.kotlin.ByteArrayExt
 import linea.kotlin.encodeHex
 import linea.log4j.configureLoggers
-import net.consensys.linea.traces.fakeTracesCountersV1
+import net.consensys.linea.traces.fakeTracesCountersV2
 import net.consensys.zkevm.coordinator.clients.BatchExecutionProofRequestV1
 import net.consensys.zkevm.coordinator.clients.BatchExecutionProofResponse
 import net.consensys.zkevm.coordinator.clients.ExecutionProverClientV2
@@ -95,7 +95,7 @@ class ZkProofCreationCoordinatorImplTest {
           startBlockNumber = 123UL,
           endBlockNumber = 124UL,
           conflationTrigger = ConflationTrigger.TRACES_LIMIT,
-          tracesCounters = fakeTracesCountersV1(0u)
+          tracesCounters = fakeTracesCountersV2(0u)
         )
       ),
       traces = BlocksTracesConflated(

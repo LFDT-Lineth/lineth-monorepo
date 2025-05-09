@@ -1,7 +1,7 @@
 package net.consensys.zkevm.ethereum.coordination.conflation
 
 import kotlinx.datetime.Instant
-import net.consensys.linea.traces.fakeTracesCountersV1
+import net.consensys.linea.traces.fakeTracesCountersV2
 import net.consensys.zkevm.domain.BlockCounters
 import net.consensys.zkevm.domain.ConflationTrigger
 import net.consensys.zkevm.ethereum.coordination.blob.BlobCompressionException
@@ -196,7 +196,7 @@ class ConflationCalculatorByDataCompressedTest {
   private fun blockCounters(rlpRawData: ByteArray = ByteArray(1)): BlockCounters = BlockCounters(
     blockNumber = 0u,
     blockTimestamp = Instant.parse("2021-01-01T00:00:00Z"),
-    tracesCounters = fakeTracesCountersV1(0u),
+    tracesCounters = fakeTracesCountersV2(0u),
     blockRLPEncoded = rlpRawData
   )
 }

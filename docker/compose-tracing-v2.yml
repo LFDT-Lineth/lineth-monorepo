@@ -41,10 +41,10 @@ services:
       file: compose-spec-l2-services.yml
       service: sequencer
 
-  traces-node-v2:
+  traces-node:
     extends:
       file: compose-spec-l2-services.yml
-      service: traces-node-v2
+      service: traces-node
 
   prover-v3:
     extends:
@@ -60,14 +60,6 @@ services:
     extends:
       file: compose-spec-l2-services.yml
       service: coordinator
-    environment:
-      config__override__l2-network-gas-pricing__json-rpc-pricing-propagation__disabled: ${DISABLE_JSON_RPC_PRICING_PROPAGATION:-true}
-      config__override__type2-state-proof-provider__endpoints: # leave empty to disable
-    command: [ 'java', '-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005','-Dvertx.configurationFile=/var/lib/coordinator/vertx-options.json', '-Dlog4j2.configurationFile=/var/lib/coordinator/log4j2-dev.xml', '-jar', 'libs/coordinator.jar', '--traces-limits-v2', 'config/traces-limits-v2.toml', '--smart-contract-errors', 'config/smart-contract-errors.toml', '--gas-price-cap-time-of-day-multipliers', 'config/gas-price-cap-time-of-day-multipliers.toml', 'config/coordinator-docker.config.toml', 'config/coordinator-docker-traces-v2-override.config.toml' ]
-    volumes:
-      - ../config/common/traces-limits-v2.toml:/opt/consensys/linea/coordinator/config/traces-limits-v2.toml:ro
-      - ../config/coordinator/coordinator-docker-traces-v2-override.config.toml:/opt/consensys/linea/coordinator/config/coordinator-docker-traces-v2-override.config.toml:ro
-      - ../tmp/local/:/data/
 
   web3signer:
     extends:

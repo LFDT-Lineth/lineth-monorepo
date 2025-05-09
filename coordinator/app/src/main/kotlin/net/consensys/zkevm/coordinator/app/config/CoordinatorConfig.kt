@@ -15,15 +15,12 @@ import net.consensys.linea.ethereum.gaspricing.dynamiccap.TimeOfDayMultipliers
 import net.consensys.linea.ethereum.gaspricing.dynamiccap.getAllTimeOfDayKeys
 import net.consensys.linea.jsonrpc.client.RequestRetryConfig
 import net.consensys.linea.traces.TracesCounters
-import net.consensys.linea.traces.TracesCountersV1
 import net.consensys.linea.traces.TracesCountersV2
-import net.consensys.linea.traces.TracingModuleV1
 import net.consensys.linea.traces.TracingModuleV2
 import net.consensys.zkevm.coordinator.app.L2NetworkGasPricingService
 import net.consensys.zkevm.coordinator.clients.prover.ProversConfig
 import java.math.BigInteger
 import java.net.URL
-import java.nio.file.Path
 import java.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
@@ -41,7 +38,6 @@ data class ConflationConfig(
   val conflationDeadlineCheckInterval: Duration,
   val conflationDeadlineLastBlockConfirmationDelay: Duration,
   val blocksLimit: Long? = null,
-  private var _tracesLimitsV1: TracesCountersV1?,
   private var _tracesLimitsV2: TracesCountersV2?,
   private var _smartContractErrors: SmartContractErrors?,
   val fetchBlocksLimit: Int,
@@ -62,9 +58,6 @@ data class ConflationConfig(
       ?.let { it.mapKeys { it.key.lowercase() } }
       ?: emptyMap()
   }
-
-  val tracesLimitsV1: TracesCounters
-    get() = _tracesLimitsV1 ?: throw IllegalStateException("Traces limits not defined!")
 
   val tracesLimitsV2: TracesCounters
     get() = _tracesLimitsV2 ?: throw IllegalStateException("Traces limits not defined!")
@@ -181,26 +174,11 @@ data class AggregationConfig(
 
 data class TracesConfig(
   val rawExecutionTracesVersion: String,
-  val expectedTracesApiVersion: String,
-  val counters: FunctionalityEndpoint,
-  val conflation: FunctionalityEndpoint,
-  val fileManager: FileManager,
-  val switchToLineaBesu: Boolean = false,
   val blobCompressorVersion: BlobCompressorVersion,
-  val expectedTracesApiVersionV2: String? = null,
-  val countersV2: FunctionalityEndpoint? = null,
-  val conflationV2: FunctionalityEndpoint? = null
+  val expectedTracesApiVersionV2: String,
+  val countersV2: FunctionalityEndpoint,
+  val conflationV2: FunctionalityEndpoint
 ) {
-  init {
-    if (switchToLineaBesu) {
-      require(expectedTracesApiVersionV2 != null) {
-        "expectedTracesApiVersionV2 is required when switching to linea besu for tracing"
-      }
-      require(countersV2 != null) { "countersV2 is required when switching to linea besu for tracing" }
-      require(conflationV2 != null) { "conflationV2 is required when switching to linea besu for tracing" }
-    }
-  }
-
   data class FunctionalityEndpoint(
     val endpoints: List<URL>,
     val requestLimitPerEndpoint: UInt,
@@ -210,15 +188,6 @@ data class TracesConfig(
       require(requestLimitPerEndpoint > 0u) { "requestLimitPerEndpoint must be greater than 0" }
     }
   }
-
-  data class FileManager(
-    val tracesFileExtension: String,
-    val rawTracesDirectory: Path,
-    val nonCanonicalRawTracesDirectory: Path,
-    val createNonCanonicalDirectory: Boolean,
-    val pollingInterval: Duration,
-    val tracesFileCreationWaitTimeout: Duration
-  )
 }
 
 data class StateManagerClientConfig(
@@ -515,7 +484,6 @@ data class Type2StateProofProviderConfig(
   override val requestRetry: RequestRetryConfigTomlFriendly
 ) : RequestRetryConfigurable
 
-data class TracesLimitsV1ConfigFile(val tracesLimits: Map<TracingModuleV1, UInt>)
 data class TracesLimitsV2ConfigFile(val tracesLimits: Map<TracingModuleV2, UInt>)
 
 //

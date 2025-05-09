@@ -126,9 +126,9 @@ services:
       linea:
         ipv4_address: 11.11.11.119
 
-  traces-node-v2:
-    hostname: traces-node-v2
-    container_name: traces-node-v2
+  traces-node:
+    hostname: traces-node
+    container_name: traces-node
     image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-sepolia-3e31c8f}
     profiles: [ "l2", "l2-bc", "debug", "external-to-monorepo" ]
     depends_on:
@@ -154,12 +154,12 @@ services:
       - -c
       - |
         /opt/besu/bin/besu \
-        --config-file=/var/lib/besu/traces-node-v2.config.toml \
+        --config-file=/var/lib/besu/traces-node.config.toml \
         --genesis-file=/var/lib/besu/genesis.json \
         --bootnodes=enode://14408801a444dafc44afbccce2eb755f902aed3b5743fed787b3c790e021fef28b8c827ed896aa4e8fb46e22bd67c39f994a73768b4b382f8597b0d44370e15d@11.11.11.101:30303
     volumes:
-      - ./config/traces-node-v2/traces-node-v2-config.toml:/var/lib/besu/traces-node-v2.config.toml:ro
-      - ./config/traces-node-v2/log4j.xml:/var/lib/besu/log4j.xml:ro
+      - ./config/traces-node/traces-node-config.toml:/var/lib/besu/traces-node.config.toml:ro
+      - ./config/traces-node/log4j.xml:/var/lib/besu/log4j.xml:ro
       - ./config/linea-local-dev-genesis-PoA-besu.json/:/var/lib/besu/genesis.json:ro
       - ../tmp/local/:/data/:rw
     networks:
@@ -228,11 +228,15 @@ services:
     ports:
       - "9545:9545"
     restart: on-failure
-    command: [ 'java', '-Dvertx.configurationFile=/var/lib/coordinator/vertx-options.json', '-Dlog4j2.configurationFile=/var/lib/coordinator/log4j2-dev.xml', '-jar', 'libs/coordinator.jar', '--traces-limits', 'config/traces-limits-v1.toml', '--smart-contract-errors', 'config/smart-contract-errors.toml', '--gas-price-cap-time-of-day-multipliers', 'config/gas-price-cap-time-of-day-multipliers.toml', 'config/coordinator-docker.config.toml', 'config/coordinator-docker-web3signer-override.config.toml' ]
+    environment:
+      config__override__l2-network-gas-pricing__json-rpc-pricing-propagation__disabled: ${DISABLE_JSON_RPC_PRICING_PROPAGATION:-true}
+      config__override__type2-state-proof-provider__endpoints: # leave empty to disable
+    command: [ 'java', '-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005','-Dvertx.configurationFile=/var/lib/coordinator/vertx-options.json', '-Dlog4j2.configurationFile=/var/lib/coordinator/log4j2-dev.xml', '-jar', 'libs/coordinator.jar', '--traces-limits-v2', 'config/traces-limits-v2.toml', '--smart-contract-errors', 'config/smart-contract-errors.toml', '--gas-price-cap-time-of-day-multipliers', 'config/gas-price-cap-time-of-day-multipliers.toml', 'config/coordinator-docker.config.toml', 'config/coordinator-docker-traces-v2-override.config.toml' ]
     volumes:
       - ../config/coordinator/coordinator-docker.config.toml:/opt/consensys/linea/coordinator/config/coordinator-docker.config.toml:ro
       - ../config/coordinator/coordinator-docker-web3signer-override.config.toml:/opt/consensys/linea/coordinator/config/coordinator-docker-web3signer-override.config.toml:ro
-      - ../config/common/traces-limits-v1.toml:/opt/consensys/linea/coordinator/config/traces-limits-v1.toml:ro
+      - ../config/coordinator/coordinator-docker-traces-v2-override.config.toml:/opt/consensys/linea/coordinator/config/coordinator-docker-traces-v2-override.config.toml:ro
+      - ../config/common/traces-limits-v2.toml:/opt/consensys/linea/coordinator/config/traces-limits-v2.toml:ro
       - ../config/common/smart-contract-errors.toml:/opt/consensys/linea/coordinator/config/smart-contract-errors.toml:ro
       - ../config/common/gas-price-cap-time-of-day-multipliers.toml:/opt/consensys/linea/coordinator/config/gas-price-cap-time-of-day-multipliers.toml:ro
       - ../config/coordinator/vertx-options.json:/var/lib/coordinator/vertx-options.json:ro

@@ -12,25 +12,23 @@ endpoint="http://127.0.0.1:9000"
 
 [prover]
 [prover.execution]
-fs-requests-directory = "tmp/local/prover/v2/execution/requests"
-fs-responses-directory = "tmp/local/prover/v2/execution/responses"
+fs-requests-directory = "tmp/local/prover/v3/execution/requests"
+fs-responses-directory = "tmp/local/prover/v3/execution/responses"
 [prover.blob-compression]
-fs-requests-directory = "tmp/local/prover/v2/compression/requests"
-fs-responses-directory = "tmp/local/prover/v2/compression/responses"
+fs-requests-directory = "tmp/local/prover/v3/compression/requests"
+fs-responses-directory = "tmp/local/prover/v3/compression/responses"
 [prover.proof-aggregation]
 fs-requests-directory = "tmp/local/prover/v2/aggregation/requests"
 fs-responses-directory = "tmp/local/prover/v2/aggregation/responses"
 
 # Config of Traces API Facade endpoint
 [traces]
-[traces.counters]
-endpoints=["http://127.0.0.1:8080/"]
-[traces.conflation]
-endpoints=["http://127.0.0.1:8080/"]
-[traces.file-manager]
-traces-file-extension = "json.gz"
-raw-traces-directory = "tmp/local/traces/raw"
-non-canonical-raw-traces-directory = "tmp/local/traces/raw-non-canonical"
+blob-compressor-version="V1_0_1"
+expected-traces-api-version-v2="beta-v2.1-rc14"
+[traces.counters-v2]
+endpoints=["http://127.0.0.1:8745/"]
+[traces.conflation-v2]
+endpoints=["http://127.0.0.1:8745/"]
 
 [state-manager]
 endpoints=["http://127.0.0.1:8998/"]
@@ -54,7 +52,7 @@ finalized-block-tag="finalized"
 earliestBlock=0
 
 [l2]
-rpc-endpoint="http://127.0.0.1:8645"
+rpc-endpoint="http://127.0.0.1:8845"
 blocks-to-finalization=0
 
 [database]

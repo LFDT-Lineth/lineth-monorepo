@@ -1,7 +1,6 @@
 package net.consensys.zkevm.coordinator.clients
 
 import com.github.michaelbull.result.Result
-import linea.domain.BlockNumberAndHash
 import net.consensys.linea.errors.ErrorResponse
 import net.consensys.linea.traces.TracesCounters
 import tech.pegasys.teku.infrastructure.async.SafeFuture
@@ -17,22 +16,10 @@ data class GetTracesCountersResponse(val tracesCounters: TracesCounters, val tra
 
 data class GenerateTracesResponse(val tracesFileName: String, val tracesEngineVersion: String)
 
-interface TracesCountersClientV1 {
-  fun rollupGetTracesCounters(
-    block: BlockNumberAndHash
-  ): SafeFuture<Result<GetTracesCountersResponse, ErrorResponse<TracesServiceErrorType>>>
-}
-
 interface TracesCountersClientV2 {
   fun getTracesCounters(
     blockNumber: ULong
   ): SafeFuture<Result<GetTracesCountersResponse, ErrorResponse<TracesServiceErrorType>>>
-}
-
-interface TracesConflationClientV1 {
-  fun rollupGenerateConflatedTracesToFile(
-    blocks: List<BlockNumberAndHash>
-  ): SafeFuture<Result<GenerateTracesResponse, ErrorResponse<TracesServiceErrorType>>>
 }
 
 interface TracesConflationClientV2 {

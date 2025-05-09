@@ -29,14 +29,6 @@ internal constructor(private val errorWriter: PrintWriter, private val startActi
   private val configFiles: List<File>? = null
 
   @CommandLine.Option(
-    names = ["--traces-limits"],
-    paramLabel = "<FILE>",
-    description = ["Prover traces limits"],
-    arity = "1"
-  )
-  private val tracesLimitsFile: File? = null
-
-  @CommandLine.Option(
     names = ["--traces-limits-v2"],
     paramLabel = "<FILE>",
     description = ["Prover traces limits for linea besu"],
@@ -78,8 +70,8 @@ internal constructor(private val errorWriter: PrintWriter, private val startActi
         printUsage(errorWriter)
         return 1
       }
-      if (tracesLimitsFile == null && tracesLimitsV2File == null) {
-        errorWriter.println("Please provide traces-limits or traces-limits-v2 file!")
+      if (tracesLimitsV2File == null) {
+        errorWriter.println("Please provide traces-limits-v2 file!")
         printUsage(errorWriter)
         return 1
       }
@@ -102,8 +94,7 @@ internal constructor(private val errorWriter: PrintWriter, private val startActi
 
       val configs = linea.coordinator.config.loadConfigs(
         coordinatorConfigFiles = configFiles.map { it.toPath() },
-        tracesLimitsFileV1 = tracesLimitsFile?.toPath(),
-        tracesLimitsFileV2 = tracesLimitsV2File?.toPath(),
+        tracesLimitsFileV2 = tracesLimitsV2File.toPath(),
         smartContractErrorsFile = smartContractErrorsFile.toPath(),
         gasPriceCapTimeOfDayMultipliersFile = gasPriceCapTimeOfDayMultipliersFile.toPath(),
         logger = logger
