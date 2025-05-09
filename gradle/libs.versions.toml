@@ -17,6 +17,7 @@ mockito = "5.7.0"
 mockitoKotlin = "5.4.0"
 restassured = "5.3.0"
 wiremock = "3.13.0"
+logcaptor = "2.11.0"
 
 # Runtime
 besu = "25.2.1-linea1"

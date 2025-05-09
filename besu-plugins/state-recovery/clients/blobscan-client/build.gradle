@@ -23,7 +23,7 @@ dependencies {
   testImplementation "org.wiremock:wiremock:${libs.versions.wiremock.get()}"
   testImplementation "org.slf4j:slf4j-api:${libs.versions.slf4j.get()}"
   testImplementation project(":jvm-libs:generic:logging")
-  testImplementation 'io.github.hakky54:logcaptor:2.11.0'
+  testImplementation "io.github.hakky54:logcaptor:${libs.versions.logcaptor.get()}"
 }
 
 sourceSets {

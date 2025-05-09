@@ -211,7 +211,7 @@ services:
   coordinator:
     hostname: coordinator
     container_name: coordinator
-    image: consensys/linea-coordinator:${COORDINATOR_TAG:-052958b}
+    image: consensys/linea-coordinator:${COORDINATOR_TAG:-47a9d07}
     platform: linux/amd64
     profiles: [ "l2", "debug" ]
     depends_on:
