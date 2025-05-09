@@ -52,17 +52,14 @@ class BlobAndAggregationFinalizationIntTest : CleanDbTestSuiteParallel() {
   private lateinit var blobsRepository: BlobsRepository
   private lateinit var blobSubmissionCoordinator: BlobSubmissionCoordinator
   private lateinit var aggregationFinalizationCoordinator: AggregationFinalizationCoordinator
-  private val testDataDir = "testdata/coordinator/prover/v2/"
+  private val testDataDir = "testdata/coordinator/prover/v3/submissionAndFinalization/"
   private lateinit var blobSubmittedEvent: BlobSubmittedEvent
   private var blobSubmissionDelay = 0L
   private lateinit var finalizationSubmittedEvent: FinalizationSubmittedEvent
   private var finalizationSubmissionDelay = 0L
   private var acceptedBlob = 0UL
 
-  // 1-block-per-blob test data has 3 aggregations: 1..7, 8..14, 15..21.
-  // We will upgrade the contract in the middle of 2nd aggregation: 12
-  // shall submit blob 12, stop submission, upgrade the contract and resume with blob 13
-  // val lastSubmittedBlobs = blobs.filter { it.startBlockNumber == 7UL }
+  // 1-block-per-blob test data has 2 aggregations: 1..10, 11..20 with 1 more than the max blob submission
   private lateinit var aggregations: List<Aggregation>
   private lateinit var blobs: List<BlobRecord>
 
@@ -70,8 +67,8 @@ class BlobAndAggregationFinalizationIntTest : CleanDbTestSuiteParallel() {
     vertx: Vertx,
     smartContractVersion: LineaContractVersion
   ) {
+    // V6 is always used, this is left for when V7 is implemented.
     if (listOf(LineaContractVersion.V6).contains(smartContractVersion).not()) {
-      // V6 with prover V3 is soon comming, so we will need to update/extend this test setup
       throw IllegalArgumentException("unsupported contract version=$smartContractVersion!")
     }
     val rollupDeploymentFuture = ContractsManager.get()
@@ -119,7 +116,7 @@ class BlobAndAggregationFinalizationIntTest : CleanDbTestSuiteParallel() {
           pollingInterval = 6.seconds,
           proofSubmissionDelay = 0.seconds,
           maxBlobsToSubmitPerTick = 100u,
-          targetBlobsToSubmitPerTx = 6u
+          targetBlobsToSubmitPerTx = 9u
         ),
         blobsRepository = blobsRepository,
         aggregationsRepository = aggregationsRepository,
@@ -196,8 +193,8 @@ class BlobAndAggregationFinalizationIntTest : CleanDbTestSuiteParallel() {
           .untilAsserted {
             val finalizedBlockNumber = lineaRollupContractForAggregationSubmission.finalizedL2BlockNumber().get()
             assertThat(finalizedBlockNumber).isEqualTo(aggregations.last().endBlockNumber)
-            assertThat(blobSubmittedEvent.blobs.last().endBlockNumber).isEqualTo(blobs[20].endBlockNumber)
-            assertThat(acceptedBlob).isEqualTo(blobs[20].endBlockNumber)
+            assertThat(blobSubmittedEvent.blobs.last().endBlockNumber).isEqualTo(blobs[19].endBlockNumber)
+            assertThat(acceptedBlob).isEqualTo(blobs[19].endBlockNumber)
             assertThat(finalizationSubmittedEvent.endBlockNumber).isEqualTo(
               aggregations.last().endBlockNumber
             )

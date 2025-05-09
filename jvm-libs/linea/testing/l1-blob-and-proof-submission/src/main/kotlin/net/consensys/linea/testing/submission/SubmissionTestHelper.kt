@@ -59,12 +59,12 @@ fun assertTxsSuccess(
 fun submitBlobs(
   contractClient: LineaRollupSmartContractClient,
   aggregationsAndBlobs: List<AggregationAndBlobs>,
-  blobChunksSize: Int = 6,
+  blobChunksSize: Int = 9,
   awaitForPreviousTxBeforeSubmittingNext: Boolean = false,
   l1Web3jClient: Web3j,
   log: Logger
 ): List<Pair<String, List<BlobRecord>>> {
-  require(blobChunksSize in 1..6) { "blobChunksSize must be between 1..6" }
+  require(blobChunksSize in 1..9) { "blobChunksSize must be between 1..9" }
 
   return aggregationsAndBlobs
     .map { (agg, aggBlobs) ->
@@ -94,7 +94,7 @@ fun submitBlobsAndAggregationsAndWaitExecution(
   contractClientForBlobSubmission: LineaRollupSmartContractClient,
   contractClientForAggregationSubmission: LineaRollupSmartContractClient = contractClientForBlobSubmission,
   aggregationsAndBlobs: List<AggregationAndBlobs>,
-  blobChunksMaxSize: Int = 6,
+  blobChunksMaxSize: Int = 9,
   l1Web3jClient: Web3j,
   waitTimeout: Duration = 2.minutes,
   log: Logger = LogManager.getLogger("linea.testing.submission")

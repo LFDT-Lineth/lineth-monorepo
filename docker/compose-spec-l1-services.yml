@@ -72,19 +72,18 @@ services:
         ipv4_address: 10.10.10.202
 
   l1-node-genesis-generator:
-    image: ethpandaops/ethereum-genesis-generator:pk910-bash-el-genesis-generator
+    image: ethpandaops/ethereum-genesis-generator:4.0.0
     profiles: [ "l1", "debug", "external-to-monorepo" ]
     entrypoint:
       - /bin/bash
       - -c
       - |
-        PRAGUE=${PRAGUE:-} bash /generate-genesis.sh
-        /usr/local/bin/eth2-testnet-genesis deneb \
-        --config /config/network-config.yml \${L1_GENESIS_TIME:+--timestamp ${L1_GENESIS_TIME:-} \}
+        bash /generate-genesis.sh
+        /usr/local/bin/eth-beacon-genesis devnet \
+        --config /data/l1-node-config/network-config.yml \${L1_GENESIS_TIME:+--timestamp ${L1_GENESIS_TIME:-} \}
         --mnemonics /config/mnemonics.yaml \
-        --tranches-dir /data/l1-node-config/tranches \
         --state-output /data/l1-node-config/genesis.ssz \
-        --eth1-config /config/genesis.json
+        --eth1-config /data/l1-node-config/genesis.json
     volumes:
       - ./config/l1-node/cl/mnemonics.yaml:/config/mnemonics.yaml:ro
       - ./config/l1-node/cl/network-config.yml:/config/network-config.yml:ro

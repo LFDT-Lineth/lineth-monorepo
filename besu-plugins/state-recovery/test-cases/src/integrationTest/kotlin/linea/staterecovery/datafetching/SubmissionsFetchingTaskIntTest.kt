@@ -51,7 +51,7 @@ class SubmissionsFetchingTaskIntTest {
   private lateinit var appClients: AppClients
 
   private val testDataDir = run {
-    "testdata/coordinator/prover/v3"
+    "testdata/coordinator/prover/v3/submissionAndFinalization"
   }
   private val l1RpcUrl = "http://localhost:8445"
   private val blobScanUrl = "http://localhost:4001"
@@ -135,7 +135,7 @@ class SubmissionsFetchingTaskIntTest {
 
   private fun submitDataToL1ContactAndWaitExecution(
     aggregationsAndBlobs: List<AggregationAndBlobs> = this.aggregationsAndBlobs,
-    blobChunksSize: Int = 6,
+    blobChunksSize: Int = 9,
     waitTimeout: Duration = 4.minutes
   ) {
     submitBlobsAndAggregationsAndWaitExecution(
@@ -167,7 +167,7 @@ class SubmissionsFetchingTaskIntTest {
   @Test
   fun `should stop fetching submissions once debugForceSyncStopBlockNumber is reached`() {
     val debugForceSyncStopBlockNumber =
-      aggregationsAndBlobs[aggregationsAndBlobs.size - 2].aggregation!!.endBlockNumber - 1UL
+      aggregationsAndBlobs[aggregationsAndBlobs.size - 1].aggregation!!.endBlockNumber - 1UL
 
     assertSubmissionsAreCorrectlyFetched(
       l2StartBlockNumber = 1UL,

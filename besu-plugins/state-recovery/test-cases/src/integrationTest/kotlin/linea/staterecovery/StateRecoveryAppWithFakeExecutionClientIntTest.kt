@@ -49,7 +49,7 @@ class StateRecoveryAppWithFakeExecutionClientIntTest {
   private lateinit var appClients: AppClients
 
   private val testDataDir = run {
-    "testdata/coordinator/prover/v3"
+    "testdata/coordinator/prover/v3/stateRecovery"
   }
 
   private val l1RpcUrl = "http://localhost:8445"
@@ -137,7 +137,7 @@ class StateRecoveryAppWithFakeExecutionClientIntTest {
 
   private fun submitDataToL1ContactAndWaitExecution(
     aggregationsAndBlobs: List<AggregationAndBlobs> = this.aggregationsAndBlobs,
-    blobChunksSize: Int = 6,
+    blobChunksSize: Int = 9,
     waitTimeout: Duration = 4.minutes
   ) {
     submitBlobsAndAggregationsAndWaitExecution(

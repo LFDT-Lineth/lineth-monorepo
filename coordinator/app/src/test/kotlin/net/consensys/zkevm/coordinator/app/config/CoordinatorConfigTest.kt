@@ -159,7 +159,7 @@ class CoordinatorConfigTest {
       priorityFeePerGasUpperBound = 2000000000UL,
       priorityFeePerGasLowerBound = 200000000UL,
       proofSubmissionDelay = Duration.parse("PT1S"),
-      targetBlobsToSendPerTransaction = 6,
+      targetBlobsToSendPerTransaction = 9,
       useEthEstimateGas = false,
       disabled = false
     )

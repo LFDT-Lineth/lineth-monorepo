@@ -18,6 +18,7 @@ import linea.web3j.transactionmanager.AsyncFriendlyTransactionManager
 import net.consensys.linea.async.toSafeFuture
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
+import org.apache.tuweni.bytes.Bytes
 import org.web3j.abi.FunctionEncoder
 import org.web3j.abi.datatypes.Function
 import org.web3j.crypto.Blob
@@ -140,9 +141,13 @@ class Web3JContractAsyncHelper(
     blobs: List<Blob>,
     gasPriceCaps: GasPriceCaps? = null
   ): SafeFuture<Eip4844Transaction> {
-    require(blobs.size in 1..6) { "Blobs size=${blobs.size} must be between 1 and 6." }
+    require(blobs.size in 1..9) { "Blobs size=${blobs.size} must be between 1 and 9." }
+
     val blobVersionedHashes = blobs
-      .map { BlobUtils.kzgToVersionedHash(BlobUtils.getCommitment(it)).toArray() }
+      .map(BlobUtils::getCommitment)
+      .map(BlobUtils::kzgToVersionedHash)
+      .map(Bytes::toArray)
+
     return getGasLimit(function, blobs, blobVersionedHashes)
       .thenApply { gasLimit ->
         val (_, maxFeePerBlobGas) = getEip4844GasFees()
@@ -292,7 +297,7 @@ class Web3JContractAsyncHelper(
     blobs: List<ByteArray>,
     gasPriceCaps: GasPriceCaps?
   ): SafeFuture<String> {
-    require(blobs.size in 0..6) { "Blobs size=${blobs.size} must be between 0 and 6." }
+    require(blobs.size in 1..9) { "Blobs size=${blobs.size} must be between 1 and 9." }
     return sendBlobCarryingTransaction(function, BigInteger.ZERO, blobs.toWeb3jTxBlob(), gasPriceCaps)
       .thenApply { it.transactionHash }
   }

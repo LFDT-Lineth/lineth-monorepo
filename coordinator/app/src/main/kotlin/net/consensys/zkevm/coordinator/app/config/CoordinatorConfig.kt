@@ -239,16 +239,15 @@ data class BlobSubmissionConfig(
   val priorityFeePerGasUpperBound: ULong,
   val priorityFeePerGasLowerBound: ULong,
   val maxBlobsToSubmitPerTick: Int = maxBlobsToReturn,
-  // defaults to 6, not supported atm, preparatory work
-  val targetBlobsToSendPerTransaction: Int = 6,
+  val targetBlobsToSendPerTransaction: Int = 9,
   val useEthEstimateGas: Boolean = false,
   override var disabled: Boolean = false
 ) : FeatureToggleable {
   init {
     require(maxBlobsToReturn > 0) { "maxBlobsToReturn must be greater than 0" }
     require(maxBlobsToSubmitPerTick >= 0) { "submissionLimit must be greater or equal to 0" }
-    require(targetBlobsToSendPerTransaction in 1..6) {
-      "targetBlobsToSendPerTransaction must be between 1 and 6, value=$targetBlobsToSendPerTransaction"
+    require(targetBlobsToSendPerTransaction in 1..9) {
+      "targetBlobsToSendPerTransaction must be between 1 and 9, value=$targetBlobsToSendPerTransaction"
     }
   }
 }

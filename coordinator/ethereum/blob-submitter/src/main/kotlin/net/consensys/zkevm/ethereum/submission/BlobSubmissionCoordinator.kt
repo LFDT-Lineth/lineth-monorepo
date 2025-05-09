@@ -41,7 +41,7 @@ class BlobSubmissionCoordinator(
     val pollingInterval: Duration,
     val proofSubmissionDelay: Duration,
     val maxBlobsToSubmitPerTick: UInt,
-    val targetBlobsToSubmitPerTx: UInt = 6u
+    val targetBlobsToSubmitPerTx: UInt = 9u
   ) {
     init {
       require(maxBlobsToSubmitPerTick > 0u) {

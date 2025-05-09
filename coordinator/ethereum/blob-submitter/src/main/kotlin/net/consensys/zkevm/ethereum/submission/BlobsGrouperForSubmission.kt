@@ -11,7 +11,7 @@ fun interface BlobsGrouperForSubmission {
 }
 
 class BlobsGrouperForSubmissionSwitcherByTargetBock(
-  private val eip4844TargetBlobsPerTx: UInt = 6U
+  private val eip4844TargetBlobsPerTx: UInt = 9U
 ) : BlobsGrouperForSubmission {
   override fun chunkBlobs(
     blobsIntervals: List<BlobRecord>,

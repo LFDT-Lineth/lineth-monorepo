@@ -11,29 +11,15 @@ mkdir -p $output_dir
 cp $original_el_genesis_json_path $modified_el_genesis_json_path
 cp $original_cl_network_config_path $modified_cl_network_config_path
 
-# Early exit if $PRAGUE feature flag is off
-if [ -z "$PRAGUE" ]; then
-  exit 0
-fi
-
+# Although this adds 0s, it is here for flexibility in the event of extension and syntax issues.
 OS=$(uname);
 prague_time=$(    
     if [ $OS = "Linux" ]; then
-        date -d "+32 seconds" +%s;
+        date -d "+0 seconds" +%s;
     elif [ $OS = "Darwin" ]; then
-        date -v +32S +%s;
+        date -v +0S +%s;
     fi
 )
 
-# Add Prague config to modified Besu config
-jq --argjson prague_time "$prague_time" '.config.pragueTime = $prague_time' $original_el_genesis_json_path > $modified_el_genesis_json_path
-
-# Add Electra config to modified Teku config
-cat <<EOF >> $modified_cl_network_config_path
-ELECTRA_FORK_VERSION: 0x60000038
-ELECTRA_FORK_EPOCH: 1
-MAX_BLOBS_PER_BLOCK_ELECTRA: 9
-MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA: 128000000000
-BLOB_SIDECAR_SUBNET_COUNT_ELECTRA: 9
-MAX_REQUEST_BLOB_SIDECARS_ELECTRA: 1152
-EOF
+sed -i -E 's/"timestamp": "[0-9]+"/"timestamp": "'"$prague_time"'"/' $modified_el_genesis_json_path
+sed -i 's/\$GENESIS_TIME/'"$prague_time"'/g' $modified_cl_network_config_path
