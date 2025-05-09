@@ -6,7 +6,6 @@ import { expect } from "chai";
 import { BaseContract, Transaction } from "ethers";
 import { ethers } from "hardhat";
 
-import betaV1FinalizationData from "../../_testData/betaV1/proof/7027059-7042723-d2221f5035e3dcbbc46e8a6130fef34fdec33c252b7d31fb8afa6848660260ba-getZkAggregatedProof.json";
 import betaV1_4PreReleaseFinalizationData from "../../_testData/betaV1_4/preRelease/proof/17865582-12865637-getZkAggregatedProof.json";
 import betaV1_4PostReleaseFinalizationData from "../../_testData/betaV1_4/postRelease/proof/17865638-17865747-getZkAggregatedProof.json";
 import blobAggregatedProof1To155 from "../../_testData/compressedDataEip4844/aggregatedProof-1-155.json";
@@ -20,7 +19,6 @@ import { TestLineaRollup } from "contracts/typechain-types";
 import {
   deployLineaRollupFixture,
   deployPlonkVerifierMainnetFull,
-  deployPlonkVerifierSepoliaFull,
   deployRevertingVerifier,
   expectSuccessfulFinalize,
   getAccountsFixture,
@@ -731,119 +729,6 @@ describe("Linea Rollup contract: EIP-4844 Blob submission tests", () => {
         .finalizeBlocks(blobAggregatedProof1To155.aggregatedProof, TEST_PUBLIC_VERIFIER_INDEX, finalizationData),
       "InvalidProof",
     );
-  });
-
-  describe("Prover Beta V1", () => {
-    it("Can submit blobs and finalize with Prover Beta V1", async () => {
-      // *** ARRANGE ***
-      const sepoliaFullVerifier = await deployPlonkVerifierSepoliaFull();
-
-      // Deploy and initialize LineaRollup
-      const initializationData = {
-        initialStateRootHash: betaV1FinalizationData.parentStateRootHash,
-        initialL2BlockNumber: betaV1FinalizationData.lastFinalizedBlockNumber,
-        genesisTimestamp: betaV1FinalizationData.parentAggregationLastBlockTimestamp,
-        defaultVerifier: sepoliaFullVerifier,
-        rateLimitPeriodInSeconds: ONE_DAY_IN_SECONDS,
-        rateLimitAmountInWei: INITIAL_WITHDRAW_LIMIT,
-        roleAddresses,
-        pauseTypeRoles: LINEA_ROLLUP_PAUSE_TYPES_ROLES,
-        unpauseTypeRoles: LINEA_ROLLUP_UNPAUSE_TYPES_ROLES,
-        fallbackOperator: FALLBACK_OPERATOR_ADDRESS,
-        defaultAdmin: securityCouncil.address,
-      };
-
-      const betaV1LineaRollup = (await deployUpgradableFromFactory("TestLineaRollup", [initializationData], {
-        initializer: LINEA_ROLLUP_INITIALIZE_SIGNATURE,
-        unsafeAllow: ["constructor", "incorrect-initializer-order"],
-      })) as unknown as TestLineaRollup;
-
-      await betaV1LineaRollup.setupParentShnarf(betaV1FinalizationData.parentAggregationFinalShnarf);
-
-      // Send blobs
-      const blobFiles = getVersionedBlobFiles("betaV1");
-
-      for (let i = 0; i < blobFiles.length; i++) {
-        await sendVersionedBlobTransactionFromFile(lineaRollup, blobFiles[i], betaV1LineaRollup, "betaV1");
-      }
-
-      const finalBlobFile = JSON.parse(
-        fs.readFileSync(`${__dirname}/../../_testData/betaV1/${blobFiles.slice(-1)[0]}`, "utf-8"),
-      );
-
-      // Setup finalize call
-      const finalizationData = await generateFinalizationData({
-        l1RollingHash: betaV1FinalizationData.l1RollingHash,
-        l1RollingHashMessageNumber: BigInt(betaV1FinalizationData.l1RollingHashMessageNumber),
-        lastFinalizedTimestamp: BigInt(betaV1FinalizationData.parentAggregationLastBlockTimestamp),
-        endBlockNumber: BigInt(betaV1FinalizationData.finalBlockNumber),
-        parentStateRootHash: betaV1FinalizationData.parentStateRootHash,
-        finalTimestamp: BigInt(betaV1FinalizationData.finalTimestamp),
-        l2MerkleRoots: betaV1FinalizationData.l2MerkleRoots,
-        l2MerkleTreesDepth: BigInt(betaV1FinalizationData.l2MerkleTreesDepth),
-        l2MessagingBlocksOffsets: betaV1FinalizationData.l2MessagingBlocksOffsets,
-        aggregatedProof: betaV1FinalizationData.aggregatedProof,
-        shnarfData: {
-          parentShnarf: finalBlobFile.prevShnarf,
-          snarkHash: finalBlobFile.snarkHash,
-          finalStateRootHash: finalBlobFile.finalStateRootHash,
-          dataEvaluationPoint: finalBlobFile.expectedX,
-          dataEvaluationClaim: finalBlobFile.expectedY,
-        },
-      });
-
-      finalizationData.lastFinalizedL1RollingHash = betaV1FinalizationData.parentAggregationLastL1RollingHash;
-      finalizationData.lastFinalizedL1RollingHashMessageNumber = BigInt(
-        betaV1FinalizationData.parentAggregationLastL1RollingHashMessageNumber,
-      );
-
-      // Setup LineaRollup state so that its references to past state, mirror the references in the finalization proof
-      await betaV1LineaRollup.setLastFinalizedShnarf(betaV1FinalizationData.parentAggregationFinalShnarf);
-      await betaV1LineaRollup.setLastFinalizedState(
-        betaV1FinalizationData.parentAggregationLastL1RollingHashMessageNumber,
-        betaV1FinalizationData.parentAggregationLastL1RollingHash,
-        betaV1FinalizationData.parentAggregationLastBlockTimestamp,
-      );
-      await betaV1LineaRollup.setRollingHash(
-        betaV1FinalizationData.l1RollingHashMessageNumber,
-        betaV1FinalizationData.l1RollingHash,
-      );
-
-      // *** ACT ***
-      const finalizeCompressedCall = betaV1LineaRollup
-        .connect(operator)
-        .finalizeBlocks(betaV1FinalizationData.aggregatedProof, TEST_PUBLIC_VERIFIER_INDEX, finalizationData);
-
-      // *** ASSERT ***
-      const eventArgs = [
-        BigInt(betaV1FinalizationData.lastFinalizedBlockNumber) + 1n,
-        finalizationData.endBlockNumber,
-        betaV1FinalizationData.finalShnarf,
-        finalizationData.parentStateRootHash,
-        finalBlobFile.finalStateRootHash,
-      ];
-
-      await expectEvent(betaV1LineaRollup, finalizeCompressedCall, "DataFinalizedV3", eventArgs);
-
-      const [expectedFinalStateRootHash, lastFinalizedBlockNumber, lastFinalizedState] = await Promise.all([
-        betaV1LineaRollup.stateRootHashes(finalizationData.endBlockNumber),
-        betaV1LineaRollup.currentL2BlockNumber(),
-        betaV1LineaRollup.currentFinalizedState(),
-      ]);
-
-      expect(expectedFinalStateRootHash).to.equal(finalizationData.shnarfData.finalStateRootHash);
-      expect(lastFinalizedBlockNumber).to.equal(finalizationData.endBlockNumber);
-      expect(lastFinalizedState).to.equal(
-        generateKeccak256(
-          ["uint256", "bytes32", "uint256"],
-          [
-            finalizationData.l1RollingHashMessageNumber,
-            finalizationData.l1RollingHash,
-            finalizationData.finalTimestamp,
-          ],
-        ),
-      );
-    });
   });
 
   describe("Prover Beta V1.4", () => {
