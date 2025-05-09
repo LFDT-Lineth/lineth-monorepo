@@ -1,0 +1,8 @@
+services:
+  linea-besu-basic-sepolia-node:
+    image: consensys/linea-besu-package:latest
+    command: --profile=basic-sepolia --p2p-host=YOUR_IP_ADDRESS
+    ports:
+      - 30303:30303
+      - 8545:8545
+      - 8546:8546

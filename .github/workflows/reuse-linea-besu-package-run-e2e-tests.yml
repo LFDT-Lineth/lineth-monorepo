@@ -1,0 +1,134 @@
+name: Reusable run e2e tests
+on:
+  workflow_call:
+    inputs:
+      linea_besu_package_tag:
+        description: The tag to use for all linea-besu-package images
+        required: true
+        type: string
+      expected_traces_api_version:
+        description: The expected traces api version used by cooridinator
+        required: true
+        type: string
+      e2e-tests-with-ssh:
+        description: Run end to end tests with ability to ssh into environment
+        required: false
+        type: boolean
+        default: false
+      e2e-tests-logs-dump:
+        description: Dump logs after running end to end tests
+        required: false
+        type: boolean
+        default: false
+      e2e-tests-containers-list:
+        description: List containers before starting end to end tests
+        required: false
+        type: boolean
+        default: true
+    outputs:
+      tests_outcome:
+        value: ${{ jobs.run-e2e-tests.outputs.tests_outcome }}
+    secrets:
+      DOCKERHUB_USERNAME:
+        required: false
+      DOCKERHUB_TOKEN:
+        required: false
+
+jobs:
+  # Required job
+  run-e2e-tests:
+    env:
+      BESU_PACKAGE_TAG: ${{ inputs.linea_besu_package_tag }}
+      EXPECTED_TRACES_API_VERSION: ${{ inputs.expected_traces_api_version }}
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+    outputs:
+      tests_outcome: ${{ steps.run_e2e_tests.outcome }}
+    # xl saves ~0 mins
+    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-large
+    steps:
+      - name: Setup upterm session
+        if: ${{ inputs.e2e-tests-with-ssh }}
+        uses: lhotari/action-upterm@v1
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup nodejs environment
+        uses: ./.github/actions/setup-nodejs
+        with:
+          pnpm-install-options: '-F contracts -F e2e --frozen-lockfile --prefer-offline'
+      - name: Login to Docker Hub
+        if: ${{ env.DOCKERHUB_USERNAME != '' && env.DOCKERHUB_TOKEN != '' }}
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Create directory for conflated traces
+        run: |
+          mkdir -p tmp/local/traces/v2/conflated
+          chmod -R a+rw tmp/local/
+      - name: Download local docker image artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: linea-besu-package*
+      - name: Load Docker images
+        run: |
+          pwd && ls -la && echo "GITHUB_WORKSPACE=$GITHUB_WORKSPACE" &&
+          gunzip -c $GITHUB_WORKSPACE/linea-besu-package/linea-besu-package-image.tar.gz | docker load
+        shell: bash
+      - name: Replace expected traces api version in coordinator config file
+        shell: bash
+        run: |
+          sed -i 's/^\(expected-traces-api-version-v2=\).*/\1"${{ env.EXPECTED_TRACES_API_VERSION }}"/' config/coordinator/coordinator-docker-traces-v2-override.config.toml
+          echo "EXPECTED_TRACES_API_VERSION=${{ env.EXPECTED_TRACES_API_VERSION }}"
+          echo "BESU_PACKAGE_TAG=${{ env.BESU_PACKAGE_TAG }}"
+          echo "$(grep expected-traces-api-version-v2 config/coordinator/coordinator-docker-traces-v2-override.config.toml)"
+      - name: Spin up fresh environment with besu tracing with retry
+        uses: nick-fields/retry@v3
+        with:
+          max_attempts: 10
+          retry_on: error
+          retry_wait_seconds: 30
+          timeout_minutes: 10
+          command: |
+            make start-env-with-tracing-v2-ci CLEAN_PREVIOUS_ENV=false
+          on_retry_command: |
+            make clean-environment
+      - name: List docker containers/images
+        if: ${{ always() && inputs.e2e-tests-containers-list }}
+        continue-on-error: true
+        run: |
+          docker ps -la && docker images
+          docker container ls -a
+      - name: Run e2e tests
+        id: run_e2e_tests
+        timeout-minutes: 4
+        run: |
+          pnpm run -F e2e test:e2e:local
+      - name: Show e2e tests result
+        if: always()
+        run: |
+          echo "E2E_TESTS_RESULT: ${{ steps.run_e2e_tests.outcome }}"
+      - name: Dump logs
+        if: ${{ failure() && inputs.e2e-tests-logs-dump }}
+        run: |
+          mkdir -p docker_logs
+          find tmp/local/ >> docker_logs/files_in_shared_dir.txt || true
+          docker ps -a >> docker_logs/docker_ps.txt || true
+          docker logs coordinator --since 1h &>> docker_logs/coordinator.txt || true
+          docker logs prover-v3 --since 1h &>> docker_logs/prover-v3.txt || true
+          docker logs shomei --since 1h &>> docker_logs/shomei.txt || true
+          docker logs zkbesu-shomei --since 1h &>> docker_logs/zkbesu-shomei.txt || true
+          docker logs shomei-frontend --since 1h &>> docker_logs/shomei-frontend.txt || true
+          docker logs postman --since 1h &>> docker_logs/postman.txt || true
+          docker logs traces-node-v2 --since 1h &>> docker_logs/traces-node-v2.txt || true
+          docker logs l2-node-besu --since 1h &>> docker_logs/l2-node-besu.txt || true
+          docker logs transaction-exclusion-api --since 1h &>> docker_logs/transaction-exclusion-api.txt || true
+          docker logs sequencer --since 1h &>> docker_logs/sequencer.txt || true
+      - name: Archive debug logs
+        uses: actions/upload-artifact@v4
+        if: ${{ failure() && inputs.e2e-tests-logs-dump }}
+        with:
+          name: end-2-end-debug-logs
+          if-no-files-found: error
+          path: |
+            docker_logs/**/*

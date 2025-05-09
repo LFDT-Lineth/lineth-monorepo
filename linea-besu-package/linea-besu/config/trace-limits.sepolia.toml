@@ -1,0 +1,61 @@
+[traces-limits]
+#
+# Arithmetization module limits
+#
+ADD                 = 524288
+BIN                 = 262144
+BLAKE_MODEXP_DATA	= 16384
+BLOCK_DATA          = 1024
+BLOCK_HASH          = 512
+EC_DATA             = 262144
+EUC                 = 65536
+EXP                 = 8192
+EXT	                = 1048576
+GAS	                = 65536
+HUB                 = 2097152
+LOG_DATA            = 65536
+LOG_INFO            = 4096
+MMIO                = 4194304
+MMU                 = 4194304
+MOD                 = 131072
+MUL                 = 65536
+MXP                 = 524288
+OOB                 = 262144
+RLP_ADDR            = 4096
+RLP_TXN             = 131072
+RLP_TXN_RCPT        = 65536
+ROM                 = 4194304
+ROM_LEX             = 1024
+SHAKIRA_DATA        = 32768
+SHF                 = 65536
+STP                 = 16384
+TRM                 = 32768
+TXN_DATA            = 8192
+WCP                 = 262144
+#
+# Reference table limits
+#
+BIN_REFERENCE_TABLE = 262144
+SHF_REFERENCE_TABLE = 4096
+INSTRUCTION_DECODER = 512
+#
+# Precompiles limits
+#
+PRECOMPILE_ECRECOVER_EFFECTIVE_CALLS     = 128
+PRECOMPILE_SHA2_BLOCKS                   = 671
+PRECOMPILE_RIPEMD_BLOCKS                 = 671
+PRECOMPILE_MODEXP_EFFECTIVE_CALLS        = 4
+PRECOMPILE_ECADD_EFFECTIVE_CALLS         = 16384
+PRECOMPILE_ECMUL_EFFECTIVE_CALLS         = 32
+PRECOMPILE_ECPAIRING_FINAL_EXPONENTIATIONS = 16
+PRECOMPILE_ECPAIRING_G2_MEMBERSHIP_CALLS    = 64
+PRECOMPILE_ECPAIRING_MILLER_LOOPS        = 64
+PRECOMPILE_BLAKE_EFFECTIVE_CALLS         = 600
+PRECOMPILE_BLAKE_ROUNDS                  = 600
+#
+# Block-specific limits
+#
+BLOCK_KECCAK       = 8192
+BLOCK_L1_SIZE      = 1000000
+BLOCK_L2_L1_LOGS   = 16
+BLOCK_TRANSACTIONS = 200

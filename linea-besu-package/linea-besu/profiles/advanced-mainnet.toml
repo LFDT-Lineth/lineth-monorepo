@@ -1,0 +1,102 @@
+### Data and Storage ###
+data-path="/data"
+data-storage-format="BONSAI"
+
+### Node and Network configuration ###
+bootnodes=["enode://069800db9e6e0ec9cadca670994ef1aea2cfd3d88133e63ecadbc1cdbd1a5847b09838ee08d8b5f02a9c32ee13abeb4d4104bb5514e5322c9d7ee19f41ff3e51@3.132.73.210:31002","enode://a8e03a71eab12ec4b47bb6e19169d8e4dc7a58373a2476969bbe463f2dded6003037fa4dd5f71e15027f7fc8d7340956fbbefed67ddd116ac19a7f74da034b61@3.132.73.210:31003","enode://97706526cf79df9d930003644f9156805f6c8bd964fc79e083444f7014ce10c9bdd2c5049e63b58040dca1d4c82ebef970822198cf0714de830cff4111534ff1@18.223.198.165:31004","enode://24e1c654a801975a96b7f54ebd7452ab15777fc635c1db25bdbd4425fdb04e7f4768e9e838a87ab724320a765e41631d5d37758c933ad0e8668693558125c8aa@18.223.198.165:31000","enode://27010891d960f73d272a553f72b6336c6698db3ade98d631f09c764e57674a797be5ebc6829ddbb65ab564f439ebc75215d20aa98b6f351d12ea623e7d139ac3@3.132.73.210:31001"]
+static-nodes-file="config/static-nodes.mainnet.json"
+host-allowlist=["*"]
+discovery-enabled=true
+p2p-host="0.0.0.0"
+p2p-port=30303
+fast-sync-min-peers=3
+max-peers=50
+
+# For node to be a sequencer, this key has to match the key used in genesis file
+node-private-key-file="/data/key"
+genesis-file="genesis/genesis.mainnet.json" # Path to the custom genesis file
+sync-mode="SNAP"
+Xbonsai-full-flat-db-enabled=true
+
+### Transaction pool ###
+tx-pool-enable-save-restore=true
+tx-pool-price-bump=1
+tx-pool-max-future-by-sender=1000
+tx-pool-min-gas-price="20000000"
+tx-pool-layer-max-capacity="100000000"
+tx-pool-priority-senders=["0xc1C6B09D1eB6fCA0fF3cA11027E5Bc4AeDb47F67","0x46eA7a855DA88FBC09cc59de93468E6bFbf0d81b"]
+tx-pool-no-local-priority=true
+
+### RPC and API configuration ###
+rpc-http-enabled=true
+rpc-http-host="0.0.0.0"
+rpc-http-port=8545
+rpc-http-api=["ETH","NET","WEB3","DEBUG","TRACE","TXPOOL","LINEA","MINER"]
+rpc-http-cors-origins=["all"]
+
+rpc-ws-enabled=true
+rpc-ws-api=["ETH","NET","WEB3"]
+rpc-ws-host="0.0.0.0"
+rpc-ws-port=8546
+
+rpc-gas-cap="50000000"
+
+graphql-http-enabled=true
+graphql-http-host="0.0.0.0"
+graphql-http-port=8547
+graphql-http-cors-origins=["all"]
+
+api-gas-price-blocks=20
+api-gas-price-percentile=60
+api-gas-and-priority-fee-limiting-enabled=true
+api-gas-and-priority-fee-lower-bound-coefficient="120"
+
+Xplugin-rocksdb-high-spec-enabled=true
+
+### Metrics ###
+metrics-enabled=true
+metrics-host="0.0.0.0"
+metrics-port=9545
+
+### JWT and Engine Configuration ###
+engine-jwt-disabled=false
+engine-jwt-secret="/etc/jwt-secret.hex"
+engine-rpc-enabled=false
+engine-rpc-port=8551
+engine-host-allowlist=["*"]
+
+### Gas and Block Limit Configuration ###
+min-gas-price="20000000"
+target-gas-limit="2000000000"
+
+### Plugin Configuration ###
+#plugin-linea-min-margin="0.3"
+#plugin-linea-gas-price-ratio=12
+plugins=["LineaEstimateGasEndpointPlugin","LineaL1FinalizationTagUpdaterPlugin","LineaExtraDataPlugin", "LineaTransactionPoolValidatorPlugin"]
+plugin-linea-module-limit-file-path="config/trace-limits.mainnet.toml"
+plugin-linea-max-tx-calldata-size=60000
+plugin-linea-max-block-calldata-size=70000
+plugin-linea-max-tx-gas-limit=24000000
+plugin-linea-estimate-gas-min-margin="1.2"
+Xin-process-rpc-enabled=true
+Xin-process-rpc-apis=["MINER", "ETH"]
+plugin-linea-tx-pool-profitability-check-api-enabled=true
+plugin-linea-tx-pool-profitability-check-p2p-enabled=true
+plugin-linea-tx-pool-simulation-check-p2p-enabled=false
+plugin-linea-tx-pool-simulation-check-api-enabled=true
+plugin-linea-min-margin="1.0"
+plugin-linea-tx-pool-min-margin="0.8"
+plugin-linea-fixed-gas-cost-wei=30000000
+plugin-linea-variable-gas-cost-wei=10000000
+plugin-linea-estimate-gas-compatibility-mode-enabled=false
+plugin-linea-extra-data-pricing-enabled=true
+plugin-linea-extra-data-set-min-gas-price-enabled=true
+plugin-linea-max-block-gas=55000000
+plugin-linea-l1l2-bridge-contract="0x508Ca82Df566dCD1B0DE8296e70a96332cD644ec"
+plugin-linea-l1l2-bridge-topic="e856c2b8bd4eb0027ce32eeaf595c21b0b6b4644b326e5b7bd80a1cf8db72e6c"
+plugin-linea-estimate-gas-compatibility-mode-multiplier="1.2"
+plugin-linea-deny-list-path="config/denylist.mainnet.txt"
+
+# LineaL1FinalizationTagUpdaterPlugin
+plugin-linea-l1-smart-contract-address="0xd19d4B5d358258f05D7B411E21A1460D11B0876F"
+plugin-linea-l1-rpc-endpoint="http://localhost:8545"

@@ -1,0 +1,67 @@
+name: Reusable linea-besu-package Besu run test
+
+on:
+  workflow_call:
+    inputs:
+      dockerimage:
+        required: true
+        type: string
+
+jobs:
+  list-profiles:
+    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
+    outputs:
+      profile-files: ${{ steps.list-profiles.outputs.files }}
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: Split and list profiles
+        id: list-profiles
+        run: |
+          files=$(ls linea-besu-package/linea-besu/profiles/* | xargs -n 1 basename | sed 's/\.[^.]*$//')
+          files_json=$(echo "$files" | tr ' ' '\n' | jq -R -s -c 'split("\n") | map(select(length > 0))')
+          echo "files=$files_json" >> "$GITHUB_OUTPUT"
+          echo "Files: $files_json"
+
+  test-profile:
+    timeout-minutes: 4
+    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-med
+    continue-on-error: true
+    needs: [ list-profiles ]
+    strategy:
+      fail-fast: false
+      matrix:
+        file: ${{ fromJSON(needs.list-profiles.outputs.profile-files) }}
+    env:
+      CONTAINER_NAME: linea-besu-profile-check-${{ matrix.file }}
+      DOCKER_IMAGE: ${{ inputs.dockerimage }}
+    steps:
+      - name: Check repository
+        uses: actions/checkout@v4
+
+      - name: Download local docker image artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: linea-besu-package*
+      
+      - name: Load Docker image
+        run: |
+          pwd && ls -la && echo "GITHUB_WORKSPACE=$GITHUB_WORKSPACE" &&
+          gunzip -c $GITHUB_WORKSPACE/linea-besu-package/linea-besu-package-image.tar.gz | docker load
+        shell: bash
+
+      - name: Start container
+        run: |
+          env
+          COMMAND="docker run -d --name ${{ env.CONTAINER_NAME }} -e BESU_PROFILE=${{ matrix.file }} ${{ env.DOCKER_IMAGE }}"
+          echo $COMMAND
+          eval $COMMAND
+
+      - name: Verify besu container
+        run: bash linea-besu-package/docker/scripts/BesuContainerVerify.sh
+        env:
+          CONTAINER_NAME: ${{ env.CONTAINER_NAME }}
+
+      - name: Stop container
+        run: docker stop ${{ env.CONTAINER_NAME }}

@@ -1,0 +1,213 @@
+name: Reusable linea-besu-package build, test, and push
+on:
+  workflow_call:
+    inputs:
+      release_tag_prefix:
+        required: true
+        type: string 
+      run_test:
+        required: true
+        type: boolean
+      run_e2e_test:
+        required: true
+        type: boolean
+      push_image:
+        required: true
+        type: boolean
+    secrets:
+      DOCKERHUB_USERNAME:
+        required: false
+      DOCKERHUB_TOKEN:
+        required: false
+
+jobs:
+  build-and-upload-artifact:
+    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-med
+    if: ${{ inputs.run_test || inputs.run_e2e_test }}
+    environment: dockerhub
+    outputs:
+      linea_besu_package_tag: ${{ steps.assemble.outputs.dockertag }} 
+      expected_traces_api_version: ${{ steps.assemble.outputs.tracer_plugin_version }}
+      dockerimage: ${{ steps.assemble.outputs.dockerimage }}
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: build the linea artifacts
+        id: assemble
+        uses: ./.github/actions/linea-besu-package/assemble
+        with:
+          release_tag_prefix: ${{ inputs.release_tag_prefix }}
+      
+      - name: set up docker buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: set docker build args
+        run: |
+          echo "Building docker tag: ${{ steps.assemble.outputs.dockertag }}"
+          echo "Building docker image: ${{ steps.assemble.outputs.dockerimage }}"
+
+      - name: build the combined manifest
+        uses: docker/build-push-action@v6
+        env:
+          DOCKER_BUILD_SUMMARY: false
+        with:
+          context: linea-besu-package/linea-besu/.
+          platforms: linux/amd64
+          provenance: false
+          build-args: |
+            VERSION=${{ steps.assemble.outputs.dockertag }}
+            VCS_REF=${{ github.sha }}
+            BUILD_DATE=${{ steps.assemble.outputs.build_date }}
+          load: true
+          push: false
+          tags: |
+            consensys/linea-besu-package:${{ steps.assemble.outputs.dockertag }}
+      
+      - name: Save Docker image as artifact
+        run: |
+          docker images
+          docker save consensys/linea-besu-package:${{ steps.assemble.outputs.dockertag }} | gzip > linea-besu-package-image.tar.gz
+        shell: bash
+
+      - name: Upload Docker image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: linea-besu-package
+          path: linea-besu-package-image.tar.gz
+          retention-days: 1
+
+  run-test:
+    needs: [ build-and-upload-artifact ]
+    if: ${{ inputs.run_test }}
+    concurrency:
+      group: run-test-${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+    uses: ./.github/workflows/reuse-linea-besu-package-run-test.yml
+    with:
+      dockerimage: ${{ needs.build-and-upload-artifact.outputs.dockerimage }}
+
+  run-e2e-tests:
+    needs: [ build-and-upload-artifact ]
+    if: ${{ inputs.run_e2e_test }}
+    concurrency:
+      group: run-e2e-tests-${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+    uses: ./.github/workflows/reuse-linea-besu-package-run-e2e-tests.yml
+    with:
+      linea_besu_package_tag: ${{ needs.build-and-upload-artifact.outputs.linea_besu_package_tag }} 
+      expected_traces_api_version: ${{ needs.build-and-upload-artifact.outputs.expected_traces_api_version }}
+      e2e-tests-logs-dump: true
+    secrets: inherit
+
+  build-and-push-dockerhub:
+    needs: [ run-test, run-e2e-tests ]
+    if: ${{ always() && inputs.push_image && (needs.run-e2e-test.result == 'skipped' || needs.run-e2e-tests.outputs.tests_outcome == 'success') && (needs.run-test.result == 'skipped' || needs.run-test.result == 'success') }}
+    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-med
+    environment: dockerhub
+    env:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: build the linea artifacts
+        id: assemble
+        uses: ./.github/actions/linea-besu-package/assemble
+        with:
+          release_tag_prefix: ${{ inputs.release_tag_prefix }}
+          compile_release_notes: ${{ inputs.push_image }}
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      
+      - name: set up docker buildx
+        uses: docker/setup-buildx-action@v3   
+
+      - name: Login to Docker Hub
+        if: ${{ env.DOCKERHUB_USERNAME != '' && env.DOCKERHUB_TOKEN != '' }}
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: set docker build args
+        run: |
+          echo "Building docker tag: ${{ steps.assemble.outputs.dockertag }}"
+          echo "Building docker image: ${{ steps.assemble.outputs.dockerimage }}"
+
+      - name: build and push the combined manifest
+        uses: docker/build-push-action@v6
+        env:
+          DOCKER_BUILD_SUMMARY: false
+        with:
+          context: linea-besu-package/linea-besu/.
+          platforms: linux/arm64,linux/amd64
+          provenance: false
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache          
+          build-args: |
+            VERSION=${{ steps.assemble.outputs.dockertag }}
+            VCS_REF=${{ github.sha }}
+            BUILD_DATE=${{ steps.assemble.outputs.build_date }}
+          push: true
+          tags: |
+            consensys/linea-besu-package:${{ steps.assemble.outputs.dockertag }}
+            ${{ github.ref == 'refs/heads/main' && 'consensys/linea-besu-package:develop' || '' }}
+            ${{ github.event_name == 'workflow_dispatch' && 'consensys/linea-besu-package:latest' || '' }}
+
+      ### update the release notes with docker hashes
+      - name: create the release notes and then the release
+        id: release_create_artifacts
+        run: |
+          cd release
+          MANIFEST=$(docker manifest inspect consensys/linea-besu-package:${{ steps.assemble.outputs.dockertag }})
+          if [ $? -eq 0 ]; then
+            echo "### Docker Image Details" >> output.md
+            echo "" >> output.md
+            echo "To pull the image, use the following command:" >> output.md
+            echo "\`\`\`" >> output.md
+            echo "docker pull consensys/linea-besu-package:${{ steps.assemble.outputs.dockertag }}" >> output.md
+            echo "\`\`\`" >> output.md
+            echo "" >> output.md
+            echo "| Digest | OS | Architecture |" >> output.md
+            echo "|--------|----|--------------|" >> output.md
+            echo "$MANIFEST" | jq -r '.manifests[] | select(.platform.architecture != "unknown" and .platform.os != "unknown") | "| \(.digest) | \(.platform.os) | \(.platform.architecture) |"' >> output.md
+          else
+            echo "Docker image consensys/linea-besu-package:${{ steps.assemble.outputs.dockertag }} does not exist on dockerhub"
+            exit 1
+          fi
+
+      - name: Conventional Changelog Action
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        id: change_log
+        uses: TriPSs/conventional-changelog-action@v5
+        with:
+          git-path: ./linea-besu-package/
+          git-push: false
+          output-file: "false"
+      
+      - name: Append Changelog Action to release note
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        id: append_change_log
+        shell: bash
+        run: |
+          cd release
+          echo "## What's Changed" >> output.md
+          echo "${{ steps.change_log.outputs.clean_changelog }}" >> output.md
+          echo "output.md=$(cat output.md)"
+
+      - name: release - publish artifacts and release notes
+        id: release_publish
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Linea Besu Package ${{ steps.assemble.outputs.releasetag }}
+          tag_name: linea-besu-package-${{ steps.assemble.outputs.releasetag }}
+          body_path: release/output.md
+          prerelease: ${{  github.event_name != 'workflow_dispatch' }}
+          generate_release_notes: false
+          target_commitish: ${{ github.sha }}
+          fail_on_unmatched_files: true
+          files: |
+            release/linea-besu-package-${{ steps.assemble.outputs.dockertag }}.tar.gz

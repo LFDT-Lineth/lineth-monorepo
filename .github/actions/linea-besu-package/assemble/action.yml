@@ -1,0 +1,172 @@
+---
+name: 'assemble'
+description: 'Composite action to assemble the artifacts for the targer environment'
+
+inputs:
+  release_tag_prefix:
+    description: 'Custom release tag prefix'
+    required: true
+  compile_release_notes:
+    description: 'Compile release notes or not'
+    required: false
+    default: 'false'
+
+outputs:
+  workflow_id:
+    description: workflow id
+    value: ${{ steps.workflowdetails.outputs.id }}
+
+  build_date:
+    description: build date
+    value: ${{ steps.workflowdetails.outputs.build_date }}
+
+  dockertag:
+    description: docker tag
+    value: ${{ steps.dockertag.outputs.dockertag }}
+
+  dockerimage:
+    description: docker image
+    value: ${{ steps.dockerimage.outputs.dockerimage }}
+
+  releasetag:
+    description: release tag
+    value: ${{ steps.releasetag.outputs.releasetag }}
+  
+  tracer_plugin_version:
+    description: tracer plugin version
+    value: ${{ steps.dotenv.outputs.LINEA_TRACER_PLUGIN_VERSION }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout tools repo
+      uses: actions/checkout@v4
+      with:
+        repository: Consensys/docs-gha
+        path: .docs-gha
+
+    - name: get workflow_details
+      id: workflowdetails
+      shell: bash      
+      run: |
+        echo "id=${{ github.run_id }}" >> $GITHUB_OUTPUT
+        echo "build_date=$(date --rfc-3339=date)" >> $GITHUB_OUTPUT
+    
+    - name: get versions via dotenv
+      id: dotenv
+      uses: falti/dotenv-action@v1
+      with:
+        path: linea-besu-package/versions.env
+        mode: development
+        keys-case: lower
+        log-variables: true
+        load-mode: strict
+    
+    - name: Set timestamp
+      id: timestamp
+      shell: bash     
+      run: |
+        echo "TIMESTAMP=$(date -u +%Y%m%d%H%M%S)" >> $GITHUB_OUTPUT
+
+    - name: Compute commit hash
+      id: commithash
+      shell: bash
+      run: |
+        # For PR, GITHUB_SHA is NOT the last commit pushed onto the PR branch - https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#pull_request
+        if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+          echo "commithash=$(git rev-parse --short ${{ github.event.pull_request.head.sha }})" >> $GITHUB_OUTPUT
+        else
+          echo "commithash=$(git rev-parse --short $GITHUB_SHA)" >> $GITHUB_OUTPUT
+        fi
+
+    - name: set docker tag
+      id: dockertag
+      shell: bash
+      run: |
+        if [ -n "${{ inputs.release_tag_prefix }}" ]; then
+          echo "dockertag=${{ inputs.release_tag_prefix }}-${{ steps.timestamp.outputs.TIMESTAMP }}-${{ steps.commithash.outputs.commithash }}" >> $GITHUB_OUTPUT
+        else
+          echo "dockertag=${{ steps.dotenv.outputs.LINEA_TRACER_PLUGIN_VERSION }}-${{ steps.timestamp.outputs.TIMESTAMP }}-${{ steps.commithash.outputs.commithash }}" >> $GITHUB_OUTPUT
+        fi
+    
+    - name: set release tag
+      id: releasetag
+      shell: bash
+      run: |
+        echo "releasetag=${{ steps.dockertag.outputs.dockertag }}" >> $GITHUB_OUTPUT
+
+    - name: set docker image
+      id: dockerimage
+      shell: bash
+      run: |
+        echo "dockerimage=consensys/linea-besu-package:${{ steps.dockertag.outputs.dockertag }}" >> "$GITHUB_OUTPUT"
+        
+    - name: download and untar the linea-besu archive
+      shell: bash
+      run: |
+        cd /tmp/
+        echo "downloading besu from linea-besu-upstream: ${{ steps.dotenv.outputs.LINEA_BESU_TAR_GZ }}"
+        wget -nv "${{ steps.dotenv.outputs.LINEA_BESU_BASE_URL }}${{ steps.dotenv.outputs.LINEA_BESU_TAR_GZ }}/${{ steps.dotenv.outputs.LINEA_BESU_FILENAME_PREFIX }}-${{ steps.dotenv.outputs.LINEA_BESU_TAR_GZ }}.tar.gz"
+        tar -xvf ${{ steps.dotenv.outputs.LINEA_BESU_FILENAME_PREFIX }}-${{ steps.dotenv.outputs.LINEA_BESU_TAR_GZ }}.tar.gz
+        mv /tmp/${{ steps.dotenv.outputs.LINEA_BESU_FILENAME_PREFIX }}-${{ steps.dotenv.outputs.LINEA_BESU_TAR_GZ }} /tmp/besu
+
+    - name: copy the list of versions to the container
+      shell: bash      
+      run: |
+        cp ./linea-besu-package/versions.env /tmp/besu/versions.txt
+        mkdir -p /tmp/besu/plugins
+
+    - name: get the plugins
+      shell: bash      
+      run: |
+        cd /tmp/besu/plugins
+
+        echo "getting linea_sequencer_plugin_version: ${{ steps.dotenv.outputs.LINEA_SEQUENCER_PLUGIN_VERSION }}" 
+        wget -nv "https://github.com/Consensys/linea-sequencer/releases/download/v${{ steps.dotenv.outputs.LINEA_SEQUENCER_PLUGIN_VERSION }}/linea-sequencer-v${{ steps.dotenv.outputs.LINEA_SEQUENCER_PLUGIN_VERSION }}.jar" -P /tmp/besu/plugins
+
+        echo "getting linea_finalized_tag_updater_plugin_version: ${{ steps.dotenv.outputs.LINEA_FINALIZED_TAG_UPDATER_PLUGIN_VERSION }}" 
+        wget -nv "https://github.com/Consensys/linea-monorepo/releases/download/linea-finalized-tag-updater-v${{ steps.dotenv.outputs.LINEA_FINALIZED_TAG_UPDATER_PLUGIN_VERSION }}/linea-finalized-tag-updater-v${{ steps.dotenv.outputs.LINEA_FINALIZED_TAG_UPDATER_PLUGIN_VERSION }}.jar" -P /tmp/besu/plugins
+
+        echo "getting linea_staterecovery_plugin_version: ${{ steps.dotenv.outputs.LINEA_STATERECOVERY_PLUGIN_VERSION }}"
+        wget -nv "https://github.com/Consensys/linea-monorepo/releases/download/linea-staterecovery-v${{ steps.dotenv.outputs.LINEA_STATERECOVERY_PLUGIN_VERSION }}/linea-staterecovery-besu-plugin-v${{ steps.dotenv.outputs.LINEA_STATERECOVERY_PLUGIN_VERSION }}.jar" -P /tmp/besu/plugins
+
+        echo "getting linea_tracer_plugin_version: ${{ steps.dotenv.outputs.LINEA_TRACER_PLUGIN_VERSION }}" 
+        wget -nv "https://github.com/Consensys/linea-tracer/releases/download/${{ steps.dotenv.outputs.LINEA_TRACER_PLUGIN_VERSION }}/linea-tracer-${{ steps.dotenv.outputs.LINEA_TRACER_PLUGIN_VERSION }}.jar" -P /tmp/besu/plugins
+
+        echo "getting shomei_plugin_version: ${{ steps.dotenv.outputs.SHOMEI_PLUGIN_VERSION }}" 
+        wget -nv "https://github.com/Consensys/besu-shomei-plugin/releases/download/v${{ steps.dotenv.outputs.SHOMEI_PLUGIN_VERSION }}/besu-shomei-plugin-v${{ steps.dotenv.outputs.SHOMEI_PLUGIN_VERSION }}.jar" -P /tmp/besu/plugins
+
+    - name: place the packages together for preparing docker image build
+      shell: bash    
+      run: |
+        cd linea-besu-package/linea-besu
+        mv /tmp/besu ./
+        mv config/ genesis/ profiles/ besu/
+        sudo apt update
+        sudo apt-get install --no-install-recommends --assume-yes tree
+        tree .
+
+    - name: compile release notes
+      id: release_create_artifacts
+      if: ${{ inputs.compile_release_notes == 'true' }}
+      shell: bash
+      run: |
+        mkdir release && cd release
+        tar -czvf linea-besu-package-${{ steps.dockertag.outputs.dockertag }}.tar.gz ../linea-besu-package/linea-besu/
+
+        echo "# Release Artifact: Linea Besu Package" > output.md
+        echo "**Name:** linea-besu-package-${{ steps.dockertag.outputs.dockertag }}.tar.gz" >> output.md
+        echo "**SHA256:** $(sha256sum linea-besu-package-${{ steps.dockertag.outputs.dockertag }}.tar.gz | awk '{ print $1 }' )" >> output.md
+        echo "**From:** [${{ github.ref_name }} (${{ github.event_name }})](https://github.com/Consensys/linea-monorepo/actions/runs/${{ github.run_id }})" >> output.md
+        echo "" >> output.md
+
+        echo "### Besu and Plugin Details" >> output.md
+        echo "| Module | Version | SHA-256 |" >> output.md
+        echo "|--------|---------|--------------|" >> output.md
+        echo "| linea-besu | ${{ steps.dotenv.outputs.LINEA_BESU_TAR_GZ }} | $(sha256sum /tmp/${{ steps.dotenv.outputs.LINEA_BESU_FILENAME_PREFIX }}-${{ steps.dotenv.outputs.LINEA_BESU_TAR_GZ }}.tar.gz | awk '{ print $1 }' ) |" >> output.md
+        echo "| linea-sequencer-plugin | ${{ steps.dotenv.outputs.LINEA_SEQUENCER_PLUGIN_VERSION }} | $(sha256sum ../linea-besu-package/linea-besu/besu/plugins/linea-sequencer-v${{ steps.dotenv.outputs.LINEA_SEQUENCER_PLUGIN_VERSION }}.jar | awk '{ print $1 }' ) |" >> output.md    
+        echo "| linea-tracer-plugin | ${{ steps.dotenv.outputs.LINEA_TRACER_PLUGIN_VERSION }} | $(sha256sum ../linea-besu-package/linea-besu/besu/plugins/linea-tracer-${{ steps.dotenv.outputs.LINEA_TRACER_PLUGIN_VERSION }}.jar | awk '{ print $1 }' ) |" >> output.md    
+        echo "| linea-finalized-tag-updater-plugin | ${{ steps.dotenv.outputs.LINEA_FINALIZED_TAG_UPDATER_PLUGIN_VERSION }} | $(sha256sum ../linea-besu-package/linea-besu/besu/plugins/linea-finalized-tag-updater-v${{ steps.dotenv.outputs.LINEA_FINALIZED_TAG_UPDATER_PLUGIN_VERSION }}.jar | awk '{ print $1 }' ) |" >> output.md    
+        echo "| linea-staterecovery-plugin | ${{ steps.dotenv.outputs.LINEA_STATERECOVERY_PLUGIN_VERSION }} | $(sha256sum ../linea-besu-package/linea-besu/besu/plugins/linea-staterecovery-besu-plugin-v${{ steps.dotenv.outputs.LINEA_STATERECOVERY_PLUGIN_VERSION }}.jar | awk '{ print $1 }' ) |" >> output.md    
+        echo "| shomei-plugin | ${{ steps.dotenv.outputs.SHOMEI_PLUGIN_VERSION }} | $(sha256sum ../linea-besu-package/linea-besu/besu/plugins/besu-shomei-plugin-v${{ steps.dotenv.outputs.SHOMEI_PLUGIN_VERSION }}.jar | awk '{ print $1 }' ) |" >> output.md    
+        echo "" >> output.md

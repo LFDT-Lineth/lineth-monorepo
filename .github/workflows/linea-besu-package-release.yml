@@ -1,0 +1,58 @@
+name: linea-besu-package-release
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+    paths:
+      - 'linea-besu-package/**'
+      - '.github/actions/linea-besu-package/**'
+      - '.github/workflows/linea-besu-package-release.yml'
+      - '.github/workflows/reuse-linea-besu-package-*.yml'
+
+  workflow_call:
+  workflow_dispatch:
+    inputs:
+      release_tag_prefix:
+        description: 'Custom release tag prefix, i.e. docker image tag would be [prefix]-[YYYYMMDDHHMMSS]-[commit], if not given, the tracer plugin version from "versions.env" would be used as prefix'
+        required: false
+        type: string
+        default: ''
+        
+permissions:
+  actions: read
+  id-token: write
+  contents: write
+
+jobs:
+  filter-commit-changes:
+    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
+    name: Filter commit changes
+    if: ${{ github.event_name != 'workflow_dispatch' }}
+    outputs:
+      versions_env: ${{ steps.filter.outputs.versions-env }}
+      linea_configs: ${{ steps.filter.outputs.linea-configs }}
+    steps:
+      - name: Filter commit changes
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          base: ${{ github.ref }}
+          list-files: "json"
+          filters: |
+            versions-env:
+              - 'linea-besu-package/versions.env'
+            linea-configs:
+              - 'linea-besu-package/linea-besu/**'
+
+  build-test-push:
+    needs: [ filter-commit-changes ]
+    if: ${{ always() }}
+    uses: ./.github/workflows/reuse-linea-besu-package-build-test-push.yml
+    with:
+      release_tag_prefix: ${{ inputs.release_tag_prefix }}
+      run_test: true
+      run_e2e_test: ${{ github.event_name == 'workflow_dispatch' || needs.filter-commit-changes.outputs.versions_env == 'true' }}
+      push_image: ${{ github.event_name == 'workflow_dispatch' || needs.filter-commit-changes.outputs.versions_env == 'true' || needs.filter-commit-changes.outputs.linea_configs == 'true' }}
+    secrets: inherit
