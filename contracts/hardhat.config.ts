@@ -36,14 +36,14 @@ const config: HardhatUserConfig = {
     // NB: double check the autoupdate shell script version complies to the latest solidity version if you add a new one.
     compilers: [
       {
-        version: "0.8.28",
+        version: "0.8.30",
         settings: {
           viaIR: useViaIR,
           optimizer: {
             enabled: true,
             runs: 10_000,
           },
-          evmVersion: "cancun",
+          evmVersion: "prague",
         },
       },
       /**
