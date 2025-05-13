@@ -135,6 +135,15 @@
   }
 }
 
+.menuItem > a {
+  text-decoration: none;
+
+  &:hover,
+  &:focus {
+    text-decoration: underline;
+  }
+}
+
 .submenu {
   display: none;
   flex-direction: column;
