@@ -51,9 +51,9 @@ export const test = metaMaskFixtures(setup).extend<{
   // Bridge UI Actions
   clickNativeBridgeButton: async ({ page }, use) => {
     await use(async () => {
-      const nativeBridgeBtn = page.getByRole("link", { name: "Native Bridge", exact: true });
-      await nativeBridgeBtn.click();
-      return nativeBridgeBtn;
+      const nativeBridgeLink = page.getByTestId("nav-item-Native-Bridge");
+      await nativeBridgeLink.click();
+      return nativeBridgeLink;
     });
   },
   openNativeBridgeTransactionHistory: async ({ page }, use) => {

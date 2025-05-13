@@ -23,7 +23,7 @@ export default function NavItem({ title, description, href, icon, label, as, dro
   const Wrapper = as || "li";
   return (
     <Wrapper key={href} className={clsx(styles["card-item"], dropdown && styles["dropdown"], isOpen && styles["open"])}>
-      <Link href={href} className={styles["card-link"]}>
+      <Link href={href} className={styles["card-link"]} data-testid={`nav-item-${title.split(" ").join("-")}`}>
         <div className={styles["card-wrapper"]}>
           <span className={styles["card-icon"]}>{icon}</span>
           <div className={styles["card-content"]}>

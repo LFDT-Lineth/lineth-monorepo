@@ -55,7 +55,7 @@
   "devDependencies": {
     "@playwright/test": "1.51.1",
     "@svgr/webpack": "8.1.0",
-    "@synthetixio/synpress": "4.0.10",
+    "@synthetixio/synpress": "4.1.0",
     "@types/fs-extra": "11.0.4",
     "@types/react": "18.3.11",
     "@types/react-dom": "18.3.0",
