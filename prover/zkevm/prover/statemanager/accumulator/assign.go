@@ -12,7 +12,9 @@ import (
 	"github.com/consensys/linea-monorepo/prover/protocol/dedicated/merkle"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	"github.com/consensys/linea-monorepo/prover/utils"
+	"github.com/consensys/linea-monorepo/prover/utils/exit"
 	"github.com/consensys/linea-monorepo/prover/utils/types"
+	"github.com/sirupsen/logrus"
 )
 
 // leafOpenings represents the structure for leaf openings
@@ -207,7 +209,8 @@ func (am *Module) Assign(
 
 	// Sanity check on the size
 	if len(builder.leaves) > am.MaxNumProofs {
-		utils.Panic("We have registered %v proofs which is more than the maximum number of proofs %v", len(builder.leaves), am.MaxNumProofs)
+		logrus.Errorf("We have registered %v proofs which is more than the maximum number of proofs %v", len(builder.leaves), am.MaxNumProofs)
+		exit.OnLimitOverflow()
 	}
 
 	// Assignments of columns

@@ -74,7 +74,7 @@ func (a *Arithmetization) Assign(run *wizard.ProverRuntime, traceFile string) {
 	// Performs a compatibility check by comparing the constraints
 	// commit of zkevm.bin with the constraints commit of the trace file.
 	// Panics if an incompatibility is detected.
-	if *a.Settings.IgnoreCompatibilityCheck == false {
+	if !*a.Settings.IgnoreCompatibilityCheck {
 		var errors []string
 
 		zkevmBinCommit, ok := a.Metadata.String("commit")

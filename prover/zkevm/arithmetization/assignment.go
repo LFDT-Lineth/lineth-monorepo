@@ -3,7 +3,6 @@ package arithmetization
 import (
 	"errors"
 	"fmt"
-	"os"
 
 	"github.com/consensys/go-corset/pkg/air"
 	"github.com/consensys/go-corset/pkg/trace"
@@ -12,6 +11,7 @@ import (
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
+	"github.com/consensys/linea-monorepo/prover/utils/exit"
 	"github.com/sirupsen/logrus"
 )
 
@@ -48,7 +48,7 @@ func AssignFromLtTraces(run *wizard.ProverRuntime, schema *air.Schema, expTraces
 
 	if err77 != nil {
 		logrus.Errorf("Error code 77 %v", err77)
-		os.Exit(TraceOverflowExitCode)
+		exit.OnLimitOverflow()
 	}
 
 	for id := uint(0); id < numCols; id++ {

@@ -11,7 +11,9 @@ import (
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	"github.com/consensys/linea-monorepo/prover/utils"
+	"github.com/consensys/linea-monorepo/prover/utils/exit"
 	"github.com/consensys/linea-monorepo/prover/utils/parallel"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -127,7 +129,8 @@ func (mod *Module) Assign(
 	// If the number of keccakf constraints is larger than what the module
 	// is sized for, then, we cannot prove everything.
 	if numKeccakf > mod.MaxNumKeccakf {
-		utils.Panic("Too many keccakf %v > %v", numKeccakf, mod.MaxNumKeccakf)
+		logrus.Errorf("Too many keccakf %v > %v", numKeccakf, mod.MaxNumKeccakf)
+		exit.OnLimitOverflow()
 	}
 
 	lu := mod.lookups

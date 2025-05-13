@@ -112,7 +112,7 @@ func (ctx localOpeningCtx) verifier(assi *wizard.VerifierRuntime) error {
 	}
 
 	if len(ys) != len(newParams.Ys) {
-		utils.Panic("the ys do not have the same length")
+		return fmt.Errorf("the ys do not have the same length")
 	}
 
 	errMsg := "fixed point compiler verifier failed\n"

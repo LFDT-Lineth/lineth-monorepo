@@ -2,7 +2,6 @@ package plonk
 
 import (
 	"fmt"
-	"os"
 	"sync"
 
 	"github.com/consensys/gnark-crypto/ecc"
@@ -17,6 +16,7 @@ import (
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	"github.com/consensys/linea-monorepo/prover/symbolic"
 	"github.com/consensys/linea-monorepo/prover/utils"
+	"github.com/consensys/linea-monorepo/prover/utils/exit"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
 	"golang.org/x/sync/errgroup"
@@ -96,7 +96,7 @@ func (ci *CircuitAlignmentInput) prepareWitnesses(run *wizard.ProverRuntime) {
 			// Don't use the fatal level here because we want to control the exit code
 			// to be 77.
 			logrus.Errorf("fatal=%v", err)
-			os.Exit(77)
+			exit.OnLimitOverflow()
 		}
 
 		if ci.InputFiller == nil {

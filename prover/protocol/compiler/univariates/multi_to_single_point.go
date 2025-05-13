@@ -2,11 +2,13 @@ package univariates
 
 import (
 	"fmt"
-	ppool "github.com/consensys/linea-monorepo/prover/utils/parallel/pool"
 	"math/big"
 	"reflect"
 	"runtime"
 	"sync"
+
+	"github.com/consensys/linea-monorepo/prover/utils/exit"
+	ppool "github.com/consensys/linea-monorepo/prover/utils/parallel/pool"
 
 	"github.com/consensys/gnark/frontend"
 	"github.com/sirupsen/logrus"
@@ -322,7 +324,8 @@ func (ctx mptsCtx) accumulateQuotients(run *wizard.ProverRuntime) {
 						panicMsg += fmt.Sprintf("\t\tfor %v, P(x) = %v\n", q.Pols[i].GetColID(), params.Ys[i].String())
 					}
 
-					utils.Panic("%vremainder was %v (while reducing %v from query %v) \n", panicMsg, rem.String(), polHandle.GetColID(), ctx.hs[hpos])
+					logrus.Errorf("%vremainder was %v (while reducing %v from query %v) \n", panicMsg, rem.String(), polHandle.GetColID(), ctx.hs[hpos])
+					exit.OnUnsatisfiedConstraints()
 				}
 			}
 

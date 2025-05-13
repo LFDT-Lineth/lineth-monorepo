@@ -16,8 +16,6 @@ import (
 	"github.com/consensys/go-corset/pkg/util/collection/typed"
 )
 
-const TraceOverflowExitCode = 77
-
 // Embed the whole constraint system at compile time, so no
 // more need to keep it in sync
 //

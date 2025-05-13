@@ -1,11 +1,10 @@
 package modexp
 
 import (
-	"os"
-
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	"github.com/consensys/linea-monorepo/prover/utils"
+	"github.com/consensys/linea-monorepo/prover/utils/exit"
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/common"
 	"github.com/sirupsen/logrus"
 )
@@ -88,12 +87,12 @@ func (mod *Module) Assign(run *wizard.ProverRuntime) {
 
 	if modexpCountSmall > mod.MaxNb256BitsInstances {
 		logrus.Errorf("limit overflow: the modexp (256 bits) count is %v and the limit is %v\n", modexpCountSmall, mod.MaxNb256BitsInstances)
-		os.Exit(77)
+		exit.OnLimitOverflow()
 	}
 
 	if modexpCountLarge > mod.MaxNb4096BitsInstances {
-		logrus.Errorf("limit overflow: the modexp (4096 bits) count is %v and the limit is %v\n", modexpCountSmall, mod.MaxNb4096BitsInstances)
-		os.Exit(77)
+		logrus.Errorf("limit overflow: the modexp (4096 bits) count is %v and the limit is %v\n", modexpCountLarge, mod.MaxNb4096BitsInstances)
+		exit.OnLimitOverflow()
 	}
 
 	builder.isActive.PadAndAssign(run, field.Zero())
