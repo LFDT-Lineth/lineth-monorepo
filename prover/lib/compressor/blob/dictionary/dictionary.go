@@ -3,11 +3,13 @@ package dictionary
 import (
 	"bytes"
 	"errors"
+	"fmt"
+	"os"
+
 	"github.com/consensys/gnark-crypto/ecc/bls12-381/fr"
 	"github.com/consensys/gnark-crypto/hash"
 	"github.com/consensys/gnark/std/compress"
 	"github.com/consensys/linea-monorepo/prover/lib/compressor/blob/encode"
-	"os"
 )
 
 // Checksum according to the given spec version
@@ -73,7 +75,7 @@ func (s Store) Get(checksum []byte, version uint16) ([]byte, error) {
 	}
 	res, ok := s[version][string(checksum)]
 	if !ok {
-		return nil, errors.New("dictionary not found")
+		return nil, fmt.Errorf("blob v%d: no dictionary found in store with checksum %x", version, checksum)
 	}
 	return res, nil
 }
