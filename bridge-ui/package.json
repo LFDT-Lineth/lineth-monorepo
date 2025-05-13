@@ -29,7 +29,7 @@
     "@dynamic-labs/solana": "4.10.2",
     "@dynamic-labs/wagmi-connector": "4.10.2",
     "@headlessui/react": "2.1.9",
-    "@layerswap/widget": "0.1.15",
+    "@layerswap/widget": "0.1.16",
     "@lifi/widget": "3.18.2",
     "@solana/wallet-adapter-base": "0.9.24",
     "@solana/wallet-adapter-react": "0.15.36",

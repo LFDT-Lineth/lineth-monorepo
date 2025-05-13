@@ -63,8 +63,8 @@ importers:
         specifier: 2.1.9
         version: 2.1.9(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@layerswap/widget':
-        specifier: 0.1.15
-        version: 0.1.15(36cdbs6sbt4hnf6malkxxidv2e)
+        specifier: 0.1.16
+        version: 0.1.16(36cdbs6sbt4hnf6malkxxidv2e)
       '@lifi/widget':
         specifier: 3.18.2
         version: 3.18.2(6llx6mg3jnie75ujog4w6rkshe)
@@ -2207,8 +2207,8 @@ packages:
   '@jridgewell/trace-mapping@0.3.9':
     resolution: {integrity: sha512-3Belt6tdc8bPgAtbcmdtNJlirVoTmEb5e2gC94PnkwEW9jI6CAHUeoG85tjWP5WquqfavoMtMwiG4P926ZKKuQ==}
 
-  '@layerswap/widget@0.1.15':
-    resolution: {integrity: sha512-4AS7XS59AFfdm4QbGxXR3F9WqPE4a5KSxofqiMy8Jo5iJlkQH/4D+FSoPET1OFofy6KSl4naejIA6m0x1r6GWA==}
+  '@layerswap/widget@0.1.16':
+    resolution: {integrity: sha512-T4u0M1OpAHJ527BETM4tn7qLmDA+t/dKiWQ+4MgQ7LEtFsEjTGXz0F9NLFAlGR1zMgy0XTojlaRm/0POgAO4fw==}
     engines: {node: '>=22'}
     peerDependencies:
       '@tanstack/react-query': ^5.59.20
@@ -14001,7 +14001,7 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.0
 
-  '@layerswap/widget@0.1.15(36cdbs6sbt4hnf6malkxxidv2e)':
+  '@layerswap/widget@0.1.16(36cdbs6sbt4hnf6malkxxidv2e)':
     dependencies:
       '@headlessui/react': 2.1.9(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@metamask/jazzicon': 2.0.0
