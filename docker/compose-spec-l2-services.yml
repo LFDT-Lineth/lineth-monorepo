@@ -169,7 +169,7 @@ services:
   prover-v3: # prover compatible with the traces from zkbesu
     container_name: prover-v3
     hostname: prover-v3
-    image: consensys/linea-prover:${PROVER_TAG:-052958b}
+    image: consensys/linea-prover:${PROVER_TAG:-b0ea13b}
     platform: linux/amd64
     # to avoid spinning up on CI for now
     profiles: [ "l2" ]
@@ -211,7 +211,7 @@ services:
   coordinator:
     hostname: coordinator
     container_name: coordinator
-    image: consensys/linea-coordinator:${COORDINATOR_TAG:-47a9d07}
+    image: consensys/linea-coordinator:${COORDINATOR_TAG:-b0ea13b}
     platform: linux/amd64
     profiles: [ "l2", "debug" ]
     depends_on:
