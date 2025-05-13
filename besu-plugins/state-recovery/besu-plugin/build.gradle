@@ -15,7 +15,7 @@ dependencies {
   api(project(":jvm-libs:generic:serialization:jackson"))
   api(project(":jvm-libs:linea:metrics:micrometer"))
   api(project(":jvm-libs:linea:clients:eth-logs-searcher"))
-  api(project(":jvm-libs:linea:clients:linea-l1-contract-client"))
+  api(project(":jvm-libs:linea:clients:linea-contract-clients"))
   api(project(":jvm-libs:linea:web3j-extensions"))
   api(project(":besu-plugins:state-recovery:appcore:logic"))
   api(project(":besu-plugins:state-recovery:clients:blobscan-client"))

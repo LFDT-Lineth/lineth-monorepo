@@ -34,7 +34,7 @@ dependencies {
   implementation project(':coordinator:ethereum:common')
   implementation project(':coordinator:ethereum:models-helper')
   implementation project(':coordinator:ethereum:blob-submitter')
-  implementation project(':coordinator:ethereum:message-anchoring-i2')
+  implementation project(':coordinator:ethereum:message-anchoring')
   implementation project(':coordinator:clients:web3signer-client')
   implementation project(':coordinator:persistence:blob')
   implementation project(':coordinator:persistence:aggregation')

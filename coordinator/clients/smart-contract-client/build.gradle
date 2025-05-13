@@ -5,7 +5,7 @@ plugins {
 dependencies {
   implementation project(":jvm-libs:generic:extensions:kotlin")
   api project(':jvm-libs:linea:web3j-extensions')
-  api project(':jvm-libs:linea:clients:linea-l1-contract-client')
+  api project(':jvm-libs:linea:clients:linea-contract-clients')
   api ("org.web3j:core:${libs.versions.web3j.get()}") {
     exclude group: 'org.slf4j', module: 'slf4j-nop'
   }
