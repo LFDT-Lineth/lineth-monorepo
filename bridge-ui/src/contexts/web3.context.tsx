@@ -75,7 +75,7 @@ export function Web3Provider({ children }: Web3ProviderProps) {
         cssOverrides,
       }}
     >
-      <WagmiProvider config={wagmiConfig} reconnectOnMount={false}>
+      <WagmiProvider config={wagmiConfig}>
         <DynamicWagmiConnector>
           <SolanaWalletProvider>{children}</SolanaWalletProvider>
         </DynamicWagmiConnector>

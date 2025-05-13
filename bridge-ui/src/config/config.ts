@@ -72,6 +72,7 @@ export const config: Config = {
   lifiApiKey: process.env.NEXT_PUBLIC_LIFI_API_KEY ?? "",
   lifiIntegrator: process.env.NEXT_PUBLIC_LIFI_INTEGRATOR_NAME ?? "",
   onRamperApiKey: process.env.NEXT_PUBLIC_ONRAMPER_API_KEY ?? "",
+  layerswapApiKey: process.env.NEXT_PUBLIC_LAYERSWAP_API_KEY ?? "",
   tokenListUrls: {
     mainnet: process.env.NEXT_PUBLIC_MAINNET_TOKEN_LIST ?? "",
     sepolia: process.env.NEXT_PUBLIC_SEPOLIA_TOKEN_LIST ?? "",

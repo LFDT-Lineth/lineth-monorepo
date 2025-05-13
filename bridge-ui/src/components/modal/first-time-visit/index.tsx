@@ -12,7 +12,7 @@ import CloseIcon from "@/assets/icons/close.svg";
 export type VisitedModalType = "all-bridges" | "native-bridge" | "buy";
 
 const pathToModalType: Record<string, VisitedModalType> = {
-  "/": "all-bridges",
+  "/bridge-aggregator": "all-bridges",
   "/native-bridge": "native-bridge",
   "/buy": "buy",
 };

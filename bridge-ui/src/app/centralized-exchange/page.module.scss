@@ -1,0 +1,18 @@
+.content-wrapper {
+  max-width: 29.25rem;
+  margin: 0 auto;
+
+  width: calc(100% - 3rem);
+
+  @include bp("tablet") {
+    width: 100%;
+  }
+}
+
+.widget-wrapper {
+  font-family: var(--font-atyp-text);
+
+  @media (min-width: 640px) {
+    margin-bottom: -1.5rem;
+  }
+}

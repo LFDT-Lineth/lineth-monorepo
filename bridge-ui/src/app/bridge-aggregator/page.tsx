@@ -1,14 +1,14 @@
 "use client";
 
-import OnRamperWidget from "@/components/onramper";
-import styles from "./page.module.scss";
 import FaqHelp from "@/components/bridge/faq-help";
+import styles from "./page.module.scss";
+import { Widget } from "@/components/lifi/widget";
 
 export default function Page() {
   return (
     <>
       <section className={styles["content-wrapper"]}>
-        <OnRamperWidget />
+        <Widget />
       </section>
       <FaqHelp />
     </>

@@ -1,11 +1,18 @@
 import "@layerswap/widget/index.css";
 import { Swap, LayerswapProvider, GetSettings, ThemeData } from "@layerswap/widget";
 import CustomHooks from "./custom-hooks";
+import { config } from "@/config";
 
 export async function Widget() {
   const settings = await GetSettings();
   return (
-    <LayerswapProvider integrator="linea" themeData={themeData} settings={settings} apiKey={"YOUR_API_KEY"}>
+    <LayerswapProvider
+      integrator="linea"
+      themeData={themeData}
+      settings={settings}
+      apiKey={config.layerswapApiKey}
+      version="mainnet"
+    >
       <CustomHooks>
         <Swap
           featuredNetwork={{
@@ -18,11 +25,11 @@ export async function Widget() {
     </LayerswapProvider>
   );
 }
-// TODO: Implement theme colors
+
 const themeData: ThemeData = {
-  placeholderText: "134, 134, 134",
+  placeholderText: "82, 82, 82",
   actionButtonText: "255, 255, 255",
-  buttonTextColor: "17, 17, 17",
+  buttonTextColor: "18, 18, 18",
   logo: "255, 0, 147",
   borderRadius: "large",
   primary: {
@@ -50,9 +57,9 @@ const themeData: ThemeData = {
     "500": "228, 227, 219",
     "600": "240, 240, 235",
     "700": "248, 247, 241",
-    "800": "243, 244, 246",
+    "800": "255, 255, 255",
     "900": "255, 255, 255",
     "950": "255, 255, 255",
-    text: "82, 82, 82",
+    text: "18, 18, 18",
   },
 };

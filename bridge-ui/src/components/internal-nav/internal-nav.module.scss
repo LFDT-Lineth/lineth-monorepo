@@ -9,10 +9,37 @@
   @include bp("tablet") {
     margin: 3.75rem auto 1.5rem;
   }
+
+  &.hide {
+    margin-bottom: 0;
+  }
+}
+
+.dropdown-wrapper {
+  position: relative;
+  width: 100%;
+
+  button {
+    width: 100%;
+    border-radius: 0.625rem;
+    overflow: hidden;
+    text-align: start;
+  }
 }
 
 .list-nav {
+  position: absolute;
+  top: 4.625rem;
+  z-index: 10;
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
+  box-shadow: 0 0.25rem 0.25rem 0 rgba(18, 18, 18, 0.09);
+  background-color: var(--v2-color-white);
+  border-radius: 0.625rem;
+  overflow: hidden;
+}
+
+.list-nav-mobile {
+  padding: 0.5rem 0.5rem 1.5rem;
 }

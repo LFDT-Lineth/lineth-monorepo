@@ -98,7 +98,6 @@ export default function BridgeForm() {
               setIsDestinationAddressOpen={() => setIsDestinationAddressOpen((prev) => !prev)}
             />
           </div>
-          <FaqHelp isMobile />
         </div>
       </div>
       <FaqHelp />

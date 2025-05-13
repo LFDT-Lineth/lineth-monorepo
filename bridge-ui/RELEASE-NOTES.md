@@ -1,3 +1,12 @@
+<a name="v2.4.0"></a>
+
+# [v2.4.0] - 09 May 2025
+
+# Feat: Add Layerswap widget
+
+Description:
+- Add Layerswap widget
+
 <a name="v2.3.0"></a>
 
 # [v2.3.0] - 04 Apr 2025
