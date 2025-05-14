@@ -969,7 +969,7 @@ Any party (e.g. via an npm package we provide for the bridge/partners etc) does 
 
 # Finalized Block Tag on L2
 
-For a Linea besu node to support `finalized` tag on Ethereum RPC methods (e.g. `eth_getBlockByNumber`), the linea besu node would need to run with the `finalized-tag-updater` plugin (download [page](https://github.com/Consensys/zkevm-monorepo/releases/tag/finalized-tag-updater-v0.0.1) and please note that it requires a Github access token for now but would soon to be publicly downloadable from [linea-monorepo](https://github.com/Consensys/linea-monorepo))
+For a Linea besu node to support `finalized` tag on Ethereum RPC methods (e.g. `eth_getBlockByNumber`), the Linea Besu node would need to run with the `finalized-tag-updater` plugin (download [page](https://github.com/Consensys/linea-monorepo/releases/tag/linea-finalized-tag-updater-v0.2.0).
 
 The plugin periodically calls the L1 Linea rollup contract's `currentL2BlockNumber` method to retrieve the latest proven L2 block number from the current L1 `finalized` block, and set the L2 block number as the `finalized` (and `safe` block number) to the plugin-hosting besu client.
 

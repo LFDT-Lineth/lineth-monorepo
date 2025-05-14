@@ -23,14 +23,14 @@ the steps output, can be used to debug containers.
 
 
 ## Debugging test in vscode 
-Install the `vscode-jest` plugin and open `zkevm-monorepo/e2e/` directory. Use the following config in `zkevm-monorepo/e2e/.vscode/settings.json` 
+Install the `vscode-jest` plugin and open `linea-monorepo/e2e/` directory. Use the following config in `linea-monorepo/e2e/.vscode/settings.json` 
 ```
 {
   "jest.autoRun": { "watch": false },
   "jest.jestCommandLine": "pnpm run test:e2e:vscode --",
 }
 ```
-and the following config in `zkevm-monorepo/e2e/.vscode/launch.json` 
+and the following config in `linea-monorepo/e2e/.vscode/launch.json` 
 ```
 {
     "configurations": [

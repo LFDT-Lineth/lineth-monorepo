@@ -34,9 +34,9 @@ publishing {
         }
 
         scm {
-          url = 'https://github.com/Consensys/zkevm-monorepo'
-          connection = 'scm:git://github.com/Consensys/zkevm-monorepo.git'
-          developerConnection = 'scm:git:ssh://github.com:Consensys/zkevm-monorepo.git'
+          url = 'https://github.com/Consensys/linea-monorepo'
+          connection = 'scm:git://github.com/Consensys/linea-monorepo.git'
+          developerConnection = 'scm:git:ssh://github.com:Consensys/linea-monorepo.git'
         }
 
         developers {
