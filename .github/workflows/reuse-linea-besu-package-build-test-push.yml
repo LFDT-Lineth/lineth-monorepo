@@ -82,7 +82,7 @@ jobs:
     if: ${{ inputs.run_test }}
     concurrency:
       group: run-test-${{ github.workflow }}-${{ github.ref }}
-      cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+      cancel-in-progress: ${{ github.ref != 'refs/heads/main' || github.event_name == 'workflow_dispatch' }}
     uses: ./.github/workflows/reuse-linea-besu-package-run-test.yml
     with:
       dockerimage: ${{ needs.build-and-upload-artifact.outputs.dockerimage }}
@@ -92,7 +92,7 @@ jobs:
     if: ${{ inputs.run_e2e_test }}
     concurrency:
       group: run-e2e-tests-${{ github.workflow }}-${{ github.ref }}
-      cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+      cancel-in-progress: ${{ github.ref != 'refs/heads/main' || github.event_name == 'workflow_dispatch' }}
     uses: ./.github/workflows/reuse-linea-besu-package-run-e2e-tests.yml
     with:
       linea_besu_package_tag: ${{ needs.build-and-upload-artifact.outputs.linea_besu_package_tag }} 
@@ -102,7 +102,7 @@ jobs:
 
   build-and-push-dockerhub:
     needs: [ run-test, run-e2e-tests ]
-    if: ${{ always() && inputs.push_image && (needs.run-e2e-test.result == 'skipped' || needs.run-e2e-tests.outputs.tests_outcome == 'success') && (needs.run-test.result == 'skipped' || needs.run-test.result == 'success') }}
+    if: ${{ always() && !cancelled() && inputs.push_image && (needs.run-e2e-test.result == 'skipped' || needs.run-e2e-tests.outputs.tests_outcome == 'success') && (needs.run-test.result == 'skipped' || needs.run-test.result == 'success') }}
     runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-med
     environment: dockerhub
     env:

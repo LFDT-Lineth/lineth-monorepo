@@ -55,7 +55,7 @@ jobs:
 
   build-test-push:
     needs: [ filter-commit-changes ]
-    if: ${{ always() }}
+    if: ${{ always() && !cancelled() }}
     uses: ./.github/workflows/reuse-linea-besu-package-build-test-push.yml
     with:
       release_tag_prefix: ${{ inputs.release_tag_prefix }}
