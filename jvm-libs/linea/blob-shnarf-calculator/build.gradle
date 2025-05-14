@@ -6,7 +6,9 @@ plugins {
 description = 'Java JNA wrapper for Linea Blob Shnarf Calculator implemented in GO Lang'
 
 dependencies {
-  api "net.java.dev.jna:jna:${libs.versions.jna.get()}"
+  compileOnly "net.java.dev.jna:jna:${libs.versions.jna.get()}"
+
+  testImplementation "net.java.dev.jna:jna:${libs.versions.jna.get()}"
   testImplementation project(":jvm-libs:generic:extensions:kotlin")
 }
 

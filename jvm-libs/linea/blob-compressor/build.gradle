@@ -7,11 +7,12 @@ plugins {
 description = 'Java JNA wrapper for Linea Blob Compressor Library implemented in GO Lang'
 
 dependencies {
-  implementation "net.java.dev.jna:jna:${libs.versions.jna.get()}"
-  implementation project(":jvm-libs:generic:extensions:kotlin")
-  implementation "org.apache.logging.log4j:log4j-api:${libs.versions.log4j.get()}"
-  implementation "org.apache.logging.log4j:log4j-core:${libs.versions.log4j.get()}"
+  compileOnly "net.java.dev.jna:jna:${libs.versions.jna.get()}"
+  compileOnly project(":jvm-libs:generic:extensions:kotlin")
+  compileOnly "org.apache.logging.log4j:log4j-api:${libs.versions.log4j.get()}"
+  compileOnly "org.apache.logging.log4j:log4j-core:${libs.versions.log4j.get()}"
 
+  testImplementation "net.java.dev.jna:jna:${libs.versions.jna.get()}"
   testImplementation project(":jvm-libs:linea:blob-shnarf-calculator")
   testFixturesImplementation project(':jvm-libs:linea:besu-libs')
   testFixturesImplementation project(':jvm-libs:linea:besu-rlp-and-mappers')

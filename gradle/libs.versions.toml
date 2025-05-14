@@ -21,7 +21,7 @@ logcaptor = "2.11.0"
 
 # Runtime
 besu = "25.2.1-linea1"
-blobCompressor = "0.0.4"
+blobCompressor = "1.1.3"
 blobShnarfCalculator = "0.0.4"
 bouncycastle = "1.79"
 caffeine = "3.1.6"

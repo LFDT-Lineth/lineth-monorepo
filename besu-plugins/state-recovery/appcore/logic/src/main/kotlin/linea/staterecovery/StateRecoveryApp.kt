@@ -37,7 +37,7 @@ class StateRecoveryApp(
     val l1PollingInterval: Duration = 12.seconds,
     val l1getLogsChunkSize: UInt,
     val executionClientPollingInterval: Duration = 1.seconds,
-    val blobDecompressorVersion: BlobDecompressorVersion = BlobDecompressorVersion.V1_1_0,
+    val blobDecompressorVersion: BlobDecompressorVersion = BlobDecompressorVersion.V1_2_0,
     /**
      * The block number at which the recovery mode will start overriding the recovery start block number
      * this is meant for testing purposes, not production

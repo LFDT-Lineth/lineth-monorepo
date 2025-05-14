@@ -5,6 +5,7 @@ plugins {
 
 dependencies {
   api "build.linea:blob-compressor:${libs.versions.blobCompressor.get()}"
+  //  api project(':jvm-libs:linea:blob-compressor')
   api "build.linea:blob-shnarf-calculator:${libs.versions.blobShnarfCalculator.get()}"
   api project(':jvm-libs:linea:core:domain-models')
   api project(':jvm-libs:linea:core:metrics')

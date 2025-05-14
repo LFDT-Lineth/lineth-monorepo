@@ -10,6 +10,7 @@ dependencies {
   compileOnly "net.java.dev.jna:jna:${libs.versions.jna.get()}"
   compileOnly project(":jvm-libs:generic:extensions:kotlin")
 
+  testImplementation "net.java.dev.jna:jna:${libs.versions.jna.get()}"
   testImplementation project(":jvm-libs:linea:blob-compressor")
   testImplementation(testFixtures(project(":jvm-libs:linea:blob-compressor")))
   testImplementation(testFixtures(project(":jvm-libs:linea:core:domain-models")))
@@ -27,7 +28,7 @@ def libsZipDownloadOutputDir = project.parent.layout.buildDirectory.asFile.get()
 
 task downloadNativeLibs {
   doLast {
-    fetchLibFromZip("https://github.com/Consensys/linea-monorepo/releases/download/blob-libs-v1.1.1/linea-blob-libs-v1.1.1.zip", "blob_decompressor", libsZipDownloadOutputDir)
+    fetchLibFromZip("https://github.com/Consensys/linea-monorepo/releases/download/blob-libs-v1.2.0/linea-blob-libs-v1.2.0.zip", "blob_decompressor", libsZipDownloadOutputDir)
   }
 }
 

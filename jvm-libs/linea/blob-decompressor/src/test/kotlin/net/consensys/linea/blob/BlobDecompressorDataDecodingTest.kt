@@ -16,7 +16,7 @@ class BlobDecompressorDataDecodingTest {
 
   @BeforeEach
   fun beforeEach() {
-    decompressor = GoNativeBlobDecompressorFactory.getInstance(BlobDecompressorVersion.V1_1_1)
+    decompressor = GoNativeBlobDecompressorFactory.getInstance(BlobDecompressorVersion.V1_2_0)
   }
 
   @Test

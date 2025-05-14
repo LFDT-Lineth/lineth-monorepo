@@ -112,7 +112,7 @@ class SubmissionsFetchingTaskIntTest {
       logsBlockChunkSize = 5000
     )
     val blobDecompressor: BlobDecompressorAndDeserializer = BlobDecompressorToDomainV1(
-      decompressor = GoNativeBlobDecompressorFactory.getInstance(BlobDecompressorVersion.V1_1_0),
+      decompressor = GoNativeBlobDecompressorFactory.getInstance(BlobDecompressorVersion.V1_2_0),
       staticFields = BlockHeaderStaticFields.localDev,
       vertx = vertx
     )

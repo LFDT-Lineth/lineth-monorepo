@@ -41,7 +41,7 @@ class BlobDecompressorAndDeserializerV1Test {
       compressorVersion = BlobCompressorVersion.V1_0_1,
       dataLimit = 124u * 1024u
     )
-    val decompressor = GoNativeBlobDecompressorFactory.getInstance(BlobDecompressorVersion.V1_1_0)
+    val decompressor = GoNativeBlobDecompressorFactory.getInstance(BlobDecompressorVersion.V1_2_0)
     decompressorToDomain = BlobDecompressorToDomainV1(decompressor, blockStaticFields, vertx)
   }
 
