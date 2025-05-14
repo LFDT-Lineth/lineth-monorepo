@@ -14,39 +14,47 @@ const faqList = [
   },
   {
     title: "Can I send the funds to a different address?",
-    content: `<p>Yes — find the 'To different address' button beneath the field that displays the amount of ETH or tokens you will receive on the target chain. You can then enter the address you want the funds to be bridged to. Only send funds to addresses on Ethereum Mainnet or Linea Mainnet. You may lose funds otherwise, and they will be irretrievable (see this <a rel="noopener noreferrer" target="_blank" href="https://support.metamask.io/managing-my-tokens/moving-your-tokens/funds-sent-on-wrong-network/#non-evm-tokens-and-networks">MetaMask Support article</a> for an explanation). This means you cannot bridge to Bitcoin or Solana, for example, using the Linea Bridge.</p>`,
+    content: `<p>Yes — find the wallet icon in the bottom-right of the widget. Click it to display a field where you can enter a new recipient address.</p>`,
+  },
+  {
+    title: "Why do I need to claim my funds?",
+    content: `<p>Manual claiming is required for all L2 → L1 transfers, and in some other circumstances detailed in our <a rel="noopener noreferrer" target="_blank" href="https://docs.linea.build/get-started/how-to/bridge">documentation</a>.</p>`,
   },
   {
     title: "I need to claim a transaction. What do I do?",
-    content: `<div><p>If you chose manual claiming, you need to return to the Linea Bridge and make an additional transaction. It typically takes around 20 minutes (two Ethereum epochs) before you can claim a deposit; withdrawals from Linea can take much longer, and vary in duration.</p><p>To claim, head to the 'Transactions' tab and locate the bridge transaction you want to claim; it should be marked as 'Ready to claim'. Click on it, and then on the 'Claim' button to initiate the transaction.</p></div>`,
+    content: `<div><p>If your transfer requires manual claiming, you need to return to the native bridge and make an additional transaction. It typically takes around 20 minutes before you can claim a deposit; withdrawals from Linea can take longer.</p><p>To claim, click the receipt icon in the top-right of the widget. If your transaction is ready, it will be marked as “Ready to claim”. Click the transaction, and then “Claim” to prompt the claiming transaction in your wallet. Once it’s complete, the funds will be in your wallet.</p></div>`,
   },
   {
     title: "What fees will I pay?",
-    content: `<div><p>Linea does not charge fees for using the bridge. However, you will need to pay gas fees for transactions. Gas fees vary according to network activity, so we cannot accurately predict how much you'll pay. The bulk of the cost will be for interacting with Ethereum Mainnet; Linea's gas fees are considerably cheaper.</p><p>If you use manual claiming, you pay gas fees for the bridge transaction and then gas fees for the claim transaction.</p><p>For automatic claiming, you pay gas fees for your initial bridge transaction and then a fee to cover the gas costs of the postman executing the claim on your behalf.</p></div>`,
+    content: `<div><p>Linea does not charge fees for using the native bridge. However, you will still need to pay gas fees on Ethereum when bridging from Ethereum to Linea.</p><p>In the default automatic claiming flow from Ethereum to Linea, we cover the gas fees on the Linea side, which means you only have to pay gas on Ethereum and nothing more.</p><p>If you choose manual claiming, you will need to pay gas fees on both Ethereum and Linea.</p></div>`,
   },
   {
     title: "Why can I only select Linea Mainnet and Ethereum Mainnet?",
-    content: `<div><p>The Linea Bridge is designed to transact between layer 1 (Ethereum Mainnet) and layer 2 (Linea Mainnet), rather than for bridging to any other chains.</p><p>If you want to bridge to other EVM-compatible networks, consider using the <a rel="noopener noreferrer" target="_blank" href="https://portfolio.metamask.io/bridge">MetaMask Portfolio bridge</a>.</p></div>`,
+    content: `<div><p>The native bridge is designed for transacting between layer 1 (Ethereum Mainnet) and layer 2 (Linea Mainnet) only.</p><p>If you want to bridge to other chains, switch to the “Bridge Aggregator” tab.</p></div>`,
   },
   {
     title: "Why can't I see the token I want to bridge?",
-    content: `<p>The tokens available to select on the Linea Bridge are sourced from a curated list defined <a rel="noopener noreferrer" target="_blank" href="https://github.com/Consensys/linea-token-list/blob/main/json/linea-mainnet-token-shortlist.json">here</a> and maintained by the Linea team. This practice ensures users always bridge to the correct token—rather than variants, preventing <a rel="noopener noreferrer" target="_blank" href="https://support.linea.build/bridging/bridging-to-the-correct-erc-20-token-on-linea">liquidity fragmentation</a> and mitigates the risk of funds loss.</p>`,
+    content: `<p>Available tokens are sourced from a curated list defined <a href="https://github.com/Consensys/linea-token-list/blob/main/json/linea-mainnet-token-shortlist.json" target="_blank" rel="noopener noreferrer">here</a> and maintained by the Linea team. This ensures users always bridge to the correct token rather than variants, preventing <a href="https://support.linea.build/bridging/bridging-to-the-correct-erc-20-token-on-linea" target="_blank" rel="noopener noreferrer">liquidity fragmentation</a>, and mitigates the risk of funds loss.</p>`,
   },
   {
     title: "Why can't I see my bridged tokens in my wallet?",
-    content: `<div><p>First, check whether your funds are ready to claim. To see claimable funds, go to the “Transactions” tab of the Linea Bridge app.</p><p>If claiming isn't the issue, head to Lineascan and see if the transaction is pending, and in the queue:</p><ul class="list-disc pl-8"><li><a rel="noopener noreferrer" target="_blank" href="https://lineascan.build/txsDeposits">Here</a> for L1 -&gt; L2 transactions (deposits)</li><li><a rel="noopener noreferrer" target="_blank" href="https://lineascan.build/txsExit">Here</a> for L2 -&gt; L1 transactions (exit transactions)</li></ul><p>If the transaction is still pending, just wait for it to be confirmed, and your funds will be available to claim or will be in your wallet (depending on the claiming method you chose). If the transaction is missing, or it has been confirmed and you still don&amp;pos;t see your tokens, contact support by clicking the button in the bottom-left of the Linea Bridge app, or head to the <a rel="noopener noreferrer" target="_blank" href="https://support.linea.build/">Linea help center</a>.</p></div>`,
+    content: `<div><p>First, check whether your funds are ready to claim. To see claimable funds, go to the transaction history page, accessible via the receipt icon in the top-right of the widget.</p><p>If claiming isn't the issue, head to LineaScan and see if the transaction is pending, and in the queue:</p><ul class="list-disc pl-8"><li><a rel="noopener noreferrer" target="_blank" href="https://lineascan.build/txsDeposits">Here</a> for L1 -&gt; L2 transactions (deposits)</li><li><a rel="noopener noreferrer" target="_blank" href="https://lineascan.build/txsExit">Here</a> for L2 -&gt; L1 transactions (exit transactions)</li></ul><p>If the transaction is still pending, wait for it to be confirmed, and your funds will be available to claim or will be in your wallet (depending on the claiming method you chose). If the transaction is missing, or it has been confirmed and you still don’t see your tokens, contact support via the “Contact” button on the <a rel="noopener noreferrer" target="_blank" href="https://support.linea.build/">Linea help center homepage</a>.</p></div>`,
   },
   {
-    title: "How long does the bridging take?",
+    title: "How long does bridging take?",
     content: `<div><p>This depends on the direction of your bridge:</p><ul><li>Deposit (L1 -&gt; L2): Approximately 20 minutes.</li><li>Withdrawal (L2 -&gt; L1): Between 2 and 16 hours. The L2 transaction must be finalized on Ethereum Mainnet before you can claim your funds.</li></ul></div>`,
   },
   {
     title: "Can I speed up my transaction?",
-    content: `<div><p>Yes, although it's not a method we recommend for beginners. <a rel="noopener noreferrer" target="_blank" href="https://support.linea.build/bridging/can-i-speed-up-bridge-transfers-on-the-linea-bridge">View the guide on the MetaMask Help Center</a>.</p><p>Note that this only speeds up your submission of the bridge transaction. It does not actually speed up the bridging process itself that you initiate with this transaction — you cannot speed up the 2-16 hour waiting time for a withdrawal.</p></div>`,
+    content: `<div><p>Yes, although it's not a method we recommend for beginners. <a rel="noopener noreferrer" target="_blank" href="https://support.linea.build/bridging/can-i-speed-up-bridge-transfers-on-the-linea-bridge">View the guide on the Linea help center</a>.</p><p>Note that this only speeds up your submission of the bridge transaction. It does not actually speed up the bridging process itself that you initiate with this transaction — you cannot speed up the 8-32 hour waiting time for a withdrawal.</p></div>`,
   },
   {
     title: "Where can I access support?",
-    content: `<div><p>Click the “Contact support” button in the bottom-left corner of the Linea Bridge app.</p><p>Alternatively, head to the Linea Help Center and click the “Contact” button on the homepage.</p><p>You can also get advice and support on our moderated <a rel="noopener noreferrer" target="_blank" href="https://discord.gg/linea">Discord</a>.</p></div>`,
+    content: `<div><p>Head to the <a href="https://support.linea.build/" target="_blank" rel="noopener noreferrer">Linea help center</a> and click the “Contact” button on the homepage, or the chat icon in the bottom right.</p><p>You can also get advice and support on our moderated <a href="https://discord.gg/linea" target="_blank" rel="noopener noreferrer">Discord</a>.</p></div>`,
+  },
+  {
+    title: "Can I bridge testnet funds?",
+    content: `<div><p>Yes, you can use Sepolia and Linea Sepolia with the native bridge. These are the only testnets supported.</p><p>Click the gear icon to access the settings, then flick the “Show Test Networks” toggle.</p></div>`,
   },
 ];
 
