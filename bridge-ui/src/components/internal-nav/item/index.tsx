@@ -21,28 +21,39 @@ type Props = NavItemProps & {
 
 export default function NavItem({ title, description, href, icon, label, as, dropdown, showCaret, isOpen }: Props) {
   const Wrapper = as || "li";
-  return (
-    <Wrapper key={href} className={clsx(styles["card-item"], dropdown && styles["dropdown"], isOpen && styles["open"])}>
-      <Link href={href} className={styles["card-link"]} data-testid={`nav-item-${title.split(" ").join("-")}`}>
-        <div className={styles["card-wrapper"]}>
-          <span className={styles["card-icon"]}>{icon}</span>
-          <div className={styles["card-content"]}>
-            <div className={styles["card-title-wrapper"]}>
-              <h2>{title}</h2>
-              {label && <span className={styles["card-label"]}>{label}</span>}
-            </div>
-            <p className={styles["card-description"]}>{description}</p>
+
+  const content = (
+    <>
+      <div className={styles["card-wrapper"]}>
+        <span className={styles["card-icon"]}>{icon}</span>
+        <div className={styles["card-content"]}>
+          <div className={styles["card-title-wrapper"]}>
+            <h2 className={styles["card-title"]}>{title}</h2>
+            {label && <span className={styles["card-label"]}>{label}</span>}
           </div>
+          <p className={styles["card-description"]}>{description}</p>
         </div>
-        <span className={styles["right-arrow"]}>
-          <ArrowRightIcon />
+      </div>
+      <span className={styles["right-arrow"]}>
+        <ArrowRightIcon />
+      </span>
+      {showCaret && (
+        <span className={styles["caret"]} aria-hidden="true">
+          <CaretDownIcon />
         </span>
-        {showCaret && (
-          <span className={styles["caret"]}>
-            <CaretDownIcon />
-          </span>
-        )}
-      </Link>
+      )}
+    </>
+  );
+
+  return (
+    <Wrapper className={clsx(styles["card-item"], dropdown && styles["dropdown"], isOpen && styles["open"])}>
+      {showCaret ? (
+        <div className={styles["card-link"]}>{content}</div>
+      ) : (
+        <Link href={href} className={styles["card-link"]} data-testid={`nav-item-${title.split(" ").join("-")}`}>
+          {content}
+        </Link>
+      )}
     </Wrapper>
   );
 }
