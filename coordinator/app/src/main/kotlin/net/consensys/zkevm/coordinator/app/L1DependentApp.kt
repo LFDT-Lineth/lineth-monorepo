@@ -603,7 +603,8 @@ class L1DependentApp(
           feeHistoryBlockCount = configs.l2.feeHistoryBlockCount,
           feeHistoryRewardPercentile = configs.l2.feeHistoryRewardPercentile,
           transactionManager = l2TransactionManager,
-          smartContractErrors = smartContractErrors
+          smartContractErrors = smartContractErrors,
+          smartContractDeploymentBlockNumber = configs.l2.messageServiceDeploymentBlockNumber
         ),
         aggregationDeadlineDelay = configs.conflation.conflationDeadlineLastBlockConfirmationDelay.toKotlinDuration(),
         targetEndBlockNumbers = configs.proofAggregation.targetEndBlocks,
@@ -879,7 +880,8 @@ class L1DependentApp(
         feeHistoryBlockCount = configs.l2.feeHistoryBlockCount,
         feeHistoryRewardPercentile = configs.l2.feeHistoryRewardPercentile,
         transactionManager = l2TransactionManager,
-        smartContractErrors = smartContractErrors
+        smartContractErrors = smartContractErrors,
+        smartContractDeploymentBlockNumber = configs.l2.messageServiceDeploymentBlockNumber
       )
     )
   } else {

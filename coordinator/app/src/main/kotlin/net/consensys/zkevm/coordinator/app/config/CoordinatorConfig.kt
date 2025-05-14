@@ -293,6 +293,7 @@ data class L1Config(
 
 data class L2Config(
   val messageServiceAddress: String,
+  val messageServiceDeploymentBlockNumber: ULong? = null,
   val rpcEndpoint: URL,
   val gasLimit: ULong,
   val maxFeePerGasCap: ULong,

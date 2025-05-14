@@ -1,6 +1,8 @@
 package linea.contract.l2
 
-import linea.contract.events.ContractInitializedEvent
+import linea.contract.ContractDeploymentBlockNumberProvider
+import linea.contract.EventBasedContractDeploymentBlockNumberProvider
+import linea.contract.StaticContractDeploymentBlockNumberProvider
 import linea.domain.BlockParameter
 import linea.kotlin.encodeHex
 import linea.kotlin.toBigInteger
@@ -28,6 +30,7 @@ class Web3JL2MessageServiceSmartContractClient(
   private val web3j: Web3j,
   private val contractAddress: String,
   private val web3jContractHelper: Web3JContractAsyncHelper,
+  private val deploymentBlockNumberProvider: ContractDeploymentBlockNumberProvider,
   private val log: Logger = LogManager.getLogger(Web3JL2MessageServiceSmartContractClient::class.java)
 ) : L2MessageServiceSmartContractClient {
   companion object {
@@ -39,7 +42,8 @@ class Web3JL2MessageServiceSmartContractClient(
       feeHistoryBlockCount: UInt,
       feeHistoryRewardPercentile: Double,
       transactionManager: AsyncFriendlyTransactionManager,
-      smartContractErrors: SmartContractErrors
+      smartContractErrors: SmartContractErrors,
+      smartContractDeploymentBlockNumber: ULong?
     ): Web3JL2MessageServiceSmartContractClient {
       val gasProvider = EIP1559GasProvider(
         web3jClient = web3jClient,
@@ -58,16 +62,25 @@ class Web3JL2MessageServiceSmartContractClient(
         smartContractErrors = smartContractErrors,
         useEthEstimateGas = true
       )
+      val deploymentBlockNumberProvider = smartContractDeploymentBlockNumber
+        ?.let { StaticContractDeploymentBlockNumberProvider(it) }
+        ?: EventBasedContractDeploymentBlockNumberProvider(
+          ethApiClient = Web3jEthApiClient(web3jClient),
+          contractAddress = contractAddress,
+          log = LogManager.getLogger(Web3JL2MessageServiceSmartContractClient::class.java)
+        )
+
       return Web3JL2MessageServiceSmartContractClient(
         web3j = web3jClient,
         contractAddress = contractAddress,
-        web3jContractHelper = web3jContractHelper
+        web3jContractHelper = web3jContractHelper,
+        deploymentBlockNumberProvider = deploymentBlockNumberProvider
       )
     }
   }
+
   private val fakeCredentials = Credentials.create(ByteArray(32).encodeHex())
   private val smartContractVersionCache = AtomicReference<L2MessageServiceSmartContractVersion>(null)
-  private val deploymentBlockNumberCache = AtomicReference<ULong>(0UL)
 
   private fun <T : Contract> contractClientAtBlock(blockParameter: BlockParameter, contract: Class<T>): T {
     @Suppress("UNCHECKED_CAST")
@@ -119,26 +132,7 @@ class Web3JL2MessageServiceSmartContractClient(
 
   override fun getAddress(): String = contractAddress
   override fun getVersion(): SafeFuture<L2MessageServiceSmartContractVersion> = getSmartContractVersion()
-  override fun getDeploymentBlock(): SafeFuture<ULong> {
-    if (deploymentBlockNumberCache.get() != 0UL) {
-      return SafeFuture.completedFuture(deploymentBlockNumberCache.get())
-    } else {
-      return Web3jEthApiClient(web3j)
-        .getLogs(
-          fromBlock = BlockParameter.Tag.EARLIEST,
-          toBlock = BlockParameter.Tag.LATEST,
-          address = contractAddress,
-          topics = listOf(ContractInitializedEvent.topic)
-        ).thenApply { logs ->
-          if (logs.isEmpty()) {
-            throw IllegalStateException("No contract initialized event found: contractAddress=$contractAddress")
-          }
-          val blockNumber = logs.minByOrNull { it.blockNumber }!!.blockNumber
-          deploymentBlockNumberCache.set(blockNumber)
-          blockNumber
-        }
-    }
-  }
+  override fun getDeploymentBlock(): SafeFuture<ULong> { return deploymentBlockNumberProvider() }
 
   override fun getLastAnchoredL1MessageNumber(block: BlockParameter): SafeFuture<ULong> {
     return contractClientAtBlock(block, L2MessageService::class.java)
