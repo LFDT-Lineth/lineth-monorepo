@@ -70,6 +70,7 @@ class MessageAnchoringAppTest {
         l1PollingInterval = l1PollingInterval,
         l1SuccessBackoffDelay = l1SuccessBackoffDelay,
         l1ContractAddress = L1_CONTRACT_ADDRESS,
+        l1HighestBlockTag = BlockParameter.Tag.FINALIZED,
         l2HighestBlockTag = BlockParameter.Tag.LATEST,
         anchoringTickInterval = anchoringTickInterval,
         l1RequestRetryConfig = RetryConfig.noRetries,
@@ -92,22 +93,35 @@ class MessageAnchoringAppTest {
   @Test
   fun `should anchor messages from fresh deployment`() {
     val ethLogs = createL1MessageSentV1Logs(
-      l1BlocksWithMessages = listOf(100UL, 200UL, 300UL, 400UL),
+      l1BlocksWithMessages = listOf(100UL, 200UL, 300UL, 400UL, 500UL),
       numberOfMessagesPerBlock = 1
     )
     addLogsToFakeEthClient(ethLogs)
-
-    val anchoringApp = createApp(anchoringTickInterval = 100.milliseconds, l1EventSearchBlockChunk = 100u)
+    val l1PollingInterval = 50.milliseconds
+    val anchoringApp = createApp(
+      l1PollingInterval = l1PollingInterval,
+      anchoringTickInterval = 50.milliseconds,
+      l1EventSearchBlockChunk = 100u
+    )
     anchoringApp.start().get()
-    l1Client.setFinalizedBlockTag(ethLogs.last().messageSent.log.blockNumber + 10UL)
+    val lastFinalizedMessageOnL1 = ethLogs[ethLogs.size - 2]
+    l1Client.setFinalizedBlockTag(lastFinalizedMessageOnL1.messageSent.log.blockNumber + 10UL)
+    l1Client.setLatestBlockTag(ethLogs.last().messageSent.log.blockNumber + 10UL)
+
     await()
       .atMost(5.seconds.toJavaDuration())
       .untilAsserted {
         assertThat(l2MessageService.getLastAnchoredL1MessageNumber(block = BlockParameter.Tag.LATEST).get())
-          .isEqualTo(ethLogs.last().messageSent.event.messageNumber)
+          .isEqualTo(lastFinalizedMessageOnL1.messageSent.event.messageNumber)
         assertThat(l2MessageService.getLastAnchoredRollingHash())
-          .isEqualTo(ethLogs.last().l1RollingHashUpdated.event.rollingHash)
+          .isEqualTo(lastFinalizedMessageOnL1.l1RollingHashUpdated.event.rollingHash)
       }
+    // Wait to pull more from L1 but ensure it doesn't anchor beyond FINALIZED
+    Thread.sleep((l1PollingInterval * 3).inWholeMilliseconds)
+    assertThat(l2MessageService.getLastAnchoredL1MessageNumber(block = BlockParameter.Tag.LATEST).get())
+      .isEqualTo(lastFinalizedMessageOnL1.messageSent.event.messageNumber)
+    assertThat(l2MessageService.getLastAnchoredRollingHash())
+      .isEqualTo(lastFinalizedMessageOnL1.l1RollingHashUpdated.event.rollingHash)
 
     anchoringApp.stop().get()
   }

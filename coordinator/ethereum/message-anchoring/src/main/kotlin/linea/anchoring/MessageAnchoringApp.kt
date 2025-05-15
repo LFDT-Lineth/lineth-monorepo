@@ -28,6 +28,7 @@ class MessageAnchoringApp(
     val l1PollingInterval: Duration = 12.seconds,
     val l1SuccessBackoffDelay: Duration = 1.milliseconds, // is configurable mostly for testing purposes
     val l1ContractAddress: String,
+    val l1HighestBlockTag: BlockParameter,
     val l2HighestBlockTag: BlockParameter,
     val anchoringTickInterval: Duration,
     val l1EventPollingTimeout: Duration = 5.seconds,
@@ -59,7 +60,8 @@ class MessageAnchoringApp(
       l1MessagesSentFetchLimit = config.maxMessagesToAnchorPerL2Transaction * 2u,
       l1MessagesSentFetchTimeout = config.l1EventPollingTimeout,
       l1BlockSearchChuck = config.l1EventSearchBlockChunk,
-      highestBlockNumber = config.l2HighestBlockTag
+      l1HighestBlock = config.l1HighestBlockTag,
+      l2HighestBlock = config.l2HighestBlockTag
     )
   }
   private val messageAnchoringService =

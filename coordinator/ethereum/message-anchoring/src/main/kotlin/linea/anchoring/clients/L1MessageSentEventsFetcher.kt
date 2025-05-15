@@ -24,7 +24,7 @@ import kotlin.time.Duration
 internal class L1MessageSentEventsFetcher(
   private val l1SmartContractAddress: String,
   private val l1EventsSearcher: EthLogsSearcher,
-  private val highestBlock: BlockParameter,
+  private val l1HighestBlock: BlockParameter,
   private val log: Logger = LogManager.getLogger(L1MessageSentEventsFetcher::class.java)
 ) {
   private data class LastSearch(
@@ -60,7 +60,7 @@ internal class L1MessageSentEventsFetcher(
 
       l1EventsSearcher.getLogsRollingForward(
         fromBlock = event.log.blockNumber.toBlockParameter(),
-        toBlock = highestBlock,
+        toBlock = l1HighestBlock,
         address = l1SmartContractAddress,
         topics = listOf(
           MessageSentEvent.topic

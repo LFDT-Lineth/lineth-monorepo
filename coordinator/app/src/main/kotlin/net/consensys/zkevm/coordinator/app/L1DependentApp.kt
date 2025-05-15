@@ -863,6 +863,7 @@ class L1DependentApp(
         l1ContractAddress = configs.l1.zkEvmContractAddress,
         l1EventPollingTimeout = configs.messageAnchoring.l1EventPollingTimeout,
         l1EventSearchBlockChunk = configs.messageAnchoring.l1EventSearchBlockChunk,
+        l1HighestBlockTag = configs.messageAnchoring.l1HighestBlockTag,
         l2HighestBlockTag = configs.messageAnchoring.l2HighestBlockTag,
         anchoringTickInterval = configs.messageAnchoring.anchoringTickInterval,
         messageQueueCapacity = configs.messageAnchoring.messageQueueCapacity,
