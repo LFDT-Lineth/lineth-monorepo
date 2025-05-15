@@ -7,8 +7,8 @@ import (
 )
 
 var (
-	DefaultDeferToOtherLargeCodes     = []int{137}     // List of exit codes for which the job will put back the job to be reexecuted in large mode.
-	DefaultRetryLocallyWithLargeCodes = []int{77, 333} // List of exit codes for which the job will retry in large mode
+	DefaultDeferToOtherLargeCodes     = []int{137}        // List of exit codes for which the job will put back the job to be reexecuted in large mode.
+	DefaultRetryLocallyWithLargeCodes = []int{77, 333, 2} // List of exit codes for which the job will retry in large mode
 )
 
 func setDefaultValues() {
@@ -36,7 +36,6 @@ func setDefaultValues() {
 	viper.SetDefault("controller.worker_cmd_large_tmpl", "prover prove --config {{.ConfFile}} --in {{.InFile}} --out {{.OutFile}} --large")
 
 	viper.SetDefault("execution.ignore_compatibility_check", false)
-
 }
 
 func setDefaultPaths() {

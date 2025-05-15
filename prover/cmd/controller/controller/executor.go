@@ -71,12 +71,11 @@ func (e *Executor) Run(job *Job) (status Status) {
 		}
 	}
 
-	// if we are on a large instance and the job is execution with large suffix,
-	// we directly run with large.
-	// note: checking that locked job contains "large" is not super typesafe...
+	// Determine if it's a large job based on the file suffix and config
+	// Note: checking that locked job contains "large" is not super typesafe...
 	largeRun := job.Def.Name == jobNameExecution && e.Config.Execution.CanRunFullLarge && strings.Contains(job.LockedFile, config.LargeSuffix)
 
-	// First, run the job normally
+	// Build the initial command (normal for regular jobs, large for large jobs)
 	cmd, err := e.buildCmd(job, largeRun)
 	if err != nil {
 		return Status{
@@ -86,41 +85,40 @@ func (e *Executor) Run(job *Job) (status Status) {
 		}
 	}
 
+	// Run the initial command
 	status = runCmd(cmd, job, false)
 
-	// if it's a blob decompression or aggregation, we never retry with a large
-	// command. We can return the status as is.
-	if largeRun || job.Def.Name == jobNameBlobDecompression || job.Def.Name == jobNameAggregation {
+	// Do not retry for blob decompression or aggregation jobs
+	if job.Def.Name == jobNameBlobDecompression || job.Def.Name == jobNameAggregation {
 		return status
 	}
 
-	var (
-		isSuccess       bool  = status.ExitCode == CodeSuccess
-		retryableCodes  []int = e.Config.Controller.RetryLocallyWithLargeCodes
-		isRetryableCode bool  = isIn(status.ExitCode, retryableCodes)
-	)
-
-	// Happy path, the job is successful and we can return the status. Testing
-	// for success separately from the other code ensures that we are not going
-	// to retry on success even if the controller is misconfigured.
-	if isSuccess || !isRetryableCode {
+	// If the initial run succeeds, return the status
+	if status.ExitCode == CodeSuccess {
 		return status
 	}
 
-	// At this point, we expect that all the required fields to fill the
-	// template have been passed in job args have been passed. This is enforced
-	// by the configuration validation rule.
-	cmd, err = e.buildCmd(job, true)
-	if err != nil {
-		return Status{
-			ExitCode: CodeCantRunCommand,
-			Err:      err,
-			What:     "can't format the command",
+	// Check if the exit code is retryable
+	retryableCodes := e.Config.Controller.RetryLocallyWithLargeCodes
+	if isIn(status.ExitCode, retryableCodes) {
+		if largeRun {
+			// For large jobs, retry with the same large command
+			status = runCmd(cmd, job, true)
+		} else {
+			// For regular jobs, retry with the large command
+			largeCmd, err := e.buildCmd(job, true)
+			if err != nil {
+				return Status{
+					ExitCode: CodeCantRunCommand,
+					Err:      err,
+					What:     "can't format the command",
+				}
+			}
+			status = runCmd(largeCmd, job, true)
 		}
 	}
 
-	// And escalates the return whatever the return value is.
-	return runCmd(cmd, job, true)
+	return status
 }
 
 // Builds a command from a template to run, returns a status if it failed
