@@ -26,6 +26,7 @@ USER besu
 WORKDIR /opt/besu
 
 COPY --chown=besu:besu besu /opt/besu/
+RUN sed -i '/^CLASSPATH/c\CLASSPATH=/opt/besu/lib/\*\:/opt/besu/plugins/\*' /opt/besu/bin/besu
 
 # Expose services ports
 # 8545 HTTP JSON-RPC
