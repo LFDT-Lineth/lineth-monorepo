@@ -24,6 +24,16 @@ on:
         required: false
         type: string
         default: ''
+      expected_traces_api_ver:
+        description: '(For Debug) If given, this will override the expected traces api version in coordinator config'
+        required: false
+        type: string
+        default: ''
+      skip_e2e_test:
+        description: '(For Debug) Type "true" to skip e2e test for the need of pushing image to dockerhub'
+        required: false
+        type: string
+        default: ''
         
 permissions:
   actions: read
@@ -62,4 +72,6 @@ jobs:
       run_test: true
       run_e2e_test: ${{ github.event_name == 'workflow_dispatch' || needs.filter-commit-changes.outputs.versions_env == 'true' }}
       push_image: ${{ github.event_name == 'workflow_dispatch' }}
+      skip_e2e_test: ${{ inputs.skip_e2e_test == 'true' }}
+      expected_traces_api_ver: ${{ inputs.expected_traces_api_ver }}
     secrets: inherit
