@@ -86,13 +86,15 @@ html[data-theme="v2"] {
     left: 0;
     width: 18.75rem;
     height: auto;
-    // top: 53rem;
   }
   .right-illustration {
-    right: 0;
+    right: -8rem;
     width: 38.125rem;
     height: auto;
-    // top: 17rem;
+
+    @media (min-width: 1300px) {
+      right: 0;
+    }
   }
 
   .mobile-illustration {

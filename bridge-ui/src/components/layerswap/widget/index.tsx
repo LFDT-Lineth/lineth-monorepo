@@ -1,4 +1,4 @@
-import "@layerswap/widget/index.css";
+import "./layerswap.scss";
 import { Swap, LayerswapProvider, GetSettings, ThemeData } from "@layerswap/widget";
 import CustomHooks from "./custom-hooks";
 import { config } from "@/config";
@@ -6,23 +6,25 @@ import { config } from "@/config";
 export async function Widget() {
   const settings = await GetSettings();
   return (
-    <LayerswapProvider
-      integrator="linea"
-      themeData={themeData}
-      settings={settings}
-      apiKey={config.layerswapApiKey}
-      version="mainnet"
-    >
-      <CustomHooks>
-        <Swap
-          featuredNetwork={{
-            initialDirection: "to",
-            network: "LINEA_MAINNET",
-            oppositeDirectionOverrides: "onlyExchanges",
-          }}
-        />
-      </CustomHooks>
-    </LayerswapProvider>
+    <div className="container-layerswap">
+      <LayerswapProvider
+        integrator="linea"
+        themeData={themeData}
+        settings={settings}
+        apiKey={config.layerswapApiKey}
+        version="mainnet"
+      >
+        <CustomHooks>
+          <Swap
+            featuredNetwork={{
+              initialDirection: "to",
+              network: "LINEA_MAINNET",
+              oppositeDirectionOverrides: "onlyExchanges",
+            }}
+          />
+        </CustomHooks>
+      </LayerswapProvider>
+    </div>
   );
 }
 
