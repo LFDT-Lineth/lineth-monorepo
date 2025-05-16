@@ -2,6 +2,7 @@ package smartvectors
 
 import (
 	"math/big"
+	"sync/atomic"
 
 	"github.com/consensys/linea-monorepo/prover/maths/common/poly"
 	"github.com/consensys/linea-monorepo/prover/maths/common/vector"
@@ -111,7 +112,7 @@ func BatchInterpolate(vs []SmartVector, x field.Element, oncoset ...bool) []fiel
 		polys         = make([][]field.Element, len(vs))
 		results       = make([]field.Element, len(vs))
 		computed      = make([]bool, len(vs))
-		totalConstant = 0
+		totalConstant = uint64(0)
 	)
 
 	// smartvector to []fr.element
@@ -122,7 +123,7 @@ func BatchInterpolate(vs []SmartVector, x field.Element, oncoset ...bool) []fiel
 				// constant vectors
 				results[i] = con.val
 				computed[i] = true
-				totalConstant++
+				atomic.AddUint64(&totalConstant, 1)
 				continue
 			}
 
@@ -131,7 +132,7 @@ func BatchInterpolate(vs []SmartVector, x field.Element, oncoset ...bool) []fiel
 		}
 	})
 
-	if totalConstant == len(vs) {
+	if int(totalConstant) == len(vs) {
 		return results
 	}
 

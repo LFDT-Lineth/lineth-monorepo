@@ -2,6 +2,7 @@ package mempool
 
 import (
 	"github.com/consensys/linea-monorepo/prover/maths/field"
+	"github.com/consensys/linea-monorepo/prover/utils"
 )
 
 // SliceArena is a simple not-threadsafe arena implementation that uses a
@@ -46,6 +47,8 @@ func (m *SliceArena) Size() int {
 
 func (m *SliceArena) TearDown() {
 	for i := range m.frees {
-		m.parent.Free(m.frees[i])
+		if err := m.parent.Free(m.frees[i]); err != nil {
+			utils.Panic("failed to free slice in arena: %v", err)
+		}
 	}
 }

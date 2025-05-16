@@ -1,9 +1,10 @@
 package fft
 
 import (
+	"math/bits"
+
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/linea-monorepo/prover/utils/parallel"
-	"math/bits"
 
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 )

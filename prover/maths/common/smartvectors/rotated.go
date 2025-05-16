@@ -2,6 +2,7 @@ package smartvectors
 
 import (
 	"fmt"
+
 	"github.com/consensys/linea-monorepo/prover/maths/field/fext"
 
 	"github.com/consensys/linea-monorepo/prover/maths/common/vector"

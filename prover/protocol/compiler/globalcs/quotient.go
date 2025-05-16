@@ -1,13 +1,14 @@
 package globalcs
 
 import (
-	"github.com/consensys/linea-monorepo/prover/protocol/coin"
-	"github.com/consensys/linea-monorepo/prover/protocol/variables"
 	"math/big"
 	"reflect"
 	"runtime"
 	"sync"
 	"time"
+
+	"github.com/consensys/linea-monorepo/prover/protocol/coin"
+	"github.com/consensys/linea-monorepo/prover/protocol/variables"
 
 	"github.com/sirupsen/logrus"
 
@@ -196,12 +197,18 @@ func (ctx *quotientCtx) Run(run *wizard.ProverRuntime) {
 
 	logrus.Infof("run the prover for the global constraint (quotient computation)")
 
+	// threadSafeVector is a wrapper around the smart vector that makes it lockable
+	type threadSafeVector struct {
+		*sync.Mutex
+		sv.SmartVector
+	}
+
 	var (
 		// Tracks the time spent on garbage collection
 		totalTimeGc = int64(0)
 
 		// Initial step is to compute the FFTs for all committed vectors
-		coeffs    = sync.Map{} // (ifaces.ColID <=> sv.SmartVector)
+		coeffs    = sync.Map{} // (ifaces.ColID <=> threadSafeVector{sv.SmartVector})
 		stopTimer = profiling.LogTimer("Computing the coeffs %v pols of size %v", len(ctx.AllInvolvedColumns), ctx.DomainSize)
 		pool      = mempool.CreateFromSyncPool(symbolic.MaxChunkSize).Prewarm(runtime.GOMAXPROCS(0) * ctx.MaxNbExprNode)
 		largePool = mempool.CreateFromSyncPool(ctx.DomainSize).Prewarm(len(ctx.AllInvolvedColumns))
@@ -235,9 +242,9 @@ func (ctx *quotientCtx) Run(run *wizard.ProverRuntime) {
 				witness = pol.GetColAssignment(run)
 			}
 
-			witness = sv.FFTInverse(witness, fft.DIF, false, 0, 0, nil)
+			witness = sv.FFTInverse(witness, fft.DIF, false, 0, 0, nil, fft.WithNbTasks(2))
 
-			coeffs.Store(name, witness)
+			coeffs.Store(name, threadSafeVector{&sync.Mutex{}, witness})
 		})
 
 		wg.Done()
@@ -258,11 +265,11 @@ func (ctx *quotientCtx) Run(run *wizard.ProverRuntime) {
 			// normal case for interleaved or repeated columns
 			witness := pol.GetColAssignment(run)
 
-			witness = sv.FFTInverse(witness, fft.DIF, false, 0, 0, nil)
+			witness = sv.FFTInverse(witness, fft.DIF, false, 0, 0, nil, fft.WithNbTasks(2))
 
 			name := pol.GetColID()
 
-			coeffs.Store(name, witness)
+			coeffs.Store(name, threadSafeVector{&sync.Mutex{}, witness})
 		})
 		wg.Done()
 	}()
@@ -359,18 +366,31 @@ func (ctx *quotientCtx) Run(run *wizard.ProverRuntime) {
 				root := roots[k]
 				name := root.GetColID()
 
-				_, found := computedReeval.Load(name)
-
-				if found {
-					// it was already computed in a previous iteration of `j`
+				// check if it was already computed
+				if _, ok := computedReeval.Load(name); ok {
 					return
 				}
 
 				// else it's the first value of j that sees it. so we compute the
 				// coset reevaluation.
 
-				v, _ := coeffs.Load(name)
-				reevaledRoot := sv.FFT(v.(sv.SmartVector), fft.DIT, false, ratio, share, localPool)
+				v, ok := coeffs.Load(name)
+				if !ok {
+					utils.Panic("handle %v not found in the coeffs (a)\n", name)
+				}
+
+				// lock the vector to ensure we don't do twice the same compute
+				// and that we don't (over)write an entry in the map with a (leaking) pool vector
+				v.(threadSafeVector).Lock()
+				defer v.(threadSafeVector).Unlock()
+
+				// check again if it was already computed
+				// (can happen if 2 go routines hit the lock at the same time)
+				if _, ok := computedReeval.Load(name); ok {
+					return
+				}
+
+				reevaledRoot := sv.FFT(v.(threadSafeVector).SmartVector, fft.DIT, false, ratio, share, localPool, fft.WithNbTasks(2))
 				computedReeval.Store(name, reevaledRoot)
 			})
 
@@ -382,6 +402,7 @@ func (ctx *quotientCtx) Run(run *wizard.ProverRuntime) {
 				// short-path, the column is a purely Shifted(Natural) or a Natural
 				// (this excludes repeats and/or interleaved columns)
 				rootCols := column.RootParents(pol)
+
 				if len(rootCols) == 1 && rootCols[0].Size() == pol.Size() {
 
 					root := rootCols[0]
@@ -410,8 +431,9 @@ func (ctx *quotientCtx) Run(run *wizard.ProverRuntime) {
 				}
 
 				name := pol.GetColID()
-				_, ok := computedReeval.Load(name)
-				if ok {
+
+				if _, ok := computedReeval.Load(name); ok {
+					// already computed
 					return
 				}
 
@@ -420,7 +442,18 @@ func (ctx *quotientCtx) Run(run *wizard.ProverRuntime) {
 					utils.Panic("handle %v not found in the coeffs\n", name)
 				}
 
-				res := sv.FFT(v.(sv.SmartVector), fft.DIT, false, ratio, share, localPool)
+				// lock the vector to ensure we don't do twice the same compute
+				// and that we don't (over)write an entry in the map with a (leaking) pool vector
+				v.(threadSafeVector).Lock()
+				defer v.(threadSafeVector).Unlock()
+
+				// check again if it was already computed
+				// (can happen if 2 go routines hit the lock at the same time)
+				if _, ok := computedReeval.Load(name); ok {
+					return
+				}
+
+				res := sv.FFT(v.(threadSafeVector).SmartVector, fft.DIT, false, ratio, share, localPool, fft.WithNbTasks(2))
 				computedReeval.Store(name, res)
 
 			})
@@ -445,7 +478,10 @@ func (ctx *quotientCtx) Run(run *wizard.ProverRuntime) {
 				case ifaces.Column:
 					//name := metadata.GetColID()
 					//evalInputs[k] = computedReeval[name]
-					value, _ := computedReeval.Load(metadata.GetColID())
+					value, ok := computedReeval.Load(metadata.GetColID())
+					if !ok {
+						utils.Panic("did not find the reevaluation of %v", metadata.GetColID())
+					}
 					evalInputs[k] = value.(sv.SmartVector)
 				case coin.Info:
 					evalInputs[k] = sv.NewConstant(run.GetRandomCoinField(metadata.Name), ctx.DomainSize)
