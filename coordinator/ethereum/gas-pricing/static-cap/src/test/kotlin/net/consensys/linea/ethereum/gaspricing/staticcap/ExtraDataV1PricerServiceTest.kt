@@ -91,11 +91,17 @@ class ExtraDataV1PricerServiceTest {
       expectedVariableFees.toKWei().toUInt(),
       expectedEthGasPrice.toKWei().toUInt()
     )
-    monitor.start().thenApply {
-      vertx.setTimer(pollingInterval.inWholeMilliseconds * 2) {
+
+    // Start the service
+    monitor.start().thenAccept { _ ->
+      // Wait for a reasonable amount of time to ensure polling executes at least once
+      // Use 5x the polling interval to ensure enough time for the action to complete
+      vertx.setTimer(pollingInterval.inWholeMilliseconds * 5) {
         testContext
           .verify {
+            // Stop the service
             monitor.stop()
+            // Verify the mocks were called as expected
             verify(mockFeesFetcher, atLeastOnce()).getL1EthGasPriceData()
             verify(mockVariableFeesCalculator, atLeastOnce()).calculateFees(feeHistory)
             verify(mockLegacyFeesCalculator, atLeastOnce()).calculateFees(feeHistory)
