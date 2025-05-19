@@ -3,7 +3,7 @@
 
 This document outlines the procedure for assigning or removing specific roles on various components of the Linea ecosystem: **LineaRollup**, **L2MessageService**, and **TokenBridge**.
 
-**Note**: These contracts are governed by the [Security Council Charter](../../security-council-charter-v1.3.md).
+**Note**: These contracts are governed by the [Security Council Charter](../../security-council-charter.md).
 
 ---
 

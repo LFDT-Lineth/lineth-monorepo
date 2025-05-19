@@ -3,7 +3,7 @@
 
 This guide outlines the process of **upgrading an upgradable contract** (e.g. **LineaRollup**, **L2MessageService**, **TokenBridge**) and calling a **reinitialize function** in the same transaction. This flow ensures integrity while applying critical upgrades.
 
-**Note**: These contracts are governed by the [Security Council Charter](../../security-council-charter-v1.3.md).
+**Note**: These contracts are governed by the [Security Council Charter](../../security-council-charter.md).
 
 ---
 

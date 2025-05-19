@@ -3,7 +3,7 @@
 
 This guide outlines the secure process for upgrading a contract (e.g. **LineaRollup**, **L2MessageService**, **TokenBridge**) without calling a reinitialize function, via a timelock-protected upgrade flow.
 
-**Note**: These contracts are governed by the [Security Council Charter](../../security-council-charter-v1.3.md).
+**Note**: These contracts are governed by the [Security Council Charter](../../security-council-charter.md).
 
 ---
 
