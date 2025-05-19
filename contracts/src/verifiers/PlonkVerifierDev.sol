@@ -1323,9 +1323,7 @@ contract PlonkVerifierDev {
         mstore(add(mPtr, 0x80), e)
         mstore(add(mPtr, 0xa0), R_MOD)
         let check_staticcall := staticcall(gas(), MOD_EXP, mPtr, 0xc0, mPtr, 0x20)
-        if eq(check_staticcall, 0) {
-
-        }
+        if eq(check_staticcall, 0) {}
         res := mload(mPtr)
       }
     }

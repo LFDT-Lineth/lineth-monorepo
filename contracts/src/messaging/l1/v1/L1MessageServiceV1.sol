@@ -6,7 +6,6 @@ import { RateLimiter } from "../../../security/limiting/RateLimiter.sol";
 import { L1MessageManagerV1 } from "./L1MessageManagerV1.sol";
 import { TransientStorageReentrancyGuardUpgradeable } from "../../../security/reentrancy/TransientStorageReentrancyGuardUpgradeable.sol";
 import { IMessageService } from "../../interfaces/IMessageService.sol";
-import { TransientStorageHelpers } from "../../../libraries/TransientStorageHelpers.sol";
 import { MessageHashing } from "../../libraries/MessageHashing.sol";
 
 /**
@@ -23,6 +22,8 @@ abstract contract L1MessageServiceV1 is
 {
   using MessageHashing for *;
 
+  address transient TRANSIENT_MESSAGE_SENDER;
+
   // @dev This is initialised to save user cost with existing slot.
   uint256 public nextMessageNumber;
 
@@ -36,10 +37,6 @@ abstract contract L1MessageServiceV1 is
   /// @dev adding these should not affect storage as they are constants and are stored in bytecode.
   uint256 internal constant REFUND_OVERHEAD_IN_GAS = 48252;
 
-  /// @dev The transient storage key to set the message sender against while claiming.
-  bytes32 internal constant MESSAGE_SENDER_TRANSIENT_KEY =
-    bytes32(uint256(keccak256("eip1967.message.sender.transient.key")) - 1);
-
   /// @notice The default value for the message sender reset to post claiming using the MESSAGE_SENDER_TRANSIENT_KEY.
   address internal constant DEFAULT_MESSAGE_SENDER_TRANSIENT_VALUE = address(0);
 
@@ -49,12 +46,7 @@ abstract contract L1MessageServiceV1 is
    * @param _to The recipient of the message and gas refund.
    * @param _calldata The calldata of the message.
    */
-  modifier distributeFees(
-    uint256 _feeInWei,
-    address _to,
-    bytes calldata _calldata,
-    address _feeRecipient
-  ) {
+  modifier distributeFees(uint256 _feeInWei, address _to, bytes calldata _calldata, address _feeRecipient) {
     //pre-execution
     uint256 startingGas = gasleft();
     _;
@@ -120,7 +112,7 @@ abstract contract L1MessageServiceV1 is
     _requireTypeAndGeneralNotPaused(PauseType.L2_L1);
 
     /// @dev This is placed earlier to fix the stack issue by using these two earlier on.
-    TransientStorageHelpers.tstoreAddress(MESSAGE_SENDER_TRANSIENT_KEY, _from);
+    TRANSIENT_MESSAGE_SENDER = _from;
 
     bytes32 messageHash = MessageHashing._hashMessage(_from, _to, _fee, _value, _nonce, _calldata);
 
@@ -141,7 +133,7 @@ abstract contract L1MessageServiceV1 is
       }
     }
 
-    TransientStorageHelpers.tstoreAddress(MESSAGE_SENDER_TRANSIENT_KEY, DEFAULT_MESSAGE_SENDER_TRANSIENT_VALUE);
+    TRANSIENT_MESSAGE_SENDER = DEFAULT_MESSAGE_SENDER_TRANSIENT_VALUE;
 
     emit MessageClaimed(messageHash);
   }

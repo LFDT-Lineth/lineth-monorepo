@@ -602,9 +602,7 @@ contract LineaRollup is AccessControlUpgradeable, ZkEvmV2, L1MessageService, Per
     assembly {
       for {
         let i := _data.length
-      } gt(i, 0) {
-
-      } {
+      } gt(i, 0) {} {
         i := sub(i, 0x20)
         let chunk := calldataload(add(_data.offset, i))
         if iszero(iszero(and(chunk, 0xFF00000000000000000000000000000000000000000000000000000000000000))) {

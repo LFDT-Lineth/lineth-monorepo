@@ -7,7 +7,6 @@ import { L1MessageManager } from "./L1MessageManager.sol";
 import { IL1MessageService } from "./interfaces/IL1MessageService.sol";
 import { IGenericErrors } from "../../interfaces/IGenericErrors.sol";
 import { SparseMerkleTreeVerifier } from "../libraries/SparseMerkleTreeVerifier.sol";
-import { TransientStorageHelpers } from "../../libraries/TransientStorageHelpers.sol";
 import { MessageHashing } from "../libraries/MessageHashing.sol";
 
 /**
@@ -24,7 +23,6 @@ abstract contract L1MessageService is
 {
   using SparseMerkleTreeVerifier for *;
   using MessageHashing for *;
-  using TransientStorageHelpers for *;
 
   /// @dev This is currently not in use, but is reserved for future upgrades.
   uint256 public systemMigrationBlock;
@@ -122,7 +120,7 @@ abstract contract L1MessageService is
       revert InvalidMerkleProof();
     }
 
-    TransientStorageHelpers.tstoreAddress(MESSAGE_SENDER_TRANSIENT_KEY, _params.from);
+    TRANSIENT_MESSAGE_SENDER = _params.from;
 
     (bool callSuccess, bytes memory returnData) = _params.to.call{ value: _params.value }(_params.data);
     if (!callSuccess) {
@@ -136,7 +134,7 @@ abstract contract L1MessageService is
       }
     }
 
-    TransientStorageHelpers.tstoreAddress(MESSAGE_SENDER_TRANSIENT_KEY, DEFAULT_MESSAGE_SENDER_TRANSIENT_VALUE);
+    TRANSIENT_MESSAGE_SENDER = DEFAULT_MESSAGE_SENDER_TRANSIENT_VALUE;
 
     emit MessageClaimed(messageLeafHash);
   }
@@ -147,6 +145,6 @@ abstract contract L1MessageService is
    * @return originalSender The message sender address that is stored temporarily in the transient storage when claiming.
    */
   function sender() external view returns (address originalSender) {
-    originalSender = TransientStorageHelpers.tloadAddress(MESSAGE_SENDER_TRANSIENT_KEY);
+    originalSender = TRANSIENT_MESSAGE_SENDER;
   }
 }
