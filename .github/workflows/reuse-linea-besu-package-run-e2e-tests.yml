@@ -78,9 +78,11 @@ jobs:
       - name: Replace expected traces api version in coordinator config file
         shell: bash
         run: |
+          sed -i 's/^\(expected-traces-api-version-v2=\).*/\1"${{ env.EXPECTED_TRACES_API_VERSION }}"/' config/coordinator/coordinator-docker.config.toml
           sed -i 's/^\(expected-traces-api-version-v2=\).*/\1"${{ env.EXPECTED_TRACES_API_VERSION }}"/' config/coordinator/coordinator-docker-traces-v2-override.config.toml
           echo "EXPECTED_TRACES_API_VERSION=${{ env.EXPECTED_TRACES_API_VERSION }}"
           echo "BESU_PACKAGE_TAG=${{ env.BESU_PACKAGE_TAG }}"
+          echo "$(grep expected-traces-api-version-v2 config/coordinator/coordinator-docker.config.toml)"
           echo "$(grep expected-traces-api-version-v2 config/coordinator/coordinator-docker-traces-v2-override.config.toml)"
       - name: Spin up fresh environment with besu tracing with retry
         uses: nick-fields/retry@v3

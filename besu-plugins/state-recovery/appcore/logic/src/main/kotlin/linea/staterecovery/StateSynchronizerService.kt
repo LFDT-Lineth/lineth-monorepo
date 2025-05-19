@@ -28,6 +28,8 @@ class StateSynchronizerService(
   log = log,
   pollingIntervalMs = pollingInterval.inWholeMilliseconds
 ) {
+  @get:Synchronized
+  @set:Synchronized
   var stateRootMismatchFound: Boolean = false
     private set(value) {
       field = value

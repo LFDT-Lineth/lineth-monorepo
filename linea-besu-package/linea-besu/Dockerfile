@@ -27,6 +27,9 @@ WORKDIR /opt/besu
 
 COPY --chown=besu:besu besu /opt/besu/
 RUN sed -i '/^CLASSPATH/c\CLASSPATH=/opt/besu/lib/\*\:/opt/besu/plugins/\*' /opt/besu/bin/besu
+RUN sed -i '/^CLASSPATH/c\CLASSPATH=/opt/besu/lib/\*\:/opt/besu/plugins/\*' /opt/besu/bin/besu.bat
+RUN sed -i '/^CLASSPATH/c\CLASSPATH=/opt/besu/lib/\*\:/opt/besu/plugins/\*' /opt/besu/bin/besu-untuned
+RUN sed -i '/^CLASSPATH/c\CLASSPATH=/opt/besu/lib/\*\:/opt/besu/plugins/\*' /opt/besu/bin/besu-untuned.bat
 
 # Expose services ports
 # 8545 HTTP JSON-RPC
