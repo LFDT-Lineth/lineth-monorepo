@@ -16,7 +16,7 @@ class GoNativeBlobShnarfCalculatorTest {
   inner class CompressorV0 {
     @BeforeEach
     fun beforeEach() {
-      shnarfCalculator = GoNativeShnarfCalculatorFactory.getInstance(ShnarfCalculatorVersion.V0_1_0)
+      shnarfCalculator = GoNativeShnarfCalculatorFactory.getInstance(ShnarfCalculatorVersion.V1_0_1)
     }
 
     @Test

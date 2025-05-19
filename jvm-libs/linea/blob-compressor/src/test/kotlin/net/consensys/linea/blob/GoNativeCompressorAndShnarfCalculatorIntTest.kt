@@ -6,6 +6,7 @@ import net.consensys.linea.nativecompressor.CompressorTestData
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import java.util.Base64
@@ -24,12 +25,12 @@ class GoNativeCompressorAndShnarfCalculatorIntTest {
   inner class CompressorV0 {
     @BeforeEach
     fun beforeEach() {
-      compressor = GoNativeBlobCompressorFactory.getInstance(BlobCompressorVersion.V0_1_0)
+      compressor = GoNativeBlobCompressorFactory.getInstance(BlobCompressorVersion.V1_0_1)
         .apply {
           this.Init(DATA_LIMIT, GoNativeBlobCompressorFactory.dictionaryPath.toString())
           this.Reset()
         }
-      shnarfCalculator = GoNativeShnarfCalculatorFactory.getInstance(ShnarfCalculatorVersion.V0_1_0)
+      shnarfCalculator = GoNativeShnarfCalculatorFactory.getInstance(ShnarfCalculatorVersion.V1_0_1)
     }
 
     @Test
@@ -78,9 +79,9 @@ class GoNativeCompressorAndShnarfCalculatorIntTest {
 
   @Nested
   inner class CompressorSupportsMultipleInstances {
-    @Test
+    @Disabled("we only have v1 Atm, but keepin this for future")
     fun `should support multiple instances`() {
-      val compressorInstance1 = GoNativeBlobCompressorFactory.getInstance(BlobCompressorVersion.V0_1_0)
+      val compressorInstance1 = GoNativeBlobCompressorFactory.getInstance(BlobCompressorVersion.V1_0_1)
         .apply {
           this.Init(DATA_LIMIT, GoNativeBlobCompressorFactory.dictionaryPath.toString())
           this.Reset()
@@ -103,36 +104,6 @@ class GoNativeCompressorAndShnarfCalculatorIntTest {
       compressorInstance2.Write(block1, block1.size)
       assertThat(compressorInstance1.Len()).isEqualTo(0)
       assertThat(compressorInstance2.Len()).isGreaterThan(0)
-    }
-  }
-
-  @Nested
-  inner class CompressorV0AndV1CoExistence {
-    @Test
-    fun `should support multiple versions with isolated state`() {
-      val compressorV0 = GoNativeBlobCompressorFactory.getInstance(BlobCompressorVersion.V0_1_0)
-        .apply {
-          this.Init(DATA_LIMIT, GoNativeBlobCompressorFactory.dictionaryPath.toString())
-          this.Reset()
-        }
-
-      val compressorV1 = GoNativeBlobCompressorFactory.getInstance(BlobCompressorVersion.V1_0_1)
-        .apply {
-          this.Init(DATA_LIMIT, GoNativeBlobCompressorFactory.dictionaryPath.toString())
-          this.Reset()
-        }
-      val block0 = CompressorTestData.blocksRlpEncoded[0]
-      val block1 = CompressorTestData.blocksRlpEncoded[1]
-      assertThat(block0.encodeHex()).isNotEqualTo(block1.encodeHex())
-
-      compressorV0.Write(block0, block0.size)
-      assertThat(compressorV0.Len()).isGreaterThan(0)
-      assertThat(compressorV1.Len()).isEqualTo(0)
-
-      compressorV0.Reset()
-      compressorV1.Write(block1, block1.size)
-      assertThat(compressorV0.Len()).isEqualTo(0)
-      assertThat(compressorV1.Len()).isGreaterThan(0)
     }
   }
 

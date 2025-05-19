@@ -39,7 +39,7 @@ class BlobDecompressorAndDeserializerV1Test {
     vertx = Vertx.vertx()
     compressor = GoBackedBlobCompressor.getInstance(
       compressorVersion = BlobCompressorVersion.V1_0_1,
-      dataLimit = 124u * 1024u
+      dataLimit = 124 * 1024
     )
     val decompressor = GoNativeBlobDecompressorFactory.getInstance(BlobDecompressorVersion.V1_2_0)
     decompressorToDomain = BlobDecompressorToDomainV1(decompressor, blockStaticFields, vertx)

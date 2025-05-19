@@ -56,7 +56,7 @@ fs-responses-directory = "/data/prover/v2/aggregation/responses"
 #fs-responses-directory = "/data/prover/v3/aggregation/responses"
 
 [traces]
-blob-compressor-version="V0_1_0"
+blob-compressor-version="V1_0_1"
 raw-execution-traces-version="0.2.0"
 expected-traces-api-version-v2="beta-v2.1-rc16"
 [traces.counters-v2]

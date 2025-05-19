@@ -95,7 +95,7 @@ class CoordinatorConfigTest {
     )
 
     private val tracesConfig = TracesConfig(
-      blobCompressorVersion = BlobCompressorVersion.V0_1_0,
+      blobCompressorVersion = BlobCompressorVersion.V1_0_1,
       rawExecutionTracesVersion = "0.2.0",
       expectedTracesApiVersionV2 = "v0.8.0-rc8",
       conflationV2 = TracesConfig.FunctionalityEndpoint(

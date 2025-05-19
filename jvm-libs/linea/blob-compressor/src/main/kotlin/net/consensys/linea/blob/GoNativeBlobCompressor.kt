@@ -100,7 +100,6 @@ interface GoNativeBlobCompressor {
 interface GoNativeBlobCompressorJnaLib : GoNativeBlobCompressor, Library
 
 enum class BlobCompressorVersion(val version: String) {
-  V0_1_0("v0.1.0"),
   V1_0_1("v1.0.1")
 }
 
@@ -111,12 +110,24 @@ class GoNativeBlobCompressorFactory {
 
     private fun getLibFileName(version: String) = "blob_compressor_jna_$version"
 
+    @JvmStatic
+    private val loadedVersions = mutableMapOf<BlobCompressorVersion, GoNativeBlobCompressor>()
+
+    @JvmStatic
     fun getInstance(
       version: BlobCompressorVersion
     ): GoNativeBlobCompressor {
+      synchronized(loadedVersions) {
+        return loadedVersions[version]
+          ?: loadLib(version)
+            .also { loadedVersions[version] = it }
+      }
+    }
+
+    private fun loadLib(version: BlobCompressorVersion): GoNativeBlobCompressor {
       return Native.load(
-        Native.extractFromResourcePath(getLibFileName(version.version)).toString(),
-        GoNativeBlobCompressorJnaLib::class.java
+        /* name = */ Native.extractFromResourcePath(getLibFileName(version.version)).toString(),
+        /* interfaceClass = */ GoNativeBlobCompressorJnaLib::class.java
       )
     }
   }

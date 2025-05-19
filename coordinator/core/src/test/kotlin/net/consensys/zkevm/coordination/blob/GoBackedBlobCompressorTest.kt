@@ -23,7 +23,7 @@ class GoBackedBlobCompressorTest {
     private val meterRegistry = SimpleMeterRegistry()
     private val metricsFacade: MetricsFacade = MicrometerMetricsFacade(registry = meterRegistry, "linea")
     private val compressor = GoBackedBlobCompressor.getInstance(
-      BlobCompressorVersion.V0_1_0,
+      BlobCompressorVersion.V1_0_1,
       DATA_LIMIT.toUInt(),
       metricsFacade
     )

@@ -48,7 +48,7 @@ class GoBackedBlobCompressor private constructor(
     private var instance: GoBackedBlobCompressor? = null
 
     fun getInstance(
-      compressorVersion: BlobCompressorVersion = BlobCompressorVersion.V0_1_0,
+      compressorVersion: BlobCompressorVersion,
       dataLimit: UInt,
       metricsFacade: MetricsFacade
     ): GoBackedBlobCompressor {

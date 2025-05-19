@@ -32,7 +32,7 @@ class BlockEncodingValidator(
   val log: Logger = LogManager.getLogger(BlockEncodingValidator::class.java)
 ) : PeriodicPollingService(vertx, pollingIntervalMs = 1.milliseconds.inWholeMilliseconds, log = log) {
 
-  val compressor = GoBackedBlobCompressor.getInstance(compressorVersion, blobSizeLimitBytes)
+  val compressor = GoBackedBlobCompressor.getInstance(compressorVersion, blobSizeLimitBytes.toInt())
   val decompressor = GoNativeBlobDecompressorFactory.getInstance(decompressorVersion)
   val rlpEncoder = BesuRlpMainnetEncoderAsyncVertxImpl(vertx)
   val rlpMainnetDecoder = BesuRlpDecoderAsyncVertxImpl.mainnetDecoder(vertx)
