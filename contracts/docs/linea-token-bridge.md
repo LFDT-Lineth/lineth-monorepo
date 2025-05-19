@@ -82,7 +82,7 @@ npx hardhat test
 
 ### Test coverage
 
-This project uses the Hardhat plugin [solidity-coverage](https://github.com/sc-forks/solidity-coverage/blob/master/HARDHAT_README.md) to assess the overall coverage of the unit tests.
+This project uses the Hardhat plugin [solidity-coverage](https://github.com/sc-forks/solidity-coverage/blob/master/README.md) to assess the overall coverage of the unit tests.
 To generate a boilerplate report, use the following command:
 
 ```shell

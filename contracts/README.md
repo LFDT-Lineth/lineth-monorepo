@@ -11,6 +11,8 @@ The Linea Rollup, which contains the L1MessageService, is the smart contract tha
 - Submission of L2 compressed data using EIP-4844 blobs or via calldata.
 - Finalization of L2 state on L1 using a Zero Knowledge Proof verified via a Plonk verifier contract.
 
+Workflow Documentation [Linea Rollup Workflows](./docs/workflows/LineaRollup.md)
+
 ## Verifiers
 A Plonk based verifier contract is responsible for: 
 - verifying the Zero Knowledge proof that proves correct
@@ -25,13 +27,16 @@ The L2MessageService is the L2 smart contract that is responsible for:
 - Anchoring of L1 to L2 Message hashes for later claiming.
 - Claiming of messages sent from L1 to L2.
 
+Workflow Documentation [L2MessageService Workflows](./docs/workflows/L2MessageService.md)
+
 ## Linea Canonical Token Bridge
 
 The Canonical Token Bridge (TokenBridge) is a canonical ERC20 token brige between Ethereum and Linea networks.
 
 The TokenBridge utilises the L1MessageService and the L2MessageService for the transmission of messages between each layer's TokenBridge.
 
-Documentation: [Token Bridge](./docs/linea-token-bridge.md)
+Deployment Documentation: [Token Bridge](./docs/linea-token-bridge.md)
+Workflow Documentation [Token Bridge Workflows](./docs/workflows/TokenBridge.md)
 
 # Style Guide
 Please see the [Smart Contract Style Guide](./docs/contract-style-guide.md) for in depth smart contract layout and styling.
