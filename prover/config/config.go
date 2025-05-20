@@ -181,6 +181,10 @@ type Controller struct {
 	WorkerCmdLarge     string             `mapstructure:"worker_cmd_large_tmpl"`
 	WorkerCmdTmpl      *template.Template `mapstructure:"-"`
 	WorkerCmdLargeTmpl *template.Template `mapstructure:"-"`
+
+	// SpotInstanceMode tells the controller to gracefully exit as soon as it
+	// receives a SIGTERM.
+	SpotInstanceMode bool `mapstructure:"spot_instance_mode"`
 }
 
 type Prometheus struct {

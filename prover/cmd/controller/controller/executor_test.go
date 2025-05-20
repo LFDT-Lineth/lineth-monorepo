@@ -1,8 +1,10 @@
 package controller
 
 import (
+	"context"
 	"testing"
 	"text/template"
+	"time"
 
 	"github.com/consensys/linea-monorepo/prover/config"
 	"github.com/stretchr/testify/assert"
@@ -12,10 +14,8 @@ func TestRetryWithLarge(t *testing.T) {
 
 	// A test command useful for testing the command generation
 	var testDefinition = JobDefinition{
-
 		// Give a name to the command
 		Name: jobNameExecution,
-
 		// The template of the output file (returns a constant template with no
 		// parameters)
 		OutputFileTmpl: template.Must(
@@ -93,7 +93,54 @@ func TestRetryWithLarge(t *testing.T) {
 	})
 
 	for i := range jobs {
-		status := e.Run(&jobs[i].Job)
+		status := e.Run(context.Background(), &jobs[i].Job)
 		assert.Equalf(t, jobs[i].ExpCode, status.ExitCode, "got status %++v", status)
 	}
+}
+
+func TestEarlyExitOnSpotInstanceMode(t *testing.T) {
+
+	// A test command useful for testing the command generation
+	testDefinition := JobDefinition{
+		// Give a name to the command
+		Name: jobNameExecution,
+		// The template of the output file (returns a constant template with no
+		// parameters)
+		OutputFileTmpl: template.Must(
+			template.New("output-file").
+				Parse("output-fill-constant"),
+		),
+		RequestsRootDir: "./testdata",
+	}
+
+	e := NewExecutor(&config.Config{
+		Controller: config.Controller{
+			WorkerCmdTmpl: template.Must(
+				template.New("test-cmd").
+					Parse("/bin/sh {{.InFile}}"),
+			),
+		},
+	})
+
+	job := &Job{
+		Def:        &testDefinition,
+		LockedFile: "sleep-4.sh",
+		// Not directly needed but helpful to track the process name
+		Start: 0,
+		End:   0,
+	}
+
+	var (
+		// The context auto-cancels after 2 seconds and will not let the original
+		// command finish.
+		ctx, cancelMainExpiration = context.WithTimeout(context.Background(), 2*time.Second)
+	)
+
+	status := e.Run(ctx, job)
+	cancelMainExpiration()
+
+	assert.Equal(t, CodeKilledByUs, status.ExitCode)
+
+	// We wait 3 more second to ensure all sub-process have exited
+	time.Sleep(3 * time.Second)
 }

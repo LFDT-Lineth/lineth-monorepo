@@ -133,7 +133,7 @@ func TestExecutionInFileRegexp(t *testing.T) {
 		def := ExecutionDefinition(&conf)
 
 		t.Run(c.Explainer, func(t *testing.T) {
-			runInpFileTestCase(t, &conf, &def, c)
+			runInpFileTestCase(t, &def, c)
 		})
 	}
 }
@@ -196,7 +196,7 @@ func TestCompressionInFileRegexp(t *testing.T) {
 		def := CompressionDefinition(&conf)
 
 		t.Run(c.Explainer, func(t *testing.T) {
-			runInpFileTestCase(t, &conf, &def, c)
+			runInpFileTestCase(t, &def, c)
 		})
 	}
 }
@@ -244,12 +244,12 @@ func TestAggregatedInFileRegexp(t *testing.T) {
 		def := AggregatedDefinition(&conf)
 
 		t.Run(c.Explainer, func(t *testing.T) {
-			runInpFileTestCase(t, &conf, &def, c)
+			runInpFileTestCase(t, &def, c)
 		})
 	}
 }
 
-func runInpFileTestCase(t *testing.T, conf *config.Config, def *JobDefinition, c inpFileNamesCases) {
+func runInpFileTestCase(t *testing.T, def *JobDefinition, c inpFileNamesCases) {
 
 	for i, fname := range c.Fnames {
 

@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"os"
 	"path"
+	"syscall"
 	"testing"
 	"text/template"
 	"time"
@@ -281,9 +282,6 @@ func setupFsTest(t *testing.T) (confM, confL *config.Config) {
 	testDir := t.TempDir()
 
 	const (
-		dirfrom     = "prover-requests"
-		dirto       = "prover-responses"
-		dirdone     = "requests-done"
 		dirlogs     = "logs"
 		proverM     = "prover-full-M"
 		proverL     = "prover-full-L"
@@ -464,4 +462,86 @@ func createTestInputFile(
 	f.Close()
 
 	return filename
+}
+
+func TestSpotInstanceMode(t *testing.T) {
+
+	var (
+		cfg    = setupFsTestSpotInstance(t)
+		nbTest = 5
+	)
+
+	for i := 0; i < nbTest; i++ {
+		// Create the input file
+		createTestInputFile(cfg.Execution.DirFrom(), i, i, execJob, 0)
+	}
+
+	// This bit of code finds the current process with the goal of self-SIGTERMING
+	// a few seconds after we start the controller.
+	p, err := os.FindProcess(os.Getpid())
+	if err != nil {
+		panic("could not find the current process")
+	}
+
+	go runController(context.Background(), cfg)
+
+	// Wait for the controller to process 2 jobs and be in the middle of the
+	// 3rd job.
+	time.Sleep(5 * time.Second)
+
+	if err := p.Signal(os.Signal(syscall.SIGTERM)); err != nil {
+		panic("panic could not self-send a SIGTERM")
+	}
+
+	var (
+		contentFrom, eFrom = lsname(cfg.Execution.DirFrom())
+		contentDone, eDone = lsname(cfg.Execution.DirDone())
+	)
+
+	if eFrom != nil || eDone != nil {
+		t.Fatalf("could not list the directories: %v %v", eFrom, eDone)
+	}
+
+	assert.Len(t, contentFrom, 3)
+	assert.Len(t, contentDone, 2)
+}
+
+func setupFsTestSpotInstance(t *testing.T) (cfg *config.Config) {
+
+	// Testdir is going to contain the whole test directory
+	testDir := t.TempDir()
+
+	cfg = &config.Config{
+		Version: "0.2.4",
+
+		Controller: config.Controller{
+			SpotInstanceMode: true,
+			EnableExecution:  true,
+			LocalID:          "test-prover-id",
+			Prometheus:       config.Prometheus{Enabled: false},
+			RetryDelays:      []int{0, 1},
+			WorkerCmdTmpl:    template.Must(template.New("test-cmd").Parse("sleep 2")),
+		},
+
+		Execution: config.Execution{
+			WithRequestDir: config.WithRequestDir{
+				RequestsRootDir: path.Join(testDir, "execution"),
+			},
+		},
+	}
+
+	// Initialize the dirs (and give them all permissions). They will be
+	// wiped out after the test anyway.
+	permCode := fs.FileMode(0777)
+	err := errors.Join(
+		os.MkdirAll(cfg.Execution.DirFrom(), permCode),
+		os.MkdirAll(cfg.Execution.DirTo(), permCode),
+		os.MkdirAll(cfg.Execution.DirDone(), permCode),
+	)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return cfg
 }

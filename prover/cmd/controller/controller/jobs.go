@@ -69,6 +69,11 @@ func NewJob(jdef *JobDefinition, filename string) (j *Job, err error) {
 	return j, nil
 }
 
+// Returns the full path to the original file
+func (j *Job) OriginalPath() string {
+	return filepath.Join(j.Def.dirFrom(), j.OriginalFile)
+}
+
 // Returns the full path to the inprogress file
 func (j *Job) InProgressPath() string {
 	return filepath.Join(j.Def.dirFrom(), j.LockedFile)
