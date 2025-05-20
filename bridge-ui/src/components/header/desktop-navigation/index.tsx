@@ -27,7 +27,7 @@ export const DesktopNavigation = ({ menus, theme = Theme.default }: Props) => {
         {menus.map((menu, index) => (
           <MenuItem key={`menu-item-${index}`} menu={filterMobileOnly(menu)} />
         ))}
-        <li>
+        <li className={styles.connect}>
           <HeaderConnect />
         </li>
       </ul>
