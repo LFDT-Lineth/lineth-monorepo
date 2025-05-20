@@ -23,7 +23,7 @@ fs-responses-directory = "tmp/local/prover/v2/aggregation/responses"
 
 # Config of Traces API Facade endpoint
 [traces]
-blob-compressor-version="V1_0_1"
+blob-compressor-version="V1_2"
 expected-traces-api-version-v2="beta-v2.1-rc14"
 [traces.counters-v2]
 endpoints=["http://127.0.0.1:8745/"]

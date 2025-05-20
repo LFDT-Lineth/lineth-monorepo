@@ -1,9 +1,6 @@
 package linea.blob
 
 import linea.kotlin.encodeHex
-import net.consensys.linea.blob.BlobCompressorVersion
-import net.consensys.linea.blob.GoNativeBlobCompressor
-import net.consensys.linea.blob.GoNativeBlobCompressorFactory
 import org.apache.logging.log4j.LogManager
 
 class BlobCompressionException(message: String) : RuntimeException(message)

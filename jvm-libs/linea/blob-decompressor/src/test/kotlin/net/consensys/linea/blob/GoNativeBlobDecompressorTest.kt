@@ -2,6 +2,7 @@ package net.consensys.linea.blob
 
 import kotlinx.datetime.Instant
 import linea.blob.BlobCompressor
+import linea.blob.BlobCompressorVersion
 import linea.blob.GoBackedBlobCompressor
 import linea.domain.AccessListEntry
 import linea.domain.TransactionFactory
@@ -23,7 +24,7 @@ import kotlin.jvm.optionals.getOrNull
 class GoNativeBlobDecompressorTest {
   private val blobCompressedLimit = 30 * 1024
   private val compressor: BlobCompressor = GoBackedBlobCompressor
-    .getInstance(BlobCompressorVersion.V1_0_1, blobCompressedLimit)
+    .getInstance(BlobCompressorVersion.V1_2, blobCompressedLimit)
   private val decompressor: BlobDecompressor =
     GoNativeBlobDecompressorFactory.getInstance(BlobDecompressorVersion.V1_2_0)
 

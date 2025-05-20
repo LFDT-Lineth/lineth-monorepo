@@ -10,7 +10,7 @@ fs-requests-directory = "/data/prover/v3/aggregation/requests"
 fs-responses-directory = "/data/prover/v3/aggregation/responses"
 
 [traces]
-blob-compressor-version="V1_0_1"
+blob-compressor-version="V1_2"
 [traces.counters-v2]
 endpoints=["http://traces-node:8545/"]
 request-limit-per-endpoint=1

@@ -1,12 +1,12 @@
 package net.consensys.zkevm.ethereum.coordination.blob
 
+import linea.blob.CalculateShnarfResult
+import linea.blob.GoNativeBlobShnarfCalculator
+import linea.blob.GoNativeShnarfCalculatorFactory
+import linea.blob.ShnarfCalculatorVersion
 import linea.domain.BlockIntervals
 import linea.kotlin.decodeHex
 import linea.kotlin.encodeHex
-import net.consensys.linea.blob.CalculateShnarfResult
-import net.consensys.linea.blob.GoNativeBlobShnarfCalculator
-import net.consensys.linea.blob.GoNativeShnarfCalculatorFactory
-import net.consensys.linea.blob.ShnarfCalculatorVersion
 import net.consensys.linea.metrics.LineaMetricsCategory
 import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.linea.metrics.TimerCapture

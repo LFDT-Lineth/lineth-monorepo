@@ -1,7 +1,7 @@
 package net.consensys.zkevm.coordination.blob
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
-import net.consensys.linea.blob.BlobCompressorVersion
+import linea.blob.BlobCompressorVersion
 import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
 import net.consensys.zkevm.ethereum.coordination.blob.BlobCompressionException
@@ -23,7 +23,7 @@ class GoBackedBlobCompressorTest {
     private val meterRegistry = SimpleMeterRegistry()
     private val metricsFacade: MetricsFacade = MicrometerMetricsFacade(registry = meterRegistry, "linea")
     private val compressor = GoBackedBlobCompressor.getInstance(
-      BlobCompressorVersion.V1_0_1,
+      BlobCompressorVersion.V1_2,
       DATA_LIMIT.toUInt(),
       metricsFacade
     )

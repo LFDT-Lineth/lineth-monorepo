@@ -1,9 +1,8 @@
-package net.consensys.linea.blob
+package linea.blob
 
 import linea.kotlin.decodeHex
 import linea.kotlin.encodeHex
-import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -16,7 +15,7 @@ class GoNativeBlobShnarfCalculatorTest {
   inner class CompressorV0 {
     @BeforeEach
     fun beforeEach() {
-      shnarfCalculator = GoNativeShnarfCalculatorFactory.getInstance(ShnarfCalculatorVersion.V1_0_1)
+      shnarfCalculator = GoNativeShnarfCalculatorFactory.getInstance(ShnarfCalculatorVersion.V1_2)
     }
 
     @Test
@@ -34,7 +33,7 @@ class GoNativeBlobShnarfCalculatorTest {
   inner class CompressorV1 {
     @BeforeEach
     fun beforeEach() {
-      shnarfCalculator = GoNativeShnarfCalculatorFactory.getInstance(ShnarfCalculatorVersion.V1_0_1)
+      shnarfCalculator = GoNativeShnarfCalculatorFactory.getInstance(ShnarfCalculatorVersion.V1_2)
     }
 
     @Test
@@ -52,12 +51,12 @@ class GoNativeBlobShnarfCalculatorTest {
     calculator: GoNativeBlobShnarfCalculator
   ) {
     testCalculate(calculator, eip4844Enabled = false) { result ->
-      assertNotNull(result.commitment)
-      assertThat(result.commitment.decodeHex()).hasSize(0)
-      assertNotNull(result.kzgProofContract)
-      assertThat(result.kzgProofContract.decodeHex()).hasSize(0)
-      assertNotNull(result.kzgProofSideCar)
-      assertThat(result.kzgProofSideCar.decodeHex()).hasSize(0)
+      Assertions.assertNotNull(result.commitment)
+      org.assertj.core.api.Assertions.assertThat(result.commitment.decodeHex()).hasSize(0)
+      Assertions.assertNotNull(result.kzgProofContract)
+      org.assertj.core.api.Assertions.assertThat(result.kzgProofContract.decodeHex()).hasSize(0)
+      Assertions.assertNotNull(result.kzgProofSideCar)
+      org.assertj.core.api.Assertions.assertThat(result.kzgProofSideCar.decodeHex()).hasSize(0)
     }
   }
 
@@ -65,12 +64,12 @@ class GoNativeBlobShnarfCalculatorTest {
     calculator: GoNativeBlobShnarfCalculator
   ) {
     testCalculate(calculator, eip4844Enabled = true) { result ->
-      assertNotNull(result.commitment)
-      assertThat(result.commitment.decodeHex()).hasSize(48)
-      assertNotNull(result.kzgProofContract)
-      assertThat(result.kzgProofContract.decodeHex()).hasSize(48)
-      assertNotNull(result.kzgProofSideCar)
-      assertThat(result.kzgProofSideCar.decodeHex()).hasSize(48)
+      Assertions.assertNotNull(result.commitment)
+      org.assertj.core.api.Assertions.assertThat(result.commitment.decodeHex()).hasSize(48)
+      Assertions.assertNotNull(result.kzgProofContract)
+      org.assertj.core.api.Assertions.assertThat(result.kzgProofContract.decodeHex()).hasSize(48)
+      Assertions.assertNotNull(result.kzgProofSideCar)
+      org.assertj.core.api.Assertions.assertThat(result.kzgProofSideCar.decodeHex()).hasSize(48)
     }
   }
 
@@ -82,35 +81,35 @@ class GoNativeBlobShnarfCalculatorTest {
     val result = calculator.CalculateShnarf(
       eip4844Enabled = eip4844Enabled,
       compressedData = "ADAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=",
-      parentStateRootHash = Random.nextBytes(32).encodeHex(),
-      finalStateRootHash = Random.nextBytes(32).encodeHex(),
-      prevShnarf = Random.nextBytes(32).encodeHex(),
+      parentStateRootHash = Random.Default.nextBytes(32).encodeHex(),
+      finalStateRootHash = Random.Default.nextBytes(32).encodeHex(),
+      prevShnarf = Random.Default.nextBytes(32).encodeHex(),
       conflationOrderStartingBlockNumber = 1L,
       conflationOrderUpperBoundariesLen = 3,
       conflationOrderUpperBoundaries = longArrayOf(10L, 20L, 30L)
     )
 
-    assertNotNull(result)
-    assertThat(result.errorMessage).isEmpty()
+    Assertions.assertNotNull(result)
+    org.assertj.core.api.Assertions.assertThat(result.errorMessage).isEmpty()
 
     // real response fields
-    assertThat(result.dataHash).isNotNull
-    assertThat(result.dataHash.decodeHex()).hasSize(32)
-    assertThat(result.snarkHash).isNotNull
-    assertThat(result.snarkHash.decodeHex()).hasSize(32)
-    assertThat(result.expectedX).isNotNull()
-    assertThat(result.expectedX.decodeHex()).hasSize(32)
-    assertThat(result.expectedY).isNotNull()
-    assertThat(result.expectedY.decodeHex()).hasSize(32)
-    assertThat(result.expectedShnarf).isNotNull
-    assertThat(result.expectedShnarf.decodeHex()).hasSize(32)
+    org.assertj.core.api.Assertions.assertThat(result.dataHash).isNotNull
+    org.assertj.core.api.Assertions.assertThat(result.dataHash.decodeHex()).hasSize(32)
+    org.assertj.core.api.Assertions.assertThat(result.snarkHash).isNotNull
+    org.assertj.core.api.Assertions.assertThat(result.snarkHash.decodeHex()).hasSize(32)
+    org.assertj.core.api.Assertions.assertThat(result.expectedX).isNotNull()
+    org.assertj.core.api.Assertions.assertThat(result.expectedX.decodeHex()).hasSize(32)
+    org.assertj.core.api.Assertions.assertThat(result.expectedY).isNotNull()
+    org.assertj.core.api.Assertions.assertThat(result.expectedY.decodeHex()).hasSize(32)
+    org.assertj.core.api.Assertions.assertThat(result.expectedShnarf).isNotNull
+    org.assertj.core.api.Assertions.assertThat(result.expectedShnarf.decodeHex()).hasSize(32)
     assertResultFn(result)
   }
 
   // @Test
   // @Disabled("This test is meant to run locally to check for memory leaks")
   fun `shouldCalculateShnarf_checkMemory`() {
-    val calculator = GoNativeShnarfCalculatorFactory.getInstance(ShnarfCalculatorVersion.V1_0_1)
+    val calculator = GoNativeShnarfCalculatorFactory.getInstance(ShnarfCalculatorVersion.V1_2)
     // if we enable forcedLeakBuffer, we will ger OOM after 4-6 iterations
     // Exception in thread "JNA Cleaner" java.lang.OutOfMemoryError: Java heap space
     // val forcedLeakBuffer = mutableListOf<CalculateShnarfResult>()
@@ -119,9 +118,9 @@ class GoNativeBlobShnarfCalculatorTest {
         calculator.CalculateShnarf(
           eip4844Enabled = false,
           compressedData = "ADAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=",
-          parentStateRootHash = Random.nextBytes(32).encodeHex(),
-          finalStateRootHash = Random.nextBytes(32).encodeHex(),
-          prevShnarf = Random.nextBytes(32).encodeHex(),
+          parentStateRootHash = Random.Default.nextBytes(32).encodeHex(),
+          finalStateRootHash = Random.Default.nextBytes(32).encodeHex(),
+          prevShnarf = Random.Default.nextBytes(32).encodeHex(),
           conflationOrderStartingBlockNumber = 0L,
           conflationOrderUpperBoundariesLen = 2,
           conflationOrderUpperBoundaries = longArrayOf(10L, 20L)

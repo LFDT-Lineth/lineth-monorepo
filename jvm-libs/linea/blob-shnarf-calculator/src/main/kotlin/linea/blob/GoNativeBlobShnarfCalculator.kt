@@ -1,4 +1,4 @@
-package net.consensys.linea.blob
+package linea.blob
 
 import com.sun.jna.Library
 import com.sun.jna.Native
@@ -58,7 +58,7 @@ interface GoNativeBlobShnarfCalculator {
 internal interface GoNativeBlobShnarfCalculatorJna : GoNativeBlobShnarfCalculator, Library
 
 enum class ShnarfCalculatorVersion(val version: String) {
-  V1_0_1("v1.0.1")
+  V1_2("v1.2.0")
 }
 
 class GoNativeShnarfCalculatorFactory {

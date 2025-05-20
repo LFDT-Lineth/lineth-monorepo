@@ -2,10 +2,10 @@ package net.consensys.zkevm.coordinator.app.config
 
 import com.github.michaelbull.result.getError
 import com.sksamuel.hoplite.Masked
+import linea.blob.BlobCompressorVersion
 import linea.coordinator.config.loadConfigs
 import linea.coordinator.config.loadConfigsOrError
 import linea.domain.BlockParameter
-import net.consensys.linea.blob.BlobCompressorVersion
 import net.consensys.linea.ethereum.gaspricing.BoundableFeeCalculator
 import net.consensys.linea.ethereum.gaspricing.staticcap.ExtraDataV1UpdaterImpl
 import net.consensys.linea.ethereum.gaspricing.staticcap.FeeHistoryFetcherImpl
@@ -95,7 +95,7 @@ class CoordinatorConfigTest {
     )
 
     private val tracesConfig = TracesConfig(
-      blobCompressorVersion = BlobCompressorVersion.V1_0_1,
+      blobCompressorVersion = BlobCompressorVersion.V1_2,
       rawExecutionTracesVersion = "0.2.0",
       expectedTracesApiVersionV2 = "v0.8.0-rc8",
       conflationV2 = TracesConfig.FunctionalityEndpoint(
@@ -446,7 +446,7 @@ class CoordinatorConfigTest {
           )
         ),
         traces = tracesConfig.copy(
-          blobCompressorVersion = BlobCompressorVersion.V1_0_1,
+          blobCompressorVersion = BlobCompressorVersion.V1_2,
           expectedTracesApiVersionV2 = "v0.8.0-rc8",
           conflationV2 = tracesConfig.conflationV2,
           countersV2 = tracesConfig.countersV2

@@ -2,12 +2,12 @@ package net.consensys.zkevm.coordinator.app.config
 
 import com.sksamuel.hoplite.ConfigAlias
 import com.sksamuel.hoplite.Masked
+import linea.blob.BlobCompressorVersion
 import linea.domain.BlockParameter
 import linea.domain.assertIsValidAddress
 import linea.kotlin.assertIs32Bytes
 import linea.kotlin.decodeHex
 import linea.web3j.SmartContractErrors
-import net.consensys.linea.blob.BlobCompressorVersion
 import net.consensys.linea.ethereum.gaspricing.dynamiccap.MAX_FEE_HISTORIES_STORAGE_PERIOD
 import net.consensys.linea.ethereum.gaspricing.dynamiccap.MAX_FEE_HISTORY_BLOCK_COUNT
 import net.consensys.linea.ethereum.gaspricing.dynamiccap.MAX_REWARD_PERCENTILES_SIZE

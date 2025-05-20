@@ -5,6 +5,7 @@ import build.linea.clients.StateManagerV1JsonRpcClient
 import io.vertx.core.Vertx
 import kotlinx.datetime.Clock
 import linea.anchoring.MessageAnchoringApp
+import linea.blob.ShnarfCalculatorVersion
 import linea.contract.l1.LineaRollupSmartContractClientReadOnly
 import linea.contract.l1.Web3JLineaRollupSmartContractClientReadOnly
 import linea.contract.l2.Web3JL2MessageServiceSmartContractClient
@@ -15,7 +16,6 @@ import linea.web3j.SmartContractErrors
 import linea.web3j.Web3jBlobExtended
 import linea.web3j.createWeb3jHttpClient
 import linea.web3j.ethapi.createEthApiClient
-import net.consensys.linea.blob.ShnarfCalculatorVersion
 import net.consensys.linea.contract.l1.GenesisStateProvider
 import net.consensys.linea.ethereum.gaspricing.BoundableFeeCalculator
 import net.consensys.linea.ethereum.gaspricing.FeesCalculator
@@ -456,7 +456,7 @@ class L1DependentApp(
       blobCompressionProverClient = proverClientFactory.blobCompressionProverClient(),
       rollingBlobShnarfCalculator = RollingBlobShnarfCalculator(
         blobShnarfCalculator = GoBackedBlobShnarfCalculator(
-          version = ShnarfCalculatorVersion.V1_0_1,
+          version = ShnarfCalculatorVersion.V1_2,
           metricsFacade = metricsFacade
         ),
         blobsRepository = blobsRepository,

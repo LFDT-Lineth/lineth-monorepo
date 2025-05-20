@@ -1,6 +1,5 @@
 package linea.blob
 
-import net.consensys.linea.blob.BlobCompressorVersion
 import net.consensys.linea.nativecompressor.CompressorTestData
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
@@ -14,7 +13,7 @@ class GoBackedBlobCompressorTest {
   companion object {
     private const val DATA_LIMIT = 24 * 1024
     private val TEST_DATA = CompressorTestData.blocksRlpEncoded
-    private val compressor = GoBackedBlobCompressor.getInstance(BlobCompressorVersion.V1_0_1, DATA_LIMIT)
+    private val compressor = GoBackedBlobCompressor.getInstance(BlobCompressorVersion.V1_2, DATA_LIMIT)
   }
 
   @BeforeEach
