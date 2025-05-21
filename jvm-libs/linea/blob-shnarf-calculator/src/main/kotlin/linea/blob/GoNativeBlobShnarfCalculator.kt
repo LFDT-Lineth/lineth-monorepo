@@ -68,8 +68,12 @@ class GoNativeShnarfCalculatorFactory {
     fun getInstance(
       version: ShnarfCalculatorVersion
     ): GoNativeBlobShnarfCalculator {
+      val extractedLibFile = Native.extractFromResourcePath(
+        getLibFileName(version.version),
+        GoNativeShnarfCalculatorFactory::class.java.classLoader
+      )
       return Native.load(
-        Native.extractFromResourcePath(getLibFileName(version.version)).toString(),
+        extractedLibFile.toString(),
         GoNativeBlobShnarfCalculatorJna::class.java
       )
     }
