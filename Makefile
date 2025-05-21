@@ -4,6 +4,10 @@ GIT_TAGS := $(shell git -P tag --points-at)
 TIMESTAMP := $(shell date)
 GO_CORSET_COMPILE := ${GO_CORSET} compile -Dtags="${GIT_TAGS}" -Dcommit="${GIT_COMMIT}" -Dtimestamp="${TIMESTAMP}"
 
+# Modules setting
+## Some modules set below are fork specific. Eg. For OOB, OOB_LON is the OOB module for London and OOB_SHAN the OOB module for Shanghai.
+## The discrimination is done by having one bin file per fork - see command line below
+
 ALU := alu
 
 BIN := bin   
@@ -119,10 +123,20 @@ ZKEVM_MODULES_COMMON := ${CONSTANTS} \
 		 ${TRM} \
 		 ${WCP}
 
-ZKEVM_MODULES_LON := ${ZKEVM_MODULES_COMMON} \
-					 ${HUB_LON} \
-					 ${OOB_LON} \
-					 ${TXN_DATA_LON}
+ZKEVM_MODULES_LONDON := ${ZKEVM_MODULES_COMMON} \
+		 ${HUB_LON} \
+		 ${OOB_LON} \
+		 ${TXN_DATA_LON}
 
-zkevm.bin: ${ZKEVM_MODULES}
-	${GO_CORSET_COMPILE} -o $@ ${ZKEVM_MODULES_LON}
+ ZKEVM_MODULES_SHANGHAI := ${ZKEVM_MODULES_COMMON} \
+		 ${HUB_SHAN} \
+		 ${OOB_SHAN} \
+		 ${TXN_DATA_SHAN}
+
+all: zkevm_london.bin zkevm_shanghai.bin
+
+zkevm_london.bin: ${ZKEVM_MODULES_LONDON}
+	${GO_CORSET_COMPILE} -o $@ ${ZKEVM_MODULES_LONDON}
+
+zkevm_shanghai.bin: ${ZKEVM_MODULES_SHANGHAI}
+	${GO_CORSET_COMPILE} -o $@ ${ZKEVM_MODULES_SHANGHAI}

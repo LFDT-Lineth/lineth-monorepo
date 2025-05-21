@@ -13,11 +13,11 @@
 		 ( STP_FLAG   :binary@prove )
 
 		 ;; EXP columns (DONE)
-		 ( EXP_INST                :i32 )
+		 ( EXP_INST                :i16 )
 		 ( EXP_DATA                :array [5] :i128 )
 
 		 ;; MMU columns (DONE)
-		 ( MMU_INST                :i32   :display :hex)
+		 ( MMU_INST                :i16   :display :hex)
 		 ( MMU_SRC_ID              :i32   )
 		 ( MMU_TGT_ID              :i32   )
 		 ( MMU_AUX_ID              :i32   )
@@ -34,7 +34,7 @@
 		 ( MMU_EXO_SUM             :i32   )
 
 		 ;; MXP colummns
-		 ( MXP_INST                     :i32   )
+		 ( MXP_INST                     :byte   )
 		 ( MXP_MXPX                     :binary ) 
 		 ( MXP_DEPLOYS                  :binary ) 
 		 ( MXP_OFFSET_1_HI              :i128 )
