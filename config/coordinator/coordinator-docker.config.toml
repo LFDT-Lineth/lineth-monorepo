@@ -58,7 +58,7 @@ fs-responses-directory = "/data/prover/v2/aggregation/responses"
 [traces]
 blob-compressor-version="V1_2"
 raw-execution-traces-version="0.2.0"
-expected-traces-api-version-v2="beta-v2.1-rc16"
+expected-traces-api-version-v2="beta-v2.1-rc16.2"
 [traces.counters-v2]
 endpoints=["http://traces-node:8545/"]
 request-limit-per-endpoint=1

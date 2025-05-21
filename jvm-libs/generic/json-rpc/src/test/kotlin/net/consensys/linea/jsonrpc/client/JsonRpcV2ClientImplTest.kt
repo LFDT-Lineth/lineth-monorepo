@@ -87,8 +87,26 @@ class JsonRpcV2ClientImplTest {
     wiremock = WireMockServer(WireMockConfiguration.options().dynamicPort())
     wiremock.start()
 
+    val uris = listOf(URI(wiremock.baseUrl() + path))
+
+    return createClient(
+      uris = uris,
+      responseObjectMapper = responseObjectMapper,
+      requestObjectMapper = requestObjectMapper,
+      retryConfig = retryConfig,
+      shallRetryRequestsClientBasePredicate = shallRetryRequestsClientBasePredicate
+    )
+  }
+
+  private fun createClient(
+    uris: List<URI>,
+    responseObjectMapper: ObjectMapper = defaultObjectMapper,
+    requestObjectMapper: ObjectMapper = defaultObjectMapper,
+    retryConfig: RequestRetryConfig = defaultRetryConfig,
+    shallRetryRequestsClientBasePredicate: Predicate<Result<Any?, Throwable>> = Predicate { false }
+  ): JsonRpcV2Client {
     return factory.createJsonRpcV2Client(
-      endpoints = listOf(URI(wiremock.baseUrl() + path)),
+      endpoints = uris,
       retryConfig = retryConfig,
       requestObjectMapper = requestObjectMapper,
       responseObjectMapper = responseObjectMapper,
@@ -539,12 +557,10 @@ class JsonRpcV2ClientImplTest {
 
   @Test
   fun `when it has connection error propagates to shallRetryRequestPredicate and retries until retry config elapses`() {
-    createClientAndSetupWireMockServer(
+    createClient(
+      uris = listOf(URI.create("http://127.0.0.1:19472")),
       retryConfig = retryConfig(maxRetries = 2u, timeout = 8.seconds, backoffDelay = 5.milliseconds)
     ).also { client ->
-      // stop the server to simulate connection error
-      wiremock.stop()
-
       val retryPredicateCalls = mutableListOf<Result<String?, Throwable>>()
 
       val reqFuture = client.makeRequest(
@@ -560,7 +576,7 @@ class JsonRpcV2ClientImplTest {
       assertThatThrownBy { reqFuture.get() }
         .isInstanceOfSatisfying(ExecutionException::class.java) {
           assertThat(it.cause).isInstanceOfSatisfying(ConnectException::class.java) {
-            assertThat(it.message).contains("Connection refused: localhost/127.0.0.1:")
+            assertThat(it.message).contains("Connection refused: /127.0.0.1:19472")
           }
         }
       assertThat(retryPredicateCalls).hasSizeBetween(1, 3)

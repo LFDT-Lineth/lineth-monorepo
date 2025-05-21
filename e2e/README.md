@@ -2,15 +2,17 @@
 ## Setup
 Run `pnpm install` to setup typechain
 
-Run `make fresh-start-all` from root directory to spin up local environment
+Run `make start-env-with-tracing-v2-ci` from root directory to spin up local environment
 
 
 ## Run tests
-| ENV | Command | Description |
-|----|---|---|
-| Local | `pnpm run test:e2e:local` | Uses already running docker environment and deployed smart contracts |
-| DEV | `pnpm run test:e2e:dev` | Uses DEV env, may need to update constants in `constants.dev.ts`  |
-| UAT | `pnpm run test:e2e:uat` | Uses UAT env, may need to update constants in `constants.uat.ts` |
+| ENV   | Command                                       | Description                                                          |
+|-------|-----------------------------------------------|----------------------------------------------------------------------|
+| Local | `pnpm run test:e2e:local`                     | Uses already running docker environment and deployed smart contracts |
+| Local | `pnpm run test:e2e:local -t "test suite"`     | Runs a test suite                                                    |
+| Local | `pnpm run test:e2e:local -t "specific test"`  | Runs a single test                                                   |
+| DEV   | `pnpm run test:e2e:dev`                       | Uses DEV env, may need to update constants in `constants.dev.ts`     |
+| UAT   | `pnpm run test:e2e:uat`                       | Uses UAT env, may need to update constants in `constants.uat.ts`     |
 
 ## Remote workflows
 Workflow options:
@@ -22,15 +24,15 @@ the steps output, can be used to debug containers.
 - `e2e-tests-logs-dump` - Enable to print logs after e2e tests have ran
 
 
-## Debugging test in vscode 
-Install the `vscode-jest` plugin and open `linea-monorepo/e2e/` directory. Use the following config in `linea-monorepo/e2e/.vscode/settings.json` 
+## Debugging test in vscode
+Install the `vscode-jest` plugin and open `linea-monorepo/e2e/` directory. Use the following config in `linea-monorepo/e2e/.vscode/settings.json`
 ```
 {
   "jest.autoRun": { "watch": false },
   "jest.jestCommandLine": "pnpm run test:e2e:vscode --",
 }
 ```
-and the following config in `linea-monorepo/e2e/.vscode/launch.json` 
+and the following config in `linea-monorepo/e2e/.vscode/launch.json`
 ```
 {
     "configurations": [
@@ -58,7 +60,7 @@ and the following config in `linea-monorepo/e2e/.vscode/launch.json`
                 "program": "${workspaceFolder}/node_modules/jest/bin/jest"
             }
         }
-    
+
     ]
 }
 ```
