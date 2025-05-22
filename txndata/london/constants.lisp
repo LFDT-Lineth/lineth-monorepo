@@ -1,28 +1,10 @@
 (module txndata)
 
 (defconst
-;; TODO: this is LONDON
-  CT_MAX_TYPE_0_LONDON                                         7
-  CT_MAX_TYPE_1_LONDON                                         8
-  CT_MAX_TYPE_2_LONDON                                         8
-  ;;
-  NB_ROWS_TYPE_0_LONDON                                         (+ CT_MAX_TYPE_0_LONDON 1)
-  NB_ROWS_TYPE_1_LONDON                                         (+ CT_MAX_TYPE_1_LONDON 1)
-  NB_ROWS_TYPE_2_LONDON                                         (+ CT_MAX_TYPE_2_LONDON 1)
-  ;;
-
-;; TODO: this is SHANGHAI
-  CT_MAX_TYPE_0_SHANGHAI                                         9
-  CT_MAX_TYPE_1_SHANGHAI                                         10
-  CT_MAX_TYPE_2_SHANGHAI                                         10
-  ;;
-  NB_ROWS_TYPE_0_SHANGHAI                                         (+ CT_MAX_TYPE_0_SHANGHAI 1)
-  NB_ROWS_TYPE_1_SHANGHAI                                         (+ CT_MAX_TYPE_1_SHANGHAI 1)
-  NB_ROWS_TYPE_2_SHANGHAI                                         (+ CT_MAX_TYPE_2_SHANGHAI 1)
-  ;; TODO: this is LONDON
   CT_MAX_TYPE_0                                         7
   CT_MAX_TYPE_1                                         8
   CT_MAX_TYPE_2                                         8
+
   ;;
   NB_ROWS_TYPE_0                                         (+ CT_MAX_TYPE_0 1)
   NB_ROWS_TYPE_1                                         (+ CT_MAX_TYPE_1 1)

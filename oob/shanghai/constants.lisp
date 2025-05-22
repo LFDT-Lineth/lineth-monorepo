@@ -8,9 +8,7 @@
   CT_MAX_XCALL          0
   CT_MAX_CALL           2
   CT_MAX_XCREATE        0
-  CT_MAX_CREATE_LONDON  3
-  CT_MAX_CREATE_SHANGHAI         4
-  CT_MAX_CREATE         4 ;;TODO fix me it's su^ôsed to be dynamically fork dependant
+  CT_MAX_CREATE         4
   CT_MAX_SSTORE         0
   CT_MAX_DEPLOYMENT     0
   CT_MAX_ECRECOVER      2
