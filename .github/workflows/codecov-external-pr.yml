@@ -6,21 +6,28 @@ on:
     types:
       - completed
 
+permissions:
+  # Required to read uploaded artifact from another workflow run
+  actions: read
+  contents: read
+
 jobs:
-  filter-commit-changes:
+  get-commit-tag:
     if: github.event.workflow_run.head_repository.fork == true
     runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
-    name: Filter commit changes
+    name: get-commit-tag
     outputs:
-      coordinator: ${{ steps.filter.outputs.coordinator }}
-      smart-contracts: ${{ steps.filter.outputs.smart-contracts }}
-      commit-tag: ${{ steps.get-commit-tag.outputs.COMMIT_TAG }}
+      commit-tag: ${{ steps.compute-commit-tag.outputs.COMMIT_TAG }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Get commit tag
+        with:
+          repository: ${{ github.event.workflow_run.head_repository.full_name }}
+          ref:        ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+      - name: Compute commit tag
         shell: bash
-        id: get-commit-tag
+        id: compute-commit-tag
         # COMMIT_TAG will be the commit SHA of the workflow run that triggered this workflow
         # - For a new commit on a PR branch, COMMIT_TAG = head of PR branch
         #
@@ -30,53 +37,35 @@ jobs:
           echo "COMMIT_TAG=$(git rev-parse --short ${{ github.event.workflow_run.head_sha }})" >> $GITHUB_OUTPUT
       - name: Show commit tag
         run: |
-          echo "COMMIT_TAG: ${{ steps.get-commit-tag.outputs.COMMIT_TAG }}"
-      - name: Filter commit changes
-        uses: dorny/paths-filter@v3
-        id: filter
-        with:
-          base: ${{ github.ref }}
-          list-files: "json"
-          filters: |
-            coordinator:
-              - 'coordinator/**'
-              - 'testdata/**'
-              - 'buildSrc/**'
-              - 'jvm-libs/**'
-              - 'gradle/**'
-              - 'build.gradle'
-              - 'gradle.properties'
-              - 'settings.gradle'
-              - '.github/workflows/coordinator-*.yml'
-              - '.github/workflows/build-and-publish.yml'
-              - '.github/workflows/main.yml'
-              - '.github/workflows/reuse-*.yml'
-              - 'config/common/traces-limits-v2.toml'
-              - 'config/coordinator/**'
-              - 'e2e/**'
-              - 'docker/compose-*.yml'
-            smart-contracts:
-              - 'contracts/**'
-              - 'testdata/**'
-              - 'prover/**'
-              - '.github/workflows/main.yml'
-              - '.github/workflows/run-smc-tests.yml'
+          echo "COMMIT_TAG: ${{ steps.compute-commit-tag.outputs.COMMIT_TAG }}"
+
+  # Ideally we would use dorny/paths-filter@v3 to conditionally trigger an upload job based on file changes
+  # However there is a limitation in Github Actions where workflows triggered by a `workflow_run` event have no access to metadata on external fork PRs - https://github.com/orgs/community/discussions/25220
+  # Hence we are unable to find the base commit (the common ancestor commit between the PR branch and main branch) without using very clunky workarounds
+  # Hence we cannot provide the correct set of 'before' and 'after' commits for dorny/paths-filter@v3 to accurately assess PR file changes
+  # So instead we unconditionally use 'continue-on-error: true' and try to download every possible test coverage report that we want to upload to Codecov
 
   upload-codecov-coordinator:
-    needs: [ filter-commit-changes ]
-    if: ${{ needs.filter-commit-changes.outputs.coordinator == 'true' }}
+    needs: [ get-commit-tag ]
     runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
     name: upload-codecov-coordinator
     env:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     steps:
       - name: Download Jacoco test coverage report (from coordinator-testing.yml)
+        continue-on-error: true
         uses: actions/download-artifact@v4
+        id: coordinator-report-download
         with:
-          name: jacocoRootReport-${{ needs.filter-commit-changes.outputs.commit-tag }}.xml
+          name: jacocoRootReport-${{ needs.get-commit-tag.outputs.commit-tag }}.xml
           path: |
-            ${{ github.workspace }}/jacocoRootReport.xml
+            ${{ github.workspace }}
+          # Required to download artifacts from another workflow run
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          # Gets run id of the precedeing workflow that triggered this workflow_run
+          run-id: ${{ github.event.workflow_run.id }}
       - uses: codecov/codecov-action@v5
+        if: ${{ steps.coordinator-report-download.outcome == 'success' }}
         with:
           fail_ci_if_error: true
           files: ${{ github.workspace }}/jacocoRootReport.xml
@@ -87,20 +76,26 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
 
   upload-codecov-smart-contracts:
-    needs: [ filter-commit-changes ]
-    if: ${{ needs.filter-commit-changes.outputs.smart-contracts == 'true' }}
+    needs: [ get-commit-tag ]
     runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
     name: upload-codecov-smart-contracts
     env:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     steps:
       - name: Download smart contract coverage report (from run-smc.tests.yml)
+        id: smc-report-download
+        continue-on-error: true
         uses: actions/download-artifact@v4
         with:
-          name: smart-contract-coverage-${{ needs.filter-commit-changes.outputs.commit-tag }}.json
+          name: smart-contract-coverage-${{ needs.get-commit-tag.outputs.commit-tag }}.json
           path: |
-            ${{ github.workspace }}/coverage-final.json
+            ${{ github.workspace }}
+          # Required to download artifacts from another workflow run
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          # Gets run id of the precedeing workflow that triggered this workflow_run
+          run-id: ${{ github.event.workflow_run.id }}
       - uses: codecov/codecov-action@v5
+        if: ${{ steps.smc-report-download.outcome == 'success' }}
         with:
           fail_ci_if_error: true
           files: ${{ github.workspace }}/coverage-final.json
