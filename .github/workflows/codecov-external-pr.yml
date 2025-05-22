@@ -34,7 +34,7 @@ jobs:
         # Note that we cannot use GITHUB_SHA here because it will always reference the head of main branch
         # Since we intend for this workflow to run only for PRs from an external fork, we want COMMIT_TAG to match the PR branch head
         run: |
-          echo "COMMIT_TAG=$(git rev-parse --short ${{ github.event.workflow_run.head_sha }})" >> $GITHUB_OUTPUT
+          echo "COMMIT_TAG=$(git rev-parse --short=7 ${{ github.event.workflow_run.head_sha }})" >> $GITHUB_OUTPUT
       - name: Show commit tag
         run: |
           echo "COMMIT_TAG: ${{ steps.compute-commit-tag.outputs.COMMIT_TAG }}"

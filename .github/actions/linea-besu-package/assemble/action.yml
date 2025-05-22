@@ -74,9 +74,9 @@ runs:
       run: |
         # For PR, GITHUB_SHA is NOT the last commit pushed onto the PR branch - https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#pull_request
         if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-          echo "commithash=$(git rev-parse --short ${{ github.event.pull_request.head.sha }})" >> $GITHUB_OUTPUT
+          echo "commithash=$(git rev-parse --short=7 ${{ github.event.pull_request.head.sha }})" >> $GITHUB_OUTPUT
         else
-          echo "commithash=$(git rev-parse --short $GITHUB_SHA)" >> $GITHUB_OUTPUT
+          echo "commithash=$(git rev-parse --short=7 $GITHUB_SHA)" >> $GITHUB_OUTPUT
         fi
 
     - name: set docker tag
