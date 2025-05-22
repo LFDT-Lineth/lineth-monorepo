@@ -1077,7 +1077,10 @@ class L1DependentApp(
       l2Web3jClient: Web3j,
       vertx: Vertx
     ): LongRunningService {
-      if (type2StateProofProviderConfig == null || type2StateProofProviderConfig.endpoints.isEmpty()) {
+      if (type2StateProofProviderConfig == null ||
+        type2StateProofProviderConfig.disabled ||
+        type2StateProofProviderConfig.endpoints.isEmpty()
+      ) {
         return DisabledLongRunningService
       }
 

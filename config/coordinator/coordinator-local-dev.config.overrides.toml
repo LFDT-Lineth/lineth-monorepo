@@ -12,19 +12,18 @@ endpoint="http://127.0.0.1:9000"
 
 [prover]
 [prover.execution]
-fs-requests-directory = "tmp/local/prover/v3/execution/requests"
-fs-responses-directory = "tmp/local/prover/v3/execution/responses"
+fs-requests-directory="tmp/local/prover/v3/execution/requests"
+fs-responses-directory="tmp/local/prover/v3/execution/responses"
 [prover.blob-compression]
-fs-requests-directory = "tmp/local/prover/v3/compression/requests"
-fs-responses-directory = "tmp/local/prover/v3/compression/responses"
+fs-requests-directory="tmp/local/prover/v3/compression/requests"
+fs-responses-directory="tmp/local/prover/v3/compression/responses"
 [prover.proof-aggregation]
-fs-requests-directory = "tmp/local/prover/v2/aggregation/requests"
-fs-responses-directory = "tmp/local/prover/v2/aggregation/responses"
+fs-requests-directory="tmp/local/prover/v3/aggregation/requests"
+fs-responses-directory="tmp/local/prover/v3/aggregation/responses"
 
 # Config of Traces API Facade endpoint
 [traces]
 blob-compressor-version="V1_2"
-expected-traces-api-version-v2="beta-v2.1-rc14"
 [traces.counters-v2]
 endpoints=["http://127.0.0.1:8745/"]
 [traces.conflation-v2]
@@ -33,12 +32,17 @@ endpoints=["http://127.0.0.1:8745/"]
 [state-manager]
 endpoints=["http://127.0.0.1:8998/"]
 
+[type2-state-proof-provider]
+disabled=true
+endpoints=["http://127.0.0.1:8889/"]
+
 [l2-network-gas-pricing.extra-data-pricing-propagation]
-extra-data-update-recipient = "http://127.0.0.1:8545/"
+extra-data-update-recipient="http://127.0.0.1:8545/"
 
 [l2-network-gas-pricing.json-rpc-pricing-propagation]
-geth-gas-price-update-recipients = ["http://127.0.0.1:8845"]
-besu-gas-price-update-recipients = []
+disabled=true
+geth-gas-price-update-recipients=["http://127.0.0.1:8845/"]
+besu-gas-price-update-recipients=[]
 
 [l1]
 rpc-endpoint="http://127.0.0.1:8445"
@@ -52,7 +56,7 @@ finalized-block-tag="finalized"
 earliestBlock=0
 
 [l2]
-rpc-endpoint="http://127.0.0.1:8845"
+rpc-endpoint="http://127.0.0.1:9045"
 blocks-to-finalization=0
 
 [database]
@@ -60,12 +64,3 @@ host="localhost"
 
 [api]
 observability_port=9546
-
-[type2-state-proof-provider]
-endpoints = ["http://127.0.0.1:8889/"]
-
-[conflation]
-#switch-block-number=20
-
-[type2-state-proof-provider]
-endpoints=[]

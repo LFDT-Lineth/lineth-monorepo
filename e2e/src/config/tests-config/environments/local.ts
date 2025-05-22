@@ -4,7 +4,7 @@ import { GenesisBasedAccountManager } from "../accounts/genesis-based-account-ma
 import { Config } from "../types";
 
 const L1_RPC_URL = new URL("http://localhost:8445");
-const L2_RPC_URL = new URL("http://localhost:8845");
+const L2_RPC_URL = new URL("http://localhost:9045");
 const L2_BESU_NODE_RPC_URL = new URL("http://localhost:9045");
 const SHOMEI_ENDPOINT = new URL("http://localhost:8998");
 const SHOMEI_FRONTEND_ENDPOINT = new URL("http://localhost:8889");
@@ -43,7 +43,7 @@ const config: Config = {
       new ethers.JsonRpcProvider(L2_RPC_URL.toString()),
       path.resolve(
         process.env.LOCAL_L2_GENESIS ||
-          path.resolve(__dirname, "../../../../..", "docker/config", "linea-local-dev-genesis-PoA-geth.json"),
+          path.resolve(__dirname, "../../../../..", "docker/config", "linea-local-dev-genesis-PoA-besu.json"),
       ),
     ),
     shomeiEndpoint: SHOMEI_ENDPOINT,

@@ -45,7 +45,7 @@ class EventBasedContractDeploymentBlockNumberProvider(
         }
         .whenException {
           log.error(
-            "Failed to get deployment block number for contract={} errorMessage=",
+            "Failed to get deployment block number for contract={} errorMessage={}",
             contractAddress,
             it.message
           )

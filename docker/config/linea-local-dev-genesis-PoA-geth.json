@@ -59,7 +59,7 @@
     },
     "e00cad48944330a60bbaedfbf2e0ac97e9762a1e": {
       "@WARNING": "FOR LOCAL DEV ONLY - DO NOT REUSE THESE KEYS ELSEWHERE",
-      "privateKey": "0x4f78823f38639b9ef15392eb8024ace1d7b991ea820b0dd36a15d14d1a6785",
+      "privateKey": "0x004f78823f38639b9ef15392eb8024ace1d7b991ea820b0dd36a15d14d1a6785",
       "comment": "account 5, can be used as end user",
       "balance": "90000000000000000000005"
     },

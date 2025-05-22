@@ -36,22 +36,22 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      l2-node:
+      l2-node-besu:
         condition: service_started
     # - smart-contract-verifier not supported for v0.1
     command: bash -c "bin/blockscout eval \"Elixir.Explorer.ReleaseTasks.create_and_migrate()\" && bin/blockscout start"
     env_file:
       - ../config/blockscout/l2-blockscout.env
     environment:
-      ETHEREUM_JSONRPC_HTTP_URL: http://l2-node:8545/
-      ETHEREUM_JSONRPC_TRACE_URL: http://l2-node:8545/
-      ETHEREUM_JSONRPC_WS_URL: ws://l2-node:8546/
+      ETHEREUM_JSONRPC_HTTP_URL: http://l2-node-besu:8545/
+      ETHEREUM_JSONRPC_TRACE_URL: http://l2-node-besu:8545/
+      ETHEREUM_JSONRPC_WS_URL: ws://l2-node-besu:8546/
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/l2_blockscout_db?ssl=false
       ECTO_USE_SSL: 'false'
     ports:
       - "4000:4000"
     volumes:
-      - ./config/linea-local-dev-genesis-PoA-geth.json:/app/genesis.json:ro
+      - ./config/linea-local-dev-genesis-PoA-besu.json:/app/genesis.json:ro
     networks:
       - linea
 

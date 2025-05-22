@@ -17,7 +17,9 @@ describe("Layer 2 test suite", () => {
     const oversizedData = ethers.randomBytes(TRANSACTION_CALLDATA_LIMIT);
     logger.debug(`Generated oversized transaction data. dataLength=${oversizedData.length}`);
 
-    await expect(dummyContract.connect(account).setPayload(oversizedData)).rejects.toThrow("missing revert data");
+    await expect(dummyContract.connect(account).setPayload(oversizedData)).rejects.toThrow(
+      "Calldata of transaction is greater than the allowed max of 30000",
+    );
     logger.debug("Transaction correctly reverted due to oversized data.");
   });
 

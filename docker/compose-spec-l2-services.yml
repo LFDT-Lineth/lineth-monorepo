@@ -48,7 +48,7 @@ services:
     hostname: l2-node
     image: consensys/linea-geth:${ZKGETH_TAG:-0588665}
     platform: linux/amd64
-    profiles: [ "l2", "l2-bc", "debug", "external-to-monorepo" ]
+    profiles: [ "l2", "debug" ]
     depends_on:
       sequencer:
         condition: service_healthy
@@ -181,7 +181,7 @@ services:
   postman:
     container_name: postman
     hostname: postman
-    image: consensys/linea-postman:${POSTMAN_TAG:-c332ec7}
+    image: consensys/linea-postman:${POSTMAN_TAG:-8a0bcc8}
     profiles: [ "l2", "debug" ]
     platform: linux/amd64
     restart: on-failure
@@ -221,7 +221,7 @@ services:
     restart: on-failure
     environment:
       config__override__l2-network-gas-pricing__json-rpc-pricing-propagation__disabled: ${DISABLE_JSON_RPC_PRICING_PROPAGATION:-true}
-      config__override__type2-state-proof-provider__endpoints: # leave empty to disable
+      config__override__type2-state-proof-provider__disabled: ${DISABLE_TYPE2_STATE_PROOF_PROVIDER:-true}
     command: [ 'java', '-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005','-Dvertx.configurationFile=/var/lib/coordinator/vertx-options.json', '-Dlog4j2.configurationFile=/var/lib/coordinator/log4j2-dev.xml', '-jar', 'libs/coordinator.jar', '--traces-limits-v2', 'config/traces-limits-v2.toml', '--smart-contract-errors', 'config/smart-contract-errors.toml', '--gas-price-cap-time-of-day-multipliers', 'config/gas-price-cap-time-of-day-multipliers.toml', 'config/coordinator-docker.config.toml', 'config/coordinator-docker-traces-v2-override.config.toml' ]
     volumes:
       - ../config/coordinator/coordinator-docker.config.toml:/opt/consensys/linea/coordinator/config/coordinator-docker.config.toml:ro
@@ -369,7 +369,7 @@ services:
     image: consensys/linea-shomei:2.3.0
     hostname: shomei-frontend
     container_name: shomei-frontend
-    profiles: [ "l2", "l2-bc", "external-to-monorepo" ]
+    profiles: [ "l2", "l2-bc" ]
     depends_on:
       zkbesu-shomei:
         condition: service_started
@@ -410,7 +410,7 @@ services:
   transaction-exclusion-api:
     hostname: transaction-exclusion-api
     container_name: transaction-exclusion-api
-    image: consensys/linea-transaction-exclusion-api:${TRANSACTION_EXCLUSION_API_TAG:-c332ec7}
+    image: consensys/linea-transaction-exclusion-api:${TRANSACTION_EXCLUSION_API_TAG:-8a0bcc8}
     profiles: [ "l2", "debug" ]
     restart: on-failure
     depends_on:

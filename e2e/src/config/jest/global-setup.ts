@@ -27,7 +27,7 @@ export default async (): Promise<void> => {
 
 async function configureOnceOffPrerequisities() {
   const account = config.getL1AccountManager().whaleAccount(0);
-  const l2Account = config.getL2AccountManager().whaleAccount(0);
+  const l2Account = config.getL2AccountManager().whaleAccount(0).connect(config.getL2SequencerProvider()!);
   const lineaRollup = config.getLineaRollupContract(account);
 
   const [l1AccountNonce, l2AccountNonce] = await Promise.all([account.getNonce(), l2Account.getNonce()]);

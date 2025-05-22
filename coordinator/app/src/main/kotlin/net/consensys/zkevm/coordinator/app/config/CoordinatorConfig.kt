@@ -479,11 +479,12 @@ data class SmartContractErrorCodesConfig(val smartContractErrors: SmartContractE
 data class GasPriceCapTimeOfDayMultipliersConfig(val gasPriceCapTimeOfDayMultipliers: TimeOfDayMultipliers)
 
 data class Type2StateProofProviderConfig(
+  override var disabled: Boolean = false,
   val endpoints: List<URL>,
   val l1QueryBlockTag: BlockParameter.Tag = BlockParameter.Tag.LATEST,
   val l1PollingInterval: Duration = Duration.ofSeconds(12),
   override val requestRetry: RequestRetryConfigTomlFriendly
-) : RequestRetryConfigurable
+) : FeatureToggleable, RequestRetryConfigurable
 
 data class TracesLimitsV2ConfigFile(val tracesLimits: Map<TracingModuleV2, UInt>)
 
