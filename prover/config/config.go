@@ -19,6 +19,17 @@ import (
 // NewConfigFromFile reads the configuration from the given file path and returns a new Config.
 // It also sets default value and validate the configuration.
 func NewConfigFromFile(path string) (*Config, error) {
+	return newConfigFromFile(path, true)
+}
+
+// NewConfigFromFileUnchecked reads the configuration and skips the validation.
+func NewConfigFromFileUnchecked(path string) (*Config, error) {
+	return newConfigFromFile(path, false)
+}
+
+// NewConfigFromFile reads the configuration from the given file path and returns a new Config.
+// It also sets default value and validate the configuration.
+func newConfigFromFile(path string, withValidation bool) (*Config, error) {
 	viper.SetConfigFile(path)
 
 	// Parse the config
@@ -38,23 +49,25 @@ func NewConfigFromFile(path string) (*Config, error) {
 		return nil, err
 	}
 
-	// Validate the config
-	validate := validator.New(validator.WithRequiredStructEnabled())
-	if err = validate.RegisterValidation("power_of_2", validateIsPowerOfTwo); err != nil {
-		return nil, err
-	}
+	if withValidation {
+		// Validate the config
+		validate := validator.New(validator.WithRequiredStructEnabled())
+		if err = validate.RegisterValidation("power_of_2", validateIsPowerOfTwo); err != nil {
+			return nil, err
+		}
 
-	if err = validate.Struct(cfg); err != nil {
-		return nil, err
+		if err = validate.Struct(cfg); err != nil {
+			return nil, err
+		}
 	}
 
 	// Ensure cmdTmpl and cmdLargeTmpl are parsed
 	cfg.Controller.WorkerCmdTmpl, err = template.New("worker_cmd").Parse(cfg.Controller.WorkerCmd)
-	if err != nil {
+	if withValidation && err != nil {
 		return nil, fmt.Errorf("failed to parse worker_cmd template: %w", err)
 	}
 	cfg.Controller.WorkerCmdLargeTmpl, err = template.New("worker_cmd_large").Parse(cfg.Controller.WorkerCmdLarge)
-	if err != nil {
+	if withValidation && err != nil {
 		return nil, fmt.Errorf("failed to parse worker_cmd_large template: %w", err)
 	}
 
@@ -63,14 +76,14 @@ func NewConfigFromFile(path string) (*Config, error) {
 
 	// Extract the Layer2.MsgSvcContract address from the string
 	addr, err := common.NewMixedcaseAddressFromString(cfg.Layer2.MsgSvcContractStr)
-	if err != nil {
+	if withValidation && err != nil {
 		return nil, fmt.Errorf("failed to extract Layer2.MsgSvcContract address: %w", err)
 	}
 	cfg.Layer2.MsgSvcContract = addr.Address()
 
 	// ensure that asset dir / kzgsrs exists using os.Stat
 	srsDir := cfg.PathForSRS()
-	if _, err := os.Stat(srsDir); os.IsNotExist(err) {
+	if _, err := os.Stat(srsDir); withValidation && os.IsNotExist(err) {
 		return nil, fmt.Errorf("kzgsrs directory (%s) does not exist: %w", srsDir, err)
 	}
 
@@ -106,7 +119,7 @@ type Config struct {
 
 	// AssetsDir stores the root of the directory where the assets are stored (setup) or
 	// accessed (prover). The file structure is described in TODO @gbotrel.
-	AssetsDir string `mapstructure:"assets_dir" validate:"required,dir"`
+	AssetsDir string `mapstructure:"assets_dir"`
 
 	Controller                 Controller
 	Execution                  Execution
