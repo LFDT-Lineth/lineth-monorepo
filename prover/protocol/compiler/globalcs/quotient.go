@@ -32,7 +32,7 @@ const (
 	/*
 		Explanation for Manual Garbage Collection Thresholds
 	*/
-	// These two threshold work well for the real-world traces at the moment of writing and a 340GiB memory limit,
+	// These two thresholds work well for the real-world traces at the moment of writing and a 340GiB memory limit,
 	// but this approach can be generalized and further improved.
 
 	// When ctx.domainSize>=524288, proverEvaluationQueries() experiences a heavy workload,
@@ -93,7 +93,7 @@ type quotientCtx struct {
 	MaxNbExprNode int
 }
 
-// createQuotientCtx constructs a [quotientCtx] from a list of ratios and aggreated
+// createQuotientCtx constructs a [quotientCtx] from a list of ratios and aggregated
 // expressions. The function organizes the handles but does not declare anything
 // in the current wizard.CompiledIOP.
 func createQuotientCtx(comp *wizard.CompiledIOP, ratios []int, aggregateExpressions []*symbolic.Expression) quotientCtx {
@@ -142,7 +142,7 @@ func createQuotientCtx(comp *wizard.CompiledIOP, ratios []int, aggregateExpressi
 
 			// Append the handle (we trust that there are no duplicate of handles
 			// within a constraint). This works because the symbolic package has
-			// automatic simplifications routines that ensure that an expression
+			// automatic simplification routines that ensure that an expression
 			// does not refer to duplicates of the same variable.
 			ctx.ColumnsForRatio[k] = append(ctx.ColumnsForRatio[k], col)
 
@@ -219,7 +219,7 @@ func (ctx *quotientCtx) Run(run *wizard.ProverRuntime) {
 		tGc := time.Now()
 		runtime.GC()
 		totalTimeGc += time.Since(tGc).Milliseconds()
-		logrus.Infof("global constraints : spent %v ms in gc, total time %v ms", time.Since(tGc), totalTimeGc)
+		logrus.Infof("global constraints: spent %v in gc, total time %v ms", time.Since(tGc), totalTimeGc)
 	}
 
 	var wg sync.WaitGroup
@@ -333,7 +333,7 @@ func (ctx *quotientCtx) Run(run *wizard.ProverRuntime) {
 		for j, ratio := range ctx.Ratios {
 
 			// For instance, if deg = 2 and max deg 8, we enter only if
-			// i = 0 or 4 because this correspond to the cosets we are
+			// i = 0 or 4 because this corresponds to the cosets we are
 			// interested in.
 			if i%(maxRatio/ratio) != 0 {
 				continue
@@ -354,7 +354,7 @@ func (ctx *quotientCtx) Run(run *wizard.ProverRuntime) {
 				tGc := time.Now()
 				runtime.GC()
 				totalTimeGc += time.Since(tGc).Milliseconds()
-				logrus.Infof("global constraints : spent %v ms in gc, total time %v ms", time.Since(tGc), totalTimeGc)
+				logrus.Infof("global constraints: spent %v in gc, total time %v ms", time.Since(tGc), totalTimeGc)
 			}
 
 			stopTimer := profiling.LogTimer("ReEvaluate %v pols of size %v on coset %v/%v", len(handles), ctx.DomainSize, share, ratio)
@@ -411,7 +411,7 @@ func (ctx *quotientCtx) Run(run *wizard.ProverRuntime) {
 					reevaledRoot, found := computedReeval.Load(name)
 
 					if !found {
-						// it is expected to computed in the above loop
+						// it is expected to be computed in the above loop
 						utils.Panic("did not find the reevaluation of %v", name)
 					}
 
@@ -465,7 +465,7 @@ func (ctx *quotientCtx) Run(run *wizard.ProverRuntime) {
 				tGc := time.Now()
 				runtime.GC()
 				totalTimeGc += time.Since(tGc).Milliseconds()
-				logrus.Infof("global constraints : spent %v ms in gc, total time %v ms", time.Since(tGc), totalTimeGc)
+				logrus.Infof("global constraints: spent %v in gc, total time %v ms", time.Since(tGc), totalTimeGc)
 			}
 
 			stopTimer = profiling.LogTimer("Batch evaluation of %v pols of size %v (ratio is %v)", len(handles), ctx.DomainSize, ratio)
@@ -501,7 +501,7 @@ func (ctx *quotientCtx) Run(run *wizard.ProverRuntime) {
 				tGc := time.Now()
 				runtime.GC()
 				totalTimeGc += time.Since(tGc).Milliseconds()
-				logrus.Infof("global constraints : spent %v ms in gc, total time %v ms", time.Since(tGc), totalTimeGc)
+				logrus.Infof("global constraints: spent %v in gc, total time %v", time.Since(tGc), totalTimeGc)
 			}
 
 			// Note that this will panic if the expression contains "no commitment"
@@ -514,7 +514,7 @@ func (ctx *quotientCtx) Run(run *wizard.ProverRuntime) {
 
 		}
 
-		// Forcefuly clean the memory for the computed reevals
+		// Forcefully clean the memory for the computed reevals
 		computedReeval.Range(func(k, v interface{}) bool {
 
 			if pooled, ok := v.(*sv.Pooled); ok {
