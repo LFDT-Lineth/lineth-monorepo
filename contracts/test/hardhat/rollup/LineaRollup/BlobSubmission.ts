@@ -573,7 +573,7 @@ describe("Linea Rollup contract: EIP-4844 Blob submission tests", () => {
     const finalizeCompressedCall = lineaRollup
       .connect(operator)
       .finalizeBlocks(blobAggregatedProof1To155.aggregatedProof, TEST_PUBLIC_VERIFIER_INDEX, finalizationData, {
-        gasLimit: 50000,
+        gasLimit: 80_000,
       });
 
     // there is no reason

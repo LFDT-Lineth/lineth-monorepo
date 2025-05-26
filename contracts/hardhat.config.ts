@@ -82,7 +82,7 @@ const config: HardhatUserConfig = {
   },
   networks: {
     hardhat: {
-      hardfork: "cancun",
+      hardfork: "prague",
     },
     mainnet: {
       accounts: [process.env.MAINNET_PRIVATE_KEY || EMPTY_HASH],
