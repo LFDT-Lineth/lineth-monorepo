@@ -61,7 +61,7 @@ copy-prover-assets:
 	aws s3 sync --exclude "*prover/dev*" --exclude "*05b9ef1*" --exclude "*05b9ef1*" --exclude "*96e3a19*" --exclude "*a9e4681*" prover-assets s3://zk-uat-prover/prover-assets/ --profile=zk-uat-s3-access
 
 download-srs:
-	aws s3 sync s3://gnark-ignition/with_lines/ ./prover-assets/kzgsrs --exclude "*" --include "*.memdump"
+	aws s3 sync s3://prover-assets/kzgsrs/ ./prover-assets/kzgsrs --exclude "*" --include "*.memdump"
 
 ###
 ### Controller

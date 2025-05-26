@@ -10,7 +10,7 @@ require (
 	github.com/consensys/compress v0.2.5
 	github.com/consensys/gnark v0.11.1-0.20250107100237-2cb190338a01
 	github.com/consensys/gnark-crypto v0.14.1-0.20250515163241-5b554443cce2
-	github.com/consensys/go-corset v1.0.3
+	github.com/consensys/go-corset v1.0.7
 	github.com/crate-crypto/go-kzg-4844 v1.1.0
 	github.com/dlclark/regexp2 v1.11.2
 	github.com/fxamacker/cbor/v2 v2.7.0
