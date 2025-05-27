@@ -50,7 +50,12 @@ func runController(ctx context.Context, cfg *config.Config) {
 		// SIGTERM is received, there would be no log entry about the signal
 		// until the proof completes.
 		<-ctx.Done()
-		cLog.Infoln("Received cancellation request, will exit as soon as possible or once current proof task is complete.")
+
+		if cfg.Controller.SpotInstanceMode {
+			cLog.Infoln("Received cancellation request. Killing the ongoing process and exiting immediately after.")
+		} else {
+			cLog.Infoln("Received cancellation request, will exit as soon as possible or once current proof task is complete.")
+		}
 	}()
 
 	for {
@@ -193,6 +198,13 @@ func runController(ctx context.Context, cfg *config.Config) {
 						job.InProgressPath(), job.OriginalPath(), err,
 					)
 				}
+
+				// As an edge-case, it's possible (in theory) that the process
+				// completes exactly when we receive the kill signal. So we
+				// could end up in a situation where the tmp-response file
+				// exists. In that case, we simply delete it before exiting to
+				// keep the FS clean.
+				os.Remove(job.TmpResponseFile(cfg))
 
 			// Failure case
 			default:
