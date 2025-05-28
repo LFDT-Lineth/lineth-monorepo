@@ -3,7 +3,6 @@ plugins {
   id 'java-library'
 }
 
-def besuArtifactGroup="org.hyperledger.besu"
 def besuVersion="${libs.versions.besu.get()}"
 
 dependencies {

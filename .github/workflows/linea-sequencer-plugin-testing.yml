@@ -1,0 +1,79 @@
+name: linea-sequencer-plugin-testing
+
+on:
+  workflow_call:
+
+concurrency:
+  group: linea-sequencer-plugin-testing-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  validation:
+    name: "Gradlew Wrapper Checksum Validation"
+    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
+    steps:
+      - uses: actions/checkout@v4
+      - uses: gradle/actions/wrapper-validation@v4
+
+  build:
+    name: "Linea Sequencer Plugin Build"
+    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: 21
+          distribution: temurin
+
+      - name: Build and test
+        run: ./gradlew besu-plugins:linea-sequencer:build
+        env:
+          JAVA_OPTS: -Xmx2g -Dorg.gradle.daemon=false
+
+      - name: Store distribution artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: distributions
+          path: besu-plugins/linea-sequencer/sequencer/build/libs
+
+  acceptanceTest:
+    name: "Linea Sequencer Plugin Acceptance Tests"
+    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-large
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: 21
+          distribution: temurin
+
+      - name: Run acceptance tests
+        run: ./gradlew besu-plugins:linea-sequencer:acceptance-tests:acceptanceTests
+        env:
+          JAVA_OPTS: -Dorg.gradle.daemon=false
+
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acceptance-test-report
+          path: besu-plugins/linea-sequencer/acceptance-tests/build/reports/tests/
+
+  spotless:
+    name: "Linea Sequencer Plugin Spotless Check"
+    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: spotless
+        run: ./gradlew --no-daemon --parallel clean besu-plugins:linea-sequencer:spotlessCheck

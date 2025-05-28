@@ -24,6 +24,10 @@ on:
       smart_contracts_changed:
         required: true
         type: string
+      linea_sequencer_changed:
+        required: true
+        type: string
+
 jobs:
   # Cache for pulling Docker images is disabled as we empirically found that this
   # (retrieving cache and loading Docker images) actually increased test time-to-completion
@@ -61,6 +65,11 @@ jobs:
     if: ${{ inputs.smart_contracts_changed == 'true' }}
     with:
       commit_tag: ${{ inputs.commit_tag }}
+    secrets: inherit
+
+  linea-sequencer:
+    uses: ./.github/workflows/linea-sequencer-plugin-testing.yml
+    if: ${{ inputs.linea_sequencer_changed == 'true' }}
     secrets: inherit
 
   # If all jobs are skipped, the workflow will still succeed.

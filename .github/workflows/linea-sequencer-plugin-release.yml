@@ -1,0 +1,69 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version (must start with "v", e.g., "v1.2.3")'
+        required: true
+        type: string
+
+jobs:
+  build:
+    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
+    steps:
+      - name: Validate version
+        run: |
+          if [[ ! "${{ github.event.inputs.version }}" =~ ^v.+ ]]; then
+            echo "Error: version must start with 'v'"
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: 21
+          distribution: temurin
+          cache: 'gradle'
+
+      - name: Build artifacts
+        run: ./gradlew besu-plugins:linea-sequencer:artifacts -PreleaseVersion=${{ github.event.inputs.version }}
+        env:
+          JAVA_OPTS: -Xmx2g -Dorg.gradle.daemon=false
+
+      # TODO in later ticket - actions/create-release and actions/upload-release-asset are both archived
+      # ncipollo/release-action@v1 is an actively-maintained alternative that can combine release creation and artifact upload
+      - name: Draft Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          body: 'Draft release of version ${{ github.event.inputs.version }}.'
+          draft: true
+          prerelease: false
+
+      - name: Upload Release Lib Asset
+        id: upload-release-asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./besu-plugins/linea-sequencer/sequencer/build/libs/linea-sequencer-${{ github.event.inputs.version }}.jar
+          asset_name: linea-sequencer-${{ github.event.inputs.version }}.jar
+          asset_content_type: application/octet-stream
+
+      - name: Upload Release Dist Asset
+        id: upload-release-dist-asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./besu-plugins/linea-sequencer/sequencer/build/distributions/linea-sequencer-${{ github.event.inputs.version }}.zip
+          asset_name: linea-sequencer-${{ github.event.inputs.version }}.zip
+          asset_content_type: application/octet-stream

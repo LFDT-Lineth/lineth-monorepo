@@ -1,0 +1,76 @@
+/*
+ * Copyright Consensys Software Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+repositories {
+  maven {
+    url "https://artifacts.consensys.net/public/linea-besu/maven/"
+    content {
+      includeGroupByRegex('io\\.consensys\\..*')
+      includeGroupByRegex('org\\.hyperledger\\..*')
+    }
+  }
+  maven {
+    url 'https://hyperledger.jfrog.io/hyperledger/besu-maven'
+    content { includeGroupByRegex('org\\.hyperledger\\..*') }
+  }
+  maven {
+    url 'https://artifacts.consensys.net/public/maven/maven/'
+    content {
+      includeGroupByRegex('tech\\.pegasys(\\..*)?')
+    }
+  }
+  maven {
+    url "https://artifacts.consensys.net/public/linea-arithmetization/maven/"
+    content {
+      includeGroupByRegex('net\\.consensys\\.linea\\..*?')
+    }
+  }
+  maven {
+    url 'https://splunk.jfrog.io/splunk/ext-releases-local'
+    content { includeGroupByRegex('com\\.splunk\\..*') }
+  }
+  mavenCentral()
+  mavenLocal()
+}
+
+apply plugin: 'io.spring.dependency-management'
+
+dependencyManagement {
+  applyMavenExclusions = false
+  generatedPomCustomization {
+    enabled = false
+  }
+  imports {
+    mavenBom "${besuArtifactGroup}:bom:${libs.versions.besu.get()}"
+  }
+
+  dependencies {
+    dependencySet(group: "net.consensys.linea.zktracer", version: "${libs.versions.arithmetization.get()}") {
+      entry "arithmetization"
+    }
+
+    dependency "com.google.code.gson:gson:${libs.versions.gson.get()}"
+    
+    dependency "io.tmio:tuweni-bytes:${libs.versions.tuweni.get()}"
+    dependency "io.tmio:tuweni-units:${libs.versions.tuweni.get()}"
+    dependency "io.tmio:tuweni-toml:${libs.versions.tuweni.get()}"
+
+    // ToDo: remove when fixed in Besu, force version to avoid conflict with previous version
+    dependency "org.apache.logging.log4j:log4j-api:${libs.versions.log4j.get()}"
+    dependency "org.apache.logging.log4j:log4j-core:${libs.versions.log4j.get()}"
+
+    dependency "org.wiremock:wiremock:${libs.versions.wiremock.get()}"
+  }
+}

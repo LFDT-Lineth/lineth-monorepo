@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration level="INFO">
+    <Properties>
+        <Property name="root.log.level">TRACE</Property>
+    </Properties>
+    <Appenders>
+        <Console name="Console">
+            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSSZZZ} | %t | %-5level | %c{1} | %msg%n" />
+        </Console>
+        <Memory name="Memory">
+            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSSZZZ} | %t | %-5level | %c{1} | %msg%n" />
+        </Memory>
+    </Appenders>
+    <Loggers>
+        <Logger level="INFO" name="io.vertx" />
+        <Logger level="INFO" name="io.netty" />
+        <Logger level="INFO" name="org.web3j.protocol.http.HttpService" />
+        <Logger level="INFO" name="org.hyperledger.besu.ethereum.p2p.network.DefaultP2PNetwork" />
+        <Logger level="INFO" name="org.hyperledger.besu.ethereum.eth.manager.EthPeers" />
+        <Root level="${sys:root.log.level}">
+            <AppenderRef ref="Console" />
+            <AppenderRef ref="Memory" />
+        </Root>
+    </Loggers>
+</Configuration>

@@ -1,0 +1,42 @@
+import com.github.jk1.license.filter.LicenseBundleNormalizer
+
+buildscript {
+  ext {
+    distributionIdentifier = "linea-sequencer"
+    releaseVersion = "v2.1-rc16.2.4"
+    distributionBaseUrl = "https://github.com/Consensys/linea-besu-upstream/releases/download/"
+    besuIdentifier = "besu-${libs.versions.besu.get()}"
+    besuFilename = "${besuIdentifier}.tar.gz"
+    besuUrl = "${distributionBaseUrl}${libs.versions.besu.get()}/${besuFilename}"
+    besuPluginsIdentifier = "${distributionIdentifier}-${version}"
+    besuPluginDir = File.createTempDir("plugins")
+  }
+}
+
+plugins {
+  id 'java-library'
+  alias(libs.plugins.dependencyLicenseReport)
+}
+
+licenseReport {
+  // This is for the allowed-licenses-file in checkLicense Task
+  // Accepts File, URL or String path to local or remote file
+  allowedLicensesFile = project.file("gradle/allowed-licenses.json")
+
+  excludes = []
+
+  // If set to true, then all boms will be excluded from the report
+  excludeBoms = true
+
+  filters = [
+    new LicenseBundleNormalizer(bundlePath: project.file("gradle/license-normalizer-bundle.json"))
+  ]
+}
+
+build {
+  dependsOn checkLicense
+}
+
+jar {
+  enabled = false
+}
