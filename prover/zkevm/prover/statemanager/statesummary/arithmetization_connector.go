@@ -849,15 +849,7 @@ func assignInsertionFilterForFinalStorage(run *wizard.ProverRuntime, smc HubColu
 
 	}
 
-	// Due to the constraint being invalid but the lookup of the filter also not being done,
-	// we can assign 1. This column is to be removed with beta-v2.
-	//
-	// svfilterAccountInsert := smartvectors.NewRegular(filterAccountInsert)
-	//
-	// The normal assignment of svFilterAccountInsert is fine but since the constraint is
-	// invalid, (and not used) it is simpler to just assign 1.
-	//
-	svfilterAccountInsert := smartvectors.NewConstant(field.One(), smc.AddressHI.Size())
+	svfilterAccountInsert := smartvectors.NewRegular(filterAccountInsert)
 	run.AssignColumn("FILTER_CONNECTOR_HUB_STATE_SUMMARY_ACCOUNT_INSERT_FILTER", svfilterAccountInsert)
 	return svfilterAccountInsert
 }
