@@ -143,18 +143,18 @@ contract LineaRollup is AccessControlUpgradeable, ZkEvmV2, L1MessageService, Per
    * @notice Sets permissions for a list of addresses and their roles as well as initialises the PauseManager pauseType:role mappings and fallback operator.
    * @dev This function is a reinitializer and can only be called once per version. Should be called using an upgradeAndCall transaction to the ProxyAdmin.
    * @param _roleAddresses The list of addresses and roles to assign permissions to.
-   * @param _pauseTypeRoles The list of pause types to associate with roles.
-   * @param _unpauseTypeRoles The list of unpause types to associate with roles.
+   * @param _pauseTypeRoleAssignments The list of pause types to associate with roles.
+   * @param _unpauseTypeRoleAssignments The list of unpause types to associate with roles.
    * @param _fallbackOperator The address of the fallback operator.
    */
   function reinitializeLineaRollupV6(
     RoleAddress[] calldata _roleAddresses,
-    PauseTypeRole[] calldata _pauseTypeRoles,
-    PauseTypeRole[] calldata _unpauseTypeRoles,
+    PauseTypeRole[] calldata _pauseTypeRoleAssignments,
+    PauseTypeRole[] calldata _unpauseTypeRoleAssignments,
     address _fallbackOperator
   ) external reinitializer(6) {
     __Permissions_init(_roleAddresses);
-    __PauseManager_init(_pauseTypeRoles, _unpauseTypeRoles);
+    __PauseManager_init(_pauseTypeRoleAssignments, _unpauseTypeRoleAssignments);
 
     if (_fallbackOperator == address(0)) {
       revert ZeroAddressNotAllowed();

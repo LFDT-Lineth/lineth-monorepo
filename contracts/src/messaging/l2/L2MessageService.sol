@@ -30,23 +30,23 @@ contract L2MessageService is AccessControlUpgradeable, L2MessageServiceV1, L2Mes
    * @param _rateLimitAmount The limit allowed for withdrawing the period.
    * @param _defaultAdmin The account to be given DEFAULT_ADMIN_ROLE on initialization.
    * @param _roleAddresses The list of addresses to grant roles to.
-   * @param _pauseTypeRoles The list of pause type roles.
-   * @param _unpauseTypeRoles The list of unpause type roles.
+   * @param _pauseTypeRoleAssignments The list of pause type roles.
+   * @param _unpauseTypeRoleAssignments The list of unpause type roles.
    */
   function initialize(
     uint256 _rateLimitPeriod,
     uint256 _rateLimitAmount,
     address _defaultAdmin,
     RoleAddress[] calldata _roleAddresses,
-    PauseTypeRole[] calldata _pauseTypeRoles,
-    PauseTypeRole[] calldata _unpauseTypeRoles
+    PauseTypeRole[] calldata _pauseTypeRoleAssignments,
+    PauseTypeRole[] calldata _unpauseTypeRoleAssignments
   ) external initializer {
     __ERC165_init();
     __Context_init();
     __AccessControl_init();
     __RateLimiter_init(_rateLimitPeriod, _rateLimitAmount);
 
-    __PauseManager_init(_pauseTypeRoles, _unpauseTypeRoles);
+    __PauseManager_init(_pauseTypeRoleAssignments, _unpauseTypeRoleAssignments);
     __ReentrancyGuard_init();
 
     if (_defaultAdmin == address(0)) {
@@ -71,15 +71,15 @@ contract L2MessageService is AccessControlUpgradeable, L2MessageServiceV1, L2Mes
    * @notice Sets permissions for a list of addresses and their roles as well as initialises the PauseManager pauseType:role mappings.
    * @dev This function is a reinitializer and can only be called once per version. Should be called using an upgradeAndCall transaction to the ProxyAdmin.
    * @param _roleAddresses The list of addresses and roles to assign permissions to.
-   * @param _pauseTypeRoles The list of pause types to associate with roles.
-   * @param _unpauseTypeRoles The list of unpause types to associate with roles.
+   * @param _pauseTypeRoleAssignments The list of pause types to associate with roles.
+   * @param _unpauseTypeRoleAssignments The list of unpause types to associate with roles.
    */
   function reinitializePauseTypesAndPermissions(
     RoleAddress[] calldata _roleAddresses,
-    PauseTypeRole[] calldata _pauseTypeRoles,
-    PauseTypeRole[] calldata _unpauseTypeRoles
+    PauseTypeRole[] calldata _pauseTypeRoleAssignments,
+    PauseTypeRole[] calldata _unpauseTypeRoleAssignments
   ) external reinitializer(2) {
     __Permissions_init(_roleAddresses);
-    __PauseManager_init(_pauseTypeRoles, _unpauseTypeRoles);
+    __PauseManager_init(_pauseTypeRoleAssignments, _unpauseTypeRoleAssignments);
   }
 }

@@ -157,11 +157,6 @@ interface ITokenBridge {
   error ReservedToken(address token);
 
   /**
-   * @dev Thrown when the remote token bridge is already set.
-   */
-  error RemoteTokenBridgeAlreadySet(address remoteTokenBridge);
-
-  /**
    * @dev Thrown when attempting to reserve an already bridged token.
    */
   error AlreadyBridgedToken(address token);
