@@ -485,6 +485,7 @@ func storageIntegrationDefineInitial(comp *wizard.CompiledIOP, ss Module, smc Hu
 		filterSummary,
 	)
 
+	filterAccountInsert := defineInsertionFilterForFinalStorage(comp, smc, sc)
 	filterEphemeralAccounts := defineEphemeralAccountFilterStorage(comp, smc, sc)
 	// Now we define the constraints for our filters
 	comp.InsertGlobal(
@@ -496,6 +497,7 @@ func storageIntegrationDefineInitial(comp *wizard.CompiledIOP, ss Module, smc Hu
 				sc.SelectorMinDeplBlock,
 				smc.PeekAtStorage,
 				smc.FirstKOCBlock,
+				filterAccountInsert,
 				filterEphemeralAccounts,
 			),
 		),
@@ -544,12 +546,14 @@ func storageIntegrationAssignInitial(run *wizard.ProverRuntime, ss Module, smc H
 	}
 	svSelectorMinDeplBlock := smartvectors.NewRegular(selectorMinDeplBlock)
 
+	filterAccountInsert := assignInsertionFilterForStorage(run, smc)
 	filterEphemeralAccounts := assignEphemeralAccountFilterStorage(run, smc)
 
 	filterArith := smartvectors.Mul(
 		svSelectorMinDeplBlock,
 		smc.PeekAtStorage.GetColAssignment(run),
 		smc.FirstKOCBlock.GetColAssignment(run),
+		filterAccountInsert,
 		filterEphemeralAccounts,
 	)
 	run.AssignColumn(
@@ -610,7 +614,7 @@ func storageIntegrationDefineFinal(comp *wizard.CompiledIOP, ss Module, smc HubC
 			ss.Account.Address.Size(),
 		)
 
-		filterAccountInsert     = defineInsertionFilterForFinalStorage(comp, smc, sc)
+		filterAccountInsert     = comp.Columns.GetHandle("FILTER_CONNECTOR_HUB_STATE_SUMMARY_ACCOUNT_INSERT_FILTER")
 		filterEphemeralAccounts = comp.Columns.GetHandle("FILTER_CONNECTOR_HUB_STATE_SUMMARY_ACCOUNT_EPHEMERAL_FILTER")
 	)
 
@@ -692,7 +696,7 @@ func storageIntegrationAssignFinal(run *wizard.ProverRuntime, ss Module, smc Hub
 	run.AssignColumn("FILTER_CONNECTOR_SUMMARY_ARITHMETIZATION_STORAGE_FINAL_SUMMARY", filterSummary)
 
 	// assign the insertion filter
-	filterAccountInsert := assignInsertionFilterForFinalStorage(run, smc)
+	filterAccountInsert := run.GetColumn("FILTER_CONNECTOR_HUB_STATE_SUMMARY_ACCOUNT_INSERT_FILTER")
 	filterEphemeralAccounts := run.GetColumn("FILTER_CONNECTOR_HUB_STATE_SUMMARY_ACCOUNT_EPHEMERAL_FILTER")
 
 	filterArith := smartvectors.Mul(
@@ -807,11 +811,11 @@ func defineInsertionFilterForFinalStorage(comp *wizard.CompiledIOP, smc HubColum
 }
 
 /*
-assignInsertionFilterForFinalStorage assigns the insertion filter for the edge case of
+assignInsertionFilterForStorage assigns the insertion filter for the edge case of
 missing storage keys that get created but then wiped when an account that did not exist is
 not added to the state
 */
-func assignInsertionFilterForFinalStorage(run *wizard.ProverRuntime, smc HubColumnSet) smartvectors.SmartVector {
+func assignInsertionFilterForStorage(run *wizard.ProverRuntime, smc HubColumnSet) smartvectors.SmartVector {
 	// compute the filter that detects account inserts in order to exclude those key reads from the
 	// arithmetization to state summary lookups.
 	filterAccountInsert := make([]field.Element, smc.AddressHI.Size())
@@ -848,7 +852,6 @@ func assignInsertionFilterForFinalStorage(run *wizard.ProverRuntime, smc HubColu
 		}
 
 	}
-
 	svfilterAccountInsert := smartvectors.NewRegular(filterAccountInsert)
 	run.AssignColumn("FILTER_CONNECTOR_HUB_STATE_SUMMARY_ACCOUNT_INSERT_FILTER", svfilterAccountInsert)
 	return svfilterAccountInsert
