@@ -98,8 +98,8 @@ export default function useEVM(): WalletProvider {
   const connectedWallets: Wallet[] = useMemo(
     () =>
       activeConnectors
-        .map((conn) => {
-          const dyn = userWallets.find((w) => true);
+        .map(() => {
+          const dyn = userWallets.find(() => true);
           if (!dyn) return;
           return resolveWallet({
             connection: dyn,
