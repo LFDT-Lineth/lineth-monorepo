@@ -1,5 +1,6 @@
 import { describe, it, beforeEach, expect } from "@jest/globals";
-import { Transaction, Wallet, ethers } from "ethers";
+import { parseEther, serializeTransaction, toBytes, toRlp } from "viem";
+import { privateKeyToAccount } from "viem/accounts";
 import { GoNativeCompressor } from "../GoNativeCompressor";
 
 const TEST_ADDRESS = "0x0000000000000000000000000000000000000001";
@@ -15,12 +16,16 @@ describe("GoNativeCompressor", () => {
 
   describe("getCompressedTxSize", () => {
     it("Should throw an error if an error occured during tx compression", () => {
-      const transaction = Transaction.from({
+      const transaction = serializeTransaction({
         to: TEST_ADDRESS,
-        value: ethers.parseEther("2"),
+        value: parseEther("2"),
+        maxFeePerGas: parseEther("0.5"),
+        maxPriorityFeePerGas: parseEther("0.45"),
+        nonce: 1,
+        chainId: 1,
       });
-      const rlpEncodedTransaction = ethers.encodeRlp(transaction.unsignedSerialized);
-      const input = ethers.getBytes(rlpEncodedTransaction);
+      const rlpEncodedTransaction = toRlp(transaction);
+      const input = toBytes(rlpEncodedTransaction);
 
       expect(() => compressor.getCompressedTxSize(input)).toThrow(
         "Error while compressing the transaction: rlp: too few elements for types.DynamicFeeTx",
@@ -28,19 +33,22 @@ describe("GoNativeCompressor", () => {
     });
 
     it("Should return compressed tx size", async () => {
-      const transaction = Transaction.from({
+      const signer = privateKeyToAccount(TEST_PRIVATE_KEY);
+      const encodedSignedTx = await signer.signTransaction({
         to: TEST_ADDRESS,
-        value: ethers.parseEther("2"),
+        value: parseEther("2"),
+        maxFeePerGas: parseEther("0.5"),
+        maxPriorityFeePerGas: parseEther("0.45"),
+        nonce: 1,
+        chainId: 1,
       });
-      const signer = new Wallet(TEST_PRIVATE_KEY);
-      const encodedSignedTx = await signer.signTransaction(transaction);
 
-      const rlpEncodedTransaction = ethers.encodeRlp(encodedSignedTx);
-      const input = ethers.getBytes(rlpEncodedTransaction);
+      const rlpEncodedTransaction = toRlp(encodedSignedTx);
+      const input = toBytes(rlpEncodedTransaction);
 
       const compressedTxSize = compressor.getCompressedTxSize(input);
 
-      expect(compressedTxSize).toStrictEqual(43);
+      expect(compressedTxSize).toStrictEqual(63);
     });
   });
 });

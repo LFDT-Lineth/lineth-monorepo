@@ -98,7 +98,7 @@ jobs:
           push: false
           tags: ${{ env.IMAGE_NAME }}:${{ env.COMMIT_TAG }}
           build-args: |
-            NATIVE_LIBS_RELEASE_TAG=blob-libs-v1.0.1
+            NATIVE_LIBS_RELEASE_TAG=blob-libs-v1.2.0
       - name: Save Docker image as artifact
         if: ${{ env.PUSH_IMAGE == 'false' }}
         run: |
@@ -126,4 +126,4 @@ jobs:
             type=registry,ref=${{ env.IMAGE_NAME }}:buildcache-amd64,mode=max,platform=linux/amd64
             type=registry,ref=${{ env.IMAGE_NAME }}:buildcache-arm64,mode=max,platform=linux/arm64
           build-args: |
-            NATIVE_LIBS_RELEASE_TAG=blob-libs-v1.0.1
+            NATIVE_LIBS_RELEASE_TAG=blob-libs-v1.2.0

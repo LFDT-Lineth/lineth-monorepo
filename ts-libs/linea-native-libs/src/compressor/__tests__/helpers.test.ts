@@ -2,7 +2,7 @@ import { describe, it, expect } from "@jest/globals";
 import os from "os";
 import fs, { Dirent } from "fs";
 import path from "path";
-import { getCompressorLibPath } from "..";
+import { getCompressorLibPath } from "../helpers";
 
 describe("Helpers", () => {
   afterEach(() => {

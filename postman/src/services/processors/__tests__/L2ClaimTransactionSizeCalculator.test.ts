@@ -79,7 +79,7 @@ describe("L2ClaimTransactionSizeCalculator", () => {
         maxFeePerGas: DEFAULT_MAX_FEE_PER_GAS,
       });
 
-      expect(transactionSize).toStrictEqual(77);
+      expect(transactionSize).toStrictEqual(81);
     });
   });
 });

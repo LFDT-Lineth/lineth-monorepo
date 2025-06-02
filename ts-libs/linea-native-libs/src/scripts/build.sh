@@ -8,8 +8,8 @@ error_handler() {
 
 trap 'error_handler $LINENO' ERR
 
-node ./dist/scripts/build.mjs
-cp -R src/compressor/lib/ dist/compressor/lib
+npx ts-node ./src/scripts/build.ts
+cp -R src/compressor/lib/ dist/lib
 rm -rf ./dist/scripts
 
 echo "Build script executed successfully."

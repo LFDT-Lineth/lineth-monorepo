@@ -183,7 +183,6 @@ services:
     hostname: postman
     image: consensys/linea-postman:${POSTMAN_TAG:-8a0bcc8}
     profiles: [ "l2", "debug" ]
-    platform: linux/amd64
     restart: on-failure
     ports:
       - "9090:3000"

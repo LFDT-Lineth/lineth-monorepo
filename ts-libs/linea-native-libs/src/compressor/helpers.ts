@@ -30,7 +30,7 @@ export function getCompressorLibPath(): string {
     throw new Error(`Unsupported platform: ${platform}`);
   }
 
-  const dirPath = path.join(__dirname, "..", "lib", directory);
+  const dirPath = path.join(__dirname, "lib", directory);
 
   if (!existsSync(dirPath)) {
     throw new Error(`Directory does not exist: ${dirPath}`);

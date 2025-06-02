@@ -8,7 +8,8 @@
       "noEmit": false,
       "outDir": "dist",
       "rootDir": "src",
-      "sourceMap": true
+      "sourceMap": true,
+      "composite": false,
     },
     "include": ["./src/**/*.ts"],
     "exclude": [

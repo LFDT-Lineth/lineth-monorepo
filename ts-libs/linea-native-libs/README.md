@@ -1,6 +1,6 @@
 # @consensys/linea-native-libs
 
-`@consensys/linea-native-libs` is a Node.js library that provides an interface to native Go libraries using the `ffi-napi` and `ref-napi` packages.
+`@consensys/linea-native-libs` is a Node.js library that provides an interface to native Go libraries using the `koffi` package.
 It provides the following Go libraries wrapper:
 
 - `GoNativeCompressor`: This class allows you to initialize the transaction compressor, check for errors, and get the worst compressed transaction size for a given RLP-encoded transaction.

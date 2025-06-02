@@ -2,7 +2,7 @@ import { KoffiFunction, load } from "koffi";
 import path from "path";
 import { getCompressorLibPath } from "./helpers";
 
-const COMPRESSOR_DICT_PATH = path.join(__dirname, "./lib/compressor_dict.bin");
+const COMPRESSOR_DICT_PATH = path.join(__dirname, "./lib/25-04-21.bin");
 
 /**
  * Class representing a Go Native Compressor.
