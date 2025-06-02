@@ -34,7 +34,7 @@ task("setVerifierAddress", "Sets the verifier address on a Message Service contr
 
     const proofType = getTaskCliOrEnvValue(taskArgs, "verifierProofType", "VERIFIER_PROOF_TYPE"); // todo rename this once checking it doesn't break anything else
     let LineaRollupAddress = getTaskCliOrEnvValue(taskArgs, "proxyAddress", "LINEA_ROLLUP_ADDRESS");
-    const verifierName = getTaskCliOrEnvValue(taskArgs, "verifierName", "VERIFIER_NAME");
+    const verifierName = getTaskCliOrEnvValue(taskArgs, "plonkVerifierName", "PLONKVERIFIER_NAME");
 
     if (LineaRollupAddress === undefined) {
       LineaRollupAddress = (await get("LineaRollup")).address;
@@ -43,7 +43,7 @@ task("setVerifierAddress", "Sets the verifier address on a Message Service contr
     let verifierAddress = getTaskCliOrEnvValue(taskArgs, "verifierAddress", "VERIFIER_ADDRESS");
     if (verifierAddress === undefined) {
       if (verifierName === undefined) {
-        throw "Please specify a verifier name e.g. --verifier-name PlonkVerifierForDataAggregation";
+        throw "Please specify a verifier name e.g. --plonk-verifier-name PlonkVerifierForDataAggregation";
       }
       verifierAddress = (await get(verifierName)).address;
     }
