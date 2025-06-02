@@ -36,7 +36,7 @@ class AsyncFriendlyTransactionManager : RawTransactionManager {
   constructor(
     web3j: Web3j,
     txSignService: TxSignService,
-    chainId: Long
+    chainId: Long,
   ) : super(web3j, txSignService, chainId) {
     this.web3j = web3j
     resetNonce().get()
@@ -50,8 +50,8 @@ class AsyncFriendlyTransactionManager : RawTransactionManager {
   constructor(
     web3j: Web3j,
     credentials: Credentials,
-    transactionReceiptProcessor: TransactionReceiptProcessor
-  ) : super(web3j, credentials, /*chainId*/-1, transactionReceiptProcessor) {
+    transactionReceiptProcessor: TransactionReceiptProcessor,
+  ) : super(web3j, credentials, -1, transactionReceiptProcessor) {
     this.web3j = web3j
     resetNonce().get()
   }
@@ -60,7 +60,7 @@ class AsyncFriendlyTransactionManager : RawTransactionManager {
     web3j: Web3j,
     credentials: Credentials,
     chainId: Long,
-    transactionReceiptProcessor: TransactionReceiptProcessor
+    transactionReceiptProcessor: TransactionReceiptProcessor,
   ) : super(web3j, credentials, chainId, transactionReceiptProcessor) {
     this.web3j = web3j
     resetNonce().get()
@@ -73,7 +73,7 @@ class AsyncFriendlyTransactionManager : RawTransactionManager {
 
     return web3j.ethGetTransactionCount(
       fromAddress,
-      blockParameter
+      blockParameter,
     )
       .requestAsync { setNonce(it.transactionCount) }
   }
@@ -100,7 +100,7 @@ class AsyncFriendlyTransactionManager : RawTransactionManager {
     function: Function,
     encodedData: String,
     weiValue: BigInteger,
-    transactionSent: EthSendTransaction
+    transactionSent: EthSendTransaction,
   ): RemoteFunctionCall<TransactionReceipt> {
     return RemoteFunctionCall(function) {
       val receipt = processResponse(transactionSent)
@@ -114,9 +114,9 @@ class AsyncFriendlyTransactionManager : RawTransactionManager {
             receipt.transactionHash,
             receipt.status,
             if (receipt.gasUsedRaw != null) receipt.gasUsed.toString() else "unknown",
-            RevertReasonExtractor.extractRevertReason(receipt, encodedData, web3j, true, weiValue)
+            RevertReasonExtractor.extractRevertReason(receipt, encodedData, web3j, true, weiValue),
           ),
-          receipt
+          receipt,
         )
       }
       receipt
@@ -133,19 +133,19 @@ class AsyncFriendlyTransactionManager : RawTransactionManager {
     to: String,
     value: BigInteger,
     data: String,
-    maxFeePerBlobGas: BigInteger
+    maxFeePerBlobGas: BigInteger,
   ): RawTransaction {
     return RawTransaction.createTransaction(
-      /*blobs*/ blobs,
-      /*chainId*/ chainId,
-      /*nonce*/ nonce,
-      /*maxPriorityFeePerGas*/ maxPriorityFeePerGas,
-      /*maxFeePerGas*/ maxFeePerGas,
-      /*gasLimit*/ gasLimit,
-      /*to*/ to,
-      /*value*/ value,
-      /*data*/ data,
-      /*maxFeePerBlobGas*/ maxFeePerBlobGas
+      blobs,
+      chainId,
+      nonce,
+      maxPriorityFeePerGas,
+      maxFeePerGas,
+      gasLimit,
+      to,
+      value,
+      data,
+      maxFeePerBlobGas,
     )
   }
 
@@ -157,17 +157,17 @@ class AsyncFriendlyTransactionManager : RawTransactionManager {
     gasLimit: BigInteger,
     to: String,
     value: BigInteger,
-    data: String
+    data: String,
   ): RawTransaction {
     return RawTransaction.createTransaction(
-      /*chainId*/ chainId,
-      /*nonce*/ nonce,
-      /*gasLimit*/ gasLimit,
-      /*to*/ to,
-      /*value*/ value,
-      /*data*/ data,
-      /*maxPriorityFeePerGas*/ maxPriorityFeePerGas,
-      /*maxFeePerGas*/ maxFeePerGas
+      chainId,
+      nonce,
+      gasLimit,
+      to,
+      value,
+      data,
+      maxPriorityFeePerGas,
+      maxFeePerGas,
     )
   }
 
@@ -177,15 +177,15 @@ class AsyncFriendlyTransactionManager : RawTransactionManager {
     gasLimit: BigInteger,
     to: String,
     value: BigInteger,
-    data: String
+    data: String,
   ): RawTransaction {
     return RawTransaction.createTransaction(
-      /*nonce*/ nonce,
-      /*gasPrice*/ gasPrice,
-      /*gasLimit*/ gasLimit,
-      /*to*/ to,
-      /*value*/ value,
-      /*data*/ data
+      nonce,
+      gasPrice,
+      gasLimit,
+      to,
+      value,
+      data,
     )
   }
 }

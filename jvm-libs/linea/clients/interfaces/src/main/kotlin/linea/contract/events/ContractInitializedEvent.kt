@@ -12,9 +12,9 @@ data class ContractInitializedEvent(val version: UInt) {
     fun fromEthLog(ethLog: EthLog): EthLogEvent<ContractInitializedEvent> {
       return EthLogEvent(
         event = ContractInitializedEvent(
-          version = ethLog.data.sliceOf32(sliceNumber = 0).toULongFromLast8Bytes().toUInt()
+          version = ethLog.data.sliceOf32(sliceNumber = 0).toULongFromLast8Bytes().toUInt(),
         ),
-        log = ethLog
+        log = ethLog,
       )
     }
   }

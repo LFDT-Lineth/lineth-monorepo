@@ -24,7 +24,7 @@ object DbQueries {
       2 -> Batch.Status.Proven
       else ->
         throw IllegalStateException(
-          "Value '$value' does not map to any ${Batch.Status::class.simpleName}"
+          "Value '$value' does not map to any ${Batch.Status::class.simpleName}",
         )
     }
   }
@@ -34,7 +34,7 @@ object DbQueries {
         record ->
       Batch(
         startBlockNumber = record.getLong("start_block_number").toULong(),
-        endBlockNumber = record.getLong("end_block_number").toULong()
+        endBlockNumber = record.getLong("end_block_number").toULong(),
       )
     }
   }

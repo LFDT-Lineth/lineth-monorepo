@@ -36,7 +36,7 @@ class FileMonitorTest {
   fun test_fileExists_exists(vertx: Vertx) {
     val config = FileMonitor.Config(
       pollingInterval = 50.toDuration(DurationUnit.MILLISECONDS),
-      timeout = 1.toDuration(DurationUnit.SECONDS)
+      timeout = 1.toDuration(DurationUnit.SECONDS),
     )
     val fileMonitor = FileMonitor(vertx, config)
 
@@ -49,7 +49,7 @@ class FileMonitorTest {
   fun test_fileExists_doesNotExist(vertx: Vertx) {
     val config = FileMonitor.Config(
       pollingInterval = 50.toDuration(DurationUnit.MILLISECONDS),
-      timeout = 1.toDuration(DurationUnit.SECONDS)
+      timeout = 1.toDuration(DurationUnit.SECONDS),
     )
     val fileMonitor = FileMonitor(vertx, config)
     val testFilePath = tmpDirectory.resolve("test_fileExists_doesNotExist")
@@ -60,7 +60,7 @@ class FileMonitorTest {
   fun test_fileExists_patternExists(vertx: Vertx) {
     val config = FileMonitor.Config(
       pollingInterval = 50.toDuration(DurationUnit.MILLISECONDS),
-      timeout = 1.toDuration(DurationUnit.SECONDS)
+      timeout = 1.toDuration(DurationUnit.SECONDS),
     )
     val fileMonitor = FileMonitor(vertx, config)
     val testFile = tmpDirectory.resolve("file-monitor-test-1").toFile()
@@ -72,7 +72,7 @@ class FileMonitorTest {
   fun test_fileExists_patternDoesNotExists(vertx: Vertx) {
     val config = FileMonitor.Config(
       pollingInterval = 50.toDuration(DurationUnit.MILLISECONDS),
-      timeout = 1.toDuration(DurationUnit.SECONDS)
+      timeout = 1.toDuration(DurationUnit.SECONDS),
     )
     val fileMonitor = FileMonitor(vertx, config)
     Assertions.assertFalse(fileMonitor.fileExists(tmpDirectory, "file-monitor-test-.*").get())
@@ -84,14 +84,14 @@ class FileMonitorTest {
     testFile.createNewFile()
     val config = FileMonitor.Config(
       pollingInterval = 50.toDuration(DurationUnit.MILLISECONDS),
-      timeout = 1.toDuration(DurationUnit.SECONDS)
+      timeout = 1.toDuration(DurationUnit.SECONDS),
     )
     val fileMonitor = FileMonitor(vertx, config)
     val result = fileMonitor.monitor(testFile.toPath()).get()
     Assertions.assertTrue(result is Ok)
     Assertions.assertEquals(
       testFile.toPath(),
-      result.component1()
+      result.component1(),
     )
   }
 
@@ -99,7 +99,7 @@ class FileMonitorTest {
   fun test_monitor_timeOut(vertx: Vertx) {
     val config = FileMonitor.Config(
       pollingInterval = 50.toDuration(DurationUnit.MILLISECONDS),
-      timeout = 1.toDuration(DurationUnit.SECONDS)
+      timeout = 1.toDuration(DurationUnit.SECONDS),
     )
     val fileMonitor = FileMonitor(vertx, config)
     val testFilePath = tmpDirectory.resolve("test_monitor_timeOut")
@@ -107,7 +107,7 @@ class FileMonitorTest {
     Assertions.assertTrue(result is Err)
     Assertions.assertEquals(
       FileMonitor.ErrorType.TIMED_OUT,
-      result.component2()
+      result.component2(),
     )
   }
 
@@ -116,7 +116,7 @@ class FileMonitorTest {
     val tempFilePath = tmpDirectory.resolve("test_monitor_fileCreatedInTime")
     val config = FileMonitor.Config(
       pollingInterval = 50.toDuration(DurationUnit.MILLISECONDS),
-      timeout = 1.toDuration(DurationUnit.SECONDS)
+      timeout = 1.toDuration(DurationUnit.SECONDS),
     )
     val fileMonitor = FileMonitor(vertx, config)
     Assertions.assertFalse(fileMonitor.fileExists(tempFilePath).get())
@@ -127,7 +127,7 @@ class FileMonitorTest {
     Assertions.assertTrue(result is Ok)
     Assertions.assertEquals(
       tempFilePath,
-      result.component1()
+      result.component1(),
     )
   }
 
@@ -137,7 +137,7 @@ class FileMonitorTest {
     val tempFilePath2 = tmpDirectory.resolve("test_monitor_fileCreatedInTime2")
     val config = FileMonitor.Config(
       pollingInterval = 50.toDuration(DurationUnit.MILLISECONDS),
-      timeout = 1.toDuration(DurationUnit.SECONDS)
+      timeout = 1.toDuration(DurationUnit.SECONDS),
     )
     val fileMonitor = FileMonitor(vertx, config)
     Assertions.assertFalse(fileMonitor.fileExists(tempFilePath1).get())
@@ -150,7 +150,7 @@ class FileMonitorTest {
     Assertions.assertTrue(result is Ok)
     Assertions.assertEquals(
       tempFilePath2,
-      result.component1()
+      result.component1(),
     )
   }
 }

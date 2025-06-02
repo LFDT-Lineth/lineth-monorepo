@@ -10,12 +10,12 @@ import java.util.concurrent.atomic.AtomicReference
 class GasPriceCapProviderForDataSubmission(
   private val config: Config,
   private val gasPriceCapProvider: GasPriceCapProvider,
-  metricsFacade: MetricsFacade
+  metricsFacade: MetricsFacade,
 ) : GasPriceCapProvider {
   data class Config(
     val maxPriorityFeePerGasCap: ULong,
     val maxFeePerGasCap: ULong,
-    val maxFeePerBlobGasCap: ULong
+    val maxFeePerBlobGasCap: ULong,
   )
   private var lastGasPriceCap: AtomicReference<GasPriceCaps?> = AtomicReference(null)
 
@@ -36,19 +36,19 @@ class GasPriceCapProviderForDataSubmission(
       category = LineaMetricsCategory.GAS_PRICE_CAP,
       name = "l1.blobsubmission.maxpriorityfeepergascap",
       description = "Max priority fee per gas cap for blob submission on L1",
-      measurementSupplier = { lastGasPriceCap.get()?.maxPriorityFeePerGasCap?.toLong() ?: 0 }
+      measurementSupplier = { lastGasPriceCap.get()?.maxPriorityFeePerGasCap?.toLong() ?: 0 },
     )
     metricsFacade.createGauge(
       category = LineaMetricsCategory.GAS_PRICE_CAP,
       name = "l1.blobsubmission.maxfeepergascap",
       description = "Max fee per gas cap for blob submission on L1",
-      measurementSupplier = { lastGasPriceCap.get()?.maxFeePerGasCap?.toLong() ?: 0 }
+      measurementSupplier = { lastGasPriceCap.get()?.maxFeePerGasCap?.toLong() ?: 0 },
     )
     metricsFacade.createGauge(
       category = LineaMetricsCategory.GAS_PRICE_CAP,
       name = "l1.blobsubmission.maxfeeperblobgascap",
       description = "Max fee per blob gas cap for blob submission on L1",
-      measurementSupplier = { lastGasPriceCap.get()?.maxFeePerBlobGasCap?.toLong() ?: 0 }
+      measurementSupplier = { lastGasPriceCap.get()?.maxFeePerBlobGasCap?.toLong() ?: 0 },
     )
   }
 
@@ -74,7 +74,7 @@ class GasPriceCapProviderForDataSubmission(
     return GasPriceCaps(
       maxFeePerGasCap = maxFeePerGasCap,
       maxPriorityFeePerGasCap = maxPriorityFeePerGasCap,
-      maxFeePerBlobGasCap = maxFeePerBlobGasCap
+      maxFeePerBlobGasCap = maxFeePerBlobGasCap,
     )
   }
 

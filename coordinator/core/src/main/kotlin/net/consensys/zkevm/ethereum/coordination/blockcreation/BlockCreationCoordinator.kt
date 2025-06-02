@@ -4,7 +4,7 @@ import linea.domain.Block
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 data class BlockCreated(
-  val block: Block
+  val block: Block,
 )
 
 fun interface BlockCreationListener {

@@ -18,7 +18,7 @@ class Request(val id: Int, val name: String, val calls: List<ScenarioDefinition>
         fromJson.id!!,
         fromJson.name ?: "",
         fromJson.calls!!.map { c -> translate(c) }.toList(),
-        translate(fromJson.context)
+        translate(fromJson.context),
       )
     }
 
@@ -44,7 +44,7 @@ class Request(val id: Int, val name: String, val calls: List<ScenarioDefinition>
               EthConnection.SIMPLE_TX_PRICE
             } else {
               BigInteger.valueOf(transaction.price!!.toLong())
-            }
+            },
           )
         }
 
@@ -59,7 +59,7 @@ class Request(val id: Int, val name: String, val calls: List<ScenarioDefinition>
               EthConnection.SIMPLE_TX_PRICE
             } else {
               BigInteger.valueOf(transaction.price!!.toLong())
-            }
+            },
           )
         }
 
@@ -100,50 +100,49 @@ class Request(val id: Int, val name: String, val calls: List<ScenarioDefinition>
     private fun createContract(contract: net.consensys.zkevm.load.swagger.CreateContract) =
       CreateContract(contract.name ?: "null", contract.byteCode, contract.gasLimit)
 
-    private fun translate(methodAndParameters: net.consensys.zkevm.load.swagger.MethodAndParameter):
-      MethodAndParameter {
-      return when (methodAndParameters.type) {
+    private fun translate(methodAndParams: net.consensys.zkevm.load.swagger.MethodAndParameter): MethodAndParameter {
+      return when (methodAndParams.type) {
         "GenericCall" -> {
-          methodAndParameters as net.consensys.zkevm.load.swagger.GenericCall
+          methodAndParams as net.consensys.zkevm.load.swagger.GenericCall
           GenericCall(
-            methodAndParameters.numberOfTimes,
-            methodAndParameters.methodName!!,
-            methodAndParameters.price!!,
-            methodAndParameters.parameters?.map { p -> translate(p) }?.toList()!!
+            methodAndParams.numberOfTimes,
+            methodAndParams.methodName!!,
+            methodAndParams.price!!,
+            methodAndParams.parameters?.map { p -> translate(p) }?.toList()!!,
           )
         }
 
         "Mint" -> {
-          methodAndParameters as net.consensys.zkevm.load.swagger.Mint
+          methodAndParams as net.consensys.zkevm.load.swagger.Mint
           Mint(
-            methodAndParameters.numberOfTimes,
-            methodAndParameters.address ?: "self",
-            methodAndParameters.amount
-              ?: 0
+            methodAndParams.numberOfTimes,
+            methodAndParams.address ?: "self",
+            methodAndParams.amount
+              ?: 0,
           )
         }
 
         "BatchMint" -> {
-          methodAndParameters as net.consensys.zkevm.load.swagger.BatchMint
+          methodAndParams as net.consensys.zkevm.load.swagger.BatchMint
           BatchMint(
-            methodAndParameters.numberOfTimes,
-            methodAndParameters.address
+            methodAndParams.numberOfTimes,
+            methodAndParams.address
               ?: listOf("self"),
-            methodAndParameters.amount ?: 0
+            methodAndParams.amount ?: 0,
           )
         }
 
         "TransferOwnership" -> {
-          methodAndParameters as TransferOwnership
+          methodAndParams as TransferOwnership
           TransferOwnerShip(
-            methodAndParameters.numberOfTimes,
-            methodAndParameters.destinationAddress
-              ?: "self"
+            methodAndParams.numberOfTimes,
+            methodAndParams.destinationAddress
+              ?: "self",
           )
         }
 
         else -> {
-          throw UnsupportedOperationException(methodAndParameters.toJson())
+          throw UnsupportedOperationException(methodAndParams.toJson())
         }
       }
     }
@@ -171,7 +170,7 @@ class Request(val id: Int, val name: String, val calls: List<ScenarioDefinition>
         context?.chainId!!,
         context.contracts?.map { c -> createContract(c) }?.toList() ?: listOf(),
         context.url!!,
-        context.nbOfExecutions!!
+        context.nbOfExecutions!!,
       )
     }
   }

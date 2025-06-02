@@ -30,13 +30,13 @@ class GlobalBlockConflationCalculatorTest {
     blockNumber = 1uL,
     blockTimestamp = Instant.parse("2023-12-11T00:00:00.000Z"),
     tracesCounters = fakeTracesCountersV2(10u),
-    blockRLPEncoded = ByteArray(0)
+    blockRLPEncoded = ByteArray(0),
   )
   val block2Counters = BlockCounters(
     blockNumber = 2uL,
     blockTimestamp = Instant.parse("2023-12-11T00:00:02.000Z"),
     tracesCounters = fakeTracesCountersV2(20u),
-    blockRLPEncoded = ByteArray(0)
+    blockRLPEncoded = ByteArray(0),
   )
 
   private lateinit var conflations: MutableList<ConflationCalculationResult>
@@ -70,7 +70,7 @@ class GlobalBlockConflationCalculatorTest {
       lastBlockNumber = lastBlockNumber,
       syncCalculators = listOf(calculatorByTraces, calculatorByData),
       deferredTriggerConflationCalculators = listOf(calculatorByDealine),
-      emptyTracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT
+      emptyTracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT,
     )
     conflations = mutableListOf<ConflationCalculationResult>()
     globalCalculator.onConflatedBatch { trigger ->
@@ -86,7 +86,7 @@ class GlobalBlockConflationCalculatorTest {
         lastBlockNumber = lastBlockNumber,
         syncCalculators = listOf(calculatorByTraces, calculatorByData, calculatorByDealine),
         deferredTriggerConflationCalculators = listOf(calculatorByDealine),
-        emptyTracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT
+        emptyTracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT,
       )
     }.isInstanceOf(IllegalArgumentException::class.java)
       .hasMessageContaining("calculators must not contain duplicates")
@@ -113,9 +113,9 @@ class GlobalBlockConflationCalculatorTest {
           startBlockNumber = 1uL,
           endBlockNumber = 1uL,
           conflationTrigger = ConflationTrigger.DATA_LIMIT,
-          tracesCounters = fakeCountersAfterConflation
-        )
-      )
+          tracesCounters = fakeCountersAfterConflation,
+        ),
+      ),
     )
 
     calculatorByData.inOrder {
@@ -154,9 +154,9 @@ class GlobalBlockConflationCalculatorTest {
           startBlockNumber = 1uL,
           endBlockNumber = 2uL,
           conflationTrigger = ConflationTrigger.TIME_LIMIT,
-          tracesCounters = fakeCountersAfterConflation
-        )
-      )
+          tracesCounters = fakeCountersAfterConflation,
+        ),
+      ),
     )
 
     calculatorByData.inOrder {

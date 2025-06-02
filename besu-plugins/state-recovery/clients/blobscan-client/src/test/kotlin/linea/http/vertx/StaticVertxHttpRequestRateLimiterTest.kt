@@ -23,7 +23,7 @@ class StaticVertxHttpRequestRateLimiterTest {
       vertx = vertx,
       requestSender = reqSender,
       rateLimitBackoffDelay = rateLimitBackoffDelay,
-      requestLogFormatter = VertxRestLoggingFormatter()
+      requestLogFormatter = VertxRestLoggingFormatter(),
     )
   }
 

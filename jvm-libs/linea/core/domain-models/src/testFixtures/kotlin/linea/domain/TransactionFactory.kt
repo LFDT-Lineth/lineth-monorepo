@@ -29,7 +29,7 @@ object TransactionFactory {
     v: ULong? = null,
     chainId: ULong? = null, // Optional field for EIP-155 transactions
     gasPrice: ULong? = 3UL.gwei, // null for EIP-1559 transactions
-    accessList: List<AccessListEntry>? = null // null non for EIP-2930 transactions
+    accessList: List<AccessListEntry>? = null, // null non for EIP-2930 transactions
   ): Transaction {
     return createTransaction(
       type = TransactionType.FRONTIER,
@@ -46,7 +46,7 @@ object TransactionFactory {
       gasPrice = gasPrice,
       maxFeePerGas = null,
       maxPriorityFeePerGas = null,
-      accessList = accessList
+      accessList = accessList,
     )
   }
 
@@ -62,7 +62,7 @@ object TransactionFactory {
     chainId: ULong = 1337UL, // Optional field for EIP-155 transactions
     maxFeePerGas: ULong? = 3UL.gwei, // null for EIP-1559 transactions
     maxPriorityFeePerGas: ULong? = 2UL.gwei, // null for non EIP-1559 transactions
-    accessList: List<AccessListEntry>? = null // null non for EIP-2930 transactions
+    accessList: List<AccessListEntry>? = null, // null non for EIP-2930 transactions
   ): Transaction = createTransaction(
     type = TransactionType.EIP1559,
     nonce = nonce,
@@ -78,7 +78,7 @@ object TransactionFactory {
     gasPrice = null,
     maxFeePerGas = maxFeePerGas,
     maxPriorityFeePerGas = maxPriorityFeePerGas,
-    accessList = accessList
+    accessList = accessList,
   )
 
   fun createTransaction(
@@ -96,7 +96,7 @@ object TransactionFactory {
     gasPrice: ULong? = null, // null for EIP-1559 transactions
     maxFeePerGas: ULong? = 3UL.gwei, // null for EIP-1559 transactions
     maxPriorityFeePerGas: ULong? = 2UL.gwei, // null for non EIP-1559 transactions
-    accessList: List<AccessListEntry>? = null // null non for EIP-2930 transactions
+    accessList: List<AccessListEntry>? = null, // null non for EIP-2930 transactions
   ): Transaction {
     val signatureArgs = listOfNotNull(r, s, v)
     require(signatureArgs.let { it.size == 3 || it.isEmpty() }) {
@@ -118,7 +118,7 @@ object TransactionFactory {
         gasPrice = gasPrice,
         maxFeePerGas = maxFeePerGas,
         maxPriorityFeePerGas = maxPriorityFeePerGas,
-        accessList = accessList
+        accessList = accessList,
       )
       eR = sig.r
       eS = sig.s
@@ -146,12 +146,12 @@ object TransactionFactory {
       gasPrice = gasPrice,
       maxFeePerGas = maxFeePerGas,
       maxPriorityFeePerGas = maxPriorityFeePerGas,
-      accessList = accessList
+      accessList = accessList,
     )
   }
 
   fun Transaction.computeSignature(
-    keyPair: KeyPair = defaltSecp256k1
+    keyPair: KeyPair = defaltSecp256k1,
   ): SECPSignature {
     return computeSignature(
       type = type,
@@ -165,7 +165,7 @@ object TransactionFactory {
       maxFeePerGas = maxFeePerGas,
       maxPriorityFeePerGas = maxPriorityFeePerGas,
       accessList = accessList,
-      keyPair = keyPair
+      keyPair = keyPair,
     )
   }
 
@@ -181,7 +181,7 @@ object TransactionFactory {
     maxFeePerGas: ULong?,
     maxPriorityFeePerGas: ULong?,
     accessList: List<AccessListEntry>?,
-    keyPair: KeyPair = defaltSecp256k1
+    keyPair: KeyPair = defaltSecp256k1,
   ): SECPSignature {
     val besuType = type.toBesu()
     return org.hyperledger.besu.ethereum.core.Transaction.builder()
@@ -200,7 +200,7 @@ object TransactionFactory {
           val accList = accessList?.map { entry ->
             org.hyperledger.besu.datatypes.AccessListEntry(
               Address.wrap(Bytes.wrap(entry.address)),
-              entry.storageKeys.map { Bytes32.wrap(it) }
+              entry.storageKeys.map { Bytes32.wrap(it) },
             )
           } ?: emptyList()
           accessList(accList)
@@ -213,7 +213,7 @@ object TransactionFactory {
   fun calcV(
     transactionType: TransactionType,
     signature: SECPSignature,
-    chainId: ULong?
+    chainId: ULong?,
   ): ULong? {
     if (transactionType != TransactionType.FRONTIER) {
       // EIP-2718 typed transaction, use yParity:

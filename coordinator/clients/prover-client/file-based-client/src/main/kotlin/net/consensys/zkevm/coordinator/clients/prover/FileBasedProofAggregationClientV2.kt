@@ -21,13 +21,13 @@ data class AggregationProofRequestDto(
   val compressionProofs: List<String>,
   val parentAggregationLastBlockTimestamp: Long,
   val parentAggregationLastL1RollingHashMessageNumber: Long,
-  val parentAggregationLastL1RollingHash: String
+  val parentAggregationLastL1RollingHash: String,
 ) {
   companion object {
     fun fromDomainObject(
       proofsToAggregate: ProofsToAggregate,
       executionProofResponseFileNameProvider: ProverFileNameProvider,
-      compressionProofResponseFileNameProvider: ProverFileNameProvider
+      compressionProofResponseFileNameProvider: ProverFileNameProvider,
     ): AggregationProofRequestDto {
       val executionProofsResponseFiles = proofsToAggregate.executionProofs
         .toIntervalList()
@@ -35,8 +35,8 @@ data class AggregationProofRequestDto(
           executionProofResponseFileNameProvider.getFileName(
             ProofIndex(
               startBlockNumber = blockInterval.startBlockNumber,
-              endBlockNumber = blockInterval.endBlockNumber
-            )
+              endBlockNumber = blockInterval.endBlockNumber,
+            ),
           )
         }
 
@@ -46,8 +46,8 @@ data class AggregationProofRequestDto(
             ProofIndex(
               startBlockNumber = it.startBlockNumber,
               endBlockNumber = it.endBlockNumber,
-              hash = it.hash
-            )
+              hash = it.hash,
+            ),
           )
         }
 
@@ -57,7 +57,7 @@ data class AggregationProofRequestDto(
         parentAggregationLastBlockTimestamp = proofsToAggregate.parentAggregationLastBlockTimestamp.epochSeconds,
         parentAggregationLastL1RollingHashMessageNumber =
         proofsToAggregate.parentAggregationLastL1RollingHashMessageNumber.toLong(),
-        parentAggregationLastL1RollingHash = proofsToAggregate.parentAggregationLastL1RollingHash.encodeHex()
+        parentAggregationLastL1RollingHash = proofsToAggregate.parentAggregationLastL1RollingHash.encodeHex(),
       )
     }
   }
@@ -65,15 +65,15 @@ data class AggregationProofRequestDto(
 
 internal class AggregationRequestDtoMapper(
   private val executionProofResponseFileNameProvider: ProverFileNameProvider,
-  private val compressionProofResponseFileNameProvider: ProverFileNameProvider
+  private val compressionProofResponseFileNameProvider: ProverFileNameProvider,
 ) : (ProofsToAggregate) -> SafeFuture<AggregationProofRequestDto> {
   override fun invoke(proofsToAggregate: ProofsToAggregate): SafeFuture<AggregationProofRequestDto> {
     return SafeFuture.completedFuture(
       AggregationProofRequestDto.fromDomainObject(
         proofsToAggregate,
         executionProofResponseFileNameProvider,
-        compressionProofResponseFileNameProvider
-      )
+        compressionProofResponseFileNameProvider,
+      ),
     )
   }
 }
@@ -95,13 +95,13 @@ class FileBasedProofAggregationClientV2(
   hashFunction: HashFunction = Sha256HashFunction(),
   executionProofResponseFileNameProvider: ProverFileNameProvider = ExecutionProofResponseFileNameProvider,
   compressionProofResponseFileNameProvider: ProverFileNameProvider = CompressionProofResponseFileNameProvider,
-  jsonObjectMapper: ObjectMapper = JsonSerialization.proofResponseMapperV1
+  jsonObjectMapper: ObjectMapper = JsonSerialization.proofResponseMapperV1,
 ) :
   GenericFileBasedProverClient<
     ProofsToAggregate,
     ProofToFinalize,
     AggregationProofRequestDto,
-    ProofToFinalizeJsonResponse
+    ProofToFinalizeJsonResponse,
     >(
     config = config,
     vertx = vertx,
@@ -109,18 +109,18 @@ class FileBasedProofAggregationClientV2(
     fileReader = FileReader(
       vertx,
       jsonObjectMapper,
-      ProofToFinalizeJsonResponse::class.java
+      ProofToFinalizeJsonResponse::class.java,
     ),
     requestFileNameProvider = AggregationProofFileNameProvider,
     responseFileNameProvider = AggregationProofFileNameProvider,
     proofIndexProvider = createProofIndexProviderFn(hashFunction),
     requestMapper = AggregationRequestDtoMapper(
       executionProofResponseFileNameProvider = executionProofResponseFileNameProvider,
-      compressionProofResponseFileNameProvider = compressionProofResponseFileNameProvider
+      compressionProofResponseFileNameProvider = compressionProofResponseFileNameProvider,
     ),
     responseMapper = ProofToFinalizeJsonResponse::toDomainObject,
     proofTypeLabel = "aggregation",
-    log = LogManager.getLogger(this::class.java)
+    log = LogManager.getLogger(this::class.java),
   ),
   ProofAggregationProverClientV2 {
 
@@ -128,20 +128,20 @@ class FileBasedProofAggregationClientV2(
     fun createProofIndexProviderFn(
       hashFunction: HashFunction,
       executionProofResponseFileNameProvider: ProverFileNameProvider = ExecutionProofResponseFileNameProvider,
-      compressionProofResponseFileNameProvider: ProverFileNameProvider = CompressionProofResponseFileNameProvider
+      compressionProofResponseFileNameProvider: ProverFileNameProvider = CompressionProofResponseFileNameProvider,
     ): (ProofsToAggregate) -> ProofIndex {
       return { request: ProofsToAggregate ->
 
         val requestDto = AggregationProofRequestDto.fromDomainObject(
           proofsToAggregate = request,
           executionProofResponseFileNameProvider = executionProofResponseFileNameProvider,
-          compressionProofResponseFileNameProvider = compressionProofResponseFileNameProvider
+          compressionProofResponseFileNameProvider = compressionProofResponseFileNameProvider,
         )
         val hash = hashRequest(hashFunction, requestDto)
         ProofIndex(
           startBlockNumber = request.startBlockNumber,
           endBlockNumber = request.endBlockNumber,
-          hash = hash
+          hash = hash,
         )
       }
     }

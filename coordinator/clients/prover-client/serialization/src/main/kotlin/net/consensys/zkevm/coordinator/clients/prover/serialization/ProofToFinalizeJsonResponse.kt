@@ -36,7 +36,7 @@ data class ProofToFinalizeJsonResponse(
   val l2MerkleTreesDepth: Int,
   @JsonSerialize(using = ByteArraySerializer::class)
   @JsonDeserialize(using = ByteArrayDeserializer::class)
-  val l2MessagingBlocksOffsets: ByteArray
+  val l2MessagingBlocksOffsets: ByteArray,
 ) {
 
   fun toDomainObject(): ProofToFinalize {
@@ -55,7 +55,7 @@ data class ProofToFinalizeJsonResponse(
       l1RollingHashMessageNumber = l1RollingHashMessageNumber,
       l2MerkleRoots = l2MerkleRoots,
       l2MerkleTreesDepth = l2MerkleTreesDepth,
-      l2MessagingBlocksOffsets = l2MessagingBlocksOffsets
+      l2MessagingBlocksOffsets = l2MessagingBlocksOffsets,
     )
   }
 
@@ -118,7 +118,7 @@ data class ProofToFinalizeJsonResponse(
     fun fromJsonString(jsonString: String): ProofToFinalizeJsonResponse {
       return JsonSerialization.proofResponseMapperV1.readValue(
         jsonString,
-        ProofToFinalizeJsonResponse::class.java
+        ProofToFinalizeJsonResponse::class.java,
       )
     }
 
@@ -138,7 +138,7 @@ data class ProofToFinalizeJsonResponse(
         l1RollingHashMessageNumber = proofToFinalize.l1RollingHashMessageNumber,
         l2MerkleRoots = proofToFinalize.l2MerkleRoots,
         l2MerkleTreesDepth = proofToFinalize.l2MerkleTreesDepth,
-        l2MessagingBlocksOffsets = proofToFinalize.l2MessagingBlocksOffsets
+        l2MessagingBlocksOffsets = proofToFinalize.l2MessagingBlocksOffsets,
       )
     }
   }

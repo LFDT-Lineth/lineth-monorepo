@@ -34,7 +34,7 @@ open class TestRunner(
   private val l1RpcUrl: String,
   private val blobScanUrl: String,
   private val blobScanRatelimitBackoffDelay: Duration? = 1.seconds,
-  private val debugForceSyncStopBlockNumber: ULong = ULong.MAX_VALUE
+  private val debugForceSyncStopBlockNumber: ULong = ULong.MAX_VALUE,
 ) {
   private val log = LogManager.getLogger("test.case.TestRunner")
   val appConfig = StateRecoveryApp.Config(
@@ -45,7 +45,7 @@ open class TestRunner(
     executionClientPollingInterval = 1.seconds,
     smartContractAddress = smartContractAddress,
     l1getLogsChunkSize = 10_000u,
-    debugForceSyncStopBlockNumber = debugForceSyncStopBlockNumber
+    debugForceSyncStopBlockNumber = debugForceSyncStopBlockNumber,
   )
   val appClients = createAppClients(
     vertx = vertx,
@@ -56,17 +56,17 @@ open class TestRunner(
     blobScanEndpoint = URI(blobScanUrl),
     blobScanRequestRetryConfig = RetryConfig(backoffDelay = 10.milliseconds, timeout = 2.minutes),
     blobscanRequestRateLimitBackoffDelay = blobScanRatelimitBackoffDelay,
-    stateManagerClientEndpoint = URI("http://it-does-not-matter:5432")
+    stateManagerClientEndpoint = URI("http://it-does-not-matter:5432"),
   )
   private val fakeExecutionLayerClient = FakeExecutionLayerClient(
     headBlock = BlockNumberAndHash(number = l2RecoveryStartBlockNumber - 1UL, hash = ByteArray(32) { 0 }),
     initialStateRecoverStartBlockNumber = l2RecoveryStartBlockNumber,
-    loggerName = "test.fake.clients.execution-layer"
+    loggerName = "test.fake.clients.execution-layer",
   )
   var fakeStateManagerClient: StateManagerClientV1 = FakeStateManagerClientReadFromL1(
     headBlockNumber = ULong.MAX_VALUE,
     logsSearcher = appClients.ethLogsSearcher,
-    contractAddress = StateRecoveryApp.Config.lineaSepolia.smartContractAddress
+    contractAddress = StateRecoveryApp.Config.lineaSepolia.smartContractAddress,
   )
   var stateRecoverApp: StateRecoveryApp = StateRecoveryApp(
     vertx = vertx,
@@ -77,7 +77,7 @@ open class TestRunner(
     transactionDetailsClient = appClients.transactionDetailsClient,
     blockHeaderStaticFields = BlockHeaderStaticFields.localDev,
     lineaContractClient = appClients.lineaContractClient,
-    config = appConfig
+    config = appConfig,
   )
 
   init {
@@ -86,12 +86,12 @@ open class TestRunner(
       "linea.staterecovery" to Level.TRACE,
       "linea.plugin.staterecovery" to Level.INFO,
       "linea.plugin.staterecovery.clients.l1.blob-scan" to Level.TRACE,
-      "linea.plugin.staterecovery.clients.l1.logs-searcher" to Level.INFO
+      "linea.plugin.staterecovery.clients.l1.logs-searcher" to Level.INFO,
     )
   }
 
   fun run(
-    timeout: kotlin.time.Duration = 10.minutes
+    timeout: kotlin.time.Duration = 10.minutes,
   ) {
     log.info("Running test case")
     stateRecoverApp.start().get()
@@ -113,7 +113,7 @@ fun main() {
     l2RecoveryStartBlockNumber = 18_504_528UL,
     l1RpcUrl = "https://mainnet.infura.io/v3/$infuraAppKey",
     blobScanUrl = "https://api.blobscan.com/",
-    blobScanRatelimitBackoffDelay = 1.seconds
+    blobScanRatelimitBackoffDelay = 1.seconds,
   )
   // val sepoliaTestRunner = TestRunner(
   //   l1RpcUrl = "https://sepolia.infura.io/v3/$infuraAppKey",

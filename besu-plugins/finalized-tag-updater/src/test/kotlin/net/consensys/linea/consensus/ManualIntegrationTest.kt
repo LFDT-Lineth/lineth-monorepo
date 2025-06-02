@@ -11,7 +11,7 @@ import kotlin.time.Duration.Companion.seconds
 
 class FakeEngineBlockTagUpdater : EngineBlockTagUpdater {
   override fun lineaUpdateFinalizedBlockV1(
-    finalizedBlockNumber: Long
+    finalizedBlockNumber: Long,
   ) {
     println("Linea finalized block update: blockNumber=$finalizedBlockNumber")
   }
@@ -23,7 +23,7 @@ fun main() {
   val config = PluginConfig(
     l1RpcEndpoint = URI("https://mainnet.infura.io/v3/$infuraAppKey").toURL(),
     l1SmartContractAddress = Address.fromHexString("0xd19d4B5d358258f05D7B411E21A1460D11B0876F"),
-    l1PollingInterval = 1.seconds
+    l1PollingInterval = 1.seconds,
   )
   val service = LineaL1FinalizationUpdaterService(vertx, config, FakeEngineBlockTagUpdater())
   service.start().get()

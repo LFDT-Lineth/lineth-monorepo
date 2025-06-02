@@ -59,8 +59,8 @@ class MessageSentEventTest {
         "0xe856c2b8bd4eb0027ce32eeaf595c21b0b6b4644b326e5b7bd80a1cf8db72e6c".decodeHex(),
         "0x00000000000000000000000017e764ba16c95815ca06fb5d174f08d842e340df".decodeHex(), // from
         "0x0000000000000000000000007a98052d4be677df72ede5a3f2829c893d10388d".decodeHex(), // to
-        "0x6011e7f01aae0e2cd2650cbe229a330f93821d5ed8a2e8830d1e64ba3c76cc3f".decodeHex() // messageHash
-      )
+        "0x6011e7f01aae0e2cd2650cbe229a330f93821d5ed8a2e8830d1e64ba3c76cc3f".decodeHex(), // messageHash
+      ),
     )
 
     // When
@@ -74,11 +74,11 @@ class MessageSentEventTest {
       fee = BigInteger("2386f26fc10000", 16),
       value = BigInteger("de0b6b3a7640000", 16),
       calldata = "0x$callData".decodeHex(),
-      messageHash = "0x6011e7f01aae0e2cd2650cbe229a330f93821d5ed8a2e8830d1e64ba3c76cc3f".decodeHex()
+      messageHash = "0x6011e7f01aae0e2cd2650cbe229a330f93821d5ed8a2e8830d1e64ba3c76cc3f".decodeHex(),
     )
     val expectedEthLogEvent = EthLogEvent(
       event = expectedEvent,
-      log = ethLog
+      log = ethLog,
     )
 
     assertThat(result).isEqualTo(expectedEthLogEvent)
@@ -91,7 +91,7 @@ class MessageSentEventTest {
     fee = 0uL.toBigInteger(),
     value = 0uL.toBigInteger(),
     calldata = ByteArray(0),
-    messageHash = "0x0000000000000000000000000000000000000000".decodeHex()
+    messageHash = "0x0000000000000000000000000000000000000000".decodeHex(),
   )
 
   @Test

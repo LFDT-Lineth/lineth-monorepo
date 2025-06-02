@@ -5,7 +5,7 @@ import net.consensys.zkevm.coordinator.clients.ProverClient
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 class StartBlockNumberBasedSwitchPredicate<ProofRequest>(
-  private val switchStartBlockNumberInclusive: ULong
+  private val switchStartBlockNumberInclusive: ULong,
 ) where ProofRequest : BlockInterval {
   fun invoke(proofRequest: ProofRequest): Boolean = proofRequest.startBlockNumber >= switchStartBlockNumberInclusive
 }
@@ -13,7 +13,7 @@ class StartBlockNumberBasedSwitchPredicate<ProofRequest>(
 class ABProverClientRouter<ProofRequest, ProofResponse>(
   private val proverA: ProverClient<ProofRequest, ProofResponse>,
   private val proverB: ProverClient<ProofRequest, ProofResponse>,
-  private val switchToProverBPredicate: (ProofRequest) -> Boolean
+  private val switchToProverBPredicate: (ProofRequest) -> Boolean,
 ) : ProverClient<ProofRequest, ProofResponse> {
 
   override fun requestProof(proofRequest: ProofRequest): SafeFuture<ProofResponse> {

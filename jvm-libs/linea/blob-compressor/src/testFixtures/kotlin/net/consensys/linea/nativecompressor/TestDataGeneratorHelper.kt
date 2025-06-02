@@ -10,7 +10,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 fun loadBlocksFromProverRequests(
-  proverExecutionRequestsFolder: Path
+  proverExecutionRequestsFolder: Path,
 ): List<Pair<Block, ByteArray>> {
   val blocks = Files
     .list(proverExecutionRequestsFolder)
@@ -38,14 +38,14 @@ fun loadBlocksFromProverRequests(
 
 fun generateEncodeBlocksToBinaryFromProverRequests(
   proverExecutionRequestsFolder: Path,
-  outputFilePath: Path
+  outputFilePath: Path,
 ) {
   val blocks = loadBlocksFromProverRequests(proverExecutionRequestsFolder)
   Files.write(outputFilePath, RLP.encodeList(blocks.map { it.second }))
 }
 
 fun loadBlocksRlpEncoded(
-  binFile: Path
+  binFile: Path,
 ): List<ByteArray> {
   return RLP.decodeList(Files.readAllBytes(binFile))
 }
@@ -57,7 +57,7 @@ fun main() {
 
   generateEncodeBlocksToBinaryFromProverRequests(
     proverExecutionRequestsDir,
-    destFile
+    destFile,
   )
 
   // Just a visual indicator that it can read/decode again

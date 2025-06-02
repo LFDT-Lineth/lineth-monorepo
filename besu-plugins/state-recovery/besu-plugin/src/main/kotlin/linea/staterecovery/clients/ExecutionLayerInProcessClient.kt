@@ -21,7 +21,7 @@ class ExecutionLayerInProcessClient(
   private val blockchainService: BlockchainService,
   private val stateRecoveryModeManager: RecoveryModeManager,
   private val stateRecoveryStatusPersistence: RecoveryStatusPersistence,
-  private val blockImporter: BlockImporter
+  private val blockImporter: BlockImporter,
 ) : ExecutionLayerClient {
   companion object {
     fun create(
@@ -29,7 +29,7 @@ class ExecutionLayerInProcessClient(
       simulatorService: BlockSimulationService,
       synchronizationService: SynchronizationService,
       stateRecoveryModeManager: RecoveryModeManager,
-      stateRecoveryStatusPersistence: RecoveryStatusPersistence
+      stateRecoveryStatusPersistence: RecoveryStatusPersistence,
     ): ExecutionLayerInProcessClient {
       return ExecutionLayerInProcessClient(
         blockchainService = blockchainService,
@@ -38,8 +38,8 @@ class ExecutionLayerInProcessClient(
         blockImporter = BlockImporter(
           blockchainService = blockchainService,
           simulatorService = simulatorService,
-          synchronizationService = synchronizationService
-        )
+          synchronizationService = synchronizationService,
+        ),
       )
     }
   }
@@ -71,8 +71,8 @@ class ExecutionLayerInProcessClient(
         SafeFuture.completedFuture(
           BlockNumberAndHash(
             it.number.toULong(),
-            it.blockHash.toArray()
-          )
+            it.blockHash.toArray(),
+          ),
         )
       }
       ?: SafeFuture.failedFuture(IllegalArgumentException("Block not found for parameter: $blockParameter"))
@@ -91,8 +91,8 @@ class ExecutionLayerInProcessClient(
       .completedFuture(
         StateRecoveryStatus(
           headBlockNumber = stateRecoveryModeManager.headBlockNumber,
-          stateRecoverStartBlockNumber = stateRecoveryModeManager.targetBlockNumber
-        )
+          stateRecoverStartBlockNumber = stateRecoveryModeManager.targetBlockNumber,
+        ),
       )
   }
 
@@ -102,8 +102,8 @@ class ExecutionLayerInProcessClient(
     return SafeFuture.completedFuture(
       StateRecoveryStatus(
         headBlockNumber = stateRecoveryModeManager.headBlockNumber,
-        stateRecoverStartBlockNumber = stateRecoveryStatusPersistence.getRecoveryStartBlockNumber()
-      )
+        stateRecoverStartBlockNumber = stateRecoveryStatusPersistence.getRecoveryStartBlockNumber(),
+      ),
     )
   }
 
@@ -113,7 +113,7 @@ class ExecutionLayerInProcessClient(
     } else {
       log.debug(
         "importing blocks from blob: blocks={}",
-        CommonDomainFunctions.blockIntervalString(blocks.first().header.blockNumber, blocks.last().header.blockNumber)
+        CommonDomainFunctions.blockIntervalString(blocks.first().header.blockNumber, blocks.last().header.blockNumber),
       )
     }
   }

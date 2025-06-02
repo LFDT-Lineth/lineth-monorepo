@@ -32,10 +32,10 @@ class ConflationServiceImplTest {
     conflationCalculator = GlobalBlockConflationCalculator(
       lastBlockNumber = 0u,
       syncCalculators = listOf(
-        ConflationCalculatorByBlockLimit(conflationBlockLimit)
+        ConflationCalculatorByBlockLimit(conflationBlockLimit),
       ),
       deferredTriggerConflationCalculators = emptyList(),
-      emptyTracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT
+      emptyTracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT,
     )
     conflationService = ConflationServiceImpl(conflationCalculator, mock(defaultAnswer = RETURNS_DEEP_STUBS))
   }
@@ -50,19 +50,19 @@ class ConflationServiceImplTest {
       blockNumber = 1UL,
       payload1Time.plus(0.seconds),
       tracesCounters = fakeTracesCountersV2(40u),
-      blockRLPEncoded = ByteArray(0)
+      blockRLPEncoded = ByteArray(0),
     )
     val payloadCounters2 = BlockCounters(
       blockNumber = 2UL,
       payload1Time.plus(2.seconds),
       tracesCounters = fakeTracesCountersV2(40u),
-      blockRLPEncoded = ByteArray(0)
+      blockRLPEncoded = ByteArray(0),
     )
     val payloadCounters3 = BlockCounters(
       blockNumber = 3UL,
       payload1Time.plus(4.seconds),
       tracesCounters = fakeTracesCountersV2(100u),
-      blockRLPEncoded = ByteArray(0)
+      blockRLPEncoded = ByteArray(0),
     )
 
     val conflationEvents = mutableListOf<BlocksConflation>()
@@ -85,10 +85,10 @@ class ConflationServiceImplTest {
             endBlockNumber = 2u,
             conflationTrigger = ConflationTrigger.BLOCKS_LIMIT,
             // these are not counted in conflation, so will be 0
-            tracesCounters = fakeTracesCountersV2(0u)
-          )
-        )
-      )
+            tracesCounters = fakeTracesCountersV2(0u),
+          ),
+        ),
+      ),
     )
   }
 
@@ -120,8 +120,8 @@ class ConflationServiceImplTest {
               blockNumber = it.number.toULong(),
               blockTimestamp = blockTime,
               tracesCounters = fixedTracesCounters,
-              blockRLPEncoded = ByteArray(0)
-            )
+              blockRLPEncoded = ByteArray(0),
+            ),
           )
         }
       }
@@ -160,8 +160,8 @@ class ConflationServiceImplTest {
           blockNumber = block.number.toULong(),
           blockTimestamp = blockTime,
           tracesCounters = fixedTracesCounters,
-          blockRLPEncoded = ByteArray(0)
-        )
+          blockRLPEncoded = ByteArray(0),
+        ),
       )
     }.isEqualTo(expectedException)
   }

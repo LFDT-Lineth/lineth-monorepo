@@ -31,7 +31,7 @@ class MicrometerMetricsFacadeTest {
       name = "some.metric",
       description = "This is a test metric",
       measurementSupplier = { metricMeasureValue },
-      tags = expectedTags
+      tags = expectedTags,
     )
     metricMeasureValue = 13L
     val createdGauge = meterRegistry.find("linea.test.batch.some.metric").gauge()
@@ -50,7 +50,7 @@ class MicrometerMetricsFacadeTest {
       category = LineaMetricsCategory.BATCH,
       name = "some.metric",
       description = "This is a test metric",
-      tags = expectedTags
+      tags = expectedTags,
     )
     val createdCounter = meterRegistry.find("linea.test.batch.some.metric").counter()
     assertThat(createdCounter!!.count()).isEqualTo(0.0)
@@ -76,14 +76,14 @@ class MicrometerMetricsFacadeTest {
       name = "some.metric",
       description = "This is a test metric",
       tags = expectedTags,
-      baseUnit = "seconds"
+      baseUnit = "seconds",
     )
 
     val createdHistogram = meterRegistry.find("linea.test.batch.some.metric").summary()
     assertThat(createdHistogram).isNotNull
     assertThat(createdHistogram!!.id.description).isEqualTo("This is a test metric")
     assertThat(createdHistogram.id.tags).isEqualTo(
-      listOf(ImmutableTag("key1", "value1"), ImmutableTag("key2", "value2"))
+      listOf(ImmutableTag("key1", "value1"), ImmutableTag("key2", "value2")),
     )
     assertThat(createdHistogram.id.baseUnit).isEqualTo("seconds")
     assertThat(createdHistogram.count()).isEqualTo(0L)
@@ -115,7 +115,7 @@ class MicrometerMetricsFacadeTest {
     val timer = metricsFacade.createSimpleTimer<Unit>(
       name = "some.timer.metric",
       description = "This is a test metric",
-      tags = expectedTags
+      tags = expectedTags,
     )
 
     timer.captureTime(::mockTimer)
@@ -140,7 +140,7 @@ class MicrometerMetricsFacadeTest {
       name = "some.dynamictag.timer.metric",
       description = "This is a test metric",
       tagKey = "key",
-      tagValueExtractorOnError = { "unfound_key" }
+      tagValueExtractorOnError = { "unfound_key" },
     ) {
       "value"
     }
@@ -166,7 +166,7 @@ class MicrometerMetricsFacadeTest {
       name = "some.gauge.metric",
       description = "This is a test metric",
       measurementSupplier = { metricMeasureValue },
-      tags = listOf(Tag("key1", "value1"), Tag("key2", "value2"))
+      tags = listOf(Tag("key1", "value1"), Tag("key2", "value2")),
     )
     val createdGauge = meterRegistry.find("some.gauge.metric").gauge()
     assertThat(createdGauge).isNotNull
@@ -179,7 +179,7 @@ class MicrometerMetricsFacadeTest {
     metricsFacade.createCounter(
       name = "some.counter.metric",
       description = "This is a test metric",
-      tags = listOf(Tag("key1", "value1"), Tag("key2", "value2"))
+      tags = listOf(Tag("key1", "value1"), Tag("key2", "value2")),
     )
     val createdCounter = meterRegistry.find("some.counter.metric").counter()
     assertThat(createdCounter).isNotNull
@@ -193,7 +193,7 @@ class MicrometerMetricsFacadeTest {
       name = "some.histogram.metric",
       description = "This is a test metric",
       tags = listOf(Tag("key1", "value1"), Tag("key2", "value2")),
-      baseUnit = "seconds"
+      baseUnit = "seconds",
     )
     val createdHistogram = meterRegistry.find("some.histogram.metric").summary()
     assertThat(createdHistogram).isNotNull
@@ -206,7 +206,7 @@ class MicrometerMetricsFacadeTest {
     val timer = metricsFacade.createSimpleTimer<Unit>(
       name = "some.timer.metric",
       description = "This is a test metric",
-      tags = listOf(Tag("key1", "value1"), Tag("key2", "value2"))
+      tags = listOf(Tag("key1", "value1"), Tag("key2", "value2")),
     )
     timer.captureTime {}
     val createdTimer = meterRegistry.find("some.timer.metric").timer()
@@ -221,7 +221,7 @@ class MicrometerMetricsFacadeTest {
       name = "some.dynamictag.timer.metric",
       description = "This is a test metric",
       tagKey = "key",
-      tagValueExtractorOnError = { "unfound_key" }
+      tagValueExtractorOnError = { "unfound_key" },
     ) {
       "value"
     }

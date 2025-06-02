@@ -16,12 +16,12 @@ class BlobSubmitterAsEIP4844MultipleBlobsPerTx(
   private val contract: LineaRollupSmartContractClient,
   private val gasPriceCapProvider: GasPriceCapProvider?,
   private val blobSubmittedEventConsumer: Consumer<BlobSubmittedEvent> = Consumer<BlobSubmittedEvent> { },
-  private val clock: Clock = Clock.System
+  private val clock: Clock = Clock.System,
 ) : BlobSubmitter {
   private val log: Logger = LogManager.getLogger(this::class.java)
 
   override fun submitBlobs(
-    blobsChunks: List<List<BlobRecord>>
+    blobsChunks: List<List<BlobRecord>>,
   ): SafeFuture<List<String>> {
     return blobsChunks
       .fold(SafeFuture.completedFuture(emptyList())) { chainOfFutures, blobs ->
@@ -35,7 +35,7 @@ class BlobSubmitterAsEIP4844MultipleBlobsPerTx(
   }
 
   private fun submitBlobsInSingleTx(
-    blobs: List<BlobRecord>
+    blobs: List<BlobRecord>,
   ): SafeFuture<String> {
     return (
       gasPriceCapProvider?.getGasPriceCaps(blobs.first().startBlockNumber.toLong())
@@ -47,7 +47,7 @@ class BlobSubmitterAsEIP4844MultipleBlobsPerTx(
           "submitting blobs: blobs={} nonce={} gasPriceCaps={}",
           blobs.toBlockIntervalsString(),
           nonce,
-          gasPriceCaps
+          gasPriceCaps,
         )
         contract.submitBlobs(blobs, gasPriceCaps)
           .whenException { th ->
@@ -55,7 +55,7 @@ class BlobSubmitterAsEIP4844MultipleBlobsPerTx(
               log,
               blobs.toBlockIntervalsString(),
               th,
-              isEthCall = false
+              isEthCall = false,
             )
           }
           .thenPeek { transactionHash ->
@@ -64,14 +64,14 @@ class BlobSubmitterAsEIP4844MultipleBlobsPerTx(
               blobs.toBlockIntervalsString(),
               transactionHash,
               nonce,
-              gasPriceCaps
+              gasPriceCaps,
             )
             val blobSubmittedEvent = BlobSubmittedEvent(
               blobs = blobs.map { BlockIntervalData(it.startBlockNumber, it.endBlockNumber) },
               endBlockTime = blobs.last().endBlockTime,
               lastShnarf = blobs.last().expectedShnarf,
               submissionTimestamp = clock.now(),
-              transactionHash = transactionHash.toByteArray()
+              transactionHash = transactionHash.toByteArray(),
             )
             blobSubmittedEventConsumer.accept(blobSubmittedEvent)
           }
@@ -79,7 +79,7 @@ class BlobSubmitterAsEIP4844MultipleBlobsPerTx(
   }
 
   override fun submitBlobCall(
-    blobRecords: List<BlobRecord>
+    blobRecords: List<BlobRecord>,
   ): SafeFuture<*> {
     return (
       gasPriceCapProvider?.getGasPriceCapsWithCoefficient(blobRecords.first().startBlockNumber.toLong())
@@ -91,7 +91,7 @@ class BlobSubmitterAsEIP4844MultipleBlobsPerTx(
           "eth_call submitting blobs: blobs={} nonce={} gasPriceCaps={}",
           blobRecords.toBlockIntervalsString(),
           nonce,
-          gasPriceCaps
+          gasPriceCaps,
         )
         contract.submitBlobsEthCall(blobRecords, gasPriceCaps)
           .whenException { th ->
@@ -102,7 +102,7 @@ class BlobSubmitterAsEIP4844MultipleBlobsPerTx(
               "eth_call blobs submission passed: blob={} nonce={} gasPriceCaps={}",
               blobRecords.toBlockIntervalsString(),
               nonce,
-              gasPriceCaps
+              gasPriceCaps,
             )
           }
       }

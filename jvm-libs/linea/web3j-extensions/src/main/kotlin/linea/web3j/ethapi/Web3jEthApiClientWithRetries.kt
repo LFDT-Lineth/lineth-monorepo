@@ -13,18 +13,18 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 class Web3jEthApiClientWithRetries(
   val vertx: Vertx,
   val ethApiClient: EthApiClient,
-  val requestRetryConfig: RetryConfig
+  val requestRetryConfig: RetryConfig,
 ) : EthApiClient {
 
   private fun <T> retry(
-    fn: () -> SafeFuture<T>
+    fn: () -> SafeFuture<T>,
   ): SafeFuture<T> {
     return AsyncRetryer.retry(
       vertx = vertx,
       backoffDelay = requestRetryConfig.backoffDelay,
       timeout = requestRetryConfig.timeout,
       maxRetries = requestRetryConfig.maxRetries?.toInt(),
-      action = fn
+      action = fn,
     )
   }
 
@@ -33,7 +33,7 @@ class Web3jEthApiClientWithRetries(
   }
 
   override fun findBlockByNumberWithoutTransactionsData(
-    blockParameter: BlockParameter
+    blockParameter: BlockParameter,
   ): SafeFuture<BlockWithTxHashes?> {
     return retry { ethApiClient.findBlockByNumberWithoutTransactionsData(blockParameter) }
   }
@@ -42,7 +42,7 @@ class Web3jEthApiClientWithRetries(
     fromBlock: BlockParameter,
     toBlock: BlockParameter,
     address: String,
-    topics: List<String?>
+    topics: List<String?>,
   ): SafeFuture<List<EthLog>> {
     return retry { ethApiClient.getLogs(fromBlock, toBlock, address, topics) }
   }

@@ -22,7 +22,7 @@ import java.util.concurrent.Callable
   synopsisHeading = "%n",
   descriptionHeading = "%nDescription:%n%n",
   optionListHeading = "%nOptions:%n",
-  footerHeading = "%n"
+  footerHeading = "%n",
 )
 class TransactionExclusionAppCli
 internal constructor(private val errorWriter: PrintWriter, private val startAction: StartAction) :

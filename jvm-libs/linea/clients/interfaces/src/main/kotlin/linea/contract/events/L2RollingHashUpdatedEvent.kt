@@ -15,7 +15,7 @@ event RollingHashUpdated(uint256 indexed messageNumber, bytes32 indexed rollingH
 
 data class L2RollingHashUpdatedEvent(
   val messageNumber: ULong, // Unique L1 computed indexed message number for the message
-  val rollingHash: ByteArray // L1 rolling hash computed for the current message number
+  val rollingHash: ByteArray, // L1 rolling hash computed for the current message number
 ) {
 
   companion object {
@@ -25,9 +25,9 @@ data class L2RollingHashUpdatedEvent(
       return EthLogEvent(
         event = L2RollingHashUpdatedEvent(
           messageNumber = ethLog.topics[1].toULongFromLast8Bytes(),
-          rollingHash = ethLog.topics[2]
+          rollingHash = ethLog.topics[2],
         ),
-        log = ethLog
+        log = ethLog,
       )
     }
   }

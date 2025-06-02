@@ -24,18 +24,18 @@ interface BlobDecompressorAndDeserializer {
    */
   fun decompress(
     startBlockNumber: ULong,
-    blobs: List<ByteArray>
+    blobs: List<ByteArray>,
   ): SafeFuture<List<BlockFromL1RecoveredData>>
 }
 
 data class BlockHeaderStaticFields(
   val coinbase: ByteArray,
   val gasLimit: ULong = 2_000_000_000UL,
-  val difficulty: ULong = 2UL
+  val difficulty: ULong = 2UL,
 ) {
   companion object {
     val localDev = BlockHeaderStaticFields(
-      coinbase = "0x6d976c9b8ceee705d4fe8699b44e5eb58242f484".decodeHex()
+      coinbase = "0x6d976c9b8ceee705d4fe8699b44e5eb58242f484".decodeHex(),
     )
   }
 
@@ -69,11 +69,11 @@ class BlobDecompressorToDomainV1(
   val staticFields: BlockHeaderStaticFields,
   val vertx: Vertx,
   val decoder: BinaryDecoder<Block> = BesuRlpBlobDecoder,
-  val logger: Logger = LogManager.getLogger(BlobDecompressorToDomainV1::class.java)
+  val logger: Logger = LogManager.getLogger(BlobDecompressorToDomainV1::class.java),
 ) : BlobDecompressorAndDeserializer {
   override fun decompress(
     startBlockNumber: ULong,
-    blobs: List<ByteArray>
+    blobs: List<ByteArray>,
   ): SafeFuture<List<BlockFromL1RecoveredData>> {
     var blockNumber = startBlockNumber
     val startTime = Clock.System.now()
@@ -89,7 +89,7 @@ class BlobDecompressorToDomainV1(
             coinbase = staticFields.coinbase,
             blockTimestamp = Instant.fromEpochSeconds(block.header.timestamp),
             gasLimit = this.staticFields.gasLimit,
-            difficulty = this.staticFields.difficulty
+            difficulty = this.staticFields.difficulty,
           )
           val transactions = block.body.transactions.map { transaction ->
             TransactionFromL1RecoveredData(
@@ -106,14 +106,14 @@ class BlobDecompressorToDomainV1(
               accessList = transaction.accessList.getOrNull()?.map { accessTuple ->
                 TransactionFromL1RecoveredData.AccessTuple(
                   address = accessTuple.address.toArray(),
-                  storageKeys = accessTuple.storageKeys.map { it.toArray() }
+                  storageKeys = accessTuple.storageKeys.map { it.toArray() },
                 )
-              }
+              },
             )
           }
           BlockFromL1RecoveredData(
             header = header,
-            transactions = transactions
+            transactions = transactions,
           )
         }
       }.thenPeek {
@@ -122,7 +122,7 @@ class BlobDecompressorToDomainV1(
           "blobs decompressed and serialized: duration={} blobsCount={} blocks={}",
           endTime - startTime,
           blobs.size,
-          CommonDomainFunctions.blockIntervalString(startBlockNumber, blockNumber - 1UL)
+          CommonDomainFunctions.blockIntervalString(startBlockNumber, blockNumber - 1UL),
         )
       }
   }
@@ -130,7 +130,7 @@ class BlobDecompressorToDomainV1(
   private fun decodeBlocksAsync(blocksRLP: ByteArray): SafeFuture<List<Block>> {
     return vertx.executeBlocking(
       Callable { RLP.decodeList(blocksRLP).map(decoder::decode) },
-      false
+      false,
     )
       .onFailure(logger::error)
       .toSafeFuture()

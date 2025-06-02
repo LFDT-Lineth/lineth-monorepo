@@ -5,7 +5,7 @@ import linea.domain.BlockInterval
 data class ProofIndex(
   override val startBlockNumber: ULong,
   override val endBlockNumber: ULong,
-  val hash: ByteArray? = null
+  val hash: ByteArray? = null,
 ) : BlockInterval {
   override fun equals(other: Any?): Boolean {
     if (this === other) return true

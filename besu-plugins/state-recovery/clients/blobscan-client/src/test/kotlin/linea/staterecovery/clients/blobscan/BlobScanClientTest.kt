@@ -32,13 +32,13 @@ class BlobScanClientTest {
   fun setUp(vertx: Vertx) {
     wiremock = WireMockServer(
       WireMockConfiguration.options()
-        .dynamicPort()
+        .dynamicPort(),
     )
       .apply {
         addMockServiceRequestListener(object : RequestListener {
           override fun requestReceived(
             request: com.github.tomakehurst.wiremock.http.Request,
-            response: com.github.tomakehurst.wiremock.http.Response
+            response: com.github.tomakehurst.wiremock.http.Response,
           ) {
             // to debug
             // println("request: ${request.url}")
@@ -55,8 +55,8 @@ class BlobScanClientTest {
       requestRetryConfig = RetryConfig(
         backoffDelay = 10.milliseconds,
         maxRetries = 5u,
-        timeout = 5.seconds
-      )
+        timeout = 5.seconds,
+      ),
     )
   }
 
@@ -78,8 +78,8 @@ class BlobScanClientTest {
         .willReturn(
           WireMock.ok()
             .withHeader("Content-type", "application/json")
-            .withBody(successResponseBody(blobId, blobData))
-        )
+            .withBody(successResponseBody(blobId, blobData)),
+        ),
     )
 
     assertThat(blobScanClient.getBlobById(blobId).get().encodeHex()).isEqualTo(blobData)
@@ -99,9 +99,9 @@ class BlobScanClientTest {
             .withBody(
               """
                {"message":"No blob with versioned hash or kzg commitment '$blobId'.","code":"NOT_FOUND"}
-              """.trimIndent()
-            )
-        )
+              """.trimIndent(),
+            ),
+        ),
     )
 
     assertThatThrownBy { blobScanClient.getBlobById(blobId).get() }
@@ -117,22 +117,22 @@ class BlobScanClientTest {
       WireMock.get("/blobs/$blobId")
         .inScenario("SERVER_ERROR")
         .willReturn(WireMock.status(503))
-        .willSetStateTo("SERVER_ERROR_1")
+        .willSetStateTo("SERVER_ERROR_1"),
     )
     wiremock.stubFor(
       WireMock.get("/blobs/$blobId")
         .inScenario("SERVER_ERROR")
         .whenScenarioStateIs("SERVER_ERROR_1")
         .willReturn(WireMock.status(503))
-        .willSetStateTo("SERVER_OK")
+        .willSetStateTo("SERVER_OK"),
     )
     wiremock.stubFor(
       WireMock.get("/blobs/$blobId")
         .inScenario("SERVER_ERROR")
         .whenScenarioStateIs("SERVER_OK")
         .willReturn(
-          WireMock.okJson(successResponseBody(blobId, blobData))
-        )
+          WireMock.okJson(successResponseBody(blobId, blobData)),
+        ),
     )
 
     assertThat(blobScanClient.getBlobById(blobId).get().encodeHex()).isEqualTo(blobData)
@@ -140,7 +140,7 @@ class BlobScanClientTest {
 
   private fun successResponseBody(
     blobId: String,
-    blobData: String
+    blobData: String,
   ): String {
     return """
       {

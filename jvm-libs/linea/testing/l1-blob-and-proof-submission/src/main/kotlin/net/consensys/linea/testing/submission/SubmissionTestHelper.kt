@@ -19,17 +19,17 @@ fun assertTxSuccess(
   submissionType: String,
   l1Web3jClient: Web3j,
   timeout: Duration = 1.minutes,
-  log: Logger = LogManager.getLogger("linea.testing.submission")
+  log: Logger = LogManager.getLogger("linea.testing.submission"),
 ) {
   l1Web3jClient.waitForTxReceipt(
     txHash = txHash,
     timeout = timeout,
-    log = log
+    log = log,
   ).also { txReceipt ->
     if (txReceipt.status != "0x1") {
       throw RuntimeException(
         "submission of $submissionType=${interval.intervalString()}" +
-          " failed on L1. receipt=$txReceipt"
+          " failed on L1. receipt=$txReceipt",
       )
     }
   }
@@ -40,7 +40,7 @@ fun assertTxsSuccess(
   submissionType: String,
   l1Web3jClient: Web3j,
   timeout: Duration = 1.minutes,
-  log: Logger = LogManager.getLogger("linea.testing.submission")
+  log: Logger = LogManager.getLogger("linea.testing.submission"),
 ) {
   SafeFuture.supplyAsync {
     txsAndInterval.forEach { (txHash, interval) ->
@@ -62,7 +62,7 @@ fun submitBlobs(
   blobChunksSize: Int = 9,
   awaitForPreviousTxBeforeSubmittingNext: Boolean = false,
   l1Web3jClient: Web3j,
-  log: Logger
+  log: Logger,
 ): List<Pair<String, List<BlobRecord>>> {
   require(blobChunksSize in 1..9) { "blobChunksSize must be between 1..9" }
 
@@ -76,7 +76,7 @@ fun submitBlobs(
           "submitting blobs: aggregation={} blobsChunk={} txHash={}",
           agg?.intervalString(),
           blobsLogInfo,
-          txHash
+          txHash,
         )
         if (awaitForPreviousTxBeforeSubmittingNext) {
           log.debug("waiting for blobsChunk={} txHash={} to be mined", blobsLogInfo, txHash)
@@ -97,7 +97,7 @@ fun submitBlobsAndAggregationsAndWaitExecution(
   blobChunksMaxSize: Int = 9,
   l1Web3jClient: Web3j,
   waitTimeout: Duration = 2.minutes,
-  log: Logger = LogManager.getLogger("linea.testing.submission")
+  log: Logger = LogManager.getLogger("linea.testing.submission"),
 ) {
   val blobSubmissions = submitBlobs(
     contractClientForBlobSubmission,
@@ -105,7 +105,7 @@ fun submitBlobsAndAggregationsAndWaitExecution(
     blobChunksMaxSize,
     awaitForPreviousTxBeforeSubmittingNext = false,
     l1Web3jClient = l1Web3jClient,
-    log = log
+    log = log,
   )
 
   assertTxsSuccess(
@@ -114,12 +114,12 @@ fun submitBlobsAndAggregationsAndWaitExecution(
     },
     submissionType = "blobs",
     l1Web3jClient = l1Web3jClient,
-    timeout = waitTimeout
+    timeout = waitTimeout,
   )
   log.info(
     "blob={} txHash={} executed on L1",
     blobSubmissions.last().second.last().intervalString(),
-    blobSubmissions.last().first
+    blobSubmissions.last().first,
   )
 
   val submissions = aggregationsAndBlobs
@@ -132,12 +132,12 @@ fun submitBlobsAndAggregationsAndWaitExecution(
         aggregationLastBlob = aggBlobs.last(),
         parentL1RollingHash = parentAgg?.aggregationProof?.l1RollingHash ?: ByteArray(32),
         parentL1RollingHashMessageNumber = parentAgg?.aggregationProof?.l1RollingHashMessageNumber ?: 0L,
-        gasPriceCaps = null
+        gasPriceCaps = null,
       ).get()
       log.info(
         "submitting aggregation={} txHash={}",
         aggregation.intervalString(),
-        txHash
+        txHash,
       )
       txHash to aggregation
     }
@@ -146,12 +146,12 @@ fun submitBlobsAndAggregationsAndWaitExecution(
     txsAndInterval = submissions,
     submissionType = "aggregation",
     l1Web3jClient = l1Web3jClient,
-    timeout = waitTimeout
+    timeout = waitTimeout,
   )
 
   log.info(
     "aggregation={} txHash={} executed on L1",
     submissions.last().second.intervalString(),
-    submissions.last().first
+    submissions.last().first,
   )
 }

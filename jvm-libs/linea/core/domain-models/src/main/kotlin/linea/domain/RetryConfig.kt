@@ -7,7 +7,7 @@ data class RetryConfig(
   val maxRetries: UInt? = null,
   val timeout: Duration? = null,
   val backoffDelay: Duration = 100.milliseconds,
-  val failuresWarningThreshold: UInt = 0u
+  val failuresWarningThreshold: UInt = 0u,
 ) {
   val isRetryDisabled = maxRetries == 0u || timeout == 0.milliseconds
   val isRetryEnabled: Boolean = !isRetryDisabled
@@ -30,12 +30,12 @@ data class RetryConfig(
     val noRetries = RetryConfig(maxRetries = 0u)
     fun endlessRetry(
       backoffDelay: Duration,
-      failuresWarningThreshold: UInt
+      failuresWarningThreshold: UInt,
     ) = RetryConfig(
       maxRetries = null,
       timeout = null,
       backoffDelay = backoffDelay,
-      failuresWarningThreshold = failuresWarningThreshold
+      failuresWarningThreshold = failuresWarningThreshold,
     )
   }
 }

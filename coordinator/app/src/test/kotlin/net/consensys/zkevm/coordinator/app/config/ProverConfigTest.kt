@@ -13,7 +13,7 @@ import kotlin.time.Duration.Companion.seconds
 
 class ProverConfigTest {
   data class Config(
-    val prover: ProverConfigTomlDto
+    val prover: ProverConfigTomlDto,
   )
 
   private fun parseConfig(toml: String): ProversConfig {
@@ -62,8 +62,8 @@ class ProverConfigTest {
         inprogressRequestWritingSuffix = ".OVERRIDE_inprogress_coordinator_writing",
         inprogressProvingSuffixPattern = "OVERRIDE_\\.inprogress\\.prover.*",
         pollingInterval = 10.seconds,
-        pollingTimeout = 10.minutes
-      )
+        pollingTimeout = 10.minutes,
+      ),
     )
     assertThat(config.blobCompression).isEqualTo(
       FileBasedProverConfig(
@@ -72,8 +72,8 @@ class ProverConfigTest {
         inprogressRequestWritingSuffix = ".inprogress_coordinator_writing",
         inprogressProvingSuffixPattern = "\\.inprogress\\.prover.*",
         pollingInterval = 20.seconds,
-        pollingTimeout = 20.minutes
-      )
+        pollingTimeout = 20.minutes,
+      ),
     )
     assertThat(config.proofAggregation).isEqualTo(
       FileBasedProverConfig(
@@ -82,8 +82,8 @@ class ProverConfigTest {
         inprogressRequestWritingSuffix = ".inprogress_coordinator_writing",
         inprogressProvingSuffixPattern = "\\.inprogress\\.prover.*",
         pollingInterval = 10.seconds,
-        pollingTimeout = 10.minutes
-      )
+        pollingTimeout = 10.minutes,
+      ),
     )
   }
 
@@ -122,8 +122,8 @@ class ProverConfigTest {
         inprogressRequestWritingSuffix = ".NEW_OVERRIDE_2_inprogress_coordinator_writing",
         inprogressProvingSuffixPattern = "NEW_OVERRIDE_2\\.inprogress\\.prover.*",
         pollingInterval = 10.seconds,
-        pollingTimeout = 5.minutes
-      )
+        pollingTimeout = 5.minutes,
+      ),
     )
     assertThat(config.proverB!!.blobCompression).isEqualTo(
       FileBasedProverConfig(
@@ -132,8 +132,8 @@ class ProverConfigTest {
         inprogressRequestWritingSuffix = ".NEW_OVERRIDE_inprogress_coordinator_writing",
         inprogressProvingSuffixPattern = "\\.inprogress\\.prover.*",
         pollingInterval = 12.seconds,
-        pollingTimeout = 12.minutes
-      )
+        pollingTimeout = 12.minutes,
+      ),
     )
     assertThat(config.proverB!!.proofAggregation).isEqualTo(
       FileBasedProverConfig(
@@ -142,8 +142,8 @@ class ProverConfigTest {
         inprogressRequestWritingSuffix = ".NEW_OVERRIDE_inprogress_coordinator_writing",
         inprogressProvingSuffixPattern = "\\.inprogress\\.prover.*",
         pollingInterval = 10.seconds,
-        pollingTimeout = 5.minutes
-      )
+        pollingTimeout = 5.minutes,
+      ),
     )
   }
 }

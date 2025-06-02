@@ -55,6 +55,6 @@ val expectedTracesLimitsV2 = TracesCountersV2(
     TracingModuleV2.BLOCK_KECCAK to 46u,
     TracingModuleV2.BLOCK_L1_SIZE to 47u,
     TracingModuleV2.BLOCK_L2_L1_LOGS to 48u,
-    TracingModuleV2.BLOCK_TRANSACTIONS to 49u
-  )
+    TracingModuleV2.BLOCK_TRANSACTIONS to 49u,
+  ),
 )

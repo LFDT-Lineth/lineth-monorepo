@@ -19,7 +19,7 @@ class AggregationTriggerCalculatorByProofLimitTest {
       numberOfBatches = batchesCount,
       startBlockTimestamp = Instant.fromEpochMilliseconds((startBlockNumber * 100uL).toLong()),
       endBlockTimestamp = Instant.fromEpochMilliseconds((endBlockNumber * 100uL).toLong()),
-      expectedShnarf = Random.nextBytes(32)
+      expectedShnarf = Random.nextBytes(32),
     )
   }
 
@@ -49,8 +49,8 @@ class AggregationTriggerCalculatorByProofLimitTest {
       .isEqualTo(
         AggregationTrigger(
           aggregationTriggerType = AggregationTriggerType.PROOF_LIMIT,
-          aggregation = BlobsToAggregate(blobCounters.first().startBlockNumber, blobCounters.last().endBlockNumber)
-        )
+          aggregation = BlobsToAggregate(blobCounters.first().startBlockNumber, blobCounters.last().endBlockNumber),
+        ),
       )
   }
 
@@ -82,9 +82,9 @@ class AggregationTriggerCalculatorByProofLimitTest {
           aggregationTriggerType = AggregationTriggerType.PROOF_LIMIT,
           aggregation = BlobsToAggregate(
             blobCounters.first().startBlockNumber,
-            blobCounters[blobCounters.size - 2].endBlockNumber // Last blob [size-1] should not be included
-          )
-        )
+            blobCounters[blobCounters.size - 2].endBlockNumber, // Last blob [size-1] should not be included
+          ),
+        ),
       )
   }
 
@@ -129,9 +129,9 @@ class AggregationTriggerCalculatorByProofLimitTest {
           aggregationTriggerType = AggregationTriggerType.PROOF_LIMIT,
           aggregation = BlobsToAggregate(
             blobCountersAfterReset.first().startBlockNumber,
-            blobCountersAfterReset.last().endBlockNumber
-          )
-        )
+            blobCountersAfterReset.last().endBlockNumber,
+          ),
+        ),
       )
   }
 
@@ -169,8 +169,8 @@ class AggregationTriggerCalculatorByProofLimitTest {
     assertThat(aggregationTrigger1.aggregation).isEqualTo(
       BlobsToAggregate(
         blobCounters.first().startBlockNumber,
-        blobCounters[blobCounters.size - 2].endBlockNumber
-      )
+        blobCounters[blobCounters.size - 2].endBlockNumber,
+      ),
     )
 
     // Calculator should be reset after aggregation trigger
@@ -190,8 +190,8 @@ class AggregationTriggerCalculatorByProofLimitTest {
     assertThat(aggregationTrigger2.aggregation).isEqualTo(
       BlobsToAggregate(
         aggregationTrigger1.aggregation.endBlockNumber + 1u,
-        blobCounters[blobCounters.size - 2].endBlockNumber
-      )
+        blobCounters[blobCounters.size - 2].endBlockNumber,
+      ),
     )
 
     // Calculator should be reset after aggregation trigger

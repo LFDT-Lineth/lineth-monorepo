@@ -15,7 +15,7 @@ data class BlobCompressionProofRequest(
   val expectedShnarfResult: ShnarfResult,
   val commitment: ByteArray,
   val kzgProofContract: ByteArray,
-  val kzgProofSideCar: ByteArray
+  val kzgProofSideCar: ByteArray,
 ) : BlockInterval {
   override val startBlockNumber: ULong
     get() = conflations.first().startBlockNumber
@@ -75,7 +75,7 @@ data class BlobCompressionProof(
   val verifierID: Long,
   val commitment: ByteArray,
   val kzgProofContract: ByteArray,
-  val kzgProofSidecar: ByteArray
+  val kzgProofSidecar: ByteArray,
 ) {
 
   override fun equals(other: Any?): Boolean {

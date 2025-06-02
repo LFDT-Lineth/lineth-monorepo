@@ -6,15 +6,15 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 interface RejectedTransactionsDao {
   fun saveNewRejectedTransaction(
-    rejectedTransaction: RejectedTransaction
+    rejectedTransaction: RejectedTransaction,
   ): SafeFuture<Unit>
 
   fun findRejectedTransactionByTxHash(
     txHash: ByteArray,
-    notRejectedBefore: Instant = Instant.DISTANT_PAST
+    notRejectedBefore: Instant = Instant.DISTANT_PAST,
   ): SafeFuture<RejectedTransaction?>
 
   fun deleteRejectedTransactions(
-    createdBefore: Instant
+    createdBefore: Instant,
   ): SafeFuture<Int>
 }

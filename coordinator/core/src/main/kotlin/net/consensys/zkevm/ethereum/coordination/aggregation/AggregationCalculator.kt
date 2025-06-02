@@ -17,12 +17,12 @@ enum class AggregationTriggerType {
    * Aggregation trigger by target block numbers specified in the configuration.
    * This is meant for either Development,  Testing or Match specific blobs sent to L1.
    */
-  TARGET_BLOCK_NUMBER
+  TARGET_BLOCK_NUMBER,
 }
 
 data class AggregationTrigger(
   val aggregationTriggerType: AggregationTriggerType,
-  val aggregation: BlobsToAggregate
+  val aggregation: BlobsToAggregate,
 )
 
 fun interface AggregationTriggerHandler {

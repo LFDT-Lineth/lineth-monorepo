@@ -21,25 +21,25 @@ val defaultRejectedTransaction = RejectedTransaction(
     ModuleOverflow(
       module = "ADD",
       count = 402,
-      limit = 70
+      limit = 70,
     ),
     ModuleOverflow(
       module = "MUL",
       count = 587,
-      limit = 401
+      limit = 401,
     ),
     ModuleOverflow(
       module = "EXP",
       count = 9000,
-      limit = 8192
-    )
+      limit = 8192,
+    ),
   ),
   transactionInfo = TransactionInfo(
     hash = "0x526e56101cf39c1e717cef9cedf6fdddb42684711abda35bae51136dbb350ad7".decodeHex(),
     from = "0x4d144d7b9c96b26361d6ac74dd1d8267edca4fc2".decodeHex(),
     to = "0x1195cf65f83b3a5768f3c496d3a05ad6412c64b3".decodeHex(),
-    nonce = 100UL
-  )
+    nonce = 100UL,
+  ),
 )
 
 val rejectedContractDeploymentTransaction = RejectedTransaction(
@@ -59,13 +59,13 @@ val rejectedContractDeploymentTransaction = RejectedTransaction(
     ModuleOverflow(
       module = "HUB",
       count = 2119318,
-      limit = 2097152
-    )
+      limit = 2097152,
+    ),
   ),
   transactionInfo = TransactionInfo(
     hash = "0x583eb047887cc72f93ead08f389a2cd84440f3322bc4b191803d5adb0a167525".decodeHex(),
     from = "0x0d06838d1dfba9ef0a4166cca9be16fb1d76dbfc".decodeHex(),
     to = null,
-    nonce = 1UL
-  )
+    nonce = 1UL,
+  ),
 )

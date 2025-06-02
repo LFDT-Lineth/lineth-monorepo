@@ -18,7 +18,7 @@ class ConflationCalculatorByExecutionTraces(
   val tracesCountersLimit: TracesCounters,
   private val emptyTracesCounters: TracesCounters,
   metricsFacade: MetricsFacade,
-  private val log: Logger = LogManager.getLogger(ConflationCalculatorByExecutionTraces::class.java)
+  private val log: Logger = LogManager.getLogger(ConflationCalculatorByExecutionTraces::class.java),
 ) : ConflationCalculator {
   private val overflownTracesMetricsCounters = HashMap<TracingModule, Counter>().also {
     tracesCountersLimit.entries()
@@ -30,9 +30,9 @@ class ConflationCalculatorByExecutionTraces(
           tags = listOf(
             Tag(
               key = "module",
-              value = module.name
-            )
-          )
+              value = module.name,
+            ),
+          ),
         )
       }
   }
@@ -67,7 +67,7 @@ class ConflationCalculatorByExecutionTraces(
   }
 
   private fun isOversizedBlockOnTopOfNonEmptyConflation(
-    countersAfterConflation: TracesCounters
+    countersAfterConflation: TracesCounters,
   ): Boolean {
     return !countersAfterConflation.allTracesWithinLimits(tracesCountersLimit) &&
       inprogressTracesCounters != emptyTracesCounters
@@ -82,7 +82,7 @@ class ConflationCalculatorByExecutionTraces(
   }
 
   override fun copyCountersTo(
-    counters: ConflationCounters
+    counters: ConflationCounters,
   ) {
     counters.tracesCounters = inprogressTracesCounters
   }
@@ -93,7 +93,7 @@ class ConflationCalculatorByExecutionTraces(
       val errorMessage = overSizeTraces.joinToString(
         separator = ", ",
         prefix = "oversized block: block=$blockNumber, oversize traces TRACE(count, limit, overflow): [",
-        postfix = "]"
+        postfix = "]",
       ) { (moduleName, count, limit) ->
         "$moduleName($count, $limit, ${count - limit})"
       }

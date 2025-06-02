@@ -5,7 +5,7 @@ import net.consensys.zkevm.coordinator.clients.smartcontract.LineaGenesisStatePr
 
 data class GenesisStateProvider(
   override val stateRootHash: ByteArray,
-  override val shnarf: ByteArray
+  override val shnarf: ByteArray,
 ) : LineaGenesisStateProvider {
   override fun equals(other: Any?): Boolean {
     if (this === other) return true

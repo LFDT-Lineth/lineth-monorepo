@@ -15,7 +15,7 @@ internal val NOOP_CONSUMER: (ConflationCalculationResult) -> SafeFuture<*> =
 
 internal data class InflightConflation(
   var startBlockNumber: ULong?,
-  var counters: ConflationCounters
+  var counters: ConflationCounters,
 ) {
 
   fun toConflationResult(endBlockNumber: ULong, trigger: ConflationTrigger): ConflationCalculationResult {
@@ -23,7 +23,7 @@ internal data class InflightConflation(
       startBlockNumber = startBlockNumber!!,
       endBlockNumber = endBlockNumber,
       conflationTrigger = trigger,
-      tracesCounters = counters.tracesCounters
+      tracesCounters = counters.tracesCounters,
     )
   }
 
@@ -31,7 +31,7 @@ internal data class InflightConflation(
     fun empty(emptyTracesCounters: TracesCounters): InflightConflation {
       return InflightConflation(
         startBlockNumber = null,
-        counters = ConflationCounters.empty(emptyTracesCounters)
+        counters = ConflationCounters.empty(emptyTracesCounters),
       )
     }
   }
@@ -42,7 +42,7 @@ class GlobalBlockConflationCalculator(
   syncCalculators: List<ConflationCalculator>,
   deferredTriggerConflationCalculators: List<DeferredTriggerConflationCalculator>,
   private val emptyTracesCounters: TracesCounters,
-  private val log: Logger = LogManager.getLogger(GlobalBlockConflationCalculator::class.java)
+  private val log: Logger = LogManager.getLogger(GlobalBlockConflationCalculator::class.java),
 ) : TracesConflationCalculator, ConflationTriggerConsumer {
   private var conflationConsumer: (ConflationCalculationResult) -> SafeFuture<*> = NOOP_CONSUMER
   private var inflightConflation: InflightConflation = InflightConflation.empty(emptyTracesCounters)
@@ -71,7 +71,7 @@ class GlobalBlockConflationCalculator(
       "conflatingBlock: blockNumber={} startBlockNumber={} accCounters={}",
       blockCounters.blockNumber,
       inflightConflation.startBlockNumber,
-      inflightConflation.counters
+      inflightConflation.counters,
     )
     val triggers = calculators.mapNotNull {
       val overflowTrigger = it.checkOverflow(blockCounters)
@@ -104,7 +104,7 @@ class GlobalBlockConflationCalculator(
       "conflatingBlock FINISH: blockNumber={} startBlockNumber={} accCounters={}",
       blockCounters.blockNumber,
       inflightConflation.startBlockNumber,
-      inflightConflation.counters
+      inflightConflation.counters,
     )
   }
 
@@ -112,7 +112,7 @@ class GlobalBlockConflationCalculator(
     calculators.forEach { it.copyCountersTo(inflightConflation.counters) }
     val conflationResult = inflightConflation.toConflationResult(
       endBlockNumber = endBlockNumber,
-      trigger = conflationTrigger
+      trigger = conflationTrigger,
     )
     log.trace("conflationTrigger: trigger=$conflationTrigger, result=$conflationResult")
     conflationConsumer.invoke(conflationResult)
@@ -149,7 +149,7 @@ class GlobalBlockConflationCalculator(
   private fun ensureBlockIsInOrder(blockNumber: ULong) {
     if (blockNumber != (lastBlockNumber + 1u)) {
       val error = IllegalArgumentException(
-        "Blocks to conflate must be sequential: lastBlockNumber=$lastBlockNumber, new blockNumber=$blockNumber"
+        "Blocks to conflate must be sequential: lastBlockNumber=$lastBlockNumber, new blockNumber=$blockNumber",
       )
       log.error(error.message)
       throw error

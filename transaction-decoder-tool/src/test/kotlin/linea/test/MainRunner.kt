@@ -27,14 +27,14 @@ fun main() {
     FetchAndValidationRunner(
       rpcUrl = rpcUrl,
       vertx = vertx,
-      log = LogManager.getLogger("test.validator")
+      log = LogManager.getLogger("test.validator"),
     )
   configureLoggers(
     listOf(
       "linea.rlp" to Level.TRACE,
       "test.client.web3j" to Level.TRACE,
-      "test.validator" to Level.INFO
-    )
+      "test.validator" to Level.INFO,
+    ),
   )
 
   // Sepolia Blocks
@@ -48,7 +48,7 @@ fun main() {
       endBlockNumber = startBlockNumber + 1U,
 //      endBlockNumber = startBlockNumber + 0u,
       chuckSize = 1_000U,
-      rlpEncodingDecodingOnly = false
+      rlpEncodingDecodingOnly = false,
     ).get(2, TimeUnit.MINUTES)
   }.onFailure { error ->
     fetcherAndValidate.log.error("Error fetching and validating blocks", error)

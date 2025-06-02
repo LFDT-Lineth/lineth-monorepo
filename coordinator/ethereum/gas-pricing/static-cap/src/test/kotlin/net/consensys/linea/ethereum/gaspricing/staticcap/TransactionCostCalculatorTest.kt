@@ -13,7 +13,7 @@ class TransactionCostCalculatorTest {
     priorityFeeCoefficient = 0.02,
     baseFeeBlobCoefficient = 0.02,
     blobSubmissionExpectedExecutionGas = 69000,
-    expectedBlobGas = 131_000
+    expectedBlobGas = 131_000,
   )
   private val legacyFeesCalculator = GasUsageRatioWeightedAverageFeesCalculator(oldCalculatorConfig)
 
@@ -21,7 +21,7 @@ class TransactionCostCalculatorTest {
     margin = 1.2,
     bytesPerDataSubmission = 131_000u,
     blobSubmissionExpectedExecutionGas = 69000u,
-    expectedBlobGas = 131_000u
+    expectedBlobGas = 131_000u,
   )
   private val variableFeesCalculator = VariableFeesCalculator(variableFeesCalculatorConfig)
   private val transactionCostCalculator = TransactionCostCalculator(variableFeesCalculator, config)
@@ -36,7 +36,7 @@ class TransactionCostCalculatorTest {
       reward = listOf(listOf(1000UL)), // not a big impact
       gasUsedRatio = listOf(0.25),
       baseFeePerBlobGas = listOf(100UL),
-      blobGasUsedRatio = listOf(0.25)
+      blobGasUsedRatio = listOf(0.25),
     )
 
     val legacyGasPriceUnderRegularConditions = legacyFeesCalculator.calculateFees(regularL1Fees)

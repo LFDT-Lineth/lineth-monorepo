@@ -13,22 +13,22 @@ import kotlin.time.Duration
 
 class FileMonitor(
   private val vertx: Vertx,
-  config: Config
+  config: Config,
 ) {
 
   private val asyncRetryer = AsyncRetryer.retryer<List<Boolean>>(
     vertx = vertx,
     backoffDelay = config.pollingInterval,
-    timeout = config.timeout
+    timeout = config.timeout,
   )
 
   data class Config(
     val pollingInterval: Duration,
-    val timeout: Duration
+    val timeout: Duration,
   )
 
   enum class ErrorType {
-    TIMED_OUT
+    TIMED_OUT,
   }
 
   /**
@@ -70,7 +70,7 @@ class FileMonitor(
       .fileSystem()
       .readDir(
         directory.toString(),
-        pattern
+        pattern,
       )
       .map { files -> files.firstOrNull() }
       .toSafeFuture()

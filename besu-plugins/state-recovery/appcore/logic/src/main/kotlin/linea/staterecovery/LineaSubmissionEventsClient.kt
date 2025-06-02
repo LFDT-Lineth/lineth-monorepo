@@ -12,7 +12,7 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 data class DataSubmittedV3(
   val parentShnarf: ByteArray,
   val shnarf: ByteArray,
-  val finalStateRootHash: ByteArray
+  val finalStateRootHash: ByteArray,
 ) {
   companion object {
     val topic = "0x55f4c645c36aa5cd3f443d6be44d7a7a5df9d2100d7139dfc69d4289ee072319"
@@ -22,9 +22,9 @@ data class DataSubmittedV3(
         event = DataSubmittedV3(
           parentShnarf = ethLog.data.sliceOf32(0),
           shnarf = ethLog.topics[1],
-          finalStateRootHash = ethLog.data.sliceOf32(1)
+          finalStateRootHash = ethLog.data.sliceOf32(1),
         ),
-        log = ethLog
+        log = ethLog,
       )
     }
   }
@@ -62,7 +62,7 @@ data class DataFinalizedV3(
   override val endBlockNumber: ULong,
   val shnarf: ByteArray,
   val parentStateRootHash: ByteArray,
-  val finalStateRootHash: ByteArray
+  val finalStateRootHash: ByteArray,
 ) : BlockInterval {
   companion object {
     val topic = "0xa0262dc79e4ccb71ceac8574ae906311ae338aa4a2044fd4ec4b99fad5ab60cb"
@@ -81,9 +81,9 @@ data class DataFinalizedV3(
           endBlockNumber = ethLog.topics[2].toULongFromLast8Bytes(),
           shnarf = ethLog.topics[3],
           parentStateRootHash = dataBytes.sliceOf32(sliceNumber = 0),
-          finalStateRootHash = dataBytes.sliceOf32(sliceNumber = 1)
+          finalStateRootHash = dataBytes.sliceOf32(sliceNumber = 1),
         ),
-        log = ethLog
+        log = ethLog,
       )
     }
   }
@@ -124,17 +124,17 @@ data class DataFinalizedV3(
 
 data class FinalizationAndDataEventsV3(
   val dataSubmittedEvents: List<EthLogEvent<DataSubmittedV3>>,
-  val dataFinalizedEvent: EthLogEvent<DataFinalizedV3>
+  val dataFinalizedEvent: EthLogEvent<DataFinalizedV3>,
 )
 
 interface LineaRollupSubmissionEventsClient {
   fun findFinalizationAndDataSubmissionV3Events(
     fromL1BlockNumber: BlockParameter,
-    finalizationStartBlockNumber: ULong
+    finalizationStartBlockNumber: ULong,
   ): SafeFuture<FinalizationAndDataEventsV3?>
 
   fun findFinalizationAndDataSubmissionV3EventsContainingL2BlockNumber(
     fromL1BlockNumber: BlockParameter,
-    l2BlockNumber: ULong
+    l2BlockNumber: ULong,
   ): SafeFuture<FinalizationAndDataEventsV3?>
 }

@@ -34,14 +34,14 @@ class ExtraDataV1UpdaterImplTest {
   val requestRetry = RequestRetryConfig(
     maxRetries = 2u,
     backoffDelay = 10.milliseconds,
-    failuresWarningThreshold = 1u
+    failuresWarningThreshold = 1u,
   )
   lateinit var wiremock: WireMockServer
   private lateinit var jsonRpcClientFactory: VertxHttpJsonRpcClientFactory
   private val minerExtraData = MinerExtraDataV1(
     fixedCostInKWei = 1u,
     variableCostInKWei = 2u,
-    ethGasPriceInKWei = 10u
+    ethGasPriceInKWei = 10u,
   )
   val setMinerExtraDataSuccessResponse =
     JsonObject.of(
@@ -50,7 +50,7 @@ class ExtraDataV1UpdaterImplTest {
       "id",
       1,
       "result",
-      true
+      true,
     )
   val expectedRequest = JsonObject.of(
     "jsonrpc",
@@ -58,7 +58,7 @@ class ExtraDataV1UpdaterImplTest {
     "method",
     "miner_setExtraData",
     "params",
-    listOf(minerExtraData.encode())
+    listOf(minerExtraData.encode()),
   )
 
   @BeforeEach
@@ -85,8 +85,8 @@ class ExtraDataV1UpdaterImplTest {
         jsonRpcClientFactory,
         ExtraDataV1UpdaterImpl.Config(
           sequencerEndpoint = sequencerEndpoint,
-          retryConfig = requestRetry
-        )
+          retryConfig = requestRetry,
+        ),
       )
     extraDataUpdaterImpl.updateMinerExtraData(extraData = minerExtraData)
       .thenApply {
@@ -101,15 +101,15 @@ class ExtraDataV1UpdaterImplTest {
         .willReturn(
           ok()
             .withHeader("Content-type", "application/json")
-            .withBody(response.toString())
-        )
+            .withBody(response.toString()),
+        ),
     )
   }
 
   private fun verifyRequest(
     wiremock: WireMockServer,
     requestOriginEndpoint: URL,
-    request: JsonObject
+    request: JsonObject,
   ) {
     wiremock.verify(
       RequestPatternBuilder.newRequestPattern()
@@ -120,9 +120,9 @@ class ExtraDataV1UpdaterImplTest {
           EqualToJsonPattern(
             request.toString(), /*ignoreArrayOrder*/
             false, /*ignoreExtraElements*/
-            true
-          )
-        )
+            true,
+          ),
+        ),
     )
   }
 }

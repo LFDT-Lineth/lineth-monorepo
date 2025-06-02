@@ -6,10 +6,10 @@ import net.consensys.linea.vertx.ObservabilityServer
 
 class Api(
   private val configs: Config,
-  private val vertx: Vertx
+  private val vertx: Vertx,
 ) {
   data class Config(
-    val observabilityPort: UInt
+    val observabilityPort: UInt,
   )
 
   private var observabilityServerId: String? = null

@@ -48,13 +48,13 @@ class BlobSubmissionCoordinatorTest {
         79u, 89u, 99u, 109u, 119u, 129u,
         139u, 149u, 159u,
         // Agg2
-        169u, 179u, 189u, 199u
-      )
-    )
+        169u, 179u, 189u, 199u,
+      ),
+    ),
   )
   private val aggregations = listOf(
     createAggregation(startBlockNumber = 1, endBlockNumber = 159),
-    createAggregation(startBlockNumber = 160, endBlockNumber = 199)
+    createAggregation(startBlockNumber = 160, endBlockNumber = 199),
   )
 
   @BeforeEach
@@ -71,7 +71,7 @@ class BlobSubmissionCoordinatorTest {
     blobsGrouperForSubmission = spy(object : BlobsGrouperForSubmission {
       override fun chunkBlobs(
         blobsIntervals: List<BlobRecord>,
-        aggregations: BlockIntervals
+        aggregations: BlockIntervals,
       ): List<List<BlobRecord>> = chunkBlobs(blobsIntervals, aggregations, targetChunkSize = 6)
     })
 
@@ -85,7 +85,7 @@ class BlobSubmissionCoordinatorTest {
           pollingInterval = 100.milliseconds,
           proofSubmissionDelay = 0.seconds,
           maxBlobsToSubmitPerTick = 200u,
-          targetBlobsToSubmitPerTx = 9u
+          targetBlobsToSubmitPerTx = 9u,
         ),
         blobsRepository = blobsRepository,
         aggregationsRepository = aggregationsRepository,
@@ -95,8 +95,8 @@ class BlobSubmissionCoordinatorTest {
         clock = fakeClock,
         blobSubmissionFilter = blobSubmissionFilter,
         blobsGrouperForSubmission = blobsGrouperForSubmission,
-        log = log
-      )
+        log = log,
+      ),
     )
 
     whenever(blobsRepository.getConsecutiveBlobsFromBlockNumber(any(), any()))

@@ -23,7 +23,7 @@ private val fakeCredentials = Credentials.create(ByteArray(32).encodeHex())
 open class Web3JLineaRollupSmartContractClientReadOnly(
   val web3j: Web3j,
   val contractAddress: String,
-  private val log: Logger = LogManager.getLogger(Web3JLineaRollupSmartContractClientReadOnly::class.java)
+  private val log: Logger = LogManager.getLogger(Web3JLineaRollupSmartContractClientReadOnly::class.java),
 ) : LineaRollupSmartContractClientReadOnly {
 
   protected fun contractClientAtBlock(blockParameter: BlockParameter): LineaRollupV6 {
@@ -37,7 +37,7 @@ open class Web3JLineaRollupSmartContractClientReadOnly(
         contractAddress,
         web3j,
         fakeCredentials,
-        StaticGasProvider(BigInteger.ZERO, BigInteger.ZERO)
+        StaticGasProvider(BigInteger.ZERO, BigInteger.ZERO),
       ).apply {
         this.setDefaultBlockParameter(blockParameter.toWeb3j())
       }
@@ -60,7 +60,7 @@ open class Web3JLineaRollupSmartContractClientReadOnly(
             log.info(
               "Smart contract upgraded: prevVersion={} upgradedVersion={}",
               smartContractVersionCache.get(),
-              contractLatestVersion
+              contractLatestVersion,
             )
           }
           smartContractVersionCache.set(contractLatestVersion)
@@ -118,7 +118,7 @@ open class Web3JLineaRollupSmartContractClientReadOnly(
       .thenCompose { version ->
         when (version!!) {
           LineaContractVersion.V6 -> contractClientAtBlock(blockParameter, LineaRollupV6::class.java).blobShnarfExists(
-            shnarf
+            shnarf,
           )
         }
           .sendAsync()

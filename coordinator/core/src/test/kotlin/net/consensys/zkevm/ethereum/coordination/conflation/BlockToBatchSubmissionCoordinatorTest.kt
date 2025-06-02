@@ -38,7 +38,7 @@ class BlockToBatchSubmissionCoordinatorTest {
   private fun createBlockToBatchSubmissionCoordinator(
     vertx: Vertx,
     conflationService: ConflationService = defaultConflationService,
-    log: Logger = LogManager.getLogger(this::class.java)
+    log: Logger = LogManager.getLogger(this::class.java),
   ): BlockToBatchSubmissionCoordinator {
     val tracesCountersClient =
       mock<TracesCountersClientV2>().also {
@@ -50,7 +50,7 @@ class BlockToBatchSubmissionCoordinatorTest {
       tracesCountersClient = tracesCountersClient,
       vertx = vertx,
       encoder = { blockRlpEncoded },
-      log = log
+      log = log,
     )
   }
 
@@ -63,7 +63,7 @@ class BlockToBatchSubmissionCoordinatorTest {
     val blockToBatchSubmissionCoordinator = createBlockToBatchSubmissionCoordinator(
       vertx = vertx,
       conflationService = failingConflationService,
-      log = testLogger
+      log = testLogger,
     )
 
     val captor = argumentCaptor<Throwable>()
@@ -74,7 +74,7 @@ class BlockToBatchSubmissionCoordinatorTest {
           eq("Failed to conflate block={} errorMessage={}"),
           any(),
           any(),
-          captor.capture()
+          captor.capture(),
         )
       }
 

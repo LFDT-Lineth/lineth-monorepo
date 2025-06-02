@@ -76,7 +76,7 @@ class DbSchemaUpdatesIntTest {
     DbHelper.dropAllTables(dataSource)
     Db.applyDbMigrations(
       dataSource = dataSource,
-      target = schemaTarget
+      target = schemaTarget,
     )
 
     val paramsV1 = listOf(
@@ -84,7 +84,7 @@ class DbSchemaUpdatesIntTest {
       0L,
       1L,
       "0.1.0",
-      1
+      1,
     )
 
     val paramsV2 = listOf(
@@ -93,7 +93,7 @@ class DbSchemaUpdatesIntTest {
       1L,
       "0.1.0",
       "0.1.0",
-      1
+      1,
     )
 
     DbQueries.insertBatch(sqlClient, DbQueries.insertBatchQueryV1, paramsV1).get()
@@ -112,7 +112,7 @@ class DbSchemaUpdatesIntTest {
     DbHelper.dropAllTables(dataSource)
     Db.applyDbMigrations(
       dataSource = dataSource,
-      target = schemaTarget
+      target = schemaTarget,
     )
 
     val batchParamsV2 = listOf(
@@ -121,7 +121,7 @@ class DbSchemaUpdatesIntTest {
       1L,
       "0.1.0",
       "0.1.0",
-      1
+      1,
     )
 
     DbQueries.insertBatch(sqlClient, DbQueries.insertBatchQueryV2, batchParamsV2).get()
@@ -140,7 +140,7 @@ class DbSchemaUpdatesIntTest {
       Clock.System.now().toEpochMilliseconds(),
       3,
       ByteArray(32).encodeHex(),
-      "{}"
+      "{}",
     )
 
     DbQueries.insertBlob(sqlClient, DbQueries.insertBlobQuery, blobParams).get()

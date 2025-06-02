@@ -13,7 +13,7 @@ import java.util.concurrent.ConcurrentHashMap
 
 class BlockHashLookupWithRecoverySupport(
   val lookbackWindow: ULong,
-  private val log: Logger = LogManager.getLogger(BlockHashLookupWithRecoverySupport::class.java)
+  private val log: Logger = LogManager.getLogger(BlockHashLookupWithRecoverySupport::class.java),
 ) : BlockHashLookup {
   private val lookbackHashesMap = ConcurrentHashMap<ULong, ByteArray>()
 

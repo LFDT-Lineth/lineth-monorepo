@@ -8,12 +8,12 @@ import org.apache.logging.log4j.Logger
 
 class BoundableFeeCalculator(
   val config: Config,
-  private val feesCalculator: FeesCalculator
+  private val feesCalculator: FeesCalculator,
 ) : FeesCalculator {
   data class Config(
     val feeUpperBound: Double,
     val feeLowerBound: Double,
-    val feeMargin: Double
+    val feeMargin: Double,
   ) {
     init {
       require(feeUpperBound >= 0.0 && feeLowerBound >= 0.0 && feeMargin >= 0.0) {
@@ -37,7 +37,7 @@ class BoundableFeeCalculator(
           " Will default to the upper bound value",
         fee.toGWei(),
         blockRange.toIntervalString(),
-        config.feeUpperBound.toGWei()
+        config.feeUpperBound.toGWei(),
       )
       config.feeUpperBound
     } else if (fee.compareTo(config.feeLowerBound) == -1) {
@@ -46,14 +46,14 @@ class BoundableFeeCalculator(
           " Will default to the lower bound value",
         fee.toGWei(),
         blockRange.toIntervalString(),
-        config.feeLowerBound.toGWei()
+        config.feeLowerBound.toGWei(),
       )
       config.feeLowerBound
     } else {
       log.debug(
         "Gas fee update: gasPrice={}GWei, l1Blocks={}.",
         fee.toGWei(),
-        blockRange.toIntervalString()
+        blockRange.toIntervalString(),
       )
       fee
     }

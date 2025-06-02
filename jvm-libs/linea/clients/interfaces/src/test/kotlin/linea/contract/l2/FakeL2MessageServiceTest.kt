@@ -14,7 +14,7 @@ class FakeL2MessageServiceTest {
   private val testMessageHashes = listOf(
     "0x1111111111111111111111111111111111111111111111111111111111111111".decodeHex(),
     "0x2222222222222222222222222222222222222222222222222222222222222222".decodeHex(),
-    "0x3333333333333333333333333333333333333333333333333333333333333333".decodeHex()
+    "0x3333333333333333333333333333333333333333333333333333333333333333".decodeHex(),
   )
 
   @BeforeEach
@@ -41,7 +41,7 @@ class FakeL2MessageServiceTest {
       messageHashes = testMessageHashes,
       startingMessageNumber = 1UL,
       finalMessageNumber = 3UL,
-      finalRollingHash = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa".decodeHex()
+      finalRollingHash = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa".decodeHex(),
     ).get()
       .also { txHash ->
         val lastMessageNumber = fakeL2MessageService.getLastAnchoredL1MessageNumber(BlockParameter.Tag.LATEST).get()
@@ -58,11 +58,11 @@ class FakeL2MessageServiceTest {
     fakeL2MessageService.anchorL1L2MessageHashes(
       messageHashes = listOf(
         "0x4444444444444444444444444444444444444444444444444444444444444444".decodeHex(),
-        "0x5555555555555555555555555555555555555555555555555555555555555555".decodeHex()
+        "0x5555555555555555555555555555555555555555555555555555555555555555".decodeHex(),
       ),
       startingMessageNumber = 4UL,
       finalMessageNumber = 5UL,
-      finalRollingHash = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaB".decodeHex()
+      finalRollingHash = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaB".decodeHex(),
     ).get()
       .also { txHash ->
         val lastMessageNumber = fakeL2MessageService.getLastAnchoredL1MessageNumber(BlockParameter.Tag.LATEST).get()
@@ -72,7 +72,7 @@ class FakeL2MessageServiceTest {
         assertThat(txHash).isNotEmpty()
         assertThat(lastMessageNumber).isEqualTo(5UL)
         assertThat(lastRollingHash).isEqualTo(
-          "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaB".decodeHex()
+          "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaB".decodeHex(),
         )
         assertThat(anchoredMessages.map { it.encodeHex() }).isEqualTo(
           listOf(
@@ -80,8 +80,8 @@ class FakeL2MessageServiceTest {
             "0x2222222222222222222222222222222222222222222222222222222222222222",
             "0x3333333333333333333333333333333333333333333333333333333333333333",
             "0x4444444444444444444444444444444444444444444444444444444444444444",
-            "0x5555555555555555555555555555555555555555555555555555555555555555"
-          )
+            "0x5555555555555555555555555555555555555555555555555555555555555555",
+          ),
         )
       }
   }

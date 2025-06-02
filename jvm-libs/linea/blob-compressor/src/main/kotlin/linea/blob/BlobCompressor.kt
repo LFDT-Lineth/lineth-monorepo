@@ -32,28 +32,28 @@ interface BlobCompressor {
     val blockAppended: Boolean,
     val compressedSizeBefore: Int,
     // even when block is not appended, compressedSizeAfter should as if it was appended
-    val compressedSizeAfter: Int
+    val compressedSizeAfter: Int,
   )
 
   fun compressedSize(data: ByteArray): Int
 }
 
 class GoBackedBlobCompressor private constructor(
-  internal val goNativeBlobCompressor: GoNativeBlobCompressor
+  internal val goNativeBlobCompressor: GoNativeBlobCompressor,
 ) : BlobCompressor {
 
   companion object {
     @JvmStatic
     fun getInstance(
       compressorVersion: BlobCompressorVersion,
-      dataLimit: Int
+      dataLimit: Int,
     ): GoBackedBlobCompressor {
       require(dataLimit > 0) { "dataLimit=$dataLimit must be greater than 0" }
 
       val goNativeBlobCompressor = GoNativeBlobCompressorFactory.getInstance(compressorVersion)
       val initialized = goNativeBlobCompressor.Init(
         dataLimit = dataLimit,
-        dictPath = GoNativeBlobCompressorFactory.dictionaryPath.toString()
+        dictPath = GoNativeBlobCompressorFactory.dictionaryPath.toString(),
       )
       if (!initialized) {
         throw InstantiationException(goNativeBlobCompressor.Error())
@@ -81,7 +81,7 @@ class GoBackedBlobCompressor private constructor(
       blockRLPEncoded.size,
       compressionSizeBefore,
       compressedSizeAfter,
-      1.0 - ((compressedSizeAfter - compressionSizeBefore).toDouble() / blockRLPEncoded.size)
+      1.0 - ((compressedSizeAfter - compressionSizeBefore).toDouble() / blockRLPEncoded.size),
     )
     val error = goNativeBlobCompressor.Error()
     if (error != null) {

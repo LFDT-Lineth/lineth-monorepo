@@ -19,13 +19,13 @@ data class ProverConfigTomlDto(
   val execution: FileSystemTomlDto,
   val blobCompression: FileSystemTomlDto,
   val proofAggregation: FileSystemTomlDto,
-  val new: ProverConfigTomlDto? = null
+  val new: ProverConfigTomlDto? = null,
 ) {
   private fun asProverConfig(): ProverConfig {
     return ProverConfig(
       execution = execution.toDomain(),
       blobCompression = blobCompression.toDomain(),
-      proofAggregation = proofAggregation.toDomain()
+      proofAggregation = proofAggregation.toDomain(),
     )
   }
 
@@ -56,7 +56,7 @@ data class ProverConfigTomlDto(
     return ProversConfig(
       proverA = this.asProverConfig(),
       switchBlockNumberInclusive = new?.switchBlockNumberInclusive?.toULong(),
-      proverB = new?.asProverConfig()
+      proverB = new?.asProverConfig(),
     )
   }
 }
@@ -67,7 +67,7 @@ data class FileSystemTomlDto(
   internal var fsInprogressRequestWritingSuffix: String?,
   internal var fsInprogressProvingSuffixPattern: String?,
   internal var fsPollingInterval: Duration?,
-  internal var fsPollingTimeout: Duration?
+  internal var fsPollingTimeout: Duration?,
 ) {
   internal fun reifyWithRootDefaults(rootConfig: ProverConfigTomlDto) {
     fsInprogressRequestWritingSuffix = fsInprogressRequestWritingSuffix
@@ -85,7 +85,7 @@ data class FileSystemTomlDto(
       inprogressRequestWritingSuffix = fsInprogressRequestWritingSuffix!!,
       inprogressProvingSuffixPattern = fsInprogressProvingSuffixPattern!!,
       pollingInterval = fsPollingInterval!!.toKotlinDuration(),
-      pollingTimeout = fsPollingTimeout!!.toKotlinDuration()
+      pollingTimeout = fsPollingTimeout!!.toKotlinDuration(),
     )
   }
 }

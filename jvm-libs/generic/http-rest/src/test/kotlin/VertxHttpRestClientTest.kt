@@ -61,8 +61,8 @@ class VertxHttpRestClientTest {
       post("$path/text")
         .withHeader("Content-Type", WireMock.containing("application/json"))
         .willReturn(
-          ok().withHeader("Content-type", "text/plain; charset=utf-8\n").withBody("hello")
-        )
+          ok().withHeader("Content-type", "text/plain; charset=utf-8\n").withBody("hello"),
+        ),
     )
 
     val response =
@@ -79,7 +79,7 @@ class VertxHttpRestClientTest {
     node.put("status", "correct")
     wiremock.stubFor(
       get("$path/json")
-        .willReturn(ok().withHeader("Content-type", "application/json").withJsonBody(node))
+        .willReturn(ok().withHeader("Content-type", "application/json").withJsonBody(node)),
     )
 
     val response =
@@ -95,8 +95,8 @@ class VertxHttpRestClientTest {
     wiremock.stubFor(
       get("$path/text")
         .willReturn(
-          ok().withHeader("Content-type", "text/plain; charset=utf-8\n").withBody("text")
-        )
+          ok().withHeader("Content-type", "text/plain; charset=utf-8\n").withBody("text"),
+        ),
     )
 
     val response =
@@ -113,8 +113,8 @@ class VertxHttpRestClientTest {
     wiremock.stubFor(
       get("$path/text?1=one&2=two&3=three&4=four")
         .willReturn(
-          ok().withHeader("Content-type", "text/plain; charset=utf-8\n").withBody("text")
-        )
+          ok().withHeader("Content-type", "text/plain; charset=utf-8\n").withBody("text"),
+        ),
     )
 
     val response =
@@ -129,7 +129,7 @@ class VertxHttpRestClientTest {
   fun get_serverErrorResponse() {
     wiremock.stubFor(
       get("$path/serverError")
-        .willReturn(serverError().withHeader("Content-type", "text/plain; charset=utf-8\n"))
+        .willReturn(serverError().withHeader("Content-type", "text/plain; charset=utf-8\n")),
     )
 
     val response = client.get("$path/serverError").get()
@@ -141,7 +141,7 @@ class VertxHttpRestClientTest {
   fun post_notFound() {
     wiremock.stubFor(
       post("$path/notFound")
-        .willReturn(notFound().withHeader("Content-type", "text/plain; charset=utf-8\n"))
+        .willReturn(notFound().withHeader("Content-type", "text/plain; charset=utf-8\n")),
     )
 
     val response = client.post("$path/notFound", Buffer.buffer("")).get()
@@ -155,8 +155,8 @@ class VertxHttpRestClientTest {
         .willReturn(
           notFound()
             .withHeader("Content-type", "text/plain; charset=utf-8\n")
-            .withStatusMessage("Param not found")
-        )
+            .withStatusMessage("Param not found"),
+        ),
     )
 
     val response = client.post("$path/notFound", Buffer.buffer("")).get()

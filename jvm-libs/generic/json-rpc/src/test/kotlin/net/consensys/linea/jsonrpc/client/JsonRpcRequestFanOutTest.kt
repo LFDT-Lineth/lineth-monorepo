@@ -44,8 +44,8 @@ class JsonRpcRequestFanOutTest {
       listOf(
         Ok(JsonRpcSuccessResponse("1", 1)),
         Ok(JsonRpcSuccessResponse("1", 2)),
-        Ok(JsonRpcSuccessResponse("1", 3))
-      )
+        Ok(JsonRpcSuccessResponse("1", 3)),
+      ),
     )
     verify(rpcClient1).makeRequest(eq(request), anyOrNull())
     verify(rpcClient2).makeRequest(eq(request), anyOrNull())

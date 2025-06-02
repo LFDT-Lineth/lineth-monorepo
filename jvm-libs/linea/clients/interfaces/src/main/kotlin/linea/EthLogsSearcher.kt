@@ -9,7 +9,7 @@ import kotlin.time.Duration
 
 enum class SearchDirection {
   FORWARD,
-  BACKWARD
+  BACKWARD,
 }
 
 interface EthLogsSearcher : EthLogsClient {
@@ -24,13 +24,13 @@ interface EthLogsSearcher : EthLogsClient {
     chunkSize: Int = 1000,
     address: String,
     topics: List<String>,
-    shallContinueToSearch: (EthLog) -> SearchDirection? // null means stop searching
+    shallContinueToSearch: (EthLog) -> SearchDirection?, // null means stop searching
   ): SafeFuture<EthLog?>
 
   data class LogSearchResult(
     val logs: List<EthLog>,
     override val startBlockNumber: ULong,
-    override val endBlockNumber: ULong
+    override val endBlockNumber: ULong,
   ) : BlockInterval {
     val isEmpty: Boolean = logs.isEmpty()
   }
@@ -46,6 +46,6 @@ interface EthLogsSearcher : EthLogsClient {
     topics: List<String?>,
     chunkSize: UInt = 1000u,
     searchTimeout: Duration,
-    stopAfterTargetLogsCount: UInt? = null
+    stopAfterTargetLogsCount: UInt? = null,
   ): SafeFuture<LogSearchResult>
 }

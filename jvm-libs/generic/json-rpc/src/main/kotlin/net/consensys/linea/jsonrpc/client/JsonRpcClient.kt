@@ -41,7 +41,7 @@ fun toPrimitiveOrVertxJson(value: Any?): Any? {
 interface JsonRpcClient {
   fun makeRequest(
     request: JsonRpcRequest,
-    resultMapper: (Any?) -> Any? = ::toPrimitiveOrVertxJson // to keep backward compatibility
+    resultMapper: (Any?) -> Any? = ::toPrimitiveOrVertxJson, // to keep backward compatibility
   ): Future<Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>>
 }
 
@@ -51,6 +51,6 @@ interface JsonRpcClientWithRetries : JsonRpcClient {
   fun makeRequest(
     request: JsonRpcRequest,
     resultMapper: (Any?) -> Any? = ::toPrimitiveOrVertxJson, // to keep backward compatibility
-    stopRetriesPredicate: (result: Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>) -> Boolean = ::isResultOk
+    stopRetriesPredicate: (result: Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>) -> Boolean = ::isResultOk,
   ): Future<Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>>
 }

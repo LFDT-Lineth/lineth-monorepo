@@ -19,7 +19,7 @@ fun loadVertxConfig(): VertxOptions {
     val jsonRetrieverOptions = ConfigStoreOptions().setType("file").setConfig(
       JsonObject()
         .put("hierarchical", true)
-        .put("path", vertxPropertiesConfigFile)
+        .put("path", vertxPropertiesConfigFile),
     )
     options.addStore(jsonRetrieverOptions)
   }

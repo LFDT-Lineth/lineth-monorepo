@@ -29,7 +29,7 @@ class BlobDecompressorAndDeserializerV1Test {
   private val blockStaticFields = BlockHeaderStaticFields(
     coinbase = Address.ZERO.toArray(),
     gasLimit = 30_000_000UL,
-    difficulty = 0UL
+    difficulty = 0UL,
   )
   private lateinit var decompressorToDomain: BlobDecompressorAndDeserializer
   private lateinit var vertx: Vertx
@@ -39,7 +39,7 @@ class BlobDecompressorAndDeserializerV1Test {
     vertx = Vertx.vertx()
     compressor = GoBackedBlobCompressor.getInstance(
       compressorVersion = BlobCompressorVersion.V1_2,
-      dataLimit = 124 * 1024
+      dataLimit = 124 * 1024,
     )
     val decompressor = GoNativeBlobDecompressorFactory.getInstance(BlobDecompressorVersion.V1_2_0)
     decompressorToDomain = BlobDecompressorToDomainV1(decompressor, blockStaticFields, vertx)
@@ -57,7 +57,7 @@ class BlobDecompressorAndDeserializerV1Test {
   }
 
   private fun assertBlockCompressionAndDecompression(
-    blocksRLP: List<ByteArray>
+    blocksRLP: List<ByteArray>,
   ) {
     val blocks = blocksRLP.map(RLP::decodeBlockWithMainnetFunctions)
     val startingBlockNumber = blocks[0].header.number.toULong()
@@ -66,7 +66,7 @@ class BlobDecompressorAndDeserializerV1Test {
 
     val recoveredBlocks = decompressorToDomain.decompress(
       startBlockNumber = startingBlockNumber,
-      blobs = blobs
+      blobs = blobs,
     ).get()
     assertThat(recoveredBlocks[0].header.blockNumber).isEqualTo(startingBlockNumber)
 
@@ -77,7 +77,7 @@ class BlobDecompressorAndDeserializerV1Test {
 
   private fun assertBlockData(
     uncompressed: BlockFromL1RecoveredData,
-    original: Block
+    original: Block,
   ) {
     try {
       assertThat(uncompressed.header.blockNumber).isEqualTo(original.header.number.toULong())
@@ -94,14 +94,14 @@ class BlobDecompressorAndDeserializerV1Test {
         "uncompressed block does not match expected original: blockNumber: ${e.message} " +
           "\n original    =$original " +
           "\n uncompressed=$uncompressed ",
-        e
+        e,
       )
     }
   }
 
   private fun assertTransactionData(
     uncompressed: TransactionFromL1RecoveredData,
-    original: Transaction
+    original: Transaction,
   ) {
     assertThat(uncompressed.type).isEqualTo(original.type.serializedType.toUByte())
     assertThat(uncompressed.from).isEqualTo(original.sender.toArray())

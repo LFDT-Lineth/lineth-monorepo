@@ -16,14 +16,14 @@ data class ApiConfig(
   val port: Int = 0,
   val observabilityPort: Int = 0,
   val numberOfVerticles: Int = 0,
-  val path: String = "/"
+  val path: String = "/",
 )
 
 class Api(
   private val configs: ApiConfig,
   private val vertx: Vertx,
   private val metricsFacade: MetricsFacade,
-  private val transactionExclusionService: TransactionExclusionServiceV1
+  private val transactionExclusionService: TransactionExclusionServiceV1,
 ) {
   private var jsonRpcServerId: String? = null
   private var observabilityServerId: String? = null
@@ -40,12 +40,12 @@ class Api(
       mapOf(
         ApiMethod.LINEA_SAVE_REJECTED_TRANSACTION_V1.method to
           SaveRejectedTransactionRequestHandlerV1(
-            transactionExclusionService = transactionExclusionService
+            transactionExclusionService = transactionExclusionService,
           ),
         ApiMethod.LINEA_GET_TRANSACTION_EXCLUSION_STATUS_V1.method to
           GetTransactionExclusionStatusRequestHandlerV1(
-            transactionExclusionService = transactionExclusionService
-          )
+            transactionExclusionService = transactionExclusionService,
+          ),
       )
 
     val messageHandler: JsonRpcMessageHandler =
@@ -62,8 +62,8 @@ class Api(
       ObservabilityServer(
         ObservabilityServer.Config(
           "transaction-exclusion-api",
-          configs.observabilityPort
-        )
+          configs.observabilityPort,
+        ),
       )
     var httpServer: HttpJsonRpcServer? = null
     return vertx
@@ -74,7 +74,7 @@ class Api(
               httpServer = it
             }
         },
-        DeploymentOptions().setInstances(numberOfVerticles)
+        DeploymentOptions().setInstances(numberOfVerticles),
       )
       .compose { verticleId: String ->
         jsonRpcServerId = verticleId
@@ -88,7 +88,7 @@ class Api(
   fun stop(): Future<*> {
     return Future.all(
       this.jsonRpcServerId?.let { vertx.undeploy(it) } ?: Future.succeededFuture(null),
-      this.observabilityServerId?.let { vertx.undeploy(it) } ?: Future.succeededFuture(null)
+      this.observabilityServerId?.let { vertx.undeploy(it) } ?: Future.succeededFuture(null),
     )
   }
 }

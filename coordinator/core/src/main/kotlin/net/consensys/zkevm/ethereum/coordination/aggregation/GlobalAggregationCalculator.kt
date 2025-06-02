@@ -14,7 +14,7 @@ class GlobalAggregationCalculator(
   private val syncAggregationTrigger: List<SyncAggregationTriggerCalculator>,
   private val deferredAggregationTrigger: List<DeferredAggregationTriggerCalculator>,
   metricsFacade: MetricsFacade,
-  private val aggregationSizeMultipleOf: UInt
+  private val aggregationSizeMultipleOf: UInt,
 ) : AggregationCalculator {
   private var aggregationHandler: AggregationHandler = AggregationHandler.NOOP_HANDLER
 
@@ -26,12 +26,12 @@ class GlobalAggregationCalculator(
   private val blobsCounter: Counter = metricsFacade.createCounter(
     category = LineaMetricsCategory.AGGREGATION,
     name = "calculator.blobs.accepted",
-    description = "Number of blobs accepted by aggregation calculator"
+    description = "Number of blobs accepted by aggregation calculator",
   )
   private val batchesCounter: Counter = metricsFacade.createCounter(
     category = LineaMetricsCategory.AGGREGATION,
     name = "calculator.batches.accepted",
-    description = "Number of batches accepted by aggregation calculator"
+    description = "Number of batches accepted by aggregation calculator",
   )
 
   init {
@@ -43,7 +43,7 @@ class GlobalAggregationCalculator(
       description = "Number of proofs pending for aggregation",
       measurementSupplier = {
         pendingBlobs.size + pendingBlobs.sumOf { it.numberOfBatches }.toLong()
-      }
+      },
     )
     metricsFacade.createGauge(
       category = LineaMetricsCategory.AGGREGATION,
@@ -51,7 +51,7 @@ class GlobalAggregationCalculator(
       description = "Number of batches pending for aggregation",
       measurementSupplier = {
         pendingBlobs.sumOf { it.numberOfBatches }.toLong()
-      }
+      },
     )
     metricsFacade.createGauge(
       category = LineaMetricsCategory.AGGREGATION,
@@ -59,7 +59,7 @@ class GlobalAggregationCalculator(
       description = "Number of blobs pending for aggregation",
       measurementSupplier = {
         pendingBlobs.size
-      }
+      },
     )
   }
 
@@ -109,7 +109,7 @@ class GlobalAggregationCalculator(
       val exception = IllegalStateException(
         "Aggregation triggered when pending blobs do not contain blobs within aggregation interval. " +
           "aggregationTrigger=$aggregationTrigger " +
-          "pendingBlobs=${pendingBlobs.map { it.intervalString() }}"
+          "pendingBlobs=${pendingBlobs.map { it.intervalString() }}",
       )
       log.error(exception.message, exception)
       throw exception
@@ -130,18 +130,18 @@ class GlobalAggregationCalculator(
 
     val updatedAggregationSize = getUpdatedAggregationSize(
       blobsInAggregation.size.toUInt(),
-      aggregationSizeMultipleOf
+      aggregationSizeMultipleOf,
     )
 
     val blobsInUpdatedAggregation = blobsInAggregation.subList(0, updatedAggregationSize.toInt())
     val blobsNotInUpdatedAggregation = blobsInAggregation.subList(
       updatedAggregationSize.toInt(),
-      blobsInAggregation.size
+      blobsInAggregation.size,
     )
 
     val updatedAggregation = BlobsToAggregate(
       startBlockNumber = blobsInUpdatedAggregation.first().startBlockNumber,
-      endBlockNumber = blobsInUpdatedAggregation.last().endBlockNumber
+      endBlockNumber = blobsInUpdatedAggregation.last().endBlockNumber,
     )
 
     log.info(
@@ -153,7 +153,7 @@ class GlobalAggregationCalculator(
       blobsInUpdatedAggregation.size,
       blobsInUpdatedAggregation.sumOf { it.numberOfBatches },
       blobsInUpdatedAggregation.map { it.intervalString() },
-      aggregationSizeMultipleOf
+      aggregationSizeMultipleOf,
     )
 
     // Reset the trigger calculators now that we have a valid aggregation to handle
@@ -181,7 +181,7 @@ class GlobalAggregationCalculator(
     if (blockNumber != (lastBlockNumber + 1u)) {
       val error = IllegalArgumentException(
         "Blobs to aggregate must be sequential: lastBlockNumber=$lastBlockNumber, startBlockNumber=$blockNumber for " +
-          "new blob"
+          "new blob",
       )
       log.error(error.message)
       throw error

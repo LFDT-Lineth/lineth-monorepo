@@ -8,7 +8,7 @@ import org.apache.logging.log4j.Logger
 
 class ConflationCalculatorByDataCompressed(
   private val blobCompressor: BlobCompressor,
-  private val log: Logger = LogManager.getLogger(ConflationCalculatorByDataCompressed::class.java)
+  private val log: Logger = LogManager.getLogger(ConflationCalculatorByDataCompressed::class.java),
 ) : ConflationCalculator {
   override val id: String = ConflationTrigger.DATA_LIMIT.name
   internal var dataSizeUpToLastBatch: UInt = 0u
@@ -30,7 +30,7 @@ class ConflationCalculatorByDataCompressed(
       blockCounters.blockNumber,
       dataSize,
       dataSizeUpToLastBatch,
-      overflowResult
+      overflowResult,
     )
     return overflowResult
   }
@@ -51,7 +51,7 @@ class ConflationCalculatorByDataCompressed(
       blockCounters.blockRLPEncoded.size,
       appendResult.compressedSizeBefore,
       appendResult.compressedSizeAfter,
-      compressionRatio
+      compressionRatio,
     )
 
     if (!appendResult.blockAppended) {
@@ -70,7 +70,7 @@ class ConflationCalculatorByDataCompressed(
   }
 
   override fun copyCountersTo(
-    counters: ConflationCounters
+    counters: ConflationCounters,
   ) {
     counters.dataSize = dataSize - dataSizeUpToLastBatch
   }

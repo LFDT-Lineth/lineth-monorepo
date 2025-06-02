@@ -14,7 +14,7 @@ import java.util.concurrent.TimeUnit
 
 class ConflationServiceImpl(
   private val calculator: TracesConflationCalculator,
-  metricsFacade: MetricsFacade
+  metricsFacade: MetricsFacade,
 ) :
   ConflationService {
   private val log: Logger = LogManager.getLogger(this::class.java)
@@ -23,7 +23,7 @@ class ConflationServiceImpl(
 
   data class PayloadAndBlockCounters(
     val block: Block,
-    val blockCounters: BlockCounters
+    val blockCounters: BlockCounters,
   ) : Comparable<PayloadAndBlockCounters> {
     override fun compareTo(other: PayloadAndBlockCounters): Int {
       return this.block.number.compareTo(other.block.number)
@@ -35,12 +35,12 @@ class ConflationServiceImpl(
   private val blocksCounter = metricsFacade.createCounter(
     category = LineaMetricsCategory.CONFLATION,
     name = "blocks.imported",
-    description = "New blocks arriving to conflation service counter"
+    description = "New blocks arriving to conflation service counter",
   )
   private val batchSizeInBlocksHistogram = metricsFacade.createHistogram(
     category = LineaMetricsCategory.CONFLATION,
     name = "blocks.size",
-    description = "Number of blocks in each conflated batch"
+    description = "Number of blocks in each conflated batch",
   )
 
   init {
@@ -48,13 +48,13 @@ class ConflationServiceImpl(
       category = LineaMetricsCategory.CONFLATION,
       name = "inprogress.blocks",
       description = "Number of blocks in progress of conflation",
-      measurementSupplier = { blocksInProgress.size }
+      measurementSupplier = { blocksInProgress.size },
     )
     metricsFacade.createGauge(
       category = LineaMetricsCategory.CONFLATION,
       name = "queue.size",
       description = "Number of blocks in conflation queue",
-      measurementSupplier = { blocksToConflate.size }
+      measurementSupplier = { blocksToConflate.size },
     )
     calculator.onConflatedBatch(this::handleConflation)
   }
@@ -66,7 +66,7 @@ class ConflationServiceImpl(
       conflation.intervalString(),
       conflation.conflationTrigger,
       conflation.tracesCounters,
-      conflation.blocksRange.joinToString(",", "[", "]") { it.toString() }
+      conflation.blocksRange.joinToString(",", "[", "]") { it.toString() },
     )
     batchSizeInBlocksHistogram.record(conflation.blocksRange.count().toDouble())
 
@@ -82,7 +82,7 @@ class ConflationServiceImpl(
           "Conflation listener failed: batch={} errorMessage={}",
           conflation.intervalString(),
           th.message,
-          th
+          th,
         )
       }
   }
@@ -98,7 +98,7 @@ class ConflationServiceImpl(
       block.number,
       calculator.lastBlockNumber,
       blocksToConflate.size,
-      blocksInProgress.size
+      blocksInProgress.size,
     )
     blocksToConflate.add(PayloadAndBlockCounters(block, blockCounters))
     blocksInProgress.add(block)
@@ -114,7 +114,7 @@ class ConflationServiceImpl(
       nextAvailableBlock = blocksToConflate.poll(100, TimeUnit.MILLISECONDS)
       log.trace(
         "block {} removed from conflation queue and sent to calculator",
-        nextAvailableBlock?.block?.number
+        nextAvailableBlock?.block?.number,
       )
       calculator.newBlock(nextAvailableBlock.blockCounters)
       nextBlockNumberToConflate = nextAvailableBlock.block.number + 1u

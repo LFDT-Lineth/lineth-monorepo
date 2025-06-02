@@ -40,7 +40,7 @@ class ExtendedWeb3JImpl(override val web3jClient: Web3j) : ExtendedWeb3J {
     return web3jClient
       .ethGetBlockByNumber(
         blockParameter.toWeb3j(),
-        true
+        true,
       )
       .sendAsync()
       .toSafeFuture()
@@ -56,15 +56,15 @@ class ExtendedWeb3JImpl(override val web3jClient: Web3j) : ExtendedWeb3J {
   }
 
   override fun ethGetBlockTimestampByNumber(
-    blockNumber: Long
+    blockNumber: Long,
   ): SafeFuture<BigInteger> {
     return SafeFuture.of(
       web3jClient
         .ethGetBlockByNumber(
           DefaultBlockParameter.valueOf(BigInteger.valueOf(blockNumber)),
-          false
+          false,
         )
-        .sendAsync()
+        .sendAsync(),
     )
       .thenCompose { response ->
         if (response.hasError()) {

@@ -34,7 +34,7 @@ data class MessageSentEvent(
   val fee: BigInteger, // Fee paid in Wei
   val value: BigInteger, // Value sent in Wei
   val calldata: ByteArray, // Calldata passed to the recipient
-  val messageHash: ByteArray // Hash of the message parameters
+  val messageHash: ByteArray, // Hash of the message parameters
 ) : Comparable<MessageSentEvent> {
   companion object {
     const val topic = "0xe856c2b8bd4eb0027ce32eeaf595c21b0b6b4644b326e5b7bd80a1cf8db72e6c"
@@ -48,9 +48,9 @@ data class MessageSentEvent(
           fee = BigInteger(ethLog.data.sliceOf32(sliceNumber = 0)),
           value = BigInteger(ethLog.data.sliceOf32(sliceNumber = 1)),
           calldata = ethLog.data.sliceArray(32 * 3..ethLog.data.size - 1),
-          messageHash = ethLog.topics[3]
+          messageHash = ethLog.topics[3],
         ),
-        log = ethLog
+        log = ethLog,
       )
     }
   }

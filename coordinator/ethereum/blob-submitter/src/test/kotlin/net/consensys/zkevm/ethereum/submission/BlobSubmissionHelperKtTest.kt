@@ -29,34 +29,34 @@ class BlobSubmissionHelperKtTest {
       BlockIntervalData(90UL, 99UL),
       BlockIntervalData(100UL, 109UL),
       BlockIntervalData(110UL, 119UL),
-      BlockIntervalData(120UL, 121UL)
+      BlockIntervalData(120UL, 121UL),
     )
 
     val result = chunkBlobs(
       blobs,
       aggregations = BlockIntervals(startingBlockNumber = 0UL, listOf(69UL, 89UL)),
-      targetChunkSize = 3
+      targetChunkSize = 3,
     )
     assertThat(result).isEqualTo(
       listOf(
         listOf(
           BlockIntervalData(0UL, 9UL),
           BlockIntervalData(10UL, 19UL),
-          BlockIntervalData(20UL, 29UL)
+          BlockIntervalData(20UL, 29UL),
         ),
         listOf(
           BlockIntervalData(30UL, 39UL),
           BlockIntervalData(40UL, 49UL),
-          BlockIntervalData(50UL, 59UL)
+          BlockIntervalData(50UL, 59UL),
         ),
         listOf(
-          BlockIntervalData(60UL, 69UL)
+          BlockIntervalData(60UL, 69UL),
         ),
         listOf(
           BlockIntervalData(70UL, 79UL),
-          BlockIntervalData(80UL, 89UL)
-        )
-      )
+          BlockIntervalData(80UL, 89UL),
+        ),
+      ),
     )
   }
 
@@ -72,27 +72,27 @@ class BlobSubmissionHelperKtTest {
       BlockIntervalData(60UL, 69UL),
 
       BlockIntervalData(70UL, 79UL),
-      BlockIntervalData(80UL, 89UL)
+      BlockIntervalData(80UL, 89UL),
     )
 
     val result = chunkBlobs(
       blobs,
       aggregations = BlockIntervals(startingBlockNumber = 0UL, listOf(300UL, 500UL)),
-      targetChunkSize = 3
+      targetChunkSize = 3,
     )
     assertThat(result).isEqualTo(
       listOf(
         listOf(
           BlockIntervalData(10UL, 19UL),
           BlockIntervalData(20UL, 29UL),
-          BlockIntervalData(30UL, 39UL)
+          BlockIntervalData(30UL, 39UL),
         ),
         listOf(
           BlockIntervalData(40UL, 49UL),
           BlockIntervalData(50UL, 59UL),
-          BlockIntervalData(60UL, 69UL)
-        )
-      )
+          BlockIntervalData(60UL, 69UL),
+        ),
+      ),
     )
   }
 
@@ -110,32 +110,32 @@ class BlobSubmissionHelperKtTest {
 
       BlockIntervalData(60UL, 69UL),
       BlockIntervalData(70UL, 79UL),
-      BlockIntervalData(80UL, 89UL)
+      BlockIntervalData(80UL, 89UL),
     )
 
     val result = chunkBlobs(
       blobs,
       aggregations = BlockIntervals(startingBlockNumber = 0UL, listOf(59UL, 89UL)),
-      targetChunkSize = 3
+      targetChunkSize = 3,
     )
     assertThat(result).isEqualTo(
       listOf(
         listOf(
           BlockIntervalData(0UL, 9UL),
           BlockIntervalData(10UL, 19UL),
-          BlockIntervalData(20UL, 29UL)
+          BlockIntervalData(20UL, 29UL),
         ),
         listOf(
           BlockIntervalData(30UL, 39UL),
           BlockIntervalData(40UL, 49UL),
-          BlockIntervalData(50UL, 59UL)
+          BlockIntervalData(50UL, 59UL),
         ),
         listOf(
           BlockIntervalData(60UL, 69UL),
           BlockIntervalData(70UL, 79UL),
-          BlockIntervalData(80UL, 89UL)
-        )
-      )
+          BlockIntervalData(80UL, 89UL),
+        ),
+      ),
     )
   }
 
@@ -147,26 +147,26 @@ class BlobSubmissionHelperKtTest {
       BlockIntervalData(20UL, 29UL),
 
       BlockIntervalData(30UL, 39UL),
-      BlockIntervalData(40UL, 49UL)
+      BlockIntervalData(40UL, 49UL),
     )
 
     val result = chunkBlobs(
       blobs,
       aggregations = BlockIntervals(startingBlockNumber = 0UL, listOf(49UL)),
-      targetChunkSize = 3
+      targetChunkSize = 3,
     )
     assertThat(result).isEqualTo(
       listOf(
         listOf(
           BlockIntervalData(0UL, 9UL),
           BlockIntervalData(10UL, 19UL),
-          BlockIntervalData(20UL, 29UL)
+          BlockIntervalData(20UL, 29UL),
         ),
         listOf(
           BlockIntervalData(30UL, 39UL),
-          BlockIntervalData(40UL, 49UL)
-        )
-      )
+          BlockIntervalData(40UL, 49UL),
+        ),
+      ),
     )
   }
 
@@ -185,30 +185,30 @@ class BlobSubmissionHelperKtTest {
       BlockIntervalData(60UL, 69UL),
 
       BlockIntervalData(70UL, 79UL),
-      BlockIntervalData(80UL, 89UL)
+      BlockIntervalData(80UL, 89UL),
     )
 
     val result = chunkBlobs(
       blobs,
       aggregations = BlockIntervals(startingBlockNumber = 0UL, listOf(9UL, 500UL)),
-      targetChunkSize = 3
+      targetChunkSize = 3,
     )
     assertThat(result).isEqualTo(
       listOf(
         listOf(
-          BlockIntervalData(0UL, 9UL)
+          BlockIntervalData(0UL, 9UL),
         ),
         listOf(
           BlockIntervalData(10UL, 19UL),
           BlockIntervalData(20UL, 29UL),
-          BlockIntervalData(30UL, 39UL)
+          BlockIntervalData(30UL, 39UL),
         ),
         listOf(
           BlockIntervalData(40UL, 49UL),
           BlockIntervalData(50UL, 59UL),
-          BlockIntervalData(60UL, 69UL)
-        )
-      )
+          BlockIntervalData(60UL, 69UL),
+        ),
+      ),
     )
   }
 
@@ -219,20 +219,20 @@ class BlobSubmissionHelperKtTest {
       // agg: 0, 9
 
       BlockIntervalData(10UL, 19UL),
-      BlockIntervalData(20UL, 29UL)
+      BlockIntervalData(20UL, 29UL),
     )
 
     val result = chunkBlobs(
       blobs,
       aggregations = BlockIntervals(startingBlockNumber = 0UL, listOf(9UL, 500UL)),
-      targetChunkSize = 3
+      targetChunkSize = 3,
     )
     assertThat(result).isEqualTo(
       listOf(
         listOf(
-          BlockIntervalData(0UL, 9UL)
-        )
-      )
+          BlockIntervalData(0UL, 9UL),
+        ),
+      ),
     )
   }
 
@@ -241,14 +241,14 @@ class BlobSubmissionHelperKtTest {
     val blobs = listOf(
       BlockIntervalData(0UL, 9UL),
       BlockIntervalData(10UL, 19UL),
-      BlockIntervalData(20UL, 29UL)
+      BlockIntervalData(20UL, 29UL),
     )
 
     assertThrows<IllegalArgumentException> {
       chunkBlobs(
         blobs,
         aggregations = BlockIntervals(startingBlockNumber = 0UL, listOf(15UL, 29UL)),
-        targetChunkSize = 3
+        targetChunkSize = 3,
       )
     }.let { error ->
       assertThat(error).hasMessageMatching("blobs.* are inconsistent with aggregations.*")
@@ -258,7 +258,7 @@ class BlobSubmissionHelperKtTest {
       chunkBlobs(
         blobs,
         aggregations = BlockIntervals(startingBlockNumber = 0UL, listOf(9UL, 21UL)),
-        targetChunkSize = 3
+        targetChunkSize = 3,
       )
     }.let { error ->
       assertThat(error).hasMessageMatching("blobs.* are inconsistent with aggregations.*")

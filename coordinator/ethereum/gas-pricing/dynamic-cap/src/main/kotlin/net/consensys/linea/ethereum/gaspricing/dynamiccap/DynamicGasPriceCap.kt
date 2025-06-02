@@ -14,7 +14,7 @@ val MAX_FEE_HISTORIES_STORAGE_PERIOD = 30.days
 data class PercentileGasFees(
   val percentileBaseFeePerGas: ULong,
   val percentileBaseFeePerBlobGas: ULong,
-  val percentileAvgReward: ULong
+  val percentileAvgReward: ULong,
 ) {
   override fun toString(): String {
     return "percentileBaseFeePerGas=${percentileBaseFeePerGas.toGWei()} GWei," +
@@ -46,7 +46,7 @@ interface GasPriceCapCalculator {
     finalizationTargetMaxDelay: Duration,
     historicGasPriceCap: ULong,
     elapsedTimeSinceBlockTimestamp: Duration,
-    timeOfDayMultiplier: Double = 1.0
+    timeOfDayMultiplier: Double = 1.0,
   ): ULong
 }
 
@@ -55,14 +55,14 @@ interface GasPriceCapFeeHistoryCache {
 
   fun cacheNumOfFeeHistoriesFromBlockNumber(
     rewardPercentile: Double,
-    fromBlockNumber: Long
+    fromBlockNumber: Long,
   ): SafeFuture<Int>
 
   fun getCachedPercentileGasFees(): PercentileGasFees
 
   fun cachePercentileGasFees(
     percentile: Double,
-    fromBlockNumber: Long
+    fromBlockNumber: Long,
   ): SafeFuture<Unit>
 }
 

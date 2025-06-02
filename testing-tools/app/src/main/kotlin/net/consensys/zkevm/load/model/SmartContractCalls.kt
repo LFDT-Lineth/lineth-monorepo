@@ -72,7 +72,7 @@ class SmartContractCalls(private val ethConnection: EthConnection) {
   fun batchMint(addressesInput: List<String?>, inputAmount: Long): String {
     @Suppress("DEPRECATION")
     val addresses = DynamicArray(
-      addressesInput.stream().map { address: String? -> Address(address) }.toList()
+      addressesInput.stream().map { address: String? -> Address(address) }.toList(),
     )
     val amount = Uint256(BigInteger.valueOf(inputAmount))
     val function = Function("batchMint", listOf(addresses, amount), emptyList())
@@ -84,7 +84,7 @@ class SmartContractCalls(private val ethConnection: EthConnection) {
     sourceWallet: Wallet,
     contractCode: CreateContract,
     chainId: Int,
-    details: ExecutionDetails
+    details: ExecutionDetails,
   ): String {
     val contractCreationTx =
       getCreateContractTransaction(sourceWallet, contractCode.byteCode, chainId)
@@ -96,9 +96,9 @@ class SmartContractCalls(private val ethConnection: EthConnection) {
     // maybe transaction receipt is not directly present, we may have to retry.
     var attempt = 0
     while ((
-      !transactionReceipt.transactionReceipt.isPresent ||
-        transactionReceipt.transactionReceipt.get().contractAddress == null
-      ) &&
+        !transactionReceipt.transactionReceipt.isPresent ||
+          transactionReceipt.transactionReceipt.get().contractAddress == null
+        ) &&
       attempt < 3
     ) {
       transactionReceipt = ethConnection.ethGetTransactionReceipt(receipt.transactionHash).send()
@@ -117,28 +117,40 @@ class SmartContractCalls(private val ethConnection: EthConnection) {
   fun getCreateContractTransaction(
     sourceWallet: Wallet,
     contractCode: String?,
-    chainId: Int
+    chainId: Int,
   ): TransactionDetail {
     val nonce = sourceWallet.theoreticalNonceValue
     sourceWallet.incrementTheoreticalNonce()
     val transactionForEstimation = Transaction(
-      /* from = */ sourceWallet.address,
-      /* nonce = */ nonce,
-      /* gasPrice = */ null,
-      /* gasLimit = */ null,
-      /* to = */ null,
-      /* value = */ null,
-      /* data = */ contractCode
+      /* from = */
+      sourceWallet.address,
+      /* nonce = */
+      nonce,
+      /* gasPrice = */
+      null,
+      /* gasLimit = */
+      null,
+      /* to = */
+      null,
+      /* value = */
+      null,
+      /* data = */
+      contractCode,
     )
 
     val (gasPrice, gasLimit) = ethConnection.estimateGasPriceAndLimit(transactionForEstimation)
 
     val rawTransaction = RawTransaction.createContractTransaction(
-      /* nonce = */ nonce,
-      /* gasPrice = */ gasPrice,
-      /* gasLimit = */ gasLimit,
-      /* value = */ BigInteger.ZERO,
-      /* init = */ contractCode
+      /* nonce = */
+      nonce,
+      /* gasPrice = */
+      gasPrice,
+      /* gasLimit = */
+      gasLimit,
+      /* value = */
+      BigInteger.ZERO,
+      /* init = */
+      contractCode,
     )
     val contractCreationTx = ethConnection.ethSendRawTransaction(rawTransaction, sourceWallet, chainId)
     return TransactionDetail(sourceWallet.id, nonce, contractCreationTx)
@@ -150,35 +162,46 @@ class SmartContractCalls(private val ethConnection: EthConnection) {
     sourceWallet: Wallet,
     encodedFunction: String,
     txCount: Int,
-    chainId: Int
-  ):
-    Map<Wallet, List<TransactionDetail>> {
+    chainId: Int,
+  ): Map<Wallet, List<TransactionDetail>> {
     val txs: MutableList<TransactionDetail> = ArrayList()
 
     for (i in 0 until txCount) {
       val transactionForEstimation = Transaction(
-        /* from = */ sourceWallet.address,
-        /* nonce = */ sourceWallet.theoreticalNonceValue,
-        /* gasPrice = */ null,
-        /* gasLimit = */ null,
-        /* to = */ contractAddress,
-        /* value = */ null,
-        /* data = */ encodedFunction
+        /* from = */
+        sourceWallet.address,
+        /* nonce = */
+        sourceWallet.theoreticalNonceValue,
+        /* gasPrice = */
+        null,
+        /* gasLimit = */
+        null,
+        /* to = */
+        contractAddress,
+        /* value = */
+        null,
+        /* data = */
+        encodedFunction,
       )
       val (gasPrice, gasLimit) = ethConnection.estimateGasPriceAndLimit(transactionForEstimation)
       val rawTransaction = RawTransaction.createTransaction(
-        /* nonce = */ sourceWallet.theoreticalNonceValue,
-        /* gasPrice = */ gasPrice,
-        /* gasLimit = */ gasLimit,
-        /* to = */ contractAddress,
-        /* data = */ encodedFunction
+        /* nonce = */
+        sourceWallet.theoreticalNonceValue,
+        /* gasPrice = */
+        gasPrice,
+        /* gasLimit = */
+        gasLimit,
+        /* to = */
+        contractAddress,
+        /* data = */
+        encodedFunction,
       )
       txs.add(
         TransactionDetail(
           sourceWallet.id,
           sourceWallet.theoreticalNonceValue,
-          ethConnection.ethSendRawTransaction(rawTransaction, sourceWallet, chainId)
-        )
+          ethConnection.ethSendRawTransaction(rawTransaction, sourceWallet, chainId),
+        ),
       )
       sourceWallet.incrementTheoreticalNonce()
     }

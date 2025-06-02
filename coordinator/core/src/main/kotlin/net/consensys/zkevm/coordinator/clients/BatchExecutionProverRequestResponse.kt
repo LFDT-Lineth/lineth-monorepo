@@ -10,7 +10,7 @@ data class BatchExecutionProofRequestV1(
   val bridgeLogs: List<EthLog>,
   val tracesResponse: GenerateTracesResponse,
   val type2StateData: GetZkEVMStateMerkleProofResponse,
-  val keccakParentStateRootHash: ByteArray
+  val keccakParentStateRootHash: ByteArray,
 ) : BlockInterval {
   override val startBlockNumber: ULong
     get() = blocks.first().number
@@ -44,5 +44,5 @@ data class BatchExecutionProofRequestV1(
 
 data class BatchExecutionProofResponse(
   override val startBlockNumber: ULong,
-  override val endBlockNumber: ULong
+  override val endBlockNumber: ULong,
 ) : BlockInterval

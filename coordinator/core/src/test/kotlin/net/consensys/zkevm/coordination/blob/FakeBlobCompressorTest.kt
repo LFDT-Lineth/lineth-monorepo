@@ -57,24 +57,24 @@ class FakeBlobCompressorTest {
       BlobCompressor.AppendResult(
         blockAppended = true,
         compressedSizeBefore = 0,
-        compressedSizeAfter = 33
-      )
+        compressedSizeAfter = 33,
+      ),
     )
 
     assertThat(compressor.appendBlock(block2)).isEqualTo(
       BlobCompressor.AppendResult(
         blockAppended = true,
         compressedSizeBefore = 33,
-        compressedSizeAfter = 77
-      )
+        compressedSizeAfter = 77,
+      ),
     )
     val block3 = ByteArray(31)
     assertThat(compressor.appendBlock(block3)).isEqualTo(
       BlobCompressor.AppendResult(
         blockAppended = false,
         compressedSizeBefore = 77,
-        compressedSizeAfter = 111
-      )
+        compressedSizeAfter = 111,
+      ),
     )
   }
 

@@ -25,7 +25,7 @@ object TransactionMapper {
    */
   fun mapToBesu(
     transaction: TransactionFromL1RecoveredData,
-    chainId: ULong
+    chainId: ULong,
   ): Transaction {
     val builder = Transaction.builder()
     builder
@@ -48,13 +48,13 @@ object TransactionMapper {
   }
 
   private fun mapAccessListEntries(
-    accessList: List<AccessTuple>?
+    accessList: List<AccessTuple>?,
   ): List<AccessListEntry>? {
     return accessList
       ?.map { accessTupleParameter ->
         AccessListEntry.createAccessListEntry(
           accessTupleParameter.address.toBesuAddress(),
-          accessTupleParameter.storageKeys.map { it.encodeHex() }
+          accessTupleParameter.storageKeys.map { it.encodeHex() },
         )
       }
   }
@@ -69,7 +69,7 @@ object TransactionMapper {
    */
   fun mapToBesu(
     transactions: List<TransactionFromL1RecoveredData>,
-    defaultChainId: ULong
+    defaultChainId: ULong,
   ): List<Transaction> {
     return transactions.map { tx -> mapToBesu(tx, defaultChainId) }
   }

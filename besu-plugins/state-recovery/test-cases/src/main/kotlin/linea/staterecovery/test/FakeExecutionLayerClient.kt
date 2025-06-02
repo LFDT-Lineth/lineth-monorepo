@@ -12,7 +12,7 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 class FakeExecutionLayerClient(
   headBlock: BlockNumberAndHash = BlockNumberAndHash(number = 0uL, hash = ByteArray(32) { 0 }),
   initialStateRecoverStartBlockNumber: ULong? = null,
-  loggerName: String? = null
+  loggerName: String? = null,
 ) : ExecutionLayerClient {
   private val log = loggerName
     ?.let { LogManager.getLogger(loggerName) }
@@ -35,7 +35,7 @@ class FakeExecutionLayerClient(
   val stateRecoverStatus: StateRecoveryStatus
     get() = StateRecoveryStatus(
       headBlockNumber = headBlock.number,
-      stateRecoverStartBlockNumber = stateRecoverStartBlockNumber
+      stateRecoverStartBlockNumber = stateRecoverStartBlockNumber,
     )
 
   @Synchronized
@@ -46,14 +46,14 @@ class FakeExecutionLayerClient(
 
   @Synchronized
   override fun lineaEngineImportBlocksFromBlob(
-    blocks: List<BlockFromL1RecoveredData>
+    blocks: List<BlockFromL1RecoveredData>,
   ): SafeFuture<Unit> {
     if (log.isTraceEnabled) {
       log.trace("lineaEngineImportBlocksFromBlob($blocks)")
     } else {
       val interval = CommonDomainFunctions.blockIntervalString(
         blocks.first().header.blockNumber,
-        blocks.last().header.blockNumber
+        blocks.last().header.blockNumber,
       )
       log.debug("lineaEngineImportBlocksFromBlob(interval=$interval)")
     }
@@ -64,7 +64,7 @@ class FakeExecutionLayerClient(
 
   @Synchronized
   override fun getBlockNumberAndHash(
-    blockParameter: BlockParameter
+    blockParameter: BlockParameter,
   ): SafeFuture<BlockNumberAndHash> {
     log.trace("getBlockNumberAndHash($blockParameter): $headBlock")
     return SafeFuture.completedFuture(headBlock)
@@ -78,7 +78,7 @@ class FakeExecutionLayerClient(
 
   @Synchronized
   override fun lineaEnableStateRecovery(
-    stateRecoverStartBlockNumber: ULong
+    stateRecoverStartBlockNumber: ULong,
   ): SafeFuture<StateRecoveryStatus> {
     this.stateRecoverStartBlockNumber = stateRecoverStartBlockNumber
     log.debug("lineaEnableStateRecovery($stateRecoverStartBlockNumber) = $stateRecoverStatus")

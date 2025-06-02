@@ -221,4 +221,3 @@ public class ContractCall extends Scenario {
     return JSON.getGson().toJson(this);
   }
 }
-

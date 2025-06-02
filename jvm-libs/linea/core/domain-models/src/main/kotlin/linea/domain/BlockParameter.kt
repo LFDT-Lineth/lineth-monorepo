@@ -40,11 +40,12 @@ sealed interface BlockParameter {
     LATEST("latest"),
     EARLIEST("earliest"),
     SAFE("safe"),
-    FINALIZED("finalized");
+    FINALIZED("finalized"),
+    ;
 
     override fun getTag(): String = value
     override fun getNumber(): ULong = throw UnsupportedOperationException(
-      "getNumber isn't supposed to be called on a block tag!"
+      "getNumber isn't supposed to be called on a block tag!",
     )
 
     companion object {
@@ -52,7 +53,7 @@ sealed interface BlockParameter {
       fun fromString(value: String): Tag = kotlin.runCatching { Tag.valueOf(value.uppercase()) }
         .getOrElse {
           throw IllegalArgumentException(
-            "BlockParameter Tag=$value is invalid. Valid values: ${Tag.entries.joinToString(", ")}"
+            "BlockParameter Tag=$value is invalid. Valid values: ${Tag.entries.joinToString(", ")}",
           )
         }
     }

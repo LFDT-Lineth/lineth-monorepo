@@ -4,7 +4,7 @@ import linea.domain.BlockParameter
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 enum class LineaContractVersion : Comparable<LineaContractVersion> {
-  V6 // more efficient data submission and new events for state recovery
+  V6, // more efficient data submission and new events for state recovery
 }
 
 interface LineaRollupSmartContractClientReadOnly : ContractVersionProvider<LineaContractVersion> {
@@ -23,7 +23,7 @@ interface LineaRollupSmartContractClientReadOnly : ContractVersionProvider<Linea
 
   fun getMessageRollingHash(
     blockParameter: BlockParameter = BlockParameter.Tag.LATEST,
-    messageNumber: Long
+    messageNumber: Long,
   ): SafeFuture<ByteArray>
 
   /**
@@ -33,7 +33,7 @@ interface LineaRollupSmartContractClientReadOnly : ContractVersionProvider<Linea
    */
   fun isBlobShnarfPresent(
     blockParameter: BlockParameter = BlockParameter.Tag.LATEST,
-    shnarf: ByteArray
+    shnarf: ByteArray,
   ): SafeFuture<Boolean>
 
   /**
@@ -41,6 +41,6 @@ interface LineaRollupSmartContractClientReadOnly : ContractVersionProvider<Linea
    */
   fun blockStateRootHash(
     blockParameter: BlockParameter,
-    lineaL2BlockNumber: ULong
+    lineaL2BlockNumber: ULong,
   ): SafeFuture<ByteArray>
 }

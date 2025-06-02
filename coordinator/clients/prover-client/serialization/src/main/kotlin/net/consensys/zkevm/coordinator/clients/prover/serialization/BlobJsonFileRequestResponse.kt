@@ -66,17 +66,17 @@ data class BlobCompressionProofJsonRequest(
   val kzgProofContract: ByteArray,
   @JsonProperty("kzgProofSidecar")
   @JsonSerialize(using = ByteArraySerializer::class)
-  val kzgProofSidecar: ByteArray
+  val kzgProofSidecar: ByteArray,
 ) {
   companion object {
     fun fromDomainObject(
-      request: BlobCompressionProofRequest
+      request: BlobCompressionProofRequest,
     ): BlobCompressionProofJsonRequest {
       return BlobCompressionProofJsonRequest(
         compressedData = request.compressedData,
         conflationOrder = BlockIntervals(
           startingBlockNumber = request.conflations.first().startBlockNumber,
-          upperBoundaries = request.conflations.map { it.endBlockNumber }
+          upperBoundaries = request.conflations.map { it.endBlockNumber },
         ),
         prevShnarf = request.prevShnarf,
         parentStateRootHash = request.parentStateRootHash,
@@ -89,7 +89,7 @@ data class BlobCompressionProofJsonRequest(
         expectedShnarf = request.expectedShnarfResult.expectedShnarf,
         commitment = request.commitment,
         kzgProofContract = request.kzgProofContract,
-        kzgProofSidecar = request.kzgProofSideCar
+        kzgProofSidecar = request.kzgProofSideCar,
       )
     }
   }
@@ -152,7 +152,7 @@ data class BlobCompressionProofJsonResponse(
   @JsonProperty("kzgProofSidecar")
   @JsonDeserialize(using = ByteArrayDeserializer::class)
   @JsonSerialize(using = ByteArraySerializer::class)
-  val kzgProofSidecar: ByteArray = ByteArray(0)
+  val kzgProofSidecar: ByteArray = ByteArray(0),
 ) {
 
   fun toDomainObject(): BlobCompressionProof {
@@ -173,7 +173,7 @@ data class BlobCompressionProofJsonResponse(
       verifierID = verifierID,
       commitment = commitment,
       kzgProofContract = kzgProofContract,
-      kzgProofSidecar = kzgProofSidecar
+      kzgProofSidecar = kzgProofSidecar,
     )
   }
 
@@ -235,7 +235,7 @@ data class BlobCompressionProofJsonResponse(
     fun fromJsonString(jsonString: String): BlobCompressionProofJsonResponse {
       return JsonSerialization.proofResponseMapperV1.readValue(
         jsonString,
-        BlobCompressionProofJsonResponse::class.java
+        BlobCompressionProofJsonResponse::class.java,
       )
     }
 
@@ -257,7 +257,7 @@ data class BlobCompressionProofJsonResponse(
         verifierID = compressionProof.verifierID,
         commitment = compressionProof.commitment,
         kzgProofContract = compressionProof.kzgProofContract,
-        kzgProofSidecar = compressionProof.kzgProofSidecar
+        kzgProofSidecar = compressionProof.kzgProofSidecar,
       )
     }
   }

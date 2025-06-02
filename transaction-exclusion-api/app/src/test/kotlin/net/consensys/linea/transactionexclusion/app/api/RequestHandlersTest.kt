@@ -33,27 +33,27 @@ class RequestHandlersTest {
     "timestamp" to "2024-09-05T09:22:52Z",
     "transactionRLP" to defaultRejectedTransaction.transactionRLP.encodeHex(),
     "reasonMessage" to defaultRejectedTransaction.reasonMessage,
-    "overflows" to defaultRejectedTransaction.overflows
+    "overflows" to defaultRejectedTransaction.overflows,
   )
 
   private val mapRequest = JsonRpcRequestMapParams(
     "2.0",
     "1",
     "linea_saveRejectedTransactionV1",
-    mapParams
+    mapParams,
   )
 
   private val listRequest = JsonRpcRequestListParams(
     "2.0",
     "1",
     "linea_saveRejectedTransactionV1",
-    listOf(mapParams)
+    listOf(mapParams),
   )
 
   @BeforeEach
   fun beforeEach() {
     transactionExclusionServiceMock = mock<TransactionExclusionServiceV1>(
-      defaultAnswer = Mockito.RETURNS_DEEP_STUBS
+      defaultAnswer = Mockito.RETURNS_DEEP_STUBS,
     )
   }
 
@@ -62,13 +62,13 @@ class RequestHandlersTest {
     val request = JsonRpcRequestMapParams("", "", "", emptyMap<String, Any>())
 
     val saveRequestHandlerV1 = SaveRejectedTransactionRequestHandlerV1(
-      transactionExclusionServiceMock
+      transactionExclusionServiceMock,
     )
 
     val result = saveRequestHandlerV1.invoke(
       user = null,
       request = request,
-      requestJson = JsonObject()
+      requestJson = JsonObject(),
     ).get()
 
     Assertions.assertEquals(
@@ -76,10 +76,10 @@ class RequestHandlersTest {
         JsonRpcErrorResponse.invalidParams(
           request.id,
           "Missing [txRejectionStage,timestamp,reasonMessage,transactionRLP,overflows] " +
-            "from the given request params"
-        )
+            "from the given request params",
+        ),
       ),
-      result
+      result,
     )
   }
 
@@ -88,23 +88,23 @@ class RequestHandlersTest {
     val request = JsonRpcRequestListParams("", "", "", emptyList())
 
     val saveRequestHandlerV1 = SaveRejectedTransactionRequestHandlerV1(
-      transactionExclusionServiceMock
+      transactionExclusionServiceMock,
     )
 
     val result = saveRequestHandlerV1.invoke(
       user = null,
       request = request,
-      requestJson = JsonObject()
+      requestJson = JsonObject(),
     ).get()
 
     Assertions.assertEquals(
       Err(
         JsonRpcErrorResponse.invalidParams(
           request.id,
-          "The given request params list should have one argument"
-        )
+          "The given request params list should have one argument",
+        ),
       ),
-      result
+      result,
     )
   }
 
@@ -113,23 +113,23 @@ class RequestHandlersTest {
     val request = JsonRpcRequestListParams("", "", "", listOf("invalid_argument"))
 
     val saveRequestHandlerV1 = SaveRejectedTransactionRequestHandlerV1(
-      transactionExclusionServiceMock
+      transactionExclusionServiceMock,
     )
 
     val result = saveRequestHandlerV1.invoke(
       user = null,
       request = request,
-      requestJson = JsonObject()
+      requestJson = JsonObject(),
     ).get()
 
     Assertions.assertEquals(
       Err(
         JsonRpcErrorResponse.invalidParams(
           request.id,
-          "The argument in the request params list should be an object"
-        )
+          "The argument in the request params list should be an object",
+        ),
       ),
-      result
+      result,
     )
   }
 
@@ -138,12 +138,12 @@ class RequestHandlersTest {
     whenever(transactionExclusionServiceMock.saveRejectedTransaction(any()))
       .thenReturn(
         SafeFuture.completedFuture(
-          Ok(TransactionExclusionServiceV1.SaveRejectedTransactionStatus.SAVED)
-        )
+          Ok(TransactionExclusionServiceV1.SaveRejectedTransactionStatus.SAVED),
+        ),
       )
 
     val saveRequestHandlerV1 = SaveRejectedTransactionRequestHandlerV1(
-      transactionExclusionServiceMock
+      transactionExclusionServiceMock,
     )
 
     val expectedResult = JsonObject()
@@ -156,7 +156,7 @@ class RequestHandlersTest {
     val result = saveRequestHandlerV1.invoke(
       user = null,
       request = mapRequest,
-      requestJson = JsonObject()
+      requestJson = JsonObject(),
     ).get()
 
     Assertions.assertEquals(expectedResult, result.get())
@@ -167,12 +167,12 @@ class RequestHandlersTest {
     whenever(transactionExclusionServiceMock.saveRejectedTransaction(any()))
       .thenReturn(
         SafeFuture.completedFuture(
-          Ok(TransactionExclusionServiceV1.SaveRejectedTransactionStatus.SAVED)
-        )
+          Ok(TransactionExclusionServiceV1.SaveRejectedTransactionStatus.SAVED),
+        ),
       )
 
     val saveRequestHandlerV1 = SaveRejectedTransactionRequestHandlerV1(
-      transactionExclusionServiceMock
+      transactionExclusionServiceMock,
     )
 
     val expectedResult = JsonObject()
@@ -185,7 +185,7 @@ class RequestHandlersTest {
     val result = saveRequestHandlerV1.invoke(
       user = null,
       request = listRequest,
-      requestJson = JsonObject()
+      requestJson = JsonObject(),
     ).get()
 
     Assertions.assertEquals(expectedResult, result.get())
@@ -196,12 +196,12 @@ class RequestHandlersTest {
     whenever(transactionExclusionServiceMock.saveRejectedTransaction(any()))
       .thenReturn(
         SafeFuture.completedFuture(
-          Ok(TransactionExclusionServiceV1.SaveRejectedTransactionStatus.SAVED)
-        )
+          Ok(TransactionExclusionServiceV1.SaveRejectedTransactionStatus.SAVED),
+        ),
       )
 
     val saveTxRequestHandlerV1 = SaveRejectedTransactionRequestHandlerV1(
-      transactionExclusionServiceMock
+      transactionExclusionServiceMock,
     )
 
     val expectedResult = JsonObject()
@@ -214,7 +214,7 @@ class RequestHandlersTest {
     val result = saveTxRequestHandlerV1.invoke(
       user = null,
       request = mapRequest,
-      requestJson = JsonObject()
+      requestJson = JsonObject(),
     ).get()
 
     Assertions.assertEquals(expectedResult, result.get())
@@ -225,12 +225,12 @@ class RequestHandlersTest {
     whenever(transactionExclusionServiceMock.saveRejectedTransaction(any()))
       .thenReturn(
         SafeFuture.completedFuture(
-          Ok(TransactionExclusionServiceV1.SaveRejectedTransactionStatus.DUPLICATE_ALREADY_SAVED_BEFORE)
-        )
+          Ok(TransactionExclusionServiceV1.SaveRejectedTransactionStatus.DUPLICATE_ALREADY_SAVED_BEFORE),
+        ),
       )
 
     val saveTxRequestHandlerV1 = SaveRejectedTransactionRequestHandlerV1(
-      transactionExclusionServiceMock
+      transactionExclusionServiceMock,
     )
 
     val expectedResult = JsonObject()
@@ -243,7 +243,7 @@ class RequestHandlersTest {
     val result = saveTxRequestHandlerV1.invoke(
       user = null,
       request = mapRequest,
-      requestJson = JsonObject()
+      requestJson = JsonObject(),
     ).get()
 
     Assertions.assertEquals(expectedResult, result.get())
@@ -257,14 +257,14 @@ class RequestHandlersTest {
           Err(
             TransactionExclusionError(
               ErrorType.SERVER_ERROR,
-              "error for unit test"
-            )
-          )
-        )
+              "error for unit test",
+            ),
+          ),
+        ),
       )
 
     val saveTxRequestHandlerV1 = SaveRejectedTransactionRequestHandlerV1(
-      transactionExclusionServiceMock
+      transactionExclusionServiceMock,
     )
 
     val expectedResult = JsonRpcErrorResponse(
@@ -272,15 +272,15 @@ class RequestHandlersTest {
       jsonRpcError(
         TransactionExclusionError(
           ErrorType.SERVER_ERROR,
-          "error for unit test"
-        )
-      )
+          "error for unit test",
+        ),
+      ),
     )
 
     val result = saveTxRequestHandlerV1.invoke(
       user = null,
       request = mapRequest,
-      requestJson = JsonObject()
+      requestJson = JsonObject(),
     ).get()
 
     Assertions.assertEquals(expectedResult, result.getError())
@@ -291,23 +291,23 @@ class RequestHandlersTest {
     val request = JsonRpcRequestListParams("", "", "", emptyList())
 
     val getRequestHandlerV1 = GetTransactionExclusionStatusRequestHandlerV1(
-      transactionExclusionServiceMock
+      transactionExclusionServiceMock,
     )
 
     val result = getRequestHandlerV1.invoke(
       user = null,
       request = request,
-      requestJson = JsonObject()
+      requestJson = JsonObject(),
     ).get()
 
     Assertions.assertEquals(
       Err(
         JsonRpcErrorResponse.invalidParams(
           request.id,
-          "The given request params list should have one argument"
-        )
+          "The given request params list should have one argument",
+        ),
       ),
-      result
+      result,
     )
   }
 
@@ -316,23 +316,23 @@ class RequestHandlersTest {
     val request = JsonRpcRequestListParams("", "", "", listOf("0x123"))
 
     val getRequestHandlerV1 = GetTransactionExclusionStatusRequestHandlerV1(
-      transactionExclusionServiceMock
+      transactionExclusionServiceMock,
     )
 
     val result = getRequestHandlerV1.invoke(
       user = null,
       request = request,
-      requestJson = JsonObject()
+      requestJson = JsonObject(),
     ).get()
 
     Assertions.assertEquals(
       Err(
         JsonRpcErrorResponse.invalidParams(
           request.id,
-          "Hex string of transaction hash cannot be parsed: Must have an even length"
-        )
+          "Hex string of transaction hash cannot be parsed: Must have an even length",
+        ),
       ),
-      result
+      result,
     )
   }
 
@@ -341,8 +341,8 @@ class RequestHandlersTest {
     whenever(transactionExclusionServiceMock.getTransactionExclusionStatus(any()))
       .thenReturn(
         SafeFuture.completedFuture(
-          Ok(defaultRejectedTransaction)
-        )
+          Ok(defaultRejectedTransaction),
+        ),
       )
 
     val request = JsonRpcRequestListParams(
@@ -350,12 +350,12 @@ class RequestHandlersTest {
       "1",
       "linea_getTransactionExclusionStatusV1",
       listOf(
-        defaultRejectedTransaction.transactionInfo.hash.encodeHex()
-      )
+        defaultRejectedTransaction.transactionInfo.hash.encodeHex(),
+      ),
     )
 
     val getTxStatusRequestHandlerV1 = GetTransactionExclusionStatusRequestHandlerV1(
-      transactionExclusionServiceMock
+      transactionExclusionServiceMock,
     )
 
     val expectedResult = JsonObject()
@@ -373,7 +373,7 @@ class RequestHandlersTest {
     val result = getTxStatusRequestHandlerV1.invoke(
       user = null,
       request = request,
-      requestJson = JsonObject()
+      requestJson = JsonObject(),
     ).get()
 
     Assertions.assertEquals(expectedResult, result.get())
@@ -389,12 +389,12 @@ class RequestHandlersTest {
       "1",
       "linea_getTransactionExclusionStatusV1",
       listOf(
-        defaultRejectedTransaction.transactionInfo.hash.encodeHex()
-      )
+        defaultRejectedTransaction.transactionInfo.hash.encodeHex(),
+      ),
     )
 
     val getTxStatusRequestHandlerV1 = GetTransactionExclusionStatusRequestHandlerV1(
-      transactionExclusionServiceMock
+      transactionExclusionServiceMock,
     )
 
     val expectedResult = JsonRpcSuccessResponse(request.id, null)
@@ -402,7 +402,7 @@ class RequestHandlersTest {
     val result = getTxStatusRequestHandlerV1.invoke(
       user = null,
       request = request,
-      requestJson = JsonObject()
+      requestJson = JsonObject(),
     ).get()
 
     Assertions.assertEquals(expectedResult, result.get())
@@ -416,10 +416,10 @@ class RequestHandlersTest {
           Err(
             TransactionExclusionError(
               ErrorType.SERVER_ERROR,
-              "error for unit test"
-            )
-          )
-        )
+              "error for unit test",
+            ),
+          ),
+        ),
       )
 
     val request = JsonRpcRequestListParams(
@@ -427,12 +427,12 @@ class RequestHandlersTest {
       "1",
       "linea_getTransactionExclusionStatusV1",
       listOf(
-        defaultRejectedTransaction.transactionInfo.hash.encodeHex()
-      )
+        defaultRejectedTransaction.transactionInfo.hash.encodeHex(),
+      ),
     )
 
     val getTxStatusRequestHandlerV1 = GetTransactionExclusionStatusRequestHandlerV1(
-      transactionExclusionServiceMock
+      transactionExclusionServiceMock,
     )
 
     val expectedResult = JsonRpcErrorResponse(
@@ -440,15 +440,15 @@ class RequestHandlersTest {
       jsonRpcError(
         TransactionExclusionError(
           ErrorType.SERVER_ERROR,
-          "error for unit test"
-        )
-      )
+          "error for unit test",
+        ),
+      ),
     )
 
     val result = getTxStatusRequestHandlerV1.invoke(
       user = null,
       request = request,
-      requestJson = JsonObject()
+      requestJson = JsonObject(),
     ).get()
 
     Assertions.assertEquals(expectedResult, result.getError())

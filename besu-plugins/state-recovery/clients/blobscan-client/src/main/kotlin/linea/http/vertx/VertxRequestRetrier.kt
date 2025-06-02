@@ -17,15 +17,15 @@ class VertxRequestRetrier(
     backoffDelay = requestRetryConfig.backoffDelay,
     maxRetries = requestRetryConfig.maxRetries?.toInt(),
     timeout = requestRetryConfig.timeout,
-    vertx = vertx
-  )
+    vertx = vertx,
+  ),
 ) : VertxHttpRequestSender {
   override fun makeRequest(request: HttpRequest<Buffer>): SafeFuture<HttpResponse<Buffer>> {
     return asyncRetryer
       .retry(
         stopRetriesPredicate = { response: HttpResponse<Buffer> ->
           response.statusCode() !in retryableErrorCodes
-        }
+        },
       ) {
         requestSender.makeRequest(request)
       }

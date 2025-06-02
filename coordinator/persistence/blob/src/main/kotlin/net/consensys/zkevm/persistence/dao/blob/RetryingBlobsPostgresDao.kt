@@ -7,7 +7,7 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 class RetryingBlobsPostgresDao(
   private val delegate: BlobsPostgresDao,
-  private val persistenceRetryer: PersistenceRetryer
+  private val persistenceRetryer: PersistenceRetryer,
 ) : BlobsDao {
   override fun saveNewBlob(blobRecord: BlobRecord): SafeFuture<Unit> {
     return persistenceRetryer.retryQuery({ delegate.saveNewBlob(blobRecord) })
@@ -15,12 +15,12 @@ class RetryingBlobsPostgresDao(
 
   override fun getConsecutiveBlobsFromBlockNumber(
     startingBlockNumberInclusive: ULong,
-    endBlockCreatedBefore: Instant
+    endBlockCreatedBefore: Instant,
   ): SafeFuture<List<BlobRecord>> {
     return persistenceRetryer.retryQuery({
       delegate.getConsecutiveBlobsFromBlockNumber(
         startingBlockNumberInclusive,
-        endBlockCreatedBefore
+        endBlockCreatedBefore,
       )
     })
   }

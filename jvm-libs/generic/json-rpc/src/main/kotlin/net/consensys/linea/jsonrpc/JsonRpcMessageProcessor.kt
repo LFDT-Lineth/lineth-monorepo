@@ -34,14 +34,15 @@ typealias JsonRpcRequestParser =
 
 typealias JsonRpcRequestHandler =
   (user: User?, jsonRpcRequest: JsonRpcRequest, requestJson: JsonObject) -> Future<
-    Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>>
+    Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>,
+    >
 
 fun Result<*, *>.isSuccess(): Boolean = this is Ok
 
 private data class RequestContext(
   val id: Any,
   val method: String,
-  val result: Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>
+  val result: Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>,
 )
 
 /**
@@ -54,7 +55,7 @@ class JsonRpcMessageProcessor(
   private val requestParser: JsonRpcRequestParser = Companion::parseRequest,
   private val log: Logger = LogManager.getLogger(JsonRpcMessageProcessor::class.java),
   private val responseResultObjectMapper: ObjectMapper = jacksonObjectMapper().registerModules(VertxModule()),
-  private val rpcEnvelopeObjectMapper: ObjectMapper = jacksonObjectMapper()
+  private val rpcEnvelopeObjectMapper: ObjectMapper = jacksonObjectMapper(),
 ) : JsonRpcMessageHandler {
   init {
     DatabindCodec.mapper().registerKotlinModule()
@@ -65,27 +66,27 @@ class JsonRpcMessageProcessor(
 
   private fun handleAndMeasureRequestProcessing(
     user: User?,
-    requestJsonStr: String
+    requestJsonStr: String,
   ): Future<String> {
     return Future.fromCompletionStage(
       metricsFacade.createDynamicTagTimer<Triple<String?, String, Boolean>>(
         name = "jsonrpc.processing.whole",
         description = "Processing of JSON-RPC message: Deserialization + Business Logic + Serialization",
         tagKey = "method",
-        tagValueExtractorOnError = { "METHOD_PROCESSING_ERROR" }
+        tagValueExtractorOnError = { "METHOD_PROCESSING_ERROR" },
       ) {
         it.first!!
       }
         .captureTime(
           handleMessage(
             user = user,
-            requestJsonStr = requestJsonStr
-          ).toCompletionStage().toCompletableFuture()
+            requestJsonStr = requestJsonStr,
+          ).toCompletionStage().toCompletableFuture(),
         )
         .thenApply {
           logResponse(it.third, it.second, requestJsonStr)
           it.second
-        }
+        },
     )
   }
 
@@ -122,14 +123,14 @@ class JsonRpcMessageProcessor(
     return handleMessageRequests(
       user = user,
       parsingResults = requestParsingResults,
-      methodTag = methodTag
+      methodTag = methodTag,
     )
   }
 
   private fun handleMessageRequests(
     user: User?,
     parsingResults: List<Result<Pair<JsonRpcRequest, JsonObject>, JsonRpcErrorResponse>>,
-    methodTag: String
+    methodTag: String,
   ): Future<Triple<String?, String, Boolean>> {
     var allSuccessful = true
     val executionFutures: List<Future<RequestContext>> =
@@ -143,14 +144,14 @@ class JsonRpcMessageProcessor(
               "Failed processing JSON-RPC request. error: {}",
               // NullPointerException have null message, at least log the class name
               error.message ?: error::class.java,
-              error
+              error,
             )
             Future.succeededFuture(
               RequestContext(
                 rpc.id,
                 rpc.method,
-                Err(JsonRpcErrorResponse.internalError(rpc.id, null))
-              )
+                Err(JsonRpcErrorResponse.internalError(rpc.id, null)),
+              ),
             )
           }
       }
@@ -175,7 +176,7 @@ class JsonRpcMessageProcessor(
           } else {
             metricsFacade.createSimpleTimer<String>(
               name = "jsonrpc.serialization.response.bulk",
-              description = "Time of bulk json response serialization"
+              description = "Time of bulk json response serialization",
             ).captureTime { responses.joinToString(",", "[", "]") }
           }
         Future.succeededFuture(Triple(methodTag, finalResponseJsonStr, allSuccessful))
@@ -183,13 +184,13 @@ class JsonRpcMessageProcessor(
   }
 
   private fun measureRequestParsing(
-    json: Any
+    json: Any,
   ): Result<Pair<JsonRpcRequest, JsonObject>, JsonRpcErrorResponse> {
     return metricsFacade.createDynamicTagTimer(
       name = "jsonrpc.serialization.request",
       description = "json-rpc method parsing",
       tagKey = "method",
-      tagValueExtractorOnError = { "METHOD_PARSE_ERROR" }
+      tagValueExtractorOnError = { "METHOD_PARSE_ERROR" },
     ) {
         parsingResult: Result<Pair<JsonRpcRequest, JsonObject>, JsonRpcErrorResponse> ->
       parsingResult.map { it.first.method }.recover { "METHOD_PARSE_ERROR" }.value
@@ -200,7 +201,7 @@ class JsonRpcMessageProcessor(
     val timerCapture = metricsFacade.createSimpleTimer<String>(
       name = "jsonrpc.serialization.response",
       description = "Time of json response serialization",
-      tags = listOf(Tag("method", requestContext.method))
+      tags = listOf(Tag("method", requestContext.method)),
     )
 
     return timerCapture.captureTime {
@@ -215,12 +216,12 @@ class JsonRpcMessageProcessor(
   private fun handleAndMeasureRequestHandling(
     user: User?,
     jsonRpcRequest: JsonRpcRequest,
-    requestJson: JsonObject
+    requestJson: JsonObject,
   ): Future<Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>> {
     return metricsFacade.createSimpleTimer<Future<Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>>>(
       name = "jsonrpc.processing.logic",
       description = "Processing of a particular JRPC method's logic without SerDes",
-      tags = listOf(Tag("method", jsonRpcRequest.method))
+      tags = listOf(Tag("method", jsonRpcRequest.method)),
     )
       .captureTime { callRequestHandlerAndCatchError(user, jsonRpcRequest, requestJson) }
       .onComplete { result: AsyncResult<Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>> ->
@@ -230,8 +231,8 @@ class JsonRpcMessageProcessor(
           description = "Counting the JSON rpc request with result and method",
           tags = listOf(
             Tag("success", success.toString()),
-            Tag("method", jsonRpcRequest.method)
-          )
+            Tag("method", jsonRpcRequest.method),
+          ),
         ).increment()
       }
   }
@@ -239,7 +240,7 @@ class JsonRpcMessageProcessor(
   private fun callRequestHandlerAndCatchError(
     user: User?,
     jsonRpcRequest: JsonRpcRequest,
-    requestJson: JsonObject
+    requestJson: JsonObject,
   ): Future<Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>> {
     val promise = Promise.promise<Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>>()
 

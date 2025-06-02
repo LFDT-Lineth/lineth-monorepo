@@ -38,12 +38,12 @@ class JsonRpcMessageProcessorTest {
 
   @Test
   fun `handleMessage should catch exceptions and return internal error`(
-    testContext: VertxTestContext
+    testContext: VertxTestContext,
   ) {
     val request = buildJsonRpcRequest(method = "eth_blockNumber")
     val processor = JsonRpcMessageProcessor(
       { _, _, _ -> throw RuntimeException("Something went wrong") },
-      metricsFacade
+      metricsFacade,
     )
     processor(null, request.toString())
       .onComplete(
@@ -51,16 +51,16 @@ class JsonRpcMessageProcessorTest {
           assertError(
             response,
             JsonObject.mapFrom(JsonRpcErrorCode.INTERNAL_ERROR.toErrorObject()),
-            request
+            request,
           )
           testContext.completeNow()
-        }
+        },
       )
   }
 
   @Test
   fun `handleMessage should return error when message can't be deserialized`(
-    testContext: VertxTestContext
+    testContext: VertxTestContext,
   ) {
     val jsonStr = "{ bad json }"
     val future = processor(null, jsonStr)
@@ -69,13 +69,13 @@ class JsonRpcMessageProcessorTest {
       testContext.succeeding { response ->
         assertError(response, expectedError)
         testContext.completeNow()
-      }
+      },
     )
   }
 
   @Test
   fun `handleMessage should return error when message contains invalid JSON-RPC request`(
-    testContext: VertxTestContext
+    testContext: VertxTestContext,
   ) {
     val jsonStr = Json.encode(JsonArray().add(JsonObject()))
     val future = processor(null, jsonStr)
@@ -83,22 +83,22 @@ class JsonRpcMessageProcessorTest {
       testContext.succeeding { response ->
         assertError(
           response,
-          JsonObject.mapFrom(JsonRpcErrorCode.INVALID_REQUEST.toErrorObject())
+          JsonObject.mapFrom(JsonRpcErrorCode.INVALID_REQUEST.toErrorObject()),
         )
         testContext.completeNow()
-      }
+      },
     )
   }
 
   @Test
   fun `handleMessage bulk should return error when one message is invalid JSON-RPC request`(
-    testContext: VertxTestContext
+    testContext: VertxTestContext,
   ) {
     val requests =
       listOf(
         buildJsonRpcRequest(id = 1, "eth_blockNumber"),
         JsonObject().put("invalid_key", "any value"),
-        buildJsonRpcRequest(id = 2, "eth_getBlockByNumber", "latest")
+        buildJsonRpcRequest(id = 2, "eth_getBlockByNumber", "latest"),
       )
     val jsonStr = Json.encode(JsonArray(requests))
 
@@ -107,16 +107,16 @@ class JsonRpcMessageProcessorTest {
         testContext.succeeding { response ->
           assertError(
             response,
-            JsonObject.mapFrom(JsonRpcErrorCode.INVALID_REQUEST.toErrorObject())
+            JsonObject.mapFrom(JsonRpcErrorCode.INVALID_REQUEST.toErrorObject()),
           )
           testContext.completeNow()
-        }
+        },
       )
   }
 
   @Test
   fun `handleMessage should execute single JSON-RPC request and return success response`(
-    testContext: VertxTestContext
+    testContext: VertxTestContext,
   ) {
     val request = buildJsonRpcRequest(method = "eth_blockNumber")
     processor(null, request.toString())
@@ -124,18 +124,18 @@ class JsonRpcMessageProcessorTest {
         testContext.succeeding { response ->
           assertResult(response, JsonObject(), request)
           testContext.completeNow()
-        }
+        },
       )
   }
 
   @Test
   fun `handleMessage should execute bulk JSON-RPC requests and return success response`(
-    testContext: VertxTestContext
+    testContext: VertxTestContext,
   ) {
     val requests =
       listOf(
         buildJsonRpcRequest(id = 1, "read_value"),
-        buildJsonRpcRequest(id = 2, "update_value", "latest")
+        buildJsonRpcRequest(id = 2, "update_value", "latest"),
       )
     val jsonStr = Json.encode(JsonArray(requests))
 
@@ -146,7 +146,7 @@ class JsonRpcMessageProcessorTest {
           assertResult(responses.getJsonObject(0).toString(), JsonObject(), requests[0])
           assertResult(responses.getJsonObject(1).toString(), JsonObject(), requests[1])
           testContext.completeNow()
-        }
+        },
       )
   }
 
@@ -158,9 +158,9 @@ class JsonRpcMessageProcessorTest {
             Err(
               JsonRpcErrorResponse(
                 jsonRpcRequest.id,
-                JsonRpcError.invalidMethodParameter("Required argument missing")
-              )
-            )
+                JsonRpcError.invalidMethodParameter("Required argument missing"),
+              ),
+            ),
           )
 
         -100 -> Future.failedFuture(Exception("An internal bug"))
@@ -171,7 +171,7 @@ class JsonRpcMessageProcessorTest {
 
   @Test
   fun `handleMessage should return error when any of the requests fail`(
-    testContext: VertxTestContext
+    testContext: VertxTestContext,
   ) {
     val requests =
       listOf(
@@ -181,7 +181,7 @@ class JsonRpcMessageProcessorTest {
         buildJsonRpcRequest(id = -100, "update_value", "latest"),
         buildJsonRpcRequest(id = 4, "update_value", "latest"),
         buildJsonRpcRequest(id = 5, "read_value"),
-        buildJsonRpcRequest(id = 6, "update_value", "latest")
+        buildJsonRpcRequest(id = 6, "update_value", "latest"),
       )
 
     val jsonStr = Json.encode(JsonArray(requests))
@@ -196,18 +196,18 @@ class JsonRpcMessageProcessorTest {
           assertError(
             responses.getJsonObject(1).toString(),
             JsonObject.mapFrom(
-              JsonRpcError.invalidMethodParameter("Required argument missing")
+              JsonRpcError.invalidMethodParameter("Required argument missing"),
             ),
-            requests[1]
+            requests[1],
           )
           assertResult(responses.getJsonObject(2).toString(), JsonObject(), requests[2])
           assertError(
             responses.getJsonObject(3).toString(),
             JsonObject.mapFrom(JsonRpcError.internalError()),
-            requests[3]
+            requests[3],
           )
           testContext.completeNow()
-        }
+        },
       )
   }
 
@@ -222,7 +222,7 @@ class JsonRpcMessageProcessorTest {
     val bulkRequests1 =
       listOf(
         buildJsonRpcRequest(id = 1, "read_value"),
-        buildJsonRpcRequest(id = 2, "update_value", "latest")
+        buildJsonRpcRequest(id = 2, "update_value", "latest"),
       )
     val bulkRequests2 =
       listOf(
@@ -232,7 +232,7 @@ class JsonRpcMessageProcessorTest {
         buildJsonRpcRequest(id = -100, "update_value", "latest"),
         buildJsonRpcRequest(id = 4, "update_value", "latest"),
         buildJsonRpcRequest(id = 5, "read_value"),
-        buildJsonRpcRequest(id = 6, "update_value", "latest")
+        buildJsonRpcRequest(id = 6, "update_value", "latest"),
       )
     val singleAsBulk = listOf(buildJsonRpcRequest(id = 10, "read_value"))
 
@@ -257,26 +257,26 @@ class JsonRpcMessageProcessorTest {
     assertThat(
       meterRegistry
         .counter("jsonrpc.counter", "method", "read_value", "success", "true")
-        .count()
+        .count(),
     )
       .isEqualTo(5.0)
     assertThat(
       meterRegistry
         .counter("jsonrpc.counter", "method", "read_value", "success", "false")
-        .count()
+        .count(),
     )
       .isEqualTo(1.0)
 
     assertThat(
       meterRegistry
         .counter("jsonrpc.counter", "method", "update_value", "success", "true")
-        .count()
+        .count(),
     )
       .isEqualTo(5.0)
     assertThat(
       meterRegistry
         .counter("jsonrpc.counter", "method", "update_value", "success", "false")
-        .count()
+        .count(),
     )
       .isEqualTo(3.0)
 
@@ -289,15 +289,15 @@ class JsonRpcMessageProcessorTest {
     assertThat(meterRegistry.timer("jsonrpc.serialization.request", "method", "read_value").count())
       .isEqualTo(6)
     assertThat(
-      meterRegistry.timer("jsonrpc.serialization.request", "method", "update_value").count()
+      meterRegistry.timer("jsonrpc.serialization.request", "method", "update_value").count(),
     )
       .isEqualTo(8)
     assertThat(
-      meterRegistry.timer("jsonrpc.serialization.response", "method", "read_value").count()
+      meterRegistry.timer("jsonrpc.serialization.response", "method", "read_value").count(),
     )
       .isEqualTo(6)
     assertThat(
-      meterRegistry.timer("jsonrpc.serialization.response", "method", "update_value").count()
+      meterRegistry.timer("jsonrpc.serialization.response", "method", "update_value").count(),
     )
       .isEqualTo(8)
 
@@ -307,7 +307,7 @@ class JsonRpcMessageProcessorTest {
   private fun buildJsonRpcRequest(
     id: Int = 1,
     method: String = "eth_blockNumber",
-    vararg params: Any
+    vararg params: Any,
   ): JsonObject {
     return JsonObject()
       .put("jsonrpc", "2.0")
@@ -319,7 +319,7 @@ class JsonRpcMessageProcessorTest {
   private fun assertResult(
     responseStr: String,
     expectedResult: JsonObject,
-    originalRequest: JsonObject
+    originalRequest: JsonObject,
   ) {
     val response = JsonObject(responseStr)
     assertThat(response.getValue("id")).isEqualTo(originalRequest.getValue("id"))
@@ -330,7 +330,7 @@ class JsonRpcMessageProcessorTest {
   private fun assertError(
     responseStr: String,
     expectedError: Any,
-    originalRequest: JsonObject? = null
+    originalRequest: JsonObject? = null,
   ) {
     val response = JsonObject(responseStr)
     originalRequest?.let {

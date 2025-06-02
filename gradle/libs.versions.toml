@@ -2,7 +2,7 @@
 docker = { id = "com.avast.gradle.docker-compose", version = "0.17.7" }
 web3j = { id = "org.web3j", version.ref = "web3j" }
 web3jSolidity = { id = "org.web3j.solidity", version = "0.5.0" }
-spotless = { id = "com.diffplug.spotless", version = "6.16.0" } # TODO in later ticket - Update to >=6.25.0, which breaks the CI
+spotless = { id = "com.diffplug.spotless", version = "6.25.0" }
 jreleaser = {id = "org.jreleaser", version = "1.15.0"}
 dependencyLicenseReport = { id = "com.github.jk1.dependency-license-report", version = "2.9" }
 lombok = { id = "io.freefair.lombok", version = "8.6" }
@@ -38,7 +38,7 @@ jackson = "2.19.0"
 jna = "5.14.0"
 kotlinResult = "1.1.16"
 kotlinxDatetime = "0.6.2"
-ktlint = "0.47.0"
+ktlint = "0.50.0"
 lineaKotlin = "0.1.0"
 log4j = "2.24.1"
 micrometer = "1.8.4"

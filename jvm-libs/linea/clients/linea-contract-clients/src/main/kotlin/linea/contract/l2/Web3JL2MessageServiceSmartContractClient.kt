@@ -31,7 +31,7 @@ class Web3JL2MessageServiceSmartContractClient(
   private val contractAddress: String,
   private val web3jContractHelper: Web3JContractAsyncHelper,
   private val deploymentBlockNumberProvider: ContractDeploymentBlockNumberProvider,
-  private val log: Logger = LogManager.getLogger(Web3JL2MessageServiceSmartContractClient::class.java)
+  private val log: Logger = LogManager.getLogger(Web3JL2MessageServiceSmartContractClient::class.java),
 ) : L2MessageServiceSmartContractClient {
   companion object {
     fun create(
@@ -43,7 +43,7 @@ class Web3JL2MessageServiceSmartContractClient(
       feeHistoryRewardPercentile: Double,
       transactionManager: AsyncFriendlyTransactionManager,
       smartContractErrors: SmartContractErrors,
-      smartContractDeploymentBlockNumber: ULong?
+      smartContractDeploymentBlockNumber: ULong?,
     ): Web3JL2MessageServiceSmartContractClient {
       val gasProvider = EIP1559GasProvider(
         web3jClient = web3jClient,
@@ -51,8 +51,8 @@ class Web3JL2MessageServiceSmartContractClient(
           gasLimit = gasLimit,
           maxFeePerGasCap = maxFeePerGasCap,
           feeHistoryBlockCount = feeHistoryBlockCount,
-          feeHistoryRewardPercentile = feeHistoryRewardPercentile
-        )
+          feeHistoryRewardPercentile = feeHistoryRewardPercentile,
+        ),
       )
       val web3jContractHelper = Web3JContractAsyncHelper(
         contractAddress = contractAddress,
@@ -60,21 +60,21 @@ class Web3JL2MessageServiceSmartContractClient(
         contractGasProvider = gasProvider,
         transactionManager = transactionManager,
         smartContractErrors = smartContractErrors,
-        useEthEstimateGas = true
+        useEthEstimateGas = true,
       )
       val deploymentBlockNumberProvider = smartContractDeploymentBlockNumber
         ?.let { StaticContractDeploymentBlockNumberProvider(it) }
         ?: EventBasedContractDeploymentBlockNumberProvider(
           ethApiClient = Web3jEthApiClient(web3jClient),
           contractAddress = contractAddress,
-          log = LogManager.getLogger(Web3JL2MessageServiceSmartContractClient::class.java)
+          log = LogManager.getLogger(Web3JL2MessageServiceSmartContractClient::class.java),
         )
 
       return Web3JL2MessageServiceSmartContractClient(
         web3j = web3jClient,
         contractAddress = contractAddress,
         web3jContractHelper = web3jContractHelper,
-        deploymentBlockNumberProvider = deploymentBlockNumberProvider
+        deploymentBlockNumberProvider = deploymentBlockNumberProvider,
       )
     }
   }
@@ -89,7 +89,7 @@ class Web3JL2MessageServiceSmartContractClient(
         contractAddress,
         web3j,
         fakeCredentials,
-        StaticGasProvider(BigInteger.ZERO, BigInteger.ZERO)
+        StaticGasProvider(BigInteger.ZERO, BigInteger.ZERO),
       ).apply {
         this.setDefaultBlockParameter(blockParameter.toWeb3j())
       }
@@ -111,7 +111,7 @@ class Web3JL2MessageServiceSmartContractClient(
             log.info(
               "L2 Message Service Smart contract upgraded: prevVersion={} upgradedVersion={}",
               smartContractVersionCache.get(),
-              contractLatestVersion
+              contractLatestVersion,
             )
           }
           smartContractVersionCache.set(contractLatestVersion)
@@ -142,7 +142,7 @@ class Web3JL2MessageServiceSmartContractClient(
 
   override fun getRollingHashByL1MessageNumber(
     block: BlockParameter,
-    l1MessageNumber: ULong
+    l1MessageNumber: ULong,
   ): SafeFuture<ByteArray> {
     return contractClientAtBlock(block, L2MessageService::class.java)
       .l1RollingHashes(l1MessageNumber.toBigInteger())
@@ -153,13 +153,13 @@ class Web3JL2MessageServiceSmartContractClient(
     messageHashes: List<ByteArray>,
     startingMessageNumber: ULong,
     finalMessageNumber: ULong,
-    finalRollingHash: ByteArray
+    finalRollingHash: ByteArray,
   ): SafeFuture<String> {
     return anchorL1L2MessageHashesV2(
       messageHashes = messageHashes,
       startingMessageNumber = startingMessageNumber.toBigInteger(),
       finalMessageNumber = finalMessageNumber.toBigInteger(),
-      finalRollingHash = finalRollingHash
+      finalRollingHash = finalRollingHash,
     )
   }
 
@@ -167,20 +167,20 @@ class Web3JL2MessageServiceSmartContractClient(
     messageHashes: List<ByteArray>,
     startingMessageNumber: BigInteger,
     finalMessageNumber: BigInteger,
-    finalRollingHash: ByteArray
+    finalRollingHash: ByteArray,
   ): SafeFuture<String> {
     val function = buildAnchorL1L2MessageHashesV1(
       messageHashes = messageHashes,
       startingMessageNumber = startingMessageNumber,
       finalMessageNumber = finalMessageNumber,
-      finalRollingHash = finalRollingHash
+      finalRollingHash = finalRollingHash,
     )
 
     return web3jContractHelper
       .sendTransactionAfterEthCallAsync(
         function = function,
         weiValue = BigInteger.ZERO,
-        gasPriceCaps = null
+        gasPriceCaps = null,
       )
       .thenApply { response ->
         response.transactionHash

@@ -28,8 +28,8 @@ private fun validateIsMapOrListParams(request: JsonRpcRequest): Result<JsonRpcRe
     return Err(
       JsonRpcErrorResponse.invalidParams(
         request.id,
-        "params should be either an object or a list"
-      )
+        "params should be either an object or a list",
+      ),
     )
   }
   return Ok(request)
@@ -40,15 +40,15 @@ private fun validateIsListParams(request: JsonRpcRequest): Result<JsonRpcRequest
     return Err(
       JsonRpcErrorResponse.invalidParams(
         request.id,
-        "params should be a list"
-      )
+        "params should be a list",
+      ),
     )
   }
   return Ok(request)
 }
 
 class SaveRejectedTransactionRequestHandlerV1(
-  private val transactionExclusionService: TransactionExclusionServiceV1
+  private val transactionExclusionService: TransactionExclusionServiceV1,
 ) : JsonRpcRequestHandler {
   enum class RequestParams(val paramName: String) {
     TX_REJECTION_STAGE("txRejectionStage"),
@@ -56,7 +56,7 @@ class SaveRejectedTransactionRequestHandlerV1(
     REASON_MESSAGE("reasonMessage"),
     TRANSACTION_RLP("transactionRLP"),
     BLOCK_NUMBER("blockNumber"),
-    OVERFLOWS("overflows")
+    OVERFLOWS("overflows"),
   }
 
   private fun validateMapParamsPresence(requestMapParams: Map<*, *>) {
@@ -68,7 +68,7 @@ class SaveRejectedTransactionRequestHandlerV1(
         if (this.isNotEmpty()) {
           throw IllegalArgumentException(
             "Missing ${this.joinToString(",", "[", "]") { it.paramName }} " +
-              "from the given request params"
+              "from the given request params",
           )
         }
       }
@@ -83,11 +83,11 @@ class SaveRejectedTransactionRequestHandlerV1(
   private fun parseListParamsToRejectedTransaction(requestListParams: List<Any?>): RejectedTransaction {
     if (requestListParams.size != 1) {
       throw IllegalArgumentException(
-        "The given request params list should have one argument"
+        "The given request params list should have one argument",
       )
     } else if (requestListParams.first() !is Map<*, *>) {
       throw IllegalArgumentException(
-        "The argument in the request params list should be an object"
+        "The argument in the request params list should be an object",
       )
     }
     return parseMapParamsToRejectedTransaction(requestListParams[0] as Map<*, *>)
@@ -96,7 +96,7 @@ class SaveRejectedTransactionRequestHandlerV1(
   override fun invoke(
     user: User?,
     request: JsonRpcRequest,
-    requestJson: JsonObject
+    requestJson: JsonObject,
   ): Future<Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>> {
     val rejectedTransaction = try {
       val parsingResult = validateIsMapOrListParams(request).flatMap { validatedRequest ->
@@ -105,7 +105,7 @@ class SaveRejectedTransactionRequestHandlerV1(
             is JsonRpcRequestMapParams -> parseMapParamsToRejectedTransaction(validatedRequest.params)
             is JsonRpcRequestListParams -> parseListParamsToRejectedTransaction(validatedRequest.params)
             else -> throw IllegalStateException(
-              "JsonRpcRequest should be as JsonRpcRequestMapParams or JsonRpcRequestListParams"
+              "JsonRpcRequest should be as JsonRpcRequestMapParams or JsonRpcRequestListParams",
             )
           }
         Ok(parsedRejectedTransaction)
@@ -120,9 +120,9 @@ class SaveRejectedTransactionRequestHandlerV1(
         Err(
           JsonRpcErrorResponse.invalidParams(
             request.id,
-            e.message
-          )
-        )
+            e.message,
+          ),
+        ),
       )
     }
 
@@ -143,12 +143,12 @@ class SaveRejectedTransactionRequestHandlerV1(
 }
 
 class GetTransactionExclusionStatusRequestHandlerV1(
-  private val transactionExclusionService: TransactionExclusionServiceV1
+  private val transactionExclusionService: TransactionExclusionServiceV1,
 ) : JsonRpcRequestHandler {
   private fun parseListParamsToTxHash(requestListParams: List<Any?>): ByteArray {
     if (requestListParams.size != 1) {
       throw IllegalArgumentException(
-        "The given request params list should have one argument"
+        "The given request params list should have one argument",
       )
     }
     return ArgumentParser.getTxHashInRawBytes(requestListParams[0].toString())
@@ -157,7 +157,7 @@ class GetTransactionExclusionStatusRequestHandlerV1(
   override fun invoke(
     user: User?,
     request: JsonRpcRequest,
-    requestJson: JsonObject
+    requestJson: JsonObject,
   ): Future<Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>> {
     val txHash = try {
       val parsingResult = validateIsListParams(request).flatMap { validatedRequest ->
@@ -178,9 +178,9 @@ class GetTransactionExclusionStatusRequestHandlerV1(
         Err(
           JsonRpcErrorResponse.invalidParams(
             request.id,
-            e.message
-          )
-        )
+            e.message,
+          ),
+        ),
       )
     }
 

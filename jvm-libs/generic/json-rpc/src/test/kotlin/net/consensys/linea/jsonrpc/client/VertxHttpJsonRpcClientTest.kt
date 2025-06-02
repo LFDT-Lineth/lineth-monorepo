@@ -87,7 +87,7 @@ class VertxHttpJsonRpcClientTest {
         JsonObject()
           .put("name", "Alice")
           .put("email", "alice@wonderland.io")
-          .put("address", "0xaabbccdd".decodeHex())
+          .put("address", "0xaabbccdd".decodeHex()),
       )
     client.makeRequest(JsonRpcRequestListParams("2.0", 1, "addUser", params)).get()
 
@@ -115,9 +115,9 @@ class VertxHttpJsonRpcClientTest {
           EqualToJsonPattern(
             expectedJsonBody, /*ignoreArrayOrder*/
             false, /*ignoreExtraElements*/
-            false
-          )
-        )
+            false,
+          ),
+        ),
     )
   }
 
@@ -157,7 +157,7 @@ class VertxHttpJsonRpcClientTest {
       JsonObject()
         .put("jsonrpc", "2.0")
         .put("id", "1")
-        .put("result", JsonObject().put("odd", 23).put("even", 10))
+        .put("result", JsonObject().put("odd", 23).put("even", 10)),
     )
 
     client
@@ -172,7 +172,7 @@ class VertxHttpJsonRpcClientTest {
     client
       .makeRequest(
         request = JsonRpcRequestListParams("2.0", 1, "randomNumbers", emptyList()),
-        resultMapper = ::toPrimitiveOrJacksonJsonNode
+        resultMapper = ::toPrimitiveOrJacksonJsonNode,
       )
       .get()
       .also { response ->
@@ -191,7 +191,7 @@ class VertxHttpJsonRpcClientTest {
         |"id": "1",
         |"result": ["a", 2, "c", 4]
         |}
-      """.trimMargin()
+      """.trimMargin(),
     )
 
     client
@@ -206,7 +206,7 @@ class VertxHttpJsonRpcClientTest {
     client
       .makeRequest(
         request = JsonRpcRequestListParams("2.0", 1, "randomNumbers", emptyList()),
-        resultMapper = ::toPrimitiveOrJacksonJsonNode
+        resultMapper = ::toPrimitiveOrJacksonJsonNode,
       )
       .get()
       .also { response ->
@@ -219,7 +219,7 @@ class VertxHttpJsonRpcClientTest {
   @Test
   fun makesRequest_successWithMapper() {
     replyRequestWith(
-      JsonObject().put("jsonrpc", "2.0").put("id", "1").put("result", "some_random_value")
+      JsonObject().put("jsonrpc", "2.0").put("id", "1").put("result", "some_random_value"),
     )
     val resultMapper = { value: Any? -> (value as String).uppercase() }
 
@@ -242,8 +242,8 @@ class VertxHttpJsonRpcClientTest {
           JsonObject()
             .put("code", -32602)
             .put("message", "Invalid params")
-            .put("data", JsonObject().put("k", "v"))
-        )
+            .put("data", JsonObject().put("k", "v")),
+        ),
     )
     val response =
       client.makeRequest(JsonRpcRequestListParams("2.0", 1, "randomNumbers", emptyList())).get()
@@ -253,9 +253,9 @@ class VertxHttpJsonRpcClientTest {
         Err(
           JsonRpcErrorResponse(
             "1",
-            JsonRpcError(-32602, "Invalid params", mapOf("k" to "v"))
-          )
-        )
+            JsonRpcError(-32602, "Invalid params", mapOf("k" to "v")),
+          ),
+        ),
       )
   }
 
@@ -264,7 +264,7 @@ class VertxHttpJsonRpcClientTest {
     replyRequestWith(
       JsonObject()
         .put("jsonrpc", "2.0")
-        .put("error", JsonObject().put("code", -32602).put("message", "Parse Error"))
+        .put("error", JsonObject().put("code", -32602).put("message", "Parse Error")),
     )
     val response =
       client.makeRequest(JsonRpcRequestListParams("2.0", 1, "randomNumbers", emptyList())).get()
@@ -277,18 +277,18 @@ class VertxHttpJsonRpcClientTest {
   @Timeout(15, unit = TimeUnit.SECONDS)
   fun makesRequest_malFormattedJsonResponse() {
     replyRequestWith(
-      JsonObject().put("jsonrpc", "2.0").put("id", "1").put("nonsense", "some_random_value")
+      JsonObject().put("jsonrpc", "2.0").put("id", "1").put("nonsense", "some_random_value"),
     )
 
     assertThat(
       client
         .makeRequest(JsonRpcRequestListParams("2.0", 1, "randomNumbers", emptyList()))
-        .toSafeFuture()
+        .toSafeFuture(),
     )
       .failsWithin(Duration.ofSeconds(14))
       .withThrowableOfType(ExecutionException::class.java)
       .withMessage(
-        "java.lang.IllegalArgumentException: Invalid JSON-RPC response without result or error"
+        "java.lang.IllegalArgumentException: Invalid JSON-RPC response without result or error",
       )
   }
 
@@ -301,7 +301,7 @@ class VertxHttpJsonRpcClientTest {
       vertx.createHttpClient(clientOptions),
       endpoint,
       metricsFacade,
-      log = log
+      log = log,
     )
 
     val request = JsonRpcRequestListParams("2.0", 1, "randomNumbers", emptyList())
@@ -316,7 +316,7 @@ class VertxHttpJsonRpcClientTest {
       eq(endpoint),
       eq(JsonObject.mapFrom(request).encode()),
       any<String>(),
-      any<Throwable>()
+      any<Throwable>(),
     )
   }
 
@@ -329,7 +329,7 @@ class VertxHttpJsonRpcClientTest {
       vertx.createHttpClient(clientOptions),
       endpoint,
       metricsFacade,
-      log = log
+      log = log,
     )
 
     val request = JsonRpcRequestListParams("2.0", 1, "randomNumbers", emptyList())
@@ -344,7 +344,7 @@ class VertxHttpJsonRpcClientTest {
       eq(endpoint),
       eq(JsonObject.mapFrom(request).encode()),
       any<String>(),
-      any<Throwable>()
+      any<Throwable>(),
     )
   }
 
@@ -360,7 +360,7 @@ class VertxHttpJsonRpcClientTest {
     val timer =
       meterRegistry.timer(
         "jsonrpc.request",
-        listOf(Tag.of("method", "randomNumber"), Tag.of("endpoint", "localhost"))
+        listOf(Tag.of("method", "randomNumber"), Tag.of("endpoint", "localhost")),
       )
     assertThat(timer).isNotNull
 
@@ -378,8 +378,8 @@ class VertxHttpJsonRpcClientTest {
         .willReturn(
           ok()
             .withHeader("Content-type", "application/json")
-            .withBody(jsonRpcResponse.toString())
-        )
+            .withBody(jsonRpcResponse.toString()),
+        ),
     )
   }
 
@@ -390,8 +390,8 @@ class VertxHttpJsonRpcClientTest {
         .willReturn(
           status(statusCode)
             .withHeader("Content-type", "text/plain")
-            .apply { if (body != null) withBody(body) }
-        )
+            .apply { if (body != null) withBody(body) },
+        ),
     )
   }
 }

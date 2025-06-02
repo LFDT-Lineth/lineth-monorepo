@@ -8,12 +8,12 @@ import java.net.URL
 
 class GasPriceUpdaterImpl(
   private val httpJsonRpcClientFactory: VertxHttpJsonRpcClientFactory,
-  private val config: Config
+  private val config: Config,
 ) : GasPriceUpdater {
   data class Config(
     val gethEndpoints: List<URL>,
     val besuEndPoints: List<URL>,
-    val retryConfig: RequestRetryConfig
+    val retryConfig: RequestRetryConfig,
   ) {
     init {
       require(gethEndpoints.isNotEmpty() || besuEndPoints.isNotEmpty()) {
@@ -24,23 +24,23 @@ class GasPriceUpdaterImpl(
 
   private val gethGasPriceUpdater: GenericGasPriceUpdater? = createPriceUpdater(
     endpoints = config.gethEndpoints,
-    setMinerGasPriceMethodName = "miner_setGasPrice"
+    setMinerGasPriceMethodName = "miner_setGasPrice",
   )
   private val besuGasPriceUpdater: GenericGasPriceUpdater? = createPriceUpdater(
     endpoints = config.besuEndPoints,
-    setMinerGasPriceMethodName = "miner_setMinGasPrice"
+    setMinerGasPriceMethodName = "miner_setMinGasPrice",
   )
 
   override fun updateMinerGasPrice(gasPrice: ULong): SafeFuture<Unit> {
     return SafeFuture.allOf(
       gethGasPriceUpdater?.updateMinerGasPrice(gasPrice) ?: SafeFuture.COMPLETE,
-      besuGasPriceUpdater?.updateMinerGasPrice(gasPrice) ?: SafeFuture.COMPLETE
+      besuGasPriceUpdater?.updateMinerGasPrice(gasPrice) ?: SafeFuture.COMPLETE,
     ).thenApply {}
   }
 
   private fun createPriceUpdater(
     endpoints: List<URL>,
-    setMinerGasPriceMethodName: String
+    setMinerGasPriceMethodName: String,
   ): GenericGasPriceUpdater? {
     if (endpoints.isEmpty()) return null
 
@@ -48,9 +48,9 @@ class GasPriceUpdaterImpl(
       httpJsonRpcClientFactory = httpJsonRpcClientFactory,
       config = GenericGasPriceUpdater.Config(
         endpoints = endpoints,
-        retryConfig = config.retryConfig
+        retryConfig = config.retryConfig,
       ),
-      setMinerGasPriceMethodName = setMinerGasPriceMethodName
+      setMinerGasPriceMethodName = setMinerGasPriceMethodName,
     )
   }
 }

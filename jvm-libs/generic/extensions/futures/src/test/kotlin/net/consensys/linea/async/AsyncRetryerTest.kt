@@ -29,7 +29,7 @@ class AsyncRetryerTest {
         maxRetries = -1,
         initialDelay = 5.milliseconds,
         timeout = 2.seconds,
-        stopRetriesPredicate = { result -> result == "20" }
+        stopRetriesPredicate = { result -> result == "20" },
       ) {
         callCount++
         SafeFuture.completedFuture("true")
@@ -49,7 +49,7 @@ class AsyncRetryerTest {
         maxRetries = 3,
         initialDelay = 5.milliseconds,
         timeout = 0.seconds,
-        stopRetriesPredicate = { result -> result == "20" }
+        stopRetriesPredicate = { result -> result == "20" },
       ) {
         callCount++
         SafeFuture.completedFuture("true")
@@ -61,7 +61,7 @@ class AsyncRetryerTest {
 
   @Test
   fun `Retryer should retry endlessly until predicate is met when both timeout and maxRetries are null`(
-    vertx: Vertx
+    vertx: Vertx,
   ) {
     val callCount = AtomicInteger(0)
     val expectedResult = "6"
@@ -69,7 +69,7 @@ class AsyncRetryerTest {
       AsyncRetryer.retry(
         vertx = vertx,
         backoffDelay = 5.milliseconds,
-        stopRetriesPredicate = { result -> result == expectedResult }
+        stopRetriesPredicate = { result -> result == expectedResult },
       ) {
         SafeFuture.completedFuture("${callCount.incrementAndGet()}")
       }.get()
@@ -80,14 +80,14 @@ class AsyncRetryerTest {
 
   @Test
   fun `Retryer should retry endlessly until stopRetriesOnErrorPredicate returns true`(
-    vertx: Vertx
+    vertx: Vertx,
   ) {
     val callCount = AtomicInteger(0)
 
     val future = AsyncRetryer.retry(
       vertx = vertx,
       backoffDelay = 5.milliseconds,
-      stopRetriesOnErrorPredicate = { error -> error.message == "stop now" }
+      stopRetriesOnErrorPredicate = { error -> error.message == "stop now" },
     ) {
       if (callCount.incrementAndGet() < 3) {
         SafeFuture.failedFuture<String>(RuntimeException("${callCount.get()}"))
@@ -116,7 +116,7 @@ class AsyncRetryerTest {
   @Test
   fun `Retryer should retry endlessly if predicate is never met when both timeout and maxRetries are null`(
     vertx: Vertx,
-    testContext: VertxTestContext
+    testContext: VertxTestContext,
   ) {
     val callCount = AtomicInteger(0)
     val everPendingFuture =
@@ -143,7 +143,7 @@ class AsyncRetryerTest {
         maxRetries = 3,
         initialDelay = 5.milliseconds,
         timeout = 2.seconds,
-        stopRetriesPredicate = { result -> result == "20" }
+        stopRetriesPredicate = { result -> result == "20" },
       ) {
         callCount++
         SafeFuture.completedFuture("true")
@@ -163,7 +163,7 @@ class AsyncRetryerTest {
         maxRetries = 3,
         initialDelay = 50.nanoseconds,
         timeout = 2.seconds,
-        stopRetriesPredicate = { result -> result == "20" }
+        stopRetriesPredicate = { result -> result == "20" },
       ) {
         callCount++
         SafeFuture.completedFuture("true")
@@ -267,7 +267,7 @@ class AsyncRetryerTest {
         vertx,
         backoffDelay = 5.milliseconds,
         timeout = 60.milliseconds,
-        stopRetriesPredicate = { false } // stop condition will never be met
+        stopRetriesPredicate = { false }, // stop condition will never be met
       ) {
         SafeFuture.completedFuture("${callCount.incrementAndGet()}")
       }

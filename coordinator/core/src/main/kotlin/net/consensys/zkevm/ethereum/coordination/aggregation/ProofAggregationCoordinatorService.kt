@@ -36,32 +36,32 @@ class ProofAggregationCoordinatorService(
   private val proofAggregationClient: ProofAggregationProverClientV2,
   private val aggregationL2StateProvider: AggregationL2StateProvider,
   private val log: Logger = LogManager.getLogger(ProofAggregationCoordinatorService::class.java),
-  private val provenAggregationEndBlockNumberConsumer: Consumer<ULong> = Consumer<ULong> { }
+  private val provenAggregationEndBlockNumberConsumer: Consumer<ULong> = Consumer<ULong> { },
 ) : AggregationHandler, PeriodicPollingService(
   vertx = vertx,
   pollingIntervalMs = config.pollingInterval.inWholeMilliseconds,
-  log = log
+  log = log,
 ) {
   data class Config(
     val pollingInterval: Duration,
-    val proofsLimit: UInt
+    val proofsLimit: UInt,
   )
 
   private val pendingBlobs = ConcurrentLinkedQueue<BlobAndBatchCounters>()
   private val aggregationSizeInBlocksHistogram = metricsFacade.createHistogram(
     category = LineaMetricsCategory.AGGREGATION,
     name = "blocks.size",
-    description = "Number of blocks in each aggregation"
+    description = "Number of blocks in each aggregation",
   )
   private val aggregationSizeInBatchesHistogram = metricsFacade.createHistogram(
     category = LineaMetricsCategory.AGGREGATION,
     name = "batches.size",
-    description = "Number of batches in each aggregation"
+    description = "Number of batches in each aggregation",
   )
   private val aggregationSizeInBlobsHistogram = metricsFacade.createHistogram(
     category = LineaMetricsCategory.AGGREGATION,
     name = "blobs.size",
-    description = "Number of blobs in each aggregation"
+    description = "Number of blobs in each aggregation",
   )
 
   init {
@@ -123,7 +123,7 @@ class ProofAggregationCoordinatorService(
             blobs.size,
             numberOfBatches,
             blobs.size + numberOfBatches.toInt(),
-            blobs.map(BlobAndBatchCounters::blobCounters).toBlockIntervalsString()
+            blobs.map(BlobAndBatchCounters::blobCounters).toBlockIntervalsString(),
           )
         } else {
           log.debug("Found no new blobs for aggregation. nextBlockToPoll={}", nextBlockNumberToPoll)
@@ -157,7 +157,7 @@ class ProofAggregationCoordinatorService(
       ProofIndex(
         startBlockNumber = it.blobCounters.startBlockNumber,
         endBlockNumber = it.blobCounters.endBlockNumber,
-        hash = it.blobCounters.expectedShnarf
+        hash = it.blobCounters.expectedShnarf,
       )
     }
 
@@ -174,7 +174,7 @@ class ProofAggregationCoordinatorService(
           "failed to get parent aggregation l2 message rolling hash: aggregation={} errorMessage={}",
           blobsToAggregate.intervalString(),
           it.message,
-          it
+          it,
         )
       }
       .thenApply { rollingInfo ->
@@ -183,7 +183,7 @@ class ProofAggregationCoordinatorService(
           executionProofs = blockIntervals,
           parentAggregationLastBlockTimestamp = rollingInfo.parentAggregationLastBlockTimestamp,
           parentAggregationLastL1RollingHashMessageNumber = rollingInfo.parentAggregationLastL1RollingHashMessageNumber,
-          parentAggregationLastL1RollingHash = rollingInfo.parentAggregationLastL1RollingHash
+          parentAggregationLastL1RollingHash = rollingInfo.parentAggregationLastL1RollingHash,
         )
       }
       .thenCompose(proofAggregationClient::requestProof)
@@ -192,7 +192,7 @@ class ProofAggregationCoordinatorService(
           "Error getting aggregation proof: aggregation={} errorMessage={}",
           blobsToAggregate.intervalString(),
           it.message,
-          it
+          it,
         )
       }
       .thenCompose { aggregationProof ->
@@ -200,7 +200,7 @@ class ProofAggregationCoordinatorService(
           startBlockNumber = blobsToAggregate.startBlockNumber,
           endBlockNumber = blobsToAggregate.endBlockNumber,
           batchCount = batchCount.toULong(),
-          aggregationProof = aggregationProof
+          aggregationProof = aggregationProof,
         )
         aggregationsRepository
           .saveNewAggregation(aggregation = aggregation)
@@ -212,7 +212,7 @@ class ProofAggregationCoordinatorService(
               "Error saving proven aggregation to DB: aggregation={} errorMessage={}",
               blobsToAggregate.intervalString(),
               it.message,
-              it
+              it,
             )
           }
       }
@@ -236,16 +236,16 @@ class ProofAggregationCoordinatorService(
       targetEndBlockNumbers: List<ULong>,
       metricsFacade: MetricsFacade,
       provenAggregationEndBlockNumberConsumer: Consumer<ULong>,
-      aggregationSizeMultipleOf: UInt
+      aggregationSizeMultipleOf: UInt,
     ): LongRunningService {
       val aggregationCalculatorByDeadline =
         AggregationTriggerCalculatorByDeadline(
           config = AggregationTriggerCalculatorByDeadline.Config(
             aggregationDeadline = aggregationDeadline,
-            aggregationDeadlineDelay = aggregationDeadlineDelay
+            aggregationDeadlineDelay = aggregationDeadlineDelay,
           ),
           clock = Clock.System,
-          latestBlockProvider = latestBlockProvider
+          latestBlockProvider = latestBlockProvider,
         )
       val syncAggregationTriggerCalculators = mutableListOf<SyncAggregationTriggerCalculator>()
       syncAggregationTriggerCalculators
@@ -259,22 +259,22 @@ class ProofAggregationCoordinatorService(
         syncAggregationTrigger = syncAggregationTriggerCalculators,
         deferredAggregationTrigger = listOf(aggregationCalculatorByDeadline),
         metricsFacade = metricsFacade,
-        aggregationSizeMultipleOf = aggregationSizeMultipleOf
+        aggregationSizeMultipleOf = aggregationSizeMultipleOf,
       )
 
       val deadlineCheckRunner = AggregationTriggerCalculatorByDeadlineRunner(
         vertx = vertx,
         config = AggregationTriggerCalculatorByDeadlineRunner.Config(
-          deadlineCheckInterval = deadlineCheckInterval
+          deadlineCheckInterval = deadlineCheckInterval,
         ),
-        aggregationTriggerByDeadline = aggregationCalculatorByDeadline
+        aggregationTriggerByDeadline = aggregationCalculatorByDeadline,
       )
 
       val proofAggregationService = ProofAggregationCoordinatorService(
         vertx = vertx,
         config = Config(
           pollingInterval = aggregationCoordinatorPollingInterval,
-          proofsLimit = maxProofsPerAggregation
+          proofsLimit = maxProofsPerAggregation,
         ),
         metricsFacade = metricsFacade,
         nextBlockNumberToPoll = startBlockNumberInclusive.toLong(),
@@ -284,9 +284,9 @@ class ProofAggregationCoordinatorService(
         proofAggregationClient = proofAggregationClient,
         aggregationL2StateProvider = AggregationL2StateProviderImpl(
           ethApiClient = l2EthApiClient,
-          messageService = l2MessageService
+          messageService = l2MessageService,
         ),
-        provenAggregationEndBlockNumberConsumer = provenAggregationEndBlockNumberConsumer
+        provenAggregationEndBlockNumberConsumer = provenAggregationEndBlockNumberConsumer,
       )
 
       return LongRunningService.compose(deadlineCheckRunner, proofAggregationService)

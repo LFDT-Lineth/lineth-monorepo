@@ -13,7 +13,7 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.net.URI
 
 class VertxTransactionDetailsClient internal constructor(
-  private val jsonRpcClient: JsonRpcV2Client
+  private val jsonRpcClient: JsonRpcV2Client,
 ) : TransactionDetailsClient {
 
   companion object {
@@ -21,14 +21,14 @@ class VertxTransactionDetailsClient internal constructor(
       jsonRpcClientFactory: JsonRpcClientFactory,
       endpoint: URI,
       retryConfig: RequestRetryConfig,
-      logger: Logger = LogManager.getLogger(TransactionDetailsClient::class.java)
+      logger: Logger = LogManager.getLogger(TransactionDetailsClient::class.java),
     ): VertxTransactionDetailsClient {
       return VertxTransactionDetailsClient(
         jsonRpcClientFactory.createJsonRpcV2Client(
           endpoints = listOf(endpoint),
           retryConfig = retryConfig,
-          log = logger
-        )
+          log = logger,
+        ),
       )
     }
   }
@@ -44,7 +44,7 @@ class VertxTransactionDetailsClient internal constructor(
           ?.toList()
           ?.map { it.asText().decodeHex() }
           ?: emptyList()
-      }
+      },
     )
   }
 }

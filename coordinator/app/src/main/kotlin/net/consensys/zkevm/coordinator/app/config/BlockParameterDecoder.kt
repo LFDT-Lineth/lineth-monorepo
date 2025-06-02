@@ -20,14 +20,14 @@ class BlockParameterDecoder : Decoder<BlockParameter> {
         BlockParameter.parse(node.value)
       }.fold(
         { it.valid() },
-        { ConfigFailure.DecodeError(node, type).invalid() }
+        { ConfigFailure.DecodeError(node, type).invalid() },
       )
 
       is LongNode -> runCatching {
         BlockParameter.fromNumber(node.value)
       }.fold(
         { it.valid() },
-        { ConfigFailure.DecodeError(node, type).invalid() }
+        { ConfigFailure.DecodeError(node, type).invalid() },
       )
 
       else -> ConfigFailure.DecodeError(node, type).invalid()

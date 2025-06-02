@@ -14,12 +14,12 @@ data class TransactionFromL1RecoveredData(
   val to: ByteArray?,
   val value: BigInteger,
   val data: ByteArray?,
-  val accessList: List<AccessTuple>?
+  val accessList: List<AccessTuple>?,
 ) {
 
   data class AccessTuple(
     val address: ByteArray,
-    val storageKeys: List<ByteArray>
+    val storageKeys: List<ByteArray>,
   ) {
     override fun equals(other: Any?): Boolean {
       if (this === other) return true

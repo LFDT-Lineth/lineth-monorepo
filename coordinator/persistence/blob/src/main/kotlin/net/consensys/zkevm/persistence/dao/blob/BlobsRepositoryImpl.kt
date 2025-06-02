@@ -7,7 +7,7 @@ import net.consensys.zkevm.persistence.db.DuplicatedRecordException
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 class BlobsRepositoryImpl(
-  private val blobsDao: BlobsDao
+  private val blobsDao: BlobsDao,
 ) : BlobsRepository {
   override fun saveNewBlob(blobRecord: BlobRecord): SafeFuture<Unit> {
     return blobsDao.saveNewBlob(blobRecord)
@@ -22,11 +22,11 @@ class BlobsRepositoryImpl(
 
   override fun getConsecutiveBlobsFromBlockNumber(
     startingBlockNumberInclusive: Long,
-    endBlockCreatedBefore: Instant
+    endBlockCreatedBefore: Instant,
   ): SafeFuture<List<BlobRecord>> {
     return blobsDao.getConsecutiveBlobsFromBlockNumber(
       startingBlockNumberInclusive.toULong(),
-      endBlockCreatedBefore
+      endBlockCreatedBefore,
     )
   }
 
@@ -39,7 +39,7 @@ class BlobsRepositoryImpl(
   }
 
   override fun deleteBlobsUpToEndBlockNumber(
-    endBlockNumberInclusive: ULong
+    endBlockNumberInclusive: ULong,
   ): SafeFuture<Int> {
     return blobsDao.deleteBlobsUpToEndBlockNumber(endBlockNumberInclusive)
   }

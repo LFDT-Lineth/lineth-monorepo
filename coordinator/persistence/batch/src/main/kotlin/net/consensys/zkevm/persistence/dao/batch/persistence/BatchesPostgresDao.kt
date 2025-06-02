@@ -15,7 +15,7 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 class BatchesPostgresDao(
   connection: SqlClient,
-  private val clock: Clock = Clock.System
+  private val clock: Clock = Clock.System,
 ) : BatchesDao {
   private val log = LogManager.getLogger(this.javaClass.name)
   private val queryLog = SQLQueryLogger(log)
@@ -84,7 +84,7 @@ class BatchesPostgresDao(
       .trimIndent()
 
   private val findHighestConsecutiveEndBlockNumberQuery = connection.preparedQuery(
-    findHighestConsecutiveEndBlockNumberSql
+    findHighestConsecutiveEndBlockNumberSql,
   )
   private val insertQuery = connection.preparedQuery(insertSql)
   private val deleteUptoQuery = connection.preparedQuery(deleteUptoSql)
@@ -98,7 +98,7 @@ class BatchesPostgresDao(
         clock.now().toEpochMilliseconds(),
         startBlockNumber,
         endBlockNumber,
-        batchStatusToDbValue(Batch.Status.Proven)
+        batchStatusToDbValue(Batch.Status.Proven),
       )
     queryLog.log(Level.TRACE, insertSql, params)
     return insertQuery.execute(Tuple.tuple(params))
@@ -109,8 +109,8 @@ class BatchesPostgresDao(
             DuplicatedRecordException(
               "Batch startBlockNumber=$startBlockNumber, endBlockNumber=$endBlockNumber " +
                 "is already persisted!",
-              th
-            )
+              th,
+            ),
           )
         } else {
           Future.failedFuture(th)
@@ -120,7 +120,7 @@ class BatchesPostgresDao(
   }
 
   override fun findHighestConsecutiveEndBlockNumberFromBlockNumber(
-    startingBlockNumberInclusive: Long
+    startingBlockNumberInclusive: Long,
   ): SafeFuture<Long?> {
     val params = listOf(startingBlockNumberInclusive)
     queryLog.log(Level.TRACE, findHighestConsecutiveEndBlockNumberSql, params)
@@ -133,13 +133,13 @@ class BatchesPostgresDao(
   }
 
   override fun deleteBatchesUpToEndBlockNumber(
-    endBlockNumberInclusive: Long
+    endBlockNumberInclusive: Long,
   ): SafeFuture<Int> {
     return deleteUptoQuery
       .execute(
         Tuple.of(
-          endBlockNumberInclusive
-        )
+          endBlockNumberInclusive,
+        ),
       )
       .map { rowSet -> rowSet.rowCount() }
       .toSafeFuture()
@@ -149,8 +149,8 @@ class BatchesPostgresDao(
     return deleteAfterQuery
       .execute(
         Tuple.of(
-          startingBlockNumberInclusive
-        )
+          startingBlockNumberInclusive,
+        ),
       )
       .map { rowSet -> rowSet.rowCount() }
       .toSafeFuture()

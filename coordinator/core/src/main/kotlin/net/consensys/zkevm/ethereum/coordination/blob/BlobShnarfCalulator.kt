@@ -26,7 +26,7 @@ data class ShnarfResult(
   val expectedShnarf: ByteArray,
   val commitment: ByteArray,
   val kzgProofContract: ByteArray,
-  val kzgProofSideCar: ByteArray
+  val kzgProofSideCar: ByteArray,
 ) {
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
@@ -65,13 +65,13 @@ interface BlobShnarfCalculator {
     parentStateRootHash: ByteArray,
     finalStateRootHash: ByteArray,
     prevShnarf: ByteArray,
-    conflationOrder: BlockIntervals
+    conflationOrder: BlockIntervals,
   ): ShnarfResult
 }
 
 class GoBackedBlobShnarfCalculator(
   private val delegate: GoNativeBlobShnarfCalculator,
-  private val metricsFacade: MetricsFacade
+  private val metricsFacade: MetricsFacade,
 ) : BlobShnarfCalculator {
   constructor(version: ShnarfCalculatorVersion, metricsFacade: MetricsFacade) :
     this(GoNativeShnarfCalculatorFactory.getInstance(version), metricsFacade)
@@ -79,7 +79,7 @@ class GoBackedBlobShnarfCalculator(
   private val calculateShnarfTimer: TimerCapture<CalculateShnarfResult> = metricsFacade.createSimpleTimer(
     category = LineaMetricsCategory.BLOB,
     name = "shnarf.calculation",
-    description = "Time taken to calculate the shnarf hash of the given blob"
+    description = "Time taken to calculate the shnarf hash of the given blob",
   )
 
   private val log: Logger = LogManager.getLogger(GoBackedBlobShnarfCalculator::class.java)
@@ -90,7 +90,7 @@ class GoBackedBlobShnarfCalculator(
     parentStateRootHash: ByteArray,
     finalStateRootHash: ByteArray,
     prevShnarf: ByteArray,
-    conflationOrder: BlockIntervals
+    conflationOrder: BlockIntervals,
   ): ShnarfResult {
     val compressedDataB64 = Base64.getEncoder().encodeToString(compressedData)
     log.trace(
@@ -106,7 +106,7 @@ class GoBackedBlobShnarfCalculator(
       parentStateRootHash.encodeHex(),
       finalStateRootHash.encodeHex(),
       prevShnarf.encodeHex(),
-      conflationOrder
+      conflationOrder,
     )
 
     val result = calculateShnarfTimer.captureTime {
@@ -118,7 +118,7 @@ class GoBackedBlobShnarfCalculator(
         prevShnarf = prevShnarf.encodeHex(),
         conflationOrderStartingBlockNumber = conflationOrder.startingBlockNumber.toLong(),
         conflationOrderUpperBoundariesLen = conflationOrder.upperBoundaries.size,
-        conflationOrderUpperBoundaries = conflationOrder.upperBoundaries.map { it.toLong() }.toLongArray()
+        conflationOrderUpperBoundaries = conflationOrder.upperBoundaries.map { it.toLong() }.toLongArray(),
       )
     }
 
@@ -136,7 +136,7 @@ class GoBackedBlobShnarfCalculator(
         expectedShnarf = result.expectedShnarf.decodeHex(),
         commitment = result.commitment.decodeHex(),
         kzgProofContract = result.kzgProofContract.decodeHex(),
-        kzgProofSideCar = result.kzgProofSideCar.decodeHex()
+        kzgProofSideCar = result.kzgProofSideCar.decodeHex(),
       )
     } catch (it: Exception) {
       throw RuntimeException("Error while decoding Shnarf calculation response from Go: ${it.message}")
@@ -156,7 +156,7 @@ class FakeBlobShnarfCalculator : BlobShnarfCalculator {
     parentStateRootHash: ByteArray,
     finalStateRootHash: ByteArray,
     prevShnarf: ByteArray,
-    conflationOrder: BlockIntervals
+    conflationOrder: BlockIntervals,
   ): ShnarfResult {
     return ShnarfResult(
       dataHash = Random.nextBytes(32),
@@ -166,7 +166,7 @@ class FakeBlobShnarfCalculator : BlobShnarfCalculator {
       expectedShnarf = Random.nextBytes(32),
       commitment = Random.nextBytes(48),
       kzgProofContract = Random.nextBytes(48),
-      kzgProofSideCar = Random.nextBytes(48)
+      kzgProofSideCar = Random.nextBytes(48),
     )
   }
 }

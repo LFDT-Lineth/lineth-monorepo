@@ -23,7 +23,7 @@ class L1DependentAppTest {
     val lastProcessedBlock =
       L1DependentApp.resumeConflationFrom(
         aggregationsRepository,
-        lastFinalizedBlock
+        lastFinalizedBlock,
       ).get()
     assertThat(lastProcessedBlock).isEqualTo(lastFinalizedBlock)
     verify(aggregationsRepository).findConsecutiveProvenBlobs(lastFinalizedBlock.toLong() + 1)
@@ -49,12 +49,12 @@ class L1DependentAppTest {
       lastConsecutiveAggregatedBlockNumber = lastConsecutiveAggregatedBlockNumber,
       batchesRepository = batchesRepository,
       blobsRepository = blobsRepository,
-      aggregationsRepository = aggregationsRepository
+      aggregationsRepository = aggregationsRepository,
     ).get()
     verify(batchesRepository).deleteBatchesAfterBlockNumber((lastProcessedBlock + 1uL).toLong())
     verify(blobsRepository).deleteBlobsAfterBlockNumber(lastProcessedBlock + 1uL)
     verify(aggregationsRepository).deleteAggregationsAfterBlockNumber(
-      (lastConsecutiveAggregatedBlockNumber + 1uL).toLong()
+      (lastConsecutiveAggregatedBlockNumber + 1uL).toLong(),
     )
   }
 }

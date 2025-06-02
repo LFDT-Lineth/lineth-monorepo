@@ -295,4 +295,3 @@ public class SelfTransactionWithRandomPayload extends Scenario {
     return JSON.getGson().toJson(this);
   }
 }
-

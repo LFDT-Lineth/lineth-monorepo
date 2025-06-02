@@ -13,7 +13,7 @@ class EthLogTest {
     blockNumber = 123UL,
     address = byteArrayOf(7, 8, 9),
     data = byteArrayOf(10, 11, 12),
-    topics = listOf(byteArrayOf(13, 14), byteArrayOf(15, 16))
+    topics = listOf(byteArrayOf(13, 14), byteArrayOf(15, 16)),
   )
   private val ethLog2 = ethLog1.copy(blockNumber = 124UL)
   private val ethLog3 = ethLog1.copy(blockNumber = 123UL, logIndex = 3UL)

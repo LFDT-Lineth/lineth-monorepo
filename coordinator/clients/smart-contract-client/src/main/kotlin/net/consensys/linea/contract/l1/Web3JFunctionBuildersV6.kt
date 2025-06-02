@@ -17,7 +17,7 @@ import java.util.Arrays
 
 internal fun buildSubmitBlobsFunction(
   version: LineaContractVersion,
-  blobs: List<BlobRecord>
+  blobs: List<BlobRecord>,
 ): Function {
   return when (version) {
     LineaContractVersion.V6 -> buildSubmitBlobsFunctionV6(blobs)
@@ -25,18 +25,23 @@ internal fun buildSubmitBlobsFunction(
 }
 
 internal fun buildSubmitBlobsFunctionV6(
-  blobs: List<BlobRecord>
+  blobs: List<BlobRecord>,
 ): Function {
   val blobsSubmissionData = blobs.map { blob ->
     val blobCompressionProof = blob.blobCompressionProof!!
     // BlobSubmission(BigInteger dataEvaluationClaim, byte[] kzgCommitment, byte[] kzgProof,
     //                byte[] finalStateRootHash, byte[] snarkHash)
     LineaRollupV6.BlobSubmission(
-      /*dataEvaluationClaim*/ BigInteger(blobCompressionProof.expectedY),
-      /*kzgCommitment*/ blobCompressionProof.commitment,
-      /*kzgProof*/ blobCompressionProof.kzgProofContract,
-      /*finalStateRootHash*/ blobCompressionProof.finalStateRootHash,
-      /*snarkHash*/ blobCompressionProof.snarkHash
+      /*dataEvaluationClaim*/
+      BigInteger(blobCompressionProof.expectedY),
+      /*kzgCommitment*/
+      blobCompressionProof.commitment,
+      /*kzgProof*/
+      blobCompressionProof.kzgProofContract,
+      /*finalStateRootHash*/
+      blobCompressionProof.finalStateRootHash,
+      /*snarkHash*/
+      blobCompressionProof.snarkHash,
     )
   }
 
@@ -52,9 +57,9 @@ internal fun buildSubmitBlobsFunctionV6(
     Arrays.asList<Type<*>>(
       DynamicArray(LineaRollupV6.BlobSubmission::class.java, blobsSubmissionData),
       Bytes32(blobs.first().blobCompressionProof!!.prevShnarf),
-      Bytes32(blobs.last().blobCompressionProof!!.expectedShnarf)
+      Bytes32(blobs.last().blobCompressionProof!!.expectedShnarf),
     ),
-    emptyList<TypeReference<*>>()
+    emptyList<TypeReference<*>>(),
   )
 }
 
@@ -63,7 +68,7 @@ fun buildFinalizeBlocksFunction(
   aggregationProof: ProofToFinalize,
   aggregationLastBlob: BlobRecord,
   parentL1RollingHash: ByteArray,
-  parentL1RollingHashMessageNumber: Long
+  parentL1RollingHashMessageNumber: Long,
 ): Function {
   when (version) {
     LineaContractVersion.V6 -> {
@@ -71,7 +76,7 @@ fun buildFinalizeBlocksFunction(
         aggregationProof,
         aggregationLastBlob,
         parentL1RollingHash,
-        parentL1RollingHashMessageNumber
+        parentL1RollingHashMessageNumber,
       )
     }
   }
@@ -81,14 +86,19 @@ internal fun buildFinalizeBlockFunctionV6(
   aggregationProof: ProofToFinalize,
   aggregationLastBlob: BlobRecord,
   parentL1RollingHash: ByteArray,
-  parentL1RollingHashMessageNumber: Long
+  parentL1RollingHashMessageNumber: Long,
 ): Function {
   val aggregationEndBlobInfo = LineaRollupV6.ShnarfData(
-    /*parentShnarf*/ aggregationLastBlob.blobCompressionProof!!.prevShnarf,
-    /*snarkHash*/ aggregationLastBlob.blobCompressionProof!!.snarkHash,
-    /*finalStateRootHash*/ aggregationLastBlob.blobCompressionProof!!.finalStateRootHash,
-    /*dataEvaluationPoint*/ aggregationLastBlob.blobCompressionProof!!.expectedX,
-    /*dataEvaluationClaim*/ aggregationLastBlob.blobCompressionProof!!.expectedY
+    /*parentShnarf*/
+    aggregationLastBlob.blobCompressionProof!!.prevShnarf,
+    /*snarkHash*/
+    aggregationLastBlob.blobCompressionProof!!.snarkHash,
+    /*finalStateRootHash*/
+    aggregationLastBlob.blobCompressionProof!!.finalStateRootHash,
+    /*dataEvaluationPoint*/
+    aggregationLastBlob.blobCompressionProof!!.expectedX,
+    /*dataEvaluationClaim*/
+    aggregationLastBlob.blobCompressionProof!!.expectedY,
   )
 
 //  FinalizationDataV3(
@@ -107,18 +117,30 @@ internal fun buildFinalizeBlockFunctionV6(
 //    )
 
   val finalizationData = LineaRollupV6.FinalizationDataV3(
-    /*parentStateRootHash*/ aggregationProof.parentStateRootHash,
-    /*endBlockNumber*/ aggregationProof.endBlockNumber.toBigInteger(),
-    /*shnarfData*/ aggregationEndBlobInfo,
-    /*lastFinalizedTimestamp*/ aggregationProof.parentAggregationLastBlockTimestamp.epochSeconds.toBigInteger(),
-    /*finalTimestamp*/ aggregationProof.finalTimestamp.epochSeconds.toBigInteger(),
-    /*lastFinalizedL1RollingHash*/ parentL1RollingHash,
-    /*l1RollingHash*/ aggregationProof.l1RollingHash,
-    /*lastFinalizedL1RollingHashMessageNumber*/ parentL1RollingHashMessageNumber.toBigInteger(),
-    /*l1RollingHashMessageNumber*/ aggregationProof.l1RollingHashMessageNumber.toBigInteger(),
-    /*l2MerkleTreesDepth*/ aggregationProof.l2MerkleTreesDepth.toBigInteger(),
-    /*l2MerkleRoots*/ aggregationProof.l2MerkleRoots,
-    /*l2MessagingBlocksOffsets*/ aggregationProof.l2MessagingBlocksOffsets
+    /*parentStateRootHash*/
+    aggregationProof.parentStateRootHash,
+    /*endBlockNumber*/
+    aggregationProof.endBlockNumber.toBigInteger(),
+    /*shnarfData*/
+    aggregationEndBlobInfo,
+    /*lastFinalizedTimestamp*/
+    aggregationProof.parentAggregationLastBlockTimestamp.epochSeconds.toBigInteger(),
+    /*finalTimestamp*/
+    aggregationProof.finalTimestamp.epochSeconds.toBigInteger(),
+    /*lastFinalizedL1RollingHash*/
+    parentL1RollingHash,
+    /*l1RollingHash*/
+    aggregationProof.l1RollingHash,
+    /*lastFinalizedL1RollingHashMessageNumber*/
+    parentL1RollingHashMessageNumber.toBigInteger(),
+    /*l1RollingHashMessageNumber*/
+    aggregationProof.l1RollingHashMessageNumber.toBigInteger(),
+    /*l2MerkleTreesDepth*/
+    aggregationProof.l2MerkleTreesDepth.toBigInteger(),
+    /*l2MerkleRoots*/
+    aggregationProof.l2MerkleRoots,
+    /*l2MessagingBlocksOffsets*/
+    aggregationProof.l2MessagingBlocksOffsets,
   )
 
   /**
@@ -133,9 +155,9 @@ internal fun buildFinalizeBlockFunctionV6(
     Arrays.asList<Type<*>>(
       DynamicBytes(aggregationProof.aggregatedProof),
       Uint256(aggregationProof.aggregatedVerifierIndex.toLong()),
-      finalizationData
+      finalizationData,
     ),
-    emptyList<TypeReference<*>>()
+    emptyList<TypeReference<*>>(),
   )
   return function
 }

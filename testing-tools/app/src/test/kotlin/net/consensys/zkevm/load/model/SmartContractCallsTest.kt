@@ -21,8 +21,8 @@ class SmartContractCallsTest {
       "mint",
       listOf(
         SimpleParameter(DEFAULT_ADDRESS, "Address"),
-        SimpleParameter("1", "Uint256")
-      )
+        SimpleParameter("1", "Uint256"),
+      ),
     )
     assertEquals(MINT_ENCODED, callFunction)
   }
@@ -42,7 +42,7 @@ class SmartContractCallsTest {
       sourceWallet,
       MINT_ENCODED,
       10,
-      1944
+      1944,
     )
     assertEquals(1, requests.size)
     assertEquals(10, requests.get(sourceWallet)?.size)

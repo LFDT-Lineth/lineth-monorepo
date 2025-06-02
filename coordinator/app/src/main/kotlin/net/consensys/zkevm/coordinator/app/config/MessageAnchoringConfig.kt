@@ -14,7 +14,7 @@ data class MessageAnchoringConfigTomlDto(
   val l1HighestBlockTag: BlockParameter = BlockParameter.Tag.FINALIZED,
   val l1RequestRetries: RequestRetryConfigTomlFriendly = RequestRetryConfigTomlFriendly.endlessRetry(
     backoffDelay = 1.seconds.toJavaDuration(),
-    failuresWarningThreshold = 3
+    failuresWarningThreshold = 3,
   ),
   val l1EventPollingInterval: Duration = 12.seconds.toJavaDuration(),
   val l1EventPollingTimeout: Duration = 6.seconds.toJavaDuration(),
@@ -24,11 +24,11 @@ data class MessageAnchoringConfigTomlDto(
   val l2HighestBlockTag: BlockParameter = BlockParameter.Tag.LATEST,
   val l2RequestRetries: RequestRetryConfigTomlFriendly = RequestRetryConfigTomlFriendly.endlessRetry(
     backoffDelay = 1.seconds.toJavaDuration(),
-    failuresWarningThreshold = 3
+    failuresWarningThreshold = 3,
   ),
   val anchoringTickInterval: Duration = 2.seconds.toJavaDuration(),
   val messageQueueCapacity: Int = 10_000,
-  val maxMessagesToAnchorPerL2Transaction: Int = 100
+  val maxMessagesToAnchorPerL2Transaction: Int = 100,
 ) {
   init {
     require(messageQueueCapacity > 0) {
@@ -56,7 +56,7 @@ data class MessageAnchoringConfigTomlDto(
 
   fun reified(
     l1DefaultEndpoint: URL,
-    l2DefaultEndpoint: URL
+    l2DefaultEndpoint: URL,
   ): MessageAnchoringConfig {
     return MessageAnchoringConfig(
       disabled = disabled,
@@ -72,7 +72,7 @@ data class MessageAnchoringConfigTomlDto(
       l1EventSearchBlockChunk = l1EventSearchBlockChunk.toUInt(),
       anchoringTickInterval = anchoringTickInterval.toKotlinDuration(),
       messageQueueCapacity = messageQueueCapacity.toUInt(),
-      maxMessagesToAnchorPerL2Transaction = maxMessagesToAnchorPerL2Transaction.toUInt()
+      maxMessagesToAnchorPerL2Transaction = maxMessagesToAnchorPerL2Transaction.toUInt(),
     )
   }
 }
@@ -91,5 +91,5 @@ data class MessageAnchoringConfig(
   val l1EventSearchBlockChunk: UInt,
   val anchoringTickInterval: kotlin.time.Duration,
   val messageQueueCapacity: UInt,
-  val maxMessagesToAnchorPerL2Transaction: UInt
+  val maxMessagesToAnchorPerL2Transaction: UInt,
 ) : FeatureToggleable

@@ -12,7 +12,7 @@ fun <T> measureTimeAndLog(
   logger: Logger,
   logLevel: Level = Level.DEBUG,
   logMessageProvider: (duration: kotlin.time.Duration, result: T) -> String,
-  action: () -> T
+  action: () -> T,
 ): T {
   var value: T
   val duration = measureTime {
@@ -26,12 +26,12 @@ fun <T> measureTimeAndLog(
 
 class MeasureLogger(
   private val logger: Logger,
-  private val logLevel: Level = Level.DEBUG
+  private val logLevel: Level = Level.DEBUG,
 ) {
   fun <T> measureTimeAndLog(
     logLevel: Level = this.logLevel,
     logMessageProvider: (duration: kotlin.time.Duration, result: T) -> String,
-    action: () -> T
+    action: () -> T,
   ): T {
     return measureTimeAndLog(logger, logLevel, logMessageProvider, action)
   }

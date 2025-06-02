@@ -28,7 +28,7 @@ import kotlin.time.Duration.Companion.seconds
  */
 data class SubmissionEventsAndData<T>(
   val submissionEvents: FinalizationAndDataEventsV3,
-  val data: List<T>
+  val data: List<T>,
 )
 
 class SubmissionsFetchingTask(
@@ -44,11 +44,11 @@ class SubmissionsFetchingTask(
   private val compressedBlobsQueueLimit: Int,
   private val targetDecompressedBlobsQueueLimit: Int,
   private val debugForceSyncStopBlockNumber: ULong?,
-  private val log: Logger = LogManager.getLogger(SubmissionsFetchingTask::class.java)
+  private val log: Logger = LogManager.getLogger(SubmissionsFetchingTask::class.java),
 ) : PeriodicPollingService(
   vertx = vertx,
   pollingIntervalMs = l1PollingInterval.inWholeMilliseconds,
-  log = log
+  log = log,
 ) {
   init {
     require(submissionEventsQueueLimit >= 1) {
@@ -84,7 +84,7 @@ class SubmissionsFetchingTask(
     l2StartBlockNumber = l2StartBlockNumberToFetchInclusive,
     submissionEventsQueue = submissionEventsQueue,
     queueLimit = submissionEventsQueueLimit,
-    debugForceSyncStopBlockNumber = debugForceSyncStopBlockNumber
+    debugForceSyncStopBlockNumber = debugForceSyncStopBlockNumber,
   )
   private val blobFetchingTask = BlobsFetchingTask(
     vertx = vertx,
@@ -93,7 +93,7 @@ class SubmissionsFetchingTask(
     blobsFetcher = blobsFetcher,
     transactionDetailsClient = transactionDetailsClient,
     compressedBlobsQueue = compressedBlobsQueue,
-    compressedBlobsQueueLimit = compressedBlobsQueueLimit
+    compressedBlobsQueueLimit = compressedBlobsQueueLimit,
   )
   private val blobDecompressionTask = BlobDecompressionTask(
     vertx = vertx,
@@ -101,7 +101,7 @@ class SubmissionsFetchingTask(
     blobDecompressor = blobDecompressor,
     rawBlobsQueue = compressedBlobsQueue,
     decompressedBlocksQueue = decompressedBlocksQueue,
-    decompressedFinalizationQueueLimit = dynamicDecompressedBlobsQueueLimit::get
+    decompressedFinalizationQueueLimit = dynamicDecompressedBlobsQueueLimit::get,
   )
 
   @Synchronized
@@ -109,7 +109,7 @@ class SubmissionsFetchingTask(
     return SafeFuture.allOf(
       submissionEventsFetchingTask.start(),
       blobFetchingTask.start(),
-      blobDecompressionTask.start()
+      blobDecompressionTask.start(),
     ).thenCompose { super.start() }
   }
 
@@ -118,7 +118,7 @@ class SubmissionsFetchingTask(
     return SafeFuture.allOf(
       submissionEventsFetchingTask.stop(),
       blobFetchingTask.stop(),
-      blobDecompressionTask.stop()
+      blobDecompressionTask.stop(),
     ).thenCompose { super.stop() }
   }
 
@@ -136,7 +136,7 @@ class SubmissionsFetchingTask(
 
   @Synchronized
   fun pruneQueueForElementsUpToInclusive(
-    elHeadBlockNumber: ULong
+    elHeadBlockNumber: ULong,
   ) {
     decompressedBlocksQueue.removeIf {
       it.submissionEvents.dataFinalizedEvent.event.endBlockNumber <= elHeadBlockNumber

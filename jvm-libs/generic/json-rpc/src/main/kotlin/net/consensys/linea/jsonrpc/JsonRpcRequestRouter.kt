@@ -11,12 +11,12 @@ class JsonRpcRequestRouter(private val methodHandlers: Map<String, JsonRpcReques
   override fun invoke(
     user: User?,
     jsonRpcRequest: JsonRpcRequest,
-    requestJson: JsonObject
+    requestJson: JsonObject,
   ): Future<Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>> {
     val handler =
       methodHandlers[jsonRpcRequest.method]
         ?: return Future.succeededFuture(
-          Err(JsonRpcErrorResponse.methodNotFound(jsonRpcRequest.id, jsonRpcRequest.method))
+          Err(JsonRpcErrorResponse.methodNotFound(jsonRpcRequest.id, jsonRpcRequest.method)),
         )
 
     return handler.invoke(user, jsonRpcRequest, requestJson)

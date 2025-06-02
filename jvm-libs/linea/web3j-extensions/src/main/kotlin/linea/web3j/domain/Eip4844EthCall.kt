@@ -32,7 +32,7 @@ class Eip4844Transaction(
   @Suppress("Unused")
   @JsonProperty("blobVersionedHashes")
   @JsonSerialize(contentUsing = ByteArrayToHexSerializer::class)
-  val blobVersionedHashes: List<ByteArray> = computeVersionedHashesFromBlobs(blobs)
+  val blobVersionedHashes: List<ByteArray> = computeVersionedHashesFromBlobs(blobs),
 ) : Transaction(from, nonce, gasPrice, gasLimit, to, value, data, chainId, maxPriorityFeePerGas, maxFeePerGas) {
   @Suppress("Unused")
   val maxFeePerBlobGas: String? = _maxFeePerBlobGas?.let { Numeric.encodeQuantity(it) }
@@ -54,7 +54,7 @@ class Eip4844Transaction(
       gasLimit: BigInteger?,
       blobVersionedHashes: List<ByteArray> = computeVersionedHashesFromBlobs(blobs),
       maxPriorityFeePerGas: BigInteger? = null,
-      maxFeePerGas: BigInteger? = null
+      maxFeePerGas: BigInteger? = null,
     ): Eip4844Transaction {
       return Eip4844Transaction(
         from = from,
@@ -69,7 +69,7 @@ class Eip4844Transaction(
         maxFeePerGas = maxFeePerGas,
         _maxFeePerBlobGas = maxFeePerBlobGas,
         blobs = blobs,
-        blobVersionedHashes = blobVersionedHashes
+        blobVersionedHashes = blobVersionedHashes,
       )
     }
   }

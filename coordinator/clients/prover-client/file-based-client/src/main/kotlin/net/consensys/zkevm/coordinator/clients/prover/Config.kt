@@ -6,13 +6,13 @@ import kotlin.time.Duration
 data class ProversConfig(
   val proverA: ProverConfig,
   val switchBlockNumberInclusive: ULong?,
-  val proverB: ProverConfig?
+  val proverB: ProverConfig?,
 )
 
 data class ProverConfig(
   val execution: FileBasedProverConfig,
   val blobCompression: FileBasedProverConfig,
-  val proofAggregation: FileBasedProverConfig
+  val proofAggregation: FileBasedProverConfig,
 )
 
 data class FileBasedProverConfig(
@@ -21,5 +21,5 @@ data class FileBasedProverConfig(
   val inprogressProvingSuffixPattern: String,
   val inprogressRequestWritingSuffix: String,
   val pollingInterval: Duration,
-  val pollingTimeout: Duration
+  val pollingTimeout: Duration,
 )

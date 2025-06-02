@@ -22,7 +22,7 @@ fun createMessageSentEthLogV1(
   value: ULong = 2_000UL,
   messageNumber: ULong = 10_000UL,
   calldata: ByteArray = "deadbeef".decodeHex(),
-  messageHash: ByteArray = Random.nextBytes(32)
+  messageHash: ByteArray = Random.nextBytes(32),
 ): EthLog {
   return EthLog(
     removed = false,
@@ -43,8 +43,8 @@ fun createMessageSentEthLogV1(
       MessageSentEvent.topic.decodeHex(),
       from.decodeHex().padLeft(32), // from
       to.decodeHex().padLeft(32), // to
-      messageHash // messageHash
-    )
+      messageHash, // messageHash
+    ),
   )
 }
 
@@ -57,7 +57,7 @@ fun createL1RollingHashUpdatedEthLogV1(
   rollingHash: ByteArray = Random.nextBytes(32),
   messageHash: ByteArray = Random.nextBytes(32),
   transactionHash: ByteArray = Random.nextBytes(32),
-  blockHash: ByteArray = Random.nextBytes(32)
+  blockHash: ByteArray = Random.nextBytes(32),
 ): EthLog {
   return EthLog(
     removed = false,
@@ -72,14 +72,14 @@ fun createL1RollingHashUpdatedEthLogV1(
       L1RollingHashUpdatedEvent.topic.decodeHex(), // topic is static
       messageNumber.toHexStringUInt256().decodeHex(),
       rollingHash,
-      messageHash
-    )
+      messageHash,
+    ),
   )
 }
 
 data class L1MessageSentV1EthLogs(
   val messageSent: EthLogEvent<MessageSentEvent>,
-  val l1RollingHashUpdated: EthLogEvent<L1RollingHashUpdatedEvent>
+  val l1RollingHashUpdated: EthLogEvent<L1RollingHashUpdatedEvent>,
 )
 
 fun createL1MessageSentV1Logs(
@@ -94,7 +94,7 @@ fun createL1MessageSentV1Logs(
   messageNumber: ULong = 10_000UL,
   calldata: ByteArray = "deadbeef".decodeHex(),
   messageHash: ByteArray,
-  rollingHash: ByteArray
+  rollingHash: ByteArray,
 ): L1MessageSentV1EthLogs {
   val l1RollingHashUpdated = createL1RollingHashUpdatedEthLogV1(
     blockNumber = blockNumber,
@@ -103,7 +103,7 @@ fun createL1MessageSentV1Logs(
     contractAddress = contractAddress,
     messageNumber = messageNumber,
     rollingHash = rollingHash,
-    messageHash = messageHash
+    messageHash = messageHash,
   )
   val messageSent = createMessageSentEthLogV1(
     blockNumber = blockNumber,
@@ -116,12 +116,12 @@ fun createL1MessageSentV1Logs(
     value = value,
     messageNumber = messageNumber,
     calldata = calldata,
-    messageHash = messageHash
+    messageHash = messageHash,
   )
 
   return L1MessageSentV1EthLogs(
     messageSent = MessageSentEvent.fromEthLog(messageSent),
-    l1RollingHashUpdated = L1RollingHashUpdatedEvent.fromEthLog(l1RollingHashUpdated)
+    l1RollingHashUpdated = L1RollingHashUpdatedEvent.fromEthLog(l1RollingHashUpdated),
   )
 }
 
@@ -133,7 +133,7 @@ fun createL2RollingHashUpdatedEthLogV1(
   messageNumber: ULong = 10_000UL,
   rollingHash: ByteArray = Random.nextBytes(32),
   transactionHash: ByteArray = Random.nextBytes(32),
-  blockHash: ByteArray = Random.nextBytes(32)
+  blockHash: ByteArray = Random.nextBytes(32),
 ): EthLog {
   return EthLog(
     removed = false,
@@ -147,7 +147,7 @@ fun createL2RollingHashUpdatedEthLogV1(
     topics = listOf(
       L2RollingHashUpdatedEvent.topic.decodeHex(), // topic is static
       messageNumber.toHexStringUInt256().decodeHex(),
-      rollingHash
-    )
+      rollingHash,
+    ),
   )
 }

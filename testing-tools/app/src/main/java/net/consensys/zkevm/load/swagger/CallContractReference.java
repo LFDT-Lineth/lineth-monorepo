@@ -221,4 +221,3 @@ public class CallContractReference extends Contract {
     return JSON.getGson().toJson(this);
   }
 }
-

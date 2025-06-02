@@ -16,7 +16,7 @@ class AverageWeightedFeesCalculatorTest {
   fun `test AverageWeightedFeesCalculator`(
     @Suppress("UNUSED_PARAMETER") name: String,
     expectedWeightedAverage: Double,
-    feeHistory: FeeHistory
+    feeHistory: FeeHistory,
   ) {
     val mockLog = mock<Logger>()
     val feeList = { fh: FeeHistory -> fh.baseFeePerGas }
@@ -31,7 +31,7 @@ class AverageWeightedFeesCalculatorTest {
   fun `test AverageWeightedBaseFeesCalculator`(
     @Suppress("UNUSED_PARAMETER") name: String,
     expectedWeightedAverage: Double,
-    feeHistory: FeeHistory
+    feeHistory: FeeHistory,
   ) {
     val actualWeightedAverage = AverageWeightedBaseFeesCalculator.calculateFees(feeHistory)
     assertThat(actualWeightedAverage).isEqualTo(expectedWeightedAverage)
@@ -42,7 +42,7 @@ class AverageWeightedFeesCalculatorTest {
   fun `test AverageWeightedPriorityFeesCalculator`(
     @Suppress("UNUSED_PARAMETER") name: String,
     expectedWeightedAverage: Double,
-    feeHistory: FeeHistory
+    feeHistory: FeeHistory,
   ) {
     val actualWeightedAverage = AverageWeightedPriorityFeesCalculator.calculateFees(feeHistory)
     assertThat(actualWeightedAverage).isEqualTo(expectedWeightedAverage)
@@ -53,7 +53,7 @@ class AverageWeightedFeesCalculatorTest {
   fun `test AverageWeightedBlobBaseFeesCalculator`(
     @Suppress("UNUSED_PARAMETER") name: String,
     expectedWeightedAverage: Double,
-    feeHistory: FeeHistory
+    feeHistory: FeeHistory,
   ) {
     val actualWeightedAverage = AverageWeightedBlobBaseFeesCalculator.calculateFees(feeHistory)
     assertThat(actualWeightedAverage).isEqualTo(expectedWeightedAverage)
@@ -66,7 +66,7 @@ class AverageWeightedFeesCalculatorTest {
       val feeHistory: FeeHistory,
       val weightedAverageBaseFee: Double,
       val weightedAveragePriorityFee: Double,
-      val weightedAverageBlobBaseFee: Double
+      val weightedAverageBlobBaseFee: Double,
     )
 
     private val feeHistoryTestCases = listOf(
@@ -78,11 +78,11 @@ class AverageWeightedFeesCalculatorTest {
           reward = listOf(1000).map { listOf(it.toULong()) },
           gasUsedRatio = listOf(0.25).map { it },
           baseFeePerBlobGas = listOf(200, 210).map { it.toULong() },
-          blobGasUsedRatio = listOf(0.16).map { it }
+          blobGasUsedRatio = listOf(0.16).map { it },
         ),
         weightedAverageBaseFee = 100.0, // 100*0.25/0.25
         weightedAveragePriorityFee = 1000.0, // 1000*0.25/0.25
-        weightedAverageBlobBaseFee = 200.0 // 200*0.16/0.16
+        weightedAverageBlobBaseFee = 200.0, // 200*0.16/0.16
       ),
       FeeHistoryTestCase(
         name = "Single block history with zero ratio sum -> Simple average",
@@ -92,11 +92,11 @@ class AverageWeightedFeesCalculatorTest {
           reward = listOf(1000).map { listOf(it.toULong()) },
           gasUsedRatio = listOf(0.0).map { it },
           baseFeePerBlobGas = listOf(200, 210).map { it.toULong() },
-          blobGasUsedRatio = listOf(0.0).map { it }
+          blobGasUsedRatio = listOf(0.0).map { it },
         ),
         weightedAverageBaseFee = 100.0,
         weightedAveragePriorityFee = 1000.0,
-        weightedAverageBlobBaseFee = 200.0
+        weightedAverageBlobBaseFee = 200.0,
       ),
       FeeHistoryTestCase(
         name = "Multiple block history",
@@ -106,7 +106,7 @@ class AverageWeightedFeesCalculatorTest {
           reward = listOf(1000, 1100, 1200, 1300).map { listOf(it.toULong()) },
           gasUsedRatio = listOf(0.25, 0.5, 0.75, 0.9).map { it },
           baseFeePerBlobGas = listOf(100, 110, 120, 130, 140).map { it.toULong() },
-          blobGasUsedRatio = listOf(0.16, 0.5, 0.66, 0.83).map { it }
+          blobGasUsedRatio = listOf(0.16, 0.5, 0.66, 0.83).map { it },
         ),
         weightedAverageBaseFee = listOf(100, 110, 120, 130, 140).map { it }
           .zip(listOf(0.25, 0.5, 0.75, 0.9).map { it })
@@ -125,7 +125,7 @@ class AverageWeightedFeesCalculatorTest {
           .sumOf { it.first * it.second } /
           (
             listOf(0.16, 0.5, 0.66, 0.83).map { it }.sumOf { it }
-            )
+            ),
       ),
       FeeHistoryTestCase(
         name = "Multiple block history equal ratio -> Simple Average",
@@ -135,11 +135,11 @@ class AverageWeightedFeesCalculatorTest {
           reward = listOf(1000, 1100, 1200, 1300).map { listOf(it.toULong()) },
           gasUsedRatio = listOf(0.25, 0.25, 0.25, 0.25).map { it },
           baseFeePerBlobGas = listOf(200, 210, 220, 230, 240).map { it.toULong() },
-          blobGasUsedRatio = listOf(0.16, 0.16, 0.16, 0.16).map { it }
+          blobGasUsedRatio = listOf(0.16, 0.16, 0.16, 0.16).map { it },
         ),
         weightedAverageBaseFee = 115.0,
         weightedAveragePriorityFee = 1150.0,
-        weightedAverageBlobBaseFee = 215.0
+        weightedAverageBlobBaseFee = 215.0,
       ),
       FeeHistoryTestCase(
         name = "Multiple block history zero ratio sum -> Simple Average",
@@ -149,11 +149,11 @@ class AverageWeightedFeesCalculatorTest {
           reward = listOf(1000, 1100, 1200, 1300).map { listOf(it.toULong()) },
           gasUsedRatio = listOf(0, 0, 0, 0).map { it.toDouble() },
           baseFeePerBlobGas = listOf(200, 210, 220, 230, 240).map { it.toULong() },
-          blobGasUsedRatio = listOf(0, 0, 0, 0).map { it.toDouble() }
+          blobGasUsedRatio = listOf(0, 0, 0, 0).map { it.toDouble() },
         ),
         weightedAverageBaseFee = 115.0,
         weightedAveragePriorityFee = 1150.0,
-        weightedAverageBlobBaseFee = 215.0
+        weightedAverageBlobBaseFee = 215.0,
       ),
       FeeHistoryTestCase(
         name = "Empty history",
@@ -163,12 +163,12 @@ class AverageWeightedFeesCalculatorTest {
           reward = emptyList(),
           gasUsedRatio = emptyList(),
           baseFeePerBlobGas = emptyList(),
-          blobGasUsedRatio = emptyList()
+          blobGasUsedRatio = emptyList(),
         ),
         weightedAverageBaseFee = 0.0,
         weightedAveragePriorityFee = 0.0,
-        weightedAverageBlobBaseFee = 0.0
-      )
+        weightedAverageBlobBaseFee = 0.0,
+      ),
     )
 
     @JvmStatic

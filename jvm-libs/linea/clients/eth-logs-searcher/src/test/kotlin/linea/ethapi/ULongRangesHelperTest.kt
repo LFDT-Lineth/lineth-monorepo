@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Test
 internal fun generateEffectiveIntervals(
   blocksWithLogs: List<ULongRange>,
   filterFromBlock: ULong,
-  filterToBlock: ULong
+  filterToBlock: ULong,
 ): List<ULongRange> {
   // if blocksWithLogs is [10..19, 25..29, 40..49] and filter.fromBlock=15 and filter.toBlock=45
   // then we will return logs for blocks [15..19, 25..29, 40..45]
@@ -29,7 +29,7 @@ class ULongRangesHelperTest {
     generateEffectiveIntervals(
       blocksWithLogs = blocksWithLogs,
       filterFromBlock = 0UL,
-      filterToBlock = 9UL
+      filterToBlock = 9UL,
     )
       .also {
         assertThat(it).isEmpty()
@@ -39,7 +39,7 @@ class ULongRangesHelperTest {
     generateEffectiveIntervals(
       blocksWithLogs = blocksWithLogs,
       filterFromBlock = 0UL,
-      filterToBlock = 15UL
+      filterToBlock = 15UL,
     )
       .also {
         assertThat(it).containsExactly(10UL..15UL)
@@ -48,7 +48,7 @@ class ULongRangesHelperTest {
     generateEffectiveIntervals(
       blocksWithLogs = blocksWithLogs,
       filterFromBlock = 15UL,
-      filterToBlock = 25UL
+      filterToBlock = 25UL,
     )
       .also {
         assertThat(it).containsExactly(15UL..19UL)
@@ -58,7 +58,7 @@ class ULongRangesHelperTest {
     generateEffectiveIntervals(
       blocksWithLogs = blocksWithLogs,
       filterFromBlock = 0UL,
-      filterToBlock = 25UL
+      filterToBlock = 25UL,
     )
       .also {
         assertThat(it).containsExactly(10UL..19UL)
@@ -68,7 +68,7 @@ class ULongRangesHelperTest {
     generateEffectiveIntervals(
       blocksWithLogs = blocksWithLogs,
       filterFromBlock = 42UL,
-      filterToBlock = 45UL
+      filterToBlock = 45UL,
     )
       .also {
         assertThat(it).containsExactly(42UL..45UL)
@@ -78,7 +78,7 @@ class ULongRangesHelperTest {
     generateEffectiveIntervals(
       blocksWithLogs = blocksWithLogs,
       filterFromBlock = 50UL,
-      filterToBlock = 55UL
+      filterToBlock = 55UL,
     )
       .also {
         assertThat(it).isEmpty()
@@ -88,7 +88,7 @@ class ULongRangesHelperTest {
     generateEffectiveIntervals(
       blocksWithLogs = blocksWithLogs,
       filterFromBlock = 0UL,
-      filterToBlock = 100UL
+      filterToBlock = 100UL,
     )
       .also {
         assertThat(it).containsExactly(10UL..19UL, 40UL..49UL, 60UL..69UL)
@@ -98,7 +98,7 @@ class ULongRangesHelperTest {
     generateEffectiveIntervals(
       blocksWithLogs = blocksWithLogs,
       filterFromBlock = 15UL,
-      filterToBlock = 65UL
+      filterToBlock = 65UL,
     )
       .also {
         assertThat(it).containsExactly(15UL..19UL, 40UL..49UL, 60UL..65UL)
@@ -108,7 +108,7 @@ class ULongRangesHelperTest {
     generateEffectiveIntervals(
       blocksWithLogs = blocksWithLogs,
       filterFromBlock = 15UL,
-      filterToBlock = 45UL
+      filterToBlock = 45UL,
     )
       .also {
         assertThat(it).containsExactly(15UL..19UL, 40UL..45UL)

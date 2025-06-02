@@ -5,7 +5,7 @@ import linea.SearchDirection
 internal fun rangeChunks(
   start: ULong,
   end: ULong,
-  chunkSize: Int
+  chunkSize: Int,
 ): List<ULongRange> {
   return (start..end step chunkSize.toLong())
     .map { chunkStart ->
@@ -26,7 +26,7 @@ internal fun rangeChunks(
 internal class BinarySearchCursor(
   val from: ULong,
   val to: ULong,
-  val chunkSize: Int
+  val chunkSize: Int,
 ) {
   init {
     require(from <= to) { "invalid range: from=$from must be less or equal to=$to" }

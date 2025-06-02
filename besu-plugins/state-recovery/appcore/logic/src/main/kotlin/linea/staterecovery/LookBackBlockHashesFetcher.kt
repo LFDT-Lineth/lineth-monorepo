@@ -12,28 +12,28 @@ import kotlin.time.Duration.Companion.seconds
 class LookBackBlockHashesFetcher(
   private val vertx: Vertx,
   private val elClient: ExecutionLayerClient,
-  private val submissionsFetcher: SubmissionsFetchingTask
+  private val submissionsFetcher: SubmissionsFetchingTask,
 ) {
   fun getLookBackHashes(
-    status: StateRecoveryStatus
+    status: StateRecoveryStatus,
   ): SafeFuture<Map<ULong, ByteArray>> {
     val intervals = lookbackFetchingIntervals(
       headBlockNumber = status.headBlockNumber,
       recoveryStartBlockNumber = status.stateRecoverStartBlockNumber,
-      lookbackWindow = 256UL
+      lookbackWindow = 256UL,
     )
 
     return SafeFuture.collectAll(
       listOf(
         intervals.elInterval?.let(::getLookBackHashesFromLocalEl) ?: SafeFuture.completedFuture(emptyMap()),
-        intervals.l1Interval?.let(::getLookBackHashesFromL1) ?: SafeFuture.completedFuture(emptyMap())
-      ).stream()
+        intervals.l1Interval?.let(::getLookBackHashesFromL1) ?: SafeFuture.completedFuture(emptyMap()),
+      ).stream(),
     )
       .thenApply { (blockHashesFromEl, blockHashesFromL1) -> blockHashesFromEl + blockHashesFromL1 }
   }
 
   fun getLookBackHashesFromLocalEl(
-    blockInterval: BlockInterval
+    blockInterval: BlockInterval,
   ): SafeFuture<Map<ULong, ByteArray>> {
     return SafeFuture
       .collectAll(blockInterval.blocksRange.map { elClient.getBlockNumberAndHash(it.toBlockParameter()) }.stream())
@@ -43,7 +43,7 @@ class LookBackBlockHashesFetcher(
   }
 
   fun getLookBackHashesFromL1(
-    blockInterval: BlockInterval
+    blockInterval: BlockInterval,
   ): SafeFuture<Map<ULong, ByteArray>> {
     return AsyncRetryer.retry(
       vertx,
@@ -51,7 +51,7 @@ class LookBackBlockHashesFetcher(
       stopRetriesPredicate = { submissions ->
         submissions.isNotEmpty() &&
           submissions.last().submissionEvents.dataFinalizedEvent.event.endBlockNumber >= blockInterval.endBlockNumber
-      }
+      },
     ) {
       // get the data without removing it from the queue
       // it must still be in the queue until is imported to the EL
@@ -75,7 +75,7 @@ class LookBackBlockHashesFetcher(
 
   fun shallIncreaseQueueLimit(
     availableSubmissions: List<SubmissionEventsAndData<BlockFromL1RecoveredData>>,
-    blockInterval: BlockInterval
+    blockInterval: BlockInterval,
   ): Boolean {
     if (availableSubmissions.isEmpty()) {
       return false

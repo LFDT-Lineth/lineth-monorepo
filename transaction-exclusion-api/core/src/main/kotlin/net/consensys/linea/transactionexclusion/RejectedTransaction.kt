@@ -6,7 +6,7 @@ import linea.kotlin.encodeHex
 data class ModuleOverflow(
   val count: Long,
   val limit: Long,
-  val module: String
+  val module: String,
 ) {
   // Jackson ObjectMapper requires a default constructor
   constructor() : this(0L, 0L, "")
@@ -20,7 +20,7 @@ data class TransactionInfo(
   val hash: ByteArray,
   val from: ByteArray,
   val to: ByteArray?,
-  val nonce: ULong
+  val nonce: ULong,
 ) {
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
@@ -55,12 +55,12 @@ data class RejectedTransaction(
   val transactionRLP: ByteArray,
   val reasonMessage: String,
   val overflows: List<ModuleOverflow>,
-  val transactionInfo: TransactionInfo
+  val transactionInfo: TransactionInfo,
 ) {
   enum class Stage {
     SEQUENCER,
     RPC,
-    P2P
+    P2P,
   }
 
   override fun equals(other: Any?): Boolean {

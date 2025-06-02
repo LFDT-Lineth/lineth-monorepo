@@ -55,7 +55,7 @@ class EthConnectionImpl(url: String?) : EthConnection {
   override fun ethSendRawTransaction(
     rawTransaction: RawTransaction?,
     sourceWallet: Wallet,
-    chainId: Int
+    chainId: Int,
   ): Request<*, EthSendTransaction> {
     val signedMessage = TransactionEncoder.signMessage(rawTransaction, chainId.toLong(), sourceWallet.credentials)
     val hexValue = Numeric.toHexString(signedMessage)
@@ -64,7 +64,7 @@ class EthConnectionImpl(url: String?) : EthConnection {
 
   override fun ethGetTransactionCount(
     sourceOfFundsAddress: String?,
-    defaultBlockParameterName: DefaultBlockParameterName?
+    defaultBlockParameterName: DefaultBlockParameterName?,
   ): BigInteger {
     return web3.ethGetTransactionCount(sourceOfFundsAddress, defaultBlockParameterName).send().transactionCount
   }
@@ -92,10 +92,10 @@ class EthConnectionImpl(url: String?) : EthConnection {
     val lineaEstimateGasResponseRequest = Request(
       "linea_estimateGas",
       listOf(
-        transaction
+        transaction,
       ),
       httpService,
-      LineaEstimateGasResponse::class.java
+      LineaEstimateGasResponse::class.java,
     )
     return httpService.send(lineaEstimateGasResponseRequest, LineaEstimateGasResponse::class.java)
   }
@@ -122,7 +122,8 @@ class EthConnectionImpl(url: String?) : EthConnection {
       Collectors.toMap(
         { (key): Map.Entry<Wallet, List<TransactionDetail>> -> key },
         Function<Map.Entry<Wallet, List<TransactionDetail>>, BigInteger> { (key, value):
-            Map.Entry<Wallet, List<TransactionDetail>> ->
+        Map.Entry<Wallet, List<TransactionDetail>>,
+          ->
           val sorted =
             value.stream().sorted { s: TransactionDetail, t: TransactionDetail -> 1 * s.nonce.compareTo(t.nonce) }
               .toList()
@@ -131,8 +132,8 @@ class EthConnectionImpl(url: String?) : EthConnection {
           } else {
             sendAllTransactions(sorted[0], sorted.subList(1, sorted.size))
           }
-        }
-      )
+        },
+      ),
     )
   }
 
@@ -154,9 +155,9 @@ class EthConnectionImpl(url: String?) : EthConnection {
               walletId,
               res.id,
               transaction.nonce,
-              res.transactionHash
+              res.transactionHash,
             )
-            if (transaction.expectedOutcome == EXPECTED_OUTCOME.SUCCESS) {
+            if (transaction.expectedOutcome == ExpectedOutcome.SUCCESS) {
               succeeded.add(transaction.nonce)
             } else {
               failed.add(transaction.nonce)
@@ -168,13 +169,13 @@ class EthConnectionImpl(url: String?) : EthConnection {
               transaction.nonce,
               res.transactionHash,
               walletId,
-              res.error.message
+              res.error.message,
             )
             failed.add(transaction.nonce)
           }
           return@map Tuple2<TransactionDetail, Optional<EthSendTransaction>>(
             transaction,
-            Optional.of<EthSendTransaction>(res)
+            Optional.of<EthSendTransaction>(res),
           )
         } catch (e: IOException) {
           logger.error("Error while sending transaction " + transaction.ethSendTransactionRequest.id)
@@ -192,9 +193,9 @@ class EthConnectionImpl(url: String?) : EthConnection {
           first.walletId,
           res.id,
           first.nonce,
-          res.transactionHash
+          res.transactionHash,
         )
-        if (first.expectedOutcome == EXPECTED_OUTCOME.SUCCESS) {
+        if (first.expectedOutcome == ExpectedOutcome.SUCCESS) {
           succeeded.add(first.nonce)
         } else {
           failed.add(first.nonce)
@@ -206,7 +207,7 @@ class EthConnectionImpl(url: String?) : EthConnection {
           res.id,
           res.transactionHash,
           first.walletId,
-          res.error.message
+          res.error.message,
         )
         failed.add(first.nonce)
       }
@@ -217,21 +218,21 @@ class EthConnectionImpl(url: String?) : EthConnection {
       list.stream().collect(
         Collectors.toMap(
           { t: Tuple2<TransactionDetail, Optional<EthSendTransaction>> -> t.component1().nonce },
-          { t: Tuple2<TransactionDetail, Optional<EthSendTransaction>> -> getTransactionHash(t) }
-        )
-      )
+          { t: Tuple2<TransactionDetail, Optional<EthSendTransaction>> -> getTransactionHash(t) },
+        ),
+      ),
     )
     logger.info(
       "Wallet id: {}, number of transaction sent attempt:{}, succeeded:{}, failed:{}.",
       first.walletId,
       succeeded.size + failed.size,
       succeeded.size,
-      failed.size
+      failed.size,
     )
     logger.info(
       "Wallet id: {}, number of transaction hash:{}.",
       first.walletId,
-      nonceToHash.values.stream().filter { v: String -> !v.startsWith("noTransactionHash") }.count()
+      nonceToHash.values.stream().filter { v: String -> !v.startsWith("noTransactionHash") }.count(),
     )
     return if (failed.isEmpty()) {
       succeeded.stream().max { obj: BigInteger, `val`: BigInteger? -> obj.compareTo(`val`) }.get()
@@ -264,7 +265,7 @@ class EthConnectionImpl(url: String?) : EthConnection {
       "{} walets used to send {} requests in {}s. Waiting for their completion.",
       transactions.size,
       transactions.values.stream().mapToInt { v: List<TransactionDetail> -> v.size }.sum(),
-      Instant.now().epochSecond - startTime.epochSecond
+      Instant.now().epochSecond - startTime.epochSecond,
     )
     return targetNoncePerWallets
   }
@@ -272,7 +273,7 @@ class EthConnectionImpl(url: String?) : EthConnection {
   override fun getEthGetBlockByNumber(blockId: Long): EthBlock {
     return web3.ethGetBlockByNumber(
       DefaultBlockParameter.valueOf(BigInteger.valueOf(blockId)),
-      true
+      true,
     ).send()
   }
 
@@ -287,7 +288,7 @@ class EthConnectionImpl(url: String?) : EthConnection {
     try {
       val ethGetTransactionCount = ethGetTransactionCount(
         encodedAddress,
-        DefaultBlockParameterName.LATEST
+        DefaultBlockParameterName.LATEST,
       )
       return ethGetTransactionCount
     } catch (e: SocketTimeoutException) {
@@ -320,14 +321,14 @@ interface EthConnection {
   fun ethSendRawTransaction(
     rawTransaction: RawTransaction?,
     sourceWallet: Wallet,
-    chainId: Int
+    chainId: Int,
   ): Request<*, EthSendTransaction>
 
   fun getBalance(sourceWallet: Wallet): BigInteger?
   fun getNonce(encodedAddress: String?): BigInteger
   fun ethGetTransactionCount(
     sourceOfFundsAddress: String?,
-    defaultBlockParameterName: DefaultBlockParameterName?
+    defaultBlockParameterName: DefaultBlockParameterName?,
   ): BigInteger
 
   fun estimateGas(transaction: Transaction): BigInteger

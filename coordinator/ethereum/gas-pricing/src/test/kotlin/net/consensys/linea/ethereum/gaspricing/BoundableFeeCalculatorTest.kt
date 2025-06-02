@@ -18,15 +18,15 @@ class BoundableFeeCalculatorTest {
       0.25,
       0.5,
       0.75,
-      0.9
+      0.9,
     ),
     baseFeePerBlobGas = listOf(100, 110, 120, 130, 140).map { it.toULong() },
     blobGasUsedRatio = listOf(
       0.25,
       0.5,
       0.75,
-      0.9
-    )
+      0.9,
+    ),
   )
 
   @Test
@@ -41,7 +41,7 @@ class BoundableFeeCalculatorTest {
     }
     val boundableFeeCalculator = BoundableFeeCalculator(
       BoundableFeeCalculator.Config(gasPriceUpperBound, gasPriceLowerBound, gasPriceFixedCost),
-      mockFeesCalculator
+      mockFeesCalculator,
     )
     Assertions.assertThat(boundableFeeCalculator.calculateFees(feeHistory)).isEqualTo(expectedGasPrice)
   }
@@ -59,7 +59,7 @@ class BoundableFeeCalculatorTest {
     }
     val boundableFeeCalculator = BoundableFeeCalculator(
       BoundableFeeCalculator.Config(gasPriceUpperBound, gasPriceLowerBound, gasPriceFixedCost),
-      mockFeesCalculator
+      mockFeesCalculator,
     )
     Assertions.assertThat(boundableFeeCalculator.calculateFees(feeHistory)).isEqualTo(expectedGasPrice)
   }
@@ -77,7 +77,7 @@ class BoundableFeeCalculatorTest {
     }
     val boundableFeeCalculator = BoundableFeeCalculator(
       BoundableFeeCalculator.Config(gasPriceUpperBound, gasPriceLowerBound, gasPriceFixedCost),
-      mockFeesCalculator
+      mockFeesCalculator,
     )
     Assertions.assertThat(boundableFeeCalculator.calculateFees(feeHistory)).isEqualTo(expectedGasPrice)
   }
@@ -89,9 +89,9 @@ class BoundableFeeCalculatorTest {
         BoundableFeeCalculator.Config(
           -1000.0,
           -10000.0,
-          -100.0
+          -100.0,
         ),
-        mock<FeesCalculator>()
+        mock<FeesCalculator>(),
       )
     }
     Assertions.assertThat(exception)
@@ -106,9 +106,9 @@ class BoundableFeeCalculatorTest {
         BoundableFeeCalculator.Config(
           1000.0,
           10000.0,
-          10.0
+          10.0,
         ),
-        mock<FeesCalculator>()
+        mock<FeesCalculator>(),
       )
     }
     Assertions.assertThat(exception)

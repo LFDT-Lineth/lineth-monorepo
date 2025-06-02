@@ -20,7 +20,7 @@ import java.util.concurrent.Callable
   synopsisHeading = "%n",
   descriptionHeading = "%nDescription:%n%n",
   optionListHeading = "%nOptions:%n",
-  footerHeading = "%n"
+  footerHeading = "%n",
 )
 class CoordinatorAppCli
 internal constructor(private val errorWriter: PrintWriter, private val startAction: StartAction) :
@@ -32,7 +32,7 @@ internal constructor(private val errorWriter: PrintWriter, private val startActi
     names = ["--traces-limits-v2"],
     paramLabel = "<FILE>",
     description = ["Prover traces limits for linea besu"],
-    arity = "1"
+    arity = "1",
   )
   private val tracesLimitsV2File: File? = null
 
@@ -40,27 +40,24 @@ internal constructor(private val errorWriter: PrintWriter, private val startActi
     names = ["--smart-contract-errors"],
     paramLabel = "<FILE>",
     description = ["Smart contract error codes"],
-    arity = "1"
+    arity = "1",
   )
-
   private val smartContractErrorsFile: File? = null
 
   @CommandLine.Option(
     names = ["--gas-price-cap-time-of-day-multipliers"],
     paramLabel = "<FILE>",
     description = ["Time-of-day multipliers for calculation of L1 dynamic gas price caps"],
-    arity = "1"
+    arity = "1",
   )
-
   private val gasPriceCapTimeOfDayMultipliersFile: File? = null
 
   @CommandLine.Option(
     names = ["--check-configs-only"],
     paramLabel = "<BOOLEAN>",
     description = ["Validates configuration files only, without starting the application."],
-    arity = "0..1"
+    arity = "0..1",
   )
-
   private var checkConfigsOnly: Boolean = false
 
   override fun call(): Int {
@@ -97,7 +94,7 @@ internal constructor(private val errorWriter: PrintWriter, private val startActi
         tracesLimitsFileV2 = tracesLimitsV2File.toPath(),
         smartContractErrorsFile = smartContractErrorsFile.toPath(),
         gasPriceCapTimeOfDayMultipliersFile = gasPriceCapTimeOfDayMultipliersFile.toPath(),
-        logger = logger
+        logger = logger,
       )
 
       if (checkConfigsOnly) {

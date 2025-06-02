@@ -24,23 +24,23 @@ fun mapToDomainWithTxHashes(web3jBlock: EthBlock.Block): BlockWithTxHashes {
 }
 
 fun mapFullTxDataToDomain(
-  web3jBlock: EthBlock.Block
+  web3jBlock: EthBlock.Block,
 ): List<Transaction> {
   if (web3jBlock.transactions.isNotEmpty() && web3jBlock.transactions[0] !is EthBlock.TransactionObject) {
     throw IllegalArgumentException(
       "Expected to be have full EthBlock.TransactionObject." +
-        "Got just transaction hashes."
+        "Got just transaction hashes.",
     )
   }
   return web3jBlock.transactions.map { (it as EthBlock.TransactionObject).toDomain() }
 }
 
 fun mapTxHashToByteArray(
-  web3jBlock: EthBlock.Block
+  web3jBlock: EthBlock.Block,
 ): List<ByteArray> {
   if (web3jBlock.transactions.isNotEmpty() && web3jBlock.transactions[0] !is EthBlock.TransactionHash) {
     throw IllegalArgumentException(
-      "Expected to be have EthBlock.TransactionHash. Got instance of ${web3jBlock.transactions[0]::class.java}"
+      "Expected to be have EthBlock.TransactionHash. Got instance of ${web3jBlock.transactions[0]::class.java}",
     )
   }
   return web3jBlock.transactions.map { (it as EthBlock.TransactionHash).get().decodeHex() }
@@ -66,7 +66,7 @@ fun <TxData> mapToDomain(web3jBlock: EthBlock.Block, txsMapper: (EthBlock.Block)
     mixHash = web3jBlock.mixHash.decodeHex(),
     baseFeePerGas = web3jBlock.baseFeePerGas?.toULong(), // Optional field for EIP-1559 blocks
     ommers = web3jBlock.uncles.map { it.decodeHex() }, // List of uncle block hashes
-    transactions = txsMapper(web3jBlock) // List of transactions
+    transactions = txsMapper(web3jBlock), // List of transactions
   )
   return block
 }
@@ -86,7 +86,7 @@ fun EthBlock.TransactionObject.toDomain(): Transaction {
   val accessList = this.accessList?.map { accessListEntry ->
     AccessListEntry(
       accessListEntry.address.decodeHex(),
-      accessListEntry.storageKeys.map { it.decodeHex() }
+      accessListEntry.storageKeys.map { it.decodeHex() },
     )
   }
 
@@ -114,7 +114,7 @@ fun EthBlock.TransactionObject.toDomain(): Transaction {
     gasPrice = gasPrice, // Optional field for EIP-1559 transactions
     maxFeePerGas = maxFeePerGas, // Optional field for EIP-1559 transactions
     maxPriorityFeePerGas = maxPriorityFeePerGas, // Optional field for EIP-1559 transactions,
-    accessList = accessList
+    accessList = accessList,
   )
   return domainTx
 }

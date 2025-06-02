@@ -47,27 +47,27 @@ class RecordsCleanupFinalizationHandlerTest : CleanDbTestSuiteParallel() {
     batchesRepository = PostgresBatchesRepository(
       BatchesPostgresDao(
         connection = sqlClient,
-        clock = fakeClock
-      )
+        clock = fakeClock,
+      ),
     )
     blobsRepository = BlobsRepositoryImpl(
       BlobsPostgresDao(
         config = BlobsPostgresDao.Config(maxBlobsToReturn = 10u),
         connection = sqlClient,
-        clock = fakeClock
-      )
+        clock = fakeClock,
+      ),
     )
     aggregationsRepository = AggregationsRepositoryImpl(
       PostgresAggregationsDao(
         connection = sqlClient,
-        clock = fakeClock
-      )
+        clock = fakeClock,
+      ),
     )
 
     recordsCleanupFinalizationHandler = RecordsCleanupFinalizationHandler(
       batchesRepository,
       blobsRepository,
-      aggregationsRepository
+      aggregationsRepository,
     )
   }
 
@@ -96,18 +96,18 @@ class RecordsCleanupFinalizationHandlerTest : CleanDbTestSuiteParallel() {
   val aggregation1 = createAggregation(
     startBlockNumber = blob1.startBlockNumber.toLong(),
     endBlockNumber = blob1.endBlockNumber.toLong(),
-    batchCount = blob1.batchesCount.toLong()
+    batchCount = blob1.batchesCount.toLong(),
   )
   val aggregation2 = createAggregation(
     startBlockNumber = blob2.startBlockNumber.toLong(),
     endBlockNumber = blob2.endBlockNumber.toLong(),
-    batchCount = blob2.batchesCount.toLong()
+    batchCount = blob2.batchesCount.toLong(),
   )
 
   val aggregation3 = createAggregation(
     startBlockNumber = blob3.startBlockNumber.toLong(),
     endBlockNumber = blob3.endBlockNumber.toLong(),
-    batchCount = blob3.batchesCount.toLong()
+    batchCount = blob3.batchesCount.toLong(),
   )
 
   val aggregations = listOf(aggregation1, aggregation2, aggregation3)
@@ -125,7 +125,7 @@ class RecordsCleanupFinalizationHandlerTest : CleanDbTestSuiteParallel() {
 
       aggregationsRepository.saveNewAggregation(aggregation1),
       aggregationsRepository.saveNewAggregation(aggregation2),
-      aggregationsRepository.saveNewAggregation(aggregation3)
+      aggregationsRepository.saveNewAggregation(aggregation3),
     ).get()
   }
 
@@ -135,7 +135,7 @@ class RecordsCleanupFinalizationHandlerTest : CleanDbTestSuiteParallel() {
     val update = FinalizationMonitor.FinalizationUpdate(
       blockNumber = 21u,
       blockHash = Bytes32.random(),
-      zkStateRootHash = Bytes32.random()
+      zkStateRootHash = Bytes32.random(),
     )
 
     val batchesBeforeCleanup = batchesContentQuery().execute().get()
@@ -160,7 +160,7 @@ class RecordsCleanupFinalizationHandlerTest : CleanDbTestSuiteParallel() {
     val aggregationsAfterCleanup = aggregationsContentQuery().execute().get()
     Assertions.assertThat(aggregationsAfterCleanup.size()).isEqualTo(1)
     Assertions.assertThat(
-      aggregationsRepository.findAggregationProofByEndBlockNumber(aggregation3.endBlockNumber.toLong()).get()
+      aggregationsRepository.findAggregationProofByEndBlockNumber(aggregation3.endBlockNumber.toLong()).get(),
     )
       .isNotNull()
   }

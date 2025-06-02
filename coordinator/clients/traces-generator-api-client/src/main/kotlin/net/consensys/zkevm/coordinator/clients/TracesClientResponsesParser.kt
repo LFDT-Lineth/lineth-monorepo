@@ -17,7 +17,7 @@ object TracesClientResponsesParser {
   private val log: Logger = LogManager.getLogger(this::class.java)
 
   internal fun mapErrorResponseV2(
-    jsonRpcErrorResponse: JsonRpcErrorResponse
+    jsonRpcErrorResponse: JsonRpcErrorResponse,
   ): ErrorResponse<TracesServiceErrorType> {
     val errorType: TracesServiceErrorType = runCatching {
       TracesServiceErrorType.valueOf(jsonRpcErrorResponse.error.data.toString().substringBefore(':'))
@@ -27,13 +27,13 @@ object TracesClientResponsesParser {
   }
 
   internal fun parseTracesCounterResponseV2(
-    jsonRpcResponse: JsonRpcSuccessResponse
+    jsonRpcResponse: JsonRpcSuccessResponse,
   ): GetTracesCountersResponse {
     val result = jsonRpcResponse.result as JsonObject
 
     return GetTracesCountersResponse(
       result.getJsonObject("tracesCounters").let { parseTracesCountersV2(it) },
-      result.getString("tracesEngineVersion")
+      result.getString("tracesEngineVersion"),
     )
   }
 
@@ -62,7 +62,7 @@ object TracesClientResponsesParser {
           log.error(
             "Failed to parse Evm module ${traceModule.name}='$counterValue' to UInt. errorMessage={}",
             it.message,
-            it
+            it,
           )
         }
         .getOrThrow()
@@ -71,12 +71,12 @@ object TracesClientResponsesParser {
   }
 
   internal fun parseConflatedTracesToFileResponse(
-    jsonRpcResponse: JsonRpcSuccessResponse
+    jsonRpcResponse: JsonRpcSuccessResponse,
   ): GenerateTracesResponse {
     val result = jsonRpcResponse.result as JsonObject
     return GenerateTracesResponse(
       result.getString("conflatedTracesFileName"),
-      result.getString("tracesEngineVersion")
+      result.getString("tracesEngineVersion"),
     )
   }
 }

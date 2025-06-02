@@ -13,14 +13,14 @@ import java.util.concurrent.atomic.AtomicReference
 class FetchAndValidationRunner(
   val vertx: Vertx = Vertx.vertx(),
   val rpcUrl: String,
-  val log: Logger = LogManager.getLogger(FetchAndValidationRunner::class.java)
+  val log: Logger = LogManager.getLogger(FetchAndValidationRunner::class.java),
 ) {
   val web3j: Web3j = createWeb3jHttpClient(
     rpcUrl = rpcUrl,
 //    executorService = vertx.nettyEventLoopGroup(),
     log = LogManager.getLogger("test.client.web3j"),
     requestResponseLogLevel = Level.DEBUG,
-    failuresLogLevel = Level.ERROR
+    failuresLogLevel = Level.ERROR,
   )
   val validator = BlockEncodingValidator(vertx = vertx, log = log).also { it.start() }
   val blocksFetcher = BlocksFetcher(web3j, log = log)
@@ -45,17 +45,17 @@ class FetchAndValidationRunner(
     startBlockNumber: ULong,
     endBlockNumber: ULong? = null,
     chuckSize: UInt = 100U,
-    rlpEncodingDecodingOnly: Boolean = false
+    rlpEncodingDecodingOnly: Boolean = false,
   ): SafeFuture<*> {
     targetEndBlockNumber.set(endBlockNumber)
     return blocksFetcher.consumeBlocks(
       startBlockNumber = startBlockNumber,
       endBlockNumber = endBlockNumber,
-      chunkSize = chuckSize
+      chunkSize = chuckSize,
     ) { blocks ->
       log.info(
         "got blocks: {}",
-        CommonDomainFunctions.blockIntervalString(blocks.first().number, blocks.last().number)
+        CommonDomainFunctions.blockIntervalString(blocks.first().number, blocks.last().number),
       )
       if (rlpEncodingDecodingOnly) {
         validator.validateRlpEncodingDecoding(blocks)

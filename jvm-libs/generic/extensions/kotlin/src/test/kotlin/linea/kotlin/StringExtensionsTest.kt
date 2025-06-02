@@ -19,7 +19,7 @@ class StringExtensionsTest {
   fun `String#containsAny`() {
     val stringList = listOf(
       "This is a TEST",
-      "lorem ipsum"
+      "lorem ipsum",
     )
 
     assertThat("this is a test string ignoring cases".containsAny(stringList, ignoreCase = true)).isTrue()

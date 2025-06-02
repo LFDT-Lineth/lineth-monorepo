@@ -19,7 +19,7 @@ import org.apache.logging.log4j.Logger
 import java.nio.file.Path
 
 inline fun <reified T : Any> loadConfigsOrError(
-  configFiles: List<Path>
+  configFiles: List<Path>,
 ): Result<T, String> {
   val confBuilder: ConfigLoaderBuilder = ConfigLoaderBuilder.Companion
     .empty()
@@ -43,7 +43,7 @@ fun logErrorIfPresent(
   configName: String,
   configFiles: List<Path>,
   configLoadingResult: Result<Any?, String>,
-  logger: Logger
+  logger: Logger,
 ) {
   if (configLoadingResult is Err) {
     logger.error("Failed to load $configName from files=$configFiles with error=${configLoadingResult.error}")
@@ -53,7 +53,7 @@ fun logErrorIfPresent(
 inline fun <reified T : Any> loadConfigsAndLogErrors(
   configFiles: List<Path>,
   configName: String,
-  logger: Logger = LogManager.getLogger("linea.coordinator.config")
+  logger: Logger = LogManager.getLogger("linea.coordinator.config"),
 ): Result<T, String> {
   return loadConfigsOrError<T>(configFiles)
     .also { logErrorIfPresent(configName, configFiles, it, logger) }
@@ -64,7 +64,7 @@ fun loadConfigsOrError(
   tracesLimitsFileV2: Path,
   gasPriceCapTimeOfDayMultipliersFile: Path,
   smartContractErrorsFile: Path,
-  logger: Logger = LogManager.getLogger("linea.coordinator.config")
+  logger: Logger = LogManager.getLogger("linea.coordinator.config"),
 ): Result<CoordinatorConfigTomlDto, String> {
   val coordinatorBaseConfigs =
     loadConfigsAndLogErrors<CoordinatorConfigTomlDto>(coordinatorConfigFiles, "coordinator", logger)
@@ -74,18 +74,18 @@ fun loadConfigsOrError(
     loadConfigsAndLogErrors<GasPriceCapTimeOfDayMultipliersConfig>(
       listOf(gasPriceCapTimeOfDayMultipliersFile),
       "l1 submission gas prices caps",
-      logger
+      logger,
     )
   val smartContractErrorsConfig = loadConfigsAndLogErrors<SmartContractErrorCodesConfig>(
     listOf(smartContractErrorsFile),
     "smart contract errors",
-    logger
+    logger,
   )
   val configError = listOf(
     coordinatorBaseConfigs,
     tracesLimitsV2Configs,
     gasPriceCapTimeOfDayMultipliersConfig,
-    smartContractErrorsConfig
+    smartContractErrorsConfig,
   )
     .find { it is Err }
 
@@ -98,13 +98,13 @@ fun loadConfigsOrError(
   val finalConfig = baseConfig.copy(
     conflation = baseConfig.conflation.copy(
       _tracesLimitsV2 = tracesLimitsV2Configs.get()?.tracesLimits?.let { TracesCountersV2(it) },
-      _smartContractErrors = smartContractErrorsConfig.get()!!.smartContractErrors
+      _smartContractErrors = smartContractErrorsConfig.get()!!.smartContractErrors,
     ),
     l1DynamicGasPriceCapService = baseConfig.l1DynamicGasPriceCapService.copy(
       gasPriceCapCalculation = baseConfig.l1DynamicGasPriceCapService.gasPriceCapCalculation.copy(
-        timeOfDayMultipliers = gasPriceCapTimeOfDayMultipliersConfig.get()?.gasPriceCapTimeOfDayMultipliers
-      )
-    )
+        timeOfDayMultipliers = gasPriceCapTimeOfDayMultipliersConfig.get()?.gasPriceCapTimeOfDayMultipliers,
+      ),
+    ),
   )
   return Ok(finalConfig)
 }
@@ -114,14 +114,14 @@ fun loadConfigs(
   tracesLimitsFileV2: Path,
   gasPriceCapTimeOfDayMultipliersFile: Path,
   smartContractErrorsFile: Path,
-  logger: Logger = LogManager.getLogger("linea.coordinator.config")
+  logger: Logger = LogManager.getLogger("linea.coordinator.config"),
 ): CoordinatorConfig {
   loadConfigsOrError(
     coordinatorConfigFiles,
     tracesLimitsFileV2,
     gasPriceCapTimeOfDayMultipliersFile,
     smartContractErrorsFile,
-    logger
+    logger,
   ).let {
     return it
       .getOrElse {

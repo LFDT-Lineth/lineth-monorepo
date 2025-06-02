@@ -39,7 +39,7 @@ class CoordinatorAppMain {
               // Messages in App.stop won't appear in the logs
               Configurator.shutdown(LogManager.getContext() as LoggerContext)
             }
-          }
+          },
         )
       app.start()
     }

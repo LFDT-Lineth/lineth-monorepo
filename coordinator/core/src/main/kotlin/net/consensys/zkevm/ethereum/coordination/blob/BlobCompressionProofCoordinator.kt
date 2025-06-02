@@ -31,7 +31,7 @@ class BlobCompressionProofCoordinator(
   private val blobZkStateProvider: BlobZkStateProvider,
   private val config: Config,
   private val blobCompressionProofHandler: BlobCompressionProofHandler,
-  metricsFacade: MetricsFacade
+  metricsFacade: MetricsFacade,
 ) : BlobCreationHandler, LongRunningService {
   private val log: Logger = LogManager.getLogger(this::class.java)
   private val defaultQueueCapacity = 1000 // Should be more than blob submission limit
@@ -42,17 +42,17 @@ class BlobCompressionProofCoordinator(
   private val blobsCounter = metricsFacade.createCounter(
     category = LineaMetricsCategory.BLOB,
     name = "counter",
-    description = "New blobs arriving to blob compression proof coordinator"
+    description = "New blobs arriving to blob compression proof coordinator",
   )
   private val blobSizeInBlocksHistogram = metricsFacade.createHistogram(
     category = LineaMetricsCategory.BLOB,
     name = "blocks.size",
-    description = "Number of blocks in each blob"
+    description = "Number of blocks in each blob",
   )
   private val blobSizeInBatchesHistogram = metricsFacade.createHistogram(
     category = LineaMetricsCategory.BLOB,
     name = "batches.size",
-    description = "Number of batches in each blob"
+    description = "Number of batches in each blob",
   )
 
   init {
@@ -60,12 +60,12 @@ class BlobCompressionProofCoordinator(
       category = LineaMetricsCategory.BLOB,
       name = "compression.queue.size",
       description = "Size of blob compression proving queue",
-      measurementSupplier = { blobsToHandle.size }
+      measurementSupplier = { blobsToHandle.size },
     )
   }
 
   data class Config(
-    val pollingInterval: Duration
+    val pollingInterval: Duration,
   )
 
   @Synchronized
@@ -81,8 +81,8 @@ class BlobCompressionProofCoordinator(
           finalStateRootHash = blobZkState.finalStateRootHash,
           conflationOrder = BlockIntervals(
             startingBlockNumber = blob.conflations.first().startBlockNumber,
-            upperBoundaries = blob.conflations.map { it.endBlockNumber }
-          )
+            upperBoundaries = blob.conflations.map { it.endBlockNumber },
+          ),
         ).thenApply { rollingBlobShnarfResult ->
           Pair(blobZkState, rollingBlobShnarfResult)
         }
@@ -101,13 +101,13 @@ class BlobCompressionProofCoordinator(
         kzgProofContract = rollingBlobShnarfResult.shnarfResult.kzgProofContract,
         kzgProofSideCar = rollingBlobShnarfResult.shnarfResult.kzgProofSideCar,
         blobStartBlockTime = blob.startBlockTime,
-        blobEndBlockTime = blob.endBlockTime
+        blobEndBlockTime = blob.endBlockTime,
       ).whenException { exception ->
         log.error(
           "Error in requesting blob compression proof: blob={} errorMessage={} ",
           blob.intervalString(),
           exception.message,
-          exception
+          exception,
         )
       }
     }
@@ -128,7 +128,7 @@ class BlobCompressionProofCoordinator(
     kzgProofContract: ByteArray,
     kzgProofSideCar: ByteArray,
     blobStartBlockTime: Instant,
-    blobEndBlockTime: Instant
+    blobEndBlockTime: Instant,
   ): SafeFuture<Unit> {
     val proofRequest = BlobCompressionProofRequest(
       compressedData = compressedData,
@@ -140,7 +140,7 @@ class BlobCompressionProofCoordinator(
       expectedShnarfResult = expectedShnarfResult,
       commitment = commitment,
       kzgProofContract = kzgProofContract,
-      kzgProofSideCar = kzgProofSideCar
+      kzgProofSideCar = kzgProofSideCar,
     )
     return blobCompressionProverClient.requestProof(proofRequest)
       .thenCompose { blobCompressionProof ->
@@ -152,7 +152,7 @@ class BlobCompressionProofCoordinator(
           endBlockTime = blobEndBlockTime,
           batchesCount = conflations.size.toUInt(),
           expectedShnarf = expectedShnarfResult.expectedShnarf,
-          blobCompressionProof = blobCompressionProof
+          blobCompressionProof = blobCompressionProof,
         )
         SafeFuture.allOf(
           blobsRepository.saveNewBlob(blobRecord),
@@ -160,11 +160,11 @@ class BlobCompressionProofCoordinator(
             BlobCompressionProofUpdate(
               blockInterval = BlockInterval.between(
                 startBlockNumber = blobRecord.startBlockNumber,
-                endBlockNumber = blobRecord.endBlockNumber
+                endBlockNumber = blobRecord.endBlockNumber,
               ),
-              blobCompressionProof = blobCompressionProof
-            )
-          )
+              blobCompressionProof = blobCompressionProof,
+            ),
+          ),
         ).thenApply {}
       }
   }
@@ -176,7 +176,7 @@ class BlobCompressionProofCoordinator(
       "new blob: blob={} queuedBlobsToProve={} blobBatches={}",
       blob.intervalString(),
       blobsToHandle.size,
-      blob.conflations.toBlockIntervalsString()
+      blob.conflations.toBlockIntervalsString(),
     )
     blobSizeInBlocksHistogram.record(blob.blocksRange.count().toDouble())
     blobSizeInBatchesHistogram.record(blob.conflations.size.toDouble())
@@ -207,7 +207,7 @@ class BlobCompressionProofCoordinator(
             "Error handling blob from BlobCompressionProofCoordinator queue: blob={} errorMessage={}",
             blobToHandle.intervalString(),
             exception.message,
-            exception
+            exception,
           )
         }
     } else {

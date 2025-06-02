@@ -17,7 +17,7 @@ class SimpleTimerCapture<T> : AbstractTimerCapture<T>, TimerCapture<T> {
   constructor(meterRegistry: MeterRegistry, name: String) : super(meterRegistry, name)
   constructor(
     meterRegistry: MeterRegistry,
-    timerBuilder: Timer.Builder
+    timerBuilder: Timer.Builder,
   ) : super(meterRegistry, timerBuilder)
 
   override fun setDescription(description: String): SimpleTimerCapture<T> {

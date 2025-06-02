@@ -63,7 +63,7 @@ class TracesCountersTest {
   @Test
   fun empty_counters() {
     val tracesCountersV2 = TracesCountersV2(
-      TracingModuleV2.entries.associateWith { 0u }
+      TracingModuleV2.entries.associateWith { 0u },
     )
     assertThat(tracesCountersV2).isEqualTo(TracesCountersV2.EMPTY_TRACES_COUNT)
   }

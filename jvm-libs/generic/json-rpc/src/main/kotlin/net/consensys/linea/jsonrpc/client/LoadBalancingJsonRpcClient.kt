@@ -24,7 +24,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock
 class LoadBalancingJsonRpcClient
 private constructor(
   rpcClients: List<JsonRpcClient>,
-  private val maxInflightRequestsPerClient: UInt
+  private val maxInflightRequestsPerClient: UInt,
 ) : JsonRpcClient {
 
   companion object {
@@ -32,11 +32,11 @@ private constructor(
 
     fun create(
       rpcClients: List<JsonRpcClient>,
-      requestLimitPerEndpoint: UInt
+      requestLimitPerEndpoint: UInt,
     ): LoadBalancingJsonRpcClient {
       val loadBalancingJsonRpcClient = LoadBalancingJsonRpcClient(
         rpcClients,
-        requestLimitPerEndpoint
+        requestLimitPerEndpoint,
       )
       loadBalancingJsonRpcClients.add(loadBalancingJsonRpcClient)
       return loadBalancingJsonRpcClient
@@ -55,7 +55,7 @@ private constructor(
   private data class RpcRequestContext(
     val request: JsonRpcRequest,
     val promise: Promise<Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>>,
-    val resultMapper: (Any?) -> Any?
+    val resultMapper: (Any?) -> Any?,
   )
 
   private val clientsPool: List<RpcClientContext> = rpcClients.map { RpcClientContext(it, 0u) }
@@ -96,7 +96,7 @@ private constructor(
 
   private fun enqueueRequest(
     request: JsonRpcRequest,
-    resultMapper: (Any?) -> Any?
+    resultMapper: (Any?) -> Any?,
   ): Future<Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>> {
     val resultPromise: Promise<Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>> =
       Promise.promise()
@@ -106,7 +106,7 @@ private constructor(
 
   override fun makeRequest(
     request: JsonRpcRequest,
-    resultMapper: (Any?) -> Any?
+    resultMapper: (Any?) -> Any?,
   ): Future<Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>> {
     val result = enqueueRequest(request, resultMapper)
     serveNextWaitingInTheQueue()
@@ -115,7 +115,7 @@ private constructor(
 
   private fun dispatchRequest(
     rpcClientContext: RpcClientContext,
-    queuedRequest: RpcRequestContext
+    queuedRequest: RpcRequestContext,
   ) {
     rpcClientContext.rpcClient
       .makeRequest(queuedRequest.request, queuedRequest.resultMapper)

@@ -23,8 +23,8 @@ class FeeHistoryExtensionsTest {
         reward = listOf(listOf("ba1", "ba2").map { it.toULong(16) }),
         gasUsedRatio = listOf(0.25),
         baseFeePerBlobGas = listOf(0uL),
-        blobGasUsedRatio = listOf(0.0)
-      )
+        blobGasUsedRatio = listOf(0.0),
+      ),
     )
   }
 
@@ -36,8 +36,8 @@ class FeeHistoryExtensionsTest {
       this.setReward(
         listOf(
           listOf("0xba1", "0xba2"),
-          listOf("0xbb1", "0xbb2")
-        )
+          listOf("0xbb1", "0xbb2"),
+        ),
       )
       this.gasUsedRatio = listOf(0.25, 0.75)
     }
@@ -48,12 +48,12 @@ class FeeHistoryExtensionsTest {
         baseFeePerGas = listOf("a1", "a2", "a3").map { it.toULong(16) },
         reward = listOf(
           listOf("ba1", "ba2").map { it.toULong(16) },
-          listOf("bb1", "bb2").map { it.toULong(16) }
+          listOf("bb1", "bb2").map { it.toULong(16) },
         ),
         gasUsedRatio = listOf(0.25, 0.75),
         baseFeePerBlobGas = listOf(0uL),
-        blobGasUsedRatio = listOf(0.0)
-      )
+        blobGasUsedRatio = listOf(0.0),
+      ),
     )
   }
 }

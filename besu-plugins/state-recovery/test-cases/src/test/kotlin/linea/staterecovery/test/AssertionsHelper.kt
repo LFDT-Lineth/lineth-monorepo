@@ -19,7 +19,7 @@ import kotlin.time.toJavaDuration
 fun execCommandAndAssertSuccess(
   command: String,
   timeout: Duration = 1.minutes,
-  log: Logger
+  log: Logger,
 ): SafeFuture<CommandResult> {
   return Runner
     .executeCommandFailOnNonZeroExitCode(command, timeout = timeout, log = log)
@@ -35,7 +35,7 @@ fun assertBesuAndShomeiRecoveredAsExpected(
   stateManagerClient: StateManagerClientV1,
   expectedBlockNumber: ULong,
   expectedZkEndStateRootHash: ByteArray,
-  timeout: Duration = 60.seconds
+  timeout: Duration = 60.seconds,
 ) {
   await()
     .pollInterval(1.seconds.toJavaDuration())
@@ -53,7 +53,7 @@ fun waitExecutionLayerToBeUpAndRunning(
   executionLayerUrl: String,
   expectedHeadBlockNumber: ULong = 0UL,
   log: Logger,
-  timeout: Duration = 2.minutes
+  timeout: Duration = 2.minutes,
 ) {
   val web3jElClient = createWeb3jHttpClient(executionLayerUrl)
   await()

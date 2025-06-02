@@ -4,7 +4,7 @@ import linea.kotlin.encodeHex
 
 data class BlockNumberAndHash(
   val number: ULong,
-  val hash: ByteArray
+  val hash: ByteArray,
 ) {
   override fun equals(other: Any?): Boolean {
     if (this === other) return true

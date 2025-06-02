@@ -65,7 +65,7 @@ class BlobAndAggregationFinalizationIntTest : CleanDbTestSuiteParallel() {
 
   private fun setupTest(
     vertx: Vertx,
-    smartContractVersion: LineaContractVersion
+    smartContractVersion: LineaContractVersion,
   ) {
     // V6 is always used, this is left for when V7 is implemented.
     if (listOf(LineaContractVersion.V6).contains(smartContractVersion).not()) {
@@ -76,7 +76,7 @@ class BlobAndAggregationFinalizationIntTest : CleanDbTestSuiteParallel() {
     // load files from FS while smc deploy
     loadBlobsAndAggregations(
       blobsResponsesDir = "$testDataDir/compression/responses",
-      aggregationsResponsesDir = "$testDataDir/aggregation/responses"
+      aggregationsResponsesDir = "$testDataDir/aggregation/responses",
     )
       .let { (blobs, aggregations) ->
         this.blobs = blobs
@@ -91,8 +91,8 @@ class BlobAndAggregationFinalizationIntTest : CleanDbTestSuiteParallel() {
       BlobsPostgresDao(
         config = BlobsPostgresDao.Config(maxBlobsToReturn = 100U),
         connection = sqlClient,
-        clock = fakeClock
-      )
+        clock = fakeClock,
+      ),
     )
     aggregationsRepository = AggregationsRepositoryImpl(PostgresAggregationsDao(sqlClient, fakeClock))
 
@@ -103,11 +103,11 @@ class BlobAndAggregationFinalizationIntTest : CleanDbTestSuiteParallel() {
     @Suppress("DEPRECATION")
     val alreadySubmittedBlobFilter = L1ShnarfBasedAlreadySubmittedBlobsFilter(
       lineaRollup = lineaRollupContractForDataSubmissionV6,
-      acceptedBlobEndBlockNumberConsumer = acceptedBlobEndBlockNumberConsumer
+      acceptedBlobEndBlockNumberConsumer = acceptedBlobEndBlockNumberConsumer,
     )
     val blobSubmittedEventConsumers = mapOf(
       Consumer<BlobSubmittedEvent> { blobSubmittedEvent = it } to "Blob Submitted Consumer 1",
-      Consumer<BlobSubmittedEvent> { blobSubmissionDelay = it.getSubmissionDelay() } to "Blob Submitted Consumer 2"
+      Consumer<BlobSubmittedEvent> { blobSubmissionDelay = it.getSubmissionDelay() } to "Blob Submitted Consumer 2",
     )
 
     blobSubmissionCoordinator = run {
@@ -116,7 +116,7 @@ class BlobAndAggregationFinalizationIntTest : CleanDbTestSuiteParallel() {
           pollingInterval = 6.seconds,
           proofSubmissionDelay = 0.seconds,
           maxBlobsToSubmitPerTick = 100u,
-          targetBlobsToSubmitPerTx = 9u
+          targetBlobsToSubmitPerTx = 9u,
         ),
         blobsRepository = blobsRepository,
         aggregationsRepository = aggregationsRepository,
@@ -125,7 +125,7 @@ class BlobAndAggregationFinalizationIntTest : CleanDbTestSuiteParallel() {
         gasPriceCapProvider = FakeGasPriceCapProvider(),
         blobSubmittedEventDispatcher = EventDispatcher(blobSubmittedEventConsumers),
         vertx = vertx,
-        clock = fakeClock
+        clock = fakeClock,
       )
     }
 
@@ -133,27 +133,27 @@ class BlobAndAggregationFinalizationIntTest : CleanDbTestSuiteParallel() {
       lineaRollupContractForAggregationSubmission = MakeFileDelegatedContractsManager
         .connectToLineaRollupContract(
           rollupDeploymentResult.contractAddress,
-          rollupDeploymentResult.rollupOperators[1].txManager
+          rollupDeploymentResult.rollupOperators[1].txManager,
 
         )
 
       val submittedFinalizationConsumers = mapOf(
         Consumer<FinalizationSubmittedEvent> { finalizationSubmittedEvent = it } to "Finalization Submitted Consumer 1",
         Consumer<FinalizationSubmittedEvent> { finalizationSubmissionDelay = it.getSubmissionDelay() }
-          to "Finalization Submitted Consumer 2"
+          to "Finalization Submitted Consumer 2",
       )
 
       val aggregationSubmitter = AggregationSubmitterImpl(
         lineaRollup = lineaRollupContractForAggregationSubmission,
         gasPriceCapProvider = FakeGasPriceCapProvider(),
         aggregationSubmittedEventConsumer = EventDispatcher(submittedFinalizationConsumers),
-        clock = fakeClock
+        clock = fakeClock,
       )
 
       AggregationFinalizationCoordinator(
         config = AggregationFinalizationCoordinator.Config(
           pollingInterval = 6.seconds,
-          proofSubmissionDelay = 0.seconds
+          proofSubmissionDelay = 0.seconds,
         ),
         aggregationSubmitter = aggregationSubmitter,
         aggregationsRepository = aggregationsRepository,
@@ -161,7 +161,7 @@ class BlobAndAggregationFinalizationIntTest : CleanDbTestSuiteParallel() {
         lineaRollup = lineaRollupContractForAggregationSubmission,
         alreadySubmittedBlobsFilter = alreadySubmittedBlobFilter,
         vertx = vertx,
-        clock = fakeClock
+        clock = fakeClock,
       )
     }
   }
@@ -169,13 +169,13 @@ class BlobAndAggregationFinalizationIntTest : CleanDbTestSuiteParallel() {
   private fun testSubmission(
     vertx: Vertx,
     testContext: VertxTestContext,
-    smartContractVersion: LineaContractVersion
+    smartContractVersion: LineaContractVersion,
   ) {
     setupTest(vertx, smartContractVersion)
 
     SafeFuture.allOf(
       SafeFuture.collectAll(blobs.map { blobsRepository.saveNewBlob(it) }.stream()),
-      SafeFuture.collectAll(aggregations.map { aggregationsRepository.saveNewAggregation(it) }.stream())
+      SafeFuture.collectAll(aggregations.map { aggregationsRepository.saveNewAggregation(it) }.stream()),
     ).get()
 
     val aggEndTime = aggregations.last().aggregationProof!!.finalTimestamp
@@ -196,7 +196,7 @@ class BlobAndAggregationFinalizationIntTest : CleanDbTestSuiteParallel() {
             assertThat(blobSubmittedEvent.blobs.last().endBlockNumber).isEqualTo(blobs[19].endBlockNumber)
             assertThat(acceptedBlob).isEqualTo(blobs[19].endBlockNumber)
             assertThat(finalizationSubmittedEvent.endBlockNumber).isEqualTo(
-              aggregations.last().endBlockNumber
+              aggregations.last().endBlockNumber,
             )
             assertThat(blobSubmissionDelay).isGreaterThan(0L)
             assertThat(finalizationSubmissionDelay).isGreaterThan(0L)
@@ -209,7 +209,7 @@ class BlobAndAggregationFinalizationIntTest : CleanDbTestSuiteParallel() {
   @Timeout(3, timeUnit = TimeUnit.MINUTES)
   fun `submission works with contract V6`(
     vertx: Vertx,
-    testContext: VertxTestContext
+    testContext: VertxTestContext,
   ) {
     testSubmission(vertx, testContext, LineaContractVersion.V6)
   }

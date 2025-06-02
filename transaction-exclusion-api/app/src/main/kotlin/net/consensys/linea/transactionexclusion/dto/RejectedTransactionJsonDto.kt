@@ -8,7 +8,7 @@ import net.consensys.linea.transactionexclusion.app.api.ArgumentParser
 data class ModuleOverflowJsonDto(
   val count: Long,
   val limit: Long,
-  val module: String
+  val module: String,
 ) {
   // Jackson ObjectMapper requires a default constructor
   constructor() : this(0L, 0L, "")
@@ -17,7 +17,7 @@ data class ModuleOverflowJsonDto(
     fun parseListFrom(target: Any): List<ModuleOverflowJsonDto> {
       return ObjectMapper().readValue(
         ObjectMapper().writeValueAsString(target),
-        Array<ModuleOverflowJsonDto>::class.java
+        Array<ModuleOverflowJsonDto>::class.java,
       ).toList()
     }
   }
@@ -26,7 +26,7 @@ data class ModuleOverflowJsonDto(
     return ModuleOverflow(
       count = count,
       limit = limit,
-      module = module
+      module = module,
     )
   }
 }
@@ -37,7 +37,7 @@ data class RejectedTransactionJsonDto(
   val blockNumber: String?,
   val transactionRLP: String,
   val reasonMessage: String,
-  val overflows: Any
+  val overflows: Any,
 ) {
   // Jackson ObjectMapper requires a default constructor
   constructor() : this("", "", null, "", "", Any())
@@ -46,7 +46,7 @@ data class RejectedTransactionJsonDto(
     fun parseFrom(target: Any): RejectedTransactionJsonDto {
       return ObjectMapper().readValue(
         ObjectMapper().writeValueAsString(target),
-        RejectedTransactionJsonDto::class.java
+        RejectedTransactionJsonDto::class.java,
       )
     }
   }
@@ -85,7 +85,7 @@ data class RejectedTransactionJsonDto(
           transactionRLP = parsedTransactionRLP,
           reasonMessage = ArgumentParser.getReasonMessage(reasonMessage),
           overflows = ArgumentParser.getOverflows(overflows),
-          transactionInfo = ArgumentParser.getTransactionInfoFromRLP(parsedTransactionRLP)
+          transactionInfo = ArgumentParser.getTransactionInfoFromRLP(parsedTransactionRLP),
         )
       }
   }

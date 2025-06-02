@@ -30,22 +30,22 @@ class TestingJsonRpcServerTest {
   fun beforeEach(vertx: io.vertx.core.Vertx) {
     jsonRpcServer = TestingJsonRpcServer(
       vertx = vertx,
-      recordRequestsResponses = true
+      recordRequestsResponses = true,
     )
     val rpcClientFactory = VertxHttpJsonRpcClientFactory(
       vertx = vertx,
-      metricsFacade = MicrometerMetricsFacade(registry = SimpleMeterRegistry())
+      metricsFacade = MicrometerMetricsFacade(registry = SimpleMeterRegistry()),
     )
     client = rpcClientFactory.createJsonRpcV2Client(
       endpoints = listOf(URI.create("http://localhost:${jsonRpcServer.boundPort}")),
       retryConfig = RequestRetryConfig(
         maxRetries = 10u,
         backoffDelay = 10.milliseconds,
-        timeout = 2.minutes
+        timeout = 2.minutes,
       ),
       shallRetryRequestsClientBasePredicate = {
         false
-      } // disable retry
+      }, // disable retry
     )
   }
 
@@ -56,7 +56,7 @@ class TestingJsonRpcServerTest {
         method = "not_existing_method",
         params = mapOf("k1" to "v1", "k2" to 100),
         resultMapper = { it },
-        shallRetryRequestPredicate = { false }
+        shallRetryRequestPredicate = { false },
       ).get()
     }.hasCauseInstanceOf(JsonRpcErrorResponseException::class.java)
       .hasMessageContaining("Method not found")
@@ -68,7 +68,7 @@ class TestingJsonRpcServerTest {
       assertThat(request.method).isEqualTo("not_existing_method")
       assertThat(request.params).isEqualTo(mapOf("k1" to "v1", "k2" to 100))
       assertThat(responseFuture.get()).isEqualTo(
-        Err(JsonRpcErrorResponse.methodNotFound(request.id, data = "not_existing_method"))
+        Err(JsonRpcErrorResponse.methodNotFound(request.id, data = "not_existing_method")),
       )
     }
   }
@@ -91,8 +91,8 @@ class TestingJsonRpcServerTest {
       client.makeRequest(
         method = "add",
         params = listOf(1, 2, 3),
-        resultMapper = { it }
-      ).get()
+        resultMapper = { it },
+      ).get(),
     )
       .isEqualTo(6)
 
@@ -100,8 +100,8 @@ class TestingJsonRpcServerTest {
       client.makeRequest(
         method = "addUser",
         params = mapOf("name" to "John", "email" to "john@email.com"),
-        resultMapper = { it }
-      ).get()
+        resultMapper = { it },
+      ).get(),
     )
       .isEqualTo("user=John email=john@email.com")
 

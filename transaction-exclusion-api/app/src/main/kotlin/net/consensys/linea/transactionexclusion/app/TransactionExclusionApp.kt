@@ -30,12 +30,12 @@ data class DbConnectionConfig(
   val host: String,
   val port: Int,
   val username: String,
-  val password: Masked
+  val password: Masked,
 )
 
 data class DbCleanupConfig(
   val pollingInterval: Duration,
-  val storagePeriod: Duration
+  val storagePeriod: Duration,
 )
 
 data class DatabaseConfig(
@@ -46,19 +46,19 @@ data class DatabaseConfig(
   val schema: String = "linea_transaction_exclusion",
   val readPoolSize: Int = 10,
   val readPipeliningLimit: Int = 10,
-  val transactionalPoolSize: Int = 10
+  val transactionalPoolSize: Int = 10,
 )
 
 data class AppConfig(
   val api: ApiConfig,
   val database: DatabaseConfig,
-  val dataQueryableWindowSinceRejectedTimestamp: Duration
+  val dataQueryableWindowSinceRejectedTimestamp: Duration,
 )
 
 data class PersistenceRetryConfig(
   val maxRetries: Int? = null,
   val backoffDelay: Duration = 1.seconds.toJavaDuration(),
-  val timeout: Duration? = 20.seconds.toJavaDuration()
+  val timeout: Duration? = 20.seconds.toJavaDuration(),
 )
 
 class TransactionExclusionApp(config: AppConfig) {
@@ -88,49 +88,49 @@ class TransactionExclusionApp(config: AppConfig) {
       schema = config.database.schema,
       transactionalPoolSize = config.database.transactionalPoolSize,
       readPipeliningLimit = config.database.readPipeliningLimit,
-      skipMigration = true
+      skipMigration = true,
     )
     this.sqlWriteClient = initDb(
       connectionConfig = config.database.write,
       schema = config.database.schema,
       transactionalPoolSize = config.database.transactionalPoolSize,
-      readPipeliningLimit = config.database.readPipeliningLimit
+      readPipeliningLimit = config.database.readPipeliningLimit,
     )
     this.rejectedTransactionsRepository = RetryingRejectedTransactionsPostgresDao(
       delegate = RejectedTransactionsPostgresDao(
         readConnection = this.sqlReadClient,
-        writeConnection = this.sqlWriteClient
+        writeConnection = this.sqlWriteClient,
       ),
       persistenceRetryer = PersistenceRetryer(
         vertx = vertx,
         config = PersistenceRetryer.Config(
           backoffDelay = config.database.persistenceRetry.backoffDelay.toKotlinDuration(),
           maxRetries = config.database.persistenceRetry.maxRetries,
-          timeout = config.database.persistenceRetry.timeout?.toKotlinDuration()
-        )
-      )
+          timeout = config.database.persistenceRetry.timeout?.toKotlinDuration(),
+        ),
+      ),
     )
     this.transactionExclusionService = TransactionExclusionServiceV1Impl(
       config = TransactionExclusionServiceV1Impl.Config(
-        config.dataQueryableWindowSinceRejectedTimestamp.toKotlinDuration()
+        config.dataQueryableWindowSinceRejectedTimestamp.toKotlinDuration(),
       ),
       repository = this.rejectedTransactionsRepository,
-      metricsFacade = this.micrometerMetricsFacade
+      metricsFacade = this.micrometerMetricsFacade,
     )
     this.rejectedTransactionCleanupService = RejectedTransactionCleanupService(
       config = RejectedTransactionCleanupService.Config(
         pollingInterval = config.database.cleanup.pollingInterval.toKotlinDuration(),
-        storagePeriod = config.database.cleanup.storagePeriod.toKotlinDuration()
+        storagePeriod = config.database.cleanup.storagePeriod.toKotlinDuration(),
       ),
       repository = this.rejectedTransactionsRepository,
-      vertx = this.vertx
+      vertx = this.vertx,
     )
     this.api =
       Api(
         configs = config.api,
         vertx = vertx,
         metricsFacade = MicrometerMetricsFacade(meterRegistry),
-        transactionExclusionService = transactionExclusionService
+        transactionExclusionService = transactionExclusionService,
       )
   }
 
@@ -157,7 +157,7 @@ class TransactionExclusionApp(config: AppConfig) {
     schema: String,
     transactionalPoolSize: Int,
     readPipeliningLimit: Int,
-    skipMigration: Boolean = false
+    skipMigration: Boolean = false,
   ): SqlClient {
     val dbVersion = "3"
     if (!skipMigration) {
@@ -167,7 +167,7 @@ class TransactionExclusionApp(config: AppConfig) {
         database = schema,
         target = dbVersion,
         username = connectionConfig.username,
-        password = connectionConfig.password.value
+        password = connectionConfig.password.value,
       )
     }
     return Db.vertxSqlClient(
@@ -178,7 +178,7 @@ class TransactionExclusionApp(config: AppConfig) {
       username = connectionConfig.username,
       password = connectionConfig.password.value,
       maxPoolSize = transactionalPoolSize,
-      pipeliningLimit = readPipeliningLimit
+      pipeliningLimit = readPipeliningLimit,
     )
   }
 }

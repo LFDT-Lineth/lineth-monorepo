@@ -12,13 +12,13 @@ import org.apache.logging.log4j.Logger
  * */
 class TransactionCostCalculator(
   private val dataCostCalculator: FeesCalculator,
-  private val config: Config
+  private val config: Config,
 ) : FeesCalculator {
   data class Config(
     val sampleTransactionCostMultiplier: Double,
     val fixedCostWei: ULong,
     val compressedTxSize: Int = 125,
-    val expectedGas: Int = 21000
+    val expectedGas: Int = 21000,
   )
 
   private val log: Logger = LogManager.getLogger(this::class.java)

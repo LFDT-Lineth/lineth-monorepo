@@ -15,6 +15,6 @@ fun Log.toDomain(): EthLog {
     blockNumber = this.blockNumber.toULong(),
     address = this.address.decodeHex(),
     data = this.data.decodeHex(),
-    topics = this.topics.map(String::decodeHex)
+    topics = this.topics.map(String::decodeHex),
   )
 }

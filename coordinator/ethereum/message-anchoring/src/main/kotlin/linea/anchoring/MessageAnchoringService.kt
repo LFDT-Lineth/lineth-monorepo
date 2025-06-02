@@ -24,11 +24,11 @@ class MessageAnchoringService(
   private val maxMessagesToAnchorPerL2Transaction: UInt,
   private val l2HighestBlockTag: BlockParameter,
   anchoringTickInterval: Duration,
-  private val log: Logger = LogManager.getLogger(MessageAnchoringService::class.java)
+  private val log: Logger = LogManager.getLogger(MessageAnchoringService::class.java),
 ) : PeriodicPollingService(
   vertx = vertx,
   pollingIntervalMs = anchoringTickInterval.inWholeMilliseconds,
-  log = log
+  log = log,
 ) {
   override fun action(): SafeFuture<*> {
     return l2MessageService
@@ -54,7 +54,7 @@ class MessageAnchoringService(
   private fun anchorMessages(eventsToAnchor: List<MessageSentEvent>): SafeFuture<String> {
     val messagesInterval = CommonDomainFunctions.blockIntervalString(
       eventsToAnchor.first().messageNumber,
-      eventsToAnchor.last().messageNumber
+      eventsToAnchor.last().messageNumber,
     )
     log.debug("sending anchoring tx messagesNumbers={}", messagesInterval)
 
@@ -65,7 +65,7 @@ class MessageAnchoringService(
             messageHashes = eventsToAnchor.map { it.messageHash },
             startingMessageNumber = eventsToAnchor.first().messageNumber,
             finalMessageNumber = eventsToAnchor.last().messageNumber,
-            finalRollingHash = rollingHash
+            finalRollingHash = rollingHash,
           )
       }.thenPeek { txHash ->
         log.info("sent anchoring tx messagesNumbers={} txHash={}", messagesInterval, txHash)
@@ -82,8 +82,8 @@ class MessageAnchoringService(
         address = l1ContractAddress,
         topics = listOf(
           L1RollingHashUpdatedEvent.topic,
-          messageNumber.toHexStringUInt256()
-        )
+          messageNumber.toHexStringUInt256(),
+        ),
       )
       .thenApply { rawLogs ->
         val events = rawLogs.map(L1RollingHashUpdatedEvent::fromEthLog)

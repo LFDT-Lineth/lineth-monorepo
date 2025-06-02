@@ -25,26 +25,26 @@ class LogsSearcherTest {
     transactionIndex = 0UL,
     logIndex = 0UL,
     blockHash = "0xabcdefabcdefabcdefabcdefabcdefabcdefabcdef".decodeHex(),
-    removed = false
+    removed = false,
   )
   private val initialLogs = listOf(
     templateLog.copy(
       blockNumber = 200UL,
-      topics = listOf(testTopic1.decodeHex(), testTopic2.decodeHex())
+      topics = listOf(testTopic1.decodeHex(), testTopic2.decodeHex()),
     ),
     templateLog.copy(
       blockNumber = 300UL,
-      topics = listOf(testTopic1.decodeHex())
+      topics = listOf(testTopic1.decodeHex()),
     ),
     templateLog.copy(
       blockNumber = 350UL,
-      topics = listOf(testTopic2.decodeHex())
+      topics = listOf(testTopic2.decodeHex()),
     ),
     templateLog.copy(
       blockNumber = 400UL,
       address = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa02".decodeHex(),
-      topics = listOf(testTopic2.decodeHex())
-    )
+      topics = listOf(testTopic2.decodeHex()),
+    ),
   )
   private lateinit var vertx: Vertx
   private lateinit var fakeElClient: FakeEthApiClient
@@ -73,7 +73,7 @@ class LogsSearcherTest {
       topics = emptyList(),
       chunkSize = 10U,
       searchTimeout = 1000000.seconds,
-      stopAfterTargetLogsCount = null
+      stopAfterTargetLogsCount = null,
     ).get()
 
     assertThat(result.logs).isEqualTo(initialLogs.take(3))
@@ -90,7 +90,7 @@ class LogsSearcherTest {
       topics = emptyList(),
       chunkSize = 100U,
       searchTimeout = 5.seconds,
-      stopAfterTargetLogsCount = null
+      stopAfterTargetLogsCount = null,
     ).get()
 
     assertThat(result.logs).isEqualTo(listOf(initialLogs[3]))
@@ -105,7 +105,7 @@ class LogsSearcherTest {
       topics = listOf(testTopic1),
       chunkSize = 100U,
       searchTimeout = 5.seconds,
-      stopAfterTargetLogsCount = null
+      stopAfterTargetLogsCount = null,
     ).get()
 
     assertThat(result.logs).isEqualTo(initialLogs.take(2))
@@ -120,7 +120,7 @@ class LogsSearcherTest {
       topics = emptyList(),
       chunkSize = 50U,
       searchTimeout = 2.hours,
-      stopAfterTargetLogsCount = 1U
+      stopAfterTargetLogsCount = 1U,
     ).get()
 
     assertThat(result.logs).isEqualTo(initialLogs.take(1))
@@ -131,7 +131,7 @@ class LogsSearcherTest {
     searcher = EthLogsSearcherImpl(
       vertx,
       fakeElClient,
-      config = EthLogsSearcherImpl.Config(loopSuccessBackoffDelay = 1.seconds)
+      config = EthLogsSearcherImpl.Config(loopSuccessBackoffDelay = 1.seconds),
     )
     val result = searcher.getLogsRollingForward(
       fromBlock = BlockParameter.BlockNumber(initialLogs.first().blockNumber),
@@ -140,7 +140,7 @@ class LogsSearcherTest {
       topics = emptyList(),
       chunkSize = 50U,
       searchTimeout = 1.seconds, // it only has time for the first iteration
-      stopAfterTargetLogsCount = null
+      stopAfterTargetLogsCount = null,
     ).get()
 
     assertThat(result.logs).hasSize(1)
@@ -155,7 +155,7 @@ class LogsSearcherTest {
       topics = listOf("0x3333333333333333333333333333333333333333333333333333333333333333"),
       chunkSize = 100U,
       searchTimeout = 5.seconds,
-      stopAfterTargetLogsCount = null
+      stopAfterTargetLogsCount = null,
     ).get()
 
     assertThat(result.logs).isEmpty()

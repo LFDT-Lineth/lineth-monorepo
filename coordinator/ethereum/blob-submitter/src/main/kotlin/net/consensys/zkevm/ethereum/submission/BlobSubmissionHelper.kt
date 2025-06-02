@@ -26,7 +26,7 @@ import kotlin.math.min
 fun <T : BlockInterval> chunkBlobs(
   blobsIntervals: List<T>,
   aggregations: BlockIntervals,
-  targetChunkSize: Int
+  targetChunkSize: Int,
 ): List<List<T>> {
   require(targetChunkSize > 0) { "targetChunkSize must be greater than 0" }
   assertConsecutiveIntervals(blobsIntervals)
@@ -62,7 +62,7 @@ fun <T : BlockInterval> chunkBlobs(
 
 private fun inconsistentBlobAggregationMessage(
   blobsIntervals: List<BlockInterval>,
-  aggregationsIntervals: List<BlockInterval>
+  aggregationsIntervals: List<BlockInterval>,
 ): String {
   return "blobs=${blobsIntervals.toBlockIntervalsString()} are inconsistent with " +
     "aggregations=${aggregationsIntervals.toBlockIntervalsString()}"
@@ -72,13 +72,13 @@ internal fun logSubmissionError(
   log: Logger,
   intervalString: String,
   error: Throwable,
-  isEthCall: Boolean = false
+  isEthCall: Boolean = false,
 ) {
   logSubmissionError(
     log,
     "{} for blob submission failed: blob={} errorMessage={}",
     intervalString,
     error,
-    isEthCall
+    isEthCall,
   )
 }

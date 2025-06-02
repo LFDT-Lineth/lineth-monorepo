@@ -27,7 +27,7 @@ import kotlin.time.Duration.Companion.seconds
 
 data class Account(
   private val _privateKey: String,
-  private val _address: String
+  private val _address: String,
 ) {
   val privateKey: String
     get() = _privateKey.replace("0x", "")
@@ -37,7 +37,7 @@ data class Account(
 
 data class AccountTransactionManager(
   val account: Account,
-  val txManager: AsyncFriendlyTransactionManager
+  val txManager: AsyncFriendlyTransactionManager,
 ) {
   val address: String
     get() = account.address
@@ -61,7 +61,7 @@ fun readGenesisFileAccounts(genesisJson: Map<String, Any>): List<Account> {
 
 fun getTransactionManager(
   web3JClient: Web3j,
-  privateKey: String
+  privateKey: String,
 ): AsyncFriendlyTransactionManager {
   val credentials = Credentials.create(privateKey.replace("0x", ""))
   val receiptPoller = PollingTransactionReceiptProcessor(web3JClient, 100, 4000)
@@ -69,7 +69,7 @@ fun getTransactionManager(
     web3JClient,
     credentials,
     chainId = -1,
-    receiptPoller
+    receiptPoller,
   )
 }
 
@@ -89,7 +89,7 @@ private open class WhaleBasedAccountManager(
   genesisFile: Path,
   val clock: Clock = Clock.System,
   val testWorkerIdProvider: () -> Long = { ProcessHandle.current().pid() },
-  val log: Logger = LogManager.getLogger(WhaleBasedAccountManager::class.java)
+  val log: Logger = LogManager.getLogger(WhaleBasedAccountManager::class.java),
 ) : AccountManager {
   private val whaleAccounts: List<Account>
   final override val chainId: Long
@@ -131,7 +131,7 @@ private open class WhaleBasedAccountManager(
       "Generating accounts: chainId={} numberOfAccounts={} whaleAccount={}",
       chainId,
       numberOfAccounts,
-      whaleAccount.address
+      whaleAccount.address,
     )
 
     val result = synchronized(whaleTxManager) {
@@ -141,11 +141,13 @@ private open class WhaleBasedAccountManager(
         val transactionHash = try {
           retry {
             whaleTxManager.sendTransaction(
-              /*gasPrice*/ 300_000_000.toBigInteger(),
-              /*gasLimit*/ 21000.toBigInteger(),
+              /*gasPrice*/
+              300_000_000.toBigInteger(),
+              /*gasLimit*/
+              21000.toBigInteger(),
               newAccount.address,
               "",
-              initialBalanceWei
+              initialBalanceWei,
             )
           }
         } catch (e: Exception) {
@@ -155,7 +157,7 @@ private open class WhaleBasedAccountManager(
             "Failed to send funds from accAddress=${whaleAccount.address}, " +
               "accBalance=$accountBalance, " +
               "accPrivKey=0x...${whaleAccount.privateKey.takeLast(8)}, " +
-              "error: ${e.message}"
+              "error: ${e.message}",
           )
         }
         newAccount to transactionHash
@@ -166,19 +168,19 @@ private open class WhaleBasedAccountManager(
         "Waiting for account funding: newAccount={} txHash={} whaleAccount={}",
         account.address,
         transactionHash,
-        whaleAccount.address
+        whaleAccount.address,
       )
       web3jClient.waitForTxReceipt(
         transactionHash,
         expectedStatus = "0x1",
         timeout = 40.seconds,
-        pollingInterval = 500.milliseconds
+        pollingInterval = 500.milliseconds,
       )
       if (log.isDebugEnabled) {
         log.debug(
           "Account funded: newAccount={} balance={}wei",
           account.address,
-          web3jClient.ethGetBalance(account.address, DefaultBlockParameterName.LATEST).send().balance
+          web3jClient.ethGetBalance(account.address, DefaultBlockParameterName.LATEST).send().balance,
         )
       }
     }
@@ -188,7 +190,7 @@ private open class WhaleBasedAccountManager(
   override fun getTransactionManager(account: Account): AsyncFriendlyTransactionManager {
     return getTransactionManager(
       web3jClient,
-      account.privateKey
+      account.privateKey,
     )
   }
 
@@ -199,7 +201,7 @@ private open class WhaleBasedAccountManager(
       name = "wait-account-balance-${account.address}",
       daemon = true,
       initialDelay = 0L,
-      period = 100L
+      period = 100L,
     ) {
       val balance = web3jClient.ethGetBalance(account.address, DefaultBlockParameterName.LATEST)
         .send()
@@ -211,8 +213,8 @@ private open class WhaleBasedAccountManager(
         this.cancel()
         futureResult.completeExceptionally(
           RuntimeException(
-            "Timed out ${timeout.inWholeSeconds}s waiting for account=${account.address} to have balance"
-          )
+            "Timed out ${timeout.inWholeSeconds}s waiting for account=${account.address} to have balance",
+          ),
         )
       }
     }
@@ -224,19 +226,19 @@ private open class WhaleBasedAccountManager(
 object L1AccountManager : AccountManager by WhaleBasedAccountManager(
   web3jClient = Web3jClientManager.l1Client,
   genesisFile = getPathTo(System.getProperty("L1_GENESIS", "docker/config/l1-node/el/genesis.json")),
-  log = LogManager.getLogger(L1AccountManager::class.java)
+  log = LogManager.getLogger(L1AccountManager::class.java),
 )
 
 object L2AccountManager : AccountManager by WhaleBasedAccountManager(
   web3jClient = Web3jClientManager.l2Client,
   genesisFile = getPathTo(System.getProperty("L2_GENESIS", "docker/config/linea-local-dev-genesis-PoA-besu.json")),
-  log = LogManager.getLogger(L2AccountManager::class.java)
+  log = LogManager.getLogger(L2AccountManager::class.java),
 )
 
 fun <R, T : Response<R>> retry(
   timeout: Duration = 30.seconds,
   retryInterval: Duration = 1.seconds,
-  action: () -> T
+  action: () -> T,
 ): R {
   val start = Clock.System.now()
   var response: T? = null

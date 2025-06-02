@@ -8,7 +8,7 @@ class AggregationTriggerCalculatorByProofLimit(private val maxProofsPerAggregati
 
   data class InFlightAggregation(
     val proofsCount: UInt,
-    val blobsToAggregate: BlobsToAggregate
+    val blobsToAggregate: BlobsToAggregate,
   )
 
   private var inFlightAggregation: InFlightAggregation? = null
@@ -23,7 +23,7 @@ class AggregationTriggerCalculatorByProofLimit(private val maxProofsPerAggregati
     if (blobProofCount > maxProofsPerAggregation) {
       throw IllegalArgumentException(
         "Number of proofs in one blob exceed the aggregation proof limit. " +
-          "blob = $blobCounters"
+          "blob = $blobCounters",
       )
     }
 
@@ -32,15 +32,15 @@ class AggregationTriggerCalculatorByProofLimit(private val maxProofsPerAggregati
       if (newProofsCount > maxProofsPerAggregation) {
         AggregationTrigger(
           aggregationTriggerType = AggregationTriggerType.PROOF_LIMIT,
-          aggregation = inFlightAggregation!!.blobsToAggregate
+          aggregation = inFlightAggregation!!.blobsToAggregate,
         )
       } else if (newProofsCount == maxProofsPerAggregation) {
         AggregationTrigger(
           aggregationTriggerType = AggregationTriggerType.PROOF_LIMIT,
           aggregation = BlobsToAggregate(
             inFlightAggregation!!.blobsToAggregate.startBlockNumber,
-            blobCounters.endBlockNumber
-          )
+            blobCounters.endBlockNumber,
+          ),
         )
       } else {
         null
@@ -51,8 +51,8 @@ class AggregationTriggerCalculatorByProofLimit(private val maxProofsPerAggregati
           aggregationTriggerType = AggregationTriggerType.PROOF_LIMIT,
           aggregation = BlobsToAggregate(
             blobCounters.startBlockNumber,
-            blobCounters.endBlockNumber
-          )
+            blobCounters.endBlockNumber,
+          ),
         )
       } else {
         null
@@ -66,7 +66,7 @@ class AggregationTriggerCalculatorByProofLimit(private val maxProofsPerAggregati
     if (blobProofCount > maxProofsPerAggregation) {
       throw IllegalArgumentException(
         "Number of proofs in one blob exceed the aggregation proof limit. " +
-          "blob = $blobCounters"
+          "blob = $blobCounters",
       )
     }
     val newProofsCount = (inFlightAggregation?.proofsCount ?: 0u) + blobProofCount
@@ -77,8 +77,8 @@ class AggregationTriggerCalculatorByProofLimit(private val maxProofsPerAggregati
         proofsCount = newProofsCount,
         blobsToAggregate = BlobsToAggregate(
           inFlightAggregation?.blobsToAggregate?.startBlockNumber ?: blobCounters.startBlockNumber,
-          blobCounters.endBlockNumber
-        )
+          blobCounters.endBlockNumber,
+        ),
       )
     }
   }

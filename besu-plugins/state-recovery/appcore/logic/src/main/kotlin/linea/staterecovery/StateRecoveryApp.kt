@@ -28,7 +28,7 @@ class StateRecoveryApp(
   private val transactionDetailsClient: TransactionDetailsClient,
   private val blockHeaderStaticFields: BlockHeaderStaticFields,
   // configs
-  private val config: Config
+  private val config: Config,
 ) : LongRunningService {
   data class Config(
     val smartContractAddress: String,
@@ -43,7 +43,7 @@ class StateRecoveryApp(
      * this is meant for testing purposes, not production
      */
     val overridingRecoveryStartBlockNumber: ULong? = null,
-    val debugForceSyncStopBlockNumber: ULong? = null
+    val debugForceSyncStopBlockNumber: ULong? = null,
   ) {
     companion object {
       val lineaMainnet = Config(
@@ -53,7 +53,7 @@ class StateRecoveryApp(
         l1LatestSearchBlock = BlockParameter.Tag.FINALIZED,
         l1PollingInterval = 12.seconds,
         l1getLogsChunkSize = 10_000u,
-        executionClientPollingInterval = 2.seconds
+        executionClientPollingInterval = 2.seconds,
       )
       val lineaSepolia = Config(
         smartContractAddress = "0xb218f8a4bc926cf1ca7b3423c154a0d627bdb7e5",
@@ -61,7 +61,7 @@ class StateRecoveryApp(
         l1LatestSearchBlock = BlockParameter.Tag.FINALIZED,
         l1PollingInterval = 12.seconds,
         l1getLogsChunkSize = 10_000u,
-        executionClientPollingInterval = 2.seconds
+        executionClientPollingInterval = 2.seconds,
       )
     }
   }
@@ -76,19 +76,19 @@ class StateRecoveryApp(
     logsSearcher = ethLogsSearcher,
     smartContractAddress = config.smartContractAddress,
     l1LatestSearchBlock = config.l1LatestSearchBlock,
-    logsBlockChunkSize = config.l1getLogsChunkSize.toInt()
+    logsBlockChunkSize = config.l1getLogsChunkSize.toInt(),
   )
   private val log = LogManager.getLogger(this::class.java)
   private val blockImporterAndStateVerifier = BlockImporterAndStateVerifierV1(
     vertx = vertx,
     elClient = elClient,
     stateManagerClient = stateManagerClient,
-    stateManagerImportTimeoutPerBlock = 2.seconds
+    stateManagerImportTimeoutPerBlock = 2.seconds,
   )
   private val blobDecompressor: BlobDecompressorAndDeserializer = BlobDecompressorToDomainV1(
     decompressor = GoNativeBlobDecompressorFactory.getInstance(config.blobDecompressorVersion),
     staticFields = blockHeaderStaticFields,
-    vertx = vertx
+    vertx = vertx,
   )
   private val stateSynchronizerService = StateSynchronizerService(
     vertx = vertx,
@@ -100,7 +100,7 @@ class StateRecoveryApp(
     blobDecompressor = blobDecompressor,
     blockImporterAndStateVerifier = blockImporterAndStateVerifier,
     pollingInterval = config.l1PollingInterval,
-    debugForceSyncStopBlockNumber = config.debugForceSyncStopBlockNumber
+    debugForceSyncStopBlockNumber = config.debugForceSyncStopBlockNumber,
   )
   val stateRootMismatchFound: Boolean
     get() = stateSynchronizerService.stateRootMismatchFound
@@ -119,7 +119,7 @@ class StateRecoveryApp(
               updateLabel,
               newStatus.headBlockNumber,
               statusBeforeUpdate.stateRecoverStartBlockNumber,
-              newStatus.stateRecoverStartBlockNumber
+              newStatus.stateRecoverStartBlockNumber,
             )
           }
       }
@@ -138,7 +138,7 @@ class StateRecoveryApp(
           log.info(
             "starting recovery mode already enabled: stateRecoverStartBlockNumber={} headBlockNumber={}",
             status.stateRecoverStartBlockNumber,
-            status.headBlockNumber
+            status.headBlockNumber,
           )
           SafeFuture.completedFuture(Unit)
         } else {
@@ -153,7 +153,7 @@ class StateRecoveryApp(
                   "L1 lastFinalizedBlockNumber={}",
                 stateRecoverStartBlockNumber,
                 status.headBlockNumber,
-                lastFinalizedBlockNumber
+                lastFinalizedBlockNumber,
               )
               elClient.lineaEnableStateRecovery(stateRecoverStartBlockNumber)
             }.thenApply { }
@@ -175,17 +175,17 @@ class StateRecoveryApp(
           log.info(
             "node reached recovery target block: stateRecoverStartBlockNumber={} headBlockNumber={}",
             recoveryStatus.stateRecoverStartBlockNumber,
-            recoveryStatus.headBlockNumber
+            recoveryStatus.headBlockNumber,
           )
         } else {
           log.info(
             "waiting for node to sync until stateRecoverStartBlockNumber={} - 1,  headBlockNumber={}",
             recoveryStatus.stateRecoverStartBlockNumber,
-            recoveryStatus.headBlockNumber
+            recoveryStatus.headBlockNumber,
           )
         }
         hasReachedTargetBlock
-      }
+      },
     ) {
       elClient.lineaGetStateRecoveryStatus()
     }

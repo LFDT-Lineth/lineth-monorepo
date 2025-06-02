@@ -43,7 +43,7 @@ class NoSignatureTransactionDecoder {
         transactionInput
           .readBytes { addressBytes: Bytes ->
             if (addressBytes.isEmpty) null else Address.wrap(addressBytes)
-          }
+          },
       )
       .value(Wei.of(transactionInput.readUInt256Scalar()))
       .payload(transactionInput.readBytes())
@@ -53,11 +53,11 @@ class NoSignatureTransactionDecoder {
           val accessListEntry =
             AccessListEntry(
               Address.wrap(accessListEntryRLPInput.readBytes()),
-              accessListEntryRLPInput.readList { obj: RLPInput -> obj.readBytes32() }
+              accessListEntryRLPInput.readList { obj: RLPInput -> obj.readBytes32() },
             )
           accessListEntryRLPInput.leaveList()
           accessListEntry
-        }
+        },
       )
     transactionInput.readUnsignedByteScalar()
     builder.sender(Address.extract(transactionInput.readUInt256Scalar()))
@@ -83,10 +83,10 @@ class NoSignatureTransactionDecoder {
             null
           } else {
             Address.wrap(
-              v
+              v,
             )
           }
-        }
+        },
       )
       .value(Wei.of(transactionInput.readUInt256Scalar()))
       .payload(transactionInput.readBytes())
@@ -96,11 +96,11 @@ class NoSignatureTransactionDecoder {
           val accessListEntry =
             AccessListEntry(
               Address.wrap(accessListEntryRLPInput.readBytes()),
-              accessListEntryRLPInput.readList { obj: RLPInput -> obj.readBytes32() }
+              accessListEntryRLPInput.readList { obj: RLPInput -> obj.readBytes32() },
             )
           accessListEntryRLPInput.leaveList()
           accessListEntry
-        }
+        },
       )
     transactionInput.readUnsignedByteScalar()
     builder.sender(Address.extract(transactionInput.readUInt256Scalar()))
@@ -123,10 +123,10 @@ class NoSignatureTransactionDecoder {
             null
           } else {
             Address.wrap(
-              v
+              v,
             )
           }
-        }
+        },
       )
       .value(Wei.of(input.readUInt256Scalar()))
       .payload(input.readBytes())

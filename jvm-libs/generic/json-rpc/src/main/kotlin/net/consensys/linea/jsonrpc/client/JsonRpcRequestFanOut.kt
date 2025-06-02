@@ -10,7 +10,7 @@ import net.consensys.linea.jsonrpc.JsonRpcRequest
 import net.consensys.linea.jsonrpc.JsonRpcSuccessResponse
 
 class JsonRpcRequestFanOut(
-  private val targets: List<JsonRpcClient>
+  private val targets: List<JsonRpcClient>,
 ) : JsonRpcClient {
   init {
     require(targets.isNotEmpty()) { "Must have at least one target to fan out the requests" }
@@ -24,7 +24,7 @@ class JsonRpcRequestFanOut(
    */
   override fun makeRequest(
     request: JsonRpcRequest,
-    resultMapper: (Any?) -> Any?
+    resultMapper: (Any?) -> Any?,
   ): Future<Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>> {
     return this.fanoutRequest(request, resultMapper).map { results ->
       val errors = results.filterIsInstance<Err<JsonRpcErrorResponse>>()
@@ -39,7 +39,7 @@ class JsonRpcRequestFanOut(
 
   fun fanoutRequest(
     request: JsonRpcRequest,
-    resultMapper: (Any?) -> Any? = ::toPrimitiveOrVertxJson
+    resultMapper: (Any?) -> Any? = ::toPrimitiveOrVertxJson,
   ): Future<List<Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>>> {
     return Future
       .all(targets.map { it.makeRequest(request, resultMapper) })

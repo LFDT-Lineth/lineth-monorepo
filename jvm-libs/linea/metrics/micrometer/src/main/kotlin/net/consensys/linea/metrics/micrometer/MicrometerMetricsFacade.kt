@@ -16,13 +16,13 @@ import io.micrometer.core.instrument.Timer as MicrometerTimer
 
 class MicrometerMetricsFacade(
   private val registry: MeterRegistry,
-  private val metricsPrefix: String? = null
+  private val metricsPrefix: String? = null,
 ) : MetricsFacade {
   companion object {
     private val validBaseUnits = listOf(
       "seconds",
       "minutes",
-      "hours"
+      "hours",
     )
 
     fun requireValidMicrometerName(name: String) {
@@ -50,7 +50,7 @@ class MicrometerMetricsFacade(
     name: String,
     description: String,
     measurementSupplier: Supplier<Number>,
-    tags: List<Tag>
+    tags: List<Tag>,
   ) {
     if (category != null) requireValidMicrometerName(category.toString())
     requireValidMicrometerName(name)
@@ -70,7 +70,7 @@ class MicrometerMetricsFacade(
     category: LineaMetricsCategory?,
     name: String,
     description: String,
-    tags: List<Tag>
+    tags: List<Tag>,
   ): Counter {
     if (category != null) requireValidMicrometerName(category.toString())
     requireValidMicrometerName(name)
@@ -92,7 +92,7 @@ class MicrometerMetricsFacade(
     description: String,
     tags: List<Tag>,
     isRatio: Boolean,
-    baseUnit: String?
+    baseUnit: String?,
   ): Histogram {
     if (category != null) requireValidMicrometerName(category.toString())
     requireValidMicrometerName(name)
@@ -118,7 +118,7 @@ class MicrometerMetricsFacade(
     category: LineaMetricsCategory?,
     name: String,
     description: String,
-    tags: List<Tag>
+    tags: List<Tag>,
   ): TimerCapture<T> {
     if (category != null) requireValidMicrometerName(category.toString())
     requireValidMicrometerName(name)
@@ -141,7 +141,7 @@ class MicrometerMetricsFacade(
     description: String,
     tagKey: String,
     tagValueExtractorOnError: Function<Throwable, String>,
-    tagValueExtractor: Function<T, String>
+    tagValueExtractor: Function<T, String>,
   ): TimerCapture<T> {
     if (category != null) requireValidMicrometerName(category.toString())
     requireValidMicrometerName(name)

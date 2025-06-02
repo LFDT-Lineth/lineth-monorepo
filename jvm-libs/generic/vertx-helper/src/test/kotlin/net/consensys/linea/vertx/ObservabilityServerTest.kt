@@ -40,8 +40,8 @@ class ObservabilityServerTest {
     val observabilityServer = ObservabilityServer(
       ObservabilityServer.Config(
         applicationName = "test",
-        port = 0 // random port assigned by underlying OS
-      )
+        port = 0, // random port assigned by underlying OS
+      ),
     )
     val deploymentId = vertx.deployVerticle(observabilityServer).get()
 
@@ -50,7 +50,7 @@ class ObservabilityServerTest {
       .spec(
         RequestSpecBuilder()
           .setBaseUri("http://localhost:${(observabilityServer.port)}/")
-          .build()
+          .build(),
       )
       .When {
         get("/live")
@@ -111,7 +111,7 @@ class ObservabilityServerTest {
 
   private fun runServerOnARandomPort(vertx: Vertx): Pair<String, Int> {
     val observabilityServer = ObservabilityServer(
-      ObservabilityServer.Config(applicationName = "test")
+      ObservabilityServer.Config(applicationName = "test"),
     )
     val deploymentId = vertx.deployVerticle(observabilityServer).get()
     return deploymentId to observabilityServer.port

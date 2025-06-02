@@ -8,15 +8,15 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 fun <Resp> rejectOnJsonRpcError(
   rpcMethod: String,
-  response: Resp
+  response: Resp,
 ): SafeFuture<Resp>
   where Resp : Response<*> {
   return if (response.hasError()) {
     SafeFuture.failedFuture(
       RuntimeException(
         "$rpcMethod failed with JsonRpcError " +
-          "code=${response.error.code} message=${response.error.message} data=${response.error.data}"
-      )
+          "code=${response.error.code} message=${response.error.message} data=${response.error.data}",
+      ),
     )
   } else {
     SafeFuture.completedFuture(response)
@@ -24,7 +24,7 @@ fun <Resp> rejectOnJsonRpcError(
 }
 
 fun <Resp, T> Request<*, Resp>.requestAsync(
-  mapperFn: (Resp) -> T
+  mapperFn: (Resp) -> T,
 ): SafeFuture<T>
   where Resp : Response<*> {
   return this.sendAsync()

@@ -22,7 +22,7 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 class RejectedTransactionsPostgresDao(
   private val readConnection: SqlClient,
   private val writeConnection: SqlClient,
-  private val clock: Clock = Clock.System
+  private val clock: Clock = Clock.System,
 ) : RejectedTransactionsDao {
   private val log = LogManager.getLogger(this.javaClass.name)
   private val queryLog = SQLQueryLogger(log)
@@ -44,7 +44,7 @@ class RejectedTransactionsPostgresDao(
         "P2P" -> RejectedTransaction.Stage.P2P
         else -> throw IllegalStateException(
           "The db string value: \"$dbStrValue\" cannot be mapped to any RejectedTransaction.Stage enums: " +
-            RejectedTransaction.Stage.entries.joinToString(",", "[", "]") { it.name }
+            RejectedTransaction.Stage.entries.joinToString(",", "[", "]") { it.name },
         )
       }
     }
@@ -52,7 +52,7 @@ class RejectedTransactionsPostgresDao(
     fun parseModuleOverflowListFromJsonString(jsonString: String): List<ModuleOverflow> {
       return ObjectMapper().readValue(
         jsonString,
-        Array<ModuleOverflow>::class.java
+        Array<ModuleOverflow>::class.java,
       ).toList()
     }
 
@@ -64,14 +64,14 @@ class RejectedTransactionsPostgresDao(
         transactionRLP = record.getBuffer("tx_rlp").bytes,
         reasonMessage = record.getString("reject_reason"),
         overflows = parseModuleOverflowListFromJsonString(
-          record.getJsonArray("overflows").encode()
+          record.getJsonArray("overflows").encode(),
         ),
         transactionInfo = TransactionInfo(
           hash = record.getBuffer("tx_hash").bytes,
           from = record.getBuffer("tx_from").bytes,
           to = record.getBuffer("tx_to")?.bytes,
-          nonce = record.getLong("tx_nonce").toULong()
-        )
+          nonce = record.getLong("tx_nonce").toULong(),
+        ),
       )
     }
 
@@ -145,7 +145,7 @@ class RejectedTransactionsPostgresDao(
         rejectedTransaction.timestamp.toEpochMilliseconds(),
         rejectedTransaction.blockNumber?.toLong(),
         ObjectMapper().writeValueAsString(rejectedTransaction.overflows),
-        rejectedTransaction.transactionRLP
+        rejectedTransaction.transactionRLP,
       )
     queryLog.log(Level.TRACE, insertSql, params)
 
@@ -156,8 +156,8 @@ class RejectedTransactionsPostgresDao(
           Future.failedFuture(
             DuplicatedRecordException(
               "RejectedTransaction ${rejectedTransaction.transactionInfo.hash.encodeHex()} is already persisted!",
-              th
-            )
+              th,
+            ),
           )
         } else {
           Future.failedFuture(th)
@@ -168,14 +168,14 @@ class RejectedTransactionsPostgresDao(
 
   override fun findRejectedTransactionByTxHash(
     txHash: ByteArray,
-    notRejectedBefore: Instant
+    notRejectedBefore: Instant,
   ): SafeFuture<RejectedTransaction?> {
     return selectSqlQuery
       .execute(
         Tuple.of(
           txHash,
-          notRejectedBefore.toEpochMilliseconds()
-        )
+          notRejectedBefore.toEpochMilliseconds(),
+        ),
       )
       .toSafeFuture()
       .thenApply { rowSet -> rowSet.map(::parseRecord) }
@@ -183,7 +183,7 @@ class RejectedTransactionsPostgresDao(
   }
 
   override fun deleteRejectedTransactions(
-    createdBefore: Instant
+    createdBefore: Instant,
   ): SafeFuture<Int> {
     return deleteRejectedTransactionsSqlQuery
       .execute(Tuple.of(createdBefore.toEpochMilliseconds()))

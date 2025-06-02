@@ -7,7 +7,7 @@ import net.consensys.zkevm.domain.ConflationTrigger
 data class ConflationCounters(
   var dataSize: UInt = 0u,
   var blockCount: UInt = 0u,
-  var tracesCounters: TracesCounters
+  var tracesCounters: TracesCounters,
 ) {
   companion object {
     internal fun empty(emptyTracesCounters: TracesCounters): ConflationCounters {
@@ -20,7 +20,7 @@ interface ConflationCalculator {
   val id: String
   data class OverflowTrigger(
     val trigger: ConflationTrigger,
-    val singleBlockOverSized: Boolean
+    val singleBlockOverSized: Boolean,
   )
 
   /**

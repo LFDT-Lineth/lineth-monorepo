@@ -28,7 +28,7 @@ class TransactionExclusionAppMain {
                 // Messages in App.stop won't appear in the logs
                 Configurator.shutdown(LogManager.getContext() as LoggerContext)
               }
-            }
+            },
           )
         app.start()
       } catch (t: Throwable) {

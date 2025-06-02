@@ -10,7 +10,7 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 enum class StateManagerErrorType : ClientError {
   UNKNOWN,
   UNSUPPORTED_VERSION,
-  BLOCK_MISSING_IN_CHAIN
+  BLOCK_MISSING_IN_CHAIN,
 }
 
 sealed interface StateManagerRequest<ResponseType : StateManagerResponse> : ClientRequest<ResponseType>
@@ -26,7 +26,7 @@ data class GetZkEVMStateMerkleProofResponse(
   val zkStateMerkleProof: ArrayNode,
   val zkParentStateRootHash: ByteArray,
   val zkEndStateRootHash: ByteArray,
-  val zkStateManagerVersion: String
+  val zkStateManagerVersion: String,
 ) : StateManagerResponse {
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
@@ -67,7 +67,7 @@ interface StateManagerClientV1 : AsyncClient<StateManagerRequest<*>> {
    * @throws ClientException with errorType StateManagerErrorType when know error occurs
    */
   fun rollupGetStateMerkleProof(
-    blockInterval: BlockInterval
+    blockInterval: BlockInterval,
   ): SafeFuture<GetZkEVMStateMerkleProofResponse> = rollupGetStateMerkleProofWithTypedError(blockInterval)
     .unwrapResultMonad()
 
@@ -76,7 +76,7 @@ interface StateManagerClientV1 : AsyncClient<StateManagerRequest<*>> {
    * This error typing is not really usefull anymore
    */
   fun rollupGetStateMerkleProofWithTypedError(
-    blockInterval: BlockInterval
+    blockInterval: BlockInterval,
   ): SafeFuture<Result<GetZkEVMStateMerkleProofResponse, ErrorResponse<StateManagerErrorType>>>
 
   fun rollupGetHeadBlockNumber(): SafeFuture<ULong>

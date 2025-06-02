@@ -9,10 +9,10 @@ import net.consensys.zkevm.persistence.db.DuplicatedRecordException
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 class AggregationsRepositoryImpl(
-  private val aggregationsPostgresDao: AggregationsDao
+  private val aggregationsPostgresDao: AggregationsDao,
 ) : AggregationsRepository {
   override fun findConsecutiveProvenBlobs(
-    fromBlockNumber: Long
+    fromBlockNumber: Long,
   ): SafeFuture<List<BlobAndBatchCounters>> {
     return aggregationsPostgresDao.findConsecutiveProvenBlobs(fromBlockNumber)
   }
@@ -31,17 +31,17 @@ class AggregationsRepositoryImpl(
   override fun getProofsToFinalize(
     fromBlockNumber: Long,
     finalEndBlockCreatedBefore: Instant,
-    maximumNumberOfProofs: Int
+    maximumNumberOfProofs: Int,
   ): SafeFuture<List<ProofToFinalize>> {
     return aggregationsPostgresDao.getProofsToFinalize(
       fromBlockNumber,
       finalEndBlockCreatedBefore,
-      maximumNumberOfProofs
+      maximumNumberOfProofs,
     )
   }
 
   override fun findHighestConsecutiveEndBlockNumber(
-    fromBlockNumber: Long
+    fromBlockNumber: Long,
   ): SafeFuture<Long?> {
     return aggregationsPostgresDao.findHighestConsecutiveEndBlockNumber(fromBlockNumber)
   }

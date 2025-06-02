@@ -6,7 +6,7 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 data class BlobCompressionProofUpdate(
   val blockInterval: BlockInterval,
-  val blobCompressionProof: BlobCompressionProof
+  val blobCompressionProof: BlobCompressionProof,
 )
 
 fun interface BlobCompressionProofHandler {

@@ -49,7 +49,8 @@ class TracesGeneratorJsonRpcClientV2Test {
   private val tracesCountersValid: Map<String, Long> =
     TracingModuleV2.values()
       .fold(mutableMapOf()) { acc: MutableMap<String, Long>,
-        evmModule: TracingModuleV2 ->
+                              evmModule: TracingModuleV2,
+        ->
         acc[evmModule.name] = Random.nextUInt(0u, UInt.MAX_VALUE).toLong()
         acc
       }
@@ -77,15 +78,15 @@ class TracesGeneratorJsonRpcClientV2Test {
         maxRetries = 2u,
         timeout = 10.seconds,
         backoffDelay = 10.milliseconds,
-        failuresWarningThreshold = 1u
-      )
+        failuresWarningThreshold = 1u,
+      ),
     )
 
     tracesGeneratorClient = TracesGeneratorJsonRpcClientV2(
       vertxHttpJsonRpcClient,
       TracesGeneratorJsonRpcClientV2.Config(
-        expectedTracesApiVersion = expectedTracesApiVersion
-      )
+        expectedTracesApiVersion = expectedTracesApiVersion,
+      ),
     )
   }
 
@@ -105,8 +106,8 @@ class TracesGeneratorJsonRpcClientV2Test {
       "result",
       mapOf(
         "tracesEngineVersion" to tracesEngineVersion,
-        "tracesCounters" to tracesCountersValid
-      )
+        "tracesCounters" to tracesCountersValid,
+      ),
     )
   }
 
@@ -117,7 +118,7 @@ class TracesGeneratorJsonRpcClientV2Test {
       "id",
       1,
       "error",
-      mapOf("code" to "1", "message" to errorMessage, "data" to data)
+      mapOf("code" to "1", "message" to errorMessage, "data" to data),
     )
   }
 
@@ -130,8 +131,8 @@ class TracesGeneratorJsonRpcClientV2Test {
       post("/")
         .withHeader("Content-Type", containing("application/json"))
         .willReturn(
-          ok().withHeader("Content-type", "application/json").withBody(response.toString())
-        )
+          ok().withHeader("Content-type", "application/json").withBody(response.toString()),
+        ),
     )
 
     val blockNumber = 1UL
@@ -145,11 +146,11 @@ class TracesGeneratorJsonRpcClientV2Test {
             TracesCountersV2(
               tracesCountersValid
                 .mapKeys { TracingModuleV2.valueOf(it.key) }
-                .mapValues { it.value.toUInt() }
+                .mapValues { it.value.toUInt() },
             ),
-            tracesEngineVersion
-          )
-        )
+            tracesEngineVersion,
+          ),
+        ),
       )
 
     val expectedJsonRequest = JsonObject.of(
@@ -165,14 +166,14 @@ class TracesGeneratorJsonRpcClientV2Test {
           "blockNumber",
           1,
           "expectedTracesEngineVersion",
-          expectedTracesApiVersion
-        )
-      )
+          expectedTracesApiVersion,
+        ),
+      ),
     )
     wiremock.verify(
       postRequestedFor(urlEqualTo("/"))
         .withHeader("Content-Type", equalTo("application/json"))
-        .withRequestBody(equalToJson(expectedJsonRequest.toString(), false, true))
+        .withRequestBody(equalToJson(expectedJsonRequest.toString(), false, true)),
     )
   }
 
@@ -191,16 +192,16 @@ class TracesGeneratorJsonRpcClientV2Test {
         "result",
         mapOf(
           "tracesEngineVersion" to tracesEngineVersion,
-          "tracesCounters" to tracesCountersMissingModule
-        )
+          "tracesCounters" to tracesCountersMissingModule,
+        ),
       )
 
     wiremock.stubFor(
       post("/")
         .withHeader("Content-Type", containing("application/json"))
         .willReturn(
-          ok().withHeader("Content-type", "application/json").withBody(response.toString())
-        )
+          ok().withHeader("Content-type", "application/json").withBody(response.toString()),
+        ),
     )
 
     val blockNumber = 1UL
@@ -224,16 +225,16 @@ class TracesGeneratorJsonRpcClientV2Test {
         "result",
         mapOf(
           "tracesEngineVersion" to tracesEngineVersion,
-          "tracesCounters" to tracesCountersMissingModule
-        )
+          "tracesCounters" to tracesCountersMissingModule,
+        ),
       )
 
     wiremock.stubFor(
       post("/")
         .withHeader("Content-Type", containing("application/json"))
         .willReturn(
-          ok().withHeader("Content-type", "application/json").withBody(response.toString())
-        )
+          ok().withHeader("Content-type", "application/json").withBody(response.toString()),
+        ),
     )
 
     val blockNumber = 1UL
@@ -260,8 +261,8 @@ class TracesGeneratorJsonRpcClientV2Test {
         "result",
         mapOf(
           "tracesEngineVersion" to tracesEngineVersion,
-          "conflatedTracesFileName" to conflatedTracesFileName
-        )
+          "conflatedTracesFileName" to conflatedTracesFileName,
+        ),
       )
 
     wiremock.stubFor(
@@ -270,8 +271,8 @@ class TracesGeneratorJsonRpcClientV2Test {
         .willReturn(
           ok()
             .withHeader("Content-type", "application/json")
-            .withBody(response.toString().toByteArray())
-        )
+            .withBody(response.toString().toByteArray()),
+        ),
     )
 
     val queryStartBlockNumber = 1UL
@@ -280,13 +281,13 @@ class TracesGeneratorJsonRpcClientV2Test {
     val resultFuture =
       tracesGeneratorClient.generateConflatedTracesToFile(
         queryStartBlockNumber,
-        queryEndBlockNumber
+        queryEndBlockNumber,
       )
     resultFuture.get()
 
     assertThat(resultFuture)
       .isCompletedWithValue(
-        Ok(GenerateTracesResponse(conflatedTracesFileName, tracesEngineVersion))
+        Ok(GenerateTracesResponse(conflatedTracesFileName, tracesEngineVersion)),
       )
 
     val expectedJsonRequest = JsonObject.of(
@@ -304,14 +305,14 @@ class TracesGeneratorJsonRpcClientV2Test {
           "endBlockNumber",
           queryEndBlockNumber.toLong(),
           "expectedTracesEngineVersion",
-          expectedTracesApiVersion
-        )
-      )
+          expectedTracesApiVersion,
+        ),
+      ),
     )
     wiremock.verify(
       postRequestedFor(urlEqualTo("/"))
         .withHeader("Content-Type", equalTo("application/json"))
-        .withRequestBody(equalToJson(expectedJsonRequest.toString(), false, true))
+        .withRequestBody(equalToJson(expectedJsonRequest.toString(), false, true)),
     )
   }
 
@@ -327,8 +328,8 @@ class TracesGeneratorJsonRpcClientV2Test {
         .willReturn(
           ok()
             .withHeader("Content-type", "application/json")
-            .withBody(response.toString().toByteArray())
-        )
+            .withBody(response.toString().toByteArray()),
+        ),
     )
 
     val blockNumber = 1UL
@@ -337,7 +338,7 @@ class TracesGeneratorJsonRpcClientV2Test {
 
     assertThat(resultFuture)
       .isCompletedWithValue(
-        Err(ErrorResponse(TracesServiceErrorType.BLOCK_MISSING_IN_CHAIN, errorMessage))
+        Err(ErrorResponse(TracesServiceErrorType.BLOCK_MISSING_IN_CHAIN, errorMessage)),
       )
   }
 
@@ -353,8 +354,8 @@ class TracesGeneratorJsonRpcClientV2Test {
         .willReturn(
           ok()
             .withHeader("Content-type", "application/json")
-            .withBody(response.toString().toByteArray())
-        )
+            .withBody(response.toString().toByteArray()),
+        ),
     )
 
     val startBlockNumber = 1UL
@@ -363,13 +364,13 @@ class TracesGeneratorJsonRpcClientV2Test {
     val resultFuture =
       tracesGeneratorClient.generateConflatedTracesToFile(
         startBlockNumber,
-        endBlockNumber
+        endBlockNumber,
       )
     resultFuture.get()
 
     assertThat(resultFuture)
       .isCompletedWithValue(
-        Err(ErrorResponse(TracesServiceErrorType.BLOCK_RANGE_TOO_LARGE, errorMessage))
+        Err(ErrorResponse(TracesServiceErrorType.BLOCK_RANGE_TOO_LARGE, errorMessage)),
       )
   }
 
@@ -388,8 +389,8 @@ class TracesGeneratorJsonRpcClientV2Test {
         .willReturn(
           aResponse()
             .withStatus(500)
-            .withBody("Internal Server Error")
-        )
+            .withBody("Internal Server Error"),
+        ),
     )
     wiremock.stubFor(
       post("/")
@@ -400,8 +401,8 @@ class TracesGeneratorJsonRpcClientV2Test {
         .willReturn(
           aResponse()
             .withStatus(200)
-            .withBody(jsonRpcErrorResponse.toString())
-        )
+            .withBody(jsonRpcErrorResponse.toString()),
+        ),
     )
     wiremock.stubFor(
       post("/")
@@ -421,24 +422,24 @@ class TracesGeneratorJsonRpcClientV2Test {
                 "result",
                 mapOf(
                   "tracesEngineVersion" to tracesEngineVersion,
-                  "conflatedTracesFileName" to "conflated-traces-1-3.json"
-                )
-              ).toString()
-            )
-        )
+                  "conflatedTracesFileName" to "conflated-traces-1-3.json",
+                ),
+              ).toString(),
+            ),
+        ),
     )
 
     tracesGeneratorClient = TracesGeneratorJsonRpcClientV2(
       vertxHttpJsonRpcClient,
       TracesGeneratorJsonRpcClientV2.Config(
-        expectedTracesApiVersion = expectedTracesApiVersion
-      )
+        expectedTracesApiVersion = expectedTracesApiVersion,
+      ),
     )
 
     val blockNumber = 1UL
     val resultFuture = tracesGeneratorClient.generateConflatedTracesToFile(
       startBlockNumber = blockNumber,
-      endBlockNumber = blockNumber
+      endBlockNumber = blockNumber,
     )
 
     assertThat(resultFuture.get()).isInstanceOf(Ok::class.java)

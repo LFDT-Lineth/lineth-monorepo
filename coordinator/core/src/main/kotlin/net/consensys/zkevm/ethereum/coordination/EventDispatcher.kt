@@ -6,7 +6,7 @@ import java.util.function.Consumer
 
 class EventDispatcher<T>(
   private val consumers: Map<Consumer<T>, String>,
-  private val log: Logger = LogManager.getLogger(EventDispatcher::class.java)
+  private val log: Logger = LogManager.getLogger(EventDispatcher::class.java),
 ) : Consumer<T> {
 
   override fun accept(event: T) {
@@ -19,7 +19,7 @@ class EventDispatcher<T>(
           name,
           event,
           e.message,
-          e
+          e,
         )
       }
     }

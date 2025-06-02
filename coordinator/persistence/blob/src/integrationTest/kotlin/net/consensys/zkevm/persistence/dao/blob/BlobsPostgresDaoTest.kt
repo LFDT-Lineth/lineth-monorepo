@@ -50,15 +50,15 @@ class BlobsPostgresDaoTest : CleanDbTestSuiteParallel() {
     blobsPostgresDao =
       BlobsPostgresDao(
         config = BlobsPostgresDao.Config(
-          maxBlobsToReturn
+          maxBlobsToReturn,
         ),
         connection = sqlClient,
-        clock = fakeClock
+        clock = fakeClock,
       )
   }
 
   private fun performInsertTest(
-    blobRecord: BlobRecord
+    blobRecord: BlobRecord,
   ): RowSet<Row>? {
     blobsPostgresDao.saveNewBlob(blobRecord).get()
     val dbContent = blobsContentQuery().execute().get()
@@ -71,7 +71,7 @@ class BlobsPostgresDaoTest : CleanDbTestSuiteParallel() {
     assertThat(newlyInsertedRow.getLong("end_block_number"))
       .isEqualTo(blobRecord.endBlockNumber.toLong())
     assertThat(newlyInsertedRow.getInteger("status")).isEqualTo(
-      BlobsPostgresDao.blobStatusToDbValue(BlobStatus.COMPRESSION_PROVEN)
+      BlobsPostgresDao.blobStatusToDbValue(BlobStatus.COMPRESSION_PROVEN),
     )
 
     return dbContent
@@ -82,7 +82,7 @@ class BlobsPostgresDaoTest : CleanDbTestSuiteParallel() {
     val blobRecord1 = createBlobRecord(
       startBlockNumber = expectedStartBlock,
       endBlockNumber = expectedEndBlock,
-      startBlockTime = expectedStartBlockTime
+      startBlockTime = expectedStartBlockTime,
     )
     fakeClock.setTimeTo(Clock.System.now())
 
@@ -92,7 +92,7 @@ class BlobsPostgresDaoTest : CleanDbTestSuiteParallel() {
     val blobRecord2 = createBlobRecord(
       startBlockNumber = expectedEndBlock + 1UL,
       endBlockNumber = expectedEndBlock + 100UL,
-      startBlockTime = expectedStartBlockTime
+      startBlockTime = expectedStartBlockTime,
     )
     fakeClock.advanceBy(1.seconds)
 
@@ -105,7 +105,7 @@ class BlobsPostgresDaoTest : CleanDbTestSuiteParallel() {
     val blobRecord1 = createBlobRecord(
       startBlockNumber = expectedStartBlock,
       endBlockNumber = expectedEndBlock,
-      startBlockTime = expectedStartBlockTime
+      startBlockTime = expectedStartBlockTime,
     )
 
     val dbContent1 =
@@ -118,7 +118,7 @@ class BlobsPostgresDaoTest : CleanDbTestSuiteParallel() {
       assertThat(executionException.cause).isInstanceOf(DuplicatedRecordException::class.java)
       assertThat(executionException.cause!!.message)
         .isEqualTo(
-          "Blob [1..100]100 is already persisted!"
+          "Blob [1..100]100 is already persisted!",
         )
     }
   }
@@ -130,7 +130,7 @@ class BlobsPostgresDaoTest : CleanDbTestSuiteParallel() {
     val expectedBlob = createBlobRecord(
       expectedStartBlock1,
       expectedEndBlock1,
-      startBlockTime = expectedStartBlockTime
+      startBlockTime = expectedStartBlockTime,
     )
 
     blobsPostgresDao.saveNewBlob(expectedBlob).get()
@@ -138,7 +138,7 @@ class BlobsPostgresDaoTest : CleanDbTestSuiteParallel() {
     val actualBlobs =
       blobsPostgresDao.getConsecutiveBlobsFromBlockNumber(
         expectedStartBlock1,
-        expectedEndBlockTime.plus(12.seconds)
+        expectedEndBlockTime.plus(12.seconds),
       ).get()
     assertThat(actualBlobs).hasSameElementsAs(listOf(expectedBlob))
   }
@@ -148,28 +148,28 @@ class BlobsPostgresDaoTest : CleanDbTestSuiteParallel() {
     val blobRecord1 = createBlobRecord(
       expectedStartBlock,
       expectedEndBlock,
-      startBlockTime = expectedStartBlockTime
+      startBlockTime = expectedStartBlockTime,
     )
     val blobRecord2 = createBlobRecord(
       startBlockNumber = expectedEndBlock + 1UL,
       endBlockNumber = expectedEndBlock + 100UL,
-      startBlockTime = expectedStartBlockTime
+      startBlockTime = expectedStartBlockTime,
     )
     val blobRecord3 = createBlobRecord(
       startBlockNumber = expectedEndBlock + 101UL,
       endBlockNumber = expectedEndBlock + 200UL,
-      startBlockTime = expectedStartBlockTime
+      startBlockTime = expectedStartBlockTime,
     )
 
     SafeFuture.collectAll(
       blobsPostgresDao.saveNewBlob(blobRecord1),
       blobsPostgresDao.saveNewBlob(blobRecord2),
-      blobsPostgresDao.saveNewBlob(blobRecord3)
+      blobsPostgresDao.saveNewBlob(blobRecord3),
     ).get()
 
     blobsPostgresDao.getConsecutiveBlobsFromBlockNumber(
       expectedStartBlock + 1UL,
-      blobRecord3.endBlockTime.plus(1.seconds)
+      blobRecord3.endBlockTime.plus(1.seconds),
     ).get().also { blobs ->
       assertThat(blobs).isEmpty()
     }
@@ -180,48 +180,48 @@ class BlobsPostgresDaoTest : CleanDbTestSuiteParallel() {
     val blobRecord1 = createBlobRecord(
       startBlockNumber = 1UL,
       endBlockNumber = 40UL,
-      startBlockTime = expectedStartBlockTime
+      startBlockTime = expectedStartBlockTime,
     )
     val blobRecord2 = createBlobRecord(
       startBlockNumber = 41UL,
       endBlockNumber = 60UL,
-      startBlockTime = blobRecord1.endBlockTime.plus(3.seconds)
+      startBlockTime = blobRecord1.endBlockTime.plus(3.seconds),
     )
     val blobRecord3 = createBlobRecord(
       startBlockNumber = 61UL,
       endBlockNumber = 100UL,
-      startBlockTime = blobRecord2.endBlockTime.plus(3.seconds)
+      startBlockTime = blobRecord2.endBlockTime.plus(3.seconds),
     )
     val blobRecord4 = createBlobRecord(
       startBlockNumber = 101UL,
       endBlockNumber = 111UL,
-      startBlockTime = blobRecord3.endBlockTime.plus(3.seconds)
+      startBlockTime = blobRecord3.endBlockTime.plus(3.seconds),
     )
     val blobRecord5 = createBlobRecord(
       startBlockNumber = 112UL,
       endBlockNumber = 132UL,
-      startBlockTime = blobRecord4.endBlockTime.plus(3.seconds)
+      startBlockTime = blobRecord4.endBlockTime.plus(3.seconds),
     )
     val blobRecord6 = createBlobRecord(
       startBlockNumber = 134UL,
       endBlockNumber = 156UL,
-      startBlockTime = blobRecord5.endBlockTime.plus(3.seconds)
+      startBlockTime = blobRecord5.endBlockTime.plus(3.seconds),
     )
     val blobRecord7 = createBlobRecord(
       startBlockNumber = 157UL,
       endBlockNumber = 189UL,
-      startBlockTime = blobRecord5.endBlockTime.plus(3.seconds)
+      startBlockTime = blobRecord5.endBlockTime.plus(3.seconds),
     )
     val expectedBlobs = listOf(
       blobRecord3,
       blobRecord4,
-      blobRecord5
+      blobRecord5,
     )
     val otherBlobs = listOf(
       blobRecord1,
       blobRecord2,
       blobRecord6,
-      blobRecord7
+      blobRecord7,
     )
 
     saveBlobs(expectedBlobs + otherBlobs)
@@ -232,7 +232,7 @@ class BlobsPostgresDaoTest : CleanDbTestSuiteParallel() {
       blobsPostgresDao
         .getConsecutiveBlobsFromBlockNumber(
           startingBlockNumberInclusive = expectedBlobs.first().startBlockNumber,
-          endBlockCreatedBefore = expectedBlobs.last().endBlockTime.plus(1.seconds)
+          endBlockCreatedBefore = expectedBlobs.last().endBlockTime.plus(1.seconds),
         ).get()
     assertThat(actualBlobs).hasSameElementsAs(expectedBlobs)
   }
@@ -242,7 +242,7 @@ class BlobsPostgresDaoTest : CleanDbTestSuiteParallel() {
     val expectedBlob = createBlobRecord(
       startBlockNumber = 1UL,
       endBlockNumber = 90UL,
-      startBlockTime = expectedStartBlockTime
+      startBlockTime = expectedStartBlockTime,
     )
 
     blobsPostgresDao.saveNewBlob(expectedBlob).get()
@@ -269,55 +269,55 @@ class BlobsPostgresDaoTest : CleanDbTestSuiteParallel() {
     val blobRecord1 = createBlobRecord(
       startBlockNumber = 1UL,
       endBlockNumber = 40UL,
-      startBlockTime = expectedStartBlockTime
+      startBlockTime = expectedStartBlockTime,
     )
     val blobRecord2 = createBlobRecord(
       startBlockNumber = 41UL,
       endBlockNumber = 60UL,
-      startBlockTime = expectedStartBlockTime
+      startBlockTime = expectedStartBlockTime,
     )
     val blobRecord3 = createBlobRecord(
       startBlockNumber = 61UL,
       endBlockNumber = 100UL,
-      startBlockTime = expectedStartBlockTime
+      startBlockTime = expectedStartBlockTime,
     )
     val blobRecord4 = createBlobRecord(
       startBlockNumber = 101UL,
       endBlockNumber = 111UL,
-      startBlockTime = expectedStartBlockTime
+      startBlockTime = expectedStartBlockTime,
     )
     val blobRecord5 = createBlobRecord(
       startBlockNumber = 112UL,
       endBlockNumber = 132UL,
-      startBlockTime = expectedStartBlockTime
+      startBlockTime = expectedStartBlockTime,
     )
     val blobRecord6 = createBlobRecord(
       startBlockNumber = 133UL,
       endBlockNumber = 156UL,
-      startBlockTime = expectedStartBlockTime
+      startBlockTime = expectedStartBlockTime,
     )
     val blobRecord7 = createBlobRecord(
       startBlockNumber = 157UL,
       endBlockNumber = 189UL,
-      startBlockTime = expectedStartBlockTime
+      startBlockTime = expectedStartBlockTime,
     )
     val expectedBlobs = listOf(
       blobRecord4,
       blobRecord5,
       blobRecord6,
-      blobRecord7
+      blobRecord7,
     )
     val deletedBlobs = listOf(
       blobRecord1,
       blobRecord2,
-      blobRecord3
+      blobRecord3,
     )
 
     expectedBlobs.forEach { blobsPostgresDao.saveNewBlob(it).get() }
     deletedBlobs.forEach { blobsPostgresDao.saveNewBlob(it).get() }
 
     blobsPostgresDao.deleteBlobsUpToEndBlockNumber(
-      blobRecord3.endBlockNumber
+      blobRecord3.endBlockNumber,
     ).get()
 
     val existedBlobRecords = blobsContentQuery().execute()
@@ -334,55 +334,55 @@ class BlobsPostgresDaoTest : CleanDbTestSuiteParallel() {
     val blobRecord1 = createBlobRecord(
       startBlockNumber = 1UL,
       endBlockNumber = 40UL,
-      startBlockTime = expectedStartBlockTime
+      startBlockTime = expectedStartBlockTime,
     )
     val blobRecord2 = createBlobRecord(
       startBlockNumber = 41UL,
       endBlockNumber = 60UL,
-      startBlockTime = expectedStartBlockTime
+      startBlockTime = expectedStartBlockTime,
     )
     val blobRecord3 = createBlobRecord(
       startBlockNumber = 61UL,
       endBlockNumber = 100UL,
-      startBlockTime = expectedStartBlockTime
+      startBlockTime = expectedStartBlockTime,
     )
     val blobRecord4 = createBlobRecord(
       startBlockNumber = 101UL,
       endBlockNumber = 111UL,
-      startBlockTime = expectedStartBlockTime
+      startBlockTime = expectedStartBlockTime,
     )
     val blobRecord5 = createBlobRecord(
       startBlockNumber = 112UL,
       endBlockNumber = 132UL,
-      startBlockTime = expectedStartBlockTime
+      startBlockTime = expectedStartBlockTime,
     )
     val blobRecord6 = createBlobRecord(
       startBlockNumber = 133UL,
       endBlockNumber = 156UL,
-      startBlockTime = expectedStartBlockTime
+      startBlockTime = expectedStartBlockTime,
     )
     val blobRecord7 = createBlobRecord(
       startBlockNumber = 157UL,
       endBlockNumber = 189UL,
-      startBlockTime = expectedStartBlockTime
+      startBlockTime = expectedStartBlockTime,
     )
     val deletedBlobs = listOf(
       blobRecord4,
       blobRecord5,
       blobRecord6,
-      blobRecord7
+      blobRecord7,
     )
     val expectedBlobs = listOf(
       blobRecord1,
       blobRecord2,
-      blobRecord3
+      blobRecord3,
     )
 
     expectedBlobs.forEach { blobsPostgresDao.saveNewBlob(it).get() }
     deletedBlobs.forEach { blobsPostgresDao.saveNewBlob(it).get() }
 
     blobsPostgresDao.deleteBlobsAfterBlockNumber(
-      blobRecord3.endBlockNumber
+      blobRecord3.endBlockNumber,
     ).get()
 
     val existedBlobRecords = blobsContentQuery().execute()

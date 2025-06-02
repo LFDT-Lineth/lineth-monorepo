@@ -21,7 +21,7 @@ class VertxRestRequestLoggerTest {
     override fun toLogString(
       request: HttpRequest<Buffer>,
       response: HttpResponse<Buffer>?,
-      failureCause: Throwable?
+      failureCause: Throwable?,
     ): String {
       return "response-log-string"
     }
@@ -29,14 +29,14 @@ class VertxRestRequestLoggerTest {
 
   fun setUpLogger(
     // we need to use a different logger name for each test
-    loggerName: String = "request-logger-test-" + Random.nextBytes(8).encodeHex()
+    loggerName: String = "request-logger-test-" + Random.nextBytes(8).encodeHex(),
   ): Pair<VertxRestRequestLogger, LogCaptor> {
     val logCaptor: LogCaptor = LogCaptor.forName(loggerName)
     return VertxRestRequestLogger(
       log = LogManager.getLogger(loggerName),
       logFormatter = FakeLogFormatter(),
       requestResponseLogLevel = Level.TRACE,
-      failuresLogLevel = Level.DEBUG
+      failuresLogLevel = Level.DEBUG,
     ) to logCaptor
   }
 

@@ -30,7 +30,7 @@ import kotlin.time.toJavaDuration
 class ConflationCalculatorByTimeDeadlineTest {
   private val config = ConflationCalculatorByTimeDeadline.Config(
     conflationDeadline = 20.seconds,
-    conflationDeadlineLastBlockConfirmationDelay = 4.seconds
+    conflationDeadlineLastBlockConfirmationDelay = 4.seconds,
   )
   private val blockTimestamp = Instant.parse("2021-01-01T00:00:00Z")
   private val clock: Clock = mock { on { now() } doReturn blockTimestamp }
@@ -39,8 +39,8 @@ class ConflationCalculatorByTimeDeadlineTest {
       BlockHeaderSummary(
         number = 1u,
         timestamp = blockTimestamp,
-        hash = ByteArrayExt.random32()
-      )
+        hash = ByteArrayExt.random32(),
+      ),
     )
   }
   private lateinit var conflationTiggers: MutableList<Instant>
@@ -57,8 +57,8 @@ class ConflationCalculatorByTimeDeadlineTest {
         lastBlockNumber = 0u,
         clock = clock,
         latestBlockProvider = latestBlockProvider,
-        log = log
-      )
+        log = log,
+      ),
     ).also {
       it.setConflationTriggerConsumer {
         conflationTiggers.add(clock.now())
@@ -96,9 +96,9 @@ class ConflationCalculatorByTimeDeadlineTest {
         BlockHeaderSummary(
           number = 3u,
           timestamp = block2Timestamp.plus(config.conflationDeadline).plus(5.seconds),
-          hash = ByteArrayExt.random32()
-        )
-      )
+          hash = ByteArrayExt.random32(),
+        ),
+      ),
     )
 
     conflationCalculatorByTimeDeadline.checkConflationDeadline()
@@ -117,9 +117,9 @@ class ConflationCalculatorByTimeDeadlineTest {
           BlockHeaderSummary(
             number = 2u,
             timestamp = block2Timestamp,
-            hash = ByteArrayExt.random32()
-          )
-        )
+            hash = ByteArrayExt.random32(),
+          ),
+        ),
       )
 
     val time1 = blockTimestamp.plus(config.conflationDeadline).plus(10.seconds)
@@ -148,9 +148,9 @@ class ConflationCalculatorByTimeDeadlineTest {
           BlockHeaderSummary(
             number = 2u,
             timestamp = block2Timestamp,
-            hash = ByteArrayExt.random32()
-          )
-        )
+            hash = ByteArrayExt.random32(),
+          ),
+        ),
       )
 
     val time1 = blockTimestamp.plus(config.conflationDeadline).plus(10.seconds)
@@ -171,9 +171,9 @@ class ConflationCalculatorByTimeDeadlineTest {
           BlockHeaderSummary(
             number = 1u,
             timestamp = blockTimestamp,
-            hash = ByteArrayExt.random32()
-          )
-        )
+            hash = ByteArrayExt.random32(),
+          ),
+        ),
       )
 
     whenever(clock.now()).thenReturn(blockTimestamp.plus(config.conflationDeadline).plus(10.seconds))
@@ -183,7 +183,7 @@ class ConflationCalculatorByTimeDeadlineTest {
     verify(log).warn(
       eq("SafeBlock request failed. Will Retry conflation deadline on next tick errorMessage={}"),
       contains("Failed to fetch latest block"),
-      any()
+      any(),
     )
   }
 
@@ -192,7 +192,7 @@ class ConflationCalculatorByTimeDeadlineTest {
       blockNumber = blockNumber,
       blockTimestamp = timestamp,
       tracesCounters = fakeTracesCountersV2(1u),
-      blockRLPEncoded = ByteArray(0)
+      blockRLPEncoded = ByteArray(0),
     )
   }
 }
@@ -204,7 +204,7 @@ class ConflationCalculatorByTimeDeadlineRunnerTest {
   fun `should call calculator every interval`() {
     val runner = DeadlineConflationCalculatorRunner(
       10.milliseconds,
-      mockCalculator
+      mockCalculator,
     )
     // it should be idempotent
     runner.start()

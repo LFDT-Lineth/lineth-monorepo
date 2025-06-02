@@ -10,13 +10,13 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 class GasPriceCapFeeHistoryFetcherImpl(
   private val web3jService: Web3jBlobExtended,
-  private val config: Config
+  private val config: Config,
 ) : GasPriceCapFeeHistoryFetcher {
   private val log: Logger = LogManager.getLogger(this::class.java)
 
   data class Config(
     val maxBlockCount: UInt,
-    val rewardPercentiles: List<Double>
+    val rewardPercentiles: List<Double>,
   ) {
     init {
       require(rewardPercentiles.isNotEmpty()) {
@@ -37,8 +37,8 @@ class GasPriceCapFeeHistoryFetcherImpl(
       web3jService.ethFeeHistoryWithBlob(
         blockCount,
         newestBlock,
-        config.rewardPercentiles
-      ).sendAsync()
+        config.rewardPercentiles,
+      ).sendAsync(),
     ).thenApply {
       if (it.hasError()) {
         throw Exception(it.error.message)
@@ -50,7 +50,7 @@ class GasPriceCapFeeHistoryFetcherImpl(
 
   override fun getEthFeeHistoryData(
     startBlockNumberInclusive: Long,
-    endBlockNumberInclusive: Long
+    endBlockNumberInclusive: Long,
   ): SafeFuture<FeeHistory> {
     require(endBlockNumberInclusive >= startBlockNumberInclusive) {
       "endBlockNumberInclusive=$endBlockNumberInclusive must be equal or higher " +
@@ -72,7 +72,7 @@ class GasPriceCapFeeHistoryFetcherImpl(
       startBlockNumberInclusive,
       endBlockNumberInclusive,
       newestBlock.blockNumber,
-      blockCount
+      blockCount,
     )
 
     return getFeeHistory(newestBlock, blockCount)

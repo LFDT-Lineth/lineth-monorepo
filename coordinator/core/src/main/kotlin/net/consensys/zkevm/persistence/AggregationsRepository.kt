@@ -23,7 +23,7 @@ interface AggregationsRepository {
    *      * Not sure yet about blockMetaData, we'll revisit it later
    */
   fun findConsecutiveProvenBlobs(
-    fromBlockNumber: Long
+    fromBlockNumber: Long,
   ): SafeFuture<List<BlobAndBatchCounters>>
 
   fun saveNewAggregation(aggregation: Aggregation): SafeFuture<Unit>
@@ -31,15 +31,15 @@ interface AggregationsRepository {
   fun getProofsToFinalize(
     fromBlockNumber: Long,
     finalEndBlockCreatedBefore: Instant,
-    maximumNumberOfProofs: Int
+    maximumNumberOfProofs: Int,
   ): SafeFuture<List<ProofToFinalize>>
 
   fun findHighestConsecutiveEndBlockNumber(
-    fromBlockNumber: Long
+    fromBlockNumber: Long,
   ): SafeFuture<Long?>
 
   fun findAggregationProofByEndBlockNumber(
-    endBlockNumber: Long
+    endBlockNumber: Long,
   ): SafeFuture<ProofToFinalize?>
 
   fun deleteAggregationsUpToEndBlockNumber(endBlockNumberInclusive: Long): SafeFuture<Int>

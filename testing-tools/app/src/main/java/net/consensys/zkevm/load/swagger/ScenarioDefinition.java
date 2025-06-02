@@ -216,4 +216,3 @@ public class ScenarioDefinition {
     return JSON.getGson().toJson(this);
   }
 }
-

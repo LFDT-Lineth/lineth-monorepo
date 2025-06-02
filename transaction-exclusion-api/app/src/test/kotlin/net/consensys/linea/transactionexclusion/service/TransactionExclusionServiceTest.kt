@@ -22,14 +22,14 @@ import kotlin.time.Duration.Companion.hours
 class TransactionExclusionServiceTest {
   private val metricsFacadeMock = mock<MetricsFacade>(defaultAnswer = Mockito.RETURNS_DEEP_STUBS)
   private val config = TransactionExclusionServiceV1Impl.Config(
-    rejectedTimestampWithinDuration = 24.hours
+    rejectedTimestampWithinDuration = 24.hours,
   )
   private lateinit var rejectedTransactionsRepositoryMock: RejectedTransactionsDao
 
   @BeforeEach
   fun beforeEach() {
     rejectedTransactionsRepositoryMock = mock<RejectedTransactionsDao>(
-      defaultAnswer = Mockito.RETURNS_DEEP_STUBS
+      defaultAnswer = Mockito.RETURNS_DEEP_STUBS,
     )
   }
 
@@ -43,12 +43,12 @@ class TransactionExclusionServiceTest {
     val transactionExclusionService = TransactionExclusionServiceV1Impl(
       config = config,
       repository = rejectedTransactionsRepositoryMock,
-      metricsFacade = metricsFacadeMock
+      metricsFacade = metricsFacadeMock,
     )
 
     Assertions.assertEquals(
       Ok(TransactionExclusionServiceV1.SaveRejectedTransactionStatus.SAVED),
-      transactionExclusionService.saveRejectedTransaction(defaultRejectedTransaction).get()
+      transactionExclusionService.saveRejectedTransaction(defaultRejectedTransaction).get(),
     )
   }
 
@@ -60,12 +60,12 @@ class TransactionExclusionServiceTest {
     val transactionExclusionService = TransactionExclusionServiceV1Impl(
       config = config,
       repository = rejectedTransactionsRepositoryMock,
-      metricsFacade = metricsFacadeMock
+      metricsFacade = metricsFacadeMock,
     )
 
     Assertions.assertEquals(
       Ok(TransactionExclusionServiceV1.SaveRejectedTransactionStatus.DUPLICATE_ALREADY_SAVED_BEFORE),
-      transactionExclusionService.saveRejectedTransaction(defaultRejectedTransaction).get()
+      transactionExclusionService.saveRejectedTransaction(defaultRejectedTransaction).get(),
     )
   }
 
@@ -79,12 +79,12 @@ class TransactionExclusionServiceTest {
     val transactionExclusionService = TransactionExclusionServiceV1Impl(
       config = config,
       repository = rejectedTransactionsRepositoryMock,
-      metricsFacade = metricsFacadeMock
+      metricsFacade = metricsFacadeMock,
     )
 
     Assertions.assertEquals(
       Err(TransactionExclusionError(ErrorType.SERVER_ERROR, "")),
-      transactionExclusionService.saveRejectedTransaction(defaultRejectedTransaction).get()
+      transactionExclusionService.saveRejectedTransaction(defaultRejectedTransaction).get(),
     )
   }
 
@@ -96,14 +96,14 @@ class TransactionExclusionServiceTest {
     val transactionExclusionService = TransactionExclusionServiceV1Impl(
       config = config,
       repository = rejectedTransactionsRepositoryMock,
-      metricsFacade = metricsFacadeMock
+      metricsFacade = metricsFacadeMock,
     )
 
     Assertions.assertEquals(
       Ok(defaultRejectedTransaction),
       transactionExclusionService.getTransactionExclusionStatus(
-        defaultRejectedTransaction.transactionInfo.hash
-      ).get()
+        defaultRejectedTransaction.transactionInfo.hash,
+      ).get(),
     )
   }
 
@@ -115,14 +115,14 @@ class TransactionExclusionServiceTest {
     val transactionExclusionService = TransactionExclusionServiceV1Impl(
       config = config,
       repository = rejectedTransactionsRepositoryMock,
-      metricsFacade = metricsFacadeMock
+      metricsFacade = metricsFacadeMock,
     )
 
     Assertions.assertEquals(
       Ok(null),
       transactionExclusionService.getTransactionExclusionStatus(
-        defaultRejectedTransaction.transactionInfo.hash
-      ).get()
+        defaultRejectedTransaction.transactionInfo.hash,
+      ).get(),
     )
   }
 
@@ -134,19 +134,19 @@ class TransactionExclusionServiceTest {
     val transactionExclusionService = TransactionExclusionServiceV1Impl(
       config = config,
       repository = rejectedTransactionsRepositoryMock,
-      metricsFacade = metricsFacadeMock
+      metricsFacade = metricsFacadeMock,
     )
 
     Assertions.assertEquals(
       Err(
         TransactionExclusionError(
           ErrorType.SERVER_ERROR,
-          ""
-        )
+          "",
+        ),
       ),
       transactionExclusionService.getTransactionExclusionStatus(
-        defaultRejectedTransaction.transactionInfo.hash
-      ).get()
+        defaultRejectedTransaction.transactionInfo.hash,
+      ).get(),
     )
   }
 }

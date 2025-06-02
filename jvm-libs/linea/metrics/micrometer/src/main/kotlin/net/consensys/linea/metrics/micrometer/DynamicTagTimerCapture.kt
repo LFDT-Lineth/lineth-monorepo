@@ -23,7 +23,7 @@ class DynamicTagTimerCapture<T> : AbstractTimerCapture<T>, TimerCapture<T> {
   constructor(meterRegistry: MeterRegistry, name: String) : super(meterRegistry, name)
   constructor(
     meterRegistry: MeterRegistry,
-    timerBuilder: Timer.Builder
+    timerBuilder: Timer.Builder,
   ) : super(meterRegistry, timerBuilder)
 
   override fun setDescription(description: String): DynamicTagTimerCapture<T> {
@@ -33,7 +33,7 @@ class DynamicTagTimerCapture<T> : AbstractTimerCapture<T>, TimerCapture<T> {
 
   override fun setTag(tagKey: String, tagValue: String): DynamicTagTimerCapture<T> {
     throw NoSuchMethodException(
-      "If you need to set both value and key, please use ${SimpleTimerCapture::class.qualifiedName}"
+      "If you need to set both value and key, please use ${SimpleTimerCapture::class.qualifiedName}",
     )
   }
 
@@ -53,7 +53,7 @@ class DynamicTagTimerCapture<T> : AbstractTimerCapture<T>, TimerCapture<T> {
   }
 
   fun setTagValueExtractorOnError(
-    onErrorExtractor: Function<Throwable, String>
+    onErrorExtractor: Function<Throwable, String>,
   ): DynamicTagTimerCapture<T> {
     this.extractorOnError = onErrorExtractor
     return this

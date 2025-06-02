@@ -30,7 +30,7 @@ object MapperLineaDomainToBesu {
     return secp256k1.createSignature(
       tx.r,
       tx.s,
-      recId
+      recId,
     )
   }
 
@@ -105,7 +105,7 @@ object MapperLineaDomainToBesu {
       .getOrElse { th ->
         throw RuntimeException(
           "Error mapping transaction to Besu: block=$blockNumber txIndex=$txIndex transaction=$tx",
-          th
+          th,
         )
       }
   }
@@ -132,7 +132,7 @@ object MapperLineaDomainToBesu {
           val accList = tx.accessList?.map { entry ->
             AccessListEntry(
               Address.wrap(Bytes.wrap(entry.address)),
-              entry.storageKeys.map { Bytes32.wrap(it) }
+              entry.storageKeys.map { Bytes32.wrap(it) },
             )
           } ?: emptyList()
           accessList(accList)

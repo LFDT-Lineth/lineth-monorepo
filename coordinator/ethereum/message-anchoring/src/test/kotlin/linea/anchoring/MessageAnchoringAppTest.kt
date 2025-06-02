@@ -44,14 +44,14 @@ class MessageAnchoringAppTest {
       topicsTranslation = mapOf(
         L1RollingHashUpdatedEvent.topic to "L1RollingHashUpdatedEvent",
         MessageSentEvent.topic to "MessageSentEvent",
-        L2RollingHashUpdatedEvent.topic to "L2RollingHashUpdatedEvent"
+        L2RollingHashUpdatedEvent.topic to "L2RollingHashUpdatedEvent",
       ),
-      log = LogManager.getLogger("FakeEthApiClient")
+      log = LogManager.getLogger("FakeEthApiClient"),
     )
 
     configureLoggers(
       rootLevel = Level.INFO,
-      "FakeEthApiClient" to Level.INFO
+      "FakeEthApiClient" to Level.INFO,
     )
   }
 
@@ -62,7 +62,7 @@ class MessageAnchoringAppTest {
     l1EventPollingTimeout: Duration = 2.seconds,
     l1SuccessBackoffDelay: Duration = 1.milliseconds,
     messageQueueCapacity: UInt = 100u,
-    maxMessagesToAnchorPerL2Transaction: UInt = 10u
+    maxMessagesToAnchorPerL2Transaction: UInt = 10u,
   ): MessageAnchoringApp {
     return MessageAnchoringApp(
       vertx = vertx,
@@ -77,15 +77,15 @@ class MessageAnchoringAppTest {
         l1EventPollingTimeout = l1EventPollingTimeout,
         l1EventSearchBlockChunk = l1EventSearchBlockChunk,
         messageQueueCapacity = messageQueueCapacity,
-        maxMessagesToAnchorPerL2Transaction = maxMessagesToAnchorPerL2Transaction
+        maxMessagesToAnchorPerL2Transaction = maxMessagesToAnchorPerL2Transaction,
       ),
       l1EthApiClient = l1Client,
-      l2MessageService = l2MessageService
+      l2MessageService = l2MessageService,
     )
   }
 
   private fun addLogsToFakeEthClient(
-    logs: List<L1MessageSentV1EthLogs>
+    logs: List<L1MessageSentV1EthLogs>,
   ) {
     l1Client.setLogs(logs.map { listOf(it.l1RollingHashUpdated.log, it.messageSent.log) }.flatten())
   }
@@ -94,14 +94,14 @@ class MessageAnchoringAppTest {
   fun `should anchor messages from fresh deployment`() {
     val ethLogs = createL1MessageSentV1Logs(
       l1BlocksWithMessages = listOf(100UL, 200UL, 300UL, 400UL, 500UL),
-      numberOfMessagesPerBlock = 1
+      numberOfMessagesPerBlock = 1,
     )
     addLogsToFakeEthClient(ethLogs)
     val l1PollingInterval = 50.milliseconds
     val anchoringApp = createApp(
       l1PollingInterval = l1PollingInterval,
       anchoringTickInterval = 50.milliseconds,
-      l1EventSearchBlockChunk = 100u
+      l1EventSearchBlockChunk = 100u,
     )
     anchoringApp.start().get()
     val lastFinalizedMessageOnL1 = ethLogs[ethLogs.size - 2]
@@ -130,15 +130,15 @@ class MessageAnchoringAppTest {
   fun `should anchor messages resuming from latest anchored message on L2`() {
     val ethLogs = createL1MessageSentV1Logs(
       l1BlocksWithMessages = listOf(100UL, 200UL, 300UL, 400UL),
-      numberOfMessagesPerBlock = 1
+      numberOfMessagesPerBlock = 1,
     )
     l2MessageService.setLastAnchoredL1Message(
       l1MessageNumber = ethLogs.first().l1RollingHashUpdated.event.messageNumber,
-      rollingHash = ethLogs.first().l1RollingHashUpdated.event.rollingHash
+      rollingHash = ethLogs.first().l1RollingHashUpdated.event.rollingHash,
     )
     val anchoringApp = createApp(
       anchoringTickInterval = 100.milliseconds,
-      l1EventSearchBlockChunk = 100u
+      l1EventSearchBlockChunk = 100u,
     )
     anchoringApp.start().get()
     addLogsToFakeEthClient(ethLogs)
@@ -163,12 +163,12 @@ class MessageAnchoringAppTest {
   fun `should anchor messages in chunks when too many messages are waiting on L1`() {
     val ethLogs = createL1MessageSentV1Logs(
       l1BlocksWithMessages = (1UL..100UL).map { it },
-      numberOfMessagesPerBlock = 1
+      numberOfMessagesPerBlock = 1,
     )
     val anchoringApp = createApp(
       l1EventSearchBlockChunk = 1000u,
       maxMessagesToAnchorPerL2Transaction = 20u,
-      anchoringTickInterval = 1.milliseconds
+      anchoringTickInterval = 1.milliseconds,
     )
     anchoringApp.start().get()
 
@@ -194,7 +194,7 @@ class MessageAnchoringAppTest {
     // slow timeout 1
     val ethLogs = createL1MessageSentV1Logs(
       l1BlocksWithMessages = (1UL..100_000UL).step(1000).map { it },
-      numberOfMessagesPerBlock = 1
+      numberOfMessagesPerBlock = 1,
     )
     val anchoringApp = createApp(
       l1PollingInterval = 1.milliseconds,
@@ -204,7 +204,7 @@ class MessageAnchoringAppTest {
       l1EventPollingTimeout = 1.milliseconds,
       l1SuccessBackoffDelay = 3.milliseconds,
       maxMessagesToAnchorPerL2Transaction = 50u,
-      anchoringTickInterval = 20.milliseconds
+      anchoringTickInterval = 20.milliseconds,
     )
 
     addLogsToFakeEthClient(ethLogs)
@@ -231,7 +231,7 @@ class MessageAnchoringAppTest {
     val ethLogs = createL1MessageSentV1Logs(
       l1BlocksWithMessages = listOf(100UL, 200UL, 201UL),
       numberOfMessagesPerBlock = 100,
-      startingMessageNumber = 1UL
+      startingMessageNumber = 1UL,
     )
 
     val messageQueueSoftCap = 20u
@@ -242,7 +242,7 @@ class MessageAnchoringAppTest {
       l1EventPollingTimeout = 1.seconds,
       messageQueueCapacity = messageQueueSoftCap,
       maxMessagesToAnchorPerL2Transaction = 50u,
-      anchoringTickInterval = 10.milliseconds
+      anchoringTickInterval = 10.milliseconds,
     )
 
     addLogsToFakeEthClient(ethLogs)
@@ -282,7 +282,7 @@ class MessageAnchoringAppTest {
   private fun createL1MessageSentV1Logs(
     l1BlocksWithMessages: List<ULong>,
     numberOfMessagesPerBlock: Int,
-    startingMessageNumber: ULong = 1UL
+    startingMessageNumber: ULong = 1UL,
   ): List<L1MessageSentV1EthLogs> {
     val ethLogs = mutableListOf<L1MessageSentV1EthLogs>()
     var messageNumber = startingMessageNumber
@@ -294,8 +294,8 @@ class MessageAnchoringAppTest {
             contractAddress = L1_CONTRACT_ADDRESS,
             messageNumber = messageNumber,
             messageHash = messageNumber.toHexStringUInt256().decodeHex(),
-            rollingHash = messageNumber.toHexStringUInt256().decodeHex()
-          )
+            rollingHash = messageNumber.toHexStringUInt256().decodeHex(),
+          ),
         )
         messageNumber++
       }

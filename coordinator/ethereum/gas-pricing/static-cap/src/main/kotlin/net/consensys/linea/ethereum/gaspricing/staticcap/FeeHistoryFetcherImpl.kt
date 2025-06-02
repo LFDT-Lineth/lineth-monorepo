@@ -14,13 +14,13 @@ import java.math.BigInteger
 class FeeHistoryFetcherImpl(
   private val web3jClient: Web3j,
   private val web3jService: Web3jBlobExtended,
-  private val config: Config
+  private val config: Config,
 ) : FeesFetcher {
   private val log: Logger = LogManager.getLogger(this::class.java)
 
   data class Config(
     val feeHistoryBlockCount: UInt,
-    val feeHistoryRewardPercentile: Double
+    val feeHistoryRewardPercentile: Double,
   ) {
     init {
       require(feeHistoryRewardPercentile in 0.0..100.0) {
@@ -43,7 +43,7 @@ class FeeHistoryFetcherImpl(
             .ethFeeHistoryWithBlob(
               config.feeHistoryBlockCount.toInt(),
               DefaultBlockParameterName.LATEST,
-              listOf(config.feeHistoryRewardPercentile)
+              listOf(config.feeHistoryRewardPercentile),
             )
             .sendAsync()
             .thenApply {
@@ -59,7 +59,7 @@ class FeeHistoryFetcherImpl(
                   feeHistory.reward.map { percentiles -> percentiles[0] },
                   feeHistory.gasUsedRatio,
                   feeHistory.baseFeePerBlobGas[feeHistory.baseFeePerBlobGas.lastIndex],
-                  feeHistory.blobGasUsedRatio
+                  feeHistory.blobGasUsedRatio,
                 )
               } else {
                 log.trace(
@@ -68,7 +68,7 @@ class FeeHistoryFetcherImpl(
                   feeHistory.blocksRange().toIntervalString(),
                   feeHistory.baseFeePerGas[feeHistory.baseFeePerGas.lastIndex],
                   feeHistory.reward.map { percentiles -> percentiles[0] },
-                  feeHistory.gasUsedRatio
+                  feeHistory.gasUsedRatio,
                 )
               }
               feesCache = feeHistory

@@ -15,7 +15,7 @@ class WMAGasProviderTest {
     reward = listOf(1000, 1100, 1200, 1300).map { listOf(it.toULong()) },
     gasUsedRatio = listOf(0.25, 0.5, 0.75, 0.9),
     baseFeePerBlobGas = listOf(100, 110, 120, 130, 140).map { it.toULong() },
-    blobGasUsedRatio = listOf(0.25, 0.5, 0.75, 0.9)
+    blobGasUsedRatio = listOf(0.25, 0.5, 0.75, 0.9),
   )
   private val chainId = 999
   private val gasLimit = 100000uL
@@ -25,8 +25,8 @@ class WMAGasProviderTest {
   private val l1PriorityFeeCalculator: FeesCalculator = WMAFeesCalculator(
     WMAFeesCalculator.Config(
       baseFeeCoefficient = 0.0,
-      priorityFeeWmaCoefficient = 1.0
-    )
+      priorityFeeWmaCoefficient = 1.0,
+    ),
   )
 
   @Test
@@ -43,8 +43,8 @@ class WMAGasProviderTest {
           gasLimit = gasLimit,
           maxFeePerGasCap = maxFeePerGasCap,
           maxPriorityFeePerGasCap = maxPriorityFeePerGasCap,
-          maxFeePerBlobGasCap = maxFeePerBlobGasCap
-        )
+          maxFeePerBlobGasCap = maxFeePerBlobGasCap,
+        ),
       )
 
     // WMA = (140*0.0) + ((1000*0.25*1 + 1100*0.5*2 + 1200*0.75*3 + 1300*0.9*4) / (0.25*1 + 0.5*2 + 0.75*3 + 0.9*4)) * 1.0 = 1229.57746
@@ -67,8 +67,8 @@ class WMAGasProviderTest {
           gasLimit = gasLimit,
           maxFeePerGasCap = maxFeePerGasCap,
           maxPriorityFeePerGasCap = maxPriorityFeePerGasCap,
-          maxFeePerBlobGasCap = maxFeePerBlobGasCap
-        )
+          maxFeePerBlobGasCap = maxFeePerBlobGasCap,
+        ),
       )
 
     val calculatedMaxPriorityFeePerGas = wmaGasProvider.getMaxPriorityFeePerGas(null).toULong()
@@ -89,8 +89,8 @@ class WMAGasProviderTest {
           gasLimit = gasLimit,
           maxFeePerGasCap = maxFeePerGasCap,
           maxPriorityFeePerGasCap = maxPriorityFeePerGasCap,
-          maxFeePerBlobGasCap = maxFeePerBlobGasCap
-        )
+          maxFeePerBlobGasCap = maxFeePerBlobGasCap,
+        ),
       )
 
     val calculatedMaxFeePerGas = wmaGasProvider.getMaxFeePerGas(null).toULong()
@@ -111,8 +111,8 @@ class WMAGasProviderTest {
           gasLimit = gasLimit,
           maxFeePerGasCap = maxFeePerGasCap,
           maxPriorityFeePerGasCap = maxPriorityFeePerGasCap,
-          maxFeePerBlobGasCap = maxFeePerBlobGasCap
-        )
+          maxFeePerBlobGasCap = maxFeePerBlobGasCap,
+        ),
       )
 
     val calculatedMaxPriorityFeePerGas = wmaGasProvider.getMaxPriorityFeePerGas(null).toULong()
@@ -133,8 +133,8 @@ class WMAGasProviderTest {
           gasLimit = gasLimit,
           maxFeePerGasCap = maxFeePerGasCap,
           maxPriorityFeePerGasCap = maxPriorityFeePerGasCap,
-          maxFeePerBlobGasCap = maxFeePerBlobGasCap
-        )
+          maxFeePerBlobGasCap = maxFeePerBlobGasCap,
+        ),
       )
 
     val calculatedFees = wmaGasProvider.getEIP1559GasFees()
@@ -156,8 +156,8 @@ class WMAGasProviderTest {
           gasLimit = gasLimit,
           maxFeePerGasCap = maxFeePerGasCap,
           maxPriorityFeePerGasCap = maxPriorityFeePerGasCap,
-          maxFeePerBlobGasCap = maxFeePerBlobGasCap
-        )
+          maxFeePerBlobGasCap = maxFeePerBlobGasCap,
+        ),
       )
 
     val calculatedFees = wmaGasProvider.getEIP1559GasFees()
@@ -179,8 +179,8 @@ class WMAGasProviderTest {
           gasLimit = gasLimit,
           maxFeePerGasCap = maxFeePerGasCap,
           maxPriorityFeePerGasCap = maxPriorityFeePerGasCap,
-          maxFeePerBlobGasCap = maxFeePerBlobGasCap
-        )
+          maxFeePerBlobGasCap = maxFeePerBlobGasCap,
+        ),
       )
 
     val calculatedFees = wmaGasProvider.getEIP4844GasFees()
@@ -203,8 +203,8 @@ class WMAGasProviderTest {
           gasLimit = gasLimit,
           maxFeePerGasCap = maxFeePerGasCap,
           maxPriorityFeePerGasCap = maxPriorityFeePerGasCap,
-          maxFeePerBlobGasCap = maxFeePerBlobGasCap
-        )
+          maxFeePerBlobGasCap = maxFeePerBlobGasCap,
+        ),
       )
 
     val calculatedFees = wmaGasProvider.getEIP4844GasFees()

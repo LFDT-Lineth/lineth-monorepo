@@ -19,7 +19,7 @@ import kotlin.time.toKotlinDuration
 data class SampleTransactionGasPricingTomlDto(
   val plainTransferCostMultiplier: Double = 1.0,
   val compressedTxSize: Int = 125,
-  val expectedGas: Int = 21000
+  val expectedGas: Int = 21000,
 )
 
 data class LegacyGasPricingTomlDto(
@@ -28,11 +28,11 @@ data class LegacyGasPricingTomlDto(
   val naiveGasPricing: NaiveGasPricingTomlDto?,
   val sampleTransactionGasPricing: SampleTransactionGasPricingTomlDto = SampleTransactionGasPricingTomlDto(),
   val gasPriceUpperBound: ULong,
-  val gasPriceLowerBound: ULong
+  val gasPriceLowerBound: ULong,
 ) {
   enum class Type {
     Naive,
-    SampleTransaction
+    SampleTransaction,
   }
 
   init {
@@ -49,7 +49,7 @@ data class LegacyGasPricingTomlDto(
 data class NaiveGasPricingTomlDto(
   val baseFeeCoefficient: Double,
   val priorityFeeCoefficient: Double,
-  val baseFeeBlobCoefficient: Double
+  val baseFeeBlobCoefficient: Double,
 )
 
 data class VariableCostPricingTomlDto(
@@ -57,7 +57,7 @@ data class VariableCostPricingTomlDto(
   val legacyFeesMultiplier: Double,
   val margin: Double,
   val variableCostUpperBound: ULong,
-  val variableCostLowerBound: ULong
+  val variableCostLowerBound: ULong,
 ) {
   init {
     require(variableCostUpperBound >= variableCostLowerBound) {
@@ -69,7 +69,7 @@ data class VariableCostPricingTomlDto(
 data class JsonRpcPricingPropagationTomlDto(
   override var disabled: Boolean = false,
   val gethGasPriceUpdateRecipients: List<URL>,
-  val besuGasPriceUpdateRecipients: List<URL>
+  val besuGasPriceUpdateRecipients: List<URL>,
 ) : FeatureToggleable {
   init {
     require(disabled || (gethGasPriceUpdateRecipients.isNotEmpty() || besuGasPriceUpdateRecipients.isNotEmpty())) {
@@ -81,7 +81,7 @@ data class JsonRpcPricingPropagationTomlDto(
 
 data class ExtraDataPricingPropagationTomlDto(
   override var disabled: Boolean = false,
-  val extraDataUpdateRecipient: URL
+  val extraDataUpdateRecipient: URL,
 ) : FeatureToggleable
 
 data class L2NetworkGasPricingTomlDto(
@@ -99,7 +99,7 @@ data class L2NetworkGasPricingTomlDto(
   val legacy: LegacyGasPricingTomlDto,
   val variableCostPricing: VariableCostPricingTomlDto,
   val jsonRpcPricingPropagation: JsonRpcPricingPropagationTomlDto?,
-  val extraDataPricingPropagation: ExtraDataPricingPropagationTomlDto
+  val extraDataPricingPropagation: ExtraDataPricingPropagationTomlDto,
 ) : FeatureToggleable, RequestRetryConfigurable {
   init {
     require(feeHistoryBlockCount > 0) { "feeHistoryBlockCount must be greater than 0" }
@@ -124,13 +124,13 @@ data class L2NetworkGasPricingTomlDto(
             priorityFeeCoefficient = legacy.naiveGasPricing.priorityFeeCoefficient,
             baseFeeBlobCoefficient = legacy.naiveGasPricing.baseFeeBlobCoefficient,
             blobSubmissionExpectedExecutionGas = blobSubmissionExpectedExecutionGas,
-            expectedBlobGas = l1BlobGas
+            expectedBlobGas = l1BlobGas,
           ),
           legacyGasPricingCalculatorBounds = BoundableFeeCalculator.Config(
             legacy.gasPriceUpperBound.toDouble(),
             legacy.gasPriceLowerBound.toDouble(),
-            0.0
-          )
+            0.0,
+          ),
         )
       }
 
@@ -140,14 +140,14 @@ data class L2NetworkGasPricingTomlDto(
             sampleTransactionCostMultiplier = legacy.sampleTransactionGasPricing.plainTransferCostMultiplier,
             fixedCostWei = variableCostPricing.gasPriceFixedCost,
             compressedTxSize = legacy.sampleTransactionGasPricing.compressedTxSize,
-            expectedGas = legacy.sampleTransactionGasPricing.expectedGas
+            expectedGas = legacy.sampleTransactionGasPricing.expectedGas,
           ),
           naiveGasPricingCalculatorConfig = null,
           legacyGasPricingCalculatorBounds = BoundableFeeCalculator.Config(
             legacy.gasPriceUpperBound.toDouble(),
             legacy.gasPriceLowerBound.toDouble(),
-            0.0
-          )
+            0.0,
+          ),
         )
       }
     }
@@ -155,7 +155,7 @@ data class L2NetworkGasPricingTomlDto(
       GasPriceUpdaterImpl.Config(
         gethEndpoints = jsonRpcPricingPropagation.gethGasPriceUpdateRecipients,
         besuEndPoints = jsonRpcPricingPropagation.besuGasPriceUpdateRecipients,
-        retryConfig = requestRetryConfig
+        retryConfig = requestRetryConfig,
       )
     } else {
       null
@@ -163,7 +163,7 @@ data class L2NetworkGasPricingTomlDto(
     return L2NetworkGasPricingService.Config(
       feeHistoryFetcherConfig = FeeHistoryFetcherImpl.Config(
         feeHistoryBlockCount = feeHistoryBlockCount.toUInt(),
-        feeHistoryRewardPercentile = feeHistoryRewardPercentile
+        feeHistoryRewardPercentile = feeHistoryRewardPercentile,
       ),
       legacy = legacyGasPricingConfig,
       jsonRpcGasPriceUpdaterConfig = gasPriceUpdaterConfig,
@@ -174,21 +174,21 @@ data class L2NetworkGasPricingTomlDto(
         blobSubmissionExpectedExecutionGas = blobSubmissionExpectedExecutionGas.toUInt(),
         bytesPerDataSubmission = l1BlobGas.toUInt(),
         expectedBlobGas = bytesPerDataSubmission.toUInt(),
-        margin = variableCostPricing.margin
+        margin = variableCostPricing.margin,
       ),
       variableFeesCalculatorBounds = BoundableFeeCalculator.Config(
         feeUpperBound = variableCostPricing.variableCostUpperBound.toDouble(),
         feeLowerBound = variableCostPricing.variableCostLowerBound.toDouble(),
-        feeMargin = 0.0
+        feeMargin = 0.0,
       ),
       extraDataCalculatorConfig = MinerExtraDataV1CalculatorImpl.Config(
         fixedCostInKWei = variableCostPricing.gasPriceFixedCost.toKWeiUInt(),
-        ethGasPriceMultiplier = variableCostPricing.legacyFeesMultiplier
+        ethGasPriceMultiplier = variableCostPricing.legacyFeesMultiplier,
       ),
       extraDataUpdaterConfig = ExtraDataV1UpdaterImpl.Config(
         extraDataPricingPropagation.extraDataUpdateRecipient,
-        requestRetryConfig
-      )
+        requestRetryConfig,
+      ),
     )
   }
 }

@@ -18,11 +18,11 @@ internal class BlobDecompressionTask(
   private val rawBlobsQueue: ConcurrentLinkedQueue<SubmissionEventsAndData<ByteArray>>,
   private val decompressedBlocksQueue: ConcurrentLinkedQueue<SubmissionEventsAndData<BlockFromL1RecoveredData>>,
   private val decompressedFinalizationQueueLimit: Supplier<Int>,
-  private val log: Logger = LogManager.getLogger(SubmissionsFetchingTask::class.java)
+  private val log: Logger = LogManager.getLogger(SubmissionsFetchingTask::class.java),
 ) : PeriodicPollingService(
   vertx = vertx,
   pollingIntervalMs = pollingInterval.inWholeMilliseconds,
-  log = log
+  log = log,
 ) {
   override fun action(): SafeFuture<*> {
     return decompressAndDeserializeBlobs()
@@ -38,10 +38,10 @@ internal class BlobDecompressionTask(
     return blobDecompressor
       .decompress(
         startBlockNumber = submissionEventsAndData.submissionEvents.dataFinalizedEvent.event.startBlockNumber,
-        blobs = submissionEventsAndData.data
+        blobs = submissionEventsAndData.data,
       ).thenCompose { decompressedBlocks ->
         decompressedBlocksQueue.add(
-          SubmissionEventsAndData(submissionEventsAndData.submissionEvents, decompressedBlocks)
+          SubmissionEventsAndData(submissionEventsAndData.submissionEvents, decompressedBlocks),
         )
         decompressAndDeserializeBlobs()
       }

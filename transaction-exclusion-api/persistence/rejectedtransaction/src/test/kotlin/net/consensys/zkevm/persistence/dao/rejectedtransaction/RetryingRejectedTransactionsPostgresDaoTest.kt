@@ -34,9 +34,9 @@ class RetryingRejectedTransactionsPostgresDaoTest {
       PersistenceRetryer(
         vertx = vertx,
         PersistenceRetryer.Config(
-          backoffDelay = 1.milliseconds
-        )
-      )
+          backoffDelay = 1.milliseconds,
+        ),
+      ),
     )
 
     whenever(delegateRejectedTransactionsDao.saveNewRejectedTransaction(eq(rejectedTransaction)))
@@ -45,8 +45,8 @@ class RetryingRejectedTransactionsPostgresDaoTest {
     whenever(
       delegateRejectedTransactionsDao.findRejectedTransactionByTxHash(
         eq(rejectedTransaction.transactionInfo.hash),
-        eq(notRejectedBefore)
-      )
+        eq(notRejectedBefore),
+      ),
     )
       .thenReturn(SafeFuture.completedFuture(null))
 
@@ -61,16 +61,16 @@ class RetryingRejectedTransactionsPostgresDaoTest {
 
     retryingRejectedTransactionsPostgresDao.findRejectedTransactionByTxHash(
       rejectedTransaction.transactionInfo.hash,
-      notRejectedBefore
+      notRejectedBefore,
     )
     verify(delegateRejectedTransactionsDao, times(1)).findRejectedTransactionByTxHash(
       eq(rejectedTransaction.transactionInfo.hash),
-      eq(notRejectedBefore)
+      eq(notRejectedBefore),
     )
 
     retryingRejectedTransactionsPostgresDao.deleteRejectedTransactions(createdBefore)
     verify(delegateRejectedTransactionsDao, times(1)).deleteRejectedTransactions(
-      eq(createdBefore)
+      eq(createdBefore),
     )
   }
 }

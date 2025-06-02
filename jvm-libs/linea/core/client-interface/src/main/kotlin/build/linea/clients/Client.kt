@@ -14,7 +14,7 @@ interface ClientError
 
 class ClientException(
   override val message: String,
-  val errorType: ClientError?
+  val errorType: ClientError?,
 ) :
   RuntimeException(errorType?.let { "errorType=$it $message" } ?: message)
 

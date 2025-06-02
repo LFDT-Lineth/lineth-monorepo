@@ -18,11 +18,11 @@ class BlocksFetcher(
   val web3j: Web3j,
   val vertx: Vertx = Vertx.vertx(),
   val pollingChuckSize: UInt = 100U,
-  val log: Logger = LogManager.getLogger(BlocksFetcher::class.java)
+  val log: Logger = LogManager.getLogger(BlocksFetcher::class.java),
 ) {
   fun fetchBlocks(
     startBlockNumber: ULong,
-    endBlockNumber: ULong
+    endBlockNumber: ULong,
   ): SafeFuture<List<Block>> {
     return (startBlockNumber..endBlockNumber).toList()
       .map { blockNumber ->
@@ -52,7 +52,7 @@ class BlocksFetcher(
     startBlockNumber: ULong,
     endBlockNumber: ULong? = null,
     chunkSize: UInt = pollingChuckSize,
-    consumer: (List<Block>) -> SafeFuture<*>
+    consumer: (List<Block>) -> SafeFuture<*>,
   ): SafeFuture<*> {
     val lastBlockFetched = AtomicLong(startBlockNumber.toLong() - 1)
     return AsyncRetryer.retry(
@@ -63,7 +63,7 @@ class BlocksFetcher(
       },
       stopRetriesOnErrorPredicate = {
         it is Exception
-      }
+      },
     ) {
       val start = (lastBlockFetched.get() + 1).toULong()
       val end = (start + chunkSize - 1U).coerceAtMost(endBlockNumber ?: ULong.MAX_VALUE)

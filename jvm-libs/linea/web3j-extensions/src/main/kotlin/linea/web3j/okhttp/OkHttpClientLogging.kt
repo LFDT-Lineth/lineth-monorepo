@@ -13,7 +13,7 @@ import org.apache.logging.log4j.Logger
 import org.web3j.protocol.http.HttpService
 
 class OkHttpMinimalJsonRpcLoggerInterceptor(
-  val logger: JsonRpcRequestResponseLogger = MinimalInLineJsonRpcLogger(LogManager.getLogger(HttpService::class.java))
+  val logger: JsonRpcRequestResponseLogger = MinimalInLineJsonRpcLogger(LogManager.getLogger(HttpService::class.java)),
 ) : Interceptor {
   override fun intercept(chain: Interceptor.Chain): Response {
     val request = chain.request()
@@ -37,7 +37,7 @@ class OkHttpMinimalJsonRpcLoggerInterceptor(
         endpoint = endpoint,
         responseStatusCode = response.code,
         requestBody = requestBody,
-        responseBody = responseBody
+        responseBody = responseBody,
       )
     }.onFailure { e ->
       logger.logResponse(
@@ -45,7 +45,7 @@ class OkHttpMinimalJsonRpcLoggerInterceptor(
         responseStatusCode = null,
         requestBody = requestBody,
         responseBody = "",
-        failureCause = e
+        failureCause = e,
       )
     }
       .getOrThrow()
@@ -57,7 +57,7 @@ fun okHttpClientBuilder(
   // we make a lot of eth_call request that fail by design, having DEBUG/WARN level is too noisy
   // ideally we should manage methods individually, but don't have time for that now
   requestResponseLogLevel: Level = Level.TRACE,
-  failuresLogLevel: Level = Level.DEBUG
+  failuresLogLevel: Level = Level.DEBUG,
 ): OkHttpClient.Builder {
   val httpClientBuilder = OkHttpClient.Builder()
   httpClientBuilder.addInterceptor(
@@ -66,9 +66,9 @@ fun okHttpClientBuilder(
         logger,
         requestResponseLogLevel = requestResponseLogLevel,
         failuresLogLevel = failuresLogLevel,
-        maskEndpoint = ::maskEndpointPath
-      )
-    )
+        maskEndpoint = ::maskEndpointPath,
+      ),
+    ),
   )
   return httpClientBuilder
 }

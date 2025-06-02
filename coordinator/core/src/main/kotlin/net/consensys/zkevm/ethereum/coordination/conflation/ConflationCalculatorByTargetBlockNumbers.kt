@@ -4,7 +4,7 @@ import net.consensys.zkevm.domain.BlockCounters
 import net.consensys.zkevm.domain.ConflationTrigger
 
 class ConflationCalculatorByTargetBlockNumbers(
-  private val targetEndBlockNumbers: Set<ULong>
+  private val targetEndBlockNumbers: Set<ULong>,
 ) : ConflationCalculator {
   override val id: String = ConflationTrigger.TARGET_BLOCK_NUMBER.name
 

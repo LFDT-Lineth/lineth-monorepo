@@ -20,7 +20,7 @@ import kotlin.time.Duration
 
 class BlobScanClient(
   private val restClient: RestClient<JsonObject>,
-  private val log: Logger = LogManager.getLogger(BlobScanClient::class.java)
+  private val log: Logger = LogManager.getLogger(BlobScanClient::class.java),
 ) : BlobFetcher {
   fun getBlobById(id: String): SafeFuture<ByteArray> {
     return restClient
@@ -31,7 +31,7 @@ class BlobScanClient(
         } else {
           throw RuntimeException(
             "error fetching blobId=$id " +
-              "errorMessage=${response.body?.getString("message") ?: ""}"
+              "errorMessage=${response.body?.getString("message") ?: ""}",
           )
         }
       }
@@ -48,7 +48,7 @@ class BlobScanClient(
       requestRetryConfig: RetryConfig,
       rateLimitBackoffDelay: Duration? = null,
       logger: Logger = LogManager.getLogger(BlobScanClient::class.java),
-      responseLogMaxSize: UInt? = 1000u
+      responseLogMaxSize: UInt? = 1000u,
     ): BlobScanClient {
       val logFormatter = VertxRestLoggingFormatter(responseLogMaxSize = responseLogMaxSize)
 
@@ -61,16 +61,16 @@ class BlobScanClient(
           logger = logger,
           requestResponseLogLevel = Level.DEBUG,
           failuresLogLevel = Level.DEBUG,
-          logFormatter = logFormatter
+          logFormatter = logFormatter,
         )
       val restClient = VertxRestClient(
         webClient = WebClient.create(vertx, WebClientOptions().setDefaultsFrom(endpoint)),
         responseParser = { it.toJsonObject() },
-        requestSender = requestSender
+        requestSender = requestSender,
       )
       return BlobScanClient(
         restClient = restClient,
-        log = logger
+        log = logger,
       )
     }
   }

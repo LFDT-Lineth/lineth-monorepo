@@ -71,7 +71,7 @@ class FinalizationMonitorImplTest {
         config = config,
         contract = contractMock,
         l2Client = mockL2Client,
-        vertx = vertx
+        vertx = vertx,
       )
     finalizationMonitorImpl
       .start()
@@ -114,7 +114,7 @@ class FinalizationMonitorImplTest {
         config = config,
         contract = contractMock,
         l2Client = mockL2Client,
-        vertx = vertx
+        vertx = vertx,
       )
     val updatesReceived1 = mutableListOf<FinalizationMonitor.FinalizationUpdate>()
     val updatesReceived2 = mutableListOf<FinalizationMonitor.FinalizationUpdate>()
@@ -152,7 +152,7 @@ class FinalizationMonitorImplTest {
   @Test
   fun finalizationUpdatesDontCrashTheWholeMonitorInCaseOfErrors(
     vertx: Vertx,
-    testContext: VertxTestContext
+    testContext: VertxTestContext,
   ) {
     var blockNumber = 0
     whenever(contractMock.finalizedL2BlockNumber(any())).thenAnswer {
@@ -177,7 +177,7 @@ class FinalizationMonitorImplTest {
         config = config,
         contract = contractMock,
         l2Client = mockL2Client,
-        vertx = vertx
+        vertx = vertx,
       )
     val updatesReceived = CopyOnWriteArrayList<FinalizationMonitor.FinalizationUpdate>()
     val numberOfEventsBeforeError = AtomicInteger(0)
@@ -248,7 +248,7 @@ class FinalizationMonitorImplTest {
         config = config,
         contract = contractMock,
         l2Client = mockL2Client,
-        vertx = vertx
+        vertx = vertx,
       )
 
     finalizationMonitorImpl.addFinalizationHandler("handler1") {
@@ -292,7 +292,7 @@ class FinalizationMonitorImplTest {
         config = config.copy(pollingInterval = pollingInterval * 2),
         contract = contractMock,
         l2Client = mockL2Client,
-        vertx = vertx
+        vertx = vertx,
       )
     val updatesReceived = CopyOnWriteArrayList<Pair<FinalizationMonitor.FinalizationUpdate, String>>()
 
@@ -331,7 +331,7 @@ class FinalizationMonitorImplTest {
       assertThat(
         updatesReceived.windowed(3, 3).all { finalizationUpdates ->
           finalizationUpdates.map { it.second } == listOf(handlerName1, handlerName2, handlerName3)
-        }
+        },
       )
         .overridingErrorMessage("Updates aren't in the right order! $updatesReceived")
         .isTrue()

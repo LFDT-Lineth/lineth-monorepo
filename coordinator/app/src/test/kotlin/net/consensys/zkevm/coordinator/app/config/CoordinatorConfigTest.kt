@@ -45,9 +45,9 @@ class CoordinatorConfigTest {
       _smartContractErrors = mapOf(
         // L1 Linea Rollup
         "0f06cd15" to "DataAlreadySubmitted",
-        "c01eab56" to "EmptySubmissionData"
+        "c01eab56" to "EmptySubmissionData",
       ),
-      fetchBlocksLimit = 4000
+      fetchBlocksLimit = 4000,
     )
 
     private val proversConfig = ProversConfig(
@@ -58,7 +58,7 @@ class CoordinatorConfigTest {
           pollingInterval = 1.seconds,
           pollingTimeout = 10.minutes,
           inprogressProvingSuffixPattern = ".*\\.inprogress\\.prover.*",
-          inprogressRequestWritingSuffix = ".inprogress_coordinator_writing"
+          inprogressRequestWritingSuffix = ".inprogress_coordinator_writing",
         ),
         blobCompression = FileBasedProverConfig(
           requestsDirectory = Path.of("/data/prover/v2/compression/requests"),
@@ -66,7 +66,7 @@ class CoordinatorConfigTest {
           pollingInterval = 1.seconds,
           pollingTimeout = 10.minutes,
           inprogressProvingSuffixPattern = ".*\\.inprogress\\.prover.*",
-          inprogressRequestWritingSuffix = ".inprogress_coordinator_writing"
+          inprogressRequestWritingSuffix = ".inprogress_coordinator_writing",
         ),
         proofAggregation = FileBasedProverConfig(
           requestsDirectory = Path.of("/data/prover/v2/aggregation/requests"),
@@ -74,24 +74,24 @@ class CoordinatorConfigTest {
           pollingInterval = 1.seconds,
           pollingTimeout = 10.minutes,
           inprogressProvingSuffixPattern = ".*\\.inprogress\\.prover.*",
-          inprogressRequestWritingSuffix = ".inprogress_coordinator_writing"
-        )
+          inprogressRequestWritingSuffix = ".inprogress_coordinator_writing",
+        ),
       ),
       switchBlockNumberInclusive = null,
-      proverB = null
+      proverB = null,
     )
 
     private val blobCompressionConfig = BlobCompressionConfig(
       blobSizeLimit = 100 * 1024,
       handlerPollingInterval = Duration.parse("PT1S"),
-      _batchesLimit = 1
+      _batchesLimit = 1,
     )
 
     private val aggregationConfig = AggregationConfig(
       aggregationProofsLimit = 3,
       aggregationDeadline = Duration.parse("PT10S"),
       aggregationCoordinatorPollingInterval = Duration.parse("PT2S"),
-      deadlineCheckInterval = Duration.parse("PT8S")
+      deadlineCheckInterval = Duration.parse("PT8S"),
     )
 
     private val tracesConfig = TracesConfig(
@@ -103,38 +103,38 @@ class CoordinatorConfigTest {
         requestLimitPerEndpoint = 1U,
         requestRetry = RequestRetryConfigTomlFriendly(
           backoffDelay = Duration.parse("PT1S"),
-          failuresWarningThreshold = 2
-        )
+          failuresWarningThreshold = 2,
+        ),
       ),
       countersV2 = TracesConfig.FunctionalityEndpoint(
         endpoints = listOf(URI("http://traces-node:8545/").toURL()),
         requestLimitPerEndpoint = 1U,
         requestRetry = RequestRetryConfigTomlFriendly(
           backoffDelay = Duration.parse("PT1S"),
-          failuresWarningThreshold = 2
-        )
-      )
+          failuresWarningThreshold = 2,
+        ),
+      ),
     )
 
     private val type2StateProofProviderConfig = Type2StateProofProviderConfig(
       endpoints = listOf(URI("http://shomei-frontend:8888/").toURL()),
       requestRetry = RequestRetryConfigTomlFriendly(
         backoffDelay = Duration.parse("PT1S"),
-        failuresWarningThreshold = 2
+        failuresWarningThreshold = 2,
       ),
       l1QueryBlockTag = BlockParameter.Tag.SAFE,
-      l1PollingInterval = Duration.parse("PT6S")
+      l1PollingInterval = Duration.parse("PT6S"),
     )
     private val stateManagerConfig = StateManagerClientConfig(
       version = "2.3.0",
       endpoints = listOf(
-        URI("http://shomei:8888/").toURL()
+        URI("http://shomei:8888/").toURL(),
       ),
       requestLimitPerEndpoint = 2U,
       requestRetry = RequestRetryConfigTomlFriendly(
         backoffDelay = Duration.parse("PT2S"),
-        failuresWarningThreshold = 2
-      )
+        failuresWarningThreshold = 2,
+      ),
     )
 
     private val blobSubmissionConfig = BlobSubmissionConfig(
@@ -146,7 +146,7 @@ class CoordinatorConfigTest {
       proofSubmissionDelay = Duration.parse("PT1S"),
       targetBlobsToSendPerTransaction = 9,
       useEthEstimateGas = false,
-      disabled = false
+      disabled = false,
     )
 
     private val aggregationFinalizationConfig = AggregationFinalizationConfig(
@@ -154,7 +154,7 @@ class CoordinatorConfigTest {
       maxAggregationsToFinalizePerTick = 1,
       proofSubmissionDelay = Duration.parse("PT1S"),
       useEthEstimateGas = true,
-      disabled = false
+      disabled = false,
     )
 
     private val databaseConfig = DatabaseConfig(
@@ -165,12 +165,12 @@ class CoordinatorConfigTest {
       schema = "linea_coordinator",
       readPoolSize = 10,
       readPipeliningLimit = 10,
-      transactionalPoolSize = 10
+      transactionalPoolSize = 10,
     )
 
     private val persistenceRetryConfig = PersistenceRetryConfig(
       maxRetries = null,
-      backoffDelay = Duration.parse("PT1S")
+      backoffDelay = Duration.parse("PT1S"),
     )
 
     private val l1Config = L1Config(
@@ -194,7 +194,7 @@ class CoordinatorConfigTest {
       blockRangeLoopLimit = 500U,
       _ethFeeHistoryEndpoint = null,
       _genesisStateRootHash = "0x072ead6777750dc20232d1cee8dc9a395c2d350df4bbaa5096c6f59b214dcecd",
-      _genesisShnarfV6 = "0x47452a1b9ebadfe02bdd02f580fa1eba17680d57eec968a591644d05d78ee84f"
+      _genesisShnarfV6 = "0x47452a1b9ebadfe02bdd02f580fa1eba17680d57eec968a591644d05d78ee84f",
     )
 
     private val l2Config = L2Config(
@@ -208,7 +208,7 @@ class CoordinatorConfigTest {
       lastHashSearchWindow = 25U,
       anchoringReceiptPollingInterval = Duration.parse("PT01S"),
       maxReceiptRetries = 120U,
-      newBlockPollingInterval = Duration.parse("PT1S")
+      newBlockPollingInterval = Duration.parse("PT1S"),
     )
 
     private val finalizationSigner = SignerConfig(
@@ -219,9 +219,9 @@ class CoordinatorConfigTest {
         keepAlive = true,
         publicKey =
         "ba5734d8f7091719471e7f7ed6b9df170dc70cc661ca05e688601ad984f068b0d67351e5f06073092499336ab0839ef8a521afd334e5" +
-          "3807205fa2f08eec74f4"
+          "3807205fa2f08eec74f4",
       ),
-      web3j = Web3jConfig(Masked("0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d"))
+      web3j = Web3jConfig(Masked("0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d")),
     )
 
     private val dataSubmissionSigner = SignerConfig(
@@ -232,9 +232,9 @@ class CoordinatorConfigTest {
         keepAlive = true,
         publicKey =
         "9d9031e97dd78ff8c15aa86939de9b1e791066a0224e331bc962a2099a7b1f0464b8bbafe1535f2301c72c2cb3535b172da30b02686a" +
-          "b0393d348614f157fbdb"
+          "b0393d348614f157fbdb",
       ),
-      web3j = Web3jConfig(Masked("0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a"))
+      web3j = Web3jConfig(Masked("0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a")),
     )
     private val l2SignerConfig = SignerConfig(
       type = SignerConfig.Type.Web3j,
@@ -244,43 +244,43 @@ class CoordinatorConfigTest {
         keepAlive = true,
         publicKey =
         "4a788ad6fa008beed58de6418369717d7492f37d173d70e2c26d9737e2c6eeae929452ef8602a19410844db3e200a0e73f5208fd7625" +
-          "9a8766b73953fc3e7023"
+          "9a8766b73953fc3e7023",
       ),
-      web3j = Web3jConfig(Masked("0x4d01ae6487860981699236a58b68f807ee5f17b12df5740b85cf4c4653be0f55"))
+      web3j = Web3jConfig(Masked("0x4d01ae6487860981699236a58b68f807ee5f17b12df5740b85cf4c4653be0f55")),
     )
 
     private val l2NetworkGasPricingRequestRetryConfig = RequestRetryConfig(
       maxRetries = 3u,
       timeout = 6.seconds,
       backoffDelay = 1.seconds,
-      failuresWarningThreshold = 2u
+      failuresWarningThreshold = 2u,
     )
 
     private val l2NetworkGasPricingServiceConfig = L2NetworkGasPricingService.Config(
       feeHistoryFetcherConfig = FeeHistoryFetcherImpl.Config(
         feeHistoryBlockCount = 50U,
-        feeHistoryRewardPercentile = 15.0
+        feeHistoryRewardPercentile = 15.0,
       ),
       legacy = L2NetworkGasPricingService.LegacyGasPricingCalculatorConfig(
         legacyGasPricingCalculatorBounds = BoundableFeeCalculator.Config(
           feeUpperBound = 10_000_000_000.0,
           feeLowerBound = 90_000_000.0,
-          feeMargin = 0.0
+          feeMargin = 0.0,
         ),
         transactionCostCalculatorConfig = TransactionCostCalculator.Config(
           sampleTransactionCostMultiplier = 1.0,
           fixedCostWei = 3000000u,
           compressedTxSize = 125,
-          expectedGas = 21000
+          expectedGas = 21000,
         ),
-        naiveGasPricingCalculatorConfig = null
+        naiveGasPricingCalculatorConfig = null,
       ),
       jsonRpcGasPriceUpdaterConfig = GasPriceUpdaterImpl.Config(
         gethEndpoints = listOf(
-          URI("http://l2-node:8545/").toURL()
+          URI("http://l2-node:8545/").toURL(),
         ),
         besuEndPoints = listOf(),
-        retryConfig = l2NetworkGasPricingRequestRetryConfig
+        retryConfig = l2NetworkGasPricingRequestRetryConfig,
       ),
       jsonRpcPriceUpdateInterval = 12.seconds,
       extraDataPricingPropagationEnabled = true,
@@ -289,21 +289,21 @@ class CoordinatorConfigTest {
         blobSubmissionExpectedExecutionGas = 213_000u,
         bytesPerDataSubmission = 131072u,
         expectedBlobGas = 131072u,
-        margin = 4.0
+        margin = 4.0,
       ),
       variableFeesCalculatorBounds = BoundableFeeCalculator.Config(
         feeUpperBound = 10_000_000_001.0,
         feeLowerBound = 90_000_001.0,
-        feeMargin = 0.0
+        feeMargin = 0.0,
       ),
       extraDataCalculatorConfig = MinerExtraDataV1CalculatorImpl.Config(
         fixedCostInKWei = 3000u,
-        ethGasPriceMultiplier = 1.2
+        ethGasPriceMultiplier = 1.2,
       ),
       extraDataUpdaterConfig = ExtraDataV1UpdaterImpl.Config(
-        sequencerEndpoint = URI(/* str = */ "http://sequencer:8545/").toURL(),
-        retryConfig = l2NetworkGasPricingRequestRetryConfig
-      )
+        sequencerEndpoint = URI("http://sequencer:8545/").toURL(),
+        retryConfig = l2NetworkGasPricingRequestRetryConfig,
+      ),
     )
 
     private val l1DynamicGasPriceCapServiceConfig = L1DynamicGasPriceCapServiceConfig(
@@ -318,18 +318,18 @@ class CoordinatorConfigTest {
         gasPriceCapsCheckCoefficient = 0.9,
         historicBaseFeePerBlobGasLowerBound = 100_000_000u,
         historicAvgRewardConstant = 100_000_000u,
-        timeOfDayMultipliers = expectedTimeOfDayMultipliers
+        timeOfDayMultipliers = expectedTimeOfDayMultipliers,
       ),
       feeHistoryFetcher = L1DynamicGasPriceCapServiceConfig.FeeHistoryFetcher(
         fetchInterval = Duration.parse("PT1S"),
         maxBlockCount = 1000U,
         rewardPercentiles = listOf(10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 90.0, 100.0),
         numOfBlocksBeforeLatest = 4U,
-        endpoint = null
+        endpoint = null,
       ),
       feeHistoryStorage = L1DynamicGasPriceCapServiceConfig.FeeHistoryStorage(
-        storagePeriod = Duration.parse("PT2M")
-      )
+        storagePeriod = Duration.parse("PT2M"),
+      ),
     )
 
     private val coordinatorConfig = CoordinatorConfig(
@@ -351,11 +351,11 @@ class CoordinatorConfigTest {
       l2Signer = l2SignerConfig,
       messageAnchoring = MessageAnchoringConfigTomlDto().reified(
         l1DefaultEndpoint = l1Config.rpcEndpoint,
-        l2DefaultEndpoint = l2Config.rpcEndpoint
+        l2DefaultEndpoint = l2Config.rpcEndpoint,
       ),
       l2NetworkGasPricingService = l2NetworkGasPricingServiceConfig,
       l1DynamicGasPriceCapService = l1DynamicGasPriceCapServiceConfig,
-      proversConfig = proversConfig
+      proversConfig = proversConfig,
     )
   }
 
@@ -371,18 +371,18 @@ class CoordinatorConfigTest {
         Path.of("../../config/coordinator/coordinator-docker-traces-v2-override.config.toml"),
         Path.of("../../config/coordinator/coordinator-docker-web3signer-override.config.toml"),
         Path.of("../../config/coordinator/coordinator-local-dev.config.overrides.toml"),
-        Path.of("../../config/coordinator/coordinator-local-dev.config-traces-v2.overrides.toml")
+        Path.of("../../config/coordinator/coordinator-local-dev.config-traces-v2.overrides.toml"),
       ),
       tracesLimitsFileV2 = Path.of("../../config/common/traces-limits-v2.toml"),
       gasPriceCapTimeOfDayMultipliersFile = Path.of("../../config/common/gas-price-cap-time-of-day-multipliers.toml"),
-      smartContractErrorsFile = Path.of("../../config/common/smart-contract-errors.toml")
+      smartContractErrorsFile = Path.of("../../config/common/smart-contract-errors.toml"),
     )
   }
 
   private fun pathToResource(resource: String): Path {
     return Paths.get(
       this::class.java.classLoader.getResource(resource)?.toURI()
-        ?: error("Resource not found: $resource")
+        ?: error("Resource not found: $resource"),
     )
   }
 
@@ -392,7 +392,7 @@ class CoordinatorConfigTest {
       coordinatorConfigFiles = listOf(pathToResource("configs/coordinator.config.toml")),
       tracesLimitsFileV2 = pathToResource("configs/traces-limits-v2.toml"),
       gasPriceCapTimeOfDayMultipliersFile = pathToResource("configs/gas-price-cap-time-of-day-multipliers.toml"),
-      smartContractErrorsFile = pathToResource("configs/smart-contract-errors.toml")
+      smartContractErrorsFile = pathToResource("configs/smart-contract-errors.toml"),
     )
 
     assertEquals(coordinatorConfig, configs)
@@ -404,18 +404,18 @@ class CoordinatorConfigTest {
     val config = loadConfigs(
       coordinatorConfigFiles = listOf(
         pathToResource("configs/coordinator.config.toml"),
-        pathToResource("configs/coordinator-web3signer-override.config.toml")
+        pathToResource("configs/coordinator-web3signer-override.config.toml"),
       ),
       tracesLimitsFileV2 = pathToResource("configs/traces-limits-v2.toml"),
       gasPriceCapTimeOfDayMultipliersFile = pathToResource("configs/gas-price-cap-time-of-day-multipliers.toml"),
-      smartContractErrorsFile = pathToResource("configs/smart-contract-errors.toml")
+      smartContractErrorsFile = pathToResource("configs/smart-contract-errors.toml"),
     )
 
     val expectedConfig =
       coordinatorConfig.copy(
         finalizationSigner = finalizationSigner.copy(type = SignerConfig.Type.Web3Signer),
         dataSubmissionSigner = dataSubmissionSigner.copy(type = SignerConfig.Type.Web3Signer),
-        l2Signer = l2SignerConfig.copy(type = SignerConfig.Type.Web3Signer)
+        l2Signer = l2SignerConfig.copy(type = SignerConfig.Type.Web3Signer),
       )
 
     assertThat(config).isEqualTo(expectedConfig)
@@ -426,11 +426,11 @@ class CoordinatorConfigTest {
     val config = loadConfigs(
       coordinatorConfigFiles = listOf(
         pathToResource("configs/coordinator.config.toml"),
-        pathToResource("configs/coordinator-traces-v2-override.config.toml")
+        pathToResource("configs/coordinator-traces-v2-override.config.toml"),
       ),
       tracesLimitsFileV2 = pathToResource("configs/traces-limits-v2.toml"),
       gasPriceCapTimeOfDayMultipliersFile = pathToResource("configs/gas-price-cap-time-of-day-multipliers.toml"),
-      smartContractErrorsFile = pathToResource("configs/smart-contract-errors.toml")
+      smartContractErrorsFile = pathToResource("configs/smart-contract-errors.toml"),
     )
 
     val expectedConfig =
@@ -441,31 +441,31 @@ class CoordinatorConfigTest {
             transactionCostCalculatorConfig =
             l2NetworkGasPricingServiceConfig.legacy.transactionCostCalculatorConfig?.copy(
               compressedTxSize = 350,
-              expectedGas = 29400
-            )
-          )
+              expectedGas = 29400,
+            ),
+          ),
         ),
         traces = tracesConfig.copy(
           blobCompressorVersion = BlobCompressorVersion.V1_2,
           expectedTracesApiVersionV2 = "v0.8.0-rc8",
           conflationV2 = tracesConfig.conflationV2,
-          countersV2 = tracesConfig.countersV2
+          countersV2 = tracesConfig.countersV2,
         ),
         proversConfig = proversConfig.copy(
           proverA = proversConfig.proverA.copy(
             execution = proversConfig.proverA.execution.copy(
               requestsDirectory = Path.of("/data/prover/v3/execution/requests"),
-              responsesDirectory = Path.of("/data/prover/v3/execution/responses")
+              responsesDirectory = Path.of("/data/prover/v3/execution/responses"),
             ),
             blobCompression = proversConfig.proverA.blobCompression.copy(
               requestsDirectory = Path.of("/data/prover/v3/compression/requests"),
-              responsesDirectory = Path.of("/data/prover/v3/compression/responses")
+              responsesDirectory = Path.of("/data/prover/v3/compression/responses"),
             ),
             proofAggregation = proversConfig.proverA.proofAggregation.copy(
               requestsDirectory = Path.of("/data/prover/v3/aggregation/requests"),
-              responsesDirectory = Path.of("/data/prover/v3/aggregation/responses")
-            )
-          )
+              responsesDirectory = Path.of("/data/prover/v3/aggregation/responses"),
+            ),
+          ),
         ),
         messageAnchoring = MessageAnchoringConfigTomlDto().copy(
           l1Endpoint = URI("http://l1-endpoint-for-anchoring:8545").toURL(),
@@ -475,12 +475,12 @@ class CoordinatorConfigTest {
           anchoringTickInterval = 1.seconds.toJavaDuration(),
           l1RequestRetries = RequestRetryConfigTomlFriendly(
             maxRetries = 10,
-            failuresWarningThreshold = 1
-          )
+            failuresWarningThreshold = 1,
+          ),
         ).reified(
           l1DefaultEndpoint = l1Config.rpcEndpoint,
-          l2DefaultEndpoint = l2Config.rpcEndpoint
-        )
+          l2DefaultEndpoint = l2Config.rpcEndpoint,
+        ),
       )
 
     assertThat(config).isEqualTo(expectedConfig)
@@ -489,7 +489,7 @@ class CoordinatorConfigTest {
   @Test
   fun invalidConfigReturnsErrorResult() {
     val configsResult = loadConfigsOrError<TestConfig>(
-      configFiles = listOf(pathToResource("configs/coordinator.config.toml"))
+      configFiles = listOf(pathToResource("configs/coordinator.config.toml")),
     )
 
     assertThat(configsResult.getError()).contains("'extraField': Missing String from config")
@@ -498,17 +498,17 @@ class CoordinatorConfigTest {
   @Test
   fun testInvalidAggregationByTargetBlockNumberWhenL2InclusiveBlockNumberToStopAndFlushAggregationSpecified() {
     val aggregationConfigWithoutTargetBlockNumber = aggregationConfig.copy(
-      _targetEndBlocks = emptyList()
+      _targetEndBlocks = emptyList(),
     )
     val conflationConfigWithTargetBlockNumber = conflationConfig.copy(
-      _conflationTargetEndBlockNumbers = listOf(100L)
+      _conflationTargetEndBlockNumbers = listOf(100L),
     )
 
     val exception = assertThrows<IllegalArgumentException> {
       coordinatorConfig.copy(
         l2InclusiveBlockNumberToStopAndFlushAggregation = 100uL,
         proofAggregation = aggregationConfigWithoutTargetBlockNumber,
-        conflation = conflationConfigWithTargetBlockNumber
+        conflation = conflationConfigWithTargetBlockNumber,
       )
     }
     assertThat(exception.message)
@@ -518,40 +518,40 @@ class CoordinatorConfigTest {
   @Test
   fun testInvalidConflationByTargetBlockNumberWhenL2InclusiveBlockNumberToStopAndFlushAggregationSpecified() {
     val aggregationConfigWithTargetBlockNumber = aggregationConfig.copy(
-      _targetEndBlocks = listOf(100L)
+      _targetEndBlocks = listOf(100L),
     )
     val conflationConfigWithoutTargetBlockNumber = conflationConfig.copy(
-      _conflationTargetEndBlockNumbers = emptyList()
+      _conflationTargetEndBlockNumbers = emptyList(),
     )
 
     val exception = assertThrows<IllegalArgumentException> {
       coordinatorConfig.copy(
         l2InclusiveBlockNumberToStopAndFlushAggregation = 100uL,
         proofAggregation = aggregationConfigWithTargetBlockNumber,
-        conflation = conflationConfigWithoutTargetBlockNumber
+        conflation = conflationConfigWithoutTargetBlockNumber,
       )
     }
     assertThat(exception.message)
       .isEqualTo(
         "conflation.conflationTargetEndBlockNumbers should contain the " +
-          "l2InclusiveBlockNumberToStopAndFlushAggregation"
+          "l2InclusiveBlockNumberToStopAndFlushAggregation",
       )
   }
 
   @Test
   fun testValidAggrAndConflationByTargetBlockNumberWhenL2InclusiveBlockNumberToStopAndFlushAggregationSpecified() {
     val aggregationConfigWithoutSwithBlockNumber = aggregationConfig.copy(
-      _targetEndBlocks = listOf(10L, 100L)
+      _targetEndBlocks = listOf(10L, 100L),
     )
     val conflationConfigWithTargetBlockNumber = conflationConfig.copy(
-      _conflationTargetEndBlockNumbers = listOf(100L)
+      _conflationTargetEndBlockNumbers = listOf(100L),
     )
 
     assertDoesNotThrow {
       coordinatorConfig.copy(
         l2InclusiveBlockNumberToStopAndFlushAggregation = 100uL,
         proofAggregation = aggregationConfigWithoutSwithBlockNumber,
-        conflation = conflationConfigWithTargetBlockNumber
+        conflation = conflationConfigWithTargetBlockNumber,
       )
     }
   }

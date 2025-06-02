@@ -10,7 +10,8 @@ enum class JsonRpcErrorCode(val code: Int, val message: String) {
   METHOD_NOT_FOUND(-32601, "Method not found"),
   INVALID_PARAMS(-32602, "Invalid params"),
   INTERNAL_ERROR(-32603, "Internal error"),
-  UNAUTHORIZED(-40100, "Unauthorized");
+  UNAUTHORIZED(-40100, "Unauthorized"),
+  ;
 
   fun toErrorObject(data: Any? = null): JsonRpcError {
     return JsonRpcError(this.code, this.message, data)
@@ -29,7 +30,7 @@ abstract class JsonRpcResponse(open val jsonrpc: String = "2.0", open val id: An
 data class JsonRpcSuccessResponse(
   override val jsonrpc: String,
   override val id: Any,
-  val result: Any?
+  val result: Any?,
 ) : JsonRpcResponse(jsonrpc, id) {
   constructor(id: Any, result: Any?) : this("2.0", id, result)
   constructor(request: JsonRpcRequest, result: Any?) : this(request.jsonrpc, id = request.id, result)
@@ -39,7 +40,7 @@ data class JsonRpcSuccessResponse(
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class JsonRpcErrorResponse(
   @JsonProperty("id") override val id: Any?,
-  @JsonProperty("error") val error: JsonRpcError
+  @JsonProperty("error") val error: JsonRpcError,
 ) : JsonRpcResponse(id = id) {
 
   companion object {
@@ -74,7 +75,7 @@ data class JsonRpcErrorResponse(
 data class JsonRpcError(
   @JsonProperty("code") val code: Int,
   @JsonProperty("message") val message: String,
-  @JsonProperty("data") val data: Any? = null
+  @JsonProperty("data") val data: Any? = null,
 ) {
   // inlining for better stacktrace
   @Suppress("NOTHING_TO_INLINE")
@@ -85,7 +86,7 @@ data class JsonRpcError(
     fun invalidMethodParameter(message: String?): JsonRpcError =
       JsonRpcError(
         JsonRpcErrorCode.INVALID_PARAMS.code,
-        message ?: JsonRpcErrorCode.INVALID_PARAMS.message
+        message ?: JsonRpcErrorCode.INVALID_PARAMS.message,
       )
 
     @JvmStatic
@@ -106,13 +107,13 @@ data class JsonRpcError(
 
 class JsonRpcErrorException(
   override val message: String?,
-  val httpStatusCode: Int? = null
+  val httpStatusCode: Int? = null,
 ) : RuntimeException(message)
 
 class JsonRpcErrorResponseException(
   val rpcErrorCode: Int,
   val rpcErrorMessage: String,
-  val rpcErrorData: Any? = null
+  val rpcErrorData: Any? = null,
 ) : RuntimeException("code=$rpcErrorCode message=$rpcErrorMessage errorData=$rpcErrorData") {
   fun asJsonRpcError(): JsonRpcError = JsonRpcError(rpcErrorCode, rpcErrorMessage, rpcErrorData)
 }

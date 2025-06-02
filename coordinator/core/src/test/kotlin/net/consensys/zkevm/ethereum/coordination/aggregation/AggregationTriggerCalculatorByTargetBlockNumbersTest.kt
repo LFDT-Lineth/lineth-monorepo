@@ -18,7 +18,7 @@ class AggregationTriggerCalculatorByTargetBlockNumbersTest {
     log = mock<Logger>()
     calculator = AggregationTriggerCalculatorByTargetBlockNumbers(
       targetEndBlockNumbers = listOf(10uL, 20uL, 30uL),
-      log = log
+      log = log,
     )
   }
 
@@ -59,8 +59,8 @@ class AggregationTriggerCalculatorByTargetBlockNumbersTest {
       .isEqualTo(
         AggregationTrigger(
           aggregationTriggerType = AggregationTriggerType.TARGET_BLOCK_NUMBER,
-          aggregation = BlobsToAggregate(15uL, 20uL)
-        )
+          aggregation = BlobsToAggregate(15uL, 20uL),
+        ),
       )
   }
 
@@ -70,8 +70,8 @@ class AggregationTriggerCalculatorByTargetBlockNumbersTest {
       .isEqualTo(
         AggregationTrigger(
           aggregationTriggerType = AggregationTriggerType.TARGET_BLOCK_NUMBER,
-          aggregation = BlobsToAggregate(20uL, 20uL)
-        )
+          aggregation = BlobsToAggregate(20uL, 20uL),
+        ),
       )
   }
 }

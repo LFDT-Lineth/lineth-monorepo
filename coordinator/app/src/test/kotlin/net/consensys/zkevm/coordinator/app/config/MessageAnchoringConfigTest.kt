@@ -14,7 +14,7 @@ class MessageAnchoringConfigTest {
   private val l1DefaultEndpoint = URI("http://l1-default-rpc-endpoint:8545").toURL()
   private val l2DefaultEndpoint = URI("http://l2-default-rpc-endpoint:8545").toURL()
   data class Config(
-    val messageAnchoring: MessageAnchoringConfigTomlDto = MessageAnchoringConfigTomlDto()
+    val messageAnchoring: MessageAnchoringConfigTomlDto = MessageAnchoringConfigTomlDto(),
   )
 
   private fun parseConfig(toml: String): MessageAnchoringConfig {
@@ -27,7 +27,7 @@ class MessageAnchoringConfigTest {
       .let {
         it.messageAnchoring.reified(
           l1DefaultEndpoint = l1DefaultEndpoint,
-          l2DefaultEndpoint = l2DefaultEndpoint
+          l2DefaultEndpoint = l2DefaultEndpoint,
         )
       }
   }
@@ -74,13 +74,13 @@ class MessageAnchoringConfigTest {
             maxRetries = 10u,
             timeout = 100.seconds,
             backoffDelay = 11.seconds,
-            failuresWarningThreshold = 1u
+            failuresWarningThreshold = 1u,
           ),
           l2RequestRetryConfig = RetryConfig(
             maxRetries = 20u,
             timeout = 200.seconds,
             backoffDelay = 21.seconds,
-            failuresWarningThreshold = 2u
+            failuresWarningThreshold = 2u,
           ),
           l1EventPollingInterval = 30.seconds,
           l1EventPollingTimeout = 6.seconds,
@@ -88,8 +88,8 @@ class MessageAnchoringConfigTest {
           l1EventSearchBlockChunk = 123u,
           anchoringTickInterval = 3.seconds,
           messageQueueCapacity = 321u,
-          maxMessagesToAnchorPerL2Transaction = 54u
-        )
+          maxMessagesToAnchorPerL2Transaction = 54u,
+        ),
       )
   }
 
@@ -111,13 +111,13 @@ class MessageAnchoringConfigTest {
             maxRetries = null,
             timeout = null,
             backoffDelay = 1.seconds,
-            failuresWarningThreshold = 3u
+            failuresWarningThreshold = 3u,
           ),
           l2RequestRetryConfig = RetryConfig(
             maxRetries = null,
             timeout = null,
             backoffDelay = 1.seconds,
-            failuresWarningThreshold = 3u
+            failuresWarningThreshold = 3u,
           ),
           l1EventPollingInterval = 12.seconds,
           l1EventPollingTimeout = 6.seconds,
@@ -125,8 +125,8 @@ class MessageAnchoringConfigTest {
           l1EventSearchBlockChunk = 1000u,
           anchoringTickInterval = 2.seconds,
           messageQueueCapacity = 10_000u,
-          maxMessagesToAnchorPerL2Transaction = 100u
-        )
+          maxMessagesToAnchorPerL2Transaction = 100u,
+        ),
       )
   }
 }

@@ -23,14 +23,14 @@ internal data class JsonRpcRequestData(
   override val jsonrpc: String,
   override val id: Any,
   override val method: String,
-  override val params: Any
+  override val params: Any,
 ) : JsonRpcRequest
 
 data class JsonRpcRequestListParams(
   override val jsonrpc: String,
   override val id: Any,
   override val method: String,
-  override val params: List<Any?>
+  override val params: List<Any?>,
 ) : JsonRpcRequest {
   override fun toString(): String {
     return StringJoiner(", ", JsonRpcRequestListParams::class.java.simpleName + "[", "]")
@@ -46,7 +46,7 @@ data class JsonRpcRequestMapParams(
   override val jsonrpc: String,
   override val id: Any,
   override val method: String,
-  override val params: Map<String, *>
+  override val params: Map<String, *>,
 ) : JsonRpcRequest {
   override fun toString(): String {
     return StringJoiner(", ", JsonRpcRequestMapParams::class.java.simpleName + "[", "]")

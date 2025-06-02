@@ -5,7 +5,7 @@ import org.apache.logging.log4j.core.config.Configurator
 
 fun configureLoggers(
   rootLevel: Level = Level.INFO,
-  vararg loggerConfigs: Pair<String, Level>
+  vararg loggerConfigs: Pair<String, Level>,
 ) {
   Configurator.setRootLevel(rootLevel)
   loggerConfigs.forEach { (loggerName, level) ->

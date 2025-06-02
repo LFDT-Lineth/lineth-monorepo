@@ -33,14 +33,14 @@ interface BlobCompressor {
     val blockAppended: Boolean,
     val compressedSizeBefore: Int,
     // even when block is not appended, compressedSizeAfter should as if it was appended
-    val compressedSizeAfter: Int
+    val compressedSizeAfter: Int,
   )
 }
 
 class GoBackedBlobCompressor private constructor(
   internal val goNativeBlobCompressor: GoNativeBlobCompressor,
   private val dataLimit: UInt,
-  private val metricsFacade: MetricsFacade
+  private val metricsFacade: MetricsFacade,
 ) : BlobCompressor {
 
   companion object {
@@ -50,7 +50,7 @@ class GoBackedBlobCompressor private constructor(
     fun getInstance(
       compressorVersion: BlobCompressorVersion,
       dataLimit: UInt,
-      metricsFacade: MetricsFacade
+      metricsFacade: MetricsFacade,
     ): GoBackedBlobCompressor {
       if (instance == null) {
         synchronized(this) {
@@ -58,7 +58,7 @@ class GoBackedBlobCompressor private constructor(
             val goNativeBlobCompressor = GoNativeBlobCompressorFactory.getInstance(compressorVersion)
             val initialized = goNativeBlobCompressor.Init(
               dataLimit.toInt(),
-              GoNativeBlobCompressorFactory.dictionaryPath.toString()
+              GoNativeBlobCompressorFactory.dictionaryPath.toString(),
             )
             if (!initialized) {
               throw InstantiationException(goNativeBlobCompressor.Error())
@@ -78,24 +78,24 @@ class GoBackedBlobCompressor private constructor(
   private val canAppendBlockTimer: TimerCapture<Boolean> = metricsFacade.createSimpleTimer(
     category = LineaMetricsCategory.BLOB,
     name = "compressor.canappendblock",
-    description = "Time taken to check if block fits in current blob"
+    description = "Time taken to check if block fits in current blob",
   )
   private val appendBlockTimer: TimerCapture<Boolean> = metricsFacade.createSimpleTimer(
     category = LineaMetricsCategory.BLOB,
     name = "compressor.appendblock",
-    description = "Time taken to compress block into current blob"
+    description = "Time taken to compress block into current blob",
   )
   private val compressionRatioHistogram = metricsFacade.createHistogram(
     category = LineaMetricsCategory.BLOB,
     name = "block.compression.ratio",
     description = "Block compression ratio measured in [0.0,1.0]",
-    isRatio = true
+    isRatio = true,
   )
   private val utilizationRatioHistogram = metricsFacade.createHistogram(
     category = LineaMetricsCategory.BLOB,
     name = "data.utilization.ratio",
     description = "Data utilization ratio of a blob measured in [0.0,1.0]",
-    isRatio = true
+    isRatio = true,
   )
 
   private val log = LogManager.getLogger(GoBackedBlobCompressor::class.java)
@@ -120,7 +120,7 @@ class GoBackedBlobCompressor private constructor(
       blockRLPEncoded.size,
       compressionSizeBefore,
       compressedSizeAfter,
-      compressionRatio
+      compressionRatio,
     )
     val error = goNativeBlobCompressor.Error()
     if (error != null) {
@@ -151,7 +151,7 @@ class FakeBlobCompressor(
   // 1 means no compression
   // 0.5 means compressed data is 50% smaller than original
   // 1.1 means compressed data is 10% bigger than original
-  private val fakeCompressionRatio: Double = 1.0
+  private val fakeCompressionRatio: Double = 1.0,
 ) : BlobCompressor {
   val log = LogManager.getLogger(FakeBlobCompressor::class.java)
 
@@ -178,7 +178,7 @@ class FakeBlobCompressor(
       BlobCompressor.AppendResult(
         false,
         compressedSizeBefore,
-        compressedSizeAfter
+        compressedSizeAfter,
       )
     } else {
       compressedData += compressedBlock

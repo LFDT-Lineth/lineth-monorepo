@@ -29,7 +29,7 @@ class Eip4844TransactionTest {
       maxFeePerGas = BigInteger.valueOf(8),
       _maxFeePerBlobGas = BigInteger.valueOf(9),
       blobs = listOf(Blob(blobByteArray)),
-      blobVersionedHashes = listOf("0x010657f37554c781402a22917dee2f75def7ab966d7b770905398eba3c444014".decodeHex())
+      blobVersionedHashes = listOf("0x010657f37554c781402a22917dee2f75def7ab966d7b770905398eba3c444014".decodeHex()),
     )
 
     val serializedBlob = Numeric.toHexString(blobByteArray)

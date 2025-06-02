@@ -17,13 +17,13 @@ class GasPriceCapProviderForFinalizationTest {
     maxBaseFeePerGasCap = 7000000000uL, // 7GWei
     maxPriorityFeePerGasCap = 1000000000uL, // 1GWei
     maxFeePerGasCap = 8000000000uL, // 8GWei
-    maxFeePerBlobGasCap = 500000000uL // 0.5GWei
+    maxFeePerBlobGasCap = 500000000uL, // 0.5GWei
   )
   private val returnMultipliedRawGasPriceCaps = GasPriceCaps(
     maxBaseFeePerGasCap = (returnRawGasPriceCaps.maxBaseFeePerGasCap!!.toDouble() * 0.9).toULong(), // 6.3GWei
     maxPriorityFeePerGasCap = (returnRawGasPriceCaps.maxPriorityFeePerGasCap.toDouble() * 0.9).toULong(), // 0.9GWei
     maxFeePerGasCap = 7200000000uL, // 7.2GWei
-    maxFeePerBlobGasCap = (returnRawGasPriceCaps.maxFeePerBlobGasCap.toDouble() * 0.9).toULong() // 0.45GWei
+    maxFeePerBlobGasCap = (returnRawGasPriceCaps.maxFeePerBlobGasCap.toDouble() * 0.9).toULong(), // 0.45GWei
   )
   private val maxPriorityFeePerGasCap = 3000000000uL // 3GWei
   private val maxFeePerGasCap = 10000000000uL // 10GWei
@@ -42,8 +42,8 @@ class GasPriceCapProviderForFinalizationTest {
     config: GasPriceCapProviderForFinalization.Config = GasPriceCapProviderForFinalization.Config(
       maxPriorityFeePerGasCap = maxPriorityFeePerGasCap,
       maxFeePerGasCap = maxFeePerGasCap,
-      gasPriceCapMultiplier = gasPriceCapMultiplier
-    )
+      gasPriceCapMultiplier = gasPriceCapMultiplier,
+    ),
   ): GasPriceCapProviderForFinalization {
     mockedGasPriceCapProvider = mock<GasPriceCapProvider> {
       on { getGasPriceCaps(any()) } doReturn SafeFuture.completedFuture(returnRawGasPriceCaps)
@@ -54,7 +54,7 @@ class GasPriceCapProviderForFinalizationTest {
     return GasPriceCapProviderForFinalization(
       config = config,
       gasPriceCapProvider = mockedGasPriceCapProvider,
-      metricsFacade = mockedMetricsFacade
+      metricsFacade = mockedMetricsFacade,
     )
   }
 
@@ -66,26 +66,26 @@ class GasPriceCapProviderForFinalizationTest {
   @Test
   fun `gas price caps of finalization should be returned correctly`() {
     assertThat(
-      gasPriceCapProviderForFinalization.getGasPriceCaps(100L).get()
+      gasPriceCapProviderForFinalization.getGasPriceCaps(100L).get(),
     ).isEqualTo(
       GasPriceCaps(
         maxPriorityFeePerGasCap = returnRawGasPriceCaps.maxPriorityFeePerGasCap,
         maxFeePerGasCap = returnRawGasPriceCaps.maxFeePerGasCap,
-        maxFeePerBlobGasCap = 0uL
-      )
+        maxFeePerBlobGasCap = 0uL,
+      ),
     )
   }
 
   @Test
   fun `gas price caps with coefficient of finalization should be returned correctly`() {
     assertThat(
-      gasPriceCapProviderForFinalization.getGasPriceCapsWithCoefficient(100L).get()
+      gasPriceCapProviderForFinalization.getGasPriceCapsWithCoefficient(100L).get(),
     ).isEqualTo(
       GasPriceCaps(
         maxPriorityFeePerGasCap = returnMultipliedRawGasPriceCaps.maxPriorityFeePerGasCap,
         maxFeePerGasCap = returnMultipliedRawGasPriceCaps.maxFeePerGasCap,
-        maxFeePerBlobGasCap = 0uL
-      )
+        maxFeePerBlobGasCap = 0uL,
+      ),
     )
   }
 
@@ -96,17 +96,17 @@ class GasPriceCapProviderForFinalizationTest {
         maxBaseFeePerGasCap = 22000000000uL, // 22GWei (exceeds 20GWei upper bound)
         maxPriorityFeePerGasCap = 8000000000uL, // 8GWei (exceeds 6GWei upper bound)
         maxFeePerGasCap = 30000000000uL, // 30GWei (exceeds 20GWei upper bound)
-        maxFeePerBlobGasCap = 8000000000uL // 8GWei (ignorable)
-      )
+        maxFeePerBlobGasCap = 8000000000uL, // 8GWei (ignorable)
+      ),
     )
     assertThat(
-      gasPriceCapProviderForFinalization.getGasPriceCaps(100L).get()
+      gasPriceCapProviderForFinalization.getGasPriceCaps(100L).get(),
     ).isEqualTo(
       GasPriceCaps(
         maxPriorityFeePerGasCap = expectedMaxPriorityFeePerGasCap, // 6GWei (capped at 6GWei upper bound)
         maxFeePerGasCap = expectedMaxFeePerGasCap, // 20GWei (capped at 20GWei upper bound)
-        maxFeePerBlobGasCap = 0uL
-      )
+        maxFeePerBlobGasCap = 0uL,
+      ),
     )
 
     gasPriceCapProviderForFinalization = createGasPriceCapProviderForFinalization(
@@ -114,17 +114,17 @@ class GasPriceCapProviderForFinalizationTest {
         maxBaseFeePerGasCap = 21000000000uL, // 21GWei (exceeds 20GWei upper bound)
         maxPriorityFeePerGasCap = 4000000000uL,
         maxFeePerGasCap = 25000000000uL, // 25GWei (exceeds 20GWei upper bound)
-        maxFeePerBlobGasCap = 8000000000uL // 8GWei (ignorable)
-      )
+        maxFeePerBlobGasCap = 8000000000uL, // 8GWei (ignorable)
+      ),
     )
     assertThat(
-      gasPriceCapProviderForFinalization.getGasPriceCaps(100L).get()
+      gasPriceCapProviderForFinalization.getGasPriceCaps(100L).get(),
     ).isEqualTo(
       GasPriceCaps(
         maxPriorityFeePerGasCap = 4000000000uL,
         maxFeePerGasCap = expectedMaxFeePerGasCap, // 20GWei (capped at 20GWei upper bound)
-        maxFeePerBlobGasCap = 0uL
-      )
+        maxFeePerBlobGasCap = 0uL,
+      ),
     )
 
     gasPriceCapProviderForFinalization = createGasPriceCapProviderForFinalization(
@@ -132,17 +132,17 @@ class GasPriceCapProviderForFinalizationTest {
         maxBaseFeePerGasCap = 13000000000uL, // 13GWei
         maxPriorityFeePerGasCap = 10000000000uL, // 10GWei (exceeds 6GWei upper bound)
         maxFeePerGasCap = 23000000000uL, // 26GWei (exceeds 20GWei upper bound)
-        maxFeePerBlobGasCap = 8000000000uL // 8GWei (ignorable)
-      )
+        maxFeePerBlobGasCap = 8000000000uL, // 8GWei (ignorable)
+      ),
     )
     assertThat(
-      gasPriceCapProviderForFinalization.getGasPriceCaps(100L).get()
+      gasPriceCapProviderForFinalization.getGasPriceCaps(100L).get(),
     ).isEqualTo(
       GasPriceCaps(
         maxPriorityFeePerGasCap = expectedMaxPriorityFeePerGasCap, // 6GWei (capped at 6GWei upper bound)
         maxFeePerGasCap = 19000000000uL,
-        maxFeePerBlobGasCap = 0uL
-      )
+        maxFeePerBlobGasCap = 0uL,
+      ),
     )
   }
 }

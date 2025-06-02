@@ -29,7 +29,7 @@ class RetryingPostgresAggregationsDaoTest {
   private val createdBeforeInstant = fakeClock.now()
   private val aggregation = createAggregation(
     startBlockNumber = 1,
-    endBlockNumber = 10
+    endBlockNumber = 10,
   )
 
   @BeforeEach
@@ -39,15 +39,15 @@ class RetryingPostgresAggregationsDaoTest {
       PersistenceRetryer(
         vertx = vertx,
         PersistenceRetryer.Config(
-          backoffDelay = 1.milliseconds
-        )
-      )
+          backoffDelay = 1.milliseconds,
+        ),
+      ),
     )
 
     val baseBlobCounters = blobCounters(startBlockNumber = 1uL, endBlockNumber = 10uL)
     val baseBlobAndBatchCounters = BlobAndBatchCounters(
       blobCounters = baseBlobCounters,
-      executionProofs = BlockIntervals(1UL, listOf(2UL, 3UL))
+      executionProofs = BlockIntervals(1UL, listOf(2UL, 3UL)),
     )
 
     val aggregationProof = createProofToFinalize(
@@ -55,7 +55,7 @@ class RetryingPostgresAggregationsDaoTest {
       finalBlockNumber = 10,
       parentAggregationLastBlockTimestamp = Instant.fromEpochSeconds(0),
       startBlockTime = Instant.fromEpochSeconds(0),
-      finalTimestamp = Instant.parse("2024-04-28T15:00:00Z")
+      finalTimestamp = Instant.parse("2024-04-28T15:00:00Z"),
     )
 
     whenever(delegateAggregationsDao.findConsecutiveProvenBlobs(eq(0L)))
@@ -68,15 +68,15 @@ class RetryingPostgresAggregationsDaoTest {
       delegateAggregationsDao.getProofsToFinalize(
         eq(0L),
         eq(createdBeforeInstant),
-        eq(1)
-      )
+        eq(1),
+      ),
     )
       .thenReturn(SafeFuture.completedFuture(listOf(aggregationProof)))
 
     whenever(
       delegateAggregationsDao.findHighestConsecutiveEndBlockNumber(
-        eq(0L)
-      )
+        eq(0L),
+      ),
     )
       .thenReturn(SafeFuture.completedFuture(10L))
 
@@ -101,12 +101,12 @@ class RetryingPostgresAggregationsDaoTest {
     retryingAggregationsPostgresDao.getProofsToFinalize(
       fromBlockNumber = 0L,
       finalEndBlockCreatedBefore = createdBeforeInstant,
-      maximumNumberOfProofs = 1
+      maximumNumberOfProofs = 1,
     )
     verify(delegateAggregationsDao, times(1)).getProofsToFinalize(
       eq(0L),
       eq(createdBeforeInstant),
-      eq(1)
+      eq(1),
     )
 
     retryingAggregationsPostgresDao.findHighestConsecutiveEndBlockNumber(0L)

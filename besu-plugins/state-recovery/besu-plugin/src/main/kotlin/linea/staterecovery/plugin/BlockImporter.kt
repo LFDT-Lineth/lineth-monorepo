@@ -22,8 +22,8 @@ class BlockImporter(
   private val simulatorService: BlockSimulationService,
   private val synchronizationService: SynchronizationService,
   private val blockHashLookup: BlockHashLookupWithRecoverySupport = BlockHashLookupWithRecoverySupport(
-    lookbackWindow = 256UL
-  )
+    lookbackWindow = 256UL,
+  ),
 ) {
   private val log = LogManager.getLogger(BlockImporter::class.java)
   private val chainId = blockchainService.chainId.orElseThrow().toULong()
@@ -40,16 +40,16 @@ class BlockImporter(
   }
 
   private fun executeBlockWithTransactionsWithoutSignature(
-    block: BlockFromL1RecoveredData
+    block: BlockFromL1RecoveredData,
   ): PluginBlockSimulationResult {
     log.trace(
       "simulating import block={} blockHash={}",
       block.header.blockNumber,
-      block.header.blockHash.encodeHex()
+      block.header.blockHash.encodeHex(),
     )
     val transactions = TransactionMapper.mapToBesu(
       block.transactions,
-      chainId
+      chainId,
     )
     val parentBlockNumber = block.header.blockNumber.toLong() - 1
 
@@ -58,13 +58,13 @@ class BlockImporter(
         parentBlockNumber,
         transactions,
         createOverrides(block, blockHashLookup::getHash),
-        StateOverrideMap()
+        StateOverrideMap(),
       )
 
     log.trace(
       " import simulation result: block={} blockHeader={}",
       executedBlockResult.blockHeader.number,
-      executedBlockResult.blockHeader
+      executedBlockResult.blockHeader,
     )
     return executedBlockResult
   }
@@ -73,7 +73,7 @@ class BlockImporter(
     log.trace(
       "calling simulateAndPersistWorldState block={} blockHeader={}",
       context.blockHeader.number,
-      context.blockHeader
+      context.blockHeader,
     )
     val parentBlockNumber = context.blockHeader.number - 1
     val importedBlockResult =
@@ -81,12 +81,12 @@ class BlockImporter(
         parentBlockNumber,
         context.blockBody.transactions,
         createOverrides(context.blockHeader, blockHashLookup::getHash),
-        StateOverrideMap()
+        StateOverrideMap(),
       )
     log.trace(
       "simulateAndPersistWorldState result: block={} blockHeader={}",
       context.blockHeader.number,
-      importedBlockResult.blockHeader
+      importedBlockResult.blockHeader,
     )
     storeAndSetHead(importedBlockResult)
     return importedBlockResult
@@ -95,12 +95,12 @@ class BlockImporter(
   private fun storeAndSetHead(block: PluginBlockSimulationResult) {
     log.debug(
       "storeAndSetHead result: blockHeader={}",
-      block.blockHeader
+      block.blockHeader,
     )
     blockchainService.storeBlock(
       block.blockHeader,
       block.blockBody,
-      block.receipts
+      block.receipts,
     )
     synchronizationService.setHeadUnsafe(block.blockHeader, block.blockBody)
   }
@@ -108,7 +108,7 @@ class BlockImporter(
   companion object {
     fun createOverrides(
       blockFromBlob: BlockFromL1RecoveredData,
-      blockHashLookup: (Long) -> Hash
+      blockHashLookup: (Long) -> Hash,
     ): BlockOverrides {
       return BlockOverrides.builder()
         .blockHash(Hash.wrap(Bytes32.wrap(blockFromBlob.header.blockHash)))
@@ -124,7 +124,7 @@ class BlockImporter(
 
     fun createOverrides(
       blockHeader: BlockHeader,
-      blockHashLookup: (Long) -> Hash
+      blockHashLookup: (Long) -> Hash,
     ): BlockOverrides {
       return BlockOverrides.builder()
         .feeRecipient(blockHeader.coinbase)

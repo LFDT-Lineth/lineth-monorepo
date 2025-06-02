@@ -51,7 +51,7 @@ class EthGetBlockToLineaBlockMapperTest {
           "r": "0x1fa31b9272cc67174efb129c2fd2ec5afda122503745beb22bd26e48a42240bb",
           "s": "0x248c9cdf9352b4a379577c5b44bcb25a5350dc6722fd7b2aec40e193f670e4f4"
       }
-      """.trimIndent()
+      """.trimIndent(),
     )
 
     val domainTx = txWeb3j.toDomain()
@@ -71,8 +71,8 @@ class EthGetBlockToLineaBlockMapperTest {
         chainId = 0x539UL,
         maxFeePerGas = 0xeUL,
         maxPriorityFeePerGas = 0x0UL,
-        accessList = emptyList()
-      )
+        accessList = emptyList(),
+      ),
     )
 
     domainTx.toBesu().also { besuTx ->
@@ -86,10 +86,10 @@ class EthGetBlockToLineaBlockMapperTest {
       assertThat(besuTx.value).isEqualTo(Wei.of(0x0L))
       assertThat(besuTx.payload).isEqualTo(Bytes.fromHexString("0x60806040523480156200001157600080fd5b506200001c"))
       assertThat(besuTx.signature.r).isEqualTo(
-        "0x1fa31b9272cc67174efb129c2fd2ec5afda122503745beb22bd26e48a42240bb".toBigIntegerFromHex()
+        "0x1fa31b9272cc67174efb129c2fd2ec5afda122503745beb22bd26e48a42240bb".toBigIntegerFromHex(),
       )
       assertThat(besuTx.signature.s).isEqualTo(
-        "0x248c9cdf9352b4a379577c5b44bcb25a5350dc6722fd7b2aec40e193f670e4f4".toBigIntegerFromHex()
+        "0x248c9cdf9352b4a379577c5b44bcb25a5350dc6722fd7b2aec40e193f670e4f4".toBigIntegerFromHex(),
       )
       assertThat(besuTx.signature.recId).isEqualTo(0)
       assertThat(besuTx.chainId.getOrNull()).isEqualTo(0x539L)
@@ -118,7 +118,7 @@ class EthGetBlockToLineaBlockMapperTest {
         "v": "0x1ce2e",
         "value": "0x186a0"
       }
-      """.trimIndent()
+      """.trimIndent(),
     )
     val domainTx = txWeb3j.toDomain()
     assertThat(domainTx).isEqualTo(
@@ -137,8 +137,8 @@ class EthGetBlockToLineaBlockMapperTest {
         chainId = 0xe705UL,
         maxFeePerGas = null,
         maxPriorityFeePerGas = null,
-        accessList = null
-      )
+        accessList = null,
+      ),
     )
     domainTx.toBesu().also { besuTx ->
       assertThat(besuTx.type).isEqualTo(org.hyperledger.besu.datatypes.TransactionType.FRONTIER)
@@ -149,10 +149,10 @@ class EthGetBlockToLineaBlockMapperTest {
       assertThat(besuTx.value).isEqualTo(Wei.of(0x186a0L))
       assertThat(besuTx.payload).isEqualTo(Bytes.EMPTY)
       assertThat(besuTx.signature.r).isEqualTo(
-        "0xdf28597129341d5d345c9043c7d0b0a22be82cac13988cfc1d8cbdaf3ab3f35b".toBigIntegerFromHex()
+        "0xdf28597129341d5d345c9043c7d0b0a22be82cac13988cfc1d8cbdaf3ab3f35b".toBigIntegerFromHex(),
       )
       assertThat(besuTx.signature.s).isEqualTo(
-        "0x3189b2ff80d8f728d6fb7503b46734ee77a60a42db01d0b09db10bdc9d5caa44".toBigIntegerFromHex()
+        "0x3189b2ff80d8f728d6fb7503b46734ee77a60a42db01d0b09db10bdc9d5caa44".toBigIntegerFromHex(),
       )
       assertThat(besuTx.signature.recId).isEqualTo(1)
       assertThat(besuTx.chainId.getOrNull()).isEqualTo(0xe705L)
@@ -193,7 +193,7 @@ class EthGetBlockToLineaBlockMapperTest {
         "r": "0x4f24ed24207bec8591c8172584dc3b57cdf3ee96afbd5e63905a90a704ff33f0",
         "s": "0x6277bb9d2614843a4791ff2c192e70876438ec940c39d92deb504591b83dfeb3"
       }
-      """.trimIndent()
+      """.trimIndent(),
     )
 
     val domainTx = txWeb3j.toDomain()
@@ -218,11 +218,11 @@ class EthGetBlockToLineaBlockMapperTest {
             address = "0x8d97689c9818892b700e27f316cc3e41e17fbeb9".decodeHex(),
             listOf(
               "0x0000000000000000000000000000000000000000000000000000000000000000".decodeHex(),
-              "0x0000000000000000000000000000000000000000000000000000000000000001".decodeHex()
-            )
-          )
-        )
-      )
+              "0x0000000000000000000000000000000000000000000000000000000000000001".decodeHex(),
+            ),
+          ),
+        ),
+      ),
     )
 
     domainTx.toBesu().also { besuTx ->
@@ -233,10 +233,10 @@ class EthGetBlockToLineaBlockMapperTest {
       assertThat(besuTx.value).isEqualTo(Wei.of(0x2386f26fc10000L))
       assertThat(besuTx.payload).isEqualTo(Bytes.EMPTY)
       assertThat(besuTx.signature.r).isEqualTo(
-        "0x4f24ed24207bec8591c8172584dc3b57cdf3ee96afbd5e63905a90a704ff33f0".toBigIntegerFromHex()
+        "0x4f24ed24207bec8591c8172584dc3b57cdf3ee96afbd5e63905a90a704ff33f0".toBigIntegerFromHex(),
       )
       assertThat(besuTx.signature.s).isEqualTo(
-        "0x6277bb9d2614843a4791ff2c192e70876438ec940c39d92deb504591b83dfeb3".toBigIntegerFromHex()
+        "0x6277bb9d2614843a4791ff2c192e70876438ec940c39d92deb504591b83dfeb3".toBigIntegerFromHex(),
       )
       assertThat(besuTx.signature.recId).isEqualTo(1)
       assertThat(besuTx.type).isEqualTo(org.hyperledger.besu.datatypes.TransactionType.ACCESS_LIST)
@@ -250,7 +250,7 @@ class EthGetBlockToLineaBlockMapperTest {
       assertThat(accessList.get(0).storageKeys)
         .containsExactly(
           Bytes32.fromHexString("0x0000000000000000000000000000000000000000000000000000000000000000"),
-          Bytes32.fromHexString("0x0000000000000000000000000000000000000000000000000000000000000001")
+          Bytes32.fromHexString("0x0000000000000000000000000000000000000000000000000000000000000001"),
         )
     }
   }
@@ -279,7 +279,7 @@ class EthGetBlockToLineaBlockMapperTest {
           "r": "0xc57273f9ba15320937d5d9dfd1dc0b18d1e678b34bd3a4bfd29a63e11a856292",
           "s": "0x7aa875a64835ecc5f9ac1a9fe3ab38d2a62bb3643a2597ab585a5607641a0c57"
         }
-      """.trimIndent()
+      """.trimIndent(),
     )
 
     val domainTx = txWeb3j.toDomain()
@@ -299,8 +299,8 @@ class EthGetBlockToLineaBlockMapperTest {
         chainId = 0x539UL,
         maxFeePerGas = null,
         maxPriorityFeePerGas = null,
-        accessList = emptyList()
-      )
+        accessList = emptyList(),
+      ),
     )
 
     domainTx.toBesu().also { besuTx ->
@@ -312,10 +312,10 @@ class EthGetBlockToLineaBlockMapperTest {
       assertThat(besuTx.value).isEqualTo(Wei.of(0x2386f26fc10000L))
       assertThat(besuTx.payload).isEqualTo(Bytes.EMPTY)
       assertThat(besuTx.signature.r).isEqualTo(
-        "0xc57273f9ba15320937d5d9dfd1dc0b18d1e678b34bd3a4bfd29a63e11a856292".toBigIntegerFromHex()
+        "0xc57273f9ba15320937d5d9dfd1dc0b18d1e678b34bd3a4bfd29a63e11a856292".toBigIntegerFromHex(),
       )
       assertThat(besuTx.signature.s).isEqualTo(
-        "0x7aa875a64835ecc5f9ac1a9fe3ab38d2a62bb3643a2597ab585a5607641a0c57".toBigIntegerFromHex()
+        "0x7aa875a64835ecc5f9ac1a9fe3ab38d2a62bb3643a2597ab585a5607641a0c57".toBigIntegerFromHex(),
       )
       assertThat(besuTx.signature.recId).isEqualTo(1)
       assertThat(besuTx.chainId.getOrNull()).isEqualTo(0x539L)
@@ -356,7 +356,7 @@ class EthGetBlockToLineaBlockMapperTest {
           "maxFeePerGas": "0x1017dff7",
           "maxPriorityFeePerGas": "0x1017df87"
         }
-      """.trimIndent()
+      """.trimIndent(),
     )
 
     val txDomain = txWeb3j.toDomain()
@@ -378,8 +378,8 @@ class EthGetBlockToLineaBlockMapperTest {
         chainId = 0x539UL,
         maxFeePerGas = 0x1017dff7UL,
         maxPriorityFeePerGas = 0x1017df87UL,
-        accessList = emptyList()
-      )
+        accessList = emptyList(),
+      ),
     )
 
     txDomain.toBesu().also { txBesu ->
@@ -391,10 +391,10 @@ class EthGetBlockToLineaBlockMapperTest {
       assertThat(txBesu.value).isEqualTo(Wei.of(0x2386f26fc10000L))
       assertThat(txBesu.payload).isEqualTo(Bytes.fromHexString(input))
       assertThat(txBesu.signature.r).isEqualTo(
-        "0xeb4f70991ea4f14d23efb32591da3621d551406fd32bdfdd78bb677dec13160a".toBigIntegerFromHex()
+        "0xeb4f70991ea4f14d23efb32591da3621d551406fd32bdfdd78bb677dec13160a".toBigIntegerFromHex(),
       )
       assertThat(txBesu.signature.s).isEqualTo(
-        "0x783aaa89f73ef7535924da8fd5f12e15cae1a0811c4c4746d1c23abff1eacddf".toBigIntegerFromHex()
+        "0x783aaa89f73ef7535924da8fd5f12e15cae1a0811c4c4746d1c23abff1eacddf".toBigIntegerFromHex(),
       )
       assertThat(txBesu.signature.recId).isEqualTo(1)
       assertThat(txBesu.chainId.getOrNull()).isEqualTo(0x539L)
@@ -433,7 +433,7 @@ class EthGetBlockToLineaBlockMapperTest {
           "r": "0xf7afccb560d0c52bea021ba522a27dbd6c3aba3512dd2d3b2f476ed8dd87d5f7",
           "s": "0x5f47f6ddcf1c216eb33eb69db553d682de34c78f5a5ab97905a428c2182f32e"
         }
-      """.trimIndent()
+      """.trimIndent(),
     )
 
     val txDomain = txWeb3j.toDomain()
@@ -453,8 +453,8 @@ class EthGetBlockToLineaBlockMapperTest {
         gasPrice = null,
         maxFeePerGas = 0xeUL,
         maxPriorityFeePerGas = 0UL,
-        accessList = emptyList()
-      )
+        accessList = emptyList(),
+      ),
     )
 
     txDomain.toBesu().let { txBesu ->
@@ -466,10 +466,10 @@ class EthGetBlockToLineaBlockMapperTest {
       assertThat(txBesu.value).isEqualTo(Wei.ZERO)
       assertThat(txBesu.payload).isEqualTo(Bytes.fromHexString(input))
       assertThat(txBesu.signature.r).isEqualTo(
-        "0xf7afccb560d0c52bea021ba522a27dbd6c3aba3512dd2d3b2f476ed8dd87d5f7".toBigIntegerFromHex()
+        "0xf7afccb560d0c52bea021ba522a27dbd6c3aba3512dd2d3b2f476ed8dd87d5f7".toBigIntegerFromHex(),
       )
       assertThat(txBesu.signature.s).isEqualTo(
-        "0x5f47f6ddcf1c216eb33eb69db553d682de34c78f5a5ab97905a428c2182f32e".toBigIntegerFromHex()
+        "0x5f47f6ddcf1c216eb33eb69db553d682de34c78f5a5ab97905a428c2182f32e".toBigIntegerFromHex(),
       )
       assertThat(txBesu.signature.recId).isEqualTo(1)
       assertThat(txBesu.chainId.getOrNull()).isEqualTo(0x539L)
@@ -502,7 +502,7 @@ class EthGetBlockToLineaBlockMapperTest {
           "v": "0x1b",
           "value": "0x0"
       }
-      """.trimIndent()
+      """.trimIndent(),
     )
     val domainTx = txWeb3j.toDomain()
     assertThat(domainTx).isEqualTo(
@@ -522,8 +522,8 @@ class EthGetBlockToLineaBlockMapperTest {
         chainId = null,
         maxFeePerGas = null,
         maxPriorityFeePerGas = null,
-        accessList = null
-      )
+        accessList = null,
+      ),
     )
     domainTx.toBesu().also { besuTx ->
       assertThat(besuTx.type).isEqualTo(org.hyperledger.besu.datatypes.TransactionType.FRONTIER)
@@ -534,10 +534,10 @@ class EthGetBlockToLineaBlockMapperTest {
       assertThat(besuTx.value).isEqualTo(Wei.of(0x0))
       assertThat(besuTx.payload).isEqualTo(Bytes.fromHexString(input))
       assertThat(besuTx.signature.r).isEqualTo(
-        "0x98cf46978ebd95f2f61780c767b1ad392beaa11b68f0e310728f5be8296e752a".toBigIntegerFromHex()
+        "0x98cf46978ebd95f2f61780c767b1ad392beaa11b68f0e310728f5be8296e752a".toBigIntegerFromHex(),
       )
       assertThat(besuTx.signature.s).isEqualTo(
-        "0x1c621c3046755e5600d73b83a0c28676b02a7dff6b89f76b02f5eddd7817854".toBigIntegerFromHex()
+        "0x1c621c3046755e5600d73b83a0c28676b02a7dff6b89f76b02f5eddd7817854".toBigIntegerFromHex(),
       )
       assertThat(besuTx.signature.recId).isEqualTo(0)
       assertThat(besuTx.chainId.getOrNull()).isNull()

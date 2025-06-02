@@ -11,7 +11,7 @@ fun blobCounters(
   numberOfBatches: UInt = 2u,
   startBlockTimestamp: Instant = Clock.System.now(),
   endBlockTimestamp: Instant = startBlockTimestamp.plus(LINEA_BLOCK_INTERVAL * numberOfBatches.toInt()),
-  expectedShnarf: ByteArray = Random.nextBytes(32)
+  expectedShnarf: ByteArray = Random.nextBytes(32),
 ): BlobCounters {
   return BlobCounters(
     startBlockNumber = startBlockNumber,
@@ -19,6 +19,6 @@ fun blobCounters(
     numberOfBatches = numberOfBatches,
     startBlockTimestamp = startBlockTimestamp,
     endBlockTimestamp = endBlockTimestamp,
-    expectedShnarf = expectedShnarf
+    expectedShnarf = expectedShnarf,
   )
 }

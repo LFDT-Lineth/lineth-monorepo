@@ -300,4 +300,3 @@ public class Context {
     return JSON.getGson().toJson(this);
   }
 }
-

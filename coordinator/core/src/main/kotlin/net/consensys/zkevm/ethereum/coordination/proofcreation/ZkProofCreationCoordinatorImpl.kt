@@ -18,13 +18,13 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 class ZkProofCreationCoordinatorImpl(
   private val executionProverClient: ExecutionProverClientV2,
   private val messageServiceAddress: String,
-  private val l2EthApiClient: EthApiClient
+  private val l2EthApiClient: EthApiClient,
 ) : ZkProofCreationCoordinator {
   private val log: Logger = LogManager.getLogger(this::class.java)
   private val messageEventsTopics: List<String> = listOf(
     MessageSentEvent.topic,
     L1L2MessageHashesAddedToInboxEvent.topic,
-    L2RollingHashUpdatedEvent.topic
+    L2RollingHashUpdatedEvent.topic,
   )
 
   private fun getBlockStateRootHash(blockNumber: ULong): SafeFuture<ByteArray> {
@@ -40,7 +40,7 @@ class ZkProofCreationCoordinatorImpl(
           fromBlock = blockNumber.toBlockParameter(),
           toBlock = blockNumber.toBlockParameter(),
           address = messageServiceAddress,
-          topics = listOf(messageEventTopic)
+          topics = listOf(messageEventTopic),
         )
       }.let {
         SafeFuture.collectAll(it.stream()).thenApply { it.flatten() }
@@ -49,7 +49,7 @@ class ZkProofCreationCoordinatorImpl(
 
   override fun createZkProof(
     blocksConflation: BlocksConflation,
-    traces: BlocksTracesConflated
+    traces: BlocksTracesConflated,
   ): SafeFuture<Batch> {
     val startBlockNumber = blocksConflation.blocks.first().number
     val endBlockNumber = blocksConflation.blocks.last().number
@@ -68,12 +68,12 @@ class ZkProofCreationCoordinatorImpl(
                 bridgeLogs = bridgeLogsList.flatten(),
                 tracesResponse = traces.tracesResponse,
                 type2StateData = traces.zkStateTraces,
-                keccakParentStateRootHash = previousKeccakStateRootHash
-              )
+                keccakParentStateRootHash = previousKeccakStateRootHash,
+              ),
             ).thenApply {
               Batch(
                 startBlockNumber = startBlockNumber,
-                endBlockNumber = endBlockNumber
+                endBlockNumber = endBlockNumber,
               )
             }.whenException {
               log.error("Prover returned for batch={} errorMessage={}", blocksConflationInterval, it.message, it)

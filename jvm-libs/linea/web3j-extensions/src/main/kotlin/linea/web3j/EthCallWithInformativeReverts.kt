@@ -13,7 +13,7 @@ typealias SmartContractErrors = Map<String, String>
 
 fun getRevertReason(
   error: Response.Error?,
-  smartContractErrors: SmartContractErrors
+  smartContractErrors: SmartContractErrors,
 ): String? {
   val errorDataString = error?.data ?: ""
   return if (errorDataString.length > 11) {
@@ -27,7 +27,7 @@ fun getRevertReason(
 
 private fun getErrorMessage(
   ethCall: EthCall,
-  smartContractErrors: SmartContractErrors
+  smartContractErrors: SmartContractErrors,
 ): String {
   val revertReason = getRevertReason(ethCall.error, smartContractErrors)
 
@@ -37,7 +37,7 @@ private fun getErrorMessage(
 
 fun Web3j.informativeEthCall(
   tx: Transaction,
-  smartContractErrors: SmartContractErrors
+  smartContractErrors: SmartContractErrors,
 ): SafeFuture<String?> {
   return SafeFuture
     .of(this.ethCall(tx, DefaultBlockParameterName.LATEST).sendAsync())

@@ -11,7 +11,7 @@ interface VertxRequestLogger {
   fun logResponse(
     request: HttpRequest<Buffer>,
     response: HttpResponse<Buffer>? = null,
-    failureCause: Throwable? = null
+    failureCause: Throwable? = null,
   )
 }
 
@@ -19,18 +19,18 @@ class VertxRestRequestLogger(
   private val log: Logger,
   private val logFormatter: VertxHttpLoggingFormatter,
   private val requestResponseLogLevel: Level = Level.TRACE,
-  private val failuresLogLevel: Level = Level.DEBUG
+  private val failuresLogLevel: Level = Level.DEBUG,
 ) : VertxRequestLogger {
   constructor(
     log: Logger,
     responseLogMaxSize: UInt? = null,
     requestResponseLogLevel: Level = Level.TRACE,
-    failuresLogLevel: Level = Level.DEBUG
+    failuresLogLevel: Level = Level.DEBUG,
   ) : this(
     log = log,
     logFormatter = VertxRestLoggingFormatter(responseLogMaxSize = responseLogMaxSize),
     requestResponseLogLevel = requestResponseLogLevel,
-    failuresLogLevel = failuresLogLevel
+    failuresLogLevel = failuresLogLevel,
   )
 
   private fun logRequest(request: HttpRequest<Buffer>, logLevel: Level = requestResponseLogLevel) {
@@ -46,7 +46,7 @@ class VertxRestRequestLogger(
   override fun logResponse(
     request: HttpRequest<Buffer>,
     response: HttpResponse<Buffer>?,
-    failureCause: Throwable?
+    failureCause: Throwable?,
   ) {
     val isError = response?.statusCode()?.let(::isNotSuccessStatusCode) ?: true
     val logLevel = if (isError) failuresLogLevel else requestResponseLogLevel

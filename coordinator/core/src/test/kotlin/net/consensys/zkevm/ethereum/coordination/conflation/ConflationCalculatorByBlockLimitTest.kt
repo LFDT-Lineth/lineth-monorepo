@@ -49,7 +49,7 @@ class ConflationCalculatorByBlockLimitTest {
       blockNumber = blockNumber.toULong(),
       blockTimestamp = Instant.parse("2021-01-01T00:00:00.000Z"),
       tracesCounters = fakeTracesCountersV2(blockNumber.toUInt()),
-      blockRLPEncoded = ByteArray(0)
+      blockRLPEncoded = ByteArray(0),
     )
   }
 }

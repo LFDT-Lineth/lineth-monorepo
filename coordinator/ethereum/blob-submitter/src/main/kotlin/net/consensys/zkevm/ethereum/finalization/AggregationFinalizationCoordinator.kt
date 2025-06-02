@@ -25,15 +25,15 @@ class AggregationFinalizationCoordinator(
   private val aggregationSubmitter: AggregationSubmitter,
   private val vertx: Vertx,
   private val clock: Clock,
-  private val log: Logger = LogManager.getLogger(AggregationFinalizationCoordinator::class.java)
+  private val log: Logger = LogManager.getLogger(AggregationFinalizationCoordinator::class.java),
 ) : PeriodicPollingService(
   vertx = vertx,
   pollingIntervalMs = config.pollingInterval.inWholeMilliseconds,
-  log = log
+  log = log,
 ) {
   class Config(
     val pollingInterval: Duration,
-    val proofSubmissionDelay: Duration
+    val proofSubmissionDelay: Duration,
   )
 
   override fun action(): SafeFuture<Unit> {
@@ -46,7 +46,7 @@ class AggregationFinalizationCoordinator(
             if (aggregationData == null) {
               log.info(
                 "No aggregation available to submit with endBlockCreatedBefore={}",
-                endBlockCreatedBefore
+                endBlockCreatedBefore,
               )
               SafeFuture.completedFuture(Unit)
             } else {
@@ -57,7 +57,7 @@ class AggregationFinalizationCoordinator(
                     log.debug(
                       "aggregation={} last blob={} not yet submitted on L1, waiting for it.",
                       aggregationData.aggregationProof.intervalString(),
-                      aggregationData.aggregationEndBlob.intervalString()
+                      aggregationData.aggregationEndBlob.intervalString(),
                     )
                     SafeFuture.completedFuture(Unit)
                   } else {
@@ -70,25 +70,25 @@ class AggregationFinalizationCoordinator(
   }
 
   private fun fetchAggregationStartAndEndBlob(
-    proofToFinalize: ProofToFinalize?
+    proofToFinalize: ProofToFinalize?,
   ): SafeFuture<ProofEdgeBlobs?> {
     return if (proofToFinalize == null) {
       SafeFuture.completedFuture(null)
     } else {
       SafeFuture.collectAll(
         blobsRepository.findBlobByStartBlockNumber(proofToFinalize.startBlockNumber.toLong()),
-        blobsRepository.findBlobByEndBlockNumber(proofToFinalize.endBlockNumber.toLong())
+        blobsRepository.findBlobByEndBlockNumber(proofToFinalize.endBlockNumber.toLong()),
       )
         .thenApply { (startBlob, endBlob) ->
           when {
             startBlob == null ->
               throw IllegalStateException(
-                "start blob of aggregation=${proofToFinalize.intervalString()} not found in the DB."
+                "start blob of aggregation=${proofToFinalize.intervalString()} not found in the DB.",
               )
 
             endBlob == null ->
               throw IllegalStateException(
-                "end blob of aggregation=${proofToFinalize.intervalString()} not found in the DB."
+                "end blob of aggregation=${proofToFinalize.intervalString()} not found in the DB.",
               )
 
             else -> ProofEdgeBlobs(proofToFinalize, startBlob, endBlob)
@@ -98,12 +98,12 @@ class AggregationFinalizationCoordinator(
   }
 
   private fun fetchAggregationData(
-    lastFinalizedBlockNumber: ULong
+    lastFinalizedBlockNumber: ULong,
   ): SafeFuture<AggregationData?> {
     return aggregationsRepository.getProofsToFinalize(
       fromBlockNumber = lastFinalizedBlockNumber.toLong() + 1,
       finalEndBlockCreatedBefore = clock.now().minus(config.proofSubmissionDelay),
-      maximumNumberOfProofs = 1
+      maximumNumberOfProofs = 1,
     )
       .thenApply { it.firstOrNull() }
       .thenCompose(::fetchAggregationStartAndEndBlob)
@@ -120,8 +120,8 @@ class AggregationFinalizationCoordinator(
               AggregationData.genesis(
                 aggregationProof,
                 aggregationEndBlob,
-                aggregationStartBlob.blobCompressionProof!!.prevShnarf
-              )
+                aggregationStartBlob.blobCompressionProof!!.prevShnarf,
+              ),
             )
           } else {
             aggregationsRepository
@@ -134,15 +134,15 @@ class AggregationFinalizationCoordinator(
                       aggregationEndBlob = aggregationEndBlob,
                       parentShnarf = aggregationStartBlob.blobCompressionProof!!.prevShnarf,
                       parentL1RollingHash = parentAggregationProof.l1RollingHash,
-                      parentL1RollingHashMessageNumber = parentAggregationProof.l1RollingHashMessageNumber
-                    )
+                      parentL1RollingHashMessageNumber = parentAggregationProof.l1RollingHashMessageNumber,
+                    ),
                   )
                 } ?: run {
                   log.info(
                     "parent aggregation not found for aggregation={} " +
                       "lastFinalizedBlockNumber={} skipping because another finalization tx was executed.",
                     aggregationProof.intervalString(),
-                    parentAggregationProof
+                    parentAggregationProof,
                   )
                   SafeFuture.completedFuture(null)
                 }
@@ -153,14 +153,14 @@ class AggregationFinalizationCoordinator(
   }
 
   private fun finalizeAggregationAfterEthCall(
-    aggregationData: AggregationData
+    aggregationData: AggregationData,
   ): SafeFuture<Unit> {
     return aggregationSubmitter.submitAggregationAfterEthCall(
       aggregationProof = aggregationData.aggregationProof,
       aggregationEndBlob = aggregationData.aggregationEndBlob,
       parentShnarf = aggregationData.parentShnarf,
       parentL1RollingHash = aggregationData.parentL1RollingHash,
-      parentL1RollingHashMessageNumber = aggregationData.parentL1RollingHashMessageNumber
+      parentL1RollingHashMessageNumber = aggregationData.parentL1RollingHashMessageNumber,
     ).thenApply { Unit }
   }
 
@@ -173,20 +173,20 @@ class AggregationFinalizationCoordinator(
     val aggregationEndBlob: BlobRecord,
     val parentShnarf: ByteArray,
     val parentL1RollingHash: ByteArray,
-    val parentL1RollingHashMessageNumber: Long
+    val parentL1RollingHashMessageNumber: Long,
   ) {
     companion object {
       fun genesis(
         aggregationProof: ProofToFinalize,
         aggregationEndBlob: BlobRecord,
-        parentShnarf: ByteArray
+        parentShnarf: ByteArray,
       ): AggregationData {
         return AggregationData(
           aggregationProof = aggregationProof,
           aggregationEndBlob = aggregationEndBlob,
           parentShnarf = parentShnarf,
           parentL1RollingHash = ByteArray(32),
-          parentL1RollingHashMessageNumber = 0
+          parentL1RollingHashMessageNumber = 0,
         )
       }
     }
@@ -195,7 +195,7 @@ class AggregationFinalizationCoordinator(
   private data class ProofEdgeBlobs(
     val proof: ProofToFinalize,
     val startBlob: BlobRecord,
-    val endBlob: BlobRecord
+    val endBlob: BlobRecord,
   )
 
   companion object {
@@ -207,7 +207,7 @@ class AggregationFinalizationCoordinator(
       alreadySubmittedBlobFilter: AsyncFilter<BlobRecord>,
       aggregationSubmitter: AggregationSubmitter,
       vertx: Vertx,
-      clock: Clock
+      clock: Clock,
     ): AggregationFinalizationCoordinator {
       return AggregationFinalizationCoordinator(
         config = config,
@@ -217,7 +217,7 @@ class AggregationFinalizationCoordinator(
         aggregationSubmitter = aggregationSubmitter,
         alreadySubmittedBlobsFilter = alreadySubmittedBlobFilter,
         vertx = vertx,
-        clock = clock
+        clock = clock,
       )
     }
   }

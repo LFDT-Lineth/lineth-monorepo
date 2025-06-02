@@ -24,11 +24,11 @@ class StaticVertxHttpRequestRateLimiter(
     .div(5)
     .coerceAtLeast(1.milliseconds),
   private val requestLogFormatter: VertxHttpLoggingFormatter,
-  private val logger: Logger = LogManager.getLogger(StaticVertxHttpRequestRateLimiter::class.java)
+  private val logger: Logger = LogManager.getLogger(StaticVertxHttpRequestRateLimiter::class.java),
 ) : VertxHttpRequestSender {
   private data class RequestAndFutureResponse(
     val request: HttpRequest<Buffer>,
-    val future: SafeFuture<HttpResponse<Buffer>>
+    val future: SafeFuture<HttpResponse<Buffer>>,
   )
 
   private val rateLimitPerSecond = 1.seconds.div(rateLimitBackoffDelay).toInt()
@@ -54,7 +54,7 @@ class StaticVertxHttpRequestRateLimiter(
         rateLimitPerSecond,
         requestQueue.size,
         rateLimitBackoffDelay - elapsedTimeSinceLastRequest,
-        requestLogFormatter.toLogString(requestQueue.peek().request)
+        requestLogFormatter.toLogString(requestQueue.peek().request),
       )
       return
     }
@@ -93,7 +93,7 @@ class StaticVertxHttpRequestRateLimiter(
         rateLimitPerSecond,
         requestQueue.size,
         rateLimitBackoffDelay - lastRequestFiredTime.elapsedNow(),
-        requestLogFormatter.toLogString(request)
+        requestLogFormatter.toLogString(request),
       )
 
       requestQueue.add(req)

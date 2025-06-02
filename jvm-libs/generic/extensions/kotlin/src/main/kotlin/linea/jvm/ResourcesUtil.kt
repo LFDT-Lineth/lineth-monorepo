@@ -17,18 +17,18 @@ object ResourcesUtil {
   fun copyResourceToTmpDir(
     resourcePath: String,
     classLoader: ClassLoader,
-    tmpDirPrefix: String = "linea-resources-"
+    tmpDirPrefix: String = "linea-resources-",
   ): Path {
     val fileDestination = File(
       Files.createTempDirectory(tmpDirPrefix)
         .resolve(Path.of(resourcePath).fileName)
-        .toString()
+        .toString(),
     )
     val resourceInputStream = classLoader.getResourceAsStream(resourcePath)
       ?: throw IllegalStateException("Resource not found: $resourcePath")
     Files.copy(
       resourceInputStream,
-      fileDestination.toPath()
+      fileDestination.toPath(),
     )
     return fileDestination.toPath()
   }

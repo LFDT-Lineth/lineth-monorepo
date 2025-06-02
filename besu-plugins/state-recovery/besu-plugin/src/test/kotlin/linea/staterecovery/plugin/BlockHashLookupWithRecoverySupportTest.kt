@@ -15,16 +15,16 @@ class BlockHashLookupWithRecoverySupportTest {
     lookback.addLookbackHashes(
       mapOf(
         1UL to hashOf(1UL),
-        2UL to hashOf(3UL)
-      )
+        2UL to hashOf(3UL),
+      ),
     )
 
     assertThatThrownBy {
       lookback.addLookbackHashes(
         mapOf(
           1UL to hashOf(1UL),
-          3UL to hashOf(3UL)
-        )
+          3UL to hashOf(3UL),
+        ),
       )
     }
       .isInstanceOf(IllegalArgumentException::class.java)
@@ -34,7 +34,7 @@ class BlockHashLookupWithRecoverySupportTest {
   @Test
   fun `addHeadBlockHash should update and prune the lookback hashes outside the lookback window`() {
     val lookback = BlockHashLookupWithRecoverySupport(
-      lookbackWindow = 3UL
+      lookbackWindow = 3UL,
     )
 
     lookback.addHeadBlockHash(0UL, hashOf(123UL))

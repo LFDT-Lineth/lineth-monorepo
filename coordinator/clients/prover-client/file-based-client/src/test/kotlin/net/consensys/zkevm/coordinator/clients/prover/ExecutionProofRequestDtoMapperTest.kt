@@ -51,8 +51,8 @@ class ExecutionProofRequestDtoMapperTest {
       data = "0xdeadbeef".decodeHex(),
       topics = listOf(
         "0xa000000000000000000000000000000000000000000000000000000000000001".decodeHex(),
-        "0xa000000000000000000000000000000000000000000000000000000000000002".decodeHex()
-      )
+        "0xa000000000000000000000000000000000000000000000000000000000000002".decodeHex(),
+      ),
     )
     assertThat(BridgeLogsDto.fromDomainObject(logEvent))
       .isEqualTo(
@@ -67,9 +67,9 @@ class ExecutionProofRequestDtoMapperTest {
           data = "0xdeadbeef",
           topics = listOf(
             "0xa000000000000000000000000000000000000000000000000000000000000001",
-            "0xa000000000000000000000000000000000000000000000000000000000000002"
-          )
-        )
+            "0xa000000000000000000000000000000000000000000000000000000000000002",
+          ),
+        ),
       )
   }
 
@@ -82,19 +82,19 @@ class ExecutionProofRequestDtoMapperTest {
       zkStateMerkleProof = ArrayNode(null),
       zkParentStateRootHash = ByteArrayExt.random32(),
       zkEndStateRootHash = ByteArrayExt.random32(),
-      zkStateManagerVersion = "2.0.0"
+      zkStateManagerVersion = "2.0.0",
     )
     val block1Logs = listOf(
       createMessageSentEthLogV1(blockNumber = 747066UL),
-      createL2RollingHashUpdatedEthLogV1(blockNumber = 747066UL)
+      createL2RollingHashUpdatedEthLogV1(blockNumber = 747066UL),
     )
     val block3Logs = listOf(
       createMessageSentEthLogV1(blockNumber = 747068UL),
-      createL2RollingHashUpdatedEthLogV1(blockNumber = 747068UL)
+      createL2RollingHashUpdatedEthLogV1(blockNumber = 747068UL),
     )
     val generateTracesResponse = GenerateTracesResponse(
       tracesFileName = "747066-747068-conflated-traces.json",
-      tracesEngineVersion = "1.0.0"
+      tracesEngineVersion = "1.0.0",
     )
     val stateRoot = Random.nextBytes(32)
     val request = BatchExecutionProofRequestV1(
@@ -102,7 +102,7 @@ class ExecutionProofRequestDtoMapperTest {
       bridgeLogs = block1Logs + block3Logs,
       tracesResponse = generateTracesResponse,
       type2StateData = type2StateResponse,
-      keccakParentStateRootHash = stateRoot
+      keccakParentStateRootHash = stateRoot,
     )
 
     val requestDto = requestDtoMapper.invoke(request).get()
@@ -117,20 +117,20 @@ class ExecutionProofRequestDtoMapperTest {
     assertThat(requestDto.blocksData[0]).isEqualTo(
       RlpBridgeLogsDto(
         rlp = "747066".toByteArray().encodeHex(),
-        bridgeLogs = block1Logs.map(BridgeLogsDto::fromDomainObject)
-      )
+        bridgeLogs = block1Logs.map(BridgeLogsDto::fromDomainObject),
+      ),
     )
     assertThat(requestDto.blocksData[1]).isEqualTo(
       RlpBridgeLogsDto(
         rlp = "747067".toByteArray().encodeHex(),
-        bridgeLogs = emptyList()
-      )
+        bridgeLogs = emptyList(),
+      ),
     )
     assertThat(requestDto.blocksData[2]).isEqualTo(
       RlpBridgeLogsDto(
         rlp = "747068".toByteArray().encodeHex(),
-        bridgeLogs = block3Logs.map(BridgeLogsDto::fromDomainObject)
-      )
+        bridgeLogs = block3Logs.map(BridgeLogsDto::fromDomainObject),
+      ),
     )
   }
 }

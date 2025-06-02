@@ -21,7 +21,7 @@ import kotlin.time.toJavaDuration
 
 class L2NetworkGasPricingConfigTest {
   data class Config(
-    val l2NetworkGasPricing: L2NetworkGasPricingTomlDto
+    val l2NetworkGasPricing: L2NetworkGasPricingTomlDto,
   )
 
   private fun parseConfig(toml: String): L2NetworkGasPricingTomlDto {
@@ -135,7 +135,7 @@ class L2NetworkGasPricingConfigTest {
           maxRetries = 3,
           timeout = 6.seconds.toJavaDuration(),
           backoffDelay = 1.seconds.toJavaDuration(),
-          failuresWarningThreshold = 2
+          failuresWarningThreshold = 2,
         ),
 
         priceUpdateInterval = Duration.parse("PT12S"),
@@ -152,29 +152,29 @@ class L2NetworkGasPricingConfigTest {
           naiveGasPricing = NaiveGasPricingTomlDto(
             baseFeeCoefficient = 0.1,
             priorityFeeCoefficient = 1.0,
-            baseFeeBlobCoefficient = 0.1
-          )
+            baseFeeBlobCoefficient = 0.1,
+          ),
         ),
         variableCostPricing = VariableCostPricingTomlDto(
           gasPriceFixedCost = 3000000u,
           legacyFeesMultiplier = 1.2,
           margin = 4.0,
           variableCostUpperBound = 10_000_000_001u,
-          variableCostLowerBound = 90_000_001u
+          variableCostLowerBound = 90_000_001u,
         ),
         jsonRpcPricingPropagation = JsonRpcPricingPropagationTomlDto(
           gethGasPriceUpdateRecipients = listOf(
             URI("http://traces-node:8545/").toURL(),
-            URI("http://l2-node:8545/").toURL()
+            URI("http://l2-node:8545/").toURL(),
           ),
           besuGasPriceUpdateRecipients = listOf(
-            URI("http://sequencer:8545/").toURL()
-          )
+            URI("http://sequencer:8545/").toURL(),
+          ),
         ),
         extraDataPricingPropagation = ExtraDataPricingPropagationTomlDto(
-          extraDataUpdateRecipient = URI("http://sequencer:8545/").toURL()
-        )
-      )
+          extraDataUpdateRecipient = URI("http://sequencer:8545/").toURL(),
+        ),
+      ),
     )
   }
 
@@ -187,7 +187,7 @@ class L2NetworkGasPricingConfigTest {
           maxRetries = 3,
           timeout = 6.seconds.toJavaDuration(),
           backoffDelay = 1.seconds.toJavaDuration(),
-          failuresWarningThreshold = 2
+          failuresWarningThreshold = 2,
         ),
 
         priceUpdateInterval = Duration.parse("PT12S"),
@@ -201,28 +201,28 @@ class L2NetworkGasPricingConfigTest {
           type = LegacyGasPricingTomlDto.Type.SampleTransaction,
           gasPriceUpperBound = 10_000_000_000u,
           gasPriceLowerBound = 90_000_000u,
-          naiveGasPricing = null
+          naiveGasPricing = null,
         ),
         variableCostPricing = VariableCostPricingTomlDto(
           gasPriceFixedCost = 3000000u,
           legacyFeesMultiplier = 1.2,
           margin = 4.0,
           variableCostUpperBound = 10_000_000_001u,
-          variableCostLowerBound = 90_000_001u
+          variableCostLowerBound = 90_000_001u,
         ),
         jsonRpcPricingPropagation = JsonRpcPricingPropagationTomlDto(
           gethGasPriceUpdateRecipients = listOf(
             URI("http://traces-node:8545/").toURL(),
-            URI("http://l2-node:8545/").toURL()
+            URI("http://l2-node:8545/").toURL(),
           ),
           besuGasPriceUpdateRecipients = listOf(
-            URI("http://sequencer:8545/").toURL()
-          )
+            URI("http://sequencer:8545/").toURL(),
+          ),
         ),
         extraDataPricingPropagation = ExtraDataPricingPropagationTomlDto(
-          extraDataUpdateRecipient = URI("http://sequencer:8545/").toURL()
-        )
-      )
+          extraDataUpdateRecipient = URI("http://sequencer:8545/").toURL(),
+        ),
+      ),
     )
   }
 
@@ -233,14 +233,14 @@ class L2NetworkGasPricingConfigTest {
       maxRetries = 3u,
       timeout = 6.seconds,
       backoffDelay = 1.seconds,
-      failuresWarningThreshold = 2u
+      failuresWarningThreshold = 2u,
     )
 
     assertThat(config).isEqualTo(
       L2NetworkGasPricingService.Config(
         feeHistoryFetcherConfig = FeeHistoryFetcherImpl.Config(
           feeHistoryBlockCount = 50U,
-          feeHistoryRewardPercentile = 15.0
+          feeHistoryRewardPercentile = 15.0,
         ),
         legacy = L2NetworkGasPricingService.LegacyGasPricingCalculatorConfig(
           naiveGasPricingCalculatorConfig = GasUsageRatioWeightedAverageFeesCalculator.Config(
@@ -248,24 +248,24 @@ class L2NetworkGasPricingConfigTest {
             priorityFeeCoefficient = 1.0,
             baseFeeBlobCoefficient = 0.1,
             blobSubmissionExpectedExecutionGas = 213_000,
-            expectedBlobGas = 131072
+            expectedBlobGas = 131072,
           ),
           legacyGasPricingCalculatorBounds = BoundableFeeCalculator.Config(
             10_000_000_000.0,
             90_000_000.0,
-            0.0
+            0.0,
           ),
-          transactionCostCalculatorConfig = null
+          transactionCostCalculatorConfig = null,
         ),
         jsonRpcGasPriceUpdaterConfig = GasPriceUpdaterImpl.Config(
           gethEndpoints = listOf(
             URI("http://traces-node:8545/").toURL(),
-            URI("http://l2-node:8545/").toURL()
+            URI("http://l2-node:8545/").toURL(),
           ),
           besuEndPoints = listOf(
-            URI("http://sequencer:8545/").toURL()
+            URI("http://sequencer:8545/").toURL(),
           ),
-          retryConfig = l2NetworkGasPricingRequestretryConfig
+          retryConfig = l2NetworkGasPricingRequestretryConfig,
         ),
         jsonRpcPriceUpdateInterval = 12.seconds,
         extraDataPricingPropagationEnabled = true,
@@ -274,22 +274,22 @@ class L2NetworkGasPricingConfigTest {
           blobSubmissionExpectedExecutionGas = 213_000u,
           bytesPerDataSubmission = 131072u,
           expectedBlobGas = 131072u,
-          margin = 4.0
+          margin = 4.0,
         ),
         variableFeesCalculatorBounds = BoundableFeeCalculator.Config(
           feeUpperBound = 10_000_000_001.0,
           feeLowerBound = 90_000_001.0,
-          feeMargin = 0.0
+          feeMargin = 0.0,
         ),
         extraDataCalculatorConfig = MinerExtraDataV1CalculatorImpl.Config(
           fixedCostInKWei = 3000u,
-          ethGasPriceMultiplier = 1.2
+          ethGasPriceMultiplier = 1.2,
         ),
         extraDataUpdaterConfig = ExtraDataV1UpdaterImpl.Config(
-          sequencerEndpoint = URI(/* str = */ "http://sequencer:8545/").toURL(),
-          retryConfig = l2NetworkGasPricingRequestretryConfig
-        )
-      )
+          sequencerEndpoint = URI("http://sequencer:8545/").toURL(),
+          retryConfig = l2NetworkGasPricingRequestretryConfig,
+        ),
+      ),
     )
   }
 
@@ -300,38 +300,38 @@ class L2NetworkGasPricingConfigTest {
       maxRetries = 3u,
       timeout = 6.seconds,
       backoffDelay = 1.seconds,
-      failuresWarningThreshold = 2u
+      failuresWarningThreshold = 2u,
     )
 
     assertThat(config).isEqualTo(
       L2NetworkGasPricingService.Config(
         feeHistoryFetcherConfig = FeeHistoryFetcherImpl.Config(
           feeHistoryBlockCount = 50U,
-          feeHistoryRewardPercentile = 15.0
+          feeHistoryRewardPercentile = 15.0,
         ),
         legacy = L2NetworkGasPricingService.LegacyGasPricingCalculatorConfig(
           naiveGasPricingCalculatorConfig = null,
           legacyGasPricingCalculatorBounds = BoundableFeeCalculator.Config(
             10_000_000_000.0,
             90_000_000.0,
-            0.0
+            0.0,
           ),
           transactionCostCalculatorConfig = TransactionCostCalculator.Config(
             sampleTransactionCostMultiplier = 1.0,
             fixedCostWei = 3000000u,
             compressedTxSize = 125,
-            expectedGas = 21000
-          )
+            expectedGas = 21000,
+          ),
         ),
         jsonRpcGasPriceUpdaterConfig = GasPriceUpdaterImpl.Config(
           gethEndpoints = listOf(
             URI("http://traces-node:8545/").toURL(),
-            URI("http://l2-node:8545/").toURL()
+            URI("http://l2-node:8545/").toURL(),
           ),
           besuEndPoints = listOf(
-            URI("http://sequencer:8545/").toURL()
+            URI("http://sequencer:8545/").toURL(),
           ),
-          retryConfig = l2NetworkGasPricingRequestretryConfig
+          retryConfig = l2NetworkGasPricingRequestretryConfig,
         ),
         jsonRpcPriceUpdateInterval = 12.seconds,
         extraDataPricingPropagationEnabled = true,
@@ -340,22 +340,22 @@ class L2NetworkGasPricingConfigTest {
           blobSubmissionExpectedExecutionGas = 213_000u,
           bytesPerDataSubmission = 131072u,
           expectedBlobGas = 131072u,
-          margin = 4.0
+          margin = 4.0,
         ),
         variableFeesCalculatorBounds = BoundableFeeCalculator.Config(
           feeUpperBound = 10_000_000_001.0,
           feeLowerBound = 90_000_001.0,
-          feeMargin = 0.0
+          feeMargin = 0.0,
         ),
         extraDataCalculatorConfig = MinerExtraDataV1CalculatorImpl.Config(
           fixedCostInKWei = 3000u,
-          ethGasPriceMultiplier = 1.2
+          ethGasPriceMultiplier = 1.2,
         ),
         extraDataUpdaterConfig = ExtraDataV1UpdaterImpl.Config(
-          sequencerEndpoint = URI(/* str = */ "http://sequencer:8545/").toURL(),
-          retryConfig = l2NetworkGasPricingRequestretryConfig
-        )
-      )
+          sequencerEndpoint = URI("http://sequencer:8545/").toURL(),
+          retryConfig = l2NetworkGasPricingRequestretryConfig,
+        ),
+      ),
     )
   }
 
@@ -400,28 +400,28 @@ class L2NetworkGasPricingConfigTest {
       maxRetries = 3u,
       timeout = 6.seconds,
       backoffDelay = 1.seconds,
-      failuresWarningThreshold = 2u
+      failuresWarningThreshold = 2u,
     )
 
     assertThat(config).isEqualTo(
       L2NetworkGasPricingService.Config(
         feeHistoryFetcherConfig = FeeHistoryFetcherImpl.Config(
           feeHistoryBlockCount = 50U,
-          feeHistoryRewardPercentile = 15.0
+          feeHistoryRewardPercentile = 15.0,
         ),
         legacy = L2NetworkGasPricingService.LegacyGasPricingCalculatorConfig(
           naiveGasPricingCalculatorConfig = null,
           legacyGasPricingCalculatorBounds = BoundableFeeCalculator.Config(
             10_000_000_000.0,
             90_000_000.0,
-            0.0
+            0.0,
           ),
           transactionCostCalculatorConfig = TransactionCostCalculator.Config(
             sampleTransactionCostMultiplier = 1.0,
             fixedCostWei = 3000000u,
             compressedTxSize = 125,
-            expectedGas = 21000
-          )
+            expectedGas = 21000,
+          ),
         ),
         jsonRpcGasPriceUpdaterConfig = null,
         jsonRpcPriceUpdateInterval = 12.seconds,
@@ -431,22 +431,22 @@ class L2NetworkGasPricingConfigTest {
           blobSubmissionExpectedExecutionGas = 213_000u,
           bytesPerDataSubmission = 131072u,
           expectedBlobGas = 131072u,
-          margin = 4.0
+          margin = 4.0,
         ),
         variableFeesCalculatorBounds = BoundableFeeCalculator.Config(
           feeUpperBound = 10_000_000_001.0,
           feeLowerBound = 90_000_001.0,
-          feeMargin = 0.0
+          feeMargin = 0.0,
         ),
         extraDataCalculatorConfig = MinerExtraDataV1CalculatorImpl.Config(
           fixedCostInKWei = 3000u,
-          ethGasPriceMultiplier = 1.2
+          ethGasPriceMultiplier = 1.2,
         ),
         extraDataUpdaterConfig = ExtraDataV1UpdaterImpl.Config(
-          sequencerEndpoint = URI(/* str = */ "http://sequencer:8545/").toURL(),
-          retryConfig = l2NetworkGasPricingRequestretryConfig
-        )
-      )
+          sequencerEndpoint = URI("http://sequencer:8545/").toURL(),
+          retryConfig = l2NetworkGasPricingRequestretryConfig,
+        ),
+      ),
     )
   }
 
@@ -496,28 +496,28 @@ class L2NetworkGasPricingConfigTest {
       maxRetries = 3u,
       timeout = 6.seconds,
       backoffDelay = 1.seconds,
-      failuresWarningThreshold = 2u
+      failuresWarningThreshold = 2u,
     )
 
     assertThat(config).isEqualTo(
       L2NetworkGasPricingService.Config(
         feeHistoryFetcherConfig = FeeHistoryFetcherImpl.Config(
           feeHistoryBlockCount = 50U,
-          feeHistoryRewardPercentile = 15.0
+          feeHistoryRewardPercentile = 15.0,
         ),
         legacy = L2NetworkGasPricingService.LegacyGasPricingCalculatorConfig(
           naiveGasPricingCalculatorConfig = null,
           legacyGasPricingCalculatorBounds = BoundableFeeCalculator.Config(
             10_000_000_000.0,
             90_000_000.0,
-            0.0
+            0.0,
           ),
           transactionCostCalculatorConfig = TransactionCostCalculator.Config(
             sampleTransactionCostMultiplier = 1.0,
             fixedCostWei = 3000000u,
             compressedTxSize = 125,
-            expectedGas = 21000
-          )
+            expectedGas = 21000,
+          ),
         ),
         jsonRpcGasPriceUpdaterConfig = null,
         jsonRpcPriceUpdateInterval = 12.seconds,
@@ -527,22 +527,22 @@ class L2NetworkGasPricingConfigTest {
           blobSubmissionExpectedExecutionGas = 213_000u,
           bytesPerDataSubmission = 131072u,
           expectedBlobGas = 131072u,
-          margin = 4.0
+          margin = 4.0,
         ),
         variableFeesCalculatorBounds = BoundableFeeCalculator.Config(
           feeUpperBound = 10_000_000_001.0,
           feeLowerBound = 90_000_001.0,
-          feeMargin = 0.0
+          feeMargin = 0.0,
         ),
         extraDataCalculatorConfig = MinerExtraDataV1CalculatorImpl.Config(
           fixedCostInKWei = 3000u,
-          ethGasPriceMultiplier = 1.2
+          ethGasPriceMultiplier = 1.2,
         ),
         extraDataUpdaterConfig = ExtraDataV1UpdaterImpl.Config(
-          sequencerEndpoint = URI(/* str = */ "http://sequencer:8545/").toURL(),
-          retryConfig = l2NetworkGasPricingRequestretryConfig
-        )
-      )
+          sequencerEndpoint = URI("http://sequencer:8545/").toURL(),
+          retryConfig = l2NetworkGasPricingRequestretryConfig,
+        ),
+      ),
     )
   }
 }

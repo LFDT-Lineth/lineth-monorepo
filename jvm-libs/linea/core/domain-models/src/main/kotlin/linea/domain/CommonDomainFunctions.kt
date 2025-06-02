@@ -7,7 +7,7 @@ import java.math.BigInteger
 object CommonDomainFunctions {
   fun blockIntervalString(
     startBlockNumber: ULong,
-    endBlockNumber: ULong
+    endBlockNumber: ULong,
   ): String {
     return "[$startBlockNumber..$endBlockNumber]${endBlockNumber - startBlockNumber + 1uL}"
   }

@@ -37,7 +37,7 @@ class ProofAggregationCoordinatorServiceTest {
   private fun createBlob(startBlockNumber: ULong, endBLockNumber: ULong): BlobAndBatchCounters {
     val batches = BlockIntervals(
       startBlockNumber,
-      listOf(startBlockNumber + 2UL, startBlockNumber + 6UL, endBLockNumber)
+      listOf(startBlockNumber + 2UL, startBlockNumber + 6UL, endBLockNumber),
     )
 
     val blobCounters = BlobCounters(
@@ -46,7 +46,7 @@ class ProofAggregationCoordinatorServiceTest {
       endBLockNumber,
       Instant.fromEpochMilliseconds(100),
       Instant.fromEpochMilliseconds(5000),
-      expectedShnarf = Random.nextBytes(32)
+      expectedShnarf = Random.nextBytes(32),
     )
     return BlobAndBatchCounters(blobCounters = blobCounters, executionProofs = batches)
   }
@@ -66,7 +66,7 @@ class ProofAggregationCoordinatorServiceTest {
     l1RollingHashMessageNumber = 4,
     l2MerkleRoots = listOf("mock_l2MerkleRoots".toByteArray()),
     l2MerkleTreesDepth = 5,
-    l2MessagingBlocksOffsets = "mock_l2MessagingBlocksOffsets".toByteArray()
+    l2MessagingBlocksOffsets = "mock_l2MessagingBlocksOffsets".toByteArray(),
   )
 
   @Test
@@ -81,7 +81,7 @@ class ProofAggregationCoordinatorServiceTest {
 
     val config = ProofAggregationCoordinatorService.Config(
       pollingInterval = 10.milliseconds,
-      proofsLimit = blobsToPoll
+      proofsLimit = blobsToPoll,
     )
 
     var provenAggregation = 0UL
@@ -97,7 +97,7 @@ class ProofAggregationCoordinatorServiceTest {
       proofAggregationClient = mockProofAggregationClient,
       aggregationL2StateProvider = mockAggregationL2StateProvider,
       metricsFacade = metricsFacade,
-      provenAggregationEndBlockNumberConsumer = provenAggregationEndBlockNumberConsumer
+      provenAggregationEndBlockNumberConsumer = provenAggregationEndBlockNumberConsumer,
     )
     verify(mockAggregationCalculator).onAggregation(proofAggregationCoordinatorService)
 
@@ -132,23 +132,23 @@ class ProofAggregationCoordinatorServiceTest {
 
     val executionProofs1 = BlockIntervals(
       blob1[0].executionProofs.startingBlockNumber,
-      blob1[0].executionProofs.upperBoundaries + blob1[1].executionProofs.upperBoundaries
+      blob1[0].executionProofs.upperBoundaries + blob1[1].executionProofs.upperBoundaries,
     )
 
     val executionProofs2 = BlockIntervals(
       blob1[2].executionProofs.startingBlockNumber,
-      blob1[2].executionProofs.upperBoundaries + blob2[0].executionProofs.upperBoundaries
+      blob1[2].executionProofs.upperBoundaries + blob2[0].executionProofs.upperBoundaries,
     )
 
     val rollingInfo1 = AggregationL2State(
       parentAggregationLastBlockTimestamp = Instant.fromEpochSeconds(123456),
       parentAggregationLastL1RollingHashMessageNumber = 12UL,
-      parentAggregationLastL1RollingHash = ByteArray(32)
+      parentAggregationLastL1RollingHash = ByteArray(32),
     )
     val rollingInfo2 = AggregationL2State(
       parentAggregationLastBlockTimestamp = Instant.fromEpochSeconds(123458),
       parentAggregationLastL1RollingHashMessageNumber = 14UL,
-      parentAggregationLastL1RollingHash = ByteArray(32)
+      parentAggregationLastL1RollingHash = ByteArray(32),
     )
 
     whenever(mockAggregationL2StateProvider.getAggregationL2State(anyLong()))
@@ -160,13 +160,13 @@ class ProofAggregationCoordinatorServiceTest {
         ProofIndex(
           it.blobCounters.startBlockNumber,
           it.blobCounters.endBlockNumber,
-          it.blobCounters.expectedShnarf
+          it.blobCounters.expectedShnarf,
         )
       },
       executionProofs = executionProofs1,
       parentAggregationLastBlockTimestamp = rollingInfo1.parentAggregationLastBlockTimestamp,
       parentAggregationLastL1RollingHashMessageNumber = rollingInfo1.parentAggregationLastL1RollingHashMessageNumber,
-      parentAggregationLastL1RollingHash = rollingInfo1.parentAggregationLastL1RollingHash
+      parentAggregationLastL1RollingHash = rollingInfo1.parentAggregationLastL1RollingHash,
     )
 
     val proofsToAggregate2 = ProofsToAggregate(
@@ -174,13 +174,13 @@ class ProofAggregationCoordinatorServiceTest {
         ProofIndex(
           it.blobCounters.startBlockNumber,
           it.blobCounters.endBlockNumber,
-          it.blobCounters.expectedShnarf
+          it.blobCounters.expectedShnarf,
         )
       },
       executionProofs = executionProofs2,
       parentAggregationLastBlockTimestamp = rollingInfo2.parentAggregationLastBlockTimestamp,
       parentAggregationLastL1RollingHashMessageNumber = rollingInfo2.parentAggregationLastL1RollingHashMessageNumber,
-      parentAggregationLastL1RollingHash = rollingInfo2.parentAggregationLastL1RollingHash
+      parentAggregationLastL1RollingHash = rollingInfo2.parentAggregationLastL1RollingHash,
     )
 
     val aggregationProof1 = aggregationProofResponse.copy(finalBlockNumber = 23)
@@ -190,14 +190,14 @@ class ProofAggregationCoordinatorServiceTest {
       startBlockNumber = blobsToAggregate1.startBlockNumber,
       endBlockNumber = blobsToAggregate1.endBlockNumber,
       batchCount = compressionBlobs1.sumOf { it.blobCounters.numberOfBatches }.toULong(),
-      aggregationProof = aggregationProof1
+      aggregationProof = aggregationProof1,
     )
 
     val aggregation2 = Aggregation(
       startBlockNumber = blobsToAggregate2.startBlockNumber,
       endBlockNumber = blobsToAggregate2.endBlockNumber,
       batchCount = compressionBlobs2.sumOf { it.blobCounters.numberOfBatches }.toULong(),
-      aggregationProof = aggregationProof2
+      aggregationProof = aggregationProof2,
     )
 
     whenever(mockProofAggregationClient.requestProof(any()))
@@ -215,8 +215,8 @@ class ProofAggregationCoordinatorServiceTest {
       mockAggregationsRepository.saveNewAggregation(
         argThat<Aggregation> {
           this == aggregation1 || this == aggregation2
-        }
-      )
+        },
+      ),
     )
       .thenReturn(SafeFuture.completedFuture(Unit))
 

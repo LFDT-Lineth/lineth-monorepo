@@ -11,7 +11,7 @@ fun EthFeeHistory.FeeHistory.toLineaDomain(): FeeHistory {
     reward = reward.map { it.map { it.toULong() } },
     gasUsedRatio = gasUsedRatio.map { it },
     baseFeePerBlobGas = listOf(0uL),
-    blobGasUsedRatio = listOf(0.0)
+    blobGasUsedRatio = listOf(0.0),
   )
 }
 fun EthFeeHistory.FeeHistory.blocksRange(): ClosedRange<ULong> {

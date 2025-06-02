@@ -42,7 +42,7 @@ class L1ShnarfBasedAlreadySubmittedBlobsFilterTest {
     val acceptedBlobEndBlockNumberConsumer = Consumer<ULong> { acceptedBlob = it }
     val blobsFilter = L1ShnarfBasedAlreadySubmittedBlobsFilter(
       lineaRollup = l1SmcClient,
-      acceptedBlobEndBlockNumberConsumer = acceptedBlobEndBlockNumberConsumer
+      acceptedBlobEndBlockNumberConsumer = acceptedBlobEndBlockNumberConsumer,
     )
 
     val filteredBlobs = blobsFilter.invoke(blobs).get()

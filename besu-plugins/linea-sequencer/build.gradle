@@ -33,6 +33,15 @@ licenseReport {
   ]
 }
 
+// Make the parent project's spotlessCheck depend on all subproject spotlessCheck tasks
+afterEvaluate {
+  if (tasks.findByName('spotlessCheck')) {
+    spotlessCheck.dependsOn subprojects.collect { subproject ->
+      subproject.tasks.matching { task -> task.name == 'spotlessCheck' }
+    }
+  }
+}
+
 build {
   dependsOn checkLicense
 }

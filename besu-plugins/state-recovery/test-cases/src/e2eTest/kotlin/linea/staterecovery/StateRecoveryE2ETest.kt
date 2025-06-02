@@ -54,7 +54,7 @@ class StateRecoveryE2ETest {
   fun beforeEach(vertx: Vertx) {
     val jsonRpcFactory = VertxHttpJsonRpcClientFactory(
       vertx = vertx,
-      metricsFacade = MicrometerMetricsFacade(SimpleMeterRegistry())
+      metricsFacade = MicrometerMetricsFacade(SimpleMeterRegistry()),
     )
 
     stateManagerClient = StateManagerV1JsonRpcClient.create(
@@ -63,10 +63,10 @@ class StateRecoveryE2ETest {
       maxInflightRequestsPerClient = 1U,
       requestRetry = RequestRetryConfig(
         backoffDelay = 10.milliseconds,
-        timeout = 2.seconds
+        timeout = 2.seconds,
       ),
       zkStateManagerVersion = "2.3.0",
-      logger = LogManager.getLogger("test.clients.l1.state-manager")
+      logger = LogManager.getLogger("test.clients.l1.state-manager"),
     )
 
     configureLoggers(
@@ -80,7 +80,7 @@ class StateRecoveryE2ETest {
       "test.clients.l1.linea-contract" to Level.INFO,
       "test.clients.l1.events-fetcher" to Level.INFO,
       "test.clients.l1.blobscan" to Level.INFO,
-      "net.consensys.linea.contract.l1" to Level.INFO
+      "net.consensys.linea.contract.l1" to Level.INFO,
     )
   }
 
@@ -89,16 +89,16 @@ class StateRecoveryE2ETest {
     Runner.executeCommandFailOnNonZeroExitCode(
       command = "make start-env-with-staterecovery",
       envVars = mapOf(
-        "L1_GENESIS_TIME" to Clock.System.now().plus(5.seconds).epochSeconds.toString()
+        "L1_GENESIS_TIME" to Clock.System.now().plus(5.seconds).epochSeconds.toString(),
       ),
-      timeout = 2.minutes
+      timeout = 2.minutes,
     ).get()
     log.debug("stack restarted")
   }
 
   @Test
   fun `should recover from middle of chain and be resilient to node restarts`(
-    vertx: Vertx
+    vertx: Vertx,
   ) {
     // Part A:
     // we shall have multiple finalizations on L1
@@ -128,15 +128,15 @@ class StateRecoveryE2ETest {
         Web3jClientManager.buildL1Client(
           log = LogManager.getLogger("test.clients.l1.events-fetcher"),
           requestResponseLogLevel = Level.TRACE,
-          failuresLogLevel = Level.WARN
+          failuresLogLevel = Level.WARN,
         ),
         requestRetryConfig = RetryConfig.noRetries,
-        vertx = null
+        vertx = null,
       ),
       EthLogsSearcherImpl.Config(
-        loopSuccessBackoffDelay = 1.milliseconds
+        loopSuccessBackoffDelay = 1.milliseconds,
       ),
-      log = LogManager.getLogger("test.clients.l1.events-fetcher")
+      log = LogManager.getLogger("test.clients.l1.events-fetcher"),
     )
     val web3jElClient = createWeb3jHttpClient(executionLayerUrl)
     log.info("starting test flow: besu staterecovery block={}", web3jElClient.ethBlockNumber().send().blockNumber)
@@ -167,7 +167,7 @@ class StateRecoveryE2ETest {
       command = "make staterecovery-replay-from-block " +
         "L1_ROLLUP_CONTRACT_ADDRESS=$localStackL1ContractAddress " +
         "STATERECOVERY_OVERRIDE_START_BLOCK_NUMBER=$stateRecoveryStartBlockNumber",
-      log = log
+      log = log,
     ).get()
     // No Errors should be logged in Besu
     assertThat(getBesuErrorLogs()).isEmpty()
@@ -178,7 +178,7 @@ class StateRecoveryE2ETest {
       web3jElClient,
       stateManagerClient,
       lastFinalizationA.event.endBlockNumber,
-      lastFinalizationA.event.finalStateRootHash
+      lastFinalizationA.event.finalStateRootHash,
     )
     // No Errors should be logged in Besu
     assertThat(getBesuErrorLogs()).isEmpty()
@@ -200,7 +200,7 @@ class StateRecoveryE2ETest {
       web3jElClient,
       stateManagerClient,
       lastFinalizationB.event.endBlockNumber,
-      lastFinalizationB.event.finalStateRootHash
+      lastFinalizationB.event.finalStateRootHash,
     )
     // No Errors should be logged in Besu
     assertThat(getBesuErrorLogs()).isEmpty()
@@ -210,7 +210,7 @@ class StateRecoveryE2ETest {
     log.info("Restarting zkbesu-shomei node")
     execCommandAndAssertSuccess(
       command = "docker restart -s 9 zkbesu-shomei-sr",
-      log = log
+      log = log,
     ).get()
     // No Errors should be logged in Besu
     assertThat(getBesuErrorLogs()).isEmpty()
@@ -237,31 +237,36 @@ class StateRecoveryE2ETest {
       web3jElClient,
       stateManagerClient,
       lastFinalizationC.event.endBlockNumber,
-      lastFinalizationC.event.finalStateRootHash
+      lastFinalizationC.event.finalStateRootHash,
     )
     // No Errors should be logged in Besu
     assertThat(getBesuErrorLogs()).isEmpty()
   }
 
   private fun sendTxToL2(
-    keepSendingPredicate: () -> Boolean
+    keepSendingPredicate: () -> Boolean,
   ) {
     val account = L2AccountManager.generateAccount()
     val txManager = L2AccountManager.getTransactionManager(account)
     Thread {
       while (keepSendingPredicate()) {
         val txHash = txManager.sendTransaction(
-          /*gasPrice*/ 150UL.gwei.toBigInteger(),
-          /*gasLimit*/ 25_000UL.toBigInteger(),
-          /*to*/ account.address,
-          /*data*/ "",
-          /*value*/ 1UL.toBigInteger()
+          /*gasPrice*/
+          150UL.gwei.toBigInteger(),
+          /*gasLimit*/
+          25_000UL.toBigInteger(),
+          /*to*/
+          account.address,
+          /*data*/
+          "",
+          /*value*/
+          1UL.toBigInteger(),
         ).transactionHash
         log.trace("sent tx to L2, txHash={}", txHash)
         Web3jClientManager.l2Client.waitForTxReceipt(
           txHash = txHash,
           timeout = 5.seconds,
-          pollingInterval = 500.milliseconds
+          pollingInterval = 500.milliseconds,
         )
       }
     }.start()

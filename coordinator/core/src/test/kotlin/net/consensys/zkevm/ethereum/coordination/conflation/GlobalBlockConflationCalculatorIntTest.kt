@@ -41,27 +41,27 @@ class GlobalBlockConflationCalculatorIntTest {
     conflations = mutableListOf()
     safeBlockProvider = mock<SafeBlockProvider>() {
       on { getLatestSafeBlock() }.thenReturn(
-        SafeFuture.failedFuture(RuntimeException("getLatestSafeBlock should not be called"))
+        SafeFuture.failedFuture(RuntimeException("getLatestSafeBlock should not be called")),
       )
       on { getLatestSafeBlockHeader() }.thenReturn(
-        SafeFuture.failedFuture(RuntimeException("getLatestSafeBlockHeader not mocked yet"))
+        SafeFuture.failedFuture(RuntimeException("getLatestSafeBlockHeader not mocked yet")),
       )
     }
     calculatorByDealine = spy(
       ConflationCalculatorByTimeDeadline(
         config = ConflationCalculatorByTimeDeadline.Config(
           conflationDeadline = 2.seconds,
-          conflationDeadlineLastBlockConfirmationDelay = 10.milliseconds
+          conflationDeadlineLastBlockConfirmationDelay = 10.milliseconds,
         ),
         lastBlockNumber = lastBlockNumber,
-        latestBlockProvider = safeBlockProvider
-      )
+        latestBlockProvider = safeBlockProvider,
+      ),
     )
     val fakeBlobCompressor = FakeBlobCompressor(1_000)
     val calculatorByData = spy(
       ConflationCalculatorByDataCompressed(
-        blobCompressor = fakeBlobCompressor
-      )
+        blobCompressor = fakeBlobCompressor,
+      ),
     )
     whenever(calculatorByData.reset()).then {
       fakeBlobCompressor.reset()
@@ -70,13 +70,13 @@ class GlobalBlockConflationCalculatorIntTest {
     calculatorByTraces = ConflationCalculatorByExecutionTraces(
       tracesCountersLimit = fakeTracesCountersV2(100u),
       emptyTracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT,
-      metricsFacade = mock<MetricsFacade>(defaultAnswer = Mockito.RETURNS_DEEP_STUBS)
+      metricsFacade = mock<MetricsFacade>(defaultAnswer = Mockito.RETURNS_DEEP_STUBS),
     )
     globalCalculator = GlobalBlockConflationCalculator(
       lastBlockNumber = lastBlockNumber,
       syncCalculators = listOf(calculatorByTraces, calculatorByData),
       deferredTriggerConflationCalculators = listOf(calculatorByDealine),
-      emptyTracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT
+      emptyTracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT,
     )
     globalCalculator.onConflatedBatch { trigger ->
       conflations.add(trigger)
@@ -91,13 +91,13 @@ class GlobalBlockConflationCalculatorIntTest {
       blockNumber = 1uL,
       blockTimestamp = fakeClock.now(),
       tracesCounters = fakeTracesCountersV2(101u),
-      blockRLPEncoded = ByteArray(10)
+      blockRLPEncoded = ByteArray(10),
     )
     val block2Counters = BlockCounters(
       blockNumber = 2uL,
       blockTimestamp = fakeClock.now(),
       tracesCounters = fakeTracesCountersV2(10u),
-      blockRLPEncoded = ByteArray(10)
+      blockRLPEncoded = ByteArray(10),
     )
     globalCalculator.newBlock(block1Counters)
     globalCalculator.newBlock(block2Counters)
@@ -108,8 +108,8 @@ class GlobalBlockConflationCalculatorIntTest {
         startBlockNumber = 1uL,
         endBlockNumber = 1uL,
         conflationTrigger = ConflationTrigger.TRACES_LIMIT,
-        tracesCounters = block1Counters.tracesCounters
-      )
+        tracesCounters = block1Counters.tracesCounters,
+      ),
     )
   }
 
@@ -120,13 +120,13 @@ class GlobalBlockConflationCalculatorIntTest {
       blockNumber = 1uL,
       blockTimestamp = fakeClock.now(),
       tracesCounters = fakeTracesCountersV2(60u),
-      blockRLPEncoded = ByteArray(10)
+      blockRLPEncoded = ByteArray(10),
     )
     val block2Counters = BlockCounters(
       blockNumber = 2uL,
       blockTimestamp = fakeClock.now(),
       tracesCounters = fakeTracesCountersV2(50u),
-      blockRLPEncoded = ByteArray(20)
+      blockRLPEncoded = ByteArray(20),
     )
     globalCalculator.newBlock(block1Counters)
     globalCalculator.newBlock(block2Counters)
@@ -137,8 +137,8 @@ class GlobalBlockConflationCalculatorIntTest {
         startBlockNumber = 1uL,
         endBlockNumber = 1uL,
         conflationTrigger = ConflationTrigger.TRACES_LIMIT,
-        tracesCounters = block1Counters.tracesCounters
-      )
+        tracesCounters = block1Counters.tracesCounters,
+      ),
     )
   }
 
@@ -149,19 +149,19 @@ class GlobalBlockConflationCalculatorIntTest {
       blockNumber = 1uL,
       blockTimestamp = fakeClock.now(),
       tracesCounters = fakeTracesCountersV2(50u),
-      blockRLPEncoded = ByteArray(10)
+      blockRLPEncoded = ByteArray(10),
     )
     val block2Counters = BlockCounters(
       blockNumber = 2uL,
       blockTimestamp = fakeClock.now(),
       tracesCounters = fakeTracesCountersV2(50u),
-      blockRLPEncoded = ByteArray(20)
+      blockRLPEncoded = ByteArray(20),
     )
     val block3Counters = BlockCounters(
       blockNumber = 3uL,
       blockTimestamp = fakeClock.now(),
       tracesCounters = fakeTracesCountersV2(10u),
-      blockRLPEncoded = ByteArray(20)
+      blockRLPEncoded = ByteArray(20),
     )
     globalCalculator.newBlock(block1Counters)
     globalCalculator.newBlock(block2Counters)
@@ -173,8 +173,8 @@ class GlobalBlockConflationCalculatorIntTest {
         startBlockNumber = 1uL,
         endBlockNumber = 2uL,
         conflationTrigger = ConflationTrigger.TRACES_LIMIT,
-        tracesCounters = block1Counters.tracesCounters.add(block2Counters.tracesCounters)
-      )
+        tracesCounters = block1Counters.tracesCounters.add(block2Counters.tracesCounters),
+      ),
     )
   }
 
@@ -185,19 +185,19 @@ class GlobalBlockConflationCalculatorIntTest {
       blockNumber = 1uL,
       blockTimestamp = fakeClock.now(),
       tracesCounters = fakeTracesCountersV2(10u),
-      blockRLPEncoded = ByteArray(500)
+      blockRLPEncoded = ByteArray(500),
     )
     val block2Counters = BlockCounters(
       blockNumber = 2uL,
       blockTimestamp = fakeClock.now(),
       tracesCounters = fakeTracesCountersV2(20u),
-      blockRLPEncoded = ByteArray(480)
+      blockRLPEncoded = ByteArray(480),
     )
     val block3Counters = BlockCounters(
       blockNumber = 3uL,
       blockTimestamp = fakeClock.now(),
       tracesCounters = fakeTracesCountersV2(20u),
-      blockRLPEncoded = ByteArray(21)
+      blockRLPEncoded = ByteArray(21),
     )
     globalCalculator.newBlock(block1Counters)
     globalCalculator.newBlock(block2Counters)
@@ -209,8 +209,8 @@ class GlobalBlockConflationCalculatorIntTest {
         startBlockNumber = 1uL,
         endBlockNumber = 2uL,
         conflationTrigger = ConflationTrigger.DATA_LIMIT,
-        tracesCounters = block1Counters.tracesCounters.add(block2Counters.tracesCounters)
-      )
+        tracesCounters = block1Counters.tracesCounters.add(block2Counters.tracesCounters),
+      ),
     )
   }
 
@@ -221,46 +221,46 @@ class GlobalBlockConflationCalculatorIntTest {
       blockNumber = 1uL,
       blockTimestamp = fakeClock.now(),
       tracesCounters = fakeTracesCountersV2(101u),
-      blockRLPEncoded = ByteArray(100)
+      blockRLPEncoded = ByteArray(100),
     )
     // block with data in size limit
     val block2Counters = BlockCounters(
       blockNumber = 2uL,
       blockTimestamp = fakeClock.now(),
       tracesCounters = fakeTracesCountersV2(20u),
-      blockRLPEncoded = ByteArray(1_000)
+      blockRLPEncoded = ByteArray(1_000),
     )
 
     val block3Counters = BlockCounters(
       blockNumber = 3uL,
       blockTimestamp = fakeClock.now(),
       tracesCounters = fakeTracesCountersV2(30u),
-      blockRLPEncoded = ByteArray(300)
+      blockRLPEncoded = ByteArray(300),
     )
     val block4Counters = BlockCounters(
       blockNumber = 4uL,
       blockTimestamp = fakeClock.now(),
       tracesCounters = fakeTracesCountersV2(70u),
-      blockRLPEncoded = ByteArray(400)
+      blockRLPEncoded = ByteArray(400),
     )
     // will trigger traces overflow
     val block5Counters = BlockCounters(
       blockNumber = 5uL,
       blockTimestamp = fakeClock.now(),
       tracesCounters = fakeTracesCountersV2(10u),
-      blockRLPEncoded = ByteArray(100)
+      blockRLPEncoded = ByteArray(100),
     )
     val block6Counters = BlockCounters(
       blockNumber = 6uL,
       blockTimestamp = fakeClock.now(),
       tracesCounters = fakeTracesCountersV2(10u),
-      blockRLPEncoded = ByteArray(100)
+      blockRLPEncoded = ByteArray(100),
     )
     val block7Counters = BlockCounters(
       blockNumber = 7uL,
       blockTimestamp = fakeClock.now(),
       tracesCounters = fakeTracesCountersV2(10u),
-      blockRLPEncoded = ByteArray(100)
+      blockRLPEncoded = ByteArray(100),
     )
 
     globalCalculator.newBlock(block1Counters)
@@ -278,9 +278,9 @@ class GlobalBlockConflationCalculatorIntTest {
         BlockHeaderSummary(
           number = 7uL,
           hash = ByteArrayExt.random32(),
-          timestamp = block7Counters.blockTimestamp
-        )
-      )
+          timestamp = block7Counters.blockTimestamp,
+        ),
+      ),
     )
 
     calculatorByDealine.checkConflationDeadline()
@@ -290,24 +290,24 @@ class GlobalBlockConflationCalculatorIntTest {
         startBlockNumber = 1uL,
         endBlockNumber = 1uL,
         conflationTrigger = ConflationTrigger.DATA_LIMIT,
-        tracesCounters = block1Counters.tracesCounters
-      )
+        tracesCounters = block1Counters.tracesCounters,
+      ),
     )
     assertThat(conflations[1]).isEqualTo(
       ConflationCalculationResult(
         startBlockNumber = 2uL,
         endBlockNumber = 2uL,
         conflationTrigger = ConflationTrigger.DATA_LIMIT,
-        tracesCounters = block2Counters.tracesCounters
-      )
+        tracesCounters = block2Counters.tracesCounters,
+      ),
     )
     assertThat(conflations[2]).isEqualTo(
       ConflationCalculationResult(
         startBlockNumber = 3uL,
         endBlockNumber = 4uL,
         conflationTrigger = ConflationTrigger.TRACES_LIMIT,
-        tracesCounters = block3Counters.tracesCounters.add(block4Counters.tracesCounters)
-      )
+        tracesCounters = block3Counters.tracesCounters.add(block4Counters.tracesCounters),
+      ),
     )
     assertThat(conflations[3]).isEqualTo(
       ConflationCalculationResult(
@@ -315,8 +315,8 @@ class GlobalBlockConflationCalculatorIntTest {
         endBlockNumber = 7uL,
         conflationTrigger = ConflationTrigger.TIME_LIMIT,
         tracesCounters =
-        block5Counters.tracesCounters.add(block6Counters.tracesCounters).add(block7Counters.tracesCounters)
-      )
+        block5Counters.tracesCounters.add(block6Counters.tracesCounters).add(block7Counters.tracesCounters),
+      ),
     )
     assertThat(conflations).hasSize(4)
   }

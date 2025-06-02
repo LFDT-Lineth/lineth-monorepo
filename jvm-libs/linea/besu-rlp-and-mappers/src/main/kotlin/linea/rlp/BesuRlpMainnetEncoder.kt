@@ -16,14 +16,14 @@ object BesuMainnetBlockRlpDecoder : BesuBlockRlpDecoder {
 
 class BesuRlpMainnetEncoderAsyncVertxImpl(
   val vertx: Vertx,
-  val encoder: BesuBlockRlpEncoder = BesuMainnetBlockRlpEncoder
+  val encoder: BesuBlockRlpEncoder = BesuMainnetBlockRlpEncoder,
 ) : BesuBlockRlpEncoderAsync {
   override fun encodeAsync(block: Block): SafeFuture<ByteArray> {
     return vertx.executeBlocking(
       Callable {
         encoder.encode(block)
       },
-      false
+      false,
     )
       .toSafeFuture()
   }
@@ -36,7 +36,7 @@ class BesuRlpMainnetEncoderAsyncVertxImpl(
  */
 class BesuRlpDecoderAsyncVertxImpl(
   private val vertx: Vertx,
-  private val decoder: BesuBlockRlpDecoder
+  private val decoder: BesuBlockRlpDecoder,
 ) : BesuBlockRlpDecoderAsync {
   companion object {
     fun mainnetDecoder(vertx: Vertx): BesuBlockRlpDecoderAsync {
@@ -53,7 +53,7 @@ class BesuRlpDecoderAsyncVertxImpl(
       Callable {
         decoder.decode(block)
       },
-      false
+      false,
     )
       .toSafeFuture()
   }

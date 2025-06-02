@@ -24,20 +24,20 @@ class InMemoryRecoveryStatus : RecoveryStatusPersistence {
 }
 
 class FileBasedRecoveryStatusPersistence(
-  filePath: Path
+  filePath: Path,
 ) : RecoveryStatusPersistence {
   // A little future proofing in case we need to change the file format in the future
   private enum class FileVersion {
-    V1 // note: do not rename because it will fail to parse the file if already written
+    V1, // note: do not rename because it will fail to parse the file if already written
   }
 
   private data class RecoveryStatusEnvelopeDto(
     val version: FileVersion,
-    val recoveryStatus: RecoveryStatusV1Dto?
+    val recoveryStatus: RecoveryStatusV1Dto?,
   )
 
   private data class RecoveryStatusV1Dto(
-    val recoveryStartBlockNumber: ULong
+    val recoveryStartBlockNumber: ULong,
   )
   private val objectMapper = jacksonObjectMapper()
   private val file = filePath.toFile()
@@ -46,8 +46,8 @@ class FileBasedRecoveryStatusPersistence(
   private fun saveToFile(status: RecoveryStatusV1Dto?) {
     file.writeText(
       objectMapper.writeValueAsString(
-        RecoveryStatusEnvelopeDto(FileVersion.V1, status)
-      )
+        RecoveryStatusEnvelopeDto(FileVersion.V1, status),
+      ),
     )
   }
 

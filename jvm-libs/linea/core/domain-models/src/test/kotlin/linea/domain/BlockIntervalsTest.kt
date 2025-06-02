@@ -12,7 +12,7 @@ class BlockIntervalsTest {
     val expected = listOf(
       BlockIntervalData(11u, 21u),
       BlockIntervalData(22u, 27u),
-      BlockIntervalData(28u, 35u)
+      BlockIntervalData(28u, 35u),
     )
     Assertions.assertTrue(expected == blockIntervals.toIntervalList())
   }
@@ -22,7 +22,7 @@ class BlockIntervalsTest {
     val intervals = listOf(
       BlockIntervalData(0UL, 9UL),
       BlockIntervalData(20UL, 29UL),
-      BlockIntervalData(10UL, 19UL)
+      BlockIntervalData(10UL, 19UL),
     )
 
     val exception = assertThrows<IllegalArgumentException> {
@@ -39,8 +39,8 @@ class BlockIntervalsTest {
         listOf(
           BlockIntervalData(0UL, 9UL),
           BlockIntervalData(11UL, 19UL),
-          BlockIntervalData(20UL, 29UL)
-        )
+          BlockIntervalData(20UL, 29UL),
+        ),
       )
     }
 
@@ -51,8 +51,8 @@ class BlockIntervalsTest {
         listOf(
           BlockIntervalData(0UL, 11UL),
           BlockIntervalData(10UL, 19UL),
-          BlockIntervalData(20UL, 29UL)
-        )
+          BlockIntervalData(20UL, 29UL),
+        ),
       )
     }
 

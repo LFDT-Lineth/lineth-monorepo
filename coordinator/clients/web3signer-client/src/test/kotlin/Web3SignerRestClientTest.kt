@@ -68,8 +68,8 @@ class Web3SignerRestClientTest {
         .willReturn(
           WireMock.ok()
             .withHeader("Content-type", "text/plain; charset=utf-8\n")
-            .withBody(returnSignature)
-        )
+            .withBody(returnSignature),
+        ),
     )
 
     val (r, s) = web3SignerClient.sign(Bytes.wrap(msg.toByteArray()))
@@ -89,8 +89,8 @@ class Web3SignerRestClientTest {
         .willReturn(
           WireMock.notFound()
             .withHeader("Content-type", "text/plain; charset=utf-8\n")
-            .withStatusMessage("Public Key not found")
-        )
+            .withStatusMessage("Public Key not found"),
+        ),
     )
     assertThrows<Exception> { web3SignerClient.sign(Bytes.wrap("Message".toByteArray())) }
   }

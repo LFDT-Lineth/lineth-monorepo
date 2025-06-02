@@ -29,6 +29,6 @@ interface JsonRpcV2Client {
     method: String,
     params: Any, // List<Any?>, Map<String, Any?>, Pojo
     shallRetryRequestPredicate: Predicate<Result<T, Throwable>> = Predicate { false },
-    resultMapper: (Any?) -> T
+    resultMapper: (Any?) -> T,
   ): SafeFuture<T>
 }

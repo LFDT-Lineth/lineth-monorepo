@@ -13,7 +13,7 @@ class LineaSubmissionEventsClientImpl(
   private val logsSearcher: EthLogsSearcher,
   private val smartContractAddress: String,
   private val l1LatestSearchBlock: BlockParameter = BlockParameter.Tag.FINALIZED,
-  private val logsBlockChunkSize: Int
+  private val logsBlockChunkSize: Int,
 ) : LineaRollupSubmissionEventsClient {
   init {
     require(logsBlockChunkSize > 0) { "logsBlockChunkSize=$logsBlockChunkSize must be greater than 0" }
@@ -21,7 +21,7 @@ class LineaSubmissionEventsClientImpl(
 
   private fun findDataFinalizedEventContainingBlock(
     fromBlock: BlockParameter,
-    l2BlockNumber: ULong
+    l2BlockNumber: ULong,
   ): SafeFuture<EthLogEvent<DataFinalizedV3>?> {
     return logsSearcher.findLog(
       fromBlock = fromBlock,
@@ -36,18 +36,18 @@ class LineaSubmissionEventsClientImpl(
           l2BlockNumber > event.endBlockNumber -> SearchDirection.FORWARD
           else -> null
         }
-      }
+      },
     ).thenApply { it?.let { DataFinalizedV3.fromEthLog(it) } }
   }
 
   override fun findFinalizationAndDataSubmissionV3Events(
     fromL1BlockNumber: BlockParameter,
-    finalizationStartBlockNumber: ULong
+    finalizationStartBlockNumber: ULong,
   ): SafeFuture<FinalizationAndDataEventsV3?> {
     return findDataFinalizedV3Event(
       fromL1BlockNumber = fromL1BlockNumber,
       toL1BlockNumber = l1LatestSearchBlock,
-      startBlockNumber = finalizationStartBlockNumber
+      startBlockNumber = finalizationStartBlockNumber,
     )
       .thenCompose { finalizationEvent ->
         finalizationEvent
@@ -63,7 +63,7 @@ class LineaSubmissionEventsClientImpl(
 
   override fun findFinalizationAndDataSubmissionV3EventsContainingL2BlockNumber(
     fromL1BlockNumber: BlockParameter,
-    l2BlockNumber: ULong
+    l2BlockNumber: ULong,
   ): SafeFuture<FinalizationAndDataEventsV3?> {
     return findDataFinalizedEventContainingBlock(fromL1BlockNumber, l2BlockNumber)
       .thenCompose { finalizationEvent ->
@@ -82,7 +82,7 @@ class LineaSubmissionEventsClientImpl(
     fromL1BlockNumber: BlockParameter,
     toL1BlockNumber: BlockParameter,
     startBlockNumber: ULong? = null,
-    endBlockNumber: ULong? = null
+    endBlockNumber: ULong? = null,
   ): SafeFuture<EthLogEvent<DataFinalizedV3>?> {
     assert(startBlockNumber != null || endBlockNumber != null) {
       "Either startBlockNumber or endBlockNumber must be provided"
@@ -104,8 +104,8 @@ class LineaSubmissionEventsClientImpl(
       topics = listOf(
         DataFinalizedV3.topic,
         startBlockNumber?.toHexStringUInt256(),
-        endBlockNumber?.toHexStringUInt256()
-      )
+        endBlockNumber?.toHexStringUInt256(),
+      ),
     ).thenCompose { rawLogs ->
       val finalizedEvents = rawLogs.map(DataFinalizedV3::fromEthLog)
 
@@ -122,7 +122,7 @@ class LineaSubmissionEventsClientImpl(
   }
 
   private fun findAggregationDataSubmittedV3Events(
-    finalizationEvent: EthLogEvent<DataFinalizedV3>
+    finalizationEvent: EthLogEvent<DataFinalizedV3>,
   ): SafeFuture<List<EthLogEvent<DataSubmittedV3>>> {
     val dataEvents = mutableListOf<EthLogEvent<DataSubmittedV3>>()
     val futureResult = SafeFuture<List<EthLogEvent<DataSubmittedV3>>>()
@@ -140,7 +140,7 @@ class LineaSubmissionEventsClientImpl(
         findDataSubmittedV3EventByShnarf(
           fromL1BlockParameter = BlockParameter.Tag.EARLIEST,
           tol1BlockParameter = dataSubmission.log.blockNumber.toLong().toBlockParameter(),
-          shnarf = dataSubmission.event.parentShnarf
+          shnarf = dataSubmission.event.parentShnarf,
         ).thenPeek(::fetchParentDataSubmission)
       }
     }
@@ -148,7 +148,7 @@ class LineaSubmissionEventsClientImpl(
     getDataSubmittedV3EventByShnarf(
       fromL1BlockParameter = BlockParameter.Tag.EARLIEST,
       tol1BlockParameter = finalizationEvent.log.blockNumber.toLong().toBlockParameter(),
-      shnarf = finalizationEvent.event.shnarf
+      shnarf = finalizationEvent.event.shnarf,
     ).thenPeek(::fetchParentDataSubmission)
 
     return futureResult
@@ -157,7 +157,7 @@ class LineaSubmissionEventsClientImpl(
   private fun getDataSubmittedV3EventByShnarf(
     fromL1BlockParameter: BlockParameter,
     tol1BlockParameter: BlockParameter,
-    shnarf: ByteArray
+    shnarf: ByteArray,
   ): SafeFuture<EthLogEvent<DataSubmittedV3>> {
     return findDataSubmittedV3EventByShnarf(fromL1BlockParameter, tol1BlockParameter, shnarf)
       .thenApply { event ->
@@ -168,7 +168,7 @@ class LineaSubmissionEventsClientImpl(
   private fun findDataSubmittedV3EventByShnarf(
     fromL1BlockParameter: BlockParameter,
     tol1BlockParameter: BlockParameter,
-    shnarf: ByteArray
+    shnarf: ByteArray,
   ): SafeFuture<EthLogEvent<DataSubmittedV3>?> {
     return logsSearcher
       .getLogs(
@@ -177,8 +177,8 @@ class LineaSubmissionEventsClientImpl(
         address = smartContractAddress,
         topics = listOf(
           DataSubmittedV3.topic,
-          shnarf.encodeHex()
-        )
+          shnarf.encodeHex(),
+        ),
       )
       .thenApply { rawLogs ->
         val events = rawLogs.map(DataSubmittedV3::fromEthLog)

@@ -8,12 +8,12 @@ class TransactionDetail(
   val walletId: Int,
   val nonce: BigInteger,
   @Transient val ethSendTransactionRequest: Request<*, EthSendTransaction>,
-  val expectedOutcome: EXPECTED_OUTCOME = EXPECTED_OUTCOME.SUCCESS
+  val expectedOutcome: ExpectedOutcome = ExpectedOutcome.SUCCESS,
 ) {
   var hash: String? = null
 }
 
-enum class EXPECTED_OUTCOME {
+enum class ExpectedOutcome {
   // TODO: NOT_EXECUTED should be used for non profitable or underpriced transactions.
   FAILED, SUCCESS, NOT_EXECUTED
 }

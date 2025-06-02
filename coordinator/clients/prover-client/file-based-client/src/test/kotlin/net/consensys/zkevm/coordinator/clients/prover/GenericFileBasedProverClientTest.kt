@@ -49,17 +49,19 @@ class GenericFileBasedProverClientTest {
     ProofRequest,
     ProofResponse,
     ProofRequestDto,
-    ProofResponseDto
+    ProofResponseDto,
     >
   private lateinit var proverConfig: FileBasedProverConfig
 
   private fun createProverClient(
     config: FileBasedProverConfig,
-    vertx: Vertx
-  ): GenericFileBasedProverClient<ProofRequest,
+    vertx: Vertx,
+  ): GenericFileBasedProverClient<
+    ProofRequest,
     ProofResponse,
     ProofRequestDto,
-    ProofResponseDto> {
+    ProofResponseDto,
+    > {
     return GenericFileBasedProverClient(
       config = config,
       vertx = vertx,
@@ -67,20 +69,20 @@ class GenericFileBasedProverClientTest {
       fileReader = FileReader(
         vertx,
         JsonSerialization.proofResponseMapperV1,
-        ProofResponseDto::class.java
+        ProofResponseDto::class.java,
       ),
       requestFileNameProvider = requestFileNameProvider,
       responseFileNameProvider = responseFileNameProvider,
       requestMapper = { SafeFuture.completedFuture(ProofRequestDto.fromDomain(it)) },
       proofTypeLabel = "batch",
-      responseMapper = ProofResponseDto::toDomain
+      responseMapper = ProofResponseDto::toDomain,
     )
   }
 
   @BeforeEach
   fun beforeEach(
     vertx: Vertx,
-    @TempDir tempDir: Path
+    @TempDir tempDir: Path,
   ) {
     proverConfig = FileBasedProverConfig(
       requestsDirectory = tempDir.resolve("requests"),
@@ -88,7 +90,7 @@ class GenericFileBasedProverClientTest {
       inprogressProvingSuffixPattern = ".*\\.inprogress\\.prover.*",
       inprogressRequestWritingSuffix = "coordinator_writing_inprogress",
       pollingInterval = 100.milliseconds,
-      pollingTimeout = 2.seconds
+      pollingTimeout = 2.seconds,
     )
 
     proverClient = createProverClient(proverConfig, vertx)
@@ -114,12 +116,12 @@ class GenericFileBasedProverClientTest {
 
   @Test
   fun `when it cannot create request and response directories shall fail`(
-    vertx: Vertx
+    vertx: Vertx,
   ) {
     val dirWithoutWritePermissions = Path.of("/invalid/path")
     val invalidConfig = proverConfig.copy(
       requestsDirectory = dirWithoutWritePermissions.resolve("requests"),
-      responsesDirectory = dirWithoutWritePermissions.resolve("responses")
+      responsesDirectory = dirWithoutWritePermissions.resolve("responses"),
     )
     assertThrows<Exception> {
       createProverClient(invalidConfig, vertx)
@@ -197,7 +199,7 @@ class GenericFileBasedProverClientTest {
     // 8930088-8930101-etv0.2.0-stv2.2.0-getZkProof.json.inprogress.prover-aggregation-97695c877-vgsfg
     val requestProvingInprogressFilePath = proverConfig.requestsDirectory.resolve(
       requestFileNameProvider.getFileName(proofIndex) +
-        "some-midle-str.inprogress.prover-aggregation-97695c877-vgsfg"
+        "some-midle-str.inprogress.prover-aggregation-97695c877-vgsfg",
     )
     // write request with a different block number content to check tha it was not overwritten
     saveToFile(requestProvingInprogressFilePath, ProofRequestDto(blockNumberStart = 4u, blockNumberEnd = 44444u))

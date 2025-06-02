@@ -196,4 +196,3 @@ public class UnderPricedTransaction extends Scenario {
     return JSON.getGson().toJson(this);
   }
 }
-

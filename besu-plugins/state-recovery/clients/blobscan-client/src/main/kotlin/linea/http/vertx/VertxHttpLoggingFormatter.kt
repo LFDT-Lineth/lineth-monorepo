@@ -9,7 +9,7 @@ interface VertxHttpLoggingFormatter {
   fun toLogString(
     request: HttpRequest<Buffer>,
     response: HttpResponse<Buffer>? = null,
-    failureCause: Throwable? = null
+    failureCause: Throwable? = null,
   ): String
 }
 
@@ -22,14 +22,14 @@ fun HttpRequest<*>.fullUri(): String {
     scheme,
     this.host(),
     this.port(),
-    path
+    path,
   )
 }
 
 class VertxRestLoggingFormatter(
   private val includeFullUri: Boolean = false,
   private val uriTransformer: (String) -> String = { it },
-  private val responseLogMaxSize: UInt? = null
+  private val responseLogMaxSize: UInt? = null,
 ) : VertxHttpLoggingFormatter {
   fun HttpRequest<*>.uriToLog(): String {
     return if (includeFullUri) {
@@ -46,14 +46,14 @@ class VertxRestLoggingFormatter(
   override fun toLogString(
     request: HttpRequest<Buffer>,
     response: HttpResponse<Buffer>?,
-    failureCause: Throwable?
+    failureCause: Throwable?,
   ): String {
     return if (failureCause != null) {
       String.format(
         "<-- %s %s %s",
         request.method(),
         uriTransformer.invoke(request.uriToLog()),
-        failureCause.message?.let { errorMsg -> "error=$errorMsg" } ?: ""
+        failureCause.message?.let { errorMsg -> "error=$errorMsg" } ?: "",
       )
     } else {
       val responseToLog = response?.bodyAsString()?.let { bodyStr ->
@@ -68,7 +68,7 @@ class VertxRestLoggingFormatter(
         request.method(),
         uriTransformer.invoke(request.uriToLog()),
         response?.statusCode() ?: "",
-        responseToLog
+        responseToLog,
       )
     }
   }

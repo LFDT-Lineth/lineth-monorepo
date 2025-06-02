@@ -9,7 +9,7 @@ enum class TracesServiceErrorType {
   BLOCK_MISSING_IN_CHAIN,
   BLOCK_RANGE_TOO_LARGE,
   INVALID_TRACES_VERSION,
-  UNKNOWN_ERROR
+  UNKNOWN_ERROR,
 }
 
 data class GetTracesCountersResponse(val tracesCounters: TracesCounters, val tracesEngineVersion: String)
@@ -18,13 +18,13 @@ data class GenerateTracesResponse(val tracesFileName: String, val tracesEngineVe
 
 interface TracesCountersClientV2 {
   fun getTracesCounters(
-    blockNumber: ULong
+    blockNumber: ULong,
   ): SafeFuture<Result<GetTracesCountersResponse, ErrorResponse<TracesServiceErrorType>>>
 }
 
 interface TracesConflationClientV2 {
   fun generateConflatedTracesToFile(
     startBlockNumber: ULong,
-    endBlockNumber: ULong
+    endBlockNumber: ULong,
   ): SafeFuture<Result<GenerateTracesResponse, ErrorResponse<TracesServiceErrorType>>>
 }

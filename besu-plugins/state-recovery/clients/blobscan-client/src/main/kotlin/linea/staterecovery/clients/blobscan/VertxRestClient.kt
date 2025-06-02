@@ -8,7 +8,7 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 // TODO: move to a common module
 data class RestResponse<T>(
   val statusCode: Int,
-  val body: T?
+  val body: T?,
 )
 
 interface RestClient<Response> {
@@ -20,13 +20,13 @@ class VertxRestClient<Response>(
   private val webClient: WebClient,
   private val responseParser: (Buffer) -> Response,
   private val requestSender: VertxHttpRequestSender,
-  private val requestHeaders: Map<String, String> = mapOf("Accept" to "application/json")
+  private val requestHeaders: Map<String, String> = mapOf("Accept" to "application/json"),
 ) : RestClient<Response> {
   override fun get(path: String): SafeFuture<RestResponse<Response>> {
     return requestSender.makeRequest(
       webClient
         .get(path)
-        .apply { requestHeaders.forEach(::putHeader) }
+        .apply { requestHeaders.forEach(::putHeader) },
     )
       .thenApply { response ->
         val parsedResponse = response.body()?.let(responseParser)

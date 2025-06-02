@@ -5,7 +5,7 @@ import kotlinx.datetime.Instant
 data class AggregationL2State(
   val parentAggregationLastBlockTimestamp: Instant,
   val parentAggregationLastL1RollingHashMessageNumber: ULong,
-  val parentAggregationLastL1RollingHash: ByteArray
+  val parentAggregationLastL1RollingHash: ByteArray,
 ) {
   override fun equals(other: Any?): Boolean {
     if (this === other) return true

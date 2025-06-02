@@ -36,7 +36,7 @@ open class LineaStateRecoveryPlugin : BesuPlugin {
     warningExceptionTime = 5.minutes,
     jvmMetricsEnabled = false,
     prometheusMetricsEnabled = false,
-    preferNativeTransport = false
+    preferNativeTransport = false,
   )
   private val cliOptions = PluginCliOptions()
   private lateinit var serviceManager: ServiceManager
@@ -59,18 +59,18 @@ open class LineaStateRecoveryPlugin : BesuPlugin {
     val blockHeaderStaticFields = BlockHeaderStaticFields(
       coinbase = config.lineaSequencerBeneficiaryAddress.toArray(),
       gasLimit = config.lineaBlockGasLimit,
-      difficulty = config.lineaBlockDifficulty
+      difficulty = config.lineaBlockDifficulty,
     )
     this.recoveryStatusPersistence = FileBasedRecoveryStatusPersistence(
       serviceManager.getServiceOrThrow(BesuConfiguration::class.java)
         .dataPath
-        .resolve("plugin-staterecovery-status.json")
+        .resolve("plugin-staterecovery-status.json"),
     )
     log.info(
       "starting: config={} blockHeaderStaticFields={} previousRecoveryStartBlockNumber={}",
       config,
       blockHeaderStaticFields,
-      this.recoveryStatusPersistence.getRecoveryStartBlockNumber()
+      this.recoveryStatusPersistence.getRecoveryStartBlockNumber(),
     )
 
     val synchronizationService = serviceManager.getServiceOrThrow(SynchronizationService::class.java)
@@ -80,7 +80,7 @@ open class LineaStateRecoveryPlugin : BesuPlugin {
       recoveryStatePersistence = this.recoveryStatusPersistence,
       synchronizationService = synchronizationService,
       headBlockNumber = blockchainService.chainHeadHeader.number.toULong(),
-      debugForceSyncStopBlockNumber = config.debugForceSyncStopBlockNumber
+      debugForceSyncStopBlockNumber = config.debugForceSyncStopBlockNumber,
     )
     val simulatorService = serviceManager.getServiceOrThrow(BlockSimulationService::class.java)
     val executionLayerClient = ExecutionLayerInProcessClient.create(
@@ -88,7 +88,7 @@ open class LineaStateRecoveryPlugin : BesuPlugin {
       stateRecoveryModeManager = this.recoveryModeManager,
       stateRecoveryStatusPersistence = this.recoveryStatusPersistence,
       simulatorService = simulatorService,
-      synchronizationService = synchronizationService
+      synchronizationService = synchronizationService,
     )
 
     this.stateRecoverApp = run {
@@ -112,8 +112,8 @@ open class LineaStateRecoveryPlugin : BesuPlugin {
           l1LatestSearchBlock = config.l1HighestSearchBlock,
           l1PollingInterval = config.l1PollingInterval,
           overridingRecoveryStartBlockNumber = config.overridingRecoveryStartBlockNumber,
-          debugForceSyncStopBlockNumber = config.debugForceSyncStopBlockNumber
-        )
+          debugForceSyncStopBlockNumber = config.debugForceSyncStopBlockNumber,
+        ),
       )
     }
     // add recoverty mode manager as listener to block added events
@@ -129,7 +129,7 @@ open class LineaStateRecoveryPlugin : BesuPlugin {
     this.recoveryModeManager.enableRecoveryModeIfNecessary()
     log.info(
       "started: recoveryStartBlockNumber={}",
-      this.recoveryStatusPersistence.getRecoveryStartBlockNumber()
+      this.recoveryStatusPersistence.getRecoveryStartBlockNumber(),
     )
     this.stateRecoverApp.start().get()
   }

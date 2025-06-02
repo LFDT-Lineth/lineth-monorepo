@@ -43,7 +43,7 @@ class ZkProofCreationCoordinatorImplTest {
     zkProofCreationCoordinator = ZkProofCreationCoordinatorImpl(
       executionProverClient = executionProverClient,
       messageServiceAddress = messageServiceAddress,
-      l2EthApiClient = l2EthApiClient
+      l2EthApiClient = l2EthApiClient,
     )
   }
 
@@ -54,11 +54,11 @@ class ZkProofCreationCoordinatorImplTest {
     val block2 = createBlock(number = 124UL, stateRoot = ByteArray(32) { 0x2 })
     val block1Logs = listOf(
       createMessageSentEthLogV1(blockNumber = 123UL, contractAddress = messageServiceAddress),
-      createL2RollingHashUpdatedEthLogV1(blockNumber = 123UL, contractAddress = messageServiceAddress)
+      createL2RollingHashUpdatedEthLogV1(blockNumber = 123UL, contractAddress = messageServiceAddress),
     )
     val block2Logs = listOf(
       createMessageSentEthLogV1(blockNumber = 124UL, contractAddress = messageServiceAddress),
-      createL2RollingHashUpdatedEthLogV1(blockNumber = 124UL, contractAddress = messageServiceAddress)
+      createL2RollingHashUpdatedEthLogV1(blockNumber = 124UL, contractAddress = messageServiceAddress),
     )
 
     l2EthApiClient.addBlocks(listOf(block0, block1, block2))
@@ -71,11 +71,11 @@ class ZkProofCreationCoordinatorImplTest {
       zkStateMerkleProof = ArrayNode(null),
       zkParentStateRootHash = ByteArrayExt.random32(),
       zkEndStateRootHash = ByteArrayExt.random32(),
-      zkStateManagerVersion = "2.0.0"
+      zkStateManagerVersion = "2.0.0",
     )
     val generateTracesResponse = GenerateTracesResponse(
       tracesFileName = "123-124-conflated-traces.json",
-      tracesEngineVersion = "1.0.0"
+      tracesEngineVersion = "1.0.0",
     )
 
     whenever(executionProverClient.requestProof(any()))
@@ -83,9 +83,9 @@ class ZkProofCreationCoordinatorImplTest {
         SafeFuture.completedFuture(
           BatchExecutionProofResponse(
             startBlockNumber = 123UL,
-            endBlockNumber = 124UL
-          )
-        )
+            endBlockNumber = 124UL,
+          ),
+        ),
       )
 
     val batch = zkProofCreationCoordinator.createZkProof(
@@ -95,13 +95,13 @@ class ZkProofCreationCoordinatorImplTest {
           startBlockNumber = 123UL,
           endBlockNumber = 124UL,
           conflationTrigger = ConflationTrigger.TRACES_LIMIT,
-          tracesCounters = fakeTracesCountersV2(0u)
-        )
+          tracesCounters = fakeTracesCountersV2(0u),
+        ),
       ),
       traces = BlocksTracesConflated(
         tracesResponse = generateTracesResponse,
-        zkStateTraces = type2StateResponse
-      )
+        zkStateTraces = type2StateResponse,
+      ),
     ).get()
 
     assertThat(batch.startBlockNumber).isEqualTo(123UL)
@@ -113,8 +113,8 @@ class ZkProofCreationCoordinatorImplTest {
         tracesResponse = generateTracesResponse,
         bridgeLogs = listOf(block1Logs, block2Logs).flatten(),
         type2StateData = type2StateResponse,
-        keccakParentStateRootHash = block0.stateRoot
-      )
+        keccakParentStateRootHash = block0.stateRoot,
+      ),
     )
   }
 }

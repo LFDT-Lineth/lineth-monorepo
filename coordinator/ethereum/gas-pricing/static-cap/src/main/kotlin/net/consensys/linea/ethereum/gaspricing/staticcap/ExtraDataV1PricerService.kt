@@ -17,11 +17,11 @@ class ExtraDataV1PricerService(
   private val feesFetcher: FeesFetcher,
   private val minerExtraDataCalculatorImpl: MinerExtraDataV1CalculatorImpl,
   private val extraDataUpdater: ExtraDataUpdater,
-  private val log: Logger = LogManager.getLogger(ExtraDataV1PricerService::class.java)
+  private val log: Logger = LogManager.getLogger(ExtraDataV1PricerService::class.java),
 ) : PeriodicPollingService(
   vertx = vertx,
   pollingIntervalMs = pollingInterval.inWholeMilliseconds,
-  log = log
+  log = log,
 ) {
   private var lastExtraData: MinerExtraDataV1? = null
 
@@ -37,7 +37,7 @@ class ExtraDataV1PricerService(
           log.info(
             "L2 extra data update: extraData={} l1Blocks={}",
             newExtraData,
-            blockRange.toIntervalString()
+            blockRange.toIntervalString(),
           )
         }
         // even if extraData value is old, still call sequencer node, they may be restarted

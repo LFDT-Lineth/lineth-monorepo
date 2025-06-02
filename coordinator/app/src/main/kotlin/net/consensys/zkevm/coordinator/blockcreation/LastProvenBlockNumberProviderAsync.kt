@@ -15,7 +15,7 @@ interface LastProvenBlockNumberProviderSync {
 
 class BatchesRepoBasedLastProvenBlockNumberProvider(
   startingBlockNumberExclusive: Long,
-  private val batchesRepository: BatchesRepository
+  private val batchesRepository: BatchesRepository,
 ) : LastProvenBlockNumberProviderAsync, LastProvenBlockNumberProviderSync {
   private var latestL1FinalizedBlock: AtomicLong = AtomicLong(startingBlockNumberExclusive)
   private var lastProvenBlock: AtomicLong = AtomicLong(startingBlockNumberExclusive)
@@ -35,7 +35,7 @@ class BatchesRepoBasedLastProvenBlockNumberProvider(
 
   private fun findAndCacheLastProvenBlockNumberFromDb(): SafeFuture<Long> {
     return batchesRepository.findHighestConsecutiveEndBlockNumberFromBlockNumber(
-      latestL1FinalizedBlock.get() + 1
+      latestL1FinalizedBlock.get() + 1,
     ).thenApply {
         newValue ->
       if (newValue != null) {

@@ -19,14 +19,14 @@ interface BlockInterval {
   companion object {
     operator fun invoke(
       startBlockNumber: ULong,
-      endBlockNumber: ULong
+      endBlockNumber: ULong,
     ): BlockInterval {
       return BlockIntervalData(startBlockNumber, endBlockNumber)
     }
 
     operator fun invoke(
       startBlockNumber: Number,
-      endBlockNumber: Number
+      endBlockNumber: Number,
     ): BlockInterval {
       assert(startBlockNumber.toLong() >= 0 && endBlockNumber.toLong() >= 0) {
         "startBlockNumber=${startBlockNumber.toLong()} and " +
@@ -41,7 +41,7 @@ interface BlockInterval {
      */
     fun between(
       startBlockNumber: ULong,
-      endBlockNumber: ULong
+      endBlockNumber: ULong,
     ): BlockInterval {
       return BlockIntervalData(startBlockNumber, endBlockNumber)
     }
@@ -55,7 +55,7 @@ interface BlockInterval {
  */
 data class BlockIntervalData(
   override val startBlockNumber: ULong,
-  override val endBlockNumber: ULong
+  override val endBlockNumber: ULong,
 ) : BlockInterval {
   init {
     require(startBlockNumber <= endBlockNumber) {
@@ -69,12 +69,12 @@ fun List<BlockInterval>.toBlockIntervalsString(): String {
     separator = ", ",
     prefix = "[",
     postfix = "]$size",
-    transform = BlockInterval::intervalString
+    transform = BlockInterval::intervalString,
   )
 }
 
 fun <T : BlockInterval> List<T>.filterOutWithEndBlockNumberBefore(
-  endBlockNumberInclusive: ULong
+  endBlockNumberInclusive: ULong,
 ): List<T> {
   return this.filter { int -> int.endBlockNumber > endBlockNumberInclusive }
 }
@@ -97,7 +97,7 @@ fun assertConsecutiveIntervals(intervals: List<BlockInterval>) {
  */
 data class BlockIntervals(
   val startingBlockNumber: ULong,
-  val upperBoundaries: List<ULong>
+  val upperBoundaries: List<ULong>,
 ) {
   // This default constructor is to avoid the parse error when deserializing
   constructor() : this(0UL, listOf())
@@ -121,6 +121,6 @@ fun List<BlockInterval>.toBlockIntervals(): BlockIntervals {
   require(isNotEmpty()) { "BlockIntervals list must not be empty" }
   return BlockIntervals(
     startingBlockNumber = first().startBlockNumber,
-    upperBoundaries = map { it.endBlockNumber }
+    upperBoundaries = map { it.endBlockNumber },
   )
 }

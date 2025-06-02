@@ -11,7 +11,7 @@ data class EthLog(
   val blockNumber: ULong,
   val address: ByteArray,
   val data: ByteArray,
-  val topics: List<ByteArray>
+  val topics: List<ByteArray>,
 ) {
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
@@ -61,7 +61,7 @@ data class EthLog(
 
 data class EthLogEvent<E>(
   val event: E,
-  val log: EthLog
+  val log: EthLog,
 ) : Comparable<EthLogEvent<E>> {
   override fun compareTo(other: EthLogEvent<E>): Int {
     return when {

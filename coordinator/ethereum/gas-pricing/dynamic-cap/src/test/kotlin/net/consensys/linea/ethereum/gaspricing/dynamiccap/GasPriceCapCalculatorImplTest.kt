@@ -21,7 +21,7 @@ class GasPriceCapCalculatorImplTest {
       finalizationTargetMaxDelay = 32.hours,
       historicGasPriceCap = 1000000000uL, // 1GWei
       elapsedTimeSinceBlockTimestamp = 1.hours,
-      timeOfDayMultiplier = 1.75 // i.e. SUNDAY_2 in config/common/gas-price-cap-time-of-day-multipliers.toml
+      timeOfDayMultiplier = 1.75, // i.e. SUNDAY_2 in config/common/gas-price-cap-time-of-day-multipliers.toml
     )
     assertThat(calculatedGasPriceCap).isEqualTo(1042724609uL)
   }
@@ -38,7 +38,7 @@ class GasPriceCapCalculatorImplTest {
       finalizationTargetMaxDelay = 32.hours,
       historicGasPriceCap = 1000000000uL, // 1GWei
       elapsedTimeSinceBlockTimestamp = 16.hours,
-      timeOfDayMultiplier = 1.75 // i.e. SUNDAY_2 in config/common/gas-price-cap-time-of-day-multipliers.toml
+      timeOfDayMultiplier = 1.75, // i.e. SUNDAY_2 in config/common/gas-price-cap-time-of-day-multipliers.toml
     )
     assertThat(calculatedGasPriceCap).isEqualTo(11937500000uL)
   }
@@ -55,7 +55,7 @@ class GasPriceCapCalculatorImplTest {
       finalizationTargetMaxDelay = 32.hours,
       historicGasPriceCap = 1000000000uL, // 1GWei
       elapsedTimeSinceBlockTimestamp = 32.hours,
-      timeOfDayMultiplier = 1.75 // i.e. SUNDAY_2 in config/common/gas-price-cap-time-of-day-multipliers.toml
+      timeOfDayMultiplier = 1.75, // i.e. SUNDAY_2 in config/common/gas-price-cap-time-of-day-multipliers.toml
     )
     assertThat(calculatedGasPriceCap).isEqualTo(44750000000uL)
   }
@@ -71,7 +71,7 @@ class GasPriceCapCalculatorImplTest {
       adjustmentConstant = 25U,
       finalizationTargetMaxDelay = 32.hours,
       historicGasPriceCap = 1000000000uL, // 1GWei
-      elapsedTimeSinceBlockTimestamp = 32.hours
+      elapsedTimeSinceBlockTimestamp = 32.hours,
       // timeOfDayMultiplier = 1.0 as default
     )
     assertThat(calculatedGasPriceCap).isEqualTo(26000000000uL)
@@ -84,12 +84,12 @@ class GasPriceCapCalculatorImplTest {
         adjustmentConstant = 25U,
         finalizationTargetMaxDelay = 0.hours,
         historicGasPriceCap = 1000000000uL, // 1GWei
-        elapsedTimeSinceBlockTimestamp = 32.hours
+        elapsedTimeSinceBlockTimestamp = 32.hours,
       )
     }.also { exception ->
       assertThat(exception.message)
         .isEqualTo(
-          "finalizationTargetMaxDelay duration must be longer than zero second. Value=0s"
+          "finalizationTargetMaxDelay duration must be longer than zero second. Value=0s",
         )
     }
   }

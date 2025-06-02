@@ -42,7 +42,7 @@ class StateRecoveryWithRealBesuAndStateManagerIntTest {
   private val testDataDir = "testdata/coordinator/prover/v3/stateRecovery"
   private val aggregationsAndBlobs: List<AggregationAndBlobs> = loadBlobsAndAggregationsSortedAndGrouped(
     blobsResponsesDir = "$testDataDir/compression/responses",
-    aggregationsResponsesDir = "$testDataDir/aggregation/responses"
+    aggregationsResponsesDir = "$testDataDir/aggregation/responses",
   )
   private lateinit var rollupDeploymentResult: LineaRollupDeploymentResult
   private lateinit var contractClientForBlobSubmission: LineaRollupSmartContractClient
@@ -54,7 +54,7 @@ class StateRecoveryWithRealBesuAndStateManagerIntTest {
   fun beforeEach(vertx: Vertx) {
     val jsonRpcFactory = VertxHttpJsonRpcClientFactory(
       vertx = vertx,
-      metricsFacade = MicrometerMetricsFacade(SimpleMeterRegistry())
+      metricsFacade = MicrometerMetricsFacade(SimpleMeterRegistry()),
     )
 
     stateManagerClient = StateManagerV1JsonRpcClient.create(
@@ -63,10 +63,10 @@ class StateRecoveryWithRealBesuAndStateManagerIntTest {
       maxInflightRequestsPerClient = 1U,
       requestRetry = RequestRetryConfig(
         backoffDelay = 1.seconds,
-        timeout = 4.seconds
+        timeout = 4.seconds,
       ),
       zkStateManagerVersion = "2.3.0",
-      logger = LogManager.getLogger("test.clients.l1.state-manager")
+      logger = LogManager.getLogger("test.clients.l1.state-manager"),
     )
 
     configureLoggers(
@@ -74,7 +74,7 @@ class StateRecoveryWithRealBesuAndStateManagerIntTest {
       log.name to Level.DEBUG,
       "net.consensys.linea.contract.Web3JContractAsyncHelper" to Level.WARN, // silence noisy gasPrice Caps logs
       "test.clients.l1.state-manager" to Level.DEBUG,
-      "test.clients.l1.web3j-default" to Level.DEBUG
+      "test.clients.l1.web3j-default" to Level.DEBUG,
     )
   }
 
@@ -90,7 +90,7 @@ class StateRecoveryWithRealBesuAndStateManagerIntTest {
       rollupDeploymentResult.contractAddress,
       // index 0 is the first operator in rollupOperatorClient
       rollupDeploymentResult.rollupOperators[1].txManager,
-      smartContractErrors = lineaRollupContractErrors
+      smartContractErrors = lineaRollupContractErrors,
     )
     log.info("starting stack for recovery of state pushed to L1")
     val staterecoveryNodesStartFuture = execCommandAndAssertSuccess(
@@ -98,7 +98,7 @@ class StateRecoveryWithRealBesuAndStateManagerIntTest {
         "L1_ROLLUP_CONTRACT_ADDRESS=${rollupDeploymentResult.contractAddress} " +
         "STATERECOVERY_OVERRIDE_START_BLOCK_NUMBER=1",
       timeout = 1.minutes,
-      log = log
+      log = log,
     ).thenPeek {
       log.info("make staterecovery-replay-from-block executed")
     }
@@ -114,7 +114,7 @@ class StateRecoveryWithRealBesuAndStateManagerIntTest {
         blobChunksMaxSize = 9,
         l1Web3jClient = Web3jClientManager.l1Client,
         waitTimeout = 4.minutes,
-        log = log
+        log = log,
       )
       log.info("finalization={} executed on l1", lastAggregation.intervalString())
     }
@@ -125,13 +125,13 @@ class StateRecoveryWithRealBesuAndStateManagerIntTest {
 
     assertBesuAndShomeiRecoveredAsExpected(
       lastAggregationAndBlobs,
-      timeout = 5.minutes
+      timeout = 5.minutes,
     )
   }
 
   private fun assertBesuAndShomeiRecoveredAsExpected(
     targetAggregationAndBlobs: AggregationAndBlobs,
-    timeout: Duration
+    timeout: Duration,
   ) {
     val targetAggregation = targetAggregationAndBlobs.aggregation!!
     val expectedZkEndStateRootHash = targetAggregationAndBlobs.blobs.last().blobCompressionProof!!.finalStateRootHash
@@ -141,7 +141,7 @@ class StateRecoveryWithRealBesuAndStateManagerIntTest {
       stateManagerClient = stateManagerClient,
       targetAggregation.endBlockNumber,
       expectedZkEndStateRootHash,
-      timeout = timeout
+      timeout = timeout,
     )
   }
 }

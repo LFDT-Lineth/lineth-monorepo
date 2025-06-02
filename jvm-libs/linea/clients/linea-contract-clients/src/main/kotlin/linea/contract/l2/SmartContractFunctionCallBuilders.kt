@@ -13,19 +13,22 @@ internal fun buildAnchorL1L2MessageHashesV1(
   messageHashes: List<ByteArray>,
   startingMessageNumber: BigInteger,
   finalMessageNumber: BigInteger,
-  finalRollingHash: ByteArray
+  finalRollingHash: ByteArray,
 ): Function {
   return Function(
-    /* name = */ FUNC_ANCHORL1L2MESSAGEHASHES,
-    /* inputParameters = */ listOf<Type<*>>(
+    /* name = */
+    FUNC_ANCHORL1L2MESSAGEHASHES,
+    /* inputParameters = */
+    listOf<Type<*>>(
       DynamicArray(
         Bytes32::class.java,
-        messageHashes.map { Bytes32(it) }
+        messageHashes.map { Bytes32(it) },
       ),
       Uint256(startingMessageNumber),
       Uint256(finalMessageNumber),
-      Bytes32(finalRollingHash)
+      Bytes32(finalRollingHash),
     ),
-    /* outputParameters = */ emptyList<TypeReference<*>>()
+    /* outputParameters = */
+    emptyList<TypeReference<*>>(),
   )
 }

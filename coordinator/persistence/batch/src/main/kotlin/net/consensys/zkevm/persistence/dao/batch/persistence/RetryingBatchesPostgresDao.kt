@@ -6,17 +6,17 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 class RetryingBatchesPostgresDao(
   private val delegate: BatchesPostgresDao,
-  private val persistenceRetryer: PersistenceRetryer
+  private val persistenceRetryer: PersistenceRetryer,
 ) : BatchesDao {
   override fun saveNewBatch(batch: Batch): SafeFuture<Unit> {
     return persistenceRetryer.retryQuery({ delegate.saveNewBatch(batch) })
   }
 
   override fun findHighestConsecutiveEndBlockNumberFromBlockNumber(
-    startingBlockNumberInclusive: Long
+    startingBlockNumberInclusive: Long,
   ): SafeFuture<Long?> {
     return persistenceRetryer.retryQuery(
-      { delegate.findHighestConsecutiveEndBlockNumberFromBlockNumber(startingBlockNumberInclusive) }
+      { delegate.findHighestConsecutiveEndBlockNumberFromBlockNumber(startingBlockNumberInclusive) },
     )
   }
 

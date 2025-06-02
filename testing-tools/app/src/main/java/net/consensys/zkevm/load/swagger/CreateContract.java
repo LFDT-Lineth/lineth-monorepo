@@ -238,4 +238,3 @@ public class CreateContract extends Contract {
     return JSON.getGson().toJson(this);
   }
 }
-

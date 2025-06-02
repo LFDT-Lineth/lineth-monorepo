@@ -28,7 +28,7 @@ class L1BasedLastFinalizedBlockProviderTest {
     whenever(lineaRollupClient.finalizedL2BlockNumber(eq(BlockParameter.Tag.LATEST)))
       .thenReturn(
         SafeFuture.completedFuture(replies[0]),
-        *replies.subList(1, replies.size).map { SafeFuture.completedFuture(it) }.toTypedArray()
+        *replies.subList(1, replies.size).map { SafeFuture.completedFuture(it) }.toTypedArray(),
       )
 
     val resumerCalculator = L1BasedLastFinalizedBlockProvider(
@@ -36,7 +36,7 @@ class L1BasedLastFinalizedBlockProviderTest {
       lineaRollupClient,
       consistentNumberOfBlocksOnL1 = 3u,
       numberOfRetries = 50u,
-      pollingInterval = 10.milliseconds
+      pollingInterval = 10.milliseconds,
     )
 
     assertThat(resumerCalculator.getLastFinalizedBlock().get()).isEqualTo(101.toULong())

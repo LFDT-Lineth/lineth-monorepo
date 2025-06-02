@@ -23,7 +23,7 @@ class DirectoryCleanerTest {
   @Test
   fun test_tmp_directory_cleanup(vertx: Vertx) {
     val tmpDirectory = Files.createTempDirectory(
-      DirectoryCleanerTest::class.simpleName + "-test_tmp_directory_cleanup"
+      DirectoryCleanerTest::class.simpleName + "-test_tmp_directory_cleanup",
     )
     for (i in 1..9) {
       val fileExtension = (i % 3).run {
@@ -36,7 +36,7 @@ class DirectoryCleanerTest {
       Files.createTempFile(
         tmpDirectory,
         "directory_cleaner_test-request-$i",
-        fileExtension
+        fileExtension,
       )
     }
     assertThat(vertx.fileSystem().readDir(tmpDirectory.absolutePathString()).get().size).isEqualTo(9)
@@ -44,7 +44,7 @@ class DirectoryCleanerTest {
       vertx,
       listOf(tmpDirectory),
       DirectoryCleaner.getSuffixFileFilters(listOf(".inprogress_coordinator_writing")) +
-        DirectoryCleaner.JSON_FILE_FILTER
+        DirectoryCleaner.JSON_FILE_FILTER,
     )
     directoryCleaner.cleanup().get()
     var remainingFiles = 0
@@ -61,24 +61,24 @@ class DirectoryCleanerTest {
   @Test
   fun test_deletion_of_absent_file_does_not_throw_exception(vertx: Vertx) {
     val tmpDirectory = Files.createTempDirectory(
-      DirectoryCleanerTest::class.simpleName + "-test_deletion_of_absent_file_throws_exception"
+      DirectoryCleanerTest::class.simpleName + "-test_deletion_of_absent_file_throws_exception",
     )
     val fileToBeMovedDuringCleanup = Files.createTempFile(
       tmpDirectory,
       "absent_file",
-      ".json"
+      ".json",
     )
 
     Files.createTempFile(
       tmpDirectory,
       "directory_cleaner_test-request-1",
-      ".json"
+      ".json",
     )
 
     val inProgressFile = Files.createTempFile(
       tmpDirectory,
       "directory_cleaner_test-request-2",
-      ".json.inprogress"
+      ".json.inprogress",
     )
 
     val mockFileFilter = mock<FileFilter> {}
@@ -105,7 +105,7 @@ class DirectoryCleanerTest {
     assertThat(DirectoryCleaner.JSON_FILE_FILTER.accept(File("11-27-getZkAggregatedProof.Json"))).isTrue()
     assertThat(DirectoryCleaner.JSON_FILE_FILTER.accept(File("11-27-getZkAggregatedProof.JSON"))).isTrue()
     assertThat(
-      DirectoryCleaner.JSON_FILE_FILTER.accept(File("11-27-getZkAggregatedProof.json.inprogress"))
+      DirectoryCleaner.JSON_FILE_FILTER.accept(File("11-27-getZkAggregatedProof.json.inprogress")),
     ).isFalse()
   }
 
@@ -113,13 +113,13 @@ class DirectoryCleanerTest {
   fun test_extension_file_filter() {
     val extensionFileFilter = DirectoryCleaner.getSuffixFileFilters(listOf(".inprogress_coordinator_writing")).first()
     assertThat(
-      extensionFileFilter.accept(File("11-27-getZkAggregatedProof.json.inprogress_coordinator_writing"))
+      extensionFileFilter.accept(File("11-27-getZkAggregatedProof.json.inprogress_coordinator_writing")),
     ).isTrue()
     assertThat(
-      extensionFileFilter.accept(File("11-27-getZkAggregatedProof.json.inProgress_cooRdinator_Writing"))
+      extensionFileFilter.accept(File("11-27-getZkAggregatedProof.json.inProgress_cooRdinator_Writing")),
     ).isFalse()
     assertThat(
-      extensionFileFilter.accept(File("11-27-getZkAggregatedProof.json.inprogress"))
+      extensionFileFilter.accept(File("11-27-getZkAggregatedProof.json.inprogress")),
     ).isFalse()
   }
 }

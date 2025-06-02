@@ -8,7 +8,7 @@ import java.util.function.Consumer
 
 class L1ShnarfBasedAlreadySubmittedBlobsFilter(
   private val lineaRollup: LineaRollupSmartContractClient,
-  private val acceptedBlobEndBlockNumberConsumer: Consumer<ULong> = Consumer<ULong> { }
+  private val acceptedBlobEndBlockNumberConsumer: Consumer<ULong> = Consumer<ULong> { },
 ) : AsyncFilter<BlobRecord> {
 
   /**
@@ -19,7 +19,7 @@ class L1ShnarfBasedAlreadySubmittedBlobsFilter(
    * if blobRecords=[b1, b2, b3, b4, b5, b6] the result will be [b4, b5, b6]
    */
   override fun invoke(
-    items: List<BlobRecord>
+    items: List<BlobRecord>,
   ): SafeFuture<List<BlobRecord>> {
     val blockByShnarfQueryFutures = items.map { blobRecord ->
       lineaRollup

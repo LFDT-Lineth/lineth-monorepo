@@ -7,7 +7,7 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 class RetryingRejectedTransactionsPostgresDao(
   private val delegate: RejectedTransactionsPostgresDao,
-  private val persistenceRetryer: PersistenceRetryer
+  private val persistenceRetryer: PersistenceRetryer,
 ) : RejectedTransactionsDao {
   override fun saveNewRejectedTransaction(rejectedTransaction: RejectedTransaction): SafeFuture<Unit> {
     return persistenceRetryer.retryQuery({ delegate.saveNewRejectedTransaction(rejectedTransaction) })
@@ -15,7 +15,7 @@ class RetryingRejectedTransactionsPostgresDao(
 
   override fun findRejectedTransactionByTxHash(
     txHash: ByteArray,
-    notRejectedBefore: Instant
+    notRejectedBefore: Instant,
   ): SafeFuture<RejectedTransaction?> {
     return persistenceRetryer.retryQuery({ delegate.findRejectedTransactionByTxHash(txHash, notRejectedBefore) })
   }

@@ -16,7 +16,7 @@ fun createWeb3jHttpClient(
   pollingInterval: Duration = 500.milliseconds,
   executorService: ScheduledExecutorService = Async.defaultExecutorService(),
   requestResponseLogLevel: Level = Level.TRACE,
-  failuresLogLevel: Level = Level.DEBUG
+  failuresLogLevel: Level = Level.DEBUG,
 ): Web3j {
   return Web3j.build(
     HttpService(
@@ -24,10 +24,10 @@ fun createWeb3jHttpClient(
       okHttpClientBuilder(
         logger = log,
         requestResponseLogLevel = requestResponseLogLevel,
-        failuresLogLevel = failuresLogLevel
-      ).build()
+        failuresLogLevel = failuresLogLevel,
+      ).build(),
     ),
     pollingInterval.inWholeMilliseconds,
-    executorService
+    executorService,
   )
 }

@@ -9,22 +9,22 @@ interface BlobsDao {
 
   fun getConsecutiveBlobsFromBlockNumber(
     startingBlockNumberInclusive: ULong,
-    endBlockCreatedBefore: Instant
+    endBlockCreatedBefore: Instant,
   ): SafeFuture<List<BlobRecord>>
 
   fun findBlobByStartBlockNumber(
-    startBlockNumber: ULong
+    startBlockNumber: ULong,
   ): SafeFuture<BlobRecord?>
 
   fun findBlobByEndBlockNumber(
-    endBlockNumber: ULong
+    endBlockNumber: ULong,
   ): SafeFuture<BlobRecord?>
 
   fun deleteBlobsUpToEndBlockNumber(
-    endBlockNumberInclusive: ULong
+    endBlockNumberInclusive: ULong,
   ): SafeFuture<Int>
 
   fun deleteBlobsAfterBlockNumber(
-    startingBlockNumberInclusive: ULong
+    startingBlockNumberInclusive: ULong,
   ): SafeFuture<Int>
 }

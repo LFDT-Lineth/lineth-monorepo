@@ -7,7 +7,7 @@ class SelfTransactionWithPayload(
   val nbWallets: Int,
   val nbTransfers: Int,
   val payload: String,
-  val price: BigInteger
+  val price: BigInteger,
 ) : Scenario {
   override fun wallet(): String {
     return wallet

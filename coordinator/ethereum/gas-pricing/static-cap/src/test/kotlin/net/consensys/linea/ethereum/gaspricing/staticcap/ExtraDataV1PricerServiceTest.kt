@@ -37,15 +37,15 @@ class ExtraDataV1PricerServiceTest {
       0.25,
       0.5,
       0.75,
-      0.9
+      0.9,
     ),
     baseFeePerBlobGas = listOf(100, 110, 120, 130, 140).map { it.toULong() },
     blobGasUsedRatio = listOf(
       0.25,
       0.5,
       0.75,
-      0.9
-    )
+      0.9,
+    ),
   )
 
   @Test
@@ -69,10 +69,10 @@ class ExtraDataV1PricerServiceTest {
     val boundableFeeCalculator = MinerExtraDataV1CalculatorImpl(
       MinerExtraDataV1CalculatorImpl.Config(
         defaultFixedCost,
-        defaultEthGasPriceMultiplier
+        defaultEthGasPriceMultiplier,
       ),
       variableFeesCalculator = mockVariableFeesCalculator,
-      legacyFeesCalculator = mockLegacyFeesCalculator
+      legacyFeesCalculator = mockLegacyFeesCalculator,
     )
     val mockExtraDataUpdater = mock<ExtraDataUpdater> {
       on { updateMinerExtraData(any()) } doAnswer { SafeFuture.completedFuture(Unit) }
@@ -83,13 +83,13 @@ class ExtraDataV1PricerServiceTest {
         vertx = vertx,
         feesFetcher = mockFeesFetcher,
         minerExtraDataCalculatorImpl = boundableFeeCalculator,
-        extraDataUpdater = mockExtraDataUpdater
+        extraDataUpdater = mockExtraDataUpdater,
       )
 
     val expectedExtraData = MinerExtraDataV1(
       defaultFixedCost,
       expectedVariableFees.toKWei().toUInt(),
-      expectedEthGasPrice.toKWei().toUInt()
+      expectedEthGasPrice.toKWei().toUInt(),
     )
 
     // Start the service

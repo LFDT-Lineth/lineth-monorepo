@@ -13,13 +13,13 @@ import kotlin.time.Duration.Companion.seconds
 
 data class LogCacheKey(
   val message: String,
-  val logLevel: Level
+  val logLevel: Level,
 )
 
 @Plugin(name = "DebouncingFilter", category = "Core", elementType = "filter")
 class DebouncingFilter internal constructor(
   private val debounceTime: Duration = 30.seconds,
-  private val maxCacheCapacity: Int = 1000
+  private val maxCacheCapacity: Int = 1000,
 ) : AbstractFilter() {
   private val logTimesCache = run {
     // Source: https://stackoverflow.com/questions/15844035/best-hashmap-initial-capacity-while-indexing-a-list
@@ -48,11 +48,11 @@ class DebouncingFilter internal constructor(
     @JvmStatic
     fun createFilter(
       @PluginAttribute(value = "debounceTimeMillis", defaultLong = 30000L) debounceTimeMillis: Long,
-      @PluginAttribute(value = "maxCacheCapacity", defaultInt = 1000) maxCacheCapacity: Int
+      @PluginAttribute(value = "maxCacheCapacity", defaultInt = 1000) maxCacheCapacity: Int,
     ): DebouncingFilter {
       return DebouncingFilter(
         debounceTime = debounceTimeMillis.milliseconds,
-        maxCacheCapacity = maxCacheCapacity
+        maxCacheCapacity = maxCacheCapacity,
       )
     }
   }

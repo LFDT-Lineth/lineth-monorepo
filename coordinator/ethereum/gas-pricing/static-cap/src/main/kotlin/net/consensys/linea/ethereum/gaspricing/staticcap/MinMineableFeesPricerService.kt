@@ -18,11 +18,11 @@ class MinMineableFeesPricerService(
   private val feesFetcher: FeesFetcher,
   private val feesCalculator: FeesCalculator,
   private val gasPriceUpdater: GasPriceUpdater,
-  private val log: Logger = LogManager.getLogger(MinMineableFeesPricerService::class.java)
+  private val log: Logger = LogManager.getLogger(MinMineableFeesPricerService::class.java),
 ) : PeriodicPollingService(
   vertx = vertx,
   pollingIntervalMs = pollingInterval.inWholeMilliseconds,
-  log = log
+  log = log,
 ) {
   private var lastPriceUpdate = 0uL
 
@@ -39,7 +39,7 @@ class MinMineableFeesPricerService(
           log.info(
             "L2 Gas price update: gasPrice={} GWei l1Blocks={}",
             gasPrice.toGWei(),
-            blockRange.toIntervalString()
+            blockRange.toIntervalString(),
           )
         }
         // even if price was not update, still call Besu/Geth nodes, they may be restarted

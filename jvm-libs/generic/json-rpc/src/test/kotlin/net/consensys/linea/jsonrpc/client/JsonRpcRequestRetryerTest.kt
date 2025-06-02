@@ -41,7 +41,7 @@ class JsonRpcRequestRetryerTest {
     jsonrpc = "2.0",
     id = "1",
     method = "eth_blockNumber",
-    params = listOf("0x1")
+    params = listOf("0x1"),
   )
   private val networkError1 = SocketException("Forced network error 1")
   private val networkError2 = SocketException("Forced network error 2")
@@ -52,8 +52,8 @@ class JsonRpcRequestRetryerTest {
       maxRetries = maxRetries.toUInt(),
       timeout = 20.seconds,
       backoffDelay = 10.milliseconds,
-      failuresWarningThreshold = 2u
-    )
+      failuresWarningThreshold = 2u,
+    ),
   )
   private lateinit var vertx: Vertx
 
@@ -65,7 +65,7 @@ class JsonRpcRequestRetryerTest {
       backoffDelay = 10.milliseconds,
       maxRetries = maxRetries,
       timeout = 20.seconds,
-      initialDelay = null
+      initialDelay = null,
     )
     delegate = mock() {
       on { makeRequest(any(), anyOrNull()) }
@@ -111,7 +111,7 @@ class JsonRpcRequestRetryerTest {
 
     val result = requestRetrier.makeRequest(
       ethBlockNumberRequest,
-      stopRetriesPredicate = { result -> result is Ok && result.value.result == "0x2" }
+      stopRetriesPredicate = { result -> result is Ok && result.value.result == "0x2" },
     ).get()
 
     assertThat(result).isEqualTo(Ok(JsonRpcSuccessResponse("1", "0x2")))
@@ -161,7 +161,7 @@ class JsonRpcRequestRetryerTest {
     val error = assertThrows<Exception> {
       requestRetrier.makeRequest(
         ethBlockNumberRequest,
-        stopRetriesPredicate = { result -> result is Ok && result.value.result == "0x100" }
+        stopRetriesPredicate = { result -> result is Ok && result.value.result == "0x100" },
       )
         .get()
     }
@@ -183,10 +183,10 @@ class JsonRpcRequestRetryerTest {
         alwaysDownEndpoint,
         config.copy(
           methodsToRetry = methodsToRetry,
-          requestRetry = config.requestRetry.copy(failuresWarningThreshold = 2u)
+          requestRetry = config.requestRetry.copy(failuresWarningThreshold = 2u),
         ),
         log = log,
-        failuresLogLevel = Level.INFO
+        failuresLogLevel = Level.INFO,
       )
 
     val error = assertThrows<Exception> { requestRetryer.makeRequest(ethBlockNumberRequest).get() }
@@ -197,14 +197,14 @@ class JsonRpcRequestRetryerTest {
       eq("Request '{}' already retried {} times. lastError={}"),
       eq("""{"jsonrpc":"2.0","id":"1","method":"eth_blockNumber","params":["0x1"]}"""),
       eq(2),
-      eq(networkError1)
+      eq(networkError1),
     )
     verify(log).log(
       eq(Level.INFO),
       eq("Request '{}' already retried {} times. lastError={}"),
       eq("""{"jsonrpc":"2.0","id":"1","method":"eth_blockNumber","params":["0x1"]}"""),
       eq(4),
-      eq(networkError1)
+      eq(networkError1),
     )
   }
 
@@ -221,10 +221,10 @@ class JsonRpcRequestRetryerTest {
         alwaysDownEndpoint,
         config.copy(
           methodsToRetry = methodsToRetry,
-          requestRetry = config.requestRetry.copy(failuresWarningThreshold = 0u)
+          requestRetry = config.requestRetry.copy(failuresWarningThreshold = 0u),
         ),
         log = log,
-        failuresLogLevel = Level.INFO
+        failuresLogLevel = Level.INFO,
       )
 
     val error = assertThrows<Exception> { requestRetryer.makeRequest(ethBlockNumberRequest).get() }
@@ -235,7 +235,7 @@ class JsonRpcRequestRetryerTest {
       any<String>(),
       any<String>(),
       any(),
-      eq(networkError1)
+      eq(networkError1),
     )
   }
 }

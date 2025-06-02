@@ -28,7 +28,7 @@ class FileReaderTest {
     mapper.writeValue(tempFile, data)
     Assertions.assertEquals(
       data,
-      fileReader.read(tempFile.toPath()).get().component1()
+      fileReader.read(tempFile.toPath()).get().component1(),
     )
   }
 
@@ -40,7 +40,7 @@ class FileReaderTest {
     mapper.writeValue(tempFile, data)
     Assertions.assertEquals(
       FileReader.ErrorType.PARSING_ERROR,
-      fileReader.read(tempFile.toPath()).get().component2()?.type
+      fileReader.read(tempFile.toPath()).get().component2()?.type,
     )
   }
 }

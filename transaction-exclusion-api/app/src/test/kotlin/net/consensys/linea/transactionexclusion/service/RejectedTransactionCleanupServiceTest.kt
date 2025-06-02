@@ -34,7 +34,7 @@ class RejectedTransactionCleanupServiceTest {
   fun beforeEach() {
     fakeClock.setTimeTo(Clock.System.now())
     rejectedTransactionsRepositoryMock = mock<RejectedTransactionsDao>(
-      defaultAnswer = Mockito.RETURNS_DEEP_STUBS
+      defaultAnswer = Mockito.RETURNS_DEEP_STUBS,
     ).also {
       whenever(it.deleteRejectedTransactions(any()))
         .thenReturn(SafeFuture.completedFuture(1))
@@ -43,18 +43,19 @@ class RejectedTransactionCleanupServiceTest {
       RejectedTransactionCleanupService(
         config = RejectedTransactionCleanupService.Config(
           pollingInterval = 100.milliseconds,
-          storagePeriod = 24.hours
+          storagePeriod = 24.hours,
         ),
         clock = fakeClock,
         vertx = Vertx.vertx(),
-        repository = rejectedTransactionsRepositoryMock
+        repository = rejectedTransactionsRepositoryMock,
       )
   }
 
   @Test
   @Timeout(2, timeUnit = TimeUnit.SECONDS)
-  fun `when rejectedTransactionCleanupService starts, deleteRejectedTransaction should be called`
-  (testContext: VertxTestContext) {
+  fun `when rejectedTransactionCleanupService starts, deleteRejectedTransaction should be called`(
+    testContext: VertxTestContext,
+  ) {
     rejectedTransactionCleanupService.start()
       .thenApply {
         Awaitility.await()

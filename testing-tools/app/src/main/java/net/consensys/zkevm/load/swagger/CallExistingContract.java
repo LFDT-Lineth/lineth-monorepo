@@ -221,4 +221,3 @@ public class CallExistingContract extends Contract {
     return JSON.getGson().toJson(this);
   }
 }
-

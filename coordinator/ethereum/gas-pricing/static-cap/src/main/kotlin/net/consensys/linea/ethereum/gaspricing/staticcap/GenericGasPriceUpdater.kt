@@ -22,11 +22,11 @@ import java.util.concurrent.atomic.AtomicLong
 class GenericGasPriceUpdater(
   httpJsonRpcClientFactory: VertxHttpJsonRpcClientFactory,
   config: Config,
-  private val setMinerGasPriceMethodName: String
+  private val setMinerGasPriceMethodName: String,
 ) : GasPriceUpdater {
   class Config(
     val endpoints: List<URL>,
-    val retryConfig: RequestRetryConfig
+    val retryConfig: RequestRetryConfig,
   ) {
     init {
       require(endpoints.isNotEmpty()) { "At least one endpoint is required" }
@@ -41,7 +41,7 @@ class GenericGasPriceUpdater(
     endpoints = config.endpoints,
     methodsToRetry = setOf(setMinerGasPriceMethodName),
     retryConfig = config.retryConfig,
-    log = log
+    log = log,
   )
 
   override fun updateMinerGasPrice(gasPrice: ULong): SafeFuture<Unit> {
@@ -51,13 +51,13 @@ class GenericGasPriceUpdater(
   }
 
   private fun fireAndForget(
-    gasPrice: ULong
+    gasPrice: ULong,
   ): Future<Unit> {
     val jsonRequest = JsonRpcRequestListParams(
       jsonrpc = "2.0",
       id = id.incrementAndGet(),
       method = setMinerGasPriceMethodName,
-      params = listOf("0x${gasPrice.toString(16)}")
+      params = listOf("0x${gasPrice.toString(16)}"),
     )
 
     return setPriceRequestFanOut.makeRequest(jsonRequest)
@@ -83,14 +83,14 @@ class GenericGasPriceUpdater(
       endpoints: List<URL>,
       methodsToRetry: Set<String>,
       retryConfig: RequestRetryConfig,
-      log: Logger
+      log: Logger,
     ): JsonRpcRequestFanOut {
       val rpcClients: List<JsonRpcClient> = endpoints.map { endpoint ->
         httpJsonRpcClientFactory.createWithRetries(
           endpoint = endpoint,
           retryConfig = retryConfig,
           methodsToRetry = methodsToRetry,
-          log = log
+          log = log,
         )
       }
       return JsonRpcRequestFanOut(rpcClients)

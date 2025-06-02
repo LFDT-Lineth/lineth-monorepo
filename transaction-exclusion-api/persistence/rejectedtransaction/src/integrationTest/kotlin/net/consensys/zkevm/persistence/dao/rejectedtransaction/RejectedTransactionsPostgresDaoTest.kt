@@ -48,7 +48,7 @@ class RejectedTransactionsPostgresDaoTest : CleanDbTestSuiteParallel() {
     transactionRLP: ByteArray = defaultRejectedTransaction.transactionRLP,
     reasonMessage: String = defaultRejectedTransaction.reasonMessage,
     overflows: List<ModuleOverflow> = defaultRejectedTransaction.overflows,
-    transactionInfo: TransactionInfo = defaultRejectedTransaction.transactionInfo
+    transactionInfo: TransactionInfo = defaultRejectedTransaction.transactionInfo,
   ): RejectedTransaction {
     return RejectedTransaction(
       txRejectionStage = txRejectionStage,
@@ -57,7 +57,7 @@ class RejectedTransactionsPostgresDaoTest : CleanDbTestSuiteParallel() {
       transactionRLP = transactionRLP,
       reasonMessage = reasonMessage,
       overflows = overflows,
-      transactionInfo = transactionInfo
+      transactionInfo = transactionInfo,
     )
   }
 
@@ -78,12 +78,12 @@ class RejectedTransactionsPostgresDaoTest : CleanDbTestSuiteParallel() {
       RejectedTransactionsPostgresDao(
         readConnection = sqlClient,
         writeConnection = sqlClient,
-        clock = fakeClock
+        clock = fakeClock,
       )
   }
 
   private fun performInsertTest(
-    rejectedTransaction: RejectedTransaction
+    rejectedTransaction: RejectedTransaction,
   ) {
     rejectedTransactionsPostgresDao.saveNewRejectedTransaction(rejectedTransaction).get()
 
@@ -94,7 +94,7 @@ class RejectedTransactionsPostgresDaoTest : CleanDbTestSuiteParallel() {
       }
     assertThat(newlyInsertedFullTxnsRows.size).isEqualTo(1)
     assertThat(newlyInsertedFullTxnsRows.first().getBuffer("tx_rlp").bytes).isEqualTo(
-      rejectedTransaction.transactionRLP
+      rejectedTransaction.transactionRLP,
     )
 
     // assert the corresponding record was inserted into the rejected_transactions table
@@ -106,28 +106,28 @@ class RejectedTransactionsPostgresDaoTest : CleanDbTestSuiteParallel() {
     assertThat(newlyInsertedRejectedTxnsRows.size).isEqualTo(1)
     val insertedRow = newlyInsertedRejectedTxnsRows.first()
     assertThat(insertedRow.getLong("created_epoch_milli")).isEqualTo(
-      fakeClock.now().toEpochMilliseconds()
+      fakeClock.now().toEpochMilliseconds(),
     )
     assertThat(insertedRow.getString("reject_stage")).isEqualTo(
-      RejectedTransactionsPostgresDao.rejectedStageToDbValue(rejectedTransaction.txRejectionStage)
+      RejectedTransactionsPostgresDao.rejectedStageToDbValue(rejectedTransaction.txRejectionStage),
     )
     assertThat(insertedRow.getLong("block_number")?.toULong()).isEqualTo(
-      rejectedTransaction.blockNumber
+      rejectedTransaction.blockNumber,
     )
     assertThat(insertedRow.getJsonArray("overflows").encode()).isEqualTo(
-      ObjectMapper().writeValueAsString(rejectedTransaction.overflows)
+      ObjectMapper().writeValueAsString(rejectedTransaction.overflows),
     )
     assertThat(insertedRow.getLong("reject_timestamp")).isEqualTo(
-      rejectedTransaction.timestamp.toEpochMilliseconds()
+      rejectedTransaction.timestamp.toEpochMilliseconds(),
     )
     assertThat(insertedRow.getBuffer("tx_from").bytes).isEqualTo(
-      rejectedTransaction.transactionInfo.from
+      rejectedTransaction.transactionInfo.from,
     )
     assertThat(insertedRow.getBuffer("tx_to")?.bytes).isEqualTo(
-      rejectedTransaction.transactionInfo.to
+      rejectedTransaction.transactionInfo.to,
     )
     assertThat(insertedRow.getLong("tx_nonce")).isEqualTo(
-      rejectedTransaction.transactionInfo.nonce.toLong()
+      rejectedTransaction.transactionInfo.nonce.toLong(),
     )
   }
 
@@ -166,10 +166,10 @@ class RejectedTransactionsPostgresDaoTest : CleanDbTestSuiteParallel() {
           ModuleOverflow(
             module = "MUL",
             count = 587,
-            limit = 401
-          )
-        )
-      )
+            limit = 401,
+          ),
+        ),
+      ),
     )
 
     // assert that the total number of rows in the two tables are correct
@@ -190,9 +190,9 @@ class RejectedTransactionsPostgresDaoTest : CleanDbTestSuiteParallel() {
         ModuleOverflow(
           module = "ADD",
           count = 587,
-          limit = 401
-        )
-      )
+          limit = 401,
+        ),
+      ),
     )
 
     // assert that the insertion of duplicatedRejectedTransaction would trigger DuplicatedRecordException error
@@ -203,7 +203,7 @@ class RejectedTransactionsPostgresDaoTest : CleanDbTestSuiteParallel() {
       assertThat(executionException.cause!!.message)
         .isEqualTo(
           "RejectedTransaction ${duplicatedRejectedTransaction.transactionInfo.hash.encodeHex()} " +
-            "is already persisted!"
+            "is already persisted!",
         )
     }
 
@@ -216,7 +216,7 @@ class RejectedTransactionsPostgresDaoTest : CleanDbTestSuiteParallel() {
   fun `findRejectedTransactionByTxHash returns rejected transaction with most recent timestamp from db`() {
     // insert a new rejected transaction
     val oldestRejectedTransaction = createRejectedTransaction(
-      timestamp = fakeClock.now().minus(10.seconds)
+      timestamp = fakeClock.now().minus(10.seconds),
     )
     performInsertTest(oldestRejectedTransaction)
 
@@ -225,21 +225,21 @@ class RejectedTransactionsPostgresDaoTest : CleanDbTestSuiteParallel() {
     performInsertTest(
       createRejectedTransaction(
         reasonMessage = "Transaction line count for module MUL=587 is above the limit 401",
-        timestamp = fakeClock.now().minus(9.seconds)
-      )
+        timestamp = fakeClock.now().minus(9.seconds),
+      ),
     )
 
     // insert another rejected transaction with same txHash but different reason
     // and with the most recent timestamp
     val newestRejectedTransaction = createRejectedTransaction(
       reasonMessage = "Transaction line count for module EXP=9000 is above the limit 8192",
-      timestamp = fakeClock.now().minus(8.seconds)
+      timestamp = fakeClock.now().minus(8.seconds),
     )
     performInsertTest(newestRejectedTransaction)
 
     // find the rejected transaction with the txHash
     val foundRejectedTransaction = rejectedTransactionsPostgresDao.findRejectedTransactionByTxHash(
-      oldestRejectedTransaction.transactionInfo.hash
+      oldestRejectedTransaction.transactionInfo.hash,
     ).get()
 
     // assert that the found rejected transaction is the same as the one with most recent timestamp
@@ -254,14 +254,14 @@ class RejectedTransactionsPostgresDaoTest : CleanDbTestSuiteParallel() {
   fun `findRejectedTransactionByTxHash returns null as rejected timestamp exceeds queryable window`() {
     // insert a new rejected transaction with timestamp exceeds the 1-hour queryable window
     val rejectedTransaction = createRejectedTransaction(
-      timestamp = fakeClock.now().minus(1.hours).minus(1.seconds)
+      timestamp = fakeClock.now().minus(1.hours).minus(1.seconds),
     )
     performInsertTest(rejectedTransaction)
 
     // find the rejected transaction with the txHash
     val foundRejectedTransaction = rejectedTransactionsPostgresDao.findRejectedTransactionByTxHash(
       rejectedTransaction.transactionInfo.hash,
-      notRejectedBefore
+      notRejectedBefore,
     ).get()
 
     // assert that null is returned from the find method
@@ -282,11 +282,11 @@ class RejectedTransactionsPostgresDaoTest : CleanDbTestSuiteParallel() {
           hash = "0x078ecd6f00bff4beca9116ca85c65ddd265971e415d7df7a96b3c10424b031e2".decodeHex(),
           from = "0x4d144d7b9c96b26361d6ac74dd1d8267edca4fc2".decodeHex(),
           to = "0x1195cf65f83b3a5768f3c496d3a05ad6412c64b3".decodeHex(),
-          nonce = 101UL
+          nonce = 101UL,
         ),
         reasonMessage = "Transaction line count for module EXP=10000 is above the limit 8192",
-        timestamp = fakeClock.now()
-      )
+        timestamp = fakeClock.now(),
+      ),
     )
     // advance the fake clock to make its created timestamp exceeds the 10-hours storage window
     fakeClock.advanceBy(1.hours)
@@ -294,8 +294,8 @@ class RejectedTransactionsPostgresDaoTest : CleanDbTestSuiteParallel() {
     // insert another rejected transaction B1
     performInsertTest(
       createRejectedTransaction(
-        timestamp = fakeClock.now()
-      )
+        timestamp = fakeClock.now(),
+      ),
     )
     // advance the fake clock to make its created timestamp exceeds the 10-hours storage window
     fakeClock.advanceBy(1.hours)
@@ -304,8 +304,8 @@ class RejectedTransactionsPostgresDaoTest : CleanDbTestSuiteParallel() {
     performInsertTest(
       createRejectedTransaction(
         reasonMessage = "Transaction line count for module EXP=9000 is above the limit 8192",
-        timestamp = fakeClock.now()
-      )
+        timestamp = fakeClock.now(),
+      ),
     )
     // advance the fake clock to make its created timestamp stay within the 10-hours storage window
     fakeClock.advanceBy(10.hours)
@@ -317,7 +317,7 @@ class RejectedTransactionsPostgresDaoTest : CleanDbTestSuiteParallel() {
 
     // delete the rejected transactions with storage window as 10 hours from now
     val deletedRows = rejectedTransactionsPostgresDao.deleteRejectedTransactions(
-      fakeClock.now().minus(10.hours)
+      fakeClock.now().minus(10.hours),
     ).get()
 
     // assert that number of total deleted rows in rejected_transactions table is 2

@@ -15,7 +15,7 @@ fun inProgressFilePattern(fileName: String, inProgressSuffix: String): String {
 
 class FileWriter(
   private val vertx: Vertx,
-  private val mapper: ObjectMapper
+  private val mapper: ObjectMapper,
 ) {
   fun write(data: Any, filePath: Path, inProgressSuffix: String?): SafeFuture<Path> {
     return vertx
@@ -30,7 +30,7 @@ class FileWriter(
           tmpFile.renameTo(filePath.toFile())
           filePath
         },
-        false
+        false,
       ).toSafeFuture()
   }
 
@@ -39,7 +39,7 @@ class FileWriter(
       Callable {
         filePath.exists() || inProgressFilePath(filePath, inProgressSuffix).exists()
       },
-      false
+      false,
     ).toSafeFuture()
   }
   private fun inProgressFilePath(filePath: Path, inProgressSuffix: String): Path {

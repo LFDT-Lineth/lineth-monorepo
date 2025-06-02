@@ -20,13 +20,13 @@ class GasPriceCapProviderForDataSubmissionTest {
     maxBaseFeePerGasCap = 7000000000uL, // 7GWei
     maxPriorityFeePerGasCap = 1000000000uL, // 1GWei
     maxFeePerGasCap = 8000000000uL, // 8GWei
-    maxFeePerBlobGasCap = 500000000uL // 0.5GWei
+    maxFeePerBlobGasCap = 500000000uL, // 0.5GWei
   )
   private val returnMultipliedRawGasPriceCaps = GasPriceCaps(
     maxBaseFeePerGasCap = (returnRawGasPriceCaps.maxBaseFeePerGasCap!!.toDouble() * 0.9).toULong(), // 6.3GWei
     maxPriorityFeePerGasCap = (returnRawGasPriceCaps.maxPriorityFeePerGasCap.toDouble() * 0.9).toULong(), // 0.9GWei
     maxFeePerGasCap = 7200000000uL, // 7.2GWei
-    maxFeePerBlobGasCap = (returnRawGasPriceCaps.maxFeePerBlobGasCap.toDouble() * 0.9).toULong() // 0.45GWei
+    maxFeePerBlobGasCap = (returnRawGasPriceCaps.maxFeePerBlobGasCap.toDouble() * 0.9).toULong(), // 0.45GWei
   )
   private val expectedMaxPriorityFeePerGasCap = 3000000000uL // 3GWei
   private val expectedMaxFeePerGasCap = 10000000000uL // 10GWei
@@ -41,8 +41,8 @@ class GasPriceCapProviderForDataSubmissionTest {
     config: GasPriceCapProviderForDataSubmission.Config = GasPriceCapProviderForDataSubmission.Config(
       maxPriorityFeePerGasCap = expectedMaxPriorityFeePerGasCap,
       maxFeePerGasCap = expectedMaxFeePerGasCap,
-      maxFeePerBlobGasCap = expectedMaxFeePerBlobGasCap
-    )
+      maxFeePerBlobGasCap = expectedMaxFeePerBlobGasCap,
+    ),
   ): GasPriceCapProviderForDataSubmission {
     mockedGasPriceCapProvider = mock<GasPriceCapProvider> {
       on { getGasPriceCaps(any()) } doReturn SafeFuture.completedFuture(returnRawGasPriceCaps)
@@ -53,7 +53,7 @@ class GasPriceCapProviderForDataSubmissionTest {
     return GasPriceCapProviderForDataSubmission(
       config = config,
       gasPriceCapProvider = mockedGasPriceCapProvider,
-      metricsFacade = mockedMetricsFacade
+      metricsFacade = mockedMetricsFacade,
     )
   }
 
@@ -65,26 +65,26 @@ class GasPriceCapProviderForDataSubmissionTest {
   @Test
   fun `gas price caps of data submission should be returned correctly`() {
     assertThat(
-      gasPriceCapProviderForDataSubmission.getGasPriceCaps(100L).get()
+      gasPriceCapProviderForDataSubmission.getGasPriceCaps(100L).get(),
     ).isEqualTo(
       GasPriceCaps(
         maxPriorityFeePerGasCap = 1000000000uL, // 1GWei
         maxFeePerGasCap = 8000000000uL, // 8GWei
-        maxFeePerBlobGasCap = 500000000uL // 0.5GWei
-      )
+        maxFeePerBlobGasCap = 500000000uL, // 0.5GWei
+      ),
     )
   }
 
   @Test
   fun `gas price caps with coefficient of data submission should be returned correctly`() {
     assertThat(
-      gasPriceCapProviderForDataSubmission.getGasPriceCapsWithCoefficient(100L).get()
+      gasPriceCapProviderForDataSubmission.getGasPriceCapsWithCoefficient(100L).get(),
     ).isEqualTo(
       GasPriceCaps(
         maxPriorityFeePerGasCap = returnMultipliedRawGasPriceCaps.maxPriorityFeePerGasCap,
         maxFeePerGasCap = returnMultipliedRawGasPriceCaps.maxFeePerGasCap,
-        maxFeePerBlobGasCap = returnMultipliedRawGasPriceCaps.maxFeePerBlobGasCap
-      )
+        maxFeePerBlobGasCap = returnMultipliedRawGasPriceCaps.maxFeePerBlobGasCap,
+      ),
     )
   }
 
@@ -95,17 +95,17 @@ class GasPriceCapProviderForDataSubmissionTest {
         maxBaseFeePerGasCap = 9000000000uL, // 9GWei
         maxPriorityFeePerGasCap = 8000000000uL, // 8GWei (exceeds 3GWei upper bound)
         maxFeePerGasCap = 17000000000uL, // 17GWei (exceeds 10GWei upper bound)
-        maxFeePerBlobGasCap = 8000000000uL // 8GWei (exceeds 0.7GWei upper bound)
-      )
+        maxFeePerBlobGasCap = 8000000000uL, // 8GWei (exceeds 0.7GWei upper bound)
+      ),
     )
     assertThat(
-      gasPriceCapProviderForDataSubmission.getGasPriceCaps(100L).get()
+      gasPriceCapProviderForDataSubmission.getGasPriceCaps(100L).get(),
     ).isEqualTo(
       GasPriceCaps(
         maxPriorityFeePerGasCap = expectedMaxPriorityFeePerGasCap, // 3GWei (capped at 3GWei upper bound)
         maxFeePerGasCap = expectedMaxFeePerGasCap, // 10GWei (capped at 10GWei upper bound)
-        maxFeePerBlobGasCap = expectedMaxFeePerBlobGasCap // 0.7GWei (capped at 0.7GWei upper bound)
-      )
+        maxFeePerBlobGasCap = expectedMaxFeePerBlobGasCap, // 0.7GWei (capped at 0.7GWei upper bound)
+      ),
     )
 
     gasPriceCapProviderForDataSubmission = createGasPriceCapProviderForDataSubmission(
@@ -113,17 +113,17 @@ class GasPriceCapProviderForDataSubmissionTest {
         maxBaseFeePerGasCap = 5000000000uL, // 5GWei
         maxPriorityFeePerGasCap = 8000000000uL, // 8GWei (exceeds 3GWei upper bound)
         maxFeePerGasCap = 13000000000uL, // 13GWei (exceeds 10GWei upper bound)
-        maxFeePerBlobGasCap = 8000000000uL // 8GWei (exceeds 0.7GWei upper bound)
-      )
+        maxFeePerBlobGasCap = 8000000000uL, // 8GWei (exceeds 0.7GWei upper bound)
+      ),
     )
     assertThat(
-      gasPriceCapProviderForDataSubmission.getGasPriceCaps(100L).get()
+      gasPriceCapProviderForDataSubmission.getGasPriceCaps(100L).get(),
     ).isEqualTo(
       GasPriceCaps(
         maxPriorityFeePerGasCap = expectedMaxPriorityFeePerGasCap, // 3GWei (capped at 3GWei upper bound)
         maxFeePerGasCap = 8000000000uL, // 8GWei
-        maxFeePerBlobGasCap = expectedMaxFeePerBlobGasCap // 0.7GWei (capped at 0.7GWei upper bound)
-      )
+        maxFeePerBlobGasCap = expectedMaxFeePerBlobGasCap, // 0.7GWei (capped at 0.7GWei upper bound)
+      ),
     )
 
     gasPriceCapProviderForDataSubmission = createGasPriceCapProviderForDataSubmission(
@@ -131,17 +131,17 @@ class GasPriceCapProviderForDataSubmissionTest {
         maxBaseFeePerGasCap = 15000000000uL, // 15GWei (exceeds 10GWei upper bound)
         maxPriorityFeePerGasCap = 8000000000uL, // 8GWei (exceeds 3GWei upper bound)
         maxFeePerGasCap = 23000000000uL, // 23GWei (exceeds 10GWei upper bound)
-        maxFeePerBlobGasCap = 8000000000uL // 8GWei (exceeds 0.7GWei upper bound)
-      )
+        maxFeePerBlobGasCap = 8000000000uL, // 8GWei (exceeds 0.7GWei upper bound)
+      ),
     )
     assertThat(
-      gasPriceCapProviderForDataSubmission.getGasPriceCaps(100L).get()
+      gasPriceCapProviderForDataSubmission.getGasPriceCaps(100L).get(),
     ).isEqualTo(
       GasPriceCaps(
         maxPriorityFeePerGasCap = expectedMaxPriorityFeePerGasCap, // 3GWei (capped at 3GWei upper bound)
         maxFeePerGasCap = expectedMaxFeePerGasCap, // 10GWei (capped at 10GWei upper bound)
-        maxFeePerBlobGasCap = expectedMaxFeePerBlobGasCap // 0.7GWei (capped at 0.7GWei upper bound)
-      )
+        maxFeePerBlobGasCap = expectedMaxFeePerBlobGasCap, // 0.7GWei (capped at 0.7GWei upper bound)
+      ),
     )
   }
 }

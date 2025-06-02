@@ -165,4 +165,3 @@ public class Scenario {
     return JSON.getGson().toJson(this);
   }
 }
-

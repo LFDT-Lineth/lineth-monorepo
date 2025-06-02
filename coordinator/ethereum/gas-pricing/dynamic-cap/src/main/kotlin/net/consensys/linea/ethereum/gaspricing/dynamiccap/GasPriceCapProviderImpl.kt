@@ -20,7 +20,7 @@ class GasPriceCapProviderImpl(
   private val l2ExtendedWeb3JClient: ExtendedWeb3J,
   private val feeHistoriesRepository: FeeHistoriesRepositoryWithCache,
   private val gasPriceCapCalculator: GasPriceCapCalculator,
-  private val clock: Clock = Clock.System
+  private val clock: Clock = Clock.System,
 ) : GasPriceCapProvider {
   data class Config(
     val enabled: Boolean,
@@ -31,7 +31,7 @@ class GasPriceCapProviderImpl(
     val adjustmentConstant: UInt,
     val blobAdjustmentConstant: UInt,
     val finalizationTargetMaxDelay: Duration,
-    val gasPriceCapsCoefficient: Double
+    val gasPriceCapsCoefficient: Double,
   )
 
   private val log: Logger = LogManager.getLogger(this::class.java)
@@ -65,7 +65,7 @@ class GasPriceCapProviderImpl(
         "Not enough fee history data for gas price cap update: numOfValidFeeHistoriesInDb={}, " +
           "minNumOfFeeHistoriesNeeded={}",
         numOfValidFeeHistories,
-        minNumOfFeeHistoriesNeeded
+        minNumOfFeeHistoriesNeeded,
       )
     }
     return isEnoughData
@@ -82,7 +82,7 @@ class GasPriceCapProviderImpl(
   }
 
   private fun calculateGasPriceCapsHelper(
-    targetL2BlockNumber: Long
+    targetL2BlockNumber: Long,
   ): SafeFuture<GasPriceCaps?> {
     return if (isEnoughDataForGasPriceCapCalculation()) {
       l2ExtendedWeb3JClient.ethGetBlockTimestampByNumber(targetL2BlockNumber).thenApply {
@@ -94,26 +94,26 @@ class GasPriceCapProviderImpl(
           finalizationTargetMaxDelay = config.finalizationTargetMaxDelay,
           historicGasPriceCap = percentileGasFees.percentileAvgReward,
           elapsedTimeSinceBlockTimestamp = elapsedTimeSinceBlockTimestamp,
-          timeOfDayMultiplier = getTimeOfDayMultiplierForNow(config.timeOfDayMultipliers)
+          timeOfDayMultiplier = getTimeOfDayMultiplierForNow(config.timeOfDayMultipliers),
         )
         val maxBaseFeePerGasCap = gasPriceCapCalculator.calculateGasPriceCap(
           adjustmentConstant = config.adjustmentConstant,
           finalizationTargetMaxDelay = config.finalizationTargetMaxDelay,
           historicGasPriceCap = percentileGasFees.percentileBaseFeePerGas,
           elapsedTimeSinceBlockTimestamp = elapsedTimeSinceBlockTimestamp,
-          timeOfDayMultiplier = getTimeOfDayMultiplierForNow(config.timeOfDayMultipliers)
+          timeOfDayMultiplier = getTimeOfDayMultiplierForNow(config.timeOfDayMultipliers),
         )
         val maxFeePerBlobGasCap = gasPriceCapCalculator.calculateGasPriceCap(
           adjustmentConstant = config.blobAdjustmentConstant,
           finalizationTargetMaxDelay = config.finalizationTargetMaxDelay,
           historicGasPriceCap = percentileGasFees.percentileBaseFeePerBlobGas,
-          elapsedTimeSinceBlockTimestamp = elapsedTimeSinceBlockTimestamp
+          elapsedTimeSinceBlockTimestamp = elapsedTimeSinceBlockTimestamp,
         )
         GasPriceCaps(
           maxBaseFeePerGasCap = maxBaseFeePerGasCap,
           maxPriorityFeePerGasCap = maxPriorityFeePerGasCap,
           maxFeePerGasCap = maxPriorityFeePerGasCap + maxBaseFeePerGasCap,
-          maxFeePerBlobGasCap = maxFeePerBlobGasCap
+          maxFeePerBlobGasCap = maxFeePerBlobGasCap,
         )
       }.thenPeek { gasPriceCaps ->
         log.debug(
@@ -124,14 +124,14 @@ class GasPriceCapProviderImpl(
           gasPriceCaps.maxPriorityFeePerGasCap.toGWei(),
           gasPriceCaps.maxFeePerGasCap.toGWei(),
           gasPriceCaps.maxFeePerBlobGasCap.toGWei(),
-          config.gasFeePercentile
+          config.gasFeePercentile,
         )
       }.exceptionallyCompose { th ->
         log.error(
           "Gas price caps returned as null due to failure occurred: " +
             "errorMessage={}",
           th.message,
-          th
+          th,
         )
         SafeFuture.completedFuture(null)
       }
@@ -143,7 +143,7 @@ class GasPriceCapProviderImpl(
   private fun calculateGasPriceCaps(targetL2BlockNumber: Long): SafeFuture<GasPriceCaps?> {
     return if (config.enabled) {
       calculateGasPriceCapsHelper(
-        targetL2BlockNumber = targetL2BlockNumber
+        targetL2BlockNumber = targetL2BlockNumber,
       )
     } else {
       SafeFuture.completedFuture(null)
@@ -165,7 +165,7 @@ class GasPriceCapProviderImpl(
           maxBaseFeePerGasCap = multipliedMaxBaseFeePerGasCap.toULong(),
           maxPriorityFeePerGasCap = multipliedMaxPriorityFeePerGas.toULong(),
           maxFeePerGasCap = (multipliedMaxBaseFeePerGasCap + multipliedMaxPriorityFeePerGas).toULong(),
-          maxFeePerBlobGasCap = multipliedMaxFeePerBlobGasCap.toULong()
+          maxFeePerBlobGasCap = multipliedMaxFeePerBlobGasCap.toULong(),
         )
       }
     }

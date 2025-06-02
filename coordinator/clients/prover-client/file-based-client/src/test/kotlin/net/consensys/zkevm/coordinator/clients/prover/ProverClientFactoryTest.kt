@@ -27,7 +27,7 @@ import kotlin.time.toJavaDuration
 class ProverClientFactoryTest {
   private fun buildProversConfig(
     tmpDir: Path,
-    switchBlockNumber: Int? = null
+    switchBlockNumber: Int? = null,
   ): ProversConfig {
     fun buildProverConfig(proverDir: Path): ProverConfig {
       return ProverConfig(
@@ -37,7 +37,7 @@ class ProverClientFactoryTest {
           pollingInterval = 100.milliseconds,
           pollingTimeout = 500.milliseconds,
           inprogressProvingSuffixPattern = ".*\\.inprogress\\.prover.*",
-          inprogressRequestWritingSuffix = ".inprogress_coordinator_writing"
+          inprogressRequestWritingSuffix = ".inprogress_coordinator_writing",
         ),
         blobCompression = FileBasedProverConfig(
           requestsDirectory = proverDir.resolve("compression/requests"),
@@ -45,7 +45,7 @@ class ProverClientFactoryTest {
           pollingInterval = 100.milliseconds,
           pollingTimeout = 500.milliseconds,
           inprogressProvingSuffixPattern = ".*\\.inprogress\\.prover.*",
-          inprogressRequestWritingSuffix = ".inprogress_coordinator_writing"
+          inprogressRequestWritingSuffix = ".inprogress_coordinator_writing",
         ),
         proofAggregation = FileBasedProverConfig(
           requestsDirectory = proverDir.resolve("aggregation/requests"),
@@ -53,8 +53,8 @@ class ProverClientFactoryTest {
           pollingInterval = 100.milliseconds,
           pollingTimeout = 500.milliseconds,
           inprogressProvingSuffixPattern = ".*\\.inprogress\\.prover.*",
-          inprogressRequestWritingSuffix = ".inprogress_coordinator_writing"
-        )
+          inprogressRequestWritingSuffix = ".inprogress_coordinator_writing",
+        ),
       )
     }
 
@@ -63,7 +63,7 @@ class ProverClientFactoryTest {
       switchBlockNumberInclusive = switchBlockNumber?.toULong(),
       proverB = switchBlockNumber?.let {
         buildProverConfig(tmpDir.resolve("prover/v3"))
-      }
+      },
     )
   }
 
@@ -78,27 +78,27 @@ class ProverClientFactoryTest {
     executionProofs = BlockIntervals(startingBlockNumber = 1uL, listOf(9uL)),
     parentAggregationLastBlockTimestamp = Clock.System.now(),
     parentAggregationLastL1RollingHashMessageNumber = 0uL,
-    parentAggregationLastL1RollingHash = ByteArrayExt.random32()
+    parentAggregationLastL1RollingHash = ByteArrayExt.random32(),
   )
   private val request2 = ProofsToAggregate(
     compressionProofIndexes = listOf(ProofIndex(startBlockNumber = 10uL, endBlockNumber = 19uL)),
     executionProofs = BlockIntervals(startingBlockNumber = 10uL, listOf(19uL)),
     parentAggregationLastBlockTimestamp = Clock.System.now(),
     parentAggregationLastL1RollingHashMessageNumber = 9uL,
-    parentAggregationLastL1RollingHash = ByteArrayExt.random32()
+    parentAggregationLastL1RollingHash = ByteArrayExt.random32(),
   )
   private val request3 = ProofsToAggregate(
     compressionProofIndexes = listOf(ProofIndex(startBlockNumber = 300uL, endBlockNumber = 319uL)),
     executionProofs = BlockIntervals(startingBlockNumber = 300uL, listOf(319uL)),
     parentAggregationLastBlockTimestamp = Clock.System.now(),
     parentAggregationLastL1RollingHashMessageNumber = 299uL,
-    parentAggregationLastL1RollingHash = ByteArrayExt.random32()
+    parentAggregationLastL1RollingHash = ByteArrayExt.random32(),
   )
 
   @BeforeEach
   fun beforeEach(
     vertx: Vertx,
-    @TempDir tmpDir: Path
+    @TempDir tmpDir: Path,
   ) {
     this.vertx = vertx
     this.testTmpDir = tmpDir

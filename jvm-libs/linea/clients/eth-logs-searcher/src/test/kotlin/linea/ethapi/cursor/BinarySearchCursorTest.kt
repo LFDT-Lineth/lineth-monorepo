@@ -14,7 +14,7 @@ class BinarySearchCursorTest {
       20UL..29UL,
       30UL..39UL,
       40UL..49UL,
-      50UL..50UL
+      50UL..50UL,
     )
 
     assertThat(rangeChunks(0uL, 45uL, 10)).containsExactly(
@@ -22,7 +22,7 @@ class BinarySearchCursorTest {
       10UL..19UL,
       20UL..29UL,
       30UL..39UL,
-      40UL..45UL
+      40UL..45UL,
     )
   }
 
@@ -32,22 +32,22 @@ class BinarySearchCursorTest {
       BinarySearchCursor(
         from = 1uL,
         to = 100uL,
-        chunkSize = 10
-      ).next(searchDirection = null)
+        chunkSize = 10,
+      ).next(searchDirection = null),
     ).isEqualTo(41UL to 50UL)
     assertThat(
       BinarySearchCursor(
         from = 1uL,
         to = 100uL,
-        chunkSize = 10
-      ).next(searchDirection = SearchDirection.FORWARD)
+        chunkSize = 10,
+      ).next(searchDirection = SearchDirection.FORWARD),
     ).isEqualTo(41UL to 50UL)
     assertThat(
       BinarySearchCursor(
         from = 1uL,
         to = 100uL,
-        chunkSize = 10
-      ).next(searchDirection = SearchDirection.BACKWARD)
+        chunkSize = 10,
+      ).next(searchDirection = SearchDirection.BACKWARD),
     ).isEqualTo(41UL to 50UL)
   }
 
@@ -110,7 +110,7 @@ class BinarySearchCursorTest {
       61UL to 70UL,
       71UL to 80UL,
       81UL to 90UL,
-      91UL to 100UL
+      91UL to 100UL,
     )
   }
 

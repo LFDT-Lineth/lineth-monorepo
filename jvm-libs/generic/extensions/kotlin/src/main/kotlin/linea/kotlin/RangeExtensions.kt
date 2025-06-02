@@ -6,9 +6,9 @@ internal fun <T : Comparable<T>> isRangeWithin(outer: ClosedRange<T>, inner: Clo
 
 fun <T : Comparable<T>> ClosedRange<T>.contains(inner: ClosedRange<T>): Boolean = isRangeWithin(
   outer = this,
-  inner = inner
+  inner = inner,
 )
 fun <T : Comparable<T>> ClosedRange<T>.isWithin(outer: ClosedRange<T>): Boolean = isRangeWithin(
   outer = outer,
-  inner = this
+  inner = this,
 )

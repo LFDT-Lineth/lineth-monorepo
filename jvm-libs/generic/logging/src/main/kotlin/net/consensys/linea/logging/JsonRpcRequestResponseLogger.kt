@@ -10,7 +10,7 @@ interface JsonRpcRequestResponseLogger {
     responseStatusCode: Int?,
     requestBody: String,
     responseBody: String,
-    failureCause: Throwable? = null
+    failureCause: Throwable? = null,
   )
 
   fun isJsonRpcError(responseStatusCode: Int?, responseBody: String?): Boolean {
@@ -22,7 +22,7 @@ class MinimalInLineJsonRpcLogger(
   val logger: Logger,
   val requestResponseLogLevel: Level = Level.DEBUG,
   val failuresLogLevel: Level = Level.WARN,
-  val maskEndpoint: LogFieldMask = ::noopMask
+  val maskEndpoint: LogFieldMask = ::noopMask,
 ) : JsonRpcRequestResponseLogger {
 
   private fun logRequestOnLevel(level: Level, endpoint: String, jsonBody: String, throwable: Throwable?) {
@@ -42,7 +42,7 @@ class MinimalInLineJsonRpcLogger(
     responseStatusCode: Int?,
     requestBody: String,
     responseBody: String,
-    failureCause: Throwable?
+    failureCause: Throwable?,
   ) {
     val isError = failureCause != null || isJsonRpcError(responseStatusCode, responseBody)
     val logLevel = if (isError) failuresLogLevel else requestResponseLogLevel
@@ -59,7 +59,7 @@ class MinimalInLineJsonRpcLogger(
         "<-- {} {} {}",
         maskedEndpoint,
         responseStatusCode,
-        responseBody
+        responseBody,
       )
     } else {
       logger.log(
@@ -68,7 +68,7 @@ class MinimalInLineJsonRpcLogger(
         maskedEndpoint,
         responseStatusCode,
         responseBody,
-        failureCause.message
+        failureCause.message,
       )
     }
   }

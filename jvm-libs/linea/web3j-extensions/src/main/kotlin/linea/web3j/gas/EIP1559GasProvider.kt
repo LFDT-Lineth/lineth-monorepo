@@ -19,7 +19,7 @@ class EIP1559GasProvider(private val web3jClient: Web3j, private val config: Con
     val gasLimit: ULong,
     val maxFeePerGasCap: ULong,
     val feeHistoryBlockCount: UInt,
-    val feeHistoryRewardPercentile: Double
+    val feeHistoryRewardPercentile: Double,
   )
 
   private val chainId: Long = web3jClient.ethChainId().send().chainId.toLong()
@@ -34,7 +34,7 @@ class EIP1559GasProvider(private val web3jClient: Web3j, private val config: Con
         .ethFeeHistory(
           config.feeHistoryBlockCount.toInt(),
           DefaultBlockParameterName.LATEST,
-          listOf(config.feeHistoryRewardPercentile)
+          listOf(config.feeHistoryRewardPercentile),
         )
         .sendAsync()
         .thenApply {
@@ -46,7 +46,7 @@ class EIP1559GasProvider(private val web3jClient: Web3j, private val config: Con
             maxPriorityFeePerGas = config.maxFeePerGasCap
             log.warn(
               "Estimated miner tip of $maxPriorityFeePerGas exceeds configured max " +
-                "fee per gas of ${config.maxFeePerGasCap} returning cap instead!"
+                "fee per gas of ${config.maxFeePerGasCap} returning cap instead!",
             )
           }
 
@@ -57,17 +57,17 @@ class EIP1559GasProvider(private val web3jClient: Web3j, private val config: Con
           if (maxFeePerGas > 0uL && maxPriorityFeePerGas > 0uL) {
             feesCache = EIP1559GasFees(
               maxPriorityFeePerGas = maxPriorityFeePerGas,
-              maxFeePerGas = min(maxFeePerGas, config.maxFeePerGasCap)
+              maxFeePerGas = min(maxFeePerGas, config.maxFeePerGasCap),
             )
             log.debug(
               "New fees estimation: fees={} l2Blocks={}",
               feeHistoryResponse.feeHistory.blocksRange().toIntervalString(),
-              feesCache
+              feesCache,
             )
           } else {
             feesCache = EIP1559GasFees(
               maxPriorityFeePerGas = 0uL,
-              maxFeePerGas = config.maxFeePerGasCap
+              maxFeePerGas = config.maxFeePerGasCap,
             )
           }
         }

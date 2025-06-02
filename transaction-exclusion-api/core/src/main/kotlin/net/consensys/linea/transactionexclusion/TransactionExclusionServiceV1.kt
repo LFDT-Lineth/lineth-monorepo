@@ -6,14 +6,14 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 interface TransactionExclusionServiceV1 {
   enum class SaveRejectedTransactionStatus {
     SAVED,
-    DUPLICATE_ALREADY_SAVED_BEFORE
+    DUPLICATE_ALREADY_SAVED_BEFORE,
   }
 
   fun saveRejectedTransaction(
-    rejectedTransaction: RejectedTransaction
+    rejectedTransaction: RejectedTransaction,
   ): SafeFuture<Result<SaveRejectedTransactionStatus, TransactionExclusionError>>
 
   fun getTransactionExclusionStatus(
-    txHash: ByteArray
+    txHash: ByteArray,
   ): SafeFuture<Result<RejectedTransaction?, TransactionExclusionError>>
 }

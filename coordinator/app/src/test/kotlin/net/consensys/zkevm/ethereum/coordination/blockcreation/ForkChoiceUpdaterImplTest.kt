@@ -22,12 +22,12 @@ class ForkChoiceUpdaterImplTest {
   fun dispatchFinalizedBlockNotification_allClientsSuccess() {
     val mockClient1 = mock<RollupForkChoiceUpdatedClient>()
     whenever(
-      mockClient1.rollupForkChoiceUpdated(any())
+      mockClient1.rollupForkChoiceUpdated(any()),
     )
       .thenReturn(SafeFuture.completedFuture(Ok(RollupForkChoiceUpdatedResponse("success"))))
     val mockClient2 = mock<RollupForkChoiceUpdatedClient>()
     whenever(
-      mockClient2.rollupForkChoiceUpdated(any())
+      mockClient2.rollupForkChoiceUpdated(any()),
     )
       .thenReturn(SafeFuture.completedFuture(Ok(RollupForkChoiceUpdatedResponse("success"))))
 
@@ -43,12 +43,12 @@ class ForkChoiceUpdaterImplTest {
   fun dispatchFinalizedBlockNotification_someClientsFail() {
     val mockClient1 = mock<RollupForkChoiceUpdatedClient>()
     whenever(
-      mockClient1.rollupForkChoiceUpdated(any())
+      mockClient1.rollupForkChoiceUpdated(any()),
     )
       .thenReturn(SafeFuture.completedFuture(Ok(RollupForkChoiceUpdatedResponse("success"))))
     val mockClient2 = mock<RollupForkChoiceUpdatedClient>()
     whenever(
-      mockClient2.rollupForkChoiceUpdated(any())
+      mockClient2.rollupForkChoiceUpdated(any()),
     )
       .thenReturn(SafeFuture.completedFuture(Err(ErrorResponse(RollupForkChoiceUpdatedError.UNKNOWN, ""))))
 

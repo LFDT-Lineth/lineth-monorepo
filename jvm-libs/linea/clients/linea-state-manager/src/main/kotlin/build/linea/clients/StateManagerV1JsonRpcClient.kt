@@ -22,7 +22,7 @@ import java.net.URI
 class StateManagerV1JsonRpcClient(
   private val rpcClient: JsonRpcV2Client,
   private val zkStateManagerVersion: String,
-  private val log: Logger = LogManager.getLogger(StateManagerV1JsonRpcClient::class.java)
+  private val log: Logger = LogManager.getLogger(StateManagerV1JsonRpcClient::class.java),
 ) : StateManagerClientV1 {
 
   companion object {
@@ -32,7 +32,7 @@ class StateManagerV1JsonRpcClient(
       maxInflightRequestsPerClient: UInt,
       requestRetry: RequestRetryConfig,
       zkStateManagerVersion: String,
-      logger: Logger = LogManager.getLogger(StateManagerV1JsonRpcClient::class.java)
+      logger: Logger = LogManager.getLogger(StateManagerV1JsonRpcClient::class.java),
     ): StateManagerV1JsonRpcClient {
       return StateManagerV1JsonRpcClient(
         rpcClient = rpcClientFactory.createJsonRpcV2Client(
@@ -40,9 +40,9 @@ class StateManagerV1JsonRpcClient(
           maxInflightRequestsPerClient = maxInflightRequestsPerClient,
           retryConfig = requestRetry,
           log = logger,
-          shallRetryRequestsClientBasePredicate = { it is Err }
+          shallRetryRequestsClientBasePredicate = { it is Err },
         ),
-        zkStateManagerVersion = zkStateManagerVersion
+        zkStateManagerVersion = zkStateManagerVersion,
       )
     }
   }
@@ -52,7 +52,7 @@ class StateManagerV1JsonRpcClient(
       .makeRequest(
         method = "rollup_getZkEVMBlockNumber",
         params = emptyList<Unit>(),
-        resultMapper = { ULong.fromHexString(it as String) }
+        resultMapper = { ULong.fromHexString(it as String) },
       )
   }
 
@@ -64,20 +64,20 @@ class StateManagerV1JsonRpcClient(
         "endBlockNumber",
         blockInterval.endBlockNumber.toLong(),
         "zkStateManagerVersion",
-        zkStateManagerVersion
-      )
+        zkStateManagerVersion,
+      ),
     )
 
     return rpcClient
       .makeRequest(
         method = "rollup_getZkEVMStateMerkleProofV0",
         params = params,
-        resultMapper = ::parseZkEVMStateMerkleProofResponse
+        resultMapper = ::parseZkEVMStateMerkleProofResponse,
       )
   }
 
   override fun rollupGetStateMerkleProofWithTypedError(
-    blockInterval: BlockInterval
+    blockInterval: BlockInterval,
   ): SafeFuture<Result<GetZkEVMStateMerkleProofResponse, ErrorResponse<StateManagerErrorType>>> {
     return rollupGetStateMerkleProof(blockInterval)
       .handleComposed { result, th ->
@@ -94,17 +94,17 @@ class StateManagerV1JsonRpcClient(
   }
 
   private fun mapErrorResponse(
-    jsonRpcErrorResponse: JsonRpcErrorResponseException
+    jsonRpcErrorResponse: JsonRpcErrorResponseException,
   ): ErrorResponse<StateManagerErrorType> {
     val errorType =
       try {
         StateManagerErrorType.valueOf(
-          jsonRpcErrorResponse.rpcErrorMessage.substringBefore('-').trim()
+          jsonRpcErrorResponse.rpcErrorMessage.substringBefore('-').trim(),
         )
       } catch (_: Exception) {
         log.error(
           "State manager found unrecognised JSON-RPC response error: {}",
-          jsonRpcErrorResponse.rpcErrorMessage
+          jsonRpcErrorResponse.rpcErrorMessage,
         )
         StateManagerErrorType.UNKNOWN
       }
@@ -113,21 +113,21 @@ class StateManagerV1JsonRpcClient(
       errorType,
       listOfNotNull(
         jsonRpcErrorResponse.rpcErrorMessage,
-        jsonRpcErrorResponse.rpcErrorData?.toString()
+        jsonRpcErrorResponse.rpcErrorData?.toString(),
       )
-        .joinToString(": ")
+        .joinToString(": "),
     )
   }
 
   private fun parseZkEVMStateMerkleProofResponse(
-    result: Any?
+    result: Any?,
   ): GetZkEVMStateMerkleProofResponse {
     result as JsonNode
     return GetZkEVMStateMerkleProofResponse(
       zkStateManagerVersion = result.get("zkStateManagerVersion").asText(),
       zkStateMerkleProof = result.get("zkStateMerkleProof") as ArrayNode,
       zkParentStateRootHash = result.get("zkParentStateRootHash").asText().decodeHex(),
-      zkEndStateRootHash = result.get("zkEndStateRootHash").asText().decodeHex()
+      zkEndStateRootHash = result.get("zkEndStateRootHash").asText().decodeHex(),
     )
   }
 }

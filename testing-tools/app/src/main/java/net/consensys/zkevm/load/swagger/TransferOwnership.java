@@ -198,4 +198,3 @@ public class TransferOwnership extends MethodAndParameter {
     return JSON.getGson().toJson(this);
   }
 }
-

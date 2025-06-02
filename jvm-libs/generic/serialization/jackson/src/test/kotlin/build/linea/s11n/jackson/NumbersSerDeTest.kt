@@ -47,7 +47,7 @@ class NumbersSerDeTest {
       val listOfInts: List<Int> = listOf(1, 10),
       val listOfLongs: List<Long> = listOf(1, 10),
       val listOfULongs: List<ULong> = listOf(1UL, 10UL),
-      val listOfBigIntegers: List<BigInteger> = listOf(1L, 10L).map(BigInteger::valueOf)
+      val listOfBigIntegers: List<BigInteger> = listOf(1L, 10L).map(BigInteger::valueOf),
     )
 
     val json = objectMapper.writeValueAsString(SomeObject())
@@ -74,7 +74,7 @@ class NumbersSerDeTest {
           "listOfULongs": ["0x1", "0xa"],
           "listOfBigIntegers": ["0x1", "0xa"]
       }
-      """.trimIndent()
+      """.trimIndent(),
     )
   }
 }

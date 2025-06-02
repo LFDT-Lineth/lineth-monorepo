@@ -16,7 +16,7 @@ interface VertxHttpRequestSender {
  * Handy to avoid creating anonymous classes.
  */
 class SimpleVertxHttpRequestSender(
-  private val requestLogger: VertxRequestLogger
+  private val requestLogger: VertxRequestLogger,
 ) : VertxHttpRequestSender {
   override fun makeRequest(request: HttpRequest<Buffer>): SafeFuture<HttpResponse<Buffer>> {
     requestLogger.logRequest(request)

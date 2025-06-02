@@ -6,7 +6,7 @@ internal class ConsecutiveSearchCursor(
   val from: ULong,
   val to: ULong,
   val chunkSize: Int,
-  val direction: SearchDirection
+  val direction: SearchDirection,
 ) : Iterator<ULongRange> {
 
   private val chunks: List<ULongRange> = run {

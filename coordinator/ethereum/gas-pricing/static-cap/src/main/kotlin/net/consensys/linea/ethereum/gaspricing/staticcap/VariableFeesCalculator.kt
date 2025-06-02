@@ -15,13 +15,13 @@ class VariableFeesCalculator(
   val config: Config,
   val averageWeightedBaseFeesCalculator: FeesCalculator = AverageWeightedBaseFeesCalculator,
   val averageWeightedPriorityFeesCalculator: FeesCalculator = AverageWeightedPriorityFeesCalculator,
-  val averageWeightedBlobBaseFeesCalculator: FeesCalculator = AverageWeightedBlobBaseFeesCalculator
+  val averageWeightedBlobBaseFeesCalculator: FeesCalculator = AverageWeightedBlobBaseFeesCalculator,
 ) : FeesCalculator {
   data class Config(
     val blobSubmissionExpectedExecutionGas: UInt,
     val bytesPerDataSubmission: UInt,
     val expectedBlobGas: UInt,
-    val margin: Double
+    val margin: Double,
   )
 
   private val log = LogManager.getLogger(this::class.java)
@@ -44,7 +44,7 @@ class VariableFeesCalculator(
       executionFee,
       blobFee,
       config.bytesPerDataSubmission,
-      feeHistory.blocksRange().toIntervalString()
+      feeHistory.blocksRange().toIntervalString(),
     )
 
     log.trace("feeHistory={}", feeHistory)

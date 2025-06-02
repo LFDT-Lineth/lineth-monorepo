@@ -159,4 +159,3 @@ public class Contract {
     return JSON.getGson().toJson(this);
   }
 }
-

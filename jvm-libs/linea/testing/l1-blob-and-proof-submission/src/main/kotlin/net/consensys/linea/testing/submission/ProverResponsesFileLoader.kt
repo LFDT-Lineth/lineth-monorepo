@@ -32,7 +32,7 @@ fun loadAggregations(aggregationsDir: String): List<Aggregation> {
 
 fun loadBlobs(
   blobsDir: String,
-  firstBlockStartBlockTime: Instant
+  firstBlockStartBlockTime: Instant,
 ): List<BlobRecord> {
   return loadProverResponses(blobsDir) {
     BlobCompressionProofJsonResponse.fromJsonString(it).toDomainObject()
@@ -40,7 +40,7 @@ fun loadBlobs(
     .let { compressionProofs ->
       createBlobRecords(
         compressionProofs = compressionProofs,
-        firstBlockStartBlockTime = firstBlockStartBlockTime
+        firstBlockStartBlockTime = firstBlockStartBlockTime,
       )
     }
     .sortedBy { it.startBlockNumber }
@@ -48,7 +48,7 @@ fun loadBlobs(
 
 fun loadBlobsAndAggregations(
   blobsResponsesDir: String,
-  aggregationsResponsesDir: String
+  aggregationsResponsesDir: String,
 ): Pair<List<BlobRecord>, List<Aggregation>> {
   val aggregations = loadAggregations(aggregationsResponsesDir)
   val firstAggregationBlockTime = aggregations.first().let { agg ->
@@ -63,7 +63,7 @@ fun loadBlobsAndAggregationsSortedAndGrouped(
   blobsResponsesDir: String,
   aggregationsResponsesDir: String,
   numberOfAggregations: Int? = null,
-  extraBlobsWithoutAggregation: Int = 0
+  extraBlobsWithoutAggregation: Int = 0,
 ): List<AggregationAndBlobs> {
   var (blobs, aggregations) = loadBlobsAndAggregations(blobsResponsesDir, aggregationsResponsesDir)
 
@@ -76,13 +76,13 @@ fun loadBlobsAndAggregationsSortedAndGrouped(
 
 data class AggregationAndBlobs(
   val aggregation: Aggregation?,
-  val blobs: List<BlobRecord>
+  val blobs: List<BlobRecord>,
 )
 
 fun groupBlobsToAggregations(
   aggregations: List<Aggregation>,
   blobs: List<BlobRecord>,
-  extraBlobsWithoutAggregation: Int
+  extraBlobsWithoutAggregation: Int,
 ): List<AggregationAndBlobs> {
   val aggBlobs = aggregations.map { agg ->
     AggregationAndBlobs(agg, blobs.filter { it.startBlockNumber in agg.blocksRange })
@@ -97,7 +97,7 @@ fun groupBlobsToAggregations(
       throw IllegalStateException(
         "Not enough blobs without aggregation: " +
           "blobsWithoutAggregation=${blobsWithoutAgg.size} " +
-          "requestedBlobsWithoutAggregation=$extraBlobsWithoutAggregation"
+          "requestedBlobsWithoutAggregation=$extraBlobsWithoutAggregation",
       )
     }
 

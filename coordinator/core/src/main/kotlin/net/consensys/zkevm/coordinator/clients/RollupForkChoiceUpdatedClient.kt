@@ -6,7 +6,7 @@ import net.consensys.linea.errors.ErrorResponse
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 enum class RollupForkChoiceUpdatedError {
-  UNKNOWN
+  UNKNOWN,
 }
 data class RollupForkChoiceUpdatedResponse(val result: String)
 

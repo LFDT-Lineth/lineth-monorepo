@@ -302,4 +302,3 @@ public class Request {
     return JSON.getGson().toJson(this);
   }
 }
-

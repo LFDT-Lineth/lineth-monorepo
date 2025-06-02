@@ -13,7 +13,7 @@ class VariableFeesCalculatorTest {
     margin = 1.1,
     bytesPerDataSubmission = 200_000u,
     blobSubmissionExpectedExecutionGas = 120_000u,
-    expectedBlobGas = 131_000u
+    expectedBlobGas = 131_000u,
   )
 
   @Test
@@ -37,7 +37,7 @@ class VariableFeesCalculatorTest {
       config = config,
       averageWeightedBaseFeesCalculator = mockBaseFeeCalculator,
       averageWeightedPriorityFeesCalculator = mockPriorityFeeCalculator,
-      averageWeightedBlobBaseFeesCalculator = mockBlobBaseFeeCalculator
+      averageWeightedBlobBaseFeesCalculator = mockBlobBaseFeeCalculator,
     )
     assertThat(feesCalculator.calculateFees(mockFeeHistory))
       .isEqualTo(expectedVariableFees)

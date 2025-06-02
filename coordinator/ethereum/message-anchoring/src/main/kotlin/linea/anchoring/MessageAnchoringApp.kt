@@ -21,7 +21,7 @@ class MessageAnchoringApp(
   private val vertx: Vertx,
   private val config: Config,
   l1EthApiClient: EthApiClient,
-  private val l2MessageService: L2MessageServiceSmartContractClient
+  private val l2MessageService: L2MessageServiceSmartContractClient,
 ) : LongRunningService {
   data class Config(
     val l1RequestRetryConfig: RetryConfig,
@@ -34,14 +34,14 @@ class MessageAnchoringApp(
     val l1EventPollingTimeout: Duration = 5.seconds,
     val l1EventSearchBlockChunk: UInt = 1000u,
     val messageQueueCapacity: UInt = 10_000u,
-    val maxMessagesToAnchorPerL2Transaction: UInt = 100u
+    val maxMessagesToAnchorPerL2Transaction: UInt = 100u,
   )
 
   private val l1EthLogsSearcher: EthLogsSearcher =
     EthLogsSearcherImpl(
       vertx = vertx,
       ethApiClient = l1EthApiClient,
-      config = EthLogsSearcherImpl.Config(loopSuccessBackoffDelay = config.l1SuccessBackoffDelay)
+      config = EthLogsSearcherImpl.Config(loopSuccessBackoffDelay = config.l1SuccessBackoffDelay),
     )
 
   private val eventsQueue: Deque<MessageSentEvent> = LinkedBlockingDeque()
@@ -61,7 +61,7 @@ class MessageAnchoringApp(
       l1MessagesSentFetchTimeout = config.l1EventPollingTimeout,
       l1BlockSearchChuck = config.l1EventSearchBlockChunk,
       l1HighestBlock = config.l1HighestBlockTag,
-      l2HighestBlock = config.l2HighestBlockTag
+      l2HighestBlock = config.l2HighestBlockTag,
     )
   }
   private val messageAnchoringService =
@@ -73,7 +73,7 @@ class MessageAnchoringApp(
       eventsQueue = eventsQueue,
       maxMessagesToAnchorPerL2Transaction = config.maxMessagesToAnchorPerL2Transaction,
       l2HighestBlockTag = config.l2HighestBlockTag,
-      anchoringTickInterval = config.anchoringTickInterval
+      anchoringTickInterval = config.anchoringTickInterval,
     )
 
   override fun start(): CompletableFuture<Unit> {
@@ -84,7 +84,7 @@ class MessageAnchoringApp(
   override fun stop(): CompletableFuture<Unit> {
     return CompletableFuture.allOf(
       l1EventsPoller.stop(),
-      messageAnchoringService.stop()
+      messageAnchoringService.stop(),
     ).thenApply {
       Unit
     }

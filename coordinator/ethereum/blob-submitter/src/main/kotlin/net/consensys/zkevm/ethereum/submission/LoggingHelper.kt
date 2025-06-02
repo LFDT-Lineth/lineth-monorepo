@@ -19,13 +19,13 @@ private fun rewriteInsufficientGasFeeErrorMessage(errorMessage: String): String?
 fun logUnhandledError(
   log: Logger,
   errorOrigin: String,
-  error: Throwable
+  error: Throwable,
 ) {
   if (error.message != null) {
     log.error(
       "Error from {}: errorMessage={}",
       errorOrigin,
-      error.message
+      error.message,
     )
   } else {
     log.error("Error from {}: ", errorOrigin, error)
@@ -42,7 +42,7 @@ fun logSubmissionError(
   logMessage: String,
   intervalString: String,
   error: Throwable,
-  isEthCall: Boolean = false
+  isEthCall: Boolean = false,
 ) {
   var matchedInsufficientGasFeeRegex = false
   val ethMethod = if (isEthCall) "eth_call" else "eth_sendRawTransaction"
@@ -61,7 +61,7 @@ fun logSubmissionError(
       logMessage,
       ethMethod,
       intervalString,
-      errorMessage
+      errorMessage,
     )
   } else {
     log.error(
@@ -69,7 +69,7 @@ fun logSubmissionError(
       ethMethod,
       intervalString,
       errorMessage,
-      error
+      error,
     )
   }
 }

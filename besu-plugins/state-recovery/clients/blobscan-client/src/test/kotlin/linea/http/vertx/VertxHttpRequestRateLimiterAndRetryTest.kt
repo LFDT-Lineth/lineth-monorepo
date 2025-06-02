@@ -28,10 +28,10 @@ class VertxHttpRequestRateLimiterAndRetryTest {
       requestRetryConfig = RetryConfig(
         maxRetries = 5u,
         backoffDelay = 10.milliseconds,
-        timeout = rateLimitBackoffDelay * 30
+        timeout = rateLimitBackoffDelay * 30,
       ),
       rateLimitBackoffDelay = rateLimitBackoffDelay,
-      logFormatter = VertxRestLoggingFormatter(responseLogMaxSize = 1000u)
+      logFormatter = VertxRestLoggingFormatter(responseLogMaxSize = 1000u),
     )
     // Warn: this does not work in io.github.hakky54:logcaptor
     // don't have time to dig into it now. disabling it for now

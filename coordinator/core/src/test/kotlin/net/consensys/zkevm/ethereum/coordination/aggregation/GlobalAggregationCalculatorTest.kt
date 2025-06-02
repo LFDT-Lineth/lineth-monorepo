@@ -56,7 +56,7 @@ class GlobalAggregationCalculatorTest {
     targetBlockNumbers: List<Int>? = null,
     aggregationSizeMultipleOf: Int = 1,
     metricsFacade: MetricsFacade = mock<MetricsFacade>(defaultAnswer = Mockito.RETURNS_DEEP_STUBS),
-    aggregationHandler: AggregationHandler = AggregationHandler.NOOP_HANDLER
+    aggregationHandler: AggregationHandler = AggregationHandler.NOOP_HANDLER,
   ): GlobalAggregationCalculator {
     val syncAggregationTriggers = mutableListOf<SyncAggregationTriggerCalculator>()
       .apply {
@@ -71,10 +71,10 @@ class GlobalAggregationCalculatorTest {
         aggregationTriggerCalculatorByDeadline = AggregationTriggerCalculatorByDeadline(
           AggregationTriggerCalculatorByDeadline.Config(
             aggregationDeadline = aggregationDeadline,
-            aggregationDeadlineDelay = aggregationDeadlineDelay!!
+            aggregationDeadlineDelay = aggregationDeadlineDelay!!,
           ),
           fixedClock,
-          safeBlockProvider
+          safeBlockProvider,
         )
         add(aggregationTriggerCalculatorByDeadline)
       }
@@ -85,7 +85,7 @@ class GlobalAggregationCalculatorTest {
       syncAggregationTrigger = syncAggregationTriggers,
       deferredAggregationTrigger = deferredAggregationTriggers,
       metricsFacade = metricsFacade,
-      aggregationSizeMultipleOf = aggregationSizeMultipleOf.toUInt()
+      aggregationSizeMultipleOf = aggregationSizeMultipleOf.toUInt(),
     ).apply { onAggregation(aggregationHandler) }
   }
   private fun blobCounters(
@@ -93,7 +93,7 @@ class GlobalAggregationCalculatorTest {
     endBlockNumber: ULong,
     numberOfBatches: UInt = 1u,
     startBlockTimestamp: Instant = fixedClock.now(),
-    endBlockTimestamp: Instant = fixedClock.now().plus(2.seconds.times((endBlockNumber - startBlockNumber).toInt()))
+    endBlockTimestamp: Instant = fixedClock.now().plus(2.seconds.times((endBlockNumber - startBlockNumber).toInt())),
   ): BlobCounters {
     return BlobCounters(
       numberOfBatches = numberOfBatches,
@@ -101,7 +101,7 @@ class GlobalAggregationCalculatorTest {
       endBlockNumber = endBlockNumber,
       startBlockTimestamp = startBlockTimestamp,
       endBlockTimestamp = endBlockTimestamp,
-      expectedShnarf = Random.nextBytes(32)
+      expectedShnarf = Random.nextBytes(32),
     )
   }
 
@@ -112,9 +112,9 @@ class GlobalAggregationCalculatorTest {
           BlockHeaderSummary(
             number = blockNumber,
             timestamp = timestamp,
-            hash = ByteArrayExt.random32()
-          )
-        )
+            hash = ByteArrayExt.random32(),
+          ),
+        ),
       )
   }
 
@@ -128,8 +128,8 @@ class GlobalAggregationCalculatorTest {
         blobCounters(
           numberOfBatches = 5u,
           startBlockNumber = 2u,
-          endBlockNumber = 10u
-        )
+          endBlockNumber = 10u,
+        ),
       )
     }
       .message()
@@ -146,9 +146,9 @@ class GlobalAggregationCalculatorTest {
         blobCounters(
           numberOfBatches = maxProofsPerAggregation,
           startBlockNumber = 1u,
-          endBlockNumber = 10u
+          endBlockNumber = 10u,
 
-        )
+        ),
       )
     }
     assertThat(exception.message).contains(expectedErrorMessage)
@@ -170,8 +170,8 @@ class GlobalAggregationCalculatorTest {
       blobCounters(
         numberOfBatches = 5u,
         startBlockNumber = 1u,
-        endBlockNumber = 10u
-      )
+        endBlockNumber = 10u,
+      ),
     )
 
     // This blob with #proofs = proofLimit (15) will trigger aggregation 2 times, first for the previous blob and
@@ -180,8 +180,8 @@ class GlobalAggregationCalculatorTest {
       blobCounters(
         numberOfBatches = proofLimit - 1u,
         startBlockNumber = 11u,
-        endBlockNumber = 30u
-      )
+        endBlockNumber = 30u,
+      ),
     )
     expectedAggregations.add(BlobsToAggregate(1u, 10u))
     expectedAggregations.add(BlobsToAggregate(11u, 30u))
@@ -191,8 +191,8 @@ class GlobalAggregationCalculatorTest {
       blobCounters(
         numberOfBatches = proofLimit - 1u,
         startBlockNumber = 31u,
-        endBlockNumber = 45u
-      )
+        endBlockNumber = 45u,
+      ),
     )
     expectedAggregations.add(BlobsToAggregate(31u, 45u))
 
@@ -201,8 +201,8 @@ class GlobalAggregationCalculatorTest {
       blobCounters(
         numberOfBatches = 4u,
         startBlockNumber = 46u,
-        endBlockNumber = 61u
-      )
+        endBlockNumber = 61u,
+      ),
     )
 
     // This blob with #proofs = 10 will trigger aggregation and will be included in aggregation along with previous
@@ -211,8 +211,8 @@ class GlobalAggregationCalculatorTest {
       blobCounters(
         numberOfBatches = 9u,
         startBlockNumber = 62u,
-        endBlockNumber = 70u
-      )
+        endBlockNumber = 70u,
+      ),
     )
     expectedAggregations.add(BlobsToAggregate(46u, 70u))
 
@@ -221,8 +221,8 @@ class GlobalAggregationCalculatorTest {
       blobCounters(
         numberOfBatches = proofLimit - 1u,
         startBlockNumber = 71u,
-        endBlockNumber = 85u
-      )
+        endBlockNumber = 85u,
+      ),
     )
     expectedAggregations.add(BlobsToAggregate(71u, 85u))
     assertThat(actualAggregations).containsExactlyElementsOf(expectedAggregations)
@@ -243,8 +243,8 @@ class GlobalAggregationCalculatorTest {
       blobCounters(
         numberOfBatches = 5u,
         startBlockNumber = 1u,
-        endBlockNumber = 10u
-      )
+        endBlockNumber = 10u,
+      ),
     )
 
     // This blob with proof count 13 will trigger aggregation, but will not be included in any aggregation.
@@ -253,8 +253,8 @@ class GlobalAggregationCalculatorTest {
       blobCounters(
         numberOfBatches = 12u,
         startBlockNumber = 11u,
-        endBlockNumber = 30u
-      )
+        endBlockNumber = 30u,
+      ),
     )
     expectedAggregations.add(BlobsToAggregate(1u, 10u))
 
@@ -264,8 +264,8 @@ class GlobalAggregationCalculatorTest {
       blobCounters(
         numberOfBatches = 9u,
         startBlockNumber = 31u,
-        endBlockNumber = 45u
-      )
+        endBlockNumber = 45u,
+      ),
     )
 
     expectedAggregations.add(BlobsToAggregate(11u, 30u))
@@ -275,8 +275,8 @@ class GlobalAggregationCalculatorTest {
       blobCounters(
         numberOfBatches = 4u,
         startBlockNumber = 46u,
-        endBlockNumber = 61u
-      )
+        endBlockNumber = 61u,
+      ),
     )
     expectedAggregations.add(BlobsToAggregate(31u, 61u))
     assertThat(actualAggregations).containsExactlyElementsOf(expectedAggregations)
@@ -292,7 +292,7 @@ class GlobalAggregationCalculatorTest {
       aggregationCalculator(
         proofLimit = 1500u,
         aggregationDeadline = aggregationDeadline,
-        aggregationDeadlineDelay = aggregationDeadlineDelay
+        aggregationDeadlineDelay = aggregationDeadlineDelay,
       ) { blobsToAggregate ->
         aggregation = blobsToAggregate
         SafeFuture.completedFuture(Unit)
@@ -303,7 +303,7 @@ class GlobalAggregationCalculatorTest {
       startBlockNumber = 1u,
       endBlockNumber = 10u,
       startBlockTimestamp = Instant.fromEpochMilliseconds(100),
-      endBlockTimestamp = Instant.fromEpochMilliseconds(130)
+      endBlockTimestamp = Instant.fromEpochMilliseconds(130),
     )
 
     val blob2 = blobCounters(
@@ -311,7 +311,7 @@ class GlobalAggregationCalculatorTest {
       startBlockNumber = blob1.endBlockNumber + 1uL,
       endBlockNumber = 30u,
       startBlockTimestamp = Instant.fromEpochMilliseconds(140),
-      endBlockTimestamp = Instant.fromEpochMilliseconds(250)
+      endBlockTimestamp = Instant.fromEpochMilliseconds(250),
     )
 
     whenever(safeBlockProvider.getLatestSafeBlockHeader())
@@ -320,9 +320,9 @@ class GlobalAggregationCalculatorTest {
           BlockHeaderSummary(
             number = blob2.endBlockNumber,
             hash = ByteArrayExt.random32(),
-            timestamp = blob2.endBlockTimestamp
-          )
-        )
+            timestamp = blob2.endBlockTimestamp,
+          ),
+        ),
       )
 
     val time1 = blob1.startBlockTimestamp.plus(aggregationDeadline).minus(1.milliseconds)
@@ -347,7 +347,7 @@ class GlobalAggregationCalculatorTest {
     val testMeterRegistry = SimpleMeterRegistry()
     val globalAggregationCalculator = aggregationCalculator(
       proofLimit = 15u,
-      metricsFacade = MicrometerMetricsFacade(testMeterRegistry, "test")
+      metricsFacade = MicrometerMetricsFacade(testMeterRegistry, "test"),
     )
     val pendingProofsGauge = testMeterRegistry.get("test.aggregation.proofs.ready").gauge()
     assertThat(pendingProofsGauge.value()).isEqualTo(0.0)
@@ -359,8 +359,8 @@ class GlobalAggregationCalculatorTest {
       blobCounters(
         numberOfBatches = 5u,
         startBlockNumber = 1u,
-        endBlockNumber = 10u
-      )
+        endBlockNumber = 10u,
+      ),
     )
     assertThat(pendingProofsGauge.value()).isEqualTo(6.0)
 
@@ -368,8 +368,8 @@ class GlobalAggregationCalculatorTest {
       blobCounters(
         numberOfBatches = 7u,
         startBlockNumber = 11u,
-        endBlockNumber = 30u
-      )
+        endBlockNumber = 30u,
+      ),
     )
     assertThat(pendingProofsGauge.value()).isEqualTo(14.0)
 
@@ -378,8 +378,8 @@ class GlobalAggregationCalculatorTest {
       blobCounters(
         numberOfBatches = 9u,
         startBlockNumber = 31u,
-        endBlockNumber = 45u
-      )
+        endBlockNumber = 45u,
+      ),
     )
     assertThat(pendingProofsGauge.value()).isEqualTo(10.0)
 
@@ -387,8 +387,8 @@ class GlobalAggregationCalculatorTest {
       blobCounters(
         numberOfBatches = 4u,
         startBlockNumber = 46u,
-        endBlockNumber = 61u
-      )
+        endBlockNumber = 61u,
+      ),
     )
     assertThat(pendingProofsGauge.value()).isEqualTo(0.0)
   }
@@ -399,7 +399,7 @@ class GlobalAggregationCalculatorTest {
     val globalAggregationCalculator = aggregationCalculator(
       aggregationDeadline = 100.milliseconds,
       aggregationDeadlineDelay = 50.milliseconds,
-      metricsFacade = MicrometerMetricsFacade(testMeterRegistry, "test")
+      metricsFacade = MicrometerMetricsFacade(testMeterRegistry, "test"),
     )
 
     val pendingProofsGauge = testMeterRegistry.get("test.aggregation.proofs.ready").gauge()
@@ -411,8 +411,8 @@ class GlobalAggregationCalculatorTest {
         startBlockNumber = 1u,
         endBlockNumber = 10u,
         startBlockTimestamp = Instant.fromEpochMilliseconds(100),
-        endBlockTimestamp = Instant.fromEpochMilliseconds(130)
-      )
+        endBlockTimestamp = Instant.fromEpochMilliseconds(130),
+      ),
     )
     globalAggregationCalculator.newBlob(
       blobCounters(
@@ -420,8 +420,8 @@ class GlobalAggregationCalculatorTest {
         startBlockNumber = 11u,
         endBlockNumber = 30u,
         startBlockTimestamp = Instant.fromEpochMilliseconds(140),
-        endBlockTimestamp = Instant.fromEpochMilliseconds(250)
-      )
+        endBlockTimestamp = Instant.fromEpochMilliseconds(250),
+      ),
     )
 
     whenever(safeBlockProvider.getLatestSafeBlockHeader())
@@ -430,9 +430,9 @@ class GlobalAggregationCalculatorTest {
           BlockHeaderSummary(
             number = 30u,
             hash = ByteArrayExt.random32(),
-            timestamp = Instant.fromEpochMilliseconds(250)
-          )
-        )
+            timestamp = Instant.fromEpochMilliseconds(250),
+          ),
+        ),
       )
     fixedClock.setTimeTo(Instant.fromEpochMilliseconds(1755))
 
@@ -489,7 +489,7 @@ class GlobalAggregationCalculatorTest {
       lastBlockNumber = lastFinalizedBlockNumber,
       aggregationDeadline = aggregationDeadline,
       aggregationDeadlineDelay = aggregationDeadlineDelay,
-      aggregationHandler = aggregationHandler
+      aggregationHandler = aggregationHandler,
     )
 
     whenever(safeBlockProvider.getLatestSafeBlockHeader())
@@ -498,9 +498,9 @@ class GlobalAggregationCalculatorTest {
           BlockHeaderSummary(
             number = firstBlobEndBlockNumber,
             hash = ByteArrayExt.random32(),
-            timestamp = firstBlobEndBlockTimeStamp
-          )
-        )
+            timestamp = firstBlobEndBlockTimeStamp,
+          ),
+        ),
       )
 
     val time1 = firstBlobEndBlockTimeStamp.plus(aggregationDeadline).plus(aggregationDeadlineDelay).plus(2.milliseconds)
@@ -511,8 +511,8 @@ class GlobalAggregationCalculatorTest {
         startBlockNumber = firstBlobStartBlockNumber,
         endBlockNumber = firstBlobEndBlockNumber,
         startBlockTimestamp = firstBlobStartBlockTimeStamp,
-        endBlockTimestamp = firstBlobEndBlockTimeStamp
-      )
+        endBlockTimestamp = firstBlobEndBlockTimeStamp,
+      ),
     )
     val check1 = aggregationTriggerCalculatorByDeadline.checkAggregation()
 
@@ -522,9 +522,9 @@ class GlobalAggregationCalculatorTest {
           BlockHeaderSummary(
             number = secondBlobEndBlockNumber,
             hash = ByteArrayExt.random32(),
-            timestamp = secondBlobEndTimestamp
-          )
-        )
+            timestamp = secondBlobEndTimestamp,
+          ),
+        ),
       )
 
     val time2 = secondBlobEndTimestamp.plus(aggregationDeadline).plus(aggregationDeadlineDelay).plus(2.milliseconds)
@@ -536,8 +536,8 @@ class GlobalAggregationCalculatorTest {
         startBlockNumber = secondBlobStartBlockNumber,
         endBlockNumber = secondBlobEndBlockNumber,
         startBlockTimestamp = secondBlobStartTimestamp,
-        endBlockTimestamp = secondBlobEndTimestamp
-      )
+        endBlockTimestamp = secondBlobEndTimestamp,
+      ),
     )
     blockAggregation1ProcessingUntilComplete.complete(Unit)
     check1.get()
@@ -550,7 +550,7 @@ class GlobalAggregationCalculatorTest {
     assertThat(aggregations.size).isEqualTo(2)
     assertThat(aggregations.toList().sortedBy { it.startBlockNumber }).containsExactly(
       BlobsToAggregate(startBlockNumber = firstBlobStartBlockNumber, endBlockNumber = firstBlobEndBlockNumber),
-      BlobsToAggregate(startBlockNumber = secondBlobStartBlockNumber, endBlockNumber = secondBlobEndBlockNumber)
+      BlobsToAggregate(startBlockNumber = secondBlobStartBlockNumber, endBlockNumber = secondBlobEndBlockNumber),
     )
   }
 
@@ -561,12 +561,12 @@ class GlobalAggregationCalculatorTest {
     aggregationSizeMultipleOf: Int,
     blobs: List<BlobCounters>,
     proofsLimit: Int,
-    expectedAggregations: List<BlobsToAggregate>
+    expectedAggregations: List<BlobsToAggregate>,
   ) {
     val actualAggregations = mutableListOf<BlobsToAggregate>()
     val globalAggregationCalculator = aggregationCalculator(
       proofLimit = proofsLimit.toUInt(),
-      aggregationSizeMultipleOf = aggregationSizeMultipleOf
+      aggregationSizeMultipleOf = aggregationSizeMultipleOf,
     ) { blobsToAggregate ->
       actualAggregations.add(blobsToAggregate)
       SafeFuture.completedFuture(Unit)
@@ -584,7 +584,7 @@ class GlobalAggregationCalculatorTest {
         return if (seenBlobsSet.contains(blobCounters.startBlockNumber)) {
           AggregationTrigger(
             AggregationTriggerType.TIME_LIMIT,
-            inFlightAggregation ?: BlobsToAggregate(blobCounters.startBlockNumber, blobCounters.endBlockNumber)
+            inFlightAggregation ?: BlobsToAggregate(blobCounters.startBlockNumber, blobCounters.endBlockNumber),
           )
         } else {
           seenBlobsSet.add(blobCounters.startBlockNumber)
@@ -594,7 +594,7 @@ class GlobalAggregationCalculatorTest {
       override fun newBlob(blobCounters: BlobCounters) {
         inFlightAggregation = BlobsToAggregate(
           inFlightAggregation?.startBlockNumber ?: blobCounters.startBlockNumber,
-          blobCounters.endBlockNumber
+          blobCounters.endBlockNumber,
         )
       }
       override fun reset() {
@@ -609,7 +609,7 @@ class GlobalAggregationCalculatorTest {
       BlobsToAggregate(5uL, 5uL),
       BlobsToAggregate(6uL, 6uL),
       BlobsToAggregate(7uL, 7uL),
-      BlobsToAggregate(8uL, 8uL)
+      BlobsToAggregate(8uL, 8uL),
     )
     val aggregationTriggerCalculator = AggregationTriggerCalculatorByProofLimit(proofsLimit.toUInt())
     val globalAggregationCalculator = GlobalAggregationCalculator(
@@ -617,7 +617,7 @@ class GlobalAggregationCalculatorTest {
       syncAggregationTrigger = listOf(aggregationTriggerCalculator, aggregationTriggerOnReprocessCalculator),
       deferredAggregationTrigger = emptyList(),
       metricsFacade = mock<MetricsFacade>(defaultAnswer = Mockito.RETURNS_DEEP_STUBS),
-      aggregationSizeMultipleOf = aggregationSizeMultipleOf.toUInt()
+      aggregationSizeMultipleOf = aggregationSizeMultipleOf.toUInt(),
     )
     val actualAggregations = mutableListOf<BlobsToAggregate>()
     val aggregationHandler = AggregationHandler { blobsToAggregate ->
@@ -638,18 +638,18 @@ class GlobalAggregationCalculatorTest {
       aggregationTriggerType = AggregationTriggerType.TIME_LIMIT,
       aggregation = BlobsToAggregate(
         startBlockNumber = blobs[0].startBlockNumber,
-        endBlockNumber = blobs[2].endBlockNumber
-      )
+        endBlockNumber = blobs[2].endBlockNumber,
+      ),
     )
     val expectedAggregations = listOf(
       BlobsToAggregate(
         startBlockNumber = blobs[0].startBlockNumber,
-        endBlockNumber = blobs[1].endBlockNumber
+        endBlockNumber = blobs[1].endBlockNumber,
       ),
       BlobsToAggregate(
         startBlockNumber = blobs[2].startBlockNumber,
-        endBlockNumber = blobs[3].endBlockNumber
-      )
+        endBlockNumber = blobs[3].endBlockNumber,
+      ),
     )
     val syncAggregationTriggerCalculator = AggregationTriggerCalculatorByProofLimit(proofsLimit.toUInt())
     val deferredAggregationTriggerCalculator = object : DeferredAggregationTriggerCalculator {
@@ -668,7 +668,7 @@ class GlobalAggregationCalculatorTest {
       syncAggregationTrigger = listOf(syncAggregationTriggerCalculator),
       deferredAggregationTrigger = listOf(deferredAggregationTriggerCalculator),
       metricsFacade = mock<MetricsFacade>(defaultAnswer = Mockito.RETURNS_DEEP_STUBS),
-      aggregationSizeMultipleOf = aggregationSizeMultipleOf.toUInt()
+      aggregationSizeMultipleOf = aggregationSizeMultipleOf.toUInt(),
     )
 
     val enableDeferredTrigger = AtomicBoolean(false)
@@ -728,13 +728,13 @@ class GlobalAggregationCalculatorTest {
       val aggregationSizeMultipleOf: Int,
       val blobs: List<BlobCounters>,
       val proofsLimit: Int,
-      val expectedAggregations: List<BlobsToAggregate>
+      val expectedAggregations: List<BlobsToAggregate>,
     )
 
     private fun checkAggregationSizesNotExceedingMaxAggregationSize(endSize: UInt, maxAggregationSize: UInt) {
       for (aggregationSize in 1u..endSize) {
         assertThat(
-          GlobalAggregationCalculator.getUpdatedAggregationSize(aggregationSize, maxAggregationSize)
+          GlobalAggregationCalculator.getUpdatedAggregationSize(aggregationSize, maxAggregationSize),
         ).isEqualTo(aggregationSize)
       }
     }
@@ -750,7 +750,7 @@ class GlobalAggregationCalculatorTest {
         endBlockNumber = endBlockNumber.toULong(),
         startBlockTimestamp = Instant.fromEpochMilliseconds((startBlockNumber * 100).toLong()),
         endBlockTimestamp = Instant.fromEpochMilliseconds((endBlockNumber * 100).toLong()),
-        expectedShnarf = Random.nextBytes(32)
+        expectedShnarf = Random.nextBytes(32),
       )
     }
 
@@ -764,8 +764,8 @@ class GlobalAggregationCalculatorTest {
           BlobsToAggregate(1u, 7u),
           BlobsToAggregate(8u, 14u),
           BlobsToAggregate(15u, 15u),
-          BlobsToAggregate(16u, 20u)
-        )
+          BlobsToAggregate(16u, 20u),
+        ),
       ),
       AggregationSizeConstraintTestCase(
         name = "regular_blobs_with_customization",
@@ -777,8 +777,8 @@ class GlobalAggregationCalculatorTest {
           BlobsToAggregate(7u, 12u),
           BlobsToAggregate(13u, 14u),
           BlobsToAggregate(15u, 20u),
-          BlobsToAggregate(21u, 25u)
-        )
+          BlobsToAggregate(21u, 25u),
+        ),
       ),
       AggregationSizeConstraintTestCase(
         name = "regular_blobs",
@@ -787,8 +787,8 @@ class GlobalAggregationCalculatorTest {
         proofsLimit = 15,
         expectedAggregations = listOf(
           BlobsToAggregate(1u, 6u),
-          BlobsToAggregate(7u, 12u)
-        )
+          BlobsToAggregate(7u, 12u),
+        ),
       ),
       AggregationSizeConstraintTestCase(
         name = "regular_blobs",
@@ -797,8 +797,8 @@ class GlobalAggregationCalculatorTest {
         proofsLimit = 15,
         expectedAggregations = listOf(
           BlobsToAggregate(1u, 4u),
-          BlobsToAggregate(5u, 8u)
-        )
+          BlobsToAggregate(5u, 8u),
+        ),
       ),
       AggregationSizeConstraintTestCase(
         name = "regular_blobs",
@@ -806,8 +806,8 @@ class GlobalAggregationCalculatorTest {
         blobs = regularBlobs(15),
         proofsLimit = 21,
         expectedAggregations = listOf(
-          BlobsToAggregate(1u, 10u)
-        )
+          BlobsToAggregate(1u, 10u),
+        ),
       ),
       AggregationSizeConstraintTestCase(
         name = "regular_blobs",
@@ -816,8 +816,8 @@ class GlobalAggregationCalculatorTest {
         proofsLimit = 26,
         expectedAggregations = listOf(
           BlobsToAggregate(1u, 12u),
-          BlobsToAggregate(13u, 24u)
-        )
+          BlobsToAggregate(13u, 24u),
+        ),
       ),
       AggregationSizeConstraintTestCase(
         name = "regular_blobs",
@@ -827,8 +827,8 @@ class GlobalAggregationCalculatorTest {
         expectedAggregations = listOf(
           BlobsToAggregate(1u, 7u),
           BlobsToAggregate(8u, 14u),
-          BlobsToAggregate(15u, 21u)
-        )
+          BlobsToAggregate(15u, 21u),
+        ),
       ),
       AggregationSizeConstraintTestCase(
         name = "regular_blobs",
@@ -838,8 +838,8 @@ class GlobalAggregationCalculatorTest {
         expectedAggregations = listOf(
           BlobsToAggregate(1u, 8u),
           BlobsToAggregate(9u, 16u),
-          BlobsToAggregate(17u, 24u)
-        )
+          BlobsToAggregate(17u, 24u),
+        ),
       ),
       AggregationSizeConstraintTestCase(
         name = "regular_blobs",
@@ -848,9 +848,9 @@ class GlobalAggregationCalculatorTest {
         proofsLimit = 26,
         expectedAggregations = listOf(
           BlobsToAggregate(1u, 9u),
-          BlobsToAggregate(10u, 18u)
-        )
-      )
+          BlobsToAggregate(10u, 18u),
+        ),
+      ),
     )
 
     @JvmStatic
@@ -861,7 +861,7 @@ class GlobalAggregationCalculatorTest {
           it.aggregationSizeMultipleOf,
           it.blobs,
           it.proofsLimit,
-          it.expectedAggregations
+          it.expectedAggregations,
         )
       }.stream()
     }

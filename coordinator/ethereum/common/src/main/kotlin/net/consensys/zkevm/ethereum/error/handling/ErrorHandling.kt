@@ -7,7 +7,7 @@ object ErrorHandling {
   fun handleError(
     messagePrefix: String,
     error: Throwable,
-    ethCall: () -> SafeFuture<*>
+    ethCall: () -> SafeFuture<*>,
   ): SafeFuture<TransactionReceipt> {
     return ethCall().handleException { errorWithRevertReason ->
       val txHash = extractTransactionHashFromErrorMessage(error.message!!)

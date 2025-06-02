@@ -56,7 +56,7 @@ class PeriodicPollingServiceTest {
           .untilAsserted {
             verify(log, atLeastOnce()).error(
               eq("Error polling: errorMessage={}"),
-              eq("java.lang.IllegalStateException: Test error")
+              eq("java.lang.IllegalStateException: Test error"),
             )
           }
         testContext.completeNow()
@@ -78,7 +78,7 @@ class PeriodicPollingServiceTest {
           .untilAsserted {
             verify(log, atLeastOnce()).error(
               eq("Error polling: errorMessage={}"),
-              eq("java.lang.IllegalStateException: Throw test")
+              eq("java.lang.IllegalStateException: Throw test"),
             )
           }
         testContext.completeNow()
@@ -112,7 +112,7 @@ class PeriodicPollingServiceTest {
             assertThat(actionCallCount.get()).isGreaterThanOrEqualTo(5)
             verify(log, times(2)).error(
               eq("Error polling: errorMessage={}"),
-              eq("java.lang.IllegalStateException: Test error")
+              eq("java.lang.IllegalStateException: Test error"),
             )
           }
         testContext.completeNow()
@@ -146,7 +146,7 @@ class PeriodicPollingServiceTest {
             assertThat(actionCallCount.get()).isGreaterThanOrEqualTo(5)
             verify(log, times(2)).error(
               eq("Error polling: errorMessage={}"),
-              eq("java.lang.IllegalStateException: Throw test")
+              eq("java.lang.IllegalStateException: Throw test"),
             )
           }
         testContext.completeNow()
@@ -157,7 +157,7 @@ class PeriodicPollingServiceTest {
   @Timeout(3, timeUnit = TimeUnit.SECONDS)
   fun `ticks shouldn't run concurrently if execution is longer than polling interval`(
     vertx: Vertx,
-    testContext: VertxTestContext
+    testContext: VertxTestContext,
   ) {
     val pollingInterval = 5.milliseconds.inWholeMilliseconds
     val numberOfInvocations = AtomicInteger(0)
@@ -196,7 +196,7 @@ class PeriodicPollingServiceTest {
   @Test
   @Timeout(3, timeUnit = TimeUnit.SECONDS)
   fun `periodicPollingService start should be idempotent`(
-    testContext: VertxTestContext
+    testContext: VertxTestContext,
   ) {
     val pollingInterval = 60.milliseconds.inWholeMilliseconds
     val mockVertx = mock<Vertx>()
@@ -221,7 +221,7 @@ class PeriodicPollingServiceTest {
   @Timeout(3, timeUnit = TimeUnit.SECONDS)
   fun `periodicPollingService stop should be idempotent`(
     vertx: Vertx,
-    testContext: VertxTestContext
+    testContext: VertxTestContext,
   ) {
     val log: Logger = Mockito.spy(LogManager.getLogger(PollingService::class.java))
     val pollingService = PollingService(vertx, pollingInterval, log)
@@ -252,11 +252,11 @@ class PollingService(
   private val vertx: Vertx,
   pollingInterval: Long,
   private val log: Logger,
-  val mockAction: (_: Unit) -> SafeFuture<Unit> = { SafeFuture.completedFuture(Unit) }
+  val mockAction: (_: Unit) -> SafeFuture<Unit> = { SafeFuture.completedFuture(Unit) },
 ) : PeriodicPollingService(
   vertx = vertx,
   pollingIntervalMs = pollingInterval,
-  log = log
+  log = log,
 ) {
   override fun action(): SafeFuture<Unit> {
     val future = SafeFuture<Unit>()

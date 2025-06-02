@@ -1,7 +1,7 @@
 package linea.contract.events
 
 data class L1L2MessageHashesAddedToInboxEvent(
-  val messageHashesRlpEncoded: ByteArray
+  val messageHashesRlpEncoded: ByteArray,
 ) {
   companion object {
     const val topic = "0x9995fb3da0c2de4012f2b814b6fc29ce7507571dcb20b8d0bd38621a842df1eb"

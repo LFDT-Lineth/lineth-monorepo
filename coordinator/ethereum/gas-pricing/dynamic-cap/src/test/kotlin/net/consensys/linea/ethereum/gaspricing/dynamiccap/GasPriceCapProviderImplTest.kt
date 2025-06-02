@@ -28,7 +28,7 @@ class GasPriceCapProviderImplTest {
     "WEDNESDAY_0" to 1.0,
     "WEDNESDAY_1" to 2.0,
     "WEDNESDAY_2" to 3.0,
-    "WEDNESDAY_3" to 4.0
+    "WEDNESDAY_3" to 4.0,
   )
   private val p10BaseFeeGas = 1000000000uL // 1GWei
   private val p10BaseFeeBlobGas = 100000000uL // 0.1GWei
@@ -57,7 +57,7 @@ class GasPriceCapProviderImplTest {
     l2ExtendedWeb3JClient: ExtendedWeb3J = mockedL2ExtendedWeb3JClient,
     feeHistoriesRepository: FeeHistoriesRepositoryWithCache = mockedL1FeeHistoriesRepository,
     gasPriceCapCalculator: GasPriceCapCalculator = this.gasPriceCapCalculator,
-    clock: Clock = mockedClock
+    clock: Clock = mockedClock,
   ): GasPriceCapProviderImpl {
     return GasPriceCapProviderImpl(
       config = GasPriceCapProviderImpl.Config(
@@ -69,12 +69,12 @@ class GasPriceCapProviderImplTest {
         adjustmentConstant = adjustmentConstant,
         blobAdjustmentConstant = blobAdjustmentConstant,
         finalizationTargetMaxDelay = finalizationTargetMaxDelay,
-        gasPriceCapsCoefficient = gasPriceCapsCoefficient
+        gasPriceCapsCoefficient = gasPriceCapsCoefficient,
       ),
       l2ExtendedWeb3JClient = l2ExtendedWeb3JClient,
       feeHistoriesRepository = feeHistoriesRepository,
       gasPriceCapCalculator = gasPriceCapCalculator,
-      clock = clock
+      clock = clock,
     )
   }
 
@@ -83,7 +83,7 @@ class GasPriceCapProviderImplTest {
     targetBlockTime = currentTime - 1.hours
     mockedL2ExtendedWeb3JClient = mock<ExtendedWeb3J> {
       on { ethGetBlockTimestampByNumber(any()) } doReturn SafeFuture.completedFuture(
-        BigInteger.valueOf(targetBlockTime.epochSeconds)
+        BigInteger.valueOf(targetBlockTime.epochSeconds),
       )
     }
 
@@ -92,7 +92,7 @@ class GasPriceCapProviderImplTest {
       on { getCachedPercentileGasFees() } doReturn PercentileGasFees(
         percentileBaseFeePerGas = p10BaseFeeGas,
         percentileBaseFeePerBlobGas = p10BaseFeeBlobGas,
-        percentileAvgReward = avgP10Reward
+        percentileAvgReward = avgP10Reward,
       )
     }
 
@@ -106,36 +106,36 @@ class GasPriceCapProviderImplTest {
     val negativePercentile = -10.0
     assertThrows<IllegalArgumentException> {
       createGasPriceCapProvider(
-        gasFeePercentile = negativePercentile
+        gasFeePercentile = negativePercentile,
       )
     }.also { exception ->
       assertThat(exception.message)
         .isEqualTo(
-          "gasFeePercentile must be no less than 0.0. Value=$negativePercentile"
+          "gasFeePercentile must be no less than 0.0. Value=$negativePercentile",
         )
     }
 
     val negativeDuration = (-1).hours
     assertThrows<IllegalArgumentException> {
       createGasPriceCapProvider(
-        finalizationTargetMaxDelay = negativeDuration
+        finalizationTargetMaxDelay = negativeDuration,
       )
     }.also { exception ->
       assertThat(exception.message)
         .isEqualTo(
-          "finalizationTargetMaxDelay duration must be longer than zero second. Value=$negativeDuration"
+          "finalizationTargetMaxDelay duration must be longer than zero second. Value=$negativeDuration",
         )
     }
 
     val negativeCoefficient = -1.0
     assertThrows<IllegalArgumentException> {
       createGasPriceCapProvider(
-        gasPriceCapsCoefficient = negativeCoefficient
+        gasPriceCapsCoefficient = negativeCoefficient,
       )
     }.also { exception ->
       assertThat(exception.message)
         .isEqualTo(
-          "gasPriceCapsCoefficient must be greater than 0.0. Value=$negativeCoefficient"
+          "gasPriceCapsCoefficient must be greater than 0.0. Value=$negativeCoefficient",
         )
     }
   }
@@ -146,14 +146,14 @@ class GasPriceCapProviderImplTest {
     val gasPriceCapProvider = createGasPriceCapProvider()
 
     assertThat(
-      gasPriceCapProvider.getGasPriceCaps(targetL2BlockNumber).get()
+      gasPriceCapProvider.getGasPriceCaps(targetL2BlockNumber).get(),
     ).isEqualTo(
       GasPriceCaps(
         maxBaseFeePerGasCap = 1694444444uL,
         maxPriorityFeePerGasCap = 338888888uL,
         maxFeePerGasCap = 2033333332uL,
-        maxFeePerBlobGasCap = 169444444uL
-      )
+        maxFeePerBlobGasCap = 169444444uL,
+      ),
     )
   }
 
@@ -166,14 +166,14 @@ class GasPriceCapProviderImplTest {
     val expectedMaxFeePerBlobGasCap = (169444444 * gasPriceCapsCoefficient).toULong()
 
     assertThat(
-      gasPriceCapProvider.getGasPriceCapsWithCoefficient(targetL2BlockNumber).get()
+      gasPriceCapProvider.getGasPriceCapsWithCoefficient(targetL2BlockNumber).get(),
     ).isEqualTo(
       GasPriceCaps(
         maxBaseFeePerGasCap = expectedMaxBaseFeePerGasCap,
         maxPriorityFeePerGasCap = expectedMaxPriorityFeePerGasCap,
         maxFeePerGasCap = (expectedMaxBaseFeePerGasCap + expectedMaxPriorityFeePerGasCap),
-        maxFeePerBlobGasCap = expectedMaxFeePerBlobGasCap
-      )
+        maxFeePerBlobGasCap = expectedMaxFeePerBlobGasCap,
+      ),
     )
   }
 
@@ -181,15 +181,15 @@ class GasPriceCapProviderImplTest {
   fun `gas price caps should be null if disabled`() {
     val targetL2BlockNumber = 100L
     val gasPriceCapProvider = createGasPriceCapProvider(
-      enabled = false
+      enabled = false,
     )
 
     assertThat(
-      gasPriceCapProvider.getGasPriceCaps(targetL2BlockNumber).get()
+      gasPriceCapProvider.getGasPriceCaps(targetL2BlockNumber).get(),
     ).isNull()
 
     assertThat(
-      gasPriceCapProvider.getGasPriceCapsWithCoefficient(targetL2BlockNumber).get()
+      gasPriceCapProvider.getGasPriceCapsWithCoefficient(targetL2BlockNumber).get(),
     ).isNull()
   }
 
@@ -197,15 +197,15 @@ class GasPriceCapProviderImplTest {
   fun `gas price caps should be null if not enough fee history data`() {
     val targetL2BlockNumber = 100L
     val gasPriceCapProvider = createGasPriceCapProvider(
-      gasFeePercentileWindowInBlocks = 200U
+      gasFeePercentileWindowInBlocks = 200U,
     )
 
     assertThat(
-      gasPriceCapProvider.getGasPriceCaps(targetL2BlockNumber).get()
+      gasPriceCapProvider.getGasPriceCaps(targetL2BlockNumber).get(),
     ).isNull()
 
     assertThat(
-      gasPriceCapProvider.getGasPriceCapsWithCoefficient(targetL2BlockNumber).get()
+      gasPriceCapProvider.getGasPriceCapsWithCoefficient(targetL2BlockNumber).get(),
     ).isNull()
   }
 
@@ -214,19 +214,19 @@ class GasPriceCapProviderImplTest {
     val targetL2BlockNumber = 100L
     mockedL1FeeHistoriesRepository = mock<FeeHistoriesRepositoryWithCache> {
       on { getNumOfFeeHistoriesFromBlockNumber(any(), any()) } doReturn SafeFuture.failedFuture(
-        Error("Throw error for testing")
+        Error("Throw error for testing"),
       )
     }
     val gasPriceCapProvider = createGasPriceCapProvider(
-      l2ExtendedWeb3JClient = mockedL2ExtendedWeb3JClient
+      l2ExtendedWeb3JClient = mockedL2ExtendedWeb3JClient,
     )
 
     assertThat(
-      gasPriceCapProvider.getGasPriceCaps(targetL2BlockNumber).get()
+      gasPriceCapProvider.getGasPriceCaps(targetL2BlockNumber).get(),
     ).isNull()
 
     assertThat(
-      gasPriceCapProvider.getGasPriceCapsWithCoefficient(targetL2BlockNumber).get()
+      gasPriceCapProvider.getGasPriceCapsWithCoefficient(targetL2BlockNumber).get(),
     ).isNull()
   }
 
@@ -235,19 +235,19 @@ class GasPriceCapProviderImplTest {
     val targetL2BlockNumber = 100L
     mockedL2ExtendedWeb3JClient = mock<ExtendedWeb3J> {
       on { ethGetBlockTimestampByNumber(any()) } doReturn SafeFuture.failedFuture(
-        Error("Throw error for testing")
+        Error("Throw error for testing"),
       )
     }
     val gasPriceCapProvider = createGasPriceCapProvider(
-      l2ExtendedWeb3JClient = mockedL2ExtendedWeb3JClient
+      l2ExtendedWeb3JClient = mockedL2ExtendedWeb3JClient,
     )
 
     assertThat(
-      gasPriceCapProvider.getGasPriceCaps(targetL2BlockNumber).get()
+      gasPriceCapProvider.getGasPriceCaps(targetL2BlockNumber).get(),
     ).isNull()
 
     assertThat(
-      gasPriceCapProvider.getGasPriceCapsWithCoefficient(targetL2BlockNumber).get()
+      gasPriceCapProvider.getGasPriceCapsWithCoefficient(targetL2BlockNumber).get(),
     ).isNull()
   }
 }

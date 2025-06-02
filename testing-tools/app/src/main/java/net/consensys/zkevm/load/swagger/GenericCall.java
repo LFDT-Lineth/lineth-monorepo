@@ -258,4 +258,3 @@ public class GenericCall extends MethodAndParameter {
     return JSON.getGson().toJson(this);
   }
 }
-

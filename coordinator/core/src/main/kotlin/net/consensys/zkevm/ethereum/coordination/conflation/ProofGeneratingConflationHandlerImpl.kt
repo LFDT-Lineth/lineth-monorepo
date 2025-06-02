@@ -22,12 +22,12 @@ class ProofGeneratingConflationHandlerImpl(
   private val zkProofProductionCoordinator: ZkProofCreationCoordinator,
   private val batchProofHandler: BatchProofHandler,
   private val vertx: Vertx,
-  private val config: Config
+  private val config: Config,
 ) : ConflationHandler {
   private val log: Logger = LogManager.getLogger(this::class.java)
 
   data class Config(
-    val conflationAndProofGenerationRetryInterval: Duration
+    val conflationAndProofGenerationRetryInterval: Duration,
   )
 
   override fun handleConflatedBatch(conflation: BlocksConflation): SafeFuture<*> {
@@ -37,7 +37,7 @@ class ProofGeneratingConflationHandlerImpl(
         "new batch: batch={} trigger={} tracesCounters={}",
         blockIntervalString,
         conflation.conflationResult.conflationTrigger,
-        conflation.conflationResult.tracesCounters
+        conflation.conflationResult.tracesCounters,
       )
       AsyncRetryer.retry(
         vertx = vertx,
@@ -47,9 +47,9 @@ class ProofGeneratingConflationHandlerImpl(
           log.warn(
             "conflation and proof creation flow failed batch={} errorMessage={}",
             blockIntervalString,
-            it.message
+            it.message,
           )
-        }
+        },
       ) {
         conflationToProofCreation(conflation)
       }
@@ -59,7 +59,7 @@ class ProofGeneratingConflationHandlerImpl(
           "traces conflation or proof request failed: batch={} errorMessage={}",
           blockIntervalString,
           th.message,
-          th
+          th,
         )
       }
   }
@@ -75,14 +75,14 @@ class ProofGeneratingConflationHandlerImpl(
               "traces conflation failed: batch={} errorMessage={}",
               conflation.conflationResult.intervalString(),
               th.message,
-              th
+              th,
             )
           }
           .thenCompose { blocksTracesConflated: BlocksTracesConflated ->
             log.debug(
               "requesting execution proof: batch={} tracesFile={}",
               blockIntervalString,
-              blocksTracesConflated.tracesResponse.tracesFileName
+              blocksTracesConflated.tracesResponse.tracesFileName,
             )
             zkProofProductionCoordinator
               .createZkProof(conflation, blocksTracesConflated)
@@ -94,7 +94,7 @@ class ProofGeneratingConflationHandlerImpl(
                   "execution proof failure: batch={} errorMessage={}",
                   blockIntervalString,
                   th.message,
-                  th
+                  th,
                 )
               }
           }
@@ -104,7 +104,7 @@ class ProofGeneratingConflationHandlerImpl(
 }
 
 internal fun assertConsecutiveBlocksRange(
-  blocks: List<Block>
+  blocks: List<Block>,
 ): Result<ULongRange, IllegalArgumentException> {
   if (blocks.isEmpty()) {
     return Err(IllegalArgumentException("Empty list of blocks"))

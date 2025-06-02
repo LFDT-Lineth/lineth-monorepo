@@ -30,10 +30,10 @@ class EthLogsSearcherImpl(
   val ethApiClient: EthApiClient,
   val config: Config = Config(),
   val clock: Clock = Clock.System,
-  val log: Logger = LogManager.getLogger(EthLogsSearcherImpl::class.java)
+  val log: Logger = LogManager.getLogger(EthLogsSearcherImpl::class.java),
 ) : EthLogsSearcher, EthLogsClient by ethApiClient {
   data class Config(
-    val loopSuccessBackoffDelay: Duration = 1.milliseconds
+    val loopSuccessBackoffDelay: Duration = 1.milliseconds,
   )
 
   override fun findLog(
@@ -42,7 +42,7 @@ class EthLogsSearcherImpl(
     chunkSize: Int,
     address: String,
     topics: List<String>,
-    shallContinueToSearch: (EthLog) -> SearchDirection?
+    shallContinueToSearch: (EthLog) -> SearchDirection?,
   ): SafeFuture<EthLog?> {
     require(chunkSize > 0) { "chunkSize=$chunkSize must be greater than 0" }
 
@@ -51,7 +51,7 @@ class EthLogsSearcherImpl(
         if (start > end) {
           // this is to prevent edge case when fromBlock number is after toBlock=LATEST/FINALIZED
           SafeFuture.failedFuture(
-            IllegalStateException("invalid range: fromBlock=$fromBlock is after toBlock=$toBlock ($end)")
+            IllegalStateException("invalid range: fromBlock=$fromBlock is after toBlock=$toBlock ($end)"),
           )
         } else {
           findLogWithBinarySearch(
@@ -60,7 +60,7 @@ class EthLogsSearcherImpl(
             chunkSize = chunkSize,
             address = address,
             topics = topics,
-            shallContinueToSearchPredicate = shallContinueToSearch
+            shallContinueToSearchPredicate = shallContinueToSearch,
           )
         }
       }
@@ -73,7 +73,7 @@ class EthLogsSearcherImpl(
     topics: List<String?>,
     chunkSize: UInt,
     searchTimeout: Duration,
-    stopAfterTargetLogsCount: UInt?
+    stopAfterTargetLogsCount: UInt?,
   ): SafeFuture<EthLogsSearcher.LogSearchResult> {
     require(chunkSize > 0u) { "chunkSize=$chunkSize must be greater than 0" }
 
@@ -82,7 +82,7 @@ class EthLogsSearcherImpl(
         if (start > end) {
           // this is to prevent edge case when fromBlock number is after toBlock=LATEST/FINALIZED
           SafeFuture.failedFuture(
-            IllegalStateException("invalid range: fromBlock=$fromBlock is after toBlock=$toBlock ($end)")
+            IllegalStateException("invalid range: fromBlock=$fromBlock is after toBlock=$toBlock ($end)"),
           )
         } else {
           getLogsLoopingForward(
@@ -92,7 +92,7 @@ class EthLogsSearcherImpl(
             topics = topics,
             chunkSize = chunkSize,
             searchTimeout = searchTimeout,
-            logsSoftLimit = stopAfterTargetLogsCount
+            logsSoftLimit = stopAfterTargetLogsCount,
           )
         }
       }
@@ -105,7 +105,7 @@ class EthLogsSearcherImpl(
     topics: List<String?>,
     chunkSize: UInt,
     searchTimeout: Duration,
-    logsSoftLimit: UInt?
+    logsSoftLimit: UInt?,
   ): SafeFuture<EthLogsSearcher.LogSearchResult> {
     val cursor = ConsecutiveSearchCursor(fromBlock, toBlock, chunkSize.toInt(), SearchDirection.FORWARD)
 
@@ -122,7 +122,7 @@ class EthLogsSearcherImpl(
         val noMoreChunksToCollect = !cursor.hasNext()
 
         enoughLogsCollected || collectionTimeoutElapsed || noMoreChunksToCollect
-      }
+      },
     ) {
       val chunk = cursor.next()
       val chunkInterval = CommonDomainFunctions.blockIntervalString(chunk.start, chunk.endInclusive)
@@ -136,7 +136,7 @@ class EthLogsSearcherImpl(
           log.trace(
             "logs collected: chunk={} logsCount={}",
             chunkInterval,
-            result.size
+            result.size,
           )
         }
     }
@@ -150,12 +150,12 @@ class EthLogsSearcherImpl(
           endBlockNumber,
           address,
           topics.joinToString(", ") { it ?: "null" },
-          logs.size
+          logs.size,
         )
         EthLogsSearcher.LogSearchResult(
           logs = logs,
           startBlockNumber = fromBlock,
-          endBlockNumber = endBlockNumber
+          endBlockNumber = endBlockNumber,
         )
       }
   }
@@ -166,7 +166,7 @@ class EthLogsSearcherImpl(
     chunkSize: Int,
     address: String,
     topics: List<String>,
-    shallContinueToSearchPredicate: (EthLog) -> SearchDirection?
+    shallContinueToSearchPredicate: (EthLog) -> SearchDirection?,
   ): SafeFuture<EthLog?> {
     val cursor = BinarySearchCursor(fromBlock, toBlock, chunkSize)
     log.trace("searching between blocks={}", CommonDomainFunctions.blockIntervalString(fromBlock, toBlock))
@@ -178,7 +178,7 @@ class EthLogsSearcherImpl(
       backoffDelay = config.loopSuccessBackoffDelay,
       stopRetriesPredicate = {
         it is SearchResult.ItemFound || nextChunkToSearchRef.get() == null
-      }
+      },
     ) {
       log.trace("searching in chunk={}", nextChunkToSearchRef.get())
       val (chunkStart, chunkEnd) = nextChunkToSearchRef.get()!!
@@ -195,7 +195,7 @@ class EthLogsSearcherImpl(
             "search result chunk={} searchResult={} nextChunkToSearch={}",
             chunkInterval,
             result,
-            nextChunkToSearchRef.get()
+            nextChunkToSearchRef.get(),
           )
         }
     }.thenApply { either ->
@@ -211,13 +211,13 @@ class EthLogsSearcherImpl(
     toBlock: ULong,
     address: String,
     topics: List<String>,
-    shallContinueToSearchPredicate: (EthLog) -> SearchDirection?
+    shallContinueToSearchPredicate: (EthLog) -> SearchDirection?,
   ): SafeFuture<SearchResult> {
     return getLogs(
       fromBlock = fromBlock.toBlockParameter(),
       toBlock = toBlock.toBlockParameter(),
       address = address,
-      topics = topics
+      topics = topics,
     )
       .thenApply { logs ->
         if (logs.isEmpty()) {
@@ -239,11 +239,11 @@ class EthLogsSearcherImpl(
 
   private fun getAbsoluteBlockNumbers(
     fromBlock: BlockParameter,
-    toBlock: BlockParameter
+    toBlock: BlockParameter,
   ): SafeFuture<Pair<ULong, ULong>> {
     return SafeFuture.collectAll(
       getBlockParameterNumber(fromBlock),
-      getBlockParameterNumber(toBlock)
+      getBlockParameterNumber(toBlock),
     ).thenApply { (start, end) ->
       start to end
     }

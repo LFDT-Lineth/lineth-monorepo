@@ -46,7 +46,7 @@ class BytesSerDeTest {
     nullByte = null,
     someByte = 0xaf.toByte(),
     minByte = Byte.MIN_VALUE,
-    maxByte = Byte.MAX_VALUE
+    maxByte = Byte.MAX_VALUE,
   )
 
   @BeforeEach
@@ -78,7 +78,7 @@ class BytesSerDeTest {
     val nullByte: Byte?,
     val someByte: Byte,
     val minByte: Byte,
-    val maxByte: Byte
+    val maxByte: Byte,
   ) {
     override fun equals(other: Any?): Boolean {
       if (this === other) return true

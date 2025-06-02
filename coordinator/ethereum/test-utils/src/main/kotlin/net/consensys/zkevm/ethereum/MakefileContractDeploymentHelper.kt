@@ -9,20 +9,20 @@ import java.util.regex.Matcher
 import java.util.regex.Pattern
 
 internal val lineaRollupAddressPattern = Pattern.compile(
-  "^contract=LineaRollup(?:.*)? deployed: address=(0x[0-9a-fA-F]{40}) blockNumber=(\\d+)"
+  "^contract=LineaRollup(?:.*)? deployed: address=(0x[0-9a-fA-F]{40}) blockNumber=(\\d+)",
 )
 internal val l2MessageServiceAddressPattern = Pattern.compile(
-  "^contract=L2MessageService(?:.*)? deployed: address=(0x[0-9a-fA-F]{40}) blockNumber=(\\d+)"
+  "^contract=L2MessageService(?:.*)? deployed: address=(0x[0-9a-fA-F]{40}) blockNumber=(\\d+)",
 )
 
 data class DeployedContract(
   val address: String,
-  val blockNumber: Long
+  val blockNumber: Long,
 )
 
 fun getDeployedAddress(
   commandResult: CommandResult,
-  addressPattern: Pattern
+  addressPattern: Pattern,
 ): DeployedContract {
   val lines = commandResult.stdOutLines.toList().asReversed()
   return getDeployedAddress(lines, addressPattern)
@@ -30,7 +30,7 @@ fun getDeployedAddress(
 
 fun getDeployedAddress(
   cmdStdoutLines: List<String>,
-  addressPattern: Pattern
+  addressPattern: Pattern,
 ): DeployedContract {
   val matcher: Matcher? = cmdStdoutLines
     .firstOrNull { line -> addressPattern.matcher(line).find() }
@@ -50,11 +50,11 @@ fun getDeployedAddress(
 private fun deployContract(
   command: String,
   env: Map<String, String> = emptyMap(),
-  addressPattern: Pattern
+  addressPattern: Pattern,
 ): SafeFuture<DeployedContract> {
   return Runner.executeCommand(
     command = command,
-    envVars = env
+    envVars = env,
   )
     .thenApply { result ->
       if (result.exitCode != 0) {
@@ -63,7 +63,7 @@ private fun deployContract(
           "Command $command failed: " +
             "\nexitCode=${result.exitCode} " +
             "\nSTD_OUT: \n${result.stdOutStr}" +
-            "\nSTD_ERROR: \n${result.stdErrStr}"
+            "\nSTD_ERROR: \n${result.stdErrStr}",
         )
       } else {
         runCatching { getDeployedAddress(result, addressPattern) }
@@ -76,10 +76,10 @@ private fun deployContract(
 fun makeDeployLineaRollup(
   deploymentPrivateKey: String? = null,
   operatorsAddresses: List<String>,
-  contractVersion: LineaContractVersion
+  contractVersion: LineaContractVersion,
 ): SafeFuture<DeployedContract> {
   val env = mutableMapOf(
-    "LINEA_ROLLUP_OPERATORS" to operatorsAddresses.joinToString(",")
+    "LINEA_ROLLUP_OPERATORS" to operatorsAddresses.joinToString(","),
     // "HARDHAT_DISABLE_CACHE" to "true"
   )
   deploymentPrivateKey?.let { env["DEPLOYMENT_PRIVATE_KEY"] = it }
@@ -91,23 +91,23 @@ fun makeDeployLineaRollup(
   return deployContract(
     command = command,
     env = env,
-    addressPattern = lineaRollupAddressPattern
+    addressPattern = lineaRollupAddressPattern,
   )
 }
 
 fun makeDeployL2MessageService(
   deploymentPrivateKey: String? = null,
-  anchorOperatorAddresses: String
+  anchorOperatorAddresses: String,
 ): SafeFuture<DeployedContract> {
   val env = mutableMapOf(
-    "L2MSGSERVICE_L1L2_MESSAGE_SETTER" to anchorOperatorAddresses
+    "L2MSGSERVICE_L1L2_MESSAGE_SETTER" to anchorOperatorAddresses,
   )
   deploymentPrivateKey?.let { env["DEPLOYMENT_PRIVATE_KEY"] = it }
 
   return deployContract(
     command = "make deploy-l2messageservice",
     env = env,
-    addressPattern = l2MessageServiceAddressPattern
+    addressPattern = l2MessageServiceAddressPattern,
   )
 }
 
@@ -124,12 +124,12 @@ fun main() {
     makeDeployLineaRollup(
       L1AccountManager.generateAccount().privateKey,
       listOf("03dfa322A95039BB679771346Ee2dBfEa0e2B773"),
-      LineaContractVersion.V6
+      LineaContractVersion.V6,
     ),
     makeDeployL2MessageService(
       L2AccountManager.generateAccount().privateKey,
-      "03dfa322A95039BB679771346Ee2dBfEa0e2B773"
-    )
+      "03dfa322A95039BB679771346Ee2dBfEa0e2B773",
+    ),
   ).thenApply { addresses ->
     println("LineaRollup address: ${addresses[0]}")
     println("L2MessageService address: ${addresses[1]}")

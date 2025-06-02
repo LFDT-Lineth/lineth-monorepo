@@ -23,7 +23,7 @@ fun createProofToFinalize(
   parentAggregationLastBlockTimestamp: Instant = parentAggregationProof?.finalTimestamp
     ?: startBlockTime.minus(2.seconds),
   finalTimestamp: Instant = startBlockTime.plus((2L * (finalBlockNumber - firstBlockNumber)).seconds),
-  l2MessagingBlockOffsets: ByteArray = ByteArray(32)
+  l2MessagingBlockOffsets: ByteArray = ByteArray(32),
 ): ProofToFinalize {
   return ProofToFinalize(
     aggregatedProof = Random.nextBytes(32).setFirstByteToZero(),
@@ -40,7 +40,7 @@ fun createProofToFinalize(
     l1RollingHashMessageNumber = 0,
     l2MerkleRoots = listOf(Random.nextBytes(32).setFirstByteToZero()),
     l2MerkleTreesDepth = 0,
-    l2MessagingBlocksOffsets = l2MessagingBlockOffsets
+    l2MessagingBlocksOffsets = l2MessagingBlockOffsets,
   )
 }
 
@@ -51,7 +51,7 @@ fun createProofToFinalizeFromBlobs(
   parentStateRootHash: ByteArray = parentBlob?.blobCompressionProof?.finalStateRootHash
     ?: Random.nextBytes(32).setFirstByteToZero(),
   dataParentHash: ByteArray = parentBlob?.blobCompressionProof?.dataHash
-    ?: Random.nextBytes(32).setFirstByteToZero()
+    ?: Random.nextBytes(32).setFirstByteToZero(),
 ): ProofToFinalize {
   return createProofToFinalize(
     firstBlockNumber = blobRecords.first().startBlockNumber.toLong(),
@@ -62,19 +62,19 @@ fun createProofToFinalizeFromBlobs(
     parentStateRootHash = parentStateRootHash,
     dataParentHash = dataParentHash,
     finalTimestamp = blobRecords.last().endBlockTime,
-    dataHashes = blobRecords.map { it.blobCompressionProof!!.dataHash }
+    dataHashes = blobRecords.map { it.blobCompressionProof!!.dataHash },
   )
 }
 
 fun createProofToFinalizeFromBlobs(
   blobsByAggregation: List<List<BlobRecord>>,
   parentStateRootHash: ByteArray = Random.nextBytes(32),
-  dataParentHash: ByteArray = Random.nextBytes(32)
+  dataParentHash: ByteArray = Random.nextBytes(32),
 ): List<ProofToFinalize> {
   val firstAggregationProof = createProofToFinalizeFromBlobs(
     blobRecords = blobsByAggregation.first(),
     parentStateRootHash = parentStateRootHash,
-    dataParentHash = dataParentHash
+    dataParentHash = dataParentHash,
   )
   val aggregations = mutableListOf<ProofToFinalize>(firstAggregationProof)
 
@@ -84,7 +84,7 @@ fun createProofToFinalizeFromBlobs(
       val aggregationProof = createProofToFinalizeFromBlobs(
         blobRecords = aggBlobs,
         parentAggregationProof = parentAggProof,
-        parentBlob = parentBlob
+        parentBlob = parentBlob,
       )
       aggregations.add(aggregationProof)
       aggregationProof to aggBlobs.last()

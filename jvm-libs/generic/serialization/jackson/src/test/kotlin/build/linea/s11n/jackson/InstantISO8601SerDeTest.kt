@@ -21,7 +21,7 @@ class InstantISO8601SerDeTest {
       val instantNull: Instant? = null,
       val instantUTC: Instant = Instant.parse("2021-01-02T09:00:45Z"),
       val instantUTCPlus: Instant = Instant.parse("2021-01-02T09:00:45+01:30"),
-      val instantUTCMinus: Instant = Instant.parse("2021-01-02T09:00:45-01:30")
+      val instantUTCMinus: Instant = Instant.parse("2021-01-02T09:00:45-01:30"),
     )
 
     val json = objectMapper.writeValueAsString(SomeObject())
@@ -33,7 +33,7 @@ class InstantISO8601SerDeTest {
         "instantUTCPlus": "2021-01-02T07:30:45Z",
         "instantUTCMinus": "2021-01-02T10:30:45Z"
       }
-      """.trimIndent()
+      """.trimIndent(),
     )
   }
 
@@ -44,7 +44,7 @@ class InstantISO8601SerDeTest {
       val instantNull: Instant? = null,
       val instantUTC: Instant = Instant.parse("2021-01-02T09:00:45Z"),
       val instantUTCPlus: Instant = Instant.parse("2021-01-02T09:00:45+01:30"),
-      val instantUTCMinus: Instant = Instant.parse("2021-01-02T09:00:45-01:30")
+      val instantUTCMinus: Instant = Instant.parse("2021-01-02T09:00:45-01:30"),
     )
 
     val expectedJson = """

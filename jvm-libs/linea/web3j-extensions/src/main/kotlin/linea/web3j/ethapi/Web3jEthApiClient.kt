@@ -20,7 +20,7 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
  * Request retries is responsibility of another class
  */
 class Web3jEthApiClient(
-  val web3jClient: Web3j
+  val web3jClient: Web3j,
 ) : EthApiClient {
 
   override fun findBlockByNumber(blockParameter: BlockParameter): SafeFuture<Block?> {
@@ -30,7 +30,7 @@ class Web3jEthApiClient(
   }
 
   override fun findBlockByNumberWithoutTransactionsData(
-    blockParameter: BlockParameter
+    blockParameter: BlockParameter,
   ): SafeFuture<BlockWithTxHashes?> {
     return web3jClient
       .ethGetBlockByNumber(blockParameter.toWeb3j(), false)
@@ -41,12 +41,15 @@ class Web3jEthApiClient(
     fromBlock: BlockParameter,
     toBlock: BlockParameter,
     address: String,
-    topics: List<String?>
+    topics: List<String?>,
   ): SafeFuture<List<EthLog>> {
     val ethFilter = EthFilter(
-      /*fromBlock*/ fromBlock.toWeb3j(),
-      /*toBlock*/ toBlock.toWeb3j(),
-      /*address*/ address
+      /*fromBlock*/
+      fromBlock.toWeb3j(),
+      /*toBlock*/
+      toBlock.toWeb3j(),
+      /*address*/
+      address,
     ).apply {
       topics.forEach { addSingleTopic(it) }
     }

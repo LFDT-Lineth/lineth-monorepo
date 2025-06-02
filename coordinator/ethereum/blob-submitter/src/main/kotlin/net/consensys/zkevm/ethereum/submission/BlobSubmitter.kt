@@ -5,10 +5,10 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 interface BlobSubmitter {
   fun submitBlobs(
-    blobsChunks: List<List<BlobRecord>>
+    blobsChunks: List<List<BlobRecord>>,
   ): SafeFuture<List<String>>
 
   fun submitBlobCall(
-    blobRecords: List<BlobRecord>
+    blobRecords: List<BlobRecord>,
   ): SafeFuture<*>
 }

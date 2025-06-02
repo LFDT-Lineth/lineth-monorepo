@@ -22,7 +22,7 @@ class ConsecutiveSearchCursorTest {
       20uL..29uL,
       30uL..39uL,
       40uL..49uL,
-      50uL..55uL
+      50uL..55uL,
     )
   }
 
@@ -41,7 +41,7 @@ class ConsecutiveSearchCursorTest {
       30uL..39uL,
       20uL..29uL,
       10uL..19uL,
-      0uL..9uL
+      0uL..9uL,
     )
   }
 

@@ -6,11 +6,11 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 data class BlocksTracesConflated(
   val tracesResponse: GenerateTracesResponse,
-  val zkStateTraces: GetZkEVMStateMerkleProofResponse
+  val zkStateTraces: GetZkEVMStateMerkleProofResponse,
 )
 
 interface TracesConflationCoordinator {
   fun conflateExecutionTraces(
-    blockRange: ULongRange
+    blockRange: ULongRange,
   ): SafeFuture<BlocksTracesConflated>
 }

@@ -14,7 +14,7 @@ object RLP {
   fun decodeBlockWithMainnetFunctions(block: ByteArray): org.hyperledger.besu.ethereum.core.Block {
     return Block.readFrom(
       RLP.input(Bytes.wrap(block)),
-      MainnetBlockHeaderFunctions()
+      MainnetBlockHeaderFunctions(),
     )
   }
 
@@ -29,7 +29,7 @@ object RLP {
   }
 
   fun decodeList(
-    bytes: ByteArray
+    bytes: ByteArray,
   ): List<ByteArray> {
     val items = mutableListOf<ByteArray>()
     val rlpInput = RLP.input(Bytes.wrap(bytes), false)

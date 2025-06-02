@@ -22,7 +22,7 @@ object Web3jClientManager {
     rpcUrl: String = l1RpcUrl,
     log: Logger = LogManager.getLogger("test.clients.l1.web3j-default"),
     requestResponseLogLevel: Level = Level.TRACE,
-    failuresLogLevel: Level = Level.DEBUG
+    failuresLogLevel: Level = Level.DEBUG,
   ): Web3j {
     return buildWeb3Client(rpcUrl, log, requestResponseLogLevel, failuresLogLevel)
   }
@@ -31,7 +31,7 @@ object Web3jClientManager {
     rpcUrl: String = l2RpcUrl,
     log: Logger = LogManager.getLogger("test.clients.l2.web3j-default"),
     requestResponseLogLevel: Level = Level.TRACE,
-    failuresLogLevel: Level = Level.DEBUG
+    failuresLogLevel: Level = Level.DEBUG,
   ): Web3j {
     return buildWeb3Client(rpcUrl, log, requestResponseLogLevel, failuresLogLevel)
   }
@@ -40,7 +40,7 @@ object Web3jClientManager {
     rpcUrl: String,
     log: Logger = LogManager.getLogger("test.clients.web3j"),
     requestResponseLogLevel: Level = Level.TRACE,
-    failuresLogLevel: Level = Level.DEBUG
+    failuresLogLevel: Level = Level.DEBUG,
   ): Web3j {
     return Web3j.build(
       HttpService(
@@ -48,11 +48,11 @@ object Web3jClientManager {
         okHttpClientBuilder(
           logger = log,
           requestResponseLogLevel = requestResponseLogLevel,
-          failuresLogLevel = failuresLogLevel
-        ).build()
+          failuresLogLevel = failuresLogLevel,
+        ).build(),
       ),
       500,
-      Async.defaultExecutorService()
+      Async.defaultExecutorService(),
     )
   }
 }

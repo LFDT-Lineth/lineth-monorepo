@@ -14,11 +14,11 @@ class FeeHistoryCachingService(
   private val web3jClient: Web3j,
   private val feeHistoryFetcher: GasPriceCapFeeHistoryFetcher,
   private val feeHistoriesRepository: FeeHistoriesRepositoryWithCache,
-  private val log: Logger = LogManager.getLogger(FeeHistoryCachingService::class.java)
+  private val log: Logger = LogManager.getLogger(FeeHistoryCachingService::class.java),
 ) : PeriodicPollingService(
   vertx = vertx,
   pollingIntervalMs = config.pollingInterval.inWholeMilliseconds,
-  log = log
+  log = log,
 ) {
   data class Config(
     val pollingInterval: Duration,
@@ -26,7 +26,7 @@ class FeeHistoryCachingService(
     val gasFeePercentile: Double,
     val feeHistoryWindowInBlocks: UInt,
     val feeHistoryStoragePeriodInBlocks: UInt,
-    val numOfBlocksBeforeLatest: UInt
+    val numOfBlocksBeforeLatest: UInt,
   )
 
   private fun fetchAndSaveFeeHistories(maxL1BlockNumberToFetch: Long): SafeFuture<Unit> {
@@ -34,7 +34,7 @@ class FeeHistoryCachingService(
       .coerceAtLeast(0L).inc()
 
     return feeHistoriesRepository.findHighestBlockNumberWithPercentile(
-      config.gasFeePercentile
+      config.gasFeePercentile,
     )
       .thenCompose {
         val highestStoredL1BlockNumber = it ?: 0L
@@ -51,14 +51,14 @@ class FeeHistoryCachingService(
         } else {
           feeHistoryFetcher.getEthFeeHistoryData(
             startBlockNumberInclusive = startBlockNumberInclusive,
-            endBlockNumberInclusive = endBlockNumberInclusive
+            endBlockNumberInclusive = endBlockNumberInclusive,
           ).thenCompose { feeHistory ->
             feeHistoriesRepository.saveNewFeeHistory(feeHistory)
           }.thenCompose {
             if (endBlockNumberInclusive == maxL1BlockNumberToFetch) {
               feeHistoriesRepository.cachePercentileGasFees(
                 percentile = config.gasFeePercentile,
-                fromBlockNumber = minFromBlockNumberInclusive
+                fromBlockNumber = minFromBlockNumberInclusive,
               )
             } else {
               SafeFuture.completedFuture(Unit)
@@ -69,16 +69,16 @@ class FeeHistoryCachingService(
         log.warn(
           "failure occurred when fetch and save fee histories but will be ignored: errorMessage={}",
           th.message,
-          th
+          th,
         )
       }.alwaysRun {
         feeHistoriesRepository.deleteFeeHistoriesUpToBlockNumber(
           maxL1BlockNumberToFetch.minus(config.feeHistoryStoragePeriodInBlocks.toLong())
-            .coerceAtLeast(0L)
+            .coerceAtLeast(0L),
         ).thenCompose {
           feeHistoriesRepository.cacheNumOfFeeHistoriesFromBlockNumber(
             rewardPercentile = config.gasFeePercentile,
-            fromBlockNumber = minFromBlockNumberInclusive
+            fromBlockNumber = minFromBlockNumberInclusive,
           )
         }
       }
@@ -93,7 +93,7 @@ class FeeHistoryCachingService(
           // from nodes that were not catching up with the head yet
           maxL1BlockNumberToFetch = latestL1BlockNumber.blockNumber.toLong()
             .minus(config.numOfBlocksBeforeLatest.toLong())
-            .coerceAtLeast(1L)
+            .coerceAtLeast(1L),
         )
       }
   }
@@ -102,7 +102,7 @@ class FeeHistoryCachingService(
     log.error(
       "Error with fee history caching service: errorMessage={}",
       error.message,
-      error
+      error,
     )
   }
 }

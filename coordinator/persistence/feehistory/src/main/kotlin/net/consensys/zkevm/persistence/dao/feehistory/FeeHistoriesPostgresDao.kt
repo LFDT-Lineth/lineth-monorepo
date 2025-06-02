@@ -14,39 +14,39 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 interface FeeHistoriesDao {
   fun saveNewFeeHistory(
     feeHistory: FeeHistory,
-    rewardPercentiles: List<Double>
+    rewardPercentiles: List<Double>,
   ): SafeFuture<Unit>
 
   fun findBaseFeePerGasAtPercentile(
     percentile: Double,
-    fromBlockNumber: Long
+    fromBlockNumber: Long,
   ): SafeFuture<ULong?>
 
   fun findBaseFeePerBlobGasAtPercentile(
     percentile: Double,
-    fromBlockNumber: Long
+    fromBlockNumber: Long,
   ): SafeFuture<ULong?>
 
   fun findAverageRewardAtPercentile(
     rewardPercentile: Double,
-    fromBlockNumber: Long
+    fromBlockNumber: Long,
   ): SafeFuture<ULong?>
 
   fun findHighestBlockNumberWithPercentile(rewardPercentile: Double): SafeFuture<Long?>
 
   fun getNumOfFeeHistoriesFromBlockNumber(
     rewardPercentile: Double,
-    fromBlockNumber: Long
+    fromBlockNumber: Long,
   ): SafeFuture<Int>
 
   fun deleteFeeHistoriesUpToBlockNumber(
-    blockNumberInclusive: Long
+    blockNumberInclusive: Long,
   ): SafeFuture<Int>
 }
 
 class FeeHistoriesPostgresDao(
   connection: SqlClient,
-  private val clock: Clock = Clock.System
+  private val clock: Clock = Clock.System,
 ) : FeeHistoriesDao {
   private val log = LogManager.getLogger(this.javaClass.name)
   private val queryLog = SQLQueryLogger(log)
@@ -121,7 +121,7 @@ class FeeHistoriesPostgresDao(
   private val selectHighestBlockNumberQuery = connection.preparedQuery(selectHighestBlockNumberSql)
   private val getNthPercentileOfBaseFeePerGasQuery = connection.preparedQuery(getNthPercentileOfBaseFeePerGasSql)
   private val getNthPercentileOfBaseFeePerBlobGasQuery = connection.preparedQuery(
-    getNthPercentileOfBaseFeePerBlobGasSql
+    getNthPercentileOfBaseFeePerBlobGasSql,
   )
   private val getAvgNthPercentileRewardQuery = connection.preparedQuery(getAvgNthPercentileRewardSql)
   private val countFeeHistoriesFromBlockNumberQuery = connection.preparedQuery(countFeeHistoriesFromBlockNumberSql)
@@ -137,7 +137,7 @@ class FeeHistoriesPostgresDao(
         feeHistory.gasUsedRatio[i].toFloat(),
         feeHistory.blobGasUsedRatio.getOrElse(i) { 0.0 }.toFloat(),
         reward.map { it.toLong() }.toTypedArray(),
-        rewardPercentiles.map { it.toFloat() }.toTypedArray()
+        rewardPercentiles.map { it.toFloat() }.toTypedArray(),
       )
       queryLog.log(Level.TRACE, upsertSql, params)
       Tuple.tuple(params)
@@ -152,11 +152,11 @@ class FeeHistoriesPostgresDao(
 
   override fun findBaseFeePerGasAtPercentile(
     percentile: Double,
-    fromBlockNumber: Long
+    fromBlockNumber: Long,
   ): SafeFuture<ULong?> {
     val params = listOf(
       percentile.div(100).toFloat(),
-      fromBlockNumber
+      fromBlockNumber,
     )
     queryLog.log(Level.TRACE, getNthPercentileOfBaseFeePerGasSql, params)
     return getNthPercentileOfBaseFeePerGasQuery
@@ -169,11 +169,11 @@ class FeeHistoriesPostgresDao(
 
   override fun findBaseFeePerBlobGasAtPercentile(
     percentile: Double,
-    fromBlockNumber: Long
+    fromBlockNumber: Long,
   ): SafeFuture<ULong?> {
     val params = listOf(
       percentile.div(100).toFloat(),
-      fromBlockNumber
+      fromBlockNumber,
     )
     queryLog.log(Level.TRACE, getNthPercentileOfBaseFeePerBlobGasSql, params)
     return getNthPercentileOfBaseFeePerBlobGasQuery
@@ -186,11 +186,11 @@ class FeeHistoriesPostgresDao(
 
   override fun findAverageRewardAtPercentile(
     rewardPercentile: Double,
-    fromBlockNumber: Long
+    fromBlockNumber: Long,
   ): SafeFuture<ULong?> {
     val params = listOf(
       rewardPercentile.toFloat(),
-      fromBlockNumber
+      fromBlockNumber,
     )
     queryLog.log(Level.TRACE, getAvgNthPercentileRewardSql, params)
     return getAvgNthPercentileRewardQuery
@@ -214,11 +214,11 @@ class FeeHistoriesPostgresDao(
 
   override fun getNumOfFeeHistoriesFromBlockNumber(
     rewardPercentile: Double,
-    fromBlockNumber: Long
+    fromBlockNumber: Long,
   ): SafeFuture<Int> {
     val params = listOf(
       rewardPercentile.toFloat(),
-      fromBlockNumber
+      fromBlockNumber,
     )
     queryLog.log(Level.TRACE, countFeeHistoriesFromBlockNumberSql, params)
     return countFeeHistoriesFromBlockNumberQuery
@@ -230,7 +230,7 @@ class FeeHistoriesPostgresDao(
   }
 
   override fun deleteFeeHistoriesUpToBlockNumber(
-    blockNumberInclusive: Long
+    blockNumberInclusive: Long,
   ): SafeFuture<Int> {
     return deleteQuery
       .execute(Tuple.of(blockNumberInclusive))

@@ -15,7 +15,7 @@ data class ProofsToAggregate(
   val executionProofs: BlockIntervals,
   val parentAggregationLastBlockTimestamp: Instant,
   val parentAggregationLastL1RollingHashMessageNumber: ULong,
-  val parentAggregationLastL1RollingHash: ByteArray
+  val parentAggregationLastL1RollingHash: ByteArray,
 ) : BlockInterval {
   override val startBlockNumber = compressionProofIndexes.first().startBlockNumber
   override val endBlockNumber = compressionProofIndexes.last().endBlockNumber
@@ -68,7 +68,7 @@ data class ProofToFinalize(
   val l1RollingHashMessageNumber: Long,
   val l2MerkleRoots: List<ByteArray>,
   val l2MerkleTreesDepth: Int,
-  val l2MessagingBlocksOffsets: ByteArray
+  val l2MessagingBlocksOffsets: ByteArray,
 ) : BlockInterval {
   override val startBlockNumber: ULong = firstBlockNumber.toULong()
   override val endBlockNumber: ULong = finalBlockNumber.toULong()
@@ -126,11 +126,11 @@ data class Aggregation(
   override val startBlockNumber: ULong,
   override val endBlockNumber: ULong,
   val batchCount: ULong,
-  val aggregationProof: ProofToFinalize?
+  val aggregationProof: ProofToFinalize?,
 ) : BlockInterval {
   enum class Status {
     Proven,
-    Proving
+    Proving,
   }
 }
 
@@ -140,7 +140,7 @@ data class FinalizationSubmittedEvent(
   val parentL1RollingHash: ByteArray,
   val parentL1RollingHashMessageNumber: Long,
   val submissionTimestamp: Instant,
-  val transactionHash: ByteArray
+  val transactionHash: ByteArray,
 ) : BlockInterval by aggregationProof {
 
   override fun equals(other: Any?): Boolean {

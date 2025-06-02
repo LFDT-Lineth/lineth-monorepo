@@ -59,7 +59,8 @@ enum class TracingModuleV2 : TracingModule {
   BLOCK_KECCAK,
   BLOCK_L1_SIZE,
   BLOCK_L2_L1_LOGS,
-  BLOCK_TRANSACTIONS;
+  BLOCK_TRANSACTIONS,
+  ;
 
   companion object {
     val evmModules: Set<TracingModuleV2> = setOf(
@@ -92,7 +93,7 @@ enum class TracingModuleV2 : TracingModule {
       STP,
       TRM,
       TXN_DATA,
-      WCP
+      WCP,
     )
   }
 }

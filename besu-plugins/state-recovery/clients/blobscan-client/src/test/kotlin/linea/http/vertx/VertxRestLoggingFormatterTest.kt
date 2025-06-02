@@ -13,7 +13,7 @@ class VertxRestLoggingFormatterTest {
   val request = WebClient.create(
     Vertx.vertx(),
     WebClientOptions()
-      .setDefaultsFrom(URI("http://service:9876/"))
+      .setDefaultsFrom(URI("http://service:9876/")),
   )
     .get("/users/1?appKey=SOME_APP_KEY")
 
@@ -21,7 +21,7 @@ class VertxRestLoggingFormatterTest {
     return VertxRestLoggingFormatter(
       includeFullUri = includeFullUri,
       uriTransformer = { it.replace("SOME_APP_KEY", "***") },
-      responseLogMaxSize = null
+      responseLogMaxSize = null,
     )
   }
 
@@ -39,7 +39,7 @@ class VertxRestLoggingFormatterTest {
     val response = httpResponse(
       statusCode = 200,
       statusMessage = "OK",
-      body = Buffer.buffer("some-response-body")
+      body = Buffer.buffer("some-response-body"),
     )
 
     assertThat(formatter(includeFullUri = false).toLogString(request, response))

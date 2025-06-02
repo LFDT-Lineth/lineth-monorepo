@@ -12,12 +12,12 @@ interface AggregationL2StateProvider {
 
 class AggregationL2StateProviderImpl(
   private val ethApiClient: EthApiClient,
-  private val messageService: L2MessageServiceSmartContractClientReadOnly
+  private val messageService: L2MessageServiceSmartContractClientReadOnly,
 ) : AggregationL2StateProvider {
 
   private data class AnchoredMessage(
     val messageNumber: ULong,
-    val rollingHash: ByteArray
+    val rollingHash: ByteArray,
   )
 
   private fun getLastAnchoredMessage(blockNumber: ULong): SafeFuture<AnchoredMessage> {
@@ -34,7 +34,7 @@ class AggregationL2StateProviderImpl(
             .thenCompose { lastAnchoredMessageNumber ->
               messageService.getRollingHashByL1MessageNumber(
                 block = blockNumber.toBlockParameter(),
-                l1MessageNumber = lastAnchoredMessageNumber
+                l1MessageNumber = lastAnchoredMessageNumber,
               )
                 .thenApply { rollingHash -> AnchoredMessage(lastAnchoredMessageNumber, rollingHash) }
             }
@@ -46,12 +46,12 @@ class AggregationL2StateProviderImpl(
     val blockParameter = blockNumber.toBlockParameter()
     return getLastAnchoredMessage(blockNumber.toULong())
       .thenCombine(
-        ethApiClient.getBlockByNumberWithoutTransactionsData(blockParameter)
+        ethApiClient.getBlockByNumberWithoutTransactionsData(blockParameter),
       ) { (messageNumber, rollingHash), block ->
         AggregationL2State(
           parentAggregationLastBlockTimestamp = Instant.fromEpochSeconds(block.timestamp.toLong()),
           parentAggregationLastL1RollingHashMessageNumber = messageNumber,
-          parentAggregationLastL1RollingHash = rollingHash
+          parentAggregationLastL1RollingHash = rollingHash,
         )
       }
   }

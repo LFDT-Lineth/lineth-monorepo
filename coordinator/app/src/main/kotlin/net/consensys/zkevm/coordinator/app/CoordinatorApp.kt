@@ -51,20 +51,20 @@ class CoordinatorApp(private val configs: CoordinatorConfig) {
     vertx = vertx,
     metricsFacade = MicrometerMetricsFacade(meterRegistry),
     requestResponseLogLevel = Level.TRACE,
-    failuresLogLevel = Level.WARN
+    failuresLogLevel = Level.WARN,
   )
   private val api = Api(
     Api.Config(
-      configs.api.observabilityPort
+      configs.api.observabilityPort,
     ),
-    vertx
+    vertx,
   )
   private val l2Web3jClient: Web3j = createWeb3jHttpClient(
     rpcUrl = configs.l2.rpcEndpoint.toString(),
     log = LogManager.getLogger("clients.l2.eth-api.rpc-node"),
     pollingInterval = 1.seconds,
     requestResponseLogLevel = Level.TRACE,
-    failuresLogLevel = Level.DEBUG
+    failuresLogLevel = Level.DEBUG,
   )
 
   private val persistenceRetryer = PersistenceRetryer(
@@ -72,8 +72,8 @@ class CoordinatorApp(private val configs: CoordinatorConfig) {
     config = PersistenceRetryer.Config(
       backoffDelay = configs.persistenceRetry.backoffDelay.toKotlinDuration(),
       maxRetries = configs.persistenceRetry.maxRetries,
-      timeout = configs.persistenceRetry.timeout?.toKotlinDuration()
-    )
+      timeout = configs.persistenceRetry.timeout?.toKotlinDuration(),
+    ),
   )
 
   private val sqlClient: SqlClient = initDb(configs.database)
@@ -81,10 +81,10 @@ class CoordinatorApp(private val configs: CoordinatorConfig) {
     PostgresBatchesRepository(
       batchesDao = RetryingBatchesPostgresDao(
         delegate = BatchesPostgresDao(
-          connection = sqlClient
+          connection = sqlClient,
         ),
-        persistenceRetryer = persistenceRetryer
-      )
+        persistenceRetryer = persistenceRetryer,
+      ),
     )
 
   private val blobsRepository =
@@ -92,21 +92,21 @@ class CoordinatorApp(private val configs: CoordinatorConfig) {
       blobsDao = RetryingBlobsPostgresDao(
         delegate = BlobsPostgresDao(
           config = BlobsPostgresDao.Config(
-            maxBlobsToReturn = configs.blobSubmission.maxBlobsToReturn.toUInt()
+            maxBlobsToReturn = configs.blobSubmission.maxBlobsToReturn.toUInt(),
           ),
-          connection = sqlClient
+          connection = sqlClient,
         ),
-        persistenceRetryer = persistenceRetryer
-      )
+        persistenceRetryer = persistenceRetryer,
+      ),
     )
 
   private val aggregationsRepository = AggregationsRepositoryImpl(
     aggregationsPostgresDao = RetryingPostgresAggregationsDao(
       delegate = PostgresAggregationsDao(
-        connection = sqlClient
+        connection = sqlClient,
       ),
-      persistenceRetryer = persistenceRetryer
-    )
+      persistenceRetryer = persistenceRetryer,
+    ),
   )
 
   private val l1FeeHistoriesRepository =
@@ -116,11 +116,11 @@ class CoordinatorApp(private val configs: CoordinatorConfig) {
         minBaseFeePerBlobGasToCache =
         configs.l1DynamicGasPriceCapService.gasPriceCapCalculation.historicBaseFeePerBlobGasLowerBound,
         fixedAverageRewardToCache =
-        configs.l1DynamicGasPriceCapService.gasPriceCapCalculation.historicAvgRewardConstant
+        configs.l1DynamicGasPriceCapService.gasPriceCapCalculation.historicAvgRewardConstant,
       ),
       FeeHistoriesPostgresDao(
-        sqlClient
-      )
+        sqlClient,
+      ),
     )
 
   private val l1App = L1DependentApp(
@@ -133,7 +133,7 @@ class CoordinatorApp(private val configs: CoordinatorConfig) {
     aggregationsRepository = aggregationsRepository,
     l1FeeHistoriesRepository = l1FeeHistoriesRepository,
     smartContractErrors = configs.conflation.smartContractErrors,
-    metricsFacade = micrometerMetricsFacade
+    metricsFacade = micrometerMetricsFacade,
   )
 
   private val requestFileCleanup = DirectoryCleaner(
@@ -144,7 +144,7 @@ class CoordinatorApp(private val configs: CoordinatorConfig) {
       configs.proversConfig.proverA.proofAggregation.requestsDirectory,
       configs.proversConfig.proverB?.execution?.requestsDirectory,
       configs.proversConfig.proverB?.blobCompression?.requestsDirectory,
-      configs.proversConfig.proverB?.proofAggregation?.requestsDirectory
+      configs.proversConfig.proverB?.proofAggregation?.requestsDirectory,
     ),
     fileFilters = DirectoryCleaner.getSuffixFileFilters(
       listOfNotNull(
@@ -153,9 +153,9 @@ class CoordinatorApp(private val configs: CoordinatorConfig) {
         configs.proversConfig.proverA.proofAggregation.inprogressRequestWritingSuffix,
         configs.proversConfig.proverB?.execution?.inprogressRequestWritingSuffix,
         configs.proversConfig.proverB?.blobCompression?.inprogressRequestWritingSuffix,
-        configs.proversConfig.proverB?.proofAggregation?.inprogressRequestWritingSuffix
-      )
-    ) + DirectoryCleaner.JSON_FILE_FILTER
+        configs.proversConfig.proverB?.proofAggregation?.inprogressRequestWritingSuffix,
+      ),
+    ) + DirectoryCleaner.JSON_FILE_FILTER,
   )
 
   init {
@@ -176,7 +176,7 @@ class CoordinatorApp(private val configs: CoordinatorConfig) {
       SafeFuture.allOf(
         l1App.stop(),
         SafeFuture.fromRunnable { l2Web3jClient.shutdown() },
-        api.stop().toSafeFuture()
+        api.stop().toSafeFuture(),
       ).thenApply {
         LoadBalancingJsonRpcClient.stop()
       }.thenCompose {
@@ -201,7 +201,7 @@ class CoordinatorApp(private val configs: CoordinatorConfig) {
       database = dbConfig.schema,
       target = dbVersion,
       username = dbConfig.username,
-      password = dbConfig.password.value
+      password = dbConfig.password.value,
     )
     return Db.vertxSqlClient(
       vertx = vertx,
@@ -211,7 +211,7 @@ class CoordinatorApp(private val configs: CoordinatorConfig) {
       username = dbConfig.username,
       password = dbConfig.password.value,
       maxPoolSize = dbConfig.transactionalPoolSize,
-      pipeliningLimit = dbConfig.readPipeliningLimit
+      pipeliningLimit = dbConfig.readPipeliningLimit,
     )
   }
 }

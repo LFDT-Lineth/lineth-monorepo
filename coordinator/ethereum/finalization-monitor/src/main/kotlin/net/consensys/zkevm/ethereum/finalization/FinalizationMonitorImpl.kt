@@ -21,20 +21,20 @@ class FinalizationMonitorImpl(
   private val contract: LineaRollupSmartContractClientReadOnly,
   private val l2Client: Web3j,
   private val vertx: Vertx,
-  private val log: Logger = LogManager.getLogger(FinalizationMonitor::class.java)
+  private val log: Logger = LogManager.getLogger(FinalizationMonitor::class.java),
 ) : FinalizationMonitor, PeriodicPollingService(
   vertx = vertx,
   pollingIntervalMs = config.pollingInterval.inWholeMilliseconds,
-  log = log
+  log = log,
 ) {
   data class Config(
     val pollingInterval: Duration = 500.milliseconds,
-    val l1QueryBlockTag: BlockParameter.Tag = BlockParameter.Tag.FINALIZED
+    val l1QueryBlockTag: BlockParameter.Tag = BlockParameter.Tag.FINALIZED,
   )
 
   private val finalizationHandlers:
     MutableMap<String, FinalizationHandler> =
-      Collections.synchronizedMap(LinkedHashMap())
+    Collections.synchronizedMap(LinkedHashMap())
   private val lastFinalizationUpdate = AtomicReference<FinalizationMonitor.FinalizationUpdate>(null)
 
   override fun handleError(error: Throwable) {
@@ -55,7 +55,7 @@ class FinalizationMonitorImpl(
         log.info(
           "finalization update: previousFinalizedBlock={} newFinalizedBlock={}",
           lastFinalizationUpdate.get().blockNumber,
-          currentState
+          currentState,
         )
         lastFinalizationUpdate.set(currentState)
         onUpdate(currentState)
@@ -75,13 +75,13 @@ class FinalizationMonitorImpl(
           .thenCombine(
             contract.blockStateRootHash(
               blockParameter = config.l1QueryBlockTag,
-              lineaL2BlockNumber = lineaFinalizedBlockNumber
-            )
+              lineaL2BlockNumber = lineaFinalizedBlockNumber,
+            ),
           ) { finalizedBlock, stateRootHash ->
             FinalizationMonitor.FinalizationUpdate(
               lineaFinalizedBlockNumber,
               Bytes32.wrap(stateRootHash),
-              Bytes32.fromHexString(finalizedBlock.block.hash)
+              Bytes32.fromHexString(finalizedBlock.block.hash),
             )
           }
       }
@@ -95,7 +95,7 @@ class FinalizationMonitorImpl(
         log.trace(
           "calling finalization handler: handler={} update={}",
           handlerName,
-          finalizationUpdate.blockNumber
+          finalizationUpdate.blockNumber,
         )
         try {
           finalizationHandler.handleUpdate(finalizationUpdate)
@@ -114,7 +114,7 @@ class FinalizationMonitorImpl(
 
   override fun addFinalizationHandler(
     handlerName: String,
-    handler: FinalizationHandler
+    handler: FinalizationHandler,
   ) {
     synchronized(finalizationHandlers) {
       finalizationHandlers[handlerName] = handler

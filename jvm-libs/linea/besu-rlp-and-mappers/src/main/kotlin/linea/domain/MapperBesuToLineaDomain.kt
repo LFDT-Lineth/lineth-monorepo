@@ -30,7 +30,7 @@ object MapperBesuToLineaDomain {
       nonce = besuBlock.header.nonce.toULong(),
       baseFeePerGas = besuBlock.header.baseFee.getOrNull()?.toBigInteger()?.toULong(),
       ommers = besuBlock.body.ommers.map { it.hash.toArray() },
-      transactions = besuBlock.body.transactions.map(MapperBesuToLineaDomain::mapToDomain)
+      transactions = besuBlock.body.transactions.map(MapperBesuToLineaDomain::mapToDomain),
     )
 
     return block
@@ -55,9 +55,9 @@ object MapperBesuToLineaDomain {
       accessList = transaction.accessList.getOrNull()?.map { accessListEntry ->
         AccessListEntry(
           accessListEntry.address.toArray(),
-          accessListEntry.storageKeys.map { it.toArray() }
+          accessListEntry.storageKeys.map { it.toArray() },
         )
-      }
+      },
     )
   }
 }

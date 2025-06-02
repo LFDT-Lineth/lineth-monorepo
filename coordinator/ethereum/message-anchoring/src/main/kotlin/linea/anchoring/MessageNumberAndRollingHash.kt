@@ -4,7 +4,7 @@ import linea.kotlin.encodeHex
 
 data class MessageNumberAndRollingHash(
   val messageNumber: ULong,
-  val rollingHash: ByteArray
+  val rollingHash: ByteArray,
 ) {
   override fun equals(other: Any?): Boolean {
     if (this === other) return true

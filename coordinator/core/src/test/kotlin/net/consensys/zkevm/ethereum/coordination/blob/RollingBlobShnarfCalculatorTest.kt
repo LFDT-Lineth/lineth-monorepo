@@ -54,14 +54,14 @@ class RollingBlobShnarfCalculatorTest {
         expectedShnarf = Random.nextBytes(32),
         commitment = Random.nextBytes(48),
         kzgProofContract = Random.nextBytes(48),
-        kzgProofSideCar = Random.nextBytes(48)
-      )
+        kzgProofSideCar = Random.nextBytes(48),
+      ),
     )
 
     rollingBlobShnarfCalculator = RollingBlobShnarfCalculator(
       blobShnarfCalculator = mockBlobShnarfCalculator,
       blobsRepository = mockBlobsRepository,
-      genesisShnarf = ByteArray(32)
+      genesisShnarf = ByteArray(32),
     )
   }
 
@@ -75,7 +75,7 @@ class RollingBlobShnarfCalculatorTest {
         compressedData = Random.nextBytes(100),
         parentStateRootHash = Random.nextBytes(32),
         finalStateRootHash = Random.nextBytes(32),
-        conflationOrder = BlockIntervals(previousBlobEndBlockNumber + 1UL, listOf(previousBlobEndBlockNumber + 100UL))
+        conflationOrder = BlockIntervals(previousBlobEndBlockNumber + 1UL, listOf(previousBlobEndBlockNumber + 100UL)),
       ).get()
 
       assertThat(rollingBlobShnarfResult.parentBlobHash.contentEquals(previousBlobDataHash)).isTrue()
@@ -97,7 +97,7 @@ class RollingBlobShnarfCalculatorTest {
         compressedData = Random.nextBytes(100),
         parentStateRootHash = Random.nextBytes(32),
         finalStateRootHash = Random.nextBytes(32),
-        conflationOrder = BlockIntervals(firstBlobEndBlockNumber + 2UL, listOf(firstBlobEndBlockNumber + 100UL))
+        conflationOrder = BlockIntervals(firstBlobEndBlockNumber + 2UL, listOf(firstBlobEndBlockNumber + 100UL)),
       ).get()
     }
     assertThat(exception).hasCauseInstanceOf(IllegalStateException::class.java)
@@ -113,7 +113,7 @@ class RollingBlobShnarfCalculatorTest {
       compressedData = Random.nextBytes(100),
       parentStateRootHash = Random.nextBytes(32),
       finalStateRootHash = Random.nextBytes(32),
-      conflationOrder = BlockIntervals(secondBlobStartBlockNumber, listOf(secondBlobEndBlockNumber))
+      conflationOrder = BlockIntervals(secondBlobStartBlockNumber, listOf(secondBlobEndBlockNumber)),
     ).get()
 
     assertThat(rollingBlobShnarfResult.parentBlobHash.contentEquals(firstBlob.blobHash)).isTrue()
@@ -129,14 +129,14 @@ class RollingBlobShnarfCalculatorTest {
         compressedData = Random.nextBytes(100),
         parentStateRootHash = Random.nextBytes(32),
         finalStateRootHash = Random.nextBytes(32),
-        conflationOrder = BlockIntervals(thirdBlobStartBlockNumber, listOf(thirdBlobEndBlockNumber))
+        conflationOrder = BlockIntervals(thirdBlobStartBlockNumber, listOf(thirdBlobEndBlockNumber)),
       ).get()
     }
     assertThat(exception).hasCauseInstanceOf(IllegalStateException::class.java)
     assertThat(exception.cause)
       .hasMessage(
         "Blob block range start block number=$thirdBlobStartBlockNumber " +
-          "is not equal to parent blob end block number=$secondBlobEndBlockNumber + 1"
+          "is not equal to parent blob end block number=$secondBlobEndBlockNumber + 1",
       )
   }
 
@@ -153,7 +153,7 @@ class RollingBlobShnarfCalculatorTest {
         compressedData = Random.nextBytes(100),
         parentStateRootHash = Random.nextBytes(32),
         finalStateRootHash = Random.nextBytes(32),
-        conflationOrder = BlockIntervals(secondBlobStartBlockNumber, listOf(secondBlobEndBlockNumber))
+        conflationOrder = BlockIntervals(secondBlobStartBlockNumber, listOf(secondBlobEndBlockNumber)),
       ).get()
     }
 

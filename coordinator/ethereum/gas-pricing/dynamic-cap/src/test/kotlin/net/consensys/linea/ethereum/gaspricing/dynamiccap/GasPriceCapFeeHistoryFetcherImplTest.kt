@@ -26,12 +26,12 @@ class GasPriceCapFeeHistoryFetcherImplTest {
   @Timeout(10, timeUnit = TimeUnit.SECONDS)
   fun getEthFeeHistoryData_returnsFeeHistoryData(testContext: VertxTestContext) {
     val feeHistoryFetcherImpl = createFeeHistoryFetcherImpl(
-      l1Web3jServiceMock = createMockedWeb3jBlobExtended()
+      l1Web3jServiceMock = createMockedWeb3jBlobExtended(),
     )
 
     feeHistoryFetcherImpl.getEthFeeHistoryData(
       startBlockNumberInclusive = 101L,
-      endBlockNumberInclusive = 110L
+      endBlockNumberInclusive = 110L,
     )
       .thenApply {
         testContext
@@ -53,12 +53,12 @@ class GasPriceCapFeeHistoryFetcherImplTest {
   @Test
   fun getEthFeeHistoryData_returnsFeeHistoryDataWithEmptyBlobData(testContext: VertxTestContext) {
     val feeHistoryFetcherImpl = createFeeHistoryFetcherImpl(
-      l1Web3jServiceMock = createMockedWeb3jBlobExtendedWithoutBlobData()
+      l1Web3jServiceMock = createMockedWeb3jBlobExtendedWithoutBlobData(),
     )
 
     feeHistoryFetcherImpl.getEthFeeHistoryData(
       startBlockNumberInclusive = 101L,
-      endBlockNumberInclusive = 110L
+      endBlockNumberInclusive = 110L,
     )
       .thenApply {
         testContext
@@ -89,13 +89,13 @@ class GasPriceCapFeeHistoryFetcherImplTest {
           l1Web3jServiceMock,
           GasPriceCapFeeHistoryFetcherImpl.Config(
             maxBlockCount,
-            rewardPercentiles = listOf()
-          )
+            rewardPercentiles = listOf(),
+          ),
         )
       }.also { exception ->
         assertThat(exception.message)
           .isEqualTo(
-            "Reward percentiles must be a non-empty list."
+            "Reward percentiles must be a non-empty list.",
           )
       }
     }.completeNow()
@@ -112,13 +112,13 @@ class GasPriceCapFeeHistoryFetcherImplTest {
           l1Web3jServiceMock,
           GasPriceCapFeeHistoryFetcherImpl.Config(
             maxBlockCount,
-            rewardPercentiles = listOf(101.0, -12.2)
-          )
+            rewardPercentiles = listOf(101.0, -12.2),
+          ),
         )
       }.also { exception ->
         assertThat(exception.message)
           .isEqualTo(
-            "Reward percentile must be within 0.0 and 100.0." + " Value=101.0"
+            "Reward percentile must be within 0.0 and 100.0." + " Value=101.0",
           )
       }
 
@@ -127,13 +127,13 @@ class GasPriceCapFeeHistoryFetcherImplTest {
           l1Web3jServiceMock,
           GasPriceCapFeeHistoryFetcherImpl.Config(
             maxBlockCount,
-            rewardPercentiles = listOf(-12.2, 1000.0)
-          )
+            rewardPercentiles = listOf(-12.2, 1000.0),
+          ),
         )
       }.also { exception ->
         assertThat(exception.message)
           .isEqualTo(
-            "Reward percentile must be within 0.0 and 100.0." + " Value=-12.2"
+            "Reward percentile must be within 0.0 and 100.0." + " Value=-12.2",
           )
       }
     }.completeNow()
@@ -143,19 +143,19 @@ class GasPriceCapFeeHistoryFetcherImplTest {
   @Timeout(10, timeUnit = TimeUnit.SECONDS)
   fun getEthFeeHistoryData_throwsErrorIfStartBlockIsHigherThanTargetBlock(testContext: VertxTestContext) {
     val feeHistoryFetcherImpl = createFeeHistoryFetcherImpl(
-      l1Web3jServiceMock = createMockedWeb3jBlobExtended()
+      l1Web3jServiceMock = createMockedWeb3jBlobExtended(),
     )
 
     testContext.verify {
       assertThrows<IllegalArgumentException> {
         feeHistoryFetcherImpl.getEthFeeHistoryData(
           startBlockNumberInclusive = 111L,
-          endBlockNumberInclusive = 100L
+          endBlockNumberInclusive = 100L,
         ).get()
       }.also { exception ->
         assertThat(exception.message)
           .isEqualTo(
-            "endBlockNumberInclusive=100 must be equal or higher than startBlockNumberInclusive=111"
+            "endBlockNumberInclusive=100 must be equal or higher than startBlockNumberInclusive=111",
           )
       }
     }.completeNow()
@@ -165,20 +165,20 @@ class GasPriceCapFeeHistoryFetcherImplTest {
   @Timeout(10, timeUnit = TimeUnit.SECONDS)
   fun getEthFeeHistoryData_throwsErrorIfBlockDiffIsLargerThanMaxBlockCount(testContext: VertxTestContext) {
     val feeHistoryFetcherImpl = createFeeHistoryFetcherImpl(
-      l1Web3jServiceMock = createMockedWeb3jBlobExtended()
+      l1Web3jServiceMock = createMockedWeb3jBlobExtended(),
     )
 
     testContext.verify {
       assertThrows<IllegalArgumentException> {
         feeHistoryFetcherImpl.getEthFeeHistoryData(
           startBlockNumberInclusive = 101L,
-          endBlockNumberInclusive = 120L
+          endBlockNumberInclusive = 120L,
         ).get()
       }.also { exception ->
         assertThat(exception.message)
           .isEqualTo(
             "difference between endBlockNumberInclusive=120 and startBlockNumberInclusive=101 " +
-              "must be less than maxBlockCount=10"
+              "must be less than maxBlockCount=10",
           )
       }
     }.completeNow()
@@ -191,9 +191,9 @@ class GasPriceCapFeeHistoryFetcherImplTest {
         .ethFeeHistoryWithBlob(
           any(),
           any(),
-          eq(rewardPercentiles)
+          eq(rewardPercentiles),
         )
-        .sendAsync()
+        .sendAsync(),
     )
       .thenAnswer {
         val feeHistoryResponse = EthFeeHistoryBlobExtended()
@@ -208,7 +208,7 @@ class GasPriceCapFeeHistoryFetcherImplTest {
           baseFeePerBlobGas = (10000 until 10000 + maxBlockCount.toLong() + 1)
             .map { it.toString() },
           blobGasUsedRatio = (10 until 10 + maxBlockCount.toLong())
-            .map { it / 100.0 }
+            .map { it / 100.0 },
         )
         feeHistoryResponse.result = feeHistory
         SafeFuture.completedFuture(feeHistoryResponse)
@@ -224,9 +224,9 @@ class GasPriceCapFeeHistoryFetcherImplTest {
         .ethFeeHistoryWithBlob(
           any(),
           any(),
-          eq(rewardPercentiles)
+          eq(rewardPercentiles),
         )
-        .sendAsync()
+        .sendAsync(),
     )
       .thenAnswer {
         val feeHistoryResponse = EthFeeHistoryBlobExtended()
@@ -239,7 +239,7 @@ class GasPriceCapFeeHistoryFetcherImplTest {
           gasUsedRatio = (10 until 10 + maxBlockCount.toLong())
             .map { it / 100.0 },
           baseFeePerBlobGas = emptyList(),
-          blobGasUsedRatio = emptyList()
+          blobGasUsedRatio = emptyList(),
         )
         feeHistoryResponse.result = feeHistory
         SafeFuture.completedFuture(feeHistoryResponse)
@@ -249,14 +249,14 @@ class GasPriceCapFeeHistoryFetcherImplTest {
   }
 
   private fun createFeeHistoryFetcherImpl(
-    l1Web3jServiceMock: Web3jBlobExtended
+    l1Web3jServiceMock: Web3jBlobExtended,
   ): GasPriceCapFeeHistoryFetcherImpl {
     return GasPriceCapFeeHistoryFetcherImpl(
       l1Web3jServiceMock,
       GasPriceCapFeeHistoryFetcherImpl.Config(
         maxBlockCount,
-        rewardPercentiles
-      )
+        rewardPercentiles,
+      ),
     )
   }
 }

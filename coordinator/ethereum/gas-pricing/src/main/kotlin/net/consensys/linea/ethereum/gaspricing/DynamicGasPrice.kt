@@ -23,13 +23,13 @@ interface GasPriceUpdater {
 }
 
 enum class MinerExtraDataVersions(val version: Byte) {
-  V1(0x1)
+  V1(0x1),
 }
 
 data class MinerExtraDataV1(
   val fixedCostInKWei: UInt,
   val variableCostInKWei: UInt,
-  val ethGasPriceInKWei: UInt
+  val ethGasPriceInKWei: UInt,
 ) {
   val version: Byte = MinerExtraDataVersions.V1.version
 

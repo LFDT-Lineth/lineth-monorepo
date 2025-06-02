@@ -34,7 +34,7 @@ class GasPriceUpdaterImplTest {
   private val requestRetry = RequestRetryConfig(
     maxRetries = 2u,
     backoffDelay = 10.milliseconds,
-    failuresWarningThreshold = 1u
+    failuresWarningThreshold = 1u,
   )
   private lateinit var wiremock: WireMockServer
   private lateinit var jsonRpcClientFactory: VertxHttpJsonRpcClientFactory
@@ -45,7 +45,7 @@ class GasPriceUpdaterImplTest {
       "id",
       1,
       "result",
-      true
+      true,
     )
   private val expectedGethRequest = JsonObject.of(
     "jsonrpc",
@@ -53,7 +53,7 @@ class GasPriceUpdaterImplTest {
     "method",
     "miner_setGasPrice",
     "params",
-    listOf("0xa")
+    listOf("0xa"),
   )
   private val expectedBesuRequest = expectedGethRequest.copy()
     .put("method", "miner_setMinGasPrice")
@@ -61,24 +61,24 @@ class GasPriceUpdaterImplTest {
   @BeforeEach
   fun beforeEach(vertx: Vertx) {
     wiremock = WireMockServer(
-      WireMockConfiguration.wireMockConfig().dynamicPort()
+      WireMockConfiguration.wireMockConfig().dynamicPort(),
     )
     wiremock.start()
     gethRecipients = listOf(
       URI("http://localhost:${wiremock.port()}/geth-1/").toURL(),
       URI("http://localhost:${wiremock.port()}/geth-2/").toURL(),
-      URI("http://localhost:${wiremock.port()}/geth-3/").toURL()
+      URI("http://localhost:${wiremock.port()}/geth-3/").toURL(),
     )
     besuRecipients = listOf(
       URI("http://localhost:${wiremock.port()}/besu-1/").toURL(),
       URI("http://localhost:${wiremock.port()}/besu-2/").toURL(),
-      URI("http://localhost:${wiremock.port()}/besu-3/").toURL()
+      URI("http://localhost:${wiremock.port()}/besu-3/").toURL(),
     )
     val meterRegistry = SimpleMeterRegistry()
     val metricsFacade: MetricsFacade = MicrometerMetricsFacade(registry = meterRegistry, "linea")
     jsonRpcClientFactory = VertxHttpJsonRpcClientFactory(
       vertx,
-      metricsFacade
+      metricsFacade,
     )
   }
 
@@ -93,7 +93,7 @@ class GasPriceUpdaterImplTest {
       GasPriceUpdaterImpl.Config(
         gethEndpoints = emptyList(),
         besuEndPoints = emptyList(),
-        retryConfig = requestRetry
+        retryConfig = requestRetry,
       )
     }
 
@@ -105,20 +105,20 @@ class GasPriceUpdaterImplTest {
     GasPriceUpdaterImpl.Config(
       gethEndpoints = listOf(URI("http://localhost:8545").toURL()),
       besuEndPoints = emptyList(),
-      retryConfig = requestRetry
+      retryConfig = requestRetry,
     )
     // works with at least one Besu endpoint
     GasPriceUpdaterImpl.Config(
       gethEndpoints = emptyList(),
       besuEndPoints = listOf(URI("http://localhost:8545").toURL()),
-      retryConfig = requestRetry
+      retryConfig = requestRetry,
     )
   }
 
   @Test
   @Timeout(10, timeUnit = TimeUnit.SECONDS)
   fun gasPriceUpdaterImpl_setsPriceOnGethAndBesu(
-    testContext: VertxTestContext
+    testContext: VertxTestContext,
   ) {
     testPriceUpdateForEndpoints(testContext, gethRecipients, besuRecipients)
   }
@@ -126,7 +126,7 @@ class GasPriceUpdaterImplTest {
   @Test
   @Timeout(10, timeUnit = TimeUnit.SECONDS)
   fun gasPriceUpdaterImpl_setsPriceOnGethOnly(
-    testContext: VertxTestContext
+    testContext: VertxTestContext,
   ) {
     testPriceUpdateForEndpoints(testContext, gethRecipients = gethRecipients, besuRecipients = emptyList())
   }
@@ -134,7 +134,7 @@ class GasPriceUpdaterImplTest {
   @Test
   @Timeout(10, timeUnit = TimeUnit.SECONDS)
   fun gasPriceUpdaterImpl_setsPriceOnBesuOnly(
-    testContext: VertxTestContext
+    testContext: VertxTestContext,
   ) {
     testPriceUpdateForEndpoints(testContext, gethRecipients = emptyList(), besuRecipients = besuRecipients)
   }
@@ -142,7 +142,7 @@ class GasPriceUpdaterImplTest {
   private fun testPriceUpdateForEndpoints(
     testContext: VertxTestContext,
     gethRecipients: List<URL>,
-    besuRecipients: List<URL>
+    besuRecipients: List<URL>,
   ) {
     val gasPrice = 10uL
     gethRecipients.forEach { endpoint -> wiremockStubForPost(wiremock, endpoint, setPriceSuccessResponse) }
@@ -154,8 +154,8 @@ class GasPriceUpdaterImplTest {
         GasPriceUpdaterImpl.Config(
           gethEndpoints = gethRecipients,
           besuEndPoints = besuRecipients,
-          retryConfig = requestRetry
-        )
+          retryConfig = requestRetry,
+        ),
       )
 
     l2GasPriceUpdaterImpl.updateMinerGasPrice(gasPrice)
@@ -172,26 +172,26 @@ class GasPriceUpdaterImplTest {
   private fun wiremockStubForPost(
     wiremock: WireMockServer,
     requestOriginEndpoint: URL,
-    response: JsonObject
+    response: JsonObject,
   ) {
     wiremock.stubFor(
       WireMock.post(requestOriginEndpoint.path)
         .withHeader(
           "Content-Type",
-          WireMock.containing("application/json")
+          WireMock.containing("application/json"),
         )
         .willReturn(
           WireMock.ok()
             .withHeader("Content-type", "application/json")
-            .withBody(response.toString())
-        )
+            .withBody(response.toString()),
+        ),
     )
   }
 
   private fun verifyRequest(
     wiremock: WireMockServer,
     requestOriginEndpoint: URL,
-    request: JsonObject
+    request: JsonObject,
   ) {
     wiremock.verify(
       RequestPatternBuilder.newRequestPattern()
@@ -199,15 +199,15 @@ class GasPriceUpdaterImplTest {
         .withUrl(requestOriginEndpoint.path)
         .withHeader(
           "content-type",
-          EqualToPattern("application/json")
+          EqualToPattern("application/json"),
         )
         .withRequestBody(
           EqualToJsonPattern(
             request.toString(), /*ignoreArrayOrder*/
             false, /*ignoreExtraElements*/
-            true
-          )
-        )
+            true,
+          ),
+        ),
     )
   }
 }

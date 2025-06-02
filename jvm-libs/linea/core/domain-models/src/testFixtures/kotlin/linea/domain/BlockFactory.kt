@@ -23,7 +23,7 @@ fun createBlock(
   extraData: ByteArray = ByteArrayExt.random32(),
   baseFeePerGas: ULong = 7UL,
   transactionsRoot: ByteArray = ByteArrayExt.random32(),
-  transactions: List<Transaction> = emptyList()
+  transactions: List<Transaction> = emptyList(),
 ): Block {
   return Block(
     number = number,
@@ -44,7 +44,7 @@ fun createBlock(
     nonce = 0UL,
     baseFeePerGas = baseFeePerGas,
     transactions = transactions,
-    ommers = emptyList()
+    ommers = emptyList(),
   )
 }
 
@@ -76,12 +76,12 @@ class EthGetBlockResponseDTO(
   val size: ULong,
   val totalDifficulty: ULong,
   val transactions: List<ByteArray>,
-  val uncles: List<ByteArray> = emptyList()
+  val uncles: List<ByteArray> = emptyList(),
 )
 
 fun Block?.toEthGetBlockResponse(
   size: ULong = 10UL * 1024UL,
-  totalDifficulty: ULong = this?.difficulty ?: 0UL
+  totalDifficulty: ULong = this?.difficulty ?: 0UL,
 ): EthGetBlockResponseDTO? {
   if (this == null) return null
   return EthGetBlockResponseDTO(
@@ -104,7 +104,7 @@ fun Block?.toEthGetBlockResponse(
     sha3Uncles = this.ommersHash,
     size = size,
     totalDifficulty = totalDifficulty,
-    transactions = emptyList<ByteArray>()
+    transactions = emptyList<ByteArray>(),
   )
 }
 
@@ -128,6 +128,6 @@ fun Block.toBlockWithRandomTxHashes(): BlockWithTxHashes {
     nonce = nonce,
     baseFeePerGas = baseFeePerGas,
     transactions = transactions.map { Random.nextBytes(32) },
-    ommers = emptyList()
+    ommers = emptyList(),
   )
 }

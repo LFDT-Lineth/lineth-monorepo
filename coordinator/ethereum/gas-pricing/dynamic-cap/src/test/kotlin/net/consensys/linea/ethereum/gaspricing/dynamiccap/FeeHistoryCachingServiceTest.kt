@@ -38,7 +38,7 @@ class FeeHistoryCachingServiceTest {
     reward = listOf(2000, 2100, 2200, 2300, 2400).map { listOf(it.toULong().times(OneMWei)) },
     gasUsedRatio = listOf(0.2, 0.4, 0.6, 0.8, 1.0).map { it },
     baseFeePerBlobGas = listOf(100, 110, 120, 130, 140, 150).map { it.toULong().times(OneMWei) },
-    blobGasUsedRatio = listOf(0.5, 0.333, 0.167, 1.0, 0.667).map { it }
+    blobGasUsedRatio = listOf(0.5, 0.333, 0.167, 1.0, 0.667).map { it },
   )
   private val highestStoredL1BlockNumber = 100L
   private val latestL1BlockNumber = 200L
@@ -56,7 +56,7 @@ class FeeHistoryCachingServiceTest {
 
   private fun createFeeHistoryCachingService(
     vertx: Vertx,
-    mockedL1FeeHistoriesRepository: FeeHistoriesRepositoryWithCache
+    mockedL1FeeHistoriesRepository: FeeHistoriesRepositoryWithCache,
   ): FeeHistoryCachingService {
     return FeeHistoryCachingService(
       config = FeeHistoryCachingService.Config(
@@ -65,12 +65,12 @@ class FeeHistoryCachingServiceTest {
         gasFeePercentile = gasFeePercentile,
         feeHistoryStoragePeriodInBlocks = feeHistoryStoragePeriodInBlocks,
         feeHistoryWindowInBlocks = feeHistoryWindowInBlocks,
-        numOfBlocksBeforeLatest = numOfBlocksBeforeLatest
+        numOfBlocksBeforeLatest = numOfBlocksBeforeLatest,
       ),
       vertx = vertx,
       web3jClient = mockedL1Web3jClient,
       feeHistoryFetcher = mockedL1FeeHistoryFetcher,
-      feeHistoriesRepository = mockedL1FeeHistoriesRepository
+      feeHistoriesRepository = mockedL1FeeHistoriesRepository,
     )
   }
 
@@ -92,7 +92,7 @@ class FeeHistoryCachingServiceTest {
       on { cachePercentileGasFees(any(), any()) } doReturn SafeFuture.completedFuture(Unit)
       on { deleteFeeHistoriesUpToBlockNumber(any()) } doReturn SafeFuture.completedFuture(deletedFeeHistoriesNum)
       on { cacheNumOfFeeHistoriesFromBlockNumber(any(), any()) } doReturn SafeFuture.completedFuture(
-        storedFeeHistoriesNum
+        storedFeeHistoriesNum,
       )
     }
   }
@@ -107,27 +107,27 @@ class FeeHistoryCachingServiceTest {
           .untilAsserted {
             verify(mockedL1Web3jClient, atLeast(2)).ethBlockNumber()
             verify(mockedL1FeeHistoriesRepository, atLeastOnce()).findHighestBlockNumberWithPercentile(
-              gasFeePercentile
+              gasFeePercentile,
             )
             verify(mockedL1FeeHistoryFetcher, atLeast(2)).getEthFeeHistoryData(
               latestL1BlockNumber - feeHistoryWindowInBlocks.toLong() + 1L,
-              latestL1BlockNumber - feeHistoryWindowInBlocks.toLong() + feeHistoryMaxBlockCount.toLong()
+              latestL1BlockNumber - feeHistoryWindowInBlocks.toLong() + feeHistoryMaxBlockCount.toLong(),
             )
             verify(mockedL1FeeHistoriesRepository, atLeast(2)).saveNewFeeHistory(
-              feeHistory
+              feeHistory,
             )
             verify(mockedL1FeeHistoriesRepository, atLeast(2)).cachePercentileGasFees(
               gasFeePercentile,
-              latestL1BlockNumber - feeHistoryWindowInBlocks.toLong() + 1L
+              latestL1BlockNumber - feeHistoryWindowInBlocks.toLong() + 1L,
             )
             verify(mockedL1FeeHistoriesRepository, atLeast(2))
               .deleteFeeHistoriesUpToBlockNumber(
-                latestL1BlockNumber - feeHistoryStoragePeriodInBlocks.toLong()
+                latestL1BlockNumber - feeHistoryStoragePeriodInBlocks.toLong(),
               )
             verify(mockedL1FeeHistoriesRepository, atLeast(2))
               .cacheNumOfFeeHistoriesFromBlockNumber(
                 gasFeePercentile,
-                latestL1BlockNumber - feeHistoryWindowInBlocks.toLong() + 1L
+                latestL1BlockNumber - feeHistoryWindowInBlocks.toLong() + 1L,
               )
           }
         testContext.completeNow()
@@ -139,11 +139,11 @@ class FeeHistoryCachingServiceTest {
   fun start_alwaysDeleteFeeHistoriesWhenError(vertx: Vertx, testContext: VertxTestContext) {
     mockedL1FeeHistoriesRepository = mock<FeeHistoriesRepositoryWithCache> {
       on { findHighestBlockNumberWithPercentile(any()) } doReturn SafeFuture.failedFuture(
-        Error("Throw error for testing")
+        Error("Throw error for testing"),
       )
       on { deleteFeeHistoriesUpToBlockNumber(any()) } doReturn SafeFuture.completedFuture(deletedFeeHistoriesNum)
       on { cacheNumOfFeeHistoriesFromBlockNumber(any(), any()) } doReturn SafeFuture.completedFuture(
-        storedFeeHistoriesNum
+        storedFeeHistoriesNum,
       )
     }
     createFeeHistoryCachingService(vertx, mockedL1FeeHistoriesRepository).start()
@@ -154,12 +154,12 @@ class FeeHistoryCachingServiceTest {
             verify(mockedL1Web3jClient, atLeast(2)).ethBlockNumber()
             verify(mockedL1FeeHistoriesRepository, atLeast(2))
               .deleteFeeHistoriesUpToBlockNumber(
-                latestL1BlockNumber - feeHistoryStoragePeriodInBlocks.toLong()
+                latestL1BlockNumber - feeHistoryStoragePeriodInBlocks.toLong(),
               )
             verify(mockedL1FeeHistoriesRepository, atLeast(2))
               .cacheNumOfFeeHistoriesFromBlockNumber(
                 gasFeePercentile,
-                latestL1BlockNumber - feeHistoryWindowInBlocks.toLong() + 1L
+                latestL1BlockNumber - feeHistoryWindowInBlocks.toLong() + 1L,
               )
           }
         testContext.completeNow()

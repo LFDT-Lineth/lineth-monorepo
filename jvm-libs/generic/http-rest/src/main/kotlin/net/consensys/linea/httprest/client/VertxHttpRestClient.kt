@@ -18,7 +18,7 @@ import java.net.URI
 
 class VertxHttpRestClient(
   private val webClientOptions: WebClientOptions,
-  private val vertx: Vertx
+  private val vertx: Vertx,
 ) : HttpRestClient {
   private var webClient = WebClient.create(vertx, webClientOptions)
   private val log: Logger = LogManager.getLogger(this.javaClass)
@@ -26,7 +26,7 @@ class VertxHttpRestClient(
   override fun get(
     path: String,
     params: List<Pair<String, String>>,
-    resultMapper: (Any?) -> Any?
+    resultMapper: (Any?) -> Any?,
   ): SafeFuture<Result<Any?, ErrorResponse<RestErrorType>>> {
     return webClient
       .get(webClientOptions.defaultPort, webClientOptions.defaultHost, path)
@@ -50,9 +50,9 @@ class VertxHttpRestClient(
                 webClientOptions.defaultPort,
                 path,
                 null,
-                null
+                null,
               ).toURL()}, " +
-              "statusMessage=${response.statusMessage()}"
+              "statusMessage=${response.statusMessage()}",
           )
           val errorType = RestErrorType.fromStatusCode(response.statusCode())
           Future.succeededFuture(Err(ErrorResponse(errorType, response.statusMessage())))
@@ -67,7 +67,7 @@ class VertxHttpRestClient(
   override fun post(
     path: String,
     buffer: Buffer,
-    resultMapper: (Any?) -> Any?
+    resultMapper: (Any?) -> Any?,
   ): SafeFuture<Result<Any?, ErrorResponse<RestErrorType>>> {
     return webClient
       .post(webClientOptions.defaultPort, webClientOptions.defaultHost, path)
@@ -87,9 +87,9 @@ class VertxHttpRestClient(
                 webClientOptions.defaultPort,
                 path,
                 null,
-                null
+                null,
               ).toURL()}, " +
-              "statusMessage=${httpResponse.statusMessage()}"
+              "statusMessage=${httpResponse.statusMessage()}",
           )
           val errorType = RestErrorType.fromStatusCode(httpResponse.statusCode())
           Future.succeededFuture(Err(ErrorResponse(errorType, httpResponse.statusMessage())))

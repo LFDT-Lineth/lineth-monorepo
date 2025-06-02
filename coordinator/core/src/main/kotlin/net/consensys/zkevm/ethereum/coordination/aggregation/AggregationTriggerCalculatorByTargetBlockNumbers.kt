@@ -8,7 +8,7 @@ import org.apache.logging.log4j.Logger
 
 class AggregationTriggerCalculatorByTargetBlockNumbers(
   targetEndBlockNumbers: List<ULong>,
-  private val log: Logger = LogManager.getLogger(SyncAggregationTriggerCalculator::class.java)
+  private val log: Logger = LogManager.getLogger(SyncAggregationTriggerCalculator::class.java),
 ) : SyncAggregationTriggerCalculator {
   private val endBlockNumbers = targetEndBlockNumbers.sorted()
   private var firstBlobWasConsumed: Boolean = false
@@ -27,7 +27,7 @@ class AggregationTriggerCalculatorByTargetBlockNumbers(
           "first blob={} is already beyond last target aggregation endBlockNumber={} " +
             "please check configuration",
           blob,
-          endBlockNumbers.last()
+          endBlockNumbers.last(),
         )
       }
 
@@ -42,7 +42,7 @@ class AggregationTriggerCalculatorByTargetBlockNumbers(
         log.warn(
           "blob={} overlaps target aggregation with endBlockNumber={}",
           blob.intervalString(),
-          overlapedTargetAggregation
+          overlapedTargetAggregation,
         )
         null
       }
@@ -52,8 +52,8 @@ class AggregationTriggerCalculatorByTargetBlockNumbers(
           aggregationTriggerType = AggregationTriggerType.TARGET_BLOCK_NUMBER,
           aggregation = BlobsToAggregate(
             startBlockNumber = inFlightAggregation?.startBlockNumber ?: blob.startBlockNumber,
-            endBlockNumber = blob.endBlockNumber
-          )
+            endBlockNumber = blob.endBlockNumber,
+          ),
         )
       }
 

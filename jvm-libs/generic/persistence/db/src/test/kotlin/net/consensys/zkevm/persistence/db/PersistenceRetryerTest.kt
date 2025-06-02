@@ -25,8 +25,8 @@ class PersistenceRetryerTest {
       PersistenceRetryer.Config(
         backoffDelay = 10.milliseconds,
         maxRetries = 5,
-        timeout = 2.seconds
-      )
+        timeout = 2.seconds,
+      ),
     )
   }
 
@@ -41,8 +41,8 @@ class PersistenceRetryerTest {
           } else {
             SafeFuture.completedFuture("success")
           }
-        }
-      )
+        },
+      ),
     ).succeedsWithin(1.seconds.toJavaDuration())
       .isEqualTo("success")
     assertThat(callCounter.get()).isEqualTo(2)
@@ -57,13 +57,18 @@ class PersistenceRetryerTest {
         action = {
           if (callCounter.incrementAndGet() < 20) {
             SafeFuture.failedFuture<String>(
-              PgException("duplicate key value violates unique constraint", "some-severity", "some-code", "some-detail")
+              PgException(
+                "duplicate key value violates unique constraint",
+                "some-severity",
+                "some-code",
+                "some-detail",
+              ),
             )
           } else {
             SafeFuture.completedFuture("success")
           }
-        }
-      )
+        },
+      ),
     ).isCompletedExceptionally
       .isNotCancelled
       .failsWithin(2.seconds.toJavaDuration())

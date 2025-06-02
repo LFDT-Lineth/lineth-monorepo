@@ -9,19 +9,19 @@ interface BlobsRepository {
 
   fun getConsecutiveBlobsFromBlockNumber(
     startingBlockNumberInclusive: Long,
-    endBlockCreatedBefore: Instant
+    endBlockCreatedBefore: Instant,
   ): SafeFuture<List<BlobRecord>>
 
   fun findBlobByStartBlockNumber(
-    startBlockNumber: Long
+    startBlockNumber: Long,
   ): SafeFuture<BlobRecord?>
 
   fun findBlobByEndBlockNumber(
-    endBlockNumber: Long
+    endBlockNumber: Long,
   ): SafeFuture<BlobRecord?>
 
   fun deleteBlobsUpToEndBlockNumber(
-    endBlockNumberInclusive: ULong
+    endBlockNumberInclusive: ULong,
   ): SafeFuture<Int>
 
   fun deleteBlobsAfterBlockNumber(startingBlockNumberInclusive: ULong): SafeFuture<Int>

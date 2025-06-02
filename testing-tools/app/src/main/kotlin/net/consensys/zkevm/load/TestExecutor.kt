@@ -67,15 +67,15 @@ class TestExecutor(request: String, pk: String) {
       return Request.translate(
         builder.create().fromJson(
           InputStreamReader(resource.openStream()),
-          net.consensys.zkevm.load.swagger.Request::class.java
-        )
+          net.consensys.zkevm.load.swagger.Request::class.java,
+        ),
       )
     } else {
       val file = Paths.get(request)
       val reader = FileReader(file.toFile())
       return Request.translate(
         builder.create()
-          .fromJson(reader, net.consensys.zkevm.load.swagger.Request::class.java)
+          .fromJson(reader, net.consensys.zkevm.load.swagger.Request::class.java),
       )
     }
   }
@@ -161,7 +161,7 @@ class TestExecutor(request: String, pk: String) {
 
   private fun merge(
     txs: MutableMap<Wallet, List<TransactionDetail>>,
-    walletListMap: Map<Wallet, List<TransactionDetail>>
+    walletListMap: Map<Wallet, List<TransactionDetail>>,
   ) {
     walletListMap.forEach { (k: Wallet, v: List<TransactionDetail>) ->
       if (txs.containsKey(k)) {
@@ -178,7 +178,7 @@ class TestExecutor(request: String, pk: String) {
   @Throws(IOException::class, InterruptedException::class)
   private fun prepareContracts(
     contracts: List<CreateContract>?,
-    chainId: Int
+    chainId: Int,
   ): Map<String, String> {
     val contractAdresses: MutableMap<String, String> = HashMap()
     for (contract in contracts!!) {
@@ -188,7 +188,7 @@ class TestExecutor(request: String, pk: String) {
         "[CONTRACT] contract {} created with address {} and owner {}",
         contract.name,
         contractAdresses[contract.name],
-        sourceWallet
+        sourceWallet,
       )
     }
     return contractAdresses
@@ -199,12 +199,18 @@ class TestExecutor(request: String, pk: String) {
     return when (scenario) {
       is RoundRobinMoneyTransfer -> {
         val transactionForEstimation = Transaction.createEtherTransaction(
-          /* from = */ sourceWallet.address,
-          /* nonce = */ sourceWallet.theoreticalNonceValue,
-          /* gasPrice = */ null,
-          /* gasLimit = */ null,
-          /* to = */ Numeric.prependHexPrefix(sourceWallet.address),
-          /* value = */ RoundRobinMoneyTransfer.valueToTransfer
+          /* from = */
+          sourceWallet.address,
+          /* nonce = */
+          sourceWallet.theoreticalNonceValue,
+          /* gasPrice = */
+          null,
+          /* gasLimit = */
+          null,
+          /* to = */
+          Numeric.prependHexPrefix(sourceWallet.address),
+          /* value = */
+          RoundRobinMoneyTransfer.valueToTransfer,
         )
         val (gasPrice, gasLimit) = ethConnection.estimateGasPriceAndLimit(transactionForEstimation)
 
@@ -214,20 +220,27 @@ class TestExecutor(request: String, pk: String) {
           chainId = chainId,
           gasPerCall = gasLimit,
           gasPricePerCall = gasPrice,
-          valuePerCall = RoundRobinMoneyTransfer.valueToTransfer
+          valuePerCall = RoundRobinMoneyTransfer.valueToTransfer,
         )
       }
 
       is SelfTransactionWithPayload -> {
         if (scenario.wallet == NEW) {
           val transactionForEstimation = Transaction(
-            /* from = */ sourceWallet.address,
-            /* nonce = */ sourceWallet.theoreticalNonceValue,
-            /* gasPrice = */ null,
-            /* gasLimit = */ null,
-            /* to = */ Numeric.prependHexPrefix(sourceWallet.address),
-            /* value = */ null,
-            /* data = */ Numeric.toHexString(scenario.payload.toByteArray())
+            /* from = */
+            sourceWallet.address,
+            /* nonce = */
+            sourceWallet.theoreticalNonceValue,
+            /* gasPrice = */
+            null,
+            /* gasLimit = */
+            null,
+            /* to = */
+            Numeric.prependHexPrefix(sourceWallet.address),
+            /* value = */
+            null,
+            /* data = */
+            Numeric.toHexString(scenario.payload.toByteArray()),
           )
 
           val (gasPrice, gasLimit) = ethConnection.estimateGasPriceAndLimit(transactionForEstimation)
@@ -237,7 +250,7 @@ class TestExecutor(request: String, pk: String) {
             nbTransferPerWallets = scenario.nbTransfers,
             chainId = chainId,
             gasPerCall = gasLimit,
-            gasPricePerCall = gasPrice
+            gasPricePerCall = gasPrice,
           )
         } else {
           java.util.Map.of(-1, sourceWallet)
@@ -248,13 +261,20 @@ class TestExecutor(request: String, pk: String) {
         if (scenario.wallet == NEW) {
           val payload = Util.generateRandomPayloadOfSize(scenario.payloadSize)
           val transactionForEstimation = Transaction(
-            /* from = */ sourceWallet.address,
-            /* nonce = */ sourceWallet.theoreticalNonceValue,
-            /* gasPrice = */ null,
-            /* gasLimit = */ null,
-            /* to = */ Numeric.prependHexPrefix(sourceWallet.address),
-            /* value = */ null,
-            /* data = */ Numeric.toHexString(payload.toByteArray())
+            /* from = */
+            sourceWallet.address,
+            /* nonce = */
+            sourceWallet.theoreticalNonceValue,
+            /* gasPrice = */
+            null,
+            /* gasLimit = */
+            null,
+            /* to = */
+            Numeric.prependHexPrefix(sourceWallet.address),
+            /* value = */
+            null,
+            /* data = */
+            Numeric.toHexString(payload.toByteArray()),
           )
 
           val (gasPrice, gasLimit) = ethConnection.estimateGasPriceAndLimit(transactionForEstimation)
@@ -264,7 +284,7 @@ class TestExecutor(request: String, pk: String) {
             nbTransferPerWallets = scenario.nbTransfers,
             chainId = chainId,
             gasPerCall = gasLimit,
-            gasPricePerCall = gasPrice
+            gasPricePerCall = gasPrice,
           )
         } else {
           java.util.Map.of(-1, sourceWallet)
@@ -280,7 +300,7 @@ class TestExecutor(request: String, pk: String) {
             nbTransferPerWallets = scenario.contract.nbCalls(),
             chainId = chainId,
             gasPerCall = scenario.gasLimit(),
-            gasPricePerCall = gasPrice
+            gasPricePerCall = gasPrice,
           )
         } else {
           java.util.Map.of()
@@ -298,7 +318,7 @@ class TestExecutor(request: String, pk: String) {
     scenario: Scenario?,
     chainId: Int,
     walletMap: Map<Int, Wallet>,
-    contractAddresses: Map<String, String>
+    contractAddresses: Map<String, String>,
   ): Map<Wallet, List<TransactionDetail>> {
     return when (scenario) {
       is RoundRobinMoneyTransfer -> {
@@ -310,7 +330,7 @@ class TestExecutor(request: String, pk: String) {
           scenario.payload,
           chainId,
           walletMap,
-          scenario.nbTransfers
+          scenario.nbTransfers,
         )
       }
 
@@ -319,7 +339,7 @@ class TestExecutor(request: String, pk: String) {
           scenario.payloadSize,
           chainId,
           walletMap,
-          scenario.nbTransfers
+          scenario.nbTransfers,
         )
       }
 
@@ -336,7 +356,7 @@ class TestExecutor(request: String, pk: String) {
     payloadSize: Int,
     chainId: Int,
     walletMap: Map<Int, Wallet>,
-    nbTransfers: Int
+    nbTransfers: Int,
   ): Map<Wallet, List<TransactionDetail>> {
     return walletsFunding.generateTxWithRandomPayload(walletMap, payloadSize, chainId, nbTransfers)
   }
@@ -346,7 +366,7 @@ class TestExecutor(request: String, pk: String) {
     payload: String,
     chainId: Int,
     walletMap: Map<Int, Wallet>,
-    nbTransfers: Int
+    nbTransfers: Int,
   ): Map<Wallet, List<TransactionDetail>> {
     return walletsFunding.generateTxsWithPayload(walletMap, payload, chainId, nbTransfers)
   }
@@ -356,7 +376,7 @@ class TestExecutor(request: String, pk: String) {
     call: ContractCall,
     chainId: Int,
     contractAddresses: Map<String, String>,
-    walletMap: Map<Int, Wallet>
+    walletMap: Map<Int, Wallet>,
   ): Map<Wallet, List<TransactionDetail>> {
     return when (val contractType = call.contract) {
       is CallExistingContract -> {
@@ -364,7 +384,7 @@ class TestExecutor(request: String, pk: String) {
           call.wallet(sourceWallet, walletMap),
           contractType.contractAddress,
           contractType.methodAndParameters,
-          chainId
+          chainId,
         )
       }
 
@@ -372,7 +392,7 @@ class TestExecutor(request: String, pk: String) {
         prepareContractCreation(
           call.wallet(sourceWallet, walletMap),
           contractType,
-          chainId
+          chainId,
         )
       }
 
@@ -382,7 +402,7 @@ class TestExecutor(request: String, pk: String) {
           call.wallet(sourceWallet, walletMap),
           address!!,
           contractType.methodAndParameters,
-          chainId
+          chainId,
         )
       }
 
@@ -395,49 +415,48 @@ class TestExecutor(request: String, pk: String) {
     wallet: Wallet,
     contractAddress: String,
     methodAndParameters: MethodAndParameter?,
-    chainId: Int
-  ):
-    Map<Wallet, List<TransactionDetail>> {
+    chainId: Int,
+  ): Map<Wallet, List<TransactionDetail>> {
     return when (methodAndParameters) {
       is GenericCall -> {
         val encodedFunction = smartContractCalls.genericCall(
           methodAndParameters.methodName,
-          methodAndParameters.parameters
+          methodAndParameters.parameters,
         )
         smartContractCalls.getRequests(
           contractAddress,
           wallet,
           encodedFunction,
           methodAndParameters.nbOfTimes,
-          chainId
+          chainId,
         )
       }
 
       is Mint -> {
         val encodedFunction = smartContractCalls.mint(
           methodAndParameters.address,
-          methodAndParameters.amount.toLong()
+          methodAndParameters.amount.toLong(),
         )
         smartContractCalls.getRequests(
           contractAddress,
           wallet,
           encodedFunction,
           methodAndParameters.nbOfTimes,
-          chainId
+          chainId,
         )
       }
 
       is BatchMint -> {
         val encodedFunction = smartContractCalls.batchMint(
           methodAndParameters.address,
-          methodAndParameters.amount.toLong()
+          methodAndParameters.amount.toLong(),
         )
         smartContractCalls.getRequests(
           contractAddress,
           wallet,
           encodedFunction,
           methodAndParameters.nbOfTimes,
-          chainId
+          chainId,
         )
       }
 
@@ -449,7 +468,7 @@ class TestExecutor(request: String, pk: String) {
           wallet,
           encodedFunction,
           methodAndParameters.nbOfTimes,
-          chainId
+          chainId,
         )
       }
 
@@ -461,18 +480,17 @@ class TestExecutor(request: String, pk: String) {
   private fun prepareContractCreation(
     wallet: Wallet,
     contract: CreateContract,
-    chainId: Int
-  ):
-    Map<Wallet, List<TransactionDetail>> {
+    chainId: Int,
+  ): Map<Wallet, List<TransactionDetail>> {
     return java.util.Map.of(
       wallet,
       listOf(
         smartContractCalls.getCreateContractTransaction(
           wallet,
           contract.byteCode,
-          chainId
-        )
-      )
+          chainId,
+        ),
+      ),
     )
   }
 
@@ -481,7 +499,7 @@ class TestExecutor(request: String, pk: String) {
     NoSuchAlgorithmException::class,
     NoSuchProviderException::class,
     IOException::class,
-    InterruptedException::class
+    InterruptedException::class,
   )
   private fun prepareWallets(
     nbWallets: Int,
@@ -489,7 +507,7 @@ class TestExecutor(request: String, pk: String) {
     chainId: Int,
     gasPerCall: BigInteger,
     gasPricePerCall: BigInteger,
-    valuePerCall: BigInteger = BigInteger.ZERO
+    valuePerCall: BigInteger = BigInteger.ZERO,
   ): Map<Int, Wallet> {
     val wallets: Map<Int, Wallet> = createWallets(nbWallets)
     executionDetails.addInitialization(
@@ -500,8 +518,8 @@ class TestExecutor(request: String, pk: String) {
         chainId = chainId,
         gasPerCall = gasPerCall,
         gasPricePerCall = gasPricePerCall,
-        valuePerCall = valuePerCall
-      )
+        valuePerCall = valuePerCall,
+      ),
     )
     return wallets
   }
@@ -510,13 +528,13 @@ class TestExecutor(request: String, pk: String) {
   private fun generateTxs(
     nbTransferPerWallets: Int,
     wallets: Map<Int, Wallet>,
-    chainId: Int
+    chainId: Int,
   ): Map<Wallet, List<TransactionDetail>> {
     return walletsFunding.generateTransactions(
       wallets,
       RoundRobinMoneyTransfer.valueToTransfer,
       nbTransferPerWallets,
-      chainId
+      chainId,
     )
   }
 }

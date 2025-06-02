@@ -13,7 +13,7 @@ object DbHelper {
 
   fun generateUniqueDbName(
     prefix: String = "test",
-    clock: Clock = Clock.systemUTC()
+    clock: Clock = Clock.systemUTC(),
   ): String {
     // Just time is not enough, as we can have multiple tests running in parallel
     val dateStr = formatter.format(clock.instant().atZone(ZoneId.of("UTC")))
@@ -56,7 +56,7 @@ object DbHelper {
 
   fun createDataBase(
     dataSource: DataSource,
-    databaseName: String
+    databaseName: String,
   ) {
     dataSource.connection
       .use { con -> con.prepareStatement("CREATE DATABASE $databaseName;").execute() }
@@ -64,13 +64,13 @@ object DbHelper {
 
   fun dropAndCreateDataBase(
     dataSource: DataSource,
-    databaseName: String
+    databaseName: String,
   ) {
     resetAllConnections(dataSource, databaseName)
     dataSource.connection
       .use { con ->
         con.prepareStatement(
-          "DROP DATABASE IF EXISTS  $databaseName; CREATE DATABASE $databaseName;"
+          "DROP DATABASE IF EXISTS  $databaseName; CREATE DATABASE $databaseName;",
         ).execute()
       }
   }

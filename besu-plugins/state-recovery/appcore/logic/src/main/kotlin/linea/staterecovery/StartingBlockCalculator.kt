@@ -6,7 +6,7 @@ import linea.kotlin.minusCoercingUnderflow
 fun startBlockToFetchFromL1(
   headBlockNumber: ULong,
   recoveryStartBlockNumber: ULong?,
-  lookbackWindow: ULong
+  lookbackWindow: ULong,
 ): ULong {
   if (recoveryStartBlockNumber == null) {
     return headBlockNumber + 1UL
@@ -19,24 +19,24 @@ fun startBlockToFetchFromL1(
 
 data class FetchingIntervals(
   val elInterval: BlockInterval?,
-  val l1Interval: BlockInterval?
+  val l1Interval: BlockInterval?,
 )
 
 fun lookbackFetchingIntervals(
   headBlockNumber: ULong,
   recoveryStartBlockNumber: ULong?,
-  lookbackWindow: ULong
+  lookbackWindow: ULong,
 ): FetchingIntervals {
   if (recoveryStartBlockNumber == null || recoveryStartBlockNumber > headBlockNumber) {
     return FetchingIntervals(
       l1Interval = null,
-      elInterval = BlockInterval(headBlockNumber.minusCoercingUnderflow(lookbackWindow - 1UL), headBlockNumber)
+      elInterval = BlockInterval(headBlockNumber.minusCoercingUnderflow(lookbackWindow - 1UL), headBlockNumber),
     )
   }
   if (headBlockNumber - lookbackWindow > recoveryStartBlockNumber) {
     return FetchingIntervals(
       l1Interval = BlockInterval(headBlockNumber.minusCoercingUnderflow(lookbackWindow - 1UL), headBlockNumber),
-      elInterval = null
+      elInterval = null,
     )
   }
 
@@ -44,7 +44,7 @@ fun lookbackFetchingIntervals(
     l1Interval = BlockInterval(recoveryStartBlockNumber, headBlockNumber),
     elInterval = BlockInterval(
       headBlockNumber.minusCoercingUnderflow(lookbackWindow - 1UL),
-      recoveryStartBlockNumber - 1UL
-    )
+      recoveryStartBlockNumber - 1UL,
+    ),
   )
 }

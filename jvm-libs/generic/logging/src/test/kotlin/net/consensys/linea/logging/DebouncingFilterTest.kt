@@ -19,7 +19,7 @@ class DebouncingFilterTest {
   fun beforeEach() {
     debouncer = DebouncingFilter(
       debounceTime = debounceTime,
-      maxCacheCapacity = 3
+      maxCacheCapacity = 3,
     )
   }
 
@@ -44,13 +44,13 @@ class DebouncingFilterTest {
     val initialMessageTime = 12L
     assertThat(
       debouncer.filter(
-        eventsBuilder.setTimeMillis(initialMessageTime).build()
-      )
+        eventsBuilder.setTimeMillis(initialMessageTime).build(),
+      ),
     ).isEqualTo(Filter.Result.ACCEPT)
     assertThat(
       debouncer.filter(
-        eventsBuilder.setTimeMillis(initialMessageTime + debounceTime.inWholeMilliseconds + 1).build()
-      )
+        eventsBuilder.setTimeMillis(initialMessageTime + debounceTime.inWholeMilliseconds + 1).build(),
+      ),
     ).isEqualTo(Filter.Result.ACCEPT)
   }
 
@@ -76,34 +76,34 @@ class DebouncingFilterTest {
     val theSameMessageTime = 12L
     assertThat(
       debouncer.filter(
-        createLogEventBuilderWithString("Message 1").setTimeMillis(theSameMessageTime).build()
-      )
+        createLogEventBuilderWithString("Message 1").setTimeMillis(theSameMessageTime).build(),
+      ),
     ).isEqualTo(Filter.Result.ACCEPT)
     assertThat(
       debouncer.filter(
-        createLogEventBuilderWithString("Message 2").setTimeMillis(theSameMessageTime).build()
-      )
+        createLogEventBuilderWithString("Message 2").setTimeMillis(theSameMessageTime).build(),
+      ),
     ).isEqualTo(Filter.Result.ACCEPT)
     assertThat(
       debouncer.filter(
-        createLogEventBuilderWithString("Message 3").setTimeMillis(theSameMessageTime).build()
-      )
+        createLogEventBuilderWithString("Message 3").setTimeMillis(theSameMessageTime).build(),
+      ),
     ).isEqualTo(Filter.Result.ACCEPT)
     assertThat(
       debouncer.filter(
-        createLogEventBuilderWithString("Message 3").setTimeMillis(theSameMessageTime).build()
-      )
+        createLogEventBuilderWithString("Message 3").setTimeMillis(theSameMessageTime).build(),
+      ),
     ).isEqualTo(Filter.Result.DENY)
     // Message 4 pushes Message 1 out of the LRU cache
     assertThat(
       debouncer.filter(
-        createLogEventBuilderWithString("Message 4").setTimeMillis(theSameMessageTime).build()
-      )
+        createLogEventBuilderWithString("Message 4").setTimeMillis(theSameMessageTime).build(),
+      ),
     ).isEqualTo(Filter.Result.ACCEPT)
     assertThat(
       debouncer.filter(
-        createLogEventBuilderWithString("Message 1").setTimeMillis(theSameMessageTime).build()
-      )
+        createLogEventBuilderWithString("Message 1").setTimeMillis(theSameMessageTime).build(),
+      ),
     ).isEqualTo(Filter.Result.ACCEPT)
   }
 

@@ -35,15 +35,15 @@ class MinMineableFeesPricerServiceTest {
       0.25,
       0.5,
       0.75,
-      0.9
+      0.9,
     ),
     baseFeePerBlobGas = listOf(100, 110, 120, 130, 140).map { it.toULong() },
     blobGasUsedRatio = listOf(
       0.25,
       0.5,
       0.75,
-      0.9
-    )
+      0.9,
+    ),
   )
 
   @Test
@@ -66,9 +66,9 @@ class MinMineableFeesPricerServiceTest {
       BoundableFeeCalculator.Config(
         gasPriceUpperBound,
         gasPriceLowerBound,
-        gasPriceFixedCost
+        gasPriceFixedCost,
       ),
-      mockFeesCalculator
+      mockFeesCalculator,
     )
     val mockGasPriceUpdater = mock<GasPriceUpdater> {
       on { updateMinerGasPrice(anyLong().toULong()) } doAnswer { SafeFuture.completedFuture(Unit) }
@@ -79,7 +79,7 @@ class MinMineableFeesPricerServiceTest {
         vertx = vertx,
         feesFetcher = mockFeesFetcher,
         feesCalculator = boundableFeeCalculator,
-        gasPriceUpdater = mockGasPriceUpdater
+        gasPriceUpdater = mockGasPriceUpdater,
       )
     monitor.start().thenApply {
       vertx.setTimer(100) {
@@ -114,9 +114,9 @@ class MinMineableFeesPricerServiceTest {
       BoundableFeeCalculator.Config(
         gasPriceUpperBound,
         gasPriceLowerBound,
-        gasPriceFixedCost
+        gasPriceFixedCost,
       ),
-      mockFeesCalculator
+      mockFeesCalculator,
     )
     val mockGasPriceUpdater = mock<GasPriceUpdater> {
       on { updateMinerGasPrice(anyLong().toULong()) } doAnswer { SafeFuture.completedFuture(Unit) }
@@ -128,7 +128,7 @@ class MinMineableFeesPricerServiceTest {
         vertx = vertx,
         feesFetcher = mockFeesFetcher,
         feesCalculator = boundableFeeCalculator,
-        gasPriceUpdater = mockGasPriceUpdater
+        gasPriceUpdater = mockGasPriceUpdater,
       )
 
     monitor.action().get()
@@ -154,9 +154,9 @@ class MinMineableFeesPricerServiceTest {
       BoundableFeeCalculator.Config(
         gasPriceUpperBound,
         gasPriceLowerBound,
-        gasPriceFixedCost
+        gasPriceFixedCost,
       ),
-      mockFeesCalculator
+      mockFeesCalculator,
     )
     val mockGasPriceUpdater = mock<GasPriceUpdater> {
       on { updateMinerGasPrice(anyLong().toULong()) } doAnswer { SafeFuture.completedFuture(Unit) }
@@ -168,7 +168,7 @@ class MinMineableFeesPricerServiceTest {
         vertx = vertx,
         feesFetcher = mockFeesFetcher,
         feesCalculator = boundableFeeCalculator,
-        gasPriceUpdater = mockGasPriceUpdater
+        gasPriceUpdater = mockGasPriceUpdater,
       )
 
     monitor.action().get()

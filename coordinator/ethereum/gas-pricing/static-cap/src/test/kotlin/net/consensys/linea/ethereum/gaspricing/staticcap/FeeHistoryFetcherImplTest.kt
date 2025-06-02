@@ -38,8 +38,8 @@ class FeeHistoryFetcherImplTest {
         l1Web3jServiceMock,
         FeeHistoryFetcherImpl.Config(
           feeHistoryBlockCount,
-          feeHistoryRewardPercentile
-        )
+          feeHistoryRewardPercentile,
+        ),
       )
 
     feeHistoryFetcherImpl.getL1EthGasPriceData()
@@ -71,8 +71,8 @@ class FeeHistoryFetcherImplTest {
         l1Web3jServiceMock,
         FeeHistoryFetcherImpl.Config(
           feeHistoryBlockCount,
-          feeHistoryRewardPercentile
-        )
+          feeHistoryRewardPercentile,
+        ),
       )
 
     feeHistoryFetcherImpl.getL1EthGasPriceData()
@@ -99,7 +99,7 @@ class FeeHistoryFetcherImplTest {
     whenever(
       web3jClient
         .ethGasPrice()
-        .sendAsync()
+        .sendAsync(),
     )
       .thenAnswer {
         val gasPriceResponse = EthGasPrice()
@@ -121,9 +121,9 @@ class FeeHistoryFetcherImplTest {
         .ethFeeHistoryWithBlob(
           eq(feeHistoryBlockCount.toInt()),
           eq(DefaultBlockParameterName.LATEST),
-          eq(listOf(feeHistoryRewardPercentile))
+          eq(listOf(feeHistoryRewardPercentile)),
         )
-        .sendAsync()
+        .sendAsync(),
     )
       .thenAnswer {
         val feeHistoryResponse = EthFeeHistoryBlobExtended()
@@ -133,7 +133,7 @@ class FeeHistoryFetcherImplTest {
           baseFeePerGas = (10000 until 10011).map { it.toString() },
           gasUsedRatio = (10 until 20).map { it / 100.0 },
           baseFeePerBlobGas = (10000 until 10011).map { it.toString() },
-          blobGasUsedRatio = (10 until 20).map { it / 100.0 }
+          blobGasUsedRatio = (10 until 20).map { it / 100.0 },
         )
         feeHistoryResponse.result = feeHistory
         SafeFuture.completedFuture(feeHistoryResponse)
@@ -149,9 +149,9 @@ class FeeHistoryFetcherImplTest {
         .ethFeeHistoryWithBlob(
           eq(feeHistoryBlockCount.toInt()),
           eq(DefaultBlockParameterName.LATEST),
-          eq(listOf(feeHistoryRewardPercentile))
+          eq(listOf(feeHistoryRewardPercentile)),
         )
-        .sendAsync()
+        .sendAsync(),
     )
       .thenAnswer {
         val feeHistoryResponse = EthFeeHistoryBlobExtended()
@@ -161,7 +161,7 @@ class FeeHistoryFetcherImplTest {
           baseFeePerGas = (10000 until 10011).map { it.toString() },
           gasUsedRatio = (10 until 20).map { it / 100.0 },
           baseFeePerBlobGas = emptyList(),
-          blobGasUsedRatio = emptyList()
+          blobGasUsedRatio = emptyList(),
         )
         feeHistoryResponse.result = feeHistory
         SafeFuture.completedFuture(feeHistoryResponse)

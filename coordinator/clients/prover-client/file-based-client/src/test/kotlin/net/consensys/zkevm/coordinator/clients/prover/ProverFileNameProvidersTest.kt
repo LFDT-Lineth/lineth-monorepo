@@ -11,16 +11,16 @@ class ProverFileNameProvidersTest {
   fun test_getExecutionProof_requestFileName() {
     val executionProofRequestFileNameProvider = ExecutionProofRequestFileNameProvider(
       tracesVersion = "0.1",
-      stateManagerVersion = "0.2"
+      stateManagerVersion = "0.2",
     )
     Assertions.assertEquals(
       "11-17-etv0.1-stv0.2-getZkProof.json",
       executionProofRequestFileNameProvider.getFileName(
         ProofIndex(
           startBlockNumber = 11u,
-          endBlockNumber = 17u
-        )
-      )
+          endBlockNumber = 17u,
+        ),
+      ),
     )
   }
 
@@ -31,9 +31,9 @@ class ProverFileNameProvidersTest {
       ExecutionProofResponseFileNameProvider.getFileName(
         ProofIndex(
           startBlockNumber = 11u,
-          endBlockNumber = 17u
-        )
-      )
+          endBlockNumber = 17u,
+        ),
+      ),
     )
   }
 
@@ -47,9 +47,9 @@ class ProverFileNameProvidersTest {
         ProofIndex(
           startBlockNumber = 11u,
           endBlockNumber = 17u,
-          hash = hash
-        )
-      )
+          hash = hash,
+        ),
+      ),
     )
   }
 
@@ -60,13 +60,13 @@ class ProverFileNameProvidersTest {
       ProofIndex(
         startBlockNumber = 1uL,
         endBlockNumber = 11uL,
-        hash = requestHash
-      )
+        hash = requestHash,
+      ),
     )
 
     Assertions.assertEquals(
       "1-11-bcv0.0-ccv0.0-0abcd123-getZkBlobCompressionProof.json",
-      requestFileName
+      requestFileName,
     )
   }
 
@@ -79,9 +79,9 @@ class ProverFileNameProvidersTest {
         ProofIndex(
           startBlockNumber = 11u,
           endBlockNumber = 27u,
-          hash = hash
-        )
-      )
+          hash = hash,
+        ),
+      ),
     )
   }
 }

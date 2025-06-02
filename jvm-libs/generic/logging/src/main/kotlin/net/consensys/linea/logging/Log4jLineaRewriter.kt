@@ -11,21 +11,21 @@ import org.apache.logging.log4j.core.impl.Log4jLogEvent
 
 @Plugin(name = "Log4jLineaRewriter", category = "Core", elementType = "rewritePolicy", printObject = true)
 class Log4jLineaRewriter(
-  private val knownErrors: KnownErrors
+  private val knownErrors: KnownErrors,
 ) : RewritePolicy {
   companion object {
     @PluginFactory
     @JvmStatic
     fun createPolicy(
       @PluginElement(value = "knownErrors")
-      knownErrorsConfig: KnownErrorsConfig
+      knownErrorsConfig: KnownErrorsConfig,
     ): Log4jLineaRewriter {
       return Log4jLineaRewriter(
         KnownErrors(
           knownErrorsConfig.knownErrors.toList().map {
             KnownError(Level.getLevel(it.logLevel), it.messagePattern.toRegex(RegexOption.IGNORE_CASE), it.stackTrace)
-          }
-        )
+          },
+        ),
       )
     }
   }
@@ -62,7 +62,7 @@ class KnownErrorsConfig(val knownErrors: Array<KnownErrorConfig>) {
     @JvmStatic
     fun createKnownErrorsConfig(
       @PluginElement("KnownError")
-      knownErrors: Array<KnownErrorConfig>
+      knownErrors: Array<KnownErrorConfig>,
     ): KnownErrorsConfig {
       return KnownErrorsConfig(knownErrors)
     }
@@ -73,7 +73,7 @@ class KnownErrorsConfig(val knownErrors: Array<KnownErrorConfig>) {
 class KnownErrorConfig(
   val logLevel: String,
   val messagePattern: String,
-  val stackTrace: Boolean = false
+  val stackTrace: Boolean = false,
 ) {
   companion object {
     @PluginFactory
@@ -81,12 +81,12 @@ class KnownErrorConfig(
     fun createKnownErrorConfig(
       @PluginAttribute("logLevel") logLevel: String,
       @PluginAttribute("message") message: String,
-      @PluginAttribute("stackTrace") stackTrace: Boolean?
+      @PluginAttribute("stackTrace") stackTrace: Boolean?,
     ): KnownErrorConfig {
       return KnownErrorConfig(
         logLevel = logLevel,
         messagePattern = message,
-        stackTrace = stackTrace ?: false
+        stackTrace = stackTrace ?: false,
       )
     }
   }

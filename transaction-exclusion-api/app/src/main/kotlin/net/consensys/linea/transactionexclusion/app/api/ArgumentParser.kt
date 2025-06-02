@@ -36,13 +36,13 @@ object ArgumentParser {
     try {
       return TransactionDecoder.decodeOpaqueBytes(
         Bytes.wrap(rlp),
-        EncodingContext.BLOCK_BODY
+        EncodingContext.BLOCK_BODY,
       ).run {
         TransactionInfo(
           hash = this.hash.toArray(),
           to = if (this.to.isPresent) this.to.get().toArray() else null,
           from = this.sender.toArray(),
-          nonce = this.nonce.toULong()
+          nonce = this.nonce.toULong(),
         )
       }
     } catch (ex: Exception) {
@@ -61,7 +61,7 @@ object ArgumentParser {
   fun getReasonMessage(reasonMessage: String): String {
     if (reasonMessage.length > MAX_REASON_MESSAGE_STR_LEN) {
       throw IllegalArgumentException(
-        "Reason message should not be more than $MAX_REASON_MESSAGE_STR_LEN characters: $reasonMessage"
+        "Reason message should not be more than $MAX_REASON_MESSAGE_STR_LEN characters: $reasonMessage",
       )
     }
     return reasonMessage

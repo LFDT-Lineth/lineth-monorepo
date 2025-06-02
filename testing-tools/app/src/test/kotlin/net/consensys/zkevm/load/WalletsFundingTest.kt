@@ -2,7 +2,7 @@ package net.consensys.zkevm.load
 
 import net.consensys.zkevm.load.model.DummyEthConnection
 import net.consensys.zkevm.load.model.DummyWalletL1State
-import net.consensys.zkevm.load.model.EXPECTED_OUTCOME
+import net.consensys.zkevm.load.model.ExpectedOutcome
 import net.consensys.zkevm.load.model.Wallet
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -27,14 +27,14 @@ class WalletsFundingTest {
       mapOf(-1 to sourceWallet, 1 to wallet1, 2 to wallet2),
       100,
       1944,
-      1
+      1,
     )
     assertEquals(3, txs.size)
     assertEquals(1, txs[wallet1]?.size)
     assertEquals(1, txs[wallet1]?.get(0)?.walletId)
     assertEquals(200, txs[wallet1]?.get(0)?.ethSendTransactionRequest?.params?.get(0).toString().length)
     assertEquals(null, txs[wallet1]?.get(0)?.hash) // not set as not send yet
-    assertEquals(EXPECTED_OUTCOME.SUCCESS, txs[wallet1]?.get(0)?.expectedOutcome) // move to NOT_EXECUTED ?
+    assertEquals(ExpectedOutcome.SUCCESS, txs[wallet1]?.get(0)?.expectedOutcome) // move to NOT_EXECUTED ?
     assertEquals(BigInteger.valueOf(1000), txs[wallet1]?.get(0)?.nonce)
     assertEquals(BigInteger.valueOf(1001), sourceWallet.theoreticalNonceValue)
   }
@@ -50,7 +50,7 @@ class WalletsFundingTest {
       1944,
       BigInteger.valueOf(2500),
       BigInteger.valueOf(2500),
-      BigInteger.valueOf(1)
+      BigInteger.valueOf(1),
     )
 
     assertEquals(1, txs.size)
@@ -66,7 +66,7 @@ class WalletsFundingTest {
       mapOf(0 to wallet1, 1 to wallet2),
       BigInteger.TWO,
       2,
-      1944
+      1944,
     )
 
     assertEquals(2, txs.size)
@@ -77,7 +77,7 @@ class WalletsFundingTest {
   fun timeout_waitForTransactions() {
     assertFailsWith<InterruptedException>(
       "should time out",
-      block = { walletsFunding.waitForTransactions(mapOf(sourceWallet to BigInteger.ONE), 1L) }
+      block = { walletsFunding.waitForTransactions(mapOf(sourceWallet to BigInteger.ONE), 1L) },
     )
   }
 

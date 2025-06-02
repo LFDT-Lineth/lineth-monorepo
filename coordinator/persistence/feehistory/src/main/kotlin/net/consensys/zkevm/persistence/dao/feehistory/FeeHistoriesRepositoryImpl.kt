@@ -10,12 +10,12 @@ import java.util.concurrent.atomic.AtomicReference
 
 class FeeHistoriesRepositoryImpl(
   private val config: Config,
-  private val feeHistoriesDao: FeeHistoriesDao
+  private val feeHistoriesDao: FeeHistoriesDao,
 ) : FeeHistoriesRepositoryWithCache {
   data class Config(
     val rewardPercentiles: List<Double>,
     val minBaseFeePerBlobGasToCache: ULong? = null,
-    val fixedAverageRewardToCache: ULong? = null
+    val fixedAverageRewardToCache: ULong? = null,
   ) {
     init {
       require(rewardPercentiles.isNotEmpty()) {
@@ -37,14 +37,14 @@ class FeeHistoriesRepositoryImpl(
       PercentileGasFees(
         percentileBaseFeePerGas = 0uL,
         percentileBaseFeePerBlobGas = 0uL,
-        percentileAvgReward = 0uL
-      )
+        percentileAvgReward = 0uL,
+      ),
     )
 
   override fun saveNewFeeHistory(feeHistory: FeeHistory): SafeFuture<Unit> {
     return feeHistoriesDao.saveNewFeeHistory(
       feeHistory,
-      config.rewardPercentiles
+      config.rewardPercentiles,
     )
       .exceptionallyCompose { error ->
         if (error is DuplicatedRecordException) {
@@ -57,31 +57,31 @@ class FeeHistoriesRepositoryImpl(
 
   override fun findBaseFeePerGasAtPercentile(
     percentile: Double,
-    fromBlockNumber: Long
+    fromBlockNumber: Long,
   ): SafeFuture<ULong?> {
     return feeHistoriesDao.findBaseFeePerGasAtPercentile(
       percentile,
-      fromBlockNumber
+      fromBlockNumber,
     )
   }
 
   override fun findBaseFeePerBlobGasAtPercentile(
     percentile: Double,
-    fromBlockNumber: Long
+    fromBlockNumber: Long,
   ): SafeFuture<ULong?> {
     return feeHistoriesDao.findBaseFeePerBlobGasAtPercentile(
       percentile,
-      fromBlockNumber
+      fromBlockNumber,
     )
   }
 
   override fun findAverageRewardAtPercentile(
     rewardPercentile: Double,
-    fromBlockNumber: Long
+    fromBlockNumber: Long,
   ): SafeFuture<ULong?> {
     return feeHistoriesDao.findAverageRewardAtPercentile(
       rewardPercentile,
-      fromBlockNumber
+      fromBlockNumber,
     )
   }
 
@@ -91,11 +91,11 @@ class FeeHistoriesRepositoryImpl(
 
   override fun getNumOfFeeHistoriesFromBlockNumber(
     rewardPercentile: Double,
-    fromBlockNumber: Long
+    fromBlockNumber: Long,
   ): SafeFuture<Int> {
     return feeHistoriesDao.getNumOfFeeHistoriesFromBlockNumber(
       rewardPercentile,
-      fromBlockNumber
+      fromBlockNumber,
     )
   }
 
@@ -105,11 +105,11 @@ class FeeHistoriesRepositoryImpl(
 
   override fun cacheNumOfFeeHistoriesFromBlockNumber(
     rewardPercentile: Double,
-    fromBlockNumber: Long
+    fromBlockNumber: Long,
   ): SafeFuture<Int> {
     return feeHistoriesDao.getNumOfFeeHistoriesFromBlockNumber(
       rewardPercentile,
-      fromBlockNumber
+      fromBlockNumber,
     ).thenPeek {
       lastNumOfFeeHistoriesFromBlockNumber.set(it)
     }
@@ -121,15 +121,15 @@ class FeeHistoriesRepositoryImpl(
 
   override fun cachePercentileGasFees(
     percentile: Double,
-    fromBlockNumber: Long
+    fromBlockNumber: Long,
   ): SafeFuture<Unit> {
     return findBaseFeePerGasAtPercentile(
       percentile,
-      fromBlockNumber
+      fromBlockNumber,
     ).thenCompose { percentileBaseFeePerGas ->
       findBaseFeePerBlobGasAtPercentile(
         percentile,
-        fromBlockNumber
+        fromBlockNumber,
       ).thenCompose { percentileBaseFeePerBlobGas ->
         (
           if (config.fixedAverageRewardToCache != null) {
@@ -143,8 +143,8 @@ class FeeHistoriesRepositoryImpl(
               percentileBaseFeePerGas!!,
               percentileBaseFeePerBlobGas!!
                 .coerceAtLeast(config.minBaseFeePerBlobGasToCache ?: percentileBaseFeePerBlobGas),
-              percentileAvgReward!!
-            )
+              percentileAvgReward!!,
+            ),
           )
         }
       }
@@ -152,7 +152,7 @@ class FeeHistoriesRepositoryImpl(
   }
 
   override fun deleteFeeHistoriesUpToBlockNumber(
-    blockNumberInclusive: Long
+    blockNumberInclusive: Long,
   ): SafeFuture<Int> {
     return feeHistoriesDao.deleteFeeHistoriesUpToBlockNumber(blockNumberInclusive)
   }

@@ -13,7 +13,7 @@ class FileRecoveryStatusPersistenceTest {
 
   @Test
   fun `should return null when no recovery start block number is saved`(
-    @TempDir tempDir: Path
+    @TempDir tempDir: Path,
   ) {
     val recoveryStatusPersistence = FileBasedRecoveryStatusPersistence(tempDir.resolve("recovery-status.json"))
     assertThat(recoveryStatusPersistence.getRecoveryStartBlockNumber()).isNull()
@@ -21,7 +21,7 @@ class FileRecoveryStatusPersistenceTest {
 
   @Test
   fun `should return the saved recovery start block number`(
-    @TempDir tempDir: Path
+    @TempDir tempDir: Path,
   ) {
     FileBasedRecoveryStatusPersistence(tempDir.resolve("recovery-status.json"))
       .also { persistence ->
@@ -46,7 +46,7 @@ class FileRecoveryStatusPersistenceTest {
 
   @Test
   fun `shall throw when it cannot create the file`(
-    @TempDir tempDir: Path
+    @TempDir tempDir: Path,
   ) {
     val dirWithoutWritePermissions = tempDir.resolve("dir-without-write-permissions")
 
@@ -64,7 +64,7 @@ class FileRecoveryStatusPersistenceTest {
 
   @Test
   fun `should throw error when file version is not supported`(
-    @TempDir tempDir: Path
+    @TempDir tempDir: Path,
   ) {
     val invalidJsonPayload = """
       {

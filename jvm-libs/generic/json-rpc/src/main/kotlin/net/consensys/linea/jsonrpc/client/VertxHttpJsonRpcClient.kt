@@ -34,7 +34,7 @@ class VertxHttpJsonRpcClient(
   private val responseObjectMapper: ObjectMapper = objectMapper,
   private val log: Logger = LogManager.getLogger(VertxHttpJsonRpcClient::class.java),
   private val requestResponseLogLevel: Level = Level.TRACE,
-  private val failuresLogLevel: Level = Level.DEBUG
+  private val failuresLogLevel: Level = Level.DEBUG,
 ) : JsonRpcClient {
   private val requestOptions = RequestOptions().apply {
     setMethod(HttpMethod.POST)
@@ -47,14 +47,14 @@ class VertxHttpJsonRpcClient(
         jsonrpc = request.jsonrpc,
         id = request.id,
         method = request.method,
-        params = requestParamsObjectMapper.valueToTree(request.params)
-      )
+        params = requestParamsObjectMapper.valueToTree(request.params),
+      ),
     )
   }
 
   override fun makeRequest(
     request: JsonRpcRequest,
-    resultMapper: (Any?) -> Any?
+    resultMapper: (Any?) -> Any?,
   ): Future<Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>> {
     val json = serializeRequest(request)
 
@@ -72,14 +72,14 @@ class VertxHttpJsonRpcClient(
                 isError = true,
                 response = response,
                 requestBody = json,
-                responseBody = bodyBuffer.toString().lines().firstOrNull() ?: ""
+                responseBody = bodyBuffer.toString().lines().firstOrNull() ?: "",
               )
               Future.failedFuture(
                 JsonRpcErrorException(
                   message =
                   "HTTP errorCode=${response.statusCode()}, message=${response.statusMessage()}",
-                  httpStatusCode = response.statusCode()
-                )
+                  httpStatusCode = response.statusCode(),
+                ),
               )
             }
           }
@@ -91,9 +91,9 @@ class VertxHttpJsonRpcClient(
           description = "Time of Upstream API JsonRpc Requests",
           tags = listOf(
             Tag("endpoint", endpoint.host),
-            Tag("method", request.method)
-          )
-        ).captureTime(requestFuture.toCompletionStage().toCompletableFuture())
+            Tag("method", request.method),
+          ),
+        ).captureTime(requestFuture.toCompletionStage().toCompletableFuture()),
       )
     }
       .onFailure { th -> logRequestFailure(json, th) }
@@ -102,7 +102,7 @@ class VertxHttpJsonRpcClient(
   private fun handleResponse(
     requestBody: String,
     httpResponse: HttpClientResponse,
-    resultMapper: (Any?) -> Any?
+    resultMapper: (Any?) -> Any?,
   ): Future<Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>> {
     var isError = false
     var responseBody = ""
@@ -119,8 +119,8 @@ class VertxHttpJsonRpcClient(
                 Ok(
                   JsonRpcSuccessResponse(
                     responseId,
-                    resultMapper(jsonResponse.get("result").toPrimitiveOrJsonNode())
-                  )
+                    resultMapper(jsonResponse.get("result").toPrimitiveOrJsonNode()),
+                  ),
                 )
               }
 
@@ -128,7 +128,7 @@ class VertxHttpJsonRpcClient(
                 isError = true
                 val errorResponse = JsonRpcErrorResponse(
                   responseId,
-                  responseObjectMapper.treeToValue(jsonResponse["error"], JsonRpcError::class.java)
+                  responseObjectMapper.treeToValue(jsonResponse["error"], JsonRpcError::class.java),
                 )
                 Err(errorResponse)
               }
@@ -143,8 +143,8 @@ class VertxHttpJsonRpcClient(
             else -> Future.failedFuture(
               IllegalArgumentException(
                 "Error parsing JSON-RPC response: message=${e.message}",
-                e
-              )
+                e,
+              ),
             )
           }
         }
@@ -163,7 +163,7 @@ class VertxHttpJsonRpcClient(
     response: HttpClientResponse,
     requestBody: String,
     responseBody: String,
-    failureCause: Throwable? = null
+    failureCause: Throwable? = null,
   ) {
     val logLevel = if (isError) failuresLogLevel else requestResponseLogLevel
     if (isError && log.level != requestResponseLogLevel) {
@@ -178,13 +178,13 @@ class VertxHttpJsonRpcClient(
       endpoint,
       response.statusCode(),
       responseBody,
-      failureCause?.message ?: ""
+      failureCause?.message ?: "",
     )
   }
 
   private fun logRequestFailure(
     requestBody: String,
-    failureCause: Throwable
+    failureCause: Throwable,
   ) {
     log.log(
       failuresLogLevel,
@@ -192,7 +192,7 @@ class VertxHttpJsonRpcClient(
       endpoint,
       requestBody,
       failureCause.message,
-      failureCause
+      failureCause,
     )
   }
 

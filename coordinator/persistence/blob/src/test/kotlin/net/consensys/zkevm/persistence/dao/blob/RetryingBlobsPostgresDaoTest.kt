@@ -32,7 +32,7 @@ class RetryingBlobsPostgresDaoTest {
   private val blobRecord = createBlobRecord(
     startBlockNumber = 0U,
     endBlockNumber = 10U,
-    startBlockTime = now
+    startBlockTime = now,
   )
   private val blobCompressionProof = BlobCompressionProof(
     compressedData = Random.nextBytes(32).setFirstByteToZero(),
@@ -51,7 +51,7 @@ class RetryingBlobsPostgresDaoTest {
     verifierID = 6789,
     commitment = ByteArray(0),
     kzgProofContract = ByteArray(0),
-    kzgProofSidecar = ByteArray(0)
+    kzgProofSidecar = ByteArray(0),
   )
 
   @BeforeEach
@@ -61,9 +61,9 @@ class RetryingBlobsPostgresDaoTest {
       PersistenceRetryer(
         vertx = vertx,
         PersistenceRetryer.Config(
-          backoffDelay = 1.milliseconds
-        )
-      )
+          backoffDelay = 1.milliseconds,
+        ),
+      ),
     )
 
     whenever(delegateBlobsDao.saveNewBlob(eq(blobRecord)))

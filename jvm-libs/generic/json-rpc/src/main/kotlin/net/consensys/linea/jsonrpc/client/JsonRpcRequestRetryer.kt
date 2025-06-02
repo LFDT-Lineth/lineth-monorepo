@@ -25,7 +25,7 @@ data class RequestRetryConfig(
   val maxRetries: UInt? = null,
   val timeout: Duration? = null,
   val backoffDelay: Duration,
-  val failuresWarningThreshold: UInt = 0u
+  val failuresWarningThreshold: UInt = 0u,
 ) {
   init {
     maxRetries?.also {
@@ -47,24 +47,24 @@ class JsonRpcRequestRetryer(
   private val config: Config,
   private val requestObjectMapper: ObjectMapper = objectMapper,
   private val log: Logger = LogManager.getLogger(JsonRpcRequestRetryer::class.java),
-  private val failuresLogLevel: Level = Level.WARN
+  private val failuresLogLevel: Level = Level.WARN,
 ) : JsonRpcClientWithRetries {
 
   data class Config(
     val methodsToRetry: Set<String>,
-    val requestRetry: RequestRetryConfig
+    val requestRetry: RequestRetryConfig,
   )
 
   private val retryer: AsyncRetryer<Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>> = AsyncRetryer.retryer(
     vertx = this.vertx,
     backoffDelay = config.requestRetry.backoffDelay,
     maxRetries = config.requestRetry.maxRetries?.toInt(),
-    timeout = config.requestRetry.timeout
+    timeout = config.requestRetry.timeout,
   )
 
   override fun makeRequest(
     request: JsonRpcRequest,
-    resultMapper: (Any?) -> Any?
+    resultMapper: (Any?) -> Any?,
   ): Future<Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>> {
     return makeRequest(request, resultMapper, ::isResultOk)
   }
@@ -72,7 +72,7 @@ class JsonRpcRequestRetryer(
   override fun makeRequest(
     request: JsonRpcRequest,
     resultMapper: (Any?) -> Any?,
-    stopRetriesPredicate: (result: Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>) -> Boolean
+    stopRetriesPredicate: (result: Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>) -> Boolean,
   ): Future<Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>> {
     if (request.method in config.methodsToRetry) {
       return makeRequestWithRetryer(request, resultMapper, stopRetriesPredicate)
@@ -84,7 +84,7 @@ class JsonRpcRequestRetryer(
   private fun makeRequestWithRetryer(
     request: JsonRpcRequest,
     resultMapper: (Any?) -> Any?,
-    stopRetriesPredicate: (result: Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>) -> Boolean
+    stopRetriesPredicate: (result: Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>) -> Boolean,
   ): Future<Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>> {
     val lastResult = AtomicReference<Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>>()
     val lastException = AtomicReference<Throwable>()
@@ -94,7 +94,7 @@ class JsonRpcRequestRetryer(
       stopRetriesPredicate = { result: Result<JsonRpcSuccessResponse, JsonRpcErrorResponse> ->
         lastResult.set(result)
         stopRetriesPredicate.invoke(result)
-      }
+      },
     ) {
       if (config.requestRetry.failuresWarningThreshold > 0u &&
         retriesCount.get() > 0 &&
@@ -105,7 +105,7 @@ class JsonRpcRequestRetryer(
           "Request '{}' already retried {} times. lastError={}",
           requestObjectMapper.writeValueAsString(request),
           retriesCount.get(),
-          lastException.get()
+          lastException.get(),
         )
       }
       retriesCount.incrementAndGet()

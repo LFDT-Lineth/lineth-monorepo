@@ -28,7 +28,7 @@ object Db {
     target: String,
     username: String,
     password: String,
-    migrationLocations: String = "classpath:db/"
+    migrationLocations: String = "classpath:db/",
   ) {
     val dataSource =
       PGSimpleDataSource().apply {
@@ -49,7 +49,7 @@ object Db {
   fun applyDbMigrations(
     dataSource: DataSource,
     target: String,
-    migrationLocations: String = "classpath:db/"
+    migrationLocations: String = "classpath:db/",
   ) {
     LOG.info("Migrating coordinator database")
     Flyway.configure()
@@ -82,7 +82,7 @@ object Db {
     database: String,
     username: String,
     password: String,
-    maxPoolSize: Int = DEFAULT_VERTX_CONNECTION_POOL_MAX_SIZE
+    maxPoolSize: Int = DEFAULT_VERTX_CONNECTION_POOL_MAX_SIZE,
   ): Pool {
     val connectOptions =
       PgConnectOptions()
@@ -119,7 +119,7 @@ object Db {
     username: String,
     password: String,
     maxPoolSize: Int = DEFAULT_VERTX_CONNECTION_POOL_MAX_SIZE,
-    pipeliningLimit: Int = PgConnectOptions.DEFAULT_PIPELINING_LIMIT
+    pipeliningLimit: Int = PgConnectOptions.DEFAULT_PIPELINING_LIMIT,
   ): SqlClient {
     val connectOptions =
       PgConnectOptions()

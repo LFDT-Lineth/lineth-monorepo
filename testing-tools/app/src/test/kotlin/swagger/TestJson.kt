@@ -17,7 +17,7 @@ class TestJson {
       """
       {"privateKey":"${wallet.privateKey}","credentials":{"ecKeyPair":{"privateKey":${wallet.credentials.ecKeyPair.privateKey},"publicKey":${wallet.credentials.ecKeyPair.publicKey}},"address":"${wallet.credentials.address}"},"id":0,"initialNonce":0,"address":"${wallet.address}"}
       """.trimIndent(),
-      JSON.createGson().create().toJson(wallet)
+      JSON.createGson().create().toJson(wallet),
     )
   }
 }

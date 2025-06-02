@@ -10,12 +10,12 @@ import kotlin.time.Duration
 open class PersistenceRetryer(
   private val vertx: Vertx,
   private val config: Config,
-  private val log: Logger = LogManager.getLogger(PersistenceRetryer::class.java)
+  private val log: Logger = LogManager.getLogger(PersistenceRetryer::class.java),
 ) {
   data class Config(
     val backoffDelay: Duration,
     val maxRetries: Int? = null,
-    val timeout: Duration? = null
+    val timeout: Duration? = null,
   )
 
   fun <T> retryQuery(
@@ -25,16 +25,16 @@ open class PersistenceRetryer(
       when {
         isDuplicateKeyException(error) -> log.info(
           "Persistence errorMessage={}",
-          error.message
+          error.message,
         )
         else -> log.info(
           "Persistence errorMessage={}, it will retry again in {}",
           error.message,
           config.backoffDelay,
-          error
+          error,
         )
       }
-    }
+    },
   ): SafeFuture<T> {
     return AsyncRetryer.retry(
       vertx = vertx,
@@ -43,7 +43,7 @@ open class PersistenceRetryer(
       maxRetries = config.maxRetries,
       stopRetriesOnErrorPredicate = stopRetriesOnErrorPredicate,
       exceptionConsumer = exceptionConsumer,
-      action = action
+      action = action,
     )
   }
 

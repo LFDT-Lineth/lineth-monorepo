@@ -13,7 +13,7 @@ class EthFeeHistoryBlobExtendedIntTest {
     web3jBlobExtended.ethFeeHistoryWithBlob(
       blockCount = 5,
       newestBlock = DefaultBlockParameter.valueOf("latest"),
-      rewardPercentiles = listOf(15.0)
+      rewardPercentiles = listOf(15.0),
     ).sendAsync()
       .thenApply { response ->
         assertThat(response).isNotNull

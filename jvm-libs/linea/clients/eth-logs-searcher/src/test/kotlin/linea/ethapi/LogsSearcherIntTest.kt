@@ -37,7 +37,7 @@ internal data class EthGetLogsRequest(
   val fromBlock: ULong,
   val toBlock: ULong,
   val topics: List<String>,
-  val address: List<String>
+  val address: List<String>,
 )
 
 class EthLogsSearcherImplIntTest {
@@ -55,7 +55,7 @@ class EthLogsSearcherImplIntTest {
     configureLoggers(
       rootLevel = Level.INFO,
       log.name to Level.DEBUG,
-      "test.case.Web3JLogsSearcher" to Level.DEBUG
+      "test.case.Web3JLogsSearcher" to Level.DEBUG,
     )
   }
 
@@ -65,7 +65,7 @@ class EthLogsSearcherImplIntTest {
   }
 
   private fun setupClientWithWireMockServer(
-    retryConfig: RetryConfig = RetryConfig.noRetries
+    retryConfig: RetryConfig = RetryConfig.noRetries,
   ) {
     wireMockServer = WireMockServer(WireMockConfiguration.options().dynamicPort())
     wireMockServer.start()
@@ -77,22 +77,22 @@ class EthLogsSearcherImplIntTest {
       ethApiClient = createEthApiClient(
         web3jClient = web3jClient,
         requestRetryConfig = retryConfig,
-        vertx = vertx
+        vertx = vertx,
       ),
       config = EthLogsSearcherImpl.Config(
-        loopSuccessBackoffDelay = 1.milliseconds
-      )
+        loopSuccessBackoffDelay = 1.milliseconds,
+      ),
     )
   }
 
   private fun setupClientWithTestingJsonRpcServer(
     retryConfig: RetryConfig = RetryConfig.noRetries,
-    subsetOfBlocksWithLogs: List<ULongRange>? = null
+    subsetOfBlocksWithLogs: List<ULongRange>? = null,
   ) {
     TestingJsonRpcServer = TestingJsonRpcServer(
       vertx = vertx,
       serverName = "fake-execution-layer-log-searcher",
-      recordRequestsResponses = true
+      recordRequestsResponses = true,
     )
     setUpFakeLogsServerToHandleEthLogs(TestingJsonRpcServer, subsetOfBlocksWithLogs)
     logsClient = EthLogsSearcherImpl(
@@ -100,12 +100,12 @@ class EthLogsSearcherImplIntTest {
       ethApiClient = createEthApiClient(
         vertx = vertx,
         web3jClient = Web3j.build(HttpService(URI("http://127.0.0.1:" + TestingJsonRpcServer.boundPort).toString())),
-        requestRetryConfig = retryConfig
+        requestRetryConfig = retryConfig,
       ),
       config = EthLogsSearcherImpl.Config(
-        loopSuccessBackoffDelay = 1.milliseconds
+        loopSuccessBackoffDelay = 1.milliseconds,
       ),
-      log = LogManager.getLogger("test.case.Web3JLogsSearcher")
+      log = LogManager.getLogger("test.case.Web3JLogsSearcher"),
     )
   }
 
@@ -117,8 +117,8 @@ class EthLogsSearcherImplIntTest {
           aResponse()
             .withStatus(statusCode)
             .withBody(responseBody)
-            .withHeader("Content-Type", "application/json")
-        )
+            .withHeader("Content-Type", "application/json"),
+        ),
     )
   }
 
@@ -136,7 +136,7 @@ class EthLogsSearcherImplIntTest {
           },
           "id": 1
         }
-      """.trimIndent()
+      """.trimIndent(),
     )
 
     assertThatThrownBy {
@@ -144,7 +144,7 @@ class EthLogsSearcherImplIntTest {
         0UL.toBlockParameter(),
         20UL.toBlockParameter(),
         address = address,
-        topics = emptyList()
+        topics = emptyList(),
       ).get()
     }
       .hasCauseInstanceOf(RuntimeException::class.java)
@@ -172,7 +172,7 @@ class EthLogsSearcherImplIntTest {
                   "transactionIndex": "0x0"
            }]
       }
-      """.trimIndent()
+      """.trimIndent(),
     )
 
     assertThatThrownBy {
@@ -180,7 +180,7 @@ class EthLogsSearcherImplIntTest {
         0UL.toBlockParameter(),
         20UL.toBlockParameter(),
         address = address,
-        topics = emptyList()
+        topics = emptyList(),
       ).get()
     }
   }
@@ -190,8 +190,8 @@ class EthLogsSearcherImplIntTest {
     setupClientWithTestingJsonRpcServer(
       retryConfig = RetryConfig(
         backoffDelay = 1.milliseconds,
-        maxRetries = 4u
-      )
+        maxRetries = 4u,
+      ),
     )
 
     TestingJsonRpcServer.handle("eth_getLogs", { _ ->
@@ -208,7 +208,7 @@ class EthLogsSearcherImplIntTest {
       0UL.toBlockParameter(),
       20UL.toBlockParameter(),
       address = address,
-      topics = emptyList()
+      topics = emptyList(),
     )
 
     getLogsFuture.get().also { logs ->
@@ -222,7 +222,7 @@ class EthLogsSearcherImplIntTest {
 
     replyEthGetLogsWith(
       statusCode = 500,
-      responseBody = "Internal Server Error"
+      responseBody = "Internal Server Error",
     )
 
     assertThatThrownBy {
@@ -230,7 +230,7 @@ class EthLogsSearcherImplIntTest {
         0UL.toBlockParameter(),
         20UL.toBlockParameter(),
         address = address,
-        topics = emptyList()
+        topics = emptyList(),
       ).get()
     }
       .hasCauseInstanceOf(org.web3j.protocol.exceptions.ClientConnectionException::class.java)
@@ -247,11 +247,11 @@ class EthLogsSearcherImplIntTest {
       createEthApiClient(
         web3jClient,
         requestRetryConfig = RetryConfig.noRetries,
-        vertx = null
+        vertx = null,
       ),
       config = EthLogsSearcherImpl.Config(
-        loopSuccessBackoffDelay = 1.milliseconds
-      )
+        loopSuccessBackoffDelay = 1.milliseconds,
+      ),
     )
 
     assertThatThrownBy {
@@ -259,7 +259,7 @@ class EthLogsSearcherImplIntTest {
         0UL.toBlockParameter(),
         20UL.toBlockParameter(),
         address = address,
-        topics = emptyList()
+        topics = emptyList(),
       ).get()
     }
       .hasCauseInstanceOf(java.net.UnknownHostException::class.java)
@@ -269,7 +269,7 @@ class EthLogsSearcherImplIntTest {
 
   private fun shallContinueToSearch(
     ethLog: EthLog,
-    targetNumber: ULong
+    targetNumber: ULong,
   ): SearchDirection? {
     val number = ULong.fromHexString(ethLog.topics[1].encodeHex())
     val direction = when {
@@ -282,7 +282,7 @@ class EthLogsSearcherImplIntTest {
       ethLog.blockNumber,
       number,
       targetNumber,
-      direction
+      direction,
     )
     return direction
   }
@@ -301,7 +301,7 @@ class EthLogsSearcherImplIntTest {
           chunkSize = 10,
           shallContinueToSearch = { ethLog ->
             shallContinueToSearch(ethLog, targetNumber = number.toULong())
-          }
+          },
         )
           .get()
           .also { log ->
@@ -325,7 +325,7 @@ class EthLogsSearcherImplIntTest {
       shallContinueToSearch = { ethLog ->
         logsEvaluated.add(ethLog.blockNumber)
         shallContinueToSearch(ethLog, targetNumber = 89UL)
-      }
+      },
     )
       .get()
       .also { log ->
@@ -339,7 +339,7 @@ class EthLogsSearcherImplIntTest {
   @Test
   fun `findLogs searches L1 and returns null when not found - target expected in chunk that has no logs`() {
     setupClientWithTestingJsonRpcServer(
-      subsetOfBlocksWithLogs = listOf(100UL..109UL, 150UL..159UL)
+      subsetOfBlocksWithLogs = listOf(100UL..109UL, 150UL..159UL),
     )
     val logsEvaluated = mutableListOf<ULong>()
 
@@ -351,7 +351,7 @@ class EthLogsSearcherImplIntTest {
       chunkSize = 10,
       shallContinueToSearch = { ethLog ->
         shallContinueToSearch(ethLog, targetNumber = 120UL)
-      }
+      },
     )
       .get()
       .also { log ->
@@ -363,7 +363,7 @@ class EthLogsSearcherImplIntTest {
   @Test
   fun `findLogs searches L1 and returns null when not found - target is after toBlock`() {
     setupClientWithTestingJsonRpcServer(
-      subsetOfBlocksWithLogs = listOf(100UL..109UL, 150UL..200UL)
+      subsetOfBlocksWithLogs = listOf(100UL..109UL, 150UL..200UL),
     )
     val logsEvaluated = mutableListOf<ULong>()
 
@@ -375,7 +375,7 @@ class EthLogsSearcherImplIntTest {
       chunkSize = 10,
       shallContinueToSearch = { ethLog ->
         shallContinueToSearch(ethLog, targetNumber = 250UL)
-      }
+      },
     )
       .get()
       .also { log ->
@@ -389,7 +389,7 @@ class EthLogsSearcherImplIntTest {
   @Test
   fun `findLogs searches L1 and returns item when - target found an chunk in the middle`() {
     setupClientWithTestingJsonRpcServer(
-      subsetOfBlocksWithLogs = listOf(10UL..19UL, 30UL..37UL, 50UL..100UL)
+      subsetOfBlocksWithLogs = listOf(10UL..19UL, 30UL..37UL, 50UL..100UL),
     )
     val logsEvaluated = mutableListOf<ULong>()
     logsClient.findLog(
@@ -400,7 +400,7 @@ class EthLogsSearcherImplIntTest {
       chunkSize = 5,
       shallContinueToSearch = { ethLog ->
         shallContinueToSearch(ethLog, targetNumber = 35UL)
-      }
+      },
     )
       .get()
       .also { log ->
@@ -416,13 +416,13 @@ class EthLogsSearcherImplIntTest {
       fromBlock: Int,
       toBlock: Int,
       stepSize: Int = 1,
-      topic: String = "0x"
+      topic: String = "0x",
     ): List<Map<String, Any>> {
       return (fromBlock..toBlock step stepSize)
         .map {
           generateLogJson(
             blockNumber = it,
-            topic = topic
+            topic = topic,
           )
         }
     }
@@ -430,11 +430,11 @@ class EthLogsSearcherImplIntTest {
     private fun generateLogJson(
       blockNumber: Int,
       topic: String = "0x",
-      transactionHash: String = "0x"
+      transactionHash: String = "0x",
     ): Map<String, Any> {
       val topics = listOf(
         topic,
-        blockNumber.toULong().toHexStringUInt256()
+        blockNumber.toULong().toHexStringUInt256(),
       )
       return mapOf(
         "address" to "0x",
@@ -445,13 +445,13 @@ class EthLogsSearcherImplIntTest {
         "removed" to false,
         "topics" to topics,
         "transactionHash" to transactionHash,
-        "transactionIndex" to "0x0"
+        "transactionIndex" to "0x0",
       )
     }
 
     internal fun generateLogs(
       blocksWithLogs: List<ULongRange>,
-      filter: EthGetLogsRequest
+      filter: EthGetLogsRequest,
     ): List<Map<String, Any>> {
       return generateEffectiveIntervals(blocksWithLogs, filter.fromBlock, filter.toBlock)
         // .also {
@@ -485,13 +485,13 @@ class EthLogsSearcherImplIntTest {
         fromBlock = fromBlock,
         toBlock = toBlock,
         topics = topics,
-        address = logsFilter["address"] as List<String>
+        address = logsFilter["address"] as List<String>,
       )
     }
 
     private fun setUpFakeLogsServerToHandleEthLogs(
       TestingJsonRpcServer: TestingJsonRpcServer,
-      subsetOfBlocksWithLogs: List<ULongRange>?
+      subsetOfBlocksWithLogs: List<ULongRange>?,
     ) {
       TestingJsonRpcServer.apply {
         this.handle("eth_getLogs", { request ->
@@ -502,7 +502,7 @@ class EthLogsSearcherImplIntTest {
             } ?: generateLogsForBlockRange(
             fromBlock = filter.fromBlock.toInt(),
             toBlock = filter.toBlock.toInt(),
-            topic = filter.topics[0]
+            topic = filter.topics[0],
           )
         })
       }

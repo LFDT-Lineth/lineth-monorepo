@@ -13,7 +13,8 @@ enum class RestErrorType(val code: Int?, val message: String?) {
   INTERNAL_SERVER_ERROR(500, "Internal server error"),
   BAD_GATEWAY(502, "Bad Gateway"),
   SERVICE_UNAVAILABLE(503, "Service Unavailable"),
-  UNKNOWN(null, null);
+  UNKNOWN(null, null),
+  ;
 
   companion object {
     fun fromStatusCode(code: Int?): RestErrorType {
@@ -29,12 +30,12 @@ interface HttpRestClient {
   fun get(
     path: String,
     params: List<Pair<String, String>> = emptyList(),
-    resultMapper: (Any?) -> Any? = ::identityMapper
+    resultMapper: (Any?) -> Any? = ::identityMapper,
   ): SafeFuture<Result<Any?, ErrorResponse<RestErrorType>>>
 
   fun post(
     path: String,
     buffer: Buffer,
-    resultMapper: (Any?) -> Any? = ::identityMapper
+    resultMapper: (Any?) -> Any? = ::identityMapper,
   ): SafeFuture<Result<Any?, ErrorResponse<RestErrorType>>>
 }

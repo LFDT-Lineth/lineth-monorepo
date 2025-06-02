@@ -21,7 +21,7 @@ class RetryingBatchesPostgresDaoTest {
   private val delegateBatchesDao = mock<BatchesPostgresDao>()
   private val batch = createBatch(
     startBlockNumber = 0L,
-    endBlockNumber = 10L
+    endBlockNumber = 10L,
   )
 
   @BeforeEach
@@ -31,9 +31,9 @@ class RetryingBatchesPostgresDaoTest {
       PersistenceRetryer(
         vertx = vertx,
         PersistenceRetryer.Config(
-          backoffDelay = 1.milliseconds
-        )
-      )
+          backoffDelay = 1.milliseconds,
+        ),
+      ),
     )
 
     whenever(delegateBatchesDao.saveNewBatch(eq(batch)))
@@ -52,7 +52,7 @@ class RetryingBatchesPostgresDaoTest {
   @Test
   fun `retrying batches dao should delegate all queries to standard dao`() {
     retryingBatchesPostgresDao.saveNewBatch(
-      batch
+      batch,
     )
     verify(delegateBatchesDao, times(1)).saveNewBatch(batch)
 

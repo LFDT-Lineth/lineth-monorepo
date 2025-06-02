@@ -16,7 +16,7 @@ class CalculateShnarfResult(
   @JvmField var expectedShnarf: String,
   // error message is empty if there is no error
   // it cannot be null because JNA call blow up with segfault.
-  @JvmField var errorMessage: String
+  @JvmField var errorMessage: String,
 ) : Structure() {
 
   // JNA requires a default constructor
@@ -32,7 +32,7 @@ class CalculateShnarfResult(
       "expectedX",
       "expectedY",
       "expectedShnarf",
-      "errorMessage"
+      "errorMessage",
     )
   }
 }
@@ -50,7 +50,7 @@ interface GoNativeBlobShnarfCalculator {
     prevShnarf: String,
     conflationOrderStartingBlockNumber: Long,
     conflationOrderUpperBoundariesLen: Int,
-    conflationOrderUpperBoundaries: LongArray
+    conflationOrderUpperBoundaries: LongArray,
   ): CalculateShnarfResult
 }
 
@@ -58,7 +58,7 @@ interface GoNativeBlobShnarfCalculator {
 internal interface GoNativeBlobShnarfCalculatorJna : GoNativeBlobShnarfCalculator, Library
 
 enum class ShnarfCalculatorVersion(val version: String) {
-  V1_2("v1.2.0")
+  V1_2("v1.2.0"),
 }
 
 class GoNativeShnarfCalculatorFactory {
@@ -66,15 +66,15 @@ class GoNativeShnarfCalculatorFactory {
     private fun getLibFileName(version: String) = "shnarf_calculator_jna_$version"
 
     fun getInstance(
-      version: ShnarfCalculatorVersion
+      version: ShnarfCalculatorVersion,
     ): GoNativeBlobShnarfCalculator {
       val extractedLibFile = Native.extractFromResourcePath(
         getLibFileName(version.version),
-        GoNativeShnarfCalculatorFactory::class.java.classLoader
+        GoNativeShnarfCalculatorFactory::class.java.classLoader,
       )
       return Native.load(
         extractedLibFile.toString(),
-        GoNativeBlobShnarfCalculatorJna::class.java
+        GoNativeBlobShnarfCalculatorJna::class.java,
       )
     }
   }

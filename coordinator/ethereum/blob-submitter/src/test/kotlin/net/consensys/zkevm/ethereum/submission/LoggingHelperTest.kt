@@ -44,7 +44,7 @@ class LoggingHelperTest {
       logMessage = blobSubmissionFailedLogMsg,
       intervalString = blobSubmissionFailedIntervalStr,
       error = error,
-      isEthCall = true
+      isEthCall = true,
     )
     val expectedErrorMessage =
       "maxFeePerGas less than block base fee:" +
@@ -55,7 +55,7 @@ class LoggingHelperTest {
       eq(blobSubmissionFailedLogMsg),
       eq("eth_call"),
       eq(blobSubmissionFailedIntervalStr),
-      eq(expectedErrorMessage)
+      eq(expectedErrorMessage),
     )
   }
 
@@ -67,7 +67,7 @@ class LoggingHelperTest {
       logMessage = blobSubmissionFailedLogMsg,
       intervalString = blobSubmissionFailedIntervalStr,
       error = error,
-      isEthCall = true
+      isEthCall = true,
     )
     val expectedErrorMessage =
       "maxFeePerBlobGas less than block blob gas fee:" +
@@ -78,7 +78,7 @@ class LoggingHelperTest {
       eq(blobSubmissionFailedLogMsg),
       eq("eth_call"),
       eq(blobSubmissionFailedIntervalStr),
-      eq(expectedErrorMessage)
+      eq(expectedErrorMessage),
     )
   }
 
@@ -90,7 +90,7 @@ class LoggingHelperTest {
       logMessage = blobSubmissionFailedLogMsg,
       intervalString = blobSubmissionFailedIntervalStr,
       error = error,
-      isEthCall = false
+      isEthCall = false,
     )
 
     verify(logger).error(
@@ -98,7 +98,7 @@ class LoggingHelperTest {
       eq("eth_sendRawTransaction"),
       eq(blobSubmissionFailedIntervalStr),
       eq(insufficientMaxFeePerGasErrMsg),
-      eq(error)
+      eq(error),
     )
   }
 
@@ -110,7 +110,7 @@ class LoggingHelperTest {
       logMessage = blobSubmissionFailedLogMsg,
       intervalString = blobSubmissionFailedIntervalStr,
       error = error,
-      isEthCall = false
+      isEthCall = false,
     )
 
     verify(logger).error(
@@ -118,7 +118,7 @@ class LoggingHelperTest {
       eq("eth_sendRawTransaction"),
       eq(blobSubmissionFailedIntervalStr),
       eq(insufficientMaxFeePerBlobGasErrMsg),
-      eq(error)
+      eq(error),
     )
   }
 
@@ -130,7 +130,7 @@ class LoggingHelperTest {
       logMessage = blobSubmissionFailedLogMsg,
       intervalString = blobSubmissionFailedIntervalStr,
       error = error,
-      isEthCall = true
+      isEthCall = true,
     )
 
     verify(logger).error(
@@ -138,7 +138,7 @@ class LoggingHelperTest {
       eq("eth_call"),
       eq(blobSubmissionFailedIntervalStr),
       eq(unknownErrMsg),
-      eq(error)
+      eq(error),
     )
   }
 }

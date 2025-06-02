@@ -49,20 +49,20 @@ class MinerExtraDataV1Test {
       val minerExtraData1 = MinerExtraDataV1(
         fixedCostInKWei = Int.MAX_VALUE.toUInt() - 1u, // 2147483646u, 2147483646, 0x7FFF_FFFE
         variableCostInKWei = Int.MAX_VALUE.toUInt(), // 2147483647u, 2147483647, 0x7FFF_FFFF
-        ethGasPriceInKWei = Int.MAX_VALUE.toUInt() + 1u // 2147483648u, -2147483648, 0x8000_0000
+        ethGasPriceInKWei = Int.MAX_VALUE.toUInt() + 1u, // 2147483648u, -2147483648, 0x8000_0000
       )
       val encodedMinerExtraData1 = readableBytesToPaddedHex("0x01|7FFF_FFFE|7FFF_FFFF|8000_0000")
 
       val minerExtraData2 = MinerExtraDataV1(
         fixedCostInKWei = UInt.MIN_VALUE, // 0u, 0, 0x0000_0000
         variableCostInKWei = Int.MAX_VALUE.toUInt(), // 2147483647u, 2147483647, 0x7FFF_FFFF
-        ethGasPriceInKWei = UInt.MAX_VALUE // 4294967295u, -1, 0xFFFF_FFFF
+        ethGasPriceInKWei = UInt.MAX_VALUE, // 4294967295u, -1, 0xFFFF_FFFF
       )
       val encodedMinerExtraData2 = readableBytesToPaddedHex("0x01|0000_0000|7FFF_FFFF|FFFF_FFFF")
 
       return Stream.of(
         Arguments.of(encodedMinerExtraData1, minerExtraData1),
-        Arguments.of(encodedMinerExtraData2, minerExtraData2)
+        Arguments.of(encodedMinerExtraData2, minerExtraData2),
       )
     }
   }

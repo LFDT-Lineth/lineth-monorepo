@@ -18,7 +18,7 @@ object VertxFactory {
     warningExceptionTime: Duration? = 60.seconds,
     jvmMetricsEnabled: Boolean = true,
     prometheusMetricsEnabled: Boolean = true,
-    preferNativeTransport: Boolean = true
+    preferNativeTransport: Boolean = true,
   ): Vertx {
     val configs = JsonObject()
     maxEventLoopExecuteTime?.let {

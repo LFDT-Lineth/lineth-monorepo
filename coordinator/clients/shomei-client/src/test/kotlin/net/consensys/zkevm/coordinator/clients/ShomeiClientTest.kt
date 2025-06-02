@@ -59,14 +59,14 @@ class ShomeiClientTest {
       "id",
       "1",
       "result",
-      "success"
+      "success",
     )
     wiremock.stubFor(
       WireMock.post("/")
         .withHeader("Content-Type", WireMock.containing("application/json"))
         .willReturn(
-          WireMock.ok().withHeader("Content-type", "application/json").withBody(successResponse.toString())
-        )
+          WireMock.ok().withHeader("Content-type", "application/json").withBody(successResponse.toString()),
+        ),
     )
     val blockNumberAndHash = BlockNumberAndHash(1U, ByteArrayExt.random32())
     val resultFuture = shomeiClient.rollupForkChoiceUpdated(blockNumberAndHash)
@@ -86,14 +86,14 @@ class ShomeiClientTest {
       listOf(
         mapOf(
           "finalizedBlockNumber" to blockNumberAndHash.number.toString(),
-          "finalizedBlockHash" to blockNumberAndHash.hash.encodeHex()
-        )
-      )
+          "finalizedBlockHash" to blockNumberAndHash.hash.encodeHex(),
+        ),
+      ),
     )
     wiremock.verify(
       WireMock.postRequestedFor(WireMock.urlEqualTo("/"))
         .withHeader("Content-Type", WireMock.equalTo("application/json"))
-        .withRequestBody(WireMock.equalToJson(expectedJsonRequest.toString(), false, true))
+        .withRequestBody(WireMock.equalToJson(expectedJsonRequest.toString(), false, true)),
     )
   }
 
@@ -106,7 +106,7 @@ class ShomeiClientTest {
       "id",
       "1",
       "error",
-      mapOf("code" to "1", "message" to "Internal Error")
+      mapOf("code" to "1", "message" to "Internal Error"),
     )
 
     wiremock.stubFor(
@@ -115,8 +115,8 @@ class ShomeiClientTest {
         .willReturn(
           WireMock.aResponse()
             .withStatus(200)
-            .withBody(jsonRpcErrorResponse.toString())
-        )
+            .withBody(jsonRpcErrorResponse.toString()),
+        ),
     )
     val blockNumberAndHash = BlockNumberAndHash(1U, ByteArrayExt.random32())
     val resultFuture = shomeiClient.rollupForkChoiceUpdated(blockNumberAndHash)
@@ -136,14 +136,14 @@ class ShomeiClientTest {
       listOf(
         mapOf(
           "finalizedBlockNumber" to blockNumberAndHash.number.toString(),
-          "finalizedBlockHash" to blockNumberAndHash.hash.encodeHex()
-        )
-      )
+          "finalizedBlockHash" to blockNumberAndHash.hash.encodeHex(),
+        ),
+      ),
     )
     wiremock.verify(
       WireMock.postRequestedFor(WireMock.urlEqualTo("/"))
         .withHeader("Content-Type", WireMock.equalTo("application/json"))
-        .withRequestBody(WireMock.equalToJson(expectedJsonRequest.toString(), false, true))
+        .withRequestBody(WireMock.equalToJson(expectedJsonRequest.toString(), false, true)),
     )
   }
 }

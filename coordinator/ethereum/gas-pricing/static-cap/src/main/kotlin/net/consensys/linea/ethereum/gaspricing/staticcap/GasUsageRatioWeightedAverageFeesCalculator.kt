@@ -13,14 +13,14 @@ import org.apache.logging.log4j.Logger
  * L2FinalGasPrice = L2BaseGasPrice + WeightedL2BlobGasPrice
  */
 class GasUsageRatioWeightedAverageFeesCalculator(
-  val config: Config
+  val config: Config,
 ) : FeesCalculator {
   data class Config(
     val baseFeeCoefficient: Double,
     val priorityFeeCoefficient: Double,
     val baseFeeBlobCoefficient: Double,
     val blobSubmissionExpectedExecutionGas: Int,
-    val expectedBlobGas: Int
+    val expectedBlobGas: Int,
   )
 
   private val log: Logger = LogManager.getLogger(this::class.java)
@@ -43,7 +43,7 @@ class GasUsageRatioWeightedAverageFeesCalculator(
       executionGasPrice,
       weightedL2BlobGasPrice,
       feeHistory.blocksRange().toIntervalString(),
-      feeHistory
+      feeHistory,
     )
     return l2GasPrice
   }
@@ -51,7 +51,7 @@ class GasUsageRatioWeightedAverageFeesCalculator(
   private fun calculateExecutionGasPrice(
     feeHistory: FeeHistory,
     baseFeePerGasList: List<ULong>,
-    priorityFeesPerGasList: List<ULong>
+    priorityFeesPerGasList: List<ULong>,
   ): Double {
     var gasUsageRatioList = feeHistory.gasUsedRatio
     var gasUsageRatiosSum = gasUsageRatioList.sumOf { it }
@@ -59,7 +59,7 @@ class GasUsageRatioWeightedAverageFeesCalculator(
     if (gasUsageRatiosSum.compareTo(0.0) == 0) {
       log.warn(
         "GasUsedRatio is zero for all l1Blocks={}. Will fallback to Simple Average.",
-        feeHistory.blocksRange().toIntervalString()
+        feeHistory.blocksRange().toIntervalString(),
       )
       // Giving a weight of one will yield the simple average
       gasUsageRatioList = feeHistory.gasUsedRatio.map { 1.0 }
@@ -78,12 +78,12 @@ class GasUsageRatioWeightedAverageFeesCalculator(
 
   private fun calculateWeightedBlobGasPrice(
     feeHistory: FeeHistory,
-    baseFeePerBlobGasList: List<ULong>
+    baseFeePerBlobGasList: List<ULong>,
   ): Double {
     val blobGasUsageRatio = if (feeHistory.blobGasUsedRatio.sumOf { it }.compareTo(0.0) == 0) {
       log.warn(
         "BlobGasUsedRatio is zero for all l1Blocks={}. Will fallback to Simple Average.",
-        feeHistory.blocksRange().toIntervalString()
+        feeHistory.blocksRange().toIntervalString(),
       )
       List(feeHistory.gasUsedRatio.size) { 1.0 }
     } else {

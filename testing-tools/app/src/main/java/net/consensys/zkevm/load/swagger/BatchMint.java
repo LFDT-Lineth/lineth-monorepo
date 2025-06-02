@@ -233,4 +233,3 @@ public class BatchMint extends MethodAndParameter {
     return JSON.getGson().toJson(this);
   }
 }
-

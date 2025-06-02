@@ -25,17 +25,17 @@ class L1MessageSentEventsPoller(
   private val l1BlockSearchChuck: UInt,
   private val l1HighestBlock: BlockParameter,
   private val l2HighestBlock: BlockParameter,
-  private val log: Logger = LogManager.getLogger(L1MessageSentEventsPoller::class.java)
+  private val log: Logger = LogManager.getLogger(L1MessageSentEventsPoller::class.java),
 ) : PeriodicPollingService(
   vertx,
   pollingIntervalMs = pollingInterval.inWholeMilliseconds,
-  log = log
+  log = log,
 ) {
   private val eventsFetcher = L1MessageSentEventsFetcher(
     l1SmartContractAddress = l1SmartContractAddress,
     l1EventsSearcher = l1EventsSearcher,
     l1HighestBlock = l1HighestBlock,
-    log = log
+    log = log,
   )
 
   private fun nextMessageNumberToFetchFromL1(): SafeFuture<ULong> {
@@ -59,7 +59,7 @@ class L1MessageSentEventsPoller(
       log.debug(
         "skipping fetching MessageSent events: queueSize={} reached targetCapacity={}",
         eventsQueue.size,
-        eventsQueueMaxCapacity
+        eventsQueueMaxCapacity,
       )
       return SafeFuture.completedFuture(null)
     }
@@ -70,7 +70,7 @@ class L1MessageSentEventsPoller(
           startingMessageNumber = nextMessageNumberToFetchFromL1,
           targetMessagesToFetch = l1MessagesSentFetchLimit.coerceAtMost(remainingCapacity.toUInt()),
           fetchTimeout = l1MessagesSentFetchTimeout,
-          blockChunkSize = l1BlockSearchChuck
+          blockChunkSize = l1BlockSearchChuck,
         )
       }
       .thenApply { events ->

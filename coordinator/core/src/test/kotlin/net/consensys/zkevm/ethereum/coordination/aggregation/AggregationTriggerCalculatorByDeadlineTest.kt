@@ -37,9 +37,9 @@ class AggregationTriggerCalculatorByDeadlineTest {
           BlockHeaderSummary(
             number = latestBlockNumber,
             hash = ByteArrayExt.random32(),
-            timestamp = latestBlockTimestamp
-          )
-        )
+            timestamp = latestBlockTimestamp,
+          ),
+        ),
       )
 
     val deadlineTriggered = SafeFuture<AggregationTrigger?>()
@@ -55,7 +55,7 @@ class AggregationTriggerCalculatorByDeadlineTest {
     val aggregationTriggerByDeadline = AggregationTriggerCalculatorByDeadline(
       AggregationTriggerCalculatorByDeadline.Config(aggregationDeadline, aggregationDeadlineDelay),
       mockClock,
-      mockLatestSafeBlockProvider
+      mockLatestSafeBlockProvider,
     )
 
     aggregationTriggerByDeadline.onAggregationTrigger(aggregationTriggerTypeHandler)
@@ -71,8 +71,8 @@ class AggregationTriggerCalculatorByDeadlineTest {
         endBlockNumber = blobEndBlockNumber,
         startBlockTimestamp = blobStartBlockTimeStamp,
         endBlockTimestamp = blobEndBlockTimeStamp,
-        expectedShnarf = Random.nextBytes(32)
-      )
+        expectedShnarf = Random.nextBytes(32),
+      ),
     )
 
     val time1 = blobEndBlockTimeStamp.plus(1.milliseconds) // 491
@@ -126,7 +126,7 @@ class AggregationTriggerCalculatorByDeadlineTest {
     val aggregationTriggerByDeadline = AggregationTriggerCalculatorByDeadline(
       AggregationTriggerCalculatorByDeadline.Config(deadline, aggregationDeadlineDelay),
       mockClock,
-      mockLatestSafeBlockProvider
+      mockLatestSafeBlockProvider,
     )
     aggregationTriggerByDeadline.onAggregationTrigger(aggregationTriggerTypeHandler)
 
@@ -144,13 +144,13 @@ class AggregationTriggerCalculatorByDeadlineTest {
         endBlockNumber = 15u,
         startBlockTimestamp = firstBloblStartBlockTimeStamp,
         endBlockTimestamp = firstBlobEndBlockTimeStamp,
-        expectedShnarf = Random.nextBytes(32)
-      )
+        expectedShnarf = Random.nextBytes(32),
+      ),
     )
 
     whenever(mockClock.now()).thenReturn(
       firstBlobEndBlockTimeStamp
-        .plus(1.milliseconds)
+        .plus(1.milliseconds),
     )
     aggregationTriggerByDeadline.checkAggregation().get()
     assertThat(deadlineTriggered).isNotCompleted
@@ -176,8 +176,8 @@ class AggregationTriggerCalculatorByDeadlineTest {
         endBlockNumber = blobEndBlockNumber,
         startBlockTimestamp = secondBlobStartBlockTimestamp,
         endBlockTimestamp = secondBlobEndBlockTimestamp,
-        expectedShnarf = Random.nextBytes(32)
-      )
+        expectedShnarf = Random.nextBytes(32),
+      ),
     )
     whenever(mockLatestSafeBlockProvider.getLatestSafeBlockHeader())
       .thenReturn(
@@ -185,9 +185,9 @@ class AggregationTriggerCalculatorByDeadlineTest {
           BlockHeaderSummary(
             number = 15u,
             hash = ByteArrayExt.random32(),
-            timestamp = firstBlobEndBlockTimeStamp
-          )
-        )
+            timestamp = firstBlobEndBlockTimeStamp,
+          ),
+        ),
       )
     whenever(mockClock.now()).thenReturn(secondBlobStartBlockTimestamp.plus(deadline).plus(1.milliseconds))
     aggregationTriggerByDeadline.checkAggregation().get()
@@ -218,9 +218,9 @@ class AggregationTriggerCalculatorByDeadlineTest {
           BlockHeaderSummary(
             number = latestBlockNumber,
             hash = ByteArrayExt.random32(),
-            timestamp = latestBlockTimestamp
-          )
-        )
+            timestamp = latestBlockTimestamp,
+          ),
+        ),
       )
 
     val deadlineTriggered = SafeFuture<AggregationTrigger?>()
@@ -236,7 +236,7 @@ class AggregationTriggerCalculatorByDeadlineTest {
     val aggregationTriggerByDeadline = AggregationTriggerCalculatorByDeadline(
       AggregationTriggerCalculatorByDeadline.Config(aggregationDeadline, aggregationDeadlineDelay),
       mockClock,
-      mockLatestSafeBlockProvider
+      mockLatestSafeBlockProvider,
     )
 
     aggregationTriggerByDeadline.onAggregationTrigger(aggregationTriggerTypeHandler)
@@ -252,8 +252,8 @@ class AggregationTriggerCalculatorByDeadlineTest {
         endBlockNumber = blobEndBlockNumber,
         startBlockTimestamp = blobStartBlockTimeStamp,
         endBlockTimestamp = blobEndBlockTimeStamp,
-        expectedShnarf = Random.nextBytes(32)
-      )
+        expectedShnarf = Random.nextBytes(32),
+      ),
     )
 
     val time1 = blobEndBlockTimeStamp.plus(1.milliseconds) // 491
@@ -293,8 +293,8 @@ class AggregationTriggerCalculatorByDeadlineTest {
         endBlockNumber = latestBlockNumber,
         startBlockTimestamp = latestBlockTimestamp,
         endBlockTimestamp = latestBlockTimestamp,
-        expectedShnarf = Random.nextBytes(32)
-      )
+        expectedShnarf = Random.nextBytes(32),
+      ),
     )
     val time4 = time3.plus(10.milliseconds) // 611
     whenever(mockClock.now()).thenReturn(time4)

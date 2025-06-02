@@ -9,7 +9,7 @@ data class BlockHeaderFromL1RecoveredData(
   val coinbase: ByteArray,
   val blockTimestamp: Instant,
   val gasLimit: ULong,
-  val difficulty: ULong
+  val difficulty: ULong,
 ) {
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
@@ -51,7 +51,7 @@ data class BlockHeaderFromL1RecoveredData(
 
 data class BlockFromL1RecoveredData(
   val header: BlockHeaderFromL1RecoveredData,
-  val transactions: List<TransactionFromL1RecoveredData>
+  val transactions: List<TransactionFromL1RecoveredData>,
 ) {
   override fun equals(other: Any?): Boolean {
     if (this === other) return true

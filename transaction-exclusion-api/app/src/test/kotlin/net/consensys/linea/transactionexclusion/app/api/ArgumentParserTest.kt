@@ -19,7 +19,7 @@ class ArgumentParserTest {
     val transactionRLPInHexStr = defaultRejectedTransaction.transactionRLP.encodeHex()
     Assertions.assertTrue(
       ArgumentParser.getTransactionRLPInRawBytes(transactionRLPInHexStr)
-        .contentEquals(transactionRLPInHexStr.decodeHex())
+        .contentEquals(transactionRLPInHexStr.decodeHex()),
     )
   }
 
@@ -29,11 +29,11 @@ class ArgumentParserTest {
     assertThrows<IllegalArgumentException> {
       ArgumentParser.getTransactionRLPInRawBytes(
         "0x02f8388204d2648203e88203e88203e8941195cf65f83b3a5768f3c4" +
-          "96d3a05ad6412c64b38203e88c666d93e9cc5f73748162cea9c0017b820"
+          "96d3a05ad6412c64b38203e88c666d93e9cc5f73748162cea9c0017b820",
       )
     }.also { error ->
       Assertions.assertTrue(
-        error.message!!.contains("RLP-encoded transaction cannot be parsed")
+        error.message!!.contains("RLP-encoded transaction cannot be parsed"),
       )
     }
 
@@ -41,11 +41,11 @@ class ArgumentParserTest {
     assertThrows<IllegalArgumentException> {
       ArgumentParser.getTransactionRLPInRawBytes(
         "yyf8388204d2648203e88203e88203e8941195cf65f83b3a5768f3c4" +
-          "96d3a05ad6412c64b38203e88c666d93e9cc5f73748162cea9c0017b8201xx"
+          "96d3a05ad6412c64b38203e88c666d93e9cc5f73748162cea9c0017b8201xx",
       )
     }.also { error ->
       Assertions.assertTrue(
-        error.message!!.contains("RLP-encoded transaction cannot be parsed")
+        error.message!!.contains("RLP-encoded transaction cannot be parsed"),
       )
     }
   }
@@ -55,7 +55,7 @@ class ArgumentParserTest {
     val txHashInHexStr = "0x526e56101cf39c1e717cef9cedf6fdddb42684711abda35bae51136dbb350ad7"
     Assertions.assertTrue(
       ArgumentParser.getTxHashInRawBytes(txHashInHexStr)
-        .contentEquals(txHashInHexStr.decodeHex())
+        .contentEquals(txHashInHexStr.decodeHex()),
     )
   }
 
@@ -64,11 +64,11 @@ class ArgumentParserTest {
     // hex string of less than 64 hex characters
     assertThrows<IllegalArgumentException> {
       ArgumentParser.getTxHashInRawBytes(
-        "0x526e56101cf39c1e717cef9cedf6fdddb42684711abda35bae51136dbb350a"
+        "0x526e56101cf39c1e717cef9cedf6fdddb42684711abda35bae51136dbb350a",
       )
     }.also { error ->
       Assertions.assertTrue(
-        error.message!!.contains("Hex string of transaction hash cannot be parsed")
+        error.message!!.contains("Hex string of transaction hash cannot be parsed"),
       )
     }
   }
@@ -78,7 +78,7 @@ class ArgumentParserTest {
     val transactionRLP = defaultRejectedTransaction.transactionRLP
     Assertions.assertEquals(
       ArgumentParser.getTransactionInfoFromRLP(transactionRLP),
-      defaultRejectedTransaction.transactionInfo
+      defaultRejectedTransaction.transactionInfo,
     )
   }
 
@@ -87,7 +87,7 @@ class ArgumentParserTest {
     val transactionRLP = rejectedContractDeploymentTransaction.transactionRLP
     Assertions.assertEquals(
       ArgumentParser.getTransactionInfoFromRLP(transactionRLP),
-      rejectedContractDeploymentTransaction.transactionInfo
+      rejectedContractDeploymentTransaction.transactionInfo,
     )
   }
 
@@ -99,11 +99,11 @@ class ArgumentParserTest {
         (
           "0xaaf8388204d2648203e88203e88203e8941195cf65f83b3a5768f3c4" +
             "96d3a05ad6412c64b38203e88c666d93e9cc5f73748162cea9c0017b8201c8"
-          ).decodeHex()
+          ).decodeHex(),
       )
     }.also { error ->
       Assertions.assertTrue(
-        error.message!!.contains("RLP-encoded transaction cannot be parsed")
+        error.message!!.contains("RLP-encoded transaction cannot be parsed"),
       )
     }
   }
@@ -114,13 +114,13 @@ class ArgumentParserTest {
       ModuleOverflow(
         module = "ADD",
         count = 402,
-        limit = 70
+        limit = 70,
       ),
       ModuleOverflow(
         module = "MUL",
         count = 587,
-        limit = 400
-      )
+        limit = 400,
+      ),
     )
 
     // valid module overflow as json request params
@@ -129,18 +129,18 @@ class ArgumentParserTest {
         mapOf(
           "module" to "ADD",
           "count" to "402",
-          "limit" to "70"
+          "limit" to "70",
         ),
         mapOf(
           "module" to "MUL",
           "count" to "587",
-          "limit" to "400"
-        )
+          "limit" to "400",
+        ),
       )
 
     Assertions.assertEquals(
       ArgumentParser.getOverflows(moduleOverflowJsonRequestParams),
-      expectedModuleOverflowList
+      expectedModuleOverflowList,
     )
   }
 
@@ -153,18 +153,18 @@ class ArgumentParserTest {
           mapOf(
             "module" to "ADD",
             "count" to "402",
-            "xxx" to "70"
+            "xxx" to "70",
           ),
           mapOf(
             "module" to "MUL",
             "count" to "587",
-            "limit" to "400"
-          )
-        )
+            "limit" to "400",
+          ),
+        ),
       )
     }.also { error ->
       Assertions.assertTrue(
-        error.message!!.contains("Overflows cannot be parsed")
+        error.message!!.contains("Overflows cannot be parsed"),
       )
     }
 
@@ -175,18 +175,18 @@ class ArgumentParserTest {
           mapOf(
             "module" to null,
             "count" to "402",
-            "limit" to "70"
+            "limit" to "70",
           ),
           mapOf(
             "module" to "MUL",
             "count" to "587",
-            "limit" to "400"
-          )
-        )
+            "limit" to "400",
+          ),
+        ),
       )
     }.also { error ->
       Assertions.assertTrue(
-        error.message!!.contains("Overflows cannot be parsed")
+        error.message!!.contains("Overflows cannot be parsed"),
       )
     }
 
@@ -195,7 +195,7 @@ class ArgumentParserTest {
       ArgumentParser.getOverflows(JsonObject())
     }.also { error ->
       Assertions.assertTrue(
-        error.message!!.contains("Overflows cannot be parsed")
+        error.message!!.contains("Overflows cannot be parsed"),
       )
     }
   }
@@ -205,13 +205,13 @@ class ArgumentParserTest {
     val reasonMessage = "Transaction line count for module ADD=402 is above the limit 70"
     Assertions.assertEquals(
       ArgumentParser.getReasonMessage(reasonMessage),
-      reasonMessage
+      reasonMessage,
     )
 
     val reasonMessageWithMaxLen = Random.Default.nextBytes(128).encodeHex(prefix = false)
     Assertions.assertEquals(
       ArgumentParser.getReasonMessage(reasonMessageWithMaxLen),
-      reasonMessageWithMaxLen
+      reasonMessageWithMaxLen,
     )
   }
 
@@ -220,11 +220,11 @@ class ArgumentParserTest {
     // reason message string with more than 1024 characters
     assertThrows<IllegalArgumentException> {
       ArgumentParser.getReasonMessage(
-        Random.Default.nextBytes(512).encodeHex(prefix = false) + "0"
+        Random.Default.nextBytes(512).encodeHex(prefix = false) + "0",
       )
     }.also { error ->
       Assertions.assertTrue(
-        error.message!!.contains("Reason message should not be more than 1024 characters")
+        error.message!!.contains("Reason message should not be more than 1024 characters"),
       )
     }
   }
@@ -235,11 +235,11 @@ class ArgumentParserTest {
     val blockNumberStr = "12345"
     Assertions.assertEquals(
       ArgumentParser.getBlockNumber(blockNumberStr)!!,
-      blockNumberStr.toULong()
+      blockNumberStr.toULong(),
     )
 
     Assertions.assertNull(
-      ArgumentParser.getBlockNumber(null)
+      ArgumentParser.getBlockNumber(null),
     )
   }
 
@@ -248,22 +248,22 @@ class ArgumentParserTest {
     // block number string with hex string
     assertThrows<IllegalArgumentException> {
       ArgumentParser.getBlockNumber(
-        "0x12345"
+        "0x12345",
       )
     }.also { error ->
       Assertions.assertTrue(
-        error.message!!.contains("Block number cannot be parsed to an unsigned number")
+        error.message!!.contains("Block number cannot be parsed to an unsigned number"),
       )
     }
 
     // block number string with random characters
     assertThrows<IllegalArgumentException> {
       ArgumentParser.getBlockNumber(
-        "xxyyzz"
+        "xxyyzz",
       )
     }.also { error ->
       Assertions.assertTrue(
-        error.message!!.contains("Block number cannot be parsed to an unsigned number")
+        error.message!!.contains("Block number cannot be parsed to an unsigned number"),
       )
     }
 
@@ -272,7 +272,7 @@ class ArgumentParserTest {
       ArgumentParser.getBlockNumber("")
     }.also { error ->
       Assertions.assertTrue(
-        error.message!!.contains("Block number cannot be parsed to an unsigned number")
+        error.message!!.contains("Block number cannot be parsed to an unsigned number"),
       )
     }
   }
@@ -283,7 +283,7 @@ class ArgumentParserTest {
     val timestampStr = "2024-09-05T09:22:52Z"
     Assertions.assertEquals(
       ArgumentParser.getTimestampFromISO8601(timestampStr),
-      Instant.parse(timestampStr)
+      Instant.parse(timestampStr),
     )
   }
 
@@ -292,22 +292,22 @@ class ArgumentParserTest {
     // timestamp string not in ISO-8601
     assertThrows<IllegalArgumentException> {
       ArgumentParser.getTimestampFromISO8601(
-        "2024-09-05_09:22:52"
+        "2024-09-05_09:22:52",
       )
     }.also { error ->
       Assertions.assertTrue(
-        error.message!!.contains("Timestamp is not in ISO-8601")
+        error.message!!.contains("Timestamp is not in ISO-8601"),
       )
     }
 
     // timestamp string in epoch time millisecond
     assertThrows<IllegalArgumentException> {
       ArgumentParser.getTimestampFromISO8601(
-        "1725543970103"
+        "1725543970103",
       )
     }.also { error ->
       Assertions.assertTrue(
-        error.message!!.contains("Timestamp is not in ISO-8601")
+        error.message!!.contains("Timestamp is not in ISO-8601"),
       )
     }
 
@@ -316,7 +316,7 @@ class ArgumentParserTest {
       ArgumentParser.getTimestampFromISO8601("")
     }.also { error ->
       Assertions.assertTrue(
-        error.message!!.contains("Timestamp is not in ISO-8601")
+        error.message!!.contains("Timestamp is not in ISO-8601"),
       )
     }
   }
@@ -326,7 +326,7 @@ class ArgumentParserTest {
     val txRejectionStageStr = "SEQUENCER"
     Assertions.assertEquals(
       ArgumentParser.getTxRejectionStage(txRejectionStageStr),
-      RejectedTransaction.Stage.SEQUENCER
+      RejectedTransaction.Stage.SEQUENCER,
     )
   }
 
@@ -335,22 +335,22 @@ class ArgumentParserTest {
     // rejection stage string in lower case
     assertThrows<IllegalArgumentException> {
       ArgumentParser.getTxRejectionStage(
-        "sequencer"
+        "sequencer",
       )
     }.also { error ->
       Assertions.assertTrue(
-        error.message!!.contains("Unsupported transaction rejection stage")
+        error.message!!.contains("Unsupported transaction rejection stage"),
       )
     }
 
     // rejection stage string in random characters
     assertThrows<IllegalArgumentException> {
       ArgumentParser.getTxRejectionStage(
-        "helloworld"
+        "helloworld",
       )
     }.also { error ->
       Assertions.assertTrue(
-        error.message!!.contains("Unsupported transaction rejection stage")
+        error.message!!.contains("Unsupported transaction rejection stage"),
       )
     }
   }

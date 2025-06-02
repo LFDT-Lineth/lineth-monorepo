@@ -28,13 +28,13 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 class FileBasedBlobCompressionProverClientV2(
   val config: FileBasedProverConfig,
   val vertx: Vertx,
-  jsonObjectMapper: ObjectMapper = JsonSerialization.proofResponseMapperV1
+  jsonObjectMapper: ObjectMapper = JsonSerialization.proofResponseMapperV1,
 ) :
   GenericFileBasedProverClient<
     BlobCompressionProofRequest,
     BlobCompressionProof,
     BlobCompressionProofJsonRequest,
-    BlobCompressionProofJsonResponse
+    BlobCompressionProofJsonResponse,
     >(
     config = config,
     vertx = vertx,
@@ -42,7 +42,7 @@ class FileBasedBlobCompressionProverClientV2(
     fileReader = FileReader(
       vertx,
       jsonObjectMapper,
-      BlobCompressionProofJsonResponse::class.java
+      BlobCompressionProofJsonResponse::class.java,
     ),
     requestFileNameProvider = CompressionProofRequestFileNameProvider,
     responseFileNameProvider = CompressionProofResponseFileNameProvider,
@@ -50,7 +50,7 @@ class FileBasedBlobCompressionProverClientV2(
     requestMapper = FileBasedBlobCompressionProverClientV2::requestDtoMapper,
     responseMapper = BlobCompressionProofJsonResponse::toDomainObject,
     proofTypeLabel = "blob",
-    log = LogManager.getLogger(this::class.java)
+    log = LogManager.getLogger(this::class.java),
   ),
   BlobCompressionProverClientV2 {
 
@@ -59,7 +59,7 @@ class FileBasedBlobCompressionProverClientV2(
       return ProofIndex(
         startBlockNumber = request.startBlockNumber,
         endBlockNumber = request.endBlockNumber,
-        hash = request.expectedShnarfResult.expectedShnarf
+        hash = request.expectedShnarfResult.expectedShnarf,
       )
     }
 

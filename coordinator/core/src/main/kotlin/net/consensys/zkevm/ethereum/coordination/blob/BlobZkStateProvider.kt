@@ -4,7 +4,7 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 data class BlobZkState(
   val parentStateRootHash: ByteArray,
-  val finalStateRootHash: ByteArray
+  val finalStateRootHash: ByteArray,
 ) {
   override fun equals(other: Any?): Boolean {
     if (this === other) return true

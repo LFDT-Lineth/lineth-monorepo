@@ -66,7 +66,7 @@ class SubmissionsFetchingTaskIntTest {
       blobsResponsesDir = "$testDataDir/compression/responses",
       aggregationsResponsesDir = "$testDataDir/aggregation/responses",
       numberOfAggregations = 7,
-      extraBlobsWithoutAggregation = 0
+      extraBlobsWithoutAggregation = 0,
     )
     val rollupDeploymentResult = ContractsManager.get()
       .deployLineaRollup(numberOfOperators = 2, contractVersion = LineaContractVersion.V6).get()
@@ -77,14 +77,14 @@ class SubmissionsFetchingTaskIntTest {
       l1RpcEndpoint = URI(l1RpcUrl),
       l1RequestRetryConfig = RetryConfig(backoffDelay = 2.seconds),
       blobScanEndpoint = URI(blobScanUrl),
-      stateManagerClientEndpoint = URI("http://it-does-not-matter:5432")
+      stateManagerClientEndpoint = URI("http://it-does-not-matter:5432"),
     )
 
     contractClientForBlobSubmissions = rollupDeploymentResult.rollupOperatorClient
     contractClientForAggregationSubmissions = connectToLineaRollupContract(
       rollupDeploymentResult.contractAddress,
       rollupDeploymentResult.rollupOperators[1].txManager,
-      smartContractErrors = lineaRollupContractErrors
+      smartContractErrors = lineaRollupContractErrors,
     )
     configureLoggers(
       rootLevel = Level.INFO,
@@ -95,7 +95,7 @@ class SubmissionsFetchingTaskIntTest {
       "linea.plugin.staterecovery.clients" to Level.DEBUG,
       "test.clients.l1.web3j-default" to Level.INFO,
       "test.clients.l1.web3j.receipt-poller" to Level.INFO,
-      "linea.staterecovery.datafetching" to Level.INFO
+      "linea.staterecovery.datafetching" to Level.INFO,
     )
     submitDataToL1ContactAndWaitExecution()
   }
@@ -103,18 +103,18 @@ class SubmissionsFetchingTaskIntTest {
   fun createFetcherTask(
     l2StartBlockNumber: ULong,
     debugForceSyncStopBlockNumber: ULong? = null,
-    queuesSizeLimit: Int = 2
+    queuesSizeLimit: Int = 2,
   ): SubmissionsFetchingTask {
     val l1EventsClient = LineaSubmissionEventsClientImpl(
       logsSearcher = appClients.ethLogsSearcher,
       smartContractAddress = appClients.lineaContractClient.contractAddress,
       l1LatestSearchBlock = BlockParameter.Tag.LATEST,
-      logsBlockChunkSize = 5000
+      logsBlockChunkSize = 5000,
     )
     val blobDecompressor: BlobDecompressorAndDeserializer = BlobDecompressorToDomainV1(
       decompressor = GoNativeBlobDecompressorFactory.getInstance(BlobDecompressorVersion.V1_2_0),
       staticFields = BlockHeaderStaticFields.localDev,
-      vertx = vertx
+      vertx = vertx,
     )
 
     return SubmissionsFetchingTask(
@@ -129,14 +129,14 @@ class SubmissionsFetchingTaskIntTest {
       submissionEventsQueueLimit = queuesSizeLimit,
       compressedBlobsQueueLimit = queuesSizeLimit,
       targetDecompressedBlobsQueueLimit = queuesSizeLimit,
-      debugForceSyncStopBlockNumber = debugForceSyncStopBlockNumber
+      debugForceSyncStopBlockNumber = debugForceSyncStopBlockNumber,
     )
   }
 
   private fun submitDataToL1ContactAndWaitExecution(
     aggregationsAndBlobs: List<AggregationAndBlobs> = this.aggregationsAndBlobs,
     blobChunksSize: Int = 9,
-    waitTimeout: Duration = 4.minutes
+    waitTimeout: Duration = 4.minutes,
   ) {
     submitBlobsAndAggregationsAndWaitExecution(
       contractClientForBlobSubmission = contractClientForBlobSubmissions,
@@ -146,9 +146,9 @@ class SubmissionsFetchingTaskIntTest {
       waitTimeout = waitTimeout,
       l1Web3jClient = createWeb3jHttpClient(
         rpcUrl = l1RpcUrl,
-        log = LogManager.getLogger("test.clients.l1.web3j.receipt-poller")
+        log = LogManager.getLogger("test.clients.l1.web3j.receipt-poller"),
       ),
-      log = log
+      log = log,
     )
   }
 
@@ -171,17 +171,17 @@ class SubmissionsFetchingTaskIntTest {
 
     assertSubmissionsAreCorrectlyFetched(
       l2StartBlockNumber = 1UL,
-      debugForceSyncStopBlockNumber = debugForceSyncStopBlockNumber
+      debugForceSyncStopBlockNumber = debugForceSyncStopBlockNumber,
     )
   }
 
   private fun assertSubmissionsAreCorrectlyFetched(
     l2StartBlockNumber: ULong,
-    debugForceSyncStopBlockNumber: ULong? = null
+    debugForceSyncStopBlockNumber: ULong? = null,
   ) {
     val submissionsFetcher = createFetcherTask(
       l2StartBlockNumber = l2StartBlockNumber,
-      queuesSizeLimit = 2
+      queuesSizeLimit = 2,
     )
       .also { it.start() }
     val expectedAggregationsAndBlobsToBeFetched =
@@ -208,7 +208,7 @@ class SubmissionsFetchingTaskIntTest {
           ?.also { nextSubmission ->
             fetchedSubmissions.add(nextSubmission)
             submissionsFetcher.pruneQueueForElementsUpToInclusive(
-              elHeadBlockNumber = nextSubmission.submissionEvents.dataFinalizedEvent.event.endBlockNumber
+              elHeadBlockNumber = nextSubmission.submissionEvents.dataFinalizedEvent.event.endBlockNumber,
             )
           }
         assertThat(submissionsFetcher.finalizationsReadyToImport()).isLessThanOrEqualTo(2)
@@ -241,11 +241,11 @@ class SubmissionsFetchingTaskIntTest {
 
   fun assertFetchedData(
     fetchedData: SubmissionEventsAndData<BlockFromL1RecoveredData>,
-    sotAggregationData: AggregationAndBlobs
+    sotAggregationData: AggregationAndBlobs,
   ) {
     assertEventMatchesAggregation(
       fetchedData.submissionEvents.dataFinalizedEvent.event,
-      sotAggregationData.aggregation!!
+      sotAggregationData.aggregation!!,
     )
     assertThat(fetchedData.data.first().header.blockNumber)
       .isEqualTo(sotAggregationData.blobs.first().startBlockNumber)
@@ -255,7 +255,7 @@ class SubmissionsFetchingTaskIntTest {
 
   fun assertEventMatchesAggregation(
     event: DataFinalizedV3,
-    aggregation: Aggregation
+    aggregation: Aggregation,
   ) {
     assertThat(event.startBlockNumber).isEqualTo(aggregation.startBlockNumber)
     assertThat(event.endBlockNumber).isEqualTo(aggregation.endBlockNumber)

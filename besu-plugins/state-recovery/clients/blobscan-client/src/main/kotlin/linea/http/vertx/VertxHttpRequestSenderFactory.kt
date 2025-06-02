@@ -13,7 +13,7 @@ object VertxHttpRequestSenderFactory {
     rateLimitBackoffDelay: Duration? = null,
     retryableErrorCodes: Set<Int> = setOf(429, 503, 504),
     logFormatter: VertxHttpLoggingFormatter,
-    baseRequestSender: VertxHttpRequestSender
+    baseRequestSender: VertxHttpRequestSender,
   ): VertxHttpRequestSender {
     val rateLimitedSender = rateLimitBackoffDelay
       ?.let {
@@ -21,7 +21,7 @@ object VertxHttpRequestSenderFactory {
           vertx = vertx,
           requestSender = baseRequestSender,
           rateLimitBackoffDelay = rateLimitBackoffDelay,
-          requestLogFormatter = logFormatter
+          requestLogFormatter = logFormatter,
         )
       } ?: baseRequestSender
     val sender = requestRetryConfig
@@ -30,7 +30,7 @@ object VertxHttpRequestSenderFactory {
           vertx = vertx,
           requestSender = rateLimitedSender,
           requestRetryConfig = requestRetryConfig,
-          retryableErrorCodes = retryableErrorCodes
+          retryableErrorCodes = retryableErrorCodes,
         )
       } ?: rateLimitedSender
 
@@ -45,13 +45,13 @@ object VertxHttpRequestSenderFactory {
     requestResponseLogLevel: Level = Level.TRACE,
     failuresLogLevel: Level = Level.DEBUG,
     retryableErrorCodes: Set<Int> = setOf(429, 503, 504),
-    logFormatter: VertxHttpLoggingFormatter
+    logFormatter: VertxHttpLoggingFormatter,
   ): VertxHttpRequestSender {
     val requestLogger = VertxRestRequestLogger(
       log = logger,
       requestResponseLogLevel = requestResponseLogLevel,
       failuresLogLevel = failuresLogLevel,
-      logFormatter = logFormatter
+      logFormatter = logFormatter,
     )
     return createWithBaseSender(
       vertx = vertx,
@@ -59,7 +59,7 @@ object VertxHttpRequestSenderFactory {
       rateLimitBackoffDelay = rateLimitBackoffDelay,
       retryableErrorCodes = retryableErrorCodes,
       logFormatter = logFormatter,
-      baseRequestSender = SimpleVertxHttpRequestSender(requestLogger)
+      baseRequestSender = SimpleVertxHttpRequestSender(requestLogger),
     )
   }
 }

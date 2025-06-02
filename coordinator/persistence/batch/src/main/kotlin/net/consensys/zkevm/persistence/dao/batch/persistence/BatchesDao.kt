@@ -7,14 +7,14 @@ interface BatchesDao {
   fun saveNewBatch(batch: Batch): SafeFuture<Unit>
 
   fun findHighestConsecutiveEndBlockNumberFromBlockNumber(
-    startingBlockNumberInclusive: Long
+    startingBlockNumberInclusive: Long,
   ): SafeFuture<Long?>
 
   fun deleteBatchesUpToEndBlockNumber(
-    endBlockNumberInclusive: Long
+    endBlockNumberInclusive: Long,
   ): SafeFuture<Int>
 
   fun deleteBatchesAfterBlockNumber(
-    startingBlockNumberInclusive: Long
+    startingBlockNumberInclusive: Long,
   ): SafeFuture<Int>
 }

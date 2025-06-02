@@ -9,7 +9,7 @@ open class ProverFileNameProvider(protected val fileNameSuffix: String) {
     startBlockNumber: ULong,
     endBlockNumber: ULong,
     fileNameSuffix: String,
-    hash: ByteArray?
+    hash: ByteArray?,
   ) =
     if (hash == null || hash.isEmpty()) {
       "$startBlockNumber-$endBlockNumber-$fileNameSuffix"
@@ -22,7 +22,7 @@ open class ProverFileNameProvider(protected val fileNameSuffix: String) {
       startBlockNumber = proofIndex.startBlockNumber,
       endBlockNumber = proofIndex.endBlockNumber,
       hash = proofIndex.hash,
-      fileNameSuffix = fileNameSuffix
+      fileNameSuffix = fileNameSuffix,
     )
   }
 }
@@ -35,7 +35,7 @@ object FileNameSuffixes {
 
 class ExecutionProofRequestFileNameProvider(
   private val tracesVersion: String,
-  private val stateManagerVersion: String
+  private val stateManagerVersion: String,
 ) : ProverFileNameProvider(FileNameSuffixes.EXECUTION_PROOF_SUFFIX) {
   override fun getFileName(proofIndex: ProofIndex): String {
     return "${proofIndex.startBlockNumber}-${proofIndex.endBlockNumber}" +

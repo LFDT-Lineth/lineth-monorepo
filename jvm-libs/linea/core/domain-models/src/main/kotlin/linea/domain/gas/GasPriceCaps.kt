@@ -6,7 +6,7 @@ data class GasPriceCaps(
   val maxPriorityFeePerGasCap: ULong,
   val maxFeePerGasCap: ULong,
   val maxFeePerBlobGasCap: ULong,
-  val maxBaseFeePerGasCap: ULong? = null
+  val maxBaseFeePerGasCap: ULong? = null,
 ) {
   override fun toString(): String {
     return "maxPriorityFeePerGasCap=${maxPriorityFeePerGasCap.toGWei()} GWei," +

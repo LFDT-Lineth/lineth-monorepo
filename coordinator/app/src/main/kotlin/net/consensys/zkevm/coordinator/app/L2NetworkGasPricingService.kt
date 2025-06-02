@@ -28,12 +28,12 @@ class L2NetworkGasPricingService(
   httpJsonRpcClientFactory: VertxHttpJsonRpcClientFactory,
   l1Web3jClient: Web3j,
   l1Web3jService: Web3jBlobExtended,
-  config: Config
+  config: Config,
 ) : LongRunningService {
   data class LegacyGasPricingCalculatorConfig(
     val transactionCostCalculatorConfig: TransactionCostCalculator.Config?,
     val naiveGasPricingCalculatorConfig: GasUsageRatioWeightedAverageFeesCalculator.Config?,
-    val legacyGasPricingCalculatorBounds: BoundableFeeCalculator.Config
+    val legacyGasPricingCalculatorBounds: BoundableFeeCalculator.Config,
   )
 
   data class Config(
@@ -46,23 +46,23 @@ class L2NetworkGasPricingService(
     val variableFeesCalculatorConfig: VariableFeesCalculator.Config,
     val variableFeesCalculatorBounds: BoundableFeeCalculator.Config,
     val extraDataCalculatorConfig: MinerExtraDataV1CalculatorImpl.Config,
-    val extraDataUpdaterConfig: ExtraDataV1UpdaterImpl.Config
+    val extraDataUpdaterConfig: ExtraDataV1UpdaterImpl.Config,
   )
   private val log = LogManager.getLogger(this::class.java)
 
   private val gasPricingFeesFetcher: FeesFetcher = FeeHistoryFetcherImpl(
     l1Web3jClient,
     l1Web3jService,
-    config.feeHistoryFetcherConfig
+    config.feeHistoryFetcherConfig,
   )
 
   private val boundedVariableCostCalculator = run {
     val variableCostCalculator = VariableFeesCalculator(
-      config.variableFeesCalculatorConfig
+      config.variableFeesCalculatorConfig,
     )
     BoundableFeeCalculator(
       config = config.variableFeesCalculatorBounds,
-      feesCalculator = variableCostCalculator
+      feesCalculator = variableCostCalculator,
     )
   }
 
@@ -71,12 +71,12 @@ class L2NetworkGasPricingService(
       TransactionCostCalculator(boundedVariableCostCalculator, config.legacy.transactionCostCalculatorConfig)
     } else {
       GasUsageRatioWeightedAverageFeesCalculator(
-        config.legacy.naiveGasPricingCalculatorConfig!!
+        config.legacy.naiveGasPricingCalculatorConfig!!,
       )
     }
     BoundableFeeCalculator(
       config.legacy.legacyGasPricingCalculatorBounds,
-      baseCalculator
+      baseCalculator,
     )
   }
 
@@ -84,7 +84,7 @@ class L2NetworkGasPricingService(
     if (config.jsonRpcGasPriceUpdaterConfig != null) {
       val l2SetGasPriceUpdater: GasPriceUpdater = GasPriceUpdaterImpl(
         httpJsonRpcClientFactory = httpJsonRpcClientFactory,
-        config = config.jsonRpcGasPriceUpdaterConfig
+        config = config.jsonRpcGasPriceUpdaterConfig,
       )
 
       MinMineableFeesPricerService(
@@ -92,7 +92,7 @@ class L2NetworkGasPricingService(
         vertx = vertx,
         feesFetcher = gasPricingFeesFetcher,
         feesCalculator = legacyGasPricingCalculator,
-        gasPriceUpdater = l2SetGasPriceUpdater
+        gasPriceUpdater = l2SetGasPriceUpdater,
       )
     } else {
       null
@@ -106,12 +106,12 @@ class L2NetworkGasPricingService(
       minerExtraDataCalculatorImpl = MinerExtraDataV1CalculatorImpl(
         config = config.extraDataCalculatorConfig,
         variableFeesCalculator = boundedVariableCostCalculator,
-        legacyFeesCalculator = legacyGasPricingCalculator
+        legacyFeesCalculator = legacyGasPricingCalculator,
       ),
       extraDataUpdater = ExtraDataV1UpdaterImpl(
         httpJsonRpcClientFactory = httpJsonRpcClientFactory,
-        config = config.extraDataUpdaterConfig
-      )
+        config = config.extraDataUpdaterConfig,
+      ),
     )
   } else {
     null
@@ -128,7 +128,7 @@ class L2NetworkGasPricingService(
   override fun stop(): CompletableFuture<Unit> {
     return SafeFuture.allOf(
       minMineableFeesPricerService?.stop() ?: SafeFuture.completedFuture(Unit),
-      extraDataPricerService?.stop() ?: SafeFuture.completedFuture(Unit)
+      extraDataPricerService?.stop() ?: SafeFuture.completedFuture(Unit),
     )
       .thenApply { }
       .thenPeek {

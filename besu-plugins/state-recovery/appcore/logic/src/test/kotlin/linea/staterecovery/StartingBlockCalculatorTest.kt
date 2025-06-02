@@ -13,7 +13,7 @@ class StartingBlockCalculatorTest {
       lookbackFetchingIntervals(
         headBlockNumber = 50UL,
         recoveryStartBlockNumber = null,
-        lookbackWindow = 10UL
+        lookbackWindow = 10UL,
       ).also { intervals ->
         assertThat(intervals.l1Interval).isNull()
         assertThat(intervals.elInterval).isEqualTo(BlockInterval(41UL, 50UL))
@@ -23,7 +23,7 @@ class StartingBlockCalculatorTest {
       lookbackFetchingIntervals(
         headBlockNumber = 5UL,
         recoveryStartBlockNumber = null,
-        lookbackWindow = 10UL
+        lookbackWindow = 10UL,
       ).also { intervals ->
         assertThat(intervals.l1Interval).isNull()
         assertThat(intervals.elInterval).isEqualTo(BlockInterval(0UL, 5UL))
@@ -35,7 +35,7 @@ class StartingBlockCalculatorTest {
       lookbackFetchingIntervals(
         headBlockNumber = 50UL,
         recoveryStartBlockNumber = 51UL,
-        lookbackWindow = 10UL
+        lookbackWindow = 10UL,
       ).also { intervals ->
         assertThat(intervals.l1Interval).isNull()
         assertThat(intervals.elInterval).isEqualTo(BlockInterval(41UL, 50UL))
@@ -47,7 +47,7 @@ class StartingBlockCalculatorTest {
       lookbackFetchingIntervals(
         headBlockNumber = 0UL,
         recoveryStartBlockNumber = 1UL,
-        lookbackWindow = 10UL
+        lookbackWindow = 10UL,
       ).also { intervals ->
         assertThat(intervals.l1Interval).isNull()
         assertThat(intervals.elInterval).isEqualTo(BlockInterval(0UL, 0UL))
@@ -59,7 +59,7 @@ class StartingBlockCalculatorTest {
       lookbackFetchingIntervals(
         headBlockNumber = 50UL,
         recoveryStartBlockNumber = 10UL,
-        lookbackWindow = 10UL
+        lookbackWindow = 10UL,
       ).also { intervals ->
         assertThat(intervals.l1Interval).isEqualTo(BlockInterval(41UL, 50UL))
         assertThat(intervals.elInterval).isNull()
@@ -71,7 +71,7 @@ class StartingBlockCalculatorTest {
       lookbackFetchingIntervals(
         headBlockNumber = 50UL,
         recoveryStartBlockNumber = 45UL,
-        lookbackWindow = 10UL
+        lookbackWindow = 10UL,
       ).also { intervals ->
         assertThat(intervals.l1Interval).isEqualTo(BlockInterval(45UL, 50UL))
         assertThat(intervals.elInterval).isEqualTo(BlockInterval(41UL, 44UL))
@@ -86,7 +86,7 @@ class StartingBlockCalculatorTest {
       startBlockToFetchFromL1(
         headBlockNumber = 500UL,
         recoveryStartBlockNumber = null,
-        lookbackWindow = 256UL
+        lookbackWindow = 256UL,
       ).also { result ->
         // Then
         assertThat(result).isEqualTo(501UL)
@@ -95,7 +95,7 @@ class StartingBlockCalculatorTest {
       startBlockToFetchFromL1(
         headBlockNumber = 200UL,
         recoveryStartBlockNumber = null,
-        lookbackWindow = 256UL
+        lookbackWindow = 256UL,
       ).also { result ->
         // Then
         assertThat(result).isEqualTo(201UL)
@@ -107,7 +107,7 @@ class StartingBlockCalculatorTest {
       startBlockToFetchFromL1(
         headBlockNumber = 500UL,
         recoveryStartBlockNumber = 250UL,
-        lookbackWindow = 100UL
+        lookbackWindow = 100UL,
       ).also { result ->
         // Then
         assertThat(result).isEqualTo(400UL)
@@ -119,7 +119,7 @@ class StartingBlockCalculatorTest {
       startBlockToFetchFromL1(
         headBlockNumber = 500UL,
         recoveryStartBlockNumber = 450UL,
-        lookbackWindow = 100UL
+        lookbackWindow = 100UL,
       ).also { result ->
         // Then
         assertThat(result).isEqualTo(450UL)
@@ -129,7 +129,7 @@ class StartingBlockCalculatorTest {
       startBlockToFetchFromL1(
         headBlockNumber = 50UL,
         recoveryStartBlockNumber = 45UL,
-        lookbackWindow = 100UL
+        lookbackWindow = 100UL,
       ).also { result ->
         // Then
         assertThat(result).isEqualTo(45UL)

@@ -27,7 +27,7 @@ class MinimalInLineJsonRpcLoggerTest {
     minimalInLineJsonRpcLogger = MinimalInLineJsonRpcLogger(
       logger,
       requestResponseLogLevel = Level.DEBUG,
-      failuresLogLevel = Level.WARN
+      failuresLogLevel = Level.WARN,
     )
     whenever(logger.level).thenReturn(Level.INFO)
   }
@@ -50,7 +50,7 @@ class MinimalInLineJsonRpcLoggerTest {
       eq("testEndpoint"),
       eq(jsonRequestBody),
       eq("Http client error"),
-      eq(error)
+      eq(error),
     )
   }
 
@@ -63,7 +63,7 @@ class MinimalInLineJsonRpcLoggerTest {
       eq("<-- {} {} {}"),
       eq("testEndpoint"),
       eq(200),
-      eq(jsonSuccessResponse)
+      eq(jsonSuccessResponse),
     )
   }
 
@@ -79,7 +79,7 @@ class MinimalInLineJsonRpcLoggerTest {
       eq("testEndpoint"),
       eq(500),
       eq(jsonErrorResponse),
-      eq("Test exception")
+      eq("Test exception"),
     )
   }
 
@@ -89,7 +89,7 @@ class MinimalInLineJsonRpcLoggerTest {
     minimalInLineJsonRpcLogger = MinimalInLineJsonRpcLogger(
       logger,
       requestResponseLogLevel = Level.DEBUG,
-      failuresLogLevel = Level.WARN
+      failuresLogLevel = Level.WARN,
     )
     whenever(logger.level).thenReturn(Level.DEBUG)
     minimalInLineJsonRpcLogger.logResponse("testEndpoint", 500, jsonRequestBody, jsonErrorResponse, exception)
@@ -100,7 +100,7 @@ class MinimalInLineJsonRpcLoggerTest {
       eq("testEndpoint"),
       eq(jsonRequestBody),
       anyOrNull(),
-      anyOrNull()
+      anyOrNull(),
     )
     verify(logger).log(
       eq(Level.WARN),
@@ -108,7 +108,7 @@ class MinimalInLineJsonRpcLoggerTest {
       eq("testEndpoint"),
       eq(500),
       eq(jsonErrorResponse),
-      eq("Test exception")
+      eq("Test exception"),
     )
   }
 

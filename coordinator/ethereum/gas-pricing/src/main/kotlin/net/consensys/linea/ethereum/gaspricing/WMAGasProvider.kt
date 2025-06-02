@@ -12,14 +12,14 @@ class WMAGasProvider(
   private val chainId: Long,
   private val feesFetcher: FeesFetcher,
   private val priorityFeeCalculator: FeesCalculator,
-  private val config: Config
+  private val config: Config,
 ) :
   AtomicContractEIP1559GasProvider, EIP4844GasProvider {
   data class Config(
     val gasLimit: ULong,
     val maxFeePerGasCap: ULong,
     val maxFeePerBlobGasCap: ULong,
-    val maxPriorityFeePerGasCap: ULong
+    val maxPriorityFeePerGasCap: ULong,
   )
 
   private fun getRecentFees(): EIP4844GasFees {
@@ -32,9 +32,9 @@ class WMAGasProvider(
       EIP4844GasFees(
         EIP1559GasFees(
           maxPriorityFeePerGas.toULong(),
-          maxFeePerGas.toULong()
+          maxFeePerGas.toULong(),
         ),
-        maxFeePerBlobGas
+        maxFeePerBlobGas,
       )
     }.get()
   }
@@ -79,7 +79,7 @@ class WMAGasProvider(
     return getRecentFees().run {
       EIP1559GasFees(
         maxPriorityFeePerGas = min(this.eip1559GasFees.maxPriorityFeePerGas, config.maxFeePerGasCap),
-        maxFeePerGas = min(this.eip1559GasFees.maxFeePerGas, config.maxFeePerGasCap)
+        maxFeePerGas = min(this.eip1559GasFees.maxFeePerGas, config.maxFeePerGasCap),
       )
     }
   }
@@ -90,14 +90,14 @@ class WMAGasProvider(
         eip1559GasFees = EIP1559GasFees(
           maxPriorityFeePerGas = min(
             this.eip1559GasFees.maxPriorityFeePerGas,
-            config.maxFeePerGasCap
+            config.maxFeePerGasCap,
           ),
           maxFeePerGas = min(
             this.eip1559GasFees.maxFeePerGas,
-            config.maxFeePerGasCap
-          )
+            config.maxFeePerGasCap,
+          ),
         ),
-        maxFeePerBlobGas = min(this.maxFeePerBlobGas, config.maxFeePerBlobGasCap)
+        maxFeePerBlobGas = min(this.maxFeePerBlobGas, config.maxFeePerBlobGasCap),
       )
     }
   }

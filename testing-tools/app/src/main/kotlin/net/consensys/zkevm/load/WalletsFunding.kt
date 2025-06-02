@@ -17,7 +17,7 @@ import java.util.function.Consumer
 
 class WalletsFunding(
   private val ethConnection: EthConnection,
-  private val sourceOfFundsWallet: Wallet
+  private val sourceOfFundsWallet: Wallet,
 ) {
 
   @Throws(IOException::class)
@@ -25,14 +25,14 @@ class WalletsFunding(
     wallets: Map<Int, Wallet>,
     payloadSize: Int,
     chainId: Int,
-    nbTransfers: Int
+    nbTransfers: Int,
   ): Map<Wallet, List<TransactionDetail>> {
     val payload = Util.generateRandomPayloadOfSize(payloadSize)
     return generateTxsWithPayload(
       wallets = wallets,
       payLoad = payload,
       chainId = chainId,
-      nbTransfers = nbTransfers
+      nbTransfers = nbTransfers,
     )
   }
 
@@ -40,7 +40,7 @@ class WalletsFunding(
     wallets: Map<Int, Wallet>,
     payLoad: String,
     chainId: Int,
-    nbTransfers: Int
+    nbTransfers: Int,
   ): MutableMap<Wallet, List<TransactionDetail>> {
     val result: MutableMap<Wallet, List<TransactionDetail>> = HashMap()
 
@@ -48,31 +48,44 @@ class WalletsFunding(
       val txs = ArrayList<TransactionDetail>()
       for (i in 0 until nbTransfers) {
         val transactionForEstimation = Transaction(
-          /* from = */ sourceWallet.address,
-          /* nonce = */ sourceWallet.theoreticalNonceValue,
-          /* gasPrice = */ null,
-          /* gasLimit = */ null,
-          /* to = */ Numeric.prependHexPrefix(sourceWallet.address),
-          /* value = */ null,
-          /* data = */ payLoad
+          /* from = */
+          sourceWallet.address,
+          /* nonce = */
+          sourceWallet.theoreticalNonceValue,
+          /* gasPrice = */
+          null,
+          /* gasLimit = */
+          null,
+          /* to = */
+          Numeric.prependHexPrefix(sourceWallet.address),
+          /* value = */
+          null,
+          /* data = */
+          payLoad,
         )
 
         val (gasPrice, gasLimit) = ethConnection.estimateGasPriceAndLimit(transactionForEstimation)
 
         val rawTransaction = RawTransaction.createTransaction(
-          /* nonce = */ sourceWallet.theoreticalNonceValue,
-          /* gasPrice = */ gasPrice,
-          /* gasLimit = */ gasLimit,
-          /* to = */ Numeric.prependHexPrefix(sourceWallet.address),
-          /* value = */ BigInteger.ZERO,
-          /* data = */ payLoad
+          /* nonce = */
+          sourceWallet.theoreticalNonceValue,
+          /* gasPrice = */
+          gasPrice,
+          /* gasLimit = */
+          gasLimit,
+          /* to = */
+          Numeric.prependHexPrefix(sourceWallet.address),
+          /* value = */
+          BigInteger.ZERO,
+          /* data = */
+          payLoad,
         )
         txs.add(
           TransactionDetail(
             sourceWallet.id,
             sourceWallet.theoreticalNonceValue,
-            ethConnection.ethSendRawTransaction(rawTransaction, sourceWallet, chainId)
-          )
+            ethConnection.ethSendRawTransaction(rawTransaction, sourceWallet, chainId),
+          ),
         )
 
         sourceWallet.incrementTheoreticalNonce()
@@ -86,7 +99,7 @@ class WalletsFunding(
   @Throws(IOException::class)
   fun generateUnderPricedTxs(
     wallets: Map<Int, Wallet>,
-    chainId: Int
+    chainId: Int,
   ): Map<Wallet, List<TransactionDetail>> {
     val gasUnderPriced = ethConnection.ethGasPrice().multiply(BigInteger.valueOf(80))
       .divide(BigInteger.valueOf(100))
@@ -100,14 +113,14 @@ class WalletsFunding(
         costPerCall,
         Numeric.prependHexPrefix(sourceWallet.address),
         BigInteger.ZERO,
-        null
+        null,
       )
       result[sourceWallet] = listOf(
         TransactionDetail(
           sourceWallet.id,
           sourceWallet.theoreticalNonceValue,
-          ethConnection.ethSendRawTransaction(rawTransaction, sourceWallet, chainId)
-        )
+          ethConnection.ethSendRawTransaction(rawTransaction, sourceWallet, chainId),
+        ),
       )
       sourceWallet.incrementTheoreticalNonce()
     }
@@ -123,7 +136,7 @@ class WalletsFunding(
     chainId: Int,
     gasPerCall: BigInteger,
     gasPricePerCall: BigInteger,
-    valuePerCall: BigInteger
+    valuePerCall: BigInteger,
   ): Map<Wallet, List<TransactionDetail>> {
     val balance = ethConnection.getBalance(sourceWallet)
     logger.info("[FUNDING] source of funds balance is {}.", balance)
@@ -137,7 +150,7 @@ class WalletsFunding(
     logger.debug(
       "[FUNDING] gas price is {}, transferred amount is {}.",
       gasPricePerCall,
-      transferredAmount
+      transferredAmount,
     )
     val fundingTransfers: ArrayList<TransactionDetail> = ArrayList()
     for ((_, value) in wallets) {
@@ -148,28 +161,28 @@ class WalletsFunding(
         gasPrice = gasPricePerCall,
         gasLimit = EthConnection.SIMPLE_TX_PRICE,
         initialAmount = transferredAmount,
-        chainId = chainId
+        chainId = chainId,
       )
       fundingTransfers.add(
         TransactionDetail(
           sourceOfFundsWallet.id,
           nonce,
-          rawTx
-        )
+          rawTx,
+        ),
       )
       val res = rawTx.send()
       logger.debug(
         "[FUNDING] Transfer fund transaction sent for nonce:{}, hash:{}, {}.",
         nonce,
         res.transactionHash,
-        if (res.error != null) " error:" + res.error.message else "no error"
+        if (res.error != null) " error:" + res.error.message else "no error",
       )
       nonce = nonce.add(BigInteger.ONE)
     }
     logger.info("[FUNDING] Waiting for fund transfer.")
     while (ethConnection.ethGetTransactionCount(
         sourceOfFundsWallet.encodedAddress(),
-        DefaultBlockParameterName.LATEST
+        DefaultBlockParameterName.LATEST,
       ) < nonce
     ) {
       Thread.sleep(10)
@@ -186,14 +199,14 @@ class WalletsFunding(
     gasPrice: BigInteger,
     gasLimit: BigInteger,
     initialAmount: BigInteger,
-    chainId: Int
+    chainId: Int,
   ): Request<*, EthSendTransaction> {
     val rawTransaction = RawTransaction.createEtherTransaction(
       nonce,
       gasPrice,
       gasLimit,
       Numeric.prependHexPrefix(toAddress),
-      initialAmount
+      initialAmount,
     )
     return ethConnection.ethSendRawTransaction(rawTransaction, wallet, chainId)
   }
@@ -203,7 +216,7 @@ class WalletsFunding(
     wallets: Map<Int, Wallet>,
     valueToTransfer: BigInteger,
     nbTransactions: Int,
-    chainId: Int
+    chainId: Int,
   ): Map<Wallet, MutableList<TransactionDetail>> {
     // check wallet balance, it helps to ensure wallets exist.
     wallets.values.forEach(Consumer { a: Wallet? -> ethConnection.getBalance(a!!) })
@@ -215,7 +228,7 @@ class WalletsFunding(
       valueToTransfer,
       nbTransactions,
       initialNoncePerWallet,
-      chainId
+      chainId,
     )
   }
 
@@ -230,9 +243,8 @@ class WalletsFunding(
     value: BigInteger,
     nbTransactions: Int,
     initialNoncePerWallet: Map<Wallet, List<TransactionDetail>>,
-    chainId: Int
-  ):
-    Map<Wallet, MutableList<TransactionDetail>> {
+    chainId: Int,
+  ): Map<Wallet, MutableList<TransactionDetail>> {
     val transactions: MutableMap<Wallet, MutableList<TransactionDetail>> = HashMap()
     val gasPrice = ethConnection.ethGasPrice()
     for ((wallet) in initialNoncePerWallet) {
@@ -249,14 +261,14 @@ class WalletsFunding(
           gasPrice,
           EthConnection.SIMPLE_TX_PRICE,
           value,
-          chainId
+          chainId,
         )
         transactions[wallet]!!.add(
           TransactionDetail(
             walletId,
             nonce,
-            rawTransaction
-          )
+            rawTransaction,
+          ),
         )
         wallet.incrementTheoreticalNonce()
       }
@@ -268,13 +280,13 @@ class WalletsFunding(
     wallets: Map<Int, Wallet>,
     wallet: Wallet,
     walletId: Int,
-    i: Int
+    i: Int,
   ): String {
     val walletDestinationId = (walletId + i + 1) % wallets.size
     logger.debug(
       "[TRANSFER] preparing transactions from wallet {} to wallet {}",
       wallet,
-      walletDestinationId
+      walletDestinationId,
     )
     return wallets[walletDestinationId]!!.address
   }

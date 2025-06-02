@@ -28,7 +28,7 @@ class EventDispatcherTest {
       } to "Consumer error",
       Consumer<AtomicInteger> { atomicInteger ->
         atomicInteger.incrementAndGet()
-      } to "Consumer counter 2"
+      } to "Consumer counter 2",
     )
 
     val eventDispatcher = EventDispatcher(mappedConsumers)
@@ -50,7 +50,7 @@ class EventDispatcherTest {
     val mappedConsumers: Map<Consumer<Any>, String> = mapOf(
       Consumer<Any> {
         throw RuntimeException(exceptionMessage)
-      } to consumerName
+      } to consumerName,
     )
 
     val log = Mockito.spy(LogManager.getLogger(EventDispatcher::class.java))
@@ -66,7 +66,7 @@ class EventDispatcherTest {
           eq(consumerName),
           eq(event),
           eq(exceptionMessage),
-          any()
+          any(),
         )
       }
   }

@@ -27,23 +27,23 @@ class ConsecutiveProvenBlobsProviderWithLastEndBlockNumberTrackerTest {
       endBlockNumber = 2UL,
       startBlockTimestamp = Instant.DISTANT_PAST,
       endBlockTimestamp = Instant.DISTANT_PAST,
-      expectedShnarf = Random.nextBytes(32)
+      expectedShnarf = Random.nextBytes(32),
     )
     val baseBlobAndBatchCounters = BlobAndBatchCounters(
       blobCounters = baseBlobCounters,
-      executionProofs = BlockIntervals(1UL, listOf(2UL, 3UL))
+      executionProofs = BlockIntervals(1UL, listOf(2UL, 3UL)),
     )
     val expectedEndBLockNumber = 10UL
     val lastBlobAndBatchCounters = baseBlobAndBatchCounters.copy(
-      blobCounters = baseBlobCounters.copy(startBlockNumber = 3UL, endBlockNumber = expectedEndBLockNumber)
+      blobCounters = baseBlobCounters.copy(startBlockNumber = 3UL, endBlockNumber = expectedEndBLockNumber),
     )
     whenever(repositoryMock.findConsecutiveProvenBlobs(any())).thenReturn(
       SafeFuture.completedFuture(
         listOf(
           baseBlobAndBatchCounters,
-          lastBlobAndBatchCounters
-        )
-      )
+          lastBlobAndBatchCounters,
+        ),
+      ),
     )
 
     cache.findConsecutiveProvenBlobs(expectedEndBLockNumber.toLong())

@@ -35,7 +35,7 @@ class BlobCompressionProofJsonResponseTest {
       eip4844Enabled = false,
       commitment = ByteArray(0),
       kzgProofSidecar = ByteArray(0),
-      kzgProofContract = ByteArray(0)
+      kzgProofContract = ByteArray(0),
     )
     val proofResponseJsonString = proofResponse.toJsonString()
 

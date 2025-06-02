@@ -12,7 +12,7 @@ import kotlin.io.path.isDirectory
 class DirectoryCleaner(
   val vertx: Vertx,
   val directories: List<Path>,
-  val fileFilters: List<FileFilter>
+  val fileFilters: List<FileFilter>,
 ) {
 
   private val log = LogManager.getLogger(this::class.java)

@@ -206,4 +206,3 @@ public class ArrayParameter extends Parameter {
     return JSON.getGson().toJson(this);
   }
 }
-

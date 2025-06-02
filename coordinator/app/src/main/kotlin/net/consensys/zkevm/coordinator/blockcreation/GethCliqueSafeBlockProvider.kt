@@ -12,10 +12,10 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 class GethCliqueSafeBlockProvider(
   private val web3j: Web3j,
-  private val config: Config
+  private val config: Config,
 ) : SafeBlockProvider {
   data class Config(
-    val blocksToFinalization: Long
+    val blocksToFinalization: Long,
   )
 
   override fun getLatestSafeBlock(): SafeFuture<Block> {

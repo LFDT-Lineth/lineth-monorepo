@@ -8,29 +8,29 @@ interface FeeHistoriesRepository {
 
   fun findBaseFeePerGasAtPercentile(
     percentile: Double,
-    fromBlockNumber: Long
+    fromBlockNumber: Long,
   ): SafeFuture<ULong?>
 
   fun findBaseFeePerBlobGasAtPercentile(
     percentile: Double,
-    fromBlockNumber: Long
+    fromBlockNumber: Long,
   ): SafeFuture<ULong?>
 
   fun findAverageRewardAtPercentile(
     rewardPercentile: Double,
-    fromBlockNumber: Long
+    fromBlockNumber: Long,
   ): SafeFuture<ULong?>
 
   fun findHighestBlockNumberWithPercentile(
-    rewardPercentile: Double
+    rewardPercentile: Double,
   ): SafeFuture<Long?>
 
   fun getNumOfFeeHistoriesFromBlockNumber(
     rewardPercentile: Double,
-    fromBlockNumber: Long
+    fromBlockNumber: Long,
   ): SafeFuture<Int>
 
   fun deleteFeeHistoriesUpToBlockNumber(
-    blockNumberInclusive: Long
+    blockNumberInclusive: Long,
   ): SafeFuture<Int>
 }

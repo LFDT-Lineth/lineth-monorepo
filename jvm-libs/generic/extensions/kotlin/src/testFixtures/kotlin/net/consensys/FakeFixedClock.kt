@@ -8,7 +8,7 @@ import kotlinx.datetime.Instant
  */
 
 class FakeFixedClock(
-  private var time: Instant = Clock.System.now()
+  private var time: Instant = Clock.System.now(),
 ) : Clock {
 
   @Synchronized

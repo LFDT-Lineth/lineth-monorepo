@@ -53,7 +53,7 @@ class BlobCompressionProofCoordinatorIntTest : CleanDbTestSuiteParallel() {
   }
 
   override val databaseName = DbHelper.generateUniqueDbName(
-    "blob-compression-proof-coordinator"
+    "blob-compression-proof-coordinator",
   )
   private val maxBlobsToReturn = 30u
   private var timeToReturn: Instant = Clock.System.now()
@@ -71,7 +71,7 @@ class BlobCompressionProofCoordinatorIntTest : CleanDbTestSuiteParallel() {
   private val blobHandlerPollingInterval = 50.milliseconds
   private val expectedStartBlockTime = Instant.fromEpochMilliseconds(fixedClock.now().toEpochMilliseconds())
   private val expectedEndBlockTime = Instant.fromEpochMilliseconds(
-    fixedClock.now().plus(1200.seconds).toEpochMilliseconds()
+    fixedClock.now().plus(1200.seconds).toEpochMilliseconds(),
   )
   private var expectedBlobCompressionProofResponse: BlobCompressionProof? = null
 
@@ -91,10 +91,10 @@ class BlobCompressionProofCoordinatorIntTest : CleanDbTestSuiteParallel() {
     blobsPostgresDao =
       BlobsPostgresDao(
         config = BlobsPostgresDao.Config(
-          maxBlobsToReturn
+          maxBlobsToReturn,
         ),
         connection = sqlClient,
-        clock = fixedClock
+        clock = fixedClock,
       )
     whenever(zkStateClientMock.rollupGetStateMerkleProof(any()))
       .thenAnswer {
@@ -104,9 +104,9 @@ class BlobCompressionProofCoordinatorIntTest : CleanDbTestSuiteParallel() {
               zkStateManagerVersion = zkStateManagerVersion,
               zkStateMerkleProof = zkStateMerkleProof,
               zkParentStateRootHash = ByteArrayExt.random32(),
-              zkEndStateRootHash = ByteArrayExt.random32()
-            )
-          )
+              zkEndStateRootHash = ByteArrayExt.random32(),
+            ),
+          ),
         )
       }
     whenever(blobZkStateProvider.getBlobZKState(any()))
@@ -114,9 +114,9 @@ class BlobCompressionProofCoordinatorIntTest : CleanDbTestSuiteParallel() {
         SafeFuture.completedFuture(
           BlobZkState(
             parentStateRootHash = Bytes32.random().toArray(),
-            finalStateRootHash = Bytes32.random().toArray()
-          )
-        )
+            finalStateRootHash = Bytes32.random().toArray(),
+          ),
+        ),
       )
     whenever(blobCompressionProverClientMock.requestProof(any()))
       .thenAnswer { invocationMock ->
@@ -125,7 +125,7 @@ class BlobCompressionProofCoordinatorIntTest : CleanDbTestSuiteParallel() {
           compressedData = proofReq.compressedData,
           conflationOrder = BlockIntervals(
             startingBlockNumber = proofReq.startBlockNumber,
-            upperBoundaries = proofReq.conflations.map { it.endBlockNumber }
+            upperBoundaries = proofReq.conflations.map { it.endBlockNumber },
           ),
           prevShnarf = proofReq.prevShnarf,
           parentStateRootHash = proofReq.parentStateRootHash,
@@ -141,7 +141,7 @@ class BlobCompressionProofCoordinatorIntTest : CleanDbTestSuiteParallel() {
           verifierID = 6789,
           commitment = Random.nextBytes(48),
           kzgProofContract = Random.nextBytes(48),
-          kzgProofSidecar = Random.nextBytes(48)
+          kzgProofSidecar = Random.nextBytes(48),
         )
         SafeFuture.completedFuture(expectedBlobCompressionProofResponse)
       }
@@ -149,14 +149,14 @@ class BlobCompressionProofCoordinatorIntTest : CleanDbTestSuiteParallel() {
     mockShnarfCalculator = spy(FakeBlobShnarfCalculator())
     blobsRepositorySpy = spy(
       BlobsRepositoryImpl(
-        blobsPostgresDao
-      )
+        blobsPostgresDao,
+      ),
     )
 
     val rollingBlobShnarfCalculator = RollingBlobShnarfCalculator(
       blobShnarfCalculator = mockShnarfCalculator,
       blobsRepository = blobsRepositorySpy,
-      genesisShnarf = ByteArray(32)
+      genesisShnarf = ByteArray(32),
     )
 
     blobCompressionProofCoordinator = BlobCompressionProofCoordinator(
@@ -166,10 +166,10 @@ class BlobCompressionProofCoordinatorIntTest : CleanDbTestSuiteParallel() {
       rollingBlobShnarfCalculator = rollingBlobShnarfCalculator,
       blobZkStateProvider = blobZkStateProvider,
       config = BlobCompressionProofCoordinator.Config(
-        pollingInterval = blobHandlerPollingInterval
+        pollingInterval = blobHandlerPollingInterval,
       ),
       blobCompressionProofHandler = { _ -> SafeFuture.completedFuture(Unit) },
-      metricsFacade = mock(defaultAnswer = Mockito.RETURNS_DEEP_STUBS)
+      metricsFacade = mock(defaultAnswer = Mockito.RETURNS_DEEP_STUBS),
     )
     blobCompressionProofCoordinator.start()
   }
@@ -178,7 +178,7 @@ class BlobCompressionProofCoordinatorIntTest : CleanDbTestSuiteParallel() {
     numberOfBlobs: Int,
     conflationStep: ULong = 10UL,
     startBlockNumber: ULong,
-    startBlockTime: Instant
+    startBlockTime: Instant,
   ): List<Blob> {
     var currentBlockNumber = startBlockNumber
     var currentBlockTime = startBlockTime
@@ -191,12 +191,12 @@ class BlobCompressionProofCoordinatorIntTest : CleanDbTestSuiteParallel() {
             startBlockNumber = currentBlockNumber,
             endBlockNumber = endBlockNumber,
             conflationTrigger = ConflationTrigger.TRACES_LIMIT,
-            tracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT
-          )
+            tracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT,
+          ),
         ),
         compressedData = Random.nextBytes(128),
         startBlockTime = currentBlockTime,
-        endBlockTime = endBlockTime
+        endBlockTime = endBlockTime,
       )
       currentBlockNumber = endBlockNumber + 1UL
       currentBlockTime = endBlockTime.plus(12.seconds)
@@ -206,12 +206,12 @@ class BlobCompressionProofCoordinatorIntTest : CleanDbTestSuiteParallel() {
 
   @Test
   fun `handle blob event and update blob record with blob compression proof`(
-    testContext: VertxTestContext
+    testContext: VertxTestContext,
   ) {
     val prevBlobRecord = createBlobRecord(
       startBlockNumber = expectedStartBlock,
       endBlockNumber = expectedEndBlock,
-      startBlockTime = expectedStartBlockTime
+      startBlockTime = expectedStartBlockTime,
     )
     timeToReturn = Clock.System.now()
     blobsPostgresDao.saveNewBlob(prevBlobRecord).get()
@@ -224,24 +224,24 @@ class BlobCompressionProofCoordinatorIntTest : CleanDbTestSuiteParallel() {
           startBlockNumber = blobEventStartBlock,
           endBlockNumber = blobEventEndBlock,
           conflationTrigger = ConflationTrigger.TRACES_LIMIT,
-          tracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT
+          tracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT,
         ),
         ConflationCalculationResult(
           startBlockNumber = blobEventEndBlock + 1UL,
           endBlockNumber = blobEventEndBlock + 200UL,
           conflationTrigger = ConflationTrigger.TRACES_LIMIT,
-          tracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT
+          tracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT,
         ),
         ConflationCalculationResult(
           startBlockNumber = blobEventEndBlock + 201UL,
           endBlockNumber = blobEventEndBlock + 300UL,
           conflationTrigger = ConflationTrigger.TRACES_LIMIT,
-          tracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT
-        )
+          tracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT,
+        ),
       ),
       compressedData = Random.nextBytes(128),
       startBlockTime = prevBlobRecord.endBlockTime.plus(12.seconds),
-      endBlockTime = prevBlobRecord.endBlockTime.plus(3600.seconds)
+      endBlockTime = prevBlobRecord.endBlockTime.plus(3600.seconds),
     )
 
     timeToReturn = Clock.System.now()
@@ -252,7 +252,7 @@ class BlobCompressionProofCoordinatorIntTest : CleanDbTestSuiteParallel() {
       .untilAsserted {
         val actualBlobs = blobsPostgresDao.getConsecutiveBlobsFromBlockNumber(
           expectedStartBlock,
-          blobEvent.endBlockTime.plus(1.seconds)
+          blobEvent.endBlockTime.plus(1.seconds),
         ).get()
 
         assertThat(actualBlobs).size().isEqualTo(2)
@@ -274,7 +274,7 @@ class BlobCompressionProofCoordinatorIntTest : CleanDbTestSuiteParallel() {
 
   @Test
   fun `handle blob event and update blob record with blob compression proof when prev blob record not found`(
-    testContext: VertxTestContext
+    testContext: VertxTestContext,
   ) {
     val blobEventStartBlock = expectedEndBlock + 1UL
     val blobEventEndBlock = expectedEndBlock + 100UL
@@ -284,12 +284,12 @@ class BlobCompressionProofCoordinatorIntTest : CleanDbTestSuiteParallel() {
           startBlockNumber = blobEventStartBlock,
           endBlockNumber = blobEventEndBlock,
           conflationTrigger = ConflationTrigger.TRACES_LIMIT,
-          tracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT
-        )
+          tracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT,
+        ),
       ),
       compressedData = Random.nextBytes(128),
       startBlockTime = expectedEndBlockTime.plus(12.seconds),
-      endBlockTime = expectedEndBlockTime.plus(1200.seconds)
+      endBlockTime = expectedEndBlockTime.plus(1200.seconds),
     )
 
     timeToReturn = Clock.System.now()
@@ -300,7 +300,7 @@ class BlobCompressionProofCoordinatorIntTest : CleanDbTestSuiteParallel() {
       .untilAsserted {
         val actualBlobs = blobsPostgresDao.getConsecutiveBlobsFromBlockNumber(
           blobEventStartBlock,
-          blobEvent.endBlockTime.plus(1.seconds)
+          blobEvent.endBlockTime.plus(1.seconds),
         ).get()
 
         assertThat(actualBlobs).size().isEqualTo(0)
@@ -310,12 +310,12 @@ class BlobCompressionProofCoordinatorIntTest : CleanDbTestSuiteParallel() {
 
   @Test
   fun `handle blob events and update blob record with blob compression proof with correct parent blob data`(
-    testContext: VertxTestContext
+    testContext: VertxTestContext,
   ) {
     val prevBlobRecord = createBlobRecord(
       startBlockNumber = expectedStartBlock,
       endBlockNumber = expectedEndBlock,
-      startBlockTime = expectedStartBlockTime
+      startBlockTime = expectedStartBlockTime,
     )
     timeToReturn = Clock.System.now()
     blobsPostgresDao.saveNewBlob(prevBlobRecord).get()
@@ -323,14 +323,14 @@ class BlobCompressionProofCoordinatorIntTest : CleanDbTestSuiteParallel() {
     val blobs = createConsecutiveBlobs(
       numberOfBlobs = maxBlobsToReturn.toInt() - 1,
       startBlockNumber = expectedEndBlock + 1UL,
-      startBlockTime = prevBlobRecord.endBlockTime.plus(12.seconds)
+      startBlockTime = prevBlobRecord.endBlockTime.plus(12.seconds),
     )
 
     timeToReturn = Clock.System.now()
     SafeFuture.allOf(
       blobs.map {
         blobCompressionProofCoordinator.handleBlob(it)
-      }.stream()
+      }.stream(),
     ).get()
 
     waitAtMost(10.seconds.toJavaDuration())
@@ -338,7 +338,7 @@ class BlobCompressionProofCoordinatorIntTest : CleanDbTestSuiteParallel() {
       .untilAsserted {
         val actualBlobs = blobsPostgresDao.getConsecutiveBlobsFromBlockNumber(
           expectedStartBlock,
-          blobs.last().endBlockTime.plus(1.seconds)
+          blobs.last().endBlockTime.plus(1.seconds),
         ).get()
 
         assertThat(actualBlobs).size().isEqualTo(blobs.size + 1)
@@ -360,12 +360,12 @@ class BlobCompressionProofCoordinatorIntTest : CleanDbTestSuiteParallel() {
 
   @Test
   fun `test blob handle failures re-queue's the blob`(
-    testContext: VertxTestContext
+    testContext: VertxTestContext,
   ) {
     val prevBlobRecord = createBlobRecord(
       startBlockNumber = expectedStartBlock,
       endBlockNumber = expectedEndBlock,
-      startBlockTime = expectedStartBlockTime
+      startBlockTime = expectedStartBlockTime,
     )
     timeToReturn = Clock.System.now()
     blobsPostgresDao.saveNewBlob(prevBlobRecord).get()
@@ -373,7 +373,7 @@ class BlobCompressionProofCoordinatorIntTest : CleanDbTestSuiteParallel() {
     val blobs = createConsecutiveBlobs(
       numberOfBlobs = maxBlobsToReturn.toInt() - 1,
       startBlockNumber = expectedEndBlock + 1UL,
-      startBlockTime = prevBlobRecord.endBlockTime.plus(12.seconds)
+      startBlockTime = prevBlobRecord.endBlockTime.plus(12.seconds),
     )
     val maxMockedBlobZkStateFailures = 10
     var blobZkStateFailures = 0
@@ -389,8 +389,8 @@ class BlobCompressionProofCoordinatorIntTest : CleanDbTestSuiteParallel() {
         SafeFuture.completedFuture(
           BlobZkState(
             parentStateRootHash = Bytes32.random().toArray(),
-            finalStateRootHash = Bytes32.random().toArray()
-          )
+            finalStateRootHash = Bytes32.random().toArray(),
+          ),
         )
       }
     }
@@ -399,7 +399,7 @@ class BlobCompressionProofCoordinatorIntTest : CleanDbTestSuiteParallel() {
     SafeFuture.allOf(
       blobs.map {
         blobCompressionProofCoordinator.handleBlob(it)
-      }.stream()
+      }.stream(),
     ).get()
 
     waitAtMost(100.seconds.toJavaDuration())
@@ -407,7 +407,7 @@ class BlobCompressionProofCoordinatorIntTest : CleanDbTestSuiteParallel() {
       .untilAsserted {
         val actualBlobs = blobsPostgresDao.getConsecutiveBlobsFromBlockNumber(
           expectedStartBlock,
-          blobs.last().endBlockTime.plus(1.seconds)
+          blobs.last().endBlockTime.plus(1.seconds),
         ).get()
 
         assertThat(actualBlobs).size().isEqualTo(blobs.size + 1)

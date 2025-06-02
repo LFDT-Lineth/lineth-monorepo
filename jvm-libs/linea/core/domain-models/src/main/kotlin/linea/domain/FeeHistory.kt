@@ -6,7 +6,7 @@ data class FeeHistory(
   val reward: List<List<ULong>>,
   val gasUsedRatio: List<Double>,
   val baseFeePerBlobGas: List<ULong>,
-  val blobGasUsedRatio: List<Double>
+  val blobGasUsedRatio: List<Double>,
 ) {
   fun blocksRange(): ClosedRange<ULong> {
     return oldestBlock..oldestBlock + ((reward.size - 1).toUInt())

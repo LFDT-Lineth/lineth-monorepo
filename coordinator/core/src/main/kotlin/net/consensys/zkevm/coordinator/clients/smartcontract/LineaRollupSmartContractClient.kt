@@ -8,7 +8,7 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 data class BlockAndNonce(
   val blockNumber: ULong,
-  val nonce: ULong
+  val nonce: ULong,
 )
 
 interface LineaRollupSmartContractClient : LineaRollupSmartContractClientReadOnly {
@@ -26,14 +26,14 @@ interface LineaRollupSmartContractClient : LineaRollupSmartContractClientReadOnl
    */
   fun submitBlobsEthCall(
     blobs: List<BlobRecord>,
-    gasPriceCaps: GasPriceCaps?
+    gasPriceCaps: GasPriceCaps?,
   ): SafeFuture<String?>
 
   fun finalizeBlocksEthCall(
     aggregation: ProofToFinalize,
     aggregationLastBlob: BlobRecord,
     parentL1RollingHash: ByteArray,
-    parentL1RollingHashMessageNumber: Long
+    parentL1RollingHashMessageNumber: Long,
   ): SafeFuture<String?>
 
   /**
@@ -41,7 +41,7 @@ interface LineaRollupSmartContractClient : LineaRollupSmartContractClientReadOnl
    */
   fun submitBlobs(
     blobs: List<BlobRecord>,
-    gasPriceCaps: GasPriceCaps?
+    gasPriceCaps: GasPriceCaps?,
   ): SafeFuture<String>
 
   fun finalizeBlocks(
@@ -49,7 +49,7 @@ interface LineaRollupSmartContractClient : LineaRollupSmartContractClientReadOnl
     aggregationLastBlob: BlobRecord,
     parentL1RollingHash: ByteArray,
     parentL1RollingHashMessageNumber: Long,
-    gasPriceCaps: GasPriceCaps?
+    gasPriceCaps: GasPriceCaps?,
   ): SafeFuture<String>
 
   fun finalizeBlocksAfterEthCall(
@@ -57,7 +57,7 @@ interface LineaRollupSmartContractClient : LineaRollupSmartContractClientReadOnl
     aggregationLastBlob: BlobRecord,
     parentL1RollingHash: ByteArray,
     parentL1RollingHashMessageNumber: Long,
-    gasPriceCaps: GasPriceCaps?
+    gasPriceCaps: GasPriceCaps?,
   ): SafeFuture<String>
 }
 

@@ -10,12 +10,12 @@ import java.util.concurrent.atomic.AtomicReference
 class GasPriceCapProviderForFinalization(
   private val config: Config,
   private val gasPriceCapProvider: GasPriceCapProvider,
-  metricsFacade: MetricsFacade
+  metricsFacade: MetricsFacade,
 ) : GasPriceCapProvider {
   data class Config(
     val maxPriorityFeePerGasCap: ULong,
     val maxFeePerGasCap: ULong,
-    val gasPriceCapMultiplier: Double = 1.0
+    val gasPriceCapMultiplier: Double = 1.0,
   )
   private var lastGasPriceCap: AtomicReference<GasPriceCaps?> = AtomicReference(null)
 
@@ -36,14 +36,14 @@ class GasPriceCapProviderForFinalization(
       category = LineaMetricsCategory.GAS_PRICE_CAP,
       name = "l1.finalization.maxpriorityfeepergascap",
       description = "Max priority fee per gas cap for finalization on L1",
-      measurementSupplier = { lastGasPriceCap.get()?.maxPriorityFeePerGasCap?.toLong() ?: 0 }
+      measurementSupplier = { lastGasPriceCap.get()?.maxPriorityFeePerGasCap?.toLong() ?: 0 },
     )
 
     metricsFacade.createGauge(
       category = LineaMetricsCategory.GAS_PRICE_CAP,
       name = "l1.finalization.maxfeepergascap",
       description = "Max fee per gas cap for finalization on L1",
-      measurementSupplier = { lastGasPriceCap.get()?.maxFeePerGasCap?.toLong() ?: 0 }
+      measurementSupplier = { lastGasPriceCap.get()?.maxFeePerGasCap?.toLong() ?: 0 },
     )
   }
 
@@ -68,7 +68,7 @@ class GasPriceCapProviderForFinalization(
     return GasPriceCaps(
       maxPriorityFeePerGasCap = maxPriorityFeePerGasCap,
       maxFeePerGasCap = maxFeePerGasCap,
-      maxFeePerBlobGasCap = 0uL
+      maxFeePerBlobGasCap = 0uL,
     )
   }
 

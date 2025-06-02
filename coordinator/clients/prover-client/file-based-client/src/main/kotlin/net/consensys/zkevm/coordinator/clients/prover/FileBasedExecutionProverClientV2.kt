@@ -26,7 +26,7 @@ data class BatchExecutionProofRequestDto(
   val tracesEngineVersion: String,
   val type2StateManagerVersion: String?,
   val zkStateMerkleProof: ArrayNode,
-  val blocksData: List<RlpBridgeLogsDto>
+  val blocksData: List<RlpBridgeLogsDto>,
 )
 
 data class RlpBridgeLogsDto(val rlp: String, val bridgeLogs: List<BridgeLogsDto>)
@@ -40,7 +40,7 @@ data class BridgeLogsDto(
   val blockNumber: String,
   val address: String,
   val data: String,
-  val topics: List<String>
+  val topics: List<String>,
 ) {
   companion object {
     fun fromDomainObject(ethLog: EthLog): BridgeLogsDto {
@@ -53,14 +53,14 @@ data class BridgeLogsDto(
         blockNumber = ethLog.blockNumber.toHexString(),
         address = ethLog.address.encodeHex(),
         data = ethLog.data.encodeHex(),
-        topics = ethLog.topics.map { it.encodeHex() }
+        topics = ethLog.topics.map { it.encodeHex() },
       )
     }
   }
 }
 
 internal class ExecutionProofRequestDtoMapper(
-  private val encoder: BlockEncoder = BlockRLPEncoder
+  private val encoder: BlockEncoder = BlockRLPEncoder,
 ) : (BatchExecutionProofRequestV1) -> SafeFuture<BatchExecutionProofRequestDto> {
   override fun invoke(request: BatchExecutionProofRequestV1): SafeFuture<BatchExecutionProofRequestDto> {
     val blocksData = request.blocks.map { block ->
@@ -79,8 +79,8 @@ internal class ExecutionProofRequestDtoMapper(
         tracesEngineVersion = request.tracesResponse.tracesEngineVersion,
         type2StateManagerVersion = request.type2StateData.zkStateManagerVersion,
         zkStateMerkleProof = request.type2StateData.zkStateMerkleProof,
-        blocksData = blocksData
-      )
+        blocksData = blocksData,
+      ),
     )
   }
 }
@@ -105,15 +105,15 @@ class FileBasedExecutionProverClientV2(
   executionProofRequestFileNameProvider: ProverFileNameProvider =
     ExecutionProofRequestFileNameProvider(
       tracesVersion = tracesVersion,
-      stateManagerVersion = stateManagerVersion
+      stateManagerVersion = stateManagerVersion,
     ),
-  executionProofResponseFileNameProvider: ProverFileNameProvider = ExecutionProofResponseFileNameProvider
+  executionProofResponseFileNameProvider: ProverFileNameProvider = ExecutionProofResponseFileNameProvider,
 ) :
   GenericFileBasedProverClient<
     BatchExecutionProofRequestV1,
     BatchExecutionProofResponse,
     BatchExecutionProofRequestDto,
-    Any
+    Any,
     >(
     config = config,
     vertx = vertx,
@@ -125,19 +125,19 @@ class FileBasedExecutionProverClientV2(
     requestMapper = ExecutionProofRequestDtoMapper(),
     responseMapper = { throw UnsupportedOperationException("Batch execution proof response shall not be parsed!") },
     proofTypeLabel = "batch",
-    log = LogManager.getLogger(FileBasedExecutionProverClientV2::class.java)
+    log = LogManager.getLogger(FileBasedExecutionProverClientV2::class.java),
   ),
   ExecutionProverClientV2 {
 
   override fun parseResponse(
     responseFilePath: Path,
-    proofIndex: ProofIndex
+    proofIndex: ProofIndex,
   ): SafeFuture<BatchExecutionProofResponse> {
     return SafeFuture.completedFuture(
       BatchExecutionProofResponse(
         startBlockNumber = proofIndex.startBlockNumber,
-        endBlockNumber = proofIndex.endBlockNumber
-      )
+        endBlockNumber = proofIndex.endBlockNumber,
+      ),
     )
   }
 }

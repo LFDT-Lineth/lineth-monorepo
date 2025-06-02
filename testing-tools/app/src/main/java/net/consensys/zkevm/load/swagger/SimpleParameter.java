@@ -221,4 +221,3 @@ public class SimpleParameter extends Parameter {
     return JSON.getGson().toJson(this);
   }
 }
-

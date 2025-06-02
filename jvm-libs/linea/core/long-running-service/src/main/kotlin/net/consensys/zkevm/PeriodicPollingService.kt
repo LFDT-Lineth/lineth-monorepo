@@ -7,7 +7,7 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 abstract class PeriodicPollingService(
   private val vertx: Vertx,
   private val pollingIntervalMs: Long,
-  private val log: Logger
+  private val log: Logger,
 ) : LongRunningService {
   private var timerId: Long? = null
 

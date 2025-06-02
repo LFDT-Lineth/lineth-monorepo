@@ -18,7 +18,7 @@ class InstantAsHexNumberSerDeTest {
         SimpleModule().apply {
           this.addSerializer(Instant::class.java, InstantAsHexNumberSerializer)
           this.addDeserializer(Instant::class.java, InstantAsHexNumberDeserializer)
-        }
+        },
       )
   }
 
@@ -34,7 +34,7 @@ class InstantAsHexNumberSerDeTest {
       // 2021-01-02T09:00:45+01:30 UTC+01:30,
       val instantUTCPlus: Instant = Instant.fromEpochSeconds(1609572645),
       // 2021-01-02T09:00:45-01:30" UTC-01:30
-      val instantUTCMinus: Instant = Instant.fromEpochSeconds(1609583445)
+      val instantUTCMinus: Instant = Instant.fromEpochSeconds(1609583445),
     )
 
     val expectedJson = """

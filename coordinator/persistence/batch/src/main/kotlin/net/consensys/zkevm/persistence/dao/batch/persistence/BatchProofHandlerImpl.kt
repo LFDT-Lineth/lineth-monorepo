@@ -8,7 +8,7 @@ import org.apache.logging.log4j.LogManager
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 class BatchProofHandlerImpl(
-  private val batchesRepository: BatchesRepository
+  private val batchesRepository: BatchesRepository,
 ) : BatchProofHandler {
   private val log = LogManager.getLogger(this::class.java)
   override fun acceptNewBatch(batch: Batch): SafeFuture<Unit> {
@@ -18,7 +18,7 @@ class BatchProofHandlerImpl(
           log.debug(
             "Ignoring Batch already persisted error. batch={} errorMessage={}",
             batch.intervalString(),
-            th.message
+            th.message,
           )
           SafeFuture.completedFuture(Unit)
         } else {

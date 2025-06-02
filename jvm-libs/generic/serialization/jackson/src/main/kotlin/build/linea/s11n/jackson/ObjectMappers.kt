@@ -32,5 +32,5 @@ val ethByteAsHexDeserialisersModule = SimpleModule().apply {
 val ethApiObjectMapper: ObjectMapper = jacksonObjectMapper()
   .registerModules(
     ethNumberAsHexSerialisersModule,
-    ethByteAsHexSerialisersModule
+    ethByteAsHexSerialisersModule,
   )

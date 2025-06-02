@@ -221,4 +221,3 @@ public class RoundRobinMoneyTransfer extends Scenario {
     return JSON.getGson().toJson(this);
   }
 }
-

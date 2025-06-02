@@ -9,7 +9,7 @@ class ULongExtensionsTest {
     0.toULong() to "0x0",
     1.toULong() to "0x1",
     0xABC_DEF_123_456u to "0xabcdef123456",
-    ULong.MAX_VALUE to "0xffffffffffffffff"
+    ULong.MAX_VALUE to "0xffffffffffffffff",
   )
 
   @Test

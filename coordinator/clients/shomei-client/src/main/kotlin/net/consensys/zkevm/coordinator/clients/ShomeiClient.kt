@@ -21,23 +21,23 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.atomic.AtomicInteger
 
 class ShomeiClient(
-  private val rpcClient: JsonRpcClient
+  private val rpcClient: JsonRpcClient,
 ) : RollupForkChoiceUpdatedClient {
   constructor(
     vertx: Vertx,
     rpcClient: JsonRpcClient,
     retryConfig: RequestRetryConfig,
-    log: Logger = LogManager.getLogger(ShomeiClient::class.java)
+    log: Logger = LogManager.getLogger(ShomeiClient::class.java),
   ) : this(
     JsonRpcRequestRetryer(
       vertx,
       rpcClient,
       config = JsonRpcRequestRetryer.Config(
         methodsToRetry = retryableMethods,
-        requestRetry = retryConfig
+        requestRetry = retryConfig,
       ),
-      log = log
-    )
+      log = log,
+    ),
   )
 
   private var id = AtomicInteger(0)
@@ -52,9 +52,9 @@ class ShomeiClient(
         listOf(
           mapOf(
             "finalizedBlockNumber" to finalizedBlockNumberAndHash.number.toString(),
-            "finalizedBlockHash" to finalizedBlockNumberAndHash.hash.encodeHex()
-          )
-        )
+            "finalizedBlockHash" to finalizedBlockNumberAndHash.hash.encodeHex(),
+          ),
+        ),
       )
     return rpcClient.makeRequest(jsonRequest).toSafeFuture()
       .thenApply { responseResult ->
@@ -64,8 +64,7 @@ class ShomeiClient(
 
   companion object {
     internal val retryableMethods = setOf("rollup_forkChoiceUpdated")
-    fun mapErrorResponse(jsonRpcErrorResponse: JsonRpcErrorResponse):
-      ErrorResponse<RollupForkChoiceUpdatedError> {
+    fun mapErrorResponse(jsonRpcErrorResponse: JsonRpcErrorResponse): ErrorResponse<RollupForkChoiceUpdatedError> {
       val errorType: RollupForkChoiceUpdatedError = runCatching {
         RollupForkChoiceUpdatedError.valueOf(jsonRpcErrorResponse.error.message.substringBefore(':'))
       }.getOrElse { RollupForkChoiceUpdatedError.UNKNOWN }
@@ -73,8 +72,7 @@ class ShomeiClient(
       return ErrorResponse(errorType, jsonRpcErrorResponse.error.message)
     }
 
-    fun mapRollupForkChoiceUpdatedResponse(jsonRpcResponse: JsonRpcSuccessResponse):
-      RollupForkChoiceUpdatedResponse {
+    fun mapRollupForkChoiceUpdatedResponse(jsonRpcResponse: JsonRpcSuccessResponse): RollupForkChoiceUpdatedResponse {
       return RollupForkChoiceUpdatedResponse(result = jsonRpcResponse.result.toString())
     }
   }

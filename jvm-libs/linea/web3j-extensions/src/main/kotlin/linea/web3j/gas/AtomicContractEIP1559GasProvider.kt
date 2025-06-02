@@ -4,7 +4,7 @@ import org.web3j.tx.gas.ContractEIP1559GasProvider
 
 data class EIP1559GasFees(
   val maxPriorityFeePerGas: ULong,
-  val maxFeePerGas: ULong
+  val maxFeePerGas: ULong,
 )
 
 interface AtomicContractEIP1559GasProvider : ContractEIP1559GasProvider {

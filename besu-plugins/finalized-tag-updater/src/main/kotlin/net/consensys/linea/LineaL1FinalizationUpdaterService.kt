@@ -28,7 +28,7 @@ class LineaBesuEngineBlockTagUpdater(private val blockchainService: BlockchainSe
         log.info(
           "Linea safe/finalized block update: blockNumber={} blockHash={}",
           finalizedBlockNumber,
-          blockHash
+          blockHash,
         )
         blockchainService.setSafeBlock(blockHash)
         blockchainService.setFinalizedBlock(blockHash)
@@ -40,7 +40,7 @@ class LineaBesuEngineBlockTagUpdater(private val blockchainService: BlockchainSe
         log.error(
           "Linea safe/finalized block update failure: Method not supported or not enabled for PoS network: " +
             "setFinalizedBlock and setSafeBlock",
-          e
+          e,
         )
         throw e
       } catch (e: Exception) {
@@ -54,7 +54,7 @@ class LineaBesuEngineBlockTagUpdater(private val blockchainService: BlockchainSe
   }
 
   override fun lineaUpdateFinalizedBlockV1(
-    finalizedBlockNumber: Long
+    finalizedBlockNumber: Long,
   ) {
     val updateSuccess = setFinalizedAndSafeBlock(finalizedBlockNumber)
     log.debug("Linea safe/finalized block update: blockNumber={} success={}", finalizedBlockNumber, updateSuccess)
@@ -62,10 +62,10 @@ class LineaBesuEngineBlockTagUpdater(private val blockchainService: BlockchainSe
 }
 
 class LineaL1FinalizationUpdater(
-  private val engineBlockTagUpdater: EngineBlockTagUpdater
+  private val engineBlockTagUpdater: EngineBlockTagUpdater,
 ) {
   fun handleL1Finalization(
-    finalizedBlockNumber: ULong
+    finalizedBlockNumber: ULong,
   ): CompletableFuture<Unit> {
     runCatching {
       engineBlockTagUpdater
@@ -80,28 +80,28 @@ class LineaL1FinalizationUpdater(
 class LineaL1FinalizationUpdaterService(
   vertx: Vertx,
   config: PluginConfig,
-  engineBlockTagUpdater: EngineBlockTagUpdater
+  engineBlockTagUpdater: EngineBlockTagUpdater,
 ) : LongRunningService {
   private val web3j = Web3j.build(
     HttpService(
       config.l1RpcEndpoint.toString(),
-      okHttpClientBuilder(LogManager.getLogger("clients.l1")).build()
-    )
+      okHttpClientBuilder(LogManager.getLogger("clients.l1")).build(),
+    ),
   )
   private val lineaRollup = Web3JLineaRollupSmartContractClientReadOnly(
     contractAddress = config.l1SmartContractAddress.toHexString(),
-    web3j = web3j
+    web3j = web3j,
   )
   private val updater = LineaL1FinalizationUpdater(engineBlockTagUpdater)
   private val poller = FinalizationUpdatePoller(
     vertx,
     FinalizationUpdatePollerConfig(
       pollingInterval = config.l1PollingInterval,
-      blockTag = BlockParameter.Tag.FINALIZED
+      blockTag = BlockParameter.Tag.FINALIZED,
     ),
     lineaRollup,
     updater::handleL1Finalization,
-    LogManager.getLogger(FinalizationUpdatePoller::class.java)
+    LogManager.getLogger(FinalizationUpdatePoller::class.java),
   )
 
   override fun start(): CompletableFuture<Unit> {

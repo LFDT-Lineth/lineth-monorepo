@@ -8,7 +8,7 @@ import java.util.function.Supplier
 
 class ConsecutiveProvenBlobsProviderWithLastEndBlockNumberTracker(
   private val repository: AggregationsRepository,
-  initialBlockNumber: ULong
+  initialBlockNumber: ULong,
 ) : ConsecutiveProvenBlobsProvider, Supplier<Number> {
   private val cache = AtomicReference(initialBlockNumber)
 

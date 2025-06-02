@@ -6,7 +6,7 @@ typealias TracesFileNameSupplier = (
   blockNumber: ULong,
   blockHash: Bytes32,
   tracesEngineVersion: String,
-  tracesFileExtension: String
+  tracesFileExtension: String,
 ) -> String
 
 object TracesFiles {
@@ -14,7 +14,7 @@ object TracesFiles {
     blockNumber: ULong,
     blockHash: Bytes32,
     tracesEngineVersion: String,
-    tracesFileExtension: String
+    tracesFileExtension: String,
   ): String {
     return "$blockNumber-${blockHash.toHexString().lowercase()}.v$tracesEngineVersion.$tracesFileExtension"
   }

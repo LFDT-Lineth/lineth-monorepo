@@ -29,7 +29,7 @@ class FileWriterTest {
     val text = mapper.readValue(result.toFile(), String::class.java)
     Assertions.assertEquals(
       data,
-      text
+      text,
     )
   }
 
@@ -42,7 +42,7 @@ class FileWriterTest {
     val text = mapper.readValue(result.toFile(), String::class.java)
     Assertions.assertEquals(
       data,
-      text
+      text,
     )
   }
 }

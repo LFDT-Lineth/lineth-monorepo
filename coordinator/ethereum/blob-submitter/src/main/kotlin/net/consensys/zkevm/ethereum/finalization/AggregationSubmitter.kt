@@ -23,7 +23,7 @@ interface AggregationSubmitter {
     aggregationEndBlob: BlobRecord,
     parentShnarf: ByteArray,
     parentL1RollingHash: ByteArray,
-    parentL1RollingHashMessageNumber: Long
+    parentL1RollingHashMessageNumber: Long,
   ): SafeFuture<String?>
 }
 
@@ -32,7 +32,7 @@ class AggregationSubmitterImpl(
   private val gasPriceCapProvider: GasPriceCapProvider?,
   private val aggregationSubmittedEventConsumer: Consumer<FinalizationSubmittedEvent> =
     Consumer<FinalizationSubmittedEvent> { },
-  private val clock: Clock = Clock.System
+  private val clock: Clock = Clock.System,
 ) : AggregationSubmitter {
   private val log = LogManager.getLogger(this::class.java)
 
@@ -41,7 +41,7 @@ class AggregationSubmitterImpl(
     aggregationEndBlob: BlobRecord,
     parentShnarf: ByteArray,
     parentL1RollingHash: ByteArray,
-    parentL1RollingHashMessageNumber: Long
+    parentL1RollingHashMessageNumber: Long,
   ): SafeFuture<String?> {
     log.debug("submitting aggregation={}", aggregationProof.intervalString())
     return (
@@ -54,14 +54,14 @@ class AggregationSubmitterImpl(
         aggregationLastBlob = aggregationEndBlob,
         parentL1RollingHash = parentL1RollingHash,
         parentL1RollingHashMessageNumber = parentL1RollingHashMessageNumber,
-        gasPriceCaps = gasPriceCaps
+        gasPriceCaps = gasPriceCaps,
       ).thenPeek { transactionHash ->
         log.info(
           "submitted aggregation={} transactionHash={} nonce={} gasPriceCaps={}",
           aggregationProof.intervalString(),
           transactionHash,
           nonce,
-          gasPriceCaps
+          gasPriceCaps,
         )
         val aggregationSubmittedEvent = FinalizationSubmittedEvent(
           aggregationProof = aggregationProof,
@@ -69,7 +69,7 @@ class AggregationSubmitterImpl(
           parentL1RollingHash = parentL1RollingHash,
           parentL1RollingHashMessageNumber = parentL1RollingHashMessageNumber,
           submissionTimestamp = clock.now(),
-          transactionHash = transactionHash.toByteArray()
+          transactionHash = transactionHash.toByteArray(),
         )
         aggregationSubmittedEventConsumer.accept(aggregationSubmittedEvent)
       }
@@ -81,14 +81,14 @@ class AggregationSubmitterImpl(
   private fun logAggregationSubmissionError(
     intervalString: String,
     error: Throwable,
-    isEthCall: Boolean = error.cause is ContractCallException
+    isEthCall: Boolean = error.cause is ContractCallException,
   ) {
     logSubmissionError(
       log,
       "{} for aggregation finalization failed: aggregation={} errorMessage={}",
       intervalString,
       error,
-      isEthCall
+      isEthCall,
     )
   }
 }

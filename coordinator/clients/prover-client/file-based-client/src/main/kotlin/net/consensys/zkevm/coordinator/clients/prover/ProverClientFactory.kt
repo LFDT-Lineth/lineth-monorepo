@@ -13,7 +13,7 @@ import net.consensys.zkevm.coordinator.clients.ProverClient
 class ProverClientFactory(
   private val vertx: Vertx,
   private val config: ProversConfig,
-  metricsFacade: MetricsFacade
+  metricsFacade: MetricsFacade,
 ) {
   private val executionWaitingResponsesMetric = GaugeAggregator()
   private val blobWaitingResponsesMetric = GaugeAggregator()
@@ -24,37 +24,37 @@ class ProverClientFactory(
       category = LineaMetricsCategory.BATCH,
       name = "prover.waiting",
       description = "Number of execution proof waiting responses",
-      measurementSupplier = executionWaitingResponsesMetric
+      measurementSupplier = executionWaitingResponsesMetric,
     )
     metricsFacade.createGauge(
       category = LineaMetricsCategory.BLOB,
       name = "prover.waiting",
       description = "Number of blob compression proof waiting responses",
-      measurementSupplier = blobWaitingResponsesMetric
+      measurementSupplier = blobWaitingResponsesMetric,
 
     )
     metricsFacade.createGauge(
       category = LineaMetricsCategory.AGGREGATION,
       name = "prover.waiting",
       description = "Number of aggregation proof waiting responses",
-      measurementSupplier = aggregationWaitingResponsesMetric
+      measurementSupplier = aggregationWaitingResponsesMetric,
     )
   }
 
   fun executionProverClient(
     tracesVersion: String,
-    stateManagerVersion: String
+    stateManagerVersion: String,
   ): ExecutionProverClientV2 {
     return createClient(
       proverAConfig = config.proverA.execution,
       proverBConfig = config.proverB?.execution,
-      switchBlockNumberInclusive = config.switchBlockNumberInclusive
+      switchBlockNumberInclusive = config.switchBlockNumberInclusive,
     ) { proverConfig ->
       FileBasedExecutionProverClientV2(
         config = proverConfig,
         vertx = vertx,
         tracesVersion = tracesVersion,
-        stateManagerVersion = stateManagerVersion
+        stateManagerVersion = stateManagerVersion,
       ).also { executionWaitingResponsesMetric.addReporter(it) }
     }
   }
@@ -63,11 +63,11 @@ class ProverClientFactory(
     return createClient(
       proverAConfig = config.proverA.blobCompression,
       proverBConfig = config.proverB?.blobCompression,
-      switchBlockNumberInclusive = config.switchBlockNumberInclusive
+      switchBlockNumberInclusive = config.switchBlockNumberInclusive,
     ) { proverConfig ->
       FileBasedBlobCompressionProverClientV2(
         config = proverConfig,
-        vertx = vertx
+        vertx = vertx,
       ).also { blobWaitingResponsesMetric.addReporter(it) }
     }
   }
@@ -76,11 +76,11 @@ class ProverClientFactory(
     return createClient(
       proverAConfig = config.proverA.proofAggregation,
       proverBConfig = config.proverB?.proofAggregation,
-      switchBlockNumberInclusive = config.switchBlockNumberInclusive
+      switchBlockNumberInclusive = config.switchBlockNumberInclusive,
     ) { proverConfig ->
       FileBasedProofAggregationClientV2(
         config = proverConfig,
-        vertx = vertx
+        vertx = vertx,
       ).also { aggregationWaitingResponsesMetric.addReporter(it) }
     }
   }
@@ -89,7 +89,7 @@ class ProverClientFactory(
     proverAConfig: FileBasedProverConfig,
     proverBConfig: FileBasedProverConfig?,
     switchBlockNumberInclusive: ULong?,
-    clientBuilder: (FileBasedProverConfig) -> ProverClient<ProofRequest, ProofResponse>
+    clientBuilder: (FileBasedProverConfig) -> ProverClient<ProofRequest, ProofResponse>,
   ): ProverClient<ProofRequest, ProofResponse>
     where ProofRequest : BlockInterval {
     return if (switchBlockNumberInclusive != null) {
@@ -97,7 +97,7 @@ class ProverClientFactory(
       ABProverClientRouter(
         proverA = clientBuilder(proverAConfig),
         proverB = clientBuilder(proverBConfig!!),
-        switchToProverBPredicate = switchPredicate::invoke
+        switchToProverBPredicate = switchPredicate::invoke,
       )
     } else {
       clientBuilder(proverAConfig)

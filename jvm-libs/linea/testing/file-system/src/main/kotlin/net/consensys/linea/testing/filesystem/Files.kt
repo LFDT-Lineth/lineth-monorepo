@@ -12,7 +12,7 @@ import java.nio.file.Paths
 fun findPathTo(
   targetFileOrDir: String,
   lookupDir: Path = Paths.get("").toAbsolutePath(),
-  lookupParentDir: Boolean = true
+  lookupParentDir: Boolean = true,
 ): Path? {
   var current: Path = lookupDir
   var keepSearching = true
@@ -36,7 +36,7 @@ fun findPathTo(
 fun getPathTo(
   targetFileOrDir: String,
   lookupDir: Path = Paths.get("").toAbsolutePath(),
-  lookupParentDir: Boolean = true
+  lookupParentDir: Boolean = true,
 ): Path {
   return findPathTo(targetFileOrDir, lookupDir, lookupParentDir)
     ?: throw IllegalArgumentException("Could not find $targetFileOrDir in path: $lookupDir or its parent directories")

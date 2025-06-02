@@ -5,7 +5,7 @@ import linea.domain.BlockParameter
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 enum class L2MessageServiceSmartContractVersion : Comparable<L2MessageServiceSmartContractVersion> {
-  V1 // initial version
+  V1, // initial version
 }
 
 interface L2MessageServiceSmartContractClientReadOnly : ContractVersionProvider<L2MessageServiceSmartContractVersion> {
@@ -14,7 +14,7 @@ interface L2MessageServiceSmartContractClientReadOnly : ContractVersionProvider<
   fun getLastAnchoredL1MessageNumber(block: BlockParameter): SafeFuture<ULong>
   fun getRollingHashByL1MessageNumber(
     block: BlockParameter,
-    l1MessageNumber: ULong
+    l1MessageNumber: ULong,
   ): SafeFuture<ByteArray>
 }
 
@@ -45,6 +45,6 @@ interface L2MessageServiceSmartContractClient : L2MessageServiceSmartContractCli
     messageHashes: List<ByteArray>,
     startingMessageNumber: ULong,
     finalMessageNumber: ULong,
-    finalRollingHash: ByteArray
+    finalRollingHash: ByteArray,
   ): SafeFuture<String>
 }

@@ -8,7 +8,7 @@ import kotlin.random.Random
 class FakeL2MessageService(
   val contractAddress: String = Random.nextBytes(20).encodeHex(),
   val contractDeployBlock: ULong = 0uL,
-  var contractVersion: L2MessageServiceSmartContractVersion = L2MessageServiceSmartContractVersion.V1
+  var contractVersion: L2MessageServiceSmartContractVersion = L2MessageServiceSmartContractVersion.V1,
 ) : L2MessageServiceSmartContractClient {
   private val anchoredMessageHashes: MutableList<ByteArray> = mutableListOf()
   private val anchoredMessageRollingHashes: MutableMap<ULong, ByteArray> = mutableMapOf()
@@ -29,7 +29,7 @@ class FakeL2MessageService(
   @Synchronized
   fun setLastAnchoredL1Message(
     l1MessageNumber: ULong,
-    rollingHash: ByteArray
+    rollingHash: ByteArray,
   ) {
     this.anchoredMessageRollingHashes[l1MessageNumber] = rollingHash
     this.lastAnchoredL1MessageNumber = l1MessageNumber
@@ -41,7 +41,7 @@ class FakeL2MessageService(
     messageHashes: List<ByteArray>,
     startingMessageNumber: ULong,
     finalMessageNumber: ULong,
-    finalRollingHash: ByteArray
+    finalRollingHash: ByteArray,
   ): SafeFuture<String> {
     require(startingMessageNumber == lastAnchoredL1MessageNumber + 1UL) {
       "startingMessageNumber=$startingMessageNumber must be equal to " +

@@ -9,7 +9,7 @@ import net.consensys.linea.traces.TracesCounters
 
 data class BlocksConflation(
   val blocks: List<Block>,
-  val conflationResult: ConflationCalculationResult
+  val conflationResult: ConflationCalculationResult,
 ) : BlockInterval {
   init {
     require(blocks.isSortedBy { it.number }) { "Blocks list must be sorted by blockNumber" }
@@ -23,7 +23,7 @@ data class BlocksConflation(
 
 data class Batch(
   val startBlockNumber: ULong,
-  val endBlockNumber: ULong
+  val endBlockNumber: ULong,
 ) {
   init {
     require(startBlockNumber <= endBlockNumber) {
@@ -33,7 +33,7 @@ data class Batch(
 
   enum class Status {
     Finalized, // Batch is finalized on L1
-    Proven // Batch is ready to be sent to L1 to be finalized
+    Proven, // Batch is ready to be sent to L1 to be finalized
   }
 
   fun intervalString(): String =
@@ -52,14 +52,14 @@ enum class ConflationTrigger(val triggerPriority: Int) {
   TRACES_LIMIT(3),
   TIME_LIMIT(4),
   BLOCKS_LIMIT(5),
-  SWITCH_CUTOFF(6)
+  SWITCH_CUTOFF(6),
 }
 
 data class ConflationCalculationResult(
   override val startBlockNumber: ULong,
   override val endBlockNumber: ULong,
   val conflationTrigger: ConflationTrigger,
-  val tracesCounters: TracesCounters
+  val tracesCounters: TracesCounters,
 ) : BlockInterval {
   init {
     require(startBlockNumber <= endBlockNumber) {
@@ -74,7 +74,7 @@ data class BlockCounters(
   val tracesCounters: TracesCounters,
   val blockRLPEncoded: ByteArray,
   val numOfTransactions: UInt = 0u,
-  val gasUsed: ULong = 0uL
+  val gasUsed: ULong = 0uL,
 ) {
 
   override fun toString(): String {

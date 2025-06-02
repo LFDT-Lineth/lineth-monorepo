@@ -18,7 +18,7 @@ import java.util.concurrent.ConcurrentHashMap
 
 open class FakeStateManagerClient(
   _blocksStateRootHashes: Map<ULong, ByteArray> = emptyMap(),
-  var headBlockNumber: ULong = _blocksStateRootHashes.keys.maxOrNull() ?: 0UL
+  var headBlockNumber: ULong = _blocksStateRootHashes.keys.maxOrNull() ?: 0UL,
 ) : StateManagerClientV1 {
   open val blocksStateRootHashes: MutableMap<ULong, ByteArray> =
     ConcurrentHashMap<ULong, ByteArray>(_blocksStateRootHashes)
@@ -33,8 +33,8 @@ open class FakeStateManagerClient(
       ?.let { SafeFuture.completedFuture(it) }
       ?: SafeFuture.failedFuture(
         RuntimeException(
-          "StateRootHash not found for block=$blockNumber. available blocks: ${blocksStateRootHashes.keys}"
-        )
+          "StateRootHash not found for block=$blockNumber. available blocks: ${blocksStateRootHashes.keys}",
+        ),
       )
   }
 
@@ -43,7 +43,7 @@ open class FakeStateManagerClient(
   }
 
   override fun rollupGetStateMerkleProofWithTypedError(
-    blockInterval: BlockInterval
+    blockInterval: BlockInterval,
   ): SafeFuture<Result<GetZkEVMStateMerkleProofResponse, ErrorResponse<StateManagerErrorType>>> {
     // For state recovery, we just need the endStateRootHash
     return getStateRootHash(blockInterval.endBlockNumber)
@@ -53,26 +53,26 @@ open class FakeStateManagerClient(
             zkStateMerkleProof = ArrayNode(null),
             zkParentStateRootHash = ByteArray(32),
             zkEndStateRootHash = stateRootHash,
-            zkStateManagerVersion = "fake-version"
-          )
+            zkStateManagerVersion = "fake-version",
+          ),
         )
       }
   }
 }
 
 class FakeStateManagerClientBasedOnBlobsRecords(
-  val blobRecords: List<BlobRecord>
+  val blobRecords: List<BlobRecord>,
 ) : FakeStateManagerClient(
   _blocksStateRootHashes = blobRecords
-    .associate { it.endBlockNumber to it.blobCompressionProof!!.finalStateRootHash }
+    .associate { it.endBlockNumber to it.blobCompressionProof!!.finalStateRootHash },
 )
 
 class FakeStateManagerClientReadFromL1(
   headBlockNumber: ULong,
   val logsSearcher: EthLogsSearcher,
-  val contractAddress: String
+  val contractAddress: String,
 ) : FakeStateManagerClient(
-  headBlockNumber = headBlockNumber
+  headBlockNumber = headBlockNumber,
 ) {
 
   override fun getStateRootHash(blockNumber: ULong): SafeFuture<ByteArray> {
@@ -87,8 +87,8 @@ class FakeStateManagerClientReadFromL1(
             topics = listOf(
               DataFinalizedV3.topic,
               null,
-              blockNumber.toHexStringUInt256()
-            )
+              blockNumber.toHexStringUInt256(),
+            ),
           ).thenApply { logs ->
             logs.firstOrNull()?.let { finalizationLog ->
               DataFinalizedV3.fromEthLog(finalizationLog).event.finalStateRootHash

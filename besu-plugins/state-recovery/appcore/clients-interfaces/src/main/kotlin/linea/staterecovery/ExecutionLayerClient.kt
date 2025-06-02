@@ -6,7 +6,7 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 data class StateRecoveryStatus(
   val headBlockNumber: ULong,
-  val stateRecoverStartBlockNumber: ULong?
+  val stateRecoverStartBlockNumber: ULong?,
 )
 interface ExecutionLayerClient {
   fun getBlockNumberAndHash(blockParameter: BlockParameter): SafeFuture<BlockNumberAndHash>

@@ -26,7 +26,7 @@ class ObservabilityServer(private val config: Config) : AbstractVerticle() {
     val healthPath: String = "/health",
     val metricsHandler: Handler<RoutingContext> = PrometheusScrapingHandler.create(),
     val readinessSupplier: (() -> Boolean) = { true },
-    val healthCheckHandler: HealthCheckHandler? = null
+    val healthCheckHandler: HealthCheckHandler? = null,
   )
 
   private var actualPort: Int? = null

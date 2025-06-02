@@ -10,7 +10,7 @@ data class Blob(
   val conflations: List<ConflationCalculationResult>,
   val compressedData: ByteArray,
   val startBlockTime: Instant,
-  val endBlockTime: Instant
+  val endBlockTime: Instant,
 ) : BlockInterval {
 
   override val startBlockNumber: ULong
@@ -70,7 +70,7 @@ data class Blob(
 
 data class BlobAndBatchCounters(
   val blobCounters: BlobCounters,
-  val executionProofs: BlockIntervals
+  val executionProofs: BlockIntervals,
 )
 data class BlobCounters(
   val numberOfBatches: UInt,
@@ -78,7 +78,7 @@ data class BlobCounters(
   override val endBlockNumber: ULong,
   val startBlockTimestamp: Instant,
   val endBlockTimestamp: Instant,
-  val expectedShnarf: ByteArray
+  val expectedShnarf: ByteArray,
 ) : BlockInterval {
   companion object {
     fun areAllConsecutive(blobs: List<BlobCounters>): Boolean {
@@ -124,7 +124,7 @@ data class BlobRecord(
   val batchesCount: UInt,
   val expectedShnarf: ByteArray,
   // Unproven records will have null here
-  val blobCompressionProof: BlobCompressionProof? = null
+  val blobCompressionProof: BlobCompressionProof? = null,
 ) : BlockInterval {
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
@@ -160,7 +160,7 @@ data class BlobRecord(
 
 enum class BlobStatus {
   COMPRESSION_PROVING,
-  COMPRESSION_PROVEN
+  COMPRESSION_PROVEN,
 }
 
 data class BlobSubmittedEvent(
@@ -168,7 +168,7 @@ data class BlobSubmittedEvent(
   val endBlockTime: Instant,
   val lastShnarf: ByteArray,
   val submissionTimestamp: Instant,
-  val transactionHash: ByteArray
+  val transactionHash: ByteArray,
 ) {
   fun getSubmissionDelay(): Long {
     return submissionTimestamp.minus(endBlockTime).inWholeSeconds

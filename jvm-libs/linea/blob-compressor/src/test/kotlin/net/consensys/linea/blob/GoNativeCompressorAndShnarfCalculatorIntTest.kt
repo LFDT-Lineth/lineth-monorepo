@@ -116,7 +116,7 @@ class GoNativeCompressorAndShnarfCalculatorIntTest {
 
   fun testsCompressionAndsShnarfCalculationWithEip4844Disabled(
     compressor: GoNativeBlobCompressor,
-    shnarfCalculator: GoNativeBlobShnarfCalculator
+    shnarfCalculator: GoNativeBlobShnarfCalculator,
   ) {
     testsCompressionAndsShnarfCalculation(compressor, shnarfCalculator, false) { result ->
       assertThat(result.commitment.decodeHex()).hasSize(0)
@@ -129,7 +129,7 @@ class GoNativeCompressorAndShnarfCalculatorIntTest {
 
   fun testsCompressionAndsShnarfCalculationWithEip4844Enabled(
     compressor: GoNativeBlobCompressor,
-    shnarfCalculator: GoNativeBlobShnarfCalculator
+    shnarfCalculator: GoNativeBlobShnarfCalculator,
   ) {
     testsCompressionAndsShnarfCalculation(compressor, shnarfCalculator, true) { result ->
       assertThat(result.commitment.decodeHex()).hasSize(48)
@@ -144,7 +144,7 @@ class GoNativeCompressorAndShnarfCalculatorIntTest {
     compressor: GoNativeBlobCompressor,
     shnarfCalculator: GoNativeBlobShnarfCalculator,
     eip4844Enabled: Boolean,
-    resultAsserterFn: (CalculateShnarfResult) -> Unit
+    resultAsserterFn: (CalculateShnarfResult) -> Unit,
   ) {
     val block = CompressorTestData.blocksRlpEncoded.first()
     assertTrue(compressor.Write(block, block.size))
@@ -161,7 +161,7 @@ class GoNativeCompressorAndShnarfCalculatorIntTest {
       prevShnarf = Random.nextBytes(32).encodeHex(),
       conflationOrderStartingBlockNumber = 1,
       conflationOrderUpperBoundariesLen = 2,
-      conflationOrderUpperBoundaries = longArrayOf(10, 20)
+      conflationOrderUpperBoundaries = longArrayOf(10, 20),
     )
     assertThat(result).isNotNull
     assertThat(result.errorMessage).isEmpty()

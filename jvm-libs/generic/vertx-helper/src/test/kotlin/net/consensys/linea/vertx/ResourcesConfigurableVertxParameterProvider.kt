@@ -23,7 +23,7 @@ class ResourcesConfigurableVertxParameterProvider : VertxParameterProvider() {
         "Failure when reading Vert.x options file {} from property {}, will use default options",
         optionFileName,
         VERTX_PARAMETER_FILENAME_SYS_PROP,
-        e
+        e,
       )
       return JsonObject()
     }

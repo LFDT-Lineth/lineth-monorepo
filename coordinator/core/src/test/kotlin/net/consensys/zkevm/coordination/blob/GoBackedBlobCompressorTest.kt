@@ -25,7 +25,7 @@ class GoBackedBlobCompressorTest {
     private val compressor = GoBackedBlobCompressor.getInstance(
       BlobCompressorVersion.V1_2,
       DATA_LIMIT.toUInt(),
-      metricsFacade
+      metricsFacade,
     )
     private fun loadTestData(): Array<ByteArray> {
       val data = GoBackedBlobCompressorTest::class.java.getResourceAsStream("rlp_blocks.bin")!!.readAllBytes()

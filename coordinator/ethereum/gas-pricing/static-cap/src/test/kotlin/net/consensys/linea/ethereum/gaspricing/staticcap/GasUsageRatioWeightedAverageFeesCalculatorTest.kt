@@ -10,7 +10,7 @@ class GasUsageRatioWeightedAverageFeesCalculatorTest {
     priorityFeeCoefficient = 1.2,
     baseFeeBlobCoefficient = 0.1,
     blobSubmissionExpectedExecutionGas = 120_000,
-    expectedBlobGas = 131_000
+    expectedBlobGas = 131_000,
   )
   private val feesCalculator = GasUsageRatioWeightedAverageFeesCalculator(config)
 
@@ -22,7 +22,7 @@ class GasUsageRatioWeightedAverageFeesCalculatorTest {
       reward = listOf(1000).map { listOf(it.toULong()) },
       gasUsedRatio = listOf(0.25),
       baseFeePerBlobGas = listOf(100, 110).map { it.toULong() },
-      blobGasUsedRatio = listOf(0.16)
+      blobGasUsedRatio = listOf(0.16),
     )
     // (100*0.1 + 1000*1.2)*0.25/0.25 = 1210
     // ((100*0.1)*0.16)/0.16 * (131000.0 / 120000.0) = 10.9166666
@@ -41,7 +41,7 @@ class GasUsageRatioWeightedAverageFeesCalculatorTest {
       reward = listOf(1000).map { listOf(it.toULong()) },
       gasUsedRatio = listOf(0.0),
       baseFeePerBlobGas = listOf(100, 110).map { it.toULong() },
-      blobGasUsedRatio = listOf(0.0)
+      blobGasUsedRatio = listOf(0.0),
     )
     // (100*0.1 + 1000*1.2) = 1210
     // (((100*0.1) * 0.5) / 0.5 ) * (131000.0 / 120000.0) = 10.9166666
@@ -62,15 +62,15 @@ class GasUsageRatioWeightedAverageFeesCalculatorTest {
         0.25,
         0.5,
         0.75,
-        0.9
+        0.9,
       ),
       baseFeePerBlobGas = listOf(100, 110, 120, 130, 140).map { it.toULong() },
       blobGasUsedRatio = listOf(
         0.16,
         0.5,
         0.66,
-        0.83
-      )
+        0.83,
+      ),
     )
 
     // Weighted Average:
@@ -90,15 +90,15 @@ class GasUsageRatioWeightedAverageFeesCalculatorTest {
         0.5,
         0.5,
         0.5,
-        0.5
+        0.5,
       ),
       baseFeePerBlobGas = listOf(100, 110, 120, 130, 140).map { it.toULong() },
       blobGasUsedRatio = listOf(
         0.5,
         0.5,
         0.5,
-        0.5
-      )
+        0.5,
+      ),
     )
 
     // Simple Average:
@@ -118,15 +118,15 @@ class GasUsageRatioWeightedAverageFeesCalculatorTest {
         0.0,
         0.0,
         0.0,
-        0.0
+        0.0,
       ),
       baseFeePerBlobGas = listOf(100, 110, 120, 130, 140).map { it.toULong() },
       blobGasUsedRatio = listOf(
         0.0,
         0.0,
         0.0,
-        0.0
-      )
+        0.0,
+      ),
     )
 
     // Simple Average:
@@ -146,15 +146,15 @@ class GasUsageRatioWeightedAverageFeesCalculatorTest {
         0.0,
         0.0,
         0.0,
-        0.0
+        0.0,
       ),
       baseFeePerBlobGas = listOf(100, 110, 120, 130, 140).map { it.toULong() },
       blobGasUsedRatio = listOf(
         0.0,
         0.0,
         0.0,
-        0.0
-      )
+        0.0,
+      ),
     )
 
     // Simple Average:
@@ -174,10 +174,10 @@ class GasUsageRatioWeightedAverageFeesCalculatorTest {
         0.25,
         0.5,
         0.75,
-        0.9
+        0.9,
       ),
       baseFeePerBlobGas = emptyList(),
-      blobGasUsedRatio = emptyList()
+      blobGasUsedRatio = emptyList(),
     )
 
     // Weighted Average:
@@ -198,15 +198,15 @@ class GasUsageRatioWeightedAverageFeesCalculatorTest {
         0.75,
         0.0,
         0.75,
-        0.0
+        0.0,
       ),
       baseFeePerBlobGas = listOf(100, 110, 120, 130, 140).map { it.toULong() },
       blobGasUsedRatio = listOf(
         0.83,
         0.0,
         0.83,
-        0.0
-      )
+        0.0,
+      ),
     )
 
     // Weighted Average:

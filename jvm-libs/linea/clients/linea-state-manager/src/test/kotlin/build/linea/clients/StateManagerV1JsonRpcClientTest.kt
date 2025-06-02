@@ -46,8 +46,8 @@ class StateManagerV1JsonRpcClientTest {
         .willReturn(
           ok()
             .withHeader("Content-type", "application/json")
-            .withBody(response.toByteArray())
-        )
+            .withBody(response.toByteArray()),
+        ),
     )
   }
 
@@ -65,9 +65,9 @@ class StateManagerV1JsonRpcClientTest {
         maxRetries = 2u,
         timeout = 2.seconds,
         10.milliseconds,
-        1u
+        1u,
       ),
-      zkStateManagerVersion = "0.1.2"
+      zkStateManagerVersion = "0.1.2",
     )
   }
 
@@ -99,7 +99,7 @@ class StateManagerV1JsonRpcClientTest {
           "zkStateManagerVersion": "$zkStateManagerVersion"
         }
       }
-    """
+    """,
     )
 
     assertThat(stateManagerClient.rollupGetStateMerkleProofWithTypedError(BlockInterval(50UL, 100UL)))
@@ -110,9 +110,9 @@ class StateManagerV1JsonRpcClientTest {
             zkStateManagerVersion = zkStateManagerVersion,
             zkStateMerkleProof = zkStateMerkleProof,
             zkParentStateRootHash = zkParentStateRootHash.decodeHex(),
-            zkEndStateRootHash = zkEndStateRootHash.decodeHex()
-          )
-        )
+            zkEndStateRootHash = zkEndStateRootHash.decodeHex(),
+          ),
+        ),
       )
   }
 
@@ -127,7 +127,7 @@ class StateManagerV1JsonRpcClientTest {
           "code":"-32600",
           "message":"BLOCK_MISSING_IN_CHAIN - block 1 is missing"
          }
-      }"""
+      }""",
     )
 
     assertThat(stateManagerClient.rollupGetStateMerkleProofWithTypedError(BlockInterval(50UL, 100UL)))
@@ -136,9 +136,9 @@ class StateManagerV1JsonRpcClientTest {
         Err(
           ErrorResponse(
             StateManagerErrorType.BLOCK_MISSING_IN_CHAIN,
-            "BLOCK_MISSING_IN_CHAIN - block 1 is missing"
-          )
-        )
+            "BLOCK_MISSING_IN_CHAIN - block 1 is missing",
+          ),
+        ),
       )
   }
 
@@ -166,9 +166,9 @@ class StateManagerV1JsonRpcClientTest {
         Err(
           ErrorResponse(
             StateManagerErrorType.UNSUPPORTED_VERSION,
-            "UNSUPPORTED_VERSION: {requestedVersion=0.1.2, supportedVersion=0.0.1-dev-3e607237}"
-          )
-        )
+            "UNSUPPORTED_VERSION: {requestedVersion=0.1.2, supportedVersion=0.0.1-dev-3e607237}",
+          ),
+        ),
       )
   }
 
@@ -184,13 +184,13 @@ class StateManagerV1JsonRpcClientTest {
           "message":"BRA_BRA_BRA_SOME_UNKNOWN_ERROR",
           "data": {"xyz": "1234", "abc": 100}
          }
-      }"""
+      }""",
     )
 
     assertThat(stateManagerClient.rollupGetStateMerkleProofWithTypedError(BlockInterval(50L, 100L)))
       .succeedsWithin(5.seconds.toJavaDuration())
       .isEqualTo(
-        Err(ErrorResponse(StateManagerErrorType.UNKNOWN, """BRA_BRA_BRA_SOME_UNKNOWN_ERROR: {xyz=1234, abc=100}"""))
+        Err(ErrorResponse(StateManagerErrorType.UNKNOWN, """BRA_BRA_BRA_SOME_UNKNOWN_ERROR: {xyz=1234, abc=100}""")),
       )
   }
 

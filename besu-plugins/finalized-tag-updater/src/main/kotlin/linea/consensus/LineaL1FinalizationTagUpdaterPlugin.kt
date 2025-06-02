@@ -29,7 +29,7 @@ class LineaL1FinalizationTagUpdaterPlugin : BesuPlugin {
     service = LineaL1FinalizationUpdaterService(
       vertx,
       cliOptions.getConfig(),
-      LineaBesuEngineBlockTagUpdater(blockchainService)
+      LineaBesuEngineBlockTagUpdater(blockchainService),
     )
     service.start()
   }

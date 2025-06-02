@@ -42,23 +42,23 @@ class TransactionExclusionAppTest : CleanDbTestSuiteParallel() {
       host = "localhost",
       port = 5432,
       username = "postgres",
-      password = Masked("postgres")
+      password = Masked("postgres"),
     ),
     write = DbConnectionConfig(
       host = "localhost",
       port = 5432,
       username = "postgres",
-      password = Masked("postgres")
+      password = Masked("postgres"),
     ),
     cleanup = DbCleanupConfig(
       pollingInterval = Duration.parse("PT60S"),
-      storagePeriod = Duration.parse("P7D")
+      storagePeriod = Duration.parse("P7D"),
     ),
     persistenceRetry = PersistenceRetryConfig(
       backoffDelay = Duration.parse("PT5S"),
-      timeout = Duration.parse("PT20S")
+      timeout = Duration.parse("PT20S"),
     ),
-    schema = databaseName
+    schema = databaseName,
   )
 
   private lateinit var requestSpecification: RequestSpecification
@@ -71,11 +71,11 @@ class TransactionExclusionAppTest : CleanDbTestSuiteParallel() {
         api = ApiConfig(
           port = 0, // port will be assigned under os
           observabilityPort = 0, // port will be assigned under os
-          numberOfVerticles = 1
+          numberOfVerticles = 1,
         ),
         database = dbConfig,
-        dataQueryableWindowSinceRejectedTimestamp = Duration.parse("P7D")
-      )
+        dataQueryableWindowSinceRejectedTimestamp = Duration.parse("P7D"),
+      ),
     )
     app.start().get()
 
@@ -128,7 +128,7 @@ class TransactionExclusionAppTest : CleanDbTestSuiteParallel() {
           "jsonrpc": "2.0",
           "id": 123,
           "result": {"status":"SAVED","txHash":"0x526e56101cf39c1e717cef9cedf6fdddb42684711abda35bae51136dbb350ad7"}
-        }"""
+        }""",
       )
   }
 
@@ -168,7 +168,7 @@ class TransactionExclusionAppTest : CleanDbTestSuiteParallel() {
           "jsonrpc": "2.0",
           "id": 124,
           "result": {"status":"SAVED","txHash":"0x526e56101cf39c1e717cef9cedf6fdddb42684711abda35bae51136dbb350ad7"}
-        }"""
+        }""",
       )
 
     // Send the get request for the rejected transaction
@@ -195,7 +195,7 @@ class TransactionExclusionAppTest : CleanDbTestSuiteParallel() {
             "timestamp": "$rejectionTimeStamp",
             "blockNumber": "0x2710"
           }
-        }"""
+        }""",
       )
   }
 
@@ -229,7 +229,7 @@ class TransactionExclusionAppTest : CleanDbTestSuiteParallel() {
           "jsonrpc": "2.0",
           "id": 124,
           "result": {"status":"SAVED","txHash":"0x583eb047887cc72f93ead08f389a2cd84440f3322bc4b191803d5adb0a167525"}
-        }"""
+        }""",
       )
 
     // Send the get request for the rejected contract deployment tx
@@ -255,7 +255,7 @@ class TransactionExclusionAppTest : CleanDbTestSuiteParallel() {
             "reasonMessage": "Transaction 0x583eb047887cc72f93ead08f389a2cd84440f3322bc4b191803d5adb0a167525 line count for module HUB=2119318 is above the limit 2097152",
             "timestamp": "$rejectionTimeStamp"
           }
-        }"""
+        }""",
       )
   }
 
@@ -294,7 +294,7 @@ class TransactionExclusionAppTest : CleanDbTestSuiteParallel() {
           "jsonrpc": "2.0",
           "id": 124,
           "result": {"status":"DUPLICATE_ALREADY_SAVED_BEFORE","txHash":"0x526e56101cf39c1e717cef9cedf6fdddb42684711abda35bae51136dbb350ad7"}
-        }"""
+        }""",
       )
   }
 
@@ -319,7 +319,7 @@ class TransactionExclusionAppTest : CleanDbTestSuiteParallel() {
           "jsonrpc": "2.0",
           "id": 124,
           "result": null
-        }"""
+        }""",
       )
   }
 
@@ -347,7 +347,7 @@ class TransactionExclusionAppTest : CleanDbTestSuiteParallel() {
             "code": -32602,
             "message": "Missing [timestamp,overflows] from the given request params"
           }
-        }"""
+        }""",
       )
   }
 }

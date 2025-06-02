@@ -54,7 +54,7 @@ class GoNativeBlobDecompressorTest {
       gasLimit = 22_0000uL,
       to = null,
       value = 1uL.eth.toBigInteger(),
-      input = byteArrayOf()
+      input = byteArrayOf(),
     )
     val tx1 = TransactionFactory.createTransactionEip1559(
       nonce = 123uL,
@@ -67,22 +67,22 @@ class GoNativeBlobDecompressorTest {
           address = "0x0000000000000000000000000000000000000001".decodeHex(),
           storageKeys = listOf(
             "0x0000000000000000000000000000000000000000000000000000000000000001".decodeHex(),
-            "0x0000000000000000000000000000000000000000000000000000000000000002".decodeHex()
-          )
+            "0x0000000000000000000000000000000000000000000000000000000000000002".decodeHex(),
+          ),
         ),
         AccessListEntry(
           address = "0x0000000000000000000000000000000000000002".decodeHex(),
           storageKeys = listOf(
             "0x0000000000000000000000000000000000000000000000000000000000000011".decodeHex(),
-            "0x0000000000000000000000000000000000000000000000000000000000000012".decodeHex()
-          )
-        )
-      )
+            "0x0000000000000000000000000000000000000000000000000000000000000012".decodeHex(),
+          ),
+        ),
+      ),
     )
     val originalBesuBlock = createBlock(
       number = 123uL,
       timestamp = Instant.parse("2025-01-02T12:23:45Z"),
-      transactions = listOf(tx0, tx1)
+      transactions = listOf(tx0, tx1),
     ).toBesu()
 
     compressor.appendBlock(RLP.encodeBlock(originalBesuBlock))

@@ -9,6 +9,6 @@ interface EthLogsClient {
     fromBlock: BlockParameter,
     toBlock: BlockParameter,
     address: String,
-    topics: List<String?>
+    topics: List<String?>,
   ): SafeFuture<List<EthLog>>
 }

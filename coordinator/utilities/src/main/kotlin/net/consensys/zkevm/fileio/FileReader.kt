@@ -16,11 +16,11 @@ import java.util.concurrent.Callable
 class FileReader<T> (
   private val vertx: Vertx,
   private val mapper: ObjectMapper,
-  private val classOfT: Class<T>
+  private val classOfT: Class<T>,
 ) {
 
   enum class ErrorType {
-    PARSING_ERROR
+    PARSING_ERROR,
   }
 
   fun read(filePath: Path): SafeFuture<Result<T, ErrorResponse<ErrorType>>> {
@@ -39,7 +39,7 @@ class FileReader<T> (
             }
           }
         },
-        false
+        false,
       )
       .toSafeFuture()
   }

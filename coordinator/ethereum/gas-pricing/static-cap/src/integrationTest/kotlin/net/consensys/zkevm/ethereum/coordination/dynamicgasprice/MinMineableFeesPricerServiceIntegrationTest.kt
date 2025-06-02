@@ -87,7 +87,7 @@ class MinMineableFeesPricerServiceIntegrationTest {
     BoundableFeeCalculator.Config(
       l2GasPriceUpperBound.toDouble(),
       l2GasPriceLowerBound.toDouble(),
-      l2GasPriceFixedCost
+      l2GasPriceFixedCost,
     ),
     GasUsageRatioWeightedAverageFeesCalculator(
       GasUsageRatioWeightedAverageFeesCalculator.Config(
@@ -95,9 +95,9 @@ class MinMineableFeesPricerServiceIntegrationTest {
         priorityFeeCoefficient = 0.1,
         baseFeeBlobCoefficient = 0.1,
         blobSubmissionExpectedExecutionGas = 131_000,
-        expectedBlobGas = 120_000
-      )
-    )
+        expectedBlobGas = 120_000,
+      ),
+    ),
   )
 
   companion object {
@@ -120,7 +120,7 @@ class MinMineableFeesPricerServiceIntegrationTest {
   @Timeout(5, timeUnit = TimeUnit.MINUTES)
   fun `miner set gas price are sent to recipients correctly and underpriced txn is pending`(
     vertx: Vertx,
-    testContext: VertxTestContext
+    testContext: VertxTestContext,
   ) {
     // we need this mocked web3j client because the gas fee history in layer 1 is full of zeros initially
     val l1Web3jClientMock = mock<Web3j>(defaultAnswer = Mockito.RETURNS_DEEP_STUBS)
@@ -128,7 +128,7 @@ class MinMineableFeesPricerServiceIntegrationTest {
     whenever(
       l1Web3jClientMock
         .ethBlockNumber()
-        .sendAsync()
+        .sendAsync(),
     )
       .thenAnswer {
         val l1Response = l1Web3jClient.ethBlockNumber().send()
@@ -143,9 +143,9 @@ class MinMineableFeesPricerServiceIntegrationTest {
         .ethFeeHistory(
           ArgumentMatchers.eq(feeHistoryBlockCount.toInt()),
           ArgumentMatchers.eq(DefaultBlockParameterName.LATEST),
-          ArgumentMatchers.eq(listOf(feeHistoryRewardPercentile))
+          ArgumentMatchers.eq(listOf(feeHistoryRewardPercentile)),
         )
-        .sendAsync()
+        .sendAsync(),
     )
       .thenAnswer {
         val lastFakeFeeHistory = buildFakeEthFeeHistory(
@@ -153,7 +153,7 @@ class MinMineableFeesPricerServiceIntegrationTest {
           initialReward,
           initialBaseFeePerGas = initialBaseFeePerGas.times(2u),
           initialGasUsedRatio,
-          feeHistoryBlockCount
+          feeHistoryBlockCount,
         )
         SafeFuture.completedFuture(lastFakeFeeHistory)
       }
@@ -161,7 +161,7 @@ class MinMineableFeesPricerServiceIntegrationTest {
     val dynamicGasPriceService = initialiseServices(
       vertx,
       l1Web3jClientMock,
-      initialBaseFeePerGas.div(10u)
+      initialBaseFeePerGas.div(10u),
     )
 
     dynamicGasPriceService.start()
@@ -182,12 +182,13 @@ class MinMineableFeesPricerServiceIntegrationTest {
             val sendResp = l2NodeTxManager.sendEIP1559Transaction(
               l2ChainId,
               setMineableGasPrice.subtract(BigInteger.valueOf(1)), // 1679999999
-              /*maxFeePerGas*/updatedL2NodeGasPrice, // 2520000001
+              /*maxFeePerGas*/
+              updatedL2NodeGasPrice, // 2520000001
               DefaultGasProvider().gasLimit,
               l2NodeTxManager.fromAddress,
               Bytes.random(32).toHexString(), // avoid tx already known error
               BigInteger.valueOf(1000),
-              false
+              false,
             )
             println("maxPriorityGasFee: ${setMineableGasPrice.subtract(BigInteger.valueOf(1))}")
             // save the txn hash in the static variable to be retrieved in subsequent tests
@@ -209,7 +210,7 @@ class MinMineableFeesPricerServiceIntegrationTest {
   @Timeout(90, timeUnit = TimeUnit.SECONDS)
   fun `underpriced txn is mined after miner gas price set to a lower value`(
     vertx: Vertx,
-    testContext: VertxTestContext
+    testContext: VertxTestContext,
   ) {
     var l1LatestBlockNumber = BigInteger.valueOf(2)
     val l1Web3jClientMock = mock<Web3j>(defaultAnswer = Mockito.RETURNS_DEEP_STUBS)
@@ -218,9 +219,9 @@ class MinMineableFeesPricerServiceIntegrationTest {
         .ethFeeHistory(
           ArgumentMatchers.eq(feeHistoryBlockCount.toInt()),
           ArgumentMatchers.eq(DefaultBlockParameterName.LATEST),
-          ArgumentMatchers.eq(listOf(feeHistoryRewardPercentile))
+          ArgumentMatchers.eq(listOf(feeHistoryRewardPercentile)),
         )
-        .sendAsync()
+        .sendAsync(),
     )
       .thenAnswer {
         // The following should yield l2 calculated gas fee as 110,000,001
@@ -229,14 +230,14 @@ class MinMineableFeesPricerServiceIntegrationTest {
           (initialReward / 10u),
           (initialBaseFeePerGas / 10u),
           initialGasUsedRatio,
-          feeHistoryBlockCount
+          feeHistoryBlockCount,
         )
         SafeFuture.completedFuture(feeHistoryResponse)
       }
     whenever(
       l1Web3jClientMock
         .ethBlockNumber()
-        .sendAsync()
+        .sendAsync(),
     )
       .thenAnswer {
         val ethBlockNumber = EthBlockNumber()
@@ -275,7 +276,7 @@ class MinMineableFeesPricerServiceIntegrationTest {
   @Timeout(90, timeUnit = TimeUnit.SECONDS)
   fun `txn with max fee per gas as current gas price is sent to l2-node and is mined correctly`(
     vertx: Vertx,
-    testContext: VertxTestContext
+    testContext: VertxTestContext,
   ) {
     val l2NodeGasPrice = l2NodeWeb3jClient.ethGasPrice().send().gasPrice // 165000001
 
@@ -288,7 +289,7 @@ class MinMineableFeesPricerServiceIntegrationTest {
         l2NodeTxManager.fromAddress,
         "0x",
         BigInteger.valueOf(1000),
-        false
+        false,
       )
       sendTxnHash = sendResp.transactionHash
 
@@ -307,7 +308,7 @@ class MinMineableFeesPricerServiceIntegrationTest {
       BigInteger.valueOf(25000),
       l2Credentials2.address,
       "",
-      BigInteger.ZERO
+      BigInteger.ZERO,
     )
   }
 
@@ -316,13 +317,13 @@ class MinMineableFeesPricerServiceIntegrationTest {
     initialReward: ULong,
     initialBaseFeePerGas: ULong,
     initialGasUsedRatio: UInt,
-    feeHistoryBlockCount: UInt
+    feeHistoryBlockCount: UInt,
   ): EthFeeHistory {
     val feeHistory = EthFeeHistory.FeeHistory()
     feeHistory.setReward((initialReward until initialReward + feeHistoryBlockCount).map { listOf(it.toString()) })
     feeHistory.setBaseFeePerGas(
       (initialBaseFeePerGas until initialBaseFeePerGas + feeHistoryBlockCount + 1u)
-        .map { it.toString() }
+        .map { it.toString() },
     )
     feeHistory.gasUsedRatio =
       (initialGasUsedRatio until initialGasUsedRatio + feeHistoryBlockCount).map { it.toDouble() / 100.0 }
@@ -336,17 +337,17 @@ class MinMineableFeesPricerServiceIntegrationTest {
   private fun initialiseServices(
     vertx: Vertx,
     l1Web3jClient: Web3j,
-    initialGasPrice: ULong? = null
+    initialGasPrice: ULong? = null,
   ): MinMineableFeesPricerService {
     val feesFetcher: FeesFetcher = FeeHistoryFetcherImpl(
       web3jClient = l1Web3jClient,
       web3jService = Web3jBlobExtended(
-        HttpService(System.getProperty("L1_RPC_URL", "http://localhost:8445"))
+        HttpService(System.getProperty("L1_RPC_URL", "http://localhost:8445")),
       ),
       config = FeeHistoryFetcherImpl.Config(
         feeHistoryBlockCount,
-        feeHistoryRewardPercentile
-      )
+        feeHistoryRewardPercentile,
+      ),
     )
 
     val l2SetGasPriceUpdater: GasPriceUpdater = createGasPriceUpdater(vertx)
@@ -360,7 +361,7 @@ class MinMineableFeesPricerServiceIntegrationTest {
       vertx = vertx,
       feesFetcher = feesFetcher,
       feesCalculator = l2MinMinerTipCalculator,
-      gasPriceUpdater = l2SetGasPriceUpdater
+      gasPriceUpdater = l2SetGasPriceUpdater,
     )
   }
 
@@ -371,8 +372,8 @@ class MinMineableFeesPricerServiceIntegrationTest {
       besuEndPoints = besuRecipients.map { URI(it).toURL() },
       retryConfig = RequestRetryConfig(
         maxRetries = 3u,
-        backoffDelay = 1.seconds
-      )
-    )
+        backoffDelay = 1.seconds,
+      ),
+    ),
   )
 }

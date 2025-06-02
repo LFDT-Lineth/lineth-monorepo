@@ -23,8 +23,8 @@ class L2RollingHashUpdatedEventTest {
       topics = listOf(
         "0x99b65a4301b38c09fb6a5f27052d73e8372bbe8f6779d678bfe8a41b66cce7ac".decodeHex(),
         "0x00000000000000000000000000000000000000000000000000000000000b415e".decodeHex(),
-        "0x3444eb64c4a09587c01e9102c567e34f9fc9a6a367c2c5abad5a57dbf1df98de".decodeHex()
-      )
+        "0x3444eb64c4a09587c01e9102c567e34f9fc9a6a367c2c5abad5a57dbf1df98de".decodeHex(),
+      ),
     )
 
     // When
@@ -33,11 +33,11 @@ class L2RollingHashUpdatedEventTest {
     // Then
     val expectedEvent = L2RollingHashUpdatedEvent(
       messageNumber = 0xB415E.toULong(),
-      rollingHash = "0x3444eb64c4a09587c01e9102c567e34f9fc9a6a367c2c5abad5a57dbf1df98de".decodeHex()
+      rollingHash = "0x3444eb64c4a09587c01e9102c567e34f9fc9a6a367c2c5abad5a57dbf1df98de".decodeHex(),
     )
     val expectedEthLogEvent = EthLogEvent(
       event = expectedEvent,
-      log = ethLog
+      log = ethLog,
     )
 
     Assertions.assertThat(result).isEqualTo(expectedEthLogEvent)

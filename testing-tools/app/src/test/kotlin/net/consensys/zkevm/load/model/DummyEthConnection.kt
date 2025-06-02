@@ -40,7 +40,7 @@ class DummyEthConnection : EthConnection {
   override fun ethSendRawTransaction(
     rawTransaction: RawTransaction?,
     sourceWallet: Wallet,
-    chainId: Int
+    chainId: Int,
   ): Request<*, EthSendTransaction> {
     wallets.get(sourceWallet.encodedAddress())?.wallet?.initialNonce =
       wallets.get(sourceWallet.encodedAddress())?.wallet?.initialNonce?.add(BigInteger.ONE)
@@ -49,7 +49,7 @@ class DummyEthConnection : EthConnection {
       "eth_sendRawTransaction",
       Arrays.asList(rawTransaction?.transaction?.data),
       web3Service,
-      EthSendTransaction::class.java
+      EthSendTransaction::class.java,
     )
   }
 
@@ -63,7 +63,7 @@ class DummyEthConnection : EthConnection {
 
   override fun ethGetTransactionCount(
     sourceOfFundsAddress: String?,
-    defaultBlockParameterName: DefaultBlockParameterName?
+    defaultBlockParameterName: DefaultBlockParameterName?,
   ): BigInteger {
     return wallets.get(sourceOfFundsAddress)?.wallet?.initialNonce!!
   }
@@ -114,7 +114,7 @@ class DummyWeb3jService : Web3jService {
   override fun <T : Notification<*>?> subscribe(
     request: Request<*, out Response<*>>?,
     unsubscribeMethod: String?,
-    responseType: Class<T>?
+    responseType: Class<T>?,
   ): Flowable<T> {
     TODO("Not yet implemented")
   }

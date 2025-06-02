@@ -24,7 +24,7 @@ class ProofGeneratingConflationHandlerImplTest {
       // // gap on 13
       createBlock(12UL),
       createBlock(11UL),
-      createBlock(10UL)
+      createBlock(10UL),
     )
     assertConsecutiveBlocksRange(blocks).let { result ->
       assertThat(result).isInstanceOf(Err::class.java)
@@ -38,7 +38,7 @@ class ProofGeneratingConflationHandlerImplTest {
       createBlock(13UL),
       createBlock(12UL),
       createBlock(11UL),
-      createBlock(10UL)
+      createBlock(10UL),
     )
 
     assertThat(assertConsecutiveBlocksRange(blocks)).isEqualTo(Ok(10UL..13UL))

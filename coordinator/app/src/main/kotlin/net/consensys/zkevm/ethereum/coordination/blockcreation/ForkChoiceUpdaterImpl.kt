@@ -17,7 +17,7 @@ class ForkChoiceUpdaterImpl(private val rollupForkChoiceUpdatedClients: List<Rol
     log.debug(
       "Updating finalized block: {}, to {} clients",
       finalizedBlockNumberAndHash,
-      rollupForkChoiceUpdatedClients.size
+      rollupForkChoiceUpdatedClients.size,
     )
     val futures: List<SafeFuture<*>> = rollupForkChoiceUpdatedClients.map { rollupForkChoiceUpdatedClient ->
       rollupForkChoiceUpdatedClient

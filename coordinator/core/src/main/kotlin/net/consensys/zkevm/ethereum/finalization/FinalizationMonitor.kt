@@ -7,7 +7,7 @@ interface FinalizationMonitor {
   data class FinalizationUpdate(
     val blockNumber: ULong,
     val zkStateRootHash: Bytes32,
-    val blockHash: Bytes32
+    val blockHash: Bytes32,
   )
 
   fun getLastFinalizationUpdate(): FinalizationUpdate

@@ -11,7 +11,7 @@ import java.util.concurrent.atomic.AtomicReference
 typealias ContractDeploymentBlockNumberProvider = () -> SafeFuture<ULong>
 
 class StaticContractDeploymentBlockNumberProvider(
-  private val deploymentBlockNumber: ULong
+  private val deploymentBlockNumber: ULong,
 ) : ContractDeploymentBlockNumberProvider {
   override fun invoke(): SafeFuture<ULong> {
     return SafeFuture.completedFuture(deploymentBlockNumber)
@@ -21,7 +21,7 @@ class StaticContractDeploymentBlockNumberProvider(
 class EventBasedContractDeploymentBlockNumberProvider(
   private val ethApiClient: EthApiClient,
   private val contractAddress: String,
-  private val log: Logger = LogManager.getLogger(EventBasedContractDeploymentBlockNumberProvider::class.java)
+  private val log: Logger = LogManager.getLogger(EventBasedContractDeploymentBlockNumberProvider::class.java),
 ) : ContractDeploymentBlockNumberProvider {
   private val deploymentBlockNumberCache = AtomicReference<ULong>(0UL)
 
@@ -34,7 +34,7 @@ class EventBasedContractDeploymentBlockNumberProvider(
           fromBlock = BlockParameter.Tag.EARLIEST,
           toBlock = BlockParameter.Tag.LATEST,
           address = contractAddress,
-          topics = listOf(Upgraded.topic)
+          topics = listOf(Upgraded.topic),
         ).thenApply { logs ->
           if (logs.isEmpty()) {
             throw IllegalStateException("Upgraded event not found: contractAddress=$contractAddress")
@@ -47,7 +47,7 @@ class EventBasedContractDeploymentBlockNumberProvider(
           log.error(
             "Failed to get deployment block number for contract={} errorMessage={}",
             contractAddress,
-            it.message
+            it.message,
           )
         }
     }

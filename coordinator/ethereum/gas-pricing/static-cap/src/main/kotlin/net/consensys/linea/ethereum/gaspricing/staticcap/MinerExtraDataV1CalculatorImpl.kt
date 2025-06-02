@@ -9,12 +9,12 @@ import net.consensys.linea.ethereum.gaspricing.MinerExtraDataV1
 class MinerExtraDataV1CalculatorImpl(
   val config: Config,
   private val variableFeesCalculator: FeesCalculator,
-  private val legacyFeesCalculator: FeesCalculator
+  private val legacyFeesCalculator: FeesCalculator,
 ) : MinerExtraDataCalculator {
 
   data class Config(
     val fixedCostInKWei: UInt,
-    val ethGasPriceMultiplier: Double
+    val ethGasPriceMultiplier: Double,
   )
 
   override fun calculateMinerExtraData(feeHistory: FeeHistory): MinerExtraDataV1 {
@@ -23,7 +23,7 @@ class MinerExtraDataV1CalculatorImpl(
     return MinerExtraDataV1(
       fixedCostInKWei = config.fixedCostInKWei,
       variableCostInKWei = variableFees.tokWeiUInt(),
-      ethGasPriceInKWei = legacyFees.tokWeiUInt()
+      ethGasPriceInKWei = legacyFees.tokWeiUInt(),
     )
   }
 }

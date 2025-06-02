@@ -21,7 +21,7 @@ class ConflationCalculatorByExecutionTracesTest {
   private val calculator = ConflationCalculatorByExecutionTraces(
     tracesLimit,
     TracesCountersV2.EMPTY_TRACES_COUNT,
-    metricsFacade = MicrometerMetricsFacade(testMeterRegistry, "test")
+    metricsFacade = MicrometerMetricsFacade(testMeterRegistry, "test"),
   )
   private lateinit var conflationTriggerConsumer: ConflationTriggerConsumer
 
@@ -108,7 +108,7 @@ class ConflationCalculatorByExecutionTracesTest {
     val overflowingTraces = listOf(
       TracingModuleV2.MMU,
       TracingModuleV2.ADD,
-      TracingModuleV2.RLP_TXN
+      TracingModuleV2.RLP_TXN,
     )
     val oversizedTraceCounters = TracesCountersV2(
       TracingModuleV2.entries.associate {
@@ -117,7 +117,7 @@ class ConflationCalculatorByExecutionTracesTest {
         } else {
           it to 0u
         }
-      }
+      },
     )
 
     TracingModuleV2.entries.forEach { module ->
@@ -147,7 +147,7 @@ class ConflationCalculatorByExecutionTracesTest {
         } else {
           it to 0u
         }
-      }
+      },
     )
 
     calculator.appendBlock(blockCounters(fakeTracesCountersV2(10u)))
@@ -168,13 +168,13 @@ class ConflationCalculatorByExecutionTracesTest {
 
   private fun blockCounters(
     tracesCounters: TracesCounters,
-    blockNumber: ULong = 1uL
+    blockNumber: ULong = 1uL,
   ): BlockCounters {
     return BlockCounters(
       blockNumber = blockNumber,
       blockTimestamp = Instant.parse("2021-01-01T00:00:00Z"),
       tracesCounters = tracesCounters,
-      blockRLPEncoded = ByteArray(0)
+      blockRLPEncoded = ByteArray(0),
     )
   }
 }

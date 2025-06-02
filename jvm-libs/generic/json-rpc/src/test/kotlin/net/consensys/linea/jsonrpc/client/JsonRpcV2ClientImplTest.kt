@@ -64,25 +64,25 @@ class JsonRpcV2ClientImplTest {
       SimpleModule().apply {
         this.addSerializer(ByteArray::class.java, ByteArrayToHexSerializer)
         this.addSerializer(ULong::class.java, ULongToHexSerializer)
-      }
+      },
     )
   private val jsonRpcResultOk = """{"jsonrpc": "2.0", "id": 1, "result": "OK"}"""
 
   private fun retryConfig(
     maxRetries: UInt = 2u,
     timeout: Duration = 8.seconds, // bellow 2s we may have flacky tests when running whole test suite in parallel
-    backoffDelay: Duration = 5.milliseconds
+    backoffDelay: Duration = 5.milliseconds,
   ) = RequestRetryConfig(
     maxRetries = maxRetries,
     timeout = timeout,
-    backoffDelay = backoffDelay
+    backoffDelay = backoffDelay,
   )
 
   private fun createClientAndSetupWireMockServer(
     responseObjectMapper: ObjectMapper = defaultObjectMapper,
     requestObjectMapper: ObjectMapper = defaultObjectMapper,
     retryConfig: RequestRetryConfig = defaultRetryConfig,
-    shallRetryRequestsClientBasePredicate: Predicate<Result<Any?, Throwable>> = Predicate { false }
+    shallRetryRequestsClientBasePredicate: Predicate<Result<Any?, Throwable>> = Predicate { false },
   ): JsonRpcV2Client {
     wiremock = WireMockServer(WireMockConfiguration.options().dynamicPort())
     wiremock.start()
@@ -94,7 +94,7 @@ class JsonRpcV2ClientImplTest {
       responseObjectMapper = responseObjectMapper,
       requestObjectMapper = requestObjectMapper,
       retryConfig = retryConfig,
-      shallRetryRequestsClientBasePredicate = shallRetryRequestsClientBasePredicate
+      shallRetryRequestsClientBasePredicate = shallRetryRequestsClientBasePredicate,
     )
   }
 
@@ -103,14 +103,14 @@ class JsonRpcV2ClientImplTest {
     responseObjectMapper: ObjectMapper = defaultObjectMapper,
     requestObjectMapper: ObjectMapper = defaultObjectMapper,
     retryConfig: RequestRetryConfig = defaultRetryConfig,
-    shallRetryRequestsClientBasePredicate: Predicate<Result<Any?, Throwable>> = Predicate { false }
+    shallRetryRequestsClientBasePredicate: Predicate<Result<Any?, Throwable>> = Predicate { false },
   ): JsonRpcV2Client {
     return factory.createJsonRpcV2Client(
       endpoints = uris,
       retryConfig = retryConfig,
       requestObjectMapper = requestObjectMapper,
       responseObjectMapper = responseObjectMapper,
-      shallRetryRequestsClientBasePredicate = shallRetryRequestsClientBasePredicate
+      shallRetryRequestsClientBasePredicate = shallRetryRequestsClientBasePredicate,
     )
   }
 
@@ -139,7 +139,7 @@ class JsonRpcV2ClientImplTest {
     client.makeRequest(
       method = "someMethod",
       params = listOf("superUser", "Alice"),
-      resultMapper = { it }
+      resultMapper = { it },
     ).get()
 
     assertThatJson(wiremock.jsonRequest()).isEqualTo(
@@ -150,7 +150,7 @@ class JsonRpcV2ClientImplTest {
         "method": "someMethod",
         "params": ["superUser", "Alice"]
       }
-      """
+      """,
     )
   }
 
@@ -161,7 +161,7 @@ class JsonRpcV2ClientImplTest {
     client.makeRequest(
       method = "someMethod",
       params = mapOf("superUser" to "Alice"),
-      resultMapper = { it }
+      resultMapper = { it },
     ).get()
 
     assertThatJson(wiremock.jsonRequest()).isEqualTo(
@@ -172,7 +172,7 @@ class JsonRpcV2ClientImplTest {
         "method": "someMethod",
         "params": {"superUser":"Alice"}
       }
-      """
+      """,
     )
   }
 
@@ -180,7 +180,7 @@ class JsonRpcV2ClientImplTest {
     val name: String,
     val email: String,
     val address: ByteArray,
-    val value: ULong
+    val value: ULong,
   )
 
   @Test
@@ -190,7 +190,7 @@ class JsonRpcV2ClientImplTest {
     client.makeRequest(
       method = "someMethod",
       params = User(name = "John", email = "email@example.com", address = "0x01ffbb".decodeHex(), value = 987UL),
-      resultMapper = { it }
+      resultMapper = { it },
     ).get()
     // 0x01ffbb -> "Af+7" in Base64, jackon's default encoding for ByteArray
     assertThatJson(wiremock.jsonRequest()).isEqualTo(
@@ -201,7 +201,7 @@ class JsonRpcV2ClientImplTest {
         "method": "someMethod",
         "params": {"name":"John", "email":"email@example.com", "address":"Af+7", "value":987}
       }
-      """
+      """,
     )
   }
 
@@ -214,7 +214,7 @@ class JsonRpcV2ClientImplTest {
       client.makeRequest(
         method = "someMethod",
         params = obj,
-        resultMapper = { it }
+        resultMapper = { it },
       ).get()
 
       assertThatJson(wiremock.jsonRequest()).isEqualTo(
@@ -225,7 +225,7 @@ class JsonRpcV2ClientImplTest {
         "method": "someMethod",
         "params": {"name":"John", "email":"email@example.com", "address":"Af+7", "value":987}
       }
-      """
+      """,
       )
       wiremock.stop()
     }
@@ -237,7 +237,7 @@ class JsonRpcV2ClientImplTest {
           this.addSerializer(ULong::class.java, ULongToHexSerializer)
           this.addSerializer(Integer::class.java, JIntegerToHexSerializer)
           this.addSerializer(BigInteger::class.java, BigIntegerToHexSerializer)
-        }
+        },
       )
 
     createClientAndSetupWireMockServer(requestObjectMapper = objMapperWithNumbersAsHex).also { client ->
@@ -245,7 +245,7 @@ class JsonRpcV2ClientImplTest {
       client.makeRequest(
         method = "someMethod",
         params = obj,
-        resultMapper = { it }
+        resultMapper = { it },
       ).get()
 
       assertThatJson(wiremock.jsonRequest()).isEqualTo(
@@ -256,7 +256,7 @@ class JsonRpcV2ClientImplTest {
         "method": "someMethod",
         "params": {"name":"John", "email":"email@example.com", "address":"0x01ffbb", "value": "0x3db"}
       }
-      """
+      """,
       )
     }
   }
@@ -269,7 +269,7 @@ class JsonRpcV2ClientImplTest {
       client.makeRequest(
         method = "someMethod",
         params = listOf(index),
-        resultMapper = { it }
+        resultMapper = { it },
       )
     }
     SafeFuture.collectAll(requestsPromises.stream()).get()
@@ -290,7 +290,7 @@ class JsonRpcV2ClientImplTest {
     client.makeRequest(
       method = "someMethod",
       params = emptyList<Any>(),
-      resultMapper = { it }
+      resultMapper = { it },
     )
       .get()
       .also { response ->
@@ -305,7 +305,7 @@ class JsonRpcV2ClientImplTest {
     client.makeRequest(
       method = "someMethod",
       params = emptyList<Any>(),
-      resultMapper = { it }
+      resultMapper = { it },
     )
       .get()
       .also { response ->
@@ -320,7 +320,7 @@ class JsonRpcV2ClientImplTest {
     client.makeRequest(
       method = "someMethod",
       params = emptyList<Any>(),
-      resultMapper = { it }
+      resultMapper = { it },
     )
       .get()
       .also { response ->
@@ -335,7 +335,7 @@ class JsonRpcV2ClientImplTest {
     client.makeRequest(
       method = "someMethod",
       params = emptyList<Any>(),
-      resultMapper = { it }
+      resultMapper = { it },
     )
       .get()
       .also { response ->
@@ -350,7 +350,7 @@ class JsonRpcV2ClientImplTest {
     client.makeRequest(
       method = "someMethod",
       params = emptyList<Any>(),
-      resultMapper = { it }
+      resultMapper = { it },
     )
       .get()
       .also { response ->
@@ -362,13 +362,13 @@ class JsonRpcV2ClientImplTest {
   fun `when result is an Object, returns JsonNode`() {
     replyRequestWith(
       200,
-      """{"jsonrpc": "2.0", "id": 1, "result": {"name": "Alice", "age": 23}}"""
+      """{"jsonrpc": "2.0", "id": 1, "result": {"name": "Alice", "age": 23}}""",
     )
 
     client.makeRequest(
       method = "someMethod",
       params = emptyList<Any>(),
-      resultMapper = { it }
+      resultMapper = { it },
     )
       .get()
       .also { response ->
@@ -385,7 +385,7 @@ class JsonRpcV2ClientImplTest {
     client.makeRequest(
       method = "someMethod",
       params = emptyList<Any>(),
-      resultMapper = { it }
+      resultMapper = { it },
     )
       .get()
       .also { response ->
@@ -406,7 +406,7 @@ class JsonRpcV2ClientImplTest {
       resultMapper = {
         it as JsonNode
         SimpleUser(it.get("name").asText(), it.get("age").asInt())
-      }
+      },
     )
       .get()
       .also { response ->
@@ -419,7 +419,7 @@ class JsonRpcV2ClientImplTest {
       resultMapper = {
         it as JsonNode
         defaultObjectMapper.treeToValue(it, SimpleUser::class.java)
-      }
+      },
     )
       .get()
       .also { response ->
@@ -442,15 +442,15 @@ class JsonRpcV2ClientImplTest {
            }
           }
         }
-      """.trimMargin()
+      """.trimMargin(),
     )
 
     assertThat(
       client.makeRequest(
         method = "someMethod",
         params = emptyList<Any>(),
-        resultMapper = { it }
-      )
+        resultMapper = { it },
+      ),
     ).failsWithin(10.seconds.toJavaDuration())
       .withThrowableThat()
       .isInstanceOfSatisfying(ExecutionException::class.java) {
@@ -463,8 +463,8 @@ class JsonRpcV2ClientImplTest {
             "key1" to "value1",
             "key2" to 20,
             "key3" to listOf(1, 2, 3),
-            "key4" to null
-          )
+            "key4" to null,
+          ),
         )
         assertThat(cause.rpcErrorData).isEqualTo(expectedData)
       }
@@ -473,7 +473,7 @@ class JsonRpcV2ClientImplTest {
   @Test
   fun `when it gets an error propagates to shallRetryRequestPredicate and retries while is true`() {
     createClientAndSetupWireMockServer(
-      retryConfig = retryConfig(maxRetries = 10u)
+      retryConfig = retryConfig(maxRetries = 10u),
     ).also { client ->
       val responses = listOf(
         500 to "Internal Error",
@@ -481,7 +481,7 @@ class JsonRpcV2ClientImplTest {
         200 to """{"jsonrpc": "2.0", "id": 1, "error": {"code": -32602, "message": "Invalid params"}}""",
         200 to """{"jsonrpc": "2.0", "id": 1, "result": null }""",
         200 to """{"jsonrpc": "2.0", "id": 1, "result": "some result" }""",
-        200 to """{"jsonrpc": "2.0", "id": 1, "result": "expected result" }"""
+        200 to """{"jsonrpc": "2.0", "id": 1, "result": "expected result" }""",
       )
       replyRequestsWith(responses = responses)
       val retryPredicateCalls = mutableListOf<Result<String?, Throwable>>()
@@ -496,7 +496,7 @@ class JsonRpcV2ClientImplTest {
         resultMapper = {
           it as String?
           it?.uppercase()
-        }
+        },
       ).get()
 
       assertThat(wiremock.serveEvents.serveEvents).hasSize(responses.size)
@@ -523,7 +523,7 @@ class JsonRpcV2ClientImplTest {
   @Test
   fun `when it has connection error propagates to shallRetryRequestPredicate and retries while is true`() {
     createClientAndSetupWireMockServer(
-      retryConfig = retryConfig(maxRetries = 10u)
+      retryConfig = retryConfig(maxRetries = 10u),
     ).also { client ->
       // stop the server to simulate connection error
       wiremock.stop()
@@ -537,7 +537,7 @@ class JsonRpcV2ClientImplTest {
           retryPredicateCalls.add(it)
           retryPredicateCalls.size < 2
         },
-        resultMapper = { it as String? }
+        resultMapper = { it as String? },
       )
 
       assertThatThrownBy { reqFuture.get() }
@@ -559,7 +559,7 @@ class JsonRpcV2ClientImplTest {
   fun `when it has connection error propagates to shallRetryRequestPredicate and retries until retry config elapses`() {
     createClient(
       uris = listOf(URI.create("http://127.0.0.1:19472")),
-      retryConfig = retryConfig(maxRetries = 2u, timeout = 8.seconds, backoffDelay = 5.milliseconds)
+      retryConfig = retryConfig(maxRetries = 2u, timeout = 8.seconds, backoffDelay = 5.milliseconds),
     ).also { client ->
       val retryPredicateCalls = mutableListOf<Result<String?, Throwable>>()
 
@@ -570,7 +570,7 @@ class JsonRpcV2ClientImplTest {
           retryPredicateCalls.add(it)
           true // keep retrying
         },
-        resultMapper = { it as String? }
+        resultMapper = { it as String? },
       )
 
       assertThatThrownBy { reqFuture.get() }
@@ -595,9 +595,9 @@ class JsonRpcV2ClientImplTest {
       retryConfig = RequestRetryConfig(
         maxRetries = 10u,
         timeout = 5.minutes,
-        backoffDelay = 1.milliseconds
+        backoffDelay = 1.milliseconds,
       ),
-      shallRetryRequestsClientBasePredicate = baseRetryPredicate
+      shallRetryRequestsClientBasePredicate = baseRetryPredicate,
     ).also { client ->
       replyRequestsWith(
         listOf(
@@ -607,8 +607,8 @@ class JsonRpcV2ClientImplTest {
           200 to """{"jsonrpc": "2.0", "id": 1, "result": "retry_b_3" }""",
           200 to """{"jsonrpc": "2.0", "id": 1, "result": "retry_b_4" }""",
           200 to """{"jsonrpc": "2.0", "id": 1, "result": "retry_b_5" }""",
-          200 to """{"jsonrpc": "2.0", "id": 1, "result": "some_result" }"""
-        )
+          200 to """{"jsonrpc": "2.0", "id": 1, "result": "some_result" }""",
+        ),
       )
       val retryPredicateCalls = mutableListOf<Result<String, Throwable>>()
       val reqFuture = client.makeRequest(
@@ -618,7 +618,7 @@ class JsonRpcV2ClientImplTest {
           retryPredicateCalls.add(it)
           it.getOr("").startsWith("retry_b")
         },
-        resultMapper = { it as String }
+        resultMapper = { it as String },
       )
 
       assertThat(reqFuture.get()).isEqualTo("some_result")
@@ -630,8 +630,8 @@ class JsonRpcV2ClientImplTest {
           "retry_b_3",
           "retry_b_4",
           "retry_b_5",
-          "some_result"
-        )
+          "some_result",
+        ),
       )
     }
   }
@@ -643,8 +643,8 @@ class JsonRpcV2ClientImplTest {
         .willReturn(
           status(statusCode)
             .withHeader("Content-type", "text/plain")
-            .apply { if (body != null) withBody(body) }
-        )
+            .apply { if (body != null) withBody(body) },
+        ),
     )
   }
 
@@ -658,9 +658,9 @@ class JsonRpcV2ClientImplTest {
         .willReturn(
           status(firstResponseStatus)
             .withHeader("Content-type", "text/plain")
-            .apply { if (firstResponseBody != null) withBody(firstResponseBody) }
+            .apply { if (firstResponseBody != null) withBody(firstResponseBody) },
         )
-        .willSetStateTo("req_0")
+        .willSetStateTo("req_0"),
     )
 
     responses
@@ -674,9 +674,9 @@ class JsonRpcV2ClientImplTest {
             .willReturn(
               status(statusCode)
                 .withHeader("Content-type", "text/plain")
-                .apply { if (body != null) withBody(body) }
+                .apply { if (body != null) withBody(body) },
             )
-            .willSetStateTo("req_${index + 1}")
+            .willSetStateTo("req_${index + 1}"),
         )
       }
   }

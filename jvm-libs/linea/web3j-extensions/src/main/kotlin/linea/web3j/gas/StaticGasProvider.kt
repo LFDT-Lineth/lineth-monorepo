@@ -12,7 +12,7 @@ class StaticGasProvider(
   private val maxFeePerGas: ULong = 22uL.gwei,
   private val maxPriorityFeePerGas: ULong = 20uL.gwei,
   private val maxFeePerBlobGas: ULong = 1000uL.gwei,
-  private val gasLimit: ULong = 30_000_000uL
+  private val gasLimit: ULong = 30_000_000uL,
 ) : AtomicContractEIP1559GasProvider, EIP4844GasProvider {
   override fun getEIP1559GasFees(): EIP1559GasFees {
     return EIP1559GasFees(maxPriorityFeePerGas, maxFeePerGas)

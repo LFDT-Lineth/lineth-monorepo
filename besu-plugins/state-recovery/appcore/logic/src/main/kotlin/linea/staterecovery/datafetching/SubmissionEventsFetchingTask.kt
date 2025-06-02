@@ -24,11 +24,11 @@ internal class SubmissionEventsFetchingTask(
   private val submissionEventsQueue: ConcurrentLinkedQueue<FinalizationAndDataEventsV3>,
   private val queueLimit: Int,
   private val debugForceSyncStopBlockNumber: ULong?,
-  private val log: Logger = LogManager.getLogger(SubmissionEventsFetchingTask::class.java)
+  private val log: Logger = LogManager.getLogger(SubmissionEventsFetchingTask::class.java),
 ) : PeriodicPollingService(
   vertx = vertx,
   pollingIntervalMs = l1PollingInterval.inWholeMilliseconds,
-  log = log
+  log = log,
 ) {
   val latestFetchedFinalization: AtomicReference<EthLogEvent<DataFinalizedV3>> = AtomicReference(null)
 
@@ -38,7 +38,7 @@ internal class SubmissionEventsFetchingTask(
     ) {
       log.debug(
         "Force stop fetching submission events from L1, reached debugForceSyncStopBlockNumber={}",
-        debugForceSyncStopBlockNumber
+        debugForceSyncStopBlockNumber,
       )
       return this.stop()
     }
@@ -51,7 +51,7 @@ internal class SubmissionEventsFetchingTask(
       // Queue is full, no need to fetch more
       log.debug(
         "skipping fetching submission events from L1, internal queue is full size={}",
-        submissionEventsQueue.size
+        submissionEventsQueue.size,
       )
       return SafeFuture.completedFuture(Unit)
     }
@@ -74,21 +74,21 @@ internal class SubmissionEventsFetchingTask(
     return if (latestFetchedFinalization.get() != null) {
       log.trace(
         "fetching submission events from L1 startBlockNumber={}",
-        latestFetchedFinalization.get().event.endBlockNumber + 1u
+        latestFetchedFinalization.get().event.endBlockNumber + 1u,
       )
       submissionEventsClient.findFinalizationAndDataSubmissionV3Events(
         fromL1BlockNumber = latestFetchedFinalization.get().log.blockNumber.toBlockParameter(),
-        finalizationStartBlockNumber = latestFetchedFinalization.get().event.endBlockNumber + 1u
+        finalizationStartBlockNumber = latestFetchedFinalization.get().event.endBlockNumber + 1u,
       )
     } else {
       log.trace(
         "fetching submission events from L1 startBlockNumber={}",
-        l2StartBlockNumber
+        l2StartBlockNumber,
       )
       submissionEventsClient
         .findFinalizationAndDataSubmissionV3EventsContainingL2BlockNumber(
           fromL1BlockNumber = l1EarliestBlockWithFinalizationThatSupportRecovery,
-          l2BlockNumber = l2StartBlockNumber
+          l2BlockNumber = l2StartBlockNumber,
         )
     }
   }

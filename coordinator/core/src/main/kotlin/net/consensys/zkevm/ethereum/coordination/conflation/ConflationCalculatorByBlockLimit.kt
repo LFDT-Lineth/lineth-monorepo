@@ -4,7 +4,7 @@ import net.consensys.zkevm.domain.BlockCounters
 import net.consensys.zkevm.domain.ConflationTrigger
 
 class ConflationCalculatorByBlockLimit(
-  private val blockLimit: UInt
+  private val blockLimit: UInt,
 ) : ConflationCalculator {
   override val id: String = ConflationTrigger.BLOCKS_LIMIT.name
   private var blockCount: UInt = 0u
@@ -29,7 +29,7 @@ class ConflationCalculatorByBlockLimit(
   }
 
   override fun copyCountersTo(
-    counters: ConflationCounters
+    counters: ConflationCounters,
   ) {
     counters.blockCount = blockCount
   }

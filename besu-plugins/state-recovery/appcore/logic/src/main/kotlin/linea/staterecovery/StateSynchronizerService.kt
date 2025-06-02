@@ -22,11 +22,11 @@ class StateSynchronizerService(
   private val blockImporterAndStateVerifier: BlockImporterAndStateVerifier,
   private val pollingInterval: Duration,
   private val debugForceSyncStopBlockNumber: ULong?,
-  private val log: Logger = LogManager.getLogger(StateSynchronizerService::class.java)
+  private val log: Logger = LogManager.getLogger(StateSynchronizerService::class.java),
 ) : PeriodicPollingService(
   vertx = vertx,
   log = log,
-  pollingIntervalMs = pollingInterval.inWholeMilliseconds
+  pollingIntervalMs = pollingInterval.inWholeMilliseconds,
 ) {
   @get:Synchronized
   @set:Synchronized
@@ -48,7 +48,7 @@ class StateSynchronizerService(
         val l2StartBlockNumberToFetchInclusive = startBlockToFetchFromL1(
           headBlockNumber = status.headBlockNumber,
           recoveryStartBlockNumber = status.stateRecoverStartBlockNumber,
-          lookbackWindow = 256UL
+          lookbackWindow = 256UL,
         )
 
         this.blobsFetcherTask = SubmissionsFetchingTask(
@@ -63,7 +63,7 @@ class StateSynchronizerService(
           submissionEventsQueueLimit = 10,
           compressedBlobsQueueLimit = 10,
           targetDecompressedBlobsQueueLimit = 10,
-          debugForceSyncStopBlockNumber = debugForceSyncStopBlockNumber
+          debugForceSyncStopBlockNumber = debugForceSyncStopBlockNumber,
         )
         blobsFetcherTask.start()
       }
@@ -91,7 +91,7 @@ class StateSynchronizerService(
     val loobackHasheFetcher = LookBackBlockHashesFetcher(
       vertx = vertx,
       elClient = elClient,
-      submissionsFetcher = blobsFetcherTask
+      submissionsFetcher = blobsFetcherTask,
     )
 
     return this.elClient
@@ -116,30 +116,30 @@ class StateSynchronizerService(
         if (blocksToImport.isEmpty()) {
           log.debug(
             "no blocks to import for finalization={}",
-            nexFinalization.submissionEvents.dataFinalizedEvent.event
+            nexFinalization.submissionEvents.dataFinalizedEvent.event,
           )
           return@thenCompose SafeFuture.completedFuture(Unit)
         }
 
         importBlocksAndAssertStateroot(
           decompressedBlocksToImport = blocksToImport,
-          dataFinalizedV3 = nexFinalization.submissionEvents.dataFinalizedEvent.event
+          dataFinalizedV3 = nexFinalization.submissionEvents.dataFinalizedEvent.event,
         )
       }
       .thenPeek {
         blobsFetcherTask.pruneQueueForElementsUpToInclusive(
-          nexFinalization.submissionEvents.dataFinalizedEvent.event.endBlockNumber
+          nexFinalization.submissionEvents.dataFinalizedEvent.event.endBlockNumber,
         )
       }
   }
 
   private fun importBlocksAndAssertStateroot(
     decompressedBlocksToImport: List<BlockFromL1RecoveredData>,
-    dataFinalizedV3: DataFinalizedV3
+    dataFinalizedV3: DataFinalizedV3,
   ): SafeFuture<Unit> {
     val blockInterval = CommonDomainFunctions.blockIntervalString(
       decompressedBlocksToImport.first().header.blockNumber,
-      decompressedBlocksToImport.last().header.blockNumber
+      decompressedBlocksToImport.last().header.blockNumber,
     )
     log.debug("importing blocks={} from finalization={}", blockInterval, dataFinalizedV3.intervalString())
     return blockImporterAndStateVerifier
@@ -151,7 +151,7 @@ class StateSynchronizerService(
   }
 
   private fun filterOutBlocksAlreadyImportedAndBeyondStopSync(
-    blocks: List<BlockFromL1RecoveredData>
+    blocks: List<BlockFromL1RecoveredData>,
   ): SafeFuture<List<BlockFromL1RecoveredData>> {
     return elClient.getBlockNumberAndHash(blockParameter = BlockParameter.Tag.LATEST)
       .thenApply { headBlock ->
@@ -165,14 +165,14 @@ class StateSynchronizerService(
 
   private fun assertStateMatches(
     importResult: ImportResult,
-    finalizedV3: DataFinalizedV3
+    finalizedV3: DataFinalizedV3,
   ): SafeFuture<Unit> {
     if (importResult.blockNumber != finalizedV3.endBlockNumber) {
       log.info(
         "cannot compare stateroot: last imported block={} finalization={} debugForceSyncStopBlockNumber={}",
         importResult.blockNumber,
         finalizedV3.intervalString(),
-        debugForceSyncStopBlockNumber
+        debugForceSyncStopBlockNumber,
       )
       if (importResult.blockNumber == debugForceSyncStopBlockNumber) {
         // this means debugForceSyncStopBlockNumber was set and we stopped before reaching the target block
@@ -183,7 +183,7 @@ class StateSynchronizerService(
       log.info(
         "state recovered up to finalization={} zkStateRootHash={}",
         finalizedV3.intervalString(),
-        importResult.zkStateRootHash.encodeHex()
+        importResult.zkStateRootHash.encodeHex(),
       )
     } else {
       log.error(
@@ -193,7 +193,7 @@ class StateSynchronizerService(
         finalizedV3.intervalString(),
         importResult.blockNumber,
         importResult.zkStateRootHash.encodeHex(),
-        finalizedV3.finalStateRootHash.encodeHex()
+        finalizedV3.finalStateRootHash.encodeHex(),
       )
       stateRootMismatchFound = true
       this.stop()

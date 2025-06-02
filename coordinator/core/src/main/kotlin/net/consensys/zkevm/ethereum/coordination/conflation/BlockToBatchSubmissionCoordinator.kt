@@ -24,10 +24,10 @@ class BlockToBatchSubmissionCoordinator(
   private val tracesCountersClient: TracesCountersClientV2,
   private val vertx: Vertx,
   private val encoder: BlockEncoder,
-  private val log: Logger = LogManager.getLogger(BlockToBatchSubmissionCoordinator::class.java)
+  private val log: Logger = LogManager.getLogger(BlockToBatchSubmissionCoordinator::class.java),
 ) : BlockCreationListener {
   private fun getTracesCounters(
-    block: Block
+    block: Block,
   ): SafeFuture<GetTracesCountersResponse> {
     return tracesCountersClient
       .getTracesCounters(block.number)
@@ -56,15 +56,15 @@ class BlockToBatchSubmissionCoordinator(
             tracesCounters = traces.tracesCounters,
             blockRLPEncoded = blockRLPEncoded,
             numOfTransactions = blockEvent.block.transactions.size.toUInt(),
-            gasUsed = blockEvent.block.gasUsed
-          )
+            gasUsed = blockEvent.block.gasUsed,
+          ),
         )
       }.whenException { th ->
         log.error(
           "Failed to conflate block={} errorMessage={}",
           blockEvent.block.number,
           th.message,
-          th
+          th,
         )
       }
 
@@ -76,7 +76,7 @@ class BlockToBatchSubmissionCoordinator(
     return vertx.executeBlocking(
       Callable {
         encoder.encode(block)
-      }
+      },
     )
       .toSafeFuture()
   }

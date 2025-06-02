@@ -55,7 +55,7 @@ class Log4JLineaAppenderTest {
     logger.error(
       "errorMessage={}",
       exception.message,
-      exception
+      exception,
     )
     val logEvent = listAppender.events.last()
 
@@ -72,7 +72,7 @@ class Log4JLineaAppenderTest {
     logger.error(
       "errorMessage={}",
       exception.message,
-      exception
+      exception,
     )
     val logEvent = listAppender.events.last()
 
@@ -90,7 +90,7 @@ class Log4JLineaAppenderTest {
     logger.error(
       "errorMessage={}",
       exception.message,
-      exception
+      exception,
     )
     val logEvent = listAppender.events.last()
 
@@ -102,7 +102,7 @@ class Log4JLineaAppenderTest {
   @Test
   fun `if error is eth_call log level is rewritten`() {
     logger.error(
-      "eth_call for aggregation finalization failed Contract Call has been reverted by the EVM with the reason"
+      "eth_call for aggregation finalization failed Contract Call has been reverted by the EVM with the reason",
     )
     val logEvent = listAppender.events.last()
 
@@ -112,7 +112,7 @@ class Log4JLineaAppenderTest {
   @Test
   fun `if error is not an eth_call log level remains at ERROR level`() {
     logger.error(
-      "aggregation finalization failed Contract Call has been reverted by the EVM with the reason"
+      "aggregation finalization failed Contract Call has been reverted by the EVM with the reason",
     )
     val logEvent = listAppender.events.last()
 

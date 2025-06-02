@@ -18,13 +18,13 @@ import kotlin.time.Duration.Companion.seconds
 class AggregationTriggerCalculatorByDeadline(
   private val config: Config,
   private val clock: Clock = Clock.System,
-  private val latestBlockProvider: SafeBlockProvider
+  private val latestBlockProvider: SafeBlockProvider,
 ) : DeferredAggregationTriggerCalculator {
   data class Config(val aggregationDeadline: Duration, val aggregationDeadlineDelay: Duration)
 
   data class InFlightAggregation(
     val aggregationStartTimeStamp: Instant,
-    val blobsToAggregate: BlobsToAggregate
+    val blobsToAggregate: BlobsToAggregate,
   )
 
   private var inFlightAggregation: InFlightAggregation? = null
@@ -36,7 +36,7 @@ class AggregationTriggerCalculatorByDeadline(
       log.warn(
         "SafeBlock request failed. Will retry aggregation deadline on next tick errorMessage={}",
         th.message,
-        th
+        th,
       )
     }.thenApply {
       val noActivityOnL2 = clock.now().minus(config.aggregationDeadlineDelay) > it.timestamp
@@ -44,15 +44,15 @@ class AggregationTriggerCalculatorByDeadline(
         "Aggregation deadline checking trigger criteria lastBlockNumber={} latestL2SafeBlock={} noActivityOnL2={}",
         blobsToAggregate.endBlockNumber,
         it.number,
-        noActivityOnL2
+        noActivityOnL2,
       )
       if (it.number == blobsToAggregate.endBlockNumber && noActivityOnL2) {
         log.info("Aggregation Deadline reached at block {}", blobsToAggregate.endBlockNumber)
         aggregationTriggerHandler.onAggregationTrigger(
           AggregationTrigger(
             aggregationTriggerType = AggregationTriggerType.TIME_LIMIT,
-            aggregation = blobsToAggregate
-          )
+            aggregation = blobsToAggregate,
+          ),
         )
       }
     }
@@ -65,12 +65,12 @@ class AggregationTriggerCalculatorByDeadline(
       "Checking deadline: inflightAggregation={} timeElapsed={} deadline={}",
       inFlightAggregation,
       inFlightAggregation?.aggregationStartTimeStamp?.let { now.minus(it) } ?: 0.seconds,
-      config.aggregationDeadline
+      config.aggregationDeadline,
     )
 
     val deadlineReached =
       inFlightAggregation != null && now > inFlightAggregation!!.aggregationStartTimeStamp.plus(
-        config.aggregationDeadline
+        config.aggregationDeadline,
       )
 
     if (!deadlineReached) {
@@ -84,15 +84,15 @@ class AggregationTriggerCalculatorByDeadline(
     if (inFlightAggregation == null) {
       inFlightAggregation = InFlightAggregation(
         aggregationStartTimeStamp = blobCounters.startBlockTimestamp,
-        blobsToAggregate = BlobsToAggregate(blobCounters.startBlockNumber, blobCounters.endBlockNumber)
+        blobsToAggregate = BlobsToAggregate(blobCounters.startBlockNumber, blobCounters.endBlockNumber),
       )
     } else {
       inFlightAggregation = InFlightAggregation(
         aggregationStartTimeStamp = inFlightAggregation!!.aggregationStartTimeStamp,
         blobsToAggregate = BlobsToAggregate(
           inFlightAggregation!!.blobsToAggregate.startBlockNumber,
-          blobCounters.endBlockNumber
-        )
+          blobCounters.endBlockNumber,
+        ),
       )
     }
   }
@@ -111,7 +111,7 @@ class AggregationTriggerCalculatorByDeadline(
 class AggregationTriggerCalculatorByDeadlineRunner(
   private val vertx: Vertx,
   private val config: Config,
-  private val aggregationTriggerByDeadline: AggregationTriggerCalculatorByDeadline
+  private val aggregationTriggerByDeadline: AggregationTriggerCalculatorByDeadline,
 ) : DeferredAggregationTriggerCalculator by aggregationTriggerByDeadline, LongRunningService {
   data class Config(val deadlineCheckInterval: Duration)
 
@@ -129,7 +129,7 @@ class AggregationTriggerCalculatorByDeadlineRunner(
           }
           deadlineCheckerTimerId = vertx.setTimer(
             config.deadlineCheckInterval.inWholeMilliseconds,
-            deadlineCheckerAction
+            deadlineCheckerAction,
           )
         }
       }
