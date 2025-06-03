@@ -20,6 +20,7 @@ export type BaseL2Config = BaseConfig & {
   besuNodeRpcUrl?: URL;
   tokenBridgeAddress: string;
   l2TokenAddress: string;
+  l2SparseMerkleProofAddress: string;
   shomeiEndpoint?: URL;
   shomeiFrontendEndpoint?: URL;
   sequencerEndpoint?: URL;

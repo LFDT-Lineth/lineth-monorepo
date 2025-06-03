@@ -7,6 +7,11 @@ services:
       file: compose-spec-l2-services.yml
       service: l2-node-besu
 
+  shomei-frontend:
+    extends:
+      file: compose-spec-l2-services.yml
+      service: shomei-frontend
+  
   postman:
     extends:
       file: compose-spec-l2-services.yml

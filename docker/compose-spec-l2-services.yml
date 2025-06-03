@@ -368,7 +368,7 @@ services:
     image: consensys/linea-shomei:2.3.0
     hostname: shomei-frontend
     container_name: shomei-frontend
-    profiles: [ "l2", "l2-bc" ]
+    profiles: [ "l2", "l2-bc", "external-to-monorepo" ]
     depends_on:
       zkbesu-shomei:
         condition: service_started

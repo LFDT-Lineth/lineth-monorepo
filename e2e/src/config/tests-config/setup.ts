@@ -11,6 +11,8 @@ import {
   LineaRollupV6__factory,
   ProxyAdmin,
   ProxyAdmin__factory,
+  SparseMerkleProof,
+  SparseMerkleProof__factory,
   TestContract,
   TestContract__factory,
   TestERC20,
@@ -225,6 +227,10 @@ export default class TestSetup {
     } else {
       return undefined;
     }
+  }
+
+  public getL2SparseMerkleProofContract(): SparseMerkleProof {
+    return SparseMerkleProof__factory.connect(this.config.L2.l2SparseMerkleProofAddress, this.getL2Provider());
   }
 
   public getL1AccountManager(): AccountManager {

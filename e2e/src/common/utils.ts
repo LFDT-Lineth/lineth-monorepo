@@ -74,7 +74,7 @@ export function generateRandomUUIDv4(): string {
   return randomUUID();
 }
 
-async function awaitUntil<T>(
+export async function awaitUntil<T>(
   callback: () => Promise<T>,
   stopRetry: (a: T) => boolean,
   pollingIntervalMs: number = 500,
@@ -228,6 +228,68 @@ export class LineaBundleClient {
     }
     assert("result" in responseJson);
     return responseJson.result;
+  }
+}
+
+export class LineaShomeiClient {
+  private endpoint: URL;
+
+  public constructor(endpoint: URL) {
+    this.endpoint = endpoint;
+  }
+
+  public async rollupGetZkEVMStateMerkleProofV0(
+    startBlockNumber: number,
+    endBlockNumber: number,
+    zkStateManagerVersion: string,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ): Promise<any> {
+    const request = {
+      method: "post",
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        method: "rollup_getZkEVMStateMerkleProofV0",
+        params: [
+          {
+            startBlockNumber,
+            endBlockNumber,
+            zkStateManagerVersion,
+          },
+        ],
+        id: generateRandomInt(),
+      }),
+    };
+    const response = await fetch(this.endpoint, request);
+    const responseJson = await response.json();
+    assert("result" in responseJson);
+    return responseJson;
+  }
+}
+
+export class LineaShomeiFrontendClient {
+  private endpoint: URL;
+
+  public constructor(endpoint: URL) {
+    this.endpoint = endpoint;
+  }
+
+  public async lineaGetProof(
+    address: string,
+    storageKeys: string[] = [],
+    blockParameter: string = "latest",
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ): Promise<any> {
+    const request = {
+      method: "post",
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        method: "linea_getProof",
+        params: [address, storageKeys, blockParameter],
+        id: generateRandomInt(),
+      }),
+    };
+    const response = await fetch(this.endpoint, request);
+    return await response.json();
   }
 }
 
@@ -463,6 +525,11 @@ export async function execDockerCommand(command: string, containerName: string):
       resolve(stdout);
     });
   });
+}
+
+export async function getDockerImageTag(containerName: string, imageRepoName: string): Promise<string> {
+  const inspectJsonOutput = JSON.parse(await execDockerCommand("inspect", containerName));
+  return inspectJsonOutput[0]["Config"]["Image"].replace(imageRepoName + ":", "");
 }
 
 export function generateRoleAssignments(
