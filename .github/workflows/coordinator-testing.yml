@@ -36,7 +36,7 @@ jobs:
       - name: Setup Gradle
         # Configure Gradle for optimal use in GiHub Actions, including caching of downloaded dependencies.
         # See: https://github.com/gradle/actions/blob/main/setup-gradle/README.md
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@8379f6a1328ee0e06e2bb424dadb7b159856a326 # 4.4.0
       # Install pnpm to compile smart contracts
       - name: Setup nodejs environment
         uses: ./.github/actions/setup-nodejs
