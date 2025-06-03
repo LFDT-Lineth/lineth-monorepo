@@ -2,15 +2,8 @@
   "extends": "../tsconfig.json",
   "compilerOptions": {
     "types": ["node", "jest"],
-    "removeComments": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
-    "target": "es2021",
-    "baseUrl": "./",
-    "outDir": "./dist",
-    "moduleResolution": "node",
-    "isolatedModules": true,
-    "noFallthroughCasesInSwitch": true,
     "strictPropertyInitialization": false,
   },
   "references": [

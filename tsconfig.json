@@ -2,20 +2,23 @@
   "compilerOptions": {
     "outDir": "./dist",
     "baseUrl": ".",
-    "moduleResolution": "Node",
-    "module": "CommonJS",
-    "target": "ES2021",
+    "moduleResolution": "node",
+    "module": "commonjs",
+    "target": "es2022",
     "sourceMap": true,
     "strict": true,
     "esModuleInterop": true,
-    "alwaysStrict": true,
-    "strictNullChecks": true,
-    "noImplicitAny": true,
     "noImplicitReturns": true,
-    "noImplicitThis": true,
     "noUnusedLocals": true,
     "resolveJsonModule": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "noFallthroughCasesInSwitch": true,
+    "removeComments": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "noErrorTruncation": true,
+    "exactOptionalPropertyTypes": true,
+    "noEmit": false
   },
   "exclude": ["node_modules", "dist", "*.d.ts"]
 }

@@ -23,16 +23,16 @@
     "@oclif/plugin-help": "6.2.13",
     "@oclif/plugin-plugins": "5.4.10",
     "axios": "1.7.7",
-    "ethers": "6.13.2"
+    "ethers": "catalog:"
   },
   "devDependencies": {
-    "@jest/globals": "29.7.0",
+    "@jest/globals": "catalog:",
     "@oclif/test": "4.0.9",
-    "@types/jest": "29.5.13",
-    "jest": "29.7.0",
-    "jest-mock-extended": "3.0.5",
+    "@types/jest": "catalog:",
+    "jest": "catalog:",
+    "jest-mock-extended": "catalog:",
     "shx": "0.3.4",
-    "ts-jest": "29.2.5"
+    "ts-jest": "catalog:"
   },
   "engines": {
     "node": ">=20"

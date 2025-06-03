@@ -19,17 +19,17 @@
     "test": "npx jest --bail --detectOpenHandles --forceExit"
   },
   "dependencies": {
-    "ethers": "6.13.4",
+    "ethers": "catalog:",
     "lru-cache": "11.0.2"
   },
   "devDependencies": {
-    "@jest/globals": "29.7.0",
-    "@typechain/ethers-v6": "0.5.1",
-    "@types/jest": "29.5.14",
-    "jest": "29.7.0",
-    "jest-mock-extended": "3.0.5",
-    "ts-jest": "29.2.5",
-    "typechain": "8.3.2"
+    "@jest/globals": "catalog:",
+    "@typechain/ethers-v6": "catalog:",
+    "@types/jest": "catalog:",
+    "jest": "catalog:",
+    "jest-mock-extended": "catalog:",
+    "ts-jest": "catalog:",
+    "typechain": "catalog:"
   },
   "files": [
     "dist"

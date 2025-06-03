@@ -36,14 +36,14 @@
     "@safe-global/safe-core-sdk-types": "4.0.2",
     "@typechain/hardhat": "9.1.0",
     "@types/diff": "5.2.0",
-    "@types/yargs": "17.0.32",
+    "@types/yargs": "catalog:",
     "c-kzg": "2.1.2",
     "chai": "4.1.1",
     "colors": "1.4.0",
     "csv-parser": "3.0.0",
-    "dotenv": "16.4.5",
+    "dotenv": "catalog:",
     "edit-json-file": "1.8.0",
-    "ethers": "6.12.0",
+    "ethers": "catalog:",
     "hardhat": "2.24.0",
     "hardhat-deploy": "0.12.4",
     "hardhat-storage-layout": "0.1.7",
@@ -51,10 +51,8 @@
     "node-gyp": "10.1.0",
     "prettier-plugin-solidity": "1.4.2",
     "solhint": "5.0.5",
-    "yargs": "17.7.2"
-  },
-  "dependencies": {
     "solidity-coverage": "0.8.16",
-    "solidity-docgen": "0.6.0-beta.36"
+    "solidity-docgen": "0.6.0-beta.36",
+    "yargs": "catalog:"
   }
 }

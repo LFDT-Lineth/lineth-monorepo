@@ -1,14 +1,13 @@
 {
   "extends": "../tsconfig.json",
   "compilerOptions": {
-    "lib": ["ES2021", "DOM"],
-    "noEmit": false,
-    "skipLibCheck": true,
-    "noErrorTruncation": true,
-    "strictPropertyInitialization": false,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
-    "composite": true
+    "composite": true,
+    "removeComments": false,
+    "isolatedModules": false,
+    "strictPropertyInitialization": false,
+    "exactOptionalPropertyTypes": false
   },
   "exclude": ["./dist", "**/node_modules"]
 }

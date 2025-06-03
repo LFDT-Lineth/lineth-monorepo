@@ -60,7 +60,7 @@
     "@types/react": "18.3.11",
     "@types/react-dom": "18.3.0",
     "autoprefixer": "10.4.21",
-    "dotenv": "16.4.7",
+    "dotenv": "catalog:",
     "eslint-config-next": "14.2.15",
     "nock": "14.0.1",
     "postcss": "8.5.3",
