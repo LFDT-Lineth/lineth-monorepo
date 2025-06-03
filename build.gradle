@@ -121,7 +121,7 @@ allprojects {
 
         java {
           target 'src/**/*.java'
-          targetExclude '**/src/test/java/**ReferenceTest**', '**/src/main/generated/**', '**/src/test/generated/**', '**/src/jmh/generated/**'
+          // Do not use 'targetExclude' with wildcard patterns, it will add minutes to the build
           removeUnusedImports()
           trimTrailingWhitespace()
           endWithNewline()
