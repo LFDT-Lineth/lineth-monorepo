@@ -22,7 +22,7 @@
     "@oclif/core": "4.0.23",
     "@oclif/plugin-help": "6.2.13",
     "@oclif/plugin-plugins": "5.4.10",
-    "axios": "1.7.7",
+    "axios": "1.8.2",
     "ethers": "catalog:"
   },
   "devDependencies": {

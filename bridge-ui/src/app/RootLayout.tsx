@@ -18,8 +18,9 @@ const metadata: Metadata = {
   Discover the future of blockchain interaction with Linea Bridge.`,
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
-  const nonce = headers().get("x-nonce") || "";
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const headersList = await headers();
+  const nonce = headersList.get("x-nonce") || "";
 
   return (
     <html lang="en" data-theme="v2" className={clsx(atypFont.variable, atypTextFont.variable)}>
