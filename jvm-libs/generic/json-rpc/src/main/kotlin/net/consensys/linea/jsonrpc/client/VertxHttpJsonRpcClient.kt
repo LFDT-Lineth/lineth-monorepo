@@ -18,6 +18,7 @@ import net.consensys.linea.jsonrpc.JsonRpcErrorResponse
 import net.consensys.linea.jsonrpc.JsonRpcRequest
 import net.consensys.linea.jsonrpc.JsonRpcRequestData
 import net.consensys.linea.jsonrpc.JsonRpcSuccessResponse
+import net.consensys.linea.metrics.MetricsCategory
 import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.linea.metrics.Tag
 import org.apache.logging.log4j.Level
@@ -35,6 +36,9 @@ class VertxHttpJsonRpcClient(
   private val log: Logger = LogManager.getLogger(VertxHttpJsonRpcClient::class.java),
   private val requestResponseLogLevel: Level = Level.TRACE,
   private val failuresLogLevel: Level = Level.DEBUG,
+  private val metricsCategory: MetricsCategory = object : MetricsCategory {
+    override val name: String = "jsonrpc"
+  },
 ) : JsonRpcClient {
   private val requestOptions = RequestOptions().apply {
     setMethod(HttpMethod.POST)
@@ -87,7 +91,8 @@ class VertxHttpJsonRpcClient(
 
       Future.fromCompletionStage(
         metricsFacade.createSimpleTimer<Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>>(
-          name = "jsonrpc.request",
+          category = metricsCategory,
+          name = "request",
           description = "Time of Upstream API JsonRpc Requests",
           tags = listOf(
             Tag("endpoint", endpoint.host),

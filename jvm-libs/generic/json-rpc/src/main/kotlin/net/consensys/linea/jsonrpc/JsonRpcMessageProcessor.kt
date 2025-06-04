@@ -22,6 +22,7 @@ import io.vertx.core.json.JsonObject
 import io.vertx.core.json.jackson.DatabindCodec
 import io.vertx.core.json.jackson.VertxModule
 import io.vertx.ext.auth.User
+import net.consensys.linea.metrics.MetricsCategory
 import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.linea.metrics.Tag
 import org.apache.logging.log4j.LogManager
@@ -56,6 +57,9 @@ class JsonRpcMessageProcessor(
   private val log: Logger = LogManager.getLogger(JsonRpcMessageProcessor::class.java),
   private val responseResultObjectMapper: ObjectMapper = jacksonObjectMapper().registerModules(VertxModule()),
   private val rpcEnvelopeObjectMapper: ObjectMapper = jacksonObjectMapper(),
+  private val metricsCategory: MetricsCategory = object : MetricsCategory {
+    override val name: String = "jsonrpc"
+  },
 ) : JsonRpcMessageHandler {
   init {
     DatabindCodec.mapper().registerKotlinModule()
@@ -70,7 +74,8 @@ class JsonRpcMessageProcessor(
   ): Future<String> {
     return Future.fromCompletionStage(
       metricsFacade.createDynamicTagTimer<Triple<String?, String, Boolean>>(
-        name = "jsonrpc.processing.whole",
+        category = metricsCategory,
+        name = "processing.whole",
         description = "Processing of JSON-RPC message: Deserialization + Business Logic + Serialization",
         tagKey = "method",
         tagValueExtractorOnError = { "METHOD_PROCESSING_ERROR" },
@@ -175,7 +180,8 @@ class JsonRpcMessageProcessor(
             responses.first()
           } else {
             metricsFacade.createSimpleTimer<String>(
-              name = "jsonrpc.serialization.response.bulk",
+              category = metricsCategory,
+              name = "serialization.response.bulk",
               description = "Time of bulk json response serialization",
             ).captureTime { responses.joinToString(",", "[", "]") }
           }
@@ -187,7 +193,8 @@ class JsonRpcMessageProcessor(
     json: Any,
   ): Result<Pair<JsonRpcRequest, JsonObject>, JsonRpcErrorResponse> {
     return metricsFacade.createDynamicTagTimer(
-      name = "jsonrpc.serialization.request",
+      category = metricsCategory,
+      name = "serialization.request",
       description = "json-rpc method parsing",
       tagKey = "method",
       tagValueExtractorOnError = { "METHOD_PARSE_ERROR" },
@@ -199,7 +206,8 @@ class JsonRpcMessageProcessor(
 
   private fun encodeAndMeasureResponse(requestContext: RequestContext): String {
     val timerCapture = metricsFacade.createSimpleTimer<String>(
-      name = "jsonrpc.serialization.response",
+      category = metricsCategory,
+      name = "serialization.response",
       description = "Time of json response serialization",
       tags = listOf(Tag("method", requestContext.method)),
     )
@@ -219,7 +227,8 @@ class JsonRpcMessageProcessor(
     requestJson: JsonObject,
   ): Future<Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>> {
     return metricsFacade.createSimpleTimer<Future<Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>>>(
-      name = "jsonrpc.processing.logic",
+      category = metricsCategory,
+      name = "processing.logic",
       description = "Processing of a particular JRPC method's logic without SerDes",
       tags = listOf(Tag("method", jsonRpcRequest.method)),
     )
@@ -227,7 +236,8 @@ class JsonRpcMessageProcessor(
       .onComplete { result: AsyncResult<Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>> ->
         val success = (result.succeeded() && result.result() is Ok)
         metricsFacade.createCounter(
-          name = "jsonrpc.counter",
+          category = metricsCategory,
+          name = "counter",
           description = "Counting the JSON rpc request with result and method",
           tags = listOf(
             Tag("success", success.toString()),
