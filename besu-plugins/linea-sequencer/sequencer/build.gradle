@@ -71,3 +71,9 @@ dependencies {
 }
 
 apply from: lineaSequencerProject.file("gradle/dist.gradle")
+
+test {
+  useJUnitPlatform()
+  // Disable parallel execution for this module due to WireMock test interference
+  systemProperty "junit.jupiter.execution.parallel.enabled", "false"
+}
