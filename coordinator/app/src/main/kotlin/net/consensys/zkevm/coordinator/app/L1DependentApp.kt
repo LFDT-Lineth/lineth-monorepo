@@ -564,7 +564,7 @@ class L1DependentApp(
       measurementSupplier = maxBlobEndBlockNumberTracker,
     )
 
-    val highestAggregationTracker = HighestULongTracker(lastProcessedBlockNumber)
+    val highestAggregationTracker = HighestULongTracker(lastConsecutiveAggregatedBlockNumber)
     metricsFacade.createGauge(
       category = LineaMetricsCategory.AGGREGATION,
       name = "proven.highest.block.number",

@@ -61,20 +61,37 @@ Linea Finalization status is based on L1 RPC endpoint's response
 bin/besu --profile=advanced-mainnet --plugin-linea-l1-rpc-endpoint=YOUR_L1_RPC_ENDPOINT
 ```
 
-## Build from source
+## Build from source locally
 
-1. Make a branch with changes to `linea-besu-package/versions.env` as needed
-2. Create a PR for the branch
-3. Go to the [actions tab](https://github.com/Consensys/linea-monorepo/actions) to check if the workflow completed successfully
-4. Go to the [releases page](https://github.com/Consensys/linea-monorepo/releases?q=linea-besu-package&expanded=true) and you should find the corresponding release info along with the docker image tag
+1. Make changes to `linea-besu-package/versions.env` as needed
+
+2. Cd into `linea-besu-package`
+
+3. Run `make clean && make build` (check the Makefile for build options)
+
+4. The docker image (i.e. default as `consensys/linea-besu-package:local`) should be created locally 
+
+### Note: 
+
+To build with specific platform (e.g. linux/amd64) and image tag (e.g. xxx), do the following:
+```
+make clean && PLATFORM=linux/amd64 TAG=xxx make build
+```
+
+To run the e2e test locally with the locally-built `linea-besu-package` image (e.g. tagged as xxx), do the following:
+```
+TAG=xxx make run-e2e-test
+```
 
 ## How-To Release
 
-1. Go to the [actions tab](https://github.com/Consensys/linea-monorepo/actions) and click on the workflow `linea-besu-package-release` for release with besu and plugin versions based on `linea-besu-package/versions.env`
+1. Make a branch with changes to `linea-besu-package/versions.env` as needed
 
-2. If release prefix is not given, `LINEA_TRACER_PLUGIN_VERSION` in the target `versions.env` file will be used, and the resultant release tag would be `linea-besu-package-[releasePrefix]-[YYYYMMDDHHMMSS]-[shortenCommitHash]` and the docker image tag would be `[releasePrefix]-[YYYYMMDDHHMMSS]-[shortenCommitHash]`
+2. Go to the [actions tab](https://github.com/Consensys/linea-monorepo/actions) and click on the workflow `linea-besu-package-release` and select the target branch for making a release with besu and plugin versions based on `linea-besu-package/versions.env`
 
-3. Go to the [releases page](https://github.com/Consensys/linea-monorepo/releases?q=linea-besu-package&expanded=true) and you should find the corresponding release info along with the docker image tag
+3. If release prefix is not given, `LINEA_TRACER_PLUGIN_VERSION` in the target `versions.env` file will be used, and the resultant release tag would be `linea-besu-package-[releasePrefix]-[YYYYMMDDHHMMSS]-[shortenCommitHash]` and the docker image tag would be `[releasePrefix]-[YYYYMMDDHHMMSS]-[shortenCommitHash]`
+
+4. Once the workflow is done successfully, go to the [releases page](https://github.com/Consensys/linea-monorepo/releases?q=linea-besu-package&expanded=true) and you should find the corresponding release info along with the docker image tag
 
 Additionally, the `latest` tag will be updated to match this release
 

@@ -59,7 +59,7 @@ jobs:
           eval $COMMAND
 
       - name: Verify besu container
-        run: bash linea-besu-package/docker/scripts/BesuContainerVerify.sh
+        run: bash linea-besu-package/scripts/besu-container-verify.sh
         env:
           CONTAINER_NAME: ${{ env.CONTAINER_NAME }}
 

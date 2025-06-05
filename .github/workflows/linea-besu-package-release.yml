@@ -48,7 +48,7 @@ jobs:
     outputs:
       versions_env: ${{ steps.filter.outputs.versions-env }}
       linea_configs: ${{ steps.filter.outputs.linea-configs }}
-      dockerfile: ${{ steps.filter.outputs.dockerfile }}
+      docker-files: ${{ steps.filter.outputs.docker-files }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -61,8 +61,9 @@ jobs:
           filters: |
             versions-env:
               - 'linea-besu-package/versions.env'
-            dockerfile:
+            docker-files:
               - 'linea-besu-package/linea-besu/Dockerfile'
+              - 'linea-besu-package/scripts/assemble-packages.sh'
             linea-configs:
               - 'linea-besu-package/linea-besu/**'
 
@@ -73,7 +74,7 @@ jobs:
     with:
       release_tag_prefix: ${{ inputs.release_tag_prefix }}
       run_test: true
-      run_e2e_test: ${{ github.event_name == 'workflow_dispatch' || needs.filter-commit-changes.outputs.versions_env == 'true' || needs.filter-commit-changes.outputs.dockerfile == 'true' }}
+      run_e2e_test: ${{ github.event_name == 'workflow_dispatch' || needs.filter-commit-changes.outputs.versions_env == 'true' || needs.filter-commit-changes.outputs.docker-files == 'true' }}
       push_image: ${{ github.event_name == 'workflow_dispatch' }}
       skip_e2e_test: ${{ inputs.skip_e2e_test == 'true' }}
       expected_traces_api_ver: ${{ inputs.expected_traces_api_ver }}

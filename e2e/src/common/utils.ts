@@ -521,7 +521,7 @@ export async function execDockerCommand(command: string, containerName: string):
         logger.error(`Error executing (${dockerCommand}). error=${stderr}`);
         reject(error);
       }
-      logger.info(`Execution success (${dockerCommand}). output=${stdout}`);
+      logger.debug(`Execution success (${dockerCommand}). output=${stdout}`);
       resolve(stdout);
     });
   });

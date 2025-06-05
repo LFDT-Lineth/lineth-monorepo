@@ -100,48 +100,13 @@ runs:
       shell: bash
       run: |
         echo "dockerimage=consensys/linea-besu-package:${{ steps.dockertag.outputs.dockertag }}" >> "$GITHUB_OUTPUT"
-        
-    - name: download and untar the linea-besu archive
-      shell: bash
-      run: |
-        cd /tmp/
-        echo "downloading besu from linea-besu-upstream: ${{ steps.dotenv.outputs.LINEA_BESU_TAR_GZ }}"
-        wget -nv "${{ steps.dotenv.outputs.LINEA_BESU_BASE_URL }}${{ steps.dotenv.outputs.LINEA_BESU_TAR_GZ }}/${{ steps.dotenv.outputs.LINEA_BESU_FILENAME_PREFIX }}-${{ steps.dotenv.outputs.LINEA_BESU_TAR_GZ }}.tar.gz"
-        tar -xvf ${{ steps.dotenv.outputs.LINEA_BESU_FILENAME_PREFIX }}-${{ steps.dotenv.outputs.LINEA_BESU_TAR_GZ }}.tar.gz
-        mv /tmp/${{ steps.dotenv.outputs.LINEA_BESU_FILENAME_PREFIX }}-${{ steps.dotenv.outputs.LINEA_BESU_TAR_GZ }} /tmp/besu
 
-    - name: copy the list of versions to the container
-      shell: bash      
-      run: |
-        cp ./linea-besu-package/versions.env /tmp/besu/versions.txt
-        mkdir -p /tmp/besu/plugins
-
-    - name: get the plugins
-      shell: bash      
-      run: |
-        cd /tmp/besu/plugins
-
-        echo "getting linea_sequencer_plugin_version: ${{ steps.dotenv.outputs.LINEA_SEQUENCER_PLUGIN_VERSION }}" 
-        wget -nv "https://github.com/Consensys/linea-sequencer/releases/download/v${{ steps.dotenv.outputs.LINEA_SEQUENCER_PLUGIN_VERSION }}/linea-sequencer-v${{ steps.dotenv.outputs.LINEA_SEQUENCER_PLUGIN_VERSION }}.jar" -P /tmp/besu/plugins
-
-        echo "getting linea_finalized_tag_updater_plugin_version: ${{ steps.dotenv.outputs.LINEA_FINALIZED_TAG_UPDATER_PLUGIN_VERSION }}" 
-        wget -nv "https://github.com/Consensys/linea-monorepo/releases/download/linea-finalized-tag-updater-v${{ steps.dotenv.outputs.LINEA_FINALIZED_TAG_UPDATER_PLUGIN_VERSION }}/linea-finalized-tag-updater-v${{ steps.dotenv.outputs.LINEA_FINALIZED_TAG_UPDATER_PLUGIN_VERSION }}.jar" -P /tmp/besu/plugins
-
-        echo "getting linea_staterecovery_plugin_version: ${{ steps.dotenv.outputs.LINEA_STATERECOVERY_PLUGIN_VERSION }}"
-        wget -nv "https://github.com/Consensys/linea-monorepo/releases/download/linea-staterecovery-v${{ steps.dotenv.outputs.LINEA_STATERECOVERY_PLUGIN_VERSION }}/linea-staterecovery-besu-plugin-v${{ steps.dotenv.outputs.LINEA_STATERECOVERY_PLUGIN_VERSION }}.jar" -P /tmp/besu/plugins
-
-        echo "getting linea_tracer_plugin_version: ${{ steps.dotenv.outputs.LINEA_TRACER_PLUGIN_VERSION }}" 
-        wget -nv "https://github.com/Consensys/linea-tracer/releases/download/${{ steps.dotenv.outputs.LINEA_TRACER_PLUGIN_VERSION }}/linea-tracer-${{ steps.dotenv.outputs.LINEA_TRACER_PLUGIN_VERSION }}.jar" -P /tmp/besu/plugins
-
-        echo "getting shomei_plugin_version: ${{ steps.dotenv.outputs.SHOMEI_PLUGIN_VERSION }}" 
-        wget -nv "https://github.com/Consensys/besu-shomei-plugin/releases/download/v${{ steps.dotenv.outputs.SHOMEI_PLUGIN_VERSION }}/besu-shomei-plugin-v${{ steps.dotenv.outputs.SHOMEI_PLUGIN_VERSION }}.jar" -P /tmp/besu/plugins
-
-    - name: place the packages together for preparing docker image build
+    - name: assemble the packages to linea-besu and show folder structure
       shell: bash    
       run: |
-        cd linea-besu-package/linea-besu
-        mv /tmp/besu ./
-        mv config/ genesis/ profiles/ besu/
+        cd linea-besu-package
+        make assemble
+        mv ./tmp/besu ./linea-besu
         sudo apt update
         sudo apt-get install --no-install-recommends --assume-yes tree
         tree .
