@@ -68,7 +68,8 @@
   EVM_INST_COINBASE                         0x41
   EVM_INST_TIMESTAMP                        0x42
   EVM_INST_NUMBER                           0x43
-  EVM_INST_DIFFICULTY                       0x44                               ;; PREVRANDAO comes after London, in Paris
+  EVM_INST_DIFFICULTY                       0x44                               
+  EVM_INST_PREVRANDAO                       0x44          ;; PREVRANDAO comes in Paris, after London 
   EVM_INST_GASLIMIT                         0x45
   EVM_INST_CHAINID                          0x46
   EVM_INST_SELFBALANCE                      0x47

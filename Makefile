@@ -15,11 +15,17 @@ BIN := bin
 BLAKE2f_MODEXP_DATA := blake2fmodexpdata
 
 # constraints used in prod for LINEA, with linea block gas limit
-BLOCKDATA := $(wildcard blockdata/*.lisp) \
-	       $(wildcard blockdata/processing/*.lisp) \
-	       $(wildcard blockdata/processing/gaslimit/common.lisp) \
-	       $(wildcard blockdata/processing/gaslimit/linea.lisp) \
-	       $(wildcard blockdata/lookups/*.lisp)
+BLOCKDATA_LON := $(wildcard blockdata/london/*.lisp) \
+	             $(wildcard blockdata/london/processing/*.lisp) \
+	             $(wildcard blockdata/london/processing/gaslimit/common.lisp) \
+	       		 $(wildcard blockdata/london/processing/gaslimit/linea.lisp) \
+	       		 $(wildcard blockdata/london/lookups/*.lisp)
+
+BLOCKDATA_PAR := $(wildcard blockdata/paris/*.lisp) \
+	             $(wildcard blockdata/paris/processing/*.lisp) \
+	             $(wildcard blockdata/paris/processing/gaslimit/common.lisp) \
+	       		 $(wildcard blockdata/paris/processing/gaslimit/linea.lisp) \
+	       		 $(wildcard blockdata/paris/lookups/*.lisp)
 
 BLOCKHASH := blockhash
 
@@ -99,7 +105,6 @@ ZKEVM_MODULES_COMMON := ${CONSTANTS} \
 		 ${ALU} \
 		 ${BIN} \
 		 ${BLAKE2f_MODEXP_DATA} \
-		 ${BLOCKDATA} \
 		 ${BLOCKHASH} \
 		 ${EC_DATA} \
 		 ${EUC} \
@@ -124,19 +129,30 @@ ZKEVM_MODULES_COMMON := ${CONSTANTS} \
 		 ${WCP}
 
 ZKEVM_MODULES_LONDON := ${ZKEVM_MODULES_COMMON} \
+		 ${BLOCKDATA_LON} \
+		 ${HUB_LON} \
+		 ${OOB_LON} \
+		 ${TXN_DATA_LON}
+
+ZKEVM_MODULES_PARIS := ${ZKEVM_MODULES_COMMON} \
+		 ${BLOCKDATA_PAR} \
 		 ${HUB_LON} \
 		 ${OOB_LON} \
 		 ${TXN_DATA_LON}
 
  ZKEVM_MODULES_SHANGHAI := ${ZKEVM_MODULES_COMMON} \
+ 		 ${BLOCKDATA_PAR} \
 		 ${HUB_SHAN} \
 		 ${OOB_SHAN} \
 		 ${TXN_DATA_SHAN}
 
-all: zkevm_london.bin zkevm_shanghai.bin
+all: zkevm_london.bin zkevm_paris.bin zkevm_shanghai.bin
 
 zkevm_london.bin: ${ZKEVM_MODULES_LONDON}
 	${GO_CORSET_COMPILE} -o $@ ${ZKEVM_MODULES_LONDON}
+
+zkevm_paris.bin: ${ZKEVM_MODULES_PARIS}
+	${GO_CORSET_COMPILE} -o $@ ${ZKEVM_MODULES_PARIS}
 
 zkevm_shanghai.bin: ${ZKEVM_MODULES_SHANGHAI}
 	${GO_CORSET_COMPILE} -o $@ ${ZKEVM_MODULES_SHANGHAI}
