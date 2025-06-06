@@ -65,7 +65,6 @@ jobs:
               - '.github/workflows/staterecovery-*.yml'
               - '.github/workflows/main.yml'
               - '.github/workflows/reuse-*.yml'
-              - 'e2e/**'
             postman:
               - 'postman/**'
               - 'sdk/**'

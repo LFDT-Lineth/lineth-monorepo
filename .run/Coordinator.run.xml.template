@@ -4,7 +4,7 @@
     <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
     <option name="MAIN_CLASS_NAME" value="net.consensys.zkevm.coordinator.app.CoordinatorAppMain" />
     <module name="zkevm.coordinator.app.main" />
-    <option name="PROGRAM_PARAMETERS" value="--traces-limits-v2=config/common/traces-limits-v2.toml --smart-contract-errors=config/common/smart-contract-errors.toml --gas-price-cap-time-of-day-multipliers=config/common/gas-price-cap-time-of-day-multipliers.toml config/coordinator/coordinator-docker.config.toml config/coordinator/coordinator-docker-traces-v2-override.config.toml config/coordinator/coordinator-local-dev.config.overrides.toml config/coordinator/coordinator-local-dev.config-traces-v2.overrides.toml" />
+    <option name="PROGRAM_PARAMETERS" value="--traces-limits-v2=config/common/traces-limits-v2.toml --smart-contract-errors=config/common/smart-contract-errors.toml --gas-price-cap-time-of-day-multipliers=config/common/gas-price-cap-time-of-day-multipliers.toml config/coordinator/coordinator-config-v2.toml config/coordinator/coordinator-config-v2-override-local-dev.toml" />
     <option name="VM_PARAMETERS" value="-Dvertx.configurationFile=config/coordinator/vertx-options.json -Dlog4j2.configurationFile=config/coordinator/log4j2-dev.xml" />
     <extension name="net.ashald.envfile">
       <option name="IS_ENABLED" value="false" />

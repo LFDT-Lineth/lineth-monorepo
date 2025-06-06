@@ -25,6 +25,7 @@ import org.web3j.tx.gas.StaticGasProvider
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.math.BigInteger
 import java.util.concurrent.atomic.AtomicReference
+import kotlin.random.Random
 
 class Web3JL2MessageServiceSmartContractClient(
   private val web3j: Web3j,
@@ -75,6 +76,30 @@ class Web3JL2MessageServiceSmartContractClient(
         contractAddress = contractAddress,
         web3jContractHelper = web3jContractHelper,
         deploymentBlockNumberProvider = deploymentBlockNumberProvider,
+      )
+    }
+
+    fun createReadOnly(
+      web3jClient: Web3j,
+      contractAddress: String,
+      smartContractErrors: SmartContractErrors,
+      smartContractDeploymentBlockNumber: ULong?,
+    ): L2MessageServiceSmartContractClientReadOnly {
+      val unUsedTxManager = AsyncFriendlyTransactionManager(
+        web3j = web3jClient,
+        credentials = Credentials.create(Random.nextBytes(64).encodeHex()),
+        chainId = 1L,
+      )
+      return create(
+        web3jClient = web3jClient,
+        contractAddress = contractAddress,
+        gasLimit = 0UL,
+        maxFeePerGasCap = 0UL,
+        feeHistoryBlockCount = 1u,
+        feeHistoryRewardPercentile = 100.0,
+        transactionManager = unUsedTxManager,
+        smartContractErrors = smartContractErrors,
+        smartContractDeploymentBlockNumber = smartContractDeploymentBlockNumber,
       )
     }
   }

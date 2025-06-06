@@ -11,7 +11,7 @@ services:
     extends:
       file: compose-spec-l2-services.yml
       service: shomei-frontend
-  
+
   postman:
     extends:
       file: compose-spec-l2-services.yml

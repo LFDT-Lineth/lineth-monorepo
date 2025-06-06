@@ -1,0 +1,58 @@
+[defaults]
+l1-endpoint = "http://127.0.0.1:8445"
+l2-endpoint = "http://127.0.0.1:8545"
+
+[prover]
+[prover.execution]
+fs-requests-directory = "tmp/local/prover/v3/execution/requests"
+fs-responses-directory = "tmp/local/prover/v3/execution/responses"
+[prover.blob-compression]
+fs-requests-directory = "tmp/local/prover/v3/compression/requests"
+fs-responses-directory = "tmp/local/prover/v3/compression/responses"
+[prover.proof-aggregation]
+fs-requests-directory = "tmp/local/prover/v3/aggregation/requests"
+fs-responses-directory = "tmp/local/prover/v3/aggregation/responses"
+
+[traces]
+[traces.counters]
+endpoints = ["http://127.0.0.1:8745/"]
+[traces.conflation]
+endpoints = ["http://127.0.0.1:8745/"]
+
+[state-manager]
+endpoints = ["http://127.0.0.1:8998/"]
+
+[type2-state-proof-provider]
+disabled = true
+
+[l1-finalization-monitor]
+l1-query-block-tag="LATEST"
+
+[l1-submission.blob.signer]
+type = "Web3j"
+
+[l1-submission.aggregation.signer]
+type = "Web3j"
+
+[message-anchoring]
+disabled = false
+l1-highest-block-tag="LATEST"
+l2-highest-block-tag="LATEST"
+anchoring-tick-interval = "PT1S"
+
+[message-anchoring.l1-event-scraping]
+polling-interval = "PT1S"
+
+[message-anchoring.signer]
+type = "Web3j"
+
+[l2-network-gas-pricing]
+disabled = false
+extra-data-update-endpoint = "http://127.0.0.1:8545/"
+
+[database]
+hostname = "127.0.0.1"
+port = "5432"
+
+[api]
+observability_port = 9545

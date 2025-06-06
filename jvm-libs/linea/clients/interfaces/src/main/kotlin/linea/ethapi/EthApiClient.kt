@@ -6,6 +6,8 @@ import linea.domain.BlockWithTxHashes
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 interface EthApiClient : EthLogsClient {
+  fun getChainId(): SafeFuture<ULong>
+
   fun findBlockByNumber(
     blockParameter: BlockParameter,
   ): SafeFuture<Block?>

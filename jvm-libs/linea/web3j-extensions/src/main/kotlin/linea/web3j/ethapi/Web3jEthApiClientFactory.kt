@@ -65,7 +65,14 @@ fun createEthApiClient(
   vertx: Vertx?,
 ): EthApiClient {
   val web3jClient =
-    createWeb3jHttpClient(rpcUrl, log, pollingInterval, executorService, requestResponseLogLevel, failuresLogLevel)
+    createWeb3jHttpClient(
+      rpcUrl,
+      log,
+      pollingInterval,
+      executorService,
+      requestResponseLogLevel,
+      failuresLogLevel,
+    )
 
   return createEthApiClient(web3jClient, requestRetryConfig, vertx)
 }

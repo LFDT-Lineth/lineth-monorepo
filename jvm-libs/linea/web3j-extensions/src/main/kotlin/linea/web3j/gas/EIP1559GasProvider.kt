@@ -4,6 +4,7 @@ import linea.kotlin.toBigInteger
 import linea.kotlin.toIntervalString
 import linea.web3j.domain.blocksRange
 import linea.web3j.domain.toLineaDomain
+import linea.web3j.requestAsync
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import org.web3j.protocol.Web3j
@@ -20,7 +21,13 @@ class EIP1559GasProvider(private val web3jClient: Web3j, private val config: Con
     val maxFeePerGasCap: ULong,
     val feeHistoryBlockCount: UInt,
     val feeHistoryRewardPercentile: Double,
-  )
+  ) {
+    init {
+      require(feeHistoryBlockCount > 0u) {
+        "feeHistoryBlockCount=$feeHistoryBlockCount must be greater than 0."
+      }
+    }
+  }
 
   private val chainId: Long = web3jClient.ethChainId().send().chainId.toLong()
   private var cacheIsValidForBlockNumber: BigInteger = BigInteger.ZERO
@@ -36,9 +43,7 @@ class EIP1559GasProvider(private val web3jClient: Web3j, private val config: Con
           DefaultBlockParameterName.LATEST,
           listOf(config.feeHistoryRewardPercentile),
         )
-        .sendAsync()
-        .thenApply {
-            feeHistoryResponse ->
+        .requestAsync { feeHistoryResponse ->
           val feeHistory = feeHistoryResponse.feeHistory.toLineaDomain()
           var maxPriorityFeePerGas = feeHistory.reward.sumOf { it[0] } / feeHistory.reward.size.toUInt()
 

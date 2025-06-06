@@ -5,6 +5,7 @@ import linea.domain.BlockParameter
 import linea.domain.BlockWithTxHashes
 import linea.domain.EthLog
 import linea.ethapi.EthApiClient
+import linea.kotlin.toULong
 import linea.web3j.domain.toDomain
 import linea.web3j.domain.toWeb3j
 import linea.web3j.mapToDomainWithTxHashes
@@ -22,6 +23,14 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 class Web3jEthApiClient(
   val web3jClient: Web3j,
 ) : EthApiClient {
+
+  override fun getChainId(): SafeFuture<ULong> {
+    return web3jClient
+      .ethChainId()
+      .requestAsync { resp ->
+        resp.chainId?.toULong() ?: throw IllegalStateException("Chain ID not found in response")
+      }
+  }
 
   override fun findBlockByNumber(blockParameter: BlockParameter): SafeFuture<Block?> {
     return web3jClient

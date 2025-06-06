@@ -67,7 +67,7 @@ start-env-with-tracing-v2:
 
 ## Enable L2 geth node
 start-env-with-tracing-v2-extra:
-	make start-env COMPOSE_PROFILES:=l1,l2 COMPOSE_FILE:=docker/compose-tracing-v2-extra-extension.yml LINEA_PROTOCOL_CONTRACTS_ONLY=true DISABLE_JSON_RPC_PRICING_PROPAGATION=false DISABLE_TYPE2_STATE_PROOF_PROVIDER=false
+	make start-env COMPOSE_PROFILES:=l1,l2 COMPOSE_FILE:=docker/compose-tracing-v2-extra-extension.yml LINEA_PROTOCOL_CONTRACTS_ONLY=true DISABLE_TYPE2_STATE_PROOF_PROVIDER=false
 
 start-env-with-tracing-v2-ci:
 	make start-env COMPOSE_FILE=docker/compose-tracing-v2-ci-extension.yml DISABLE_TYPE2_STATE_PROOF_PROVIDER=false

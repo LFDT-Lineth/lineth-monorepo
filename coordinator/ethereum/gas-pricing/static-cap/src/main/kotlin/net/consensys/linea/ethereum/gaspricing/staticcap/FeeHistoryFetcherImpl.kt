@@ -23,6 +23,9 @@ class FeeHistoryFetcherImpl(
     val feeHistoryRewardPercentile: Double,
   ) {
     init {
+      require(feeHistoryBlockCount > 0u) {
+        "feeHistoryBlockCount=$feeHistoryBlockCount must be greater than 0."
+      }
       require(feeHistoryRewardPercentile in 0.0..100.0) {
         "feeHistoryRewardPercentile must be within 0.0 and 100.0." +
           " Value=$feeHistoryRewardPercentile"

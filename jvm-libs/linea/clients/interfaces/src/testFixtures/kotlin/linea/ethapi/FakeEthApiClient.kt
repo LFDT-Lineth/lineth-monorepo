@@ -17,6 +17,7 @@ import kotlin.time.Duration.Companion.seconds
 
 class FakeEthApiClient(
   initialLogsDb: Set<EthLog> = emptySet(),
+  val chainId: ULong = 101UL,
   val genesisTimestamp: Instant = Instant.parse("2025-04-01T00:00:00Z"),
   val blockTime: Duration = 1.seconds,
   initialTagsBlocks: Map<BlockParameter.Tag, ULong> = mapOf(
@@ -110,6 +111,10 @@ class FakeEthApiClient(
         blockTags[tag] = minBlockNumber
       }
     }
+  }
+
+  override fun getChainId(): SafeFuture<ULong> {
+    return SafeFuture.completedFuture(chainId)
   }
 
   override fun findBlockByNumber(blockParameter: BlockParameter): SafeFuture<Block?> {

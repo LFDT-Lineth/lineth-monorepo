@@ -4,15 +4,14 @@ import io.micrometer.core.instrument.MeterRegistry
 import io.vertx.core.Vertx
 import io.vertx.micrometer.backends.BackendRegistries
 import io.vertx.sqlclient.SqlClient
-import linea.web3j.createWeb3jHttpClient
+import linea.coordinator.config.v2.CoordinatorConfig
+import linea.coordinator.config.v2.DatabaseConfig
 import net.consensys.linea.async.toSafeFuture
 import net.consensys.linea.jsonrpc.client.LoadBalancingJsonRpcClient
 import net.consensys.linea.jsonrpc.client.VertxHttpJsonRpcClientFactory
 import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
 import net.consensys.linea.vertx.loadVertxConfig
 import net.consensys.zkevm.coordinator.api.Api
-import net.consensys.zkevm.coordinator.app.config.CoordinatorConfig
-import net.consensys.zkevm.coordinator.app.config.DatabaseConfig
 import net.consensys.zkevm.fileio.DirectoryCleaner
 import net.consensys.zkevm.persistence.dao.aggregation.AggregationsRepositoryImpl
 import net.consensys.zkevm.persistence.dao.aggregation.PostgresAggregationsDao
@@ -23,17 +22,12 @@ import net.consensys.zkevm.persistence.dao.batch.persistence.RetryingBatchesPost
 import net.consensys.zkevm.persistence.dao.blob.BlobsPostgresDao
 import net.consensys.zkevm.persistence.dao.blob.BlobsRepositoryImpl
 import net.consensys.zkevm.persistence.dao.blob.RetryingBlobsPostgresDao
-import net.consensys.zkevm.persistence.dao.feehistory.FeeHistoriesPostgresDao
-import net.consensys.zkevm.persistence.dao.feehistory.FeeHistoriesRepositoryImpl
 import net.consensys.zkevm.persistence.db.Db
 import net.consensys.zkevm.persistence.db.PersistenceRetryer
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
-import org.web3j.protocol.Web3j
 import tech.pegasys.teku.infrastructure.async.SafeFuture
-import kotlin.time.Duration.Companion.seconds
-import kotlin.time.toKotlinDuration
 
 class CoordinatorApp(private val configs: CoordinatorConfig) {
   private val log: Logger = LogManager.getLogger(this::class.java)
@@ -59,20 +53,13 @@ class CoordinatorApp(private val configs: CoordinatorConfig) {
     ),
     vertx,
   )
-  private val l2Web3jClient: Web3j = createWeb3jHttpClient(
-    rpcUrl = configs.l2.rpcEndpoint.toString(),
-    log = LogManager.getLogger("clients.l2.eth-api.rpc-node"),
-    pollingInterval = 1.seconds,
-    requestResponseLogLevel = Level.TRACE,
-    failuresLogLevel = Level.DEBUG,
-  )
 
   private val persistenceRetryer = PersistenceRetryer(
     vertx = vertx,
     config = PersistenceRetryer.Config(
-      backoffDelay = configs.persistenceRetry.backoffDelay.toKotlinDuration(),
-      maxRetries = configs.persistenceRetry.maxRetries,
-      timeout = configs.persistenceRetry.timeout?.toKotlinDuration(),
+      backoffDelay = configs.database.persistenceRetries.backoffDelay,
+      maxRetries = configs.database.persistenceRetries.maxRetries?.toInt(),
+      timeout = configs.database.persistenceRetries.timeout,
     ),
   )
 
@@ -92,7 +79,7 @@ class CoordinatorApp(private val configs: CoordinatorConfig) {
       blobsDao = RetryingBlobsPostgresDao(
         delegate = BlobsPostgresDao(
           config = BlobsPostgresDao.Config(
-            maxBlobsToReturn = configs.blobSubmission.maxBlobsToReturn.toUInt(),
+            maxBlobsToReturn = configs.l1Submission?.blob?.dbMaxBlobsToReturn ?: 50u,
           ),
           connection = sqlClient,
         ),
@@ -109,30 +96,15 @@ class CoordinatorApp(private val configs: CoordinatorConfig) {
     ),
   )
 
-  private val l1FeeHistoriesRepository =
-    FeeHistoriesRepositoryImpl(
-      FeeHistoriesRepositoryImpl.Config(
-        rewardPercentiles = configs.l1DynamicGasPriceCapService.feeHistoryFetcher.rewardPercentiles,
-        minBaseFeePerBlobGasToCache =
-        configs.l1DynamicGasPriceCapService.gasPriceCapCalculation.historicBaseFeePerBlobGasLowerBound,
-        fixedAverageRewardToCache =
-        configs.l1DynamicGasPriceCapService.gasPriceCapCalculation.historicAvgRewardConstant,
-      ),
-      FeeHistoriesPostgresDao(
-        sqlClient,
-      ),
-    )
-
   private val l1App = L1DependentApp(
     configs = configs,
     vertx = vertx,
-    l2Web3jClient = l2Web3jClient,
     httpJsonRpcClientFactory = httpJsonRpcClientFactory,
     batchesRepository = batchesRepository,
     blobsRepository = blobsRepository,
     aggregationsRepository = aggregationsRepository,
-    l1FeeHistoriesRepository = l1FeeHistoriesRepository,
-    smartContractErrors = configs.conflation.smartContractErrors,
+    sqlClient = sqlClient,
+    smartContractErrors = configs.smartContractErrors,
     metricsFacade = micrometerMetricsFacade,
   )
 
@@ -175,7 +147,6 @@ class CoordinatorApp(private val configs: CoordinatorConfig) {
     return kotlin.runCatching {
       SafeFuture.allOf(
         l1App.stop(),
-        SafeFuture.fromRunnable { l2Web3jClient.shutdown() },
         api.stop().toSafeFuture(),
       ).thenApply {
         LoadBalancingJsonRpcClient.stop()
