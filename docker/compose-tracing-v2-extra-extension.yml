@@ -2,6 +2,11 @@ include:
   - compose-tracing-v2.yml
 
 services:
+  web3signer:
+    extends:
+      file: compose-spec-l2-services.yml
+      service: web3signer
+
   shomei-frontend:
     extends:
       file: compose-spec-l2-services.yml
@@ -26,4 +31,3 @@ services:
     extends:
       file: compose-spec-l2-services.yml
       service: transaction-exclusion-api
-

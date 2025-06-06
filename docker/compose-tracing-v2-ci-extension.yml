@@ -2,6 +2,11 @@ include:
   - compose-tracing-v2.yml
 
 services:
+  web3signer:
+    extends:
+      file: compose-spec-l2-services.yml
+      service: web3signer
+
   l2-node-besu:
     extends:
       file: compose-spec-l2-services.yml

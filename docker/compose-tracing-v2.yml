@@ -61,11 +61,6 @@ services:
       file: compose-spec-l2-services.yml
       service: coordinator
 
-  web3signer:
-    extends:
-      file: compose-spec-l2-services.yml
-      service: web3signer
-
   postgres:
     extends:
       file: compose-spec-l2-services.yml
