@@ -17,9 +17,8 @@ package net.consensys.linea.extradata;
 
 import static net.consensys.linea.metrics.LineaMetricCategory.PRICING_CONF;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-
 import com.google.auto.service.AutoService;
+import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.AbstractLineaRequiredPlugin;
 import net.consensys.linea.config.LineaProfitabilityConfiguration;

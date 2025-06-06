@@ -18,7 +18,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.web3j.crypto.Hash.sha3;
 
 import java.util.List;
-
 import linea.plugin.acc.test.LineaPluginTestBase;
 import linea.plugin.acc.test.TestCommandLineOptionsBuilder;
 import org.apache.tuweni.bytes.Bytes;

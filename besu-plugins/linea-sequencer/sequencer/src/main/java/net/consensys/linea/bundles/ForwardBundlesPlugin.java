@@ -15,13 +15,12 @@
 
 package net.consensys.linea.bundles;
 
+import com.google.auto.service.AutoService;
 import java.net.URL;
 import java.time.Duration;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-
-import com.google.auto.service.AutoService;
 import net.consensys.linea.AbstractLineaRequiredPlugin;
 import net.consensys.linea.utils.PriorityThreadPoolExecutor;
 import okhttp3.OkHttpClient;

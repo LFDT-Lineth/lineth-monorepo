@@ -23,7 +23,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.stream.Stream;
-
 import linea.plugin.acc.test.tests.web3j.generated.EcAdd;
 import linea.plugin.acc.test.tests.web3j.generated.EcMul;
 import linea.plugin.acc.test.tests.web3j.generated.EcPairing;

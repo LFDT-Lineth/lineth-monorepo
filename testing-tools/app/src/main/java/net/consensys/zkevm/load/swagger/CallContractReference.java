@@ -10,38 +10,33 @@
  * Do not edit the class manually.
  */
 
-
 package net.consensys.zkevm.load.swagger;
-
-import java.util.Objects;
-import com.google.gson.TypeAdapter;
-import com.google.gson.annotations.SerializedName;
-import com.google.gson.stream.JsonReader;
-import com.google.gson.stream.JsonWriter;
-import java.io.IOException;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.TypeAdapter;
 import com.google.gson.TypeAdapterFactory;
+import com.google.gson.annotations.SerializedName;
 import com.google.gson.reflect.TypeToken;
-
+import com.google.gson.stream.JsonReader;
+import com.google.gson.stream.JsonWriter;
+import java.io.IOException;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
-
 import net.consensys.zkevm.load.model.JSON;
 
-/**
- * CallContractReference
- */
-
+/** CallContractReference */
 public class CallContractReference extends Contract {
   public static final String SERIALIZED_NAME_CONTRACT_NAME = "contractName";
+
   @SerializedName(SERIALIZED_NAME_CONTRACT_NAME)
   private String contractName;
 
   public static final String SERIALIZED_NAME_METHOD_AND_PARAMETERS = "methodAndParameters";
+
   @SerializedName(SERIALIZED_NAME_METHOD_AND_PARAMETERS)
   private MethodAndParameter methodAndParameters;
 
@@ -54,10 +49,11 @@ public class CallContractReference extends Contract {
     return this;
   }
 
-   /**
+  /**
    * Get contractName
+   *
    * @return contractName
-  **/
+   */
   @javax.annotation.Nullable
   public String getContractName() {
     return contractName;
@@ -67,16 +63,16 @@ public class CallContractReference extends Contract {
     this.contractName = contractName;
   }
 
-
   public CallContractReference methodAndParameters(MethodAndParameter methodAndParameters) {
     this.methodAndParameters = methodAndParameters;
     return this;
   }
 
-   /**
+  /**
    * Get methodAndParameters
+   *
    * @return methodAndParameters
-  **/
+   */
   @javax.annotation.Nullable
   public MethodAndParameter getMethodAndParameters() {
     return methodAndParameters;
@@ -85,8 +81,6 @@ public class CallContractReference extends Contract {
   public void setMethodAndParameters(MethodAndParameter methodAndParameters) {
     this.methodAndParameters = methodAndParameters;
   }
-
-
 
   @Override
   public boolean equals(Object o) {
@@ -97,9 +91,9 @@ public class CallContractReference extends Contract {
       return false;
     }
     CallContractReference callContractReference = (CallContractReference) o;
-    return Objects.equals(this.contractName, callContractReference.contractName) &&
-        Objects.equals(this.methodAndParameters, callContractReference.methodAndParameters) &&
-        super.equals(o);
+    return Objects.equals(this.contractName, callContractReference.contractName)
+        && Objects.equals(this.methodAndParameters, callContractReference.methodAndParameters)
+        && super.equals(o);
   }
 
   @Override
@@ -113,14 +107,15 @@ public class CallContractReference extends Contract {
     sb.append("class CallContractReference {\n");
     sb.append("    ").append(toIndentedString(super.toString())).append("\n");
     sb.append("    contractName: ").append(toIndentedString(contractName)).append("\n");
-    sb.append("    methodAndParameters: ").append(toIndentedString(methodAndParameters)).append("\n");
+    sb.append("    methodAndParameters: ")
+        .append(toIndentedString(methodAndParameters))
+        .append("\n");
     sb.append("}");
     return sb.toString();
   }
 
   /**
-   * Convert the given object to string with each line indented by 4 spaces
-   * (except the first line).
+   * Convert the given object to string with each line indented by 4 spaces (except the first line).
    */
   private String toIndentedString(Object o) {
     if (o == null) {
@@ -128,7 +123,6 @@ public class CallContractReference extends Contract {
     }
     return o.toString().replace("\n", "\n    ");
   }
-
 
   public static HashSet<String> openapiFields;
   public static HashSet<String> openapiRequiredFields;
@@ -143,80 +137,90 @@ public class CallContractReference extends Contract {
     openapiRequiredFields.add("contractCallType");
   }
 
- /**
-  * Validates the JSON Element and throws an exception if issues found
-  *
-  * @param jsonElement JSON Element
-  * @throws IOException if the JSON Element is invalid with respect to CallContractReference
-  */
+  /**
+   * Validates the JSON Element and throws an exception if issues found
+   *
+   * @param jsonElement JSON Element
+   * @throws IOException if the JSON Element is invalid with respect to CallContractReference
+   */
   public static void validateJsonElement(JsonElement jsonElement) throws IOException {
-      if (jsonElement == null) {
-        if (!CallContractReference.openapiRequiredFields.isEmpty()) { // has required fields but JSON element is null
-          throw new IllegalArgumentException(String.format("The required field(s) %s in CallContractReference is not found in the empty JSON string", CallContractReference.openapiRequiredFields.toString()));
-        }
+    if (jsonElement == null) {
+      if (!CallContractReference.openapiRequiredFields
+          .isEmpty()) { // has required fields but JSON element is null
+        throw new IllegalArgumentException(
+            String.format(
+                "The required field(s) %s in CallContractReference is not found in the empty JSON string",
+                CallContractReference.openapiRequiredFields.toString()));
       }
+    }
 
-      Set<Map.Entry<String, JsonElement>> entries = jsonElement.getAsJsonObject().entrySet();
-      // check to see if the JSON string contains additional fields
-      for (Map.Entry<String, JsonElement> entry : entries) {
-        if (!CallContractReference.openapiFields.contains(entry.getKey())) {
-          throw new IllegalArgumentException(String.format("The field `%s` in the JSON string is not defined in the `CallContractReference` properties. JSON: %s", entry.getKey(), jsonElement.toString()));
-        }
+    Set<Map.Entry<String, JsonElement>> entries = jsonElement.getAsJsonObject().entrySet();
+    // check to see if the JSON string contains additional fields
+    for (Map.Entry<String, JsonElement> entry : entries) {
+      if (!CallContractReference.openapiFields.contains(entry.getKey())) {
+        throw new IllegalArgumentException(
+            String.format(
+                "The field `%s` in the JSON string is not defined in the `CallContractReference` properties. JSON: %s",
+                entry.getKey(), jsonElement.toString()));
       }
+    }
 
-      // check to make sure all required properties/fields are present in the JSON string
-      for (String requiredField : CallContractReference.openapiRequiredFields) {
-        if (jsonElement.getAsJsonObject().get(requiredField) == null) {
-          throw new IllegalArgumentException(String.format("The required field `%s` is not found in the JSON string: %s", requiredField, jsonElement.toString()));
-        }
+    // check to make sure all required properties/fields are present in the JSON string
+    for (String requiredField : CallContractReference.openapiRequiredFields) {
+      if (jsonElement.getAsJsonObject().get(requiredField) == null) {
+        throw new IllegalArgumentException(
+            String.format(
+                "The required field `%s` is not found in the JSON string: %s",
+                requiredField, jsonElement.toString()));
       }
+    }
   }
 
   public static class CustomTypeAdapterFactory implements TypeAdapterFactory {
     @SuppressWarnings("unchecked")
     @Override
     public <T> TypeAdapter<T> create(Gson gson, TypeToken<T> type) {
-       if (!CallContractReference.class.isAssignableFrom(type.getRawType())) {
-         return null; // this class only serializes 'CallContractReference' and its subtypes
-       }
-       final TypeAdapter<JsonElement> elementAdapter = gson.getAdapter(JsonElement.class);
-       final TypeAdapter<CallContractReference> thisAdapter
-                        = gson.getDelegateAdapter(this, TypeToken.get(CallContractReference.class));
+      if (!CallContractReference.class.isAssignableFrom(type.getRawType())) {
+        return null; // this class only serializes 'CallContractReference' and its subtypes
+      }
+      final TypeAdapter<JsonElement> elementAdapter = gson.getAdapter(JsonElement.class);
+      final TypeAdapter<CallContractReference> thisAdapter =
+          gson.getDelegateAdapter(this, TypeToken.get(CallContractReference.class));
 
-       return (TypeAdapter<T>) new TypeAdapter<CallContractReference>() {
-           @Override
-           public void write(JsonWriter out, CallContractReference value) throws IOException {
-             JsonObject obj = thisAdapter.toJsonTree(value).getAsJsonObject();
-             elementAdapter.write(out, obj);
-           }
+      return (TypeAdapter<T>)
+          new TypeAdapter<CallContractReference>() {
+            @Override
+            public void write(JsonWriter out, CallContractReference value) throws IOException {
+              JsonObject obj = thisAdapter.toJsonTree(value).getAsJsonObject();
+              elementAdapter.write(out, obj);
+            }
 
-           @Override
-           public CallContractReference read(JsonReader in) throws IOException {
-             JsonElement jsonElement = elementAdapter.read(in);
-             validateJsonElement(jsonElement);
-             return thisAdapter.fromJsonTree(jsonElement);
-           }
-
-       }.nullSafe();
+            @Override
+            public CallContractReference read(JsonReader in) throws IOException {
+              JsonElement jsonElement = elementAdapter.read(in);
+              validateJsonElement(jsonElement);
+              return thisAdapter.fromJsonTree(jsonElement);
+            }
+          }.nullSafe();
     }
   }
 
- /**
-  * Create an instance of CallContractReference given an JSON string
-  *
-  * @param jsonString JSON string
-  * @return An instance of CallContractReference
-  * @throws IOException if the JSON string is invalid with respect to CallContractReference
-  */
+  /**
+   * Create an instance of CallContractReference given an JSON string
+   *
+   * @param jsonString JSON string
+   * @return An instance of CallContractReference
+   * @throws IOException if the JSON string is invalid with respect to CallContractReference
+   */
   public static CallContractReference fromJson(String jsonString) throws IOException {
     return JSON.getGson().fromJson(jsonString, CallContractReference.class);
   }
 
- /**
-  * Convert an instance of CallContractReference to an JSON string
-  *
-  * @return JSON string
-  */
+  /**
+   * Convert an instance of CallContractReference to an JSON string
+   *
+   * @return JSON string
+   */
   public String toJson() {
     return JSON.getGson().toJson(this);
   }

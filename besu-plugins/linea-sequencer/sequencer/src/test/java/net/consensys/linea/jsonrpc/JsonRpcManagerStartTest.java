@@ -25,6 +25,8 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.Mockito.when;
 
+import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
+import com.github.tomakehurst.wiremock.junit5.WireMockTest;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
@@ -32,9 +34,6 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
-
-import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
-import com.github.tomakehurst.wiremock.junit5.WireMockTest;
 import net.consensys.linea.config.LineaNodeType;
 import net.consensys.linea.config.LineaRejectedTxReportingConfiguration;
 import org.apache.tuweni.bytes.Bytes;

@@ -15,15 +15,14 @@
 
 package net.consensys.linea.bundles;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.SequencedMap;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
-
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonValue;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.ToString;

@@ -17,6 +17,7 @@ package linea.plugin.acc.test.rpc.linea;
 import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.net.URI;
@@ -27,8 +28,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-
-import com.fasterxml.jackson.annotation.JsonInclude;
 import linea.plugin.acc.test.LineaPluginTestBase;
 import linea.plugin.acc.test.TestCommandLineOptionsBuilder;
 import linea.plugin.acc.test.tests.web3j.generated.SimpleStorage;

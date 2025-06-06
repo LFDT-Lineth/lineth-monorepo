@@ -14,14 +14,13 @@
  */
 package net.consensys.linea.sequencer.modulelimit;
 
+import com.google.common.io.Resources;
 import java.io.File;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-
-import com.google.common.io.Resources;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.config.LineaTracerConfiguration;
 import org.apache.tuweni.toml.Toml;

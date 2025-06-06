@@ -16,7 +16,6 @@ package net.consensys.linea.rpc.methods;
 
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.bundles.BundlePoolService;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.parameters.JsonRpcParameter;

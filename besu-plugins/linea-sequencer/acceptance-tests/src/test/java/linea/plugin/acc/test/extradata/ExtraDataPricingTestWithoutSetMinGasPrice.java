@@ -17,7 +17,6 @@ package linea.plugin.acc.test.extradata;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
-
 import linea.plugin.acc.test.TestCommandLineOptionsBuilder;
 import org.hyperledger.besu.tests.acceptance.dsl.account.Account;
 import org.hyperledger.besu.tests.acceptance.dsl.transaction.account.TransferTransaction;

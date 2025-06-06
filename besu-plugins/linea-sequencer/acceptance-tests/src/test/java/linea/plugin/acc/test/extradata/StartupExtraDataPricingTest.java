@@ -18,7 +18,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
 import java.util.Optional;
-
 import linea.plugin.acc.test.LineaPluginTestBase;
 import linea.plugin.acc.test.TestCommandLineOptionsBuilder;
 import org.apache.tuweni.bytes.Bytes32;

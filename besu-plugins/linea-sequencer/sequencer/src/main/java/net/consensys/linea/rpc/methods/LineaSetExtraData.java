@@ -19,7 +19,6 @@ import static net.consensys.linea.extradata.LineaExtraDataException.ErrorType.FA
 import static net.consensys.linea.extradata.LineaExtraDataException.ErrorType.INVALID_ARGUMENT;
 
 import java.util.concurrent.atomic.AtomicInteger;
-
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.extradata.LineaExtraDataException;
 import net.consensys.linea.extradata.LineaExtraDataHandler;

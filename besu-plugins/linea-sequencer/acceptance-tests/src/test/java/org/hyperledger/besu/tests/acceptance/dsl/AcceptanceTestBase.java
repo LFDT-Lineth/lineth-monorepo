@@ -25,7 +25,6 @@ import java.lang.ProcessBuilder.Redirect;
 import java.math.BigInteger;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-
 import lombok.extern.slf4j.Slf4j;
 import org.hyperledger.besu.tests.acceptance.dsl.account.Accounts;
 import org.hyperledger.besu.tests.acceptance.dsl.blockchain.Blockchain;

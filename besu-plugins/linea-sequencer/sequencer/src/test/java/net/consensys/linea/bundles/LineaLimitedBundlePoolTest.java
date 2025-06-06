@@ -38,7 +38,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-
 import lombok.Getter;
 import net.consensys.linea.bundles.BundlePoolService.TransactionBundleAddedListener;
 import net.consensys.linea.bundles.BundlePoolService.TransactionBundleRemovedListener;

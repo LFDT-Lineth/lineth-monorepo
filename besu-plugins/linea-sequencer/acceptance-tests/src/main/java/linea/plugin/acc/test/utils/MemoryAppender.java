@@ -17,7 +17,6 @@ package linea.plugin.acc.test.utils;
 import java.io.ByteArrayOutputStream;
 import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
-
 import lombok.SneakyThrows;
 import org.apache.logging.log4j.core.Appender;
 import org.apache.logging.log4j.core.Core;

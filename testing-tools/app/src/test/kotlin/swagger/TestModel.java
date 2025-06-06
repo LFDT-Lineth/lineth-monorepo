@@ -1,4 +1,5 @@
 package swagger;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import net.consensys.zkevm.load.model.JSON;
@@ -36,7 +37,6 @@ public class TestModel {
     String json = om.writeValueAsString(request);
     System.out.println(json);
 
-
     var builder = JSON.createGson();
     var source = builder.create().fromJson(json, Request.class);
     Assertions.assertEquals(json, om.writeValueAsString(source));
@@ -47,5 +47,4 @@ public class TestModel {
 
     Assertions.assertTrue(true);
   }
-
 }

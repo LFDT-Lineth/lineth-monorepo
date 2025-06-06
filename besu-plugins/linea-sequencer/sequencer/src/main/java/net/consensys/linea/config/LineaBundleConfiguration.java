@@ -17,7 +17,6 @@ package net.consensys.linea.config;
 
 import java.net.URL;
 import java.util.Set;
-
 import lombok.Builder;
 import lombok.Getter;
 import lombok.ToString;

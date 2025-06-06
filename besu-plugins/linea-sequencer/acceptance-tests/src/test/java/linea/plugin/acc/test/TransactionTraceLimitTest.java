@@ -17,7 +17,6 @@ package linea.plugin.acc.test;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
-
 import linea.plugin.acc.test.tests.web3j.generated.DummyAdder;
 import org.hyperledger.besu.tests.acceptance.dsl.account.Accounts;
 import org.junit.jupiter.api.Test;

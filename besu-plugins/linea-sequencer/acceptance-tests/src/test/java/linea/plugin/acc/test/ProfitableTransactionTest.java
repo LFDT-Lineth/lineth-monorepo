@@ -16,7 +16,6 @@ package linea.plugin.acc.test;
 
 import java.math.BigInteger;
 import java.util.List;
-
 import org.bouncycastle.crypto.digests.KeccakDigest;
 import org.hyperledger.besu.datatypes.Wei;
 import org.hyperledger.besu.tests.acceptance.dsl.account.Account;

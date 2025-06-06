@@ -15,7 +15,6 @@
 package net.consensys.linea.bl;
 
 import java.math.BigDecimal;
-
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.config.LineaProfitabilityConfiguration;
 import net.consensys.linea.utils.Compressor;

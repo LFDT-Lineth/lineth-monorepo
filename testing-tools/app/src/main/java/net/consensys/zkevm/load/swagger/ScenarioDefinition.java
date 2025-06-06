@@ -10,53 +10,49 @@
  * Do not edit the class manually.
  */
 
-
 package net.consensys.zkevm.load.swagger;
-
-import java.util.Objects;
-import com.google.gson.TypeAdapter;
-import com.google.gson.annotations.SerializedName;
-import com.google.gson.stream.JsonReader;
-import com.google.gson.stream.JsonWriter;
-import java.io.IOException;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.TypeAdapter;
 import com.google.gson.TypeAdapterFactory;
+import com.google.gson.annotations.SerializedName;
 import com.google.gson.reflect.TypeToken;
-
+import com.google.gson.stream.JsonReader;
+import com.google.gson.stream.JsonWriter;
+import java.io.IOException;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
-
 import net.consensys.zkevm.load.model.JSON;
 
-/**
- * ScenarioDefinition
- */
-
+/** ScenarioDefinition */
 public class ScenarioDefinition {
   public static final String SERIALIZED_NAME_NB_OF_EXECUTION = "nbOfExecution";
+
   @SerializedName(SERIALIZED_NAME_NB_OF_EXECUTION)
   private Integer nbOfExecution = 1;
 
   public static final String SERIALIZED_NAME_SCENARIO = "scenario";
+
   @SerializedName(SERIALIZED_NAME_SCENARIO)
   private Scenario scenario;
 
-  public ScenarioDefinition() {
-  }
+  public ScenarioDefinition() {}
 
   public ScenarioDefinition nbOfExecution(Integer nbOfExecution) {
     this.nbOfExecution = nbOfExecution;
     return this;
   }
 
-   /**
-   * Number of time the set of call described in this ScenarioDefinition object will be executed. Set to 0 to disable this ScenarioDefinition.
+  /**
+   * Number of time the set of call described in this ScenarioDefinition object will be executed.
+   * Set to 0 to disable this ScenarioDefinition.
+   *
    * @return nbOfExecution
-  **/
+   */
   @javax.annotation.Nullable
   public Integer getNbOfExecution() {
     return nbOfExecution;
@@ -66,16 +62,16 @@ public class ScenarioDefinition {
     this.nbOfExecution = nbOfExecution;
   }
 
-
   public ScenarioDefinition scenario(Scenario scenario) {
     this.scenario = scenario;
     return this;
   }
 
-   /**
+  /**
    * Get scenario
+   *
    * @return scenario
-  **/
+   */
   @javax.annotation.Nullable
   public Scenario getScenario() {
     return scenario;
@@ -84,8 +80,6 @@ public class ScenarioDefinition {
   public void setScenario(Scenario scenario) {
     this.scenario = scenario;
   }
-
-
 
   @Override
   public boolean equals(Object o) {
@@ -96,8 +90,8 @@ public class ScenarioDefinition {
       return false;
     }
     ScenarioDefinition scenarioDefinition = (ScenarioDefinition) o;
-    return Objects.equals(this.nbOfExecution, scenarioDefinition.nbOfExecution) &&
-        Objects.equals(this.scenario, scenarioDefinition.scenario);
+    return Objects.equals(this.nbOfExecution, scenarioDefinition.nbOfExecution)
+        && Objects.equals(this.scenario, scenarioDefinition.scenario);
   }
 
   @Override
@@ -116,8 +110,7 @@ public class ScenarioDefinition {
   }
 
   /**
-   * Convert the given object to string with each line indented by 4 spaces
-   * (except the first line).
+   * Convert the given object to string with each line indented by 4 spaces (except the first line).
    */
   private String toIndentedString(Object o) {
     if (o == null) {
@@ -125,7 +118,6 @@ public class ScenarioDefinition {
     }
     return o.toString().replace("\n", "\n    ");
   }
-
 
   public static HashSet<String> openapiFields;
   public static HashSet<String> openapiRequiredFields;
@@ -140,78 +132,85 @@ public class ScenarioDefinition {
     openapiRequiredFields = new HashSet<String>();
   }
 
- /**
-  * Validates the JSON Element and throws an exception if issues found
-  *
-  * @param jsonElement JSON Element
-  * @throws IOException if the JSON Element is invalid with respect to ScenarioDefinition
-  */
+  /**
+   * Validates the JSON Element and throws an exception if issues found
+   *
+   * @param jsonElement JSON Element
+   * @throws IOException if the JSON Element is invalid with respect to ScenarioDefinition
+   */
   public static void validateJsonElement(JsonElement jsonElement) throws IOException {
-      if (jsonElement == null) {
-        if (!ScenarioDefinition.openapiRequiredFields.isEmpty()) { // has required fields but JSON element is null
-          throw new IllegalArgumentException(String.format("The required field(s) %s in ScenarioDefinition is not found in the empty JSON string", ScenarioDefinition.openapiRequiredFields.toString()));
-        }
+    if (jsonElement == null) {
+      if (!ScenarioDefinition.openapiRequiredFields
+          .isEmpty()) { // has required fields but JSON element is null
+        throw new IllegalArgumentException(
+            String.format(
+                "The required field(s) %s in ScenarioDefinition is not found in the empty JSON string",
+                ScenarioDefinition.openapiRequiredFields.toString()));
       }
+    }
 
-      Set<Map.Entry<String, JsonElement>> entries = jsonElement.getAsJsonObject().entrySet();
-      // check to see if the JSON string contains additional fields
-      for (Map.Entry<String, JsonElement> entry : entries) {
-        if (!ScenarioDefinition.openapiFields.contains(entry.getKey())) {
-          throw new IllegalArgumentException(String.format("The field `%s` in the JSON string is not defined in the `ScenarioDefinition` properties. JSON: %s", entry.getKey(), jsonElement.toString()));
-        }
+    Set<Map.Entry<String, JsonElement>> entries = jsonElement.getAsJsonObject().entrySet();
+    // check to see if the JSON string contains additional fields
+    for (Map.Entry<String, JsonElement> entry : entries) {
+      if (!ScenarioDefinition.openapiFields.contains(entry.getKey())) {
+        throw new IllegalArgumentException(
+            String.format(
+                "The field `%s` in the JSON string is not defined in the `ScenarioDefinition` properties. JSON: %s",
+                entry.getKey(), jsonElement.toString()));
       }
-        JsonObject jsonObj = jsonElement.getAsJsonObject();
-      // validate the optional field `scenario`
-      if (jsonObj.get("scenario") != null && !jsonObj.get("scenario").isJsonNull()) {
-        Scenario.validateJsonElement(jsonObj.get("scenario"));
-      }
+    }
+    JsonObject jsonObj = jsonElement.getAsJsonObject();
+    // validate the optional field `scenario`
+    if (jsonObj.get("scenario") != null && !jsonObj.get("scenario").isJsonNull()) {
+      Scenario.validateJsonElement(jsonObj.get("scenario"));
+    }
   }
 
   public static class CustomTypeAdapterFactory implements TypeAdapterFactory {
     @SuppressWarnings("unchecked")
     @Override
     public <T> TypeAdapter<T> create(Gson gson, TypeToken<T> type) {
-       if (!ScenarioDefinition.class.isAssignableFrom(type.getRawType())) {
-         return null; // this class only serializes 'ScenarioDefinition' and its subtypes
-       }
-       final TypeAdapter<JsonElement> elementAdapter = gson.getAdapter(JsonElement.class);
-       final TypeAdapter<ScenarioDefinition> thisAdapter
-                        = gson.getDelegateAdapter(this, TypeToken.get(ScenarioDefinition.class));
+      if (!ScenarioDefinition.class.isAssignableFrom(type.getRawType())) {
+        return null; // this class only serializes 'ScenarioDefinition' and its subtypes
+      }
+      final TypeAdapter<JsonElement> elementAdapter = gson.getAdapter(JsonElement.class);
+      final TypeAdapter<ScenarioDefinition> thisAdapter =
+          gson.getDelegateAdapter(this, TypeToken.get(ScenarioDefinition.class));
 
-       return (TypeAdapter<T>) new TypeAdapter<ScenarioDefinition>() {
-           @Override
-           public void write(JsonWriter out, ScenarioDefinition value) throws IOException {
-             JsonObject obj = thisAdapter.toJsonTree(value).getAsJsonObject();
-             elementAdapter.write(out, obj);
-           }
+      return (TypeAdapter<T>)
+          new TypeAdapter<ScenarioDefinition>() {
+            @Override
+            public void write(JsonWriter out, ScenarioDefinition value) throws IOException {
+              JsonObject obj = thisAdapter.toJsonTree(value).getAsJsonObject();
+              elementAdapter.write(out, obj);
+            }
 
-           @Override
-           public ScenarioDefinition read(JsonReader in) throws IOException {
-             JsonElement jsonElement = elementAdapter.read(in);
-             validateJsonElement(jsonElement);
-             return thisAdapter.fromJsonTree(jsonElement);
-           }
-
-       }.nullSafe();
+            @Override
+            public ScenarioDefinition read(JsonReader in) throws IOException {
+              JsonElement jsonElement = elementAdapter.read(in);
+              validateJsonElement(jsonElement);
+              return thisAdapter.fromJsonTree(jsonElement);
+            }
+          }.nullSafe();
     }
   }
 
- /**
-  * Create an instance of ScenarioDefinition given an JSON string
-  *
-  * @param jsonString JSON string
-  * @return An instance of ScenarioDefinition
-  * @throws IOException if the JSON string is invalid with respect to ScenarioDefinition
-  */
+  /**
+   * Create an instance of ScenarioDefinition given an JSON string
+   *
+   * @param jsonString JSON string
+   * @return An instance of ScenarioDefinition
+   * @throws IOException if the JSON string is invalid with respect to ScenarioDefinition
+   */
   public static ScenarioDefinition fromJson(String jsonString) throws IOException {
     return JSON.getGson().fromJson(jsonString, ScenarioDefinition.class);
   }
 
- /**
-  * Convert an instance of ScenarioDefinition to an JSON string
-  *
-  * @return JSON string
-  */
+  /**
+   * Convert an instance of ScenarioDefinition to an JSON string
+   *
+   * @return JSON string
+   */
   public String toJson() {
     return JSON.getGson().toJson(this);
   }

@@ -36,6 +36,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Answers.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.lenient;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
+import com.github.tomakehurst.wiremock.junit5.WireMockTest;
+import com.github.tomakehurst.wiremock.matching.StringValuePattern;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.MalformedURLException;
@@ -50,11 +54,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
-
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
-import com.github.tomakehurst.wiremock.junit5.WireMockTest;
-import com.github.tomakehurst.wiremock.matching.StringValuePattern;
 import net.consensys.linea.bundles.BundleForwarder.SendBundleResponse;
 import net.consensys.linea.config.LineaBundleConfiguration;
 import net.consensys.linea.utils.PriorityThreadPoolExecutor;

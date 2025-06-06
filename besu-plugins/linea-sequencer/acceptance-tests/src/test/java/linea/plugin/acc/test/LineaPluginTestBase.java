@@ -20,6 +20,9 @@ import static net.consensys.linea.metrics.LineaMetricCategory.SEQUENCER_PROFITAB
 import static net.consensys.linea.metrics.LineaMetricCategory.TX_POOL_PROFITABILITY;
 import static org.assertj.core.api.Assertions.*;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.net.URI;
@@ -36,10 +39,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
-
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import linea.plugin.acc.test.tests.web3j.generated.AcceptanceTestToken;
 import linea.plugin.acc.test.tests.web3j.generated.DummyAdder;
 import linea.plugin.acc.test.tests.web3j.generated.EcAdd;

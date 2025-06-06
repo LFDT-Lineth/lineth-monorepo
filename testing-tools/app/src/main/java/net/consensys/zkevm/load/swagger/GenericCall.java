@@ -10,44 +10,40 @@
  * Do not edit the class manually.
  */
 
-
 package net.consensys.zkevm.load.swagger;
-
-import java.util.Objects;
-import com.google.gson.TypeAdapter;
-import com.google.gson.annotations.SerializedName;
-import com.google.gson.stream.JsonReader;
-import com.google.gson.stream.JsonWriter;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.TypeAdapter;
 import com.google.gson.TypeAdapterFactory;
+import com.google.gson.annotations.SerializedName;
 import com.google.gson.reflect.TypeToken;
-
+import com.google.gson.stream.JsonReader;
+import com.google.gson.stream.JsonWriter;
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
-
 import net.consensys.zkevm.load.model.JSON;
 
-/**
- * GenericCall
- */
-
+/** GenericCall */
 public class GenericCall extends MethodAndParameter {
   public static final String SERIALIZED_NAME_METHOD_NAME = "methodName";
+
   @SerializedName(SERIALIZED_NAME_METHOD_NAME)
   private String methodName;
 
   public static final String SERIALIZED_NAME_PRICE = "price";
+
   @SerializedName(SERIALIZED_NAME_PRICE)
   private Long price;
 
   public static final String SERIALIZED_NAME_PARAMETERS = "parameters";
+
   @SerializedName(SERIALIZED_NAME_PARAMETERS)
   private List<Parameter> parameters;
 
@@ -60,10 +56,11 @@ public class GenericCall extends MethodAndParameter {
     return this;
   }
 
-   /**
+  /**
    * Get methodName
+   *
    * @return methodName
-  **/
+   */
   @javax.annotation.Nullable
   public String getMethodName() {
     return methodName;
@@ -73,16 +70,16 @@ public class GenericCall extends MethodAndParameter {
     this.methodName = methodName;
   }
 
-
   public GenericCall price(Long price) {
     this.price = price;
     return this;
   }
 
-   /**
+  /**
    * Get price
+   *
    * @return price
-  **/
+   */
   @javax.annotation.Nullable
   public Long getPrice() {
     return price;
@@ -91,7 +88,6 @@ public class GenericCall extends MethodAndParameter {
   public void setPrice(Long price) {
     this.price = price;
   }
-
 
   public GenericCall parameters(List<Parameter> parameters) {
     this.parameters = parameters;
@@ -106,10 +102,11 @@ public class GenericCall extends MethodAndParameter {
     return this;
   }
 
-   /**
+  /**
    * Get parameters
+   *
    * @return parameters
-  **/
+   */
   @javax.annotation.Nullable
   public List<Parameter> getParameters() {
     return parameters;
@@ -118,8 +115,6 @@ public class GenericCall extends MethodAndParameter {
   public void setParameters(List<Parameter> parameters) {
     this.parameters = parameters;
   }
-
-
 
   @Override
   public boolean equals(Object o) {
@@ -130,10 +125,10 @@ public class GenericCall extends MethodAndParameter {
       return false;
     }
     GenericCall genericCall = (GenericCall) o;
-    return Objects.equals(this.methodName, genericCall.methodName) &&
-        Objects.equals(this.price, genericCall.price) &&
-        Objects.equals(this.parameters, genericCall.parameters) &&
-        super.equals(o);
+    return Objects.equals(this.methodName, genericCall.methodName)
+        && Objects.equals(this.price, genericCall.price)
+        && Objects.equals(this.parameters, genericCall.parameters)
+        && super.equals(o);
   }
 
   @Override
@@ -154,8 +149,7 @@ public class GenericCall extends MethodAndParameter {
   }
 
   /**
-   * Convert the given object to string with each line indented by 4 spaces
-   * (except the first line).
+   * Convert the given object to string with each line indented by 4 spaces (except the first line).
    */
   private String toIndentedString(Object o) {
     if (o == null) {
@@ -163,7 +157,6 @@ public class GenericCall extends MethodAndParameter {
     }
     return o.toString().replace("\n", "\n    ");
   }
-
 
   public static HashSet<String> openapiFields;
   public static HashSet<String> openapiRequiredFields;
@@ -180,80 +173,90 @@ public class GenericCall extends MethodAndParameter {
     openapiRequiredFields.add("numberOfTimes");
   }
 
- /**
-  * Validates the JSON Element and throws an exception if issues found
-  *
-  * @param jsonElement JSON Element
-  * @throws IOException if the JSON Element is invalid with respect to GenericCall
-  */
+  /**
+   * Validates the JSON Element and throws an exception if issues found
+   *
+   * @param jsonElement JSON Element
+   * @throws IOException if the JSON Element is invalid with respect to GenericCall
+   */
   public static void validateJsonElement(JsonElement jsonElement) throws IOException {
-      if (jsonElement == null) {
-        if (!GenericCall.openapiRequiredFields.isEmpty()) { // has required fields but JSON element is null
-          throw new IllegalArgumentException(String.format("The required field(s) %s in GenericCall is not found in the empty JSON string", GenericCall.openapiRequiredFields.toString()));
-        }
+    if (jsonElement == null) {
+      if (!GenericCall.openapiRequiredFields
+          .isEmpty()) { // has required fields but JSON element is null
+        throw new IllegalArgumentException(
+            String.format(
+                "The required field(s) %s in GenericCall is not found in the empty JSON string",
+                GenericCall.openapiRequiredFields.toString()));
       }
+    }
 
-      Set<Map.Entry<String, JsonElement>> entries = jsonElement.getAsJsonObject().entrySet();
-      // check to see if the JSON string contains additional fields
-      for (Map.Entry<String, JsonElement> entry : entries) {
-        if (!GenericCall.openapiFields.contains(entry.getKey())) {
-          throw new IllegalArgumentException(String.format("The field `%s` in the JSON string is not defined in the `GenericCall` properties. JSON: %s", entry.getKey(), jsonElement.toString()));
-        }
+    Set<Map.Entry<String, JsonElement>> entries = jsonElement.getAsJsonObject().entrySet();
+    // check to see if the JSON string contains additional fields
+    for (Map.Entry<String, JsonElement> entry : entries) {
+      if (!GenericCall.openapiFields.contains(entry.getKey())) {
+        throw new IllegalArgumentException(
+            String.format(
+                "The field `%s` in the JSON string is not defined in the `GenericCall` properties. JSON: %s",
+                entry.getKey(), jsonElement.toString()));
       }
+    }
 
-      // check to make sure all required properties/fields are present in the JSON string
-      for (String requiredField : GenericCall.openapiRequiredFields) {
-        if (jsonElement.getAsJsonObject().get(requiredField) == null) {
-          throw new IllegalArgumentException(String.format("The required field `%s` is not found in the JSON string: %s", requiredField, jsonElement.toString()));
-        }
+    // check to make sure all required properties/fields are present in the JSON string
+    for (String requiredField : GenericCall.openapiRequiredFields) {
+      if (jsonElement.getAsJsonObject().get(requiredField) == null) {
+        throw new IllegalArgumentException(
+            String.format(
+                "The required field `%s` is not found in the JSON string: %s",
+                requiredField, jsonElement.toString()));
       }
+    }
   }
 
   public static class CustomTypeAdapterFactory implements TypeAdapterFactory {
     @SuppressWarnings("unchecked")
     @Override
     public <T> TypeAdapter<T> create(Gson gson, TypeToken<T> type) {
-       if (!GenericCall.class.isAssignableFrom(type.getRawType())) {
-         return null; // this class only serializes 'GenericCall' and its subtypes
-       }
-       final TypeAdapter<JsonElement> elementAdapter = gson.getAdapter(JsonElement.class);
-       final TypeAdapter<GenericCall> thisAdapter
-                        = gson.getDelegateAdapter(this, TypeToken.get(GenericCall.class));
+      if (!GenericCall.class.isAssignableFrom(type.getRawType())) {
+        return null; // this class only serializes 'GenericCall' and its subtypes
+      }
+      final TypeAdapter<JsonElement> elementAdapter = gson.getAdapter(JsonElement.class);
+      final TypeAdapter<GenericCall> thisAdapter =
+          gson.getDelegateAdapter(this, TypeToken.get(GenericCall.class));
 
-       return (TypeAdapter<T>) new TypeAdapter<GenericCall>() {
-           @Override
-           public void write(JsonWriter out, GenericCall value) throws IOException {
-             JsonObject obj = thisAdapter.toJsonTree(value).getAsJsonObject();
-             elementAdapter.write(out, obj);
-           }
+      return (TypeAdapter<T>)
+          new TypeAdapter<GenericCall>() {
+            @Override
+            public void write(JsonWriter out, GenericCall value) throws IOException {
+              JsonObject obj = thisAdapter.toJsonTree(value).getAsJsonObject();
+              elementAdapter.write(out, obj);
+            }
 
-           @Override
-           public GenericCall read(JsonReader in) throws IOException {
-             JsonElement jsonElement = elementAdapter.read(in);
-             validateJsonElement(jsonElement);
-             return thisAdapter.fromJsonTree(jsonElement);
-           }
-
-       }.nullSafe();
+            @Override
+            public GenericCall read(JsonReader in) throws IOException {
+              JsonElement jsonElement = elementAdapter.read(in);
+              validateJsonElement(jsonElement);
+              return thisAdapter.fromJsonTree(jsonElement);
+            }
+          }.nullSafe();
     }
   }
 
- /**
-  * Create an instance of GenericCall given an JSON string
-  *
-  * @param jsonString JSON string
-  * @return An instance of GenericCall
-  * @throws IOException if the JSON string is invalid with respect to GenericCall
-  */
+  /**
+   * Create an instance of GenericCall given an JSON string
+   *
+   * @param jsonString JSON string
+   * @return An instance of GenericCall
+   * @throws IOException if the JSON string is invalid with respect to GenericCall
+   */
   public static GenericCall fromJson(String jsonString) throws IOException {
     return JSON.getGson().fromJson(jsonString, GenericCall.class);
   }
 
- /**
-  * Convert an instance of GenericCall to an JSON string
-  *
-  * @return JSON string
-  */
+  /**
+   * Convert an instance of GenericCall to an JSON string
+   *
+   * @return JSON string
+   */
   public String toJson() {
     return JSON.getGson().toJson(this);
   }

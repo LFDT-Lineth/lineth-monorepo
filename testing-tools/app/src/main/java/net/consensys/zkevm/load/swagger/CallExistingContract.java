@@ -10,38 +10,33 @@
  * Do not edit the class manually.
  */
 
-
 package net.consensys.zkevm.load.swagger;
-
-import java.util.Objects;
-import com.google.gson.TypeAdapter;
-import com.google.gson.annotations.SerializedName;
-import com.google.gson.stream.JsonReader;
-import com.google.gson.stream.JsonWriter;
-import java.io.IOException;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.TypeAdapter;
 import com.google.gson.TypeAdapterFactory;
+import com.google.gson.annotations.SerializedName;
 import com.google.gson.reflect.TypeToken;
-
+import com.google.gson.stream.JsonReader;
+import com.google.gson.stream.JsonWriter;
+import java.io.IOException;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
-
 import net.consensys.zkevm.load.model.JSON;
 
-/**
- * CallExistingContract
- */
-
+/** CallExistingContract */
 public class CallExistingContract extends Contract {
   public static final String SERIALIZED_NAME_CONTRACT_ADDRESS = "contractAddress";
+
   @SerializedName(SERIALIZED_NAME_CONTRACT_ADDRESS)
   private String contractAddress;
 
   public static final String SERIALIZED_NAME_METHOD_AND_PARAMETERS = "methodAndParameters";
+
   @SerializedName(SERIALIZED_NAME_METHOD_AND_PARAMETERS)
   private MethodAndParameter methodAndParameters;
 
@@ -54,10 +49,11 @@ public class CallExistingContract extends Contract {
     return this;
   }
 
-   /**
+  /**
    * Get contractAddress
+   *
    * @return contractAddress
-  **/
+   */
   @javax.annotation.Nullable
   public String getContractAddress() {
     return contractAddress;
@@ -67,16 +63,16 @@ public class CallExistingContract extends Contract {
     this.contractAddress = contractAddress;
   }
 
-
   public CallExistingContract methodAndParameters(MethodAndParameter methodAndParameters) {
     this.methodAndParameters = methodAndParameters;
     return this;
   }
 
-   /**
+  /**
    * Get methodAndParameters
+   *
    * @return methodAndParameters
-  **/
+   */
   @javax.annotation.Nullable
   public MethodAndParameter getMethodAndParameters() {
     return methodAndParameters;
@@ -85,8 +81,6 @@ public class CallExistingContract extends Contract {
   public void setMethodAndParameters(MethodAndParameter methodAndParameters) {
     this.methodAndParameters = methodAndParameters;
   }
-
-
 
   @Override
   public boolean equals(Object o) {
@@ -97,9 +91,9 @@ public class CallExistingContract extends Contract {
       return false;
     }
     CallExistingContract callExistingContract = (CallExistingContract) o;
-    return Objects.equals(this.contractAddress, callExistingContract.contractAddress) &&
-        Objects.equals(this.methodAndParameters, callExistingContract.methodAndParameters) &&
-        super.equals(o);
+    return Objects.equals(this.contractAddress, callExistingContract.contractAddress)
+        && Objects.equals(this.methodAndParameters, callExistingContract.methodAndParameters)
+        && super.equals(o);
   }
 
   @Override
@@ -113,14 +107,15 @@ public class CallExistingContract extends Contract {
     sb.append("class CallExistingContract {\n");
     sb.append("    ").append(toIndentedString(super.toString())).append("\n");
     sb.append("    contractAddress: ").append(toIndentedString(contractAddress)).append("\n");
-    sb.append("    methodAndParameters: ").append(toIndentedString(methodAndParameters)).append("\n");
+    sb.append("    methodAndParameters: ")
+        .append(toIndentedString(methodAndParameters))
+        .append("\n");
     sb.append("}");
     return sb.toString();
   }
 
   /**
-   * Convert the given object to string with each line indented by 4 spaces
-   * (except the first line).
+   * Convert the given object to string with each line indented by 4 spaces (except the first line).
    */
   private String toIndentedString(Object o) {
     if (o == null) {
@@ -128,7 +123,6 @@ public class CallExistingContract extends Contract {
     }
     return o.toString().replace("\n", "\n    ");
   }
-
 
   public static HashSet<String> openapiFields;
   public static HashSet<String> openapiRequiredFields;
@@ -143,80 +137,90 @@ public class CallExistingContract extends Contract {
     openapiRequiredFields.add("contractCallType");
   }
 
- /**
-  * Validates the JSON Element and throws an exception if issues found
-  *
-  * @param jsonElement JSON Element
-  * @throws IOException if the JSON Element is invalid with respect to CallExistingContract
-  */
+  /**
+   * Validates the JSON Element and throws an exception if issues found
+   *
+   * @param jsonElement JSON Element
+   * @throws IOException if the JSON Element is invalid with respect to CallExistingContract
+   */
   public static void validateJsonElement(JsonElement jsonElement) throws IOException {
-      if (jsonElement == null) {
-        if (!CallExistingContract.openapiRequiredFields.isEmpty()) { // has required fields but JSON element is null
-          throw new IllegalArgumentException(String.format("The required field(s) %s in CallExistingContract is not found in the empty JSON string", CallExistingContract.openapiRequiredFields.toString()));
-        }
+    if (jsonElement == null) {
+      if (!CallExistingContract.openapiRequiredFields
+          .isEmpty()) { // has required fields but JSON element is null
+        throw new IllegalArgumentException(
+            String.format(
+                "The required field(s) %s in CallExistingContract is not found in the empty JSON string",
+                CallExistingContract.openapiRequiredFields.toString()));
       }
+    }
 
-      Set<Map.Entry<String, JsonElement>> entries = jsonElement.getAsJsonObject().entrySet();
-      // check to see if the JSON string contains additional fields
-      for (Map.Entry<String, JsonElement> entry : entries) {
-        if (!CallExistingContract.openapiFields.contains(entry.getKey())) {
-          throw new IllegalArgumentException(String.format("The field `%s` in the JSON string is not defined in the `CallExistingContract` properties. JSON: %s", entry.getKey(), jsonElement.toString()));
-        }
+    Set<Map.Entry<String, JsonElement>> entries = jsonElement.getAsJsonObject().entrySet();
+    // check to see if the JSON string contains additional fields
+    for (Map.Entry<String, JsonElement> entry : entries) {
+      if (!CallExistingContract.openapiFields.contains(entry.getKey())) {
+        throw new IllegalArgumentException(
+            String.format(
+                "The field `%s` in the JSON string is not defined in the `CallExistingContract` properties. JSON: %s",
+                entry.getKey(), jsonElement.toString()));
       }
+    }
 
-      // check to make sure all required properties/fields are present in the JSON string
-      for (String requiredField : CallExistingContract.openapiRequiredFields) {
-        if (jsonElement.getAsJsonObject().get(requiredField) == null) {
-          throw new IllegalArgumentException(String.format("The required field `%s` is not found in the JSON string: %s", requiredField, jsonElement.toString()));
-        }
+    // check to make sure all required properties/fields are present in the JSON string
+    for (String requiredField : CallExistingContract.openapiRequiredFields) {
+      if (jsonElement.getAsJsonObject().get(requiredField) == null) {
+        throw new IllegalArgumentException(
+            String.format(
+                "The required field `%s` is not found in the JSON string: %s",
+                requiredField, jsonElement.toString()));
       }
+    }
   }
 
   public static class CustomTypeAdapterFactory implements TypeAdapterFactory {
     @SuppressWarnings("unchecked")
     @Override
     public <T> TypeAdapter<T> create(Gson gson, TypeToken<T> type) {
-       if (!CallExistingContract.class.isAssignableFrom(type.getRawType())) {
-         return null; // this class only serializes 'CallExistingContract' and its subtypes
-       }
-       final TypeAdapter<JsonElement> elementAdapter = gson.getAdapter(JsonElement.class);
-       final TypeAdapter<CallExistingContract> thisAdapter
-                        = gson.getDelegateAdapter(this, TypeToken.get(CallExistingContract.class));
+      if (!CallExistingContract.class.isAssignableFrom(type.getRawType())) {
+        return null; // this class only serializes 'CallExistingContract' and its subtypes
+      }
+      final TypeAdapter<JsonElement> elementAdapter = gson.getAdapter(JsonElement.class);
+      final TypeAdapter<CallExistingContract> thisAdapter =
+          gson.getDelegateAdapter(this, TypeToken.get(CallExistingContract.class));
 
-       return (TypeAdapter<T>) new TypeAdapter<CallExistingContract>() {
-           @Override
-           public void write(JsonWriter out, CallExistingContract value) throws IOException {
-             JsonObject obj = thisAdapter.toJsonTree(value).getAsJsonObject();
-             elementAdapter.write(out, obj);
-           }
+      return (TypeAdapter<T>)
+          new TypeAdapter<CallExistingContract>() {
+            @Override
+            public void write(JsonWriter out, CallExistingContract value) throws IOException {
+              JsonObject obj = thisAdapter.toJsonTree(value).getAsJsonObject();
+              elementAdapter.write(out, obj);
+            }
 
-           @Override
-           public CallExistingContract read(JsonReader in) throws IOException {
-             JsonElement jsonElement = elementAdapter.read(in);
-             validateJsonElement(jsonElement);
-             return thisAdapter.fromJsonTree(jsonElement);
-           }
-
-       }.nullSafe();
+            @Override
+            public CallExistingContract read(JsonReader in) throws IOException {
+              JsonElement jsonElement = elementAdapter.read(in);
+              validateJsonElement(jsonElement);
+              return thisAdapter.fromJsonTree(jsonElement);
+            }
+          }.nullSafe();
     }
   }
 
- /**
-  * Create an instance of CallExistingContract given an JSON string
-  *
-  * @param jsonString JSON string
-  * @return An instance of CallExistingContract
-  * @throws IOException if the JSON string is invalid with respect to CallExistingContract
-  */
+  /**
+   * Create an instance of CallExistingContract given an JSON string
+   *
+   * @param jsonString JSON string
+   * @return An instance of CallExistingContract
+   * @throws IOException if the JSON string is invalid with respect to CallExistingContract
+   */
   public static CallExistingContract fromJson(String jsonString) throws IOException {
     return JSON.getGson().fromJson(jsonString, CallExistingContract.class);
   }
 
- /**
-  * Convert an instance of CallExistingContract to an JSON string
-  *
-  * @return JSON string
-  */
+  /**
+   * Convert an instance of CallExistingContract to an JSON string
+   *
+   * @return JSON string
+   */
   public String toJson() {
     return JSON.getGson().toJson(this);
   }

@@ -31,7 +31,6 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-
 import net.consensys.linea.bundles.BundleParameter;
 import net.consensys.linea.bundles.LineaLimitedBundlePool;
 import net.consensys.linea.bundles.TransactionBundle;

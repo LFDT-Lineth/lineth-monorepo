@@ -16,13 +16,12 @@ package net.consensys.linea.bundles;
 
 import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_ABSENT;
 
-import java.util.List;
-import java.util.Optional;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
+import java.util.List;
+import java.util.Optional;
 import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.datatypes.parameters.UnsignedLongParameter;
 

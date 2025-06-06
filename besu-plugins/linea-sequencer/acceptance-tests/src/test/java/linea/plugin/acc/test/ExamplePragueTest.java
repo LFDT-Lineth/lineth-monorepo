@@ -15,7 +15,6 @@
 package linea.plugin.acc.test;
 
 import java.math.BigInteger;
-
 import org.hyperledger.besu.tests.acceptance.dsl.account.Accounts;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

@@ -19,7 +19,6 @@ import static linea.plugin.acc.test.LineaPluginTestBase.getResourcePath;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
-
 import org.web3j.tx.gas.DefaultGasProvider;
 
 /** This class is used to build a list of command line options for testing. */

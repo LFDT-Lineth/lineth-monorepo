@@ -27,7 +27,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
-
 import net.consensys.linea.bundles.TransactionBundle;
 import net.consensys.linea.sequencer.txselection.selectors.MaxBundleGasPerBlockTransactionSelector.BundleGasTracker;
 import org.apache.tuweni.bytes.Bytes32;

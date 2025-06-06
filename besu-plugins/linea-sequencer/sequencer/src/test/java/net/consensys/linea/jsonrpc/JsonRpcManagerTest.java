@@ -28,6 +28,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.Mockito.when;
 
+import com.github.tomakehurst.wiremock.http.Fault;
+import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
+import com.github.tomakehurst.wiremock.junit5.WireMockTest;
+import com.github.tomakehurst.wiremock.stubbing.Scenario;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URI;
@@ -37,11 +41,6 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
-
-import com.github.tomakehurst.wiremock.http.Fault;
-import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
-import com.github.tomakehurst.wiremock.junit5.WireMockTest;
-import com.github.tomakehurst.wiremock.stubbing.Scenario;
 import net.consensys.linea.config.LineaNodeType;
 import net.consensys.linea.config.LineaRejectedTxReportingConfiguration;
 import org.apache.tuweni.bytes.Bytes;

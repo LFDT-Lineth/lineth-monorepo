@@ -21,14 +21,13 @@ import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectio
 import static net.consensys.linea.zktracer.Fork.LONDON;
 import static org.hyperledger.besu.plugin.data.TransactionSelectionResult.SELECTED;
 
+import com.google.common.annotations.VisibleForTesting;
 import java.math.BigInteger;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-
-import com.google.common.annotations.VisibleForTesting;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.config.LineaTracerConfiguration;
 import net.consensys.linea.config.LineaTransactionSelectorConfiguration;

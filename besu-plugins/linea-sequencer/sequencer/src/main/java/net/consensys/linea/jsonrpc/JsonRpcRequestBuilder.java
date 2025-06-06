@@ -15,13 +15,12 @@
 
 package net.consensys.linea.jsonrpc;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
-
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
 import net.consensys.linea.config.LineaNodeType;
 import net.consensys.linea.sequencer.modulelimit.ModuleLimitsValidationResult;
 import org.hyperledger.besu.datatypes.Transaction;

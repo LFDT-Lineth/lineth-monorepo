@@ -16,7 +16,6 @@ package net.consensys.linea.metrics;
 
 import java.util.Locale;
 import java.util.Optional;
-
 import org.hyperledger.besu.plugin.services.metrics.MetricCategory;
 
 public enum LineaMetricCategory implements MetricCategory {

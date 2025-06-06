@@ -18,9 +18,8 @@ package net.consensys.linea.sequencer.txselection;
 import static net.consensys.linea.metrics.LineaMetricCategory.SEQUENCER_PROFITABILITY;
 import static net.consensys.linea.sequencer.modulelimit.ModuleLineCountValidator.createLimitModules;
 
-import java.util.Optional;
-
 import com.google.auto.service.AutoService;
+import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.AbstractLineaRequiredPlugin;
 import net.consensys.linea.config.LineaRejectedTxReportingConfiguration;

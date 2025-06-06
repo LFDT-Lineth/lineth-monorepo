@@ -14,9 +14,8 @@
  */
 package net.consensys.linea.config;
 
-import java.net.URL;
-
 import com.google.common.base.MoreObjects;
+import java.net.URL;
 import net.consensys.linea.plugins.LineaCliOptions;
 import picocli.CommandLine.Option;
 

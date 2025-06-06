@@ -19,7 +19,6 @@ import static org.web3j.crypto.Hash.sha3;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.util.Arrays;
-
 import linea.plugin.acc.test.LineaPluginTestBase;
 import linea.plugin.acc.test.tests.web3j.generated.AcceptanceTestToken;
 import linea.plugin.acc.test.tests.web3j.generated.MulmodExecutor;

@@ -10,27 +10,19 @@
  * Do not edit the class manually.
  */
 
-
 package net.consensys.zkevm.load.swagger;
 
-import java.util.Objects;
-
-import com.google.gson.annotations.SerializedName;
-
-import java.io.IOException;
-
 import com.google.gson.JsonElement;
-
+import com.google.gson.annotations.SerializedName;
+import java.io.IOException;
 import java.util.HashSet;
-
+import java.util.Objects;
 import net.consensys.zkevm.load.model.JSON;
 
-/**
- * Parameter
- */
-
+/** Parameter */
 public class Parameter {
   public static final String SERIALIZED_NAME_TYPE = "type";
+
   @SerializedName(SERIALIZED_NAME_TYPE)
   protected String type;
 
@@ -43,10 +35,11 @@ public class Parameter {
     return this;
   }
 
-   /**
+  /**
    * Get type
+   *
    * @return type
-  **/
+   */
   @javax.annotation.Nonnull
   public String getType() {
     return type;
@@ -55,8 +48,6 @@ public class Parameter {
   public void setType(String type) {
     this.type = type;
   }
-
-
 
   @Override
   public boolean equals(Object o) {
@@ -85,8 +76,7 @@ public class Parameter {
   }
 
   /**
-   * Convert the given object to string with each line indented by 4 spaces
-   * (except the first line).
+   * Convert the given object to string with each line indented by 4 spaces (except the first line).
    */
   private String toIndentedString(Object o) {
     if (o == null) {
@@ -94,7 +84,6 @@ public class Parameter {
     }
     return o.toString().replace("\n", "\n    ");
   }
-
 
   public static HashSet<String> openapiFields;
   public static HashSet<String> openapiRequiredFields;
@@ -109,49 +98,55 @@ public class Parameter {
     openapiRequiredFields.add("type");
   }
 
- /**
-  * Validates the JSON Element and throws an exception if issues found
-  *
-  * @param jsonElement JSON Element
-  * @throws IOException if the JSON Element is invalid with respect to Parameter
-  */
+  /**
+   * Validates the JSON Element and throws an exception if issues found
+   *
+   * @param jsonElement JSON Element
+   * @throws IOException if the JSON Element is invalid with respect to Parameter
+   */
   public static void validateJsonElement(JsonElement jsonElement) throws IOException {
-      if (jsonElement == null) {
-        if (!Parameter.openapiRequiredFields.isEmpty()) { // has required fields but JSON element is null
-          throw new IllegalArgumentException(String.format("The required field(s) %s in Parameter is not found in the empty JSON string", Parameter.openapiRequiredFields.toString()));
-        }
+    if (jsonElement == null) {
+      if (!Parameter.openapiRequiredFields
+          .isEmpty()) { // has required fields but JSON element is null
+        throw new IllegalArgumentException(
+            String.format(
+                "The required field(s) %s in Parameter is not found in the empty JSON string",
+                Parameter.openapiRequiredFields.toString()));
       }
+    }
 
-      String discriminatorValue = jsonElement.getAsJsonObject().get("type").getAsString();
-      switch (discriminatorValue) {
-        case "ArrayParameter":
-          ArrayParameter.validateJsonElement(jsonElement);
-          break;
-        case "SimpleParameter":
-          SimpleParameter.validateJsonElement(jsonElement);
-          break;
-        default:
-          throw new IllegalArgumentException(String.format("The value of the `type` field `%s` does not match any key defined in the discriminator's mapping.", discriminatorValue));
-      }
+    String discriminatorValue = jsonElement.getAsJsonObject().get("type").getAsString();
+    switch (discriminatorValue) {
+      case "ArrayParameter":
+        ArrayParameter.validateJsonElement(jsonElement);
+        break;
+      case "SimpleParameter":
+        SimpleParameter.validateJsonElement(jsonElement);
+        break;
+      default:
+        throw new IllegalArgumentException(
+            String.format(
+                "The value of the `type` field `%s` does not match any key defined in the discriminator's mapping.",
+                discriminatorValue));
+    }
   }
 
-
- /**
-  * Create an instance of Parameter given an JSON string
-  *
-  * @param jsonString JSON string
-  * @return An instance of Parameter
-  * @throws IOException if the JSON string is invalid with respect to Parameter
-  */
+  /**
+   * Create an instance of Parameter given an JSON string
+   *
+   * @param jsonString JSON string
+   * @return An instance of Parameter
+   * @throws IOException if the JSON string is invalid with respect to Parameter
+   */
   public static Parameter fromJson(String jsonString) throws IOException {
     return JSON.getGson().fromJson(jsonString, Parameter.class);
   }
 
- /**
-  * Convert an instance of Parameter to an JSON string
-  *
-  * @return JSON string
-  */
+  /**
+   * Convert an instance of Parameter to an JSON string
+   *
+   * @return JSON string
+   */
   public String toJson() {
     return JSON.getGson().toJson(this);
   }

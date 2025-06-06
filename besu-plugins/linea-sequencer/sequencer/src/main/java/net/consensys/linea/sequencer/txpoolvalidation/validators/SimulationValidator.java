@@ -23,7 +23,6 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.config.LineaTransactionPoolValidatorConfiguration;
 import net.consensys.linea.jsonrpc.JsonRpcManager;

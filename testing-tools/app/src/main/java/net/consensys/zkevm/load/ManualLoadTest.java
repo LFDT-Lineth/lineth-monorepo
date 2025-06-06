@@ -6,8 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class ManualLoadTest {
-  private final static Logger logger = LoggerFactory.getLogger(ManualLoadTest.class);
-
+  private static final Logger logger = LoggerFactory.getLogger(ManualLoadTest.class);
 
   /**
    * Call main method by passing arguments like '-ft 2 -nbTx 2'
@@ -20,25 +19,25 @@ public class ManualLoadTest {
     var options = getOptions();
     var parser = new DefaultParser();
 
-      try {
-        // parse the command line arguments
-        CommandLine cmd = parser.parse(options, args);
+    try {
+      // parse the command line arguments
+      CommandLine cmd = parser.parse(options, args);
 
-        if (cmd.hasOption("help")) {
-          String header = "Tools to generate load on an ethereum network.";
-          HelpFormatter formatter = new HelpFormatter();
-          formatter.printHelp("LoadTesting", header, options, "", true);
-          return;
-        }
-
-        if (cmd.hasOption("request")) {
-          TestExecutor testExecutor = new TestExecutor(cmd.getOptionValue("request"), cmd.getOptionValue("pk"));
-          testExecutor.test();
-        }
-      } catch (ParseException e) {
-        logger.info("Failed to parse command line properties." + e);
+      if (cmd.hasOption("help")) {
+        String header = "Tools to generate load on an ethereum network.";
+        HelpFormatter formatter = new HelpFormatter();
+        formatter.printHelp("LoadTesting", header, options, "", true);
+        return;
       }
 
+      if (cmd.hasOption("request")) {
+        TestExecutor testExecutor =
+            new TestExecutor(cmd.getOptionValue("request"), cmd.getOptionValue("pk"));
+        testExecutor.test();
+      }
+    } catch (ParseException e) {
+      logger.info("Failed to parse command line properties." + e);
+    }
   }
 
   private static Options getOptions() {
@@ -50,5 +49,4 @@ public class ManualLoadTest {
 
     return options;
   }
-
 }

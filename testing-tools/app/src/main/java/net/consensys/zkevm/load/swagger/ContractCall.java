@@ -10,38 +10,33 @@
  * Do not edit the class manually.
  */
 
-
 package net.consensys.zkevm.load.swagger;
-
-import java.util.Objects;
-import com.google.gson.TypeAdapter;
-import com.google.gson.annotations.SerializedName;
-import com.google.gson.stream.JsonReader;
-import com.google.gson.stream.JsonWriter;
-import java.io.IOException;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.TypeAdapter;
 import com.google.gson.TypeAdapterFactory;
+import com.google.gson.annotations.SerializedName;
 import com.google.gson.reflect.TypeToken;
-
+import com.google.gson.stream.JsonReader;
+import com.google.gson.stream.JsonWriter;
+import java.io.IOException;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
-
 import net.consensys.zkevm.load.model.JSON;
 
-/**
- * ContractCall
- */
-
+/** ContractCall */
 public class ContractCall extends Scenario {
   public static final String SERIALIZED_NAME_WALLET = "wallet";
+
   @SerializedName(SERIALIZED_NAME_WALLET)
   private String wallet = "source";
 
   public static final String SERIALIZED_NAME_CONTRACT = "contract";
+
   @SerializedName(SERIALIZED_NAME_CONTRACT)
   private Contract contract;
 
@@ -54,10 +49,12 @@ public class ContractCall extends Scenario {
     return this;
   }
 
-   /**
-   * new means a new wallet is going to be created by the test framework to make the calls, source means the test will use the sourceWallet passed in the context.
+  /**
+   * new means a new wallet is going to be created by the test framework to make the calls, source
+   * means the test will use the sourceWallet passed in the context.
+   *
    * @return wallet
-  **/
+   */
   @javax.annotation.Nullable
   public String getWallet() {
     return wallet;
@@ -67,16 +64,16 @@ public class ContractCall extends Scenario {
     this.wallet = wallet;
   }
 
-
   public ContractCall contract(Contract contract) {
     this.contract = contract;
     return this;
   }
 
-   /**
+  /**
    * Get contract
+   *
    * @return contract
-  **/
+   */
   @javax.annotation.Nullable
   public Contract getContract() {
     return contract;
@@ -85,8 +82,6 @@ public class ContractCall extends Scenario {
   public void setContract(Contract contract) {
     this.contract = contract;
   }
-
-
 
   @Override
   public boolean equals(Object o) {
@@ -97,9 +92,9 @@ public class ContractCall extends Scenario {
       return false;
     }
     ContractCall contractCall = (ContractCall) o;
-    return Objects.equals(this.wallet, contractCall.wallet) &&
-        Objects.equals(this.contract, contractCall.contract) &&
-        super.equals(o);
+    return Objects.equals(this.wallet, contractCall.wallet)
+        && Objects.equals(this.contract, contractCall.contract)
+        && super.equals(o);
   }
 
   @Override
@@ -119,8 +114,7 @@ public class ContractCall extends Scenario {
   }
 
   /**
-   * Convert the given object to string with each line indented by 4 spaces
-   * (except the first line).
+   * Convert the given object to string with each line indented by 4 spaces (except the first line).
    */
   private String toIndentedString(Object o) {
     if (o == null) {
@@ -128,7 +122,6 @@ public class ContractCall extends Scenario {
     }
     return o.toString().replace("\n", "\n    ");
   }
-
 
   public static HashSet<String> openapiFields;
   public static HashSet<String> openapiRequiredFields;
@@ -143,80 +136,90 @@ public class ContractCall extends Scenario {
     openapiRequiredFields.add("scenarioType");
   }
 
- /**
-  * Validates the JSON Element and throws an exception if issues found
-  *
-  * @param jsonElement JSON Element
-  * @throws IOException if the JSON Element is invalid with respect to ContractCall
-  */
+  /**
+   * Validates the JSON Element and throws an exception if issues found
+   *
+   * @param jsonElement JSON Element
+   * @throws IOException if the JSON Element is invalid with respect to ContractCall
+   */
   public static void validateJsonElement(JsonElement jsonElement) throws IOException {
-      if (jsonElement == null) {
-        if (!ContractCall.openapiRequiredFields.isEmpty()) { // has required fields but JSON element is null
-          throw new IllegalArgumentException(String.format("The required field(s) %s in ContractCall is not found in the empty JSON string", ContractCall.openapiRequiredFields.toString()));
-        }
+    if (jsonElement == null) {
+      if (!ContractCall.openapiRequiredFields
+          .isEmpty()) { // has required fields but JSON element is null
+        throw new IllegalArgumentException(
+            String.format(
+                "The required field(s) %s in ContractCall is not found in the empty JSON string",
+                ContractCall.openapiRequiredFields.toString()));
       }
+    }
 
-      Set<Map.Entry<String, JsonElement>> entries = jsonElement.getAsJsonObject().entrySet();
-      // check to see if the JSON string contains additional fields
-      for (Map.Entry<String, JsonElement> entry : entries) {
-        if (!ContractCall.openapiFields.contains(entry.getKey())) {
-          throw new IllegalArgumentException(String.format("The field `%s` in the JSON string is not defined in the `ContractCall` properties. JSON: %s", entry.getKey(), jsonElement.toString()));
-        }
+    Set<Map.Entry<String, JsonElement>> entries = jsonElement.getAsJsonObject().entrySet();
+    // check to see if the JSON string contains additional fields
+    for (Map.Entry<String, JsonElement> entry : entries) {
+      if (!ContractCall.openapiFields.contains(entry.getKey())) {
+        throw new IllegalArgumentException(
+            String.format(
+                "The field `%s` in the JSON string is not defined in the `ContractCall` properties. JSON: %s",
+                entry.getKey(), jsonElement.toString()));
       }
+    }
 
-      // check to make sure all required properties/fields are present in the JSON string
-      for (String requiredField : ContractCall.openapiRequiredFields) {
-        if (jsonElement.getAsJsonObject().get(requiredField) == null) {
-          throw new IllegalArgumentException(String.format("The required field `%s` is not found in the JSON string: %s", requiredField, jsonElement.toString()));
-        }
+    // check to make sure all required properties/fields are present in the JSON string
+    for (String requiredField : ContractCall.openapiRequiredFields) {
+      if (jsonElement.getAsJsonObject().get(requiredField) == null) {
+        throw new IllegalArgumentException(
+            String.format(
+                "The required field `%s` is not found in the JSON string: %s",
+                requiredField, jsonElement.toString()));
       }
+    }
   }
 
   public static class CustomTypeAdapterFactory implements TypeAdapterFactory {
     @SuppressWarnings("unchecked")
     @Override
     public <T> TypeAdapter<T> create(Gson gson, TypeToken<T> type) {
-       if (!ContractCall.class.isAssignableFrom(type.getRawType())) {
-         return null; // this class only serializes 'ContractCall' and its subtypes
-       }
-       final TypeAdapter<JsonElement> elementAdapter = gson.getAdapter(JsonElement.class);
-       final TypeAdapter<ContractCall> thisAdapter
-                        = gson.getDelegateAdapter(this, TypeToken.get(ContractCall.class));
+      if (!ContractCall.class.isAssignableFrom(type.getRawType())) {
+        return null; // this class only serializes 'ContractCall' and its subtypes
+      }
+      final TypeAdapter<JsonElement> elementAdapter = gson.getAdapter(JsonElement.class);
+      final TypeAdapter<ContractCall> thisAdapter =
+          gson.getDelegateAdapter(this, TypeToken.get(ContractCall.class));
 
-       return (TypeAdapter<T>) new TypeAdapter<ContractCall>() {
-           @Override
-           public void write(JsonWriter out, ContractCall value) throws IOException {
-             JsonObject obj = thisAdapter.toJsonTree(value).getAsJsonObject();
-             elementAdapter.write(out, obj);
-           }
+      return (TypeAdapter<T>)
+          new TypeAdapter<ContractCall>() {
+            @Override
+            public void write(JsonWriter out, ContractCall value) throws IOException {
+              JsonObject obj = thisAdapter.toJsonTree(value).getAsJsonObject();
+              elementAdapter.write(out, obj);
+            }
 
-           @Override
-           public ContractCall read(JsonReader in) throws IOException {
-             JsonElement jsonElement = elementAdapter.read(in);
-             validateJsonElement(jsonElement);
-             return thisAdapter.fromJsonTree(jsonElement);
-           }
-
-       }.nullSafe();
+            @Override
+            public ContractCall read(JsonReader in) throws IOException {
+              JsonElement jsonElement = elementAdapter.read(in);
+              validateJsonElement(jsonElement);
+              return thisAdapter.fromJsonTree(jsonElement);
+            }
+          }.nullSafe();
     }
   }
 
- /**
-  * Create an instance of ContractCall given an JSON string
-  *
-  * @param jsonString JSON string
-  * @return An instance of ContractCall
-  * @throws IOException if the JSON string is invalid with respect to ContractCall
-  */
+  /**
+   * Create an instance of ContractCall given an JSON string
+   *
+   * @param jsonString JSON string
+   * @return An instance of ContractCall
+   * @throws IOException if the JSON string is invalid with respect to ContractCall
+   */
   public static ContractCall fromJson(String jsonString) throws IOException {
     return JSON.getGson().fromJson(jsonString, ContractCall.class);
   }
 
- /**
-  * Convert an instance of ContractCall to an JSON string
-  *
-  * @return JSON string
-  */
+  /**
+   * Convert an instance of ContractCall to an JSON string
+   *
+   * @return JSON string
+   */
   public String toJson() {
     return JSON.getGson().toJson(this);
   }

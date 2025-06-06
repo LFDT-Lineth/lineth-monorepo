@@ -10,27 +10,19 @@
  * Do not edit the class manually.
  */
 
-
 package net.consensys.zkevm.load.swagger;
 
-import java.util.Objects;
-
-import com.google.gson.annotations.SerializedName;
-
-import java.io.IOException;
-
 import com.google.gson.JsonElement;
-
+import com.google.gson.annotations.SerializedName;
+import java.io.IOException;
 import java.util.HashSet;
-
+import java.util.Objects;
 import net.consensys.zkevm.load.model.JSON;
 
-/**
- * Contract
- */
-
+/** Contract */
 public class Contract {
   public static final String SERIALIZED_NAME_CONTRACT_CALL_TYPE = "contractCallType";
+
   @SerializedName(SERIALIZED_NAME_CONTRACT_CALL_TYPE)
   protected String contractCallType;
 
@@ -43,10 +35,11 @@ public class Contract {
     return this;
   }
 
-   /**
+  /**
    * Get contractCallType
+   *
    * @return contractCallType
-  **/
+   */
   @javax.annotation.Nonnull
   public String getContractCallType() {
     return contractCallType;
@@ -55,8 +48,6 @@ public class Contract {
   public void setContractCallType(String contractCallType) {
     this.contractCallType = contractCallType;
   }
-
-
 
   @Override
   public boolean equals(Object o) {
@@ -85,8 +76,7 @@ public class Contract {
   }
 
   /**
-   * Convert the given object to string with each line indented by 4 spaces
-   * (except the first line).
+   * Convert the given object to string with each line indented by 4 spaces (except the first line).
    */
   private String toIndentedString(Object o) {
     if (o == null) {
@@ -94,7 +84,6 @@ public class Contract {
     }
     return o.toString().replace("\n", "\n    ");
   }
-
 
   public static HashSet<String> openapiFields;
   public static HashSet<String> openapiRequiredFields;
@@ -109,52 +98,58 @@ public class Contract {
     openapiRequiredFields.add("contractCallType");
   }
 
- /**
-  * Validates the JSON Element and throws an exception if issues found
-  *
-  * @param jsonElement JSON Element
-  * @throws IOException if the JSON Element is invalid with respect to Contract
-  */
+  /**
+   * Validates the JSON Element and throws an exception if issues found
+   *
+   * @param jsonElement JSON Element
+   * @throws IOException if the JSON Element is invalid with respect to Contract
+   */
   public static void validateJsonElement(JsonElement jsonElement) throws IOException {
-      if (jsonElement == null) {
-        if (!Contract.openapiRequiredFields.isEmpty()) { // has required fields but JSON element is null
-          throw new IllegalArgumentException(String.format("The required field(s) %s in Contract is not found in the empty JSON string", Contract.openapiRequiredFields.toString()));
-        }
+    if (jsonElement == null) {
+      if (!Contract.openapiRequiredFields
+          .isEmpty()) { // has required fields but JSON element is null
+        throw new IllegalArgumentException(
+            String.format(
+                "The required field(s) %s in Contract is not found in the empty JSON string",
+                Contract.openapiRequiredFields.toString()));
       }
+    }
 
-      String discriminatorValue = jsonElement.getAsJsonObject().get("contractCallType").getAsString();
-      switch (discriminatorValue) {
-        case "CallContractReference":
-          CallContractReference.validateJsonElement(jsonElement);
-          break;
-        case "CallExistingContract":
-          CallExistingContract.validateJsonElement(jsonElement);
-          break;
-        case "CreateContract":
-          CreateContract.validateJsonElement(jsonElement);
-          break;
-        default:
-          throw new IllegalArgumentException(String.format("The value of the `contractCallType` field `%s` does not match any key defined in the discriminator's mapping.", discriminatorValue));
-      }
+    String discriminatorValue = jsonElement.getAsJsonObject().get("contractCallType").getAsString();
+    switch (discriminatorValue) {
+      case "CallContractReference":
+        CallContractReference.validateJsonElement(jsonElement);
+        break;
+      case "CallExistingContract":
+        CallExistingContract.validateJsonElement(jsonElement);
+        break;
+      case "CreateContract":
+        CreateContract.validateJsonElement(jsonElement);
+        break;
+      default:
+        throw new IllegalArgumentException(
+            String.format(
+                "The value of the `contractCallType` field `%s` does not match any key defined in the discriminator's mapping.",
+                discriminatorValue));
+    }
   }
 
-
- /**
-  * Create an instance of Contract given an JSON string
-  *
-  * @param jsonString JSON string
-  * @return An instance of Contract
-  * @throws IOException if the JSON string is invalid with respect to Contract
-  */
+  /**
+   * Create an instance of Contract given an JSON string
+   *
+   * @param jsonString JSON string
+   * @return An instance of Contract
+   * @throws IOException if the JSON string is invalid with respect to Contract
+   */
   public static Contract fromJson(String jsonString) throws IOException {
     return JSON.getGson().fromJson(jsonString, Contract.class);
   }
 
- /**
-  * Convert an instance of Contract to an JSON string
-  *
-  * @return JSON string
-  */
+  /**
+   * Convert an instance of Contract to an JSON string
+   *
+   * @return JSON string
+   */
   public String toJson() {
     return JSON.getGson().toJson(this);
   }

@@ -125,6 +125,7 @@ allprojects {
           removeUnusedImports()
           trimTrailingWhitespace()
           endWithNewline()
+          googleJavaFormat(libs.versions.googleJavaFormat.get())
         }
       }
     }

@@ -10,64 +10,61 @@
  * Do not edit the class manually.
  */
 
-
 package net.consensys.zkevm.load.swagger;
-
-import java.util.Objects;
-import com.google.gson.TypeAdapter;
-import com.google.gson.annotations.SerializedName;
-import com.google.gson.stream.JsonReader;
-import com.google.gson.stream.JsonWriter;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.TypeAdapter;
 import com.google.gson.TypeAdapterFactory;
+import com.google.gson.annotations.SerializedName;
 import com.google.gson.reflect.TypeToken;
-
+import com.google.gson.stream.JsonReader;
+import com.google.gson.stream.JsonWriter;
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
-
 import net.consensys.zkevm.load.model.JSON;
 
-/**
- * Request
- */
-
+/** Request */
 public class Request {
   public static final String SERIALIZED_NAME_ID = "id";
+
   @SerializedName(SERIALIZED_NAME_ID)
   private Integer id;
 
   public static final String SERIALIZED_NAME_NAME = "name";
+
   @SerializedName(SERIALIZED_NAME_NAME)
   private String name;
 
   public static final String SERIALIZED_NAME_CONTEXT = "context";
+
   @SerializedName(SERIALIZED_NAME_CONTEXT)
   private Context context;
 
   public static final String SERIALIZED_NAME_CALLS = "calls";
+
   @SerializedName(SERIALIZED_NAME_CALLS)
   private List<ScenarioDefinition> calls;
 
-  public Request() {
-  }
+  public Request() {}
 
   public Request id(Integer id) {
     this.id = id;
     return this;
   }
 
-   /**
+  /**
    * Get id
+   *
    * @return id
-  **/
+   */
   @javax.annotation.Nullable
   public Integer getId() {
     return id;
@@ -77,16 +74,16 @@ public class Request {
     this.id = id;
   }
 
-
   public Request name(String name) {
     this.name = name;
     return this;
   }
 
-   /**
+  /**
    * Get name
+   *
    * @return name
-  **/
+   */
   @javax.annotation.Nullable
   public String getName() {
     return name;
@@ -96,16 +93,16 @@ public class Request {
     this.name = name;
   }
 
-
   public Request context(Context context) {
     this.context = context;
     return this;
   }
 
-   /**
+  /**
    * Get context
+   *
    * @return context
-  **/
+   */
   @javax.annotation.Nonnull
   public Context getContext() {
     return context;
@@ -114,7 +111,6 @@ public class Request {
   public void setContext(Context context) {
     this.context = context;
   }
-
 
   public Request calls(List<ScenarioDefinition> calls) {
     this.calls = calls;
@@ -129,10 +125,11 @@ public class Request {
     return this;
   }
 
-   /**
+  /**
    * Get calls
+   *
    * @return calls
-  **/
+   */
   @javax.annotation.Nullable
   public List<ScenarioDefinition> getCalls() {
     return calls;
@@ -141,8 +138,6 @@ public class Request {
   public void setCalls(List<ScenarioDefinition> calls) {
     this.calls = calls;
   }
-
-
 
   @Override
   public boolean equals(Object o) {
@@ -153,10 +148,10 @@ public class Request {
       return false;
     }
     Request request = (Request) o;
-    return Objects.equals(this.id, request.id) &&
-        Objects.equals(this.name, request.name) &&
-        Objects.equals(this.context, request.context) &&
-        Objects.equals(this.calls, request.calls);
+    return Objects.equals(this.id, request.id)
+        && Objects.equals(this.name, request.name)
+        && Objects.equals(this.context, request.context)
+        && Objects.equals(this.calls, request.calls);
   }
 
   @Override
@@ -177,8 +172,7 @@ public class Request {
   }
 
   /**
-   * Convert the given object to string with each line indented by 4 spaces
-   * (except the first line).
+   * Convert the given object to string with each line indented by 4 spaces (except the first line).
    */
   private String toIndentedString(Object o) {
     if (o == null) {
@@ -186,7 +180,6 @@ public class Request {
     }
     return o.toString().replace("\n", "\n    ");
   }
-
 
   public static HashSet<String> openapiFields;
   public static HashSet<String> openapiRequiredFields;
@@ -204,100 +197,118 @@ public class Request {
     openapiRequiredFields.add("context");
   }
 
- /**
-  * Validates the JSON Element and throws an exception if issues found
-  *
-  * @param jsonElement JSON Element
-  * @throws IOException if the JSON Element is invalid with respect to Request
-  */
+  /**
+   * Validates the JSON Element and throws an exception if issues found
+   *
+   * @param jsonElement JSON Element
+   * @throws IOException if the JSON Element is invalid with respect to Request
+   */
   public static void validateJsonElement(JsonElement jsonElement) throws IOException {
-      if (jsonElement == null) {
-        if (!Request.openapiRequiredFields.isEmpty()) { // has required fields but JSON element is null
-          throw new IllegalArgumentException(String.format("The required field(s) %s in Request is not found in the empty JSON string", Request.openapiRequiredFields.toString()));
-        }
+    if (jsonElement == null) {
+      if (!Request.openapiRequiredFields
+          .isEmpty()) { // has required fields but JSON element is null
+        throw new IllegalArgumentException(
+            String.format(
+                "The required field(s) %s in Request is not found in the empty JSON string",
+                Request.openapiRequiredFields.toString()));
       }
+    }
 
-      Set<Map.Entry<String, JsonElement>> entries = jsonElement.getAsJsonObject().entrySet();
-      // check to see if the JSON string contains additional fields
-      for (Map.Entry<String, JsonElement> entry : entries) {
-        if (!Request.openapiFields.contains(entry.getKey())) {
-          throw new IllegalArgumentException(String.format("The field `%s` in the JSON string is not defined in the `Request` properties. JSON: %s", entry.getKey(), jsonElement.toString()));
-        }
+    Set<Map.Entry<String, JsonElement>> entries = jsonElement.getAsJsonObject().entrySet();
+    // check to see if the JSON string contains additional fields
+    for (Map.Entry<String, JsonElement> entry : entries) {
+      if (!Request.openapiFields.contains(entry.getKey())) {
+        throw new IllegalArgumentException(
+            String.format(
+                "The field `%s` in the JSON string is not defined in the `Request` properties. JSON: %s",
+                entry.getKey(), jsonElement.toString()));
       }
+    }
 
-      // check to make sure all required properties/fields are present in the JSON string
-      for (String requiredField : Request.openapiRequiredFields) {
-        if (jsonElement.getAsJsonObject().get(requiredField) == null) {
-          throw new IllegalArgumentException(String.format("The required field `%s` is not found in the JSON string: %s", requiredField, jsonElement.toString()));
+    // check to make sure all required properties/fields are present in the JSON string
+    for (String requiredField : Request.openapiRequiredFields) {
+      if (jsonElement.getAsJsonObject().get(requiredField) == null) {
+        throw new IllegalArgumentException(
+            String.format(
+                "The required field `%s` is not found in the JSON string: %s",
+                requiredField, jsonElement.toString()));
+      }
+    }
+    JsonObject jsonObj = jsonElement.getAsJsonObject();
+    if ((jsonObj.get("name") != null && !jsonObj.get("name").isJsonNull())
+        && !jsonObj.get("name").isJsonPrimitive()) {
+      throw new IllegalArgumentException(
+          String.format(
+              "Expected the field `name` to be a primitive type in the JSON string but got `%s`",
+              jsonObj.get("name").toString()));
+    }
+    // validate the required field `context`
+    Context.validateJsonElement(jsonObj.get("context"));
+    if (jsonObj.get("calls") != null && !jsonObj.get("calls").isJsonNull()) {
+      JsonArray jsonArraycalls = jsonObj.getAsJsonArray("calls");
+      if (jsonArraycalls != null) {
+        // ensure the json data is an array
+        if (!jsonObj.get("calls").isJsonArray()) {
+          throw new IllegalArgumentException(
+              String.format(
+                  "Expected the field `calls` to be an array in the JSON string but got `%s`",
+                  jsonObj.get("calls").toString()));
         }
-      }
-        JsonObject jsonObj = jsonElement.getAsJsonObject();
-      if ((jsonObj.get("name") != null && !jsonObj.get("name").isJsonNull()) && !jsonObj.get("name").isJsonPrimitive()) {
-        throw new IllegalArgumentException(String.format("Expected the field `name` to be a primitive type in the JSON string but got `%s`", jsonObj.get("name").toString()));
-      }
-      // validate the required field `context`
-      Context.validateJsonElement(jsonObj.get("context"));
-      if (jsonObj.get("calls") != null && !jsonObj.get("calls").isJsonNull()) {
-        JsonArray jsonArraycalls = jsonObj.getAsJsonArray("calls");
-        if (jsonArraycalls != null) {
-          // ensure the json data is an array
-          if (!jsonObj.get("calls").isJsonArray()) {
-            throw new IllegalArgumentException(String.format("Expected the field `calls` to be an array in the JSON string but got `%s`", jsonObj.get("calls").toString()));
-          }
 
-          // validate the optional field `calls` (array)
-          for (int i = 0; i < jsonArraycalls.size(); i++) {
-            ScenarioDefinition.validateJsonElement(jsonArraycalls.get(i));
-          };
+        // validate the optional field `calls` (array)
+        for (int i = 0; i < jsonArraycalls.size(); i++) {
+          ScenarioDefinition.validateJsonElement(jsonArraycalls.get(i));
         }
+        ;
       }
+    }
   }
 
   public static class CustomTypeAdapterFactory implements TypeAdapterFactory {
     @SuppressWarnings("unchecked")
     @Override
     public <T> TypeAdapter<T> create(Gson gson, TypeToken<T> type) {
-       if (!Request.class.isAssignableFrom(type.getRawType())) {
-         return null; // this class only serializes 'Request' and its subtypes
-       }
-       final TypeAdapter<JsonElement> elementAdapter = gson.getAdapter(JsonElement.class);
-       final TypeAdapter<Request> thisAdapter
-                        = gson.getDelegateAdapter(this, TypeToken.get(Request.class));
+      if (!Request.class.isAssignableFrom(type.getRawType())) {
+        return null; // this class only serializes 'Request' and its subtypes
+      }
+      final TypeAdapter<JsonElement> elementAdapter = gson.getAdapter(JsonElement.class);
+      final TypeAdapter<Request> thisAdapter =
+          gson.getDelegateAdapter(this, TypeToken.get(Request.class));
 
-       return (TypeAdapter<T>) new TypeAdapter<Request>() {
-           @Override
-           public void write(JsonWriter out, Request value) throws IOException {
-             JsonObject obj = thisAdapter.toJsonTree(value).getAsJsonObject();
-             elementAdapter.write(out, obj);
-           }
+      return (TypeAdapter<T>)
+          new TypeAdapter<Request>() {
+            @Override
+            public void write(JsonWriter out, Request value) throws IOException {
+              JsonObject obj = thisAdapter.toJsonTree(value).getAsJsonObject();
+              elementAdapter.write(out, obj);
+            }
 
-           @Override
-           public Request read(JsonReader in) throws IOException {
-             JsonElement jsonElement = elementAdapter.read(in);
-             validateJsonElement(jsonElement);
-             return thisAdapter.fromJsonTree(jsonElement);
-           }
-
-       }.nullSafe();
+            @Override
+            public Request read(JsonReader in) throws IOException {
+              JsonElement jsonElement = elementAdapter.read(in);
+              validateJsonElement(jsonElement);
+              return thisAdapter.fromJsonTree(jsonElement);
+            }
+          }.nullSafe();
     }
   }
 
- /**
-  * Create an instance of Request given an JSON string
-  *
-  * @param jsonString JSON string
-  * @return An instance of Request
-  * @throws IOException if the JSON string is invalid with respect to Request
-  */
+  /**
+   * Create an instance of Request given an JSON string
+   *
+   * @param jsonString JSON string
+   * @return An instance of Request
+   * @throws IOException if the JSON string is invalid with respect to Request
+   */
   public static Request fromJson(String jsonString) throws IOException {
     return JSON.getGson().fromJson(jsonString, Request.class);
   }
 
- /**
-  * Convert an instance of Request to an JSON string
-  *
-  * @return JSON string
-  */
+  /**
+   * Convert an instance of Request to an JSON string
+   *
+   * @return JSON string
+   */
   public String toJson() {
     return JSON.getGson().toJson(this);
   }

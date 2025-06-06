@@ -17,7 +17,6 @@ package net.consensys.linea.sequencer.txpoolvalidation.metrics;
 import static net.consensys.linea.metrics.LineaMetricCategory.TX_POOL_PROFITABILITY;
 
 import java.util.stream.Collectors;
-
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.bl.TransactionProfitabilityCalculator;
 import net.consensys.linea.config.LineaProfitabilityConfiguration;

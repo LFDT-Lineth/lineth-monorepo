@@ -16,7 +16,6 @@ package net.consensys.linea.bundles;
 
 import java.util.List;
 import java.util.UUID;
-
 import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.plugin.services.BesuService;
 

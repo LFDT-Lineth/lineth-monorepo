@@ -16,7 +16,6 @@
 package org.hyperledger.besu.tests.acceptance.dsl;
 
 import java.util.concurrent.TimeUnit;
-
 import org.awaitility.Awaitility;
 import org.awaitility.core.ThrowingRunnable;
 

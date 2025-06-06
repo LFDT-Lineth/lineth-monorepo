@@ -15,9 +15,8 @@
 
 package net.consensys.linea.config;
 
-import java.math.BigDecimal;
-
 import com.google.common.base.MoreObjects;
+import java.math.BigDecimal;
 import net.consensys.linea.plugins.LineaCliOptions;
 import picocli.CommandLine;
 

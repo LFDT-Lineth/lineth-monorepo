@@ -15,10 +15,9 @@
 
 package net.consensys.linea.config;
 
-import java.math.BigDecimal;
-
 import com.google.common.base.MoreObjects;
 import jakarta.validation.constraints.Positive;
+import java.math.BigDecimal;
 import net.consensys.linea.plugins.LineaCliOptions;
 import picocli.CommandLine;
 

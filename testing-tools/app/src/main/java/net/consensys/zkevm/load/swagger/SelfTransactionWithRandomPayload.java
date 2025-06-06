@@ -10,49 +10,52 @@
  * Do not edit the class manually.
  */
 
-
 package net.consensys.zkevm.load.swagger;
-
-import java.util.Objects;
-import com.google.gson.TypeAdapter;
-import com.google.gson.annotations.SerializedName;
-import com.google.gson.stream.JsonReader;
-import com.google.gson.stream.JsonWriter;
-import java.io.IOException;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.TypeAdapter;
 import com.google.gson.TypeAdapterFactory;
+import com.google.gson.annotations.SerializedName;
 import com.google.gson.reflect.TypeToken;
-
+import com.google.gson.stream.JsonReader;
+import com.google.gson.stream.JsonWriter;
+import java.io.IOException;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
-
 import net.consensys.zkevm.load.model.JSON;
 
 /**
- * The test will create nbTransfers new wallets and make each of them send one request to itself. A new wallet is created for each transaction as it&#39;s likely the tx will remain in pending state.
+ * The test will create nbTransfers new wallets and make each of them send one request to itself. A
+ * new wallet is created for each transaction as it&#39;s likely the tx will remain in pending
+ * state.
  */
 public class SelfTransactionWithRandomPayload extends Scenario {
   public static final String SERIALIZED_NAME_WALLET = "wallet";
+
   @SerializedName(SERIALIZED_NAME_WALLET)
   private String wallet = "new";
 
   public static final String SERIALIZED_NAME_NB_WALLETS = "nbWallets";
+
   @SerializedName(SERIALIZED_NAME_NB_WALLETS)
   private Integer nbWallets = 1;
 
   public static final String SERIALIZED_NAME_NB_TRANSFERS = "nbTransfers";
+
   @SerializedName(SERIALIZED_NAME_NB_TRANSFERS)
   private Integer nbTransfers = 1;
 
   public static final String SERIALIZED_NAME_PAYLOAD_SIZE = "payloadSize";
+
   @SerializedName(SERIALIZED_NAME_PAYLOAD_SIZE)
   private Integer payloadSize = 50000;
 
   public static final String SERIALIZED_NAME_PRICE = "price";
+
   @SerializedName(SERIALIZED_NAME_PRICE)
   private Integer price = 27000;
 
@@ -65,10 +68,12 @@ public class SelfTransactionWithRandomPayload extends Scenario {
     return this;
   }
 
-   /**
-   * new means a new wallet is going to be created by the test framework to make the calls, source means the test will use the sourceWallet whose pk is passed as parameter.
+  /**
+   * new means a new wallet is going to be created by the test framework to make the calls, source
+   * means the test will use the sourceWallet whose pk is passed as parameter.
+   *
    * @return wallet
-  **/
+   */
   @javax.annotation.Nullable
   public String getWallet() {
     return wallet;
@@ -78,16 +83,16 @@ public class SelfTransactionWithRandomPayload extends Scenario {
     this.wallet = wallet;
   }
 
-
   public SelfTransactionWithRandomPayload nbWallets(Integer nbWallets) {
     this.nbWallets = nbWallets;
     return this;
   }
 
-   /**
+  /**
    * Get nbWallets
+   *
    * @return nbWallets
-  **/
+   */
   @javax.annotation.Nullable
   public Integer getNbWallets() {
     return nbWallets;
@@ -97,16 +102,16 @@ public class SelfTransactionWithRandomPayload extends Scenario {
     this.nbWallets = nbWallets;
   }
 
-
   public SelfTransactionWithRandomPayload nbTransfers(Integer nbTransfers) {
     this.nbTransfers = nbTransfers;
     return this;
   }
 
-   /**
+  /**
    * Get nbTransfers
+   *
    * @return nbTransfers
-  **/
+   */
   @javax.annotation.Nullable
   public Integer getNbTransfers() {
     return nbTransfers;
@@ -116,16 +121,16 @@ public class SelfTransactionWithRandomPayload extends Scenario {
     this.nbTransfers = nbTransfers;
   }
 
-
   public SelfTransactionWithRandomPayload payloadSize(Integer payloadSize) {
     this.payloadSize = payloadSize;
     return this;
   }
 
-   /**
+  /**
    * Get payloadSize
+   *
    * @return payloadSize
-  **/
+   */
   @javax.annotation.Nullable
   public Integer getPayloadSize() {
     return payloadSize;
@@ -135,16 +140,16 @@ public class SelfTransactionWithRandomPayload extends Scenario {
     this.payloadSize = payloadSize;
   }
 
-
   public SelfTransactionWithRandomPayload price(Integer price) {
     this.price = price;
     return this;
   }
 
-   /**
+  /**
    * Get price
+   *
    * @return price
-  **/
+   */
   @javax.annotation.Nullable
   public Integer getPrice() {
     return price;
@@ -154,8 +159,6 @@ public class SelfTransactionWithRandomPayload extends Scenario {
     this.price = price;
   }
 
-
-
   @Override
   public boolean equals(Object o) {
     if (this == o) {
@@ -164,13 +167,14 @@ public class SelfTransactionWithRandomPayload extends Scenario {
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    SelfTransactionWithRandomPayload selfTransactionWithRandomPayload = (SelfTransactionWithRandomPayload) o;
-    return Objects.equals(this.wallet, selfTransactionWithRandomPayload.wallet) &&
-        Objects.equals(this.nbWallets, selfTransactionWithRandomPayload.nbWallets) &&
-        Objects.equals(this.nbTransfers, selfTransactionWithRandomPayload.nbTransfers) &&
-        Objects.equals(this.payloadSize, selfTransactionWithRandomPayload.payloadSize) &&
-        Objects.equals(this.price, selfTransactionWithRandomPayload.price) &&
-        super.equals(o);
+    SelfTransactionWithRandomPayload selfTransactionWithRandomPayload =
+        (SelfTransactionWithRandomPayload) o;
+    return Objects.equals(this.wallet, selfTransactionWithRandomPayload.wallet)
+        && Objects.equals(this.nbWallets, selfTransactionWithRandomPayload.nbWallets)
+        && Objects.equals(this.nbTransfers, selfTransactionWithRandomPayload.nbTransfers)
+        && Objects.equals(this.payloadSize, selfTransactionWithRandomPayload.payloadSize)
+        && Objects.equals(this.price, selfTransactionWithRandomPayload.price)
+        && super.equals(o);
   }
 
   @Override
@@ -193,8 +197,7 @@ public class SelfTransactionWithRandomPayload extends Scenario {
   }
 
   /**
-   * Convert the given object to string with each line indented by 4 spaces
-   * (except the first line).
+   * Convert the given object to string with each line indented by 4 spaces (except the first line).
    */
   private String toIndentedString(Object o) {
     if (o == null) {
@@ -202,7 +205,6 @@ public class SelfTransactionWithRandomPayload extends Scenario {
     }
     return o.toString().replace("\n", "\n    ");
   }
-
 
   public static HashSet<String> openapiFields;
   public static HashSet<String> openapiRequiredFields;
@@ -217,80 +219,94 @@ public class SelfTransactionWithRandomPayload extends Scenario {
     openapiRequiredFields.add("scenarioType");
   }
 
- /**
-  * Validates the JSON Element and throws an exception if issues found
-  *
-  * @param jsonElement JSON Element
-  * @throws IOException if the JSON Element is invalid with respect to SelfTransactionWithRandomPayload
-  */
+  /**
+   * Validates the JSON Element and throws an exception if issues found
+   *
+   * @param jsonElement JSON Element
+   * @throws IOException if the JSON Element is invalid with respect to
+   *     SelfTransactionWithRandomPayload
+   */
   public static void validateJsonElement(JsonElement jsonElement) throws IOException {
-      if (jsonElement == null) {
-        if (!SelfTransactionWithRandomPayload.openapiRequiredFields.isEmpty()) { // has required fields but JSON element is null
-          throw new IllegalArgumentException(String.format("The required field(s) %s in SelfTransactionWithRandomPayload is not found in the empty JSON string", SelfTransactionWithRandomPayload.openapiRequiredFields.toString()));
-        }
+    if (jsonElement == null) {
+      if (!SelfTransactionWithRandomPayload.openapiRequiredFields
+          .isEmpty()) { // has required fields but JSON element is null
+        throw new IllegalArgumentException(
+            String.format(
+                "The required field(s) %s in SelfTransactionWithRandomPayload is not found in the empty JSON string",
+                SelfTransactionWithRandomPayload.openapiRequiredFields.toString()));
       }
+    }
 
-      Set<Map.Entry<String, JsonElement>> entries = jsonElement.getAsJsonObject().entrySet();
-      // check to see if the JSON string contains additional fields
-      for (Map.Entry<String, JsonElement> entry : entries) {
-        if (!SelfTransactionWithRandomPayload.openapiFields.contains(entry.getKey())) {
-          throw new IllegalArgumentException(String.format("The field `%s` in the JSON string is not defined in the `SelfTransactionWithRandomPayload` properties. JSON: %s", entry.getKey(), jsonElement.toString()));
-        }
+    Set<Map.Entry<String, JsonElement>> entries = jsonElement.getAsJsonObject().entrySet();
+    // check to see if the JSON string contains additional fields
+    for (Map.Entry<String, JsonElement> entry : entries) {
+      if (!SelfTransactionWithRandomPayload.openapiFields.contains(entry.getKey())) {
+        throw new IllegalArgumentException(
+            String.format(
+                "The field `%s` in the JSON string is not defined in the `SelfTransactionWithRandomPayload` properties. JSON: %s",
+                entry.getKey(), jsonElement.toString()));
       }
+    }
 
-      // check to make sure all required properties/fields are present in the JSON string
-      for (String requiredField : SelfTransactionWithRandomPayload.openapiRequiredFields) {
-        if (jsonElement.getAsJsonObject().get(requiredField) == null) {
-          throw new IllegalArgumentException(String.format("The required field `%s` is not found in the JSON string: %s", requiredField, jsonElement.toString()));
-        }
+    // check to make sure all required properties/fields are present in the JSON string
+    for (String requiredField : SelfTransactionWithRandomPayload.openapiRequiredFields) {
+      if (jsonElement.getAsJsonObject().get(requiredField) == null) {
+        throw new IllegalArgumentException(
+            String.format(
+                "The required field `%s` is not found in the JSON string: %s",
+                requiredField, jsonElement.toString()));
       }
+    }
   }
 
   public static class CustomTypeAdapterFactory implements TypeAdapterFactory {
     @SuppressWarnings("unchecked")
     @Override
     public <T> TypeAdapter<T> create(Gson gson, TypeToken<T> type) {
-       if (!SelfTransactionWithRandomPayload.class.isAssignableFrom(type.getRawType())) {
-         return null; // this class only serializes 'SelfTransactionWithRandomPayload' and its subtypes
-       }
-       final TypeAdapter<JsonElement> elementAdapter = gson.getAdapter(JsonElement.class);
-       final TypeAdapter<SelfTransactionWithRandomPayload> thisAdapter
-                        = gson.getDelegateAdapter(this, TypeToken.get(SelfTransactionWithRandomPayload.class));
+      if (!SelfTransactionWithRandomPayload.class.isAssignableFrom(type.getRawType())) {
+        return null; // this class only serializes 'SelfTransactionWithRandomPayload' and its
+        // subtypes
+      }
+      final TypeAdapter<JsonElement> elementAdapter = gson.getAdapter(JsonElement.class);
+      final TypeAdapter<SelfTransactionWithRandomPayload> thisAdapter =
+          gson.getDelegateAdapter(this, TypeToken.get(SelfTransactionWithRandomPayload.class));
 
-       return (TypeAdapter<T>) new TypeAdapter<SelfTransactionWithRandomPayload>() {
-           @Override
-           public void write(JsonWriter out, SelfTransactionWithRandomPayload value) throws IOException {
-             JsonObject obj = thisAdapter.toJsonTree(value).getAsJsonObject();
-             elementAdapter.write(out, obj);
-           }
+      return (TypeAdapter<T>)
+          new TypeAdapter<SelfTransactionWithRandomPayload>() {
+            @Override
+            public void write(JsonWriter out, SelfTransactionWithRandomPayload value)
+                throws IOException {
+              JsonObject obj = thisAdapter.toJsonTree(value).getAsJsonObject();
+              elementAdapter.write(out, obj);
+            }
 
-           @Override
-           public SelfTransactionWithRandomPayload read(JsonReader in) throws IOException {
-             JsonElement jsonElement = elementAdapter.read(in);
-             validateJsonElement(jsonElement);
-             return thisAdapter.fromJsonTree(jsonElement);
-           }
-
-       }.nullSafe();
+            @Override
+            public SelfTransactionWithRandomPayload read(JsonReader in) throws IOException {
+              JsonElement jsonElement = elementAdapter.read(in);
+              validateJsonElement(jsonElement);
+              return thisAdapter.fromJsonTree(jsonElement);
+            }
+          }.nullSafe();
     }
   }
 
- /**
-  * Create an instance of SelfTransactionWithRandomPayload given an JSON string
-  *
-  * @param jsonString JSON string
-  * @return An instance of SelfTransactionWithRandomPayload
-  * @throws IOException if the JSON string is invalid with respect to SelfTransactionWithRandomPayload
-  */
+  /**
+   * Create an instance of SelfTransactionWithRandomPayload given an JSON string
+   *
+   * @param jsonString JSON string
+   * @return An instance of SelfTransactionWithRandomPayload
+   * @throws IOException if the JSON string is invalid with respect to
+   *     SelfTransactionWithRandomPayload
+   */
   public static SelfTransactionWithRandomPayload fromJson(String jsonString) throws IOException {
     return JSON.getGson().fromJson(jsonString, SelfTransactionWithRandomPayload.class);
   }
 
- /**
-  * Convert an instance of SelfTransactionWithRandomPayload to an JSON string
-  *
-  * @return JSON string
-  */
+  /**
+   * Convert an instance of SelfTransactionWithRandomPayload to an JSON string
+   *
+   * @return JSON string
+   */
   public String toJson() {
     return JSON.getGson().toJson(this);
   }

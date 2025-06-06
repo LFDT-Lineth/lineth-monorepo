@@ -21,7 +21,6 @@ import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
-
 import linea.plugin.acc.test.tests.web3j.generated.ExcludedPrecompiles;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;

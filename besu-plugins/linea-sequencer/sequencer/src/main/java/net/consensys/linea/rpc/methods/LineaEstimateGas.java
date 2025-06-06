@@ -20,15 +20,14 @@ import static net.consensys.linea.sequencer.modulelimit.ModuleLineCountValidator
 import static net.consensys.linea.zktracer.Fork.LONDON;
 import static org.hyperledger.besu.ethereum.api.jsonrpc.internal.results.Quantity.create;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.math.RoundingMode;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.annotations.VisibleForTesting;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.bl.TransactionProfitabilityCalculator;
 import net.consensys.linea.config.LineaProfitabilityConfiguration;

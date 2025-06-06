@@ -15,11 +15,10 @@
 
 package net.consensys.linea.config;
 
+import com.google.common.base.MoreObjects;
 import java.net.URL;
 import java.util.Set;
 import java.util.stream.Collectors;
-
-import com.google.common.base.MoreObjects;
 import net.consensys.linea.plugins.LineaCliOptions;
 import picocli.CommandLine;
 
