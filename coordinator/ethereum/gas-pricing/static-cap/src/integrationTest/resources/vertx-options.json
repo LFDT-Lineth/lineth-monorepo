@@ -1,8 +1,0 @@
-{
-  "blockedThreadCheckInterval" : 5,
-  "blockedThreadCheckIntervalUnit" : "MINUTES",
-  "maxEventLoopExecuteTime" : 2,
-  "maxEventLoopExecuteTimeUnit" : "MINUTES",
-  "maxWorkerExecuteTime": 5,
-  "maxWorkerExecuteTimeUnit": "MINUTES"
-}
