@@ -48,7 +48,9 @@ export default function NavItem({ title, description, href, icon, label, as, dro
   return (
     <Wrapper className={clsx(styles["card-item"], dropdown && styles["dropdown"], isOpen && styles["open"])}>
       {showCaret ? (
-        <div className={styles["card-link"]}>{content}</div>
+        <div data-testid={`nav-item-${title.split(" ").join("-")}`} className={styles["card-link"]}>
+          {content}
+        </div>
       ) : (
         <Link href={href} className={styles["card-link"]} data-testid={`nav-item-${title.split(" ").join("-")}`}>
           {content}
