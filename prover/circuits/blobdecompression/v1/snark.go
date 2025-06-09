@@ -180,7 +180,7 @@ func CheckBatchesSums(api frontend.API, hasher snarkHash.FieldHasher, nbBatches 
 	}
 
 	var (
-		partialSumsT *logderivlookup.Table
+		partialSumsT logderivlookup.Table
 		partialSums  []frontend.Variable
 	)
 	// create a table of claimed sums and prove their correctness as we go through the payload
