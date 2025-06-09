@@ -1,6 +1,5 @@
 package net.consensys.zkevm.ethereum.coordination.blob
 
-import linea.blob.CalculateShnarfResult
 import linea.blob.GoNativeBlobShnarfCalculator
 import linea.blob.GoNativeShnarfCalculatorFactory
 import linea.blob.ShnarfCalculatorVersion
@@ -9,7 +8,7 @@ import linea.kotlin.decodeHex
 import linea.kotlin.encodeHex
 import net.consensys.linea.metrics.LineaMetricsCategory
 import net.consensys.linea.metrics.MetricsFacade
-import net.consensys.linea.metrics.TimerCapture
+import net.consensys.linea.metrics.Timer
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import java.util.Base64
@@ -76,7 +75,7 @@ class GoBackedBlobShnarfCalculator(
   constructor(version: ShnarfCalculatorVersion, metricsFacade: MetricsFacade) :
     this(GoNativeShnarfCalculatorFactory.getInstance(version), metricsFacade)
 
-  private val calculateShnarfTimer: TimerCapture<CalculateShnarfResult> = metricsFacade.createSimpleTimer(
+  private val calculateShnarfTimer: Timer = metricsFacade.createTimer(
     category = LineaMetricsCategory.BLOB,
     name = "shnarf.calculation",
     description = "Time taken to calculate the shnarf hash of the given blob",

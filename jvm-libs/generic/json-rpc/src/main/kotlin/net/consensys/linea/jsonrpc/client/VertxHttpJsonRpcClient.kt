@@ -12,6 +12,8 @@ import io.vertx.core.http.HttpClient
 import io.vertx.core.http.HttpClientResponse
 import io.vertx.core.http.HttpMethod
 import io.vertx.core.http.RequestOptions
+import net.consensys.linea.async.toCompletableFuture
+import net.consensys.linea.async.toVertxFuture
 import net.consensys.linea.jsonrpc.JsonRpcError
 import net.consensys.linea.jsonrpc.JsonRpcErrorException
 import net.consensys.linea.jsonrpc.JsonRpcErrorResponse
@@ -89,17 +91,17 @@ class VertxHttpJsonRpcClient(
           }
         }
 
-      Future.fromCompletionStage(
-        metricsFacade.createSimpleTimer<Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>>(
-          category = metricsCategory,
-          name = "request",
-          description = "Time of Upstream API JsonRpc Requests",
-          tags = listOf(
-            Tag("endpoint", endpoint.host),
-            Tag("method", request.method),
-          ),
-        ).captureTime(requestFuture.toCompletionStage().toCompletableFuture()),
+      metricsFacade.createTimer(
+        category = metricsCategory,
+        name = "request",
+        description = "Time of Upstream API JsonRpc Requests",
+        tags = listOf(
+          Tag("endpoint", endpoint.host),
+          Tag("method", request.method),
+        ),
       )
+        .captureTime(requestFuture.toCompletableFuture())
+        .toVertxFuture()
     }
       .onFailure { th -> logRequestFailure(json, th) }
   }

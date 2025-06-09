@@ -6,7 +6,7 @@ import linea.blob.GoNativeBlobCompressorFactory
 import linea.kotlin.encodeHex
 import net.consensys.linea.metrics.LineaMetricsCategory
 import net.consensys.linea.metrics.MetricsFacade
-import net.consensys.linea.metrics.TimerCapture
+import net.consensys.linea.metrics.Timer
 import org.apache.logging.log4j.LogManager
 import kotlin.random.Random
 
@@ -75,12 +75,12 @@ class GoBackedBlobCompressor private constructor(
     }
   }
 
-  private val canAppendBlockTimer: TimerCapture<Boolean> = metricsFacade.createSimpleTimer(
+  private val canAppendBlockTimer: Timer = metricsFacade.createTimer(
     category = LineaMetricsCategory.BLOB,
     name = "compressor.canappendblock",
     description = "Time taken to check if block fits in current blob",
   )
-  private val appendBlockTimer: TimerCapture<Boolean> = metricsFacade.createSimpleTimer(
+  private val appendBlockTimer: Timer = metricsFacade.createTimer(
     category = LineaMetricsCategory.BLOB,
     name = "compressor.appendblock",
     description = "Time taken to compress block into current blob",

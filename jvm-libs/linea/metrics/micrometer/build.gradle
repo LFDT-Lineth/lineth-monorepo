@@ -5,6 +5,7 @@ plugins {
 description="Micrometer metrics implementation for Linea"
 
 dependencies {
-  api "io.vertx:vertx-micrometer-metrics"
+  api "io.micrometer:micrometer-registry-prometheus:${libs.versions.micrometer.get()}"
   implementation project(':jvm-libs:linea:core:metrics')
+  testImplementation project(':jvm-libs:generic:extensions:futures')
 }

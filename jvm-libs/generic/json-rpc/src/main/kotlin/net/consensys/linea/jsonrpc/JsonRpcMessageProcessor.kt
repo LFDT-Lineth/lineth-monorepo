@@ -77,11 +77,9 @@ class JsonRpcMessageProcessor(
         category = metricsCategory,
         name = "processing.whole",
         description = "Processing of JSON-RPC message: Deserialization + Business Logic + Serialization",
-        tagKey = "method",
-        tagValueExtractorOnError = { "METHOD_PROCESSING_ERROR" },
-      ) {
-        it.first!!
-      }
+        tagValueExtractorOnError = { listOf(Tag(key = "method", value = "METHOD_PROCESSING_ERROR")) },
+        tagValueExtractor = { listOf(Tag(key = "method", value = it.first!!)) },
+      )
         .captureTime(
           handleMessage(
             user = user,
@@ -179,7 +177,7 @@ class JsonRpcMessageProcessor(
           if (responses.size == 1) {
             responses.first()
           } else {
-            metricsFacade.createSimpleTimer<String>(
+            metricsFacade.createTimer(
               category = metricsCategory,
               name = "serialization.response.bulk",
               description = "Time of bulk json response serialization",
@@ -192,20 +190,24 @@ class JsonRpcMessageProcessor(
   private fun measureRequestParsing(
     json: Any,
   ): Result<Pair<JsonRpcRequest, JsonObject>, JsonRpcErrorResponse> {
-    return metricsFacade.createDynamicTagTimer(
+    return metricsFacade.createDynamicTagTimer<Result<Pair<JsonRpcRequest, JsonObject>, JsonRpcErrorResponse>>(
       category = metricsCategory,
       name = "serialization.request",
       description = "json-rpc method parsing",
-      tagKey = "method",
-      tagValueExtractorOnError = { "METHOD_PARSE_ERROR" },
-    ) {
-        parsingResult: Result<Pair<JsonRpcRequest, JsonObject>, JsonRpcErrorResponse> ->
-      parsingResult.map { it.first.method }.recover { "METHOD_PARSE_ERROR" }.value
-    }.captureTime { requestParser(json) }
+      tagValueExtractorOnError = { listOf(Tag(key = "method", value = "METHOD_PARSE_ERROR")) },
+      tagValueExtractor = { parsingResult ->
+        listOf(
+          Tag(
+            key = "method",
+            value = parsingResult.map { it.first.method }.recover { "METHOD_PARSE_ERROR" }.value,
+          ),
+        )
+      },
+    ).captureTime { requestParser(json) }
   }
 
   private fun encodeAndMeasureResponse(requestContext: RequestContext): String {
-    val timerCapture = metricsFacade.createSimpleTimer<String>(
+    val timerCapture = metricsFacade.createTimer(
       category = metricsCategory,
       name = "serialization.response",
       description = "Time of json response serialization",
@@ -226,7 +228,7 @@ class JsonRpcMessageProcessor(
     jsonRpcRequest: JsonRpcRequest,
     requestJson: JsonObject,
   ): Future<Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>> {
-    return metricsFacade.createSimpleTimer<Future<Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>>>(
+    return metricsFacade.createTimer(
       category = metricsCategory,
       name = "processing.logic",
       description = "Processing of a particular JRPC method's logic without SerDes",

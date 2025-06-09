@@ -26,7 +26,7 @@ class MicrometerMetricsFacadeTest {
     metricsFacade = MicrometerMetricsFacade(
       meterRegistry,
       metricsPrefix = "linea.test",
-      commonTags = listOf(Tag("version", "1.0.1")),
+      allMetricsCommonTags = listOf(Tag("version", "1.0.1")),
     )
   }
 
@@ -130,7 +130,7 @@ class MicrometerMetricsFacadeTest {
     }
 
     val expectedTags = listOf(Tag("key1", "value1"), Tag("key2", "value2"))
-    val timer = metricsFacade.createSimpleTimer<Unit>(
+    val timer = metricsFacade.createTimer(
       category = TestCategory.TEST_CATEGORY,
       name = "some.timer.metric",
       description = "This is a test metric",
@@ -163,11 +163,9 @@ class MicrometerMetricsFacadeTest {
       category = TestCategory.TEST_CATEGORY,
       name = "some.dynamictag.timer.metric",
       description = "This is a test metric",
-      tagKey = "key",
-      tagValueExtractorOnError = { "unfound_key" },
-    ) {
-      "value"
-    }
+      tagValueExtractorOnError = { listOf(Tag(key = "key", value = "unfound_key")) },
+      tagValueExtractor = { listOf(Tag(key = "key", value = "value")) },
+    )
 
     timer.captureTime(::mockTimer)
     val createdTimer = meterRegistry.find("linea.test.test.category.some.dynamictag.timer.metric").timer()
@@ -182,7 +180,7 @@ class MicrometerMetricsFacadeTest {
   }
 
   @Test
-  fun `createGauge creates gauge with correct name when metrics prefix and category are absent`() {
+  fun `createGauge creates gauge with correct name when metrics prefix is absent`() {
     val metricMeasureValue = 0L
     val meterRegistry = SimpleMeterRegistry()
     val metricsFacade = MicrometerMetricsFacade(meterRegistry)
@@ -198,7 +196,7 @@ class MicrometerMetricsFacadeTest {
   }
 
   @Test
-  fun `createCounter creates counter with correct name when metrics prefix and category are absent`() {
+  fun `createCounter creates counter with correct name when metrics prefix is absent`() {
     val meterRegistry = SimpleMeterRegistry()
     val metricsFacade = MicrometerMetricsFacade(meterRegistry)
     metricsFacade.createCounter(
@@ -212,7 +210,7 @@ class MicrometerMetricsFacadeTest {
   }
 
   @Test
-  fun `createHistogram creates histogram with correct name when metrics prefix and category are absent`() {
+  fun `createHistogram creates histogram with correct name when metrics prefix is absent`() {
     val meterRegistry = SimpleMeterRegistry()
     val metricsFacade = MicrometerMetricsFacade(meterRegistry)
     metricsFacade.createHistogram(
@@ -227,10 +225,10 @@ class MicrometerMetricsFacadeTest {
   }
 
   @Test
-  fun `createSimpleTimer creates timer with correct name when metrics prefix and category are absent`() {
+  fun `createSimpleTimer creates timer with correct name when metrics prefix is absent`() {
     val meterRegistry = SimpleMeterRegistry()
     val metricsFacade = MicrometerMetricsFacade(meterRegistry)
-    val timer = metricsFacade.createSimpleTimer<Unit>(
+    val timer = metricsFacade.createTimer(
       category = TestCategory.TEST_CATEGORY,
       name = "some.timer.metric",
       description = "This is a test metric",
@@ -242,20 +240,80 @@ class MicrometerMetricsFacadeTest {
   }
 
   @Test
-  fun `createDynamicTagTimer creates timer with correct name when metrics prefix and category are absent`() {
+  fun `createDynamicTagTimer creates timer with correct name when metrics prefix is absent`() {
     val meterRegistry = SimpleMeterRegistry()
     val metricsFacade = MicrometerMetricsFacade(meterRegistry)
     val timer = metricsFacade.createDynamicTagTimer<Unit>(
       category = TestCategory.TEST_CATEGORY,
       name = "some.dynamictag.timer.metric",
       description = "This is a test metric",
-      tagKey = "key",
-      tagValueExtractorOnError = { "unfound_key" },
-    ) {
-      "value"
-    }
+      tagValueExtractorOnError = { listOf(Tag("key", "unfound_key")) },
+      tagValueExtractor = { listOf(Tag("key", "value")) },
+    )
     timer.captureTime {}
     val createdTimer = meterRegistry.find("test.category.some.dynamictag.timer.metric").timer()
     assertThat(createdTimer).isNotNull
+  }
+
+  @Test
+  fun `counter provider creates multiple counters`() {
+    val requestCounter = metricsFacade.createCounterFactory(
+      category = TestCategory.TEST_CATEGORY,
+      name = "request.counter",
+      description = "This is a test counter provider",
+      commonTags = listOf(Tag("apitype", "engine_prague")),
+    )
+    requestCounter.create(listOf(Tag("method", "getPayload")))
+      .increment(5.0)
+    requestCounter.create(listOf(Tag("method", "newPayload")))
+      .increment(3.0)
+    requestCounter.create(listOf(Tag("method", "getPayload")))
+      .increment()
+
+    val createdCounter1 = meterRegistry
+      .find("linea.test.test.category.request.counter")
+      .tags("method", "getPayload")
+      .counter()
+
+    val createdCounter2 = meterRegistry
+      .find("linea.test.test.category.request.counter")
+      .tags("method", "newPayload")
+      .counter()
+
+    assertThat(createdCounter1).isNotNull
+    assertThat(createdCounter2).isNotNull
+    assertThat(createdCounter1!!.count()).isEqualTo(6.0)
+    assertThat(createdCounter2!!.count()).isEqualTo(3.0)
+  }
+
+  @Test
+  fun `timer provider creates multiple timers`() {
+    val requestTimer = metricsFacade.createTimerFactory(
+      category = TestCategory.TEST_CATEGORY,
+      name = "request.latency",
+      description = "This is a test counter provider",
+      commonTags = listOf(Tag("apitype", "engine_prague")),
+    )
+    requestTimer.create(listOf(Tag("method", "getPayload")))
+      .captureTime { Thread.sleep(2) }
+    requestTimer.create(listOf(Tag("method", "newPayload")))
+      .captureTime { Thread.sleep(10) }
+    requestTimer.create(listOf(Tag("method", "getPayload")))
+      .captureTime { Thread.sleep(2) }
+
+    val createdTimer1 = meterRegistry
+      .find("linea.test.test.category.request.latency")
+      .tags("method", "getPayload")
+      .timer()
+
+    val createdTimer2 = meterRegistry
+      .find("linea.test.test.category.request.latency")
+      .tags("method", "newPayload")
+      .timer()
+
+    assertThat(createdTimer1).isNotNull
+    assertThat(createdTimer1!!.count()).isEqualTo(2)
+    assertThat(createdTimer2).isNotNull
+    assertThat(createdTimer2!!.count()).isEqualTo(1)
   }
 }
