@@ -101,6 +101,12 @@ TXN_DATA_SHAN := $(wildcard txndata/shanghai/*.lisp) \
 
 WCP := wcp
 
+LISPX := $(shell find * -name *.lispX)
+# Warn about any lispX files
+define warn_lispX
+	@for FILE in ${LISPX}; do (echo "WARNING: $$FILE"); done
+endef
+
 ZKEVM_MODULES_COMMON := ${CONSTANTS} \
 		 ${ALU} \
 		 ${BIN} \
@@ -150,9 +156,12 @@ all: zkevm_london.bin zkevm_paris.bin zkevm_shanghai.bin
 
 zkevm_london.bin: ${ZKEVM_MODULES_LONDON}
 	${GO_CORSET_COMPILE} -o $@ ${ZKEVM_MODULES_LONDON}
+	@$(call warn_lispX)
 
 zkevm_paris.bin: ${ZKEVM_MODULES_PARIS}
 	${GO_CORSET_COMPILE} -o $@ ${ZKEVM_MODULES_PARIS}
+	@$(call warn_lispX)
 
 zkevm_shanghai.bin: ${ZKEVM_MODULES_SHANGHAI}
 	${GO_CORSET_COMPILE} -o $@ ${ZKEVM_MODULES_SHANGHAI}
+	@$(call warn_lispX)
