@@ -34,7 +34,7 @@ All messages are stored in a configurable Postgres DB.
     <br>
     You can filter by the calldata field:
     <br>
-    
+
     Example:
     `calldata.funcSignature == "0x6463fb2a" and calldata.params.messageNumber == 85804`,
 - `L1_EVENT_FILTER_CALLDATA_FUNCTION_INTERFACE`: Calldata data function interface following this format: `"function transfer(address to, uint256 amount)"`. Make sure you specify parameters names in order to use syntax like `calldata.params.messageNumber`.
@@ -55,7 +55,7 @@ All messages are stored in a configurable Postgres DB.
     <br>
     You can filter by the calldata field:
     <br>
-    
+
     Example:
     `calldata.funcSignature == "0x6463fb2a" and calldata.params.messageNumber == 85804`,
 - `L2_EVENT_FILTER_CALLDATA_FUNCTION_INTERFACE`: Calldata data function interface following this format: `"function transfer(address to, uint256 amount)"`. Make sure you specify parameters names in order to use syntax like `calldata.params.messageNumber`.
@@ -150,4 +150,4 @@ We will then implement the migration code manually. We omit scripts for TypeORM 
 
 ## License
 
-This package is licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE) for more information.
+This package is licensed under the [Apache 2.0](../LICENSE-APACHE) and the [MIT](../LICENSE-MIT) licenses.

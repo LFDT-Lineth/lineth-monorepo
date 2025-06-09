@@ -33,7 +33,8 @@ RUN apk add --no-cache bash musl-dev libgcc
 RUN mkdir -p /opt/linea/prover/lib/compressor /app/logs
 
 # Import the LICENSE
-COPY ./LICENSE /opt/linea/prover/
+COPY ../LICENSE-APACHE /opt/linea/prover/
+COPY ../LICENSE-MIT /opt/linea/prover/
 
 # Copy the blob compressor dictionaries
 COPY --from=go-builder /usr/src/prover/lib/compressor/compressor_dict.bin /opt/linea/prover/lib/compressor/

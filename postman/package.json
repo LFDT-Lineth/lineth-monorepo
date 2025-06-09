@@ -2,7 +2,7 @@
   "name": "@consensys/linea-postman",
   "version": "1.0.0",
   "author": "Consensys Software Inc.",
-  "license": "Apache-2.0",
+  "license": "(MIT OR Apache-2.0)",
   "description": "",
   "main": "dist/src/index.js",
   "types": "dist/src/index.d.ts",

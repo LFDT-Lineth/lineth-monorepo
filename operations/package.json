@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Operations scripts",
   "author": "Consensys Software Inc.",
-  "license": "Apache-2.0",
+  "license": "(MIT OR Apache-2.0)",
   "scripts": {
     "build": "shx rm -rf dist && tsc -p tsconfig.build.json",
     "prettier": "prettier -c '**/*.{js,ts}'",

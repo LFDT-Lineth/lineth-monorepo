@@ -1,5 +1,6 @@
 {
   "name": "contracts",
+  "license": "(MIT OR Apache-2.0)",
   "engines": {
     "node": ">=20",
     "pnpm": ">=9"

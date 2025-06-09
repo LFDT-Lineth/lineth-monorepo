@@ -26,7 +26,7 @@
     "lint:fix": "pnpm run lint:ts:fix && pnpm run prettier:fix"
   },
   "author": "",
-  "license": "MIT",
+  "license": "(MIT OR Apache-2.0)",
   "devDependencies": {
     "@jest/globals": "catalog:",
     "@types/jest": "catalog:",

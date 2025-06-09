@@ -9,11 +9,11 @@ The Linea SDK package a TypeScript library for seamless bridging operations betw
   - Claim bridged assets on L1 and L2
   - Get message proof to claim on L1
   - Track message status across chains
-  
+
 - 🔍 **Message Tracking**
   - Query message status
   - Monitor bridge events
-  
+
 - ⚡ **Gas Management**
   - Automatic gas estimation
   - Custom fee strategies
@@ -230,4 +230,4 @@ const tx = await l2Contract.claim(message);
 
 ## License
 
-This package is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
+This package is licensed under the [Apache 2.0](../LICENSE-APACHE) and the [MIT](../LICENSE-MIT) licenses.

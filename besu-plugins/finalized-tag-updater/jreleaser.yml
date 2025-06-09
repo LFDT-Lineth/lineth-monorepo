@@ -6,7 +6,7 @@ project:
     homepage: https://github.com/Consensys/linea-monorepo
   authors:
     - Linea automations
-  license: APACHE-2.0
+  license: (MIT OR Apache-2.0)
   inceptionYear: '2024'
   stereotype: NONE
   java:

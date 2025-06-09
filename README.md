@@ -6,16 +6,19 @@
 <a href="https://discord.com/invite/consensys">
   <img src="https://img.shields.io/badge/Discord-%235865F2.svg?style=for-the-badge&logo=discord&logoColor=white" alt="Discord" height="20">
 </a>
-<a href="https://github.com/Consensys/linea-monorepo/blob/main/LICENSE">
-  <img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="License" height="20">
+<a href="https://github.com/Consensys/linea-monorepo/blob/main/LICENSE-APACHE">
+  <img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="Apache 2.0 License" height="20">
+</a>
+<a href="https://github.com/Consensys/linea-monorepo/blob/main/LICENSE-MIT">
+  <img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="MIT License" height="20">
 </a>
 <a href="https://codecov.io/gh/Consensys/linea-monorepo">
   <img src="https://codecov.io/gh/Consensys/linea-monorepo/graph/badge.svg?token=2TM55P0CGJ" alt="Codecov" height="20">
 </a>
 
-This is the principal Linea repository. It mainly includes the smart contracts covering Linea's core functions, the prover in charge of generating ZK proofs, the coordinator responsible for multiple orchestrations, and the Postman to execute bridge messages. 
+This is the principal Linea repository. It mainly includes the smart contracts covering Linea's core functions, the prover in charge of generating ZK proofs, the coordinator responsible for multiple orchestrations, and the Postman to execute bridge messages.
 
-It serves developers by making the Linea tech stack open source under the [Apache 2.0 license](LICENSE).
+It serves developers by making the Linea tech stack open source under the [Apache 2.0](LICENSE-APACHE) and the [MIT](LICENSE-MIT) licenses.
 
 ## What is Linea?
 
@@ -54,7 +57,7 @@ Please keep in mind that we do not accept non-code contributions like fixing com
 
 1. [Create an issue](https://github.com/Consensys/linea-monorepo/issues)
 > If the proposed update is non-trivial, also tag us for discussion.
-2. Submit the update as a pull request from your [fork of this repo](https://github.com/Consensys/linea-monorepo/fork), and tag us for review. 
+2. Submit the update as a pull request from your [fork of this repo](https://github.com/Consensys/linea-monorepo/fork), and tag us for review.
 > Include the issue number in the pull request description and (optionally) in the branch name.
 
 Consider starting with a ["good first issue"](https://github.com/ConsenSys/linea-monorepo/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22).

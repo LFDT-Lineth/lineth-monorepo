@@ -1,6 +1,7 @@
 {
   "name": "linea-monorepo",
   "author": "Consensys Software Inc.",
+  "license": "(MIT OR Apache-2.0)",
   "engines": {
     "node": ">=20",
     "pnpm": ">=9"

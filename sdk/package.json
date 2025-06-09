@@ -2,7 +2,7 @@
   "name": "@consensys/linea-sdk",
   "version": "1.0.0",
   "author": "Consensys Software Inc.",
-  "license": "Apache-2.0",
+  "license": "(MIT OR Apache-2.0)",
   "description": "",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -14,6 +14,8 @@
     "lint:fix": "pnpm run lint:ts:fix && pnpm run prettier:fix",
     "clean": "rimraf dist src/typechain node_modules coverage tsconfig.build.tsbuildinfo",
     "build:pre": "pnpm run typechain",
+    "prepack": "cp ../LICENSE-APACHE . && cp ../LICENSE-MIT . && pnpm run build",
+    "postpublish": "rm -rf LICENSE-APACHE LICENSE-MIT",
     "build": "pnpm run build:pre && tsc -p tsconfig.build.json",
     "typechain": "typechain --target ethers-v6 --out-dir ./src/contracts/typechain './src/contracts/abis/*.abi'",
     "test": "npx jest --bail --detectOpenHandles --forceExit"
@@ -32,6 +34,8 @@
     "typechain": "catalog:"
   },
   "files": [
-    "dist"
+    "dist",
+    "LICENSE-APACHE",
+    "LICENSE-MIT"
   ]
 }

@@ -16,7 +16,7 @@
     "clean": "rimraf node_modules src/typechain"
   },
   "author": "",
-  "license": "ISC",
+  "license": "(MIT OR Apache-2.0)",
   "devDependencies": {
     "@jest/globals": "catalog:",
     "@openzeppelin/upgrades-core": "1.42.1",
