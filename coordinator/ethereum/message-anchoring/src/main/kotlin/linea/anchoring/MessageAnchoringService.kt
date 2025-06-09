@@ -31,6 +31,10 @@ class MessageAnchoringService(
   log = log,
 ) {
   override fun action(): SafeFuture<*> {
+    if (eventsQueue.isEmpty()) {
+      log.trace("No messages in the queue to anchor")
+      return SafeFuture.completedFuture(null)
+    }
     return l2MessageService
       .getLastAnchoredL1MessageNumber(block = l2HighestBlockTag)
       .thenApply { lastAnchoredL1MessageNumber ->

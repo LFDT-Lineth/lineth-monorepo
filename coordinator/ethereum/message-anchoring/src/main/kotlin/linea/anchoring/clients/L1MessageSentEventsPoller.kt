@@ -10,6 +10,7 @@ import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.Deque
+import java.util.concurrent.atomic.AtomicLong
 import kotlin.time.Duration
 
 class L1MessageSentEventsPoller(
@@ -37,14 +38,18 @@ class L1MessageSentEventsPoller(
     l1HighestBlock = l1HighestBlock,
     log = log,
   )
+  private val lastFetchedMessageNumber: AtomicLong = AtomicLong(0L)
 
   private fun nextMessageNumberToFetchFromL1(): SafeFuture<ULong> {
-    val queueLastMessage = eventsQueue.peekLast()
-    if (queueLastMessage != null) {
-      return SafeFuture.completedFuture(queueLastMessage.messageNumber.inc())
+    if (lastFetchedMessageNumber.get() > 0) {
+      return SafeFuture.completedFuture(lastFetchedMessageNumber.get().inc().toULong())
     } else {
-      return l2MessageService.getLastAnchoredL1MessageNumber(block = l2HighestBlock)
-        .thenApply { it.inc() }
+      return l2MessageService
+        .getLastAnchoredL1MessageNumber(block = l2HighestBlock)
+        .thenApply {
+          lastFetchedMessageNumber.set(it.toLong())
+          it.inc()
+        }
     }
   }
 
@@ -75,6 +80,7 @@ class L1MessageSentEventsPoller(
       }
       .thenApply { events ->
         eventsQueue.addAll(events.map { it.event })
+        events.lastOrNull()?.also { lastFetchedMessageNumber.set(it.event.messageNumber.toLong()) }
       }
   }
 }
