@@ -6,8 +6,8 @@
   "license": "(MIT OR Apache-2.0)",
   "scripts": {
     "build": "shx rm -rf dist && tsc -p tsconfig.build.json",
-    "prettier": "prettier -c '**/*.{js,ts}'",
-    "prettier:fix": "prettier -w '**/*.{js,ts}'",
+    "prettier": "prettier -c '**/*.{js,ts,md}'",
+    "prettier:fix": "prettier -w '**/*.{js,ts,md}'",
     "lint": "eslint . --ext .ts",
     "lint:fix": "pnpm run lint:ts:fix",
     "lint:ts:fix": "eslint . --ext .ts --fix",
