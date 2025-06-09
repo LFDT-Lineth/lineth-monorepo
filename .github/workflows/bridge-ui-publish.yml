@@ -21,6 +21,9 @@ jobs:
     if: github.event.pull_request.head.repo.fork == false
     # ~1 min saved vs small
     runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-med
+    strategy:
+      matrix:
+        environment: [development, production]
     env:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -36,7 +39,7 @@ jobs:
 
       - name: Set Docker Tag
         id: docker-tag
-        run: echo "DOCKER_TAG=${GITHUB_SHA:0:7}-$(date +%s)-bridge-ui-${{ steps.package-version.outputs.current-version }}" | tee $GITHUB_ENV
+        run: echo "DOCKER_TAG=${GITHUB_SHA:0:7}-$(date +%s)-bridge-ui-${{ steps.package-version.outputs.current-version }}-${{ matrix.environment }}" | tee $GITHUB_ENV
 
       - name: Login to Docker Repository
         if: ${{ env.DOCKERHUB_USERNAME != '' && env.DOCKERHUB_TOKEN != '' }}
@@ -59,6 +62,7 @@ jobs:
           tags: consensys/linea-bridge-ui:${{ env.DOCKER_TAG }}
           build-args: |
             ENV_FILE=./bridge-ui/.env.production
+            NEXT_PUBLIC_ENVIRONMENT=${{ env.NEXT_PUBLIC_ENVIRONMENT }}
             NEXT_PUBLIC_WALLET_CONNECT_ID=${{ env.NEXT_PUBLIC_WALLET_CONNECT_ID }}
             NEXT_PUBLIC_INFURA_ID=${{ env.NEXT_PUBLIC_INFURA_ID }}
             NEXT_PUBLIC_QUICKNODE_ID=${{ env.NEXT_PUBLIC_QUICKNODE_ID }}
@@ -78,6 +82,7 @@ jobs:
           NEXT_PUBLIC_LIFI_INTEGRATOR_NAME: ${{ secrets.PUBLIC_LIFI_INTEGRATOR_NAME }}
           NEXT_PUBLIC_ONRAMPER_API_KEY: ${{ secrets.PUBLIC_ONRAMPER_API_KEY }}
           NEXT_PUBLIC_LAYERSWAP_API_KEY: ${{ secrets.PUBLIC_LAYERSWAP_API_KEY }}
+          NEXT_PUBLIC_ENVIRONMENT: ${{ matrix.environment }}
   
   test-build:
     if: github.event.pull_request.head.repo.fork == true

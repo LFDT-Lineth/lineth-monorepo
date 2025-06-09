@@ -61,7 +61,7 @@ export async function validateTokenURI(url: string): Promise<string> {
     await fetch(url);
     return url;
   } catch (error) {
-    return "/images/logo/noTokenLogo.svg";
+    return `${process.env.NEXT_PUBLIC_BASE_PATH}/images/logo/noTokenLogo.svg`;
   }
 }
 

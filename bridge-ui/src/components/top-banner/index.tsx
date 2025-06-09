@@ -23,7 +23,7 @@ export default function TopBanner({ text, href }: Props) {
     <div className={styles["banner-wrapper"]}>
       <Image
         className={styles["left-illustration"]}
-        src={"/images/illustration/banner/left.svg"}
+        src={`${process.env.NEXT_PUBLIC_BASE_PATH}/images/illustration/banner/left.svg`}
         role="presentation"
         alt="banner illustration left"
         width={0}
@@ -40,7 +40,7 @@ export default function TopBanner({ text, href }: Props) {
       <CloseIcon onClick={handleClose} className={styles["close-icon"]} />
       <Image
         className={styles["right-illustration"]}
-        src={"/images/illustration/banner/right.svg"}
+        src={`${process.env.NEXT_PUBLIC_BASE_PATH}/images/illustration/banner/right.svg`}
         role="presentation"
         alt="banner illustration right"
         width={0}

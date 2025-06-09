@@ -159,7 +159,7 @@ export const MENUS = [
             title: "x",
             description: "",
             file: {
-              url: "/images/logo/header/x.svg",
+              url: `${process.env.NEXT_PUBLIC_BASE_PATH}/images/logo/header/x.svg`,
               details: {
                 size: 389,
                 image: {
@@ -185,7 +185,7 @@ export const MENUS = [
             title: "farcaster-final",
             description: "",
             file: {
-              url: "/images/logo/header/farcaster-final.svg",
+              url: `${process.env.NEXT_PUBLIC_BASE_PATH}/images/logo/header/farcaster-final.svg`,
               details: {
                 size: 925,
                 image: {
@@ -211,7 +211,7 @@ export const MENUS = [
             title: "discord",
             description: "",
             file: {
-              url: "/images/logo/header/discord.svg",
+              url: `${process.env.NEXT_PUBLIC_BASE_PATH}/images/logo/header/discord.svg`,
               details: {
                 size: 1346,
                 image: {
@@ -237,7 +237,7 @@ export const MENUS = [
             title: "youtube",
             description: "",
             file: {
-              url: "/images/logo/header/youtube.svg",
+              url: `${process.env.NEXT_PUBLIC_BASE_PATH}/images/logo/header/youtube.svg`,
               details: {
                 size: 1031,
                 image: {
@@ -263,7 +263,7 @@ export const MENUS = [
             title: "x",
             description: "",
             file: {
-              url: "/images/logo/header/x.svg",
+              url: `${process.env.NEXT_PUBLIC_BASE_PATH}/images/logo/header/x.svg`,
               details: {
                 size: 389,
                 image: {

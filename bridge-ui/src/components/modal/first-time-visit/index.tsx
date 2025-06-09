@@ -44,7 +44,7 @@ const modalData: Record<VisitedModalType, FirstTimeModalDataType> = {
     btnText: "Start bridging now",
     extraText: "Ready to bridge?",
     image: {
-      src: "/images/illustration/bridge-first-time-modal-illustration.svg",
+      src: `${process.env.NEXT_PUBLIC_BASE_PATH}/images/illustration/bridge-first-time-modal-illustration.svg`,
       width: 128,
       height: 179,
     },
@@ -61,7 +61,7 @@ const modalData: Record<VisitedModalType, FirstTimeModalDataType> = {
     btnText: "Start bridging now",
     extraText: "Ready to bridge?",
     image: {
-      src: "/images/illustration/bridge-first-time-modal-illustration.svg",
+      src: `${process.env.NEXT_PUBLIC_BASE_PATH}/images/illustration/bridge-first-time-modal-illustration.svg`,
       width: 128,
       height: 179,
     },
@@ -78,7 +78,7 @@ const modalData: Record<VisitedModalType, FirstTimeModalDataType> = {
     ],
     btnText: "Buy tokens now",
     image: {
-      src: "/images/illustration/buy-first-time-modal-illustration.svg",
+      src: `${process.env.NEXT_PUBLIC_BASE_PATH}/images/illustration/buy-first-time-modal-illustration.svg`,
       width: 157,
       height: 167,
     },
