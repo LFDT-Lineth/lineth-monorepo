@@ -115,7 +115,6 @@ const widgetConfig: Partial<WidgetConfig> = {
           },
         },
       },
-      MuiInputCard: "",
     },
   },
   hiddenUI: ["appearance", "language"],
