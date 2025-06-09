@@ -50,7 +50,7 @@ public class EcDataLimitsTest extends LineaPluginTestBase {
   @Override
   protected GenesisConfigurationFactory.CliqueOptions getCliqueOptions() {
     return new GenesisConfigurationFactory.CliqueOptions(
-        BLOCK_PERIOD_SECONDS + 1,
+        BLOCK_PERIOD_SECONDS * 2,
         GenesisConfigurationFactory.CliqueOptions.DEFAULT.epochLength(),
         false);
   }
