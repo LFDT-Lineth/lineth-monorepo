@@ -440,7 +440,8 @@ class L1DependentApp(
       log = logger,
     )
 
-    val batchesLimit = configs.conflation.blocksLimit ?: (configs.conflation.proofAggregation.proofsLimit - 1U)
+    val batchesLimit = configs.conflation.blobCompression.batchesLimit
+      ?: (configs.conflation.proofAggregation.proofsLimit - 1U)
     GlobalBlobAwareConflationCalculator(
       conflationCalculator = globalCalculator,
       blobCalculator = compressedBlobCalculator,
@@ -897,9 +898,9 @@ class L1DependentApp(
         pollingInterval = configs.conflation.blocksPollingInterval,
         blocksToFinalization = 0L,
         blocksFetchLimit = configs.conflation.l2FetchBlocksLimit.toLong(),
-        // We need to add 1 to l2InclusiveBlockNumberToStopAndFlushAggregation because conflation calculator requires
-        // block_number = l2InclusiveBlockNumberToStopAndFlushAggregation + 1 to trigger conflation at
-        // l2InclusiveBlockNumberToStopAndFlushAggregation
+        // We need to add 1 to forceStopConflationAtBlockInclusive because conflation calculator requires
+        // block_number = forceStopConflationAtBlockInclusive + 1 to trigger conflation at
+        // forceStopConflationAtBlockInclusive
         lastL2BlockNumberToProcessInclusive = configs.conflation.forceStopConflationAtBlockInclusive?.inc(),
       ),
     )

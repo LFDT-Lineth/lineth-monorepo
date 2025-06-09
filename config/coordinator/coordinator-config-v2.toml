@@ -31,8 +31,6 @@ force-stop-conflation-at-block-inclusive=100_000_000
 # Queries SMC for last finalised block, and keeps polling until this number of blocks observe the same state.
 # If state is updated meanwhile, it resets counter and restarts the polling.
 consistent-number-of-blocks-on-l1-to-wait = 1
-l2-endpoint = "http://sequencer:8545"
-l2-logs-endpoint = "http://sequencer:8545"
 
 [conflation.l2-request-retries]
 backoff-delay = "PT1S"
@@ -43,8 +41,8 @@ failures-warning-threshold = 3
 blob-compressor-version="V1_2"
 blob-size-limit = 102400 # 100KB
 handler-polling-interval = "PT1S"
-# default batches limit is aggregation-proofs-limit -1
-# batches-limit must be less than or equal to aggregation-proofs-limit-1
+# default batches-limit is proof-aggregation.proofs-limit - 1
+# batches-limit must be less than or equal to proof-aggregation.proofs-limit - 1
 batches-limit = 1
 
 [conflation.proof-aggregation]
@@ -180,7 +178,6 @@ public-key = "9d9031e97dd78ff8c15aa86939de9b1e791066a0224e331bc962a2099a7b1f0464
 
 [l1-submission.aggregation]
 disabled = false
-l1-endpoint = "http://l1-el-node:8545"
 submission-delay = "PT1S"
 submission-tick-interval = "PT1S"
 max-submissions-per-tick = 10
