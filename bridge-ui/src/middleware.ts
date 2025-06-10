@@ -5,7 +5,7 @@ export function middleware(request: NextRequest) {
   const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
 
   // We only want to allow unsafe-eval in local environment for NextJS dev server
-  const unsafeEvalScript = process.env.NEXT_PUBLIC_ENVIRONMENT === "local" ? "unsafe-eval" : "";
+  const unsafeEvalScript = process.env.NEXT_PUBLIC_ENVIRONMENT === "local" ? "'unsafe-eval'" : "";
 
   /**
    * Content Security Policy (CSP) configuration:
@@ -58,7 +58,7 @@ export function middleware(request: NextRequest) {
     font-src 'self' data: https://cdn.jsdelivr.net;
     connect-src 'self' https:;
     frame-src 'self'
-      https://*.walletconnect.com 
+      https://*.walletconnect.com
       https://buy.onramper.com/;
     object-src 'none';
     base-uri 'self';
