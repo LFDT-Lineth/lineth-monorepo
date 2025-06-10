@@ -68,12 +68,13 @@
   EVM_INST_COINBASE                         0x41
   EVM_INST_TIMESTAMP                        0x42
   EVM_INST_NUMBER                           0x43
-  EVM_INST_DIFFICULTY                       0x44                               
-  EVM_INST_PREVRANDAO                       0x44          ;; PREVRANDAO comes in Paris, after London 
+  EVM_INST_DIFFICULTY                       0x44          ;; disappears in Paris                     
+  EVM_INST_PREVRANDAO                       0x44          ;; appears in Paris 
   EVM_INST_GASLIMIT                         0x45
   EVM_INST_CHAINID                          0x46
   EVM_INST_SELFBALANCE                      0x47
   EVM_INST_BASEFEE                          0x48
+  EVM_INST_BLOBBASEFEE                      0x4A          ;; appears in Cancun
   ;; Stack, Memory, Storage and Flow Operations
   EVM_INST_POP                              0x50
   EVM_INST_MLOAD                            0x51
@@ -256,6 +257,7 @@
   LINEA_GAS_LIMIT_MINIMUM                   61000000
   LINEA_GAS_LIMIT_MAXIMUM                   2000000000
   LINEA_BLOCK_GAS_LIMIT                     LINEA_GAS_LIMIT_MAXIMUM
+  LINEA_BLOB_BASE_FEE                       666 ;; TODO: put the right value
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;               ;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; SIZE / LENGTH ;;

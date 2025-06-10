@@ -11,6 +11,7 @@
  (IS_GASLIMIT         :binary@prove)
  (IS_CHAINID          :binary@prove)
  (IS_BASEFEE          :binary@prove)
+ (IS_BLOBBASEFEE      :binary@prove)
  (INST                :byte :display :opcode)
  (COINBASE_HI         :i32)
  (COINBASE_LO         :i128)
@@ -18,7 +19,6 @@
  (BASEFEE             :i64)
  (FIRST_BLOCK_NUMBER  :i48)
  (REL_BLOCK           :i16)
- (REL_TX_NUM_MAX      :i16)
  (DATA_HI             :i128)
  (DATA_LO             :i128)
  (ARG_1_HI            :i128)
@@ -39,4 +39,5 @@
   IS_GL   IS_GASLIMIT
   IS_ID   IS_CHAINID
   IS_BF   IS_BASEFEE
+  IS_BL   IS_BLOBBASEFEE
   )
