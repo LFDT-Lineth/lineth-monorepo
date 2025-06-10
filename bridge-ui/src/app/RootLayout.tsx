@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import Script from "next/script";
 import clsx from "clsx";
 import usabillaBeScript from "@/scripts/usabilla";
-import { gtmScript, gtmNoScript } from "@/scripts/gtm";
+import { gtmNoScript, gtmScript } from "@/scripts/gtm";
 import { Providers } from "@/components/layouts/Providers";
 import { Layout } from "@/components/layouts/Layout";
 import atypFont from "@/assets/fonts/atyp";
@@ -10,7 +10,6 @@ import atypTextFont from "@/assets/fonts/atypText";
 import "./globals.css";
 import "../scss/app.scss";
 import FirstVisitModal from "@/components/modal/first-time-visit";
-import { headers } from "next/headers";
 
 const metadata: Metadata = {
   title: "Linea Bridge",
@@ -18,10 +17,7 @@ const metadata: Metadata = {
   Discover the future of blockchain interaction with Linea Bridge.`,
 };
 
-export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const headersList = await headers();
-  const nonce = headersList.get("x-nonce") || "";
-
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" data-theme="v2" className={clsx(atypFont.variable, atypTextFont.variable)}>
       <title>{metadata.title?.toString()}</title>
@@ -48,13 +44,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <FirstVisitModal />
       </body>
 
-      <Script
-        id="usabilla"
-        dangerouslySetInnerHTML={{ __html: usabillaBeScript }}
-        strategy="lazyOnload"
-        nonce={nonce}
-      />
-      <Script id="gtm" dangerouslySetInnerHTML={{ __html: gtmScript }} strategy="lazyOnload" nonce={nonce} />
+      <Script id="usabilla" dangerouslySetInnerHTML={{ __html: usabillaBeScript }} strategy="lazyOnload" />
+      <Script id="gtm" dangerouslySetInnerHTML={{ __html: gtmScript }} strategy="lazyOnload" />
     </html>
   );
 }
