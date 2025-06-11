@@ -37,7 +37,10 @@ def lineaSequencerProject = project(lineaSequencerProjectPath)
 // Takes the version, and if -SNAPSHOT is part of it replaces SNAPSHOT
 // with the git commit version.
 ext.calculateVersion = { ->
-  String version = lineaSequencerProject.releaseVersion
+  // First try to get releaseVersion from project properties (for -P overrides),
+  // otherwise fallback to the parent project's releaseVersion
+  String version = project.hasProperty('releaseVersion') ? 
+    project.releaseVersion : lineaSequencerProject.releaseVersion
   if (version.endsWith("-SNAPSHOT")) {
     version = version.replace("-SNAPSHOT", "-dev-${getCheckedOutGitCommitHash()}")
   }
