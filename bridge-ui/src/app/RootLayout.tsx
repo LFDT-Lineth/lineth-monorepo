@@ -1,7 +1,6 @@
 import { Metadata } from "next";
 import Script from "next/script";
 import clsx from "clsx";
-import usabillaBeScript from "@/scripts/usabilla";
 import { gtmScript, gtmNoScript } from "@/scripts/gtm";
 import { Providers } from "@/components/layouts/Providers";
 import { Layout } from "@/components/layouts/Layout";
@@ -48,12 +47,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <FirstVisitModal />
       </body>
 
-      <Script
-        id="usabilla"
-        dangerouslySetInnerHTML={{ __html: usabillaBeScript }}
-        strategy="lazyOnload"
-        nonce={nonce}
-      />
       <Script id="gtm" dangerouslySetInnerHTML={{ __html: gtmScript }} strategy="lazyOnload" nonce={nonce} />
     </html>
   );
