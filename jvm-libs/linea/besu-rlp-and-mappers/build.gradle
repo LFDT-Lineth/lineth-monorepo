@@ -2,6 +2,8 @@ plugins {
   id 'net.consensys.zkevm.kotlin-library-conventions'
 }
 
+description = 'Utilities for RLP encoding/decoding and mappers for besu to linea domain models'
+
 dependencies {
   api(project(':jvm-libs:generic:extensions:kotlin'))
   api(project(':jvm-libs:generic:extensions:futures'))

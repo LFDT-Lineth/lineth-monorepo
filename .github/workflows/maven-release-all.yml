@@ -57,7 +57,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets._GITHUB_TOKEN_RELEASE_ACCESS }}
 
       - name: Build and Release to Maven Central
-        run: ./gradlew --stacktrace -p jvm-libs jreleaserRelease -Pversion=$VERSION
+        run: ./gradlew --stacktrace --info -p jvm-libs jreleaserRelease -Pversion=$VERSION
         env:
           GITHUB_TOKEN: ${{ secrets._GITHUB_TOKEN_RELEASE_ACCESS }}
           JRELEASER_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -23,7 +23,7 @@ publishing {
 
       pom {
         name = "Linea - ${_artifactId}"
-        description = project.description
+        description = project.description ?: name
         url = 'https://linea.build/'
 
         licenses {
