@@ -3,7 +3,7 @@ import com.github.jk1.license.filter.LicenseBundleNormalizer
 buildscript {
   ext {
     distributionIdentifier = "linea-sequencer"
-    releaseVersion = "v2.1-rc16.2.4"
+    releaseVersion = "${libs.versions.arithmetization.get()}-SNAPSHOT"
     distributionBaseUrl = "https://github.com/Consensys/linea-besu-upstream/releases/download/"
     besuIdentifier = "besu-${libs.versions.besu.get()}"
     besuFilename = "${besuIdentifier}.tar.gz"
