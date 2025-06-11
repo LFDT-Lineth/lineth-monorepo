@@ -2,6 +2,7 @@ package net.consensys.linea.contract.l1
 
 import build.linea.contract.LineaRollupV6
 import linea.contract.l1.Web3JLineaRollupSmartContractClientReadOnly
+import linea.domain.BlockParameter.Companion.toBlockParameter
 import linea.domain.gas.GasPriceCaps
 import linea.kotlin.toULong
 import linea.web3j.SmartContractErrors
@@ -91,9 +92,9 @@ class Web3JLineaRollupSmartContractClient internal constructor(
     return transactionManager.currentNonce().toULong()
   }
 
-  private fun resetNonce(blockNumber: BigInteger?): SafeFuture<ULong> {
+  private fun resetNonce(blockNumber: BigInteger): SafeFuture<ULong> {
     return transactionManager
-      .resetNonce(blockNumber)
+      .resetNonce(blockNumber.toBlockParameter())
       .thenApply { currentNonce() }
   }
 

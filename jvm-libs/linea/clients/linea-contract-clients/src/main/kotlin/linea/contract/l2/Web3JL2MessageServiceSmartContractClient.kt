@@ -13,7 +13,6 @@ import linea.web3j.ethapi.Web3jEthApiClient
 import linea.web3j.gas.EIP1559GasProvider
 import linea.web3j.requestAsync
 import linea.web3j.transactionmanager.AsyncFriendlyTransactionManager
-import net.consensys.linea.async.toSafeFuture
 import net.consensys.linea.contract.L2MessageService
 import net.consensys.linea.contract.Web3JContractAsyncHelper
 import org.apache.logging.log4j.LogManager
@@ -157,7 +156,9 @@ class Web3JL2MessageServiceSmartContractClient(
 
   override fun getAddress(): String = contractAddress
   override fun getVersion(): SafeFuture<L2MessageServiceSmartContractVersion> = getSmartContractVersion()
-  override fun getDeploymentBlock(): SafeFuture<ULong> { return deploymentBlockNumberProvider() }
+  override fun getDeploymentBlock(): SafeFuture<ULong> {
+    return deploymentBlockNumberProvider()
+  }
 
   override fun getLastAnchoredL1MessageNumber(block: BlockParameter): SafeFuture<ULong> {
     return contractClientAtBlock(block, L2MessageService::class.java)
@@ -202,14 +203,18 @@ class Web3JL2MessageServiceSmartContractClient(
     )
 
     return web3jContractHelper
-      .sendTransactionAfterEthCallAsync(
-        function = function,
-        weiValue = BigInteger.ZERO,
-        gasPriceCaps = null,
-      )
+      .transactionManager
+      .resetNonce(blockParameter = BlockParameter.Tag.LATEST)
+      .thenCompose {
+        web3jContractHelper
+          .sendTransactionAfterEthCallAsync(
+            function = function,
+            weiValue = BigInteger.ZERO,
+            gasPriceCaps = null,
+          )
+      }
       .thenApply { response ->
         response.transactionHash
       }
-      .toSafeFuture()
   }
 }

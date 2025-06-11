@@ -1,5 +1,8 @@
 package linea.web3j.transactionmanager
 
+import linea.domain.BlockParameter
+import linea.kotlin.toULong
+import linea.web3j.domain.toWeb3j
 import linea.web3j.requestAsync
 import org.apache.logging.log4j.LogManager
 import org.web3j.abi.datatypes.Function
@@ -7,8 +10,6 @@ import org.web3j.crypto.Blob
 import org.web3j.crypto.Credentials
 import org.web3j.crypto.RawTransaction
 import org.web3j.protocol.Web3j
-import org.web3j.protocol.core.DefaultBlockParameter
-import org.web3j.protocol.core.DefaultBlockParameterName
 import org.web3j.protocol.core.RemoteFunctionCall
 import org.web3j.protocol.core.methods.response.EthSendTransaction
 import org.web3j.protocol.core.methods.response.TransactionReceipt
@@ -66,16 +67,15 @@ class AsyncFriendlyTransactionManager : RawTransactionManager {
     resetNonce().get()
   }
 
-  fun resetNonce(blockNumber: BigInteger? = null): SafeFuture<Unit> {
-    val blockParameter = blockNumber
-      ?.let { DefaultBlockParameter.valueOf(blockNumber) }
-      ?: DefaultBlockParameterName.LATEST
-
+  fun resetNonce(blockParameter: BlockParameter = BlockParameter.Tag.LATEST): SafeFuture<ULong> {
     return web3j.ethGetTransactionCount(
       fromAddress,
-      blockParameter,
+      blockParameter.toWeb3j(),
     )
-      .requestAsync { setNonce(it.transactionCount) }
+      .requestAsync {
+        setNonce(it.transactionCount)
+        it.transactionCount.toULong()
+      }
   }
 
   fun currentNonce(): BigInteger {

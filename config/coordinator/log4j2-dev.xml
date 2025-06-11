@@ -75,9 +75,6 @@
 <!--    </RollingFile>-->
   </Appenders>
   <Loggers>
-    <!--    <Logger name="net.consensys.linea.jsonrpc.client" level="DEBUG" additivity="false">-->
-    <!--      <appender-ref ref="console"/>-->
-    <!--    </Logger>-->
     <!--    <Logger name="net.consensys.zkevm.ethereum.coordination.dynamicgasprice.GasPriceUpdaterImpl" level="TRACE" additivity="false">-->
     <!--      <appender-ref ref="console"/>-->
     <!--    </Logger>-->
