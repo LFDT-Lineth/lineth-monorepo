@@ -29,6 +29,8 @@ It serves developers by making the Linea tech stack open source under the [Apach
 
 If you already have an understanding of the tech stack, use our [Get Started](docs/get-started.md) guide.
 
+For developers looking to build services locally (e.g., the coordinator), see our detailed [Local Development Guide](docs/local-development-guide.md).
+
 ## Looking for the Linea code?
 
 Linea's stack is made up of multiple repositories, these include:

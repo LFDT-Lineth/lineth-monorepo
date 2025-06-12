@@ -84,3 +84,5 @@ If you want bigger conflations, increase the deadline accordingly.
 ## Next steps
 
 Consider reviewing the [Linea architecture](architecture-description.md) description.
+
+For detailed instructions on local development and building services locally, see the [Local Development Guide](local-development-guide.md).
