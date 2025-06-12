@@ -1,5 +1,7 @@
 package net.consensys.zkevm.coordinator.app
 
+import net.consensys.zkevm.coordinator.app.conflation.ConflationAppHelper.cleanupDbDataAfterBlockNumbers
+import net.consensys.zkevm.coordinator.app.conflation.ConflationAppHelper.resumeConflationFrom
 import net.consensys.zkevm.persistence.AggregationsRepository
 import net.consensys.zkevm.persistence.BatchesRepository
 import net.consensys.zkevm.persistence.BlobsRepository
@@ -11,7 +13,7 @@ import org.mockito.Mockito.verify
 import org.mockito.kotlin.whenever
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
-class L1DependentAppTest {
+class ConflationAppTest {
   @Test
   fun `test resume conflation from uses lastFinalizedBlock + 1 for db queries`() {
     val aggregationsRepository = mock<AggregationsRepository>()
@@ -21,7 +23,7 @@ class L1DependentAppTest {
       .thenReturn(SafeFuture.completedFuture(emptyList()))
 
     val lastProcessedBlock =
-      L1DependentApp.resumeConflationFrom(
+      resumeConflationFrom(
         aggregationsRepository,
         lastFinalizedBlock,
       ).get()
@@ -44,7 +46,7 @@ class L1DependentAppTest {
     whenever(aggregationsRepository.deleteAggregationsAfterBlockNumber(anyLong()))
       .thenReturn(SafeFuture.completedFuture(0))
 
-    L1DependentApp.cleanupDbDataAfterBlockNumbers(
+    cleanupDbDataAfterBlockNumbers(
       lastProcessedBlockNumber = lastProcessedBlock,
       lastConsecutiveAggregatedBlockNumber = lastConsecutiveAggregatedBlockNumber,
       batchesRepository = batchesRepository,

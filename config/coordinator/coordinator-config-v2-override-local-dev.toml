@@ -24,6 +24,7 @@ endpoints = ["http://127.0.0.1:8998/"]
 
 [type2-state-proof-provider]
 disabled = true
+endpoints = ["http://127.0.0.1:8889/"]
 
 [l1-finalization-monitor]
 l1-query-block-tag="LATEST"
