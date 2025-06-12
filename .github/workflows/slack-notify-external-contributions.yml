@@ -37,12 +37,13 @@ jobs:
 
       - name: Send Slack notification if external
         if: steps.check-team-membership.outputs.is_team_member == 'false'
+        env:
+          TITLE: ${{ github.event.issue.title }}
+          URL: ${{ github.event.issue.html_url }}
+          AUTHOR: ${{ github.event.sender.login }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
-          TITLE="${{ github.event.issue.title }}"
-          URL="${{ github.event.issue.html_url }}"
-          AUTHOR="${{ github.event.sender.login }}"
           PAYLOAD=$(jq -n \
-            --arg type "$TYPE" \
             --arg title "$TITLE" \
             --arg url "$URL" \
             --arg author "$AUTHOR" \
@@ -50,4 +51,4 @@ jobs:
 
           curl -X POST -H "Content-type: application/json" \
             --data "$PAYLOAD" \
-            ${{ secrets.SLACK_WEBHOOK_URL }}
+            "$SLACK_WEBHOOK_URL"
