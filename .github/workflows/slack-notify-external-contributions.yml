@@ -1,0 +1,56 @@
+name: Notify Slack on external contribution
+
+on:
+  issues:
+    types: [ opened ]
+  pull_request:
+    types: [ opened ]
+
+jobs:
+  notify-if-external:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check if user is member of Consensys/linea team
+        id: check-team-membership
+        run: |
+          AUTHOR="${{ github.event.sender.login }}"
+
+          # Check if user is member of @Consensys/linea team
+          HTTP_STATUS=$(curl -s -w "%{http_code}" -o /tmp/team_response.json \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ secrets.SLACK_ORG_ACCESS }}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            https://api.github.com/orgs/Consensys/teams/linea/memberships/$AUTHOR)
+
+          echo "Team membership check status: $HTTP_STATUS"
+          echo "Response body:"
+          cat /tmp/team_response.json || echo "No response body"
+
+          if [ "$HTTP_STATUS" -eq 200 ]; then
+            echo "User $AUTHOR is a member of @Consensys/linea team"
+            echo "is_team_member=true" >> $GITHUB_OUTPUT
+          elif [ "$HTTP_STATUS" -eq 404 ]; then
+            echo "User $AUTHOR is NOT a member of @Consensys/linea team"
+            echo "is_team_member=false" >> $GITHUB_OUTPUT
+          else
+            echo "Error checking team membership (HTTP $HTTP_STATUS). Treating as external to be safe."
+            echo "is_team_member=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Send Slack notification if external
+        if: steps.check-team-membership.outputs.is_team_member == 'false'
+        run: |
+          TYPE="${{ github.event_name == 'issues' && 'Issue' || 'Pull Request' }}"
+          TITLE="${{ github.event.issue.title || github.event.pull_request.title }}"
+          URL="${{ github.event.issue.html_url || github.event.pull_request.html_url }}"
+          AUTHOR="${{ github.event.sender.login }}"
+          PAYLOAD=$(jq -n \
+            --arg type "$TYPE" \
+            --arg title "$TITLE" \
+            --arg url "$URL" \
+            --arg author "$AUTHOR" \
+            '{text: "*New \($type)*\n\"\($title)\" by *\($author)*\n👉 \($url)"}')
+
+          curl -X POST -H "Content-type: application/json" \
+            --data "$PAYLOAD" \
+            ${{ secrets.SLACK_WEBHOOK_URL }}
