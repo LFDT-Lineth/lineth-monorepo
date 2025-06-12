@@ -1,9 +1,7 @@
-name: Notify Slack on external contribution
+name: Notify Slack on external issue creation
 
 on:
   issues:
-    types: [ opened ]
-  pull_request:
     types: [ opened ]
 
 jobs:
@@ -40,16 +38,15 @@ jobs:
       - name: Send Slack notification if external
         if: steps.check-team-membership.outputs.is_team_member == 'false'
         run: |
-          TYPE="${{ github.event_name == 'issues' && 'Issue' || 'Pull Request' }}"
-          TITLE="${{ github.event.issue.title || github.event.pull_request.title }}"
-          URL="${{ github.event.issue.html_url || github.event.pull_request.html_url }}"
+          TITLE="${{ github.event.issue.title }}"
+          URL="${{ github.event.issue.html_url }}"
           AUTHOR="${{ github.event.sender.login }}"
           PAYLOAD=$(jq -n \
             --arg type "$TYPE" \
             --arg title "$TITLE" \
             --arg url "$URL" \
             --arg author "$AUTHOR" \
-            '{text: "*New \($type)*\n\"\($title)\" by *\($author)*\n👉 \($url)"}')
+            '{text: "*New Issue*\n\"\($title)\" by *\($author)*\n👉 \($url)"}')
 
           curl -X POST -H "Content-type: application/json" \
             --data "$PAYLOAD" \
