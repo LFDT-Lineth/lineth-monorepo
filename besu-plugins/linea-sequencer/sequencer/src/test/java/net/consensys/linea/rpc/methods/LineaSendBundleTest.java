@@ -11,7 +11,6 @@ package net.consensys.linea.rpc.methods;
 import static java.util.Optional.empty;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.hyperledger.besu.ethereum.core.PrivateTransactionDataFixture.SIGNATURE_ALGORITHM;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -28,6 +27,7 @@ import java.util.UUID;
 import net.consensys.linea.bundles.BundleParameter;
 import net.consensys.linea.bundles.LineaLimitedBundlePool;
 import net.consensys.linea.bundles.TransactionBundle;
+import org.hyperledger.besu.crypto.SignatureAlgorithmType;
 import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.ethereum.core.Transaction;
 import org.hyperledger.besu.ethereum.core.TransactionTestFixture;
@@ -50,13 +50,15 @@ class LineaSendBundleTest {
       new TransactionTestFixture()
           .nonce(1)
           .gasLimit(21000)
-          .createTransaction(SIGNATURE_ALGORITHM.get().generateKeyPair());
+          .createTransaction(
+              SignatureAlgorithmType.DEFAULT_SIGNATURE_ALGORITHM_TYPE.get().generateKeyPair());
 
   private Transaction mockTX2 =
       new TransactionTestFixture()
           .nonce(1)
           .gasLimit(21000)
-          .createTransaction(SIGNATURE_ALGORITHM.get().generateKeyPair());
+          .createTransaction(
+              SignatureAlgorithmType.DEFAULT_SIGNATURE_ALGORITHM_TYPE.get().generateKeyPair());
 
   @BeforeEach
   void setup() {

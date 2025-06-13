@@ -9,21 +9,21 @@ dependencies {
   api("${besuArtifactGroup}:besu-datatypes:${besuVersion}") {
     transitive = false
   }
-  api("${besuArtifactGroup}:evm:${besuVersion}") {
+  api("${besuArtifactGroup}:besu-evm:${besuVersion}") {
     transitive = false
   }
-  api("${besuArtifactGroup}.internal:core:${besuVersion}") {
+  api("${besuArtifactGroup}.internal:besu-ethereum-core:${besuVersion}") {
     transitive = false
   }
-  api("${besuArtifactGroup}.internal:algorithms:${besuVersion}") {
-    transitive = false
-  }
-
-  api("${besuArtifactGroup}:plugin-api:${besuVersion}") {
+  api("${besuArtifactGroup}.internal:besu-crypto-algorithms:${besuVersion}") {
     transitive = false
   }
 
-  api("${besuArtifactGroup}.internal:rlp:${besuVersion}") {
+  api("${besuArtifactGroup}:besu-plugin-api:${besuVersion}") {
+    transitive = false
+  }
+
+  api("${besuArtifactGroup}.internal:besu-ethereum-rlp:${besuVersion}") {
     transitive = false
   }
 

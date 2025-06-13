@@ -33,13 +33,13 @@ dependencies {
   api "build.linea.internal:kotlin:${libs.versions.lineaKotlin.get()}"
 
   implementation "${besuArtifactGroup}:besu-datatypes"
-  implementation "${besuArtifactGroup}:evm"
-  implementation "${besuArtifactGroup}:plugin-api"
-  implementation "${besuArtifactGroup}.internal:algorithms"
-  implementation "${besuArtifactGroup}.internal:api"
-  implementation "${besuArtifactGroup}.internal:core"
-  implementation "${besuArtifactGroup}.internal:eth"
-  implementation "${besuArtifactGroup}.internal:rlp"
+  implementation "${besuArtifactGroup}:besu-evm"
+  implementation "${besuArtifactGroup}:besu-plugin-api"
+  implementation "${besuArtifactGroup}.internal:besu-crypto-algorithms"
+  implementation "${besuArtifactGroup}.internal:besu-ethereum-api"
+  implementation "${besuArtifactGroup}.internal:besu-ethereum-core"
+  implementation "${besuArtifactGroup}.internal:besu-ethereum-eth"
+  implementation "${besuArtifactGroup}.internal:besu-ethereum-rlp"
 
   implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8'
 
@@ -57,8 +57,8 @@ dependencies {
 
   implementation 'org.hibernate.validator:hibernate-validator'
 
-  testImplementation "${besuArtifactGroup}.internal:besu"
-  testImplementation group: "${besuArtifactGroup}.internal", name: "core", classifier: "test-support"
+  testImplementation "${besuArtifactGroup}.internal:besu-app"
+  testImplementation group: "${besuArtifactGroup}.internal", name: "besu-ethereum-core", classifier: "test-support"
 
   testImplementation 'org.awaitility:awaitility'
 }

@@ -16,7 +16,10 @@ task compileAll
 def allowCompilationWarnings = System.getenv('LINEA_DEV_ALLOW_WARNINGS') != null
 
 allprojects {
-  repositories { mavenCentral() }
+  repositories {
+    mavenCentral()
+    mavenLocal()
+  }
 
   apply plugin: 'java' // do not add kotlin plugin here, it will add unnecessary Kotlin runtime dependencies
   apply plugin: 'jacoco'

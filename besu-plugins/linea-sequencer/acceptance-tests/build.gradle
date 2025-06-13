@@ -46,7 +46,9 @@ tasks.register('acceptanceTests', Test) {
     includeTags("AcceptanceTest")
   }
 
-  maxParallelForks Runtime.runtime.availableProcessors()
+  // Configure resource limits
+  boolean isCiServer = System.getenv().containsKey("CI")
+  maxParallelForks = isCiServer ? Runtime.runtime.availableProcessors() : 2
   systemProperties["junit.jupiter.execution.parallel.enabled"] = false
 }
 
@@ -58,14 +60,14 @@ dependencies {
   testImplementation project("${lineaSequencerProjectPath}:sequencer")
 
   testImplementation "${besuArtifactGroup}:besu-datatypes"
-  testImplementation "${besuArtifactGroup}.internal:clique"
-  testImplementation "${besuArtifactGroup}.internal:api"
-  testImplementation "${besuArtifactGroup}.internal:core"
-  testImplementation "${besuArtifactGroup}.internal:dsl"
-  testImplementation "${besuArtifactGroup}.internal:eth"
-  testImplementation "${besuArtifactGroup}.internal:metrics-core"
-  testImplementation "${besuArtifactGroup}.internal:services"
-  testImplementation group: "${besuArtifactGroup}.internal", name: "core", classifier: "test-support"
+  testImplementation "${besuArtifactGroup}.internal:besu-consensus-clique"
+  testImplementation "${besuArtifactGroup}.internal:besu-ethereum-api"
+  testImplementation "${besuArtifactGroup}.internal:besu-ethereum-core"
+  testImplementation "${besuArtifactGroup}.internal:besu-acceptance-tests-dsl"
+  testImplementation "${besuArtifactGroup}.internal:besu-ethereum-eth"
+  testImplementation "${besuArtifactGroup}.internal:besu-metrics-core"
+  testImplementation "${besuArtifactGroup}.internal:besu-crypto-services"
+  testImplementation group: "${besuArtifactGroup}.internal", name: "besu-ethereum-core", classifier: "test-support"
 
   testImplementation 'net.consensys.linea.zktracer:arithmetization'
 

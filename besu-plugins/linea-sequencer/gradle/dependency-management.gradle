@@ -68,3 +68,38 @@ dependencyManagement {
     dependency "org.wiremock:wiremock:${libs.versions.wiremock.get()}"
   }
 }
+
+configurations.all {
+  // transitive versions conflict new Besu coordinates
+  exclude group: "${besuArtifactGroup}.internal", module: 'dsl'
+  exclude group: "${besuArtifactGroup}.internal", module: 'besu'
+  exclude group: "${besuArtifactGroup}.internal", module: 'config'
+  exclude group: "${besuArtifactGroup}.internal", module: 'clique'
+  exclude group: "${besuArtifactGroup}.internal", module: 'common'
+  exclude group: "${besuArtifactGroup}.internal", module: 'ibft'
+  exclude group: "${besuArtifactGroup}.internal", module: 'ibftlegacy'
+  exclude group: "${besuArtifactGroup}.internal", module: 'merge'
+  exclude group: "${besuArtifactGroup}.internal", module: 'qbft'
+  exclude group: "${besuArtifactGroup}.internal", module: 'qbft-core'
+  exclude group: "${besuArtifactGroup}.internal", module: 'algorithms'
+  exclude group: "${besuArtifactGroup}.internal", module: 'services'
+  exclude group: "${besuArtifactGroup}.internal", module: 'api'
+  exclude group: "${besuArtifactGroup}.internal", module: 'blockcreation'
+  exclude group: "${besuArtifactGroup}.internal", module: 'core'
+  exclude group: "${besuArtifactGroup}.internal", module: 'eth'
+  exclude group: "${besuArtifactGroup}.internal", module: 'p2p'
+  exclude group: "${besuArtifactGroup}.internal", module: 'permissioning'
+  exclude group: "${besuArtifactGroup}.internal", module: 'referencetests'
+  exclude group: "${besuArtifactGroup}.internal", module: 'rlp'
+  exclude group: "${besuArtifactGroup}.internal", module: 'trie'
+  exclude group: "${besuArtifactGroup}", module: 'evm'
+  exclude group: "${besuArtifactGroup}.internal", module: 'metrics-core'
+  exclude group: "${besuArtifactGroup}", module: 'plugin-api'
+  exclude group: "${besuArtifactGroup}.internal", module: 'testutil'
+  exclude group: "${besuArtifactGroup}.internal", module: 'util'
+  exclude group: "${besuArtifactGroup}.internal", module: 'nat'
+  exclude group: "${besuArtifactGroup}.internal", module: 'tasks'
+  exclude group: "${besuArtifactGroup}.internal", module: 'pipeline'
+  exclude group: "${besuArtifactGroup}.internal", module: 'kvstore'
+  exclude group: "${besuArtifactGroup}.internal", module: 'enclave'
+}
