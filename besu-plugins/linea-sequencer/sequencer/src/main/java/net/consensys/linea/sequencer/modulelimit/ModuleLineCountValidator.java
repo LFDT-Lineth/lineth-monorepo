@@ -16,7 +16,6 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
-import net.consensys.linea.config.LineaTracerConfiguration;
 import org.apache.tuweni.toml.Toml;
 import org.apache.tuweni.toml.TomlParseResult;
 import org.apache.tuweni.toml.TomlTable;
@@ -118,10 +117,9 @@ public class ModuleLineCountValidator {
     INVALID_LINE_COUNT
   }
 
-  public static Map<String, Integer> createLimitModules(
-      LineaTracerConfiguration lineaTracerConfiguration) {
+  public static Map<String, Integer> createLimitModules(String moduleLimitsFilePath) {
     try {
-      URL url = new File(lineaTracerConfiguration.moduleLimitsFilePath()).toURI().toURL();
+      URL url = new File(moduleLimitsFilePath).toURI().toURL();
       final String tomlString = Resources.toString(url, StandardCharsets.UTF_8);
       TomlParseResult result = Toml.parse(tomlString);
       final TomlTable table = result.getTable("traces-limits");
@@ -135,7 +133,7 @@ public class ModuleLineCountValidator {
     } catch (final Exception e) {
       final String errorMsg =
           "Problem reading the toml file containing the limits for the modules: "
-              + lineaTracerConfiguration.moduleLimitsFilePath();
+              + moduleLimitsFilePath;
       log.error(errorMsg);
       throw new RuntimeException(errorMsg, e);
     }

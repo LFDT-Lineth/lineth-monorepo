@@ -4,22 +4,61 @@
         <Property name="root.log.level">TRACE</Property>
     </Properties>
     <Appenders>
-        <Console name="Console">
-            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSSZZZ} | %t | %-5level | %c{1} | %msg%n" />
-        </Console>
-        <Memory name="Memory">
-            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSSZZZ} | %t | %-5level | %c{1} | %msg%n" />
-        </Memory>
+      <Console name="Console">
+        <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSSZZZ} | %t | %-5level | %c{1} | %msg%n" />
+      </Console>
+      <Memory name="Memory">
+        <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSSZZZ} | %t | %-5level | %c{1} | %msg%n" />
+      </Memory>
+      <Console name="ConsoleBLC" target="SYSTEM_OUT">
+        <PatternLayout pattern='{"blockNumber":%X{blockNumber},"blockHash":"%X{blockHash}","traceCounts":{%X{traceCounts}}}%n'/>
+      </Console>
+      <Memory name="MemoryBLC">
+        <PatternLayout pattern='{"blockNumber":%X{blockNumber},"blockHash":"%X{blockHash}","traceCounts":{%X{traceCounts}}}%n'/>
+      </Memory>
+      <Console name="ConsoleITR" target="SYSTEM_OUT">
+        <PatternLayout pattern="Invalid tx removed:%X{txlog}, reason:%X{reason}; RLP={%X{txrlp}}}%n"/>
+      </Console>
+      <Memory name="MemoryITR">
+        <PatternLayout pattern="Invalid tx removed:%X{txlog}, reason:%X{reason}; RLP={%X{txrlp}}}%n"/>
+      </Memory>
+
+      <Async name="Main">
+        <AppenderRef ref="Console" />
+        <AppenderRef ref="Memory" />
+      </Async>
+        <Routing name="Router">
+          <Routes pattern="$${event:Marker}">
+            <Route key="BLOCK_LINE_COUNT">
+              <Async name="BLC">
+                <AppenderRef ref="ConsoleBLC" />
+                <AppenderRef ref="MemoryBLC" />
+              </Async>
+            </Route>
+            <Route key="INVALID_TX_REMOVED">
+              <Async name="ITR">
+                <AppenderRef ref="ConsoleITR" />
+                <AppenderRef ref="MemoryITR" />
+              </Async>
+            </Route>
+            <Route ref="Main" />
+          </Routes>
+        </Routing>
     </Appenders>
     <Loggers>
+        <Logger name="net.consensys.linea.sequencer.txselection.selectors.TraceLineLimitTransactionSelector" level="${sys:root.log.level}" additivity="false">
+          <AppenderRef ref="Router" />
+        </Logger>
+        <Logger name="org.hyperledger.besu.ethereum.eth.transactions"  level="${sys:root.log.level}" additivity="false">
+          <AppenderRef ref="Router"/>
+        </Logger>
         <Logger level="INFO" name="io.vertx" />
         <Logger level="INFO" name="io.netty" />
         <Logger level="INFO" name="org.web3j.protocol.http.HttpService" />
         <Logger level="INFO" name="org.hyperledger.besu.ethereum.p2p.network.DefaultP2PNetwork" />
         <Logger level="INFO" name="org.hyperledger.besu.ethereum.eth.manager.EthPeers" />
         <Root level="${sys:root.log.level}">
-            <AppenderRef ref="Console" />
-            <AppenderRef ref="Memory" />
+            <AppenderRef ref="Main" />
         </Root>
     </Loggers>
 </Configuration>

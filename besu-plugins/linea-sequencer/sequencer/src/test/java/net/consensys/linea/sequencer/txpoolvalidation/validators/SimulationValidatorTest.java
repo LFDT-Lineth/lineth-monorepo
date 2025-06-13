@@ -33,7 +33,6 @@ import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
-import java.util.Map;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -96,11 +95,10 @@ public class SimulationValidatorTest {
             curve.getN());
   }
 
-  private Map<String, Integer> lineCountLimits;
-
   @Mock BlockchainService blockchainService;
   @Mock TransactionSimulationService transactionSimulationService;
   private JsonRpcManager jsonRpcManager;
+  private LineaTracerConfiguration tracerConfiguration;
   @TempDir private Path tempDataDir;
   @TempDir static Path tempDir;
   static Path lineLimitsConfPath;
@@ -116,11 +114,14 @@ public class SimulationValidatorTest {
 
   @BeforeEach
   public void initialize(final WireMockRuntimeInfo wmInfo) throws MalformedURLException {
-    final var tracerConf =
+    tracerConfiguration =
         LineaTracerConfiguration.builder()
             .moduleLimitsFilePath(lineLimitsConfPath.toString())
+            .moduleLimitsMap(
+                new HashMap<>(
+                    ModuleLineCountValidator.createLimitModules(lineLimitsConfPath.toString())))
+            .isLimitless(false)
             .build();
-    lineCountLimits = new HashMap<>(ModuleLineCountValidator.createLimitModules(tracerConf));
     final var pendingBlockHeader = mock(BlockHeader.class);
     when(pendingBlockHeader.getBaseFee()).thenReturn(Optional.of(BASE_FEE));
     when(pendingBlockHeader.getCoinbase()).thenReturn(Address.ZERO);
@@ -152,9 +153,7 @@ public class SimulationValidatorTest {
   }
 
   private SimulationValidator createSimulationValidator(
-      final Map<String, Integer> lineCountLimits,
-      final boolean enableForApi,
-      final boolean enableForP2p) {
+      final boolean enableForApi, final boolean enableForP2p) {
     return new SimulationValidator(
         blockchainService,
         transactionSimulationService,
@@ -162,7 +161,7 @@ public class SimulationValidatorTest {
             .txPoolSimulationCheckApiEnabled(enableForApi)
             .txPoolSimulationCheckP2pEnabled(enableForP2p)
             .build(),
-        lineCountLimits,
+        tracerConfiguration,
         LineaL1L2BridgeSharedConfiguration.builder()
             .contract(BRIDGE_CONTRACT)
             .topic(BRIDGE_LOG_TOPIC)
@@ -172,7 +171,7 @@ public class SimulationValidatorTest {
 
   @Test
   public void successfulTransactionIsValid() {
-    final var simulationValidator = createSimulationValidator(lineCountLimits, true, false);
+    final var simulationValidator = createSimulationValidator(true, false);
     final org.hyperledger.besu.ethereum.core.Transaction transaction =
         org.hyperledger.besu.ethereum.core.Transaction.builder()
             .sender(SENDER)
@@ -188,8 +187,8 @@ public class SimulationValidatorTest {
 
   @Test
   public void moduleLineCountOverflowTransactionIsInvalidAndReported() {
-    lineCountLimits.put("EXT", 5);
-    final var simulationValidator = createSimulationValidator(lineCountLimits, true, false);
+    tracerConfiguration.moduleLimitsMap().put("EXT", 5);
+    final var simulationValidator = createSimulationValidator(true, false);
     final org.hyperledger.besu.ethereum.core.Transaction transaction =
         org.hyperledger.besu.ethereum.core.Transaction.builder()
             .sender(SENDER)

@@ -22,7 +22,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 import net.consensys.linea.bundles.BundlePoolService;
@@ -67,7 +66,6 @@ class LineaTransactionSelectorFactoryTest {
   private LineaTransactionSelectorConfiguration mockTxSelectorConfiguration;
   private LineaL1L2BridgeSharedConfiguration l1L2BridgeConfiguration;
   private LineaProfitabilityConfiguration mockProfitabilityConfiguration;
-  private Map<String, Integer> lineCountLimits;
   private BesuEvents mockEvents;
   private LineaLimitedBundlePool bundlePool;
   private BundlePoolService mockBundlePool;
@@ -92,9 +90,11 @@ class LineaTransactionSelectorFactoryTest {
     lineaTracerConfiguration =
         LineaTracerConfiguration.builder()
             .moduleLimitsFilePath(lineLimitsConfPath.toString())
+            .moduleLimitsMap(
+                new HashMap<>(
+                    ModuleLineCountValidator.createLimitModules(lineLimitsConfPath.toString())))
+            .isLimitless(false)
             .build();
-    lineCountLimits =
-        new HashMap<>(ModuleLineCountValidator.createLimitModules(lineaTracerConfiguration));
 
     mockBlockchainService = mock(BlockchainService.class);
     when(mockBlockchainService.getChainId()).thenReturn(Optional.of(BigInteger.ONE));
@@ -113,7 +113,6 @@ class LineaTransactionSelectorFactoryTest {
             l1L2BridgeConfiguration,
             mockProfitabilityConfiguration,
             lineaTracerConfiguration,
-            lineCountLimits,
             Optional.empty(),
             Optional.empty(),
             bundlePool);

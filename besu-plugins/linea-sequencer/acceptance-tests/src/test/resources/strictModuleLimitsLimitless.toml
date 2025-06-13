@@ -1,0 +1,17 @@
+##
+# This file specifies prover limit by each EVM module
+# WARN: The prover/arithmetization team has the owneship of this.
+# Changing this values may compromise the system.
+# issue: https://github.com/Consensys/zkevm-monorepo/issues/525
+##
+
+[traces-limits]
+MODEXP  = 1
+RIP     = 1
+BLAKE   = 1
+
+#
+# Block-specific limits
+#
+BLOCK_L1_SIZE      = 2000
+BLOCK_L2_L1_LOGS   = 16

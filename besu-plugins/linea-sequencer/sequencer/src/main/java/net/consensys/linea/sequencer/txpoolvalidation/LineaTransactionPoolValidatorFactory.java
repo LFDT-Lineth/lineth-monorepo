@@ -10,10 +10,10 @@
 package net.consensys.linea.sequencer.txpoolvalidation;
 
 import java.util.Arrays;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import net.consensys.linea.config.LineaProfitabilityConfiguration;
+import net.consensys.linea.config.LineaTracerConfiguration;
 import net.consensys.linea.config.LineaTransactionPoolValidatorConfiguration;
 import net.consensys.linea.jsonrpc.JsonRpcManager;
 import net.consensys.linea.plugins.config.LineaL1L2BridgeSharedConfiguration;
@@ -38,8 +38,8 @@ public class LineaTransactionPoolValidatorFactory implements PluginTransactionPo
   private final LineaTransactionPoolValidatorConfiguration txPoolValidatorConf;
   private final LineaProfitabilityConfiguration profitabilityConf;
   private final Set<Address> denied;
-  private final Map<String, Integer> moduleLineLimitsMap;
   private final LineaL1L2BridgeSharedConfiguration l1L2BridgeConfiguration;
+  private final LineaTracerConfiguration tracerConfiguration;
   private final Optional<JsonRpcManager> rejectedTxJsonRpcManager;
 
   public LineaTransactionPoolValidatorFactory(
@@ -49,7 +49,7 @@ public class LineaTransactionPoolValidatorFactory implements PluginTransactionPo
       final LineaTransactionPoolValidatorConfiguration txPoolValidatorConf,
       final LineaProfitabilityConfiguration profitabilityConf,
       final Set<Address> deniedAddresses,
-      final Map<String, Integer> moduleLineLimitsMap,
+      final LineaTracerConfiguration tracerConfiguration,
       final LineaL1L2BridgeSharedConfiguration l1L2BridgeConfiguration,
       final Optional<JsonRpcManager> rejectedTxJsonRpcManager) {
     this.besuConfiguration = besuConfiguration;
@@ -58,7 +58,7 @@ public class LineaTransactionPoolValidatorFactory implements PluginTransactionPo
     this.txPoolValidatorConf = txPoolValidatorConf;
     this.profitabilityConf = profitabilityConf;
     this.denied = deniedAddresses;
-    this.moduleLineLimitsMap = moduleLineLimitsMap;
+    this.tracerConfiguration = tracerConfiguration;
     this.l1L2BridgeConfiguration = l1L2BridgeConfiguration;
     this.rejectedTxJsonRpcManager = rejectedTxJsonRpcManager;
   }
@@ -81,7 +81,7 @@ public class LineaTransactionPoolValidatorFactory implements PluginTransactionPo
               blockchainService,
               transactionSimulationService,
               txPoolValidatorConf,
-              moduleLineLimitsMap,
+              tracerConfiguration,
               l1L2BridgeConfiguration,
               rejectedTxJsonRpcManager)
         };

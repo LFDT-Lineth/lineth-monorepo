@@ -9,10 +9,12 @@
 
 package net.consensys.linea.config;
 
+import java.util.Map;
 import lombok.Builder;
 import net.consensys.linea.plugins.LineaOptionsConfiguration;
 
 /** The Linea tracer configuration. */
 @Builder(toBuilder = true)
-public record LineaTracerConfiguration(String moduleLimitsFilePath)
+public record LineaTracerConfiguration(
+    String moduleLimitsFilePath, Map<String, Integer> moduleLimitsMap, boolean isLimitless)
     implements LineaOptionsConfiguration {}

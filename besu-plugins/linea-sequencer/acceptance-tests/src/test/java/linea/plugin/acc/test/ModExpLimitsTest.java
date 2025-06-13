@@ -6,7 +6,7 @@
  *
  * SPDX-License-Identifier: MIT OR Apache-2.0
  */
-package linea.plugin.acc.test.rpc.linea;
+package linea.plugin.acc.test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -14,10 +14,7 @@ import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import linea.plugin.acc.test.LineaPluginTestBase;
-import linea.plugin.acc.test.TestCommandLineOptionsBuilder;
 import linea.plugin.acc.test.tests.web3j.generated.ModExp;
-import net.consensys.linea.config.LineaTracerConfiguration;
 import net.consensys.linea.sequencer.modulelimit.ModuleLineCountValidator;
 import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.datatypes.Hash;
@@ -46,8 +43,7 @@ public class ModExpLimitsTest extends LineaPluginTestBase {
   @Test
   public void modExpLimitTest() throws Exception {
     Map<String, Integer> moduleLimits =
-        ModuleLineCountValidator.createLimitModules(
-            new LineaTracerConfiguration(getResourcePath("/moduleLimits.toml")));
+        ModuleLineCountValidator.createLimitModules(getResourcePath("/moduleLimits.toml"));
     final int PRECOMPILE_MODEXP_EFFECTIVE_CALLS =
         moduleLimits.get("PRECOMPILE_MODEXP_EFFECTIVE_CALLS");
 
