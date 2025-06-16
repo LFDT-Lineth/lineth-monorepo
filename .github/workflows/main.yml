@@ -6,6 +6,11 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+  actions: read
+  security-events: write
+
 jobs:
   store-image-name-and-tags:
     uses: ./.github/workflows/reuse-store-image-name-and-tags.yml
@@ -142,6 +147,11 @@ jobs:
       prover_changed: ${{ needs.filter-commit-changes.outputs.prover }}
       transaction_exclusion_api_changed: ${{ needs.filter-commit-changes.outputs.transaction-exclusion-api }}
     secrets: inherit
+
+  code-analysis:
+    needs: [ filter-commit-changes ]
+    if: ${{ always() && needs.filter-commit-changes.outputs.has-changes-requiring-build == 'true' }}
+    uses: ./.github/workflows/codeql.yml
 
   testing:
     needs: [ store-image-name-and-tags, filter-commit-changes, check-and-tag-images ]
