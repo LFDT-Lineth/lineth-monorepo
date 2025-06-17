@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0
-pragma solidity 0.8.30;
+pragma solidity ^0.8.30;
 
 import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import { L1MessageServiceV1 } from "./v1/L1MessageServiceV1.sol";
@@ -57,7 +57,17 @@ abstract contract L1MessageService is
     address _to,
     uint256 _fee,
     bytes calldata _calldata
-  ) external payable whenTypeAndGeneralNotPaused(PauseType.L1_L2) {
+  ) external payable virtual whenTypeAndGeneralNotPaused(PauseType.L1_L2) {
+    _sendMessage(_to, _fee, _calldata);
+  }
+
+  /**
+   * @notice Adds a message for sending cross-chain and emits MessageSent.
+   * @param _to The address the message is intended for.
+   * @param _fee The fee being paid for the message delivery.
+   * @param _calldata The calldata to pass to the recipient.
+   */
+  function _sendMessage(address _to, uint256 _fee, bytes calldata _calldata) internal virtual {
     if (_to == address(0)) {
       revert ZeroAddressNotAllowed();
     }
@@ -84,7 +94,15 @@ abstract contract L1MessageService is
    */
   function claimMessageWithProof(
     ClaimMessageWithProofParams calldata _params
-  ) external nonReentrant distributeFees(_params.fee, _params.to, _params.data, _params.feeRecipient) {
+  ) external virtual nonReentrant distributeFees(_params.fee, _params.to, _params.data, _params.feeRecipient) {
+    _claimMessageWithProof(_params);
+  }
+
+  /**
+   * @notice Claims and delivers a cross-chain message using a Merkle proof.
+   * @param _params Collection of claim data with proof and supporting data.
+   */
+  function _claimMessageWithProof(ClaimMessageWithProofParams calldata _params) internal virtual {
     _requireTypeAndGeneralNotPaused(PauseType.L2_L1);
 
     uint256 merkleDepth = l2MerkleRootsDepths[_params.merkleRoot];
@@ -144,7 +162,7 @@ abstract contract L1MessageService is
    * @dev The message sender address is set temporarily in the transient storage when claiming.
    * @return originalSender The message sender address that is stored temporarily in the transient storage when claiming.
    */
-  function sender() external view returns (address originalSender) {
+  function sender() external view virtual returns (address originalSender) {
     originalSender = TRANSIENT_MESSAGE_SENDER;
   }
 }

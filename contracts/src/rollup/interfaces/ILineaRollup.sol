@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity 0.8.30;
+pragma solidity ^0.8.30;
 
 import { IPauseManager } from "../../security/pausing/interfaces/IPauseManager.sol";
 import { IPermissionsManager } from "../../security/access/interfaces/IPermissionsManager.sol";
@@ -282,6 +282,12 @@ interface ILineaRollup {
    * @dev Thrown when the fallback operator tries to renounce their operator role.
    */
   error OnlyNonFallbackOperator();
+
+  /**
+   * @notice Returns the ABI version and not the reinitialize version.
+   * @return contractVersion The contract ABI version.
+   */
+  function CONTRACT_VERSION() external view returns (string memory contractVersion);
 
   /**
    * @notice Adds or updates the verifier contract address for a proof type.

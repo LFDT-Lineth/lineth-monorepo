@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity 0.8.30;
+pragma solidity ^0.8.30;
 
 import { IPauseManager } from "../../../security/pausing/interfaces/IPauseManager.sol";
 import { IPermissionsManager } from "../../../security/access/interfaces/IPermissionsManager.sol";
@@ -225,6 +225,12 @@ interface ITokenBridge {
    * @dev Thrown when sourceChainId is the same as targetChainId during initialization.
    */
   error SourceChainSameAsTargetChain();
+
+  /**
+   * @notice Returns the ABI version and not the reinitialize version.
+   * @return contractVersion The contract ABI version.
+   */
+  function CONTRACT_VERSION() external view returns (string memory contractVersion);
 
   /**
    * @notice Similar to `bridgeToken` function but allows to pass additional

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0
-pragma solidity 0.8.30;
+pragma solidity ^0.8.30;
 
 import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import { IMessageService } from "../../interfaces/IMessageService.sol";
@@ -29,7 +29,7 @@ abstract contract L2MessageServiceV1 is
    * NB: Take note that this is at the beginning of the file where other storage gaps,
    * are at the end of files. Be careful with how storage is adjusted on upgrades.
    */
-  uint256[50] private __gap_L2MessageService;
+  uint256[50] private __gap_L2MessageServiceV1;
 
   /// @notice The role required to set the minimum DDOS fee.
   bytes32 public constant MINIMUM_FEE_SETTER_ROLE = keccak256("MINIMUM_FEE_SETTER_ROLE");
@@ -63,9 +63,21 @@ abstract contract L2MessageServiceV1 is
    * @param _fee The fee being paid for the message delivery.
    * @param _calldata The calldata to pass to the recipient.
    */
-  function sendMessage(address _to, uint256 _fee, bytes calldata _calldata) external payable {
-    _requireTypeAndGeneralNotPaused(PauseType.L2_L1);
+  function sendMessage(
+    address _to,
+    uint256 _fee,
+    bytes calldata _calldata
+  ) external payable virtual whenTypeAndGeneralNotPaused(PauseType.L2_L1) {
+    _sendMessage(_to, _fee, _calldata);
+  }
 
+  /**
+   * @notice Adds a message for sending cross-chain and emits a relevant event.
+   * @param _to The address the message is intended for.
+   * @param _fee The fee being paid for the message delivery.
+   * @param _calldata The calldata to pass to the recipient.
+   */
+  function _sendMessage(address _to, uint256 _fee, bytes calldata _calldata) internal virtual {
     if (_to == address(0)) {
       revert ZeroAddressNotAllowed();
     }
@@ -121,9 +133,33 @@ abstract contract L2MessageServiceV1 is
     address payable _feeRecipient,
     bytes calldata _calldata,
     uint256 _nonce
-  ) external nonReentrant distributeFees(_fee, _to, _calldata, _feeRecipient) {
-    _requireTypeAndGeneralNotPaused(PauseType.L1_L2);
+  )
+    external
+    virtual
+    nonReentrant
+    distributeFees(_fee, _to, _calldata, _feeRecipient)
+    whenTypeAndGeneralNotPaused(PauseType.L1_L2)
+  {
+    _claimMessage(_from, _to, _fee, _value, _calldata, _nonce);
+  }
 
+  /**
+   * @notice Claims and delivers a cross-chain message.
+   * @param _from The address of the original sender.
+   * @param _to The address the message is intended for.
+   * @param _fee The fee being paid for the message delivery.
+   * @param _value The value to be transferred to the destination address.
+   * @param _calldata The calldata to pass to the recipient.
+   * @param _nonce The unique auto generated message number used when sending the message.
+   */
+  function _claimMessage(
+    address _from,
+    address _to,
+    uint256 _fee,
+    uint256 _value,
+    bytes calldata _calldata,
+    uint256 _nonce
+  ) internal virtual {
     bytes32 messageHash = MessageHashing._hashMessage(_from, _to, _fee, _value, _nonce, _calldata);
 
     /// @dev Status check and revert is in the message manager.
@@ -163,7 +199,7 @@ abstract contract L2MessageServiceV1 is
    * @dev The _messageSender address is set temporarily when claiming.
    * @return originalSender The original sender stored temporarily at the _messageSender address in storage.
    */
-  function sender() external view returns (address originalSender) {
+  function sender() external view virtual returns (address originalSender) {
     originalSender = _messageSender;
   }
 

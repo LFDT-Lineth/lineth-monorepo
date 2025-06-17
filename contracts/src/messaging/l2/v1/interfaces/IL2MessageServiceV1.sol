@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity 0.8.30;
+pragma solidity ^0.8.30;
 
 /**
  * @title L2 Message Service interface for pre-existing functions, events and errors.
@@ -7,6 +7,12 @@ pragma solidity 0.8.30;
  * @custom:security-contact security-report@linea.build
  */
 interface IL2MessageServiceV1 {
+  /**
+   * @notice Returns the ABI version and not the reinitialize version.
+   * @return contractVersion The contract ABI version.
+   */
+  function CONTRACT_VERSION() external view returns (string memory contractVersion);
+
   /**
    * @notice The Fee Manager sets a minimum fee to address DOS protection.
    * @dev MINIMUM_FEE_SETTER_ROLE is required to set the minimum fee.

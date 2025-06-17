@@ -264,6 +264,11 @@ describe("Linea Rollup contract", () => {
       expect(await lineaRollup.hasRole(VERIFIER_SETTER_ROLE, operator.address)).to.be.true;
     });
 
+    it("Should have the correct contract version", async () => {
+      ({ verifier, lineaRollup } = await loadFixture(deployLineaRollupFixture));
+      expect(await lineaRollup.CONTRACT_VERSION()).to.equal("7.0");
+    });
+
     it("Should revert if the initialize function is called a second time", async () => {
       ({ verifier, lineaRollup } = await loadFixture(deployLineaRollupFixture));
       const initializeCall = lineaRollup.initialize({
@@ -726,12 +731,7 @@ describe("Linea Rollup contract", () => {
 
       const upgradedContract = await newLineaRollup.waitForDeployment();
 
-      await upgradedContract.reinitializeLineaRollupV6(
-        [],
-        LINEA_ROLLUP_PAUSE_TYPES_ROLES,
-        LINEA_ROLLUP_UNPAUSE_TYPES_ROLES,
-        forwardingProxyAddress,
-      );
+      await upgradedContract.setFallbackOperatorAddress(forwardingProxyAddress);
 
       // Grants deployed callforwarding proxy as operator
       await networkTime.increase(SIX_MONTHS_IN_SECONDS);

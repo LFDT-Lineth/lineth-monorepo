@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0
-pragma solidity 0.8.30;
+pragma solidity ^0.8.30;
 
 import { AccessControl } from "@openzeppelin/contracts/access/AccessControl.sol";
 import { ITokenMinter } from "./interfaces/ITokenMinter.sol";
