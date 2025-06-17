@@ -12,7 +12,7 @@ dependencies {
   api project(':jvm-libs:generic:errors')
   api project(':jvm-libs:generic:extensions:futures')
   api project(':jvm-libs:generic:extensions:kotlin')
-  api "io.tmio:tuweni-bytes:${libs.versions.tuweni.get()}"
+  api "io.consensys.tuweni:tuweni-bytes:${libs.versions.tuweni.get()}"
 
   implementation "com.fasterxml.jackson.core:jackson-annotations:${libs.versions.jackson.get()}"
   implementation "com.fasterxml.jackson.core:jackson-databind:${libs.versions.jackson.get()}"

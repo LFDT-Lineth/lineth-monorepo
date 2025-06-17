@@ -11,7 +11,7 @@ dependencies {
   testImplementation(project(":coordinator:persistence:batch"))
   testImplementation(project(":coordinator:persistence:blob"))
   testImplementation(project(":coordinator:persistence:db-common"))
-  testImplementation "io.tmio:tuweni-units:${libs.versions.tuweni.get()}"
+  testImplementation "io.consensys.tuweni:tuweni-units:${libs.versions.tuweni.get()}"
   testImplementation(testFixtures(project(":coordinator:core")))
   testImplementation(testFixtures(project(":coordinator:persistence:db-common")))
   testImplementation(testFixtures(project(":jvm-libs:generic:persistence:db")))

@@ -46,7 +46,7 @@ netty = "4.1.92.Final"
 picoli = "4.7.6"
 slf4j="1.7.36"
 teku = "23.1.1"
-tuweni = "2.4.2"
+tuweni = "2.7.0"
 vertx = "4.5.14"
 web3j = "4.12.2"
 

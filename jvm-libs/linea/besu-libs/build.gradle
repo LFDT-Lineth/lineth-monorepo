@@ -27,11 +27,11 @@ dependencies {
     transitive = false
   }
 
-  api("io.tmio:tuweni-bytes:${libs.versions.tuweni.get()}") {
+  api("io.consensys.tuweni:tuweni-bytes:${libs.versions.tuweni.get()}") {
     transitive = false
   }
 
-  api("io.tmio:tuweni-units:${libs.versions.tuweni.get()}") {
+  api("io.consensys.tuweni:tuweni-units:${libs.versions.tuweni.get()}") {
     transitive = false
   }
 

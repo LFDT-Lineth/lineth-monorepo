@@ -47,9 +47,9 @@ dependencies {
 
   implementation 'com.google.code.gson:gson'
 
-  implementation "io.tmio:tuweni-bytes"
-  implementation "io.tmio:tuweni-units"
-  implementation "io.tmio:tuweni-toml"
+  implementation "io.consensys.tuweni:tuweni-bytes"
+  implementation "io.consensys.tuweni:tuweni-units"
+  implementation "io.consensys.tuweni:tuweni-toml"
 
   implementation 'info.picocli:picocli'
 
