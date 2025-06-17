@@ -13,7 +13,13 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "**",
+        hostname: "s2.coinmarketcap.com",
+        pathname: "/static/img/coins/**",
+      },
+      {
+        protocol: "https",
+        hostname: "assets.coingecko.com",
+        pathname: "/coins/images/**",
       },
     ],
   },
