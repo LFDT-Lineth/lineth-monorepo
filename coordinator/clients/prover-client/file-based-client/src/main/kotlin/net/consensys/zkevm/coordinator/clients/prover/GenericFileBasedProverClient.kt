@@ -118,10 +118,9 @@ open class GenericFileBasedProverClient<Request, Response, RequestDto, ResponseD
           FileMonitor.ErrorType.TIMED_OUT -> {
             SafeFuture.failedFuture<Path>(RuntimeException("Timeout waiting for response file=$responseFilePath"))
           }
-
-          else -> {
-            SafeFuture.failedFuture(RuntimeException("Unexpected error=$it"))
-          }
+          // else -> {
+          //  SafeFuture.failedFuture(RuntimeException("Unexpected error=$it"))
+          // }
         }
       } else {
         SafeFuture.completedFuture(responseFilePath)

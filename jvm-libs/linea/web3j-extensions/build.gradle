@@ -22,6 +22,7 @@ dependencies {
   testImplementation "com.fasterxml.jackson.core:jackson-databind:${libs.versions.jackson.get()}"
   testImplementation "org.wiremock:wiremock:${libs.versions.wiremock.get()}"
   testImplementation project(":jvm-libs:linea:besu-rlp-and-mappers")
+  testFixturesImplementation "org.apache.logging.log4j:log4j-slf4j2-impl:${libs.versions.log4j.get()}"
 }
 
 jar {

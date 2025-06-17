@@ -14,6 +14,7 @@ dependencies {
 
   testImplementation "net.java.dev.jna:jna:${libs.versions.jna.get()}"
   testImplementation project(":jvm-libs:linea:blob-shnarf-calculator")
+  testImplementation project(":jvm-libs:generic:extensions:kotlin")
   testFixturesImplementation project(':jvm-libs:linea:besu-libs')
   testFixturesImplementation project(':jvm-libs:linea:besu-rlp-and-mappers')
   testFixturesImplementation(project(":jvm-libs:linea:testing:file-system"))

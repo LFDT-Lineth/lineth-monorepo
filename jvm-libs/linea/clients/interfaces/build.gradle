@@ -5,6 +5,15 @@ plugins {
 
 description="Interfaces for interaction with Linea Smart Contract"
 
+configurations {
+  testFixturesDeps {
+    extendsFrom implementation // Inherit plugin's dependencies
+    canBeConsumed = false
+    canBeResolved = false
+  }
+  testFixturesImplementation.extendsFrom testFixturesDeps
+}
+
 dependencies {
   api project(':jvm-libs:linea:core:domain-models')
   api project(':jvm-libs:generic:extensions:futures')
