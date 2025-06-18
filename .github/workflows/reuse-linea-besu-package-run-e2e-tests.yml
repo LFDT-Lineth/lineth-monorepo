@@ -120,7 +120,7 @@ jobs:
           docker logs zkbesu-shomei --since 1h &>> docker_logs/zkbesu-shomei.txt || true
           docker logs shomei-frontend --since 1h &>> docker_logs/shomei-frontend.txt || true
           docker logs postman --since 1h &>> docker_logs/postman.txt || true
-          docker logs traces-node-v2 --since 1h &>> docker_logs/traces-node-v2.txt || true
+          docker logs traces-node --since 1h &>> docker_logs/traces-node.txt || true
           docker logs l2-node-besu --since 1h &>> docker_logs/l2-node-besu.txt || true
           docker logs transaction-exclusion-api --since 1h &>> docker_logs/transaction-exclusion-api.txt || true
           docker logs sequencer --since 1h &>> docker_logs/sequencer.txt || true
