@@ -40,6 +40,11 @@ afterEvaluate {
       subproject.tasks.matching { task -> task.name == 'spotlessCheck' }
     }
   }
+  if (tasks.findByName('spotlessApply')) {
+    spotlessApply.dependsOn subprojects.collect { subproject ->
+      subproject.tasks.matching { task -> task.name == 'spotlessApply' }
+    }
+  }
 }
 
 build {

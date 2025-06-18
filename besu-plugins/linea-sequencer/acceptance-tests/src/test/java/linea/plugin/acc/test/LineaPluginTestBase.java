@@ -91,6 +91,17 @@ public abstract class LineaPluginTestBase extends AcceptanceTestBase {
   public static final int BLOCK_PERIOD_SECONDS = 5;
   public static final CliqueOptions DEFAULT_LINEA_CLIQUE_OPTIONS =
       new CliqueOptions(BLOCK_PERIOD_SECONDS, CliqueOptions.DEFAULT.epochLength(), false);
+  protected static final List<String> DEFAULT_REQUESTED_PLUGINS =
+      List.of(
+          "LineaExtraDataPlugin",
+          "LineaEstimateGasEndpointPlugin",
+          "LineaSetExtraDataEndpointPlugin",
+          "LineaTransactionPoolValidatorPlugin",
+          "LineaTransactionSelectorPlugin",
+          "LineaBundleEndpointsPlugin",
+          "ForwardBundlesPlugin",
+          "LineaTransactionValidatorPlugin");
+
   protected static final HttpClient HTTP_CLIENT = HttpClient.newHttpClient();
   protected BesuNode minerNode;
 
@@ -98,7 +109,12 @@ public abstract class LineaPluginTestBase extends AcceptanceTestBase {
   public void setup() throws Exception {
     minerNode =
         createCliqueNodeWithExtraCliOptionsAndRpcApis(
-            "miner1", getCliqueOptions(), getTestCliOptions(), Set.of("LINEA", "MINER"), false);
+            "miner1",
+            getCliqueOptions(),
+            getTestCliOptions(),
+            Set.of("LINEA", "MINER"),
+            false,
+            DEFAULT_REQUESTED_PLUGINS);
     minerNode.setTransactionPoolConfiguration(
         ImmutableTransactionPoolConfiguration.builder()
             .from(TransactionPoolConfiguration.DEFAULT)
@@ -131,7 +147,8 @@ public abstract class LineaPluginTestBase extends AcceptanceTestBase {
       final CliqueOptions cliqueOptions,
       final List<String> extraCliOptions,
       final Set<String> extraRpcApis,
-      final boolean isEngineRpcEnabled)
+      final boolean isEngineRpcEnabled,
+      final List<String> requestedPlugins)
       throws IOException {
     final NodeConfigurationFactory node = new NodeConfigurationFactory();
 
@@ -155,15 +172,7 @@ public abstract class LineaPluginTestBase extends AcceptanceTestBase {
                     .metricCategories(
                         Set.of(PRICING_CONF, SEQUENCER_PROFITABILITY, TX_POOL_PROFITABILITY))
                     .build())
-            .requestedPlugins(
-                List.of(
-                    "LineaExtraDataPlugin",
-                    "LineaEstimateGasEndpointPlugin",
-                    "LineaSetExtraDataEndpointPlugin",
-                    "LineaTransactionPoolValidatorPlugin",
-                    "LineaTransactionSelectorPlugin",
-                    "LineaBundleEndpointsPlugin",
-                    "ForwardBundlesPlugin"));
+            .requestedPlugins(requestedPlugins);
 
     return besu.create(nodeConfBuilder.build());
   }
