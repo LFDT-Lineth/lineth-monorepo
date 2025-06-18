@@ -102,7 +102,11 @@ SHIFT :=  shf
 
 STP := stp
 
-TABLES := reftables
+TABLES := reftables/*.lisp
+
+INST_DECODER_LONDON := reftables/london/inst_decoder.lisp
+
+INST_DECODER_CANCUN := reftables/cancun/inst_decoder.lisp
 
 TRM := trm
 
@@ -154,24 +158,28 @@ ZKEVM_MODULES_LONDON := ${ZKEVM_MODULES_COMMON} \
 		 ${BLOCKDATA_LONDON} \
 		 ${HUB_LONDON} \
 		 ${OOB_LONDON} \
+		 ${INST_DECODER_LONDON} \
 		 ${TXN_DATA_LONDON}
 
 ZKEVM_MODULES_PARIS := ${ZKEVM_MODULES_COMMON} \
 		 ${BLOCKDATA_PARIS} \
 		 ${HUB_LONDON} \
 		 ${OOB_LONDON} \
+		 ${INST_DECODER_LONDON} \
 		 ${TXN_DATA_LONDON}
 
 ZKEVM_MODULES_SHANGHAI := ${ZKEVM_MODULES_COMMON} \
  		 ${BLOCKDATA_PARIS} \
 		 ${HUB_SHANGHAI} \
 		 ${OOB_SHANGHAI} \
+		 ${INST_DECODER_LONDON} \
 		 ${TXN_DATA_SHANGHAI}
 
 ZKEVM_MODULES_CANCUN := ${ZKEVM_MODULES_COMMON} \
  		 ${BLOCKDATA_CANCUN} \
 		 ${HUB_CANCUN} \
 		 ${OOB_SHANGHAI} \
+		 ${INST_DECODER_CANCUN} \
 		 ${TXN_DATA_CANCUN}
 
 all: zkevm_london.bin zkevm_paris.bin zkevm_shanghai.bin zkevm_cancun.bin

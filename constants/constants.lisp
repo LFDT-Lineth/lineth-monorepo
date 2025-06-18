@@ -88,8 +88,11 @@
   EVM_INST_MSIZE                            0x59
   EVM_INST_GAS                              0x5A
   EVM_INST_JUMPDEST                         0x5B
+  ;; Transient Operations                                 ;; appear in Cancun (EIP-1153)
+  EVM_INST_TLOAD                            0x5C
+  EVM_INST_TSTORE                           0x5D
   ;; Push Operations
-  EVM_INST_PUSH0                            0x5F ;; post Shanghai
+  EVM_INST_PUSH0                            0x5F          ;; post Shanghai
   EVM_INST_PUSH1                            0x60
   EVM_INST_PUSH2                            0x61
   EVM_INST_PUSH3                            0x62
@@ -227,6 +230,8 @@
   GAS_CONST_ECPAIRING_PAIR                  34000
   GAS_CONST_BLAKE2_PER_ROUND                1
   GAS_CONST_INIT_CODE_WORD                  2 ;; post Shanghai EIP-3860
+  GAS_CONST_TLOAD                           100               ;; post Cancun (EIP-1153)
+  GAS_CONST_TSTORE                          100               ;; post Cancun (EIP-1153)
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;           ;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  EVM MISC ;;

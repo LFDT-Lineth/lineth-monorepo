@@ -37,6 +37,7 @@
    ( SHF_FLAG                :binary )
    ( STACKRAM_FLAG           :binary )
    ( STO_FLAG                :binary )
+   ( TRANS_FLAG              :binary )
    ( SWAP_FLAG               :binary )
    ( TXN_FLAG                :binary )
    ( WCP_FLAG                :binary )
