@@ -19,7 +19,7 @@ on:
       pluginName:
         required: true
         type: string
-        description: 'plugin name used for the tag name, e.g staterecovery'
+        description: 'plugin name used for the tag name, e.g linea-staterecovery'
       workspaceModulePath:
         required: true
         type: string

@@ -2,6 +2,15 @@ plugins {
   id 'net.consensys.zkevm.kotlin-common-minimal-conventions'
 }
 
+configurations {
+  testFixturesDeps {
+    extendsFrom implementation // Inherit plugin's dependencies
+    canBeConsumed = false
+    canBeResolved = false
+  }
+  testFixturesImplementation.extendsFrom testFixturesDeps
+}
+
 dependencies {
   api platform("io.vertx:vertx-stack-depchain:${libs.versions.vertx.get()}")
   //<utils>

@@ -6,15 +6,6 @@ plugins {
 
 description = "JSON RPC 2.0 utilities"
 
-configurations {
-  testFixturesDeps {
-    extendsFrom implementation // Inherit plugin's dependencies
-    canBeConsumed = false
-    canBeResolved = false
-  }
-  testFixturesImplementation.extendsFrom testFixturesDeps
-}
-
 dependencies {
   implementation project(":jvm-libs:linea:core:metrics")
   implementation project(":jvm-libs:linea:metrics:micrometer")
