@@ -6,7 +6,8 @@ export function middleware(request: NextRequest) {
 
   // We only want to allow unsafe-eval in local environment for NextJS dev server
   // We are required to use unsafe-inline with Cloudflare - https://developers.cloudflare.com/fundamentals/reference/policies-compliances/content-security-policies/#product-requirements
-  const unsafeScript = process.env.NEXT_PUBLIC_ENVIRONMENT === "local" ? "'unsafe-eval'" : "'unsafe-inline'";
+  // TODO: Remove unsafe-eval in production and replace with 'unsafe-inline'
+  const unsafeScript = process.env.NEXT_PUBLIC_ENVIRONMENT === "local" ? "'unsafe-eval'" : "'unsafe-eval'";
 
   /**
    * Content Security Policy (CSP) configuration:
