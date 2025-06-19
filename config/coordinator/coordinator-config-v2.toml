@@ -88,6 +88,7 @@ failures-warning-threshold = 10
 [traces.conflation]
 endpoints = ["http://traces-node:8545/"]
 request-limit-per-endpoint = 1
+request-timeout = "PT60S" # each conflated trace request would be timeout in 60 seconds
 [traces.conflation.request-retries]
 backoff-delay = "PT1S"
 failures-warning-threshold = 10

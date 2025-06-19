@@ -37,6 +37,7 @@ class VertxHttpJsonRpcClient(
   private val responseObjectMapper: ObjectMapper = objectMapper,
   private val log: Logger = LogManager.getLogger(VertxHttpJsonRpcClient::class.java),
   private val requestResponseLogLevel: Level = Level.TRACE,
+  private val requestTimeout: Long? = null,
   private val failuresLogLevel: Level = Level.DEBUG,
   private val metricsCategory: MetricsCategory = object : MetricsCategory {
     override val name: String = "jsonrpc"
@@ -45,6 +46,7 @@ class VertxHttpJsonRpcClient(
   private val requestOptions = RequestOptions().apply {
     setMethod(HttpMethod.POST)
     setAbsoluteURI(endpoint)
+    requestTimeout?.let { setTimeout(it) }
   }
 
   private fun serializeRequest(request: JsonRpcRequest): String {

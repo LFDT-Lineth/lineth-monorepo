@@ -31,6 +31,7 @@ class StateManagerV1JsonRpcClient(
       endpoints: List<URI>,
       maxInflightRequestsPerClient: UInt,
       requestRetry: RequestRetryConfig,
+      requestTimeout: Long? = null,
       zkStateManagerVersion: String,
       logger: Logger = LogManager.getLogger(StateManagerV1JsonRpcClient::class.java),
     ): StateManagerV1JsonRpcClient {
@@ -39,6 +40,7 @@ class StateManagerV1JsonRpcClient(
           endpoints = endpoints,
           maxInflightRequestsPerClient = maxInflightRequestsPerClient,
           retryConfig = requestRetry,
+          requestTimeout = requestTimeout,
           log = logger,
           shallRetryRequestsClientBasePredicate = { it is Err },
         ),

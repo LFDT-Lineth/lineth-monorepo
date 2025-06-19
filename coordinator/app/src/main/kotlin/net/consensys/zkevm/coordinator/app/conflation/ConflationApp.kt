@@ -137,6 +137,7 @@ class ConflationApp(
     endpoints = configs.stateManager.endpoints.map { it.toURI() },
     maxInflightRequestsPerClient = configs.stateManager.requestLimitPerEndpoint,
     requestRetry = configs.stateManager.requestRetries.toJsonRpcRetry(),
+    requestTimeout = configs.stateManager.requestTimeout?.inWholeMilliseconds,
     zkStateManagerVersion = configs.stateManager.version,
     logger = LogManager.getLogger("clients.StateManagerShomeiClient"),
   )
@@ -273,6 +274,7 @@ class ConflationApp(
         rpcClient = httpJsonRpcClientFactory.createWithLoadBalancing(
           endpoints = configs.traces.counters.endpoints.toSet(),
           maxInflightRequestsPerClient = configs.traces.counters.requestLimitPerEndpoint,
+          requestTimeout = configs.traces.counters.requestTimeout?.inWholeMilliseconds,
           log = tracesCountersLog,
         ),
         config = TracesGeneratorJsonRpcClientV2.Config(
@@ -290,6 +292,7 @@ class ConflationApp(
         rpcClient = httpJsonRpcClientFactory.createWithLoadBalancing(
           endpoints = configs.traces.conflation.endpoints.toSet(),
           maxInflightRequestsPerClient = configs.traces.conflation.requestLimitPerEndpoint,
+          requestTimeout = configs.traces.conflation.requestTimeout?.inWholeMilliseconds,
           log = tracesConflationLog,
         ),
         config = TracesGeneratorJsonRpcClientV2.Config(

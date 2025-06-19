@@ -25,6 +25,7 @@ class TracesParsingTest {
     [traces.conflation]
     endpoints = ["http://traces-api-2:8080/"]
     request-limit-per-endpoint = 2
+    request-timeout = "PT60S"
     [traces.conflation.request-retries]
     max-retries = 30
     backoff-delay = "PT3S"
@@ -64,6 +65,7 @@ class TracesParsingTest {
       conflation = TracesToml.ClientApiConfigToml(
         endpoints = listOf(URI.create("http://traces-api-2:8080/").toURL()),
         requestLimitPerEndpoint = 2u,
+        requestTimeout = 60.seconds,
         requestRetries = RequestRetriesToml(
           maxRetries = 30u,
           backoffDelay = 3.seconds,
@@ -108,6 +110,7 @@ class TracesParsingTest {
       counters = TracesToml.ClientApiConfigToml(
         endpoints = listOf(URI.create("http://traces-api-1:8080/").toURL()),
         requestLimitPerEndpoint = UInt.MAX_VALUE,
+        requestTimeout = null,
         requestRetries = RequestRetriesToml(
           maxRetries = null,
           backoffDelay = 1.seconds,
@@ -117,6 +120,7 @@ class TracesParsingTest {
       conflation = TracesToml.ClientApiConfigToml(
         endpoints = listOf(URI.create("http://traces-api-2:8080/").toURL()),
         requestLimitPerEndpoint = UInt.MAX_VALUE,
+        requestTimeout = null,
         requestRetries = RequestRetriesToml(
           maxRetries = null,
           backoffDelay = 1.seconds,
