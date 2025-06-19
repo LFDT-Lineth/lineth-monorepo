@@ -14,12 +14,10 @@ import net.consensys.linea.sequencer.modulelimit.ModuleLineCountValidator;
 import picocli.CommandLine;
 
 public class LineaTracerCliOptions implements LineaCliOptions {
-  public static final String CONFIG_KEY = "tracer-config";
+  public static final String CONFIG_KEY = "tracer-sequencer-config";
 
   public static final String MODULE_LIMIT_FILE_PATH = "--plugin-linea-module-limit-file-path";
   public static final String DEFAULT_MODULE_LIMIT_FILE_PATH = "moduleLimitFile.toml";
-  public static final String LIMITLESS_ENABLED = "--plugin-linea-limitless-enabled";
-  public static final boolean DEFAULT_LIMITLESS_ENABLED = false;
 
   @CommandLine.Option(
       names = {MODULE_LIMIT_FILE_PATH},
@@ -28,14 +26,6 @@ public class LineaTracerCliOptions implements LineaCliOptions {
       description =
           "Path to the toml file containing the module limits (default: ${DEFAULT-VALUE})")
   private String moduleLimitFilePath = DEFAULT_MODULE_LIMIT_FILE_PATH;
-
-  @CommandLine.Option(
-      names = {LIMITLESS_ENABLED},
-      hidden = true,
-      paramLabel = "<BOOLEAN>",
-      description =
-          "If the sequencer needs to use or not the limitless prover (default: ${DEFAULT-VALUE})")
-  private boolean limitlessEnabled = DEFAULT_LIMITLESS_ENABLED;
 
   private LineaTracerCliOptions() {}
 
@@ -57,7 +47,6 @@ public class LineaTracerCliOptions implements LineaCliOptions {
   public static LineaTracerCliOptions fromConfig(final LineaTracerConfiguration config) {
     final LineaTracerCliOptions options = create();
     options.moduleLimitFilePath = config.moduleLimitsFilePath();
-    options.limitlessEnabled = config.isLimitless();
     return options;
   }
 
@@ -67,11 +56,10 @@ public class LineaTracerCliOptions implements LineaCliOptions {
    * @return the Linea factory configuration
    */
   @Override
-  public LineaTracerConfiguration toDomainObject() {
-    return LineaTracerConfiguration.builder()
+  public LineaTracerLineLimitConfiguration toDomainObject() {
+    return LineaTracerLineLimitConfiguration.builder()
         .moduleLimitsFilePath(moduleLimitFilePath)
         .moduleLimitsMap(ModuleLineCountValidator.createLimitModules(moduleLimitFilePath))
-        .isLimitless(limitlessEnabled)
         .build();
   }
 
@@ -79,7 +67,6 @@ public class LineaTracerCliOptions implements LineaCliOptions {
   public String toString() {
     return MoreObjects.toStringHelper(this)
         .add(MODULE_LIMIT_FILE_PATH, moduleLimitFilePath)
-        .add(LIMITLESS_ENABLED, limitlessEnabled)
         .toString();
   }
 }

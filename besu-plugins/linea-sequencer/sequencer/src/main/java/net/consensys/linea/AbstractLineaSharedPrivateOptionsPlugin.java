@@ -25,6 +25,7 @@ import net.consensys.linea.config.LineaRpcCliOptions;
 import net.consensys.linea.config.LineaRpcConfiguration;
 import net.consensys.linea.config.LineaTracerCliOptions;
 import net.consensys.linea.config.LineaTracerConfiguration;
+import net.consensys.linea.config.LineaTracerLineLimitConfiguration;
 import net.consensys.linea.config.LineaTransactionPoolValidatorCliOptions;
 import net.consensys.linea.config.LineaTransactionPoolValidatorConfiguration;
 import net.consensys.linea.config.LineaTransactionSelectorCliOptions;
@@ -33,6 +34,8 @@ import net.consensys.linea.config.LineaTransactionValidatorCliOptions;
 import net.consensys.linea.config.LineaTransactionValidatorConfiguration;
 import net.consensys.linea.plugins.AbstractLineaSharedOptionsPlugin;
 import net.consensys.linea.plugins.LineaOptionsPluginConfiguration;
+import net.consensys.linea.plugins.config.LineaTracerSharedCliOptions;
+import net.consensys.linea.plugins.config.LineaTracerSharedConfiguration;
 import net.consensys.linea.utils.Compressor;
 import org.hyperledger.besu.plugin.ServiceManager;
 import org.hyperledger.besu.plugin.services.BesuConfiguration;
@@ -124,8 +127,16 @@ public abstract class AbstractLineaSharedPrivateOptionsPlugin
   }
 
   public LineaTracerConfiguration tracerConfiguration() {
-    return (LineaTracerConfiguration)
-        getConfigurationByKey(LineaTracerCliOptions.CONFIG_KEY).optionsConfig();
+    var tracerLineLimitConfig =
+        (LineaTracerLineLimitConfiguration)
+            getConfigurationByKey(LineaTracerCliOptions.CONFIG_KEY).optionsConfig();
+    var tracerSharedConfig =
+        (LineaTracerSharedConfiguration)
+            getConfigurationByKey(LineaTracerSharedCliOptions.CONFIG_KEY).optionsConfig();
+    return new LineaTracerConfiguration(
+        tracerLineLimitConfig.moduleLimitsFilePath(),
+        tracerLineLimitConfig.moduleLimitsMap(),
+        tracerSharedConfig.isLimitless());
   }
 
   public LineaRejectedTxReportingConfiguration rejectedTxReportingConfiguration() {
