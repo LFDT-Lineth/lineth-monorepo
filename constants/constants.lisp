@@ -230,8 +230,6 @@
   GAS_CONST_ECPAIRING_PAIR                  34000
   GAS_CONST_BLAKE2_PER_ROUND                1
   GAS_CONST_INIT_CODE_WORD                  2 ;; post Shanghai EIP-3860
-  GAS_CONST_TLOAD                           100               ;; post Cancun (EIP-1153)
-  GAS_CONST_TSTORE                          100               ;; post Cancun (EIP-1153)
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;           ;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  EVM MISC ;;
@@ -244,6 +242,9 @@
   MAX_REFUND_QUOTIENT                       5
   CREATE2_SHIFT                             0xff                               ;; create2 first byte
   EIP2681_MAX_NONCE                         18446744073709551615               ;; = 2^64 - 1
+  ETHEREUM_GAS_LIMIT_MINIMUM                5000
+  ETHEREUM_GAS_LIMIT_MAXIMUM                0xffffffffffffffff ;; maxUint64
+  MIN_BASE_FEE_PER_BLOB_GAS                 1
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;             ;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  LINEA MISC ;;
@@ -257,12 +258,10 @@
   LINEA_MAX_NUMBER_OF_TRANSACTIONS_IN_BATCH 200
   GAS_LIMIT_ADJUSTMENT_FACTOR               1024
   ;; we keep the following constants as they are referenced in blockdata gas limit tests
-  ETHEREUM_GAS_LIMIT_MINIMUM                5000
-  ETHEREUM_GAS_LIMIT_MAXIMUM                0xffffffffffffffff ;; maxUint64
   LINEA_GAS_LIMIT_MINIMUM                   61000000
   LINEA_GAS_LIMIT_MAXIMUM                   2000000000
   LINEA_BLOCK_GAS_LIMIT                     LINEA_GAS_LIMIT_MAXIMUM
-  LINEA_BLOB_BASE_FEE                       666 ;; TODO: put the right value
+  LINEA_BLOB_BASE_FEE                       MIN_BASE_FEE_PER_BLOB_GAS
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;               ;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; SIZE / LENGTH ;;

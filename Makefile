@@ -15,23 +15,11 @@ BIN := bin
 BLAKE2f_MODEXP_DATA := blake2fmodexpdata
 
 # constraints used in prod for LINEA, with linea block gas limit
-BLOCKDATA_LONDON := $(wildcard blockdata/london/*.lisp) \
-	             $(wildcard blockdata/london/processing/*.lisp) \
-	             $(wildcard blockdata/london/processing/gaslimit/common.lisp) \
-	       		 $(wildcard blockdata/london/processing/gaslimit/linea.lisp) \
-	       		 $(wildcard blockdata/london/lookups/*.lisp)
+BLOCKDATA_LONDON := blockdata/london
 
-BLOCKDATA_PARIS := $(wildcard blockdata/paris/*.lisp) \
-	             $(wildcard blockdata/paris/processing/*.lisp) \
-	             $(wildcard blockdata/paris/processing/gaslimit/common.lisp) \
-	       		 $(wildcard blockdata/paris/processing/gaslimit/linea.lisp) \
-	       		 $(wildcard blockdata/paris/lookups/*.lisp)
+BLOCKDATA_PARIS := blockdata/paris
 
-BLOCKDATA_CANCUN := $(wildcard blockdata/cancun/*.lisp) \
-	             $(wildcard blockdata/cancun/processing/*.lisp) \
-	             $(wildcard blockdata/cancun/processing/gaslimit/common.lisp) \
-	       		 $(wildcard blockdata/cancun/processing/gaslimit/linea.lisp) \
-	       		 $(wildcard blockdata/cancun/lookups/*.lisp)
+BLOCKDATA_CANCUN := blockdata/cancun
 
 BLOCKHASH := blockhash
 
@@ -45,26 +33,11 @@ EXP := exp
 
 GAS := gas
 
-HUB_LONDON :=  $(wildcard hub/london/*.lisp) \
-			$(wildcard hub/london/**/*.lisp) \
-			$(wildcard hub/london/**/**/*.lisp) \
-			$(wildcard hub/london/**/**/**/*.lisp) \
-			$(wildcard hub/london/**/**/**/**/*.lisp) \
-			$(wildcard hub/london/**/**/**/**/**/*.lisp)
+HUB_LONDON :=  hub/london
 
-HUB_SHANGHAI :=  $(wildcard hub/shanghai/*.lisp) \
-	 		 $(wildcard hub/shanghai/**/*.lisp) \
-	 		 $(wildcard hub/shanghai/**/**/*.lisp) \
-			 $(wildcard hub/shanghai/**/**/**/*.lisp) \
-			 $(wildcard hub/shanghai/**/**/**/**/*.lisp) \
-			 $(wildcard hub/shanghai/**/**/**/**/**/*.lisp)
+HUB_SHANGHAI :=  hub/shanghai
 
-HUB_CANCUN :=  $(wildcard hub/cancun/*.lisp) \
-	 		 $(wildcard hub/cancun/**/*.lisp) \
-	 		 $(wildcard hub/cancun/**/**/*.lisp) \
-			 $(wildcard hub/cancun/**/**/**/*.lisp) \
-			 $(wildcard hub/cancun/**/**/**/**/*.lisp) \
-			 $(wildcard hub/cancun/**/**/**/**/**/*.lisp)
+HUB_CANCUN :=  hub/cancun
 
 LIBRARY := library
 
@@ -78,13 +51,9 @@ MMIO := mmio
 
 MXP := mxp
 
-OOB_LONDON := $(wildcard oob/london/*.lisp) \
-	       $(wildcard oob/london/**/*.lisp) \
-	       $(wildcard oob/london/**/**/*.lisp)
+OOB_LONDON := oob/london
 
-OOB_SHANGHAI := $(wildcard oob/shanghai/*.lisp) \
-	        $(wildcard oob/shanghai/**/*.lisp) \
-	        $(wildcard oob/shanghai/**/**/*.lisp)
+OOB_SHANGHAI := oob/shanghai
 
 RLP_ADDR := rlpaddr
 
@@ -110,14 +79,11 @@ INST_DECODER_CANCUN := reftables/cancun/inst_decoder.lisp
 
 TRM := trm
 
-TXN_DATA_LONDON := $(wildcard txndata/london/*.lisp) \
-                $(wildcard txndata/london/**/*.lisp)
+TXN_DATA_LONDON := txndata/london
 
-TXN_DATA_SHANGHAI := $(wildcard txndata/shanghai/*.lisp) \
-                 $(wildcard txndata/shanghai/**/*.lisp)
+TXN_DATA_SHANGHAI := txndata/shanghai
 
-TXN_DATA_CANCUN := $(wildcard txndata/cancun/*.lisp) \
-                 $(wildcard txndata/cancun/**/*.lisp)
+TXN_DATA_CANCUN := txndata/cancun
 
 WCP := wcp
 

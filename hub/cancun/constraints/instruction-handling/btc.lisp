@@ -31,9 +31,10 @@
 ;;                         stack/OOGX))
 
 (defconstraint   block-data-instruction-setting-the-stack-pattern       (:guard (block-data-standard-hypothesis))
-                 (if-zero   (force-bin   [stack/DEC_FLAG   2])
-                            (stack-pattern-1-1)
-                            (stack-pattern-0-1)))
+                 (begin
+                     (if-eq   [stack/DEC_FLAG   1] 1 (stack-pattern-1-1))
+                     (if-eq   [stack/DEC_FLAG   2] 1 (stack-pattern-0-1))
+                     (if-eq   [stack/DEC_FLAG   3] 1 (stack-pattern-1-1))))  ;;TODO: this is for BLOBHASH, will be recategorize TXN family 
 
 (defconstraint   block-data-instruction-setting-NSR                     (:guard (block-data-standard-hypothesis))
                  (eq!   NON_STACK_ROWS
