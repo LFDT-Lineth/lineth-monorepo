@@ -1,5 +1,9 @@
 name: coordinator-testing
 
+permissions:
+  contents: read
+  actions: read
+
 on:
   workflow_call:
     inputs:
@@ -47,7 +51,7 @@ jobs:
           ./gradlew -V coordinator:app:buildNeeded
       - name: Login to Docker Hub
         if: ${{ env.DOCKERHUB_USERNAME != '' && env.DOCKERHUB_TOKEN != '' }}
-        uses: docker/login-action@v3
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 #v3.4.0
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -67,7 +71,7 @@ jobs:
             ${{ github.workspace }}/build/reports/jacoco/jacocoRootReport/jacocoRootReport.xml
       - name: Upload coverage to Codecov
         if: ${{ env.CODECOV_TOKEN != '' }}
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@18283e04ce6e62d37312384ff67231eb8fd56d24 #v5.4.3
         with:
           fail_ci_if_error: true
           files: ${{ github.workspace }}/build/reports/jacoco/jacocoRootReport/jacocoRootReport.xml

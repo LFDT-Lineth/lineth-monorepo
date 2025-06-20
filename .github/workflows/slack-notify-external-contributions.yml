@@ -1,5 +1,8 @@
 name: Notify Slack on external issue creation
 
+permissions:
+  contents: read
+
 on:
   issues:
     types: [ opened ]

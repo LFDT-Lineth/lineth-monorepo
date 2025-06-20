@@ -1,4 +1,8 @@
 name: Reusable store image name and tags
+
+permissions:
+  contents: read
+
 on:
   workflow_call:
     outputs:

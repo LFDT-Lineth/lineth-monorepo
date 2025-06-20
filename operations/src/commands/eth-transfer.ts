@@ -148,7 +148,7 @@ export default class EthTransfer extends Command {
       type: 2,
       chainId,
       maxFeePerGas: fees.maxFeePerGas,
-      maxPriorityFeePerGas: fees.maxPriorityFeePerGas,
+      maxPriorityFeePerGas: fees.maxPriorityFeePerGas ?? null,
       nonce: nonce,
     };
 

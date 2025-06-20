@@ -179,7 +179,7 @@ export default class Synctx extends Command {
       const toAddress = tx.to ? await ethers.resolveAddress(tx.to) : undefined;
 
       const transaction: ethers.TransactionLike<string> = {
-        to: toAddress,
+        to: toAddress ?? null,
         nonce: Number(tx.nonce),
         gasLimit: BigInt(tx.gas),
         ...(Number(tx.type) === 2

@@ -1,4 +1,9 @@
 name: Reusable run e2e tests
+
+permissions:
+  contents: read
+  actions: read
+
 on:
   workflow_dispatch:
     inputs:
@@ -71,7 +76,7 @@ jobs:
     steps:
       - name: Setup upterm session
         if: ${{ inputs.e2e-tests-with-ssh }}
-        uses: lhotari/action-upterm@v1
+        uses: lhotari/action-upterm@b0357f23233f5ea6d58947c0c402e0631bab7334 #v1
       - name: Checkout
         uses: actions/checkout@v4
       - name: Setup nodejs environment
@@ -80,7 +85,7 @@ jobs:
           pnpm-install-options: '-F contracts -F e2e --frozen-lockfile --prefer-offline'
       - name: Login to Docker Hub
         if: ${{ env.DOCKERHUB_USERNAME != '' && env.DOCKERHUB_TOKEN != '' }}
-        uses: docker/login-action@v3
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 #v3.4.0
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -89,7 +94,7 @@ jobs:
           mkdir -p tmp/local/traces/v2/conflated
           chmod -R a+rw tmp/local/
       - name: Pull all images with retry
-        uses: nick-fields/retry@v3
+        uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 #v3.0.2
         with:
           max_attempts: 10
           retry_on: error
@@ -110,7 +115,7 @@ jobs:
           gunzip -c $GITHUB_WORKSPACE/linea-transaction-exclusion-api/linea-transaction-exclusion-api-docker-image.tar.gz | docker load
         shell: bash
       - name: Spin up fresh environment with besu tracing with retry
-        uses: nick-fields/retry@v3
+        uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 #v3.0.2
         with:
           max_attempts: 10
           retry_on: error

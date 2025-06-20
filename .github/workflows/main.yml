@@ -10,6 +10,7 @@ permissions:
   contents: read
   actions: read
   security-events: write
+  packages: write
 
 jobs:
   store-image-name-and-tags:
@@ -149,7 +150,6 @@ jobs:
     secrets: inherit
 
   code-analysis:
-    needs: [ filter-commit-changes ]
     uses: ./.github/workflows/codeql.yml
 
   testing:

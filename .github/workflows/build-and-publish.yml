@@ -1,5 +1,10 @@
 name: Docker build and publish
 
+permissions:
+  contents: read
+  actions: read
+  packages: write
+
 on:
   workflow_call:
     inputs:

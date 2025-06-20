@@ -1,5 +1,10 @@
 name: Prover build and publish CI
 
+permissions:
+  contents: read
+  actions: read
+  packages: write
+
 on:
   workflow_call:
     inputs:
@@ -76,18 +81,18 @@ jobs:
           submodules: true
       - name: Login to Docker Hub
         if: ${{ env.DOCKERHUB_USERNAME != '' && env.DOCKERHUB_TOKEN != '' }}
-        uses: docker/login-action@v3
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 #v3.4.0
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 #v3.11.1
       - name: Show the "version" build argument
         run: |
           echo "We inject the commit tag in the docker image ${{ env.COMMIT_TAG }}"
           echo COMMIT_TAG=${{ env.COMMIT_TAG }} >> $GITHUB_ENV
       - name: Build and push prover image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 #v6.18.0
         if: ${{ env.PUSH_IMAGE == 'false' }}
         with:
           context: .
@@ -114,7 +119,7 @@ jobs:
           name: linea-prover
           path: linea-prover-docker-image.tar.gz
       - name: Build and push prover image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 #v6.18.0
         if: ${{ env.PUSH_IMAGE == 'true' || github.event_name == 'workflow_dispatch' }}
         with:
           context: .

@@ -1,4 +1,10 @@
 name: Export Security Report to CSV
+
+permissions:
+  contents: read
+  actions: read
+  security-events: read
+
 on: workflow_dispatch
 jobs:
   data_gathering:

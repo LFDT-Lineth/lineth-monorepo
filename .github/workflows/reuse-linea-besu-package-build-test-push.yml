@@ -4,7 +4,7 @@ on:
     inputs:
       release_tag_prefix:
         required: true
-        type: string 
+        type: string
       run_test:
         required: true
         type: boolean
@@ -32,7 +32,7 @@ jobs:
     if: ${{ inputs.run_test || inputs.run_e2e_test }}
     environment: dockerhub
     outputs:
-      linea_besu_package_tag: ${{ steps.assemble.outputs.dockertag }} 
+      linea_besu_package_tag: ${{ steps.assemble.outputs.dockertag }}
       expected_traces_api_version: ${{ steps.assemble.outputs.tracer_plugin_version }}
       dockerimage: ${{ steps.assemble.outputs.dockerimage }}
     steps:
@@ -44,9 +44,9 @@ jobs:
         uses: ./.github/actions/linea-besu-package/assemble
         with:
           release_tag_prefix: ${{ inputs.release_tag_prefix }}
-      
+
       - name: set up docker buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 #v3.11.1
 
       - name: set docker build args
         run: |
@@ -54,7 +54,7 @@ jobs:
           echo "Building docker image: ${{ steps.assemble.outputs.dockerimage }}"
 
       - name: build the combined manifest
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 #v6.18.0
         env:
           DOCKER_BUILD_SUMMARY: false
         with:
@@ -69,7 +69,7 @@ jobs:
           push: false
           tags: |
             consensys/linea-besu-package:${{ steps.assemble.outputs.dockertag }}
-      
+
       - name: Save Docker image as artifact
         run: |
           docker images
@@ -101,7 +101,7 @@ jobs:
       cancel-in-progress: ${{ github.ref != 'refs/heads/main' || github.event_name == 'workflow_dispatch' }}
     uses: ./.github/workflows/reuse-linea-besu-package-run-e2e-tests.yml
     with:
-      linea_besu_package_tag: ${{ needs.build-and-upload-artifact.outputs.linea_besu_package_tag }} 
+      linea_besu_package_tag: ${{ needs.build-and-upload-artifact.outputs.linea_besu_package_tag }}
       expected_traces_api_version: ${{ inputs.expected_traces_api_ver || needs.build-and-upload-artifact.outputs.expected_traces_api_version }}
       e2e-tests-logs-dump: true
     secrets: inherit
@@ -126,14 +126,14 @@ jobs:
           compile_release_notes: true
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-      
+        uses: docker/setup-qemu-action@29109295f81e9208d7d86ff1c6c12d2833863392 #v3.6.0
+
       - name: set up docker buildx
-        uses: docker/setup-buildx-action@v3   
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 #v3.11.1
 
       - name: Login to Docker Hub
         if: ${{ env.DOCKERHUB_USERNAME != '' && env.DOCKERHUB_TOKEN != '' }}
-        uses: docker/login-action@v3
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 #v3.4.0
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -144,7 +144,7 @@ jobs:
           echo "Building docker image: ${{ steps.assemble.outputs.dockerimage }}"
 
       - name: build and push the combined manifest
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 #v6.18.0
         env:
           DOCKER_BUILD_SUMMARY: false
         with:
@@ -152,7 +152,7 @@ jobs:
           platforms: linux/arm64,linux/amd64
           provenance: false
           cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache          
+          cache-to: type=local,dest=/tmp/.buildx-cache
           build-args: |
             VERSION=${{ steps.assemble.outputs.dockertag }}
             VCS_REF=${{ github.sha }}
@@ -188,12 +188,12 @@ jobs:
       - name: Conventional Changelog Action
         if: ${{ github.event_name == 'workflow_dispatch' }}
         id: change_log
-        uses: TriPSs/conventional-changelog-action@v5
+        uses: TriPSs/conventional-changelog-action@3c4970b6573374889b897403d2f1278c395ea0df #v5.4.0
         with:
           git-path: ./linea-besu-package/
           git-push: false
           output-file: "false"
-      
+
       - name: Append Changelog Action to release note
         if: ${{ github.event_name == 'workflow_dispatch' }}
         id: append_change_log
@@ -206,7 +206,7 @@ jobs:
 
       - name: release - publish artifacts and release notes
         id: release_publish
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@72f2c25fcb47643c292f7107632f7a47c1df5cd8 #v2.3.2
         with:
           name: Linea Besu Package ${{ steps.assemble.outputs.releasetag }}
           tag_name: linea-besu-package-${{ steps.assemble.outputs.releasetag }}

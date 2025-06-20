@@ -1,5 +1,8 @@
 name: get-has-changes-requiring-e2e-testing
 
+permissions:
+  contents: read
+
 on:
   workflow_call:
     inputs:

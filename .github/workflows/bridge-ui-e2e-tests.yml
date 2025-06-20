@@ -1,5 +1,9 @@
 name: Run Bridge UI E2E Tests
 
+permissions:
+  contents: read
+  actions: read
+
 on:
   pull_request:
     branches:
