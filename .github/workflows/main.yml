@@ -150,7 +150,6 @@ jobs:
 
   code-analysis:
     needs: [ filter-commit-changes ]
-    if: ${{ always() && needs.filter-commit-changes.outputs.has-changes-requiring-build == 'true' }}
     uses: ./.github/workflows/codeql.yml
 
   testing:

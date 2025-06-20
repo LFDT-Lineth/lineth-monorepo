@@ -6,6 +6,8 @@ labels: Bug
 assignees: ''
 ---
 
+🔐 🔐 `Should this be a security advisory instead?` 🔐 🔐
+
 _Remenber not to put too much unhelpful information or too little important information, be specific._
 
 ## Impact
