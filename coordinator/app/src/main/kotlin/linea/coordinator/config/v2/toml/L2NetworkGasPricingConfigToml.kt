@@ -8,6 +8,7 @@ import kotlin.time.Duration.Companion.seconds
 data class L2NetworkGasPricingConfigToml(
   val disabled: Boolean = false,
   val l1Endpoint: URL? = null,
+  val l2Endpoint: URL? = null,
   val priceUpdateInterval: Duration = 12.seconds,
   val feeHistoryBlockCount: UInt = 1000u,
   val feeHistoryRewardPercentile: UInt = 15u,
@@ -34,6 +35,7 @@ data class L2NetworkGasPricingConfigToml(
     val variableCostUpperBound: ULong,
     val variableCostLowerBound: ULong,
     val margin: Double,
+    val calldataBasedPricing: CalldataBasedPricingToml? = null,
   ) {
     fun reified(): L2NetworkGasPricingConfig.DynamicGasPricing {
       return L2NetworkGasPricingConfig.DynamicGasPricing(
@@ -42,6 +44,23 @@ data class L2NetworkGasPricingConfigToml(
         variableCostUpperBound = this.variableCostUpperBound,
         variableCostLowerBound = this.variableCostLowerBound,
         margin = this.margin,
+        calldataBasedPricing = this.calldataBasedPricing?.reified(),
+      )
+    }
+  }
+
+  data class CalldataBasedPricingToml(
+    val calldataSumSizeBlockCount: UInt = 5U,
+    val feeChangeDenominator: UInt = 32U,
+    val calldataSumSizeTarget: ULong = 109000UL,
+    val blockSizeNonCalldataOverhead: UInt = 540U,
+  ) {
+    fun reified(): L2NetworkGasPricingConfig.CalldataBasedPricing {
+      return L2NetworkGasPricingConfig.CalldataBasedPricing(
+        calldataSumSizeBlockCount = this.calldataSumSizeBlockCount,
+        feeChangeDenominator = this.feeChangeDenominator,
+        calldataSumSizeTarget = this.calldataSumSizeTarget,
+        blockSizeNonCalldataOverhead = this.blockSizeNonCalldataOverhead,
       )
     }
   }
@@ -66,6 +85,7 @@ data class L2NetworkGasPricingConfigToml(
 
   fun reified(
     l1DefaultEndpoint: URL?,
+    l2DefaultEndpoint: URL?,
   ): L2NetworkGasPricingConfig {
     return L2NetworkGasPricingConfig(
       disabled = disabled,
@@ -78,6 +98,7 @@ data class L2NetworkGasPricingConfigToml(
       extraDataUpdateEndpoint = this.extraDataUpdateEndpoint,
       extraDataUpdateRequestRetries = this.extraDataUpdateRequestRetries.asDomain,
       l1Endpoint = this.l1Endpoint ?: l1DefaultEndpoint ?: throw AssertionError("l1Endpoint must be set"),
+      l2Endpoint = this.l2Endpoint ?: l2DefaultEndpoint ?: throw AssertionError("l2Endpoint must be set"),
     )
   }
 }

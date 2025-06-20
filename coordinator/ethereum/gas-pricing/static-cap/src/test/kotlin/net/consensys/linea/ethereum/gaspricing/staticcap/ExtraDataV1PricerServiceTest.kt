@@ -82,7 +82,7 @@ class ExtraDataV1PricerServiceTest {
         pollingInterval = pollingInterval,
         vertx = vertx,
         feesFetcher = mockFeesFetcher,
-        minerExtraDataCalculatorImpl = boundableFeeCalculator,
+        minerExtraDataCalculator = boundableFeeCalculator,
         extraDataUpdater = mockExtraDataUpdater,
       )
 

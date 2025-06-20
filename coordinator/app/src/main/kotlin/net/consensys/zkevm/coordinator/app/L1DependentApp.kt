@@ -7,6 +7,7 @@ import linea.contract.l1.LineaRollupSmartContractClientReadOnly
 import linea.contract.l1.Web3JLineaRollupSmartContractClientReadOnly
 import linea.coordinator.config.toJsonRpcRetry
 import linea.coordinator.config.v2.CoordinatorConfig
+import linea.coordinator.config.v2.Type2StateProofManagerConfig
 import linea.coordinator.config.v2.isDisabled
 import linea.coordinator.config.v2.isEnabled
 import linea.domain.BlockNumberAndHash
@@ -32,6 +33,8 @@ import net.consensys.linea.ethereum.gaspricing.dynamiccap.GasPriceCapProviderFor
 import net.consensys.linea.ethereum.gaspricing.dynamiccap.GasPriceCapProviderImpl
 import net.consensys.linea.ethereum.gaspricing.staticcap.ExtraDataV1UpdaterImpl
 import net.consensys.linea.ethereum.gaspricing.staticcap.FeeHistoryFetcherImpl
+import net.consensys.linea.ethereum.gaspricing.staticcap.L2CalldataBasedVariableFeesCalculator
+import net.consensys.linea.ethereum.gaspricing.staticcap.L2CalldataSizeAccumulatorImpl
 import net.consensys.linea.ethereum.gaspricing.staticcap.MinerExtraDataV1CalculatorImpl
 import net.consensys.linea.ethereum.gaspricing.staticcap.TransactionCostCalculator
 import net.consensys.linea.ethereum.gaspricing.staticcap.VariableFeesCalculator
@@ -543,10 +546,28 @@ class L1DependentApp(
           sequencerEndpoint = configs.l2NetworkGasPricing.extraDataUpdateEndpoint,
           retryConfig = configs.l2NetworkGasPricing.extraDataUpdateRequestRetries.toJsonRpcRetry(),
         ),
+        l2CalldataSizeAccumulatorConfig = configs.l2NetworkGasPricing.dynamicGasPricing.calldataBasedPricing?.let {
+          L2CalldataSizeAccumulatorImpl.Config(
+            blockSizeNonCalldataOverhead = it.blockSizeNonCalldataOverhead,
+            calldataSizeBlockCount = it.calldataSumSizeBlockCount,
+          )
+        },
+        l2CalldataBasedVariableFeesCalculatorConfig =
+        configs.l2NetworkGasPricing.dynamicGasPricing.calldataBasedPricing?.let {
+          L2CalldataBasedVariableFeesCalculator.Config(
+            feeChangeDenominator = it.feeChangeDenominator,
+            calldataSizeBlockCount = it.calldataSumSizeBlockCount,
+            maxBlockCalldataSize = it.calldataSumSizeTarget.toUInt(),
+          )
+        },
       )
       val l1Web3jClient = createWeb3jHttpClient(
         rpcUrl = configs.l2NetworkGasPricing.l1Endpoint.toString(),
         log = LogManager.getLogger("clients.l1.eth.l2pricing"),
+      )
+      val l2Web3jClient = createWeb3jHttpClient(
+        rpcUrl = configs.l2NetworkGasPricing.l2Endpoint.toString(),
+        log = LogManager.getLogger("clients.l2.eth.l2pricing"),
       )
       L2NetworkGasPricingService(
         vertx = vertx,
@@ -558,6 +579,7 @@ class L1DependentApp(
             log = LogManager.getLogger("clients.l1.eth.l2pricing"),
           ),
         ),
+        l2Web3jClient = ExtendedWeb3JImpl(l2Web3jClient),
         config = config,
       )
     } else {
@@ -674,7 +696,7 @@ class L1DependentApp(
 
   companion object {
     fun setupL1FinalizationMonitorForShomeiFrontend(
-      type2StateProofProviderConfig: linea.coordinator.config.v2.Type2StateProofManagerConfig,
+      type2StateProofProviderConfig: Type2StateProofManagerConfig,
       httpJsonRpcClientFactory: VertxHttpJsonRpcClientFactory,
       lineaRollupClient: LineaRollupSmartContractClientReadOnly,
       l2Web3jClient: Web3j,

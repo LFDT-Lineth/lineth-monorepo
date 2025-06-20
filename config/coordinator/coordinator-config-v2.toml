@@ -116,8 +116,6 @@ failures-warning-threshold = 2
 l1-polling-interval = "PT1S"
 l1-query-block-tag="LATEST"
 
-[l1-submission]
-disabled = true
 [l1-submission.dynamic-gas-price-cap]
 disabled = false
 [l1-submission.dynamic-gas-price-cap.gas-price-cap-calculation]
@@ -265,6 +263,11 @@ blob-submission-expected-execution-gas = 213000
 variable-cost-upper-bound = 10000000001 # ~10 GWEI
 variable-cost-lower-bound = 90000001  # ~0.09 GWEI
 margin = 4.0
+[l2-network-gas-pricing.dynamic-gas-pricing.calldata-based-pricing]
+calldata-sum-size-block-count = 5 # disabled if zero
+fee-change-denominator = 32
+calldata-sum-size-target = 109000
+block-size-non-calldata-overhead = 540
 
 [database]
 hostname = "postgres"

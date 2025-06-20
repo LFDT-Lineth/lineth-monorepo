@@ -15,6 +15,7 @@ data class L2NetworkGasPricingConfig(
   val extraDataUpdateEndpoint: URL,
   val extraDataUpdateRequestRetries: RetryConfig,
   val l1Endpoint: URL,
+  val l2Endpoint: URL,
 ) : FeatureToggle {
   data class DynamicGasPricing(
     val l1BlobGas: ULong,
@@ -22,6 +23,14 @@ data class L2NetworkGasPricingConfig(
     val variableCostUpperBound: ULong,
     val variableCostLowerBound: ULong,
     val margin: Double,
+    val calldataBasedPricing: CalldataBasedPricing?,
+  )
+
+  data class CalldataBasedPricing(
+    val calldataSumSizeBlockCount: UInt = 5u,
+    val feeChangeDenominator: UInt = 32u,
+    val calldataSumSizeTarget: ULong = 109000uL,
+    val blockSizeNonCalldataOverhead: UInt = 540u,
   )
 
   data class FlatRateGasPricing(

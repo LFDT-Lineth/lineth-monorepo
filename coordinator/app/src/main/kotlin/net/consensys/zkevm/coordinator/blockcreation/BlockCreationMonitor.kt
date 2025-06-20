@@ -188,7 +188,7 @@ class BlockCreationMonitor(
           val blockNumber = _nexBlockNumberToFetch.get()
           web3j.ethGetBlock(blockNumber.toBlockParameter())
             .thenPeek { block ->
-              log.trace("requestedBock={} responselock={}", blockNumber, block?.number)
+              log.trace("requestedBlock={} responseBlock={}", blockNumber, block?.number)
             }
             .whenException {
               log.warn(

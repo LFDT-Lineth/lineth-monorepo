@@ -37,6 +37,11 @@ class L2NetWorkingGasPricingConfigParsingTest {
     variable-cost-upper-bound = 10000000001 # ~10 GWEI
     variable-cost-lower-bound = 90000001  # ~0.09 GWEI
     margin = 4.0
+    [l2-network-gas-pricing.dynamic-gas-pricing.calldata-based-pricing]
+    calldata-sum-size-block-count = 5
+    fee-change-denominator = 32
+    calldata-sum-size-target = 109000
+    block-size-non-calldata-overhead = 540
     """.trimIndent()
 
     val config = L2NetworkGasPricingConfigToml(
@@ -59,6 +64,12 @@ class L2NetWorkingGasPricingConfigParsingTest {
         variableCostUpperBound = 10_000_000_001UL, // ~10 GWEI
         variableCostLowerBound = 90_000_001UL, // ~0.09 GWEI
         margin = 4.0,
+        calldataBasedPricing = L2NetworkGasPricingConfigToml.CalldataBasedPricingToml(
+          calldataSumSizeBlockCount = 5u,
+          feeChangeDenominator = 32u,
+          calldataSumSizeTarget = 109000uL,
+          blockSizeNonCalldataOverhead = 540u,
+        ),
       ),
       flatRateGasPricing = L2NetworkGasPricingConfigToml.FlatRateGasPricingToml(
         gasPriceUpperBound = 10_000_000_000UL, // 10 GWEI

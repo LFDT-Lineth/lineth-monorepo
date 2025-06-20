@@ -64,6 +64,7 @@ data class CoordinatorConfigToml(
       ),
       l2NetworkGasPricing = this.configs.l2NetworkGasPricing.reified(
         l1DefaultEndpoint = this.configs.defaults.l1Endpoint,
+        l2DefaultEndpoint = this.configs.defaults.l2Endpoint,
       ),
       database = this.configs.database.reified(),
       api = this.configs.api.reified(),
