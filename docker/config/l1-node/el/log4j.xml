@@ -27,6 +27,9 @@
     <Logger name="io.opentelemetry" level="WARN" additivity="false">
       <AppenderRef ref="Console"/>
     </Logger>
+    <Logger name="org.hyperledger.besu.ethereum.api.handlers.AbstractJsonRpcExecutor" level="TRACE">
+      <AppenderRef ref="Console"/>
+    </Logger>
     <Root level="INFO">
       <AppenderRef ref="Console"/>
     </Root>

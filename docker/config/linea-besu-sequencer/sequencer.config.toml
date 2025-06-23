@@ -1,5 +1,5 @@
 genesis-file="/var/lib/besu/genesis.json"
-logging="DEBUG"
+#logging="DEBUG" log is managed via log4j config file
 data-path="/opt/besu/data"
 data-storage-format="FOREST"
 sync-mode="FULL"

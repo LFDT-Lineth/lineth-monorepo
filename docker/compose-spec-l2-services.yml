@@ -141,7 +141,7 @@ services:
       retries: 120
     restart: "no"
     environment:
-      JAVA_OPTS: -Xmx1g -XX:+UnlockExperimentalVMOptions -XX:-UseG1GC -XX:+UseZGC
+      JAVA_OPTS: -Xmx1g
       LOG4J_CONFIGURATION_FILE: /var/lib/besu/log4j.xml
     entrypoint: besu-untuned
     command:
@@ -310,7 +310,7 @@ services:
         ipv4_address: 11.11.11.113
     environment:
       LOG4J_CONFIGURATION_FILE: /var/lib/besu/log4j.xml
-      JAVA_OPTS: -Xmx512m -XX:+UnlockExperimentalVMOptions -XX:-UseG1GC -XX:+UseZGC
+      JAVA_OPTS: -Xmx512m
     entrypoint:
       - /bin/bash
       - -c

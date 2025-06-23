@@ -37,6 +37,9 @@
     <Logger name="org.hyperledger.besu.ethereum.eth.transactions.TransactionPool" level="TRACE" additivity="false">
       <AppenderRef ref="Console"/>
     </Logger>
+    <Logger name="org.hyperledger.besu.ethereum.api.handlers.AbstractJsonRpcExecutor" level="TRACE">
+      <AppenderRef ref="Console"/>
+    </Logger>
     <Root level="${sys:root.log.level}">
       <AppenderRef ref="Console"/>
     </Root>

@@ -124,6 +124,7 @@ jobs:
           docker logs l2-node-besu --since 1h &>> docker_logs/l2-node-besu.txt || true
           docker logs transaction-exclusion-api --since 1h &>> docker_logs/transaction-exclusion-api.txt || true
           docker logs sequencer --since 1h &>> docker_logs/sequencer.txt || true
+          docker logs l1-el-node --since 1h &>> docker_logs/l1-el-node.txt || true
       - name: Archive debug logs
         uses: actions/upload-artifact@v4
         if: ${{ failure() && inputs.e2e-tests-logs-dump }}
