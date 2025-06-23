@@ -1,7 +1,7 @@
 import { ethers, Provider } from "ethers";
+import { readFileSync } from "fs";
 import Account from "./account";
 import { AccountManager } from "./account-manager";
-import { readJsonFile } from "../../../common/utils";
 
 interface GenesisJson {
   config: {
@@ -12,6 +12,11 @@ interface GenesisJson {
       privateKey?: string;
     };
   };
+}
+
+function readJsonFile(filePath: string): unknown {
+  const data = readFileSync(filePath, "utf8");
+  return JSON.parse(data);
 }
 
 function readGenesisFileAccounts(genesisJson: GenesisJson): Account[] {
