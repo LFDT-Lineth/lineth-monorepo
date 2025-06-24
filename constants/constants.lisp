@@ -74,6 +74,7 @@
   EVM_INST_CHAINID                          0x46
   EVM_INST_SELFBALANCE                      0x47
   EVM_INST_BASEFEE                          0x48
+  EVM_INST_BLOBHASH                         0x49          ;; appears in Canun EIP-4844
   EVM_INST_BLOBBASEFEE                      0x4A          ;; appears in Cancun
   ;; Stack, Memory, Storage and Flow Operations
   EVM_INST_POP                              0x50
@@ -230,6 +231,7 @@
   GAS_CONST_ECPAIRING_PAIR                  34000
   GAS_CONST_BLAKE2_PER_ROUND                1
   GAS_CONST_INIT_CODE_WORD                  2 ;; post Shanghai EIP-3860
+  GAS_CONST_HASH_OPCODE_GAS                 3 ;; gas cost of BLOBHASH, EIP-4844 in Cancun         
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;           ;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  EVM MISC ;;
@@ -262,6 +264,7 @@
   LINEA_GAS_LIMIT_MAXIMUM                   2000000000
   LINEA_BLOCK_GAS_LIMIT                     LINEA_GAS_LIMIT_MAXIMUM
   LINEA_BLOB_BASE_FEE                       MIN_BASE_FEE_PER_BLOB_GAS
+  LINEA_BLOB_PER_TRANSACTION_MAXIMUM        0
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;               ;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; SIZE / LENGTH ;;
