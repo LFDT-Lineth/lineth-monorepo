@@ -100,7 +100,7 @@
                  (account-same-code                              ROW_OFFSET_FOR_JUMP_NO_OOGX_ADDRESS_ROW)
                  (account-same-deployment-number-and-status      ROW_OFFSET_FOR_JUMP_NO_OOGX_ADDRESS_ROW)
                  (account-same-warmth                            ROW_OFFSET_FOR_JUMP_NO_OOGX_ADDRESS_ROW)
-                 (account-same-marked-for-selfdestruct           ROW_OFFSET_FOR_JUMP_NO_OOGX_ADDRESS_ROW)
+                 (account-same-marked-for-deletion               ROW_OFFSET_FOR_JUMP_NO_OOGX_ADDRESS_ROW)
                  (DOM-SUB-stamps---standard                      ROW_OFFSET_FOR_JUMP_NO_OOGX_ADDRESS_ROW
                                                                  0)))
 

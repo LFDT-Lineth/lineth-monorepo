@@ -27,7 +27,7 @@
                     (account-same-code                               CALL_3rd_callee_account_row___row_offset)
                     (account-undo-warmth-update                      CALL_3rd_callee_account_row___row_offset    CALL_1st_callee_account_row___row_offset)
                     (account-same-deployment-number-and-status       CALL_3rd_callee_account_row___row_offset)
-                    (account-same-marked-for-selfdestruct            CALL_3rd_callee_account_row___row_offset)
+                    (account-same-marked-for-deletion                CALL_3rd_callee_account_row___row_offset)
                     (vanishes!    (shift    account/ROMLEX_FLAG      CALL_3rd_callee_account_row___row_offset))
                     (vanishes!    (shift    account/TRM_FLAG         CALL_3rd_callee_account_row___row_offset))
                     (vanishes!    (shift    account/RLPADDR_FLAG     CALL_3rd_callee_account_row___row_offset))

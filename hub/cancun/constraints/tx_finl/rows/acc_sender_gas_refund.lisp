@@ -20,6 +20,6 @@
                    (account-same-code                             tx-finl---row-offset---ACC---sender-gas-refund)
                    (account-same-deployment-number-and-status     tx-finl---row-offset---ACC---sender-gas-refund)
                    (account-same-warmth                           tx-finl---row-offset---ACC---sender-gas-refund)
-                   (account-same-marked-for-selfdestruct          tx-finl---row-offset---ACC---sender-gas-refund)
+                   (account-same-marked-for-deletion              tx-finl---row-offset---ACC---sender-gas-refund)
                    (DOM-SUB-stamps---standard                     tx-finl---row-offset---ACC---sender-gas-refund
                                                                   0)))

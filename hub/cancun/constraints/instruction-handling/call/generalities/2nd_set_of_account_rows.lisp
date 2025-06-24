@@ -26,7 +26,7 @@
                     (account-same-code                               CALL_2nd_caller_account_row___row_offset)
                     (account-same-warmth                             CALL_2nd_caller_account_row___row_offset)
                     (account-same-deployment-number-and-status       CALL_2nd_caller_account_row___row_offset)
-                    (account-same-marked-for-selfdestruct            CALL_2nd_caller_account_row___row_offset)
+                    (account-same-marked-for-deletion                CALL_2nd_caller_account_row___row_offset)
                     (vanishes!    (shift    account/ROMLEX_FLAG      CALL_2nd_caller_account_row___row_offset))
                     (vanishes!    (shift    account/TRM_FLAG         CALL_2nd_caller_account_row___row_offset))
                     (vanishes!    (shift    account/RLPADDR_FLAG     CALL_2nd_caller_account_row___row_offset))
@@ -53,7 +53,7 @@
                     (account-same-code                               CALL_2nd_callee_account_row___row_offset)
                     ;; warmth operation done below
                     (account-same-deployment-number-and-status       CALL_2nd_callee_account_row___row_offset)
-                    (account-same-marked-for-selfdestruct            CALL_2nd_callee_account_row___row_offset)
+                    (account-same-marked-for-deletion                CALL_2nd_callee_account_row___row_offset)
                     (vanishes!    (shift    account/ROMLEX_FLAG      CALL_2nd_callee_account_row___row_offset))
                     (vanishes!    (shift    account/TRM_FLAG         CALL_2nd_callee_account_row___row_offset))
                     (vanishes!    (shift    account/RLPADDR_FLAG     CALL_2nd_callee_account_row___row_offset))

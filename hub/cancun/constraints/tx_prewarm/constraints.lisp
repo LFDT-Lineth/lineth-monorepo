@@ -40,7 +40,7 @@
                                 (account-same-code                                  0)
                                 (account-same-deployment-number-and-status          0)
                                 (account-turn-on-warmth                             0)
-                                (account-same-marked-for-selfdestruct               0)
+                                (account-same-marked-for-deletion                   0)
                                 (debug (account-trim-address                        0
                                                                                     account/ADDRESS_HI
                                                                                     account/ADDRESS_LO)))))

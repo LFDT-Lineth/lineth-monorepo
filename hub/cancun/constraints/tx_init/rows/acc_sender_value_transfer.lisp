@@ -19,7 +19,7 @@
                    (account-same-code                             tx-init---row-offset---ACC---sender-value-transfer)
                    (account-same-deployment-number-and-status     tx-init---row-offset---ACC---sender-value-transfer)
                    (account-same-warmth                           tx-init---row-offset---ACC---sender-value-transfer)
-                   (account-same-marked-for-selfdestruct          tx-init---row-offset---ACC---sender-value-transfer)
+                   (account-same-marked-for-deletion              tx-init---row-offset---ACC---sender-value-transfer)
                    (account-isnt-precompile                       tx-init---row-offset---ACC---sender-value-transfer)
                    (DOM-SUB-stamps---standard                     tx-init---row-offset---ACC---sender-value-transfer
                                                                   2)))

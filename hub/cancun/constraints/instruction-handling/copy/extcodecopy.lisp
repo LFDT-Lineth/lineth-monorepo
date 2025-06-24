@@ -36,7 +36,7 @@
                               (account-same-code                             ROFF_EXTCODECOPY_OOGX_ACCOUNT_ROW)
                               (account-same-deployment-number-and-status     ROFF_EXTCODECOPY_OOGX_ACCOUNT_ROW)
                               (account-same-warmth                           ROFF_EXTCODECOPY_OOGX_ACCOUNT_ROW)
-                              (account-same-marked-for-selfdestruct          ROFF_EXTCODECOPY_OOGX_ACCOUNT_ROW)
+                              (account-same-marked-for-deletion              ROFF_EXTCODECOPY_OOGX_ACCOUNT_ROW)
                               (DOM-SUB-stamps---standard                     ROFF_EXTCODECOPY_OOGX_ACCOUNT_ROW 0)
                               ;; context-row i + 3: redundant constraint ahead
                               (debug (execution-provides-empty-return-data   ROFF_EXTCODECOPY_OOGX_CONTEXT_ROW)))))
@@ -55,7 +55,7 @@
                                    (account-same-code                           ROFF_EXTCODECOPY_NO_XAHOY_REVERT_ACCOUNT_DOING_ROW)
                                    (account-same-deployment-number-and-status   ROFF_EXTCODECOPY_NO_XAHOY_REVERT_ACCOUNT_DOING_ROW)
                                    (account-turn-on-warmth                      ROFF_EXTCODECOPY_NO_XAHOY_REVERT_ACCOUNT_DOING_ROW)
-                                   (account-same-marked-for-selfdestruct        ROFF_EXTCODECOPY_NO_XAHOY_REVERT_ACCOUNT_DOING_ROW)
+                                   (account-same-marked-for-deletion            ROFF_EXTCODECOPY_NO_XAHOY_REVERT_ACCOUNT_DOING_ROW)
                                    (DOM-SUB-stamps---standard                   ROFF_EXTCODECOPY_NO_XAHOY_REVERT_ACCOUNT_DOING_ROW 0))))
 
 (defconstraint copy-instruction---unexceptional-reverted-EXTCODECOPY---undoing-account-row (:guard (copy-instruction---standard-EXTCODECOPY))
@@ -67,7 +67,7 @@
                                    (account-undo-code-update                      ROFF_EXTCODECOPY_NO_XAHOY_REVERT_ACCOUNT_UNDOING_ROW   ROFF_EXTCODECOPY_NO_XAHOY_REVERT_ACCOUNT_DOING_ROW)
                                    (account-undo-deployment-status-update         ROFF_EXTCODECOPY_NO_XAHOY_REVERT_ACCOUNT_UNDOING_ROW   ROFF_EXTCODECOPY_NO_XAHOY_REVERT_ACCOUNT_DOING_ROW)
                                    (account-undo-warmth-update                    ROFF_EXTCODECOPY_NO_XAHOY_REVERT_ACCOUNT_UNDOING_ROW   ROFF_EXTCODECOPY_NO_XAHOY_REVERT_ACCOUNT_DOING_ROW)
-                                   (account-same-marked-for-selfdestruct          ROFF_EXTCODECOPY_NO_XAHOY_REVERT_ACCOUNT_UNDOING_ROW)
+                                   (account-same-marked-for-deletion              ROFF_EXTCODECOPY_NO_XAHOY_REVERT_ACCOUNT_UNDOING_ROW)
                                    (DOM-SUB-stamps---revert-with-current          ROFF_EXTCODECOPY_NO_XAHOY_REVERT_ACCOUNT_UNDOING_ROW 1))))
 
 (defconstraint copy-instruction---unexceptional-unreverted-EXTCODECOPY-account-row (:guard (copy-instruction---standard-EXTCODECOPY))
@@ -79,6 +79,6 @@
                                    (account-same-code                           ROFF_EXTCODECOPY_NO_XAHOY_NO_REVERT_ACCOUNT_ROW)
                                    (account-same-deployment-number-and-status   ROFF_EXTCODECOPY_NO_XAHOY_NO_REVERT_ACCOUNT_ROW)
                                    (account-turn-on-warmth                      ROFF_EXTCODECOPY_NO_XAHOY_NO_REVERT_ACCOUNT_ROW)
-                                   (account-same-marked-for-selfdestruct        ROFF_EXTCODECOPY_NO_XAHOY_NO_REVERT_ACCOUNT_ROW)
+                                   (account-same-marked-for-deletion            ROFF_EXTCODECOPY_NO_XAHOY_NO_REVERT_ACCOUNT_ROW)
                                    (DOM-SUB-stamps---standard                   ROFF_EXTCODECOPY_NO_XAHOY_NO_REVERT_ACCOUNT_ROW 0))))
 

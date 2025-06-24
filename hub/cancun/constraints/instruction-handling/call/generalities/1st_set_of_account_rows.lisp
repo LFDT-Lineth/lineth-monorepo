@@ -29,7 +29,7 @@
                     (account-same-code                               CALL_1st_caller_account_row___row_offset)
                     (account-same-warmth                             CALL_1st_caller_account_row___row_offset)
                     (account-same-deployment-number-and-status       CALL_1st_caller_account_row___row_offset)
-                    (account-same-marked-for-selfdestruct            CALL_1st_caller_account_row___row_offset)
+                    (account-same-marked-for-deletion                CALL_1st_caller_account_row___row_offset)
                     (vanishes!    (shift    account/ROMLEX_FLAG      CALL_1st_caller_account_row___row_offset))
                     (vanishes!    (shift    account/TRM_FLAG         CALL_1st_caller_account_row___row_offset))
                     (vanishes!    (shift    account/RLPADDR_FLAG     CALL_1st_caller_account_row___row_offset))
@@ -57,7 +57,7 @@
                     (account-same-code                               CALL_1st_callee_account_row___row_offset)
                     ;; warmth done below
                     (account-same-deployment-number-and-status       CALL_1st_callee_account_row___row_offset)
-                    (account-same-marked-for-selfdestruct            CALL_1st_callee_account_row___row_offset)
+                    (account-same-marked-for-deletion                CALL_1st_callee_account_row___row_offset)
                     (eq!          (shift    account/ROMLEX_FLAG      CALL_1st_callee_account_row___row_offset)    (scenario-shorthand---CALL---smart-contract))
                     (account-trim-address                            CALL_1st_callee_account_row___row_offset          ;; row offset
                                                                      (call-instruction---STACK-raw-callee-address-hi)  ;; high part of raw, potentially untrimmed address

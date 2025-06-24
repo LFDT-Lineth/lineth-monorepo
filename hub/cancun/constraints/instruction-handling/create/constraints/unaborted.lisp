@@ -28,7 +28,7 @@
                     ;; warmth            operation done below
                     ;; deployment number operation done below
                     ;; deployment status operation done below
-                    (account-same-marked-for-selfdestruct            CREATE_first_createe_account_row___row_offset)
+                    (account-same-marked-for-deletion                CREATE_first_createe_account_row___row_offset)
                     (eq!          (shift    account/ROMLEX_FLAG      CREATE_first_createe_account_row___row_offset)    (create-instruction---trigger_ROMLEX))
                     (account-trim-address                            CREATE_first_createe_account_row___row_offset     ;; row offset
                                                                      (create-instruction---createe-address-hi)         ;; high part of raw, potentially untrimmed address

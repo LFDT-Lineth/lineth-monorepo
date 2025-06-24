@@ -20,14 +20,15 @@
    (CODE_HASH_LO_NEW            :i128)
    (HAS_CODE                    :binary) ;; rmk1: explicitly set on every account row, de facto binary
    (HAS_CODE_NEW                :binary) ;; rmk1
+   (HAD_CODE_INITIALLY          :binary)
    (CODE_FRAGMENT_INDEX         :i32 :display :dec)
    (ROMLEX_FLAG                 :binary@prove)
    (EXISTS                      :binary) ;; rmk1
    (EXISTS_NEW                  :binary) ;; rmk1
    (WARMTH                      :binary@prove) ;; rmk2: should be binary even without the explicit constraint; we keep it as a safety;
    (WARMTH_NEW                  :binary@prove) ;; rmk2
-   (MARKED_FOR_SELFDESTRUCT     :binary@prove) ;; rmk2
-   (MARKED_FOR_SELFDESTRUCT_NEW :binary@prove) ;; rmk2
+   (MARKED_FOR_DELETION         :binary@prove) ;; rmk2
+   (MARKED_FOR_DELETION_NEW     :binary@prove) ;; rmk2
    (DEPLOYMENT_NUMBER           :i32 :display :dec)
    (DEPLOYMENT_NUMBER_NEW       :i32 :display :dec)
    (DEPLOYMENT_STATUS           :binary@prove) ;; rmk2

@@ -24,7 +24,7 @@
                     (account-same-code                               CALL_2nd_callee_account_row___abort_will_revert___row_offset)
                     (account-undo-warmth-update                      CALL_2nd_callee_account_row___abort_will_revert___row_offset    CALL_1st_callee_account_row___row_offset)
                     (account-same-deployment-number-and-status       CALL_2nd_callee_account_row___abort_will_revert___row_offset)
-                    (account-same-marked-for-selfdestruct            CALL_2nd_callee_account_row___abort_will_revert___row_offset)
+                    (account-same-marked-for-deletion                CALL_2nd_callee_account_row___abort_will_revert___row_offset)
                     (vanishes!    (shift    account/ROMLEX_FLAG      CALL_2nd_callee_account_row___abort_will_revert___row_offset))
                     (vanishes!    (shift    account/TRM_FLAG         CALL_2nd_callee_account_row___abort_will_revert___row_offset))
                     (vanishes!    (shift    account/RLPADDR_FLAG     CALL_2nd_callee_account_row___abort_will_revert___row_offset))

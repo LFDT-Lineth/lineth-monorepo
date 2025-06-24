@@ -51,7 +51,7 @@
                    (account-same-code                            tx-skip---row-offset---sender-account)
                    (account-same-deployment-number-and-status    tx-skip---row-offset---sender-account)
                    (account-same-warmth                          tx-skip---row-offset---sender-account)
-                   (account-same-marked-for-selfdestruct         tx-skip---row-offset---sender-account)
+                   (account-same-marked-for-deletion             tx-skip---row-offset---sender-account)
                    (account-isnt-precompile                      tx-skip---row-offset---sender-account)
                    (DOM-SUB-stamps---standard                    tx-skip---row-offset---sender-account    0)))
 
@@ -72,7 +72,7 @@
                         ;; (account-same-code                             tx-skip---row-offset---recipient-account)
                         ;; (account-same-deployment-number-and-status     tx-skip---row-offset---recipient-account)
                         (account-same-warmth                        tx-skip---row-offset---recipient-account)
-                        (account-same-marked-for-selfdestruct       tx-skip---row-offset---recipient-account)
+                        (account-same-marked-for-deletion           tx-skip---row-offset---recipient-account)
                         (account-isnt-precompile                    tx-skip---row-offset---recipient-account)
                         (DOM-SUB-stamps---standard                  tx-skip---row-offset---recipient-account 1)))
 
@@ -136,7 +136,7 @@
                    (account-same-code                            tx-skip---row-offset---coinbase-account)
                    (account-same-deployment-number-and-status    tx-skip---row-offset---coinbase-account)
                    (account-same-warmth                          tx-skip---row-offset---coinbase-account)
-                   (account-same-marked-for-selfdestruct         tx-skip---row-offset---coinbase-account)
+                   (account-same-marked-for-deletion             tx-skip---row-offset---coinbase-account)
                    (DOM-SUB-stamps---standard                    tx-skip---row-offset---coinbase-account    2)))
 
 (defconstraint   tx-skip---transaction-row-partially-justifying-requires-evm-execution (:guard (tx-skip---precondition))

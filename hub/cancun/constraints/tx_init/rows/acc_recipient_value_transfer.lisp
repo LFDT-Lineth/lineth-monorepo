@@ -23,7 +23,7 @@
                    ;; (account-same-code                          tx-init---row-offset---ACC---recipient-value-reception)
                    ;; (account-same-deployment-number-and-status  tx-init---row-offset---ACC---recipient-value-reception)
                    (account-turn-on-warmth                        tx-init---row-offset---ACC---recipient-value-reception)
-                   (account-same-marked-for-selfdestruct          tx-init---row-offset---ACC---recipient-value-reception)
+                   (account-same-marked-for-deletion              tx-init---row-offset---ACC---recipient-value-reception)
                    (account-retrieve-code-fragment-index          tx-init---row-offset---ACC---recipient-value-reception)
                    (account-isnt-precompile                       tx-init---row-offset---ACC---recipient-value-reception)
                    (DOM-SUB-stamps---standard                     tx-init---row-offset---ACC---recipient-value-reception

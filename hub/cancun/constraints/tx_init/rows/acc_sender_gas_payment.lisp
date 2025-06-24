@@ -23,7 +23,7 @@
                    (account-same-code                             tx-init---row-offset---ACC---sender-pay-for-gas)
                    (account-same-deployment-number-and-status     tx-init---row-offset---ACC---sender-pay-for-gas)
                    (account-turn-on-warmth                        tx-init---row-offset---ACC---sender-pay-for-gas)
-                   (account-same-marked-for-selfdestruct          tx-init---row-offset---ACC---sender-pay-for-gas)
+                   (account-same-marked-for-deletion              tx-init---row-offset---ACC---sender-pay-for-gas)
                    (account-isnt-precompile                       tx-init---row-offset---ACC---sender-pay-for-gas)
                    (DOM-SUB-stamps---standard                     tx-init---row-offset---ACC---sender-pay-for-gas
                                                                   1)))

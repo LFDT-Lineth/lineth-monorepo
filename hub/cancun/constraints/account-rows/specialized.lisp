@@ -99,8 +99,8 @@
 ;;                                                       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defun (account-same-marked-for-selfdestruct  kappa) (shift (eq! account/MARKED_FOR_SELFDESTRUCT_NEW account/MARKED_FOR_SELFDESTRUCT) kappa))
-(defun (account-mark-account-for-selfdestruct kappa) (shift (eq! account/MARKED_FOR_SELFDESTRUCT_NEW 1                              ) kappa))
+(defun (account-same-marked-for-deletion  kappa) (shift (eq! account/MARKED_FOR_DELETION_NEW account/MARKED_FOR_DELETION) kappa))
+(defun (account-mark-account-for-deletion kappa) (shift (eq! account/MARKED_FOR_DELETION_NEW 1                              ) kappa))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                                          ;;

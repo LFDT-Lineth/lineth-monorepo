@@ -37,7 +37,7 @@
                                   (account-same-code                         ROFF_CODECOPY_NO_XAHOY_ACCOUNT_ROW)
                                   (account-same-deployment-number-and-status ROFF_CODECOPY_NO_XAHOY_ACCOUNT_ROW)
                                   (account-same-warmth                       ROFF_CODECOPY_NO_XAHOY_ACCOUNT_ROW)
-                                  (account-same-marked-for-selfdestruct      ROFF_CODECOPY_NO_XAHOY_ACCOUNT_ROW)
+                                  (account-same-marked-for-deletion          ROFF_CODECOPY_NO_XAHOY_ACCOUNT_ROW)
                                   (DOM-SUB-stamps---standard                 ROFF_CODECOPY_NO_XAHOY_ACCOUNT_ROW 0))))
 
 (defconstraint    copy-instruction---CODECOPY---consistency-constraints---debug

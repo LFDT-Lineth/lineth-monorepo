@@ -116,7 +116,8 @@
                   (begin
                     (eq!        acp_WARMTH    acp_IS_PRECOMPILE)
                     (vanishes!  acp_DEPLOYMENT_STATUS)
-                    (vanishes!  acp_MARKED_FOR_SELFDESTRUCT)))
+                    (vanishes!  acp_MARKED_FOR_DELETION)
+                    (eq! acp_HAD_CODE_INITIALLY acp_HAS_CODE)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                                ;;
@@ -185,10 +186,10 @@
                   (:guard   acp_AGAIN_IN_TXN)
                   ;;;;;;;;;;;;;;;;;;;;;;;;;;;
                   (begin
-                    (eq!   acp_WARMTH                     (prev    acp_WARMTH_NEW))
-                    (eq!   acp_MARKED_FOR_SELFDESTRUCT    (prev    acp_MARKED_FOR_SELFDESTRUCT_NEW))
-                    (if-not-zero    acp_MARKED_FOR_SELFDESTRUCT
-                                    (eq!    acp_MARKED_FOR_SELFDESTRUCT_NEW    1))))
+                    (eq! acp_HAD_CODE_INITIALLY              (prev acp_HAD_CODE_INITIALLY))
+                    (eq!   acp_WARMTH                        (prev    acp_WARMTH_NEW))
+                    (eq!   acp_MARKED_FOR_DELETION           (prev    acp_MARKED_FOR_DELETION_NEW))
+                    (if-not-zero    acp_MARKED_FOR_DELETION  (eq!    acp_MARKED_FOR_DELETION_NEW    1))))
 
 (defconstraint    account-consistency---linking---for-CFI
                   (:guard    acp_AGAIN_IN_CNF)
@@ -258,3 +259,12 @@
                                                    (eq!         acp_NONCE_NEW    1)
                                                    (eq!         acp_CODE_HASH_HI_NEW    EMPTY_KECCAK_HI)
                                                    (eq!         acp_CODE_HASH_LO_NEW    EMPTY_KECCAK_LO)))))
+
+(defconstraint account-consistency---other---vanishing-deletion-for-account-already-having-code
+                (:guard    acp_PEEK_AT_ACCOUNT)               
+                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                  (if-not-zero acp_HAD_CODE_INITIALLY
+                  (begin 
+                  (vanishes! acp_MARKED_FOR_DELETION)
+                  (vanishes! acp_MARKED_FOR_DELETION_NEW)))
+)                                                   

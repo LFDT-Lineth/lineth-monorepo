@@ -156,7 +156,7 @@
                                   (account-same-code                            ROFF_ACC___ACCOUNT_DOING_ROW)
                                   (account-same-deployment-number-and-status    ROFF_ACC___ACCOUNT_DOING_ROW)
                                   ;; (account-turn-on-warmth                       ROFF_ACC___ACCOUNT_DOING_ROW)
-                                  (account-same-marked-for-selfdestruct         ROFF_ACC___ACCOUNT_DOING_ROW)
+                                  (account-same-marked-for-deletion             ROFF_ACC___ACCOUNT_DOING_ROW)
                                   (DOM-SUB-stamps---standard                    ROFF_ACC___ACCOUNT_DOING_ROW    0)))))
 
 (defconstraint   account-instruction---foreign-address-opcode---doing-account-row---warmth-update
@@ -183,7 +183,7 @@
                                                (account-undo-code-update                 ROFF_ACC___ACCOUNT_UNDOING_ROW    ROFF_ACC___ACCOUNT_DOING_ROW)
                                                (account-undo-deployment-status-update    ROFF_ACC___ACCOUNT_UNDOING_ROW    ROFF_ACC___ACCOUNT_DOING_ROW)
                                                (account-undo-warmth-update               ROFF_ACC___ACCOUNT_UNDOING_ROW    ROFF_ACC___ACCOUNT_DOING_ROW)
-                                               (account-same-marked-for-selfdestruct     ROFF_ACC___ACCOUNT_UNDOING_ROW)
+                                               (account-same-marked-for-deletion         ROFF_ACC___ACCOUNT_UNDOING_ROW)
                                                (DOM-SUB-stamps---revert-with-current     ROFF_ACC___ACCOUNT_UNDOING_ROW    1))))))
 
 (defconstraint   account-instruction---current-address-opcode---unexceptional-case---setting-context-row
@@ -206,7 +206,7 @@
                                            (account-same-code                            ROFF_ACC___ACCOUNT_READING_ROW)
                                            (account-same-deployment-number-and-status    ROFF_ACC___ACCOUNT_READING_ROW)
                                            (account-turn-on-warmth                       ROFF_ACC___ACCOUNT_READING_ROW)
-                                           (account-same-marked-for-selfdestruct         ROFF_ACC___ACCOUNT_READING_ROW)
+                                           (account-same-marked-for-deletion             ROFF_ACC___ACCOUNT_READING_ROW)
                                            (DOM-SUB-stamps---standard                    ROFF_ACC___ACCOUNT_READING_ROW    0)
                                            (if-not-zero (account-instruction---is-CODESIZE)
                                                     (begin

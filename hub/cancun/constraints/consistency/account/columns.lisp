@@ -33,14 +33,16 @@
       acp_CODE_SIZE_NEW
       acp_EXISTS
       acp_EXISTS_NEW
+      acp_HAS_CODE
+      acp_HAD_CODE_INITIALLY
       acp_WARMTH
       acp_WARMTH_NEW
       acp_DEPLOYMENT_NUMBER
       acp_DEPLOYMENT_NUMBER_NEW
       acp_DEPLOYMENT_STATUS
       acp_DEPLOYMENT_STATUS_NEW
-      acp_MARKED_FOR_SELFDESTRUCT
-      acp_MARKED_FOR_SELFDESTRUCT_NEW
+      acp_MARKED_FOR_DELETION
+      acp_MARKED_FOR_DELETION_NEW
       acp_TRM_FLAG
       acp_IS_PRECOMPILE
     )
@@ -68,14 +70,16 @@
       account/CODE_SIZE_NEW
       account/EXISTS
       account/EXISTS_NEW
+      account/HAS_CODE
+      account/HAD_CODE_INITIALLY
       account/WARMTH
       account/WARMTH_NEW
       account/DEPLOYMENT_NUMBER
       account/DEPLOYMENT_NUMBER_NEW
       account/DEPLOYMENT_STATUS
       account/DEPLOYMENT_STATUS_NEW
-      account/MARKED_FOR_SELFDESTRUCT
-      account/MARKED_FOR_SELFDESTRUCT_NEW
+      account/MARKED_FOR_DELETION
+      account/MARKED_FOR_DELETION_NEW
       account/TRM_FLAG
       account/IS_PRECOMPILE
     )
