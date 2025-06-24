@@ -82,9 +82,12 @@ func (c *EcRecoverInstance) splitInputs(api frontend.API) (PK *sw_emulated.Affin
 		Y: *PY,
 	}
 
+	// v is 27 or 28 in EVM, but arithmetization gives on two limbs. Ensure that the high limb is zero and use only the low limb.
 	api.AssertIsEqual(c.VHi, 0)
 	v = c.VLo
 
+	// similarly, we split r and s into limbs compatible with gnark. But we work
+	// over a different field (scalar field vs base field for PK).
 	rLimbs := make([]frontend.Variable, 4)
 	rLimbs[2], rLimbs[3] = bitslice.Partition(api, c.RHi, 64, bitslice.WithNbDigits(128))
 	rLimbs[0], rLimbs[1] = bitslice.Partition(api, c.RLo, 64, bitslice.WithNbDigits(128))
@@ -95,8 +98,13 @@ func (c *EcRecoverInstance) splitInputs(api frontend.API) (PK *sw_emulated.Affin
 	sLimbs[0], sLimbs[1] = bitslice.Partition(api, c.SLo, 64, bitslice.WithNbDigits(128))
 	s = fr.NewElement(sLimbs)
 
+	// SUCCESS_BIT indicates if the input is a valid signature (1 for valid, 0
+	// for invalid). Recall that we also allow to verify invalid signatures (for
+	// the ECRECOVER precompile call).
 	isFailure = api.Sub(1, c.SUCCESS_BIT)
-	strictRange = c.ECRECOVERBIT
+	// ECRECOVERBIT indicates if the input comes from the ECRECOVER precompile
+	// or not (1 for ECRECOVER, 0 for TX).
+	strictRange = api.Sub(1, c.ECRECOVERBIT)
 
 	return
 }
@@ -148,7 +156,7 @@ func inputFiller(circuitInstance, inputIndex int) field.Element {
 	case 12: // success bit
 		ret.SetUint64(1)
 	case 13: // ecrecover bit
-		ret.SetUint64(0)
+		ret.SetUint64(1)
 	}
 	return ret
 }

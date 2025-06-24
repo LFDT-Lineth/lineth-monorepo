@@ -34,9 +34,9 @@ func TestAntichamber(t *testing.T) {
 	var ecSrc *ecDataSource
 	var txSrc *txnData
 	limits := &Settings{
-		MaxNbEcRecover:     3,
+		MaxNbEcRecover:     4,
 		MaxNbTx:            2,
-		NbInputInstance:    5,
+		NbInputInstance:    6,
 		NbCircuitInstances: 1,
 	}
 	var rlpTxn generic.GenDataModule
@@ -147,7 +147,8 @@ func dummyTxSignatureGetter(i int, txHash []byte) (r, s, v *big.Int, err error) 
 func generateDeterministicSignature(txHash []byte) (pk *ecdsa.PublicKey, r, s, v *big.Int, err error) {
 	reader := sha3.NewShake128()
 	reader.Write(txHash)
-	for i := 0; i < 10; i++ {
+	// heuristic number of loops. We use deterministic generation and know the bounds
+	for i := 0; i < 20; i++ {
 		r, err := rand.Int(reader, fr_secp256k1.Modulus())
 		if err != nil {
 			return nil, nil, nil, nil, err
@@ -155,6 +156,12 @@ func generateDeterministicSignature(txHash []byte) (pk *ecdsa.PublicKey, r, s, v
 		s, err := rand.Int(reader, fr_secp256k1.Modulus())
 		if err != nil {
 			return nil, nil, nil, nil, err
+		}
+		halfFr := new(big.Int).Sub(fr_secp256k1.Modulus(), big.NewInt(1))
+		halfFr.Div(halfFr, big.NewInt(2))
+		if s.Cmp(halfFr) > 0 {
+			// try again if s is too big.
+			continue
 		}
 		var v uint = 0
 		pk = new(ecdsa.PublicKey)

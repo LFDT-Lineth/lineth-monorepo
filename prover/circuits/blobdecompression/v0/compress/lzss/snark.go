@@ -126,7 +126,7 @@ func Decompress(api frontend.API, c []frontend.Variable, cLength frontend.Variab
 	return dLength, nil
 }
 
-func initAddrTable(api frontend.API, bytes, c []frontend.Variable, wordNbBits int, backrefs []lzss.BackrefType) logderivlookup.Table {
+func initAddrTable(api frontend.API, bytes, c []frontend.Variable, wordNbBits int, backrefs []lzss.BackrefType) *logderivlookup.Table {
 	for i := range backrefs {
 		if backrefs[i].NbBitsLength != backrefs[0].NbBitsLength {
 			panic("all backref types must have the same length size")

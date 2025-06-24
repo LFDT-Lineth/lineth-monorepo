@@ -1,0 +1,116 @@
+package ringsis_{{.ModulusDegree}}_{{.LogTwoBound}}_test
+
+import (
+	"fmt"
+	"math/rand/v2"
+	"testing"
+
+	"github.com/consensys/gnark-crypto/ecc/bls12-377/fr/fft"
+	"github.com/consensys/linea-monorepo/prover/crypto/ringsis"
+	"github.com/consensys/linea-monorepo/prover/crypto/ringsis/ringsis_{{.ModulusDegree}}_{{.LogTwoBound}}"
+	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
+	"github.com/consensys/linea-monorepo/prover/maths/common/vector"
+	wfft "github.com/consensys/linea-monorepo/prover/maths/fft"
+	"github.com/consensys/linea-monorepo/prover/maths/field"
+	"github.com/stretchr/testify/require"
+)
+
+{{- $bitPerField := 256}}
+{{- $limbPerField := div $bitPerField .LogTwoBound}}
+{{- $fieldPerPoly := div .ModulusDegree $limbPerField}}
+
+// randomConstRow generates a random constant smart-vector
+func randomConstRow(rng *rand.Rand, size int) smartvectors.SmartVector {
+	return smartvectors.NewConstant(field.PseudoRand(rng), size)
+}
+
+// randomRegularRow generates a random regular smart-vector
+func randomRegularRow(rng *rand.Rand, size int) smartvectors.SmartVector {
+	return smartvectors.PseudoRand(rng, size)
+}
+
+// generate a smartvector row-matrix by using randomly constant or regular smart-vectors
+func fullyRandomTestVector(rng *rand.Rand, numRow, numCols int) []smartvectors.SmartVector {
+	list := make([]smartvectors.SmartVector, numRow)
+	for i := range list {
+		coin := rng.IntN(2)
+		switch {
+		case coin == 0:
+			list[i] = randomConstRow(rng, numCols)
+		case coin == 1:
+			list[i] = randomRegularRow(rng, numCols)
+		}
+	}
+	return list
+}
+
+func constantRandomTestVector(rng *rand.Rand, numRow, numCols int) []smartvectors.SmartVector {
+	list := make([]smartvectors.SmartVector, numRow)
+	for i := range list {
+		list[i] = randomConstRow(rng, numCols)
+	}
+	return list
+}
+
+func regularRandomTestVector(rng *rand.Rand, numRow, numCols int) []smartvectors.SmartVector {
+	list := make([]smartvectors.SmartVector, numRow)
+	for i := range list {
+		list[i] = randomConstRow(rng, numCols)
+	}
+	return list
+}
+
+func TestSmartVectorTransversalSisHash(t *testing.T) {
+
+	var (
+		numReps   = 64
+		numCols   = 16
+		rng       = rand.New(rand.NewChaCha8([32]byte{}))
+		domain    = fft.NewDomain({{.ModulusDegree}}, fft.WithShift(wfft.GetOmega({{.ModulusDegree}}*2)))
+		twiddles  = ringsis_{{.ModulusDegree}}_{{.LogTwoBound}}.PrecomputeTwiddlesCoset(domain.Generator, domain.FrMultiplicativeGen)
+		params    = ringsis.Params{LogTwoBound: {{.LogTwoBound}}, LogTwoDegree: {{log2 .ModulusDegree}}}
+		testCases = [][]smartvectors.SmartVector{
+			constantRandomTestVector(rng, {{$fieldPerPoly}}, numCols),
+			regularRandomTestVector(rng, {{$fieldPerPoly}}, numCols),
+		}
+	)
+
+	for i := 0; i < numReps; i++ {
+		testCases = append(testCases, fullyRandomTestVector(rng, {{$fieldPerPoly}}, numCols))
+	}
+
+	for i := 0; i < numReps; i++ {
+		testCases = append(testCases, fullyRandomTestVector(rng, {{mul 4 $fieldPerPoly}}, 2*numCols))
+	}
+
+	for i, c := range testCases {
+		t.Run(fmt.Sprintf("testcase-%v", i), func(t *testing.T) {
+
+			var (
+				numRow = len(c)
+				key    = ringsis.GenerateKey(params, numRow)
+				result = ringsis_{{.ModulusDegree}}_{{.LogTwoBound}}.TransversalHash(
+					key.Ag(),
+					c,
+					twiddles,
+					domain,
+				)
+			)
+
+			for col := 0; col < numCols; col++ {
+				column := make([]field.Element, numRow)
+				for r := 0; r < numRow; r++ {
+					column[r] = c[r].Get(col)
+				}
+
+				colHash := key.Hash(column)
+				require.Equalf(
+					t,
+					vector.Prettify(colHash),
+					vector.Prettify(result[{{.ModulusDegree}}*col:{{.ModulusDegree}}*col+{{.ModulusDegree}}]),
+					"column %v", col,
+				)
+			}
+		})
+	}
+}
