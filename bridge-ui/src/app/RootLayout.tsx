@@ -9,9 +9,6 @@ import atypTextFont from "@/assets/fonts/atypText";
 import "./globals.css";
 import "../scss/app.scss";
 import FirstVisitModal from "@/components/modal/first-time-visit";
-import { headers } from "next/headers";
-// To make Cloudflare read CSP nonce - https://stackoverflow.com/questions/78570765/how-to-debug-content-security-policy-csp-and-nonces-in-nextjs
-export const dynamic = "force-dynamic";
 
 const metadata: Metadata = {
   title: "Linea Bridge",
@@ -20,9 +17,6 @@ const metadata: Metadata = {
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const headersList = await headers();
-  const nonce = headersList.get("x-nonce") || "";
-
   return (
     <html lang="en" data-theme="v2" className={clsx(atypFont.variable, atypTextFont.variable)}>
       <title>{metadata.title?.toString()}</title>
@@ -49,7 +43,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <FirstVisitModal />
       </body>
 
-      <Script id="gtm" dangerouslySetInnerHTML={{ __html: gtmScript }} strategy="lazyOnload" nonce={nonce} />
+      <Script id="gtm" dangerouslySetInnerHTML={{ __html: gtmScript }} strategy="lazyOnload" />
     </html>
   );
 }
