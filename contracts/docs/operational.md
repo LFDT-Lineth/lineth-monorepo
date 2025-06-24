@@ -198,7 +198,7 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 | VERIFIER_PROOF_TYPE | true | uint256 | Verifier Proof type ("0" - Full Verifier, "1" - Full-Large Verifier, "2" - Light Verifier). If ommited in the .env, it must be provided as CLI argument using the `--verifier-proof-type` flag| |
 | LINEA_ROLLUP_ADDRESS | true | address | Proxy contract address. If ommited in the .env, it must be provided as CLI argument using the `--proxy-address` flag|
 | VERIFIER_ADDRESS | true | address | Verifier Address. If ommited in the .env, it must be provided as CLI argument using the `--verifier-address` flag|
-| PLONKVERIFIER_NAME | true | address | Verifier Name. If ommited in the .env, it must be provided as CLI argument using the `--plonk-verifier-name` flag|
+| VERIFIER_CONTRACT_NAME | true | address | Verifier Name. If ommited in the .env, it must be provided as CLI argument using the `--verifier-contract-name` flag|
 
 <br />
 
@@ -217,7 +217,7 @@ npx hardhat setVerifierAddress \
 --verifier-proof-type <uint256> \
 --proxy-address <address> \
 --verifier-address <address> \
---plonk-verifier-name <string> \
+--verifier-contract-name <string> \
 --network sepolia
 ```
 

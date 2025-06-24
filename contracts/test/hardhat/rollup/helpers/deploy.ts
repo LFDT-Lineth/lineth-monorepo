@@ -43,13 +43,6 @@ export async function deployPlonkVerifierDev(): Promise<string> {
   return await verifier.getAddress();
 }
 
-export async function deployPlonkVerifierForMultiTypeDataAggregation(): Promise<string> {
-  const plonkVerifier = await ethers.getContractFactory("PlonkVerifierForMultiTypeDataAggregation");
-  const verifier = await plonkVerifier.deploy();
-  await verifier.waitForDeployment();
-  return await verifier.getAddress();
-}
-
 export async function deployCallForwardingProxy(target: string): Promise<CallForwardingProxy> {
   const callForwardingProxyFactory = await ethers.getContractFactory("CallForwardingProxy");
   const callForwardingProxy = await callForwardingProxyFactory.deploy(target);

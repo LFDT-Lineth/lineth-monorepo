@@ -13,8 +13,8 @@ import {
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments } = hre;
 
-  const contractName = getRequiredEnvVar("PLONKVERIFIER_NAME");
-  const verifierIndex = getRequiredEnvVar("PLONKVERIFIER_INDEX");
+  const contractName = getRequiredEnvVar("VERIFIER_CONTRACT_NAME");
+  const verifierIndex = getRequiredEnvVar("VERIFIER_PROOF_TYPE");
 
   const existingContractAddress = await getDeployedContractAddress(contractName, deployments);
 

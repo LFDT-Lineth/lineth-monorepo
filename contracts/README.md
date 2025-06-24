@@ -127,7 +127,7 @@ The L2MessageService deploy uses nonce 2 as the following are deployed beforehan
 # Some end to end tests will test future upgrades to validate the stack remains functional.
 
 # Note: By default a test/placeholder verifier contract is used `IntegrationTestTrueVerifier` if you wish to use a proper verifier, adjust the
-# PLONKVERIFIER_NAME=IntegrationTestTrueVerifier in the make command to be something like PLONKVERIFIER_NAME=PlonkVerifierForDataAggregation .
+# VERIFIER_CONTRACT_NAME=IntegrationTestTrueVerifier in the make command to be something like VERIFIER_CONTRACT_NAME=PlonkVerifierForDataAggregation .
 
 # Be sure to check the parameter values in the Makefile before executing the command.
 

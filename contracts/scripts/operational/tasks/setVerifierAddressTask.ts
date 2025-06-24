@@ -32,9 +32,9 @@ task("setVerifierAddress", "Sets the verifier address on a Message Service contr
     const { deployer } = await getNamedAccounts();
     const { get } = deployments;
 
-    const proofType = getTaskCliOrEnvValue(taskArgs, "verifierProofType", "VERIFIER_PROOF_TYPE"); // todo rename this once checking it doesn't break anything else
+    const proofType = getTaskCliOrEnvValue(taskArgs, "verifierProofType", "VERIFIER_PROOF_TYPE");
     let LineaRollupAddress = getTaskCliOrEnvValue(taskArgs, "proxyAddress", "LINEA_ROLLUP_ADDRESS");
-    const verifierName = getTaskCliOrEnvValue(taskArgs, "plonkVerifierName", "PLONKVERIFIER_NAME");
+    const verifierName = getTaskCliOrEnvValue(taskArgs, "verifierContractName", "VERIFIER_CONTRACT_NAME");
 
     if (LineaRollupAddress === undefined) {
       LineaRollupAddress = (await get("LineaRollup")).address;
@@ -43,7 +43,7 @@ task("setVerifierAddress", "Sets the verifier address on a Message Service contr
     let verifierAddress = getTaskCliOrEnvValue(taskArgs, "verifierAddress", "VERIFIER_ADDRESS");
     if (verifierAddress === undefined) {
       if (verifierName === undefined) {
-        throw "Please specify a verifier name e.g. --plonk-verifier-name PlonkVerifierForDataAggregation";
+        throw "Please specify a verifier name e.g. --verifier-contract-name PlonkVerifierDev";
       }
       verifierAddress = (await get(verifierName)).address;
     }

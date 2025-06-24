@@ -67,7 +67,8 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 | \**PRIVATE_KEY* | true     | key | Network-specific private key used when deploying the contract |
 | \**BLOCK_EXPLORER_API_KEY*  | false     | key | Network-specific Block Explorer API Key used for verifying deployed contracts. |
 | INFURA_API_KEY     | true     | key | Infura API Key. This is required only when deploying contracts to a live network, not required when deploying on a local dev network. |
-| PLONKVERIFIER_NAME | true  | string | The name of the PlonkVerifier contract that should be deployed |
+| VERIFIER_CONTRACT_NAME | true  | string | The name of the PlonkVerifier contract that should be deployed |
+| VERIFIER_PROOF_TYPE | true  | string | The proof type that the verifier should be mapped to |
 
 <br />
 
@@ -79,7 +80,7 @@ npx hardhat deploy --network sepolia --tags PlonkVerifier
 Base command with cli arguments:
 
 ```shell
-SAVE_ADDRESS=true VERIFY_CONTRACT=true SEPOLIA_PRIVATE_KEY=<key> ETHERSCAN_API_KEY=<key> INFURA_API_KEY=<key> PLONKVERIFIER_NAME=PlonkVerifierForMultiTypeDataAggregation npx hardhat deploy --network sepolia --tags PlonkVerifier
+SAVE_ADDRESS=true VERIFY_CONTRACT=true SEPOLIA_PRIVATE_KEY=<key> ETHERSCAN_API_KEY=<key> INFURA_API_KEY=<key> VERIFIER_CONTRACT_NAME=PlonkVerifierDev npx hardhat deploy --network sepolia --tags PlonkVerifier
 ```
 
 (make sure to replace `<key>` with actual values)
@@ -345,7 +346,7 @@ Parameters that should be filled either in .env or passed as CLI arguments:
 | TIMELOCK_EXECUTORS | true     | address | Timelock Executors address |
 | TIMELOCK_ADMIN_ADDRESS | true     | address | Timelock Admin address |
 | MIN_DELAY | true      | uint256 | Timelock Minimum Delay |
-| PLONKVERIFIER_NAME | true | string | PlonkVerifier contract name that should be deployed |
+| VERIFIER_CONTRACT_NAME | true | string | PlonkVerifier contract name that should be deployed |
 
 <br />
 
@@ -356,7 +357,7 @@ npx hardhat deploy --network sepolia --tags PlonkVerifier,LineaRollup,Timelock
 
 Base command with cli arguments:
 ```shell
-SAVE_ADDRESS=true VERIFY_CONTRACT=true SEPOLIA_PRIVATE_KEY=<key> ETHERSCAN_API_KEY=<key> INFURA_API_KEY=<key> LINEA_ROLLUP_INITIAL_STATE_ROOT_HASH=<bytes> LINEA_ROLLUP_INITIAL_L2_BLOCK_NUMBER=<value> LINEA_ROLLUP_SECURITY_COUNCIL=<address> LINEA_ROLLUP_OPERATORS=<address> LINEA_ROLLUP_RATE_LIMIT_PERIOD=<value> LINEA_ROLLUP_RATE_LIMIT_AMOUNT=<value> TIMELOCK_PROPOSERS=<address> TIMELOCK_EXECUTORS=<address> TIMELOCK_ADMIN_ADDRESS=<address> MIN_DELAY=<value> PLONKVERIFIER_NAME=PlonkVerifierForMultiTypeDataAggregation npx hardhat deploy --network sepolia --tags PlonkVerifier,LineaRollup,Timelock
+SAVE_ADDRESS=true VERIFY_CONTRACT=true SEPOLIA_PRIVATE_KEY=<key> ETHERSCAN_API_KEY=<key> INFURA_API_KEY=<key> LINEA_ROLLUP_INITIAL_STATE_ROOT_HASH=<bytes> LINEA_ROLLUP_INITIAL_L2_BLOCK_NUMBER=<value> LINEA_ROLLUP_SECURITY_COUNCIL=<address> LINEA_ROLLUP_OPERATORS=<address> LINEA_ROLLUP_RATE_LIMIT_PERIOD=<value> LINEA_ROLLUP_RATE_LIMIT_AMOUNT=<value> TIMELOCK_PROPOSERS=<address> TIMELOCK_EXECUTORS=<address> TIMELOCK_ADMIN_ADDRESS=<address> MIN_DELAY=<value> VERIFIER_CONTRACT_NAME=PlonkVerifierForMultiTypeDataAggregation npx hardhat deploy --network sepolia --tags PlonkVerifier,LineaRollup,Timelock
 ```
 
 (make sure to replace `<value>` `<bytes>` `<key>` `<address>` with actual values)
