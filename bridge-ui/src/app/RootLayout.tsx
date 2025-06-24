@@ -10,6 +10,8 @@ import "./globals.css";
 import "../scss/app.scss";
 import FirstVisitModal from "@/components/modal/first-time-visit";
 import { headers } from "next/headers";
+// To make Cloudflare read CSP nonce - https://stackoverflow.com/questions/78570765/how-to-debug-content-security-policy-csp-and-nonces-in-nextjs
+export const dynamic = "force-dynamic";
 
 const metadata: Metadata = {
   title: "Linea Bridge",

@@ -5,9 +5,7 @@ export function middleware(request: NextRequest) {
   const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
 
   // We only want to allow unsafe-eval in local environment for NextJS dev server
-  // We are required to use unsafe-inline with Cloudflare - https://developers.cloudflare.com/fundamentals/reference/policies-compliances/content-security-policies/#product-requirements
-  // TODO: Remove unsafe-eval in production and replace with 'unsafe-inline'
-  // const unsafeScript = process.env.NEXT_PUBLIC_ENVIRONMENT === "local" ? "'unsafe-eval'" : "'unsafe-eval'";
+  const unsafeScript = process.env.NEXT_PUBLIC_ENVIRONMENT === "local" ? "'unsafe-eval'" : "";
 
   /**
    * Content Security Policy (CSP) configuration:
@@ -54,7 +52,7 @@ export function middleware(request: NextRequest) {
    */
   const cspHeader = `
     default-src 'self';
-    script-src 'self' 'nonce-${nonce}' https://www.googletagmanager.com/gtm.js https://widget.intercom.io/widget/h5zisg78 https://ajax.cloudflare.com https://js.intercomcdn.com;
+    script-src 'self' ${unsafeScript} 'nonce-${nonce}' https://www.googletagmanager.com/gtm.js https://widget.intercom.io/widget/h5zisg78 https://ajax.cloudflare.com https://js.intercomcdn.com;
     style-src 'self' 'unsafe-inline';
     img-src 'self' blob: data: https:;
     font-src 'self' data: https://cdn.jsdelivr.net;
