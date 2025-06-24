@@ -1,4 +1,10 @@
 name: Reusable linea-besu-package build, test, and push
+
+permissions:
+  contents: write
+  actions: read
+  packages: write
+
 on:
   workflow_call:
     inputs:

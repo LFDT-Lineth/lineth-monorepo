@@ -17,7 +17,7 @@ jobs:
     runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
     steps:
       - uses: actions/checkout@v4
-      - uses: gradle/actions/wrapper-validation@v4
+      - uses: gradle/actions/wrapper-validation@ac638b010cf58a27ee6c972d7336334ccaf61c96 #v4.4.1
 
       - name: Set up Java
         uses: actions/setup-java@8df1039502a15bceb9433410b1a100fbe190c53b #v4.5.0

@@ -1,4 +1,9 @@
 name: Reusable run e2e tests
+
+permissions:
+  contents: read
+  actions: read
+
 on:
   workflow_call:
     inputs:

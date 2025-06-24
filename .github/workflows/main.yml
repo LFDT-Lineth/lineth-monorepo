@@ -35,7 +35,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Filter commit changes
-        uses: dorny/paths-filter@v3
+        uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 #v3.0.2
         id: filter
         with:
           base: ${{ github.ref }}
@@ -116,7 +116,7 @@ jobs:
               - '.github/workflows/linea-sequencer-plugin-testing.yml'
 
       - name: Filter out commit changes
-        uses: dorny/paths-filter@v3
+        uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 #v3.0.2
         id: exclusion-filter
         with:
           base: ${{ github.ref }}
@@ -133,7 +133,6 @@ jobs:
           # Means that ALL (and not just one) filter patterns must match. In other words applies the 'AND' operator to filter patterns.
           # The default is 'some', which requires just one filter pattern match and applies the 'OR' operator.
           # For 'has-changes-requiring-build', it means we have an exclusion list that we can append to.
-          predicate-quantifier: 'every'
 
   check-and-tag-images:
     needs: [ store-image-name-and-tags, filter-commit-changes ]
@@ -242,7 +241,7 @@ jobs:
     if: ${{ always() }}
     runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
     steps:
-      - uses: strumwolf/delete-deployment-environment@v3
+      - uses: strumwolf/delete-deployment-environment@a4825dd9648c57da8437a4885c3fcad58beac69c #v3.0.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           environment: docker-build-and-e2e

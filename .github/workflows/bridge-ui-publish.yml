@@ -38,7 +38,7 @@ jobs:
 
       - name: Get version from package.json
         id: package-version
-        uses: martinbeentjes/npm-get-version-action@master
+        uses: martinbeentjes/npm-get-version-action@3cf273023a0dda27efcd3164bdfb51908dd46a5b #v1.3.1
         with:
           path: ./bridge-ui
 

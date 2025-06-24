@@ -1,5 +1,9 @@
 name: Release Blob Compressor binaries
 
+permissions:
+  contents: write
+  actions: read
+
 on:
   workflow_dispatch:
     inputs:

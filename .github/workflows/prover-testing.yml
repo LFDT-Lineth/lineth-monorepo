@@ -41,7 +41,7 @@ jobs:
       working-directory: prover
       run: if [[ -n $(gofmt -l .) ]]; then echo "please run gofmt"; exit 1; fi
     - name: golangci-lint
-      uses: golangci/golangci-lint-action@v6
+      uses: golangci/golangci-lint-action@55c2c1448f86e01eaae002a5a3a9624417608d84 #v6.5.2
       with:
           version: v1.61.0
           working-directory: prover

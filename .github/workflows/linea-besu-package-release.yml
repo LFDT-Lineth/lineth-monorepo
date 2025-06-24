@@ -34,7 +34,7 @@ on:
         required: false
         type: string
         default: ''
-        
+
 permissions:
   actions: read
   id-token: write
@@ -53,7 +53,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Filter commit changes
-        uses: dorny/paths-filter@v3
+        uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 #v3.0.2
         id: filter
         with:
           base: ${{ github.ref }}

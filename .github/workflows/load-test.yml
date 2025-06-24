@@ -45,7 +45,7 @@ jobs:
         uses: gradle/actions/setup-gradle@8379f6a1328ee0e06e2bb424dadb7b159856a326 # 4.4.0
 
       - name: Hide sensitive inputs
-        uses: levibostian/action-hide-sensitive-inputs@1.0.0
+        uses: levibostian/action-hide-sensitive-inputs@80877460a95aa5e56cba23314096ef0e0a3c10c1 #v1.1.1
         with:
           exclude_inputs: network, file
 

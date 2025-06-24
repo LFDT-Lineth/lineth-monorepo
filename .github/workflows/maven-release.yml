@@ -1,4 +1,10 @@
 name: Maven Release
+
+permissions:
+  contents: write
+  actions: read
+  packages: write
+
 on:
   workflow_dispatch:
     inputs:
