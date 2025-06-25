@@ -101,7 +101,6 @@ jobs:
       - name: Setup nodejs environment
         uses: ./.github/actions/setup-nodejs
         with:
-          node-version: 18.17.0
           pnpm-install-options: '--frozen-lockfile --prefer-offline'
 
       - name: Test Build Bridge UI
