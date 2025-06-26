@@ -1,5 +1,6 @@
 package linea.web3j
 
+import linea.error.JsonRpcErrorResponseException
 import net.consensys.linea.async.toSafeFuture
 import org.web3j.protocol.core.RemoteFunctionCall
 import org.web3j.protocol.core.Request
@@ -13,9 +14,11 @@ fun <Resp> rejectOnJsonRpcError(
   where Resp : Response<*> {
   return if (response.hasError()) {
     SafeFuture.failedFuture(
-      RuntimeException(
-        "$rpcMethod failed with JsonRpcError " +
-          "code=${response.error.code} message=${response.error.message} data=${response.error.data}",
+      JsonRpcErrorResponseException(
+        rpcErrorCode = response.error.code,
+        rpcErrorMessage = response.error.message,
+        rpcErrorData = response.error.data,
+        method = rpcMethod,
       ),
     )
   } else {

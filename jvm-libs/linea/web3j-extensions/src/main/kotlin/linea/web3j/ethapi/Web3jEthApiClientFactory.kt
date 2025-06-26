@@ -9,6 +9,7 @@ import org.apache.logging.log4j.Logger
 import org.web3j.protocol.Web3j
 import org.web3j.utils.Async
 import java.util.concurrent.ScheduledExecutorService
+import java.util.function.Predicate
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -24,6 +25,7 @@ fun createEthApiClient(
   web3jClient: Web3j,
   requestRetryConfig: RetryConfig?,
   vertx: Vertx?,
+  stopRetriesOnErrorPredicate: Predicate<Throwable> = Predicate { _ -> false },
 ): EthApiClient {
   if (requestRetryConfig?.isRetryEnabled == true && vertx == null) {
     throw IllegalArgumentException("Vertx instance is required when request retry is enabled")
@@ -35,6 +37,7 @@ fun createEthApiClient(
       vertx = vertx!!,
       ethApiClient = ethApiClient,
       requestRetryConfig = requestRetryConfig,
+      stopRetriesOnErrorPredicate = stopRetriesOnErrorPredicate,
     )
   } else {
     Web3jEthApiClient(web3jClient)
@@ -63,6 +66,7 @@ fun createEthApiClient(
   failuresLogLevel: Level = Level.DEBUG,
   requestRetryConfig: RetryConfig?,
   vertx: Vertx?,
+  stopRetriesOnErrorPredicate: Predicate<Throwable> = Predicate { _ -> false },
 ): EthApiClient {
   val web3jClient =
     createWeb3jHttpClient(
@@ -74,5 +78,5 @@ fun createEthApiClient(
       failuresLogLevel,
     )
 
-  return createEthApiClient(web3jClient, requestRetryConfig, vertx)
+  return createEthApiClient(web3jClient, requestRetryConfig, vertx, stopRetriesOnErrorPredicate)
 }

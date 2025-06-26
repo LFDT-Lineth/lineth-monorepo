@@ -24,6 +24,8 @@ import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture
+import java.net.URI
+import java.net.URL
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
@@ -47,6 +49,8 @@ open class TestingJsonRpcServer(
   private var requests: MutableList<
     Pair<JsonRpcRequest, Future<Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>>>,
     > = mutableListOf()
+  val httpEndpoint: URL
+    get() = URI.create("http://127.0.0.1:$boundPort/$apiPath").toURL()
 
   var responsesArtificialDelay: Duration? = responsesArtificialDelay
     set(value) {
