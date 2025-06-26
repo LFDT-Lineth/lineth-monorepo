@@ -74,7 +74,7 @@ public class TransactionProfitabilityCalculator {
         .addArgument(profitabilityConf.fixedCostWei())
         .addArgument(variableCostWei)
         .addArgument(gas)
-        .addArgument(transaction::getSize)
+        .addArgument(transaction::getSizeForBlockInclusion)
         .addArgument(compressedTxSize)
         .log();
 

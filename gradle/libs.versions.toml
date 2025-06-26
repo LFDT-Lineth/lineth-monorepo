@@ -27,7 +27,7 @@ logcaptor = "2.11.0"
 
 # Runtime
 arithmetization="beta-v3.1-rc6"
-besu = "25.6.0-linea1"
+besu = "25.6.0-linea2"
 blobCompressor = "1.2.2"
 blobShnarfCalculator = "1.2.0"
 bouncycastle = "1.79"
@@ -46,7 +46,7 @@ netty = "4.1.92.Final"
 picoli = "4.7.6"
 slf4j="1.7.36"
 teku = "23.1.1"
-tuweni = "2.7.0"
+tuweni = "2.7.1"
 vertx = "4.5.14"
 web3j = "4.12.2"
 

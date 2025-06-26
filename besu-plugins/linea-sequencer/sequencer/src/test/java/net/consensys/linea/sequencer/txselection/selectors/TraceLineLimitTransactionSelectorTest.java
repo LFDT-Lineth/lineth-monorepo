@@ -234,7 +234,7 @@ public class TraceLineLimitTransactionSelectorTest {
     PendingTransaction pendingTransaction = mock(PendingTransaction.class);
     Transaction transaction = mock(Transaction.class);
     when(transaction.getHash()).thenReturn(Hash.wrap(Bytes32.random()));
-    when(transaction.getSize()).thenReturn(size);
+    when(transaction.getSizeForBlockInclusion()).thenReturn(size);
     when(transaction.getGasLimit()).thenReturn(gasLimit);
     when(transaction.getPayload()).thenReturn(Bytes.repeat((byte) 1, payloadSize));
     when(pendingTransaction.getTransaction()).thenReturn(transaction);
