@@ -39,6 +39,7 @@ permissions:
   actions: read
   id-token: write
   contents: write
+  packages: write
 
 jobs:
   filter-commit-changes:
