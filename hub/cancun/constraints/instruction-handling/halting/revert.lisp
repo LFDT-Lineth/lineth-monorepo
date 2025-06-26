@@ -54,19 +54,23 @@
                                                           (halting-instruction---is-REVERT)
                                                           (-  1  stack/SUX  stack/SOX )))
 
-(defconstraint  revert-instruction---setting-the-stack-pattern                     (:guard (revert-instruction---standard-precondition))
+(defconstraint  revert-instruction---setting-the-stack-pattern
+                (:guard (revert-instruction---standard-precondition))
                 (stack-pattern-2-0))
 
-(defconstraint  revert-instruction---allowable-exceptions                          (:guard (revert-instruction---standard-precondition))
+(defconstraint  revert-instruction---allowable-exceptions
+                (:guard (revert-instruction---standard-precondition))
                 (eq!  XAHOY
                       (+  stack/MXPX
                           stack/OOGX)))
 
-(defconstraint  revert-instruction---setting-NSR                                   (:guard (revert-instruction---standard-precondition))
+(defconstraint  revert-instruction---setting-NSR
+                (:guard (revert-instruction---standard-precondition))
                 (eq! NSR
                      (-  3  XAHOY)))
 
-(defconstraint  revert-instruction---setting-the-peeking-flags                     (:guard (revert-instruction---standard-precondition))
+(defconstraint  revert-instruction---setting-the-peeking-flags
+                (:guard (revert-instruction---standard-precondition))
                 (if-not-zero  XAHOY
                               ;; XAHOY ≡ 1
                               (eq!  NSR
@@ -78,11 +82,13 @@
                                        (shift  PEEK_AT_CONTEXT         ROFF_REVERT___NO_XAHOY_CURRENT_CONTEXT_ROW)
                                        (shift  PEEK_AT_CONTEXT         ROFF_REVERT___NO_XAHOY_CALLER_CONTEXT_ROW )))))
 
-(defconstraint  revert-instruction---setting-the-context-rows---exceptional                      (:guard (revert-instruction---standard-precondition))
+(defconstraint  revert-instruction---setting-the-context-rows---exceptional
+                (:guard (revert-instruction---standard-precondition))
                 (if-not-zero  XAHOY
                               (execution-provides-empty-return-data      ROFF_REVERT___XAHOY_CALLER_CONTEXT_ROW)))
 
-(defconstraint  revert-instruction---setting-the-context-rows---unexceptional                      (:guard (revert-instruction---standard-precondition))
+(defconstraint  revert-instruction---setting-the-context-rows---unexceptional
+                (:guard (revert-instruction---standard-precondition))
                 (if-zero      XAHOY
                               (provide-return-data   ROFF_REVERT___NO_XAHOY_CALLER_CONTEXT_ROW             ;; row offset
                                                      (revert-instruction---caller-context)                 ;; receiver context
@@ -91,7 +97,8 @@
                                                      (revert-instruction---type-safe-return-data-size)     ;; type safe rds
                                                      )))
 
-(defconstraint  revert-instruction---setting-the-miscellaneous-row-module-flags    (:guard (revert-instruction---standard-precondition))
+(defconstraint  revert-instruction---setting-the-miscellaneous-row-module-flags
+                (:guard (revert-instruction---standard-precondition))
   (let ((FLAG (weighted-MISC-flag-sum  ROFF_REVERT___MISC_ROW)))
     ;;
     (if (or!
@@ -104,19 +111,22 @@
         ;; trigger_MMU == 1
         (eq! FLAG (+ MISC_WEIGHT_MXP MISC_WEIGHT_MMU)))))
 
-(defconstraint  revert-instruction---setting-the-MXP-data                          (:guard (revert-instruction---standard-precondition))
-                (set-MXP-instruction-type-4 ROFF_REVERT___MISC_ROW   ;; row offset kappa
-                                            (revert-instruction---instruction)             ;; instruction
-                                            0                                     ;; bit modifying the behaviour of RETURN pricing
-                                            (revert-instruction---offset-hi)               ;; offset high
-                                            (revert-instruction---offset-lo)               ;; offset low
-                                            (revert-instruction---size-hi)                 ;; size high
-                                            (revert-instruction---size-lo)))               ;; size low
+(defconstraint  revert-instruction---setting-the-MXP-instruction
+                (:guard (revert-instruction---standard-precondition))
+                (set-MXP-instruction---single-mxp-offset-instructions   ROFF_REVERT___MISC_ROW                 ;; row offset kappa
+                                                                        (revert-instruction---instruction)     ;; instruction
+                                                                        0                                      ;; bit modifying the behaviour of RETURN pricing
+                                                                        (revert-instruction---offset-hi)       ;; offset high
+                                                                        (revert-instruction---offset-lo)       ;; offset low
+                                                                        (revert-instruction---size-hi)         ;; size high
+                                                                        (revert-instruction---size-lo)))       ;; size low
 
-(defconstraint  revert-instruction---setting-the-MXPX                              (:guard (revert-instruction---standard-precondition))
+(defconstraint  revert-instruction---setting-the-MXPX
+                (:guard (revert-instruction---standard-precondition))
                 (eq!  stack/MXPX  (shift  misc/MXP_MXPX  ROFF_REVERT___MISC_ROW)))
 
-(defconstraint  revert-instruction---setting-the-MMU-data                          (:guard (revert-instruction---standard-precondition))
+(defconstraint  revert-instruction---setting-the-MMU-data
+                (:guard (revert-instruction---standard-precondition))
                 (if-not-zero  (shift  misc/MMU_FLAG  ROFF_REVERT___MISC_ROW)
                               (set-MMU-instruction---ram-to-ram-sans-padding    ROFF_REVERT___MISC_ROW  ;; row offset
                                                                                 (revert-instruction---current-context)        ;; source ID
@@ -135,7 +145,8 @@
                                                                                 ;; phase                                         ;; phase
                                                                                 )))
 
-(defconstraint  revert-instruction---setting-the-gas-cost                          (:guard (revert-instruction---standard-precondition))
+(defconstraint  revert-instruction---setting-the-gas-cost
+                (:guard (revert-instruction---standard-precondition))
                 (if-not-zero  stack/MXPX
                               (vanishes!  GAS_COST)
                               (eq!  GAS_COST

@@ -92,6 +92,7 @@
   ;; Transient Operations                                 ;; appear in Cancun (EIP-1153)
   EVM_INST_TLOAD                            0x5C
   EVM_INST_TSTORE                           0x5D
+  EVM_INST_MCOPY                            0x5E
   ;; Push Operations
   EVM_INST_PUSH0                            0x5F          ;; post Shanghai
   EVM_INST_PUSH1                            0x60
@@ -509,5 +510,3 @@
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   WCP_INST_GEQ                              0x0E
   WCP_INST_LEQ                              0x0F)
-
-

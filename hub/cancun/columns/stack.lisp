@@ -22,6 +22,7 @@
    ( CALL_FLAG               :binary )
    ( CON_FLAG                :binary )
    ( COPY_FLAG               :binary )
+   ( MCOPY_FLAG              :binary )
    ( CREATE_FLAG             :binary )
    ( DUP_FLAG                :binary )
    ( EXT_FLAG                :binary )

@@ -62,8 +62,8 @@
 (defconstraint machine-state-instruction---setting-miscellaneous-row (:guard (machine-state-instruction---no-stack-exception))
                (if-not-zero    (machine-state-instruction---is-MSIZE)
                                (begin
-                                 (eq! (weighted-MISC-flag-sum    ROFF_MACHINESTATE___MSIZE___MISC_ROW) MISC_WEIGHT_MXP)
-                                 (set-MXP-instruction-type-1     ROFF_MACHINESTATE___MSIZE___MISC_ROW))))
+                                 (eq! (weighted-MISC-flag-sum      ROFF_MACHINESTATE___MSIZE___MISC_ROW) MISC_WEIGHT_MXP)
+                                 (set-MXP-instruction---for-MSIZE  ROFF_MACHINESTATE___MSIZE___MISC_ROW))))
 
 (defconstraint machine-state-instruction---setting-gas-cost
                (:guard (machine-state-instruction---no-stack-exception))

@@ -46,7 +46,7 @@
 (defun    (create-instruction---OOB-failure-condition)        (shift   [misc/OOB_DATA 8]                 CREATE_miscellaneous_row___row_offset))
 (defun    (create-instruction---MXP-mxpx)                     (shift   misc/MXP_MXPX                     CREATE_miscellaneous_row___row_offset))
 (defun    (create-instruction---MXP-gas)                      (shift   misc/MXP_GAS_MXP                  CREATE_miscellaneous_row___row_offset))
-(defun    (create-instruction---MXP-mtntop)                   (shift   misc/MXP_MTNTOP                   CREATE_miscellaneous_row___row_offset))
+(defun    (create-instruction---MXP-s1nznomxpx)               (shift   misc/MXP_SIZE_1_NONZERO_NO_MXPX   CREATE_miscellaneous_row___row_offset))
 (defun    (create-instruction---STP-gas-paid-out-of-pocket)   (shift   misc/STP_GAS_PAID_OUT_OF_POCKET   CREATE_miscellaneous_row___row_offset))
 (defun    (create-instruction---STP-oogx)                     (shift   misc/STP_OOGX                     CREATE_miscellaneous_row___row_offset))
 (defun    (create-instruction---compute-createe-address)      (shift   account/RLPADDR_FLAG              CREATE_first_creator_account_row___row_offset))

@@ -82,17 +82,17 @@
 
 (defconstraint    call-instruction---setting-MXP-instruction-parameters    (:guard    (call-instruction---standard-precondition))
                   (if-not-zero    (shift    misc/MXP_FLAG    CALL_misc_row___row_offset)
-                                  (set-MXP-instruction-type-5    CALL_misc_row___row_offset                ;; row offset kappa
-                                                                 (call-instruction---STACK-instruction)    ;; instruction
-                                                                 (call-instruction---STACK-cdo-hi)         ;; call data offset high
-                                                                 (call-instruction---STACK-cdo-lo)         ;; call data offset low
-                                                                 (call-instruction---STACK-cds-hi)         ;; call data size high
-                                                                 (call-instruction---STACK-cds-lo)         ;; call data size low
-                                                                 (call-instruction---STACK-r@o-hi)         ;; return at offset high
-                                                                 (call-instruction---STACK-r@o-lo)         ;; return at offset low
-                                                                 (call-instruction---STACK-r@c-hi)         ;; return at capacity high
-                                                                 (call-instruction---STACK-r@c-lo)         ;; return at capacity low
-                                                                 )
+                                  (set-MXP-instruction---for-CALL-type    CALL_misc_row___row_offset                ;; row offset kappa
+                                                                          (call-instruction---STACK-instruction)    ;; instruction
+                                                                          (call-instruction---STACK-cdo-hi)         ;; call data offset high
+                                                                          (call-instruction---STACK-cdo-lo)         ;; call data offset low
+                                                                          (call-instruction---STACK-cds-hi)         ;; call data size high
+                                                                          (call-instruction---STACK-cds-lo)         ;; call data size low
+                                                                          (call-instruction---STACK-r@o-hi)         ;; return at offset high
+                                                                          (call-instruction---STACK-r@o-lo)         ;; return at offset low
+                                                                          (call-instruction---STACK-r@c-hi)         ;; return at capacity high
+                                                                          (call-instruction---STACK-r@c-lo)         ;; return at capacity low
+                                                                          )
                                   ))
 
 (defconstraint    call-instruction---justifying-mxpx                       (:guard    (call-instruction---standard-precondition))

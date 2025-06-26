@@ -33,7 +33,7 @@
 
 (defun    (create-instruction---trigger_HASHINFO)   (*    (create-instruction---is-CREATE2)
                                                           (+    (*    (scenario-shorthand---CREATE---failure-condition)
-                                                                      (create-instruction---MXP-mtntop))
+                                                                      (create-instruction---MXP-s1nznomxpx))
                                                                 (scenario-shorthand---CREATE---not-rebuffed-nonempty-init-code))))
 
 (defun    (create-instruction---trigger_RLPADDR)    (scenario-shorthand---CREATE---compute-deployment-address))
@@ -42,7 +42,7 @@
 
 ;; auxiliary shorthands required for (create-instruction---trigger_MMU)
 (defun    (create-instruction---hash-init-code)                   (*    (scenario-shorthand---CREATE---failure-condition)
-                                                                        (create-instruction---MXP-mtntop)
+                                                                        (create-instruction---MXP-s1nznomxpx)
                                                                         (create-instruction---is-CREATE2)))
 
 (defun    (create-instruction---hash-init-code-and-send-to-ROM)   (*    (scenario-shorthand---CREATE---not-rebuffed-nonempty-init-code)

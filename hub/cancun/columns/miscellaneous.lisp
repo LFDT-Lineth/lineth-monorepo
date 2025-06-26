@@ -47,7 +47,6 @@
 		 ( MXP_SIZE_2_LO                :i128 )
 		 ( MXP_WORDS                    :i128 )
 		 ( MXP_GAS_MXP                  :i128 )
-		 ( MXP_MTNTOP                   :binary@prove )
 		 ( MXP_SIZE_1_NONZERO_NO_MXPX   :binary@prove )
 		 ( MXP_SIZE_2_NONZERO_NO_MXPX   :binary@prove )
 

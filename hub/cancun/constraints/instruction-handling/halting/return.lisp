@@ -84,13 +84,12 @@
 (defun (return-instruction---return-at-capacity)                      (shift   context/RETURN_AT_CAPACITY            ROFF_RETURN___CURRENT_CONTEXT_ROW))
 (defun (return-instruction---MXP-memory-expansion-gas)                (shift   misc/MXP_GAS_MXP                      ROFF_RETURN___1ST_MISC_ROW))
 (defun (return-instruction---MXP-memory-expansion-exception)          (shift   misc/MXP_MXPX                         ROFF_RETURN___1ST_MISC_ROW))
-(defun (return-instruction---MXP-may-trigger-non-trivial-operation)   (shift   misc/MXP_MTNTOP                       ROFF_RETURN___1ST_MISC_ROW))
-(defun (return-instruction---MXP-size-1-is-nonzero-and-no-mxpx)       (shift   misc/MXP_SIZE_1_NONZERO_NO_MXPX       ROFF_RETURN___1ST_MISC_ROW))
+(defun (return-instruction---MXP-s1nznomxpx)                          (shift   misc/MXP_SIZE_1_NONZERO_NO_MXPX       ROFF_RETURN___1ST_MISC_ROW))
 (defun (return-instruction---MMU-success-bit)                         (shift   misc/MMU_SUCCESS_BIT                  ROFF_RETURN___1ST_MISC_ROW))
 (defun (return-instruction---OOB-max-code-size-exception)             (shift   [ misc/OOB_DATA 7 ]                   ROFF_RETURN___1ST_MISC_ROW)) ;; ""
 (defun (return-instruction---deployment-code-fragment-index)          (shift   account/CODE_FRAGMENT_INDEX           ROFF_RETURN___NONEMPTY_DEPLOYMENT___1ST_ACCOUNT_ROW))
 
-(defun (return-instruction---type-safe-return-data-offset)            (*       (return-instruction---offset-lo)      (return-instruction---MXP-size-1-is-nonzero-and-no-mxpx)))
+(defun (return-instruction---type-safe-return-data-offset)            (*       (return-instruction---offset-lo)      (return-instruction---MXP-s1nznomxpx)))
 (defun (return-instruction---type-safe-return-data-size)              (return-instruction---size-lo))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -207,7 +206,7 @@
                    (if-not-zero  (scenario-shorthand---RETURN---deployment)
                                  (begin
                                     (eq!  (scenario-shorthand---RETURN---deployment-will-revert)  CONTEXT_WILL_REVERT)
-                                    (eq!  (scenario-shorthand---RETURN---nonempty-deployment)     (return-instruction---MXP-may-trigger-non-trivial-operation))))
+                                    (eq!  (scenario-shorthand---RETURN---nonempty-deployment)     (return-instruction---MXP-s1nznomxpx))))
                    (if-not-zero  (scenario-shorthand---RETURN---message-call)
                                  (if-zero  (return-touch-ram-expression)
                                            ;; touch_ram_expression = 0
@@ -217,7 +216,7 @@
                                            ))))
 
 (defun  (return-touch-ram-expression)  (*  (-  1  (return-instruction---is-root))
-                                           (return-instruction---MXP-may-trigger-non-trivial-operation)
+                                           (return-instruction---MXP-s1nznomxpx)
                                            (return-instruction---return-at-capacity)
                                            ))
 
@@ -243,15 +242,15 @@
 
 (defconstraint   return-instruction---setting-MXP-data              (:guard   (return-instruction---standard-scenario-row))
                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-                 (if-not-zero   (shift   misc/MXP_FLAG        ROFF_RETURN___1ST_MISC_ROW)
-                                (set-MXP-instruction-type-4   ROFF_RETURN___1ST_MISC_ROW   ;; row offset kappa
-                                                              (return-instruction---instruction)           ;; instruction
-                                                              (return-instruction---is-deployment)         ;; bit modifying the behaviour of RETURN pricing
-                                                              (return-instruction---offset-hi)             ;; offset high
-                                                              (return-instruction---offset-lo)             ;; offset low
-                                                              (return-instruction---size-hi)               ;; size high
-                                                              (return-instruction---size-lo)               ;; size low
-                                                              )))
+                 (if-not-zero   (shift   misc/MXP_FLAG                                  ROFF_RETURN___1ST_MISC_ROW)
+                                (set-MXP-instruction---single-mxp-offset-instructions   ROFF_RETURN___1ST_MISC_ROW   ;; row offset kappa
+                                                                                        (return-instruction---instruction)           ;; instruction
+                                                                                        (return-instruction---is-deployment)         ;; bit modifying the behaviour of RETURN pricing
+                                                                                        (return-instruction---offset-hi)             ;; offset high
+                                                                                        (return-instruction---offset-lo)             ;; offset low
+                                                                                        (return-instruction---size-hi)               ;; size high
+                                                                                        (return-instruction---size-lo)               ;; size low
+                                                                                        )))
 
 (defconstraint   return-instruction---setting-OOB-data              (:guard   (return-instruction---standard-scenario-row))
                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

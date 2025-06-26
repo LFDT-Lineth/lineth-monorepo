@@ -42,6 +42,10 @@
 (defun    (stack-ram---call-data-size)             (shift     context/CALL_DATA_SIZE             ROFF_STACK_RAM___CONTEXT_ROW))
 (defun    (stack-ram---call-data-offset)           (shift     context/CALL_DATA_OFFSET           ROFF_STACK_RAM___CONTEXT_ROW))
 (defun    (stack-ram---call-data-context-number)   (shift     context/CALL_DATA_CONTEXT_NUMBER   ROFF_STACK_RAM___CONTEXT_ROW))
+(defun    (stack-ram---fixed-size)                 (+   (*   WORD_SIZE   (stack-ram---is-MLOAD)   )
+                                                        (*   WORD_SIZE   (stack-ram---is-MSTORE)  )
+                                                        (*           1   (stack-ram---is-MSTORE8) )))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                        ;;
@@ -134,25 +138,17 @@
                                              (vanishes! (stack-ram---value-hi))
                                              (vanishes! (stack-ram---value-lo))))))
 
-(defconstraint   stack-ram---setting-MXP-instruction---MLOAD-MSTORE-case
+(defconstraint   stack-ram---setting-MXP-instruction
                  (:guard (stack-ram---std-hyp))
                  (if-not-zero    (stack-ram---misc-MXP-flag)
-                                 (if-not-zero    (+    (stack-ram---is-MLOAD)    (stack-ram---is-MSTORE))
-                                                 (set-MXP-instruction-type-2     ROFF_STACK_RAM___MISC_ROW   ;; row offset
-                                                                                 (stack-ram---instruction)   ;; instruction
-                                                                                 (stack-ram---offset-hi)     ;; source offset high
-                                                                                 (stack-ram---offset-lo)     ;; source offset low
-                                                                                 ))))
-
-(defconstraint   stack-ram---setting-MXP-instruction---MSTORE8-case
-                 (:guard (stack-ram---std-hyp))
-                 (if-not-zero    (stack-ram---misc-MXP-flag)
-                                 (if-not-zero    (stack-ram---is-MSTORE8)
-                                                 (set-MXP-instruction-type-3    ROFF_STACK_RAM___MISC_ROW  ;; row offset
-                                                                                (stack-ram---offset-hi)    ;; source offset high
-                                                                                (stack-ram---offset-lo)    ;; source offset low
-                                                                                ))))
-
+                                 (set-MXP-instruction---single-mxp-offset-instructions   ROFF_STACK_RAM___MISC_ROW   ;; row offset
+                                                                                         (stack-ram---instruction)   ;; instruction
+                                                                                         0                           ;; deploys
+                                                                                         (stack-ram---offset-hi)     ;; source offset high
+                                                                                         (stack-ram---offset-lo)     ;; source offset low
+                                                                                         0                           ;; size high
+                                                                                         (stack-ram---fixed-size)    ;; size low
+                                                                                         )))
 
 (defconstraint   stack-ram---setting-MMU-instruction---CALLDATALOAD-case
                  (:guard (stack-ram---std-hyp))
