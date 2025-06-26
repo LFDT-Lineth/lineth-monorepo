@@ -56,7 +56,7 @@ export function middleware(request: NextRequest) {
     style-src 'self' 'unsafe-inline';
     img-src 'self' blob: data: https:;
     font-src 'self' data: https://cdn.jsdelivr.net;
-    connect-src 'self' https:;
+    connect-src 'self' https: wss:;
     frame-src 'self'
       https://*.walletconnect.com
       https://buy.onramper.com/;
