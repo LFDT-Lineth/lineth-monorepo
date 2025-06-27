@@ -249,8 +249,8 @@ trust-store-password = "changeit"
 
 [l2-network-gas-pricing] # old [dynamic-gas-price-service]
 disabled = false
-price-update-interval = "PT12S"
-fee-history-block-count = 50
+price-update-interval = "PT4S"
+fee-history-block-count = 10
 fee-history-reward-percentile = 15
 gas-price-fixed-cost = 3000000
 extra-data-update-endpoint = "http://sequencer:8545/"
@@ -263,7 +263,7 @@ failures-warning-threshold = 3
 [l2-network-gas-pricing.flat-rate-gas-pricing]
 # Relate to legacy gas pricing, goes into extradata
 # and is exposed on Bessu eth_gasPrice
-gas-price-upper-bound = 10000000000 # 10 GWEI
+gas-price-upper-bound = 1000000000 # 1 GWEI
 gas-price-lower-bound = 90000000 # 0.09 GWEI
 compressed-tx-size = 125
 expected-gas = 21000
@@ -273,12 +273,12 @@ expected-gas = 21000
 # uses it dynaically culcuale the profitability of each transaction on:
 # eth_sendRawTransaction, linea_estimateGas, and block building
 l1-blob-gas = 131072 # 2^17 # expected-l1-blob-gas previous name: expected-blob-gas
-blob-submission-expected-execution-gas = 213000
-variable-cost-upper-bound = 10000000001 # ~10 GWEI
+blob-submission-expected-execution-gas = 65250
+variable-cost-upper-bound = 1000000001 # ~1 GWEI
 variable-cost-lower-bound = 90000001  # ~0.09 GWEI
-margin = 4.0
+margin = 1.0
 [l2-network-gas-pricing.dynamic-gas-pricing.calldata-based-pricing]
-calldata-sum-size-block-count = 5 # disabled if zero
+calldata-sum-size-block-count = 0 # disabled if zero
 fee-change-denominator = 32
 calldata-sum-size-target = 109000
 block-size-non-calldata-overhead = 540

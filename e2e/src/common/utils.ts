@@ -4,7 +4,6 @@ import {
   AbstractSigner,
   BaseContract,
   BlockTag,
-  Transaction,
   TransactionReceipt,
   TransactionRequest,
   Wallet,
@@ -141,6 +140,8 @@ export class RollupGetZkEVMBlockNumberClient {
 
 export class LineaEstimateGasClient {
   private endpoint: URL;
+  private BASE_FEE_MULTIPLIER = 1.35;
+  private PRIORITY_FEE_MULTIPLIER = 1.05;
 
   public constructor(endpoint: URL) {
     this.endpoint = endpoint;
@@ -148,7 +149,7 @@ export class LineaEstimateGasClient {
 
   public async lineaEstimateGas(
     from: string,
-    to: string,
+    to?: string,
     data: string = "0x",
     value: string = "0x0",
   ): Promise<{ maxFeePerGas: bigint; maxPriorityFeePerGas: bigint; gasLimit: bigint }> {
@@ -171,11 +172,25 @@ export class LineaEstimateGasClient {
     const response = await fetch(this.endpoint, request);
     const responseJson = await response.json();
     assert("result" in responseJson);
+
+    const baseFeePerGas = this.getValueFromMultiplier(
+      BigInt(responseJson.result.baseFeePerGas),
+      this.BASE_FEE_MULTIPLIER,
+    );
+    const maxPriorityFeePerGas = this.getValueFromMultiplier(
+      BigInt(responseJson.result.priorityFeePerGas),
+      this.PRIORITY_FEE_MULTIPLIER,
+    );
+
     return {
-      maxFeePerGas: BigInt(responseJson.result.baseFeePerGas) + BigInt(responseJson.result.priorityFeePerGas),
-      maxPriorityFeePerGas: BigInt(responseJson.result.priorityFeePerGas),
+      maxFeePerGas: baseFeePerGas + maxPriorityFeePerGas,
+      maxPriorityFeePerGas,
       gasLimit: BigInt(responseJson.result.gasLimit),
     };
+  }
+
+  private getValueFromMultiplier(value: bigint, multiplier: number): bigint {
+    return (value * BigInt(multiplier * 100)) / 100n;
   }
 }
 
@@ -433,10 +448,10 @@ export async function sendTransactionsToGenerateTrafficWithInterval(
 ) {
   const lineaEstimateGasClient = new LineaEstimateGasClient(config.getL2BesuNodeEndpoint()!);
 
-  const transaction = Transaction.from({
+  const transaction: TransactionRequest = {
     to: await signer.getAddress(),
     value: etherToWei("0.000001"),
-  });
+  };
 
   let timeoutId: NodeJS.Timeout | null = null;
   let isRunning = true;
@@ -449,11 +464,13 @@ export async function sendTransactionsToGenerateTrafficWithInterval(
         await signer.getAddress(),
         await signer.getAddress(),
         undefined,
-        toBeHex(transaction.value),
+        toBeHex(transaction.value!),
       );
       const tx = await signer.sendTransaction({ ...transaction, maxPriorityFeePerGas, maxFeePerGas });
       await tx.wait();
-      logger.debug(`Transaction sent successfully. hash=${tx.hash}`);
+      logger.debug(
+        `Transaction sent successfully. hash=${tx.hash} maxPriorityFeePerGas=${tx.maxPriorityFeePerGas} maxFeePerGas=${tx.maxFeePerGas}`,
+      );
     } catch (error) {
       logger.error(`Error sending transaction. error=${JSON.stringify(error)}`);
     } finally {
@@ -469,7 +486,7 @@ export async function sendTransactionsToGenerateTrafficWithInterval(
       clearTimeout(timeoutId);
       timeoutId = null;
     }
-    logger.info("Stopped generating traffic on L2");
+    logger.debug("Stopped generating traffic on L2");
   };
 
   sendTransaction();
@@ -526,7 +543,7 @@ export const sendMessage = async <T extends LineaRollupV6 | L2MessageService>(
 
 export async function execDockerCommand(command: string, containerName: string): Promise<string> {
   const dockerCommand = `docker ${command} ${containerName}`;
-  logger.info(`Executing ${dockerCommand}...`);
+  logger.debug(`Executing ${dockerCommand}...`);
   return new Promise((resolve, reject) => {
     exec(dockerCommand, (error, stdout, stderr) => {
       if (error) {

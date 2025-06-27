@@ -1,4 +1,5 @@
 import { describe, it } from "@jest/globals";
+import { toBeHex } from "ethers";
 import { config } from "./config/tests-config";
 import { awaitUntil, getDockerImageTag, LineaShomeiClient, LineaShomeiFrontendClient } from "./common/utils";
 
@@ -13,7 +14,7 @@ describe("Shomei Linea get proof test suite", () => {
     "Call linea_getProof to Shomei frontend node and get a valid proof",
     async () => {
       const shomeiImageTag = await getDockerImageTag("shomei-frontend", "consensys/linea-shomei");
-      logger.info(`shomeiImageTag=${shomeiImageTag}`);
+      logger.debug(`shomeiImageTag=${shomeiImageTag}`);
 
       let targetL2BlockNumber = await awaitUntil(
         async () => {
@@ -45,7 +46,7 @@ describe("Shomei Linea get proof test suite", () => {
             getProofResponse = await lineaShomeiFrontenedClient.lineaGetProof(
               provingAddress,
               [],
-              "0x" + finalizedL2BlockNumber.toString(16),
+              toBeHex(finalizedL2BlockNumber),
             );
             if (getProofResponse?.result) {
               targetL2BlockNumber = finalizedL2BlockNumber;
@@ -56,7 +57,9 @@ describe("Shomei Linea get proof test suite", () => {
             const latestFinalizedL2BlockNumber = await lineaRollupV6.currentL2BlockNumber({ blockTag: "finalized" });
             if (!finalizedL2BlockNumbers.includes(latestFinalizedL2BlockNumber)) {
               finalizedL2BlockNumbers.push(latestFinalizedL2BlockNumber);
-              logger.info(`finalizedL2BlockNumbers=${JSON.stringify(finalizedL2BlockNumbers.map((it) => Number(it)))}`);
+              logger.debug(
+                `finalizedL2BlockNumbers=${JSON.stringify(finalizedL2BlockNumbers.map((it) => Number(it)))}`,
+              );
             }
           }
           return getProofResponse;
@@ -66,7 +69,7 @@ describe("Shomei Linea get proof test suite", () => {
         150000,
       );
 
-      logger.info(`targetL2BlockNumber=${targetL2BlockNumber}`);
+      logger.debug(`targetL2BlockNumber=${targetL2BlockNumber}`);
 
       const {
         result: { zkEndStateRootHash },
@@ -76,7 +79,7 @@ describe("Shomei Linea get proof test suite", () => {
         shomeiImageTag,
       );
 
-      logger.info(`zkEndStateRootHash=${zkEndStateRootHash}`);
+      logger.debug(`zkEndStateRootHash=${zkEndStateRootHash}`);
       expect(zkEndStateRootHash).toBeDefined();
 
       const l2SparseMerkleProofContract = config.getL2SparseMerkleProofContract();

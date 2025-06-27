@@ -16,23 +16,26 @@ let coordinatorHasRestarted = false;
 
 async function waitForCoordinatorRestart(logger: Logger) {
   testsWaitingForRestart += 1;
+
   while (testsWaitingForRestart < TOTAL_TESTS_WAITING) {
+    logger.debug(`Waiting for other test to reach restart point... (${testsWaitingForRestart}/${TOTAL_TESTS_WAITING})`);
+    await wait(1000);
+  }
+
+  if (!coordinatorHasRestarted) {
+    coordinatorHasRestarted = true;
     logger.debug("Both tests have reached the restart point. Restarting coordinator...");
-    await wait(1_000);
-    if (!coordinatorHasRestarted) {
-      coordinatorHasRestarted = true;
-      try {
-        await execDockerCommand("restart", "coordinator");
-        logger.debug("Coordinator restarted.");
-        return;
-      } catch (error) {
-        logger.error(`Failed to restart coordinator: ${error}`);
-        throw error;
-      }
+    try {
+      await execDockerCommand("restart", "coordinator");
+      logger.debug("Coordinator restarted.");
+    } catch (error) {
+      logger.error(`Failed to restart coordinator: ${error}`);
+      throw error;
     }
+  } else {
+    logger.debug("Coordinator has already been restarted by another test.");
   }
 }
-
 const l1AccountManager = config.getL1AccountManager();
 
 describe("Coordinator restart test suite", () => {

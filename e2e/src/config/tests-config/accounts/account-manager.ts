@@ -1,9 +1,10 @@
-import { ethers, NonceManager, Provider, TransactionResponse, Wallet } from "ethers";
+import { ethers, NonceManager, Provider, toBeHex, TransactionRequest, TransactionResponse, Wallet } from "ethers";
 import { Mutex } from "async-mutex";
 import type { Logger } from "winston";
 import Account from "./account";
-import { etherToWei } from "../../../common/utils";
+import { etherToWei, LineaEstimateGasClient } from "../../../common/utils";
 import { createTestLogger } from "../../../config/logger";
+import { config } from "..";
 
 interface IAccountManager {
   whaleAccount(accIndex?: number): NonceManager;
@@ -86,10 +87,31 @@ abstract class AccountManager implements IAccountManager {
       const newAccount = new Account(randomPrivKey, ethers.computeAddress(randomPrivKey));
       accounts.push(newAccount);
 
-      const tx = {
+      let maxPriorityFeePerGas = null;
+      let maxFeePerGas = null;
+
+      if (this.chainId === 1337) {
+        const client = new LineaEstimateGasClient(config.getL2BesuNodeEndpoint()!);
+        const feeData = await client.lineaEstimateGas(
+          await whaleAccountWallet.getAddress(),
+          newAccount.address,
+          undefined,
+          toBeHex(initialBalanceWei),
+        );
+        maxPriorityFeePerGas = feeData.maxPriorityFeePerGas;
+        maxFeePerGas = feeData.maxFeePerGas;
+      } else {
+        const feeData = await this.provider.getFeeData();
+        maxPriorityFeePerGas = feeData.maxPriorityFeePerGas ?? ethers.parseUnits("1", "gwei");
+        maxFeePerGas = feeData.maxFeePerGas ?? ethers.parseUnits("10", "gwei");
+      }
+
+      const tx: TransactionRequest = {
+        type: 2,
         to: newAccount.address,
         value: initialBalanceWei,
-        gasPrice: ethers.parseUnits("300", "gwei"),
+        maxPriorityFeePerGas,
+        maxFeePerGas,
         gasLimit: 21000n,
       };
 

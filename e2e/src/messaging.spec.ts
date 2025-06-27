@@ -1,4 +1,4 @@
-import { ethers, Wallet } from "ethers";
+import { ethers, toBeHex, Wallet } from "ethers";
 import { describe, expect, it } from "@jest/globals";
 import type { Logger } from "winston";
 import { config } from "./config/tests-config";
@@ -34,12 +34,8 @@ async function sendL1ToL2Message(
 
   logger.debug(`Fetched fee data. maxPriorityFeePerGas=${maxPriorityFeePerGas} maxFeePerGas=${maxFeePerGas}`);
 
-  const nonce = await l1Provider.getTransactionCount(l1Account.address, "pending");
-  logger.debug(`Fetched nonce. nonce=${nonce} account=${l1Account.address}`);
-
   const tx = await lineaRollup.sendMessage(destinationAddress, fee, calldata, {
     value: fee,
-    nonce,
     maxPriorityFeePerGas,
     maxFeePerGas,
   });
@@ -71,7 +67,6 @@ async function sendL2ToL1Message(
     withCalldata: boolean;
   },
 ) {
-  const l2Provider = config.getL2Provider();
   const dummyContract = config.getL1DummyContract(l1Account);
   const l2MessageService = config.getL2MessageServiceContract(l2Account);
   const lineaEstimateGasClient = new LineaEstimateGasClient(config.getL2BesuNodeEndpoint()!);
@@ -81,20 +76,17 @@ async function sendL2ToL1Message(
     : "0x";
 
   const destinationAddress = withCalldata ? await dummyContract.getAddress() : l1Account.address;
-  const nonce = await l2Provider.getTransactionCount(l2Account.address, "pending");
-  logger.debug(`Fetched nonce. nonce=${nonce} account=${l2Account.address}`);
 
   const { maxPriorityFeePerGas, maxFeePerGas, gasLimit } = await lineaEstimateGasClient.lineaEstimateGas(
     l2Account.address,
     await l2MessageService.getAddress(),
     l2MessageService.interface.encodeFunctionData("sendMessage", [destinationAddress, fee, calldata]),
-    etherToWei("0.001").toString(16),
+    toBeHex(etherToWei("0.001")),
   );
   logger.debug(`Fetched fee data. maxPriorityFeePerGas=${maxPriorityFeePerGas} maxFeePerGas=${maxFeePerGas}`);
 
   const tx = await l2MessageService.sendMessage(destinationAddress, fee, calldata, {
     value: fee,
-    nonce,
     maxPriorityFeePerGas,
     maxFeePerGas,
     gasLimit,
@@ -149,7 +141,7 @@ describe("Messaging test suite", () => {
         `Message claimed on L2. messageHash=${messageClaimedEvent.args._messageHash} transactionHash=${messageClaimedEvent.transactionHash}`,
       );
     },
-    100_000,
+    150_000,
   );
 
   it.concurrent(
@@ -182,7 +174,7 @@ describe("Messaging test suite", () => {
         `Message claimed on L2. messageHash=${messageClaimedEvent.args._messageHash} transactionHash=${messageClaimedEvent.transactionHash}`,
       );
     },
-    100_000,
+    150_000,
   );
 
   // Test that Postman sponsoring works for L1->L2
@@ -216,7 +208,7 @@ describe("Messaging test suite", () => {
         `Message claimed on L2. messageHash=${messageClaimedEvent.args._messageHash} transactionHash=${messageClaimedEvent.transactionHash}`,
       );
     },
-    100_000,
+    150_000,
   );
 
   it.concurrent(
