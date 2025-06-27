@@ -231,6 +231,7 @@ services:
       - ../config/common/gas-price-cap-time-of-day-multipliers.toml:/opt/consensys/linea/coordinator/config/gas-price-cap-time-of-day-multipliers.toml:ro
       - ../config/coordinator/vertx-options.json:/var/lib/coordinator/vertx-options.json:ro
       - ../config/coordinator/log4j2-dev.xml:/var/lib/coordinator/log4j2-dev.xml:ro
+      - ../config/coordinator/tls-files/:/tls-files/
       - ../tmp/local/:/data/
     networks:
       l1network:
@@ -246,11 +247,15 @@ services:
     ports:
       - "9000:9000"
     command:
-      - --key-store-path=/keyFiles/
+      - --key-store-path=/key-files/
+      - --tls-keystore-file=/tls-files/web3signer-keystore.p12
+      - --tls-keystore-password-file=/tls-files/web3signer-keystore-password.txt
+      - --tls-known-clients-file=/tls-files/known-clients.txt
       - --http-host-allowlist=*
       - eth1
     volumes:
-      - ./web3signer/keyFiles/:/keyFiles/
+      - ./web3signer/key-files/:/key-files/
+      - ./web3signer/tls-files/:/tls-files/
     networks:
       - linea
 

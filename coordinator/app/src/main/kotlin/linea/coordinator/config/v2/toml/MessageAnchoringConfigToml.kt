@@ -92,8 +92,8 @@ data class MessageAnchoringConfigToml(
         ethLogsSearchBlockChunkSize = l1EventScraping.ethLogsSearchBlockChunkSize,
       ),
       anchoringTickInterval = anchoringTickInterval,
-      messageQueueCapacity = messageQueueCapacity.toUInt(),
-      maxMessagesToAnchorPerL2Transaction = maxMessagesToAnchorPerL2Transaction.toUInt(),
+      messageQueueCapacity = messageQueueCapacity,
+      maxMessagesToAnchorPerL2Transaction = maxMessagesToAnchorPerL2Transaction,
       signer = signer.reified(),
       gas = MessageAnchoringConfig.GasConfig(
         maxFeePerGasCap = gas.maxFeePerGasCap,

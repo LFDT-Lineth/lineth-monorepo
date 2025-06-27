@@ -73,7 +73,7 @@ disabled=false //if false, dynamic gas price cap will be enabled, and if true, g
 [l1-submission.dynamic-gas-price-cap.gas-price-cap-calculation]
 adjustment-constant=25 //used in the dynamic gas price cap equation
 blob-adjustment-constant=25 //used in the dynamic gas price cap equation
-finalization-target-max-delay="PT32H" //used in the dynamic gas price cap equation which is derived by our service level agreement that a L2 block should be finalized on L1 within 32 hours
+finalization-target-max-delay="PT16H" //used in the dynamic gas price cap equation which is derived by our service level agreement that a L2 block should be finalized on L1 within 16 hours
 base-fee-per-gas-percentile-window="P7D" //used by fee history repository to calculate the p10(baseFeePastWeek)
 base-fee-per-gas-percentile-window-leeway="PT10M" //used by gas price cap provider to determine whether the currently cached fee history data is enough for gas price cap calculation, e.g. this means 50400 - 50 = 50350 blocks of fee history data from the past 7 days would be sufficient to proceed the calculation; otherwise, will fallback to static gas pricing mechanism
 base-fee-per-gas-percentile=10.0 //used by fee history repository to calculate the p10(baseFeePastWeek)
@@ -128,7 +128,7 @@ The effects would be as following:
     - `replacement transaction underpriced: new tx gas fee cap 40733292344 <= 32144797253 queued + 100% replacement penalty`
     - `replacement transaction underpriced: new tx blob gas fee cap 485826427361 <= 243239997227 queued + 100% replacement penalty`
     
-    It means the pending blob-carrying transaction was not able to be replaced with the current dynamic gas prices due to the “100% replacement penalty” for blob-carrying transactions (see [here](https://github.com/colinlyguo/EIP-4844-dev-usage?tab=readme-ov-file#:~:text=Due%20to%20blob%20pool%27s%20constraints)), which in most case is normal, as the dynamic gas prices would eventually climb up to be doubled as the pending ones within a reasonable timeframe (e.g. long before the 32 hours SLA)
+    It means the pending blob-carrying transaction was not able to be replaced with the current dynamic gas prices due to the “100% replacement penalty” for blob-carrying transactions (see [here](https://github.com/colinlyguo/EIP-4844-dev-usage?tab=readme-ov-file#:~:text=Due%20to%20blob%20pool%27s%20constraints)), which in most case is normal, as the dynamic gas prices would eventually climb up to be doubled as the pending ones within a reasonable timeframe (e.g. long before the 16 hours SLA)
 
 **Coordinator Metrics**
 

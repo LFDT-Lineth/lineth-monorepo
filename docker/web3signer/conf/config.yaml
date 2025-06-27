@@ -5,4 +5,4 @@
 data-path: "~/web3signerdata" # Path
 
 # Signing key locations
-key-store-path: "/keyFiles/"
+key-store-path: "/key-files/"

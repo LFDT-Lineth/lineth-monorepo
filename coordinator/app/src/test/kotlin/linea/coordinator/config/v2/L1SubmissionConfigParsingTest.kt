@@ -8,6 +8,7 @@ import linea.kotlin.decodeHex
 import linea.kotlin.toURL
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import java.nio.file.Path
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
@@ -62,17 +63,22 @@ class L1SubmissionConfigParsingTest {
 
     [l1-submission.blob.signer]
     # Web3j/Web3signer
-    type = "Web3j"
+    type = "Web3signer"
 
     # The account with this private key is in genesis file
     [l1-submission.blob.signer.web3j]
     private-key = "0x0000000000000000000000000000000000000000000000000000000000000001"
 
     [l1-submission.blob.signer.web3signer]
-    endpoint = "http://web3signer:9000"
+    endpoint = "https://web3signer:9000"
     max-pool-size = 10
     keep-alive = true
     public-key = "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001"
+    [l1-submission.blob.signer.web3signer.tls]
+    key-store-path = "coordinator-client-keystore.p12"
+    key-store-password = "xxxxx"
+    trust-store-path = "web3signer-truststore.p12"
+    trust-store-password = "xxxxx"
 
     [l1-submission.aggregation]
     disabled = false
@@ -98,10 +104,15 @@ class L1SubmissionConfigParsingTest {
     private-key = "0x0000000000000000000000000000000000000000000000000000000000000002"
 
     [l1-submission.aggregation.signer.web3signer]
-    endpoint = "http://web3signer:9000"
+    endpoint = "https://web3signer:9000"
     max-pool-size = 10
     keep-alive = true
     public-key = "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002"
+    [l1-submission.aggregation.signer.web3signer.tls]
+    key-store-path = "coordinator-client-keystore.p12"
+    key-store-password = "xxxxx"
+    trust-store-path = "web3signer-truststore.p12"
+    trust-store-password = "xxxxx"
     """.trimIndent()
 
     val config =
@@ -152,18 +163,24 @@ class L1SubmissionConfigParsingTest {
             ),
           ),
           signer = SignerConfigToml(
-            type = SignerConfigToml.SignerType.WEB3J,
+            type = SignerConfigToml.SignerType.WEB3SIGNER,
             web3j = SignerConfigToml.Web3jConfig(
               privateKey = Masked("0x0000000000000000000000000000000000000000000000000000000000000001"),
             ),
             web3signer = SignerConfigToml.Web3SignerConfig(
-              endpoint = "http://web3signer:9000".toURL(),
+              endpoint = "https://web3signer:9000".toURL(),
               publicKey = (
                 "0000000000000000000000000000000000000000000000000000000000000000" +
                   "0000000000000000000000000000000000000000000000000000000000000001"
                 ).decodeHex(),
               maxPoolSize = 10,
               keepAlive = true,
+              tls = SignerConfigToml.Web3SignerConfig.TlsConfig(
+                keyStorePath = Path.of("coordinator-client-keystore.p12"),
+                keyStorePassword = Masked("xxxxx"),
+                trustStorePath = Path.of("web3signer-truststore.p12"),
+                trustStorePassword = Masked("xxxxx"),
+              ),
             ),
           ),
         ),
@@ -189,13 +206,19 @@ class L1SubmissionConfigParsingTest {
               privateKey = Masked("0x0000000000000000000000000000000000000000000000000000000000000002"),
             ),
             web3signer = SignerConfigToml.Web3SignerConfig(
-              endpoint = "http://web3signer:9000".toURL(),
+              endpoint = "https://web3signer:9000".toURL(),
               publicKey = (
                 "0000000000000000000000000000000000000000000000000000000000000000" +
                   "0000000000000000000000000000000000000000000000000000000000000002"
                 ).decodeHex(),
               maxPoolSize = 10,
               keepAlive = true,
+              tls = SignerConfigToml.Web3SignerConfig.TlsConfig(
+                keyStorePath = Path.of("coordinator-client-keystore.p12"),
+                keyStorePassword = Masked("xxxxx"),
+                trustStorePath = Path.of("web3signer-truststore.p12"),
+                trustStorePassword = Masked("xxxxx"),
+              ),
             ),
           ),
         ),
@@ -335,6 +358,7 @@ class L1SubmissionConfigParsingTest {
                 ).decodeHex(),
               maxPoolSize = 10,
               keepAlive = true,
+              tls = null,
             ),
           ),
         ),
