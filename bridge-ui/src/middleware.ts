@@ -1,17 +1,24 @@
-// NextJS automatically recognises a single middleware.ts file in the project root - https://nextjs.org/docs/app/building-your-application/routing/middleware#convention
+// Next.js automatically recognises a single middleware.ts file in the project root - https://nextjs.org/docs/app/building-your-application/routing/middleware#convention
 import { NextRequest, NextResponse } from "next/server";
 
 export function middleware(request: NextRequest) {
   const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
 
-  // We only want to allow unsafe-eval in local environment for NextJS dev server
+  // We only want to allow unsafe-eval in local environment for Next.js dev server
   const unsafeScript = process.env.NEXT_PUBLIC_ENVIRONMENT === "local" ? "'unsafe-eval'" : "";
+
+  // Metamask fails on Firefox without 'unsafe-inline' https://github.com/MetaMask/metamask-extension/issues/3133
+  // Furthermore 'unsafe-inline' is ignored when nonces is present
+  const isFirefox = request.headers.get("user-agent")?.includes("Firefox");
+  const browserSpecificHeader = isFirefox
+    ? `'unsafe-inline' https://www.googletagmanager.com`
+    : `'nonce-${nonce}' https://www.googletagmanager.com/gtm.js`;
 
   /**
    * Content Security Policy (CSP) configuration:
    *
    * default-src 'self'
-   * - Fallback policy to only allow resources from the same origin, unless overriden by a more specific policy
+   * - Fallback policy to only allow resources from the same origin, unless overridden by a more specific policy
    *
    * script-src-elem 'self' 'nonce-{nonce}' 'strict-dynamic'
    * - Allow scripts from the same origin, with the provided nonce, and child scripts recursively loaded from a script with nonce
@@ -21,7 +28,7 @@ export function middleware(request: NextRequest) {
    *
    * img-src
    * - Control image source
-   * - We allow `https:` here because we cannot sustainably maintain a whitelist for token image sources used by our widgets, especially when new tokens come out everyday and some introduce new image sources
+   * - We allow `https:` here because we cannot sustainably maintain a allowlist for token image sources used by our widgets, especially when new tokens come out everyday and some introduce new image sources
    *
    * font-src
    * - Control font source
@@ -52,7 +59,7 @@ export function middleware(request: NextRequest) {
    */
   const cspHeader = `
     default-src 'self';
-    script-src 'self' ${unsafeScript} 'nonce-${nonce}' https://www.googletagmanager.com/gtm.js https://widget.intercom.io/widget/h5zisg78 https://ajax.cloudflare.com https://js.intercomcdn.com;
+    script-src 'self' ${unsafeScript} ${browserSpecificHeader} https://widget.intercom.io/widget/h5zisg78 https://ajax.cloudflare.com https://js.intercomcdn.com;
     style-src 'self' 'unsafe-inline';
     img-src 'self' blob: data: https:;
     font-src 'self' data: https://cdn.jsdelivr.net;
@@ -69,7 +76,7 @@ export function middleware(request: NextRequest) {
   `;
 
   /**
-   * Purposely excluded URLs from CSP whitelist because they seem suspicious
+   * Purposely excluded URLs from CSP allowlist because they seem suspicious
    *
    * base-uri
    * - https://d6tizftlrpuof.cloudfront.net/live/
@@ -112,7 +119,7 @@ export const config = {
      */
     {
       source: "/((?!api|_next/static|_next/image|favicon.ico|public/).*)",
-      // Skip running Middleware if request includes NextJS prefetch headers
+      // Skip running Middleware if request includes Next.js prefetch headers
       missing: [
         { type: "header", key: "next-router-prefetch" },
         { type: "header", key: "purpose", value: "prefetch" },
