@@ -248,6 +248,10 @@
   ETHEREUM_GAS_LIMIT_MINIMUM                5000
   ETHEREUM_GAS_LIMIT_MAXIMUM                0xffffffffffffffff ;; maxUint64
   MIN_BASE_FEE_PER_BLOB_GAS                 1
+  UNPROTECTED_V                             27
+  UNPROTECTED_V_PO                          (+ UNPROTECTED_V 1)
+  PROTECTED_BASE_V                          35
+  PROTECTED_BASE_V_PO                       (+ PROTECTED_BASE_V 1)
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;             ;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  LINEA MISC ;;
