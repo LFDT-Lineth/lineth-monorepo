@@ -36,7 +36,4 @@ Linea risk disclosures can be found at:
 This security policy applies to the code, libraries, and configurations within this repository. This includes any code or components that are part of the repository or its dependencies.
 
 ## Previous Audits
-
-- Plonk Verifier https://consensys.io/diligence/audits/private/re9fdlhtjn7jfr/
-- Message Service & Rollup: https://consensys.io/diligence/audits/private/zxi4edywq3d1zr/
-- Canonical Token Bridge: https://consensys.io/diligence/audits/private/nzqt1bai7j8ryf/
+Please see the full [audit history](audits.md).

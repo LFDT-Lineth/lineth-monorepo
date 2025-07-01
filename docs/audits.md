@@ -51,7 +51,7 @@
 ### Second Audit Round
 
 **Diligence**
-- Proof aggregation, data compression and message service updates Audit: [https://consensys.io/diligence/audits/2024/01/)linea-contracts-update/](https://consensys.io/diligence/audits/2024/01/)linea-contracts-update/)
+- Proof aggregation, data compression and message service updates Audit: [https://consensys.io/diligence/audits/2024/01/linea-contracts-update/](https://consensys.io/diligence/audits/2024/01/linea-contracts-update/)
 
 **OpenZeppelin**
 
