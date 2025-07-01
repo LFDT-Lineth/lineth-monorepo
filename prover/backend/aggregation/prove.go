@@ -1,6 +1,7 @@
 package aggregation
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"path/filepath"
@@ -173,6 +174,7 @@ func makeBw6Proof(
 		biggestAvailable            = 0
 		bestSize                    = math.MaxInt
 		bestAllowedVkForAggregation []string
+		errs                        []error
 	)
 
 	// first we discover available setups
@@ -181,7 +183,7 @@ func makeBw6Proof(
 
 		// That's the quickest reject condition we have
 		if maxNbProofs < numProofClaims {
-			logrus.Debugf("skipping setup with %v proofs < %v claims", maxNbProofs, numProofClaims)
+			logrus.Debugf("skipping setup for aggregation-%v proof circuit since %v proof claims is greater than what this setup can handle", maxNbProofs, numProofClaims)
 			continue
 		}
 
@@ -198,8 +200,9 @@ func makeBw6Proof(
 		}
 
 		// This reject condition may take longer
-		if !doesBw6CircuitSupportVKeys(allowedVkForAggregation, cf.ProofClaims) {
-			logrus.Infof("skipping setup with %v proofs because it does not support the required verifying keys", maxNbProofs)
+		if err = doesBw6CircuitSupportVKeys(allowedVkForAggregation, cf.ProofClaims); err != nil {
+			logrus.Warnf("skipped setup with %v proofs because it does not support the required verifying keys", maxNbProofs)
+			errs = append(errs, fmt.Errorf("skipped setup for aggregation-%v proof circuit: %w", maxNbProofs, err))
 			continue
 		}
 
@@ -211,10 +214,14 @@ func makeBw6Proof(
 	}
 
 	if bestSize == math.MaxInt {
-		return nil, 0, fmt.Errorf(
-			"could not find a setup large enough for %v proofs: the biggest available size is %v",
-			numProofClaims, biggestAvailable,
-		)
+		if len(errs) > 0 {
+			return nil, 0, errors.Join(errs...)
+		} else {
+			return nil, 0, fmt.Errorf(
+				"could not find a setup large enough for %v proofs: the biggest available size is %v",
+				numProofClaims, biggestAvailable,
+			)
+		}
 	}
 
 	logrus.Infof("reading the BW6 setup for %v proofs", bestSize)
@@ -293,7 +300,7 @@ func makeBn254Proof(
 // proof's verifier keys. Namely, it takes the list of supported keys, parse them
 // as hex-bytes-32 and check that all the proof claims verifier keys are included
 // in the list of supported verifier keys.
-func doesBw6CircuitSupportVKeys(supportedVkeys []string, proofClaims []aggregation.ProofClaimAssignment) bool {
+func doesBw6CircuitSupportVKeys(supportedVkeys []string, proofClaims []aggregation.ProofClaimAssignment) error {
 	// Parse the required verifying keys into a list of bytes32
 	suppBytes32 := make([]types.FullBytes32, len(supportedVkeys))
 	for i := range suppBytes32 {
@@ -302,6 +309,7 @@ func doesBw6CircuitSupportVKeys(supportedVkeys []string, proofClaims []aggregati
 
 	// The list are not expected to be very big therefore, we anticipate that
 	// relying on a hashmap is likely not worth the effort.
+	var unSupportedIdxs []int
 	for k := range proofClaims {
 		found := false
 		requiredVKey := proofClaims[k].VerifyingKeyShasum
@@ -309,11 +317,16 @@ func doesBw6CircuitSupportVKeys(supportedVkeys []string, proofClaims []aggregati
 			found = found || (suppBytes32[i] == requiredVKey)
 		}
 		if !found {
-			return false
+			unSupportedIdxs = append(unSupportedIdxs, k)
 		}
 	}
 
-	return true
+	if len(unSupportedIdxs) > 0 {
+		return fmt.Errorf("BW6 circuit does not support the verifying keys for aggregation requests at indices %v"+
+			". Please retry generating the sub-proofs at these indices with compatible verifying keys and then retry the aggregation", unSupportedIdxs)
+	}
+
+	return nil
 }
 
 // This function assigns circuits ID to the input proof claims based on the list
