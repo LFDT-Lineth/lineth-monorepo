@@ -1,7 +1,7 @@
 (defun (hub-into-log-info-trigger)
   (* hub.PEEK_AT_STACK hub.stack/LOG_INFO_FLAG (- 1 hub.CT_TLI)))
 
-(deflookup
+(defclookup
   hub-into-loginfo
   ;; target columns
   (
@@ -20,22 +20,24 @@
     [loginfo.TOPIC_LO 4]
     loginfo.DATA_SIZE
   )
+  ;; source selector
+  (hub-into-log-info-trigger)
   ;; source columns
   (
-    (* hub.ABSOLUTE_TRANSACTION_NUMBER (hub-into-log-info-trigger))
-    (* hub.LOG_INFO_STAMP (hub-into-log-info-trigger))
-    (* hub.stack/INSTRUCTION (hub-into-log-info-trigger))
-    (* (shift hub.context/ACCOUNT_ADDRESS_HI 2) (hub-into-log-info-trigger))
-    (* (shift hub.context/ACCOUNT_ADDRESS_LO 2) (hub-into-log-info-trigger))
-    (* (next [hub.stack/STACK_ITEM_VALUE_HI 1]) (hub-into-log-info-trigger))
-    (* (next [hub.stack/STACK_ITEM_VALUE_LO 1]) (hub-into-log-info-trigger))
-    (* (next [hub.stack/STACK_ITEM_VALUE_HI 2]) (hub-into-log-info-trigger))
-    (* (next [hub.stack/STACK_ITEM_VALUE_LO 2]) (hub-into-log-info-trigger))
-    (* (next [hub.stack/STACK_ITEM_VALUE_HI 3]) (hub-into-log-info-trigger))
-    (* (next [hub.stack/STACK_ITEM_VALUE_LO 3]) (hub-into-log-info-trigger))
-    (* (next [hub.stack/STACK_ITEM_VALUE_HI 4]) (hub-into-log-info-trigger))
-    (* (next [hub.stack/STACK_ITEM_VALUE_LO 4]) (hub-into-log-info-trigger))
-    (* [hub.stack/STACK_ITEM_VALUE_LO 2] (hub-into-log-info-trigger))
+    hub.ABSOLUTE_TRANSACTION_NUMBER
+    hub.LOG_INFO_STAMP
+    hub.stack/INSTRUCTION
+    (shift hub.context/ACCOUNT_ADDRESS_HI 2)
+    (shift hub.context/ACCOUNT_ADDRESS_LO 2)
+    (next [hub.stack/STACK_ITEM_VALUE_HI 1])
+    (next [hub.stack/STACK_ITEM_VALUE_LO 1])
+    (next [hub.stack/STACK_ITEM_VALUE_HI 2])
+    (next [hub.stack/STACK_ITEM_VALUE_LO 2])
+    (next [hub.stack/STACK_ITEM_VALUE_HI 3])
+    (next [hub.stack/STACK_ITEM_VALUE_LO 3])
+    (next [hub.stack/STACK_ITEM_VALUE_HI 4])
+    (next [hub.stack/STACK_ITEM_VALUE_LO 4])
+    [hub.stack/STACK_ITEM_VALUE_LO 2]
   ))
 
 

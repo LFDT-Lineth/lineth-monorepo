@@ -1,4 +1,4 @@
-(deflookup
+(defclookup
   stp-into-mod
   ; target columns (in MOD)
   (
@@ -10,15 +10,17 @@
     mod.RES_LO
     mod.INST
   )
+  ; source selector
+  stp.MOD_FLAG
   ; source columns (in STP)
   (
-    (* stp.ARG_1_HI stp.MOD_FLAG)
-    (* stp.ARG_1_LO stp.MOD_FLAG)
+    stp.ARG_1_HI
+    stp.ARG_1_LO
     0
-    (* stp.ARG_2_LO stp.MOD_FLAG)
+    stp.ARG_2_LO
     0
-    (* stp.RES_LO stp.MOD_FLAG)
-    (* stp.EXO_INST stp.MOD_FLAG)
+    stp.RES_LO
+    stp.EXO_INST
   ))
 
 

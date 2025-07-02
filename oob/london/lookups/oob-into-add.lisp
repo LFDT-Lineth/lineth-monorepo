@@ -1,9 +1,9 @@
-(defun (mxp-into-add-activation-flag)
+(defun (oob-into-add-activation-flag)
   oob.ADD_FLAG)
 
-(deflookup
+(defclookup
   oob-into-add
-  ;source columns
+  ;; target columns
   (
     add.ARG_1_HI
     add.ARG_1_LO
@@ -13,15 +13,17 @@
     add.RES_LO
     add.INST
   )
-  ;target columns
+  ;; source selector
+  (oob-into-add-activation-flag)
+  ;; source columns
   (
-    (* [oob.OUTGOING_DATA 1] (mxp-into-add-activation-flag))
-    (* [oob.OUTGOING_DATA 2] (mxp-into-add-activation-flag))
-    (* [oob.OUTGOING_DATA 3] (mxp-into-add-activation-flag))
-    (* [oob.OUTGOING_DATA 4] (mxp-into-add-activation-flag))
-    (* (next [oob.OUTGOING_DATA 1]) (mxp-into-add-activation-flag))
-    (* (next [oob.OUTGOING_DATA 2]) (mxp-into-add-activation-flag))
-    (* oob.OUTGOING_INST (mxp-into-add-activation-flag))
+    [oob.OUTGOING_DATA 1]
+    [oob.OUTGOING_DATA 2]
+    [oob.OUTGOING_DATA 3]
+    [oob.OUTGOING_DATA 4]
+    (next [oob.OUTGOING_DATA 1])
+    (next [oob.OUTGOING_DATA 2])
+    oob.OUTGOING_INST
   ))
 
 

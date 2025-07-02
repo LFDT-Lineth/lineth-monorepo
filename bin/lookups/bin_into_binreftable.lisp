@@ -1,7 +1,7 @@
 (defun (selector-bin-to-binreftable)
   (+ bin.IS_AND bin.IS_OR bin.IS_XOR bin.IS_NOT))
 
-(deflookup
+(defclookup
   bin-into-binreftable-high
   ;reference columns
   (
@@ -10,15 +10,17 @@
     binreftable.INPUT_BYTE_1
     binreftable.INPUT_BYTE_2
   )
+  ;source selector
+  (selector-bin-to-binreftable)
   ;source columns
   (
-    (* bin.INST (selector-bin-to-binreftable))
-    (* bin.XXX_BYTE_HI (selector-bin-to-binreftable))
-    (* bin.BYTE_1 (selector-bin-to-binreftable))
-    (* bin.BYTE_3 (selector-bin-to-binreftable))
+    bin.INST
+    bin.XXX_BYTE_HI
+    bin.BYTE_1
+    bin.BYTE_3
   ))
 
-(deflookup
+(defclookup
   bin-into-binreftable-low
   ;reference columns
   (
@@ -26,13 +28,15 @@
     binreftable.RESULT_BYTE
     binreftable.INPUT_BYTE_1
     binreftable.INPUT_BYTE_2
-  )
+    )
+  ;source selector
+  (selector-bin-to-binreftable)
   ;source columns
   (
-    (* bin.INST (selector-bin-to-binreftable))
-    (* bin.XXX_BYTE_LO (selector-bin-to-binreftable))
-    (* bin.BYTE_2 (selector-bin-to-binreftable))
-    (* bin.BYTE_4 (selector-bin-to-binreftable))
+    bin.INST
+    bin.XXX_BYTE_LO
+    bin.BYTE_2
+    bin.BYTE_4
   ))
 
 

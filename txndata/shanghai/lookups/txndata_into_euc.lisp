@@ -1,18 +1,20 @@
-(deflookup
+(defclookup
   txndata-into-euc
-  ; target columns
+  ;; target columns
   (
     euc.DONE
     euc.DIVIDEND
     euc.DIVISOR
     euc.QUOTIENT
   )
-  ; source columns
+  ;; source selector
+  txndata.EUC_FLAG
+  ;; source columns
   (
-    txndata.EUC_FLAG
-    (* txndata.EUC_FLAG txndata.ARG_ONE_LO)
-    (* txndata.EUC_FLAG txndata.ARG_TWO_LO)
-    (* txndata.EUC_FLAG txndata.RES)
+    1
+    txndata.ARG_ONE_LO
+    txndata.ARG_TWO_LO
+    txndata.RES
   ))
 
 

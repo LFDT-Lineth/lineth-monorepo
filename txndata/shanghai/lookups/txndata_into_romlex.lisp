@@ -1,7 +1,7 @@
 (defun (sel-txn-data-to-rom-lex)
   (* txndata.IS_DEP (~ txndata.INIT_CODE_SIZE)))
 
-(deflookup
+(defclookup
   txndata-into-romlex
   ;; target columns
   (
@@ -12,14 +12,16 @@
     romlex.DEPLOYMENT_NUMBER
     romlex.DEPLOYMENT_STATUS
   )
+  ;; source selector
+  (sel-txn-data-to-rom-lex)
   ;; source columns
   (
-    (* txndata.CODE_FRAGMENT_INDEX (sel-txn-data-to-rom-lex))
-    (* txndata.INIT_CODE_SIZE (sel-txn-data-to-rom-lex))
-    (* txndata.TO_HI (sel-txn-data-to-rom-lex))
-    (* txndata.TO_LO (sel-txn-data-to-rom-lex))
-    (sel-txn-data-to-rom-lex)
-    (sel-txn-data-to-rom-lex)
+    txndata.CODE_FRAGMENT_INDEX 
+    txndata.INIT_CODE_SIZE
+    txndata.TO_HI
+    txndata.TO_LO
+    1
+    1
   ))
 
 

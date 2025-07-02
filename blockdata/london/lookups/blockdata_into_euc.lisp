@@ -1,6 +1,6 @@
 (defun (blockdata-into-euc-selector) blockdata.EUC_FLAG)
 
-(deflookup 
+(defclookup 
   blockdata-into-euc
   ;; target columns
   (
@@ -9,11 +9,13 @@
     euc.DIVISOR
     euc.QUOTIENT
   )
+  ;; source selector
+  (blockdata-into-euc-selector)
   ;; source columns
   (
-    (* 1                  (blockdata-into-euc-selector))
-    (* blockdata.ARG_1_LO (blockdata-into-euc-selector))
-    (* blockdata.ARG_2_LO (blockdata-into-euc-selector))
-    (* blockdata.RES      (blockdata-into-euc-selector))
+    1
+    blockdata.ARG_1_LO
+    blockdata.ARG_2_LO
+    blockdata.RES
   ))
 

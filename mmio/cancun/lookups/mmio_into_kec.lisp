@@ -1,6 +1,6 @@
-(deflookup
+(defclookup
   mmio-into-kec
-  ;reference columns
+  ;; target columns
   (
     shakiradata.ID
     shakiradata.PHASE
@@ -9,14 +9,16 @@
     shakiradata.nBYTES
     shakiradata.TOTAL_SIZE
   )
-  ;source columns
+  ;; source selector
+  mmio.EXO_IS_KEC
+  ;; source columns
   (
-    (* mmio.EXO_IS_KEC mmio.KEC_ID)
-    (* mmio.EXO_IS_KEC PHASE_KECCAK_DATA)
-    (* mmio.EXO_IS_KEC mmio.INDEX_X)
-    (* mmio.EXO_IS_KEC mmio.LIMB)
-    (* mmio.EXO_IS_KEC mmio.SIZE)
-    (* mmio.EXO_IS_KEC mmio.TOTAL_SIZE)
+    mmio.KEC_ID
+    PHASE_KECCAK_DATA
+    mmio.INDEX_X
+    mmio.LIMB
+    mmio.SIZE
+    mmio.TOTAL_SIZE
   ))
 
 

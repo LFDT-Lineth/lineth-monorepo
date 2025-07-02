@@ -1,17 +1,19 @@
 (defun   (blockhash-into-blockdata-selector)   blockhash.MACRO) ;; ""
 
-(deflookup
+(defclookup
   blockhash-into-blockdata
-  ; target columns
+  ;; target columns
   (
    blockdata.REL_BLOCK
    blockdata.DATA_LO
    blockdata.INST
-   )
-  ; source columns
+  )
+  ;; source selector
+  (blockhash-into-blockdata-selector)
+  ;; source columns
   (
-   (* (blockhash-into-blockdata-selector)   blockhash.macro/REL_BLOCK)
-   (* (blockhash-into-blockdata-selector)   blockhash.macro/ABS_BLOCK)
-   (* (blockhash-into-blockdata-selector)   EVM_INST_NUMBER)
+   blockhash.macro/REL_BLOCK
+   blockhash.macro/ABS_BLOCK
+   EVM_INST_NUMBER
    )
   )

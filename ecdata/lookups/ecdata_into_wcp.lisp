@@ -1,9 +1,9 @@
 (defun (ec_data-into-wcp-activation-flag)
   ecdata.WCP_FLAG)
 
-(deflookup
+(defclookup
   ecdata-into-wcp
-  ; target columns
+  ;; target columns
   (
     wcp.ARGUMENT_1_HI
     wcp.ARGUMENT_1_LO
@@ -12,14 +12,16 @@
     wcp.RESULT
     wcp.INST
   )
-  ; source columns
+  ;; source selector
+  (ec_data-into-wcp-activation-flag)
+  ;; source columns
   (
-    (* ecdata.WCP_ARG1_HI (ec_data-into-wcp-activation-flag))
-    (* ecdata.WCP_ARG1_LO (ec_data-into-wcp-activation-flag))
-    (* ecdata.WCP_ARG2_HI (ec_data-into-wcp-activation-flag))
-    (* ecdata.WCP_ARG2_LO (ec_data-into-wcp-activation-flag))
-    (* ecdata.WCP_RES (ec_data-into-wcp-activation-flag))
-    (* ecdata.WCP_INST (ec_data-into-wcp-activation-flag))
+    ecdata.WCP_ARG1_HI
+    ecdata.WCP_ARG1_LO
+    ecdata.WCP_ARG2_HI
+    ecdata.WCP_ARG2_LO
+    ecdata.WCP_RES
+    ecdata.WCP_INST
   ))
 
 

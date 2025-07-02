@@ -1,7 +1,7 @@
 (defun (hub-into-mmu-trigger)
   (* hub.PEEK_AT_MISCELLANEOUS hub.misc/MMU_FLAG))
 
-(deflookup
+(defclookup
   hub-into-mmu
   ;; target columns
   (
@@ -23,25 +23,27 @@
     mmu.macro/PHASE
     mmu.macro/EXO_SUM
   )
+  ;; source selector
+  (hub-into-mmu-trigger)
   ;; source columns
   (
-    (hub-into-mmu-trigger)
-    (* hub.MMU_STAMP (hub-into-mmu-trigger))
-    (* hub.misc/MMU_INST (hub-into-mmu-trigger))
-    (* hub.misc/MMU_SRC_ID (hub-into-mmu-trigger))
-    (* hub.misc/MMU_TGT_ID (hub-into-mmu-trigger))
-    (* hub.misc/MMU_AUX_ID (hub-into-mmu-trigger))
-    (* hub.misc/MMU_SRC_OFFSET_LO (hub-into-mmu-trigger))
-    (* hub.misc/MMU_SRC_OFFSET_HI (hub-into-mmu-trigger))
-    (* hub.misc/MMU_TGT_OFFSET_LO (hub-into-mmu-trigger))
-    (* hub.misc/MMU_SIZE (hub-into-mmu-trigger))
-    (* hub.misc/MMU_REF_OFFSET (hub-into-mmu-trigger))
-    (* hub.misc/MMU_REF_SIZE (hub-into-mmu-trigger))
-    (* hub.misc/MMU_SUCCESS_BIT (hub-into-mmu-trigger))
-    (* hub.misc/MMU_LIMB_1 (hub-into-mmu-trigger))
-    (* hub.misc/MMU_LIMB_2 (hub-into-mmu-trigger))
-    (* hub.misc/MMU_PHASE (hub-into-mmu-trigger))
-    (* hub.misc/MMU_EXO_SUM (hub-into-mmu-trigger))
+    1
+    hub.MMU_STAMP
+    hub.misc/MMU_INST
+    hub.misc/MMU_SRC_ID
+    hub.misc/MMU_TGT_ID
+    hub.misc/MMU_AUX_ID
+    hub.misc/MMU_SRC_OFFSET_LO
+    hub.misc/MMU_SRC_OFFSET_HI
+    hub.misc/MMU_TGT_OFFSET_LO
+    hub.misc/MMU_SIZE
+    hub.misc/MMU_REF_OFFSET
+    hub.misc/MMU_REF_SIZE
+    hub.misc/MMU_SUCCESS_BIT
+    hub.misc/MMU_LIMB_1
+    hub.misc/MMU_LIMB_2
+    hub.misc/MMU_PHASE
+    hub.misc/MMU_EXO_SUM
   ))
 
 

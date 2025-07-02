@@ -1,8 +1,9 @@
 (defun (oob-into-wcp-activation-flag)
   oob.WCP_FLAG)
 
-(deflookup
+(defclookup
   oob-into-wcp
+  ;; target columns
   (
     wcp.ARGUMENT_1_HI
     wcp.ARGUMENT_1_LO
@@ -11,13 +12,16 @@
     wcp.RESULT
     wcp.INST
   )
+  ;; source selector
+  (oob-into-wcp-activation-flag)
+  ;; source columns
   (
-    (* [oob.OUTGOING_DATA 1] (oob-into-wcp-activation-flag))
-    (* [oob.OUTGOING_DATA 2] (oob-into-wcp-activation-flag))
-    (* [oob.OUTGOING_DATA 3] (oob-into-wcp-activation-flag))
-    (* [oob.OUTGOING_DATA 4] (oob-into-wcp-activation-flag))
-    (* oob.OUTGOING_RES_LO (oob-into-wcp-activation-flag))
-    (* oob.OUTGOING_INST (oob-into-wcp-activation-flag))
+    [oob.OUTGOING_DATA 1]
+    [oob.OUTGOING_DATA 2]
+    [oob.OUTGOING_DATA 3]
+    [oob.OUTGOING_DATA 4]
+    oob.OUTGOING_RES_LO
+    oob.OUTGOING_INST
   ))
 
 

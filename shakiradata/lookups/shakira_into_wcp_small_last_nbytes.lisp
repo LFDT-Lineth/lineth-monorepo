@@ -1,4 +1,4 @@
-(deflookup
+(defclookup
   shakiradata-into-wcp-small-last-nbytes
   ; target colums (in WCP)
   (
@@ -9,14 +9,16 @@
     wcp.RES
     wcp.INST
   )
+  ; source selector
+  (is-final-data-row)
   ; source columns
   (
     0
-    (* (is-final-data-row) shakiradata.nBYTES)
+    shakiradata.nBYTES
     0
-    (* (is-final-data-row) LLARGE)
-    (* (is-final-data-row) 1)
-    (* (is-final-data-row) WCP_INST_LEQ)
+    LLARGE
+    1
+    WCP_INST_LEQ
   ))
 
 

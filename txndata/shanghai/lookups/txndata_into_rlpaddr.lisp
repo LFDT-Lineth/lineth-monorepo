@@ -1,7 +1,7 @@
 (defun (sel-txndata-to-rlpaddr)
   txndata.IS_DEP)
 
-(deflookup
+(defclookup
   txndata-into-rlpaddr
   ;; target columns
   (
@@ -12,14 +12,16 @@
     rlpaddr.NONCE
     rlpaddr.RECIPE_1
   )
+  ;; source selector
+  (sel-txndata-to-rlpaddr)
   ;; source columns
   (
-    (* txndata.FROM_HI (sel-txndata-to-rlpaddr))
-    (* txndata.FROM_LO (sel-txndata-to-rlpaddr))
-    (* txndata.TO_HI (sel-txndata-to-rlpaddr))
-    (* txndata.TO_LO (sel-txndata-to-rlpaddr))
-    (* txndata.NONCE (sel-txndata-to-rlpaddr))
-    (* txndata.IS_DEP (sel-txndata-to-rlpaddr))
+    txndata.FROM_HI
+    txndata.FROM_LO
+    txndata.TO_HI
+    txndata.TO_LO
+    txndata.NONCE
+    txndata.IS_DEP
   ))
 
 

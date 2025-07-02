@@ -1,6 +1,6 @@
-(deflookup
+(defclookup
   mmio-into-rlptxn
-  ;reference columns
+  ;; target columns
   (
     rlptxn.ABS_TX_NUM
     rlptxn.LC
@@ -8,13 +8,15 @@
     rlptxn.INDEX_DATA
     rlptxn.LIMB
   )
-  ;source columns
+  ;; source selector
+  mmio.EXO_IS_TXCD
+  ;; source columns
   (
-    (* mmio.EXO_IS_TXCD mmio.EXO_ID)
-    mmio.EXO_IS_TXCD
-    (* mmio.EXO_IS_TXCD mmio.PHASE)
-    (* mmio.EXO_IS_TXCD mmio.INDEX_X)
-    (* mmio.EXO_IS_TXCD mmio.LIMB)
+    mmio.EXO_ID
+    1
+    mmio.PHASE
+    mmio.INDEX_X
+    mmio.LIMB
   ))
 
 

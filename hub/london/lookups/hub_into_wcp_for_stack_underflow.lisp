@@ -1,6 +1,6 @@
 (defun (hub-into-wcp-for-sux-activation-flag) hub.PEEK_AT_STACK)
 
-(deflookup hub-into-wcp-for-sux
+(defclookup hub-into-wcp-for-sux
     ;; target columns
     (
         wcp.INST
@@ -10,13 +10,15 @@
         wcp.ARG_2_LO
         wcp.RESULT
     )
+    ;; source selector
+    (hub-into-wcp-for-sux-activation-flag)
     ;; source columns
     (
-        (* EVM_INST_LT         (hub-into-wcp-for-sux-activation-flag))
+        EVM_INST_LT
         0
-        (* hub.HEIGHT          (hub-into-wcp-for-sux-activation-flag))
+        hub.HEIGHT
         0
-        (* hub.stack/DELTA     (hub-into-wcp-for-sux-activation-flag))
-        (* hub.stack/SUX       (hub-into-wcp-for-sux-activation-flag))
+        hub.stack/DELTA
+        hub.stack/SUX
     )
 )

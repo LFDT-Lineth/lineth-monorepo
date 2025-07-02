@@ -1,6 +1,6 @@
 (defun (rlp-txn-into-hub-src-selector) (* rlptxn.REQUIRES_EVM_EXECUTION rlptxn.IS_PHASE_ACCESS_LIST (- 1 rlptxn.IS_PREFIX)))
 
-(deflookup 
+(defclookup 
   rlptxn-into-hub
   ;; target columns
   (
@@ -13,16 +13,18 @@
    (prewarming-phase-storage-key-hi)
    (prewarming-phase-storage-key-lo)
    )
+  ;; source selector
+  (rlp-txn-into-hub-src-selector)
   ;; source columns
   (
-                                            (rlp-txn-into-hub-src-selector)
-   (* rlptxn.ABS_TX_NUM                     (rlp-txn-into-hub-src-selector))
-   (* (- 1 (rlp-txn-depth-2))               (rlp-txn-into-hub-src-selector))
-   (* (rlp-txn-depth-2)                     (rlp-txn-into-hub-src-selector))
-   (* rlptxn.ADDR_HI                        (rlp-txn-into-hub-src-selector))
-   (* rlptxn.ADDR_LO                        (rlp-txn-into-hub-src-selector))
-   (* [rlptxn.INPUT 1] (rlp-txn-depth-2)    (rlp-txn-into-hub-src-selector))
-   (* [rlptxn.INPUT 2] (rlp-txn-depth-2)    (rlp-txn-into-hub-src-selector))
+   1
+   rlptxn.ABS_TX_NUM
+   (- 1 (rlp-txn-depth-2))
+   (rlp-txn-depth-2)
+   rlptxn.ADDR_HI
+   rlptxn.ADDR_LO
+   (* [rlptxn.INPUT 1] (rlp-txn-depth-2))
+   (* [rlptxn.INPUT 2] (rlp-txn-depth-2))
    )
   )
 

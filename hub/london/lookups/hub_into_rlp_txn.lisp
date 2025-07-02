@@ -14,30 +14,37 @@
                                               rlptxn.IS_PHASE_ACCESS_LIST
                                               (- 1 rlptxn.IS_PREFIX)))
 
-(deflookup
+(defclookup
   hub-into-rlptxn
+  ;; TODO: target selector likely unnecessary but as we multiply by
+  ;; the same column for the lookup tlptxn into hub ...
+    
+  ;; target selector
+  (hub-into-rlp-txn-tgt-selector)
   ;; target columns
-  ;; TODO: multiplication by selector likely unnecessary but as we multiply by the same column for the lookup tlptxn into hub ...
   (
-    (* 1                                    (hub-into-rlp-txn-tgt-selector))
-    (* rlptxn.ABS_TX_NUM                    (hub-into-rlp-txn-tgt-selector))
-    (* (- 1 (rlp-txn-depth-2))              (hub-into-rlp-txn-tgt-selector))
-    (* (rlp-txn-depth-2)                    (hub-into-rlp-txn-tgt-selector))
+    1
+    rlptxn.ABS_TX_NUM
+    (- 1 (rlp-txn-depth-2))
+    (rlp-txn-depth-2)
 
-    (* rlptxn.ADDR_HI                       (hub-into-rlp-txn-tgt-selector))
-    (* rlptxn.ADDR_LO                       (hub-into-rlp-txn-tgt-selector))
-    (* [rlptxn.INPUT 1] (rlp-txn-depth-2)   (hub-into-rlp-txn-tgt-selector))
-    (* [rlptxn.INPUT 2] (rlp-txn-depth-2)   (hub-into-rlp-txn-tgt-selector)) ;; ""
+    rlptxn.ADDR_HI
+    rlptxn.ADDR_LO
+    (* [rlptxn.INPUT 1] (rlp-txn-depth-2))
+    (* [rlptxn.INPUT 2] (rlp-txn-depth-2))
   )
+  ;; source selector
+  (hub-into-rlp-txn-src-selector)
   ;; source columns
   (
-    (* 1                                    (hub-into-rlp-txn-src-selector))
-    (* hub.ABSOLUTE_TRANSACTION_NUMBER      (hub-into-rlp-txn-src-selector))
-    (* hub.PEEK_AT_ACCOUNT                  (hub-into-rlp-txn-src-selector))
-    (* hub.PEEK_AT_STORAGE                  (hub-into-rlp-txn-src-selector))
+    1
+    hub.ABSOLUTE_TRANSACTION_NUMBER
+    hub.PEEK_AT_ACCOUNT
+    hub.PEEK_AT_STORAGE
 
-    (* (prewarming-phase-address-hi)        (hub-into-rlp-txn-src-selector))
-    (* (prewarming-phase-address-lo)        (hub-into-rlp-txn-src-selector))
-    (* (prewarming-phase-storage-key-hi)    (hub-into-rlp-txn-src-selector))
-    (* (prewarming-phase-storage-key-lo)    (hub-into-rlp-txn-src-selector))
-  ))
+    (prewarming-phase-address-hi)
+    (prewarming-phase-address-lo)
+    (prewarming-phase-storage-key-hi)
+    (prewarming-phase-storage-key-lo)
+  )
+)

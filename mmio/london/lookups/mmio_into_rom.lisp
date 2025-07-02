@@ -1,18 +1,20 @@
-(deflookup
+(defclookup
   mmio-into-rom
-  ;reference columns
+  ;; target columns
   (
     rom.CFI
     rom.INDEX
     rom.LIMB
     rom.CODE_SIZE
   )
-  ;source columns
+  ;; source selector
+  mmio.EXO_IS_ROM
+  ;; source columns
   (
-    (* mmio.EXO_IS_ROM mmio.EXO_ID)
-    (* mmio.EXO_IS_ROM mmio.INDEX_X)
-    (* mmio.EXO_IS_ROM mmio.LIMB)
-    (* mmio.EXO_IS_ROM mmio.TOTAL_SIZE)
+    mmio.EXO_ID
+    mmio.INDEX_X
+    mmio.LIMB
+    mmio.TOTAL_SIZE
   ))
 
 

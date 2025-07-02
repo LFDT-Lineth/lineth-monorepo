@@ -1,9 +1,9 @@
 (defun (ec_data-into-ext-activation-flag)
   ecdata.EXT_FLAG)
 
-(deflookup
+(defclookup
   ecdata-into-ext
-  ; target columns
+  ;; target columns
   (
     ext.ARG_1_HI
     ext.ARG_1_LO
@@ -15,17 +15,19 @@
     ext.RES_LO
     ext.INST
   )
-  ; source columns
+  ;; source selector
+  (ec_data-into-ext-activation-flag)
+  ;; source columns
   (
-    (* ecdata.EXT_ARG1_HI (ec_data-into-ext-activation-flag))
-    (* ecdata.EXT_ARG1_LO (ec_data-into-ext-activation-flag))
-    (* ecdata.EXT_ARG2_HI (ec_data-into-ext-activation-flag))
-    (* ecdata.EXT_ARG2_LO (ec_data-into-ext-activation-flag))
-    (* ecdata.EXT_ARG3_HI (ec_data-into-ext-activation-flag))
-    (* ecdata.EXT_ARG3_LO (ec_data-into-ext-activation-flag))
-    (* ecdata.EXT_RES_HI (ec_data-into-ext-activation-flag))
-    (* ecdata.EXT_RES_LO (ec_data-into-ext-activation-flag))
-    (* ecdata.EXT_INST (ec_data-into-ext-activation-flag))
+    ecdata.EXT_ARG1_HI
+    ecdata.EXT_ARG1_LO
+    ecdata.EXT_ARG2_HI
+    ecdata.EXT_ARG2_LO
+    ecdata.EXT_ARG3_HI
+    ecdata.EXT_ARG3_LO
+    ecdata.EXT_RES_HI
+    ecdata.EXT_RES_LO
+    ecdata.EXT_INST
   ))
 
 

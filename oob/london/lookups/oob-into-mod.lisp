@@ -1,9 +1,9 @@
 (defun (oob-into-mod-activation-flag)
   oob.MOD_FLAG)
 
-(deflookup
+(defclookup
   oob-into-mod
-  ;source columns
+  ;; target columns
   (
     mod.ARG_1_HI
     mod.ARG_1_LO
@@ -12,16 +12,18 @@
     mod.RES_HI
     mod.RES_LO
     mod.INST
-  )
-  ;target columns
+    )
+  ;; source selector
+  (oob-into-mod-activation-flag)
+  ;; source columns
   (
-    (* [oob.OUTGOING_DATA 1] (oob-into-mod-activation-flag))
-    (* [oob.OUTGOING_DATA 2] (oob-into-mod-activation-flag))
-    (* [oob.OUTGOING_DATA 3] (oob-into-mod-activation-flag))
-    (* [oob.OUTGOING_DATA 4] (oob-into-mod-activation-flag))
-    (* 0 (oob-into-mod-activation-flag))
-    (* oob.OUTGOING_RES_LO (oob-into-mod-activation-flag))
-    (* oob.OUTGOING_INST (oob-into-mod-activation-flag))
+    [oob.OUTGOING_DATA 1]
+    [oob.OUTGOING_DATA 2]
+    [oob.OUTGOING_DATA 3]
+    [oob.OUTGOING_DATA 4]
+    0
+    oob.OUTGOING_RES_LO
+    oob.OUTGOING_INST
   ))
 
 

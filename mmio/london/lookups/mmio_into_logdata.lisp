@@ -1,6 +1,6 @@
-(deflookup
+(defclookup
   mmio-into-logdata
-  ;reference columns
+  ;; target columns
   (
     logdata.ABS_LOG_NUM
     logdata.INDEX
@@ -8,13 +8,15 @@
     logdata.SIZE_LIMB
     logdata.SIZE_TOTAL
   )
-  ;source columns
+  ;; source selector
+  mmio.EXO_IS_LOG
+  ;; source columns
   (
-    (* mmio.EXO_IS_LOG mmio.EXO_ID)
-    (* mmio.EXO_IS_LOG mmio.INDEX_X)
-    (* mmio.EXO_IS_LOG mmio.LIMB)
-    (* mmio.EXO_IS_LOG mmio.SIZE)
-    (* mmio.EXO_IS_LOG mmio.TOTAL_SIZE)
+    mmio.EXO_ID
+    mmio.INDEX_X
+    mmio.LIMB
+    mmio.SIZE
+    mmio.TOTAL_SIZE
   ))
 
 

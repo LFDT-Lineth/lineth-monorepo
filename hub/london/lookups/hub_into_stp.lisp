@@ -1,7 +1,7 @@
 (defun (hub-into-stp-trigger)
   (* hub.PEEK_AT_MISCELLANEOUS hub.misc/STP_FLAG))
 
-(deflookup
+(defclookup
   hub-into-stp
   ;; target columns
   (
@@ -19,21 +19,23 @@
     stp.GAS_OUT_OF_POCKET
     stp.GAS_STIPEND
   )
+  ;; source selector
+  (hub-into-stp-trigger)
   ;; source columns
   (
-    (* hub.misc/STP_INSTRUCTION            (hub-into-stp-trigger))
-    (* hub.misc/STP_GAS_HI                 (hub-into-stp-trigger))
-    (* hub.misc/STP_GAS_LO                 (hub-into-stp-trigger))
-    (* hub.misc/STP_VALUE_HI               (hub-into-stp-trigger))
-    (* hub.misc/STP_VALUE_LO               (hub-into-stp-trigger))
-    (* hub.misc/STP_EXISTS                 (hub-into-stp-trigger))
-    (* hub.misc/STP_WARMTH                 (hub-into-stp-trigger))
-    (* hub.misc/STP_OOGX                   (hub-into-stp-trigger))
-    (* hub.GAS_ACTUAL                      (hub-into-stp-trigger))
-    (* hub.misc/STP_GAS_UPFRONT_GAS_COST   (hub-into-stp-trigger))
-    (* hub.misc/STP_GAS_MXP                (hub-into-stp-trigger))
-    (* hub.misc/STP_GAS_PAID_OUT_OF_POCKET (hub-into-stp-trigger))
-    (* hub.misc/STP_GAS_STIPEND            (hub-into-stp-trigger))
+    hub.misc/STP_INSTRUCTION
+    hub.misc/STP_GAS_HI
+    hub.misc/STP_GAS_LO
+    hub.misc/STP_VALUE_HI
+    hub.misc/STP_VALUE_LO
+    hub.misc/STP_EXISTS
+    hub.misc/STP_WARMTH
+    hub.misc/STP_OOGX
+    hub.GAS_ACTUAL
+    hub.misc/STP_GAS_UPFRONT_GAS_COST
+    hub.misc/STP_GAS_MXP
+    hub.misc/STP_GAS_PAID_OUT_OF_POCKET
+    hub.misc/STP_GAS_STIPEND
   )
   )
 

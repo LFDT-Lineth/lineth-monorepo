@@ -1,6 +1,6 @@
-(deflookup
+(defclookup
   txndata-into-wcp
-  ; target columns
+  ;; target columns
   (
     wcp.ARGUMENT_1_HI
     wcp.ARGUMENT_1_LO
@@ -9,14 +9,16 @@
     wcp.RESULT
     wcp.INST
   )
-  ; source columns
+  ;; source selector
+  txndata.WCP_FLAG
+  ;; source columns
   (
     0
-    (* txndata.WCP_FLAG txndata.ARG_ONE_LO)
+    txndata.ARG_ONE_LO
     0
-    (* txndata.WCP_FLAG txndata.ARG_TWO_LO)
-    (* txndata.WCP_FLAG txndata.RES)
-    (* txndata.WCP_FLAG txndata.INST)
+    txndata.ARG_TWO_LO
+    txndata.RES
+    txndata.INST
   ))
 
 

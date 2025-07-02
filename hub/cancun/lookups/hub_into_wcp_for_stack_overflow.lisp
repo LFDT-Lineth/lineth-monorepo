@@ -2,9 +2,10 @@
   (* hub.PEEK_AT_STACK (- 1 hub.stack/SUX)))
 
 (defun (projected-height)
-  (- (+ hub.HEIGHT hub.stack/ALPHA) hub.stack/DELTA))
+  (* (- (+ hub.HEIGHT hub.stack/ALPHA) hub.stack/DELTA)
+     (- 1 hub.stack/SUX)))
 
-(deflookup
+(defclookup
   hub-into-wcp-for-sox
   ;; target columns
   (
@@ -15,14 +16,14 @@
     wcp.ARG_2_LO
     wcp.RESULT
   )
+  ;; source selector
+  (hub-into-wcp-for-sox-activation-flag)
   ;; source columns
   (
-    (* EVM_INST_GT (hub-into-wcp-for-sox-activation-flag))
+    EVM_INST_GT
     0
-    (* (projected-height) (hub-into-wcp-for-sox-activation-flag))
+    (projected-height)
     0
-    (* 1024 (hub-into-wcp-for-sox-activation-flag))
-    (* hub.stack/SOX (hub-into-wcp-for-sox-activation-flag))
-  ))
-
-
+    1024
+    hub.stack/SOX
+ ))

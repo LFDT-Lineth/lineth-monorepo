@@ -3,9 +3,9 @@
   (* mxp.COMPUTATION mxp.computation/EUC_FLAG)
   )
 
-(deflookup
+(defclookup
   mxp-into-euc
-  ;reference columns
+  ;; target columns
   (
     euc.DIVIDEND
     euc.DIVISOR
@@ -13,11 +13,13 @@
     euc.CEIL
     euc.DONE
   )
-  ;source columns
+  ;; source selector
+  (mxp-to-euc-selector)
+  ;; source columns
   (
-    (* mxp.computation/ARG_1_LO (mxp-to-euc-selector))
-    (* mxp.computation/ARG_2_LO (mxp-to-euc-selector))
-    (* mxp.computation/RES_A    (mxp-to-euc-selector))
-    (* mxp.computation/RES_B    (mxp-to-euc-selector))
-    (mxp-to-euc-selector)
+    mxp.computation/ARG_1_LO
+    mxp.computation/ARG_2_LO
+    mxp.computation/RES_A
+    mxp.computation/RES_B
+    1
   ))

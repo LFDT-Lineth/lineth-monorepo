@@ -1,7 +1,7 @@
 (defun (blockdata-into-wcp-selector)
   blockdata.WCP_FLAG)
 
-(deflookup 
+(defclookup 
   blockdata-into-wcp
   ;; target columns
   (
@@ -12,13 +12,15 @@
     wcp.RESULT
     wcp.INST
   )
+  ;; source selector
+  (blockdata-into-wcp-selector)
   ;; source columns
   (
-    (* blockdata.ARG_1_HI (blockdata-into-wcp-selector))
-    (* blockdata.ARG_1_LO (blockdata-into-wcp-selector))
-    (* blockdata.ARG_2_HI (blockdata-into-wcp-selector))
-    (* blockdata.ARG_2_LO (blockdata-into-wcp-selector))
-    (* blockdata.RES      (blockdata-into-wcp-selector))
-    (* blockdata.EXO_INST (blockdata-into-wcp-selector))
+    blockdata.ARG_1_HI
+    blockdata.ARG_1_LO
+    blockdata.ARG_2_HI
+    blockdata.ARG_2_LO
+    blockdata.RES
+    blockdata.EXO_INST
   ))
 

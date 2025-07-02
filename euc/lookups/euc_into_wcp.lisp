@@ -1,6 +1,6 @@
-(deflookup
+(defclookup
   euc-into-wcp
-  ;reference columns
+  ;; target columns
   (
     wcp.ARG_1_HI
     wcp.ARG_1_LO
@@ -9,14 +9,16 @@
     wcp.RES
     wcp.INST
   )
-  ;source columns
+  ;; source selector
+  euc.DONE
+  ;; source columns
   (
     0
-    (* euc.REMAINDER euc.DONE)
+    euc.REMAINDER
     0
-    (* euc.DIVISOR   euc.DONE)
-    (* 1             euc.DONE)
-    (* EVM_INST_LT   euc.DONE)
+    euc.DIVISOR
+    1
+    EVM_INST_LT
   ))
 
 

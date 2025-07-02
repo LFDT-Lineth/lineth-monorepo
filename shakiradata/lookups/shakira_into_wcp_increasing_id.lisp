@@ -11,7 +11,7 @@
   (force-bin (* (is-data)
                 (- 1 (prev (is-data))))))
 
-(deflookup
+(defclookup
   shakiradata-into-wcp-increasing-id
   ; target colums (in WCP)
   (
@@ -22,12 +22,14 @@
     wcp.RES
     wcp.INST
   )
+  ; source selector
+  (is-first-data-row)
   ; source columns
   (
     0
-    (* (is-first-data-row) (prev shakiradata.ID))
+    (prev shakiradata.ID)
     0
-    (* (is-first-data-row) shakiradata.ID)
-    (* (is-first-data-row) 1)
-    (* (is-first-data-row) EVM_INST_LT)
+    shakiradata.ID
+    1
+    EVM_INST_LT
   ))

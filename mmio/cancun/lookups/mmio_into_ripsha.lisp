@@ -1,6 +1,6 @@
-(deflookup
+(defclookup
   mmio-into-ripsha
-  ;reference columns
+  ;; target columns
   (
     shakiradata.ID
     shakiradata.PHASE
@@ -9,12 +9,14 @@
     shakiradata.nBYTES
     shakiradata.TOTAL_SIZE
   )
-  ;source columns
+  ;; source selector
+  mmio.EXO_IS_RIPSHA 
+  ;; source columns
   (
-    (* mmio.EXO_IS_RIPSHA mmio.EXO_ID)
-    (* mmio.EXO_IS_RIPSHA mmio.PHASE)
-    (* mmio.EXO_IS_RIPSHA mmio.INDEX_X)
-    (* mmio.EXO_IS_RIPSHA mmio.LIMB)
-    (* mmio.EXO_IS_RIPSHA mmio.SIZE)
-    (* mmio.EXO_IS_RIPSHA mmio.TOTAL_SIZE)
+    mmio.EXO_ID
+    mmio.PHASE
+    mmio.INDEX_X
+    mmio.LIMB
+    mmio.SIZE
+    mmio.TOTAL_SIZE
   ))
