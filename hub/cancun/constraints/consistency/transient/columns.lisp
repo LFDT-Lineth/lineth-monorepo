@@ -29,7 +29,7 @@
     (+ transient/ADDRESS_LO     )
     (+ transient/STORAGE_KEY_HI )
     (+ transient/STORAGE_KEY_LO )
-    (+ ABS_TX_NUM               )
+    (+ ABSOLUTE_TRANSACTION_NUMBER               )
     (+ DOM_STAMP                )
     (- SUB_STAMP                )
     ;;

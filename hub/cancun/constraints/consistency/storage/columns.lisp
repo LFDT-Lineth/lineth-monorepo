@@ -43,7 +43,7 @@
     (↓ DOM_STAMP )
     (↑ SUB_STAMP )
     ;;
-    ABS_TX_NUM
+    ABSOLUTE_TRANSACTION_NUMBER
     REL_BLK_NUM
     storage/VALUE_ORIG_HI
     storage/VALUE_ORIG_LO

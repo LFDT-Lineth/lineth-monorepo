@@ -1,13 +1,21 @@
 (module hub)
 
 (defcolumns
-    ( ABSOLUTE_TRANSACTION_NUMBER               :i16 )
-    ( RELATIVE_BLOCK_NUMBER                     :i16 )
+    ( ABSOLUTE_TRANSACTION_NUMBER               :i16 ) ;;TODO to delete
+    ( RELATIVE_BLOCK_NUMBER                     :i16 ) ;;TODO to delete
+    ( SYSI                                      :binary@prove )
+    ( USER                                      :binary@prove )
+    ( SYSF                                      :binary@prove )
     ( TX_SKIP                                   :binary@prove )
     ( TX_WARM                                   :binary@prove )
     ( TX_INIT                                   :binary@prove )
     ( TX_EXEC                                   :binary@prove )
     ( TX_FINL                                   :binary@prove )
+    ( BLK_NUMBER                                :i24 )
+    ( TOTL_TXN_NUMBER                           :i24 )
+    ( SYSI_TXN_NUMBER                           :i24 )
+    ( USER_TXN_NUMBER                           :i24 )
+    ( SYSF_TXN_NUMBER                           :i24 )
     ( HUB_STAMP                                 :i32 )
     ( HUB_STAMP_TRANSACTION_END                 :i32 )
     ( CONTEXT_MAY_CHANGE                        :binary@prove )

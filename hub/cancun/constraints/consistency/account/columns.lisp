@@ -55,8 +55,8 @@
       (↓ DOM_STAMP )
       (↑ SUB_STAMP )
       ;;
-      REL_BLK_NUM
-      ABS_TX_NUM
+      REL_BLK_NUM 
+      ABSOLUTE_TRANSACTION_NUMBER 
       account/CODE_FRAGMENT_INDEX
       account/BALANCE
       account/BALANCE_NEW

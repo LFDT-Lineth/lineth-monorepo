@@ -42,5 +42,11 @@
                 ;; coinbase related
                 ( COINBASE_ADDRESS_HI          :i32  )
                 ( COINBASE_ADDRESS_LO          :i128 )
+
+                ;; related to system transaction
+                ( NOOP                         :binary@prove)
+                ( EIP4788                      :binary@prove)
+                ( EIP2935                      :binary@prove) ;; should be Pectra only
+                ( SYST_TXN_DATA    :array [4]  :i128        ) ;; TODO: review typing
         )
 )
