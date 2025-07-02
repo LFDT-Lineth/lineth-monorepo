@@ -1,25 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Configuration status="INFO" monitorInterval="2">
-  <Properties>
-    <Property name="root.log.level">WARN</Property>
-  </Properties>
-
   <Appenders>
     <Console name="Console" target="SYSTEM_OUT">
       <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} | %t | %-5level | %c{1} | %msg %throwable{short.message}%n" />
     </Console>
   </Appenders>
   <Loggers>
-    <Logger name="net.consensys.shomei" level="INFO" additivity="false">
-      <AppenderRef ref="Console"/>
-    </Logger>
-    <Logger name="net.consensys.shomei.rpc" level="INFO" additivity="false">
-      <AppenderRef ref="Console"/>
-    </Logger>
-    <Logger name="org.hyperledger.besu.ethereum.api.jsonrpc.execution" level="INFO" additivity="false">
-      <AppenderRef ref="Console"/>
-    </Logger>
-    <Root level="${sys:root.log.level}">
+    <Logger name="net.consensys.shomei" level="INFO" />
+    <Logger name="net.consensys.shomei.rpc" level="INFO" />
+    <Logger name="org.hyperledger.besu.ethereum.api.jsonrpc.execution" level="INFO" />
+    <Root level="WARN">
       <AppenderRef ref="Console"/>
     </Root>
   </Loggers>
