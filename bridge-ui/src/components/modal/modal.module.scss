@@ -17,8 +17,8 @@
   overflow: hidden;
   position: relative;
   top: -5rem;
-  color: var(--v2-color-black);
-  background: var(--v2-color-white);
+  color: var(--color-black);
+  background: var(--color-white);
 
   width: calc(100% - 3rem);
 
@@ -33,11 +33,12 @@
 }
 
 .drawer {
-  background: var(--v2-color-white);
+  background: var(--color-white);
   border-radius: 0.625rem 0.625rem 0 0;
   position: absolute;
   bottom: 0;
   width: 100%;
+  max-width: 31.25rem;
   max-height: 90%;
   height: auto;
   box-shadow: 0 -0.3125rem 0.625rem rgba(0, 0, 0, 0.2);
@@ -70,6 +71,6 @@
   svg {
     width: 1rem;
     height: 1rem;
-    color: var(--v2-color-darker-gray);
+    color: var(--color-darker-gray);
   }
 }

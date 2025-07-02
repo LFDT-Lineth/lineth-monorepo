@@ -1,12 +1,6 @@
 .content-wrapper {
   max-width: 29.25rem;
-  margin: 0 auto;
-
-  width: calc(100% - 3rem);
-
-  @include bp("tablet") {
-    width: 100%;
-  }
+  margin: 0 auto 1.5rem;
 }
 
 .widget-wrapper {

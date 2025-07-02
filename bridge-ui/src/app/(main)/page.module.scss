@@ -1,20 +1,14 @@
 .content-wrapper {
   max-width: 31.5rem;
-  margin: 0 auto;
-
-  width: calc(100% - 3rem);
-  background-color: var(--v2-color-white);
+  margin: 0 auto 1.5rem;
+  background-color: var(--color-white);
   padding: 1.5rem;
   border-radius: 0.625rem;
-
-  @include bp("tablet") {
-    width: 100%;
-  }
 }
 
 .title {
   font-size: 1.5rem;
-  color: var(--v2-color-black);
+  color: var(--color-black);
   line-height: 1.4;
   margin-bottom: 1rem;
 }

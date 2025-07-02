@@ -4,11 +4,7 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin: 3rem auto 1rem;
-
-  @include bp("tablet") {
-    margin: 3.75rem auto 1.5rem;
-  }
+  margin: 0 auto 1.5rem;
 
   &.hide {
     margin-bottom: 0;
@@ -36,7 +32,7 @@
   flex-wrap: wrap;
   gap: 0.5rem;
   box-shadow: 0 0.25rem 0.25rem 0 rgba(18, 18, 18, 0.09);
-  background-color: var(--v2-color-white);
+  background-color: var(--color-white);
   border-radius: 0.625rem;
   overflow: hidden;
 }

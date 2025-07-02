@@ -10,8 +10,8 @@
 .tooltip {
   position: absolute;
   padding: 0.75rem 1rem;
-  background-color: var(--v2-color-navy);
-  color: var(--v2-color-white);
+  background-color: var(--color-navy);
+  color: var(--color-white);
   font-size: 0.875rem;
   border-radius: 0.5rem;
   white-space: nowrap;
@@ -42,7 +42,7 @@
       transform: translateX(-50%);
       border-left: 0.375rem solid transparent;
       border-right: 0.375rem solid transparent;
-      border-top: 0.375rem solid var(--v2-color-navy);
+      border-top: 0.375rem solid var(--color-navy);
     }
   }
 
@@ -59,7 +59,7 @@
       transform: translateX(-50%);
       border-left: 0.375rem solid transparent;
       border-right: 0.375rem solid transparent;
-      border-bottom: 0.375rem solid var(--v2-color-navy);
+      border-bottom: 0.375rem solid var(--color-navy);
     }
   }
 
@@ -76,7 +76,7 @@
       transform: translateY(-50%);
       border-top: 0.375rem solid transparent;
       border-bottom: 0.375rem solid transparent;
-      border-left: 0.375rem solid var(--v2-color-navy);
+      border-left: 0.375rem solid var(--color-navy);
     }
   }
 
@@ -93,7 +93,7 @@
       transform: translateY(-50%);
       border-top: 0.375rem solid transparent;
       border-bottom: 0.375rem solid transparent;
-      border-right: 0.375rem solid var(--v2-color-navy);
+      border-right: 0.375rem solid var(--color-navy);
     }
   }
 }

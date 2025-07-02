@@ -30,14 +30,19 @@ export const cssOverrides = `
 
   .dynamic-widget-inline-controls {
     background-color: transparent;
-    border: 1px solid white;
+    border: 1px solid var(--color-indigo);
     border-radius: 1.875rem;
   }
 
-  .dynamic-widget-inline-controls .network-switch-control__network-name {
-    color: white;
+  .dynamic-widget-inline-controls__account-control-container {
+    display: flex;
+    align-items: center;
+  }
 
-    @media screen and (max-width: 912px) {
+  .dynamic-widget-inline-controls .network-switch-control__network-name {
+    color: var(--color-white);
+
+    @media screen and (max-width: 767px) {
       display: none;
     }
   }
@@ -47,19 +52,34 @@ export const cssOverrides = `
   }
 
   .dynamic-widget-inline-controls .network-switch-control__arrow-icon {
-    color: white;
+    color: var(--color-white);
   }
 
   .account-control__name {
-    color: white;
+    color: var(--color-indigo);
 
-    @media screen and (max-width: 912px) {
+    @media screen and (max-width: 767px) {
       display: none;
     }
   }
 
   .account-control__icon {
-    color: white;
+    color: var(--color-silver);
+
+    @media screen and (max-width: 767px) {
+      margin-left: 0 !important;
+    }
+  }
+
+  .account-control__container {
+    @media screen and (max-width: 767px) {
+      justify-content: center;
+    }
+  }
+
+  .account-control__container:hover,
+  .account-control__container--active {
+    background-color: unset;
   }
 `;
 

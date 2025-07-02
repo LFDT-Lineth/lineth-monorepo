@@ -1,10 +1,10 @@
 .card-item {
-  background-color: var(--v2-color-smoke);
+  background-color: var(--color-smoke);
   border-radius: 0.625rem;
   transition: background-color 0.25s ease-in-out;
 
   &.dropdown {
-    background-color: var(--v2-color-white);
+    background-color: var(--color-white);
     border-radius: unset;
     width: 100%;
 
@@ -15,7 +15,7 @@
     }
 
     &:hover {
-      background-color: var(--v2-color-light-pink);
+      background-color: var(--color-light-pink);
     }
 
     .card-link {
@@ -38,7 +38,7 @@
 
   &:hover {
     .right-arrow {
-      background-color: var(--v2-color-cyan);
+      background-color: var(--color-cyan);
     }
   }
 }
@@ -57,7 +57,7 @@
 }
 
 .card-content {
-  color: var(--v2-color-navy);
+  color: var(--color-navy);
   font-family: var(--font-atyp-text);
   display: flex;
   flex-direction: column;
@@ -83,8 +83,8 @@
 }
 
 .card-label {
-  background-color: var(--v2-color-light-pink);
-  color: var(--v2-color-indigo);
+  background-color: var(--color-light-pink);
+  color: var(--color-indigo);
   font-size: 0.75rem;
   line-height: 1;
   padding: 0.25rem 0.5rem;
@@ -98,7 +98,7 @@
   flex-shrink: 0;
   width: 2rem;
   height: 2rem;
-  background-color: var(--v2-color-white);
+  background-color: var(--color-white);
   border-radius: 50%;
   transition: background-color 0.25s ease-in-out;
 
@@ -112,7 +112,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--v2-color-darker-gray);
+  color: var(--color-darker-gray);
   transition: transform 0.25s ease-in-out;
 
   svg {

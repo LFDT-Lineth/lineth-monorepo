@@ -12,8 +12,8 @@
 }
 
 .banner {
-  background-color: var(--v2-color-tangerine);
-  color: var(--v2-color-white);
+  background-color: var(--color-tangerine);
+  color: var(--color-white);
   padding: 1rem 0;
   display: flex;
   justify-content: center;
@@ -73,7 +73,7 @@
   width: 1rem;
   height: 1rem;
   top: 0.625rem;
-  color: var(--v2-color-white);
+  color: var(--color-white);
   cursor: pointer;
   z-index: 2;
 

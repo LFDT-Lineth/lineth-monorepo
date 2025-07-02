@@ -1,24 +1,24 @@
 .list-item {
-    padding: 0.75rem;
-    font-size: 0.875rem;
+  padding: 0.75rem;
+  font-size: 0.875rem;
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: space-between;
+
+  &:not(:last-child) {
+    border-bottom: 1px solid var(--color-silver);
+  }
+
+  .fee-row {
     display: flex;
     gap: 0.5rem;
-    align-items: center;
-    justify-content: space-between;
 
-    &:not(:last-child) {
-      border-bottom: 1px solid var(--v2-color-silver);
+    .fee-value {
+      font-weight: 500;
     }
-
-    .fee-row {
-      display: flex;
-      gap: 0.5rem;
-
-      .fee-value {
-        font-weight: 500;
-      }
-      .fee-fiat-value {
-        color: var(--v2-color-darker-gray);
-      }
+    .fee-fiat-value {
+      color: var(--color-darker-gray);
     }
   }
+}

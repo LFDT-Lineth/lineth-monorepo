@@ -76,6 +76,7 @@ jobs:
             NEXT_PUBLIC_LIFI_INTEGRATOR_NAME=${{ env.NEXT_PUBLIC_LIFI_INTEGRATOR_NAME }}
             NEXT_PUBLIC_ONRAMPER_API_KEY=${{ env.NEXT_PUBLIC_ONRAMPER_API_KEY }}
             NEXT_PUBLIC_LAYERSWAP_API_KEY=${{ env.NEXT_PUBLIC_LAYERSWAP_API_KEY }}
+            REVALIDATE_SECRET=${{ env.REVALIDATE_SECRET }}
           cache-from: type=registry,ref=consensys/linea-bridge-ui:buildcache
           cache-to: type=registry,ref=consensys/linea-bridge-ui:buildcache,mode=max
         env:
@@ -88,6 +89,7 @@ jobs:
           NEXT_PUBLIC_ONRAMPER_API_KEY: ${{ secrets.PUBLIC_ONRAMPER_API_KEY }}
           NEXT_PUBLIC_LAYERSWAP_API_KEY: ${{ secrets.PUBLIC_LAYERSWAP_API_KEY }}
           NEXT_PUBLIC_ENVIRONMENT: ${{ matrix.environment }}
+          REVALIDATE_SECRET: ${{ secrets.BRIDGE_UI_REVALIDATE_SECRET }}
 
   test-build:
     if: github.event.pull_request.head.repo.fork == true

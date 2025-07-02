@@ -6,14 +6,14 @@
   input {
     font-size: 0.875rem;
     font-family: var(--font-atyp-text);
-    border: 0.125rem solid var(--v2-color-silver);
+    border: 0.125rem solid var(--color-silver);
     border-radius: 0.625rem;
     width: 100%;
     padding: 1rem 0.75rem 1rem 2.375rem;
     transition: 0.25s border-color ease-in-out;
 
     &:focus {
-      border-color: var(--v2-color-icterine);
+      border-color: var(--color-icterine);
     }
   }
 

@@ -1,10 +1,26 @@
-.content-wrapper {
-    max-width: 29.25rem;
-    margin: 0 auto;
-  
-    width: calc(100% - 3rem);
-  
-    @include bp("tablet") {
-      width: 100%;
-    }
+.layout {
+  padding: 0.625rem 1.5rem 0 1.5rem;
+
+  @include bp("tablet") {
+    padding: 1.5rem 1.5rem 0 1.5rem;
+  }
+}
+
+.container {
+  display: flex;
+  column-gap: 1.5rem;
+  max-width: 90rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.right {
+  min-height: calc(100svh - 3rem);
+  width: 100%;
+  min-width: 0;
+  margin-bottom: 3.9375rem;
+
+  @include bp("tablet") {
+    margin-bottom: 0;
+  }
 }

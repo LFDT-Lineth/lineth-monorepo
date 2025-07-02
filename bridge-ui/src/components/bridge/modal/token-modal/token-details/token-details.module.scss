@@ -8,7 +8,7 @@
   transition: background-color 0.2s ease-in-out;
 
   &:hover {
-    background-color: var(--v2-color-light-pink);
+    background-color: var(--color-light-pink);
   }
 }
 
@@ -34,7 +34,7 @@
   }
   .token-name {
     font-size: 0.875rem;
-    color: var(--v2-color-darker-gray);
+    color: var(--color-darker-gray);
   }
 }
 
@@ -47,7 +47,7 @@
   }
   .price {
     font-size: 0.875rem;
-    color: var(--v2-color-darker-gray);
+    color: var(--color-darker-gray);
   }
 }
 

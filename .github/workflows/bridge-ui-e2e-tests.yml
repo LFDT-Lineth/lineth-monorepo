@@ -66,6 +66,7 @@ jobs:
           NEXT_PUBLIC_ONRAMPER_API_KEY: ${{ secrets.PUBLIC_ONRAMPER_API_KEY }}
           NEXT_PUBLIC_LAYERSWAP_API_KEY: ${{ secrets.PUBLIC_LAYERSWAP_API_KEY }}
           NEXT_PUBLIC_ENVIRONMENT: development
+          REVALIDATE_SECRET: ${{ secrets.BRIDGE_UI_REVALIDATE_SECRET }}
 
       - name: Install linux dependencies
         run: |

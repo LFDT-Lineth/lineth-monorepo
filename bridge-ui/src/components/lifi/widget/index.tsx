@@ -100,7 +100,7 @@ const widgetConfig: Partial<WidgetConfig> = {
             WebkitFilter: "none !important",
             fontSize: "0.875rem !important",
             ":hover": {
-              boxShadow: "inset 0 0 0 0.125rem var(--v2-color-icterine)",
+              boxShadow: "inset 0 0 0 0.125rem var(--color-icterine)",
             },
           },
         },
@@ -109,7 +109,7 @@ const widgetConfig: Partial<WidgetConfig> = {
           sx: {
             ".MuiCardContent-root": {
               ":hover": {
-                boxShadow: "inset 0 0 0 0.125rem var(--v2-color-icterine)",
+                boxShadow: "inset 0 0 0 0.125rem var(--color-icterine)",
               },
             },
           },

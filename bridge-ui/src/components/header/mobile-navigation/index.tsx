@@ -1,12 +1,13 @@
+"use client";
 import Link from "next/link";
-import { LinkBlock } from "@/types";
+import { LinkBlock } from "@/types/index";
 import { useEffect, useState } from "react";
-import Image from "next/image";
-import HeaderConnect from "@/components/header/header-connect";
-
-import styles from "./mobile-navigation.module.scss";
-import LineaBridgeLogo from "@/assets/logos/linea-bridge.svg";
+import Image from "@/components/ui/image";
 import clsx from "clsx";
+import styles from "./mobile-navigation.module.scss";
+import UnionIcon from "@/assets/icons/union.svg";
+import LineaLogo from "@/assets/logos/linea.svg";
+import ListYourApp from "@/components/list-your-app";
 
 type Props = {
   menus: LinkBlock[];
@@ -47,8 +48,7 @@ export const MobileNavigation = ({ menus, theme = "default" }: Props) => {
 
   return (
     <div className={styles["nav-wrapper"]}>
-      <HeaderConnect />
-      <button onClick={() => setIsOpen(true)} className={`${styles.menuButton} ${styles[theme]}`}>
+      <button onClick={() => setIsOpen(true)} className={clsx(styles.menuButton, styles[theme])} aria-label="Open menu">
         <svg xmlns="http://www.w3.org/2000/svg" width="25" height="17" viewBox="0 0 25 17" fill="none">
           <line x1="0.469727" y1="1.48633" x2="24.0663" y2="1.48633" stroke="currentColor" />
           <line x1="0.469971" y1="8.75293" x2="24.0665" y2="8.75293" stroke="currentColor" />
@@ -57,103 +57,95 @@ export const MobileNavigation = ({ menus, theme = "default" }: Props) => {
       </button>
       {isOpen && (
         <div className={styles.wrapper}>
-          <div className={styles.content}>
-            <div className={styles.actions}>
-              <Link href="/" aria-label="Go to homepage">
-                <LineaBridgeLogo className={styles.logo} />
-              </Link>
-              <button onClick={() => setIsOpen(false)}>
-                <svg
-                  className={styles["close-icon"]}
-                  width="24"
-                  height="23"
-                  viewBox="0 0 24 23"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <line x1="1.3193" y1="22.5245" x2="22.5695" y2="1.2743" stroke="currentColor" />
-                  <line x1="2.02665" y1="1.27425" x2="23.2768" y2="22.5245" stroke="currentColor" />
-                </svg>
-              </button>
-            </div>
-            <div className={styles.navigationWrapper}>
-              <ul className={styles.navigation}>
-                {menus.map((menu, index) => (
-                  <li
-                    className={clsx(styles.menuItem, { [styles.active]: activeMenu === index })}
-                    key={`mobile-menu-item-${index}`}
-                    onClick={() => handleToggleMenu(menu, index)}
+          <div className={styles.innerWrapper}>
+            <div className={styles.content}>
+              <div className={styles.actions}>
+                <Link href="/" aria-label="Go to homepage">
+                  <LineaLogo />
+                </Link>
+                <button onClick={() => setIsOpen(false)}>
+                  <svg
+                    className={styles["close-icon"]}
+                    width="24"
+                    height="23"
+                    viewBox="0 0 24 23"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
                   >
-                    {menu.url ? (
-                      <Link href={menu.url} target={menu.external ? "_blank" : "_self"}>
-                        <span className={styles.label}>
-                          <i className={styles.dot}></i>
-                          {menu.label}
-                          {menu.external && (
-                            <svg className={styles.external}>
-                              <use href="#icon-new-tab" />
-                            </svg>
-                          )}
-                        </span>
-                      </Link>
-                    ) : (
-                      <>
-                        <span className={styles.label}>
-                          <i className={styles.dot}></i>
-                          {menu.label}
-                        </span>
-                        {menu.submenusLeft && (
-                          <ul className={styles.submenu}>
-                            {menu.submenusLeft.map((submenu, subIndex) => (
-                              <li
-                                className={styles.submenuItem}
-                                key={`mobile-submenuleft-item-${subIndex}`}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleToggleMenu(submenu, -1);
-                                }}
-                              >
-                                <Link href={submenu.url as string} target={submenu.external ? "_blank" : "_self"}>
-                                  {submenu.label}
-                                  {submenu.external && (
-                                    <svg className={styles.external}>
-                                      <use href="#icon-new-tab" />
-                                    </svg>
-                                  )}
-                                </Link>
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                        {menu.submenusRight && (
-                          <ul className={`${styles.submenu} ${styles.right}`}>
-                            {menu.submenusRight?.submenusLeft?.map((submenu, subIndex) => (
-                              <li
-                                className={styles.submenuItem}
-                                key={`mobile-submenuright-submenuleft-item-${subIndex}`}
-                              >
-                                <Link
-                                  href={submenu.url as string}
-                                  target={submenu.external ? "_blank" : "_self"}
-                                  aria-label={submenu.label}
-                                  className={styles.iconItem}
+                    <line x1="1.3193" y1="22.5245" x2="22.5695" y2="1.2743" stroke="currentColor" />
+                    <line x1="2.02665" y1="1.27425" x2="23.2768" y2="22.5245" stroke="currentColor" />
+                  </svg>
+                </button>
+              </div>
+              <div className={styles.navigationWrapper}>
+                <ul className={styles.navigation}>
+                  {menus.map((menu, index) => (
+                    <li
+                      className={clsx(styles.menuItem, activeMenu === index && styles.active)}
+                      key={index}
+                      onClick={() => handleToggleMenu(menu, index)}
+                    >
+                      {menu.url ? (
+                        <Link href={menu.url} target={menu.external ? "_blank" : "_self"}>
+                          <span className={styles.label}>
+                            <i className={styles.dot}></i>
+                            {menu.label}
+                            {menu.external && <UnionIcon className={styles.external} />}
+                          </span>
+                        </Link>
+                      ) : (
+                        <>
+                          <span className={styles.label}>
+                            <i className={styles.dot}></i>
+                            {menu.label}
+                          </span>
+                          {menu.submenusLeft && (
+                            <ul className={styles.submenu}>
+                              {menu.submenusLeft.map((submenu, subIndex) => (
+                                <li
+                                  className={styles.submenuItem}
+                                  key={subIndex}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleToggleMenu(submenu, -1);
+                                  }}
                                 >
-                                  <Image
-                                    src={submenu.icon?.file.url as string}
-                                    width={submenu.icon?.file.details.image.width}
-                                    height={submenu.icon?.file.details.image.height}
-                                    alt={submenu.label}
-                                  />
-                                </Link>
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                      </>
-                    )}
-                  </li>
-                ))}
-              </ul>
+                                  <Link href={submenu.url as string} target={submenu.external ? "_blank" : "_self"}>
+                                    {submenu.label}
+                                    {submenu.external && <UnionIcon className={styles.external} />}
+                                  </Link>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                          {menu.submenusRight && (
+                            <ul className={`${styles.submenu} ${styles.right}`}>
+                              {menu.submenusRight?.submenusLeft?.map((submenu, subIndex) => (
+                                <li className={styles.submenuItem} key={subIndex}>
+                                  <Link
+                                    href={submenu.url as string}
+                                    target={submenu.external ? "_blank" : "_self"}
+                                    aria-label={submenu.label}
+                                    className={styles.iconItem}
+                                  >
+                                    <Image
+                                      src={submenu.icon?.file.url as string}
+                                      width={submenu.icon?.file.details.image.width || 0}
+                                      height={submenu.icon?.file.details.image.height || 0}
+                                      alt={submenu.label}
+                                    />
+                                  </Link>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+                <ListYourApp />
+              </div>
             </div>
           </div>
         </div>

@@ -1,6 +1,6 @@
 .content {
   padding: 1.5rem;
-  background-color: var(--v2-color-white);
+  background-color: var(--color-white);
   border-radius: 1.25rem;
   text-align: center;
 }
@@ -10,7 +10,7 @@
   display: inline-block;
 
   svg {
-    color: var(--v2-color-indigo);
+    color: var(--color-indigo);
     width: 2.5rem;
     height: 2.5rem;
   }
@@ -33,8 +33,8 @@
 .link {
   border-radius: 1.875rem;
   width: 100%;
-  background-color: var(--v2-color-indigo);
-  color: var(--v2-color-white);
+  background-color: var(--color-indigo);
+  color: var(--color-white);
   font-size: 0.875rem;
   padding: 0.75rem 0;
   text-decoration: none;
@@ -44,7 +44,7 @@
     0.25s background-color ease-in-out;
 
   &:hover {
-    background-color: var(--v2-color-icterine);
-    color: var(--v2-color-black);
+    background-color: var(--color-icterine);
+    color: var(--color-black);
   }
 }

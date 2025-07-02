@@ -6,11 +6,11 @@
 .header-wrapper {
   position: relative;
   height: 11.2rem;
-  background-color: var(--v2-color-cyan);
+  background-color: var(--color-cyan);
   display: flex;
 
   .title {
-    color: var(--v2-color-navy);
+    color: var(--color-navy);
     line-height: 1.4;
     font-size: 1.5rem;
     width: 12.2rem;
@@ -20,7 +20,7 @@
     width: 2.6rem;
     margin-bottom: 0.5rem;
     height: auto;
-    color: var(--v2-color-navy);
+    color: var(--color-navy);
   }
 
   .illustration {
@@ -38,7 +38,7 @@
 
   .close-icon {
     display: inline-flex;
-    background: var(--v2-color-white);
+    background: var(--color-white);
     border-radius: 50%;
     padding: 0.25rem;
     position: absolute;
@@ -47,7 +47,7 @@
     cursor: pointer;
 
     svg {
-      color: var(--v2-color-black);
+      color: var(--color-black);
       width: 1rem;
       height: 1rem;
     }
@@ -76,7 +76,7 @@
 
   li {
     padding: 0.5rem 1rem;
-    background-color: var(--v2-color-light-pink);
+    background-color: var(--color-light-pink);
     border-radius: 0.625rem;
     display: flex;
     align-items: center;
@@ -88,8 +88,8 @@
       display: block;
       flex-shrink: 0;
       align-self: flex-start;
-      color: var(--v2-color-white);
-      background-color: var(--v2-color-indigo);
+      color: var(--color-white);
+      background-color: var(--color-indigo);
       width: 1.5rem;
       height: 1.5rem;
       line-height: 1;

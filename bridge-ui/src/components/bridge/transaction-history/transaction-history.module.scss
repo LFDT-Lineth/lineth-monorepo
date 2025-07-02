@@ -1,40 +1,40 @@
 .transaction-history-wrapper {
-    background-color: var(--v2-color-white);
-    border-radius: 0.625rem;
-    padding: 1.5rem;
+  background-color: var(--color-white);
+  border-radius: 0.625rem;
+  padding: 1.5rem;
+}
+
+.headline {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+
+  .title {
+    font-weight: 500;
+    font-size: 1.25rem;
+    color: var(--color-black);
   }
-  
-  .headline {
+
+  .action {
     display: flex;
-    justify-content: flex-start;
-    align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 1rem;
-  
-    .title {
-      font-weight: 500;
-      font-size: 1.25rem;
-      color: var(--v2-color-black);
-    }
-  
-    .action {
-      display: flex;
-      gap: 1rem;
+    gap: 1rem;
 
-      .go-back-button {
-        width: 2.5rem;
-        height: 2.5rem;
-        padding: 0.5rem;
-        border-radius: 100%;
-        &:hover {
-          background-color: var(--v2-color-smoke);
-        }
+    .go-back-button {
+      width: 2.5rem;
+      height: 2.5rem;
+      padding: 0.5rem;
+      border-radius: 100%;
+      &:hover {
+        background-color: var(--color-smoke);
+      }
 
-        .go-back-icon {
-          width: 1.5rem;
-          height: 1.5rem;
-          color: var(--v2-color-black);
-        }
-      }      
+      .go-back-icon {
+        width: 1.5rem;
+        height: 1.5rem;
+        color: var(--color-black);
+      }
     }
   }
+}

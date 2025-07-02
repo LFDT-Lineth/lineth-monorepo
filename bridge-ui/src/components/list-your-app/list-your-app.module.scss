@@ -1,0 +1,40 @@
+.submit-dapp {
+  display: flex;
+  gap: 0.625rem;
+  justify-content: center;
+  align-items: center;
+  margin-top: 4.125rem;
+  font-size: 0.875rem;
+  border: 1px solid var(--color-indigo);
+  width: 100%;
+  border-radius: 1.875rem;
+  padding: 0.75rem;
+  text-decoration: none;
+  text-align: center;
+  line-height: 1;
+  color: var(--color-indigo);
+  transition:
+    color,
+    background-color 0.2s ease-in-out;
+
+  svg {
+    width: 0.875rem;
+    height: 0.875rem;
+  }
+
+  &:hover {
+    background-color: var(--color-indigo);
+    color: var(--color-white);
+  }
+
+  @include bp("tablet") {
+    position: absolute;
+    bottom: 1.5rem;
+    left: 1rem;
+    width: calc(100% - 2rem);
+    background-color: var(--color-white);
+    border: 0.125rem solid var(--color-indigo);
+    font-weight: 500;
+    margin-top: 0;
+  }
+}

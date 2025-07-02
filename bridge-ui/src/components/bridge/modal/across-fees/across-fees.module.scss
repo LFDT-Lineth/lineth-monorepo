@@ -8,12 +8,12 @@
   line-height: 1.4;
 
   .across {
-    color: var(--v2-color-indigo);
+    color: var(--color-indigo);
   }
 }
 
 .list {
-  background-color: var(--v2-color-smoke);
+  background-color: var(--color-smoke);
   border-radius: 0.5rem;
   margin: 1rem 0;
   font-family: var(--font-atyp-text);
@@ -27,7 +27,7 @@
     justify-content: space-between;
 
     &:not(:last-child) {
-      border-bottom: 1px solid var(--v2-color-silver);
+      border-bottom: 1px solid var(--color-silver);
     }
 
     .two-fee {
@@ -38,7 +38,7 @@
         font-weight: 500;
       }
       .fee2 {
-        color: var(--v2-color-darker-gray);
+        color: var(--color-darker-gray);
       }
     }
   }

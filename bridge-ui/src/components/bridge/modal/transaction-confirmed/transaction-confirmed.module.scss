@@ -31,22 +31,22 @@
 
   .primary-btn {
     padding: 0.75rem 1.5rem;
-    color: var(--v2-color-white);
-    background-color: var(--v2-color-indigo);
+    color: var(--color-white);
+    background-color: var(--color-indigo);
     border-radius: 1.875rem;
     transition:
       background-color 0.2s ease,
       color 0.2s ease;
 
     &:hover {
-      background-color: var(--v2-color-icterine);
-      color: var(--v2-color-black);
+      background-color: var(--color-icterine);
+      color: var(--color-black);
     }
   }
   .secondary-btn {
     border-radius: 0rem;
     padding: 0.75rem 0;
-    color: var(--v2-color-navy);
-    border-bottom: 1px solid var(--v2-color-indigo);
+    color: var(--color-navy);
+    border-bottom: 1px solid var(--color-indigo);
   }
 }

@@ -2,14 +2,14 @@
   width: 2.5rem;
   height: 2.5rem;
   border-radius: 100%;
-  background-color: var(--v2-color-white);
+  background-color: var(--color-white);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
 
   svg {
-    color: var(--v2-color-black);
+    color: var(--color-black);
     width: 1.5rem;
     height: 1.5rem;
     transition: color 0.25s ease-in-out;
@@ -17,7 +17,7 @@
 
   &:hover,
   &.visible {
-    background-color: var(--v2-color-smoke);
+    background-color: var(--color-smoke);
   }
 }
 
@@ -28,7 +28,7 @@
 .menu-dropdown {
   position: absolute;
   visibility: hidden;
-  background-color: var(--v2-color-white);
+  background-color: var(--color-white);
   border-radius: 0.625rem;
   width: 13.625rem;
   z-index: 2;

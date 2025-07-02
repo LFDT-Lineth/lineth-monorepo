@@ -10,9 +10,9 @@
 }
 
 .token-select-btn {
-  --v2-color-indigo: #ffffff;
-  --v2-color-white: var(--v2-color-black);
-  --v2-color-icterine: #ffffff;
+  --color-indigo: #ffffff;
+  --color-white: var(--color-black);
+  --color-icterine: #ffffff;
 
   display: flex;
   align-items: center;
@@ -28,6 +28,5 @@
     width: 1.5rem;
     height: 1.5rem;
     border-radius: 50%;
-  }  
+  }
 }
-

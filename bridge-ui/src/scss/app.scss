@@ -1,39 +1,33 @@
-@import "breakpoints";
-@import "reset";
+@use "reset";
+@use "breakpoints" as *;
 
 :root {
-  --tablet-mockup-width: 834;
-  --desktop-mockup-width: 1440;
-
-  --v2-color-white: #ffffff;
-  --v2-color-smoke: #f8f7f2;
-  --v2-color-silver: #c0c0c0;
-  --v2-color-light-gray: #c3c3c3;
-  --v2-color-dark-gray: #d8d8d8;
-  --v2-color-darker-gray: #525252;
-  --v2-color-black: #121212;
-  --v2-color-navy: #190066;
-  --v2-color-cyan: #61dfff;
-  --v2-color-indigo: #6119ef;
-  --v2-color-icterine: #fff068;
-  --v2-color-tangerine: #ff8d4c;
-  --v2-color-pink: #fcd6ff;
-  --v2-color-light-pink: #f4effe;
-  --v2-color-teal-blue: #007b9a;
-  --v2-color-baby-blue: #ebfbff;
-  --v2-color-red: #d73847;
-  --v2-color-dark-red: #a63c00;
-  --v2-color-green: #1c8234;
+  --color-black: #121212;
+  --color-white: #ffffff;
+  --color-smoke: #f8f7f2;
+  --color-cyan: #61dfff;
+  --color-indigo: #6119ef;
+  --color-navy: #190066;
+  --color-pink: #fcd6ff;
+  --color-magenta: #f361ff;
+  --color-light-pink: #f4effe;
+  --color-tangerine: #ff8d4c;
+  --color-light-gray: #c3c3c3;
+  --color-medium-gray: #898989;
+  --color-dark-gray: #d8d8d8;
+  --color-darker-gray: #525252;
+  --color-silver: #c0c0c0;
+  --color-green: #1c8234;
+  --color-red: #d73847;
+  --color-dark-red: #a63c00;
+  --color-icterine: #fff068;
+  --color-baby-blue: #ebfbff;
+  --color-teal-blue: #007b9a;
 }
 
-html[data-theme="v2"] {
-  font-size: math.div(1000vw, 259);
-
-  @media (min-width: 414px) {
-    font-size: 16px;
-  }
-
+html {
   box-sizing: border-box;
+  font-size: math.div(1000vw, 250);
 
   *,
   *::before,
@@ -41,76 +35,36 @@ html[data-theme="v2"] {
     box-sizing: inherit;
   }
 
+  @media (min-width: 400px) {
+    font-size: 16px;
+  }
+
+  @include bp("tablet") {
+    font-size: math.div(1000vw, 750);
+  }
+
+  @media (min-width: 1200px) {
+    font-size: 16px;
+  }
+
   body {
     font-family: var(--font-atyp);
     font-size: 1rem;
-    background: var(--v2-color-smoke);
-    color: var(--v2-color-black);
+    color: var(--color-black);
+    background-color: var(--color-smoke);
     margin: 0;
-
-    &.mobile-navigation-open {
-      overflow: hidden;
-    }
+    overflow-x: hidden;
   }
+}
 
-  main {
-    position: relative;
-    z-index: 2;
-  }
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
 
-  .layout {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh;
-  }
-
-  .container-v2 {
-    width: 100vw;
-    max-width: 90rem;
-    margin: 0 auto;
-  }
-  .left-illustration,
-  .right-illustration {
-    position: fixed;
-    z-index: 1;
-    display: none;
-    bottom: 0;
-
-    @include bp("desktop") {
-      display: block;
-    }
-  }
-
-  .left-illustration {
-    left: 0;
-    width: 18.75rem;
-    height: auto;
-  }
-  .right-illustration {
-    right: -8rem;
-    width: 38.125rem;
-    height: auto;
-
-    @media (min-width: 1300px) {
-      right: 0;
-    }
-  }
-
-  .mobile-illustration {
-    position: absolute;
-    bottom: 0;
-    width: 100%;
-    object-fit: cover;
-
-    @include bp("desktop") {
-      display: none;
-    }
-
-    &.hidden {
-      display: none !important;
-    }
-  }
+sub {
+  font-size: smaller;
+  vertical-align: sub;
 }
 
 .pulsating {
@@ -119,7 +73,7 @@ html[data-theme="v2"] {
 
 @keyframes pulsate {
   0% {
-    background-color: var(--v2-color-smoke);
+    background-color: var(--color-smoke);
   }
   100% {
     background-color: #ecece8;
@@ -127,16 +81,36 @@ html[data-theme="v2"] {
 }
 
 .dynamic-shadow-dom {
-  --dynamic-brand-primary-color: var(--v2-color-indigo);
-  --dynamic-brand-secondary-color: var(--v2-color-icterine);
-  --dynamic-connection-green: var(--v2-color-green);
-  --dynamic-error-1: var(--v2-color-red);
-  --dynamic-success-1: var(--v2-color-green);
+  --dynamic-brand-primary-color: var(--color-indigo);
+  --dynamic-brand-secondary-color: var(--color-icterine);
+  --dynamic-connection-green: var(--color-green);
+  --dynamic-error-1: var(--color-red);
+  --dynamic-success-1: var(--color-green);
 
-  --dynamic-connect-button-background: var(--v2-color-indigo);
-  --dynamic-connect-button-color: var(--v2-color-white);
+  --dynamic-connect-button-background: var(--color-indigo);
+  --dynamic-connect-button-color: var(--color-white);
   --dynamic-connect-button-border: none;
-  --dynamic-connect-button-background-hover: var(--v2-color-icterine);
-  --dynamic-connect-button-color-hover: var(--v2-color-black);
+  --dynamic-connect-button-background-hover: var(--color-icterine);
+  --dynamic-connect-button-color-hover: var(--color-black);
   --dynamic-connect-button-border-hover: none;
+}
+
+/* scrollbar */
+::-webkit-scrollbar {
+  width: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 10px;
+}
+
+* {
+  scrollbar-color: rgba(0, 0, 0, 0.2) rgba(0, 0, 0, 0);
+  scrollbar-width: thin;
 }

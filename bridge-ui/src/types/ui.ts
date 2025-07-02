@@ -16,16 +16,16 @@ export type AssetType = {
 };
 
 export type LinkBlock = {
+  __id: string;
   name: string;
   label: string;
+  text?: string;
   url?: string;
   external?: boolean;
   active?: boolean;
   icon?: AssetType;
   submenusLeft?: LinkBlock[];
   submenusRight?: LinkBlock;
-  mobileOnly?: boolean;
-  desktopUrl?: string;
 };
 
 export enum Theme {

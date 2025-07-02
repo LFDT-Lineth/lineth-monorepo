@@ -2,12 +2,12 @@
   width: 2rem;
   height: 2rem;
   font-size: 1rem;
-  background-color: var(--v2-color-smoke);
+  background-color: var(--color-smoke);
   display: flex;
   justify-content: center;
   align-items: center;
   border-radius: 100%;
-  outline: 0.3rem solid var(--v2-color-white);
+  outline: 0.3rem solid var(--color-white);
   transition:
     transform,
     background-color 0.2s ease;
@@ -17,16 +17,16 @@
   }
 
   &:hover {
-    background-color: var(--v2-color-icterine);
+    background-color: var(--color-icterine);
   }
 
   &:disabled {
-    background-color: var(--v2-color-smoke);
+    background-color: var(--color-smoke);
   }
 }
 
 .arrow-icon {
   width: 0.875rem;
   height: auto;
-  color: var(--v2-color-black);
+  color: var(--color-black);
 }
