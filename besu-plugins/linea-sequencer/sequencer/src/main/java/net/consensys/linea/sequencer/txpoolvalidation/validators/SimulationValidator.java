@@ -11,9 +11,11 @@ package net.consensys.linea.sequencer.txpoolvalidation.validators;
 import static net.consensys.linea.sequencer.modulelimit.ModuleLineCountValidator.ModuleLineCountResult.MODULE_NOT_DEFINED;
 import static net.consensys.linea.sequencer.modulelimit.ModuleLineCountValidator.ModuleLineCountResult.TX_MODULE_LINE_COUNT_OVERFLOW;
 import static net.consensys.linea.zktracer.Fork.LONDON;
+import static org.hyperledger.besu.plugin.services.TransactionSimulationService.SimulationParameters.ALLOW_FUTURE_NONCE;
 
 import java.math.BigInteger;
 import java.time.Instant;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
@@ -87,7 +89,11 @@ public class SimulationValidator implements PluginTransactionPoolValidator {
           createLineCountingTracer(pendingBlockHeader, blockchainService.getChainId().get());
       final var maybeSimulationResults =
           transactionSimulationService.simulate(
-              transaction, Optional.empty(), pendingBlockHeader, lineCountingTracer, false, true);
+              transaction,
+              Optional.empty(),
+              pendingBlockHeader,
+              lineCountingTracer,
+              EnumSet.of(ALLOW_FUTURE_NONCE));
 
       ModuleLimitsValidationResult moduleLimitResult =
           moduleLineCountValidator.validate(lineCountingTracer.getModulesLineCount());
