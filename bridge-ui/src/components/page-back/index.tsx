@@ -5,22 +5,17 @@ import styles from "./page-back.module.scss";
 
 type Props = {
   label?: string;
-  href?: string;
-  isHomepage?: boolean;
 };
 
-export default function PageBack({ label = "Back", href = "/", isHomepage = false }: Props) {
+export default function PageBack({ label = "Back" }: Props) {
   const router = useRouter();
 
   const handleBack = () => {
-    if (window.history.length <= 2) {
-      router.push(href);
-    } else {
-      router.back();
-    }
+    router.push("/");
   };
+
   return (
-    <div className={clsx(styles.wrapper, isHomepage && styles.homepage)}>
+    <div className={clsx(styles.wrapper)}>
       <span className={styles.back} onClick={handleBack}>
         <ArrowLeftIcon />
         <span>{label}</span>

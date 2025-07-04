@@ -3,10 +3,6 @@
   margin: 1.5rem auto;
   padding-left: 1.25rem;
 
-  &.homepage {
-    max-width: 31.5rem;
-  }
-
   @include bp(tablet) {
     padding-left: 1.5rem;
   }

@@ -13,5 +13,6 @@ export {
   isUndefinedOrNull,
   isEmptyString,
   isUndefinedOrEmptyString,
+  isHomePage,
 } from "./utils";
 export { getCctpTransactionStatus, getCctpMessageByTxHash } from "./cctp";

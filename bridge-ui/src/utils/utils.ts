@@ -25,3 +25,7 @@ export const isUndefinedOrNull = (value: unknown): value is undefined | null => 
 export const isUndefinedOrEmptyString = (value: string | undefined): value is undefined => {
   return isUndefined(value) || isEmptyString(value);
 };
+
+export const isHomePage = (pathname: string): boolean => {
+  return pathname === "/";
+};
