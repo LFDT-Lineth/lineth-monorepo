@@ -12,7 +12,6 @@ package net.consensys.linea.sequencer.txpoolvalidation.validators;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.consensys.linea.config.LineaTransactionPoolValidatorCliOptions;
 import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.datatypes.Wei;
 import org.junit.jupiter.api.Assertions;
@@ -27,11 +26,7 @@ public class CalldataValidatorTest {
 
   @BeforeEach
   public void initialize() {
-    calldataValidator =
-        new CalldataValidator(
-            LineaTransactionPoolValidatorCliOptions.create().toDomainObject().toBuilder()
-                .maxTxCalldataSize(MAX_TX_CALLDATA_SIZE)
-                .build());
+    calldataValidator = new CalldataValidator(MAX_TX_CALLDATA_SIZE);
   }
 
   @Test

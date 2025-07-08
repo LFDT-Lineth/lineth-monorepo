@@ -27,7 +27,7 @@ import org.web3j.utils.Numeric;
 
 public class AbstractSendBundleTest extends LineaPluginTestBase {
   protected static final BigInteger TRANSFER_GAS_LIMIT = BigInteger.valueOf(100_000L);
-  protected static final BigInteger MULMOD_GAS_LIMIT = BigInteger.valueOf(10_000_000L);
+  protected static final BigInteger MULMOD_GAS_LIMIT = BigInteger.valueOf(9_000_000L);
   protected static final BigInteger GAS_PRICE = BigInteger.TEN.pow(9);
 
   protected TokenTransfer transferTokens(
@@ -61,6 +61,15 @@ public class AbstractSendBundleTest extends LineaPluginTestBase {
 
   protected MulmodCall mulmodOperation(
       final MulmodExecutor executor, final Account sender, final int nonce, final int iterations) {
+    return mulmodOperation(executor, sender, nonce, iterations, MULMOD_GAS_LIMIT);
+  }
+
+  protected MulmodCall mulmodOperation(
+      final MulmodExecutor executor,
+      final Account sender,
+      final int nonce,
+      final int iterations,
+      final BigInteger gasLimit) {
     final var operationCalldata =
         executor.executeMulmod(BigInteger.valueOf(iterations)).encodeFunctionCall();
 
@@ -68,7 +77,7 @@ public class AbstractSendBundleTest extends LineaPluginTestBase {
         RawTransaction.createTransaction(
             CHAIN_ID,
             BigInteger.valueOf(nonce),
-            MULMOD_GAS_LIMIT,
+            gasLimit,
             executor.getContractAddress(),
             BigInteger.ZERO,
             operationCalldata,

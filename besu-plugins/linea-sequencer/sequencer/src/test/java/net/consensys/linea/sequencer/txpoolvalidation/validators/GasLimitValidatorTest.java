@@ -12,7 +12,6 @@ package net.consensys.linea.sequencer.txpoolvalidation.validators;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.consensys.linea.config.LineaTransactionPoolValidatorCliOptions;
 import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.datatypes.Wei;
 import org.junit.jupiter.api.Assertions;
@@ -27,11 +26,7 @@ public class GasLimitValidatorTest {
 
   @BeforeEach
   public void initialize() {
-    gasLimitValidator =
-        new GasLimitValidator(
-            LineaTransactionPoolValidatorCliOptions.create().toDomainObject().toBuilder()
-                .maxTxGasLimit(MAX_TX_GAS_LIMIT)
-                .build());
+    gasLimitValidator = new GasLimitValidator(MAX_TX_GAS_LIMIT);
   }
 
   @Test

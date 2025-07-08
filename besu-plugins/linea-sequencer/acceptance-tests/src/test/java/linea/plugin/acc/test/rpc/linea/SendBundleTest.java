@@ -70,6 +70,34 @@ public class SendBundleTest extends AbstractSendBundleTest {
   }
 
   @Test
+  public void bundleWithInvalidTxIsNotAccepted() throws Exception {
+    final var mulmodExecutor = deployMulmodExecutor();
+    final Account sender = accounts.getSecondaryBenefactor();
+    final Account recipient = accounts.getPrimaryBenefactor();
+
+    final TransferTransaction tx1 = accountTransactions.createTransfer(sender, recipient, 1);
+    final var mulmodOk =
+        mulmodOperation(
+            mulmodExecutor,
+            accounts.getPrimaryBenefactor(),
+            1,
+            1_000,
+            BigInteger.valueOf(MAX_TX_GAS_LIMIT + 1));
+
+    final String[] bundleRawTxs = new String[] {tx1.signedTransactionData(), mulmodOk.rawTx()};
+
+    final var sendBundleRequest =
+        new SendBundleRequest(new BundleParams(bundleRawTxs, Integer.toHexString(2)));
+    final var sendBundleResponse = sendBundleRequest.execute(minerNode.nodeRequests());
+
+    assertThat(sendBundleResponse.hasError()).isTrue();
+    assertThat(sendBundleResponse.getError().getMessage())
+        .isEqualTo(
+            "Invalid transaction in bundle: hash 0x3f6ff4384305623a7c5cbf05afd9b97c8409be23c4b39c7b16d60001aee4340b,"
+                + " reason: Gas limit of transaction is greater than the allowed max of 9000000");
+  }
+
+  @Test
   public void distributeTokensInBundle() throws Exception {
     final AcceptanceTestToken token = deployAcceptanceTestToken();
 

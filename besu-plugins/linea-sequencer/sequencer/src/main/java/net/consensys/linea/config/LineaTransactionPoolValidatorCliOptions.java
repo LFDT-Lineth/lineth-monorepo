@@ -10,7 +10,15 @@
 package net.consensys.linea.config;
 
 import com.google.common.base.MoreObjects;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import net.consensys.linea.plugins.LineaCliOptions;
+import org.hyperledger.besu.datatypes.Address;
 import picocli.CommandLine;
 
 /** The Linea CLI options. */
@@ -117,6 +125,7 @@ public class LineaTransactionPoolValidatorCliOptions implements LineaCliOptions 
   public LineaTransactionPoolValidatorConfiguration toDomainObject() {
     return new LineaTransactionPoolValidatorConfiguration(
         denyListPath,
+        parseDeniedAddresses(),
         maxTxGasLimit,
         maxTxCallDataSize,
         txPoolSimulationCheckApiEnabled,
@@ -132,5 +141,15 @@ public class LineaTransactionPoolValidatorCliOptions implements LineaCliOptions 
         .add(TX_POOL_ENABLE_SIMULATION_CHECK_API, txPoolSimulationCheckApiEnabled)
         .add(TX_POOL_ENABLE_SIMULATION_CHECK_P2P, txPoolSimulationCheckP2pEnabled)
         .toString();
+  }
+
+  private Set<Address> parseDeniedAddresses() {
+    try (Stream<String> lines = Files.lines(Path.of(new File(denyListPath).toURI()))) {
+      return lines
+          .map(l -> Address.fromHexString(l.trim()))
+          .collect(Collectors.toUnmodifiableSet());
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
   }
 }

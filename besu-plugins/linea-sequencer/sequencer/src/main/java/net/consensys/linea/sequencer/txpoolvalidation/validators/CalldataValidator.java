@@ -11,7 +11,6 @@ package net.consensys.linea.sequencer.txpoolvalidation.validators;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.consensys.linea.config.LineaTransactionPoolValidatorConfiguration;
 import org.hyperledger.besu.datatypes.Transaction;
 import org.hyperledger.besu.plugin.services.txvalidator.PluginTransactionPoolValidator;
 
@@ -19,15 +18,14 @@ import org.hyperledger.besu.plugin.services.txvalidator.PluginTransactionPoolVal
 @Slf4j
 @RequiredArgsConstructor
 public class CalldataValidator implements PluginTransactionPoolValidator {
-  final LineaTransactionPoolValidatorConfiguration txPoolValidatorConf;
+  final int maxTxCalldataSize;
 
   @Override
   public Optional<String> validateTransaction(
       final Transaction transaction, final boolean isLocal, final boolean hasPriority) {
-    if (transaction.getPayload().size() > txPoolValidatorConf.maxTxCalldataSize()) {
+    if (transaction.getPayload().size() > maxTxCalldataSize) {
       final String errMsg =
-          "Calldata of transaction is greater than the allowed max of "
-              + txPoolValidatorConf.maxTxCalldataSize();
+          "Calldata of transaction is greater than the allowed max of " + maxTxCalldataSize;
       log.debug(errMsg);
       return Optional.of(errMsg);
     }

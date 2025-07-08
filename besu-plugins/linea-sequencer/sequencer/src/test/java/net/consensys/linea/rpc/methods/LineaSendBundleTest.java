@@ -34,12 +34,14 @@ import org.hyperledger.besu.ethereum.core.TransactionTestFixture;
 import org.hyperledger.besu.plugin.services.BesuEvents;
 import org.hyperledger.besu.plugin.services.BlockchainService;
 import org.hyperledger.besu.plugin.services.rpc.PluginRpcRequest;
+import org.hyperledger.besu.plugin.services.txvalidator.PluginTransactionPoolValidator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 class LineaSendBundleTest {
   private static final long CHAIN_HEAD_BLOCK_NUMBER = 100L;
+  private static final long MAX_GAS_LIMIT_PER_TX = 1_000_000L;
   @TempDir Path dataDir;
   private LineaSendBundle lineaSendBundle;
   private BesuEvents mockEvents;
@@ -60,13 +62,28 @@ class LineaSendBundleTest {
           .createTransaction(
               SignatureAlgorithmType.DEFAULT_SIGNATURE_ALGORITHM_TYPE.get().generateKeyPair());
 
+  private Transaction mockTX3 =
+      new TransactionTestFixture()
+          .nonce(1)
+          .gasLimit(MAX_GAS_LIMIT_PER_TX + 1)
+          .createTransaction(
+              SignatureAlgorithmType.DEFAULT_SIGNATURE_ALGORITHM_TYPE.get().generateKeyPair());
+
   @BeforeEach
   void setup() {
     mockEvents = mock(BesuEvents.class);
     blockchainService = mock(BlockchainService.class, RETURNS_DEEP_STUBS);
     when(blockchainService.getChainHeadHeader().getNumber()).thenReturn(CHAIN_HEAD_BLOCK_NUMBER);
     bundlePool = spy(new LineaLimitedBundlePool(dataDir, 4096L, mockEvents, blockchainService));
-    lineaSendBundle = new LineaSendBundle(blockchainService).init(bundlePool);
+    lineaSendBundle =
+        new LineaSendBundle(blockchainService).init(bundlePool, createTransactionValidator());
+  }
+
+  private PluginTransactionPoolValidator createTransactionValidator() {
+    return (tx, isLocal, hasPriority) ->
+        tx.getGasLimit() > MAX_GAS_LIMIT_PER_TX
+            ? Optional.of("Gas limit exceeded")
+            : Optional.empty();
   }
 
   @Test
@@ -79,7 +96,13 @@ class LineaSendBundleTest {
 
     BundleParameter bundleParams =
         new BundleParameter(
-            transactions, 123L, minTimestamp, maxTimestamp, empty(), empty(), empty());
+            transactions,
+            CHAIN_HEAD_BLOCK_NUMBER + 1,
+            minTimestamp,
+            maxTimestamp,
+            empty(),
+            empty(),
+            empty());
 
     PluginRpcRequest request = mock(PluginRpcRequest.class);
     when(request.getParams()).thenReturn(new Object[] {bundleParams});
@@ -104,7 +127,7 @@ class LineaSendBundleTest {
     BundleParameter bundleParams =
         new BundleParameter(
             transactions,
-            123L,
+            CHAIN_HEAD_BLOCK_NUMBER + 1,
             minTimestamp,
             maxTimestamp,
             empty(),
@@ -126,7 +149,7 @@ class LineaSendBundleTest {
     bundleParams =
         new BundleParameter(
             transactions,
-            12345L,
+            CHAIN_HEAD_BLOCK_NUMBER + 2,
             minTimestamp,
             maxTimestamp,
             empty(),
@@ -142,7 +165,8 @@ class LineaSendBundleTest {
     assertEquals(expectedUUIDBundleHash.toHexString(), response.bundleHash());
 
     // assert the new block number:
-    assertTrue(bundlePool.get(expectedUUIDBundleHash).blockNumber().equals(12345L));
+    assertTrue(
+        bundlePool.get(expectedUUIDBundleHash).blockNumber().equals(CHAIN_HEAD_BLOCK_NUMBER + 2));
     List<TransactionBundle.PendingBundleTx> pts =
         bundlePool.get(expectedUUIDBundleHash).pendingTransactions();
     // assert the new tx2 is present
@@ -154,7 +178,14 @@ class LineaSendBundleTest {
     List<String> transactions = List.of(mockTX1.encoded().toHexString());
     Optional<Long> maxTimestamp = Optional.of(5000L);
     BundleParameter bundleParams =
-        new BundleParameter(transactions, 123L, empty(), maxTimestamp, empty(), empty(), empty());
+        new BundleParameter(
+            transactions,
+            CHAIN_HEAD_BLOCK_NUMBER + 1,
+            empty(),
+            maxTimestamp,
+            empty(),
+            empty(),
+            empty());
 
     PluginRpcRequest request = mock(PluginRpcRequest.class);
     when(request.getParams()).thenReturn(new Object[] {bundleParams});
@@ -162,7 +193,7 @@ class LineaSendBundleTest {
     assertThatThrownBy(() -> lineaSendBundle.execute(request))
         .isInstanceOf(RuntimeException.class)
         .hasMessageMatching(
-            "bundle max timestamp [0-9]+ is in the past, current timestamp is [0-9]+");
+            "Bundle max timestamp [0-9]+ is in the past, current timestamp is [0-9]+");
   }
 
   @Test
@@ -178,7 +209,7 @@ class LineaSendBundleTest {
     assertThatThrownBy(() -> lineaSendBundle.execute(request))
         .isInstanceOf(RuntimeException.class)
         .hasMessageContaining(
-            "bundle block number 100 is not greater than current chain head block number 100");
+            "Bundle block number 100 is not greater than current chain head block number 100");
   }
 
   @Test
@@ -193,7 +224,25 @@ class LineaSendBundleTest {
               lineaSendBundle.execute(request);
             });
 
-    assertTrue(exception.getMessage().contains("malformed linea_sendBundle json param"));
+    assertTrue(exception.getMessage().contains("Malformed linea_sendBundle json param"));
+  }
+
+  @Test
+  void testExecute_InvalidTransaction_ThrowsException() {
+    List<String> transactions =
+        List.of(mockTX1.encoded().toHexString(), mockTX3.encoded().toHexString());
+    BundleParameter bundleParams =
+        new BundleParameter(
+            transactions, CHAIN_HEAD_BLOCK_NUMBER + 1, empty(), empty(), empty(), empty(), empty());
+
+    PluginRpcRequest request = mock(PluginRpcRequest.class);
+    when(request.getParams()).thenReturn(new Object[] {bundleParams});
+
+    assertThatThrownBy(() -> lineaSendBundle.execute(request))
+        .isInstanceOf(RuntimeException.class)
+        .hasMessageContaining(
+            "Invalid transaction in bundle: hash %s, reason: Gas limit exceeded"
+                .formatted(mockTX3.getHash()));
   }
 
   @Test

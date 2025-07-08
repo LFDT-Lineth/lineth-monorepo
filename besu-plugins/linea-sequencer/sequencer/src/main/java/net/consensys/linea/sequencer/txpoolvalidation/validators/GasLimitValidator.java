@@ -11,7 +11,6 @@ package net.consensys.linea.sequencer.txpoolvalidation.validators;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.consensys.linea.config.LineaTransactionPoolValidatorConfiguration;
 import org.hyperledger.besu.datatypes.Transaction;
 import org.hyperledger.besu.plugin.services.txvalidator.PluginTransactionPoolValidator;
 
@@ -22,15 +21,14 @@ import org.hyperledger.besu.plugin.services.txvalidator.PluginTransactionPoolVal
 @Slf4j
 @RequiredArgsConstructor
 public class GasLimitValidator implements PluginTransactionPoolValidator {
-  final LineaTransactionPoolValidatorConfiguration txPoolValidatorConf;
+  final int maxTxGasLimit;
 
   @Override
   public Optional<String> validateTransaction(
       final Transaction transaction, final boolean isLocal, final boolean hasPriority) {
-    if (transaction.getGasLimit() > txPoolValidatorConf.maxTxGasLimit()) {
+    if (transaction.getGasLimit() > maxTxGasLimit) {
       final String errMsg =
-          "Gas limit of transaction is greater than the allowed max of "
-              + txPoolValidatorConf.maxTxGasLimit();
+          "Gas limit of transaction is greater than the allowed max of " + maxTxGasLimit;
       log.debug(errMsg);
       return Optional.of(errMsg);
     }

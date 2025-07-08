@@ -30,6 +30,7 @@ import org.hyperledger.besu.plugin.services.BlockchainService;
 import org.hyperledger.besu.plugin.services.exception.PluginRpcEndpointException;
 import org.hyperledger.besu.plugin.services.rpc.PluginRpcRequest;
 import org.hyperledger.besu.plugin.services.rpc.RpcMethodError;
+import org.hyperledger.besu.plugin.services.txvalidator.PluginTransactionPoolValidator;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -44,9 +45,13 @@ public class LineaSendBundle {
           .build();
   private final BlockchainService blockchainService;
   private BundlePoolService bundlePool;
+  private PluginTransactionPoolValidator txPoolValidator;
 
-  public LineaSendBundle init(BundlePoolService bundlePoolService) {
+  public LineaSendBundle init(
+      final BundlePoolService bundlePoolService,
+      final PluginTransactionPoolValidator txPoolValidator) {
     this.bundlePool = bundlePoolService;
+    this.txPoolValidator = txPoolValidator;
     return this;
   }
 
@@ -88,6 +93,8 @@ public class LineaSendBundle {
                         .map(DomainObjectDecodeUtils::decodeRawTransaction)
                         .toList();
 
+                validateTransactions(txs);
+
                 bundlePool.putOrReplace(
                     bundleHash,
                     new TransactionBundle(
@@ -125,7 +132,7 @@ public class LineaSendBundle {
     final var chainHeadBlockNumber = blockchainService.getChainHeadHeader().getNumber();
     if (bundleParams.blockNumber() <= chainHeadBlockNumber) {
       throw new IllegalArgumentException(
-          "bundle block number "
+          "Bundle block number "
               + bundleParams.blockNumber()
               + " is not greater than current chain head block number "
               + chainHeadBlockNumber);
@@ -138,7 +145,7 @@ public class LineaSendBundle {
               final var now = Instant.now().getEpochSecond();
               if (maxTimestamp < now) {
                 throw new IllegalArgumentException(
-                    "bundle max timestamp "
+                    "Bundle max timestamp "
                         + maxTimestamp
                         + " is in the past, current timestamp is "
                         + now);
@@ -152,11 +159,24 @@ public class LineaSendBundle {
       return param;
     } catch (Exception e) {
       log.atError()
-          .setMessage("[{}] failed to parse linea_sendBundle request")
+          .setMessage("[{}] Failed to parse linea_sendBundle request")
           .addArgument(logId)
           .setCause(e)
           .log();
-      throw new RuntimeException("malformed linea_sendBundle json param");
+      throw new RuntimeException("Malformed linea_sendBundle json param");
+    }
+  }
+
+  private void validateTransactions(final List<Transaction> txs) {
+    for (final Transaction tx : txs) {
+      final var maybeInvalidReason = txPoolValidator.validateTransaction(tx, true, false);
+      if (maybeInvalidReason.isPresent()) {
+        throw new IllegalArgumentException(
+            "Invalid transaction in bundle: hash "
+                + tx.getHash()
+                + ", reason: "
+                + maybeInvalidReason.get());
+      }
     }
   }
 

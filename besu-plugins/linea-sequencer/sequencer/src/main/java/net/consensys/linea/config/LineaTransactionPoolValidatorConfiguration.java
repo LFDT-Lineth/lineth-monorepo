@@ -9,8 +9,10 @@
 
 package net.consensys.linea.config;
 
+import java.util.Set;
 import lombok.Builder;
 import net.consensys.linea.plugins.LineaOptionsConfiguration;
+import org.hyperledger.besu.datatypes.Address;
 
 /**
  * The Linea transaction pool validation configuration.
@@ -22,6 +24,7 @@ import net.consensys.linea.plugins.LineaOptionsConfiguration;
 @Builder(toBuilder = true)
 public record LineaTransactionPoolValidatorConfiguration(
     String denyListPath,
+    Set<Address> deniedAddresses,
     int maxTxGasLimit,
     int maxTxCalldataSize,
     boolean txPoolSimulationCheckApiEnabled,

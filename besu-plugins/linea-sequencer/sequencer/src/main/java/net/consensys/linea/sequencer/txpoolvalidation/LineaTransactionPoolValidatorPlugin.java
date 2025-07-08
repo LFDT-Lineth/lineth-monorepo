@@ -12,20 +12,13 @@ package net.consensys.linea.sequencer.txpoolvalidation;
 import static net.consensys.linea.metrics.LineaMetricCategory.TX_POOL_PROFITABILITY;
 
 import com.google.auto.service.AutoService;
-import java.io.File;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.AbstractLineaRequiredPlugin;
 import net.consensys.linea.config.LineaRejectedTxReportingConfiguration;
 import net.consensys.linea.jsonrpc.JsonRpcManager;
 import net.consensys.linea.plugins.config.LineaL1L2BridgeSharedConfiguration;
 import net.consensys.linea.sequencer.txpoolvalidation.metrics.TransactionPoolProfitabilityMetrics;
-import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.plugin.BesuPlugin;
 import org.hyperledger.besu.plugin.ServiceManager;
 import org.hyperledger.besu.plugin.services.BesuEvents;
@@ -76,12 +69,7 @@ public class LineaTransactionPoolValidatorPlugin extends AbstractLineaRequiredPl
       throw new IllegalArgumentException("L1L2 bridge settings have not been defined.");
     }
 
-    try (Stream<String> lines =
-        Files.lines(
-            Path.of(new File(transactionPoolValidatorConfiguration().denyListPath()).toURI()))) {
-      final Set<Address> deniedAddresses =
-          lines.map(l -> Address.fromHexString(l.trim())).collect(Collectors.toUnmodifiableSet());
-
+    try {
       // start the optional json rpc manager for rejected tx reporting
       final LineaRejectedTxReportingConfiguration lineaRejectedTxReportingConfiguration =
           rejectedTxReportingConfiguration();
@@ -102,7 +90,6 @@ public class LineaTransactionPoolValidatorPlugin extends AbstractLineaRequiredPl
               transactionSimulationService,
               transactionPoolValidatorConfiguration(),
               profitabilityConfiguration(),
-              deniedAddresses,
               tracerConfiguration(),
               l1L2BridgeSharedConfiguration(),
               rejectedTxJsonRpcManager));
