@@ -29,8 +29,8 @@
   nROWS_MSIZE    1
   nROWS_TRIV     2
   nROWS_MXPX     6
-  nROWS_UPDT_W  10
-  nROWS_UPDT_B  11
+  nROWS_UPDT_B  10
+  nROWS_UPDT_W  11
 
   CT_MAX_MSIZE    (-  nROWS_MSIZE   1)
   CT_MAX_TRIV     (-  nROWS_TRIV    1)
