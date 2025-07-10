@@ -15,7 +15,11 @@
     <Logger name="org.hyperledger.besu.consensus.merge.blockcreation" level="INFO" />
     <Logger name="org.hyperledger.besu.ethereum.api.jsonrpc" level="DEBUG" />
     <Logger name="io.opentelemetry" level="WARN" />
+
+    <!-- log the request and response of RPC calls -->
     <Logger name="org.hyperledger.besu.ethereum.api.handlers.AbstractJsonRpcExecutor" level="TRACE" />
+    <Logger name="org.hyperledger.besu.ethereum.api.handlers.JsonRpcArrayExecutor" level="TRACE" />
+
     <Root level="INFO">
       <AppenderRef ref="Console"/>
     </Root>

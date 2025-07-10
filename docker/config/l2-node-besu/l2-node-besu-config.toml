@@ -46,7 +46,7 @@ plugin-linea-tx-pool-profitability-check-api-enabled=true
 plugin-linea-tx-pool-simulation-check-api-enabled=true
 plugin-linea-tx-pool-simulation-check-p2p-enabled=true
 plugin-linea-extra-data-pricing-enabled=true
-plugin-linea-max-tx-calldata-size=30000 # lower this to 30000 (default 60000) for the transaction data limit e2e test 
+plugin-linea-max-tx-calldata-size=30000 # lower this to 30000 (default 60000) for the transaction data limit e2e test
 plugin-linea-tx-pool-min-margin="0.8"
 plugin-linea-min-margin="1.0"
 plugin-linea-fixed-gas-cost-wei=30000000
@@ -63,3 +63,5 @@ bonsai-historical-block-limit=1024
 
 Xin-process-rpc-enabled=true
 Xin-process-rpc-apis=["ETH", "MINER"]
+
+Xbonsai-parallel-tx-processing-enabled=false

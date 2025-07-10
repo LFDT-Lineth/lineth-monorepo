@@ -35,7 +35,7 @@ task downloadBesu {
             def localBesuDir =
                     project.hasProperty('useLocalBesuDir')
                             ? file("${findProperty('useLocalBesuDir')}".replaceFirst('^~', System.getProperty('user.home')))
-                            : new File(projectDir, "../../besu")
+                            : new File(projectDir, "../../../../besu")
 
             def localBesuFile = new File("${localBesuDir.canonicalPath}/build/distributions/${lineaSequencerProject.besuFilename}")
 

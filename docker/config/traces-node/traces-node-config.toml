@@ -47,3 +47,4 @@ plugin-linea-l1l2-bridge-topic="e856c2b8bd4eb0027ce32eeaf595c21b0b6b4644b326e5b7
 
 bonsai-limit-trie-logs-enabled=false
 bonsai-historical-block-limit=1024
+Xbonsai-parallel-tx-processing-enabled=false

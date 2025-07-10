@@ -43,17 +43,6 @@ jobs:
           draft: true
           prerelease: false
 
-      - name: Upload Release Lib Asset
-        id: upload-release-asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./besu-plugins/linea-sequencer/sequencer/build/libs/linea-sequencer-${{ github.event.inputs.version }}.jar
-          asset_name: linea-sequencer-${{ github.event.inputs.version }}.jar
-          asset_content_type: application/octet-stream
-
       - name: Upload Release Dist Asset
         id: upload-release-dist-asset
         uses: actions/upload-release-asset@v1

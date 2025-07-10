@@ -54,3 +54,5 @@ node-private-key-file="/config/keys/besu.key"
 # beahvior
 revert-reason-enabled=true
 plugins=[]
+
+Xbonsai-parallel-tx-processing-enabled=false

@@ -69,6 +69,9 @@ engine-host-allowlist=["*"]
 min-gas-price="20000000"
 target-gas-limit="2000000000"
 
+### Disable parallel tx processing until it is fully supported by Linea
+bonsai-parallel-tx-processing-enabled=false
+
 ### Plugin Configuration ###
 #plugin-linea-min-margin="0.3"
 #plugin-linea-gas-price-ratio=12

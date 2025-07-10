@@ -79,4 +79,4 @@ tx-pool-priority-senders=["0xfe3b557e8fb62b89f4916b721be55ceb828dbd73",
 Xin-process-rpc-enabled=true
 Xin-process-rpc-apis=["ETH", "MINER"]
 
-
+Xbonsai-parallel-tx-processing-enabled=false

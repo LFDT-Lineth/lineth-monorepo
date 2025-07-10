@@ -6,7 +6,7 @@ mkdir -p ./tmp
 pushd ./tmp
 
 echo "downloading besu from linea-besu-upstream: $LINEA_BESU_TAR_GZ"
-wget -nv $LINEA_BESU_BASE_URL$LINEA_BESU_TAR_GZ/$LINEA_BESU_FILENAME_PREFIX-$LINEA_BESU_TAR_GZ.tar.gz 
+wget -nv $LINEA_BESU_BASE_URL$LINEA_BESU_TAR_GZ/$LINEA_BESU_FILENAME_PREFIX-$LINEA_BESU_TAR_GZ.tar.gz
 tar -xvf $LINEA_BESU_FILENAME_PREFIX-$LINEA_BESU_TAR_GZ.tar.gz
 mv $LINEA_BESU_FILENAME_PREFIX-$LINEA_BESU_TAR_GZ ./besu
 
@@ -17,8 +17,10 @@ mkdir -p ./besu/plugins
 cd ./besu/plugins
 
 echo "downloading the plugins"
-echo "getting linea_sequencer_plugin_version: $LINEA_SEQUENCER_PLUGIN_VERSION" 
-wget -nv https://github.com/Consensys/linea-sequencer/releases/download/v$LINEA_SEQUENCER_PLUGIN_VERSION/linea-sequencer-v$LINEA_SEQUENCER_PLUGIN_VERSION.jar
+echo "getting linea_sequencer_plugin_version: $LINEA_SEQUENCER_PLUGIN_VERSION"
+wget -nv https://github.com/Consensys/linea-monorepo/releases/download/linea-sequencer-$LINEA_SEQUENCER_PLUGIN_VERSION/linea-sequencer-$LINEA_SEQUENCER_PLUGIN_VERSION.zip
+unzip -o linea-sequencer-$LINEA_SEQUENCER_PLUGIN_VERSION.zip
+rm linea-sequencer-$LINEA_SEQUENCER_PLUGIN_VERSION.zip
 
 echo "getting linea_finalized_tag_updater_plugin_version: $LINEA_FINALIZED_TAG_UPDATER_PLUGIN_VERSION"
 wget -nv https://github.com/Consensys/linea-monorepo/releases/download/linea-finalized-tag-updater-v$LINEA_FINALIZED_TAG_UPDATER_PLUGIN_VERSION/linea-finalized-tag-updater-v$LINEA_FINALIZED_TAG_UPDATER_PLUGIN_VERSION.jar
@@ -32,7 +34,7 @@ wget -nv https://github.com/Consensys/linea-tracer/releases/download/$LINEA_TRAC
 unzip -o linea-tracer-$LINEA_TRACER_PLUGIN_VERSION.zip
 rm linea-tracer-$LINEA_TRACER_PLUGIN_VERSION.zip
 
-echo "getting shomei_plugin_version: $SHOMEI_PLUGIN_VERSION" 
+echo "getting shomei_plugin_version: $SHOMEI_PLUGIN_VERSION"
 wget -nv https://github.com/Consensys/besu-shomei-plugin/releases/download/v$SHOMEI_PLUGIN_VERSION/besu-shomei-plugin-v$SHOMEI_PLUGIN_VERSION.jar
 
 popd

@@ -36,3 +36,5 @@ metrics-port=9545
 data-storage-format="BONSAI"
 
 plugins=["BesuShomeiRpcPlugin", "ZkTrieLogPlugin"]
+
+Xbonsai-parallel-tx-processing-enabled=false

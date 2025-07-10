@@ -60,3 +60,6 @@ metrics-port=9545
 
 # Disable external plugins
 Xplugins-external-enabled=false
+
+### Disable parallel tx processing until it is fully supported by Linea
+bonsai-parallel-tx-processing-enabled=false
