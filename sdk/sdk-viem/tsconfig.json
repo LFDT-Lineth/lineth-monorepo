@@ -1,0 +1,25 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "moduleResolution": "NodeNext",
+    "module": "NodeNext",
+    "lib": ["ES2022", "DOM"],
+    "noEmit": false,
+    "skipLibCheck": true,
+    "noUnusedParameters": true, 
+    "noErrorTruncation": true,
+    "strictPropertyInitialization": false,
+    "experimentalDecorators": true,
+    "esModuleInterop": false,
+    "allowJs": false,
+    "checkJs": false,
+    "useUnknownInCatchVariables": true,
+    "exactOptionalPropertyTypes": true,
+    "allowSyntheticDefaultImports": false,
+    "isolatedModules": true,
+    "composite": true,
+  },
+  "references": [{
+    "path": "../sdk-core"
+  }]
+}

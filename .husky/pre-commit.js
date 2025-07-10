@@ -25,7 +25,9 @@ const FOLDER = {
     E2E: "E2E",
     OPERATIONS: "OPERATIONS",
     POSTMAN: "POSTMAN",
-    SDK: "SDK",
+    "SDK-ETHERS": "SDK-ETHERS",
+    "SDK-CORE": "SDK-CORE",
+    "SDK-VIEM": "SDK-VIEM",
 }
 
 // Project runtimes
@@ -61,7 +63,9 @@ const FOLDER_PATH = {
     [FOLDER.E2E]: "e2e/",
     [FOLDER.OPERATIONS]: "operations/",
     [FOLDER.POSTMAN]: "postman/",
-    [FOLDER.SDK]: "sdk/",
+    [FOLDER["SDK-CORE"]]: "sdk/sdk-core/",
+    [FOLDER["SDK-ETHERS"]]: "sdk/sdk-ethers/",
+    [FOLDER["SDK-VIEM"]]: "sdk/sdk-viem/",
 };
 
 // Project => List of changed files
@@ -71,7 +75,9 @@ const FOLDER_CHANGED_FILES = {
     [FOLDER.E2E]: new Array(),
     [FOLDER.OPERATIONS]: new Array(),
     [FOLDER.POSTMAN]: new Array(),
-    [FOLDER.SDK]: new Array(),
+    [FOLDER["SDK-CORE"]]: new Array(),
+    [FOLDER["SDK-ETHERS"]]: new Array(),
+    [FOLDER["SDK-VIEM"]]: new Array(),
 };
 
 // Project => Runtime
@@ -81,7 +87,9 @@ const FOLDER_RUNTIME = {
     [FOLDER.E2E]: RUNTIME.NODEJS,
     [FOLDER.OPERATIONS]: RUNTIME.NODEJS,
     [FOLDER.POSTMAN]: RUNTIME.NODEJS,
-    [FOLDER.SDK]: RUNTIME.NODEJS,
+    [FOLDER["SDK-CORE"]]: RUNTIME.NODEJS,
+    [FOLDER["SDK-ETHERS"]]: RUNTIME.NODEJS,
+    [FOLDER["SDK-VIEM"]]: RUNTIME.NODEJS,
 };
 
 /**

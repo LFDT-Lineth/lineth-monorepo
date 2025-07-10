@@ -8,7 +8,7 @@
   },
   "references": [
     {
-      "path": "../sdk"
+      "path": "../sdk/sdk-ethers"
     }
   ],
   "include": ["**/*.ts"],

@@ -22,3 +22,4 @@ catalog:
   typechain: 8.3.2
   winston: 3.17.0
   yargs: 17.7.2
+  viem: 2.31.3

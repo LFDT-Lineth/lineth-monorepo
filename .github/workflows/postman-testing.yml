@@ -27,6 +27,6 @@ jobs:
           NATIVE_LIBS_RELEASE_TAG: blob-libs-v1.2.0
         run: |
           pnpm run -F ./ts-libs/linea-native-libs build;
-          pnpm run -F ./sdk build;
+          pnpm run -F ./sdk/sdk-ethers build;
           pnpm run -F ./postman test;
-          pnpm run -F ./sdk test;
+          pnpm run -F ./sdk/sdk-ethers test;

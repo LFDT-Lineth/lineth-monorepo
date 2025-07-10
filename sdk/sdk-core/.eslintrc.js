@@ -1,5 +1,5 @@
 module.exports = {
-  extends: "../.eslintrc.js",
+  extends: "../../.eslintrc.js",
   env: {
     commonjs: true,
     es2021: true,

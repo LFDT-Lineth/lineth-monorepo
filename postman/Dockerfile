@@ -23,13 +23,13 @@ ENV NATIVE_LIBS_RELEASE_TAG=${NATIVE_LIBS_RELEASE_TAG}
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json ./
 
 COPY ./postman/package.json ./postman/package.json
-COPY ./sdk/package.json ./sdk/package.json
+COPY ./sdk/sdk-ethers/package.json ./sdk/sdk-ethers/package.json
 COPY ./ts-libs/linea-native-libs/package.json ./ts-libs/linea-native-libs/package.json
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --prefer-offline --ignore-scripts
 
 COPY ./postman ./postman
-COPY ./sdk ./sdk
+COPY ./sdk/sdk-ethers ./sdk/sdk-ethers
 COPY ts-libs/linea-native-libs ./ts-libs/linea-native-libs
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm run build \
