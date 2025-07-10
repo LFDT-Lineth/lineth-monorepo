@@ -48,6 +48,7 @@ describe("getCctpTransactionStatus", () => {
     messageServiceAddress: "0x971e727e956690b9957be6d51Ec16E73AcAC83A7",
     name: "Linea Sepolia",
     layer: ChainLayer.L2,
+    toChainId: 11155111,
     nativeCurrency: {
       decimals: 18,
       name: "Linea Ether",
@@ -102,7 +103,7 @@ describe("getCctpTransactionStatus", () => {
     expect(resp).toBe(TransactionStatus.PENDING);
   });
 
-  test("should return COMPLETE for a used nonce", async () => {
+  test("should return COMPLETED for a used nonce", async () => {
     const resp = await getCctpTransactionStatus(toChainStub, cctpApiRespNoExpiry, usedCctpNonce);
     expect(resp).toBe(TransactionStatus.COMPLETED);
   });

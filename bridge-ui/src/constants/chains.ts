@@ -1,4 +1,62 @@
 import { config } from "@/config";
+import { defineChain } from "viem";
+
+// This is a local L1 network configuration for testing purposes
+export const localL1Network = defineChain({
+  id: 31648428,
+  name: "Local L1 Network",
+  nativeCurrency: {
+    decimals: 18,
+    name: "Ether",
+    symbol: "ETH",
+  },
+  blockExplorers: {
+    default: {
+      name: "Etherscan",
+      url: "https://etherscan.io",
+      apiUrl: "https://api.etherscan.io/api",
+    },
+  },
+  rpcUrls: {
+    default: {
+      http: ["http://127.0.0.1:8445"],
+      webSocket: ["ws://127.0.0.1:8445"],
+    },
+  },
+  testnet: true,
+  custom: {
+    localNetwork: true,
+  },
+});
+
+// This is a local L2 Network configuration for testing purposes
+export const localL2Network = defineChain({
+  id: 1337,
+  name: "Local L2 Network",
+  nativeCurrency: {
+    decimals: 18,
+    name: "Ether",
+    symbol: "ETH",
+  },
+  blockExplorers: {
+    default: {
+      name: "Etherscan",
+      url: "https://lineascan.build",
+      apiUrl: "https://api.lineascan.build/api",
+    },
+  },
+  rpcUrls: {
+    default: {
+      http: ["http://127.0.0.1:9045"],
+      webSocket: ["ws://127.0.0.1:9045"],
+    },
+  },
+  testnet: true,
+  custom: {
+    localNetwork: true,
+  },
+});
+
 import {
   arbitrum,
   aurora,
@@ -53,6 +111,7 @@ export const CHAINS = [
   zksync,
 ] as const;
 
+export const E2E_TEST_CHAINS = [localL1Network, localL2Network] as const;
 const SOLANA_CHAIN = 1151111081099710 as const;
 
 export const CHAINS_IDS = [...CHAINS.map((chain) => chain.id), SOLANA_CHAIN];
@@ -85,4 +144,11 @@ export const CHAINS_RPC_URLS: Record<(typeof CHAINS_IDS)[number], string> = {
   [SOLANA_CHAIN]: `https://old-light-county.solana-mainnet.quiknode.pro/${config.quickNodeApiKey}`,
 };
 
-export const NATIVE_BRIDGE_SUPPORTED_CHAIN_IDS = [mainnet.id, linea.id, lineaSepolia.id, sepolia.id] as const;
+export const NATIVE_BRIDGE_SUPPORTED_CHAIN_IDS = [
+  mainnet.id,
+  linea.id,
+  lineaSepolia.id,
+  sepolia.id,
+  // Local networks for testing purposes
+  ...(config.e2eTestMode ? [localL1Network.id, localL2Network.id] : []),
+] as const;

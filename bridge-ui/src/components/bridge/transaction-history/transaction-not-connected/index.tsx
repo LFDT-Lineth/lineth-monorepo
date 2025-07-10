@@ -8,7 +8,9 @@ export default function TransactionNotConnected() {
       <span className={styles["icon"]}>
         <TransactionCircleIcon />
       </span>
-      <p className={styles["title"]}>Please connect your wallet.</p>
+      <p data-testid="tx-history-connect-your-wallet-text" className={styles["title"]}>
+        Please connect your wallet.
+      </p>
       <ConnectButton text="Connect" />
     </div>
   );

@@ -27,6 +27,7 @@ export type Chain = {
   };
   testnet: boolean;
   layer: ChainLayer;
+  toChainId: SupportedChainIds;
   messageServiceAddress: Address;
   tokenBridgeAddress: Address;
   gasLimitSurplus: bigint;
@@ -34,4 +35,5 @@ export type Chain = {
   cctpDomain: number;
   cctpTokenMessengerV2Address: Address;
   cctpMessageTransmitterV2Address: Address;
+  localNetwork?: boolean; // Optional field for local networks
 };

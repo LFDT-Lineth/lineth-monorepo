@@ -8,7 +8,12 @@ export default function ManualClaim() {
 
   return (
     <>
-      <button type="button" className={styles.manual} onClick={() => setShowManualClaimModal(true)}>
+      <button
+        data-testid="manual-mode-btn"
+        type="button"
+        className={styles.manual}
+        onClick={() => setShowManualClaimModal(true)}
+      >
         <AttentionIcon />
         <span>Manual</span>
       </button>

@@ -8,6 +8,7 @@ import CurrencyDropdown from "@/components/bridge/currency-dropdown";
 import { useConfigStore, useChainStore, useFormStore } from "@/stores";
 import { useChains } from "@/hooks";
 import { ChainLayer } from "@/types";
+import { config } from "@/config";
 
 interface SettingProps extends HTMLAttributes<HTMLDivElement> {
   "data-testid": string;
@@ -41,7 +42,10 @@ export default function Setting(props: SettingProps) {
   };
 
   useEffect(() => {
-    if (!showTestnet) {
+    if (config.e2eTestMode) {
+      setFromChain(chains.find((c) => c.localNetwork && c.layer === ChainLayer.L1));
+      setToChain(chains.find((c) => c.localNetwork && c.layer === ChainLayer.L2));
+    } else if (!showTestnet) {
       setFromChain(chains.find((c) => !c.testnet && c.layer === ChainLayer.L1));
       setToChain(chains.find((c) => !c.testnet && c.layer === ChainLayer.L2));
     } else {

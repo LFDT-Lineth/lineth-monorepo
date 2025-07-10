@@ -84,6 +84,38 @@ export async function formatToken(token: GithubTokenListToken): Promise<Token> {
 }
 
 export async function getTokenConfig(): Promise<NetworkTokens> {
+  if (config.e2eTestMode) {
+    return {
+      MAINNET: [
+        ...defaultTokensConfig.MAINNET,
+        {
+          type: ["canonical-bridge"],
+          name: "TestERC20",
+          symbol: "TERC20",
+          decimals: 18,
+          L1: "0x8A791620dd6260079BF849Dc5567aDC3F2FdC318",
+          L2: "0xCC1B08B17301e090cbb4c1F5598Cbaa096d591FB",
+          image: "",
+          isDefault: true,
+          bridgeProvider: BridgeProvider.NATIVE,
+        },
+      ],
+      SEPOLIA: [
+        ...defaultTokensConfig.SEPOLIA,
+        {
+          type: ["canonical-bridge"],
+          name: "TestERC20",
+          symbol: "TERC20",
+          decimals: 18,
+          L1: "0x8A791620dd6260079BF849Dc5567aDC3F2FdC318",
+          L2: "0xCC1B08B17301e090cbb4c1F5598Cbaa096d591FB",
+          image: "",
+          isDefault: true,
+          bridgeProvider: BridgeProvider.NATIVE,
+        },
+      ],
+    };
+  }
   const updatedTokensConfig = { ...defaultTokensConfig };
 
   // Feature toggle, remove when feature toggle no longer needed

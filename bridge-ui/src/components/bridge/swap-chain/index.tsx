@@ -11,6 +11,7 @@ export default function SwapChain() {
     <Tooltip text="Switch chains" position="top">
       <button
         className={styles["swap-chain"]}
+        data-testid="swap-chain-button"
         onClick={(e) => {
           e.preventDefault();
           e.currentTarget.classList.toggle(styles["rotate-360"]);

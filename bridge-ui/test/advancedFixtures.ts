@@ -2,7 +2,7 @@ import { metaMaskFixtures, getExtensionId } from "@synthetixio/synpress/playwrig
 import { Locator, Page } from "@playwright/test";
 import setup from "./wallet-setup/metamask.setup";
 import { getNativeBridgeTransactionsCountImpl, selectTokenAndWaitForBalance } from "./utils";
-import { LINEA_SEPOLIA_NETWORK, PAGE_TIMEOUT, POLLING_INTERVAL } from "./constants";
+import { L1_ACCOUNT_METAMASK_NAME, LOCAL_L2_NETWORK, PAGE_TIMEOUT, POLLING_INTERVAL } from "./constants";
 
 /**
  * NB: There is an issue with Synpress `metaMaskFixtures` extension functions wherein extension functions
@@ -21,19 +21,19 @@ export const test = metaMaskFixtures(setup).extend<{
   openNativeBridgeFormSettings: () => Promise<void>;
   toggleShowTestNetworksInNativeBridgeForm: () => Promise<void>;
   getNativeBridgeTransactionsCount: () => Promise<number>;
-  selectTokenAndInputAmount: (tokenSymbol: string, amount: string) => Promise<void>;
+  selectTokenAndInputAmount: (tokenSymbol: string, amount: string, waitForBalance?: boolean) => Promise<void>;
   waitForNewTxAdditionToTxList: (txCountBeforeUpdate: number) => Promise<void>;
   waitForTxListUpdateForClaimTx: (claimTxCountBeforeUpdate: number) => Promise<void>;
   openGasFeeModal: () => Promise<void>;
 
   // Metamask Actions - Should be ok to reuse within other fixture functions
-  connectMetamaskToDapp: () => Promise<void>;
+  connectMetamaskToDapp: (account: string) => Promise<void>;
   openMetamaskActivityPage: () => Promise<void>;
   submitERC20ApprovalTx: () => Promise<void>;
   waitForTransactionToConfirm: () => Promise<void>;
   confirmTransactionAndWaitForInclusion: () => Promise<void>;
-  switchToLineaSepolia: () => Promise<void>;
-  switchToEthereumMainnet: () => Promise<void>;
+  switchToL2Network: () => Promise<void>;
+  swapChain: () => Promise<void>;
 
   // Composite Bridge UI + Metamask Actions
   doTokenApprovalIfNeeded: () => Promise<void>;
@@ -85,17 +85,17 @@ export const test = metaMaskFixtures(setup).extend<{
     });
   },
   selectTokenAndInputAmount: async ({ page }, use) => {
-    await use(async (tokenSymbol: string, amount: string) => {
+    await use(async (tokenSymbol: string, amount: string, waitForBalance = true) => {
       // Wait for page to retrieve blockchain token balance
-      await selectTokenAndWaitForBalance(tokenSymbol, page);
+      await selectTokenAndWaitForBalance(tokenSymbol, page, waitForBalance);
 
       // Input amount
-      const amountInput = page.getByRole("textbox", { name: "0", exact: true });
+      const amountInput = page.getByTestId("amount-input");
       await amountInput.fill(amount);
 
       // Wait for "Receive amount" to populate, we need to fetch blockchain data before proceeding
       const receivedAmountField = page.getByTestId("received-amount-text");
-      await receivedAmountField.waitFor({ state: "visible" });
+      await receivedAmountField.waitFor({ state: "visible", timeout: PAGE_TIMEOUT });
 
       // Check if there are sufficient funds available
       const insufficientFundsButton = page.getByRole("button", { name: "Insufficient funds", exact: true });
@@ -133,15 +133,14 @@ export const test = metaMaskFixtures(setup).extend<{
   openGasFeeModal: async ({ page }, use) => {
     await use(async () => {
       const gasFeeBtn = page.getByRole("button", { name: "fee-chain-icon" });
-      // bridge-ui-known-flaky-line - Unsure why, the gas fees may not load within 5s
-      await expect(gasFeeBtn).not.toContainText("0.00000000");
+      await expect(gasFeeBtn).not.toContainText("0.00000000", { timeout: PAGE_TIMEOUT });
       await gasFeeBtn.click();
     });
   },
 
   // Metamask Actions - Should be ok to reuse within other fixture functions
   connectMetamaskToDapp: async ({ page, metamask }, use) => {
-    await use(async () => {
+    await use(async (account: string) => {
       await page.waitForLoadState("domcontentloaded", { timeout: PAGE_TIMEOUT });
 
       // Click Connect button
@@ -152,7 +151,12 @@ export const test = metaMaskFixtures(setup).extend<{
       const metamaskBtnInDropdownList = page.getByRole("button").filter({ hasText: "MetaMask" }).first();
       await metamaskBtnInDropdownList.click();
 
-      await metamask.connectToDapp();
+      if (account !== L1_ACCOUNT_METAMASK_NAME) {
+        // Switch to the specified account (used for L2 to L1 tests)
+        await metamask.switchAccount(account);
+      }
+
+      await metamask.connectToDapp([account]);
       await metamask.goBackToHomePage();
       await page.bringToFront();
     });
@@ -227,14 +231,9 @@ export const test = metaMaskFixtures(setup).extend<{
       await page.bringToFront();
     });
   },
-  switchToLineaSepolia: async ({ metamask }, use) => {
+  switchToL2Network: async ({ metamask }, use) => {
     await use(async () => {
-      await metamask.switchNetwork(LINEA_SEPOLIA_NETWORK.name, true);
-    });
-  },
-  switchToEthereumMainnet: async ({ metamask }, use) => {
-    await use(async () => {
-      await metamask.switchNetwork("Ethereum Mainnet", false);
+      await metamask.switchNetwork(LOCAL_L2_NETWORK.name, true);
     });
   },
 
@@ -291,6 +290,14 @@ export const test = metaMaskFixtures(setup).extend<{
       await confirmTransactionAndWaitForInclusion();
 
       // Should finish on tx history page
+    });
+  },
+  swapChain: async ({ page }, use) => {
+    await use(async () => {
+      const swapChainButton = page.getByTestId("swap-chain-button");
+      await expect(swapChainButton).toBeVisible();
+      await expect(swapChainButton).toBeEnabled();
+      await swapChainButton.click();
     });
   },
 });

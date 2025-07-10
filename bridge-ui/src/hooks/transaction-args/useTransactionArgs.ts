@@ -6,6 +6,7 @@ import useDepositForBurnTxArgs from "./cctp/useDepositForBurnTxArgs";
 import { QueryObserverResult, RefetchOptions } from "@tanstack/react-query";
 import { ReadContractErrorType } from "@wagmi/core";
 import { useAccount } from "wagmi";
+import { SupportedChainIds } from "@/types";
 
 type TransactionArgs =
   | {
@@ -13,7 +14,7 @@ type TransactionArgs =
         to: `0x${string}`;
         data: `0x${string}`;
         value: bigint;
-        chainId: 1 | 59144 | 59141 | 11155111;
+        chainId: SupportedChainIds;
       };
       type: string;
       refetchAllowance?: (options?: RefetchOptions) => Promise<QueryObserverResult<bigint, ReadContractErrorType>>;

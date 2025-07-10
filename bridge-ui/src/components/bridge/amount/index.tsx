@@ -97,6 +97,7 @@ export function Amount() {
       <p className={styles.title}>Send</p>
       <input
         id="amount-input"
+        data-testid="amount-input"
         type="text"
         autoCorrect="off"
         autoComplete="off"

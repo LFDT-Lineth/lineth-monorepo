@@ -1,21 +1,12 @@
 import { testWithSynpress } from "@synthetixio/synpress";
 import { test as advancedFixtures } from "../advancedFixtures";
-import {
-  USDC_SYMBOL,
-  USDC_AMOUNT,
-  WEI_AMOUNT,
-  ETH_SYMBOL,
-  LOCAL_L2_NETWORK,
-  ERC20_SYMBOL,
-  ERC20_AMOUNT,
-  L1_ACCOUNT_METAMASK_NAME,
-} from "../constants";
+import { WEI_AMOUNT, ETH_SYMBOL, ERC20_SYMBOL, ERC20_AMOUNT, L2_ACCOUNT_METAMASK_NAME } from "../constants";
 
 const test = testWithSynpress(advancedFixtures);
 
 const { expect, describe } = test;
 
-describe("L1 > L2 via Native Bridge", () => {
+describe("L2 > L1 via Native Bridge", () => {
   describe("No blockchain tx cases", () => {
     test.describe.configure({ mode: "parallel" });
 
@@ -24,68 +15,61 @@ describe("L1 > L2 via Native Bridge", () => {
       clickNativeBridgeButton,
       selectTokenAndInputAmount,
       clickFirstVisitModalConfirmButton,
+      switchToL2Network,
     }) => {
       test.setTimeout(60_000);
 
       await clickNativeBridgeButton();
       await clickFirstVisitModalConfirmButton();
+
+      await switchToL2Network();
 
       await selectTokenAndInputAmount(ETH_SYMBOL, WEI_AMOUNT, false);
 
       const receivedAmount = page.getByTestId("received-amount-text");
       await expect(receivedAmount).toBeVisible();
-      await expect(receivedAmount).toHaveText(`${WEI_AMOUNT} ETH`);
     });
 
-    test("should see Free gas fees for ETH transfer to L2", async ({
+    test("should automatically set bridge mode to 'manual' for L2 to L1 bridge", async ({
+      page,
+      clickNativeBridgeButton,
+      selectTokenAndInputAmount,
+      clickFirstVisitModalConfirmButton,
+      swapChain,
+      connectMetamaskToDapp,
+    }) => {
+      test.setTimeout(60_000);
+
+      await connectMetamaskToDapp(L2_ACCOUNT_METAMASK_NAME); // Connect to L2 account
+      await clickNativeBridgeButton();
+      await clickFirstVisitModalConfirmButton();
+
+      await swapChain();
+
+      await selectTokenAndInputAmount(ETH_SYMBOL, WEI_AMOUNT, false);
+
+      const manualModeBtn = page.getByTestId("manual-mode-btn");
+      await expect(manualModeBtn).toBeVisible();
+      await expect(manualModeBtn).toHaveText("Manual");
+    });
+
+    test("should not see Free gas fees for ETH transfer to L1", async ({
       page,
       connectMetamaskToDapp,
       clickNativeBridgeButton,
       selectTokenAndInputAmount,
       openGasFeeModal,
+      switchToL2Network,
       clickFirstVisitModalConfirmButton,
     }) => {
       test.setTimeout(60_000);
 
-      await connectMetamaskToDapp(L1_ACCOUNT_METAMASK_NAME);
+      await connectMetamaskToDapp(L2_ACCOUNT_METAMASK_NAME); // Connect to L2 account
       await clickNativeBridgeButton();
       await clickFirstVisitModalConfirmButton();
 
+      await switchToL2Network();
       await selectTokenAndInputAmount(ETH_SYMBOL, WEI_AMOUNT);
-      await openGasFeeModal();
-
-      // Assert text items
-      const l2NetworkFeeText = page.getByText(`${LOCAL_L2_NETWORK.name} fee`);
-      const freeText = page.getByText("Free");
-      await expect(l2NetworkFeeText).toBeVisible();
-      await expect(freeText).toBeVisible();
-      const listItem = page
-        .locator("li")
-        .filter({
-          has: l2NetworkFeeText,
-        })
-        .filter({
-          has: freeText,
-        });
-      await expect(listItem).toBeVisible();
-    });
-
-    // This test is skipped because CCTP is not supported on the local stack.
-    test.skip("should not see Free gas fees for USDC transfer to L2", async ({
-      page,
-      connectMetamaskToDapp,
-      clickNativeBridgeButton,
-      selectTokenAndInputAmount,
-      openGasFeeModal,
-      clickFirstVisitModalConfirmButton,
-    }) => {
-      test.setTimeout(60_000);
-
-      await connectMetamaskToDapp(L1_ACCOUNT_METAMASK_NAME);
-      await clickNativeBridgeButton();
-      await clickFirstVisitModalConfirmButton();
-
-      await selectTokenAndInputAmount(USDC_SYMBOL, USDC_AMOUNT);
       await openGasFeeModal();
 
       // Assert text items
@@ -98,7 +82,7 @@ describe("L1 > L2 via Native Bridge", () => {
     // If not serial risk colliding nonces -> transactions cancelling each other out
     test.describe.configure({ retries: 1, timeout: 120_000, mode: "serial" });
 
-    test("should be able to initiate bridging ETH from L1 to L2", async ({
+    test("should be able to initiate bridging ETH from L2 to L1", async ({
       getNativeBridgeTransactionsCount,
       waitForNewTxAdditionToTxList,
       connectMetamaskToDapp,
@@ -108,16 +92,24 @@ describe("L1 > L2 via Native Bridge", () => {
       openNativeBridgeTransactionHistory,
       closeNativeBridgeTransactionHistory,
       clickFirstVisitModalConfirmButton,
+      switchToL2Network,
+      swapChain,
     }) => {
       // Setup testnet UI
-      await connectMetamaskToDapp(L1_ACCOUNT_METAMASK_NAME);
+      await connectMetamaskToDapp(L2_ACCOUNT_METAMASK_NAME); // Connect to L2 account
       await clickNativeBridgeButton();
       await clickFirstVisitModalConfirmButton();
+
+      // Switch to L2 network
+      await switchToL2Network();
 
       // Get # of txs in txHistory before doing bridge tx, so that we can later confirm that our bridge tx shows up in the txHistory.
       await openNativeBridgeTransactionHistory();
       const txnsLengthBefore = await getNativeBridgeTransactionsCount();
       await closeNativeBridgeTransactionHistory();
+
+      // Swap chain to L2
+      await swapChain();
 
       // // Actual bridging actions
       await selectTokenAndInputAmount(ETH_SYMBOL, WEI_AMOUNT);
@@ -127,7 +119,7 @@ describe("L1 > L2 via Native Bridge", () => {
       await waitForNewTxAdditionToTxList(txnsLengthBefore);
     });
 
-    test("should be able to initiate bridging ERC20 from L1 to L2", async ({
+    test("should be able to initiate bridging ERC20 from L2 to L1", async ({
       getNativeBridgeTransactionsCount,
       waitForNewTxAdditionToTxList,
       connectMetamaskToDapp,
@@ -137,17 +129,25 @@ describe("L1 > L2 via Native Bridge", () => {
       openNativeBridgeTransactionHistory,
       closeNativeBridgeTransactionHistory,
       clickFirstVisitModalConfirmButton,
+      switchToL2Network,
+      swapChain,
       doTokenApprovalIfNeeded,
     }) => {
       // Setup testnet UI
-      await connectMetamaskToDapp(L1_ACCOUNT_METAMASK_NAME);
+      await connectMetamaskToDapp(L2_ACCOUNT_METAMASK_NAME); // Connect to L2 account
       await clickNativeBridgeButton();
       await clickFirstVisitModalConfirmButton();
+
+      // Switch to L2 network
+      await switchToL2Network();
 
       // Get # of txs in txHistory before doing bridge tx, so that we can later confirm that our bridge tx shows up in the txHistory.
       await openNativeBridgeTransactionHistory();
       const txnsLengthBefore = await getNativeBridgeTransactionsCount();
       await closeNativeBridgeTransactionHistory();
+
+      // Swap chain to L2
+      await swapChain();
 
       // // Actual bridging actions
       await selectTokenAndInputAmount(ERC20_SYMBOL, ERC20_AMOUNT);
@@ -158,36 +158,38 @@ describe("L1 > L2 via Native Bridge", () => {
       await waitForNewTxAdditionToTxList(txnsLengthBefore);
     });
 
-    // This test is skipped because CCTP is not supported on the local stack.
-    test.skip("should be able to initiate bridging USDC from L1 to L2 in testnet", async ({
-      getNativeBridgeTransactionsCount,
-      waitForNewTxAdditionToTxList,
+    test("should be able to claim if available READY_TO_CLAIM transactions", async ({
+      page,
       connectMetamaskToDapp,
       clickNativeBridgeButton,
-      selectTokenAndInputAmount,
-      doInitiateBridgeTransaction,
       openNativeBridgeTransactionHistory,
-      closeNativeBridgeTransactionHistory,
-      doTokenApprovalIfNeeded,
+      getNativeBridgeTransactionsCount,
+      switchToL2Network,
+      doClaimTransaction,
+      waitForTxListUpdateForClaimTx,
       clickFirstVisitModalConfirmButton,
     }) => {
-      // Setup testnet UI
-      await connectMetamaskToDapp(L1_ACCOUNT_METAMASK_NAME);
+      await connectMetamaskToDapp(L2_ACCOUNT_METAMASK_NAME); // Connect to L2 account
       await clickNativeBridgeButton();
       await clickFirstVisitModalConfirmButton();
 
-      // Get # of txs in txHistory before doing bridge tx, so that we can later confirm that our bridge tx shows up in the txHistory.
+      // Switch to L2 network
+      await switchToL2Network();
+
+      // Load tx history
       await openNativeBridgeTransactionHistory();
-      const txnsLengthBefore = await getNativeBridgeTransactionsCount();
-      await closeNativeBridgeTransactionHistory();
+      await getNativeBridgeTransactionsCount();
 
-      // Actual bridging actions
-      await selectTokenAndInputAmount(USDC_SYMBOL, USDC_AMOUNT);
-      await doTokenApprovalIfNeeded();
-      await doInitiateBridgeTransaction();
+      // Find and click READY_TO_CLAIM TX
+      const readyToClaimTx = page.getByRole("listitem").filter({ hasText: "Ready to claim" });
+      const readyToClaimCount = await readyToClaimTx.count();
+      if (readyToClaimCount === 0) return;
+      await readyToClaimTx.first().click();
 
-      // Check that our bridge tx shows up in the tx history
-      await waitForNewTxAdditionToTxList(txnsLengthBefore);
+      await doClaimTransaction();
+
+      // Check that tx history has updated accordingly
+      await waitForTxListUpdateForClaimTx(readyToClaimCount);
     });
   });
 });

@@ -1,4 +1,4 @@
-import { getAddress } from "viem";
+import { getAddress, zeroAddress } from "viem";
 import { configSchema, Config } from "./config.schema";
 
 export const config: Config = {
@@ -59,6 +59,31 @@ export const config: Config = {
       cctpTokenMessengerV2Address: getAddress("0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA"),
       cctpMessageTransmitterV2Address: getAddress("0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275"),
     },
+    // Local networks for testing purposes
+    ...(process.env.NEXT_PUBLIC_E2E_TEST_MODE === "true"
+      ? {
+          31648428: {
+            iconPath: `${process.env.NEXT_PUBLIC_BASE_PATH}/images/logo/ethereum-rounded.svg`,
+            messageServiceAddress: "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9",
+            tokenBridgeAddress: "0x2279B7A0a67DB372996a5FaB50D91eAA73d2eBe6",
+            gasLimitSurplus: 6000n,
+            profitMargin: 2n,
+            cctpDomain: 0,
+            cctpTokenMessengerV2Address: zeroAddress, // Not used in E2E tests
+            cctpMessageTransmitterV2Address: zeroAddress, // Not used in E2E tests
+          },
+          1337: {
+            iconPath: `${process.env.NEXT_PUBLIC_BASE_PATH}/images/logo/linea-sepolia.svg`,
+            messageServiceAddress: "0xe537D669CA013d86EBeF1D64e40fC74CADC91987",
+            tokenBridgeAddress: "0x5C95Bcd50E6D1B4E3CDC478484C9030Ff0a7D493",
+            gasLimitSurplus: 6000n,
+            profitMargin: 2n,
+            cctpDomain: 0,
+            cctpTokenMessengerV2Address: zeroAddress, // Not used in E2E tests
+            cctpMessageTransmitterV2Address: zeroAddress, // Not used in E2E tests
+          },
+        }
+      : {}),
   },
   walletConnectId: process.env.NEXT_PUBLIC_WALLET_CONNECT_ID ?? "",
   storage: {
@@ -77,6 +102,7 @@ export const config: Config = {
     mainnet: process.env.NEXT_PUBLIC_MAINNET_TOKEN_LIST ?? "",
     sepolia: process.env.NEXT_PUBLIC_SEPOLIA_TOKEN_LIST ?? "",
   },
+  e2eTestMode: process.env.NEXT_PUBLIC_E2E_TEST_MODE === "true",
 };
 
 export async function getConfiguration(): Promise<Config> {

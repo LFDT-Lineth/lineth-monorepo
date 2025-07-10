@@ -89,6 +89,7 @@ __pycache__/
 /besu-plugins/linea-sequencer/**/site
 
 /bridge-ui/.env*.local
+!/bridge-ui/.env.test
 /bridge-ui/cache
 /bridge-ui/out
 /bridge-ui/test-results

@@ -7,6 +7,11 @@ export function middleware(request: NextRequest) {
   // We only want to allow unsafe-eval in local environment for Next.js dev server
   const unsafeScript = process.env.NEXT_PUBLIC_ENVIRONMENT === "local" ? "'unsafe-eval'" : "";
 
+  const localUrls =
+    process.env.NEXT_PUBLIC_ENVIRONMENT === "local"
+      ? "'unsafe-inline' http://127.0.0.1:8445 http://localhost:8445 http://127.0.0.1:9045 http://localhost:9045"
+      : "";
+
   // Metamask fails on Firefox without 'unsafe-inline' https://github.com/MetaMask/metamask-extension/issues/3133
   // Furthermore 'unsafe-inline' is ignored when nonces is present
   const isFirefox = request.headers.get("user-agent")?.includes("Firefox");
@@ -63,7 +68,7 @@ export function middleware(request: NextRequest) {
     style-src 'self' 'unsafe-inline';
     img-src 'self' blob: data: https:;
     font-src 'self' data: https://cdn.jsdelivr.net;
-    connect-src 'self' https: wss:;
+    connect-src 'self' https: wss: ${localUrls};
     frame-src 'self'
       https://*.walletconnect.com
       https://buy.onramper.com/;

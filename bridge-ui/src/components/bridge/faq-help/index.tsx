@@ -5,7 +5,10 @@ import clsx from "clsx";
 export default function FaqHelp() {
   return (
     <div className={clsx(styles["faq-help"])}>
-      Need help? <Link href="/faq">Check our FAQ</Link>
+      Need help?{" "}
+      <Link data-testid="faq-page-link" href="/faq">
+        Check our FAQ
+      </Link>
     </div>
   );
 }

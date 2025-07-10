@@ -1,7 +1,7 @@
-import { formatEther } from "viem";
+import { useMemo } from "react";
 import styles from "./gas-fees-list-item.module.scss";
 import { CurrencyOption } from "@/stores";
-import { useMemo } from "react";
+import { useFormattedDigit } from "@/hooks/useFormattedDigit";
 
 type Props = {
   name: string;
@@ -11,10 +11,12 @@ type Props = {
 };
 
 export default function GasFeesListItem({ name, fee, fiatValue, currency }: Props) {
+  const formattedFees = useFormattedDigit(fee, 18);
+
   const feeText = useMemo(() => {
-    if (fee === 0n) return "Free";
-    return `${parseFloat(formatEther(fee)).toFixed(8)} ETH`;
-  }, [fee]);
+    if (fee === 0n) return <>Free</>;
+    return <>{formattedFees} ETH</>;
+  }, [fee, formattedFees]);
 
   return (
     <li className={styles["list-item"]}>

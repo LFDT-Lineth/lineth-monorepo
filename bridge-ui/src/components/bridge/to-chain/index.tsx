@@ -26,12 +26,7 @@ export default function ToChain() {
       return;
     }
     setToChain(chain);
-
-    if (chain.testnet) {
-      setFromChain(chains.find((c: Chain) => c.testnet && c.layer !== chain.layer));
-    } else {
-      setFromChain(chains.find((c: Chain) => !c.testnet && c.layer !== chain.layer));
-    }
+    setFromChain(chains.find((c: Chain) => c.id === chain.toChainId));
   };
 
   return (

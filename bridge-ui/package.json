@@ -18,10 +18,10 @@
     "build:cache": "synpress",
     "build:cache:force": "synpress --force",
     "build:cache:headless": "synpress --headless",
-    "test:unit": "HEADLESS=true playwright test src",
-    "test:e2e:headful": "playwright test test/e2e",
-    "test:e2e:headless": "HEADLESS=true playwright test test/e2e",
-    "test:e2e:headless:ui": "HEADLESS=true playwright test test/e2e --ui"
+    "test:unit": "HEADLESS=true UNIT=true playwright test --project=unit",
+    "test:e2e:headful": "playwright test --project=chromium",
+    "test:e2e:headless": "HEADLESS=true playwright test --project=chromium",
+    "test:e2e:headless:ui": "HEADLESS=true playwright test --project=chromium --ui"
   },
   "dependencies": {
     "@bigmi/react": "0.3.1",
@@ -57,7 +57,7 @@
     "zustand": "4.5.4"
   },
   "devDependencies": {
-    "@playwright/test": "1.51.1",
+    "@playwright/test": "1.53.2",
     "@svgr/webpack": "8.1.0",
     "@synthetixio/synpress": "4.1.0",
     "@types/fs-extra": "11.0.4",

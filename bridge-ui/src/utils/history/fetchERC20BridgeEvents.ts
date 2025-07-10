@@ -16,6 +16,8 @@ import { HistoryActionsForCompleteTxCaching } from "@/stores";
 import { getCompleteTxStoreKey } from "./getCompleteTxStoreKey";
 import { isBlockTooOld } from "./isBlockTooOld";
 import { isUndefined, isUndefinedOrNull } from "@/utils";
+import { config } from "@/config";
+import { localL1Network, localL2Network } from "@/constants";
 
 export async function fetchERC20BridgeEvents(
   historyStoreActions: HistoryActionsForCompleteTxCaching,
@@ -31,10 +33,16 @@ export async function fetchERC20BridgeEvents(
     chainId: fromChain.id,
   });
 
+  const l1Contract = lineaSDK.getL1Contract(
+    config.e2eTestMode ? config.chains[localL1Network.id].messageServiceAddress : undefined,
+    config.e2eTestMode ? config.chains[localL2Network.id].messageServiceAddress : undefined,
+  );
+  const l2Contract = lineaSDK.getL2Contract(
+    config.e2eTestMode ? config.chains[localL2Network.id].messageServiceAddress : undefined,
+  );
+
   const [originContract, destinationContract] =
-    fromChain.layer === ChainLayer.L1
-      ? [lineaSDK.getL1Contract(), lineaSDK.getL2Contract()]
-      : [lineaSDK.getL2Contract(), lineaSDK.getL1Contract()];
+    fromChain.layer === ChainLayer.L1 ? [l1Contract, l2Contract] : [l2Contract, l1Contract];
 
   const tokenBridgeAddress = fromChain.tokenBridgeAddress;
   const [erc20LogsForSender, erc20LogsForRecipient] = await Promise.all([

@@ -43,7 +43,7 @@ export const defaultInitState: ConfigState = {
     label: "USD",
     flag: "🇺🇸",
   },
-  showTestnet: false,
+  showTestnet: config.e2eTestMode,
   visitedModal: {
     "all-bridges": false,
     "native-bridge": false,

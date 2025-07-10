@@ -7,6 +7,7 @@ import {
   EthereumWalletConnectors,
   DynamicContextProvider,
   SolanaWalletConnectors,
+  mergeNetworks,
 } from "@/lib/dynamic";
 import { config as wagmiConfig } from "@/lib/wagmi";
 import { config } from "@/config";
@@ -93,6 +94,47 @@ export function Web3Provider({ children }: Web3ProviderProps) {
         mobileExperience: "redirect",
         appName: "Linea Bridge",
         cssOverrides,
+        ...(config.e2eTestMode
+          ? {
+              overrides: {
+                evmNetworks: (networks) =>
+                  mergeNetworks(networks, [
+                    {
+                      blockExplorerUrls: [],
+                      chainId: 31648428,
+                      chainName: "Local L1 Network",
+                      iconUrls: ["https://app.dynamic.xyz/assets/networks/ethereum.svg"],
+                      name: "L1Local",
+                      nativeCurrency: {
+                        decimals: 18,
+                        name: "Ether",
+                        symbol: "ETH",
+                        iconUrl: "https://app.dynamic.xyz/assets/networks/ethereum.svg",
+                      },
+                      networkId: 31648428,
+                      rpcUrls: ["http://localhost:8445"],
+                      vanityName: "L1Local",
+                    },
+                    {
+                      blockExplorerUrls: [],
+                      chainId: 1337,
+                      chainName: "Local L2 Network",
+                      iconUrls: ["https://app.dynamic.xyz/assets/networks/ethereum.svg"],
+                      name: "L2Local",
+                      nativeCurrency: {
+                        decimals: 18,
+                        name: "Ether",
+                        symbol: "ETH",
+                        iconUrl: "https://app.dynamic.xyz/assets/networks/ethereum.svg",
+                      },
+                      networkId: 1337,
+                      rpcUrls: ["http://localhost:9045"],
+                      vanityName: "L2Local",
+                    },
+                  ]),
+              },
+            }
+          : {}),
       }}
     >
       <WagmiProvider config={wagmiConfig}>

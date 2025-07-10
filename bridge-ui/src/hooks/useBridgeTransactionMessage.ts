@@ -10,6 +10,8 @@ import { isNativeBridgeMessage } from "@/utils/message";
 import { useQuery } from "@tanstack/react-query";
 import useLineaSDK from "./useLineaSDK";
 import { isUndefined, isUndefinedOrEmptyString } from "@/utils";
+import { config } from "@/config";
+import { localL1Network, localL2Network } from "@/constants";
 
 const useBridgeTransactionMessage = (
   transaction: BridgeTransaction | undefined,
@@ -37,14 +39,24 @@ const useBridgeTransactionMessage = (
         if (toChain.layer === ChainLayer.L2) return message;
         if (!isNativeBridgeMessage(message) || isUndefinedOrEmptyString(message?.messageHash)) return message;
         const { messageHash } = message;
-        message.proof = await lineaSDK.getL1ClaimingService().getMessageProof(messageHash);
+        message.proof = await lineaSDK
+          .getL1ClaimingService(
+            config.e2eTestMode ? config.chains[localL1Network.id].messageServiceAddress : undefined,
+            config.e2eTestMode ? config.chains[localL2Network.id].messageServiceAddress : undefined,
+          )
+          .getMessageProof(messageHash);
         return message;
       }
       case BridgeTransactionType.ERC20: {
         if (toChain.layer === ChainLayer.L2) return message;
         if (!isNativeBridgeMessage(message) || isUndefinedOrEmptyString(message?.messageHash)) return message;
         const { messageHash } = message;
-        message.proof = await lineaSDK.getL1ClaimingService().getMessageProof(messageHash);
+        message.proof = await lineaSDK
+          .getL1ClaimingService(
+            config.e2eTestMode ? config.chains[localL1Network.id].messageServiceAddress : undefined,
+            config.e2eTestMode ? config.chains[localL2Network.id].messageServiceAddress : undefined,
+          )
+          .getMessageProof(messageHash);
         return message;
       }
       case BridgeTransactionType.USDC: {

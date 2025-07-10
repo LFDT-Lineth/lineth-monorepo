@@ -23,7 +23,7 @@ on:
 jobs:
   run-e2e-tests:
     if: github.event.pull_request.head.repo.fork == false
-    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-med
+    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-large
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -52,7 +52,7 @@ jobs:
           pnpm-install-options: '--frozen-lockfile --prefer-offline'
 
       - name: Install Playwright
-        run: pnpm dlx playwright@1.51.1 install --with-deps chromium
+        run: pnpm dlx playwright@1.53.2 install --with-deps chromium
 
       - name: Build Bridge UI
         run: pnpm run -F bridge-ui build
@@ -65,32 +65,73 @@ jobs:
           NEXT_PUBLIC_LIFI_INTEGRATOR_NAME: ${{ secrets.PUBLIC_LIFI_INTEGRATOR_NAME }}
           NEXT_PUBLIC_ONRAMPER_API_KEY: ${{ secrets.PUBLIC_ONRAMPER_API_KEY }}
           NEXT_PUBLIC_LAYERSWAP_API_KEY: ${{ secrets.PUBLIC_LAYERSWAP_API_KEY }}
-          NEXT_PUBLIC_ENVIRONMENT: development
+          NEXT_PUBLIC_ENVIRONMENT: local
           REVALIDATE_SECRET: ${{ secrets.BRIDGE_UI_REVALIDATE_SECRET }}
+          NEXT_PUBLIC_E2E_TEST_MODE: true
+          NEXT_PUBLIC_IS_CCTP_ENABLED: false
 
       - name: Install linux dependencies
         run: |
           sudo apt-get install --no-install-recommends -y xvfb
-
-      - name: Initialize Metamask testing fixture
-        run: xvfb-run pnpm run -F bridge-ui build:cache
-        env:
-          E2E_TEST_PRIVATE_KEY: ${{ secrets.BRIDGE_UI_E2E_TESTS_PRIVATE_KEY }}
-          E2E_TEST_SEED_PHRASE: "test test test test test test test test test test test junk"
-          E2E_TEST_WALLET_PASSWORD: "TestPassword!"
-          NEXT_PUBLIC_INFURA_ID: ${{ secrets.PUBLIC_BRIDGE_UI_INFURA_ID }}
-
+      
       - name: Run unit tests
-        run: DOTENV_CONFIG_PATH=.env.production pnpm run -F bridge-ui test:unit
+        run: pnpm run -F bridge-ui test:unit
         env:
           # Can run unit tests in parallel
           CI: "false"
+          DOTENV_CONFIG_PATH: ".env.production"
           NEXT_PUBLIC_INFURA_ID: ${{ secrets.PUBLIC_BRIDGE_UI_INFURA_ID }}
           NEXT_PUBLIC_LIFI_API_KEY: "placeholder"
           NEXT_PUBLIC_LIFI_INTEGRATOR_NAME: "placeholder"
           NEXT_PUBLIC_WALLET_CONNECT_ID: "placeholder"
           NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID: "placeholder"
           NEXT_PUBLIC_QUICKNODE_ID: "placeholder"
+          NEXT_PUBLIC_E2E_TEST_MODE: false
+      
+      - name: Login to Docker Hub
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 #v3.4.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      
+      - name: Pull all images with retry
+        uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 #v3.0.2
+        with:
+          max_attempts: 10
+          retry_on: error
+          retry_wait_seconds: 30
+          timeout_minutes: 10
+          command: |
+            make docker-pull-images-external-to-monorepo
+
+      - name: Create directory for conflated traces
+        run: |
+          mkdir -p tmp/local/traces/v2/conflated
+          chmod -R a+rw tmp/local/
+
+      - name: Spin up fresh environment with besu tracing with retry
+        uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 #v3.0.2
+        with:
+          max_attempts: 10
+          retry_on: error
+          retry_wait_seconds: 30
+          timeout_minutes: 10
+          command: |
+            make start-env-with-tracing-v2-ci CLEAN_PREVIOUS_ENV=false
+          on_retry_command: |
+            make clean-environment
+
+      - name: List docker containers/images
+        continue-on-error: true
+        run: |
+          docker ps -la && docker images
+          docker container ls -a
+      
+      - name: Initialize Metamask testing fixture
+        run: xvfb-run pnpm run -F bridge-ui build:cache
+        env:
+          E2E_TEST_SEED_PHRASE: "test test test test test test test test test test test junk"
+          E2E_TEST_WALLET_PASSWORD: "TestPassword!"
 
       # Prerequisite - Testing wallet must have >0 ETH and USDC on Sepolia
       - name: Run E2E tests
@@ -98,10 +139,8 @@ jobs:
         env:
           # Do not run E2E tests in parallel. Especially blockchain tx where nonces can collide.
           CI: "true"
-          E2E_TEST_PRIVATE_KEY: ${{ secrets.BRIDGE_UI_E2E_TESTS_PRIVATE_KEY }}
-          E2E_TEST_SEED_PHRASE: "test test test test test test test test test test test junk"
-          E2E_TEST_WALLET_PASSWORD: "TestPassword!"
-          NEXT_PUBLIC_INFURA_ID: ${{ secrets.PUBLIC_BRIDGE_UI_INFURA_ID }}
+          DOTENV_CONFIG_PATH: ".env.test"
+          NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID: ${{ secrets.PUBLIC_DYNAMIC_SANDBOX_ENVIRONMENT_ID }}
 
       - name: Archive Playwright report
         uses: actions/upload-artifact@v4
