@@ -25,7 +25,7 @@ MACRO
 (DATA_3                 :binary)
 (DATA_4                 :binary)
 (DATA_5                 :binary)
-(DATA_6                 :i32)
+(DATA_6                 :i128)
 (DATA_7                 :i128)
 (DATA_8                 :i8)
 ))

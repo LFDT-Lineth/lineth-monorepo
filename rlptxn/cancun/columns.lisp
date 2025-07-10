@@ -78,11 +78,15 @@ CMP
   (EXO_DATA_3                       :binary)
   (EXO_DATA_4                       :binary)
   (EXO_DATA_5                       :binary)
-  (EXO_DATA_6                       :i32)
+  (EXO_DATA_6                       :i128)
   (EXO_DATA_7                       :i128)
   (EXO_DATA_8                       :i8)
   (IS_PREFIX                        :binary)
-  (TMP                              :i64 :array [7])
+  (IS_ADDRESS                       :binary)
+  (IS_STORAGE                       :binary)
+  (TMP                              :i32 :array [5])
+  (TMP6                             :i128)
+  (TMP7                             :i32)
 ))
 
 ;; aliases

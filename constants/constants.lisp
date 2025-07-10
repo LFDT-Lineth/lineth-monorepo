@@ -493,6 +493,13 @@
   ;;
   RLP_ADDR_RECIPE_1                         1                                  ;; for RlpAddr, used to discriminate between recipe for create
   RLP_ADDR_RECIPE_2                         2                                  ;; for RlpAddr, used to discriminate between recipe for create
+  ;;
+  ;; RLP_UTILS instruction
+  ;;
+  RLP_UTILS_INST_INTEGER                    1
+  RLP_UTILS_INST_BYTE_STRING_PREFIX         2
+  RLP_UTILS_INST_BYTES32                    4
+  RLP_UTILS_INST_DATA_PRICING               8
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;                ;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; SHAKIRA MODULE ;;
