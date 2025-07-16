@@ -36,4 +36,4 @@ Linea risk disclosures can be found at:
 This security policy applies to the code, libraries, and configurations within this repository. This includes any code or components that are part of the repository or its dependencies.
 
 ## Previous Audits
-Please see the full [audit history](audits.md).
+Please see the full [audit history](/docs/audits.md).
