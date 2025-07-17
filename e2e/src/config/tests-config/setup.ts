@@ -83,6 +83,13 @@ export default class TestSetup {
     return this.config.L2.besuNodeRpcUrl;
   }
 
+  public getL2BesuFollowerNodeEndpoint(): URL | undefined {
+    if (!this.isLocalL2Config(this.config.L2)) {
+      return undefined;
+    }
+    return this.config.L2.besuFollowerNodeRpcUrl;
+  }
+
   public getTransactionExclusionEndpoint(): URL | undefined {
     if (!this.isLocalL2Config(this.config.L2)) {
       return undefined;

@@ -66,13 +66,17 @@ abstract class AccountManager implements IAccountManager {
     return this.selectWhaleAccount(accIndex).accountWallet;
   }
 
-  async generateAccount(initialBalanceWei = etherToWei("10")): Promise<Wallet> {
-    const accounts = await this.generateAccounts(1, initialBalanceWei);
+  async generateAccount(initialBalanceWei = etherToWei("10"), accIndex?: number): Promise<Wallet> {
+    const accounts = await this.generateAccounts(1, initialBalanceWei, accIndex);
     return accounts[0];
   }
 
-  async generateAccounts(numberOfAccounts: number, initialBalanceWei = etherToWei("10")): Promise<Wallet[]> {
-    const { account: whaleAccount, accountWallet: whaleAccountWallet } = this.selectWhaleAccount();
+  async generateAccounts(
+    numberOfAccounts: number,
+    initialBalanceWei = etherToWei("10"),
+    accIndex?: number,
+  ): Promise<Wallet[]> {
+    const { account: whaleAccount, accountWallet: whaleAccountWallet } = this.selectWhaleAccount(accIndex);
 
     this.logger.debug(
       `Generating accounts... chainId=${this.chainId} numberOfAccounts=${numberOfAccounts} whaleAccount=${whaleAccount.address}`,

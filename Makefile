@@ -72,6 +72,10 @@ start-env-with-tracing-v2-extra:
 start-env-with-tracing-v2-ci:
 	make start-env COMPOSE_FILE=docker/compose-tracing-v2-ci-extension.yml LINEA_COORDINATOR_DISABLE_TYPE2_STATE_PROOF_PROVIDER=false LINEA_COORDINATOR_SIGNER_TYPE=web3signer
 
+## Enable Fleet leader and follower besu nodes
+start-env-with-tracing-v2-fleet-ci:
+	make start-env COMPOSE_FILE=docker/compose-tracing-v2-fleet-ci-extension.yml LINEA_COORDINATOR_DISABLE_TYPE2_STATE_PROOF_PROVIDER=false LINEA_COORDINATOR_SIGNER_TYPE=web3signer
+
 start-env-with-staterecovery: COMPOSE_PROFILES:=l1,l2,staterecovery
 start-env-with-staterecovery: L1_CONTRACT_VERSION:=6
 start-env-with-staterecovery:

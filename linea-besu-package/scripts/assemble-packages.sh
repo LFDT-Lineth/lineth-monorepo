@@ -18,9 +18,9 @@ cd ./besu/plugins
 
 echo "downloading the plugins"
 echo "getting linea_sequencer_plugin_version: $LINEA_SEQUENCER_PLUGIN_VERSION"
-wget -nv https://github.com/Consensys/linea-monorepo/releases/download/linea-sequencer-$LINEA_SEQUENCER_PLUGIN_VERSION/linea-sequencer-$LINEA_SEQUENCER_PLUGIN_VERSION.zip
-unzip -o linea-sequencer-$LINEA_SEQUENCER_PLUGIN_VERSION.zip
-rm linea-sequencer-$LINEA_SEQUENCER_PLUGIN_VERSION.zip
+wget -nv https://github.com/Consensys/linea-monorepo/releases/download/linea-sequencer-v$LINEA_SEQUENCER_PLUGIN_VERSION/linea-sequencer-v$LINEA_SEQUENCER_PLUGIN_VERSION.zip
+unzip -o linea-sequencer-v$LINEA_SEQUENCER_PLUGIN_VERSION.zip
+rm linea-sequencer-v$LINEA_SEQUENCER_PLUGIN_VERSION.zip
 
 echo "getting linea_finalized_tag_updater_plugin_version: $LINEA_FINALIZED_TAG_UPDATER_PLUGIN_VERSION"
 wget -nv https://github.com/Consensys/linea-monorepo/releases/download/linea-finalized-tag-updater-v$LINEA_FINALIZED_TAG_UPDATER_PLUGIN_VERSION/linea-finalized-tag-updater-v$LINEA_FINALIZED_TAG_UPDATER_PLUGIN_VERSION.jar

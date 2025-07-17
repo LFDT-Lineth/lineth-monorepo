@@ -24,6 +24,11 @@ on:
         required: false
         type: string
         default: ''
+      without_besu_fleet_plugin:
+        description: 'Type "true" to exclude besu-fleet-plugin in the release'
+        required: false
+        type: string
+        default: ''
       expected_traces_api_ver:
         description: '(For Debug) If given, this will override the expected traces api version in coordinator config'
         required: false
@@ -79,4 +84,5 @@ jobs:
       push_image: ${{ github.event_name == 'workflow_dispatch' }}
       skip_e2e_test: ${{ inputs.skip_e2e_test == 'true' }}
       expected_traces_api_ver: ${{ inputs.expected_traces_api_ver }}
+      with_besu_fleet_plugin: ${{ github.event_name == 'workflow_dispatch' && inputs.without_besu_fleet_plugin != 'true' }}
     secrets: inherit

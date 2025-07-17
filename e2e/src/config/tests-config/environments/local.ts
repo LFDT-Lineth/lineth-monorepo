@@ -6,6 +6,7 @@ import { Config } from "../types";
 const L1_RPC_URL = new URL("http://localhost:8445");
 const L2_RPC_URL = new URL("http://localhost:9045");
 const L2_BESU_NODE_RPC_URL = new URL("http://localhost:9045");
+const L2_BESU_FOLLOWER_NODE_RPC_URL = new URL("http://localhost:9245");
 const SHOMEI_ENDPOINT = new URL("http://localhost:8998");
 const SHOMEI_FRONTEND_ENDPOINT = new URL("http://localhost:8889");
 const SEQUENCER_ENDPOINT = new URL("http://localhost:8545");
@@ -31,6 +32,7 @@ const config: Config = {
   L2: {
     rpcUrl: L2_RPC_URL,
     besuNodeRpcUrl: L2_BESU_NODE_RPC_URL,
+    besuFollowerNodeRpcUrl: L2_BESU_FOLLOWER_NODE_RPC_URL,
     chainId: 1337,
     l2MessageServiceAddress: "0xe537D669CA013d86EBeF1D64e40fC74CADC91987",
     l2TestContractAddress: "0x997FC3aF1F193Cbdc013060076c67A13e218980e", // Nonce 10

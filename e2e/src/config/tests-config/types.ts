@@ -18,6 +18,7 @@ export type BaseL2Config = BaseConfig & {
   l2MessageServiceAddress: string;
   l2TestContractAddress?: string;
   besuNodeRpcUrl?: URL;
+  besuFollowerNodeRpcUrl?: URL;
   tokenBridgeAddress: string;
   l2TokenAddress: string;
   l2SparseMerkleProofAddress: string;
