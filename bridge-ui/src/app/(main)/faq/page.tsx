@@ -54,11 +54,13 @@ const faqList = [
   },
   {
     title: "How long does the Linea native bridge take?",
-    content: `<p>This depends on the direction of your bridge:</p>
+    content: `<p>This depends on the asset and direction of your bridge transfer.</p>
+    <p>For ETH or ERC-20 tokens:</p>
     <ul>
-      <li>Deposit (L1 -> L2): Approximately 20 minutes.</li>
-      <li>Withdrawal (L2 -> L1): Between 8 and 32 hours. The L2 transaction must be finalized on Ethereum Mainnet before you can claim your funds.</li>
-    </ul>`,
+      <li>Deposit (L1 &rarr; L2): ~20 minutes.</li>
+      <li>Withdrawal (L2 &rarr; L1): 2-16 hours.</li>
+    </ul>
+    <p>For USDC, deposits and withdrawals leverage the Circle Cross-Chain Transfer Protocol (CCTP) for much faster transfers.</p>`,
   },
   {
     title: "Can I speed up my transactions on the Linea native bridge?",
