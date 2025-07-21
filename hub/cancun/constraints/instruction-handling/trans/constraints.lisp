@@ -39,10 +39,11 @@
                                  (begin
                                    (eq! NSR  (+  2  (tstore-must-be-undone)))
                                    (eq! NSR
-                                        (+ (shift      PEEK_AT_CONTEXT                              TRANSIENT___UNEXCEPTIONAL___CONTEXT_CURR_ROFF      )
-                                           (shift      PEEK_AT_TRANSIENT                            TRANSIENT___UNEXCEPTIONAL___TRANSIENT_DOING_ROFF   )
-                                           (shift  (*  PEEK_AT_TRANSIENT  (tstore-must-be-undone))  TRANSIENT___UNEXCEPTIONAL___TRANSIENT_UNDOING_ROFF )
-                                           )))))
+                                        (+    (shift      PEEK_AT_CONTEXT                              TRANSIENT___UNEXCEPTIONAL___CONTEXT_CURR_ROFF      )
+                                              (shift      PEEK_AT_TRANSIENT                            TRANSIENT___UNEXCEPTIONAL___TRANSIENT_DOING_ROFF   )
+                                           (* (shift      PEEK_AT_TRANSIENT                            TRANSIENT___UNEXCEPTIONAL___TRANSIENT_UNDOING_ROFF )
+                                              (tstore-must-be-undone))
+                                              )))))
 
 (defconstraint   transient-storage-instruction---first-context-row
                  (:guard (transient-storage-instruction---no-stack-exceptions))
@@ -63,7 +64,7 @@
 (defconstraint   transient-storage-instruction---setting-storage-slot-parameters
                  (:guard (transient-storage-instruction---no-stack-exceptions))
                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-                 (if-not-zero    (transient-oogx-or-no-exception)
+                 (if-not-zero    (transient-no-exception)
                                  (begin
                                    (eq! (shift transient/ADDRESS_HI        TRANSIENT___UNEXCEPTIONAL___TRANSIENT_DOING_ROFF) (shift context/ACCOUNT_ADDRESS_HI   TRANSIENT___UNEXCEPTIONAL___CONTEXT_CURR_ROFF))
                                    (eq! (shift transient/ADDRESS_LO        TRANSIENT___UNEXCEPTIONAL___TRANSIENT_DOING_ROFF) (shift context/ACCOUNT_ADDRESS_LO   TRANSIENT___UNEXCEPTIONAL___CONTEXT_CURR_ROFF))
