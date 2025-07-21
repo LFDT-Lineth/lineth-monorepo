@@ -61,14 +61,18 @@
 (defconstraint  computations---state-update---updating-the-state---no-state-update
 		(:guard   (mxp-guard---state-update))
 		(if-zero   (force-bin   (mxp-shorthand---update-internal-state))
-			   (eq!   (mxp-shorthand---words-new)   (mxp-shorthand---words))
-			   (eq!   (mxp-shorthand---c_mem-new)   (mxp-shorthand---c_mem))
-			   ))
+			   (begin
+			        (eq!   (mxp-shorthand---words-new)   (mxp-shorthand---words))
+			        (eq!   (mxp-shorthand---c_mem-new)   (mxp-shorthand---c_mem))
+			   )
+	    ))
 
 (defconstraint  computations---state-update---updating-the-state---state-update
 		(:guard   (mxp-guard---state-update))
 		(if-not-zero   (force-bin   (mxp-shorthand---update-internal-state))
-			       (eq!   (mxp-shorthand---words-new)   (mxp-shorthand---EYP_a))
-			       (eq!   (mxp-shorthand---c_mem-new)   (+  (mxp-shorthand---C_MEM-quad-part)
+			       (begin
+			            (eq!   (mxp-shorthand---words-new)   (mxp-shorthand---EYP_a))
+			            (eq!   (mxp-shorthand---c_mem-new)   (+  (mxp-shorthand---C_MEM-quad-part)
 									(mxp-shorthand---C_MEM-linr-part)))
-			       ))
+				   )
+	    ))

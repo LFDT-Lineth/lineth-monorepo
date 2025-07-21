@@ -45,7 +45,7 @@
 (defconstraint  generalities---heartbeat---setting-CT_MAX-during-COMPUTATION ()
 		(if-not-zero  SCNRI
 			      (eq!  (next  CT_MAX)
-				    (next  (mxp-ct-max-sum)))
+				    (mxp-ct-max-sum))
 			      ))
 
 (defconstraint  generalities---heartbeat---illegal-perspective-transitions ()
