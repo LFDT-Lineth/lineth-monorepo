@@ -1,8 +1,8 @@
 "use client";
 
-import { useDynamicContext, useIsLoggedIn } from "@/lib/dynamic";
-import { ChainId, LiFiWidget, WidgetSkeleton, type WidgetConfig } from "@/lib/lifi";
-import { ClientOnly } from "../client-only";
+import dynamic from "next/dynamic";
+import { useDynamicContext, useIsLoggedIn } from "@dynamic-labs/sdk-react-core";
+import { ChainId, WidgetConfig, WidgetSkeleton } from "@lifi/widget";
 import atypTextFont from "@/assets/fonts/atypText";
 import { CHAINS_RPC_URLS, ETH_SYMBOL } from "@/constants";
 import { config } from "@/config";
@@ -164,25 +164,26 @@ const widgetConfig: Partial<WidgetConfig> = {
   apiKey: config.lifiApiKey,
 };
 
+const LiFiWidget = dynamic(() => import("@lifi/widget").then((mod) => mod.LiFiWidget), {
+  ssr: false,
+  loading: () => <WidgetSkeleton config={widgetConfig} />,
+});
+
 export function Widget() {
   const { setShowAuthFlow, setShowDynamicUserProfile } = useDynamicContext();
   const isLoggedIn = useIsLoggedIn();
 
   return (
-    <div>
-      <ClientOnly fallback={<WidgetSkeleton config={widgetConfig} />}>
-        <LiFiWidget
-          config={{
-            ...widgetConfig,
-            walletConfig: {
-              onConnect() {
-                isLoggedIn ? setShowDynamicUserProfile(true) : setShowAuthFlow(true);
-              },
-            },
-          }}
-          integrator={config.lifiIntegrator}
-        />
-      </ClientOnly>
-    </div>
+    <LiFiWidget
+      config={{
+        ...widgetConfig,
+        walletConfig: {
+          onConnect() {
+            isLoggedIn ? setShowDynamicUserProfile(true) : setShowAuthFlow(true);
+          },
+        },
+      }}
+      integrator={config.lifiIntegrator}
+    />
   );
 }

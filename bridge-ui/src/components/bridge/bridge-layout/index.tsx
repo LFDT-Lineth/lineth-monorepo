@@ -1,6 +1,6 @@
 "use client";
 
-import { useDynamicContext } from "@/lib/dynamic";
+import { useDynamicContext } from "@dynamic-labs/sdk-react-core";
 import Bridge from "../form";
 import TransactionHistory from "../transaction-history";
 import { useNativeBridgeNavigationStore } from "@/stores";

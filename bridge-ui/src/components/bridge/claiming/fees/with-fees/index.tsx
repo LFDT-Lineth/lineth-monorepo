@@ -1,10 +1,14 @@
+import dynamic from "next/dynamic";
 import Image from "next/image";
 import styles from "./with-fees.module.scss";
 import { useState } from "react";
-import GasFees from "../../../modal/gas-fees";
 import { useFees } from "@/hooks";
 import { useConfigStore } from "@/stores";
 import { useFormattedDigit } from "@/hooks/useFormattedDigit";
+
+const GasFees = dynamic(() => import("../../../modal/gas-fees"), {
+  ssr: false,
+});
 
 type Props = {
   iconPath: string;
@@ -43,7 +47,9 @@ export default function WithFees({ iconPath }: Props) {
           )}
         </button>
       )}
-      <GasFees isModalOpen={showGasFeesModal} onCloseModal={() => setShowGasFeesModal(false)} fees={fees} />
+      {showGasFeesModal && (
+        <GasFees isModalOpen={showGasFeesModal} onCloseModal={() => setShowGasFeesModal(false)} fees={fees} />
+      )}
     </>
   );
 }

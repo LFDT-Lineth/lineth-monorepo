@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAccount } from "wagmi";
-import { useDynamicEvents } from "@/lib/dynamic";
+import { useDynamicEvents } from "@dynamic-labs/sdk-react-core";
 import FaqHelp from "@/components/bridge/faq-help";
 import TokenList from "@/components/bridge/token-list";
 import { Amount } from "@/components/bridge/amount";

@@ -2,13 +2,10 @@
 
 import { PropsWithChildren } from "react";
 import { WagmiProvider } from "wagmi";
-import {
-  DynamicWagmiConnector,
-  EthereumWalletConnectors,
-  DynamicContextProvider,
-  SolanaWalletConnectors,
-  mergeNetworks,
-} from "@/lib/dynamic";
+import { DynamicContextProvider, mergeNetworks } from "@dynamic-labs/sdk-react-core";
+import { EthereumWalletConnectors } from "@dynamic-labs/ethereum";
+import { SolanaWalletConnectors } from "@dynamic-labs/solana";
+import { DynamicWagmiConnector } from "@dynamic-labs/wagmi-connector";
 import { config as wagmiConfig } from "@/lib/wagmi";
 import { config } from "@/config";
 import { SolanaWalletProvider } from "./solana-provider";

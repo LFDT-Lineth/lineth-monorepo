@@ -1,9 +1,9 @@
 "use client";
 
-import styles from "./connect-button.module.scss";
 import clsx from "clsx";
+import { useDynamicContext } from "@dynamic-labs/sdk-react-core";
+import styles from "./connect-button.module.scss";
 import Button from "@/components/ui/button";
-import { useDynamicContext } from "@/lib/dynamic";
 
 type ConnectButtonProps = {
   text: string;

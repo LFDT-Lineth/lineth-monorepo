@@ -1,9 +1,9 @@
 import { useEffect, useState, useMemo } from "react";
+import dynamic from "next/dynamic";
 import { useAccount } from "wagmi";
 import BridgeTwoLogo from "@/components/bridge/bridge-two-logo";
 import styles from "./claiming.module.scss";
 import SettingIcon from "@/assets/icons/setting.svg";
-import AdvancedSettings from "@/components/bridge/modal/advanced-settings";
 import Skeleton from "@/components/bridge/claiming/skeleton";
 import ReceivedAmount from "./received-amount";
 import Fees from "./fees";
@@ -11,6 +11,10 @@ import { useFormStore, useChainStore } from "@/stores";
 import BridgeMode from "./bridge-mode";
 import { ChainLayer } from "@/types";
 import { isCctp } from "@/utils";
+
+const AdvancedSettings = dynamic(() => import("@/components/bridge/modal/advanced-settings"), {
+  ssr: false,
+});
 
 export default function Claiming() {
   const { isConnected } = useAccount();
@@ -77,10 +81,12 @@ export default function Claiming() {
           <Fees />
         </div>
       )}
-      <AdvancedSettings
-        isModalOpen={showAdvancedSettingsModal}
-        onCloseModal={() => setShowAdvancedSettingsModal(false)}
-      />
+      {showAdvancedSettingsModal && (
+        <AdvancedSettings
+          isModalOpen={showAdvancedSettingsModal}
+          onCloseModal={() => setShowAdvancedSettingsModal(false)}
+        />
+      )}
     </div>
   );
 }

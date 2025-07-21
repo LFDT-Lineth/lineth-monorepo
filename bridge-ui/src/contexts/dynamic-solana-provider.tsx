@@ -1,8 +1,9 @@
 "use client";
 
 import { type PropsWithChildren, useCallback, useEffect, useMemo } from "react";
-import { type Wallet, useDynamicContext, useDynamicEvents, type SolanaWalletConnector } from "@/lib/dynamic";
-import { useWallet } from "@/lib/solana";
+import { useDynamicContext, useDynamicEvents, type Wallet } from "@dynamic-labs/sdk-react-core";
+import { SolanaWalletConnector } from "@dynamic-labs/solana";
+import { useWallet } from "@solana/wallet-adapter-react";
 
 const getSolanaConnector = (wallet: Wallet | null): SolanaWalletConnector | undefined => {
   if (wallet?.connector.connectedChain === "SOL") {

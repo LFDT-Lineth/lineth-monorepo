@@ -1,5 +1,7 @@
 import { GetBlockReturnType } from "viem";
-import { compareAsc, fromUnixTime, subDays } from "date-fns";
+import { fromUnixTime } from "date-fns/fromUnixTime";
+import { compareAsc } from "date-fns/compareAsc";
+import { subDays } from "date-fns/subDays";
 
 // Transactions with an age > TOO_OLD_IN_DAYS_THRESHOLD will not be shown in the TransactionHistory
 const TOO_OLD_IN_DAYS_THRESHOLD = 90;

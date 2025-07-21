@@ -1,7 +1,7 @@
 "use client";
 
+import { useDynamicContext } from "@dynamic-labs/sdk-react-core";
 import { usePathname } from "next/navigation";
-import { useDynamicContext } from "@/lib/dynamic";
 import { useInitialiseChain } from "@/hooks";
 import { LinkBlock } from "@/types";
 import Header from "@/components/header";

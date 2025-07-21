@@ -1,12 +1,12 @@
+import { useRef } from "react";
 import Link from "next/link";
 import { useGSAP } from "@gsap/react";
-import gsap from "gsap";
+import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { DesktopNavigation } from "./desktop-navigation";
 import { MobileNavigation } from "./mobile-navigation";
 import LineaLogo from "@/assets/logos/linea.svg";
 import { LinkBlock } from "@/types";
-import { useRef } from "react";
 import { useDevice } from "@/hooks";
 import HeaderConnect from "@/components/header/header-connect";
 import styles from "./header.module.scss";

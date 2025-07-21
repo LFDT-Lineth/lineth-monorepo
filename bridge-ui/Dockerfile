@@ -15,38 +15,37 @@ ARG NEXT_PUBLIC_LIFI_INTEGRATOR_NAME
 ARG NEXT_PUBLIC_ONRAMPER_API_KEY
 ARG NEXT_PUBLIC_LAYERSWAP_API_KEY
 ARG NEXT_PUBLIC_ENVIRONMENT
-ARG REVALIDATE_SECRET
-
-ENV NEXT_PUBLIC_WALLET_CONNECT_ID=$NEXT_PUBLIC_WALLET_CONNECT_ID
-ENV NEXT_PUBLIC_INFURA_ID=$NEXT_PUBLIC_INFURA_ID
-ENV NEXT_PUBLIC_QUICKNODE_ID=$NEXT_PUBLIC_QUICKNODE_ID
-ENV NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID=$NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID
-ENV NEXT_PUBLIC_LIFI_API_KEY=$NEXT_PUBLIC_LIFI_API_KEY
-ENV NEXT_PUBLIC_LIFI_INTEGRATOR_NAME=$NEXT_PUBLIC_LIFI_INTEGRATOR_NAME
-ENV NEXT_PUBLIC_ONRAMPER_API_KEY=$NEXT_PUBLIC_ONRAMPER_API_KEY
-ENV NEXT_PUBLIC_LAYERSWAP_API_KEY=$NEXT_PUBLIC_LAYERSWAP_API_KEY
-ENV NEXT_PUBLIC_ENVIRONMENT=$NEXT_PUBLIC_ENVIRONMENT
-ENV REVALIDATE_SECRET=$REVALIDATE_SECRET
-
 ARG ENV_FILE
+
+ENV NEXT_PUBLIC_WALLET_CONNECT_ID=$NEXT_PUBLIC_WALLET_CONNECT_ID \
+    NEXT_PUBLIC_INFURA_ID=$NEXT_PUBLIC_INFURA_ID \
+    NEXT_PUBLIC_QUICKNODE_ID=$NEXT_PUBLIC_QUICKNODE_ID \
+    NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID=$NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID \
+    NEXT_PUBLIC_LIFI_API_KEY=$NEXT_PUBLIC_LIFI_API_KEY \
+    NEXT_PUBLIC_LIFI_INTEGRATOR_NAME=$NEXT_PUBLIC_LIFI_INTEGRATOR_NAME \
+    NEXT_PUBLIC_ONRAMPER_API_KEY=$NEXT_PUBLIC_ONRAMPER_API_KEY \
+    NEXT_PUBLIC_LAYERSWAP_API_KEY=$NEXT_PUBLIC_LAYERSWAP_API_KEY \
+    NEXT_PUBLIC_ENVIRONMENT=$NEXT_PUBLIC_ENVIRONMENT
 
 WORKDIR /app
 
-RUN mkdir -p bridge-ui
-
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json .eslintrc.js .prettierrc.js ./
-
-COPY ./bridge-ui ./bridge-ui
-COPY $ENV_FILE ./bridge-ui/.env.production
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json ./
+COPY ./bridge-ui/package.json ./bridge-ui/package.json
+COPY ./sdk/sdk-core ./sdk/sdk-core
+COPY ./sdk/sdk-viem ./sdk/sdk-viem
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store apk add --virtual build-dependencies --no-cache python3 make g++ \
-    && pnpm install --frozen-lockfile --prefer-offline \
-    && pnpm run -F bridge-ui build \
-    && apk del build-dependencies
+    && pnpm install --frozen-lockfile --prefer-offline
+
+COPY ./bridge-ui ./bridge-ui
+
+COPY $ENV_FILE ./bridge-ui/.env.production
+
+RUN --mount=type=secret,id=revalidate_secret,env=REVALIDATE_SECRET pnpm run -F bridge-ui build
+
+RUN apk del build-dependencies
 
 FROM node:lts-alpine AS runner
-
-ARG X_TAG
 
 WORKDIR /app
 

@@ -1,19 +1,26 @@
 import { MouseEventHandler, useEffect, useMemo, useState } from "react";
 import { useAccount, useChainId, useSwitchChain } from "wagmi";
 import clsx from "clsx";
+import dynamic from "next/dynamic";
 import Button from "@/components/ui/button";
 import WalletIcon from "@/assets/icons/wallet.svg";
 import styles from "./submit.module.scss";
 import { useFormStore, useChainStore } from "@/stores";
 import { useBridge } from "@/hooks";
-import TransactionConfirmed from "../modal/transaction-confirmed";
-import ConfirmDestinationAddress from "../modal/confirm-destination-address";
 import ConnectButton from "@/components/connect-button";
 
 type Props = {
   isDestinationAddressOpen: boolean;
   setIsDestinationAddressOpen: MouseEventHandler<HTMLButtonElement>;
 };
+
+const ConfirmDestinationAddress = dynamic(() => import("../modal/confirm-destination-address"), {
+  ssr: false,
+});
+
+const TransactionConfirmed = dynamic(() => import("../modal/transaction-confirmed"), {
+  ssr: false,
+});
 
 export function Submit({ isDestinationAddressOpen, setIsDestinationAddressOpen }: Props) {
   const { address, isConnected } = useAccount();
@@ -115,29 +122,33 @@ export function Submit({ isDestinationAddressOpen, setIsDestinationAddressOpen }
           <WalletIcon />
         </button>
       </div>
-      <ConfirmDestinationAddress
-        isModalOpen={showConfirmDestinationAddressModal}
-        recipient={recipient}
-        onCloseModal={() => {
-          setShowConfirmDestinationAddressModal(false);
-        }}
-        onConfirm={() => {
-          bridge?.();
-          setShowConfirmDestinationAddressModal(false);
-        }}
-      />
-      <TransactionConfirmed
-        isModalOpen={showTransactionConfirmedModal}
-        transactionType={transactionType}
-        onCloseModal={() => {
-          if (transactionType !== "approve") {
-            resetForm();
-          } else {
-            refetchAllowance?.();
-          }
-          setShowTransactionConfirmedModal(false);
-        }}
-      />
+      {showConfirmDestinationAddressModal && (
+        <ConfirmDestinationAddress
+          isModalOpen={showConfirmDestinationAddressModal}
+          recipient={recipient}
+          onCloseModal={() => {
+            setShowConfirmDestinationAddressModal(false);
+          }}
+          onConfirm={() => {
+            bridge?.();
+            setShowConfirmDestinationAddressModal(false);
+          }}
+        />
+      )}
+      {showTransactionConfirmedModal && (
+        <TransactionConfirmed
+          isModalOpen={showTransactionConfirmedModal}
+          transactionType={transactionType}
+          onCloseModal={() => {
+            if (transactionType !== "approve") {
+              resetForm();
+            } else {
+              refetchAllowance?.();
+            }
+            setShowTransactionConfirmedModal(false);
+          }}
+        />
+      )}
     </>
   );
 }

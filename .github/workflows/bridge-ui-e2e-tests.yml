@@ -55,7 +55,10 @@ jobs:
         run: pnpm dlx playwright@1.53.2 install --with-deps chromium
 
       - name: Build Bridge UI
-        run: pnpm run -F bridge-ui build
+        run: |
+          pnpm run -F @consensys/linea-sdk-core build;
+          pnpm run -F @consensys/linea-sdk-viem build;
+          pnpm run -F bridge-ui build;
         env:
           NEXT_PUBLIC_WALLET_CONNECT_ID: ${{ secrets.PUBLIC_WALLET_CONNECT_ID }}
           NEXT_PUBLIC_INFURA_ID: ${{ secrets.PUBLIC_BRIDGE_UI_INFURA_ID }}

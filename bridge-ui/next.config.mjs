@@ -26,14 +26,15 @@ const nextConfig = {
   sassOptions: {
     prependData: `@use 'sass:math'; @use 'src/scss/breakpoints' as *;`,
   },
+  turbopack: {
+    rules: {
+      "*.svg": {
+        loaders: ["@svgr/webpack"],
+        as: "*.js",
+      },
+    },
+  },
   webpack: (config) => {
-    const warning = [...(config.ignoreWarnings || []), { module: /typeorm/ }];
-
-    config.ignoreWarnings = warning;
-
-    config.resolve.fallback = {
-      fs: false,
-    };
     config.externals.push("pino-pretty", "lokijs", "encoding");
 
     const fileLoaderRule = config.module.rules.find((rule) => rule.test?.test?.(".svg"));
