@@ -252,6 +252,11 @@
   UNPROTECTED_V_PO                          (+ UNPROTECTED_V 1)
   PROTECTED_BASE_V                          35
   PROTECTED_BASE_V_PO                       (+ PROTECTED_BASE_V 1)
+  HISTORY_BUFFER_LENGTH                     8191
+  BEACON_ROOTS_ADDRESS_HI                   0x000f3df6
+  BEACON_ROOTS_ADDRESS_LO                   0xd732807ef1319fb7b8bb8522d0beac02
+  HISTORY_STORAGE_ADDRESS_HI                0x0000f908
+  HISTORY_STORAGE_ADDRESS_LO                0x27f1c53a10cb7a02335b175320002935
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;             ;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  LINEA MISC ;;
