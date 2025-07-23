@@ -159,7 +159,7 @@ const widgetConfig: Partial<WidgetConfig> = {
     ],
   },
   bridges: {
-    allow: ["stargateV2", "stargateV2Bus", "across", "hop", "squid", "relay", "symbiosis"],
+    allow: ["mayanMCTP", "stargateV2", "stargateV2Bus", "across", "hop", "squid", "relay", "symbiosis"],
   },
   apiKey: config.lifiApiKey,
 };
