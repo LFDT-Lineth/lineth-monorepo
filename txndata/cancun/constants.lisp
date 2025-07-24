@@ -1,6 +1,6 @@
 (module txndata)
 
-
+;;TODO: rewrite me completely
 
 (defconst
   CT_MAX_TYPE_0                                         9
