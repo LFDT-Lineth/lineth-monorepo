@@ -21,10 +21,13 @@
 (defun    (precompile-processing---common---precondition)    (*    PEEK_AT_SCENARIO    (scenario-shorthand---PRC---common-address-bit-sum)))
 
 
-(defconstraint    precompile-processing---common---setting-MISC-module-flags    (:guard     (precompile-processing---common---precondition))
-                  (eq!    (weighted-MISC-flag-sum    1)
-                          (+    (*    MISC_WEIGHT_MMU    (precompile-processing---common---OOB-extract-call-data))
-                                MISC_WEIGHT_OOB)))
+(defconstraint    precompile-processing---common---setting-MISC-module-flags
+                  (:guard     (precompile-processing---common---precondition))
+                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                  (begin
+                    (eq!    (weighted-MISC-flag-sum-sans-MMU    1)    MISC_WEIGHT_OOB)
+                    (eq!    (shift    misc/MMU_FLAG             1)    (precompile-processing---common---OOB-extract-call-data))
+                    ))
 
 (defconstraint    precompile-processing---common---setting-OOB-instruction    (:guard    (precompile-processing---common---precondition))
                   (set-OOB-instruction---common    precompile-processing---common---1st-misc-row---row-offset  ;; offset

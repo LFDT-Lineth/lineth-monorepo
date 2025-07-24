@@ -150,10 +150,12 @@
                                                            (shift PEEK_AT_ACCOUNT          ROFF_EXTCODECOPY_NO_XAHOY_NO_REVERT_ACCOUNT_ROW)))))))
 
 (defconstraint    copy-instruction---setting-misc-row-module-flags (:guard (copy-instruction---standard-precondition))
-                  (eq! (weighted-MISC-flag-sum ROFF_COPY_INST_MISCELLANEOUS_ROW)
-                       (+ (* MISC_WEIGHT_MMU (copy-instruction---trigger_MMU))
-                          (* MISC_WEIGHT_MXP (copy-instruction---trigger_MXP))
-                          (* MISC_WEIGHT_OOB (copy-instruction---trigger_OOB)))))
+                  (begin
+                    (eq!   (weighted-MISC-flag-sum-sans-MMU    ROFF_COPY_INST_MISCELLANEOUS_ROW)
+                           (+ (* MISC_WEIGHT_MXP (copy-instruction---trigger_MXP))
+                              (* MISC_WEIGHT_OOB (copy-instruction---trigger_OOB))))
+                    (eq!   (shift   misc/MMU_FLAG   ROFF_COPY_INST_MISCELLANEOUS_ROW)   (copy-instruction---trigger_MMU))
+                    ))
 
 (defun (copy-instruction---trigger_OOB)    (copy-instruction---is-RETURNDATACOPY))
 (defun (copy-instruction---trigger_MXP)    (- 1 stack/RDCX))

@@ -220,13 +220,15 @@
                                            (return-instruction---return-at-capacity)
                                            ))
 
-(defconstraint return-instruction---setting-the-first-misc-row  (:guard  (return-instruction---standard-scenario-row))
-               ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-               (eq!   (weighted-MISC-flag-sum   ROFF_RETURN___1ST_MISC_ROW)
-                      (+   (*   MISC_WEIGHT_MMU   (return-instruction---trigger_MMU))
-                           (*   MISC_WEIGHT_MXP   (return-instruction---trigger_MXP))
-                           (*   MISC_WEIGHT_OOB   (return-instruction---trigger_OOB))
-                           )))
+(defconstraint return-instruction---setting-the-first-misc-row
+               (:guard  (return-instruction---standard-scenario-row))
+               ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+               (begin
+                 (eq!    (shift    misc/EXP_FLAG    ROFF_RETURN___1ST_MISC_ROW)    0)
+                 (eq!    (shift    misc/MMU_FLAG    ROFF_RETURN___1ST_MISC_ROW)    (return-instruction---trigger_MMU))
+                 (eq!    (shift    misc/MXP_FLAG    ROFF_RETURN___1ST_MISC_ROW)    (return-instruction---trigger_MXP))
+                 (eq!    (shift    misc/OOB_FLAG    ROFF_RETURN___1ST_MISC_ROW)    (return-instruction---trigger_OOB))
+                 (eq!    (shift    misc/STP_FLAG    ROFF_RETURN___1ST_MISC_ROW)    0)))
 
 (defun  (return-instruction---trigger_MXP)                        1)
 (defun  (return-instruction---trigger_OOB)                        (+  (return-instruction---exception-flag-MAXCSX)   (scenario-shorthand---RETURN---nonempty-deployment)))

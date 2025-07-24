@@ -88,10 +88,10 @@
 (defconstraint   mcopy-instruction---1st-MISC-row---setting-the-flags
                  (:guard (mcopy-instruction---standard-precondition))
                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-                 (eq! (weighted-MISC-flag-sum   MCOPY_ROFF___1ST_MISC_ROW)
-                      (+   (*   MISC_WEIGHT_MXP (mcopy-instruction---trigger_MXP))
-                           (*   MISC_WEIGHT_MMU (mcopy-instruction---trigger_MMU))
-                           )))
+                 (begin
+                   (eq!   (weighted-MISC-flag-sum-sans-MMU   MCOPY_ROFF___1ST_MISC_ROW)   (*   MISC_WEIGHT_MXP (mcopy-instruction---trigger_MXP)))
+                   (eq!   (shift   misc/MMU_FLAG             MCOPY_ROFF___1ST_MISC_ROW)   (mcopy-instruction---trigger_MMU))
+                   ))
 
 (defconstraint   mcopy-instruction---2nd-MISC-row---setting-the-flags
                  (:guard (mcopy-instruction---standard-precondition))

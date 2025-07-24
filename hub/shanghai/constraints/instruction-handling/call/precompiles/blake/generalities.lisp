@@ -34,10 +34,11 @@
 
 (defconstraint    precompile-processing---BLAKE2f---setting-MISC-flags
                   (:guard    (precompile-processing---BLAKE2f---standard-precondition))
-                  (eq!       (weighted-MISC-flag-sum          precompile-processing---BLAKE2f---misc-row-offset---BLAKE-parameter-extraction)
-                             (+    MISC_WEIGHT_OOB
-                                   (*    MISC_WEIGHT_MMU
-                                         (precompile-processing---BLAKE2f---OOB-hub-success)))))
+                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                  (begin
+                    (eq!   (weighted-MISC-flag-sum-sans-MMU    precompile-processing---BLAKE2f---misc-row-offset---BLAKE-parameter-extraction)    MISC_WEIGHT_OOB)
+                    (eq!   (shift    misc/MMU_FLAG             precompile-processing---BLAKE2f---misc-row-offset---BLAKE-parameter-extraction)    (precompile-processing---BLAKE2f---OOB-hub-success))
+                    ))
 
 (defconstraint    precompile-processing---BLAKE2f---setting-first-OOB-instruction
                   (:guard    (precompile-processing---BLAKE2f---standard-precondition))

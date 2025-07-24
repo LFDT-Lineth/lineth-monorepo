@@ -95,9 +95,9 @@
 
 (defconstraint    log-instruction---setting-MISC-module-flags                        (:guard (log-instruction---standard-hypothesis))
                   (if-zero   stack/STATICX
-                             (eq!    (weighted-MISC-flag-sum       ROFF_LOG___MISCELLANEOUS_ROW)
-                                     (+ (* MISC_WEIGHT_MMU (trigger_MMU))
-                                        MISC_WEIGHT_MXP))))
+                             (begin
+                               (eq!    (weighted-MISC-flag-sum-sans-MMU    ROFF_LOG___MISCELLANEOUS_ROW)    MISC_WEIGHT_MXP)
+                               (eq!    (shift    misc/MMU_FLAG             ROFF_LOG___MISCELLANEOUS_ROW)    (log-instruction---trigger-MMU)))))
 
 (defconstraint    log-instruction---MISC-row-setting-MXP-data                        (:guard (log-instruction---standard-hypothesis))
                   (if-zero   stack/STATICX
@@ -109,8 +109,8 @@
                                                             (log-instruction---size-hi)         ;; size high
                                                             (log-instruction---size-lo))))      ;; size low
 
-(defun (trigger_MMU) (* (- 1 CONTEXT_WILL_REVERT)
-                        (shift misc/MXP_MTNTOP ROFF_LOG___MISCELLANEOUS_ROW)))
+(defun (log-instruction---trigger-MMU) (* (- 1 CONTEXT_WILL_REVERT)
+                                          (shift misc/MXP_MTNTOP ROFF_LOG___MISCELLANEOUS_ROW)))
 
 (defconstraint    log-instruction---MISC-row-setting-MMU-data                        (:guard (log-instruction---standard-hypothesis))
                   (if-zero (force-bin stack/STATICX)

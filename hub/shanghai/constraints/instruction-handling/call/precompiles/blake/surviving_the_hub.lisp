@@ -28,10 +28,11 @@
 
 (defconstraint    precompile-processing---BLAKE2f---setting-second-MISC-flags
                   (:guard    (precompile-processing---BLAKE2f---surviving-the-HUB))
-                  (eq!       (weighted-MISC-flag-sum          precompile-processing---BLAKE2f---misc-row-offset---BLAKE-call-data-extraction)
-                             (+    MISC_WEIGHT_OOB
-                                   (*    MISC_WEIGHT_MMU
-                                         (precompile-processing---BLAKE2f---OOB-ram-success)))))
+                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                  (begin
+                    (eq!    (weighted-MISC-flag-sum-sans-MMU    precompile-processing---BLAKE2f---misc-row-offset---BLAKE-call-data-extraction)    MISC_WEIGHT_OOB)
+                    (eq!    (shift    misc/MMU_FLAG             precompile-processing---BLAKE2f---misc-row-offset---BLAKE-call-data-extraction)    (precompile-processing---BLAKE2f---OOB-ram-success))
+                    ))
 
 (defconstraint    precompile-processing---BLAKE2f---setting-the-second-OOB-instruction
                   (:guard    (precompile-processing---BLAKE2f---surviving-the-HUB))

@@ -33,10 +33,13 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-(defconstraint    precompile-processing---MODEXP---success-case---base-extraction-row---setting-module-flags    (:guard    (precompile-processing---MODEXP---success-case))
-                  (eq!   (weighted-MISC-flag-sum    precompile-processing---MODEXP---misc-row-offset---base-extraction)
-                         (+    (*    MISC_WEIGHT_MMU    (precompile-processing---MODEXP---extract-modulus))
-                               MISC_WEIGHT_OOB)))
+(defconstraint    precompile-processing---MODEXP---success-case---base-extraction-row---setting-module-flags
+                  (:guard    (precompile-processing---MODEXP---success-case))
+                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                  (begin
+                    (eq!    (weighted-MISC-flag-sum-sans-MMU    precompile-processing---MODEXP---misc-row-offset---base-extraction)    MISC_WEIGHT_OOB)
+                    (eq!    (shift    misc/MMU_FLAG             precompile-processing---MODEXP---misc-row-offset---base-extraction)    (precompile-processing---MODEXP---extract-modulus))
+                    ))
 
 (defconstraint    precompile-processing---MODEXP---success-case---base-extraction-row---setting-the-OOB-instruction-which-decides-which-actual-parameters-to-extract      (:guard    (precompile-processing---MODEXP---success-case))
                   (set-OOB-instruction---modexp-extract    precompile-processing---MODEXP---misc-row-offset---base-extraction    ;; offset

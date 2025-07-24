@@ -26,10 +26,10 @@
 (defun   (keccak-instruction---size-lo)               [ stack/STACK_ITEM_VALUE_LO 2 ])
 (defun   (keccak-instruction---result-hi)             [ stack/STACK_ITEM_VALUE_HI 4 ])
 (defun   (keccak-instruction---result-lo)             [ stack/STACK_ITEM_VALUE_LO 4 ]) ;; ""
-(defun   (keccak-instruction---mxpx)                  (shift    misc/MXP_MXPX      ROFF___KEC___MISCELLANEOUS_ROW))
-(defun   (keccak-instruction---mxp-gas)               (shift    misc/MXP_GAS_MXP   ROFF___KEC___MISCELLANEOUS_ROW))
-(defun   (keccak-instruction---mxp-MTNTOP)            (shift    misc/MXP_MTNTOP    ROFF___KEC___MISCELLANEOUS_ROW))
-(defun   (keccak-instruction---trigger_MMU)           (* (- 1 XAHOY) (keccak-instruction---mxp-MTNTOP)))
+(defun   (keccak-instruction---mxpx)                  (shift    misc/MXP_MXPX                      ROFF___KEC___MISCELLANEOUS_ROW))
+(defun   (keccak-instruction---mxp-gas)               (shift    misc/MXP_GAS_MXP                   ROFF___KEC___MISCELLANEOUS_ROW))
+(defun   (keccak-instruction---mxp-s1nznomxpx)        (shift    misc/MXP_SIZE_1_NONZERO_NO_MXPX    ROFF___KEC___MISCELLANEOUS_ROW))
+(defun   (keccak-instruction---trigger_MMU)           (* (- 1 XAHOY) (keccak-instruction---mxp-s1nznomxpx)))
 (defun   (keccak-instruction---no-stack-exceptions)   (* PEEK_AT_STACK stack/KEC_FLAG (- 1 stack/SUX stack/SOX)))
 
 (defconstraint    keccak-instruction---setting-stack-pattern (:guard (keccak-instruction---no-stack-exceptions))
@@ -43,41 +43,42 @@
 (defconstraint    keccak-instruction---setting-NSR-and-peeking-flags (:guard (keccak-instruction---no-stack-exceptions))
                   (begin (eq! NON_STACK_ROWS (+ 1 CONTEXT_MAY_CHANGE))
                          (eq! NON_STACK_ROWS
-                              (+ (shift PEEK_AT_MISCELLANEOUS 1)
+                              (+ (shift PEEK_AT_MISCELLANEOUS    ROFF___KEC___MISCELLANEOUS_ROW)
                                  (* (shift PEEK_AT_CONTEXT 2) CONTEXT_MAY_CHANGE)))))
 
-(defconstraint    keccak-instruction---setting-MISC-flags (:guard (keccak-instruction---no-stack-exceptions))
-                  (eq! (weighted-MISC-flag-sum 1)
-                       (+ MISC_WEIGHT_MXP
-                          (* MISC_WEIGHT_MMU (keccak-instruction---trigger_MMU)))))
+(defconstraint    keccak-instruction---setting-MISC-flags
+                  (:guard (keccak-instruction---no-stack-exceptions))
+                  (begin
+                    (eq!   (weighted-MISC-flag-sum-sans-MMU    ROFF___KEC___MISCELLANEOUS_ROW)    MISC_WEIGHT_MXP)
+                    (eq!   (shift    misc/MMU_FLAG             ROFF___KEC___MISCELLANEOUS_ROW)    (keccak-instruction---trigger_MMU))))
 
 (defconstraint    keccak-instruction---setting-MXP-parameters (:guard (keccak-instruction---no-stack-exceptions))
-                  (set-MXP-instruction-type-4 1                                  ;; row offset kappa
-                                              EVM_INST_SHA3                      ;; instruction
-                                              0                                  ;; deploys (bit modifying the behaviour of RETURN pricing)
-                                              (keccak-instruction---offset-hi)   ;; source offset high
-                                              (keccak-instruction---offset-lo)   ;; source offset low
-                                              (keccak-instruction---size-hi)     ;; source size high
-                                              (keccak-instruction---size-lo)     ;; source size low
-                                              ))
+                  (set-MXP-instruction-type-4   ROFF___KEC___MISCELLANEOUS_ROW     ;; row offset kappa
+                                                EVM_INST_SHA3                      ;; instruction
+                                                0                                  ;; deploys (bit modifying the behaviour of RETURN pricing)
+                                                (keccak-instruction---offset-hi)   ;; source offset high
+                                                (keccak-instruction---offset-lo)   ;; source offset low
+                                                (keccak-instruction---size-hi)     ;; source size high
+                                                (keccak-instruction---size-lo)     ;; source size low
+                                                ))
 
 (defconstraint    keccak-instruction---setting-MMU-parameters (:guard (keccak-instruction---no-stack-exceptions))
                   (if-not-zero misc/MMU_FLAG
-                               (set-MMU-instruction---ram-to-exo-with-padding    1                        ;; offset
-                                                                                 CN                       ;; source ID
-                                                                                 0                        ;; target ID
-                                                                                 (+ 1 HUB_STAMP)          ;; auxiliary ID
-                                                                                 ;; src_offset_hi             ;; source offset high
-                                                                                 (keccak-instruction---offset-lo)       ;; source offset low
-                                                                                 ;; tgt_offset_lo             ;; target offset low
-                                                                                 (keccak-instruction---size-lo)         ;; size
-                                                                                 ;; ref_offset                ;; reference offset
-                                                                                 (keccak-instruction---size-lo)         ;; reference size
-                                                                                 0                        ;; success bit
-                                                                                 ;; limb_1                    ;; limb 1
-                                                                                 ;; limb_2                    ;; limb 2
-                                                                                 EXO_SUM_WEIGHT_KEC       ;; weighted exogenous module flag sum
-                                                                                 0                        ;; phase
+                               (set-MMU-instruction---ram-to-exo-with-padding    ROFF___KEC___MISCELLANEOUS_ROW        ;; offset
+                                                                                 CN                                    ;; source ID
+                                                                                 0                                     ;; target ID
+                                                                                 (+ 1 HUB_STAMP)                       ;; auxiliary ID
+                                                                                 ;; src_offset_hi                      ;; source offset high
+                                                                                 (keccak-instruction---offset-lo)      ;; source offset low
+                                                                                 ;; tgt_offset_lo                      ;; target offset low
+                                                                                 (keccak-instruction---size-lo)        ;; size
+                                                                                 ;; ref_offset                         ;; reference offset
+                                                                                 (keccak-instruction---size-lo)        ;; reference size
+                                                                                 0                                     ;; success bit
+                                                                                 ;; limb_1                             ;; limb 1
+                                                                                 ;; limb_2                             ;; limb 2
+                                                                                 EXO_SUM_WEIGHT_KEC                    ;; weighted exogenous module flag sum
+                                                                                 0                                     ;; phase
                                                                                  )))
 
 (defconstraint    keccak-instruction---transferring-MXPX-to-stack
