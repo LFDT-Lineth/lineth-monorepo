@@ -33,10 +33,8 @@ public class LineaTransactionSelectorCliOptions implements LineaCliOptions {
   public static final long DEFAULT_MAX_BUNDLE_GAS_PER_BLOCK = 15_000_000L;
 
   public static final String UNPROFITABLE_CACHE_SIZE = "--plugin-linea-unprofitable-cache-size";
-  public static final int DEFAULT_UNPROFITABLE_CACHE_SIZE = 100_000;
 
   public static final String UNPROFITABLE_RETRY_LIMIT = "--plugin-linea-unprofitable-retry-limit";
-  public static final int DEFAULT_UNPROFITABLE_RETRY_LIMIT = 10;
 
   @Positive
   @CommandLine.Option(
@@ -81,23 +79,25 @@ public class LineaTransactionSelectorCliOptions implements LineaCliOptions {
           "Sets max amount of block gas bundle transactions can use (default: ${DEFAULT-VALUE})")
   public Long maxBundleGasPerBlock = DEFAULT_MAX_BUNDLE_GAS_PER_BLOCK;
 
+  @Deprecated
   @Positive
   @CommandLine.Option(
       names = {UNPROFITABLE_CACHE_SIZE},
       hidden = true,
       paramLabel = "<INTEGER>",
       description =
-          "Max number of unprofitable transactions we keep track of (default: ${DEFAULT-VALUE})")
-  private int unprofitableCacheSize = DEFAULT_UNPROFITABLE_CACHE_SIZE;
+          "DEPRECATED, has no effect: Max number of unprofitable transactions we keep track of (default: ${DEFAULT-VALUE})")
+  private int unprofitableCacheSize = 1;
 
+  @Deprecated
   @Positive
   @CommandLine.Option(
       names = {UNPROFITABLE_RETRY_LIMIT},
       hidden = true,
       paramLabel = "<INTEGER>",
       description =
-          "Max number of unprofitable transactions we retry on each block creation (default: ${DEFAULT-VALUE})")
-  private int unprofitableRetryLimit = DEFAULT_UNPROFITABLE_RETRY_LIMIT;
+          "DEPRECATED, has no effect: Max number of unprofitable transactions we retry on each block creation (default: ${DEFAULT-VALUE})")
+  private int unprofitableRetryLimit = 1;
 
   private LineaTransactionSelectorCliOptions() {}
 
@@ -122,8 +122,6 @@ public class LineaTransactionSelectorCliOptions implements LineaCliOptions {
     options.maxBlockCallDataSize = config.maxBlockCallDataSize();
     options.overLineCountLimitCacheSize = config.overLinesLimitCacheSize();
     options.maxGasPerBlock = config.maxGasPerBlock();
-    options.unprofitableCacheSize = config.unprofitableCacheSize();
-    options.unprofitableRetryLimit = config.unprofitableRetryLimit();
     return options;
   }
 
@@ -138,8 +136,6 @@ public class LineaTransactionSelectorCliOptions implements LineaCliOptions {
         .maxBlockCallDataSize(maxBlockCallDataSize)
         .overLinesLimitCacheSize(overLineCountLimitCacheSize)
         .maxGasPerBlock(maxGasPerBlock)
-        .unprofitableCacheSize(unprofitableCacheSize)
-        .unprofitableRetryLimit(unprofitableRetryLimit)
         .maxBundleGasPerBlock(maxBundleGasPerBlock)
         .maxBundlePoolSizeBytes(maxBundlePoolSizeBytes)
         .build();
@@ -151,8 +147,6 @@ public class LineaTransactionSelectorCliOptions implements LineaCliOptions {
         .add(MAX_BLOCK_CALLDATA_SIZE, maxBlockCallDataSize)
         .add(OVER_LINE_COUNT_LIMIT_CACHE_SIZE, overLineCountLimitCacheSize)
         .add(MAX_GAS_PER_BLOCK, maxGasPerBlock)
-        .add(UNPROFITABLE_CACHE_SIZE, unprofitableCacheSize)
-        .add(UNPROFITABLE_RETRY_LIMIT, unprofitableRetryLimit)
         .add(MAX_BUNDLE_GAS_PER_BLOCK, maxBundleGasPerBlock)
         .add(MAX_BUNDLE_POOL_SIZE_BYTES, maxBundlePoolSizeBytes)
         .toString();

@@ -18,8 +18,6 @@ public record LineaTransactionSelectorConfiguration(
     int maxBlockCallDataSize,
     int overLinesLimitCacheSize,
     long maxGasPerBlock,
-    int unprofitableCacheSize,
-    int unprofitableRetryLimit,
     long maxBundleGasPerBlock,
     long maxBundlePoolSizeBytes)
     implements LineaOptionsConfiguration {}

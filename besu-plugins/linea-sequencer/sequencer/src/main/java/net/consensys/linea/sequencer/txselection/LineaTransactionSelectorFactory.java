@@ -74,7 +74,6 @@ public class LineaTransactionSelectorFactory implements PluginTransactionSelecto
             l1L2BridgeConfiguration,
             profitabilityConfiguration,
             tracerConfiguration,
-            bundlePoolService,
             rejectedTxJsonRpcManager,
             maybeProfitabilityMetrics);
     currSelector.set(selector);

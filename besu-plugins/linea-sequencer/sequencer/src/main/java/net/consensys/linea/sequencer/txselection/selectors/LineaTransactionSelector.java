@@ -17,7 +17,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
-import net.consensys.linea.bundles.BundlePoolService;
 import net.consensys.linea.bundles.TransactionBundle;
 import net.consensys.linea.config.LineaProfitabilityConfiguration;
 import net.consensys.linea.config.LineaTracerConfiguration;
@@ -50,7 +49,6 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
       final LineaL1L2BridgeSharedConfiguration l1L2BridgeConfiguration,
       final LineaProfitabilityConfiguration profitabilityConfiguration,
       final LineaTracerConfiguration tracerConfiguration,
-      final BundlePoolService bundlePoolService,
       final Optional<JsonRpcManager> rejectedTxJsonRpcManager,
       final Optional<HistogramMetrics> maybeProfitabilityMetrics) {
     this.rejectedTxJsonRpcManager = rejectedTxJsonRpcManager;
@@ -69,7 +67,6 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
             l1L2BridgeConfiguration,
             profitabilityConfiguration,
             tracerConfiguration,
-            bundlePoolService,
             maybeProfitabilityMetrics);
   }
 
@@ -81,8 +78,6 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
    * @param txSelectorConfiguration The configuration to use.
    * @param profitabilityConfiguration The profitability configuration.
    * @param tracerConfiguration the tracer config
-   * @param bundlePoolService bundle pool for transaction bundle selector
-   * @param limitsMap The limits map.
    * @param maybeProfitabilityMetrics The optional profitability metrics
    * @return A list of selectors.
    */
@@ -93,7 +88,6 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
       final LineaL1L2BridgeSharedConfiguration l1L2BridgeConfiguration,
       final LineaProfitabilityConfiguration profitabilityConfiguration,
       final LineaTracerConfiguration tracerConfiguration,
-      final BundlePoolService bundlePoolService,
       final Optional<HistogramMetrics> maybeProfitabilityMetrics) {
 
     traceLineLimitTransactionSelector =
@@ -111,10 +105,7 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
             new MaxBlockGasTransactionSelector(
                 selectorsStateManager, txSelectorConfiguration.maxGasPerBlock()),
             new ProfitableTransactionSelector(
-                blockchainService,
-                txSelectorConfiguration,
-                profitabilityConfiguration,
-                maybeProfitabilityMetrics),
+                blockchainService, profitabilityConfiguration, maybeProfitabilityMetrics),
             new BundleConstraintTransactionSelector(),
             new MaxBundleGasPerBlockTransactionSelector(
                 selectorsStateManager, txSelectorConfiguration.maxBundleGasPerBlock()),
