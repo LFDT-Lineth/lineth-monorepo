@@ -147,7 +147,7 @@
 ;;        constraints          ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defconstraint   plateau-constraints (:perspective computation :guard IS_MODEXP_LOG)
+(defconstraint   plateau-constraints (:perspective computation)
                  (plateau-constraint CT PLT_BIT PLT_JMP))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
