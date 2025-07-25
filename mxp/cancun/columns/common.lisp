@@ -3,7 +3,7 @@
 
 (defcolumns
   ( MXP_STAMP   :i16          )
-  ( CN          :i16          )
+  ( CN          :i64          )
   ( DECODER     :binary@prove )
   ( MACRO       :binary@prove )
   ( SCENARIO    :binary@prove )
