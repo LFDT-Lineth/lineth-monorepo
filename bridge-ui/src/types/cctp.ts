@@ -20,5 +20,6 @@ export type CctpV2ReattestationApiResponse = {
 };
 
 export type CctpFeeApiResponse = {
+  finalityThreshold: number;
   minimumFee: number;
-};
+}[];

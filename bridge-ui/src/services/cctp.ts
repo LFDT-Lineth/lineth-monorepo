@@ -68,7 +68,7 @@ export async function getCctpFee(
   isTestnet: boolean,
 ): Promise<CctpFeeApiResponse> {
   const response = await fetch(
-    `https://iris-api${isTestnet ? "-sandbox" : ""}.circle.com/v2/fastBurn/USDC/fees/${srcDomain}/${dstDomain}`,
+    `https://iris-api${isTestnet ? "-sandbox" : ""}.circle.com/v2/burn/USDC/fees/${srcDomain}/${dstDomain}`,
     {
       headers: {
         "Content-Type": "application/json",

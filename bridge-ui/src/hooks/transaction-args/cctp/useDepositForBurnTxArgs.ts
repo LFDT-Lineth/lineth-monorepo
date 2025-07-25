@@ -16,11 +16,12 @@ const useDepositForBurnTxArgs = ({ allowance }: UseDepositForBurnTxArgs) => {
   const token = useFormStore((state) => state.token);
   const amount = useFormStore((state) => state.amount);
   const recipient = useFormStore((state) => state.recipient);
-  const fee = useCctpFee();
+  const fee = useCctpFee(amount, token.decimals);
 
   return useMemo(() => {
     if (
       isNull(amount) ||
+      isNull(fee) ||
       isUndefined(allowance) ||
       allowance < amount ||
       isUndefinedOrEmptyString(recipient) ||
