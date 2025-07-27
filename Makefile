@@ -96,7 +96,7 @@ TXN_DATA_CANCUN := txndata/cancun
 
 WCP := wcp
 
-LISPX := $(shell find * -name *.lispX)
+LISPX := $(shell find * -name "*.lispX")
 # Warn about any lispX files
 define warn_lispX
 	@for FILE in ${LISPX}; do (echo "WARNING: $$FILE"); done
