@@ -132,8 +132,8 @@ importers:
         specifier: 2.1.9
         version: 2.1.9(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@layerswap/widget':
-        specifier: 0.1.17
-        version: 0.1.17(v3jlrlrz2pivzdbj75ycemx2ty)
+        specifier: 0.1.18
+        version: 0.1.18(v3jlrlrz2pivzdbj75ycemx2ty)
       '@lifi/widget':
         specifier: 3.23.3
         version: 3.23.3(4nmnsm45jr4e2oxcflhf4oi5j4)
@@ -2468,8 +2468,8 @@ packages:
   '@jridgewell/trace-mapping@0.3.9':
     resolution: {integrity: sha512-3Belt6tdc8bPgAtbcmdtNJlirVoTmEb5e2gC94PnkwEW9jI6CAHUeoG85tjWP5WquqfavoMtMwiG4P926ZKKuQ==}
 
-  '@layerswap/widget@0.1.17':
-    resolution: {integrity: sha512-H2MQwlV3qx23sTx2sCJ8Syf1XybR443rvZ2Q4d9uuWWembiq+iSgk85667/sWcbjbhgJCSpnVvMlAHn/jkVVNA==}
+  '@layerswap/widget@0.1.18':
+    resolution: {integrity: sha512-rcWMXijIQjrTx5LqKDXuBZcmoB7RYUWYGGA3M6ylJLDoaLZbpC4LCW+Yxn3NWspnbYhLpnFwa64STC9pjd3bCw==}
     engines: {node: '>=22'}
     peerDependencies:
       '@tanstack/react-query': ^5.59.20
@@ -14790,7 +14790,7 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.0
 
-  '@layerswap/widget@0.1.17(v3jlrlrz2pivzdbj75ycemx2ty)':
+  '@layerswap/widget@0.1.18(v3jlrlrz2pivzdbj75ycemx2ty)':
     dependencies:
       '@headlessui/react': 2.1.9(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@radix-ui/react-accordion': 1.2.10(@types/react-dom@18.3.0)(@types/react@18.3.11)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
