@@ -26,9 +26,9 @@ import java.util.Optional;
 import java.util.UUID;
 import net.consensys.linea.bundles.BundleParameter;
 import net.consensys.linea.bundles.LineaLimitedBundlePool;
-import net.consensys.linea.bundles.TransactionBundle;
 import org.hyperledger.besu.crypto.SignatureAlgorithmType;
 import org.hyperledger.besu.datatypes.Hash;
+import org.hyperledger.besu.datatypes.PendingTransaction;
 import org.hyperledger.besu.ethereum.core.Transaction;
 import org.hyperledger.besu.ethereum.core.TransactionTestFixture;
 import org.hyperledger.besu.plugin.services.BesuEvents;
@@ -167,7 +167,7 @@ class LineaSendBundleTest {
     // assert the new block number:
     assertTrue(
         bundlePool.get(expectedUUIDBundleHash).blockNumber().equals(CHAIN_HEAD_BLOCK_NUMBER + 2));
-    List<TransactionBundle.PendingBundleTx> pts =
+    List<? extends PendingTransaction> pts =
         bundlePool.get(expectedUUIDBundleHash).pendingTransactions();
     // assert the new tx2 is present
     assertTrue(pts.stream().map(pt -> pt.getTransaction()).anyMatch(t -> t.equals(mockTX2)));

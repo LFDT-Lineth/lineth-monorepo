@@ -31,6 +31,8 @@ import static org.mockito.Answers.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.lenient;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
 import com.github.tomakehurst.wiremock.matching.StringValuePattern;
@@ -65,6 +67,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @WireMockTest
 @ExtendWith(MockitoExtension.class)
 class BundleForwarderTest extends AbstractBundleTest {
+  private static final ObjectMapper OBJECT_MAPPER =
+      new ObjectMapper().registerModule(new Jdk8Module());
   private static final AtomicLong REQ_ID_COUNT = new AtomicLong(0);
   private static final Duration RPC_CALL_TIMEOUT = Duration.ofSeconds(2);
   private static final long CHAIN_HEAD_BLOCK_NUMBER = 5L;
@@ -276,7 +280,7 @@ class BundleForwarderTest extends AbstractBundleTest {
           "params": [<params>]
         }
         """
-            .replace("<params>", OBJECT_MAPPER.writeValueAsString(bundle.toBundleParameter(false)))
+            .replace("<params>", OBJECT_MAPPER.writeValueAsString(bundle.toBundleParameter()))
             .replace("<reqId>", String.valueOf(reqId));
     return expectedRequest;
   }

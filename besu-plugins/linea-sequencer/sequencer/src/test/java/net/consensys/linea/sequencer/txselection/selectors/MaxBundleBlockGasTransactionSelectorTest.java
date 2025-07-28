@@ -91,7 +91,8 @@ public class MaxBundleBlockGasTransactionSelectorTest {
             Optional.empty(),
             Optional.empty(),
             Optional.empty(),
-            Optional.empty());
+            Optional.empty(),
+            false);
     final var evaluationContexts =
         bundle.pendingTransactions().stream()
             .map(pt -> new TestTransactionEvaluationContext(mock(ProcessableBlockHeader.class), pt))

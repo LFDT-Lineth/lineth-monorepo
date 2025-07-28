@@ -177,7 +177,8 @@ class LineaTransactionSelectorFactoryTest {
         Optional.empty(),
         Optional.empty(),
         Optional.empty(),
-        Optional.empty());
+        Optional.empty(),
+        false);
   }
 
   static class FailedTransactionSelectionResultProvider implements ArgumentsProvider {

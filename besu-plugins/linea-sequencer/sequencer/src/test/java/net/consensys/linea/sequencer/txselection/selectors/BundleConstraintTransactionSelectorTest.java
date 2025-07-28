@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Optional;
 import net.consensys.linea.bundles.TransactionBundle;
 import org.hyperledger.besu.datatypes.Hash;
+import org.hyperledger.besu.datatypes.PendingTransaction;
 import org.hyperledger.besu.datatypes.Wei;
 import org.hyperledger.besu.ethereum.core.Transaction;
 import org.hyperledger.besu.plugin.data.BlockHeader;
@@ -101,11 +102,12 @@ class BundleConstraintTransactionSelectorTest {
         Optional.ofNullable(minTimestamp),
         Optional.ofNullable(maxTimestamp),
         Optional.empty(),
-        Optional.empty());
+        Optional.empty(),
+        false);
   }
 
   private TransactionEvaluationContext mockTransactionEvaluationContext(
-      BlockHeader blockHeader, TransactionBundle.PendingBundleTx pendingTransaction) {
+      BlockHeader blockHeader, PendingTransaction pendingTransaction) {
     return new TestTransactionEvaluationContext(blockHeader, pendingTransaction, Wei.ONE, Wei.ONE);
   }
 

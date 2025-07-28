@@ -9,8 +9,6 @@
 
 package net.consensys.linea.bundles;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import java.math.BigInteger;
 import java.util.List;
 import java.util.Optional;
@@ -23,8 +21,6 @@ import org.hyperledger.besu.ethereum.core.Transaction;
 import org.hyperledger.besu.ethereum.core.TransactionTestFixture;
 
 abstract class AbstractBundleTest {
-  protected static final ObjectMapper OBJECT_MAPPER =
-      new ObjectMapper().registerModule(new Jdk8Module());
   protected static final KeyPair KEY_PAIR =
       new KeyPair(
           SECPPrivateKey.create(BigInteger.valueOf(Long.MAX_VALUE), SignatureAlgorithm.ALGORITHM),
@@ -39,6 +35,11 @@ abstract class AbstractBundleTest {
 
   protected TransactionBundle createBundle(
       Hash hash, long blockNumber, List<Transaction> maybeTxs) {
+    return createBundle(hash, blockNumber, maybeTxs, false);
+  }
+
+  protected TransactionBundle createBundle(
+      Hash hash, long blockNumber, List<Transaction> maybeTxs, boolean hasPriority) {
     return new TransactionBundle(
         hash,
         maybeTxs,
@@ -46,6 +47,7 @@ abstract class AbstractBundleTest {
         Optional.empty(),
         Optional.empty(),
         Optional.empty(),
-        Optional.empty());
+        Optional.empty(),
+        hasPriority);
   }
 }

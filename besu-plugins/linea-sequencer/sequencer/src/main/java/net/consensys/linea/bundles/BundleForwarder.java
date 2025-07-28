@@ -90,7 +90,7 @@ public class BundleForwarder
       }
 
       final long reqId = reqIdProvider.getAndIncrement();
-      final var jsonRpcRequest = new JsonRpcEnvelope(reqId, bundle.toBundleParameter(false));
+      final var jsonRpcRequest = new JsonRpcEnvelope(reqId, bundle.toBundleParameter());
 
       log.trace("Forwarding request {}, retry count {}", jsonRpcRequest, retryCount);
 

@@ -104,7 +104,8 @@ public class LineaSendBundle {
                         bundleParams.minTimestamp(),
                         bundleParams.maxTimestamp(),
                         bundleParams.revertingTxHashes(),
-                        optBundleUUID));
+                        optBundleUUID,
+                        false));
                 return new BundleResponse(bundleHash.toHexString());
               })
           .orElseThrow(

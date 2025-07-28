@@ -14,6 +14,7 @@ import static java.util.Collections.emptyList;
 import com.fasterxml.jackson.databind.MappingIterator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SequenceWriter;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -41,6 +42,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.datatypes.PendingTransaction;
+import org.hyperledger.besu.ethereum.core.Transaction;
 import org.hyperledger.besu.plugin.data.AddedBlockContext;
 import org.hyperledger.besu.plugin.services.BesuEvents;
 import org.hyperledger.besu.plugin.services.BesuService;
@@ -55,7 +57,6 @@ import org.hyperledger.besu.util.Subscribers;
 @Slf4j
 public class LineaLimitedBundlePool implements BundlePoolService, BesuEvents.BlockAddedListener {
   public static final String BUNDLE_SAVE_FILENAME = "bundles.ndjson";
-  private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new Jdk8Module());
   private final BlockchainService blockchainService;
   private final Cache<Hash, TransactionBundle> cache;
   private final Map<Long, List<TransactionBundle>> blockIndex;
@@ -220,7 +221,8 @@ public class LineaLimitedBundlePool implements BundlePoolService, BesuEvents.Blo
     synchronized (isFrozen) {
       isFrozen.set(true);
       log.info("Saving bundles to {}", saveFilePath);
-
+      final var objectMapper = new ObjectMapper().registerModule(new Jdk8Module());
+      configureObjectMapperV2(objectMapper);
       try (final BufferedWriter bw = Files.newBufferedWriter(saveFilePath, StandardCharsets.UTF_8);
           final SequenceWriter sequenceWriter =
               objectMapper
@@ -229,7 +231,7 @@ public class LineaLimitedBundlePool implements BundlePoolService, BesuEvents.Blo
                   .writeValues(bw)) {
 
         // write the header
-        bw.write(objectMapper.writeValueAsString(Map.of("version", 1)));
+        bw.write(objectMapper.writeValueAsString(Map.of("version", 2)));
         bw.newLine();
 
         // write the bundles sorted by block number
@@ -265,14 +267,24 @@ public class LineaLimitedBundlePool implements BundlePoolService, BesuEvents.Blo
 
             try (final BufferedReader br =
                 Files.newBufferedReader(saveFilePath, StandardCharsets.UTF_8)) {
-
-              // read header and check version
+              final var objectMapper = new ObjectMapper().registerModule(new Jdk8Module());
+              // read the header and check the version
               final var headerNode = objectMapper.readTree(br.readLine());
-              if (!headerNode.has("version") || headerNode.get("version").asInt() != 1) {
+              if (!headerNode.has("version") || !headerNode.get("version").isInt()) {
                 throw new IllegalArgumentException(
                     "Unsupported bundle serialization header " + headerNode);
               }
               log.info("Loading bundles from {}, header {}", saveFilePath, headerNode);
+
+              // register (de)serializer for saving/restoring from disk according to the version
+              final int version = headerNode.get("version").asInt();
+              switch (version) {
+                case 1 -> configureObjectMapperV1(objectMapper);
+                case 2 -> configureObjectMapperV2(objectMapper);
+                default ->
+                    throw new IllegalArgumentException(
+                        "Unsupported bundle serialization version " + version);
+              }
 
               try (final MappingIterator<TransactionBundle> iterator =
                   objectMapper.readerFor(TransactionBundle.class).readValues(br)) {
@@ -304,6 +316,23 @@ public class LineaLimitedBundlePool implements BundlePoolService, BesuEvents.Blo
           }
           return null;
         });
+  }
+
+  private void configureObjectMapperV1(final ObjectMapper objectMapper) {
+    final var module = new SimpleModule();
+    module.addDeserializer(
+        TransactionBundle.class, new TransactionBundle.TransactionBundleDeserializerV1());
+    objectMapper.registerModule(module);
+  }
+
+  private void configureObjectMapperV2(final ObjectMapper objectMapper) {
+    final var module = new SimpleModule();
+    module.addSerializer(
+        TransactionBundle.PendingBundleTx.class, new TransactionBundle.PendingBundleTxSerializer());
+    module.addSerializer(Hash.class, new TransactionBundle.HashSerializer());
+    module.addDeserializer(Transaction.class, new TransactionBundle.PendingBundleTxDeserializer());
+    module.addDeserializer(Hash.class, new TransactionBundle.HashDeserializer());
+    objectMapper.registerModule(module);
   }
 
   @Override

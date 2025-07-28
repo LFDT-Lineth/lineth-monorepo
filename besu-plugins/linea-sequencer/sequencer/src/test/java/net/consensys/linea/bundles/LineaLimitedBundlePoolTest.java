@@ -37,8 +37,8 @@ import net.consensys.linea.bundles.BundlePoolService.TransactionBundleAddedListe
 import net.consensys.linea.bundles.BundlePoolService.TransactionBundleRemovedListener;
 import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.datatypes.Hash;
-import org.hyperledger.besu.ethereum.core.Transaction;
-import org.hyperledger.besu.ethereum.eth.transactions.PendingTransaction;
+import org.hyperledger.besu.datatypes.PendingTransaction;
+import org.hyperledger.besu.datatypes.Transaction;
 import org.hyperledger.besu.plugin.data.AddedBlockContext;
 import org.hyperledger.besu.plugin.data.BlockHeader;
 import org.hyperledger.besu.plugin.services.BesuEvents;
@@ -286,7 +286,7 @@ class LineaLimitedBundlePoolTest extends AbstractBundleTest {
   void saveToDisk() throws IOException {
 
     Hash hash1 = Hash.fromHexStringLenient("0x1234");
-    TransactionBundle bundle1 = createBundle(hash1, 1, List.of(TX1, TX2));
+    TransactionBundle bundle1 = createBundle(hash1, 1, List.of(TX1, TX2), true);
     pool.putOrReplace(hash1, bundle1);
 
     Hash hash2 = Hash.fromHexStringLenient("0x5678");
@@ -299,13 +299,49 @@ class LineaLimitedBundlePoolTest extends AbstractBundleTest {
     assertThat(saved)
         .isEqualTo(
             """
-            {"version":1}
-            {"0x0000000000000000000000000000000000000000000000000000000000001234":{"blockNumber":1,"txs":["+E+AghOIglIIgASAggqWoHNvbkX5jC5D+Q0GW88l7bP45W+b8oubebJsfXgE+lRzoAVzHPSnS/zQmUxq3Hg9UHQ3p51KWM6dyYuqKVM7HYz7","+E8BghOIglIIgASAggqVoGgwjcqbkx9qWzUse4MmYxq5fGYo617lp3j9YAj74GDhoFrjtX1uTIbDgflVrS1EPJv2jmbGV2NbxukBL0sNVpBf"]}}
-            {"0x0000000000000000000000000000000000000000000000000000000000005678":{"blockNumber":2,"txs":["+E8CghOIglIIgASAggqVoMmdnUf+4fBBE+l/IAxacTZhj5elWnFdplP+s4jg92yyoHUWAGDUZ5Vo6dg3q7e9+PyBAkwlk4Fprh1UFmyQhhjx"]}}""");
+              {"version":2}
+              {"blockNumber":1,"bundleIdentifier":"0x0000000000000000000000000000000000000000000000000000000000001234","pendingTransactions":["+E+AghOIglIIgASAggqWoHNvbkX5jC5D+Q0GW88l7bP45W+b8oubebJsfXgE+lRzoAVzHPSnS/zQmUxq3Hg9UHQ3p51KWM6dyYuqKVM7HYz7","+E8BghOIglIIgASAggqVoGgwjcqbkx9qWzUse4MmYxq5fGYo617lp3j9YAj74GDhoFrjtX1uTIbDgflVrS1EPJv2jmbGV2NbxukBL0sNVpBf"],"hasPriority":true}
+              {"blockNumber":2,"bundleIdentifier":"0x0000000000000000000000000000000000000000000000000000000000005678","pendingTransactions":["+E8CghOIglIIgASAggqVoMmdnUf+4fBBE+l/IAxacTZhj5elWnFdplP+s4jg92yyoHUWAGDUZ5Vo6dg3q7e9+PyBAkwlk4Fprh1UFmyQhhjx"],"hasPriority":false}""");
   }
 
   @Test
-  void loadFromDisk() throws IOException {
+  void loadFromDiskV2() throws IOException {
+    Files.writeString(
+        dataDir.resolve(BUNDLE_SAVE_FILENAME),
+        """
+              {"version":2}
+              {"blockNumber":11,"bundleIdentifier":"0x0000000000000000000000000000000000000000000000000000000000001234","pendingTransactions":["+E+AghOIglIIgASAggqWoHNvbkX5jC5D+Q0GW88l7bP45W+b8oubebJsfXgE+lRzoAVzHPSnS/zQmUxq3Hg9UHQ3p51KWM6dyYuqKVM7HYz7","+E8BghOIglIIgASAggqVoGgwjcqbkx9qWzUse4MmYxq5fGYo617lp3j9YAj74GDhoFrjtX1uTIbDgflVrS1EPJv2jmbGV2NbxukBL0sNVpBf"],"hasPriority":true}
+              {"blockNumber":12,"bundleIdentifier":"0x0000000000000000000000000000000000000000000000000000000000005678","pendingTransactions":["+E8CghOIglIIgASAggqVoMmdnUf+4fBBE+l/IAxacTZhj5elWnFdplP+s4jg92yyoHUWAGDUZ5Vo6dg3q7e9+PyBAkwlk4Fprh1UFmyQhhjx"],"hasPriority":false}""",
+        US_ASCII);
+
+    pool.loadFromDisk();
+
+    Hash hash1 = Hash.fromHexStringLenient("0x1234");
+    TransactionBundle bundle1 = pool.get(hash1);
+
+    notificationCollector.assertAddNotificationReceived(bundle1);
+    assertThat(bundle1.blockNumber()).isEqualTo(11);
+    assertThat(bundle1.bundleIdentifier()).isEqualTo(hash1);
+    assertThat(bundle1.pendingTransactions())
+        .map(PendingTransaction::getTransaction)
+        .map(Transaction::getHash)
+        .containsExactly(TX1.getHash(), TX2.getHash());
+
+    Hash hash2 = Hash.fromHexStringLenient("0x5678");
+
+    TransactionBundle bundle2 = pool.get(hash2);
+
+    notificationCollector.assertAddNotificationReceived(bundle2);
+    assertThat(bundle2.blockNumber()).isEqualTo(12);
+    assertThat(bundle2.bundleIdentifier()).isEqualTo(hash2);
+    assertThat(bundle2.pendingTransactions())
+        .map(PendingTransaction::getTransaction)
+        .map(Transaction::getHash)
+        .containsExactly(TX3.getHash());
+  }
+
+  @Test
+  void loadFromDiskV1() throws IOException {
     Files.writeString(
         dataDir.resolve(BUNDLE_SAVE_FILENAME),
         """
