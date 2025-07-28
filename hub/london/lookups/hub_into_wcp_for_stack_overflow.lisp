@@ -1,7 +1,7 @@
 (defun (hub-into-wcp-for-sox-activation-flag)
   (* hub.PEEK_AT_STACK (- 1 hub.stack/SUX)))
 
-(defun (projected-height)
+(defun ((projected-height :i16 :force))
   (* (- (+ hub.HEIGHT hub.stack/ALPHA) hub.stack/DELTA)
      (- 1 hub.stack/SUX)))
 

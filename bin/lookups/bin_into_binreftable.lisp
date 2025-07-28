@@ -1,5 +1,5 @@
 (defun (selector-bin-to-binreftable)
-  (+ bin.IS_AND bin.IS_OR bin.IS_XOR bin.IS_NOT))
+  (force-bin (+ bin.IS_AND bin.IS_OR bin.IS_XOR bin.IS_NOT)))
 
 (defclookup
   bin-into-binreftable-high
