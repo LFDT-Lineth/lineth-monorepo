@@ -1,17 +1,17 @@
 (module hub)
 
-;; tcp_ ⇔ storage consistency permutation
+;; tcp_ ⇔ transient (storage) consistency permutation
 (defpermutation
   ;; permuted columns
-  ;; replace scp with storage_consistency_permutation
-  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ;; replace tcp with transient_storage_consistency_permutation
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   (
     tcp_PEEK_AT_TRANSIENT
     tcp_ADDRESS_HI
     tcp_ADDRESS_LO
     tcp_STORAGE_KEY_HI
     tcp_STORAGE_KEY_LO
-    tcp_ABS_TX_NUM
+    tcp_TOTL_TXN_NUMBER
     tcp_DOM_STAMP
     tcp_SUB_STAMP
     ;;
@@ -29,7 +29,7 @@
     (+ transient/ADDRESS_LO     )
     (+ transient/STORAGE_KEY_HI )
     (+ transient/STORAGE_KEY_LO )
-    (+ ABSOLUTE_TRANSACTION_NUMBER               )
+    (+ TOTL_TXN_NUMBER          )
     (+ DOM_STAMP                )
     (- SUB_STAMP                )
     ;;

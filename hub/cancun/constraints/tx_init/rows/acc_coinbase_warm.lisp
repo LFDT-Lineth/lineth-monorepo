@@ -13,13 +13,9 @@
                  (:guard (tx-init---standard-precondition))
                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                  (begin
-                   (eq!     (shift account/ADDRESS_HI             tx-init---row-offset---ACC---coinbase-warming)     
-                            (tx-init---coinbase-address-hi))
-                   (eq!     (shift account/ADDRESS_LO             tx-init---row-offset---ACC---coinbase-warming)     
-                            (tx-init---coinbase-address-lo))
-                   (account-trim-address                          tx-init---row-offset---ACC---coinbase-warming
-                                                                  (tx-init---coinbase-address-hi)
-                                                                  (tx-init---coinbase-address-lo))
+                   (eq!     (shift account/ADDRESS_HI             tx-init---row-offset---ACC---coinbase-warming)     (tx-init---coinbase-address-hi))
+                   (eq!     (shift account/ADDRESS_LO             tx-init---row-offset---ACC---coinbase-warming)     (tx-init---coinbase-address-lo))
+                   (account-trim-address                          tx-init---row-offset---ACC---coinbase-warming      (tx-init---coinbase-address-hi) (tx-init---coinbase-address-lo))
                    (account-same-balance                          tx-init---row-offset---ACC---coinbase-warming)
                    (account-same-nonce                            tx-init---row-offset---ACC---coinbase-warming)
                    (account-same-code                             tx-init---row-offset---ACC---coinbase-warming)

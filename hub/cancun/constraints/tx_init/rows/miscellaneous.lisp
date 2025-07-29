@@ -20,7 +20,7 @@
                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                  (if-not-zero    (shift misc/MMU_FLAG     tx-init---row-offset---MISC)
                                  (set-MMU-instruction---exo-to-ram-transplants    tx-init---row-offset---MISC           ;; offset
-                                                                                  ABS_TX_NUM                            ;; source ID
+                                                                                  USER_TXN_NUMBER                       ;; source ID
                                                                                   (tx-init---call-data-context-number)  ;; target ID
                                                                                   ;; aux_id                             ;; auxiliary ID
                                                                                   ;; src_offset_hi                      ;; source offset high

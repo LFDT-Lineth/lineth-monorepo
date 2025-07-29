@@ -14,8 +14,8 @@
     scp_DOM_STAMP
     scp_SUB_STAMP
     ;;
-    scp_ABS_TX_NUM
-    scp_REL_BLK_NUM
+    scp_TOTL_TXN_NUMBER
+    scp_BLK_NUMBER
     scp_VALUE_ORIG_HI
     scp_VALUE_ORIG_LO
     scp_VALUE_CURR_HI
@@ -43,8 +43,8 @@
     (↓ DOM_STAMP )
     (↑ SUB_STAMP )
     ;;
-    ABSOLUTE_TRANSACTION_NUMBER
-    REL_BLK_NUM
+    TOTL_TXN_NUMBER
+    BLK_NUMBER
     storage/VALUE_ORIG_HI
     storage/VALUE_ORIG_LO
     storage/VALUE_CURR_HI

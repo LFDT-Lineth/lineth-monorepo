@@ -15,7 +15,7 @@
   (hub-into-block-hash-trigger)
   ;; source columns
   (
-     hub.RELATIVE_BLOCK_NUMBER
+     hub.BLK_NUMBER
     [hub.stack/STACK_ITEM_VALUE_HI 1]
     [hub.stack/STACK_ITEM_VALUE_LO 1]
     [hub.stack/STACK_ITEM_VALUE_HI 4]

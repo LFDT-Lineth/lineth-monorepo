@@ -14,7 +14,7 @@
                          tcp_ADDRESS_LO
                          tcp_STORAGE_KEY_HI
                          tcp_STORAGE_KEY_LO
-                         tcp_ABS_TX_NUM
+                         tcp_TOTL_TXN_NUMBER
                          ))
 (defcomputed
   (tcp_AGAIN_IN_TXN)
@@ -23,7 +23,7 @@
                            tcp_ADDRESS_LO
                            tcp_STORAGE_KEY_HI
                            tcp_STORAGE_KEY_LO
-                           tcp_ABS_TX_NUM
+                           tcp_TOTL_TXN_NUMBER
                            ))
 
 

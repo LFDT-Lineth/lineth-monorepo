@@ -10,9 +10,9 @@
 
 (defconst
   tx-init---row-offset---row-preceding-the-init-phase                  -1
-  tx-init---row-offset---MISC                                           0
-  tx-init---row-offset---TXN                                            1
-  tx-init---row-offset---ACC---coinbase-warming                            2
+  tx-init---row-offset---TXN                                            0
+  tx-init---row-offset---MISC                                           1
+  tx-init---row-offset---ACC---coinbase-warming                         2
   tx-init---row-offset---ACC---sender-pay-for-gas                       3
   tx-init---row-offset---ACC---sender-value-transfer                    4
   tx-init---row-offset---ACC---recipient-value-reception                5

@@ -63,18 +63,18 @@
                   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                   (begin
                     (if-not (remained-constant!   (acp_full_address))              (eq! (account-consistency---transition-block) 2))
-                    (if-not (remained-constant!    acp_REL_BLK_NUM)                (eq! (account-consistency---transition-block) 2))
+                    (if-not (remained-constant!    acp_BLK_NUMBER)                 (eq! (account-consistency---transition-block) 2))
                     (if     (remained-constant!   (acp_full_address))
-                            (if    (remained-constant!    acp_REL_BLK_NUM)    (eq! (account-consistency---transition-block) 0)))))
+                            (if    (remained-constant!    acp_BLK_NUMBER)    (eq! (account-consistency---transition-block) 0)))))
 
 (defconstraint    account-consistency---FIRST-AGAIN-FINAL---repeat-encounter---transaction-level
                   (:guard   (account-consistency---repeat-account-row))
                   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                   (begin
                     (if-not (remained-constant!   (acp_full_address))              (eq! (account-consistency---transition-transaction) 2))
-                    (if-not (remained-constant!    acp_ABS_TX_NUM)                 (eq! (account-consistency---transition-transaction) 2))
+                    (if-not (remained-constant!    acp_TOTL_TXN_NUMBER)            (eq! (account-consistency---transition-transaction) 2))
                     (if     (remained-constant!   (acp_full_address))
-                            (if    (remained-constant!    acp_ABS_TX_NUM)     (eq! (account-consistency---transition-transaction) 0)))))
+                            (if    (remained-constant!    acp_TOTL_TXN_NUMBER)     (eq! (account-consistency---transition-transaction) 0)))))
 
 (defconstraint    account-consistency---FIRST-AGAIN-FINAL---final-row-with-room-to-spare ()
                   (if-not-zero (prev acp_PEEK_AT_ACCOUNT)

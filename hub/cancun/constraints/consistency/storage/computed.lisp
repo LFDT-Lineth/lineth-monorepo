@@ -45,7 +45,7 @@
                          scp_ADDRESS_LO
                          scp_STORAGE_KEY_HI
                          scp_STORAGE_KEY_LO
-                         scp_REL_BLK_NUM
+                         scp_BLK_NUMBER
                          ))
 (defcomputed
   (scp_AGAIN_IN_BLK)
@@ -54,7 +54,7 @@
                            scp_ADDRESS_LO
                            scp_STORAGE_KEY_HI
                            scp_STORAGE_KEY_LO
-                           scp_REL_BLK_NUM
+                           scp_BLK_NUMBER
                            ))
 (defcomputed
   (scp_FINAL_IN_BLK)
@@ -63,7 +63,7 @@
                          scp_ADDRESS_LO
                          scp_STORAGE_KEY_HI
                          scp_STORAGE_KEY_LO
-                         scp_REL_BLK_NUM
+                         scp_BLK_NUMBER
                          ))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -79,7 +79,7 @@
                          scp_ADDRESS_LO
                          scp_STORAGE_KEY_HI
                          scp_STORAGE_KEY_LO
-                         scp_ABS_TX_NUM
+                         scp_TOTL_TXN_NUMBER
                          ))
 (defcomputed
   (scp_AGAIN_IN_TXN)
@@ -88,7 +88,7 @@
                            scp_ADDRESS_LO
                            scp_STORAGE_KEY_HI
                            scp_STORAGE_KEY_LO
-                           scp_ABS_TX_NUM
+                           scp_TOTL_TXN_NUMBER
                            ))
 (defcomputed
   (scp_FINAL_IN_TXN)
@@ -97,7 +97,7 @@
                          scp_ADDRESS_LO
                          scp_STORAGE_KEY_HI
                          scp_STORAGE_KEY_LO
-                         scp_ABS_TX_NUM
+                         scp_TOTL_TXN_NUMBER
                          ))
 
 
@@ -119,7 +119,7 @@
     ;; target key columns
     scp_ADDRESS_HI
     scp_ADDRESS_LO
-    scp_REL_BLK_NUM
+    scp_BLK_NUMBER
 
     ;; source perspective and key/value columns
     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -129,7 +129,7 @@
     ;; source key columns
     acp_ADDRESS_HI
     acp_ADDRESS_LO
-    acp_REL_BLK_NUM
+    acp_BLK_NUMBER
     ;; source value column
     acp_DEPLOYMENT_NUMBER_FIRST_IN_BLOCK
     )
@@ -146,7 +146,7 @@
     ;; target key columns
     scp_ADDRESS_HI
     scp_ADDRESS_LO
-    scp_REL_BLK_NUM
+    scp_BLK_NUMBER
 
     ;; source perspective and key/value columns
     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -156,7 +156,7 @@
     ;; source key columns
     acp_ADDRESS_HI
     acp_ADDRESS_LO
-    acp_REL_BLK_NUM
+    acp_BLK_NUMBER
     ;; source value column
     acp_DEPLOYMENT_NUMBER_FINAL_IN_BLOCK
     )
@@ -174,7 +174,7 @@
     ;; target key columns
     scp_ADDRESS_HI
     scp_ADDRESS_LO
-    scp_REL_BLK_NUM
+    scp_BLK_NUMBER
 
     ;; source perspective and key/value columns
     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -184,7 +184,7 @@
     ;; source key columns
     acp_ADDRESS_HI
     acp_ADDRESS_LO
-    acp_REL_BLK_NUM
+    acp_BLK_NUMBER
     ;; source value column
     acp_EXISTS_FIRST_IN_BLOCK
     )
@@ -201,7 +201,7 @@
     ;; target key columns
     scp_ADDRESS_HI
     scp_ADDRESS_LO
-    scp_REL_BLK_NUM
+    scp_BLK_NUMBER
 
     ;; source perspective and key/value columns
     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -211,7 +211,7 @@
     ;; source key columns
     acp_ADDRESS_HI
     acp_ADDRESS_LO
-    acp_REL_BLK_NUM
+    acp_BLK_NUMBER
     ;; source value column
     acp_EXISTS_FINAL_IN_BLOCK
     )

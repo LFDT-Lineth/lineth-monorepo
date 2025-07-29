@@ -18,8 +18,8 @@
       acp_DOM_STAMP
       acp_SUB_STAMP
       ;;
-      acp_REL_BLK_NUM
-      acp_ABS_TX_NUM
+      acp_BLK_NUMBER
+      acp_TOTL_TXN_NUMBER
       acp_CODE_FRAGMENT_INDEX
       acp_BALANCE
       acp_BALANCE_NEW
@@ -55,8 +55,8 @@
       (↓ DOM_STAMP )
       (↑ SUB_STAMP )
       ;;
-      REL_BLK_NUM 
-      ABSOLUTE_TRANSACTION_NUMBER 
+      BLK_NUMBER
+      TOTL_TXN_NUMBER
       account/CODE_FRAGMENT_INDEX
       account/BALANCE
       account/BALANCE_NEW

@@ -21,6 +21,10 @@
 (defun (storage-turn-on-warmth kappa)
   (eq! (shift storage/WARMTH_NEW kappa) 1))
 
+(defun (storage-same-warmth kappa)
+  (eq! (shift storage/WARMTH_NEW kappa)
+       (shift storage/WARMTH     kappa)))
+
 (defun (storage-same-slot kappa)
   (begin (remained-constant! (shift storage/ADDRESS_HI        kappa) )
          (remained-constant! (shift storage/ADDRESS_LO        kappa) )

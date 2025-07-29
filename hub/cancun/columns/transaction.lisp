@@ -45,8 +45,8 @@
 
                 ;; related to system transaction
                 ( NOOP                         :binary@prove)
-                ( EIP4788                      :binary@prove)
-                ( EIP2935                      :binary@prove) ;; should be Pectra only
-                ( SYST_TXN_DATA    :array [4]  :i128        ) ;; TODO: review typing
+                ( EIP_4788                     :binary@prove)
+                ( EIP_2935                     :binary@prove) ;; should be Pectra only
+                ( SYST_TXN_DATA    :array [4]  :i128        )
         )
 )

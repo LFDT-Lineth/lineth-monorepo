@@ -62,10 +62,10 @@
 
 (defconstraint    storage-consistency---FIRST-AGAIN-FINAL---repeat-encounter-of-storage-slot    (:guard    (*   scp_PEEK_AT_STORAGE    (-   1   scp_FIRST_IN_CNF)))
                   (begin
-                    (if-not    (remained-constant!    scp_REL_BLK_NUM)
+                    (if-not    (remained-constant!    scp_BLK_NUMBER)
                                (eq!    (storage-consistency---transtion-block)   2)
                                (eq!    (storage-consistency---transtion-block)   0))
-                    (if-not    (remained-constant!    scp_ABS_TX_NUM)
+                    (if-not    (remained-constant!    scp_TOTL_TXN_NUMBER)
                                (eq!    (storage-consistency---transtion-transaction)   2)
                                (eq!    (storage-consistency---transtion-transaction)   0))))
 

@@ -43,7 +43,9 @@ LIBRARY := library
 
 LOG_DATA := logdata
 
-LOG_INFO := loginfo
+LOG_INFO_PRE_CANCUN := loginfo/pre-cancun
+
+LOG_INFO_CANCUN := loginfo/cancun
 
 MMU :=  mmu
 
@@ -113,7 +115,6 @@ ZKEVM_MODULES_COMMON := ${CONSTANTS} \
 		 ${GAS} \
 		 ${LIBRARY} \
 		 ${LOG_DATA} \
-		 ${LOG_INFO} \
 		 ${MMU} \
 		 ${RLP_ADDR} \
 		 ${RLP_TXRCPT} \
@@ -129,6 +130,7 @@ ZKEVM_MODULES_LONDON := ${ZKEVM_MODULES_COMMON} \
 		 ${TABLES_LONDON} \
 		 ${BLOCKDATA_LONDON} \
 		 ${HUB_LONDON} \
+		 ${LOG_INFO_PRE_CANCUN} \
 		 ${MMIO_LONDON} \
 		 ${MXP_LONDON} \
 		 ${OOB_LONDON} \
@@ -139,6 +141,7 @@ ZKEVM_MODULES_PARIS := ${ZKEVM_MODULES_COMMON} \
 		 ${TABLES_LONDON} \
 		 ${BLOCKDATA_PARIS} \
 		 ${HUB_LONDON} \
+		 ${LOG_INFO_PRE_CANCUN} \
 		 ${MMIO_LONDON} \
 		 ${MXP_LONDON} \
 		 ${OOB_LONDON} \
@@ -149,6 +152,7 @@ ZKEVM_MODULES_SHANGHAI := ${ZKEVM_MODULES_COMMON} \
 		 ${TABLES_LONDON} \
  		 ${BLOCKDATA_PARIS} \
 		 ${HUB_SHANGHAI} \
+		 ${LOG_INFO_PRE_CANCUN} \
 		 ${MMIO_LONDON} \
 		 ${MXP_LONDON} \
 		 ${OOB_SHANGHAI} \
@@ -159,6 +163,7 @@ ZKEVM_MODULES_CANCUN := ${ZKEVM_MODULES_COMMON} \
 		 ${TABLES_CANCUN} \
  		 ${BLOCKDATA_CANCUN} \
 		 ${HUB_CANCUN} \
+		 ${LOG_INFO_CANCUN} \
 		 ${MMIO_CANCUN} \
 		 ${MXP_CANCUN} \
 		 ${OOB_SHANGHAI} \

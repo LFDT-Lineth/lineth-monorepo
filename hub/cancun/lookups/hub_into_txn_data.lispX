@@ -36,8 +36,8 @@
   (hub-into-txn-data-trigger)  
   ;; source columns
   (
-   hub.ABSOLUTE_TRANSACTION_NUMBER
-   hub.RELATIVE_BLOCK_NUMBER
+   hub.TOTL_TXN_NUMBER
+   hub.BLK_NUMBER
    hub.transaction/FROM_ADDRESS_HI
    hub.transaction/FROM_ADDRESS_LO
    hub.transaction/TO_ADDRESS_HI

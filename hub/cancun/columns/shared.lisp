@@ -1,21 +1,25 @@
 (module hub)
 
 (defcolumns
-    ( ABSOLUTE_TRANSACTION_NUMBER               :i16 ) ;;TODO to delete
-    ( RELATIVE_BLOCK_NUMBER                     :i16 ) ;;TODO to delete
+
+    ;; system transactions vs user transaction flags
     ( SYSI                                      :binary@prove )
     ( USER                                      :binary@prove )
     ( SYSF                                      :binary@prove )
+
+    ;; block and transaction accounting
+    ( BLK_NUMBER                                :i24 )
+    ;; ( TOTL_TXN_NUMBER                           :i24 )
+    ( SYSI_TXN_NUMBER                           :i24 )
+    ( USER_TXN_NUMBER                           :i24 )
+    ( SYSF_TXN_NUMBER                           :i24 )
+
+    ;; transaction processing phases
     ( TX_SKIP                                   :binary@prove )
     ( TX_WARM                                   :binary@prove )
     ( TX_INIT                                   :binary@prove )
     ( TX_EXEC                                   :binary@prove )
     ( TX_FINL                                   :binary@prove )
-    ( BLK_NUMBER                                :i24 )
-    ( TOTL_TXN_NUMBER                           :i24 )
-    ( SYSI_TXN_NUMBER                           :i24 )
-    ( USER_TXN_NUMBER                           :i24 )
-    ( SYSF_TXN_NUMBER                           :i24 )
     ( HUB_STAMP                                 :i32 )
     ( HUB_STAMP_TRANSACTION_END                 :i32 )
     ( CONTEXT_MAY_CHANGE                        :binary@prove )
@@ -77,8 +81,6 @@
 
 (defalias
     ;;
-    ABS_TX_NUM          ABSOLUTE_TRANSACTION_NUMBER
-    REL_BLK_NUM         RELATIVE_BLOCK_NUMBER
     CMC                 CONTEXT_MAY_CHANGE
     XAHOY               EXCEPTION_AHOY
     TX_END_STAMP        HUB_STAMP_TRANSACTION_END

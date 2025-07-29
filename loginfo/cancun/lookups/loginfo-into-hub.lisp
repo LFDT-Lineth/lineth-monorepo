@@ -2,7 +2,7 @@
   loginfo-into-hub
   ;; target columns
   (
-    hub.ABS_TX_NUM
+    hub.USER_TXN_NUMBER
     hub.LOG_INFO_STAMP
   )
   ;; source columns

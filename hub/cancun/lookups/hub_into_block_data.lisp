@@ -15,7 +15,7 @@
   (hub-into-block-data-trigger)
   ;; source columns
   (
-   hub.RELATIVE_BLOCK_NUMBER
+   hub.BLK_NUMBER
    hub.stack/INSTRUCTION
    [hub.stack/STACK_ITEM_VALUE_HI 4]
    [hub.stack/STACK_ITEM_VALUE_LO 4]

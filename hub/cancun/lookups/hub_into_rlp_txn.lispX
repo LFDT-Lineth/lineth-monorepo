@@ -38,7 +38,7 @@
   ;; source columns
   (
     1
-    hub.ABSOLUTE_TRANSACTION_NUMBER
+    hub.USER_TXN_NUMBER
     hub.PEEK_AT_ACCOUNT
     hub.PEEK_AT_STORAGE
 

@@ -24,7 +24,7 @@
   (hub-into-log-info-trigger)
   ;; source columns
   (
-    hub.ABSOLUTE_TRANSACTION_NUMBER
+    hub.USER_TXN_NUMBER
     hub.LOG_INFO_STAMP
     hub.stack/INSTRUCTION
     (shift hub.context/ACCOUNT_ADDRESS_HI 2)

@@ -37,10 +37,10 @@
                   (:guard   (transient-consistency---repeat-transient-row))
                   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                   (begin
-                    (if-not (remained-constant!   (tcp_full_address) )  (eq!  tcp_FIRST_IN_TXN  1))
-                    (if-not (remained-constant!   tcp_STORAGE_KEY_HI )  (eq!  tcp_FIRST_IN_TXN  1))
-                    (if-not (remained-constant!   tcp_STORAGE_KEY_LO )  (eq!  tcp_FIRST_IN_TXN  1))
-                    (if-not (remained-constant!   tcp_ABS_TX_NUM     )  (eq!  tcp_FIRST_IN_TXN  1))
+                    (if-not (remained-constant!   (tcp_full_address)  )  (eq!  tcp_FIRST_IN_TXN  1))
+                    (if-not (remained-constant!   tcp_STORAGE_KEY_HI  )  (eq!  tcp_FIRST_IN_TXN  1))
+                    (if-not (remained-constant!   tcp_STORAGE_KEY_LO  )  (eq!  tcp_FIRST_IN_TXN  1))
+                    (if-not (remained-constant!   tcp_TOTL_TXN_NUMBER )  (eq!  tcp_FIRST_IN_TXN  1))
                     ))
 
 (defconstraint    transient-consistency---FIRST-AGAIN---repeat-transient-row---no-change-in-address-transient-storage-key-or-transaction
@@ -49,7 +49,7 @@
                   (if (remained-constant!   (tcp_full_address))
                            (if (remained-constant!   tcp_STORAGE_KEY_HI)
                                     (if (remained-constant!   tcp_STORAGE_KEY_LO)
-                                             (if (remained-constant!   tcp_ABS_TX_NUM)
+                                             (if (remained-constant!   tcp_TOTL_TXN_NUMBER)
                                                       (eq!  tcp_AGAIN_IN_TXN  1))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

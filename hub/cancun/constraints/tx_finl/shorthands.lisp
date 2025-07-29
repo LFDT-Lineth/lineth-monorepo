@@ -10,9 +10,11 @@
 
 (defconst
   tx-finl---row-offset---row-preceding-the-finl-phase   -1
-  tx-finl---row-offset---ACC---sender-gas-refund         0
-  tx-finl---row-offset---ACC---coinbase-reward           1
-  tx-finl---row-offset---TXN                             2
+  tx-finl---row-offset---TXN                             0
+  tx-finl---row-offset---ACC---sender-gas-refund         1
+  tx-finl---row-offset---ACC---coinbase-reward           2
+  tx-finl---row-offset---CON---final-zero-context        3
+  tx-finl---NSR                                          4
   )
 
 
