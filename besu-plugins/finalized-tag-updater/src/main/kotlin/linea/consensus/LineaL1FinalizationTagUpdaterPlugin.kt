@@ -2,6 +2,7 @@ package linea.consensus
 
 import io.vertx.core.Vertx
 import net.consensys.linea.LineaBesuEngineBlockTagUpdater
+import net.consensys.linea.LineaBesuHardForkIdProvider
 import net.consensys.linea.LineaL1FinalizationUpdaterService
 import net.consensys.linea.PluginCliOptions
 import net.consensys.linea.async.toSafeFuture
@@ -29,6 +30,7 @@ class LineaL1FinalizationTagUpdaterPlugin : BesuPlugin {
     service = LineaL1FinalizationUpdaterService(
       vertx,
       cliOptions.getConfig(),
+      LineaBesuHardForkIdProvider(blockchainService),
       LineaBesuEngineBlockTagUpdater(blockchainService),
     )
     service.start()

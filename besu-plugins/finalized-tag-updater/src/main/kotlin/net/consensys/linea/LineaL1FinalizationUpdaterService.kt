@@ -2,6 +2,7 @@ package net.consensys.linea
 
 import io.vertx.core.Vertx
 import linea.consensus.EngineBlockTagUpdater
+import linea.consensus.HardForkIdProvider
 import linea.contract.l1.Web3JLineaRollupSmartContractClientReadOnly
 import linea.domain.BlockParameter
 import linea.web3j.okhttp.okHttpClientBuilder
@@ -9,6 +10,7 @@ import net.consensys.zkevm.LongRunningService
 import net.consensys.zkevm.ethereum.finalization.FinalizationUpdatePoller
 import net.consensys.zkevm.ethereum.finalization.FinalizationUpdatePollerConfig
 import org.apache.logging.log4j.LogManager
+import org.hyperledger.besu.datatypes.HardforkId
 import org.hyperledger.besu.plugin.services.BlockchainService
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -77,9 +79,18 @@ class LineaL1FinalizationUpdater(
   }
 }
 
+class LineaBesuHardForkIdProvider(
+  private val blockchainService: BlockchainService,
+) : HardForkIdProvider {
+  override fun getHardForkId(): HardforkId {
+    return blockchainService.getHardforkId(blockchainService.chainHeadHeader)
+  }
+}
+
 class LineaL1FinalizationUpdaterService(
   vertx: Vertx,
   config: PluginConfig,
+  hardForkIdProvider: HardForkIdProvider,
   engineBlockTagUpdater: EngineBlockTagUpdater,
 ) : LongRunningService {
   private val web3j = Web3j.build(
@@ -100,6 +111,7 @@ class LineaL1FinalizationUpdaterService(
       blockTag = BlockParameter.Tag.FINALIZED,
     ),
     lineaRollup,
+    hardForkIdProvider,
     updater::handleL1Finalization,
     LogManager.getLogger(FinalizationUpdatePoller::class.java),
   )
