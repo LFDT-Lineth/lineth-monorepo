@@ -15,6 +15,99 @@ import (
 	"github.com/consensys/linea-monorepo/prover/utils"
 )
 
+type SubsampleProverAction struct {
+	Large        []ifaces.Column
+	Small        []ifaces.Column
+	AccLarge     ifaces.Column
+	AccSmall     ifaces.Column
+	AccLargeLast ifaces.QueryID
+	AccSmallLast ifaces.QueryID
+	Gamma        coin.Info
+	Alpha        coin.Info
+	LenSmall     int
+	Period       int
+	Offset       int
+	NeedGamma    bool
+}
+
+func (a *SubsampleProverAction) Run(run *wizard.ProverRuntime) {
+	r := a.Large[0].GetColAssignment(run)
+	if a.NeedGamma {
+		largeWit := make([]smartvectors.SmartVector, len(a.Large))
+		largeWit[0] = r
+		for i := 1; i < len(a.Large); i++ {
+			largeWit[i] = a.Large[i].GetColAssignment(run)
+		}
+		gamma := run.GetRandomCoinField(a.Gamma.Name)
+		r = smartvectors.PolyEval(largeWit, gamma)
+	}
+
+	prev := field.Zero()
+	accLargeWit := make([]field.Element, a.Period*a.LenSmall)
+	alpha_ := run.GetRandomCoinField(a.Alpha.Name)
+
+	for hashID := 0; hashID < a.LenSmall; hashID++ {
+		for i := 0; i < a.Period; i++ {
+			pos := hashID*a.Period + i
+			if i != a.Offset {
+				accLargeWit[pos] = prev
+				continue
+			}
+			currentNewState := r.Get(pos)
+			accLargeWit[pos].Mul(&alpha_, &prev)
+			accLargeWit[pos].Add(&accLargeWit[pos], &currentNewState)
+			prev = accLargeWit[pos]
+		}
+	}
+
+	run.AssignColumn(a.AccLarge.GetColID(), smartvectors.NewRegular(accLargeWit))
+	run.AssignLocalPoint(a.AccLargeLast, prev)
+
+	rPrime := a.Small[0].GetColAssignment(run)
+	if a.NeedGamma {
+		smallWit := make([]smartvectors.SmartVector, len(a.Small))
+		smallWit[0] = rPrime
+		for i := 1; i < len(a.Small); i++ {
+			smallWit[i] = a.Small[i].GetColAssignment(run)
+		}
+		gamma := run.GetRandomCoinField(a.Gamma.Name)
+		rPrime = smartvectors.PolyEval(smallWit, gamma)
+	}
+
+	accSmallWit := make([]field.Element, a.LenSmall)
+	prev = field.Zero()
+
+	for hashID := 0; hashID < a.LenSmall; hashID++ {
+		currExpectedHash := rPrime.Get(hashID)
+		accSmallWit[hashID].Mul(&alpha_, &prev)
+		accSmallWit[hashID].Add(&accSmallWit[hashID], &currExpectedHash)
+		prev = accSmallWit[hashID]
+	}
+
+	run.AssignColumn(a.AccSmall.GetColID(), smartvectors.NewRegular(accSmallWit))
+	run.AssignLocalPoint(a.AccSmallLast, prev)
+}
+
+type SubsampleVerifierAction struct {
+	AccLargeLast ifaces.QueryID
+	AccSmallLast ifaces.QueryID
+}
+
+func (a *SubsampleVerifierAction) Run(run wizard.Runtime) error {
+	resAccLast := run.GetLocalPointEvalParams(a.AccLargeLast)
+	expectedResAccLast := run.GetLocalPointEvalParams(a.AccSmallLast)
+	if resAccLast.Y != expectedResAccLast.Y {
+		return fmt.Errorf("linear hashing failed : the ResAcc and ExpectedResAcc do not match on their last inputs %v, %v", resAccLast.Y.String(), expectedResAccLast.Y.String())
+	}
+	return nil
+}
+
+func (a *SubsampleVerifierAction) RunGnark(frontend frontend.API, run wizard.GnarkRuntime) {
+	resAccLast := run.GetLocalPointEvalParams(a.AccLargeLast)
+	expectedResAccLast := run.GetLocalPointEvalParams(a.AccSmallLast)
+	frontend.AssertIsEqual(resAccLast.Y, expectedResAccLast.Y)
+}
+
 // Tests that a small table is obtained from subsampling a larger column with a given offset
 func CheckSubsample(comp *wizard.CompiledIOP, name string, large, small []ifaces.Column, offset int) {
 
@@ -158,94 +251,23 @@ func CheckSubsample(comp *wizard.CompiledIOP, name string, large, small []ifaces
 	)
 
 	// And assign them
-	comp.SubProvers.AppendToInner(round+1, func(run *wizard.ProverRuntime) {
-
-		r := large[0].GetColAssignment(run)
-		if needGamma {
-			// Then we need to compute the linear combination explicitly
-			largeWit := make([]smartvectors.SmartVector, numCol)
-			largeWit[0] = r
-			for i := 1; i < numCol; i++ {
-				largeWit[i] = large[i].GetColAssignment(run)
-			}
-
-			gamma := run.GetRandomCoinField(gamma.Name)
-			r = smartvectors.PolyEval(largeWit, gamma)
-		}
-
-		// AccLarge
-		prev := field.Zero()
-		accLargeWit := make([]field.Element, lenLarge)
-		alpha_ := run.GetRandomCoinField(alpha.Name)
-
-		for hashID := 0; hashID < lenSmall; hashID++ {
-			for i := 0; i < period; i++ {
-				pos := hashID*period + i
-
-				// Depending on whether the newstate is at the end
-				// of the chunk we compute the next value differently.
-				if i != offset {
-					// reuse the previous value
-					accLargeWit[pos] = prev
-					continue
-				}
-
-				// prev <- prev * alpha + newState
-				currentNewState := r.Get(pos)
-				accLargeWit[pos].Mul(&alpha_, &prev)
-				accLargeWit[pos].Add(&accLargeWit[pos], &currentNewState)
-				prev = accLargeWit[pos]
-			}
-		}
-
-		run.AssignColumn(accLarge.GetColID(), smartvectors.NewRegular(accLargeWit))
-		run.AssignLocalPoint(accLargeLast.ID, prev)
-
-		// rPrime
-
-		rPrime := small[0].GetColAssignment(run)
-		if needGamma {
-			// Then we need to compute the linear combination explicitly
-			smallWit := make([]smartvectors.SmartVector, numCol)
-			smallWit[0] = rPrime
-			for i := 1; i < numCol; i++ {
-				smallWit[i] = small[i].GetColAssignment(run)
-			}
-
-			gamma := run.GetRandomCoinField(gamma.Name)
-			rPrime = smartvectors.PolyEval(smallWit, gamma)
-		}
-
-		accSmallWit := make([]field.Element, lenSmall)
-		prev = field.Zero()
-
-		for hashID := 0; hashID < lenSmall; hashID++ {
-			// prev <- prev * alpha + newState
-			currExpectedHash := rPrime.Get(hashID)
-			accSmallWit[hashID].Mul(&alpha_, &prev)
-			accSmallWit[hashID].Add(&accSmallWit[hashID], &currExpectedHash)
-			prev = accSmallWit[hashID]
-		}
-
-		run.AssignColumn(accSmall.GetColID(), smartvectors.NewRegular(accSmallWit))
-		run.AssignLocalPoint(accSmallLast.ID, prev)
+	comp.RegisterProverAction(round+1, &SubsampleProverAction{
+		Large:        large,
+		Small:        small,
+		AccLarge:     accLarge,
+		AccSmall:     accSmall,
+		AccLargeLast: accLargeLast.ID,
+		AccSmallLast: accSmallLast.ID,
+		Gamma:        gamma,
+		Alpha:        alpha,
+		LenSmall:     lenSmall,
+		Period:       period,
+		Offset:       offset,
+		NeedGamma:    needGamma,
 	})
 
-	comp.InsertVerifier(
-		round+1,
-		func(run *wizard.VerifierRuntime) error {
-			resAccLast := run.GetLocalPointEvalParams(accLargeLast.ID)
-			expectedResAccLast := run.GetLocalPointEvalParams(accSmallLast.ID)
-			if resAccLast.Y != expectedResAccLast.Y {
-				return fmt.Errorf("linear hashing failed : the ResAcc and ExpectedResAcc do not match on their last inputs %v, %v", resAccLast.Y.String(), expectedResAccLast.Y.String())
-			}
-			return nil
-		},
-		func(a frontend.API, run *wizard.WizardVerifierCircuit) {
-			resAccLast := run.GetLocalPointEvalParams(accLargeLast.ID)
-			expectedResAccLast := run.GetLocalPointEvalParams(accSmallLast.ID)
-			a.AssertIsEqual(resAccLast.Y, expectedResAccLast.Y)
-		},
-	)
-
+	comp.RegisterVerifierAction(round+1, &SubsampleVerifierAction{
+		AccLargeLast: accLargeLast.ID,
+		AccSmallLast: accSmallLast.ID,
+	})
 }

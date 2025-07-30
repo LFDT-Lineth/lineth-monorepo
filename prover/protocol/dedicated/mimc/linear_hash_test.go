@@ -38,7 +38,7 @@ func TestLinearHash(t *testing.T) {
 		define := func(b *wizard.Builder) {
 			tohash = b.RegisterCommit("TOHASH", numRowLarge)
 			expectedhash = b.RegisterCommit("HASHED", numRowSmall)
-			linhash.CheckLinearHash(b.CompiledIOP, tohash, period, numhash, expectedhash)
+			linhash.CheckLinearHash(b.CompiledIOP, "test", tohash, period, numhash, expectedhash)
 		}
 
 		prove := func(run *wizard.ProverRuntime) {

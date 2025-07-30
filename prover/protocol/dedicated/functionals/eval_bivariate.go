@@ -10,7 +10,6 @@ import (
 	"github.com/consensys/linea-monorepo/prover/protocol/accessors"
 	"github.com/consensys/linea-monorepo/prover/protocol/column"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
-	"github.com/consensys/linea-monorepo/prover/protocol/serialization"
 	"github.com/consensys/linea-monorepo/prover/protocol/variables"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	"github.com/consensys/linea-monorepo/prover/symbolic"
@@ -24,6 +23,36 @@ const (
 	EVAL_BIVARIATE_FIXED_POINT_BEGIN    string = "FIXED_POINT_BEGIN"
 	EVAL_BIVARIATE_GLOBAL               string = "GLOBAL"
 )
+
+type EvalBivariateProverAction struct {
+	Name     string
+	PCom     ifaces.Column
+	X        ifaces.Accessor
+	YXPow1mk XYPow1MinNAccessor
+	Length   int
+	NPowX    int
+}
+
+func (a *EvalBivariateProverAction) Run(assi *wizard.ProverRuntime) {
+	xVal := a.X.GetVal(assi)
+	yxPow1mkVal := a.YXPow1mk.GetVal(assi)
+	p := a.PCom.GetColAssignment(assi)
+
+	h := make([]field.Element, a.Length)
+	h[a.Length-1] = p.Get(a.Length - 1)
+
+	for i := a.Length - 2; i >= 0; i-- {
+		pi := p.Get(i)
+		if (i+1)%a.NPowX == 0 {
+			h[i].Mul(&h[i+1], &yxPow1mkVal).Add(&h[i], &pi)
+			continue
+		}
+		h[i].Mul(&h[i+1], &xVal).Add(&h[i], &pi)
+	}
+
+	assi.AssignColumn(ifaces.ColIDf("%v_%v", a.Name, EVAL_BIVARIATE_POLY), smartvectors.NewRegular(h))
+	assi.AssignLocalPoint(ifaces.QueryIDf("%v_%v", a.Name, EVAL_BIVARIATE_FIXED_POINT_BEGIN), h[0])
+}
 
 /*
 EvalCoeffBivariate creates a dedicated wizard to perform an evaluation in coefficient form
@@ -108,30 +137,13 @@ func EvalCoeffBivariate(
 		hCom,
 	)
 
-	comp.SubProvers.AppendToInner(maxRound, func(assi *wizard.ProverRuntime) {
-
-		// Get the value of the coin and of pol
-		x, yx_pow_1mk := x.GetVal(assi), yx_pow_1mk_acc.GetVal(assi)
-		p := pCom.GetColAssignment(assi)
-
-		// Now needs to evaluate the Horner poly
-		h := make([]field.Element, length)
-		h[length-1] = p.Get(length - 1)
-
-		for i := length - 2; i >= 0; i-- {
-			pi := p.Get(i)
-
-			// Transition to a new "power of y"
-			if (i+1)%nPowX == 0 {
-				h[i].Mul(&h[i+1], &yx_pow_1mk).Add(&h[i], &pi)
-				continue
-			}
-
-			h[i].Mul(&h[i+1], &x).Add(&h[i], &pi)
-		}
-
-		assi.AssignColumn(ifaces.ColIDf("%v_%v", name, EVAL_BIVARIATE_POLY), smartvectors.NewRegular(h))
-		assi.AssignLocalPoint(ifaces.QueryIDf("%v_%v", name, EVAL_BIVARIATE_FIXED_POINT_BEGIN), h[0])
+	comp.RegisterProverAction(maxRound, &EvalBivariateProverAction{
+		Name:     name,
+		PCom:     pCom,
+		X:        x,
+		YXPow1mk: yx_pow_1mk_acc,
+		Length:   length,
+		NPowX:    nPowX,
 	})
 
 	return accessors.NewLocalOpeningAccessor(finalLocalOpening, maxRound)
@@ -148,13 +160,6 @@ type XYPow1MinNAccessor struct {
 	// AccessName is used to derive a unique name to the accessor.s
 	AccessName string
 }
-
-// This makes the [XYPow1MinNAccessor] serializable. The return value is just
-// for making this compilable.
-var _ = func() int {
-	serialization.RegisterImplementation(XYPow1MinNAccessor{})
-	return 0
-}()
 
 // String implements [symbolic.Metadata] and thus [ifaces.Accessor].
 func (a *XYPow1MinNAccessor) String() string {

@@ -112,9 +112,9 @@ func TestExecutionDataCollectorAndHash(t *testing.T) {
 	blockHashList := [1 << 10]types.FullBytes32{}
 
 	var (
-		execDataCollector ExecutionDataCollector
+		execDataCollector *ExecutionDataCollector
 		blockTxnMeta      fetch.BlockTxnMetadata
-		timestampFetcher  fetch.TimestampFetcher
+		timestampFetcher  *fetch.TimestampFetcher
 		txnDataFetcher    fetch.TxnDataFetcher
 		rlpTxnFetcher     fetch.RlpTxnFetcher
 		txnDataCols       *arith.TxnData
@@ -138,7 +138,7 @@ func TestExecutionDataCollectorAndHash(t *testing.T) {
 		// create a new timestamp fetcher
 		timestampFetcher = fetch.NewTimestampFetcher(b.CompiledIOP, "TIMESTAMP_FETCHER_FROM_ARITH", blockDataCols)
 		// constrain the timestamp fetcher
-		fetch.DefineTimestampFetcher(b.CompiledIOP, &timestampFetcher, "TIMESTAMP_FETCHER_FROM_ARITH", blockDataCols)
+		fetch.DefineTimestampFetcher(b.CompiledIOP, timestampFetcher, "TIMESTAMP_FETCHER_FROM_ARITH", blockDataCols)
 		txnDataFetcher = fetch.NewTxnDataFetcher(b.CompiledIOP, "TXN_DATA_FETCHER_FROM_ARITH", txnDataCols)
 		fetch.DefineTxnDataFetcher(b.CompiledIOP, &txnDataFetcher, "TXN_DATA_FETCHER_FROM_ARITH", txnDataCols)
 
@@ -152,7 +152,7 @@ func TestExecutionDataCollectorAndHash(t *testing.T) {
 		// create a new ExecutionDataCollector
 		execDataCollector = NewExecutionDataCollector(b.CompiledIOP, "EXECUTION_DATA_COLLECTOR", limbColSize)
 		// define the ExecutionDataCollector
-		DefineExecutionDataCollector(b.CompiledIOP, &execDataCollector, "EXECUTION_DATA_COLLECTOR", timestampFetcher, blockTxnMeta, txnDataFetcher, rlpTxnFetcher)
+		DefineExecutionDataCollector(b.CompiledIOP, execDataCollector, "EXECUTION_DATA_COLLECTOR", timestampFetcher, blockTxnMeta, txnDataFetcher, rlpTxnFetcher)
 
 		// create a padding module for the ExecutionDataCollector
 		importInp = importpad.ImportAndPadInputs{

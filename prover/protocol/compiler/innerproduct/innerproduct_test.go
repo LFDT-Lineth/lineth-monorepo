@@ -36,7 +36,7 @@ func TestInnerProduct(t *testing.T) {
 		}
 	}
 
-	comp := wizard.Compile(define, Compile, dummy.Compile)
+	comp := wizard.Compile(define, Compile(), dummy.Compile)
 	proof := wizard.Prove(comp, prover)
 	assert.NoErrorf(t, wizard.Verify(comp, proof), "invalid proof")
 }

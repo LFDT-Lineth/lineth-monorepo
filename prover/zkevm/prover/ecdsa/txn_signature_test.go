@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/dummy"
+	"github.com/consensys/linea-monorepo/prover/protocol/distributed/pragmas"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/common"
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/hash/generic/testdata"
@@ -20,20 +21,20 @@ func TestTxnSignature(t *testing.T) {
 	}
 	size := settings.sizeAntichamber()
 	m := &keccak.KeccakSingleProvider{}
-	var txSign *txSignature
+	var txSign *TxSignature
 
 	compiled := wizard.Compile(func(b *wizard.Builder) {
 		var (
 			comp      = b.CompiledIOP
-			createCol = common.CreateColFn(comp, "TESTING_TxSignature", size)
+			createCol = common.CreateColFn(comp, "TESTING_TxSignature", size, pragmas.RightPadded)
 
 			txSignInputs = txSignatureInputs{
-				ac: &antichamber{
+				Ac: &antichamber{
 					IsFetching: createCol("Is_Fetching"),
 					IsActive:   createCol("Is_Active"),
 					Source:     createCol("Source"),
-					size:       size,
-					Inputs:     &antichamberInput{settings: settings},
+					Size:       size,
+					Inputs:     &antichamberInput{Settings: settings},
 				},
 				RlpTxn: testdata.CreateGenDataModule(comp, "RLP_TXN", 128),
 			}
@@ -42,7 +43,7 @@ func TestTxnSignature(t *testing.T) {
 		txSign = newTxSignatures(comp, txSignInputs)
 
 		// check the keccak consistency over the provider.
-		provider := txSign.provider
+		provider := txSign.Provider
 		keccakInp := keccak.KeccakSingleProviderInput{
 			Provider:      provider,
 			MaxNumKeccakF: 16,
@@ -65,14 +66,14 @@ var rlpTxnTest = makeTestCase{
 	ToHash:  []int{1, 1, 0, 1, 0, 0, 1, 1, 1, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 1, 0, 1, 1, 0, 0},
 }
 
-func (txSign txSignature) assigntxSignInputs(run *wizard.ProverRuntime, c makeTestCase) {
+func (txSign TxSignature) assigntxSignInputs(run *wizard.ProverRuntime, c makeTestCase) {
 
 	var (
-		nbEcRec    = txSign.Inputs.ac.Inputs.settings.MaxNbEcRecover
-		nbTxn      = txSign.Inputs.ac.Inputs.settings.MaxNbTx
-		isFetching = common.NewVectorBuilder(txSign.Inputs.ac.IsFetching)
-		isActive   = common.NewVectorBuilder(txSign.Inputs.ac.IsActive)
-		source     = common.NewVectorBuilder(txSign.Inputs.ac.Source)
+		nbEcRec    = txSign.Inputs.Ac.Inputs.Settings.MaxNbEcRecover
+		nbTxn      = txSign.Inputs.Ac.Inputs.Settings.MaxNbTx
+		isFetching = common.NewVectorBuilder(txSign.Inputs.Ac.IsFetching)
+		isActive   = common.NewVectorBuilder(txSign.Inputs.Ac.IsActive)
+		source     = common.NewVectorBuilder(txSign.Inputs.Ac.Source)
 	)
 
 	// assign rlpTxn

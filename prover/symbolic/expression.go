@@ -263,6 +263,40 @@ func (e *Expression) ReconstructBottomUp(
 	panic("unreachable")
 }
 
+// ReconstructBottomUpSingleThreaded is the same as [Expression.ReconstructBottomUp]
+// but it is single threaded.
+func (e *Expression) ReconstructBottomUpSingleThreaded(
+	constructor func(e *Expression, children []*Expression) (new *Expression),
+) *Expression {
+
+	switch e.Operator.(type) {
+	// Constant, indicating we reached the bottom of the expression. Thus it
+	// applies the mutator and returns.
+	case Constant, Variable:
+		x := constructor(e, []*Expression{})
+		if x == nil {
+			panic(x)
+		}
+		return x
+	// LinComb or Product or PolyEval. This is an intermediate expression.
+	case LinComb, Product, PolyEval:
+		children := make([]*Expression, len(e.Children))
+		for i, c := range e.Children {
+			children[i] = c.ReconstructBottomUp(constructor)
+			if children[i] == nil {
+				panic(children[i])
+			}
+		}
+		x := constructor(e, children)
+		if x == nil {
+			panic(x)
+		}
+		return x
+	}
+
+	panic("unreachable")
+}
+
 // SameWithNewChildren constructs a new expression that is a copy-cat of the
 // receiver expression but swapping the children with the new ones instead. It
 // is common for rebuilding expressions. If the expression is a variable or a

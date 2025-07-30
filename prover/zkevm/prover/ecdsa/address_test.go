@@ -18,7 +18,7 @@ func TestAddress(t *testing.T) {
 		MaxNbEcRecover: 1,
 		MaxNbTx:        4,
 	}
-	ac := &antichamber{Inputs: &antichamberInput{settings: limits}}
+	ac := &antichamber{Inputs: &antichamberInput{Settings: limits}}
 	var addr *Addresses
 	var uaGnark *UnalignedGnarkData
 	var ecRec *EcRecover
@@ -28,7 +28,7 @@ func TestAddress(t *testing.T) {
 
 	size := limits.sizeAntichamber()
 
-	nbKeccakF := ac.Inputs.settings.nbKeccakF(8) // if each txn has 8 blocks
+	nbKeccakF := ac.Inputs.Settings.nbKeccakF(8) // if each txn has 8 blocks
 	nbRowsPerTxInTxnData := 9
 
 	sizeTxnData := utils.NextPowerOfTwo(limits.MaxNbTx * nbRowsPerTxInTxnData)
@@ -39,7 +39,7 @@ func TestAddress(t *testing.T) {
 		// generate a gbm and use it to represent gnark-columns
 		gbmGnark = testdata.CreateGenDataModule(comp, "UnGNARK", size)
 		ac = &antichamber{
-			Inputs: &antichamberInput{settings: limits},
+			Inputs: &antichamberInput{Settings: limits},
 			ID:     gbmGnark.HashNum,
 		}
 		uaGnark = &UnalignedGnarkData{
@@ -57,7 +57,7 @@ func TestAddress(t *testing.T) {
 
 		// define keccak (columns and constraints)
 		keccakInp := keccak.KeccakSingleProviderInput{
-			Provider:      addr.provider,
+			Provider:      addr.Provider,
 			MaxNumKeccakF: nbKeccakF,
 		}
 		m = keccak.NewKeccakSingleProvider(comp, keccakInp)

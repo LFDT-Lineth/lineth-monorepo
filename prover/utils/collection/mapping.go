@@ -2,59 +2,63 @@ package collection
 
 import (
 	"fmt"
+	"reflect"
 
 	"github.com/consensys/linea-monorepo/prover/utils"
 )
 
 // Mapping wraps a map and adds utility functions
 type Mapping[K comparable, V any] struct {
-	innerMap map[K]V
+	InnerMap map[K]V
 }
 
 // Constructor for KVStore
 func NewMapping[K comparable, V any]() Mapping[K, V] {
 	return Mapping[K, V]{
-		innerMap: make(map[K]V),
+		InnerMap: make(map[K]V),
 	}
 }
 
 // Attempts to retrieve a value from a given key. Panics
 // if it fails
 func (kv *Mapping[K, V]) MustGet(key K) V {
-	res, found := kv.innerMap[key]
+	res, found := kv.InnerMap[key]
 
 	if !found {
-		utils.Panic("Entry %v does not exists", key)
+		keyType := reflect.TypeOf(key)
+		keyTypeName := keyType.Name()
+		keyTypeStr := keyType.String()
+		keyTypeKind := keyType.Kind()
+		utils.Panic("Entry %v of type(name):%s type(string):%s kind:%s does not exists \n", key, keyTypeName, keyTypeStr, keyTypeKind)
 	}
-
 	return res
 }
 
 // Attempts to retrieve a value from a given key. Returns nil
 // if it failed
 func (kv *Mapping[K, V]) TryGet(key K) (V, bool) {
-	res, ok := kv.innerMap[key]
+	res, ok := kv.InnerMap[key]
 	return res, ok
 }
 
 // InsertNew inserts a new value and panics if it was
 // contained already
 func (kv *Mapping[K, V]) InsertNew(key K, value V) {
-	if _, found := kv.innerMap[key]; found {
+	if _, found := kv.InnerMap[key]; found {
 		utils.Panic("Entry %v already found", key)
 	}
-	kv.innerMap[key] = value
+	kv.InnerMap[key] = value
 }
 
 // Update a key possibly overwriting any existing entry
 func (kv *Mapping[K, V]) Update(key K, value V) {
-	kv.innerMap[key] = value
+	kv.InnerMap[key] = value
 }
 
 // Returns the list of all the keys
 func (kv *Mapping[K, V]) ListAllKeys() []K {
-	res := make([]K, 0, len(kv.innerMap))
-	for k := range kv.innerMap {
+	res := make([]K, 0, len(kv.InnerMap))
+	for k := range kv.InnerMap {
 		res = append(res, k)
 	}
 	return res
@@ -65,7 +69,7 @@ func (kv *Mapping[K, V]) MustExists(keys ...K) {
 	var missingListString error
 	ok := true
 	for _, key := range keys {
-		if _, found := kv.innerMap[key]; !found {
+		if _, found := kv.InnerMap[key]; !found {
 
 			// accumulate the keys in an user-friendly error message
 			if missingListString == nil {
@@ -84,7 +88,7 @@ func (kv *Mapping[K, V]) MustExists(keys ...K) {
 
 // Iterates a function over all elements of the map
 func (kv *Mapping[K, V]) IterateFunc(f func(k K, v V)) {
-	for k, v := range kv.innerMap {
+	for k, v := range kv.InnerMap {
 		f(k, v)
 	}
 }
@@ -92,7 +96,7 @@ func (kv *Mapping[K, V]) IterateFunc(f func(k K, v V)) {
 // Returns `true` if all the passed entries exists
 func (kv *Mapping[K, V]) Exists(ks ...K) bool {
 	for _, k := range ks {
-		_, found := kv.innerMap[k]
+		_, found := kv.InnerMap[k]
 		if !found {
 			return false
 		}
@@ -102,23 +106,23 @@ func (kv *Mapping[K, V]) Exists(ks ...K) bool {
 
 // ToSlice lists all entries in a slice of tuple
 func (kv *Mapping[K, V]) ListValues() []V {
-	res := make([]V, 0, len(kv.innerMap))
-	for _, v := range kv.innerMap {
+	res := make([]V, 0, len(kv.InnerMap))
+	for _, v := range kv.InnerMap {
 		res = append(res, v)
 	}
 	return res
 }
 
 // Returns the innerMap
-func (kv *Mapping[K, V]) InnerMap() map[K]V {
-	return kv.innerMap
+func (kv *Mapping[K, V]) GetInnerMap() map[K]V {
+	return kv.InnerMap
 }
 
 // Delete an entry. Panic if the entry was not found
 func (kv *Mapping[K, V]) Del(k K) {
 	// Sanity-check
 	kv.MustGet(k)
-	delete(kv.innerMap, k)
+	delete(kv.InnerMap, k)
 }
 
 // Delete an entry. NOOP if the entry was not found
@@ -127,7 +131,11 @@ func (kv *Mapping[K, V]) TryDel(k K) bool {
 	found := kv.Exists(k)
 	if found {
 		kv.MustGet(k)
-		delete(kv.innerMap, k)
+		delete(kv.InnerMap, k)
 	}
 	return found
+}
+
+func (kv *Mapping[K, V]) Len() int {
+	return len(kv.ListAllKeys())
 }

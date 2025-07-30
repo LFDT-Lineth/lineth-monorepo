@@ -44,24 +44,20 @@ func TestReprAndDerivation(t *testing.T) {
 		cachedXs := collection.NewMapping[string, field.Element]()
 		cachedXs.InsertNew("", x)
 
-		x_ := column.DeriveEvaluationPoint(Shifted1, "", cachedXs, x)
-
-		allDSBranches := column.AllDownStreamBranches(Shifted1)
-		roots := column.RootParents(Shifted1)
-
-		require.Len(t, allDSBranches, 1)
-		require.Len(t, x_, 1)
-		require.Len(t, roots, 1)
+		var (
+			x_       = column.DeriveEvaluationPoint(Shifted1, "", cachedXs, x)
+			dsBranch = column.DownStreamBranch(Shifted1)
+			_        = column.RootParents(Shifted1)
+		)
 
 		// Should find the downstreams in the cached map
-		for j, ds := range allDSBranches {
-			require.Equal(t, x_[j], cachedXs.MustGet(ds))
-		}
+		require.Equal(t, x_, cachedXs.MustGet(dsBranch))
+
 		// Evaluate the derived claim : should equal the expected Y
-		derivedY := smartvectors.Interpolate(v, x_[0])
+		derivedY := smartvectors.Interpolate(v, x_)
 
 		finalYs := collection.NewMapping[string, field.Element]()
-		finalYs.InsertNew(column.DerivedYRepr(allDSBranches[0], V), derivedY)
+		finalYs.InsertNew(column.DerivedYRepr(dsBranch, V), derivedY)
 
 		// Test that we recovered
 		recoveredY := column.VerifyYConsistency(Shifted1, "", cachedXs, finalYs)

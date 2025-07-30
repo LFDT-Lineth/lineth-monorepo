@@ -24,7 +24,7 @@ func TestLinearCombination(t *testing.T) {
 	x := field.NewElement(478)
 	randomCoin := field.NewElement(1523)
 
-	params := NewParams(blowUpFactor, polySize, nPolys, ringsis.StdParams, mimc.NewMiMC)
+	params := NewParams(blowUpFactor, polySize, nPolys, ringsis.StdParams, mimc.NewMiMC, mimc.NewMiMC)
 
 	// Polynomials to commit to
 	polys := make([]smartvectors.SmartVector, nPolys)
@@ -50,10 +50,8 @@ func TestLinearCombination(t *testing.T) {
 
 // testCaseParameters is a corpus of valid parameters for Vortex
 var testCaseParameters = []*Params{
-	NewParams(2, 1<<4, 32, ringsis.StdParams, mimc.NewMiMC),
-	NewParams(2, 1<<4, 32, ringsis.StdParams, mimc.NewMiMC).RemoveSis(mimc.NewMiMC),
-	NewParams(4, 1<<3, 32, ringsis.StdParams, mimc.NewMiMC),
-	NewParams(4, 1<<3, 32, ringsis.StdParams, mimc.NewMiMC).RemoveSis(mimc.NewMiMC),
+	NewParams(2, 1<<4, 32, ringsis.StdParams, mimc.NewMiMC, mimc.NewMiMC),
+	NewParams(4, 1<<3, 32, ringsis.StdParams, mimc.NewMiMC, mimc.NewMiMC),
 }
 
 func TestProver(t *testing.T) {
@@ -74,26 +72,32 @@ func TestProver(t *testing.T) {
 		// the testCase provides to the prover. If nil, then this is equivalent
 		// to `f(n) -> n`.
 		ChangeAssignmentSize func(int) int
-		MustPanic            bool
+		// Flag denoting if we are committing with SIS+MiMC hash or MiMC hash
+		IsSisReplacedByMiMC []bool
+		MustPanic           bool
 	}{
 		{
-			Explainer:             "1 matrix commitment with one poly",
+			Explainer:             "1 matrix commitment with one poly with SIS commitment",
 			NumPolysPerCommitment: []int{1},
+			IsSisReplacedByMiMC:   []bool{false},
 			NumOpenedColumns:      4,
 		},
 		{
-			Explainer:             "1 matrix commitment with several polys",
+			Explainer:             "1 matrix commitment with several polys without SIS commitment",
 			NumPolysPerCommitment: []int{3},
+			IsSisReplacedByMiMC:   []bool{true},
 			NumOpenedColumns:      4,
 		},
 		{
-			Explainer:             "1 matrix commitment with several polys",
+			Explainer:             "2 matrix commitment with several polys with SIS commitment",
 			NumPolysPerCommitment: []int{3, 3},
+			IsSisReplacedByMiMC:   []bool{false, false},
 			NumOpenedColumns:      8,
 		},
 		{
-			Explainer:             "1 matrix commitment with several polys",
+			Explainer:             "1 matrix commitment with several polys with SIS and no SIS commitment",
 			NumPolysPerCommitment: []int{1, 15},
+			IsSisReplacedByMiMC:   []bool{false, true},
 			NumOpenedColumns:      8,
 		},
 		{
@@ -140,21 +144,21 @@ func TestProver(t *testing.T) {
 			MustPanic:             true,
 		},
 		{
-			Explainer:             "the polys are twice to small",
+			Explainer:             "the polys are twice too small",
 			NumPolysPerCommitment: []int{3, 3},
 			NumOpenedColumns:      8,
 			ChangeAssignmentSize:  func(i int) int { return i / 2 },
 			MustPanic:             true,
 		},
 		{
-			Explainer:             "the polys are twice to small",
+			Explainer:             "the polys are twice too small",
 			NumPolysPerCommitment: []int{3, 3},
 			NumOpenedColumns:      8,
 			ChangeAssignmentSize:  func(i int) int { return i + 1 },
 			MustPanic:             true,
 		},
 		{
-			Explainer:             "the polys are twice to small",
+			Explainer:             "the polys are twice too small",
 			NumPolysPerCommitment: []int{3, 3},
 			NumOpenedColumns:      8,
 			ChangeAssignmentSize:  func(i int) int { return i - 1 },
@@ -173,16 +177,20 @@ func TestProver(t *testing.T) {
 				t.Logf("params=%++v test-case=%++v", params, testCase)
 
 				var (
-					numCommitments = len(testCase.NumPolysPerCommitment)
-					effPolySize    = params.NbColumns
-					polyLists      = make([][]smartvectors.SmartVector, numCommitments)
-					yLists         = make([][]field.Element, numCommitments)
-					roots          = make([]types.Bytes32, numCommitments)
-					trees          = make([]*smt.Tree, numCommitments)
+					numCommitments      = len(testCase.NumPolysPerCommitment)
+					effPolySize         = params.NbColumns
+					polyLists           = make([][]smartvectors.SmartVector, numCommitments)
+					yLists              = make([][]field.Element, numCommitments)
+					roots               = make([]types.Bytes32, numCommitments)
+					trees               = make([]*smt.Tree, numCommitments)
+					isSisReplacedByMiMC = make([]bool, numCommitments)
 				)
 
 				if testCase.ChangeAssignmentSize != nil {
 					effPolySize = testCase.ChangeAssignmentSize(effPolySize)
+				}
+				if testCase.IsSisReplacedByMiMC != nil {
+					isSisReplacedByMiMC = testCase.IsSisReplacedByMiMC
 				}
 
 				for i := range polyLists {
@@ -222,7 +230,11 @@ func TestProver(t *testing.T) {
 				// Commits to it
 				committedMatrices := make([]EncodedMatrix, numCommitments)
 				for i := range trees {
-					committedMatrices[i], trees[i], _ = params.CommitMerkle(polyLists[i])
+					if !isSisReplacedByMiMC[i] {
+						committedMatrices[i], trees[i], _ = params.CommitMerkleWithSIS(polyLists[i])
+					} else {
+						committedMatrices[i], trees[i], _ = params.CommitMerkleWithoutSIS(polyLists[i])
+					}
 					roots[i] = trees[i].Root
 				}
 
@@ -233,13 +245,14 @@ func TestProver(t *testing.T) {
 				// Check the proof
 				err := VerifyOpening(
 					&VerifierInputs{
-						Params:       *params,
-						MerkleRoots:  roots,
-						X:            x,
-						Ys:           yLists,
-						OpeningProof: *proof,
-						RandomCoin:   randomCoin,
-						EntryList:    entryList[:testCase.NumOpenedColumns],
+						Params:              *params,
+						MerkleRoots:         roots,
+						X:                   x,
+						Ys:                  yLists,
+						OpeningProof:        *proof,
+						RandomCoin:          randomCoin,
+						EntryList:           entryList[:testCase.NumOpenedColumns],
+						IsSISReplacedByMiMC: isSisReplacedByMiMC,
 					})
 
 				require.NoError(t, err)
@@ -257,8 +270,8 @@ func TestVerifierNegative(t *testing.T) {
 			{3, 1, 15},
 		}
 		params = []*Params{
-			NewParams(2, 8, 17, ringsis.StdParams, mimc.NewMiMC),
-			NewParams(2, 8, 17, ringsis.StdParams, mimc.NewMiMC).RemoveSis(mimc.NewMiMC),
+			NewParams(2, 8, 17, ringsis.StdParams, mimc.NewMiMC, mimc.NewMiMC),
+			NewParams(2, 8, 17, ringsis.StdParams, mimc.NewMiMC, mimc.NewMiMC),
 		}
 
 		statementMutatorCorpus = []struct {
@@ -470,7 +483,7 @@ func TestVerifierNegative(t *testing.T) {
 			// Commits to it
 			committedMatrices := make([]EncodedMatrix, numCommitments)
 			for i := range trees {
-				committedMatrices[i], trees[i], _ = params.CommitMerkle(polyLists[i])
+				committedMatrices[i], trees[i], _ = params.CommitMerkleWithSIS(polyLists[i])
 				roots[i] = trees[i].Root
 			}
 

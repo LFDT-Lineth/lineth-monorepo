@@ -4,8 +4,9 @@ import (
 	"github.com/consensys/linea-monorepo/prover/crypto/keccak"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/column"
-	"github.com/consensys/linea-monorepo/prover/protocol/dedicated/projection"
+	"github.com/consensys/linea-monorepo/prover/protocol/distributed/pragmas"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
+	"github.com/consensys/linea-monorepo/prover/protocol/query"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	sym "github.com/consensys/linea-monorepo/prover/symbolic"
 	"github.com/consensys/linea-monorepo/prover/utils"
@@ -61,21 +62,21 @@ Therefore we can directly project from the output of dataTransfer module to the 
 func (io *InputOutput) newInput(comp *wizard.CompiledIOP, maxNumKeccakF int,
 	mod Module,
 ) {
-	lu := mod.lookups
-	io.PiChiIota = mod.piChiIota
-	input := mod.state
+	lu := mod.Lookups
+	io.PiChiIota = mod.PiChiIota
+	input := mod.State
 
 	// declare the columns
 	io.declareColumnsInput(comp, maxNumKeccakF)
 
 	// declare the constraints
-	commonconstraints.MustBeActivationColumns(comp, mod.isActive)
+	commonconstraints.MustBeActivationColumns(comp, mod.IsActive)
 	// Binary Column
 	commonconstraints.MustBeBinary(comp, io.IsBlock)
 	commonconstraints.MustBeBinary(comp, io.IsBlockBaseB)
 	commonconstraints.MustBeBinary(comp, io.IsFirstBlock)
 
-	commonconstraints.MustZeroWhenInactive(comp, mod.isActive,
+	commonconstraints.MustZeroWhenInactive(comp, mod.IsActive,
 		io.IsBlockBaseB,
 		io.IsFirstBlock,
 	)
@@ -89,11 +90,10 @@ func (io *InputOutput) newInput(comp *wizard.CompiledIOP, maxNumKeccakF int,
 
 	// usePrevIota = 1- (IsFirstBlock[i]+ IsBlockBaseB[i-1])
 	comp.InsertGlobal(0, ifaces.QueryIDf("UsePrevIota_SET_TO_ZERO_OVER_BLOCKS"),
-		sym.Mul(mod.isActive,
-			sym.Sub(lu.UsePrevAIota,
-				sym.Sub(1,
-					sym.Add(io.IsFirstBlock, column.Shift(io.IsBlockBaseB, -1)),
-				),
+		sym.Mul(mod.IsActive,
+			sym.Sub(
+				sym.Add(io.IsFirstBlock, column.Shift(io.IsBlockBaseB, -1)),
+				lu.DontUsePrevAIota.Natural,
 			),
 		),
 	)
@@ -122,9 +122,9 @@ func (io *InputOutput) newInput(comp *wizard.CompiledIOP, maxNumKeccakF int,
 func (io *InputOutput) newOutput(comp *wizard.CompiledIOP, maxNumKeccakF int,
 	mod Module,
 ) {
-	lu := mod.lookups
-	io.PiChiIota = mod.piChiIota
-	input := mod.state
+	lu := mod.Lookups
+	io.PiChiIota = mod.PiChiIota
+	input := mod.State
 
 	io.declareColumnsOutput(comp, maxNumKeccakF)
 
@@ -141,7 +141,7 @@ func (io *InputOutput) newOutput(comp *wizard.CompiledIOP, maxNumKeccakF int,
 		sym.Sub(
 			io.IsHashOutPut,
 			column.Shift(io.IsFirstBlock, 1),
-			sym.Sub(mod.isActive, column.Shift(mod.isActive, 1)),
+			sym.Sub(mod.IsActive, column.Shift(mod.IsActive, 1)),
 		),
 	)
 
@@ -160,7 +160,7 @@ func (io *InputOutput) newOutput(comp *wizard.CompiledIOP, maxNumKeccakF int,
 func (io *InputOutput) declareColumnsInput(comp *wizard.CompiledIOP, maxNumKeccakF int) {
 	var (
 		size      = numRows(maxNumKeccakF)
-		createCol = common.CreateColFn(comp, "KECCAKF_INPUT_MODULE", size)
+		createCol = common.CreateColFn(comp, "KECCAKF_INPUT_MODULE", size, pragmas.RightPadded)
 	)
 
 	io.IsFirstBlock = createCol("IS_FIRST_BLOCK")
@@ -172,7 +172,7 @@ func (io *InputOutput) declareColumnsInput(comp *wizard.CompiledIOP, maxNumKecca
 func (io *InputOutput) declareColumnsOutput(comp *wizard.CompiledIOP, maxNumKeccakF int) {
 	var (
 		size      = utils.NextPowerOfTwo(maxNumKeccakF)
-		createCol = common.CreateColFn(comp, "KECCAKF_OUTPUT_MODULE", size)
+		createCol = common.CreateColFn(comp, "KECCAKF_OUTPUT_MODULE", size, pragmas.RightPadded)
 	)
 	for j := range io.HashOutputSlicesBaseB {
 		for k := range io.HashOutputSlicesBaseB[0] {
@@ -201,13 +201,13 @@ func (io *InputOutput) csNextState(
 			recomposedAIota := BaseRecomposeSliceHandles(
 				// Recall that the PiChiIota module performs all the steps pi-chi-iota
 				// at once.
-				pci.aIotaBaseASliced[x][y][:],
+				pci.AIotaBaseASliced[x][y][:],
 				BaseA,
 				true,
 			)
 			// for an ongoing permutation or for permutations from the same hash;
 			// impose that the previous aIota in base A should be equal with the state.
-			usePrevIota := sym.Add(column.Shift(io.IsBlockBaseB, -1), lu.UsePrevAIota) // isBlockBaseB[i-1] + UsePrevAIota[i]
+			usePrevIota := sym.Add(column.Shift(io.IsBlockBaseB, -1), sym.Sub(1, lu.DontUsePrevAIota.Natural)) // isBlockBaseB[i-1] + UsePrevAIota[i]
 			comp.InsertGlobal(0, ifaces.QueryIDf("AIOTA_TO_A_%v_%v", x, y),
 				sym.Mul(usePrevIota,
 					sym.Sub(input[x][y], recomposedAIota)),
@@ -229,11 +229,11 @@ func (io *InputOutput) csHashOutput(comp *wizard.CompiledIOP) {
 	colB = append(colB, io.HashOutputSlicesBaseB[2][:]...)
 	colB = append(colB, io.HashOutputSlicesBaseB[3][:]...)
 
-	projection.InsertProjection(comp, ifaces.QueryIDf("HashOutput_Projection"),
-		colB, colA,
-		io.IsActive,
-		io.IsHashOutPut,
-	)
+	comp.InsertProjection(ifaces.QueryIDf("HashOutput_Projection"),
+		query.ProjectionInput{ColumnA: colB,
+			ColumnB: colA,
+			FilterA: io.IsActive,
+			FilterB: io.IsHashOutPut})
 }
 
 // It assigns the columns specific to the submodule.

@@ -14,24 +14,24 @@ import (
 
 func MakeTestCaseInputOutputModule(maxNumKeccakF int) (
 	define wizard.DefineFunc,
-	prover func(permTrace keccak.PermTraces) wizard.ProverStep,
+	prover func(permTrace keccak.PermTraces) wizard.MainProverStep,
 ) {
 	round := 0
 	mod := &Module{}
 	mod.MaxNumKeccakf = maxNumKeccakF
-	mod.state = [5][5]ifaces.Column{}
+	mod.State = [5][5]ifaces.Column{}
 	define = func(builder *wizard.Builder) {
 		comp := builder.CompiledIOP
-		mod.lookups = newLookUpTables(comp, maxNumKeccakF)
+		mod.Lookups = newLookUpTables(comp, maxNumKeccakF)
 		mod.declareColumns(comp, round, maxNumKeccakF)
-		mod.theta.declareColumn(comp, round, maxNumKeccakF)
-		mod.rho.declareColumns(comp, round, maxNumKeccakF)
-		mod.piChiIota.declareColumns(comp, round, maxNumKeccakF)
+		mod.Theta.declareColumn(comp, round, maxNumKeccakF)
+		mod.Rho.declareColumns(comp, round, maxNumKeccakF)
+		mod.PiChiIota.declareColumns(comp, round, maxNumKeccakF)
 		mod.IO.newInput(comp, maxNumKeccakF, *mod)
 		mod.IO.newOutput(comp, maxNumKeccakF, *mod)
 	}
 
-	prover = func(permTrace keccak.PermTraces) wizard.ProverStep {
+	prover = func(permTrace keccak.PermTraces) wizard.MainProverStep {
 		return func(run *wizard.ProverRuntime) {
 			mod.Assign(run, permTrace)
 		}

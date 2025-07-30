@@ -14,9 +14,9 @@ import (
 
 func makeTestCaseLengthConsistency() (
 	define wizard.DefineFunc,
-	prover wizard.ProverStep,
+	prover wizard.MainProverStep,
 ) {
-	lc := lengthConsistency{}
+	lc := LengthConsistencyCtx{}
 	size := 8
 	maxLen := 6
 
@@ -50,6 +50,7 @@ func makeTestCaseLengthConsistency() (
 	}
 	return define, prover
 }
+
 func TestLengthConsistency(t *testing.T) {
 	define, prover := makeTestCaseLengthConsistency()
 	comp := wizard.Compile(define, dummy.Compile)
@@ -57,22 +58,22 @@ func TestLengthConsistency(t *testing.T) {
 	assert.NoErrorf(t, wizard.Verify(comp, proof), "invalid proof")
 }
 
-func (lc *lengthConsistency) assignTable(run *wizard.ProverRuntime) {
+func (lc *LengthConsistencyCtx) assignTable(run *wizard.ProverRuntime) {
 	var (
 		table    = make([]*common.VectorBuilder, 2)
 		tableLen = make([]*common.VectorBuilder, 2)
 		f        field.Element
 	)
 	for i := range table {
-		table[i] = common.NewVectorBuilder(lc.inp.Table[i])
+		table[i] = common.NewVectorBuilder(lc.Inp.Table[i])
 
-		tableLen[i] = common.NewVectorBuilder(lc.inp.TableLen[i])
+		tableLen[i] = common.NewVectorBuilder(lc.Inp.TableLen[i])
 
-		for row := 0; row < lc.size; row++ {
-			token := make([]byte, row%lc.inp.MaxLen)
+		for row := 0; row < lc.Size; row++ {
+			token := make([]byte, row%lc.Inp.MaxLen)
 			rand.Read(token)
 			table[i].PushField(*f.SetBytes(token))
-			tableLen[i].PushInt(row % lc.inp.MaxLen)
+			tableLen[i].PushInt(row % lc.Inp.MaxLen)
 		}
 		table[i].PadAndAssign(run, field.Zero())
 		tableLen[i].PadAndAssign(run, field.Zero())

@@ -15,7 +15,6 @@ import (
 	"github.com/consensys/gnark/std/multicommit"
 	"github.com/consensys/linea-monorepo/prover/crypto/mimc"
 	"github.com/consensys/linea-monorepo/prover/utils"
-	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -76,15 +75,41 @@ func createGateNames() {
 // which contains the "normal" and the "gnark" version of the GKR gates forming
 // the MiMC GKR circuit.
 func registerGates() {
+
+	var (
+		cDegree17 = cGkr.WithDegree(17)
+		gDegree17 = gGkr.WithUnverifiedDegree(17)
+	)
+
 	for i := 4; i < numGates-1; i++ {
-		name := gateNames[i]
-		gGkr.Gates[name] = NewRoundGateGnark(mimc.Constants[i-prefetchSize])
-		cGkr.Gates[name] = NewRoundGateCrypto(mimc.Constants[i-prefetchSize])
+
+		var (
+			name  = gateNames[i]
+			gateG = NewRoundGateGnark(mimc.Constants[i-prefetchSize])
+			gateC = NewRoundGateCrypto(mimc.Constants[i-prefetchSize])
+		)
+
+		if e := gGkr.RegisterGate(gGkr.GateName(name), gateG.Evaluate, 2, gDegree17); e != nil {
+			panic(e)
+		}
+
+		if e := cGkr.RegisterGate(cGkr.GateName(name), gateC.Evaluate, 2, cDegree17); e != nil {
+			panic(e)
+		}
 	}
 
-	name := gateNames[numGates-1]
-	gGkr.Gates[name] = NewFinalRoundGateGnark(mimc.Constants[len(mimc.Constants)-1])
-	cGkr.Gates[name] = NewFinalRoundGateCrypto(mimc.Constants[len(mimc.Constants)-1])
+	var (
+		name  = gateNames[numGates-1]
+		gateG = NewFinalRoundGateGnark(mimc.Constants[len(mimc.Constants)-1])
+		gateC = NewFinalRoundGateCrypto(mimc.Constants[len(mimc.Constants)-1])
+	)
+
+	if e := gGkr.RegisterGate(gGkr.GateName(name), gateG.Evaluate, 3, gDegree17); e != nil {
+		panic(e)
+	}
+	if e := cGkr.RegisterGate(cGkr.GateName(name), gateC.Evaluate, 3, cDegree17); e != nil {
+		panic(e)
+	}
 }
 
 // gkrMiMC constructs and return the GKR circuit. The function is concretely
@@ -109,10 +134,10 @@ func gkrMiMC(gkr *gGkr.API, initStates, blocks []frontend.Variable) (constraint.
 	v[3] = gkr.NamedGate("identity", v[1])
 
 	for i := 4; i < numGates-1; i++ {
-		v[i] = gkr.NamedGate(gateNames[i], v[2], v[i-1])
+		v[i] = gkr.NamedGate(gGkr.GateName(gateNames[i]), v[2], v[i-1])
 	}
 
-	res := gkr.NamedGate(gateNames[numGates-1], v[2], v[3], v[numGates-2])
+	res := gkr.NamedGate(gGkr.GateName(gateNames[numGates-1]), v[2], v[3], v[numGates-2])
 
 	return res, nil
 }
@@ -148,7 +173,6 @@ func checkWithGkr(api frontend.API, initStates, blocks, allegedNewState []fronte
 	multicommit.WithCommitment(
 		api,
 		func(api frontend.API, initialChallenge frontend.Variable) error {
-			logrus.Infof("defining the constraints of the GKR verifier")
 
 			// "mimc" means that we are using MiMC hashes to compute the FS challenges
 			// this part is responsible for verifying the GKR proof.
@@ -156,8 +180,6 @@ func checkWithGkr(api frontend.API, initStates, blocks, allegedNewState []fronte
 			if err != nil {
 				panic(err)
 			}
-
-			logrus.Infof("defining the constraints of the GKR verifier : done")
 
 			// Export the last gkr layer as an array of frontend variable
 			d := solution.Export(D)

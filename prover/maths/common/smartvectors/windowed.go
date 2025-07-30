@@ -2,6 +2,9 @@ package smartvectors
 
 import (
 	"fmt"
+	"iter"
+	"slices"
+
 	"github.com/consensys/linea-monorepo/prover/maths/field/fext"
 
 	"github.com/consensys/linea-monorepo/prover/maths/common/vector"
@@ -11,10 +14,10 @@ import (
 
 // It's a slice - zero padded up to a certain length - and rotated
 type PaddedCircularWindow struct {
-	window     []field.Element
-	paddingVal field.Element
+	Window_     []field.Element
+	PaddingVal_ field.Element
 	// Totlen is the length of the represented vector
-	totLen, offset int
+	TotLen_, Offset_ int
 }
 
 // Create a new padded circular window vector
@@ -35,27 +38,42 @@ func NewPaddedCircularWindow(window []field.Element, paddingVal field.Element, o
 	// Normalize the offset to be in range [0:totlen)
 	offset = utils.PositiveMod(offset, totLen)
 	return &PaddedCircularWindow{
-		window:     window,
-		paddingVal: paddingVal,
-		offset:     offset,
-		totLen:     totLen,
+		Window_:     window,
+		PaddingVal_: paddingVal,
+		Offset_:     offset,
+		TotLen_:     totLen,
 	}
 }
 
 // Returns the length of the vector
 func (p *PaddedCircularWindow) Len() int {
-	return p.totLen
+	return p.TotLen_
+}
+
+// Offset returns the offset of the PCW
+func (p *PaddedCircularWindow) Offset() int {
+	return p.Offset_
+}
+
+// Windows returns the length of the window of the PCQ
+func (p *PaddedCircularWindow) Window() []field.Element {
+	return p.Window_
+}
+
+// PaddingVal returns the value used for padding the window
+func (p *PaddedCircularWindow) PaddingVal() field.Element {
+	return p.PaddingVal_
 }
 
 // Returns a queries position
 func (p *PaddedCircularWindow) GetBase(n int) (field.Element, error) {
 	// Check if the queried index is in the window
-	posFromWindowsPoV := utils.PositiveMod(n-p.offset, p.totLen)
-	if posFromWindowsPoV < len(p.window) {
-		return p.window[posFromWindowsPoV], nil
+	posFromWindowsPoV := utils.PositiveMod(n-p.Offset_, p.TotLen_)
+	if posFromWindowsPoV < len(p.Window_) {
+		return p.Window_[posFromWindowsPoV], nil
 	}
 	// Else, return the padding value
-	return p.paddingVal, nil
+	return p.PaddingVal_, nil
 }
 
 func (p *PaddedCircularWindow) GetExt(n int) fext.Element {
@@ -79,9 +97,9 @@ func (p *PaddedCircularWindow) SubVector(start, stop int) SmartVector {
 		panic("negative Start value is not allowed")
 	}
 	// Sanity checks for all subvectors
-	assertCorrectBound(start, p.totLen)
+	assertCorrectBound(start, p.TotLen_)
 	// The +1 is because we accept if "Stop = length"
-	assertCorrectBound(stop, p.totLen+1)
+	assertCorrectBound(stop, p.TotLen_+1)
 
 	if start > stop {
 		panic("rollover are forbidden")
@@ -123,50 +141,50 @@ func (p *PaddedCircularWindow) SubVector(start, stop int) SmartVector {
 
 	// Case 1 : return a constant vector
 	if b <= c && c < d {
-		return NewConstant(p.paddingVal, b)
+		return NewConstant(p.PaddingVal_, b)
 	}
 
 	// Case 2 : return a regular vector
 	if b <= d && d < c {
-		reg := Regular(p.window[n-c : n-c+b])
+		reg := Regular(p.Window_[n-c : n-c+b])
 		return &reg
 	}
 
 	// Case 2* : same as 2 but c == 0
 	if b <= d && c == 0 {
-		reg := Regular(p.window[:b])
+		reg := Regular(p.Window_[:b])
 		return &reg
 	}
 
 	// Case 3 : the window is fully contained in the subvector
 	if c < d && d <= b {
-		return NewPaddedCircularWindow(p.window, p.paddingVal, c, b)
+		return NewPaddedCircularWindow(p.Window_, p.PaddingVal_, c, b)
 	}
 
 	// Case 4 : left-ended
 	if c < b && c <= d {
-		return NewPaddedCircularWindow(p.window[:b-c], p.paddingVal, c, b)
+		return NewPaddedCircularWindow(p.Window_[:b-c], p.PaddingVal_, c, b)
 	}
 
 	// Case 5 : the window is double ended (we skip some element in the center of the window)
 	if d < c && c < b {
-		left := p.window[:b-c]
-		right := p.window[n-c:]
+		left := p.Window_[:b-c]
+		right := p.Window_[n-c:]
 
 		// The deep-copy of left ensures that we do not append
 		// on the same concrete slice.
 		w := append(vector.DeepCopy(left), right...)
-		return NewPaddedCircularWindow(w, p.paddingVal, c, b)
+		return NewPaddedCircularWindow(w, p.PaddingVal_, c, b)
 	}
 
 	// Case 6 : right-ended
 	if 0 < d && d < b && b <= c {
-		return NewPaddedCircularWindow(p.window[n-c:], p.paddingVal, 0, b)
+		return NewPaddedCircularWindow(p.Window_[n-c:], p.PaddingVal_, 0, b)
 	}
 
 	// Case 7 : d == 0 and c is out
 	if d == 0 && b <= c {
-		return NewConstant(p.paddingVal, b)
+		return NewConstant(p.PaddingVal_, b)
 	}
 
 	panic(fmt.Sprintf("unsupported case : b %v, c %v, d %v", b, c, d))
@@ -175,20 +193,20 @@ func (p *PaddedCircularWindow) SubVector(start, stop int) SmartVector {
 
 // Rotate the vector
 func (p *PaddedCircularWindow) RotateRight(offset int) SmartVector {
-	return NewPaddedCircularWindow(vector.DeepCopy(p.window), p.paddingVal, p.offset+offset, p.totLen)
+	return NewPaddedCircularWindow(vector.DeepCopy(p.Window_), p.PaddingVal_, p.Offset_+offset, p.TotLen_)
 }
 
 func (p *PaddedCircularWindow) WriteInSlice(buff []field.Element) {
-	assertHasLength(len(buff), p.totLen)
+	assertHasLength(len(buff), p.TotLen_)
 
-	for i := range p.window {
-		pos := utils.PositiveMod(i+p.offset, p.totLen)
-		buff[pos] = p.window[i]
+	for i := range p.Window_ {
+		pos := utils.PositiveMod(i+p.Offset_, p.TotLen_)
+		buff[pos] = p.Window_[i]
 	}
 
-	for i := len(p.window); i < p.totLen; i++ {
-		pos := utils.PositiveMod(i+p.offset, p.totLen)
-		buff[pos] = p.paddingVal
+	for i := len(p.Window_); i < p.TotLen_; i++ {
+		pos := utils.PositiveMod(i+p.Offset_, p.TotLen_)
+		buff[pos] = p.PaddingVal_
 	}
 }
 
@@ -203,11 +221,45 @@ func (p *PaddedCircularWindow) WriteInSliceExt(buff []fext.Element) {
 }
 
 func (p *PaddedCircularWindow) Pretty() string {
-	return fmt.Sprintf("Windowed[totlen=%v offset=%v, paddingVal=%v, window=%v]", p.totLen, p.offset, p.paddingVal.String(), vector.Prettify(p.window))
+	return fmt.Sprintf("Windowed[totlen=%v offset=%v, paddingVal=%v, window=%v]", p.TotLen_, p.Offset_, p.PaddingVal_.String(), vector.Prettify(p.Window_))
+}
+
+// IterateCompact returns an iterator over the elements of the PaddedCircularWindow
+// in a "compact" way. It can behave in 3 different ways:
+//   - (left-padded): the iterator will first return one element for the padding value
+//     and then the elements of the window.
+//   - (right-padded): the iterator will first return the elements of the window
+//     and then one element for the padding value.
+//   - (others): the iterator will not try to be smart and will return the elements
+func (p *PaddedCircularWindow) IterateCompact() iter.Seq[field.Element] {
+
+	if p.Offset_ > 0 && p.Offset_+len(p.Window_) != p.TotLen_ {
+		all := p.IntoRegVecSaveAlloc()
+		return slices.Values(all)
+	}
+
+	its := []iter.Seq[field.Element]{}
+
+	if p.Offset_ > 0 {
+		its = append(its, slices.Values([]field.Element{p.PaddingVal_}))
+	}
+
+	its = append(its, slices.Values(p.Window_))
+
+	if p.Offset_+len(p.Window_) < p.TotLen_ {
+		its = append(its, slices.Values([]field.Element{p.PaddingVal_}))
+	}
+
+	return utils.ChainIterators(its...)
+}
+
+// IterateSkipPadding returns an iterator over the windows of the PaddedCircularWindow
+func (p *PaddedCircularWindow) IterateSkipPadding() iter.Seq[field.Element] {
+	return slices.Values(p.Window_)
 }
 
 func (p *PaddedCircularWindow) interval() CircularInterval {
-	return IvalWithStartLen(p.offset, len(p.window), p.totLen)
+	return IvalWithStartLen(p.Offset_, len(p.Window_), p.TotLen_)
 }
 
 // normalize converts the (circle) coordinator x to another coordinate by changing
@@ -300,34 +352,34 @@ func processWindowedOnly(op operator, svecs []SmartVector, coeffs_ []int) (res S
 		// multiplying / adding
 		if isFirst {
 			isFirst = false
-			op.vecIntoTerm(unionWindow[start_:stop_], pcw.window, coeffs[i])
+			op.vecIntoTerm(unionWindow[start_:stop_], pcw.Window_, coeffs[i])
 			// #nosec G601 -- Deliberate pass by reference. (We trust the pointed object is not mutated)
-			op.constIntoTerm(&paddedTerm, &pcw.paddingVal, coeffs[i])
+			op.constIntoTerm(&paddedTerm, &pcw.PaddingVal_, coeffs[i])
 			vector.Fill(unionWindow[:start_], paddedTerm)
 			vector.Fill(unionWindow[stop_:], paddedTerm)
 			continue
 		}
 
 		// sanity-check : Start and Stop are consistent with the size of pcw
-		if stop_-start_ != len(pcw.window) {
+		if stop_-start_ != len(pcw.Window_) {
 			utils.Panic(
 				"sanity-check failed. The renormalized coordinates (Start=%v, Stop=%v) are inconsistent with pcw : (len=%v)",
-				start_, stop_, len(pcw.window),
+				start_, stop_, len(pcw.Window_),
 			)
 		}
 
-		op.vecIntoVec(unionWindow[start_:stop_], pcw.window, coeffs[i])
+		op.vecIntoVec(unionWindow[start_:stop_], pcw.Window_, coeffs[i])
 
 		// Update the padded term
 		// #nosec G601 -- Deliberate pass by reference. (We trust the pointed object is not mutated)
-		op.constIntoConst(&paddedTerm, &pcw.paddingVal, coeffs[i])
+		op.constIntoConst(&paddedTerm, &pcw.PaddingVal_, coeffs[i])
 
 		// Complete the left and the right-side of the window (i.e) the part
 		// of unionWindow that does not overlap with pcw.window.
 		// #nosec G601 -- Deliberate pass by reference. (We trust the pointed object is not mutated)
-		op.constIntoVec(unionWindow[:start_], &pcw.paddingVal, coeffs[i])
+		op.constIntoVec(unionWindow[:start_], &pcw.PaddingVal_, coeffs[i])
 		// #nosec G601 -- Deliberate pass by reference. (We trust the pointed object is not mutated)
-		op.constIntoVec(unionWindow[stop_:], &pcw.paddingVal, coeffs[i])
+		op.constIntoVec(unionWindow[stop_:], &pcw.PaddingVal_, coeffs[i])
 	}
 
 	if smallestCover.IsFullCircle() {
@@ -338,8 +390,8 @@ func processWindowedOnly(op operator, svecs []SmartVector, coeffs_ []int) (res S
 }
 
 func (w *PaddedCircularWindow) DeepCopy() SmartVector {
-	window := vector.DeepCopy(w.window)
-	return NewPaddedCircularWindow(window, w.paddingVal, w.offset, w.totLen)
+	window := vector.DeepCopy(w.Window_)
+	return NewPaddedCircularWindow(window, w.PaddingVal_, w.Offset_, w.TotLen_)
 }
 
 // Converts a smart-vector into a normal vec. The implementation minimizes
@@ -365,4 +417,20 @@ func (w *PaddedCircularWindow) IntoRegVecSaveAllocExt() []fext.Element {
 		res[i].SetFromBase(&elem)
 	}
 	return res
+}
+
+func (w *PaddedCircularWindow) GetPtr(n int) *field.Element {
+
+	// This normalizes the position of n with respect to the start of the
+	// window.
+	n = n - w.Offset_
+	if n < 0 {
+		n += w.TotLen_
+	}
+
+	if n < len(w.Window_) {
+		return &w.Window_[n]
+	}
+
+	return &w.PaddingVal_
 }

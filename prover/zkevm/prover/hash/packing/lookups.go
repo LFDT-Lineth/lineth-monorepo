@@ -11,9 +11,9 @@ import (
 )
 
 type lookUpTables struct {
-	//colNumber:=(1,,..,16) and colPowers:=(2^(8*1),...,2^(8*16))
-	colNumber ifaces.Column
-	colPowers ifaces.Column
+	//ColNumber:=(1,,..,16) and colPowers:=(2^(8*1),...,2^(8*16))
+	ColNumber ifaces.Column
+	ColPowers ifaces.Column
 }
 
 // It commits to the lookUp tables used by dataTransfer module.
@@ -21,8 +21,8 @@ func NewLookupTables(comp *wizard.CompiledIOP) lookUpTables {
 	res := lookUpTables{}
 	// table for powers of numbers (used for decomposition of clean limbs)
 	colNum, colPower2 := numToPower2(MAXNBYTE)
-	res.colNumber = comp.InsertPrecomputed(ifaces.ColIDf("LookUp_Num"), colNum)
-	res.colPowers = comp.InsertPrecomputed(ifaces.ColIDf("LookUp_Powers"), colPower2)
+	res.ColNumber = comp.InsertPrecomputed(ifaces.ColIDf("LookUp_Num"), colNum)
+	res.ColPowers = comp.InsertPrecomputed(ifaces.ColIDf("LookUp_Powers"), colPower2)
 
 	return res
 }

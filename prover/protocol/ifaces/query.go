@@ -6,6 +6,7 @@ import (
 
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/linea-monorepo/prover/crypto/fiatshamir"
+	"github.com/google/uuid"
 )
 
 // QueryID denotes an unique identifier ID. It uniquely
@@ -67,6 +68,11 @@ type Query interface {
 	Check(run Runtime) error
 	CheckGnark(api frontend.API, run GnarkRuntime)
 	Name() QueryID
+	// UUID returns a unique identifier for the query. It is stronger identifier
+	// than the name of the query because two compiled IOPs with queries with
+	// the same name won't have the same UUID. The UUID can then be used to
+	// distinguish between the two.
+	UUID() uuid.UUID
 }
 
 // QueryParams represents the runtime parameters of a query. As explained in

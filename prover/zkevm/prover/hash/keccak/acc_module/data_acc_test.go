@@ -13,7 +13,7 @@ import (
 // It generates Define and Assign function of Data module, for testing
 func makeTestCaseDataModule(c []makeTestCase) (
 	define wizard.DefineFunc,
-	prover wizard.ProverStep,
+	prover wizard.MainProverStep,
 ) {
 	maxNumKeccakF := 8
 

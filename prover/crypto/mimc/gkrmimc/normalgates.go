@@ -2,6 +2,7 @@ package gkrmimc
 
 import (
 	"github.com/consensys/gnark/frontend"
+	gGkr "github.com/consensys/gnark/std/gkr"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 )
 
@@ -23,7 +24,7 @@ func NewRoundGateGnark(ark field.Element) *RoundGate {
 	}
 }
 
-func (m RoundGate) Evaluate(api frontend.API, input ...frontend.Variable) frontend.Variable {
+func (m RoundGate) Evaluate(api gGkr.GateAPI, input ...frontend.Variable) frontend.Variable {
 
 	if len(input) != 2 {
 		panic("mimc has fan-in 2")

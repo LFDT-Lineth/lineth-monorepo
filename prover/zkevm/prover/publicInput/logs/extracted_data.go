@@ -4,8 +4,9 @@ import (
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/column"
-	"github.com/consensys/linea-monorepo/prover/protocol/dedicated/projection"
+	"github.com/consensys/linea-monorepo/prover/protocol/distributed/pragmas"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
+	"github.com/consensys/linea-monorepo/prover/protocol/query"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	sym "github.com/consensys/linea-monorepo/prover/symbolic"
 	util "github.com/consensys/linea-monorepo/prover/zkevm/prover/publicInput/utilities"
@@ -17,8 +18,8 @@ import (
 // or the RollingHash stored in both Hi/Lo
 type ExtractedData struct {
 	Hi, Lo        ifaces.Column
-	filterArith   ifaces.Column
-	filterFetched ifaces.Column
+	FilterArith   ifaces.Column
+	FilterFetched ifaces.Column
 }
 
 // NewExtractedData initializes a NewExtractedData struct, registering columns that are not yet constrained.
@@ -28,10 +29,18 @@ func NewExtractedData(comp *wizard.CompiledIOP, size int, name string) Extracted
 		Hi: util.CreateCol(name, "EXTRACTED_HI", size, comp),
 		Lo: util.CreateCol(name, "EXTRACTED_LO", size, comp),
 		// register the filter on the arithmetization log columns
-		filterArith: util.CreateCol(name, "FILTER", size, comp),
+		FilterArith: util.CreateCol(name, "FILTER", size, comp),
 		// a filter on the columns with fetched data
-		filterFetched: util.CreateCol(name, "FILTER_ON_FETCHED", size, comp),
+		FilterFetched: util.CreateCol(name, "FILTER_ON_FETCHED", size, comp),
 	}
+
+	// Tagging of "fetched" column hints the compiler on how this column should
+	// be padded. Without it, it will assume that there are no padding
+	// informations. The "arith" columns are already "grouped" with the columns
+	// of the logdata module and the compiler will already infer that they are
+	// right padded.
+	pragmas.MarkRightPadded(res.FilterFetched)
+
 	return res
 }
 
@@ -54,7 +63,7 @@ func DefineExtractedData(comp *wizard.CompiledIOP, logCols LogColumns, sel Selec
 		0,
 		ifaces.QueryIDf("%s_LOGS_FILTER_CONSTRAINT_CHECK_LOG_OF_TYPE", GetName(logType)),
 		sym.Sub(
-			fetched.filterArith,
+			fetched.FilterArith,
 			sym.Mul(
 				IsLogType(logCols, logType),      // IsLogType returns either isLog3 or isLog4 depending on the case
 				GetSelectorCounter(sel, logType), // GetSelectorCounter returns 1 when one of the following holds:
@@ -75,8 +84,8 @@ func DefineExtractedData(comp *wizard.CompiledIOP, logCols LogColumns, sel Selec
 		0,
 		ifaces.QueryIDf("%s_LOGS_FILTER_ON_FETCHED_CONSTRAINT_MUST_BE_BINARY", GetName(logType)),
 		sym.Mul(
-			fetched.filterFetched,
-			sym.Sub(fetched.filterFetched, 1),
+			fetched.FilterFetched,
+			sym.Sub(fetched.FilterFetched, 1),
 		),
 	)
 
@@ -85,14 +94,19 @@ func DefineExtractedData(comp *wizard.CompiledIOP, logCols LogColumns, sel Selec
 		0,
 		ifaces.QueryIDf("%s_LOGS_FILTER_ON_FETCHED_CONSTRAINT_NO_0_TO_1", GetName(logType)),
 		sym.Sub(
-			fetched.filterFetched,
+			fetched.FilterFetched,
 			sym.Mul(
-				column.Shift(fetched.filterFetched, -1),
-				fetched.filterFetched),
+				column.Shift(fetched.FilterFetched, -1),
+				fetched.FilterFetched),
 		),
 	)
 	// a projection query to check that the messages are fetched correctly
-	projection.InsertProjection(comp, ifaces.QueryIDf("%s_LOGS_PROJECTION", GetName(logType)), fetchedTable, logsTable, fetched.filterFetched, fetched.filterArith)
+	comp.InsertProjection(
+		ifaces.QueryIDf("%s_LOGS_PROJECTION", GetName(logType)),
+		query.ProjectionInput{ColumnA: fetchedTable,
+			ColumnB: logsTable,
+			FilterA: fetched.FilterFetched,
+			FilterB: fetched.FilterArith})
 }
 
 // CheckBridgeAddress checks if a row does indeed contain the data corresponding to a the bridge address
@@ -171,6 +185,6 @@ func AssignExtractedData(run *wizard.ProverRuntime, lCols LogColumns, sel Select
 	run.AssignColumn(fetched.Hi.GetColID(), smartvectors.NewRegular(Hi))
 	run.AssignColumn(fetched.Lo.GetColID(), smartvectors.NewRegular(Lo))
 	// assign filters for original log columns and fetched ExtractedData
-	run.AssignColumn(fetched.filterArith.GetColID(), smartvectors.NewRegular(filterLogs))      // filter on LogColumns
-	run.AssignColumn(fetched.filterFetched.GetColID(), smartvectors.NewRegular(filterFetched)) // filter on fetched data
+	run.AssignColumn(fetched.FilterArith.GetColID(), smartvectors.NewRegular(filterLogs))      // filter on LogColumns
+	run.AssignColumn(fetched.FilterFetched.GetColID(), smartvectors.NewRegular(filterFetched)) // filter on fetched data
 }

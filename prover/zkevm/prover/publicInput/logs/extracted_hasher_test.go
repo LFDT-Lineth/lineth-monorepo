@@ -44,7 +44,7 @@ func TestLogsDataFetcher(t *testing.T) {
 				selectors                                          Selectors
 				fetchedL2L1, fetchedRollingMsg, fetchedRollingHash ExtractedData
 				hasherL2l1                                         LogHasher
-				rollingSelector                                    RollingSelector
+				rollingSelector                                    *RollingSelector
 			)
 
 			define := func(b *wizard.Builder) {
@@ -59,7 +59,7 @@ func TestLogsDataFetcher(t *testing.T) {
 				// initialize hashers
 				hasherL2l1 = NewLogHasher(b.CompiledIOP, colSize, "L2L1LOGS")
 				// initialize rolling selector
-				rollingSelector = NewRollingSelector(b.CompiledIOP, "ROLLING_SEL")
+				rollingSelector = NewRollingSelector(b.CompiledIOP, "ROLLING_SEL", fetchedRollingHash.Hi.Size(), fetchedRollingMsg.Hi.Size())
 				// define extracted data from logs and associated filters
 				DefineExtractedData(b.CompiledIOP, logCols, selectors, fetchedL2L1, L2L1)
 				DefineExtractedData(b.CompiledIOP, logCols, selectors, fetchedRollingMsg, RollingMsgNo)

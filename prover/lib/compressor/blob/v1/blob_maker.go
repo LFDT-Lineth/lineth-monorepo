@@ -24,7 +24,7 @@ const (
 	NbElemsEncodingBytes = 2
 
 	// These also impact the circuit constraints (compile / setup time)
-	MaxUncompressedBytes = 793125    // ~774.54KB defines the max size we can handle for a blob (uncompressed) input
+	MaxUncompressedBytes = 780000    // This defines the max we can do including some leeway with 2**27 constraints
 	MaxUsableBytes       = 32 * 4096 // defines the number of bytes available in a blob
 )
 

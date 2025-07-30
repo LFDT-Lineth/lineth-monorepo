@@ -15,7 +15,7 @@ import (
 
 // type alias to denote a wizard-compilation suite. This is used when calling
 // compile and provides internal parameters for the wizard package.
-type compilationSuite = []func(*wizard.CompiledIOP)
+type CompilationSuite = []func(*wizard.CompiledIOP)
 
 // List the options set to initialize the zkEVM
 type Settings struct {
@@ -28,6 +28,6 @@ type Settings struct {
 	Ecpair           ecpair.Limits
 	Sha2             sha2.Settings
 	PublicInput      publicInput.Settings
-	CompilationSuite compilationSuite
+	CompilationSuite CompilationSuite
 	Metadata         wizard.VersionMetadata
 }

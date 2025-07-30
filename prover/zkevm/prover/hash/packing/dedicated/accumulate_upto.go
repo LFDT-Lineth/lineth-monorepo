@@ -7,6 +7,7 @@ import (
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/column"
 	"github.com/consensys/linea-monorepo/prover/protocol/dedicated"
+	"github.com/consensys/linea-monorepo/prover/protocol/distributed/pragmas"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	sym "github.com/consensys/linea-monorepo/prover/symbolic"
@@ -23,7 +24,7 @@ type AccumulatorInputs struct {
 }
 
 /*
-accumulateUpToMax stores the intermediate columns for [AccumulateUpToMax] function.
+AccumulateUpToMaxCtx stores the intermediate columns for [AccumulateUpToMax] function.
 AccumulateUpToMax accumulates the values of column ColA (upward) up to the given max,
 
 after reaching the max, it restarts the accumulation.
@@ -35,27 +36,27 @@ The column IsMax indicate where the accumulator reaches the max,
 
 	it is a fully-constrained binary column.
 */
-type accumulateUpToMax struct {
+type AccumulateUpToMaxCtx struct {
 	Inputs AccumulatorInputs
 	// It is 1 when the accumulator reaches the max value.
 	IsMax    ifaces.Column
 	IsActive ifaces.Column
 	// the  ProverAction for IsZero()
-	pa wizard.ProverAction
+	PA wizard.ProverAction
 	// It accumulate the elements from ColA.
 	Accumulator ifaces.Column
 	// size of the accumulator
 	Size int
 }
 
-func AccumulateUpToMax(comp *wizard.CompiledIOP, maxValue int, colA, isActive ifaces.Column) *accumulateUpToMax {
+func AccumulateUpToMax(comp *wizard.CompiledIOP, maxValue int, colA, isActive ifaces.Column) *AccumulateUpToMaxCtx {
 	var (
 		uniqueID  = strconv.Itoa(len(comp.ListCommitments()))
 		size      = colA.Size()
-		createCol = common.CreateColFn(comp, "ACCUMULATE_UP_TO_MAX_"+uniqueID, size)
+		createCol = common.CreateColFn(comp, "ACCUMULATE_UP_TO_MAX_"+uniqueID, size, pragmas.RightPadded)
 	)
 
-	acc := &accumulateUpToMax{
+	acc := &AccumulateUpToMaxCtx{
 		Inputs: AccumulatorInputs{MaxValue: maxValue,
 			ColA: colA},
 		Accumulator: createCol("Accumulator"),
@@ -63,7 +64,7 @@ func AccumulateUpToMax(comp *wizard.CompiledIOP, maxValue int, colA, isActive if
 		Size:        size,
 	}
 
-	acc.IsMax, acc.pa = dedicated.IsZero(comp, sym.Sub(maxValue, acc.Accumulator))
+	acc.IsMax, acc.PA = dedicated.IsZero(comp, sym.Sub(maxValue, acc.Accumulator))
 
 	// Constraints over the accumulator
 	// Accumulator[last] =ColA[last]
@@ -95,7 +96,7 @@ func AccumulateUpToMax(comp *wizard.CompiledIOP, maxValue int, colA, isActive if
 
 }
 
-func (la *accumulateUpToMax) Run(run *wizard.ProverRuntime) {
+func (la *AccumulateUpToMaxCtx) Run(run *wizard.ProverRuntime) {
 
 	var (
 		column    = la.Inputs.ColA.GetColAssignment(run).IntoRegVecSaveAlloc()
@@ -109,7 +110,7 @@ func (la *accumulateUpToMax) Run(run *wizard.ProverRuntime) {
 
 		s = s + column[j].Uint64()
 		if s > uint64(targetVal) {
-			utils.Panic("Should not reach a value larger than target value")
+			utils.Panic("Should not reach a value larger than target value, target-value=%v s=%v:", targetVal, column[j].Uint64())
 		}
 		if s == uint64(targetVal) {
 			acc[j] = field.NewElement(s)
@@ -122,5 +123,5 @@ func (la *accumulateUpToMax) Run(run *wizard.ProverRuntime) {
 
 	run.AssignColumn(la.Accumulator.GetColID(), smartvectors.RightZeroPadded(acc, la.Size))
 	// assign IsMax
-	la.pa.Run(run)
+	la.PA.Run(run)
 }

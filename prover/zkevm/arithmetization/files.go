@@ -36,9 +36,26 @@ var zkevmStr string
 // contains information which can be used to cross-check the zkevm.bin file,
 // such as the git commit of the enclosing repository when it was built.
 func ReadZkevmBin(optConfig *mir.OptimisationConfig) (schema *air.Schema, metadata typed.Map, err error) {
+	return UnmarshalZkEVMBin([]byte(zkevmStr), optConfig)
+}
+
+// UnmarshalZkEVMBin parses and compiles a "zkevm.bin" buffered file into an
+// air.Schema, whilst applying whatever optimisations are requested.
+// Optimisations can impact the size of the generated schema and, consequently,
+// the size of the expanded trace.  For example, certain optimisations eliminate
+// unnecessary columns creates for multiplicative inverses.  However,
+// optimisations do not always improve overall performance, as they can increase
+// the complexity of other constraints.  The DEFAULT_OPTIMISATION_LEVEL is the
+// recommended level to use in general, whilst others are intended for testing
+// purposes (i.e. to try out new optimisations to see whether they help or
+// hinder, etc).
+//
+// This additionally extracts the metadata map from the zkevm.bin file.  This
+// contains information which can be used to cross-check the zkevm.bin file,
+// such as the git commit of the enclosing repository when it was built.
+func UnmarshalZkEVMBin(buf []byte, optConfig *mir.OptimisationConfig) (schema *air.Schema, metadata typed.Map, err error) {
 	var (
 		binf binfile.BinaryFile
-		buf  []byte = []byte(zkevmStr)
 	)
 	// TODO: why is only this one needed??
 	gob.Register(binfile.Attribute(&corset.SourceMap{}))

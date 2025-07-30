@@ -58,3 +58,10 @@ func (key *Key) MaxNumFieldHashable() int {
 func (key *Key) maxNumLimbsHashable() int {
 	return key.modulusDegree() * len(key.gnarkInternal.A)
 }
+
+// NumFieldPerPoly returns the number of field elements that can be hashed with
+// a single polynomial accumulation. The function returns 0 is a single field
+// requires more than one polynomial.
+func (p *Params) NumFieldPerPoly() int {
+	return (p.OutputSize() * p.LogTwoBound) / (8 * field.Bytes)
+}

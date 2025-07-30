@@ -37,7 +37,7 @@ func (ss *Module) Assign(run *wizard.ProverRuntime, traces [][]statemanager.Deco
 
 	assignmentBuilder := newStateSummaryAssignmentBuilder(ss, run)
 
-	if ss.arithmetizationLink != nil {
+	if ss.ArithmetizationLink != nil {
 		assignmentBuilder.arithmetizationStorage.Process()
 	}
 
@@ -48,7 +48,7 @@ func (ss *Module) Assign(run *wizard.ProverRuntime, traces [][]statemanager.Deco
 
 	assignmentBuilder.finalize(run)
 
-	if ss.arithmetizationLink != nil {
+	if ss.ArithmetizationLink != nil {
 		ss.assignArithmetizationLink(run)
 	}
 }

@@ -1,9 +1,12 @@
 package column
 
 import (
+	"strconv"
+
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
+
 	"github.com/consensys/linea-monorepo/prover/utils"
 )
 
@@ -84,11 +87,27 @@ func (n Natural) GetColAssignmentGnarkAt(run ifaces.GnarkRuntime, pos int) front
 // String returns the ID of the column as a string and implements [ifaces.Column]
 // and [github.com/consensys/linea-monorepo/prover/symbolic.Metadata]
 func (n Natural) String() string {
-	return string(n.GetColID())
+	return string(n.GetColID()) + "_" + strconv.Itoa(n.Round()) + "_" + strconv.Itoa(n.Size())
 }
 
 // Status returns the status of the column. It is only implemented for Natural
 // and not by the other composite columns.
 func (n Natural) Status() Status {
 	return n.store.Status(n.ID)
+}
+
+// SetPragma sets the pragma for a given column name.
+func (n Natural) SetPragma(pragma string, data any) {
+	n.store.SetPragma(n.ID, pragma, data)
+}
+
+// GetPragma returns the pragma for a given column name.
+func (n Natural) GetPragma(pragma string) (any, bool) {
+	return n.store.GetPragma(n.ID, pragma)
+}
+
+// GetStoreUnsafe returns the internal store pointer of the column. It is unsafe to
+// use.
+func (n Natural) GetStoreUnsafe() *Store {
+	return n.store
 }

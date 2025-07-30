@@ -8,10 +8,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"iter"
 	"math"
 	"math/big"
 	"os"
 	"reflect"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -98,7 +100,7 @@ func NextPowerOfTwo[T ~int64 | ~uint64 | ~uintptr | ~int | ~uint](in T) T {
 	return v
 }
 
-// PositiveMod returns the positive modulus
+// PositiveMod returns the positive modulus of [a] modulo [n]
 func PositiveMod[T ~int](a, n T) T {
 	res := a % n
 	if res < 0 {
@@ -172,7 +174,7 @@ func Digest(src io.Reader) (string, error) {
 }
 
 // RightPadWith copies `s` and returns a vector padded up to length `n` using
-// `padWith` as a filling value. The function panics if len(s) < n and returns
+// `padWith` as a filling value. The function panics if len(s) > n and returns
 // a copy of s if len(s) == n.
 func RightPadWith[T any](s []T, n int, padWith T) []T {
 	if len(s) > n {
@@ -444,6 +446,42 @@ func WriteToFile(path string, from io.WriterTo) error {
 	return errors.Join(err, f.Close())
 }
 
+// SortedKeysOf returns a sorted list of the keys of the map using less
+// to determine the order. Less is as in [sort.Slice]
+func SortedKeysOf[K comparable, V any](m map[K]V, less func(K, K) bool) []K {
+
+	keys := make([]K, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+
+	// Since the keys of a map are all unique, we don't have to worry
+	// about the duplicates and thus, we don't need a stable sort.
+	sort.Slice(keys, func(i, j int) bool {
+		return less(keys[i], keys[j])
+	})
+
+	return keys
+}
+
+// MapFunc maps f to every entries of the slice and return an array with the
+// result.
+func MapFunc[T, U any](slice []T, f func(T) U) []U {
+	res := make([]U, len(slice))
+	for i, v := range slice {
+		res[i] = f(v)
+	}
+	return res
+}
+
+// Ternary returns "a" if cond is true, else b
+func Ternary[T any](cond bool, ifTrue, ifFalse T) T {
+	if cond {
+		return ifTrue
+	}
+	return ifFalse
+}
+
 // SumFloat64: Calculates the sum of all values inside the float64 slice
 func SumFloat64(vals []float64) (sum float64) {
 	for _, val := range vals {
@@ -480,4 +518,115 @@ func CalculateMinAvgMax(values []float64) (min, avg, max float64) {
 func BytesToGiB(bytes uint64) float64 {
 	const bytesInGiB = 1024 * 1024 * 1024 // 1 GiB = 1024^3 bytes
 	return float64(bytes) / bytesInGiB
+}
+
+// ChainIterators concatenates iterators into a single iterator
+func ChainIterators[V any](iters ...iter.Seq[V]) iter.Seq[V] {
+	return func(yield func(V) bool) {
+		for _, iter := range iters {
+			for v := range iter {
+				if !yield(v) {
+					return
+				}
+			}
+		}
+	}
+}
+
+// ConstantIterator returns an iterator that always returns the same value
+// n times.
+func ConstantIterator[T any](value T, n int) iter.Seq[T] {
+	return func(yield func(T) bool) {
+		for i := 0; i < n; i++ {
+			if !yield(value) {
+				return
+			}
+		}
+	}
+}
+
+// SpliceExact splits a slice into a slice of slices of size n
+func SpliceExact[T any](slice []T, n int) [][]T {
+
+	if len(slice)%n != 0 {
+		panic("slice length must be a multiple of n")
+	}
+
+	slices := make([][]T, 0, len(slice)/n)
+	for i := 0; i < len(slice); i += n {
+		slices = append(slices, slice[i:i+n])
+	}
+	return slices
+}
+
+// SetDiff returns the difference between two sets. The elements are returned
+// in non-deterministic order. The function returns aExtra for the elements
+// in a but not in b and bExtra for the elements in b but not in a.
+func SetDiff[T comparable](a, b []T) (aExtra, bExtra []T) {
+
+	mset := make(map[T]int, len(a))
+
+	for _, av := range a {
+		if _, ok := mset[av]; !ok {
+			mset[av] = 0
+		}
+		mset[av]++
+	}
+
+	for _, bv := range b {
+		if _, ok := mset[bv]; !ok {
+			mset[bv] = 0
+		}
+		mset[bv]--
+	}
+
+	for v, cnt := range mset {
+		if cnt > 0 {
+			aExtra = append(aExtra, v)
+			// Importantly, we want to ditch the "zeroes" so that they don't end up
+			// in bExtra.
+		} else if cnt < 0 {
+			bExtra = append(bExtra, v)
+		}
+	}
+
+	return aExtra, bExtra
+}
+
+// NextMultipleOf returns the next multiple of "multiple" for "n".
+// For instance n=8 and multiple=5 returns 10.
+func NextMultipleOf(n, multiple int) int {
+	return multiple * ((n + multiple - 1) / multiple)
+}
+
+// FilterInSliceWithSet returns the entries of slice that are in the set.
+// The returned parameter "in" contains the entries found in the set and
+// the returned parameter "out" contains the entries not found in the set.
+func FilterInSliceWithMap[T comparable](slice []T, set map[T]struct{}) (in []T, out []T) {
+	for _, v := range slice {
+		if _, ok := set[v]; ok {
+			in = append(in, v)
+		} else {
+			out = append(out, v)
+		}
+	}
+	return in, out
+}
+
+// GrowSliceSize grows the size of a slice to the provided size. The function
+// does so by appending "zero" elements of the slice. If the slice is already
+// large enough, the function does nothing.
+func GrowSliceSize[T any](slice []T, size int) []T {
+
+	// Note: this clause is not necessary as the loop will just be skipped if
+	// the slice is already large enough.
+	if len(slice) >= size {
+		return slice
+	}
+
+	for i := len(slice); i < size; i++ {
+		var t T
+		slice = append(slice, t)
+	}
+	return slice
 }

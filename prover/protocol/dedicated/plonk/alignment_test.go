@@ -29,6 +29,14 @@ func TestAlignment(t *testing.T) {
 	// plonk in wizard is deferred, so we need to capture the runtime to be able
 	// to verify concatenated PI column assignment
 	var runLeaked *wizard.ProverRuntime
+	var inputFillerKey = "alignment-test-input-filler"
+
+	RegisterInputFiller(
+		inputFillerKey,
+		func(circuitInstance, inputIndex int) field.Element {
+			return field.NewElement(uint64(inputIndex + 1))
+		})
+
 	cmp := wizard.Compile(func(build *wizard.Builder) {
 		toAlign = &CircuitAlignmentInput{
 			Name:               "ALIGNMENT_TEST",
@@ -36,7 +44,7 @@ func TestAlignment(t *testing.T) {
 			DataToCircuit:      ct.GetCommit(build, "DATA"),
 			DataToCircuitMask:  ct.GetCommit(build, "DATA_MASK"),
 			NbCircuitInstances: nbCircuitInstances,
-			InputFiller:        func(circuitInstance, inputIndex int) field.Element { return field.NewElement(uint64(inputIndex + 1)) },
+			InputFillerKey:     inputFillerKey,
 		}
 		alignment = DefineAlignment(build.CompiledIOP, toAlign)
 	}, dummy.Compile)
@@ -48,8 +56,7 @@ func TestAlignment(t *testing.T) {
 
 	ct.CheckAssignmentColumn(runLeaked, "IS_ACTIVE", alignment.IsActive)
 	ct.CheckAssignmentColumn(runLeaked, "CIRCUIT_INPUT", alignment.CircuitInput)
-	ct.CheckAssignmentColumn(runLeaked, "FULL_CIRCUIT_INPUT_MASK", alignment.FullCircuitInputMask)
-	ct.CheckAssignmentColumn(runLeaked, "ACTUAL_CIRCUIT_INPUT_MASK", alignment.ActualCircuitInputMask)
+	ct.CheckAssignmentColumn(runLeaked, "ACTUAL_CIRCUIT_INPUT_MASK", alignment.ActualCircuitInputMask.Natural)
 	if err := wizard.Verify(cmp, proof); err != nil {
 		t.Fatal("proof failed", err)
 	}

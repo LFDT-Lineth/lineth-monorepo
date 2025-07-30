@@ -15,7 +15,6 @@ import (
 	"github.com/consensys/linea-monorepo/prover/crypto/ringsis"
 	"github.com/consensys/linea-monorepo/prover/crypto/state-management/smt"
 	"github.com/consensys/linea-monorepo/prover/utils"
-	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -161,7 +160,7 @@ func gnarkComputeLagrangeAtZ(api frontend.API, z frontend.Variable, gen fr.Eleme
 // Checks that p is a polynomial of degree < cardinality/rate
 // * p polynomial of size cardinality
 // * genInv inverse of the generator of the subgroup of size cardinality
-// * rate rate of the RS code
+// * rate of the RS code
 func assertIsCodeWord(api frontend.API, p []frontend.Variable, genInv fr.Element, cardinality, rate uint64) error {
 
 	if uint64(len(p)) != cardinality {
@@ -211,7 +210,7 @@ type GProof struct {
 
 // Gnark params
 type GParams struct {
-	Key         ringsis.Key
+	Key         *ringsis.Key
 	HasherFunc  func(frontend.API) (hash.FieldHasher, error)
 	NoSisHasher func(frontend.API) (hash.FieldHasher, error)
 }
@@ -231,7 +230,6 @@ func GnarkVerifyCommon(
 ) ([][]frontend.Variable, error) {
 
 	// check the linear combination is a codeword
-	logrus.Infof("Checking the code membership")
 	api.Compiler().Defer(func(api frontend.API) error {
 		return assertIsCodeWord(
 			api,
@@ -243,7 +241,6 @@ func GnarkVerifyCommon(
 	})
 
 	// Check the consistency of Ys and proof.Linearcombination
-	logrus.Infof("Checking the consistency between ys and the linear combination")
 	yjoined := utils.Join(ys...)
 	alphaY := gnarkInterpolate(
 		api,

@@ -11,7 +11,7 @@ import (
 	"github.com/consensys/linea-monorepo/prover/crypto/keccak"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/dummy"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/innerproduct"
-	"github.com/consensys/linea-monorepo/prover/protocol/compiler/lookup"
+	"github.com/consensys/linea-monorepo/prover/protocol/compiler/logderivativesum"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/permutation"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/specialqueries"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
@@ -23,7 +23,7 @@ func keccakfTestingModule(
 	maxNumKeccakf int,
 ) (
 	define wizard.DefineFunc,
-	prover func(t *testing.T, traces keccak.PermTraces) wizard.ProverStep,
+	prover func(t *testing.T, traces keccak.PermTraces) wizard.MainProverStep,
 ) {
 
 	mod := &Module{}
@@ -39,7 +39,7 @@ func keccakfTestingModule(
 	prover = func(
 		t *testing.T,
 		traces keccak.PermTraces,
-	) wizard.ProverStep {
+	) wizard.MainProverStep {
 		return func(run *wizard.ProverRuntime) {
 			// Assigns the module
 			mod.Assign(run, traces)
@@ -56,8 +56,8 @@ func keccakfTestingModule(
 			for x := 0; x < 5; x++ {
 				for y := 0; y < 5; y++ {
 					z := mod.
-						piChiIota.
-						aIotaBaseB[x][y].
+						PiChiIota.
+						AIotaBaseB[x][y].
 						GetColAssignmentAt(run, pos)
 					extractedState[x][y] = BaseXToU64(z, &BaseBFr, 1)
 				}
@@ -122,9 +122,9 @@ func BenchmarkDataTransferModule(b *testing.B) {
 					define,
 					specialqueries.RangeProof,
 					specialqueries.CompileFixedPermutations,
-					permutation.CompileGrandProduct,
-					lookup.CompileLogDerivative,
-					innerproduct.Compile,
+					permutation.CompileViaGrandProduct,
+					logderivativesum.CompileLookups,
+					innerproduct.Compile(),
 				)
 				numCells = 0
 				numCols  = 0

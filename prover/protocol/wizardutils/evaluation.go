@@ -5,52 +5,14 @@ import (
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/coin"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
-	"github.com/consensys/linea-monorepo/prover/protocol/variables"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	"github.com/consensys/linea-monorepo/prover/symbolic"
 )
 
-// EvalExprColumn resolves an expression to a column assignment. The expression
-// must be converted to a board prior to evaluating the expression.
-//
-//   - If the expression does not uses ifaces.Column as metadata, the function
-//     will panic.
-//
-//   - If the expression contains several columns and they don't contain all
-//     have the same size.
-func EvalExprColumn(run *wizard.ProverRuntime, board symbolic.ExpressionBoard) smartvectors.SmartVector {
-
-	var (
-		metadata = board.ListVariableMetadata()
-		inputs   = make([]smartvectors.SmartVector, len(metadata))
-		length   = ExprIsOnSameLengthHandles(&board)
-	)
-
-	// Attempt to recover the size of the
-	for i := range inputs {
-		switch m := metadata[i].(type) {
-		case ifaces.Column:
-			inputs[i] = m.GetColAssignment(run)
-		case coin.Info:
-			v := run.GetRandomCoinField(m.Name)
-			inputs[i] = smartvectors.NewConstant(v, length)
-		case ifaces.Accessor:
-			v := m.GetVal(run)
-			inputs[i] = smartvectors.NewConstant(v, length)
-		case variables.PeriodicSample:
-			v := m.EvalCoset(length, 0, 1, false)
-			inputs[i] = v
-		case variables.X:
-			v := m.EvalCoset(length, 0, 1, false)
-			inputs[i] = v
-		}
-	}
-
-	return board.Evaluate(inputs)
-}
-
-// returns the symbolic expression of a column obtained as a random linear combinations of differents handles
-// without committing to the column itself
+// RandLinCombColSymbolic generates a symbolic expression representing a random
+// linear combination of columns (hs) using a random coin value (x). It converts
+// each column to a symbolic variable and returns a polynomial expression with
+// the coin value and each columns as the variables.
 func RandLinCombColSymbolic(x coin.Info, hs []ifaces.Column) *symbolic.Expression {
 	cols := make([]*symbolic.Expression, len(hs))
 	for c := range cols {
@@ -60,8 +22,13 @@ func RandLinCombColSymbolic(x coin.Info, hs []ifaces.Column) *symbolic.Expressio
 	return expr
 }
 
-// return the runtime assignments of a linear combination column
-// that is computed on the fly from the columns stored in hs
+// RandLinCombColAssignment computes the runtime assignment of a linear combination
+// of columns. It takes a wizard.ProverRuntime, a random coin value, and a slice of
+// columns as input. The function iteratively multiplies each column's assignment
+// by a cumulative product of the coin value and adds the results to a running total,
+// effectively computing a weighted sum of the columns. The weights are powers of the
+// coin value. The function returns the resulting linear combination as a
+// [smartvectors.SmartVector].
 func RandLinCombColAssignment(run *wizard.ProverRuntime, coinVal field.Element, hs []ifaces.Column) smartvectors.SmartVector {
 	var colTableWit smartvectors.SmartVector
 	var witnessCollapsed smartvectors.SmartVector

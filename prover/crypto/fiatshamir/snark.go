@@ -5,10 +5,10 @@ import (
 
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/std/hash"
-	"github.com/consensys/gnark/std/hash/mimc"
-	"github.com/consensys/linea-monorepo/prover/crypto/mimc/gkrmimc"
+	locmimc "github.com/consensys/linea-monorepo/prover/crypto/mimc"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/utils"
+	"golang.org/x/crypto/blake2b"
 )
 
 // GnarkFiatShamir mirrors [State] in a gnark circuit. It provides analogous
@@ -28,23 +28,13 @@ type GnarkFiatShamir struct {
 // NewGnarkFiatShamir creates a [GnarkFiatShamir] object. The function accepts
 // an optional [gkrmimc.HasherFactory] object as input. This is expected to be
 // used in the scope of a [frontend.Define] function.
-func NewGnarkFiatShamir(api frontend.API, factory *gkrmimc.HasherFactory) *GnarkFiatShamir {
+func NewGnarkFiatShamir(api frontend.API, factory locmimc.HasherFactory) *GnarkFiatShamir {
 
-	var hasher hash.StateStorer
-	if factory != nil {
-		h := factory.NewHasher()
-		hasher = h
-	} else {
-		h, err := mimc.NewMiMC(api)
-		if err != nil {
-			// There is no real case where this can happen. The only case I
-			// can think of is when the function is called outside of the scope
-			// of a Define function and `api == nil` but then, there is no way
-			// the user can do anything useful with this function anyway.
-			panic(err)
-		}
-		hasher = &h
+	if factory == nil {
+		factory = &locmimc.BasicHasherFactory{Api: api}
 	}
+
+	hasher := factory.NewHasher()
 
 	return &GnarkFiatShamir{
 		hasher: hasher,
@@ -59,6 +49,7 @@ func (fs *GnarkFiatShamir) SetState(state []frontend.Variable) {
 	case interface {
 		SetState([]frontend.Variable) error
 	}:
+		fs.hasher.Reset()
 		if err := hsh.SetState(state); err != nil {
 			panic(err)
 		}
@@ -67,7 +58,8 @@ func (fs *GnarkFiatShamir) SetState(state []frontend.Variable) {
 	}
 }
 
-// State mutates the fiat-shamir state of
+// State mutates returns the state of the fiat-shamir hasher. The
+// function will also updates its own state with unprocessed inputs.
 func (fs *GnarkFiatShamir) State() []frontend.Variable {
 
 	switch hsh := fs.hasher.(type) {
@@ -163,7 +155,31 @@ func (fs *GnarkFiatShamir) RandomManyIntegers(num, upperBound int) []frontend.Va
 
 		fs.safeguardUpdate()
 	}
+}
 
+// RandomFieldFromSeed generates a new field element from the given seed
+// and a name. The 'fs' is left unchanged by the call (aside from the
+// underlying [frontend.API]).
+func (fs *GnarkFiatShamir) RandomFieldFromSeed(seed frontend.Variable, name string) frontend.Variable {
+
+	// The first step encodes the 'name' into a single field element. The
+	// field element is obtained by hashing and taking the modulo of the
+	// result to fit into a field element.
+	nameBytes := []byte(name)
+	hasher, _ := blake2b.New256(nil)
+	hasher.Write(nameBytes)
+	nameBytes = hasher.Sum(nil)
+	nameField := new(field.Element).SetBytes(nameBytes)
+
+	// The seed is then obtained by calling the compression function over
+	// the seed and the encoded name.
+	oldState := fs.State()
+	defer fs.SetState(oldState)
+
+	fs.SetState([]frontend.Variable{seed})
+	fs.hasher.Write(nameField)
+
+	return fs.hasher.Sum()
 }
 
 // safeguardUpdate updates the state as a safeguard by appending a field element

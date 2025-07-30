@@ -20,10 +20,10 @@ func (b *builder) Compile() (constraint.ConstraintSystem, error) {
 	return makeCS(b.zkevm), nil
 }
 
-// builds the circuit
+// Makes the constraint system for the execution circuit
 func makeCS(z *zkevm.ZkEvm) constraint.ConstraintSystem {
-	circuit := Allocate(z)
 
+	circuit := Allocate(z)
 	scs, err := frontend.Compile(fr.Modulus(), scs.NewBuilder, &circuit, frontend.WithCapacity(1<<24))
 	if err != nil {
 		panic(err)

@@ -10,6 +10,7 @@ import (
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/cleanup"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/dummy"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/mimc"
+	"github.com/consensys/linea-monorepo/prover/protocol/compiler/plonkinwizard"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/selfrecursion"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/vortex"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
@@ -23,6 +24,18 @@ import (
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/modexp"
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/statemanager"
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/statemanager/accumulator"
+)
+
+const (
+	NbInputPerInstancesEcAdd           = 28
+	NbInputPerInstancesEcMul           = 6
+	NbInputPerInstanceEcPairMillerLoop = 1
+	NbInputPerInstanceEcPairFinalExp   = 1
+	NbInputPerInstanceEcPairG2Check    = 1
+	NbInputPerInstanceSha2Block        = 3
+	NbInputPerInstanceModexp256        = 10
+	NbInputPerInstanceModexp4096       = 1
+	NbInputPerInstanceEcdsa            = 4
 )
 
 var (
@@ -43,13 +56,14 @@ var (
 	// level target.
 	sisInstance = ringsis.Params{LogTwoBound: 16, LogTwoDegree: 6}
 
-	dummyCompilationSuite = compilationSuite{dummy.CompileAtProverLvl}
+	dummyCompilationSuite = CompilationSuite{dummy.CompileAtProverLvl()}
 
 	// This is the compilation suite in use for the full prover
-	fullCompilationSuite = compilationSuite{
+	fullCompilationSuite = CompilationSuite{
 		// logdata.Log("initial-wizard"),
 		mimc.CompileMiMC,
-		compiler.Arcane(1<<10, 1<<19, false),
+		plonkinwizard.Compile,
+		compiler.Arcane(compiler.WithTargetColSize(1 << 19)),
 		vortex.Compile(
 			2,
 			vortex.ForceNumOpenedColumns(256),
@@ -62,7 +76,7 @@ var (
 		// logdata.Log("post-selfrecursion-1"),
 		cleanup.CleanUp,
 		mimc.CompileMiMC,
-		compiler.Arcane(1<<10, 1<<18, false),
+		compiler.Arcane(compiler.WithTargetColSize(1 << 18)),
 		vortex.Compile(
 			2,
 			vortex.ForceNumOpenedColumns(256),
@@ -75,7 +89,7 @@ var (
 		// logdata.Log("post-selfrecursion-2"),
 		cleanup.CleanUp,
 		mimc.CompileMiMC,
-		compiler.Arcane(1<<10, 1<<16, false),
+		compiler.Arcane(compiler.WithTargetColSize(1 << 16)),
 		vortex.Compile(
 			8,
 			vortex.ForceNumOpenedColumns(64),
@@ -88,11 +102,10 @@ var (
 		// logdata.Log("post-selfrecursion-3"),
 		cleanup.CleanUp,
 		mimc.CompileMiMC,
-		compiler.Arcane(1<<10, 1<<13, false),
+		compiler.Arcane(compiler.WithTargetColSize(1 << 13)),
 		vortex.Compile(
 			8,
 			vortex.ForceNumOpenedColumns(64),
-			vortex.ReplaceSisByMimc(),
 		),
 		// logdata.Log("post-vortex-4"),
 	}
@@ -142,7 +155,7 @@ func FullZkEvmSetupLarge(tl *config.TracesLimits, cfg *config.Config) *ZkEvm {
 // FullZKEVMWithSuite returns a compiled zkEVM with the given compilation suite.
 // It can be used to benchmark the compilation time of the zkEVM and helps with
 // performance optimization.
-func FullZKEVMWithSuite(tl *config.TracesLimits, suite compilationSuite, cfg *config.Config) *ZkEvm {
+func FullZKEVMWithSuite(tl *config.TracesLimits, suite CompilationSuite, cfg *config.Config) *ZkEvm {
 
 	// @Alex: only set mandatory parameters here. aka, the one that are not
 	// actually feature-gated.
@@ -171,33 +184,36 @@ func FullZKEVMWithSuite(tl *config.TracesLimits, suite compilationSuite, cfg *co
 		Ecdsa: ecdsa.Settings{
 			MaxNbEcRecover:     tl.PrecompileEcrecoverEffectiveCalls,
 			MaxNbTx:            tl.BlockTransactions,
-			NbInputInstance:    4,
-			NbCircuitInstances: utils.DivCeil(tl.PrecompileEcrecoverEffectiveCalls+tl.BlockTransactions, 4),
+			NbInputInstance:    NbInputPerInstanceEcdsa,
+			NbCircuitInstances: utils.DivCeil(tl.PrecompileEcrecoverEffectiveCalls+tl.BlockTransactions, NbInputPerInstanceEcdsa),
 		},
 		Modexp: modexp.Settings{
-			MaxNbInstance256:  tl.PrecompileModexpEffectiveCalls,
-			MaxNbInstance4096: 1,
+			MaxNbInstance256:                tl.PrecompileModexpEffectiveCalls,
+			MaxNbInstance4096:               tl.PrecompileModexpEffectiveCalls4096,
+			NbInstancesPerCircuitModexp256:  NbInputPerInstanceModexp256,
+			NbInstancesPerCircuitModexp4096: NbInputPerInstanceModexp4096,
 		},
 		Ecadd: ecarith.Limits{
 			// 14 was found the right number to have just under 2^19 constraints
 			// per circuit.
-			NbInputInstances:   utils.DivCeil(tl.PrecompileEcaddEffectiveCalls, 28),
-			NbCircuitInstances: 28,
+			NbCircuitInstances: utils.DivCeil(tl.PrecompileEcaddEffectiveCalls, NbInputPerInstancesEcAdd),
+			NbInputInstances:   NbInputPerInstancesEcAdd,
 		},
 		Ecmul: ecarith.Limits{
-			NbCircuitInstances: utils.DivCeil(tl.PrecompileEcmulEffectiveCalls, 6),
-			NbInputInstances:   6,
+			NbCircuitInstances: utils.DivCeil(tl.PrecompileEcmulEffectiveCalls, NbInputPerInstancesEcMul),
+			NbInputInstances:   NbInputPerInstancesEcMul,
 		},
 		Ecpair: ecpair.Limits{
-			NbMillerLoopInputInstances:   1,
-			NbMillerLoopCircuits:         tl.PrecompileEcpairingMillerLoops,
-			NbFinalExpInputInstances:     1,
-			NbFinalExpCircuits:           tl.PrecompileEcpairingEffectiveCalls,
-			NbG2MembershipInputInstances: 6,
-			NbG2MembershipCircuits:       utils.DivCeil(tl.PrecompileEcpairingG2MembershipCalls, 6),
+			NbMillerLoopInputInstances:   NbInputPerInstanceEcPairMillerLoop,
+			NbMillerLoopCircuits:         utils.DivCeil(tl.PrecompileEcpairingMillerLoops, NbInputPerInstanceEcPairMillerLoop),
+			NbFinalExpInputInstances:     NbInputPerInstanceEcPairFinalExp,
+			NbFinalExpCircuits:           utils.DivCeil(tl.PrecompileEcpairingEffectiveCalls, NbInputPerInstanceEcPairFinalExp),
+			NbG2MembershipInputInstances: NbInputPerInstanceEcPairG2Check,
+			NbG2MembershipCircuits:       utils.DivCeil(tl.PrecompileEcpairingG2MembershipCalls, NbInputPerInstanceEcPairG2Check),
 		},
 		Sha2: sha2.Settings{
-			MaxNumSha2F: tl.PrecompileSha2Blocks,
+			MaxNumSha2F:                    tl.PrecompileSha2Blocks,
+			NbInstancesPerCircuitSha2Block: NbInputPerInstanceSha2Block,
 		},
 	}
 

@@ -1,6 +1,8 @@
 package common
 
 import (
+	"fmt"
+
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
@@ -8,7 +10,6 @@ import (
 	"github.com/consensys/linea-monorepo/prover/utils"
 	"github.com/consensys/linea-monorepo/prover/utils/exit"
 	"github.com/consensys/linea-monorepo/prover/utils/types"
-	"github.com/sirupsen/logrus"
 )
 
 // VectorBuilder is a convenience structure to assign columns by appending
@@ -26,7 +27,9 @@ type VectorBuilder struct {
 func NewVectorBuilder(col ifaces.Column) *VectorBuilder {
 	return &VectorBuilder{
 		column: col,
-		slice:  make([]field.Element, 0, col.Size()),
+		// The size is always divided by 16 because 99% of the time this
+		// will be more than needed. It make sense to reduce it.
+		slice: make([]field.Element, 0, col.Size()/16),
 	}
 }
 
@@ -157,9 +160,12 @@ func (vb *VectorBuilder) PushAddr(addr types.EthAddress) {
 func (vb *VectorBuilder) PadAndAssign(run *wizard.ProverRuntime, v ...field.Element) {
 
 	if len(vb.slice) > vb.column.Size() {
-		logrus.Errorf("the slice size %v is larger than the column size %v", len(vb.slice), vb.column.Size())
 		// We print the stack to help debugging
-		exit.OnLimitOverflow()
+		exit.OnLimitOverflow(
+			vb.column.Size(),
+			len(vb.slice),
+			fmt.Errorf("the slice size %v is larger than the column size %v", len(vb.slice), vb.column.Size()),
+		)
 	}
 
 	paddingValue := field.Zero()
@@ -192,4 +198,10 @@ func (vb *VectorBuilder) PushSliceF(s []field.Element) {
 // it overwrites the last push
 func (vb *VectorBuilder) OverWriteInt(n int) {
 	vb.slice[len(vb.slice)-1] = field.NewElement(uint64(n))
+}
+
+// Last returns the last inserted value. Will panic if the vector is empty.
+// Does not mutate the receiver.
+func (vb *VectorBuilder) Last() field.Element {
+	return vb.slice[len(vb.slice)-1]
 }

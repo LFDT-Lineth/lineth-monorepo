@@ -5,6 +5,7 @@ import (
 
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
+	"github.com/consensys/linea-monorepo/prover/protocol/distributed/pragmas"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	sym "github.com/consensys/linea-monorepo/prover/symbolic"
@@ -16,10 +17,10 @@ import (
 type cleaningInputs struct {
 	// It stores Limb-column that is subject to cleaning,
 	// given the meaningful number of bytes in nByte-column.
-	imported Importation
-	// lookup table used for storing powers of 2^8,
+	Imported Importation
+	// Lookup table used for storing powers of 2^8,
 	// removing the redundant zeroes from Limbs.
-	lookup lookUpTables
+	Lookup lookUpTables
 	// Name gives additional context for the input name
 	Name string
 }
@@ -30,21 +31,21 @@ type cleaningCtx struct {
 	Inputs *cleaningInputs
 	// The column storing the result of the cleaning
 	CleanLimb ifaces.Column
-	// nbZeros =  MaxBytes - imported.NBytes
-	nbZeros ifaces.Column
-	// powersNbZeros represent powers of nbZeroes;
-	//  powersNbZeros = 2^(8 * nbZeroes)
-	powersNbZeros ifaces.Column
+	// NbZeros =  MaxBytes - imported.NBytes
+	NbZeros ifaces.Column
+	// PowersNbZeros represent powers of nbZeroes;
+	//  PowersNbZeros = 2^(8 * nbZeroes)
+	PowersNbZeros ifaces.Column
 }
 
 // NewClean imposes the constraint for cleaning the limbs.
 func NewClean(comp *wizard.CompiledIOP, inp cleaningInputs) cleaningCtx {
 
-	createCol := common.CreateColFn(comp, CLEANING+"_"+inp.Name, inp.imported.Limb.Size())
+	createCol := common.CreateColFn(comp, CLEANING+"_"+inp.Name, inp.Imported.Limb.Size(), pragmas.RightPadded)
 	ctx := cleaningCtx{
 		CleanLimb:     createCol("CleanLimb"),
-		nbZeros:       createCol("NbZeroes"),
-		powersNbZeros: createCol("PowersNbZeroes"),
+		NbZeros:       createCol("NbZeroes"),
+		PowersNbZeros: createCol("PowersNbZeroes"),
 		Inputs:        &inp,
 	}
 
@@ -54,10 +55,10 @@ func NewClean(comp *wizard.CompiledIOP, inp cleaningInputs) cleaningCtx {
 	ctx.csNbZeros(comp)
 
 	// impose the cleaning of limbs
-	limb := sym.Mul(ctx.powersNbZeros, ctx.CleanLimb)
+	limb := sym.Mul(ctx.PowersNbZeros, ctx.CleanLimb)
 
 	comp.InsertGlobal(0, ifaces.QueryIDf("LimbCleaning_%v", inp.Name),
-		sym.Sub(limb, inp.imported.Limb),
+		sym.Sub(limb, inp.Imported.Limb),
 	)
 
 	return ctx
@@ -69,23 +70,23 @@ func NewClean(comp *wizard.CompiledIOP, inp cleaningInputs) cleaningCtx {
 // -  nbZeros = 16 - nByte
 func (ctx cleaningCtx) csNbZeros(comp *wizard.CompiledIOP) {
 	var (
-		isActive = ctx.Inputs.imported.IsActive
-		nByte    = ctx.Inputs.imported.NByte
+		isActive = ctx.Inputs.Imported.IsActive
+		nByte    = ctx.Inputs.Imported.NByte
 	)
 
 	// Equivalence of "PowersNbZeros" with "2^(NbZeros * 8)"
 	comp.InsertInclusion(0, ifaces.QueryIDf("NumToPowers_%v", ctx.Inputs.Name),
-		[]ifaces.Column{ctx.Inputs.lookup.colNumber, ctx.Inputs.lookup.colPowers},
-		[]ifaces.Column{ctx.nbZeros, ctx.powersNbZeros},
+		[]ifaces.Column{ctx.Inputs.Lookup.ColNumber, ctx.Inputs.Lookup.ColPowers},
+		[]ifaces.Column{ctx.NbZeros, ctx.PowersNbZeros},
 	)
-	commonconstraints.MustZeroWhenInactive(comp, isActive, ctx.nbZeros)
+	commonconstraints.MustZeroWhenInactive(comp, isActive, ctx.NbZeros)
 
 	//  The constraint for nbZeros = (MaxBytes - NByte)* isActive
 	nbZeros := sym.Sub(MAXNBYTE, nByte)
 	comp.InsertGlobal(0, ifaces.QueryIDf("NB_ZEROES_%v", ctx.Inputs.Name),
 		sym.Mul(
 			sym.Sub(
-				nbZeros, ctx.nbZeros),
+				nbZeros, ctx.NbZeros),
 			isActive),
 	)
 }
@@ -100,8 +101,8 @@ func (ctx *cleaningCtx) assignCleanLimbs(run *wizard.ProverRuntime) {
 
 	var (
 		cleanLimbs = common.NewVectorBuilder(ctx.CleanLimb)
-		limbs      = ctx.Inputs.imported.Limb.GetColAssignment(run).IntoRegVecSaveAlloc()
-		nByte      = ctx.Inputs.imported.NByte.GetColAssignment(run).IntoRegVecSaveAlloc()
+		limbs      = ctx.Inputs.Imported.Limb.GetColAssignment(run).IntoRegVecSaveAlloc()
+		nByte      = ctx.Inputs.Imported.NByte.GetColAssignment(run).IntoRegVecSaveAlloc()
 	)
 
 	// populate cleanLimbs
@@ -121,9 +122,9 @@ func (ctx *cleaningCtx) assignCleanLimbs(run *wizard.ProverRuntime) {
 func (ctx *cleaningCtx) assignNbZeros(run *wizard.ProverRuntime) {
 	// populate nbZeros and powersNbZeros
 	var (
-		nbZeros       = *common.NewVectorBuilder(ctx.nbZeros)
-		powersNbZeros = common.NewVectorBuilder(ctx.powersNbZeros)
-		nByte         = smartvectors.Window(ctx.Inputs.imported.NByte.GetColAssignment(run))
+		nbZeros       = *common.NewVectorBuilder(ctx.NbZeros)
+		powersNbZeros = common.NewVectorBuilder(ctx.PowersNbZeros)
+		nByte         = smartvectors.Window(ctx.Inputs.Imported.NByte.GetColAssignment(run))
 	)
 
 	fr16 := field.NewElement(16)
@@ -154,8 +155,8 @@ func (ctx *cleaningCtx) assignNbZeros(run *wizard.ProverRuntime) {
 // newCleaningInputs constructs CleaningInputs
 func newCleaningInputs(imported Importation, lookup lookUpTables, name string) cleaningInputs {
 	return cleaningInputs{
-		imported: imported,
-		lookup:   lookup,
+		Imported: imported,
+		Lookup:   lookup,
 		Name:     name,
 	}
 }

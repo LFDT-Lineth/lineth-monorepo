@@ -30,7 +30,7 @@ const (
 	packingSizeLastU64 = 64 - 256 + packingSizeU256
 
 	// These also impact the circuit constraints (compile / setup time)
-	MaxUncompressedBytes = 800_000   // defines the max size we can handle for a blob (uncompressed) input
+	MaxUncompressedBytes = 780_000   // defines the max size we can handle for a blob (uncompressed) input
 	MaxUsableBytes       = 32 * 4096 // TODO @gbotrel confirm this value // defines the number of bytes available in a blob
 )
 

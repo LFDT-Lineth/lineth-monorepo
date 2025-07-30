@@ -3,6 +3,8 @@
 package packing
 
 import (
+	"fmt"
+
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/column/verifiercol"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
@@ -115,25 +117,25 @@ func (pck *Packing) Run(run *wizard.ProverRuntime) {
 // it stores the inputs /outputs of spaghettifier used in the Packing module.
 type spaghettiCtx struct {
 	// ContentSpaghetti
-	decLimbSp, decLenSp, decLenPowerSp ifaces.Column
-	newHashSp                          ifaces.Column
+	DecLimbSp, DecLenSp, DecLenPowerSp ifaces.Column
+	NewHashSp                          ifaces.Column
 	// FilterSpaghetti
-	filterSpaghetti ifaces.Column
-	pa              wizard.ProverAction
-	spaghettiSize   int
+	FilterSpaghetti ifaces.Column
+	PA              wizard.ProverAction
+	SpaghettiSize   int
 }
 
 func spaghettiMaker(comp *wizard.CompiledIOP, decomposed decomposition, isNewHash ifaces.Column) spaghettiCtx {
 
 	var (
 		isNewHashTable []ifaces.Column
-		size           = decomposed.size
-		zeroCol        = verifiercol.NewConstantCol(field.Zero(), size)
+		size           = decomposed.Size
+		zeroCol        = verifiercol.NewConstantCol(field.Zero(), size, fmt.Sprintf("spaghetti-maker-%v", decomposed.Inputs.Name))
 	)
 
 	// build isNewHash
 	isNewHashTable = append(isNewHashTable, isNewHash)
-	for i := 1; i < decomposed.nbSlices; i++ {
+	for i := 1; i < decomposed.NbSlices; i++ {
 		isNewHashTable = append(isNewHashTable, zeroCol)
 	}
 
@@ -141,25 +143,25 @@ func spaghettiMaker(comp *wizard.CompiledIOP, decomposed decomposition, isNewHas
 	inp := spaghettifier.SpaghettificationInput{
 		Name: decomposed.Inputs.Name,
 		ContentMatrix: [][]ifaces.Column{
-			decomposed.decomposedLimbs,
-			decomposed.decomposedLen,
-			decomposed.decomposedLenPowers,
+			decomposed.DecomposedLimbs,
+			decomposed.DecomposedLen,
+			decomposed.DecomposedLenPowers,
 			isNewHashTable,
 		},
-		Filter:        decomposed.filter,
-		SpaghettiSize: decomposed.size,
+		Filter:        decomposed.Filter,
+		SpaghettiSize: decomposed.Size,
 	}
 	// declare ProverAction for Spaghettification
 	pa := spaghettifier.Spaghettify(comp, inp)
 
 	s := spaghettiCtx{
-		pa:              pa,
-		decLimbSp:       pa.ContentSpaghetti[0],
-		decLenSp:        pa.ContentSpaghetti[1],
-		decLenPowerSp:   pa.ContentSpaghetti[2],
-		newHashSp:       pa.ContentSpaghetti[3],
-		spaghettiSize:   decomposed.size,
-		filterSpaghetti: pa.FilterSpaghetti,
+		PA:              pa,
+		DecLimbSp:       pa.ContentSpaghetti[0],
+		DecLenSp:        pa.ContentSpaghetti[1],
+		DecLenPowerSp:   pa.ContentSpaghetti[2],
+		NewHashSp:       pa.ContentSpaghetti[3],
+		SpaghettiSize:   decomposed.Size,
+		FilterSpaghetti: pa.FilterSpaghetti,
 	}
 
 	return s

@@ -40,19 +40,19 @@ go-corset:
 ## Build and bundle the go-corset trace-expander dependency
 ##
 zkevm/arithmetization/zkevm.bin: go-corset
-	cd ../constraints && $(GO_CORSET) make zkevm.bin && mv zkevm.bin ../prover/zkevm/arithmetization
+	cd ../constraints && $(GO_CORSET) make zkevm_london.bin && mv zkevm_london.bin ../prover/zkevm/arithmetization/zkevm.bin
 
 ##
 ## Generate the setup for all provers job for sepolia (to be run with S3 access)
 ##
 setup-sepolia: bin/prover
-	bin/prover setup --config ./config/config-sepolia-full.toml --dict ./lib/compressor/compressor_dict.bin --assets-dir ./prover-assets
+	bin/prover setup --config ./config/config-sepolia-limitless.toml --dict ./lib/compressor/compressor_dict.bin --assets-dir ./prover-assets
 
 ##
 ## Generate the setup for all provers job for mainnet (to be run with S3 access)
 ##
 setup-mainnet: bin/prover
-	bin/prover setup --config ./config/config-mainnet-full.toml --dict ./lib/compressor/compressor_dict.bin --assets-dir ./prover-assets
+	bin/prover setup --config ./config/config-mainnet-limitless.toml --dict ./lib/compressor/compressor_dict.bin --assets-dir ./prover-assets
 
 ##
 ## Copy the prover assets to the S3 bucket (zkuat)
@@ -131,7 +131,7 @@ lib/compressor-and-shnarf-calculator-local: lib/compressor lib/shnarf_calculator
 ## Run all the unit-tests
 ##
 test:
-	go test ./...
+	go test -tags debug ./...
 
 ##
 ## Run the CI linting

@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/dummy"
-	"github.com/consensys/linea-monorepo/prover/protocol/dedicated/plonk"
+	"github.com/consensys/linea-monorepo/prover/protocol/query"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	"github.com/consensys/linea-monorepo/prover/utils/csvtraces"
 )
@@ -26,7 +26,7 @@ func TestEcAddIntegration(t *testing.T) {
 				IsData:  ct.GetCommit(b, "IS_DATA"),
 				IsRes:   ct.GetCommit(b, "IS_RES"),
 			}
-			ecAdd = newEcAdd(b.CompiledIOP, limits, ecAddSource, []plonk.Option{plonk.WithRangecheck(16, 6, true)})
+			ecAdd = newEcAdd(b.CompiledIOP, limits, ecAddSource, []query.PlonkOption{query.PlonkRangeCheckOption(16, 6, true)})
 		},
 		dummy.Compile,
 	)

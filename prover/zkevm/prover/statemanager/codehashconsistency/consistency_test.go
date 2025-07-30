@@ -97,7 +97,7 @@ func runTestcase(t *testing.T, mimcCodeHashCsvPath, stateSummaryCsvPath string) 
 		consistency.Assign(run)
 	}
 
-	comp := wizard.Compile(define, dummy.CompileAtProverLvl)
+	comp := wizard.Compile(define, dummy.CompileAtProverLvl())
 	_ = wizard.Prove(comp, prover)
 
 }

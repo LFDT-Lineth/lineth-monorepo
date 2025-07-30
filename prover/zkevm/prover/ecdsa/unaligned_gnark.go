@@ -8,8 +8,8 @@ import (
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/column"
 	"github.com/consensys/linea-monorepo/prover/protocol/dedicated"
-	"github.com/consensys/linea-monorepo/prover/protocol/dedicated/projection"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
+	"github.com/consensys/linea-monorepo/prover/protocol/query"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	sym "github.com/consensys/linea-monorepo/prover/symbolic"
 	"github.com/consensys/linea-monorepo/prover/utils"
@@ -26,19 +26,19 @@ type UnalignedGnarkData struct {
 	GnarkData           ifaces.Column
 
 	// auxiliary columns
-	isIndex0     ifaces.Column
-	isIndex0Act  wizard.ProverAction
-	isIndex5     ifaces.Column
-	isIndex5Act  wizard.ProverAction
-	isIndex4     ifaces.Column
-	isIndex4Act  wizard.ProverAction
-	isIndex13    ifaces.Column
-	isIndex13Act wizard.ProverAction
+	IsIndex0     ifaces.Column
+	IsIndex0Act  wizard.ProverAction
+	IsIndex5     ifaces.Column
+	IsIndex5Act  wizard.ProverAction
+	IsIndex4     ifaces.Column
+	IsIndex4Act  wizard.ProverAction
+	IsIndex13    ifaces.Column
+	IsIndex13Act wizard.ProverAction
 
-	isEcrecoverAndFetching   ifaces.Column
-	isNotPublicKeyAndPushing ifaces.Column
+	IsEcrecoverAndFetching   ifaces.Column
+	IsNotPublicKeyAndPushing ifaces.Column
 
-	size int
+	Size int
 }
 
 type unalignedGnarkDataSource struct {
@@ -67,10 +67,10 @@ func newUnalignedGnarkData(comp *wizard.CompiledIOP, size int, src *unalignedGna
 		GnarkPublicKeyIndex: createCol("GNARK_PUBLIC_KEY_INDEX"),
 		GnarkData:           createCol("GNARK_DATA"),
 
-		isEcrecoverAndFetching:   createCol("IS_ECRECOVER_AND_FETCHING"),
-		isNotPublicKeyAndPushing: createCol("IS_NOT_PUBLIC_KEY_AND_PUSHING"),
+		IsEcrecoverAndFetching:   createCol("IS_ECRECOVER_AND_FETCHING"),
+		IsNotPublicKeyAndPushing: createCol("IS_NOT_PUBLIC_KEY_AND_PUSHING"),
 
-		size: size,
+		Size: size,
 	}
 
 	res.csDataIds(comp)
@@ -92,10 +92,10 @@ func (d *UnalignedGnarkData) Assign(run *wizard.ProverRuntime, src *unalignedGna
 	d.assignUnalignedGnarkData(run, src, txSigs)
 	d.assignHelperColumns(run, src)
 	// depends on the value in the gnarkIndex column, so needs to be run after
-	d.isIndex0Act.Run(run)
-	d.isIndex4Act.Run(run)
-	d.isIndex5Act.Run(run)
-	d.isIndex13Act.Run(run)
+	d.IsIndex0Act.Run(run)
+	d.IsIndex4Act.Run(run)
+	d.IsIndex5Act.Run(run)
+	d.IsIndex13Act.Run(run)
 }
 
 func (d *UnalignedGnarkData) assignUnalignedGnarkData(run *wizard.ProverRuntime, src *unalignedGnarkDataSource, txSigs TxSignatureGetter) {
@@ -111,14 +111,14 @@ func (d *UnalignedGnarkData) assignUnalignedGnarkData(run *wizard.ProverRuntime,
 		sourceTxHashLo   = run.GetColumn(src.TxHashLo.GetColID())
 	)
 
-	if sourceSource.Len() != d.size || sourceIsActive.Len() != d.size || sourceLimb.Len() != d.size || sourceSuccessBit.Len() != d.size || sourceTxHashHi.Len() != d.size || sourceTxHashLo.Len() != d.size {
+	if sourceSource.Len() != d.Size || sourceIsActive.Len() != d.Size || sourceLimb.Len() != d.Size || sourceSuccessBit.Len() != d.Size || sourceTxHashHi.Len() != d.Size || sourceTxHashLo.Len() != d.Size {
 		panic("unexpected source length")
 	}
 
 	var resIsPublicKey, resGnarkIndex, resGnarkPkIndex, resGnarkData []field.Element
 	txCount := 0
 
-	for i := 0; i < d.size; {
+	for i := 0; i < d.Size; {
 
 		var (
 			isActive         = sourceIsActive.Get(i)
@@ -237,14 +237,14 @@ func (d *UnalignedGnarkData) assignUnalignedGnarkData(run *wizard.ProverRuntime,
 	}
 	// pad the vectors to the full size. It is expected in the hashing module
 	// that the underlying vectors have same length.
-	resIsPublicKey = append(resIsPublicKey, make([]field.Element, d.size-len(resIsPublicKey))...)
-	resGnarkIndex = append(resGnarkIndex, make([]field.Element, d.size-len(resGnarkIndex))...)
-	resGnarkPkIndex = append(resGnarkPkIndex, make([]field.Element, d.size-len(resGnarkPkIndex))...)
-	resGnarkData = append(resGnarkData, make([]field.Element, d.size-len(resGnarkData))...)
-	run.AssignColumn(d.IsPublicKey.GetColID(), smartvectors.RightZeroPadded(resIsPublicKey, d.size))
-	run.AssignColumn(d.GnarkIndex.GetColID(), smartvectors.RightZeroPadded(resGnarkIndex, d.size))
-	run.AssignColumn(d.GnarkPublicKeyIndex.GetColID(), smartvectors.RightZeroPadded(resGnarkPkIndex, d.size))
-	run.AssignColumn(d.GnarkData.GetColID(), smartvectors.RightZeroPadded(resGnarkData, d.size))
+	resIsPublicKey = append(resIsPublicKey, make([]field.Element, d.Size-len(resIsPublicKey))...)
+	resGnarkIndex = append(resGnarkIndex, make([]field.Element, d.Size-len(resGnarkIndex))...)
+	resGnarkPkIndex = append(resGnarkPkIndex, make([]field.Element, d.Size-len(resGnarkPkIndex))...)
+	resGnarkData = append(resGnarkData, make([]field.Element, d.Size-len(resGnarkData))...)
+	run.AssignColumn(d.IsPublicKey.GetColID(), smartvectors.RightZeroPadded(resIsPublicKey, d.Size))
+	run.AssignColumn(d.GnarkIndex.GetColID(), smartvectors.RightZeroPadded(resGnarkIndex, d.Size))
+	run.AssignColumn(d.GnarkPublicKeyIndex.GetColID(), smartvectors.RightZeroPadded(resGnarkPkIndex, d.Size))
+	run.AssignColumn(d.GnarkData.GetColID(), smartvectors.RightZeroPadded(resGnarkData, d.Size))
 }
 
 func (d *UnalignedGnarkData) assignHelperColumns(run *wizard.ProverRuntime, src *unalignedGnarkDataSource) {
@@ -254,12 +254,12 @@ func (d *UnalignedGnarkData) assignHelperColumns(run *wizard.ProverRuntime, src 
 	sourceIsData := run.GetColumn(src.IsData.GetColID())
 	sourceIsPublicKey := run.GetColumn(d.IsPublicKey.GetColID())
 	sourceGnarkIndex := run.GetColumn(d.GnarkIndex.GetColID())
-	if sourceSource.Len() != d.size || sourcIsFetching.Len() != d.size || sourceIsPushing.Len() != d.size || sourceIsPublicKey.Len() != d.size {
+	if sourceSource.Len() != d.Size || sourcIsFetching.Len() != d.Size || sourceIsPushing.Len() != d.Size || sourceIsPublicKey.Len() != d.Size {
 		utils.Panic("unexpected source length")
 	}
 	var resEF, resPP []field.Element
 	fe12 := field.NewElement(12)
-	for i := 0; i < d.size; i++ {
+	for i := 0; i < d.Size; i++ {
 		source := sourceSource.Get(i)
 		isFetching := sourcIsFetching.Get(i)
 		isPushing := sourceIsPushing.Get(i)
@@ -277,15 +277,15 @@ func (d *UnalignedGnarkData) assignHelperColumns(run *wizard.ProverRuntime, src 
 			resPP = append(resPP, field.NewElement(0))
 		}
 	}
-	run.AssignColumn(d.isEcrecoverAndFetching.GetColID(), smartvectors.RightZeroPadded(resEF, d.size))
-	run.AssignColumn(d.isNotPublicKeyAndPushing.GetColID(), smartvectors.RightZeroPadded(resPP, d.size))
+	run.AssignColumn(d.IsEcrecoverAndFetching.GetColID(), smartvectors.RightZeroPadded(resEF, d.Size))
+	run.AssignColumn(d.IsNotPublicKeyAndPushing.GetColID(), smartvectors.RightZeroPadded(resPP, d.Size))
 }
 
 func (d *UnalignedGnarkData) csDataIds(comp *wizard.CompiledIOP) {
-	d.isIndex0, d.isIndex0Act = dedicated.IsZero(comp, d.GnarkIndex)
-	d.isIndex4, d.isIndex4Act = dedicated.IsZero(comp, sym.Sub(d.GnarkIndex, 4))
-	d.isIndex5, d.isIndex5Act = dedicated.IsZero(comp, sym.Sub(d.GnarkIndex, 5))
-	d.isIndex13, d.isIndex13Act = dedicated.IsZero(comp, sym.Sub(d.GnarkIndex, 13))
+	d.IsIndex0, d.IsIndex0Act = dedicated.IsZero(comp, d.GnarkIndex)
+	d.IsIndex4, d.IsIndex4Act = dedicated.IsZero(comp, sym.Sub(d.GnarkIndex, 4))
+	d.IsIndex5, d.IsIndex5Act = dedicated.IsZero(comp, sym.Sub(d.GnarkIndex, 5))
+	d.IsIndex13, d.IsIndex13Act = dedicated.IsZero(comp, sym.Sub(d.GnarkIndex, 13))
 }
 
 func (d *UnalignedGnarkData) csIndex(comp *wizard.CompiledIOP, src *unalignedGnarkDataSource) {
@@ -305,7 +305,7 @@ func (d *UnalignedGnarkData) csIndex(comp *wizard.CompiledIOP, src *unalignedGna
 		sym.Mul(
 			src.IsPushing,
 			column.Shift(src.IsFetching, -1),
-			sym.Sub(1, d.isIndex0)),
+			sym.Sub(1, d.IsIndex0)),
 	)
 	// if IS_PUSHING and previous was not IS_FETCHING, then it is previous+1
 	comp.InsertGlobal(
@@ -331,7 +331,7 @@ func (d *UnalignedGnarkData) csProjectionEcRecover(comp *wizard.CompiledIOP, src
 	comp.InsertGlobal(
 		ROUND_NR,
 		ifaces.QueryIDf("%v_%v", NAME_UNALIGNED_GNARKDATA, "MASKS_A"),
-		sym.Sub(d.isEcrecoverAndFetching, sym.Mul(
+		sym.Sub(d.IsEcrecoverAndFetching, sym.Mul(
 			src.IsFetching,
 			sym.Sub(1, src.Source),
 			src.IsData,
@@ -340,23 +340,21 @@ func (d *UnalignedGnarkData) csProjectionEcRecover(comp *wizard.CompiledIOP, src
 	comp.InsertGlobal(
 		ROUND_NR,
 		ifaces.QueryIDf("%v_%v", NAME_UNALIGNED_GNARKDATA, "MASKS_B"),
-		sym.Sub(d.isNotPublicKeyAndPushing, sym.Mul(
+		sym.Sub(d.IsNotPublicKeyAndPushing, sym.Mul(
 			sym.Sub(1, d.IsPublicKey),
 			sym.Sub(1, src.Source),
 			src.IsPushing,
-			sym.Sub(1, d.isIndex13),                  // last is ecrecoverbit
-			sym.Sub(1, column.Shift(d.isIndex13, 1)), // one before last is successbit
+			sym.Sub(1, d.IsIndex13),                  // last is ecrecoverbit
+			sym.Sub(1, column.Shift(d.IsIndex13, 1)), // one before last is successbit
 		)),
 	)
 	// that we have projected correctly ecrecover
-	projection.InsertProjection(
-		comp,
+	comp.InsertProjection(
 		ifaces.QueryIDf("%v_PROJECT_ECRECOVER", NAME_UNALIGNED_GNARKDATA),
-		[]ifaces.Column{src.Limb},
-		[]ifaces.Column{d.GnarkData},
-		d.isEcrecoverAndFetching,
-		d.isNotPublicKeyAndPushing,
-	)
+		query.ProjectionInput{ColumnA: []ifaces.Column{src.Limb},
+			ColumnB: []ifaces.Column{d.GnarkData},
+			FilterA: d.IsEcrecoverAndFetching,
+			FilterB: d.IsNotPublicKeyAndPushing})
 }
 
 func (d *UnalignedGnarkData) csTxHash(comp *wizard.CompiledIOP, src *unalignedGnarkDataSource) {
@@ -364,12 +362,12 @@ func (d *UnalignedGnarkData) csTxHash(comp *wizard.CompiledIOP, src *unalignedGn
 	comp.InsertGlobal(
 		ROUND_NR,
 		ifaces.QueryIDf("%v_%v", NAME_UNALIGNED_GNARKDATA, "TXHASH_HI"),
-		sym.Mul(d.isIndex4, src.Source, sym.Sub(d.GnarkData, src.TxHashHi)),
+		sym.Mul(d.IsIndex4, src.Source, sym.Sub(d.GnarkData, src.TxHashHi)),
 	)
 	comp.InsertGlobal(
 		ROUND_NR,
 		ifaces.QueryIDf("%v_%v", NAME_UNALIGNED_GNARKDATA, "TXHASH_LO"),
-		sym.Mul(d.isIndex5, src.Source, sym.Sub(d.GnarkData, src.TxHashLo)),
+		sym.Mul(d.IsIndex5, src.Source, sym.Sub(d.GnarkData, src.TxHashLo)),
 	)
 }
 
@@ -383,6 +381,6 @@ func (d *UnalignedGnarkData) csTxEcRecoverBit(comp *wizard.CompiledIOP, src *una
 	comp.InsertGlobal(
 		ROUND_NR,
 		ifaces.QueryIDf("%v_%v", NAME_UNALIGNED_GNARKDATA, "ECRECOVERBIT"),
-		sym.Mul(d.isIndex13, src.Source, d.GnarkData),
+		sym.Mul(d.IsIndex13, src.Source, d.GnarkData),
 	)
 }

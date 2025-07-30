@@ -11,11 +11,81 @@ import (
 	"github.com/consensys/linea-monorepo/prover/maths/fft"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/coin"
+	"github.com/consensys/linea-monorepo/prover/protocol/column"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/protocol/variables"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizardutils"
 )
+
+type BigRangeProverAction struct {
+	Boarded      symbolic.ExpressionBoard
+	Limbs        []ifaces.Column
+	BitPerLimbs  int
+	TotalNumBits int
+}
+
+func (a *BigRangeProverAction) Run(run *wizard.ProverRuntime) {
+	size := a.Limbs[0].Size()
+	metadatas := a.Boarded.ListVariableMetadata()
+	evalInputs := make([]sv.SmartVector, len(metadatas))
+	omega := fft.GetOmega(size)
+	omegaI := field.One()
+	omegas := make([]field.Element, size)
+	for i := 0; i < size; i++ {
+		omegas[i] = omegaI
+		omegaI.Mul(&omegaI, &omega)
+	}
+
+	for k, metadataInterface := range metadatas {
+		switch meta := metadataInterface.(type) {
+		case ifaces.Column:
+			w := meta.GetColAssignment(run)
+			evalInputs[k] = w
+		case coin.Info:
+			x := run.GetRandomCoinField(meta.Name)
+			evalInputs[k] = sv.NewConstant(x, size)
+		case variables.X:
+			evalInputs[k] = meta.EvalCoset(size, 0, 1, false)
+		case variables.PeriodicSample:
+			evalInputs[k] = meta.EvalCoset(size, 0, 1, false)
+		case ifaces.Accessor:
+			evalInputs[k] = sv.NewConstant(meta.GetVal(run), size)
+		default:
+			utils.Panic("Not a variable type %v in sub-wizard", reflect.TypeOf(metadataInterface))
+		}
+	}
+
+	resWitness := a.Boarded.Evaluate(evalInputs)
+	limbsWitness := make([][]field.Element, len(a.Limbs))
+	for i := range limbsWitness {
+		limbsWitness[i] = make([]field.Element, size)
+	}
+
+	for j := 0; j < size; j++ {
+		x := resWitness.Get(j)
+		var tmp big.Int
+		x.BigInt(&tmp)
+
+		if tmp.BitLen() > a.TotalNumBits {
+			utils.Panic("BigRange: cannot prove that the bitLen is smaller than %v : the provided witness has %v bits on position %v (%v)",
+				a.TotalNumBits, tmp.BitLen(), j, x.String())
+		}
+
+		for i := range a.Limbs {
+			l := uint64(0)
+			for k := i * (a.TotalNumBits / len(a.Limbs)); k < (i+1)*(a.TotalNumBits/len(a.Limbs)); k++ {
+				extractedBit := tmp.Bit(k)
+				l |= uint64(extractedBit) << (k % (a.TotalNumBits / len(a.Limbs)))
+			}
+			limbsWitness[i][j].SetUint64(l)
+		}
+	}
+
+	for i := range limbsWitness {
+		run.AssignColumn(a.Limbs[i].GetColID(), sv.NewRegular(limbsWitness[i]))
+	}
+}
 
 // BigRange enforces that an input sympolic expression evaluates to values that
 // can be expressed in `numLimbs` limbs of `bitPerLimbs` bits. This is equivalent
@@ -41,7 +111,7 @@ func BigRange(comp *wizard.CompiledIOP, expr *symbolic.Expression, numLimbs, bit
 		limbs        = make([]ifaces.Column, numLimbs)
 		round        = wizardutils.LastRoundToEval(expr)
 		boarded      = expr.Board()
-		size         = wizardutils.ExprIsOnSameLengthHandles(&boarded)
+		size         = column.ExprIsOnSameLengthHandles(&boarded)
 		totalNumBits = numLimbs * bitPerLimbs
 	)
 
@@ -75,90 +145,11 @@ func BigRange(comp *wizard.CompiledIOP, expr *symbolic.Expression, numLimbs, bit
 	comp.InsertGlobal(round, ifaces.QueryIDf("GLOBAL_BIGRANGE_%v", name), acc.Sub(expr))
 
 	// The below prover steps assign the limb values
-	comp.SubProvers.AppendToInner(round, func(run *wizard.ProverRuntime) {
-
-		// Evaluate the expression we wish to range proof
-		metadatas := boarded.ListVariableMetadata()
-
-		/*
-			Collects the relevant datas into a slice for the evaluation
-		*/
-		evalInputs := make([]sv.SmartVector, len(metadatas))
-
-		/*
-			Omega is a root of unity which generates the domain of evaluation
-			of the constraint. Its size coincide with the size of the domain
-			of evaluation. For each value of `i`, X will evaluate to omega^i.
-		*/
-		omega := fft.GetOmega(size)
-		omegaI := field.One()
-
-		// precomputations of the powers of omega, can be optimized if useful
-		omegas := make([]field.Element, size)
-		for i := 0; i < size; i++ {
-			omegas[i] = omegaI
-			omegaI.Mul(&omegaI, &omega)
-		}
-
-		/*
-			Collect the relevants inputs for evaluating the constraint
-		*/
-		for k, metadataInterface := range metadatas {
-			switch meta := metadataInterface.(type) {
-			case ifaces.Column:
-				w := meta.GetColAssignment(run)
-				evalInputs[k] = w
-			case coin.Info:
-				// Implicitly, the coin has to be a field element in the expression
-				// It will panic if not
-				x := run.GetRandomCoinField(meta.Name)
-				evalInputs[k] = sv.NewConstant(x, size)
-			case variables.X:
-				evalInputs[k] = meta.EvalCoset(size, 0, 1, false)
-			case variables.PeriodicSample:
-				evalInputs[k] = meta.EvalCoset(size, 0, 1, false)
-			case ifaces.Accessor:
-				evalInputs[k] = sv.NewConstant(meta.GetVal(run), size)
-			default:
-				utils.Panic("Not a variable type %v in sub-wizard %v", reflect.TypeOf(metadataInterface), name)
-			}
-		}
-
-		// This panics if the global constraints doesn't use any commitment
-		resWitness := boarded.Evaluate(evalInputs)
-
-		limbsWitness := make([][]field.Element, numLimbs)
-		for i := range limbsWitness {
-			limbsWitness[i] = make([]field.Element, size)
-		}
-
-		for j := 0; j < size; j++ {
-			x := resWitness.Get(j)
-			var tmp big.Int
-			x.BigInt(&tmp)
-
-			if tmp.BitLen() > totalNumBits {
-				utils.Panic(
-					"BigRange: cannot prove that the bitLen is smaller than %v : the provided witness has %v bits on position %v (%v)",
-					totalNumBits, tmp.BitLen(), j, x.String(),
-				)
-			}
-
-			for i := 0; i < numLimbs; i++ {
-				l := uint64(0)
-				for k := i * bitPerLimbs; k < (i+1)*bitPerLimbs; k++ {
-					extractedBit := tmp.Bit(k)
-					l |= uint64(extractedBit) << (k % bitPerLimbs)
-				}
-				limbsWitness[i][j].SetUint64(l)
-			}
-		}
-
-		// Then assigns the limbs
-		for i := range limbsWitness {
-			run.AssignColumn(limbs[i].GetColID(), sv.NewRegular(limbsWitness[i]))
-		}
-
+	comp.RegisterProverAction(round, &BigRangeProverAction{
+		Boarded:      boarded,
+		Limbs:        limbs,
+		BitPerLimbs:  bitPerLimbs,
+		TotalNumBits: totalNumBits,
 	})
 
 }

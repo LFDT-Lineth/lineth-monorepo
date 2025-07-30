@@ -5,15 +5,20 @@ package circuits
 type CircuitID string
 
 const (
-	ExecutionCircuitID                  CircuitID = "execution"
-	ExecutionLargeCircuitID             CircuitID = "execution-large"
-	BlobDecompressionV0CircuitID        CircuitID = "blob-decompression-v0"
-	BlobDecompressionV1CircuitID        CircuitID = "blob-decompression-v1"
-	AggregationCircuitID                CircuitID = "aggregation"
-	EmulationCircuitID                  CircuitID = "emulation"
-	EmulationDummyCircuitID             CircuitID = "emulation-dummy"
-	ExecutionDummyCircuitID             CircuitID = "execution-dummy"
-	BlobDecompressionDummyCircuitID     CircuitID = "blob-decompression-dummy"
+	ExecutionCircuitID          CircuitID = "execution"
+	ExecutionLargeCircuitID     CircuitID = "execution-large"
+	ExecutionLimitlessCircuitID CircuitID = "execution-limitless"
+	ExecutionDummyCircuitID     CircuitID = "execution-dummy"
+
+	BlobDecompressionV0CircuitID    CircuitID = "blob-decompression-v0"
+	BlobDecompressionV1CircuitID    CircuitID = "blob-decompression-v1"
+	BlobDecompressionDummyCircuitID CircuitID = "blob-decompression-dummy"
+
+	AggregationCircuitID CircuitID = "aggregation"
+
+	EmulationCircuitID      CircuitID = "emulation"
+	EmulationDummyCircuitID CircuitID = "emulation-dummy"
+
 	PublicInputInterconnectionCircuitID CircuitID = "public-input-interconnection"
 )
 

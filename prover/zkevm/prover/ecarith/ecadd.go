@@ -10,6 +10,7 @@ import (
 	"github.com/consensys/gnark/std/math/emulated"
 	"github.com/consensys/linea-monorepo/prover/protocol/dedicated/plonk"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
+	"github.com/consensys/linea-monorepo/prover/protocol/query"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 )
 
@@ -27,7 +28,7 @@ type EcAdd struct {
 	*EcDataAddSource
 	AlignedGnarkData *plonk.Alignment
 
-	size int
+	Size int
 	*Limits
 }
 
@@ -42,12 +43,12 @@ func NewEcAddZkEvm(comp *wizard.CompiledIOP, limits *Limits) *EcAdd {
 			IsData:  comp.Columns.GetHandle("ecdata.IS_ECADD_DATA"),
 			IsRes:   comp.Columns.GetHandle("ecdata.IS_ECADD_RESULT"),
 		},
-		[]plonk.Option{plonk.WithRangecheck(16, 6, true)},
+		[]query.PlonkOption{query.PlonkRangeCheckOption(16, 6, true)},
 	)
 }
 
 // newEcAdd creates a new EC_ADD integration.
-func newEcAdd(comp *wizard.CompiledIOP, limits *Limits, src *EcDataAddSource, plonkOptions []plonk.Option) *EcAdd {
+func newEcAdd(comp *wizard.CompiledIOP, limits *Limits, src *EcDataAddSource, plonkOptions []query.PlonkOption) *EcAdd {
 	size := limits.sizeEcAddIntegration()
 
 	toAlign := &plonk.CircuitAlignmentInput{
@@ -58,12 +59,15 @@ func newEcAdd(comp *wizard.CompiledIOP, limits *Limits, src *EcDataAddSource, pl
 		Circuit:            NewECAddCircuit(limits),
 		NbCircuitInstances: limits.NbCircuitInstances,
 		PlonkOptions:       plonkOptions,
-		InputFiller:        nil, // not necessary: 0 * (0,0) = (0,0) with complete arithmetic
+		// This resolves to the statement (0, 0) + (0, 0) = (0, 0), which is
+		// correct as (0, 0) encodes the point at infinity.
+		InputFillerKey: "",
 	}
+
 	res := &EcAdd{
 		EcDataAddSource:  src,
 		AlignedGnarkData: plonk.DefineAlignment(comp, toAlign),
-		size:             size,
+		Size:             size,
 	}
 
 	return res

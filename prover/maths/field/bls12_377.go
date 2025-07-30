@@ -148,3 +148,11 @@ func PseudoRandTruncated(rng *rand.Rand, sizeByte int) Element {
 	res.SetBigInt(bigInt)
 	return res
 }
+
+// FromBool returns 1 if true and zero if false
+func FromBool(b bool) Element {
+	if b {
+		return One()
+	}
+	return Zero()
+}

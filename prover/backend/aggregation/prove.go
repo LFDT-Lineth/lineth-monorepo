@@ -214,14 +214,14 @@ func makeBw6Proof(
 	}
 
 	if bestSize == math.MaxInt {
-		if len(errs) > 0 {
-			return nil, 0, errors.Join(errs...)
-		} else {
-			return nil, 0, fmt.Errorf(
-				"could not find a setup large enough for %v proofs: the biggest available size is %v",
-				numProofClaims, biggestAvailable,
-			)
-		}
+
+		err := fmt.Errorf(
+			"could not find a setup large enough for %v proofs: the biggest available size is %v",
+			numProofClaims, biggestAvailable,
+		)
+
+		errs = append(errs, err)
+		return nil, 0, errors.Join(errs...)
 	}
 
 	logrus.Infof("reading the BW6 setup for %v proofs", bestSize)

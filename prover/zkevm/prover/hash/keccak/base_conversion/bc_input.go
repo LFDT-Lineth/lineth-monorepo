@@ -18,6 +18,7 @@ import (
 	"github.com/consensys/linea-monorepo/prover/maths/common/vector"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/column"
+	"github.com/consensys/linea-monorepo/prover/protocol/distributed/pragmas"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	sym "github.com/consensys/linea-monorepo/prover/symbolic"
@@ -54,33 +55,33 @@ type BlockBaseConversionInputs struct {
 	Lookup               lookUpTables
 }
 
-// The submodule blockBaseConversion implements the base conversion over
+// The submodule BlockBaseConversion implements the base conversion over
 // the inputs to the keccakf (i.e., blocks/lanes), in order to export them to the keccakf.
 // The lanes from the first block of hash should be in baseA and others are in baseB.
-type blockBaseConversion struct {
+type BlockBaseConversion struct {
 	Inputs *BlockBaseConversionInputs
 	// It is 1 when the lane is from the first block of the hash
 	IsFromFirstBlock ifaces.Column
 	// IsFromBlockBaseB := 1-isFromFirstBlock
 	IsFromBlockBaseB ifaces.Column
 	// Limbs in baseX; the one from first blocks are in baseA and others are in baseB.
-	limbsX [4]ifaces.Column
+	LimbsX [4]ifaces.Column
 	// lanes from first block in baseA, others in baseB
 	LaneX ifaces.Column
 	//  the ProverAction for [DecomposeBE]
-	pa wizard.ProverAction
-	// size of the module
-	size int
+	PA wizard.ProverAction
+	// Size of the module
+	Size int
 }
 
 // NewBlockBaseConversion declare the intermediate columns,
 // and the constraints for changing the blocks in base uint64 into baseA/baseB.
 // It also change the order of Bytes from Big-Endian to Little-Endian.
 func NewBlockBaseConversion(comp *wizard.CompiledIOP,
-	inp BlockBaseConversionInputs) *blockBaseConversion {
-	b := &blockBaseConversion{
+	inp BlockBaseConversionInputs) *BlockBaseConversion {
+	b := &BlockBaseConversion{
 		Inputs: &inp,
-		size:   inp.Lane.Size(),
+		Size:   inp.Lane.Size(),
 	}
 	// declare the columns
 	b.insertCommit(comp)
@@ -94,10 +95,10 @@ func NewBlockBaseConversion(comp *wizard.CompiledIOP,
 }
 
 // it declares the native columns
-func (b *blockBaseConversion) insertCommit(comp *wizard.CompiledIOP) {
-	createCol := common.CreateColFn(comp, BASE_CONVERSION, b.size)
-	for j := range b.limbsX {
-		b.limbsX[j] = createCol("LimbX_%v", j)
+func (b *BlockBaseConversion) insertCommit(comp *wizard.CompiledIOP) {
+	createCol := common.CreateColFn(comp, BASE_CONVERSION, b.Size, pragmas.RightPadded)
+	for j := range b.LimbsX {
+		b.LimbsX[j] = createCol("LimbX_%v", j)
 	}
 	b.LaneX = createCol("LaneX")
 	b.IsFromFirstBlock = createCol("IsFromFirstBlock")
@@ -105,13 +106,13 @@ func (b *blockBaseConversion) insertCommit(comp *wizard.CompiledIOP) {
 }
 
 // assign the columns specific to the submodule
-func (b *blockBaseConversion) Run(run *wizard.ProverRuntime) {
+func (b *BlockBaseConversion) Run(run *wizard.ProverRuntime) {
 	b.assignIsFromFirstBlock(run)
 	b.assignSlicesLaneX(run)
 }
 
 // the constraints over isFromFirstBlock
-func (b *blockBaseConversion) csIsFromFirstBlock(comp *wizard.CompiledIOP) {
+func (b *BlockBaseConversion) csIsFromFirstBlock(comp *wizard.CompiledIOP) {
 	var (
 		param             = generic.KeccakUsecase
 		nbOfLanesPerBlock = param.NbOfLanesPerBlock()
@@ -140,19 +141,19 @@ func (b *blockBaseConversion) csIsFromFirstBlock(comp *wizard.CompiledIOP) {
 // the constraints over base conversion
 // - base conversion from uint64 into BaseA/BaseB
 // - from Big-Endian to Little-Endian
-func (b *blockBaseConversion) csBaseConversion(comp *wizard.CompiledIOP) {
+func (b *BlockBaseConversion) csBaseConversion(comp *wizard.CompiledIOP) {
 	// if isFromFirstBlock = 1  ---> convert to keccak.BaseA
 	// otherwise convert to keccak.BaseB
 
 	// first, decompose to limbs
 	inp := DecompositionInputs{
-		name:          "LANE_DECOMPOSITION_BE",
-		col:           b.Inputs.Lane,
-		numLimbs:      numLimbsInput,
-		bytesPerLimbs: LaneSizeByte / numLimbsInput}
+		Name:          "LANE_DECOMPOSITION_BE",
+		Col:           b.Inputs.Lane,
+		NumLimbs:      numLimbsInput,
+		BytesPerLimbs: LaneSizeByte / numLimbsInput}
 
 	decomposed := DecomposeBE(comp, inp)
-	b.pa = decomposed
+	b.PA = decomposed
 
 	// reverse to go from big-endian to little-endian,
 	// Note: reversing the bytes within the limb is done in the lookUp.
@@ -165,14 +166,14 @@ func (b *blockBaseConversion) csBaseConversion(comp *wizard.CompiledIOP) {
 	for j := range decomposed.Limbs {
 		comp.InsertInclusionConditionalOnIncluded(0,
 			ifaces.QueryIDf("BaseConversion_Into_BaseA_%v", j),
-			[]ifaces.Column{b.Inputs.Lookup.colUint16, b.Inputs.Lookup.colBaseA},
-			[]ifaces.Column{slice[j], b.limbsX[j]},
+			[]ifaces.Column{b.Inputs.Lookup.ColUint16, b.Inputs.Lookup.ColBaseA},
+			[]ifaces.Column{slice[j], b.LimbsX[j]},
 			b.IsFromFirstBlock)
 
 		comp.InsertInclusionConditionalOnIncluded(0,
 			ifaces.QueryIDf("BaseConversion_Into_BaseB_%v", j),
-			[]ifaces.Column{b.Inputs.Lookup.colUint16, b.Inputs.Lookup.colBaseB},
-			[]ifaces.Column{slice[j], b.limbsX[j]},
+			[]ifaces.Column{b.Inputs.Lookup.ColUint16, b.Inputs.Lookup.ColBaseB},
+			[]ifaces.Column{slice[j], b.LimbsX[j]},
 			b.IsFromBlockBaseB)
 	}
 
@@ -185,10 +186,10 @@ func (b *blockBaseConversion) csBaseConversion(comp *wizard.CompiledIOP) {
 
 	// reconstruct LaneX from limbsX
 	laneX := sym.NewConstant(0)
-	for k := range b.limbsX {
+	for k := range b.LimbsX {
 		laneX = sym.Add(
 			sym.Mul(base, laneX),
-			b.limbsX[k])
+			b.LimbsX[k])
 	}
 
 	comp.InsertGlobal(0, ifaces.QueryIDf("Recompose_Lane_BaseX"),
@@ -198,10 +199,10 @@ func (b *blockBaseConversion) csBaseConversion(comp *wizard.CompiledIOP) {
 }
 
 // assign column isFromFirstBlock
-func (b *blockBaseConversion) assignIsFromFirstBlock(run *wizard.ProverRuntime) {
+func (b *BlockBaseConversion) assignIsFromFirstBlock(run *wizard.ProverRuntime) {
 	ones := vector.Repeat(field.One(), generic.KeccakUsecase.NbOfLanesPerBlock())
 	var (
-		size                 = b.size
+		size                 = b.Size
 		isFirstLaneOfNewHash = b.Inputs.IsFirstLaneOfNewHash.GetColAssignment(run).IntoRegVecSaveAlloc()
 		param                = generic.KeccakUsecase
 		numLanesInBlock      = param.NbOfLanesPerBlock()
@@ -227,7 +228,7 @@ func (b *blockBaseConversion) assignIsFromFirstBlock(run *wizard.ProverRuntime) 
 }
 
 // assign limbs for the base conversion;  limbX, laneX
-func (b *blockBaseConversion) assignSlicesLaneX(
+func (b *BlockBaseConversion) assignSlicesLaneX(
 	run *wizard.ProverRuntime) {
 	var (
 		isFirstBlock = b.IsFromFirstBlock.GetColAssignment(run).IntoRegVecSaveAlloc()
@@ -237,10 +238,10 @@ func (b *blockBaseConversion) assignSlicesLaneX(
 	)
 
 	for j := range limbX {
-		limbX[j] = common.NewVectorBuilder(b.limbsX[j])
+		limbX[j] = common.NewVectorBuilder(b.LimbsX[j])
 	}
 
-	b.pa.Run(run)
+	b.PA.Run(run)
 
 	// populate laneX
 	for j := range lane {
@@ -253,7 +254,7 @@ func (b *blockBaseConversion) assignSlicesLaneX(
 		if isFirstBlock[j].IsOne() {
 			laneX.PushField(bytesToBaseX(bytes, &keccakf.BaseAFr))
 
-			for k := range b.limbsX {
+			for k := range b.LimbsX {
 				a := bytes[k*2 : k*2+2]
 				limbX[k].PushField(bytesToBaseX(a, &keccakf.BaseAFr))
 			}
@@ -261,7 +262,7 @@ func (b *blockBaseConversion) assignSlicesLaneX(
 		} else {
 			laneX.PushField(bytesToBaseX(bytes, &keccakf.BaseBFr))
 
-			for k := range b.limbsX {
+			for k := range b.LimbsX {
 				a := bytes[k*2 : k*2+2]
 				limbX[k].PushField(bytesToBaseX(a, &keccakf.BaseBFr))
 			}
@@ -271,7 +272,7 @@ func (b *blockBaseConversion) assignSlicesLaneX(
 	// assign the laneX
 	laneX.PadAndAssign(run, field.Zero())
 
-	for k := range b.limbsX {
+	for k := range b.LimbsX {
 		limbX[k].PadAndAssign(run, field.Zero())
 	}
 }

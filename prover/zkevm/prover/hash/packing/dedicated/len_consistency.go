@@ -6,6 +6,7 @@ import (
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/dedicated/byte32cmp"
+	"github.com/consensys/linea-monorepo/prover/protocol/distributed/pragmas"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	sym "github.com/consensys/linea-monorepo/prover/symbolic"
@@ -26,52 +27,52 @@ type LcInputs struct {
 	Name string
 }
 
-// lengthConsistency stores the intermediate columns for [LengthConsistency] function.
-type lengthConsistency struct {
-	inp LcInputs
-	// decomposition of Table into bytes
-	bytes []byte32cmp.LimbColumns
+// LengthConsistencyCtx stores the intermediate columns for [LengthConsistency] function.
+type LengthConsistencyCtx struct {
+	Inp LcInputs
+	// decomposition of Table into Bytes
+	Bytes []byte32cmp.LimbColumns
 	// the ProverAction for decomposition of Tables into bytes.
-	pa []wizard.ProverAction
+	PA []wizard.ProverAction
 	// a binary column indicating if the byte is non-empty
-	bytesLen [][]ifaces.Column
-	// size of the columns
-	size int
+	BytesLen [][]ifaces.Column
+	// Size of the columns
+	Size int
 }
 
 // LengthConsistency receives a table and the associated lengths,
 //
 //	and assert that the elements in the table of are the given lengths.
-func LengthConsistency(comp *wizard.CompiledIOP, inp LcInputs) *lengthConsistency {
+func LengthConsistency(comp *wizard.CompiledIOP, inp LcInputs) *LengthConsistencyCtx {
 
 	var (
 		name      = inp.Name
 		numCol    = len(inp.Table)
 		size      = inp.Table[0].Size()
 		numBytes  = inp.MaxLen
-		createCol = common.CreateColFn(comp, "LENGTH_CONSISTENCY_"+name, size)
+		createCol = common.CreateColFn(comp, "LENGTH_CONSISTENCY_"+name, size, pragmas.RightPadded)
 	)
 
-	res := &lengthConsistency{
-		bytesLen: make([][]ifaces.Column, numCol),
-		inp:      inp,
-		size:     size,
+	res := &LengthConsistencyCtx{
+		BytesLen: make([][]ifaces.Column, numCol),
+		Inp:      inp,
+		Size:     size,
 	}
 
 	for j := 0; j < numCol; j++ {
-		res.bytesLen[j] = make([]ifaces.Column, numBytes)
-		for k := range res.bytesLen[0] {
-			res.bytesLen[j][k] = createCol("BYTE_LEN_%v_%v", j, k)
+		res.BytesLen[j] = make([]ifaces.Column, numBytes)
+		for k := range res.BytesLen[0] {
+			res.BytesLen[j][k] = createCol("BYTE_LEN_%v_%v", j, k)
 		}
 	}
 
 	// 1. decompose each column of the table to bytes
 	// 2. check that number of bytes == tableLen
-	res.bytes = make([]byte32cmp.LimbColumns, numCol)
-	res.pa = make([]wizard.ProverAction, numCol)
+	res.Bytes = make([]byte32cmp.LimbColumns, numCol)
+	res.PA = make([]wizard.ProverAction, numCol)
 	for j := range inp.Table {
 		// 	// constraint asserting to the correct decomposition of table to bytes
-		res.bytes[j], res.pa[j] = byte32cmp.Decompose(comp, inp.Table[j], numBytes, 8, res.bytesLen[j]...)
+		res.Bytes[j], res.PA[j] = byte32cmp.Decompose(comp, inp.Table[j], numBytes, 8, res.BytesLen[j]...)
 	}
 
 	// claimed lengths for the table are correct;
@@ -80,24 +81,24 @@ func LengthConsistency(comp *wizard.CompiledIOP, inp LcInputs) *lengthConsistenc
 	for j := range inp.Table {
 		sum := sym.NewConstant(0)
 		for k := 0; k < numBytes; k++ {
-			sum = sym.Add(sum, res.bytesLen[j][k])
+			sum = sym.Add(sum, res.BytesLen[j][k])
 
 			// bytesLen is binary
-			commonconstraints.MustBeBinary(comp, res.bytesLen[j][k])
+			commonconstraints.MustBeBinary(comp, res.BytesLen[j][k])
 		}
 		comp.InsertGlobal(0, ifaces.QueryIDf("%v_CLDLen_%v", name, j), sym.Sub(sum, inp.TableLen[j]))
 	}
 	return res
 }
 
-func (lc *lengthConsistency) Run(run *wizard.ProverRuntime) {
+func (lc *LengthConsistencyCtx) Run(run *wizard.ProverRuntime) {
 	var (
-		numCol   = len(lc.inp.Table)
-		numBytes = lc.inp.MaxLen
+		numCol   = len(lc.Inp.Table)
+		numBytes = lc.Inp.MaxLen
 	)
 
-	for j := range lc.inp.Table {
-		lc.pa[j].Run(run)
+	for j := range lc.Inp.Table {
+		lc.PA[j].Run(run)
 	}
 
 	tableLen := make([]smartvectors.SmartVector, numCol)
@@ -107,16 +108,25 @@ func (lc *lengthConsistency) Run(run *wizard.ProverRuntime) {
 	for j := 0; j < numCol; j++ {
 		bytesLen[j] = make([]*common.VectorBuilder, numBytes)
 		for k := range bytesLen[0] {
-			bytesLen[j][k] = common.NewVectorBuilder(lc.bytesLen[j][k])
+			bytesLen[j][k] = common.NewVectorBuilder(lc.BytesLen[j][k])
 		}
 	}
 
 	// populate bytesLen
 	for j := 0; j < numCol; j++ {
-		tableLen[j] = lc.inp.TableLen[j].GetColAssignment(run)
 
-		for row := 0; row < tableLen[0].Len(); row++ {
-			dec := getZeroOnes(tableLen[j].Get(row), numBytes)
+		tableLen[j] = lc.Inp.TableLen[j].GetColAssignment(run)
+		startPlainRange, stopPlainRange := smartvectors.CoWindowRange(tableLen[j])
+
+		if startPlainRange != 0 {
+			utils.Panic(
+				"tableLen were expected to be padded on the right, not on the left, start: %v, stop: %v len: %v",
+				startPlainRange, stopPlainRange, tableLen[j].Len(),
+			)
+		}
+
+		for tl := range tableLen[j].IterateSkipPadding() {
+			dec := getZeroOnes(tl, numBytes)
 			//  this is used in bytes32cmp.Decompose() which needs little-endian
 			slices.Reverse(dec)
 
@@ -125,6 +135,7 @@ func (lc *lengthConsistency) Run(run *wizard.ProverRuntime) {
 			}
 		}
 	}
+
 	for j := range tableLen {
 		for k := range bytesLen[0] {
 			bytesLen[j][k].PadAndAssign(run)

@@ -24,7 +24,7 @@ func piChiIotaTestingModule(
 	func(
 		traces keccak.PermTraces,
 		runRet **wizard.ProverRuntime,
-	) wizard.ProverStep,
+	) wizard.MainProverStep,
 	*Module,
 ) {
 
@@ -46,7 +46,7 @@ func piChiIotaTestingModule(
 			for y := 0; y < 5; y++ {
 				// The output of the rho module that serves as input for the
 				// chi module.
-				mod.rho.aRho[x][y] = comp.InsertCommit(
+				mod.Rho.ARho[x][y] = comp.InsertCommit(
 					round,
 					deriveName("A_RHO", x, y),
 					numRows(maxNumKeccakf),
@@ -54,9 +54,9 @@ func piChiIotaTestingModule(
 			}
 		}
 
-		mod.lookups = newLookUpTables(comp, maxNumKeccakf)
+		mod.Lookups = newLookUpTables(comp, maxNumKeccakf)
 		mod.IO.declareColumnsInput(comp, maxNumKeccakf)
-		mod.piChiIota = newPiChiIota(comp, round, maxNumKeccakf, *mod)
+		mod.PiChiIota = newPiChiIota(comp, round, maxNumKeccakf, *mod)
 	}
 
 	prover := func(
@@ -65,9 +65,11 @@ func piChiIotaTestingModule(
 		// prover has been run. This allows the caller test to "open" the box
 		// and checks that the assigned columns are consistent with the traces.
 		runRet **wizard.ProverRuntime,
-	) wizard.ProverStep {
+	) wizard.MainProverStep {
 		return func(run *wizard.ProverRuntime) {
 			*runRet = run
+
+			mod.Lookups.DontUsePrevAIota.Assign(run)
 
 			// Number of permutation used for the current instance
 			numKeccakf := len(traces.KeccakFInps)
@@ -114,7 +116,7 @@ func piChiIotaTestingModule(
 			for x := 0; x < 5; x++ {
 				for y := 0; y < 5; y++ {
 					run.AssignColumn(
-						mod.rho.aRho[x][y].GetColID(),
+						mod.Rho.ARho[x][y].GetColID(),
 						smartvectors.RightZeroPadded(
 							aRho[x][y],
 							numRows(maxNumKeccakf),
@@ -126,7 +128,7 @@ func piChiIotaTestingModule(
 			// Then assigns all the columns of the rho module
 			mod.assignStateAndBlocks(run, traces, numKeccakf)
 			mod.IO.assignBlockFlags(run, traces)
-			mod.piChiIota.assign(run, numKeccakf, mod.lookups, mod.rho.aRho,
+			mod.PiChiIota.assign(run, numKeccakf, mod.Lookups, mod.Rho.ARho,
 				mod.Blocks, mod.IO.IsBlockBaseB)
 		}
 	}
@@ -192,7 +194,7 @@ func TestPiChiIota(t *testing.T) {
 						// Extract the slices
 						slice := [numSlice]field.Element{}
 						for k := 0; k < numSlice; k++ {
-							colid := mod.piChiIota.aIotaBaseASliced[x][y][k].GetColID()
+							colid := mod.PiChiIota.AIotaBaseASliced[x][y][k].GetColID()
 							slice[k] = run.GetColumnAt(colid, pos)
 						}
 

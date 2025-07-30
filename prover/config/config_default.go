@@ -80,11 +80,18 @@ func setDefaultTracesLimit() {
 	viper.SetDefault("traces_limits.TXN_DATA", 8192)
 	viper.SetDefault("traces_limits.WCP", 262144)
 
+	viper.SetDefault("traces_limits.U128", 131072)
+	viper.SetDefault("traces_limits.U20", 131072)
+	viper.SetDefault("traces_limits.U32", 131072)
+	viper.SetDefault("traces_limits.U36", 131072)
+	viper.SetDefault("traces_limits.U64", 131072)
+
 	// Precompile limits
 	viper.SetDefault("traces_limits.PRECOMPILE_ECRECOVER_EFFECTIVE_CALLS", 128)
 	viper.SetDefault("traces_limits.PRECOMPILE_SHA2_BLOCKS", 671)
 	viper.SetDefault("traces_limits.PRECOMPILE_RIPEMD_BLOCKS", 671)
 	viper.SetDefault("traces_limits.PRECOMPILE_MODEXP_EFFECTIVE_CALLS", 4)
+	viper.SetDefault("traces_limits.PRECOMPILE_MODEXP_EFFECTIVE_CALLS_4096", 1)
 	viper.SetDefault("traces_limits.PRECOMPILE_ECADD_EFFECTIVE_CALLS", 16384)
 	viper.SetDefault("traces_limits.PRECOMPILE_ECMUL_EFFECTIVE_CALLS", 32)
 	viper.SetDefault("traces_limits.PRECOMPILE_ECPAIRING_FINAL_EXPONENTIATIONS", 16)
@@ -141,11 +148,18 @@ func setDefaultTracesLimit() {
 	viper.SetDefault("traces_limits_large.TXN_DATA", 16384)
 	viper.SetDefault("traces_limits_large.WCP", 524288)
 
+	viper.SetDefault("traces_limits_large.U128", 262144)
+	viper.SetDefault("traces_limits_large.U20", 262144)
+	viper.SetDefault("traces_limits_large.U32", 262144)
+	viper.SetDefault("traces_limits_large.U36", 262144)
+	viper.SetDefault("traces_limits_large.U64", 262144)
+
 	// Precompile limits
 	viper.SetDefault("traces_limits_large.PRECOMPILE_ECRECOVER_EFFECTIVE_CALLS", 256)
 	viper.SetDefault("traces_limits_large.PRECOMPILE_SHA2_BLOCKS", 671)
 	viper.SetDefault("traces_limits_large.PRECOMPILE_RIPEMD_BLOCKS", 671)
 	viper.SetDefault("traces_limits_large.PRECOMPILE_MODEXP_EFFECTIVE_CALLS", 8)
+	viper.SetDefault("traces_limits_large.PRECOMPILE_MODEXP_EFFECTIVE_CALLS_4096", 1)
 	viper.SetDefault("traces_limits_large.PRECOMPILE_ECADD_EFFECTIVE_CALLS", 32768)
 	viper.SetDefault("traces_limits_large.PRECOMPILE_ECMUL_EFFECTIVE_CALLS", 64)
 	viper.SetDefault("traces_limits_large.PRECOMPILE_ECPAIRING_FINAL_EXPONENTIATIONS", 32)

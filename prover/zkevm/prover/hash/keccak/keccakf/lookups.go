@@ -3,10 +3,12 @@ package keccakf
 import (
 	"github.com/consensys/linea-monorepo/prover/crypto/keccak"
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
-	"github.com/consensys/linea-monorepo/prover/maths/common/vector"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
+	"github.com/consensys/linea-monorepo/prover/protocol/column/verifiercol"
+	"github.com/consensys/linea-monorepo/prover/protocol/dedicated"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
+	"github.com/consensys/linea-monorepo/prover/symbolic"
 	"github.com/consensys/linea-monorepo/prover/utils"
 )
 
@@ -28,12 +30,12 @@ type lookUpTables struct {
 	BaseBDirty ifaces.Column
 
 	// Column containing the round constants.
-	RC ifaces.Column
+	RC *dedicated.RepeatedPattern
 
-	// Column indicating whether we should be looking at the previous of
-	// aIota to set a. It consists of a 0, followed by 23 1s, repeated
+	// DontUsePrevAIota indicates whether we should be looking at the previous
+	// of aIota to set a. It consists of a 1, followed by 23 0s, repeated
 	// numKeccakF times and then zero padded.
-	UsePrevAIota ifaces.Column
+	DontUsePrevAIota *dedicated.HeartBeatColumn
 }
 
 // Instantiate and populates the lookup tables for KeccakF.
@@ -50,15 +52,32 @@ func newLookUpTables(comp *wizard.CompiledIOP, maxNumKeccakf int) lookUpTables {
 	l.BaseADirty = comp.InsertPrecomputed(deriveName("BASE1_DIRTY"), baseADirty)
 	l.BaseBDirty = comp.InsertPrecomputed(deriveName("BASE2_DIRTY"), baseBDirty)
 
+	// This constraint is a small hack fixing an issue unrelated to keccak
+	// itself. The above-declared precomputed columns are grouped in a module
+	// named "STATIC" and it regroups common an small lookup tables and none of
+	// theses constraints is otherwise by a global or local constraint. This
+	// creates an edge-case where the corresponding GL module has nothing to
+	// prove and this bugs the compilation. To remediate, we add this dummy
+	// constraint that the first value of the column is equal to what it should
+	// be equal. This is always true and avoids the issue.
+	//
+	// Note: @alex: I had tried using a global constraint that A = A, but this
+	// gets simplified as 0 = 0 and panic instantly because the wizard won't
+	// detect any column in the expression.
+	comp.InsertLocal(0, "FILLING_FOR_STATIC_MODULE", symbolic.Sub(l.BaseAClean, baseAClean.Get(0)))
+
 	// tables for the RC columns
-	l.RC = comp.InsertPrecomputed(deriveName("RC"), valRCBase2(maxNumKeccakf))
+	l.RC = dedicated.NewRepeatedPattern(
+		comp, 0, valRCBase2Pattern(),
+		verifiercol.NewConstantCol(
+			field.One(),
+			numRows(maxNumKeccakf),
+			"keccak-rc-pattern",
+		))
 
 	// tables to indicate when to use the output of the previous round as
 	// input for the next round.
-	l.UsePrevAIota = comp.InsertPrecomputed(
-		deriveName("USE_PREV_CHI_IOTA"),
-		valUsePrevAIota(maxNumKeccakf),
-	)
+	l.DontUsePrevAIota = dedicated.CreateHeartBeat(comp, 0, keccak.NumRound, 0, verifiercol.NewConstantCol(field.One(), numRows(maxNumKeccakf), "keccak-dont-use-prev-a-iota-heart-beat"))
 
 	return l
 }
@@ -114,29 +133,18 @@ func valBaseXToBaseY(
 		smartvectors.RightZeroPadded(byClean, utils.ToInt(colSize))
 }
 
-// Returns a lookup table for the round constant of keccak given a maximal
-// number of permutations.
-func valRCBase2(maxNumKeccakf int) smartvectors.SmartVector {
-	size := numRows(maxNumKeccakf)
-	baseBF := field.NewElement(uint64(BaseB))
-	nKRound := keccak.NumRound
-	res := make([]field.Element, nKRound*maxNumKeccakf)
+// valRCBase2Pattern returns the list of the round constant of keccakf in base
+// [baseBF].
+func valRCBase2Pattern() []field.Element {
 
-	for permID := 0; permID < maxNumKeccakf; permID++ {
-		// Insert the actual round constants re-expressed in base B
-		for rID := 0; rID < nKRound; rID++ {
-			res[nKRound*permID+rID] = U64ToBaseX(keccak.RC[rID], &baseBF)
-		}
+	var (
+		res    = make([]field.Element, len(keccak.RC))
+		baseBF = field.NewElement(uint64(BaseB))
+	)
+
+	for i := range res {
+		res[i] = U64ToBaseX(keccak.RC[i], &baseBF)
 	}
 
-	return smartvectors.RightZeroPadded(res, size)
-}
-
-// Returns the values of the UsePrevAIota
-func valUsePrevAIota(maxNumKeccakf int) smartvectors.SmartVector {
-	res := vector.Repeat(field.One(), maxNumKeccakf*keccak.NumRound)
-	for i := 0; i < maxNumKeccakf; i++ {
-		res[i*keccak.NumRound] = field.Zero()
-	}
-	return smartvectors.RightZeroPadded(res, numRows(maxNumKeccakf))
+	return res
 }

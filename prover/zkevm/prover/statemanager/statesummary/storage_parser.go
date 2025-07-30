@@ -39,8 +39,8 @@ func newArithmetizationStorageParser(ss *Module, run *wizard.ProverRuntime) *Ari
 	// In case the SCP module is not activated (for instance, for testing). We
 	// still need to instantiate the storage parser but we can return one that
 	// does not feature the SCP module.
-	if ss.arithmetizationLink != nil {
-		res.scp = &ss.arithmetizationLink.Scp
+	if ss.ArithmetizationLink != nil {
+		res.scp = &ss.ArithmetizationLink.Scp
 	}
 
 	return res

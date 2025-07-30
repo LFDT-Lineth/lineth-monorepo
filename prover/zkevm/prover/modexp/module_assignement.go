@@ -1,12 +1,13 @@
 package modexp
 
 import (
+	"fmt"
+
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	"github.com/consensys/linea-monorepo/prover/utils"
 	"github.com/consensys/linea-monorepo/prover/utils/exit"
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/common"
-	"github.com/sirupsen/logrus"
 )
 
 // antichamberAssignment is a builder structure used to incrementally compute
@@ -27,8 +28,9 @@ func (mod *Module) Assign(run *wizard.ProverRuntime) {
 	var (
 		modexpCountSmall int = 0
 		modexpCountLarge int = 0
-		isModexp             = mod.Input.isModExp.GetColAssignment(run).IntoRegVecSaveAlloc()
+		isModexp             = mod.Input.IsModExp.GetColAssignment(run).IntoRegVecSaveAlloc()
 		limbs                = mod.Input.Limbs.GetColAssignment(run).IntoRegVecSaveAlloc()
+		settings             = mod.Input.Settings
 		builder              = antichamberAssignment{
 			isActive:    common.NewVectorBuilder(mod.IsActive),
 			isSmall:     common.NewVectorBuilder(mod.IsSmall),
@@ -85,14 +87,20 @@ func (mod *Module) Assign(run *wizard.ProverRuntime) {
 		currPosition += modexpNumRowsPerInstance
 	}
 
-	if modexpCountSmall > mod.MaxNb256BitsInstances {
-		logrus.Errorf("limit overflow: the modexp (256 bits) count is %v and the limit is %v\n", modexpCountSmall, mod.MaxNb256BitsInstances)
-		exit.OnLimitOverflow()
+	if modexpCountSmall > settings.MaxNbInstance256 {
+		exit.OnLimitOverflow(
+			settings.MaxNbInstance256,
+			modexpCountSmall,
+			fmt.Errorf("limit overflow: the modexp (256 bits) count is %v and the limit is %v", modexpCountSmall, settings.MaxNbInstance256),
+		)
 	}
 
-	if modexpCountLarge > mod.MaxNb4096BitsInstances {
-		logrus.Errorf("limit overflow: the modexp (4096 bits) count is %v and the limit is %v\n", modexpCountLarge, mod.MaxNb4096BitsInstances)
-		exit.OnLimitOverflow()
+	if modexpCountLarge > settings.MaxNbInstance4096 {
+		exit.OnLimitOverflow(
+			settings.MaxNbInstance4096,
+			modexpCountLarge,
+			fmt.Errorf("limit overflow: the modexp (4096 bits) count is %v and the limit is %v", modexpCountLarge, settings.MaxNbInstance4096),
+		)
 	}
 
 	builder.isActive.PadAndAssign(run, field.Zero())
@@ -103,7 +111,7 @@ func (mod *Module) Assign(run *wizard.ProverRuntime) {
 
 	// It is possible to not declare the circuit (for testing purpose) in that
 	// case we skip the corresponding assignment part.
-	if mod.hasCircuit {
+	if mod.HasCircuit {
 		mod.GnarkCircuitConnector256Bits.Assign(run)
 		mod.GnarkCircuitConnector4096Bits.Assign(run)
 	}

@@ -2,6 +2,8 @@ package smartvectors
 
 import (
 	"fmt"
+	"iter"
+	"slices"
 
 	"github.com/consensys/linea-monorepo/prover/maths/field/fext"
 
@@ -61,25 +63,17 @@ func (r *Regular) RotateRight(offset int) SmartVector {
 		return &resSlice
 	}
 
-	if offset > 0 {
-		// v and w may be the same vector thus we should use a
-		// separate leftover buffer for temporary memory buffers.
-		cutAt := len(*r) - offset
-		leftovers := vector.DeepCopy((*r)[cutAt:])
-		copy(resSlice[offset:], (*r)[:cutAt])
-		copy(resSlice[:offset], leftovers)
-		return &resSlice
+	if offset < 0 || offset > len(*r) {
+		offset = utils.PositiveMod(offset, len(*r))
 	}
 
-	if offset < 0 {
-		glueAt := len(*r) + offset
-		leftovers := vector.DeepCopy((*r)[:-offset])
-		copy(resSlice[:glueAt], (*r)[-offset:])
-		copy(resSlice[glueAt:], leftovers)
-		return &resSlice
-	}
-
-	panic("unreachable")
+	// v and w may be the same vector thus we should use a
+	// separate leftover buffer for temporary memory buffers.
+	cutAt := len(*r) - offset
+	leftovers := vector.DeepCopy((*r)[cutAt:])
+	copy(resSlice[offset:], (*r)[:cutAt])
+	copy(resSlice[:offset], leftovers)
+	return &resSlice
 }
 
 func (r *Regular) WriteInSlice(s []field.Element) {
@@ -97,6 +91,17 @@ func (r *Regular) WriteInSliceExt(s []fext.Element) {
 
 func (r *Regular) Pretty() string {
 	return fmt.Sprintf("Regular[%v]", vector.Prettify(*r))
+}
+
+// IterateCompact returns an iterator over the elements of the Regular.
+func (r *Regular) IterateCompact() iter.Seq[field.Element] {
+	return slices.Values(*r)
+}
+
+// IterateSkipPadding returns an interator over all the elements of the
+// smart-vector.
+func (r *Regular) IterateSkipPadding() iter.Seq[field.Element] {
+	return r.IterateCompact()
 }
 
 func processRegularOnly(op operator, svecs []SmartVector, coeffs []int, p ...mempool.MemPool) (result *Pooled, numMatches int) {
@@ -178,9 +183,13 @@ func (r *Regular) IntoRegVecSaveAllocExt() []fext.Element {
 	return temp
 }
 
+func (r *Regular) GetPtr(n int) *field.Element {
+	return &(*r)[n]
+}
+
 type Pooled struct {
 	Regular
-	poolPtr *[]field.Element
+	poolPtr *[]field.Element `serde:"omit"`
 }
 
 func AllocFromPool(pool mempool.MemPool) *Pooled {

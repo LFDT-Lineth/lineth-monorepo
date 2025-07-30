@@ -44,6 +44,12 @@ type TracesLimits struct {
 	Txndata           int `mapstructure:"TXN_DATA" validate:"power_of_2" corset:"txndata"`
 	Wcp               int `mapstructure:"WCP" validate:"power_of_2" corset:"wcp"`
 
+	U128 int `mapstructure:"U128" validate:"power_of_2" corset:":u128"`
+	U20  int `mapstructure:"U20" validate:"power_of_2" corset:":u20"`
+	U32  int `mapstructure:"U32" validate:"power_of_2" corset:":u32"`
+	U36  int `mapstructure:"U36" validate:"power_of_2" corset:":u36"`
+	U64  int `mapstructure:"U64" validate:"power_of_2" corset:":u64"`
+
 	Binreftable int `mapstructure:"BIN_REFERENCE_TABLE" validate:"power_of_2" corset:"binreftable"`
 	Shfreftable int `mapstructure:"SHF_REFERENCE_TABLE" validate:"power_of_2" corset:"shfreftable"`
 	Instdecoder int `mapstructure:"INSTRUCTION_DECODER" validate:"power_of_2" corset:"instdecoder"`
@@ -52,6 +58,7 @@ type TracesLimits struct {
 	PrecompileSha2Blocks                 int `mapstructure:"PRECOMPILE_SHA2_BLOCKS"`
 	PrecompileRipemdBlocks               int `mapstructure:"PRECOMPILE_RIPEMD_BLOCKS"`
 	PrecompileModexpEffectiveCalls       int `mapstructure:"PRECOMPILE_MODEXP_EFFECTIVE_CALLS"`
+	PrecompileModexpEffectiveCalls4096   int `mapstructure:"PRECOMPILE_MODEXP_EFFECTIVE_CALLS_4096"`
 	PrecompileEcaddEffectiveCalls        int `mapstructure:"PRECOMPILE_ECADD_EFFECTIVE_CALLS"`
 	PrecompileEcmulEffectiveCalls        int `mapstructure:"PRECOMPILE_ECMUL_EFFECTIVE_CALLS"`
 	PrecompileEcpairingEffectiveCalls    int `mapstructure:"PRECOMPILE_ECPAIRING_FINAL_EXPONENTIATIONS"`
@@ -81,4 +88,119 @@ func (tl *TracesLimits) Checksum() string {
 	}
 
 	return digest
+}
+
+func (tl *TracesLimits) ScaleUp(by int) {
+
+	tl.Add *= by
+	tl.Bin *= by
+	tl.Blake2Fmodexpdata *= by
+	tl.Blockdata *= by
+	tl.Blockhash *= by
+	tl.Ecdata *= by
+	tl.Euc *= by
+	tl.Exp *= by
+	tl.Ext *= by
+	tl.Gas *= by
+	tl.Hub *= by
+	tl.Logdata *= by
+	tl.Loginfo *= by
+	tl.Mmio *= by
+	tl.Mmu *= by
+	tl.Mod *= by
+	tl.Mul *= by
+	tl.Mxp *= by
+	tl.Oob *= by
+	tl.Rlpaddr *= by
+	tl.Rlptxn *= by
+	tl.Rlptxrcpt *= by
+	tl.Rom *= by
+	tl.Romlex *= by
+	tl.Shakiradata *= by
+	tl.Shf *= by
+	tl.Stp *= by
+	tl.Trm *= by
+	tl.Txndata *= by
+	tl.Wcp *= by
+	tl.PrecompileEcrecoverEffectiveCalls *= by
+	tl.PrecompileSha2Blocks *= by
+	tl.PrecompileModexpEffectiveCalls *= by
+	tl.PrecompileModexpEffectiveCalls4096 *= by
+	tl.PrecompileEcaddEffectiveCalls *= by
+	tl.PrecompileEcmulEffectiveCalls *= by
+	tl.PrecompileEcpairingEffectiveCalls *= by
+	tl.PrecompileEcpairingMillerLoops *= by
+	tl.PrecompileEcpairingG2MembershipCalls *= by
+	tl.BlockKeccak *= by
+	tl.BlockTransactions *= by
+	tl.ShomeiMerkleProofs *= by
+	tl.U128 *= by
+	tl.U20 *= by
+	tl.U32 *= by
+	tl.U36 *= by
+	tl.U64 *= by
+}
+
+func GetTestTracesLimits() *TracesLimits {
+
+	// This are the config trace-limits from sepolia. All multiplied by 16.
+	traceLimits := &TracesLimits{
+		Add:                                  1 << 19,
+		Bin:                                  1 << 18,
+		Blake2Fmodexpdata:                    1 << 14,
+		Blockdata:                            1 << 12,
+		Blockhash:                            1 << 12,
+		Ecdata:                               1 << 18,
+		Euc:                                  1 << 16,
+		Exp:                                  1 << 14,
+		Ext:                                  1 << 20,
+		Gas:                                  1 << 16,
+		Hub:                                  1 << 21,
+		Logdata:                              1 << 16,
+		Loginfo:                              1 << 12,
+		Mmio:                                 1 << 21,
+		Mmu:                                  1 << 21,
+		Mod:                                  1 << 17,
+		Mul:                                  1 << 16,
+		Mxp:                                  1 << 19,
+		Oob:                                  1 << 18,
+		Rlpaddr:                              1 << 12,
+		Rlptxn:                               1 << 17,
+		Rlptxrcpt:                            1 << 17,
+		Rom:                                  1 << 22,
+		Romlex:                               1 << 12,
+		Shakiradata:                          1 << 15,
+		Shf:                                  1 << 16,
+		Stp:                                  1 << 14,
+		Trm:                                  1 << 15,
+		Txndata:                              1 << 14,
+		Wcp:                                  1 << 18,
+		Binreftable:                          1 << 20,
+		Shfreftable:                          1 << 12,
+		Instdecoder:                          1 << 9,
+		PrecompileEcrecoverEffectiveCalls:    1 << 9,
+		PrecompileSha2Blocks:                 1 << 9,
+		PrecompileRipemdBlocks:               0,
+		PrecompileModexpEffectiveCalls:       1 << 10,
+		PrecompileModexpEffectiveCalls4096:   1 << 4,
+		PrecompileEcaddEffectiveCalls:        1 << 6,
+		PrecompileEcmulEffectiveCalls:        1 << 6,
+		PrecompileEcpairingEffectiveCalls:    1 << 4,
+		PrecompileEcpairingMillerLoops:       1 << 4,
+		PrecompileEcpairingG2MembershipCalls: 1 << 4,
+		PrecompileBlakeEffectiveCalls:        0,
+		PrecompileBlakeRounds:                0,
+		BlockKeccak:                          1 << 13,
+		BlockL1Size:                          100_000,
+		BlockL2L1Logs:                        16,
+		BlockTransactions:                    1 << 8,
+		ShomeiMerkleProofs:                   1 << 14,
+		U128:                                 1 << 17,
+		U20:                                  1 << 17,
+		U32:                                  1 << 17,
+		U36:                                  1 << 17,
+		U64:                                  1 << 17,
+	}
+
+	return traceLimits
 }

@@ -4,8 +4,11 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/linea-monorepo/prover/crypto/fiatshamir"
+	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/utils"
+	"github.com/google/uuid"
 )
 
 // Wrapper type for naming the coins
@@ -42,8 +45,15 @@ func (n *Name) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-// Metadata around the random coin
+// Metadata around the random coin. The struct is made non-constructible to
+// ensure that it is built from the [NewInfo] constructor. The reason is that
+// the structure contains an internal UUID used for the serialization process
+// and we want to be sure that all instances have their own UUID.
 type Info struct {
+	info
+}
+
+type info struct {
 	Type Type `json:"type"`
 	// Set if applicable (for instance, IntegerVec)
 	Size int `json:"size"`
@@ -53,6 +63,9 @@ type Info struct {
 	Name Name `json:"name"`
 	// Round at which the coin was declared
 	Round int `json:"round"`
+	// uuid is a pointer to the compiler IOP. This is used as part of the
+	// serialization process
+	uuid uuid.UUID
 }
 
 // Type of random coin
@@ -61,6 +74,7 @@ type Type int
 const (
 	Field Type = iota
 	IntegerVec
+	FieldFromSeed
 )
 
 // MarshalJSON implements [json.Marshaler] directly returning the Itoa of the
@@ -88,12 +102,28 @@ func (t *Type) UnmarshalJSON(b []byte) error {
 /*
 Sample a random coin, according to its `spec`
 */
-func (info *Info) Sample(fs *fiatshamir.State) interface{} {
+func (info *Info) Sample(fs *fiatshamir.State, seed field.Element) interface{} {
 	switch info.Type {
 	case Field:
 		return fs.RandomField()
 	case IntegerVec:
 		return fs.RandomManyIntegers(info.Size, info.UpperBound)
+	case FieldFromSeed:
+		return fs.RandomFieldFromSeed(seed, string(info.Name))
+	}
+	panic("Unreachable")
+}
+
+// SampleGnark samples a random coin in a gnark circuit. The seed can optionally be
+// passed by the caller is used for [FieldFromSeed] coins. The function returns
+func (info *Info) SampleGnark(fs *fiatshamir.GnarkFiatShamir, seed frontend.Variable) interface{} {
+	switch info.Type {
+	case Field:
+		return fs.RandomField()
+	case IntegerVec:
+		return fs.RandomManyIntegers(info.Size, info.UpperBound)
+	case FieldFromSeed:
+		return fs.RandomFieldFromSeed(seed, string(info.Name))
 	}
 	panic("Unreachable")
 }
@@ -104,7 +134,7 @@ number of integers and size[1] contains the upperBound.
 */
 func NewInfo(name Name, type_ Type, round int, size ...int) Info {
 
-	infos := Info{Name: name, Type: type_, Round: round}
+	infos := Info{info{Name: name, Type: type_, Round: round, uuid: uuid.New()}}
 
 	switch type_ {
 	case IntegerVec:
@@ -117,9 +147,17 @@ func NewInfo(name Name, type_ Type, round int, size ...int) Info {
 		if len(size) > 0 {
 			utils.Panic("size for Field")
 		}
+	case FieldFromSeed:
+		if len(size) > 0 {
+			utils.Panic("size for Field")
+		}
 	default:
 		panic("unreachable")
 	}
 
 	return infos
+}
+
+func (info Info) UUID() uuid.UUID {
+	return info.uuid
 }

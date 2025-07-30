@@ -14,7 +14,7 @@ var (
 	checkerZkEvm     *ZkEvm
 	onceCheckerZkEvm = sync.Once{}
 
-	checkerCompilationSuite = compilationSuite{
+	checkerCompilationSuite = CompilationSuite{
 		// The dummy compiler returns the witness as the proof and manually
 		// checks it as the verifier. It is essentially the trivial proof
 		// system.

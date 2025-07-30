@@ -4,8 +4,9 @@ import (
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/column"
 	"github.com/consensys/linea-monorepo/prover/protocol/dedicated"
-	"github.com/consensys/linea-monorepo/prover/protocol/dedicated/projection"
+	"github.com/consensys/linea-monorepo/prover/protocol/distributed/pragmas"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
+	"github.com/consensys/linea-monorepo/prover/protocol/query"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	sym "github.com/consensys/linea-monorepo/prover/symbolic"
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/common"
@@ -26,12 +27,12 @@ type ImportAndPadInputs struct {
 	PaddingStrategy generic.HashingUsecase
 }
 
-// importation stores the wizard compilation context to instantiate the
+// Importation stores the wizard compilation context to instantiate the
 // functionality of [ImportAndPad]: e.g. it stores all the intermediate columns
 // and constraints and implements the [wizard.ProverAction] interface. The
-// [importation.Run] function is responsible for assigning all the generated
+// [Importation.Run] function is responsible for assigning all the generated
 // columns.
-type importation struct {
+type Importation struct {
 
 	// Inputs tracks the input structure used for instantiating this [Importation]
 	Inputs         ImportAndPadInputs
@@ -48,11 +49,11 @@ type importation struct {
 	IsActive ifaces.Column
 
 	// Padder stores the padding-strategy-specific
-	padder padder
+	Padder padder
 
 	// helper column
-	indexIsZero ifaces.Column
-	paIsZero    wizard.ProverAction
+	IndexIsZero ifaces.Column
+	PaIsZero    wizard.ProverAction
 }
 
 // importationAssignmentBuilder is a utility struct used to build an assignment
@@ -82,10 +83,10 @@ type padderAssignmentBuilder interface {
 
 // ImportAndPad defines and constrains the Importation and the padding of a
 // group of generic byte module following a prespecified padding strategy.
-func ImportAndPad(comp *wizard.CompiledIOP, inp ImportAndPadInputs, numRows int) *importation {
+func ImportAndPad(comp *wizard.CompiledIOP, inp ImportAndPadInputs, numRows int) *Importation {
 
 	var (
-		res = &importation{
+		res = &Importation{
 			Inputs:         inp,
 			HashNum:        comp.InsertCommit(0, ifaces.ColIDf("%v_IMPORT_PAD_HASH_NUM", inp.Name), numRows),
 			Limbs:          comp.InsertCommit(0, ifaces.ColIDf("%v_IMPORT_PAD_LIMBS", inp.Name), numRows),
@@ -99,13 +100,15 @@ func ImportAndPad(comp *wizard.CompiledIOP, inp ImportAndPadInputs, numRows int)
 		}
 	)
 
+	pragmas.MarkRightPadded(res.HashNum)
+
 	switch {
 	case inp.PaddingStrategy == generic.KeccakUsecase:
-		res.padder = res.newKeccakPadder(comp)
+		res.Padder = res.newKeccakPadder(comp)
 	case inp.PaddingStrategy == generic.Sha2Usecase:
-		res.padder = res.newSha2Padder(comp)
+		res.Padder = res.newSha2Padder(comp)
 	case inp.PaddingStrategy == generic.MiMCUsecase:
-		res.padder = res.newMimcPadder(comp)
+		res.Padder = res.newMimcPadder(comp)
 	default:
 		panic("unknown strategy")
 	}
@@ -135,9 +138,9 @@ func ImportAndPad(comp *wizard.CompiledIOP, inp ImportAndPadInputs, numRows int)
 	)
 
 	// When Index = 0, IsNewHash = 1
-	res.indexIsZero, res.paIsZero = dedicated.IsZero(comp, res.Index)
+	res.IndexIsZero, res.PaIsZero = dedicated.IsZero(comp, res.Index)
 	comp.InsertGlobal(0, ifaces.QueryIDf("%v_IS_NEW_HASH_WELL_SET", inp.Name),
-		sym.Mul(res.IsActive, res.indexIsZero,
+		sym.Mul(res.IsActive, res.IndexIsZero,
 			sym.Sub(1, res.IsNewHash),
 		),
 	)
@@ -184,20 +187,18 @@ func ImportAndPad(comp *wizard.CompiledIOP, inp ImportAndPadInputs, numRows int)
 		res.IsPadded,
 	)
 
-	projection.InsertProjection(
-		comp,
+	comp.InsertProjection(
 		ifaces.QueryIDf("%v_IMPORT_PAD_PROJECTION", inp.Name),
-		[]ifaces.Column{inp.Src.Data.HashNum, inp.Src.Data.Limb, inp.Src.Data.NBytes, inp.Src.Data.Index},
-		[]ifaces.Column{res.HashNum, res.Limbs, res.NBytes, res.Index},
-		inp.Src.Data.ToHash,
-		res.IsInserted,
-	)
+		query.ProjectionInput{ColumnA: []ifaces.Column{inp.Src.Data.HashNum, inp.Src.Data.Limb, inp.Src.Data.NBytes, inp.Src.Data.Index},
+			ColumnB: []ifaces.Column{res.HashNum, res.Limbs, res.NBytes, res.Index},
+			FilterA: inp.Src.Data.ToHash,
+			FilterB: res.IsInserted})
 
 	return res
 }
 
 // Run performs the assignment of the Importation module.
-func (imp *importation) Run(run *wizard.ProverRuntime) {
+func (imp *Importation) Run(run *wizard.ProverRuntime) {
 
 	var (
 		sha2Count = 0
@@ -229,7 +230,7 @@ func (imp *importation) Run(run *wizard.ProverRuntime) {
 		iab.Padder = keccakPadderAssignmentBuilder{}
 	case imp.Inputs.PaddingStrategy == generic.Sha2Usecase:
 		iab.Padder = &sha2PaddingAssignmentBuilder{
-			AccInsertedBytes: common.NewVectorBuilder(imp.padder.(*sha2Padder).AccInsertedBytes),
+			AccInsertedBytes: common.NewVectorBuilder(imp.Padder.(*Sha2Padder).AccInsertedBytes),
 		}
 	case imp.Inputs.PaddingStrategy == generic.MiMCUsecase:
 		iab.Padder = &mimcPadderAssignmentBuilder{}
@@ -243,7 +244,7 @@ func (imp *importation) Run(run *wizard.ProverRuntime) {
 			// The condition of sha2Count addresses the case were sha2 is never
 			// called.
 			if sha2Count > 0 && i == len(hashNum)-1 {
-				imp.padder.pushPaddingRows(currByteSize, &iab)
+				imp.Padder.pushPaddingRows(currByteSize, &iab)
 			}
 
 			continue
@@ -252,7 +253,7 @@ func (imp *importation) Run(run *wizard.ProverRuntime) {
 		sha2Count++
 
 		if index[i].IsZero() && !currHashNum.IsZero() {
-			imp.padder.pushPaddingRows(currByteSize, &iab)
+			imp.Padder.pushPaddingRows(currByteSize, &iab)
 		}
 
 		if index[i].IsZero() {
@@ -271,7 +272,7 @@ func (imp *importation) Run(run *wizard.ProverRuntime) {
 		iab.pushInsertion(hashNum[i], limbs[i], nBytesInt, indexInt)
 
 		if i == len(hashNum)-1 {
-			imp.padder.pushPaddingRows(currByteSize, &iab)
+			imp.Padder.pushPaddingRows(currByteSize, &iab)
 		}
 	}
 
@@ -286,7 +287,7 @@ func (imp *importation) Run(run *wizard.ProverRuntime) {
 	iab.IsNewHash.PadAndAssign(run, field.Zero())
 	iab.Padder.padAndAssign(run)
 
-	imp.paIsZero.Run(run)
+	imp.PaIsZero.Run(run)
 }
 
 // pushPaddingCommonColumns push an insertion row corresponding to the first

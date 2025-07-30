@@ -26,6 +26,7 @@ type merkleTestBuilder struct {
 	useNextMerkleProof []field.Element
 	isActive           []field.Element
 	counter            []field.Element
+	tree               smt.Tree
 }
 
 // newMerkleTestBuilder returns an empty builder

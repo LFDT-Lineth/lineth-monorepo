@@ -19,7 +19,7 @@ func TestReedSolomonDoesNotChangeEvaluation(t *testing.T) {
 
 	x := field.NewElement(478)
 
-	params := NewParams(_blowUpFactor, polySize, _nPolys, ringsis.StdParams, mimc.NewMiMC)
+	params := NewParams(_blowUpFactor, polySize, _nPolys, ringsis.StdParams, mimc.NewMiMC, mimc.NewMiMC)
 	vec := smartvectors.Rand(1 << 10)
 	rsEncoded := params.rsEncode(vec, nil)
 
@@ -41,7 +41,7 @@ func TestReedSolomonConstant(t *testing.T) {
 
 	x := field.NewElement(478)
 
-	params := NewParams(_blowUpFactor, polySize, _nPolys, ringsis.StdParams, mimc.NewMiMC)
+	params := NewParams(_blowUpFactor, polySize, _nPolys, ringsis.StdParams, mimc.NewMiMC, mimc.NewMiMC)
 	vec := smartvectors.NewConstant(field.NewElement(42), polySize)
 	rsEncoded := params.rsEncode(vec, nil)
 

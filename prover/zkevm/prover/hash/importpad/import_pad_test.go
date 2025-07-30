@@ -45,7 +45,7 @@ func TestImportAndPad(t *testing.T) {
 
 			var (
 				inp   ImportAndPadInputs
-				mod   *importation
+				mod   *Importation
 				inpCt = csvtraces.MustOpenCsvFile("testdata/input.csv")
 				modCt = csvtraces.MustOpenCsvFile(uc.ModFilePath)
 			)
@@ -106,7 +106,7 @@ func TestImportAndPad(t *testing.T) {
 	}
 }
 
-func checkPaddingAssignment(t *testing.T, run *wizard.ProverRuntime, paddingFunc func([]byte) []byte, mod *importation) {
+func checkPaddingAssignment(t *testing.T, run *wizard.ProverRuntime, paddingFunc func([]byte) []byte, mod *Importation) {
 
 	var (
 		paddedGdm = &generic.GenDataModule{

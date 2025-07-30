@@ -2,15 +2,17 @@ package keccak
 
 import (
 	"errors"
-	"github.com/consensys/gnark/std/compress"
-	"github.com/consensys/linea-monorepo/prover/circuits/internal"
-	"github.com/sirupsen/logrus"
 	"math/big"
+
+	"github.com/consensys/gnark/std/compress"
+	"github.com/sirupsen/logrus"
+
+	"github.com/consensys/linea-monorepo/prover/circuits/internal"
+	"github.com/consensys/linea-monorepo/prover/circuits/internal/plonk"
 
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/std/lookup/logderivlookup"
 	"github.com/consensys/gnark/std/rangecheck"
-	"github.com/consensys/linea-monorepo/prover/circuits/internal/plonk"
 	"github.com/consensys/linea-monorepo/prover/protocol/serialization"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	"github.com/consensys/linea-monorepo/prover/utils"
@@ -101,7 +103,7 @@ func (h *Hasher) Sum(nbIn frontend.Variable, bytess ...[32]frontend.Variable) [3
 	return out
 }
 
-func (h *Hasher) Finalize(c *wizard.WizardVerifierCircuit) error {
+func (h *Hasher) Finalize(c *wizard.VerifierCircuit) error {
 	lanes, isLaneActive, isFirstLaneOfNewHash := h.createColumns()
 
 	if c == nil {
@@ -327,7 +329,9 @@ func NewWizardVerifierSubCircuit(maxNbKeccakF int, compilationOpts ...func(iop *
 			Title:   "prover-interconnection/keccak-strict-hasher",
 			Version: "beta-v1",
 		},
-		serialization.SerializeCompiledIOP,
+		func(wiop *wizard.CompiledIOP) ([]byte, error) {
+			return serialization.Serialize(wiop)
+		},
 	)
 	return &c
 }
@@ -338,10 +342,10 @@ func (c *HashWizardVerifierSubCircuit) prove(ins [][]byte) wizard.Proof {
 	})
 }
 
-func (c *HashWizardVerifierSubCircuit) Compile() (*wizard.WizardVerifierCircuit, error) {
-	return wizard.AllocateWizardCircuit(c.compiled)
+func (c *HashWizardVerifierSubCircuit) Compile() (*wizard.VerifierCircuit, error) {
+	return wizard.AllocateWizardCircuit(c.compiled, c.compiled.NumRounds()), nil
 }
 
-func (c *HashWizardVerifierSubCircuit) Assign(ins [][]byte) *wizard.WizardVerifierCircuit {
-	return wizard.GetWizardVerifierCircuitAssignment(c.compiled, c.prove(ins))
+func (c *HashWizardVerifierSubCircuit) Assign(ins [][]byte) *wizard.VerifierCircuit {
+	return wizard.AssignVerifierCircuit(c.compiled, c.prove(ins), c.compiled.NumRounds())
 }

@@ -2,6 +2,7 @@ package gkrmimc
 
 import (
 	"github.com/consensys/gnark/frontend"
+	gGkr "github.com/consensys/gnark/std/gkr"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/utils"
 )
@@ -25,7 +26,7 @@ func NewFinalRoundGateGnark(ark field.Element) FinalRoundGate {
 	}
 }
 
-func (m FinalRoundGate) Evaluate(api frontend.API, input ...frontend.Variable) frontend.Variable {
+func (m FinalRoundGate) Evaluate(api gGkr.GateAPI, input ...frontend.Variable) frontend.Variable {
 
 	if len(input) != 3 {
 		utils.Panic("expected fan-in of 3, got %v", len(input))

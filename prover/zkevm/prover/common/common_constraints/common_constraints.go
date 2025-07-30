@@ -4,13 +4,37 @@ import (
 	"strings"
 
 	"github.com/consensys/linea-monorepo/prover/protocol/column"
+	"github.com/consensys/linea-monorepo/prover/protocol/column/verifiercol"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	sym "github.com/consensys/linea-monorepo/prover/symbolic"
+	"github.com/consensys/linea-monorepo/prover/utils"
 )
 
 // MustZeroWhenInactive constraints the column to cancel when inactive.
-func MustZeroWhenInactive(comp *wizard.CompiledIOP, isActive ifaces.Column, cs ...ifaces.Column) {
+func MustZeroWhenInactive(comp *wizard.CompiledIOP, isActive any, cs ...ifaces.Column) {
+
+	if e, isE := isActive.(*sym.Expression); isE {
+		if v, isV := e.Operator.(sym.Variable); isV {
+			isActive = v.Metadata
+		}
+	}
+
+	if ccol, isc := isActive.(verifiercol.ConstCol); isc {
+
+		if ccol.F.IsOne() {
+			// The constraint is meaningless in that situation
+			return
+		}
+
+		if !ccol.F.IsZero() {
+			utils.Panic("activator column is not boolean: is const-col with value=%v", ccol.F.String())
+		}
+
+		// expectedly, the only possibility
+		isActive = sym.NewConstant(ccol.F)
+	}
+
 	for _, c := range cs {
 		comp.InsertGlobal(
 			0,
@@ -69,5 +93,14 @@ func MustBeMutuallyExclusiveBinaryFlags(comp *wizard.CompiledIOP, isActive iface
 		0,
 		ifaces.QueryIDf("%v_ARE_MUTUALLY_EXCLUSIVE_WHEN_%v", strings.Join(flagsNames, "_"), isActive.GetColID()),
 		sym.Sub(isActive, flagsAny...),
+	)
+}
+
+// MustBeConstant constrains the current column to be constant.
+func MustBeConstant(comp *wizard.CompiledIOP, c ifaces.Column) {
+	comp.InsertGlobal(
+		0,
+		ifaces.QueryIDf("%v_MUST_BE_CONSTANT", c.GetColID()),
+		sym.Sub(c, column.Shift(c, 1)),
 	)
 }

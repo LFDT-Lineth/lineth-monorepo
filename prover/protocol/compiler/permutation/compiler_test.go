@@ -391,7 +391,7 @@ func TestPermutationPass(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.Title, func(t *testing.T) {
-			comp := wizard.Compile(testCase.Define, CompileGrandProduct, dummy.Compile)
+			comp := wizard.Compile(testCase.Define, CompileViaGrandProduct, dummy.Compile)
 			proof := wizard.Prove(comp, testCase.Prove)
 			if err := wizard.Verify(comp, proof); err != nil && testCase.ShouldPass {
 				t.Fatalf("verifier did not pass: %v", err.Error())

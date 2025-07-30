@@ -22,6 +22,52 @@ const (
 	INTERPOLATION_GLOBAL        string = "INTERPOLATION_GLOBAL"
 )
 
+type InterpolationProverAction struct {
+	Name string
+	A    ifaces.Accessor
+	P    ifaces.Column
+	N    int
+}
+
+func (a *InterpolationProverAction) Run(assi *wizard.ProverRuntime) {
+	aVal := a.A.GetVal(assi)
+	one := field.One()
+	p := a.P.GetColAssignment(assi)
+
+	omegaInv := fft.GetOmega(a.N)
+	omegaInv.Inverse(&omegaInv)
+
+	witi := make([]field.Element, a.N)
+	witi[0] = aVal
+
+	aRootOfUnityFlag := false
+	for i := 1; i < a.N; i++ {
+		witi[i].Mul(&witi[i-1], &omegaInv)
+		witi[i-1].Sub(&witi[i-1], &one)
+		if witi[i-1].IsZero() {
+			aRootOfUnityFlag = true
+		}
+	}
+	witi[a.N-1].Sub(&witi[a.N-1], &one)
+
+	if witi[a.N-1].IsZero() || aRootOfUnityFlag {
+		utils.Panic("detected that a is a root of unity")
+	}
+
+	witi = field.BatchInvert(witi)
+
+	for i := range witi {
+		pi := p.Get(i)
+		witi[i].Mul(&pi, &witi[i])
+		if i > 0 {
+			witi[i].Add(&witi[i], &witi[i-1])
+		}
+	}
+
+	assi.AssignColumn(ifaces.ColIDf("%v_%v", a.Name, INTERPOLATION_POLY), smartvectors.NewRegular(witi))
+	assi.AssignLocalPoint(ifaces.QueryIDf("%v_%v", a.Name, INTERPOLATION_OPEN_END), witi[a.N-1])
+}
+
 // See the explainer here : https://hackmd.io/S78bJUa0Tk-T256iduE22g#Evaluate-in-Lagrange-form
 // The variable names are the same as the one in the hackmd
 func Interpolation(comp *wizard.CompiledIOP, name string, a ifaces.Accessor, p ifaces.Column) ifaces.Accessor {
@@ -98,52 +144,11 @@ func Interpolation(comp *wizard.CompiledIOP, name string, a ifaces.Accessor, p i
 		column.Shift(i, -1),
 	)
 
-	comp.SubProvers.AppendToInner(maxRound, func(assi *wizard.ProverRuntime) {
-
-		n := p.Size()
-		a := a.GetVal(assi)
-		one := field.One()
-		p := p.GetColAssignment(assi)
-
-		omegaInv := fft.GetOmega(n)
-		omegaInv.Inverse(&omegaInv)
-
-		// Compute the accumulator
-		// witi will first contain the values of
-		// omega^i / a - omega^i
-		witi := make([]field.Element, n)
-		witi[0] = a
-
-		aRootOfUnityFlag := false
-
-		for i := 1; i < n; i++ {
-			witi[i].Mul(&witi[i-1], &omegaInv)
-			witi[i-1].Sub(&witi[i-1], &one)
-			if witi[i-1].IsZero() {
-				aRootOfUnityFlag = true
-			}
-		}
-
-		witi[n-1].Sub(&witi[n-1], &one)
-
-		if witi[n-1].IsZero() || aRootOfUnityFlag {
-			utils.Panic("detected that a is a root of unity")
-		}
-
-		witi = field.BatchInvert(witi)
-
-		// Now we use it to compute the accumulation polyno
-		for i := range witi {
-			pi := p.Get(i)
-			witi[i].Mul(&pi, &witi[i])
-			if i > 0 {
-				witi[i].Add(&witi[i], &witi[i-1])
-			}
-		}
-
-		// Now we have the full witness of i
-		assi.AssignColumn(ifaces.ColIDf("%v_%v", name, INTERPOLATION_POLY), smartvectors.NewRegular(witi))
-		assi.AssignLocalPoint(ifaces.QueryIDf("%v_%v", name, INTERPOLATION_OPEN_END), witi[n-1])
+	comp.RegisterProverAction(maxRound, &InterpolationProverAction{
+		Name: name,
+		A:    a,
+		P:    p,
+		N:    length,
 	})
 
 	// Since the symbolic package does not support inversion, we have to compute

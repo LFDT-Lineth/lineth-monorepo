@@ -36,10 +36,10 @@ type KeccakOverBlocks struct {
 	MaxNumKeccakF int
 
 	// prover actions for  internal modules
-	pa_blockBaseConversion wizard.ProverAction
-	pa_hashBaseConversion  wizard.ProverAction
-	pa_spaghetti           wizard.ProverAction
-	keccakF                keccakf.Module
+	Pa_blockBaseConversion wizard.ProverAction
+	Pa_hashBaseConversion  wizard.ProverAction
+	Pa_spaghetti           wizard.ProverAction
+	KeccakF                keccakf.Module
 }
 
 // NewKeccakOverBlocks implements the utilities for proving keccak hash over the given blocks.
@@ -103,10 +103,10 @@ func NewKeccakOverBlocks(comp *wizard.CompiledIOP, inp KeccakOverBlockInputs) *K
 		HashHi:                 bcForHash.HashHi,
 		HashLo:                 bcForHash.HashLo,
 		IsActive:               bcForHash.IsActive,
-		pa_blockBaseConversion: bcForBlock,
-		keccakF:                keccakf,
-		pa_hashBaseConversion:  bcForHash,
-		pa_spaghetti:           blockSpaghetti,
+		Pa_blockBaseConversion: bcForBlock,
+		KeccakF:                keccakf,
+		Pa_hashBaseConversion:  bcForHash,
+		Pa_spaghetti:           blockSpaghetti,
 	}
 
 	return m
@@ -115,15 +115,15 @@ func NewKeccakOverBlocks(comp *wizard.CompiledIOP, inp KeccakOverBlockInputs) *K
 // It implements [wizard.ProverAction] for customizedKeccak.
 func (m *KeccakOverBlocks) Run(run *wizard.ProverRuntime) {
 	// assign blockBaseConversion
-	m.pa_blockBaseConversion.Run(run)
+	m.Pa_blockBaseConversion.Run(run)
 	// assign keccakF
 	// first, construct the traces for the accumulated Provider
 	permTrace := keccak.GenerateTrace(m.Inputs.Provider)
-	m.keccakF.Assign(run, permTrace)
+	m.KeccakF.Assign(run, permTrace)
 	// assign HashBaseConversion
-	m.pa_hashBaseConversion.Run(run)
+	m.Pa_hashBaseConversion.Run(run)
 	//assign blockSpaghetti
-	m.pa_spaghetti.Run(run)
+	m.Pa_spaghetti.Run(run)
 }
 
 // AssignLaneInfo a helper function that assigns the blocks (i.e., LaneInfo)) from the stream.

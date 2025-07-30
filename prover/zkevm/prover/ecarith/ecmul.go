@@ -11,6 +11,7 @@ import (
 	"github.com/consensys/gnark/std/math/emulated"
 	"github.com/consensys/linea-monorepo/prover/protocol/dedicated/plonk"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
+	"github.com/consensys/linea-monorepo/prover/protocol/query"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 )
 
@@ -28,7 +29,7 @@ type EcMul struct {
 	*EcDataMulSource
 	AlignedGnarkData *plonk.Alignment
 
-	size int
+	Size int
 	*Limits
 }
 
@@ -43,12 +44,12 @@ func NewEcMulZkEvm(comp *wizard.CompiledIOP, limits *Limits) *EcMul {
 			IsData:  comp.Columns.GetHandle("ecdata.IS_ECMUL_DATA"),
 			IsRes:   comp.Columns.GetHandle("ecdata.IS_ECMUL_RESULT"),
 		},
-		[]plonk.Option{plonk.WithRangecheck(16, 6, true)},
+		[]query.PlonkOption{query.PlonkRangeCheckOption(16, 6, true)},
 	)
 }
 
 // newEcMul creates a new EC_MUL integration.
-func newEcMul(comp *wizard.CompiledIOP, limits *Limits, src *EcDataMulSource, plonkOptions []plonk.Option) *EcMul {
+func newEcMul(comp *wizard.CompiledIOP, limits *Limits, src *EcDataMulSource, plonkOptions []query.PlonkOption) *EcMul {
 	size := limits.sizeEcMulIntegration()
 
 	toAlign := &plonk.CircuitAlignmentInput{
@@ -59,12 +60,15 @@ func newEcMul(comp *wizard.CompiledIOP, limits *Limits, src *EcDataMulSource, pl
 		Circuit:            NewECMulCircuit(limits),
 		NbCircuitInstances: limits.NbCircuitInstances,
 		PlonkOptions:       plonkOptions,
-		InputFiller:        nil, // not necessary: 0 * (0,0) = (0,0) with complete arithmetic
+		// not necessary: 0 * (0,0) = (0,0) with complete arithmetic since (0, 0)
+		// encodes the point at infinity.
+		InputFillerKey: "",
 	}
+
 	res := &EcMul{
 		EcDataMulSource:  src,
 		AlignedGnarkData: plonk.DefineAlignment(comp, toAlign),
-		size:             size,
+		Size:             size,
 	}
 
 	return res

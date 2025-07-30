@@ -41,13 +41,13 @@ func newAssignmentBuilder(length int) *assignBuilder {
 // Assign function assigns columns of the MiMCCodeHash module
 func (mh *Module) Assign(run *wizard.ProverRuntime) {
 
-	if mh.inputModules == nil {
+	if mh.InputModules == nil {
 		utils.Panic("Module.ConnectToRom has not been run")
 	}
 
 	var (
-		rom    = mh.inputModules.RomInput
-		romLex = mh.inputModules.RomLexInput
+		rom    = mh.InputModules.RomInput
+		romLex = mh.InputModules.RomLexInput
 	)
 
 	if !run.Columns.Exists(rom.CounterIsEqualToNBytesMinusOne.GetColID()) {
@@ -218,20 +218,20 @@ func (mh *Module) Assign(run *wizard.ProverRuntime) {
 	}
 
 	// Assign the columns of the mimc code hash module
-	run.AssignColumn(mh.IsActive.GetColID(), smartvectors.RightZeroPadded(builder.isActive, mh.inputs.Size))
-	run.AssignColumn(mh.CFI.GetColID(), smartvectors.RightZeroPadded(builder.cfi, mh.inputs.Size))
-	run.AssignColumn(mh.Limb.GetColID(), smartvectors.RightZeroPadded(builder.limb, mh.inputs.Size))
-	run.AssignColumn(mh.CodeHashHi.GetColID(), smartvectors.RightZeroPadded(builder.codeHashHi, mh.inputs.Size))
-	run.AssignColumn(mh.CodeHashLo.GetColID(), smartvectors.RightZeroPadded(builder.codeHashLo, mh.inputs.Size))
-	run.AssignColumn(mh.CodeSize.GetColID(), smartvectors.RightZeroPadded(builder.codeSize, mh.inputs.Size))
-	run.AssignColumn(mh.IsNewHash.GetColID(), smartvectors.RightZeroPadded(builder.isNewHash, mh.inputs.Size))
-	run.AssignColumn(mh.IsHashEnd.GetColID(), smartvectors.RightZeroPadded(builder.isHashEnd, mh.inputs.Size))
-	run.AssignColumn(mh.PrevState.GetColID(), smartvectors.RightZeroPadded(builder.prevState, mh.inputs.Size))
-	run.AssignColumn(mh.IsForConsistency.GetColID(), smartvectors.RightZeroPadded(builder.isNonEmptyKeccak, mh.inputs.Size))
+	run.AssignColumn(mh.IsActive.GetColID(), smartvectors.RightZeroPadded(builder.isActive, mh.Inputs.Size))
+	run.AssignColumn(mh.CFI.GetColID(), smartvectors.RightZeroPadded(builder.cfi, mh.Inputs.Size))
+	run.AssignColumn(mh.Limb.GetColID(), smartvectors.RightZeroPadded(builder.limb, mh.Inputs.Size))
+	run.AssignColumn(mh.CodeHashHi.GetColID(), smartvectors.RightZeroPadded(builder.codeHashHi, mh.Inputs.Size))
+	run.AssignColumn(mh.CodeHashLo.GetColID(), smartvectors.RightZeroPadded(builder.codeHashLo, mh.Inputs.Size))
+	run.AssignColumn(mh.CodeSize.GetColID(), smartvectors.RightZeroPadded(builder.codeSize, mh.Inputs.Size))
+	run.AssignColumn(mh.IsNewHash.GetColID(), smartvectors.RightZeroPadded(builder.isNewHash, mh.Inputs.Size))
+	run.AssignColumn(mh.IsHashEnd.GetColID(), smartvectors.RightZeroPadded(builder.isHashEnd, mh.Inputs.Size))
+	run.AssignColumn(mh.PrevState.GetColID(), smartvectors.RightZeroPadded(builder.prevState, mh.Inputs.Size))
+	run.AssignColumn(mh.IsForConsistency.GetColID(), smartvectors.RightZeroPadded(builder.isNonEmptyKeccak, mh.Inputs.Size))
 
 	// Assignment of new state with the zero hash padding
 	newStatePad := mimc.BlockCompression(field.Zero(), field.Zero())
-	run.AssignColumn(mh.NewState.GetColID(), smartvectors.RightPadded(builder.newState, newStatePad, mh.inputs.Size))
+	run.AssignColumn(mh.NewState.GetColID(), smartvectors.RightPadded(builder.newState, newStatePad, mh.Inputs.Size))
 
 	mh.CptIsEmptyKeccakHi.Run(run)
 	mh.CptIsEmptyKeccakLo.Run(run)

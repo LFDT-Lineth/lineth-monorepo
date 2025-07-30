@@ -1,13 +1,15 @@
 package common
 
 import (
+	"strconv"
+
 	"github.com/consensys/linea-monorepo/prover/crypto/mimc"
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
+	"github.com/consensys/linea-monorepo/prover/protocol/column"
 	"github.com/consensys/linea-monorepo/prover/protocol/column/verifiercol"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
-	"github.com/consensys/linea-monorepo/prover/protocol/wizardutils"
 	"github.com/consensys/linea-monorepo/prover/utils"
 	"github.com/consensys/linea-monorepo/prover/utils/parallel"
 )
@@ -15,7 +17,7 @@ import (
 // HashingCtx is the wizard context responsible for hashing a table row-wise.
 // It implements the [wizard.ProverAction] interface and is used to assign the
 // InputColumns field.
-type hashingCtx struct {
+type HashingCtx struct {
 	// InputCols is the list of columns forming a table for which the current
 	// context is computing the rows.
 	InputCols []ifaces.Column
@@ -30,14 +32,14 @@ type hashingCtx struct {
 func HashOf(comp *wizard.CompiledIOP, inputCols []ifaces.Column) (ifaces.Column, wizard.ProverAction) {
 
 	var (
-		ctx = &hashingCtx{
+		ctx = &HashingCtx{
 			InputCols:          inputCols,
 			IntermediateHashes: make([]ifaces.Column, len(inputCols)),
 		}
-		round     = wizardutils.MaxRound(inputCols...)
+		round     = column.MaxRound(inputCols...)
 		ctxID     = len(comp.ListCommitments())
 		numRows   = ifaces.AssertSameLength(inputCols...)
-		prevState = verifiercol.NewConstantCol(field.Zero(), numRows)
+		prevState = verifiercol.NewConstantCol(field.Zero(), numRows, "hash-of-"+strconv.Itoa(ctxID))
 	)
 
 	for i := range ctx.IntermediateHashes {
@@ -51,6 +53,7 @@ func HashOf(comp *wizard.CompiledIOP, inputCols []ifaces.Column) (ifaces.Column,
 			round,
 			ifaces.QueryIDf("HASHING_%v_%v", ctxID, i),
 			inputCols[i], prevState, ctx.IntermediateHashes[i],
+			nil,
 		)
 
 		prevState = ctx.IntermediateHashes[i]
@@ -60,7 +63,7 @@ func HashOf(comp *wizard.CompiledIOP, inputCols []ifaces.Column) (ifaces.Column,
 }
 
 // Run implements the [wizard.ProverAction] interface
-func (ctx *hashingCtx) Run(run *wizard.ProverRuntime) {
+func (ctx *HashingCtx) Run(run *wizard.ProverRuntime) {
 
 	var (
 		numRow = ctx.InputCols[0].Size()

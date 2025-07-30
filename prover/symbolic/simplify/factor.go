@@ -20,7 +20,7 @@ func factorizeExpression(expr *sym.Expression, iteration int) *sym.Expression {
 	alreadyWalked := sync.Map{}
 	factorMemo := sync.Map{}
 
-	logrus.Infof("factoring expression : init stats %v", evaluateCostStat(expr))
+	logrus.Debugf("factoring expression : init stats %v", evaluateCostStat(expr))
 
 	for i := 0; i < iteration; i++ {
 
@@ -86,7 +86,7 @@ func factorizeExpression(expr *sym.Expression, iteration int) *sym.Expression {
 		}
 
 		newScore := evaluateCostStat(res)
-		logrus.Infof("finished iteration : new stats %v", newScore)
+		logrus.Debugf("finished iteration : new stats %v", newScore)
 
 		if newScore.NumMul >= scoreInit.NumMul {
 			break

@@ -8,6 +8,7 @@ import (
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/utils"
+	"github.com/google/uuid"
 )
 
 // Permutation is a predicate that assess that two tables contains the same rows
@@ -20,7 +21,8 @@ type Permutation struct {
 	// multi-column (len(A[*]) = len(B[*]) > 1.
 	A, B [][]ifaces.Column
 	// ID is the string indentifier of the query.
-	ID ifaces.QueryID
+	ID   ifaces.QueryID
+	uuid uuid.UUID `serde:"omit"`
 }
 
 // NewPermutation constructs a new permutation query and performs all the
@@ -57,10 +59,10 @@ func NewPermutation(id ifaces.QueryID, a, b [][]ifaces.Column) Permutation {
 	}
 
 	if totalRow[0] != totalRow[1] {
-		utils.Panic("a and b must have the same total number of rows")
+		utils.Panic("a (numRows: %v, colId: %v) and b (numRows: %v, colId: %v) must have the same total number of rows, query id: %v", totalRow[0], a[0][0].GetColID(), totalRow[1], b[0][0].GetColID(), id)
 	}
 
-	return Permutation{A: a, B: b, ID: id}
+	return Permutation{A: a, B: b, ID: id, uuid: uuid.New()}
 }
 
 // Name implements the [ifaces.Query] interface
@@ -180,4 +182,41 @@ func CheckPermutation(a, b []ifaces.ColAssignment) error {
 // to check the query within a circuit
 func (p Permutation) CheckGnark(api frontend.API, run ifaces.GnarkRuntime) {
 	panic("UNSUPPORTED : can't check an permutation query directly into the circuit")
+}
+
+// GetShiftedRelatedColumns returns the list of the [HornerParts.Selectors]
+// found in the query. This is used to check if the query is compatible with
+// Wizard distribution.
+//
+// Note: the fact that this method is implemented makes [Inclusion] satisfy
+// an anonymous interface that is matched to detect queries that are
+// incompatible with wizard distribution. So we should not rename or remove
+// this implementation without doing the corresponding changes in the
+// distributed package. Otherwise, this will silence the checks that we are
+// doing.
+func (p Permutation) GetShiftedRelatedColumns() []ifaces.Column {
+
+	res := []ifaces.Column{}
+
+	for frag := range p.A {
+		for _, col := range p.A[frag] {
+			if col.IsComposite() {
+				res = append(res, col)
+			}
+		}
+	}
+
+	for frag := range p.B {
+		for _, col := range p.B[frag] {
+			if col.IsComposite() {
+				res = append(res, col)
+			}
+		}
+	}
+
+	return res
+}
+
+func (p Permutation) UUID() uuid.UUID {
+	return p.uuid
 }

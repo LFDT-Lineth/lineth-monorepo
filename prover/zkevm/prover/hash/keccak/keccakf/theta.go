@@ -23,14 +23,14 @@ const ATOMIC_PROVER_JOB_SIZE = 1 << 10
 // Theta defines the theta part of the keccakf permutation in the wizard
 type theta struct {
 	// Keccakf state after theta step, the results holds over 65 bits. Namely,
-	// the first and the last bits of aThetaBaseA are incompletely computed. In
+	// the first and the last bits of AThetaBaseA are incompletely computed. In
 	// order to get the proper result we should cancel it
-	aThetaBaseA    [5][5]ifaces.Column
-	aThetaBaseAMsb [5][5]ifaces.Column
+	AThetaBaseA    [5][5]ifaces.Column
+	AThetaBaseAMsb [5][5]ifaces.Column
 	// slices of ATheta in (Dirty) BaseA, each slice holds 4 bits
-	aThetaSlicedBaseA [5][5][numSlice]ifaces.Column
+	AThetaSlicedBaseA [5][5][numSlice]ifaces.Column
 	// slices of ATheta in (clean) BaseB, each slice holds 4 bits
-	aThetaSlicedBaseB [5][5][numSlice]ifaces.Column
+	AThetaSlicedBaseB [5][5][numSlice]ifaces.Column
 }
 
 // Constructs a new theta object and registers the colums into the context
@@ -63,21 +63,21 @@ func (t *theta) declareColumn(comp *wizard.CompiledIOP, round, numKeccakf int) {
 	for x := 0; x < 5; x++ {
 		for y := 0; y < 5; y++ {
 			//
-			t.aThetaBaseA[x][y] = comp.InsertCommit(
+			t.AThetaBaseA[x][y] = comp.InsertCommit(
 				round, deriveName("A_THETA_BASE1", x, y), colSize,
 			)
 			//
-			t.aThetaBaseAMsb[x][y] = comp.InsertCommit(
+			t.AThetaBaseAMsb[x][y] = comp.InsertCommit(
 				round, deriveName("A_THETA_BASE1_MBS", x, y), colSize,
 			)
 			//
 			for k := 0; k < numSlice; k++ {
 				//
-				t.aThetaSlicedBaseA[x][y][k] = comp.InsertCommit(
+				t.AThetaSlicedBaseA[x][y][k] = comp.InsertCommit(
 					round, deriveName("A_THETA_BASE1_SLICED", x, y, k), colSize,
 				)
 				//
-				t.aThetaSlicedBaseB[x][y][k] = comp.InsertCommit(
+				t.AThetaSlicedBaseB[x][y][k] = comp.InsertCommit(
 					round, deriveName("A_THETA_BASE2_SLICED", x, y, k), colSize,
 				)
 			}
@@ -107,7 +107,7 @@ func (t *theta) csEqThetaBaseA(
 	// requires adding the MSbit to the LSbit to derive the actual result.
 	for x := 0; x < 5; x++ {
 		for y := 0; y < 5; y++ {
-			eqTheta := ifaces.ColumnAsVariable(t.aThetaBaseA[x][y]).
+			eqTheta := ifaces.ColumnAsVariable(t.AThetaBaseA[x][y]).
 				Sub(ifaces.ColumnAsVariable(a[x][y]).
 					Add(c[(x-1+5)%5]).
 					Add(cc[(x+1)%5]))
@@ -130,17 +130,17 @@ func (t *theta) csAThetaDecomposition(comp *wizard.CompiledIOP, round int) {
 		for j := 0; j < 5; j++ {
 			// aThetaFirst is 65 bits, first come back to 64 bits using the
 			// committed msb
-			aTheta64BaseA := ifaces.ColumnAsVariable(t.aThetaBaseA[i][j]).
-				Sub(ifaces.ColumnAsVariable(t.aThetaBaseAMsb[i][j]).
+			aTheta64BaseA := ifaces.ColumnAsVariable(t.AThetaBaseA[i][j]).
+				Sub(ifaces.ColumnAsVariable(t.AThetaBaseAMsb[i][j]).
 					Mul(symbolic.NewConstant(shf64))).
-				Add(ifaces.ColumnAsVariable(t.aThetaBaseAMsb[i][j]))
+				Add(ifaces.ColumnAsVariable(t.AThetaBaseAMsb[i][j]))
 
 			// On the other hand, recompose the sliced version of aTheta the
 			// result should equals the values of aThetaFirstU64. Note that the
 			// fact that the decomposition holds over 16 * 4 bits forces the
 			// correctness of the MSB.
 			aThetaRecomposedBaseA := BaseRecomposeSliceHandles(
-				t.aThetaSlicedBaseA[i][j][:],
+				t.AThetaSlicedBaseA[i][j][:],
 				BaseA,
 			)
 
@@ -171,8 +171,8 @@ func (t *theta) csAThetaFromBaseAToBaseB(
 						l.BaseBClean,
 					},
 					[]ifaces.Column{
-						t.aThetaSlicedBaseA[x][y][s],
-						t.aThetaSlicedBaseB[x][y][s],
+						t.AThetaSlicedBaseA[x][y][s],
+						t.AThetaSlicedBaseB[x][y][s],
 					},
 				)
 			}
@@ -321,12 +321,12 @@ func (t *theta) assign(
 		for y := 0; y < 5; y++ {
 			// aThetaBaseA
 			run.AssignColumn(
-				t.aThetaBaseA[x][y].GetColID(),
+				t.AThetaBaseA[x][y].GetColID(),
 				smartvectors.RightZeroPadded(aThetaBaseA[x][y], colSize),
 			)
 			// aThetaBaseAMsb
 			run.AssignColumn(
-				t.aThetaBaseAMsb[x][y].GetColID(),
+				t.AThetaBaseAMsb[x][y].GetColID(),
 				smartvectors.RightZeroPadded(aThetaBaseAMsb[x][y], colSize),
 			)
 
@@ -335,14 +335,14 @@ func (t *theta) assign(
 				// aThetaBaseASliced
 				topad := aThetaBaseASliced[x][y][k]
 				run.AssignColumn(
-					t.aThetaSlicedBaseA[x][y][k].GetColID(),
+					t.AThetaSlicedBaseA[x][y][k].GetColID(),
 					smartvectors.RightZeroPadded(topad, colSize),
 				)
 
 				// aThetaBaseBSliced
 				topad = aThetaBaseBSliced[x][y][k]
 				run.AssignColumn(
-					t.aThetaSlicedBaseB[x][y][k].GetColID(),
+					t.AThetaSlicedBaseB[x][y][k].GetColID(),
 					smartvectors.RightZeroPadded(topad, colSize),
 				)
 			}

@@ -4,6 +4,7 @@ import (
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/column/verifiercol"
+	"github.com/consensys/linea-monorepo/prover/protocol/compiler/vortex"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/utils"
 )
@@ -14,24 +15,37 @@ func (ctx *SelfRecursionCtx) RootHashGlue() {
 
 	// Get the list of the root hashes (without the non-appended ones)
 	// Insert precomputed roots
-	rootHashesClean := []ifaces.Column{}
-	if ctx.VortexCtx.IsCommitToPrecomputed() {
-		precompRoots := ctx.Columns.precompRoot
+	var (
+		rootHashSis     []ifaces.Column
+		rootHashNonsis  []ifaces.Column
+		rootHashesClean []ifaces.Column
+	)
+	if ctx.VortexCtx.IsNonEmptyPrecomputed() {
+		precompRoots := ctx.Columns.PrecompRoot
 		if precompRoots == nil {
 			utils.Panic("Precomputed root should not be nil! That's because, we are in commit to precomputed mode.")
 		}
-		rootHashesClean = append(rootHashesClean, precompRoots)
-	}
-
-	for _, rh := range ctx.Columns.Rooth {
-		if rh != nil {
-			rootHashesClean = append(rootHashesClean, rh)
+		if ctx.VortexCtx.IsSISAppliedToPrecomputed() {
+			rootHashSis = append(rootHashSis, precompRoots)
+		} else {
+			rootHashNonsis = append(rootHashNonsis, precompRoots)
 		}
 	}
 
+	for round, rh := range ctx.Columns.Rooth {
+		if ctx.VortexCtx.RoundStatus[round] == vortex.IsSISApplied {
+			rootHashSis = append(rootHashSis, rh)
+		} else if ctx.VortexCtx.RoundStatus[round] == vortex.IsOnlyMiMCApplied {
+			rootHashNonsis = append(rootHashNonsis, rh)
+		} else if ctx.VortexCtx.RoundStatus[round] == vortex.IsEmpty {
+			continue
+		}
+	}
+	rootHashesClean = append(rootHashNonsis, rootHashSis...)
+
 	numCommittedRound := ctx.VortexCtx.NumCommittedRounds()
 	// numCommittedRound increses by 1 if we commit to the precomputeds
-	if ctx.VortexCtx.IsCommitToPrecomputed() {
+	if ctx.VortexCtx.IsNonEmptyPrecomputed() {
 		numCommittedRound += 1
 	}
 
@@ -54,7 +68,7 @@ func (ctx *SelfRecursionCtx) RootHashGlue() {
 	rootHashVecParts := utils.RightPadWith(
 		rootHashesClean,
 		utils.NextPowerOfTwo(len(rootHashesClean)),
-		verifiercol.NewConstantCol(field.Zero(), 1),
+		verifiercol.NewConstantCol(field.Zero(), 1, ""),
 	)
 
 	numRootsPadded := len(rootHashVecParts)
@@ -65,7 +79,7 @@ func (ctx *SelfRecursionCtx) RootHashGlue() {
 	)
 
 	rootHashVec := verifiercol.NewConcatTinyColumns(
-		ctx.comp,
+		ctx.Comp,
 		len(rootHashVecParts),
 		field.Element{}, // note: that this will be ditched by the function
 		rootHashVecParts...,
@@ -115,7 +129,7 @@ func (ctx *SelfRecursionCtx) RootHashGlue() {
 
 	// And from that, we get s1 and s2 and declare the corresponding
 	// copy constraint.
-	ctx.comp.InsertFixedPermutation(
+	ctx.Comp.InsertFixedPermutation(
 		ctx.Columns.MerkleRoots.Round(),
 		ctx.rootHasGlue(),
 		[]smartvectors.SmartVector{
@@ -138,7 +152,7 @@ func (ctx SelfRecursionCtx) GluePositions() {
 
 	// The vector that the verifier trusts
 	positionVec := verifiercol.NewFromIntVecCoin(
-		ctx.comp,
+		ctx.Comp,
 		ctx.Coins.Q,
 		verifiercol.RightPadZeroToNextPowerOfTwo,
 	)
@@ -150,7 +164,7 @@ func (ctx SelfRecursionCtx) GluePositions() {
 	sizePositionVec := positionVec.Size()
 	numCommittedRound := ctx.VortexCtx.NumCommittedRounds()
 	// numCommittedRound increses by 1 if we commit to the precomputeds
-	if ctx.VortexCtx.IsCommitToPrecomputed() {
+	if ctx.VortexCtx.IsNonEmptyPrecomputed() {
 		numCommittedRound += 1
 	}
 	numActive := sizeSmallPos * numCommittedRound
@@ -208,7 +222,7 @@ func (ctx SelfRecursionCtx) GluePositions() {
 
 	// And from that, we get s1 and s2 and declare the corresponding
 	// copy constraint.
-	ctx.comp.InsertFixedPermutation(
+	ctx.Comp.InsertFixedPermutation(
 		ctx.Columns.MerkleProofPositions.Round(),
 		ctx.positionGlue(),
 		[]smartvectors.SmartVector{

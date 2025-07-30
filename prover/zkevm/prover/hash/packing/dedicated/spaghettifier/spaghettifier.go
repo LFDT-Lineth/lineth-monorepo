@@ -26,23 +26,23 @@ type SpaghettificationInput struct {
 	SpaghettiSize int
 }
 
-// spaghettification is an implementation of the wizard.ProverAction. It
+// Spaghettification is an implementation of the wizard.ProverAction. It
 // represents a dedicated utility module that can collect the content of several
 // columns and put them in order in the same column.
 //
 // This is used in part to align the raw data limbs to the same column so that
 // we can pack them into chunks of equal byte size.
-type spaghettification struct {
+type Spaghettification struct {
 	// input stores the input that have been used to construct the struct.
-	inputs SpaghettificationInput
-	// tags for the filtered elements of the matrix
-	tags []ifaces.Column
+	Inputs SpaghettificationInput
+	// Tags for the filtered elements of the matrix
+	Tags []ifaces.Column
 	// FilterSpaghetti of the filter over the spaghettiOfMatrix. It has an
 	// "isActive" structure. Meaning that it is assigned to contain a sequence
 	// of 1's followed with 0's as padding
 	FilterSpaghetti ifaces.Column
-	// tagSpaghetti is the spaghetti of the tags
-	tagSpaghetti ifaces.Column
+	// TagSpaghetti is the spaghetti of the tags
+	TagSpaghetti ifaces.Column
 	// ContentSpaghetti stores the spaghettified of
 	// [SpaghettificationInput.ContentMatrix]. This is the main result of the
 	// operation.
@@ -55,7 +55,7 @@ type spaghettification struct {
 //
 // Among the generated columns the columns [spaghettification.ContentSpaghetti]
 // stores the required result.
-func Spaghettify(comp *wizard.CompiledIOP, inputs SpaghettificationInput) *spaghettification {
+func Spaghettify(comp *wizard.CompiledIOP, inputs SpaghettificationInput) *Spaghettification {
 
 	var (
 		// pieceSize contains the number of a spaghetti fragment. They all have
@@ -66,15 +66,15 @@ func Spaghettify(comp *wizard.CompiledIOP, inputs SpaghettificationInput) *spagh
 		// numTables contains the number of columns in the table
 		numTables = len(inputs.ContentMatrix)
 		// spaghetti stores the result of the spaghettification
-		spaghetti = &spaghettification{
-			inputs: inputs,
-			tags:   make([]ifaces.Column, numPieces),
+		spaghetti = &Spaghettification{
+			Inputs: inputs,
+			Tags:   make([]ifaces.Column, numPieces),
 			FilterSpaghetti: comp.InsertCommit(0,
 				ifaces.ColIDf("%v_%v", inputs.Name, "FILTERS_SPAGHETTI"),
 				inputs.SpaghettiSize,
 			),
 			ContentSpaghetti: make([]ifaces.Column, numTables),
-			tagSpaghetti: comp.InsertCommit(0,
+			TagSpaghetti: comp.InsertCommit(0,
 				ifaces.ColIDf("%v_%v", inputs.Name, "TAGS_SPAGHETTI"),
 				inputs.SpaghettiSize,
 			),
@@ -83,7 +83,7 @@ func Spaghettify(comp *wizard.CompiledIOP, inputs SpaghettificationInput) *spagh
 
 	for pieceID := 0; pieceID < numPieces; pieceID++ {
 
-		spaghetti.tags[pieceID] = comp.InsertCommit(0,
+		spaghetti.Tags[pieceID] = comp.InsertCommit(0,
 			ifaces.ColIDf("%v_%v_%v", inputs.Name, "TAGS", pieceID),
 			pieceSize,
 		)
@@ -110,10 +110,10 @@ func Spaghettify(comp *wizard.CompiledIOP, inputs SpaghettificationInput) *spagh
 //
 // NB: the very first value of the tags is not constrained. This is harmless
 // as only the continuity between the tags is important.
-func (sp *spaghettification) csTags(comp *wizard.CompiledIOP) {
+func (sp *Spaghettification) csTags(comp *wizard.CompiledIOP) {
 
 	var (
-		numPieces = len(sp.tags)
+		numPieces = len(sp.Tags)
 	)
 
 	for i := 1; i < numPieces; i++ {
@@ -121,34 +121,34 @@ func (sp *spaghettification) csTags(comp *wizard.CompiledIOP) {
 		// This ensures that the tags increases by 1 when walking through the
 		// rows of the matrix.
 		comp.InsertGlobal(0,
-			ifaces.QueryIDf("%v_%v_%v", sp.inputs.Name, "TAGS_INCREASE_HORIZONTALLY", i),
+			ifaces.QueryIDf("%v_%v_%v", sp.Inputs.Name, "TAGS_INCREASE_HORIZONTALLY", i),
 			sym.Sub(
-				sym.Sub(sp.tags[i], sp.tags[i-1]),
-				sp.inputs.Filter[i-1],
+				sym.Sub(sp.Tags[i], sp.Tags[i-1]),
+				sp.Inputs.Filter[i-1],
 			),
 		)
 	}
 
 	// This ensures that the tags keep increasing as we enter the next line
 	comp.InsertGlobal(0,
-		ifaces.QueryIDf("%v_%v", sp.inputs.Name, "TAGS_INCREASE_JUMPING_NEXT_LINE"),
+		ifaces.QueryIDf("%v_%v", sp.Inputs.Name, "TAGS_INCREASE_JUMPING_NEXT_LINE"),
 		sym.Sub(
-			sym.Sub(sp.tags[0], column.Shift(sp.tags[numPieces-1], -1)),
-			column.Shift(sp.inputs.Filter[numPieces-1], -1),
+			sym.Sub(sp.Tags[0], column.Shift(sp.Tags[numPieces-1], -1)),
+			column.Shift(sp.Inputs.Filter[numPieces-1], -1),
 		),
 	)
 
 }
 
 // csTagSpaghetti constrains the tagSpaghetti column to continuously increase.
-func (sp *spaghettification) csTagSpaghetti(comp *wizard.CompiledIOP) {
+func (sp *Spaghettification) csTagSpaghetti(comp *wizard.CompiledIOP) {
 
 	comp.InsertGlobal(0,
-		ifaces.QueryIDf("%v_TAGS_SPAGHETTI_INCREASES", sp.inputs.Name),
+		ifaces.QueryIDf("%v_TAGS_SPAGHETTI_INCREASES", sp.Inputs.Name),
 		sym.Sub(
-			sp.tagSpaghetti,
+			sp.TagSpaghetti,
 			sym.Mul(
-				sym.Add(column.Shift(sp.tagSpaghetti, -1), 1),
+				sym.Add(column.Shift(sp.TagSpaghetti, -1), 1),
 				sp.FilterSpaghetti,
 			),
 		),
@@ -157,10 +157,10 @@ func (sp *spaghettification) csTagSpaghetti(comp *wizard.CompiledIOP) {
 
 // csSpaghettiFilter constraints the filterSpaghetti column to be structured as
 // a sequence of 1's followed by a zero-padding.
-func (sp *spaghettification) csFilterSpaghetti(comp *wizard.CompiledIOP) {
+func (sp *Spaghettification) csFilterSpaghetti(comp *wizard.CompiledIOP) {
 
 	comp.InsertGlobal(0,
-		ifaces.QueryIDf("%v_FILTER_SPAGHETTI_IS_BINARY", sp.inputs.Name),
+		ifaces.QueryIDf("%v_FILTER_SPAGHETTI_IS_BINARY", sp.Inputs.Name),
 		sym.Mul(
 			sym.Sub(sp.FilterSpaghetti, 1),
 			sp.FilterSpaghetti,
@@ -168,7 +168,7 @@ func (sp *spaghettification) csFilterSpaghetti(comp *wizard.CompiledIOP) {
 	)
 
 	comp.InsertGlobal(0,
-		ifaces.QueryIDf("%v_FILTER_SPAGHETTI_NO_0_TO_1", sp.inputs.Name),
+		ifaces.QueryIDf("%v_FILTER_SPAGHETTI_NO_0_TO_1", sp.Inputs.Name),
 		sym.Mul(
 			sp.FilterSpaghetti,
 			sym.Sub(1, column.Shift(sp.FilterSpaghetti, -1)),
@@ -178,13 +178,13 @@ func (sp *spaghettification) csFilterSpaghetti(comp *wizard.CompiledIOP) {
 
 // csInclusion adds the bilateral inclusion queries enforcing that the spaghetti
 // and the content filter contains the same data.
-func (sp *spaghettification) csInclusion(comp *wizard.CompiledIOP) {
+func (sp *Spaghettification) csInclusion(comp *wizard.CompiledIOP) {
 
 	var (
-		numPieces      = len(sp.tags)
-		tables         = sp.inputs.ContentMatrix
+		numPieces      = len(sp.Tags)
+		tables         = sp.Inputs.ContentMatrix
 		inputTables    = make([][]ifaces.Column, numPieces)
-		spaghettiTable = append(sp.ContentSpaghetti, sp.tagSpaghetti)
+		spaghettiTable = append(sp.ContentSpaghetti, sp.TagSpaghetti)
 	)
 
 	matrix := make([][]ifaces.Column, numPieces)
@@ -196,51 +196,51 @@ func (sp *spaghettification) csInclusion(comp *wizard.CompiledIOP) {
 
 	for pieceID := 0; pieceID < numPieces; pieceID++ {
 
-		inputTables[pieceID] = append(matrix[pieceID], sp.tags[pieceID])
+		inputTables[pieceID] = append(matrix[pieceID], sp.Tags[pieceID])
 
 		comp.GenericFragmentedConditionalInclusion(0,
-			ifaces.QueryIDf("%v_SPAGHETTI_INCLUSION_%v", sp.inputs.Name, pieceID),
+			ifaces.QueryIDf("%v_SPAGHETTI_INCLUSION_%v", sp.Inputs.Name, pieceID),
 			[][]ifaces.Column{spaghettiTable},
 			inputTables[pieceID],
 			[]ifaces.Column{sp.FilterSpaghetti},
-			sp.inputs.Filter[pieceID],
+			sp.Inputs.Filter[pieceID],
 		)
 	}
 
 	comp.GenericFragmentedConditionalInclusion(0,
-		ifaces.QueryIDf("%v_SPAGHETTI_INCLUSION_BACKWARD", sp.inputs.Name),
+		ifaces.QueryIDf("%v_SPAGHETTI_INCLUSION_BACKWARD", sp.Inputs.Name),
 		inputTables,
 		spaghettiTable,
-		sp.inputs.Filter,
+		sp.Inputs.Filter,
 		sp.FilterSpaghetti,
 	)
 }
 
 // Run implements the [wizard.ProverAction] interface
-func (sp *spaghettification) Run(run *wizard.ProverRuntime) {
+func (sp *Spaghettification) Run(run *wizard.ProverRuntime) {
 
 	var (
-		numPieces            = len(sp.tags)
-		pieceSize            = sp.tags[0].Size()
+		numPieces            = len(sp.Tags)
+		pieceSize            = sp.Tags[0].Size()
 		nbTables             = len(sp.ContentSpaghetti)
 		tags                 = make([]*common.VectorBuilder, numPieces)
 		contentSpaghetti     = make([]*common.VectorBuilder, nbTables)
 		filterSpaghetti      = common.NewVectorBuilder(sp.FilterSpaghetti)
-		tagSpaghetti         = common.NewVectorBuilder(sp.tagSpaghetti)
+		tagSpaghetti         = common.NewVectorBuilder(sp.TagSpaghetti)
 		content              = make([][]smartvectors.SmartVector, nbTables)
 		filters              = make([]smartvectors.SmartVector, numPieces)
 		currTag          int = 0
 	)
 
 	for pieceID := range tags {
-		tags[pieceID] = common.NewVectorBuilder(sp.tags[pieceID])
-		filters[pieceID] = sp.inputs.Filter[pieceID].GetColAssignment(run)
+		tags[pieceID] = common.NewVectorBuilder(sp.Tags[pieceID])
+		filters[pieceID] = sp.Inputs.Filter[pieceID].GetColAssignment(run)
 	}
 
 	for table := 0; table < nbTables; table++ {
 		content[table] = make([]smartvectors.SmartVector, numPieces)
 		for pieceID := range tags {
-			content[table][pieceID] = sp.inputs.ContentMatrix[table][pieceID].GetColAssignment(run)
+			content[table][pieceID] = sp.Inputs.ContentMatrix[table][pieceID].GetColAssignment(run)
 		}
 	}
 

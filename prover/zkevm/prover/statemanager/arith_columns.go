@@ -2,6 +2,7 @@ package statemanager
 
 import (
 	"fmt"
+
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/column/verifiercol"
@@ -72,7 +73,7 @@ func acp(comp *wizard.CompiledIOP) statesummary.HubColumnSet {
 		)
 	}
 
-	constantZero := verifiercol.NewConstantCol(field.Zero(), size)
+	constantZero := verifiercol.NewConstantCol(field.Zero(), size, "hub.acp_connection")
 
 	res := statesummary.HubColumnSet{
 		Address:             comp.Columns.GetHandle("HUB_acp_PROVER_SIDE_ADDRESS_IDENTIFIER"),
@@ -148,7 +149,7 @@ func scp(comp *wizard.CompiledIOP) statesummary.HubColumnSet {
 		)
 	}
 
-	constantZero := verifiercol.NewConstantCol(field.Zero(), size)
+	constantZero := verifiercol.NewConstantCol(field.Zero(), size, "hub.scp_connection")
 
 	res := statesummary.HubColumnSet{
 		Address:             comp.Columns.GetHandle("HUB_scp_PROVER_SIDE_ADDRESS_IDENTIFIER"),
@@ -224,6 +225,7 @@ func assignHubAddresses(run *wizard.ProverRuntime) {
 		run.AssignColumn(
 			ifaces.ColID(fmt.Sprintf("HUB_%s_PROVER_SIDE_ADDRESS_IDENTIFIER", domainName)),
 			smartvectors.NewRegular(newVect),
+			wizard.DisableAssignmentSizeReduction,
 		)
 	}
 	// assign the addresses column in each of the submodules

@@ -27,7 +27,7 @@ func TestReedSolomon(t *testing.T) {
 	}
 
 	compiled := wizard.Compile(definer,
-		compiler.Arcane(8, 8),
+		compiler.Arcane(compiler.WithStitcherMinSize(8), compiler.WithTargetColSize(8)),
 		dummy.Compile,
 	)
 

@@ -24,9 +24,3 @@ type Settings struct {
 func (s Settings) NumRows() int {
 	return utils.NextPowerOfTwo(s.MaxNumProofs)
 }
-
-// merkleProofModNumRows returns the number of rows to provide to the compute
-// module of the Merkle-Tree verification submodule.
-func (s Settings) merkleProofModNumRows() int {
-	return utils.NextPowerOfTwo(s.MaxNumProofs * s.MerkleTreeDepth)
-}

@@ -10,6 +10,7 @@ import (
 	"github.com/consensys/linea-monorepo/prover/backend/aggregation"
 	"github.com/consensys/linea-monorepo/prover/backend/blobdecompression"
 	"github.com/consensys/linea-monorepo/prover/backend/execution"
+	"github.com/consensys/linea-monorepo/prover/backend/execution/limitless"
 	"github.com/consensys/linea-monorepo/prover/backend/files"
 	"github.com/consensys/linea-monorepo/prover/config"
 )
@@ -21,72 +22,99 @@ type ProverArgs struct {
 	ConfigFile string
 }
 
+// Prove orchestrates the proving process based on the job type
 func Prove(args ProverArgs) error {
-	const cmdName = "prove"
-	// TODO @gbotrel with a specific flag, we could compile the circuit and compare with the checksum of the
-	// asset we deserialize, to make sure we are using the circuit associated with the compiled binary and the setup.
 
-	// read config
+	// TODO @gbotrel with a specific flag, we could compile the circuit and compare with the checksum of the
+	// asset we deserialize, to make sure we are using the circuit associated with the compiled
+	// binary and the setup.
+	const cmdName = "prove"
+
+	// Read config
 	cfg, err := config.NewConfigFromFile(args.ConfigFile)
 	if err != nil {
 		return fmt.Errorf("%s failed to read config file: %w", cmdName, err)
 	}
 
-	// discover the type of the job from the input file name
-	jobExecution := strings.Contains(args.Input, "getZkProof")
-	jobBlobDecompression := strings.Contains(args.Input, "getZkBlobCompressionProof")
-	jobAggregation := strings.Contains(args.Input, "getZkAggregatedProof")
+	// Determine job type from input file name
+	var (
+		jobExecution         = strings.Contains(args.Input, "getZkProof")
+		jobBlobDecompression = strings.Contains(args.Input, "getZkBlobCompressionProof")
+		jobAggregation       = strings.Contains(args.Input, "getZkAggregatedProof")
+	)
 
-	if jobExecution {
-		req := &execution.Request{}
-		if err := readRequest(args.Input, req); err != nil {
-			return fmt.Errorf("could not read the input file (%v): %w", args.Input, err)
+	// Handle job type
+	switch {
+	case jobExecution:
+		return handleExecutionJob(cfg, args)
+	case jobBlobDecompression:
+		return handleBlobDecompressionJob(cfg, args)
+	case jobAggregation:
+		return handleAggregationJob(cfg, args)
+	default:
+		return errors.New("unknown job type")
+	}
+}
+
+// handleExecutionJob processes an execution job
+func handleExecutionJob(cfg *config.Config, args ProverArgs) error {
+	req := &execution.Request{}
+	if err := readRequest(args.Input, req); err != nil {
+		return fmt.Errorf("could not read the input file (%v): %w", args.Input, err)
+	}
+
+	var resp *execution.Response
+	var err error
+
+	if cfg.Execution.ProverMode == config.ProverModeLimitless {
+		// Limitless execution mode
+		resp, err = limitless.Prove(cfg, req)
+		if err != nil {
+			return fmt.Errorf("could not prove the execution in limitless mode: %w", err)
 		}
-
-		// we use the large traces in 2 cases;
-		// 1. the user explicitly asked for it (args.Large)
-		// 2. the job contains the large suffix and we are a large machine (cfg.Execution.CanRunLarge)
+	} else {
+		// Standard execution mode
 		large := args.Large || (strings.Contains(args.Input, "large") && cfg.Execution.CanRunFullLarge)
-
-		resp, err := execution.Prove(cfg, req, large)
+		resp, err = execution.Prove(cfg, req, large)
 		if err != nil {
 			return fmt.Errorf("could not prove the execution: %w", err)
 		}
-
-		return writeResponse(args.Output, resp)
 	}
 
-	if jobBlobDecompression {
-		req := &blobdecompression.Request{}
-		if err := readRequest(args.Input, req); err != nil {
-			return fmt.Errorf("could not read the input file (%v): %w", args.Input, err)
-		}
-
-		resp, err := blobdecompression.Prove(cfg, req)
-		if err != nil {
-			return fmt.Errorf("could not prove the blob decompression: %w", err)
-		}
-
-		return writeResponse(args.Output, resp)
-	}
-
-	if jobAggregation {
-		req := &aggregation.Request{}
-		if err := readRequest(args.Input, req); err != nil {
-			return fmt.Errorf("could not read the input file (%v): %w", args.Input, err)
-		}
-
-		resp, err := aggregation.Prove(cfg, req)
-		if err != nil {
-			return fmt.Errorf("could not prove the aggregation: %w", err)
-		}
-
-		return writeResponse(args.Output, resp)
-	}
-
-	return errors.New("unknown job type")
+	return writeResponse(args.Output, resp)
 }
 
+// handleBlobDecompressionJob processes a blob decompression job
+func handleBlobDecompressionJob(cfg *config.Config, args ProverArgs) error {
+	req := &blobdecompression.Request{}
+	if err := readRequest(args.Input, req); err != nil {
+		return fmt.Errorf("could not read the input file (%v): %w", args.Input, err)
+	}
+
+	resp, err := blobdecompression.Prove(cfg, req)
+	if err != nil {
+		return fmt.Errorf("could not prove the blob decompression: %w", err)
+	}
+
+	return writeResponse(args.Output, resp)
+}
+
+// handleAggregationJob processes an aggregation job
+func handleAggregationJob(cfg *config.Config, args ProverArgs) error {
+	req := &aggregation.Request{}
+	if err := readRequest(args.Input, req); err != nil {
+		return fmt.Errorf("could not read the input file (%v): %w", args.Input, err)
+	}
+
+	resp, err := aggregation.Prove(cfg, req)
+	if err != nil {
+		return fmt.Errorf("could not prove the aggregation: %w", err)
+	}
+
+	return writeResponse(args.Output, resp)
+}
+
+// readRequest reads and decodes a request from a file
 func readRequest(path string, into any) error {
 	f, err := os.Open(path)
 	if err != nil {
@@ -101,6 +129,7 @@ func readRequest(path string, into any) error {
 	return nil
 }
 
+// writeResponse encodes and writes a response to a file
 func writeResponse(path string, from any) error {
 	f := files.MustOverwrite(path)
 	defer f.Close()

@@ -1,6 +1,7 @@
 package accumulator
 
 import (
+	"fmt"
 	"io"
 
 	"github.com/consensys/linea-monorepo/prover/backend/execution/statemanager"
@@ -9,12 +10,10 @@ import (
 	"github.com/consensys/linea-monorepo/prover/crypto/state-management/smt"
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
-	"github.com/consensys/linea-monorepo/prover/protocol/dedicated/merkle"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	"github.com/consensys/linea-monorepo/prover/utils"
 	"github.com/consensys/linea-monorepo/prover/utils/exit"
 	"github.com/consensys/linea-monorepo/prover/utils/types"
-	"github.com/sirupsen/logrus"
 )
 
 // leafOpenings represents the structure for leaf openings
@@ -172,9 +171,8 @@ func (am *Module) Assign(
 	}
 
 	var (
-		builder         = newAssignmentBuilder(am.Settings)
-		paddedSize      = am.NumRows()
-		proofPaddedSize = am.merkleProofModNumRows()
+		builder    = newAssignmentBuilder(am.Settings)
+		paddedSize = am.NumRows()
 	)
 
 	for _, trace := range traces {
@@ -209,19 +207,17 @@ func (am *Module) Assign(
 
 	// Sanity check on the size
 	if len(builder.leaves) > am.MaxNumProofs {
-		logrus.Errorf("We have registered %v proofs which is more than the maximum number of proofs %v", len(builder.leaves), am.MaxNumProofs)
-		exit.OnLimitOverflow()
+		exit.OnLimitOverflow(
+			am.MaxNumProofs,
+			len(builder.leaves),
+			fmt.Errorf("we have registered %v proofs which is more than the maximum number of proofs %v", len(builder.leaves), am.MaxNumProofs),
+		)
 	}
 
 	// Assignments of columns
-	var (
-		proofs      = merkle.PackMerkleProofs(builder.proofs)
-		proofsReg   = smartvectors.IntoRegVec(proofs)
-		proofPadded = smartvectors.RightZeroPadded(proofsReg, proofPaddedSize)
-		cols        = am.Cols
-	)
+	cols := am.Cols
 
-	run.AssignColumn(cols.Proofs.GetColID(), proofPadded)
+	cols.Proofs.Assign(run, builder.proofs)
 	run.AssignColumn(cols.Roots.GetColID(), smartvectors.RightZeroPadded(builder.roots, paddedSize))
 	run.AssignColumn(cols.Positions.GetColID(), smartvectors.RightZeroPadded(builder.positions, paddedSize))
 	run.AssignColumn(cols.Leaves.GetColID(), smartvectors.RightZeroPadded(builder.leaves, paddedSize))
@@ -259,6 +255,9 @@ func (am *Module) Assign(
 
 	// Assign TopRoot hash checking columns
 	am.assignTopRootCols(run, builder)
+
+	// This prover action assigns all the Merkle proofs.
+	am.MerkleProofVerification.Run(run)
 }
 
 func (am *Module) assignLeaf(

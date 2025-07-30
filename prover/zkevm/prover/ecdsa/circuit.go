@@ -11,6 +11,7 @@ import (
 	"github.com/consensys/gnark/std/math/emulated"
 	"github.com/consensys/gnark/std/math/emulated/emparams"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
+	"github.com/consensys/linea-monorepo/prover/protocol/dedicated/plonk"
 )
 
 type EcRecoverInstance struct {
@@ -109,7 +110,19 @@ func (c *EcRecoverInstance) splitInputs(api frontend.API) (PK *sw_emulated.Affin
 	return
 }
 
-func inputFiller(circuitInstance, inputIndex int) field.Element {
+var (
+	plonkInputFillerKey = "ecdsa-secp256k1-plonk-input-filler"
+)
+
+func init() {
+	plonk.RegisterInputFiller(plonkInputFillerKey, PlonkInputFiller)
+}
+
+// PlonkInputFiller is the input-filler that we use to assign the public inputs
+// of incomplete circuits. This function must be registered via the
+// [plonk.RegisterInputFiller] via the [init] function. But this has to be done
+// manually if the package is not imported.
+func PlonkInputFiller(circuitInstance, inputIndex int) field.Element {
 	// every instance has 14 inputs.
 	// pubkey xHi, pubkey xLo, pubkey yHi, pubkey yLo, hHi, hLo, vHi, vLo, rHi, rLo, sHi, sLo, successBit, ecrecoverBit
 

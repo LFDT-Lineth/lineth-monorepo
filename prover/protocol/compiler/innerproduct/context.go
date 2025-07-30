@@ -9,11 +9,11 @@ import (
 	"github.com/consensys/linea-monorepo/prover/symbolic"
 )
 
-// contextForSize stores the compilation context of a pass of the inner-product
+// ContextForSize stores the compilation context of a pass of the inner-product
 // cryptographic compiler. In particular it stores the protocol items added to
 // the protocol by the compilation pass (coins, columns, queries etc...)
 // relating to a particular size of column.
-type contextForSize struct {
+type ContextForSize struct {
 
 	// Collapsed contains the linear combination of the product pairs covered
 	// by the context. Says the compilation context compiles the inner-product
@@ -35,8 +35,8 @@ type contextForSize struct {
 	// by the verifier to finalize the compilation step.s
 	SummationOpening query.LocalOpening
 
-	//  round after compilation
-	round int
+	//  Round after compilation
+	Round int
 }
 
 // compileForSize applies the compilation step on a range of queries such that
@@ -49,12 +49,12 @@ func compileForSize(
 	comp *wizard.CompiledIOP,
 	round int,
 	queries []query.InnerProduct,
-) *contextForSize {
+) *ContextForSize {
 
 	var (
 		hasMoreThan1Pair = len(queries) > 1 || len(queries[0].Bs) > 1
 		size             = queries[0].A.Size()
-		ctx              = &contextForSize{}
+		ctx              = &ContextForSize{}
 		// batchingCoin is used to collapse all the inner-product queries
 		// into a batched inner-product query so that we only need to
 		// commit to a single `Summation` column for all theses.
@@ -65,7 +65,7 @@ func compileForSize(
 		round = round + 1
 	}
 	//set the round
-	ctx.round = round
+	ctx.Round = round
 
 	ctx.Summation = comp.InsertCommit(
 		round,
@@ -130,7 +130,7 @@ func compileForSize(
 	)
 
 	lastRound := comp.NumRounds() - 1
-	comp.RegisterVerifierAction(lastRound, &verifierForSize{
+	comp.RegisterVerifierAction(lastRound, &VerifierForSize{
 		Queries:          queries,
 		SummationOpening: ctx.SummationOpening,
 		BatchOpening:     batchingCoin,

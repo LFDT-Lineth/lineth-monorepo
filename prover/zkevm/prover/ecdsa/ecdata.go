@@ -3,8 +3,8 @@ package ecdsa
 import (
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
-	"github.com/consensys/linea-monorepo/prover/protocol/dedicated/projection"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
+	"github.com/consensys/linea-monorepo/prover/protocol/query"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	sym "github.com/consensys/linea-monorepo/prover/symbolic"
 	commoncs "github.com/consensys/linea-monorepo/prover/zkevm/prover/common/common_constraints"
@@ -166,11 +166,11 @@ func (ec *EcRecover) assignFromEcDataSource(run *wizard.ProverRuntime, src *ecDa
 }
 
 func (ec *EcRecover) csEcDataProjection(comp *wizard.CompiledIOP, src *ecDataSource) {
-	projection.InsertProjection(comp, ifaces.QueryIDf("%v_PROJECT_ECDATA", NAME_ECRECOVER),
-		[]ifaces.Column{ec.EcRecoverID, ec.Limb, ec.SuccessBit, ec.EcRecoverIndex, ec.EcRecoverIsData, ec.EcRecoverIsRes},
-		[]ifaces.Column{src.ID, src.Limb, src.SuccessBit, src.Index, src.IsData, src.IsRes},
-		ec.AuxProjectionMask, src.CsEcrecover,
-	)
+	comp.InsertProjection(ifaces.QueryIDf("%v_PROJECT_ECDATA", NAME_ECRECOVER),
+		query.ProjectionInput{ColumnA: []ifaces.Column{ec.EcRecoverID, ec.Limb, ec.SuccessBit, ec.EcRecoverIndex, ec.EcRecoverIsData, ec.EcRecoverIsRes},
+			ColumnB: []ifaces.Column{src.ID, src.Limb, src.SuccessBit, src.Index, src.IsData, src.IsRes},
+			FilterA: ec.AuxProjectionMask,
+			FilterB: src.CsEcrecover})
 }
 
 func (ec *EcRecover) csConstraintAuxProjectionMask(comp *wizard.CompiledIOP) {

@@ -2,11 +2,13 @@ package fiatshamir
 
 import (
 	"fmt"
+	"math/rand/v2"
 	"testing"
 
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
 	"github.com/consensys/linea-monorepo/prover/maths/common/vector"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
+	"github.com/consensys/linea-monorepo/prover/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -91,6 +93,105 @@ func TestBatchUpdates(t *testing.T) {
 		fs.UpdateSV(sv)
 		actualValue := fs.RandomField()
 		assert.Equal(t, expectedVal.String(), actualValue.String())
+	})
+
+}
+
+// TestSamplingFromSeed tests that sampling from seed is consistent, does not forget
+// bytes from the seed and does not depends on the state.
+func TestSamplingFromSeed(t *testing.T) {
+
+	t.Run("dependence-on-name", func(t *testing.T) {
+
+		var (
+			// #nosec G404 --we don't need a cryptographic RNG for testing purpose
+			rng          = rand.New(utils.NewRandSource(789))
+			initialState = field.PseudoRand(rng)
+			seed         = field.PseudoRand(rng)
+			resMap       = map[field.Element]struct{}{}
+			name         = ""
+			totalSize    = 1000
+		)
+
+		fs := NewMiMCFiatShamir()
+		fs.SetState([]field.Element{initialState})
+
+		for i := 0; i < totalSize; i++ {
+
+			x := fs.RandomFieldFromSeed(seed, name)
+			if _, found := resMap[x]; found {
+				t.Errorf("found a collision for i=%v", i)
+			}
+
+			resMap[x] = struct{}{}
+			name += "a"
+		}
+	})
+
+	t.Run("non-dependance-curr-state", func(t *testing.T) {
+
+		var (
+			// #nosec G404 --we don't need a cryptographic RNG for testing purpose
+			rng    = rand.New(utils.NewRandSource(789))
+			state1 = field.PseudoRand(rng)
+			state2 = field.PseudoRand(rng)
+			fs1    = NewMiMCFiatShamir()
+			fs2    = NewMiMCFiatShamir()
+			seed   = field.PseudoRand(rng)
+			name   = "string-name"
+		)
+
+		fs1.SetState([]field.Element{state1})
+		fs2.SetState([]field.Element{state2})
+
+		y1 := fs1.RandomFieldFromSeed(seed, name)
+		y2 := fs2.RandomFieldFromSeed(seed, name)
+
+		if y1 != y2 {
+			t.Errorf("starting from different state does not give the same results")
+		}
+	})
+
+	t.Run("does-not-modify-state", func(t *testing.T) {
+
+		var (
+			// #nosec G404 --we don't need a cryptographic RNG for testing purpose
+			rng          = rand.New(utils.NewRandSource(789))
+			initialState = field.PseudoRand(rng)
+			seed         = field.PseudoRand(rng)
+			name         = "ddqsdjqskljd"
+			fs           = NewMiMCFiatShamir()
+		)
+
+		fs.SetState([]field.Element{initialState})
+
+		fs.RandomFieldFromSeed(seed, name)
+
+		newState := fs.State()
+		if initialState != newState[0] {
+			t.Errorf("state was modified")
+		}
+	})
+
+	t.Run("is-repeatable", func(t *testing.T) {
+
+		var (
+			// #nosec G404 --we don't need a cryptographic RNG for testing purpose
+			rng          = rand.New(utils.NewRandSource(789))
+			initialState = field.PseudoRand(rng)
+			seed         = field.PseudoRand(rng)
+			name         = "ddqsdjqskljd"
+			fs           = NewMiMCFiatShamir()
+		)
+
+		fs.SetState([]field.Element{initialState})
+
+		y1 := fs.RandomFieldFromSeed(seed, name)
+		y2 := fs.RandomFieldFromSeed(seed, name)
+
+		if y1 != y2 {
+			t.Errorf("state was modified")
+		}
 	})
 
 }

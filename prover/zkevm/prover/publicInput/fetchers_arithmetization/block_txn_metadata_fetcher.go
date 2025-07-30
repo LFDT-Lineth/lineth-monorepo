@@ -5,8 +5,9 @@ import (
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/column"
 	"github.com/consensys/linea-monorepo/prover/protocol/dedicated"
-	"github.com/consensys/linea-monorepo/prover/protocol/dedicated/projection"
+	"github.com/consensys/linea-monorepo/prover/protocol/distributed/pragmas"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
+	"github.com/consensys/linea-monorepo/prover/protocol/query"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	sym "github.com/consensys/linea-monorepo/prover/symbolic"
 	arith "github.com/consensys/linea-monorepo/prover/zkevm/prover/publicInput/arith_struct"
@@ -35,6 +36,10 @@ func NewBlockTxnMetadata(comp *wizard.CompiledIOP, name string, td *arith.TxnDat
 		FirstAbsTxId:    util.CreateCol(name, "FIRST_ABS_TX_ID", td.Ct.Size(), comp),
 		LastAbsTxId:     util.CreateCol(name, "LAST_ABS_TX_ID", td.Ct.Size(), comp),
 	}
+
+	pragmas.MarkRightPadded(res.BlockID)
+	pragmas.MarkLeftPadded(res.FilterArith)
+
 	return res
 }
 
@@ -130,25 +135,29 @@ func DefineBlockTxnMetaData(comp *wizard.CompiledIOP, btm *BlockTxnMetadata, nam
 	}
 
 	// a projection query to check that the sender addresses are fetched correctly
-	projection.InsertProjection(comp,
+	comp.InsertProjection(
 		ifaces.QueryIDf("%s_PROJECTION", name),
-		fetcherTable,
-		arithTable,
-		btm.FilterFetched,
-		btm.FilterArith,
-	)
+		query.ProjectionInput{ColumnA: fetcherTable,
+			ColumnB: arithTable,
+			FilterA: btm.FilterFetched,
+			FilterB: btm.FilterArith})
 }
 
 func AssignBlockTxnMetadata(run *wizard.ProverRuntime, btm BlockTxnMetadata, td *arith.TxnData) {
-	blockId := make([]field.Element, td.Ct.Size())
-	totalNoTxnBlock := make([]field.Element, td.Ct.Size())
-	filterFetched := make([]field.Element, td.Ct.Size())
-	filterArith := make([]field.Element, td.Ct.Size())
-	firstAbsTxId := make([]field.Element, td.Ct.Size())
-	lastAbsTxId := make([]field.Element, td.Ct.Size())
-	lastRelBlock := field.Zero()
-	counter := 0
-	var ctAbsTxNum int64 = 1
+
+	var (
+		size                  = td.Ct.Size()
+		blockId               = make([]field.Element, td.Ct.Size())
+		totalNoTxnBlock       = make([]field.Element, td.Ct.Size())
+		filterFetched         = make([]field.Element, td.Ct.Size())
+		filterArith           = make([]field.Element, td.Ct.Size())
+		firstAbsTxId          = make([]field.Element, td.Ct.Size())
+		lastAbsTxId           = make([]field.Element, td.Ct.Size())
+		lastRelBlock          = field.Zero()
+		counter               = 0
+		ctAbsTxNum      int64 = 1
+	)
+
 	for i := 0; i < td.Ct.Size(); i++ {
 		relBlock := td.RelBlock.GetColAssignmentAt(run, i)
 		if !relBlock.IsZero() && !relBlock.Equal(&lastRelBlock) {
@@ -176,12 +185,13 @@ func AssignBlockTxnMetadata(run *wizard.ProverRuntime, btm BlockTxnMetadata, td 
 			filterArith[i].SetOne()
 		}
 	}
-	run.AssignColumn(btm.BlockID.GetColID(), smartvectors.NewRegular(blockId))
-	run.AssignColumn(btm.TotalNoTxnBlock.GetColID(), smartvectors.NewRegular(totalNoTxnBlock))
-	run.AssignColumn(btm.FilterFetched.GetColID(), smartvectors.NewRegular(filterFetched))
+
+	run.AssignColumn(btm.BlockID.GetColID(), smartvectors.RightZeroPadded(blockId[:counter], size))
+	run.AssignColumn(btm.TotalNoTxnBlock.GetColID(), smartvectors.RightZeroPadded(totalNoTxnBlock[:counter], size))
+	run.AssignColumn(btm.FilterFetched.GetColID(), smartvectors.RightZeroPadded(filterFetched[:counter], size))
+	run.AssignColumn(btm.FirstAbsTxId.GetColID(), smartvectors.RightZeroPadded(firstAbsTxId[:counter], size))
+	run.AssignColumn(btm.LastAbsTxId.GetColID(), smartvectors.RightZeroPadded(lastAbsTxId[:counter], size))
 	run.AssignColumn(btm.FilterArith.GetColID(), smartvectors.NewRegular(filterArith))
-	run.AssignColumn(btm.FirstAbsTxId.GetColID(), smartvectors.NewRegular(firstAbsTxId))
-	run.AssignColumn(btm.LastAbsTxId.GetColID(), smartvectors.NewRegular(lastAbsTxId))
 
 	btm.ComputeSelectorCt.Run(run)
 }

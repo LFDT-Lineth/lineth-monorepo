@@ -7,6 +7,7 @@ import (
 	"github.com/consensys/linea-monorepo/prover/backend/files"
 	"github.com/consensys/linea-monorepo/prover/crypto/keccak"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
+	"github.com/consensys/linea-monorepo/prover/protocol/distributed/pragmas"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	"github.com/consensys/linea-monorepo/prover/utils"
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/common"
@@ -120,7 +121,7 @@ func CreateGenDataModule(
 	name string,
 	size int,
 ) (gbm generic.GenDataModule) {
-	createCol := common.CreateColFn(comp, name, size)
+	createCol := common.CreateColFn(comp, name, size, pragmas.RightPadded)
 	gbm.HashNum = createCol("HASH_NUM")
 	gbm.Index = createCol("INDEX")
 	gbm.Limb = createCol("LIMBS")
@@ -135,7 +136,7 @@ func CreateGenInfoModule(
 	name string,
 	size int,
 ) (gim generic.GenInfoModule) {
-	createCol := common.CreateColFn(comp, name, size)
+	createCol := common.CreateColFn(comp, name, size, pragmas.RightPadded)
 	gim.HashHi = createCol("HASH_HI")
 	gim.HashLo = createCol("HASH_LO")
 	gim.IsHashHi = createCol("IS_HASH_HI")

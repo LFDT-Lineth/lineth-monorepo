@@ -15,9 +15,9 @@ import (
 
 func commitEcRecTxnData(comp *wizard.CompiledIOP, size1 int, size int, ac *antichamber) (td *txnData, ecRec *EcRecover) {
 	td = &txnData{
-		fromHi: comp.InsertCommit(0, ifaces.ColIDf("txn_data.FromHi"), size1),
-		fromLo: comp.InsertCommit(0, ifaces.ColIDf("txn_data.FromLo"), size1),
-		ct:     comp.InsertCommit(0, ifaces.ColIDf("txn_data.CT"), size1),
+		FromHi: comp.InsertCommit(0, ifaces.ColIDf("txn_data.FromHi"), size1),
+		FromLo: comp.InsertCommit(0, ifaces.ColIDf("txn_data.FromLo"), size1),
+		Ct:     comp.InsertCommit(0, ifaces.ColIDf("txn_data.CT"), size1),
 	}
 
 	ecRec = &EcRecover{
@@ -78,9 +78,9 @@ func AssignEcRecTxnData(
 	run.AssignColumn(ecRec.Limb.GetColID(), smartvectors.RightZeroPadded(ecRecLimb, size))
 
 	// they are arithmetization columns, so LeftZeroPad
-	run.AssignColumn(td.fromHi.GetColID(), smartvectors.LeftZeroPadded(fromHi, sizeTxnData))
-	run.AssignColumn(td.fromLo.GetColID(), smartvectors.LeftZeroPadded(fromLo, sizeTxnData))
-	run.AssignColumn(td.ct.GetColID(), smartvectors.LeftZeroPadded(ctWit, sizeTxnData))
+	run.AssignColumn(td.FromHi.GetColID(), smartvectors.LeftZeroPadded(fromHi, sizeTxnData))
+	run.AssignColumn(td.FromLo.GetColID(), smartvectors.LeftZeroPadded(fromLo, sizeTxnData))
+	run.AssignColumn(td.Ct.GetColID(), smartvectors.LeftZeroPadded(ctWit, sizeTxnData))
 
 	effectiveSize := nbEcRec*nbRowsPerEcRec + nbTxS*nbRowsPerTxSign
 	isActive := vector.Repeat(field.One(), effectiveSize)
@@ -105,7 +105,7 @@ func (td *txnData) assignTxnDataFromPK(
 ) {
 	var (
 		hasher  = sha3.NewLegacyKeccak256()
-		maxNbTx = ac.Inputs.settings.MaxNbTx
+		maxNbTx = ac.Inputs.Settings.MaxNbTx
 	)
 	// compute the hash of public keys
 	pkHash := make([][]byte, 0, len(rlpTxnHashes))
@@ -141,18 +141,18 @@ func (td *txnData) assignTxnDataFromPK(
 	}
 
 	// these are arithmetization columns, so LeftZeroPad
-	run.AssignColumn(td.fromHi.GetColID(), smartvectors.LeftZeroPadded(fromHi, ac.Inputs.settings.sizeTxnData(nbRowsPerTxInTxnData)))
-	run.AssignColumn(td.fromLo.GetColID(), smartvectors.LeftZeroPadded(fromLo, ac.Inputs.settings.sizeTxnData(nbRowsPerTxInTxnData)))
-	run.AssignColumn(td.ct.GetColID(), smartvectors.LeftZeroPadded(ctWit, ac.Inputs.settings.sizeTxnData(nbRowsPerTxInTxnData)))
+	run.AssignColumn(td.FromHi.GetColID(), smartvectors.LeftZeroPadded(fromHi, ac.Inputs.Settings.sizeTxnData(nbRowsPerTxInTxnData)))
+	run.AssignColumn(td.FromLo.GetColID(), smartvectors.LeftZeroPadded(fromLo, ac.Inputs.Settings.sizeTxnData(nbRowsPerTxInTxnData)))
+	run.AssignColumn(td.Ct.GetColID(), smartvectors.LeftZeroPadded(ctWit, ac.Inputs.Settings.sizeTxnData(nbRowsPerTxInTxnData)))
 }
 
 // it commits to the txn_data
 func commitTxnData(comp *wizard.CompiledIOP, limits *Settings, nbRowsPerTxInTxnData int) (td *txnData) {
 	size := limits.sizeTxnData(nbRowsPerTxInTxnData)
 	td = &txnData{
-		fromHi: comp.InsertCommit(0, ifaces.ColIDf("txn_data.FromHi"), size),
-		fromLo: comp.InsertCommit(0, ifaces.ColIDf("txn_data.FromLo"), size),
-		ct:     comp.InsertCommit(0, ifaces.ColIDf("txn_data.CT"), size),
+		FromHi: comp.InsertCommit(0, ifaces.ColIDf("txn_data.FromHi"), size),
+		FromLo: comp.InsertCommit(0, ifaces.ColIDf("txn_data.FromLo"), size),
+		Ct:     comp.InsertCommit(0, ifaces.ColIDf("txn_data.CT"), size),
 	}
 	return td
 }

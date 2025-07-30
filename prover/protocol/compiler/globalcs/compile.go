@@ -40,8 +40,8 @@ func Compile(comp *wizard.CompiledIOP) {
 	)
 
 	comp.RegisterProverAction(quotientRound, &quotientCtx)
-	comp.RegisterProverAction(evaluationRound, evaluationProver(evaluationCtx))
-	comp.RegisterVerifierAction(evaluationRound, &evaluationVerifier{evaluationCtx: evaluationCtx})
+	comp.RegisterProverAction(evaluationRound, EvaluationProver(evaluationCtx))
+	comp.RegisterVerifierAction(evaluationRound, &EvaluationVerifier{EvaluationCtx: evaluationCtx})
 
 }
 

@@ -20,6 +20,39 @@ const (
 	REED_SOLOMON_BETA        string = "REED_SOLOMON_BETA"
 )
 
+type ReedSolomonProverAction struct {
+	H       ifaces.Column
+	Coeff   ifaces.Column
+	CodeDim int
+}
+
+func (a *ReedSolomonProverAction) Run(assi *wizard.ProverRuntime) {
+	witness := a.H.GetColAssignment(assi)
+	coeffs := smartvectors.FFTInverse(witness, fft.DIF, true, 0, 0, nil).SubVector(0, a.CodeDim)
+	assi.AssignColumn(a.Coeff.GetColID(), coeffs)
+}
+
+type ReedSolomonVerifierAction struct {
+	CoeffCheck ifaces.Accessor
+	EvalCheck  ifaces.Accessor
+	HColID     ifaces.ColID
+}
+
+func (a *ReedSolomonVerifierAction) Run(run wizard.Runtime) error {
+	y := a.CoeffCheck.GetVal(run)
+	y_ := a.EvalCheck.GetVal(run)
+	if y != y_ {
+		return fmt.Errorf("reed-solomon check failed - %v is not a codeword", a.HColID)
+	}
+	return nil
+}
+
+func (a *ReedSolomonVerifierAction) RunGnark(api frontend.API, wvc wizard.GnarkRuntime) {
+	y := a.CoeffCheck.GetFrontendVariable(api, wvc)
+	y_ := a.EvalCheck.GetFrontendVariable(api, wvc)
+	api.AssertIsEqual(y, y_)
+}
+
 // Is code-member
 func CheckReedSolomon(comp *wizard.CompiledIOP, rate int, h ifaces.Column) {
 
@@ -39,11 +72,10 @@ func CheckReedSolomon(comp *wizard.CompiledIOP, rate int, h ifaces.Column) {
 
 	// Inserts the prover before calling the sub-wizard so that it is executed
 	// before the sub-prover's wizards.
-	//
-	comp.SubProvers.AppendToInner(round, func(assi *wizard.ProverRuntime) {
-		witness := h.GetColAssignment(assi)
-		coeffs := smartvectors.FFTInverse(witness, fft.DIF, true, 0, 0, nil).SubVector(0, codeDim)
-		assi.AssignColumn(ifaces.ColIDf("%v_%v", REED_SOLOMON_COEFF, h.GetColID()), coeffs)
+	comp.RegisterProverAction(round, &ReedSolomonProverAction{
+		H:       h,
+		Coeff:   coeff,
+		CodeDim: codeDim,
 	})
 
 	coeffCheck := functionals.CoeffEval(
@@ -60,17 +92,10 @@ func CheckReedSolomon(comp *wizard.CompiledIOP, rate int, h ifaces.Column) {
 		h,
 	)
 
-	comp.InsertVerifier(round+1, func(a *wizard.VerifierRuntime) error {
-		y := coeffCheck.GetVal(a)
-		y_ := evalCheck.GetVal(a)
-		if y != y_ {
-			return fmt.Errorf("reed-solomon check failed - %v is not a codeword", h.GetColID())
-		}
-		return nil
-	}, func(api frontend.API, wvc *wizard.WizardVerifierCircuit) {
-		y := coeffCheck.GetFrontendVariable(api, wvc)
-		y_ := evalCheck.GetFrontendVariable(api, wvc)
-		api.AssertIsEqual(y, y_)
+	comp.RegisterVerifierAction(round+1, &ReedSolomonVerifierAction{
+		CoeffCheck: coeffCheck,
+		EvalCheck:  evalCheck,
+		HColID:     h.GetColID(),
 	})
 
 }

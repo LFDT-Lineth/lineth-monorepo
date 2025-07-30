@@ -80,8 +80,11 @@ func TestFromIntVec(t *testing.T) {
 
 				// Compile with the full suite
 				compiled := wizard.Compile(defineInclu,
-					compiler.Arcane(tc.Split, tc.Split, true),
-					vortex.Compile(2),
+					compiler.Arcane(
+						compiler.WithStitcherMinSize(16),
+						compiler.WithTargetColSize(16),
+					),
+					dummy.Compile,
 				)
 
 				proof := wizard.Prove(compiled, proveInclu)
@@ -161,7 +164,10 @@ func TestFromIntVecWithPadding(t *testing.T) {
 
 				// Compile with the full suite
 				compiled := wizard.Compile(defineInclu,
-					compiler.Arcane(tc.Split, tc.Split, true),
+					compiler.Arcane(
+						compiler.WithTargetColSize(16),
+						compiler.WithStitcherMinSize(16),
+					),
 					vortex.Compile(2),
 					dummy.Compile,
 				)

@@ -4,6 +4,7 @@ import (
 	"github.com/consensys/gnark-crypto/ecc/bn254"
 	"github.com/consensys/gnark-crypto/ecc/bn254/fp"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
+	"github.com/consensys/linea-monorepo/prover/protocol/dedicated/plonk"
 	"github.com/consensys/linea-monorepo/prover/utils"
 )
 
@@ -73,6 +74,18 @@ func convGtGnarkToWizard(elem bn254.GT) [nbGtLimbs]field.Element {
 
 	return res
 }
+
+func init() {
+	plonk.RegisterInputFiller(inputFillerMillerLoopKey, inputFillerMillerLoop)
+	plonk.RegisterInputFiller(inputFillerFinalExpKey, inputFillerFinalExp)
+	plonk.RegisterInputFiller(inputFillerG2MembershipKey, inputFillerG2Membership)
+}
+
+var (
+	inputFillerMillerLoopKey   = "bn254-miller-loop-input-filler"
+	inputFillerFinalExpKey     = "bn254-final-exp-input-filler"
+	inputFillerG2MembershipKey = "bn254-g2-membership-input-filler"
+)
 
 func inputFillerMillerLoop(circuitInstance, inputIndex int) field.Element {
 	// prev = 1

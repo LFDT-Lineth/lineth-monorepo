@@ -50,10 +50,35 @@ type ZCtx struct {
 	ZOpenings []query.LocalOpening
 }
 
+// NewZCtxFromGrandProduct creates list of zctxs from a single grand-product
+// query.
+func NewZCtxFromGrandProduct(gp query.GrandProduct) []*ZCtx {
+
+	var (
+		cmpInt = func(a, b int) bool {
+			return a < b
+		}
+		sizes = utils.SortedKeysOf(gp.Inputs, cmpInt)
+		zctxs = make([]*ZCtx, 0, len(sizes))
+	)
+
+	for _, size := range sizes {
+		zctx := &ZCtx{
+			Size:               size,
+			Round:              gp.Round,
+			NumeratorFactors:   gp.Inputs[size].Numerators,
+			DenominatorFactors: gp.Inputs[size].Denominators,
+		}
+		zctxs = append(zctxs, zctx)
+	}
+
+	return zctxs
+}
+
 // compileZs declares the Z polynomials and constraint them. It assumes that the
 // current z context is partially filled with their Size, Round, NumeratorFactors
 // and DenominatorFactors (not the boarded one).
-func (z *ZCtx) compile(comp *wizard.CompiledIOP) {
+func (z *ZCtx) Compile(comp *wizard.CompiledIOP) {
 
 	var (
 		numZs = utils.Max(

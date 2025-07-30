@@ -12,6 +12,7 @@ import (
 	"github.com/consensys/linea-monorepo/prover/protocol/variables"
 	"github.com/consensys/linea-monorepo/prover/symbolic"
 	"github.com/consensys/linea-monorepo/prover/utils"
+	"github.com/google/uuid"
 )
 
 // A local constraint is an arithmetic relation between prespecified
@@ -23,6 +24,7 @@ type LocalConstraint struct {
 	*symbolic.Expression
 	ID         ifaces.QueryID
 	DomainSize int
+	uuid       uuid.UUID `serde:"omit"`
 }
 
 // Construct a new local constraint
@@ -43,14 +45,19 @@ func NewLocalConstraint(id ifaces.QueryID, expr *symbolic.Expression) LocalConst
 	*/
 	board := expr.Board()
 	metadatas := board.ListVariableMetadata()
+	var firstColumn ifaces.Column
 	for _, metadataInterface := range metadatas {
 		if metadata, ok := metadataInterface.(ifaces.Column); ok {
 			if !foundAny {
 				foundAny = true
 				domainSize = metadata.Size()
+				firstColumn = metadata
 			}
 			if metadata.Size() != domainSize {
-				utils.Panic("Unsupported : Local constraints with heterogeneous domain size")
+				utils.Panic(
+					"Unsupported : Local constraints with heterogeneous domain size; %v has size %v but %v has size %v",
+					firstColumn.GetColID(), domainSize, metadata.GetColID(), metadata.Size(),
+				)
 			}
 		}
 	}
@@ -63,7 +70,7 @@ func NewLocalConstraint(id ifaces.QueryID, expr *symbolic.Expression) LocalConst
 		utils.Panic("All commitment given had a length of zero")
 	}
 
-	res := LocalConstraint{Expression: expr, ID: id, DomainSize: domainSize}
+	res := LocalConstraint{Expression: expr, ID: id, DomainSize: domainSize, uuid: uuid.New()}
 	return res
 }
 
@@ -165,4 +172,8 @@ func (cs LocalConstraint) CheckGnark(api frontend.API, run ifaces.GnarkRuntime) 
 	*/
 	res := board.GnarkEval(api, inputs)
 	api.AssertIsEqual(res, 0)
+}
+
+func (cs LocalConstraint) UUID() uuid.UUID {
+	return cs.uuid
 }

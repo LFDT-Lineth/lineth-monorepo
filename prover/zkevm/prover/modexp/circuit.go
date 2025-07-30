@@ -19,14 +19,14 @@ const (
 	limbSizeBits = 128
 )
 
-// modexpCircuit implements the [frontend.Circuit] interface and is responsible
+// ModExpCircuit implements the [frontend.Circuit] interface and is responsible
 // for ensuring all the modexp claims brought to the antichamber module.
 //
 // The circuit is meant to be used in two variants:
 //   - 256 bits, where all the operands and the claimed result have a size
 //     smaller than 256 bits.
 //   - 4096, where the operands are bound to 4096 bits
-type modexpCircuit struct {
+type ModExpCircuit struct {
 	Instances []modexpCircuitInstance `gnark:",public"`
 }
 
@@ -42,9 +42,9 @@ type modexpCircuitInstance struct {
 	Result   []frontend.Variable `gnark:",public"`
 }
 
-// allocate256Bits allocates [modexpCircuit] for n instances assuming the 256-bit
+// allocate256Bits allocates [ModExpCircuit] for n instances assuming the 256-bit
 // variant.
-func allocateCircuit(n int, numBits int) *modexpCircuit {
+func allocateCircuit(n int, numBits int) *ModExpCircuit {
 
 	if numBits != smallModexpSize && numBits != largeModexpSize {
 		utils.Panic("expected `numBits = {%v, %v}`", smallModexpSize, largeModexpSize)
@@ -52,7 +52,7 @@ func allocateCircuit(n int, numBits int) *modexpCircuit {
 
 	var (
 		numLimbs = numBits / limbSizeBits
-		res      = &modexpCircuit{
+		res      = &ModExpCircuit{
 			Instances: make([]modexpCircuitInstance, n),
 		}
 	)
@@ -68,7 +68,7 @@ func allocateCircuit(n int, numBits int) *modexpCircuit {
 }
 
 // Define implements the [frontend.Circuit] interface
-func (m *modexpCircuit) Define(api frontend.API) error {
+func (m *ModExpCircuit) Define(api frontend.API) error {
 
 	for i := range m.Instances {
 

@@ -15,9 +15,9 @@ import (
 type lookUpTables struct {
 
 	// columns for base conversion
-	colUint16 ifaces.Column
-	colBaseA  ifaces.Column
-	colBaseB  ifaces.Column
+	ColUint16 ifaces.Column
+	ColBaseA  ifaces.Column
+	ColBaseB  ifaces.Column
 
 	// columns for base conversion from baseBDirty to 4bit integers
 	ColUint4      ifaces.Column
@@ -30,9 +30,9 @@ func NewLookupTables(comp *wizard.CompiledIOP) lookUpTables {
 
 	// table for base conversion (used for converting blocks to what keccakf expect)
 	colUint16, colBaseA, colBaseB := baseConversionKeccakBaseX()
-	res.colUint16 = comp.InsertPrecomputed(ifaces.ColIDf("LOOKUP_Uint16"), colUint16)
-	res.colBaseA = comp.InsertPrecomputed(ifaces.ColIDf("LOOKUP_BaseA"), colBaseA)
-	res.colBaseB = comp.InsertPrecomputed(ifaces.ColIDf("LOOKUP_BaseB"), colBaseB)
+	res.ColUint16 = comp.InsertPrecomputed(ifaces.ColIDf("LOOKUP_Uint16"), colUint16)
+	res.ColBaseA = comp.InsertPrecomputed(ifaces.ColIDf("LOOKUP_BaseA"), colBaseA)
+	res.ColBaseB = comp.InsertPrecomputed(ifaces.ColIDf("LOOKUP_BaseB"), colBaseB)
 
 	// table for base conversion (from BaseBDirty to uint4)
 	colUint4, colBaseBDirty := baseConversionKeccakBaseBDirtyToUint4()

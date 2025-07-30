@@ -3,11 +3,10 @@ package fetchers_arithmetization
 import (
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
-	"github.com/consensys/linea-monorepo/prover/protocol/accessors"
-	"github.com/consensys/linea-monorepo/prover/protocol/column"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	sym "github.com/consensys/linea-monorepo/prover/symbolic"
+	commonconstraints "github.com/consensys/linea-monorepo/prover/zkevm/prover/common/common_constraints"
 	util "github.com/consensys/linea-monorepo/prover/zkevm/prover/publicInput/utilities"
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/statemanager/statesummary"
 )
@@ -18,22 +17,18 @@ type RootHashFetcher struct {
 }
 
 // NewRootHashFetcher returns a new RootHashFetcher with initialized columns that are not constrained.
-func NewRootHashFetcher(comp *wizard.CompiledIOP, name string) RootHashFetcher {
-	res := RootHashFetcher{
-		First: util.CreateCol(name, "FIRST", 1, comp),
-		Last:  util.CreateCol(name, "LAST", 1, comp),
+func NewRootHashFetcher(comp *wizard.CompiledIOP, name string, sizeSS int) *RootHashFetcher {
+	return &RootHashFetcher{
+		First: util.CreateCol(name, "FIRST", sizeSS, comp),
+		Last:  util.CreateCol(name, "LAST", sizeSS, comp),
 	}
-	return res
 }
 
 // DefineRootHashFetcher specifies the constraints of the RootHashFetcher with respect to the StateSummary
-func DefineRootHashFetcher(comp *wizard.CompiledIOP, fetcher RootHashFetcher, name string, ss statesummary.Module) {
-	// set the fetcher columns as public for accessors
-	comp.Columns.SetStatus(fetcher.First.GetColID(), column.Proof)
-	comp.Columns.SetStatus(fetcher.Last.GetColID(), column.Proof)
-	// get accessors
-	accessFirst := accessors.NewFromPublicColumn(fetcher.First, 0)
-	accessLast := accessors.NewFromPublicColumn(fetcher.Last, 0)
+func DefineRootHashFetcher(comp *wizard.CompiledIOP, fetcher *RootHashFetcher, name string, ss statesummary.Module) {
+
+	commonconstraints.MustBeConstant(comp, fetcher.First)
+	commonconstraints.MustBeConstant(comp, fetcher.Last)
 
 	// if the first state summary segment starts with storage operations, fetcher.First
 	// must equal the first value in the state summary's worldstatehash
@@ -42,10 +37,11 @@ func DefineRootHashFetcher(comp *wizard.CompiledIOP, fetcher RootHashFetcher, na
 		0,
 		ifaces.QueryIDf("%s_%s", name, "FIRST_LOCAL"),
 		sym.Sub(
-			accessFirst,
+			fetcher.First,
 			util.Ternary(ss.IsStorage, ss.WorldStateRoot, ss.AccumulatorStatement.StateDiff.InitialRoot),
 		),
 	)
+
 	// ss.IsActive is already constrained in the state summary as a typical IsActive pattern,
 	// with 1s followed by 0s, no need to constrain it again
 	// two cases: Case 1: ss.IsActive is not completely full, then fetcher.Last is equal to
@@ -54,12 +50,12 @@ func DefineRootHashFetcher(comp *wizard.CompiledIOP, fetcher RootHashFetcher, na
 	// Case 2: ss.IsActive is completely full, in which case we ask that
 	// ss.IsActive[size]*(fetcher.Last-ss.FinalRoot[size]) = 0
 	// i.e. at the last row, counter is equal to ctMax
-	util.CheckLastELemConsistency(comp, ss.IsActive, ss.AccumulatorStatement.StateDiff.FinalRoot, accessLast, name)
+	util.CheckLastELemConsistency(comp, ss.IsActive, ss.AccumulatorStatement.StateDiff.FinalRoot, fetcher.Last, name)
 
 }
 
 // AssignRootHashFetcher assigns the data in the RootHashFetcher using the data fetched from the StateSummary
-func AssignRootHashFetcher(run *wizard.ProverRuntime, fetcher RootHashFetcher, ss statesummary.Module) {
+func AssignRootHashFetcher(run *wizard.ProverRuntime, fetcher *RootHashFetcher, ss statesummary.Module) {
 	// if the first state summary segment starts with storage operations, fetch the value in worldstatehash
 	// otherwise, we take it from the first value of the accumulator
 	var first field.Element
@@ -87,6 +83,6 @@ func AssignRootHashFetcher(run *wizard.ProverRuntime, fetcher RootHashFetcher, s
 	}
 
 	// assign the fetcher columns
-	run.AssignColumn(fetcher.First.GetColID(), smartvectors.NewRegular([]field.Element{first}))
-	run.AssignColumn(fetcher.Last.GetColID(), smartvectors.NewRegular([]field.Element{last}))
+	run.AssignColumn(fetcher.First.GetColID(), smartvectors.NewConstant(first, size))
+	run.AssignColumn(fetcher.Last.GetColID(), smartvectors.NewConstant(last, size))
 }

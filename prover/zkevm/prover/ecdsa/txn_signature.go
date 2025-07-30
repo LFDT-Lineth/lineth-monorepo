@@ -19,66 +19,66 @@ import (
 // columns for transaction-hash are native columns,
 //
 // columns for rlp-txn lives on the arithmetization side.
-type txSignature struct {
+type TxSignature struct {
 	Inputs   *txSignatureInputs
-	txHashHi ifaces.Column
-	txHashLo ifaces.Column
-	isTxHash ifaces.Column
+	TxHashHi ifaces.Column
+	TxHashLo ifaces.Column
+	IsTxHash ifaces.Column
 
-	// provider for keccak, Provider contains the inputs and outputs of keccak hash.
-	provider generic.GenericByteModule
+	// Provider for keccak, Provider contains the inputs and outputs of keccak hash.
+	Provider generic.GenericByteModule
 }
 
 type txSignatureInputs struct {
 	RlpTxn generic.GenDataModule
-	ac     *antichamber
+	Ac     *antichamber
 }
 
-func newTxSignatures(comp *wizard.CompiledIOP, inp txSignatureInputs) *txSignature {
+func newTxSignatures(comp *wizard.CompiledIOP, inp txSignatureInputs) *TxSignature {
 	var (
-		createCol = createColFn(comp, NAME_TXSIGNATURE, inp.ac.size)
+		createCol = createColFn(comp, NAME_TXSIGNATURE, inp.Ac.Size)
 
-		res = &txSignature{
-			txHashHi: createCol("TX_HASH_HI"),
-			txHashLo: createCol("TX_HASH_LO"),
-			isTxHash: createCol("TX_IS_HASH_HI"),
+		res = &TxSignature{
+			TxHashHi: createCol("TX_HASH_HI"),
+			TxHashLo: createCol("TX_HASH_LO"),
+			IsTxHash: createCol("TX_IS_HASH_HI"),
 
 			Inputs: &inp,
 		}
 	)
 
-	commonconstraints.MustBeBinary(comp, res.isTxHash)
+	commonconstraints.MustBeBinary(comp, res.IsTxHash)
 
 	// isTxHash = 1 if isFeching = 1 and Source = 1
 	comp.InsertGlobal(0, ifaces.QueryIDf("IS_TX_HASH"),
-		sym.Mul(inp.ac.IsFetching, inp.ac.Source,
-			sym.Sub(1, res.isTxHash),
+		sym.Mul(inp.Ac.IsFetching, inp.Ac.Source,
+			sym.Sub(1, res.IsTxHash),
 		),
 	)
 
 	// txHashHi remains the same between two fetchings.
 	comp.InsertGlobal(0, "txHashHI_REMAIN_SAME",
-		sym.Mul(inp.ac.IsActive,
-			sym.Sub(1, inp.ac.IsFetching),
-			sym.Sub(res.txHashHi, column.Shift(res.txHashHi, -1))),
+		sym.Mul(inp.Ac.IsActive,
+			sym.Sub(1, inp.Ac.IsFetching),
+			sym.Sub(res.TxHashHi, column.Shift(res.TxHashHi, -1))),
 	)
 
 	// txHashLo remains the same between two fetchings.
 	comp.InsertGlobal(0, "txHashLO_REMAIN_SAME",
-		sym.Mul(inp.ac.IsActive,
-			sym.Sub(1, inp.ac.IsFetching),
-			sym.Sub(res.txHashLo, column.Shift(res.txHashLo, -1)),
+		sym.Mul(inp.Ac.IsActive,
+			sym.Sub(1, inp.Ac.IsFetching),
+			sym.Sub(res.TxHashLo, column.Shift(res.TxHashLo, -1)),
 		),
 	)
 
-	res.provider = res.GetProvider(comp, inp.RlpTxn)
+	res.Provider = res.GetProvider(comp, inp.RlpTxn)
 
 	return res
 }
 
 // It builds a provider from rlp-txn (as hash input) and native columns of TxSignature (as hash output)
 // the consistency check is then deferred to the keccak module.
-func (txn *txSignature) GetProvider(comp *wizard.CompiledIOP, rlpTxn generic.GenDataModule) generic.GenericByteModule {
+func (txn *TxSignature) GetProvider(comp *wizard.CompiledIOP, rlpTxn generic.GenDataModule) generic.GenericByteModule {
 	provider := generic.GenericByteModule{}
 
 	// pass rlp-txn as DataModule.
@@ -91,18 +91,18 @@ func (txn *txSignature) GetProvider(comp *wizard.CompiledIOP, rlpTxn generic.Gen
 }
 
 // it builds an infoModule from native columns
-func (txn *txSignature) buildInfoModule() generic.GenInfoModule {
+func (txn *TxSignature) buildInfoModule() generic.GenInfoModule {
 	info := generic.GenInfoModule{
-		HashHi:   txn.txHashHi,
-		HashLo:   txn.txHashLo,
-		IsHashHi: txn.isTxHash,
-		IsHashLo: txn.isTxHash,
+		HashHi:   txn.TxHashHi,
+		HashLo:   txn.TxHashLo,
+		IsHashHi: txn.IsTxHash,
+		IsHashLo: txn.IsTxHash,
 	}
 	return info
 }
 
 // it assign the native columns
-func (txn *txSignature) assignTxSignature(run *wizard.ProverRuntime, nbActualEcRecover int) {
+func (txn *TxSignature) assignTxSignature(run *wizard.ProverRuntime, nbActualEcRecover int) {
 
 	var (
 		nbEcRecover = nbActualEcRecover
@@ -110,7 +110,7 @@ func (txn *txSignature) assignTxSignature(run *wizard.ProverRuntime, nbActualEcR
 		hashHi      = vector.Repeat(field.Zero(), n)
 		hashLo      = vector.Repeat(field.Zero(), n)
 		isTxHash    = vector.Repeat(field.Zero(), n)
-		size        = txn.Inputs.ac.size
+		size        = txn.Inputs.Ac.Size
 		permTrace   = keccak.GenerateTrace(txn.Inputs.RlpTxn.ScanStreams(run))
 		v, w        field.Element
 	)
@@ -132,9 +132,9 @@ func (txn *txSignature) assignTxSignature(run *wizard.ProverRuntime, nbActualEcR
 		isTxHash = append(isTxHash, repeatIsTxHash...)
 	}
 
-	run.AssignColumn(txn.txHashHi.GetColID(), smartvectors.RightZeroPadded(hashHi, size))
-	run.AssignColumn(txn.txHashLo.GetColID(), smartvectors.RightZeroPadded(hashLo, size))
-	run.AssignColumn(txn.isTxHash.GetColID(), smartvectors.RightZeroPadded(isTxHash, size))
+	run.AssignColumn(txn.TxHashHi.GetColID(), smartvectors.RightZeroPadded(hashHi, size))
+	run.AssignColumn(txn.TxHashLo.GetColID(), smartvectors.RightZeroPadded(hashLo, size))
+	run.AssignColumn(txn.IsTxHash.GetColID(), smartvectors.RightZeroPadded(isTxHash, size))
 }
 
 func startAt(nbEcRecover int) int {

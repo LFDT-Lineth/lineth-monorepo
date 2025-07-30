@@ -11,19 +11,13 @@ import (
 	"github.com/consensys/linea-monorepo/prover/zkevm/arithmetization"
 )
 
-const (
-	// Number of columns from the arithmetization that are kept to instantiate
-	// light prover.
-	numColLimitLight = 10
-)
-
 var (
 	partialZkEvm     *ZkEvm
 	oncePartialZkEvm = sync.Once{}
 
-	partialCompilationSuite = compilationSuite{
-		compiler.Arcane(1<<16, 1<<17, true),
-		vortex.Compile(2, vortex.WithDryThreshold(16)),
+	partialCompilationSuite = CompilationSuite{
+		compiler.Arcane(compiler.WithTargetColSize(1 << 17)),
+		vortex.Compile(2, vortex.WithOptionalSISHashingThreshold(16)),
 	}
 )
 

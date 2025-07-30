@@ -2,21 +2,22 @@ package dedicated
 
 import (
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
+	"github.com/consensys/linea-monorepo/prover/protocol/column"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
+	"github.com/consensys/linea-monorepo/prover/protocol/query"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizardutils"
 	sym "github.com/consensys/linea-monorepo/prover/symbolic"
 	"github.com/consensys/linea-monorepo/prover/utils"
 )
 
-type isZeroCtx struct {
-	ctxID     int
-	size      int
-	round     int
-	c         *sym.Expression
-	mask      *sym.Expression
-	invOrZero ifaces.Column
-	isZero    ifaces.Column
+type IsZeroCtx struct {
+	CtxID     int
+	Round     int
+	C         *sym.Expression
+	Mask      *sym.Expression
+	InvOrZero ifaces.Column
+	IsZero    ifaces.Column
 }
 
 // IsZero returns a fully constrained binary column z such that
@@ -31,26 +32,23 @@ type isZeroCtx struct {
 func IsZero(comp *wizard.CompiledIOP, c any) (ifaces.Column, wizard.ProverAction) {
 
 	var (
-		ctx = &isZeroCtx{
-			ctxID: len(comp.QueriesNoParams.AllKeys()),
+		ctx = &IsZeroCtx{
+			CtxID: len(comp.QueriesNoParams.AllKeys()),
 		}
 	)
 
 	switch c1 := c.(type) {
 	case ifaces.Column:
-		ctx.round = c1.Round()
-		ctx.size = c1.Size()
-		ctx.c = sym.NewVariable(c1)
+		ctx.Round = c1.Round()
+		ctx.C = sym.NewVariable(c1)
 	case *sym.Expression:
-		board := c1.Board()
-		ctx.c = c1
-		ctx.size = wizardutils.ExprIsOnSameLengthHandles(&board)
-		ctx.round = wizardutils.LastRoundToEval(c1)
+		ctx.C = c1
+		ctx.Round = wizardutils.LastRoundToEval(c1)
 	}
 
 	compileIsZeroWithSize(comp, ctx)
 
-	return ctx.isZero, ctx
+	return ctx.IsZero, ctx
 }
 
 // IsZeroMasked is an [IsZero] but allows passing an additional `mask`,
@@ -60,80 +58,125 @@ func IsZero(comp *wizard.CompiledIOP, c any) (ifaces.Column, wizard.ProverAction
 func IsZeroMask(comp *wizard.CompiledIOP, c, mask any) (ifaces.Column, wizard.ProverAction) {
 
 	var (
-		ctx = &isZeroCtx{
-			ctxID: len(comp.QueriesNoParams.AllKeys()),
+		ctx = &IsZeroCtx{
+			CtxID: len(comp.QueriesNoParams.AllKeys()),
 		}
 	)
 
-	ctx.c, ctx.round, ctx.size = wizardutils.AsExpr(c)
+	var size int
+	ctx.C, ctx.Round, size = wizardutils.AsExpr(c)
 	m, roundMask, sizeMask := wizardutils.AsExpr(mask)
-	ctx.round = max(roundMask, ctx.round)
+	ctx.Round = max(roundMask, ctx.Round)
 
-	if sizeMask != ctx.size {
-		utils.Panic("the size of the mask if %v but the column's size is %v", sizeMask, ctx.size)
+	if sizeMask != size {
+		utils.Panic("the size of the mask if %v but the column's size is %v", sizeMask, size)
 	}
 
-	ctx.mask = m
+	ctx.Mask = m
 
 	compileIsZeroWithSize(comp, ctx)
 
-	return ctx.isZero, ctx
+	return ctx.IsZero, ctx
 }
 
-func compileIsZeroWithSize(comp *wizard.CompiledIOP, ctx *isZeroCtx) {
+func compileIsZeroWithSize(comp *wizard.CompiledIOP, ctx *IsZeroCtx) {
 
-	ctx.isZero = comp.InsertCommit(
-		ctx.round,
-		ifaces.ColIDf("IS_ZERO_%v_RES", ctx.ctxID),
-		ctx.size,
+	_, _, size := wizardutils.AsExpr(ctx.C)
+
+	ctx.IsZero = comp.InsertCommit(
+		ctx.Round,
+		ifaces.ColIDf("IS_ZERO_%v_RES_%v", ctx.CtxID, ctx.Round),
+		size,
 	)
 
-	ctx.invOrZero = comp.InsertCommit(
-		ctx.round,
-		ifaces.ColIDf("IS_ZERO_%v_INVERSE_OR_ZERO", ctx.ctxID),
-		ctx.size,
+	ctx.InvOrZero = comp.InsertCommit(
+		ctx.Round,
+		ifaces.ColIDf("IS_ZERO_%v_INVERSE_OR_ZERO_%v", ctx.CtxID, ctx.Round),
+		size,
 	)
 
 	var mask = any(1)
-	if ctx.mask != nil {
-		mask = ctx.mask
+	if ctx.Mask != nil {
+		mask = ctx.Mask
 	}
 
 	comp.InsertGlobal(
 		0,
-		ifaces.QueryIDf("IS_ZERO_%v_RES_IS_ONE_IF_C_ISZERO", ctx.ctxID),
-		sym.Add(ctx.isZero, sym.Mul(ctx.invOrZero, ctx.c), sym.Neg(mask)),
+		ifaces.QueryIDf("IS_ZERO_%v_RES_IS_ONE_IF_C_ISZERO", ctx.CtxID),
+		sym.Add(ctx.IsZero, sym.Mul(ctx.InvOrZero, ctx.C), sym.Neg(mask)),
 	)
 
 	comp.InsertGlobal(
 		0,
-		ifaces.QueryIDf("IS_ZERO_%v_RES_IS_ZERO_IF_C_ISNONZERO", ctx.ctxID),
-		sym.Mul(ctx.isZero, ctx.c),
+		ifaces.QueryIDf("IS_ZERO_%v_RES_IS_ZERO_IF_C_ISNONZERO", ctx.CtxID),
+		sym.Mul(ctx.IsZero, ctx.C),
 	)
 
-	if ctx.mask != nil {
+	if ctx.Mask != nil {
 		comp.InsertGlobal(
 			0,
-			ifaces.QueryIDf("IS_ZERO_%v_RES_IS_MASKED", ctx.ctxID),
-			sym.Sub(ctx.isZero, sym.Mul(mask, ctx.isZero)),
+			ifaces.QueryIDf("IS_ZERO_%v_RES_IS_MASKED", ctx.CtxID),
+			sym.Sub(ctx.IsZero, sym.Mul(mask, ctx.IsZero)),
 		)
 	}
 }
 
 // Run implements the [wizard.ProverAction] interface
-func (ctx *isZeroCtx) Run(run *wizard.ProverRuntime) {
+func (ctx *IsZeroCtx) Run(run *wizard.ProverRuntime) {
+
 	var (
-		c         = wizardutils.EvalExprColumn(run, ctx.c.Board())
-		invOrZero = smartvectors.BatchInvert(c)
-		isZero    = smartvectors.IsZero(c)
+		c                    = column.EvalExprColumn(run, ctx.C.Board()).IntoRegVecSaveAlloc()
+		offsetRange          = query.MinMaxOffset(ctx.C)
+		minOffset, maxOffset = offsetRange.Min, offsetRange.Max
 	)
 
-	if ctx.mask != nil {
-		mask := wizardutils.EvalExprColumn(run, ctx.mask.Board())
+	// In case the expression contains offsets, the concrete value of
+	// isZero won't be constrained. However, we still need to pay attention to
+	// the value set in the "non-checked" positions because the limitless prover
+	// might decide to extend the column by padding on the left or the right
+	// using the initial or the final value. In that case, it is safer to use
+	// the first/last non-ignored value.
+	if minOffset < 0 {
+		paddingVal := c[-minOffset]
+		for p := 0; p < -minOffset; p++ {
+			c[p] = paddingVal
+		}
+	}
+
+	if maxOffset > 0 {
+		paddingVal := c[len(c)-maxOffset-1]
+		for p := len(c) - maxOffset; p < len(c); p++ {
+			c[p] = paddingVal
+		}
+	}
+
+	var (
+		cSV       = smartvectors.NewRegular(c)
+		invOrZero = smartvectors.BatchInvert(cSV)
+		isZero    = smartvectors.IsZero(cSV)
+	)
+
+	if ctx.Mask != nil {
+
+		mask := column.EvalExprColumn(run, ctx.Mask.Board())
+
+		if mask.Len() != len(c) {
+			valueOfC := ctx.C.MarshalJSONString()
+			utils.Panic("the size of the mask if %v but the column's size is %v, mask=%v", mask.Len(), len(c), valueOfC)
+		}
+
+		if mask.Len() != invOrZero.Len() {
+			utils.Panic("the size of the mask if %v but inv or zero's size is %v", mask.Len(), invOrZero.Len())
+		}
+
+		if mask.Len() != isZero.Len() {
+			utils.Panic("the size of the mask if %v but the column's size is %v", mask.Len(), isZero.Len())
+		}
+
 		invOrZero = smartvectors.Mul(invOrZero, mask)
 		isZero = smartvectors.Mul(isZero, mask)
 	}
 
-	run.AssignColumn(ctx.invOrZero.GetColID(), invOrZero)
-	run.AssignColumn(ctx.isZero.GetColID(), isZero)
+	run.AssignColumn(ctx.InvOrZero.GetColID(), invOrZero, wizard.DisableAssignmentSizeReduction)
+	run.AssignColumn(ctx.IsZero.GetColID(), isZero, wizard.DisableAssignmentSizeReduction)
 }

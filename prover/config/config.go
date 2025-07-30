@@ -22,7 +22,9 @@ func NewConfigFromFile(path string) (*Config, error) {
 	return newConfigFromFile(path, true)
 }
 
-// NewConfigFromFileUnchecked reads the configuration and skips the validation.
+// NewConfigFromFileUnchecked is as [NewConfigFromFile] but does not run
+// the config validation. It will return an error if it fails reading
+// the file or if the config contains unknown fields.
 func NewConfigFromFileUnchecked(path string) (*Config, error) {
 	return newConfigFromFile(path, false)
 }
@@ -210,11 +212,17 @@ type Prometheus struct {
 	Route string
 }
 
+// type LimitlessParams struct {
+// 	DiscTargetWeight  int `mapstructure:"disc_target_weight"`
+// 	DiscPreDivision   int `mapstructure:"disc_pre_division"`
+// 	CongloMaxSegments int `mapstructure:"conglo_max_segments"`
+// }
+
 type Execution struct {
 	WithRequestDir `mapstructure:",squash"`
 
 	// ProverMode stores the kind of prover to use.
-	ProverMode ProverMode `mapstructure:"prover_mode" validate:"required,oneof=dev partial full proofless bench check-only"`
+	ProverMode ProverMode `mapstructure:"prover_mode" validate:"required,oneof=dev partial full proofless bench check-only limitless"`
 
 	// CanRunFullLarge indicates whether the prover is running on a large machine (and can run full large traces).
 	CanRunFullLarge bool `mapstructure:"can_run_full_large"`
@@ -227,6 +235,13 @@ type Execution struct {
 	// used within the prover was generated from the same commit of linea-constraints as the generated lt trace file.
 	// Set this to true to disable compatibility checks (default: false).
 	IgnoreCompatibilityCheck bool `mapstructure:"ignore_compatibility_check"`
+
+	// LimitlessWithDebug is only looked at when the limitless prover is
+	// activated. When set to true, the limitless prover will only run in
+	// debug mode and not produce any proof. This is useful to investigate
+	// bugs in the limitless prover. The field is optional and defaults to
+	// false.
+	LimitlessWithDebug bool `mapstructure:"limitless_with_debug"`
 }
 
 type BlobDecompression struct {
@@ -255,7 +270,7 @@ type Aggregation struct {
 
 	// AllowedInputs determines the "inner" plonk circuits the "outer" aggregation circuit can aggregate.
 	// Order matters.
-	AllowedInputs []string `mapstructure:"allowed_inputs" validate:"required,dive,oneof=execution-dummy execution execution-large blob-decompression-dummy blob-decompression-v0 blob-decompression-v1 emulation-dummy aggregation emulation public-input-interconnection"`
+	AllowedInputs []string `mapstructure:"allowed_inputs" validate:"required,dive,oneof=execution-dummy execution execution-large execution-limitless blob-decompression-dummy blob-decompression-v0 blob-decompression-v1 emulation-dummy aggregation emulation public-input-interconnection"`
 
 	// note @gbotrel keeping that around in case we need to support two emulation contract
 	// during a migration.

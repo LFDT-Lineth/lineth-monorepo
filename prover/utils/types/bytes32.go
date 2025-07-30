@@ -143,3 +143,17 @@ func DummyDigest(i int) (d Bytes32) {
 	d[31] = byte(i) // on the last one to not create overflows
 	return d
 }
+
+// SetField sets the bytes32 from a field.Element
+func (b *Bytes32) SetField(f field.Element) {
+	*b = Bytes32(f.Bytes())
+}
+
+// ToField returns the bytes32 as a field.Element
+func (b Bytes32) ToField() field.Element {
+	var f field.Element
+	if err := f.SetBytesCanonical(b[:]); err != nil {
+		panic(err)
+	}
+	return f
+}

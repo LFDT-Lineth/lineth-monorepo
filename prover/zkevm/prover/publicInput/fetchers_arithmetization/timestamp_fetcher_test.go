@@ -18,7 +18,7 @@ func TestTimestampFetcher(t *testing.T) {
 	ctBlockData := util.InitializeCsv("../testdata/blockdata_mock.csv", t)
 	var (
 		bdc     *arith.BlockDataCols
-		fetcher TimestampFetcher
+		fetcher *TimestampFetcher
 	)
 
 	cmp := wizard.Compile(func(b *wizard.Builder) {
@@ -27,7 +27,7 @@ func TestTimestampFetcher(t *testing.T) {
 		// create a new timestamp fetcher
 		fetcher = NewTimestampFetcher(b.CompiledIOP, "TIMESTAMP_FETCHER_FROM_ARITH", bdc)
 		// constrain the timestamp fetcher
-		DefineTimestampFetcher(b.CompiledIOP, &fetcher, "TIMESTAMP_FETCHER_FROM_ARITH", bdc)
+		DefineTimestampFetcher(b.CompiledIOP, fetcher, "TIMESTAMP_FETCHER_FROM_ARITH", bdc)
 	}, dummy.Compile)
 	proof := wizard.Prove(cmp, func(run *wizard.ProverRuntime) {
 		// assign the CSV columns

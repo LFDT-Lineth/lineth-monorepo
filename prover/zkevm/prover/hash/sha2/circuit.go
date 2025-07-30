@@ -8,20 +8,20 @@ import (
 	"github.com/consensys/gnark/std/permutation/sha2"
 )
 
-// sha2Circuit is the gnark circuit (compiled as Plonk) used to check the Sha2
+// SHA2Circuit is the gnark circuit (compiled as Plonk) used to check the Sha2
 // compression function.
-type sha2Circuit struct {
+type SHA2Circuit struct {
 	Instances []sha2BlockPermutationInstance `gnark:",public"`
 }
 
-func allocateSha2Circuit(nbInstances int) *sha2Circuit {
-	return &sha2Circuit{
+func allocateSha2Circuit(nbInstances int) *SHA2Circuit {
+	return &SHA2Circuit{
 		Instances: make([]sha2BlockPermutationInstance, nbInstances),
 	}
 }
 
 // Define implements the [frontend.Circuit] interface
-func (sc *sha2Circuit) Define(api frontend.API) error {
+func (sc *SHA2Circuit) Define(api frontend.API) error {
 	for i := range sc.Instances {
 		sc.Instances[i].checkSha2Permutation(api)
 	}

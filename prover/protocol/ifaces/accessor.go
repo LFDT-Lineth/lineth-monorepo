@@ -8,7 +8,7 @@ import (
 
 // Accessor represents a function that can be used to retrieve a field element
 // value from a [github.com/consensys/linea-monorepo/prover/protocol/wizard.VerifierRuntime].
-// It also satisfies the the [symbolic.Metadata] interface so that it can be
+// It also satisfies the [symbolic.Metadata] interface so that it can be
 // used within arithmetic expression. A good use-case example is using the
 // evaluation point of a [github.com/consensys/linea-monorepo/prover/protocol/query.UnivariateEval]
 // as part of an arithmetic expression.

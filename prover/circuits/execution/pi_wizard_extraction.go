@@ -14,7 +14,7 @@ import (
 // wizard.VerifierCircuit
 func checkPublicInputs(
 	api frontend.API,
-	wvc *wizard.WizardVerifierCircuit,
+	wvc *wizard.VerifierCircuit,
 	gnarkFuncInp FunctionalPublicInputSnark,
 ) {
 
@@ -139,7 +139,7 @@ func checkPublicInputs(
 // being with due to the encoding of the plaintext)
 func execDataHash(
 	api frontend.API,
-	wvc *wizard.WizardVerifierCircuit,
+	wvc *wizard.VerifierCircuit,
 ) frontend.Variable {
 
 	hsh, err := mimc.NewMiMC(api)

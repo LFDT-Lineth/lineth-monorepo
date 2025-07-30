@@ -18,14 +18,14 @@ import (
 // It generates Define and Assign function of Packing module, for testing
 func makeTestCaseLaneAlloc() (
 	define wizard.DefineFunc,
-	prover wizard.ProverStep,
+	prover wizard.MainProverStep,
 ) {
 	var (
 		//  the total value stored in colA should be a factor of maxValue
 		n    = 20
 		size = 256
 	)
-	acc := &accumulateUpToMax{}
+	acc := &AccumulateUpToMaxCtx{}
 	maxValue := 4
 
 	define = func(build *wizard.Builder) {
@@ -33,7 +33,7 @@ func makeTestCaseLaneAlloc() (
 
 		colA := comp.InsertCommit(0, ifaces.ColIDf("COL_A"), size)
 
-		acc = AccumulateUpToMax(comp, maxValue, colA, verifiercol.NewConstantCol(field.One(), size))
+		acc = AccumulateUpToMax(comp, maxValue, colA, verifiercol.NewConstantCol(field.One(), size, "accumulate-up-to-max"))
 
 	}
 	prover = func(run *wizard.ProverRuntime) {
@@ -55,7 +55,7 @@ func TestLaneAlloc(t *testing.T) {
 }
 
 // it assigns ColA
-func (acc *accumulateUpToMax) assignNonNativeColumns(run *wizard.ProverRuntime, n, size int) {
+func (acc *AccumulateUpToMaxCtx) assignNonNativeColumns(run *wizard.ProverRuntime, n, size int) {
 	var (
 		max  = acc.Inputs.MaxValue
 		colA = acc.Inputs.ColA

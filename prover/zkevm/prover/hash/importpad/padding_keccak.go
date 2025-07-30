@@ -9,13 +9,13 @@ import (
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/hash/generic"
 )
 
-// keccakPadder implements the [padder] interface. The struct is empty mainly
+// KeccakPadder implements the [padder] interface. The struct is empty mainly
 // because it does not need to create extra columns.
-type keccakPadder struct{}
+type KeccakPadder struct{}
 
 // newKeccakPadder declare all the constraints ensuring the imported byte strings
 // are properly padded following the spec of the keccak hash function.
-func (iPadd *importation) newKeccakPadder(comp *wizard.CompiledIOP) padder {
+func (iPadd *Importation) newKeccakPadder(comp *wizard.CompiledIOP) padder {
 
 	// 		if isPadded[i-1] = 0, isPadded[i] = 1, isPadded[i+1] =1 ----> limb = 1, nByte = 1
 	// 		if isPadded[i-1] = 1, isPadded[i] = 1, isPadded[i+1] =0 ----> limb = 128, nByte = 1
@@ -85,12 +85,12 @@ func (iPadd *importation) newKeccakPadder(comp *wizard.CompiledIOP) padder {
 		iPadd.IsPadded,
 	)
 
-	return keccakPadder{}
+	return KeccakPadder{}
 }
 
 // pushPaddingRows pushes the padding rows corresponding to a plaintext of
 // size byteStringSize.
-func (kp keccakPadder) pushPaddingRows(byteStringSize int, iPadd *importationAssignmentBuilder) {
+func (kp KeccakPadder) pushPaddingRows(byteStringSize int, iPadd *importationAssignmentBuilder) {
 
 	var (
 		blocksize   = generic.KeccakUsecase.BlockSizeBytes()

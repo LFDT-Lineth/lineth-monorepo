@@ -4,16 +4,14 @@ import (
 	"fmt"
 
 	"github.com/consensys/gnark/frontend"
-	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
-	"github.com/consensys/linea-monorepo/prover/utils"
-	"github.com/sirupsen/logrus"
+	"github.com/google/uuid"
 )
 
 /*
-	Enforces a fixedPermutation constraint, that  two handles must
-	be a fixedpermutation of eachother
+	Enforces a fixedPermutation constraint, that two handles must
+	be a fixedpermutation of each other
 
 */
 //fix permutation over splittings of two vectors
@@ -32,59 +30,31 @@ type FixedPermutation struct {
 
 	//fixed  permutation
 	S []ifaces.ColAssignment
+
+	// uuid is an internal UUID used for the serialization process
+	uuid uuid.UUID `serde:"omit"`
 }
 
 /*
 Constructor for fixedPermutation constraints also makes the input validation
 */
 func NewFixedPermutation(id ifaces.QueryID, S []ifaces.ColAssignment, a, b []ifaces.Column) FixedPermutation {
-	/*
-		Both side of the permutation must have the same number of columns
-	*/
-	if len(a) != len(b) || len(a) != len(S) {
-		utils.Panic("a , b ,S don't have the same number of splittings %v %v %v", len(a), len(b), len(S))
-	}
-
-	// All polynomials must have the same MaxSize
-	_, err := utils.AllReturnEqual(
-		ifaces.Column.Size,
-		append(a, b...))
-	if err == nil {
-		// a,b must have the same number of rows as S
-		if S[0].Len() != a[0].Size() {
-			utils.Panic("S and 'a' dont have the same number of rows: %v, %v", S[0].Len(), a[0].Size())
-		}
-	}
-
-	if err != nil {
-
-		for i := range a {
-			logrus.Errorf("size of the column %v of a : %v\n", i, a[i].Size())
-		}
-
-		for i := range b {
-			logrus.Errorf("size of the column %v of b : %v\n", i, b[i].Size())
-		}
-
-		utils.Panic("Permutation (%v) requires that all columns have the same size %v", id, err)
-	}
-	for i := range S {
-		if S[i].Len() != S[0].Len() {
-			utils.Panic("%v-th splittings of S do not have the right length", i)
-		}
-	}
 
 	// recall that 'a' and 'b' have the same size
 	for i := range a {
 		a[i].MustExists()
+	}
+
+	for i := range b {
 		b[i].MustExists()
 	}
 
 	return FixedPermutation{
-		ID: id,
-		A:  a,
-		B:  b,
-		S:  S,
+		ID:   id,
+		A:    a,
+		B:    b,
+		S:    S,
+		uuid: uuid.New(),
 	}
 }
 
@@ -99,8 +69,8 @@ func (r FixedPermutation) Check(run ifaces.Runtime) error {
 		They should have the same size and it should be tested
 		prior to calling check
 	*/
-	a := make([]ifaces.ColAssignment, len(r.B))
-	b := make([]ifaces.ColAssignment, len(r.A))
+	a := make([]ifaces.ColAssignment, len(r.A))
+	b := make([]ifaces.ColAssignment, len(r.B))
 
 	// Populate the `a`
 	for i, pol := range r.A {
@@ -112,81 +82,36 @@ func (r FixedPermutation) Check(run ifaces.Runtime) error {
 		b[i] = pol.GetColAssignment(run)
 	}
 
-	return CheckFixedPermutation(a, b, r.S)
+	return checkFixedPermutation(a, b, r.S)
 }
 
-/*
-Checks a fixedpermutation query manually.
-*/
-func CheckFixedPermutation(a, b []ifaces.ColAssignment, S []ifaces.ColAssignment) error {
-	/*
-		Sample two  random elements alpha, beta ,alpha is used for LC
-	*/
-	var alpha, beta field.Element
-	_, err := alpha.SetRandom()
-	_, err2 := beta.SetRandom()
-	if err != nil || err2 != nil {
-		utils.Panic("Could not generate a random number %v %v", err, err2)
-	}
+// checkFixedPermutation checks a fixedpermutation query manually.
+func checkFixedPermutation(a, b []ifaces.ColAssignment, s []ifaces.ColAssignment) error {
 
-	/*
-		Sanity-check both sides should have the same number of cols
-	*/
-	if len(a) != len(b) || len(a) != len(S) {
-		utils.Panic("Not the same number of columns %v %v %v", len(a), len(b), len(S))
-	}
+	var (
+		a_ = make([]field.Element, 0)
+		s_ = make([]field.Element, 0)
+		b_ = make([]field.Element, 0)
+	)
 
-	nRow := a[0].Len()
-	/*
-		Sanity-check, all sample should have the same number of rows.
-	*/
 	for i := range a {
-		if a[i].Len() != nRow {
-			utils.Panic("Row %v of a has an inconsistent size. Expected %v but got %v", i, nRow, a[i].Len())
-		}
-		if b[i].Len() != nRow {
-			utils.Panic("Row %v of b has an inconsistent size. Expected %v but got %v", i, nRow, b[i].Len())
-		}
-		if S[i].Len() != nRow {
-			utils.Panic("Row %v of S has an inconsistent size. Expected %v but got %v", i, nRow, S[i].Len())
-		}
+		a_ = append(a_, a[i].IntoRegVecSaveAlloc()...)
+
 	}
 
-	//generate identity polys of permutation; S_id
-	S_id := make([]ifaces.ColAssignment, len(S))
-	n := S[0].Len()
-	for j := range S {
-		identity := make([]field.Element, n)
-		for i := 0; i < n; i++ {
-			identity[i] = field.NewElement(uint64(n*j + i))
-		}
-		S_id[j] = smartvectors.NewRegular(identity)
+	for i := range b {
+		s_ = append(s_, s[i].IntoRegVecSaveAlloc()...)
+		b_ = append(b_, b[i].IntoRegVecSaveAlloc()...)
 	}
 
-	prodA := field.One()
-	prodB := field.One()
-	var tmp field.Element
-	for j := range a {
-		for i := 0; i < nRow; i++ {
-			//for a
-			u := a[j].Get(i)
-			v := S_id[j].Get(i)
-			tmp.Mul(&alpha, &v).Add(&u, &tmp)
-			tmp.Add(&tmp, &beta)
-			prodA.Mul(&prodA, &tmp)
+	for i := range b_ {
 
-			//for b
-			u = b[j].Get(i)
-			v = S[j].Get(i)
-			tmp.Mul(&alpha, &v).Add(&u, &tmp)
-			tmp.Add(&tmp, &beta)
-			prodB.Mul(&prodB, &tmp)
+		k := int(s_[i].Uint64())
+		x := b_[i]
+		y := a_[k]
+		if x != y {
+			return fmt.Errorf("the fixed permutation does not work: a[%v] = %v but b[%v] = %v", k, y.String(), i, x.String())
 		}
-	}
-
-	// At the end, the two product should be equals
-	if prodA != prodB {
-		return fmt.Errorf("the permutation check rejected")
 	}
 
 	return nil
@@ -196,4 +121,8 @@ func CheckFixedPermutation(a, b []ifaces.ColAssignment, S []ifaces.ColAssignment
 // to check the query within a circuit
 func (f FixedPermutation) CheckGnark(api frontend.API, run ifaces.GnarkRuntime) {
 	panic("UNSUPPORTED : can't check an inclusion query directly into the circuit")
+}
+
+func (f FixedPermutation) UUID() uuid.UUID {
+	return f.uuid
 }

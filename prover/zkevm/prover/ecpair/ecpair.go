@@ -2,13 +2,17 @@ package ecpair
 
 import (
 	"github.com/consensys/linea-monorepo/prover/protocol/dedicated/plonk"
+	"github.com/consensys/linea-monorepo/prover/protocol/distributed/pragmas"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
+	"github.com/consensys/linea-monorepo/prover/protocol/query"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 )
 
 func createColFn(comp *wizard.CompiledIOP, rootName string, size int) func(name string) ifaces.Column {
 	return func(name string) ifaces.Column {
-		return comp.InsertCommit(roundNr, ifaces.ColIDf("%s_%s", rootName, name), size)
+		res := comp.InsertCommit(roundNr, ifaces.ColIDf("%s_%s", rootName, name), size)
+		pragmas.MarkRightPadded(res)
+		return res
 	}
 }
 
@@ -74,7 +78,7 @@ func NewECPairZkEvm(comp *wizard.CompiledIOP, limits *Limits) *ECPair {
 			CsG2Membership:    comp.Columns.GetHandle("ecdata.CIRCUIT_SELECTOR_G2_MEMBERSHIP"),
 		},
 	).WithG2MembershipCircuit(comp).
-		WithPairingCircuit(comp, plonk.WithRangecheck(16, 6, true))
+		WithPairingCircuit(comp, query.PlonkRangeCheckOption(16, 6, true))
 }
 
 func newECPair(comp *wizard.CompiledIOP, limits *Limits, ecSource *ECPairSource) *ECPair {
@@ -122,17 +126,18 @@ func newECPair(comp *wizard.CompiledIOP, limits *Limits, ecSource *ECPairSource)
 
 // WithPairingCircuit attaches the gnark circuit to the ECPair module for
 // enforcing the pairing checks.
-func (ec *ECPair) WithPairingCircuit(comp *wizard.CompiledIOP, options ...plonk.Option) *ECPair {
+func (ec *ECPair) WithPairingCircuit(comp *wizard.CompiledIOP, options ...query.PlonkOption) *ECPair {
 	alignInputMillerLoop := &plonk.CircuitAlignmentInput{
 		Round:              roundNr,
 		Name:               nameAlignmentMillerLoop,
 		DataToCircuit:      ec.UnalignedPairingData.Limb,
 		DataToCircuitMask:  ec.UnalignedPairingData.ToMillerLoopCircuitMask,
 		Circuit:            newMultiMillerLoopMulCircuit(ec.NbMillerLoopInputInstances),
-		InputFiller:        inputFillerMillerLoop,
+		InputFillerKey:     inputFillerMillerLoopKey,
 		PlonkOptions:       options,
 		NbCircuitInstances: ec.NbMillerLoopCircuits,
 	}
+
 	ec.AlignedMillerLoopCircuit = plonk.DefineAlignment(comp, alignInputMillerLoop)
 
 	alignInputFinalExp := &plonk.CircuitAlignmentInput{
@@ -141,30 +146,30 @@ func (ec *ECPair) WithPairingCircuit(comp *wizard.CompiledIOP, options ...plonk.
 		DataToCircuit:      ec.UnalignedPairingData.Limb,
 		DataToCircuitMask:  ec.UnalignedPairingData.ToFinalExpCircuitMask,
 		Circuit:            newMultiMillerLoopFinalExpCircuit(ec.NbFinalExpInputInstances),
-		InputFiller:        inputFillerFinalExp,
+		InputFillerKey:     inputFillerFinalExpKey,
 		PlonkOptions:       options,
 		NbCircuitInstances: ec.NbFinalExpCircuits,
 	}
-	ec.AlignedFinalExpCircuit = plonk.DefineAlignment(comp, alignInputFinalExp)
 
+	ec.AlignedFinalExpCircuit = plonk.DefineAlignment(comp, alignInputFinalExp)
 	return ec
 }
 
 // WithG2MembershipCircuit attaches the gnark circuit to the ECPair module for
 // enforcing the G2 membership checks.
-func (ec *ECPair) WithG2MembershipCircuit(comp *wizard.CompiledIOP, options ...plonk.Option) *ECPair {
+func (ec *ECPair) WithG2MembershipCircuit(comp *wizard.CompiledIOP, options ...query.PlonkOption) *ECPair {
 	alignInputG2Membership := &plonk.CircuitAlignmentInput{
 		Round:              roundNr,
 		Name:               nameAlignmentG2Subgroup,
 		DataToCircuit:      ec.UnalignedG2MembershipData.Limb,
 		DataToCircuitMask:  ec.UnalignedG2MembershipData.ToG2MembershipCircuitMask,
 		Circuit:            newMultiG2GroupcheckCircuit(ec.NbG2MembershipInputInstances),
-		InputFiller:        inputFillerG2Membership,
+		InputFillerKey:     inputFillerG2MembershipKey,
 		PlonkOptions:       options,
 		NbCircuitInstances: ec.NbG2MembershipCircuits,
 	}
-	ec.AlignedG2MembershipData = plonk.DefineAlignment(comp, alignInputG2Membership)
 
+	ec.AlignedG2MembershipData = plonk.DefineAlignment(comp, alignInputG2Membership)
 	return ec
 }
 

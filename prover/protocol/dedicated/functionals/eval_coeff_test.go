@@ -5,7 +5,6 @@ import (
 
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
 	"github.com/consensys/linea-monorepo/prover/protocol/coin"
-	"github.com/consensys/linea-monorepo/prover/protocol/compiler"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/dummy"
 	"github.com/consensys/linea-monorepo/prover/protocol/dedicated/functionals"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
@@ -38,7 +37,6 @@ func TestEvalCoeff(t *testing.T) {
 	}
 
 	compiled := wizard.Compile(definer,
-		compiler.Arcane(1<<4, 1<<4),
 		dummy.Compile,
 	)
 

@@ -23,7 +23,7 @@ func thetaTestingModule(
 	func(
 		traces keccak.PermTraces,
 		runRet **wizard.ProverRuntime,
-	) wizard.ProverStep,
+	) wizard.MainProverStep,
 	*Module,
 ) {
 
@@ -41,11 +41,11 @@ func thetaTestingModule(
 		mod.declareColumns(comp, round, maxNumKeccakf)
 
 		// Initializes the lookup columns
-		mod.lookups = newLookUpTables(comp, maxNumKeccakf)
+		mod.Lookups = newLookUpTables(comp, maxNumKeccakf)
 
 		// Then initializes the submodules : declare the colums and all the
 		// constraints.
-		mod.theta = newTheta(comp, round, maxNumKeccakf, mod.state, mod.lookups)
+		mod.Theta = newTheta(comp, round, maxNumKeccakf, mod.State, mod.Lookups)
 	}
 
 	prover := func(
@@ -54,9 +54,12 @@ func thetaTestingModule(
 		// prover has been run. This allows the caller test to "open" the box
 		// and checks that the assigned columns are consistent with the traces.
 		runRet **wizard.ProverRuntime,
-	) wizard.ProverStep {
+	) wizard.MainProverStep {
 		return func(run *wizard.ProverRuntime) {
 			*runRet = run
+
+			mod.Lookups.RC.Assign(run)
+			mod.Lookups.DontUsePrevAIota.Assign(run)
 
 			// Number of permutation used for the current instance
 			numKeccakf := len(traces.KeccakFInps)
@@ -69,7 +72,7 @@ func thetaTestingModule(
 
 			// Then assigns all the columns
 			mod.assignStateAndBlocks(run, traces, numKeccakf)
-			mod.theta.assign(run, mod.state, mod.lookups, numKeccakf)
+			mod.Theta.assign(run, mod.State, mod.Lookups, numKeccakf)
 		}
 	}
 
@@ -162,7 +165,7 @@ func TestTheta(t *testing.T) {
 					slice := [numSlice]field.Element{}
 					pos := permId * keccak.NumRound
 					for k := 0; k < numSlice; k++ {
-						colid := mod.theta.aThetaSlicedBaseB[x][y][k].GetColID()
+						colid := mod.Theta.AThetaSlicedBaseB[x][y][k].GetColID()
 						slice[k] = run.GetColumnAt(colid, pos)
 					}
 

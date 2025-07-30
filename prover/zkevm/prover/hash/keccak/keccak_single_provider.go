@@ -4,8 +4,8 @@
 package keccak
 
 import (
-	"github.com/consensys/linea-monorepo/prover/protocol/dedicated/projection"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
+	"github.com/consensys/linea-monorepo/prover/protocol/query"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	"github.com/consensys/linea-monorepo/prover/utils"
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/hash/generic"
@@ -28,8 +28,8 @@ type KeccakSingleProvider struct {
 	MaxNumKeccakF int
 
 	// prover actions for  internal modules
-	pa_importPad, pa_packing wizard.ProverAction
-	pa_cKeccak               *KeccakOverBlocks
+	Pa_importPad, Pa_packing wizard.ProverAction
+	Pa_cKeccak               *KeccakOverBlocks
 }
 
 // NewKeccakSingleProvider implements the utilities for proving keccak hash
@@ -82,18 +82,17 @@ func NewKeccakSingleProvider(comp *wizard.CompiledIOP, inp KeccakSingleProviderI
 		cKeccak = NewKeccakOverBlocks(comp, cKeccakInp)
 	)
 
-	projection.InsertProjection(comp, "KECCAK_RES_HI",
-		[]ifaces.Column{cKeccak.HashHi},
-		[]ifaces.Column{inp.Provider.Info.HashHi},
-		cKeccak.IsActive,
-		inp.Provider.Info.IsHashHi,
-	)
-	projection.InsertProjection(comp, "KECCAK_RES_LO",
-		[]ifaces.Column{cKeccak.HashLo},
-		[]ifaces.Column{inp.Provider.Info.HashLo},
-		cKeccak.IsActive,
-		inp.Provider.Info.IsHashLo,
-	)
+	comp.InsertProjection("KECCAK_RES_HI",
+		query.ProjectionInput{ColumnA: []ifaces.Column{cKeccak.HashHi},
+			ColumnB: []ifaces.Column{inp.Provider.Info.HashHi},
+			FilterA: cKeccak.IsActive,
+			FilterB: inp.Provider.Info.IsHashHi})
+
+	comp.InsertProjection("KECCAK_RES_LO",
+		query.ProjectionInput{ColumnA: []ifaces.Column{cKeccak.HashLo},
+			ColumnB: []ifaces.Column{inp.Provider.Info.HashLo},
+			FilterA: cKeccak.IsActive,
+			FilterB: inp.Provider.Info.IsHashLo})
 
 	// set the module
 	m := &KeccakSingleProvider{
@@ -102,9 +101,9 @@ func NewKeccakSingleProvider(comp *wizard.CompiledIOP, inp KeccakSingleProviderI
 		HashHi:        cKeccak.HashHi,
 		HashLo:        cKeccak.HashLo,
 		IsActive:      cKeccak.IsActive,
-		pa_importPad:  imported,
-		pa_packing:    packing,
-		pa_cKeccak:    cKeccak,
+		Pa_importPad:  imported,
+		Pa_packing:    packing,
+		Pa_cKeccak:    cKeccak,
 	}
 
 	return m
@@ -114,12 +113,12 @@ func NewKeccakSingleProvider(comp *wizard.CompiledIOP, inp KeccakSingleProviderI
 func (m *KeccakSingleProvider) Run(run *wizard.ProverRuntime) {
 
 	// assign ImportAndPad module
-	m.pa_importPad.Run(run)
+	m.Pa_importPad.Run(run)
 	// assign packing module
-	m.pa_packing.Run(run)
+	m.Pa_packing.Run(run)
 	providerBytes := m.Inputs.Provider.Data.ScanStreams(run)
-	m.pa_cKeccak.Inputs.Provider = providerBytes
-	m.pa_cKeccak.Run(run)
+	m.Pa_cKeccak.Inputs.Provider = providerBytes
+	m.Pa_cKeccak.Run(run)
 }
 
 func isBlock(col ifaces.Column) []ifaces.Column {

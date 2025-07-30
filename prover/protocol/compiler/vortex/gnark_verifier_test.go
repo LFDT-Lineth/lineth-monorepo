@@ -22,7 +22,7 @@ import (
 Wraps the wizard verification gnark into a circuit
 */
 type VortexTestCircuit struct {
-	C wizard.WizardVerifierCircuit
+	C wizard.VerifierCircuit
 }
 
 /*
@@ -39,7 +39,7 @@ Returns an assignment from a wizard proof
 */
 func assignTestCircuit(comp *wizard.CompiledIOP, proof wizard.Proof) *VortexTestCircuit {
 	return &VortexTestCircuit{
-		C: *wizard.GetWizardVerifierCircuitAssignment(comp, proof),
+		C: *wizard.AssignVerifierCircuit(comp, proof, 0),
 	}
 }
 
@@ -107,11 +107,8 @@ func TestVortexGnarkVerifier(t *testing.T) {
 
 	compiled := wizard.Compile(
 		define,
-		vortex.Compile(
-			4,
-			vortex.ReplaceSisByMimc(),
-		),
-	)
+		vortex.Compile(4,
+			vortex.WithOptionalSISHashingThreshold(1<<20))) // Set to a high value to disable SIS hashing, because gnark does not support SIS hashing
 	proof := wizard.Prove(compiled, prove)
 
 	// Just as a sanity check, do not run the Plonk
@@ -123,13 +120,7 @@ func TestVortexGnarkVerifier(t *testing.T) {
 	// Allocate the circuit
 	circ := VortexTestCircuit{}
 	{
-		c, err := wizard.AllocateWizardCircuit(compiled)
-		if err != nil {
-			// The only error case acknowledged here is that the returned circuit
-			// is empty. In that case, there is simply no point to run the verification.
-			return
-		}
-
+		c := wizard.AllocateWizardCircuit(compiled, 0)
 		circ.C = *c
 	}
 

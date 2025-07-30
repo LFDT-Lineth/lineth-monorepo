@@ -26,13 +26,15 @@ type Input struct {
 	IsModExpResult ifaces.Column
 	// IsModexp is a constructed column constrained to be equal to the sum of the
 	// 4 above columns.
-	isModExp ifaces.Column
+	IsModExp ifaces.Column
 	// Multiplexed column containing limbs for base, exponent, modulus, and result
 	Limbs ifaces.Column
 }
 
 type Settings struct {
 	MaxNbInstance256, MaxNbInstance4096 int
+	NbInstancesPerCircuitModexp256      int
+	NbInstancesPerCircuitModexp4096     int
 }
 
 func newZkEVMInput(comp *wizard.CompiledIOP, settings Settings) Input {
@@ -49,13 +51,13 @@ func newZkEVMInput(comp *wizard.CompiledIOP, settings Settings) Input {
 // setIsModexp constructs, constraints and set the [isModexpColumn]
 func (i *Input) setIsModexp(comp *wizard.CompiledIOP) {
 
-	i.isModExp = comp.InsertCommit(0, "MODEXP_INPUT_IS_MODEXP", i.IsModExpBase.Size())
+	i.IsModExp = comp.InsertCommit(0, "MODEXP_INPUT_IS_MODEXP", i.IsModExpBase.Size())
 
 	comp.InsertGlobal(
 		0,
 		"MODEXP_IS_MODEXP_WELL_CONSTRUCTED",
 		sym.Sub(
-			i.isModExp,
+			i.IsModExp,
 			i.IsModExpBase,
 			i.IsModExpExponent,
 			i.IsModExpModulus,
@@ -75,5 +77,5 @@ func (i *Input) assignIsModexp(run *wizard.ProverRuntime) {
 		isModexp   = smartvectors.Add(isBase, isExponent, isModulus, isResult)
 	)
 
-	run.AssignColumn(i.isModExp.GetColID(), isModexp)
+	run.AssignColumn(i.IsModExp.GetColID(), isModexp)
 }

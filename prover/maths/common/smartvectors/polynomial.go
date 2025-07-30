@@ -96,7 +96,7 @@ func RuffiniQuoRem(p SmartVector, q field.Element) (quo SmartVector, rem field.E
 func Interpolate(v SmartVector, x field.Element, oncoset ...bool) field.Element {
 	switch con := v.(type) {
 	case *Constant:
-		return con.val
+		return con.Value
 	}
 
 	// Maybe there is an optim for windowed here
@@ -121,7 +121,7 @@ func BatchInterpolate(vs []SmartVector, x field.Element, oncoset ...bool) []fiel
 			switch con := vs[i].(type) {
 			case *Constant:
 				// constant vectors
-				results[i] = con.val
+				results[i] = con.Value
 				computed[i] = true
 				atomic.AddUint64(&totalConstant, 1)
 				continue

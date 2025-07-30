@@ -11,6 +11,12 @@ import (
 	"github.com/consensys/linea-monorepo/prover/utils"
 )
 
+// asFromAccessors is an ad-hoc interface that serves to identify [verifiercol.FromAccessors]
+// without creating a cyclic dependency.
+type asFromAccessors interface {
+	GetFromAccessorsFields() (accs []ifaces.Accessor, padding field.Element)
+}
+
 // FromPublicColumn refers to a position of a public column
 type FromPublicColumn struct {
 	// Info points to the underlying coin on which the accessor points to.
@@ -28,6 +34,15 @@ type FromPublicColumn struct {
 // The function accepts only Natural columns and panics if they are not of this
 // type.
 func NewFromPublicColumn(col ifaces.Column, pos int) ifaces.Accessor {
+
+	if faccs, ok := col.(asFromAccessors); ok {
+		accs, pad := faccs.GetFromAccessorsFields()
+
+		if pos >= len(accs) {
+			return NewConstant(pad)
+		}
+		return accs[pos]
+	}
 
 	nat, isNat := col.(column.Natural)
 	if !isNat {

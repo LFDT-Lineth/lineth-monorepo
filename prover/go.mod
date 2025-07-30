@@ -5,20 +5,23 @@ go 1.23.0
 toolchain go1.23.4
 
 require (
-	github.com/bits-and-blooms/bitset v1.14.3
-	github.com/consensys/bavard v0.1.31-0.20250406004941-2db259e4b582
+	github.com/bits-and-blooms/bitset v1.20.0
+	github.com/consensys/bavard v0.1.31-0.20250314194434-b30d4344e6d4
 	github.com/consensys/compress v0.2.5
-	github.com/consensys/gnark v0.11.1-0.20250107100237-2cb190338a01
-	github.com/consensys/gnark-crypto v0.14.1-0.20250515163241-5b554443cce2
-	github.com/consensys/go-corset v1.0.7
+	github.com/consensys/gnark v0.12.1-0.20250501002417-facdd9882b80
+	github.com/consensys/gnark-crypto v0.17.1-0.20250326164229-5fd6610ac2a1
+	github.com/consensys/go-corset v1.0.12-0.20250729080012-3d83adbcfe23
 	github.com/crate-crypto/go-kzg-4844 v1.1.0
 	github.com/dlclark/regexp2 v1.11.2
+	github.com/dnlo/struct2csv v0.0.0-20190928115744-2f584471b24e
 	github.com/fxamacker/cbor/v2 v2.7.0
 	github.com/go-playground/assert/v2 v2.2.0
 	github.com/go-playground/validator/v10 v10.22.0
-	github.com/iancoleman/strcase v0.3.0
+	github.com/gofrs/flock v0.12.0
+	github.com/google/uuid v1.6.0
 	github.com/icza/bitio v1.1.0
 	github.com/leanovate/gopter v0.2.11
+	github.com/pierrec/lz4/v4 v4.1.22
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.19.1
 	github.com/rs/zerolog v1.33.0
@@ -48,14 +51,14 @@ require (
 	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
-	github.com/gofrs/flock v0.12.0 // indirect
 	github.com/golang/snappy v0.0.5-0.20220116011046-fa5810519dcb // indirect
 	github.com/google/pprof v0.0.0-20240727154555-813a5fbdbec8 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/holiman/bloomfilter/v2 v2.0.3 // indirect
 	github.com/holiman/uint256 v1.3.1 // indirect
+	github.com/iancoleman/strcase v0.3.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
-	github.com/ingonyama-zk/icicle/v3 v3.1.1-0.20241118092657-fccdb2f0921b // indirect
+	github.com/ingonyama-zk/icicle-gnark/v3 v3.2.2 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
@@ -75,7 +78,7 @@ require (
 	github.com/sourcegraph/conc v0.3.0 // indirect
 	github.com/spf13/afero v1.11.0 // indirect
 	github.com/spf13/cast v1.6.0 // indirect
-	github.com/spf13/pflag v1.0.5 // indirect
+	github.com/spf13/pflag v1.0.6 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/supranational/blst v0.3.13 // indirect
 	github.com/tklauser/go-sysconf v0.3.14 // indirect

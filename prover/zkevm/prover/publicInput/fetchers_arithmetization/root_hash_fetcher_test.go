@@ -20,7 +20,7 @@ func TestRootHashFetcher(t *testing.T) {
 	var (
 		tContext = stmCommon.InitializeContext(100)
 		ss       stmgr.Module
-		fetcher  RootHashFetcher
+		fetcher  *RootHashFetcher
 	)
 
 	for i, tCase := range tContext.TestCases {
@@ -31,7 +31,7 @@ func TestRootHashFetcher(t *testing.T) {
 
 			define := func(b *wizard.Builder) {
 				ss = stmgr.NewModule(b.CompiledIOP, 1<<6)
-				fetcher = NewRootHashFetcher(b.CompiledIOP, "ROOT_HASH_FETCHER_FROM_STATE_SUMMARY")
+				fetcher = NewRootHashFetcher(b.CompiledIOP, "ROOT_HASH_FETCHER_FROM_STATE_SUMMARY", ss.IsActive.Size())
 				DefineRootHashFetcher(b.CompiledIOP, fetcher, "ROOT_HASH_FETCHER_FROM_STATE_SUMMARY", ss)
 			}
 

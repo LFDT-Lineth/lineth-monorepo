@@ -63,7 +63,7 @@ func MustBeBinary(comp *wizard.CompiledIOP, c ifaces.Column) {
 }
 
 // CheckLastELemConsistency checks that the last element of the active part of parentCol is present in the field element of acc
-func CheckLastELemConsistency(comp *wizard.CompiledIOP, isActive ifaces.Column, parentCol ifaces.Column, acc ifaces.Accessor, name string) {
+func CheckLastELemConsistency(comp *wizard.CompiledIOP, isActive ifaces.Column, parentCol ifaces.Column, acc ifaces.Column, name string) {
 	// active is already constrained in the fetcher, no need to constrain it again
 	// two cases: Case 1: isActive is not completely filled with 1s, then parentCol[i] is equal to acc at the last row i where isActive[i] is 1
 	comp.InsertGlobal(0, ifaces.QueryIDf("%s_%s_%s", name, "IS_ACTIVE_BORDER_CONSTRAINT", parentCol.GetColID()),
@@ -86,7 +86,7 @@ func CheckLastELemConsistency(comp *wizard.CompiledIOP, isActive ifaces.Column, 
 			column.Shift(isActive, -1),
 			sym.Sub(
 				column.Shift(parentCol, -1),
-				acc,
+				column.Shift(acc, -1),
 			),
 		),
 	)

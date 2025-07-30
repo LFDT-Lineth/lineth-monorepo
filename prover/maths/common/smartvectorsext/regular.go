@@ -2,6 +2,8 @@ package smartvectorsext
 
 import (
 	"fmt"
+	"iter"
+
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
 	"github.com/consensys/linea-monorepo/prover/maths/common/vectorext"
 	"github.com/consensys/linea-monorepo/prover/maths/field/fext"
@@ -175,6 +177,18 @@ func (r *RegularExt) IntoRegVecSaveAllocExt() []fext.Element {
 		temp[i].SetFromBase(&elem)
 	}
 	return temp
+}
+
+func (r *RegularExt) IterateCompact() iter.Seq[field.Element] {
+	panic("not available for extensions")
+}
+
+func (c *RegularExt) IterateSkipPadding() iter.Seq[field.Element] {
+	panic("not available for extensions")
+}
+
+func (c *RegularExt) GetPtr(n int) *field.Element {
+	panic("not available for extensions")
 }
 
 type PooledExt struct {

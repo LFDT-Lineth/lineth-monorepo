@@ -24,7 +24,7 @@ User provided function that run the "top-level" protocol.
 Function to be run by the prover to pass the values to the
 prover (i.e) what values to commit to etc...
 */
-type ProverSteps = wizard.ProverStep
+type ProverSteps = wizard.MainProverStep
 
 /*
 Run the prover of the compiled protocol

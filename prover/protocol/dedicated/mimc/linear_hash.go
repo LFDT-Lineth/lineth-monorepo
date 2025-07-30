@@ -22,9 +22,9 @@ Holds intermediate values for the linear hash wizard
 */
 type linearHashCtx struct {
 	// The compiled IOP
-	comp *wizard.CompiledIOP
+	Comp *wizard.CompiledIOP
 
-	// Names of the "data" columns
+	Name string
 
 	// Output column, which containing the result each
 	// individual hash.
@@ -41,7 +41,7 @@ type linearHashCtx struct {
 	// Optional precomputed column indicating
 	// if a row is active or not. And when a
 	// hash is finished
-	IsActiveLarge, isActiveExpected, IsEndOfHash, Ones ifaces.Column
+	IsActiveLarge, IsActiveRowExpected, IsEndOfHash, Ones ifaces.Column
 
 	// Period of the linear hash
 	Period, NumHash int
@@ -60,6 +60,7 @@ Check a linear hashby chunk of columns
 */
 func CheckLinearHash(
 	comp *wizard.CompiledIOP,
+	name string,
 	tohash ifaces.Column,
 	period int, numHash int,
 	expectedHashes ifaces.Column,
@@ -67,7 +68,8 @@ func CheckLinearHash(
 
 	// Initialize the context
 	ctx := linearHashCtx{
-		comp:         comp,
+		Comp:         comp,
+		Name:         name,
 		ToHash:       tohash,
 		Period:       period,
 		NumHash:      numHash,
@@ -83,15 +85,15 @@ func CheckLinearHash(
 	if ctx.IsFullyActive {
 		selector.CheckSubsample(
 			comp,
-			prefixWithLinearHash(comp, "RES_EXTRACTION"),
+			prefixWithLinearHash(comp, name, "RES_EXTRACTION"),
 			[]ifaces.Column{ctx.NewStateClean},
 			[]ifaces.Column{ctx.ExpectedHash},
 			period-1,
 		)
 	} else {
-		ctx.comp.InsertInclusion(
+		ctx.Comp.InsertInclusion(
 			ctx.Round,
-			ifaces.QueryID(prefixWithLinearHash(comp, "RESULT_CHECK_%v", tohash.GetColID())),
+			ifaces.QueryID(prefixWithLinearHash(comp, name, "RESULT_CHECK_%v", tohash.GetColID())),
 			[]ifaces.Column{ctx.IsEndOfHash, ctx.NewStateClean},
 			[]ifaces.Column{ctx.IsActiveExpected(), ctx.ExpectedHash},
 		)
@@ -99,73 +101,75 @@ func CheckLinearHash(
 
 }
 
-func prefixWithLinearHash(comp *wizard.CompiledIOP, msg string, args ...any) string {
-	args = append([]any{comp.SelfRecursionCount}, args...)
-	return fmt.Sprintf("LINEAR_HASH_%v_"+msg, args...)
+func prefixWithLinearHash(comp *wizard.CompiledIOP, name, msg string, args ...any) string {
+	args = append([]any{name, comp.SelfRecursionCount}, args...)
+	return fmt.Sprintf("%v.LINEAR_HASH_%v_"+msg, args...)
+}
+
+type LinearHashProverAction struct {
+	Ctx             *linearHashCtx
+	OldStateID      ifaces.ColID
+	NewStateID      ifaces.ColID
+	NewStateCleanID ifaces.ColID
+}
+
+func (a *LinearHashProverAction) Run(run *wizard.ProverRuntime) {
+	blocksWit := a.Ctx.ToHash.GetColAssignment(run)
+	olds := make([]field.Element, a.Ctx.Period*a.Ctx.NumHash)
+	news := make([]field.Element, a.Ctx.Period*a.Ctx.NumHash)
+
+	parallel.Execute(a.Ctx.NumHash, func(start, stop int) {
+		for hashID := start; hashID < stop; hashID++ {
+			old := field.Zero()
+			for i := 0; i < a.Ctx.Period; i++ {
+				pos := hashID*a.Ctx.Period + i
+				currentBlock := blocksWit.Get(pos)
+				new := mimc.BlockCompression(old, currentBlock)
+				olds[pos] = old
+				news[pos] = new
+				old = new
+			}
+		}
+	})
+
+	padNew := mimc.BlockCompression(field.Zero(), field.Zero())
+	oldSV := smartvectors.RightZeroPadded(olds, a.Ctx.ToHash.Size())
+	newSV := smartvectors.RightPadded(news, padNew, a.Ctx.ToHash.Size())
+	newCleanSV := smartvectors.RightZeroPadded(vector.DeepCopy(news), a.Ctx.ToHash.Size())
+
+	run.AssignColumn(a.OldStateID, oldSV)
+	run.AssignColumn(a.NewStateID, newSV)
+	run.AssignColumn(a.NewStateCleanID, newCleanSV)
 }
 
 // Declares assign and constraints the columns OldStates and NewStates
 func (ctx *linearHashCtx) HashingCols() {
 
 	// Registers the old states columns
-	ctx.OldState = ctx.comp.InsertCommit(
+	ctx.OldState = ctx.Comp.InsertCommit(
 		ctx.Round,
-		ifaces.ColID(prefixWithLinearHash(ctx.comp, "OLD_STATE_%v", ctx.ToHash.GetColID())),
+		ifaces.ColID(prefixWithLinearHash(ctx.Comp, ctx.Name, "OLD_STATE_%v", ctx.ToHash.GetColID())),
 		ctx.ToHash.Size(),
 	)
 
-	ctx.NewState = ctx.comp.InsertCommit(
+	ctx.NewState = ctx.Comp.InsertCommit(
 		ctx.Round,
-		ifaces.ColID(prefixWithLinearHash(ctx.comp, "NEW_STATE_%v", ctx.ToHash.GetColID())),
+		ifaces.ColID(prefixWithLinearHash(ctx.Comp, ctx.Name, "NEW_STATE_%v", ctx.ToHash.GetColID())),
 		ctx.ToHash.Size(),
 	)
 
-	ctx.NewStateClean = ctx.comp.InsertCommit(
+	ctx.NewStateClean = ctx.Comp.InsertCommit(
 		ctx.Round,
-		ifaces.ColIDf(prefixWithLinearHash(ctx.comp, "NEW_STATE_CLEAN_%v", ctx.ToHash.GetColID())),
+		ifaces.ColIDf(prefixWithLinearHash(ctx.Comp, ctx.Name, "NEW_STATE_CLEAN_%v", ctx.ToHash.GetColID())),
 		ctx.ToHash.Size(),
 	)
 
-	ctx.comp.SubProvers.AppendToInner(
-		ctx.Round,
-		func(run *wizard.ProverRuntime) {
-			// Extract the blocks
-			blocksWit := ctx.ToHash.GetColAssignment(run)
-
-			olds := make([]field.Element, ctx.Period*ctx.NumHash)
-			news := make([]field.Element, ctx.Period*ctx.NumHash)
-
-			// Assign the hashes in parallel
-			parallel.Execute(ctx.NumHash, func(start, stop int) {
-				for hashID := start; hashID < stop; hashID++ {
-					// each hash start from zero
-					old := field.Zero()
-					for i := 0; i < ctx.Period; i++ {
-						pos := hashID*ctx.Period + i
-						currentBlock := blocksWit.Get(pos)
-						new := mimc.BlockCompression(old, currentBlock)
-						olds[pos] = old
-						news[pos] = new
-						old = new
-					}
-				}
-			})
-
-			padNew := mimc.BlockCompression(field.Zero(), field.Zero())
-			oldSV := smartvectors.RightZeroPadded(olds, ctx.ToHash.Size())
-			newSV := smartvectors.RightPadded(news, padNew, ctx.ToHash.Size())
-			newCleanSV := smartvectors.RightZeroPadded(vector.DeepCopy(news), ctx.ToHash.Size())
-
-			// assign old state
-			run.AssignColumn(ctx.OldState.GetColID(), oldSV)
-
-			// assign new state
-			run.AssignColumn(ctx.NewState.GetColID(), newSV)
-
-			// and new clean, the same as newstate but clean
-			run.AssignColumn(ctx.NewStateClean.GetColID(), newCleanSV)
-		},
-	)
+	ctx.Comp.RegisterProverAction(ctx.Round, &LinearHashProverAction{
+		Ctx:             ctx,
+		OldStateID:      ctx.OldState.GetColID(),
+		NewStateID:      ctx.NewState.GetColID(),
+		NewStateCleanID: ctx.NewStateClean.GetColID(),
+	})
 
 	// And registers queries for the initial values
 
@@ -177,9 +181,9 @@ func (ctx *linearHashCtx) HashingCols() {
 		Mul(ctx.IsNotEndOfHashVar()).
 		Sub(ifaces.ColumnAsVariable(column.Shift(ctx.OldState, 1)))
 
-	ctx.comp.InsertGlobal(
+	ctx.Comp.InsertGlobal(
 		ctx.Round,
-		ifaces.QueryID(prefixWithLinearHash(ctx.comp, "STATE_PROPAGATION_%v", ctx.ToHash.GetColID())),
+		ifaces.QueryID(prefixWithLinearHash(ctx.Comp, ctx.Name, "STATE_PROPAGATION_%v", ctx.ToHash.GetColID())),
 		expr,
 		true, // no bound cancel to also enforce the first value of old state to be zero
 	)
@@ -187,9 +191,9 @@ func (ctx *linearHashCtx) HashingCols() {
 	//
 	// Cleaning the new state
 	//
-	ctx.comp.InsertGlobal(
+	ctx.Comp.InsertGlobal(
 		ctx.Round,
-		ifaces.QueryIDf(prefixWithLinearHash(ctx.comp, "CLEAN_NEW_STATE_%v", ctx.ToHash.GetColID())),
+		ifaces.QueryIDf(prefixWithLinearHash(ctx.Comp, ctx.Name, "CLEAN_NEW_STATE_%v", ctx.ToHash.GetColID())),
 		ctx.IsActiveVar().
 			Mul(ifaces.ColumnAsVariable(ctx.NewState)).
 			Sub(ifaces.ColumnAsVariable(ctx.NewStateClean)),
@@ -198,10 +202,10 @@ func (ctx *linearHashCtx) HashingCols() {
 	//
 	// Correctness of the blocks compressions
 	//
-	ctx.comp.InsertMiMC(
+	ctx.Comp.InsertMiMC(
 		ctx.Round,
-		ifaces.QueryID(prefixWithLinearHash(ctx.comp, "BLOCKS_COMPRESSION_%v", ctx.ToHash.GetColID())),
-		ctx.ToHash, ctx.OldState, ctx.NewState,
+		ifaces.QueryID(prefixWithLinearHash(ctx.Comp, ctx.Name, "BLOCKS_COMPRESSION_%v", ctx.ToHash.GetColID())),
+		ctx.ToHash, ctx.OldState, ctx.NewState, nil,
 	)
 
 }
@@ -213,7 +217,7 @@ func (ctx *linearHashCtx) IsActiveExpected() ifaces.Column {
 	}
 
 	// Lazily registers the columns
-	if ctx.isActiveExpected == nil {
+	if ctx.IsActiveRowExpected == nil {
 
 		var assignment smartvectors.SmartVector
 
@@ -226,13 +230,13 @@ func (ctx *linearHashCtx) IsActiveExpected() ifaces.Column {
 			)
 		}
 
-		ctx.isActiveExpected = ctx.comp.InsertPrecomputed(
-			ifaces.ColIDf(prefixWithLinearHash(ctx.comp, "IS_ACTIVE_EXPECTED_%v", ctx.ToHash.GetColID())),
+		ctx.IsActiveRowExpected = ctx.Comp.InsertPrecomputed(
+			ifaces.ColIDf(prefixWithLinearHash(ctx.Comp, ctx.Name, "IS_ACTIVE_EXPECTED_%v", ctx.ToHash.GetColID())),
 			assignment,
 		)
 	}
 
-	return ctx.isActiveExpected
+	return ctx.IsActiveRowExpected
 }
 
 func (ctx *linearHashCtx) IsActiveVar() *symbolic.Expression {
@@ -243,8 +247,8 @@ func (ctx *linearHashCtx) IsActiveVar() *symbolic.Expression {
 
 	// Lazily registers the columns
 	if ctx.IsActiveLarge == nil {
-		ctx.IsActiveLarge = ctx.comp.InsertPrecomputed(
-			ifaces.ColIDf(prefixWithLinearHash(ctx.comp, "IS_ACTIVE_%v", ctx.ToHash.GetColID())),
+		ctx.IsActiveLarge = ctx.Comp.InsertPrecomputed(
+			ifaces.ColIDf(prefixWithLinearHash(ctx.Comp, ctx.Name, "IS_ACTIVE_%v", ctx.ToHash.GetColID())),
 			smartvectors.RightZeroPadded(
 				vector.Repeat(field.One(), ctx.NumHash*ctx.Period),
 				ctx.ToHash.Size(),
@@ -271,8 +275,8 @@ func (ctx *linearHashCtx) IsEndOfHashVar() *symbolic.Expression {
 			}
 		}
 
-		ctx.IsEndOfHash = ctx.comp.InsertPrecomputed(
-			ifaces.ColIDf(prefixWithLinearHash(ctx.comp, "IS_END_OF_HASH_%v", ctx.ToHash.GetColID())),
+		ctx.IsEndOfHash = ctx.Comp.InsertPrecomputed(
+			ifaces.ColIDf(prefixWithLinearHash(ctx.Comp, ctx.Name, "IS_END_OF_HASH_%v", ctx.ToHash.GetColID())),
 			smartvectors.RightZeroPadded(window, ctx.ToHash.Size()),
 		)
 	}

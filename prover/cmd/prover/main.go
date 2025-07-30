@@ -22,7 +22,7 @@ var (
 	// setupCmd represents the setup command
 	setupCmd = &cobra.Command{
 		Use:   "setup",
-		Short: "pre compute assets for Linea circuits",
+		Short: "pre-compute assets for Linea circuits",
 		RunE:  cmdSetup,
 	}
 	setupArgs cmd.SetupArgs
@@ -33,7 +33,17 @@ var (
 		Short: "prove process a request, creates a proof with the adequate circuit and writes the proof to a file",
 		RunE:  cmdProve,
 	}
+
 	proverArgs cmd.ProverArgs
+
+	// logStatsCmd represents the stats command
+	logStatsCmd = &cobra.Command{
+		Use:   "log-stats",
+		Short: "log statistics about the module usage to a file",
+		RunE:  cmdLogStats,
+	}
+
+	logStatsArgs cmd.LogStatsArgs
 )
 
 func main() {
@@ -66,6 +76,10 @@ func init() {
 	proveCmd.Flags().StringVar(&proverArgs.Input, "in", "", "input file")
 	proveCmd.Flags().StringVar(&proverArgs.Output, "out", "", "output file")
 	proveCmd.Flags().BoolVar(&proverArgs.Large, "large", false, "run the large execution circuit")
+
+	rootCmd.AddCommand(logStatsCmd)
+	logStatsCmd.Flags().StringVar(&logStatsArgs.Input, "in", "", "input file")
+	logStatsCmd.Flags().StringVar(&logStatsArgs.StatsFile, "stats-file", "", "stats file where to log the result")
 }
 
 func cmdSetup(_cmd *cobra.Command, _ []string) error {
@@ -76,6 +90,11 @@ func cmdSetup(_cmd *cobra.Command, _ []string) error {
 func cmdProve(*cobra.Command, []string) error {
 	proverArgs.ConfigFile = fConfigFile
 	return cmd.Prove(proverArgs)
+}
+
+func cmdLogStats(_cmd *cobra.Command, _ []string) error {
+	logStatsArgs.ConfigFile = fConfigFile
+	return cmd.LogStats(_cmd.Context(), logStatsArgs)
 }
 
 // allCircuitList returns the list [cmd.AllCircuits] where the circuit id

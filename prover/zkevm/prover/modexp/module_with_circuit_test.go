@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/dummy"
-	"github.com/consensys/linea-monorepo/prover/protocol/dedicated/plonk"
+	"github.com/consensys/linea-monorepo/prover/protocol/query"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	"github.com/consensys/linea-monorepo/prover/utils/csvtraces"
 )
@@ -42,11 +42,11 @@ func TestModexpWithCircuit(t *testing.T) {
 					IsModExpModulus:  inpCt.GetCommit(build, "IS_MODEXP_MODULUS"),
 					IsModExpResult:   inpCt.GetCommit(build, "IS_MODEXP_RESULT"),
 					Limbs:            inpCt.GetCommit(build, "LIMBS"),
-					Settings:         Settings{MaxNbInstance256: 1, MaxNbInstance4096: 1},
+					Settings:         Settings{MaxNbInstance256: 1, MaxNbInstance4096: 1, NbInstancesPerCircuitModexp256: 1, NbInstancesPerCircuitModexp4096: 1},
 				}
 
 				mod = newModule(build.CompiledIOP, inp).
-					WithCircuit(build.CompiledIOP, plonk.WithRangecheck(21, 4, false))
+					WithCircuit(build.CompiledIOP, query.PlonkRangeCheckOption(21, 4, false))
 			}, dummy.Compile)
 
 			proof := wizard.Prove(cmp, func(run *wizard.ProverRuntime) {

@@ -35,7 +35,6 @@ func TestNaturalize(t *testing.T) {
 	comp := wizard.Compile(
 		definer,
 		Naturalize,
-		MultiPointToSinglePoint(8),
 		dummy.Compile,
 	)
 

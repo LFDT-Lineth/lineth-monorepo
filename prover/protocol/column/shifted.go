@@ -49,7 +49,6 @@ func Shift(parent ifaces.Column, offset int) ifaces.Column {
 
 	if offset == 0 {
 		// Skip zero shifts
-		logrus.Debugf("warning : attempted to shift %v by zero. Ignoring\n", parent.GetColID())
 		return parent
 	}
 
@@ -64,7 +63,6 @@ func Shift(parent ifaces.Column, offset int) ifaces.Column {
 
 		// This can happen when combining offsets within the splitter compiler
 		if totalOffset >= parent.Size() {
-			logrus.Debugf("Combining shifts results in an overflow %v + %v >= %v. Wrapping around.", parentShift.Offset, offset, parent.Size())
 			totalOffset -= parent.Size()
 		}
 		return Shift(parentShift.Parent, totalOffset)

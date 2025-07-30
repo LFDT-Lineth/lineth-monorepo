@@ -6,6 +6,7 @@ import (
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
 	"github.com/consensys/linea-monorepo/prover/maths/common/vector"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
+	"github.com/consensys/linea-monorepo/prover/protocol/distributed/pragmas"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	"github.com/consensys/linea-monorepo/prover/utils"
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/common"
@@ -158,7 +159,7 @@ const (
 
 // It creates the importation columns
 func createImportationColumns(comp *wizard.CompiledIOP, size int) Importation {
-	createCol := common.CreateColFn(comp, TEST_IMPRTATION_COLUMN, size)
+	createCol := common.CreateColFn(comp, TEST_IMPRTATION_COLUMN, size, pragmas.RightPadded)
 	res := Importation{
 		IsNewHash: createCol("IsNewHash"),
 		IsActive:  createCol("IsActive"),

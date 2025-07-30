@@ -15,7 +15,7 @@ import (
 
 func accumulatorTestingModule(maxNumProofs int) (
 	define wizard.DefineFunc,
-	prover func(traces []statemanager.DecodedTrace) wizard.ProverStep,
+	prover func(traces []statemanager.DecodedTrace) wizard.MainProverStep,
 ) {
 
 	var mod Module
@@ -32,7 +32,7 @@ func accumulatorTestingModule(maxNumProofs int) (
 	// And the prover (instanciated for traces) is called
 	prover = func(
 		traces []statemanager.DecodedTrace,
-	) wizard.ProverStep {
+	) wizard.MainProverStep {
 		return func(run *wizard.ProverRuntime) {
 			// Assigns the module
 			mod.Assign(run, traces)

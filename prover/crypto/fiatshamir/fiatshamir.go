@@ -8,6 +8,7 @@ import (
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/utils"
+	"golang.org/x/crypto/blake2b"
 )
 
 // State holds a Fiat-Shamir state. The Fiat-Shamir state can be updated by
@@ -118,6 +119,39 @@ func (fs *State) RandomField() field.Element {
 	// increase the counter by one
 	fs.NumCoinGenerated++
 	return res
+}
+
+// RandomField generates and returns a single field element from the seed and the given name.
+func (fs *State) RandomFieldFromSeed(seed field.Element, name string) field.Element {
+
+	// The first step encodes the 'name' into a single field element. The
+	// field element is obtained by hashing and taking the modulo of the
+	// result to fit into a field element.
+	tmpFr := field.Element{}
+	nameBytes := []byte(name)
+	hasher, _ := blake2b.New256(nil)
+	hasher.Write(nameBytes)
+	nameBytes = hasher.Sum(nil)
+
+	// This ensures that the name is hashed into a field element
+	tmpFr.SetBytes(nameBytes)
+	nameBytes_ := tmpFr.Bytes()
+	nameBytes = nameBytes_[:]
+
+	// The seed is then obtained by calling the compression function over
+	// the seed and the encoded name.
+	oldState := fs.State()
+	defer fs.SetState(oldState)
+
+	fs.SetState([]field.Element{seed})
+	if _, err := fs.hasher.Write(nameBytes); err != nil {
+		panic(err)
+	}
+	challBytes := fs.hasher.Sum(nil)
+	res := new(field.Element).SetBytes(challBytes)
+
+	fs.NumCoinGenerated++
+	return *res
 }
 
 // RandomManyIntegers returns a list of challenge small integers. That is, a

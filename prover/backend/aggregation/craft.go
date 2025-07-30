@@ -309,15 +309,11 @@ func PackOffsets(unpacked []bool) []byte {
 	return resWrite.Bytes()
 }
 
-func nextMultipleOf(n, multiple int) int {
-	return multiple * ((n + multiple - 1) / multiple)
-}
-
 // Hash the L2 messages into Merkle trees or arity 2 and depth
 // `l2MsgMerkleTreeDepth`. The leaves are zero-padded on the right.
 func PackInMiniTrees(l2MsgHashes []string) []string {
 
-	paddedLen := nextMultipleOf(len(l2MsgHashes), l2MsgMerkleTreeMaxLeaves)
+	paddedLen := utils.NextMultipleOf(len(l2MsgHashes), l2MsgMerkleTreeMaxLeaves)
 	paddedL2MsgHashes := make([]string, paddedLen)
 	copy(paddedL2MsgHashes, l2MsgHashes)
 

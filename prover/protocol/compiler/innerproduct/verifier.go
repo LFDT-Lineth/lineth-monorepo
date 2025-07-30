@@ -11,8 +11,8 @@ import (
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 )
 
-// verifierForSize implements [wizard.VerifierAction]
-type verifierForSize struct {
+// VerifierForSize implements [wizard.VerifierAction]
+type VerifierForSize struct {
 	// Queries is the list of queries involved with the current verification
 	// step.
 	Queries []query.InnerProduct
@@ -20,11 +20,11 @@ type verifierForSize struct {
 	SummationOpening query.LocalOpening
 	// BatchOpening is the challenge used for the linear combination
 	BatchOpening coin.Info
-	skipped      bool
+	skipped      bool `serde:"omit"`
 }
 
 // Run implements [wizard.VerifierAction]
-func (v *verifierForSize) Run(run *wizard.VerifierRuntime) error {
+func (v *VerifierForSize) Run(run wizard.Runtime) error {
 
 	var (
 		// ys stores the list of all the inner-product openings
@@ -59,7 +59,7 @@ func (v *verifierForSize) Run(run *wizard.VerifierRuntime) error {
 }
 
 // RunGnark implements the [wizard.VerifierAction] interface
-func (v *verifierForSize) RunGnark(api frontend.API, run *wizard.WizardVerifierCircuit) {
+func (v *VerifierForSize) RunGnark(api frontend.API, run wizard.GnarkRuntime) {
 
 	var (
 		// ys stores the list of all the inner-product openings
@@ -89,10 +89,10 @@ func (v *verifierForSize) RunGnark(api frontend.API, run *wizard.WizardVerifierC
 	api.AssertIsEqual(expected, actual)
 }
 
-func (v *verifierForSize) Skip() {
+func (v *VerifierForSize) Skip() {
 	v.skipped = true
 }
 
-func (v *verifierForSize) IsSkipped() bool {
+func (v *VerifierForSize) IsSkipped() bool {
 	return v.skipped
 }

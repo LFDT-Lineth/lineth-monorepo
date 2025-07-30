@@ -15,10 +15,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-/*
-Refers to an abstract value that is 0 on every entries and one
-on every entries i such that i % T == 0
-*/
+// Refers to an abstract value that is 0 on every entries and one
+// on every entries i such that i % T == 0
 type PeriodicSample struct {
 	T      int
 	Offset int // Should be < T
@@ -27,6 +25,9 @@ type PeriodicSample struct {
 // Constructs a new PeriodicSample, will panic if the offset it larger
 // than T
 func NewPeriodicSample(period, offset int) *symbolic.Expression {
+
+	offset = utils.PositiveMod(offset, period)
+
 	if !utils.IsPowerOfTwo(period) {
 		utils.Panic("non power of two period %v", period)
 	}
@@ -43,6 +44,11 @@ func NewPeriodicSample(period, offset int) *symbolic.Expression {
 		T:      period,
 		Offset: offset,
 	})
+}
+
+// Lagrange returns a PeriodicSampling representing a Lagrange polynomial
+func Lagrange(n, pos int) *symbolic.Expression {
+	return NewPeriodicSample(n, pos)
 }
 
 // to implement symbolic.Metadata

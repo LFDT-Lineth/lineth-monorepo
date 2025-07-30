@@ -83,11 +83,11 @@ type Module struct {
 	// accumulator.
 	AccumulatorStatement AccumulatorStatement
 
-	// arithmetizationLink is an optional parameter (non-optional in production)
+	// ArithmetizationLink is an optional parameter (non-optional in production)
 	// storing the collection of columns from the Hub module that are used by
 	// the constraints declared by [StateSummary.WithHubConnection] method. It
 	// also stores a few endemic columns
-	arithmetizationLink *arithmetizationLink
+	ArithmetizationLink *arithmetizationLink
 }
 
 func NewModule(comp *wizard.CompiledIOP, size int) Module {

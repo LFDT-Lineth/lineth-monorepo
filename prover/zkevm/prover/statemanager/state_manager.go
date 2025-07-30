@@ -17,11 +17,11 @@ import (
 // correctness of the state-transitions occuring in Linea w.r.t. to the
 // arithmetization.
 type StateManager struct {
-	accumulator                 accumulator.Module
-	accumulatorSummaryConnector accumulatorsummary.Module
+	Accumulator                 accumulator.Module
+	AccumulatorSummaryConnector accumulatorsummary.Module
 	StateSummary                statesummary.Module // exported because needed by the public input module
-	mimcCodeHash                mimccodehash.Module
-	codeHashConsistency         codehashconsistency.Module
+	MimcCodeHash                mimccodehash.Module
+	CodeHashConsistency         codehashconsistency.Module
 }
 
 // Settings stores all the setting to construct a StateManager and is passed to
@@ -37,25 +37,25 @@ func NewStateManager(comp *wizard.CompiledIOP, settings Settings) *StateManager 
 
 	sm := &StateManager{
 		StateSummary: statesummary.NewModule(comp, settings.stateSummarySize()),
-		accumulator:  accumulator.NewModule(comp, settings.AccSettings),
-		mimcCodeHash: mimccodehash.NewModule(comp, mimccodehash.Inputs{
+		Accumulator:  accumulator.NewModule(comp, settings.AccSettings),
+		MimcCodeHash: mimccodehash.NewModule(comp, mimccodehash.Inputs{
 			Name: "MiMCCodeHash",
 			Size: settings.MiMCCodeHashSize,
 		}),
 	}
 
-	sm.accumulatorSummaryConnector = *accumulatorsummary.NewModule(
+	sm.AccumulatorSummaryConnector = *accumulatorsummary.NewModule(
 		comp,
 		accumulatorsummary.Inputs{
 			Name:        "ACCUMULATOR_SUMMARY",
-			Accumulator: sm.accumulator,
+			Accumulator: sm.Accumulator,
 		},
 	)
 
-	sm.accumulatorSummaryConnector.ConnectToStateSummary(comp, &sm.StateSummary)
-	sm.mimcCodeHash.ConnectToRom(comp, rom(comp), romLex(comp))
+	sm.AccumulatorSummaryConnector.ConnectToStateSummary(comp, &sm.StateSummary)
+	sm.MimcCodeHash.ConnectToRom(comp, rom(comp), romLex(comp))
 	sm.StateSummary.ConnectToHub(comp, acp(comp), scp(comp))
-	sm.codeHashConsistency = codehashconsistency.NewModule(comp, "CODEHASHCONSISTENCY", &sm.StateSummary, &sm.mimcCodeHash)
+	sm.CodeHashConsistency = codehashconsistency.NewModule(comp, "CODEHASHCONSISTENCY", &sm.StateSummary, &sm.MimcCodeHash)
 
 	return sm
 }
@@ -63,13 +63,14 @@ func NewStateManager(comp *wizard.CompiledIOP, settings Settings) *StateManager 
 // Assign assignes the submodules of the state-manager. It requires the
 // arithmetization columns to be assigned first.
 func (sm *StateManager) Assign(run *wizard.ProverRuntime, shomeiTraces [][]statemanager.DecodedTrace) {
+
 	assignHubAddresses(run)
 	addSkipFlags(&shomeiTraces)
 	sm.StateSummary.Assign(run, shomeiTraces)
-	sm.accumulator.Assign(run, utils.Join(shomeiTraces...))
-	sm.accumulatorSummaryConnector.Assign(run)
-	sm.mimcCodeHash.Assign(run)
-	sm.codeHashConsistency.Assign(run)
+	sm.Accumulator.Assign(run, utils.Join(shomeiTraces...))
+	sm.AccumulatorSummaryConnector.Assign(run)
+	sm.MimcCodeHash.Assign(run)
+	sm.CodeHashConsistency.Assign(run)
 }
 
 // stateSummarySize returns the number of rows to give to the state-summary

@@ -5,6 +5,7 @@ import (
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/column"
 	"github.com/consensys/linea-monorepo/prover/protocol/dedicated"
+	"github.com/consensys/linea-monorepo/prover/protocol/distributed/pragmas"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	sym "github.com/consensys/linea-monorepo/prover/symbolic"
@@ -14,8 +15,8 @@ import (
 
 // blockInput stores the inputs for [newBlock] function.
 type blockInput struct {
-	lanes laneRepacking
-	param generic.HashingUsecase
+	Lanes laneRepacking
+	Param generic.HashingUsecase
 }
 
 type block struct {
@@ -23,11 +24,11 @@ type block struct {
 	// it is 1 iff the block is complete
 	IsBlockComplete ifaces.Column
 	// accumulator for the number of lanes
-	accNumLane ifaces.Column
-	// size of the submodule
-	size int
+	AccNumLane ifaces.Column
+	// Size of the submodule
+	Size int
 	// the ProverAction for Iszero()
-	pa wizard.ProverAction
+	PA wizard.ProverAction
 }
 
 // newBlock imposes the constraints  that the total sum of nBytes, given via imported.NBytes,
@@ -35,26 +36,26 @@ type block struct {
 func newBlock(comp *wizard.CompiledIOP, inp blockInput) block {
 
 	var (
-		name            = inp.lanes.Inputs.pckInp.Name
-		size            = inp.lanes.Size
-		createCol       = common.CreateColFn(comp, BLOCK+"_"+name, size)
-		isLaneActive    = inp.lanes.IsLaneActive
-		nbLanesPerBlock = inp.param.NbOfLanesPerBlock()
+		name            = inp.Lanes.Inputs.PckInp.Name
+		size            = inp.Lanes.Size
+		createCol       = common.CreateColFn(comp, BLOCK+"_"+name, size, pragmas.RightPadded)
+		isLaneActive    = inp.Lanes.IsLaneActive
+		nbLanesPerBlock = inp.Param.NbOfLanesPerBlock()
 	)
 
 	b := block{
-		size:   inp.lanes.Size,
+		Size:   inp.Lanes.Size,
 		Inputs: &inp,
 
-		accNumLane: createCol("AccNumLane"),
+		AccNumLane: createCol("AccNumLane"),
 	}
 
-	b.IsBlockComplete, b.pa = dedicated.IsZero(comp, sym.Sub(b.accNumLane, nbLanesPerBlock))
+	b.IsBlockComplete, b.PA = dedicated.IsZero(comp, sym.Sub(b.AccNumLane, nbLanesPerBlock))
 
 	// constraints over accNumLanes (accumulate backward)
 	// accNumLane[last] =isLaneActive[last]
 	comp.InsertLocal(0, ifaces.QueryIDf(name+"_AccNumLane_Last"),
-		sym.Sub(column.Shift(b.accNumLane, -1),
+		sym.Sub(column.Shift(b.AccNumLane, -1),
 			column.Shift(isLaneActive, -1)),
 	)
 
@@ -65,9 +66,9 @@ func newBlock(comp *wizard.CompiledIOP, inp blockInput) block {
 		sym.Sub(
 			sym.Add(
 				sym.Mul(
-					column.Shift(b.accNumLane, 1), res),
+					column.Shift(b.AccNumLane, 1), res),
 				isLaneActive),
-			b.accNumLane,
+			b.AccNumLane,
 		)
 
 	comp.InsertGlobal(0, ifaces.QueryIDf(name+"_AccNumLane_Glob"), expr)
@@ -87,7 +88,7 @@ func newBlock(comp *wizard.CompiledIOP, inp blockInput) block {
 	// if isFirstLaneOfNewHash = 1 then isBlockComplete = 1.
 	comp.InsertGlobal(0, ifaces.QueryIDf(name+"_EACH_HASH_HAS_COMPLETE_BLOCKS"),
 		sym.Mul(
-			inp.lanes.IsFirstLaneOfNewHash,
+			inp.Lanes.IsFirstLaneOfNewHash,
 			sym.Sub(1, b.IsBlockComplete),
 		),
 	)
@@ -98,10 +99,10 @@ func newBlock(comp *wizard.CompiledIOP, inp blockInput) block {
 func (b *block) Assign(run *wizard.ProverRuntime) {
 
 	var (
-		size              = b.size
+		size              = b.Size
 		accNumLane        = make([]field.Element, size)
-		isActive          = b.Inputs.lanes.IsLaneActive.GetColAssignment(run).IntoRegVecSaveAlloc()
-		nbOfLanesPerBlock = b.Inputs.param.NbOfLanesPerBlock()
+		isActive          = b.Inputs.Lanes.IsLaneActive.GetColAssignment(run).IntoRegVecSaveAlloc()
+		nbOfLanesPerBlock = b.Inputs.Param.NbOfLanesPerBlock()
 	)
 	accNumLane[size-1] = isActive[size-1]
 	// accNumLanes[i] = accNumLane[i+1]*(1-isBlockComplete[i+1]) + isLaneActive[i]
@@ -112,16 +113,16 @@ func (b *block) Assign(run *wizard.ProverRuntime) {
 			accNumLane[row].Add(&isActive[row], &accNumLane[row+1])
 		}
 	}
-	run.AssignColumn(b.accNumLane.GetColID(),
+	run.AssignColumn(b.AccNumLane.GetColID(),
 		smartvectors.RightZeroPadded(accNumLane, size))
 
-	b.pa.Run(run)
+	b.PA.Run(run)
 }
 
 // it creates a blockInputs object.
 func getBlockInputs(lane laneRepacking, param generic.HashingUsecase) blockInput {
 	return blockInput{
-		lanes: lane,
-		param: param,
+		Lanes: lane,
+		Param: param,
 	}
 }

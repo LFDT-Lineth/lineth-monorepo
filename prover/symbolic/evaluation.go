@@ -126,9 +126,14 @@ func (b *ExpressionBoard) Evaluate(inputs []sv.SmartVector, p ...mempool.MemPool
 			// Therefore the cast is safe.
 			chunkRes := b.evaluateSingleThread(chunkInputs, pool...)
 
-			// No race condition here as each call write to different places
-			// of vec.
-			chunkRes.WriteInSlice(res[chunkStart:chunkStop])
+			// If chunkRes is all zeroes, then we can skip the copying. As res
+			// is already zero. This optimization is particularly useful for the
+			// limitless prover where we often deal with very sparse vectors.
+			if c, ok := chunkRes.(*sv.Constant); !ok || c.Val() != field.Zero() {
+				// No race condition here as each call write to different places
+				// of vec.
+				chunkRes.WriteInSlice(res[chunkStart:chunkStop])
+			}
 
 			wg.Done()
 		}

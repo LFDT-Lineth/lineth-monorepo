@@ -25,7 +25,7 @@ func (ex ExpandedVerifCol) Round() int {
 
 // GetColID returns the column ID
 func (ex ExpandedVerifCol) GetColID() ifaces.ColID {
-	return ifaces.ColIDf("Expanded_%v", ex.Verifiercol.GetColID())
+	return ifaces.ColIDf("Expanded_%v_%v", ex.Verifiercol.GetColID(), ex.Expansion)
 }
 
 // MustExists implements the [ifaces.Column] interface and always returns true.
@@ -69,8 +69,7 @@ func (ex ExpandedVerifCol) GetColAssignmentAt(run ifaces.Runtime, pos int) field
 
 // GetColAssignmentGnarkAt returns a particular position of the column in a gnark circuit
 func (ex ExpandedVerifCol) GetColAssignmentGnarkAt(run ifaces.GnarkRuntime, pos int) frontend.Variable {
-
-	return ex.GetColAssignmentGnarkAt(run, pos/ex.Expansion)
+	return ex.Verifiercol.GetColAssignmentGnarkAt(run, pos/ex.Expansion)
 }
 
 // IsComposite implements the [ifaces.Column] interface
@@ -80,7 +79,7 @@ func (ex ExpandedVerifCol) IsComposite() bool {
 
 // String implements the [symbolic.Metadata] interface
 func (ex ExpandedVerifCol) String() string {
-	return ex.Verifiercol.String()
+	return string(ex.GetColID())
 }
 
 // Split implements the [VerifierCol] interface

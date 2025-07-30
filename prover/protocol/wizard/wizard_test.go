@@ -5,6 +5,7 @@ import (
 
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
 	"github.com/consensys/linea-monorepo/prover/protocol/coin"
+	"github.com/consensys/linea-monorepo/prover/protocol/column"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/dummy"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
@@ -56,4 +57,15 @@ func TestCompiler(t *testing.T) {
 	proof := wizard.Prove(compiled, prover)
 	err := wizard.Verify(compiled, proof)
 	require.NoError(t, err)
+}
+
+func TestChangingColumnStatus(t *testing.T) {
+
+	comp := wizard.NewCompiledIOP()
+	comp.InsertCommit(0, "P", 4)
+
+	p := comp.Columns.GetHandle("P").(column.Natural)
+	require.Equal(t, column.Committed, p.Status())
+	comp.Columns.SetStatus("P", column.Ignored)
+	require.Equal(t, column.Ignored, p.Status())
 }

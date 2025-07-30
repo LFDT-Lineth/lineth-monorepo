@@ -10,23 +10,23 @@ var (
 	// MiMCUsecase represents using MiMC with the Miyaguchi-Preneel construction
 	// over a single field.
 	MiMCUsecase = HashingUsecase{
-		paddingStrat:      zeroPadding,
-		laneSizeBytes:     31,
-		nbOfLanesPerBlock: 1,
+		PaddingStrat:       zeroPadding,
+		LaneSizeBytes_:     31,
+		NbOfLanesPerBlock_: 1,
 	}
 
 	// KeccakUsecase represents using the Keccak hash function as in Ethereum
 	KeccakUsecase = HashingUsecase{
-		paddingStrat:      keccakPadding,
-		laneSizeBytes:     8,
-		nbOfLanesPerBlock: 17,
+		PaddingStrat:       keccakPadding,
+		LaneSizeBytes_:     8,
+		NbOfLanesPerBlock_: 17,
 	}
 
 	// Sha2Usecase represents using the Sha2 hash function.
 	Sha2Usecase = HashingUsecase{
-		paddingStrat:      sha2Padding,
-		laneSizeBytes:     4,
-		nbOfLanesPerBlock: 16,
+		PaddingStrat:       sha2Padding,
+		LaneSizeBytes_:     4,
+		NbOfLanesPerBlock_: 16,
 	}
 )
 
@@ -39,19 +39,19 @@ const (
 )
 
 type HashingUsecase struct {
-	paddingStrat      paddingStrat
-	laneSizeBytes     int
-	nbOfLanesPerBlock int
+	PaddingStrat       paddingStrat
+	LaneSizeBytes_     int
+	NbOfLanesPerBlock_ int
 }
 
 func (huc HashingUsecase) BlockSizeBytes() int {
-	return huc.laneSizeBytes * huc.nbOfLanesPerBlock
+	return huc.LaneSizeBytes_ * huc.NbOfLanesPerBlock_
 }
 
 func (h HashingUsecase) LaneSizeBytes() int {
-	return h.laneSizeBytes
+	return h.LaneSizeBytes_
 }
 
 func (h HashingUsecase) NbOfLanesPerBlock() int {
-	return h.nbOfLanesPerBlock
+	return h.NbOfLanesPerBlock_
 }

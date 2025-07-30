@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/dummy"
-	"github.com/consensys/linea-monorepo/prover/protocol/dedicated/plonk"
+	"github.com/consensys/linea-monorepo/prover/protocol/query"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	"github.com/consensys/linea-monorepo/prover/utils/csvtraces"
 )
@@ -58,7 +58,7 @@ func runTestSha2(t *testing.T, tc testCaseFile) {
 		mod = newSha2BlockModule(build.CompiledIOP, &inp)
 
 		if tc.WithCircuit {
-			mod.WithCircuit(build.CompiledIOP, plonk.WithRangecheck(16, 6, false))
+			mod.WithCircuit(build.CompiledIOP, query.PlonkRangeCheckOption(16, 6, false))
 		}
 
 	}, dummy.Compile)

@@ -2,10 +2,11 @@ package keccak
 
 import (
 	"fmt"
-	"github.com/consensys/gnark/std/compress"
-	"github.com/consensys/linea-monorepo/prover/circuits/internal/test_utils"
 	"math/big"
 	"testing"
+
+	"github.com/consensys/gnark/std/compress"
+	"github.com/consensys/linea-monorepo/prover/circuits/internal/test_utils"
 
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/dummy"
 
@@ -214,7 +215,7 @@ type testE2ECircuit struct {
 
 	Hash [][32]frontend.Variable
 
-	WizardVerifier *wizard.WizardVerifierCircuit
+	WizardVerifier *wizard.VerifierCircuit
 }
 
 func (c *testE2ECircuit) Define(api frontend.API) error {

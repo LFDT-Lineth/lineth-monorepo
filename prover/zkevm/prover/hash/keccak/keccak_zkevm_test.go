@@ -12,7 +12,7 @@ import (
 
 func MakeTestCaseKeccakZkEVM(t *testing.T, c []makeTestCaseGBM) (
 	define wizard.DefineFunc,
-	prover wizard.ProverStep,
+	prover wizard.MainProverStep,
 ) {
 	mod := &KeccakZkEVM{}
 	maxNumKeccakF := 12

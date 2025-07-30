@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/dummy"
+	"github.com/consensys/linea-monorepo/prover/protocol/distributed/pragmas"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/common"
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/hash/generic"
@@ -13,7 +14,7 @@ import (
 // It generates Define and Assign function of Data module, for testing
 func makeTestCaseInfoModule(c []makeInfoTestCase) (
 	define wizard.DefineFunc,
-	prover wizard.ProverStep,
+	prover wizard.MainProverStep,
 ) {
 
 	var (
@@ -25,7 +26,7 @@ func makeTestCaseInfoModule(c []makeInfoTestCase) (
 	define = func(build *wizard.Builder) {
 		comp := build.CompiledIOP
 		for i := range gdms {
-			createCol := common.CreateColFn(comp, "TESTING_INFO_ACCUMULATOR", c[i].Size)
+			createCol := common.CreateColFn(comp, "TESTING_INFO_ACCUMULATOR", c[i].Size, pragmas.RightPadded)
 			gdms[i] = generic.GenInfoModule{
 				HashHi:   createCol("Hash_Hi_%v", i),
 				HashLo:   createCol("Hash_Lo_%v", i),

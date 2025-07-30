@@ -12,7 +12,7 @@ func TestSpaghettify(t *testing.T) {
 
 	var (
 		inp   SpaghettificationInput
-		mod   *spaghettification
+		mod   *Spaghettification
 		inpCt = csvtraces.MustOpenCsvFile("testdata/input.csv")
 		modCt = csvtraces.MustOpenCsvFile("testdata/mod.csv")
 	)

@@ -39,8 +39,8 @@ type Inputs struct {
 // Module stores all the columns responsible for computing the MiMC
 // codehash of every contract occuring during the EVM computation.
 type Module struct {
-	// inputs are the parameteress provided by the user of the struct
-	inputs Inputs
+	// Inputs are the parameteress provided by the user of the struct
+	Inputs Inputs
 
 	// All the columns characterizing the module
 	IsActive   ifaces.Column
@@ -58,7 +58,7 @@ type Module struct {
 
 	// inputModule stores the modules connected the present Module (e.g. Rom/RomLex)
 	// when they are not omitted.
-	inputModules *inputModules
+	InputModules *inputModules
 
 	// IsForConsistency lights-up when the imported keccak code-hash is not the empty
 	// codehash. This is used as an import filter for the consistency module with the
@@ -75,7 +75,7 @@ type Module struct {
 func NewModule(comp *wizard.CompiledIOP, inputs Inputs) (mh Module) {
 
 	mh = Module{
-		inputs:           inputs,
+		Inputs:           inputs,
 		IsActive:         comp.InsertCommit(inputs.Round, MIMC_CODE_HASH_IS_ACTIVE_NAME, inputs.Size),
 		CFI:              comp.InsertCommit(inputs.Round, MIMC_CODE_HASH_CFI_NAME, inputs.Size),
 		Limb:             comp.InsertCommit(inputs.Round, MIMC_CODE_HASH_LIMB_NAME, inputs.Size),
@@ -129,51 +129,51 @@ func NewModule(comp *wizard.CompiledIOP, inputs Inputs) (mh Module) {
 func (mh *Module) checkConsistency(comp *wizard.CompiledIOP) {
 
 	// NewState = MiMC(PrevState, Limb)
-	comp.InsertMiMC(mh.inputs.Round, mh.qname("MiMC_CODE_HASH"), mh.Limb, mh.PrevState, mh.NewState)
+	comp.InsertMiMC(mh.Inputs.Round, mh.qname("MiMC_CODE_HASH"), mh.Limb, mh.PrevState, mh.NewState, nil)
 
 	// If IsNewHash = 0, PrevState[i] = NewState[i-1] (in the active area), e.g.,
 	// IsActive[i] * (1 - IsNewHash[i]) * (PrevState[i] - NextState[i-1]) = 0
-	comp.InsertGlobal(mh.inputs.Round, mh.qname("PREV_STATE_CONSISTENCY_2"),
+	comp.InsertGlobal(mh.Inputs.Round, mh.qname("PREV_STATE_CONSISTENCY_2"),
 		sym.Mul(mh.IsActive,
 			sym.Sub(1, mh.IsNewHash),
 			sym.Sub(mh.PrevState, ifaces.ColumnAsVariable(column.Shift(mh.NewState, -1)))))
 
 	// If IsNewHash = 1, PrevState = 0 (in the active area) e.g., IsActive[i] * IsNewHash[i] * PrevState[i] = 0
-	comp.InsertGlobal(mh.inputs.Round, mh.qname("PREV_STATE_ZERO_AT_BEGINNING"),
+	comp.InsertGlobal(mh.Inputs.Round, mh.qname("PREV_STATE_ZERO_AT_BEGINNING"),
 		sym.Mul(mh.IsActive, mh.IsNewHash, mh.PrevState))
 
 	// If CFI incremented, IsNewHash = 1, e.g., IsActive[i] * (CFI[i] - CFI[i-1]) * (1 - IsNewHash[i]) = 0
-	comp.InsertGlobal(mh.inputs.Round, mh.qname("IS_NEW_HASH_CONSISTENCY_1"),
+	comp.InsertGlobal(mh.Inputs.Round, mh.qname("IS_NEW_HASH_CONSISTENCY_1"),
 		sym.Mul(mh.IsActive,
 			sym.Sub(mh.CFI, ifaces.ColumnAsVariable(column.Shift(mh.CFI, -1))),
 			sym.Sub(1, mh.IsNewHash)))
 
 	// Local constraint IsNewHash starts with 1
-	comp.InsertLocal(mh.inputs.Round, mh.qname("IS_NEW_HASH_LOCAL"), sym.Sub(mh.IsNewHash, mh.IsActive))
+	comp.InsertLocal(mh.Inputs.Round, mh.qname("IS_NEW_HASH_LOCAL"), sym.Sub(mh.IsNewHash, mh.IsActive))
 
 	// if CFI[i+1] - CFI[i] != 0, IsHashEnd[i] = 1, e.g., IsActive[i] * (CFI[i+1] - CFI[i]) * (1 - IsHashEnd[i]) = 0
-	comp.InsertGlobal(mh.inputs.Round, mh.qname("IS_HASH_END_CONSISTENCY_1"),
+	comp.InsertGlobal(mh.Inputs.Round, mh.qname("IS_HASH_END_CONSISTENCY_1"),
 		sym.Mul(mh.IsActive,
 			sym.Sub(ifaces.ColumnAsVariable(column.Shift(mh.CFI, 1)), mh.CFI),
 			sym.Sub(1, mh.IsHashEnd)))
 
 	// Booleanity of IsNewHash, IsHashEnd (in the active area)
-	comp.InsertGlobal(mh.inputs.Round, mh.qname("IS_NEW_HASH_BOOLEAN"),
+	comp.InsertGlobal(mh.Inputs.Round, mh.qname("IS_NEW_HASH_BOOLEAN"),
 		sym.Sub(sym.Mul(sym.Square(mh.IsNewHash), mh.IsActive),
 			mh.IsNewHash))
 
-	comp.InsertGlobal(mh.inputs.Round, mh.qname("IS_HASH_END_BOOLEAN"),
+	comp.InsertGlobal(mh.Inputs.Round, mh.qname("IS_HASH_END_BOOLEAN"),
 		sym.Sub(sym.Mul(sym.Square(mh.IsHashEnd), mh.IsActive),
 			mh.IsHashEnd))
 
 	// Booeanity of IsActive
-	comp.InsertGlobal(mh.inputs.Round, mh.qname("IS_ACTIVE_BOOLEAN"),
+	comp.InsertGlobal(mh.Inputs.Round, mh.qname("IS_ACTIVE_BOOLEAN"),
 		sym.Sub(
 			sym.Square(mh.IsActive),
 			mh.IsActive))
 
 	// IsActive[i] = 0 IMPLIES IsActive[i+1] = 0 e.g. IsActive[i] = IsActive[i-1] * IsActive[i]
-	comp.InsertGlobal(mh.inputs.Round, mh.qname("IS_ACTIVE_ZERO_FOLLOWED_BY_ZERO"),
+	comp.InsertGlobal(mh.Inputs.Round, mh.qname("IS_ACTIVE_ZERO_FOLLOWED_BY_ZERO"),
 		sym.Sub(mh.IsActive,
 			sym.Mul(ifaces.ColumnAsVariable(column.Shift(mh.IsActive, -1)),
 				mh.IsActive)))
@@ -181,19 +181,19 @@ func (mh *Module) checkConsistency(comp *wizard.CompiledIOP) {
 	// In a particular CFI segment, CodeHashHi and CodeHashLo remain constant,
 	// e.g., IsActive[i] * (1 - IsEndHash[i]) * (CodeHashHi[i+1] - CodeHashHi[i]) = 0 and,
 	// IsActive[i] * (1 - IsEndHash[i]) * (CodeHashLo[i+1] - CodeHashLo[i]) = 0
-	comp.InsertGlobal(mh.inputs.Round, mh.qname("CODE_HASH_HI_SEGMENT_WISE_CONSTANT"),
+	comp.InsertGlobal(mh.Inputs.Round, mh.qname("CODE_HASH_HI_SEGMENT_WISE_CONSTANT"),
 		sym.Mul(mh.IsActive,
 			sym.Sub(1, mh.IsHashEnd),
 			sym.Sub(ifaces.ColumnAsVariable(column.Shift(mh.CodeHashHi, 1)), mh.CodeHashHi)))
 
-	comp.InsertGlobal(mh.inputs.Round, mh.qname("CODE_HASH_LO_SEGMENT_WISE_CONSTANT"),
+	comp.InsertGlobal(mh.Inputs.Round, mh.qname("CODE_HASH_LO_SEGMENT_WISE_CONSTANT"),
 		sym.Mul(mh.IsActive,
 			sym.Sub(1, mh.IsHashEnd),
 			sym.Sub(ifaces.ColumnAsVariable(column.Shift(mh.CodeHashLo, 1)), mh.CodeHashLo)))
 
 	// In a particular CFI segment, CodeSize remains constant,
 	// e.g., IsActive[i] * (1 - IsEndHash[i]) * (CodeSize[i+1] - CodeSize[i]) = 0
-	comp.InsertGlobal(mh.inputs.Round, mh.qname("CODE_SIZE_SEGMENT_WISE_CONSTANT"),
+	comp.InsertGlobal(mh.Inputs.Round, mh.qname("CODE_SIZE_SEGMENT_WISE_CONSTANT"),
 		sym.Mul(mh.IsActive,
 			sym.Sub(1, mh.IsHashEnd),
 			sym.Sub(ifaces.ColumnAsVariable(column.Shift(mh.CodeSize, 1)), mh.CodeSize)))
@@ -211,12 +211,12 @@ func (mh *Module) checkConsistency(comp *wizard.CompiledIOP) {
 
 // Function returning a query name
 func (mh *Module) qname(name string, args ...any) ifaces.QueryID {
-	return ifaces.QueryIDf("%v", mh.inputs.Name) + "_" + ifaces.QueryIDf(name, args...)
+	return ifaces.QueryIDf("%v", mh.Inputs.Name) + "_" + ifaces.QueryIDf(name, args...)
 }
 
 // Function inserting a query that col is zero when IsActive is zero
 func (mh *Module) colZeroAtInactive(comp *wizard.CompiledIOP, col ifaces.Column, name string) {
 	// col zero at inactive area, e.g., (1-IsActive[i]) * col[i] = 0
-	comp.InsertGlobal(mh.inputs.Round, mh.qname(name),
+	comp.InsertGlobal(mh.Inputs.Round, mh.qname(name),
 		sym.Mul(sym.Sub(1, mh.IsActive), col))
 }

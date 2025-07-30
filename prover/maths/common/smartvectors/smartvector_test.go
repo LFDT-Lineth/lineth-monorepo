@@ -110,3 +110,99 @@ func TestSubvectorFuzzy(t *testing.T) {
 		require.True(t, success)
 	}
 }
+
+func TestTryReduceSizeRight(t *testing.T) {
+
+	testVectors := []SmartVector{
+		ForTest(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
+		ForTest(6, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
+		ForTest(6, 6, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
+		ForTest(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 6),
+		ForTest(6, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 6),
+		ForTest(6, 6, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 6),
+		ForTest(1),
+	}
+
+	expectedN := []int{
+		16,
+		15,
+		14,
+		0,
+		0,
+		0,
+		0,
+	}
+
+	for i, v := range testVectors {
+
+		v_, n := TryReduceSizeRight(v)
+
+		if v.Len() != v_.Len() {
+			t.Fatalf("the lengths mismatch %v != %v", v.Len(), v_.Len())
+		}
+
+		if n != expectedN[i] {
+			t.Errorf("the lengths mismatch %v != %v", n, expectedN[i])
+		}
+
+		for i := range v.IntoRegVecSaveAlloc() {
+
+			var (
+				vi  = v.Get(i)
+				vi_ = v_.Get(i)
+			)
+
+			if !vi.Equal(&vi_) {
+				t.Errorf("the values mismatch %v != %v", vi.String(), vi_.String())
+			}
+		}
+	}
+}
+
+func TestTryReduceSizeLeft(t *testing.T) {
+
+	testVectors := []SmartVector{
+		ForTest(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
+		ForTest(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 6),
+		ForTest(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 6, 6),
+		ForTest(6, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2),
+		ForTest(6, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 6),
+		ForTest(6, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 6, 6),
+		ForTest(1),
+	}
+
+	expectedN := []int{
+		16,
+		15,
+		14,
+		0,
+		0,
+		0,
+		0,
+	}
+
+	for i, v := range testVectors {
+
+		v_, n := TryReduceSizeLeft(v)
+
+		if v.Len() != v_.Len() {
+			t.Fatalf("the lengths mismatch %v != %v", v.Len(), v_.Len())
+		}
+
+		if n != expectedN[i] {
+			t.Errorf("the lengths mismatch %v != %v", n, expectedN[i])
+		}
+
+		for i := range v.IntoRegVecSaveAlloc() {
+
+			var (
+				vi  = v.Get(i)
+				vi_ = v_.Get(i)
+			)
+
+			if !vi.Equal(&vi_) {
+				t.Errorf("the values mismatch %v != %v", vi.String(), vi_.String())
+			}
+		}
+	}
+}

@@ -4,6 +4,7 @@ import (
 	"github.com/consensys/linea-monorepo/prover/crypto/ringsis"
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
+	VortexCompiler "github.com/consensys/linea-monorepo/prover/protocol/compiler/vortex"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/utils"
 )
@@ -25,43 +26,49 @@ import (
 //
 // Namely, all key shards consists of the first entries of A with
 // some offset and are zeroes everywhere else.
+
+// ToDo: Make the above explanation better and remove the
+// function Precomputations()
 func (ctx *SelfRecursionCtx) Precomputations() {
-	ctx.registersI()
-	ctx.registersAh()
+	ctx.RegistersI()
+	ctx.RegistersAh()
 }
 
 // Registers the polynomial I(X)
-func (ctx *SelfRecursionCtx) registersI() {
+func (ctx *SelfRecursionCtx) RegistersI() {
 	nBColEncoded := ctx.VortexCtx.NumEncodedCols()
 	i := make([]field.Element, nBColEncoded)
 	for k := range i {
 		i[k].SetUint64(uint64(k))
 	}
-	ctx.Columns.I = ctx.comp.InsertPrecomputed(ctx.iName(nBColEncoded), smartvectors.NewRegular(i))
+	ctx.Columns.I = ctx.Comp.InsertPrecomputed(ctx.iName(nBColEncoded), smartvectors.NewRegular(i))
 }
 
 // Registers the key shards, since some rounds are dried, some of the
 // of the entries are nil
-func (ctx *SelfRecursionCtx) registersAh() {
-	ahLength := ctx.VortexCtx.CommitmentsByRounds.Len()
-	// Consider the precomputed columns
-	if ctx.VortexCtx.IsCommitToPrecomputed() {
+func (ctx *SelfRecursionCtx) RegistersAh() {
+	// We need the length of total number of SIS rounds
+	ahLength := ctx.VortexCtx.CommitmentsByRoundsSIS.Len()
+	// Consider the precomputed columns.
+	// We increase ahLength only if SIS is applied to
+	// the precomputed columns.
+	if ctx.VortexCtx.IsNonEmptyPrecomputed() && ctx.VortexCtx.IsSISAppliedToPrecomputed() {
 		ahLength += 1
 	}
-	ah := make([]ifaces.Column, ahLength)
+	ah := make([]ifaces.Column, 0, ahLength)
 
-	// Tracks the number of rows already committed as we arrive in this
+	// Tracks the number of rows already committed with SIS as we arrive in this
 	// round
-	maxSize := utils.NextPowerOfTwo(ctx.VortexCtx.CommittedRowsCount)
+	maxSize := utils.NextPowerOfTwo(ctx.VortexCtx.CommittedRowsCountSIS)
 	roundStartAt := 0
 
 	// Consider the precomputed columns
-	if ctx.VortexCtx.IsCommitToPrecomputed() {
+	if ctx.VortexCtx.IsNonEmptyPrecomputed() && ctx.VortexCtx.IsSISAppliedToPrecomputed() {
 		numPrecomputeds := len(ctx.VortexCtx.Items.Precomputeds.PrecomputedColums)
 
 		// Sanity-check : if coms in precomputeds have length zero then the
 		// associated Dh should be nil
-		if (numPrecomputeds == 0) != (ctx.Columns.precompRoot == nil) {
+		if (numPrecomputeds == 0) != (ctx.Columns.PrecompRoot == nil) {
 			panic("nilness mismatch for precomputeds")
 		}
 
@@ -73,77 +80,59 @@ func (ctx *SelfRecursionCtx) registersAh() {
 			panic("the ring-SIS polynomials are not fully used")
 		}
 
-		// Registers the commitment key (if this matches an existing key
+		// Registers the commitment key, if this matches an existing key
 		// then the preexisting precomputed key is reused.
-		ah[0] = ctx.comp.InsertPrecomputed(
+		ah = append(ah, ctx.Comp.InsertPrecomputed(
 			ctx.ahName(ctx.SisKey(), roundStartAt, numPrecomputeds, maxSize),
-			FlattenedKeyChunk(ctx.SisKey(), roundStartAt, numPrecomputeds, maxSize),
-		)
+			flattenedKeyChunk(ctx.SisKey(), roundStartAt, numPrecomputeds, maxSize),
+		))
 
 		// And update the value of the start
 		roundStartAt += numPrecomputeds
 	}
-	// Offset for the precomputed polys
-	precompOffset := 0
-	if ctx.VortexCtx.IsCommitToPrecomputed() {
-		precompOffset += 1
-	}
 
-	for i, comsInRoundsI := range ctx.VortexCtx.CommitmentsByRounds.Inner() {
+	for i, comsInRoundsI := range ctx.VortexCtx.CommitmentsByRounds.GetInner() {
+		// We need to consider only the SIS rounds
+		if ctx.VortexCtx.RoundStatus[i] == VortexCompiler.IsSISApplied {
+			// Sanity-check : if coms in rounds has length zero then the
+			// associated Dh should be nil. That happens when the examinated round
+			// is an "empty" round or when it has been self-recursed already.
+			if (len(comsInRoundsI) == 0) != (ctx.Columns.Rooth[i] == nil) {
+				utils.Panic("nilness mismatch for round=%v #coms-in-round=%v vs root-is-nil=%v", i, len(comsInRoundsI), ctx.Columns.Rooth[i] == nil)
+			}
 
-		// Sanity-check : if coms in rounds has length zero then the
-		// associated Dh should be nil. That happens when the examinated round
-		// is a "dry" round or when it has been self-recursed already.
-		if (len(comsInRoundsI) == 0) != (ctx.Columns.Rooth[i] == nil) {
-			panic("nilness mismatch")
-		}
+			// Check if there is no rows to commit
+			if len(comsInRoundsI) == 0 {
+				// and ah[i] is nil
+				utils.Panic("We don't expect no polynomials to commit in a SIS round")
+			}
 
-		// Check if there is no rows to commit
-		if len(comsInRoundsI) == 0 {
-			// and ah[i] is nil
+			// The Vortex compiler is supposed to add "shadow columns" ensuring that
+			// every round (counting the precomputations as a round) uses ring-SIS
+			// polynomials fully. Otherwise, the compilation will not be able to
+			// be successful.
+			if (len(comsInRoundsI)*ctx.SisKey().NumLimbs())%(1<<ctx.SisKey().LogTwoDegree) > 0 {
+				panic("the ring-SIS polynomials are not fully used")
+			}
+
+			// Registers the commitment key (if this matches an existing key
+			// then the preexisting precomputed key is reused).
+			ah = append(ah, ctx.Comp.InsertPrecomputed(
+				ctx.ahName(ctx.SisKey(), roundStartAt, len(comsInRoundsI), maxSize),
+				flattenedKeyChunk(ctx.SisKey(), roundStartAt, len(comsInRoundsI), maxSize),
+			))
+
+			// And update the value of the start
+			roundStartAt += len(comsInRoundsI)
+		} else {
 			continue
 		}
-
-		// The Vortex compiler is supposed to add "shadow columns" ensuring that
-		// every round (counting the precomputations as a round) uses ring-SIS
-		// polynomials fully. Otherwise, the compilation will not be able to
-		// be successful.
-		if (len(comsInRoundsI)*ctx.SisKey().NumLimbs())%(1<<ctx.SisKey().LogTwoDegree) > 0 {
-			panic("the ring-SIS polynomials are not fully used")
-		}
-
-		// Registers the commitment key (if this matches an existing key
-		// then the preexisting precomputed key is reused).
-		ah[i+precompOffset] = ctx.comp.InsertPrecomputed(
-			ctx.ahName(ctx.SisKey(), roundStartAt, len(comsInRoundsI), maxSize),
-			FlattenedKeyChunk(ctx.SisKey(), roundStartAt, len(comsInRoundsI), maxSize),
-		)
-
-		// And update the value of the start
-		roundStartAt += len(comsInRoundsI)
 	}
-
 	ctx.Columns.Ah = ah
-
-	// It's cleaner for us to have len(dH) == len(aH), so we enforces that
-	// by `nil` appending the two slices so that they have the same size at
-	// the end
-	for len(ctx.Columns.Ah) < len(ctx.Columns.Rooth) {
-		ctx.Columns.Ah = append(ctx.Columns.Ah, nil)
-	}
-
-	for len(ctx.Columns.Rooth) < len(ctx.Columns.Ah) {
-		ctx.Columns.Rooth = append(ctx.Columns.Rooth, nil)
-	}
-
-	// And normally, they have the same length now
-	if len(ctx.Columns.Ah) != len(ctx.Columns.Rooth) {
-		panic("ah and dh should have had the same length now")
-	}
 }
 
 // Returns the laid out keys
-func FlattenedKeyChunk(key *ringsis.Key, start, length, maxSize int) smartvectors.SmartVector {
+func flattenedKeyChunk(key *ringsis.Key, start, length, maxSize int) smartvectors.SmartVector {
 
 	// Sanity-check : the chunkNo can't be off-bound
 	if maxSize < start+length {
@@ -151,7 +140,7 @@ func FlattenedKeyChunk(key *ringsis.Key, start, length, maxSize int) smartvector
 	}
 
 	// Case for the last chunk
-	FlattenedKey := key.FlattenedKey()
+	flattenedKey := key.FlattenedKey()
 	res := make([]field.Element, maxSize*key.NumLimbs())
 
 	// Scales the start and the length according to how many limbs
@@ -159,6 +148,6 @@ func FlattenedKeyChunk(key *ringsis.Key, start, length, maxSize int) smartvector
 	startAt := start * key.NumLimbs()
 	numToWrite := length * key.NumLimbs()
 
-	copy(res[startAt:], FlattenedKey[:numToWrite])
+	copy(res[startAt:], flattenedKey[:numToWrite])
 	return smartvectors.NewRegular(res)
 }

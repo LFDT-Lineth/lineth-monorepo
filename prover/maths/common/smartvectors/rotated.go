@@ -2,6 +2,8 @@ package smartvectors
 
 import (
 	"fmt"
+	"iter"
+	"slices"
 
 	"github.com/consensys/linea-monorepo/prover/maths/field/fext"
 
@@ -72,6 +74,11 @@ func (r *Rotated) Get(n int) field.Element {
 		panic(err)
 	}
 	return res
+}
+
+func (r *Rotated) GetPtr(n int) *field.Element {
+	pos := utils.PositiveMod(n+r.offset, r.Len())
+	return &r.v.Regular[pos]
 }
 
 // Returns a particular element. The subvector is taken at indices
@@ -185,6 +192,24 @@ func (r *Rotated) IntoRegVecSaveAllocExt() []fext.Element {
 	return res
 }
 
+func (r *Rotated) IntoRegVec() []field.Element {
+	return *rotatedAsRegular(r)
+}
+
+// IterateCompact returns an iterator over the elements of the Rotated.
+// It is not very smart as it reallocate the slice but that should not
+// matter as this is never called in practice.
+func (r *Rotated) IterateCompact() iter.Seq[field.Element] {
+	all := r.IntoRegVec()
+	return slices.Values(all)
+}
+
+// IterateSkipPadding returns an interator over all the elements of the
+// smart-vector. The function reallocates under the hood.
+func (r *Rotated) IterateSkipPadding() iter.Seq[field.Element] {
+	return r.IterateCompact()
+}
+
 // SoftRotate converts v into a [SmartVector] representing the same
 // [SmartVector]. The function tries to not reallocate the result. This means
 // that changing the v can subsequently affects the result of this function.
@@ -197,9 +222,9 @@ func SoftRotate(v SmartVector, offset int) SmartVector {
 		return NewRotated(casted.v.Regular, utils.PositiveMod(offset+casted.offset, v.Len()))
 	case *PaddedCircularWindow:
 		return NewPaddedCircularWindow(
-			casted.window,
-			casted.paddingVal,
-			utils.PositiveMod(casted.offset+offset, casted.Len()),
+			casted.Window_,
+			casted.PaddingVal_,
+			utils.PositiveMod(casted.Offset_+offset, casted.Len()),
 			casted.Len(),
 		)
 	case *Constant:

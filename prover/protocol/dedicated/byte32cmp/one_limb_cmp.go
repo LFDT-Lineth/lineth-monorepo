@@ -5,6 +5,7 @@ import (
 
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
+	"github.com/consensys/linea-monorepo/prover/protocol/column"
 	"github.com/consensys/linea-monorepo/prover/protocol/dedicated"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
@@ -14,17 +15,17 @@ import (
 
 // OneLimbCmpCtx is a wizard subroutine responsible for computing the comparison
 // of two columns storing each a small value.
-type oneLimbCmpCtx struct {
+type OneLimbCmpCtx struct {
 
 	// A and B are the two columns being compared. The two columns should be
 	// preemptively constrained to be somewhat small enough so that they are
-	// lookup-able. There is a hard-limit at 64 bits.
-	a, b ifaces.Column
+	// lookup-able. There is A hard-limit at 64 bits.
+	A, B ifaces.Column
 
 	// NumBits is the maximum number of bits the absolute value of the
 	// difference between A and B can use. There is a hard limit at 64. It
 	// should be positive also.
-	numBits int
+	NumBits int
 
 	// Greater, Lower and Equal are binary and mutually exclusive columns
 	// indicating respectively if:
@@ -32,19 +33,19 @@ type oneLimbCmpCtx struct {
 	// 		- Greater[i]	= 1 => 	A[i] > B[i]
 	// 		- Equal[i] 		= 1 => 	A[i] == B[i]
 	// 		- Lower[i] 		= 1 => 	A[i] < B[i]
-	isGreater, isLower, isEqual ifaces.Column
+	IsGreater, IsLower, IsEqual ifaces.Column
 
-	// rangeChecked is an internal column which is assigned to:
+	// RangeChecked is an internal column which is assigned to:
 	//
-	//  	- Greater[i]	= 1 => 	rangeChecked[i] = A[i] - B[i]
-	// 		- Equal[i] 		= 1 => 	rangeChecked[i] = 0
-	// 		- Lower[i] 		= 1 => 	rangeChecked[i] = B[i] - A[i]
-	rangeChecked ifaces.Column
+	//  	- Greater[i]	= 1 => 	RangeChecked[i] = A[i] - B[i]
+	// 		- Equal[i] 		= 1 => 	RangeChecked[i] = 0
+	// 		- Lower[i] 		= 1 => 	RangeChecked[i] = B[i] - A[i]
+	RangeChecked ifaces.Column
 
 	// internalProverActions is a list of prover action coming from stuffs
 	// defered from other dedicated wizards. This includes the computation of
 	// isEqual which uses the IsZero dedicated wizard.
-	internalProverAction []wizard.ProverAction
+	InternalProverAction []wizard.ProverAction
 }
 
 // CmpSmallCols computes the comparison of two columns which are allegedly short
@@ -65,10 +66,11 @@ func CmpSmallCols(comp *wizard.CompiledIOP, a, b ifaces.Column, numBits int) (g,
 	}
 
 	var (
-		size    = a.Size()
-		round   = max(a.Round(), b.Round())
-		ctxName = func(subName string) string {
-			return fmt.Sprintf("CMP_ONE_LIMB_CTX_%v_%v_%v", a.GetColID(), b.GetColID(), subName)
+		size       = a.Size()
+		round      = max(a.Round(), b.Round())
+		identifier = len(comp.Columns.AllKeys())
+		ctxName    = func(subName string) string {
+			return fmt.Sprintf("CMP_ONE_LIMB_CTX_%v_%v", identifier, subName)
 		}
 
 		// Note: that isEqual is already constrained to be correctly formed.
@@ -78,11 +80,11 @@ func CmpSmallCols(comp *wizard.CompiledIOP, a, b ifaces.Column, numBits int) (g,
 		isLower             = comp.InsertCommit(round, ifaces.ColID(ctxName("IS_LOWER")), size)
 	)
 
-	res := &oneLimbCmpCtx{
-		a: a, b: b, numBits: numBits,
-		isGreater: isGreater, isEqual: isEqual, isLower: isLower,
-		internalProverAction: []wizard.ProverAction{isEqualCtx},
-		rangeChecked:         rangeChecked,
+	res := &OneLimbCmpCtx{
+		A: a, B: b, NumBits: numBits,
+		IsGreater: isGreater, IsEqual: isEqual, IsLower: isLower,
+		InternalProverAction: []wizard.ProverAction{isEqualCtx},
+		RangeChecked:         rangeChecked,
 	}
 
 	comp.InsertRange(
@@ -124,26 +126,45 @@ func CmpSmallCols(comp *wizard.CompiledIOP, a, b ifaces.Column, numBits int) (g,
 }
 
 // Run implements the [wizard.ProverAction] interface.
-func (ol *oneLimbCmpCtx) Run(run *wizard.ProverRuntime) {
+func (ol *OneLimbCmpCtx) Run(run *wizard.ProverRuntime) {
 
 	// This assigns isEqual. Therefore, only isGreater, isLower and rangeChecked
 	// need to be assigned.
-	ol.internalProverAction[0].Run(run)
+	ol.InternalProverAction[0].Run(run)
 
 	var (
-		a      = ol.a.GetColAssignment(run)
-		b      = ol.b.GetColAssignment(run)
-		length = a.Len()
-		g      = make([]field.Element, length)
-		l      = make([]field.Element, length)
-		rc     = make([]field.Element, length)
+		a         = ol.A.GetColAssignment(run)
+		b         = ol.B.GetColAssignment(run)
+		length    = a.Len()
+		g         = make([]field.Element, length)
+		l         = make([]field.Element, length)
+		rc        = make([]field.Element, length)
+		minOffset = min(column.StackOffsets(ol.A), column.StackOffsets(ol.B))
+		maxOffset = min(column.StackOffsets(ol.A), column.StackOffsets(ol.B))
 	)
 
 	for i := 0; i < a.Len(); i++ {
+
 		var (
 			aiF, biF = a.Get(i), b.Get(i)
 			ai, bi   = aiF.Uint64(), biF.Uint64()
 		)
+
+		// If we are in an area where A - B is outside the range of the
+		// constraints due to the column offset, then we can put any value in
+		// theory but with the limitless prover we have to account for the fact
+		// that the columns are going to be extended and it is safer to use the
+		// same value as initial/final constrained value so that the column
+		// extension stays valid.
+		if minOffset < 0 && i < -minOffset {
+			aiF, biF = a.Get(-minOffset), b.Get(-minOffset)
+			ai, bi = aiF.Uint64(), biF.Uint64()
+		}
+
+		if maxOffset > 0 && i >= a.Len()-maxOffset {
+			aiF, biF = a.Get(a.Len()-maxOffset-1), b.Get(a.Len()-maxOffset-1)
+			ai, bi = aiF.Uint64(), biF.Uint64()
+		}
 
 		if ai > bi {
 			g[i].SetOne()
@@ -156,7 +177,7 @@ func (ol *oneLimbCmpCtx) Run(run *wizard.ProverRuntime) {
 		}
 	}
 
-	run.AssignColumn(ol.isGreater.GetColID(), smartvectors.NewRegular(g))
-	run.AssignColumn(ol.isLower.GetColID(), smartvectors.NewRegular(l))
-	run.AssignColumn(ol.rangeChecked.GetColID(), smartvectors.NewRegular(rc))
+	run.AssignColumn(ol.IsGreater.GetColID(), smartvectors.NewRegular(g))
+	run.AssignColumn(ol.IsLower.GetColID(), smartvectors.NewRegular(l))
+	run.AssignColumn(ol.RangeChecked.GetColID(), smartvectors.NewRegular(rc))
 }

@@ -76,13 +76,11 @@ func TestVectorBaseBToBaseA(t *testing.T) {
 
 func TestRC(t *testing.T) {
 
-	numPerm := 5
-	numActiveRows := 5 * keccak.NumRound
-	rc := valRCBase2(numPerm)
+	rc := valRCBase2Pattern()
 
-	for i := 0; i < numActiveRows; i++ {
-		expected := keccak.RC[i%keccak.NumRound]
-		actual := BaseXToU64(rc.Get(i), &BaseBFr)
+	for i := range rc {
+		expected := keccak.RC[i]
+		actual := BaseXToU64(rc[i], &BaseBFr)
 		assert.Equal(t, expected, actual, "row %v", i)
 	}
 }

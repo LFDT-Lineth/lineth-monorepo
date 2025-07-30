@@ -1,46 +1,99 @@
 package exit
 
 import (
+	"math"
 	"os"
 	"runtime/debug"
+
+	"github.com/sirupsen/logrus"
 )
 
-var (
-	activateExitOnIssue bool
-)
-
-// ActivateExitOnIssue tells the program to actually exit when [OnLimitOverflow]
-// or [OnSatisfiedConstraints] are called. This has to be manually called at the
-// beginning of the program if we want the behavior to take place. This is
-// to avoid having it running in the tests.
-func ActivateExitOnIssue() {
-	activateExitOnIssue = true
-}
+// issueHandlingMode indicates how the backend should behave when receiving an
+// issue. With the default mode, the notification functions will panic. The
+// modes can be combined by union.
+type issueHandlingMode uint64
 
 const (
-	limitOverflowExitCode          = 77
+	// limitOverflowExitCode is the exit code used to tell the parent process
+	// know that a limit has been overflown.
+	limitOverflowExitCode = 77
+	// unsatisfiedConstraintExitCode is the exit code used to tell the parent
+	// process know that a constraint is not satisfied.
 	unsatisfiedConstraintsExitCode = 78
 )
+
+const (
+	ExitOnUnsatisfiedConstraint issueHandlingMode = 1 << iota
+	ExitOnLimitOverflow
+	ExitAlways = math.MaxUint64
+)
+
+// LimitOverflowReport collects information related to a limit that has been
+// overflown. It is used as a panic message when [PanicOnIssue] is set.
+type LimitOverflowReport struct {
+	Limit         int
+	RequestedSize int
+	Err           error
+}
+
+// UnsatisfiedConstraintError is a wrapper around an error to recognize errors
+// coming from unsatisfied constraints.
+type UnsatisfiedConstraintError struct {
+	error
+}
+
+var (
+	currentIssueHandlingMode issueHandlingMode // default to [PanicOnIssue]
+)
+
+// SetIssueHandlingMode sets the issue handling mode to the user-provided mode.
+// You can pass `ExitOnLimitOverflow|ExitOnUnsatisfiedConstraint` to signify
+// that the system should exit on either a limit overflow or an unsatisfied
+// constraint.
+func SetIssueHandlingMode(mode issueHandlingMode) {
+	currentIssueHandlingMode = mode
+}
+
+// GetIssueHandlingMode returns the current handling mode
+func GetIssueHandlingMode() issueHandlingMode {
+	return currentIssueHandlingMode
+}
 
 // This function will exit the program with the exit code [limitOverflowExitCode]
 // but only if the activateExitOnIssue flag is set to true. Otherwise, it will
 // just panic.
-func OnLimitOverflow() {
+func OnLimitOverflow(limit, requestedSize int, err error) {
 
-	debug.PrintStack()
+	logrus.Errorf("[LIMIT OVERFLOW] A limit overflow has been detected limit=%v requested=%v err=%v", limit, requestedSize, err.Error())
 
-	if !activateExitOnIssue {
-		panic("limit overflow")
+	if currentIssueHandlingMode&ExitOnLimitOverflow > 0 {
+		// The print stack is really useful to help locating where the problem
+		// originates from.
+		debug.PrintStack()
+		os.Exit(limitOverflowExitCode)
 	}
-	os.Exit(limitOverflowExitCode)
+
+	panic(LimitOverflowReport{
+		Limit:         limit,
+		RequestedSize: requestedSize,
+		Err:           err,
+	})
 }
 
-func OnUnsatisfiedConstraints() {
+// OnUnsatisfiedConstraints reports that a constraint is not satisfied.
+func OnUnsatisfiedConstraints(err error) {
 
 	debug.PrintStack()
 
-	if !activateExitOnIssue {
-		panic("unsatisfied constraints")
+	if currentIssueHandlingMode&ExitOnUnsatisfiedConstraint > 0 {
+
+		logrus.Errorf("[UNSATISFIED CONSTRAINTS] An unsatisfied constraint has been report. Going to exit. err=%v", err.Error())
+
+		// The print stack is really useful to help locating where the problem
+		// originates from.
+		debug.PrintStack()
+		os.Exit(unsatisfiedConstraintsExitCode)
 	}
-	os.Exit(unsatisfiedConstraintsExitCode)
+
+	panic(UnsatisfiedConstraintError{err})
 }

@@ -10,7 +10,7 @@ import (
 	"github.com/consensys/gnark/backend"
 	"github.com/consensys/gnark/test"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/dummy"
-	"github.com/consensys/linea-monorepo/prover/protocol/dedicated/plonk"
+	"github.com/consensys/linea-monorepo/prover/protocol/query"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	"github.com/consensys/linea-monorepo/prover/utils/csvtraces"
 )
@@ -100,7 +100,7 @@ func TestEcMulIntegration(t *testing.T) {
 				IsData:  ct.GetCommit(b, "IS_DATA"),
 				IsRes:   ct.GetCommit(b, "IS_RES"),
 			}
-			ecMul = newEcMul(b.CompiledIOP, limits, ecMulSource, []plonk.Option{plonk.WithRangecheck(16, 6, true)})
+			ecMul = newEcMul(b.CompiledIOP, limits, ecMulSource, []query.PlonkOption{query.PlonkRangeCheckOption(16, 6, true)})
 		},
 		dummy.Compile,
 	)

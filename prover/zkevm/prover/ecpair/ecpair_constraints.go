@@ -5,8 +5,8 @@ import (
 	"github.com/consensys/linea-monorepo/prover/protocol/column"
 	"github.com/consensys/linea-monorepo/prover/protocol/column/verifiercol"
 	"github.com/consensys/linea-monorepo/prover/protocol/dedicated"
-	"github.com/consensys/linea-monorepo/prover/protocol/dedicated/projection"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
+	"github.com/consensys/linea-monorepo/prover/protocol/query"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	sym "github.com/consensys/linea-monorepo/prover/symbolic"
 	common "github.com/consensys/linea-monorepo/prover/zkevm/prover/common/common_constraints"
@@ -53,19 +53,22 @@ func (ec *ECPair) csOffWhenInactive(comp *wizard.CompiledIOP) {
 
 func (ec *ECPair) csProjections(comp *wizard.CompiledIOP) {
 	// we project data from the arithmetization correctly to the unaligned part of the circuit
-	projection.InsertProjection(
-		comp, ifaces.QueryIDf("%v_PROJECTION_PAIRING", nameECPair),
-		[]ifaces.Column{ec.ECPairSource.Limb, ec.ECPairSource.ID, ec.ECPairSource.IsEcPairingResult},
-		[]ifaces.Column{ec.UnalignedPairingData.Limb, ec.UnalignedPairingData.InstanceID, ec.UnalignedPairingData.IsResultOfInstance},
-		ec.ECPairSource.CsEcpairing,
-		ec.UnalignedPairingData.IsPulling,
-	)
-	projection.InsertProjection(
-		comp, ifaces.QueryIDf("%v_PROJECTION_MEMBERSHIP", nameECPair),
-		[]ifaces.Column{ec.ECPairSource.Limb, ec.ECPairSource.SuccessBit},
-		[]ifaces.Column{ec.UnalignedG2MembershipData.Limb, ec.UnalignedG2MembershipData.SuccessBit},
-		ec.ECPairSource.CsG2Membership, ec.UnalignedG2MembershipData.IsPulling,
-	)
+	comp.InsertProjection(ifaces.QueryIDf("%v_PROJECTION_PAIRING", nameECPair),
+		query.ProjectionInput{
+			ColumnA: []ifaces.Column{ec.ECPairSource.Limb, ec.ECPairSource.ID, ec.ECPairSource.IsEcPairingResult},
+			ColumnB: []ifaces.Column{ec.UnalignedPairingData.Limb, ec.UnalignedPairingData.InstanceID, ec.UnalignedPairingData.IsResultOfInstance},
+			FilterA: ec.ECPairSource.CsEcpairing,
+			FilterB: ec.UnalignedPairingData.IsPulling,
+		})
+
+	comp.InsertProjection(
+		ifaces.QueryIDf("%v_PROJECTION_MEMBERSHIP", nameECPair),
+		query.ProjectionInput{
+			ColumnA: []ifaces.Column{ec.ECPairSource.Limb, ec.ECPairSource.SuccessBit},
+			ColumnB: []ifaces.Column{ec.UnalignedG2MembershipData.Limb, ec.UnalignedG2MembershipData.SuccessBit},
+			FilterA: ec.ECPairSource.CsG2Membership,
+			FilterB: ec.UnalignedG2MembershipData.IsPulling,
+		})
 }
 
 func (ec *ECPair) csMembershipComputedResult(comp *wizard.CompiledIOP) {
@@ -116,7 +119,7 @@ func (ec *ECPair) csInstanceIDChangeWhenNewInstance(comp *wizard.CompiledIOP) {
 		roundNr,
 		ifaces.QueryIDf("%v_INSTANCE_ID_CHANGE", nameECPair),
 		sym.Mul(
-			column.Shift(verifiercol.NewConstantCol(field.One(), ec.UnalignedPairingData.IsActive.Size()), -1), // this "useless" line helps cancelling the constraint on the first row
+			column.Shift(verifiercol.NewConstantCol(field.One(), ec.UnalignedPairingData.IsActive.Size(), "ecpair-cancelling-first-row"), -1), // this "useless" line helps cancelling the constraint on the first row
 			ec.UnalignedPairingData.IsActive,
 			ec.UnalignedPairingData.IsFirstLineOfInstance,
 			ec.UnalignedPairingData.InstanceID,
@@ -151,12 +154,12 @@ func (ec *ECPair) csAccumulatorInit(comp *wizard.CompiledIOP) {
 
 func (ec *ECPair) csAccumulatorConsistency(comp *wizard.CompiledIOP) {
 	// that the accumulator between pairs is consistent
-	projection.InsertProjection(
-		comp,
+	comp.InsertProjection(
 		ifaces.QueryIDf("%v_ACCUMULATOR_CONSISTENCY", nameECPair),
-		[]ifaces.Column{ec.UnalignedPairingData.Limb}, []ifaces.Column{ec.UnalignedPairingData.Limb},
-		ec.UnalignedPairingData.IsAccumulatorCurr, ec.UnalignedPairingData.IsAccumulatorPrev,
-	)
+		query.ProjectionInput{ColumnA: []ifaces.Column{ec.UnalignedPairingData.Limb},
+			ColumnB: []ifaces.Column{ec.UnalignedPairingData.Limb},
+			FilterA: ec.UnalignedPairingData.IsAccumulatorCurr,
+			FilterB: ec.UnalignedPairingData.IsAccumulatorPrev})
 }
 
 func (ec *ECPair) csTotalPairs(comp *wizard.CompiledIOP) {

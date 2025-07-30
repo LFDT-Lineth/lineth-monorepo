@@ -12,7 +12,7 @@ import (
 // The function is kept here for reproducibility.
 //
 //lint:ignore U1000 Ignore unused function temporarily for debugging
-func generateImportation(run *wizard.ProverRuntime, mod importation, path string) {
+func generateImportation(run *wizard.ProverRuntime, mod Importation, path string) {
 
 	var (
 		limbs      = mod.Limbs.GetColAssignment(run).IntoRegVecSaveAlloc()

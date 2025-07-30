@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/dummy"
+	"github.com/consensys/linea-monorepo/prover/protocol/distributed/pragmas"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	"github.com/consensys/linea-monorepo/prover/utils"
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/common"
@@ -14,7 +15,7 @@ import (
 // It generates Define and Assign function of Packing module, for testing
 func makeTestCaseCLDModule(uc generic.HashingUsecase) (
 	define wizard.DefineFunc,
-	prover wizard.ProverStep,
+	prover wizard.MainProverStep,
 ) {
 	var (
 		// max number of blocks that can be extracted from limbs
@@ -37,17 +38,17 @@ func makeTestCaseCLDModule(uc generic.HashingUsecase) (
 		comp := build.CompiledIOP
 		imported = createImportationColumns(comp, size)
 
-		createCol := common.CreateColFn(comp, CLEANING, imported.Limb.Size())
+		createCol := common.CreateColFn(comp, CLEANING, imported.Limb.Size(), pragmas.RightPadded)
 		ctx = cleaningCtx{
 			CleanLimb: createCol("CleanLimb"),
 			Inputs: &cleaningInputs{
-				imported: imported,
-				lookup:   NewLookupTables(comp)},
+				Imported: imported,
+				Lookup:   NewLookupTables(comp)},
 		}
 
 		inp := decompositionInputs{
-			param:       uc,
-			cleaningCtx: ctx,
+			Param:       uc,
+			CleaningCtx: ctx,
 		}
 
 		decomposed = newDecomposition(comp, inp)

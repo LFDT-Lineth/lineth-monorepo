@@ -5,7 +5,7 @@ import (
 
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/dummy"
-	"github.com/consensys/linea-monorepo/prover/protocol/compiler/lookup"
+	"github.com/consensys/linea-monorepo/prover/protocol/compiler/logderivativesum"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	"github.com/stretchr/testify/require"
 )
@@ -30,7 +30,7 @@ func TestRangWithLogDerivCompiler(t *testing.T) {
 		run.AssignColumn("B", colb)
 	}
 
-	comp := wizard.Compile(define, RangeProof, lookup.CompileLogDerivative, dummy.Compile)
+	comp := wizard.Compile(define, RangeProof, logderivativesum.CompileLookups, dummy.Compile)
 	proof := wizard.Prove(comp, prover)
 	err := wizard.Verify(comp, proof)
 	require.NoError(t, err)

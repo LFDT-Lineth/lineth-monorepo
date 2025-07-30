@@ -3,10 +3,11 @@ package keccak
 import (
 	"bytes"
 	"errors"
-	"github.com/consensys/linea-monorepo/prover/utils"
 	"hash"
 	"math/big"
 	"slices"
+
+	"github.com/consensys/linea-monorepo/prover/utils"
 
 	"github.com/consensys/gnark/constraint/solver"
 	"github.com/consensys/gnark/frontend"
@@ -45,7 +46,7 @@ type CompiledStrictHasher struct {
 
 // StrictHasherCircuit is to be embedded in a gnark circuit
 type StrictHasherCircuit struct {
-	Wc           *wizard.WizardVerifierCircuit
+	Wc           *wizard.VerifierCircuit
 	Ins          [][][2]frontend.Variable // every 32-byte block is prepacked into 2 16-byte blocks
 	InLengths    []frontend.Variable      // actual lengths of the inputs
 	maxNbKeccakF int

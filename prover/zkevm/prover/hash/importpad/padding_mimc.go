@@ -8,18 +8,18 @@ import (
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/hash/generic"
 )
 
-// mimcPadder implements the [padder] interface and zero-pads the input streams.
+// MimcPadder implements the [padder] interface and zero-pads the input streams.
 // The padding is not resistant to padding-attavcks so it should be used very
 // carefully: either in situations where the length of the message is encoded
 // within the message itself or in situation where the length of the message is
 // available through other means.
-type mimcPadder struct{}
+type MimcPadder struct{}
 
 type mimcPadderAssignmentBuilder struct{}
 
 // newMimcPadder creates the constraints ensuring that the zero-padding and
 // returns an object helping with the assignment.
-func (ipad *importation) newMimcPadder(comp *wizard.CompiledIOP) padder {
+func (ipad *Importation) newMimcPadder(comp *wizard.CompiledIOP) padder {
 
 	// The padding values are all zero
 	comp.InsertGlobal(0,
@@ -38,10 +38,10 @@ func (ipad *importation) newMimcPadder(comp *wizard.CompiledIOP) padder {
 		ipad.IsPadded,
 	)
 
-	return mimcPadder{}
+	return MimcPadder{}
 }
 
-func (sp mimcPadder) pushPaddingRows(byteStringSize int, ipad *importationAssignmentBuilder) {
+func (sp MimcPadder) pushPaddingRows(byteStringSize int, ipad *importationAssignmentBuilder) {
 
 	var (
 		blocksize      = generic.MiMCUsecase.BlockSizeBytes()

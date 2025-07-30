@@ -56,7 +56,7 @@ func fullSuite() []func(*wizard.CompiledIOP) {
 
 	return []func(*wizard.CompiledIOP){
 		mimc.CompileMiMC,
-		compiler.Arcane(1<<10, 1<<19, false),
+		compiler.Arcane(compiler.WithTargetColSize(1 << 19)),
 		vortex.Compile(
 			2,
 			vortex.ForceNumOpenedColumns(256),
@@ -66,7 +66,7 @@ func fullSuite() []func(*wizard.CompiledIOP) {
 		selfrecursion.SelfRecurse,
 		cleanup.CleanUp,
 		mimc.CompileMiMC,
-		compiler.Arcane(1<<10, 1<<18, false),
+		compiler.Arcane(compiler.WithTargetColSize(1 << 18)),
 		vortex.Compile(
 			2,
 			vortex.ForceNumOpenedColumns(256),
@@ -76,7 +76,7 @@ func fullSuite() []func(*wizard.CompiledIOP) {
 		selfrecursion.SelfRecurse,
 		cleanup.CleanUp,
 		mimc.CompileMiMC,
-		compiler.Arcane(1<<10, 1<<16, false),
+		compiler.Arcane(compiler.WithTargetColSize(1 << 16)),
 		vortex.Compile(
 			8,
 			vortex.ForceNumOpenedColumns(64),
@@ -86,11 +86,10 @@ func fullSuite() []func(*wizard.CompiledIOP) {
 		selfrecursion.SelfRecurse,
 		cleanup.CleanUp,
 		mimc.CompileMiMC,
-		compiler.Arcane(1<<10, 1<<13, false),
+		compiler.Arcane(compiler.WithTargetColSize(1 << 13)),
 		vortex.Compile(
 			8,
 			vortex.ForceNumOpenedColumns(64),
-			vortex.ReplaceSisByMimc(),
 		),
 	}
 }

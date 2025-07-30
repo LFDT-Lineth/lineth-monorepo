@@ -3,6 +3,7 @@ package base_conversion
 import (
 	"github.com/consensys/linea-monorepo/prover/maths/common/vector"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
+	"github.com/consensys/linea-monorepo/prover/protocol/distributed/pragmas"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	sym "github.com/consensys/linea-monorepo/prover/symbolic"
@@ -22,24 +23,24 @@ type HashBaseConversionInput struct {
 	Lookup        lookUpTables
 }
 
-type hashBaseConversion struct {
+type HashBaseConversion struct {
 	Inputs *HashBaseConversionInput
 	// hash limbs in uint-BE
-	limbsHi, limbsLo []ifaces.Column
+	LimbsHi, LimbsLo []ifaces.Column
 	// it indicates the active part of HashHi/HashLo
 	IsActive ifaces.Column
 	// the hash result in BE
 	HashLo, HashHi ifaces.Column
-	size           int
+	Size           int
 }
 
 // NewHashBaseConversion declare the intermediate columns,
 // and the constraints for changing the hash result from BaseB-LE to uint-BE.
-func NewHashBaseConversion(comp *wizard.CompiledIOP, inp HashBaseConversionInput) *hashBaseConversion {
+func NewHashBaseConversion(comp *wizard.CompiledIOP, inp HashBaseConversionInput) *HashBaseConversion {
 
-	h := &hashBaseConversion{
+	h := &HashBaseConversion{
 		Inputs:   &inp,
-		size:     utils.NextPowerOfTwo(inp.MaxNumKeccakF),
+		Size:     utils.NextPowerOfTwo(inp.MaxNumKeccakF),
 		IsActive: inp.IsActive,
 	}
 	// declare the columns
@@ -51,23 +52,23 @@ func NewHashBaseConversion(comp *wizard.CompiledIOP, inp HashBaseConversionInput
 }
 
 // it declares the native columns
-func (h *hashBaseConversion) DeclareColumns(comp *wizard.CompiledIOP) {
+func (h *HashBaseConversion) DeclareColumns(comp *wizard.CompiledIOP) {
 
-	createCol := common.CreateColFn(comp, HASH_OUTPUT, h.size)
-	h.limbsHi = make([]ifaces.Column, numLimbsOutput)
-	h.limbsLo = make([]ifaces.Column, numLimbsOutput)
+	createCol := common.CreateColFn(comp, HASH_OUTPUT, h.Size, pragmas.RightPadded)
+	h.LimbsHi = make([]ifaces.Column, numLimbsOutput)
+	h.LimbsLo = make([]ifaces.Column, numLimbsOutput)
 
 	h.HashLo = createCol("Hash_Lo")
 	h.HashHi = createCol("Hash_Hi")
 
 	for i := 0; i < numLimbsOutput; i++ {
-		h.limbsHi[i] = createCol("Limbs_Hi_%v", i)
-		h.limbsLo[i] = createCol("Limbs_Lo_%v", i)
+		h.LimbsHi[i] = createCol("Limbs_Hi_%v", i)
+		h.LimbsLo[i] = createCol("Limbs_Lo_%v", i)
 	}
 }
 
 // constraints over decomposition of HashHi and HashLo to limbs.
-func (h *hashBaseConversion) csDecompose(comp *wizard.CompiledIOP) {
+func (h *HashBaseConversion) csDecompose(comp *wizard.CompiledIOP) {
 
 	var (
 		sliceLoB = make([]ifaces.Column, numLimbsOutput)
@@ -84,20 +85,20 @@ func (h *hashBaseConversion) csDecompose(comp *wizard.CompiledIOP) {
 	for j := range sliceLoB {
 		comp.InsertInclusion(0, ifaces.QueryIDf("BaseConversion_HashOutput_LO_%v", j),
 			[]ifaces.Column{lookup.ColBaseBDirty, lookup.ColUint4},
-			[]ifaces.Column{sliceLoB[j], h.limbsLo[j]})
+			[]ifaces.Column{sliceLoB[j], h.LimbsLo[j]})
 
 		comp.InsertInclusion(0, ifaces.QueryIDf("BaseConversion_HashOutput_HI_%v", j),
 			[]ifaces.Column{lookup.ColBaseBDirty, lookup.ColUint4},
-			[]ifaces.Column{sliceHiB[j], h.limbsHi[j]})
+			[]ifaces.Column{sliceHiB[j], h.LimbsHi[j]})
 
 	}
 
 	// recomposition of limbsHi into HashHi
 	res := sym.NewConstant(0)
-	for k := len(h.limbsHi) - 1; k >= 0; k-- {
+	for k := len(h.LimbsHi) - 1; k >= 0; k-- {
 		res = sym.Add(
 			sym.Mul(POWER4, res),
-			h.limbsHi[k])
+			h.LimbsHi[k])
 	}
 
 	comp.InsertGlobal(0, ifaces.QueryIDf("RECOMPSE_TO_HASH_HI"),
@@ -106,10 +107,10 @@ func (h *hashBaseConversion) csDecompose(comp *wizard.CompiledIOP) {
 
 	// recomposition of limbsLo into HashLo
 	res = sym.NewConstant(0)
-	for k := len(h.limbsHi) - 1; k >= 0; k-- {
+	for k := len(h.LimbsHi) - 1; k >= 0; k-- {
 		res = sym.Add(
 			sym.Mul(POWER4, res),
-			h.limbsLo[k])
+			h.LimbsLo[k])
 	}
 
 	comp.InsertGlobal(0, ifaces.QueryIDf("RECOMPSE_TO_HASH_LO"),
@@ -119,7 +120,7 @@ func (h *hashBaseConversion) csDecompose(comp *wizard.CompiledIOP) {
 }
 
 // It assigns the columns specific to the module.
-func (h *hashBaseConversion) Run(
+func (h *HashBaseConversion) Run(
 	run *wizard.ProverRuntime,
 ) {
 
@@ -128,7 +129,7 @@ func (h *hashBaseConversion) Run(
 		limbsLoB = make([][]field.Element, numLimbsOutput)
 		limbsHi  = make([]*common.VectorBuilder, numLimbsOutput)
 		limbsLo  = make([]*common.VectorBuilder, numLimbsOutput)
-		size     = h.size
+		size     = h.Size
 		v        = make([][]field.Element, numLimbsOutput)
 		w        = make([][]field.Element, numLimbsOutput)
 		hashHi   = common.NewVectorBuilder(h.HashHi)
@@ -138,8 +139,8 @@ func (h *hashBaseConversion) Run(
 	for i := range h.Inputs.LimbsHiB {
 		limbsHiB[i] = h.Inputs.LimbsHiB[i].GetColAssignment(run).IntoRegVecSaveAlloc()
 		limbsLoB[i] = h.Inputs.LimbsLoB[i].GetColAssignment(run).IntoRegVecSaveAlloc()
-		limbsHi[i] = common.NewVectorBuilder(h.limbsHi[i])
-		limbsLo[i] = common.NewVectorBuilder(h.limbsLo[i])
+		limbsHi[i] = common.NewVectorBuilder(h.LimbsHi[i])
+		limbsLo[i] = common.NewVectorBuilder(h.LimbsLo[i])
 	}
 
 	copy(v, limbsLoB[:])

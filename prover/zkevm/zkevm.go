@@ -19,37 +19,35 @@ import (
 type ZkEvm struct {
 	// Arithmetization definition function. Generated during the compilation
 	// process.
-	arithmetization *arithmetization.Arithmetization
+	Arithmetization *arithmetization.Arithmetization `json:"arithmetization"`
 	// Keccak module in use. Generated during the compilation process.
-	keccak *keccak.KeccakZkEVM
+	Keccak *keccak.KeccakZkEVM `json:"keccak"`
 	// State manager module in use. Generated during the compilation process.
-	stateManager *statemanager.StateManager
+	StateManager *statemanager.StateManager `json:"stateManager"`
 	// PublicInput gives access to the public inputs of the wizard-IOP and is
 	// used to access them to define the outer-circuit.
-	PublicInput *publicInput.PublicInput
-	// ecdsa is the module responsible for verifying the ecdsa tx signatures and
+	PublicInput *publicInput.PublicInput `json:"publicInput"`
+	// Ecdsa is the module responsible for verifying the Ecdsa tx signatures and
 	// ecrecover
-	ecdsa *ecdsa.EcdsaZkEvm
-
-	// modexp is the module responsible for proving the calls to the modexp
+	Ecdsa *ecdsa.EcdsaZkEvm `json:"ecdsa"`
+	// Modexp is the module responsible for proving the calls to the Modexp
 	// precompile
-	modexp *modexp.Module
-	// ecadd is the module responsible for proving the calls to the ecadd
+	Modexp *modexp.Module `json:"modexp"`
+	// Ecadd is the module responsible for proving the calls to the Ecadd
 	// precompile
-	ecadd *ecarith.EcAdd
-	// ecmul is the module responsible for proving the calls to the ecmul
+	Ecadd *ecarith.EcAdd `json:"ecadd"`
+	// Ecmul is the module responsible for proving the calls to the Ecmul
 	// precompile
-	ecmul *ecarith.EcMul
-	// ecpair is the module responsible for the proving the calls the ecpairing
+	Ecmul *ecarith.EcMul `json:"ecmul"`
+	// Ecpair is the module responsible for the proving the calls the ecpairing
 	// precompile
-	ecpair *ecpair.ECPair
-	// sha2 is the module responsible for doing the computation of the sha2
+	Ecpair *ecpair.ECPair `json:"ecpair"`
+	// Sha2 is the module responsible for doing the computation of the Sha2
 	// precompile.
-	sha2 *sha2.Sha2SingleProvider
-
+	Sha2 *sha2.Sha2SingleProvider `json:"sha2"`
 	// Contains the actual wizard-IOP compiled object. This object is called to
 	// generate the inner-proof.
-	WizardIOP *wizard.CompiledIOP
+	WizardIOP *wizard.CompiledIOP `json:"wizardIOP"`
 }
 
 // NewZkEVM instantiates a new ZkEvm instance. The function returns a fully
@@ -67,7 +65,10 @@ func NewZkEVM(
 		define = func(b *wizard.Builder) {
 			res = newZkEVM(b, &settings)
 		}
-		wizardIOP = wizard.Compile(define, settings.CompilationSuite...).BootstrapFiatShamir(settings.Metadata, serialization.SerializeCompiledIOP)
+		ser = func(wizardIOP *wizard.CompiledIOP) ([]byte, error) {
+			return serialization.Serialize(wizardIOP)
+		}
+		wizardIOP = wizard.Compile(define, settings.CompilationSuite...).BootstrapFiatShamir(settings.Metadata, ser)
 	)
 
 	res.WizardIOP = wizardIOP
@@ -77,7 +78,7 @@ func NewZkEVM(
 // Prove assigns and runs the inner-prover of the zkEVM and then, it returns the
 // inner-proof
 func (z *ZkEvm) ProveInner(input *Witness) wizard.Proof {
-	return wizard.Prove(z.WizardIOP, z.prove(input))
+	return wizard.Prove(z.WizardIOP, z.GetMainProverStep(input))
 }
 
 // Verify verifies the inner-proof of the zkEVM
@@ -106,38 +107,38 @@ func newZkEVM(b *wizard.Builder, s *Settings) *ZkEvm {
 	)
 
 	return &ZkEvm{
-		arithmetization: arith,
-		ecdsa:           ecdsa,
-		stateManager:    stateManager,
-		keccak:          keccak,
-		modexp:          modexp,
-		ecadd:           ecadd,
-		ecmul:           ecmul,
-		ecpair:          ecpair,
-		sha2:            sha2,
+		Arithmetization: arith,
+		Ecdsa:           ecdsa,
+		StateManager:    stateManager,
+		Keccak:          keccak,
+		Modexp:          modexp,
+		Ecadd:           ecadd,
+		Ecmul:           ecmul,
+		Ecpair:          ecpair,
+		Sha2:            sha2,
 		PublicInput:     &publicInput,
 	}
 }
 
 // Returns a prover function for the zkEVM module. The resulting function is
 // aimed to be passed to the wizard.Prove function.
-func (z *ZkEvm) prove(input *Witness) (prover wizard.ProverStep) {
+func (z *ZkEvm) GetMainProverStep(input *Witness) (prover wizard.MainProverStep) {
 	return func(run *wizard.ProverRuntime) {
 
 		// Assigns the arithmetization module. From Corset. Must be done first
 		// because the following modules use the content of these columns to
 		// assign themselves.
-		z.arithmetization.Assign(run, input.ExecTracesFPath)
+		z.Arithmetization.Assign(run, input.ExecTracesFPath)
 
 		// Assign the state-manager module
-		z.ecdsa.Assign(run, input.TxSignatureGetter, len(input.TxSignatures))
-		z.stateManager.Assign(run, input.SMTraces)
-		z.keccak.Run(run)
-		z.modexp.Assign(run)
-		z.ecadd.Assign(run)
-		z.ecmul.Assign(run)
-		z.ecpair.Assign(run)
-		z.sha2.Run(run)
+		z.Ecdsa.Assign(run, input.TxSignatureGetter, len(input.TxSignatures))
+		z.StateManager.Assign(run, input.SMTraces)
+		z.Keccak.Run(run)
+		z.Modexp.Assign(run)
+		z.Ecadd.Assign(run)
+		z.Ecmul.Assign(run)
+		z.Ecpair.Assign(run)
+		z.Sha2.Run(run)
 		z.PublicInput.Assign(run, input.L2BridgeAddress, input.BlockHashList)
 	}
 }
@@ -145,5 +146,5 @@ func (z *ZkEvm) prove(input *Witness) (prover wizard.ProverStep) {
 // Limits returns the configuration limits used to instantiate the current
 // zk-EVM.
 func (z *ZkEvm) Limits() *config.TracesLimits {
-	return z.arithmetization.Settings.Limits
+	return z.Arithmetization.Settings.Limits
 }

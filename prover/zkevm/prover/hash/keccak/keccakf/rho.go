@@ -16,7 +16,7 @@ import (
 // permutation.
 type rho struct {
 	// State after the rotation by LR in base B
-	aRho [5][5]ifaces.Column
+	ARho [5][5]ifaces.Column
 	// The  decomposition of slice cut by the rotation LR
 	TargetSliceDecompose [5][5][numChunkBaseX]ifaces.Column
 }
@@ -47,7 +47,7 @@ func (r *rho) declareColumns(comp *wizard.CompiledIOP, round, numKeccakf int) {
 	colSize := numRows(numKeccakf)
 	for x := 0; x < 5; x++ {
 		for y := 0; y < 5; y++ {
-			r.aRho[x][y] = comp.InsertCommit(
+			r.ARho[x][y] = comp.InsertCommit(
 				round,
 				deriveName("A_RHO", x, y),
 				colSize,
@@ -129,7 +129,7 @@ func (r *rho) checkConvertAndRotateLr(
 		round,
 		ifaces.QueryIDf("KECCAKF_CONVERT_ROTATE_LAZY_%v_%v", x, y),
 		BaseRecomposeSliceExpr(rotated, BaseB).
-			Sub(ifaces.ColumnAsVariable(r.aRho[x][y])),
+			Sub(ifaces.ColumnAsVariable(r.ARho[x][y])),
 	)
 }
 
@@ -284,12 +284,12 @@ func (r *rho) assign(
 	})
 
 	// Assigns the columns
-	colSize := r.aRho[0][0].Size()
+	colSize := r.ARho[0][0].Size()
 
 	for x := 0; x < 5; x++ {
 		for y := 0; y < 5; y++ {
 			run.AssignColumn(
-				r.aRho[x][y].GetColID(),
+				r.ARho[x][y].GetColID(),
 				smartvectors.RightZeroPadded(aRho[x][y], colSize),
 			)
 

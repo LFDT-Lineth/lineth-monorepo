@@ -13,11 +13,15 @@ import (
 type ConstCol struct {
 	F     field.Element
 	Size_ int
+	Name  string
 }
 
-// NewConstCol creates a new ConstCol column
-func NewConstantCol(f field.Element, size int) ifaces.Column {
-	return ConstCol{F: f, Size_: size}
+// NewConstCol creates a new ConstCol column. The function take also an optional
+// identifier that can be added in the name. Without it, the column will be
+// identified by its size and its not what we want for the bootstrapper as the
+// wizard should be elastic.
+func NewConstantCol(f field.Element, size int, name string) ifaces.Column {
+	return ConstCol{F: f, Size_: size, Name: name}
 }
 
 // Returns the round of definition of the column (always zero)
@@ -29,6 +33,9 @@ func (cc ConstCol) Round() int {
 
 // Returns a generic name from the column. Defined from the coin's.
 func (cc ConstCol) GetColID() ifaces.ColID {
+	if len(cc.Name) > 0 {
+		return ifaces.ColIDf("CONSTCOL_%v_%v", cc.F.String(), cc.Name)
+	}
 	return ifaces.ColIDf("CONSTCOL_%v_%v", cc.F.String(), cc.Size_)
 }
 
@@ -84,5 +91,5 @@ func (cc ConstCol) Split(comp *wizard.CompiledIOP, from, to int) ifaces.Column {
 	}
 
 	// Copy the underlying cc, and assigns the new from and to
-	return NewConstantCol(cc.F, to-from)
+	return NewConstantCol(cc.F, to-from, cc.Name)
 }

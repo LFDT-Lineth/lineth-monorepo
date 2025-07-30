@@ -9,6 +9,7 @@ import (
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/dummy"
 	"github.com/consensys/linea-monorepo/prover/protocol/dedicated/merkle"
+	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	"github.com/consensys/linea-monorepo/prover/utils"
 	"github.com/consensys/linea-monorepo/prover/utils/types"
@@ -207,31 +208,51 @@ func assertCorrectMerkleProof(t *testing.T, builder *assignmentBuilder) {
 }
 
 func assertCorrectMerkleProofsUsingWizard(t *testing.T, builder *assignmentBuilder) {
-	smallSize := utils.NextPowerOfTwo(builder.MaxNumProofs)
-	largeSize := utils.NextPowerOfTwo(builder.MaxNumProofs * builder.MerkleTreeDepth)
-	define := func(b *wizard.Builder) {
-		proofcol := b.RegisterCommit("PROOF", largeSize)
-		rootscol := b.RegisterCommit("ROOTS", smallSize)
-		leavescol := b.RegisterCommit("LEAVES", smallSize)
-		poscol := b.RegisterCommit("POS", smallSize)
-		useNextMerkleProofCol := b.RegisterCommit("REUSE_NEXT_PROOF", smallSize)
-		isActiveCol := b.RegisterCommit("IS_ACTIVE", smallSize)
-		counterCol := b.RegisterCommit("COUNTER", smallSize)
 
-		merkle.MerkleProofCheckWithReuse(b.CompiledIOP, "TEST", builder.MerkleTreeDepth, builder.MaxNumProofs, proofcol, rootscol, leavescol, poscol, useNextMerkleProofCol, isActiveCol, counterCol)
+	var (
+		merkleVerification    *merkle.FlatMerkleProofVerification
+		size                  = utils.NextPowerOfTwo(builder.MaxNumProofs)
+		proofcol              *merkle.FlatProof
+		rootscol              ifaces.Column
+		leavescol             ifaces.Column
+		poscol                ifaces.Column
+		useNextMerkleProofCol ifaces.Column
+		isActiveCol           ifaces.Column
+	)
+
+	define := func(b *wizard.Builder) {
+		proofcol = merkle.NewProof(b.CompiledIOP, 0, "PROOF", builder.MerkleTreeDepth, size)
+		rootscol = b.RegisterCommit("ROOTS", size)
+		leavescol = b.RegisterCommit("LEAVES", size)
+		poscol = b.RegisterCommit("POS", size)
+		useNextMerkleProofCol = b.RegisterCommit("REUSE_NEXT_PROOF", size)
+		isActiveCol = b.RegisterCommit("IS_ACTIVE", size)
+
+		merkleVerification = merkle.CheckFlatMerkleProofs(
+			b.CompiledIOP,
+			merkle.FlatProofVerificationInputs{
+				Name:     "TEST",
+				Proof:    *proofcol,
+				Roots:    rootscol,
+				Leaf:     leavescol,
+				Position: poscol,
+				IsActive: isActiveCol,
+			},
+		)
+
+		merkleVerification.AddProofReuseConstraint(b.CompiledIOP, useNextMerkleProofCol)
 	}
 
 	prove := func(run *wizard.ProverRuntime) {
-		proofs := merkle.PackMerkleProofs(builder.proofs)
-		proofsReg := smartvectors.IntoRegVec(proofs)
-		proofPadded := smartvectors.RightZeroPadded(proofsReg, largeSize)
-		run.AssignColumn("PROOF", proofPadded)
-		run.AssignColumn("ROOTS", smartvectors.RightZeroPadded(builder.roots, smallSize))
-		run.AssignColumn("LEAVES", smartvectors.RightZeroPadded(builder.leaves, smallSize))
-		run.AssignColumn("POS", smartvectors.RightZeroPadded(builder.positions, smallSize))
-		run.AssignColumn("REUSE_NEXT_PROOF", smartvectors.RightZeroPadded(builder.useNextMerkleProof, smallSize))
-		run.AssignColumn("IS_ACTIVE", smartvectors.RightZeroPadded(builder.isActive, smallSize))
-		run.AssignColumn("COUNTER", smartvectors.RightZeroPadded(builder.accumulatorCounter, smallSize))
+
+		proofcol.Assign(run, builder.proofs)
+		run.AssignColumn("ROOTS", smartvectors.RightZeroPadded(builder.roots, size))
+		run.AssignColumn("LEAVES", smartvectors.RightZeroPadded(builder.leaves, size))
+		run.AssignColumn("POS", smartvectors.RightZeroPadded(builder.positions, size))
+		run.AssignColumn("REUSE_NEXT_PROOF", smartvectors.RightZeroPadded(builder.useNextMerkleProof, size))
+		run.AssignColumn("IS_ACTIVE", smartvectors.RightZeroPadded(builder.isActive, size))
+
+		merkleVerification.Run(run)
 	}
 
 	comp := wizard.Compile(define, dummy.Compile)

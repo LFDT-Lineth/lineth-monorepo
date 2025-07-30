@@ -11,7 +11,7 @@ import (
 	fr_secp256k1 "github.com/consensys/gnark-crypto/ecc/secp256k1/fr"
 	"github.com/consensys/linea-monorepo/prover/crypto/keccak"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/dummy"
-	"github.com/consensys/linea-monorepo/prover/protocol/dedicated/plonk"
+	"github.com/consensys/linea-monorepo/prover/protocol/query"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	"github.com/consensys/linea-monorepo/prover/utils"
 	"github.com/consensys/linea-monorepo/prover/utils/csvtraces"
@@ -68,11 +68,11 @@ func TestAntichamber(t *testing.T) {
 			ac = newAntichamber(
 				b.CompiledIOP,
 				&antichamberInput{
-					ecSource:     ecSrc,
-					txSource:     txSrc,
-					rlpTxn:       rlpTxn,
-					plonkOptions: []plonk.Option{plonk.WithRangecheck(16, 6, true)},
-					settings:     limits,
+					EcSource:     ecSrc,
+					TxSource:     txSrc,
+					RlpTxn:       rlpTxn,
+					PlonkOptions: []query.PlonkOption{query.PlonkRangeCheckOption(16, 6, true)},
+					Settings:     limits,
 				},
 			)
 		},

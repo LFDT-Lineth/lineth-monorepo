@@ -45,6 +45,10 @@ type VerifierInputs struct {
 	RandomCoin field.Element
 	// EntryList is the random coin representing the columns to open.
 	EntryList []int
+	// Flag indicating if the SIS hash is replaced for the particular round
+	// the default behavior is to use the SIS hash function along with the
+	// MiMC hash function
+	IsSISReplacedByMiMC []bool
 }
 
 // VerifyOpening verifies a Vortex opening proof, see [VerifierInputs] for
@@ -166,11 +170,16 @@ func (v *VerifierInputs) checkColumnInclusion() error {
 	var (
 		mTreeHashConfig = &smt.Config{
 			HashFunc: func() hashtypes.Hasher {
-				return hashtypes.Hasher{Hash: v.Params.HashFunc()}
+				return hashtypes.Hasher{Hash: v.Params.MerkleHashFunc()}
 			},
 			Depth: utils.Log2Ceil(v.Params.NumEncodedCols()),
 		}
 	)
+
+	// If IsSISReplacedByMiMC is not assigned, we assign them with default false values
+	if v.IsSISReplacedByMiMC == nil {
+		v.IsSISReplacedByMiMC = make([]bool, len(v.MerkleRoots))
+	}
 
 	for i := 0; i < len(v.MerkleRoots); i++ {
 		for j := 0; j < len(v.EntryList); j++ {
@@ -183,15 +192,15 @@ func (v *VerifierInputs) checkColumnInclusion() error {
 				root           = v.MerkleRoots[i]
 				mProof         = v.OpeningProof.MerkleProofs[i][j]
 			)
-
-			if !v.Params.HasSisReplacement() {
-
+			// We verify the SIS hash of the current sub-column
+			// only if the SIS hash is applied for the current round.
+			if !v.IsSISReplacedByMiMC[i] {
 				var (
 					// SIS hash of the current sub-column
 					sisHash = v.Params.Key.Hash(selectedSubCol)
 					// hasher used to hash the SIS hash (and thus not a hasher
 					// based on SIS)
-					hasher = v.Params.HashFunc()
+					hasher = v.Params.LeafHashFunc()
 				)
 
 				hasher.Reset()
@@ -202,8 +211,9 @@ func (v *VerifierInputs) checkColumnInclusion() error {
 				copy(leaf[:], hasher.Sum(nil))
 
 			} else {
-
-				hasher := v.Params.NoSisHashFunc()
+				// We assume that HashFunc (to be used for Merkle Tree) and NoSisHashFunc()
+				// (to be used for in place of SIS hash) are the same i.e. the MiMC hash function
+				hasher := v.Params.LeafHashFunc()
 				hasher.Reset()
 				for k := range selectedSubCol {
 					xBytes := selectedSubCol[k].Bytes()
@@ -220,7 +230,7 @@ func (v *VerifierInputs) checkColumnInclusion() error {
 
 			// And check that the Merkle proof is related to the correct entry
 			if mProof.Path != entry {
-				return fmt.Errorf("expected the Merkle proof to hold for position %v but was %v", entry, entry)
+				return fmt.Errorf("expected the Merkle proof to hold for position %v but was %v", entry, mProof.Path)
 			}
 		}
 	}

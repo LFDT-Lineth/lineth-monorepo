@@ -16,13 +16,13 @@ import (
 // also encompasses the pi and the iota part.
 type piChiIota struct {
 	// Complex binary replaced by arithmetics 2a+b+3c+2d
-	aIotaBaseB [5][5]ifaces.Column
+	AIotaBaseB [5][5]ifaces.Column
 	// The two following columns are used for the base conversion from B to A.
 	// The decomposition of aIotaBaseB in slices of 4 bits
 	// it is exported since it build up the hash output.
 	AIotaBaseBSliced [5][5][numSlice]ifaces.Column
 	// The decompositio of aIotaBaseA in slices of 4 bits
-	aIotaBaseASliced [5][5][numSlice]ifaces.Column
+	AIotaBaseASliced [5][5][numSlice]ifaces.Column
 }
 
 // Run the chi part of the wizard
@@ -33,7 +33,7 @@ func newPiChiIota(
 	mod Module,
 ) piChiIota {
 	chi := piChiIota{}
-	lu := mod.lookups
+	lu := mod.Lookups
 	chi.declareColumns(comp, round, maxNumKeccakf)
 	chi.csAIota(comp, round, lu, mod)
 	chi.csBaseBToBaseA(comp, round, lu)
@@ -49,7 +49,7 @@ func (c *piChiIota) declareColumns(comp *wizard.CompiledIOP, round, maxNumKeccak
 		for y := 0; y < 5; y++ {
 
 			// declares a_chi_base_B
-			c.aIotaBaseB[x][y] = comp.InsertCommit(
+			c.AIotaBaseB[x][y] = comp.InsertCommit(
 				round,
 				deriveName("AIOTA_BASE2", x, y),
 				colSize,
@@ -64,7 +64,7 @@ func (c *piChiIota) declareColumns(comp *wizard.CompiledIOP, round, maxNumKeccak
 					colSize,
 				)
 				// base A
-				c.aIotaBaseASliced[x][y][k] = comp.InsertCommit(
+				c.AIotaBaseASliced[x][y][k] = comp.InsertCommit(
 					round,
 					deriveName("AIOTA_BASE1_SLICED", x, y, k),
 					colSize,
@@ -87,19 +87,19 @@ func (c *piChiIota) csAIota(
 	l lookUpTables,
 	mod Module,
 ) {
-	aRho := mod.rho.aRho
+	aRho := mod.Rho.ARho
 	blockBaseB := mod.Blocks
 
 	two := symbolic.NewConstant(2)
 	three := symbolic.NewConstant(3)
-	d := ifaces.ColumnAsVariable(l.RC).
+	d := ifaces.ColumnAsVariable(l.RC.Natural).
 		Mul(two).
-		Mul(ifaces.ColumnAsVariable(mod.isActive))
+		Mul(ifaces.ColumnAsVariable(mod.IsActive))
 
 	for x := 0; x < 5; x++ {
 		for y := 0; y < 5; y++ {
 
-			aIotaPart := ifaces.ColumnAsVariable(c.aIotaBaseB[y][(2*x+3*y)%5])
+			aIotaPart := ifaces.ColumnAsVariable(c.AIotaBaseB[y][(2*x+3*y)%5])
 			aPiPart := ifaces.ColumnAsVariable(aRho[x][y]).Mul(two).
 				Add(ifaces.ColumnAsVariable(aRho[(x+1)%5][(y+1)%5])).
 				Add(ifaces.ColumnAsVariable(aRho[(x+2)%5][(y+2)%5]).Mul(three))
@@ -135,7 +135,7 @@ func (c *piChiIota) csBaseBToBaseA(comp *wizard.CompiledIOP, round int, l lookUp
 		for y := 0; y < 5; y++ {
 
 			// Enforces that the decomposition in slice of 4 bits of aIota is correctly done.
-			expr := ifaces.ColumnAsVariable(c.aIotaBaseB[x][y]).
+			expr := ifaces.ColumnAsVariable(c.AIotaBaseB[x][y]).
 				Sub(BaseRecomposeSliceHandles(c.AIotaBaseBSliced[x][y][:], BaseB))
 			name := ifaces.QueryIDf("AIOTA_DECOMPOSITION_%v_%v", x, y)
 			comp.InsertGlobal(round, name, expr)
@@ -147,7 +147,7 @@ func (c *piChiIota) csBaseBToBaseA(comp *wizard.CompiledIOP, round int, l lookUp
 					round,
 					name,
 					[]ifaces.Column{l.BaseAClean, l.BaseBDirty},
-					[]ifaces.Column{c.aIotaBaseASliced[x][y][k], c.AIotaBaseBSliced[x][y][k]},
+					[]ifaces.Column{c.AIotaBaseASliced[x][y][k], c.AIotaBaseBSliced[x][y][k]},
 				)
 			}
 		}
@@ -175,13 +175,15 @@ func (c *piChiIota) assign(
 	isBlockBaseB ifaces.Column,
 ) {
 
+	lookups.RC.Assign(run)
+
 	// effNumRows is the number of rows that are effectively not padded
 	effNumRows := numKeccakf * keccak.NumRound
-	colSize := c.aIotaBaseB[0][0].Size()
+	colSize := c.AIotaBaseB[0][0].Size()
 
 	// Fetch the the values of aPiOut with the assignment for aRho
 	aPiOut := [5][5][]field.Element{}
-	rc := lookups.RC.GetColAssignment(run)
+	rc := lookups.RC.Natural.GetColAssignment(run)
 	base1Clean := lookups.BaseAClean.GetColAssignment(run)
 	for x := 0; x < 5; x++ {
 		for y := 0; y < 5; y++ {
@@ -297,7 +299,7 @@ func (c *piChiIota) assign(
 	for x := 0; x < 5; x++ {
 		for y := 0; y < 5; y++ {
 			run.AssignColumn(
-				c.aIotaBaseB[x][y].GetColID(),
+				c.AIotaBaseB[x][y].GetColID(),
 				smartvectors.RightZeroPadded(aIotaBaseB[x][y], colSize),
 			)
 			for k := 0; k < numSlice; k++ {
@@ -306,7 +308,7 @@ func (c *piChiIota) assign(
 					smartvectors.RightZeroPadded(aIotaBaseBSliced[x][y][k], colSize),
 				)
 				run.AssignColumn(
-					c.aIotaBaseASliced[x][y][k].GetColID(),
+					c.AIotaBaseASliced[x][y][k].GetColID(),
 					smartvectors.RightZeroPadded(aIotaBaseASliced[x][y][k], colSize),
 				)
 			}

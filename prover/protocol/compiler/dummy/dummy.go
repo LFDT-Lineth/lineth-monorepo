@@ -6,6 +6,7 @@ import (
 
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/linea-monorepo/prover/protocol/column"
+	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	"github.com/consensys/linea-monorepo/prover/utils"
 	"github.com/consensys/linea-monorepo/prover/utils/parallel"
@@ -13,10 +14,11 @@ import (
 )
 
 /*
-Converts all the oracle commmitments into messages
-and ask the verifier to manually verify all queries.
+Transforms all oracle commitments into explicit messages and instructs the verifier
+to manually check all associated queries against them.
 
-Primary use-case is testing.
+This utility is primarily intended for testing and debugging, allowing inspection of commitment-query
+consistency without automated verification.
 */
 func Compile(comp *wizard.CompiledIOP) {
 
@@ -84,59 +86,75 @@ func Compile(comp *wizard.CompiledIOP) {
 		One step to be run at the end, by verifying every constraint
 		"a la mano"
 	*/
-	verifier := func(run *wizard.VerifierRuntime) error {
-
-		logrus.Infof("started to run the dummy verifier")
-
-		var finalErr error
-		lock := sync.Mutex{}
-
-		/*
-			Test all the query with parameters
-		*/
-		parallel.Execute(len(queriesParamsToCompile), func(start, stop int) {
-			for i := start; i < stop; i++ {
-				name := queriesParamsToCompile[i]
-				lock.Lock()
-				q := comp.QueriesParams.Data(name)
-				lock.Unlock()
-				if err := q.Check(run); err != nil {
-					lock.Lock()
-					finalErr = fmt.Errorf("%v\nfailed %v - %v", finalErr, name, err)
-					lock.Unlock()
-					logrus.Debugf("query %v failed\n", name)
-				} else {
-					logrus.Debugf("query %v passed\n", name)
-				}
-			}
-		})
-
-		/*
-			Test the queries without parameters
-		*/
-		parallel.Execute(len(queriesNoParamsToCompile), func(start, stop int) {
-			for i := start; i < stop; i++ {
-				name := queriesNoParamsToCompile[i]
-				lock.Lock()
-				q := comp.QueriesNoParams.Data(name)
-				lock.Unlock()
-				if err := q.Check(run); err != nil {
-					lock.Lock()
-					finalErr = fmt.Errorf("%v\nfailed %v - %v", finalErr, name, err)
-					lock.Unlock()
-				} else {
-					logrus.Debugf("query %v passed\n", name)
-				}
-			}
-		})
-
-		/*
-			Nil to indicate all checks passed
-		*/
-		return finalErr
-	}
+	comp.RegisterVerifierAction(numRounds-1, &DummyVerifierAction{
+		Comp:                     comp,
+		QueriesParamsToCompile:   queriesParamsToCompile,
+		QueriesNoParamsToCompile: queriesNoParamsToCompile,
+	})
 
 	logrus.Debugf("NB: The gnark circuit does not check the verifier of the dummy reduction\n")
-	comp.InsertVerifier(numRounds-1, verifier, func(frontend.API, *wizard.WizardVerifierCircuit) {})
+}
 
+// DummyVerifierAction is the action to verify queries in the dummy compiler.
+// It implements the [wizard.VerifierAction] interface.
+type DummyVerifierAction struct {
+	Comp                     *wizard.CompiledIOP
+	QueriesParamsToCompile   []ifaces.QueryID
+	QueriesNoParamsToCompile []ifaces.QueryID
+}
+
+// Run executes the verifier action, checking all queries in parallel.
+func (a *DummyVerifierAction) Run(run wizard.Runtime) error {
+	var finalErr error
+	lock := sync.Mutex{}
+
+	/*
+		Test all the query with parameters
+	*/
+	parallel.Execute(len(a.QueriesParamsToCompile), func(start, stop int) {
+		for i := start; i < stop; i++ {
+			name := a.QueriesParamsToCompile[i]
+			lock.Lock()
+			q := a.Comp.QueriesParams.Data(name)
+			lock.Unlock()
+			if err := q.Check(run); err != nil {
+				lock.Lock()
+				finalErr = fmt.Errorf("%v\nfailed %v - %v", finalErr, name, err)
+				lock.Unlock()
+				logrus.Debugf("query %v failed\n", name)
+			} else {
+				logrus.Debugf("query %v passed\n", name)
+			}
+		}
+	})
+
+	/*
+		Test the queries without parameters
+	*/
+	parallel.Execute(len(a.QueriesNoParamsToCompile), func(start, stop int) {
+		for i := start; i < stop; i++ {
+			name := a.QueriesNoParamsToCompile[i]
+			lock.Lock()
+			q := a.Comp.QueriesNoParams.Data(name)
+			lock.Unlock()
+			if err := q.Check(run); err != nil {
+				lock.Lock()
+				finalErr = fmt.Errorf("%v\nfailed %v - %v", finalErr, name, err)
+				lock.Unlock()
+			} else {
+				logrus.Debugf("query %v passed\n", name)
+			}
+		}
+	})
+
+	/*
+		Nil to indicate all checks passed
+	*/
+	return finalErr
+}
+
+// RunGnark executes the verifier action in a Gnark circuit.
+// In this dummy implementation, no constraints are enforced.
+func (a *DummyVerifierAction) RunGnark(api frontend.API, gnarkRun wizard.GnarkRuntime) {
+	// No constraints are enforced in the dummy reduction, as per the original empty function
 }

@@ -6,44 +6,44 @@ import (
 
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
+	"github.com/consensys/linea-monorepo/prover/protocol/column"
 	"github.com/consensys/linea-monorepo/prover/protocol/dedicated"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
-	"github.com/consensys/linea-monorepo/prover/protocol/wizardutils"
 	sym "github.com/consensys/linea-monorepo/prover/symbolic"
 	"github.com/consensys/linea-monorepo/prover/utils"
 	"github.com/consensys/linea-monorepo/prover/utils/parallel"
 )
 
-// multiLimbCmp is a dedicated wizard which can compare two [LimbColumns] and
+// MultiLimbCmp is a dedicated wizard which can compare two [LimbColumns] and
 // thereby constructing indicator columns indicating whether the first operand
 // is lower, greater or if the two operands are equals.
 //
 // This object implements the [wizard.ProverAction] interface and is meant to
 // be run to compute the assignment of the returned column by [CmpMultiLimbs].
-type multiLimbCmp struct {
+type MultiLimbCmp struct {
 
-	// isGreater and isLower are columns to be assigned by the context. The
+	// IsGreater and IsLower are columns to be assigned by the context. The
 	// reason isEqual is missing is because its handling is defered
 	// to a dedicated sub-context.
-	isGreater, isLower ifaces.Column
+	IsGreater, IsLower ifaces.Column
 
-	// isEqualCtx is the dedicated [wizard.ProverAction] responsible for
+	// IsEqualCtx is the dedicated [wizard.ProverAction] responsible for
 	// assigning the returned isEqual column.
-	isEqualCtx wizard.ProverAction
+	IsEqualCtx wizard.ProverAction
 
 	// nonNegative syndrom is an internal column created such that it should
 	// always represent a number of size 1 << numLimbs. It is constructed using
 	// the result of the other limb-by-limb comparison.
-	nonNegativeSyndrom ifaces.Column
+	NonNegativeSyndrom ifaces.Column
 
-	// syndromBoard is an expression board used to assign the non-negative
+	// SyndromBoard is an expression board used to assign the non-negative
 	// syndromColumn its is the same as (isGreater - isLower).
-	syndromBoard sym.ExpressionBoard
+	SyndromBoard sym.ExpressionBoard
 
-	// The subCtxs are the [wizard.ProverAction] responsible for doing the
+	// The SubCtxs are the [wizard.ProverAction] responsible for doing the
 	// assignment part for each limb-by-limb comparison.
-	subCtxs []wizard.ProverAction
+	SubCtxs []wizard.ProverAction
 }
 
 // CmpMultiLimbs returns three columns: isGreater, isEqual and isLower which
@@ -95,14 +95,14 @@ func CmpMultiLimbs(comp *wizard.CompiledIOP, a, b LimbColumns) (isGreater, isEqu
 
 	var (
 		isBigEndian     = a.IsBigEndian
-		roundA          = wizardutils.MaxRound(a.Limbs...)
-		round           = max(roundA, wizardutils.MaxRound(b.Limbs...))
+		roundA          = column.MaxRound(a.Limbs...)
+		round           = max(roundA, column.MaxRound(b.Limbs...))
 		numLimbs        = len(a.Limbs)
 		numBitsPerLimbs = a.LimbBitSize
-		ctx             = &multiLimbCmp{
-			isGreater:          comp.InsertCommit(round, ifaces.ColIDf(ctxName("IS_GREATER")), nRows),
-			isLower:            comp.InsertCommit(round, ifaces.ColIDf(ctxName("IS_LOWER")), nRows),
-			nonNegativeSyndrom: comp.InsertCommit(round, ifaces.ColIDf(ctxName("MUST_BE_POSITIVE")), nRows),
+		ctx             = &MultiLimbCmp{
+			IsGreater:          comp.InsertCommit(round, ifaces.ColIDf(ctxName("IS_GREATER")), nRows),
+			IsLower:            comp.InsertCommit(round, ifaces.ColIDf(ctxName("IS_LOWER")), nRows),
+			NonNegativeSyndrom: comp.InsertCommit(round, ifaces.ColIDf(ctxName("MUST_BE_POSITIVE")), nRows),
 		}
 
 		syndromExpression = sym.NewConstant(0)
@@ -114,7 +114,7 @@ func CmpMultiLimbs(comp *wizard.CompiledIOP, a, b LimbColumns) (isGreater, isEqu
 			g, e, l, lCtx = CmpSmallCols(comp, a.Limbs[i], b.Limbs[i], numBitsPerLimbs)
 		)
 
-		ctx.subCtxs = append(ctx.subCtxs, lCtx)
+		ctx.SubCtxs = append(ctx.SubCtxs, lCtx)
 		allLimbsEqual = sym.Add(allLimbsEqual, sym.Sub(e, 1))
 
 		factor := 1 << i
@@ -131,32 +131,32 @@ func CmpMultiLimbs(comp *wizard.CompiledIOP, a, b LimbColumns) (isGreater, isEqu
 	comp.InsertGlobal(
 		round,
 		ifaces.QueryID(ctxName("IS_GREATER_IS_BINARY")),
-		sym.Mul(ctx.isGreater, sym.Sub(ctx.isGreater, 1)),
+		sym.Mul(ctx.IsGreater, sym.Sub(ctx.IsGreater, 1)),
 	)
 
 	comp.InsertGlobal(
 		round,
 		ifaces.QueryID(ctxName("IS_LOWER_IS_BINARY")),
-		sym.Mul(ctx.isLower, sym.Sub(ctx.isLower, 1)),
+		sym.Mul(ctx.IsLower, sym.Sub(ctx.IsLower, 1)),
 	)
 
-	isEqual, ctx.isEqualCtx = dedicated.IsZero(comp, allLimbsEqual)
+	isEqual, ctx.IsEqualCtx = dedicated.IsZero(comp, allLimbsEqual)
 
 	comp.InsertGlobal(
 		round,
 		ifaces.QueryIDf(ctxName("FLAGS_MUTUALLY_EXCLUSIVE")),
-		sym.Sub(1, ctx.isGreater, isEqual, ctx.isLower),
+		sym.Sub(1, ctx.IsGreater, isEqual, ctx.IsLower),
 	)
 
-	ctx.syndromBoard = syndromExpression.Board()
+	ctx.SyndromBoard = syndromExpression.Board()
 
 	comp.InsertGlobal(
 		round,
 		ifaces.QueryID(ctxName("COMPUTE_NN_SYNDROME")),
 		sym.Sub(
-			ctx.nonNegativeSyndrom,
+			ctx.NonNegativeSyndrom,
 			sym.Mul(
-				sym.Sub(ctx.isGreater, ctx.isLower),
+				sym.Sub(ctx.IsGreater, ctx.IsLower),
 				syndromExpression,
 			),
 		),
@@ -165,20 +165,20 @@ func CmpMultiLimbs(comp *wizard.CompiledIOP, a, b LimbColumns) (isGreater, isEqu
 	comp.InsertRange(
 		round,
 		ifaces.QueryID(ctxName("RANGE_CHECK_NN_SYNDROM")),
-		ctx.nonNegativeSyndrom,
+		ctx.NonNegativeSyndrom,
 		1<<numLimbs,
 	)
 
-	return ctx.isGreater, isEqual, ctx.isLower, ctx
+	return ctx.IsGreater, isEqual, ctx.IsLower, ctx
 }
 
 // Run implements the [wizard.ProverAction] interface.
-func (mCmp *multiLimbCmp) Run(run *wizard.ProverRuntime) {
+func (mCmp *MultiLimbCmp) Run(run *wizard.ProverRuntime) {
 
 	// This will assign the per-limbs comparision contexts
-	parallel.Execute(len(mCmp.subCtxs), func(start, stop int) {
+	parallel.Execute(len(mCmp.SubCtxs), func(start, stop int) {
 		for i := start; i < stop; i++ {
-			mCmp.subCtxs[i].Run(run)
+			mCmp.SubCtxs[i].Run(run)
 		}
 	})
 
@@ -187,15 +187,15 @@ func (mCmp *multiLimbCmp) Run(run *wizard.ProverRuntime) {
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
-		mCmp.isEqualCtx.Run(run)
+		mCmp.IsEqualCtx.Run(run)
 		wg.Done()
 	}()
 
 	var (
-		syndrom   = wizardutils.EvalExprColumn(run, mCmp.syndromBoard)
-		isGreater = make([]field.Element, mCmp.isGreater.Size())
-		isLower   = make([]field.Element, mCmp.isLower.Size())
-		nnSyndrom = make([]field.Element, mCmp.isLower.Size())
+		syndrom   = column.EvalExprColumn(run, mCmp.SyndromBoard)
+		isGreater = make([]field.Element, mCmp.IsGreater.Size())
+		isLower   = make([]field.Element, mCmp.IsLower.Size())
+		nnSyndrom = make([]field.Element, mCmp.IsLower.Size())
 	)
 
 	for i := range isGreater {
@@ -214,9 +214,9 @@ func (mCmp *multiLimbCmp) Run(run *wizard.ProverRuntime) {
 		}
 	}
 
-	run.AssignColumn(mCmp.isGreater.GetColID(), smartvectors.NewRegular(isGreater))
-	run.AssignColumn(mCmp.isLower.GetColID(), smartvectors.NewRegular(isLower))
-	run.AssignColumn(mCmp.nonNegativeSyndrom.GetColID(), smartvectors.NewRegular(nnSyndrom))
+	run.AssignColumn(mCmp.IsGreater.GetColID(), smartvectors.NewRegular(isGreater))
+	run.AssignColumn(mCmp.IsLower.GetColID(), smartvectors.NewRegular(isLower))
+	run.AssignColumn(mCmp.NonNegativeSyndrom.GetColID(), smartvectors.NewRegular(nnSyndrom))
 
 	wg.Wait()
 }

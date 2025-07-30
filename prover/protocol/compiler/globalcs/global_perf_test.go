@@ -9,12 +9,11 @@ import (
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/globalcs"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/innerproduct"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/localcs"
-	"github.com/consensys/linea-monorepo/prover/protocol/compiler/lookup"
+	"github.com/consensys/linea-monorepo/prover/protocol/compiler/logderivativesum"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/mimc"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/permutation"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/specialqueries"
-	"github.com/consensys/linea-monorepo/prover/protocol/compiler/splitter"
-	"github.com/consensys/linea-monorepo/prover/protocol/compiler/splitter/sticker"
+	"github.com/consensys/linea-monorepo/prover/protocol/compiler/stitchsplit"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	"github.com/consensys/linea-monorepo/prover/zkevm"
 	"github.com/sirupsen/logrus"
@@ -32,10 +31,10 @@ func BenchmarkGlobalConstraintWoArtefacts(b *testing.B) {
 		specialqueries.RangeProof,
 		specialqueries.CompileFixedPermutations,
 		permutation.CompileGrandProduct,
-		lookup.CompileLogDerivative,
-		innerproduct.Compile,
-		sticker.Sticker(1<<10, 1<<19),
-		splitter.SplitColumns(1 << 19),
+		logderivativesum.CompileLookups,
+		innerproduct.Compile(),
+		stitchsplit.Stitcher(1<<10, 1<<19),
+		stitchsplit.Splitter(1 << 19),
 		cleanup.CleanUp,
 		localcs.Compile,
 		globalcs.Compile,

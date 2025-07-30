@@ -28,17 +28,17 @@ func (ec *EcRecover) cols() []ifaces.Column {
 
 func (ad *Addresses) cols() []ifaces.Column {
 	return []ifaces.Column{
-		ad.addressHiUntrimmed,
-		ad.addressHi,
-		ad.addressLo,
+		ad.AddressHiUntrimmed,
+		ad.AddressHi,
+		ad.AddressLo,
 	}
 }
 
-func (ts *txSignature) cols() []ifaces.Column {
+func (ts *TxSignature) cols() []ifaces.Column {
 	return []ifaces.Column{
-		ts.isTxHash,
-		ts.txHashHi,
-		ts.txHashLo,
+		ts.IsTxHash,
+		ts.TxHashHi,
+		ts.TxHashLo,
 	}
 }
 
@@ -60,7 +60,7 @@ func (ac *antichamber) unalignedGnarkDataSource() *unalignedGnarkDataSource {
 		SuccessBit: ac.EcRecover.SuccessBit,
 		IsData:     ac.EcRecover.EcRecoverIsData,
 		IsRes:      ac.EcRecover.EcRecoverIsRes,
-		TxHashHi:   ac.txSignature.txHashHi,
-		TxHashLo:   ac.txSignature.txHashLo,
+		TxHashHi:   ac.TxSignature.TxHashHi,
+		TxHashLo:   ac.TxSignature.TxHashLo,
 	}
 }

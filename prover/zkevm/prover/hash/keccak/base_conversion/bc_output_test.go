@@ -6,6 +6,7 @@ import (
 
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/dummy"
+	"github.com/consensys/linea-monorepo/prover/protocol/distributed/pragmas"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	"github.com/consensys/linea-monorepo/prover/utils"
@@ -16,15 +17,15 @@ import (
 
 func makeTestCaseBaseConversionOutput() (
 	define wizard.DefineFunc,
-	prover wizard.ProverStep,
+	prover wizard.MainProverStep,
 ) {
 	maxNumBlocks := 4
-	b := &hashBaseConversion{}
+	b := &HashBaseConversion{}
 	define = func(build *wizard.Builder) {
 		var (
 			comp      = build.CompiledIOP
 			size      = utils.NextPowerOfTwo(maxNumBlocks)
-			createCol = common.CreateColFn(comp, "BASE_CONVERSION_TEST", size)
+			createCol = common.CreateColFn(comp, "BASE_CONVERSION_TEST", size, pragmas.RightPadded)
 			limbsHi   = make([]ifaces.Column, numLimbsOutput)
 			limbsLo   = make([]ifaces.Column, numLimbsOutput)
 		)
@@ -61,12 +62,12 @@ func TestBaseConversionOutput(t *testing.T) {
 	assert.NoErrorf(t, wizard.Verify(comp, proof), "invalid proof")
 }
 
-func (b *hashBaseConversion) assignInputs(run *wizard.ProverRuntime) {
+func (b *HashBaseConversion) assignInputs(run *wizard.ProverRuntime) {
 
 	var (
 		sliceHiB = make([]*common.VectorBuilder, numLimbsOutput)
 		sliceLoB = make([]*common.VectorBuilder, numLimbsOutput)
-		size     = b.size
+		size     = b.Size
 	)
 
 	for j := range sliceHiB {

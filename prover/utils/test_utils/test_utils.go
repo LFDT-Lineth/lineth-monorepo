@@ -18,6 +18,9 @@ import (
 
 	"github.com/consensys/gnark/frontend"
 	snarkHash "github.com/consensys/gnark/std/hash"
+	"github.com/consensys/linea-monorepo/prover/backend/execution"
+	"github.com/consensys/linea-monorepo/prover/config"
+	"github.com/consensys/linea-monorepo/prover/zkevm"
 
 	"github.com/stretchr/testify/require"
 )
@@ -362,4 +365,82 @@ func GetRepoRootPath() (string, error) {
 	}
 	i += len(repoName)
 	return wd[:i], nil
+}
+
+// GetZkevmWitness returns a [zkevm.Witness]
+func GetZkevmWitness(req *execution.Request, cfg *config.Config) (*execution.Response, *zkevm.Witness) {
+	out := execution.CraftProverOutput(cfg, req)
+	witness := execution.NewWitness(cfg, req, &out)
+	return &out, witness.ZkEVM
+}
+
+func PrettyPrint(v reflect.Value, indent int) string {
+	if !v.IsValid() {
+		return "<invalid>"
+	}
+
+	// Dereference pointers
+	for v.Kind() == reflect.Ptr {
+		if v.IsNil() {
+			return "<nil>"
+		}
+		v = v.Elem()
+	}
+
+	// Handle interfaces
+	if v.Kind() == reflect.Interface {
+		return PrettyPrint(v.Elem(), indent)
+	}
+
+	switch v.Kind() {
+	case reflect.Struct:
+		var b strings.Builder
+		t := v.Type()
+		ind := strings.Repeat("  ", indent)
+		b.WriteString(fmt.Sprintf("%s%s {\n", ind, t.Name()))
+		for i := 0; i < v.NumField(); i++ {
+			field := v.Field(i)
+			fieldType := t.Field(i)
+			fieldName := fieldType.Name
+			if !field.CanInterface() {
+				b.WriteString(fmt.Sprintf("%s  %s: <unexported>\n", ind, fieldName))
+				continue
+			}
+			fieldStr := PrettyPrint(field, indent+1)
+			b.WriteString(fmt.Sprintf("%s  %s: %s\n", ind, fieldName, fieldStr))
+		}
+		b.WriteString(fmt.Sprintf("%s}", ind))
+		return b.String()
+
+	case reflect.Slice, reflect.Array:
+		var b strings.Builder
+		b.WriteString("[")
+		for i := 0; i < v.Len(); i++ {
+			if i > 0 {
+				b.WriteString(", ")
+			}
+			b.WriteString(PrettyPrint(v.Index(i), indent))
+		}
+		b.WriteString("]")
+		return b.String()
+
+	case reflect.Map:
+		var b strings.Builder
+		b.WriteString("{")
+		for _, key := range v.MapKeys() {
+			val := v.MapIndex(key)
+			if !key.CanInterface() || !val.CanInterface() {
+				continue
+			}
+			b.WriteString(fmt.Sprintf("%s: %s, ", PrettyPrint(key, indent), PrettyPrint(val, indent)))
+		}
+		b.WriteString("}")
+		return b.String()
+
+	default:
+		if v.CanInterface() {
+			return fmt.Sprintf("%#v", v.Interface())
+		}
+		return "<unexported>"
+	}
 }

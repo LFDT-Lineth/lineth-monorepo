@@ -2,6 +2,9 @@ package smartvectors
 
 import (
 	"fmt"
+	"iter"
+	"slices"
+
 	"github.com/consensys/linea-monorepo/prover/maths/field/fext"
 
 	"github.com/consensys/linea-monorepo/prover/maths/field"
@@ -10,8 +13,8 @@ import (
 
 // A constant vector is a vector obtained by repeated "length" time the same value
 type Constant struct {
-	val    field.Element
-	length int
+	Value  field.Element
+	Length int
 }
 
 // Construct a new "Constant" smart-vector
@@ -19,16 +22,16 @@ func NewConstant(val field.Element, length int) *Constant {
 	if length <= 0 {
 		utils.Panic("zero or negative length are not allowed")
 	}
-	return &Constant{val: val, length: length}
+	return &Constant{Value: val, Length: length}
 }
 
 // Return the length of the smart-vector
-func (c *Constant) Len() int { return c.length }
+func (c *Constant) Len() int { return c.Length }
 
 // Returns an entry of the constant
-func (c *Constant) GetBase(int) (field.Element, error) { return c.val, nil }
+func (c *Constant) GetBase(int) (field.Element, error) { return c.Value, nil }
 
-func (c *Constant) GetExt(int) fext.Element { return *new(fext.Element).SetFromBase(&c.val) }
+func (c *Constant) GetExt(int) fext.Element { return *new(fext.Element).SetFromBase(&c.Value) }
 
 func (r *Constant) Get(n int) field.Element {
 	res, err := r.GetBase(n)
@@ -36,6 +39,10 @@ func (r *Constant) Get(n int) field.Element {
 		panic(err)
 	}
 	return res
+}
+
+func (r *Constant) GetPtr(n int) *field.Element {
+	return &r.Value
 }
 
 // Returns a subvector
@@ -46,41 +53,41 @@ func (c *Constant) SubVector(start, stop int) SmartVector {
 	if start == stop {
 		utils.Panic("zero length are not allowed")
 	}
-	assertCorrectBound(start, c.length)
+	assertCorrectBound(start, c.Length)
 	// The +1 is because we accept if "Stop = length"
-	assertCorrectBound(stop, c.length+1)
-	return NewConstant(c.val, stop-start)
+	assertCorrectBound(stop, c.Length+1)
+	return NewConstant(c.Value, stop-start)
 }
 
 // Returns a rotated version of the slice
 func (c *Constant) RotateRight(int) SmartVector {
-	return NewConstant(c.val, c.length)
+	return NewConstant(c.Value, c.Length)
 }
 
 // Write the constant vector in a slice
 func (c *Constant) WriteInSlice(s []field.Element) {
 	assertHasLength(len(s), c.Len())
 	for i := range s {
-		s[i] = c.val
+		s[i] = c.Value
 	}
 }
 
 func (c *Constant) WriteInSliceExt(s []fext.Element) {
 	for i := 0; i < len(s); i++ {
-		s[i].SetFromBase(&c.val)
+		s[i].SetFromBase(&c.Value)
 	}
 }
 
 func (c *Constant) Val() field.Element {
-	return c.val
+	return c.Value
 }
 
 func (c *Constant) Pretty() string {
-	return fmt.Sprintf("Constant[%v;%v]", c.val.String(), c.length)
+	return fmt.Sprintf("Constant[%v;%v]", c.Value.String(), c.Length)
 }
 
 func (c *Constant) DeepCopy() SmartVector {
-	return NewConstant(c.val, c.length)
+	return NewConstant(c.Value, c.Length)
 }
 
 func (c *Constant) IntoRegVecSaveAlloc() []field.Element {
@@ -104,4 +111,16 @@ func (c *Constant) IntoRegVecSaveAllocExt() []fext.Element {
 		res[i].SetFromBase(&elem)
 	}
 	return res
+}
+
+// IterateCompact returns an iterator returning a single time the constant
+// value.
+func (c *Constant) IterateCompact() iter.Seq[field.Element] {
+	return slices.Values([]field.Element{c.Value})
+}
+
+// IterateSkipPadding returns an empty iterator as the whole content of a
+// [Constant] is padding.
+func (c *Constant) IterateSkipPadding() iter.Seq[field.Element] {
+	return slices.Values([]field.Element{})
 }

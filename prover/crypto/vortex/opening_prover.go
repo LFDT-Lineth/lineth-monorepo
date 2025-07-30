@@ -41,7 +41,6 @@ type OpeningProof struct {
 // functions and is motivated by the fact that this is simpler to construct in
 // our settings.
 func (params *Params) InitOpeningWithLC(committedSV []smartvectors.SmartVector, randomCoin field.Element) *OpeningProof {
-	proof := OpeningProof{}
 
 	if len(committedSV) == 0 {
 		utils.Panic("attempted to open an empty witness")
@@ -55,15 +54,48 @@ func (params *Params) InitOpeningWithLC(committedSV []smartvectors.SmartVector, 
 		for i := range committedSV {
 			subTask = append(subTask, committedSV[i].SubVector(start, stop))
 		}
-		// Collect the result in the larger slice at the end
 
+		// Collect the result in the larger slice at the end
 		subResult := smartvectors.PolyEval(subTask, randomCoin)
 		subResult.WriteInSlice(linComb[start:stop])
 	})
 
 	linCombSV := smartvectors.NewRegular(linComb)
-	proof.LinearCombination = params.rsEncode(linCombSV, nil)
-	return &proof
+
+	return &OpeningProof{
+		LinearCombination: params.rsEncode(linCombSV, nil),
+	}
+}
+
+// InitOpeningFromAlreadyEncodedLC initiates the construction of a Vortex proof
+// by returning the encoding of the linear combinations of the committed
+// row-vectors contained in committedSV by the successive powers of randomCoin.
+//
+// The returned proof is partially assigned and must be completed using
+// [WithEntryList] to conclude the opening protocol.
+func (params *Params) InitOpeningFromAlreadyEncodedLC(rsCommittedSV EncodedMatrix, randomCoin field.Element) *OpeningProof {
+
+	if len(rsCommittedSV) == 0 {
+		utils.Panic("attempted to open an empty witness")
+	}
+
+	// Compute the linear combination
+	linComb := make([]field.Element, params.NumEncodedCols())
+
+	parallel.ExecuteChunky(len(linComb), func(start, stop int) {
+		subTask := make([]smartvectors.SmartVector, 0, len(rsCommittedSV))
+		for i := range rsCommittedSV {
+			subTask = append(subTask, rsCommittedSV[i].SubVector(start, stop))
+		}
+
+		// Collect the result in the larger slice at the end
+		subResult := smartvectors.PolyEval(subTask, randomCoin)
+		subResult.WriteInSlice(linComb[start:stop])
+	})
+
+	return &OpeningProof{
+		LinearCombination: smartvectors.NewRegular(linComb),
+	}
 }
 
 // Complete completes the proof adding the columns pointed by entryList
@@ -96,6 +128,9 @@ func (proof *OpeningProof) Complete(
 
 	// Generate the proofs for each tree and each entry
 	for treeID, tree := range trees {
+		if tree == nil {
+			utils.Panic("tree is nil")
+		}
 		proofs[treeID] = make([]smt.Proof, len(entryList))
 		for k, entry := range entryList {
 			var err error

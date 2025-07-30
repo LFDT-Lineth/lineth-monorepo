@@ -7,7 +7,6 @@ import (
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/utils"
 	"github.com/consensys/linea-monorepo/prover/utils/types"
-	"github.com/sirupsen/logrus"
 )
 
 // Final circuit - commitment using Merkle trees
@@ -139,7 +138,6 @@ func GnarkVerifyOpeningWithMerkleProof(
 		utils.Panic("the verifier circuit can only be instantiated using a NoSisHasher")
 	}
 
-	logrus.Infof("Verifying the vortex proof")
 	// Generic checks
 	selectedColsHashes, err := GnarkVerifyCommon(
 		api,
@@ -157,7 +155,6 @@ func GnarkVerifyOpeningWithMerkleProof(
 	hasher, _ := params.HasherFunc(api)
 	hasher.Reset()
 
-	logrus.Infof("Checking the merkle proofs for %v proofs", len(roots))
 	for i, root := range roots {
 		for j, entry := range entryList {
 

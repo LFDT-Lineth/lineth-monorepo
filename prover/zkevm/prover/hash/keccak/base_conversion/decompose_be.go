@@ -10,13 +10,13 @@ import (
 
 // DecompositionInputs stors the inputs for [DecomposeBE]
 type DecompositionInputs struct {
-	name          string
-	col           ifaces.Column
-	numLimbs      int
-	bytesPerLimbs int
+	Name          string
+	Col           ifaces.Column
+	NumLimbs      int
+	BytesPerLimbs int
 }
 
-// decompositionCtx stores the result of the decomposition  (i.e., Limbs).
+// DecompositionCtx stores the result of the decomposition  (i.e., Limbs).
 // The Limbs are represented in Big-Endian order, but are not range-checked.
 //
 // Decomposition without range-check is only interesting for the case where,
@@ -24,7 +24,7 @@ type DecompositionInputs struct {
 //	an InclusionCheck is applied over the Limbs via lookup tables.
 //
 // Note that the endian is meant for the limbs and not for the the bytes here.
-type decompositionCtx struct {
+type DecompositionCtx struct {
 	Inputs DecompositionInputs
 	// Limbs stores the  result of the decomposition.
 	Limbs []ifaces.Column
@@ -32,18 +32,18 @@ type decompositionCtx struct {
 
 // DecomposeBE receives a column and a base, and decompose the column in Limbs.
 // The Limbs are not range checked, thus the result can be used only beside an Inclusion check.
-func DecomposeBE(comp *wizard.CompiledIOP, inp DecompositionInputs) *decompositionCtx {
+func DecomposeBE(comp *wizard.CompiledIOP, inp DecompositionInputs) *DecompositionCtx {
 
 	var (
-		size  = inp.col.Size()
-		limbs = make([]ifaces.Column, inp.numLimbs)
+		size  = inp.Col.Size()
+		limbs = make([]ifaces.Column, inp.NumLimbs)
 	)
 
 	for i := range limbs {
 		// Declare the limbs for the number
 		limbs[i] = comp.InsertCommit(
 			0,
-			ifaces.ColIDf("%v_%v_%v", inp.name, "LIMB", i),
+			ifaces.ColIDf("%v_%v_%v", inp.Name, "LIMB", i),
 			size,
 		)
 	}
@@ -51,7 +51,7 @@ func DecomposeBE(comp *wizard.CompiledIOP, inp DecompositionInputs) *decompositi
 	// Build the linear combination with powers of 2^bitPerLimbs. The limbs are
 	// in "Big-endian" order. Namely, the first limb encodes the least
 	// significant bits first.
-	base := sym.NewConstant(1 << (inp.bytesPerLimbs * 8))
+	base := sym.NewConstant(1 << (inp.BytesPerLimbs * 8))
 	// BaseRecomposeSliceHandles (de-)composes the slices in the given base and
 	// returns the corresponding expression.
 	res := sym.NewConstant(0)
@@ -65,10 +65,10 @@ func DecomposeBE(comp *wizard.CompiledIOP, inp DecompositionInputs) *decompositi
 	comp.InsertGlobal(
 		0,
 		ifaces.QueryIDf("LIMB_RECOMPOSION"),
-		sym.Sub(inp.col, res),
+		sym.Sub(inp.Col, res),
 	)
 
-	return &decompositionCtx{
+	return &DecompositionCtx{
 		Inputs: inp,
 		Limbs:  limbs,
 	}
@@ -76,15 +76,15 @@ func DecomposeBE(comp *wizard.CompiledIOP, inp DecompositionInputs) *decompositi
 }
 
 // Run implements the [wizard.ProverAction] interface
-func (d *decompositionCtx) Run(run *wizard.ProverRuntime) {
+func (d *DecompositionCtx) Run(run *wizard.ProverRuntime) {
 
 	var (
-		numLimbs      = d.Inputs.numLimbs
-		bytesPerLimbs = d.Inputs.bytesPerLimbs
+		numLimbs      = d.Inputs.NumLimbs
+		bytesPerLimbs = d.Inputs.BytesPerLimbs
 		totalNumBytes = numLimbs * bytesPerLimbs
-		col           = d.Inputs.col.GetColAssignment(run).IntoRegVecSaveAlloc()
+		col           = d.Inputs.Col.GetColAssignment(run).IntoRegVecSaveAlloc()
 		limbs         = make([]*common.VectorBuilder, numLimbs)
-		size          = d.Inputs.col.Size()
+		size          = d.Inputs.Col.Size()
 	)
 
 	for j := range limbs {

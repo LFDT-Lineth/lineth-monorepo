@@ -8,7 +8,7 @@ import (
 	"github.com/consensys/linea-monorepo/prover/protocol/accessors"
 	"github.com/consensys/linea-monorepo/prover/protocol/coin"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/dummy"
-	"github.com/consensys/linea-monorepo/prover/protocol/compiler/splitter"
+	"github.com/consensys/linea-monorepo/prover/protocol/compiler/stitchsplit"
 	"github.com/consensys/linea-monorepo/prover/protocol/dedicated/functionals"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
@@ -124,7 +124,7 @@ func TestEvalBivariateSimpleWithSplitting(t *testing.T) {
 	}
 
 	compiled := wizard.Compile(definer,
-		splitter.SplitColumns(4),
+		stitchsplit.Splitter(4),
 		dummy.Compile,
 	)
 

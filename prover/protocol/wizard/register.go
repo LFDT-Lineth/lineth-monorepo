@@ -11,24 +11,24 @@ import (
 // informations about the objects stored in the register.
 type ByRoundRegister[ID comparable, DATA any] struct {
 	// All the data for each key
-	mapping collection.Mapping[ID, DATA]
+	Mapping collection.Mapping[ID, DATA]
 	// All the IDs for a given round
-	byRounds collection.VecVec[ID]
+	ByRounds collection.VecVec[ID]
 	// Gives the round ID of an entry
-	byRoundsIndex collection.Mapping[ID, int]
+	ByRoundsIndex collection.Mapping[ID, int]
 	// Marks an entry as ignorable (but does not delete it)
-	ignored collection.Set[ID]
-	// skippedFromVerifierTranscript marks an entry as "skipped from verifier
+	Ignored collection.Set[ID]
+	// SkippedFromVerifierTranscript marks an entry as "skipped from verifier
 	// transcript from the FS transcript for the verifier. This means that the
 	// verifier will not use this value. However, the value can still be used
 	// by the prover. The reason for this field is to work around subtle issues
 	// while dealing with recursion.
-	skippedFromVerifierTranscript collection.Set[ID]
-	// skippedFromProverTranscript marks an entry as "skipped from prover
+	SkippedFromVerifierTranscript collection.Set[ID]
+	// SkippedFromProverTranscript marks an entry as "skipped from prover
 	// transcript" this means that neither the prover nor the verifier will use
 	// this value to update the transcript. The reason for this field is to work
 	// around subtle issues while dealing with recursion.
-	skippedFromProverTranscript collection.Set[ID]
+	SkippedFromProverTranscript collection.Set[ID]
 }
 
 /*
@@ -36,12 +36,12 @@ Construct a new round register
 */
 func NewRegister[ID comparable, DATA any]() ByRoundRegister[ID, DATA] {
 	return ByRoundRegister[ID, DATA]{
-		mapping:                       collection.NewMapping[ID, DATA](),
-		byRounds:                      collection.NewVecVec[ID](),
-		byRoundsIndex:                 collection.NewMapping[ID, int](),
-		ignored:                       collection.NewSet[ID](),
-		skippedFromVerifierTranscript: collection.NewSet[ID](),
-		skippedFromProverTranscript:   collection.NewSet[ID](),
+		Mapping:                       collection.NewMapping[ID, DATA](),
+		ByRounds:                      collection.NewVecVec[ID](),
+		ByRoundsIndex:                 collection.NewMapping[ID, int](),
+		Ignored:                       collection.NewSet[ID](),
+		SkippedFromVerifierTranscript: collection.NewSet[ID](),
+		SkippedFromProverTranscript:   collection.NewSet[ID](),
 	}
 }
 
@@ -50,9 +50,9 @@ Insert for a given round. Will panic if an item
 with the same ID has been registered first
 */
 func (r *ByRoundRegister[ID, DATA]) AddToRound(round int, id ID, data DATA) {
-	r.mapping.InsertNew(id, data)
-	r.byRounds.AppendToInner(round, id)
-	r.byRoundsIndex.InsertNew(id, round)
+	r.Mapping.InsertNew(id, data)
+	r.ByRounds.AppendToInner(round, id)
+	r.ByRoundsIndex.InsertNew(id, round)
 }
 
 /*
@@ -77,22 +77,22 @@ func (r *ByRoundRegister[ID, DATA]) AllKeysAt(round int) []ID {
 	// It is absolutely legitimate to query "too far"
 	// this can happens for queries for instance.
 	// However, it should not happen for coins.
-	r.byRounds.Reserve(round + 1)
-	return r.byRounds.MustGet(round)
+	r.ByRounds.Reserve(round + 1)
+	return r.ByRounds.MustGet(round)
 }
 
 /*
 Returns the data for associated to an ID. Panic if not found
 */
 func (r *ByRoundRegister[ID, DATA]) Data(id ID) DATA {
-	return r.mapping.MustGet(id)
+	return r.Mapping.MustGet(id)
 }
 
 /*
 Find
 */
 func (r *ByRoundRegister[ID, DATA]) Round(id ID) int {
-	round, ok := r.byRoundsIndex.TryGet(id)
+	round, ok := r.ByRoundsIndex.TryGet(id)
 	if !ok {
 		utils.Panic("Could not find entry %v", id)
 	}
@@ -103,7 +103,7 @@ func (r *ByRoundRegister[ID, DATA]) Round(id ID) int {
 Panic if the name is not found at the given round
 */
 func (r *ByRoundRegister[ID, DATA]) MustBeInRound(round int, id ID) {
-	round_, ok := r.byRoundsIndex.TryGet(id)
+	round_, ok := r.ByRoundsIndex.TryGet(id)
 	if !ok {
 		utils.Panic("entry `%v` is not found at all. Was expecting to find it at round %v", id, round)
 	}
@@ -116,21 +116,21 @@ func (r *ByRoundRegister[ID, DATA]) MustBeInRound(round int, id ID) {
 Panic if the name is not found at all
 */
 func (r *ByRoundRegister[ID, DATA]) MustExists(id ...ID) {
-	r.mapping.MustExists(id...)
+	r.Mapping.MustExists(id...)
 }
 
 /*
 Returns true if all the entry exist
 */
 func (r *ByRoundRegister[ID, DATA]) Exists(id ...ID) bool {
-	return r.mapping.Exists(id...)
+	return r.Mapping.Exists(id...)
 }
 
 /*
 Returns the number of rounds
 */
 func (r *ByRoundRegister[ID, DATA]) NumRounds() int {
-	return r.byRounds.Len()
+	return r.ByRounds.Len()
 }
 
 /*
@@ -139,8 +139,8 @@ No-op if enough rounds have been allocated, otherwise, will
 reserve as many as necessary.
 */
 func (r *ByRoundRegister[ID, DATA]) ReserveFor(newLen int) {
-	if r.byRounds.Len() < newLen {
-		r.byRounds.Reserve(newLen)
+	if r.ByRounds.Len() < newLen {
+		r.ByRounds.Reserve(newLen)
 	}
 }
 
@@ -166,8 +166,8 @@ Marks an entry as compiled. Panic if the key is missing from the register.
 Returns true if the item was already ignored.
 */
 func (r *ByRoundRegister[ID, DATA]) MarkAsIgnored(id ID) bool {
-	r.mapping.MustExists(id)
-	return r.ignored.Insert(id)
+	r.Mapping.MustExists(id)
+	return r.Ignored.Insert(id)
 }
 
 /*
@@ -175,37 +175,37 @@ Returns if the entry is ignored. Panics if the entry is missing from the
 map.
 */
 func (r *ByRoundRegister[ID, DATA]) IsIgnored(id ID) bool {
-	r.mapping.MustExists(id)
-	return r.ignored.Exists(id)
+	r.Mapping.MustExists(id)
+	return r.Ignored.Exists(id)
 }
 
 // MarkAsSkippedFromVerifierTranscript marks an entry as skipped from the transcript
 // of the verifier. Panic if the key is missing from the register. Returns true if
 // the item was already ignored.
 func (r *ByRoundRegister[ID, DATA]) MarkAsSkippedFromVerifierTranscript(id ID) bool {
-	r.mapping.MustExists(id)
-	return r.skippedFromVerifierTranscript.Insert(id)
+	r.Mapping.MustExists(id)
+	return r.SkippedFromVerifierTranscript.Insert(id)
 }
 
 // IsSkippedFromVerifierTranscript returns if the entry is skipped from the
 // transcript. Panics if the entry is missing from the map.
 func (r *ByRoundRegister[ID, DATA]) IsSkippedFromVerifierTranscript(id ID) bool {
-	r.mapping.MustExists(id)
-	return r.skippedFromVerifierTranscript.Exists(id)
+	r.Mapping.MustExists(id)
+	return r.SkippedFromVerifierTranscript.Exists(id)
 }
 
 // MarkAsSkippedFromProverTranscript marks an entry as skipped from the transcript
 // of the verifier. Panic if the key is missing from the register. Returns true
 // if the item was already ignored.
 func (r *ByRoundRegister[ID, DATA]) MarkAsSkippedFromProverTranscript(id ID) bool {
-	r.mapping.MustExists(id)
-	r.skippedFromVerifierTranscript.Insert(id)
-	return r.skippedFromProverTranscript.Insert(id)
+	r.Mapping.MustExists(id)
+	r.SkippedFromVerifierTranscript.Insert(id)
+	return r.SkippedFromProverTranscript.Insert(id)
 }
 
 // IsSkippedFromProverTranscript returns if the entry is skipped from the
 // transcript. Panics if the entry is missing from the map.
 func (r *ByRoundRegister[ID, DATA]) IsSkippedFromProverTranscript(id ID) bool {
-	r.mapping.MustExists(id)
-	return r.skippedFromProverTranscript.Exists(id)
+	r.Mapping.MustExists(id)
+	return r.SkippedFromProverTranscript.Exists(id)
 }

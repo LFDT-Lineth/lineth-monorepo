@@ -78,13 +78,16 @@ func (rm *ResultMod) Define(comp *wizard.CompiledIOP, round int, name string, nu
 	rm.Name = strings.Join([]string{"MERKLE", "RESULTMOD", name}, "_")
 
 	// Defines the zero-th column
-	rm.IsActive = rm.comp.InsertPrecomputed(
-		rm.colname("ISACTIVE"),
-		smartvectors.RightZeroPadded(
-			vector.Repeat(field.One(), rm.NumProofs),
-			rm.NumRows,
-		),
-	)
+	if !rm.withOptProofReuseCheck {
+		rm.IsActive = rm.comp.InsertPrecomputed(
+			rm.colname("IS_ACTIVE_PRECOMP"),
+			smartvectors.RightZeroPadded(
+				vector.Repeat(field.One(), rm.NumProofs),
+				rm.NumRows,
+			),
+		)
+	}
+
 	// Columns registered/redefined to verify reuse of Merkle proof in the Accumulator
 	if rm.withOptProofReuseCheck {
 		rm.UseNextMerkleProof = useNextMerkleProof

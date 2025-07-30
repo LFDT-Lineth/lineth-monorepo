@@ -5,7 +5,7 @@ import "github.com/consensys/linea-monorepo/prover/utils"
 // VecVec is a wrapper around double vecs
 // The inner slice is append only
 type VecVec[T any] struct {
-	inner [][]T
+	Inner [][]T
 }
 
 /*
@@ -17,25 +17,25 @@ func NewVecVec[T any](length ...int) VecVec[T] {
 	if len(length) == 0 {
 		length = []int{0}
 	}
-	return VecVec[T]{inner: make([][]T, length[0])}
+	return VecVec[T]{Inner: make([][]T, length[0])}
 }
 
 // Extends the collections by appending empty inner slices
 // Do nothing is the slice is already large enough
 func (v *VecVec[T]) reserveOuter(newLen int) {
-	for len((*v).inner) < newLen {
-		(*v).inner = append((*v).inner, make([]T, 0))
+	for len((*v).Inner) < newLen {
+		(*v).Inner = append((*v).Inner, make([]T, 0))
 	}
 }
 
 // Returns the inner double-slice
-func (v *VecVec[T]) Inner() [][]T {
-	return v.inner
+func (v *VecVec[T]) GetInner() [][]T {
+	return v.Inner
 }
 
 // Returns the inner double-slice
 func (v *VecVec[T]) Len() int {
-	return len(v.inner)
+	return len(v.Inner)
 }
 
 /*
@@ -46,7 +46,16 @@ func (v *VecVec[T]) MustGet(pos int) []T {
 		This will panic if pos is larger than the slice. So no need
 		to additionally check here albeit not very clean.
 	*/
-	return v.inner[pos]
+	return v.Inner[pos]
+}
+
+// GetOrEmpty attempts to return the required subslice or returns an
+// empty slice if it goes out of bound.
+func (v *VecVec[T]) GetOrEmpty(pos int) []T {
+	if pos >= len(v.Inner) {
+		return []T{}
+	}
+	return v.Inner[pos]
 }
 
 /*
@@ -66,15 +75,15 @@ func (v *VecVec[T]) AppendToInner(pos int, t ...T) {
 	v.reserveOuter(pos + 1)
 
 	// Then do the appending
-	v.inner[pos] = append(v.inner[pos], t...)
+	v.Inner[pos] = append(v.Inner[pos], t...)
 }
 
 // Allocates up to a given rounds number
 func (v *VecVec[T]) Reserve(newLen int) {
 	// We may not have to append the sequence
 	// If we need to, we append to it as many time as we need
-	for len(v.inner) < newLen {
-		v.inner = append(v.inner, []T{})
+	for len(v.Inner) < newLen {
+		v.Inner = append(v.Inner, []T{})
 	}
 }
 
@@ -84,5 +93,5 @@ func (v *VecVec[T]) LenOf(pos int) int {
 	if v.Len() <= pos {
 		v.Reserve(pos + 1)
 	}
-	return len(v.inner[pos])
+	return len(v.Inner[pos])
 }

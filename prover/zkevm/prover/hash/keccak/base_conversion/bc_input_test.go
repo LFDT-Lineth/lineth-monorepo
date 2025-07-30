@@ -6,6 +6,7 @@ import (
 
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/dummy"
+	"github.com/consensys/linea-monorepo/prover/protocol/distributed/pragmas"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	"github.com/consensys/linea-monorepo/prover/utils"
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/common"
@@ -15,16 +16,16 @@ import (
 
 func makeTestCaseBaseConversionInput() (
 	define wizard.DefineFunc,
-	prover wizard.ProverStep,
+	prover wizard.MainProverStep,
 ) {
 	numBlocks := 15
-	b := &blockBaseConversion{}
+	b := &BlockBaseConversion{}
 	define = func(build *wizard.Builder) {
 		var (
 			comp      = build.CompiledIOP
 			keccak    = generic.KeccakUsecase
 			size      = utils.NextPowerOfTwo(keccak.NbOfLanesPerBlock() * numBlocks)
-			createCol = common.CreateColFn(comp, "BASE_CONVERSION_TEST", size)
+			createCol = common.CreateColFn(comp, "BASE_CONVERSION_TEST", size, pragmas.RightPadded)
 		)
 
 		inp := BlockBaseConversionInputs{
@@ -51,7 +52,7 @@ func TestBaseConversionInput(t *testing.T) {
 	assert.NoErrorf(t, wizard.Verify(comp, proof), "invalid proof")
 }
 
-func (b *blockBaseConversion) assignInputs(run *wizard.ProverRuntime, numBlocks int) {
+func (b *BlockBaseConversion) assignInputs(run *wizard.ProverRuntime, numBlocks int) {
 	var (
 		lane              = common.NewVectorBuilder(b.Inputs.Lane)
 		isFirst           = common.NewVectorBuilder(b.Inputs.IsFirstLaneOfNewHash)

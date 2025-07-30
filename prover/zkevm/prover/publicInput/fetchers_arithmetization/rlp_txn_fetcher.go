@@ -3,13 +3,13 @@ package fetchers_arithmetization
 import (
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
-	"github.com/consensys/linea-monorepo/prover/protocol/accessors"
 	"github.com/consensys/linea-monorepo/prover/protocol/column"
 	"github.com/consensys/linea-monorepo/prover/protocol/dedicated"
-	"github.com/consensys/linea-monorepo/prover/protocol/dedicated/projection"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
+	"github.com/consensys/linea-monorepo/prover/protocol/query"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	sym "github.com/consensys/linea-monorepo/prover/symbolic"
+	commonconstraints "github.com/consensys/linea-monorepo/prover/zkevm/prover/common/common_constraints"
 	arith "github.com/consensys/linea-monorepo/prover/zkevm/prover/publicInput/arith_struct"
 	util "github.com/consensys/linea-monorepo/prover/zkevm/prover/publicInput/utilities"
 )
@@ -37,20 +37,18 @@ func NewRlpTxnFetcher(comp *wizard.CompiledIOP, name string, rt *arith.RlpTxn) R
 		NBytes:          util.CreateCol(name, "NBYTES", size, comp),
 		FilterFetched:   util.CreateCol(name, "FILTER_FETCHED", size, comp),
 		EndOfRlpSegment: util.CreateCol(name, "END_OF_RLP_SEGMENT", size, comp),
-		ChainID:         util.CreateCol(name, "CHAIN_ID", 1, comp),
-		NBytesChainID:   util.CreateCol(name, "N_BYTES_CHAIN_ID", 1, comp),
+		ChainID:         util.CreateCol(name, "CHAIN_ID", size, comp),
+		NBytesChainID:   util.CreateCol(name, "N_BYTES_CHAIN_ID", size, comp),
 	}
 	return res
 }
 
 // ConstrainChainID defines constraints for both ChainID and NBytesChainID columns.
 func ConstrainChainID(comp *wizard.CompiledIOP, fetcher *RlpTxnFetcher, name string, rlpTxnArith *arith.RlpTxn) {
-	// prepare column visibility for accessors
-	comp.Columns.SetStatus(fetcher.ChainID.GetColID(), column.Proof)
-	comp.Columns.SetStatus(fetcher.NBytesChainID.GetColID(), column.Proof)
-	// get accessors
-	accChainID := accessors.NewFromPublicColumn(fetcher.ChainID, 0)
-	accNBytesChainID := accessors.NewFromPublicColumn(fetcher.NBytesChainID, 0)
+
+	commonconstraints.MustBeConstant(comp, fetcher.ChainID)
+	commonconstraints.MustBeConstant(comp, fetcher.NBytesChainID)
+
 	// constraint for the ChainID column
 	comp.InsertGlobal(
 		0,
@@ -61,7 +59,7 @@ func ConstrainChainID(comp *wizard.CompiledIOP, fetcher *RlpTxnFetcher, name str
 			rlpTxnArith.ToHashByProver,
 			sym.Sub(
 				rlpTxnArith.Limb,
-				accChainID,
+				fetcher.ChainID,
 			),
 		),
 	)
@@ -75,7 +73,7 @@ func ConstrainChainID(comp *wizard.CompiledIOP, fetcher *RlpTxnFetcher, name str
 			rlpTxnArith.ToHashByProver,
 			sym.Sub(
 				rlpTxnArith.NBytes,
-				accNBytesChainID,
+				fetcher.NBytesChainID,
 			),
 		),
 	)
@@ -148,13 +146,13 @@ func DefineRlpTxnFetcher(comp *wizard.CompiledIOP, fetcher *RlpTxnFetcher, name 
 	}
 
 	// a projection query to check that the timestamp data is fetched correctly
-	projection.InsertProjection(comp,
+	comp.InsertProjection(
 		ifaces.QueryIDf("%s_RLP_TXN_PROJECTION", name),
-		fetcherTable,
-		arithTable,
-		fetcher.FilterFetched,
-		rlpTxnArith.ToHashByProver, // filter lights up on the arithmetization's RlpTxn rows that contain rlp transaction data
-	)
+		query.ProjectionInput{ColumnA: fetcherTable,
+			ColumnB: arithTable,
+			FilterA: fetcher.FilterFetched,
+			// filter lights up on the arithmetization's RlpTxn rows that contain rlp transaction data
+			FilterB: rlpTxnArith.ToHashByProver})
 }
 
 func AssignRlpTxnFetcher(run *wizard.ProverRuntime, fetcher *RlpTxnFetcher, rlpTxnArith *arith.RlpTxn) {
@@ -185,7 +183,6 @@ func AssignRlpTxnFetcher(run *wizard.ProverRuntime, fetcher *RlpTxnFetcher, rlpT
 			absTxNumMax[counter].Set(&arithAbsTxNumMax)
 			limb[counter].Set(&arithLimb)
 			nBytes[counter].Set(&arithNBytes)
-
 			filterFetched[counter].SetOne()
 			counter++
 		}
@@ -212,14 +209,15 @@ func AssignRlpTxnFetcher(run *wizard.ProverRuntime, fetcher *RlpTxnFetcher, rlpT
 	}
 
 	// assign the fetcher columns
-	run.AssignColumn(fetcher.AbsTxNum.GetColID(), smartvectors.NewRegular(absTxNum))
-	run.AssignColumn(fetcher.AbsTxNumMax.GetColID(), smartvectors.NewRegular(absTxNumMax))
-	run.AssignColumn(fetcher.Limb.GetColID(), smartvectors.NewRegular(limb))
-	run.AssignColumn(fetcher.NBytes.GetColID(), smartvectors.NewRegular(nBytes))
-	run.AssignColumn(fetcher.FilterFetched.GetColID(), smartvectors.NewRegular(filterFetched))
-	run.AssignColumn(fetcher.EndOfRlpSegment.GetColID(), smartvectors.NewRegular(endOfRlpSegment))
-	run.AssignColumn(fetcher.ChainID.GetColID(), smartvectors.NewRegular([]field.Element{chainID}))
-	run.AssignColumn(fetcher.NBytesChainID.GetColID(), smartvectors.NewRegular([]field.Element{nBytesChainID}))
+	size := fetcher.AbsTxNum.Size()
+	run.AssignColumn(fetcher.AbsTxNum.GetColID(), smartvectors.RightZeroPadded(absTxNum[:counter], size))
+	run.AssignColumn(fetcher.AbsTxNumMax.GetColID(), smartvectors.RightZeroPadded(absTxNumMax[:counter], size))
+	run.AssignColumn(fetcher.Limb.GetColID(), smartvectors.RightZeroPadded(limb[:counter], size))
+	run.AssignColumn(fetcher.NBytes.GetColID(), smartvectors.RightZeroPadded(nBytes[:counter], size))
+	run.AssignColumn(fetcher.FilterFetched.GetColID(), smartvectors.RightZeroPadded(filterFetched[:counter], size))
+	run.AssignColumn(fetcher.EndOfRlpSegment.GetColID(), smartvectors.NewRegular(endOfRlpSegment), wizard.DisableAssignmentSizeReduction)
+	run.AssignColumn(fetcher.ChainID.GetColID(), smartvectors.NewConstant(chainID, size))
+	run.AssignColumn(fetcher.NBytesChainID.GetColID(), smartvectors.NewConstant(nBytesChainID, size))
 
 	fetcher.ComputeSelectorDiffAbsTxId.Run(run)
 }

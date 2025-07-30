@@ -22,59 +22,57 @@ import (
 // byte32cmp context
 type BytesCmpCtx struct {
 	// The compiled IOP
-	comp *wizard.CompiledIOP
+	Comp *wizard.CompiledIOP
 	// Number of limbs needed to represent a Byte32 value
-	numLimbs int
+	NumLimbs int
 	// Number of bits per each limb
-	bitPerLimbs int
-	// Name if the name of parent context joined with a specifier.
-	name string
+	BitPerLimbs int
+	// Name if the Name of parent context joined with a specifier.
+	Name string
 	// Round of the module
-	round int
-	// size of ColumnA and ColumnB
-	size int
+	Round int
 	// ColumnA, allegedly the column with larger values
-	columnA ifaces.Column
+	ColumnA ifaces.Column
 	// ColumnB, allegedly the column with smaller values
-	columnB ifaces.Column
+	ColumnB ifaces.Column
 	// Column containing the limbs of ColumnA
-	columnAlimbs []ifaces.Column
+	ColumnAlimbs []ifaces.Column
 	// Column containing the limbs of ColumnB
-	columnBlimbs []ifaces.Column
+	ColumnBlimbs []ifaces.Column
 	// Column containing the limbs of the field Modulus
-	modulusLimbs []ifaces.Column
+	ModulusLimbs []ifaces.Column
 	// Flags when comparing modulus with ColumnA
-	gCmpModulusColA []ifaces.Column
-	lCmpModulusColA []ifaces.Column
-	eCmpModulusColA []ifaces.Column
+	GCmpModulusColA []ifaces.Column
+	LCmpModulusColA []ifaces.Column
+	ECmpModulusColA []ifaces.Column
 	// Flags when comparing ColumnA with ColumnB
-	gCmpColAColB []ifaces.Column
-	lCmpColAColB []ifaces.Column
-	eCmpColAColB []ifaces.Column
-	// activeRow works as a filter
-	activeRow *symbolic.Expression
+	GCmpColAColB []ifaces.Column
+	LCmpColAColB []ifaces.Column
+	ECmpColAColB []ifaces.Column
+	// ActiveRow works as a filter
+	ActiveRow *symbolic.Expression
 }
 
 // Defines all the columns of Byte32cmpCtx and registers all the required constraint
 func (bcp *BytesCmpCtx) Define(comp *wizard.CompiledIOP, numLimbs, bitPerLimbs int, name string) {
-	if bcp.columnA.Size() != bcp.columnB.Size() {
-		utils.Panic("The size of columnA and columnB are different, %v vs %v", bcp.columnA.Size(), bcp.columnB.Size())
+	if bcp.ColumnA.Size() != bcp.ColumnB.Size() {
+		utils.Panic("The size of columnA and columnB are different, %v vs %v", bcp.ColumnA.Size(), bcp.ColumnB.Size())
 	}
-	bcp.size = bcp.columnA.Size()
-	bcp.comp = comp
-	bcp.numLimbs = numLimbs
-	bcp.bitPerLimbs = bitPerLimbs
-	bcp.name = name
+
+	bcp.Comp = comp
+	bcp.NumLimbs = numLimbs
+	bcp.BitPerLimbs = bitPerLimbs
+	bcp.Name = name
 	// Specify the sizes of columns
-	bcp.columnAlimbs = make([]ifaces.Column, numLimbs)
-	bcp.columnBlimbs = make([]ifaces.Column, numLimbs)
-	bcp.gCmpModulusColA = make([]ifaces.Column, numLimbs)
-	bcp.lCmpModulusColA = make([]ifaces.Column, numLimbs)
-	bcp.eCmpModulusColA = make([]ifaces.Column, numLimbs)
-	bcp.gCmpColAColB = make([]ifaces.Column, numLimbs)
-	bcp.lCmpColAColB = make([]ifaces.Column, numLimbs)
-	bcp.eCmpColAColB = make([]ifaces.Column, numLimbs)
-	bcp.modulusLimbs = make([]ifaces.Column, numLimbs)
+	bcp.ColumnAlimbs = make([]ifaces.Column, numLimbs)
+	bcp.ColumnBlimbs = make([]ifaces.Column, numLimbs)
+	bcp.GCmpModulusColA = make([]ifaces.Column, numLimbs)
+	bcp.LCmpModulusColA = make([]ifaces.Column, numLimbs)
+	bcp.ECmpModulusColA = make([]ifaces.Column, numLimbs)
+	bcp.GCmpColAColB = make([]ifaces.Column, numLimbs)
+	bcp.LCmpColAColB = make([]ifaces.Column, numLimbs)
+	bcp.ECmpColAColB = make([]ifaces.Column, numLimbs)
+	bcp.ModulusLimbs = make([]ifaces.Column, numLimbs)
 
 	// Define the columns and insert range constraints
 	bcp.defineColumns()
@@ -88,14 +86,19 @@ func (bcp *BytesCmpCtx) Define(comp *wizard.CompiledIOP, numLimbs, bitPerLimbs i
 	bcp.cmpLimbs(false)
 }
 
+// Size returns the size of the bytes cmp module
+func (bcp *BytesCmpCtx) Size() int {
+	return bcp.ColumnA.Size()
+}
+
 // Compute Modulus Limbs
 func (bcp *BytesCmpCtx) computeModulusLimbs() []field.Element {
-	moduluslimbsWitness := make([]field.Element, bcp.numLimbs)
-	for i := 0; i < bcp.numLimbs; i++ {
+	moduluslimbsWitness := make([]field.Element, bcp.NumLimbs)
+	for i := 0; i < bcp.NumLimbs; i++ {
 		l := uint64(0)
-		for k := i * bcp.bitPerLimbs; k < (i+1)*bcp.bitPerLimbs; k++ {
+		for k := i * bcp.BitPerLimbs; k < (i+1)*bcp.BitPerLimbs; k++ {
 			extractedBit := field.Modulus().Bit(k)
-			l |= uint64(extractedBit) << (k % bcp.bitPerLimbs)
+			l |= uint64(extractedBit) << (k % bcp.BitPerLimbs)
 		}
 		moduluslimbsWitness[i].SetUint64(l)
 	}
@@ -103,137 +106,140 @@ func (bcp *BytesCmpCtx) computeModulusLimbs() []field.Element {
 }
 
 func (bcp *BytesCmpCtx) defineColumns() {
-	for i := 0; i < bcp.numLimbs; i++ {
+
+	for i := 0; i < bcp.NumLimbs; i++ {
 		// Declare the limbs for columnA
-		bcp.columnAlimbs[i] = bcp.comp.InsertCommit(
-			bcp.round,
-			ifaces.ColIDf("BYTE32CMP_COLUMN_A_%v_LIMB_%v", bcp.name, i),
-			bcp.size,
+		bcp.ColumnAlimbs[i] = bcp.Comp.InsertCommit(
+			bcp.Round,
+			ifaces.ColIDf("BYTE32CMP_COLUMN_A_%v_LIMB_%v", bcp.Name, i),
+			bcp.Size(),
 		)
 		// Enforces the range over the limbs of columnA
-		bcp.comp.InsertRange(
-			bcp.round,
-			ifaces.QueryIDf("BYTE32CMP_LIMB_RANGE_COLUMN_A_%v_LIMB_%v", bcp.name, i),
-			bcp.columnAlimbs[i],
-			1<<bcp.bitPerLimbs,
+		bcp.Comp.InsertRange(
+			bcp.Round,
+			ifaces.QueryIDf("BYTE32CMP_LIMB_RANGE_COLUMN_A_%v_LIMB_%v", bcp.Name, i),
+			bcp.ColumnAlimbs[i],
+			1<<bcp.BitPerLimbs,
 		)
 		// Declare the limbs for ColumnB
-		bcp.columnBlimbs[i] = bcp.comp.InsertCommit(
-			bcp.round,
-			ifaces.ColIDf("BYTE32CMP_COLUMN_B_%v_LIMB_%v", bcp.name, i),
-			bcp.size,
+		bcp.ColumnBlimbs[i] = bcp.Comp.InsertCommit(
+			bcp.Round,
+			ifaces.ColIDf("BYTE32CMP_COLUMN_B_%v_LIMB_%v", bcp.Name, i),
+			bcp.Size(),
 		)
 		// Enforces the range over the limbs of columnB
-		bcp.comp.InsertRange(
-			bcp.round,
-			ifaces.QueryIDf("BYTE32CMP_LIMB_RANGE_COLUMN_B_%v_LIMB_%v", bcp.name, i),
-			bcp.columnBlimbs[i],
-			1<<bcp.bitPerLimbs,
+		bcp.Comp.InsertRange(
+			bcp.Round,
+			ifaces.QueryIDf("BYTE32CMP_LIMB_RANGE_COLUMN_B_%v_LIMB_%v", bcp.Name, i),
+			bcp.ColumnBlimbs[i],
+			1<<bcp.BitPerLimbs,
 		)
 		// Accessing the Modulus limbs
 		moduluslimbsWitness := bcp.computeModulusLimbs()
-		// Assign the modulus limbs
-		bcp.modulusLimbs[i] = verifiercol.NewConstantCol(moduluslimbsWitness[i], bcp.size)
+		// Assign the modulus limbs. The reason we remove the name from the
+		// constant col is because this column never originates from compilation
+		// This choices makes the generated bytes comparison wizard distributable.
+		bcp.ModulusLimbs[i] = verifiercol.NewConstantCol(moduluslimbsWitness[i], bcp.Size(), bcp.Name)
 	}
 
 	// Build the linear combination with powers of 2^bitPerLimbs.
 	// The limbs are in "little-endian" order. Namely, the first
 	// limb encodes the least significant bits first.
-	pow2 := symbolic.NewConstant(1 << bcp.bitPerLimbs)
-	accA := ifaces.ColumnAsVariable(bcp.columnAlimbs[bcp.numLimbs-1])
-	accB := ifaces.ColumnAsVariable(bcp.columnBlimbs[bcp.numLimbs-1])
-	for i := bcp.numLimbs - 2; i >= 0; i-- {
+	pow2 := symbolic.NewConstant(1 << bcp.BitPerLimbs)
+	accA := ifaces.ColumnAsVariable(bcp.ColumnAlimbs[bcp.NumLimbs-1])
+	accB := ifaces.ColumnAsVariable(bcp.ColumnBlimbs[bcp.NumLimbs-1])
+	for i := bcp.NumLimbs - 2; i >= 0; i-- {
 		accA = symbolic.Mul(accA, pow2)
-		accA = symbolic.Add(accA, bcp.columnAlimbs[i])
+		accA = symbolic.Add(accA, bcp.ColumnAlimbs[i])
 		accB = symbolic.Mul(accB, pow2)
-		accB = symbolic.Add(accB, bcp.columnBlimbs[i])
+		accB = symbolic.Add(accB, bcp.ColumnBlimbs[i])
 	}
 
 	// Declare the global constraint for columnA and columnB
-	bcp.comp.InsertGlobal(bcp.round, ifaces.QueryIDf("GLOBAL_BYTE32CMP_ACCUMULATION_COLUMN_A_%v", bcp.name), symbolic.Sub(accA, bcp.columnA))
-	bcp.comp.InsertGlobal(bcp.round, ifaces.QueryIDf("GLOBAL_BYTE32CMP_ACCUMULATION_COLUMN_B_%v", bcp.name), symbolic.Sub(accB, bcp.columnB))
+	bcp.Comp.InsertGlobal(bcp.Round, ifaces.QueryIDf("GLOBAL_BYTE32CMP_ACCUMULATION_COLUMN_A_%v", bcp.Name), symbolic.Sub(accA, bcp.ColumnA))
+	bcp.Comp.InsertGlobal(bcp.Round, ifaces.QueryIDf("GLOBAL_BYTE32CMP_ACCUMULATION_COLUMN_B_%v", bcp.Name), symbolic.Sub(accB, bcp.ColumnB))
 }
 
 func (bcp *BytesCmpCtx) defineFlags() {
-	for i := 0; i < bcp.numLimbs; i++ {
+	for i := 0; i < bcp.NumLimbs; i++ {
 		// Declare gCmpModulusColA
-		bcp.gCmpModulusColA[i] = bcp.comp.InsertCommit(
-			bcp.round,
-			ifaces.ColIDf("BYTE32CMP_G_MOD_COL_A_%v_LIMB_%v", bcp.name, i),
-			bcp.size,
+		bcp.GCmpModulusColA[i] = bcp.Comp.InsertCommit(
+			bcp.Round,
+			ifaces.ColIDf("BYTE32CMP_G_MOD_COL_A_%v_LIMB_%v", bcp.Name, i),
+			bcp.Size(),
 		)
 
 		// Declare lCmpModulusColA
-		bcp.lCmpModulusColA[i] = bcp.comp.InsertCommit(
-			bcp.round,
-			ifaces.ColIDf("BYTE32CMP_L_MOD_COL_A_%v_LIMB_%v", bcp.name, i),
-			bcp.size,
+		bcp.LCmpModulusColA[i] = bcp.Comp.InsertCommit(
+			bcp.Round,
+			ifaces.ColIDf("BYTE32CMP_L_MOD_COL_A_%v_LIMB_%v", bcp.Name, i),
+			bcp.Size(),
 		)
 
 		// Declare eCmpModulusColA
-		bcp.eCmpModulusColA[i] = bcp.comp.InsertCommit(
-			bcp.round,
-			ifaces.ColIDf("BYTE32CMP_E_MOD_COL_A_%v_LIMB_%v", bcp.name, i),
-			bcp.size,
+		bcp.ECmpModulusColA[i] = bcp.Comp.InsertCommit(
+			bcp.Round,
+			ifaces.ColIDf("BYTE32CMP_E_MOD_COL_A_%v_LIMB_%v", bcp.Name, i),
+			bcp.Size(),
 		)
 
 		// Declare gCmpColAColB
-		bcp.gCmpColAColB[i] = bcp.comp.InsertCommit(
-			bcp.round,
-			ifaces.ColIDf("BYTE32CMP_G_COL_A_COL_B_%v_LIMB_%v", bcp.name, i),
-			bcp.size,
+		bcp.GCmpColAColB[i] = bcp.Comp.InsertCommit(
+			bcp.Round,
+			ifaces.ColIDf("BYTE32CMP_G_COL_A_COL_B_%v_LIMB_%v", bcp.Name, i),
+			bcp.Size(),
 		)
 
 		// Declare lCmpColAColB
-		bcp.lCmpColAColB[i] = bcp.comp.InsertCommit(
-			bcp.round,
-			ifaces.ColIDf("BYTE32CMP_L_COL_A_COL_B_%v_LIMB_%v", bcp.name, i),
-			bcp.size,
+		bcp.LCmpColAColB[i] = bcp.Comp.InsertCommit(
+			bcp.Round,
+			ifaces.ColIDf("BYTE32CMP_L_COL_A_COL_B_%v_LIMB_%v", bcp.Name, i),
+			bcp.Size(),
 		)
 
 		// Declare eCmpColAColB
-		bcp.eCmpColAColB[i] = bcp.comp.InsertCommit(
-			bcp.round,
-			ifaces.ColIDf("BYTE32CMP_COL_A_COL_B_%v_LIMB_%v", bcp.name, i),
-			bcp.size,
+		bcp.ECmpColAColB[i] = bcp.Comp.InsertCommit(
+			bcp.Round,
+			ifaces.ColIDf("BYTE32CMP_COL_A_COL_B_%v_LIMB_%v", bcp.Name, i),
+			bcp.Size(),
 		)
 	}
 }
 
 func (bcp *BytesCmpCtx) cmpLimbs(isCmpWithModulus bool) {
 	var (
-		g         = make([]*symbolic.Expression, bcp.numLimbs)
-		l         = make([]*symbolic.Expression, bcp.numLimbs)
-		e         = make([]*symbolic.Expression, bcp.numLimbs)
-		gMinusl   = make([]*symbolic.Expression, bcp.numLimbs)
-		colALimbs = make([]*symbolic.Expression, bcp.numLimbs)
-		colBLimbs = make([]*symbolic.Expression, bcp.numLimbs)
+		g         = make([]*symbolic.Expression, bcp.NumLimbs)
+		l         = make([]*symbolic.Expression, bcp.NumLimbs)
+		e         = make([]*symbolic.Expression, bcp.NumLimbs)
+		gMinusl   = make([]*symbolic.Expression, bcp.NumLimbs)
+		colALimbs = make([]*symbolic.Expression, bcp.NumLimbs)
+		colBLimbs = make([]*symbolic.Expression, bcp.NumLimbs)
 		name_     string
 	)
 	// If comparing with the modulus, then colA is modulus and colB is bcp.columnA
 	// If not comparing with the modulus, then colA is bcp.columnA and colB is bcp.columnB
 	if isCmpWithModulus {
 		name_ = "MOD_COL_A"
-		for i := 0; i < bcp.numLimbs; i++ {
-			g[i] = ifaces.ColumnAsVariable(bcp.gCmpModulusColA[i])
-			l[i] = ifaces.ColumnAsVariable(bcp.lCmpModulusColA[i])
-			e[i] = ifaces.ColumnAsVariable(bcp.eCmpModulusColA[i])
-			colALimbs[i] = ifaces.ColumnAsVariable(bcp.modulusLimbs[i])
-			colBLimbs[i] = ifaces.ColumnAsVariable(bcp.columnAlimbs[i])
+		for i := 0; i < bcp.NumLimbs; i++ {
+			g[i] = ifaces.ColumnAsVariable(bcp.GCmpModulusColA[i])
+			l[i] = ifaces.ColumnAsVariable(bcp.LCmpModulusColA[i])
+			e[i] = ifaces.ColumnAsVariable(bcp.ECmpModulusColA[i])
+			colALimbs[i] = ifaces.ColumnAsVariable(bcp.ModulusLimbs[i])
+			colBLimbs[i] = ifaces.ColumnAsVariable(bcp.ColumnAlimbs[i])
 		}
 	} else {
 		name_ = "COL_A_COL_B"
-		for i := 0; i < bcp.numLimbs; i++ {
-			g[i] = ifaces.ColumnAsVariable(bcp.gCmpColAColB[i])
-			l[i] = ifaces.ColumnAsVariable(bcp.lCmpColAColB[i])
-			e[i] = ifaces.ColumnAsVariable(bcp.eCmpColAColB[i])
-			colALimbs[i] = ifaces.ColumnAsVariable(bcp.columnAlimbs[i])
-			colBLimbs[i] = ifaces.ColumnAsVariable(bcp.columnBlimbs[i])
+		for i := 0; i < bcp.NumLimbs; i++ {
+			g[i] = ifaces.ColumnAsVariable(bcp.GCmpColAColB[i])
+			l[i] = ifaces.ColumnAsVariable(bcp.LCmpColAColB[i])
+			e[i] = ifaces.ColumnAsVariable(bcp.ECmpColAColB[i])
+			colALimbs[i] = ifaces.ColumnAsVariable(bcp.ColumnAlimbs[i])
+			colBLimbs[i] = ifaces.ColumnAsVariable(bcp.ColumnBlimbs[i])
 		}
 	}
 
 	// declare gMinusL
-	for i := 0; i < bcp.numLimbs; i++ {
+	for i := 0; i < bcp.NumLimbs; i++ {
 		gMinusl[i] = symbolic.Sub(g[i], l[i])
 	}
 
@@ -245,7 +251,7 @@ func (bcp *BytesCmpCtx) cmpLimbs(isCmpWithModulus bool) {
 	// (the rest of the values are irrelevant). The expr boils down to zero as expected.
 	acc := gMinusl[0]
 	acc = symbolic.Sub(acc, e[0])
-	for i := 1; i < bcp.numLimbs; i++ {
+	for i := 1; i < bcp.NumLimbs; i++ {
 		acc = symbolic.Mul(acc, e[i])
 		acc = symbolic.Add(acc, gMinusl[i])
 	}
@@ -253,27 +259,27 @@ func (bcp *BytesCmpCtx) cmpLimbs(isCmpWithModulus bool) {
 	acc = symbolic.Sub(symbolic.NewConstant(1), acc)
 
 	// Filtering by the activeRows
-	acc = symbolic.Mul(acc, bcp.activeRow)
+	acc = symbolic.Mul(acc, bcp.ActiveRow)
 
 	// Declare the global constraint
-	bcp.comp.InsertGlobal(bcp.round, ifaces.QueryIDf("GLOBAL_BYTE32CMP_SEQUENTIAL_LIMB_CHECK_%v_%v", name_, bcp.name), acc)
+	bcp.Comp.InsertGlobal(bcp.Round, ifaces.QueryIDf("GLOBAL_BYTE32CMP_SEQUENTIAL_LIMB_CHECK_%v_%v", name_, bcp.Name), acc)
 
-	for i := 1; i < bcp.numLimbs; i++ {
+	for i := 1; i < bcp.NumLimbs; i++ {
 		// Range query on (g[i](colALimbs[i]-colBLimbs[i]) + l[i](colBLimbs[i]-colALimbs[i]))
 		summand1 := symbolic.Mul(g[i], symbolic.Sub(colALimbs[i], colBLimbs[i]))
 		summand2 := symbolic.Mul(l[i], symbolic.Sub(colBLimbs[i], colALimbs[i]))
 		expr1 := symbolic.Add(summand1, summand2)
 		// Filtering by the activeRows
-		expr1 = symbolic.Mul(expr1, bcp.activeRow)
-		name2 := fmt.Sprintf("GLOBAL_BYTE32CMP_%v_BIGRANGE_%v_%v_", name_, bcp.name, i)
+		expr1 = symbolic.Mul(expr1, bcp.ActiveRow)
+		name2 := fmt.Sprintf("GLOBAL_BYTE32CMP_%v_BIGRANGE_%v_%v_", name_, bcp.Name, i)
 		// As we compare modulus limbs, we need total number of bits 256
-		bigrange.BigRange(bcp.comp, expr1, 16, 16, name2)
+		bigrange.BigRange(bcp.Comp, expr1, 16, 16, name2)
 
 		// Sanity of g, l, and e, when active they should sum up to 1 (law of tricotomy)
 		expr2 := symbolic.Add(g[i], l[i], e[i])
 		expr2 = symbolic.Sub(symbolic.NewConstant(1), expr2)
-		expr2 = symbolic.Mul(expr2, bcp.activeRow)
-		bcp.comp.InsertGlobal(bcp.round, ifaces.QueryIDf("GLOBAL_BYTE32CMP_GLE_SUM_%v_%v_%v", name_, bcp.name, i), expr2)
+		expr2 = symbolic.Mul(expr2, bcp.ActiveRow)
+		bcp.Comp.InsertGlobal(bcp.Round, ifaces.QueryIDf("GLOBAL_BYTE32CMP_GLE_SUM_%v_%v_%v", name_, bcp.Name, i), expr2)
 	}
 
 }
@@ -284,31 +290,31 @@ func (bcp *BytesCmpCtx) assign(
 	colA, colB smartvectors.SmartVector,
 ) {
 	var (
-		colALimbs    = make([][]field.Element, bcp.numLimbs)
-		colBLimbs    = make([][]field.Element, bcp.numLimbs)
-		gCmpModColA  = make([][]field.Element, bcp.numLimbs)
-		lCmpModColA  = make([][]field.Element, bcp.numLimbs)
-		eCmpModColA  = make([][]field.Element, bcp.numLimbs)
-		gCmpColAColB = make([][]field.Element, bcp.numLimbs)
-		lCmpColAColB = make([][]field.Element, bcp.numLimbs)
-		eCmpColAColB = make([][]field.Element, bcp.numLimbs)
+		colALimbs    = make([][]field.Element, bcp.NumLimbs)
+		colBLimbs    = make([][]field.Element, bcp.NumLimbs)
+		gCmpModColA  = make([][]field.Element, bcp.NumLimbs)
+		lCmpModColA  = make([][]field.Element, bcp.NumLimbs)
+		eCmpModColA  = make([][]field.Element, bcp.NumLimbs)
+		gCmpColAColB = make([][]field.Element, bcp.NumLimbs)
+		lCmpColAColB = make([][]field.Element, bcp.NumLimbs)
+		eCmpColAColB = make([][]field.Element, bcp.NumLimbs)
 	)
 	// Accessing the Modulus limbs
 	moduluslimbsWitness := bcp.computeModulusLimbs()
 
 	// Assigning the size of the var columns
-	for i := 0; i < bcp.numLimbs; i++ {
-		colALimbs[i] = make([]field.Element, bcp.size)
-		colBLimbs[i] = make([]field.Element, bcp.size)
-		gCmpModColA[i] = make([]field.Element, bcp.size)
-		lCmpModColA[i] = make([]field.Element, bcp.size)
-		eCmpModColA[i] = make([]field.Element, bcp.size)
-		gCmpColAColB[i] = make([]field.Element, bcp.size)
-		lCmpColAColB[i] = make([]field.Element, bcp.size)
-		eCmpColAColB[i] = make([]field.Element, bcp.size)
+	for i := 0; i < bcp.NumLimbs; i++ {
+		colALimbs[i] = make([]field.Element, bcp.Size())
+		colBLimbs[i] = make([]field.Element, bcp.Size())
+		gCmpModColA[i] = make([]field.Element, bcp.Size())
+		lCmpModColA[i] = make([]field.Element, bcp.Size())
+		eCmpModColA[i] = make([]field.Element, bcp.Size())
+		gCmpColAColB[i] = make([]field.Element, bcp.Size())
+		lCmpColAColB[i] = make([]field.Element, bcp.Size())
+		eCmpColAColB[i] = make([]field.Element, bcp.Size())
 	}
 
-	for j := 0; j < bcp.size; j++ {
+	for j := 0; j < bcp.Size(); j++ {
 		colAValFr := colA.Get(j)
 		colBValFr := colB.Get(j)
 		if colAValFr == field.Zero() && colBValFr == field.Zero() {
@@ -318,14 +324,14 @@ func (bcp *BytesCmpCtx) assign(
 		colAValFr.BigInt(&colAVal)
 		colBValFr.BigInt(&colBVal)
 
-		for i := 0; i < bcp.numLimbs; i++ {
+		for i := 0; i < bcp.NumLimbs; i++ {
 			limbA := uint64(0)
 			limbB := uint64(0)
-			for k := i * bcp.bitPerLimbs; k < (i+1)*bcp.bitPerLimbs; k++ {
+			for k := i * bcp.BitPerLimbs; k < (i+1)*bcp.BitPerLimbs; k++ {
 				extractedBitA := colAVal.Bit(k)
 				extractedBitB := colBVal.Bit(k)
-				limbA |= uint64(extractedBitA) << (k % bcp.bitPerLimbs)
-				limbB |= uint64(extractedBitB) << (k % bcp.bitPerLimbs)
+				limbA |= uint64(extractedBitA) << (k % bcp.BitPerLimbs)
+				limbB |= uint64(extractedBitB) << (k % bcp.BitPerLimbs)
 			}
 			// To assign limbs
 			colALimbs[i][j].SetUint64(limbA)
@@ -365,15 +371,15 @@ func (bcp *BytesCmpCtx) assign(
 
 	}
 	// assign the computed columns
-	for i := 0; i < bcp.numLimbs; i++ {
-		run.AssignColumn(bcp.columnAlimbs[i].GetColID(), smartvectors.NewRegular(colALimbs[i]))
-		run.AssignColumn(bcp.columnBlimbs[i].GetColID(), smartvectors.NewRegular(colBLimbs[i]))
-		run.AssignColumn(bcp.gCmpModulusColA[i].GetColID(), smartvectors.NewRegular(gCmpModColA[i]))
-		run.AssignColumn(bcp.lCmpModulusColA[i].GetColID(), smartvectors.NewRegular(lCmpModColA[i]))
-		run.AssignColumn(bcp.eCmpModulusColA[i].GetColID(), smartvectors.NewRegular(eCmpModColA[i]))
-		run.AssignColumn(bcp.gCmpColAColB[i].GetColID(), smartvectors.NewRegular(gCmpColAColB[i]))
-		run.AssignColumn(bcp.lCmpColAColB[i].GetColID(), smartvectors.NewRegular(lCmpColAColB[i]))
-		run.AssignColumn(bcp.eCmpColAColB[i].GetColID(), smartvectors.NewRegular(eCmpColAColB[i]))
+	for i := 0; i < bcp.NumLimbs; i++ {
+		run.AssignColumn(bcp.ColumnAlimbs[i].GetColID(), smartvectors.NewRegular(colALimbs[i]))
+		run.AssignColumn(bcp.ColumnBlimbs[i].GetColID(), smartvectors.NewRegular(colBLimbs[i]))
+		run.AssignColumn(bcp.GCmpModulusColA[i].GetColID(), smartvectors.NewRegular(gCmpModColA[i]))
+		run.AssignColumn(bcp.LCmpModulusColA[i].GetColID(), smartvectors.NewRegular(lCmpModColA[i]))
+		run.AssignColumn(bcp.ECmpModulusColA[i].GetColID(), smartvectors.NewRegular(eCmpModColA[i]))
+		run.AssignColumn(bcp.GCmpColAColB[i].GetColID(), smartvectors.NewRegular(gCmpColAColB[i]))
+		run.AssignColumn(bcp.LCmpColAColB[i].GetColID(), smartvectors.NewRegular(lCmpColAColB[i]))
+		run.AssignColumn(bcp.ECmpColAColB[i].GetColID(), smartvectors.NewRegular(eCmpColAColB[i]))
 
 	}
 }

@@ -9,6 +9,7 @@ import (
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/utils"
+	"github.com/google/uuid"
 )
 
 // Inclusion describes an inclusion query (a.k.a. a lookup constraint). The
@@ -16,6 +17,7 @@ import (
 // tables. The query can additionally feature an fragmented table meaning that
 // the including “table" to consider is the union of two tables.
 type Inclusion struct {
+
 	// Included represents the table over which the constraint applies. The
 	// columns must be a non-zero collection of columns of the same size.
 	Included []ifaces.Column
@@ -40,6 +42,8 @@ type Inclusion struct {
 	// The slices is indexed per number of fragment, in the non-fragmented case,
 	// consider there is only a single segment.
 	IncludingFilter []ifaces.Column
+
+	uuid uuid.UUID `serde:"omit"`
 }
 
 // NewInclusion constructs an inclusion. Will panic if it is mal-formed
@@ -117,7 +121,14 @@ func NewInclusion(
 		}
 	}
 
-	return Inclusion{Included: included, Including: including, ID: id, IncludedFilter: includedFilter, IncludingFilter: includingFilter}
+	return Inclusion{
+		Included:        included,
+		Including:       including,
+		ID:              id,
+		IncludedFilter:  includedFilter,
+		IncludingFilter: includingFilter,
+		uuid:            uuid.New(),
+	}
 }
 
 // Name implements the [ifaces.Query] interface
@@ -225,4 +236,48 @@ func (r Inclusion) Check(run ifaces.Runtime) error {
 // circuit
 func (i Inclusion) CheckGnark(api frontend.API, run ifaces.GnarkRuntime) {
 	panic("UNSUPPORTED : can't check an inclusion query directly into the circuit")
+}
+
+// GetShiftedRelatedColumns returns the list of the [HornerParts.Selectors]
+// found in the query. This is used to check if the query is compatible with
+// Wizard distribution.
+//
+// Note: the fact that this method is implemented makes [Inclusion] satisfy
+// an anonymous interface that is matched to detect queries that are
+// incompatible with wizard distribution. So we should not rename or remove
+// this implementation without doing the corresponding changes in the
+// distributed package. Otherwise, this will silence the checks that we are
+// doing.
+func (i Inclusion) GetShiftedRelatedColumns() []ifaces.Column {
+
+	res := []ifaces.Column{}
+
+	if i.IncludedFilter != nil && i.IncludedFilter.IsComposite() {
+		res = append(res, i.IncludedFilter)
+	}
+
+	for _, included := range i.Included {
+		if included.IsComposite() {
+			res = append(res, included)
+		}
+	}
+
+	for frag := range i.Including {
+
+		if i.IncludingFilter != nil && i.IncludingFilter[frag] != nil && i.IncludingFilter[frag].IsComposite() {
+			res = append(res, i.IncludingFilter[frag])
+		}
+
+		for _, col := range i.Including[frag] {
+			if col.IsComposite() {
+				res = append(res, col)
+			}
+		}
+	}
+
+	return res
+}
+
+func (i Inclusion) UUID() uuid.UUID {
+	return i.uuid
 }

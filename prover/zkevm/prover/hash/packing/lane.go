@@ -4,8 +4,9 @@ import (
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/column"
-	"github.com/consensys/linea-monorepo/prover/protocol/dedicated/projection"
+	"github.com/consensys/linea-monorepo/prover/protocol/distributed/pragmas"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
+	"github.com/consensys/linea-monorepo/prover/protocol/query"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	sym "github.com/consensys/linea-monorepo/prover/symbolic"
 	"github.com/consensys/linea-monorepo/prover/utils"
@@ -16,8 +17,8 @@ import (
 
 // laneRepackingInputs collects the inputs of the [newLane] function.
 type laneRepackingInputs struct {
-	spaghetti spaghettiCtx
-	pckInp    PackingInput
+	Spaghetti spaghettiCtx
+	PckInp    PackingInput
 }
 
 // laneRepacking stores all the intermediate columns required to constraint the repacking.
@@ -26,12 +27,12 @@ type laneRepacking struct {
 	// the set of lanes, they all have the same size
 	Lanes ifaces.Column
 	// the ProverAction for accumulateUpToMax
-	paAccUpToMax wizard.ProverAction
+	PAAccUpToMax wizard.ProverAction
 	// the result of ProverAction for accumulateUpToMax
 	// It is one if the lane is complete
-	isLaneComplete ifaces.Column
+	IsLaneComplete ifaces.Column
 	// the coefficient  for computing lanes from decomposedLimbs
-	coeff ifaces.Column
+	Coeff ifaces.Column
 	// it is 1 on the effective part of lane module.
 	IsLaneActive ifaces.Column
 	// It is 1 if the lane is the first lane of the new hash.
@@ -44,27 +45,27 @@ type laneRepacking struct {
 func newLane(comp *wizard.CompiledIOP, spaghetti spaghettiCtx, pckInp PackingInput) laneRepacking {
 	var (
 		size                  = utils.NextPowerOfTwo(pckInp.PackingParam.NbOfLanesPerBlock() * pckInp.MaxNumBlocks)
-		createCol             = common.CreateColFn(comp, LANE+"_"+pckInp.Name, size)
-		isFirstSliceOfNewHash = spaghetti.newHashSp
+		createCol             = common.CreateColFn(comp, LANE+"_"+pckInp.Name, size, pragmas.RightPadded)
+		isFirstSliceOfNewHash = spaghetti.NewHashSp
 		maxValue              = pckInp.PackingParam.LaneSizeBytes()
-		decomposedLenSp       = spaghetti.decLenSp
-		pa                    = dedicated.AccumulateUpToMax(comp, maxValue, decomposedLenSp, spaghetti.filterSpaghetti)
-		spaghettiSize         = spaghetti.spaghettiSize
+		decomposedLenSp       = spaghetti.DecLenSp
+		pa                    = dedicated.AccumulateUpToMax(comp, maxValue, decomposedLenSp, spaghetti.FilterSpaghetti)
+		spaghettiSize         = spaghetti.SpaghettiSize
 	)
 
 	l := laneRepacking{
 		Inputs: &laneRepackingInputs{
-			pckInp:    pckInp,
-			spaghetti: spaghetti,
+			PckInp:    pckInp,
+			Spaghetti: spaghetti,
 		},
 
 		Lanes:                createCol("Lane"),
 		IsFirstLaneOfNewHash: createCol("IsFirstLaneOfNewHash"),
 		IsLaneActive:         createCol("IsLaneActive"),
-		coeff:                comp.InsertCommit(0, ifaces.ColIDf("Coefficient_"+pckInp.Name), spaghettiSize),
+		Coeff:                comp.InsertCommit(0, ifaces.ColIDf("Coefficient_"+pckInp.Name), spaghettiSize),
 
-		paAccUpToMax:   pa,
-		isLaneComplete: pa.IsMax,
+		PAAccUpToMax:   pa,
+		IsLaneComplete: pa.IsMax,
 		Size:           size,
 	}
 
@@ -81,45 +82,45 @@ func newLane(comp *wizard.CompiledIOP, spaghetti spaghettiCtx, pckInp PackingInp
 
 	// constraints over isFirstLaneOfNewHash
 	// Project the isFirstLaneOfNewHash from isFirstSliceOfNewHash
-	projection.InsertProjection(comp, ifaces.QueryIDf("Project_IsFirstLaneOfHash_"+pckInp.Name),
-		[]ifaces.Column{isFirstSliceOfNewHash},
-		[]ifaces.Column{l.IsFirstLaneOfNewHash},
-		l.isLaneComplete, l.IsLaneActive)
-
+	comp.InsertProjection(ifaces.QueryIDf("Project_IsFirstLaneOfHash_"+pckInp.Name),
+		query.ProjectionInput{ColumnA: []ifaces.Column{isFirstSliceOfNewHash},
+			ColumnB: []ifaces.Column{l.IsFirstLaneOfNewHash},
+			FilterA: l.IsLaneComplete,
+			FilterB: l.IsLaneActive})
 	return l
 }
 
 // it declares the constraints over coefficients.
 func (l *laneRepacking) csCoeff(comp *wizard.CompiledIOP, s spaghettiCtx) {
 	var (
-		partialCoeff = s.decLenPowerSp // decomposedLenPowers in spaghetti form.
-		isActive     = s.filterSpaghetti
+		partialCoeff = s.DecLenPowerSp // decomposedLenPowers in spaghetti form.
+		isActive     = s.FilterSpaghetti
 	)
 
 	// coeff[last-active-row] = 1
 	comp.InsertGlobal(
-		0, ifaces.QueryIDf("%v_Coeff_In_Last_Active_Row", l.Inputs.pckInp.Name),
+		0, ifaces.QueryIDf("%v_Coeff_In_Last_Active_Row", l.Inputs.PckInp.Name),
 		sym.Mul(isActive,
 			sym.Sub(column.Shift(isActive, 1), 1),
-			sym.Sub(l.coeff,
+			sym.Sub(l.Coeff,
 				1)),
 	)
 
 	// coeff[last] = 1 // to cover the case where; last-active-row ==  last-row
 	comp.InsertLocal(
-		0, ifaces.QueryIDf("%v_Coeff-In_Last_Row", l.Inputs.pckInp.Name),
-		sym.Sub(column.Shift(l.coeff, -1), 1),
+		0, ifaces.QueryIDf("%v_Coeff-In_Last_Row", l.Inputs.PckInp.Name),
+		sym.Sub(column.Shift(l.Coeff, -1), column.Shift(isActive, -1)),
 	)
 
 	// coeff[i] := coeff[i+1] * partialCoeff[i+1] * (1-isLaneComplete[i+1]) + isLaneComplete[i+1]
 	res := sym.Mul(
-		column.Shift(l.coeff, 1),
+		column.Shift(l.Coeff, 1),
 		column.Shift(partialCoeff, 1),
-		sym.Sub(1, column.Shift(l.isLaneComplete, 1)),
+		sym.Sub(1, column.Shift(l.IsLaneComplete, 1)),
 	)
-	res = sym.Add(res, column.Shift(l.isLaneComplete, 1))
-	expr := sym.Mul(sym.Sub(l.coeff, res), column.Shift(isActive, 1))
-	comp.InsertGlobal(0, ifaces.QueryIDf("%v_Coefficient_Glob", l.Inputs.pckInp.Name), expr)
+	res = sym.Add(res, column.Shift(l.IsLaneComplete, 1))
+	expr := sym.Mul(sym.Sub(l.Coeff, res), column.Shift(isActive, 1))
+	comp.InsertGlobal(0, ifaces.QueryIDf("%v_Coefficient_Glob", l.Inputs.PckInp.Name), expr)
 }
 
 // It declares the constraints over the lanes
@@ -128,27 +129,26 @@ func (l *laneRepacking) csRecomposeToLanes(comp *wizard.CompiledIOP, s spaghetti
 	// compute the partitioned inner product
 	//ipTaker[i] = (decomposedLimbs[i] * coeff[i]) + ipTracker[i+1]* (1- isLaneComplete[i+1])
 	// Constraints on the Partitioned Inner-Products
-	ipTracker := dedicated.InsertPartitionedIP(comp, l.Inputs.pckInp.Name+"_PIP_For_LaneRePacking",
-		s.decLimbSp,
-		l.coeff,
-		l.isLaneComplete,
+	ipTracker := dedicated.InsertPartitionedIP(comp, l.Inputs.PckInp.Name+"_PIP_For_LaneRePacking",
+		s.DecLimbSp,
+		l.Coeff,
+		l.IsLaneComplete,
 	)
 
 	// Project the lanes from ipTracker over the Lane column.
-	projection.InsertProjection(comp, ifaces.QueryIDf("%v_ProjectOverLanes", l.Inputs.pckInp.Name),
-		[]ifaces.Column{ipTracker},
-		[]ifaces.Column{l.Lanes},
-		l.isLaneComplete, l.IsLaneActive,
-	)
-
+	comp.InsertProjection(ifaces.QueryIDf("%v_ProjectOverLanes", l.Inputs.PckInp.Name),
+		query.ProjectionInput{ColumnA: []ifaces.Column{ipTracker},
+			ColumnB: []ifaces.Column{l.Lanes},
+			FilterA: l.IsLaneComplete,
+			FilterB: l.IsLaneActive})
 }
 
 // It assigns the columns specific to the submodule
 func (l *laneRepacking) Assign(run *wizard.ProverRuntime) {
 	// assign the spaghetti forms
-	l.Inputs.spaghetti.pa.Run(run)
+	l.Inputs.Spaghetti.PA.Run(run)
 	// assign the IsMax column from  the ProverAction (AccumulateUpToMax).
-	l.paAccUpToMax.Run(run)
+	l.PAAccUpToMax.Run(run)
 	// assign coeff
 	l.assignCoeff(run)
 	// assign the Lanes, isFirstLaneofNewHash , IsLaneActive
@@ -160,12 +160,12 @@ func (l *laneRepacking) assignCoeff(
 	run *wizard.ProverRuntime) {
 
 	var (
-		isLaneComplete       = l.isLaneComplete.GetColAssignment(run).IntoRegVecSaveAlloc()
+		isLaneComplete       = l.IsLaneComplete.GetColAssignment(run).IntoRegVecSaveAlloc()
 		size                 = len(isLaneComplete)
-		decomposedLenPowerSp = l.Inputs.spaghetti.decLenPowerSp
+		decomposedLenPowerSp = l.Inputs.Spaghetti.DecLenPowerSp
 		partialCoeff         = decomposedLenPowerSp.GetColAssignment(run).IntoRegVecSaveAlloc()
 		one                  = field.One()
-		isActive             = l.Inputs.spaghetti.filterSpaghetti.GetColAssignment(run).IntoRegVecSaveAlloc()
+		isActive             = l.Inputs.Spaghetti.FilterSpaghetti.GetColAssignment(run).IntoRegVecSaveAlloc()
 	)
 
 	//partialCoeff := decomposedLenPowers
@@ -173,7 +173,7 @@ func (l *laneRepacking) assignCoeff(
 	// coeff[i] := coeff[i+1] * partialCoeff[i+1] * (1-isLaneComplete[i+1]) + isLaneComplete[i+1]
 	coeff := make([]field.Element, size)
 
-	coeff[size-1] = field.One()
+	coeff[size-1] = isActive[size-1]
 
 	var res, notComplete field.Element
 	for i := size - 2; i >= 0; i-- {
@@ -188,18 +188,18 @@ func (l *laneRepacking) assignCoeff(
 	}
 
 	// assign the columns
-	run.AssignColumn(l.coeff.GetColID(), smartvectors.RightZeroPadded(coeff, size))
+	run.AssignColumn(l.Coeff.GetColID(), smartvectors.RightZeroPadded(coeff, size))
 }
 
 // it assigns the lanes
 func (l *laneRepacking) assignLane(run *wizard.ProverRuntime) {
 	var (
 		lane                 = common.NewVectorBuilder(l.Lanes)
-		param                = l.Inputs.pckInp.PackingParam
+		param                = l.Inputs.PckInp.PackingParam
 		isFirstLaneofNewHash = common.NewVectorBuilder(l.IsFirstLaneOfNewHash)
 		isActive             = common.NewVectorBuilder(l.IsLaneActive)
 		laneBytes            = param.LaneSizeBytes()
-		blocks, flag         = l.getBlocks(run, l.Inputs.pckInp)
+		blocks, flag         = l.getBlocks(run, l.Inputs.PckInp)
 	)
 	var f field.Element
 

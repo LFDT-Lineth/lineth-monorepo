@@ -18,7 +18,7 @@ func (ac *antichamber) csZeroWhenInactive(comp *wizard.CompiledIOP) {
 	commoncs.MustZeroWhenInactive(comp, ac.IsActive, ac.cols(false)...)
 	commoncs.MustZeroWhenInactive(comp, ac.IsActive, ac.EcRecover.cols()...)
 	commoncs.MustZeroWhenInactive(comp, ac.IsActive, ac.Addresses.cols()...)
-	commoncs.MustZeroWhenInactive(comp, ac.IsActive, ac.txSignature.cols()...)
+	commoncs.MustZeroWhenInactive(comp, ac.IsActive, ac.TxSignature.cols()...)
 	commoncs.MustZeroWhenInactive(comp, ac.IsActive, ac.UnalignedGnarkData.cols()...)
 }
 
@@ -83,7 +83,7 @@ func (ac *antichamber) csTransitions(comp *wizard.CompiledIOP) {
 		sym.Mul(
 			column.Shift(ac.IsActive, 1),    // IsActive[i+1] = 1 AND
 			sym.Sub(1, ac.IsFetching),       // IsFetching[i] = 0 AND
-			ac.UnalignedGnarkData.isIndex13, // GnarkIndex[i] = 13 THEN
+			ac.UnalignedGnarkData.IsIndex13, // GnarkIndex[i] = 13 THEN
 			sym.Add(
 				sym.Sub(column.Shift(ac.IsFetching, 1), column.Shift(ac.IsActive, 1)), // IsFetching[i+1] = IsActive[i+1] AND
 				sym.Mul(2, sym.Sub(column.Shift(ac.ID, 1), ac.ID, 1)),                 // ID[i+1] = ID[i] + 1
@@ -112,7 +112,7 @@ func (ac *antichamber) csTransitions(comp *wizard.CompiledIOP) {
 		sym.Mul(
 			sym.Sub(1, sym.Mul(
 				sym.Sub(1, ac.IsFetching),
-				ac.UnalignedGnarkData.isIndex13,
+				ac.UnalignedGnarkData.IsIndex13,
 			)),
 			sym.Sub(ac.IsActive, column.Shift(ac.IsActive, 1)),
 		),
@@ -123,7 +123,7 @@ func (ac *antichamber) csTransitions(comp *wizard.CompiledIOP) {
 		sym.Mul(
 			sym.Sub(1, sym.Mul(
 				sym.Sub(1, ac.IsFetching),
-				ac.UnalignedGnarkData.isIndex13,
+				ac.UnalignedGnarkData.IsIndex13,
 			)),
 			sym.Sub(column.Shift(ac.ID, 1), ac.ID),
 		),
@@ -134,7 +134,7 @@ func (ac *antichamber) csTransitions(comp *wizard.CompiledIOP) {
 		sym.Mul(
 			sym.Sub(1, sym.Mul(
 				sym.Sub(1, ac.IsFetching),
-				ac.UnalignedGnarkData.isIndex13,
+				ac.UnalignedGnarkData.IsIndex13,
 			)),
 			sym.Sub(ac.Source, column.Shift(ac.Source, 1)),
 		),

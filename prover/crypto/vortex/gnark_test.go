@@ -311,8 +311,7 @@ func getProofVortexNCommitmentsWithMerkleNoSis(t *testing.T, nCommitments, nPoly
 	randomCoin = field.NewElement(1523)
 	entryList = []int{1, 5, 19, 645}
 
-	params := NewParams(blowUpFactor, polySize, nPolys*nCommitments, ringsis.StdParams, mimc.NewMiMC)
-	params.RemoveSis(mimc.NewMiMC)
+	params := NewParams(blowUpFactor, polySize, nPolys*nCommitments, ringsis.StdParams, mimc.NewMiMC, mimc.NewMiMC)
 
 	polyLists := make([][]smartvectors.SmartVector, nCommitments)
 	yLists = make([][]field.Element, nCommitments)
@@ -332,9 +331,13 @@ func getProofVortexNCommitmentsWithMerkleNoSis(t *testing.T, nCommitments, nPoly
 	roots = make([]types.Bytes32, nCommitments)
 	trees := make([]*smt.Tree, nCommitments)
 	committedMatrices := make([]EncodedMatrix, nCommitments)
+	isSISReplacedByMiMC := make([]bool, nCommitments)
 	for j := range trees {
-		committedMatrices[j], trees[j], _ = params.CommitMerkle(polyLists[j])
+		// As Gnark does not support SIS, we commit without SIS hashing
+		committedMatrices[j], trees[j], _ = params.CommitMerkleWithoutSIS(polyLists[j])
 		roots[j] = trees[j].Root
+		// We set the SIS replaced by MiMC to true, as Gnark does not support SIS
+		isSISReplacedByMiMC[j] = true
 	}
 
 	// Generate the proof
@@ -343,13 +346,14 @@ func getProofVortexNCommitmentsWithMerkleNoSis(t *testing.T, nCommitments, nPoly
 
 	// Check the proof
 	err := VerifyOpening(&VerifierInputs{
-		Params:       *params,
-		MerkleRoots:  roots,
-		X:            x,
-		Ys:           yLists,
-		OpeningProof: *proof,
-		RandomCoin:   randomCoin,
-		EntryList:    entryList,
+		Params:              *params,
+		MerkleRoots:         roots,
+		X:                   x,
+		Ys:                  yLists,
+		OpeningProof:        *proof,
+		RandomCoin:          randomCoin,
+		EntryList:           entryList,
+		IsSISReplacedByMiMC: isSISReplacedByMiMC,
 	})
 	require.NoError(t, err)
 
