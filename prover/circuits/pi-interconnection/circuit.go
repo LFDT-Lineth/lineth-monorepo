@@ -425,6 +425,7 @@ func WizardCompilationParameters() []func(iop *wizard.CompiledIOP) {
 			vortex.Compile(
 				8,
 				vortex.ForceNumOpenedColumns(64),
+				vortex.WithOptionalSISHashingThreshold(1<<20),
 			),
 		}
 	)

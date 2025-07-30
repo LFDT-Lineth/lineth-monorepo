@@ -106,6 +106,7 @@ var (
 		vortex.Compile(
 			8,
 			vortex.ForceNumOpenedColumns(64),
+			vortex.WithOptionalSISHashingThreshold(1<<20),
 		),
 		// logdata.Log("post-vortex-4"),
 	}
