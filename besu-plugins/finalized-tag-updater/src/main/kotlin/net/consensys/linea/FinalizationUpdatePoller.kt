@@ -10,7 +10,7 @@ import net.consensys.zkevm.PeriodicPollingService
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import org.hyperledger.besu.datatypes.HardforkId
-import org.hyperledger.besu.datatypes.HardforkId.MainnetHardforkId.PRAGUE
+import org.hyperledger.besu.datatypes.HardforkId.MainnetHardforkId.PARIS
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicReference
@@ -50,9 +50,9 @@ class FinalizationUpdatePoller(
       val hardForkId = hardForkIdProvider.getHardForkId()
       log.debug("Current HardForkId=$hardForkId")
 
-      if (hardForkId is HardforkId.MainnetHardforkId && hardForkId.ordinal >= PRAGUE.ordinal) {
+      if (hardForkId is HardforkId.MainnetHardforkId && hardForkId.ordinal >= PARIS.ordinal) {
         log.info(
-          "Detected network had been switched to Prague or later forks, " +
+          "Detected network had been switched to Paris or later forks, " +
             "will stop updating safe/finalized block from the plugin",
         )
         super.stop().thenApply { hardForkId }
