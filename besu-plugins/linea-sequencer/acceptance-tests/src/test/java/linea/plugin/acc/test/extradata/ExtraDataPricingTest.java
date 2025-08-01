@@ -120,17 +120,18 @@ public class ExtraDataPricingTest extends LineaPluginTestBase {
     final var fixedCostMetric =
         getMetricValue(PRICING_CONF, "values", List.of(entry("field", "fixed_cost_wei")));
 
-    assertThat(fixedCostMetric).isEqualTo(MIN_GAS_PRICE.multiply(2).getValue().doubleValue());
+    assertThat(fixedCostMetric)
+        .isEqualTo(MIN_GAS_PRICE.multiply(2).getAsBigInteger().doubleValue());
 
     final var variableCostMetric =
         getMetricValue(PRICING_CONF, "values", List.of(entry("field", "variable_cost_wei")));
 
-    assertThat(variableCostMetric).isEqualTo(MIN_GAS_PRICE.getValue().doubleValue());
+    assertThat(variableCostMetric).isEqualTo(MIN_GAS_PRICE.getAsBigInteger().doubleValue());
 
     final var ethGasPriceMetric =
         getMetricValue(PRICING_CONF, "values", List.of(entry("field", "eth_gas_price_wei")));
 
-    assertThat(ethGasPriceMetric).isEqualTo(MIN_GAS_PRICE.getValue().doubleValue());
+    assertThat(ethGasPriceMetric).isEqualTo(MIN_GAS_PRICE.getAsBigInteger().doubleValue());
   }
 
   static class MinerSetExtraDataRequest implements Transaction<Boolean> {

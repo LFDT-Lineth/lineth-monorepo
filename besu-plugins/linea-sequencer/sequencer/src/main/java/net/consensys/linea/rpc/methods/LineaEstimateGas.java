@@ -56,6 +56,7 @@ import org.hyperledger.besu.plugin.services.BesuConfiguration;
 import org.hyperledger.besu.plugin.services.BlockchainService;
 import org.hyperledger.besu.plugin.services.RpcEndpointService;
 import org.hyperledger.besu.plugin.services.TransactionSimulationService;
+import org.hyperledger.besu.plugin.services.WorldStateService;
 import org.hyperledger.besu.plugin.services.exception.PluginRpcEndpointException;
 import org.hyperledger.besu.plugin.services.rpc.PluginRpcRequest;
 import org.hyperledger.besu.plugin.services.rpc.RpcMethodError;
@@ -85,6 +86,7 @@ public class LineaEstimateGas {
   private final BesuConfiguration besuConfiguration;
   private final TransactionSimulationService transactionSimulationService;
   private final BlockchainService blockchainService;
+  private final WorldStateService worldStateService;
   private final RpcEndpointService rpcEndpointService;
   private LineaRpcConfiguration rpcConfiguration;
   private LineaTransactionPoolValidatorConfiguration txValidatorConf;
@@ -98,10 +100,12 @@ public class LineaEstimateGas {
       final BesuConfiguration besuConfiguration,
       final TransactionSimulationService transactionSimulationService,
       final BlockchainService blockchainService,
+      final WorldStateService worldStateService,
       final RpcEndpointService rpcEndpointService) {
     this.besuConfiguration = besuConfiguration;
     this.transactionSimulationService = transactionSimulationService;
     this.blockchainService = blockchainService;
+    this.worldStateService = worldStateService;
     this.rpcEndpointService = rpcEndpointService;
   }
 
@@ -430,7 +434,8 @@ public class LineaEstimateGas {
             ? new ZkCounter(l1L2BridgeConfiguration)
             : new ZkTracer(LONDON, l1L2BridgeConfiguration, chainId);
     lineCountingTracer.traceStartConflation(1L);
-    lineCountingTracer.traceStartBlock(pendingBlockHeader, pendingBlockHeader.getCoinbase());
+    lineCountingTracer.traceStartBlock(
+        worldStateService.getWorldView(), pendingBlockHeader, pendingBlockHeader.getCoinbase());
     return lineCountingTracer;
   }
 

@@ -43,7 +43,11 @@ public class LineaEstimateGasEndpointPlugin extends AbstractLineaRequiredPlugin 
 
     lineaEstimateGasMethod =
         new LineaEstimateGas(
-            besuConfiguration, transactionSimulationService, blockchainService, rpcEndpointService);
+            besuConfiguration,
+            transactionSimulationService,
+            blockchainService,
+            worldStateService,
+            rpcEndpointService);
 
     rpcEndpointService.registerRPCEndpoint(
         lineaEstimateGasMethod.getNamespace(),

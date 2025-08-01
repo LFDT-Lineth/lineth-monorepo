@@ -43,6 +43,7 @@ import org.hyperledger.besu.plugin.services.BesuEvents;
 import org.hyperledger.besu.plugin.services.BlockchainService;
 import org.hyperledger.besu.plugin.services.MetricsSystem;
 import org.hyperledger.besu.plugin.services.RpcEndpointService;
+import org.hyperledger.besu.plugin.services.WorldStateService;
 import org.hyperledger.besu.plugin.services.metrics.MetricCategoryRegistry;
 
 /**
@@ -63,6 +64,7 @@ public abstract class AbstractLineaSharedPrivateOptionsPlugin
     extends AbstractLineaSharedOptionsPlugin {
   protected static BesuConfiguration besuConfiguration;
   protected static BlockchainService blockchainService;
+  protected static WorldStateService worldStateService;
   protected static MetricsSystem metricsSystem;
   protected static BesuEvents besuEvents;
   protected static BundlePoolService bundlePoolService;
@@ -233,6 +235,14 @@ public abstract class AbstractLineaSharedPrivateOptionsPlugin
             .getService(BesuEvents.class)
             .orElseThrow(
                 () -> new RuntimeException("Failed to obtain BesuEvents from the ServiceManager."));
+
+    worldStateService =
+        serviceManager
+            .getService(WorldStateService.class)
+            .orElseThrow(
+                () ->
+                    new RuntimeException(
+                        "Failed to obtain WorldStateService from the ServiceManager."));
 
     bundlePoolService =
         new LineaLimitedBundlePool(

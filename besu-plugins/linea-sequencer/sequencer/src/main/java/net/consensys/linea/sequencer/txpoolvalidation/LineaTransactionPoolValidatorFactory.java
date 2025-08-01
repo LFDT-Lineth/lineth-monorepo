@@ -24,6 +24,7 @@ import net.consensys.linea.sequencer.txpoolvalidation.validators.SimulationValid
 import org.hyperledger.besu.plugin.services.BesuConfiguration;
 import org.hyperledger.besu.plugin.services.BlockchainService;
 import org.hyperledger.besu.plugin.services.TransactionSimulationService;
+import org.hyperledger.besu.plugin.services.WorldStateService;
 import org.hyperledger.besu.plugin.services.txvalidator.PluginTransactionPoolValidator;
 import org.hyperledger.besu.plugin.services.txvalidator.PluginTransactionPoolValidatorFactory;
 
@@ -32,6 +33,7 @@ public class LineaTransactionPoolValidatorFactory implements PluginTransactionPo
 
   private final BesuConfiguration besuConfiguration;
   private final BlockchainService blockchainService;
+  private final WorldStateService worldStateService;
   private final TransactionSimulationService transactionSimulationService;
   private final LineaTransactionPoolValidatorConfiguration txPoolValidatorConf;
   private final LineaProfitabilityConfiguration profitabilityConf;
@@ -42,6 +44,7 @@ public class LineaTransactionPoolValidatorFactory implements PluginTransactionPo
   public LineaTransactionPoolValidatorFactory(
       final BesuConfiguration besuConfiguration,
       final BlockchainService blockchainService,
+      final WorldStateService worldStateService,
       final TransactionSimulationService transactionSimulationService,
       final LineaTransactionPoolValidatorConfiguration txPoolValidatorConf,
       final LineaProfitabilityConfiguration profitabilityConf,
@@ -50,6 +53,7 @@ public class LineaTransactionPoolValidatorFactory implements PluginTransactionPo
       final Optional<JsonRpcManager> rejectedTxJsonRpcManager) {
     this.besuConfiguration = besuConfiguration;
     this.blockchainService = blockchainService;
+    this.worldStateService = worldStateService;
     this.transactionSimulationService = transactionSimulationService;
     this.txPoolValidatorConf = txPoolValidatorConf;
     this.profitabilityConf = profitabilityConf;
@@ -74,6 +78,7 @@ public class LineaTransactionPoolValidatorFactory implements PluginTransactionPo
           new ProfitabilityValidator(besuConfiguration, blockchainService, profitabilityConf),
           new SimulationValidator(
               blockchainService,
+              worldStateService,
               transactionSimulationService,
               txPoolValidatorConf,
               tracerConfiguration,

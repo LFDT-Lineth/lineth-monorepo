@@ -54,6 +54,7 @@ import org.hyperledger.besu.datatypes.Wei;
 import org.hyperledger.besu.ethereum.core.BlockHeader;
 import org.hyperledger.besu.plugin.services.BlockchainService;
 import org.hyperledger.besu.plugin.services.TransactionSimulationService;
+import org.hyperledger.besu.plugin.services.WorldStateService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -96,6 +97,7 @@ public class SimulationValidatorTest {
   }
 
   @Mock BlockchainService blockchainService;
+  @Mock WorldStateService worldStateService;
   @Mock TransactionSimulationService transactionSimulationService;
   private JsonRpcManager jsonRpcManager;
   private LineaTracerConfiguration tracerConfiguration;
@@ -156,6 +158,7 @@ public class SimulationValidatorTest {
       final boolean enableForApi, final boolean enableForP2p) {
     return new SimulationValidator(
         blockchainService,
+        worldStateService,
         transactionSimulationService,
         LineaTransactionPoolValidatorConfiguration.builder()
             .txPoolSimulationCheckApiEnabled(enableForApi)

@@ -199,8 +199,8 @@ public class ProfitableTransactionSelector implements PluginTransactionSelector 
 
     final var effectivePriorityFee = evaluationContext.getTransactionGasPrice().subtract(baseFee);
     final var ratio =
-        effectivePriorityFee.getValue().doubleValue()
-            / profitablePriorityFeePerGas.getValue().doubleValue();
+        effectivePriorityFee.getAsBigInteger().doubleValue()
+            / profitablePriorityFeePerGas.getAsBigInteger().doubleValue();
 
     maybeProfitabilityMetrics.ifPresent(
         histogramMetrics -> {

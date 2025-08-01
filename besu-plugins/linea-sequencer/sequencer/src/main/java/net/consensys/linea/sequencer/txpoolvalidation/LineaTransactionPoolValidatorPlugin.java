@@ -87,6 +87,7 @@ public class LineaTransactionPoolValidatorPlugin extends AbstractLineaRequiredPl
           new LineaTransactionPoolValidatorFactory(
               besuConfiguration,
               blockchainService,
+              worldStateService,
               transactionSimulationService,
               transactionPoolValidatorConfiguration(),
               profitabilityConfiguration(),
