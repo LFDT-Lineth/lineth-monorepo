@@ -86,8 +86,8 @@ public class LineaEstimateGas {
   private final BesuConfiguration besuConfiguration;
   private final TransactionSimulationService transactionSimulationService;
   private final BlockchainService blockchainService;
-  private final WorldStateService worldStateService;
   private final RpcEndpointService rpcEndpointService;
+  private WorldStateService worldStateService;
   private LineaRpcConfiguration rpcConfiguration;
   private LineaTransactionPoolValidatorConfiguration txValidatorConf;
   private LineaProfitabilityConfiguration profitabilityConf;
@@ -100,12 +100,10 @@ public class LineaEstimateGas {
       final BesuConfiguration besuConfiguration,
       final TransactionSimulationService transactionSimulationService,
       final BlockchainService blockchainService,
-      final WorldStateService worldStateService,
       final RpcEndpointService rpcEndpointService) {
     this.besuConfiguration = besuConfiguration;
     this.transactionSimulationService = transactionSimulationService;
     this.blockchainService = blockchainService;
-    this.worldStateService = worldStateService;
     this.rpcEndpointService = rpcEndpointService;
   }
 
@@ -114,7 +112,8 @@ public class LineaEstimateGas {
       final LineaTransactionPoolValidatorConfiguration transactionValidatorConfiguration,
       final LineaProfitabilityConfiguration profitabilityConf,
       final LineaL1L2BridgeSharedConfiguration l1L2BridgeConfiguration,
-      final LineaTracerConfiguration tracerConfiguration) {
+      final LineaTracerConfiguration tracerConfiguration,
+      final WorldStateService worldStateService) {
     this.rpcConfiguration = rpcConfiguration;
     this.txValidatorConf = transactionValidatorConfiguration;
     this.profitabilityConf = profitabilityConf;
@@ -123,6 +122,7 @@ public class LineaEstimateGas {
     this.tracerConfiguration = tracerConfiguration;
     this.moduleLineCountValidator =
         new ModuleLineCountValidator(tracerConfiguration.moduleLimitsMap());
+    this.worldStateService = worldStateService;
   }
 
   public String getNamespace() {

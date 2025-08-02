@@ -43,11 +43,7 @@ public class LineaEstimateGasEndpointPlugin extends AbstractLineaRequiredPlugin 
 
     lineaEstimateGasMethod =
         new LineaEstimateGas(
-            besuConfiguration,
-            transactionSimulationService,
-            blockchainService,
-            worldStateService,
-            rpcEndpointService);
+            besuConfiguration, transactionSimulationService, blockchainService, rpcEndpointService);
 
     rpcEndpointService.registerRPCEndpoint(
         lineaEstimateGasMethod.getNamespace(),
@@ -56,20 +52,16 @@ public class LineaEstimateGasEndpointPlugin extends AbstractLineaRequiredPlugin 
   }
 
   @Override
-  public void beforeExternalServices() {
-    super.beforeExternalServices();
+  public void doStart() {
+    if (l1L2BridgeSharedConfiguration().equals(LineaL1L2BridgeSharedConfiguration.TEST_DEFAULT)) {
+      throw new IllegalArgumentException("L1L2 bridge settings have not been defined.");
+    }
     lineaEstimateGasMethod.init(
         lineaRpcConfiguration(),
         transactionPoolValidatorConfiguration(),
         profitabilityConfiguration(),
         l1L2BridgeSharedConfiguration(),
-        tracerConfiguration());
-  }
-
-  @Override
-  public void doStart() {
-    if (l1L2BridgeSharedConfiguration().equals(LineaL1L2BridgeSharedConfiguration.TEST_DEFAULT)) {
-      throw new IllegalArgumentException("L1L2 bridge settings have not been defined.");
-    }
+        tracerConfiguration(),
+        worldStateService);
   }
 }
