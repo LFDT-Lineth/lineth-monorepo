@@ -74,10 +74,11 @@ func CmpSmallCols(comp *wizard.CompiledIOP, a, b ifaces.Column, numBits int) (g,
 		}
 
 		// Note: that isEqual is already constrained to be correctly formed.
-		isEqual, isEqualCtx = dedicated.IsZero(comp, sym.Sub(a, b))
-		rangeChecked        = comp.InsertCommit(round, ifaces.ColID(ctxName("RANGE_CHECKED")), size)
-		isGreater           = comp.InsertCommit(round, ifaces.ColID(ctxName("IS_GREATER")), size)
-		isLower             = comp.InsertCommit(round, ifaces.ColID(ctxName("IS_LOWER")), size)
+		isEqualCtx   = dedicated.IsZero(comp, sym.Sub(a, b)).WithPaddingVal(field.One())
+		isEqual      = isEqualCtx.IsZero
+		rangeChecked = comp.InsertCommit(round, ifaces.ColID(ctxName("RANGE_CHECKED")), size)
+		isGreater    = comp.InsertCommit(round, ifaces.ColID(ctxName("IS_GREATER")), size)
+		isLower      = comp.InsertCommit(round, ifaces.ColID(ctxName("IS_LOWER")), size)
 	)
 
 	res := &OneLimbCmpCtx{
@@ -133,14 +134,16 @@ func (ol *OneLimbCmpCtx) Run(run *wizard.ProverRuntime) {
 	ol.InternalProverAction[0].Run(run)
 
 	var (
-		a         = ol.A.GetColAssignment(run)
-		b         = ol.B.GetColAssignment(run)
-		length    = a.Len()
-		g         = make([]field.Element, length)
-		l         = make([]field.Element, length)
-		rc        = make([]field.Element, length)
-		minOffset = min(column.StackOffsets(ol.A), column.StackOffsets(ol.B))
-		maxOffset = min(column.StackOffsets(ol.A), column.StackOffsets(ol.B))
+		a          = ol.A.GetColAssignment(run)
+		b          = ol.B.GetColAssignment(run)
+		length     = a.Len()
+		g          = make([]field.Element, length)
+		l          = make([]field.Element, length)
+		rc         = make([]field.Element, length)
+		minOffsetA = min(column.StackOffsets(ol.A))
+		minOffsetB = min(column.StackOffsets(ol.B))
+		maxOffsetA = max(column.StackOffsets(ol.A))
+		maxOffsetB = max(column.StackOffsets(ol.B))
 	)
 
 	for i := 0; i < a.Len(); i++ {
@@ -156,14 +159,24 @@ func (ol *OneLimbCmpCtx) Run(run *wizard.ProverRuntime) {
 		// that the columns are going to be extended and it is safer to use the
 		// same value as initial/final constrained value so that the column
 		// extension stays valid.
-		if minOffset < 0 && i < -minOffset {
-			aiF, biF = a.Get(-minOffset), b.Get(-minOffset)
-			ai, bi = aiF.Uint64(), biF.Uint64()
+		if minOffsetA < 0 && i < -minOffsetA {
+			aiF = a.Get(-minOffsetA)
+			ai = aiF.Uint64()
 		}
 
-		if maxOffset > 0 && i >= a.Len()-maxOffset {
-			aiF, biF = a.Get(a.Len()-maxOffset-1), b.Get(a.Len()-maxOffset-1)
-			ai, bi = aiF.Uint64(), biF.Uint64()
+		if minOffsetB < 0 && i < -minOffsetB {
+			biF = b.Get(-minOffsetB)
+			bi = biF.Uint64()
+		}
+
+		if maxOffsetA > 0 && i >= a.Len()-maxOffsetA {
+			aiF = a.Get(a.Len() - maxOffsetA - 1)
+			ai = aiF.Uint64()
+		}
+
+		if maxOffsetB > 0 && i >= b.Len()-maxOffsetB {
+			biF = b.Get(b.Len() - maxOffsetB - 1)
+			bi = biF.Uint64()
 		}
 
 		if ai > bi {

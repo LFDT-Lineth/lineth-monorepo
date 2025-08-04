@@ -146,32 +146,32 @@ func newScpSelector(comp *wizard.CompiledIOP, smc HubColumnSet) ScpSelector {
 	SelectorMinDeplNoBlock, ComputeSelectorMinDeplNoBlock := dedicated.IsZero(
 		comp,
 		sym.Sub(smc.DeploymentNumber, smc.MinDeplBlock),
-	)
+	).GetColumnAndProverAction()
 
 	SelectorMaxDeplNoBlock, ComputeSelectorMaxDeplNoBlock := dedicated.IsZero(
 		comp,
 		sym.Sub(smc.DeploymentNumber, smc.MaxDeplBlock),
-	)
+	).GetColumnAndProverAction()
 
 	// ST value selectors
 	SelectorEmptySTValueHi, ComputeSelectorEmptySTValueHi := dedicated.IsZero(
 		comp,
 		ifaces.ColumnAsVariable(smc.ValueHICurr),
-	)
+	).GetColumnAndProverAction()
 
 	SelectorEmptySTValueLo, ComputeSelectorEmptySTValueLo := dedicated.IsZero(
 		comp,
 		ifaces.ColumnAsVariable(smc.ValueLOCurr),
-	)
+	).GetColumnAndProverAction()
 	SelectorEmptySTValueNextHi, ComputeSelectorEmptySTValueNextHi := dedicated.IsZero(
 		comp,
 		ifaces.ColumnAsVariable(smc.ValueHINext),
-	)
+	).GetColumnAndProverAction()
 
 	SelectorEmptySTValueNextLo, ComputeSelectorEmptySTValueNextLo := dedicated.IsZero(
 		comp,
 		ifaces.ColumnAsVariable(smc.ValueLONext),
-	)
+	).GetColumnAndProverAction()
 	// storage key diff selectors
 	SelectorSTKeyDiffHi, ComputeSelectorSTKeyDiffHi := dedicated.IsZero(
 		comp,
@@ -179,14 +179,14 @@ func newScpSelector(comp *wizard.CompiledIOP, smc HubColumnSet) ScpSelector {
 			smc.KeyHI,
 			column.Shift(smc.KeyHI, -1),
 		),
-	)
+	).GetColumnAndProverAction()
 	SelectorSTKeyDiffLo, ComputeSelectorSTKeyDiffLo := dedicated.IsZero(
 		comp,
 		sym.Sub(
 			smc.KeyLO,
 			column.Shift(smc.KeyLO, -1),
 		),
-	)
+	).GetColumnAndProverAction()
 
 	// compute selectors for the ethereum address difference
 	SelectorAccountAddressDiff, ComputeSelectorAccountAddressDiff := dedicated.IsZero(
@@ -195,7 +195,7 @@ func newScpSelector(comp *wizard.CompiledIOP, smc HubColumnSet) ScpSelector {
 			smc.Address,
 			column.Shift(smc.Address, -1),
 		),
-	)
+	).GetColumnAndProverAction()
 
 	// compute selectors for the block number difference
 	SelectorBlockNoDiff, ComputeSelectorBlockNoDiff := dedicated.IsZero(
@@ -204,7 +204,7 @@ func newScpSelector(comp *wizard.CompiledIOP, smc HubColumnSet) ScpSelector {
 			smc.BlockNumber,
 			column.Shift(smc.BlockNumber, -1),
 		),
-	)
+	).GetColumnAndProverAction()
 
 	res := ScpSelector{
 		SelectorMinDeplBlock:        SelectorMinDeplNoBlock,

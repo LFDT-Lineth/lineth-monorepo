@@ -171,7 +171,7 @@ func (decomposed decomposition) csFilter(comp *wizard.CompiledIOP) {
 	// filtre = 1 iff decomposedLen !=0
 	for j := 0; j < decomposed.NbSlices; j++ {
 		// s.resIsZero = 1 iff decomposedLen = 0
-		decomposed.ResIsZero[j], decomposed.PaIsZero[j] = iszero.IsZero(comp, decomposed.DecomposedLen[j])
+		decomposed.ResIsZero[j], decomposed.PaIsZero[j] = iszero.IsZero(comp, decomposed.DecomposedLen[j]).GetColumnAndProverAction()
 		// s.filter = (1 - s.resIsZero), this enforces filters to be binary.
 		comp.InsertGlobal(0, ifaces.QueryIDf("%v_%v_%v", decomposed.Inputs.Name, "IS_NON_ZERO", j),
 			sym.Sub(decomposed.Filter[j],

@@ -963,7 +963,7 @@ func DefineSelectorConstraints(comp *wizard.CompiledIOP, edc *ExecutionDataColle
 			edc.AbsTxID,
 			edc.LastAbsTxIDBlock,
 		),
-	)
+	).GetColumnAndProverAction()
 
 	edc.SelectorEndOfAllTx, edc.ComputeSelectorEndOfAllTx = dedicated.IsZero(
 		comp,
@@ -971,7 +971,7 @@ func DefineSelectorConstraints(comp *wizard.CompiledIOP, edc *ExecutionDataColle
 			edc.AbsTxID,
 			edc.AbsTxIDMax,
 		),
-	)
+	).GetColumnAndProverAction()
 
 	edc.SelectorBlockDiff, edc.ComputeSelectorBlockDiff = dedicated.IsZero(
 		comp,
@@ -979,7 +979,7 @@ func DefineSelectorConstraints(comp *wizard.CompiledIOP, edc *ExecutionDataColle
 			edc.BlockID,
 			column.Shift(edc.BlockID, 1),
 		),
-	)
+	).GetColumnAndProverAction()
 
 	edc.SelectorAbsTxIDDiff, edc.ComputeSelectorAbsTxIDDiff = dedicated.IsZero(
 		comp,
@@ -987,7 +987,7 @@ func DefineSelectorConstraints(comp *wizard.CompiledIOP, edc *ExecutionDataColle
 			edc.AbsTxID,
 			column.Shift(edc.AbsTxID, 1),
 		),
-	)
+	).GetColumnAndProverAction()
 
 	// edc.EndOfRlpSegment is partially constrained in the projection queries, on areas where edc.IsTxRLP = 1
 	// it is also constrained in DefineZeroizationConstraints.

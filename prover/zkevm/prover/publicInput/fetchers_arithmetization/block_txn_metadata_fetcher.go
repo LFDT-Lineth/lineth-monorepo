@@ -47,7 +47,7 @@ func DefineBlockTxnMetaData(comp *wizard.CompiledIOP, btm *BlockTxnMetadata, nam
 	btm.SelectorCt, btm.ComputeSelectorCt = dedicated.IsZero(
 		comp,
 		td.Ct, // select the columns where td.Ct = 0
-	)
+	).GetColumnAndProverAction()
 
 	// constrain the arithmetization filter
 	comp.InsertGlobal(0, ifaces.QueryIDf("%s_%s", name, "FILTER_ARITH"),

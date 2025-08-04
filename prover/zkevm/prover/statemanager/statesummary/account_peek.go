@@ -120,7 +120,7 @@ func newAccountPeek(comp *wizard.CompiledIOP, size int) AccountPeek {
 	accPeek.InitialAndFinalAreSame, accPeek.ComputeInitialAndFinalAreSame = dedicated.IsZero(
 		comp,
 		sym.Sub(accPeek.HashInitial, accPeek.HashFinal),
-	)
+	).GetColumnAndProverAction()
 
 	accPeek.AddressHash, accPeek.ComputeAddressHash = common.HashOf(
 		comp,
@@ -189,7 +189,7 @@ func newAccount(comp *wizard.CompiledIOP, size int, name string) Account {
 
 	// There is no need for an IsActive mask here because the column will be
 	// multiplied by Exists which is already zero when inactive.
-	acc.HasEmptyCodeHash, acc.CptHasEmptyCodeHash = dedicated.IsZero(comp, acc.CodeSize)
+	acc.HasEmptyCodeHash, acc.CptHasEmptyCodeHash = dedicated.IsZero(comp, acc.CodeSize).GetColumnAndProverAction()
 
 	comp.InsertGlobal(
 		0,

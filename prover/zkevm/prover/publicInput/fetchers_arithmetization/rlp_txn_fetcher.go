@@ -86,7 +86,7 @@ func DefineRlpTxnFetcher(comp *wizard.CompiledIOP, fetcher *RlpTxnFetcher, name 
 			fetcher.AbsTxNum,
 			column.Shift(fetcher.AbsTxNum, 1),
 		),
-	)
+	).GetColumnAndProverAction()
 	// constrain the ChainID
 	ConstrainChainID(comp, fetcher, name, rlpTxnArith)
 

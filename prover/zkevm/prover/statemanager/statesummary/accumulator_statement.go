@@ -64,12 +64,12 @@ func newAccumulatorStatement(comp *wizard.CompiledIOP, size int, name string) Ac
 	res.InitialAndFinalHValAreEqual, res.ComputeInitialAndFinalHValEqual = dedicated.IsZero(
 		comp,
 		sym.Sub(res.StateDiff.InitialHVal, res.StateDiff.FinalHVal),
-	)
+	).GetColumnAndProverAction()
 
 	res.FinalHValIsZero, res.ComputeFinalHValIsZero = dedicated.IsZero(
 		comp,
 		sym.Sub(res.StateDiff.FinalHVal, field.Zero()),
-	)
+	).GetColumnAndProverAction()
 
 	res.SameTypeAsBefore, res.CptSameTypeAsBefore = dedicated.IsZero(
 		comp,
@@ -85,7 +85,7 @@ func newAccumulatorStatement(comp *wizard.CompiledIOP, size int, name string) Ac
 				column.Shift(res.IsDelete, -1),
 			),
 		),
-	)
+	).GetColumnAndProverAction()
 
 	return res
 }

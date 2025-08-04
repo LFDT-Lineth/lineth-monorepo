@@ -53,8 +53,7 @@ func TestIsZero(t *testing.T) {
 	runIsZeroTest := func(t *testing.T, inpVec, mask sv.SmartVector, withExpr bool) {
 
 		var (
-			izc wizard.ProverAction
-			iz  ifaces.Column
+			izc *IsZeroCtx
 		)
 
 		define := func(b *wizard.Builder) {
@@ -72,11 +71,11 @@ func TestIsZero(t *testing.T) {
 			}
 
 			if mask == nil {
-				iz, izc = IsZero(b.CompiledIOP, c)
+				izc = IsZero(b.CompiledIOP, c)
 			}
 
 			if mask != nil {
-				iz, izc = IsZeroMask(b.CompiledIOP, c, m)
+				izc = IsZeroMask(b.CompiledIOP, c, m)
 			}
 		}
 
@@ -86,9 +85,9 @@ func TestIsZero(t *testing.T) {
 			izc.Run(run)
 
 			// Sanity-check that IsZero is properly assigned
-			iszero := iz.GetColAssignment(run)
+			iszero := izc.IsZero.GetColAssignment(run)
 
-			for k := 0; k < iz.Size(); k++ {
+			for k := 0; k < izc.IsZero.Size(); k++ {
 				var (
 					z = iszero.Get(k)
 					c = inpVec.Get(k)

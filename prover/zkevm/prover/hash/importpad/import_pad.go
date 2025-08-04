@@ -138,7 +138,7 @@ func ImportAndPad(comp *wizard.CompiledIOP, inp ImportAndPadInputs, numRows int)
 	)
 
 	// When Index = 0, IsNewHash = 1
-	res.IndexIsZero, res.PaIsZero = dedicated.IsZero(comp, res.Index)
+	res.IndexIsZero, res.PaIsZero = dedicated.IsZero(comp, res.Index).GetColumnAndProverAction()
 	comp.InsertGlobal(0, ifaces.QueryIDf("%v_IS_NEW_HASH_WELL_SET", inp.Name),
 		sym.Mul(res.IsActive, res.IndexIsZero,
 			sym.Sub(1, res.IsNewHash),

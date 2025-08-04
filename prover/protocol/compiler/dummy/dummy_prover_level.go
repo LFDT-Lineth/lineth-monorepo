@@ -127,7 +127,7 @@ func (a *DummyProverAction) Run(run *wizard.ProverRuntime) {
 			q := a.Comp.QueriesNoParams.Data(name)
 			lock.Unlock()
 			if err := q.Check(run); err != nil {
-				err = fmt.Errorf("%v\nfailed %v - %v", finalErr, name, err)
+				err = fmt.Errorf("verifier step failed %v - %v", name, err)
 				lock.Lock()
 				finalErr = errors.Join(finalErr, err)
 				lock.Unlock()

@@ -282,10 +282,10 @@ func (d *UnalignedGnarkData) assignHelperColumns(run *wizard.ProverRuntime, src 
 }
 
 func (d *UnalignedGnarkData) csDataIds(comp *wizard.CompiledIOP) {
-	d.IsIndex0, d.IsIndex0Act = dedicated.IsZero(comp, d.GnarkIndex)
-	d.IsIndex4, d.IsIndex4Act = dedicated.IsZero(comp, sym.Sub(d.GnarkIndex, 4))
-	d.IsIndex5, d.IsIndex5Act = dedicated.IsZero(comp, sym.Sub(d.GnarkIndex, 5))
-	d.IsIndex13, d.IsIndex13Act = dedicated.IsZero(comp, sym.Sub(d.GnarkIndex, 13))
+	d.IsIndex0, d.IsIndex0Act = dedicated.IsZero(comp, d.GnarkIndex).GetColumnAndProverAction()
+	d.IsIndex4, d.IsIndex4Act = dedicated.IsZero(comp, sym.Sub(d.GnarkIndex, 4)).GetColumnAndProverAction()
+	d.IsIndex5, d.IsIndex5Act = dedicated.IsZero(comp, sym.Sub(d.GnarkIndex, 5)).GetColumnAndProverAction()
+	d.IsIndex13, d.IsIndex13Act = dedicated.IsZero(comp, sym.Sub(d.GnarkIndex, 13)).GetColumnAndProverAction()
 }
 
 func (d *UnalignedGnarkData) csIndex(comp *wizard.CompiledIOP, src *unalignedGnarkDataSource) {

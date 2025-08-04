@@ -165,26 +165,26 @@ func NewSelectorColumns(comp *wizard.CompiledIOP, lc LogColumns) Selectors {
 	SelectorCounter0, ComputeSelectorCounter0 := dedicated.IsZero(
 		comp,
 		lc.Ct,
-	)
+	).GetColumnAndProverAction()
 	SelectorCounter1, ComputeSelectorCounter1 := dedicated.IsZero(
 		comp,
 		sym.Sub(lc.Ct, 1),
-	)
+	).GetColumnAndProverAction()
 
 	SelectorCounter3, ComputeSelectorCounter3 := dedicated.IsZero(
 		comp,
 		sym.Sub(lc.Ct, 3),
-	)
+	).GetColumnAndProverAction()
 
 	SelectorCounter4, ComputeSelectorCounter4 := dedicated.IsZero(
 		comp,
 		sym.Sub(lc.Ct, 4),
-	)
+	).GetColumnAndProverAction()
 
 	SelectorCounter5, ComputeSelectorCounter5 := dedicated.IsZero(
 		comp,
 		sym.Sub(lc.Ct, 5),
-	)
+	).GetColumnAndProverAction()
 
 	// compute the expected data in the first topic of a L2L1 log
 	var firstTopicL2L1Hi, firstTopicL2L1Lo field.Element
@@ -196,12 +196,12 @@ func NewSelectorColumns(comp *wizard.CompiledIOP, lc LogColumns) Selectors {
 	SelectFirstTopicL2L1Hi, ComputeSelectFirstTopicL2L1Hi := dedicated.IsZero(
 		comp,
 		sym.Sub(lc.DataHi, firstTopicL2L1Hi),
-	)
+	).GetColumnAndProverAction()
 
 	SelectFirstTopicL2L1Lo, ComputeSelectFirstTopicL2L1Lo := dedicated.IsZero(
 		comp,
 		sym.Sub(lc.DataLo, firstTopicL2L1Lo),
-	)
+	).GetColumnAndProverAction()
 
 	// compute the expected data in the first topic of a rolling hash log
 	var firstTopicRollingHi, firstTopicRollingLo field.Element
@@ -213,12 +213,12 @@ func NewSelectorColumns(comp *wizard.CompiledIOP, lc LogColumns) Selectors {
 	SelectFirstTopicRollingHi, ComputeSelectFirstTopicRollingHi := dedicated.IsZero(
 		comp,
 		sym.Sub(lc.DataHi, firstTopicRollingHi),
-	)
+	).GetColumnAndProverAction()
 
 	SelectFirstTopicRollingLo, ComputeSelectFirstTopicRollingLo := dedicated.IsZero(
 		comp,
 		sym.Sub(lc.DataLo, firstTopicRollingLo),
-	)
+	).GetColumnAndProverAction()
 
 	bridgeAddrColHi := comp.InsertCommit(0, ifaces.ColIDf("LOGS_FETCHER_BRIDGE_ADDRESS_HI"), lc.DataHi.Size())
 	bridgeAddrColLo := comp.InsertCommit(0, ifaces.ColIDf("LOGS_FETCHER_BRIDGE_ADDRESS_LO"), lc.DataLo.Size())
@@ -230,12 +230,12 @@ func NewSelectorColumns(comp *wizard.CompiledIOP, lc LogColumns) Selectors {
 	SelectorL2BridgeAddressHi, ComputeSelectorL2BridgeAddressHi := dedicated.IsZero(
 		comp,
 		sym.Sub(lc.DataHi, bridgeAddrColHi),
-	)
+	).GetColumnAndProverAction()
 
 	SelectorL2BridgeAddressLo, ComputeSelectorL2BridgeAddressLo := dedicated.IsZero(
 		comp,
 		sym.Sub(lc.DataLo, bridgeAddrColLo),
-	)
+	).GetColumnAndProverAction()
 
 	// generate the final selector object
 	res := Selectors{

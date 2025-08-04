@@ -69,18 +69,17 @@ func CreateHeartBeat(comp *wizard.CompiledIOP, round, period, offset int, isActi
 
 	var (
 		_, isFullyActive, _ = cleanIsActive(isActive)
-		isZero              ifaces.Column
-		cptIsZero           wizard.ProverAction
+		cptIsZero           *IsZeroCtx
 	)
 
 	if !isFullyActive {
-		isZero, cptIsZero = IsZeroMask(comp, sym.Sub(hb.Counter.Natural, offset), isActive)
+		cptIsZero = IsZeroMask(comp, sym.Sub(hb.Counter.Natural, offset), isActive)
 	} else {
-		isZero, cptIsZero = IsZero(comp, sym.Sub(hb.Counter.Natural, offset))
+		cptIsZero = IsZero(comp, sym.Sub(hb.Counter.Natural, offset))
 	}
 
 	hb.PAs = append(hb.PAs, cptIsZero)
-	hb.Natural = isZero.(column.Natural)
+	hb.Natural = cptIsZero.IsZero.(column.Natural)
 
 	return hb
 }

@@ -30,7 +30,7 @@ type MultiLimbCmp struct {
 
 	// IsEqualCtx is the dedicated [wizard.ProverAction] responsible for
 	// assigning the returned isEqual column.
-	IsEqualCtx wizard.ProverAction
+	IsEqualCtx *dedicated.IsZeroCtx
 
 	// nonNegative syndrom is an internal column created such that it should
 	// always represent a number of size 1 << numLimbs. It is constructed using
@@ -140,7 +140,8 @@ func CmpMultiLimbs(comp *wizard.CompiledIOP, a, b LimbColumns) (isGreater, isEqu
 		sym.Mul(ctx.IsLower, sym.Sub(ctx.IsLower, 1)),
 	)
 
-	isEqual, ctx.IsEqualCtx = dedicated.IsZero(comp, allLimbsEqual)
+	ctx.IsEqualCtx = dedicated.IsZero(comp, allLimbsEqual)
+	isEqual = ctx.IsEqualCtx.IsZero
 
 	comp.InsertGlobal(
 		round,

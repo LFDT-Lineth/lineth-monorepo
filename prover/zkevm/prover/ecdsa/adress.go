@@ -332,7 +332,7 @@ func splitAt(nbEcRecover int) int {
 func (td *txnData) csTxnData(comp *wizard.CompiledIOP) {
 
 	//  isFrom == 1 iff ct==1
-	td.IsFrom, td.Pa_IsZero = dedicated.IsZero(comp, sym.Sub(td.Ct, 1))
+	td.IsFrom, td.Pa_IsZero = dedicated.IsZero(comp, sym.Sub(td.Ct, 1)).GetColumnAndProverAction()
 }
 
 // txndata represents the txn_data module from the arithmetization side.

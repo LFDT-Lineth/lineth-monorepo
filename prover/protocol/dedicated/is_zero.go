@@ -2,6 +2,7 @@ package dedicated
 
 import (
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
+	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/column"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/protocol/query"
@@ -18,6 +19,9 @@ type IsZeroCtx struct {
 	Mask      *sym.Expression
 	InvOrZero ifaces.Column
 	IsZero    ifaces.Column
+	// PaddingVal is an optional value to be used to pad the column
+	// in case the provided expression contains offsets.
+	PaddingVal *field.Element
 }
 
 // IsZero returns a fully constrained binary column z such that
@@ -29,7 +33,7 @@ type IsZeroCtx struct {
 // The function also returns a context object that can be invoked to perform the
 // assignment of `z` and the intermediate internal columns. It has to be called
 // explictly by the the caller during the prover runtime.
-func IsZero(comp *wizard.CompiledIOP, c any) (ifaces.Column, wizard.ProverAction) {
+func IsZero(comp *wizard.CompiledIOP, c any) *IsZeroCtx {
 
 	var (
 		ctx = &IsZeroCtx{
@@ -48,6 +52,23 @@ func IsZero(comp *wizard.CompiledIOP, c any) (ifaces.Column, wizard.ProverAction
 
 	compileIsZeroWithSize(comp, ctx)
 
+	return ctx
+}
+
+// WithPaddingVal adds a padding value to the context
+func (ctx *IsZeroCtx) WithPaddingVal(val field.Element) *IsZeroCtx {
+
+	if !val.IsOne() && !val.IsZero() {
+		utils.Panic("padding value must be 0 or 1, was %v", val.String())
+	}
+
+	ctx.PaddingVal = &val
+	return ctx
+}
+
+// GetColumnAndProverAction returns the column and the prover action. This
+// method is useful to diminish the change needed since we added [WithPaddingVal].
+func (ctx *IsZeroCtx) GetColumnAndProverAction() (ifaces.Column, wizard.ProverAction) {
 	return ctx.IsZero, ctx
 }
 
@@ -55,7 +76,7 @@ func IsZero(comp *wizard.CompiledIOP, c any) (ifaces.Column, wizard.ProverAction
 // expectedly a binary column. The caller is responsible for
 // ensuring/constraining that the column is binary. All the generated columns
 // will be zeroied when the mask is up.
-func IsZeroMask(comp *wizard.CompiledIOP, c, mask any) (ifaces.Column, wizard.ProverAction) {
+func IsZeroMask(comp *wizard.CompiledIOP, c, mask any) *IsZeroCtx {
 
 	var (
 		ctx = &IsZeroCtx{
@@ -76,7 +97,7 @@ func IsZeroMask(comp *wizard.CompiledIOP, c, mask any) (ifaces.Column, wizard.Pr
 
 	compileIsZeroWithSize(comp, ctx)
 
-	return ctx.IsZero, ctx
+	return ctx
 }
 
 func compileIsZeroWithSize(comp *wizard.CompiledIOP, ctx *IsZeroCtx) {
@@ -138,6 +159,18 @@ func (ctx *IsZeroCtx) Run(run *wizard.ProverRuntime) {
 	// the first/last non-ignored value.
 	if minOffset < 0 {
 		paddingVal := c[-minOffset]
+
+		if ctx.PaddingVal != nil && ctx.PaddingVal.IsOne() {
+			// When using a padding value of 1, we mean the isZero column should
+			// be padded with 1s. To obtain this, we pad the base column with 0s
+			// and [smartvectors.IsZero] will return 1s.
+			paddingVal = field.Zero()
+		}
+
+		if ctx.PaddingVal != nil && ctx.PaddingVal.IsZero() {
+			paddingVal = field.One()
+		}
+
 		for p := 0; p < -minOffset; p++ {
 			c[p] = paddingVal
 		}
@@ -145,6 +178,18 @@ func (ctx *IsZeroCtx) Run(run *wizard.ProverRuntime) {
 
 	if maxOffset > 0 {
 		paddingVal := c[len(c)-maxOffset-1]
+
+		if ctx.PaddingVal != nil && ctx.PaddingVal.IsOne() {
+			// When using a padding value of 1, we mean the isZero column should
+			// be padded with 1s. To obtain this, we pad the base column with 0s
+			// and [smartvectors.IsZero] will return 1s.
+			paddingVal = field.Zero()
+		}
+
+		if ctx.PaddingVal != nil && ctx.PaddingVal.IsZero() {
+			paddingVal = field.One()
+		}
+
 		for p := len(c) - maxOffset; p < len(c); p++ {
 			c[p] = paddingVal
 		}

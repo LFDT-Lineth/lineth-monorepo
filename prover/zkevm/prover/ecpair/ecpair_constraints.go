@@ -109,7 +109,7 @@ func (ec *ECPair) csInstanceIDChangeWhenNewInstance(comp *wizard.CompiledIOP) {
 			ec.UnalignedPairingData.InstanceID,
 			column.Shift(ec.UnalignedPairingData.InstanceID, -1),
 		),
-	)
+	).GetColumnAndProverAction()
 
 	ec.CptPrevEqualCurrID = cptPrevEqualCurrID
 

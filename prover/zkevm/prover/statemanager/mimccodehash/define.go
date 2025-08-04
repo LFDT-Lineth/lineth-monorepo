@@ -89,8 +89,8 @@ func NewModule(comp *wizard.CompiledIOP, inputs Inputs) (mh Module) {
 		IsForConsistency: comp.InsertCommit(inputs.Round, MIMC_CODE_HASH_IS_FOR_CONSISTENCY, inputs.Size),
 	}
 
-	mh.IsEmptyKeccakHi, mh.CptIsEmptyKeccakHi = dedicated.IsZero(comp, sym.Sub(mh.CodeHashHi, emptyKeccakHi))
-	mh.IsEmptyKeccakLo, mh.CptIsEmptyKeccakLo = dedicated.IsZero(comp, sym.Sub(mh.CodeHashLo, emptyKeccakLo))
+	mh.IsEmptyKeccakHi, mh.CptIsEmptyKeccakHi = dedicated.IsZero(comp, sym.Sub(mh.CodeHashHi, emptyKeccakHi)).GetColumnAndProverAction()
+	mh.IsEmptyKeccakLo, mh.CptIsEmptyKeccakLo = dedicated.IsZero(comp, sym.Sub(mh.CodeHashLo, emptyKeccakLo)).GetColumnAndProverAction()
 
 	comp.InsertGlobal(
 		0,

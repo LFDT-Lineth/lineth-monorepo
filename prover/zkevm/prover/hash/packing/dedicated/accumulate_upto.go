@@ -64,7 +64,7 @@ func AccumulateUpToMax(comp *wizard.CompiledIOP, maxValue int, colA, isActive if
 		Size:        size,
 	}
 
-	acc.IsMax, acc.PA = dedicated.IsZero(comp, sym.Sub(maxValue, acc.Accumulator))
+	acc.IsMax, acc.PA = dedicated.IsZero(comp, sym.Sub(maxValue, acc.Accumulator)).GetColumnAndProverAction()
 
 	// Constraints over the accumulator
 	// Accumulator[last] =ColA[last]

@@ -95,7 +95,7 @@ func newStoragePeek(comp *wizard.CompiledIOP, size int, name string) StoragePeek
 	res.OldAndNewValuesAreEqual, res.ComputeOldAndNewValuesAreEqual = dedicated.IsZero(
 		comp,
 		sym.Sub(res.OldValueHash, res.NewValueHash),
-	)
+	).GetColumnAndProverAction()
 
 	res.KeyHash, res.ComputeKeyHash = common.HashOf(
 		comp,
@@ -108,12 +108,12 @@ func newStoragePeek(comp *wizard.CompiledIOP, size int, name string) StoragePeek
 	res.OldValueIsZero, res.ComputeOldValueIsZero = dedicated.IsZero(
 		comp,
 		sym.Sub(res.OldValueHash, hashOfZeroStorage()),
-	)
+	).GetColumnAndProverAction()
 
 	res.NewValueIsZero, res.ComputeNewValueIsZero = dedicated.IsZero(
 		comp,
 		sym.Sub(res.NewValueHash, hashOfZeroStorage()),
-	)
+	).GetColumnAndProverAction()
 
 	res.KeyLimbs, res.ComputeKeyLimbs = byte32cmp.Decompose(comp, res.KeyHash, 16, 16)
 

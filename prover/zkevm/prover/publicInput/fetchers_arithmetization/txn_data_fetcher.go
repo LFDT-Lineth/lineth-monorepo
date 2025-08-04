@@ -46,7 +46,7 @@ func DefineTxnDataFetcher(comp *wizard.CompiledIOP, fetcher *TxnDataFetcher, nam
 			1, // check that the Ct field is 1 (we use 1 rather than 0, as on prepend columns, ct is 0).
 			// Moreover, all transaction segments have a row with Ct = 1
 		),
-	)
+	).GetColumnAndProverAction()
 
 	comp.InsertGlobal(
 		0,

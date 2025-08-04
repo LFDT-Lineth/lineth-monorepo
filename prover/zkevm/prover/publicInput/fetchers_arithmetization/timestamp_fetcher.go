@@ -144,12 +144,12 @@ func DefineTimestampFetcher(comp *wizard.CompiledIOP, fetcher *TimestampFetcher,
 			bdc.Inst,
 			timestampField, // check that the Inst field indicates a timestamp row
 		),
-	)
+	).GetColumnAndProverAction()
 	// constrain the fetcher.SelectorCt column, which will be used to compute the filter for the arithmetization's BlockDataCols
 	fetcher.SelectorCt, fetcher.ComputeSelectorCt = dedicated.IsZero(
 		comp,
 		ifaces.ColumnAsVariable(bdc.Ct), // pick the spots where Ct=0
-	)
+	).GetColumnAndProverAction()
 	// constrain the entire arithmetization filtering column, using SelectorCt and SelectorTimestamp
 	comp.InsertGlobal(
 		0,

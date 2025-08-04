@@ -336,8 +336,8 @@ func newSha2BlockModule(comp *wizard.CompiledIOP, inp *sha2BlocksInputs) *sha2Bl
 	// be zero when isActive.
 	var ctxLo, ctxHi wizard.ProverAction
 
-	res.HashHiIsZero, ctxHi = dedicated.IsZero(comp, res.HashHi)
-	res.HashLoIsZero, ctxLo = dedicated.IsZero(comp, res.HashLo)
+	res.HashHiIsZero, ctxHi = dedicated.IsZero(comp, res.HashHi).GetColumnAndProverAction()
+	res.HashLoIsZero, ctxLo = dedicated.IsZero(comp, res.HashLo).GetColumnAndProverAction()
 	res.ProverActions = append(res.ProverActions, ctxHi, ctxLo)
 
 	comp.InsertGlobal(0,

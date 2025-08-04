@@ -50,7 +50,7 @@ func newBlock(comp *wizard.CompiledIOP, inp blockInput) block {
 		AccNumLane: createCol("AccNumLane"),
 	}
 
-	b.IsBlockComplete, b.PA = dedicated.IsZero(comp, sym.Sub(b.AccNumLane, nbLanesPerBlock))
+	b.IsBlockComplete, b.PA = dedicated.IsZero(comp, sym.Sub(b.AccNumLane, nbLanesPerBlock)).GetColumnAndProverAction()
 
 	// constraints over accNumLanes (accumulate backward)
 	// accNumLane[last] =isLaneActive[last]

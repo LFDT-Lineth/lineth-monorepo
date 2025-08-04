@@ -67,14 +67,13 @@ func NewCyclicCounter(comp *wizard.CompiledIOP, round, period int, isActiveAny a
 	}
 
 	var (
-		isEndOfPeriod    ifaces.Column
-		cptIsEndOfPeriod wizard.ProverAction
+		cptIsEndOfPeriod *IsZeroCtx
 	)
 
 	if !fullyActive {
-		isEndOfPeriod, cptIsEndOfPeriod = IsZeroMask(comp, sym.Sub(rc.Natural, period-1), isActive)
+		cptIsEndOfPeriod = IsZeroMask(comp, sym.Sub(rc.Natural, period-1), isActive)
 	} else {
-		isEndOfPeriod, cptIsEndOfPeriod = IsZero(comp, sym.Sub(rc.Natural, period-1))
+		cptIsEndOfPeriod = IsZero(comp, sym.Sub(rc.Natural, period-1))
 	}
 
 	comp.InsertGlobal(
@@ -82,12 +81,12 @@ func NewCyclicCounter(comp *wizard.CompiledIOP, round, period int, isActiveAny a
 		ifaces.QueryID(name+"_COUNTER_RESET"),
 		sym.Mul(
 			column.Shift(rc.Natural, 1),
-			isEndOfPeriod,
+			cptIsEndOfPeriod.IsZero,
 		),
 	)
 
 	rc.PAs = append(rc.PAs, cptIsEndOfPeriod)
-	rc.Reset = isEndOfPeriod
+	rc.Reset = cptIsEndOfPeriod.IsZero
 
 	return rc
 }

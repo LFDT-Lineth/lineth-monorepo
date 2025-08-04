@@ -29,7 +29,7 @@ type RomLexInput struct {
 // the corresponding prover action "CptCounterEqualToNBytesMinusOne". It is
 // run at the beginning of the "ConnectToRom" module.
 func (inp *RomInput) complete(comp *wizard.CompiledIOP) *RomInput {
-	inp.CounterIsEqualToNBytesMinusOne, inp.CptCounterEqualToNBytesMinusOne = dedicated.IsZero(comp, symbolic.Sub(inp.NBytes, inp.Counter, 1))
+	inp.CounterIsEqualToNBytesMinusOne, inp.CptCounterEqualToNBytesMinusOne = dedicated.IsZero(comp, symbolic.Sub(inp.NBytes, inp.Counter, 1)).GetColumnAndProverAction()
 	return inp
 }
 
