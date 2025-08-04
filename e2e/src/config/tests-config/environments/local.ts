@@ -39,7 +39,8 @@ const config: Config = {
     dummyContractAddress: "0xE4392c8ecC46b304C83cDB5edaf742899b1bda93", // Nonce 9
     tokenBridgeAddress: "0x5C95Bcd50E6D1B4E3CDC478484C9030Ff0a7D493",
     l2TokenAddress: "0xCC1B08B17301e090cbb4c1F5598Cbaa096d591FB",
-    l2SparseMerkleProofAddress: "0x7917AbB0cDbf3D3C4057d6a2808eE85ec16260C1", // Nonce 12
+    l2SparseMerkleProofAddress: "0x670365526A9971E4A225c38538c5D7Ac248e4087", // Nonce 13
+    l2LineaSequencerUptimeFeedAddress: "0x7917AbB0cDbf3D3C4057d6a2808eE85ec16260C1", // Nonce 12
     accountManager: new GenesisBasedAccountManager(
       new ethers.JsonRpcProvider(L2_RPC_URL.toString()),
       path.resolve(

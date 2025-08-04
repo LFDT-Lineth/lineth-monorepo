@@ -9,6 +9,8 @@ import {
   L2MessageServiceV1__factory as L2MessageService__factory,
   LineaRollupV6,
   LineaRollupV6__factory,
+  LineaSequencerUptimeFeed,
+  LineaSequencerUptimeFeed__factory,
   ProxyAdmin,
   ProxyAdmin__factory,
   SparseMerkleProof,
@@ -238,6 +240,19 @@ export default class TestSetup {
 
   public getL2SparseMerkleProofContract(): SparseMerkleProof {
     return SparseMerkleProof__factory.connect(this.config.L2.l2SparseMerkleProofAddress, this.getL2Provider());
+  }
+
+  public getL2LineaSequencerUptimeFeedContract(signer?: Wallet): LineaSequencerUptimeFeed {
+    const livenessContract = LineaSequencerUptimeFeed__factory.connect(
+      this.config.L2.l2LineaSequencerUptimeFeedAddress,
+      this.getL2Provider(),
+    );
+
+    if (signer) {
+      return livenessContract.connect(signer);
+    }
+
+    return livenessContract;
   }
 
   public getL1AccountManager(): AccountManager {

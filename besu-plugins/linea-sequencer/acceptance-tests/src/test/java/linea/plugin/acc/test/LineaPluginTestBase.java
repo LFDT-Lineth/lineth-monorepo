@@ -9,10 +9,8 @@
 
 package linea.plugin.acc.test;
 
-import static net.consensys.linea.metrics.LineaMetricCategory.PRICING_CONF;
-import static net.consensys.linea.metrics.LineaMetricCategory.SEQUENCER_PROFITABILITY;
-import static net.consensys.linea.metrics.LineaMetricCategory.TX_POOL_PROFITABILITY;
-import static org.assertj.core.api.Assertions.*;
+import static net.consensys.linea.metrics.LineaMetricCategory.*;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -23,27 +21,9 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
-import linea.plugin.acc.test.tests.web3j.generated.AcceptanceTestToken;
-import linea.plugin.acc.test.tests.web3j.generated.DummyAdder;
-import linea.plugin.acc.test.tests.web3j.generated.EcAdd;
-import linea.plugin.acc.test.tests.web3j.generated.EcMul;
-import linea.plugin.acc.test.tests.web3j.generated.EcPairing;
-import linea.plugin.acc.test.tests.web3j.generated.EcRecover;
-import linea.plugin.acc.test.tests.web3j.generated.ExcludedPrecompiles;
-import linea.plugin.acc.test.tests.web3j.generated.ModExp;
-import linea.plugin.acc.test.tests.web3j.generated.MulmodExecutor;
-import linea.plugin.acc.test.tests.web3j.generated.RevertExample;
-import linea.plugin.acc.test.tests.web3j.generated.SimpleStorage;
+import linea.plugin.acc.test.tests.web3j.generated.*;
 import linea.plugin.acc.test.utils.MemoryAppender;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.RandomStringUtils;
@@ -170,7 +150,11 @@ public abstract class LineaPluginTestBase extends AcceptanceTestBase {
                     .enabled(true)
                     .port(0)
                     .metricCategories(
-                        Set.of(PRICING_CONF, SEQUENCER_PROFITABILITY, TX_POOL_PROFITABILITY))
+                        Set.of(
+                            PRICING_CONF,
+                            SEQUENCER_PROFITABILITY,
+                            TX_POOL_PROFITABILITY,
+                            SEQUENCER_LIVENESS))
                     .build())
             .requestedPlugins(requestedPlugins);
 

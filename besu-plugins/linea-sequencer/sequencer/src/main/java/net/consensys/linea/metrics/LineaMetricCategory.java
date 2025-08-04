@@ -18,7 +18,9 @@ public enum LineaMetricCategory implements MetricCategory {
   /** Tx pool profitability metric category */
   TX_POOL_PROFITABILITY,
   /** Runtime pricing configuration */
-  PRICING_CONF;
+  PRICING_CONF,
+  /** Sequencer liveness monitoring */
+  SEQUENCER_LIVENESS;
 
   private static final Optional<String> APPLICATION_PREFIX = Optional.of("linea_");
 

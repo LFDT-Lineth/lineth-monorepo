@@ -17,6 +17,8 @@ import net.consensys.linea.bundles.BundlePoolService;
 import net.consensys.linea.bundles.LineaLimitedBundlePool;
 import net.consensys.linea.config.LineaBundleCliOptions;
 import net.consensys.linea.config.LineaBundleConfiguration;
+import net.consensys.linea.config.LineaLivenessServiceCliOptions;
+import net.consensys.linea.config.LineaLivenessServiceConfiguration;
 import net.consensys.linea.config.LineaProfitabilityCliOptions;
 import net.consensys.linea.config.LineaProfitabilityConfiguration;
 import net.consensys.linea.config.LineaRejectedTxReportingCliOptions;
@@ -105,6 +107,9 @@ public abstract class AbstractLineaSharedPrivateOptionsPlugin
     configMap.put(
         LineaTransactionValidatorCliOptions.CONFIG_KEY,
         LineaTransactionValidatorCliOptions.create().asPluginConfig());
+    configMap.put(
+        LineaLivenessServiceCliOptions.CONFIG_KEY,
+        LineaLivenessServiceCliOptions.create().asPluginConfig());
     return configMap;
   }
 
@@ -154,6 +159,11 @@ public abstract class AbstractLineaSharedPrivateOptionsPlugin
   public LineaTransactionValidatorConfiguration transactionValidatorConfiguration() {
     return (LineaTransactionValidatorConfiguration)
         getConfigurationByKey(LineaTransactionValidatorCliOptions.CONFIG_KEY).optionsConfig();
+  }
+
+  public LineaLivenessServiceConfiguration livenessServiceConfiguration() {
+    return (LineaLivenessServiceConfiguration)
+        getConfigurationByKey(LineaLivenessServiceCliOptions.CONFIG_KEY).optionsConfig();
   }
 
   @Override

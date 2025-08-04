@@ -4,6 +4,7 @@ import { config } from "../tests-config";
 import { deployContract } from "../../common/deployments";
 import {
   DummyContract__factory,
+  LineaSequencerUptimeFeed__factory,
   Mimc__factory,
   SparseMerkleProof__factory,
   TestContract__factory,
@@ -69,31 +70,35 @@ async function configureOnceOffPrerequisities() {
     ),
   ]);
 
-  const [dummyContract, l2DummyContract, l2TestContract, l2MimcContract] = await Promise.all([
-    deployContract(new DummyContract__factory(), account, [{ nonce: l1AccountNonce }]),
-    deployContract(new DummyContract__factory(), l2Account, [
-      { nonce: l2AccountNonce, maxPriorityFeePerGas, maxFeePerGas },
-    ]),
-    deployContract(new TestContract__factory(), l2Account, [
-      {
-        nonce: l2AccountNonce + 1,
-        maxPriorityFeePerGas: maxPriorityFeePerGasTestContract,
-        maxFeePerGas: maxFeePerGasTestContract,
-      },
-    ]),
-    deployContract(new Mimc__factory(), l2Account, [
-      { nonce: l2AccountNonce + 2, maxPriorityFeePerGas: maxPriorityFeePerGasMimc, maxFeePerGas: maxFeePerGasMimc },
-    ]),
+  const [dummyContract, l2DummyContract, l2TestContract, l2MimcContract, l2LineaSequencerUptimeFeedContract] =
+    await Promise.all([
+      deployContract(new DummyContract__factory(), account, [{ nonce: l1AccountNonce }]),
+      deployContract(new DummyContract__factory(), l2Account, [
+        { nonce: l2AccountNonce, maxPriorityFeePerGas, maxFeePerGas },
+      ]),
+      deployContract(new TestContract__factory(), l2Account, [
+        {
+          nonce: l2AccountNonce + 1,
+          maxPriorityFeePerGas: maxPriorityFeePerGasTestContract,
+          maxFeePerGas: maxFeePerGasTestContract,
+        },
+      ]),
+      deployContract(new Mimc__factory(), l2Account, [
+        { nonce: l2AccountNonce + 2, maxPriorityFeePerGas: maxPriorityFeePerGasMimc, maxFeePerGas: maxFeePerGasMimc },
+      ]),
+      deployContract(new LineaSequencerUptimeFeed__factory(), l2Account, [
+        { nonce: l2AccountNonce + 3, maxPriorityFeePerGas: maxPriorityFeePerGasMimc, maxFeePerGas: maxFeePerGasMimc },
+      ]),
 
-    // Send ETH to the LineaRollup contract
-    (
-      await lineaRollup.sendMessage(to, fee, calldata, {
-        value: etherToWei("500"),
-        gasPrice: ethers.parseUnits("300", "gwei"),
-        nonce: l1AccountNonce + 1,
-      })
-    ).wait(),
-  ]);
+      // Send ETH to the LineaRollup contract
+      (
+        await lineaRollup.sendMessage(to, fee, calldata, {
+          value: etherToWei("500"),
+          gasPrice: ethers.parseUnits("300", "gwei"),
+          nonce: l1AccountNonce + 1,
+        })
+      ).wait(),
+    ]);
 
   const l2MimcContractAddress = await l2MimcContract.getAddress();
 
@@ -110,7 +115,7 @@ async function configureOnceOffPrerequisities() {
     l2Account,
     [
       {
-        nonce: l2AccountNonce + 3,
+        nonce: l2AccountNonce + 4,
         maxPriorityFeePerGas: maxPriorityFeePerGasSparseMerkleProof,
         maxFeePerGas: maxFeePerGasSparseMerkleProof,
       },
@@ -121,5 +126,8 @@ async function configureOnceOffPrerequisities() {
   logger.info(`L2 Dummy contract deployed. address=${await l2DummyContract.getAddress()}`);
   logger.info(`L2 Test contract deployed. address=${await l2TestContract.getAddress()}`);
   logger.info(`L2 Mimc contract deployed. address=${l2MimcContractAddress}`);
+  logger.info(
+    `L2 LineaSequencerUptimeFeed contract deployed. address=${await l2LineaSequencerUptimeFeedContract.getAddress()}`,
+  );
   logger.info(`L2 SparseMerkleProof contract deployed. address=${await l2SparseMerkleProofContract.getAddress()}`);
 }

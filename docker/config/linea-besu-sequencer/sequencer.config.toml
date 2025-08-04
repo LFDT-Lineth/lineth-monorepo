@@ -69,6 +69,17 @@ plugin-linea-extra-data-set-min-gas-price-enabled=false
 plugin-linea-estimate-gas-min-margin="1.2"
 strict-tx-replay-protection-enabled=false
 
+# should uncomment only when the linea-sequencer plugin supports liveness 
+#plugin-linea-liveness-enabled=true
+#plugin-linea-liveness-max-block-age-seconds=12
+#plugin-linea-liveness-bundle-max-timestamp-surplus-seconds=12
+#plugin-linea-liveness-contract-address="0x7917AbB0cDbf3D3C4057d6a2808eE85ec16260C1"
+#plugin-linea-liveness-signer-url="http://web3signer:9000"
+#plugin-linea-liveness-signer-key-id="4a788ad6fa008beed58de6418369717d7492f37d173d70e2c26d9737e2c6eeae929452ef8602a19410844db3e200a0e73f5208fd76259a8766b73953fc3e7023"
+#plugin-linea-liveness-signer-address="0xd42e308fc964b71e18126df469c21b0d7bcb86cc"
+#plugin-linea-liveness-gas-limit=1000000
+#plugin-linea-liveness-gas-price=7
+
 Xplugin-rocksdb-high-spec-enabled=true
 Xsynchronizer-fast-sync-full-validation-rate=0.000001
 tx-pool-priority-senders=["0xfe3b557e8fb62b89f4916b721be55ceb828dbd73",

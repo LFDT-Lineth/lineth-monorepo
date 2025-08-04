@@ -383,10 +383,14 @@ export async function getTransactionHash(txRequest: TransactionRequest, signer: 
   return ethers.keccak256(signature);
 }
 
-export async function getBlockByNumberOrBlockTag(rpcUrl: URL, blockTag: BlockTag): Promise<ethers.Block | null> {
+export async function getBlockByNumberOrBlockTag(
+  rpcUrl: URL,
+  blockTag: BlockTag,
+  prefetchTxs: boolean = false,
+): Promise<ethers.Block | null> {
   const provider = new ethers.JsonRpcProvider(rpcUrl.href);
   try {
-    const blockNumber = await provider.getBlock(blockTag);
+    const blockNumber = await provider.getBlock(blockTag, prefetchTxs);
     return blockNumber;
   } catch (error) {
     return null;

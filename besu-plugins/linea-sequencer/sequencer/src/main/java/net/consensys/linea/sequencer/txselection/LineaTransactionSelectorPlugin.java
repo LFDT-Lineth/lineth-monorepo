@@ -12,6 +12,7 @@ package net.consensys.linea.sequencer.txselection;
 import static net.consensys.linea.metrics.LineaMetricCategory.SEQUENCER_PROFITABILITY;
 
 import com.google.auto.service.AutoService;
+import java.math.BigInteger;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.AbstractLineaRequiredPlugin;
@@ -20,6 +21,10 @@ import net.consensys.linea.config.LineaTransactionSelectorConfiguration;
 import net.consensys.linea.jsonrpc.JsonRpcManager;
 import net.consensys.linea.metrics.HistogramMetrics;
 import net.consensys.linea.plugins.config.LineaL1L2BridgeSharedConfiguration;
+import net.consensys.linea.sequencer.liveness.LineaLivenessService;
+import net.consensys.linea.sequencer.liveness.LineaLivenessTxBuilder;
+import net.consensys.linea.sequencer.liveness.LivenessService;
+import net.consensys.linea.sequencer.liveness.LivenessTxBuilder;
 import net.consensys.linea.sequencer.txselection.selectors.ProfitableTransactionSelector;
 import org.hyperledger.besu.plugin.BesuPlugin;
 import org.hyperledger.besu.plugin.ServiceManager;
@@ -82,6 +87,24 @@ public class LineaTransactionSelectorPlugin extends AbstractLineaRequiredPlugin 
                     ProfitableTransactionSelector.Phase.class))
             : Optional.empty();
 
+    final BigInteger chainId =
+        blockchainService
+            .getChainId()
+            .orElseThrow(
+                () -> new RuntimeException("Failed to get chain Id from the BlockchainService."));
+    final LivenessTxBuilder livenessTxBuilder =
+        new LineaLivenessTxBuilder(livenessServiceConfiguration(), blockchainService, chainId);
+    final Optional<LivenessService> livenessService =
+        livenessServiceConfiguration().enabled()
+            ? Optional.of(
+                new LineaLivenessService(
+                    livenessServiceConfiguration(),
+                    rpcEndpointService,
+                    livenessTxBuilder,
+                    metricCategoryRegistry,
+                    metricsSystem))
+            : Optional.empty();
+
     transactionSelectionService.registerPluginTransactionSelectorFactory(
         new LineaTransactionSelectorFactory(
             blockchainService,
@@ -89,6 +112,7 @@ public class LineaTransactionSelectorPlugin extends AbstractLineaRequiredPlugin 
             l1L2BridgeSharedConfiguration(),
             profitabilityConfiguration(),
             tracerConfiguration(),
+            livenessService,
             rejectedTxJsonRpcManager,
             maybeProfitabilityMetrics,
             bundlePoolService));
