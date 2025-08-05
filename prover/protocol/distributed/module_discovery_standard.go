@@ -100,6 +100,7 @@ type ModuleDiscoveryAdvice struct {
 type QueryBasedAssignmentStatsRecord struct {
 	Request                  string
 	ModuleName               ModuleName
+	ClusterName              ModuleName
 	SegmentSize              int
 	OriginalSize             int
 	NbConstraintsOfPlonkCirc int
@@ -903,8 +904,11 @@ func (mod *QueryBasedModule) SegmentBoundaries(run *wizard.ProverRuntime, segmen
 // related to the columns and their padding. It returns a list of records for
 // each query-based submodule.
 func (mod *StandardModule) RecordAssignmentStats(run *wizard.ProverRuntime) (qbmRecords []QueryBasedAssignmentStatsRecord) {
-	for _, submod := range mod.SubModules {
-		qbmRecords = append(qbmRecords, submod.RecordAssignmentStats(run))
+	for i, submod := range mod.SubModules {
+		stats := submod.RecordAssignmentStats(run)
+		stats.SegmentSize = mod.NewSizes[i]
+		stats.ClusterName = mod.ModuleName
+		qbmRecords = append(qbmRecords, stats)
 	}
 	return qbmRecords
 }
@@ -917,7 +921,7 @@ func (mod *QueryBasedModule) RecordAssignmentStats(run *wizard.ProverRuntime) Qu
 		colIDs = utils.SortedKeysOf(mod.Ds.Parent, func(a, b ifaces.ColID) bool { return a < b })
 		res    = QueryBasedAssignmentStatsRecord{
 			ModuleName:               mod.ModuleName,
-			SegmentSize:              mod.OriginalSize,
+			OriginalSize:             mod.OriginalSize,
 			NbConstraintsOfPlonkCirc: mod.NbConstraintsOfPlonkCirc,
 			NbInstancesOfPlonkCirc:   mod.NbInstancesOfPlonkCirc,
 			NbInstancesOfPlonkQuery:  mod.NbInstancesOfPlonkQuery,

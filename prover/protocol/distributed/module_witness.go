@@ -12,6 +12,7 @@ import (
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	"github.com/consensys/linea-monorepo/prover/utils"
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -103,15 +104,43 @@ func SegmentRuntime(
 	witnessesLPP []*ModuleWitnessLPP,
 ) {
 
+	logger := logrus.WithField("type", "module-segmentation-stats")
+
 	for i := range blueprintGLs {
+
 		wGL := SegmentModuleGL(runtime, disc, &blueprintGLs[i])
 		witnessesGL = append(witnessesGL, wGL...)
+
+		// Expectedly, the blueprintGLs[i] is for the disc.Module[i] as the
+		// blueprintGLs list is constructed from them in the same order.  We
+		// sanity-check this assumption to ensure the line-up is correct.
+		if blueprintGLs[i].ModuleNames[0] != disc.Modules[i].ModuleName {
+			utils.Panic("blueprintGLs[i].ModuleNames[0] != disc.Modules[i].Name")
+		}
+
+		qbmStats := disc.Modules[i].RecordAssignmentStats(runtime)
+		loggableQbmStats := map[string]map[string]any{}
+
+		for _, stats := range qbmStats {
+			loggableQbmStats[string(stats.ModuleName)] = map[string]any{
+				"segment-size":     stats.SegmentSize,
+				"nb-segment":       utils.DivCeil(stats.NbActiveRows, stats.SegmentSize),
+				"total-number-row": stats.NbActiveRows,
+			}
+		}
+
+		logger = logger.WithField(string(blueprintGLs[i].ModuleNames[0]), map[string]any{
+			"qbm-stats":   loggableQbmStats,
+			"nb-segments": len(wGL),
+		})
 	}
 
 	for i := range blueprintLPPs {
 		wLPP := SegmentModuleLPP(runtime, disc, &blueprintLPPs[i])
 		witnessesLPP = append(witnessesLPP, wLPP...)
 	}
+
+	logger.Info("Performed module segmentation")
 
 	return witnessesGL, witnessesLPP
 }

@@ -1,5 +1,5 @@
 environment = "sepolia"
-version = "6.0.0"                              # TODO @gbotrel hunt all version definitions.
+version = "6.0.1"                              # TODO @gbotrel hunt all version definitions.
 assets_dir = "./prover-assets"
 log_level = 4                                  # TODO @gbotrel will be refactored with new logger.
 
