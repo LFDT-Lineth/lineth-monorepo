@@ -1,0 +1,6 @@
+type: "file-raw"
+keyType: "SECP256K1"
+# WARNING: FOR LOCAL DEV ONLY - DO NOT REUSE THESE KEYS ELSEWHERE
+# Key for sequencer liveness service on L2
+# Public key: 3aee43fafba7d1b83b23448df3c9876751feaa19b7b38be8ee6e277f2761b009737841d9a5278c8ec466655264cff58ad7921dd1687b8f5ff303e9b2fecebf30
+privateKey: "0x234d87442cf7d43841fbe280febcdfabfb646added67bc19f7e42a5483f614c4"

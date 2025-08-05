@@ -8,6 +8,7 @@
  */
 package net.consensys.linea.config;
 
+import java.nio.file.Path;
 import java.time.Duration;
 import lombok.Builder;
 import net.consensys.linea.plugins.LineaOptionsConfiguration;
@@ -22,6 +23,11 @@ public record LineaLivenessServiceConfiguration(
     String signerUrl,
     String signerKeyId,
     String signerAddress,
+    boolean tlsEnabled,
+    Path tlsKeyStorePath,
+    String tlsKeyStorePassword,
+    Path tlsTrustStorePath,
+    String tlsTrustStorePassword,
     long gasLimit,
     long gasPrice)
     implements LineaOptionsConfiguration {}

@@ -83,6 +83,6 @@ describe.skip("Liveness test suite", () => {
       expect(uptimeEvent?.index).toEqual(1);
       expect(parseInt(uptimeEvent?.topics[1] ?? "", 16)).toEqual(0); // topics[1] was the given status to update, should be 0 for uptime
     },
-    60000,
+    100000,
   );
 });

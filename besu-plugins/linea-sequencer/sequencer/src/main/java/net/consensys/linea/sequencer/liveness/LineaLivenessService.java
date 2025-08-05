@@ -152,42 +152,72 @@ public class LineaLivenessService implements LivenessService {
     }
   }
 
+  /**
+   * Checks if it needs to update the LineaSequencerUptimeFeed contract.
+   *
+   * @param currentTimestamp the current epoch timestamp in second
+   * @param lastBlockTimestamp the current head block timestamp in second
+   * @param targetBlockNumber the target block number to include the bundle transaction to update
+   *     the LineaSequencerUptimeFeed contract
+   * @return boolean
+   */
   private boolean shouldBuildLivenessBundle(
       long currentTimestamp, long lastBlockTimestamp, long targetBlockNumber) {
     boolean shouldBuild = false;
 
+    // The last seen block timestamp before the latest block timestamp (i.e. lastBlockTimestamp)
     long cachedLastBlockTimestamp = this.lastBlockTimestamp.get();
+    // The last block timestamp regarded as late
     long cachedLastDownBlockTimestamp = this.lastDownBlockTimestamp.get();
+    // The last successfully reported block timestamp regarded as late
     long cachedLastReportedDownBlockTimestamp = this.lastReportedDownBlockTimestamp.get();
 
-    long adjustedLastBlockTimestamp = cachedLastBlockTimestamp;
-    long elapsedTimeSinceLastBlock = currentTimestamp - adjustedLastBlockTimestamp;
+    boolean hasSeenLastBlockTimestamp = lastBlockTimestamp == cachedLastBlockTimestamp;
+    boolean isLastBlockTimestampFromGenesisBlock = targetBlockNumber <= 1;
 
-    // check if the cached lastBlockTimestamp was not recorded as lastDownBlockTimestamp
-    // and if its elapsed time was longer than maxBlockAgeSeconds
-    if (cachedLastBlockTimestamp > 0
-        && cachedLastDownBlockTimestamp <= cachedLastReportedDownBlockTimestamp
-        && cachedLastBlockTimestamp > cachedLastDownBlockTimestamp
-        && elapsedTimeSinceLastBlock
-            > lineaLivenessServiceConfiguration.maxBlockAgeSeconds().getSeconds()) {
+    // skip the rest and return false if the same block timestamp had been checked or
+    // the given lastBlockTimestamp is from genesis block
+    if (hasSeenLastBlockTimestamp || isLastBlockTimestampFromGenesisBlock) {
+      return false;
+    }
+
+    long pastBlockTimestampToCheck = cachedLastBlockTimestamp;
+    long elapsedTimeSincePastBlock = currentTimestamp - pastBlockTimestampToCheck;
+
+    boolean isNotFirstBlockTimestampToCheck = cachedLastBlockTimestamp > 0;
+    boolean lastDownBlockTimestampHasBeenReported =
+        cachedLastDownBlockTimestamp <= cachedLastReportedDownBlockTimestamp;
+    boolean lastSeenBlockTimestampIsNotDownBlockTimestamp =
+        cachedLastBlockTimestamp > cachedLastDownBlockTimestamp;
+    boolean lastSeenBlockTimestampWasLate =
+        elapsedTimeSincePastBlock
+            > lineaLivenessServiceConfiguration.maxBlockAgeSeconds().getSeconds();
+
+    // Check if the last seen block timestamp was late, if yes
+    // record it was last late block timestamp and return shouldBuild as true
+    if (isNotFirstBlockTimestampToCheck
+        && lastDownBlockTimestampHasBeenReported
+        && lastSeenBlockTimestampIsNotDownBlockTimestamp
+        && lastSeenBlockTimestampWasLate) {
       this.lastDownBlockTimestamp.set(cachedLastBlockTimestamp);
       shouldBuild = true;
     } else {
-      // check whether cachedLastDownBlockTimestamp was reported or not,
-      // if no, uses the given lastBlockTimestamp to calculate elapsed time,
-      // otherwise, keeps using cachedLastDownBlockTimestamp
-      adjustedLastBlockTimestamp =
-          cachedLastDownBlockTimestamp > cachedLastReportedDownBlockTimestamp
+      // check whether the last late block timestamp was reported or not,
+      // if reported, uses the given latest block timestamp to calculate elapsed time,
+      // otherwise, keeps using the last late block timestamp as the past
+      // block timestamp to calculate elapsed time
+      pastBlockTimestampToCheck =
+          !lastDownBlockTimestampHasBeenReported
               ? cachedLastDownBlockTimestamp
               : lastBlockTimestamp;
 
-      elapsedTimeSinceLastBlock = currentTimestamp - adjustedLastBlockTimestamp;
+      elapsedTimeSincePastBlock = currentTimestamp - pastBlockTimestampToCheck;
 
-      if (elapsedTimeSinceLastBlock
+      if (elapsedTimeSincePastBlock
           > lineaLivenessServiceConfiguration.maxBlockAgeSeconds().getSeconds()) {
-        // only update lastDownBlockTimestamp if the last late block was reported
-        // should only happen for first lastBlockTimestamp check
-        if (cachedLastDownBlockTimestamp <= cachedLastReportedDownBlockTimestamp) {
+        // only update the last late block timestamp if it was reported
+        // otherwise, keeps it as is to ensure it will be reported this round
+        if (lastDownBlockTimestampHasBeenReported) {
           this.lastDownBlockTimestamp.set(lastBlockTimestamp);
         }
         shouldBuild = true;
@@ -195,9 +225,9 @@ public class LineaLivenessService implements LivenessService {
     }
 
     log.debug(
-        " targetBlockNumber={} lastBlockTimestamp={} cachedLastBlockTimestamp={}"
+        "targetBlockNumber={} lastBlockTimestamp={} cachedLastBlockTimestamp={}"
             + " cachedLastDownBlockTimestamp={} cachedLastReportedDownBlockTimestamp={} lastDownBlockTimestamp={}"
-            + " currentTimestamp={} adjustedLastBlockTimestamp={} elapsedTimeSinceLastBlock={} shouldBuild={}",
+            + " currentTimestamp={} pastBlockTimestampToCheck={} elapsedTimeSincePastBlock={} shouldBuild={}",
         targetBlockNumber,
         lastBlockTimestamp,
         cachedLastBlockTimestamp,
@@ -205,8 +235,8 @@ public class LineaLivenessService implements LivenessService {
         cachedLastReportedDownBlockTimestamp,
         lastDownBlockTimestamp.get(),
         currentTimestamp,
-        adjustedLastBlockTimestamp,
-        elapsedTimeSinceLastBlock,
+        pastBlockTimestampToCheck,
+        elapsedTimeSincePastBlock,
         shouldBuild);
 
     this.lastBlockTimestamp.set(lastBlockTimestamp);
@@ -219,11 +249,6 @@ public class LineaLivenessService implements LivenessService {
   public Optional<TransactionBundle> checkBlockTimestampAndBuildBundle(
       long currentTimestamp, long lastBlockTimestamp, long targetBlockNumber) {
     if (!lineaLivenessServiceConfiguration.enabled()) return Optional.empty();
-
-    // skip if the same block timestamp had been checked or lastBlockTimestamp is from genesis block
-    if (this.lastBlockTimestamp.get() == lastBlockTimestamp || targetBlockNumber <= 1) {
-      return Optional.empty();
-    }
 
     try {
       if (shouldBuildLivenessBundle(currentTimestamp, lastBlockTimestamp, targetBlockNumber)) {
@@ -259,7 +284,7 @@ public class LineaLivenessService implements LivenessService {
         uptimeTransactionsCounter.inc(2);
       }
       lastReportedDownBlockTimestamp.set(blockTimestamp);
-    } else if (transactionFailureCounter != null) {
+    } else {
       if (this.metricCategoryRegistry.isMetricCategoryEnabled(SEQUENCER_LIVENESS_CATEGORY)) {
         transactionFailureCounter.inc(2);
       }

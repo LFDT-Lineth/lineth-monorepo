@@ -24,7 +24,6 @@ import net.consensys.linea.plugins.config.LineaL1L2BridgeSharedConfiguration;
 import net.consensys.linea.sequencer.liveness.LineaLivenessService;
 import net.consensys.linea.sequencer.liveness.LineaLivenessTxBuilder;
 import net.consensys.linea.sequencer.liveness.LivenessService;
-import net.consensys.linea.sequencer.liveness.LivenessTxBuilder;
 import net.consensys.linea.sequencer.txselection.selectors.ProfitableTransactionSelector;
 import org.hyperledger.besu.plugin.BesuPlugin;
 import org.hyperledger.besu.plugin.ServiceManager;
@@ -92,15 +91,14 @@ public class LineaTransactionSelectorPlugin extends AbstractLineaRequiredPlugin 
             .getChainId()
             .orElseThrow(
                 () -> new RuntimeException("Failed to get chain Id from the BlockchainService."));
-    final LivenessTxBuilder livenessTxBuilder =
-        new LineaLivenessTxBuilder(livenessServiceConfiguration(), blockchainService, chainId);
     final Optional<LivenessService> livenessService =
         livenessServiceConfiguration().enabled()
             ? Optional.of(
                 new LineaLivenessService(
                     livenessServiceConfiguration(),
                     rpcEndpointService,
-                    livenessTxBuilder,
+                    new LineaLivenessTxBuilder(
+                        livenessServiceConfiguration(), blockchainService, chainId),
                     metricCategoryRegistry,
                     metricsSystem))
             : Optional.empty();

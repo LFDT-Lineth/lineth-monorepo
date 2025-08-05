@@ -9,15 +9,21 @@
 package net.consensys.linea.sequencer.liveness;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.file.Path;
+import java.security.KeyStore;
 import java.security.SignatureException;
 import java.time.Duration;
 import java.util.*;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManagerFactory;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.config.LineaLivenessServiceConfiguration;
 import org.apache.tuweni.bytes.Bytes;
@@ -60,9 +66,62 @@ public class LineaLivenessTxBuilder implements LivenessTxBuilder {
     this.gasLimit = lineaLivenessServiceConfiguration.gasLimit();
     this.blockchainService = blockchainService;
 
+    boolean tlsEnabled = lineaLivenessServiceConfiguration.tlsEnabled();
+    Path tlsKeyStorePath = lineaLivenessServiceConfiguration.tlsKeyStorePath();
+    String tlsKeyStorePassword = lineaLivenessServiceConfiguration.tlsKeyStorePassword();
+    Path tlsTrustStorePath = lineaLivenessServiceConfiguration.tlsTrustStorePath();
+    String tlsTrustStorePassword = lineaLivenessServiceConfiguration.tlsTrustStorePassword();
+
+    // Build SSLContext instance
+    Optional<SSLContext> sslContext =
+        tlsEnabled
+            ? buildSSLContext(
+                tlsKeyStorePath, tlsKeyStorePassword, tlsTrustStorePath, tlsTrustStorePassword)
+            : Optional.empty();
+
     // Initialize HTTP client and JSON mapper for Web3Signer API calls
-    httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(30)).build();
+    HttpClient.Builder httpBuilder = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(30));
+    sslContext.ifPresent(httpBuilder::sslContext);
+
+    httpClient = httpBuilder.build();
     objectMapper = new ObjectMapper();
+  }
+
+  private Optional<SSLContext> buildSSLContext(
+      Path clientKeystorePath,
+      String clientKeystorePassword,
+      Path trustStorePath,
+      String trustStorePassword) {
+    try (FileInputStream keyStoreFis =
+            new FileInputStream(clientKeystorePath.toAbsolutePath().toString());
+        FileInputStream trustStoreFis =
+            new FileInputStream(trustStorePath.toAbsolutePath().toString())) {
+      // Load client keystore
+      KeyStore keyStore = KeyStore.getInstance("PKCS12");
+      keyStore.load(keyStoreFis, clientKeystorePassword.toCharArray());
+
+      // Initialize KeyManagerFactory for client certificate
+      KeyManagerFactory keyManagerFactory =
+          KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+      keyManagerFactory.init(keyStore, clientKeystorePassword.toCharArray());
+
+      // Load truststore
+      KeyStore trustStore = KeyStore.getInstance("PKCS12");
+      trustStore.load(trustStoreFis, trustStorePassword.toCharArray());
+
+      // Initialize TrustManagerFactory for server certificate
+      TrustManagerFactory trustManagerFactory =
+          TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+      trustManagerFactory.init(trustStore);
+
+      // Initialize SSLContext
+      SSLContext sslContext = SSLContext.getInstance("TLS");
+      sslContext.init(
+          keyManagerFactory.getKeyManagers(), trustManagerFactory.getTrustManagers(), null);
+      return Optional.of(sslContext);
+    } catch (Exception ex) {
+      throw new RuntimeException("Failed to initialize SSL context: " + ex.getMessage());
+    }
   }
 
   /**

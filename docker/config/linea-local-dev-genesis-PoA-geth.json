@@ -138,7 +138,7 @@
     "54d450f4d728da50f1271a1700b42657940324aa": {
       "@WARNING": "FOR LOCAL DEV ONLY - DO NOT REUSE THESE KEYS ELSEWHERE",
       "privateKey": "0x234d87442cf7d43841fbe280febcdfabfb646added67bc19f7e42a5483f614c4",
-      "comment": "account 18, can be used as end user",
+      "comment": "Liveness signer account",
       "balance": "900000000000000000000018"
     },
     "d42e308fc964b71e18126df469c21b0d7bcb86cc": {

@@ -128,7 +128,7 @@ public class LineaTransactionSelectorFactory implements PluginTransactionSelecto
     final long headBlockTimestamp = blockchainService.getChainHeadHeader().getTimestamp();
 
     Optional<TransactionBundle> livenessBundle =
-        livenessService.isPresent() && headBlockTimestamp > 0
+        livenessService.isPresent()
             ? livenessService
                 .get()
                 .checkBlockTimestampAndBuildBundle(

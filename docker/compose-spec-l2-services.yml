@@ -34,9 +34,10 @@ services:
     volumes:
       - ./config/linea-besu-sequencer/sequencer.config.toml:/var/lib/besu/sequencer.config.toml:ro
       - ./config/linea-besu-sequencer/deny-list.txt:/var/lib/besu/deny-list.txt:ro
-      - ./config/linea-local-dev-genesis-PoA-besu.json/:/var/lib/besu/genesis.json:ro
       - ./config/linea-besu-sequencer/key:/var/lib/besu/key:ro
       - ./config/linea-besu-sequencer/log4j.xml:/var/lib/besu/log4j.xml:ro
+      - ./config/linea-besu-sequencer/tls-files:/var/lib/besu/tls-files/
+      - ./config/linea-local-dev-genesis-PoA-besu.json/:/var/lib/besu/genesis.json:ro
       - ../config/common/traces-limits-v2.toml:/var/lib/besu/traces-limits.toml:ro
     networks:
       l1network:
@@ -245,7 +246,7 @@ services:
   coordinator:
     hostname: coordinator
     container_name: coordinator
-    image: consensys/linea-coordinator:${COORDINATOR_TAG:-7334563}
+    image: consensys/linea-coordinator:${COORDINATOR_TAG:-418d5c9}
     profiles: [ "l2", "debug" ]
     depends_on:
       postgres:
