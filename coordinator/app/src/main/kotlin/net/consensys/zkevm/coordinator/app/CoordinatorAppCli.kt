@@ -1,6 +1,7 @@
 package net.consensys.zkevm.coordinator.app
 
 import linea.coordinator.config.v2.CoordinatorConfig
+import linea.coordinator.config.v2.toml.loadConfigs
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import picocli.CommandLine
@@ -89,7 +90,7 @@ internal constructor(private val errorWriter: PrintWriter, private val startActi
         }
       }
 
-      val configs = linea.coordinator.config.v2.toml.loadConfigs(
+      val configs = loadConfigs(
         coordinatorConfigFiles = configFiles.map { it.toPath() },
         tracesLimitsFileV2 = tracesLimitsV2File.toPath(),
         smartContractErrorsFile = smartContractErrorsFile.toPath(),
@@ -118,7 +119,7 @@ internal constructor(private val errorWriter: PrintWriter, private val startActi
   }
 
   fun reportUserError(ex: Throwable) {
-    logger.fatal(ex.message)
+    logger.fatal(ex.message, ex)
     errorWriter.println(ex.message)
     printUsage(errorWriter)
   }
@@ -126,7 +127,7 @@ internal constructor(private val errorWriter: PrintWriter, private val startActi
   private fun printUsage(outputWriter: PrintWriter) {
     outputWriter.println()
     outputWriter.println("To display full help:")
-    outputWriter.println(COMMAND_NAME + " --help")
+    outputWriter.println("$COMMAND_NAME --help")
   }
 
   /**
