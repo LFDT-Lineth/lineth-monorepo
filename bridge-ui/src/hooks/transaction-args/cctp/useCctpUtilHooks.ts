@@ -32,13 +32,13 @@ export const useCctpFee = (amount: bigint | null, tokenDecimals: number): bigint
       return null;
     }
 
-    const fastFinalityFee = data.find((fee) => fee.finalityThreshold === CCTP_MIN_FINALITY_THRESHOLD)?.minimumFee;
+    const finalityFee = data.find((fee) => fee.finalityThreshold === CCTP_MIN_FINALITY_THRESHOLD)?.minimumFee;
 
-    if (isUndefined(fastFinalityFee)) {
+    if (isUndefined(finalityFee)) {
       return null;
     }
 
     // Convert BPS (basis points) to multiplier: multiply amount * fee (bps), then divide by 10_000 (1 BPS = 0.01%, 10_000 BPS = 100%)
-    return (amount * BigInt(fastFinalityFee)) / 10_000n;
+    return (amount * BigInt(finalityFee)) / 10_000n;
   }, [amount, tokenDecimals, data]);
 };
