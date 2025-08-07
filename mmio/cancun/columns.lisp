@@ -55,6 +55,7 @@
   (EXO_IS_LOG :binary@prove)
   (EXO_IS_TXCD :binary@prove)
   (EXO_IS_ECDATA :binary@prove)
+  (EXO_IS_BLS :binary@prove)
   (EXO_IS_RIPSHA :binary@prove)
   (EXO_IS_BLAKEMODEXP :binary@prove)
   (INDEX_X :i64)

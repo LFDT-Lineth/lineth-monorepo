@@ -91,9 +91,9 @@
                                                                                    (precompile-processing---ECADD_MUL_PAIRING---return-data-phase)                           ;; phase
                                                                                    )))
 
-(defun    (precompile-processing---ECADD_MUL_PAIRING---return-data-size)               (+    (*    ECADD_RETURN_DATA_SIZE        (precompile-processing---ECADD_MUL_PAIRING---nontrivial-ECADD))
-                                                                                             (*    ECMUL_RETURN_DATA_SIZE        (precompile-processing---ECADD_MUL_PAIRING---nontrivial-ECMUL))
-                                                                                             (*    ECPAIRING_RETURN_DATA_SIZE    (precompile-processing---ECADD_MUL_PAIRING---nontrivial-ECPAIRING))))
+(defun    (precompile-processing---ECADD_MUL_PAIRING---return-data-size)               (+    (*    PRECOMPILE_RETURN_DATA_SIZE___ECADD        (precompile-processing---ECADD_MUL_PAIRING---nontrivial-ECADD))
+                                                                                             (*    PRECOMPILE_RETURN_DATA_SIZE___ECMUL        (precompile-processing---ECADD_MUL_PAIRING---nontrivial-ECMUL))
+                                                                                             (*    PRECOMPILE_RETURN_DATA_SIZE___ECPAIRING    (precompile-processing---ECADD_MUL_PAIRING---nontrivial-ECPAIRING))))
 
 (defun    (precompile-processing---ECADD_MUL_PAIRING---return-data-phase)              (+    (*    PHASE_ECADD_RESULT            (precompile-processing---ECADD_MUL_PAIRING---nontrivial-ECADD))
                                                                                              (*    PHASE_ECMUL_RESULT            (precompile-processing---ECADD_MUL_PAIRING---nontrivial-ECMUL))
@@ -131,9 +131,9 @@
                                                                                     ;; phase                                                                                ;; phase
                                                                                     )))
 
-(defun    (precompile-processing---ECADD_MUL_PAIRING---return-data-reference-size)     (+    (*    ECADD_RETURN_DATA_SIZE        scenario/PRC_ECADD    )
-                                                                                             (*    ECMUL_RETURN_DATA_SIZE        scenario/PRC_ECMUL    )
-                                                                                             (*    ECPAIRING_RETURN_DATA_SIZE    scenario/PRC_ECPAIRING)))
+(defun    (precompile-processing---ECADD_MUL_PAIRING---return-data-reference-size)     (+    (*    PRECOMPILE_RETURN_DATA_SIZE___ECADD        scenario/PRC_ECADD    )
+                                                                                             (*    PRECOMPILE_RETURN_DATA_SIZE___ECMUL        scenario/PRC_ECMUL    )
+                                                                                             (*    PRECOMPILE_RETURN_DATA_SIZE___ECPAIRING    scenario/PRC_ECPAIRING)))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;

@@ -18,7 +18,8 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-(defun    (precompile-processing---common---precondition)    (*    PEEK_AT_SCENARIO    (scenario-shorthand---PRC---common-address-bit-sum)))
+(defun    (precompile-processing---common---precondition)    (force-bin   (*    PEEK_AT_SCENARIO
+                                                                                (scenario-shorthand---PRC---common-address-bit-sum))))
 
 
 (defconstraint    precompile-processing---common---setting-MISC-module-flags
@@ -39,14 +40,24 @@
                   )
 
 (defun    (precompile-processing---common---OOB-instruction)
-  (+    (*    OOB_INST_ECRECOVER    scenario/PRC_ECRECOVER    )
-        (*    OOB_INST_SHA2         scenario/PRC_SHA2-256     )
-        (*    OOB_INST_RIPEMD       scenario/PRC_RIPEMD-160   )
-        (*    OOB_INST_IDENTITY     scenario/PRC_IDENTITY     )
-        (*    OOB_INST_ECADD        scenario/PRC_ECADD        )
-        (*    OOB_INST_ECMUL        scenario/PRC_ECMUL        )
-        (*    OOB_INST_ECPAIRING    scenario/PRC_ECPAIRING    )
+  (+    (*    OOB_INST_ECRECOVER           scenario/PRC_ECRECOVER          )
+        (*    OOB_INST_SHA2                scenario/PRC_SHA2-256           )
+        (*    OOB_INST_RIPEMD              scenario/PRC_RIPEMD-160         )
+        (*    OOB_INST_IDENTITY            scenario/PRC_IDENTITY           )
+        (*    OOB_INST_ECADD               scenario/PRC_ECADD              )
+        (*    OOB_INST_ECMUL               scenario/PRC_ECMUL              )
+        (*    OOB_INST_ECPAIRING           scenario/PRC_ECPAIRING          )
+        (*    OOB_INST_POINT_EVALUATION    scenario/PRC_POINT_EVALUATION   )
+        (*    OOB_INST_BLS_G1_ADD          scenario/PRC_BLS_G1_ADD         )
+        (*    OOB_INST_BLS_G1_MSM          scenario/PRC_BLS_G1_MSM         )
+        (*    OOB_INST_BLS_G2_ADD          scenario/PRC_BLS_G2_ADD         )
+        (*    OOB_INST_BLS_G2_MSM          scenario/PRC_BLS_G2_MSM         )
+        (*    OOB_INST_BLS_PAIRING_CHECK   scenario/PRC_BLS_PAIRING_CHECK  )
+        (*    OOB_INST_BLS_MAP_FP_TO_G1    scenario/PRC_BLS_MAP_FP_TO_G1   )
+        (*    OOB_INST_BLS_MAP_FP2_TO_G2   scenario/PRC_BLS_MAP_FP2_TO_G2  )
         ))
+
+
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -58,6 +69,16 @@
 (defun    (precompile-processing---common---OOB-extract-call-data)    (shift    [misc/OOB_DATA    6]    precompile-processing---common---1st-misc-row---row-offset))
 (defun    (precompile-processing---common---OOB-empty-call-data)      (shift    [misc/OOB_DATA    7]    precompile-processing---common---1st-misc-row---row-offset))
 (defun    (precompile-processing---common---OOB-r@c-nonzero)          (shift    [misc/OOB_DATA    8]    precompile-processing---common---1st-misc-row---row-offset)) ;; ""
+
+(defproperty      precompile-processing---common---sanity-checks-for-BLS-precompiles
+                  (if-not-zero (precompile-processing---common---precondition)
+                               (if-not-zero (scenario-shorthand---PRC---common-BLS-address-bit-sum)
+                                            (begin
+                                              (eq!    (precompile-processing---common---OOB-extract-call-data)
+                                                      (precompile-processing---common---OOB-hub-success))
+                                              (eq!    (precompile-processing---common---OOB-empty-call-data)
+                                                      0)
+                                              ))))
 
 (defconstraint    precompile-processing---common---setting-MMU-instruction    (:guard    (precompile-processing---common---precondition))
                   (if-not-zero    (shift    misc/MMU_FLAG    precompile-processing---common---1st-misc-row---row-offset)
@@ -96,19 +117,20 @@
                                                                                                       (precompile-processing---common---MMU-exo-sum)               ;; weighted exogenous module flag sum
                                                                                                       (precompile-processing---common---MMU-phase)                 ;; phase
                                                                                                       ))
-                                  )
-                  ))
+                                    )
+                                  ))
 
 (defun    (precompile-processing---common---MMU-success-bit)
   (shift    misc/MMU_SUCCESS_BIT    precompile-processing---common---1st-misc-row---row-offset))
 
 (defun    (precompile-processing---common---MMU-reference-size)
-  (+    (*    128                                                    scenario/PRC_ECRECOVER    )
-        (*    (precompile-processing---dup-cds)                      scenario/PRC_SHA2-256     )
-        (*    (precompile-processing---dup-cds)                      scenario/PRC_RIPEMD-160   )
-        (*    128                                                    scenario/PRC_ECADD        )
-        (*    96                                                     scenario/PRC_ECMUL        )
-        (*    (precompile-processing---dup-cds)                      scenario/PRC_ECPAIRING    )
+  (+    (*   128                                 scenario/PRC_ECRECOVER                                    )
+        (*   (precompile-processing---dup-cds)   scenario/PRC_SHA2-256                                     )
+        (*   (precompile-processing---dup-cds)   scenario/PRC_RIPEMD-160                                   )
+        (*   128                                 scenario/PRC_ECADD                                        )
+        (*   96                                  scenario/PRC_ECMUL                                        )
+        (*   (precompile-processing---dup-cds)   scenario/PRC_ECPAIRING                                    )
+        (*   (precompile-processing---dup-cds)   (scenario-shorthand---PRC---common-BLS-address-bit-sum)   )
         ))
 
 (defun    (precompile-processing---common---MMU-exo-sum)
@@ -118,15 +140,24 @@
         (*    EXO_SUM_WEIGHT_ECDATA    scenario/PRC_ECADD        )
         (*    EXO_SUM_WEIGHT_ECDATA    scenario/PRC_ECMUL        )
         (*    EXO_SUM_WEIGHT_ECDATA    scenario/PRC_ECPAIRING    )
+        (*    EXO_SUM_WEIGHT_BLSDATA  (scenario-shorthand---PRC---common-BLS-address-bit-sum)   )
         ))
 
 (defun    (precompile-processing---common---MMU-phase)
-  (+    (*    PHASE_ECRECOVER_DATA    scenario/PRC_ECRECOVER    )
-        (*    PHASE_SHA2_DATA         scenario/PRC_SHA2-256     )
-        (*    PHASE_RIPEMD_DATA       scenario/PRC_RIPEMD-160   )
-        (*    PHASE_ECADD_DATA        scenario/PRC_ECADD        )
-        (*    PHASE_ECMUL_DATA        scenario/PRC_ECMUL        )
-        (*    PHASE_ECPAIRING_DATA    scenario/PRC_ECPAIRING    )
+  (+    (*    PHASE_ECRECOVER_DATA             scenario/PRC_ECRECOVER         )
+        (*    PHASE_SHA2_DATA                  scenario/PRC_SHA2-256          )
+        (*    PHASE_RIPEMD_DATA                scenario/PRC_RIPEMD-160        )
+        (*    PHASE_ECADD_DATA                 scenario/PRC_ECADD             )
+        (*    PHASE_ECMUL_DATA                 scenario/PRC_ECMUL             )
+        (*    PHASE_ECPAIRING_DATA             scenario/PRC_ECPAIRING         )
+        (*    PHASE_POINT_EVALUATION_DATA      scenario/PRC_POINT_EVALUATION  )
+        (*    PHASE_BLS_G1_ADD_DATA            scenario/PRC_BLS_G1_ADD        )
+        (*    PHASE_BLS_G1_MSM_DATA            scenario/PRC_BLS_G1_MSM        )
+        (*    PHASE_BLS_G2_ADD_DATA            scenario/PRC_BLS_G2_ADD        )
+        (*    PHASE_BLS_G2_MSM_DATA            scenario/PRC_BLS_G2_MSM        )
+        (*    PHASE_BLS_PAIRING_CHECK_DATA     scenario/PRC_BLS_PAIRING_CHECK )
+        (*    PHASE_BLS_MAP_FP_TO_G1_DATA      scenario/PRC_BLS_MAP_FP_TO_G1  )
+        (*    PHASE_BLS_MAP_FP2_TO_G2_DATA     scenario/PRC_BLS_MAP_FP2_TO_G2 )
         ))
 
 ;; ECRECOVER related shorthands
@@ -162,21 +193,22 @@
                                       (+    scenario/PRC_ECADD
                                             scenario/PRC_ECMUL
                                             scenario/PRC_ECPAIRING
+                                            (scenario-shorthand---PRC---common-BLS-address-bit-sum)
                                             ))
                                 )))
 
 (defconstraint    precompile-processing---common---justifying-FAILURE_KNOWN_TO_HUB    (:guard    (precompile-processing---common---precondition))
                   (eq!    scenario/PRC_FAILURE_KNOWN_TO_HUB
-                          (*    (-    1    (precompile-processing---common---OOB-hub-success))
-                                (scenario-shorthand---PRC---common-address-bit-sum)
-                                )))
+                          (-    1    (precompile-processing---common---OOB-hub-success))))
 
 (defconstraint    precompile-processing---common---justifying-FAILURE_KNOWN_TO_RAM    (:guard    (precompile-processing---common---precondition))
                   (eq!    scenario/PRC_FAILURE_KNOWN_TO_RAM
                           (*    (precompile-processing---common---malformed-data)
                                 (+    scenario/PRC_ECADD
                                       scenario/PRC_ECMUL
-                                      scenario/PRC_ECPAIRING))))
+                                      scenario/PRC_ECPAIRING
+                                      (scenario-shorthand---PRC---common-BLS-address-bit-sum)
+                                      ))))
 
 (defconstraint    precompile-processing---common---justifying-return-gas-prediction    (:guard    (precompile-processing---common---precondition))
                   (begin

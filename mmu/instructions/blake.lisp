@@ -44,7 +44,7 @@
 (defconstraint    blake---2nd-processing-row (:guard (* MACRO IS_BLAKE))
                   ;; preprocessing row n°2
                   (callToEuc    2
-                                (+ (blake---cdo) (- 213 1))
+                                (+ (blake---cdo) (- PRECOMPILE_CALL_DATA_SIZE___BLAKE2F 1))
                                 LLARGE))
 
 (defconstraint    blake---setting-micro-instruction-constant-values (:guard (* MACRO IS_BLAKE))

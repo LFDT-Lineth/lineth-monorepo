@@ -11,8 +11,8 @@
 (defun (prc-blake-cds---valid-cds)             OUTGOING_RES_LO)
 (defun (prc-blake-cds---r@c-is-zero)           (next OUTGOING_RES_LO))
 
-(defconstraint prc-blake-cds---compare-cds-against-PRC_BLAKE2F_SIZE (:guard (* (assumption---fresh-new-stamp) (prc-blake-cds---standard-precondition)))
-  (call-to-EQ 0 0 (prc---cds) 0 PRC_BLAKE2F_SIZE))
+(defconstraint prc-blake-cds---compare-cds-against-PRECOMPILE_CALL_DATA_SIZE___BLAKE2F (:guard (* (assumption---fresh-new-stamp) (prc-blake-cds---standard-precondition)))
+  (call-to-EQ 0 0 (prc---cds) 0 PRECOMPILE_CALL_DATA_SIZE___BLAKE2F))
 
 (defconstraint prc-blake-cds---check--is-zero (:guard (* (assumption---fresh-new-stamp) (prc-blake-cds---standard-precondition)))
   (call-to-ISZERO 1 0 (prc---r@c)))
