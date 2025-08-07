@@ -30,8 +30,10 @@ export async function fetchCctpBridgeEvents(
     },
   })) as unknown as DepositForBurnLogEvent[];
 
+  const filteredUSDCLogs = usdcLogs.filter((log) => log.args.destinationDomain === toChain.cctpDomain);
+
   await Promise.all(
-    usdcLogs.map(async (log) => {
+    filteredUSDCLogs.map(async (log) => {
       const transactionHash = log.transactionHash;
 
       // Search cache for completed tx for this txHash, if cache-hit can skip remaining logic
