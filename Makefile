@@ -8,7 +8,9 @@ GO_CORSET_COMPILE := ${GO_CORSET} compile -Dtags="${GIT_TAGS}" -Dcommit="${GIT_C
 ## Some modules set below are fork specific. Eg. For OOB, OOB_LONDON is the OOB module for London and OOB_SHANGHAI the OOB module for Shanghai.
 ## The discrimination is done by having one bin file per fork - see command line below
 
-ALU := alu
+ALU_LONDON := alu/add/london alu/ext alu/mod alu/mul
+
+ALU := alu/add/add.zkasm alu/ext alu/mod alu/mul
 
 BIN := bin   
 
@@ -107,7 +109,6 @@ define warn_lispX
 endef
 
 ZKEVM_MODULES_COMMON := ${CONSTANTS} \
-		 ${ALU} \
 		 ${BIN} \
 		 ${BLAKE2f_MODEXP_DATA} \
 		 ${BLOCKHASH} \
@@ -129,6 +130,7 @@ ZKEVM_MODULES_COMMON := ${CONSTANTS} \
 		 ${WCP}
 
 ZKEVM_MODULES_LONDON := ${ZKEVM_MODULES_COMMON} \
+		 ${ALU_LONDON} \
 		 ${TABLES_LONDON} \
 		 ${BLOCKDATA_LONDON} \
 		 ${HUB_LONDON} \
@@ -140,6 +142,7 @@ ZKEVM_MODULES_LONDON := ${ZKEVM_MODULES_COMMON} \
 		 ${TXN_DATA_LONDON}
 
 ZKEVM_MODULES_PARIS := ${ZKEVM_MODULES_COMMON} \
+		 ${ALU_LONDON} \
 		 ${TABLES_LONDON} \
 		 ${BLOCKDATA_PARIS} \
 		 ${HUB_LONDON} \
@@ -151,8 +154,9 @@ ZKEVM_MODULES_PARIS := ${ZKEVM_MODULES_COMMON} \
 		 ${TXN_DATA_LONDON}
 
 ZKEVM_MODULES_SHANGHAI := ${ZKEVM_MODULES_COMMON} \
+		 ${ALU} \
 		 ${TABLES_LONDON} \
- 		 ${BLOCKDATA_PARIS} \
+		 ${BLOCKDATA_PARIS} \
 		 ${HUB_SHANGHAI} \
 		 ${LOG_INFO_LONDON} \
 		 ${MMIO_LONDON} \
@@ -162,8 +166,9 @@ ZKEVM_MODULES_SHANGHAI := ${ZKEVM_MODULES_COMMON} \
 		 ${TXN_DATA_SHANGHAI}
 
 ZKEVM_MODULES_CANCUN := ${ZKEVM_MODULES_COMMON} \
+		 ${ALU} \
 		 ${TABLES_CANCUN} \
- 		 ${BLOCKDATA_CANCUN} \
+		 ${BLOCKDATA_CANCUN} \
 		 ${HUB_CANCUN} \
 		 ${LOG_INFO_CANCUN} \
 		 ${MMIO_CANCUN} \
