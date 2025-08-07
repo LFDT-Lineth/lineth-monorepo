@@ -10,13 +10,13 @@ on:
     branches:
       - main
     paths:
-      - 'operations/'
+      - 'operations/**'
       - '.github/workflows/all-tools.yml'
   pull_request:
     branches:
       - main
     paths:
-      - 'operations/'
+      - 'operations/**'
       - '.github/workflows/all-tools.yml'
 
 jobs:

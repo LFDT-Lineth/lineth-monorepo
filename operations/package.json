@@ -19,7 +19,7 @@
     "version": "oclif readme && git add README.md"
   },
   "dependencies": {
-    "@oclif/core": "4.0.23",
+    "@oclif/core": "4.5.2",
     "@oclif/plugin-help": "6.2.13",
     "@oclif/plugin-plugins": "5.4.10",
     "axios": "1.9.0",
@@ -54,8 +54,8 @@
     "topicSeparator": " "
   },
   "files": [
-    "/bin",
-    "/dist",
-    "/oclif.manifest.json"
+    "./bin",
+    "./dist",
+    "./oclif.manifest.json"
   ]
 }

@@ -1,15 +1,30 @@
 import axios from "axios";
 import { ethers, TransactionLike } from "ethers";
+import { Agent } from "https";
+import { readFile } from "./misc.js";
+
+export function getWeb3SignerHttpsAgent(keystorePath: string, passphrase: string, trustedStorePath: string): Agent {
+  return new Agent({
+    pfx: readFile(keystorePath),
+    passphrase,
+    ca: readFile(trustedStorePath),
+  });
+}
 
 export async function getWeb3SignerSignature(
   web3SignerUrl: string,
   web3SignerPublicKey: string,
   transaction: TransactionLike,
+  agent?: Agent,
 ): Promise<string> {
   try {
-    const { data } = await axios.post(`${web3SignerUrl}/api/v1/eth1/sign/${web3SignerPublicKey}`, {
-      data: ethers.Transaction.from(transaction).unsignedSerialized,
-    });
+    const { data } = await axios.post(
+      `${web3SignerUrl}/api/v1/eth1/sign/${web3SignerPublicKey}`,
+      {
+        data: ethers.Transaction.from(transaction).unsignedSerialized,
+      },
+      { httpsAgent: agent },
+    );
     return data;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {

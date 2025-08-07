@@ -1,4 +1,4 @@
-import { FlagOutput } from "@oclif/core/lib/interfaces/parser";
+import { ParserOutput } from "@oclif/core/interfaces";
 
 export type Config = {
   senderAddress: string;
@@ -10,9 +10,13 @@ export type Config = {
   maxFeePerGas: bigint;
   gasEstimationPercentile: number;
   dryRun: boolean;
+  tls: boolean;
+  web3SignerKeystorePath: string;
+  web3SignerPassphrase: string;
+  web3SignerTrustedStorePath: string;
 };
 
-export function validateConfig(flags: FlagOutput): Config {
+export function validateConfig(flags: ParserOutput["flags"]): Config {
   const {
     senderAddress,
     destinationAddress,
@@ -23,6 +27,10 @@ export function validateConfig(flags: FlagOutput): Config {
     dryRun,
     maxFeePerGas: maxFeePerGasArg,
     gasEstimationPercentile,
+    tls,
+    web3SignerKeystorePath,
+    web3SignerPassphrase,
+    web3SignerTrustedStorePath,
   } = flags;
 
   const requiredFlags = [
@@ -32,6 +40,7 @@ export function validateConfig(flags: FlagOutput): Config {
     "blockchainRpcUrl",
     "web3SignerUrl",
     "web3SignerPublicKey",
+    ...(tls ? ["web3SignerKeystorePath", "web3SignerPassphrase", "web3SignerTrustedStorePath"] : []),
   ];
 
   for (const flagName of requiredFlags) {
@@ -66,5 +75,9 @@ export function validateConfig(flags: FlagOutput): Config {
     maxFeePerGas,
     gasEstimationPercentile,
     dryRun,
+    tls,
+    web3SignerKeystorePath,
+    web3SignerPassphrase,
+    web3SignerTrustedStorePath,
   };
 }
