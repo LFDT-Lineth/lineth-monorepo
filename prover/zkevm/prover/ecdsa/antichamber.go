@@ -201,6 +201,15 @@ func (ac *antichamber) assignAntichamber(run *wizard.ProverRuntime, nbEcRecInsta
 
 	// prepare root module columns
 	// for ecrecover case we need 10+14 rows (fetchin and pushing). For TX we need 1+14
+	if nbTxInstances*nbRowsPerTxSign+nbEcRecInstances*nbRowsPerEcRec > ac.Size {
+		exit.OnLimitOverflow(
+			ac.Size,
+			nbTxInstances*nbRowsPerTxSign+nbEcRecInstances*nbRowsPerEcRec,
+			fmt.Errorf("not enough space in ECDSA antichamber to store all the data. Need %d, got %d",
+				nbTxInstances*nbRowsPerTxSign+nbEcRecInstances*nbRowsPerEcRec, ac.Size,
+			),
+		)
+	}
 
 	// allocate the columns for preparing the assignment
 	resIsActive := make([]field.Element, ac.Size)
