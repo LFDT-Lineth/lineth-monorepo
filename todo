@@ -1,0 +1,29 @@
+✅ hub/columns/scenarios/precompiles.tex
+✅ hub/scenario/generalities/precompiles.tex
+✅ hub/scenario/shorthands/precompile.tex
+✅ hub/instruction_handling/call/precompiles/common/generalities.tex
+❌ hub/instruction_handling/call/precompiles/ecadd_ecmul_ecpairing/success.tex
+✅ hub/instruction_handling/call/precompiles/ecadd_ecmul_ecpairing_bls/failure_KTR.tex
+✅ hub/instruction_handling/call/precompiles/ecadd_ecmul_ecpairing_bls/success.tex
+❌ hub/instruction_handling/call/precompiles/nsr_and_flagsum.tex
+✅ hub/instruction_handling/call/precompiles/nsr_and_flagsum_I.tex
+✅ hub/instruction_handling/call/precompiles/nsr_and_flagsum_II.tex
+
+
+
+
+
+
+
+
+
+
+❌ Lisp erase
+⚠️ Lisp todo
+✅ Lisp done
+
+
+
+❌ Lisp ràf
+⚠️ Lisp unclear
+✅ Lisp done

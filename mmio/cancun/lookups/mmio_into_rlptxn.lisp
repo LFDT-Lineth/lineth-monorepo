@@ -2,11 +2,10 @@
   mmio-into-rlptxn
   ;; target columns
   (
-    rlptxn.ABS_TX_NUM
-    rlptxn.LC
-    rlptxn.PHASE
-    rlptxn.INDEX_DATA
-    rlptxn.LIMB
+    rlptxn.USER_TXN_NUMBER
+    (is-limb-content-analysis-row)
+    rlptxn.CT
+    rlptxn.cmp/LIMB
   )
   ;; source columns
   mmio.EXO_IS_TXCD
@@ -14,7 +13,6 @@
   (
     mmio.EXO_ID
     1
-    mmio.PHASE
     mmio.INDEX_X
     mmio.LIMB
   ))

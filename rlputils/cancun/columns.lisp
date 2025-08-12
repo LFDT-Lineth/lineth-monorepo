@@ -2,7 +2,7 @@
 
 (defcolumns 
 ;; shared columns
-(IOMF                    :binary@prove)
+;; (IOMF                    :binary@prove)
 (MACRO                   :binary@prove)
 (COMPT                   :binary@prove)
 (CT                      :i8)

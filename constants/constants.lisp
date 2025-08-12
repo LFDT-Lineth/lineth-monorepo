@@ -502,10 +502,10 @@
   ;;
   ;; RLP prefix
   ;;
-  RLP_PREFIX_INT_SHORT                      128                                ;;RLP prefix of a short integer (<56 bytes), defined in the EYP.
-  RLP_PREFIX_INT_LONG                       183                                ;;RLP prefix of a long integer (>55 bytes), defined in the EYP.
-  RLP_PREFIX_LIST_SHORT                     192                                ;;RLP prefix of a short list (<56 bytes), defined in the EYP.
-  RLP_PREFIX_LIST_LONG                      247                                ;;RLP prefix of a long list (>55 bytes), defined in the EYP.
+  RLP_PREFIX_INT_SHORT                      128     ;; RLP prefix of a short integer (< 56 bytes), defined in the EYP.
+  RLP_PREFIX_INT_LONG                       183     ;; RLP prefix of a long integer  (≥ 56 bytes), defined in the EYP.
+  RLP_PREFIX_LIST_SHORT                     192     ;; RLP prefix of a short list    (< 56 bytes), defined in the EYP.
+  RLP_PREFIX_LIST_LONG                      247     ;; RLP prefix of a long list     (≥ 56 bytes), defined in the EYP.
   ;;
   ;; RLP_TXN Phase
   ;;
