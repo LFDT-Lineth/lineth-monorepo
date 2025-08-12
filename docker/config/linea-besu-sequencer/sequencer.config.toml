@@ -70,20 +70,20 @@ plugin-linea-estimate-gas-min-margin="1.2"
 strict-tx-replay-protection-enabled=false
 
 # should uncomment only when the linea-sequencer plugin supports liveness 
-#plugin-linea-liveness-enabled=true
-#plugin-linea-liveness-max-block-age-seconds=12
-#plugin-linea-liveness-bundle-max-timestamp-surplus-seconds=12
-#plugin-linea-liveness-contract-address="0x7917AbB0cDbf3D3C4057d6a2808eE85ec16260C1"
-#plugin-linea-liveness-signer-url="https://web3signer:9000"
-#plugin-linea-liveness-signer-key-id="3aee43fafba7d1b83b23448df3c9876751feaa19b7b38be8ee6e277f2761b009737841d9a5278c8ec466655264cff58ad7921dd1687b8f5ff303e9b2fecebf30"
-#plugin-linea-liveness-tls-enabled=true
-#plugin-linea-liveness-tls-key-store-path="/var/lib/besu/tls-files/sequencer_client_keystore.p12"
-#plugin-linea-liveness-tls-key-store-password="changeit"
-#plugin-linea-liveness-tls-trust-store-path="/var/lib/besu/tls-files/web3signer_truststore.p12"
-#plugin-linea-liveness-tls-trust-store-password="changeit"
-#plugin-linea-liveness-signer-address="0x54d450f4d728da50f1271a1700b42657940324aa"
-#plugin-linea-liveness-gas-limit=1000000
-#plugin-linea-liveness-gas-price=7
+plugin-linea-liveness-enabled=true
+plugin-linea-liveness-max-block-age-seconds=8
+plugin-linea-liveness-bundle-max-timestamp-surplus-seconds=12
+plugin-linea-liveness-contract-address="0x7917AbB0cDbf3D3C4057d6a2808eE85ec16260C1"
+plugin-linea-liveness-signer-url="https://web3signer:9000"
+plugin-linea-liveness-signer-key-id="3aee43fafba7d1b83b23448df3c9876751feaa19b7b38be8ee6e277f2761b009737841d9a5278c8ec466655264cff58ad7921dd1687b8f5ff303e9b2fecebf30"
+plugin-linea-liveness-tls-enabled=true
+plugin-linea-liveness-tls-key-store-path="/var/lib/besu/tls-files/sequencer_client_keystore.p12"
+plugin-linea-liveness-tls-key-store-password="changeit"
+plugin-linea-liveness-tls-trust-store-path="/var/lib/besu/tls-files/web3signer_truststore.p12"
+plugin-linea-liveness-tls-trust-store-password="changeit"
+plugin-linea-liveness-signer-address="0x54d450f4d728da50f1271a1700b42657940324aa"
+plugin-linea-liveness-gas-limit=1000000
+plugin-linea-liveness-gas-price=7
 
 Xplugin-rocksdb-high-spec-enabled=true
 Xsynchronizer-fast-sync-full-validation-rate=0.000001

@@ -77,7 +77,7 @@ fs-responses-directory = "/data/prover/v3/aggregation/responses"
 #fs-responses-directory = "/data/prover/v3/aggregation/responses"
 
 [traces]
-expected-traces-api-version = "beta-v2.1-rc16.2"
+expected-traces-api-version = "beta-v3.1-rc8"
 [traces.counters]
 endpoints = ["http://traces-node:8545/"]
 request-limit-per-endpoint = 1

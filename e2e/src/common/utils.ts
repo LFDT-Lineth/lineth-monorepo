@@ -138,6 +138,41 @@ export class RollupGetZkEVMBlockNumberClient {
   }
 }
 
+export class GetEthLogsClient {
+  private endpoint: URL;
+
+  public constructor(endpoint: URL) {
+    this.endpoint = endpoint;
+  }
+
+  public async getLogs(
+    address: string,
+    topics: Array<null | string | Array<string>>,
+    fromBlock: BlockTag,
+    toBlock: BlockTag,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ): Promise<any> {
+    const request = {
+      method: "post",
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        method: "eth_getLogs",
+        params: [
+          {
+            topics: [...topics],
+            fromBlock,
+            toBlock,
+            address,
+          },
+        ],
+        id: generateRandomInt(),
+      }),
+    };
+    const response = await fetch(this.endpoint, request);
+    return await response.json();
+  }
+}
+
 export class LineaEstimateGasClient {
   private endpoint: URL;
   private BASE_FEE_MULTIPLIER = 1.35;
