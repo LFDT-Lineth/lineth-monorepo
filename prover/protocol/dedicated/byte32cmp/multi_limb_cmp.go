@@ -100,9 +100,9 @@ func CmpMultiLimbs(comp *wizard.CompiledIOP, a, b LimbColumns) (isGreater, isEqu
 		numLimbs        = len(a.Limbs)
 		numBitsPerLimbs = a.LimbBitSize
 		ctx             = &MultiLimbCmp{
-			IsGreater:          comp.InsertCommit(round, ifaces.ColIDf(ctxName("IS_GREATER")), nRows),
-			IsLower:            comp.InsertCommit(round, ifaces.ColIDf(ctxName("IS_LOWER")), nRows),
-			NonNegativeSyndrom: comp.InsertCommit(round, ifaces.ColIDf(ctxName("MUST_BE_POSITIVE")), nRows),
+			IsGreater:          comp.InsertCommit(round, ifaces.ColID(ctxName("IS_GREATER")), nRows),
+			IsLower:            comp.InsertCommit(round, ifaces.ColID(ctxName("IS_LOWER")), nRows),
+			NonNegativeSyndrom: comp.InsertCommit(round, ifaces.ColID(ctxName("MUST_BE_POSITIVE")), nRows),
 		}
 
 		syndromExpression = sym.NewConstant(0)
@@ -145,7 +145,7 @@ func CmpMultiLimbs(comp *wizard.CompiledIOP, a, b LimbColumns) (isGreater, isEqu
 
 	comp.InsertGlobal(
 		round,
-		ifaces.QueryIDf(ctxName("FLAGS_MUTUALLY_EXCLUSIVE")),
+		ifaces.QueryID(ctxName("FLAGS_MUTUALLY_EXCLUSIVE")),
 		sym.Sub(1, ctx.IsGreater, isEqual, ctx.IsLower),
 	)
 

@@ -437,8 +437,8 @@ func (cm *ComputeMod) colname(name string, args ...any) ifaces.ColID {
 	return ifaces.ColIDf("%v_%v", cm.Name, cm.Comp.SelfRecursionCount) + "_" + ifaces.ColIDf(name, args...)
 }
 
-func (cm *ComputeMod) qname(name string, args ...any) ifaces.QueryID {
-	return ifaces.QueryIDf("%v_%v", cm.Name, cm.Comp.SelfRecursionCount) + "_" + ifaces.QueryIDf(name, args...)
+func (cm *ComputeMod) qname(name string) ifaces.QueryID {
+	return ifaces.QueryIDf("%s_%d", cm.Name, cm.Comp.SelfRecursionCount) + "_" + ifaces.QueryID(name)
 }
 
 // Function inserting a query that col is zero when IsActive is zero

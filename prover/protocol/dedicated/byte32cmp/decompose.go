@@ -110,7 +110,7 @@ func Decompose(comp *wizard.CompiledIOP, col any, numLimbs int, bitPerLimbs int,
 		// Enforces the range over the limbs
 		comp.InsertRange(
 			round,
-			ifaces.QueryIDf(ctxName("LIMB_"+strconv.Itoa(i))),
+			ifaces.QueryID(ctxName("LIMB_"+strconv.Itoa(i))),
 			limbs[i],
 			1<<bitPerLimbs,
 		)

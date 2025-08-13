@@ -6,7 +6,7 @@
 # G O + R U S T   B U I L D E R
 #
 ###############################
-FROM golang:1.23.0-alpine AS go-builder
+FROM golang:1.24.0-alpine AS go-builder
 
 RUN apk add --no-cache rust cargo bash make
 

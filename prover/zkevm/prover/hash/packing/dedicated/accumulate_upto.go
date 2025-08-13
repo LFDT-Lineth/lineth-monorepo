@@ -68,7 +68,7 @@ func AccumulateUpToMax(comp *wizard.CompiledIOP, maxValue int, colA, isActive if
 
 	// Constraints over the accumulator
 	// Accumulator[last] =ColA[last]
-	comp.InsertLocal(0, ifaces.QueryIDf("AccCLDLenSpaghetti_Loc_"+uniqueID),
+	comp.InsertLocal(0, ifaces.QueryID("AccCLDLenSpaghetti_Loc_"+uniqueID),
 		sym.Sub(
 			column.Shift(acc.Accumulator, -1), column.Shift(acc.Inputs.ColA, -1),
 		),
@@ -77,7 +77,7 @@ func AccumulateUpToMax(comp *wizard.CompiledIOP, maxValue int, colA, isActive if
 	// Accumulator[i] = Accumulator[i+1]*(1-acc.IsMax[i+1]) +ColA[i]; i standing for row-index.
 	res := sym.Sub(1, column.Shift(acc.IsMax, 1)) // 1-acc.IsMax[i+1]
 
-	comp.InsertGlobal(0, ifaces.QueryIDf("AccCLDLenSpaghetti_Glob_"+uniqueID),
+	comp.InsertGlobal(0, ifaces.QueryID("AccCLDLenSpaghetti_Glob_"+uniqueID),
 		sym.Sub(
 			sym.Add(
 				sym.Mul(

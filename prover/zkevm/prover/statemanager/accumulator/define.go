@@ -672,8 +672,8 @@ func (am *Module) checkZeroInInactive() {
 }
 
 // Function returning a query name
-func (am *Module) qname(name string, args ...any) ifaces.QueryID {
-	return ifaces.QueryIDf("%v_%v", am.Name, am.Comp.SelfRecursionCount) + "_" + ifaces.QueryIDf(name, args...)
+func (am *Module) qname(name string) ifaces.QueryID {
+	return ifaces.QueryIDf("%s_%d", am.Name, am.Comp.SelfRecursionCount) + "_" + ifaces.QueryID(name)
 }
 
 // Function inserting a query that col is zero when IsActive is zero

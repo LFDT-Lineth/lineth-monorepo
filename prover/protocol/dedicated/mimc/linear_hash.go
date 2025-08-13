@@ -160,7 +160,7 @@ func (ctx *linearHashCtx) HashingCols() {
 
 	ctx.NewStateClean = ctx.Comp.InsertCommit(
 		ctx.Round,
-		ifaces.ColIDf(prefixWithLinearHash(ctx.Comp, ctx.Name, "NEW_STATE_CLEAN_%v", ctx.ToHash.GetColID())),
+		ifaces.ColID(prefixWithLinearHash(ctx.Comp, ctx.Name, "NEW_STATE_CLEAN_%v", ctx.ToHash.GetColID())),
 		ctx.ToHash.Size(),
 	)
 
@@ -193,7 +193,7 @@ func (ctx *linearHashCtx) HashingCols() {
 	//
 	ctx.Comp.InsertGlobal(
 		ctx.Round,
-		ifaces.QueryIDf(prefixWithLinearHash(ctx.Comp, ctx.Name, "CLEAN_NEW_STATE_%v", ctx.ToHash.GetColID())),
+		ifaces.QueryID(prefixWithLinearHash(ctx.Comp, ctx.Name, "CLEAN_NEW_STATE_%v", ctx.ToHash.GetColID())),
 		ctx.IsActiveVar().
 			Mul(ifaces.ColumnAsVariable(ctx.NewState)).
 			Sub(ifaces.ColumnAsVariable(ctx.NewStateClean)),
@@ -231,7 +231,7 @@ func (ctx *linearHashCtx) IsActiveExpected() ifaces.Column {
 		}
 
 		ctx.IsActiveRowExpected = ctx.Comp.InsertPrecomputed(
-			ifaces.ColIDf(prefixWithLinearHash(ctx.Comp, ctx.Name, "IS_ACTIVE_EXPECTED_%v", ctx.ToHash.GetColID())),
+			ifaces.ColID(prefixWithLinearHash(ctx.Comp, ctx.Name, "IS_ACTIVE_EXPECTED_%v", ctx.ToHash.GetColID())),
 			assignment,
 		)
 	}
@@ -248,7 +248,7 @@ func (ctx *linearHashCtx) IsActiveVar() *symbolic.Expression {
 	// Lazily registers the columns
 	if ctx.IsActiveLarge == nil {
 		ctx.IsActiveLarge = ctx.Comp.InsertPrecomputed(
-			ifaces.ColIDf(prefixWithLinearHash(ctx.Comp, ctx.Name, "IS_ACTIVE_%v", ctx.ToHash.GetColID())),
+			ifaces.ColID(prefixWithLinearHash(ctx.Comp, ctx.Name, "IS_ACTIVE_%v", ctx.ToHash.GetColID())),
 			smartvectors.RightZeroPadded(
 				vector.Repeat(field.One(), ctx.NumHash*ctx.Period),
 				ctx.ToHash.Size(),
@@ -276,7 +276,7 @@ func (ctx *linearHashCtx) IsEndOfHashVar() *symbolic.Expression {
 		}
 
 		ctx.IsEndOfHash = ctx.Comp.InsertPrecomputed(
-			ifaces.ColIDf(prefixWithLinearHash(ctx.Comp, ctx.Name, "IS_END_OF_HASH_%v", ctx.ToHash.GetColID())),
+			ifaces.ColID(prefixWithLinearHash(ctx.Comp, ctx.Name, "IS_END_OF_HASH_%v", ctx.ToHash.GetColID())),
 			smartvectors.RightZeroPadded(window, ctx.ToHash.Size()),
 		)
 	}
