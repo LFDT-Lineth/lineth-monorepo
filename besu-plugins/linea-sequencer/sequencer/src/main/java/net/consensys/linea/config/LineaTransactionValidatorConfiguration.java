@@ -13,5 +13,5 @@ import net.consensys.linea.plugins.LineaOptionsConfiguration;
 
 /** The Linea transaction validation configuration. */
 @Builder(toBuilder = true)
-public record LineaTransactionValidatorConfiguration(boolean blobTxEnabled)
-    implements LineaOptionsConfiguration {}
+public record LineaTransactionValidatorConfiguration(
+    boolean blobTxEnabled, boolean delegateCodeTxEnabled) implements LineaOptionsConfiguration {}

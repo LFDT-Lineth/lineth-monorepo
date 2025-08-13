@@ -19,6 +19,9 @@ public class LineaTransactionValidatorCliOptions implements LineaCliOptions {
   public static final String BLOB_TX_ENABLED = "--plugin-linea-blob-tx-enabled";
   public static final boolean DEFAULT_BLOB_TX_ENABLED = false;
 
+  public static final String DELEGATE_CODE_TX_ENABLED = "--plugin-linea-delegate-code-tx-enabled";
+  public static final boolean DEFAULT_DELEGATE_CODE_TX_ENABLED = false;
+
   @CommandLine.Option(
       names = {BLOB_TX_ENABLED},
       arity = "0..1",
@@ -26,6 +29,14 @@ public class LineaTransactionValidatorCliOptions implements LineaCliOptions {
       paramLabel = "<BOOLEAN>",
       description = "Enable blob transactions? (default: ${DEFAULT-VALUE})")
   private boolean blobTxEnabled = DEFAULT_BLOB_TX_ENABLED;
+
+  @CommandLine.Option(
+      names = {DELEGATE_CODE_TX_ENABLED},
+      arity = "0..1",
+      hidden = true,
+      paramLabel = "<BOOLEAN>",
+      description = "Enable EIP7702 delegate code transactions? (default: ${DEFAULT-VALUE})")
+  private boolean delegateCodeTxEnabled = DEFAULT_DELEGATE_CODE_TX_ENABLED;
 
   public LineaTransactionValidatorCliOptions() {}
 
@@ -48,6 +59,7 @@ public class LineaTransactionValidatorCliOptions implements LineaCliOptions {
       final LineaTransactionValidatorConfiguration config) {
     final LineaTransactionValidatorCliOptions options = create();
     options.blobTxEnabled = config.blobTxEnabled();
+    options.delegateCodeTxEnabled = config.delegateCodeTxEnabled();
     return options;
   }
 
@@ -58,11 +70,14 @@ public class LineaTransactionValidatorCliOptions implements LineaCliOptions {
    */
   @Override
   public LineaTransactionValidatorConfiguration toDomainObject() {
-    return new LineaTransactionValidatorConfiguration(blobTxEnabled);
+    return new LineaTransactionValidatorConfiguration(blobTxEnabled, delegateCodeTxEnabled);
   }
 
   @Override
   public String toString() {
-    return MoreObjects.toStringHelper(this).add(BLOB_TX_ENABLED, blobTxEnabled).toString();
+    return MoreObjects.toStringHelper(this)
+        .add(BLOB_TX_ENABLED, blobTxEnabled)
+        .add(DELEGATE_CODE_TX_ENABLED, delegateCodeTxEnabled)
+        .toString();
   }
 }

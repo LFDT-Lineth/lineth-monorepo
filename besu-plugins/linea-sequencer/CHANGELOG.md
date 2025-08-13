@@ -6,6 +6,8 @@
 * feat: Report rejected transactions to an external service for LineaTransactionSelector used by LineaTransactionSelectorPlugin [#69](https://github.com/Consensys/linea-sequencer/pull/69)
 * feat: Create LineaTransactionValidatorPlugin to filter transactions using Besu's TransactionValidatorService (currently rejecting BLOB transactions)
 * feat: Add CLI option `--plugin-linea-blob-tx-enabled` to control blob transaction acceptance in LineaTransactionValidatorPlugin
+* feat: Add support for blocking delegate code transactions (EIP-7702) in LineaTransactionValidatorPlugin
+* feat: Add CLI option `--plugin-linea-delegate-code-tx-enabled` to control delegate code transaction acceptance in LineaTransactionValidatorPlugin
 
 ## 0.6.0-rc1.1
 * bump linea-arithmetization version to 0.6.0-rc1 [#71](https://github.com/Consensys/linea-sequencer/pull/71)
