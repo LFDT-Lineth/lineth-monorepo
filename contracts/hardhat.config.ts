@@ -48,17 +48,6 @@ const config: HardhatUserConfig = {
           evmVersion: "prague",
         },
       },
-      {
-        version: "0.8.19",
-        settings: {
-          viaIR: useViaIR,
-          optimizer: {
-            enabled: true,
-            runs: 10_000,
-          },
-          evmVersion: "london",
-        },
-      },
     ],
     overrides: overrides,
   },
