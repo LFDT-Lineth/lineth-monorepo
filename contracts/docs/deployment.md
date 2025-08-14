@@ -87,6 +87,103 @@ SAVE_ADDRESS=true VERIFY_CONTRACT=true SEPOLIA_PRIVATE_KEY=<key> ETHERSCAN_API_K
 <br />
 <br />
 
+### EIP2935SystemContract
+<br />
+
+The EIP2935SystemContract is a system contract for historical block hashes according to [EIP-2935](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-2935.md). This contract deploys to a predetermined address using a specific deployment transaction format. The deployment script automatically funds the required sender address if needed.
+
+Parameters that should be filled either in .env or passed as CLI arguments:
+
+| Parameter name             | Required | Input Value | Description |
+| -------------------------- | -------- | ---------- | ----------- |
+| \**PRIVATE_KEY* | true     | key | Network-specific private key used when deploying the contract |
+| BLOCKCHAIN_NODE     | true     | key | RPC URL endpoint` |
+
+<br />
+
+**Prerequisites:**
+- The deployment script automatically funds the predetermined sender address (0x3462413Af4609098e1E27A490f554f260213D685) if needed
+- The contract deploys to the fixed address: 0x0000F90827F1C53a10cb7A02335B175320002935
+
+Base command:
+```shell
+npx hardhat deploy --network sepolia --tags EIP2935SystemContract
+```
+
+Base command with cli arguments:
+
+```shell
+PRIVATE_KEY=<key> BLOCKCHAIN_NODE=<node_rpc_url> npx hardhat deploy --network sepolia --tags EIP2935SystemContract
+```
+
+(make sure to replace `<key>` with actual values)
+<br />
+<br />
+
+### UpgradeableWithdrawalQueuePredeploy
+<br />
+
+The UpgradeableWithdrawalQueuePredeploy is an upgradeable predeploy contract that implements EIP-7002 execution layer triggerable withdrawals. This deploys as a placeholder implementation that can be upgraded later to provide full functionality.
+
+Parameters that should be filled either in .env or passed as CLI arguments:
+
+| Parameter name             | Required | Input Value | Description |
+| -------------------------- | -------- | ---------- | ----------- |
+| SAVE_ADDRESS       | false    |true\|false| Saves file with deployment details [address, ABI, transaction hash] |
+| VERIFY_CONTRACT    | false    |true\|false| Verifies the deployed contract |
+| \**PRIVATE_KEY* | true     | key | Network-specific private key used when deploying the contract |
+| \**BLOCK_EXPLORER_API_KEY*  | false     | key | Network-specific Block Explorer API Key used for verifying deployed contracts. |
+| INFURA_API_KEY     | true     | key | Infura API Key. This is required only when deploying contracts to a live network, not required when deploying on a local dev network. |
+
+<br />
+
+Base command:
+```shell
+npx hardhat deploy --network sepolia --tags UpgradeableWithdrawalQueuePredeploy
+```
+
+Base command with cli arguments:
+
+```shell
+SAVE_ADDRESS=true VERIFY_CONTRACT=true SEPOLIA_PRIVATE_KEY=<key> ETHERSCAN_API_KEY=<key> INFURA_API_KEY=<key> npx hardhat deploy --network sepolia --tags UpgradeableWithdrawalQueuePredeploy
+```
+
+(make sure to replace `<key>` with actual values)
+<br />
+<br />
+
+### UpgradeableConsolidationQueuePredeploy
+<br />
+
+The UpgradeableConsolidationQueuePredeploy is an upgradeable predeploy contract that implements EIP-7251 execution layer consolidation requests. This deploys as a placeholder implementation that can be upgraded later to provide full functionality.
+
+Parameters that should be filled either in .env or passed as CLI arguments:
+
+| Parameter name             | Required | Input Value | Description |
+| -------------------------- | -------- | ---------- | ----------- |
+| SAVE_ADDRESS       | false    |true\|false| Saves file with deployment details [address, ABI, transaction hash] |
+| VERIFY_CONTRACT    | false    |true\|false| Verifies the deployed contract |
+| \**PRIVATE_KEY* | true     | key | Network-specific private key used when deploying the contract |
+| \**BLOCK_EXPLORER_API_KEY*  | false     | key | Network-specific Block Explorer API Key used for verifying deployed contracts. |
+| INFURA_API_KEY     | true     | key | Infura API Key. This is required only when deploying contracts to a live network, not required when deploying on a local dev network. |
+
+<br />
+
+Base command:
+```shell
+npx hardhat deploy --network sepolia --tags UpgradeableConsolidationQueuePredeploy
+```
+
+Base command with cli arguments:
+
+```shell
+SAVE_ADDRESS=true VERIFY_CONTRACT=true SEPOLIA_PRIVATE_KEY=<key> ETHERSCAN_API_KEY=<key> INFURA_API_KEY=<key> npx hardhat deploy --network sepolia --tags UpgradeableConsolidationQueuePredeploy
+```
+
+(make sure to replace `<key>` with actual values)
+<br />
+<br />
+
 ### LineaRollup
 <br />
 
