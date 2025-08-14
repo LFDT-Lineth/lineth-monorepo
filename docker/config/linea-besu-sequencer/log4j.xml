@@ -15,7 +15,6 @@
     <Logger name="org.hyperledger.besu.consensus.merge.blockcreation" level="INFO" />
     <Logger name="org.hyperledger.besu.ethereum.api.jsonrpc" level="TRACE" />
     <Logger name="io.opentelemetry" level="WARN" />
-    <Logger name="net.consensys.linea" level="DEBUG" />
     <Logger name="net.consensys.linea.bl.TransactionProfitabilityCalculator" level="DEBUG" />
     <Logger name="net.consensys.linea.sequencer.txselection" level="DEBUG" />
     <Logger name="net.consensys.linea.sequencer.liveness" level="DEBUG" />
@@ -29,7 +28,7 @@
         <RegexFilter regex="Transaction selection result .*" useRawMsg="true" onMatch="ACCEPT" onMismatch="DENY" />
       </Filters>
     </Logger>
-    <Root level="DEBUG">
+    <Root level="WARN">
       <AppenderRef ref="Console"/>
     </Root>
   </Loggers>
