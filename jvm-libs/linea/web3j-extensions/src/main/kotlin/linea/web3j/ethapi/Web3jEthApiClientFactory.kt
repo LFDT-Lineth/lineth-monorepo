@@ -23,8 +23,8 @@ import kotlin.time.Duration.Companion.milliseconds
  */
 fun createEthApiClient(
   web3jClient: Web3j,
-  requestRetryConfig: RetryConfig?,
-  vertx: Vertx?,
+  requestRetryConfig: RetryConfig? = null,
+  vertx: Vertx? = null,
   stopRetriesOnErrorPredicate: Predicate<Throwable> = Predicate { _ -> false },
 ): EthApiClient {
   if (requestRetryConfig?.isRetryEnabled == true && vertx == null) {
@@ -64,8 +64,8 @@ fun createEthApiClient(
   executorService: ScheduledExecutorService = Async.defaultExecutorService(),
   requestResponseLogLevel: Level = Level.TRACE,
   failuresLogLevel: Level = Level.DEBUG,
-  requestRetryConfig: RetryConfig?,
-  vertx: Vertx?,
+  requestRetryConfig: RetryConfig? = null,
+  vertx: Vertx? = null,
   stopRetriesOnErrorPredicate: Predicate<Throwable> = Predicate { _ -> false },
 ): EthApiClient {
   val web3jClient =

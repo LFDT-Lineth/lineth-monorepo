@@ -117,6 +117,10 @@ class FakeEthApiClient(
     return SafeFuture.completedFuture(chainId)
   }
 
+  override fun blockNumber(): SafeFuture<ULong> {
+    return SafeFuture.completedFuture(blockTags[BlockParameter.Tag.LATEST]!!)
+  }
+
   override fun findBlockByNumber(blockParameter: BlockParameter): SafeFuture<Block?> {
     val blockNumber = blockParameterToBlockNumber(blockParameter)
     if (isAfterHead(blockNumber)) {

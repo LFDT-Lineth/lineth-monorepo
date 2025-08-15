@@ -32,6 +32,14 @@ class Web3jEthApiClient(
       }
   }
 
+  override fun blockNumber(): SafeFuture<ULong> {
+    return web3jClient
+      .ethBlockNumber()
+      .requestAsync { resp ->
+        resp.blockNumber?.toULong() ?: throw IllegalStateException("Block number not found in response")
+      }
+  }
+
   override fun findBlockByNumber(blockParameter: BlockParameter): SafeFuture<Block?> {
     return web3jClient
       .ethGetBlockByNumber(blockParameter.toWeb3j(), true)
