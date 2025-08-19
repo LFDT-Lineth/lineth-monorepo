@@ -305,7 +305,6 @@
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; PRECOMPILES   ;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;               ;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  MAX_PRC_ADDRESS                                          9                        ;;London value
   PRC_ECPAIRING_SIZE                                       (* 6 WORD_SIZE)
   PRECOMPILE_CALL_DATA_SIZE___BLAKE2F                      213
   PRECOMPILE_RETURN_DATA_SIZE___ECADD                       64

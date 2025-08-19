@@ -27,6 +27,12 @@ BLOCKHASH := blockhash
 
 CONSTANTS := constants/constants.lisp
 
+CONSTANTS_LONDON := constants/london/constants.lisp
+
+CONSTANTS_CANCUN := constants/cancun/constants.lisp
+
+CONSTANTS_PRAGUE := constants/prague/constants.lisp
+
 EC_DATA := ecdata
 
 EUC := euc
@@ -130,8 +136,9 @@ ZKEVM_MODULES_COMMON := ${CONSTANTS} \
 		 ${WCP}
 
 ZKEVM_MODULES_LONDON := ${ZKEVM_MODULES_COMMON} \
-		 ${ALU_LONDON} \
+		 ${CONSTANTS_LONDON} \
 		 ${TABLES_LONDON} \
+		 ${ALU_LONDON} \
 		 ${BLOCKDATA_LONDON} \
 		 ${HUB_LONDON} \
 		 ${LOG_INFO_LONDON} \
@@ -142,8 +149,9 @@ ZKEVM_MODULES_LONDON := ${ZKEVM_MODULES_COMMON} \
 		 ${TXN_DATA_LONDON}
 
 ZKEVM_MODULES_PARIS := ${ZKEVM_MODULES_COMMON} \
-		 ${ALU_LONDON} \
+		 ${CONSTANTS_LONDON} \
 		 ${TABLES_LONDON} \
+		 ${ALU_LONDON} \
 		 ${BLOCKDATA_PARIS} \
 		 ${HUB_LONDON} \
 		 ${LOG_INFO_LONDON} \
@@ -154,8 +162,9 @@ ZKEVM_MODULES_PARIS := ${ZKEVM_MODULES_COMMON} \
 		 ${TXN_DATA_LONDON}
 
 ZKEVM_MODULES_SHANGHAI := ${ZKEVM_MODULES_COMMON} \
-		 ${ALU} \
+		 ${CONSTANTS_LONDON} \
 		 ${TABLES_LONDON} \
+		 ${ALU} \
 		 ${BLOCKDATA_PARIS} \
 		 ${HUB_SHANGHAI} \
 		 ${LOG_INFO_LONDON} \
@@ -166,8 +175,9 @@ ZKEVM_MODULES_SHANGHAI := ${ZKEVM_MODULES_COMMON} \
 		 ${TXN_DATA_SHANGHAI}
 
 ZKEVM_MODULES_CANCUN := ${ZKEVM_MODULES_COMMON} \
-		 ${ALU} \
+         ${CONSTANTS_CANCUN} \
 		 ${TABLES_CANCUN} \
+		 ${ALU} \
 		 ${BLOCKDATA_CANCUN} \
 		 ${HUB_CANCUN} \
 		 ${LOG_INFO_CANCUN} \
@@ -178,7 +188,21 @@ ZKEVM_MODULES_CANCUN := ${ZKEVM_MODULES_COMMON} \
 		 ${RLP_UTILS_CANCUN} \
 		 ${TXN_DATA_CANCUN}
 
-all: zkevm_london.bin zkevm_paris.bin zkevm_shanghai.bin zkevm_cancun.bin
+ZKEVM_MODULES_PRAGUE := ${ZKEVM_MODULES_COMMON} \
+		 ${CONSTANTS_PRAGUE} \
+		 ${TABLES_CANCUN} \
+		 ${ALU} \
+		 ${BLOCKDATA_CANCUN} \
+		 ${HUB_CANCUN} \
+		 ${LOG_INFO_CANCUN} \
+		 ${MMIO_CANCUN} \
+		 ${MXP_CANCUN} \
+		 ${OOB_CANCUN} \
+		 ${RLP_TXN_CANCUN} \
+		 ${RLP_UTILS_CANCUN} \
+		 ${TXN_DATA_CANCUN}
+
+all: zkevm_london.bin zkevm_paris.bin zkevm_shanghai.bin zkevm_cancun.bin zkevm_prague.bin
 
 zkevm_london.bin: ${ZKEVM_MODULES_LONDON}
 	${GO_CORSET_COMPILE} -o $@ ${ZKEVM_MODULES_LONDON}
@@ -193,4 +217,8 @@ zkevm_shanghai.bin: ${ZKEVM_MODULES_SHANGHAI}
 
 zkevm_cancun.bin: ${ZKEVM_MODULES_CANCUN}
 	${GO_CORSET_COMPILE} -o $@ ${ZKEVM_MODULES_CANCUN}
+	@$(call warn_lispX)
+
+zkevm_prague.bin: ${ZKEVM_MODULES_PRAGUE}
+	${GO_CORSET_COMPILE} -o $@ ${ZKEVM_MODULES_PRAGUE}
 	@$(call warn_lispX)
