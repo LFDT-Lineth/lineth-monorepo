@@ -16,8 +16,9 @@
 (defun (access-list-is-non-empty)        cmp/EXO_DATA_4) ;; ""
 (defun (access-list-is-empty)            (- 1 (access-list-is-non-empty)))
 
-(defproperty    access-list---rlp-prefix-of-the-full-access-list---sanity-checks
-                (if-zero   PHASE_END
+(defconstraint    access-list---rlp-prefix-of-the-full-access-list---sanity-checks
+                 (:guard   (is-access-list-prefix))
+                 (if-zero  PHASE_END
                            (begin
                              (eq!   IS_PREFIX_OF_ACCESS_LIST_ITEM   1)
                              (eq!   IS_ACCESS_LIST_ADDRESS          0)
