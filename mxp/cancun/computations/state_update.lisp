@@ -19,8 +19,8 @@
 (defun  (mxp-shorthand---use-parameter-set-2)  (shift  computation/RES_A  ROW_OFFSET___COMPARISON_OF_MAX_OFFSETS))
 (defun  (mxp-shorthand---use-parameter-set-1)  (-   1    (mxp-shorthand---use-parameter-set-2)))
 
-(defun  (mxp-shorthand---max-1)          (+ (mxp-shorthand---offset-1-lo)   (mxp-shorthand---size-1-lo)))
-(defun  (mxp-shorthand---max-2)          (+ (mxp-shorthand---offset-2-lo)   (mxp-shorthand---size-2-lo)))
+(defun  (mxp-shorthand---max-1)          (* (mxp-shorthand---size-1-is-nonzero) (+ (mxp-shorthand---offset-1-lo)   (mxp-shorthand---size-1-lo))))
+(defun  (mxp-shorthand---max-2)          (* (mxp-shorthand---size-2-is-nonzero) (+ (mxp-shorthand---offset-2-lo)   (mxp-shorthand---size-2-lo))))
 (defun  (mxp-shorthand---max-offset-1)   (- (mxp-shorthand---max-1)         1))
 (defun  (mxp-shorthand---max-offset-2)   (- (mxp-shorthand---max-2)         1))
 (defun  (mxp-shorthand---max-offset)     (+   (*   (mxp-shorthand---use-parameter-set-1)   (mxp-shorthand---max-offset-1))
