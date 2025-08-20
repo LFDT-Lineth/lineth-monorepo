@@ -25,9 +25,11 @@ export default class EthTransfer extends Command {
       --blockchain-rpc-url=https://mainnet.infura.io/v3/YOUR-PROJECT-ID
       --web3-signer-url=http://localhost:8545
       --web3-signer-public-key=0xYourWeb3SignerPublicKey
+      --tls
       --web3-signer-keystore-path=/path/to/keystore.p12
-      --web3-signer-passphrase=yourPassphrase
+      --web3-signer-keystore-passphrase=yourPassphrase
       --web3-signer-trusted-store-path=/path/to/ca.p12
+      --web3-signer-trusted-store-passphrase=yourTrustedStorePassphrase
       `,
 
     // Example 2: Including optional flags with custom values
@@ -40,9 +42,11 @@ export default class EthTransfer extends Command {
       --web3-signer-public-key=0xYourWeb3SignerPublicKey
       --max-fee-per-gas=150000000000
       --gas-estimation-percentile=20
+      --tls
       --web3-signer-keystore-path=/path/to/keystore.p12
-      --web3-signer-passphrase=yourPassphrase
+      --web3-signer-keystore-passphrase=yourPassphrase
       --web3-signer-trusted-store-path=/path/to/ca.p12
+      --web3-signer-trusted-store-passphrase=yourTrustedStorePassphrase
       `,
 
     // Example 3: Using the dry-run flag to simulate the transaction
@@ -54,9 +58,11 @@ export default class EthTransfer extends Command {
       --web3-signer-url=http://127.0.0.1:8546
       --web3-signer-public-key=0xYourWeb3SignerPublicKey
       --dry-run
+      --tls
       --web3-signer-keystore-path=/path/to/keystore.p12
-      --web3-signer-passphrase=yourPassphrase
+      --web3-signer-keystore-passphrase=yourPassphrase
       --web3-signer-trusted-store-path=/path/to/ca.p12
+      --web3-signer-trusted-store-passphrase=yourTrustedStorePassphrase
       `,
   ];
 

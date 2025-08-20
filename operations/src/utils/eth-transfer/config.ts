@@ -18,36 +18,19 @@ export type Config = {
 };
 
 export function validateConfig(flags: ParserOutput["flags"]): Config {
-  const {
-    senderAddress,
-    destinationAddress,
-    threshold,
-    blockchainRpcUrl,
-    web3SignerUrl,
-    web3SignerPublicKey,
-    dryRun,
-    maxFeePerGas: maxFeePerGasArg,
-    gasEstimationPercentile,
-    tls,
-    web3SignerKeystorePath,
-    web3SignerKeystorePassphrase,
-    web3SignerTrustedStorePath,
-    web3SignerTrustedStorePassphrase,
-  } = flags;
-
   const requiredFlags = [
-    "senderAddress",
-    "destinationAddress",
+    "sender-address",
+    "destination-address",
     "threshold",
-    "blockchainRpcUrl",
-    "web3SignerUrl",
-    "web3SignerPublicKey",
-    ...(tls
+    "blockchain-rpc-url",
+    "web3-signer-url",
+    "web3-signer-public-key",
+    ...(flags.tls
       ? [
-          "web3SignerKeystorePath",
-          "web3SignerKeystorePassphrase",
-          "web3SignerTrustedStorePath",
-          "web3SignerTrustedStorePassphrase",
+          "web3-signer-keystore-path",
+          "web3-signer-keystore-passphrase",
+          "web3-signer-trusted-store-path",
+          "web3-signer-trusted-store-passphrase",
         ]
       : []),
   ];
@@ -60,34 +43,36 @@ export function validateConfig(flags: ParserOutput["flags"]): Config {
 
   let maxFeePerGas: bigint;
   try {
-    maxFeePerGas = BigInt(maxFeePerGasArg);
+    maxFeePerGas = BigInt(flags["max-fee-per-gas"]);
     if (maxFeePerGas <= 0n) {
       throw new Error();
     }
   } catch {
-    throw new Error(`Invalid value for --max-fee-per-gas: ${maxFeePerGasArg}. Must be a positive integer in wei.`);
+    throw new Error(
+      `Invalid value for --max-fee-per-gas: ${flags["max-fee-per-gas"]}. Must be a positive integer in wei.`,
+    );
   }
 
-  if (gasEstimationPercentile < 0 || gasEstimationPercentile > 100) {
+  if (flags["gas-estimation-percentile"] < 0 || flags["gas-estimation-percentile"] > 100) {
     throw new Error(
-      `Invalid value for --gas-estimation-percentile: ${gasEstimationPercentile}. Must be an integer between 0 and 100.`,
+      `Invalid value for --gas-estimation-percentile: ${flags["gas-estimation-percentile"]}. Must be an integer between 0 and 100.`,
     );
   }
 
   return {
-    senderAddress,
-    destinationAddress,
-    threshold,
-    blockchainRpcUrl,
-    web3SignerUrl,
-    web3SignerPublicKey,
+    senderAddress: flags["sender-address"],
+    destinationAddress: flags["destination-address"],
+    threshold: flags["threshold"],
+    blockchainRpcUrl: flags["blockchain-rpc-url"],
+    web3SignerUrl: flags["web3-signer-url"],
+    web3SignerPublicKey: flags["web3-signer-public-key"],
     maxFeePerGas,
-    gasEstimationPercentile,
-    dryRun,
-    tls,
-    web3SignerKeystorePath,
-    web3SignerKeystorePassphrase,
-    web3SignerTrustedStorePath,
-    web3SignerTrustedStorePassphrase,
+    gasEstimationPercentile: flags["gas-estimation-percentile"],
+    dryRun: flags["dry-run"],
+    tls: flags.tls,
+    web3SignerKeystorePath: flags["web3-signer-keystore-path"],
+    web3SignerKeystorePassphrase: flags["web3-signer-keystore-passphrase"],
+    web3SignerTrustedStorePath: flags["web3-signer-trusted-store-path"],
+    web3SignerTrustedStorePassphrase: flags["web3-signer-trusted-store-passphrase"],
   };
 }
