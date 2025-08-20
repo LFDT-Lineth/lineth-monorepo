@@ -12,7 +12,8 @@
 
 
 (defproperty   access-list---finish-either-on-prefix-or-storage-key-list-or-storage-key
+    (if-not-zero (* IS_ACCESS_LIST PHASE_END)
                (eq!   (+   (is-access-list-prefix)
                            IS_PREFIX_OF_STORAGE_KEY_LIST
                            IS_ACCESS_LIST_STORAGE_KEY)
-                      1))
+                      1)))
