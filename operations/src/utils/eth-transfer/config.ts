@@ -12,8 +12,9 @@ export type Config = {
   dryRun: boolean;
   tls: boolean;
   web3SignerKeystorePath: string;
-  web3SignerPassphrase: string;
+  web3SignerKeystorePassphrase: string;
   web3SignerTrustedStorePath: string;
+  web3SignerTrustedStorePassphrase: string;
 };
 
 export function validateConfig(flags: ParserOutput["flags"]): Config {
@@ -29,8 +30,9 @@ export function validateConfig(flags: ParserOutput["flags"]): Config {
     gasEstimationPercentile,
     tls,
     web3SignerKeystorePath,
-    web3SignerPassphrase,
+    web3SignerKeystorePassphrase,
     web3SignerTrustedStorePath,
+    web3SignerTrustedStorePassphrase,
   } = flags;
 
   const requiredFlags = [
@@ -40,7 +42,14 @@ export function validateConfig(flags: ParserOutput["flags"]): Config {
     "blockchainRpcUrl",
     "web3SignerUrl",
     "web3SignerPublicKey",
-    ...(tls ? ["web3SignerKeystorePath", "web3SignerPassphrase", "web3SignerTrustedStorePath"] : []),
+    ...(tls
+      ? [
+          "web3SignerKeystorePath",
+          "web3SignerKeystorePassphrase",
+          "web3SignerTrustedStorePath",
+          "web3SignerTrustedStorePassphrase",
+        ]
+      : []),
   ];
 
   for (const flagName of requiredFlags) {
@@ -77,7 +86,8 @@ export function validateConfig(flags: ParserOutput["flags"]): Config {
     dryRun,
     tls,
     web3SignerKeystorePath,
-    web3SignerPassphrase,
+    web3SignerKeystorePassphrase,
     web3SignerTrustedStorePath,
+    web3SignerTrustedStorePassphrase,
   };
 }

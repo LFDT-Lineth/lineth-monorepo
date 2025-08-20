@@ -129,7 +129,7 @@ export default class EthTransfer extends Command {
       required: false,
       env: "ETH_TRANSFER_WEB3_SIGNER_KEYSTORE_PATH",
     }),
-    "web3-signer-passphrase": Flags.string({
+    "web3-signer-keystore-passphrase": Flags.string({
       description: "Passphrase for the web3 signer keystore",
       required: false,
       env: "ETH_TRANSFER_WEB3_SIGNER_KEYSTORE_PASSPHRASE",
@@ -138,6 +138,11 @@ export default class EthTransfer extends Command {
       description: "Path to the web3 signer trusted store file",
       required: false,
       env: "ETH_TRANSFER_WEB3_SIGNER_TRUSTED_STORE_PATH",
+    }),
+    "web3-signer-trusted-store-passphrase": Flags.string({
+      description: "Passphrase for the web3 signer trusted store file",
+      required: false,
+      env: "ETH_TRANSFER_WEB3_SIGNER_TRUSTED_STORE_PASSPHRASE",
     }),
   };
 
@@ -156,8 +161,9 @@ export default class EthTransfer extends Command {
       dryRun,
       tls,
       web3SignerKeystorePath,
-      web3SignerPassphrase,
+      web3SignerKeystorePassphrase,
       web3SignerTrustedStorePath,
+      web3SignerTrustedStorePassphrase,
     } = validateConfig(flags);
 
     const provider = new ethers.JsonRpcProvider(blockchainRpcUrl);
@@ -204,7 +210,12 @@ export default class EthTransfer extends Command {
     let httpsAgent: Agent | undefined;
     if (tls) {
       this.log(`Using TLS for secure communication with Web3 Signer.`);
-      httpsAgent = getWeb3SignerHttpsAgent(web3SignerKeystorePath, web3SignerPassphrase, web3SignerTrustedStorePath);
+      httpsAgent = getWeb3SignerHttpsAgent(
+        web3SignerKeystorePath,
+        web3SignerKeystorePassphrase,
+        web3SignerTrustedStorePath,
+        web3SignerTrustedStorePassphrase,
+      );
     }
 
     const signature = await getWeb3SignerSignature(web3SignerUrl, web3SignerPublicKey, transaction, httpsAgent);
