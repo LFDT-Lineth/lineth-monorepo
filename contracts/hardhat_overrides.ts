@@ -11,6 +11,7 @@ const londonOverride = {
 
 const londonOverridePaths = [
   "src/messaging/l2/L2MessageService.sol",
+  "src/operational/LineaSequencerUptimeFeed.sol",
   "src/bridging/token/TokenBridge.sol",
   "src/bridging/token/BridgedToken.sol",
   "src/tokens/LineaVoyageXP.sol",

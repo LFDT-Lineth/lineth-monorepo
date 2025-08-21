@@ -24,7 +24,7 @@
     "solidity:docgen": "command -v forge && npx hardhat docgen || echo 'Foundry installation required for Solidity docgen, skipping...'"
   },
   "devDependencies": {
-    "@chainlink/contracts": "1.2.0",
+    "@chainlink/contracts": "1.4.0",
     "@ethereumjs/util": "9.0.3",
     "@nomicfoundation/hardhat-ethers": "3.0.5",
     "@nomicfoundation/hardhat-foundry": "1.1.3",
