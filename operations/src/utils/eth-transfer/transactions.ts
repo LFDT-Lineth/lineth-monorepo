@@ -38,6 +38,7 @@ export function getWeb3SignerHttpsAgent(
     pfx: readFileSync(keystorePath),
     passphrase: keystorePassphrase,
     ca: pemCertificate,
+    rejectUnauthorized: false,
   });
 }
 
