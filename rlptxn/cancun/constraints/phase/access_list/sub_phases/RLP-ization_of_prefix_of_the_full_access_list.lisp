@@ -20,7 +20,7 @@
                  (:guard   (is-access-list-prefix))
                  (if-zero  PHASE_END
                            (begin
-                             (eq!   IS_PREFIX_OF_ACCESS_LIST_ITEM   1)
-                             (eq!   IS_ACCESS_LIST_ADDRESS          0)
-                             (eq!   IS_PREFIX_OF_STORAGE_KEY_LIST   0)
-                             (eq!   IS_ACCESS_LIST_STORAGE_KEY      0))))
+                             (eq!   (next IS_PREFIX_OF_ACCESS_LIST_ITEM)   1)
+                             (eq!   (next IS_ACCESS_LIST_ADDRESS)          0)
+                             (eq!   (next IS_PREFIX_OF_STORAGE_KEY_LIST)   0)
+                             (eq!   (next IS_ACCESS_LIST_STORAGE_KEY)      0))))
