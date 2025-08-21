@@ -1,8 +1,9 @@
 import axios from "axios";
 import { ethers, TransactionLike } from "ethers";
 import { Agent } from "https";
-import * as forge from "node-forge";
+import forge from "node-forge";
 import { readFileSync } from "fs";
+import path from "path";
 
 export function convertToPem(p12base64: string | forge.util.ByteStringBuffer, password: string) {
   const p12Asn1 = forge.asn1.fromDer(p12base64);
@@ -19,10 +20,8 @@ function getCertificateFromP12(p12: forge.pkcs12.Pkcs12Pfx) {
     throw new Error("Certificate not found in P12");
   }
 
-  let pemCertificate = forge.pki.certificateToPem(certificate.cert);
-  pemCertificate = pemCertificate.replace(/\r\n/g, "");
-  const commonName = certificate.cert.subject.attributes[0].value;
-  return { pemCertificate, commonName };
+  const pemCertificate = forge.pki.certificateToPem(certificate.cert);
+  return { pemCertificate };
 }
 
 export function getWeb3SignerHttpsAgent(
@@ -31,14 +30,14 @@ export function getWeb3SignerHttpsAgent(
   trustedStorePath: string,
   trustedStorePassphrase: string,
 ): Agent {
-  const trustedStoreFile = readFileSync(trustedStorePath, { encoding: "binary" });
+  const trustedStoreFile = readFileSync(path.resolve(import.meta.dirname, trustedStorePath), { encoding: "binary" });
+
   const { pemCertificate } = convertToPem(trustedStoreFile, trustedStorePassphrase);
 
   return new Agent({
-    pfx: readFileSync(keystorePath),
+    pfx: readFileSync(path.resolve(import.meta.dirname, keystorePath)),
     passphrase: keystorePassphrase,
     ca: pemCertificate,
-    rejectUnauthorized: false,
   });
 }
 
