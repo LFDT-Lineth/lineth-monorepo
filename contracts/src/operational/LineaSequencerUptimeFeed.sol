@@ -19,6 +19,8 @@ contract LineaSequencerUptimeFeed is BaseSequencerUptimeFeed, AccessControl, ILi
    * @param _initialStatus The initial status of the feed.
    * @param _admin The address of the admin that can manage the feed.
    * @param _feedUpdater The address of the feed updater that can update the status.
+   * @dev NB: The l1Sender parameter in the BaseSequencerUptimeFeed constructor is set as address(0) because it is not used.
+   * AccessControl is used instead to manage permissions.
    */
   constructor(
     bool _initialStatus,
@@ -34,8 +36,9 @@ contract LineaSequencerUptimeFeed is BaseSequencerUptimeFeed, AccessControl, ILi
 
   /**
    * @notice Internal function to check if the sender is allowed to update the status.
-   * @dev The parameter is not used here because the function relies on msg.sender instead of l1Sender.
-   * @dev The l1Sender storage variable from the BaseSequencerUptimeFeed contract is not used. We use AccessControl to manage permissions.
+   * @dev NB: The parameter is not used here because the function relies on msg.sender instead of l1Sender.
+   * @dev NB: The l1Sender storage variable from the BaseSequencerUptimeFeed contract is not used.
+   * AccessControl is used instead to manage permissions.
    */
   function _validateSender(address) internal view override {
     require(hasRole(FEED_UPDATER_ROLE, msg.sender), InvalidSender());
