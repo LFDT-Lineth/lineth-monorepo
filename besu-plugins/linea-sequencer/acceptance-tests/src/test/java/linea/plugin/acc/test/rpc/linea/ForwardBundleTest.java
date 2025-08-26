@@ -15,7 +15,6 @@ import static com.github.tomakehurst.wiremock.client.WireMock.getAllServeEvents;
 import static com.github.tomakehurst.wiremock.client.WireMock.matchingJsonPath;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
-import static com.github.tomakehurst.wiremock.client.WireMock.request;
 import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.verify;
@@ -61,6 +60,20 @@ public class ForwardBundleTest extends AbstractSendBundleTest {
         .set(
             "--plugin-linea-bundles-forward-timeout=",
             String.valueOf(Duration.ofSeconds(1).toMillis()))
+        /**
+         * If we use default retry delay of 1000ms, we get forwardIsRetriedAfterTimeout flakiness
+         * because of the following race condition: t = 0s -> bundle sent; t = 1s -> bundle
+         * forwarder timeout; t = 2s -> bundle retry + verifyRequestForwarded timeout
+         *
+         * <p>The race condition is between bundle retry and verifyRequestForwarded timeout. If
+         * verifyRequestForwarded times out before the bundle retry is completed, the test will fail
+         *
+         * <p>We set retry delay to 900ms to avoid this race condition such that t = 1.9s -> bundle
+         * retry; t = 2.0s -> verifyRequestForwarded timeout
+         */
+        .set(
+            "--plugin-linea-bundles-forward-retry-delay=",
+            String.valueOf(Duration.ofMillis(900).toMillis()))
         .build();
   }
 
