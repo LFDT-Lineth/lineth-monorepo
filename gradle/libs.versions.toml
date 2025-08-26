@@ -1,5 +1,5 @@
 [plugins]
-docker = { id = "com.avast.gradle.docker-compose", version = "0.17.7" }
+docker = { id = "com.avast.gradle.docker-compose", version = "0.17.12" }
 web3j = { id = "org.web3j", version.ref = "web3j" }
 web3jSolidity = { id = "org.web3j.solidity", version = "0.5.0" }
 spotless = { id = "com.diffplug.spotless", version = "6.25.0" }
