@@ -6,6 +6,7 @@ import linea.domain.BlockParameter
 import linea.domain.EthLog
 import linea.kotlin.decodeHex
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -79,6 +80,56 @@ class LogsSearcherTest {
     assertThat(result.logs).isEqualTo(initialLogs.take(3))
     assertThat(result.startBlockNumber).isEqualTo(10UL)
     assertThat(result.endBlockNumber).isEqualTo(450UL)
+  }
+
+  @Test
+  fun `should return logs within block range in face of temporary errors`() {
+    fakeElClient.setFinalizedBlockTag(450UL)
+    // The search should retry on errors when find logs (all will throw 5 times)
+    // and not to skip retrieving any of the event logs
+    fakeElClient.setGetLogsBlocksForcedErrorsCounts(
+      mutableMapOf(
+        1UL to 5U, // will throw error 5 times when find logs in range 1..100
+        101UL to 5U, // will throw error 5 times when find logs in range 101..200
+        201UL to 5U, // will throw error 5 times when find logs in range 201..300
+        301UL to 5U, // will throw error 5 times when find logs in range 301..400
+      ),
+    )
+    val result = searcher.getLogsRollingForward(
+      fromBlock = BlockParameter.BlockNumber(1UL),
+      toBlock = BlockParameter.Tag.FINALIZED,
+      address = testAddress,
+      topics = emptyList(),
+      chunkSize = 100U,
+      searchTimeout = 1000000.seconds,
+      stopAfterTargetLogsCount = null,
+    ).get()
+
+    assertThat(result.logs).isEqualTo(initialLogs.take(3))
+    assertThat(result.startBlockNumber).isEqualTo(1UL)
+    assertThat(result.endBlockNumber).isEqualTo(450UL)
+  }
+
+  @Test
+  fun `should throw exception when the search timeout reached in face of consistent errors`() {
+    fakeElClient.setFinalizedBlockTag(450UL)
+    fakeElClient.setGetLogsBlocksForcedErrorsCounts(
+      mutableMapOf(
+        401UL to null, // will always throw error when find logs in range 301..450
+      ),
+    )
+    assertThatThrownBy {
+      searcher.getLogsRollingForward(
+        fromBlock = BlockParameter.BlockNumber(1UL),
+        toBlock = BlockParameter.Tag.FINALIZED,
+        address = testAddress,
+        topics = emptyList(),
+        chunkSize = 100U,
+        searchTimeout = 2.seconds,
+        stopAfterTargetLogsCount = null,
+      ).get()
+    }.hasCauseInstanceOf(IllegalStateException::class.java)
+      .hasMessageContaining("for error testing when calling getLogs")
   }
 
   @Test
