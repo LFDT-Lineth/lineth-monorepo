@@ -241,10 +241,15 @@ jobs:
     needs: [ run-e2e-tests ]
     if: ${{ always() }}
     runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
+    permissions:
+      contents: read
+      deployments: write
     steps:
       - uses: strumwolf/delete-deployment-environment@a4825dd9648c57da8437a4885c3fcad58beac69c #v3.0.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           environment: docker-build-and-e2e
-          ref: ${{ github.ref_name }}
+          # ref_name is incorrect for PR trigger - https://github.com/strumwolf/delete-deployment-environment/issues/42
+          # head_ref is correct for PR trigger, but only available for PR trigger
+          ref: ${{ github.head_ref != '' && github.head_ref || github.ref_name }}
           onlyRemoveDeployments: true
