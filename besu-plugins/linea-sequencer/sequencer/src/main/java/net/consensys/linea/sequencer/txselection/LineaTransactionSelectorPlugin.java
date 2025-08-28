@@ -9,6 +9,7 @@
 
 package net.consensys.linea.sequencer.txselection;
 
+import static net.consensys.linea.metrics.LineaMetricCategory.SEQUENCER_LIVENESS;
 import static net.consensys.linea.metrics.LineaMetricCategory.SEQUENCER_PROFITABILITY;
 
 import com.google.auto.service.AutoService;
@@ -51,6 +52,7 @@ public class LineaTransactionSelectorPlugin extends AbstractLineaRequiredPlugin 
                         "Failed to obtain TransactionSelectionService from the ServiceManager."));
 
     metricCategoryRegistry.addMetricCategory(SEQUENCER_PROFITABILITY);
+    metricCategoryRegistry.addMetricCategory(SEQUENCER_LIVENESS);
   }
 
   @Override

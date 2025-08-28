@@ -8,20 +8,20 @@
  */
 package net.consensys.linea.sequencer.liveness;
 
+import static net.consensys.linea.metrics.LineaMetricCategory.SEQUENCER_LIVENESS;
+
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.bundles.TransactionBundle;
 import net.consensys.linea.config.LineaLivenessServiceConfiguration;
-import net.consensys.linea.metrics.LineaMetricCategory;
 import org.apache.tuweni.bytes.Bytes32;
 import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.ethereum.core.Transaction;
 import org.hyperledger.besu.plugin.services.MetricsSystem;
 import org.hyperledger.besu.plugin.services.RpcEndpointService;
 import org.hyperledger.besu.plugin.services.metrics.Counter;
-import org.hyperledger.besu.plugin.services.metrics.MetricCategory;
 import org.hyperledger.besu.plugin.services.metrics.MetricCategoryRegistry;
 import org.hyperledger.besu.plugin.services.rpc.RpcResponseType;
 
@@ -39,9 +39,6 @@ import org.hyperledger.besu.plugin.services.rpc.RpcResponseType;
  */
 @Slf4j
 public class LineaLivenessService implements LivenessService {
-  private static final MetricCategory SEQUENCER_LIVENESS_CATEGORY =
-      LineaMetricCategory.SEQUENCER_LIVENESS;
-
   private Counter uptimeTransactionsCounter;
   private Counter transactionFailureCounter;
   private final AtomicLong lastBlockTimestamp = new AtomicLong(0);
@@ -68,30 +65,28 @@ public class LineaLivenessService implements LivenessService {
     this.metricCategoryRegistry = metricCategoryRegistry;
     this.metricsSystem = metricsSystem;
 
-    this.metricCategoryRegistry.addMetricCategory(SEQUENCER_LIVENESS_CATEGORY);
-
     // Initialize metrics if enabled
     if (this.lineaLivenessServiceConfiguration.enabled()
-        && this.metricCategoryRegistry.isMetricCategoryEnabled(SEQUENCER_LIVENESS_CATEGORY)) {
+        && this.metricCategoryRegistry.isMetricCategoryEnabled(SEQUENCER_LIVENESS)) {
       // Register metric category
       uptimeTransactionsCounter =
           this.metricsSystem.createCounter(
-              SEQUENCER_LIVENESS_CATEGORY,
-              "uptime_transactions",
-              "Number of sequencer uptime transactions sent");
+              SEQUENCER_LIVENESS,
+              "uptime_transaction_success",
+              "Number of sequencer uptime transaction submission successes");
 
       transactionFailureCounter =
           this.metricsSystem.createCounter(
-              SEQUENCER_LIVENESS_CATEGORY,
-              "transaction_failures",
-              "Number of transaction submission failures after");
+              SEQUENCER_LIVENESS,
+              "uptime_transaction_failure",
+              "Number of sequencer uptime transaction submission failures");
 
       // Labeled gauge for better aggregation across instances
       final var labelledUptimeGauge =
           this.metricsSystem.createLabelledSuppliedGauge(
-              SEQUENCER_LIVENESS_CATEGORY,
-              "uptime_transactions",
-              "Total number of sequencer uptime transactions sent by status",
+              SEQUENCER_LIVENESS,
+              "uptime_transaction",
+              "Number of succeeded sequencer uptime transactions by status",
               "status");
       labelledUptimeGauge.labels(uptimeTransactionDownCount::doubleValue, "down");
       labelledUptimeGauge.labels(uptimeTransactionUpCount::doubleValue, "up");
@@ -278,14 +273,14 @@ public class LineaLivenessService implements LivenessService {
   @Override
   public void updateUptimeMetrics(boolean isSucceeded, long blockTimestamp) {
     if (isSucceeded) {
-      if (this.metricCategoryRegistry.isMetricCategoryEnabled(SEQUENCER_LIVENESS_CATEGORY)) {
+      if (this.metricCategoryRegistry.isMetricCategoryEnabled(SEQUENCER_LIVENESS)) {
         uptimeTransactionUpCount.incrementAndGet();
         uptimeTransactionDownCount.incrementAndGet();
         uptimeTransactionsCounter.inc(2);
       }
       lastReportedDownBlockTimestamp.set(blockTimestamp);
     } else {
-      if (this.metricCategoryRegistry.isMetricCategoryEnabled(SEQUENCER_LIVENESS_CATEGORY)) {
+      if (this.metricCategoryRegistry.isMetricCategoryEnabled(SEQUENCER_LIVENESS)) {
         transactionFailureCounter.inc(2);
       }
     }
