@@ -25,6 +25,7 @@ import net.consensys.linea.jsonrpc.JsonRpcManager;
 import net.consensys.linea.jsonrpc.JsonRpcRequestBuilder;
 import net.consensys.linea.metrics.HistogramMetrics;
 import net.consensys.linea.plugins.config.LineaL1L2BridgeSharedConfiguration;
+import net.consensys.linea.sequencer.txselection.InvalidTransactionByLineCountCache;
 import net.consensys.linea.zktracer.LineCountingTracer;
 import org.hyperledger.besu.plugin.data.TransactionProcessingResult;
 import org.hyperledger.besu.plugin.data.TransactionSelectionResult;
@@ -40,6 +41,7 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
   private TraceLineLimitTransactionSelector traceLineLimitTransactionSelector;
   private final List<PluginTransactionSelector> selectors;
   private final Optional<JsonRpcManager> rejectedTxJsonRpcManager;
+  private final InvalidTransactionByLineCountCache invalidTransactionByLineCountCache;
   private final Set<String> rejectedTransactionReasonsMap = new HashSet<>();
 
   public LineaTransactionSelector(
@@ -50,8 +52,10 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
       final LineaProfitabilityConfiguration profitabilityConfiguration,
       final LineaTracerConfiguration tracerConfiguration,
       final Optional<JsonRpcManager> rejectedTxJsonRpcManager,
-      final Optional<HistogramMetrics> maybeProfitabilityMetrics) {
+      final Optional<HistogramMetrics> maybeProfitabilityMetrics,
+      final InvalidTransactionByLineCountCache invalidTransactionByLineCountCache) {
     this.rejectedTxJsonRpcManager = rejectedTxJsonRpcManager;
+    this.invalidTransactionByLineCountCache = invalidTransactionByLineCountCache;
 
     // only report rejected transaction selection result from TraceLineLimitTransactionSelector
     if (rejectedTxJsonRpcManager.isPresent()) {
@@ -67,7 +71,8 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
             l1L2BridgeConfiguration,
             profitabilityConfiguration,
             tracerConfiguration,
-            maybeProfitabilityMetrics);
+            maybeProfitabilityMetrics,
+            invalidTransactionByLineCountCache);
   }
 
   /**
@@ -88,7 +93,8 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
       final LineaL1L2BridgeSharedConfiguration l1L2BridgeConfiguration,
       final LineaProfitabilityConfiguration profitabilityConfiguration,
       final LineaTracerConfiguration tracerConfiguration,
-      final Optional<HistogramMetrics> maybeProfitabilityMetrics) {
+      final Optional<HistogramMetrics> maybeProfitabilityMetrics,
+      final InvalidTransactionByLineCountCache invalidTransactionByLineCountCache) {
 
     traceLineLimitTransactionSelector =
         new TraceLineLimitTransactionSelector(
@@ -96,7 +102,8 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
             blockchainService.getChainId().get(),
             txSelectorConfiguration,
             l1L2BridgeConfiguration,
-            tracerConfiguration);
+            tracerConfiguration,
+            invalidTransactionByLineCountCache);
 
     List<PluginTransactionSelector> selectors =
         List.of(

@@ -69,6 +69,7 @@ class LineaTransactionSelectorFactoryTest {
   private LineaLimitedBundlePool bundlePool;
   private LineaTracerConfiguration lineaTracerConfiguration;
   private LineaTransactionSelectorFactory factory;
+  private InvalidTransactionByLineCountCache invalidTransactionByLineCountCache;
 
   @TempDir static Path tempDir;
   @TempDir Path dataDir;
@@ -104,6 +105,7 @@ class LineaTransactionSelectorFactoryTest {
     mockProfitabilityConfiguration = mock(LineaProfitabilityConfiguration.class);
     mockEvents = mock(BesuEvents.class);
     bundlePool = spy(new LineaLimitedBundlePool(dataDir, 4096, mockEvents, mockBlockchainService));
+    invalidTransactionByLineCountCache = new InvalidTransactionByLineCountCache(10);
 
     factory =
         new LineaTransactionSelectorFactory(
@@ -115,7 +117,8 @@ class LineaTransactionSelectorFactoryTest {
             Optional.empty(),
             Optional.empty(),
             Optional.empty(),
-            bundlePool);
+            bundlePool,
+            invalidTransactionByLineCountCache);
     factory.create(new SelectorsStateManager());
   }
 

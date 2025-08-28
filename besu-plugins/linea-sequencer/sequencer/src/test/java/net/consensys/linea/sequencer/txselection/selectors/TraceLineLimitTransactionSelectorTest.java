@@ -24,6 +24,7 @@ import net.consensys.linea.config.LineaTracerConfiguration;
 import net.consensys.linea.config.LineaTransactionSelectorConfiguration;
 import net.consensys.linea.plugins.config.LineaL1L2BridgeSharedConfiguration;
 import net.consensys.linea.sequencer.modulelimit.ModuleLineCountValidator;
+import net.consensys.linea.sequencer.txselection.InvalidTransactionByLineCountCache;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
 import org.hyperledger.besu.datatypes.Address;
@@ -46,6 +47,7 @@ public class TraceLineLimitTransactionSelectorTest {
   private static final String MODULE_LINE_LIMITS_RESOURCE_NAME = "/sequencer/line-limits.toml";
   private LineaTracerConfiguration tracerConfiguration;
   private SelectorsStateManager selectorsStateManager;
+  private InvalidTransactionByLineCountCache invalidTransactionByLineCountCache;
 
   @TempDir static Path tempDir;
   static Path lineLimitsConfPath;
@@ -68,13 +70,15 @@ public class TraceLineLimitTransactionSelectorTest {
                 new HashMap<>(
                     ModuleLineCountValidator.createLimitModules(lineLimitsConfPath.toString())))
             .build();
+    invalidTransactionByLineCountCache =
+        new InvalidTransactionByLineCountCache(OVER_LINE_COUNT_LIMIT_CACHE_SIZE);
   }
 
   private TestableTraceLineLimitTransactionSelector newSelectorForNewBlock() {
     selectorsStateManager = new SelectorsStateManager();
     final var selector =
         new TestableTraceLineLimitTransactionSelector(
-            selectorsStateManager, tracerConfiguration, OVER_LINE_COUNT_LIMIT_CACHE_SIZE);
+            selectorsStateManager, tracerConfiguration, invalidTransactionByLineCountCache);
     selectorsStateManager.blockSelectionStarted();
     return selector;
   }
@@ -137,6 +141,7 @@ public class TraceLineLimitTransactionSelectorTest {
             transactionSelector.isOverLineCountLimitTxCached(
                 evaluationContext.getPendingTransaction().getTransaction().getHash()))
         .isTrue();
+    // Create a new selector with the same cache instance (simulating shared cache)
     transactionSelector = newSelectorForNewBlock();
     assertThat(
             transactionSelector.isOverLineCountLimitTxCached(
@@ -245,29 +250,33 @@ public class TraceLineLimitTransactionSelectorTest {
 
   private class TestableTraceLineLimitTransactionSelector
       extends TraceLineLimitTransactionSelector {
+    private final InvalidTransactionByLineCountCache testCache;
+
     TestableTraceLineLimitTransactionSelector(
         final SelectorsStateManager selectorsStateManager,
         final LineaTracerConfiguration lineaTracerConfiguration,
-        final int overLimitCacheSize) {
+        final InvalidTransactionByLineCountCache invalidTransactionByLineCountCache) {
       super(
           selectorsStateManager,
           BigInteger.ONE,
           LineaTransactionSelectorConfiguration.builder()
-              .overLinesLimitCacheSize(overLimitCacheSize)
+              .overLinesLimitCacheSize(invalidTransactionByLineCountCache.getMaxSize())
               .build(),
           LineaL1L2BridgeSharedConfiguration.builder()
               .contract(Address.fromHexString("0xDEADBEEF"))
               .topic(Bytes.fromHexString("0x012345"))
               .build(),
-          lineaTracerConfiguration);
+          lineaTracerConfiguration,
+          invalidTransactionByLineCountCache);
+      this.testCache = invalidTransactionByLineCountCache;
     }
 
     void resetCache() {
-      overLineCountLimitCache.clear();
+      testCache.clear();
     }
 
     boolean isOverLineCountLimitTxCached(final Hash txHash) {
-      return overLineCountLimitCache.contains(txHash);
+      return testCache.contains(txHash);
     }
   }
 }

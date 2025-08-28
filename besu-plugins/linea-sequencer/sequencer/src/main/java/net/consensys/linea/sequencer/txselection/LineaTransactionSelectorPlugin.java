@@ -115,7 +115,8 @@ public class LineaTransactionSelectorPlugin extends AbstractLineaRequiredPlugin 
             livenessService,
             rejectedTxJsonRpcManager,
             maybeProfitabilityMetrics,
-            bundlePoolService));
+            bundlePoolService,
+            getInvalidTransactionByLineCountCache()));
   }
 
   @Override

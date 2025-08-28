@@ -47,6 +47,7 @@ public class LineaTransactionSelectorFactory implements PluginTransactionSelecto
   private final Optional<HistogramMetrics> maybeProfitabilityMetrics;
   private final BundlePoolService bundlePoolService;
   private final Optional<LivenessService> livenessService;
+  private final InvalidTransactionByLineCountCache invalidTransactionByLineCountCache;
   private final AtomicReference<LineaTransactionSelector> currSelector = new AtomicReference<>();
 
   public LineaTransactionSelectorFactory(
@@ -58,7 +59,8 @@ public class LineaTransactionSelectorFactory implements PluginTransactionSelecto
       final Optional<LivenessService> livenessService,
       final Optional<JsonRpcManager> rejectedTxJsonRpcManager,
       final Optional<HistogramMetrics> maybeProfitabilityMetrics,
-      final BundlePoolService bundlePoolService) {
+      final BundlePoolService bundlePoolService,
+      final InvalidTransactionByLineCountCache invalidTransactionByLineCountCache) {
     this.blockchainService = blockchainService;
     this.txSelectorConfiguration = txSelectorConfiguration;
     this.l1L2BridgeConfiguration = l1L2BridgeConfiguration;
@@ -68,6 +70,7 @@ public class LineaTransactionSelectorFactory implements PluginTransactionSelecto
     this.maybeProfitabilityMetrics = maybeProfitabilityMetrics;
     this.bundlePoolService = bundlePoolService;
     this.livenessService = livenessService;
+    this.invalidTransactionByLineCountCache = invalidTransactionByLineCountCache;
   }
 
   @Override
@@ -81,7 +84,8 @@ public class LineaTransactionSelectorFactory implements PluginTransactionSelecto
             profitabilityConfiguration,
             tracerConfiguration,
             rejectedTxJsonRpcManager,
-            maybeProfitabilityMetrics);
+            maybeProfitabilityMetrics,
+            invalidTransactionByLineCountCache);
     currSelector.set(selector);
     return selector;
   }
