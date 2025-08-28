@@ -1,27 +1,27 @@
 import { ethers, getChainId } from "hardhat";
 import { DeployFunction } from "hardhat-deploy/types";
 
-// Deploy EIP-2935 Historical Block Hashes system contract - https://github.com/ethereum/EIPs/blob/master/EIPS/eip-2935.md
+// Deploy EIP-4788 Historical Block Hashes system contract - https://github.com/ethereum/EIPs/blob/master/EIPS/eip-4788.md
 // Prerequisite - Fund the predetermined sender address with enough ETH to cover the deployment cost
 
 // Run deploy script against anvil `anvil --hardfork london`
-// CUSTOM_PRIVATE_KEY=ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 CUSTOM_BLOCKCHAIN_URL=http://127.0.0.1:8545 npx hardhat deploy --network custom --tags EIP2935SystemContract
+// CUSTOM_PRIVATE_KEY=ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 CUSTOM_BLOCKCHAIN_URL=http://127.0.0.1:8545 npx hardhat deploy --network custom --tags EIP4788SystemContract
 
 // Run deploy script against local stack `make start-env-with-tracing-v2-ci CLEAN_PREVIOUS_ENV=true`
-// CUSTOM_PRIVATE_KEY=1dd171cec7e2995408b5513004e8207fe88d6820aeff0d82463b3e41df251aae CUSTOM_BLOCKCHAIN_URL=http://127.0.0.1:9045 npx hardhat deploy --network custom --tags EIP2935SystemContract
+// CUSTOM_PRIVATE_KEY=1dd171cec7e2995408b5513004e8207fe88d6820aeff0d82463b3e41df251aae CUSTOM_BLOCKCHAIN_URL=http://127.0.0.1:9045 npx hardhat deploy --network custom --tags EIP4788SystemContract
 
 const func: DeployFunction = async function () {
-  const contractName = "EIP2935SystemContract";
-  const expectedAddress = "0x0000F90827F1C53a10cb7A02335B175320002935";
+  const contractName = "EIP4788SystemContract";
+  const expectedAddress = "0x000F3df6D732807Ef1319fB7B8bB8522d0Beac02";
 
   // Check if the contract is already deployed at the expected address
   const code = await ethers.provider.getCode(expectedAddress);
   if (code !== "0x") {
-    console.log(`EIP-2935 system contract already deployed at ${expectedAddress}`);
+    console.log(`EIP-4788 system contract already deployed at ${expectedAddress}`);
     return;
   }
 
-  // EIP-2935 deployment transaction data - https://github.com/ethereum/EIPs/blob/master/EIPS/eip-2935.md#deployment
+  // EIP-4788 deployment transaction data - https://github.com/ethereum/EIPs/blob/master/EIPS/eip-4788.md#deployment
   const deploymentTx = {
     type: 0x0,
     nonce: 0x0,
@@ -29,14 +29,14 @@ const func: DeployFunction = async function () {
     gas: 0x3d090,
     gasPrice: 0xe8d4a51000,
     value: 0x0,
-    data: "0x60538060095f395ff33373fffffffffffffffffffffffffffffffffffffffe14604657602036036042575f35600143038111604257611fff81430311604257611fff9006545f5260205ff35b5f5ffd5b5f35611fff60014303065500",
+    data: "0x60618060095f395ff33373fffffffffffffffffffffffffffffffffffffffe14604d57602036146024575f5ffd5b5f35801560495762001fff810690815414603c575f5ffd5b62001fff01545f5260205ff35b5f5ffd5b62001fff42064281555f359062001fff015500",
     v: 0x1b,
     r: "0x539",
-    s: "0xaa12693182426612186309f02cfe8a80a0000",
+    s: "0x1b9b6eb1f0",
   };
 
-  // The predetermined sender address from EIP-2935
-  const predeterminedSenderAddress = "0x3462413Af4609098e1E27A490f554f260213D685";
+  // The predetermined sender address from EIP-4788
+  const predeterminedSenderAddress = "0x0B799C86a49DEeb90402691F1041aa3AF2d3C875";
 
   // Serialize the raw transaction with signature
   const rawTx = ethers.Transaction.from({
@@ -88,4 +88,4 @@ const func: DeployFunction = async function () {
   }
 };
 export default func;
-func.tags = ["EIP2935SystemContract"];
+func.tags = ["EIP4788SystemContract"];

@@ -12,17 +12,17 @@ import { EMPTY_INITIALIZE_SIGNATURE } from "../common/constants";
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments } = hre;
 
-  const contractName = "UpgradeableWithdrawalQueuePredeploy";
+  const contractName = "UpgradeableBeaconChainDepositPredeploy";
   const existingContractAddress = await getDeployedContractAddress(contractName, deployments);
 
-  // UpgradeableWithdrawalQueuePredeploy DEPLOYED AS UPGRADEABLE PROXY
+  // UpgradeableBeaconChainDepositPredeploy DEPLOYED AS UPGRADEABLE PROXY
   if (!existingContractAddress) {
     console.log(`Deploying initial version, NB: the address will be saved if env SAVE_ADDRESS=true.`);
   } else {
     console.log(`Deploying new version, NB: ${existingContractAddress} will be overwritten if env SAVE_ADDRESS=true.`);
   }
 
-  const contract = await deployUpgradableFromFactory("UpgradeableWithdrawalQueuePredeploy", [], {
+  const contract = await deployUpgradableFromFactory("UpgradeableBeaconChainDepositPredeploy", [], {
     initializer: EMPTY_INITIALIZE_SIGNATURE,
     unsafeAllow: ["constructor"],
   });
@@ -34,9 +34,9 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   await tryVerifyContract(
     contractAddress,
-    "src/predeploy/UpgradeableWithdrawalQueuePredeploy.sol:UpgradeableWithdrawalQueuePredeploy",
+    "src/predeploy/UpgradeableBeaconChainDepositPredeploy.sol:UpgradeableBeaconChainDepositPredeploy",
   );
 };
 
 export default func;
-func.tags = ["UpgradeableWithdrawalQueuePredeploy"];
+func.tags = ["UpgradeableBeaconChainDepositPredeploy"];

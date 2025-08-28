@@ -4,12 +4,12 @@ pragma solidity 0.8.30;
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 /**
- * @title Upgradeable Withdrawal Queue Predeploy Contract
- * @notice Implementation of EIP-7002 execution layer triggerable withdrawals
+ * @title Upgradeable Beacon Chain Deposit Contract
+ * @notice Implementation of Beacon Chain Deposit contract - https://github.com/ethereum/consensus-specs/blob/master/specs/phase0/deposit-contract.md
  * @author ConsenSys Software Inc.
  * @custom:security-contact security-report@linea.build
  */
-contract UpgradeableWithdrawalQueuePredeploy is Initializable {
+contract UpgradeableBeaconChainDepositPredeploy is Initializable {
   /**
     * @dev This empty reserved space is put in place to allow future versions to add new
     * variables without shifting down storage in the inheritance chain.

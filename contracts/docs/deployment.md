@@ -13,11 +13,11 @@ Running the script with an .env file set, you will need to make sure that the co
 Running the script without an .env file will require you to place the variables as command-line arguments.
 The command-line arguments will create or replace existing .env (only in memory) environment variables. If the variables are provided in the terminal as command-line arguments, they will have priority over the same variables if they are defined in the .env file. These need not exist in the .env file.
 
-Furthermore, you can also specify a general set of variables in the .env file (SAVE_ADDRESS, VERIFY_CONTRACT, SEPOLIA_PRIVATE_KEY, LINEA_SEPOLIA_PRIVATE_KEY, MAINNET_PRIVATE_KEY, LINEA_MAINNET_PRIVATE_KEY, ETHERSCAN_API_KEY, LINEASCAN_API_KEY, INFURA_API_KEY) and provide only the script-specific variables as command-line arguments, when you run each script.
+Furthermore, you can also specify a general set of variables in the .env file (SAVE_ADDRESS, VERIFY_CONTRACT, SEPOLIA_PRIVATE_KEY, LINEA_SEPOLIA_PRIVATE_KEY, MAINNET_PRIVATE_KEY, LINEA_MAINNET_PRIVATE_KEY, ETHERSCAN_API_KEY, INFURA_API_KEY) and provide only the script-specific variables as command-line arguments, when you run each script.
 
 Setting `SAVE_ADDRESS=true` will make the script write a file in the deployments/<network_name>/ folder which stores the contract address, ABI and transaction hash.
 <br />
-Setting `VERIFY_CONTRACT=true` will start the verifying stage after the contract is deployed, provided that there is a `ETHERSCAN_API_KEY` or `LINEASCAN_API_KEY` available in the .env or provided as CLI argument.
+Setting `VERIFY_CONTRACT=true` will start the verifying stage after the contract is deployed, provided that there is a `ETHERSCAN_API_KEY` available in the .env or provided as CLI argument.
 
 <br />
 
@@ -28,9 +28,9 @@ Dependent on which network you are using, a specific network private key needs t
 | Network       | Private key parameter name   | API Key / RPC URL | Block explorer parameter name |
 | ------------- | ----------------- | ---- | ----------------- | 
 | sepolia    | SEPOLIA_PRIVATE_KEY    | INFURA_API_KEY  | ETHERSCAN_API_KEY |
-| linea_sepolia | LINEA_SEPOLIA_PRIVATE_KEY   | INFURA_API_KEY  | LINEASCAN_API_KEY |
+| linea_sepolia | LINEA_SEPOLIA_PRIVATE_KEY   | INFURA_API_KEY  | ETHERSCAN_API_KEY |
 | mainnet   | MAINNET_PRIVATE_KEY | INFURA_API_KEY | ETHERSCAN_API_KEY |
-| linea_mainnet | LINEA_MAINNET_PRIVATE_KEY |  INFURA_API_KEY  | LINEASCAN_API_KEY |
+| linea_mainnet | LINEA_MAINNET_PRIVATE_KEY |  INFURA_API_KEY  | ETHERSCAN_API_KEY |
 | custom    | CUSTOM_PRIVATE_KEY | CUSTOM_BLOCKCHAIN_URL | ETHERSCAN_API_KEY |
 | zkevm_dev | PRIVATE_KEY | BLOCKCHAIN_NODE or L2_BLOCKCHAIN_NODE | n/a |
 
@@ -303,7 +303,7 @@ npx hardhat deploy --network linea_sepolia --tags L2MessageService
 
 Base command with cli arguments:
 ```shell
-SAVE_ADDRESS=true VERIFY_CONTRACT=true SEPOLIA_PRIVATE_KEY=<key> LINEASCAN_API_KEY=<key> INFURA_API_KEY=<key> L2MSGSERVICE_SECURITY_COUNCIL=<address> L2MSGSERVICE_L1L2_MESSAGE_SETTER=<address>  L2MSGSERVICE_RATE_LIMIT_PERIOD=<value> L2MSGSERVICE_RATE_LIMIT_AMOUNT=<value> npx hardhat deploy --network linea_sepolia --tags L2MessageService
+SAVE_ADDRESS=true VERIFY_CONTRACT=true SEPOLIA_PRIVATE_KEY=<key> ETHERSCAN_API_KEY=<key> INFURA_API_KEY=<key> L2MSGSERVICE_SECURITY_COUNCIL=<address> L2MSGSERVICE_L1L2_MESSAGE_SETTER=<address>  L2MSGSERVICE_RATE_LIMIT_PERIOD=<value> L2MSGSERVICE_RATE_LIMIT_AMOUNT=<value> npx hardhat deploy --network linea_sepolia --tags L2MessageService
 ```
 
 (make sure to replace `<value>` `<key>` `<address>` with actual values)
@@ -333,7 +333,7 @@ npx hardhat deploy --network linea_sepolia --tags BridgedToken
 
 Base command with cli arguments:
 ```shell
-SAVE_ADDRESS=true VERIFY_CONTRACT=true LINEASCAN_API_KEY=<key> LINEA_SEPOLIA_PRIVATE_KEY=<key> INFURA_API_KEY=<key> npx hardhat deploy --network linea_sepolia --tags BridgedToken
+SAVE_ADDRESS=true VERIFY_CONTRACT=true ETHERSCAN_API_KEY=<key> LINEA_SEPOLIA_PRIVATE_KEY=<key> INFURA_API_KEY=<key> npx hardhat deploy --network linea_sepolia --tags BridgedToken
 ```
 
 (make sure to replace `<value>` `<key>` `<address>` with actual values)
@@ -367,7 +367,7 @@ npx hardhat deploy --network linea_sepolia --tags CustomBridgedToken
 
 Base command with cli arguments:
 ```shell
-SAVE_ADDRESS=true VERIFY_CONTRACT=true LINEASCAN_API_KEY=<key> LINEA_SEPOLIA_PRIVATE_KEY=<key> INFURA_API_KEY=<key> CUSTOMTOKENBRIDGE_NAME=<name> CUSTOMTOKENBRIDGE_SYMBOL=<symbol> CUSTOMTOKENBRIDGE_DECIMALS=<decimals> CUSTOMTOKENBRIDGE_BRIDGE_ADDRESS=<address> npx hardhat deploy --network linea_sepolia --tags CustomBridgedToken
+SAVE_ADDRESS=true VERIFY_CONTRACT=true ETHERSCAN_API_KEY=<key> LINEA_SEPOLIA_PRIVATE_KEY=<key> INFURA_API_KEY=<key> CUSTOMTOKENBRIDGE_NAME=<name> CUSTOMTOKENBRIDGE_SYMBOL=<symbol> CUSTOMTOKENBRIDGE_DECIMALS=<decimals> CUSTOMTOKENBRIDGE_BRIDGE_ADDRESS=<address> npx hardhat deploy --network linea_sepolia --tags CustomBridgedToken
 ```
 
 (make sure to replace `<key>` `<address>` `<name>` `<symbol>` `<decimals>` with actual values)
@@ -403,7 +403,7 @@ npx hardhat deploy --network linea_sepolia --tags TokenBridge
 
 Base command with cli arguments:
 ```shell
-SAVE_ADDRESS=true VERIFY_CONTRACT=true LINEASCAN_API_KEY=<key> LINEA_SEPOLIA_PRIVATE_KEY=<key> INFURA_API_KEY=<key> REMOTE_CHAIN_ID=<uint256> TOKEN_BRIDGE_L1=true L1_RESERVED_TOKEN_ADDRESSES=<address> L2MESSAGESERVICE_ADDRESS=<address> LINEA_ROLLUP_ADDRESS=<address> npx hardhat deploy --network linea_sepolia --tags TokenBridge
+SAVE_ADDRESS=true VERIFY_CONTRACT=true ETHERSCAN_API_KEY=<key> LINEA_SEPOLIA_PRIVATE_KEY=<key> INFURA_API_KEY=<key> REMOTE_CHAIN_ID=<uint256> TOKEN_BRIDGE_L1=true L1_RESERVED_TOKEN_ADDRESSES=<address> L2MESSAGESERVICE_ADDRESS=<address> LINEA_ROLLUP_ADDRESS=<address> npx hardhat deploy --network linea_sepolia --tags TokenBridge
 ```
 
 (make sure to replace `<value>` `<key>` `<address>` with actual values)
@@ -492,7 +492,7 @@ npx hardhat deploy --network linea_sepolia --tags L2MessageService,Timelock
 
 Base command with cli arguments:
 ```shell
-SAVE_ADDRESS=true VERIFY_CONTRACT=true LINEA_SEPOLIA_PRIVATE_KEY=<key> LINEASCAN_API_KEY=<key> INFURA_API_KEY=<key> L2MSGSERVICE_SECURITY_COUNCIL=<address> L2MSGSERVICE_L1L2_MESSAGE_SETTER=<address>  L2MSGSERVICE_RATE_LIMIT_PERIOD=<value> L2MSGSERVICE_RATE_LIMIT_AMOUNT=<value> TIMELOCK_PROPOSERS=<address> TIMELOCK_EXECUTORS=<address> TIMELOCK_ADMIN_ADDRESS=<address> MIN_DELAY=<value> npx hardhat deploy --network linea_sepolia --tags L2MessageService_Timelock
+SAVE_ADDRESS=true VERIFY_CONTRACT=true LINEA_SEPOLIA_PRIVATE_KEY=<key> ETHERSCAN_API_KEY=<key> INFURA_API_KEY=<key> L2MSGSERVICE_SECURITY_COUNCIL=<address> L2MSGSERVICE_L1L2_MESSAGE_SETTER=<address>  L2MSGSERVICE_RATE_LIMIT_PERIOD=<value> L2MSGSERVICE_RATE_LIMIT_AMOUNT=<value> TIMELOCK_PROPOSERS=<address> TIMELOCK_EXECUTORS=<address> TIMELOCK_ADMIN_ADDRESS=<address> MIN_DELAY=<value> npx hardhat deploy --network linea_sepolia --tags L2MessageService_Timelock
 ```
 
 (make sure to replace `<value>` `<key>` `<address>` with actual values)
@@ -526,7 +526,7 @@ npx hardhat deploy --network linea_sepolia --tags BridgedToken,TokenBridge
 
 Base command with cli arguments:
 ```shell
-SAVE_ADDRESS=true VERIFY_CONTRACT=true LINEASCAN_API_KEY=<key> LINEA_SEPOLIA_PRIVATE_KEY=<key> INFURA_API_KEY=<key> REMOTE_CHAIN_ID=<uint256> TOKEN_BRIDGE_L1=true L1_RESERVED_TOKEN_ADDRESSES=<address>  L2MESSAGESERVICE_ADDRESS=<address> LINEA_ROLLUP_ADDRESS=<address>  npx hardhat deploy --network linea_sepolia --tags BridgedToken,TokenBridge
+SAVE_ADDRESS=true VERIFY_CONTRACT=true ETHERSCAN_API_KEY=<key> LINEA_SEPOLIA_PRIVATE_KEY=<key> INFURA_API_KEY=<key> REMOTE_CHAIN_ID=<uint256> TOKEN_BRIDGE_L1=true L1_RESERVED_TOKEN_ADDRESSES=<address>  L2MESSAGESERVICE_ADDRESS=<address> LINEA_ROLLUP_ADDRESS=<address>  npx hardhat deploy --network linea_sepolia --tags BridgedToken,TokenBridge
 ```
 (make sure to replace `<value>` `<key>` `<address>` with actual values)
 

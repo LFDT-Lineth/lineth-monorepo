@@ -32,7 +32,10 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   await tryStoreAddress(hre.network.name, contractName, contractAddress, contract.deploymentTransaction()!.hash);
 
-  await tryVerifyContract(contractAddress);
+  await tryVerifyContract(
+    contractAddress,
+    "src/predeploy/UpgradeableConsolidationQueuePredeploy.sol:UpgradeableConsolidationQueuePredeploy",
+  );
 };
 
 export default func;

@@ -10,8 +10,6 @@ import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/I
  * @custom:security-contact security-report@linea.build
  */
 contract UpgradeableConsolidationQueuePredeploy is Initializable {
-  error NotImplemented();
-
   /**
     * @dev This empty reserved space is put in place to allow future versions to add new
     * variables without shifting down storage in the inheritance chain.
@@ -31,16 +29,14 @@ contract UpgradeableConsolidationQueuePredeploy is Initializable {
   }
 
   /**
-   * @notice Fallback function - reverts to prevent accidental calls
+   * @notice Fallback function - noop
    */
   fallback() external payable {
-    revert NotImplemented();
   }
 
   /**
-   * @notice Receive function - reverts to prevent accidental ETH transfers
+   * @notice Receive function - noop
    */
   receive() external payable {
-    revert NotImplemented();
   }
 }
