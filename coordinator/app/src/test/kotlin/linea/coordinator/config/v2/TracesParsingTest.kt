@@ -175,4 +175,86 @@ class TracesParsingTest {
     assertThat(parseConfig<WrapperConfig>(tomlMinimal).traces)
       .isEqualTo(configMinimal)
   }
+
+  @Test
+  fun `should parse traces config with ignoreTracesGeneratorErrors enabled`() {
+    val tomlWithIgnoreErrors = """
+    [traces]
+    expected-traces-api-version = "1.2.0"
+    ignore-traces-generator-errors = true
+    [traces.counters]
+    endpoints = ["http://traces-api-1:8080/"]
+    [traces.conflation]
+    endpoints = ["http://traces-api-2:8080/"]
+    """.trimIndent()
+
+    val expectedConfig = TracesToml(
+      expectedTracesApiVersion = "1.2.0",
+      ignoreTracesGeneratorErrors = true,
+      counters = TracesToml.ClientApiConfigToml(
+        endpoints = listOf(URI.create("http://traces-api-1:8080/").toURL()),
+        requestLimitPerEndpoint = UInt.MAX_VALUE,
+        requestTimeout = null,
+        requestRetries = RequestRetriesToml(
+          maxRetries = null,
+          backoffDelay = 1.seconds,
+          failuresWarningThreshold = 3u,
+        ),
+      ),
+      conflation = TracesToml.ClientApiConfigToml(
+        endpoints = listOf(URI.create("http://traces-api-2:8080/").toURL()),
+        requestLimitPerEndpoint = UInt.MAX_VALUE,
+        requestTimeout = null,
+        requestRetries = RequestRetriesToml(
+          maxRetries = null,
+          backoffDelay = 1.seconds,
+          failuresWarningThreshold = 3u,
+        ),
+      ),
+    )
+
+    assertThat(parseConfig<WrapperConfig>(tomlWithIgnoreErrors).traces)
+      .isEqualTo(expectedConfig)
+  }
+
+  @Test
+  fun `should parse traces config with ignoreTracesGeneratorErrors explicitly disabled`() {
+    val tomlWithIgnoreErrorsDisabled = """
+    [traces]
+    expected-traces-api-version = "1.2.0"
+    ignore-traces-generator-errors = false
+    [traces.counters]
+    endpoints = ["http://traces-api-1:8080/"]
+    [traces.conflation]
+    endpoints = ["http://traces-api-2:8080/"]
+    """.trimIndent()
+
+    val expectedConfig = TracesToml(
+      expectedTracesApiVersion = "1.2.0",
+      ignoreTracesGeneratorErrors = false,
+      counters = TracesToml.ClientApiConfigToml(
+        endpoints = listOf(URI.create("http://traces-api-1:8080/").toURL()),
+        requestLimitPerEndpoint = UInt.MAX_VALUE,
+        requestTimeout = null,
+        requestRetries = RequestRetriesToml(
+          maxRetries = null,
+          backoffDelay = 1.seconds,
+          failuresWarningThreshold = 3u,
+        ),
+      ),
+      conflation = TracesToml.ClientApiConfigToml(
+        endpoints = listOf(URI.create("http://traces-api-2:8080/").toURL()),
+        requestLimitPerEndpoint = UInt.MAX_VALUE,
+        requestTimeout = null,
+        requestRetries = RequestRetriesToml(
+          maxRetries = null,
+          backoffDelay = 1.seconds,
+          failuresWarningThreshold = 3u,
+        ),
+      ),
+    )
+
+    assertThat(parseConfig<WrapperConfig>(tomlWithIgnoreErrorsDisabled).traces)
+      .isEqualTo(expectedConfig)
+  }
 }

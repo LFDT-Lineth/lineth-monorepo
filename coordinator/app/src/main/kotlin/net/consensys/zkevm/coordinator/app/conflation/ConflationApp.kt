@@ -279,6 +279,7 @@ class ConflationApp(
         ),
         config = TracesGeneratorJsonRpcClientV2.Config(
           expectedTracesApiVersion = configs.traces.expectedTracesApiVersion,
+          ignoreTracesGeneratorErrors = configs.traces.ignoreTracesGeneratorErrors,
         ),
         retryConfig = configs.traces.counters.requestRetries.toJsonRpcRetry(),
         log = tracesCountersLog,
@@ -297,6 +298,7 @@ class ConflationApp(
         ),
         config = TracesGeneratorJsonRpcClientV2.Config(
           expectedTracesApiVersion = configs.traces.expectedTracesApiVersion,
+          ignoreTracesGeneratorErrors = configs.traces.ignoreTracesGeneratorErrors,
         ),
         retryConfig = configs.traces.conflation.requestRetries.toJsonRpcRetry(),
         log = tracesConflationLog,

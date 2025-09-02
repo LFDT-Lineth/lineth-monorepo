@@ -9,6 +9,7 @@ data class TracesToml(
   val expectedTracesApiVersion: String,
   val counters: ClientApiConfigToml,
   val conflation: ClientApiConfigToml,
+  val ignoreTracesGeneratorErrors: Boolean = false,
   val switchBlockNumberInclusive: UInt? = null,
   val new: TracesToml? = null,
 ) {
@@ -46,6 +47,7 @@ data class TracesToml(
         requestTimeout = conflation.requestTimeout,
         requestRetries = conflation.requestRetries.asDomain,
       ),
+      ignoreTracesGeneratorErrors = ignoreTracesGeneratorErrors,
       /*
       switchBlockNumberInclusive = switchBlockNumberInclusive,
       new = new?.let { newTracesConfig ->

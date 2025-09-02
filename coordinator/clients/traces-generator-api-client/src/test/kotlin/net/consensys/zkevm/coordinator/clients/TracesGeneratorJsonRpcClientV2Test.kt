@@ -207,7 +207,7 @@ class TracesGeneratorJsonRpcClientV2Test {
     val blockNumber = 1UL
     val resultFuture = tracesGeneratorClient.getTracesCounters(blockNumber)
     val exception = assertThrows<ExecutionException> { resultFuture.get() }
-    assertThat(exception.message).contains("missing modules: WCP")
+    assertThat(exception).hasMessageContaining("missing modules: WCP")
   }
 
   @Test
@@ -240,7 +240,7 @@ class TracesGeneratorJsonRpcClientV2Test {
     val blockNumber = 1UL
     val resultFuture = tracesGeneratorClient.getTracesCounters(blockNumber)
     val exception = assertThrows<ExecutionException> { resultFuture.get() }
-    assertThat(exception.message).contains("unsupported modules: NEW_EVM_MODULE")
+    assertThat(exception).hasMessageContaining("unsupported modules: NEW_EVM_MODULE")
   }
 
   @Test
@@ -443,5 +443,50 @@ class TracesGeneratorJsonRpcClientV2Test {
     )
 
     assertThat(resultFuture.get()).isInstanceOf(Ok::class.java)
+  }
+
+  @Test
+  fun error_getTracesCounters_pluginInternalError_withFallbackEnabled() {
+    val errorMessage = "Plugin internal error"
+    val data = "Exceptions triggered while tracing!"
+    val response = JsonObject.of(
+      "jsonrpc",
+      "2.0",
+      "id",
+      835,
+      "error",
+      mapOf(
+        "code" to -32603,
+        "message" to errorMessage,
+        "data" to data,
+      ),
+    )
+
+    wiremock.stubFor(
+      post("/")
+        .withHeader("Content-Type", containing("application/json"))
+        .willReturn(
+          ok()
+            .withHeader("Content-type", "application/json")
+            .withBody(response.toString().toByteArray()),
+        ),
+    )
+
+    tracesGeneratorClient = TracesGeneratorJsonRpcClientV2(
+      vertxHttpJsonRpcClient,
+      TracesGeneratorJsonRpcClientV2.Config(
+        expectedTracesApiVersion = expectedTracesApiVersion,
+        ignoreTracesGeneratorErrors = true,
+      ),
+    )
+
+    val blockNumber = 1UL
+    val resultFuture = tracesGeneratorClient.getTracesCounters(blockNumber)
+    val result = resultFuture.get()
+
+    assertThat(result).isInstanceOf(Ok::class.java)
+    result as Ok
+    assertThat(result.value.tracesCounters).isEqualTo(TracesCountersV2.EMPTY_TRACES_COUNT)
+    assertThat(result.value.tracesEngineVersion).isEqualTo(expectedTracesApiVersion)
   }
 }

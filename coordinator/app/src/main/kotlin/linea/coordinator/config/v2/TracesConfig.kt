@@ -9,6 +9,7 @@ data class TracesConfig(
   val expectedTracesApiVersion: String,
   val counters: ClientApiConfig,
   val conflation: ClientApiConfig,
+  val ignoreTracesGeneratorErrors: Boolean = false,
   // val switchBlockNumberInclusive: UInt? = null,
   // val new: TracesConfig? = null
 ) {
