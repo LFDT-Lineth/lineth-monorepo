@@ -73,12 +73,12 @@ public class ExcludedPrecompilesLimitlessTest extends LineaPluginTestBase {
           excludedPrecompiles
               .callRIPEMD160("I am not allowed here".getBytes(StandardCharsets.UTF_8))
               .encodeFunctionCall(),
-          "Tx 0xe4648fd59d4289e59b112bf60931336440d306c85c2aac5a8b0c64ab35bc55b7 line count per module: [RIP=2147483647/2147483647/1,BLAKE=0/0/1,BLOCK_L1_SIZE=235/365/1000000,MODEXP=0/0/1,BLOCK_L2_L1_LOGS=0/0/16"),
+          "Tx 0xe4648fd59d4289e59b112bf60931336440d306c85c2aac5a8b0c64ab35bc55b7 line count per module: [BLAKE=0/0/1,POINT_EVAL=0/0/1,MODEXP=0/0/1,BLOCK_L2_L1_LOGS=0/0/16,RIP=2147483647/2147483647/1,BLS=0/0/1,BLOCK_L1_SIZE=235/365/1000000]"),
       new InvalidCall(
           Accounts.GENESIS_ACCOUNT_TWO_PRIVATE_KEY,
           0,
           encodedCallBlake2F(excludedPrecompiles),
-          "Tx 0x9f457b1b5244b03c54234f7f9e8225d4253135dd3c99a46dc527d115e7ea5dac line count per module: [RIP=0/0/1,BLAKE=2147483647/2147483647/1,BLOCK_L1_SIZE=462/592/1000000,MODEXP=0/0/1,BLOCK_L2_L1_LOGS=0/0/16]")
+          "Tx 0x9f457b1b5244b03c54234f7f9e8225d4253135dd3c99a46dc527d115e7ea5dac line count per module: [BLAKE=2147483647/2147483647/1,POINT_EVAL=0/0/1,MODEXP=0/0/1,BLOCK_L2_L1_LOGS=0/0/16,RIP=0/0/1,BLS=0/0/1,BLOCK_L1_SIZE=462/592/1000000]")
     };
 
     final var invalidTxHashes =

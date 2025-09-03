@@ -6,9 +6,11 @@
 ##
 
 [traces-limits]
-MODEXP  = 1
-RIP     = 1
-BLAKE   = 1
+MODEXP     = 1
+RIP        = 1
+BLAKE      = 1
+BLS        = 1
+POINT_EVAL = 1
 
 #
 # Block-specific limits

@@ -43,6 +43,8 @@ STP                 = 262144
 OOB                 = 262144
 BLOCK_DATA          = 26
 BLOCK_HASH          = 6
+BLS                 = 1
+POINT_EVAL          = 1
 
 #
 # Block-specific limits

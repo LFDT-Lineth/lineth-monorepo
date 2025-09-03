@@ -15,6 +15,7 @@ BIN                 = 262144
 BLAKE_MODEXP_DATA   = 262144
 BLOCK_DATA          = 26
 BLOCK_HASH          = 6
+BLS                 = 1
 EC_DATA             = 4096
 EUC                 = 16384 # can probably be lower
 EXP                 = 32760
@@ -42,6 +43,7 @@ TXN_DATA            = 30
 SHAKIRA_DATA        = 262144
 STP                 = 20
 OOB                 = 262144
+POINT_EVAL          = 1
 
 #
 # Block-specific limits
