@@ -172,10 +172,16 @@ class GlobalBlobAwareConflationCalculator(
       endBlockTime = blobBlockCounters
         .find { it.blockNumber == blobInterval.endBlockNumber }!!.blockTimestamp,
     )
+    val triggerName = if (numberOfBatches >= batchesLimit) {
+      "BATCHES_LIMIT"
+    } else {
+      trigger.name
+    }
+
     log.info(
       "new blob: blob={} trigger={} blobSizeBytes={} blobBatchesCount={} blobBatchesLimit={} blobBatchesList={}",
       blobInterval.intervalString(),
-      trigger,
+      triggerName,
       compressedData.size,
       blobBatches.size,
       batchesLimit,
