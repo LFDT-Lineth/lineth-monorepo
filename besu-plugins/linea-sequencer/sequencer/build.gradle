@@ -8,12 +8,9 @@
  */
 
 plugins {
-  id 'java'
-  id 'java-library-distribution'
+  alias(libs.plugins.besuPluginDistribution)
   alias(libs.plugins.lombok)
   alias(libs.plugins.gradleVersions)
-  alias(libs.plugins.dependencyManagement)
-  alias(libs.plugins.download)
 }
 
 group = 'net.consensys.linea.besu.plugin'
@@ -21,46 +18,23 @@ group = 'net.consensys.linea.besu.plugin'
 def lineaSequencerProject = project(lineaSequencerProjectPath)
 apply from: lineaSequencerProject.file("gradle/java.gradle")
 apply from: lineaSequencerProject.file("gradle/dependency-management.gradle")
-apply from: lineaSequencerProject.file('gradle/common-dependencies.gradle')
 apply from: lineaSequencerProject.file("gradle/lint.gradle")
 
 dependencies {
-  // annotationProcessor generates the file META-INF/services/org.hyperledger.besu.plugin.BesuPlugin
-  annotationProcessor 'com.google.auto.service:auto-service'
-  compileOnly 'com.google.auto.service:auto-service'
+  implementation "net.consensys.linea.zktracer:arithmetization:${libs.versions.arithmetization.get()}"
+  implementation "build.linea:blob-compressor:${libs.versions.blobCompressor.get()}"
+  implementation "build.linea.internal:kotlin:${libs.versions.lineaKotlin.get()}"
 
-  api "build.linea:blob-compressor:${libs.versions.blobCompressor.get()}"
-  api "build.linea.internal:kotlin:${libs.versions.lineaKotlin.get()}"
+  testImplementation 'org.assertj:assertj-core'
 
-  implementation "${besuArtifactGroup}:besu-datatypes"
-  implementation "${besuArtifactGroup}:besu-evm"
-  implementation "${besuArtifactGroup}:besu-plugin-api"
-  implementation "${besuArtifactGroup}.internal:besu-crypto-algorithms"
-  implementation "${besuArtifactGroup}.internal:besu-ethereum-api"
-  implementation "${besuArtifactGroup}.internal:besu-ethereum-core"
-  implementation "${besuArtifactGroup}.internal:besu-ethereum-eth"
-  implementation "${besuArtifactGroup}.internal:besu-ethereum-rlp"
+  testImplementation 'org.junit.jupiter:junit-jupiter-api'
+  testImplementation 'org.junit.jupiter:junit-jupiter-params'
+  testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
 
-  implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8'
+  testImplementation 'org.mockito:mockito-core'
+  testImplementation 'org.mockito:mockito-junit-jupiter'
 
-  implementation 'com.github.ben-manes.caffeine:caffeine'
-
-  implementation 'com.google.code.gson:gson'
-
-  implementation "io.consensys.tuweni:tuweni-bytes"
-  implementation "io.consensys.tuweni:tuweni-units"
-  implementation "io.consensys.tuweni:tuweni-toml"
-
-  implementation 'info.picocli:picocli'
-
-  implementation 'net.consensys.linea.zktracer:arithmetization'
-
-  implementation 'org.hibernate.validator:hibernate-validator'
-
-  testImplementation "${besuArtifactGroup}.internal:besu-app"
-  testImplementation group: "${besuArtifactGroup}.internal", name: "besu-ethereum-core", classifier: "test-support"
-
-  testImplementation 'org.awaitility:awaitility'
+  testImplementation "org.wiremock:wiremock:${libs.versions.wiremock.get()}"
 }
 
 apply from: lineaSequencerProject.file("gradle/dist.gradle")

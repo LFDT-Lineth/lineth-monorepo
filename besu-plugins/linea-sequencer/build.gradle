@@ -4,17 +4,14 @@ buildscript {
   ext {
     distributionIdentifier = "linea-sequencer"
     releaseVersion = "${libs.versions.arithmetization.get()}-SNAPSHOT"
-    distributionBaseUrl = "https://github.com/Consensys/linea-besu-upstream/releases/download/"
-    besuIdentifier = "besu-${libs.versions.besu.get()}"
-    besuFilename = "${besuIdentifier}.tar.gz"
-    besuUrl = "${distributionBaseUrl}${libs.versions.besu.get()}/${besuFilename}"
-    besuPluginsIdentifier = "${distributionIdentifier}-${version}"
-    besuPluginDir = File.createTempDir("plugins")
+    besuVersion = "${libs.versions.besu.get()}"
+    besuRepo = "https://artifacts.consensys.net/public/linea-besu/maven/"
   }
 }
 
 plugins {
-  id 'java-library'
+  alias(libs.plugins.besuPluginLibrary)
+  alias(libs.plugins.besuPluginDistribution)
   alias(libs.plugins.dependencyLicenseReport)
 }
 

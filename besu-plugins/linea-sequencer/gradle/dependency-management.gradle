@@ -9,97 +9,9 @@
 
 repositories {
   maven {
-    url "https://artifacts.consensys.net/public/linea-besu/maven/"
-    content {
-      includeGroupByRegex('io\\.consensys\\..*')
-      includeGroupByRegex('org\\.hyperledger\\..*')
-    }
-  }
-  maven {
-    url 'https://hyperledger.jfrog.io/hyperledger/besu-maven'
-    content { includeGroupByRegex('org\\.hyperledger\\..*') }
-  }
-  maven {
-    url 'https://artifacts.consensys.net/public/maven/maven/'
-    content {
-      includeGroupByRegex('tech\\.pegasys(\\..*)?')
-    }
-  }
-  maven {
     url "https://artifacts.consensys.net/public/linea-arithmetization/maven/"
     content {
       includeGroupByRegex('net\\.consensys\\.linea\\..*?')
     }
   }
-  maven {
-    url 'https://splunk.jfrog.io/splunk/ext-releases-local'
-    content { includeGroupByRegex('com\\.splunk\\..*') }
-  }
-  mavenCentral()
-  mavenLocal()
-}
-
-apply plugin: 'io.spring.dependency-management'
-
-dependencyManagement {
-  applyMavenExclusions = false
-  generatedPomCustomization {
-    enabled = false
-  }
-  imports {
-    mavenBom "${besuArtifactGroup}:bom:${libs.versions.besu.get()}"
-  }
-
-  dependencies {
-    dependencySet(group: "net.consensys.linea.zktracer", version: "${libs.versions.arithmetization.get()}") {
-      entry "arithmetization"
-    }
-
-    dependency "com.google.code.gson:gson:${libs.versions.gson.get()}"
-
-    dependency "io.consensys.tuweni:tuweni-bytes:${libs.versions.tuweni.get()}"
-    dependency "io.consensys.tuweni:tuweni-units:${libs.versions.tuweni.get()}"
-    dependency "io.consensys.tuweni:tuweni-toml:${libs.versions.tuweni.get()}"
-
-    // ToDo: remove when fixed in Besu, force version to avoid conflict with previous version
-    dependency "org.apache.logging.log4j:log4j-api:${libs.versions.log4j.get()}"
-    dependency "org.apache.logging.log4j:log4j-core:${libs.versions.log4j.get()}"
-
-    dependency "org.wiremock:wiremock:${libs.versions.wiremock.get()}"
-  }
-}
-
-configurations.all {
-  // transitive versions conflict new Besu coordinates
-  exclude group: "${besuArtifactGroup}.internal", module: 'dsl'
-  exclude group: "${besuArtifactGroup}.internal", module: 'besu'
-  exclude group: "${besuArtifactGroup}.internal", module: 'config'
-  exclude group: "${besuArtifactGroup}.internal", module: 'clique'
-  exclude group: "${besuArtifactGroup}.internal", module: 'common'
-  exclude group: "${besuArtifactGroup}.internal", module: 'ibft'
-  exclude group: "${besuArtifactGroup}.internal", module: 'ibftlegacy'
-  exclude group: "${besuArtifactGroup}.internal", module: 'merge'
-  exclude group: "${besuArtifactGroup}.internal", module: 'qbft'
-  exclude group: "${besuArtifactGroup}.internal", module: 'qbft-core'
-  exclude group: "${besuArtifactGroup}.internal", module: 'algorithms'
-  exclude group: "${besuArtifactGroup}.internal", module: 'services'
-  exclude group: "${besuArtifactGroup}.internal", module: 'api'
-  exclude group: "${besuArtifactGroup}.internal", module: 'blockcreation'
-  exclude group: "${besuArtifactGroup}.internal", module: 'core'
-  exclude group: "${besuArtifactGroup}.internal", module: 'eth'
-  exclude group: "${besuArtifactGroup}.internal", module: 'p2p'
-  exclude group: "${besuArtifactGroup}.internal", module: 'permissioning'
-  exclude group: "${besuArtifactGroup}.internal", module: 'referencetests'
-  exclude group: "${besuArtifactGroup}.internal", module: 'rlp'
-  exclude group: "${besuArtifactGroup}.internal", module: 'trie'
-  exclude group: "${besuArtifactGroup}", module: 'evm'
-  exclude group: "${besuArtifactGroup}.internal", module: 'metrics-core'
-  exclude group: "${besuArtifactGroup}", module: 'plugin-api'
-  exclude group: "${besuArtifactGroup}.internal", module: 'testutil'
-  exclude group: "${besuArtifactGroup}.internal", module: 'util'
-  exclude group: "${besuArtifactGroup}.internal", module: 'nat'
-  exclude group: "${besuArtifactGroup}.internal", module: 'tasks'
-  exclude group: "${besuArtifactGroup}.internal", module: 'pipeline'
-  exclude group: "${besuArtifactGroup}.internal", module: 'kvstore'
-  exclude group: "${besuArtifactGroup}.internal", module: 'enclave'
 }

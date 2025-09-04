@@ -1,3 +1,13 @@
+pluginManagement {
+//    includeBuild '../besu-plugin-gradle-plugin'
+  repositories {
+    gradlePluginPortal()
+    maven {
+      url = uri('https://raw.githubusercontent.com/Consensys/besu-plugin-gradle-plugin-artifacts/main')
+    }
+  }
+}
+
 rootProject.name = 'linea'
 // please keep deps sorted by group and alphabetically
 include 'jvm-libs:generic:serialization:jackson'

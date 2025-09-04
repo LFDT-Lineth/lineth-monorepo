@@ -21,72 +21,6 @@ tasks.register('javadocJar', Jar) {
   from javadoc.destinationDir
 }
 
-def besuDistTar = new File(new File(buildDir, "downloads"), lineaSequencerProject.besuFilename)
-task downloadBesu {
-    outputs.file(besuDistTar)
-    doLast {
-        try {
-            download.run {
-                src lineaSequencerProject.besuUrl
-                dest besuDistTar
-                onlyIfModified true
-            }
-        } catch (Exception e) {
-            def localBesuDir =
-                    project.hasProperty('useLocalBesuDir')
-                            ? file("${findProperty('useLocalBesuDir')}".replaceFirst('^~', System.getProperty('user.home')))
-                            : new File(projectDir, "../../../../besu")
-
-            def localBesuFile = new File("${localBesuDir.canonicalPath}/build/distributions/${lineaSequencerProject.besuFilename}")
-
-            logger.warn("Could not download " + lineaSequencerProject.besuUrl + " trying local copy from " + localBesuFile + " as fallback")
-            if (!file(localBesuFile).exists()) {
-                throw new GradleException("Could not download Besu distribution from: " + lineaSequencerProject.besuUrl +
-                        ", and could not find it locally at ${localBesuFile} either")
-            }
-
-            copy {
-                from localBesuFile
-                into besuDistTar.parentFile
-            }
-        }
-    }
-}
-
-task unTarBesu(type: Copy) {
-    dependsOn downloadBesu
-
-    from tarTree(besuDistTar)
-    into besuDistTar.parentFile
-}
-
-def besuLibDir = new File(besuDistTar.parentFile, lineaSequencerProject.besuIdentifier + '/lib')
-def besuLibs = []
-
-def excludeBesuProvidedDeps = {
-    if(besuLibs.isEmpty()) {
-        // Get all the dependencies that are provided by Besu
-        fileTree(dir: besuLibDir, include: '*.jar').visit {
-            FileVisitDetails details ->
-                besuLibs << details.file.name
-        }
-    }
-    // include the dependency in the jar only if it is not already provided by Besu
-    !besuLibs.any { artifactName ->
-        if(artifactName == it.name) {
-            return true
-        }
-        // exclude Besu group
-        if(it.toString().contains(besuArtifactGroup)) {
-            return true
-        }
-        // try ignoring the version
-        def libName = it.name =~ dependencyNamePattern()
-        def artName = artifactName =~ dependencyNamePattern()
-        libName[0][1] == artName[0][1]
-    }
-}
-
 jar {
   archiveBaseName = lineaSequencerProject.distributionIdentifier
   version = calculateVersion()
@@ -99,27 +33,4 @@ jar {
       'Implementation-Version': calculateVersion()
     )
   }
-}
-
-/**
- * Create a distribution of the plugin, that only contains the plugin jar and the
- * dependencies that are not provided by Besu itself, so that is can be simply
- * extracted in the Besu plugins dir.
- */
-tasks.register('distPlugin', Zip) {
-    dependsOn unTarBesu
-    dependsOn installDist
-
-    archiveBaseName = lineaSequencerProject.distributionIdentifier
-
-    from("${buildDir}/libs/${lineaSequencerProject.distributionIdentifier}-${calculateVersion()}.jar")
-    from {
-        configurations.runtimeClasspath.filter(
-                excludeBesuProvidedDeps)
-
-    }
-}
-
-static def dependencyNamePattern() {
-    /(.*)(\-.*?)\.jar/
 }
