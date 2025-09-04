@@ -23,6 +23,14 @@ apply from: lineaSequencerProject.file("gradle/java.gradle")
 apply from: lineaSequencerProject.file("gradle/dependency-management.gradle")
 apply from: lineaSequencerProject.file("gradle/lint.gradle")
 
+compileJava {
+  options.annotationProcessorGeneratedSourcesDirectory = file("$buildDir/generated/sources/annotationProcessor/java/main")
+  options.compilerArgs += [
+    '-Alog4j.graalvm.groupId=' + project.group,
+    '-Alog4j.graalvm.artifactId=' + project.name
+  ]
+}
+
 web3j {
   generatedPackageName = 'linea.plugin.acc.test.tests.web3j.generated'
 }
