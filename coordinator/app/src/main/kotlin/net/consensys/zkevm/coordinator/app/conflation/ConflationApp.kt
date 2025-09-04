@@ -276,6 +276,7 @@ class ConflationApp(
           maxInflightRequestsPerClient = configs.traces.counters.requestLimitPerEndpoint,
           requestTimeout = configs.traces.counters.requestTimeout?.inWholeMilliseconds,
           log = tracesCountersLog,
+          requestPriorityComparator = TracesGeneratorJsonRpcClientV2.requestPriorityComparator,
         ),
         config = TracesGeneratorJsonRpcClientV2.Config(
           expectedTracesApiVersion = configs.traces.expectedTracesApiVersion,
@@ -295,6 +296,7 @@ class ConflationApp(
           maxInflightRequestsPerClient = configs.traces.conflation.requestLimitPerEndpoint,
           requestTimeout = configs.traces.conflation.requestTimeout?.inWholeMilliseconds,
           log = tracesConflationLog,
+          requestPriorityComparator = TracesGeneratorJsonRpcClientV2.requestPriorityComparator,
         ),
         config = TracesGeneratorJsonRpcClientV2.Config(
           expectedTracesApiVersion = configs.traces.expectedTracesApiVersion,

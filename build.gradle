@@ -83,7 +83,7 @@ allprojects {
       showExceptions true
       showStackTraces true
       // set showStandardStreams if you need to see test logs
-      showStandardStreams false
+      showStandardStreams true
     }
     systemProperty("L1_RPC_URL", "http://localhost:8445")
     systemProperty("L2_RPC_URL", "http://localhost:8545")
