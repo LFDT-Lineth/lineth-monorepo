@@ -6,14 +6,12 @@
 ;; SUB    (ARG_1 - ARG_2) % 2^256                   0x03
 ;;
 ;; Both of these operate on u256 words with "wrap around" semantics.
-fn add(INST u8, ARG_1 u256, ARG_2 u256) -> (RES u256) {
+fn add(INST=1 u8, ARG_1 u256, ARG_2 u256) -> (RES u256) {
   var c u1
   ;;
   if INST == 0x01 goto insn_add
   if INST == 0x03 goto insn_sub
-  ;; FIXME: support fail
-  RES = 0
-  return
+  fail
 insn_add:
   c, RES = ARG_1 + ARG_2
   return

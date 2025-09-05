@@ -15,7 +15,7 @@ jobs:
 
     - name: Install Go Corset
       shell: bash
-      run: go install github.com/consensys/go-corset/cmd/go-corset@35efdc0a58d24729963bdccecf17453d27eacf40 # includes #1131 "fix: IfZero.ValueRange()"
+      run: go install github.com/consensys/go-corset/cmd/go-corset@d31f8cad8c1340e417c4694d5ea317f2e5fb7cc1 #v1.1.17
 
     - name: Build all forks
       run: make -B all
