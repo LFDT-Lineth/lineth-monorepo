@@ -127,7 +127,12 @@ class CoordinatorApp(private val configs: CoordinatorConfig) {
         configs.proversConfig.proverB?.blobCompression?.inprogressRequestWritingSuffix,
         configs.proversConfig.proverB?.proofAggregation?.inprogressRequestWritingSuffix,
       ),
-    ) + DirectoryCleaner.JSON_FILE_FILTER,
+    ) + if (configs.proversConfig.enableRequestFilesCleanup) {
+      // Will delete prover request .json files from all the directories
+      listOf(DirectoryCleaner.JSON_FILE_FILTER)
+    } else {
+      emptyList()
+    },
   )
 
   init {
