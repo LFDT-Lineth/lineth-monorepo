@@ -49,7 +49,7 @@ class FinalizationMonitorImpl(
   }
 
   override fun action(): SafeFuture<Unit> {
-    log.debug("Checking finalization updates")
+    log.trace("Checking finalization updates")
     return getFinalizationState().thenCompose { currentState ->
       if (lastFinalizationUpdate.get() != currentState) {
         log.info(

@@ -45,7 +45,7 @@ class ExtraDataV1PricerService(
         // and need extraData to be set
         extraDataUpdater.updateMinerExtraData(newExtraData)
       }
-      .thenApply { log.debug("Fetch, calculate, update new miner extra data are all done.") }
+      .thenPeek { log.trace("Fetch, calculate, update new miner extra data are all done.") }
   }
 
   override fun handleError(error: Throwable) {
