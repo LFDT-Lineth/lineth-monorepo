@@ -15,8 +15,8 @@
                 ( VALUE                        :i128 )
 
                 ;; to account related
-                ( TO_ADDRESS_HI                :i32  )
-                ( TO_ADDRESS_LO                :i128 )
+                ( TO_ADDRESS_HI                :i32    )
+                ( TO_ADDRESS_LO                :i128   )
                 ( REQUIRES_EVM_EXECUTION       :binary )
                 ( COPY_TXCD                    :binary )
                 ( IS_DEPLOYMENT                :binary )
@@ -34,19 +34,23 @@
                 ( INIT_CODE_SIZE               :i32 )
 
                 ;; end of transaction predictions
-                ( STATUS_CODE                  :binary)
-                ( GAS_LEFTOVER                 :i64 )
-                ( REFUND_COUNTER_INFINITY      :i64 )
-                ( REFUND_EFFECTIVE             :i64 )
+                ( STATUS_CODE                  :binary )
+                ( GAS_LEFTOVER                 :i64    )
+                ( REFUND_COUNTER_INFINITY      :i64    )
+                ( REFUND_EFFECTIVE             :i64    )
 
                 ;; coinbase related
                 ( COINBASE_ADDRESS_HI          :i32  )
                 ( COINBASE_ADDRESS_LO          :i128 )
 
                 ;; related to system transaction
-                ( NOOP                         :binary@prove)
-                ( EIP_4788                     :binary@prove)
-                ( EIP_2935                     :binary@prove) ;; should be Pectra only
-                ( SYST_TXN_DATA    :array [4]  :i128        )
+                ( NOOP                         :binary@prove )
+                ( EIP_4788                     :binary@prove )
+                ( EIP_2935                     :binary@prove ) ;; should be Pectra only
+                ( SYST_TXN_DATA_1              :i64          )
+                ( SYST_TXN_DATA_2              :i16          )
+                ( SYST_TXN_DATA_3              :i128         )
+                ( SYST_TXN_DATA_4              :i128         )
+                ( SYST_TXN_DATA_5              :binary       )
         )
 )
