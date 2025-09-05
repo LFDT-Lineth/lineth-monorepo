@@ -13,12 +13,12 @@ import { requireEnv } from "../hardhat/utils";
 
     
     *******************************************************************************************
-    PROXY_ADMIN_OWNER_ADDRESS=0x.. PROXY_ADDRESS=0x.. CONTRACT_TYPE=TokenBridge npx hardhat run --network zkevm_dev scripts/operational/transferProxyAdminOwnership.ts
+    NEW_PROXY_ADMIN_ADDRESS=0x.. PROXY_ADDRESS=0x.. CONTRACT_TYPE=TokenBridge npx hardhat run --network zkevm_dev scripts/operational/changeProxyAdmin.ts
     *******************************************************************************************
 */
 
 async function main() {
-  const proxyAdminOwnerAddress = requireEnv("PROXY_ADMIN_OWNER_ADDRESS");
+  const newProxyAdmin = requireEnv("NEW_PROXY_ADMIN_ADDRESS");
   const proxyAddress = requireEnv("PROXY_ADDRESS");
   const contractType = requireEnv("CONTRACT_TYPE");
 
@@ -27,11 +27,9 @@ async function main() {
     kind: "transparent",
   });
 
-  // CHANGE OWNERSHIP OF PROXY ADMIN
-  console.log(
-    `Changing ProxyAdmin owner of ${contractType} at ${proxyAddress} to new owner: ${proxyAdminOwnerAddress}`,
-  );
-  await upgrades.admin.transferProxyAdminOwnership(proxyAdminOwnerAddress);
+  // // CHANGE OWNERSHIP OF PROXY ADMIN
+  console.log(`Changing ProxyAdmin of ${contractType} at ${proxyAddress} to new ProxyAdmin: ${newProxyAdmin}`);
+  await upgrades.admin.changeProxyAdmin(proxyAddress, newProxyAdmin);
   console.log("Done");
 }
 
