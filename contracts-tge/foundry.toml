@@ -1,0 +1,57 @@
+[profile.default]
+build_info = true
+evm_version = "prague"
+extra_output = ["storageLayout"]
+ffi = true
+optimizer = true
+optimizer_runs = 10_000_000
+remappings = [
+  "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
+  "@openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/",
+  "@openzeppelin/foundry-upgrades/=lib/openzeppelin-foundry-upgrades/src/",
+]
+
+compiler_version = "0.8.30+commit.73712a01"
+
+solc_version = "0.8.30"
+verbosity = 3
+
+# Compiler overrides
+additional_compiler_profiles = [ { name = "london", evm_version = "london" } ]
+
+# Specify EVM_VERSION restrictions for contract compilation
+compilation_restrictions = [
+    { paths = "./**/TokenAirdrop.sol", evm_version = "london" },
+    { paths = "./**/L2LineaToken.sol", evm_version = "london" },
+]
+
+[profile.ci]
+fuzz = { runs = 5000 }
+invariant = { runs = 1000 }
+
+[profile.lite]
+fuzz = { runs = 50 }
+invariant = { runs = 10 }
+# Speed up compilation and tests during development.
+optimizer = false
+
+[invariant]
+call_override = false
+depth = 100
+dictionary_weight = 80
+fail_on_revert = false
+include_push_bytes = true
+include_storage = true
+runs = 25
+optimizer = false
+
+[fmt]
+bracket_spacing = false
+int_types = "long"
+line_length = 160
+multiline_func_header = "attributes_first"
+number_underscore = "thousands"
+quote_style = "double"
+single_line_statement_blocks = "multi"
+tab_width = 2
+wrap_comments = true
