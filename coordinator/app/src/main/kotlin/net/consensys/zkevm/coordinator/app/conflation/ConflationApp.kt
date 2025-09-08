@@ -29,7 +29,9 @@ import net.consensys.zkevm.coordinator.blockcreation.GethCliqueSafeBlockProvider
 import net.consensys.zkevm.coordinator.clients.ExecutionProverClientV2
 import net.consensys.zkevm.coordinator.clients.TracesGeneratorJsonRpcClientV2
 import net.consensys.zkevm.coordinator.clients.prover.ProverClientFactory
+import net.consensys.zkevm.domain.Batch
 import net.consensys.zkevm.domain.BlocksConflation
+import net.consensys.zkevm.domain.ProofIndex
 import net.consensys.zkevm.ethereum.coordination.HighestConflationTracker
 import net.consensys.zkevm.ethereum.coordination.HighestProvenBatchTracker
 import net.consensys.zkevm.ethereum.coordination.HighestProvenBlobTracker
@@ -345,6 +347,14 @@ class ConflationApp(
         ),
         batchProofHandler = batchProofHandler,
         vertx = vertx,
+        batchAlreadyProvenSupplier = { batch: Batch ->
+          executionProverClient.isProofAlreadyDone(
+            proofRequestId = ProofIndex(
+              batch.startBlockNumber,
+              batch.endBlockNumber,
+            ),
+          )
+        },
         config = ProofGeneratingConflationHandlerImpl.Config(5.seconds),
       )
 
