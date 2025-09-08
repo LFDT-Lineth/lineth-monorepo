@@ -23,7 +23,15 @@
 
 
 ---
+## Linea Tokens and Airdrop Smart Contract Audits
+**Diligence**
+- Linea Token and Airdrop Contracts: [https://diligence.consensys.io/audits/2025/07/linea-token-and-airdrop-contracts/](https://diligence.consensys.io/audits/2025/07/linea-token-and-airdrop-contracts/)
 
+**OpenZeppelin**
+- Linea TGE Audit: [https://blog.openzeppelin.com/linea-tge-audit](https://blog.openzeppelin.com/linea-tge-audit)
+
+**Cyfrin**
+- Linea Tokens Audit Report: [https://github.com/Cyfrin/cyfrin-audit-reports/blob/76f7aa4dfa324167408ad18b7ca984c07f8dab01/reports/2025-07-31-cyfrin-linea-tokens-v2.3.pdf](https://github.com/Cyfrin/cyfrin-audit-reports/blob/76f7aa4dfa324167408ad18b7ca984c07f8dab01/reports/2025-07-31-cyfrin-linea-tokens-v2.3.pdf)
 
 ## Linea Rollup, L2MessageService and TokenBridge Smart Contract Audits
 ### Fifth Audit Round (latest)
