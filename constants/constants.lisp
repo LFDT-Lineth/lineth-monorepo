@@ -233,6 +233,8 @@
   GAS_CONST_BLAKE2_PER_ROUND                1
   GAS_CONST_INIT_CODE_WORD                  2 ;; post Shanghai EIP-3860
   GAS_CONST_HASH_OPCODE_GAS                 3 ;; gas cost of BLOBHASH, EIP-4844 in Cancun
+  STANDARD_TOKEN_COST                       4 ;; payload pricing
+  FLOOR_TOKEN_COST                         10 ;; floor cost constant, from EIP-3860 (Prague)
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;           ;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  EVM MISC ;;
@@ -276,6 +278,8 @@
   LINEA_BLOCK_GAS_LIMIT                     LINEA_GAS_LIMIT_MAXIMUM
   LINEA_BLOB_BASE_FEE                       MIN_BASE_FEE_PER_BLOB_GAS
   LINEA_BLOB_PER_TRANSACTION_MAXIMUM        0
+  LINEA_CANCUN_FORK_TIMESTAMP               0x1337 ;; TODO: find actual values
+  LINEA_PRAGUE_FORK_TIMESTAMP               0x1337 ;; TODO: find actual values
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;               ;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; SIZE / LENGTH ;;

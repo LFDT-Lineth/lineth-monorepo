@@ -1,0 +1,15 @@
+(defun   (txn-data-into-rlp-txn-rcpt-selector)   )
+
+(deflookup
+  txndata-into-rlp-txn-rcpt
+  ; target selector
+  ;
+  ; target columns
+  (
+   )
+  ; source selector
+  (txn-data-into-rlp-txn-rcpt-selector)
+  ; source columns
+  (
+   ))
+

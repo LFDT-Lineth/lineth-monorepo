@@ -10,8 +10,8 @@
 
 
 (defcomputedcolumn  (TOTL_TXN_NUMBER :i24)    (+    SYSI_TXN_NUMBER
-						                            USER_TXN_NUMBER
-						                            SYSF_TXN_NUMBER))
+						    USER_TXN_NUMBER
+						    SYSF_TXN_NUMBER))
 
 (defconstraint    system-txn-numbers---initialization (:domain {0}) ;; ""
 		  (begin

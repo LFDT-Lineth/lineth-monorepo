@@ -1,0 +1,18 @@
+(module txndata)
+
+
+;; TODO: enable for Prague
+
+
+(defconstraint    fork-specifics---prague-specifics---SYSI-transactions ()
+		  (if-not-zero    SYSI
+				  (if-not-zero    HUB
+						  (eq!    (+   hub/EIP_4788
+						  	       hub/EIP_2935)
+						          1))))
+
+(defconstraint    fork-specifics---prague-specifics---SYSF-transactions ()
+		  (if-not-zero    SYSF
+				  (if-not-zero    HUB
+						  (eq!    hub/NOOP    1))))
+
