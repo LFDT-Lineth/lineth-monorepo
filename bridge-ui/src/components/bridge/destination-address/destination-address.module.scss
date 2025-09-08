@@ -4,23 +4,24 @@
   gap: 0.25rem;
   width: 100%;
 
-  input {
+  .input {
     font-family: var(--font-atyp);
     background-color: var(--color-smoke);
     margin-top: 0.25rem;
     border-radius: 0.625rem;
     box-shadow: 0 0 0 1px var(--color-silver);
     width: 100%;
-    padding: 0.75rem 1rem;
+    padding: 0.75rem 1rem 0.6rem;
     font-size: 0.875rem;
     color: var(--color-black);
+    resize: none;
 
     &.error {
       box-shadow: inset 0 0 0 0.125rem var(--color-red);
     }
 
-    &.not-connected {
-      padding: 0.75rem 1rem 0.75rem 1rem;
+    &.extra-padding {
+      padding-right: 1.625rem;
     }
   }
 }

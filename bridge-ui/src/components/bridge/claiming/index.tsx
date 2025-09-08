@@ -71,9 +71,9 @@ export default function Claiming() {
         <div className={styles.content}>
           <div className={styles.result}>
             <BridgeTwoLogo
-              src1={fromChain?.iconPath ?? ""}
+              src1={token?.image ?? ""}
               src2={toChain?.iconPath ?? ""}
-              alt1={fromChain?.nativeCurrency.symbol ?? ""}
+              alt1={token?.symbol ?? ""}
               alt2={toChain?.nativeCurrency.symbol ?? ""}
             />
             <ReceivedAmount />

@@ -58,7 +58,7 @@ const faqList = [
     <p>For ETH or ERC-20 tokens:</p>
     <ul>
       <li>Deposit (L1 &rarr; L2): ~20 minutes.</li>
-      <li>Withdrawal (L2 &rarr; L1): 2-16 hours.</li>
+      <li>Withdrawal (L2 &rarr; L1): 2-12 hours.</li>
     </ul>
     <p>For USDC, deposits and withdrawals leverage the Circle Cross-Chain Transfer Protocol (CCTP) for much faster transfers.</p>`,
   },

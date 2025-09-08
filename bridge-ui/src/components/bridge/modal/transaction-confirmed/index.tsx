@@ -1,4 +1,3 @@
-import Link from "next/link";
 import Modal from "@/components/modal";
 import styles from "./transaction-confirmed.module.scss";
 import { useNativeBridgeNavigationStore } from "@/stores";
@@ -24,18 +23,8 @@ export default function TransactionConfirmed({ isModalOpen, transactionType, onC
             : "You may now bridge another transaction, check your transaction history, or stay ahead of the curve with the latest trending tokens."}
         </p>
         <div className={styles["list-button"]}>
-          <Link
-            className={styles["primary-btn"]}
-            href="https://linea.build/ecosystem"
-            target="_blank"
-            rel="noopenner noreferrer"
-          >
-            See What&apos;s Trending
-          </Link>
-
           <Button
-            variant="link"
-            className={styles["secondary-btn"]}
+            className={styles["primary-btn"]}
             onClick={() => {
               if (transactionType !== "approve") {
                 setIsTransactionHistoryOpen(true);

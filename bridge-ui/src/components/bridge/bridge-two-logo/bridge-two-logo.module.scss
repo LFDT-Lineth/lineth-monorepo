@@ -5,12 +5,14 @@
 }
 
 .big {
+  display: inline-block;
   width: 2.5rem;
   height: 2.5rem;
   border-radius: 50%;
 }
 
 .small {
+  display: inline-block;
   position: absolute;
   width: 1rem;
   height: 1rem;

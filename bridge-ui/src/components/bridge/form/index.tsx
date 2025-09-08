@@ -10,7 +10,6 @@ import ToChain from "@/components/bridge/to-chain";
 import Claiming from "@/components/bridge/claiming";
 import styles from "./bridge-form.module.scss";
 import { Submit } from "@/components/bridge/submit";
-import TransactionPaperIcon from "@/assets/icons/transaction-paper.svg";
 import Setting from "@/components/setting";
 import { DestinationAddress } from "../destination-address";
 import Button from "../../ui/button";
@@ -67,7 +66,7 @@ export default function BridgeForm() {
               }}
               data-testid="native-bridge-transaction-history-icon"
             >
-              <TransactionPaperIcon className={styles["transaction-icon"]} />
+              Transaction History
             </Button>
             <Setting data-testid="native-bridge-form-settings-icon" />
           </div>

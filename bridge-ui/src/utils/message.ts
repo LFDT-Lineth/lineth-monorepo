@@ -74,5 +74,5 @@ export const getEstimatedTimeText = (fromChain: Chain, token: Token, opts: GetEs
   if (fromChain.layer === ChainLayer.L1) {
     return `20 ${minuteUnit}`;
   }
-  return `2${spaceChar}-${spaceChar}16 ${hourUnit}`;
+  return `2${spaceChar}-${spaceChar}12 ${hourUnit}`;
 };
