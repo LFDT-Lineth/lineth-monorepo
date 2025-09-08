@@ -127,6 +127,7 @@ jobs:
               - '!**/*.mdx'
               - '!**/docs/**'
               - '!docs/**'
+              - '!contracts-tge/**'
             contracts-excluding-local-deployment-artifacts:
               - 'contracts/**'
               - '!contracts/local-deployments-artifacts/**'
