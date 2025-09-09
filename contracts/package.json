@@ -45,7 +45,7 @@
     "csv-parser": "3.0.0",
     "dotenv": "catalog:",
     "edit-json-file": "1.8.0",
-    "ethers": "catalog:",
+    "ethers": "6.14.3",
     "hardhat": "2.25.0",
     "hardhat-deploy": "0.12.4",
     "hardhat-gas-reporter": "2.3.0",
