@@ -5,10 +5,11 @@
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;                  ;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   EVM_LONDON                             14
-  EVM_PARIS                 (+ 1 EVM_LONDON)
-  EVM_SHANGHAI              (+ 2 EVM_LONDON)
-  EVM_CANCUN                (+ 3 EVM_LONDON)
-  EVM_PRAGUE                (+ 4 EVM_LONDON)
+  EVM_PARIS                              17
+  EVM_SHANGHAI                           18
+  EVM_CANCUN                             19
+  EVM_PRAGUE                             20
+  EVM_OSAKA                              21
   ;; Default fork
   (EVM_FORK :i8 :extern)         EVM_LONDON
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -278,8 +279,6 @@
   LINEA_BLOCK_GAS_LIMIT                     LINEA_GAS_LIMIT_MAXIMUM
   LINEA_BLOB_BASE_FEE                       MIN_BASE_FEE_PER_BLOB_GAS
   LINEA_BLOB_PER_TRANSACTION_MAXIMUM        0
-  LINEA_CANCUN_FORK_TIMESTAMP               0x1337 ;; TODO: find actual values
-  LINEA_PRAGUE_FORK_TIMESTAMP               0x1337 ;; TODO: find actual values
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;               ;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; SIZE / LENGTH ;;

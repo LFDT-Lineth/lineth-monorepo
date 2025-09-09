@@ -35,11 +35,3 @@
 		  (eq!    (EIP-2935---prev-block-number-mod-8191)
 			  (shift   computation/EUC_REMAINDER   ROFF___EIP_2935___COMPUTING_THE_PREVIOUS-BLOCK_NUMBER_MOD_8191)))
 
-(defconstraint    EIP-2935---comparing-the-timestamp-to-the-PRAGUE-hardfork-timestamp
-		  (:guard (first-row-of-EIP-2935-transaction))
-		  (begin
-		    (small-call-to-LEQ     ROFF___EIP_2935___COMPARING_THE_TIMESTAMP_TO_LINEA_PRAGUE_FORK_TIMESTAMP
-					   LINEA_PRAGUE_FORK_TIMESTAMP
-					   (EIP-2935---timestamp)
-					   )
-		    (result-must-be-true   ROFF___EIP_2935___COMPARING_THE_TIMESTAMP_TO_LINEA_PRAGUE_FORK_TIMESTAMP)))

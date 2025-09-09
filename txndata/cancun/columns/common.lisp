@@ -9,7 +9,7 @@
 
 (defcolumns
   ;; HUB block and transaction labels + transaction bit markers
-  ( BLK_NUMBER      :i24          )
+  ;; ( BLK_NUMBER      :i24          ) ;; defcomputed
   ;; ( TOTL_TXN_NUMBER :i24          ) ;; defcomputed
   ( SYSI_TXN_NUMBER :i24          )
   ( USER_TXN_NUMBER :i24          )
@@ -27,7 +27,3 @@
   ( GAS_CUMULATIVE  :i32          )
   )
 
-
-(defcomputedcolumn  ( TOTL_TXN_NUMBER :i24 )  (+  SYSI_TXN_NUMBER
-                                                  USER_TXN_NUMBER
-                                                  SYSF_TXN_NUMBER))
