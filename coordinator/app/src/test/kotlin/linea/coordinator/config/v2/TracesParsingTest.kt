@@ -1,8 +1,10 @@
 package linea.coordinator.config.v2
 
+import linea.coordinator.config.v2.TracesConfig.ClientApiConfig
 import linea.coordinator.config.v2.toml.RequestRetriesToml
 import linea.coordinator.config.v2.toml.TracesToml
 import linea.coordinator.config.v2.toml.parseConfig
+import linea.domain.RetryConfig
 import linea.kotlin.toURL
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -107,25 +109,24 @@ class TracesParsingTest {
 
     val configMinimal = TracesToml(
       expectedTracesApiVersion = "1.2.0",
+      requestLimitPerEndpoint = UInt.MAX_VALUE,
+      requestRetries = RequestRetriesToml(
+        maxRetries = null,
+        backoffDelay = 1.seconds,
+        failuresWarningThreshold = 3u,
+      ),
+      requestTimeout = null,
       counters = TracesToml.ClientApiConfigToml(
         endpoints = listOf(URI.create("http://traces-api-1:8080/").toURL()),
-        requestLimitPerEndpoint = UInt.MAX_VALUE,
+        requestLimitPerEndpoint = null,
         requestTimeout = null,
-        requestRetries = RequestRetriesToml(
-          maxRetries = null,
-          backoffDelay = 1.seconds,
-          failuresWarningThreshold = 3u,
-        ),
+        requestRetries = null,
       ),
       conflation = TracesToml.ClientApiConfigToml(
         endpoints = listOf(URI.create("http://traces-api-2:8080/").toURL()),
-        requestLimitPerEndpoint = UInt.MAX_VALUE,
+        requestLimitPerEndpoint = null,
         requestTimeout = null,
-        requestRetries = RequestRetriesToml(
-          maxRetries = null,
-          backoffDelay = 1.seconds,
-          failuresWarningThreshold = 3u,
-        ),
+        requestRetries = null,
       ),
     )
   }
@@ -188,30 +189,7 @@ class TracesParsingTest {
     endpoints = ["http://traces-api-2:8080/"]
     """.trimIndent()
 
-    val expectedConfig = TracesToml(
-      expectedTracesApiVersion = "1.2.0",
-      ignoreTracesGeneratorErrors = true,
-      counters = TracesToml.ClientApiConfigToml(
-        endpoints = listOf(URI.create("http://traces-api-1:8080/").toURL()),
-        requestLimitPerEndpoint = UInt.MAX_VALUE,
-        requestTimeout = null,
-        requestRetries = RequestRetriesToml(
-          maxRetries = null,
-          backoffDelay = 1.seconds,
-          failuresWarningThreshold = 3u,
-        ),
-      ),
-      conflation = TracesToml.ClientApiConfigToml(
-        endpoints = listOf(URI.create("http://traces-api-2:8080/").toURL()),
-        requestLimitPerEndpoint = UInt.MAX_VALUE,
-        requestTimeout = null,
-        requestRetries = RequestRetriesToml(
-          maxRetries = null,
-          backoffDelay = 1.seconds,
-          failuresWarningThreshold = 3u,
-        ),
-      ),
-    )
+    val expectedConfig = configMinimal.copy(ignoreTracesGeneratorErrors = true)
 
     assertThat(parseConfig<WrapperConfig>(tomlWithIgnoreErrors).traces)
       .isEqualTo(expectedConfig)
@@ -229,32 +207,77 @@ class TracesParsingTest {
     endpoints = ["http://traces-api-2:8080/"]
     """.trimIndent()
 
-    val expectedConfig = TracesToml(
-      expectedTracesApiVersion = "1.2.0",
-      ignoreTracesGeneratorErrors = false,
-      counters = TracesToml.ClientApiConfigToml(
-        endpoints = listOf(URI.create("http://traces-api-1:8080/").toURL()),
-        requestLimitPerEndpoint = UInt.MAX_VALUE,
-        requestTimeout = null,
-        requestRetries = RequestRetriesToml(
-          maxRetries = null,
-          backoffDelay = 1.seconds,
-          failuresWarningThreshold = 3u,
-        ),
-      ),
-      conflation = TracesToml.ClientApiConfigToml(
-        endpoints = listOf(URI.create("http://traces-api-2:8080/").toURL()),
-        requestLimitPerEndpoint = UInt.MAX_VALUE,
-        requestTimeout = null,
-        requestRetries = RequestRetriesToml(
-          maxRetries = null,
-          backoffDelay = 1.seconds,
-          failuresWarningThreshold = 3u,
-        ),
-      ),
-    )
+    val expectedConfig = configMinimal.copy(ignoreTracesGeneratorErrors = false)
 
     assertThat(parseConfig<WrapperConfig>(tomlWithIgnoreErrorsDisabled).traces)
       .isEqualTo(expectedConfig)
+  }
+
+  @Test
+  fun `should parse traces config common config`() {
+    val toml = """
+    [traces]
+    expected-traces-api-version = "1.2.0"
+    endpoints = ["http://traces-api-lb:8080/"]
+    request-limit-per-endpoint = 2
+    request-timeout = "PT60S"
+    [traces.request-retries]
+    max-retries = 30
+    backoff-delay = "PT3S"
+    failures-warning-threshold = 4
+    """.trimIndent()
+
+    val config = TracesConfig(
+      expectedTracesApiVersion = "1.2.0",
+      common = ClientApiConfig(
+        endpoints = listOf("http://traces-api-lb:8080/".toURL()),
+        requestLimitPerEndpoint = 2u,
+        requestTimeout = 60.seconds,
+        requestRetries = RetryConfig(
+          maxRetries = 30u,
+          backoffDelay = 3.seconds,
+          failuresWarningThreshold = 4u,
+        ),
+      ),
+    )
+    assertThat(parseConfig<WrapperConfig>(toml).traces.reified())
+      .isEqualTo(config)
+  }
+
+  @Test
+  fun `should parse common and override when specific are defined`() {
+    val toml = """
+    [traces]
+    expected-traces-api-version = "1.2.0"
+    endpoints = ["http://traces-api-lb:8080/"]
+    request-limit-per-endpoint = 20
+    request-timeout = "PT20S"
+    [traces.request-retries]
+    max-retries = 20
+    backoff-delay = "PT10S"
+    failures-warning-threshold = 1
+
+    [traces.counters]
+    endpoints = ["http://traces-api-2:8080/"]
+    """.trimIndent()
+
+    val commonConfig = ClientApiConfig(
+      endpoints = listOf("http://traces-api-lb:8080/".toURL()),
+      requestLimitPerEndpoint = 20u,
+      requestTimeout = 20.seconds,
+      requestRetries = RetryConfig(
+        maxRetries = 20u,
+        backoffDelay = 10.seconds,
+        failuresWarningThreshold = 1u,
+      ),
+    )
+    val config = TracesConfig(
+      expectedTracesApiVersion = "1.2.0",
+      common = null,
+      counters = commonConfig.copy(endpoints = listOf("http://traces-api-2:8080/".toURL())),
+      conflation = commonConfig,
+    )
+    assertThat(parseConfig<WrapperConfig>(toml).traces.reified())
+      .isEqualTo(config)
   }
 }
