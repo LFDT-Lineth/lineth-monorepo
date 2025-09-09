@@ -129,7 +129,9 @@
                                             (* (- 1 (selfdestruct-instruction---recipient-warmth)) GAS_CONST_G_COLD_ACCOUNT_ACCESS)
                                             (* (- 1 (selfdestruct-instruction---recipient-exists)) GAS_CONST_G_NEW_ACCOUNT        ))))))
 
-(defconstraint    selfdestruct-instruction---generalities-for-the-first-account-row (:guard (selfdestruct-instruction---scenario-precondition))
+(defconstraint    selfdestruct-instruction---first-account-row---generalities
+                  (:guard (selfdestruct-instruction---scenario-precondition))
+                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                   (begin
                     (if-zero     (selfdestruct-instruction---STATICX)
                                  (begin
@@ -147,7 +149,7 @@
                                                                  0)
                                    ))))
 
-(defconstraint    selfdestruct-instruction---setting-code-and-deployment-for-the-first-account-row
+(defconstraint    selfdestruct-instruction---first-account-row---setting-code-and-deployment
                   (:guard (selfdestruct-instruction---scenario-precondition))
                   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                   (if-zero     (selfdestruct-instruction---STATICX)
@@ -168,7 +170,7 @@
                                                          (eq!        (shift account/DEPLOYMENT_STATUS_NEW       ROFF_SELFDESTRUCT___ACCOUNT___1ST_DOING_ROW) 0)
                                                          (account-same-deployment-number                        ROFF_SELFDESTRUCT___ACCOUNT___1ST_DOING_ROW)))))))
 
-(defconstraint    selfdestruct-instruction---setting-balance-and-marked-for-SELFDESTRUCT-for-first-account-row
+(defconstraint    selfdestruct-instruction---first-account-row---setting-balance-and-marked-for-SELFDESTRUCT
                   (:guard (selfdestruct-instruction---scenario-precondition))
                   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                   (if-zero     (selfdestruct-instruction---STATICX)
@@ -177,10 +179,10 @@
                                               (begin
                                                 (account-same-balance                      ROFF_SELFDESTRUCT___ACCOUNT___1ST_DOING_ROW)
                                                 (account-same-marked-for-deletion          ROFF_SELFDESTRUCT___ACCOUNT___1ST_DOING_ROW)))
-                                 (if-not-zero (scenario-shorthand---SELFDESTRUCT---unexceptional)     (account-decrement-balance-by              ROFF_SELFDESTRUCT___ACCOUNT___1ST_DOING_ROW      (selfdestruct-instruction---balance)))
-                                 (if-not-zero scenario/SELFDESTRUCT_WILL_REVERT                   (account-same-marked-for-deletion          ROFF_SELFDESTRUCT___ACCOUNT___1ST_DOING_ROW))
-                                 (if-not-zero scenario/SELFDESTRUCT_WONT_REVERT_ALREADY_MARKED    (account-same-marked-for-deletion          ROFF_SELFDESTRUCT___ACCOUNT___1ST_DOING_ROW))
-                                 (if-not-zero scenario/SELFDESTRUCT_WONT_REVERT_NOT_YET_MARKED    (account-mark-account-for-deletion         ROFF_SELFDESTRUCT___ACCOUNT___1ST_DOING_ROW)))))
+                                 (if-not-zero (scenario-shorthand---SELFDESTRUCT---unexceptional)   (account-decrement-balance-by              ROFF_SELFDESTRUCT___ACCOUNT___1ST_DOING_ROW      (selfdestruct-instruction---balance)))
+                                 (if-not-zero scenario/SELFDESTRUCT_WILL_REVERT                     (account-same-marked-for-deletion          ROFF_SELFDESTRUCT___ACCOUNT___1ST_DOING_ROW))
+                                 (if-not-zero scenario/SELFDESTRUCT_WONT_REVERT_ALREADY_MARKED      (account-same-marked-for-deletion          ROFF_SELFDESTRUCT___ACCOUNT___1ST_DOING_ROW))
+                                 (if-not-zero scenario/SELFDESTRUCT_WONT_REVERT_NOT_YET_MARKED      (account-mark-account-for-deletion         ROFF_SELFDESTRUCT___ACCOUNT___1ST_DOING_ROW)))))
 
 (defconstraint    selfdestruct-instruction---generalities-for-the-second-account-row
                   (:guard (selfdestruct-instruction---scenario-precondition))
