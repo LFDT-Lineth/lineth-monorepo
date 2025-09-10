@@ -266,8 +266,8 @@
 (defconstraint offsets-out-of-bounds (:guard (standing-hypothesis))
   (if-eq MXPX 1
          (if-eq CT CT_MAX_NON_TRIVIAL_BUT_MXPX
-                (or! (eq! (- MAX_OFFSET_1 TWO_POW_32) [ACC 1])
-                     (eq! (- MAX_OFFSET_2 TWO_POW_32) [ACC 2])))))
+                (or! (eq! (- MAX_OFFSET_1 LONDON_MXPX_THRESHOLD) [ACC 1])
+                     (eq! (- MAX_OFFSET_2 LONDON_MXPX_THRESHOLD) [ACC 2])))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                                ;;

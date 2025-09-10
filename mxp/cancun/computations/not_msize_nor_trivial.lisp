@@ -13,7 +13,7 @@
 				   (mxp-shorthand---size-1-hi)
 				   (mxp-shorthand---size-1-lo)
 				   0
-				   MXPX_THRESHOLD
+				   CANCUN_MXPX_THRESHOLD
 				   ))
 
 (defconstraint  computations---not-msize-nor-trivial---smallness-test-for-SIZE_2
@@ -22,7 +22,7 @@
 				   (mxp-shorthand---size-2-hi)
 				   (mxp-shorthand---size-2-lo)
 				   0
-				   MXPX_THRESHOLD
+				   CANCUN_MXPX_THRESHOLD
 				   ))
 
 
@@ -44,7 +44,7 @@
 				   (mxp-shorthand---offset-1-hi)
 				   (mxp-shorthand---offset-1-lo)
 				   0
-				   MXPX_THRESHOLD
+				   CANCUN_MXPX_THRESHOLD
 				   ))
 
 (defconstraint  computations---not-msize-nor-trivial---smallness-test-for-OFFSET_2
@@ -53,7 +53,7 @@
 				   (mxp-shorthand---offset-2-hi)
 				   (mxp-shorthand---offset-2-lo)
 				   0
-				   MXPX_THRESHOLD
+				   CANCUN_MXPX_THRESHOLD
 				   ))
 
 
