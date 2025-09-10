@@ -2,7 +2,8 @@
   (* (unexceptional-stack-row)
       hub.stack/WCP_FLAG))
 
-(defclookup hub-into-wcp
+(defclookup
+    (hub-into-wcp :unchecked)
     ;; target columns
     (
         wcp.ARG_1_HI

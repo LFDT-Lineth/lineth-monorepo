@@ -15,7 +15,7 @@
                                               (- 1 rlptxn.IS_PREFIX)))
 
 (defclookup
-  hub-into-rlptxn
+  (hub-into-rlptxn :unchecked)
   ;; TODO: multiplication by selector likely unnecessary but as we
   ;; multiply by the same column for the lookup tlptxn into hub ...
 

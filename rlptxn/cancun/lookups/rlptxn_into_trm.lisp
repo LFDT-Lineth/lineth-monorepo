@@ -1,7 +1,7 @@
 (defun (sel-rlptxn-to-trm) (* rlptxn.CMP rlptxn.cmp/TRM_FLAG))
 
 (defclookup
-  rlptxn-into-trm
+  (rlptxn-into-trm :unchecked)
   ;; target columns
   (
     trm.IOMF

@@ -1,5 +1,5 @@
 (defclookup
-  txndata-into-euc
+  (txndata-into-euc :unchecked)
   ; target columns
   (
     euc.DONE

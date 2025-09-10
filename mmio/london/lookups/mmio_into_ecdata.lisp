@@ -1,5 +1,5 @@
 (defclookup
-  mmio-into-ecdata
+  (mmio-into-ecdata :unchecked)
   ;; target columns
   (
     ecdata.ID

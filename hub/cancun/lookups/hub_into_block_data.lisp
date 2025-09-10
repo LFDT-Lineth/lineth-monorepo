@@ -3,7 +3,8 @@
                                         hub.stack/BTC_FLAG
                                         [hub.stack/DEC_FLAG 2]))
 
-(defclookup hub-into-blockdata
+(defclookup
+  (hub-into-blockdata :unchecked)
   ;; target columns
   (
    blockdata.REL_BLOCK

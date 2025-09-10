@@ -1,5 +1,5 @@
 (defclookup
-  mmio-into-kec
+  (mmio-into-kec :unchecked)
   ;; target columns
   (
     shakiradata.ID

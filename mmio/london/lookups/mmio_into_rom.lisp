@@ -1,5 +1,5 @@
 (defclookup
-  mmio-into-rom
+  (mmio-into-rom :unchecked)
   ;; target columns
   (
     rom.CFI

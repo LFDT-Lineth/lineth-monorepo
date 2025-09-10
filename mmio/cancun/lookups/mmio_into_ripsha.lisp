@@ -1,5 +1,5 @@
 (defclookup
-  mmio-into-ripsha
+  (mmio-into-ripsha :unchecked)
   ;; target columns
   (
     shakiradata.ID

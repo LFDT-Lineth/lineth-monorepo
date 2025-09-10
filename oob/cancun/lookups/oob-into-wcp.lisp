@@ -2,7 +2,7 @@
   oob.WCP_FLAG)
 
 (defclookup
-  oob-into-wcp
+  (oob-into-wcp :unchecked)
   ;; target columns
   (
     wcp.ARGUMENT_1_HI

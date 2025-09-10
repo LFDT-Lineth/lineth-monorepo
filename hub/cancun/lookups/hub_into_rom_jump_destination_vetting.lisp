@@ -2,7 +2,8 @@
   (* hub.PEEK_AT_STACK
      hub.stack/JUMP_DESTINATION_VETTING_REQUIRED))
 
-(defclookup hub-into-rom-jump-destination-vetting
+(defclookup
+  (hub-into-rom-jump-destination-vetting :unchecked)
   ;; target columns
   (
    rom.CFI

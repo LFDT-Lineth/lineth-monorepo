@@ -2,7 +2,7 @@
   (* hub.PEEK_AT_MISCELLANEOUS hub.misc/MXP_FLAG))
 
 (defclookup
-  hub-into-mxp
+  (hub-into-mxp :unchecked)
   ;; target columns
   (
     mxp.STAMP

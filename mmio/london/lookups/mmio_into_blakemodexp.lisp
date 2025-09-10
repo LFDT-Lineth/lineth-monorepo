@@ -1,5 +1,5 @@
 (defclookup
-  mmio-into-blake2fmodexpdata
+  (mmio-into-blake2fmodexpdata :unchecked)
   ;; target columns
   (
     blake2fmodexpdata.ID

@@ -3,7 +3,8 @@
      hub.account/ROMLEX_FLAG))
 
 
-(defclookup hub-into-romlex
+(defclookup
+  (hub-into-romlex :unchecked)
   ;; target columns
   (
    romlex.CODE_FRAGMENT_INDEX

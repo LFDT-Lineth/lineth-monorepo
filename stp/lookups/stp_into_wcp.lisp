@@ -1,5 +1,5 @@
 (defclookup
-  stp-into-wcp
+  (stp-into-wcp :unchecked)
   ; target colums (in WCP)
   (
     wcp.ARG_1_HI

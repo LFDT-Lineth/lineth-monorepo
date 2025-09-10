@@ -4,7 +4,7 @@
   )
 
 (defclookup
-  mxp-into-euc
+  (mxp-into-euc :unchecked)
   ;; target columns
   (
     euc.DIVIDEND

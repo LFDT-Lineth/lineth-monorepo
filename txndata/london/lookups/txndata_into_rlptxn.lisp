@@ -1,5 +1,5 @@
 (deflookup
-  txndata-into-rlptxn
+  (txndata-into-rlptxn :unchecked)
   ;; target columns
   (
     rlptxn.ABS_TX_NUM_INFINY

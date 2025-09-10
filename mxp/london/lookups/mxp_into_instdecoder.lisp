@@ -1,4 +1,5 @@
-(deflookup mxp-into-instdecoder
+(deflookup
+    (mxp-into-instdecoder :unchecked)
     ;; source columns
     (
         instdecoder.OPCODE ;; INST in the specs

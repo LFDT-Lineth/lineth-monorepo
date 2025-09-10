@@ -1,5 +1,5 @@
 (defclookup
-  mmio-into-logdata
+  (mmio-into-logdata :unchecked)
   ;; target columns
   (
     logdata.ABS_LOG_NUM

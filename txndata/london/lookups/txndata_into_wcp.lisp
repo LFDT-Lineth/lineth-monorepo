@@ -1,5 +1,5 @@
 (defclookup
-  txndata-into-wcp
+  (txndata-into-wcp :unchecked)
   ; target columns
   (
     wcp.ARGUMENT_1_HI

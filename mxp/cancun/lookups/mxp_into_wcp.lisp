@@ -4,7 +4,7 @@
   )
 
 (defclookup
-  mxp-into-wcp
+  (mxp-into-wcp :unchecked)
   ;; target columns
   (
     wcp.INST

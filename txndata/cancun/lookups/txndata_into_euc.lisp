@@ -1,7 +1,7 @@
 (defun   (txn-data-into-euc-selector)   (* txndata.CMPTN txndata.computation/EUC_FLAG))
 
 (defclookup
-  txndata-into-euc
+  (txndata-into-euc :unchecked)
   ; target columns
   (
    euc.DONE

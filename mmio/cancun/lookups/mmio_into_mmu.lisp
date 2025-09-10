@@ -14,7 +14,7 @@
      mmio.IS_RAM_VANISHES))
 
 (deflookup
-  mmio-into-mmu
+  (mmio-into-mmu :unchecked)
   ;reference columns
   (
     mmu.MICRO

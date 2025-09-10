@@ -38,6 +38,6 @@
 ;;    upcoming_phase_transition
 ;;
 ;; shorthand.
-(defproperty outside-of-padding-rows-entering-a-new-phase-coincides-with-exiting-the-current-one 
+(defproperty prop-outside-of-padding-rows-entering-a-new-phase-coincides-with-exiting-the-current-one 
     (if-not-zero (phase-flag-sum) 
         (eq! (about-to-enter-new-phase) (upcoming-phase-transition))))

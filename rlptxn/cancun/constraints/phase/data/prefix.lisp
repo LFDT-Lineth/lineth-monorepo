@@ -34,7 +34,7 @@
                                 (vanishes! (rlptxn---DATA-phase---nonzs-in-payload))))
                  )
 
-(defconstraint   data-phase---payload-size-analysis-row---empty-payload-sanity-check
+(defconstraint   data-phase---payload-size-analysis-row---empty-payload-sanity-check2
                  (:guard   (is-payload-size-analysis-row))
                  (eq! PHASE_END (rlptxn---DATA-phase---payload-is-empty))
                  )

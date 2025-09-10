@@ -1,5 +1,5 @@
 (deflookup
-  loginfo-into-hub
+  (loginfo-into-hub :unchecked)
   ;; target columns
   (
     hub.ABSOLUTE_TRANSACTION_NUMBER

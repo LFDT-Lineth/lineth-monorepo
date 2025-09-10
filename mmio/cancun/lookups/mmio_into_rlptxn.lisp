@@ -1,5 +1,5 @@
 (defclookup
-  mmio-into-rlptxn
+  (mmio-into-rlptxn :unchecked)
   ;; target columns
   (
     rlptxn.USER_TXN_NUMBER

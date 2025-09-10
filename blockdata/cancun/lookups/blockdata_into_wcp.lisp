@@ -2,7 +2,7 @@
   blockdata.WCP_FLAG)
 
 (defclookup 
-  blockdata-into-wcp
+  (blockdata-into-wcp :unchecked)
   ;; target columns
   (
     wcp.ARGUMENT_1_HI

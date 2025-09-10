@@ -1,7 +1,7 @@
 (defun (blockdata-into-euc-selector) blockdata.EUC_FLAG)
 
 (defclookup 
-  blockdata-into-euc
+  (blockdata-into-euc :unchecked)
   ;; target columns
   (
     euc.IOMF

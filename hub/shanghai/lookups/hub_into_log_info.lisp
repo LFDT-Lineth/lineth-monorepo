@@ -2,7 +2,7 @@
   (* hub.PEEK_AT_STACK hub.stack/LOG_INFO_FLAG (- 1 hub.CT_TLI)))
 
 (defclookup
-  hub-into-loginfo
+  (hub-into-loginfo :unchecked)
   ;; target columns
   (
     loginfo.ABS_TXN_NUM

@@ -8,7 +8,7 @@
 (defun (hub-into-rlp-txn-tgt-selector)   (sel-rlp-txn-into-hub))
 
 (defclookup
-  hub-into-rlptxn
+  (hub-into-rlptxn :unchecked)
 
   ;; target selector
   (hub-into-rlp-txn-tgt-selector)

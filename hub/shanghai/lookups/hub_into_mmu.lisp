@@ -2,7 +2,7 @@
   (* hub.PEEK_AT_MISCELLANEOUS hub.misc/MMU_FLAG))
 
 (defclookup
-  hub-into-mmu
+  (hub-into-mmu :unchecked)
   ;; target columns
   (
     mmu.MACRO
