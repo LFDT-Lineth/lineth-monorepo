@@ -22,8 +22,8 @@
   ( HUB             :binary@prove )
   ( RLP             :binary@prove )
   ;; heartbeat
-  ( CT              :i4           )  ;; TODO: is that enough ?
+  ( CT              :i4           )
   ( CT_MAX          :i4           )
-  ( GAS_CUMULATIVE  :i32          )
+  ( GAS_CUMULATIVE  :i128         )
   )
 

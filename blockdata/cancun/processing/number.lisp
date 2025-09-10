@@ -30,7 +30,7 @@
                                                   (curr-NUMBER-hi)
                                                   (curr-NUMBER-lo)
                                                   0
-                                                  (^ 256 6)
+                                                  (^ 256 8)
                                                   ))) ;; ""
 
 (defconstraint   number---connecting-constraints

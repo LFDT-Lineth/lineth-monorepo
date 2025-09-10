@@ -20,16 +20,16 @@
                                     (curr-TIMESTAMP-hi)
                                     (curr-TIMESTAMP-lo)
                                     0
-                                    (^ 256 6))) ;; ""
+                                    (^ 256 8))) ;; ""
 
 (defconstraint   timestamp---is-incrementing
                  (:guard (timestamp-precondition))
                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                  (if-not-zero    (isnt-first-block-in-conflation)
-                              (wcp-call-to-GT   1
-                                                (curr-TIMESTAMP-hi)
-                                                (curr-TIMESTAMP-lo)
-                                                (prev-TIMESTAMP-hi)
-                                                (prev-TIMESTAMP-lo)
-                                                )))
+                                 (wcp-call-to-GT   1
+                                                   (curr-TIMESTAMP-hi)
+                                                   (curr-TIMESTAMP-lo)
+                                                   (prev-TIMESTAMP-hi)
+                                                   (prev-TIMESTAMP-lo)
+                                                   )))
 

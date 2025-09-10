@@ -20,7 +20,7 @@
                                     (curr-TIMESTAMP-hi)
                                     (curr-TIMESTAMP-lo)
                                     0
-                                    (^ 256 6))) ;; ""
+                                    (^ 256 8))) ;; ""
 
 (defconstraint   timestamp---is-incrementing
                  (:guard (timestamp-precondition))

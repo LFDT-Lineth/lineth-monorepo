@@ -18,4 +18,5 @@
 (defconst
   ROFF___EIP_4788___TIMESTAMP_MOD_8191                                     1
   ROFF___EIP_4788___DETECTING_THE_GENESIS_BLOCK                            2
+  nROWS___EIP_4788                                                         3
   )

@@ -29,7 +29,7 @@
 	 ( NUMBER_OF_NONZERO_BYTES            :i24          )
 	 ( DATA_SIZE                          :i24          )
 	 ( INIT_SIZE                          :i24          )
-	 ( GAS_LIMIT                          :i32          )
+	 ( GAS_LIMIT                          :i64          )
 	 ( GAS_PRICE                          :i64          )
 	 ( MAX_PRIORITY_FEE_PER_GAS           :i64          )
 	 ( MAX_FEE_PER_GAS                    :i64          )

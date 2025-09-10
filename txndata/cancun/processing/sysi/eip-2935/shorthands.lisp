@@ -21,4 +21,5 @@
 (defconst
   ROFF___EIP_2935___DEFINING_THE_PREVIOUS_BLOCK_NUMBER                     1
   ROFF___EIP_2935___COMPUTING_THE_PREVIOUS-BLOCK_NUMBER_MOD_8191           2
+  nROWS___EIP_2935                                                         3
   )
