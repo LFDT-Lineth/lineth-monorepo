@@ -20,18 +20,6 @@
   ROW_OFFSET___CEILING_OF_SIZE_OVER_32         11
   )
 
-
-;;;;;;;;;;;;;;;;;;;
-;;               ;;
-;;   Constants   ;;
-;;               ;;
-;;;;;;;;;;;;;;;;;;;
-
-
-(defconst
-  CANCUN_MXPX_THRESHOLD    0xffffffff  ;; 256 ** 4 - 1
-  )
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                     ;;
 ;;   Scenario guards   ;;
