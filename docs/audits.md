@@ -31,7 +31,7 @@
 - Linea TGE Audit: [https://blog.openzeppelin.com/linea-tge-audit](https://blog.openzeppelin.com/linea-tge-audit)
 
 **Cyfrin**
-- Linea Tokens Audit Report: [https://github.com/Cyfrin/cyfrin-audit-reports/blob/76f7aa4dfa324167408ad18b7ca984c07f8dab01/reports/2025-07-31-cyfrin-linea-tokens-v2.3.pdf](https://github.com/Cyfrin/cyfrin-audit-reports/blob/76f7aa4dfa324167408ad18b7ca984c07f8dab01/reports/2025-07-31-cyfrin-linea-tokens-v2.3.pdf)
+- Linea Tokens Audit Report: [https://github.com/Cyfrin/cyfrin-audit-reports/blob/b9aace5911e3ff84488cb5199cfd28e7fe24d6aa/reports/2025-09-10-cyfrin-linea-tokens-v2.5.pdf](https://github.com/Cyfrin/cyfrin-audit-reports/blob/b9aace5911e3ff84488cb5199cfd28e7fe24d6aa/reports/2025-09-10-cyfrin-linea-tokens-v2.5.pdf)
 
 ## Linea Rollup, L2MessageService and TokenBridge Smart Contract Audits
 ### Fifth Audit Round (latest)
