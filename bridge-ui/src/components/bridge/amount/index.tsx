@@ -1,5 +1,4 @@
 import { ChangeEvent, useEffect, useState } from "react";
-import { useAccount } from "wagmi";
 import { formatUnits, parseUnits } from "viem";
 import { useTokenPrices } from "@/hooks";
 import { useChainStore, useConfigStore, useFormStore } from "@/stores";
@@ -11,7 +10,6 @@ const MAX_AMOUNT_CHAR = 20;
 export function Amount() {
   const currency = useConfigStore((state) => state.currency);
   const fromChain = useChainStore.useFromChain();
-  const { address } = useAccount();
 
   const amount = useFormStore((state) => state.amount);
   const token = useFormStore((state) => state.token);
@@ -76,10 +74,6 @@ export function Amount() {
       console.error("Error parsing amount:", error);
     }
   };
-
-  useEffect(() => {
-    setAmount(0n);
-  }, [address, setAmount]);
 
   const formattedAmount = amount ? formatUnits(amount, token.decimals) : "";
   const tokenPrice = tokenPrices?.[tokenAddress.toLowerCase()];
