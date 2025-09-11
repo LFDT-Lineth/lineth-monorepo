@@ -4,12 +4,12 @@ pragma solidity 0.8.30;
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
 /**
- * @title Upgradeable Consolidation Queue Predeploy Contract
- * @notice Implementation of EIP-7251 execution layer consolidation request contract
- * @author ConsenSys Software Inc.
+ * @title Upgradeable Fee Vault Contract.
+ * @notice Accepts ETH for later economic functions.
+ * @author Consensys Software Inc.
  * @custom:security-contact security-report@linea.build
  */
-contract UpgradeableConsolidationQueuePredeploy is Initializable {
+contract RollupFeeVault is Initializable {
   /**
    * @dev This empty reserved space is put in place to allow future versions to add new
    * variables without shifting down storage in the inheritance chain.
@@ -23,17 +23,17 @@ contract UpgradeableConsolidationQueuePredeploy is Initializable {
   }
 
   /**
-   * @notice Initializes the contract state
+   * @notice Initializes the contract state.
    */
   function initialize() external initializer {}
 
   /**
-   * @notice Fallback function - noop
+   * @notice Fallback function - Receives Funds.
    */
   fallback() external payable {}
 
   /**
-   * @notice Receive function - noop
+   * @notice Receive function - Receives Funds.
    */
   receive() external payable {}
 }

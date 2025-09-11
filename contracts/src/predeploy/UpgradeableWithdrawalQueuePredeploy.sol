@@ -11,10 +11,10 @@ import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/I
  */
 contract UpgradeableWithdrawalQueuePredeploy is Initializable {
   /**
-    * @dev This empty reserved space is put in place to allow future versions to add new
-    * variables without shifting down storage in the inheritance chain.
-    * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
-    */
+   * @dev This empty reserved space is put in place to allow future versions to add new
+   * variables without shifting down storage in the inheritance chain.
+   * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
+   */
   uint256[50] private __gap;
 
   /// @custom:oz-upgrades-unsafe-allow constructor
@@ -25,18 +25,15 @@ contract UpgradeableWithdrawalQueuePredeploy is Initializable {
   /**
    * @notice Initializes the contract state
    */
-  function initialize() external initializer {
-  }
+  function initialize() external initializer {}
 
   /**
    * @notice Fallback function - noop
    */
-  fallback() external payable {
-  }
+  fallback() external payable {}
 
   /**
    * @notice Receive function - noop
    */
-  receive() external payable {
-  }
+  receive() external payable {}
 }
