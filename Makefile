@@ -23,6 +23,49 @@ BLOCKDATA_CANCUN := blockdata/cancun
 
 BLOCKHASH := blockhash
 
+BLS_CANCUN := $(wildcard blsdata/cancun/*.lisp) \
+	       $(wildcard blsdata/cancun/generalities/cancun_restriction.lisp) \
+		   $(wildcard blsdata/cancun/generalities/constancy_conditions.lisp) \
+		   $(wildcard blsdata/cancun/generalities/constraining_address_sum.lisp) \
+		   $(wildcard blsdata/cancun/generalities/constraining_flag_sum.lisp) \
+		   $(wildcard blsdata/cancun/generalities/constraints_for_bls_stamp.lisp) \
+		   $(wildcard blsdata/cancun/generalities/constraints_for_ct.lisp) \
+		   $(wildcard blsdata/cancun/generalities/id_increment_constraints.lisp) \
+		   $(wildcard blsdata/cancun/generalities/legal_transition_constraints.lisp) \
+		   $(wildcard blsdata/cancun/generalities/setting_acc_inputs.lisp) \
+		   $(wildcard blsdata/cancun/generalities/setting_ct_max.lisp) \
+		   $(wildcard blsdata/cancun/generalities/setting_index_max.lisp) \
+		   $(wildcard blsdata/cancun/generalities/setting_index.lisp) \
+		   $(wildcard blsdata/cancun/generalities/setting_is_first_input_and_is_second_input.lisp) \
+		   $(wildcard blsdata/cancun/generalities/setting_phase.lisp) \
+		   $(wildcard blsdata/cancun/generalities/setting_total_size.lisp) \
+		   $(wildcard blsdata/cancun/generalities/shorthands.lisp) \
+	       $(wildcard blsdata/cancun/lookups/*.lisp) \
+	       $(wildcard blsdata/cancun/specialized_constraints/*.lisp) \
+	       $(wildcard blsdata/cancun/top_level_flags_mint_mext_wtrv_wnon/*.lisp) \
+		   $(wildcard blsdata/cancun/utilities/*.lisp) \
+
+BLS_PRAGUE := $(wildcard blsdata/cancun/*.lisp) \
+		   $(wildcard blsdata/cancun/generalities/constancy_conditions.lisp) \
+		   $(wildcard blsdata/cancun/generalities/constraining_address_sum.lisp) \
+		   $(wildcard blsdata/cancun/generalities/constraining_flag_sum.lisp) \
+		   $(wildcard blsdata/cancun/generalities/constraints_for_bls_stamp.lisp) \
+		   $(wildcard blsdata/cancun/generalities/constraints_for_ct.lisp) \
+		   $(wildcard blsdata/cancun/generalities/id_increment_constraints.lisp) \
+		   $(wildcard blsdata/cancun/generalities/legal_transition_constraints.lisp) \
+		   $(wildcard blsdata/cancun/generalities/setting_acc_inputs.lisp) \
+		   $(wildcard blsdata/cancun/generalities/setting_ct_max.lisp) \
+		   $(wildcard blsdata/cancun/generalities/setting_index_max.lisp) \
+		   $(wildcard blsdata/cancun/generalities/setting_index.lisp) \
+		   $(wildcard blsdata/cancun/generalities/setting_is_first_input_and_is_second_input.lisp) \
+		   $(wildcard blsdata/cancun/generalities/setting_phase.lisp) \
+		   $(wildcard blsdata/cancun/generalities/setting_total_size.lisp) \
+		   $(wildcard blsdata/cancun/generalities/shorthands.lisp) \
+	       $(wildcard blsdata/cancun/lookups/*.lisp) \
+	       $(wildcard blsdata/cancun/specialized_constraints/*.lisp) \
+	       $(wildcard blsdata/cancun/top_level_flags_mint_mext_wtrv_wnon/*.lisp) \
+		   $(wildcard blsdata/cancun/utilities/*.lisp) \
+
 CONSTANTS := constants/constants.lisp
 
 CONSTANTS_LONDON := constants/london/constants.lisp
@@ -67,7 +110,30 @@ OOB_LONDON := oob/london
 
 OOB_SHANGHAI := oob/shanghai
 
-OOB_CANCUN := oob/cancun
+OOB_CANCUN := $(wildcard oob/cancun/lookups/*.lisp) \
+		   $(wildcard oob/cancun/opcodes/*.lisp) \
+		   $(wildcard oob/cancun/precompiles/*.lisp) \
+		   $(wildcard oob/cancun/binarities.lisp) \
+		   $(wildcard oob/cancun/cancun_restriction.lisp) \
+		   $(wildcard oob/cancun/columns.lisp) \
+		   $(wildcard oob/cancun/constancies.lisp) \
+		   $(wildcard oob/cancun/constants.lisp) \
+		   $(wildcard oob/cancun/decoding.lisp) \
+		   $(wildcard oob/cancun/heartbeat.lisp) \
+		   $(wildcard oob/cancun/shorthands.lisp) \
+		   $(wildcard oob/cancun/specialized.lisp) \
+
+OOB_PRAGUE := $(wildcard oob/cancun/lookups/*.lisp) \
+		   $(wildcard oob/cancun/opcodes/*.lisp) \
+		   $(wildcard oob/cancun/precompiles/*.lisp) \
+		   $(wildcard oob/cancun/binarities.lisp) \
+		   $(wildcard oob/cancun/columns.lisp) \
+		   $(wildcard oob/cancun/constancies.lisp) \
+		   $(wildcard oob/cancun/constants.lisp) \
+		   $(wildcard oob/cancun/decoding.lisp) \
+		   $(wildcard oob/cancun/heartbeat.lisp) \
+		   $(wildcard oob/cancun/shorthands.lisp) \
+		   $(wildcard oob/cancun/specialized.lisp) \
 
 RLP_ADDR := rlpaddr
 
@@ -93,8 +159,11 @@ TABLES_LONDON := reftables/*.lisp \
 				reftables/london/inst_decoder.lisp
 
 TABLES_CANCUN := reftables/*.lisp \
+				reftables/cancun/bls_reftable.lisp \
 				reftables/cancun/inst_decoder.lisp \
 				reftables/cancun/power.lisp
+
+# reftables/cancun/bls_reftable.lisp is only used in PRAGUE, but adding it in CANCUN already allows to do not duplicate OOB
 
 TRM := trm
 
@@ -174,6 +243,7 @@ ZKEVM_MODULES_CANCUN := ${ZKEVM_MODULES_COMMON} \
          ${CONSTANTS_CANCUN} \
 		 ${TABLES_CANCUN} \
 		 ${BLOCKDATA_CANCUN} \
+		 ${BLS_CANCUN} \
 		 ${HUB_CANCUN} \
 		 ${LOG_INFO_CANCUN} \
 		 ${MMIO_CANCUN} \
@@ -187,11 +257,12 @@ ZKEVM_MODULES_PRAGUE := ${ZKEVM_MODULES_COMMON} \
 		 ${CONSTANTS_PRAGUE} \
 		 ${TABLES_CANCUN} \
 		 ${BLOCKDATA_CANCUN} \
+		 ${BLS_PRAGUE} \
 		 ${HUB_CANCUN} \
 		 ${LOG_INFO_CANCUN} \
 		 ${MMIO_CANCUN} \
 		 ${MXP_CANCUN} \
-		 ${OOB_CANCUN} \
+		 ${OOB_PRAGUE} \
 		 ${RLP_TXN_CANCUN} \
 		 ${RLP_UTILS_CANCUN} \
 		 ${TXN_DATA_CANCUN}

@@ -57,7 +57,8 @@
      (* EXO_SUM_WEIGHT_TXCD EXO_IS_TXCD)
      (* EXO_SUM_WEIGHT_ECDATA EXO_IS_ECDATA)
      (* EXO_SUM_WEIGHT_RIPSHA EXO_IS_RIPSHA)
-     (* EXO_SUM_WEIGHT_BLAKEMODEXP EXO_IS_BLAKEMODEXP)))
+     (* EXO_SUM_WEIGHT_BLAKEMODEXP EXO_IS_BLAKEMODEXP)
+     (* EXO_SUM_WEIGHT_BLSDATA EXO_IS_BLS)))
 
 (defconstraint exo-sum-decoding ()
   (eq! (weighted-exo-sum) (* (instruction-may-provide-exo-sum) EXO_SUM)))

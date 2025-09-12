@@ -264,7 +264,7 @@
   (if-not-zero (transition_to_result)
                (will-remain-constant! TRIVIAL_PAIRING)))
 
-(defconstraint set-pairing-result-when-trivial-pairngs ()
+(defconstraint set-pairing-result-when-trivial-pairings ()
   (let ((pairing_result_hi (next LIMB))
         (pairing_result_lo (shift LIMB 2)))
        (if-not-zero (transition_to_result)

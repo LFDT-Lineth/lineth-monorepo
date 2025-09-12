@@ -17,7 +17,8 @@
                                                   IS_IDENTITY
                                                   IS_ECADD
                                                   IS_ECMUL
-                                                  IS_ECPAIRING))
+                                                  IS_ECPAIRING
+                                                  (flag-sum-prc-bls)))
 
 (defun (flag-sum-prc-blake)                 (+    IS_BLAKE2F_CDS
                                                   IS_BLAKE2F_PARAMS))
@@ -27,6 +28,19 @@
                                                   IS_MODEXP_LEAD
                                                   IS_MODEXP_PRICING
                                                   IS_MODEXP_EXTRACT))
+
+(defun (flag-sum-eip-blob-transactions)     IS_POINT_EVALUATION)
+
+(defun (flag-sum-eip-bls12-precompiles)     (+    IS_BLS_G1_ADD
+                                                  IS_BLS_G1_MSM
+                                                  IS_BLS_G2_ADD
+                                                  IS_BLS_G2_MSM
+                                                  IS_BLS_PAIRING_CHECK
+                                                  IS_BLS_MAP_FP_TO_G1
+                                                  IS_BLS_MAP_FP2_TO_G2))
+
+(defun (flag-sum-prc-bls)                   (+    (flag-sum-eip-blob-transactions)
+                                                  (flag-sum-eip-bls12-precompiles)))
 
 (defun (flag-sum-prc)                       (+    (flag-sum-prc-common)
                                                   (flag-sum-prc-blake)
@@ -52,7 +66,8 @@
                                                   (* OOB_INST_IDENTITY         IS_IDENTITY)
                                                   (* OOB_INST_ECADD            IS_ECADD)
                                                   (* OOB_INST_ECMUL            IS_ECMUL)
-                                                  (* OOB_INST_ECPAIRING        IS_ECPAIRING)))
+                                                  (* OOB_INST_ECPAIRING        IS_ECPAIRING)
+                                                  (wght-sum-prc-bls)))
 
 (defun (wght-sum-prc-blake)                 (+    (* OOB_INST_BLAKE_CDS        IS_BLAKE2F_CDS)
                                                   (* OOB_INST_BLAKE_PARAMS     IS_BLAKE2F_PARAMS)))
@@ -62,6 +77,19 @@
                                                   (* OOB_INST_MODEXP_LEAD      IS_MODEXP_LEAD)
                                                   (* OOB_INST_MODEXP_PRICING   IS_MODEXP_PRICING)
                                                   (* OOB_INST_MODEXP_EXTRACT   IS_MODEXP_EXTRACT)))
+
+(defun (wght-sum-prc-eip-blob-transactions) (+    (* OOB_INST_POINT_EVALUATION IS_POINT_EVALUATION)))
+
+(defun (wght-sum-prc-eip-bls12-precompiles) (+    (* OOB_INST_BLS_G1_ADD        IS_BLS_G1_ADD)
+                                                  (* OOB_INST_BLS_G1_MSM        IS_BLS_G1_MSM)
+                                                  (* OOB_INST_BLS_G2_ADD        IS_BLS_G2_ADD)
+                                                  (* OOB_INST_BLS_G2_MSM        IS_BLS_G2_MSM)
+                                                  (* OOB_INST_BLS_PAIRING_CHECK IS_BLS_PAIRING_CHECK)
+                                                  (* OOB_INST_BLS_MAP_FP_TO_G1 IS_BLS_MAP_FP_TO_G1)
+                                                  (* OOB_INST_BLS_MAP_FP2_TO_G2 IS_BLS_MAP_FP2_TO_G2)))
+
+(defun (wght-sum-prc-bls)                   (+    (wght-sum-prc-eip-blob-transactions)
+                                                  (wght-sum-prc-eip-bls12-precompiles)))
 
 (defun (wght-sum-prc)                       (+    (wght-sum-prc-common)
                                                   (wght-sum-prc-blake)
@@ -87,7 +115,8 @@
                                                   (* CT_MAX_IDENTITY           IS_IDENTITY)
                                                   (* CT_MAX_ECADD              IS_ECADD)
                                                   (* CT_MAX_ECMUL              IS_ECMUL)
-                                                  (* CT_MAX_ECPAIRING          IS_ECPAIRING)))
+                                                  (* CT_MAX_ECPAIRING          IS_ECPAIRING)
+                                                  (maxct-sum-prc-bls)))
 
 (defun (maxct-sum-prc-blake)                (+    (* CT_MAX_BLAKE2F_CDS IS_BLAKE2F_CDS)
                                                   (* CT_MAX_BLAKE2F_PARAMS IS_BLAKE2F_PARAMS)))
@@ -98,6 +127,19 @@
                                                   (* CT_MAX_MODEXP_PRICING IS_MODEXP_PRICING)
                                                   (* CT_MAX_MODEXP_EXTRACT IS_MODEXP_EXTRACT)))
 
+(defun (maxct-sum-prc-eip-blob-transactions)(+   (* CT_MAX_POINT_EVALUATION IS_POINT_EVALUATION)))
+
+(defun (maxct-sum-prc-eip-bls12-precompiles)(+   (* CT_MAX_BLS_G1_ADD IS_BLS_G1_ADD)
+                                                  (* CT_MAX_BLS_G1_MSM IS_BLS_G1_MSM)
+                                                  (* CT_MAX_BLS_G2_ADD IS_BLS_G2_ADD)
+                                                  (* CT_MAX_BLS_G2_MSM IS_BLS_G2_MSM)
+                                                  (* CT_MAX_BLS_PAIRING_CHECK IS_BLS_PAIRING_CHECK)
+                                                  (* CT_MAX_BLS_MAP_FP_TO_G1 IS_BLS_MAP_FP_TO_G1)
+                                                  (* CT_MAX_BLS_MAP_FP2_TO_G2 IS_BLS_MAP_FP2_TO_G2)))
+
+(defun (maxct-sum-prc-bls)                  (+    (maxct-sum-prc-eip-blob-transactions)
+                                                  (maxct-sum-prc-eip-bls12-precompiles)))
+
 (defun (maxct-sum-prc)                      (+    (maxct-sum-prc-common)
                                                   (maxct-sum-prc-blake)
                                                   (maxct-sum-prc-modexp)))
@@ -107,10 +149,14 @@
 
 (defun (lookup-sum k)                       (+    (shift ADD_FLAG k)
                                                   (shift MOD_FLAG k)
-                                                  (shift WCP_FLAG k)))
+                                                  (shift WCP_FLAG k)
+                                                  (shift BLS_REF_TABLE_FLAG k)))
 
 (defun (wght-lookup-sum k)                  (+    (* 1 (shift ADD_FLAG k))
                                                   (* 2 (shift MOD_FLAG k))
-                                                  (* 3 (shift WCP_FLAG k))))
+                                                  (* 3 (shift WCP_FLAG k))
+                                                  (* 4 (shift BLS_REF_TABLE_FLAG k))))
 
 (defun (assumption---fresh-new-stamp)       (- STAMP (prev STAMP)))
+
+;; TODO: change maxct ot ct-max

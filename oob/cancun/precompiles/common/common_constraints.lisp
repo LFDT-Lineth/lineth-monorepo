@@ -18,6 +18,7 @@
 (defun (prc---empty-call-data)                [DATA 7])
 (defun (prc---r@c-nonzero)                    [DATA 8])
 (defun (prc---cds-is-zero)                    OUTGOING_RES_LO)
+(defun (prc---cds-is-non-zero)                (- 1 (prc---cds-is-zero)))
 (defun (prc---r@c-is-zero)                    (next OUTGOING_RES_LO))
 
 (defconstraint prc---check-cds-is-zero (:guard (* (assumption---fresh-new-stamp) (prc-common---standard-precondition)))

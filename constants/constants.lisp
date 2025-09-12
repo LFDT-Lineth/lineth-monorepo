@@ -233,9 +233,16 @@
   GAS_CONST_ECPAIRING_PAIR                  34000
   GAS_CONST_BLAKE2_PER_ROUND                1
   GAS_CONST_INIT_CODE_WORD                  2 ;; post Shanghai EIP-3860
-  GAS_CONST_HASH_OPCODE_GAS                 3 ;; gas cost of BLOBHASH, EIP-4844 in Cancun
+  GAS_CONST_HASH_OPCODE_GAS                 3 ;; gas cost of BLOBHASH, EIP-4844 in Cancun         
   STANDARD_TOKEN_COST                       4 ;; payload pricing
   FLOOR_TOKEN_COST                         10 ;; floor cost constant, from EIP-3860 (Prague)
+  GAS_CONST_POINT_EVALUATION                50000
+  GAS_CONST_BLS_G1_ADD                      375
+  GAS_CONST_BLS_G2_ADD                      600
+  GAS_CONST_BLS_MAP_FP_TO_G1                5500
+  GAS_CONST_BLS_MAP_FP2_TO_G2               23800
+  GAS_CONST_BLS_PAIRING_CHECK               37700
+  GAS_CONST_BLS_PAIRING_CHECK_PAIR          32600
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;           ;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  EVM MISC ;;
@@ -308,6 +315,16 @@
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; PRECOMPILES   ;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;               ;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  PRECOMPILE_CALL_DATA_UNIT_SIZE___ECPAIRING               192
+  PRECOMPILE_CALL_DATA_SIZE___POINT_EVALUATION             192
+  PRECOMPILE_CALL_DATA_SIZE___G1_ADD                       256
+  PRECOMPILE_CALL_DATA_UNIT_SIZE___BLS_G1_MSM              160
+  PRECOMPILE_CALL_DATA_SIZE___G2_ADD                       512
+  PRECOMPILE_CALL_DATA_UNIT_SIZE___BLS_G2_MSM              288
+  PRECOMPILE_CALL_DATA_UNIT_SIZE___BLS_PAIRING_CHECK       384
+  PRECOMPILE_CALL_DATA_SIZE___FP_TO_G1                      64
+  PRECOMPILE_CALL_DATA_SIZE___FP2_TO_G2                    128
+
   PRC_ECPAIRING_SIZE                                       (* 6 WORD_SIZE)
   PRECOMPILE_CALL_DATA_SIZE___BLAKE2F                      213
   PRECOMPILE_RETURN_DATA_SIZE___ECADD                       64
@@ -321,6 +338,12 @@
   PRECOMPILE_RETURN_DATA_SIZE___BLS_PAIRING_CHECK           32
   PRECOMPILE_RETURN_DATA_SIZE___BLS_MAP_FP_TO_G1           128
   PRECOMPILE_RETURN_DATA_SIZE___BLS_MAP_FP2_TO_G2          256
+
+  PRC_BLS_G1_MSM_MAX_DISCOUNT                              519
+  PRC_BLS_G2_MSM_MAX_DISCOUNT                              524
+  PRC_BLS_G1_MSM_MULTIPLICATION_COST                     12000
+  PRC_BLS_G2_MSM_MULTIPLICATION_COST                     22500
+  PRC_BLS_MULTIPLICATION_MULTIPLIER                       1000
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;         ;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; EXO SUM ;;
