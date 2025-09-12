@@ -14,25 +14,25 @@
 
 
 (defconst
-  tx-skip---SYSI-2935---row-offset---TXN                                        0
-  tx-skip---SYSI-2935---row-offset---ACC---loading-the-beacon-root-account      1
-  tx-skip---SYSI-2935---row-offset---STO---storing-the-time-stamp               2
-  tx-skip---SYSI-2935---row-offset---CON---final-zero-context---nontrivial-case 3
-  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  tx-skip---SYSI-2935---row-offset---CON---final-zero-context---trivial-case    2
-  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  tx-skip---SYSI-2935---NSR---unconditional                                     2
-  tx-skip---SYSI-2935---NSR---trivial-case                                      3
-  tx-skip---SYSI-2935---NSR---nontrivial-case                                   4
+  ROFF---tx-skip---SYSI-2935---TXN                                          0
+  ROFF---tx-skip---SYSI-2935---ACC---loading-the-block-hash-history-account 1
+  ROFF---tx-skip---SYSI-2935---STO---storing-the-previous-block-hash        2
+  ROFF---tx-skip---SYSI-2935---CON---final-zero-context---nontrivial-case   3
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ROFF---tx-skip---SYSI-2935---CON---final-zero-context---trivial-case      2
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  NSR---tx-skip---SYSI-2935---unconditional                                 2
+  NSR---tx-skip---SYSI-2935---trivial-case                                  3
+  NSR---tx-skip---SYSI-2935---nontrivial-case                               4
   )
 
 
-(defun (tx-skip---SYSI-2935---sys-smc-has-code)             (shift   account/HAS_CODE              tx-skip---SYSI-2935---row-offset---ACC---loading-the-beacon-root-account)) ;; ""
+(defun (tx-skip---SYSI-2935---sys-smc-has-code)             (shift   account/HAS_CODE              ROFF---tx-skip---SYSI-2935---ACC---loading-the-block-hash-history-account)) ;; ""
 ;; we don't need "prev-block-number" itself
-(defun (tx-skip---SYSI-2935---prev-block-number-mod-8191)   (shift   transaction/SYST_TXN_DATA_2   tx-skip---SYSI-2935---row-offset---TXN)) ;; ""
-(defun (tx-skip---SYSI-2935---prev-block-hash-hi)           (shift   transaction/SYST_TXN_DATA_3   tx-skip---SYSI-2935---row-offset---TXN)) ;; ""
-(defun (tx-skip---SYSI-2935---prev-block-hash-lo)           (shift   transaction/SYST_TXN_DATA_4   tx-skip---SYSI-2935---row-offset---TXN)) ;; ""
-(defun (tx-skip---SYSI-2935---current-block-is-genesis)     (shift   transaction/SYST_TXN_DATA_5   tx-skip---SYSI-2935---row-offset---TXN)) ;; ""
+(defun (tx-skip---SYSI-2935---prev-block-number-mod-8191)   (shift   transaction/SYST_TXN_DATA_2   ROFF---tx-skip---SYSI-2935---TXN)) ;; ""
+(defun (tx-skip---SYSI-2935---prev-block-hash-hi)           (shift   transaction/SYST_TXN_DATA_3   ROFF---tx-skip---SYSI-2935---TXN)) ;; ""
+(defun (tx-skip---SYSI-2935---prev-block-hash-lo)           (shift   transaction/SYST_TXN_DATA_4   ROFF---tx-skip---SYSI-2935---TXN)) ;; ""
+(defun (tx-skip---SYSI-2935---current-block-is-genesis)     (shift   transaction/SYST_TXN_DATA_5   ROFF---tx-skip---SYSI-2935---TXN)) ;; ""
 (defun (tx-skip---SYSI-2935---current-block-isnt-genesis)   (force-bin (-  1  (tx-skip---SYSI-2935---current-block-is-genesis))))
 
 
@@ -44,5 +44,5 @@
 (defun    (tx-skip---precondition---SYSI-2935)    (force-bin (*   (-    TOTL_TXN_NUMBER    (prev    TOTL_TXN_NUMBER))
                                                                   SYSI
                                                                   TX_SKIP
-                                                                  (shift    transaction/EIP_2935    tx-skip---SYSI-2935---row-offset---TXN)
+                                                                  (shift    transaction/EIP_2935    ROFF---tx-skip---SYSI-2935---TXN)
                                                        )))

@@ -17,15 +17,15 @@
                   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                   (if-not-zero   (tx-skip---SYSI-4788---sys-txn-is-nontrivial)
                                  (begin
-                                   (eq!   (shift   storage/ADDRESS_HI          tx-skip---SYSI-4788---row-offset---STO---storing-the-beacon-root)   BEACON_ROOTS_ADDRESS_HI)
-                                   (eq!   (shift   storage/ADDRESS_LO          tx-skip---SYSI-4788---row-offset---STO---storing-the-beacon-root)   BEACON_ROOTS_ADDRESS_LO)
-                                   (eq!   (shift   storage/DEPLOYMENT_NUMBER   tx-skip---SYSI-4788---row-offset---STO---storing-the-beacon-root)   (shift   account/DEPLOYMENT_NUMBER   tx-skip---SYSI-4788---row-offset---ACC---loading-the-beacon-root-account))
-                                   (eq!   (shift   storage/STORAGE_KEY_HI      tx-skip---SYSI-4788---row-offset---STO---storing-the-beacon-root)   0)
-                                   (eq!   (shift   storage/STORAGE_KEY_LO      tx-skip---SYSI-4788---row-offset---STO---storing-the-beacon-root)   (+   (tx-skip---SYSI-4788---timestamp-mod-8191)   HISTORY_BUFFER_LENGTH))
-                                   (eq!   (shift   storage/VALUE_NEXT_HI       tx-skip---SYSI-4788---row-offset---STO---storing-the-beacon-root)   (tx-skip---SYSI-4788---beacon-root-hi))
-                                   (eq!   (shift   storage/VALUE_NEXT_LO       tx-skip---SYSI-4788---row-offset---STO---storing-the-beacon-root)   (tx-skip---SYSI-4788---beacon-root-lo))
-                                   (storage-same-warmth                        tx-skip---SYSI-4788---row-offset---STO---storing-the-beacon-root)
-                                   (DOM-SUB-stamps---standard                  tx-skip---SYSI-4788---row-offset---STO---storing-the-beacon-root       ;; kappa
-                                                                               tx-skip---SYSI-4788---row-offset---STO---storing-the-beacon-root)      ;; c
+                                   (eq!   (shift   storage/ADDRESS_HI          ROFF---tx-skip---SYSI-4788---STO---storing-the-beacon-root)   BEACON_ROOTS_ADDRESS_HI)
+                                   (eq!   (shift   storage/ADDRESS_LO          ROFF---tx-skip---SYSI-4788---STO---storing-the-beacon-root)   BEACON_ROOTS_ADDRESS_LO)
+                                   (eq!   (shift   storage/DEPLOYMENT_NUMBER   ROFF---tx-skip---SYSI-4788---STO---storing-the-beacon-root)   (shift   account/DEPLOYMENT_NUMBER   ROFF---tx-skip---SYSI-4788---ACC---loading-the-beacon-root-account))
+                                   (eq!   (shift   storage/STORAGE_KEY_HI      ROFF---tx-skip---SYSI-4788---STO---storing-the-beacon-root)   0)
+                                   (eq!   (shift   storage/STORAGE_KEY_LO      ROFF---tx-skip---SYSI-4788---STO---storing-the-beacon-root)   (+   (tx-skip---SYSI-4788---timestamp-mod-8191)   HISTORY_BUFFER_LENGTH))
+                                   (eq!   (shift   storage/VALUE_NEXT_HI       ROFF---tx-skip---SYSI-4788---STO---storing-the-beacon-root)   (tx-skip---SYSI-4788---beacon-root-hi))
+                                   (eq!   (shift   storage/VALUE_NEXT_LO       ROFF---tx-skip---SYSI-4788---STO---storing-the-beacon-root)   (tx-skip---SYSI-4788---beacon-root-lo))
+                                   (storage-same-warmth                        ROFF---tx-skip---SYSI-4788---STO---storing-the-beacon-root)
+                                   (DOM-SUB-stamps---standard                  ROFF---tx-skip---SYSI-4788---STO---storing-the-beacon-root       ;; kappa
+                                                                               ROFF---tx-skip---SYSI-4788---STO---storing-the-beacon-root)      ;; c
                                    )))
 
