@@ -13,6 +13,20 @@ compile-contracts-no-cache:
 		cd contracts/; \
 		make force-compile
 
+deploy-eip-system-contracts:
+		# WARNING: FOR LOCAL DEV ONLY - DO NOT REUSE THESE KEYS ELSEWHERE
+		cd contracts/; \
+		PRIVATE_KEY=$${DEPLOYMENT_PRIVATE_KEY:-0x1dd171cec7e2995408b5513004e8207fe88d6820aeff0d82463b3e41df251aae} \
+		RPC_URL=http:\\localhost:8545/ \
+		npx ts-node local-deployments-artifacts/deployEIPSystemContracts.ts
+
+deploy-upgradeable-predeploys:
+		# WARNING: FOR LOCAL DEV ONLY - DO NOT REUSE THESE KEYS ELSEWHERE
+		cd contracts/; \
+		PRIVATE_KEY=$${DEPLOYMENT_PRIVATE_KEY:-0x1dd171cec7e2995408b5513004e8207fe88d6820aeff0d82463b3e41df251aae} \
+		RPC_URL=http:\\localhost:8545/ \
+		npx ts-node local-deployments-artifacts/deployPredeployContractsV1.ts
+
 deploy-linea-rollup: L1_CONTRACT_VERSION:=6
 deploy-linea-rollup:
 		# WARNING: FOR LOCAL DEV ONLY - DO NOT REUSE THESE KEYS ELSEWHERE
