@@ -114,6 +114,11 @@ jobs:
             linea-sequencer-plugin:
               - 'besu-plugins/linea-sequencer/**'
               - '.github/workflows/linea-sequencer-plugin-testing.yml'
+              - 'buildSrc/**'
+              - 'gradle/**'
+              - 'build.gradle'
+              - 'gradle.properties'
+              - 'settings.gradle'
 
       - name: Filter out commit changes
         uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 #v3.0.2
