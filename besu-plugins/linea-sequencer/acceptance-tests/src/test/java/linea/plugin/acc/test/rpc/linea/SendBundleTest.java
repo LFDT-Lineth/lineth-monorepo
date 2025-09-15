@@ -19,6 +19,7 @@ import org.hyperledger.besu.datatypes.Wei;
 import org.hyperledger.besu.tests.acceptance.dsl.account.Account;
 import org.hyperledger.besu.tests.acceptance.dsl.account.Accounts;
 import org.hyperledger.besu.tests.acceptance.dsl.blockchain.Amount;
+import org.hyperledger.besu.tests.acceptance.dsl.node.configuration.genesis.GenesisConfigurationFactory;
 import org.hyperledger.besu.tests.acceptance.dsl.transaction.account.TransferTransaction;
 import org.junit.jupiter.api.Test;
 import org.web3j.crypto.Credentials;
@@ -27,6 +28,14 @@ import org.web3j.crypto.TransactionEncoder;
 import org.web3j.utils.Numeric;
 
 public class SendBundleTest extends AbstractSendBundleTest {
+
+  @Override
+  protected GenesisConfigurationFactory.CliqueOptions getCliqueOptions() {
+    return new GenesisConfigurationFactory.CliqueOptions(
+        BLOCK_PERIOD_SECONDS + 2,
+        GenesisConfigurationFactory.CliqueOptions.DEFAULT.epochLength(),
+        false);
+  }
 
   @Test
   public void singleTxBundleIsAcceptedAndMined() {

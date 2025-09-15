@@ -54,6 +54,6 @@ public class EstimateGasModuleLimitOverflowTest extends LineaPluginTestBase {
     final var respLinea = reqLinea.execute(minerNode.nodeRequests());
     assertThat(respLinea.getCode()).isEqualTo(-32000);
     assertThat(respLinea.getMessage())
-        .isEqualTo("Transaction line count for module WCP=349 is above the limit 306");
+        .isEqualTo("Transaction line count for module WCP=344 is above the limit 306");
   }
 }
