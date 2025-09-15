@@ -39,11 +39,15 @@ dependencies {
 
 apply from: lineaSequencerProject.file("gradle/dist.gradle")
 
+distZip {
+  archiveBaseName = 'linea-sequencer'
+}
+
 // Simple artifacts task that runs jar and distPlugin
 task artifacts {
   group = 'Build'
   description = 'Creates all build artifacts (JAR and distribution ZIP)'
-  dependsOn 'jar', 'distPlugin'
+  dependsOn 'jar', 'distZip'
 }
 
 test {
