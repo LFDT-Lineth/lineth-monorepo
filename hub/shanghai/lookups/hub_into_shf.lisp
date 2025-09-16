@@ -5,24 +5,18 @@
 (defclookup hub-into-shf
   ;; target columns
   (
-   shf.ARG_1_HI
-   shf.ARG_1_LO
-   shf.ARG_2_HI
-   shf.ARG_2_LO
-   shf.RES_HI
-   shf.RES_LO
+   shf.ARG_1
+   shf.ARG_2
+   shf.RES
    shf.INST
   )
   ;; source selector
   (hub-into-shf-activation-flag)
   ;; source columns
   (
-   [hub.stack/STACK_ITEM_VALUE_HI 1]
-   [hub.stack/STACK_ITEM_VALUE_LO 1]
-   [hub.stack/STACK_ITEM_VALUE_HI 2]
-   [hub.stack/STACK_ITEM_VALUE_LO 2]
-   [hub.stack/STACK_ITEM_VALUE_HI 4]
-   [hub.stack/STACK_ITEM_VALUE_LO 4]
-    hub.stack/INSTRUCTION
+   (:: [hub.stack/STACK_ITEM_VALUE_HI 1] [hub.stack/STACK_ITEM_VALUE_LO 1]) ;; arg1
+   (:: [hub.stack/STACK_ITEM_VALUE_HI 2] [hub.stack/STACK_ITEM_VALUE_LO 2]) ;; arg2
+   (:: [hub.stack/STACK_ITEM_VALUE_HI 4] [hub.stack/STACK_ITEM_VALUE_LO 4]) ;; result   
+   hub.stack/INSTRUCTION
   )
 )

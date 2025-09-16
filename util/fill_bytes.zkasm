@@ -1,0 +1,37 @@
+include "set_byte.zkasm"
+
+;; Replace all bytes starting from a specific offset in the given word
+;; with a given value, where offset==0 represents the most significant
+;; byte.  For example, consider this word:
+;;
+;; 0xffeeddccbbaa99887766554433221100
+;;
+;; Filling this word with 0s starting from offset 28 gives the
+;; following:
+;;
+;; 0xffeeddccbbaa99887766554400000000
+;;                           ^^----->
+;;
+;; Here, we see the cursor starts at offset 28 and keeps going to the
+;; end.  The key is that all other bytes remain unchanged.
+fn fill_bytes_from(word u256, offset u6, value u8) -> (res u256) {
+   var nword u256
+   var noffset u6
+   var n u5
+   var s u1
+   ;; split offset
+   s, n = offset
+   ;; check whether done
+   if s == 1 goto exit
+   ;; set given byte
+   nword = set_byte256(word, n, value)
+   ;; increment offset
+   noffset = n + 1
+   ;; recurse
+   res = fill_bytes_from(nword, noffset, value)
+   ;; done
+   return
+exit:
+   res = word
+   return
+}
