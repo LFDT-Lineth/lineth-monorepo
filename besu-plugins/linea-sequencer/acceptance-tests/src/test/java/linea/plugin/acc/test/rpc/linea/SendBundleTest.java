@@ -13,8 +13,11 @@ import static org.web3j.crypto.Hash.sha3;
 
 import java.math.BigInteger;
 import java.util.Arrays;
+import java.util.List;
+import linea.plugin.acc.test.TestCommandLineOptionsBuilder;
 import linea.plugin.acc.test.tests.web3j.generated.AcceptanceTestToken;
 import linea.plugin.acc.test.tests.web3j.generated.RevertExample;
+import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.datatypes.Wei;
 import org.hyperledger.besu.tests.acceptance.dsl.account.Account;
 import org.hyperledger.besu.tests.acceptance.dsl.account.Accounts;
@@ -28,6 +31,20 @@ import org.web3j.crypto.TransactionEncoder;
 import org.web3j.utils.Numeric;
 
 public class SendBundleTest extends AbstractSendBundleTest {
+  private static final Address DENY_TO_ADDRESS =
+      Address.fromHexString("0xf17f52151EbEF6C7334FAD080c5704D77216b732");
+  // Address 0x44b30d738d2dec1952b92c091724e8aedd52b9b2
+  private static final String DENY_FROM_PRIVATE_KEY =
+      "0xf326e86ba27e2286725a154922094f02573f4921a25a27046b74ec90e653438e";
+
+  @Override
+  public List<String> getTestCliOptions() {
+    return new TestCommandLineOptionsBuilder()
+        .set(
+            "--plugin-linea-bundle-overriding-deny-list-path=",
+            getResourcePath("/bundleDenyList.txt"))
+        .build();
+  }
 
   @Override
   protected GenesisConfigurationFactory.CliqueOptions getCliqueOptions() {
@@ -104,6 +121,46 @@ public class SendBundleTest extends AbstractSendBundleTest {
         .isEqualTo(
             "Invalid transaction in bundle: hash 0x3f6ff4384305623a7c5cbf05afd9b97c8409be23c4b39c7b16d60001aee4340b,"
                 + " reason: Gas limit of transaction is greater than the allowed max of 9000000");
+  }
+
+  @Test
+  public void bundleTxRecipientOnDenyListIsNotAccepted() {
+    final Account sender = accounts.getSecondaryBenefactor();
+    final Account recipient = accounts.createAccount(DENY_TO_ADDRESS);
+
+    final TransferTransaction tx1 = accountTransactions.createTransfer(sender, recipient, 1);
+
+    final String[] bundleRawTxs = new String[] {tx1.signedTransactionData()};
+
+    final var sendBundleRequest =
+        new SendBundleRequest(new BundleParams(bundleRawTxs, Integer.toHexString(1)));
+    final var sendBundleResponse = sendBundleRequest.execute(minerNode.nodeRequests());
+
+    assertThat(sendBundleResponse.hasError()).isTrue();
+    assertThat(sendBundleResponse.getError().getMessage())
+        .isEqualTo(
+            "Invalid transaction in bundle: hash 0xfb47ad29ecf898031bae210263198385f35818d4d154dc752d942a42acabc0cc, "
+                + "reason: recipient 0xf17f52151ebef6c7334fad080c5704d77216b732 is blocked as appearing on the SDN or other legally prohibited list");
+  }
+
+  @Test
+  public void bundleTxFromOnDenyListIsNotAccepted() {
+    final Account sender = Account.fromPrivateKey(ethTransactions, "denied", DENY_FROM_PRIVATE_KEY);
+    final Account recipient = accounts.getPrimaryBenefactor();
+
+    final TransferTransaction tx1 = accountTransactions.createTransfer(sender, recipient, 1);
+
+    final String[] bundleRawTxs = new String[] {tx1.signedTransactionData()};
+
+    final var sendBundleRequest =
+        new SendBundleRequest(new BundleParams(bundleRawTxs, Integer.toHexString(1)));
+    final var sendBundleResponse = sendBundleRequest.execute(minerNode.nodeRequests());
+
+    assertThat(sendBundleResponse.hasError()).isTrue();
+    assertThat(sendBundleResponse.getError().getMessage())
+        .isEqualTo(
+            "Invalid transaction in bundle: hash 0xd631d31a09e865fcd0d86a7f7763747ece057f9f3a63350bb56a206051020a71,"
+                + " reason: sender 0x44b30d738d2dec1952b92c091724e8aedd52b9b2 is blocked as appearing on the SDN or other legally prohibited list");
   }
 
   @Test

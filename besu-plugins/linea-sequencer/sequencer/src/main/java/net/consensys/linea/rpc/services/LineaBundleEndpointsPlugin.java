@@ -52,7 +52,8 @@ public class LineaBundleEndpointsPlugin extends AbstractLineaRequiredPlugin {
   public PluginTransactionPoolValidator createTransactionValidator() {
     final var validators =
         new PluginTransactionPoolValidator[] {
-          new AllowedAddressValidator(transactionPoolValidatorConfiguration().deniedAddresses()),
+          new AllowedAddressValidator(
+              transactionPoolValidatorConfiguration().bundleDeniedAddresses()),
           new GasLimitValidator(transactionPoolValidatorConfiguration().maxTxGasLimit()),
           new CalldataValidator(transactionPoolValidatorConfiguration().maxTxCalldataSize())
         };
