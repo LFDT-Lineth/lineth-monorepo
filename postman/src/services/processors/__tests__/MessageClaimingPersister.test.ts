@@ -247,7 +247,6 @@ describe("TestMessageClaimingPersister ", () => {
         txReceipt,
         isRateLimitExceededError: false,
       });
-      console.log("boobies");
       await messageClaimingPersister.process();
 
       expect(l2QuerierGetReceiptSpy).toHaveBeenCalledTimes(1);
