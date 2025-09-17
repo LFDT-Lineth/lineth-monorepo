@@ -17,10 +17,11 @@ import {
 } from "@/types";
 import { formatOnChainMessageStatus } from "./formatOnChainMessageStatus";
 import { HistoryActionsForCompleteTxCaching } from "@/stores";
-import { getCompleteTxStoreKey } from "./getCompleteTxStoreKey";
 import { isBlockTooOld } from "./isBlockTooOld";
 import { isUndefined, isUndefinedOrNull } from "@/utils";
 import { config } from "@/config";
+import { restoreFromTransactionCache } from "./restoreFromTransactionCache";
+import { saveToTransactionCache } from "./saveToTransactionCache";
 
 export async function fetchERC20BridgeEvents(
   historyStoreActions: HistoryActionsForCompleteTxCaching,
@@ -76,10 +77,15 @@ export async function fetchERC20BridgeEvents(
       const transactionHash = log.transactionHash;
 
       // Search cache for completed tx for this txHash, if cache-hit can skip remaining logic
-      const cacheKey = getCompleteTxStoreKey(fromChain.id, transactionHash);
-      const cachedCompletedTx = historyStoreActions.getCompleteTx(cacheKey);
-      if (cachedCompletedTx) {
-        transactionsMap.set(transactionHash, cachedCompletedTx);
+      if (
+        restoreFromTransactionCache(
+          historyStoreActions,
+          fromChain.id,
+          transactionHash,
+          transactionsMap,
+          transactionHash,
+        )
+      ) {
         return;
       }
 
@@ -147,8 +153,7 @@ export async function fetchERC20BridgeEvents(
         },
       };
 
-      // Store COMPLETE tx in cache
-      historyStoreActions.setCompleteTx(tx);
+      saveToTransactionCache(historyStoreActions, tx);
       transactionsMap.set(transactionHash, tx);
     }),
   );

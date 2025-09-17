@@ -7,28 +7,20 @@ import { getCompleteTxStoreKeyForTx } from "@/utils/history";
 
 export type HistoryState = {
   isLoading: boolean;
-  // history: Record<
-  //   string,
-  //   { transactions: BridgeTransaction[]; lastL1FetchedBlockNumber: bigint; lastL2FetchedBlockNumber: bigint }
-  // >;
   completeTxHistory: Record<string, BridgeTransaction>;
 };
 
 type HistoryActions = {
   setIsLoading: (isLoading: boolean) => void;
-  // setTransactions: (
-  //   key: string,
-  //   transactions: BridgeTransaction[],
-  //   lastL1FetchedBlockNumber?: bigint,
-  //   lastL2FetchedBlockNumber?: bigint,
-  // ) => void;
   setCompleteTx: (transaction: BridgeTransaction) => void;
-  // getTransactionsByKey: (key: string) => BridgeTransaction[];
-  // getFromBlockNumbers: (key: string) => { l1FromBlock: bigint; l2FromBlock: bigint };
   getCompleteTx: (key: string) => BridgeTransaction | undefined;
+  deleteCompleteTx: (key: string) => void;
 };
 
-export type HistoryActionsForCompleteTxCaching = Pick<HistoryActions, "setCompleteTx" | "getCompleteTx">;
+export type HistoryActionsForCompleteTxCaching = Pick<
+  HistoryActions,
+  "setCompleteTx" | "getCompleteTx" | "deleteCompleteTx"
+>;
 
 export type HistoryStore = HistoryState & HistoryActions;
 
@@ -43,17 +35,6 @@ export const useHistoryStore = createWithEqualityFn<HistoryStore>()(
     (set, get) => ({
       ...defaultInitState,
       setIsLoading: (isLoading) => set({ isLoading }),
-      // setTransactions: (key, transactions, lastL1FetchedBlockNumber, lastL2FetchedBlockNumber) =>
-      //   set((state) => ({
-      //     history: {
-      //       ...state.history,
-      //       [key]: {
-      //         transactions,
-      //         lastL1FetchedBlockNumber: lastL1FetchedBlockNumber || 0n,
-      //         lastL2FetchedBlockNumber: lastL2FetchedBlockNumber || 0n,
-      //       },
-      //     },
-      //   })),
       setCompleteTx: (transaction) =>
         set((state) => {
           if (transaction.status !== TransactionStatus.COMPLETED) return state;
@@ -69,25 +50,14 @@ export const useHistoryStore = createWithEqualityFn<HistoryStore>()(
         const { completeTxHistory } = get();
         return completeTxHistory[key];
       },
-      // getTransactionsByKey: (key) => {
-      //   const { history } = get();
-      //   return history[key]?.transactions ?? [];
-      // },
-      // getFromBlockNumbers: (key) => {
-      //   const { history } = get();
-
-      //   if (isEmptyObject(history) || !history[key]) {
-      //     return {
-      //       l1FromBlock: 0n,
-      //       l2FromBlock: 0n,
-      //     };
-      //   }
-
-      //   return {
-      //     l1FromBlock: history[key].lastL1FetchedBlockNumber,
-      //     l2FromBlock: history[key].lastL2FetchedBlockNumber,
-      //   };
-      // },
+      deleteCompleteTx: (key) =>
+        set((state) => {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          const { [key]: _, ...remainingHistory } = state.completeTxHistory;
+          return {
+            completeTxHistory: remainingHistory,
+          };
+        }),
     }),
     {
       name: "history-storage",

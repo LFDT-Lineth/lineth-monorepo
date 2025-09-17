@@ -10,13 +10,15 @@ const useTransactionHistory = () => {
   const fromChain = useChainStore.useFromChain();
   const toChain = useChainStore.useToChain();
   const tokens = useTokens();
-  const { setCompleteTx, getCompleteTx } = useHistoryStore((state) => ({
+  const { setCompleteTx, getCompleteTx, deleteCompleteTx } = useHistoryStore((state) => ({
     setCompleteTx: state.setCompleteTx,
     getCompleteTx: state.getCompleteTx,
+    deleteCompleteTx: state.deleteCompleteTx,
   }));
   const historyStoreActions: HistoryActionsForCompleteTxCaching = {
     setCompleteTx,
     getCompleteTx,
+    deleteCompleteTx,
   };
 
   const { data, isLoading, refetch } = useQuery({

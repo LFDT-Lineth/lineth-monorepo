@@ -1,4 +1,4 @@
-name: Run Bridge UI E2E Tests
+name: Bridge UI E2E Tests
 
 permissions:
   contents: read
@@ -131,14 +131,14 @@ jobs:
           docker container ls -a
       
       - name: Initialize Metamask testing fixture
-        run: xvfb-run pnpm run -F bridge-ui build:cache
+        run: xvfb-run -a pnpm run -F bridge-ui build:cache
         env:
           E2E_TEST_SEED_PHRASE: "test test test test test test test test test test test junk"
           E2E_TEST_WALLET_PASSWORD: "TestPassword!"
 
       # Prerequisite - Testing wallet must have >0 ETH and USDC on Sepolia
       - name: Run E2E tests
-        run: xvfb-run pnpm run -F bridge-ui test:e2e:headful
+        run: xvfb-run -a pnpm run -F bridge-ui test:e2e:headful
         env:
           # Do not run E2E tests in parallel. Especially blockchain tx where nonces can collide.
           CI: "true"
