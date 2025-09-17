@@ -21,11 +21,14 @@ class EIP7702TransactionSender {
     this.lineaEstimateGasClient = new LineaEstimateGasClient(new URL(rpcUrl), this.signer.address);
   }
 
-  async createAuthorization(targetContractAddress: string): Promise<Authorization> {
+  // Create Authorization for process.env.PRIVATE_KEY
+  async createAuthorizationForSelf(targetContractAddress: string): Promise<Authorization> {
     const network = await this.provider.getNetwork();
     const currentChainId = network.chainId;
 
     const currentNonce = await this.provider.getTransactionCount(this.signer.address);
+    // +1 required when same account is `to` and is an authorization signer
+    // https://eips.ethereum.org/EIPS/eip-7702 - "The authorization list is processed before the execution portion of the transaction begins, but after the sender’s nonce is incremented."
     const authNonce = currentNonce + 1;
 
     const authorization = await this.signer.authorize({
@@ -37,11 +40,29 @@ class EIP7702TransactionSender {
     return authorization;
   }
 
-  async sendNonSponsoredTransaction(targetERC20Address: string) {
+  // Create Authorization for another private key
+  async createAuthorizationForPrivateKey(targetContractAddress: string, privateKey: string): Promise<Authorization> {
+    const network = await this.provider.getNetwork();
+    const currentChainId = network.chainId;
+
+    const signer = new ethers.Wallet(privateKey, this.provider);
+    const currentNonce = await this.provider.getTransactionCount(signer.address);
+    const authNonce = currentNonce;
+
+    const authorization = await signer.authorize({
+      address: targetContractAddress,
+      nonce: authNonce,
+      chainId: currentChainId,
+    });
+    console.log("Authorization created with nonce:", authorization.nonce);
+    return authorization;
+  }
+
+  async sendNonSponsoredTransaction(targetAddress: string) {
     console.log("\n=== TRANSACTION 1: NON-SPONSORED (ETH TRANSFERS) ===");
 
     // Create authorization with incremented nonce for same-wallet transactions
-    const authorization = await this.createAuthorization(targetERC20Address);
+    const authorization = await this.createAuthorization(targetAddress);
 
     const ABI = ["function initialize() external"];
 
