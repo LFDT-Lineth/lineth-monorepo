@@ -1,0 +1,11 @@
+[traces-limits]
+#
+# limits remaining 
+#
+BLOCK_L1_SIZE = 120000
+BLOCK_L2_L1_LOGS = 16
+BLS = 0
+RIP = 0
+MODEXP = 0
+BLAKE = 0
+POINT_EVAL = 0

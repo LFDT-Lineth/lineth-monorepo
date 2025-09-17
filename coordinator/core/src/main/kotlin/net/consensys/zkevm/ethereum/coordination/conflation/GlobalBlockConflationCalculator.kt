@@ -75,7 +75,7 @@ class GlobalBlockConflationCalculator(
     )
     val triggers = calculators.mapNotNull {
       val overflowTrigger = it.checkOverflow(blockCounters)
-      log.trace("CHECK: calculator=${it.id}, blockNumber=${blockCounters.blockNumber}, trigger=$overflowTrigger")
+      log.trace("CHECK: calculator={}, blockNumber={}, trigger={}", it.id, blockCounters.blockNumber, overflowTrigger)
       overflowTrigger
     }.sortedBy { it.trigger.triggerPriority }
 
@@ -94,7 +94,7 @@ class GlobalBlockConflationCalculator(
       inflightConflation.startBlockNumber = blockCounters.blockNumber
     }
     calculators.forEach {
-      log.trace("APPENDING: calculator=${it.id}, blockNumber=${blockCounters.blockNumber}")
+      log.trace("APPENDING: calculator={}, blockNumber={}", it.id, blockCounters.blockNumber)
       it.appendBlock(blockCounters)
       it.copyCountersTo(inflightConflation.counters)
     }
@@ -114,7 +114,7 @@ class GlobalBlockConflationCalculator(
       endBlockNumber = endBlockNumber,
       trigger = conflationTrigger,
     )
-    log.trace("conflationTrigger: trigger=$conflationTrigger, result=$conflationResult")
+    log.trace("conflationTrigger: trigger={}, result={}", conflationTrigger, conflationResult)
     conflationConsumer.invoke(conflationResult)
     reset()
   }

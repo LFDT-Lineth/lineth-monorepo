@@ -24,7 +24,7 @@ class GlobalBlobAwareConflationCalculator(
   private val conflationCalculator: GlobalBlockConflationCalculator,
   private val blobCalculator: ConflationCalculatorByDataCompressed,
   private val batchesLimit: UInt,
-  private val metricsFacade: MetricsFacade,
+  metricsFacade: MetricsFacade,
   private val log: Logger = LogManager.getLogger(GlobalBlobAwareConflationCalculator::class.java),
 ) : TracesConflationCalculator {
   private var conflationHandler: (ConflationCalculationResult) -> SafeFuture<*> = NOOP_CONSUMER
@@ -145,6 +145,7 @@ class GlobalBlobAwareConflationCalculator(
     if (conflation.conflationTrigger == ConflationTrigger.DATA_LIMIT ||
       conflation.conflationTrigger == ConflationTrigger.TIME_LIMIT ||
       conflation.conflationTrigger == ConflationTrigger.TARGET_BLOCK_NUMBER ||
+      conflation.conflationTrigger == ConflationTrigger.HARD_FORK ||
       numberOfBatches >= batchesLimit
     ) {
       fireBlobTriggerAndResetState(conflation.conflationTrigger)

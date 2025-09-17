@@ -18,6 +18,12 @@ enum class AggregationTriggerType {
    * This is meant for either Development,  Testing or Match specific blobs sent to L1.
    */
   TARGET_BLOCK_NUMBER,
+
+  /**
+   * Aggregation trigger by hard fork events (timestamp-based or TTD-based).
+   * When a hard fork is detected, any pending aggregation should be finalized.
+   */
+  HARD_FORK,
 }
 
 data class AggregationTrigger(

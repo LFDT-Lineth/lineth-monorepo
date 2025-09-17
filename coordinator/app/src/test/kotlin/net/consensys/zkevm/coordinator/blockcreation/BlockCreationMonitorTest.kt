@@ -29,6 +29,7 @@ import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.kotlin.mock
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
@@ -329,8 +330,8 @@ class BlockCreationMonitorTest {
       startingBlockNumberExclusive = 99,
     )
     setupFakeExecutionLayerWithBlocks(createBlocks(startBlockNumber = 99u, numberOfBlocks = 5))
-    monitor.start().get()
-    monitor.start().get()
+    monitor.start().get(10, TimeUnit.SECONDS)
+    monitor.start().get(10, TimeUnit.SECONDS)
   }
 
   @Test

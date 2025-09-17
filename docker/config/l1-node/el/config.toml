@@ -55,4 +55,4 @@ node-private-key-file="/config/keys/besu.key"
 revert-reason-enabled=true
 plugins=[]
 
-Xbonsai-parallel-tx-processing-enabled=false
+bonsai-parallel-tx-processing-enabled=false

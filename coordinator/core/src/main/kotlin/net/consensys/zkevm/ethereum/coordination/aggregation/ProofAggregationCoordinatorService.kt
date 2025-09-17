@@ -2,6 +2,7 @@ package net.consensys.zkevm.ethereum.coordination.aggregation
 
 import io.vertx.core.Vertx
 import kotlinx.datetime.Clock
+import kotlinx.datetime.Instant
 import linea.contract.l2.L2MessageServiceSmartContractClientReadOnly
 import linea.domain.BlockIntervals
 import linea.domain.toBlockIntervalsString
@@ -237,6 +238,8 @@ class ProofAggregationCoordinatorService(
       metricsFacade: MetricsFacade,
       provenAggregationEndBlockNumberConsumer: Consumer<ULong>,
       aggregationSizeMultipleOf: UInt,
+      hardForkTimestamps: List<Instant> = emptyList(),
+      initialTimestamp: Instant,
     ): LongRunningService {
       val aggregationCalculatorByDeadline =
         AggregationTriggerCalculatorByDeadline(
@@ -254,6 +257,16 @@ class ProofAggregationCoordinatorService(
         syncAggregationTriggerCalculators
           .add(AggregationTriggerCalculatorByTargetBlockNumbers(targetEndBlockNumbers = targetEndBlockNumbers))
       }
+
+      if (hardForkTimestamps.isNotEmpty()) {
+        syncAggregationTriggerCalculators.add(
+          AggregationTriggerCalculatorByTimestampHardFork(
+            hardForkTimestamps = hardForkTimestamps,
+            initialTimestamp = initialTimestamp,
+          ),
+        )
+      }
+
       val globalAggregationCalculator = GlobalAggregationCalculator(
         lastBlockNumber = startBlockNumberInclusive - 1UL,
         syncAggregationTrigger = syncAggregationTriggerCalculators,

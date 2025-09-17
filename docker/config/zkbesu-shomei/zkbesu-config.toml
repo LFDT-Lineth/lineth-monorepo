@@ -8,13 +8,14 @@ min-gas-price=0
 # engine
 engine-host-allowlist=["*"]
 engine-rpc-port=8550
+engine-jwt-disabled=true
 
 # rpc
 rpc-http-enabled=true
 rpc-http-host="0.0.0.0"
 rpc-http-port=8545
 rpc-http-cors-origins=["*"]
-rpc-http-api=["ADMIN","DEBUG","NET","ETH","WEB3","PLUGINS","MINER","SHOMEI"]
+rpc-http-api=["ADMIN","DEBUG","NET","ETH","ENGINE","WEB3","PLUGINS","MINER","SHOMEI"]
 rpc-http-max-active-connections=200
 
 # ws
@@ -37,4 +38,4 @@ data-storage-format="BONSAI"
 
 plugins=["BesuShomeiRpcPlugin", "ZkTrieLogPlugin"]
 
-Xbonsai-parallel-tx-processing-enabled=false
+bonsai-parallel-tx-processing-enabled=false

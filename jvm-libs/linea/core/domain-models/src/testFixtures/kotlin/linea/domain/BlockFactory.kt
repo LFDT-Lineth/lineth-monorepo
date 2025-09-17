@@ -104,7 +104,7 @@ fun Block?.toEthGetBlockResponse(
     sha3Uncles = this.ommersHash,
     size = size,
     totalDifficulty = totalDifficulty,
-    transactions = emptyList<ByteArray>(),
+    transactions = emptyList(),
   )
 }
 

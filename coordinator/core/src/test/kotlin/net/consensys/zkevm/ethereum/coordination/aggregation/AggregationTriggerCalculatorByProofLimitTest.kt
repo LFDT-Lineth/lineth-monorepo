@@ -31,7 +31,7 @@ class AggregationTriggerCalculatorByProofLimitTest {
     var startBlockNumber = 1uL
     var endBlockNumber = startBlockNumber + Random.nextULong(10uL)
     val batchesCount = 1u
-    for (i in 1..4) {
+    repeat((1..4).count()) {
       val blob = createBlob(startBlockNumber, endBlockNumber, batchesCount)
       startBlockNumber = endBlockNumber + 1uL
       endBlockNumber = startBlockNumber + Random.nextULong(10uL)
@@ -62,7 +62,7 @@ class AggregationTriggerCalculatorByProofLimitTest {
     var startBlockNumber = 1uL
     var endBlockNumber = startBlockNumber + Random.nextULong(10uL)
     val batchesCount = 2u
-    for (i in 1..2) {
+    repeat((1..2).count()) {
       val blob = createBlob(startBlockNumber, endBlockNumber, batchesCount)
       startBlockNumber = endBlockNumber + 1uL
       endBlockNumber = startBlockNumber + Random.nextULong(10uL)
@@ -96,7 +96,7 @@ class AggregationTriggerCalculatorByProofLimitTest {
     var startBlockNumber = 1uL
     var endBlockNumber = startBlockNumber + Random.nextULong(10uL)
     val batchesCount = 1u
-    for (i in 1..4) {
+    repeat((1..4).count()) {
       val blob = createBlob(startBlockNumber, endBlockNumber, batchesCount)
       startBlockNumber = endBlockNumber + 1uL
       endBlockNumber = startBlockNumber + Random.nextULong(10uL)
@@ -110,7 +110,7 @@ class AggregationTriggerCalculatorByProofLimitTest {
     aggregationTrigger.reset()
     val blobCountersAfterReset = mutableListOf<BlobCounters>()
 
-    for (i in 1..4) {
+    repeat((1..4).count()) {
       val blob = createBlob(startBlockNumber, endBlockNumber, batchesCount)
       startBlockNumber = endBlockNumber + 1uL
       endBlockNumber = startBlockNumber + Random.nextULong(10uL)
@@ -143,7 +143,7 @@ class AggregationTriggerCalculatorByProofLimitTest {
     var endBlockNumber = startBlockNumber + Random.nextULong(10uL)
     val batchesCount = 2u // Blob proofs = 2 + 1
     val aggregationTriggerCalculator = AggregationTriggerCalculatorByProofLimit(maxProofsPerAggregation = proofLimit)
-    for (i in 1..3) {
+    repeat((1..3).count()) {
       val blob = createBlob(startBlockNumber, endBlockNumber, batchesCount)
       startBlockNumber = endBlockNumber + 1uL
       endBlockNumber = startBlockNumber + Random.nextULong(10uL)
@@ -231,7 +231,7 @@ class AggregationTriggerCalculatorByProofLimitTest {
     var startBlockNumber = 1uL
     var endBlockNumber = startBlockNumber + Random.nextULong(10uL)
     val batchesCount = 2u
-    for (i in 1..3) {
+    repeat((1..3).count()) {
       val blob = createBlob(startBlockNumber, endBlockNumber, batchesCount)
       startBlockNumber = endBlockNumber + 1uL
       endBlockNumber = startBlockNumber + Random.nextULong(10uL)

@@ -155,7 +155,9 @@ dockerCompose {
     startedServices = [
       "postgres",
       "sequencer",
+      "maru",
       "l1-node-genesis-generator",
+      "l2-genesis-initialization",
       "l1-el-node",
       "l1-cl-node",
       // For debug

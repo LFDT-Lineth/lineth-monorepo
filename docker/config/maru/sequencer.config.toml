@@ -1,0 +1,60 @@
+allow-empty-blocks = false
+
+[persistence]
+data-path="/tmp/maru-db"
+private-key-path="/tmp/maru-db/private-key"
+
+[qbft]
+fee-recipient = "0x0000000000000000000000000000000000000000"
+
+[p2p]
+port = 9000
+ip-address = "0.0.0.0"
+static-peers = ["/dns4/maru-follower/tcp/9000/p2p/16Uiu2HAkxepRVwhqNB4s7FJ4r2qYGowe41FofyHapGVZ6H86oJir"]
+reconnect-delay = "500 ms"
+
+[p2p.discovery]
+port = 9000
+refresh-interval = "2 seconds"
+
+[p2p.reputation]
+cooldown-period = "2 seconds"
+ban-period = "30 seconds"
+
+[payload-validator]
+engine-api-endpoint = { endpoint = "http://sequencer:8550" }
+eth-api-endpoint = { endpoint = "http://sequencer:8545" }
+
+#[follower-engine-apis]
+#follower-besu = { endpoint = "http://l2-node-besu:8550" }
+#follower-tracer = { endpoint = "http://traces-node:8550" }
+#follower-shomei = { endpoint = "http://zkbesu-shomei:8550" }
+
+[observability]
+port = 9090
+jvm-metrics-enabled = true
+prometheus-metrics-enabled = true
+
+[api]
+port = 8080
+
+[syncing]
+peer-chain-height-polling-interval = "1 seconds"
+el-sync-status-refresh-interval = "1 seconds"
+use-unconditional-random-download-peer = false
+sync-target-selection = "Highest"
+# sync-target-selection = { _type = "MostFrequent", peer-chain-height-granularity = 10 }
+# desync-tolerance = 10
+
+#[syncing.download]
+#block-range-request-timeout = "10 seconds"
+#blocks-batch-size = 10
+#blocks-parallelism = 10
+#max-retries = 5
+#backoff-delay = "1 seconds"
+#use-unconditional-random-download-peer = false
+
+[follower-engine-apis]
+follower-tracer = { endpoint = "http://traces-node:8550" }
+follower-shomei = { endpoint = "http://zkbesu-shomei:8550" }
+follower-besu = { endpoint = "http://l2-node-besu:8550" }

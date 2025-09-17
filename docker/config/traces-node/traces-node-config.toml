@@ -8,13 +8,14 @@ min-gas-price=0
 # engine
 engine-host-allowlist=["*"]
 engine-rpc-port=8550
+engine-jwt-disabled=true
 
 # rpc
 rpc-http-enabled=true
 rpc-http-host="0.0.0.0"
 rpc-http-port=8545
 rpc-http-cors-origins=["*"]
-rpc-http-api=["ADMIN","DEBUG","NET","ETH","WEB3","PLUGINS","MINER","LINEA"]
+rpc-http-api=["ADMIN","DEBUG","NET","ETH","ENGINE","WEB3","PLUGINS","MINER","LINEA"]
 rpc-http-max-active-connections=200
 
 # ws
@@ -44,7 +45,8 @@ plugin-linea-tracer-readiness-server-port=8548
 plugin-linea-tracer-readiness-max-blocks-behind=5
 plugin-linea-l1l2-bridge-contract="0xe537D669CA013d86EBeF1D64e40fC74CADC91987"
 plugin-linea-l1l2-bridge-topic="e856c2b8bd4eb0027ce32eeaf595c21b0b6b4644b326e5b7bd80a1cf8db72e6c"
+plugin-linea-limitless-enabled=false
 
 bonsai-limit-trie-logs-enabled=false
 bonsai-historical-block-limit=1024
-Xbonsai-parallel-tx-processing-enabled=false
+bonsai-parallel-tx-processing-enabled=false

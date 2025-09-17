@@ -1,4 +1,4 @@
-genesis-file="/var/lib/besu/genesis.json"
+genesis-file="/initialization/genesis-besu.json"
 #logging="DEBUG" log is managed via log4j config file
 data-path="/opt/besu/data"
 data-storage-format="FOREST"
@@ -20,7 +20,7 @@ engine-jwt-disabled=true
 rpc-http-enabled=true
 rpc-http-host="0.0.0.0"
 rpc-http-port=8545
-rpc-http-api=["ADMIN","DEBUG","NET","ETH","CLIQUE","MINER","WEB3","TRACE","LINEA"]
+rpc-http-api=["ADMIN","DEBUG","NET","ETH","ENGINE","CLIQUE","MINER","WEB3","TRACE","LINEA"]
 rpc-http-cors-origins=["*"]
 rpc-http-max-active-connections=20000
 
@@ -67,6 +67,7 @@ plugin-linea-fixed-gas-cost-wei=30000000
 plugin-linea-variable-gas-cost-wei=1000000000
 plugin-linea-extra-data-set-min-gas-price-enabled=false
 plugin-linea-estimate-gas-min-margin="1.2"
+plugin-linea-limitless-enabled=false
 strict-tx-replay-protection-enabled=false
 
 # should uncomment only when the linea-sequencer plugin supports liveness 
@@ -95,4 +96,4 @@ tx-pool-priority-senders=["0xfe3b557e8fb62b89f4916b721be55ceb828dbd73",
 Xin-process-rpc-enabled=true
 Xin-process-rpc-apis=["ETH", "MINER"]
 
-Xbonsai-parallel-tx-processing-enabled=false
+bonsai-parallel-tx-processing-enabled=false

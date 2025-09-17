@@ -43,9 +43,7 @@ object TracesClientResponsesParser {
     val modulesMissing = expectedModules - evmModulesInResponse
     val unExpectedModules = evmModulesInResponse - expectedModules
     val error =
-      if (modulesMissing.isNotEmpty()) {
-        "Traces counters response is missing modules: ${modulesMissing.joinToString(",")}"
-      } else if (unExpectedModules.isNotEmpty()) {
+      if (unExpectedModules.isNotEmpty()) {
         "Traces counters has unsupported modules: ${unExpectedModules.joinToString(",")}"
       } else {
         null
@@ -55,17 +53,25 @@ object TracesClientResponsesParser {
       throw IllegalStateException(error)
     }
 
+    if (modulesMissing.isNotEmpty()) {
+      log.debug("Traces counters response contains missing modules: ${modulesMissing.joinToString(",")}")
+    }
+
     val traces = TracingModuleV2.entries.associateWith { traceModule ->
-      val counterValue = tracesCounters.getString(traceModule.name)
-      runCatching { counterValue.toUInt() }
-        .onFailure {
-          log.error(
-            "Failed to parse Evm module ${traceModule.name}='$counterValue' to UInt. errorMessage={}",
-            it.message,
-            it,
-          )
-        }
-        .getOrThrow()
+      if (tracesCounters.containsKey(traceModule.name)) {
+        val counterValue = tracesCounters.getString(traceModule.name)
+        runCatching { counterValue.toUInt() }
+          .onFailure {
+            log.error(
+              "Failed to parse Evm module ${traceModule.name}='$counterValue' to UInt. errorMessage={}",
+              it.message,
+              it,
+            )
+          }
+          .getOrThrow()
+      } else {
+        0U
+      }
     }
     return TracesCountersV2(traces)
   }

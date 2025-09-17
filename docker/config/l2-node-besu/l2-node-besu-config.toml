@@ -8,13 +8,14 @@ min-gas-price=0
 # engine
 engine-host-allowlist=["*"]
 engine-rpc-port=8550
+engine-jwt-disabled=true
 
 # rpc
 rpc-http-enabled=true
 rpc-http-host="0.0.0.0"
 rpc-http-port=8545
 rpc-http-cors-origins=["*"]
-rpc-http-api=["ADMIN","DEBUG","NET","ETH","WEB3","PLUGINS","LINEA"]
+rpc-http-api=["ADMIN","DEBUG","NET","ETH","ENGINE","WEB3","PLUGINS","LINEA"]
 rpc-http-max-active-connections=200
 
 # ws
@@ -57,6 +58,7 @@ plugin-linea-estimate-gas-min-margin="1.2"
 plugin-linea-bundles-forward-urls=["http://sequencer:8545"]
 plugin-linea-bundles-forward-retry-delay=1000
 plugin-linea-bundles-forward-timeout=5000
+plugin-linea-limitless-enabled=false
 
 bonsai-limit-trie-logs-enabled=false
 bonsai-historical-block-limit=1024
@@ -64,4 +66,4 @@ bonsai-historical-block-limit=1024
 Xin-process-rpc-enabled=true
 Xin-process-rpc-apis=["ETH", "MINER"]
 
-Xbonsai-parallel-tx-processing-enabled=false
+bonsai-parallel-tx-processing-enabled=false

@@ -36,6 +36,16 @@ services:
       file: compose-spec-l1-services.yml
       service: l1-node-genesis-generator
 
+  l2-genesis-initialization:
+    extends:
+      file: compose-spec-l2-services.yml
+      service: l2-genesis-initialization
+
+  maru:
+    extends:
+      file: compose-spec-l2-services.yml
+      service: maru
+
   sequencer:
     extends:
       file: compose-spec-l2-services.yml

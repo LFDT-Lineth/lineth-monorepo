@@ -51,6 +51,7 @@ deadline = "PT1M"
 coordinator-polling-interval = "PT2S"
 deadline-check-interval = "PT8S"
 target-end-blocks = []
+timestamp-based-hard-forks = []
 
 [prover]
 version = "v3.0.0"
@@ -77,7 +78,7 @@ fs-responses-directory = "/data/prover/v3/aggregation/responses"
 #fs-responses-directory = "/data/prover/v3/aggregation/responses"
 
 [traces]
-expected-traces-api-version = "beta-v3.1-rc8"
+expected-traces-api-version = "beta-v4.0-rc6-CANCUN"
 [traces.counters]
 endpoints = ["http://traces-node:8545/"]
 request-limit-per-endpoint = 1

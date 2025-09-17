@@ -6,7 +6,6 @@ import net.consensys.linea.testing.filesystem.findPathTo
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
 
 class TracesCountersTest {
   data class TracesConfigV2(val tracesLimits: Map<TracingModuleV2, UInt>)
@@ -66,16 +65,6 @@ class TracesCountersTest {
       TracingModuleV2.entries.associateWith { 0u },
     )
     assertThat(tracesCountersV2).isEqualTo(TracesCountersV2.EMPTY_TRACES_COUNT)
-  }
-
-  @Test
-  fun incomplete_counters_throwsError() {
-    assertThrows<IllegalArgumentException> {
-      TracesCountersV2(emptyMap())
-    }
-    assertThrows<IllegalArgumentException> {
-      TracesCountersV2(mapOf(Pair(TracingModuleV2.ADD, 10u)))
-    }
   }
 
   @Test

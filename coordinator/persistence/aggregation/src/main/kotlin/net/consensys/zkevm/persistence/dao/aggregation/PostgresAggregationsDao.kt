@@ -194,7 +194,37 @@ class PostgresAggregationsDao(
     val batchesCount: UInt,
     val batchStartBlockNumber: ULong,
     val batchEndBlockNumber: ULong,
-  )
+  ) {
+    override fun equals(other: Any?): Boolean {
+      if (this === other) return true
+      if (javaClass != other?.javaClass) return false
+
+      other as BatchRecordWithBlobInfo
+
+      if (blobStartBlockNumber != other.blobStartBlockNumber) return false
+      if (blobEndBlockNumber != other.blobEndBlockNumber) return false
+      if (blobStartBlockTimestamp != other.blobStartBlockTimestamp) return false
+      if (blobEndBlockTimestamp != other.blobEndBlockTimestamp) return false
+      if (!blobExpectedShnarf.contentEquals(other.blobExpectedShnarf)) return false
+      if (batchesCount != other.batchesCount) return false
+      if (batchStartBlockNumber != other.batchStartBlockNumber) return false
+      if (batchEndBlockNumber != other.batchEndBlockNumber) return false
+
+      return true
+    }
+
+    override fun hashCode(): Int {
+      var result = blobStartBlockNumber.hashCode()
+      result = 31 * result + blobEndBlockNumber.hashCode()
+      result = 31 * result + blobStartBlockTimestamp.hashCode()
+      result = 31 * result + blobEndBlockTimestamp.hashCode()
+      result = 31 * result + blobExpectedShnarf.contentHashCode()
+      result = 31 * result + batchesCount.hashCode()
+      result = 31 * result + batchStartBlockNumber.hashCode()
+      result = 31 * result + batchEndBlockNumber.hashCode()
+      return result
+    }
+  }
 
   override fun findConsecutiveProvenBlobs(
     fromBlockNumber: Long,

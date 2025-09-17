@@ -48,11 +48,11 @@ enum class ConflationTrigger(val triggerPriority: Int) {
   // Business logic needs priority to pick the trigger in case multiple calculators trigger conflation.
   // TARGET_BLOCK_NUMBER needs to be the highest priority as it is used as conflation, blob and aggregation boundary.
   TARGET_BLOCK_NUMBER(1),
-  DATA_LIMIT(2),
-  TRACES_LIMIT(3),
-  TIME_LIMIT(4),
-  BLOCKS_LIMIT(5),
-  SWITCH_CUTOFF(6),
+  HARD_FORK(2),
+  DATA_LIMIT(3),
+  TRACES_LIMIT(4),
+  TIME_LIMIT(5),
+  BLOCKS_LIMIT(6),
 }
 
 data class ConflationCalculationResult(
@@ -76,13 +76,11 @@ data class BlockCounters(
   val numOfTransactions: UInt = 0u,
   val gasUsed: ULong = 0uL,
 ) {
-
   override fun toString(): String {
     return "BlockCounters(blockNumber=$blockNumber, " +
       "blockTimestamp=$blockTimestamp, " +
       "tracesCounters=$tracesCounters, " +
-      "blockRLPEncoded=${blockRLPEncoded.size}bytes), " +
-      "numOfTransactions=$numOfTransactions"
+      "blockRLPEncoded=${blockRLPEncoded.size}bytes,)"
   }
 
   override fun equals(other: Any?): Boolean {
@@ -96,7 +94,9 @@ data class BlockCounters(
     if (tracesCounters != other.tracesCounters) return false
     if (!blockRLPEncoded.contentEquals(other.blockRLPEncoded)) return false
     if (numOfTransactions != other.numOfTransactions) return false
-    return gasUsed == other.gasUsed
+    if (gasUsed != other.gasUsed) return false
+
+    return true
   }
 
   override fun hashCode(): Int {
