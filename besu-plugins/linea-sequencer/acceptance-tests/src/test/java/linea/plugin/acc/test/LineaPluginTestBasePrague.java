@@ -438,6 +438,7 @@ public abstract class LineaPluginTestBasePrague extends LineaPluginTestBase {
         BlobGas.fromHexString(blockParam.getExcessBlobGas()),
         Bytes32.fromHexString(blockParams.get(BlockParams.PARENT_BEACON_BLOCK_ROOT)),
         maybeRequests.map(BodyValidation::requestsHash).orElse(null),
+        null, // BAL
         new MainnetBlockHeaderFunctions());
   }
 
