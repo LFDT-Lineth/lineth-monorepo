@@ -59,14 +59,18 @@ private constructor(
     }
   }
 
-  private data class RpcClientContext(val rpcClient: JsonRpcClient, var inflightRequests: UInt)
+  private data class RpcClientContext(
+    val rpcClient: JsonRpcClient,
+    var inflightRequests: UInt,
+    var totalRequests: ULong,
+  )
   internal data class RpcRequestContext(
     val request: JsonRpcRequest,
     val promise: Promise<Result<JsonRpcSuccessResponse, JsonRpcErrorResponse>>,
     val resultMapper: (Any?) -> Any?,
   )
 
-  private val clientsPool: List<RpcClientContext> = rpcClients.map { RpcClientContext(it, 0u) }
+  private val clientsPool: List<RpcClientContext> = rpcClients.map { RpcClientContext(it, 0u, 0uL) }
   private val waitingQueue: Queue<RpcRequestContext> =
     if (requestPriorityComparator != null) {
       PriorityQueueWithFIFOFallback<RpcRequestContext>(comparator = { o1, o2 ->
@@ -102,10 +106,16 @@ private constructor(
     }
 
     readWriteLock.writeLock().withLock {
-      val client = clientsPool.minByOrNull(RpcClientContext::inflightRequests)!!
-      if (client.inflightRequests < maxInflightRequestsPerClient) {
+      val availableClients = clientsPool.filter {
+        it.inflightRequests < maxInflightRequestsPerClient
+      }
+      if (availableClients.isEmpty()) {
+        log.trace("All clients are busy, waitingQueue.size={}", waitingQueue.size)
+      } else {
+        val client = availableClients.minBy { it.totalRequests }
         // fetch waiting request from the queue
         waitingQueue.poll()?.let { request ->
+          client.totalRequests++
           client.inflightRequests++
           log.trace("making request={}", request.request)
           // firing request inside the lock to guarantee order
