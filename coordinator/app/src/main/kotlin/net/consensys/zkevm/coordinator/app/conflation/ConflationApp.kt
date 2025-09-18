@@ -247,6 +247,14 @@ class ConflationApp(
       measurementSupplier = highestAggregationTracker,
     )
 
+    val highestConsecutiveAggregationTracker = HighestULongTracker(lastConsecutiveAggregatedBlockNumber)
+    metricsFacade.createGauge(
+      category = LineaMetricsCategory.AGGREGATION,
+      name = "proven.highest.consecutive.block.number",
+      description = "Highest consecutive proven aggregation block number",
+      measurementSupplier = highestConsecutiveAggregationTracker,
+    )
+
     ProofAggregationCoordinatorService.Companion
       .create(
         vertx = vertx,
@@ -280,6 +288,9 @@ class ConflationApp(
         targetEndBlockNumbers = configs.conflation.proofAggregation.targetEndBlocks ?: emptyList(),
         metricsFacade = metricsFacade,
         provenAggregationEndBlockNumberConsumer = { aggEndBlockNumber -> highestAggregationTracker(aggEndBlockNumber) },
+        provenConsecutiveAggregationEndBlockNumberConsumer =
+        { aggEndBlockNumber -> highestConsecutiveAggregationTracker(aggEndBlockNumber) },
+        lastFinalizedBlockNumberSupplier = { lastProvenBlockNumberProvider.getLatestL1FinalizedBlock().toULong() },
         aggregationSizeMultipleOf = configs.conflation.proofAggregation.aggregationSizeMultipleOf,
         hardForkTimestamps = configs.conflation.proofAggregation.timestampBasedHardForks,
         initialTimestamp = lastProcessedTimestamp,

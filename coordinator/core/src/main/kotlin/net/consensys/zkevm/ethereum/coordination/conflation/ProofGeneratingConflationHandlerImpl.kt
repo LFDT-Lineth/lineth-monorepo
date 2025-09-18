@@ -29,7 +29,7 @@ class ProofGeneratingConflationHandlerImpl(
   private val log: Logger = LogManager.getLogger(this::class.java)
 
   data class Config(
-    val conflationAndProofGenerationRetryInterval: Duration,
+    val conflationAndProofGenerationRetryBackoffDelay: Duration,
   )
 
   override fun handleConflatedBatch(conflation: BlocksConflation): SafeFuture<*> {
@@ -43,13 +43,13 @@ class ProofGeneratingConflationHandlerImpl(
       )
       AsyncRetryer.retry(
         vertx = vertx,
-        backoffDelay = config.conflationAndProofGenerationRetryInterval,
+        backoffDelay = config.conflationAndProofGenerationRetryBackoffDelay,
         exceptionConsumer = {
           // log failure as warning, but keeps on retrying...
           log.warn(
             "conflation and proof creation flow failed batch={} will retry in backOff={} errorMessage={}",
             blockIntervalString,
-            config.conflationAndProofGenerationRetryInterval,
+            config.conflationAndProofGenerationRetryBackoffDelay,
             it.message,
           )
         },

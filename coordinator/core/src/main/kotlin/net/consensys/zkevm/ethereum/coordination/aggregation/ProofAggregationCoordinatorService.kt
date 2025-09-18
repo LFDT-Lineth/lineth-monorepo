@@ -7,6 +7,7 @@ import linea.contract.l2.L2MessageServiceSmartContractClientReadOnly
 import linea.domain.BlockIntervals
 import linea.domain.toBlockIntervalsString
 import linea.ethapi.EthApiClient
+import net.consensys.linea.async.AsyncRetryer
 import net.consensys.linea.metrics.LineaMetricsCategory
 import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.zkevm.LongRunningService
@@ -16,6 +17,7 @@ import net.consensys.zkevm.domain.Aggregation
 import net.consensys.zkevm.domain.BlobAndBatchCounters
 import net.consensys.zkevm.domain.BlobsToAggregate
 import net.consensys.zkevm.domain.ProofIndex
+import net.consensys.zkevm.domain.ProofToFinalize
 import net.consensys.zkevm.domain.ProofsToAggregate
 import net.consensys.zkevm.ethereum.coordination.blockcreation.SafeBlockProvider
 import net.consensys.zkevm.persistence.AggregationsRepository
@@ -24,7 +26,9 @@ import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.function.Consumer
+import java.util.function.Supplier
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
 
 class ProofAggregationCoordinatorService(
   private val vertx: Vertx,
@@ -36,8 +40,10 @@ class ProofAggregationCoordinatorService(
   private val consecutiveProvenBlobsProvider: ConsecutiveProvenBlobsProvider,
   private val proofAggregationClient: ProofAggregationProverClientV2,
   private val aggregationL2StateProvider: AggregationL2StateProvider,
-  private val log: Logger = LogManager.getLogger(ProofAggregationCoordinatorService::class.java),
   private val provenAggregationEndBlockNumberConsumer: Consumer<ULong> = Consumer<ULong> { },
+  private val provenConsecutiveAggregationEndBlockNumberConsumer: Consumer<ULong> = Consumer<ULong> { },
+  private val lastFinalizedBlockNumberSupplier: Supplier<ULong> = Supplier<ULong> { 0UL },
+  private val log: Logger = LogManager.getLogger(ProofAggregationCoordinatorService::class.java),
 ) : AggregationHandler, PeriodicPollingService(
   vertx = vertx,
   pollingIntervalMs = config.pollingInterval.inWholeMilliseconds,
@@ -46,6 +52,7 @@ class ProofAggregationCoordinatorService(
   data class Config(
     val pollingInterval: Duration,
     val proofsLimit: UInt,
+    val proofGenerationRetryBackoffDelay: Duration,
   )
 
   private val pendingBlobs = ConcurrentLinkedQueue<BlobAndBatchCounters>()
@@ -168,33 +175,23 @@ class ProofAggregationCoordinatorService(
     }
     val blockIntervals = BlockIntervals(startingBlockNumber, upperBoundaries)
 
-    aggregationL2StateProvider
-      .getAggregationL2State(blockNumber = blobsToAggregate.startBlockNumber.toLong() - 1)
-      .whenException {
-        log.error(
-          "failed to get parent aggregation l2 message rolling hash: aggregation={} errorMessage={}",
-          blobsToAggregate.intervalString(),
+    AsyncRetryer.retry(
+      vertx = vertx,
+      backoffDelay = config.proofGenerationRetryBackoffDelay,
+      exceptionConsumer = {
+        // log failure as warning, but keeps on retrying...
+        log.warn(
+          "aggregation proof creation failed aggregation={} will retry in backOff={} errorMessage={}",
+          blockIntervals.toBlockInterval().intervalString(),
+          config.proofGenerationRetryBackoffDelay,
           it.message,
-          it,
         )
-      }
-      .thenApply { rollingInfo ->
-        ProofsToAggregate(
-          compressionProofIndexes = compressionProofIndexes,
-          executionProofs = blockIntervals,
-          parentAggregationLastBlockTimestamp = rollingInfo.parentAggregationLastBlockTimestamp,
-          parentAggregationLastL1RollingHashMessageNumber = rollingInfo.parentAggregationLastL1RollingHashMessageNumber,
-          parentAggregationLastL1RollingHash = rollingInfo.parentAggregationLastL1RollingHash,
-        )
-      }
-      .thenCompose(proofAggregationClient::requestProof)
-      .whenException {
-        log.error(
-          "Error getting aggregation proof: aggregation={} errorMessage={}",
-          blobsToAggregate.intervalString(),
-          it.message,
-          it,
-        )
+      },
+    ) {
+      aggregationProofCreation(blockIntervals, compressionProofIndexes)
+    }
+      .thenPeek {
+        log.info("aggregation proof generated: aggregation={}", blobsToAggregate.intervalString())
       }
       .thenCompose { aggregationProof ->
         val aggregation = Aggregation(
@@ -216,6 +213,59 @@ class ProofAggregationCoordinatorService(
               it,
             )
           }
+          .thenPeek {
+            aggregationsRepository.findHighestConsecutiveEndBlockNumber(
+              lastFinalizedBlockNumberSupplier.get().toLong() + 1L,
+            )
+              .thenApply { it ->
+                if (it != null) {
+                  provenConsecutiveAggregationEndBlockNumberConsumer.accept(it.toULong())
+                }
+              }
+              .whenException {
+                log.warn(
+                  "Failed to get consecutive aggregation end block number from DB: aggregation={} errorMessage={}",
+                  blobsToAggregate.intervalString(),
+                  it.message,
+                  it,
+                )
+              }
+          }
+      }
+  }
+
+  private fun aggregationProofCreation(
+    batchIntervals: BlockIntervals,
+    compressionProofIndexes: List<ProofIndex>,
+  ): SafeFuture<ProofToFinalize> {
+    val blobsToAggregate = batchIntervals.toBlockInterval()
+    return aggregationL2StateProvider
+      .getAggregationL2State(blockNumber = blobsToAggregate.startBlockNumber.toLong() - 1)
+      .whenException {
+        log.debug(
+          "failed to get parent aggregation l2 message rolling hash: aggregation={} errorMessage={}",
+          blobsToAggregate.intervalString(),
+          it.message,
+          it,
+        )
+      }
+      .thenApply { rollingInfo ->
+        ProofsToAggregate(
+          compressionProofIndexes = compressionProofIndexes,
+          executionProofs = batchIntervals,
+          parentAggregationLastBlockTimestamp = rollingInfo.parentAggregationLastBlockTimestamp,
+          parentAggregationLastL1RollingHashMessageNumber = rollingInfo.parentAggregationLastL1RollingHashMessageNumber,
+          parentAggregationLastL1RollingHash = rollingInfo.parentAggregationLastL1RollingHash,
+        )
+      }
+      .thenCompose(proofAggregationClient::requestProof)
+      .whenException {
+        log.debug(
+          "Error getting aggregation proof: aggregation={} errorMessage={}",
+          batchIntervals.toBlockInterval().intervalString(),
+          it.message,
+          it,
+        )
       }
   }
 
@@ -237,6 +287,8 @@ class ProofAggregationCoordinatorService(
       targetEndBlockNumbers: List<ULong>,
       metricsFacade: MetricsFacade,
       provenAggregationEndBlockNumberConsumer: Consumer<ULong>,
+      provenConsecutiveAggregationEndBlockNumberConsumer: Consumer<ULong>,
+      lastFinalizedBlockNumberSupplier: Supplier<ULong>,
       aggregationSizeMultipleOf: UInt,
       hardForkTimestamps: List<Instant> = emptyList(),
       initialTimestamp: Instant,
@@ -288,6 +340,7 @@ class ProofAggregationCoordinatorService(
         config = Config(
           pollingInterval = aggregationCoordinatorPollingInterval,
           proofsLimit = maxProofsPerAggregation,
+          proofGenerationRetryBackoffDelay = 5.seconds,
         ),
         metricsFacade = metricsFacade,
         nextBlockNumberToPoll = startBlockNumberInclusive.toLong(),
@@ -300,6 +353,8 @@ class ProofAggregationCoordinatorService(
           messageService = l2MessageService,
         ),
         provenAggregationEndBlockNumberConsumer = provenAggregationEndBlockNumberConsumer,
+        provenConsecutiveAggregationEndBlockNumberConsumer = provenConsecutiveAggregationEndBlockNumberConsumer,
+        lastFinalizedBlockNumberSupplier = lastFinalizedBlockNumberSupplier,
       )
 
       return LongRunningService.compose(deadlineCheckRunner, proofAggregationService)

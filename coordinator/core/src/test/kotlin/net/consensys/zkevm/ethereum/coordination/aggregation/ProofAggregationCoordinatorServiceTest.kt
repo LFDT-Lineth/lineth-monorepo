@@ -27,6 +27,7 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.function.Consumer
+import java.util.function.Supplier
 import kotlin.random.Random
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -76,17 +77,21 @@ class ProofAggregationCoordinatorServiceTest {
     val mockAggregationsRepository = mock<AggregationsRepository>()
     val mockProofAggregationClient = mock<ProofAggregationProverClientV2>()
     val mockAggregationL2StateProvider = mock<AggregationL2StateProvider>()
+    val mockLastFinalizedBlockNumberSupplier = mock<Supplier<ULong>>()
     val meterRegistry = SimpleMeterRegistry()
     val metricsFacade: MetricsFacade = MicrometerMetricsFacade(registry = meterRegistry)
 
     val config = ProofAggregationCoordinatorService.Config(
       pollingInterval = 10.milliseconds,
       proofsLimit = blobsToPoll,
+      proofGenerationRetryBackoffDelay = 5.milliseconds,
     )
 
     var provenAggregation = 0UL
+    var provenConsecutiveAggregation = 0UL
 
     val provenAggregationEndBlockNumberConsumer = Consumer<ULong> { provenAggregation = it }
+    val provenConsecutiveAggregationEndBlockNumberConsumer = Consumer<ULong> { provenConsecutiveAggregation = it }
     val proofAggregationCoordinatorService = ProofAggregationCoordinatorService(
       vertx = mockVertx,
       config = config,
@@ -98,6 +103,8 @@ class ProofAggregationCoordinatorServiceTest {
       aggregationL2StateProvider = mockAggregationL2StateProvider,
       metricsFacade = metricsFacade,
       provenAggregationEndBlockNumberConsumer = provenAggregationEndBlockNumberConsumer,
+      provenConsecutiveAggregationEndBlockNumberConsumer = provenConsecutiveAggregationEndBlockNumberConsumer,
+      lastFinalizedBlockNumberSupplier = { mockLastFinalizedBlockNumberSupplier.get() },
     )
     verify(mockAggregationCalculator).onAggregation(proofAggregationCoordinatorService)
 
@@ -211,6 +218,32 @@ class ProofAggregationCoordinatorServiceTest {
         }
       }
 
+    whenever(mockLastFinalizedBlockNumberSupplier.get())
+      .thenAnswer {
+        aggregation1.startBlockNumber - 1UL
+      }
+      .thenAnswer {
+        aggregation2.startBlockNumber - 1UL
+      }
+
+    whenever(
+      mockAggregationsRepository.findHighestConsecutiveEndBlockNumber(
+        aggregation1.startBlockNumber.toLong(),
+      ),
+    )
+      .thenReturn(
+        SafeFuture.completedFuture(aggregation1.endBlockNumber.toLong()),
+      )
+
+    whenever(
+      mockAggregationsRepository.findHighestConsecutiveEndBlockNumber(
+        aggregation2.startBlockNumber.toLong(),
+      ),
+    )
+      .thenReturn(
+        SafeFuture.completedFuture(aggregation2.endBlockNumber.toLong()),
+      )
+
     whenever(
       mockAggregationsRepository.saveNewAggregation(
         argThat<Aggregation> {
@@ -232,6 +265,7 @@ class ProofAggregationCoordinatorServiceTest {
     verify(mockProofAggregationClient).requestProof(proofsToAggregate1)
     verify(mockAggregationsRepository).saveNewAggregation(aggregation1)
     assertThat(provenAggregation).isEqualTo(aggregation1.endBlockNumber)
+    assertThat(provenConsecutiveAggregation).isEqualTo(aggregation1.endBlockNumber)
 
     // Second aggregation should Trigger
     proofAggregationCoordinatorService.action().get()
@@ -245,5 +279,6 @@ class ProofAggregationCoordinatorServiceTest {
     verify(mockProofAggregationClient).requestProof(proofsToAggregate2)
     verify(mockAggregationsRepository).saveNewAggregation(aggregation2)
     assertThat(provenAggregation).isEqualTo(aggregation2.endBlockNumber)
+    assertThat(provenConsecutiveAggregation).isEqualTo(aggregation2.endBlockNumber)
   }
 }

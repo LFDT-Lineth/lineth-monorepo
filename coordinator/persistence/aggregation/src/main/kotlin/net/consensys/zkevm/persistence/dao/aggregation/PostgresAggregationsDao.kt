@@ -156,6 +156,15 @@ class PostgresAggregationsDao(
       """.trimIndent(),
     )
 
+  private val findFirstAggregation =
+    connection.preparedQuery(
+      """
+        select * from $aggregationsTable
+        order by start_block_number asc
+        LIMIT 1
+      """.trimIndent(),
+    )
+
   private val deleteUptoQuery =
     connection.preparedQuery(
       """
@@ -325,20 +334,30 @@ class PostgresAggregationsDao(
   }
 
   override fun findHighestConsecutiveEndBlockNumber(
-    fromBlockNumber: Long,
+    fromBlockNumber: Long?,
   ): SafeFuture<Long?> {
-    return selectAggregations
-      .execute(
-        Tuple.of(
-          fromBlockNumber,
-          aggregationStatusToDbValue(Aggregation.Status.Proven),
-          Int.MAX_VALUE,
-        ),
-      )
-      .toSafeFuture()
-      .thenApply { rowSet ->
-        rowSet.lastOrNull()?.getLong("end_block_number")
+    return if (fromBlockNumber != null) {
+      SafeFuture.completedFuture(fromBlockNumber)
+    } else {
+      findFirstAggregationStartBlockNumber()
+    }.thenCompose { fromBlockNumber ->
+      if (fromBlockNumber != null) {
+        selectAggregations
+          .execute(
+            Tuple.of(
+              fromBlockNumber,
+              aggregationStatusToDbValue(Aggregation.Status.Proven),
+              Int.MAX_VALUE,
+            ),
+          )
+          .toSafeFuture()
+          .thenApply { rowSet ->
+            rowSet.lastOrNull()?.getLong("end_block_number")
+          }
+      } else {
+        SafeFuture.completedFuture(null)
       }
+    }
   }
 
   override fun findAggregationProofByEndBlockNumber(endBlockNumber: Long): SafeFuture<ProofToFinalize?> {
@@ -359,6 +378,15 @@ class PostgresAggregationsDao(
         } else {
           aggregationProofs.firstOrNull()
         }
+      }
+  }
+
+  private fun findFirstAggregationStartBlockNumber(): SafeFuture<Long?> {
+    return findFirstAggregation
+      .execute()
+      .toSafeFuture()
+      .thenApply { rowSet ->
+        rowSet.firstOrNull()?.getLong("start_block_number")
       }
   }
 

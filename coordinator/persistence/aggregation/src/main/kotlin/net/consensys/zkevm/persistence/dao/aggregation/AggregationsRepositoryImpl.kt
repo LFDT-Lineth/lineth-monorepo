@@ -41,7 +41,7 @@ class AggregationsRepositoryImpl(
   }
 
   override fun findHighestConsecutiveEndBlockNumber(
-    fromBlockNumber: Long,
+    fromBlockNumber: Long?,
   ): SafeFuture<Long?> {
     return aggregationsPostgresDao.findHighestConsecutiveEndBlockNumber(fromBlockNumber)
   }
