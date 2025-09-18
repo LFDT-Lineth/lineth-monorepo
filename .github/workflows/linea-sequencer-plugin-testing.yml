@@ -16,21 +16,25 @@ jobs:
     name: "Linea Sequencer Plugin Unit Tests"
     runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
     steps:
-      - uses: actions/checkout@v4
-      - uses: gradle/actions/wrapper-validation@ac638b010cf58a27ee6c972d7336334ccaf61c96 #v4.4.1
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Set up Java
         uses: actions/setup-java@8df1039502a15bceb9433410b1a100fbe190c53b #v4.5.0
         with:
           distribution: temurin
           java-version: 21
+
+      - name: Setup Gradle
+        # Configure Gradle for optimal use in GiHub Actions, including caching of downloaded dependencies.
+        # See: https://github.com/gradle/actions/blob/main/setup-gradle/README.md
+        uses: gradle/actions/setup-gradle@8379f6a1328ee0e06e2bb424dadb7b159856a326 # 4.4.0
+
       - name: spotless
-        run: ./gradlew --no-daemon --parallel clean besu-plugins:linea-sequencer:spotlessCheck
+        run: ./gradlew --parallel besu-plugins:linea-sequencer:spotlessCheck
 
       - name: Build
         run: ./gradlew besu-plugins:linea-sequencer:build
-        env:
-          JAVA_OPTS: -Xmx2g -Dorg.gradle.daemon=false
 
       - name: Upload distribution artifacts
         uses: actions/upload-artifact@v4
@@ -40,8 +44,7 @@ jobs:
 
       - name: Run unit tests
         run: ./gradlew besu-plugins:linea-sequencer:sequencer:test
-        env:
-          JAVA_OPTS: -Dorg.gradle.daemon=false
+
       - name: Upload test report
         if: always()
         uses: actions/upload-artifact@v4
@@ -62,10 +65,15 @@ jobs:
           java-version: 21
           distribution: temurin
 
+      - name: Setup Gradle
+        # Configure Gradle for optimal use in GiHub Actions, including caching of downloaded dependencies.
+        # See: https://github.com/gradle/actions/blob/main/setup-gradle/README.md
+        uses: gradle/actions/setup-gradle@8379f6a1328ee0e06e2bb424dadb7b159856a326 # 4.4.0
+
       - name: Run acceptance tests
         run: ./gradlew besu-plugins:linea-sequencer:acceptance-tests:acceptanceTests
         env:
-          JAVA_OPTS: -Dorg.gradle.daemon=false
+          JAVA_OPTS: -Xmx10g -Xms2g
 
       - name: Upload test report
         if: always()
