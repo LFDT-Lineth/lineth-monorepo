@@ -55,7 +55,7 @@ func GetJsonSignature(tx *ethtypes.Transaction) Signature {
 			V.Sub(V, chainIdMul)
 			V.Sub(V, big.NewInt(8))
 		}
-	case ethtypes.AccessListTxType, ethtypes.DynamicFeeTxType:
+	case ethtypes.AccessListTxType, ethtypes.DynamicFeeTxType, ethtypes.SetCodeTxType:
 		// AL txs are defined to use 0 and 1 as their recovery
 		// id, add 27 to become equivalent to unprotected Homestead signatures.
 		V.Add(V, big.NewInt(27))
