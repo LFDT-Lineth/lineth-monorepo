@@ -7,12 +7,13 @@ import (
 	cRand "crypto/rand"
 	"encoding/binary"
 	"encoding/hex"
-	"github.com/consensys/linea-monorepo/prover/utils/test_utils"
 	"math/big"
 	"math/rand/v2"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/consensys/linea-monorepo/prover/utils/test_utils"
 
 	"github.com/consensys/linea-monorepo/prover/lib/compressor/blob/dictionary"
 	"github.com/consensys/linea-monorepo/prover/lib/compressor/blob/encode"
@@ -489,7 +490,7 @@ func init() {
 		panic(err)
 	}
 
-	// writes the rlp_block.bin
+	// writes the rlp_blocks.bin
 	f := files.MustOverwrite(filepath.Join(rootPath, "jvm-libs/blob-compressor/src/test/resources/net/consensys/linea/nativecompressor/rlp_blocks.bin"))
 	binary.Write(f, binary.LittleEndian, uint32(len(testBlocks)))
 	for i := range testBlocks {

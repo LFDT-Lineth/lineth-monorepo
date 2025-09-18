@@ -5,10 +5,11 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"encoding/json"
-	"github.com/consensys/linea-monorepo/prover/utils/test_utils"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/consensys/linea-monorepo/prover/utils/test_utils"
 
 	"github.com/consensys/linea-monorepo/prover/backend/execution"
 	v1 "github.com/consensys/linea-monorepo/prover/lib/compressor/blob/v1"

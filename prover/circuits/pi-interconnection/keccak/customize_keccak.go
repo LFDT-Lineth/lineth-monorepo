@@ -14,7 +14,7 @@ type module struct {
 }
 
 // NewCustomizedKeccak declares the columns and the constraints for proving hash over EXPECTED blocks.
-// The correctness of original blocks is checked outside of the module,
+// The correctness of original blocks is checked outside the module,
 // where one also should assert that the expected blocks are the same as correct original blocks.
 func NewCustomizedKeccak(comp *wizard.CompiledIOP, maxNbKeccakF int) *module {
 	var (

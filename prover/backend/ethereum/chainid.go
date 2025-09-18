@@ -9,6 +9,10 @@ import (
 // Get the signer of a transaction
 func GetSigner(tx *types.Transaction) types.Signer {
 	if tx.Protected() {
+		switch tx.Type() {
+		case types.SetCodeTxType:
+			return types.NewPragueSigner(tx.ChainId())
+		}
 		return getSigner(tx.ChainId())
 	}
 	return getUnprotectedSigner()

@@ -2,7 +2,12 @@ package blob_test
 
 import (
 	"bytes"
+	"encoding/base64"
 	"fmt"
+	"os"
+	"path/filepath"
+	"testing"
+
 	"github.com/consensys/linea-monorepo/prover/lib/compressor/blob"
 	"github.com/consensys/linea-monorepo/prover/lib/compressor/blob/dictionary"
 	"github.com/consensys/linea-monorepo/prover/lib/compressor/blob/encode"
@@ -12,9 +17,6 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"os"
-	"path/filepath"
-	"testing"
 )
 
 func TestGetVersion(t *testing.T) {
@@ -159,4 +161,11 @@ func newRecursiveFolderIterator(t *testing.T, path string) *recursiveFolderItera
 	res := recursiveFolderIterator{t: t, pathLen: len(path) + 1}
 	res.openDir(path)
 	return &res
+}
+
+func TestReadBlobWithType4Tx(t *testing.T) {
+	blobBytes, err := base64.StdEncoding.DecodeString("P//C26X2eMZsu4vnsz58sGQtmDkOK10btSlslC04tC8WwaAAEAAaUAAQAAA2d2hVEF3qKPiCwsAYZ69zMfyAyRDMie6HYaATTyz33Os0Qe3I2CoiqR3jNGr7x9zUOu/tMU6vpkXVCv8FAr4gGtsEBEf4OB6DID+EwCkC+NuCBTke/8KAr/AHBOEBEDeC2s6dkAABDGDwYmRmafFt8LMp/gmCycfhCoAD/KQCET/ioOew/hUBaAv4hAWhH+HwHsShKXQvpd6/Z/tuyq8ODxvMv9RbVIBPhMgucDDoUU9GsEAD+BQAX/BAJYZh1HDbtnhXrl60wNAadQ3OMR5fJkBCQCU/g5gbe1AfwmB+gEANwEA/wAAAAAAAAAAAAAAAAAAA")
+	dictStore := dictionary.NewStore("../dict/25-04-21.bin")
+	_, err = blob.DecompressBlob(blobBytes, dictStore)
+	require.NoError(t, err)
 }

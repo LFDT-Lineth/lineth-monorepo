@@ -5,15 +5,17 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"io"
+	"math/big"
+
 	"github.com/consensys/gnark-crypto/ecc/bls12-377/fr"
 	"github.com/consensys/gnark-crypto/hash"
 	"github.com/consensys/linea-monorepo/prover/backend/ethereum"
 	typesLinea "github.com/consensys/linea-monorepo/prover/utils/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/holiman/uint256"
 	"github.com/icza/bitio"
-	"io"
-	"math/big"
 )
 
 // UnpackAlign unpacks r (packed with PackAlign) and returns the unpacked data.
@@ -253,6 +255,12 @@ func InjectFromAddressIntoR(txData types.TxData, from *common.Address) *types.Tr
 		tx.R.SetBytes(from[:])
 		tx.S = big.NewInt(1)
 		return types.NewTx(&tx)
+	case *types.SetCodeTx:
+		tx := *txData
+		tx.R = new(uint256.Int)
+		tx.R.SetBytes(from[:])
+		tx.S = uint256.NewInt(1)
+		return types.NewTx(&tx)
 	default:
 		panic("unexpected transaction type")
 	}
@@ -287,20 +295,6 @@ func GetAddressFromR(tx *types.Transaction) typesLinea.EthAddress {
 	var res typesLinea.EthAddress
 	r.FillBytes(res[:])
 	return res
-}
-
-// TODO delete if unused
-type fixedTrieHasher common.Hash
-
-func (e fixedTrieHasher) Reset() {
-}
-
-func (e fixedTrieHasher) Update(_, _ []byte) error {
-	return nil
-}
-
-func (e fixedTrieHasher) Hash() common.Hash {
-	return common.Hash(e)
 }
 
 type emptyTrieHasher struct{}

@@ -51,7 +51,7 @@ func EncodeBlockForCompression(block *types.Block, w io.Writer) error {
 	return nil
 }
 
-// encodeTransaction encodes a single transaction
+// EncodeTxForCompression encodes a single transaction
 func EncodeTxForCompression(tx *types.Transaction, w io.Writer) error {
 	if tx == nil {
 		return fmt.Errorf("transactions is nil")
@@ -79,7 +79,7 @@ func ScanBlockByteLen(b []byte) (int, error) {
 		preTxBufSize = 32 + 4
 
 		// heuristicMaxNbTxs corresponds to a tacit maximal value that we can
-		// expect to be contained in the currently scanned block. The theoritical
+		// expect to be contained in the currently scanned block. The theoretical
 		// max value is 2**16 but a value higher than heuristic value is
 		// considered "odd" and triggers an error. The check can be easily remove
 		// in the future if we decide to make large blocks. This is used as an
@@ -95,11 +95,11 @@ func ScanBlockByteLen(b []byte) (int, error) {
 	)
 
 	if err := binary.Read(r, binary.BigEndian, &decNumTxs); err != nil {
-		return 0, fmt.Errorf("could not decode nb txs: %w", err)
+		return -1, fmt.Errorf("could not decode nb txs: %w", err)
 	}
 
 	if decNumTxs > heuristicMaxNbTxs {
-		return 0, fmt.Errorf("invalid block: the decoded nb tx is %v > %v", decNumTxs, heuristicMaxNbTxs)
+		return -1, fmt.Errorf("invalid block: the decoded nb tx is %v > %v", decNumTxs, heuristicMaxNbTxs)
 	}
 
 	r.Seek(preTxBufSize, io.SeekCurrent)
@@ -113,29 +113,31 @@ func ScanBlockByteLen(b []byte) (int, error) {
 		// scanning the RLP prefix of the transaction.
 		prefix, err := r.ReadByte()
 		if err != nil {
-			return 0, fmt.Errorf("could not read the prefix byte of the tx #%v", i)
+			return -1, fmt.Errorf("could not read the prefix byte of the tx #%v", i)
 		}
 
-		// When the prefix does not match a transaction type, this indicates a
-		// legacy transaction and the prefix was in fact the RLP prefix.
-		// We unread it, so that [passRlpTx] can access it.
-		if int(prefix) > types.DynamicFeeTxType {
-			r.UnreadByte()
+		// Prefer reading as list (legacy tx type)
+		// This limits the number of possible transaction types
+		// to 192. Beyond that point this encoding becomes ambiguous.
+		if int(prefix) > 0xc0 {
+			if err = r.UnreadByte(); err != nil {
+				return -1, fmt.Errorf("failed to rewind tx prefix: %w", err)
+			}
 		}
 
-		if err := PassRlpList(r); err != nil {
-			return 0, fmt.Errorf("failed passing transaction #%v: %w", i, err)
+		if err = passRlpList(r); err != nil {
+			return -1, fmt.Errorf("failed passing transaction #%v: %w", i, err)
 		}
 	}
 
 	return int(r.Size()) - r.Len(), nil
 }
 
-// PassRlpList advances the reader through an RLP list assuming the reader is
+// passRlpList advances the reader through an RLP list assuming the reader is
 // currently pointing to an RLP-encoded list. This is used to scan the encoded
 // number of bytes of an encoded blocks and more specifically to find the
 // boundaries of an RLP-encoded transaction.
-func PassRlpList(r *bytes.Reader) error {
+func passRlpList(r *bytes.Reader) error {
 	firstByte, err := r.ReadByte()
 	if err != nil {
 		return fmt.Errorf("could not read the first byte: %w", err)
