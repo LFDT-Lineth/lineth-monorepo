@@ -49,7 +49,6 @@ WCP                 = 262144
 # Fixed size, static tables
 #
 BIN_REFERENCE_TABLE = 262144 # contains 3 * 256^2 + 256 data rows + 1 padding row
-SHF_REFERENCE_TABLE = 4096   # contains 9 * 256         data rows + 1 padding row
 INSTRUCTION_DECODER = 512    # contains 256             data rows + 1 padding row
 
 #
