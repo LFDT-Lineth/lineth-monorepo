@@ -1,10 +1,10 @@
-(defun   (source-selector---TXNDATA-into-BLOCKDATA)   (txndata.HUB))
-(defun   (target-selector---TXNDATA-into-BLOCKDATA)   (blockdata.IOMF))
+(defun   (source-selector---TXNDATA-into-BLOCKDATA)   txndata.HUB)
+(defun   (target-selector---TXNDATA-into-BLOCKDATA)   blockdata.IOMF) ;; ""
 
 ;; recall that REL_BLOCK starts at 1 for the first block in the conflation
 ;; thus the actual block number is FIRST + (REL - 1) along non padding rows
 
-(deflookup
+(defclookup
   txndata-into-block-data
   ; target selector
   (target-selector---TXNDATA-into-BLOCKDATA)

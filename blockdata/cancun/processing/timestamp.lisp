@@ -13,6 +13,14 @@
 (defun (prev-TIMESTAMP-hi)      (prev-data-hi))
 (defun (prev-TIMESTAMP-lo)      (prev-data-lo))
 
+(defconstraint   timestamp---setting-the-eponymous-column
+                 (:guard (timestamp-precondition))
+                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                 (begin
+                   ;; (eq!    (curr-TIMESTAMP-hi)    0) ;; not necessary given the WCP constraint
+                   (eq!    (curr-TIMESTAMP-lo)    TIMESTAMP)
+                   ))
+
 (defconstraint   timestamp---upper-bound
                  (:guard (timestamp-precondition))
                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

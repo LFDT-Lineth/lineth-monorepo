@@ -232,10 +232,10 @@
   GAS_CONST_ECPAIRING                       45000
   GAS_CONST_ECPAIRING_PAIR                  34000
   GAS_CONST_BLAKE2_PER_ROUND                1
-  GAS_CONST_INIT_CODE_WORD                  2 ;; post Shanghai EIP-3860
-  GAS_CONST_HASH_OPCODE_GAS                 3 ;; gas cost of BLOBHASH, EIP-4844 in Cancun         
-  STANDARD_TOKEN_COST                       4 ;; payload pricing
-  FLOOR_TOKEN_COST                         10 ;; floor cost constant, from EIP-3860 (Prague)
+  GAS_CONST_INIT_CODE_WORD                  2  ;; post Shanghai EIP-3860
+  GAS_CONST_HASH_OPCODE_GAS                 3  ;; gas cost of BLOBHASH, EIP-4844 in Cancun
+  STANDARD_TOKEN_COST                       4  ;; payload pricing
+  FLOOR_TOKEN_COST                          10 ;; floor cost constant, from EIP-3860 (Prague)
   GAS_CONST_POINT_EVALUATION                50000
   GAS_CONST_BLS_G1_ADD                      375
   GAS_CONST_BLS_G2_ADD                      600

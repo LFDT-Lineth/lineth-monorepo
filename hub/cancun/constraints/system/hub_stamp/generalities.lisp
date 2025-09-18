@@ -13,7 +13,7 @@
 		  (vanishes!    HUB_STAMP))
 
 (defconstraint    system---hub-stamp---0-1-increments ()
-		  (has-zero-one-increments    HUB_STAMP))
+		  (has-0-1-increments    HUB_STAMP))
 
 (defconstraint    system---hub-stamp---pegging-to-system-flag-sum ()
 		  (if-not-zero    HUB_STAMP

@@ -37,8 +37,8 @@
 
 (defproperty      system-txn-numbers---0-1-increments
 		  (begin
-		    (has-zero-one-increments    SYSI_TXN_NUMBER)
-		    (has-zero-one-increments    USER_TXN_NUMBER)
-		    (has-zero-one-increments    SYSF_TXN_NUMBER)
-		    (has-zero-one-increments    TOTL_TXN_NUMBER)
+		    (has-0-1-increments    SYSI_TXN_NUMBER)
+		    (has-0-1-increments    USER_TXN_NUMBER)
+		    (has-0-1-increments    SYSF_TXN_NUMBER)
+		    (has-0-1-increments    TOTL_TXN_NUMBER)
 		    ))

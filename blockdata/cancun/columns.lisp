@@ -17,6 +17,8 @@
  (COINBASE_LO         :i128)
  (BLOCK_GAS_LIMIT     :i64) ;;i32 is enough for Linea, not for reference tests
  (BASEFEE             :i64)
+ (TIMESTAMP           :i64)
+ (NUMBER              :i32)
  (FIRST_BLOCK_NUMBER  :i48)
  (REL_BLOCK           :i16)
  (DATA_HI             :i128)

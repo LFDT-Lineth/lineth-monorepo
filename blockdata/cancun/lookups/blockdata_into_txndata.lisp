@@ -2,7 +2,7 @@
   blockdata-into-txndata
   ; target columns
   (
-    txndata.REL_BLOCK
+    txndata.BLK_NUMBER
   )
   ; source columns
   (

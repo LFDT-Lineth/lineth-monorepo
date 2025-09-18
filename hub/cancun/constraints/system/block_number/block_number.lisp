@@ -8,10 +8,6 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-(defun    (has-zero-one-increments    col) (or!    (will-inc!    col    0)
-						   (will-inc!    col    1)
-						   ))
-
 (defconstraint    BLK_NUMBER-constraints---transaction-constancy ()
 		  (transaction-constancy    BLK_NUMBER))
 
@@ -22,4 +18,4 @@
 		  (will-inc!    BLK_NUMBER    (system-block-number---about-to-enter-sysi)))
 
 (defproperty      BLK_NUMBER-constraints---0-1-increments
-		  (has-zero-one-increments    BLK_NUMBER))
+		  (has-0-1-increments    BLK_NUMBER))

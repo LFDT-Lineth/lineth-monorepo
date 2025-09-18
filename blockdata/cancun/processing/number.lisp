@@ -44,3 +44,13 @@
                                   (begin (eq!  (curr-NUMBER-hi)      (prev-NUMBER-hi))
                                          (eq!  (curr-NUMBER-lo)  (+  (prev-NUMBER-lo)  1))))
                    ))
+
+(defconstraint   number---setting-the-eponymous-column
+                 (:guard (number-precondition))
+                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                 (begin
+                   (eq!    NUMBER    (curr-NUMBER-lo))
+                   (eq!    NUMBER    (+    FIRST_BLOCK_NUMBER
+                                           (-    REL_BLOCK
+                                                 1)))
+                   ))
