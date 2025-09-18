@@ -1,5 +1,6 @@
 package linea.domain
 
+import linea.kotlin.decodeHex
 import linea.kotlin.encodeHex
 import java.math.BigInteger
 import java.util.EnumSet
@@ -51,6 +52,56 @@ enum class TransactionType(private val typeValue: Int) {
   }
 }
 
+data class CodeDelegation(
+  val chainId: ULong,
+  val address: ByteArray,
+  val nonce: ULong,
+  val v: Byte,
+  val r: BigInteger,
+  val s: BigInteger,
+) {
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (javaClass != other?.javaClass) return false
+
+    other as CodeDelegation
+
+    if (v != other.v) return false
+    if (chainId != other.chainId) return false
+    if (!address.contentEquals(other.address)) return false
+    if (nonce != other.nonce) return false
+    if (r != other.r) return false
+    if (s != other.s) return false
+
+    return true
+  }
+
+  override fun hashCode(): Int {
+    var result = address.contentHashCode()
+    result = 31 * result + chainId.hashCode()
+    result = 31 * result + nonce.hashCode()
+    result = 31 * result + v.hashCode()
+    result = 31 * result + r.hashCode()
+    result = 31 * result + s.hashCode()
+    return result
+  }
+
+  override fun toString(): String {
+    return "CodeDelegation(chainId=$chainId, address=${address.encodeHex()}, nonce=$nonce, v=$v, r=$r, s=$s)"
+  }
+}
+
+// TODO: Delete once 7702 is supported by Web3j
+val DUMMY_DELEGATION =
+  CodeDelegation(
+    chainId = 0u,
+    address = "0x0000000000000000000000000000000000000000".decodeHex(),
+    nonce = 0u,
+    v = 27,
+    r = BigInteger.ZERO,
+    s = BigInteger.ZERO,
+  )
+
 data class Transaction(
   val type: TransactionType,
   val nonce: ULong,
@@ -66,7 +117,8 @@ data class Transaction(
   val gasPrice: ULong?, // null for EIP-1559 transactions
   val maxFeePerGas: ULong? = null, // null for EIP-1559 transactions
   val maxPriorityFeePerGas: ULong? = null, // null for non EIP-1559 transactions
-  val accessList: List<AccessListEntry>?, // null non for EIP-2930 transactions
+  val accessList: List<AccessListEntry>?, // null for non EIP-2930 transactions
+  val codeDelegations: List<CodeDelegation>?, // Only for DELEGATE_CODE / EIP - 7702 transactions
 ) {
   companion object {
     // companion object to allow static extension functions

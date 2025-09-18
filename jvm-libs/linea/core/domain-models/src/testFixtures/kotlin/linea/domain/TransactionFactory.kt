@@ -97,6 +97,7 @@ object TransactionFactory {
     maxFeePerGas: ULong? = 3UL.gwei, // null for EIP-1559 transactions
     maxPriorityFeePerGas: ULong? = 2UL.gwei, // null for non EIP-1559 transactions
     accessList: List<AccessListEntry>? = null, // null non for EIP-2930 transactions
+    codeDelegations: List<CodeDelegation>? = null, // Only for DELEGATE_CODE / EIP - 7702 transactions
   ): Transaction {
     val signatureArgs = listOfNotNull(r, s, v)
     require(signatureArgs.let { it.size == 3 || it.isEmpty() }) {
@@ -147,25 +148,7 @@ object TransactionFactory {
       maxFeePerGas = maxFeePerGas,
       maxPriorityFeePerGas = maxPriorityFeePerGas,
       accessList = accessList,
-    )
-  }
-
-  fun Transaction.computeSignature(
-    keyPair: KeyPair = defaltSecp256k1,
-  ): SECPSignature {
-    return computeSignature(
-      type = type,
-      nonce = nonce,
-      gasLimit = gasLimit,
-      to = to,
-      value = value,
-      input = input,
-      chainId = chainId,
-      gasPrice = gasPrice,
-      maxFeePerGas = maxFeePerGas,
-      maxPriorityFeePerGas = maxPriorityFeePerGas,
-      accessList = accessList,
-      keyPair = keyPair,
+      codeDelegations = codeDelegations,
     )
   }
 
@@ -230,11 +213,11 @@ object TransactionFactory {
   fun BigInteger.toWei(): Wei = Wei.of(this)
   fun TransactionType.toBesu(): org.hyperledger.besu.datatypes.TransactionType {
     return when (this) {
-      linea.domain.TransactionType.FRONTIER -> org.hyperledger.besu.datatypes.TransactionType.FRONTIER
-      linea.domain.TransactionType.EIP1559 -> org.hyperledger.besu.datatypes.TransactionType.EIP1559
-      linea.domain.TransactionType.ACCESS_LIST -> org.hyperledger.besu.datatypes.TransactionType.ACCESS_LIST
-      linea.domain.TransactionType.BLOB -> org.hyperledger.besu.datatypes.TransactionType.BLOB
-      linea.domain.TransactionType.DELEGATE_CODE -> org.hyperledger.besu.datatypes.TransactionType.DELEGATE_CODE
+      TransactionType.FRONTIER -> org.hyperledger.besu.datatypes.TransactionType.FRONTIER
+      TransactionType.EIP1559 -> org.hyperledger.besu.datatypes.TransactionType.EIP1559
+      TransactionType.ACCESS_LIST -> org.hyperledger.besu.datatypes.TransactionType.ACCESS_LIST
+      TransactionType.BLOB -> org.hyperledger.besu.datatypes.TransactionType.BLOB
+      TransactionType.DELEGATE_CODE -> org.hyperledger.besu.datatypes.TransactionType.DELEGATE_CODE
     }
   }
 }

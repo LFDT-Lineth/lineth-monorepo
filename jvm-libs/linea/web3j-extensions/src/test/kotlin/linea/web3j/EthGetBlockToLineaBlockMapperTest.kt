@@ -1,6 +1,7 @@
 package linea.web3j
 
 import linea.domain.AccessListEntry
+import linea.domain.CodeDelegation
 import linea.domain.Transaction
 import linea.domain.TransactionType
 import linea.domain.toBesu
@@ -13,6 +14,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.fail
 import org.hyperledger.besu.datatypes.Address
 import org.hyperledger.besu.datatypes.Wei
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.web3j.protocol.ObjectMapperFactory
 import org.web3j.protocol.core.methods.response.EthBlock
@@ -65,13 +67,14 @@ class EthGetBlockToLineaBlockMapperTest {
         input = "0x60806040523480156200001157600080fd5b506200001c".decodeHex(),
         r = "0x1fa31b9272cc67174efb129c2fd2ec5afda122503745beb22bd26e48a42240bb".toBigIntegerFromHex(),
         s = "0x248c9cdf9352b4a379577c5b44bcb25a5350dc6722fd7b2aec40e193f670e4f4".toBigIntegerFromHex(),
-        v = 0UL,
+        v = 0u,
         yParity = null,
         type = TransactionType.EIP1559,
         chainId = 0x539UL,
         maxFeePerGas = 0xeUL,
         maxPriorityFeePerGas = 0x0UL,
         accessList = emptyList(),
+        codeDelegations = emptyList(),
       ),
     )
 
@@ -138,6 +141,7 @@ class EthGetBlockToLineaBlockMapperTest {
         maxFeePerGas = null,
         maxPriorityFeePerGas = null,
         accessList = null,
+        codeDelegations = null,
       ),
     )
     domainTx.toBesu().also { besuTx ->
@@ -222,6 +226,7 @@ class EthGetBlockToLineaBlockMapperTest {
             ),
           ),
         ),
+        codeDelegations = null,
       ),
     )
 
@@ -252,6 +257,111 @@ class EthGetBlockToLineaBlockMapperTest {
           Bytes32.fromHexString("0x0000000000000000000000000000000000000000000000000000000000000000"),
           Bytes32.fromHexString("0x0000000000000000000000000000000000000000000000000000000000000001"),
         )
+    }
+  }
+
+  @Disabled("Until Web3j supports decoding of the CodeDelegation / EIP-7702 transactions")
+  fun `should map transaction with CodeDelegationList`() {
+    val txWeb3j = serialize(
+      """
+      {
+        "authorizationList": [
+          {
+            "chainId": "0xe703",
+            "address": "0x484be06b591d7bca761444e04e35acdf269a7873",
+            "nonce": "0xf",
+            "yParity": "0x1",
+            "r": "0x981f39bf086898f5a236f60dab3a4d56a14bc2b083ec52d3dec5238d2e8cc116",
+            "s": "0x19b739390989da89acbd16d3eb937863dfe863744fe1101b95d37a412bd3a606"
+          }
+        ],
+        "blockHash": "0x7480ae911853c1fba10145401a21ddca3943b5894d74cbbf7a6beec526d1f9c2",
+        "blockNumber": "0xa",
+        "chainId": "0x539",
+        "from": "0xce3b7d471fd1fdd10d788ae64e48a9c2f2361179",
+        "gas": "0x30d40",
+        "gasPrice": "0x1017df87",
+        "hash": "0x8ef620582ed8ba98c8496a42b27a30ff7b1de901b1ff7e65b22ea59a2d0668ce",
+        "input": "0x",
+        "nonce": "0x0",
+        "to": "0x8d97689c9818892b700e27f316cc3e41e17fbeb9",
+        "transactionIndex": "0x2",
+        "type": "0x1",
+        "value": "0x2386f26fc10000",
+        "yParity": "0x1",
+        "v": "0x1",
+        "r": "0x4f24ed24207bec8591c8172584dc3b57cdf3ee96afbd5e63905a90a704ff33f0",
+        "s": "0x6277bb9d2614843a4791ff2c192e70876438ec940c39d92deb504591b83dfeb3"
+      }
+      """.trimIndent(),
+    )
+
+    val domainTx = txWeb3j.toDomain()
+    assertThat(domainTx).isEqualTo(
+      Transaction(
+        nonce = 0UL,
+        gasPrice = 0x1017df87UL,
+        gasLimit = 0x30d40UL,
+        to = "0x8d97689c9818892b700e27f316cc3e41e17fbeb9".decodeHex(),
+        value = 0x2386f26fc10000UL.toBigInteger(),
+        input = "0x".decodeHex(),
+        r = "0x4f24ed24207bec8591c8172584dc3b57cdf3ee96afbd5e63905a90a704ff33f0".toBigIntegerFromHex(),
+        s = "0x6277bb9d2614843a4791ff2c192e70876438ec940c39d92deb504591b83dfeb3".toBigIntegerFromHex(),
+        v = 1UL,
+        yParity = 1UL,
+        type = TransactionType.ACCESS_LIST,
+        chainId = 0x539UL,
+        maxFeePerGas = null,
+        maxPriorityFeePerGas = null,
+        accessList = null,
+        codeDelegations = listOf(
+          CodeDelegation(
+            chainId = 0x539UL,
+            address = "0x484be06b591d7bca761444e04e35acdf269a7873".decodeHex(),
+            nonce = 16uL,
+            v = 1,
+            r = "0x981f39bf086898f5a236f60dab3a4d56a14bc2b083ec52d3dec5238d2e8cc116".toBigIntegerFromHex(),
+            s = "0x19b739390989da89acbd16d3eb937863dfe863744fe1101b95d37a412bd3a606".toBigIntegerFromHex(),
+          ),
+        ),
+      ),
+    )
+
+    domainTx.toBesu().also { besuTx ->
+      assertThat(besuTx.nonce).isEqualTo(0L)
+      assertThat(besuTx.gasPrice.getOrNull()).isEqualTo(Wei.of(0x1017df87L))
+      assertThat(besuTx.gasLimit).isEqualTo(0x30d40L)
+      assertThat(besuTx.to.getOrNull()).isEqualTo(Address.fromHexString("0x8d97689c9818892b700e27f316cc3e41e17fbeb9"))
+      assertThat(besuTx.value).isEqualTo(Wei.of(0x2386f26fc10000L))
+      assertThat(besuTx.payload).isEqualTo(Bytes.EMPTY)
+      assertThat(besuTx.signature.r).isEqualTo(
+        "0x4f24ed24207bec8591c8172584dc3b57cdf3ee96afbd5e63905a90a704ff33f0".toBigIntegerFromHex(),
+      )
+      assertThat(besuTx.signature.s).isEqualTo(
+        "0x6277bb9d2614843a4791ff2c192e70876438ec940c39d92deb504591b83dfeb3".toBigIntegerFromHex(),
+      )
+      assertThat(besuTx.signature.recId).isEqualTo(1)
+      assertThat(besuTx.type).isEqualTo(org.hyperledger.besu.datatypes.TransactionType.ACCESS_LIST)
+      assertThat(besuTx.chainId.getOrNull()).isEqualTo(0x539L)
+      assertThat(besuTx.maxFeePerGas).isEmpty()
+      assertThat(besuTx.maxPriorityFeePerGas).isEmpty()
+      val codeDelegationList = besuTx.codeDelegationList.getOrElse { fail("CodeDelegationList is empty") }
+
+      assertThat(codeDelegationList).hasSize(1)
+      val codeDelegationListEntry = codeDelegationList[0]
+      assertThat(codeDelegationListEntry.address())
+        .isEqualTo(Address.fromHexString("0x484be06b591d7bca761444e04e35acdf269a7873"))
+      assertThat(codeDelegationListEntry.chainId()).isEqualTo(1337.toBigInteger())
+      assertThat(codeDelegationListEntry.nonce()).isEqualTo(16L)
+      assertThat(codeDelegationListEntry.v()).isEqualTo(
+        1,
+      )
+      assertThat(codeDelegationListEntry.r()).isEqualTo(
+        "0x981f39bf086898f5a236f60dab3a4d56a14bc2b083ec52d3dec5238d2e8cc116".toBigIntegerFromHex(),
+      )
+      assertThat(codeDelegationListEntry.s()).isEqualTo(
+        "0x19b739390989da89acbd16d3eb937863dfe863744fe1101b95d37a412bd3a606".toBigIntegerFromHex(),
+      )
     }
   }
 
@@ -300,6 +410,7 @@ class EthGetBlockToLineaBlockMapperTest {
         maxFeePerGas = null,
         maxPriorityFeePerGas = null,
         accessList = emptyList(),
+        codeDelegations = null,
       ),
     )
 
@@ -379,6 +490,7 @@ class EthGetBlockToLineaBlockMapperTest {
         maxFeePerGas = 0x1017dff7UL,
         maxPriorityFeePerGas = 0x1017df87UL,
         accessList = emptyList(),
+        codeDelegations = null,
       ),
     )
 
@@ -454,6 +566,7 @@ class EthGetBlockToLineaBlockMapperTest {
         maxFeePerGas = 0xeUL,
         maxPriorityFeePerGas = 0UL,
         accessList = emptyList(),
+        codeDelegations = null,
       ),
     )
 
@@ -523,6 +636,7 @@ class EthGetBlockToLineaBlockMapperTest {
         maxFeePerGas = null,
         maxPriorityFeePerGas = null,
         accessList = null,
+        codeDelegations = null,
       ),
     )
     domainTx.toBesu().also { besuTx ->

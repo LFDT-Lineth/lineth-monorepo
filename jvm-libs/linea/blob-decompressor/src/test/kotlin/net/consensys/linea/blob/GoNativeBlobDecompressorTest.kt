@@ -5,12 +5,15 @@ import linea.blob.BlobCompressor
 import linea.blob.BlobCompressorVersion
 import linea.blob.GoBackedBlobCompressor
 import linea.domain.AccessListEntry
+import linea.domain.DUMMY_DELEGATION
 import linea.domain.TransactionFactory
+import linea.domain.TransactionType
 import linea.domain.createBlock
 import linea.domain.toBesu
 import linea.kotlin.decodeHex
 import linea.kotlin.eth
 import linea.kotlin.toBigInteger
+import linea.kotlin.toULong
 import linea.rlp.BesuRlpBlobDecoder
 import linea.rlp.RLP
 import net.consensys.linea.nativecompressor.CompressorTestData
@@ -18,15 +21,16 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
+import java.math.BigInteger
 import kotlin.jvm.optionals.getOrNull
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class GoNativeBlobDecompressorTest {
   private val blobCompressedLimit = 30 * 1024
   private val compressor: BlobCompressor = GoBackedBlobCompressor
-    .getInstance(BlobCompressorVersion.V1_2, blobCompressedLimit)
+    .getInstance(BlobCompressorVersion.V2, blobCompressedLimit)
   private val decompressor: BlobDecompressor =
-    GoNativeBlobDecompressorFactory.getInstance(BlobDecompressorVersion.V1_2_0)
+    GoNativeBlobDecompressorFactory.getInstance(BlobDecompressorVersion.V2)
 
   @BeforeEach
   fun beforeEach() {
@@ -79,10 +83,29 @@ class GoNativeBlobDecompressorTest {
         ),
       ),
     )
+    val tx2 = TransactionFactory.createTransaction(
+      type = TransactionType.DELEGATE_CODE,
+      nonce = 14u,
+      gasLimit = 500000U,
+      to = "0xc3a8e1b76cf0af5cbd6981a034ea1b9c623cbe4c".decodeHex(),
+      value = BigInteger.ZERO,
+      input = "0x8129fc1c".decodeHex(),
+      r = "160981842285399234228706247823090298075894560123723101549121809333799265478".toBigInteger(),
+      s = "41497505193730071958791131225783886927059026426434667995811062394302979849447".toBigInteger(),
+      v = 1u,
+      yParity = 1u,
+      chainId = 59139u,
+      gasPrice = null,
+      maxFeePerGas = 90000000000u,
+      maxPriorityFeePerGas = 90000000000u,
+      accessList = null,
+      codeDelegations = listOf(DUMMY_DELEGATION),
+    )
+
     val originalBesuBlock = createBlock(
       number = 123uL,
       timestamp = Instant.parse("2025-01-02T12:23:45Z"),
-      transactions = listOf(tx0, tx1),
+      transactions = listOf(tx0, tx1, tx2),
     ).toBesu()
 
     compressor.appendBlock(RLP.encodeBlock(originalBesuBlock))
@@ -96,9 +119,10 @@ class GoNativeBlobDecompressorTest {
     assertThat(decodedBlock.header.hash).isEqualTo(originalBesuBlock.header.hash)
     assertThat(decodedBlock.header.timestamp).isEqualTo(Instant.parse("2025-01-02T12:23:45Z").epochSeconds)
 
-    assertThat(decodedBlock.body.transactions).hasSize(2)
+    assertThat(decodedBlock.body.transactions).hasSize(3)
     val decompressedTx0 = decodedBlock.body.transactions[0]
     val decompressedTx1 = decodedBlock.body.transactions[1]
+    val decompressedTx2 = decodedBlock.body.transactions[2]
 
     assertThat(decompressedTx0.type).isEqualTo(tx0.type.toBesu())
     assertThat(decompressedTx0.sender.toArray()).isEqualTo(tx0.toBesu().sender.toArray())
@@ -141,5 +165,33 @@ class GoNativeBlobDecompressorTest {
       assertThat(decompressedAccList[1]!!.storageKeys[1].toArray())
         .isEqualTo(tx1.accessList!![1].storageKeys[1])
     }
+
+    assertThat(decompressedTx2.type).isEqualTo(tx2.type.toBesu())
+    assertThat(decompressedTx2.sender.toArray()).isEqualTo(tx2.toBesu().sender.toArray())
+    assertThat(decompressedTx2.nonce.toULong()).isEqualTo(tx2.nonce)
+    assertThat(decompressedTx2.gasLimit.toULong()).isEqualTo(tx2.gasLimit)
+    assertThat(decompressedTx2.maxFeePerGas.getOrNull()?.asBigInteger)
+      .isEqualTo(tx2.maxFeePerGas?.toBigInteger())
+    assertThat(decompressedTx2.maxPriorityFeePerGas.getOrNull()?.asBigInteger)
+      .isEqualTo(tx2.maxPriorityFeePerGas?.toBigInteger())
+    assertThat(decompressedTx2.gasPrice.getOrNull()).isNull()
+    assertThat(decompressedTx2.to.getOrNull()?.toArray()).isEqualTo(tx2.to)
+    assertThat(decompressedTx2.value.asBigInteger).isEqualTo(tx2.value)
+    assertThat(decompressedTx2.payload.toArray()).isEqualTo(tx2.input)
+    assertThat(decompressedTx2.accessList.getOrNull()).isEmpty()
+    assertThat(decompressedTx2.codeDelegationList.getOrNull()?.map { it.toLinaDomain() })
+      .isEqualTo(listOf(DUMMY_DELEGATION))
+  }
+
+  fun org.hyperledger.besu.datatypes.CodeDelegation.toLinaDomain(): linea.domain.CodeDelegation {
+    // Besu does CodeDelegation class not implement equals/hashcode so we convert to Linea Domain model to compare
+    return linea.domain.CodeDelegation(
+      address = this.address().toArray(),
+      chainId = this.chainId().toULong(),
+      nonce = this.nonce().toULong(),
+      v = this.signature().recId,
+      r = this.signature().r,
+      s = this.signature().s,
+    )
   }
 }

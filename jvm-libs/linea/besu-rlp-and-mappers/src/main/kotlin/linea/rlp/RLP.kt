@@ -7,11 +7,11 @@ import org.hyperledger.besu.ethereum.rlp.BytesValueRLPOutput
 import org.hyperledger.besu.ethereum.rlp.RLP
 
 object RLP {
-  fun encodeBlock(besuBlock: org.hyperledger.besu.ethereum.core.Block): ByteArray {
+  fun encodeBlock(besuBlock: Block): ByteArray {
     return besuBlock.toRlp().toArray()
   }
 
-  fun decodeBlockWithMainnetFunctions(block: ByteArray): org.hyperledger.besu.ethereum.core.Block {
+  fun decodeBlockWithMainnetFunctions(block: ByteArray): Block {
     return Block.readFrom(
       RLP.input(Bytes.wrap(block)),
       MainnetBlockHeaderFunctions(),

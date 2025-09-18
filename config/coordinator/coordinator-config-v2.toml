@@ -38,7 +38,7 @@ failures-warning-threshold = 3
 
 
 [conflation.blob-compression]
-blob-compressor-version="V2_0"
+blob-compressor-version="V2"
 blob-size-limit = 102400 # 100KB
 handler-polling-interval = "PT1S"
 # default batches-limit is proof-aggregation.proofs-limit - 1

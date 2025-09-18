@@ -36,7 +36,7 @@ def libsZipDownloadOutputDir = project.parent.layout.buildDirectory.asFile.get()
 task downloadNativeLibs {
   doLast {
     fetchLibFromZip("https://github.com/Consensys/linea-monorepo/releases/download/blob-libs-v1.2.0/linea-blob-libs-v1.2.0.zip", "blob_compressor", libsZipDownloadOutputDir)
-    fetchLibFromZip("https://github.com/Consensys/linea-monorepo/releases/download/blob-libs-v2.0.0/linea-blob-libs-v2.0.0.zip", "blob_compressor", libsZipDownloadOutputDir)
+    fetchLibFromZip("https://github.com/Consensys/linea-monorepo/releases/download/blob-libs-v2.1.0-rc1/linea-blob-libs-v2.1.0-rc1.zip", "blob_compressor", libsZipDownloadOutputDir)
   }
 }
 
