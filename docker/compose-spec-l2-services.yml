@@ -281,7 +281,7 @@ services:
   coordinator:
     hostname: coordinator
     container_name: coordinator
-    image: consensys/linea-coordinator:${COORDINATOR_TAG:-6eff2d5}
+    image: consensys/linea-coordinator:${COORDINATOR_TAG:-b98c344}
     profiles: [ "l2", "debug" ]
     depends_on:
       postgres:

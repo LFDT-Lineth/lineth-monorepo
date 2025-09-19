@@ -1,6 +1,7 @@
 package linea.coordinator.config.v2
 
 import linea.domain.BlockParameter
+import linea.kotlin.encodeHex
 import kotlin.time.Duration
 
 data class ProtocolConfig(
@@ -29,6 +30,10 @@ data class ProtocolConfig(
       var result = genesisStateRootHash.contentHashCode()
       result = 31 * result + genesisShnarf.contentHashCode()
       return result
+    }
+
+    override fun toString(): String {
+      return "Genesis(stateRootHash=${genesisStateRootHash.encodeHex()}, shnarf=${genesisShnarf.encodeHex()})"
     }
   }
 
