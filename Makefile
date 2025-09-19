@@ -155,17 +155,8 @@ ZKEVM_MODULES_LONDON := ${ZKEVM_MODULES_COMMON} \
 		 ${RLP_TXN_LONDON} \
 		 ${TXN_DATA_LONDON}
 
-ZKEVM_MODULES_PARIS := ${ZKEVM_MODULES_COMMON} \
-		 ${CONSTANTS_LONDON} \
-		 ${TABLES_LONDON} \
-		 ${BLOCKDATA_PARIS} \
-		 ${HUB_LONDON} \
-		 ${LOG_INFO_LONDON} \
-		 ${MMIO_LONDON} \
-		 ${MXP_LONDON} \
-		 ${OOB_LONDON} \
-		 ${RLP_TXN_LONDON} \
-		 ${TXN_DATA_LONDON}
+
+# ZKEVM_MODULES_PARIS := ZKEVM_MODULES_LONDON
 
 ZKEVM_MODULES_SHANGHAI := ${ZKEVM_MODULES_COMMON} \
 		 ${CONSTANTS_LONDON} \
@@ -213,8 +204,10 @@ zkevm_london.bin: ${ZKEVM_MODULES_LONDON}
 	${GO_CORSET_COMPILE} -o $@ ${ZKEVM_MODULES_LONDON}
 	@$(call warn_lispX)
 
-zkevm_paris.bin: ${ZKEVM_MODULES_PARIS}
-	${GO_CORSET_COMPILE} -o $@ ${ZKEVM_MODULES_PARIS}
+ #This is not a typo:
+ # only a column name change between Paris and London n BLOCK_DATA that blocks us to have a conflation with London and Paris blocks
+zkevm_paris.bin: ${ZKEVM_MODULES_LONDON}
+	${GO_CORSET_COMPILE} -o $@ ${ZKEVM_MODULES_LONDON}
 	@$(call warn_lispX)
 
 zkevm_shanghai.bin: ${ZKEVM_MODULES_SHANGHAI}
