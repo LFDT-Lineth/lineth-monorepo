@@ -2,11 +2,9 @@
   "extends": "../tsconfig.json",
   "compilerOptions": {
     "declaration": true,
-    "module": "nodenext",
     "outDir": "dist",
     "rootDir": "src",
     "target": "es2022",
-    "moduleResolution": "nodenext"
   },
   "include": ["./src/**/*"],
 }

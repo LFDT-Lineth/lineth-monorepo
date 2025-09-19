@@ -1,8 +1,6 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "moduleResolution": "NodeNext",
-    "module": "NodeNext",
     "lib": ["ES2022", "DOM"],
     "noEmit": false,
     "skipLibCheck": true,

@@ -13,6 +13,5 @@
     {
       "path": "../sdk/sdk-ethers"
     }
-  ],
-  "exclude": ["./dist", "**/node_modules"]
+  ]
 }

@@ -11,6 +11,5 @@
       "path": "../sdk/sdk-ethers"
     }
   ],
-  "include": ["**/*.ts"],
-  "exclude": ["node_modules", "dist"],
+  "include": ["**/*.ts"]
 }

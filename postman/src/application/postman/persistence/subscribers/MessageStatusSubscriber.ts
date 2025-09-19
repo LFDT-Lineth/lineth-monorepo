@@ -8,8 +8,8 @@ import {
 } from "typeorm";
 import { Direction } from "@consensys/linea-sdk";
 import { MessageEntity } from "../entities/Message.entity";
-import { IMessageMetricsUpdater, MessagesMetricsAttributes } from "../../../../core/metrics";
-import { ILogger } from "../../../../core/utils/logging/ILogger";
+import { type IMessageMetricsUpdater, MessagesMetricsAttributes } from "../../../../core/metrics";
+import { type ILogger } from "../../../../core/utils/logging/ILogger";
 import { MessageStatus } from "../../../../core/enums";
 
 @EventSubscriber()

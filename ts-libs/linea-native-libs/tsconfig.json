@@ -4,6 +4,5 @@
     "noUncheckedIndexedAccess": true,
     "composite": true,
     "removeComments": false
-  },
-  "exclude": ["./dist", "**/node_modules"]
+  }
 }
