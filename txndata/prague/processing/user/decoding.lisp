@@ -105,8 +105,4 @@
 				  (vanishes!   (USER-transaction---RLP---number-of-access-list-addresses))
 				  )))
 
-(defconstraint   USER-transaction---transaction-decoding---CANCUN-specific---no-type-4-transactions
-		 (:guard   (first-row-of-USER-transaction))
-		 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-		 (vanishes!   (USER-transaction---is-type-4)))
 

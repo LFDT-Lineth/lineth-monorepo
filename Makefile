@@ -113,6 +113,8 @@ TXN_DATA_SHANGHAI := txndata/shanghai
 
 TXN_DATA_CANCUN := txndata/cancun
 
+TXN_DATA_PRAGUE := txndata/prague
+
 WCP := wcp
 
 LISPX := $(shell find * -name "*.lispX")
@@ -196,7 +198,7 @@ ZKEVM_MODULES_PRAGUE := ${ZKEVM_MODULES_COMMON} \
 		 ${OOB_PRAGUE} \
 		 ${RLP_TXN_CANCUN} \
 		 ${RLP_UTILS_CANCUN} \
-		 ${TXN_DATA_CANCUN}
+		 ${TXN_DATA_PRAGUE}
 
 all: zkevm_london.bin zkevm_paris.bin zkevm_shanghai.bin zkevm_cancun.bin zkevm_prague.bin
 

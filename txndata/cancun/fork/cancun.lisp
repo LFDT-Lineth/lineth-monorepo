@@ -1,9 +1,6 @@
 (module txndata)
 
-
-;; TODO: disable for Prague
-
-(defun    (first-SYSI-row)   (*   (prev (- 1 SYSI))  SYSI))
+(defun    (first-SYSI-row)   (force-bin (*   (prev (- 1 SYSI))  SYSI)))
 
 
 (defconstraint    fork-specifics---cancun-specifics---SYSI-transactions ()

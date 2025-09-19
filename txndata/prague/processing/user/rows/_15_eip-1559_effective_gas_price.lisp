@@ -25,6 +25,6 @@
 (defconstraint    USER-transaction-processing---specialized-computations---setting-the-gas-price-for-transactions-with-EIP-1559-gas-semantics
                   (:guard   (first-row-of-USER-transaction-with-EIP-1559-gas-semantics))
                   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-                  (if-not-zero   (get-full-tip)
+                           (if-not-zero (get-full-tip)
                                         (eq!   (USER-transaction---HUB---gas-price)   (+   (USER-transaction---RLP---max-priority-fee)    (USER-transaction---HUB---basefee)))
                                         (eq!   (USER-transaction---HUB---gas-price)        (USER-transaction---RLP---max-fee))))

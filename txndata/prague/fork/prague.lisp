@@ -1,8 +1,6 @@
 (module txndata)
 
-
-;; TODO: enable for Prague
-
+(defun    (first-SYSI-row)   (force-bin (*   (prev (- 1 SYSI))  SYSI)))
 
 (defconstraint    fork-specifics---prague-specifics---SYSI-transactions ()
 		  (if-not-zero    SYSI

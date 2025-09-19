@@ -19,12 +19,17 @@
 
 (defun    (USER-transaction---pay-floor-price)    (shift    computation/WCP_RES    ROFF___USER___CMPTN_ROW___EFFECTIVE_GAS_REFUND_VS_TRANSACTION_CALL_DATA_FLOOR_PRICE_COMPARISON))
 
-
-;; Cancun specific
-(defconstraint    USER-transaction-processing---common-computations---setting-REFUND_EFFECTIVE---CANCUN-version
+;; Prague specific
+(defconstraint    USER-transaction-processing---common-computations---setting-REFUND_EFFECTIVE---PRAGUE-version
                   (:guard    (first-row-of-USER-transaction))
                   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-                  (eq!    (USER-transaction---HUB---refund-effective)
-                          (-   (USER-transaction---RLP---gas-limit)
-                               (USER-transaction---consumed-gas-after-refunds))))
-
+                  (if-zero    (force-bin    (USER-transaction---pay-floor-price))
+                              ;; pay_floor_cost ≡ <false>
+                              (eq!    (USER-transaction---HUB---refund-effective)
+                                      (-   (USER-transaction---RLP---gas-limit)
+                                           (USER-transaction---consumed-gas-after-refunds)))
+                              ;; pay_floor_cost ≡ <true
+                              (eq!    (USER-transaction---HUB---refund-effective)
+                                      (-   (USER-transaction---RLP---gas-limit)
+                                           (USER-transaction---transaction-floor-cost)))
+                              ))
