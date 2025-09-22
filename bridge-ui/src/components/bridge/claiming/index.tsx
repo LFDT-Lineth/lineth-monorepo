@@ -9,7 +9,7 @@ import ReceivedAmount from "./received-amount";
 import Fees from "./fees";
 import { useFormStore, useChainStore } from "@/stores";
 import BridgeMode from "./bridge-mode";
-import { ChainLayer } from "@/types";
+import { BridgeProvider, CCTPMode, ChainLayer } from "@/types";
 import { isCctp } from "@/utils";
 
 const AdvancedSettings = dynamic(() => import("@/components/bridge/modal/advanced-settings"), {
@@ -27,7 +27,7 @@ export default function Claiming() {
   const amount = useFormStore((state) => state.amount);
   const balance = useFormStore((state) => state.balance);
   const token = useFormStore((state) => state.token);
-
+  const cctpMode = useFormStore((state) => state.cctpMode);
   const originChainBalanceTooLow = amount && balance < amount;
 
   useEffect(() => {
@@ -38,6 +38,14 @@ export default function Claiming() {
 
     return () => clearTimeout(timeout);
   }, [amount]);
+
+  useEffect(() => {
+    const noFeePill = document.getElementById("no-fees-pill");
+    if (!noFeePill) return;
+
+    noFeePill.style.display =
+      token.bridgeProvider === BridgeProvider.CCTP && cctpMode === CCTPMode.FAST ? "none" : "block";
+  }, [cctpMode, token.bridgeProvider]);
 
   // Do not allow user to go to AdvancedSettings modal, when they have no choice of ClaimType anyway
   const showSettingIcon = useMemo(() => {

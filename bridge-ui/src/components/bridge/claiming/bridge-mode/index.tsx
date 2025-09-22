@@ -2,22 +2,27 @@ import React from "react";
 import styles from "./bridge-mode.module.scss";
 import Image from "next/image";
 import { useFormStore } from "@/stores";
-import { BridgeProvider } from "@/types";
+import CctpModeDropdown from "@/components/bridge/cctp-mode-dropdown";
+import { isCctp } from "@/utils";
 
 export default function BridgeMode() {
   const token = useFormStore((state) => state.token);
-  const label = token.bridgeProvider === BridgeProvider.NATIVE ? "Native bridge" : "CCTP";
-  const logoSrc =
-    token.bridgeProvider === BridgeProvider.NATIVE
-      ? `${process.env.NEXT_PUBLIC_BASE_PATH}/images/logo/linea-rounded.svg`
-      : `${process.env.NEXT_PUBLIC_BASE_PATH}/images/logo/cctp.svg`;
+
+  if (isCctp(token)) {
+    return <CctpModeDropdown />;
+  }
 
   return (
     <div className={styles.container}>
       <div className={styles.button}>
         <div className={styles["selected-label"]}>
-          <Image src={logoSrc} width={16} height={16} alt={label} />
-          <span>{label}</span>
+          <Image
+            src={`${process.env.NEXT_PUBLIC_BASE_PATH}/images/logo/linea-rounded.svg`}
+            width={16}
+            height={16}
+            alt="Native Bridge"
+          />
+          <span>Native Bridge</span>
         </div>
       </div>
     </div>

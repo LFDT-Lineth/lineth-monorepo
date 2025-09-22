@@ -7,6 +7,10 @@
   font-size: inherit;
   font-weight: 500;
 
+  svg {
+    margin-bottom: -2px;
+  }
+
   span {
     color: var(--color-black);
     height: 0.75rem;

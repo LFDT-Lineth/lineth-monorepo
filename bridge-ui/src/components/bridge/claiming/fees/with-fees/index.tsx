@@ -3,8 +3,10 @@ import Image from "next/image";
 import styles from "./with-fees.module.scss";
 import { useState } from "react";
 import { useFees } from "@/hooks";
-import { useConfigStore } from "@/stores";
+import { useConfigStore, useFormStore } from "@/stores";
 import { useFormattedDigit } from "@/hooks/useFormattedDigit";
+import { useCctpFee } from "@/hooks/transaction-args/cctp/useCctpUtilHooks";
+import { formatUnits } from "viem";
 
 const GasFees = dynamic(() => import("../../../modal/gas-fees"), {
   ssr: false,
@@ -19,8 +21,12 @@ export default function WithFees({ iconPath }: Props) {
   const currency = useConfigStore.useCurrency();
 
   const { total, fees, isLoading } = useFees();
+  const token = useFormStore((state) => state.token);
+  const amount = useFormStore((state) => state.amount);
+  const cctpFee = useCctpFee(amount, token.decimals);
 
   const formattedFees = useFormattedDigit(total.fees, 18);
+  const formattedCctpFees = cctpFee ? formatUnits(cctpFee, token.decimals) : "";
 
   if (isLoading) {
     return null;
@@ -28,6 +34,18 @@ export default function WithFees({ iconPath }: Props) {
 
   return (
     <>
+      {formattedCctpFees && (
+        <button
+          type="button"
+          className={styles["gas-fees"]}
+          onClick={() => {
+            setShowGasFeesModal(true);
+          }}
+        >
+          <Image src={token.image} width={12} height={12} alt="usdc-fee-icon" />
+          <p className={styles["estimate-crypto"]}>{formattedCctpFees} USDC</p>
+        </button>
+      )}
       {total && (
         <button
           type="button"
@@ -48,7 +66,12 @@ export default function WithFees({ iconPath }: Props) {
         </button>
       )}
       {showGasFeesModal && (
-        <GasFees isModalOpen={showGasFeesModal} onCloseModal={() => setShowGasFeesModal(false)} fees={fees} />
+        <GasFees
+          isModalOpen={showGasFeesModal}
+          onCloseModal={() => setShowGasFeesModal(false)}
+          fees={fees}
+          formattedCctpFees={formattedCctpFees}
+        />
       )}
     </>
   );
