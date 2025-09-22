@@ -113,7 +113,7 @@ jobs:
           retry_wait_seconds: 30
           timeout_minutes: 10
           command: |
-            make start-env-with-tracing-v2-fleet-ci CLEAN_PREVIOUS_ENV=false
+            make start-env-with-tracing-v2-fleet-ci CLEAN_PREVIOUS_ENV=false BESU_PACKAGE_IMAGE_NAME=linea-besu-package
           on_retry_command: |
             make clean-environment
       - name: List docker containers/images

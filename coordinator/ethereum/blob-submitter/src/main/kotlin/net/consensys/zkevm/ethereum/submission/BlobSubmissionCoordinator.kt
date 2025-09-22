@@ -183,7 +183,7 @@ class BlobSubmissionCoordinator(
         } else {
           SafeFuture.completedFuture(emptyList())
         }
-      }.thenApply { Unit }
+      }.thenApply { }
   }
 
   override fun handleError(error: Throwable) {

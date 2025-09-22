@@ -73,8 +73,8 @@ describe("Linea besu fleet test suite", () => {
 
     expect(estimatedGasFromLeader).toEqual(estimatedGasFromFollower);
 
-    const getBlockFromLeader = await leaderL2Provider.getBlock("finalized", false);
-    const getBlockFromFollower = await followerL2Provider.getBlock("finalized", false);
+    let getBlockFromLeader = await leaderL2Provider.getBlock("finalized", false);
+    let getBlockFromFollower = await followerL2Provider.getBlock("finalized", false);
 
     // Finalized block numbers and hashes from leader and follower should match
     logger.debug(
@@ -84,7 +84,21 @@ describe("Linea besu fleet test suite", () => {
       `Fetched finalized block and hash from follower. finalizedBlockNumber=${getBlockFromFollower!.number} hash=${getBlockFromFollower!.hash}`,
     );
 
-    expect(getBlockFromLeader!.number).toEqual(getBlockFromFollower!.number);
-    expect(getBlockFromLeader!.hash).toEqual(getBlockFromFollower!.hash);
+    expect(getBlockFromFollower!.number).toEqual(getBlockFromLeader!.number);
+    expect(getBlockFromFollower!.hash).toEqual(getBlockFromLeader!.hash);
+
+    getBlockFromLeader = await leaderL2Provider.getBlock("latest", false);
+    getBlockFromFollower = await followerL2Provider.getBlock("latest", false);
+
+    // Latest block numbers and hashes from leader and follower should match
+    logger.debug(
+      `Fetched latest block and hash from leader. finalizedBlockNumber=${getBlockFromLeader!.number} hash=${getBlockFromLeader!.hash}`,
+    );
+    logger.debug(
+      `Fetched latest block and hash from follower. finalizedBlockNumber=${getBlockFromFollower!.number} hash=${getBlockFromFollower!.hash}`,
+    );
+
+    expect(getBlockFromFollower!.number).toEqual(getBlockFromLeader!.number);
+    expect(getBlockFromFollower!.hash).toEqual(getBlockFromLeader!.hash);
   });
 });

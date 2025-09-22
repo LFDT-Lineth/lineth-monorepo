@@ -26,9 +26,10 @@ services:
     extends:
       file: compose-spec-l2-services.yml
       service: l2-node-besu
+    image: consensys/${BESU_PACKAGE_IMAGE_NAME:-linea-besu-package-with-fleet}:${BESU_PACKAGE_TAG:-beta-v4.0-rc8-CANCUN-20250922065648-e5e1174}
     command:
       - --config-file=/var/lib/besu/l2-node-besu.config.toml
-      - --genesis-file=/var/lib/besu/genesis.json
+      - --genesis-file=/initialization/genesis-besu.json
       - --plugin-linea-l1-polling-interval=PT12S
       - --plugin-linea-l1-smart-contract-address=0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9
       - --plugin-linea-l1-rpc-endpoint=http://l1-el-node:8545
@@ -43,9 +44,10 @@ services:
     extends:
       file: compose-spec-l2-services.yml
       service: l2-node-besu-follower
+    image: consensys/${BESU_PACKAGE_IMAGE_NAME:-linea-besu-package-with-fleet}:${BESU_PACKAGE_TAG:-beta-v4.0-rc8-CANCUN-20250922065648-e5e1174}
     command:
       - --config-file=/var/lib/besu/l2-node-besu.config.toml
-      - --genesis-file=/var/lib/besu/genesis.json
+      - --genesis-file=/initialization/genesis-besu.json
       - --plugin-linea-l1-polling-interval=PT12S
       - --plugin-linea-l1-smart-contract-address=0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9
       - --plugin-linea-l1-rpc-endpoint=http://l1-el-node:8545

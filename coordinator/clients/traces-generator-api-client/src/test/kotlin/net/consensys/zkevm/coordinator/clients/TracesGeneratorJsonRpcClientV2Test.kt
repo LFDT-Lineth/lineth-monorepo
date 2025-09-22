@@ -35,6 +35,7 @@ import org.junit.jupiter.api.extension.ExtendWith
 import java.net.URI
 import java.net.URL
 import java.util.concurrent.ExecutionException
+import kotlin.collections.set
 import kotlin.random.Random
 import kotlin.random.nextUInt
 import kotlin.time.Duration.Companion.milliseconds
@@ -177,7 +178,7 @@ class TracesGeneratorJsonRpcClientV2Test {
   }
 
   @Test
-  fun `getTracesCounters when response misses EVM module should returns the missing module as zero`() {
+  fun `getTracesCounters when response misses EVM module returns error`() {
     val tracesCountersMissingModule =
       tracesCountersValid.toMutableMap().apply { this.remove(TracingModuleV2.WCP.name) }
 
@@ -205,45 +206,8 @@ class TracesGeneratorJsonRpcClientV2Test {
 
     val blockNumber = 1UL
     val resultFuture = tracesGeneratorClient.getTracesCounters(blockNumber)
-    resultFuture.get()
-
-    assertThat(resultFuture)
-      .isCompletedWithValue(
-        Ok(
-          GetTracesCountersResponse(
-            TracesCountersV2(
-              tracesCountersValid.toMutableMap().apply { this[TracingModuleV2.WCP.name] = 0L }
-                .mapKeys { TracingModuleV2.valueOf(it.key) }
-                .mapValues { it.value.toUInt() },
-            ),
-            tracesEngineVersion,
-          ),
-        ),
-      )
-
-    val expectedJsonRequest = JsonObject.of(
-      "jsonrpc",
-      "2.0",
-      "id",
-      1,
-      "method",
-      "linea_getBlockTracesCountersV2",
-      "params",
-      listOf(
-        JsonObject.of(
-          "blockNumber",
-          1,
-          "expectedTracesEngineVersion",
-          expectedTracesApiVersion,
-        ),
-      ),
-    )
-
-    wiremock.verify(
-      postRequestedFor(urlEqualTo("/"))
-        .withHeader("Content-Type", equalTo("application/json"))
-        .withRequestBody(equalToJson(expectedJsonRequest.toString(), false, true)),
-    )
+    val exception = assertThrows<ExecutionException> { resultFuture.get() }
+    assertThat(exception).hasMessageContaining("missing modules: WCP")
   }
 
   @Test

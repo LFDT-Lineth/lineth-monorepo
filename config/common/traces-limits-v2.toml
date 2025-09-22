@@ -36,7 +36,6 @@ WCP                 = 262144
 # Reference table limits, set to Integer.MAX_VALUE
 #
 BIN_REFERENCE_TABLE = 2147483647
-SHF_REFERENCE_TABLE = 2147483647
 INSTRUCTION_DECODER = 2147483647
 #
 # Precompiles limits
@@ -78,9 +77,6 @@ BLOCK_TRANSACTIONS  = 300
 # limitless proof limits
 #
 BLS                 = 0
-RIP                 = 0
-MODEXP              = 0
-BLAKE               = 0
 POINT_EVAL          = 0
 
 # Introduced from beta-v4.0-rc6-CANCUN and present on Cancun

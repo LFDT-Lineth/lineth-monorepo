@@ -78,13 +78,9 @@ private fun add(tc1: TracesCounters, tc2: TracesCounters): Map<TracingModule, UI
 }
 
 data class TracesCountersV2(private val countersMap: Map<TracingModuleV2, UInt>) :
-  TracesCountersImpl(
-    EMPTY_TRACES_COUNT_MAP + countersMap,
-    TracingModuleV2.entries,
-  ) {
+  TracesCountersImpl(countersMap, TracingModuleV2.entries) {
   companion object {
-    val EMPTY_TRACES_COUNT_MAP = TracingModuleV2.entries.associateWith { 0u }
-    val EMPTY_TRACES_COUNT = TracesCountersV2(EMPTY_TRACES_COUNT_MAP)
+    val EMPTY_TRACES_COUNT = TracesCountersV2(TracingModuleV2.entries.associateWith { 0u })
   }
 
   override fun add(o: TracesCounters): TracesCountersV2 {

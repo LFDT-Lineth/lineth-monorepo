@@ -39,7 +39,6 @@ enum class TracingModuleV2 : TracingModule {
 
   // Reference table limits
   BIN_REFERENCE_TABLE,
-  SHF_REFERENCE_TABLE,
   INSTRUCTION_DECODER,
 
   // Precompiles call limits
@@ -79,9 +78,6 @@ enum class TracingModuleV2 : TracingModule {
 
   // Introduced by limitless proof
   BLS,
-  RIP,
-  MODEXP,
-  BLAKE,
   POINT_EVAL,
 
   // Introduced from beta-v4.0-rc6-CANCUN and present on Cancun
@@ -124,9 +120,6 @@ enum class TracingModuleV2 : TracingModule {
       TXN_DATA,
       WCP,
       BLS,
-      RIP,
-      MODEXP,
-      BLAKE,
       POINT_EVAL,
       BLS_DATA,
       RLP_UTILS,
