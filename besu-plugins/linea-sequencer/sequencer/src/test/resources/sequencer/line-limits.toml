@@ -99,3 +99,7 @@ PRECOMPILE_BLS_G2_MEMBERSHIP_CALLS = 0
 #      * PRECOMPILE_RIPEMD_EFFECTIVE_CALLS    = 1000000
 #   (the values are nonsensical);
 #   as per Alex they are not required by the prover;
+BLS_DATA = 0
+RLP_UTILS = 131072
+BLS_REFERENCE_TABLE = 0
+POWER_REFERENCE_TABLE = 0

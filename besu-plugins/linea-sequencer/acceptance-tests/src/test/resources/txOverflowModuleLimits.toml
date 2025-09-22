@@ -59,6 +59,11 @@ BLOCK_TRANSACTIONS       = 200 # max number of tx in an L2 block
 BIN_REFERENCE_TABLE = 262144 # contains 3 * 256^2 + 256 data rows + 1 padding row
 INSTRUCTION_DECODER = 512    # contains 256             data rows + 1 padding row
 
+BLS_DATA = 0
+RLP_UTILS = 1300
+BLS_REFERENCE_TABLE = 0
+POWER_REFERENCE_TABLE = 0
+
 #
 # Precompiles limits
 #
