@@ -33,7 +33,7 @@ COPY ./sdk/sdk-ethers ./sdk/sdk-ethers
 COPY ts-libs/linea-native-libs ./ts-libs/linea-native-libs
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm run build \
-    && pnpm deploy --filter=./postman --prod ./prod/postman
+    && pnpm deploy --legacy --filter=./postman --prod ./prod/postman
 
 FROM node:lts-slim AS production
 

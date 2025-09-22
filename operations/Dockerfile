@@ -15,7 +15,7 @@ COPY operations/ ./operations/
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --prefer-offline --ignore-scripts
 RUN pnpm run -F operations build
-RUN pnpm deploy --filter=./operations --prod ./prod
+RUN pnpm deploy --legacy --filter=./operations --prod ./prod
 
 FROM node:lts-slim AS release
 

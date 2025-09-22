@@ -1,3 +1,6 @@
+# 3 days
+minimumReleaseAge: 4320
+
 packages:
   - 'contracts/**'
   - 'e2e/**'

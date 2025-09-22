@@ -11,7 +11,7 @@ Before you start, make sure you have the following installed:
   - Docker should have ~16 GB of Memory and 4+ CPUs to run the entire stack
 - Docker Compose version v2.19+
 - Make v3.81+
-- Pnpm v9.14.4 (https://pnpm.io/installation)
+- Pnpm v10.16.0 (https://pnpm.io/installation)
 - Java Development Kit (JDK) 21 (required for building the coordinator)
 - Gradle 8.5+ (for building Java-based services)
 
