@@ -149,7 +149,7 @@ public class LineaLivenessServiceTest {
   }
 
   @Test
-  public void shouldReturnEmptyBundleIfLastBlockTimestampHasBeenChecked() {
+  public void shouldReturnEmptyBundleIfEarlierBlockTimestampHasBeenChecked() {
     livenessService =
         new LineaLivenessService(
             lineaLivenessServiceConfiguration,
@@ -165,10 +165,10 @@ public class LineaLivenessServiceTest {
     livenessService.checkBlockTimestampAndBuildBundle(
         currentTime, lastBlockTimestamp, targetBlockNumber);
 
-    // simulate when the same last block had been checked
+    // simulate when the block timestamp earlier than the last seen one was passed to check
     Optional<TransactionBundle> bundle =
         livenessService.checkBlockTimestampAndBuildBundle(
-            currentTime + 10, lastBlockTimestamp, targetBlockNumber);
+            currentTime + 10, lastBlockTimestamp - 12, targetBlockNumber);
 
     assertThat(bundle.isPresent()).isFalse();
   }

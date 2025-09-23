@@ -167,12 +167,24 @@ public class LineaLivenessService implements LivenessService {
     // The last successfully reported block timestamp regarded as late
     long cachedLastReportedDownBlockTimestamp = this.lastReportedDownBlockTimestamp.get();
 
-    boolean hasSeenLastBlockTimestamp = lastBlockTimestamp == cachedLastBlockTimestamp;
+    // We only check to skip if it was earlier block timestamp than last seen one, because under
+    // PoS we could have last seen block timestamp over and over again
+    boolean hasSeenEarlierBlockTimestamp = lastBlockTimestamp < cachedLastBlockTimestamp;
     boolean isLastBlockTimestampFromGenesisBlock = targetBlockNumber <= 1;
 
-    // skip the rest and return false if the same block timestamp had been checked or
+    // skip the rest and return false if the earlier block timestamp had been checked or
     // the given lastBlockTimestamp is from genesis block
-    if (hasSeenLastBlockTimestamp || isLastBlockTimestampFromGenesisBlock) {
+    if (hasSeenEarlierBlockTimestamp || isLastBlockTimestampFromGenesisBlock) {
+      log.atDebug()
+          .setMessage(
+              "Skip the check as hasSeenEarlierBlockTimestamp={} isLastBlockTimestampFromGenesisBlock={}"
+                  + " lastBlockTimestamp={} cachedLastBlockTimestamp={} targetBlockNumber={}")
+          .addArgument(hasSeenEarlierBlockTimestamp)
+          .addArgument(isLastBlockTimestampFromGenesisBlock)
+          .addArgument(lastBlockTimestamp)
+          .addArgument(cachedLastBlockTimestamp)
+          .addArgument(targetBlockNumber)
+          .log();
       return false;
     }
 
@@ -219,20 +231,22 @@ public class LineaLivenessService implements LivenessService {
       }
     }
 
-    log.debug(
-        "targetBlockNumber={} lastBlockTimestamp={} cachedLastBlockTimestamp={}"
-            + " cachedLastDownBlockTimestamp={} cachedLastReportedDownBlockTimestamp={} lastDownBlockTimestamp={}"
-            + " currentTimestamp={} pastBlockTimestampToCheck={} elapsedTimeSincePastBlock={} shouldBuild={}",
-        targetBlockNumber,
-        lastBlockTimestamp,
-        cachedLastBlockTimestamp,
-        cachedLastDownBlockTimestamp,
-        cachedLastReportedDownBlockTimestamp,
-        lastDownBlockTimestamp.get(),
-        currentTimestamp,
-        pastBlockTimestampToCheck,
-        elapsedTimeSincePastBlock,
-        shouldBuild);
+    log.atDebug()
+        .setMessage(
+            "targetBlockNumber={} lastBlockTimestamp={} cachedLastBlockTimestamp={}"
+                + " cachedLastDownBlockTimestamp={} cachedLastReportedDownBlockTimestamp={} lastDownBlockTimestamp={}"
+                + " currentTimestamp={} pastBlockTimestampToCheck={} elapsedTimeSincePastBlock={} shouldBuild={}")
+        .addArgument(targetBlockNumber)
+        .addArgument(lastBlockTimestamp)
+        .addArgument(cachedLastBlockTimestamp)
+        .addArgument(cachedLastDownBlockTimestamp)
+        .addArgument(cachedLastReportedDownBlockTimestamp)
+        .addArgument(lastDownBlockTimestamp.get())
+        .addArgument(currentTimestamp)
+        .addArgument(pastBlockTimestampToCheck)
+        .addArgument(elapsedTimeSincePastBlock)
+        .addArgument(shouldBuild)
+        .log();
 
     this.lastBlockTimestamp.set(lastBlockTimestamp);
 
