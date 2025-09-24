@@ -3,7 +3,7 @@ pragma solidity ^0.8.30;
 
 contract TestEIP7702Delegation {
   event Log(string message);
- 
+
   function initialize() external {
     emit Log("Hello, world computer!");
   }
