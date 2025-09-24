@@ -5,18 +5,16 @@
   hub-into-stp
   ;; target columns
   (
-    stp.INSTRUCTION
-    stp.GAS_HI
-    stp.GAS_LO
-    stp.VAL_HI
-    stp.VAL_LO
+    stp.INST
+    stp.GAS
+    stp.VALUE
     stp.EXISTS
     stp.WARM
-    stp.OUT_OF_GAS_EXCEPTION
+    stp.OOGX
     stp.GAS_ACTUAL
     stp.GAS_UPFRONT
     stp.GAS_MXP
-    stp.GAS_OUT_OF_POCKET
+    stp.GAS_OOP
     stp.GAS_STIPEND
   )
   ;; source selector
@@ -24,10 +22,8 @@
   ;; source columns
   (
     hub.misc/STP_INSTRUCTION
-    hub.misc/STP_GAS_HI
-    hub.misc/STP_GAS_LO
-    hub.misc/STP_VALUE_HI
-    hub.misc/STP_VALUE_LO
+    (:: hub.misc/STP_GAS_HI hub.misc/STP_GAS_LO)
+    (:: hub.misc/STP_VALUE_HI hub.misc/STP_VALUE_LO)
     hub.misc/STP_EXISTS
     hub.misc/STP_WARMTH
     hub.misc/STP_OOGX
@@ -37,6 +33,6 @@
     hub.misc/STP_GAS_PAID_OUT_OF_POCKET
     hub.misc/STP_GAS_STIPEND
   )
-)
+  )
 
 
