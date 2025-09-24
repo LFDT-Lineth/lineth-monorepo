@@ -1,5 +1,5 @@
 import { keccak256, encodeAbiParameters, Address } from "viem";
-import { CctpV2BridgeMessage, Chain, ChainLayer, NativeBridgeMessage, Token } from "@/types";
+import { CctpV2BridgeMessage, Chain, ChainLayer, NativeBridgeMessage, Token, CCTPMode } from "@/types";
 import { INBOX_L1L2_MESSAGE_STATUS_MAPPING_SLOT } from "@/constants";
 import { isCctp } from "./tokens";
 
@@ -62,17 +62,26 @@ export type GetEstimatedTimeTextOptions = {
   isAbbreviatedTimeUnit?: boolean;
 };
 
-export const getEstimatedTimeText = (fromChain: Chain, token: Token, opts: GetEstimatedTimeTextOptions) => {
+export const getEstimatedTimeText = (
+  fromChain: Chain,
+  token: Token,
+  cctpMode: CCTPMode,
+  opts: GetEstimatedTimeTextOptions,
+) => {
   const { withSpaceAroundHyphen, isAbbreviatedTimeUnit } = opts;
   const spaceChar = withSpaceAroundHyphen ? " " : "";
+  const secondUnit = isAbbreviatedTimeUnit ? "s" : "second";
   const hourUnit = isAbbreviatedTimeUnit ? "hrs" : "hour";
   const minuteUnit = isAbbreviatedTimeUnit ? "mins" : "minute";
 
-  if (isCctp(token) && fromChain.layer === ChainLayer.L1) {
-    return `13${spaceChar}-${spaceChar}19 ${minuteUnit}`;
+  const isFromL1 = fromChain.layer === ChainLayer.L1;
+
+  if (isCctp(token)) {
+    if (cctpMode === CCTPMode.FAST) {
+      return isFromL1 ? `20 ${secondUnit}` : `8 ${secondUnit}`;
+    }
+    return isFromL1 ? `13${spaceChar}-${spaceChar}19 ${minuteUnit}` : `2${spaceChar}-${spaceChar}12 ${hourUnit}`;
   }
-  if (fromChain.layer === ChainLayer.L1) {
-    return `20 ${minuteUnit}`;
-  }
-  return `2${spaceChar}-${spaceChar}12 ${hourUnit}`;
+
+  return isFromL1 ? `20 ${minuteUnit}` : `2${spaceChar}-${spaceChar}12 ${hourUnit}`;
 };

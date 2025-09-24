@@ -1,5 +1,5 @@
 import MessageTransmitterV2 from "@/abis/MessageTransmitterV2.json" assert { type: "json" };
-import { CctpAttestationMessage, Chain, TransactionStatus, CctpAttestationMessageStatus } from "@/types";
+import { CctpAttestationMessage, Chain, TransactionStatus, CctpAttestationMessageStatus, CCTPMode } from "@/types";
 import { GetPublicClientReturnType } from "@wagmi/core";
 import { fetchCctpAttestationByTxHash, reattestCctpV2PreFinalityMessage } from "@/services/cctp";
 import { getPublicClient } from "@wagmi/core";
@@ -8,6 +8,7 @@ import {
   CCTP_V2_MESSAGE_HEADER_LENGTH,
   CCTP_V2_EXPIRATION_BLOCK_LENGTH,
   CCTP_V2_EXPIRATION_BLOCK_OFFSET,
+  CCTP_MAX_FINALITY_THRESHOLD,
 } from "@/constants";
 import { isUndefined } from "@/utils/utils";
 
@@ -94,4 +95,11 @@ export const getCctpMessageByTxHash = async (
   const message = attestationApiResp.messages[0];
   if (isUndefined(message)) return;
   return message;
+};
+
+export const getCctpModeFromFinalityThreshold = (minFinalityThreshold: number): CCTPMode => {
+  if (minFinalityThreshold === CCTP_MAX_FINALITY_THRESHOLD) {
+    return CCTPMode.FAST;
+  }
+  return CCTPMode.STANDARD;
 };

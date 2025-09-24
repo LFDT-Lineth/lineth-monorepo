@@ -5,7 +5,7 @@ import CheckIcon from "@/assets/icons/check.svg";
 import ClockIcon from "@/assets/icons/clock.svg";
 import BridgeTwoLogo from "@/components/bridge/bridge-two-logo";
 import { getChainLogoPath, formatHex, formatTimestamp, getEstimatedTimeText } from "@/utils";
-import { BridgeTransaction, TransactionStatus } from "@/types";
+import { BridgeTransaction, CCTPMode, TransactionStatus } from "@/types";
 
 type Props = BridgeTransaction & {
   onClick: (code: string) => void;
@@ -19,10 +19,11 @@ export default function Transaction({
   timestamp,
   message,
   token,
+  cctpMode,
   onClick,
 }: Props) {
   const formatedTxHash = formatHex(bridgingTx);
-  const estimatedTimeText = getEstimatedTimeText(fromChain, token, {
+  const estimatedTimeText = getEstimatedTimeText(fromChain, token, cctpMode ?? CCTPMode.STANDARD, {
     withSpaceAroundHyphen: true,
     isAbbreviatedTimeUnit: true,
   });

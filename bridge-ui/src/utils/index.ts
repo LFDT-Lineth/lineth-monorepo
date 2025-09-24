@@ -15,4 +15,4 @@ export {
   isUndefinedOrEmptyString,
   isHomePage,
 } from "./utils";
-export { getCctpTransactionStatus, getCctpMessageByTxHash } from "./cctp";
+export { getCctpTransactionStatus, getCctpMessageByTxHash, getCctpModeFromFinalityThreshold } from "./cctp";
