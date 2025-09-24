@@ -16,23 +16,17 @@ BLAKE2f_MODEXP_DATA := blake2fmodexpdata
 
 # constraints used in prod for LINEA, with linea block gas limit
 BLOCKDATA_LONDON := blockdata/london
-
 BLOCKDATA_PARIS := blockdata/paris
-
 BLOCKDATA_CANCUN := blockdata/cancun
 
 BLOCKHASH := blockhash
 
 BLS_CANCUN := blsdata/cancun
-
-BLS_PRAGUE := blsdata/cancun #TODO
+BLS_PRAGUE := blsdata/prague
 
 CONSTANTS := constants/constants.lisp
-
 CONSTANTS_LONDON := constants/london/constants.lisp
-
 CONSTANTS_CANCUN := constants/cancun/constants.lisp
-
 CONSTANTS_PRAGUE := constants/prague/constants.lisp
 
 EC_DATA := ecdata
@@ -44,46 +38,40 @@ EXP := exp/exp.zkasm
 GAS := gas/gas.zkasm
 
 HUB_LONDON :=  hub/london
-
 HUB_SHANGHAI :=  hub/shanghai
-
 HUB_CANCUN :=  hub/cancun
+HUB_PRAGUE :=  hub/prague
 
 LIBRARY := library
 
 LOG_DATA := logdata
 
 LOG_INFO_LONDON := loginfo/london
-
 LOG_INFO_CANCUN := loginfo/cancun
 
 MMU :=  mmu
 
 MMIO_LONDON := mmio/london
-
 MMIO_CANCUN := mmio/cancun
 
 MXP_LONDON := mxp/london
-
 MXP_CANCUN := mxp/cancun
 
 OOB_LONDON := oob/london
-
 OOB_SHANGHAI := oob/shanghai
-
 OOB_CANCUN := oob/cancun
-
-OOB_PRAGUE := oob/cancun #TODO
+OOB_PRAGUE := oob/prague
 
 RLP_ADDR := rlpaddr
 
 RLP_TXN_LONDON := rlptxn/london
-
 RLP_TXN_CANCUN := rlptxn/cancun
+RLP_TXN_PRAGUE := rlptxn/cancun
+# TODO: update for Prague v2 + add RLP_AUTH
 
 RLP_TXRCPT := rlptxrcpt			
 
-RLP_UTILS_CANCUN :=rlputils/cancun
+RLP_UTILS_CANCUN := rlputils/cancun
 
 ROM := rom
 
@@ -95,24 +83,15 @@ SHIFT :=  shf/shf.zkasm
 
 STP := stp
 
-TABLES_LONDON := reftables/*.lisp \
-				reftables/london/inst_decoder.lisp
-
-TABLES_CANCUN := reftables/*.lisp \
-				reftables/cancun/bls_reftable.lisp \
-				reftables/cancun/inst_decoder.lisp \
-				reftables/cancun/power.lisp
-
-# reftables/cancun/bls_reftable.lisp is only used in PRAGUE, but adding it in CANCUN already allows to do not duplicate OOB
+TABLES_LONDON := reftables/*.lisp   reftables/london/*.lisp
+TABLES_CANCUN := reftables/*.lisp   reftables/cancun/*.lisp
+TABLES_PRAGUE := reftables/*.lisp   reftables/prague/*.lisp
 
 TRM := trm
 
 TXN_DATA_LONDON := txndata/london
-
 TXN_DATA_SHANGHAI := txndata/shanghai
-
 TXN_DATA_CANCUN := txndata/cancun
-
 TXN_DATA_PRAGUE := txndata/prague
 
 WCP := wcp
@@ -188,15 +167,15 @@ ZKEVM_MODULES_CANCUN := ${ZKEVM_MODULES_COMMON} \
 
 ZKEVM_MODULES_PRAGUE := ${ZKEVM_MODULES_COMMON} \
 		 ${CONSTANTS_PRAGUE} \
-		 ${TABLES_CANCUN} \
+		 ${TABLES_PRAGUE} \
 		 ${BLOCKDATA_CANCUN} \
 		 ${BLS_PRAGUE} \
-		 ${HUB_CANCUN} \
+		 ${HUB_PRAGUE} \
 		 ${LOG_INFO_CANCUN} \
 		 ${MMIO_CANCUN} \
 		 ${MXP_CANCUN} \
 		 ${OOB_PRAGUE} \
-		 ${RLP_TXN_CANCUN} \
+		 ${RLP_TXN_PRAGUE} \
 		 ${RLP_UTILS_CANCUN} \
 		 ${TXN_DATA_PRAGUE}
 

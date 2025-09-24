@@ -39,6 +39,3 @@
 (defconstraint   SYSI-prelude-constraints---setting-CT_MAX                         (:guard (first-row-of-SYSI-transaction))
 		 (eq!   CT_MAX   (ct-max-SYSI-sum)))
 
-;; constraint to be removed for Prague
-(defconstraint   SYSI-prelude-constraints---disallowing-EIP-2935-in-Cancun         (:guard (first-row-of-SYSI-transaction))
-		 (vanishes!   ( shift  hub/EIP_2935  ROFF___SYSI___HUB_ROW )))
