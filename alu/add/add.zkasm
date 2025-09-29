@@ -1,3 +1,5 @@
+include "../../constants/evm.zkasm"
+
 ;; The Adder Module (ADD) deals with two arithmetic instructions of
 ;; the EVM.  For any call to add, the "inst" argument indicates which
 ;; of these instructions is being computed:
@@ -9,8 +11,8 @@
 fn add(INST=1 u8, ARG_1 u256, ARG_2 u256) -> (RES u256) {
   var c u1
   ;;
-  if INST == 0x01 goto insn_add
-  if INST == 0x03 goto insn_sub
+  if INST == EVM_INST_ADD goto insn_add
+  if INST == EVM_INST_SUB goto insn_sub
   fail
 insn_add:
   c, RES = ARG_1 + ARG_2

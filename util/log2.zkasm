@@ -1,4 +1,4 @@
-;; Compute log256 of word
+;; Compute log2 of word
 fn log2(arg u256) -> (res u8) {
   var hi, lo u128
   var tmp u7

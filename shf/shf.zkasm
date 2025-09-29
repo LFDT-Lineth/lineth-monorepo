@@ -1,5 +1,7 @@
-include "../util/bit_shift.zkasm"
-include "../util/byte_shift.zkasm"
+include "../constants/evm.zkasm"
+include "../util/bit_shl.zkasm"
+include "../util/bit_shr.zkasm"
+include "../util/bit_sar.zkasm"
 
 ;; The Shift Module (SHF) deals with bitwise shifting of 256bit words
 ;; (signed or unsigned).  For any call to shf, the "inst" argument
@@ -13,37 +15,27 @@ include "../util/byte_shift.zkasm"
 ;; SHR.  For SAR, the result in this case is 0 (when sign bit unset)
 ;; and -1 (when sign bit set).
 fn shf(INST=0x1b u8, ARG_1 u256, ARG_2 u256) -> (RES u256) {
-  var tmp1 u256
-  var tmp2 u248
-  ;; coarse-grained shift
-  var hi u5
-  ;; fine-grained shift
-  var lo u3
+  var tmp u248
+  var n u8
   ;; split shift
-  tmp2, hi, lo = ARG_1
+  tmp, n = ARG_1
   ;;
-  if tmp2 != 0 goto exit_01
-  if INST == 0x1b goto insn_shl
-  if INST == 0x1c goto insn_shr
-  if INST == 0x1d goto insn_sar
+  if tmp != 0 goto exit_01
+  if INST == EVM_INST_SHL goto insn_shl
+  if INST == EVM_INST_SHR goto insn_shr
+  if INST == EVM_INST_SAR goto insn_sar
   fail
 insn_shl:
-  ;; coarse-grained shift left
-  tmp1 = byte_shl256(ARG_2, hi)
-  ;; fine-grained shift left
-  RES = bit_shl256(tmp1, lo)
+  ;; bitwise shift left
+  RES = bit_shl256(ARG_2, n)
   return
 insn_shr:
-  ;; coarse-grained shift right
-  tmp1 = byte_shr256(ARG_2, hi)
-  ;; fine-grained shift right
-  RES = bit_shr256(tmp1, lo)
+  ;; bitwise shift right
+  RES = bit_shr256(ARG_2, n)
   return
 insn_sar:
-  ;; coarse-grained (signed) shift right
-  tmp1 = byte_sar256(ARG_2, hi)
-  ;; fine-grained (signed) shift right
-  RES = bit_sar256(tmp1, lo)
+  ;; bitwise (signed) shift right
+  RES = bit_sar256(ARG_2, n)
   return
 exit_01:
   ;; SAR requires special handling

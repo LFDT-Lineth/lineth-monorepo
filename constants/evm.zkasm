@@ -1,0 +1,22 @@
+;; =============================================================================
+;; Bytecodes
+;; =============================================================================
+
+const EVM_INST_ADD                              = 0x01
+const EVM_INST_SUB                              = 0x03
+const EVM_INST_SHL                              = 0x1b
+const EVM_INST_SHR                              = 0x1c
+const EVM_INST_SAR                              = 0x1d
+const EVM_INST_CREATE                           = 0xF0
+const EVM_INST_CREATE2                          = 0xF5
+
+;; =============================================================================
+;; Gas
+;; =============================================================================
+const G_CALLVALUE = 9000
+const G_CALLSTIPEND = 2300
+const G_COLDACCOUNTACCESS = 2600
+const G_EXPBYTE = 50
+const G_NEWACCOUNT = 25000
+const G_TXCREATE = 32000
+const G_WARMACCESS = 100

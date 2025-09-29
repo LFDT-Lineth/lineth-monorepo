@@ -1,7 +1,11 @@
-include "../util/byte_shift.zkasm"
+include "../constants/evm.zkasm"
+include "../util/bit_shr.zkasm"
 include "../util/fill_bytes.zkasm"
 include "../util/log2.zkasm"
 include "../util/log256.zkasm"
+
+const EXP_INST_EXPLOG    = 0xEE0A
+const EXP_INST_MODEXPLOG = 0xEE05
 
 ;; The Exponentiation Module (EXP) is a small module which carries out
 ;; intermediate computations (e.g. logarithms) required for the gas
@@ -20,13 +24,12 @@ fn exp(INST=0xEE0A u16, ARG u256, CDS u6, EBS u6) -> (RES=0 u128)
 ;; PRE: 1<=CDS<=32 && 1<=EBS<=32
 {
    var s, b u1
-   var tmp1 u5
-   var tmp2 u6
-   var log_word, zero u8
+   var tmp u5
+   var log_word, zero, shift u8
    var shifted_word, filled_word u256
    ;;
-   if INST==0xEE0A goto explog
-   if INST==0xEE05 goto modexplog
+   if INST == EXP_INST_EXPLOG goto explog
+   if INST == EXP_INST_MODEXPLOG goto modexplog
    fail
 explog:
    if ARG != 0 goto explog2
@@ -34,24 +37,21 @@ explog:
    return
 explog2:
    ;; calculate log
-   tmp1 = log256(ARG)
+   tmp = log256(ARG)
    ;; increment
-   tmp2 = tmp1 + 1
-   ;; multiply by G_expbyte
-   RES = tmp2 * 50
+   RES = (tmp + 1) * G_EXPBYTE
    return
 modexplog:
    ;; fill as necessary
    zero = 0
-   filled_word = fill_bytes_from(ARG, CDS, zero)
-   ;; determine shift amount
-   tmp2 = 32
-   s, b, tmp1 = tmp2 - EBS
+   filled_word = fill_bytes_between(ARG, CDS, EBS, zero)
+   ;; determine shift amount (in bits)
+   s, b, shift = (32 - EBS) * 8
    ;; check precondition
    if b != 0 goto failed_pre
    if s != 0 goto failed_pre
    ;; shift right
-   shifted_word = byte_shr256(filled_word,tmp1)
+   shifted_word = bit_shr256(filled_word,shift)
    ;; compute log
    log_word = log2(shifted_word)
    ;; cast

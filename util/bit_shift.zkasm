@@ -26,19 +26,15 @@ base:
 ;; n bits, this operation makes n calls.  Since this is used in
 ;; conjunction with the byte_shr, it only supports n <= 7.
 fn bit_shr256(word u256, n u3) -> (res u256) {
-  var acc, t1 u256
-  var t2 u128
+  var acc u256
   var hi, lo u127
   var b0,b1,b2 u1
-  var o u2
   var m u3
   ;; check for base case
   if n == 0 goto base
   ;; FIXME: workaround for register splitting issue
   hi, b1, lo, b0 = word
-  t1 = hi * 340282366920938463463374607431768211456
-  t2 = b1 * 170141183460469231731687303715884105728
-  o, acc = t1 + t2 + lo
+  acc = (hi * 2^128) + (b1 * 2^127) + lo
   ;; decrement counter
   b2,m = n - 1
   res = bit_shr256(acc,m)
@@ -49,22 +45,17 @@ base:
 }
 
 fn bit_sar256(word u256, n u3) -> (res u256) {
-  var acc, extension, t1 u256
-  var t2 u128
+  var acc u256
   var lo u127
   var hi u126
   var m u3
-  var o u2
   var sign, b0, b1, b2 u1
   ;; check for base case
   if n == 0 goto base
   ;; split of trailing bit
   sign, hi, b1, lo, b0 = word
-  t1 = hi * 340282366920938463463374607431768211456
-  t2 = b1 * 170141183460469231731687303715884105728
   ;; determine sign extension
-  extension = sign * 0xC000000000000000000000000000000000000000000000000000000000000000
-  o, acc = extension + t1 + t2 + lo
+  acc = (sign * (2^255 + 2^254)) + (hi * 2^128) + (b1 * 2^127) + lo
   ;; decrement counter
   b2, m = n - 1
   res = bit_sar256(acc,m)

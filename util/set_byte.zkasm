@@ -11,9 +11,8 @@
 ;; Where all other bytes are unchanged.
 fn set_byte256(word u256, n u5, value u8) -> (res u256) {
   var lo, hi, v u128
-  var tmp u256
   var m u4
-  var b,c u1
+  var b u1
   ;; split word
   hi,lo = word
   ;; compare against pivot
@@ -23,23 +22,20 @@ fn set_byte256(word u256, n u5, value u8) -> (res u256) {
   ;; update hi word
   v = set_byte128(hi, m, value)
   ;; Recombine
-  tmp = v * 340282366920938463463374607431768211456
-  c,res = tmp + lo
+  res = (v * 2^128) + lo
   return
 exit_lo:
   ;; update lo word
   v = set_byte128(lo, m, value)
   ;; Recombine
-  tmp = hi * 340282366920938463463374607431768211456
-  c,res = tmp + v
+  res = (hi * 2^128) + v
   return
 }
 
 fn set_byte128(word u128, n u4, value u8) -> (res u128) {
   var lo, hi, v u64
-  var tmp u128
   var m u3
-  var b,c u1
+  var b u1
   ;; split word
   hi,lo = word
   ;; compare against pivot
@@ -49,23 +45,20 @@ fn set_byte128(word u128, n u4, value u8) -> (res u128) {
   ;; update hi word
   v = set_byte64(hi, m, value)
   ;; Recombine
-  tmp = v * 18446744073709551616
-  c,res = tmp + lo
+  res = (v * 2^64) + lo
   return
 exit_lo:
   ;; update lo word
   v = set_byte64(lo, m, value)
   ;; Recombine
-  tmp = hi * 18446744073709551616
-  c,res = tmp + v
+  res = (hi * 2^64) + v
   return
 }
 
 fn set_byte64(word u64, n u3, value u8) -> (res u64) {
   var lo, hi, v u32
-  var tmp u64
   var m u2
-  var b,c u1
+  var b u1
   ;; split word
   hi,lo = word
   ;; compare against pivot
@@ -75,23 +68,19 @@ fn set_byte64(word u64, n u3, value u8) -> (res u64) {
   ;; update hi word
   v = set_byte32(hi, m, value)
   ;; Recombine
-  tmp = v * 4294967296
-  c,res = tmp + lo
+  res = (v * 2^32) + lo
   return
 exit_lo:
   ;; update lo word
   v = set_byte32(lo, m, value)
   ;; Recombine
-  tmp = hi * 4294967296
-  c,res = tmp + v
+  res = (hi * 2^32) + v
   return
 }
 
 fn set_byte32(word u32, n u2, value u8) -> (res u32) {
   var lo, hi, v u16
-  var tmp u32
-  var m u1
-  var b,c u1
+  var m, b u1
   ;; split word
   hi,lo = word
   ;; compare against pivot
@@ -101,33 +90,26 @@ fn set_byte32(word u32, n u2, value u8) -> (res u32) {
   ;; update hi word
   v = set_byte16(hi, m, value)
   ;; Recombine
-  tmp = v * 65536
-  c,res = tmp + lo
+  res = (v * 2^16) + lo
   return
 exit_lo:
   ;; update lo word
   v = set_byte16(lo, m, value)
   ;; Recombine
-  tmp = hi * 65536
-  c,res = tmp + v
+  res = (hi * 2^16) + v
   return
 }
 
 fn set_byte16(word u16, n u1, value u8) -> (res u16) {
   var lo, hi u8
-  var tmp u16
-  var m u1
-  var b,c u1
   ;; split word
   hi,lo = word
   ;;
   if n == 1 goto exit_lo
-  tmp = value * 256
-  c,res = tmp + lo
+  res = (value * 2^8) + lo
   return
 exit_lo:
   ;; Recombine
-  tmp = hi * 256
-  c,res = tmp + value
+  res = (hi * 2^8) + value
   return
 }
