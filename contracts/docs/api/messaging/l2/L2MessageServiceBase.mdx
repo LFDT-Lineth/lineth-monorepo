@@ -1,15 +1,15 @@
-# `L2MessageService`
+# `L2MessageServiceBase`
 
 ### constructor
 
 ```solidity
-constructor() public
+constructor() internal
 ```
 
-### initialize
+### __L2MessageService_init
 
 ```solidity
-function initialize(uint256 _rateLimitPeriod, uint256 _rateLimitAmount, address _defaultAdmin, struct IPermissionsManager.RoleAddress[] _roleAddresses, struct IPauseManager.PauseTypeRole[] _pauseTypeRoleAssignments, struct IPauseManager.PauseTypeRole[] _unpauseTypeRoleAssignments) external virtual
+function __L2MessageService_init(uint256 _rateLimitPeriod, uint256 _rateLimitAmount, address _defaultAdmin, struct IPermissionsManager.RoleAddress[] _roleAddresses, struct IPauseManager.PauseTypeRole[] _pauseTypeRoleAssignments, struct IPauseManager.PauseTypeRole[] _unpauseTypeRoleAssignments) internal virtual
 ```
 
 Initializes underlying message service dependencies.
@@ -24,4 +24,18 @@ Initializes underlying message service dependencies.
 | _roleAddresses | struct IPermissionsManager.RoleAddress[] | The list of addresses to grant roles to. |
 | _pauseTypeRoleAssignments | struct IPauseManager.PauseTypeRole[] | The list of pause type roles. |
 | _unpauseTypeRoleAssignments | struct IPauseManager.PauseTypeRole[] | The list of unpause type roles. |
+
+### CONTRACT_VERSION
+
+```solidity
+function CONTRACT_VERSION() external view virtual returns (string contractVersion)
+```
+
+Returns the ABI version and not the reinitialize version.
+
+#### Return Values
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| contractVersion | string | The contract ABI version. |
 

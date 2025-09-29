@@ -2,6 +2,10 @@
 
 ### PauseTypeRole
 
+Structure defining a pause type and its associated role.
+
+_This struct is used for both the `_pauseTypeRoles` and `_unPauseTypeRoles` mappings._
+
 ```solidity
 struct PauseTypeRole {
   enum IPauseManager.PauseType pauseType;
@@ -10,6 +14,12 @@ struct PauseTypeRole {
 ```
 
 ### PauseType
+
+Enum defining the different types of pausing.
+
+_The pause types are used to pause and unpause specific functionality.
+The UNUSED pause type is used as a default value to avoid accidental general pausing.
+Enums are uint8 by default._
 
 ```solidity
 enum PauseType {

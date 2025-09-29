@@ -51,7 +51,7 @@ constructor() internal
 ### sendMessage
 
 ```solidity
-function sendMessage(address _to, uint256 _fee, bytes _calldata) external payable
+function sendMessage(address _to, uint256 _fee, bytes _calldata) external payable virtual
 ```
 
 Adds a message for sending cross-chain and emits a relevant event.
@@ -66,10 +66,26 @@ _The message number is preset and only incremented at the end if successful for 
 | _fee | uint256 | The fee being paid for the message delivery. |
 | _calldata | bytes | The calldata to pass to the recipient. |
 
+### _sendMessage
+
+```solidity
+function _sendMessage(address _to, uint256 _fee, bytes _calldata) internal virtual
+```
+
+Adds a message for sending cross-chain and emits a relevant event.
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _to | address | The address the message is intended for. |
+| _fee | uint256 | The fee being paid for the message delivery. |
+| _calldata | bytes | The calldata to pass to the recipient. |
+
 ### claimMessage
 
 ```solidity
-function claimMessage(address _from, address _to, uint256 _fee, uint256 _value, address payable _feeRecipient, bytes _calldata, uint256 _nonce) external
+function claimMessage(address _from, address _to, uint256 _fee, uint256 _value, address payable _feeRecipient, bytes _calldata, uint256 _nonce) external virtual
 ```
 
 Claims and delivers a cross-chain message.
@@ -86,6 +102,25 @@ messageSender Is set temporarily when claiming and reset post._
 | _fee | uint256 | The fee being paid for the message delivery. |
 | _value | uint256 | The value to be transferred to the destination address. |
 | _feeRecipient | address payable | The recipient for the fee. |
+| _calldata | bytes | The calldata to pass to the recipient. |
+| _nonce | uint256 | The unique auto generated message number used when sending the message. |
+
+### _claimMessage
+
+```solidity
+function _claimMessage(address _from, address _to, uint256 _fee, uint256 _value, bytes _calldata, uint256 _nonce) internal virtual
+```
+
+Claims and delivers a cross-chain message.
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _from | address | The address of the original sender. |
+| _to | address | The address the message is intended for. |
+| _fee | uint256 | The fee being paid for the message delivery. |
+| _value | uint256 | The value to be transferred to the destination address. |
 | _calldata | bytes | The calldata to pass to the recipient. |
 | _nonce | uint256 | The unique auto generated message number used when sending the message. |
 
@@ -108,7 +143,7 @@ _MINIMUM_FEE_SETTER_ROLE is required to set the minimum fee._
 ### sender
 
 ```solidity
-function sender() external view returns (address originalSender)
+function sender() external view virtual returns (address originalSender)
 ```
 
 _The _messageSender address is set temporarily when claiming._

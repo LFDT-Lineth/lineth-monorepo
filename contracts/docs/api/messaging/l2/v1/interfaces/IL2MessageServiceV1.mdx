@@ -1,5 +1,19 @@
 # `IL2MessageServiceV1`
 
+### CONTRACT_VERSION
+
+```solidity
+function CONTRACT_VERSION() external view returns (string contractVersion)
+```
+
+Returns the ABI version and not the reinitialize version.
+
+#### Return Values
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| contractVersion | string | The contract ABI version. |
+
 ### setMinimumFee
 
 ```solidity

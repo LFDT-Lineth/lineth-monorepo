@@ -26,7 +26,7 @@ Initialises underlying message service dependencies.
 ### sendMessage
 
 ```solidity
-function sendMessage(address _to, uint256 _fee, bytes _calldata) external payable
+function sendMessage(address _to, uint256 _fee, bytes _calldata) external payable virtual
 ```
 
 Adds a message for sending cross-chain and emits MessageSent.
@@ -42,10 +42,26 @@ This function should be called with a msg.value = _value + _fee. The fee will be
 | _fee | uint256 | The fee being paid for the message delivery. |
 | _calldata | bytes | The calldata to pass to the recipient. |
 
+### _sendMessage
+
+```solidity
+function _sendMessage(address _to, uint256 _fee, bytes _calldata) internal virtual
+```
+
+Adds a message for sending cross-chain and emits MessageSent.
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _to | address | The address the message is intended for. |
+| _fee | uint256 | The fee being paid for the message delivery. |
+| _calldata | bytes | The calldata to pass to the recipient. |
+
 ### claimMessageWithProof
 
 ```solidity
-function claimMessageWithProof(struct IL1MessageService.ClaimMessageWithProofParams _params) external
+function claimMessageWithProof(struct IL1MessageService.ClaimMessageWithProofParams _params) external virtual
 ```
 
 Claims and delivers a cross-chain message using a Merkle proof.
@@ -59,10 +75,24 @@ if tree depth is different than proof size, it will revert with ProofLengthDiffe
 | ---- | ---- | ----------- |
 | _params | struct IL1MessageService.ClaimMessageWithProofParams | Collection of claim data with proof and supporting data. |
 
+### _claimMessageWithProof
+
+```solidity
+function _claimMessageWithProof(struct IL1MessageService.ClaimMessageWithProofParams _params) internal virtual
+```
+
+Claims and delivers a cross-chain message using a Merkle proof.
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _params | struct IL1MessageService.ClaimMessageWithProofParams | Collection of claim data with proof and supporting data. |
+
 ### sender
 
 ```solidity
-function sender() external view returns (address originalSender)
+function sender() external view virtual returns (address originalSender)
 ```
 
 Claims and delivers a cross-chain message.

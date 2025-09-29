@@ -1,5 +1,11 @@
 # `L1MessageServiceV1`
 
+### TRANSIENT_MESSAGE_SENDER
+
+```solidity
+address TRANSIENT_MESSAGE_SENDER
+```
+
 ### nextMessageNumber
 
 ```solidity
@@ -13,14 +19,6 @@ uint256 REFUND_OVERHEAD_IN_GAS
 ```
 
 _adding these should not affect storage as they are constants and are stored in bytecode._
-
-### MESSAGE_SENDER_TRANSIENT_KEY
-
-```solidity
-bytes32 MESSAGE_SENDER_TRANSIENT_KEY
-```
-
-_The transient storage key to set the message sender against while claiming._
 
 ### DEFAULT_MESSAGE_SENDER_TRANSIENT_VALUE
 

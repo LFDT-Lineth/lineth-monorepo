@@ -1,0 +1,46 @@
+# `LineaSequencerUptimeFeed`
+
+L2 contract that receives status updates,
+ and records a new answer if the status changed.
+
+### typeAndVersion
+
+```solidity
+string typeAndVersion
+```
+
+### FEED_UPDATER_ROLE
+
+```solidity
+bytes32 FEED_UPDATER_ROLE
+```
+
+### constructor
+
+```solidity
+constructor(bool _initialStatus, address _admin, address _feedUpdater) public
+```
+
+_NB: The l1Sender parameter in the BaseSequencerUptimeFeed constructor is set as address(0) because it is not used.
+AccessControl is used instead to manage permissions._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _initialStatus | bool | The initial status of the feed. |
+| _admin | address | The address of the admin that can manage the feed. |
+| _feedUpdater | address | The address of the feed updater that can update the status. |
+
+### _validateSender
+
+```solidity
+function _validateSender(address) internal view
+```
+
+Internal function to check if the sender is allowed to update the status.
+
+_NB: The parameter is not used here because the function relies on msg.sender instead of l1Sender.
+NB: The l1Sender storage variable from the BaseSequencerUptimeFeed contract is not used.
+AccessControl is used instead to manage permissions._
+

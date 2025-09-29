@@ -2,6 +2,8 @@
 
 ### InitializationData
 
+_Contract will be used as proxy implementation._
+
 ```solidity
 struct InitializationData {
   address defaultAdmin;
@@ -234,14 +236,6 @@ error ReservedToken(address token)
 
 _Thrown when attempting to bridge a reserved token._
 
-### RemoteTokenBridgeAlreadySet
-
-```solidity
-error RemoteTokenBridgeAlreadySet(address remoteTokenBridge)
-```
-
-_Thrown when the remote token bridge is already set._
-
 ### AlreadyBridgedToken
 
 ```solidity
@@ -353,6 +347,20 @@ error SourceChainSameAsTargetChain()
 ```
 
 _Thrown when sourceChainId is the same as targetChainId during initialization._
+
+### CONTRACT_VERSION
+
+```solidity
+function CONTRACT_VERSION() external view returns (string contractVersion)
+```
+
+Returns the ABI version and not the reinitialize version.
+
+#### Return Values
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| contractVersion | string | The contract ABI version. |
 
 ### bridgeTokenWithPermit
 
