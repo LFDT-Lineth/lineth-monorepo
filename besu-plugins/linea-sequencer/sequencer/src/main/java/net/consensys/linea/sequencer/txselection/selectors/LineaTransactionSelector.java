@@ -99,8 +99,7 @@ public class LineaTransactionSelector implements PluginTransactionSelector {
     traceLineLimitTransactionSelector =
         new TraceLineLimitTransactionSelector(
             selectorsStateManager,
-            blockchainService.getChainId().get(),
-            txSelectorConfiguration,
+            blockchainService,
             l1L2BridgeConfiguration,
             tracerConfiguration,
             invalidTransactionByLineCountCache);

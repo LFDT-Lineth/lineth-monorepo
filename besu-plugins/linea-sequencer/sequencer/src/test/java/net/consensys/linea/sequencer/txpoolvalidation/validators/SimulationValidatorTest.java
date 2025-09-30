@@ -21,6 +21,8 @@ import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -50,6 +52,7 @@ import org.bouncycastle.asn1.x9.X9ECParameters;
 import org.bouncycastle.crypto.params.ECDomainParameters;
 import org.hyperledger.besu.crypto.SECPSignature;
 import org.hyperledger.besu.datatypes.Address;
+import org.hyperledger.besu.datatypes.HardforkId;
 import org.hyperledger.besu.datatypes.Wei;
 import org.hyperledger.besu.ethereum.core.BlockHeader;
 import org.hyperledger.besu.plugin.services.BlockchainService;
@@ -129,6 +132,8 @@ public class SimulationValidatorTest {
     when(pendingBlockHeader.getCoinbase()).thenReturn(Address.ZERO);
     when(transactionSimulationService.simulatePendingBlockHeader()).thenReturn(pendingBlockHeader);
     when(blockchainService.getChainId()).thenReturn(Optional.of(BigInteger.ONE));
+    when(blockchainService.getNextBlockHardforkId(any(), anyLong()))
+        .thenReturn(HardforkId.MainnetHardforkId.LONDON);
 
     final var rejectedTxReportingConf =
         LineaRejectedTxReportingConfiguration.builder()

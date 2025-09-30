@@ -12,6 +12,8 @@ import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectio
 import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectionResult.TX_MODULE_LINE_COUNT_OVERFLOW_CACHED;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hyperledger.besu.plugin.data.TransactionSelectionResult.SELECTED;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -20,14 +22,15 @@ import java.math.BigInteger;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
+import java.util.Optional;
 import net.consensys.linea.config.LineaTracerConfiguration;
-import net.consensys.linea.config.LineaTransactionSelectorConfiguration;
 import net.consensys.linea.plugins.config.LineaL1L2BridgeSharedConfiguration;
 import net.consensys.linea.sequencer.modulelimit.ModuleLineCountValidator;
 import net.consensys.linea.sequencer.txselection.InvalidTransactionByLineCountCache;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
 import org.hyperledger.besu.datatypes.Address;
+import org.hyperledger.besu.datatypes.HardforkId;
 import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.datatypes.PendingTransaction;
 import org.hyperledger.besu.datatypes.Transaction;
@@ -35,6 +38,7 @@ import org.hyperledger.besu.datatypes.Wei;
 import org.hyperledger.besu.plugin.data.ProcessableBlockHeader;
 import org.hyperledger.besu.plugin.data.TransactionProcessingResult;
 import org.hyperledger.besu.plugin.data.TransactionSelectionResult;
+import org.hyperledger.besu.plugin.services.BlockchainService;
 import org.hyperledger.besu.plugin.services.txselection.PluginTransactionSelector;
 import org.hyperledger.besu.plugin.services.txselection.SelectorsStateManager;
 import org.junit.jupiter.api.BeforeAll;
@@ -48,6 +52,7 @@ public class TraceLineLimitTransactionSelectorTest {
   private LineaTracerConfiguration tracerConfiguration;
   private SelectorsStateManager selectorsStateManager;
   private InvalidTransactionByLineCountCache invalidTransactionByLineCountCache;
+  private BlockchainService blockchainService;
 
   @TempDir static Path tempDir;
   static Path lineLimitsConfPath;
@@ -63,6 +68,10 @@ public class TraceLineLimitTransactionSelectorTest {
 
   @BeforeEach
   public void initialize() {
+    blockchainService = mock(BlockchainService.class);
+    when(blockchainService.getChainId()).thenReturn(Optional.of(BigInteger.ONE));
+    when(blockchainService.getNextBlockHardforkId(any(), anyLong()))
+        .thenReturn(HardforkId.MainnetHardforkId.LONDON);
     tracerConfiguration =
         LineaTracerConfiguration.builder()
             .moduleLimitsFilePath(lineLimitsConfPath.toString())
@@ -78,7 +87,10 @@ public class TraceLineLimitTransactionSelectorTest {
     selectorsStateManager = new SelectorsStateManager();
     final var selector =
         new TestableTraceLineLimitTransactionSelector(
-            selectorsStateManager, tracerConfiguration, invalidTransactionByLineCountCache);
+            selectorsStateManager,
+            blockchainService,
+            tracerConfiguration,
+            invalidTransactionByLineCountCache);
     selectorsStateManager.blockSelectionStarted();
     return selector;
   }
@@ -254,14 +266,12 @@ public class TraceLineLimitTransactionSelectorTest {
 
     TestableTraceLineLimitTransactionSelector(
         final SelectorsStateManager selectorsStateManager,
+        final BlockchainService blockchainService,
         final LineaTracerConfiguration lineaTracerConfiguration,
         final InvalidTransactionByLineCountCache invalidTransactionByLineCountCache) {
       super(
           selectorsStateManager,
-          BigInteger.ONE,
-          LineaTransactionSelectorConfiguration.builder()
-              .overLinesLimitCacheSize(invalidTransactionByLineCountCache.getMaxSize())
-              .build(),
+          blockchainService,
           LineaL1L2BridgeSharedConfiguration.builder()
               .contract(Address.fromHexString("0xDEADBEEF"))
               .topic(Bytes.fromHexString("0x012345"))

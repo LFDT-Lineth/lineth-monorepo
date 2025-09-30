@@ -12,6 +12,8 @@ import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectio
 import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectionResult.TX_MODULE_LINE_COUNT_OVERFLOW_CACHED;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hyperledger.besu.plugin.data.TransactionSelectionResult.SELECTED;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -22,7 +24,6 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Optional;
 import net.consensys.linea.config.LineaTracerConfiguration;
-import net.consensys.linea.config.LineaTransactionSelectorConfiguration;
 import net.consensys.linea.plugins.config.LineaL1L2BridgeSharedConfiguration;
 import net.consensys.linea.sequencer.modulelimit.ModuleLineCountValidator;
 import net.consensys.linea.sequencer.txpoolvalidation.validators.TraceLineLimitValidator;
@@ -31,12 +32,14 @@ import net.consensys.linea.sequencer.txselection.selectors.TraceLineLimitTransac
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
 import org.hyperledger.besu.datatypes.Address;
+import org.hyperledger.besu.datatypes.HardforkId;
 import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.datatypes.PendingTransaction;
 import org.hyperledger.besu.datatypes.Transaction;
 import org.hyperledger.besu.datatypes.Wei;
 import org.hyperledger.besu.plugin.data.ProcessableBlockHeader;
 import org.hyperledger.besu.plugin.data.TransactionProcessingResult;
+import org.hyperledger.besu.plugin.services.BlockchainService;
 import org.hyperledger.besu.plugin.services.txselection.SelectorsStateManager;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -59,6 +62,7 @@ public class TraceLineLimitCacheIntegrationTest {
   private TraceLineLimitTransactionSelector transactionSelector;
   private TraceLineLimitValidator transactionPoolValidator;
   private LineaTracerConfiguration tracerConfiguration;
+  private BlockchainService blockchainService;
 
   @BeforeAll
   public static void beforeAll() throws IOException {
@@ -71,6 +75,10 @@ public class TraceLineLimitCacheIntegrationTest {
 
   @BeforeEach
   void setUp() {
+    blockchainService = mock(BlockchainService.class);
+    when(blockchainService.getChainId()).thenReturn(Optional.of(BigInteger.ONE));
+    when(blockchainService.getNextBlockHardforkId(any(), anyLong()))
+        .thenReturn(HardforkId.MainnetHardforkId.LONDON);
     // Create shared cache that both components will use
     sharedCache = new InvalidTransactionByLineCountCache(CACHE_SIZE);
 
@@ -91,10 +99,7 @@ public class TraceLineLimitCacheIntegrationTest {
     transactionSelector =
         new TraceLineLimitTransactionSelector(
             stateManager,
-            BigInteger.ONE,
-            LineaTransactionSelectorConfiguration.builder()
-                .overLinesLimitCacheSize(CACHE_SIZE)
-                .build(),
+            blockchainService,
             LineaL1L2BridgeSharedConfiguration.builder()
                 .contract(Address.fromHexString("0xdeadbeef"))
                 .topic(Bytes.fromHexString("0xc0ffee"))

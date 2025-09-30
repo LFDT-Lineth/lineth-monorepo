@@ -26,7 +26,6 @@ public class ExamplePragueTest extends LineaPluginTestBasePrague {
   private static final BigInteger GAS_PRICE = DefaultGasProvider.GAS_PRICE;
   private static final BigInteger GAS_LIMIT = DefaultGasProvider.GAS_LIMIT;
   private static final BigInteger VALUE = BigInteger.ZERO;
-  private static final String DATA = "0x";
 
   private Web3j web3j;
   private Credentials credentials;
@@ -48,7 +47,26 @@ public class ExamplePragueTest extends LineaPluginTestBasePrague {
     // Act - Send a legacy transaction
     String txHash =
         txManager
-            .sendTransaction(GAS_PRICE, GAS_LIMIT, recipient, DATA, VALUE)
+            .sendTransaction(GAS_PRICE, GAS_LIMIT, recipient, "0x", VALUE)
+            .getTransactionHash();
+
+    this.buildNewBlock();
+
+    // Assert
+    minerNode.verify(eth.expectSuccessfulTransactionReceipt(txHash));
+  }
+
+  @Test
+  public void contractCreationTransactionsAreAccepted() throws Exception {
+    // Act - Send a legacy transaction
+    String txHash =
+        txManager
+            .sendTransaction(
+                GAS_PRICE,
+                GAS_LIMIT,
+                null,
+                "0x6080604052348015600e575f80fd5b50603e80601a5f395ff3fe60806040525f80fdfea2646970667358221220efe79e1e7d531be5f170d451c358bcde343b2b7a8bc35b84f0e8e0cbb00765a564736f6c634300081a0033",
+                VALUE)
             .getTransactionHash();
 
     this.buildNewBlock();

@@ -14,7 +14,7 @@ import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectio
 import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectionResult.TX_MODULE_LINE_INVALID_COUNT;
 import static org.hyperledger.besu.plugin.data.TransactionSelectionResult.SELECTED;
 
-import java.math.BigInteger;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -23,7 +23,6 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.config.LineaTracerConfiguration;
-import net.consensys.linea.config.LineaTransactionSelectorConfiguration;
 import net.consensys.linea.plugins.config.LineaL1L2BridgeSharedConfiguration;
 import net.consensys.linea.sequencer.modulelimit.ModuleLimitsValidationResult;
 import net.consensys.linea.sequencer.modulelimit.ModuleLineCountValidator;
@@ -35,6 +34,7 @@ import net.consensys.linea.zktracer.ZkTracer;
 import net.consensys.linea.zktracer.container.module.Module;
 import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.datatypes.Address;
+import org.hyperledger.besu.datatypes.HardforkId;
 import org.hyperledger.besu.datatypes.Transaction;
 import org.hyperledger.besu.datatypes.Wei;
 import org.hyperledger.besu.evm.frame.ExceptionalHaltReason;
@@ -47,6 +47,7 @@ import org.hyperledger.besu.plugin.data.BlockHeader;
 import org.hyperledger.besu.plugin.data.ProcessableBlockHeader;
 import org.hyperledger.besu.plugin.data.TransactionProcessingResult;
 import org.hyperledger.besu.plugin.data.TransactionSelectionResult;
+import org.hyperledger.besu.plugin.services.BlockchainService;
 import org.hyperledger.besu.plugin.services.txselection.AbstractStatefulPluginTransactionSelector;
 import org.hyperledger.besu.plugin.services.txselection.SelectorsStateManager;
 import org.hyperledger.besu.plugin.services.txselection.TransactionEvaluationContext;
@@ -64,14 +65,12 @@ public class TraceLineLimitTransactionSelector
   private static final Marker BLOCK_LINE_COUNT_MARKER = MarkerFactory.getMarker("BLOCK_LINE_COUNT");
   private final LineaTracerConfiguration tracerConfiguration;
   private final LineCountingTracer lineCountingTracer;
-  private final BigInteger chainId;
   private final ModuleLineCountValidator moduleLineCountValidator;
   private final InvalidTransactionByLineCountCache invalidTransactionByLineCountCache;
 
   public TraceLineLimitTransactionSelector(
       final SelectorsStateManager stateManager,
-      final BigInteger chainId,
-      final LineaTransactionSelectorConfiguration txSelectorConfiguration,
+      final BlockchainService blockchainService,
       final LineaL1L2BridgeSharedConfiguration l1L2BridgeConfiguration,
       final LineaTracerConfiguration tracerConfiguration,
       final InvalidTransactionByLineCountCache invalidTransactionByLineCountCache) {
@@ -81,12 +80,12 @@ public class TraceLineLimitTransactionSelector
             .collect(Collectors.toMap(Function.identity(), unused -> 0)),
         Map::copyOf);
 
-    this.chainId = chainId;
     this.tracerConfiguration = tracerConfiguration;
     this.invalidTransactionByLineCountCache = invalidTransactionByLineCountCache;
 
     lineCountingTracer =
-        new LineCountingTracerWithLog(tracerConfiguration, l1L2BridgeConfiguration);
+        new LineCountingTracerWithLog(
+            tracerConfiguration, l1L2BridgeConfiguration, blockchainService);
     for (Module m : lineCountingTracer.getModulesToCount()) {
       if (!tracerConfiguration.moduleLimitsMap().containsKey(m.moduleKey())) {
         throw new IllegalStateException(
@@ -221,11 +220,27 @@ public class TraceLineLimitTransactionSelector
 
     public LineCountingTracerWithLog(
         final LineaTracerConfiguration tracerConfiguration,
-        final LineaL1L2BridgeSharedConfiguration bridgeConfiguration) {
+        final LineaL1L2BridgeSharedConfiguration bridgeConfiguration,
+        final BlockchainService blockchainService) {
+
+      final var forkId =
+          blockchainService.getNextBlockHardforkId(
+              blockchainService.getChainHeadHeader(), Instant.now().getEpochSecond());
+
       this.delegate =
           tracerConfiguration.isLimitless()
               ? new ZkCounter(bridgeConfiguration)
-              : new ZkTracer(Fork.LONDON, bridgeConfiguration, chainId);
+              : new ZkTracer(
+                  switch (forkId) {
+                    case HardforkId.MainnetHardforkId.LONDON -> Fork.LONDON;
+                    case HardforkId.MainnetHardforkId.PARIS -> Fork.PARIS;
+                    case HardforkId.MainnetHardforkId.SHANGHAI -> Fork.SHANGHAI;
+                    case HardforkId.MainnetHardforkId.CANCUN -> Fork.CANCUN;
+                    case HardforkId.MainnetHardforkId.PRAGUE -> Fork.PRAGUE;
+                    default -> throw new RuntimeException("Unknown fork id " + forkId);
+                  },
+                  bridgeConfiguration,
+                  blockchainService.getChainId().get());
     }
 
     @Override
