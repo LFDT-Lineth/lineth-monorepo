@@ -74,41 +74,30 @@ failed_pre:
 fn call_gas_extra(inst=0xf1 u8, value u256, warm u1, exists u1) -> (gas_extra=2600 u64, stipend u64)
 ;; PRE: inst in {0xf1,0xf2,0xf4,0xf5]
 {
-  var gas_transfer u16
-  var gas_new_account u16
   var gas_access u16
+  var notWarm, notExists u1
+  ;; inversions
+  notWarm = 1 - warm
+  notExists = 1 - exists
+  ;; calculate gas access cost
+  gas_access = (warm * G_WARMACCESS) + (notWarm * G_COLDACCOUNTACCESS)
   ;;
-  if inst == 0xf1 goto call_only
-  if inst == 0xf2 goto call_other
-  if inst == 0xf4 goto call_no_transfer
-  if inst == 0xfa goto call_no_transfer
-  fail
-call_only:
   if value == 0 goto call_no_transfer
-  if exists == 1 goto call_other
-  stipend = G_CALLSTIPEND
-  gas_transfer = G_CALLVALUE
-  gas_new_account = G_NEWACCOUNT
-  goto call
-call_other:
-  if value == 0 goto call_no_transfer
-  stipend = G_CALLSTIPEND
-  gas_transfer = G_CALLVALUE
-  gas_new_account = 0
-  goto call
-call_no_transfer:
-  stipend = 0
-  gas_transfer = 0
-  gas_new_account = 0
+  if inst == EVM_INST_CALL goto call
+  if inst == EVM_INST_CALLCODE goto callcode
+  goto call_no_transfer
 call:
-  ;; check for warm access
-  if warm == 0 goto call_cold
-  gas_access = G_WARMACCESS
-  goto call_cont
-call_cold:
-  gas_access = G_COLDACCOUNTACCESS
-call_cont:
-  gas_extra = gas_access + gas_transfer + gas_new_account
+  stipend = G_CALLSTIPEND
+  gas_extra = gas_access + G_CALLVALUE + (notExists * G_NEWACCOUNT)
+  return
+callcode:
+  stipend = G_CALLSTIPEND
+  gas_extra = gas_access + G_CALLVALUE
+  return
+call_no_transfer:
+  ;; staticcall / delegatecall
+  stipend=0
+  gas_extra = gas_access
   return
 }
 
