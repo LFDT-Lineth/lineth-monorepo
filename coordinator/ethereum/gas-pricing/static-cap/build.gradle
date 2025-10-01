@@ -14,6 +14,7 @@ dependencies {
   testImplementation("io.vertx:vertx-junit5")
   testImplementation "org.wiremock:wiremock:${libs.versions.wiremock.get()}"
   testImplementation project(':jvm-libs:linea:metrics:micrometer')
+  testImplementation(testFixtures(project(":jvm-libs:linea:core:domain-models")))
 
   testImplementation project(':coordinator:clients:smart-contract-client')
 }

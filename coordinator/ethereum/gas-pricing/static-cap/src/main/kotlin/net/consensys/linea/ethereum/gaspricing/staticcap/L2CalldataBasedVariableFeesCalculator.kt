@@ -1,10 +1,12 @@
 package net.consensys.linea.ethereum.gaspricing.staticcap
 
 import linea.domain.FeeHistory
+import linea.kotlin.toULong
+import linea.web3j.ExtendedWeb3J
 import net.consensys.linea.ethereum.gaspricing.FeesCalculator
+import net.consensys.linea.ethereum.gaspricing.HistoricVariableCostProvider
 import net.consensys.linea.ethereum.gaspricing.L2CalldataSizeAccumulator
 import org.apache.logging.log4j.LogManager
-import java.util.concurrent.atomic.AtomicReference
 
 /*
   CALLDATA_BASED_FEE_CHANGE_DENOMINATOR = 32
@@ -19,8 +21,10 @@ import java.util.concurrent.atomic.AtomicReference
 */
 class L2CalldataBasedVariableFeesCalculator(
   val config: Config,
+  val web3jClient: ExtendedWeb3J,
   val variableFeesCalculator: FeesCalculator,
   val l2CalldataSizeAccumulator: L2CalldataSizeAccumulator,
+  val historicVariableCostProvider: HistoricVariableCostProvider,
 ) : FeesCalculator {
   data class Config(
     val feeChangeDenominator: UInt,
@@ -30,42 +34,39 @@ class L2CalldataBasedVariableFeesCalculator(
     init {
       require(feeChangeDenominator > 0u) { "feeChangeDenominator=$feeChangeDenominator must be greater than 0" }
       require(maxBlockCalldataSize > 0u) { "maxBlockCalldataSize=$maxBlockCalldataSize must be greater than 0" }
+      require(calldataSizeBlockCount > 0u) { "calldataSizeBlockCount=$calldataSizeBlockCount must be greater than 0" }
     }
   }
 
   private val log = LogManager.getLogger(this::class.java)
-  private var lastVariableCost: AtomicReference<Double> = AtomicReference(0.0)
 
   override fun calculateFees(feeHistory: FeeHistory): Double {
     val variableFee = variableFeesCalculator.calculateFees(feeHistory)
-
-    if (config.calldataSizeBlockCount == 0u) {
-      log.debug(
-        "Calldata-based variable fee is disabled as calldataSizeBlockCount is set as 0: variableFee={} wei",
-        variableFee,
-      )
-      return variableFee
-    }
 
     val callDataTargetSize = config.maxBlockCalldataSize
       .times(config.calldataSizeBlockCount)
       .toDouble().div(2.0)
 
-    val delta = (
-      l2CalldataSizeAccumulator
-        .getSumOfL2CalldataSize().get().toDouble()
-        .minus(callDataTargetSize)
-      )
+    val (sumOfL2CalldataSize, latestVariableCost) = web3jClient.ethBlockNumber()
+      .thenCompose { latestBlockNumber ->
+        l2CalldataSizeAccumulator.getSumOfL2CalldataSize(latestBlockNumber.toULong())
+          .thenCombine(
+            historicVariableCostProvider.getVariableCost(latestBlockNumber.toULong()),
+          ) { sumOfL2CalldataSize, latestVariableCost ->
+            sumOfL2CalldataSize to latestVariableCost
+          }
+      }.get()
+
+    val delta = sumOfL2CalldataSize.toDouble()
+      .minus(callDataTargetSize)
       .div(callDataTargetSize)
       .coerceAtLeast(-1.0)
       .coerceAtMost(1.0)
 
     val calldataBasedVariableFee =
-      lastVariableCost.get().times(1.0 + (delta.div(config.feeChangeDenominator.toDouble())))
+      latestVariableCost.times(1.0 + (delta.div(config.feeChangeDenominator.toDouble())))
 
     val finalVariableFee = variableFee.coerceAtLeast(calldataBasedVariableFee)
-
-    lastVariableCost.set(finalVariableFee)
 
     log.debug(
       "Calculated calldataBasedVariableFee={} wei variableFee={} wei finalVariableFee={} wei " +

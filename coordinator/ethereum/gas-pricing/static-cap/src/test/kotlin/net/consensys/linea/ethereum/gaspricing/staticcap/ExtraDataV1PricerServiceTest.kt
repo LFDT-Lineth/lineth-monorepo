@@ -10,9 +10,11 @@ import net.consensys.linea.ethereum.gaspricing.ExtraDataUpdater
 import net.consensys.linea.ethereum.gaspricing.FeesCalculator
 import net.consensys.linea.ethereum.gaspricing.FeesFetcher
 import net.consensys.linea.ethereum.gaspricing.MinerExtraDataV1
+import net.consensys.linea.metrics.MetricsFacade
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.extension.ExtendWith
+import org.mockito.Mockito.RETURNS_DEEP_STUBS
 import org.mockito.kotlin.any
 import org.mockito.kotlin.atLeastOnce
 import org.mockito.kotlin.doAnswer
@@ -77,6 +79,7 @@ class ExtraDataV1PricerServiceTest {
     val mockExtraDataUpdater = mock<ExtraDataUpdater> {
       on { updateMinerExtraData(any()) } doAnswer { SafeFuture.completedFuture(Unit) }
     }
+    val mockedMetricsFacade = mock<MetricsFacade>(defaultAnswer = RETURNS_DEEP_STUBS)
     val monitor =
       ExtraDataV1PricerService(
         pollingInterval = pollingInterval,
@@ -84,6 +87,7 @@ class ExtraDataV1PricerServiceTest {
         feesFetcher = mockFeesFetcher,
         minerExtraDataCalculator = boundableFeeCalculator,
         extraDataUpdater = mockExtraDataUpdater,
+        metricsFacade = mockedMetricsFacade,
       )
 
     val expectedExtraData = MinerExtraDataV1(

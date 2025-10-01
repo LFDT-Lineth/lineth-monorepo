@@ -546,19 +546,23 @@ class L1DependentApp(
           sequencerEndpoint = configs.l2NetworkGasPricing.extraDataUpdateEndpoint,
           retryConfig = configs.l2NetworkGasPricing.extraDataUpdateRequestRetries.toJsonRpcRetry(),
         ),
-        l2CalldataSizeAccumulatorConfig = configs.l2NetworkGasPricing.dynamicGasPricing.calldataBasedPricing?.let {
-          L2CalldataSizeAccumulatorImpl.Config(
-            blockSizeNonCalldataOverhead = it.blockSizeNonCalldataOverhead,
-            calldataSizeBlockCount = it.calldataSumSizeBlockCount,
-          )
-        },
-        l2CalldataBasedVariableFeesCalculatorConfig =
-        configs.l2NetworkGasPricing.dynamicGasPricing.calldataBasedPricing?.let {
-          L2CalldataBasedVariableFeesCalculator.Config(
-            feeChangeDenominator = it.feeChangeDenominator,
-            calldataSizeBlockCount = it.calldataSumSizeBlockCount,
-            maxBlockCalldataSize = it.calldataSumSizeTarget.toUInt(),
-          )
+        l2CalldataPricingCalculatorConfig = configs.l2NetworkGasPricing.dynamicGasPricing.calldataBasedPricing?.let {
+          if (configs.l2NetworkGasPricing.dynamicGasPricing.calldataBasedPricing.calldataSumSizeBlockCount > 0U) {
+            L2NetworkGasPricingService.L2CalldataPricingConfig(
+              l2CalldataSizeAccumulatorConfig = L2CalldataSizeAccumulatorImpl.Config(
+                blockSizeNonCalldataOverhead = it.blockSizeNonCalldataOverhead,
+                calldataSizeBlockCount = it.calldataSumSizeBlockCount,
+              ),
+              l2CalldataBasedVariableFeesCalculatorConfig = L2CalldataBasedVariableFeesCalculator.Config(
+                feeChangeDenominator = it.feeChangeDenominator,
+                calldataSizeBlockCount = it.calldataSumSizeBlockCount,
+                maxBlockCalldataSize = it.calldataSumSizeTarget.toUInt(),
+              ),
+            )
+          } else {
+            log.debug("Calldata-based variable fee is disabled as calldataSizeBlockCount is set as 0")
+            null
+          }
         },
       )
       val l1Web3jClient = createWeb3jHttpClient(
@@ -571,6 +575,7 @@ class L1DependentApp(
       )
       L2NetworkGasPricingService(
         vertx = vertx,
+        metricsFacade = metricsFacade,
         httpJsonRpcClientFactory = httpJsonRpcClientFactory,
         l1Web3jClient = l1Web3jClient,
         l1Web3jService = Web3jBlobExtended(
