@@ -8,7 +8,7 @@ include "../../constants/evm.zkasm"
 ;; SUB    (ARG_1 - ARG_2) % 2^256                   0x03
 ;;
 ;; Both of these operate on u256 words with "wrap around" semantics.
-fn add(INST=1 u8, ARG_1 u256, ARG_2 u256) -> (RES u256) {
+pub fn add(INST=1 u8, ARG_1 u256, ARG_2 u256) -> (RES u256) {
   var c u1
   ;;
   if INST == EVM_INST_ADD goto insn_add

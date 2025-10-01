@@ -20,7 +20,7 @@ const EXP_INST_MODEXPLOG = 0xEE05
 ;; The interpretation of the argument ARG depends upon the
 ;; instruction, whilst CDS and EBS are only used for the MODEXPLOG
 ;; case.
-fn exp(INST=0xEE0A u16, ARG u256, CDS u6, EBS u6) -> (RES=0 u128)
+pub fn exp(INST=0xEE0A u16, ARG u256, CDS u6, EBS u6) -> (RES=0 u128)
 ;; PRE: 1<=CDS<=32 && 1<=EBS<=32
 {
    var s, b u1

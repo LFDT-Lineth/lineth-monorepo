@@ -22,7 +22,7 @@ include "../constants/evm.zkasm"
 ;; Finally, EXISTS indicates for a CALL instruction whether target
 ;; account exists already, and WARM indicates whether the target
 ;; account for a call instruction is warm (or not).
-fn stp(INST=0xf0 u8, GAS_ACTUAL u64, GAS_MXP u64, GAS u256, VALUE u256, EXISTS u1, WARM u1) -> (OOGX=1 u1, GAS_UPFRONT=32000 u64, GAS_OOP u64, GAS_STIPEND u64)
+pub fn stp(INST=0xf0 u8, GAS_ACTUAL u64, GAS_MXP u64, GAS u256, VALUE u256, EXISTS u1, WARM u1) -> (OOGX=1 u1, GAS_UPFRONT=32000 u64, GAS_OOP u64, GAS_STIPEND u64)
 ;; PRE: GAS_UPFRONT calculation does not overflow.
 {
   var L_gas_diff u64

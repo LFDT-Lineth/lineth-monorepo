@@ -4,7 +4,7 @@
 ;; "Out Of Gas Exception".  When OOGX==1, it means the corresponding
 ;; instruction generated an out-of-gas exception (rather than some
 ;; other exception kind).
-fn gas(GAS_COST u64, GAS_ACTUAL u64, XAHOY u1, OOGX u1) {
+pub fn gas(GAS_COST u64, GAS_ACTUAL u64, XAHOY u1, OOGX u1) {
   var tmp u64
   var b u1
   ;;
