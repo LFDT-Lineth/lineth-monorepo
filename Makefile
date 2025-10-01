@@ -25,9 +25,9 @@ BLS_CANCUN := blsdata/cancun
 BLS_PRAGUE := blsdata/prague
 
 CONSTANTS := constants/constants.lisp
-CONSTANTS_LONDON := constants/london/constants.lisp
-CONSTANTS_CANCUN := constants/cancun/constants.lisp
-CONSTANTS_PRAGUE := constants/prague/constants.lisp
+CONSTANTS_LONDON := constants/london/constants.zkasm
+CONSTANTS_CANCUN := constants/cancun/constants.zkasm
+CONSTANTS_PRAGUE := constants/prague/constants.zkasm
 
 EC_DATA := ecdata
 
@@ -87,7 +87,7 @@ TABLES_LONDON := reftables/*.lisp   reftables/london/*.lisp
 TABLES_CANCUN := reftables/*.lisp   reftables/cancun/*.lisp
 TABLES_PRAGUE := reftables/*.lisp   reftables/prague/*.lisp
 
-TRM := trm
+TRM := trm/trm.zkasm
 
 TXN_DATA_LONDON := txndata/london
 TXN_DATA_SHANGHAI := txndata/shanghai

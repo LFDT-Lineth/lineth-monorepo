@@ -5,18 +5,16 @@
 (defclookup hub-into-trm
   ;; target columns
   (
-   trm.TRM_ADDRESS_HI
-   trm.RAW_ADDRESS_HI
-   trm.RAW_ADDRESS_LO
+   trm.RAW_ADDRESS
+   trm.ADDRESS_HI
    trm.IS_PRECOMPILE
   )
   ;; source selector
   (hub-into-trm-trigger)
   ;; source columns
   (
+   (:: hub.account/TRM_RAW_ADDRESS_HI hub.account/ADDRESS_LO) 
    hub.account/ADDRESS_HI
-   hub.account/TRM_RAW_ADDRESS_HI
-   hub.account/ADDRESS_LO
    hub.account/IS_PRECOMPILE
   )
 )

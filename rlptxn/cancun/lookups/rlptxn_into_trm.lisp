@@ -4,15 +4,13 @@
   (rlptxn-into-trm :unchecked)
   ;; target columns
   (
-    trm.IOMF
-    trm.TRM_ADDRESS_HI
-    trm.RAW_ADDRESS_LO
+    trm.RAW_ADDRESS   
+    trm.ADDRESS_HI
   )
   ;; source selector
   (sel-rlptxn-to-trm)
   ;; source columns
   (
-    1
-    rlptxn.cmp/EXO_DATA_1   
-    rlptxn.cmp/EXO_DATA_2   
+   (:: rlptxn.cmp/EXO_DATA_1 rlptxn.cmp/EXO_DATA_2)
+   rlptxn.cmp/EXO_DATA_1
   ))
