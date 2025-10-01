@@ -35,13 +35,7 @@ export default function WithFees({ iconPath }: Props) {
   return (
     <>
       {formattedCctpFees && (
-        <button
-          type="button"
-          className={styles["gas-fees"]}
-          onClick={() => {
-            setShowGasFeesModal(true);
-          }}
-        >
+        <button type="button" className={`${styles["gas-fees"]} ${styles["no-click"]}`}>
           <Image src={token.image} width={12} height={12} alt="usdc-fee-icon" />
           <p className={styles["estimate-crypto"]}>{formattedCctpFees} USDC</p>
         </button>
@@ -66,12 +60,7 @@ export default function WithFees({ iconPath }: Props) {
         </button>
       )}
       {showGasFeesModal && (
-        <GasFees
-          isModalOpen={showGasFeesModal}
-          onCloseModal={() => setShowGasFeesModal(false)}
-          fees={fees}
-          formattedCctpFees={formattedCctpFees}
-        />
+        <GasFees isModalOpen={showGasFeesModal} onCloseModal={() => setShowGasFeesModal(false)} fees={fees} />
       )}
     </>
   );

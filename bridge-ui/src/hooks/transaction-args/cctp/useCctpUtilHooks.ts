@@ -36,13 +36,7 @@ export const useCctpFee = (amount: bigint | null, tokenDecimals: number): bigint
 
     const THRESHOLD = cctpMode === CCTPMode.FAST ? CCTP_MAX_FINALITY_THRESHOLD : CCTP_MIN_FINALITY_THRESHOLD;
 
-    let finalityFee = data.find((fee) => fee.finalityThreshold === THRESHOLD)?.minimumFee;
-
-    // TODO: remove this once we have the correct fee for fast mode
-    // Temporary using 0.14% fee for fast mode
-    if (cctpMode === CCTPMode.FAST) {
-      finalityFee = 14;
-    }
+    const finalityFee = data.find((fee) => fee.finalityThreshold === THRESHOLD)?.minimumFee;
 
     if (isUndefined(finalityFee)) {
       return null;

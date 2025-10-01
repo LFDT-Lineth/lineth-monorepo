@@ -1,4 +1,4 @@
-import { CctpAttestationApiResponse, CctpV2ReattestationApiResponse, CctpFeeApiResponse } from "@/types/cctp";
+import { CctpAttestationApiResponse, CctpFeeApiResponse, CctpV2ReattestationApiResponse } from "@/types/cctp";
 
 export async function fetchCctpAttestationByTxHash(
   cctpDomain: number,
@@ -78,6 +78,7 @@ export async function getCctpFee(
   if (!response.ok) {
     throw new Error(`Error in getCctpFee: isTestnet=${isTestnet} srcDomain=${srcDomain} dstDomain=${dstDomain}`);
   }
+
   const data: CctpFeeApiResponse = await response.json();
   return data;
 }

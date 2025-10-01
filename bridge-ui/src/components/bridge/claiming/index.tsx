@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { useAccount } from "wagmi";
 import BridgeTwoLogo from "@/components/bridge/bridge-two-logo";
@@ -7,7 +7,7 @@ import SettingIcon from "@/assets/icons/setting.svg";
 import Skeleton from "@/components/bridge/claiming/skeleton";
 import ReceivedAmount from "./received-amount";
 import Fees from "./fees";
-import { useFormStore, useChainStore } from "@/stores";
+import { useChainStore, useFormStore } from "@/stores";
 import BridgeMode from "./bridge-mode";
 import { BridgeProvider, CCTPMode, ChainLayer } from "@/types";
 import { isCctp } from "@/utils";
@@ -52,8 +52,7 @@ export default function Claiming() {
     if (fromChain.layer === ChainLayer.L2) return false;
     // No auto-claiming for USDC via CCTPV2
     if (isCctp(token)) return false;
-    if (loading) return false;
-    return true;
+    return !loading;
   }, [fromChain, token, loading]);
 
   if (!amount || amount <= 0n) return null;
