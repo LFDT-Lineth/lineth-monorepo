@@ -39,7 +39,7 @@ services:
   sequencer:
     hostname: sequencer
     container_name: sequencer
-    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-beta-v4.0-rc10-20250923173528-1a4fb69}
+    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-bc1097d-tmp-20251002145501-bc1097d}
     profiles: [ "l2", "l2-bc", "debug", "external-to-monorepo" ]
     depends_on:
       l2-genesis-initialization:
@@ -117,7 +117,7 @@ services:
   l2-node-besu:
     hostname: l2-node-besu
     container_name: l2-node-besu
-    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-beta-v4.0-rc10-20250923173528-1a4fb69}
+    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-bc1097d-tmp-20251002145501-bc1097d}
     profiles: [ "l2", "l2-bc", "debug", "external-to-monorepo" ]
     depends_on:
       sequencer:
@@ -161,7 +161,7 @@ services:
   l2-node-besu-follower:
     hostname: l2-node-besu-follower
     container_name: l2-node-besu-follower
-    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-beta-v4.0-rc10-20250923173528-1a4fb69}
+    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-bc1097d-tmp-20251002145501-bc1097d}
     profiles: [ "l2", "l2-bc", "debug", "external-to-monorepo" ]
     depends_on:
       sequencer:
@@ -205,7 +205,7 @@ services:
   traces-node:
     hostname: traces-node
     container_name: traces-node
-    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-beta-v4.0-rc10-20250923173528-1a4fb69}
+    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-bc1097d-tmp-20251002145501-bc1097d}
     profiles: [ "l2", "l2-bc", "debug", "external-to-monorepo" ]
     depends_on:
       sequencer:
@@ -283,7 +283,7 @@ services:
   coordinator:
     hostname: coordinator
     container_name: coordinator
-    image: consensys/linea-coordinator:${COORDINATOR_TAG:-4daddb3}
+    image: consensys/linea-coordinator:${COORDINATOR_TAG:-ec591cd-tmp}
     profiles: [ "l2", "debug" ]
     depends_on:
       l2-genesis-initialization:
@@ -383,7 +383,7 @@ services:
       - l1network
 
   zkbesu-shomei:
-    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-beta-v4.0-rc10-20250923173528-1a4fb69}
+    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-bc1097d-tmp-20251002145501-bc1097d}
     hostname: zkbesu-shomei
     container_name: zkbesu-shomei
     profiles: [ "l2", "l2-bc", "external-to-monorepo" ]
@@ -600,7 +600,7 @@ services:
         ipv4_address: 10.10.10.205
 
   zkbesu-shomei-sr:
-    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-beta-v4.0-rc10-20250923173528-1a4fb69}
+    image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-bc1097d-tmp-20251002145501-bc1097d}
     hostname: zkbesu-shomei-sr
     container_name: zkbesu-shomei-sr
     profiles: [ "external-to-monorepo", "staterecovery" ]
