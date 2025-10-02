@@ -128,10 +128,10 @@ public class EthSendRawTransactionSimulationCheckLimitlessTest extends LineaPlug
           excludedPrecompiles
               .callRIPEMD160("I am not allowed here".getBytes(StandardCharsets.UTF_8))
               .encodeFunctionCall(),
-          "Transaction 0x35451c83b480b45df19105a30f22704df8750b7e328e1ebc646e6442f2f426f9 line count for module RIP=2147483647 is above the limit 1"),
+          "Transaction 0x35451c83b480b45df19105a30f22704df8750b7e328e1ebc646e6442f2f426f9 line count for module PRECOMPILE_RIPEMD_BLOCKS=2147483647 is above the limit 671"),
       new InvalidCall(
           encodedCallBlake2F(excludedPrecompiles),
-          "Transaction 0xfd447b2b688f7448c875f68d9c85ffcb976e1cc722b70dae53e4f2e30d871be8 line count for module BLAKE=2147483647 is above the limit 1")
+          "Transaction 0xfd447b2b688f7448c875f68d9c85ffcb976e1cc722b70dae53e4f2e30d871be8 line count for module PRECOMPILE_BLAKE_EFFECTIVE_CALLS=2147483647 is above the limit 0")
     };
 
     Arrays.stream(invalidCalls)

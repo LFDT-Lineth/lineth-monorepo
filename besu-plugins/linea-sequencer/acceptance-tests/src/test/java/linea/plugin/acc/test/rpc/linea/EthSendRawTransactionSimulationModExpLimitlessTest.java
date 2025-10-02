@@ -86,7 +86,7 @@ public class EthSendRawTransactionSimulationModExpLimitlessTest extends LineaPlu
           .isEqualTo(
               "Transaction "
                   + Numeric.toHexString(sha3(mulmodOverflow))
-                  + " line count for module MODEXP=2147483647 is above the limit 1");
+                  + " line count for module PRECOMPILE_MODEXP_EFFECTIVE_CALLS=2147483647 is above the limit 4");
 
       assertThat(getTxPoolContent()).isEmpty();
     }

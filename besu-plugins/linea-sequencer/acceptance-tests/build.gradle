@@ -55,7 +55,7 @@ tasks.register('acceptanceTests', Test) {
 
   // Configure resource limits
   boolean isCiServer = System.getenv().containsKey("CI")
-  maxParallelForks = isCiServer ? Runtime.runtime.availableProcessors() : 2
+  maxParallelForks = isCiServer ? Runtime.runtime.availableProcessors() : 3
   systemProperties["junit.jupiter.execution.parallel.enabled"] = false
 }
 

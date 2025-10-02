@@ -87,7 +87,7 @@ public class TraceLineLimitTransactionSelector
         new LineCountingTracerWithLog(
             tracerConfiguration, l1L2BridgeConfiguration, blockchainService);
     for (Module m : lineCountingTracer.getModulesToCount()) {
-      if (!tracerConfiguration.moduleLimitsMap().containsKey(m.moduleKey())) {
+      if (!tracerConfiguration.moduleLimitsMap().containsKey(m.moduleKey().name())) {
         throw new IllegalStateException(
             "Limit for module %s not defined in %s"
                 .formatted(m.moduleKey(), tracerConfiguration.moduleLimitsFilePath()));

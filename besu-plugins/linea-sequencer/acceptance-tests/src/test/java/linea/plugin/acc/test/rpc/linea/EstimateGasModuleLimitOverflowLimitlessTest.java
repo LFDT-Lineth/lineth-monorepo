@@ -62,7 +62,8 @@ public class EstimateGasModuleLimitOverflowLimitlessTest extends LineaPluginTest
       final var respLinea = reqLinea.execute(minerNode.nodeRequests());
       assertThat(respLinea.getCode()).isEqualTo(-32000);
       assertThat(respLinea.getMessage())
-          .isEqualTo("Transaction line count for module MODEXP=2147483647 is above the limit 1");
+          .isEqualTo(
+              "Transaction line count for module PRECOMPILE_MODEXP_EFFECTIVE_CALLS=2147483647 is above the limit 4");
     }
   }
 }
