@@ -139,7 +139,7 @@ func (g GrandProduct) Compute(run ifaces.Runtime) field.Element {
 				denBoard            = factor.Board()
 				denominatorMetadata = denBoard.ListVariableMetadata()
 				denominator         []field.Element
-				tmp                 = field.NewElement(1)
+				tmp                 = field.One()
 			)
 
 			if len(denominatorMetadata) == 0 {

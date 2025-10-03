@@ -207,6 +207,9 @@ func (a AssignHornerCtx) Run(run *wizard.ProverRuntime) {
 			for k := 0; k < arity; k++ {
 
 				sel := selectors[k].Get(row)
+				if !(sel.IsZero() || sel.IsOne()) {
+					utils.Panic("selector %v is not binary: %v", part.Selectors[k].GetColID(), sel.String())
+				}
 				if sel.IsOne() {
 					count++
 				}

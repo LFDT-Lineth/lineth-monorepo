@@ -207,7 +207,7 @@ func DistributeWizard(comp *wizard.CompiledIOP, disc *StandardModuleDiscoverer) 
 	return distributedWizard
 }
 
-// CompileModules applies the compilation steps to each modules identically.
+// CompileSegments applies the compilation steps to each segment identically.
 func (dist *DistributedWizard) CompileSegments() *DistributedWizard {
 	logrus.Infoln("Compiling distributed wizard default module")
 	dist.CompiledDefault = CompileSegment(dist.DefaultModule)
@@ -258,7 +258,7 @@ func GetSharedRandomness(lppCommitments []field.Element) field.Element {
 	return cmimc.HashVec(lppCommitments)
 }
 
-// GetSharedRandomnessFromRuntime returns the shared randomness used by the protocol
+// GetSharedRandomnessFromWitnesses returns the shared randomness used by the protocol
 // to generate the LPP proofs. The LPP commitments are supposed to be the
 // one extractable from the [recursion.Witness] of the LPPs.
 //

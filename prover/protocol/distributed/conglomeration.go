@@ -42,7 +42,7 @@ type ConglomeratorCompilation struct {
 	// by the conglomeration proof at once.
 	MaxNbProofs int
 
-	// ModuleProofs lists the wizard whose proof are supported by the current
+	// ModuleGLIops and ModuleLPPIops lists the wizard whose proof are supported by the current
 	// instance of the conglomerator.
 	ModuleGLIops  []*wizard.CompiledIOP `serde:"omit"`
 	ModuleLPPIops []*wizard.CompiledIOP `serde:"omit"`
