@@ -24,7 +24,7 @@ OOB                 = 262144
 RLP_ADDR            = 4096
 RLP_TXN             = 131072
 RLP_TXN_RCPT        = 65536
-ROM                 = 8388608 # Note: set as 6291456 in production as workaround
+ROM                 = 8388608
 ROM_LEX             = 1024
 SHAKIRA_DATA        = 65536
 SHF                 = 262144
@@ -76,5 +76,5 @@ BLS                 = 0
 POINT_EVAL          = 0
 
 # Introduced from beta-v4.0-rc6-CANCUN and present on Cancun
-BLS_DATA                = 1073741824
+BLS_DATA                = 8192
 RLP_UTILS               = 131072

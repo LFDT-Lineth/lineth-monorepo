@@ -15,6 +15,7 @@
     "terminalTotalDifficulty": 8,
     "shanghaiTime": %SHANGHAI_TIME%,
     "cancunTime": %CANCUN_TIME%,
+    "pragueTime": %PRAGUE_TIME%,
     "depositContractAddress": "0x3a69eD7FA6f6CA1dB2649327c4A2E666130823bE",
     "withdrawalRequestContractAddress": "0x3a69eD7FA6f6CA1dB2649327c4A2E666130823bE",
     "consolidationRequestContractAddress": "0x9AFC00F4CEaadb97A3822FCA2225FaD78839FBde",

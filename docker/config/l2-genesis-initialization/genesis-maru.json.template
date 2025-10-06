@@ -21,6 +21,12 @@
       "validatorSet": ["0x083e11f14b68d5ebeb4be3e3e0237ebbc5675ab5"],
       "blockTimeSeconds": 1,
       "elFork": "Cancun"
+    },
+     "%PRAGUE_TIME%": {
+      "type": "qbft",
+      "validatorSet": ["0x083e11f14b68d5ebeb4be3e3e0237ebbc5675ab5"],
+      "blockTimeSeconds": 1,
+      "elFork": "Prague"
     }
   }
 }
