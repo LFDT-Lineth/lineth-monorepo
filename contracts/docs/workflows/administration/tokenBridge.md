@@ -50,7 +50,7 @@ Safe Member
 | Network   | Address                                      |
 |-----------|----------------------------------------------|
 | Ethereum  | `0x892bb72De7f1b06B08a09140e7825d1827991DD3` |
-| Linea     | `0x051F1D88f0aF5673fB88BeC4378eD4BB29ea3319` |
+| Linea     | `0xf5cc7604a5ef3565b4D2050D65729A06B68AA0bD` |
 
 ### 📦 Proxy Addresses
 
