@@ -26,10 +26,10 @@
   CT_MAX_MODEXP_PRICING        5
   CT_MAX_MODEXP_EXTRACT        3
   CT_MAX_POINT_EVALUATION      3
-  CT_MAX_BLS_G1_ADD             3
-  CT_MAX_BLS_G1_MSM             6
-  CT_MAX_BLS_G2_ADD             3
-  CT_MAX_BLS_G2_MSM             6
+  CT_MAX_BLS_G1_ADD            3
+  CT_MAX_BLS_G1_MSM            7
+  CT_MAX_BLS_G2_ADD            3
+  CT_MAX_BLS_G2_MSM            7
   CT_MAX_BLS_PAIRING_CHECK     4
   CT_MAX_BLS_MAP_FP_TO_G1      3
   CT_MAX_BLS_MAP_FP2_TO_G2     3

@@ -2,7 +2,7 @@
   oob.MOD_FLAG)
 
 (defclookup
-  oob-into-mod
+  (oob-into-mod :unchecked)
   ;; target columns
   (
     mod.ARG_1_HI

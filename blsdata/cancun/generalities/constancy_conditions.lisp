@@ -20,5 +20,5 @@
 
 (defconstraint pair-of-inputs-constancy ()
   (if-not-zero ACC_INPUTS
-               (if (will-remain-constant! ACC_INPUTS)
+               (if-zero (- (next ACC_INPUTS) ACC_INPUTS)
                    (will-remain-constant! NONTRIVIAL_POP_BIT))))

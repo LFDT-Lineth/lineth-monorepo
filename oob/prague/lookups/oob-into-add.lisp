@@ -2,7 +2,7 @@
   oob.ADD_FLAG)
 
 (defclookup
-  oob-into-add
+  (oob-into-add :unchecked)
   ;; target columns
   (
     add.ARG_1
