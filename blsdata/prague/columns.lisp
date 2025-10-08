@@ -3,7 +3,7 @@
 (defcolumns
   (STAMP        :i32)
   (ID           :i32)
-  (TOTAL_SIZE   :i16)
+  (TOTAL_SIZE   :i24)
   (INDEX        :i16)
   (INDEX_MAX    :i16)
   (LIMB         :i128)

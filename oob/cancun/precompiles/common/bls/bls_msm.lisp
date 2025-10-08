@@ -21,6 +21,7 @@
                                                                         (* PRC_BLS_G2_MSM_MULTIPLICATION_COST  IS_BLS_G2_MSM)))
 (defun (prc-g1msm-prc-g2msm---remainder)                                               (shift OUTGOING_RES_LO 2))
 (defun (prc-g1msm-prc-g2msm---cds-is-multiple-of-msm-pair-size)                        (shift OUTGOING_RES_LO 3))
+(defun (prc-g1msm-prc-g2msm---valid-cds)                                               (* (prc---cds-is-non-zero) (prc-g1msm-prc-g2msm---cds-is-multiple-of-msm-pair-size)))
 (defun (prc-g1msm-prc-g2msm---num-inputs_msm-pair-size)                                (prc---cds))
 (defun (prc-g1msm-prc-g2msm---num-inputs-gt-128)                                       (shift OUTGOING_RES_LO 4))
 (defun (prc-g1msm-prc-g2msm---num-inputs-leq-128)                                      (- 1 (prc-g1msm-prc-g2msm---num-inputs-gt-128)))
@@ -42,7 +43,7 @@
   (call-to-ISZERO 3 0 (prc-g1msm-prc-g2msm---remainder)))
 
 (defconstraint prc-g1msm-prc-g2msm---compare-num-inputs-against-128 (:guard (* (assumption---fresh-new-stamp) (prc-g1msm-prc-g2msm---standard-precondition)))
-  (if-zero (prc-g1msm-prc-g2msm---cds-is-multiple-of-msm-pair-size)
+  (if-zero (prc-g1msm-prc-g2msm---valid-cds)
            (noCall 4)
            (begin (vanishes! (shift ADD_FLAG 4))
                   (vanishes! (shift MOD_FLAG 4))
@@ -55,7 +56,7 @@
                   (eq! (shift [OUTGOING_DATA 4] 4) 128))))
 
 (defconstraint prc-g1-msm-prc-g2-msm---compute-discount (:guard (* (assumption---fresh-new-stamp) (prc-g1msm-prc-g2msm---standard-precondition)))
-  (if-zero (prc-g1msm-prc-g2msm---cds-is-multiple-of-msm-pair-size)
+  (if-zero (prc-g1msm-prc-g2msm---valid-cds)
            (noCall 5)
            (if-not-zero (prc-g1msm-prc-g2msm---num-inputs-leq-128)
                     (begin (vanishes! (shift ADD_FLAG 5))
@@ -70,7 +71,7 @@
                     (begin (noCall 5)))))
 
 (defconstraint prc-g1msm-prc-g2msm---compute-precompile-cost-integer-division (:guard (* (assumption---fresh-new-stamp) (prc-g1msm-prc-g2msm---standard-precondition)))
-  (if-zero (prc-g1msm-prc-g2msm---cds-is-multiple-of-msm-pair-size)
+  (if-zero (prc-g1msm-prc-g2msm---valid-cds)
            (noCall 6)
            (begin (vanishes! (shift ADD_FLAG 6))
                   (eq! (shift MOD_FLAG 6) 1)
@@ -83,7 +84,7 @@
                   (eq! (shift [OUTGOING_DATA 4] 6) PRC_BLS_MULTIPLICATION_MULTIPLIER))))
 
 (defconstraint prc-g1msm-prc-g2msm---compare-call-gas-against-precompile-cost (:guard (* (assumption---fresh-new-stamp) (prc-g1msm-prc-g2msm---standard-precondition)))
-  (if-zero (prc-g1msm-prc-g2msm---cds-is-multiple-of-msm-pair-size)
+  (if-zero (prc-g1msm-prc-g2msm---valid-cds)
            (noCall 7)
            (begin (vanishes! (shift ADD_FLAG 7))
                   (vanishes! (shift MOD_FLAG 7))
@@ -97,7 +98,7 @@
 
 (defconstraint prc-g1msm-prc-g2msm---justify-hub-predictions (:guard (* (assumption---fresh-new-stamp) (prc-g1msm-prc-g2msm---standard-precondition)))
   (begin (eq! (prc---hub-success)
-              (* (prc---cds-is-non-zero) (prc-g1msm-prc-g2msm---cds-is-multiple-of-msm-pair-size) (prc-g1msm-prc-g2msm---sufficient-gas)))
+              (* (prc-g1msm-prc-g2msm---valid-cds) (prc-g1msm-prc-g2msm---sufficient-gas)))
          (if-zero (prc---hub-success)
                   (vanishes! (prc---return-gas))
                   (eq! (prc---return-gas) 
