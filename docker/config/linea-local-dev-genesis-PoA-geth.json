@@ -132,7 +132,7 @@
     "bae3c3fcd73ccf7755ec8a10664f218ad6bbc775": {
       "@WARNING": "FOR LOCAL DEV ONLY - DO NOT REUSE THESE KEYS ELSEWHERE",
       "privateKey": "0xb35972d9380d1be620a2c61da77f68f127ef248ec55e1bc6033d20a7e13ef3fa",
-      "comment": "account 17, can be used as end user",
+      "comment": "Bridge UI polling account",
       "balance": "900000000000000000000017"
     },
     "54d450f4d728da50f1271a1700b42657940324aa": {

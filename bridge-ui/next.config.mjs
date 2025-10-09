@@ -26,6 +26,11 @@ const nextConfig = {
         hostname: "linea.build",
         pathname: "/icons/**",
       },
+      {
+        protocol: "https",
+        hostname: "harlequin-reluctant-parrotfish-147.mypinata.cloud",
+        pathname: "/ipfs/**",
+      },
     ],
   },
   sassOptions: {

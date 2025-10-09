@@ -1,8 +1,8 @@
 import log from "loglevel";
 import { Address } from "viem";
 import { config } from "@/config";
-import { SupportedCurrencies, defaultTokensConfig } from "@/stores";
-import { GithubTokenListToken, Token, BridgeProvider, NetworkTokens } from "@/types";
+import { defaultTokensConfig, SupportedCurrencies } from "@/stores";
+import { BridgeProvider, GithubTokenListToken, NetworkTokens, Token } from "@/types";
 import { PRIORITY_SYMBOLS, USDC_SYMBOL } from "@/constants";
 import { isUndefined } from "@/utils";
 
@@ -22,13 +22,13 @@ export async function getTokens(networkTypes: NetworkTypes): Promise<GithubToken
     const response = await fetch(url, { next: { revalidate: 60 } });
     const data = await response.json();
     const tokens = data.tokens as GithubTokenListToken[];
-    const bridgedTokens = tokens.filter(
+
+    return tokens.filter(
       (token: GithubTokenListToken) =>
         token.tokenType.includes("canonical-bridge") ||
         (token.tokenType.includes("native") && token.extension?.rootAddress !== undefined) ||
         token.symbol === USDC_SYMBOL,
     );
-    return bridgedTokens;
   } catch (error) {
     log.error("Error getTokens", { error });
     return [];
