@@ -51,7 +51,7 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 #v3.11.1
 
@@ -79,6 +79,7 @@ jobs:
           cache-to: type=registry,ref=consensys/linea-bridge-ui:buildcache,mode=max
           secrets: |
             "revalidate_secret=${{ env.REVALIDATE_SECRET }}"
+            "contentful_space_id=${{ secrets.CONTENTFUL_SPACE_ID }}"
         env:
           NEXT_PUBLIC_WALLET_CONNECT_ID: ${{ secrets.PUBLIC_WALLET_CONNECT_ID }}
           NEXT_PUBLIC_INFURA_ID: ${{ secrets.PUBLIC_BRIDGE_UI_INFURA_ID }}
@@ -90,6 +91,7 @@ jobs:
           NEXT_PUBLIC_LAYERSWAP_API_KEY: ${{ secrets.PUBLIC_LAYERSWAP_API_KEY }}
           NEXT_PUBLIC_ENVIRONMENT: ${{ matrix.environment }}
           REVALIDATE_SECRET: ${{ secrets.BRIDGE_UI_REVALIDATE_SECRET }}
+          CONTENTFUL_SPACE_ID: ${{ secrets.CONTENTFUL_SPACE_ID }}
 
   test-build:
     if: github.event.pull_request.head.repo.fork == true

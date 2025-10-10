@@ -70,13 +70,14 @@ jobs:
           NEXT_PUBLIC_LAYERSWAP_API_KEY: ${{ secrets.PUBLIC_LAYERSWAP_API_KEY }}
           NEXT_PUBLIC_ENVIRONMENT: local
           REVALIDATE_SECRET: ${{ secrets.BRIDGE_UI_REVALIDATE_SECRET }}
+          CONTENTFUL_SPACE_ID: ${{ secrets.CONTENTFUL_SPACE_ID }}
           NEXT_PUBLIC_E2E_TEST_MODE: true
           NEXT_PUBLIC_IS_CCTP_ENABLED: false
 
       - name: Install linux dependencies
         run: |
           sudo apt-get install --no-install-recommends -y xvfb
-      
+
       - name: Run unit tests
         run: pnpm run -F bridge-ui test:unit
         env:
@@ -90,13 +91,13 @@ jobs:
           NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID: "placeholder"
           NEXT_PUBLIC_QUICKNODE_ID: "placeholder"
           NEXT_PUBLIC_E2E_TEST_MODE: false
-      
+
       - name: Login to Docker Hub
         uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 #v3.4.0
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      
+
       - name: Pull all images with retry
         uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 #v3.0.2
         with:
@@ -129,7 +130,7 @@ jobs:
         run: |
           docker ps -la && docker images
           docker container ls -a
-      
+
       - name: Initialize Metamask testing fixture
         run: xvfb-run -a pnpm run -F bridge-ui build:cache
         env:

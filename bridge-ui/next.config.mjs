@@ -28,8 +28,8 @@ const nextConfig = {
       },
       {
         protocol: "https",
-        hostname: "harlequin-reluctant-parrotfish-147.mypinata.cloud",
-        pathname: "/ipfs/**",
+        hostname: "images.ctfassets.net",
+        pathname: `/${process.env.CONTENTFUL_SPACE_ID}/**`,
       },
     ],
   },

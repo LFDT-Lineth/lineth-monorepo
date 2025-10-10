@@ -41,7 +41,9 @@ COPY ./bridge-ui ./bridge-ui
 
 COPY $ENV_FILE ./bridge-ui/.env.production
 
-RUN --mount=type=secret,id=revalidate_secret,env=REVALIDATE_SECRET pnpm run -F bridge-ui build
+RUN --mount=type=secret,id=revalidate_secret,env=REVALIDATE_SECRET \
+    --mount=type=secret,id=contentful_space_id,env=CONTENTFUL_SPACE_ID \
+    pnpm run -F bridge-ui build
 
 RUN apk del build-dependencies
 
