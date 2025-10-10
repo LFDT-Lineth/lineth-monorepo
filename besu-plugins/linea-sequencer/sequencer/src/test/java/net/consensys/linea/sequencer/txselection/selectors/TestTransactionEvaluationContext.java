@@ -62,6 +62,11 @@ public class TestTransactionEvaluationContext implements TransactionEvaluationCo
     return minGasPrice;
   }
 
+  @Override
+  public boolean isCancelled() {
+    return false;
+  }
+
   public TestTransactionEvaluationContext setMinGasPrice(final Wei minGasPrice) {
     this.minGasPrice = minGasPrice;
     return this;
