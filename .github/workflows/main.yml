@@ -13,9 +13,6 @@ permissions:
   packages: write
 
 jobs:
-  store-image-name-and-tags:
-    uses: ./.github/workflows/reuse-store-image-name-and-tags.yml
-
   filter-commit-changes:
     runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
     name: Filter commit changes
@@ -26,6 +23,7 @@ jobs:
       postman: ${{ steps.filter.outputs.postman }}
       prover: ${{ steps.filter.outputs.prover }}
       transaction-exclusion-api: ${{ steps.filter.outputs.transaction-exclusion-api }}
+      linea-besu-package: ${{ steps.filter.outputs.linea-besu-package }}
       has-changes-requiring-build: ${{ steps.exclusion-filter.outputs.has-changes-requiring-build }}
       contracts-excluding-local-deployment-artifacts: ${{ steps.exclusion-filter.outputs.contracts-excluding-local-deployment-artifacts }}
       contracts-excluding-local-deployment-artifacts-count: ${{ steps.exclusion-filter.outputs.contracts-excluding-local-deployment-artifacts_count }}
@@ -119,6 +117,9 @@ jobs:
               - 'build.gradle'
               - 'gradle.properties'
               - 'settings.gradle'
+            linea-besu-package:
+              - 'linea-besu-package/versions.env'
+              - 'linea-besu-package/scripts/assemble-packages.sh'
 
       - name: Filter out commit changes
         uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 #v3.0.2
@@ -142,13 +143,10 @@ jobs:
           predicate-quantifier: 'every'
 
   check-and-tag-images:
-    needs: [ store-image-name-and-tags, filter-commit-changes ]
+    needs: [ filter-commit-changes ]
     uses: ./.github/workflows/reuse-check-images-tags-and-push.yml
-    if: ${{ needs.filter-commit-changes.outputs.has-changes-requiring-build == 'true' }}
     with:
-      commit_tag: ${{ needs.store-image-name-and-tags.outputs.commit_tag }}
-      last_commit_tag: ${{ needs.store-image-name-and-tags.outputs.last_commit_tag }}
-      develop_tag: ${{ needs.store-image-name-and-tags.outputs.develop_tag }}
+      has-changes-requiring-build: ${{ needs.filter-commit-changes.outputs.has-changes-requiring-build }}
       coordinator_changed: ${{ needs.filter-commit-changes.outputs.coordinator }}
       postman_changed: ${{ needs.filter-commit-changes.outputs.postman }}
       prover_changed: ${{ needs.filter-commit-changes.outputs.prover }}
@@ -159,11 +157,11 @@ jobs:
     uses: ./.github/workflows/codeql.yml
 
   testing:
-    needs: [ store-image-name-and-tags, filter-commit-changes, check-and-tag-images ]
+    needs: [ filter-commit-changes, check-and-tag-images ]
     if: ${{ always() && needs.filter-commit-changes.outputs.has-changes-requiring-build == 'true' }}
     uses: ./.github/workflows/testing.yml
     with:
-      commit_tag: ${{ needs.store-image-name-and-tags.outputs.commit_tag }}
+      commit_tag: ${{ needs.check-and-tag-images.outputs.commit_tag }}
       coordinator_changed: ${{ needs.filter-commit-changes.outputs.coordinator }}
       linea_sequencer_changed: ${{ needs.filter-commit-changes.outputs.linea-sequencer-plugin }}
       postman_changed: ${{ needs.filter-commit-changes.outputs.postman }}
@@ -184,7 +182,7 @@ jobs:
 
   manual-docker-build-and-e2e-tests:
     runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
-    needs: [ store-image-name-and-tags, check-and-tag-images, get-has-changes-requiring-e2e-testing ]
+    needs: [ check-and-tag-images, get-has-changes-requiring-e2e-testing ]
     if: ${{ needs.get-has-changes-requiring-e2e-testing.outputs.has-changes-requiring-e2e-testing == 'true' }}
     environment: ${{ github.ref != 'refs/heads/main' && 'docker-build-and-e2e' || '' }}
     concurrency:
@@ -196,15 +194,16 @@ jobs:
           echo "Build and e2e test environment deployed"
 
   docker-build:
-    needs: [ store-image-name-and-tags, filter-commit-changes, check-and-tag-images, manual-docker-build-and-e2e-tests ]
+    needs: [ filter-commit-changes, check-and-tag-images, manual-docker-build-and-e2e-tests ]
     uses: ./.github/workflows/build-and-publish.yml
     with:
-      commit_tag: ${{ needs.store-image-name-and-tags.outputs.commit_tag }}
-      develop_tag: ${{ needs.store-image-name-and-tags.outputs.develop_tag }}
+      commit_tag: ${{ needs.check-and-tag-images.outputs.commit_tag }}
+      develop_tag: ${{ needs.check-and-tag-images.outputs.develop_tag }}
       coordinator_changed: ${{ needs.filter-commit-changes.outputs.coordinator }}
       postman_changed: ${{ needs.filter-commit-changes.outputs.postman }}
       prover_changed: ${{ needs.filter-commit-changes.outputs.prover }}
       transaction_exclusion_api_changed: ${{ needs.filter-commit-changes.outputs.transaction-exclusion-api }}
+      linea_besu_package_changed: ${{ needs.filter-commit-changes.outputs.linea-besu-package }}
       coordinator_image_tagged: ${{ needs.check-and-tag-images.outputs.image_tagged_coordinator }}
       postman_image_tagged: ${{ needs.check-and-tag-images.outputs.image_tagged_postman }}
       prover_image_tagged: ${{ needs.check-and-tag-images.outputs.image_tagged_prover }}
@@ -212,7 +211,7 @@ jobs:
     secrets: inherit
 
   run-e2e-tests:
-    needs: [ store-image-name-and-tags, docker-build, get-has-changes-requiring-e2e-testing, manual-docker-build-and-e2e-tests ]
+    needs: [ docker-build, get-has-changes-requiring-e2e-testing, manual-docker-build-and-e2e-tests ]
     # Make this execute for has-changes-requiring-e2e-testing == 'false' so that we can get to the required job @ which is in reuse-run-e2e-tests.yml
     if: ${{ always() && needs.get-has-changes-requiring-e2e-testing.outputs.has-changes-requiring-e2e-testing == 'false' || needs.docker-build.result == 'success' }}
     concurrency:
@@ -220,22 +219,25 @@ jobs:
       cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
     uses: ./.github/workflows/reuse-run-e2e-tests.yml
     with:
-      commit_tag: ${{ needs.store-image-name-and-tags.outputs.commit_tag }}
+      commit_tag: ${{ needs.check-and-tag-images.outputs.commit_tag }}
+      linea_besu_package_tag: ${{ needs.docker-build.outputs.linea_besu_package_tag }}
+      expected_traces_api_version: ${{ needs.docker-build.outputs.expected_traces_api_version }}
       e2e-tests-logs-dump: true
       has-changes-requiring-e2e-testing: ${{ needs.get-has-changes-requiring-e2e-testing.outputs.has-changes-requiring-e2e-testing }}
     secrets: inherit
 
   publish-images-after-run-tests-success-on-main:
-    needs: [ store-image-name-and-tags, testing, run-e2e-tests ]
+    needs: [ filter-commit-changes, check-and-tag-images, testing, run-e2e-tests ]
     if: ${{ always() && github.ref == 'refs/heads/main' && needs.testing.result == 'success' && needs.run-e2e-tests.outputs.tests_outcome == 'success' }}
     uses: ./.github/workflows/build-and-publish.yml
     with:
       push_image: true
-      commit_tag: ${{ needs.store-image-name-and-tags.outputs.commit_tag }}
-      develop_tag: ${{ needs.store-image-name-and-tags.outputs.develop_tag }}
+      commit_tag: ${{ needs.check-and-tag-images.outputs.commit_tag }}
+      develop_tag: ${{ needs.check-and-tag-images.outputs.develop_tag }}
       coordinator_changed: ${{ needs.filter-commit-changes.outputs.coordinator }}
       postman_changed: ${{ needs.filter-commit-changes.outputs.postman }}
       prover_changed: ${{ needs.filter-commit-changes.outputs.prover }}
+      linea_besu_package_changed: ${{ needs.filter-commit-changes.outputs.linea-besu-package }}
       transaction_exclusion_api_changed: ${{ needs.filter-commit-changes.outputs.transaction-exclusion-api }}
       coordinator_image_tagged: ${{ needs.check-and-tag-images.outputs.image_tagged_coordinator }}
       postman_image_tagged: ${{ needs.check-and-tag-images.outputs.image_tagged_postman }}

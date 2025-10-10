@@ -1,12 +1,6 @@
 name: linea-besu-package-release
 
 on:
-  pull_request:
-    paths:
-      - 'linea-besu-package/**'
-      - '.github/actions/linea-besu-package/**'
-      - '.github/workflows/linea-besu-package-release.yml'
-      - '.github/workflows/reuse-linea-besu-package-*.yml'
   push:
     branches:
       - main

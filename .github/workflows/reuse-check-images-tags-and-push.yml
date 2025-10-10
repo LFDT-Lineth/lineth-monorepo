@@ -8,13 +8,7 @@ permissions:
 on:
   workflow_call:
     inputs:
-      commit_tag:
-        required: true
-        type: string
-      last_commit_tag:
-        required: true
-        type: string
-      develop_tag:
+      has-changes-requiring-build:
         required: true
         type: string
       coordinator_changed:
@@ -30,6 +24,12 @@ on:
         required: true
         type: string
     outputs:
+      commit_tag:
+        value: ${{ jobs.check_image_tags_exist.outputs.commit_tag }}
+      last_commit_tag:
+        value: ${{ jobs.check_image_tags_exist.outputs.last_commit_tag }}
+      develop_tag:
+        value: ${{ jobs.check_image_tags_exist.outputs.develop_tag }}
       image_tagged_coordinator:
         value: ${{ jobs.image_tag_push.outputs.image_tagged_coordinator }}
       image_tagged_prover:
@@ -52,21 +52,46 @@ jobs:
   check_image_tags_exist:
     runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
     name: Check image tags exist
+    env:
+      # REF_NAME: ${{ github.ref_name }}
+      EVENT_BEFORE: ${{ github.event.before }}
     outputs:
       last_commit_tag_exists_coordinator: ${{ steps.check_image_tags_exist_coordinator.outputs.last_commit_tag_exists }}
       last_commit_tag_exists_postman: ${{ steps.check_image_tags_exist_postman.outputs.last_commit_tag_exists }}
       last_commit_tag_exists_prover: ${{ steps.check_image_tags_exist_prover.outputs.last_commit_tag_exists }}
       last_commit_tag_exists_transaction_exclusion_api: ${{ steps.check_image_tags_exist_transaction_exclusion_api.outputs.last_commit_tag_exists }}
+      commit_tag: ${{ steps.compute-version-tags.outputs.COMMIT_TAG }}
+      last_commit_tag: ${{ steps.compute-version-tags.outputs.LAST_COMMIT_TAG }}
+      develop_tag: ${{ steps.compute-version-tags.outputs.DEVELOP_TAG }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Compute version tags
+        id: compute-version-tags
+        run: |
+          # For PR, GITHUB_SHA is NOT the last commit pushed onto the PR branch - https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#pull_request
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "COMMIT_TAG=$(git rev-parse --short=7 ${{ github.event.pull_request.head.sha }})" >> $GITHUB_OUTPUT
+          else
+            echo "COMMIT_TAG=$(git rev-parse --short=7 $GITHUB_SHA)" >> $GITHUB_OUTPUT
+          fi
+          echo LAST_COMMIT_TAG=$(git rev-parse --short=7 "${{ env.EVENT_BEFORE }}") >> $GITHUB_OUTPUT
+          echo DEVELOP_TAG=develop >> $GITHUB_OUTPUT
+      
+      - name: Show version tags
+        run: |
+          echo "COMMIT_TAG: ${{ steps.compute-version-tags.outputs.COMMIT_TAG }}"
+          echo "LAST_COMMIT_TAG: ${{ steps.compute-version-tags.outputs.LAST_COMMIT_TAG }}"
+          echo "DEVELOP_TAG: ${{ steps.compute-version-tags.outputs.DEVELOP_TAG }}"
+          echo "github.ref: ${{ github.ref }}"
 
       - name: Check image tags exist for coordinator
         uses: ./.github/actions/check-image-tags-exist
         if: ${{ inputs.coordinator_changed == 'false' }}
         id: check_image_tags_exist_coordinator
         with:
-          last_commit_tag: ${{ inputs.last_commit_tag }}
+          last_commit_tag: ${{ steps.compute-version-tags.outputs.LAST_COMMIT_TAG }}
           image_name: consensys/linea-coordinator
 
       - name: Check image tags exist for postman
@@ -74,7 +99,7 @@ jobs:
         if: ${{ inputs.postman_changed == 'false' }}
         id: check_image_tags_exist_postman
         with:
-          last_commit_tag: ${{ inputs.last_commit_tag }}
+          last_commit_tag: ${{ steps.compute-version-tags.outputs.LAST_COMMIT_TAG }}
           image_name: consensys/linea-postman
 
       - name: Check image tags exist for prover
@@ -82,7 +107,7 @@ jobs:
         if: ${{ inputs.prover_changed == 'false' }}
         id: check_image_tags_exist_prover
         with:
-          last_commit_tag: ${{ inputs.last_commit_tag }}
+          last_commit_tag: ${{ steps.compute-version-tags.outputs.LAST_COMMIT_TAG }}
           image_name: consensys/linea-prover
 
       - name: Check image tags exist for transaction-exclusion-api
@@ -90,12 +115,12 @@ jobs:
         if: ${{ inputs.transaction_exclusion_api_changed == 'false' }}
         id: check_image_tags_exist_transaction_exclusion_api
         with:
-          last_commit_tag: ${{ inputs.last_commit_tag }}
+          last_commit_tag: ${{ steps.compute-version-tags.outputs.LAST_COMMIT_TAG }}
           image_name: consensys/linea-transaction-exclusion-api
 
   image_tag_push:
     runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
-    if: ${{ github.ref == 'refs/heads/main' }}
+    if: ${{ github.ref == 'refs/heads/main' && inputs.has-changes-requiring-build == 'true' }}
     name: Tag and push images
     needs: [ check_image_tags_exist ]
     outputs:
@@ -112,9 +137,9 @@ jobs:
         uses: ./.github/actions/image-tag-and-push
         if: ${{ inputs.coordinator_changed == 'false' }}
         with:
-          commit_tag: ${{ inputs.commit_tag }}
-          last_commit_tag: ${{ inputs.last_commit_tag }}
-          develop_tag: ${{ inputs.develop_tag }}
+          commit_tag: ${{ needs.check_image_tags_exist.outputs.commit_tag }}
+          last_commit_tag: ${{ needs.check_image_tags_exist.outputs.last_commit_tag }}
+          develop_tag: ${{ needs.check_image_tags_exist.outputs.develop_tag }}
           image_name: consensys/linea-coordinator
           last_commit_tag_exists: ${{ needs.check_image_tags_exist.outputs.last_commit_tag_exists_coordinator }}
           docker_username: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -125,9 +150,9 @@ jobs:
         uses: ./.github/actions/image-tag-and-push
         if: ${{ inputs.postman_changed == 'false' }}
         with:
-          commit_tag: ${{ inputs.commit_tag }}
-          last_commit_tag: ${{ inputs.last_commit_tag }}
-          develop_tag: ${{ inputs.develop_tag }}
+          commit_tag: ${{ needs.check_image_tags_exist.outputs.commit_tag }}
+          last_commit_tag: ${{ needs.check_image_tags_exist.outputs.last_commit_tag }}
+          develop_tag: ${{ needs.check_image_tags_exist.outputs.develop_tag }}
           image_name: consensys/linea-postman
           last_commit_tag_exists: ${{ needs.check_image_tags_exist.outputs.last_commit_tag_exists_postman }}
           docker_username: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -138,9 +163,9 @@ jobs:
         uses: ./.github/actions/image-tag-and-push
         if: ${{ inputs.prover_changed == 'false' }}
         with:
-          commit_tag: ${{ inputs.commit_tag }}
-          last_commit_tag: ${{ inputs.last_commit_tag }}
-          develop_tag: ${{ inputs.develop_tag }}
+          commit_tag: ${{ needs.check_image_tags_exist.outputs.commit_tag }}
+          last_commit_tag: ${{ needs.check_image_tags_exist.outputs.last_commit_tag }}
+          develop_tag: ${{ needs.check_image_tags_exist.outputs.develop_tag }}
           image_name: consensys/linea-prover
           last_commit_tag_exists: ${{ needs.check_image_tags_exist.outputs.last_commit_tag_exists_prover }}
           docker_username: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -151,9 +176,9 @@ jobs:
         uses: ./.github/actions/image-tag-and-push
         if: ${{ inputs.transaction_exclusion_api_changed == 'false' }}
         with:
-          commit_tag: ${{ inputs.commit_tag }}
-          last_commit_tag: ${{ inputs.last_commit_tag }}
-          develop_tag: ${{ inputs.develop_tag }}
+          commit_tag: ${{ needs.check_image_tags_exist.outputs.commit_tag }}
+          last_commit_tag: ${{ needs.check_image_tags_exist.outputs.last_commit_tag }}
+          develop_tag: ${{ needs.check_image_tags_exist.outputs.develop_tag }}
           image_name: consensys/linea-transaction-exclusion-api
           last_commit_tag_exists: ${{ needs.check_image_tags_exist.outputs.last_commit_tag_exists_transaction_exclusion_api }}
           docker_username: ${{ secrets.DOCKERHUB_USERNAME }}

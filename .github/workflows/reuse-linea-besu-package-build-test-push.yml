@@ -41,63 +41,12 @@ on:
 
 jobs:
   build-and-upload-artifact:
-    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-med
+    uses: ./.github/workflows/linea-besu-package-build-and-upload.yml
     if: ${{ inputs.run_test || inputs.run_e2e_test }}
-    environment: dockerhub
-    outputs:
-      linea_besu_package_tag: ${{ steps.assemble.outputs.dockertag }}
-      expected_traces_api_version: ${{ steps.assemble.outputs.tracer_plugin_version }}
-      dockerimage: ${{ steps.assemble.outputs.dockerimage }}
-    steps:
-      - name: checkout
-        uses: actions/checkout@v4
-
-      - name: build the linea artifacts
-        id: assemble
-        uses: ./.github/actions/linea-besu-package/assemble
-        with:
-          release_tag_prefix: ${{ inputs.release_tag_prefix }}
-          fetch_besu_fleet_plugin: ${{ inputs.with_besu_fleet_plugin }}
-          fleet_github_app_id: ${{ secrets.FLEET_GITHUB_APP_ID }}
-          fleet_github_app_private_key: ${{ secrets.FLEET_GITHUB_APP_PRIVATE_KEY }}
-
-      - name: set up docker buildx
-        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 #v3.11.1
-
-      - name: set docker build args
-        run: |
-          echo "Building docker tag: ${{ steps.assemble.outputs.dockertag }}"
-          echo "Building docker image: ${{ steps.assemble.outputs.dockerimage }}"
-
-      - name: build the combined manifest
-        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 #v6.18.0
-        env:
-          DOCKER_BUILD_SUMMARY: false
-        with:
-          context: linea-besu-package/linea-besu/.
-          platforms: linux/amd64
-          provenance: false
-          build-args: |
-            VERSION=${{ steps.assemble.outputs.dockertag }}
-            VCS_REF=${{ github.sha }}
-            BUILD_DATE=${{ steps.assemble.outputs.build_date }}
-          load: true
-          push: false
-          tags: |
-            consensys/linea-besu-package:${{ steps.assemble.outputs.dockertag }}
-
-      - name: Save Docker image as artifact
-        run: |
-          docker images
-          docker save consensys/linea-besu-package:${{ steps.assemble.outputs.dockertag }} | gzip > linea-besu-package-image.tar.gz
-        shell: bash
-
-      - name: Upload Docker image artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: linea-besu-package
-          path: linea-besu-package-image.tar.gz
-          retention-days: 1
+    with:
+      release_tag_prefix: ${{ inputs.release_tag_prefix }}
+      with_besu_fleet_plugin: ${{ inputs.with_besu_fleet_plugin }}
+    secrets: inherit
 
   run-test:
     needs: [ build-and-upload-artifact ]

@@ -603,7 +603,7 @@ services:
     image: consensys/linea-besu-package:${BESU_PACKAGE_TAG:-beta-v4.0-rc11-20251004063519-a5c4c31}
     hostname: zkbesu-shomei-sr
     container_name: zkbesu-shomei-sr
-    profiles: [ "external-to-monorepo", "staterecovery" ]
+    profiles: [ "staterecovery", "external-to-monorepo" ]
     privileged: true
     user: root
     ports:
@@ -660,7 +660,7 @@ services:
     image: consensys/linea-shomei:2.3.0
     hostname: shomei-sr
     container_name: shomei-sr
-    profiles: [ "external-to-monorepo", "staterecovery" ]
+    profiles: [ "staterecovery", "external-to-monorepo" ]
     depends_on:
       zkbesu-shomei-sr:
         condition: service_started

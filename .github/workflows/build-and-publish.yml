@@ -30,6 +30,9 @@ on:
       transaction_exclusion_api_changed:
         required: true
         type: string
+      linea_besu_package_changed:
+        required: true
+        type: string
       coordinator_image_tagged:
         required: true
         type: string
@@ -42,6 +45,11 @@ on:
       transaction_exclusion_api_image_tagged:
         required: true
         type: string
+    outputs:
+      linea_besu_package_tag:
+        value: ${{ jobs.linea_besu_package.outputs.linea_besu_package_tag }}
+      expected_traces_api_version:
+        value: ${{ jobs.linea_besu_package.outputs.expected_traces_api_version }}
     secrets:
       DOCKERHUB_USERNAME:
         required: false
@@ -87,4 +95,12 @@ jobs:
       develop_tag: ${{ inputs.develop_tag }}
       image_name: consensys/linea-transaction-exclusion-api
       push_image: ${{ inputs.push_image }}
+    secrets: inherit
+
+  linea_besu_package:
+    uses: ./.github/workflows/linea-besu-package-build-and-upload.yml
+    if: ${{ always() && (inputs.linea_besu_package_changed == 'true') }}
+    with:
+      release_tag_prefix: ''
+      with_besu_fleet_plugin: false
     secrets: inherit
