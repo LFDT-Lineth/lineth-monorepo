@@ -1,0 +1,40 @@
+# `L1LineaTokenBurner`
+
+### LINEA_TOKEN
+
+```solidity
+address LINEA_TOKEN
+```
+
+Address of the LINEA token contract
+
+### MESSAGE_SERVICE
+
+```solidity
+address MESSAGE_SERVICE
+```
+
+Address of the MessageService contract
+
+### constructor
+
+```solidity
+constructor(address _messageService, address _lineaToken) public
+```
+
+### claimMessageWithProof
+
+```solidity
+function claimMessageWithProof(struct IL1MessageService.ClaimMessageWithProofParams _params) external
+```
+
+Claims a message with proof and burns the LINEA tokens held by this contract.
+
+_This is expected to be permissionless, allowing anyone to trigger the burn._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _params | struct IL1MessageService.ClaimMessageWithProofParams | The parameters required to claim the message with proof. |
+

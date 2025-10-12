@@ -27,7 +27,7 @@ const londonOverridePaths = [
   "src/predeploy/UpgradeableConsolidationQueuePredeploy.sol",
   "src/predeploy/UpgradeableWithdrawalQueuePredeploy.sol",
   "src/predeploy/UpgradeableBeaconChainDepositPredeploy.sol",
-  "src/operational/RollupFeeVault.sol",
+  "src/operational/RollupRevenueVault.sol",
 ];
 
 export const overrides = Object.fromEntries(londonOverridePaths.map((path) => [path, londonOverride]));

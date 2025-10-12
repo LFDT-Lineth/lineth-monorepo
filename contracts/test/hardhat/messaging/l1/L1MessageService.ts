@@ -1,14 +1,14 @@
 import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 import { loadFixture, setNonce } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
-import { ethers } from "hardhat";
+import { ethers, network } from "hardhat";
 import {
   TestClaimingCaller,
   TestL1MessageService,
   TestL1MessageServiceMerkleProof,
   TestL1RevertContract,
   TestReceivingContract,
-} from "../../typechain-types";
+} from "../../../../typechain-types";
 import {
   ADDRESS_ZERO,
   DEFAULT_ADMIN_ROLE,
@@ -37,8 +37,8 @@ import {
   PAUSE_L1_L2_ROLE,
   pauseTypeRoles,
   unpauseTypeRoles,
-} from "./common/constants";
-import { deployFromFactory, deployUpgradableFromFactory } from "./common/deployment";
+} from "../../common/constants";
+import { deployFromFactory, deployUpgradableFromFactory } from "../../common/deployment";
 import {
   buildAccessErrorMessage,
   calculateRollingHash,
@@ -47,7 +47,7 @@ import {
   expectRevertWithCustomError,
   expectRevertWithReason,
   generateKeccak256Hash,
-} from "./common/helpers";
+} from "../../common/helpers";
 
 describe("L1MessageService", () => {
   let l1MessageService: TestL1MessageService;
@@ -81,6 +81,7 @@ describe("L1MessageService", () => {
   }
 
   before(async () => {
+    await network.provider.send("hardhat_reset");
     [admin, pauser, limitSetter, notAuthorizedAccount, postmanAddress, l2Sender] = await ethers.getSigners();
     // TODO adjust the tests to dynamically use whatever nonce is set for the merkle proof
     await setNonce(admin.address, 1);

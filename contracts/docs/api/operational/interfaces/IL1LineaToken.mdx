@@ -1,0 +1,41 @@
+# `IL1LineaToken`
+
+### burn
+
+```solidity
+function burn(uint256 amount) external
+```
+
+_Destroys `amount` tokens from the caller._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| amount | uint256 | The amount of tokens to burn. |
+
+### balanceOf
+
+```solidity
+function balanceOf(address account) external view returns (uint256)
+```
+
+_Returns the amount of tokens owned by `account`._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| account | address | The address of the account to query. |
+
+### syncTotalSupplyToL2
+
+```solidity
+function syncTotalSupplyToL2() external
+```
+
+Synchronizes the total supply of the L1 token to the L2 token.
+
+_This function sends a message to the L2 token contract to sync the total supply.
+NB: This function is permissionless on purpose, allowing anyone to trigger the sync._
+

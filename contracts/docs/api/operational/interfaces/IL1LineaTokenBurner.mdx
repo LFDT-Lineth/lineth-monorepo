@@ -1,0 +1,24 @@
+# `IL1LineaTokenBurner`
+
+### NoTokensToBurn
+
+```solidity
+error NoTokensToBurn()
+```
+
+Error thrown when there are no tokens to burn.
+
+### claimMessageWithProof
+
+```solidity
+function claimMessageWithProof(struct IL1MessageService.ClaimMessageWithProofParams _params) external
+```
+
+Claims a message with proof and burns the LINEA tokens held by this contract.
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _params | struct IL1MessageService.ClaimMessageWithProofParams | The parameters required to claim the message with proof. |
+

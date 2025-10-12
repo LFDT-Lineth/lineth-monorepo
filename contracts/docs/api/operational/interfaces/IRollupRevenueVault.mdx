@@ -1,0 +1,216 @@
+# `IRollupRevenueVault`
+
+Accepts rollup revenue, and performs burning operations.
+
+### ZeroAddressNotAllowed
+
+```solidity
+error ZeroAddressNotAllowed()
+```
+
+_Thrown when a parameter is the zero address._
+
+### ZeroTimestampNotAllowed
+
+```solidity
+error ZeroTimestampNotAllowed()
+```
+
+_Thrown when a timestamp is zero._
+
+### InvoiceTransferFailed
+
+```solidity
+error InvoiceTransferFailed()
+```
+
+_Thrown when the invoice transfer fails._
+
+### EthBurnFailed
+
+```solidity
+error EthBurnFailed()
+```
+
+_Thrown when the burn of ETH fails._
+
+### TimestampsNotInSequence
+
+```solidity
+error TimestampsNotInSequence()
+```
+
+_Thrown when the timestamps are not in sequence._
+
+### EndTimestampMustBeGreaterThanStartTimestamp
+
+```solidity
+error EndTimestampMustBeGreaterThanStartTimestamp()
+```
+
+_Thrown when the end timestamp is not greater than the start timestamp._
+
+### ZeroInvoiceAmount
+
+```solidity
+error ZeroInvoiceAmount()
+```
+
+_Thrown when the invoice amount is zero._
+
+### InvoiceInArrears
+
+```solidity
+error InvoiceInArrears()
+```
+
+_Thrown when the invoice is in arrears._
+
+### InvoiceDateTooOld
+
+```solidity
+error InvoiceDateTooOld()
+```
+
+_Thrown when the invoice date is too old._
+
+### InsufficientBalance
+
+```solidity
+error InsufficientBalance()
+```
+
+_Thrown when the contract balance is insufficient._
+
+### ExistingAddressTheSame
+
+```solidity
+error ExistingAddressTheSame()
+```
+
+_Thrown when the provided address is the same as the existing address._
+
+### DexSwapFailed
+
+```solidity
+error DexSwapFailed()
+```
+
+_Thrown when the DEX swap fails._
+
+### ZeroLineaTokensReceived
+
+```solidity
+error ZeroLineaTokensReceived()
+```
+
+_Thrown when zero LINEA tokens are received from the DEX swap._
+
+### InvoiceProcessed
+
+```solidity
+event InvoiceProcessed(address receiver, uint256 startTimestamp, uint256 endTimestamp, uint256 amountPaid, uint256 amountRequested)
+```
+
+_Emitted when an invoice is processed.
+If amountRequested < amountPaid, the difference is previous unpaid invoice amount._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| receiver | address | The address of the invoice receiver. |
+| startTimestamp | uint256 | The start timestamp of the invoicing period. |
+| endTimestamp | uint256 | The end timestamp of the invoicing period. |
+| amountPaid | uint256 | The amount that was paid. |
+| amountRequested | uint256 | The amount that was requested. |
+
+### EthBurntSwappedAndBridged
+
+```solidity
+event EthBurntSwappedAndBridged(uint256 ethBurnt, uint256 lineaTokensBridged)
+```
+
+_Emitted when ETH is burnt, swapped, and bridged._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| ethBurnt | uint256 | The amount of ETH that was burnt. |
+| lineaTokensBridged | uint256 | The amount of LINEA tokens that were bridged. |
+
+### L1LineaTokenBurnerUpdated
+
+```solidity
+event L1LineaTokenBurnerUpdated(address previousValue, address newValue)
+```
+
+_Emitted when the L1 LINEA token burner contract address is updated._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| previousValue | address | The previous L1 LINEA token burner contract address. |
+| newValue | address | The new L1 LINEA token burner contract address. |
+
+### DexUpdated
+
+```solidity
+event DexUpdated(address previousValue, address newValue)
+```
+
+_Emitted when the DEX contract address is updated._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| previousValue | address | The previous DEX contract address. |
+| newValue | address | The new DEX contract address. |
+
+### EthReceived
+
+```solidity
+event EthReceived(uint256 amount)
+```
+
+_Emitted when ETH is received._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| amount | uint256 | The amount of ETH received. |
+
+### InvoiceArrearsUpdated
+
+```solidity
+event InvoiceArrearsUpdated(uint256 newInvoiceArrears, uint256 lastInvoiceDate)
+```
+
+_Emitted when the invoice arrears are updated._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| newInvoiceArrears | uint256 | The new invoice arrears value. |
+| lastInvoiceDate | uint256 | The timestamp of the last invoice processed. |
+
+### InvoicePaymentReceiverUpdated
+
+```solidity
+event InvoicePaymentReceiverUpdated(address previousValue, address newValue)
+```
+
+_Emitted when the invoice payment receiver is updated._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| previousValue | address | The previous invoice payment receiver address. |
+| newValue | address | The new invoice payment receiver address. |
+

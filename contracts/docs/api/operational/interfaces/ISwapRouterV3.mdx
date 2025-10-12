@@ -1,0 +1,39 @@
+# `ISwapRouterV3`
+
+### ExactInputSingleParams
+
+_Parameters for the exact input single swap._
+
+```solidity
+struct ExactInputSingleParams {
+  address tokenIn;
+  address tokenOut;
+  uint24 tickSpacing;
+  address recipient;
+  uint256 deadline;
+  uint256 amountIn;
+  uint256 amountOutMinimum;
+  uint160 sqrtPriceLimitX96;
+}
+```
+
+### exactInputSingle
+
+```solidity
+function exactInputSingle(struct ISwapRouterV3.ExactInputSingleParams params) external payable returns (uint256 amountOut)
+```
+
+Swaps `amountIn` of one token for as much as possible of another token.
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| params | struct ISwapRouterV3.ExactInputSingleParams | The parameters necessary for the swap, encoded as `ExactInputSingleParams` in calldata. |
+
+#### Return Values
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| amountOut | uint256 | The amount of the received token. |
+
