@@ -268,6 +268,7 @@
   BEACON_ROOTS_ADDRESS_LO                   0xd732807ef1319fb7b8bb8522d0beac02
   HISTORY_STORAGE_ADDRESS_HI                0x0000f908
   HISTORY_STORAGE_ADDRESS_LO                0x27f1c53a10cb7a02335b175320002935
+  EIP_7825_TRANSACTION_GAS_LIMIT_CAP        0x1000000 ;; 2^24 == 16777216 appears in OSAKA 
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;             ;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  LINEA MISC ;;
