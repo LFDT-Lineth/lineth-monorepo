@@ -4,6 +4,7 @@ export interface ITransactionValidationService {
   evaluateTransaction(
     message: Message,
     feeRecipient?: string,
+    claimViaAddress?: string,
   ): Promise<{
     hasZeroFee: boolean;
     isUnderPriced: boolean;

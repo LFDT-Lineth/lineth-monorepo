@@ -51,6 +51,7 @@ export class LineaTransactionValidationService implements ITransactionValidation
    *
    * @param {Message} message - The message object to evaluate.
    * @param {string} [feeRecipient] - The optional fee recipient address.
+   * @param {string} [claimViaAddress] - The optional destination address to claim via.
    * @returns {Promise<{
    *   hasZeroFee: boolean;
    *   isUnderPriced: boolean;
@@ -65,6 +66,7 @@ export class LineaTransactionValidationService implements ITransactionValidation
   public async evaluateTransaction(
     message: Message,
     feeRecipient?: string,
+    claimViaAddress?: string,
   ): Promise<{
     hasZeroFee: boolean;
     isUnderPriced: boolean;
@@ -75,10 +77,13 @@ export class LineaTransactionValidationService implements ITransactionValidation
     maxPriorityFeePerGas: bigint;
     maxFeePerGas: bigint;
   }> {
-    const { gasLimit, maxPriorityFeePerGas, maxFeePerGas } = await this.l2MessageServiceClient.estimateClaimGasFees({
-      ...message,
-      feeRecipient: feeRecipient,
-    });
+    const { gasLimit, maxPriorityFeePerGas, maxFeePerGas } = await this.l2MessageServiceClient.estimateClaimGasFees(
+      {
+        ...message,
+        feeRecipient: feeRecipient,
+      },
+      { claimViaAddress },
+    );
 
     const threshold = this.calculateGasEstimationThreshold(message.fee, gasLimit);
     const estimatedGasLimit = this.getGasLimit(gasLimit);

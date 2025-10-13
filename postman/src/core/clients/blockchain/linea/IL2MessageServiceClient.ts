@@ -20,7 +20,10 @@ export interface IL2MessageServiceClient<
   encodeClaimMessageTransactionData(message: MessageProps & { feeRecipient?: string }): string;
   estimateClaimGasFees(
     message: (MessageSent | MessageProps) & { feeRecipient?: string },
-    overrides?: Overrides,
+    opts?: {
+      claimViaAddress?: string;
+      overrides?: Overrides;
+    },
   ): Promise<LineaGasFees>;
   getSigner(): Signer | undefined;
   getContractAddress(): string;

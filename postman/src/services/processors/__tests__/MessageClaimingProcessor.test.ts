@@ -16,6 +16,7 @@ import { TestLogger } from "../../../utils/testing/helpers";
 import { MessageStatus } from "../../../core/enums";
 import {
   DEFAULT_MAX_FEE_PER_GAS,
+  TEST_ADDRESS_2,
   TEST_CONTRACT_ADDRESS_2,
   testAnchoredMessage,
   testClaimedMessage,
@@ -408,7 +409,7 @@ describe("TestMessageClaimingProcessor", () => {
 
     it("Should successfully claim message with fee", async () => {
       const lineaRollupContractMsgStatusSpy = jest.spyOn(lineaRollupContractMock, "getMessageStatus");
-      const l2MessageServiceContractClaimSpy = jest.spyOn(lineaRollupContractMock, "claim");
+      const lineaRollupContractClaimSpy = jest.spyOn(lineaRollupContractMock, "claim");
       const messageRepositorySaveSpy = jest.spyOn(databaseService, "updateMessage");
       const messageRepositoryUpdateAtomicSpy = jest.spyOn(databaseService, "updateMessageWithClaimTxAtomic");
       jest.spyOn(databaseService, "getLastClaimTxNonce").mockResolvedValue(100);
@@ -431,13 +432,23 @@ describe("TestMessageClaimingProcessor", () => {
       expect(lineaRollupContractMsgStatusSpy).toHaveBeenCalledTimes(1);
       expect(messageRepositorySaveSpy).toHaveBeenCalledTimes(1);
       expect(messageRepositorySaveSpy).toHaveBeenCalledWith(expectedLoggingMessage);
-      expect(l2MessageServiceContractClaimSpy).toHaveBeenCalledTimes(1);
+      expect(lineaRollupContractClaimSpy).toHaveBeenCalledTimes(1);
+      expect(lineaRollupContractClaimSpy).toHaveBeenCalledWith(
+        {
+          ...expectedLoggingMessage,
+          feeRecipient: undefined,
+        },
+        {
+          claimViaAddress: undefined,
+          overrides: { nonce: 101, gasLimit: 100_000n, maxPriorityFeePerGas: 1000000000n, maxFeePerGas: 1000000000n },
+        },
+      );
       expect(messageRepositoryUpdateAtomicSpy).toHaveBeenCalledTimes(1);
     });
 
     it("Should successfully claim message with zero fee", async () => {
       const lineaRollupContractMsgStatusSpy = jest.spyOn(lineaRollupContractMock, "getMessageStatus");
-      const l2MessageServiceContractClaimSpy = jest.spyOn(lineaRollupContractMock, "claim");
+      const lineaRollupContractClaimSpy = jest.spyOn(lineaRollupContractMock, "claim");
       const messageRepositorySaveSpy = jest.spyOn(databaseService, "updateMessage");
       const messageRepositoryUpdateAtomicSpy = jest.spyOn(databaseService, "updateMessageWithClaimTxAtomic");
       jest.spyOn(databaseService, "getLastClaimTxNonce").mockResolvedValue(100);
@@ -460,13 +471,23 @@ describe("TestMessageClaimingProcessor", () => {
       expect(lineaRollupContractMsgStatusSpy).toHaveBeenCalledTimes(1);
       expect(messageRepositorySaveSpy).toHaveBeenCalledTimes(1);
       expect(messageRepositorySaveSpy).toHaveBeenCalledWith(expectedLoggingMessage);
-      expect(l2MessageServiceContractClaimSpy).toHaveBeenCalledTimes(1);
+      expect(lineaRollupContractClaimSpy).toHaveBeenCalledTimes(1);
+      expect(lineaRollupContractClaimSpy).toHaveBeenCalledWith(
+        {
+          ...expectedLoggingMessage,
+          feeRecipient: undefined,
+        },
+        {
+          claimViaAddress: undefined,
+          overrides: { nonce: 101, gasLimit: 100_000n, maxPriorityFeePerGas: 1000000000n, maxFeePerGas: 1000000000n },
+        },
+      );
       expect(messageRepositoryUpdateAtomicSpy).toHaveBeenCalledTimes(1);
     });
 
     it("Should successfully claim message with underpriced fee", async () => {
       const lineaRollupContractMsgStatusSpy = jest.spyOn(lineaRollupContractMock, "getMessageStatus");
-      const l2MessageServiceContractClaimSpy = jest.spyOn(lineaRollupContractMock, "claim");
+      const lineaRollupContractClaimSpy = jest.spyOn(lineaRollupContractMock, "claim");
       const messageRepositorySaveSpy = jest.spyOn(databaseService, "updateMessage");
       const messageRepositoryUpdateAtomicSpy = jest.spyOn(databaseService, "updateMessageWithClaimTxAtomic");
       jest.spyOn(databaseService, "getLastClaimTxNonce").mockResolvedValue(100);
@@ -489,7 +510,74 @@ describe("TestMessageClaimingProcessor", () => {
       expect(lineaRollupContractMsgStatusSpy).toHaveBeenCalledTimes(1);
       expect(messageRepositorySaveSpy).toHaveBeenCalledTimes(1);
       expect(messageRepositorySaveSpy).toHaveBeenCalledWith(expectedLoggingMessage);
-      expect(l2MessageServiceContractClaimSpy).toHaveBeenCalledTimes(1);
+      expect(lineaRollupContractClaimSpy).toHaveBeenCalledTimes(1);
+      expect(lineaRollupContractClaimSpy).toHaveBeenCalledWith(
+        {
+          ...expectedLoggingMessage,
+          feeRecipient: undefined,
+        },
+        {
+          claimViaAddress: undefined,
+          overrides: { nonce: 101, gasLimit: 100_000n, maxPriorityFeePerGas: 1000000000n, maxFeePerGas: 1000000000n },
+        },
+      );
+      expect(messageRepositoryUpdateAtomicSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it("Should successfully claim message on a specified contract address if specified", async () => {
+      const lineaRollupContractMsgStatusSpy = jest.spyOn(lineaRollupContractMock, "getMessageStatus");
+      const lineaRollupContractClaimSpy = jest.spyOn(lineaRollupContractMock, "claim");
+      const messageRepositorySaveSpy = jest.spyOn(databaseService, "updateMessage");
+      const messageRepositoryUpdateAtomicSpy = jest.spyOn(databaseService, "updateMessageWithClaimTxAtomic");
+      jest.spyOn(databaseService, "getLastClaimTxNonce").mockResolvedValue(100);
+      jest.spyOn(signer, "getNonce").mockResolvedValue(99);
+      jest
+        .spyOn(gasProvider, "getGasFees")
+        .mockResolvedValue({ maxFeePerGas: 1000000000n, maxPriorityFeePerGas: 1000000000n });
+      jest.spyOn(databaseService, "getMessageToClaim").mockResolvedValue(testAnchoredMessage);
+      jest.spyOn(lineaRollupContractMock, "getMessageStatus").mockResolvedValue(OnChainMessageStatus.CLAIMABLE);
+      jest.spyOn(lineaRollupContractMock, "estimateClaimGas").mockResolvedValue(100_000n);
+      jest.spyOn(lineaRollupContractMock, "isRateLimitExceeded").mockResolvedValue(false);
+      const expectedLoggingMessage = new Message({
+        ...testAnchoredMessage,
+        claimGasEstimationThreshold: 10000000000,
+        updatedAt: mockedDate,
+        isForSponsorship: false,
+      });
+
+      const messageClaimingProcessorWithSpecifiedClaimAddress = new MessageClaimingProcessor(
+        lineaRollupContractMock,
+        signer,
+        databaseService,
+        transactionValidationService,
+        {
+          claimViaAddress: TEST_ADDRESS_2,
+          maxNonceDiff: 5,
+          profitMargin: DEFAULT_PROFIT_MARGIN,
+          maxNumberOfRetries: DEFAULT_MAX_NUMBER_OF_RETRIES,
+          retryDelayInSeconds: DEFAULT_RETRY_DELAY_IN_SECONDS,
+          maxClaimGasLimit: DEFAULT_MAX_CLAIM_GAS_LIMIT,
+          direction: Direction.L2_TO_L1,
+          originContractAddress: TEST_CONTRACT_ADDRESS_2,
+        },
+        logger,
+      );
+      await messageClaimingProcessorWithSpecifiedClaimAddress.process();
+
+      expect(lineaRollupContractMsgStatusSpy).toHaveBeenCalledTimes(1);
+      expect(messageRepositorySaveSpy).toHaveBeenCalledTimes(1);
+      expect(messageRepositorySaveSpy).toHaveBeenCalledWith(expectedLoggingMessage);
+      expect(lineaRollupContractClaimSpy).toHaveBeenCalledTimes(1);
+      expect(lineaRollupContractClaimSpy).toHaveBeenCalledWith(
+        {
+          ...expectedLoggingMessage,
+          feeRecipient: undefined,
+        },
+        {
+          claimViaAddress: TEST_ADDRESS_2,
+          overrides: { nonce: 101, gasLimit: 100_000n, maxPriorityFeePerGas: 1000000000n, maxFeePerGas: 1000000000n },
+        },
+      );
       expect(messageRepositoryUpdateAtomicSpy).toHaveBeenCalledTimes(1);
     });
   });

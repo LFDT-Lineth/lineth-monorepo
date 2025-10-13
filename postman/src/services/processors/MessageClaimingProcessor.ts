@@ -98,6 +98,7 @@ export class MessageClaimingProcessor implements IMessageClaimingProcessor {
       } = await this.transactionValidationService.evaluateTransaction(
         nextMessageToClaim,
         this.config.feeRecipientAddress,
+        this.config.claimViaAddress,
       );
 
       // If isForSponsorship = true, then we ignore hasZeroFee and isUnderPriced
@@ -172,7 +173,10 @@ export class MessageClaimingProcessor implements IMessageClaimingProcessor {
         ...message,
         feeRecipient: this.config.feeRecipientAddress,
       },
-      { nonce, gasLimit, maxPriorityFeePerGas, maxFeePerGas },
+      {
+        claimViaAddress: this.config.claimViaAddress,
+        overrides: { nonce, gasLimit, maxPriorityFeePerGas, maxFeePerGas },
+      },
     );
     await this.databaseService.updateMessageWithClaimTxAtomic(message, nonce, claimTxResponsePromise);
   }

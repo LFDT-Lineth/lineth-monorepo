@@ -40,6 +40,7 @@ export class EthereumTransactionValidationService implements ITransactionValidat
    *
    * @param {Message} message - The message object to evaluate.
    * @param {string} [feeRecipient] - The optional fee recipient address.
+   * @param {string} [claimViaAddress] - The optional destination address to claim via.
    * @returns {Promise<{
    *   hasZeroFee: boolean;
    *   isUnderPriced: boolean;
@@ -54,6 +55,7 @@ export class EthereumTransactionValidationService implements ITransactionValidat
   public async evaluateTransaction(
     message: Message,
     feeRecipient?: string,
+    claimViaAddress?: string,
   ): Promise<{
     hasZeroFee: boolean;
     isUnderPriced: boolean;
@@ -65,10 +67,13 @@ export class EthereumTransactionValidationService implements ITransactionValidat
     maxFeePerGas: bigint;
   }> {
     const [gasLimit, { maxPriorityFeePerGas, maxFeePerGas }] = await Promise.all([
-      this.lineaRollupClient.estimateClaimGas({
-        ...message,
-        feeRecipient,
-      }),
+      this.lineaRollupClient.estimateClaimGas(
+        {
+          ...message,
+          feeRecipient,
+        },
+        { claimViaAddress },
+      ),
       this.gasProvider.getGasFees(),
     ]);
 

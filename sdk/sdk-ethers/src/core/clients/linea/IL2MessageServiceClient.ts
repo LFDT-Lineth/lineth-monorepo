@@ -17,7 +17,13 @@ export interface IL2MessageServiceClient<
     ErrorDescription
   > {
   encodeClaimMessageTransactionData(message: Message & { feeRecipient?: string }): string;
-  estimateClaimGasFees(message: Message & { feeRecipient?: string }, overrides?: Overrides): Promise<LineaGasFees>;
+  estimateClaimGasFees(
+    message: Message & { feeRecipient?: string },
+    opts?: {
+      claimViaAddress?: string;
+      overrides?: Overrides;
+    },
+  ): Promise<LineaGasFees>;
   getSigner(): Signer | undefined;
   getContractAddress(): string;
 }

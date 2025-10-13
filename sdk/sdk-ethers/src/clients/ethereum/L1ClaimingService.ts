@@ -203,21 +203,24 @@ export class L1ClaimingService {
    * Estimates the gas required to claim a message.
    *
    * @param {MessageSent & { feeRecipient?: string }} message - The message to estimate the claim gas for.
-   * @param {Overrides} [overrides={}] - Optional overrides for the contract call. Defaults to `{}` if not specified.
+   * @param {Overrides} [opts={}] - Claiming options and optional overrides for the contract call. Defaults to `{}` if not specified.
    * @returns {Promise<bigint>} The estimated gas required to claim the message.
    */
   public async estimateClaimMessageGas(
     message: MessageSent & { feeRecipient?: string },
-    overrides: Overrides = {},
+    opts: {
+      claimViaAddress?: string;
+      overrides?: Overrides;
+    } = {},
   ): Promise<bigint> {
     const isClaimingNeedingProof = await this.isClaimingNeedingProof(message.messageHash);
 
     if (!isClaimingNeedingProof) {
-      const gasLimit = await this.l1ContractClient.estimateClaimWithoutProofGas(message, overrides);
+      const gasLimit = await this.l1ContractClient.estimateClaimWithoutProofGas(message, opts);
       return gasLimit;
     }
 
-    const gasLimit = await this.l1ContractClient.estimateClaimGas(message, overrides);
+    const gasLimit = await this.l1ContractClient.estimateClaimGas(message, opts);
     return gasLimit;
   }
 
@@ -225,19 +228,22 @@ export class L1ClaimingService {
    * Executes the claim transaction for a message.
    *
    * @param {MessageSent & { feeRecipient?: string }} message - The message to claim.
-   * @param {Overrides} [overrides={}] - Optional overrides for the contract call. Defaults to `{}` if not specified.
+   * @param {Overrides} [opts={}] - Claiming options and optional overrides for the contract call. Defaults to `{}` if not specified.
    * @returns {Promise<ContractTransactionResponse>} The transaction response for the claim operation.
    */
   public async claimMessage(
     message: MessageSent & { feeRecipient?: string },
-    overrides: Overrides = {},
+    opts: {
+      claimViaAddress?: string;
+      overrides?: Overrides;
+    } = {},
   ): Promise<ContractTransactionResponse> {
     const isClaimingNeedingProof = await this.isClaimingNeedingProof(message.messageHash);
 
     if (!isClaimingNeedingProof) {
-      return this.l1ContractClient.claimWithoutProof(message, overrides);
+      return this.l1ContractClient.claimWithoutProof(message, opts);
     }
 
-    return this.l1ContractClient.claim(message, overrides) as Promise<ContractTransactionResponse>;
+    return this.l1ContractClient.claim(message, opts) as Promise<ContractTransactionResponse>;
   }
 }

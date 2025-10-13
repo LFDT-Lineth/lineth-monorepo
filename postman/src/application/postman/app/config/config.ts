@@ -88,10 +88,12 @@ export type ClaimingOptions = {
   maxTxRetries?: number;
   isPostmanSponsorshipEnabled?: boolean;
   maxPostmanSponsorGasLimit?: bigint;
+  claimViaAddress?: string;
 };
 
-export type ClaimingConfig = Omit<Required<ClaimingOptions>, "feeRecipientAddress"> & {
+export type ClaimingConfig = Omit<Required<ClaimingOptions>, "feeRecipientAddress" | "claimViaAddress"> & {
   feeRecipientAddress?: string;
+  claimViaAddress?: string;
 };
 
 /**

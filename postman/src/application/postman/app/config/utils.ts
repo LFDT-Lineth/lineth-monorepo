@@ -80,6 +80,7 @@ export function getConfig(postmanOptions: PostmanOptions): PostmanConfig {
           l1Options.claiming.isPostmanSponsorshipEnabled ?? DEFAULT_ENABLE_POSTMAN_SPONSORING,
         maxPostmanSponsorGasLimit:
           l1Options.claiming.maxPostmanSponsorGasLimit ?? DEFAULT_MAX_POSTMAN_SPONSOR_GAS_LIMIT,
+        claimViaAddress: l1Options.claiming.claimViaAddress,
       },
     },
     l2Config: {
@@ -114,6 +115,7 @@ export function getConfig(postmanOptions: PostmanOptions): PostmanConfig {
           l2Options.claiming.isPostmanSponsorshipEnabled ?? DEFAULT_ENABLE_POSTMAN_SPONSORING,
         maxPostmanSponsorGasLimit:
           l2Options.claiming.maxPostmanSponsorGasLimit ?? DEFAULT_MAX_POSTMAN_SPONSOR_GAS_LIMIT,
+        claimViaAddress: l2Options.claiming.claimViaAddress,
       },
     },
     l1L2AutoClaimEnabled,
