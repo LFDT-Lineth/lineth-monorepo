@@ -13,6 +13,7 @@ import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectio
 import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectionResult.TX_MODULE_LINE_COUNT_OVERFLOW_CACHED;
 import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectionResult.TX_MODULE_LINE_INVALID_COUNT;
 import static org.hyperledger.besu.plugin.data.TransactionSelectionResult.SELECTED;
+import static org.hyperledger.besu.plugin.data.TransactionSelectionResult.SELECTION_CANCELLED;
 
 import java.time.Instant;
 import java.util.List;
@@ -135,7 +136,25 @@ public class TraceLineLimitTransactionSelector
     final var prevCumulatedLineCountMap = getWorkingState();
 
     // check that we are not exceeding line number for any module
-    final var newCumulatedLineCountMap = lineCountingTracer.getModulesLineCount();
+    final Map<String, Integer> newCumulatedLineCountMap;
+    try {
+      newCumulatedLineCountMap = lineCountingTracer.getModulesLineCount();
+    } catch (Exception e) {
+      if (evaluationContext.isCancelled()) {
+        // the tracer is not thread safe, so during selection cancellation it could
+        // fail due to concurrency issues, so in that case do not consider exception
+        // as an internal error
+        log.atTrace()
+            .setMessage(
+                "Ignoring tracer exception due to cancelled selection during evaluation of {}")
+            .addArgument(evaluationContext.getPendingTransaction()::toTraceLog)
+            .setCause(e)
+            .log();
+        return SELECTION_CANCELLED;
+      }
+      throw e;
+    }
+
     final Transaction transaction = evaluationContext.getPendingTransaction().getTransaction();
     log.atTrace()
         .setMessage("Tx {} line count per module: {}")
