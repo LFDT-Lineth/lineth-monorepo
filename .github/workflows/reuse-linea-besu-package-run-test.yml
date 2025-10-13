@@ -44,17 +44,17 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           pattern: linea-besu-package*
-      
+
       - name: Load Docker image
         run: |
           pwd && ls -la && echo "GITHUB_WORKSPACE=$GITHUB_WORKSPACE" &&
           gunzip -c $GITHUB_WORKSPACE/linea-besu-package/linea-besu-package-image.tar.gz | docker load
         shell: bash
 
-      - name: Start container
+      - name: Start container # disabling color in the output
         run: |
           env
-          COMMAND="docker run -d --name ${{ env.CONTAINER_NAME }} -e BESU_PROFILE=${{ matrix.file }} ${{ env.DOCKER_IMAGE }}"
+          COMMAND="docker run -d --name ${{ env.CONTAINER_NAME }} -e BESU_PROFILE=${{ matrix.file }} ${{ env.DOCKER_IMAGE }} --color-enabled=false"
           echo $COMMAND
           eval $COMMAND
 
