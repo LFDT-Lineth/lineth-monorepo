@@ -27,7 +27,7 @@ wiremock = "3.13.0"
 logcaptor = "2.11.0"
 
 # Runtime
-arithmetization="beta-v4.0-rc12"
+arithmetization="beta-v4.0-rc13"
 besu = "25.10.0-RC2-linea1"
 blobCompressor = "2.1.0-rc1"
 blobShnarfCalculator = "1.2.0"
