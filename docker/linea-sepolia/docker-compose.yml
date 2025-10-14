@@ -25,7 +25,7 @@ services:
   besu-node:
     hostname: linea-besu
     container_name: linea-besu
-    image: consensys/linea-besu-package:beta-v4.0-rc12-20251008121622-45d92cd
+    image: consensys/linea-besu-package:beta-v4.0-rc12-20251013164107-7e24ef4
 
     platform: linux/amd64
     healthcheck:
