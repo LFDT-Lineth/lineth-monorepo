@@ -14,16 +14,20 @@ Xbonsai-full-flat-db-enabled=true
 # Min gas price
 min-gas-price=1000
 
-# Host white list
-host-whitelist=["*"]
+# Host allow list
+host-allowlist=["*"]
+
+# engine
+engine-host-allowlist=["*"]
+engine-rpc-port=8550
+engine-jwt-disabled=true
 
 # rpc
 rpc-http-enabled=true
 rpc-http-host="0.0.0.0"
 rpc-http-port=8545
-rpc-http-api=["ADMIN","NET","ETH","WEB3","TXPOOL"]
+rpc-http-api=["ADMIN","NET","ETH","ENGINE","WEB3","TXPOOL"]
 rpc-http-cors-origins=["all"]
-
 
 # ws
 rpc-ws-enabled=true
@@ -37,15 +41,16 @@ graphql-http-host="0.0.0.0"
 graphql-http-port=8547
 graphql-http-cors-origins=["all"]
 
-
 # p2p
 p2p-port=30303
 fast-sync-min-peers=1
-Xeth-capability-max=67
 Xdns-enabled=true
-Xp2p-peer-lower-bound=5
 
 # metrics
 metrics-enabled=true
 metrics-host="0.0.0.0"
 metrics-port=9545
+
+### Plugin Configuration ###
+# Disable external plugins
+Xplugins-external-enabled=false

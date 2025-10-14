@@ -11,10 +11,29 @@
     "istanbulBlock": 0,
     "berlinBlock": 0,
     "londonBlock": 0,
+    "terminalTotalDifficulty": 37331807,
+    "shanghaiTime": 1759147200,
+    "cancunTime": 1759233600,
+    "pragueTime": 1760004000,
+    "depositContractAddress": "0x0bdae9550159eb73559e74d27fbc989641b24c8e",
+    "withdrawalRequestContractAddress": "0x0e97F666F1d99A60590F7Ce7fA5A5a7C754Ff714",
+    "consolidationRequestContractAddress": "0x94d94fac95855ed81294ed76f6b3da899e7063a8",
     "clique": {
-      "createemptyblocks": false,
+      "createemptyblocks": true,
       "blockperiodseconds": 1,
       "epochlength": 30000
+    },
+    "blobSchedule": {
+      "cancun": {
+        "target": 0,
+        "max": 0,
+        "baseFeeUpdateFraction": 3338477
+      },
+      "prague": {
+        "target": 0,
+        "max": 0,
+        "baseFeeUpdateFraction": 3338477
+      }
     }
   },
   "nonce": "0x0",

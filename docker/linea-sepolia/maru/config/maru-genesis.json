@@ -1,0 +1,32 @@
+{
+  "chainId": 59141,
+  "config": {
+    "0": {
+      "type": "difficultyAwareQbft",
+      "blockTimeSeconds": 2,
+      "postTtdConfig": {
+        "validatorSet": ["0x20e2654209c3f5a7b4728fb228778f1261f1013f"],
+        "elFork": "Paris"
+      },
+      "terminalTotalDifficulty": 37331807
+    },
+    "1759147200": {
+      "type": "qbft",
+      "validatorSet": ["0x20e2654209c3f5a7b4728fb228778f1261f1013f"],
+      "blockTimeSeconds": 2,
+      "elFork": "Shanghai"
+    },
+    "1759233600": {
+      "type": "qbft",
+      "validatorSet": ["0x20e2654209c3f5a7b4728fb228778f1261f1013f"],
+      "blockTimeSeconds": 2,
+      "elFork": "Cancun"
+    },
+    "1760004000": {
+      "type": "qbft",
+      "validatorSet": ["0x20e2654209c3f5a7b4728fb228778f1261f1013f"],
+      "blockTimeSeconds": 2,
+      "elFork": "Prague"
+    }
+  }
+}
