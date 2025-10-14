@@ -11,6 +11,7 @@
    txndata.USER
    txndata.RLP
    txndata.USER_TXN_NUMBER
+   txndata.prover___USER_TXN_NUMBER_MAX
    (txn-data-hub-view-cfi)
    txndata.rlp/REQUIRES_EVM_EXECUTION
    txndata.rlp/IS_DEPLOYMENT
@@ -35,6 +36,7 @@
    1
    1
    rlptxn.USER_TXN_NUMBER
+   rlptxn.prover___USER_TXN_NUMBER_MAX
    rlptxn.CODE_FRAGMENT_INDEX
    rlptxn.REQUIRES_EVM_EXECUTION
    rlptxn.IS_DEPLOYMENT
