@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Enable fail-fast behavior
+set -e
+
 source ./versions.env
 
 mkdir -p ./tmp
