@@ -13,12 +13,11 @@ volumes:
 
 # ─────────────────────────────────────────────
 # ⚠️ Execution Layer Clients Overview
-# Only `besu-node` is actively connected to the Maru Consensus Layer
-# and is referenced in the Maru config.toml file.
+# Only one execution client is actively connected to the Maru Consensus Layer at a time
+# and is referenced in the Maru config.toml file as el-client
 #
-# The other EL clients (Geth, Erigon, Nethermind) are included here
-# for reference or testing purposes only.
-# They are not connected to any Consensus Layer in this file.
+# The other EL clients are included here for reference or testing purposes only.
+# The user is free to choose any el client they want.
 # ─────────────────────────────────────────────
 services:
   # Besu node (Execution Layer for Maru)
