@@ -8,7 +8,7 @@ import {
   JsonRpcProvider,
   ErrorDescription,
 } from "ethers";
-import { OnChainMessageStatus } from "@consensys/linea-sdk";
+import { Direction, OnChainMessageStatus } from "@consensys/linea-sdk";
 import { BaseError } from "../../core/errors";
 import { MessageStatus } from "../../core/enums";
 import { ILogger } from "../../core/utils/logging/ILogger";
@@ -21,7 +21,7 @@ import {
 } from "../../core/services/processors/IMessageClaimingPersister";
 import { IMessageDBService } from "../../core/persistence/IMessageDBService";
 import { ErrorParser } from "../../utils/ErrorParser";
-import { ISponsorshipMetricsUpdater } from "../../core/metrics";
+import { ISponsorshipMetricsUpdater, ITransactionMetricsUpdater } from "../../core/metrics";
 
 export class MessageClaimingPersister implements IMessageClaimingPersister {
   private messageBeingRetry: { message: Message | null; retries: number };
@@ -32,6 +32,7 @@ export class MessageClaimingPersister implements IMessageClaimingPersister {
    * @param {IMessageDBService} databaseService - An instance of a class implementing the `IMessageDBService` interface, used for storing and retrieving message data.
    * @param {IMessageServiceContract} messageServiceContract - An instance of a class implementing the `IMessageServiceContract` interface, used to interact with the blockchain contract.
    * @param {ISponsorshipMetricsUpdater} sponsorshipMetricsUpdater - An instance of a class implementing the `ISponsorshipMetricsUpdater` interface, update sponsorship metrics for Prometheus monitoring.
+   * @param {ITransactionMetricsUpdater} transactionMetricsUpdater - An instance of a class implementing the `ITransactionMetricsUpdater` interface, used to update transaction-related metrics.
    * @param {IProvider} provider - An instance of a class implementing the `IProvider` interface, used to query blockchain data.
    * @param {MessageClaimingPersisterConfig} config - Configuration for network-specific settings, including transaction submission timeout and maximum transaction retries.
    * @param {ILogger} logger - An instance of a class implementing the `ILogger` interface, used for logging messages.
@@ -46,6 +47,7 @@ export class MessageClaimingPersister implements IMessageClaimingPersister {
       ErrorDescription
     >,
     private readonly sponsorshipMetricsUpdater: ISponsorshipMetricsUpdater,
+    private readonly transactionMetricsUpdater: ITransactionMetricsUpdater,
     private readonly provider: IProvider<
       TransactionReceipt,
       Block,
@@ -199,6 +201,15 @@ export class MessageClaimingPersister implements IMessageClaimingPersister {
    * @param {TransactionReceipt} receipt - The receipt of the claim transaction.
    */
   private async updateReceiptStatus(message: Message, receipt: TransactionReceipt): Promise<void> {
+    let processingTimeInSeconds: number | undefined;
+    if (this.config.direction === Direction.L1_TO_L2 && message.claimTxCreationDate) {
+      const block = await this.provider.getBlock(receipt.blockNumber);
+      if (block) {
+        processingTimeInSeconds = block.timestamp - message.claimTxCreationDate.getTime() / 1_000;
+        this.transactionMetricsUpdater.addTransactionProcessingTime(processingTimeInSeconds);
+      }
+    }
+
     if (receipt.status === 0) {
       const isRateLimitExceeded = await this.messageServiceContract.isRateLimitExceededError(receipt.hash);
 
@@ -223,6 +234,7 @@ export class MessageClaimingPersister implements IMessageClaimingPersister {
         "Message claim transaction has been REVERTED: messageHash=%s transactionHash=%s",
         message.messageHash,
         receipt.hash,
+        { ...(processingTimeInSeconds ? { processingTimeInSeconds } : {}) },
       );
       return;
     }
@@ -230,16 +242,21 @@ export class MessageClaimingPersister implements IMessageClaimingPersister {
     message.edit({
       status: MessageStatus.CLAIMED_SUCCESS,
     });
+
     await this.databaseService.updateMessage(message);
-    if (message.isForSponsorship)
+
+    if (message.isForSponsorship) {
       await this.sponsorshipMetricsUpdater.incrementSponsorshipFeePaid(
         BigInt(receipt.gasPrice) * BigInt(receipt.gasUsed),
         message.direction,
       );
+    }
+
     this.logger.info(
       "Message has been SUCCESSFULLY claimed: messageHash=%s transactionHash=%s",
       message.messageHash,
       receipt.hash,
+      { ...(processingTimeInSeconds ? { processingTimeInSeconds } : {}) },
     );
   }
 }

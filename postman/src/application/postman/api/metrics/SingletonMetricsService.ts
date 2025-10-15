@@ -1,4 +1,12 @@
-import { Counter, Gauge, MetricObjectWithValues, MetricValue, Registry } from "prom-client";
+import {
+  Counter,
+  Gauge,
+  Histogram,
+  MetricObjectWithValues,
+  MetricValue,
+  MetricValueWithName,
+  Registry,
+} from "prom-client";
 import { IMetricsService, LineaPostmanMetrics } from "../../../../core/metrics/IMetricsService";
 
 /**
@@ -12,6 +20,7 @@ export class SingletonMetricsService implements IMetricsService {
   private readonly registry: Registry;
   private readonly counters: Map<LineaPostmanMetrics, Counter<string>>;
   private readonly gauges: Map<LineaPostmanMetrics, Gauge<string>>;
+  private readonly histograms: Map<string, Histogram<string>>;
 
   constructor() {
     this.registry = new Registry();
@@ -19,6 +28,7 @@ export class SingletonMetricsService implements IMetricsService {
 
     this.counters = new Map();
     this.gauges = new Map();
+    this.histograms = new Map();
   }
 
   /**
@@ -168,5 +178,63 @@ export class SingletonMetricsService implements IMetricsService {
     };
     matchingMetricObjects.forEach((m) => (mergedMetricObject.value += m.value));
     return mergedMetricObject;
+  }
+
+  /**
+   * Creates histogram metric
+   * @param name - Name of the metric
+   * @param buckets - Buckets for the histogram
+   * @param help - Help text for the metric
+   * @param labelNames - Array of label names for the metric
+   * @returns Histogram metric
+   */
+  public createHistogram(
+    name: LineaPostmanMetrics,
+    buckets: number[],
+    help: string,
+    labelNames: string[] = [],
+  ): Histogram<string> {
+    if (!this.histograms.has(name)) {
+      this.histograms.set(
+        name,
+        new Histogram({
+          name,
+          help,
+          labelNames,
+          buckets,
+          registers: [this.registry],
+        }),
+      );
+    }
+    return this.histograms.get(name) as Histogram<string>;
+  }
+
+  /**
+   * Get histogram metric values
+   * @param name - Name of the metric
+   * @returns Values of the histogram metric
+   */
+  public async getHistogramMetricsValues(
+    name: LineaPostmanMetrics,
+  ): Promise<MetricObjectWithValues<MetricValueWithName<string>> | undefined> {
+    const histogram = this.histograms.get(name);
+
+    if (histogram === undefined) {
+      return undefined;
+    }
+    return await histogram.get();
+  }
+
+  /**
+   * Adds a value to a histogram metric
+   * @param name - Name of the metric
+   * @param value - Value to add to the histogram
+   * @param labels - Labels for the metric
+   */
+  public addValueToHistogram(name: LineaPostmanMetrics, value: number, labels: Record<string, string> = {}): void {
+    const histogram = this.histograms.get(name);
+    if (histogram !== undefined) {
+      histogram.observe(labels, value);
+    }
   }
 }

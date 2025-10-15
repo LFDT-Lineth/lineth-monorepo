@@ -21,7 +21,7 @@ import { IMessageClaimingPersister } from "../../../core/services/processors/IMe
 import { MessageClaimingPersister } from "../MessageClaimingPersister";
 import { EthereumMessageDBService } from "../../persistence/EthereumMessageDBService";
 import { IProvider } from "../../../core/clients/blockchain/IProvider";
-import { ISponsorshipMetricsUpdater } from "postman/src/core/metrics";
+import { ISponsorshipMetricsUpdater, ITransactionMetricsUpdater } from "../../../../src/core/metrics";
 
 describe("TestMessageClaimingPersister ", () => {
   let messageClaimingPersister: IMessageClaimingPersister;
@@ -38,6 +38,7 @@ describe("TestMessageClaimingPersister ", () => {
       IGasProvider<TransactionRequest>
   >();
   const sponsorshipMetricsUpdater = mock<ISponsorshipMetricsUpdater>();
+  const transactionMetricsUpdater = mock<ITransactionMetricsUpdater>();
   const provider =
     mock<IProvider<TransactionReceipt, Block, TransactionRequest, TransactionResponse, JsonRpcProvider>>();
   const logger = new TestLogger(MessageClaimingPersister.name);
@@ -47,6 +48,7 @@ describe("TestMessageClaimingPersister ", () => {
       databaseService,
       l2MessageServiceContractMock,
       sponsorshipMetricsUpdater,
+      transactionMetricsUpdater,
       provider,
       {
         direction: Direction.L1_TO_L2,
@@ -210,6 +212,7 @@ describe("TestMessageClaimingPersister ", () => {
         "Message has been SUCCESSFULLY claimed: messageHash=%s transactionHash=%s",
         expectedSavedMessage.messageHash,
         expectedSavedMessage.claimTxHash,
+        {},
       );
     });
 
@@ -257,6 +260,7 @@ describe("TestMessageClaimingPersister ", () => {
         "Message claim transaction has been REVERTED: messageHash=%s transactionHash=%s",
         expectedSavedMessage.messageHash,
         expectedSavedMessage.claimTxHash,
+        {},
       );
     });
 
@@ -434,6 +438,7 @@ describe("TestMessageClaimingPersister ", () => {
         databaseService,
         l2MessageServiceContractMock,
         sponsorshipMetricsUpdater,
+        transactionMetricsUpdater,
         provider,
         {
           direction: Direction.L1_TO_L2,

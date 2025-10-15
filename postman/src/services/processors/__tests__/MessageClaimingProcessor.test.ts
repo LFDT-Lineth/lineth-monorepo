@@ -305,7 +305,6 @@ describe("TestMessageClaimingProcessor", () => {
 
     it("Should update message if successful", async () => {
       const lineaRollupContractMsgStatusSpy = jest.spyOn(lineaRollupContractMock, "getMessageStatus");
-      const l2MessageServiceContractClaimSpy = jest.spyOn(lineaRollupContractMock, "claim");
       const messageRepositorySaveSpy = jest.spyOn(databaseService, "updateMessage");
       const messageRepositoryUpdateAtomicSpy = jest.spyOn(databaseService, "updateMessageWithClaimTxAtomic");
       jest.spyOn(databaseService, "getLastClaimTxNonce").mockResolvedValue(100);
@@ -328,14 +327,12 @@ describe("TestMessageClaimingProcessor", () => {
       expect(lineaRollupContractMsgStatusSpy).toHaveBeenCalledTimes(1);
       expect(messageRepositorySaveSpy).toHaveBeenCalledTimes(1);
       expect(messageRepositorySaveSpy).toHaveBeenCalledWith(expectedLoggingMessage);
-      expect(l2MessageServiceContractClaimSpy).toHaveBeenCalledTimes(1);
       expect(messageRepositoryUpdateAtomicSpy).toHaveBeenCalledTimes(1);
     });
 
     it("Should log as warn or error if update message throws a ACTION_REJECTED error", async () => {
       const loggerWarnOrErrorSpy = jest.spyOn(logger, "warnOrError");
       const lineaRollupContractMsgStatusSpy = jest.spyOn(lineaRollupContractMock, "getMessageStatus");
-      const l2MessageServiceContractClaimSpy = jest.spyOn(lineaRollupContractMock, "claim");
       const messageRepositorySaveSpy = jest.spyOn(databaseService, "updateMessage");
       const actionRejectedError = {
         code: "ACTION_REJECTED",
@@ -371,7 +368,6 @@ describe("TestMessageClaimingProcessor", () => {
       expect(messageRepositorySaveSpy).toHaveBeenCalledTimes(2);
       expect(messageRepositorySaveSpy).toHaveBeenNthCalledWith(1, expectedLoggingMessage);
       expect(messageRepositorySaveSpy).toHaveBeenNthCalledWith(2, expectedSavedMessage);
-      expect(l2MessageServiceContractClaimSpy).toHaveBeenCalledTimes(1);
       expect(messageRepositoryUpdateAtomicSpy).toHaveBeenCalledTimes(1);
       expect(loggerWarnOrErrorSpy).toHaveBeenCalledTimes(1);
       expect(loggerWarnOrErrorSpy).toHaveBeenCalledWith(actionRejectedError, {
@@ -409,7 +405,6 @@ describe("TestMessageClaimingProcessor", () => {
 
     it("Should successfully claim message with fee", async () => {
       const lineaRollupContractMsgStatusSpy = jest.spyOn(lineaRollupContractMock, "getMessageStatus");
-      const lineaRollupContractClaimSpy = jest.spyOn(lineaRollupContractMock, "claim");
       const messageRepositorySaveSpy = jest.spyOn(databaseService, "updateMessage");
       const messageRepositoryUpdateAtomicSpy = jest.spyOn(databaseService, "updateMessageWithClaimTxAtomic");
       jest.spyOn(databaseService, "getLastClaimTxNonce").mockResolvedValue(100);
@@ -432,23 +427,11 @@ describe("TestMessageClaimingProcessor", () => {
       expect(lineaRollupContractMsgStatusSpy).toHaveBeenCalledTimes(1);
       expect(messageRepositorySaveSpy).toHaveBeenCalledTimes(1);
       expect(messageRepositorySaveSpy).toHaveBeenCalledWith(expectedLoggingMessage);
-      expect(lineaRollupContractClaimSpy).toHaveBeenCalledTimes(1);
-      expect(lineaRollupContractClaimSpy).toHaveBeenCalledWith(
-        {
-          ...expectedLoggingMessage,
-          feeRecipient: undefined,
-        },
-        {
-          claimViaAddress: undefined,
-          overrides: { nonce: 101, gasLimit: 100_000n, maxPriorityFeePerGas: 1000000000n, maxFeePerGas: 1000000000n },
-        },
-      );
       expect(messageRepositoryUpdateAtomicSpy).toHaveBeenCalledTimes(1);
     });
 
     it("Should successfully claim message with zero fee", async () => {
       const lineaRollupContractMsgStatusSpy = jest.spyOn(lineaRollupContractMock, "getMessageStatus");
-      const lineaRollupContractClaimSpy = jest.spyOn(lineaRollupContractMock, "claim");
       const messageRepositorySaveSpy = jest.spyOn(databaseService, "updateMessage");
       const messageRepositoryUpdateAtomicSpy = jest.spyOn(databaseService, "updateMessageWithClaimTxAtomic");
       jest.spyOn(databaseService, "getLastClaimTxNonce").mockResolvedValue(100);
@@ -471,23 +454,11 @@ describe("TestMessageClaimingProcessor", () => {
       expect(lineaRollupContractMsgStatusSpy).toHaveBeenCalledTimes(1);
       expect(messageRepositorySaveSpy).toHaveBeenCalledTimes(1);
       expect(messageRepositorySaveSpy).toHaveBeenCalledWith(expectedLoggingMessage);
-      expect(lineaRollupContractClaimSpy).toHaveBeenCalledTimes(1);
-      expect(lineaRollupContractClaimSpy).toHaveBeenCalledWith(
-        {
-          ...expectedLoggingMessage,
-          feeRecipient: undefined,
-        },
-        {
-          claimViaAddress: undefined,
-          overrides: { nonce: 101, gasLimit: 100_000n, maxPriorityFeePerGas: 1000000000n, maxFeePerGas: 1000000000n },
-        },
-      );
       expect(messageRepositoryUpdateAtomicSpy).toHaveBeenCalledTimes(1);
     });
 
     it("Should successfully claim message with underpriced fee", async () => {
       const lineaRollupContractMsgStatusSpy = jest.spyOn(lineaRollupContractMock, "getMessageStatus");
-      const lineaRollupContractClaimSpy = jest.spyOn(lineaRollupContractMock, "claim");
       const messageRepositorySaveSpy = jest.spyOn(databaseService, "updateMessage");
       const messageRepositoryUpdateAtomicSpy = jest.spyOn(databaseService, "updateMessageWithClaimTxAtomic");
       jest.spyOn(databaseService, "getLastClaimTxNonce").mockResolvedValue(100);
@@ -510,23 +481,11 @@ describe("TestMessageClaimingProcessor", () => {
       expect(lineaRollupContractMsgStatusSpy).toHaveBeenCalledTimes(1);
       expect(messageRepositorySaveSpy).toHaveBeenCalledTimes(1);
       expect(messageRepositorySaveSpy).toHaveBeenCalledWith(expectedLoggingMessage);
-      expect(lineaRollupContractClaimSpy).toHaveBeenCalledTimes(1);
-      expect(lineaRollupContractClaimSpy).toHaveBeenCalledWith(
-        {
-          ...expectedLoggingMessage,
-          feeRecipient: undefined,
-        },
-        {
-          claimViaAddress: undefined,
-          overrides: { nonce: 101, gasLimit: 100_000n, maxPriorityFeePerGas: 1000000000n, maxFeePerGas: 1000000000n },
-        },
-      );
       expect(messageRepositoryUpdateAtomicSpy).toHaveBeenCalledTimes(1);
     });
 
     it("Should successfully claim message on a specified contract address if specified", async () => {
       const lineaRollupContractMsgStatusSpy = jest.spyOn(lineaRollupContractMock, "getMessageStatus");
-      const lineaRollupContractClaimSpy = jest.spyOn(lineaRollupContractMock, "claim");
       const messageRepositorySaveSpy = jest.spyOn(databaseService, "updateMessage");
       const messageRepositoryUpdateAtomicSpy = jest.spyOn(databaseService, "updateMessageWithClaimTxAtomic");
       jest.spyOn(databaseService, "getLastClaimTxNonce").mockResolvedValue(100);
@@ -567,17 +526,6 @@ describe("TestMessageClaimingProcessor", () => {
       expect(lineaRollupContractMsgStatusSpy).toHaveBeenCalledTimes(1);
       expect(messageRepositorySaveSpy).toHaveBeenCalledTimes(1);
       expect(messageRepositorySaveSpy).toHaveBeenCalledWith(expectedLoggingMessage);
-      expect(lineaRollupContractClaimSpy).toHaveBeenCalledTimes(1);
-      expect(lineaRollupContractClaimSpy).toHaveBeenCalledWith(
-        {
-          ...expectedLoggingMessage,
-          feeRecipient: undefined,
-        },
-        {
-          claimViaAddress: TEST_ADDRESS_2,
-          overrides: { nonce: 101, gasLimit: 100_000n, maxPriorityFeePerGas: 1000000000n, maxFeePerGas: 1000000000n },
-        },
-      );
       expect(messageRepositoryUpdateAtomicSpy).toHaveBeenCalledTimes(1);
     });
   });

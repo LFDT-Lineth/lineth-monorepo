@@ -1,4 +1,4 @@
-import { Counter, Gauge, Registry } from "prom-client";
+import { Counter, Gauge, Histogram, MetricObjectWithValues, MetricValueWithName, Registry } from "prom-client";
 
 export enum LineaPostmanMetrics {
   Messages = "linea_postman_messages",
@@ -19,6 +19,8 @@ export enum LineaPostmanMetrics {
    */
   SponsorshipFeesWei = "linea_postman_sponsorship_fees_wei_total", // Represent up to ~9_007_199 GWEI
   SponsorshipFeesGwei = "linea_postman_sponsorship_fees_gwei_total", // Represent up to ~9_007_199 ETH
+
+  TransactionProcessingTime = "linea_postman_l2_transaction_tx_processing_time",
 }
 
 export interface IMetricsService {
@@ -30,4 +32,9 @@ export interface IMetricsService {
   decrementGauge(name: LineaPostmanMetrics, labels?: Record<string, string>, value?: number): void;
   getGaugeValue(name: LineaPostmanMetrics, labels: Record<string, string>): Promise<number | undefined>;
   getCounterValue(name: LineaPostmanMetrics, labels: Record<string, string>): Promise<number | undefined>;
+  createHistogram(name: LineaPostmanMetrics, buckets: number[], help: string, labelNames?: string[]): Histogram<string>;
+  addValueToHistogram(name: LineaPostmanMetrics, value: number, labels?: Record<string, string>): void;
+  getHistogramMetricsValues(
+    name: LineaPostmanMetrics,
+  ): Promise<MetricObjectWithValues<MetricValueWithName<string>> | undefined>;
 }

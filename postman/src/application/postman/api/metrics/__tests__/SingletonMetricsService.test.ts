@@ -1,4 +1,4 @@
-import { Counter, Gauge } from "prom-client";
+import { Counter, Gauge, Histogram } from "prom-client";
 import { IMetricsService, LineaPostmanMetrics } from "../../../../../core/metrics/IMetricsService";
 import { SingletonMetricsService } from "../SingletonMetricsService";
 
@@ -50,5 +50,28 @@ describe("SingletonMetricsService", () => {
     metricService.incrementGauge(LineaPostmanMetrics.Messages, {}, 10);
     const gaugeValue = await metricService.getGaugeValue(LineaPostmanMetrics.Messages, {});
     expect(gaugeValue).toBe(10);
+  });
+
+  it("should create a histogram and add values", async () => {
+    const histogram = metricService.createHistogram(
+      LineaPostmanMetrics.TransactionProcessingTime,
+      [0.1, 0.5, 1, 2, 3, 5],
+      "A test histogram",
+    );
+    expect(histogram).toBeInstanceOf(Histogram);
+  });
+
+  it("should add values to histogram and retrieve them", async () => {
+    metricService.createHistogram(
+      LineaPostmanMetrics.TransactionProcessingTime,
+      [0.1, 0.5, 1, 2, 3, 5],
+      "A test histogram",
+    );
+    metricService.addValueToHistogram(LineaPostmanMetrics.TransactionProcessingTime, 0.3);
+    metricService.addValueToHistogram(LineaPostmanMetrics.TransactionProcessingTime, 1.5);
+    const histogramValues = await metricService.getHistogramMetricsValues(
+      LineaPostmanMetrics.TransactionProcessingTime,
+    );
+    expect(histogramValues?.values.length).toBe(9);
   });
 });
