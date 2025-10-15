@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="INFO" monitorInterval="2">
+  <Appenders>
+    <Console name="Console" target="SYSTEM_OUT">
+      <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSSZZZ} | %t | %-5level | %c{1} | %msg %throwable%n" />
+    </Console>
+  </Appenders>
+  <Loggers>
+    <!-- edit the package name/level below to add more logging to specific classes -->
+    <!-- no need to restart Besu as it will detect changes every 2s -->
+    <Logger name="org.hyperledger.besu" level="INFO" />
+    <!-- to avoid annoying message "INFO ... No sync target, waiting for peers. Current peers: 0" change to WARN-->
+    <Logger name="org.hyperledger.besu.ethereum.eth.sync.fullsync.FullSyncTargetManager" level="INFO" />
+    <Logger name="org.hyperledger.besu.ethereum.blockcreation" level="INFO" />
+    <Logger name="org.hyperledger.besu.consensus.merge.blockcreation" level="INFO" />
+    <Logger name="io.opentelemetry" level="WARN" />
+    <Logger name="net.consensys.linea.bl.TransactionProfitabilityCalculator" level="INFO" />
+    <Logger name="net.consensys.linea.sequencer.txselection" level="INFO" />
+    <Logger name="net.consensys.linea.sequencer.liveness" level="INFO" />
+    <Logger name="net.consensys.linea.sequencer.txselection.selectors" level="INFO" />
+    <Logger name="org.hyperledger.besu.ethereum.eth.transactions.TransactionPool" level="INFO" />
+    <Logger name="org.hyperledger.besu.ethereum.api.jsonrpc" level="INFO" />
+    <Logger name="org.hyperledger.besu.ethereum.api.jsonrpc.internal.methods.EthSendRawTransaction" level="DEBUG" />
+    <Logger name="org.hyperledger.besu.ethereum.api.jsonrpc.internal.methods.engine.AbstractEngineNewPayload" level="INFO" />
+    <Logger name="org.hyperledger.besu.ethereum.blockcreation.txselection.BlockTransactionSelector" level="INFO" >
+      <Filters>
+        <LevelRangeFilter maxLevel="DEBUG" onMatch="ACCEPT" onMismatch="NEUTRAL" />
+        <RegexFilter regex="Transaction selection result .*" useRawMsg="true" onMatch="ACCEPT" onMismatch="DENY" />
+      </Filters>
+    </Logger>
+    <Root level="WARN">
+      <AppenderRef ref="Console"/>
+    </Root>
+  </Loggers>
+</Configuration>

@@ -23,11 +23,9 @@ volumes:
 services:
   # Besu node (Execution Layer for Maru)
   besu-node:
-    hostname: linea-besu
+    hostname: el-client
     container_name: linea-besu
     image: consensys/linea-besu-package:beta-v4.0-rc12-20251013164107-7e24ef4
-
-    platform: linux/amd64
     healthcheck:
       test: ["CMD-SHELL", "bash -c '[ -f /tmp/pid ]'"]
       interval: 1s
@@ -50,12 +48,12 @@ services:
       - --Xrpc-ipc-enabled=true
       - --static-nodes-file=/var/lib/besu/static-nodes.json
     volumes:
-      - ./datadir:/data
-      - ./linea-besu.config.toml:/var/lib/besu/linea-besu.config.toml:ro
-      - ./besu-genesis.json:/var/lib/besu/genesis.json:ro
-      - ../config/linea-besu-sequencer/log4j.xml:/var/lib/besu/log4j.xml
-      - ./static-nodes.json:/var/lib/besu/static-nodes.json
-      - linea-sepolia-besu:/data
+      - ./besu/linea-besu.config.toml:/var/lib/besu/linea-besu.config.toml:ro
+      - ./besu/besu-genesis.json:/var/lib/besu/genesis.json:ro
+      - ./besu/log4j.xml:/var/lib/besu/log4j.xml
+      - ./execution-layer-static-nodes.json:/var/lib/besu/static-nodes.json:ro
+      - ./engine-jwt:/var/lib/besu/jwt:ro
+      - linea-sepolia-besu:/opt/besu
 
   # Maru Consensus Layer
   maru-node:
@@ -71,10 +69,10 @@ services:
     environment:
       - JAVA_OPTS=-Xmx2g
     volumes:
-      - ./maru/config/maru-config.toml:/opt/consensys/maru/configs/maru-config.toml:ro
-      - ./maru/config/maru-genesis.json:/opt/consensys/maru/configs/maru-genesis.json:ro
-      - ./maru/config/log4j.xml:/opt/consensys/maru/configs/log4j.xml:ro
-      - ./jwt.hex/jwt:/opt/consensys/maru/configs/jwt.hex:ro
+      - ./maru/maru-config.toml:/opt/consensys/maru/configs/maru-config.toml:ro
+      - ./maru/maru-genesis.json:/opt/consensys/maru/configs/maru-genesis.json:ro
+      - ./maru/log4j.xml:/opt/consensys/maru/configs/log4j.xml:ro
+      - ./engine-jwt:/opt/consensys/maru/configs/jwt:ro
       - linea-sepolia-maru:/opt/maru
     command:
       - "java"
@@ -93,12 +91,12 @@ services:
       - init
       - /genesis.json
     volumes:
-      - ./genesis.json:/genesis.json:ro
+      - ./geth/geth-genesis.json:/genesis.json:ro
       - linea-sepolia-geth:/root/.ethereum
 
   # Geth node
   geth-node:
-    hostname: geth-node
+    hostname: el-client
     container_name: geth-node
     image: ethereum/client-go:v1.16.4
     pull_policy: always
@@ -122,7 +120,7 @@ services:
       - --authrpc.addr=0.0.0.0
       - --authrpc.port=8550
       - --authrpc.vhosts=*
-      - --authrpc.jwtsecret=/root/.ethereum/jwt.hex/jwt
+      - --authrpc.jwtsecret=/root/.ethereum/jwt
     ports:
       - 30303:30303
       - 30303:30303/udp
@@ -130,9 +128,9 @@ services:
       - 8546:8546
       - 8550:8550
     volumes:
-      - ./genesis.json:/genesis.json:ro
-      - ./static-nodes.json:/root/.ethereum/static-nodes.json:ro # Loaded automatically by Geth if present
-      - ./jwt.hex:/root/.ethereum/jwt.hex:ro
+      - ./geth/geth-genesis.json:/genesis.json:ro
+      - ./engine-jwt:/root/.ethereum/jwt:ro
+      - ./execution-layer-static-nodes.json:/root/.ethereum/static-nodes.json:ro # Loaded automatically by Geth if present
       - linea-sepolia-geth:/root/.ethereum
 
   # Erigon initialization
@@ -180,7 +178,7 @@ services:
     container_name: nethermind-node
     image: nethermind/nethermind:1.32.4
     restart: unless-stopped
-    command: 
+    command:
       - --datadir /nethermind/nethermind_db
       - --config linea-sepolia
       - --JsonRpc.Enabled=true

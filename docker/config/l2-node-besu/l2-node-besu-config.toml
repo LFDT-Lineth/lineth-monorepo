@@ -60,10 +60,12 @@ plugin-linea-bundles-forward-retry-delay=1000
 plugin-linea-bundles-forward-timeout=5000
 plugin-linea-limitless-enabled=false
 
-bonsai-limit-trie-logs-enabled=false
-bonsai-historical-block-limit=1024
-
 Xin-process-rpc-enabled=true
 Xin-process-rpc-apis=["ETH", "MINER"]
 
+cache-last-block-headers-preload-enabled=true
+cache-last-block-headers=50
+
+bonsai-limit-trie-logs-enabled=false
+bonsai-historical-block-limit=1024
 bonsai-parallel-tx-processing-enabled=false

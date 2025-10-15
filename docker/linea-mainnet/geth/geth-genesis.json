@@ -11,9 +11,15 @@
     "istanbulBlock": 0,
     "berlinBlock": 0,
     "londonBlock": 0,
+    "terminalTotalDifficulty": 49575263,
+    "shanghaiTime": 1761213600,
+    "depositContractAddress": "0x94d4a7449B968b839dcbc64A61F195CA300986ae",
+    "withdrawalRequestContractAddress": "0x66355689a9f067eeb9dc9d899E4192676988279C",
+    "consolidationRequestContractAddress": "0xF0e003F0dE2d583Ae28FA8cBF66aa096CdAce3ff",
     "clique": {
-      "blockperiodseconds":1,
-      "epochlength":30000
+      "createemptyblocks": true,
+      "period": 1,
+      "epoch": 30000
     }
   },
   "nonce": "0x0",
@@ -804,4 +810,3 @@
   "gasUsed": "0x0",
   "parentHash": "0x0000000000000000000000000000000000000000000000000000000000000000"
 }
-

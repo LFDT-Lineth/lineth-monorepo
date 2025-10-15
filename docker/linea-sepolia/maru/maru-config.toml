@@ -1,0 +1,52 @@
+# Uncomment the below [linea] section for finalized L2 block tag
+# [linea]
+# contract-address = "0xB218f8A4Bc926cF1cA7b3423c154a0D627Bdb7E5"
+# l1-eth-api = { endpoint = "please provide an L1 RPC endpoint here" }
+# l1-polling-interval = "6 seconds"
+# l1-highest-block-tag = "finalized"
+
+[persistence]
+data-path = "/opt/maru/data"
+private-key-path = "/opt/maru/private-key"
+
+[p2p]
+port = 9000  # Default port (can be same as discovery)
+ip-address = "0.0.0.0"
+static-peers = [
+  "/ip4/3.129.120.128/tcp/31005/p2p/16Uiu2HAmR33t8RZiAHovuH9iH2UuUrajrbfyYowiYDAQo3D5Y9wg",
+  "/ip4/3.129.120.128/tcp/31006/p2p/16Uiu2HAm9HB5oNmnmj8yY6T7dfhLVidVzYqa8QVDtEthkMr6b8tx"
+]
+reconnect-delay = "500ms"
+
+[p2p.discovery]
+port = 9000
+bootnodes = []
+refresh-interval = "3s"
+
+[payload-validator]
+# Besu and Geth node as execution layer client
+engine-api-endpoint = { endpoint = "http://el-client:8550", jwt-secret-path = "/opt/consensys/maru/configs/jwt" }
+eth-api-endpoint = { endpoint = "http://el-client:8545" }
+payload-validation-enabled = false
+
+[observability]
+port = 9090
+jvm-metrics-enabled = true
+prometheus-metrics-enabled = true
+
+[api]
+port = 8080
+
+[syncing]
+peer-chain-height-polling-interval = "5s"
+el-sync-status-refresh-interval = "5s"
+sync-target-selection = "Highest"
+desync-tolerance = 0
+
+[syncing.download]
+block-range-request-timeout = "10s"
+blocks-batch-size = 10
+blocks-parallelism = 10
+max-retries = 5
+backoff-delay = "1s"
+use-unconditional-random-download-peer = false

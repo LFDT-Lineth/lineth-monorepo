@@ -40,11 +40,13 @@ metrics-host="0.0.0.0"
 metrics-port=9545
 
 tx-pool-no-local-priority=false
-#
-api-gas-and-priority-fee-limiting-enabled=false
-api-gas-and-priority-fee-lower-bound-coefficient=120
-api-gas-and-priority-fee-upper-bound-coefficient=300
-poa-block-txs-selection-max-time=1000
+# tx-pool-enable-balance-check=true # this would make e2e test fail to deploy L2 contracts
+poa-block-txs-selection-max-time=80
+block-txs-selection-max-time=800
+# plugin-block-txs-selection-max-time=50 #default as 50 which means 400ms
+
+cache-last-block-headers-preload-enabled=true
+cache-last-block-headers=50
 
 # plugins
 plugins=["LineaEstimateGasEndpointPlugin","LineaL1FinalizationTagUpdaterPlugin","LineaExtraDataPlugin","LineaTransactionPoolValidatorPlugin","LineaBundleEndpointsPlugin","LineaSetExtraDataEndpointPlugin","LineaTransactionSelectorPlugin"]

@@ -38,4 +38,7 @@ data-storage-format="BONSAI"
 
 plugins=["BesuShomeiRpcPlugin", "ZkTrieLogPlugin"]
 
+cache-last-block-headers-preload-enabled=true
+cache-last-block-headers=50
+
 bonsai-parallel-tx-processing-enabled=false

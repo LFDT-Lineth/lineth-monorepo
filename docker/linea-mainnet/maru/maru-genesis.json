@@ -1,0 +1,20 @@
+{
+  "chainId": 59144,
+  "config": {
+    "0": {
+      "type": "difficultyAwareQbft",
+      "blockTimeSeconds": 1,
+      "postTtdConfig": {
+        "validatorSet": ["0xc9fc165457b74f958af2858e51a2b0d7d7ecb762"],
+        "elFork": "Paris"
+      },
+      "terminalTotalDifficulty": 49575263
+    },
+    "1761213600": {
+      "type": "qbft",
+      "validatorSet": ["0xc9fc165457b74f958af2858e51a2b0d7d7ecb762"],
+      "blockTimeSeconds": 1,
+      "elFork": "Shanghai"
+    }
+  }
+}
