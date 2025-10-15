@@ -1,12 +1,13 @@
 import { watchAccount } from "@wagmi/core";
 import { useEffect } from "react";
 import { useChainStore } from "@/stores";
-import { config as wagmiConfig } from "@/lib/wagmi";
 import useChains from "./useChains";
 import { Chain } from "@/types";
 import { isUndefined } from "@/utils";
+import { useConfig } from "wagmi";
 
 const useInitialiseChain = () => {
+  const wagmiConfig = useConfig();
   const chains = useChains();
   const setFromChain = useChainStore.useSetFromChain();
   const setToChain = useChainStore.useSetToChain();

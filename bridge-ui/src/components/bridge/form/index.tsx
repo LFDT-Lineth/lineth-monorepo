@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useAccount } from "wagmi";
-import { useDynamicEvents } from "@dynamic-labs/sdk-react-core";
 import FaqHelp from "@/components/bridge/faq-help";
 import TokenList from "@/components/bridge/token-list";
 import { Amount } from "@/components/bridge/amount";
@@ -22,7 +21,7 @@ export default function BridgeForm() {
   const setIsTransactionHistoryOpen = useNativeBridgeNavigationStore.useSetIsTransactionHistoryOpen();
   const setIsBridgeOpen = useNativeBridgeNavigationStore.useSetIsBridgeOpen();
 
-  const { address } = useAccount();
+  const { isConnected, address } = useAccount();
   const fromChain = useChainStore.useFromChain();
   const token = useFormStore((state) => state.token);
   const setRecipient = useFormStore((state) => state.setRecipient);
@@ -36,10 +35,13 @@ export default function BridgeForm() {
     refetch();
   }, [refetch, token]);
 
-  useDynamicEvents("logout", async () => {
-    resetForm();
-    setIsDestinationAddressOpen(false);
-  });
+  useEffect(() => {
+    if (!isConnected) {
+      resetForm();
+      setIsDestinationAddressOpen(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isConnected]);
 
   useEffect(() => {
     setBalance(balance);

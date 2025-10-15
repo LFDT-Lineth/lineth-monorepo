@@ -64,14 +64,16 @@ export function middleware(request: NextRequest) {
    */
   const cspHeader = `
     default-src 'self';
-    script-src 'self' ${unsafeScript} ${browserSpecificHeader} https://widget.intercom.io/widget/h5zisg78 https://ajax.cloudflare.com https://js.intercomcdn.com;
-    style-src 'self' 'unsafe-inline';
+    script-src 'self' ${unsafeScript} ${browserSpecificHeader} https://ajax.cloudflare.com https://js.hcaptcha.com;
+    style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
     img-src 'self' blob: data: https:;
-    font-src 'self' data: https://cdn.jsdelivr.net;
+    font-src 'self' data: https://cdn.jsdelivr.net https://fonts.gstatic.com;
     connect-src 'self' https: wss: ${localUrls};
     frame-src 'self'
-      https://*.walletconnect.com
-      https://buy.onramper.com/;
+      https://*.walletconnect.org
+      https://newassets.hcaptcha.com
+      https://buy.onramper.com/
+      https://*.web3auth.io;
     object-src 'none';
     base-uri 'self';
     form-action 'self';

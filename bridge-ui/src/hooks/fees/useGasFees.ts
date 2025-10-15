@@ -55,7 +55,7 @@ const useGasFees = ({ address, amount, fromChain, isConnected, token }: UseGasFe
     query: {
       enabled: !!transactionArgs && amount > 0n && !!fromAddress && !!isEnabled,
     },
-  });
+  } as any);
 
   if (isLoading) {
     return null;

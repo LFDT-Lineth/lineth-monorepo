@@ -13,7 +13,7 @@ const useBridge = () => {
   return {
     transactionType: transactionArgs?.type,
     refetchAllowance: transactionArgs?.refetchAllowance,
-    bridge: transactionArgs ? () => sendTransaction(transactionArgs.args) : undefined,
+    bridge: transactionArgs ? () => sendTransaction(transactionArgs.args as any) : undefined,
     isPending: isPending,
     isConfirming,
     isConfirmed,

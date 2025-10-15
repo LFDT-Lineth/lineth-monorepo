@@ -1,16 +1,15 @@
 import MessageTransmitterV2 from "@/abis/MessageTransmitterV2.json" assert { type: "json" };
-import { CctpAttestationMessage, Chain, TransactionStatus, CctpAttestationMessageStatus, CCTPMode } from "@/types";
-import { GetPublicClientReturnType } from "@wagmi/core";
+import { CctpAttestationMessage, CctpAttestationMessageStatus, CCTPMode, Chain, TransactionStatus } from "@/types";
+import { getPublicClient, GetPublicClientReturnType } from "@wagmi/core";
 import { fetchCctpAttestationByTxHash, reattestCctpV2PreFinalityMessage } from "@/services/cctp";
-import { getPublicClient } from "@wagmi/core";
-import { config as wagmiConfig } from "@/lib/wagmi";
 import {
-  CCTP_V2_MESSAGE_HEADER_LENGTH,
+  CCTP_MAX_FINALITY_THRESHOLD,
   CCTP_V2_EXPIRATION_BLOCK_LENGTH,
   CCTP_V2_EXPIRATION_BLOCK_OFFSET,
-  CCTP_MAX_FINALITY_THRESHOLD,
+  CCTP_V2_MESSAGE_HEADER_LENGTH,
 } from "@/constants";
 import { isUndefined } from "@/utils/utils";
+import { Config } from "wagmi";
 
 const isCctpNonceUsed = async (
   client: GetPublicClientReturnType,
@@ -45,6 +44,7 @@ export const getCctpTransactionStatus = async (
   toChain: Chain,
   cctpAttestationMessage: CctpAttestationMessage,
   nonce: string,
+  wagmiConfig: Config,
 ): Promise<TransactionStatus> => {
   const toChainClient = getPublicClient(wagmiConfig, {
     chainId: toChain.id,

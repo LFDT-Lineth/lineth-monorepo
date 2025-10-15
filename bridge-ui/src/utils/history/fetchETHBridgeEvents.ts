@@ -1,22 +1,22 @@
 import { Address, Client, Hex } from "viem";
 import { getPublicClient } from "@wagmi/core";
 import { getL1ToL2MessageStatus, getL2ToL1MessageStatus } from "@consensys/linea-sdk-viem";
-import { config as wagmiConfig } from "@/lib/wagmi";
 import { defaultTokensConfig, HistoryActionsForCompleteTxCaching } from "@/stores";
 import {
   BridgeTransaction,
   BridgeTransactionType,
   Chain,
   ChainLayer,
-  Token,
   MessageSentABIEvent,
   MessageSentLogEvent,
+  Token,
 } from "@/types";
 import { formatOnChainMessageStatus } from "./formatOnChainMessageStatus";
 import { isBlockTooOld } from "./isBlockTooOld";
 import { config } from "@/config";
 import { restoreFromTransactionCache } from "./restoreFromTransactionCache";
 import { saveToTransactionCache } from "./saveToTransactionCache";
+import { Config } from "wagmi";
 
 export async function fetchETHBridgeEvents(
   historyStoreActions: HistoryActionsForCompleteTxCaching,
@@ -24,12 +24,17 @@ export async function fetchETHBridgeEvents(
   fromChain: Chain,
   toChain: Chain,
   tokens: Token[],
+  wagmiConfig: Config,
 ): Promise<BridgeTransaction[]> {
   const transactionsMap = new Map<string, BridgeTransaction>();
 
   const originLayerClient = getPublicClient(wagmiConfig, {
     chainId: fromChain.id,
   });
+
+  if (!originLayerClient) {
+    throw new Error(`No public client for chain ${fromChain.name}`);
+  }
 
   const destinationLayerClient = getPublicClient(wagmiConfig, {
     chainId: toChain.id,

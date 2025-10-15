@@ -63,7 +63,7 @@ jobs:
           NEXT_PUBLIC_WALLET_CONNECT_ID: ${{ secrets.PUBLIC_WALLET_CONNECT_ID }}
           NEXT_PUBLIC_INFURA_ID: ${{ secrets.PUBLIC_BRIDGE_UI_INFURA_ID }}
           NEXT_PUBLIC_QUICKNODE_ID: ${{ secrets.PUBLIC_BRIDGE_UI_QUICKNODE_ID }}
-          NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID: ${{ secrets.PUBLIC_DYNAMIC_SANDBOX_ENVIRONMENT_ID }}
+          NEXT_PUBLIC_WEB3_AUTH_CLIENT_ID: ${{ secrets.NEXT_PUBLIC_WEB3_AUTH_TESTNET_CLIENT_ID }}
           NEXT_PUBLIC_LIFI_API_KEY: ${{ secrets.PUBLIC_LIFI_API_KEY }}
           NEXT_PUBLIC_LIFI_INTEGRATOR_NAME: ${{ secrets.PUBLIC_LIFI_INTEGRATOR_NAME }}
           NEXT_PUBLIC_ONRAMPER_API_KEY: ${{ secrets.PUBLIC_ONRAMPER_API_KEY }}
@@ -88,7 +88,7 @@ jobs:
           NEXT_PUBLIC_LIFI_API_KEY: "placeholder"
           NEXT_PUBLIC_LIFI_INTEGRATOR_NAME: "placeholder"
           NEXT_PUBLIC_WALLET_CONNECT_ID: "placeholder"
-          NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID: "placeholder"
+          NEXT_PUBLIC_WEB3_AUTH_CLIENT_ID: "placeholder"
           NEXT_PUBLIC_QUICKNODE_ID: "placeholder"
           NEXT_PUBLIC_E2E_TEST_MODE: false
 
@@ -144,7 +144,7 @@ jobs:
           # Do not run E2E tests in parallel. Especially blockchain tx where nonces can collide.
           CI: "true"
           DOTENV_CONFIG_PATH: ".env.test"
-          NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID: ${{ secrets.PUBLIC_DYNAMIC_SANDBOX_ENVIRONMENT_ID }}
+          NEXT_PUBLIC_WEB3_AUTH_CLIENT_ID: ${{ secrets.NEXT_PUBLIC_WEB3_AUTH_TESTNET_CLIENT_ID }}
 
       - name: Archive Playwright report
         uses: actions/upload-artifact@v4

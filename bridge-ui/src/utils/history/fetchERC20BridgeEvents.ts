@@ -5,15 +5,14 @@ import {
   getL2ToL1MessageStatus,
   getMessagesByTransactionHash,
 } from "@consensys/linea-sdk-viem";
-import { config as wagmiConfig } from "@/lib/wagmi";
 import {
   BridgeTransaction,
   BridgeTransactionType,
+  BridgingInitiatedV2ABIEvent,
+  BridgingInitiatedV2LogEvent,
   Chain,
   ChainLayer,
   Token,
-  BridgingInitiatedV2LogEvent,
-  BridgingInitiatedV2ABIEvent,
 } from "@/types";
 import { formatOnChainMessageStatus } from "./formatOnChainMessageStatus";
 import { HistoryActionsForCompleteTxCaching } from "@/stores";
@@ -22,6 +21,7 @@ import { isUndefined, isUndefinedOrNull } from "@/utils";
 import { config } from "@/config";
 import { restoreFromTransactionCache } from "./restoreFromTransactionCache";
 import { saveToTransactionCache } from "./saveToTransactionCache";
+import { Config } from "wagmi";
 
 export async function fetchERC20BridgeEvents(
   historyStoreActions: HistoryActionsForCompleteTxCaching,
@@ -29,12 +29,17 @@ export async function fetchERC20BridgeEvents(
   fromChain: Chain,
   toChain: Chain,
   tokens: Token[],
+  wagmiConfig: Config,
 ): Promise<BridgeTransaction[]> {
   const transactionsMap = new Map<string, BridgeTransaction>();
 
   const originLayerClient = getPublicClient(wagmiConfig, {
     chainId: fromChain.id,
   });
+
+  if (!originLayerClient) {
+    throw new Error(`No public client found for chain ID ${fromChain.id}`);
+  }
 
   const destinationLayerClient = getPublicClient(wagmiConfig, {
     chainId: toChain.id,

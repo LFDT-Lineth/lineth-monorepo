@@ -143,7 +143,7 @@ Make sure to set the`NEXT_PUBLIC_E2E_TEST_MODE=true` .env
 The config variables are:
 
 | Var                                           | Description                                    | Values                                                                                                    |
-| --------------------------------------------- | ---------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+|-----------------------------------------------|------------------------------------------------| --------------------------------------------------------------------------------------------------------- |
 | NEXT_PUBLIC_MAINNET_L1_TOKEN_BRIDGE           | Linea Token Bridge on Ethereum mainnet         | 0x051F1D88f0aF5763fB888eC4378b4D8B29ea3319                                                                |
 | NEXT_PUBLIC_MAINNET_LINEA_TOKEN_BRIDGE        | Linea Token Bridge on Linea mainnet            | 0x353012dc4a9A6cF55c941bADC267f82004A8ceB9                                                                |
 | NEXT_PUBLIC_MAINNET_L1_MESSAGE_SERVICE        | Linea Message Service on Ethereum mainnet      | 0xd19d4B5d358258f05D7B411E21A1460D11B0876F                                                                |
@@ -169,7 +169,7 @@ The config variables are:
 | NEXT_PUBLIC_WALLET_CONNECT_ID                 | Wallet Connect Api Key                         |                                                                                                           |
 | NEXT_PUBLIC_INFURA_ID                         | Infura API Key                                 |                                                                                                           |
 | NEXT_PUBLIC_STORAGE_MIN_VERSION               | Local storage version for reseting the storage | 1                                                                                                         |
-| NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID            | Dynamic.xyz API key                            |                                                                                                           |
+| NEXT_PUBLIC_WEB3_AUTH_CLIENT_ID               | Web3Auth client key                            |                                                                                                           |
 | NEXT_PUBLIC_QUICKNODE_ID                      | QuickNode API key                              |                                                                                                           |
 | NEXT_PUBLIC_LIFI_API_KEY                      | LiFi API key                                   |                                                                                                           |
 | NEXT_PUBLIC_ONRAMPER_API_KEY                  | OnRamper API key                               |                                                                                                           |

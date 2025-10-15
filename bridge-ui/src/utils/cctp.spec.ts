@@ -9,6 +9,8 @@ import {
   ChainLayer,
   TransactionStatus,
 } from "@/types";
+import { createConfig, http, mock } from "wagmi";
+import { lineaSepolia, sepolia } from "viem/chains";
 
 const { expect, describe } = test;
 
@@ -71,17 +73,6 @@ describe("getCctpTransactionStatus", () => {
     status: CctpAttestationMessageStatus.PENDING_CONFIRMATIONS,
   };
 
-  // Comment out because didn't find a use yet for test, but is a valid API response
-  // const cctpApiRespReady: CctpAttestationMessage = {
-  //   attestation:
-  //     "0x362dff8a6f0a2c55345242a652bc8bef85dd206d02660c606b34a1f89574c25a58918896870a036f3271da65a9bff30f87d65f50f212dda4a3034fb77d110f511b3d44e4f71c4cdbb53f4e1f6d3f6357b87d056722151259f00f7beaa5af3ee35d21e48a00f932ba0ea02b19f26cb9b5dcd328f491ea91cb6b9ad896f493abe9c91c",
-  //   message:
-  //     "0x00000001000000000000000baf75c4d910592bc593c34bf6eb89937b1326ad43d9e3cf45581512efcf3e7da70000000000000000000000008fe6b999dc680ccfdd5bf7eb0974218be2542daa0000000000000000000000008fe6b999dc680ccfdd5bf7eb0974218be2542daa0000000000000000000000000000000000000000000000000000000000000000000003e8000007d0000000010000000000000000000000001c7d4b196cb0c7b01d743fbc6116a902379c7238000000000000000000000000558d9534cac58f743a3a9e5382f77575a2595dcb000000000000000000000000000000000000000000000000000000000000c350000000000000000000000000558d9534cac58f743a3a9e5382f77575a2595dcb000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-  //   eventNonce: "0xaf75c4d910592bc593c34bf6eb89937b1326ad43d9e3cf45581512efcf3e7da7",
-  //   cctpVersion: 2,
-  //   status: CctpAttestationMessageStatus.COMPLETE,
-  // };
-
   const cctpApiRespNoExpiry: CctpAttestationMessage = {
     attestation:
       "0x06207a5ca18bc3860b5c546e8a18f6032180b3792ece47747774b9de14f62b717c51f439f0263b733b223e507a1aa0e56c823633dbb6931f864598f5c428237b1ca042a1555747bf4d7dac0b4184dad34dfed9be62ce978c18d619c8c537254a2e7b8331068215677ea900e02dd00ffee67fb61a93280c0eec789a52eb03f385b51c",
@@ -98,13 +89,31 @@ describe("getCctpTransactionStatus", () => {
   // Random nonce, should be unused
   const randomUnusedNonce = "0x97bce01d925f4152bbdc464a774bb8fcfd161557946b33930f0be0294e97eedf";
 
+  const wagmiConfig = createConfig({
+    chains: [lineaSepolia, sepolia],
+    connectors: [
+      mock({
+        accounts: ["0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"],
+      }),
+    ],
+    transports: {
+      [lineaSepolia.id]: http(),
+      [sepolia.id]: http(),
+    },
+  });
+
   test("should return PENDING for an empty message", async () => {
-    const resp = await getCctpTransactionStatus(toChainStub, cctpApiRespPending, cctpApiRespPending.eventNonce);
+    const resp = await getCctpTransactionStatus(
+      toChainStub,
+      cctpApiRespPending,
+      cctpApiRespPending.eventNonce,
+      wagmiConfig,
+    );
     expect(resp).toBe(TransactionStatus.PENDING);
   });
 
   test("should return COMPLETED for a used nonce", async () => {
-    const resp = await getCctpTransactionStatus(toChainStub, cctpApiRespNoExpiry, usedCctpNonce);
+    const resp = await getCctpTransactionStatus(toChainStub, cctpApiRespNoExpiry, usedCctpNonce, wagmiConfig);
     expect(resp).toBe(TransactionStatus.COMPLETED);
   });
 
@@ -114,7 +123,7 @@ describe("getCctpTransactionStatus", () => {
     // Chop off last character. Last 32-bytes of message should be expirationBlock as per https://developers.circle.com/stablecoins/message-format
     corruptedCctpApiResp.message = corruptedCctpApiResp.message.slice(0, -1) as `0x${string}`;
 
-    const resp = await getCctpTransactionStatus(toChainStub, corruptedCctpApiResp, randomUnusedNonce);
+    const resp = await getCctpTransactionStatus(toChainStub, corruptedCctpApiResp, randomUnusedNonce, wagmiConfig);
     expect(resp).toBe(TransactionStatus.PENDING);
   });
 
@@ -126,14 +135,14 @@ describe("getCctpTransactionStatus", () => {
     corruptedCctpApiResp.message = (corruptedCctpApiResp.message.slice(0, -64) +
       "ILLEGALILLEGALILLEGALILLEGALILLEGALILLEGALILLEGALILLEGALILLEGALI") as `0x${string}`;
 
-    const resp = await getCctpTransactionStatus(toChainStub, corruptedCctpApiResp, randomUnusedNonce);
+    const resp = await getCctpTransactionStatus(toChainStub, corruptedCctpApiResp, randomUnusedNonce, wagmiConfig);
     expect(resp).toBe(TransactionStatus.PENDING);
   });
 
   test("should return PENDING if i.) CCTP API response has pending status, ii.) message has no expiry and iii.) nonce unused", async () => {
     const stubbedCctpApiResp = { ...cctpApiRespNoExpiry };
     stubbedCctpApiResp.status = CctpAttestationMessageStatus.PENDING_CONFIRMATIONS;
-    const resp = await getCctpTransactionStatus(toChainStub, stubbedCctpApiResp, randomUnusedNonce);
+    const resp = await getCctpTransactionStatus(toChainStub, stubbedCctpApiResp, randomUnusedNonce, wagmiConfig);
     expect(resp).toBe(TransactionStatus.PENDING);
   });
 
@@ -141,7 +150,7 @@ describe("getCctpTransactionStatus", () => {
     const stubbedCctpApiResp = { ...cctpApiRespNoExpiry };
     stubbedCctpApiResp.status = CctpAttestationMessageStatus.COMPLETE;
 
-    const resp = await getCctpTransactionStatus(toChainStub, stubbedCctpApiResp, randomUnusedNonce);
+    const resp = await getCctpTransactionStatus(toChainStub, stubbedCctpApiResp, randomUnusedNonce, wagmiConfig);
     expect(resp).toBe(TransactionStatus.READY_TO_CLAIM);
   });
 
@@ -158,7 +167,7 @@ describe("getCctpTransactionStatus", () => {
       .post(/.*/) // Intercept all POST requests
       .reply(200, stubbedReattestApiResp);
 
-    const resp = await getCctpTransactionStatus(toChainStub, expiredCctpApiResp, randomUnusedNonce);
+    const resp = await getCctpTransactionStatus(toChainStub, expiredCctpApiResp, randomUnusedNonce, wagmiConfig);
     expect(resp).toBe(TransactionStatus.PENDING);
     // Assert we made a request to CCTP reattest API
     expect(interceptor.isDone()).toBe(true);

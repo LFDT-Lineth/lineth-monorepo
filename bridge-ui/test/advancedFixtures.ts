@@ -1,4 +1,4 @@
-import { metaMaskFixtures, getExtensionId } from "@synthetixio/synpress/playwright";
+import { getExtensionId, metaMaskFixtures } from "@synthetixio/synpress/playwright";
 import { Locator, Page } from "@playwright/test";
 import setup from "./wallet-setup/metamask.setup";
 import { getNativeBridgeTransactionsCountImpl, selectTokenAndWaitForBalance } from "./utils";
@@ -142,6 +142,11 @@ export const test = metaMaskFixtures(setup).extend<{
   connectMetamaskToDapp: async ({ page, metamask }, use) => {
     await use(async (account: string) => {
       await page.waitForLoadState("domcontentloaded", { timeout: PAGE_TIMEOUT });
+
+      await page.emulateMedia({ reducedMotion: "reduce" });
+      await page.addStyleTag({
+        content: `*,*::before,*::after { transition: none !important; animation: none !important }`,
+      });
 
       // Click Connect button
       const connectBtn = page.getByRole("button", { name: "Connect", exact: true }).first();

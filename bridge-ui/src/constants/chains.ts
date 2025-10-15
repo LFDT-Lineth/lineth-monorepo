@@ -112,7 +112,7 @@ export const CHAINS = [
 ] as const;
 
 export const E2E_TEST_CHAINS = [localL1Network, localL2Network] as const;
-const SOLANA_CHAIN = 1151111081099710 as const;
+export const SOLANA_CHAIN = 1151111081099710 as const;
 
 export const CHAINS_IDS = [...CHAINS.map((chain) => chain.id), SOLANA_CHAIN];
 

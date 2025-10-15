@@ -1,7 +1,7 @@
-import { Web3Provider } from "@/contexts/web3.context";
 import { QueryProvider } from "@/contexts/query.context";
 import { TokenStoreProvider } from "@/stores";
 import { getTokenConfig } from "@/services/tokenService";
+import { Web3Provider } from "@/contexts/Web3Provider";
 
 type ProvidersProps = {
   children: JSX.Element;
