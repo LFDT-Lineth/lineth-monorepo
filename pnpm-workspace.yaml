@@ -26,3 +26,24 @@ catalog:
   winston: 3.17.0
   yargs: 17.7.2
   viem: 2.31.3
+
+ignoredBuiltDependencies:
+  - "@arbitrum/nitro-contracts"
+  - "better-sqlite3"
+  - "bigint-buffer"
+  - "bufferutil"
+  - "es5-ext"
+  - "esbuild"
+  - "keccak"
+  - "koffi"
+  - "secp256k1"
+  - "sharp"
+  - "utf-8-validate"
+  - "web3"
+  - "web3-bzz"
+  - "web3-shh"
+  - "yarn"
+  - "tiny-secp256k1"
+
+onlyBuiltDependencies:
+  - "c-kzg"
