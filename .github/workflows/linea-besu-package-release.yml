@@ -33,6 +33,11 @@ on:
         required: false
         type: string
         default: ''
+      skip_push_image:
+        description: 'Type "true" to skip pushing image to dockerhub'
+        required: false
+        type: string
+        default: ''
 
 permissions:
   actions: read
@@ -75,7 +80,7 @@ jobs:
       release_tag_prefix: ${{ inputs.release_tag_prefix }}
       run_test: true
       run_e2e_test: ${{ github.event_name == 'workflow_dispatch' || needs.filter-commit-changes.outputs.versions_env == 'true' || needs.filter-commit-changes.outputs.docker-files == 'true' }}
-      push_image: ${{ github.event_name == 'workflow_dispatch' }}
+      push_image: ${{ github.event_name == 'workflow_dispatch' &&  inputs.skip_push_image != 'true' }}
       skip_e2e_test: ${{ inputs.skip_e2e_test == 'true' }}
       expected_traces_api_ver: ${{ inputs.expected_traces_api_ver }}
       with_besu_fleet_plugin: ${{ github.event_name == 'workflow_dispatch' && inputs.without_besu_fleet_plugin != 'true' }}

@@ -47,6 +47,9 @@ plugin-linea-l1l2-bridge-contract="0xe537D669CA013d86EBeF1D64e40fC74CADC91987"
 plugin-linea-l1l2-bridge-topic="e856c2b8bd4eb0027ce32eeaf595c21b0b6b4644b326e5b7bd80a1cf8db72e6c"
 plugin-linea-limitless-enabled=false
 
+cache-last-block-headers-preload-enabled=true
+cache-last-block-headers=50
+
 bonsai-limit-trie-logs-enabled=false
 bonsai-historical-block-limit=1024
 bonsai-parallel-tx-processing-enabled=false

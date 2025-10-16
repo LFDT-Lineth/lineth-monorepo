@@ -35,7 +35,7 @@ fi
 _SUCCESS=false
 while [[ ${_SUCCESS} != "true" && $RETRY -gt 0 ]]
 do
-  docker logs ${CONTAINER_NAME} | grep -q "Ethereum main loop is up" && {
+  docker logs ${CONTAINER_NAME} &> temp.out && grep -q "Ethereum main loop is up" temp.out && {
     _SUCCESS=true
     continue
   }

@@ -12,7 +12,7 @@
     "istanbulBlock": 0,
     "berlinBlock": 0,
     "londonBlock": 0,
-    "terminalTotalDifficulty": 8,
+    "terminalTotalDifficulty": %TTD%,
     "shanghaiTime": %SHANGHAI_TIME%,
     "cancunTime": %CANCUN_TIME%,
     "pragueTime": %PRAGUE_TIME%,

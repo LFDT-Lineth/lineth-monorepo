@@ -12,9 +12,6 @@ tx-pool-min-gas-price=0
 max-peers=10
 fast-sync-min-peers=0
 
-cache-last-block-headers-preload-enabled=true
-cache-last-block-headers=50
-
 # engine
 engine-rpc-enabled=true
 engine-jwt-secret="/config/jwtsecret.txt"
