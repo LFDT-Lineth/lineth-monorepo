@@ -112,7 +112,7 @@ public class EngineAPIService {
     final ObjectNode blobsBundle;
     final ArrayNode executionRequests;
     final String newBlockHash;
-    final String parentBeaconBlockRoot;
+    final String parentBeaconBlockRoot = Hash.ZERO.toHexString();
     ArrayNode expectedBlobVersionedHashes = mapper.createArrayNode();
     try (final Response getPayloadResponse = getPayloadRequest.execute()) {
       assertThat(getPayloadResponse.code()).isEqualTo(200);
@@ -121,7 +121,6 @@ public class EngineAPIService {
       blobsBundle = (ObjectNode) result.get("blobsBundle");
       executionRequests = (ArrayNode) result.get("executionRequests");
       newBlockHash = executionPayload.get("blockHash").asText();
-      parentBeaconBlockRoot = executionPayload.remove("parentBeaconBlockRoot").asText();
       // Transform KZG commitments to versioned hashes
       for (JsonNode kzgCommitment : blobsBundle.get("commitments")) {
         Bytes kzgBytes = Bytes.fromHexString(kzgCommitment.asText());
