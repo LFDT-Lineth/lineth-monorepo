@@ -73,7 +73,7 @@ func (ctx SplitterContext) LocalGlobalConstraints() {
 
 			// detect if the expression is eligible;
 			// i.e., it contains columns of proper size with status Precomputed, committed, or verifiercol.
-			isEligible, unSupported := IsExprEligible(isColEligibleSplitting, ctx.Splittings, board)
+			isEligible, unSupported := IsExprEligible(isColEligibleSplitting, ctx.Splittings, board, compilerTypeSplit)
 
 			if unSupported {
 				panic("unSupported")
@@ -94,7 +94,7 @@ func (ctx SplitterContext) LocalGlobalConstraints() {
 
 			// detect if the expression is eligible;
 			// i.e., it contains columns of proper size with status Precomputed, committed, or verifiercol.
-			isEligible, unSupported := IsExprEligible(isColEligibleSplitting, ctx.Splittings, board)
+			isEligible, unSupported := IsExprEligible(isColEligibleSplitting, ctx.Splittings, board, compilerTypeSplit)
 
 			if unSupported {
 				panic("unSupported")

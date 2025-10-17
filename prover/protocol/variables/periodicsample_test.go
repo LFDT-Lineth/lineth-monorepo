@@ -8,10 +8,9 @@ import (
 	"github.com/consensys/linea-monorepo/prover/maths/fft"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/dummy"
-	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/protocol/variables"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
-	"github.com/consensys/linea-monorepo/prover/symbolic"
+	sym "github.com/consensys/linea-monorepo/prover/symbolic"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -24,8 +23,8 @@ func TestPeriodicSampleGlobalConstraint(t *testing.T) {
 		n := 1 << 3
 		P := build.RegisterCommit("P", n) // overshadows P
 
-		// P(X) = P(X/w) + P(X/w^2)
-		expr := ifaces.ColumnAsVariable(P).Mul(variables.NewPeriodicSample(4, 1))
+		// P * PeriodicSample(4, 1) = 0
+		expr := sym.Mul(P, variables.NewPeriodicSample(4, 1))
 
 		_ = build.GlobalConstraint("Q", expr)
 	}
@@ -53,8 +52,8 @@ func TestPeriodicSampleAsLagrange(t *testing.T) {
 		n := 1 << 3
 		P := build.RegisterCommit("P", n) // overshadows P
 
-		// P(X) = P(X/w) + P(X/w^2)
-		expr := ifaces.ColumnAsVariable(P).Mul(variables.NewPeriodicSample(8, 0))
+		// P * PeriodicSample(8, 0) = 0
+		expr := sym.Mul(P, variables.NewPeriodicSample(8, 0))
 		_ = build.GlobalConstraint("Q", expr)
 	}
 
@@ -80,8 +79,8 @@ func TestPeriodicSampleShouldFail(t *testing.T) {
 		n := 1 << 3
 		P := build.RegisterCommit("P", n) // overshadows P
 
-		// P(X) = P(X/w) + P(X/w^2)
-		expr := ifaces.ColumnAsVariable(P).Mul(variables.NewPeriodicSample(8, 0))
+		// P * PeriodicSample(8, 0) = 0
+		expr := sym.Mul(P, variables.NewPeriodicSample(8, 0))
 
 		_ = build.GlobalConstraint("Q", expr)
 	}
@@ -112,7 +111,7 @@ func TestPeriodicSampleVanillaEval(t *testing.T) {
 				// We need to do a bunch of unwrapping to get to the real PeriodicSampling that
 				// we want to test
 				sampling := variables.NewPeriodicSample(period, offset).
-					Operator.(symbolic.Variable).
+					Operator.(sym.Variable).
 					Metadata.(variables.PeriodicSample)
 
 				vanillaEval := sampling.EvalCoset(domain, 0, 1, false)
@@ -146,7 +145,7 @@ func TestPeriodicSampleCoset(t *testing.T) {
 				// We need to do a bunch of unwrapping to get to the real PeriodicSampling that
 				// we want to test
 				sampling := variables.NewPeriodicSample(period, offset).
-					Operator.(symbolic.Variable).
+					Operator.(sym.Variable).
 					Metadata.(variables.PeriodicSample)
 
 				vanillaEval := sampling.EvalCoset(domain, 0, 1, false)
@@ -183,7 +182,7 @@ func TestPeriodicSampleEvalAtConsistentWithEval(t *testing.T) {
 				// We need to do a bunch of unwrapping to get to the real PeriodicSampling that
 				// we want to test
 				sampling := variables.NewPeriodicSample(period, offset).
-					Operator.(symbolic.Variable).
+					Operator.(sym.Variable).
 					Metadata.(variables.PeriodicSample)
 
 				vanillaEval := sampling.EvalCoset(domain, 0, 1, false)
@@ -209,7 +208,7 @@ func TestPeriodicSampleEvalAtOnDomain(t *testing.T) {
 				// We need to do a bunch of unwrapping to get to the real PeriodicSampling that
 				// we want to test
 				sampling := variables.NewPeriodicSample(period, offset).
-					Operator.(symbolic.Variable).
+					Operator.(sym.Variable).
 					Metadata.(variables.PeriodicSample)
 
 				for pos := 0; pos < period; pos++ {

@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/consensys/go-corset/pkg/mir"
+	"github.com/consensys/go-corset/pkg/ir/mir"
 	"github.com/consensys/linea-monorepo/prover/config"
 	"github.com/consensys/linea-monorepo/prover/protocol/coin"
 	"github.com/consensys/linea-monorepo/prover/protocol/column"
@@ -24,11 +24,13 @@ func TestDefine(t *testing.T) {
 			Coins:           wizard.NewRegister[coin.Name, coin.Info](),
 			Precomputed:     collection.NewMapping[ifaces.ColID, ifaces.ColAssignment](),
 		}
-		schema, _, errBin = ReadZkevmBin(&mir.DEFAULT_OPTIMISATION_LEVEL)
-		limits            = &config.TracesLimits{}
-		limitRefl         = reflect.ValueOf(limits).Elem()
+		binf, _, errBin = ReadZkevmBin()
+		limits          = &config.TracesLimits{}
+		limitRefl       = reflect.ValueOf(limits).Elem()
 	)
-
+	// Compile binary file into an air.Schema
+	schema, _ := CompileZkevmBin(binf, &mir.DEFAULT_OPTIMISATION_LEVEL)
+	//
 	for i := 0; i < limitRefl.NumField(); i++ {
 		limitRefl.Field(i).SetInt(1 << 10)
 	}

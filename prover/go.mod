@@ -1,16 +1,13 @@
 module github.com/consensys/linea-monorepo/prover
 
-go 1.24.0
-
-toolchain go1.24.6
+go 1.24.6
 
 require (
 	github.com/bits-and-blooms/bitset v1.20.0
-	github.com/consensys/bavard v0.1.31-0.20250314194434-b30d4344e6d4
 	github.com/consensys/compress v0.2.5
 	github.com/consensys/gnark v0.12.1-0.20250501002417-facdd9882b80
-	github.com/consensys/gnark-crypto v0.17.1-0.20250326164229-5fd6610ac2a1
-	github.com/consensys/go-corset v1.0.12-0.20250729080012-3d83adbcfe23
+	github.com/consensys/gnark-crypto v0.17.1-0.20251006135912-abd34dcc6005
+	github.com/consensys/go-corset v1.1.23
 	github.com/crate-crypto/go-kzg-4844 v1.1.0
 	github.com/dlclark/regexp2 v1.11.2
 	github.com/dnlo/struct2csv v0.0.0-20190928115744-2f584471b24e
@@ -19,6 +16,7 @@ require (
 	github.com/go-playground/validator/v10 v10.22.0
 	github.com/gofrs/flock v0.12.0
 	github.com/google/uuid v1.6.0
+	github.com/holiman/uint256 v1.3.2
 	github.com/icza/bitio v1.1.0
 	github.com/leanovate/gopter v0.2.11
 	github.com/pierrec/lz4/v4 v4.1.22
@@ -41,6 +39,7 @@ require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
+	github.com/consensys/bavard v0.1.31-0.20250314194434-b30d4344e6d4 // indirect
 	github.com/crate-crypto/go-eth-kzg v1.3.0 // indirect
 	github.com/crate-crypto/go-ipa v0.0.0-20240724233137-53bbb0ceb27a // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.3.0 // indirect
@@ -56,7 +55,6 @@ require (
 	github.com/google/pprof v0.0.0-20240727154555-813a5fbdbec8 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/holiman/bloomfilter/v2 v2.0.3 // indirect
-	github.com/holiman/uint256 v1.3.2 // indirect
 	github.com/iancoleman/strcase v0.3.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/ingonyama-zk/icicle-gnark/v3 v3.2.2 // indirect
@@ -87,7 +85,6 @@ require (
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/term v0.32.0 // indirect
 	golang.org/x/text v0.26.0 // indirect
 	google.golang.org/protobuf v1.34.2 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect

@@ -16,7 +16,6 @@ import (
 	"github.com/consensys/gnark/frontend/cs/scs"
 	"github.com/consensys/gnark/std/hash"
 	gmimc "github.com/consensys/gnark/std/hash/mimc"
-	"github.com/consensys/linea-monorepo/prover/crypto/mimc"
 	"github.com/consensys/linea-monorepo/prover/crypto/ringsis"
 	"github.com/consensys/linea-monorepo/prover/crypto/state-management/smt"
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
@@ -311,7 +310,7 @@ func getProofVortexNCommitmentsWithMerkleNoSis(t *testing.T, nCommitments, nPoly
 	randomCoin = field.NewElement(1523)
 	entryList = []int{1, 5, 19, 645}
 
-	params := NewParams(blowUpFactor, polySize, nPolys*nCommitments, ringsis.StdParams, mimc.NewMiMC, mimc.NewMiMC)
+	params := NewParams(blowUpFactor, polySize, nPolys*nCommitments, ringsis.StdParams)
 
 	polyLists := make([][]smartvectors.SmartVector, nCommitments)
 	yLists = make([][]field.Element, nCommitments)

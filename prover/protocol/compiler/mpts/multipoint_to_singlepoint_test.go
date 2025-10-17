@@ -3,7 +3,6 @@ package mpts
 import (
 	"testing"
 
-	"github.com/consensys/linea-monorepo/prover/maths/common/mempool"
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
 	"github.com/consensys/linea-monorepo/prover/maths/common/vector"
 	"github.com/consensys/linea-monorepo/prover/maths/fft"
@@ -144,12 +143,10 @@ func TestLdeOf(t *testing.T) {
 	for _, tc := range testcases {
 		t.Run(tc.Name, func(t *testing.T) {
 
-			var (
-				sizeBig = len(tc.LDE)
-				memPool = mempool.CreateFromSyncPool(sizeBig)
-				resPtr  = ldeOf(tc.Poly, memPool)
-				res     = *resPtr
-			)
+			sizeBig := len(tc.LDE)
+			res := make([]field.Element, sizeBig)
+			copy(res, tc.Poly)
+			_ldeOf(res, len(tc.Poly), sizeBig)
 
 			for i := range tc.LDE {
 				if !tc.LDE[i].Equal(&res[i]) {

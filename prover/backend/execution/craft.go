@@ -5,6 +5,7 @@ import (
 	"path"
 
 	public_input "github.com/consensys/linea-monorepo/prover/public-input"
+	"github.com/sirupsen/logrus"
 
 	"github.com/consensys/linea-monorepo/prover/backend/ethereum"
 	"github.com/consensys/linea-monorepo/prover/backend/execution/bridge"
@@ -35,6 +36,9 @@ func CraftProverOutput(
 			L2BridgeAddress:      types.EthAddress(cfg.Layer2.MsgSvcContract),
 			MaxNbL2MessageHashes: cfg.TracesLimits.BlockL2L1Logs,
 		}
+		// execution prover performance metadta accumulators
+		totalTxs     uint64
+		totalGasUsed uint64
 	)
 
 	// Extract the data from the block
@@ -77,7 +81,13 @@ func CraftProverOutput(
 			rsp.AllL2L1MessageHashes,
 			l2l1MessageHashes...,
 		)
+
+		// execution prover performance metadta
+		totalTxs += uint64(len(block.Transactions()))
+		totalGasUsed += block.GasUsed()
 	}
+
+	logrus.Infof("Conflation stats - totalTxs: %d, totalGasUsed: %d", totalTxs, totalGasUsed)
 
 	rsp.ExecDataChecksum = mimcHashLooselyPacked(execDataBuf.Bytes())
 

@@ -15,8 +15,8 @@ type SplitProverAction struct {
 
 func (a *SplitProverAction) Run(run *wizard.ProverRuntime) {
 	for round := range a.Splittings {
-		// This is an iteration over a map so the order is non-deterministic
-		// but this does not matter here.
+		// Columns are already split, we now try to delete all
+		// the big columns
 		for bigCol := range a.Splittings[round].ByBigCol {
 			run.Columns.TryDel(bigCol)
 		}
@@ -25,8 +25,13 @@ func (a *SplitProverAction) Run(run *wizard.ProverRuntime) {
 
 func Splitter(size int) func(*wizard.CompiledIOP) {
 	return func(comp *wizard.CompiledIOP) {
+		// it creates splittings into sub columns of the eligible (big) columns and commits to the them.
 		ctx := newSplitter(comp, size)
+
+		//  adjust the constraints accordingly over the splittings of the sub columns.
 		ctx.constraints()
+
+		// it deletes the assignment of the big columns.
 		comp.RegisterProverAction(comp.NumRounds()-1, &SplitProverAction{
 			Splittings: ctx.Splittings,
 		})
@@ -34,8 +39,10 @@ func Splitter(size int) func(*wizard.CompiledIOP) {
 }
 
 type SplitterContext struct {
-	Comp       *wizard.CompiledIOP
-	Size       int
+	Comp *wizard.CompiledIOP
+	// The target column size after splitting
+	Size int
+	// Splitting alliances are stored round by round
 	Splittings []SummerizedAlliances
 }
 
@@ -50,6 +57,7 @@ func newSplitter(comp *wizard.CompiledIOP, size int) SplitterContext {
 	return ctx
 }
 
+// Implement ProverAction interface by splitting the witness to the sub columns
 type ProveRoundProverAction struct {
 	Ctx   *SplitterContext
 	Round int
@@ -83,6 +91,12 @@ func (a *ProveRoundProverAction) Run(run *wizard.ProverRuntime) {
 	}
 }
 
+// ScanSplitCommit scans all the columns round by round and classifies the
+// (big) columns eligible for splitting. It then splits them into sub-columns,
+// commits to them and updates the splitting context. It also forces the
+// compiler to set the status of the big columns to 'ignored'. Since the
+// big columns are technically replaced with their sub-columns, we need to
+// ensure that they are no longer considered for future queries.
 func (ctx *SplitterContext) ScanSplitCommit() {
 	comp := ctx.Comp
 	for round := 0; round < comp.NumRounds(); round++ {
@@ -91,6 +105,7 @@ func (ctx *SplitterContext) ScanSplitCommit() {
 			if status == column.Ignored || status == column.Proof || status == column.VerifyingKey {
 				continue
 			}
+			// But stitcher is applied much later than splitter as per the prover doc, check this
 			if col.Size() < ctx.Size {
 				utils.Panic("stitcher is not working correctly, the small columns should have been handled by the stitcher")
 			}

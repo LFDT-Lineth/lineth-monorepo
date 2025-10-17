@@ -9,11 +9,8 @@ import (
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/utils"
+	"github.com/consensys/linea-monorepo/prover/utils/arena"
 	"github.com/consensys/linea-monorepo/prover/utils/parallel"
-
-	"github.com/consensys/linea-monorepo/prover/crypto/ringsis/ringsis_32_8"
-	"github.com/consensys/linea-monorepo/prover/crypto/ringsis/ringsis_64_16"
-	"github.com/consensys/linea-monorepo/prover/crypto/ringsis/ringsis_64_8"
 )
 
 const (
@@ -40,7 +37,6 @@ type Key struct {
 	// the parameters modulusDegree=64 and logTwoBound=8 and is passed as input
 	// to the specially unrolled [sis.FFT64] function. They are thus optionally
 	// constructed when [GenerateKey] is called.
-	twiddleCosets []field.Element `serde:"omit"`
 }
 
 type KeyGen struct {
@@ -70,28 +66,6 @@ func GenerateKey(params Params, maxNumFieldToHash int) *Key {
 			Params:            &params,
 			MaxNumFieldToHash: maxNumFieldToHash,
 		},
-	}
-
-	// Optimization for these specific parameters
-	if params.LogTwoBound == 8 && 1<<params.LogTwoDegree == 64 {
-		res.twiddleCosets = ringsis_64_8.PrecomputeTwiddlesCoset(
-			rsis.Domain.Generator,
-			rsis.Domain.FrMultiplicativeGen,
-		)
-	}
-
-	if params.LogTwoBound == 16 && 1<<params.LogTwoDegree == 64 {
-		res.twiddleCosets = ringsis_64_16.PrecomputeTwiddlesCoset(
-			rsis.Domain.Generator,
-			rsis.Domain.FrMultiplicativeGen,
-		)
-	}
-
-	if params.LogTwoBound == 8 && 1<<params.LogTwoDegree == 32 {
-		res.twiddleCosets = ringsis_32_8.PrecomputeTwiddlesCoset(
-			rsis.Domain.Generator,
-			rsis.Domain.FrMultiplicativeGen,
-		)
 	}
 
 	return res
@@ -258,90 +232,70 @@ func (s *Key) FlattenedKey() []field.Element {
 //   - modulus degree: 	64  log2(bound): 	16
 //   - modulus degree: 	32  log2(bound): 	8
 func (s *Key) TransversalHash(v []smartvectors.SmartVector) []field.Element {
-
-	// numRows stores the number of rows in the matrix to hash it must be
-	// strictly positive and be within the bounds of MaxNumFieldHashable.
-	numRows := len(v)
-
-	if numRows == 0 {
-		utils.Panic("Attempted to transversally hash a matrix with no rows")
+	// nbRows is the number of rows in the matrix
+	nbRows := len(v)
+	if nbRows == 0 || nbRows > s.MaxNumFieldToHash {
+		utils.Panic("nbRows=%v out of bounds [1,%v]", nbRows, s.MaxNumFieldToHash)
 	}
 
-	if numRows > s.MaxNumFieldHashable() {
-		utils.Panic("Attempted to hash %v rows, but the limit is %v", numRows, s.MaxNumFieldHashable())
-	}
-
-	// numCols stores the number of columns in the matrix to hash et must be
-	// positive and all the rows must have the same size.
-	numCols := v[0].Len()
-
-	if numCols == 0 {
+	// nbCols is the number of columns in the matrix
+	nbCols := v[0].Len()
+	if nbCols == 0 {
 		utils.Panic("Provided a 0-colums matrix")
 	}
 
 	for i := range v {
-		if v[i].Len() != numCols {
+		if v[i].Len() != nbCols {
 			utils.Panic("Unexpected : all inputs smart-vectors should have the same length the first one has length %v, but #%v has length %v",
-				numCols, i, v[i].Len())
+				nbCols, i, v[i].Len())
 		}
 	}
 
-	if s.LogTwoBound == 8 && s.LogTwoDegree == 6 {
-		return ringsis_64_8.TransversalHash(
-			s.gnarkInternal.Ag,
-			v,
-			s.twiddleCosets,
-			s.gnarkInternal.Domain,
-		)
-	}
+	sisKeySize := s.OutputSize()
 
-	if s.LogTwoBound == 16 && s.LogTwoDegree == 6 {
-		return ringsis_64_16.TransversalHash(
-			s.gnarkInternal.Ag,
-			v,
-			s.twiddleCosets,
-			s.gnarkInternal.Domain,
-		)
-	}
+	res := make([]field.Element, nbCols*sisKeySize)
+	transposedArena := arena.NewVectorArena[field.Element](nbRows * 2 * runtime.GOMAXPROCS(0))
+	parallel.Execute(nbCols, func(start, end int) {
+		// we transpose the columns using a windowed approach
+		// this is done to improve memory accesses when transposing the matrix
 
-	if s.LogTwoBound == 8 && s.LogTwoDegree == 5 {
-		return ringsis_32_8.TransversalHash(
-			s.gnarkInternal.Ag,
-			v,
-			s.twiddleCosets,
-			s.gnarkInternal.Domain,
-		)
-	}
+		// perf note; we could allocate only blocks of 256 elements here and do the SIS hash
+		// block by block, but surprisingly it is slower than the current implementation
+		// it would however save some memory allocation.
+		windowSize := 2
+		n := end - start
+		for n%windowSize != 0 {
+			windowSize /= 2
+		}
+		// using arena here just favors contiguous memory allocation
 
-	res := make([]field.Element, numCols*s.OutputSize())
-
-	// Will contain keys per threads
-	keys := make([]*Key, runtime.GOMAXPROCS(0))
-	buffers := make([][]field.Element, runtime.GOMAXPROCS(0))
-
-	parallel.ExecuteThreadAware(
-		numCols,
-		func(threadID int) {
-			keys[threadID] = s.CopyWithFreshBuffer()
-			buffers[threadID] = make([]field.Element, numRows)
-		},
-		func(col, threadID int) {
-			buffer := buffers[threadID]
-			key := keys[threadID]
-			for row := 0; row < numRows; row++ {
-				buffer[row] = v[row].Get(col)
+		transposed := make([][]field.Element, windowSize)
+		for i := range transposed {
+			transposed[i] = arena.Get[field.Element](transposedArena, nbRows)
+		}
+		for col := start; col < end; col += windowSize {
+			for i := 0; i < nbRows; i++ {
+				switch vi := v[i].(type) {
+				case *smartvectors.Constant:
+					cst := vi.Value
+					for j := range transposed {
+						transposed[j][i] = cst
+					}
+				case *smartvectors.Regular:
+					for j := range transposed {
+						transposed[j][i] = (*vi)[col+j]
+					}
+				default:
+					for j := range transposed {
+						transposed[j][i] = v[i].Get(col + j)
+					}
+				}
 			}
-			copy(res[col*key.OutputSize():(col+1)*key.OutputSize()], key.Hash(buffer))
-		})
+			for j := range transposed {
+				s.gnarkInternal.Hash(transposed[j], res[(col+j)*sisKeySize:(col+j)*sisKeySize+sisKeySize])
+			}
+		}
+	})
 
 	return res
-}
-
-// CopyWithFreshBuffer creates a copy of the key with fresh buffers. Shallow
-// copies the the key itself.
-//
-// This is deprecated as the new implementation of SIS does not need them. The
-// function simply returns "s".
-func (s *Key) CopyWithFreshBuffer() *Key {
-	return s
 }

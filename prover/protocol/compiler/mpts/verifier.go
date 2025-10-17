@@ -2,6 +2,7 @@ package mpts
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
@@ -11,6 +12,7 @@ import (
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/protocol/query"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
+	"github.com/consensys/linea-monorepo/prover/utils/parallel"
 )
 
 // VerifierAction implements [wizard.VerifierAction]. It is tasked with
@@ -159,9 +161,10 @@ func (va VerifierAction) RunGnark(api frontend.API, run wizard.GnarkRuntime) {
 func (ctx *MultipointToSinglepointCompilation) cptEvaluationMap(run wizard.Runtime) map[ifaces.ColID]field.Element {
 
 	var (
-		evaluationMap = make(map[ifaces.ColID]field.Element)
+		evaluationMap = make(map[ifaces.ColID]field.Element, len(ctx.NewQuery.Pols)+len(ctx.ExplicitlyEvaluated))
 		univParams    = run.GetParams(ctx.NewQuery.QueryID).(query.UnivariateEvalParams)
 		x             = univParams.X
+		lock          = sync.Mutex{}
 	)
 
 	for i := range ctx.NewQuery.Pols {
@@ -169,11 +172,17 @@ func (ctx *MultipointToSinglepointCompilation) cptEvaluationMap(run wizard.Runti
 		evaluationMap[colID] = univParams.Ys[i]
 	}
 
-	for i, c := range ctx.ExplicitlyEvaluated {
-		colID := ctx.ExplicitlyEvaluated[i].GetColID()
-		poly := c.GetColAssignment(run)
-		evaluationMap[colID] = smartvectors.Interpolate(poly, x)
-	}
+	parallel.Execute(len(ctx.ExplicitlyEvaluated), func(start, stop int) {
+		for i := start; i < stop; i++ {
+			colID := ctx.ExplicitlyEvaluated[i].GetColID()
+			poly := ctx.ExplicitlyEvaluated[i].GetColAssignment(run)
+			val := smartvectors.Interpolate(poly, x)
+
+			lock.Lock()
+			evaluationMap[colID] = val
+			lock.Unlock()
+		}
+	})
 
 	return evaluationMap
 }

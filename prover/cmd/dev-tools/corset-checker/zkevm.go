@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/consensys/go-corset/pkg/mir"
+	"github.com/consensys/go-corset/pkg/ir/mir"
 	"github.com/consensys/linea-monorepo/prover/config"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	"github.com/consensys/linea-monorepo/prover/zkevm/arithmetization"

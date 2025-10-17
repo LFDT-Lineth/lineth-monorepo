@@ -3,7 +3,7 @@ package zkevm
 import (
 	"sync"
 
-	"github.com/consensys/go-corset/pkg/mir"
+	"github.com/consensys/go-corset/pkg/ir/mir"
 	"github.com/consensys/linea-monorepo/prover/config"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/vortex"

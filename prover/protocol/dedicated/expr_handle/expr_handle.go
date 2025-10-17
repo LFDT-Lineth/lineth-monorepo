@@ -5,8 +5,6 @@ import (
 	"reflect"
 
 	sv "github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
-	"github.com/consensys/linea-monorepo/prover/maths/fft"
-	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/coin"
 	"github.com/consensys/linea-monorepo/prover/protocol/column"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
@@ -32,43 +30,31 @@ func (a *ExprHandleProverAction) DomainSize() int {
 func (a *ExprHandleProverAction) Run(run *wizard.ProverRuntime) {
 
 	boarded := a.Expr.Board()
-
 	logrus.Tracef("running the expr handle assignment for %v, (round %v)", a.HandleName, a.MaxRound)
 	metadatas := boarded.ListVariableMetadata()
 
-	for _, metadataInterface := range metadatas {
-		if handle, ok := metadataInterface.(ifaces.Column); ok {
-			witness := handle.GetColAssignment(run)
-			if witness.Len() != a.DomainSize() {
-				utils.Panic("Query %v - Witness of %v has size %v which is below %v",
-					a.HandleName, handle.String(), witness.Len(), a.DomainSize())
-			}
-		}
-	}
+	domainSize := a.DomainSize()
 
 	evalInputs := make([]sv.SmartVector, len(metadatas))
-	omega := fft.GetOmega(a.DomainSize())
-	omegaI := field.One()
-	omegas := make([]field.Element, a.DomainSize())
-	for i := 0; i < a.DomainSize(); i++ {
-		omegas[i] = omegaI
-		omegaI.Mul(&omegaI, &omega)
-	}
 
 	for k, metadataInterface := range metadatas {
 		switch meta := metadataInterface.(type) {
 		case ifaces.Column:
 			w := meta.GetColAssignment(run)
+			if w.Len() != domainSize {
+				utils.Panic("Query %v - Witness of %v has size %v which is below %v",
+					a.HandleName, meta.String(), w.Len(), domainSize)
+			}
 			evalInputs[k] = w
 		case coin.Info:
 			x := run.GetRandomCoinField(meta.Name)
-			evalInputs[k] = sv.NewConstant(x, a.DomainSize())
+			evalInputs[k] = sv.NewConstant(x, domainSize)
 		case variables.X:
-			evalInputs[k] = meta.EvalCoset(a.DomainSize(), 0, 1, false)
+			evalInputs[k] = meta.EvalCoset(domainSize, 0, 1, false)
 		case variables.PeriodicSample:
-			evalInputs[k] = meta.EvalCoset(a.DomainSize(), 0, 1, false)
+			evalInputs[k] = meta.EvalCoset(domainSize, 0, 1, false)
 		case ifaces.Accessor:
-			evalInputs[k] = sv.NewConstant(meta.GetVal(run), a.DomainSize())
+			evalInputs[k] = sv.NewConstant(meta.GetVal(run), domainSize)
 		default:
 			utils.Panic("Not a variable type %v in query %v", reflect.TypeOf(metadataInterface), a.HandleName)
 		}

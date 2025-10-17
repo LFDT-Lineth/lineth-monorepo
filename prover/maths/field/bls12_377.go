@@ -17,6 +17,7 @@ import (
 // represented in Montgommery form. So neither `field.Element([0, 0, 0, 1])“ or
 // `field.Element(1, 0, 0, 0)` represent valid field elements.
 type Element = fr.Element
+type Vector = fr.Vector
 
 const (
 	// RootOfUnityOrder is the smallest integer such that

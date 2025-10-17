@@ -420,3 +420,32 @@ func (key *Key) hashFromLimbs(limbs []field.Element) []field.Element {
 	key.gnarkInternal.Domain.FFTInverse(res, fft.DIT, fft.OnCoset(), fft.WithNbTasks(1)) // -> reduces mod Xᵈ+1
 	return res
 }
+
+func BenchmarkTransversalHash(b *testing.B) {
+
+	// max nb field elements to hash
+	const nbInputs = 1 << 15
+	const polySize = 1 << 10
+
+	ps := make([]smartvectors.SmartVector, nbInputs)
+	for i := range ps {
+		if i%20 == 0 {
+			// sprinkle some constants
+			ps[i] = smartvectors.NewConstant(field.NewElement(uint64(i+1)*42), polySize)
+			continue
+		}
+		ps[i] = smartvectors.Rand(polySize)
+	}
+
+	key := GenerateKey(StdParams, nbInputs)
+
+	b.Run("transversal-hash", func(b *testing.B) {
+		b.SetBytes(int64(nbInputs * polySize * field.Bytes))
+		var res []field.Element
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			res = key.TransversalHash(ps)
+		}
+		_ = res
+	})
+}

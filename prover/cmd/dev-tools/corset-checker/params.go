@@ -4,7 +4,7 @@ import (
 	"flag"
 	"fmt"
 
-	"github.com/consensys/go-corset/pkg/mir"
+	"github.com/consensys/go-corset/pkg/ir/mir"
 	"github.com/consensys/linea-monorepo/prover/config"
 )
 

@@ -7,7 +7,14 @@ import (
 	"github.com/consensys/linea-monorepo/prover/protocol/column/verifiercol"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/symbolic"
-	"github.com/sirupsen/logrus"
+	"github.com/consensys/linea-monorepo/prover/utils"
+)
+
+type compilerType int
+
+const (
+	compilerTypeStitch compilerType = iota
+	compilerTypeSplit
 )
 
 // It stores the information regarding an alliance between a BigCol and a set of SubColumns.
@@ -24,6 +31,7 @@ type Alliance struct {
 	// Status of the sub columns
 	// the only valid Status for the eligible sub columns are;
 	// committed, Precomputed, VerifierDefined
+	// To include Proof and Verifying key
 	Status column.Status
 }
 
@@ -71,15 +79,15 @@ func (summary MultiSummary) InsertNew(s Alliance) {
 }
 
 // It checks if the expression is over a set of the columns eligible to the stitching.
-// Namely, it contains columns of proper size with status Precomputed, Committed, or Verifiercol.
-// It panics if the expression includes a mixture of eligible columns and columns with status Proof/VerifiyingKey/Ignored.
-//
+// Namely, it contains columns of proper size with status Precomputed, Committed, Verifiercol, Proof, and Verifying key.
+// It panics if the expression includes a mixture of eligible columns and columns with status Ignored.
 // If all the columns are verifierCol the expression is not eligible to the compilation.
 // This is an expected behavior, since the verifier checks such expression by itself.
 func IsExprEligible(
 	isColEligible func(MultiSummary, ifaces.Column) bool,
 	stitchings MultiSummary,
 	board symbolic.ExpressionBoard,
+	compType compilerType,
 ) (isEligible bool, isUnsupported bool) {
 
 	var (
@@ -88,6 +96,7 @@ func IsExprEligible(
 		allAreEligible        = true
 		allAreVeriferCol      = true
 		statusMap             = map[ifaces.ColID]string{}
+		b                     = true
 	)
 
 	for i := range metadata {
@@ -96,12 +105,25 @@ func IsExprEligible(
 		// all implement [ifaces.Column]
 		case ifaces.Column: // it is a Committed, Precomputed or verifierCol
 			rootColumn := column.RootParents(m)
-
 			switch nat := rootColumn.(type) {
 			case column.Natural: // then it is not a verifiercol
+				if compType == compilerTypeStitch {
+					switch nat.Status() {
+					case column.Proof, column.VerifyingKey:
+						// proof and verifying key columns are eligible,
+						// we already checked that their minSize < size < maxSize
+						b = true
+					// Here only the columns that are ignored by the stitcher compiler are eligible
+					case column.Committed, column.Precomputed, column.Ignored:
+						b = isColEligible(stitchings, m)
+					default:
+						utils.Panic("unsupported column status %v", nat.Status())
+					}
+				} else {
+					b = isColEligible(stitchings, m)
+				}
 				statusMap[rootColumn.GetColID()] = nat.Status().String() + "/" + strconv.Itoa(nat.Size())
 				allAreVeriferCol = false
-				b := isColEligible(stitchings, m)
 
 				hasAtLeastOneEligible = hasAtLeastOneEligible || b
 				allAreEligible = allAreEligible && b
@@ -110,20 +132,20 @@ func IsExprEligible(
 				}
 			case verifiercol.VerifierCol:
 				statusMap[rootColumn.GetColID()] = column.VerifierDefined.String() + "/" + strconv.Itoa(nat.Size())
+			default:
+				// unsupported column type
+				utils.Panic("unsupported column type %T", m)
 			}
 		}
 	}
 
 	if hasAtLeastOneEligible && !allAreEligible {
-		// 1. we expect no expression including Proof columns
-		// 2. we expect no expression over ignored columns
-		// 3. we expect no VerifiyingKey withing the stitching range.
-		logrus.Errorf("the expression is not valid, it is mixed with invalid columns of status Proof/Ignored/verifierKey, %v", statusMap)
-		return false, true
+		// We expect no expression over ignored columns
+		utils.Panic("the expression is not eligible, it is not supported by stitcher, %v", statusMap)
 	}
 
 	if allAreVeriferCol {
-		// 4. we expect no expression involving only and only the verifierCols.
+		// we expect no expression involving only and only the verifierCols.
 		// We expect that this case wont happen.
 		// Otherwise should be handled in the [github.com/consensys/linea-monorepo/prover/protocol/query] package.
 		// Namely, Local/Global queries should be checked directly by the verifer.

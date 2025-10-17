@@ -207,7 +207,7 @@ func batchInterpolateSV(results []field.Element, computed []bool, polys [][]fiel
 
 		\sum_{x \in H}\frac{P(gx)}{D_x}
 	*/
-	denominator = field.BatchInvert(denominator)
+	denominator = field.ParBatchInvert(denominator, 0)
 
 	// Precompute the value of x^n once outside the loop
 	xN := new(field.Element).Exp(x, big.NewInt(int64(n)))

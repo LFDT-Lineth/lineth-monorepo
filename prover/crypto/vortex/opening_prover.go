@@ -49,21 +49,40 @@ func (params *Params) InitOpeningWithLC(committedSV []smartvectors.SmartVector, 
 	// Compute the linear combination
 	linComb := make([]field.Element, params.NbColumns)
 
-	parallel.ExecuteChunky(len(linComb), func(start, stop int) {
-		subTask := make([]smartvectors.SmartVector, 0, len(committedSV))
-		for i := range committedSV {
-			subTask = append(subTask, committedSV[i].SubVector(start, stop))
-		}
+	parallel.Execute(len(linComb), func(start, stop int) {
 
-		// Collect the result in the larger slice at the end
-		subResult := smartvectors.PolyEval(subTask, randomCoin)
-		subResult.WriteInSlice(linComb[start:stop])
+		x := field.One()
+		scratch := make(field.Vector, stop-start)
+		localLinComb := make(field.Vector, stop-start)
+		for i := range committedSV {
+			_sv := committedSV[i]
+			// we distinguish the case of a regular vector and constant to avoid
+			// unnecessary allocations and copies
+			switch _svt := _sv.(type) {
+			case *smartvectors.Constant:
+				cst := _svt.Value
+				cst.Mul(&cst, &x)
+				for j := range localLinComb {
+					localLinComb[j].Add(&localLinComb[j], &cst)
+				}
+				x.Mul(&x, &randomCoin)
+				continue
+			default:
+				sv := _svt.SubVector(start, stop)
+				sv.WriteInSlice(scratch)
+			}
+			scratch.ScalarMul(scratch, &x)
+			localLinComb.Add(localLinComb, scratch)
+			x.Mul(&x, &randomCoin)
+
+		}
+		copy(linComb[start:stop], localLinComb)
 	})
 
 	linCombSV := smartvectors.NewRegular(linComb)
 
 	return &OpeningProof{
-		LinearCombination: params.rsEncode(linCombSV, nil),
+		LinearCombination: params.rsEncode(linCombSV),
 	}
 }
 

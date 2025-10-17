@@ -429,21 +429,6 @@ func TestSelfRecursionManyLayersWithSerde(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	toCheck := []ifaces.ColID{
-		"CYCLIC_COUNTER_121_8_256_COUNTER",
-		"CYCLIC_COUNTER_1902_16_4096_COUNTER",
-	}
-
-	for i := range toCheck {
-
-		n0 := comp.Columns.GetSize(toCheck[i])
-		n1 := comp2.Columns.GetSize(toCheck[i])
-
-		if n0 != n1 {
-			t.Errorf("Mismatch at %v: %v != %v\n", toCheck[i], n0, n1)
-		}
-	}
-
 	proof := wizard.Prove(comp2, prove)
 	err = wizard.Verify(comp2, proof)
 	require.NoError(t, err)

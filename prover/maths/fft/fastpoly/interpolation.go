@@ -63,7 +63,7 @@ func Interpolate(poly []field.Element, x fr.Element, oncoset ...bool) field.Elem
 
 		\sum_{x \in H}\frac{P(gx)}{D_x}
 	*/
-	denominator = field.BatchInvert(denominator)
+	denominator = field.ParBatchInvert(denominator, 8)
 	res := vector.ScalarProd(poly, denominator)
 
 	/*
@@ -133,7 +133,7 @@ func BatchInterpolate(polys [][]field.Element, x fr.Element, oncoset ...bool) []
 
 		\sum_{x \in H}\frac{P(gx)}{D_x}
 	*/
-	denominator = field.BatchInvert(denominator)
+	denominator = field.ParBatchInvert(denominator, 8)
 
 	// Precompute the value of x^n once outside the loop
 	xN := new(field.Element).Exp(x, big.NewInt(int64(n)))

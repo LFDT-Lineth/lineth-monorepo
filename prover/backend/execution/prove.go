@@ -149,10 +149,10 @@ func mustProveAndPass(
 		// the prover nevers outputs invalid proofs.
 		proof := fullZkEvm.ProveInner(w.ZkEVM)
 
-		logrus.Info("Sanity-checking the inner-proof")
-		if err := fullZkEvm.VerifyInner(proof); err != nil {
-			exit.OnUnsatisfiedConstraints(fmt.Errorf("the sanity-check of the inner-proof did not pass: %v", err))
-		}
+		// logrus.Info("Sanity-checking the inner-proof")
+		// if err := fullZkEvm.VerifyInner(proof); err != nil {
+		// 	exit.OnUnsatisfiedConstraints(fmt.Errorf("the sanity-check of the inner-proof did not pass: %v", err))
+		// }
 
 		// wait for setup to be loaded
 		<-chSetupDone

@@ -4,9 +4,9 @@ import (
 	"hash"
 	"runtime"
 
+	"github.com/consensys/gnark-crypto/ecc/bls12-377/fr/mimc"
 	"github.com/consensys/linea-monorepo/prover/crypto/state-management/hashtypes"
 	"github.com/consensys/linea-monorepo/prover/crypto/state-management/smt"
-	"github.com/consensys/linea-monorepo/prover/maths/common/mempool"
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/utils"
@@ -51,7 +51,7 @@ func (p *Params) CommitMerkleWithSIS(ps []smartvectors.SmartVector) (encodedMatr
 		tree = smt.BuildComplete(
 			leaves,
 			func() hashtypes.Hasher {
-				return hashtypes.Hasher{Hash: p.MerkleHashFunc()}
+				return hashtypes.Hasher{Hash: mimc.NewMiMC()}
 			},
 		)
 	})
@@ -96,7 +96,7 @@ func (p *Params) CommitMerkleWithoutSIS(ps []smartvectors.SmartVector) (encodedM
 		tree = smt.BuildComplete(
 			leaves,
 			func() hashtypes.Hasher {
-				return hashtypes.Hasher{Hash: p.MerkleHashFunc()}
+				return hashtypes.Hasher{Hash: mimc.NewMiMC()}
 			},
 		)
 	})
@@ -121,19 +121,13 @@ func (params *Params) encodeRows(ps []smartvectors.SmartVector) (encodedMatrix E
 		}
 	}
 
-	// The pool will be responsible for holding the coefficients that are
-	// intermediary steps in creating the rs encoded rows.
-	pool := mempool.CreateFromSyncPool(params.NbColumns)
-
 	// The committed matrix is obtained by encoding the input vectors
 	// and laying them in rows.
 	encodedMatrix = make(EncodedMatrix, len(ps))
 	parallel.Execute(len(ps), func(start, stop int) {
-		localPool := mempool.WrapsWithMemCache(pool)
 		for i := start; i < stop; i++ {
-			encodedMatrix[i] = params.rsEncode(ps[i], localPool)
+			encodedMatrix[i] = params.rsEncode(ps[i])
 		}
-		localPool.TearDown()
 	})
 
 	return encodedMatrix
@@ -151,20 +145,15 @@ func (p *Params) hashSisHash(colHashes []field.Element) (leaves []types.Bytes32)
 	leaves = make([]types.Bytes32, numChunks)
 
 	parallel.Execute(numChunks, func(start, stop int) {
-		// Create the hasher in the parallel setting to avoid race conditions.
-		hasher := p.LeafHashFunc()
+		hasher := mimc.NewMiMC()
 		for chunkID := start; chunkID < stop; chunkID++ {
 			startChunk := chunkID * chunkSize
 			hasher.Reset()
-
-			for i := 0; i < chunkSize; i++ {
-				fbytes := colHashes[startChunk+i].Bytes()
-				hasher.Write(fbytes[:])
-			}
-
+			s := hasher.SumElements(colHashes[startChunk : startChunk+chunkSize])
+			sbytes := s.Bytes()
 			// Manually copies the hasher's digest into the leaves to
 			// skip a verbose type conversion.
-			copy(leaves[chunkID][:], hasher.Sum(nil))
+			copy(leaves[chunkID][:], sbytes[:])
 		}
 	})
 
@@ -191,7 +180,7 @@ func (p *Params) noSisTransversalHash(v []smartvectors.SmartVector) []field.Elem
 	parallel.ExecuteThreadAware(
 		numCols,
 		func(threadID int) {
-			hashers[threadID] = p.LeafHashFunc()
+			hashers[threadID] = mimc.NewMiMC()
 		},
 		func(col, threadID int) {
 			hasher := hashers[threadID]

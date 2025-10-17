@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/consensys/gnark-crypto/ecc/bls12-377/fr/fft"
 	cs "github.com/consensys/gnark/constraint/bls12-377"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/linea-monorepo/prover/crypto/ringsis"
@@ -63,7 +64,8 @@ var (
 	TypeOfHashFuncGenerator  = reflect.TypeOf(func() hash.Hash { return nil })
 	TypeOfHashTypeHasher     = reflect.TypeOf(func() hashtypes.Hasher { return hashtypes.Hasher{} })
 	TypeOfRingSisKeyPtr      = reflect.TypeOf(&ringsis.Key{})
-	TypeofRingSisKeyGenParam = reflect.TypeOf(ringsis.KeyGen{})
+	TypeOfGnarkFFTDomainPtr  = reflect.TypeOf(&fft.Domain{})
+	TypeOfRingSisKeyGenParam = reflect.TypeOf(ringsis.KeyGen{})
 	TypeOfMutexPtr           = reflect.TypeOf(&sync.Mutex{})
 )
 

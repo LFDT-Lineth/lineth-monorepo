@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/consensys/gnark-crypto/ecc/bls12-377/fr/mimc"
 	"github.com/consensys/linea-monorepo/prover/crypto/state-management/hashtypes"
 	"github.com/consensys/linea-monorepo/prover/crypto/state-management/smt"
 	"github.com/consensys/linea-monorepo/prover/maths/common/poly"
@@ -170,7 +171,7 @@ func (v *VerifierInputs) checkColumnInclusion() error {
 	var (
 		mTreeHashConfig = &smt.Config{
 			HashFunc: func() hashtypes.Hasher {
-				return hashtypes.Hasher{Hash: v.Params.MerkleHashFunc()}
+				return hashtypes.Hasher{Hash: mimc.NewMiMC()}
 			},
 			Depth: utils.Log2Ceil(v.Params.NumEncodedCols()),
 		}
@@ -200,7 +201,7 @@ func (v *VerifierInputs) checkColumnInclusion() error {
 					sisHash = v.Params.Key.Hash(selectedSubCol)
 					// hasher used to hash the SIS hash (and thus not a hasher
 					// based on SIS)
-					hasher = v.Params.LeafHashFunc()
+					hasher = mimc.NewMiMC()
 				)
 
 				hasher.Reset()
@@ -213,13 +214,10 @@ func (v *VerifierInputs) checkColumnInclusion() error {
 			} else {
 				// We assume that HashFunc (to be used for Merkle Tree) and NoSisHashFunc()
 				// (to be used for in place of SIS hash) are the same i.e. the MiMC hash function
-				hasher := v.Params.LeafHashFunc()
+				hasher := mimc.NewMiMC()
 				hasher.Reset()
-				for k := range selectedSubCol {
-					xBytes := selectedSubCol[k].Bytes()
-					hasher.Write(xBytes[:])
-				}
-				copy(leaf[:], hasher.Sum(nil))
+				s := hasher.SumElements(selectedSubCol)
+				leaf = s.Bytes()
 			}
 
 			// Check the Merkle-proof for the obtained leaf

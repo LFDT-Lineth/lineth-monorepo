@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	P1, P2           ifaces.ColID   = "P1", "P2"
+	P1, P2, P3       ifaces.ColID   = "P1", "P2", "P3"
 	GLOBAL1, GLOBAL2 ifaces.QueryID = "GLOBAL1", "GLOBAL2"
 	LOCAL1           ifaces.QueryID = "LOCAL1"
 )
@@ -49,10 +49,16 @@ func TestStitcherLocalWithPeriodicSample(t *testing.T) {
 	testStitcher(t, 64, 256, localWithPeriodicSample(256, 8, 7))
 }
 
-func TestSplitterGlobalWithVerifColAndPerriodic(t *testing.T) {
+func TestStitcherGlobalWithVerifColAndPeriodic(t *testing.T) {
 	testStitcher(t, 8, 64, globalWithVerifColAndPeriodic(8, 4, 0))
 	testStitcher(t, 64, 128, globalWithVerifColAndPeriodic(256, 8, 1))
 	testStitcher(t, 8, 16, globalWithVerifColAndPeriodic(256, 8, 7))
+}
+
+func TestStitcherGlobalWithProofCol(t *testing.T) {
+	testStitcher(t, 8, 64, globalWithProofCols(16))
+	testStitcher(t, 64, 128, globalWithProofCols(16))
+	testStitcher(t, 8, 16, globalWithProofCols(32))
 }
 
 func TestLocalEvalWithStatus(t *testing.T) {
@@ -262,6 +268,7 @@ func singlePolyFibo(size int) func() (wizard.DefineFunc, wizard.MainProverStep) 
 			P2 := build.RegisterCommit(P2, size)
 
 			// P(X) = P(X/w) + P(X/w^2)
+			// i.e., P[i+2] = P[i+1] + P[i]
 			expr1 := sym.Sub(
 				sym.Add(column.Shift(P1, 1), P1),
 				column.Shift(P1, 2))
@@ -295,7 +302,7 @@ func globalWithPeriodicSample(size, period, offset int) func() (wizard.DefineFun
 
 		builder := func(build *wizard.Builder) {
 			P1 := build.RegisterCommit(P1, size) // overshadows P
-			_ = build.GlobalConstraint(GLOBAL1, variables.NewPeriodicSample(period, offset).Mul(ifaces.ColumnAsVariable(P1)))
+			_ = build.GlobalConstraint(GLOBAL1, sym.Mul(P1, variables.NewPeriodicSample(period, offset)))
 		}
 
 		prover := func(run *wizard.ProverRuntime) {
@@ -312,12 +319,46 @@ func globalWithPeriodicSample(size, period, offset int) func() (wizard.DefineFun
 	}
 }
 
+func globalWithProofCols(size int) func() (wizard.DefineFunc, wizard.MainProverStep) {
+	return func() (wizard.DefineFunc, wizard.MainProverStep) {
+
+		builder := func(build *wizard.Builder) {
+			P1 := build.RegisterCommit(P1, size)
+			P2 := build.CompiledIOP.InsertProof(0, P2, size)
+			P3 := build.RegisterCommit(P3, size) // overshadows P1
+			_ = build.GlobalConstraint(GLOBAL1, sym.Mul(P1, P2, P3))
+		}
+
+		prover := func(run *wizard.ProverRuntime) {
+			v1 := vector.Repeat(field.Zero(), size)
+			v2 := vector.Repeat(field.Zero(), size)
+			v3 := vector.Repeat(field.Zero(), size)
+			for i := 0; i < size; i++ {
+				if i%2 == 0 {
+					v1[i].SetZero()
+					v2[i].SetOne()
+					v3[i].SetOne()
+				} else {
+					v1[i].SetOne()
+					v2[i].SetZero()
+					v3[i].SetOne()
+				}
+			}
+			run.AssignColumn(P1, smartvectors.NewRegular(v1))
+			run.AssignColumn(P2, smartvectors.NewRegular(v2))
+			run.AssignColumn(P3, smartvectors.NewRegular(v3))
+		}
+
+		return builder, prover
+	}
+}
+
 func localWithPeriodicSample(size, period, offset int) func() (wizard.DefineFunc, wizard.MainProverStep) {
 	return func() (wizard.DefineFunc, wizard.MainProverStep) {
 
 		builder := func(build *wizard.Builder) {
 			P1 := build.RegisterCommit(P1, size) // overshadows P
-			_ = build.LocalConstraint(GLOBAL1, variables.NewPeriodicSample(period, offset).Mul(ifaces.ColumnAsVariable(P1)))
+			_ = build.LocalConstraint(LOCAL1, sym.Mul(P1, variables.NewPeriodicSample(period, offset)))
 		}
 
 		prover := func(run *wizard.ProverRuntime) {

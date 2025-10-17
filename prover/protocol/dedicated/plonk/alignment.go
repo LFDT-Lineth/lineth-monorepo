@@ -394,7 +394,17 @@ func (a *Alignment) assignCircData(run *wizard.ProverRuntime) {
 	)
 
 	for i := range unalignedInputs {
+
 		if unalignedSelector[i].IsOne() {
+
+			if nbActualData >= nbInputsPadded*maxNbInstances {
+				exit.OnLimitOverflow(
+					nbInputsPadded*maxNbInstances,
+					nbActualData+1,
+					fmt.Errorf("max number of instances exceeded for circuit: %v", a.Name),
+				)
+			}
+
 			dataChan <- unalignedInputs[i]
 			nbActualData++
 		}

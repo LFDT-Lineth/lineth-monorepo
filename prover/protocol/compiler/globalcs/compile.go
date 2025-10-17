@@ -32,7 +32,7 @@ func Compile(comp *wizard.CompiledIOP) {
 
 	var (
 		aggregateExprs  = merging.aggregateConstraints(comp)
-		factoredExprs   = factorExpressionList(comp, aggregateExprs)
+		factoredExprs   = factorExpressionList(aggregateExprs)
 		quotientCtx     = createQuotientCtx(comp, merging.Ratios, factoredExprs)
 		evaluationCtx   = declareUnivariateQueries(comp, quotientCtx)
 		quotientRound   = quotientCtx.QuotientShares[0][0].Round()

@@ -30,7 +30,8 @@ type StitchSubColumnsProverAction struct {
 func (a *StitchSubColumnsProverAction) Run(run *wizard.ProverRuntime) {
 	for round := range a.Stitchings {
 		// This loop is not in deterministic order but this does not matter
-		// as this is purely for cleaning up.
+		// as this is purely for cleaning up. After stitching, the big column
+		// should live and the sub columns should be deleted.
 		for subCol := range a.Stitchings[round].BySubCol {
 			run.Columns.TryDel(subCol)
 		}
@@ -44,7 +45,7 @@ func Stitcher(minSize, maxSize int) func(comp *wizard.CompiledIOP) {
 		// it creates stitchings from the eligible columns and commits to the them.
 		ctx := newStitcher(comp, minSize, maxSize)
 
-		//  adjust the constraints accordingly over the stitchings of the sub columns.
+		// adjust the constraints accordingly over the stitchings of the sub columns.
 		ctx.constraints()
 
 		// it assigns the stitching columns and delete the assignment of the sub columns.
@@ -153,7 +154,6 @@ func (ctx *StitchingContext) ScanStitchCommit() {
 					precomputedCols = append(precomputedCols, col)
 				case column.Committed:
 					committedCols = append(committedCols, col)
-
 				default:
 					// note that status of verifercol/ veriferDefined is not
 					// available via compiler trace.
@@ -199,7 +199,6 @@ func (ctx *StitchingContext) ScanStitchCommit() {
 			continue
 		}
 
-		// @Azam Precomputed ones are double assigned by this?
 		ctx.Comp.RegisterProverAction(round, &StitchColumnsProverAction{
 			Ctx:   ctx,
 			Round: round,
@@ -208,6 +207,7 @@ func (ctx *StitchingContext) ScanStitchCommit() {
 }
 
 // It scan the compiler trace for a given round and classifies the columns eligible to the stitching, by their size.
+// It also declares a column with size < minSize a public column (to be verified by the verifier)
 func scanAndClassifyEligibleColumns(ctx StitchingContext, round int) map[int][]ifaces.Column {
 	columnsBySize := map[int][]ifaces.Column{}
 
@@ -216,9 +216,8 @@ func scanAndClassifyEligibleColumns(ctx StitchingContext, round int) map[int][]i
 		status := ctx.Comp.Columns.Status(colName)
 		col := ctx.Comp.Columns.GetHandle(colName)
 
-		// 1. we expect no constraint over a mix of eligible columns and proof, thus ignore Proof columns
-		// 2. we expect no verifingKey column to fall withing the stitching interval (ctx.MinSize, ctx.MaxSize)
-		// 3. we expect no query over the ignored columns.
+		// We do not make proof and verifying key column eligible for stitching.
+		// We expand them directly during the constraints.
 		if status == column.Ignored || status == column.Proof || status == column.VerifyingKey {
 			continue
 		}
