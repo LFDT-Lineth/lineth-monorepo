@@ -8,8 +8,8 @@
     ( SYSF                                      :binary@prove )
 
     ;; block and transaction accounting
-    ( BLK_NUMBER                                :i24 )
-    ;; ( TOTL_TXN_NUMBER                           :i24 )
+    ( BLK_NUMBER                                :i16 )
+    ;; ( TOTL_TXN_NUMBER                           :i16 )
     ( SYSI_TXN_NUMBER                           :i24 )
     ( USER_TXN_NUMBER                           :i24 )
     ( SYSF_TXN_NUMBER                           :i24 )

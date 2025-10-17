@@ -3,6 +3,8 @@
 
 (defclookup
   hub-into-blockhash
+  ;; target selector
+  blockhash.MACRO
   ;; target columns
   (
     blockhash.macro/REL_BLOCK
