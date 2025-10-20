@@ -89,7 +89,7 @@
 
 
 
-(defconstraint  prover-column-constraints---RELATIVE_USER_TXN_NUMBER_MAX---const   () (user-transaction-constancy   RELMAX))
+(defconstraint  prover-column-constraints---RELATIVE_USER_TXN_NUMBER_MAX---const   () (block-constancy   RELMAX))
 (defconstraint  prover-column-constraints---RELATIVE_USER_TXN_NUMBER_MAX---zero    () (if-zero           (perspective-sum)
 													 (vanishes!   RELMAX)))
 (defconstraint  prover-column-constraints---RELATIVE_USER_TXN_NUMBER_MAX---setting () (if-not-zero       (*  (- 1 (prev SYSF))  SYSF)
