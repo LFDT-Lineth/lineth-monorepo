@@ -92,7 +92,7 @@ public abstract class LineaPluginTestBase extends AcceptanceTestBase {
             "miner1",
             getCliqueOptions(),
             getTestCliOptions(),
-            Set.of("LINEA", "MINER"),
+            Set.of("LINEA", "MINER", "PLUGINS"),
             false,
             DEFAULT_REQUESTED_PLUGINS);
     minerNode.setTransactionPoolConfiguration(

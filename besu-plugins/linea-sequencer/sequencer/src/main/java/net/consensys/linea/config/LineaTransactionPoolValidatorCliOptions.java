@@ -164,7 +164,7 @@ public class LineaTransactionPoolValidatorCliOptions implements LineaCliOptions 
         .toString();
   }
 
-  private Set<Address> parseDeniedAddresses(final String denyListFilename) {
+  public Set<Address> parseDeniedAddresses(final String denyListFilename) {
     try (Stream<String> lines = Files.lines(Path.of(new File(denyListFilename).toURI()))) {
       return lines
           .map(l -> Address.fromHexString(l.trim()))

@@ -11,13 +11,19 @@ package net.consensys.linea.rpc.services;
 
 import com.google.auto.service.AutoService;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicReference;
 import net.consensys.linea.AbstractLineaRequiredPlugin;
+import net.consensys.linea.config.LineaTransactionPoolValidatorCliOptions;
 import net.consensys.linea.rpc.methods.LineaCancelBundle;
 import net.consensys.linea.rpc.methods.LineaSendBundle;
 import net.consensys.linea.sequencer.txpoolvalidation.validators.AllowedAddressValidator;
 import net.consensys.linea.sequencer.txpoolvalidation.validators.CalldataValidator;
 import net.consensys.linea.sequencer.txpoolvalidation.validators.GasLimitValidator;
+import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.plugin.BesuPlugin;
 import org.hyperledger.besu.plugin.ServiceManager;
 import org.hyperledger.besu.plugin.services.txvalidator.PluginTransactionPoolValidator;
@@ -26,6 +32,9 @@ import org.hyperledger.besu.plugin.services.txvalidator.PluginTransactionPoolVal
 public class LineaBundleEndpointsPlugin extends AbstractLineaRequiredPlugin {
   private LineaSendBundle lineaSendBundleMethod;
   private LineaCancelBundle lineaCancelBundleMethod;
+
+  private final AtomicReference<Set<Address>> bundleDeniedAddresses =
+      new AtomicReference<>(Collections.emptySet());
 
   /**
    * Register the bundle RPC service.
@@ -52,8 +61,7 @@ public class LineaBundleEndpointsPlugin extends AbstractLineaRequiredPlugin {
   public PluginTransactionPoolValidator createTransactionValidator() {
     final var validators =
         new PluginTransactionPoolValidator[] {
-          new AllowedAddressValidator(
-              transactionPoolValidatorConfiguration().bundleDeniedAddresses()),
+          new AllowedAddressValidator(bundleDeniedAddresses),
           new GasLimitValidator(transactionPoolValidatorConfiguration().maxTxGasLimit()),
           new CalldataValidator(transactionPoolValidatorConfiguration().maxTxCalldataSize())
         };
@@ -76,6 +84,21 @@ public class LineaBundleEndpointsPlugin extends AbstractLineaRequiredPlugin {
     // set the pool
     lineaSendBundleMethod.init(bundlePoolService, createTransactionValidator());
     lineaCancelBundleMethod.init(bundlePoolService);
+
+    bundleDeniedAddresses.set(transactionPoolValidatorConfiguration().bundleDeniedAddresses());
+  }
+
+  @Override
+  public CompletableFuture<Void> reloadConfiguration() {
+    try {
+      bundleDeniedAddresses.set(
+          LineaTransactionPoolValidatorCliOptions.create()
+              .parseDeniedAddresses(
+                  transactionPoolValidatorConfiguration().bundleOverridingDenyListPath()));
+      return CompletableFuture.completedFuture(null);
+    } catch (Exception e) {
+      return CompletableFuture.failedFuture(e);
+    }
   }
 
   @Override
