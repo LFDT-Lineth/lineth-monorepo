@@ -10,7 +10,7 @@ GO_CORSET_COMPILE := ${GO_CORSET} compile -Dtags="${GIT_TAGS}" -Dcommit="${GIT_C
 
 ALU := alu/add/add.zkasm alu/ext alu/mod alu/mul
 
-BIN := bin   
+BIN := bin/bin.zkasm
 
 BLAKE2f_MODEXP_DATA := blake2fmodexpdata
 
@@ -91,9 +91,9 @@ SHIFT :=  shf/shf.zkasm
 
 STP := stp/stp.zkasm
 
-TABLES_LONDON := reftables/*.lisp   reftables/london/*.lisp
-TABLES_CANCUN := reftables/*.lisp   reftables/cancun/*.lisp
-TABLES_PRAGUE := reftables/*.lisp   reftables/prague/*.lisp
+TABLES_LONDON := reftables/london/*.lisp
+TABLES_CANCUN := reftables/cancun/*.lisp
+TABLES_PRAGUE := reftables/prague/*.lisp
 
 TRM := trm/trm.zkasm
 

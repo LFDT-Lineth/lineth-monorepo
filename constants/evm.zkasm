@@ -4,6 +4,12 @@
 
 const EVM_INST_ADD                              = 0x01
 const EVM_INST_SUB                              = 0x03
+const EVM_INST_SIGNEXTEND                       = 0x0b
+const EVM_INST_AND                              = 0x16
+const EVM_INST_OR                               = 0x17
+const EVM_INST_XOR                              = 0x18
+const EVM_INST_NOT                              = 0x19
+const EVM_INST_BYTE                             = 0x1a
 const EVM_INST_SHL                              = 0x1b
 const EVM_INST_SHR                              = 0x1c
 const EVM_INST_SAR                              = 0x1d
