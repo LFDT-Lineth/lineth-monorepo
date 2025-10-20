@@ -1,8 +1,5 @@
 # 3 days
 minimumReleaseAge: 4320
-minimumReleaseAgeExclude:
-  - '@web3auth/modal'
-  - '@web3auth/no-modal'
 
 packages:
   - 'contracts/**'
