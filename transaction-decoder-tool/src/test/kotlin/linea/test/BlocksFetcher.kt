@@ -4,7 +4,7 @@ import io.vertx.core.Vertx
 import linea.domain.Block
 import linea.domain.BlockParameter.Companion.toBlockParameter
 import linea.web3j.domain.toWeb3j
-import linea.web3j.toDomain
+import linea.web3j.mappers.toDomain
 import net.consensys.linea.async.AsyncRetryer
 import net.consensys.linea.async.toSafeFuture
 import org.apache.logging.log4j.LogManager

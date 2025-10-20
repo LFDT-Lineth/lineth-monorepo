@@ -3,6 +3,7 @@ package linea.web3j
 import linea.domain.Block
 import linea.domain.BlockParameter
 import linea.web3j.domain.toWeb3j
+import linea.web3j.mappers.toDomain
 import net.consensys.linea.async.toSafeFuture
 import org.web3j.protocol.Web3j
 import org.web3j.protocol.core.DefaultBlockParameter

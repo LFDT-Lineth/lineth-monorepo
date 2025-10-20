@@ -28,7 +28,7 @@ data class BlockData<TxData>(
   val ommers: List<ByteArray> = emptyList(), // List of uncle block hashes
 ) {
   companion object {
-    // companion object  to allow static extension functions
+    // companion object to allow static extension functions
   }
 
   init {
