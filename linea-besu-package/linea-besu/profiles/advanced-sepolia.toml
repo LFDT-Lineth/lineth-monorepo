@@ -19,6 +19,9 @@ genesis-file="genesis/genesis.sepolia.json" # Path to the custom genesis file
 sync-mode="SNAP"
 Xbonsai-full-flat-db-enabled=true
 
+cache-last-block-headers-preload-enabled=true
+cache-last-block-headers=50000
+
 ### Transaction pool ###
 tx-pool-enable-save-restore=true
 tx-pool-price-bump=1
@@ -61,8 +64,8 @@ metrics-port=9545
 ### JWT and Engine Configuration ###
 engine-jwt-disabled=false
 engine-jwt-secret="/etc/jwt-secret.hex"
-engine-rpc-enabled=false
-engine-rpc-port=8551
+engine-rpc-enabled=true
+engine-rpc-port=8550
 engine-host-allowlist=["*"]
 
 ### Gas and Block Limit Configuration ###
