@@ -20,10 +20,10 @@
     <Logger name="tech.pegasys.teku" level="TRACE" additivity="false">
       <AppenderRef ref="Console"/>
     </Logger>
-    <Logger name="maru" level="DEBUG" additivity="false">
+    <Logger name="maru" level="INFO" additivity="false">
       <AppenderRef ref="Console"/>
     </Logger>
-    <Logger name="clients" level="DEBUG" additivity="false">
+    <Logger name="maru.clients" level="DEBUG" additivity="false">
       <AppenderRef ref="Console"/>
     </Logger>
     <Root level="${sys:root.log.level}">
