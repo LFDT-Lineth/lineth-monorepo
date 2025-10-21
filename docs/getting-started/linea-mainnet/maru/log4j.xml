@@ -6,7 +6,6 @@
     </Console>
   </Appenders>
   <Loggers>
-    <Logger name="maru.p2p" level="trace"/>
     <Root level="INFO" additivity="false">
       <appender-ref ref="console"/>
     </Root>
