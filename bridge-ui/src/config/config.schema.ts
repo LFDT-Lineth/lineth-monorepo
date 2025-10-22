@@ -31,6 +31,7 @@ export const configSchema = z
     // Feature toggle for CCTPV2 for USDC transfers
     isCctpEnabled: z.boolean(),
     infuraApiKey: z.string().nonempty(),
+    alchemyApiKey: z.string().nonempty(),
     quickNodeApiKey: z.string().nonempty(),
     web3AuthClientId: z.string().nonempty(),
     lifiApiKey: z.string().nonempty(),

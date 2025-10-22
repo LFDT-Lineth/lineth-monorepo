@@ -1,7 +1,7 @@
 "use client";
 
 import { ReactNode, useEffect, useMemo, useState } from "react";
-import { createConfig, http, useReconnect, WagmiProvider } from "wagmi";
+import { createConfig, fallback, http, useReconnect, WagmiProvider } from "wagmi";
 import { useWalletDetection } from "./WalletDetectionProvider";
 import { useWeb3Auth, Web3AuthContextConfig, Web3AuthProvider } from "@web3auth/modal/react";
 import { WEB3AUTH_NETWORK } from "@web3auth/modal";
@@ -212,12 +212,12 @@ function WagmiConfigProvider({ children }: { children: ReactNode }) {
         acc[chainId] = generateWagmiTransport(chainId);
         return acc;
       },
-      {} as Record<(typeof CHAINS_IDS)[number], ReturnType<typeof http>>,
+      {} as Record<(typeof CHAINS_IDS)[number], ReturnType<typeof fallback>>,
     );
   }
 
   function generateWagmiTransport(chainId: (typeof CHAINS_IDS)[number]) {
-    return http(CHAINS_RPC_URLS[chainId], { batch: true });
+    return fallback(CHAINS_RPC_URLS[chainId].map((url) => http(url, { batch: true })).filter(Boolean));
   }
 
   // Wait for Web3Auth initialization, mounting, and wagmi config

@@ -92,6 +92,7 @@ export const config: Config = {
   },
   isCctpEnabled: process.env.NEXT_PUBLIC_IS_CCTP_ENABLED === "true",
   infuraApiKey: process.env.NEXT_PUBLIC_INFURA_ID ?? "",
+  alchemyApiKey: process.env.NEXT_PUBLIC_ALCHEMY_API_KEY ?? "",
   quickNodeApiKey: process.env.NEXT_PUBLIC_QUICKNODE_ID ?? "",
   web3AuthClientId: process.env.NEXT_PUBLIC_WEB3_AUTH_CLIENT_ID ?? "",
   lifiApiKey: process.env.NEXT_PUBLIC_LIFI_API_KEY ?? "",

@@ -62,6 +62,7 @@ jobs:
         env:
           NEXT_PUBLIC_WALLET_CONNECT_ID: ${{ secrets.PUBLIC_WALLET_CONNECT_ID }}
           NEXT_PUBLIC_INFURA_ID: ${{ secrets.PUBLIC_BRIDGE_UI_INFURA_ID }}
+          NEXT_PUBLIC_ALCHEMY_API_KEY: ${{ secrets.NEXT_PUBLIC_ALCHEMY_API_KEY }}
           NEXT_PUBLIC_QUICKNODE_ID: ${{ secrets.PUBLIC_BRIDGE_UI_QUICKNODE_ID }}
           NEXT_PUBLIC_WEB3_AUTH_CLIENT_ID: ${{ secrets.NEXT_PUBLIC_WEB3_AUTH_TESTNET_CLIENT_ID }}
           NEXT_PUBLIC_LIFI_API_KEY: ${{ secrets.PUBLIC_LIFI_API_KEY }}
@@ -85,6 +86,7 @@ jobs:
           CI: "false"
           DOTENV_CONFIG_PATH: ".env.production"
           NEXT_PUBLIC_INFURA_ID: ${{ secrets.PUBLIC_BRIDGE_UI_INFURA_ID }}
+          NEXT_PUBLIC_ALCHEMY_API_KEY: ${{ secrets.NEXT_PUBLIC_ALCHEMY_API_KEY }}
           NEXT_PUBLIC_LIFI_API_KEY: "placeholder"
           NEXT_PUBLIC_LIFI_INTEGRATOR_NAME: "placeholder"
           NEXT_PUBLIC_WALLET_CONNECT_ID: "placeholder"

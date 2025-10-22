@@ -168,6 +168,7 @@ The config variables are:
 |                                               |                                                |                                                                                                           |
 | NEXT_PUBLIC_WALLET_CONNECT_ID                 | Wallet Connect Api Key                         |                                                                                                           |
 | NEXT_PUBLIC_INFURA_ID                         | Infura API Key                                 |                                                                                                           |
+| NEXT_PUBLIC_ALCHEMY_API_KEY                   | Alchemy API Key                                |                                                                                                           |
 | NEXT_PUBLIC_STORAGE_MIN_VERSION               | Local storage version for reseting the storage | 1                                                                                                         |
 | NEXT_PUBLIC_WEB3_AUTH_CLIENT_ID               | Web3Auth client key                            |                                                                                                           |
 | NEXT_PUBLIC_QUICKNODE_ID                      | QuickNode API key                              |                                                                                                           |
