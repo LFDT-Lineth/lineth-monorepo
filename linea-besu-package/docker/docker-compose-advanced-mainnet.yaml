@@ -2,7 +2,7 @@ services:
   linea-besu-advanced-mainnet-node:
     platform: linux/amd64
     image: consensys/linea-besu-package:latest
-    command: --profile=advanced-mainnet --p2p-host=YOUR_IP_ADDRESS --plugin-linea-l1-rpc-endpoint=YOUR_L1_RPC_ENDPOINT
+    command: --profile=advanced-mainnet --p2p-host=YOUR_IP_ADDRESS
     ports:
       - 30303:30303
       - 8545:8545

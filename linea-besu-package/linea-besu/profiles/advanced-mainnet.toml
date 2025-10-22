@@ -75,7 +75,7 @@ bonsai-parallel-tx-processing-enabled=false
 ### Plugin Configuration ###
 #plugin-linea-min-margin="0.3"
 #plugin-linea-gas-price-ratio=12
-plugins=["LineaEstimateGasEndpointPlugin","LineaL1FinalizationTagUpdaterPlugin","LineaExtraDataPlugin", "LineaTransactionPoolValidatorPlugin"]
+plugins=["LineaEstimateGasEndpointPlugin","LineaExtraDataPlugin", "LineaTransactionPoolValidatorPlugin"]
 plugin-linea-module-limit-file-path="config/trace-limits.mainnet.toml"
 plugin-linea-max-tx-calldata-size=60000
 plugin-linea-max-block-calldata-size=70000
@@ -99,7 +99,3 @@ plugin-linea-l1l2-bridge-contract="0x508Ca82Df566dCD1B0DE8296e70a96332cD644ec"
 plugin-linea-l1l2-bridge-topic="e856c2b8bd4eb0027ce32eeaf595c21b0b6b4644b326e5b7bd80a1cf8db72e6c"
 plugin-linea-estimate-gas-compatibility-mode-multiplier="1.2"
 plugin-linea-deny-list-path="config/denylist.mainnet.txt"
-
-# LineaL1FinalizationTagUpdaterPlugin
-plugin-linea-l1-smart-contract-address="0xd19d4B5d358258f05D7B411E21A1460D11B0876F"
-plugin-linea-l1-rpc-endpoint="http://localhost:8545"
