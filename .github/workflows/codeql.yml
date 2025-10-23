@@ -4,9 +4,76 @@ on:
   workflow_call:
 
 jobs:
+  changes:
+    name: Detect Changes
+    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
+    outputs:
+      languages: ${{ steps.set-matrix.outputs.languages }}
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 #v3.0.2
+        id: changes
+        with:
+          filters: |
+            go:
+              - '**/*.go'
+              - '**/go.mod'
+              - '**/go.sum'
+            java-kotlin:
+              - '**/*.java'
+              - '**/*.kt'
+              - '**/*.gradle'
+              - '**/*.gradle.kts'
+              - '**/pom.xml'
+              - '**/build.gradle'
+              - '**/gradle.properties'
+              - '**/settings.gradle'
+              - 'build.gradle'
+              - 'gradle.properties'
+              - 'settings.gradle'
+            javascript-typescript:
+              - '**/*.js'
+              - '**/*.ts'
+              - '**/*.tsx'
+              - '**/*.jsx'
+              - '**/*.json'
+              - '**/package.json'
+              - '**/tsconfig.json'
+              - '**/pnpm-lock.yaml'
+              - '**/yarn.lock'
+              - '**/package-lock.json'
+            actions:
+              - '.github/workflows/**'
+              - '.github/actions/**'
+            python:
+              - '**/*.py'
+              - '**/requirements.txt'
+              - '**/pyproject.toml'
+              - '**/setup.py'
+              - '**/Pipfile'
+      - name: Build matrix
+        id: set-matrix
+        run: |
+          languages=()
+          if [ "${{ steps.changes.outputs.go }}" == "true" ]; then languages+=("\"go\""); fi
+          if [ "${{ steps.changes.outputs.java-kotlin }}" == "true" ]; then languages+=("\"java-kotlin\""); fi
+          if [ "${{ steps.changes.outputs.javascript-typescript }}" == "true" ]; then languages+=("\"javascript-typescript\""); fi
+          if [ "${{ steps.changes.outputs.actions }}" == "true" ]; then languages+=("\"actions\""); fi
+          if [ "${{ steps.changes.outputs.python }}" == "true" ]; then languages+=("\"python\""); fi
+
+          echo "languages=[$(IFS=,; echo "${languages[*]}")]" >> $GITHUB_OUTPUT
+
   analyze:
     name: Analyze
     runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-med
+    needs: changes
+    if: ${{ needs.changes.outputs.languages != '[]' }}
     permissions:
       actions: read
       contents: read
@@ -15,7 +82,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: [ 'go', 'java-kotlin', 'javascript-typescript', 'actions', 'python' ]
+        language: ${{ fromJson(needs.changes.outputs.languages) }}
 
     steps:
       - name: Checkout repository
@@ -35,7 +102,7 @@ jobs:
           java-version: 21
 
       - name: Autobuild
-        if: matrix.language != 'github-actions'
+        if: matrix.language != 'actions'
         uses: github/codeql-action/autobuild@v3
         env:
           GITHUB_TOKEN: ${{ secrets._GITHUB_TOKEN_RELEASE_ACCESS }}
