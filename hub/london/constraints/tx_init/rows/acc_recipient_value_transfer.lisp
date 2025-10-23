@@ -70,7 +70,6 @@
                   (if-not-zero   (tx-init---is-deployment)
                                  (begin
                                    ;; deployment
-                                   (vanishes!  (shift account/DEPLOYMENT_NUMBER       tx-init---row-offset---ACC---recipient-value-reception))
                                    (account-increment-deployment-number               tx-init---row-offset---ACC---recipient-value-reception)
                                    (eq!        (shift account/DEPLOYMENT_STATUS       tx-init---row-offset---ACC---recipient-value-reception) 0)
                                    (eq!        (shift account/DEPLOYMENT_STATUS_NEW   tx-init---row-offset---ACC---recipient-value-reception) 1))))
