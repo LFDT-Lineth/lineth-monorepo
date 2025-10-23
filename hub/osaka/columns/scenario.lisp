@@ -6,7 +6,8 @@
   PEEK_AT_SCENARIO
 
   ;; scenario columns
-  (;; CALL related scenario columns
+  (
+  ;; CALL related scenario columns
    (CALL_EXCEPTION                                   :binary@prove)
    (CALL_ABORT_WILL_REVERT                           :binary@prove)
    (CALL_ABORT_WONT_REVERT                           :binary@prove)
