@@ -32,7 +32,12 @@
       "prague": {
         "target": 0,
         "max": 0,
-        "baseFeeUpdateFraction": 3338477
+        "baseFeeUpdateFraction": 5007716
+      },
+      "osaka": {
+        "target": 0,
+        "max": 0,
+        "baseFeeUpdateFraction": 5007716
       }
     }
   },
