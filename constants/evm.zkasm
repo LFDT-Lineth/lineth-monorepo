@@ -13,6 +13,7 @@ const EVM_INST_BYTE                             = 0x1a
 const EVM_INST_SHL                              = 0x1b
 const EVM_INST_SHR                              = 0x1c
 const EVM_INST_SAR                              = 0x1d
+const EVM_INST_CLZ                              = 0x1e
 const EVM_INST_CREATE                           = 0xF0
 const EVM_INST_CALL                             = 0xF1
 const EVM_INST_CALLCODE                         = 0xF2

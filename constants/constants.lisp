@@ -45,6 +45,7 @@
   EVM_INST_SHL                              0x1b
   EVM_INST_SHR                              0x1c
   EVM_INST_SAR                              0x1d
+  EVM_INST_CLZ                              0x1e ;; Osaka, EIP-7939
   ;; KECCAK256
   EVM_INST_SHA3                             0x20
   ;; Environmental Information
