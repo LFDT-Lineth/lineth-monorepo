@@ -28,6 +28,10 @@ type TxnData struct {
 	IsLastTxOfBlock       ifaces.Column // 1 if this is the last transaction inside the block
 	RelBlock              ifaces.Column // Relative Block number inside the batch
 	Ct                    ifaces.Column
+	USER                  ifaces.Column // 1 if this is a user transaction, 0 otherwise
+	Selector              ifaces.Column // we require an additional selector to identify which data to fetch
+	SYSI                  ifaces.Column
+	SYSF                  ifaces.Column
 }
 
 // RlpTxn models the arithmetization's RlpTxn module
@@ -36,8 +40,8 @@ type RlpTxn struct {
 	ToHashByProver        ifaces.Column // Relative TxNum inside the block,
 	Limb                  ifaces.Column
 	NBytes                ifaces.Column // the number of bytes to load from the limb
-	Done                  ifaces.Column // indicator column which we will use to obtain the ChainID
-	IsPhaseChainID        ifaces.Column // indicator column which we will use to obtain the ChainID
+	TxnPerspective        ifaces.Column // indicator column for the transaction perspective, which we will use to obtain the ChainID
+	ChainID               ifaces.Column // dedicated column for the ChainID
 }
 
 // DefineTestingArithModules defines the BlockDataCols, TxnData and RlpTxn modules based on csv traces.
@@ -69,6 +73,10 @@ func DefineTestingArithModules(b *wizard.Builder, ctBlockData, ctTxnData, ctRlpT
 			FromLo:          ctTxnData.GetCommit(b, "TD.FROM_LO"),
 			IsLastTxOfBlock: ctTxnData.GetCommit(b, "TD.IS_LAST_TX_OF_BLOCK"),
 			RelBlock:        ctTxnData.GetCommit(b, "TD.REL_BLOCK"),
+			USER:            ctTxnData.GetCommit(b, "TD.USER"),
+			Selector:        ctTxnData.GetCommit(b, "TD.SELECTOR"),
+			SYSI:            ctTxnData.GetCommit(b, "TD.SYSI"),
+			SYSF:            ctTxnData.GetCommit(b, "TD.SYSF"),
 		}
 	}
 	if ctRlpTxn != nil {
@@ -78,8 +86,8 @@ func DefineTestingArithModules(b *wizard.Builder, ctBlockData, ctTxnData, ctRlpT
 			ToHashByProver: ctRlpTxn.GetCommit(b, "RL.TO_HASH_BY_PROVER"),
 			Limb:           ctRlpTxn.GetCommit(b, "RL.LIMB"),
 			NBytes:         ctRlpTxn.GetCommit(b, "RL.NBYTES"),
-			Done:           ctRlpTxn.GetCommit(b, "RL.DONE"),
-			IsPhaseChainID: ctRlpTxn.GetCommit(b, "RL.IS_PHASE_CHAIN_ID"),
+			TxnPerspective: ctRlpTxn.GetCommit(b, "RL.TXN"),
+			ChainID:        ctRlpTxn.GetCommit(b, "RL.CHAIN_ID"),
 		}
 	}
 
@@ -113,6 +121,10 @@ func AssignTestingArithModules(run *wizard.ProverRuntime, ctBlockData, ctTxnData
 			"TD.FROM_LO",
 			"TD.IS_LAST_TX_OF_BLOCK",
 			"TD.REL_BLOCK",
+			"TD.USER",
+			"TD.SELECTOR",
+			"TD.SYSI",
+			"TD.SYSF",
 		)
 	}
 	if ctRlpTxn != nil {
@@ -123,8 +135,8 @@ func AssignTestingArithModules(run *wizard.ProverRuntime, ctBlockData, ctTxnData
 			"RL.TO_HASH_BY_PROVER",
 			"RL.LIMB",
 			"RL.NBYTES",
-			"RL.DONE",
-			"RL.IS_PHASE_CHAIN_ID",
+			"RL.TXN",
+			"RL.CHAIN_ID",
 		)
 	}
 

@@ -1,6 +1,8 @@
 package symbolic
 
 import (
+	"sort"
+
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/utils"
 )
@@ -91,4 +93,52 @@ func newNodeID(level, posInLevel int) nodeID {
 		utils.Panic("Pos in level is too large %v", posInLevel)
 	}
 	return nodeID(uint64(level)<<32 | uint64(posInLevel))
+}
+
+// SortExpression the children list of every node by increasing ESHash and goes
+// recursively.
+func SortChildren(e *Expression) {
+
+	// Recursively call the function for the children if applicable
+	for i := range e.Children {
+		SortChildren(e.Children[i])
+	}
+
+	if len(e.Children) < 2 {
+		return
+	}
+
+	switch op := e.Operator.(type) {
+	case LinComb:
+
+		sorter := utils.GenSorter{
+			LenFn: func() int { return len(e.Children) },
+			SwapFn: func(i, j int) {
+				e.Children[i], e.Children[j] = e.Children[j], e.Children[i]
+				op.Coeffs[i], op.Coeffs[j] = op.Coeffs[j], op.Coeffs[i]
+			},
+			LessFn: func(i, j int) bool {
+				return e.Children[i].ESHash.Cmp(&e.Children[j].ESHash) < 0
+			},
+		}
+
+		sort.Sort(sorter)
+		return
+
+	case Product:
+
+		sorter := utils.GenSorter{
+			LenFn: func() int { return len(e.Children) },
+			SwapFn: func(i, j int) {
+				e.Children[i], e.Children[j] = e.Children[j], e.Children[i]
+				op.Exponents[i], op.Exponents[j] = op.Exponents[j], op.Exponents[i]
+			},
+			LessFn: func(i, j int) bool {
+				return e.Children[i].ESHash.Cmp(&e.Children[j].ESHash) < 0
+			},
+		}
+
+		sort.Sort(sorter)
+		return
+	}
 }

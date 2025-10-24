@@ -116,16 +116,19 @@ func checkPublicInputs(
 	// chainID and the one extracted from the traces. But in case, the executed
 	// block has only legacy transactions (e.g. transactions without a specified
 	// chainID) then the traces will return a chainID of zero.
+	//
+	// The constraint ensures that either:
+	// 1. wizard chainID is 0 (legacy transactions case), OR
+	// 2. wizard chainID equals functional chainID
+	wizardChainID := wvc.GetPublicInput(api, publicInput.ChainID)
+	functionalChainID := gnarkFuncInp.ChainID
+
+	// (wizardChainID - functionalChainID) * wizardChainID == 0
+	// This is satisfied when wizardChainID == 0 OR wizardChainID == functionalChainID
 	api.AssertIsEqual(
 		api.Mul(
-			wvc.GetPublicInput(api, publicInput.ChainID),
-			api.Sub(
-				api.Div(
-					wvc.GetPublicInput(api, publicInput.ChainID),
-					twoPow112,
-				),
-				gnarkFuncInp.ChainID,
-			),
+			api.Sub(wizardChainID, functionalChainID),
+			wizardChainID,
 		),
 		0,
 	)

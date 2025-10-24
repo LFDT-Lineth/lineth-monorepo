@@ -15,9 +15,11 @@ import (
 
 func commitEcRecTxnData(comp *wizard.CompiledIOP, size1 int, size int, ac *antichamber) (td *txnData, ecRec *EcRecover) {
 	td = &txnData{
-		FromHi: comp.InsertCommit(0, ifaces.ColIDf("txn_data.FromHi"), size1),
-		FromLo: comp.InsertCommit(0, ifaces.ColIDf("txn_data.FromLo"), size1),
-		Ct:     comp.InsertCommit(0, ifaces.ColIDf("txn_data.CT"), size1),
+		FromHi:   comp.InsertCommit(0, ifaces.ColIDf("txn_data.FromHi"), size1),
+		FromLo:   comp.InsertCommit(0, ifaces.ColIDf("txn_data.FromLo"), size1),
+		Ct:       comp.InsertCommit(0, ifaces.ColIDf("txn_data.CT"), size1),
+		User:     comp.InsertCommit(0, ifaces.ColIDf("txn_data.USER"), size1),
+		Selector: comp.InsertCommit(0, ifaces.ColIDf("txn_data.SELECTOR"), size1),
 	}
 
 	ecRec = &EcRecover{
@@ -45,9 +47,21 @@ func AssignEcRecTxnData(
 
 	nbRowsPerTxInTxnData := 9
 	var ctWit []field.Element
+	var userWit []field.Element
+	var selectorWit []field.Element
 	for i := 0; i < nbTxS; i++ {
 		for j := 0; j < nbRowsPerTxInTxnData; j++ {
-			ctWit = append(ctWit, field.NewElement(uint64(j+1)))
+			if j == 0 {
+				// First row: ct=0, User=1, Selector=1 (for isFrom condition)
+				ctWit = append(ctWit, field.Zero())
+				userWit = append(userWit, field.One())
+				selectorWit = append(selectorWit, field.One())
+			} else {
+				// Other rows: ct=j, User=1, Selector=1
+				ctWit = append(ctWit, field.NewElement(uint64(j)))
+				userWit = append(userWit, field.One())
+				selectorWit = append(selectorWit, field.One())
+			}
 		}
 	}
 
@@ -81,6 +95,8 @@ func AssignEcRecTxnData(
 	run.AssignColumn(td.FromHi.GetColID(), smartvectors.LeftZeroPadded(fromHi, sizeTxnData))
 	run.AssignColumn(td.FromLo.GetColID(), smartvectors.LeftZeroPadded(fromLo, sizeTxnData))
 	run.AssignColumn(td.Ct.GetColID(), smartvectors.LeftZeroPadded(ctWit, sizeTxnData))
+	run.AssignColumn(td.User.GetColID(), smartvectors.LeftZeroPadded(userWit, sizeTxnData))
+	run.AssignColumn(td.Selector.GetColID(), smartvectors.LeftZeroPadded(selectorWit, sizeTxnData))
 
 	effectiveSize := nbEcRec*nbRowsPerEcRec + nbTxS*nbRowsPerTxSign
 	isActive := vector.Repeat(field.One(), effectiveSize)
@@ -122,11 +138,23 @@ func (td *txnData) assignTxnDataFromPK(
 	}
 
 	// now assign  txn_data from the hash results.
-	// populate the CT column
+	// populate the CT, User, and Selector columns
 	var ctWit []field.Element
+	var userWit []field.Element
+	var selectorWit []field.Element
 	for i := 0; i < maxNbTx; i++ {
 		for j := 0; j < nbRowsPerTxInTxnData; j++ {
-			ctWit = append(ctWit, field.NewElement(uint64(j+1)))
+			if j == 0 {
+				// First row: ct=0, User=1, Selector=1 (for isFrom condition)
+				ctWit = append(ctWit, field.Zero())
+				userWit = append(userWit, field.One())
+				selectorWit = append(selectorWit, field.One())
+			} else {
+				// Other rows: ct=j, User=1, Selector=1
+				ctWit = append(ctWit, field.NewElement(uint64(j)))
+				userWit = append(userWit, field.One())
+				selectorWit = append(selectorWit, field.One())
+			}
 		}
 	}
 
@@ -144,15 +172,19 @@ func (td *txnData) assignTxnDataFromPK(
 	run.AssignColumn(td.FromHi.GetColID(), smartvectors.LeftZeroPadded(fromHi, ac.Inputs.Settings.sizeTxnData(nbRowsPerTxInTxnData)))
 	run.AssignColumn(td.FromLo.GetColID(), smartvectors.LeftZeroPadded(fromLo, ac.Inputs.Settings.sizeTxnData(nbRowsPerTxInTxnData)))
 	run.AssignColumn(td.Ct.GetColID(), smartvectors.LeftZeroPadded(ctWit, ac.Inputs.Settings.sizeTxnData(nbRowsPerTxInTxnData)))
+	run.AssignColumn(td.User.GetColID(), smartvectors.LeftZeroPadded(userWit, ac.Inputs.Settings.sizeTxnData(nbRowsPerTxInTxnData)))
+	run.AssignColumn(td.Selector.GetColID(), smartvectors.LeftZeroPadded(selectorWit, ac.Inputs.Settings.sizeTxnData(nbRowsPerTxInTxnData)))
 }
 
 // it commits to the txn_data
 func commitTxnData(comp *wizard.CompiledIOP, limits *Settings, nbRowsPerTxInTxnData int) (td *txnData) {
 	size := limits.sizeTxnData(nbRowsPerTxInTxnData)
 	td = &txnData{
-		FromHi: comp.InsertCommit(0, ifaces.ColIDf("txn_data.FromHi"), size),
-		FromLo: comp.InsertCommit(0, ifaces.ColIDf("txn_data.FromLo"), size),
-		Ct:     comp.InsertCommit(0, ifaces.ColIDf("txn_data.CT"), size),
+		FromHi:   comp.InsertCommit(0, ifaces.ColIDf("txn_data.FromHi"), size),
+		FromLo:   comp.InsertCommit(0, ifaces.ColIDf("txn_data.FromLo"), size),
+		Ct:       comp.InsertCommit(0, ifaces.ColIDf("txn_data.CT"), size),
+		User:     comp.InsertCommit(0, ifaces.ColIDf("txn_data.USER"), size),
+		Selector: comp.InsertCommit(0, ifaces.ColIDf("txn_data.SELECTOR"), size),
 	}
 	return td
 }

@@ -3,6 +3,7 @@ package globalcs
 import (
 	"reflect"
 	"runtime"
+	"sort"
 	"sync"
 	"time"
 
@@ -163,6 +164,24 @@ func createQuotientCtx(comp *wizard.CompiledIOP, ratios []int, aggregateExpressi
 				ctx.AllInvolvedRoots = append(ctx.AllInvolvedRoots, rootCol)
 			}
 		}
+	}
+
+	// The above loop is supposedly iterating in deterministic order but we have
+	// noticed some hard-to-find non-determinism in the compilation and this
+	// cause problems in practice. So we sort the slices of the context to be
+	// sure there is no issue.
+	sortColumns := func(v []ifaces.Column) {
+		sort.Slice(v, func(i, j int) bool {
+			return v[i].GetColID() < v[j].GetColID()
+		})
+	}
+
+	sortColumns(ctx.AllInvolvedColumns)
+	sortColumns(ctx.AllInvolvedRoots)
+
+	for k := range ctx.ColumnsForRatio {
+		sortColumns(ctx.ColumnsForRatio[k])
+		sortColumns(ctx.RootsForRatio[k])
 	}
 
 	return ctx

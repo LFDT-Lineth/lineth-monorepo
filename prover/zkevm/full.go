@@ -56,7 +56,7 @@ var (
 	// level target.
 	sisInstance = ringsis.Params{LogTwoBound: 16, LogTwoDegree: 6}
 
-	dummyCompilationSuite = CompilationSuite{dummy.CompileAtProverLvl()}
+	dummyCompilationSuite = CompilationSuite{dummy.Compile}
 
 	// This is the compilation suite in use for the full prover
 	fullCompilationSuite = CompilationSuite{

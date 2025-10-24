@@ -29,8 +29,12 @@ func factorExpressionList(exprList []*symbolic.Expression) []*symbolic.Expressio
 // resulting factored expression is cached in the file system as this is a
 // compute intensive operation.
 func factorExpression(expr *symbolic.Expression) *symbolic.Expression {
+
 	flattenedExpr := flattenExpr(expr)
-	return simplify.AutoSimplify(flattenedExpr)
+	flattenedExpr = simplify.AutoSimplify(flattenedExpr)
+	symbolic.SortChildren(flattenedExpr)
+
+	return flattenedExpr
 }
 
 // flattenExpr returns an expression equivalent to expr where the

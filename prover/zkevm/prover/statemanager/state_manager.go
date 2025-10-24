@@ -66,6 +66,7 @@ func (sm *StateManager) Assign(run *wizard.ProverRuntime, shomeiTraces [][]state
 
 	assignHubAddresses(run)
 	addSkipFlags(&shomeiTraces)
+	shomeiTraces = removeSystemTransactions(shomeiTraces)
 	sm.StateSummary.Assign(run, shomeiTraces)
 	sm.Accumulator.Assign(run, utils.Join(shomeiTraces...))
 	sm.AccumulatorSummaryConnector.Assign(run)
@@ -77,6 +78,28 @@ func (sm *StateManager) Assign(run *wizard.ProverRuntime, shomeiTraces [][]state
 // module.
 func (s *Settings) stateSummarySize() int {
 	return utils.NextPowerOfTwo(s.AccSettings.MaxNumProofs)
+}
+
+func removeSystemTransactions(shomeiTraces [][]statemanager.DecodedTrace) [][]statemanager.DecodedTrace {
+
+	cleanedTraces := [][]statemanager.DecodedTrace{}
+	systemAddreses, _ := types.AddressFromHex("0xfffffffffffffffffffffffffffffffffffffffe")
+
+	for _, blockTraces := range shomeiTraces {
+		cleanedBlockTraces := []statemanager.DecodedTrace{}
+		for _, trace := range blockTraces {
+			address, err := trace.GetRelatedAccount()
+			if err != nil {
+				utils.Panic("could not get related account while removing system transactions: %v", err)
+			}
+			// check if address is fffffffffffffffffffffffffffffffffffffffe
+			if address != systemAddreses {
+				cleanedBlockTraces = append(cleanedBlockTraces, trace)
+			}
+		}
+		cleanedTraces = append(cleanedTraces, cleanedBlockTraces)
+	}
+	return cleanedTraces
 }
 
 // addSkipFlags adds skip flags to redundant shomei traces
