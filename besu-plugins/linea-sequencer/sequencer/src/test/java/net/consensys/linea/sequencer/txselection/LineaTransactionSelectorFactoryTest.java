@@ -21,9 +21,11 @@ import java.io.IOException;
 import java.math.BigInteger;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 import net.consensys.linea.bundles.LineaLimitedBundlePool;
 import net.consensys.linea.bundles.TransactionBundle;
@@ -123,7 +125,9 @@ class LineaTransactionSelectorFactoryTest {
             Optional.empty(),
             Optional.empty(),
             bundlePool,
-            invalidTransactionByLineCountCache);
+            invalidTransactionByLineCountCache,
+            new AtomicReference<>(Collections.emptySet()),
+            new AtomicReference<>(Collections.emptySet()));
     factory.create(new SelectorsStateManager());
   }
 

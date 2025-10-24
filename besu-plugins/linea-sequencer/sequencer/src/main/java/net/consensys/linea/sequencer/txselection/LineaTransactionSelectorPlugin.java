@@ -14,10 +14,15 @@ import static net.consensys.linea.metrics.LineaMetricCategory.SEQUENCER_PROFITAB
 
 import com.google.auto.service.AutoService;
 import java.math.BigInteger;
+import java.util.Collections;
 import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicReference;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.AbstractLineaRequiredPlugin;
 import net.consensys.linea.config.LineaRejectedTxReportingConfiguration;
+import net.consensys.linea.config.LineaTransactionSelectorCliOptions;
 import net.consensys.linea.config.LineaTransactionSelectorConfiguration;
 import net.consensys.linea.jsonrpc.JsonRpcManager;
 import net.consensys.linea.metrics.HistogramMetrics;
@@ -26,6 +31,7 @@ import net.consensys.linea.sequencer.liveness.LineaLivenessService;
 import net.consensys.linea.sequencer.liveness.LineaLivenessTxBuilder;
 import net.consensys.linea.sequencer.liveness.LivenessService;
 import net.consensys.linea.sequencer.txselection.selectors.ProfitableTransactionSelector;
+import net.consensys.linea.sequencer.txselection.selectors.TransactionEventFilter;
 import org.hyperledger.besu.plugin.BesuPlugin;
 import org.hyperledger.besu.plugin.ServiceManager;
 import org.hyperledger.besu.plugin.services.TransactionSelectionService;
@@ -40,6 +46,10 @@ import org.hyperledger.besu.plugin.services.TransactionSelectionService;
 public class LineaTransactionSelectorPlugin extends AbstractLineaRequiredPlugin {
   private TransactionSelectionService transactionSelectionService;
   private Optional<JsonRpcManager> rejectedTxJsonRpcManager = Optional.empty();
+  private final AtomicReference<Set<TransactionEventFilter>> deniedEvents =
+      new AtomicReference<>(Collections.emptySet());
+  private final AtomicReference<Set<TransactionEventFilter>> deniedBundleEvents =
+      new AtomicReference<>(Collections.emptySet());
 
   @Override
   public void doRegister(final ServiceManager serviceManager) {
@@ -105,6 +115,9 @@ public class LineaTransactionSelectorPlugin extends AbstractLineaRequiredPlugin 
                     metricsSystem))
             : Optional.empty();
 
+    deniedEvents.set(txSelectorConfiguration.eventsDenyList());
+    deniedBundleEvents.set(txSelectorConfiguration.eventsBundleDenyList());
+
     transactionSelectionService.registerPluginTransactionSelectorFactory(
         new LineaTransactionSelectorFactory(
             blockchainService,
@@ -116,12 +129,34 @@ public class LineaTransactionSelectorPlugin extends AbstractLineaRequiredPlugin 
             rejectedTxJsonRpcManager,
             maybeProfitabilityMetrics,
             bundlePoolService,
-            getInvalidTransactionByLineCountCache()));
+            getInvalidTransactionByLineCountCache(),
+            deniedEvents,
+            deniedBundleEvents));
   }
 
   @Override
   public void stop() {
     super.stop();
     rejectedTxJsonRpcManager.ifPresent(JsonRpcManager::shutdown);
+  }
+
+  @Override
+  public CompletableFuture<Void> reloadConfiguration() {
+    try {
+      Set<TransactionEventFilter> newDeniedEvents =
+          LineaTransactionSelectorCliOptions.create()
+              .parseTransactionEventDenyList(
+                  transactionSelectorConfiguration().eventsDenyListPath());
+      deniedEvents.set(newDeniedEvents);
+
+      Set<TransactionEventFilter> newDeniedBundleEvents =
+          LineaTransactionSelectorCliOptions.create()
+              .parseTransactionEventDenyList(
+                  transactionSelectorConfiguration().eventsBundleDenyListPath());
+      deniedBundleEvents.set(newDeniedBundleEvents);
+      return CompletableFuture.completedFuture(null);
+    } catch (Exception e) {
+      return CompletableFuture.failedFuture(e);
+    }
   }
 }
