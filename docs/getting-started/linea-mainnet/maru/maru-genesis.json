@@ -15,6 +15,18 @@
       "validatorSet": ["0x9f31730181441beb67b10efaed5773767ea959bc"],
       "blockTimeSeconds": 1,
       "elFork": "Shanghai"
+    },
+    "1761645600": {
+      "type": "qbft",
+      "validatorSet": ["0x9f31730181441beb67b10efaed5773767ea959bc"],
+      "blockTimeSeconds": 1,
+      "elFork": "Cancun"
+    },
+    "1761646200": {
+      "type": "qbft",
+      "validatorSet": ["0x9f31730181441beb67b10efaed5773767ea959bc"],
+      "blockTimeSeconds": 1,
+      "elFork": "Prague"
     }
   }
 }

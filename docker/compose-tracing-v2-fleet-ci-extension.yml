@@ -6,7 +6,7 @@ services:
     extends:
       file: compose-spec-l2-services.yml
       service: web3signer
-  
+
   shomei-frontend:
     extends:
       file: compose-spec-l2-services.yml
