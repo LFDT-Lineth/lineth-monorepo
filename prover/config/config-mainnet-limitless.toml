@@ -1,5 +1,5 @@
 environment = "mainnet"
-version = "6.0.6"                              # TODO @gbotrel hunt all version definitions.
+version = "6.0.8"                              # TODO @gbotrel hunt all version definitions.
 assets_dir = "./prover-assets"
 log_level = 4                                  # TODO @gbotrel will be refactored with new logger.
 

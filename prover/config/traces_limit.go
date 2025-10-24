@@ -169,7 +169,7 @@ type TracesLimits struct {
 	BlsData                                        int `mapstructure:"BLS_DATA" validate:"power_of_2" corset:"blsdata"`
 	RlpUtils                                       int `mapstructure:"RLP_UTILS" validate:"power_of_2" corset:"rlputils"`
 	PowerReferenceTable                            int `mapstructure:"POWER_REFERENCE_TABLE" validate:"power_of_2" corset:"power"`
-	BlsReferenceTable                              int `mapstructure:"BLS_REFERENCE_TABLE" validate:"power_of_2" corset:"blsreferencetable"`
+	BlsReferenceTable                              int `mapstructure:"BLS_REFERENCE_TABLE" validate:"power_of_2" corset:"blsreftable"`
 }
 
 func (tl *TracesLimits) Checksum() string {
