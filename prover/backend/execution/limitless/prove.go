@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"runtime"
 	"strconv"
 
 	"github.com/consensys/linea-monorepo/prover/backend/execution"
@@ -29,7 +28,7 @@ var (
 	// numConcurrentWitnessWritingGoroutines governs the goroutine serializing,
 	// compressing and writing the  witness. The writing part is also controlled
 	// by a semaphore on top of this.
-	numConcurrentWitnessWritingGoroutines = runtime.NumCPU()
+	numConcurrentWitnessWritingGoroutines = 20
 	// numConcurrentSubProverJobs governs the number of concurrent sub-prover
 	// jobs.
 	numConcurrentSubProverJobs = 4
