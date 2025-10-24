@@ -87,7 +87,7 @@ services:
 
   # Geth initialization
   geth-init:
-    image: ethereum/client-go:v1.13.15
+    image: ethereum/client-go:v1.16.5
     command:
       - init
       - /genesis.json
@@ -99,7 +99,7 @@ services:
   geth-node:
     hostname: el-client
     container_name: geth-node
-    image: ethereum/client-go:v1.13.15
+    image: ethereum/client-go:v1.16.5
     pull_policy: always
     restart: unless-stopped
     stop_grace_period: 30s
