@@ -49,7 +49,7 @@ cache-last-block-headers-preload-enabled=true
 cache-last-block-headers=50
 
 # plugins
-plugins=["LineaEstimateGasEndpointPlugin","LineaL1FinalizationTagUpdaterPlugin","LineaExtraDataPlugin","LineaTransactionPoolValidatorPlugin","LineaBundleEndpointsPlugin","LineaSetExtraDataEndpointPlugin","LineaTransactionSelectorPlugin"]
+plugins=["LineaEstimateGasEndpointPlugin","LineaExtraDataPlugin","LineaTransactionPoolValidatorPlugin","LineaBundleEndpointsPlugin","LineaSetExtraDataEndpointPlugin","LineaTransactionSelectorPlugin"]
 plugin-linea-module-limit-file-path="/var/lib/besu/traces-limits.toml"
 plugin-linea-deny-list-path="/var/lib/besu/deny-list.txt"
 plugin-linea-estimate-gas-compatibility-mode-enabled=false
@@ -72,7 +72,7 @@ plugin-linea-estimate-gas-min-margin="1.2"
 plugin-linea-limitless-enabled=false
 strict-tx-replay-protection-enabled=false
 
-# should uncomment only when the linea-sequencer plugin supports liveness 
+# should uncomment only when the linea-sequencer plugin supports liveness
 plugin-linea-liveness-enabled=true
 plugin-linea-liveness-max-block-age-seconds=8
 plugin-linea-liveness-bundle-max-timestamp-surplus-seconds=12
