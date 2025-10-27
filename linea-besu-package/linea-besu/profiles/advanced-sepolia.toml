@@ -62,8 +62,7 @@ metrics-host="0.0.0.0"
 metrics-port=9545
 
 ### JWT and Engine Configuration ###
-engine-jwt-disabled=false
-engine-jwt-secret="/etc/jwt-secret.hex"
+engine-jwt-disabled=true
 engine-rpc-enabled=true
 engine-rpc-port=8550
 engine-host-allowlist=["*"]
@@ -79,7 +78,7 @@ bonsai-parallel-tx-processing-enabled=false
 plugins=["LineaEstimateGasEndpointPlugin","LineaExtraDataPlugin","LineaTransactionPoolValidatorPlugin"]
 plugin-linea-module-limit-file-path="config/trace-limits.sepolia.toml"
 plugin-linea-max-tx-calldata-size=60000
-plugin-linea-max-block-calldata-size=70000
+plugin-linea-max-block-calldata-size=109000
 plugin-linea-max-tx-gas-limit=24000000
 plugin-linea-estimate-gas-min-margin="1.2"
 Xin-process-rpc-enabled=true

@@ -53,7 +53,7 @@ jobs:
     outputs:
       versions_env: ${{ steps.filter.outputs.versions-env }}
       linea_configs: ${{ steps.filter.outputs.linea-configs }}
-      docker-files: ${{ steps.filter.outputs.docker-files }}
+      docker_files: ${{ steps.filter.outputs.docker-files }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -79,8 +79,8 @@ jobs:
     with:
       release_tag_prefix: ${{ inputs.release_tag_prefix }}
       run_test: true
-      run_e2e_test: ${{ github.event_name == 'workflow_dispatch' || needs.filter-commit-changes.outputs.versions_env == 'true' || needs.filter-commit-changes.outputs.docker-files == 'true' }}
-      push_image: ${{ github.event_name == 'workflow_dispatch' &&  inputs.skip_push_image != 'true' }}
+      run_e2e_test: ${{ github.event_name == 'workflow_dispatch' || needs.filter-commit-changes.outputs.versions_env == 'true' || needs.filter-commit-changes.outputs.docker_files == 'true' }}
+      push_image: ${{ (github.event_name == 'workflow_dispatch' || needs.filter-commit-changes.outputs.versions_env == 'true' || needs.filter-commit-changes.outputs.docker_files == 'true' || needs.filter-commit-changes.outputs.linea_configs == 'true') &&  inputs.skip_push_image != 'true' }}
       skip_e2e_test: ${{ inputs.skip_e2e_test == 'true' }}
       expected_traces_api_ver: ${{ inputs.expected_traces_api_ver }}
       with_besu_fleet_plugin: ${{ github.event_name == 'workflow_dispatch' && inputs.without_besu_fleet_plugin != 'true' }}

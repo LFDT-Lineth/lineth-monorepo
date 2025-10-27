@@ -1,9 +1,16 @@
 services:
   linea-besu-basic-sepolia-node:
     image: consensys/linea-besu-package:latest
-    command: --profile=basic-sepolia --p2p-host=YOUR_IP_ADDRESS
+    command: 
+      - --profile=basic-sepolia 
+      - --p2p-host=YOUR_IP_ADDRESS
+      # - --engine-jwt-disabled=false  # Uncomment if engine-api jwt is enabled
+      # - --engine-jwt-secret=/var/lib/besu/jwt  # Uncomment if engine-api jwt is enabled
     ports:
       - 30303:30303
       - 8545:8545
       - 8546:8546
       - 8550:8550
+    ## Uncomment the below volumes section if engine-api jwt is enabled
+    # volumes:
+    #   - YOUR_ENGINE_API_JWT:/var/lib/besu/jwt:ro

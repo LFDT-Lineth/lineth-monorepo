@@ -16,7 +16,13 @@ In the docker-compose.yaml file, update the --p2p-host command to include your p
 --p2p-host=103.10.10.10
 ```
 
-### Step 2. Start the Besu node
+To enable JWT on engine-api, please uncomment the followings and mount the JWT file accordingly:
+```sh
+--engine-jwt-disabled=false
+--engine-jwt-secret=/var/lib/besu/jwt
+```
+
+### Step 3. Start the Besu node
 ```sh
 docker compose -f ./linea-besu-package/docker/docker-compose-basic-mainnet.yaml up
 ```
