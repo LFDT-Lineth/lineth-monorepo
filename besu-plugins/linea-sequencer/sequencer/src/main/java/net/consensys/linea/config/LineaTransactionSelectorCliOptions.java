@@ -42,10 +42,6 @@ public class LineaTransactionSelectorCliOptions implements LineaCliOptions {
   public static final String MAX_BUNDLE_GAS_PER_BLOCK = "--plugin-linea-max-bundle-block-gas";
   public static final long DEFAULT_MAX_BUNDLE_GAS_PER_BLOCK = 15_000_000L;
 
-  public static final String UNPROFITABLE_CACHE_SIZE = "--plugin-linea-unprofitable-cache-size";
-
-  public static final String UNPROFITABLE_RETRY_LIMIT = "--plugin-linea-unprofitable-retry-limit";
-
   public static final String EVENTS_DENY_LIST_PATH = "--plugin-linea-events-deny-list-path";
   public static final String EVENTS_BUNDLE_DENY_LIST_PATH =
       "--plugin-linea-events-bundle-deny-list-path";
@@ -92,26 +88,6 @@ public class LineaTransactionSelectorCliOptions implements LineaCliOptions {
       description =
           "Sets max amount of block gas bundle transactions can use (default: ${DEFAULT-VALUE})")
   public Long maxBundleGasPerBlock = DEFAULT_MAX_BUNDLE_GAS_PER_BLOCK;
-
-  @Deprecated
-  @Positive
-  @CommandLine.Option(
-      names = {UNPROFITABLE_CACHE_SIZE},
-      hidden = true,
-      paramLabel = "<INTEGER>",
-      description =
-          "DEPRECATED, has no effect: Max number of unprofitable transactions we keep track of (default: ${DEFAULT-VALUE})")
-  private int unprofitableCacheSize = 1;
-
-  @Deprecated
-  @Positive
-  @CommandLine.Option(
-      names = {UNPROFITABLE_RETRY_LIMIT},
-      hidden = true,
-      paramLabel = "<INTEGER>",
-      description =
-          "DEPRECATED, has no effect: Max number of unprofitable transactions we retry on each block creation (default: ${DEFAULT-VALUE})")
-  private int unprofitableRetryLimit = 1;
 
   @CommandLine.Option(
       names = {EVENTS_DENY_LIST_PATH},
