@@ -41,7 +41,7 @@ interface IV3DexSwapAdapter {
   error InsufficientLineaTokensReceived(uint256 expectedMinimum, uint256 actualReceived);
 
   /** @notice Swap ETH into LINEA.
-   * @notice Emitted when the V3DexSwapAdapter contract is initialized.
+   * @notice Emitted when the V3DexAdapter contract is initialized.
    * @param router The address of the Router contract.
    * @param wethToken The address of the WETH token contract.
    * @param lineaToken The address of the LINEA token contract.
