@@ -126,8 +126,8 @@ class LineaTransactionSelectorFactoryTest {
             Optional.empty(),
             bundlePool,
             invalidTransactionByLineCountCache,
-            new AtomicReference<>(Collections.emptySet()),
-            new AtomicReference<>(Collections.emptySet()));
+            new AtomicReference<>(Collections.emptyMap()),
+            new AtomicReference<>(Collections.emptyMap()));
     factory.create(new SelectorsStateManager());
   }
 

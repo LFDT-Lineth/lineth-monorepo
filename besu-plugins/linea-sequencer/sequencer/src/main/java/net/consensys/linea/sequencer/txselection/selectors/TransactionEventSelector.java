@@ -1,10 +1,15 @@
 package net.consensys.linea.sequencer.txselection.selectors;
 
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import lombok.RequiredArgsConstructor;
 import net.consensys.linea.bundles.TransactionBundle;
+import org.apache.tuweni.bytes.Bytes32;
+import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.evm.log.Log;
+import org.hyperledger.besu.evm.log.LogTopic;
 import org.hyperledger.besu.plugin.data.TransactionProcessingResult;
 import org.hyperledger.besu.plugin.data.TransactionSelectionResult;
 import org.hyperledger.besu.plugin.services.txselection.PluginTransactionSelector;
@@ -12,8 +17,8 @@ import org.hyperledger.besu.plugin.services.txselection.TransactionEvaluationCon
 
 @RequiredArgsConstructor
 public class TransactionEventSelector implements PluginTransactionSelector {
-  private final AtomicReference<Set<TransactionEventFilter>> deniedEvents;
-  private final AtomicReference<Set<TransactionEventFilter>> deniedBundleEvents;
+  private final AtomicReference<Map<Address, Set<TransactionEventFilter>>> deniedEvents;
+  private final AtomicReference<Map<Address, Set<TransactionEventFilter>>> deniedBundleEvents;
 
   @Override
   public TransactionSelectionResult evaluateTransactionPreProcessing(
@@ -27,19 +32,28 @@ public class TransactionEventSelector implements PluginTransactionSelector {
       final TransactionProcessingResult processingResult) {
     final boolean isBundle =
         evaluationContext.getPendingTransaction() instanceof TransactionBundle.PendingBundleTx;
-    Set<TransactionEventFilter> deniedEventsForTransaction =
+    final Map<Address, Set<TransactionEventFilter>> deniedEventsByAddress =
         isBundle ? deniedBundleEvents.get() : deniedEvents.get();
-    for (TransactionEventFilter deniedEvent : deniedEventsForTransaction) {
-      for (Log log : processingResult.getLogs()) {
-        if (deniedEvent.matches(log)) {
-          return TransactionSelectionResult.invalid(
-              String.format(
-                  "Transaction %s is blocked due to contract address and event logs appearing on SDN or other legally prohibited list",
-                  evaluationContext
-                      .getPendingTransaction()
-                      .getTransaction()
-                      .getHash()
-                      .toShortHexString()));
+    for (Log log : processingResult.getLogs()) {
+      Address contractAddress = log.getLogger();
+      Set<TransactionEventFilter> deniedEventsForTransaction =
+          deniedEventsByAddress.get(contractAddress);
+      if (deniedEventsForTransaction != null) {
+        List<LogTopic> logTopics =
+            log.getTopics().stream()
+                .map((logTopic) -> LogTopic.wrap(Bytes32.leftPad(logTopic)))
+                .toList();
+        for (TransactionEventFilter deniedEvent : deniedEventsForTransaction) {
+          if (deniedEvent.matches(contractAddress, logTopics.toArray(new LogTopic[] {}))) {
+            return TransactionSelectionResult.invalid(
+                String.format(
+                    "Transaction %s is blocked due to contract address and event logs appearing on SDN or other legally prohibited list",
+                    evaluationContext
+                        .getPendingTransaction()
+                        .getTransaction()
+                        .getHash()
+                        .toShortHexString()));
+          }
         }
       }
     }

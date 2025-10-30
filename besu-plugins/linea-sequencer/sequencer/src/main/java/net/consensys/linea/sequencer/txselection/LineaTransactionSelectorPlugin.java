@@ -15,6 +15,7 @@ import static net.consensys.linea.metrics.LineaMetricCategory.SEQUENCER_PROFITAB
 import com.google.auto.service.AutoService;
 import java.math.BigInteger;
 import java.util.Collections;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -32,6 +33,7 @@ import net.consensys.linea.sequencer.liveness.LineaLivenessTxBuilder;
 import net.consensys.linea.sequencer.liveness.LivenessService;
 import net.consensys.linea.sequencer.txselection.selectors.ProfitableTransactionSelector;
 import net.consensys.linea.sequencer.txselection.selectors.TransactionEventFilter;
+import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.plugin.BesuPlugin;
 import org.hyperledger.besu.plugin.ServiceManager;
 import org.hyperledger.besu.plugin.services.TransactionSelectionService;
@@ -46,10 +48,10 @@ import org.hyperledger.besu.plugin.services.TransactionSelectionService;
 public class LineaTransactionSelectorPlugin extends AbstractLineaRequiredPlugin {
   private TransactionSelectionService transactionSelectionService;
   private Optional<JsonRpcManager> rejectedTxJsonRpcManager = Optional.empty();
-  private final AtomicReference<Set<TransactionEventFilter>> deniedEvents =
-      new AtomicReference<>(Collections.emptySet());
-  private final AtomicReference<Set<TransactionEventFilter>> deniedBundleEvents =
-      new AtomicReference<>(Collections.emptySet());
+  private final AtomicReference<Map<Address, Set<TransactionEventFilter>>> deniedEvents =
+      new AtomicReference<>(Collections.emptyMap());
+  private final AtomicReference<Map<Address, Set<TransactionEventFilter>>> deniedBundleEvents =
+      new AtomicReference<>(Collections.emptyMap());
 
   @Override
   public void doRegister(final ServiceManager serviceManager) {
@@ -143,13 +145,13 @@ public class LineaTransactionSelectorPlugin extends AbstractLineaRequiredPlugin 
   @Override
   public CompletableFuture<Void> reloadConfiguration() {
     try {
-      Set<TransactionEventFilter> newDeniedEvents =
+      Map<Address, Set<TransactionEventFilter>> newDeniedEvents =
           LineaTransactionSelectorCliOptions.create()
               .parseTransactionEventDenyList(
                   transactionSelectorConfiguration().eventsDenyListPath());
       deniedEvents.set(newDeniedEvents);
 
-      Set<TransactionEventFilter> newDeniedBundleEvents =
+      Map<Address, Set<TransactionEventFilter>> newDeniedBundleEvents =
           LineaTransactionSelectorCliOptions.create()
               .parseTransactionEventDenyList(
                   transactionSelectorConfiguration().eventsBundleDenyListPath());

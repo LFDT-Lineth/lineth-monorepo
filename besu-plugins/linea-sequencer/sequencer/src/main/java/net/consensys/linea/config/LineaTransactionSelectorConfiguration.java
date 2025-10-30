@@ -9,10 +9,12 @@
 
 package net.consensys.linea.config;
 
+import java.util.Map;
 import java.util.Set;
 import lombok.Builder;
 import net.consensys.linea.plugins.LineaOptionsConfiguration;
 import net.consensys.linea.sequencer.txselection.selectors.TransactionEventFilter;
+import org.hyperledger.besu.datatypes.Address;
 
 /** The Linea transaction selectors configuration. */
 @Builder(toBuilder = true)
@@ -23,7 +25,7 @@ public record LineaTransactionSelectorConfiguration(
     long maxBundleGasPerBlock,
     long maxBundlePoolSizeBytes,
     String eventsDenyListPath,
-    Set<TransactionEventFilter> eventsDenyList,
+    Map<Address, Set<TransactionEventFilter>> eventsDenyList,
     String eventsBundleDenyListPath,
-    Set<TransactionEventFilter> eventsBundleDenyList)
+    Map<Address, Set<TransactionEventFilter>> eventsBundleDenyList)
     implements LineaOptionsConfiguration {}

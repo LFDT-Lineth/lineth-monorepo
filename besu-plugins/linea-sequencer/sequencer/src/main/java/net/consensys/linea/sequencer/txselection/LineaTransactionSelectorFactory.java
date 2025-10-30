@@ -10,6 +10,7 @@
 package net.consensys.linea.sequencer.txselection;
 
 import java.time.Instant;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -26,6 +27,7 @@ import net.consensys.linea.plugins.config.LineaL1L2BridgeSharedConfiguration;
 import net.consensys.linea.sequencer.liveness.LivenessService;
 import net.consensys.linea.sequencer.txselection.selectors.LineaTransactionSelector;
 import net.consensys.linea.sequencer.txselection.selectors.TransactionEventFilter;
+import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.plugin.data.ProcessableBlockHeader;
 import org.hyperledger.besu.plugin.services.BlockchainService;
 import org.hyperledger.besu.plugin.services.txselection.BlockTransactionSelectionService;
@@ -52,8 +54,8 @@ public class LineaTransactionSelectorFactory implements PluginTransactionSelecto
   private final Optional<LivenessService> livenessService;
   private final InvalidTransactionByLineCountCache invalidTransactionByLineCountCache;
   private final AtomicReference<LineaTransactionSelector> currSelector = new AtomicReference<>();
-  private final AtomicReference<Set<TransactionEventFilter>> deniedEvents;
-  private final AtomicReference<Set<TransactionEventFilter>> deniedBundleEvents;
+  private final AtomicReference<Map<Address, Set<TransactionEventFilter>>> deniedEvents;
+  private final AtomicReference<Map<Address, Set<TransactionEventFilter>>> deniedBundleEvents;
 
   public LineaTransactionSelectorFactory(
       final BlockchainService blockchainService,
@@ -66,8 +68,8 @@ public class LineaTransactionSelectorFactory implements PluginTransactionSelecto
       final Optional<HistogramMetrics> maybeProfitabilityMetrics,
       final BundlePoolService bundlePoolService,
       final InvalidTransactionByLineCountCache invalidTransactionByLineCountCache,
-      final AtomicReference<Set<TransactionEventFilter>> deniedEvents,
-      final AtomicReference<Set<TransactionEventFilter>> deniedBundleEvents) {
+      final AtomicReference<Map<Address, Set<TransactionEventFilter>>> deniedEvents,
+      final AtomicReference<Map<Address, Set<TransactionEventFilter>>> deniedBundleEvents) {
     this.blockchainService = blockchainService;
     this.txSelectorConfiguration = txSelectorConfiguration;
     this.l1L2BridgeConfiguration = l1L2BridgeConfiguration;

@@ -22,12 +22,8 @@ public class TransactionEventFilterTest {
     TransactionEventFilter transactionEventFilter =
         new TransactionEventFilter(contractAddress, topic0, WILDCARD_LOGTOPIC, topic2, topic3);
 
-    Log log = Mockito.mock(Log.class);
-    Mockito.when(log.getLogger()).thenReturn(contractAddress);
-    List<LogTopic> logTopics = List.of(topic0, topic1, topic2, topic3);
-    Mockito.when(log.getTopics()).thenReturn(logTopics);
-
-    Assertions.assertTrue(transactionEventFilter.matches(log));
+    Assertions.assertTrue(
+        transactionEventFilter.matches(contractAddress, topic0, topic1, topic2, topic3));
   }
 
   @Test
@@ -41,10 +37,7 @@ public class TransactionEventFilterTest {
             WILDCARD_LOGTOPIC,
             WILDCARD_LOGTOPIC);
 
-    Log log = Mockito.mock(Log.class);
-    Mockito.when(log.getLogger()).thenReturn(Mockito.mock(Address.class));
-
-    Assertions.assertFalse(transactionEventFilter.matches(log));
+    Assertions.assertFalse(transactionEventFilter.matches(Mockito.mock(Address.class)));
   }
 
   @Test
@@ -59,12 +52,8 @@ public class TransactionEventFilterTest {
         new TransactionEventFilter(
             contractAddress, topic0, WILDCARD_LOGTOPIC, topic2, Mockito.mock(LogTopic.class));
 
-    Log log = Mockito.mock(Log.class);
-    Mockito.when(log.getLogger()).thenReturn(contractAddress);
-    List<LogTopic> logTopics = List.of(topic0, topic1, topic2, topic3);
-    Mockito.when(log.getTopics()).thenReturn(logTopics);
-
-    Assertions.assertFalse(transactionEventFilter.matches(log));
+    Assertions.assertFalse(
+        transactionEventFilter.matches(contractAddress, topic0, topic1, topic2, topic3));
   }
 
   @Test
@@ -81,6 +70,7 @@ public class TransactionEventFilterTest {
     List<LogTopic> logTopics = List.of(topic, topic, topic, topic);
     Mockito.when(log.getTopics()).thenReturn(logTopics);
 
-    Assertions.assertTrue(transactionEventFilter.matches(log));
+    Assertions.assertTrue(
+        transactionEventFilter.matches(contractAddress, topic, topic, topic, topic));
   }
 }
