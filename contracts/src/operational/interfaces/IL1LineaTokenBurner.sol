@@ -15,6 +15,13 @@ interface IL1LineaTokenBurner {
   error NoTokensToBurn();
 
   /**
+   * @notice Emitted when the L1 Linea Token Burner is initialized.
+   * @param messageService The address of the Message Service contract.
+   * @param lineaToken The address of the LINEA token contract.
+   */
+  event L1LineaTokenBurnerInitialized(address messageService, address lineaToken);
+
+  /**
    * @notice Claims a message with proof and burns the LINEA tokens held by this contract.
    * @param _params The parameters required to claim the message with proof.
    */

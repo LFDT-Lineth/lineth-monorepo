@@ -1,7 +1,7 @@
-const londonOverride = {
+const lineaOverride = {
   version: "0.8.30",
   settings: {
-    evmVersion: "london",
+    evmVersion: "prague",
     optimizer: {
       enabled: true,
       runs: 10_000,
@@ -9,7 +9,7 @@ const londonOverride = {
   },
 };
 
-const londonOverridePaths = [
+const lineaOverridePaths = [
   "src/messaging/l2/L2MessageService.sol",
   "src/operational/LineaSequencerUptimeFeed.sol",
   "src/bridging/token/TokenBridge.sol",
@@ -30,4 +30,4 @@ const londonOverridePaths = [
   "src/operational/RollupRevenueVault.sol",
 ];
 
-export const overrides = Object.fromEntries(londonOverridePaths.map((path) => [path, londonOverride]));
+export const overrides = Object.fromEntries(lineaOverridePaths.map((path) => [path, lineaOverride]));

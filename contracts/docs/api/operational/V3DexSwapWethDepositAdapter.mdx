@@ -1,0 +1,70 @@
+# `V3DexSwapWethDepositAdapter`
+
+### POOL_TICK_SPACING
+
+```solidity
+int24 POOL_TICK_SPACING
+```
+
+Tick spacing of the pool.
+
+### ROUTER
+
+```solidity
+address ROUTER
+```
+
+Address of the Swap Router contract.
+
+### WETH_TOKEN
+
+```solidity
+address WETH_TOKEN
+```
+
+Address of the WETH token contract.
+
+### LINEA_TOKEN
+
+```solidity
+address LINEA_TOKEN
+```
+
+Address of the LINEA token contract.
+
+### constructor
+
+```solidity
+constructor(address _router, address _wethToken, address _lineaToken, int24 _poolTickSpacing) public
+```
+
+_Initializes the contract with the given parameters.
+The expect pools use int24._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _router | address | Address of the Router contract. |
+| _wethToken | address | Address of the WETH token contract. |
+| _lineaToken | address | Address of the LINEA token contract. |
+| _poolTickSpacing | int24 | Tick spacing of the pool. |
+
+### swap
+
+```solidity
+function swap(uint256 _minLineaOut, uint256 _deadline) external payable returns (uint256 amountOut)
+```
+
+Swap ETH into LINEA tokens.
+
+_The msg.sender will be the recipient of the LINEA tokens, and WETH is swapped 1:1 with `msg.value`.
+No ETH is kept in the contract after the swap due to exactInputSingle swapping._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _minLineaOut | uint256 | Minimum number of LINEA tokens to receive (slippage protection). |
+| _deadline | uint256 | Time after which the transaction will revert if not yet processed. |
+

@@ -7,7 +7,7 @@ interface ISwapRouterV3 {
   struct ExactInputSingleParams {
     address tokenIn;
     address tokenOut;
-    uint24 tickSpacing;
+    int24 tickSpacing;
     address recipient;
     uint256 deadline;
     uint256 amountIn;
@@ -22,7 +22,7 @@ contract TestDexRouter {
   struct ExactInputSingleParams {
     address tokenIn;
     address tokenOut;
-    uint24 tickSpacing;
+    int24 tickSpacing;
     address recipient;
     uint256 deadline;
     uint256 amountIn;
@@ -33,5 +33,9 @@ contract TestDexRouter {
   function exactInputSingle(ExactInputSingleParams calldata params) external payable returns (uint256 amountOut) {
     amountOut = params.amountIn * 2;
     TestERC20(params.tokenOut).mint(params.recipient, amountOut);
+  }
+
+  function zeroOutputExactInputSingle(ExactInputSingleParams calldata) external payable returns (uint256 amountOut) {
+    amountOut = 0;
   }
 }

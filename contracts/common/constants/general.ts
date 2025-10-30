@@ -9,3 +9,6 @@ export const L2_MESSAGE_SERVICE_INITIALIZE_SIGNATURE =
   "initialize(uint256,uint256,address,(address,bytes32)[],(uint8,bytes32)[],(uint8,bytes32)[])";
 
 export const EMPTY_INITIALIZE_SIGNATURE = "initialize()";
+
+export const ROLLUP_REVENUE_VAULT_INITIALIZE_SIGNATURE =
+  "initializeRolesAndStorageVariables(uint256,address,address,address,address,address,address,address,address,address)";

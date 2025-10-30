@@ -44,19 +44,9 @@ interface IRollupRevenueVault {
   error ZeroInvoiceAmount();
 
   /**
-   * @dev Thrown when the invoice is in arrears.
-   */
-  error InvoiceInArrears();
-
-  /**
    * @dev Thrown when the invoice date is too old.
    */
   error InvoiceDateTooOld();
-
-  /**
-   * @dev Thrown when the contract balance is insufficient.
-   */
-  error InsufficientBalance();
 
   /**
    * @dev Thrown when the provided address is the same as the existing address.
@@ -69,9 +59,14 @@ interface IRollupRevenueVault {
   error DexSwapFailed();
 
   /**
-   * @dev Thrown when zero LINEA tokens are received from the DEX swap.
+   * @dev Thrown when the invoice is in the future.
    */
-  error ZeroLineaTokensReceived();
+  error FutureInvoicesNotAllowed();
+
+  /**
+   * @dev Thrown when no ETH is sent and the fallback or receive functions are reached.
+   */
+  error NoEthSent();
 
   /**
    * @dev Emitted when an invoice is processed.
@@ -105,11 +100,11 @@ interface IRollupRevenueVault {
   event L1LineaTokenBurnerUpdated(address previousValue, address newValue);
 
   /**
-   * @dev Emitted when the DEX contract address is updated.
-   * @param previousValue The previous DEX contract address.
-   * @param newValue The new DEX contract address.
+   * @dev Emitted when the DEX swap adapter contract address is updated.
+   * @param previousValue The previous DEX swap adapter contract address.
+   * @param newValue The new DEX swap adapter contract address.
    */
-  event DexUpdated(address previousValue, address newValue);
+  event DexSwapAdapterUpdated(address previousValue, address newValue);
 
   /**
    * @dev Emitted when ETH is received.
@@ -118,11 +113,25 @@ interface IRollupRevenueVault {
   event EthReceived(uint256 amount);
 
   /**
-   * @dev Emitted when the invoice arrears are updated.
-   * @param newInvoiceArrears The new invoice arrears value.
-   * @param lastInvoiceDate The timestamp of the last invoice processed.
+   * @dev Emitted when arrears is paid when calling burnAndBridge.
+   * @param amount The amount of ETH paid.
+   * @param remainingArrears The arrears remaining in ETH.
    */
-  event InvoiceArrearsUpdated(uint256 newInvoiceArrears, uint256 lastInvoiceDate);
+  event ArrearsPaid(uint256 amount, uint256 remainingArrears);
+
+  /**
+   * @dev Emitted when the invoice arrears are updated.
+   * @param previousInvoiceArrears The previous invoice arrears value.
+   * @param newInvoiceArrears The new invoice arrears value.
+   * @param previousLastInvoiceDate The previous timestamp of the last invoice processed.
+   * @param newLastInvoiceDate The new timestamp of the last invoice processed.
+   */
+  event InvoiceArrearsUpdated(
+    uint256 previousInvoiceArrears,
+    uint256 newInvoiceArrears,
+    uint256 previousLastInvoiceDate,
+    uint256 newLastInvoiceDate
+  );
 
   /**
    * @dev Emitted when the invoice payment receiver is updated.
@@ -130,4 +139,24 @@ interface IRollupRevenueVault {
    * @param newValue The new invoice payment receiver address.
    */
   event InvoicePaymentReceiverUpdated(address previousValue, address newValue);
+
+  /**
+   * @dev Emitted when the Rollup Revenue Vault is initialized.
+   * @param lastInvoiceDate The default or starting timestamp for invoices less 1 second.
+   * @param invoicePaymentReceiver The address that receives invoice payments.
+   * @param tokenBridge The address of the token bridge contract.
+   * @param messageService The address of the message service contract.
+   * @param l1LineaTokenBurner The address of the L1 LINEA token burner contract.
+   * @param lineaToken The address of the LINEA token contract.
+   * @param dexSwapAdapter The address of the DEX swap adapter contract.
+   */
+  event RollupRevenueVaultInitialized(
+    uint256 lastInvoiceDate,
+    address invoicePaymentReceiver,
+    address tokenBridge,
+    address messageService,
+    address l1LineaTokenBurner,
+    address lineaToken,
+    address dexSwapAdapter
+  );
 }

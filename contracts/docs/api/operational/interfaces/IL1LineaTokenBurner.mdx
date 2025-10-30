@@ -8,6 +8,21 @@ error NoTokensToBurn()
 
 Error thrown when there are no tokens to burn.
 
+### L1LineaTokenBurnerInitialized
+
+```solidity
+event L1LineaTokenBurnerInitialized(address messageService, address lineaToken)
+```
+
+Emitted when the L1 Linea Token Burner is initialized.
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| messageService | address | The address of the Message Service contract. |
+| lineaToken | address | The address of the LINEA token contract. |
+
 ### claimMessageWithProof
 
 ```solidity

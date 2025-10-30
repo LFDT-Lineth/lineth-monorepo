@@ -1,9 +1,9 @@
-# `V3DexSwap`
+# `V3DexSwapAdapter`
 
 ### POOL_TICK_SPACING
 
 ```solidity
-uint24 POOL_TICK_SPACING
+int24 POOL_TICK_SPACING
 ```
 
 Tick spacing of the pool.
@@ -35,10 +35,11 @@ Address of the LINEA token contract.
 ### constructor
 
 ```solidity
-constructor(address _router, address _wethToken, address _lineaToken, uint24 _poolTickSpacing) public
+constructor(address _router, address _wethToken, address _lineaToken, int24 _poolTickSpacing) public
 ```
 
-_Initializes the contract with the given parameters._
+_Initializes the contract with the given parameters.
+The expect pools use int24._
 
 #### Parameters
 
@@ -47,12 +48,12 @@ _Initializes the contract with the given parameters._
 | _router | address | Address of the Router contract. |
 | _wethToken | address | Address of the WETH token contract. |
 | _lineaToken | address | Address of the LINEA token contract. |
-| _poolTickSpacing | uint24 | Tick spacing of the pool. |
+| _poolTickSpacing | int24 | Tick spacing of the pool. |
 
 ### swap
 
 ```solidity
-function swap(uint256 _minLineaOut, uint256 _deadline, uint160 _sqrtPriceLimitX96) external payable returns (uint256 amountOut)
+function swap(uint256 _minLineaOut, uint256 _deadline) external payable returns (uint256 amountOut)
 ```
 
 Swap ETH into LINEA tokens.
@@ -66,5 +67,10 @@ No ETH is kept in the contract after the swap due to exactInputSingle swapping._
 | ---- | ---- | ----------- |
 | _minLineaOut | uint256 | Minimum number of LINEA tokens to receive (slippage protection). |
 | _deadline | uint256 | Time after which the transaction will revert if not yet processed. |
-| _sqrtPriceLimitX96 | uint160 | Price limit of the swap as a Q64.96 value. |
+
+#### Return Values
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| amountOut | uint256 | The amount of LINEA tokens received from the swap. |
 

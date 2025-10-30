@@ -1,0 +1,99 @@
+# `IV3DexSwapAdapter`
+
+### NoEthSent
+
+```solidity
+error NoEthSent()
+```
+
+_Thrown when no ETH is sent with the swap call._
+
+### ZeroAddressNotAllowed
+
+```solidity
+error ZeroAddressNotAllowed()
+```
+
+_Thrown when a parameter is the zero address._
+
+### ZeroTickSpacingNotAllowed
+
+```solidity
+error ZeroTickSpacingNotAllowed()
+```
+
+_Thrown when the tick spacing is zero._
+
+### ZeroMinLineaOutNotAllowed
+
+```solidity
+error ZeroMinLineaOutNotAllowed()
+```
+
+_Thrown when the minimum LINEA out parameter is zero._
+
+### DeadlineInThePast
+
+```solidity
+error DeadlineInThePast()
+```
+
+_Thrown when the deadline is in the past. (< block.timestamp)_
+
+### InsufficientLineaTokensReceived
+
+```solidity
+error InsufficientLineaTokensReceived(uint256 expectedMinimum, uint256 actualReceived)
+```
+
+_Thrown when insufficient LINEA tokens are received from the DEX swap._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| expectedMinimum | uint256 | The expected minimum number of LINEA tokens to be received. |
+| actualReceived | uint256 | The actual number of LINEA tokens received. |
+
+### V3DexSwapAdapterInitialized
+
+```solidity
+event V3DexSwapAdapterInitialized(address router, address wethToken, address lineaToken, int24 poolTickSpacing)
+```
+
+Swap ETH into LINEA.
+Emitted when the V3DexAdapter contract is initialized.
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| router | address | The address of the Router contract. |
+| wethToken | address | The address of the WETH token contract. |
+| lineaToken | address | The address of the LINEA token contract. |
+| poolTickSpacing | int24 | Tick spacing of the pool. |
+
+### swap
+
+```solidity
+function swap(uint256 _minLineaOut, uint256 _deadline) external payable returns (uint256 amountOut)
+```
+
+Swap ETH into LINEA tokens.
+
+_The msg.sender will be the recipient of the LINEA tokens, and WETH is swapped 1:1 with `msg.value`.
+No ETH is kept in the contract after the swap due to exactInputSingle swapping._
+
+#### Parameters
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| _minLineaOut | uint256 | Minimum number of LINEA tokens to receive (slippage protection). |
+| _deadline | uint256 | Time after which the transaction will revert if not yet processed. |
+
+#### Return Values
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| amountOut | uint256 | The amount of LINEA tokens received from the swap. |
+

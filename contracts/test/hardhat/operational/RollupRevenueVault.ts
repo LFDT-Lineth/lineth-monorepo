@@ -8,27 +8,28 @@ import {
   RollupRevenueVault,
   TestERC20,
   TokenBridge,
-  TestDexSwap,
-  TestDexSwap__factory,
+  TestDexSwapAdapter,
+  TestDexSwapAdapter__factory,
 } from "../../../typechain-types";
 import { getRollupRevenueVaultAccountsFixture } from "./helpers/before";
 import { deployRollupRevenueVaultFixture } from "./helpers/deploy";
 import { ADDRESS_ZERO, EMPTY_CALLDATA, ONE_DAY_IN_SECONDS } from "../common/constants";
 import {
   expectEvent,
+  expectNoEvent,
   expectRevertWithCustomError,
   expectRevertWithReason,
   generateRandomBytes,
 } from "../common/helpers";
 import { deployUpgradableFromFactory } from "../common/deployment";
-import { ROLLUP_REVENUE_VAULT_INITIALIZE_SIGNATURE } from "./constants";
+import { ROLLUP_REVENUE_VAULT_REINITIALIZE_SIGNATURE } from "./constants";
 
 describe("RollupRevenueVault", () => {
   let rollupRevenueVault: RollupRevenueVault;
   let l2LineaToken: TestERC20;
   let tokenBridge: TokenBridge;
   let messageService: L2MessageService;
-  let dex: TestDexSwap;
+  let dexSwapAdapter: TestDexSwapAdapter;
 
   let admin: SignerWithAddress;
   let invoiceSubmitter: SignerWithAddress;
@@ -37,6 +38,8 @@ describe("RollupRevenueVault", () => {
   let l1LineaTokenBurner: SignerWithAddress;
   let nonAuthorizedAccount: SignerWithAddress;
 
+  const ONE_ETHER = ethers.parseEther("1");
+
   before(async () => {
     await network.provider.send("hardhat_reset");
     ({ admin, invoiceSubmitter, burner, invoicePaymentReceiver, l1LineaTokenBurner, nonAuthorizedAccount } =
@@ -44,28 +47,55 @@ describe("RollupRevenueVault", () => {
   });
 
   beforeEach(async () => {
-    ({ rollupRevenueVault, l2LineaToken, tokenBridge, messageService, dex } = await loadFixture(
+    ({ rollupRevenueVault, l2LineaToken, tokenBridge, messageService, dexSwapAdapter } = await loadFixture(
       deployRollupRevenueVaultFixture,
     ));
   });
 
+  const sendEthToContract = async (value: bigint, data: string) => {
+    return admin.sendTransaction({ to: await rollupRevenueVault.getAddress(), value, data });
+  };
   describe("Fallback/Receive", () => {
-    const sendEthToContract = async (value: bigint, data: string) => {
-      return admin.sendTransaction({ to: await rollupRevenueVault.getAddress(), value, data });
-    };
+    it("Should fail to send eth to the rollupRevenueVault contract through the receive when msg.value == 0", async () => {
+      const value = ethers.parseEther("0");
+      await expectRevertWithCustomError(rollupRevenueVault, sendEthToContract(value, EMPTY_CALLDATA), "NoEthSent");
+    });
 
     it("Should send eth to the rollupRevenueVault contract through the receive", async () => {
-      const value = ethers.parseEther("1");
+      const value = ONE_ETHER;
       await expectEvent(rollupRevenueVault, sendEthToContract(value, EMPTY_CALLDATA), "EthReceived", [value]);
     });
 
-    it("Should fail to send eth to the rollupRevenueVault contract through the fallback function", async () => {
+    it("Should fail to send eth to the rollupRevenueVault contract through the fallback function when msg.value == 0", async () => {
+      const value = ethers.parseEther("0");
+      await expectRevertWithCustomError(rollupRevenueVault, sendEthToContract(value, "0x1234"), "NoEthSent");
+    });
+
+    it("Should send eth to the rollupRevenueVault contract through the fallback function", async () => {
       const value = ethers.parseEther("1");
       await expectEvent(rollupRevenueVault, sendEthToContract(value, "0x1234"), "EthReceived", [value]);
     });
   });
 
-  describe("Initialization", () => {
+  describe("initializeRolesAndStorageVariables", () => {
+    it("Should revert when reinitializing twice", async () => {
+      await expectRevertWithReason(
+        rollupRevenueVault.initializeRolesAndStorageVariables(
+          await time.latest(),
+          admin.address,
+          invoiceSubmitter.address,
+          burner.address,
+          invoicePaymentReceiver.address,
+          await tokenBridge.getAddress(),
+          await messageService.getAddress(),
+          l1LineaTokenBurner.address,
+          await l2LineaToken.getAddress(),
+          await dexSwapAdapter.getAddress(),
+        ),
+        "Initializable: contract is already initialized",
+      );
+    });
+
     it("should revert if lastInvoiceDate is zero", async () => {
       const deployCall = deployUpgradableFromFactory(
         "RollupRevenueVault",
@@ -79,14 +109,38 @@ describe("RollupRevenueVault", () => {
           await messageService.getAddress(),
           l1LineaTokenBurner.address,
           await l2LineaToken.getAddress(),
-          await dex.getAddress(),
+          await dexSwapAdapter.getAddress(),
         ],
         {
-          initializer: ROLLUP_REVENUE_VAULT_INITIALIZE_SIGNATURE,
+          initializer: ROLLUP_REVENUE_VAULT_REINITIALIZE_SIGNATURE,
           unsafeAllow: ["constructor"],
         },
       );
       await expectRevertWithCustomError(rollupRevenueVault, deployCall, "ZeroTimestampNotAllowed");
+    });
+
+    it("should revert if lastInvoiceDate is in the future", async () => {
+      const futureInvoiceDate = (await time.latest()) + ONE_DAY_IN_SECONDS;
+      const deployCall = deployUpgradableFromFactory(
+        "RollupRevenueVault",
+        [
+          futureInvoiceDate,
+          admin.address,
+          invoiceSubmitter.address,
+          burner.address,
+          invoicePaymentReceiver.address,
+          await tokenBridge.getAddress(),
+          await messageService.getAddress(),
+          l1LineaTokenBurner.address,
+          await l2LineaToken.getAddress(),
+          await dexSwapAdapter.getAddress(),
+        ],
+        {
+          initializer: ROLLUP_REVENUE_VAULT_REINITIALIZE_SIGNATURE,
+          unsafeAllow: ["constructor"],
+        },
+      );
+      await expectRevertWithCustomError(rollupRevenueVault, deployCall, "FutureInvoicesNotAllowed");
     });
 
     it("Should revert if defaultAdmin address is zero address", async () => {
@@ -102,10 +156,10 @@ describe("RollupRevenueVault", () => {
           await messageService.getAddress(),
           l1LineaTokenBurner.address,
           await l2LineaToken.getAddress(),
-          await dex.getAddress(),
+          await dexSwapAdapter.getAddress(),
         ],
         {
-          initializer: ROLLUP_REVENUE_VAULT_INITIALIZE_SIGNATURE,
+          initializer: ROLLUP_REVENUE_VAULT_REINITIALIZE_SIGNATURE,
           unsafeAllow: ["constructor"],
         },
       );
@@ -125,10 +179,10 @@ describe("RollupRevenueVault", () => {
           await messageService.getAddress(),
           l1LineaTokenBurner.address,
           await l2LineaToken.getAddress(),
-          await dex.getAddress(),
+          await dexSwapAdapter.getAddress(),
         ],
         {
-          initializer: ROLLUP_REVENUE_VAULT_INITIALIZE_SIGNATURE,
+          initializer: ROLLUP_REVENUE_VAULT_REINITIALIZE_SIGNATURE,
           unsafeAllow: ["constructor"],
         },
       );
@@ -148,10 +202,10 @@ describe("RollupRevenueVault", () => {
           await messageService.getAddress(),
           l1LineaTokenBurner.address,
           await l2LineaToken.getAddress(),
-          await dex.getAddress(),
+          await dexSwapAdapter.getAddress(),
         ],
         {
-          initializer: ROLLUP_REVENUE_VAULT_INITIALIZE_SIGNATURE,
+          initializer: ROLLUP_REVENUE_VAULT_REINITIALIZE_SIGNATURE,
           unsafeAllow: ["constructor"],
         },
       );
@@ -171,10 +225,10 @@ describe("RollupRevenueVault", () => {
           await messageService.getAddress(),
           l1LineaTokenBurner.address,
           await l2LineaToken.getAddress(),
-          await dex.getAddress(),
+          await dexSwapAdapter.getAddress(),
         ],
         {
-          initializer: ROLLUP_REVENUE_VAULT_INITIALIZE_SIGNATURE,
+          initializer: ROLLUP_REVENUE_VAULT_REINITIALIZE_SIGNATURE,
           unsafeAllow: ["constructor"],
         },
       );
@@ -194,10 +248,10 @@ describe("RollupRevenueVault", () => {
           await messageService.getAddress(),
           l1LineaTokenBurner.address,
           await l2LineaToken.getAddress(),
-          await dex.getAddress(),
+          await dexSwapAdapter.getAddress(),
         ],
         {
-          initializer: ROLLUP_REVENUE_VAULT_INITIALIZE_SIGNATURE,
+          initializer: ROLLUP_REVENUE_VAULT_REINITIALIZE_SIGNATURE,
           unsafeAllow: ["constructor"],
         },
       );
@@ -217,10 +271,10 @@ describe("RollupRevenueVault", () => {
           ADDRESS_ZERO,
           l1LineaTokenBurner.address,
           await l2LineaToken.getAddress(),
-          await dex.getAddress(),
+          await dexSwapAdapter.getAddress(),
         ],
         {
-          initializer: ROLLUP_REVENUE_VAULT_INITIALIZE_SIGNATURE,
+          initializer: ROLLUP_REVENUE_VAULT_REINITIALIZE_SIGNATURE,
           unsafeAllow: ["constructor"],
         },
       );
@@ -240,10 +294,10 @@ describe("RollupRevenueVault", () => {
           await messageService.getAddress(),
           ADDRESS_ZERO,
           await l2LineaToken.getAddress(),
-          await dex.getAddress(),
+          await dexSwapAdapter.getAddress(),
         ],
         {
-          initializer: ROLLUP_REVENUE_VAULT_INITIALIZE_SIGNATURE,
+          initializer: ROLLUP_REVENUE_VAULT_REINITIALIZE_SIGNATURE,
           unsafeAllow: ["constructor"],
         },
       );
@@ -263,17 +317,17 @@ describe("RollupRevenueVault", () => {
           await messageService.getAddress(),
           l1LineaTokenBurner.address,
           ADDRESS_ZERO,
-          await dex.getAddress(),
+          await dexSwapAdapter.getAddress(),
         ],
         {
-          initializer: ROLLUP_REVENUE_VAULT_INITIALIZE_SIGNATURE,
+          initializer: ROLLUP_REVENUE_VAULT_REINITIALIZE_SIGNATURE,
           unsafeAllow: ["constructor"],
         },
       );
       await expectRevertWithCustomError(rollupRevenueVault, deployCall, "ZeroAddressNotAllowed");
     });
 
-    it("Should revert if V3DexSwap contract address is zero address", async () => {
+    it("Should revert if V3DexSwapAdapter contract address is zero address", async () => {
       const deployCall = deployUpgradableFromFactory(
         "RollupRevenueVault",
         [
@@ -289,11 +343,54 @@ describe("RollupRevenueVault", () => {
           ADDRESS_ZERO,
         ],
         {
-          initializer: ROLLUP_REVENUE_VAULT_INITIALIZE_SIGNATURE,
+          initializer: ROLLUP_REVENUE_VAULT_REINITIALIZE_SIGNATURE,
           unsafeAllow: ["constructor"],
         },
       );
       await expectRevertWithCustomError(rollupRevenueVault, deployCall, "ZeroAddressNotAllowed");
+    });
+
+    it("should emit an event when initialized", async () => {
+      const lastInvoiceDate = await time.latest();
+      const contract = await deployUpgradableFromFactory(
+        "RollupRevenueVault",
+        [
+          lastInvoiceDate,
+          admin.address,
+          invoiceSubmitter.address,
+          burner.address,
+          invoicePaymentReceiver.address,
+          await tokenBridge.getAddress(),
+          await messageService.getAddress(),
+          l1LineaTokenBurner.address,
+          await l2LineaToken.getAddress(),
+          await dexSwapAdapter.getAddress(),
+        ],
+        {
+          initializer: ROLLUP_REVENUE_VAULT_REINITIALIZE_SIGNATURE,
+          unsafeAllow: ["constructor"],
+        },
+      );
+      const receipt = await contract.deploymentTransaction()?.wait();
+      const logs = receipt?.logs;
+
+      expect(logs).to.have.lengthOf(7);
+
+      const eventTopic = contract.interface.getEvent("RollupRevenueVaultInitialized");
+      expect(eventTopic).to.not.be.null;
+      const log = logs?.find((l) => l.topics[0] === eventTopic!.topicHash);
+      expect(log).to.not.be.undefined;
+
+      const event = contract.interface.parseLog(log!);
+      expect(event).is.not.null;
+      expect(event?.name).to.equal("RollupRevenueVaultInitialized");
+      expect(event?.args.lastInvoiceDate).to.equal(lastInvoiceDate);
+      expect(event?.args.invoicePaymentReceiver).to.equal(invoicePaymentReceiver.address);
+      expect(event?.args.tokenBridge).to.equal(await tokenBridge.getAddress());
+      expect(event?.args.messageService).to.equal(await messageService.getAddress());
+      expect(event?.args.l1LineaTokenBurner).to.equal(l1LineaTokenBurner.address);
+      expect(event?.args.lineaToken).to.equal(await l2LineaToken.getAddress());
+      expect(event?.args.dexSwapAdapter).to.equal(await dexSwapAdapter.getAddress());
     });
 
     it("Should initialize correctly the contract", async () => {
@@ -309,59 +406,7 @@ describe("RollupRevenueVault", () => {
       expect(await rollupRevenueVault.messageService()).to.equal(await messageService.getAddress());
       expect(await rollupRevenueVault.l1LineaTokenBurner()).to.equal(l1LineaTokenBurner.address);
       expect(await rollupRevenueVault.lineaToken()).to.equal(await l2LineaToken.getAddress());
-      expect(await rollupRevenueVault.dex()).to.equal(await dex.getAddress());
-    });
-  });
-
-  describe("initializeRolesAndStorageVariables", () => {
-    it("Should revert when reinitializing twice", async () => {
-      const txPromise = rollupRevenueVault.initializeRolesAndStorageVariables(
-        await time.latest(),
-        admin.address,
-        invoiceSubmitter.address,
-        burner.address,
-        invoicePaymentReceiver.address,
-        await tokenBridge.getAddress(),
-        await messageService.getAddress(),
-        l1LineaTokenBurner.address,
-        await l2LineaToken.getAddress(),
-        await dex.getAddress(),
-      );
-
-      await expectEvent(rollupRevenueVault, txPromise, "Initialized", [2n]);
-
-      await expectRevertWithReason(
-        rollupRevenueVault.initializeRolesAndStorageVariables(
-          await time.latest(),
-          admin.address,
-          invoiceSubmitter.address,
-          burner.address,
-          invoicePaymentReceiver.address,
-          await tokenBridge.getAddress(),
-          await messageService.getAddress(),
-          l1LineaTokenBurner.address,
-          await l2LineaToken.getAddress(),
-          await dex.getAddress(),
-        ),
-        "Initializable: contract is already initialized",
-      );
-    });
-
-    it("Should reinitialize the contract", async () => {
-      const txPromise = rollupRevenueVault.initializeRolesAndStorageVariables(
-        await time.latest(),
-        admin.address,
-        invoiceSubmitter.address,
-        burner.address,
-        invoicePaymentReceiver.address,
-        await tokenBridge.getAddress(),
-        await messageService.getAddress(),
-        l1LineaTokenBurner.address,
-        await l2LineaToken.getAddress(),
-        await dex.getAddress(),
-      );
-
-      await expectEvent(rollupRevenueVault, txPromise, "Initialized", [2n]);
+      expect(await rollupRevenueVault.dexSwapAdapter()).to.equal(await dexSwapAdapter.getAddress());
     });
   });
 
@@ -404,10 +449,22 @@ describe("RollupRevenueVault", () => {
       );
     });
 
+    it("Should revert if endTimestamp is in the future", async () => {
+      const lastInvoiceDate = await rollupRevenueVault.lastInvoiceDate();
+      const startTimestamp = lastInvoiceDate + 1n;
+      const endTimestamp = (await time.latest()) + ONE_DAY_IN_SECONDS;
+
+      await expectRevertWithCustomError(
+        rollupRevenueVault,
+        rollupRevenueVault.connect(invoiceSubmitter).submitInvoice(startTimestamp, endTimestamp, 100n),
+        "FutureInvoicesNotAllowed",
+      );
+    });
+
     it("Should revert if amount is zero", async () => {
       const lastInvoiceDate = await rollupRevenueVault.lastInvoiceDate();
       const startTimestamp = lastInvoiceDate + 1n;
-      const endTimestamp = startTimestamp + BigInt(ONE_DAY_IN_SECONDS);
+      const endTimestamp = lastInvoiceDate + BigInt(ONE_DAY_IN_SECONDS);
 
       await expectRevertWithCustomError(
         rollupRevenueVault,
@@ -420,7 +477,7 @@ describe("RollupRevenueVault", () => {
       const lastInvoiceDate = await rollupRevenueVault.lastInvoiceDate();
       const startTimestamp = lastInvoiceDate + 1n;
       const endTimestamp = startTimestamp + BigInt(ONE_DAY_IN_SECONDS);
-      const invoiceAmount = ethers.parseEther("1");
+      const invoiceAmount = ONE_ETHER;
 
       const invoicePaymentReceiverBalanceBefore = await ethers.provider.getBalance(invoicePaymentReceiver.address);
 
@@ -440,7 +497,7 @@ describe("RollupRevenueVault", () => {
       const lastInvoiceDate = await rollupRevenueVault.lastInvoiceDate();
       const startTimestamp = lastInvoiceDate + 1n;
       const endTimestamp = startTimestamp + BigInt(ONE_DAY_IN_SECONDS);
-      const invoiceAmount = ethers.parseEther("1");
+      const invoiceAmount = ONE_ETHER;
       const balanceAvailable = ethers.parseEther("0.6");
 
       const invoicePaymentReceiverBalanceBefore = await ethers.provider.getBalance(invoicePaymentReceiver.address);
@@ -464,7 +521,7 @@ describe("RollupRevenueVault", () => {
       const lastInvoiceDate = await rollupRevenueVault.lastInvoiceDate();
       const startTimestamp = lastInvoiceDate + 1n;
       const endTimestamp = startTimestamp + BigInt(ONE_DAY_IN_SECONDS);
-      const invoiceAmount = ethers.parseEther("1");
+      const invoiceAmount = ONE_ETHER;
       const balanceAvailable = ethers.parseEther("1.5");
 
       const invoicePaymentReceiverBalanceBefore = await ethers.provider.getBalance(invoicePaymentReceiver.address);
@@ -506,17 +563,32 @@ describe("RollupRevenueVault", () => {
       );
     });
 
+    it("Should revert if lastInvoiceDate is in the future", async () => {
+      const lastInvoiceDate = (await time.latest()) + ONE_DAY_IN_SECONDS;
+
+      await expectRevertWithCustomError(
+        rollupRevenueVault,
+        rollupRevenueVault.connect(admin).updateInvoiceArrears(100n, lastInvoiceDate),
+        "FutureInvoicesNotAllowed",
+      );
+    });
+
     it("Should update invoice arrears", async () => {
       const newInvoiceArrears = 100n;
+      const newInvoiceDate = await time.latest();
+
       const lastInvoiceDate = await rollupRevenueVault.lastInvoiceDate();
+      const lastInvoiceArrears = await rollupRevenueVault.invoiceArrears();
+
       await expectEvent(
         rollupRevenueVault,
-        rollupRevenueVault.connect(admin).updateInvoiceArrears(newInvoiceArrears, lastInvoiceDate),
+        rollupRevenueVault.connect(admin).updateInvoiceArrears(newInvoiceArrears, newInvoiceDate),
         "InvoiceArrearsUpdated",
-        [newInvoiceArrears, lastInvoiceDate],
+        [lastInvoiceArrears, newInvoiceArrears, lastInvoiceDate, newInvoiceDate],
       );
 
       expect(await rollupRevenueVault.invoiceArrears()).to.equal(newInvoiceArrears);
+      expect(await rollupRevenueVault.lastInvoiceDate()).to.equal(newInvoiceDate);
     });
   });
 
@@ -561,11 +633,11 @@ describe("RollupRevenueVault", () => {
     });
   });
 
-  describe("updateDex", () => {
+  describe("updateDexAdapter", () => {
     it("Should revert if caller is not admin", async () => {
       const dexAddress = generateRandomBytes(20);
       await expectRevertWithReason(
-        rollupRevenueVault.connect(nonAuthorizedAccount).updateDex(dexAddress),
+        rollupRevenueVault.connect(nonAuthorizedAccount).updateDexSwapAdapter(dexAddress),
         "AccessControl: account " +
           nonAuthorizedAccount.address.toLowerCase() +
           " is missing role " +
@@ -576,27 +648,29 @@ describe("RollupRevenueVault", () => {
     it("Should revert if Dex address is zero address", async () => {
       await expectRevertWithCustomError(
         rollupRevenueVault,
-        rollupRevenueVault.connect(admin).updateDex(ADDRESS_ZERO),
+        rollupRevenueVault.connect(admin).updateDexSwapAdapter(ADDRESS_ZERO),
         "ZeroAddressNotAllowed",
       );
     });
 
-    it("Should revert if Dex address is already setup", async () => {
+    it("Should revert if Dex adapter address is already setup", async () => {
       await expectRevertWithCustomError(
         rollupRevenueVault,
-        rollupRevenueVault.connect(admin).updateDex(await dex.getAddress()),
+        rollupRevenueVault.connect(admin).updateDexSwapAdapter(await dexSwapAdapter.getAddress()),
         "ExistingAddressTheSame",
       );
     });
 
     it("Should update Dex address", async () => {
       const randomAddress = toChecksumAddress(generateRandomBytes(20));
-      await expectEvent(rollupRevenueVault, rollupRevenueVault.connect(admin).updateDex(randomAddress), "DexUpdated", [
-        await dex.getAddress(),
-        randomAddress,
-      ]);
+      await expectEvent(
+        rollupRevenueVault,
+        rollupRevenueVault.connect(admin).updateDexSwapAdapter(randomAddress),
+        "DexSwapAdapterUpdated",
+        [await dexSwapAdapter.getAddress(), randomAddress],
+      );
 
-      expect(await rollupRevenueVault.dex()).to.equal(randomAddress);
+      expect(await rollupRevenueVault.dexSwapAdapter()).to.equal(randomAddress);
     });
   });
 
@@ -642,7 +716,7 @@ describe("RollupRevenueVault", () => {
   });
 
   describe("burnAndBridge", () => {
-    const INITIAL_CONTRACT_BALANCE = ethers.parseEther("1");
+    const INITIAL_CONTRACT_BALANCE = ONE_ETHER;
     beforeEach(async () => {
       await admin.sendTransaction({ to: await rollupRevenueVault.getAddress(), value: INITIAL_CONTRACT_BALANCE });
     });
@@ -651,10 +725,9 @@ describe("RollupRevenueVault", () => {
       const minLineaOut = 200n;
       const deadline = (await time.latest()) + ONE_DAY_IN_SECONDS;
 
-      const encodedSwapData = TestDexSwap__factory.createInterface().encodeFunctionData("swap", [
+      const encodedSwapData = TestDexSwapAdapter__factory.createInterface().encodeFunctionData("swap", [
         minLineaOut,
         deadline,
-        0n,
       ]);
 
       await expectRevertWithReason(
@@ -666,7 +739,68 @@ describe("RollupRevenueVault", () => {
       );
     });
 
-    it("Should revert if invoice arrears amount > 0", async () => {
+    it("Should pay off arrears with no burning", async () => {
+      const lastInvoiceDate = await rollupRevenueVault.lastInvoiceDate();
+      const startTimestamp = lastInvoiceDate + 1n;
+      const endTimestamp = startTimestamp + BigInt(ONE_DAY_IN_SECONDS);
+
+      await rollupRevenueVault
+        .connect(invoiceSubmitter)
+        .submitInvoice(startTimestamp, endTimestamp, ethers.parseEther("2.5"));
+
+      const value = ONE_ETHER;
+      await expectEvent(rollupRevenueVault, sendEthToContract(value, EMPTY_CALLDATA), "EthReceived", [value]);
+
+      const minLineaOut = 200n;
+      const deadline = (await time.latest()) + ONE_DAY_IN_SECONDS;
+      const encodedSwapData = TestDexSwapAdapter__factory.createInterface().encodeFunctionData("swap", [
+        minLineaOut,
+        deadline,
+      ]);
+
+      const expectedRemainingArrears = ethers.parseUnits("0.5");
+
+      await expectEvent(
+        rollupRevenueVault,
+        rollupRevenueVault.connect(burner).burnAndBridge(encodedSwapData),
+        "ArrearsPaid",
+        [ONE_ETHER, expectedRemainingArrears],
+      );
+
+      expect(await rollupRevenueVault.invoiceArrears()).equal(expectedRemainingArrears);
+    });
+
+    it("Should pay off arrears with no burning due to less than minimumFeeInWei", async () => {
+      const lastInvoiceDate = await rollupRevenueVault.lastInvoiceDate();
+      const startTimestamp = lastInvoiceDate + 1n;
+      const endTimestamp = startTimestamp + BigInt(ONE_DAY_IN_SECONDS);
+
+      await rollupRevenueVault.connect(invoiceSubmitter).submitInvoice(startTimestamp, endTimestamp, ONE_ETHER * 2n);
+
+      const minimumFee = await messageService.minimumFeeInWei();
+      const expectedRemainingBalance = minimumFee - 1n;
+      const ethToSend = ONE_ETHER + expectedRemainingBalance;
+
+      await expectEvent(rollupRevenueVault, sendEthToContract(ethToSend, EMPTY_CALLDATA), "EthReceived", [ethToSend]);
+
+      const minLineaOut = 200n;
+      const deadline = (await time.latest()) + ONE_DAY_IN_SECONDS;
+      const encodedSwapData = TestDexSwapAdapter__factory.createInterface().encodeFunctionData("swap", [
+        minLineaOut,
+        deadline,
+      ]);
+
+      await expectNoEvent(
+        rollupRevenueVault,
+        rollupRevenueVault.connect(burner).burnAndBridge(encodedSwapData),
+        "EthBurntSwappedAndBridged",
+      );
+
+      expect(await rollupRevenueVault.invoiceArrears()).equal(0n);
+      expect(await ethers.provider.getBalance(await rollupRevenueVault.getAddress())).equal(expectedRemainingBalance);
+    });
+
+    it("Should pay off arrears with burning", async () => {
       const lastInvoiceDate = await rollupRevenueVault.lastInvoiceDate();
       const startTimestamp = lastInvoiceDate + 1n;
       const endTimestamp = startTimestamp + BigInt(ONE_DAY_IN_SECONDS);
@@ -675,47 +809,30 @@ describe("RollupRevenueVault", () => {
         .connect(invoiceSubmitter)
         .submitInvoice(startTimestamp, endTimestamp, ethers.parseEther("1.5"));
 
+      const value = ONE_ETHER;
+      await expectEvent(rollupRevenueVault, sendEthToContract(value, EMPTY_CALLDATA), "EthReceived", [value]);
+
       const minLineaOut = 200n;
       const deadline = (await time.latest()) + ONE_DAY_IN_SECONDS;
-      const encodedSwapData = TestDexSwap__factory.createInterface().encodeFunctionData("swap", [
+      const encodedSwapData = TestDexSwapAdapter__factory.createInterface().encodeFunctionData("swap", [
         minLineaOut,
         deadline,
-        0n,
       ]);
-
-      await expectRevertWithCustomError(
-        rollupRevenueVault,
-        rollupRevenueVault.connect(burner).burnAndBridge(encodedSwapData),
-        "InvoiceInArrears",
-      );
-    });
-
-    it("Should revert if contract balance is insufficient to cover minimum fee", async () => {
-      const lastInvoiceDate = await rollupRevenueVault.lastInvoiceDate();
-      const startTimestamp = lastInvoiceDate + 1n;
-      const endTimestamp = startTimestamp + BigInt(ONE_DAY_IN_SECONDS);
 
       const minimumFee = await messageService.minimumFeeInWei();
+      const arrears = await rollupRevenueVault.invoiceArrears();
+      const balanceAvailable =
+        (await ethers.provider.getBalance(rollupRevenueVault.getAddress())) - minimumFee - arrears;
+      const ethToBurn = (balanceAvailable * 20n) / 100n;
 
-      // Drain the contract balance
-      await rollupRevenueVault
-        .connect(invoiceSubmitter)
-        .submitInvoice(startTimestamp, endTimestamp, INITIAL_CONTRACT_BALANCE - minimumFee / 2n);
-
-      const minLineaOut = 200n;
-      const deadline = (await time.latest()) + ONE_DAY_IN_SECONDS;
-
-      const encodedSwapData = TestDexSwap__factory.createInterface().encodeFunctionData("swap", [
-        minLineaOut,
-        deadline,
-        0n,
-      ]);
-
-      await expectRevertWithCustomError(
+      await expectEvent(
         rollupRevenueVault,
         rollupRevenueVault.connect(burner).burnAndBridge(encodedSwapData),
-        "InsufficientBalance",
+        "EthBurntSwappedAndBridged",
+        [ethToBurn, (balanceAvailable - ethToBurn) * 2n], // We mock the swap to return amountIn * 2
       );
+
+      expect(await rollupRevenueVault.invoiceArrears()).equal(0n);
     });
 
     it("Should revert if swap call fails", async () => {
@@ -727,7 +844,10 @@ describe("RollupRevenueVault", () => {
         .connect(invoiceSubmitter)
         .submitInvoice(startTimestamp, endTimestamp, ethers.parseEther("0.5"));
 
-      const encodedSwapData = TestDexSwap__factory.createInterface().encodeFunctionData("testRevertSwap", [0, 0, 0]);
+      const encodedSwapData = TestDexSwapAdapter__factory.createInterface().encodeFunctionData(
+        "testRevertSwap",
+        [0, 0],
+      );
 
       await expectRevertWithCustomError(
         rollupRevenueVault,
@@ -736,7 +856,7 @@ describe("RollupRevenueVault", () => {
       );
     });
 
-    it("Should revert if swap returns 0 linea tokens", async () => {
+    it("Should revert if swap returns insufficient linea tokens", async () => {
       const lastInvoiceDate = await rollupRevenueVault.lastInvoiceDate();
       const startTimestamp = lastInvoiceDate + 1n;
       const endTimestamp = startTimestamp + BigInt(ONE_DAY_IN_SECONDS);
@@ -748,16 +868,15 @@ describe("RollupRevenueVault", () => {
       const minLineaOut = 200n;
       const deadline = (await time.latest()) + ONE_DAY_IN_SECONDS;
 
-      const encodedSwapData = TestDexSwap__factory.createInterface().encodeFunctionData("testZeroAmountOutSwap", [
-        minLineaOut,
-        deadline,
-        0n,
-      ]);
+      const encodedSwapData = TestDexSwapAdapter__factory.createInterface().encodeFunctionData(
+        "testSwapInsufficientLineaTokensReceived",
+        [minLineaOut, deadline],
+      );
 
       await expectRevertWithCustomError(
         rollupRevenueVault,
         rollupRevenueVault.connect(burner).burnAndBridge(encodedSwapData),
-        "ZeroLineaTokensReceived",
+        "DexSwapFailed",
       );
     });
 
@@ -778,10 +897,9 @@ describe("RollupRevenueVault", () => {
       const minLineaOut = 200n;
       const deadline = (await time.latest()) + ONE_DAY_IN_SECONDS;
 
-      const encodedSwapData = TestDexSwap__factory.createInterface().encodeFunctionData("swap", [
+      const encodedSwapData = TestDexSwapAdapter__factory.createInterface().encodeFunctionData("swap", [
         minLineaOut,
         deadline,
-        0n,
       ]);
 
       await expectEvent(

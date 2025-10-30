@@ -1,8 +1,8 @@
 import { loadFixture, time } from "@nomicfoundation/hardhat-network-helpers";
 import { ethers } from "hardhat";
 import { deployFromFactory, deployUpgradableFromFactory } from "../../common/deployment";
-import { ROLLUP_REVENUE_VAULT_INITIALIZE_SIGNATURE } from "../constants";
-import { L2MessageService, RollupRevenueVault, TestERC20, TestDexSwap } from "../../../../typechain-types";
+import { ROLLUP_REVENUE_VAULT_REINITIALIZE_SIGNATURE } from "../constants";
+import { L2MessageService, RollupRevenueVault, TestERC20, TestDexSwapAdapter } from "../../../../typechain-types";
 import { getRollupRevenueVaultAccountsFixture } from "./before";
 import { deployTokenBridge } from "../../../../scripts/tokenBridge/test/deployTokenBridges";
 import { INITIAL_WITHDRAW_LIMIT, L1_L2_MESSAGE_SETTER_ROLE, ONE_DAY_IN_SECONDS } from "../../common/constants";
@@ -40,11 +40,17 @@ async function deployL2MessageService(adminAddress: string, l1l2MessageSetterAdd
   return messageService as unknown as L2MessageService;
 }
 
-export async function deployTestDexSwapFixture(lineaTokenAddress: string) {
+export async function deployTestDexSwapAdapterFixture(lineaTokenAddress: string) {
   const testWETH9 = await loadFixture(deployWETH9Fixture);
   const router = await deployFromFactory("TestDexRouter");
-  const dexSwap = await deployFromFactory("TestDexSwap", await router.getAddress(), testWETH9, lineaTokenAddress, 50);
-  return dexSwap as TestDexSwap;
+  const dexSwapAdapter = await deployFromFactory(
+    "TestDexSwapAdapter",
+    await router.getAddress(),
+    testWETH9,
+    lineaTokenAddress,
+    50,
+  );
+  return dexSwapAdapter as TestDexSwapAdapter;
 }
 
 export async function deployRollupRevenueVaultFixture() {
@@ -61,14 +67,14 @@ export async function deployRollupRevenueVaultFixture() {
 
   const l2LineaToken = await loadFixture(l2LineaTokenFn);
 
-  const dexFn = async () => await deployTestDexSwapFixture(await l2LineaToken.getAddress());
-  const dex = await loadFixture(dexFn);
+  const dexFn = async () => await deployTestDexSwapAdapterFixture(await l2LineaToken.getAddress());
+  const dexSwapAdapter = await loadFixture(dexFn);
 
   const rollupRevenueVaultFn = async () =>
     (await deployUpgradableFromFactory(
       "RollupRevenueVault",
       [
-        await time.latest(),
+        (await time.latest()) - ONE_DAY_IN_SECONDS,
         admin.address,
         invoiceSubmitter.address,
         burner.address,
@@ -77,15 +83,15 @@ export async function deployRollupRevenueVaultFixture() {
         await messageService.getAddress(),
         l1LineaTokenBurner.address,
         await l2LineaToken.getAddress(),
-        await dex.getAddress(),
+        await dexSwapAdapter.getAddress(),
       ],
       {
-        initializer: ROLLUP_REVENUE_VAULT_INITIALIZE_SIGNATURE,
+        initializer: ROLLUP_REVENUE_VAULT_REINITIALIZE_SIGNATURE,
         unsafeAllow: ["constructor", "incorrect-initializer-order"],
       },
     )) as unknown as RollupRevenueVault;
 
   const rollupRevenueVault = await loadFixture(rollupRevenueVaultFn);
 
-  return { rollupRevenueVault, l2LineaToken, tokenBridge, l1LineaTokenBurner, messageService, dex };
+  return { rollupRevenueVault, l2LineaToken, tokenBridge, l1LineaTokenBurner, messageService, dexSwapAdapter };
 }

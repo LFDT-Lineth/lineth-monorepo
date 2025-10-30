@@ -22,13 +22,13 @@ uint256 ETH_BURNT_PERCENTAGE
 
 Percentage of ETH to be burnt when performing the burn and bridge operation.
 
-### dex
+### dexSwapAdapter
 
 ```solidity
-address dex
+address dexSwapAdapter
 ```
 
-Decentralized exchange contract for swapping ETH to LINEA tokens.
+Decentralized exchange adapter contract for swapping ETH to LINEA tokens.
 
 ### invoicePaymentReceiver
 
@@ -92,33 +92,10 @@ Address of the LINEA token contract.
 constructor() public
 ```
 
-### initialize
-
-```solidity
-function initialize(uint256 _lastInvoiceDate, address _defaultAdmin, address _invoiceSubmitter, address _burner, address _invoicePaymentReceiver, address _tokenBridge, address _messageService, address _l1LineaTokenBurner, address _lineaToken, address _dex) external
-```
-
-Initializes the contract state.
-
-#### Parameters
-
-| Name | Type | Description |
-| ---- | ---- | ----------- |
-| _lastInvoiceDate | uint256 | Timestamp of the last invoice. |
-| _defaultAdmin | address | Address to be granted the default admin role. |
-| _invoiceSubmitter | address | Address to be granted the invoice submitter role. |
-| _burner | address | Address to be granted the burner role. |
-| _invoicePaymentReceiver | address | Address to receive invoice payments. |
-| _tokenBridge | address | Address of the token bridge contract. |
-| _messageService | address | Address of the L2 message service contract. |
-| _l1LineaTokenBurner | address | Address of the L1 LINEA token burner contract. |
-| _lineaToken | address | Address of the LINEA token contract. |
-| _dex | address | Address of the DEX contract. |
-
 ### initializeRolesAndStorageVariables
 
 ```solidity
-function initializeRolesAndStorageVariables(uint256 _lastInvoiceDate, address _defaultAdmin, address _invoiceSubmitter, address _burner, address _invoicePaymentReceiver, address _tokenBridge, address _messageService, address _l1LineaTokenBurner, address _lineaToken, address _dex) external
+function initializeRolesAndStorageVariables(uint256 _lastInvoiceDate, address _defaultAdmin, address _invoiceSubmitter, address _burner, address _invoicePaymentReceiver, address _tokenBridge, address _messageService, address _l1LineaTokenBurner, address _lineaToken, address _dexSwapAdapter) external
 ```
 
 Reinitializes the contract state for upgrade.
@@ -127,7 +104,7 @@ Reinitializes the contract state for upgrade.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| _lastInvoiceDate | uint256 | Timestamp of the last invoice. |
+| _lastInvoiceDate | uint256 | The default or starting timestamp for invoices less 1 second. |
 | _defaultAdmin | address | Address to be granted the default admin role. |
 | _invoiceSubmitter | address | Address to be granted the invoice submitter role. |
 | _burner | address | Address to be granted the burner role. |
@@ -136,12 +113,12 @@ Reinitializes the contract state for upgrade.
 | _messageService | address | Address of the L2 message service contract. |
 | _l1LineaTokenBurner | address | Address of the L1 LINEA token burner contract. |
 | _lineaToken | address | Address of the LINEA token contract. |
-| _dex | address | Address of the DEX contract. |
+| _dexSwapAdapter | address | Address of the DEX swap adapter contract. |
 
 ### __RollupRevenueVault_init
 
 ```solidity
-function __RollupRevenueVault_init(uint256 _lastInvoiceDate, address _defaultAdmin, address _invoiceSubmitter, address _burner, address _invoicePaymentReceiver, address _tokenBridge, address _messageService, address _l1LineaTokenBurner, address _lineaToken, address _dex) internal
+function __RollupRevenueVault_init(uint256 _lastInvoiceDate, address _defaultAdmin, address _invoiceSubmitter, address _burner, address _invoicePaymentReceiver, address _tokenBridge, address _messageService, address _l1LineaTokenBurner, address _lineaToken, address _dexSwapAdapter) internal
 ```
 
 ### submitInvoice
@@ -191,7 +168,7 @@ Update the invoice payment receiver.
 ### updateInvoiceArrears
 
 ```solidity
-function updateInvoiceArrears(uint256 _newInvoiceArrears, uint256 _lastInvoiceDate) external
+function updateInvoiceArrears(uint256 _invoiceArrears, uint256 _lastInvoiceDate) external
 ```
 
 Update the invoice arrears.
@@ -200,7 +177,7 @@ Update the invoice arrears.
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| _newInvoiceArrears | uint256 | New invoice arrears value. |
+| _invoiceArrears | uint256 | New invoice arrears value. |
 | _lastInvoiceDate | uint256 | Timestamp of the last invoice. |
 
 ### updateL1LineaTokenBurner
@@ -217,19 +194,19 @@ Updates the address of the L1 LINEA token burner contract.
 | ---- | ---- | ----------- |
 | _newL1LineaTokenBurner | address | Address of the new L1 LINEA token burner contract. |
 
-### updateDex
+### updateDexSwapAdapter
 
 ```solidity
-function updateDex(address _newDex) external
+function updateDexSwapAdapter(address _newDexSwapAdapter) external
 ```
 
-Updates the address of the DEX contract.
+Updates the address of the DEX swap adapter contract.
 
 #### Parameters
 
 | Name | Type | Description |
 | ---- | ---- | ----------- |
-| _newDex | address | Address of the new DEX contract. |
+| _newDexSwapAdapter | address | Address of the new DEX swap adapter contract. |
 
 ### fallback
 
@@ -246,4 +223,12 @@ receive() external payable
 ```
 
 Receive function - Receives Funds.
+
+### _payArrears
+
+```solidity
+function _payArrears() internal
+```
+
+Pays off arrears where applicable and balance permits.
 
