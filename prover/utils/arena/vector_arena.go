@@ -50,9 +50,21 @@ func (a *VectorArena) Offset() int64 {
 	return atomic.LoadInt64(&a.offset)
 }
 
+// Remaining returns the number of elements of type T that can still be allocated
+// from the arena before it is exhausted.
+func Remaining[T any](a *VectorArena) int {
+	var zero T
+	totalBytes := int64(unsafe.Sizeof(zero)) * int64(1)
+	used := atomic.LoadInt64(&a.offset)
+	return int((int64(len(a.data)) - used) / totalBytes)
+}
+
 // Get is a generic function that retrieves a typed vector from the arena.
 // It ensures that the requested type and length match the arena's chunk size.
 func Get[T any](a *VectorArena, vectorLen int) []T {
+	if vectorLen == 0 {
+		return make([]T, 0)
+	}
 	var zero T
 
 	// Runtime safety check: ensure the requested slice fits the arena's chunk size.

@@ -7,6 +7,7 @@ import (
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
 	wfft "github.com/consensys/linea-monorepo/prover/maths/fft"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
+	"github.com/consensys/linea-monorepo/prover/utils/arena"
 )
 
 // rsEncode encodes a vector `v` and returns the corresponding the Reed-Solomon
@@ -15,15 +16,19 @@ import (
 // the Lagrange basis Omega_{n * blow-up} where blow-up corresponds to the
 // inverse-rate of the code. The code is systematic as the original vector is
 // interleaved within the encoded vector.
-func (p *Params) rsEncode(v smartvectors.SmartVector) smartvectors.SmartVector {
+func (p *Params) rsEncode(v smartvectors.SmartVector, vArena ...*arena.VectorArena) smartvectors.SmartVector {
 
 	// Short path, v is a constant vector. It's encoding is also a constant vector
 	// with the same value.
 	if cons, ok := v.(*smartvectors.Constant); ok {
 		return smartvectors.NewConstant(cons.Val(), p.NumEncodedCols())
 	}
-
-	expandedCoeffs := make([]field.Element, p.NumEncodedCols())
+	var expandedCoeffs []field.Element
+	if len(vArena) > 0 {
+		expandedCoeffs = arena.Get[field.Element](vArena[0], p.NumEncodedCols())
+	} else {
+		expandedCoeffs = make([]field.Element, p.NumEncodedCols())
+	}
 
 	// copy the input
 	v.WriteInSlice(expandedCoeffs[:v.Len()])

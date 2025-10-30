@@ -5,16 +5,16 @@ import "github.com/consensys/linea-monorepo/prover/maths/field"
 /*
 IsMul returns true if an expression is a mul at the top-level
 */
-func (f *Expression) IsMul() bool {
-	_, ok := f.Operator.(Product)
+func (e *Expression) IsMul() bool {
+	_, ok := e.Operator.(Product)
 	return ok
 }
 
 /*
 IsConstant returns true if it is a constant and return its value if so
 */
-func (f *Expression) IsConstant() (bool, field.Element) {
-	if cons, ok := f.Operator.(Constant); ok {
+func (e *Expression) IsConstant() (bool, field.Element) {
+	if cons, ok := e.Operator.(Constant); ok {
 		return ok, cons.Val
 	}
 	return false, field.Zero()
@@ -23,15 +23,15 @@ func (f *Expression) IsConstant() (bool, field.Element) {
 /*
 IsLC returns true if the expression is a LC
 */
-func (f *Expression) IsLC() bool {
-	_, ok := f.Operator.(LinComb)
+func (e *Expression) IsLC() bool {
+	_, ok := e.Operator.(LinComb)
 	return ok
 }
 
 /*
 IsVariable returns true if the expression is a variable
 */
-func (f *Expression) IsVariable() bool {
-	_, ok := f.Operator.(Variable)
+func (e *Expression) IsVariable() bool {
+	_, ok := e.Operator.(Variable)
 	return ok
 }

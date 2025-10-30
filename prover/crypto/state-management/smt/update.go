@@ -15,6 +15,8 @@ func (t *Tree) Update(pos int, newVal types.Bytes32) {
 		utils.Panic("out of bound %v", pos)
 	}
 
+	hasher := t.Config.HashFunc()
+
 	for level := 0; level < t.Config.Depth; level++ {
 		// store the newly computed node
 		t.updateNode(level, idx, current)
@@ -23,7 +25,7 @@ func (t *Tree) Update(pos int, newVal types.Bytes32) {
 		if idx&1 == 1 {
 			left, right = right, left
 		}
-		current = hashLR(t.Config, left, right)
+		current = hashLR(hasher, left, right)
 		idx >>= 1
 	}
 

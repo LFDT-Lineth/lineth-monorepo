@@ -124,9 +124,9 @@ func (gen *testCaseGen) NewTestCaseForProd() (tcase testCase) {
 		case windowT:
 			v := gen.genWindow(val, val)
 			tcase.svecs[i] = v
-			start := normalize(v.interval().Start(), gen.windowMustStartAfter, gen.fullLen)
+			start := normalize(v.Interval().Start(), gen.windowMustStartAfter, gen.fullLen)
 			winMinStart = utils.Min(winMinStart, start)
-			stop := normalize(v.interval().Stop(), gen.windowMustStartAfter, gen.fullLen)
+			stop := normalize(v.Interval().Stop(), gen.windowMustStartAfter, gen.fullLen)
 			if stop < start {
 				stop += gen.fullLen
 			}
@@ -200,10 +200,10 @@ func (gen *testCaseGen) NewTestCaseForLinComb() (tcase testCase) {
 		case windowT:
 			v := gen.genWindow(val, val)
 			tcase.svecs[i] = v
-			start := normalize(v.interval().Start(), gen.windowMustStartAfter, gen.fullLen)
+			start := normalize(v.Interval().Start(), gen.windowMustStartAfter, gen.fullLen)
 			winMinStart = utils.Min(winMinStart, start)
 
-			stop := normalize(v.interval().Stop(), gen.windowMustStartAfter, gen.fullLen)
+			stop := normalize(v.Interval().Stop(), gen.windowMustStartAfter, gen.fullLen)
 			if stop < start {
 				stop += gen.fullLen
 			}
@@ -268,10 +268,10 @@ func (gen *testCaseGen) NewTestCaseForPolyEval() (tcase testCase) {
 		case windowT:
 			v := gen.genWindow(val, val)
 			tcase.svecs[i] = v
-			start := normalize(v.interval().Start(), gen.windowMustStartAfter, gen.fullLen)
+			start := normalize(v.Interval().Start(), gen.windowMustStartAfter, gen.fullLen)
 			winMinStart = utils.Min(winMinStart, start)
 
-			stop := normalize(v.interval().Stop(), gen.windowMustStartAfter, gen.fullLen)
+			stop := normalize(v.Interval().Stop(), gen.windowMustStartAfter, gen.fullLen)
 			if stop < start {
 				stop += gen.fullLen
 			}

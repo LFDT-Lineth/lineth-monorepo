@@ -80,12 +80,13 @@ func (p *Proof) RecoverRoot(conf *Config, leaf types.Bytes32) (types.Bytes32, er
 		idx     = p.Path
 	)
 
+	hasher := conf.HashFunc()
 	for _, sibling := range p.Siblings {
 		left, right := current, sibling
 		if idx&1 == 1 {
 			left, right = right, left
 		}
-		current = hashLR(conf, left, right)
+		current = hashLR(hasher, left, right)
 		idx >>= 1
 	}
 

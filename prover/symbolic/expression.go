@@ -7,19 +7,13 @@ import (
 	"sync"
 
 	"github.com/consensys/gnark/frontend"
-	"github.com/consensys/linea-monorepo/prover/maths/common/mempool"
 	sv "github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/utils"
 	"github.com/consensys/linea-monorepo/prover/utils/collection"
 )
 
-// anchoredExpression represents symbolic expression pinned into an overarching
-// [ExpressionBoard] expression.
-type anchoredExpression struct {
-	Board  *ExpressionBoard
-	ESHash field.Element
-}
+type esHash = field.Element
 
 // Expression represents a symbolic arithmetic expression. Expression can be
 // built using the [Add], [Mul], [Sub] etc... package. However, they can only
@@ -45,7 +39,7 @@ type Expression struct {
 	// 		- ESHash(a * b) = ESHash(a) * ESHash(b)
 	// 		- ESHash(c: Constant) = c
 	// 		- ESHash(a: variable) = H(a.String())
-	ESHash field.Element
+	ESHash esHash
 	// Children stores the list of all the sub-expressions the current
 	// Expression uses as operands.
 	Children []*Expression
@@ -59,7 +53,7 @@ type Expression struct {
 type Operator interface {
 	// Evaluate returns an evaluation of the operator from a list of assignments:
 	// one for each operand (children) of the expression.
-	Evaluate([]sv.SmartVector, ...mempool.MemPool) sv.SmartVector
+	Evaluate([]sv.SmartVector) sv.SmartVector
 	// Validate performs a sanity-check of the expression the Operator belongs
 	// to.
 	Validate(e *Expression) error
@@ -73,41 +67,55 @@ type Operator interface {
 // Expression into a DAG and runs a topological sorting algorithm over the
 // nodes of the expression. This has the effect of removing the duplicates
 // nodes and making the expression more efficient to evaluate.
-func (f *Expression) Board() ExpressionBoard {
+func (e *Expression) Board() ExpressionBoard {
 	board := emptyBoard()
-	f.anchor(&board)
+	e.anchor(&board)
+	board.esHashesToPos = nil // free the map, we don't need it anymore
 	return board
 }
 
-// anchor pins down the Expression onto an ExpressionBoard.
-func (f *Expression) anchor(b *ExpressionBoard) anchoredExpression {
+func (e *Expression) BoardListVariableMetadata() []Metadata {
+	// no need to build the whole board here, we simply walk the graph
+	// and collect variables as they appear
+	uniqueVars := map[string]struct{}{}
+	metadatas := []Metadata{}
+	var collectVars func(expr *Expression)
+	collectVars = func(expr *Expression) {
+		switch op := expr.Operator.(type) {
+		case Variable:
+			if _, seen := uniqueVars[op.Metadata.String()]; seen {
+				return
+			}
+			uniqueVars[op.Metadata.String()] = struct{}{}
+			metadatas = append(metadatas, op.Metadata)
+		default:
+			for _, c := range expr.Children {
+				collectVars(c)
+			}
+		}
+	}
+	collectVars(e)
+	return metadatas
+}
 
-	/*
-		Check if the expression is a duplicate of another expression bearing
-		the same ESHash and
-	*/
-	if _, ok := b.ESHashesToPos[f.ESHash]; ok {
-		return anchoredExpression{Board: b, ESHash: f.ESHash}
+// anchor pins down the Expression onto an ExpressionBoard.
+func (e *Expression) anchor(b *ExpressionBoard) nodeID {
+	// recursion base case: the node was already anchored
+	if id, ok := b.esHashesToPos[e.ESHash]; ok {
+		return id
 	}
 
-	/*
-		Recurse the call in all the children to ensure all
-		subexpressions are anchored. And get their levels
-	*/
+	// anchor recursively all the children
 	maxChildrenLevel := 0
 	childrenIDs := []nodeID{}
-	for _, child := range f.Children {
-		_ = child.anchor(b)
-		childID, ok := b.ESHashesToPos[child.ESHash]
-		if !ok {
-			utils.Panic("Children not found in expr")
-		}
+	for _, child := range e.Children {
+		childID := child.anchor(b)
 		maxChildrenLevel = utils.Max(maxChildrenLevel, childID.level())
 		childrenIDs = append(childrenIDs, childID)
 	}
 
 	newLevel := maxChildrenLevel + 1
-	if len(f.Children) == 0 {
+	if len(e.Children) == 0 {
 		// Then it is a leaf node and the level should be 0
 		newLevel = 0
 	}
@@ -119,13 +127,11 @@ func (f *Expression) anchor(b *ExpressionBoard) anchoredExpression {
 	if len(b.Nodes) <= newLevel {
 		b.Nodes = append(b.Nodes, []Node{})
 	}
-	NewNodeID := newNodeID(newLevel, len(b.Nodes[newLevel]))
-
+	id := newNodeID(newLevel, len(b.Nodes[newLevel]))
 	newNode := Node{
-		ESHash:   f.ESHash,
-		Parents:  []nodeID{},
+		ESHash:   e.ESHash,
 		Children: childrenIDs,
-		Operator: f.Operator,
+		Operator: e.Operator,
 	}
 
 	/*
@@ -134,19 +140,10 @@ func (f *Expression) anchor(b *ExpressionBoard) anchoredExpression {
 		Also, add it to the list of nodes at the position corresponding to
 		its new NodeID
 	*/
-	b.ESHashesToPos[f.ESHash] = NewNodeID
-	for _, childID := range childrenIDs {
-		b.getNode(childID).addParent(NewNodeID)
-	}
-	b.Nodes[NewNodeID.level()] = append(b.Nodes[NewNodeID.level()], newNode)
+	b.esHashesToPos[e.ESHash] = id
+	b.Nodes[id.level()] = append(b.Nodes[id.level()], newNode)
 
-	/*
-		And returns the new Anchored expression
-	*/
-	return anchoredExpression{
-		ESHash: f.ESHash,
-		Board:  b,
-	}
+	return id
 }
 
 // Validate operates a list of sanity-checks over the current expression to
@@ -194,34 +191,54 @@ func (e *Expression) AssertValid() {
 func (e *Expression) Replay(translationMap collection.Mapping[string, *Expression]) (res *Expression) {
 
 	switch op := e.Operator.(type) {
-	// Constant
 	case Constant:
-		return NewConstant(op.Val)
-	// Variable
+		return e
 	case Variable:
-		res := translationMap.MustGet(op.Metadata.String())
+		res, ok := translationMap.TryGet(op.Metadata.String())
+		if !ok {
+			return e // return itself if not found
+		}
 		return res
-	// LinComb
 	case LinComb:
 		children := make([]*Expression, len(e.Children))
+		allSame := true
 		for i, c := range e.Children {
 			children[i] = c.Replay(translationMap)
+			if children[i] != c {
+				allSame = false
+			}
+		}
+		if allSame {
+			return e // return itself if all children are the same
 		}
 		res := NewLinComb(children, op.Coeffs)
 		return res
-	// Product
 	case Product:
 		children := make([]*Expression, len(e.Children))
+		allSame := true
 		for i, c := range e.Children {
 			children[i] = c.Replay(translationMap)
+			if children[i] != c {
+				allSame = false
+			}
+		}
+		if allSame {
+			return e // return itself if all children are the same
 		}
 		res := NewProduct(children, op.Exponents)
 		return res
 	// PolyEval
 	case PolyEval:
 		children := make([]*Expression, len(e.Children))
+		allSame := true
 		for i, c := range e.Children {
 			children[i] = c.Replay(translationMap)
+			if children[i] != c {
+				allSame = false
+			}
+		}
+		if allSame {
+			return e // return itself if all children are the same
 		}
 		res := NewPolyEval(children[0], children[1:])
 		return res

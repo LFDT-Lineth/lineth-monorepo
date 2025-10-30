@@ -22,20 +22,15 @@ type ExpressionBoard struct {
 	// Maps nodes to their level in the DAG structure. The 32 MSB bits
 	// of the ID indicates the level and the LSB bits indicates the position
 	// in the level.
-	ESHashesToPos map[field.Element]nodeID
+	esHashesToPos map[field.Element]nodeID
 }
 
 // emptyBoard initializes a board with no Node in it.
 func emptyBoard() ExpressionBoard {
 	return ExpressionBoard{
 		Nodes:         [][]Node{},
-		ESHashesToPos: map[field.Element]nodeID{},
+		esHashesToPos: map[field.Element]nodeID{},
 	}
-}
-
-// getNode returns a node from an ID
-func (b *ExpressionBoard) getNode(id nodeID) *Node {
-	return &b.Nodes[id.level()][id.posInLevel()]
 }
 
 /*
@@ -54,23 +49,20 @@ in an [ExpressionBoard]. Additionally; it gather "DAG-wise" data such as the
 parents of the Node etc...
 */
 type Node struct {
-	// Indicates the IDs of the parents of the current node; corresponding to
-	// the nodes representing admitting this node as an input.
-	Parents  []nodeID
-	Children []nodeID
 	/*
 		ESHash (Expression Sensitive Hash) is a field.Element representing an expression.
 		Two expression with the same ESHash are considered as equals. This helps expression
 		pruning.
 	*/
-	ESHash field.Element
+	ESHash esHash
+
+	// Indicates the IDs of the parents of the current node; corresponding to
+	// the nodes representing admitting this node as an input.
+	// Parents  []nodeID
+	Children []nodeID
+
 	// Operator contains the logic to evaluate an expression
 	Operator Operator
-}
-
-// addParent appends a parent to the node
-func (n *Node) addParent(p nodeID) {
-	n.Parents = append(n.Parents, p)
 }
 
 // posInLevel returns the position in the level from a NodeID

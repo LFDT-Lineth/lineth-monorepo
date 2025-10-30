@@ -157,3 +157,68 @@ func FromBool(b bool) Element {
 	}
 	return Zero()
 }
+
+// ExpVec sets vector[i] = a[i]ᵏ for all i
+func ExpVec(vector, a Vector, k int64) {
+	N := len(a)
+	if N != len(vector) {
+		panic("vector.Exp: vectors don't have the same length")
+	}
+	if k == 0 {
+		for i := range vector {
+			vector[i].SetOne()
+		}
+		return
+	}
+	base := a
+	exp := k
+	if k < 0 {
+		// call batch inverse: note that this allocates a new slice, so even if vector and a are
+		// the same, it's fine.
+		base = BatchInvert(a)
+		exp = -k // if k == math.MinInt64, -k overflows, but uint64(-k) is correct
+	} else if N > 0 {
+		// ensure that vector and a are not the same slice; else we need to copy a into base
+		v0 := &vector[0] // #nosec G602 we check that N > 0 above
+		a0 := &a[0]      // #nosec G602 we check that N > 0 above
+		if v0 == a0 {
+			base = make(Vector, N)
+			copy(base, a)
+		}
+	}
+
+	copy(vector, base)
+
+	// Use bits.Len64 to iterate only over significant bits
+	for i := bits.Len64(uint64(exp)) - 2; i >= 0; i-- {
+		vector.Mul(vector, vector)
+		if (uint64(exp)>>uint(i))&1 != 0 {
+			vector.Mul(vector, base)
+		}
+	}
+}
+
+// ExpInt64 z = xᵏ (mod q)
+func ExpInt64(z *Element, x Element, k int64) {
+	if k == 0 {
+		z.SetOne()
+		return
+	}
+
+	if k < 0 {
+		// negative k, we invert
+		// if k < 0: xᵏ (mod q) == (x⁻¹)⁻ᵏ (mod q)
+		x.Inverse(&x)
+		k = -k // if k == math.MinInt64, -k overflows, but uint64(-k) is correct
+	}
+	e := uint64(k)
+
+	z.Set(&x)
+
+	for i := int(bits.Len64(e)) - 2; i >= 0; i-- {
+		z.Square(z)
+		if (e>>i)&1 == 1 {
+			z.Mul(z, &x)
+		}
+	}
+}

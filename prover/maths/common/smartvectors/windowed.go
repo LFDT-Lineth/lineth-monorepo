@@ -136,8 +136,8 @@ func (p *PaddedCircularWindow) SubVector(start, stop int) SmartVector {
 
 	n := p.Len()
 	b := stop - start
-	c := normalize(p.interval().Start(), start, n)
-	d := normalize(p.interval().Stop(), start, n)
+	c := normalize(p.Interval().Start(), start, n)
+	d := normalize(p.Interval().Stop(), start, n)
 
 	// Case 1 : return a constant vector
 	if b <= c && c < d {
@@ -258,7 +258,7 @@ func (p *PaddedCircularWindow) IterateSkipPadding() iter.Seq[field.Element] {
 	return slices.Values(p.Window_)
 }
 
-func (p *PaddedCircularWindow) interval() CircularInterval {
+func (p *PaddedCircularWindow) Interval() CircularInterval {
 	return IvalWithStartLen(p.Offset_, len(p.Window_), p.TotLen_)
 }
 
@@ -292,7 +292,7 @@ func processWindowedOnly(op operator, svecs []SmartVector, coeffs_ []int) (res S
 	for i, svec := range svecs {
 		if pcw, ok := svec.(*PaddedCircularWindow); ok {
 			windows = append(windows, *pcw)
-			intervals = append(intervals, pcw.interval())
+			intervals = append(intervals, pcw.Interval())
 			coeffs = append(coeffs, coeffs_[i]) // collect the coeffs related to each window
 			// Sanity-check : all vectors must have the same length
 			assertHasLength(svec.Len(), length)

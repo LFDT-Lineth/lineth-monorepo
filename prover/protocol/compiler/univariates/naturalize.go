@@ -244,15 +244,15 @@ func (ctx *NaturalizationCtx) prove(run *wizard.ProverRuntime) {
 		repr := column.DownStreamBranch(pol)
 		rootsAll := column.RootParents(pol)
 
-		cachedXs := collection.NewMapping[string, field.Element]()
-		cachedXs.InsertNew("", originalQuery.X)
-		derivedXs := column.DeriveEvaluationPoint(pol, "", cachedXs, originalQuery.X)
-
 		// Filter out (handle, repr) pairs that we already saw
 		rootName := string(rootsAll.GetColID())
 		if _, ok := alreadySeenPolyX[repr+rootName]; ok {
 			continue
 		}
+
+		cachedXs := collection.NewMapping[string, field.Element]()
+		cachedXs.InsertNew("", originalQuery.X)
+		derivedXs := column.DeriveEvaluationPoint(pol, "", cachedXs, originalQuery.X)
 
 		// If useful register a new query
 		if _, ok := alreadySeenX[repr]; !ok {

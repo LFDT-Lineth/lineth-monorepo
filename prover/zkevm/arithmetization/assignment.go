@@ -13,6 +13,7 @@ import (
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	"github.com/consensys/linea-monorepo/prover/utils/exit"
+	"github.com/consensys/linea-monorepo/prover/utils/parallel"
 	"github.com/sirupsen/logrus"
 )
 
@@ -68,25 +69,30 @@ func AssignFromLtTraces(run *wizard.ProverRuntime, schema *air.Schema[bls12_377.
 	for modId := range expTraces.Width() {
 		var trMod = expTraces.Module(modId)
 		// Iterate each column in module
-		for colId := range trMod.Width() {
-			var (
-				trCol   = trMod.Column(colId)
-				name    = ifaces.ColID(wizardName(trMod.Name(), trCol.Name()))
-				wCol    = run.Spec.Columns.GetHandle(name)
-				padding = trCol.Padding()
-				data    = trCol.Data()
-				plain   = make([]field.Element, data.Len())
-			)
 
-			if !run.Spec.Columns.Exists(name) {
-				continue
+		parallel.Execute(int(trMod.Width()), func(start, stop int) {
+			for id := start; id < stop; id++ {
+
+				var (
+					col     = trMod.Column(uint(id))
+					name    = ifaces.ColID(wizardName(trMod.Name(), col.Name()))
+					wCol    = run.Spec.Columns.GetHandle(name)
+					padding = col.Padding()
+					data    = col.Data()
+				)
+
+				if !run.Spec.Columns.Exists(name) {
+					continue
+				}
+
+				plain := make([]field.Element, data.Len())
+				for i := range plain {
+					plain[i] = data.Get(uint(i)).Element
+				}
+
+				run.AssignColumn(ifaces.ColID(name), smartvectors.LeftPadded(plain, padding.Element, wCol.Size()))
 			}
-
-			for i := range plain {
-				plain[i] = data.Get(uint(i)).Element
-			}
-
-			run.AssignColumn(ifaces.ColID(name), smartvectors.LeftPadded(plain, padding.Element, wCol.Size()))
-		}
+		})
 	}
+
 }

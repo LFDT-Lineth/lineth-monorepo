@@ -236,8 +236,7 @@ func (c *CompiledIOP) InsertGlobal(round int, name ifaces.QueryID, expr *symboli
 	// The constructor of the global constraint is assumed to perform all the
 	// well-formation checks of the constraint.
 	cs := query.NewGlobalConstraint(name, expr, noBoundCancel...)
-	boarded := cs.Board()
-	metadatas := boarded.ListVariableMetadata()
+	metadatas := cs.BoardListVariableMetadata()
 
 	// Test the existence of all variable in the instance
 	for _, metadataInterface := range metadatas {
@@ -278,8 +277,7 @@ func (c *CompiledIOP) InsertLocal(round int, name ifaces.QueryID, cs_ *symbolic.
 	c.checkExpressionInStore(cs_)
 
 	cs := query.NewLocalConstraint(name, cs_)
-	boarded := cs.Board()
-	metadatas := boarded.ListVariableMetadata()
+	metadatas := cs.BoardListVariableMetadata()
 
 	// Test the existence of all variable in the instance
 	for _, metadataInterface := range metadatas {

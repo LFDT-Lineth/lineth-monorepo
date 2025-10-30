@@ -84,50 +84,13 @@ func (r *Rotated) GetPtr(n int) *field.Element {
 // Returns a particular element. The subvector is taken at indices
 // [Start, Stop). (Stop being excluded from the span)
 func (r *Rotated) SubVector(start, stop int) SmartVector {
-
-	if stop+r.offset < len(r.v.Regular) && start+r.offset > 0 {
+	if stop+r.offset < len(r.v.Regular) && start+r.offset >= 0 {
 		res := Regular(r.v.Regular[start+r.offset : stop+r.offset])
 		return &res
 	}
-
 	res := make([]field.Element, stop-start)
-	size := r.Len()
-	spanSize := stop - start
-
-	// checking
-	if stop <= start {
-		utils.Panic("the Start %v >= Stop %v", start, stop)
-	}
-
-	// boundary checks
-	if start < 0 {
-		utils.Panic("the Start value was negative %v", start)
-	}
-
-	if stop > size {
-		utils.Panic("the Stop is OOO : %v (the length is %v)", stop, size)
-	}
-
-	// normalize the offset to something positive [0: size)
-	startWithOffsetClean := utils.PositiveMod(start+r.offset, size)
-
-	// NB: we may need to construct the res in several steps
-	// in case
-	copy(res, r.v.Regular[startWithOffsetClean:utils.Min(size, startWithOffsetClean+spanSize)])
-
-	// If this is negative of zero, it means the first copy already copied
-	// everything we needed to copy
-	howManyElementLeftToCopy := startWithOffsetClean + spanSize - size
-	howManyAlreadyCopied := spanSize - howManyElementLeftToCopy
-	if howManyElementLeftToCopy <= 0 {
-		ret := Regular(res)
-		return &ret
-	}
-
-	// if necessary perform a second
-	copy(res[howManyAlreadyCopied:], r.v.Regular[:howManyElementLeftToCopy])
-	ret := Regular(res)
-	return &ret
+	r.WriteSubVectorInSlice(start, stop, res)
+	return NewRegular(res)
 }
 
 // Rotates the vector into a new one, a positive offset means a left cyclic shift
@@ -241,4 +204,46 @@ func SoftRotate(v SmartVector, offset int) SmartVector {
 
 	panic("unreachable")
 
+}
+
+// WriteSubVectorInSlice writes the subvector [start:stop) into the provided
+// slice s. The slice s must be of length stop-start.
+// This is equivalent to doing r.SubVector(start, stop).WriteInSlice(s) but
+// avoids an allocation.
+func (r *Rotated) WriteSubVectorInSlice(start, stop int, s []field.Element) {
+	// sanity checks on start / stop / len(s)
+	if start < 0 || stop > r.Len() || stop <= start || len(s) != stop-start {
+		utils.Panic("invalid start/stop/len(s): start=%v, stop=%v, len(s)=%v, vector len=%v", start, stop, len(s), r.Len())
+	}
+	if stop+r.offset < len(r.v.Regular) && start+r.offset >= 0 {
+		for i := 0; i < stop-start; i++ {
+			s[i] = r.v.Regular[start+r.offset+i]
+		}
+		return
+	}
+	size := r.Len()
+	spanSize := stop - start
+
+	// normalize the offset to something positive [0: size)
+	startWithOffsetClean := utils.PositiveMod(start+r.offset, size)
+
+	// NB: we may need to construct the res in several steps
+	for i := 0; i < min(size-startWithOffsetClean, spanSize); i++ {
+		s[i] = r.v.Regular[startWithOffsetClean+i]
+	}
+
+	// If this is negative of zero, it means the first copy already copied
+	// everything we needed to copy
+	howManyElementLeftToCopy := startWithOffsetClean + spanSize - size
+	howManyAlreadyCopied := spanSize - howManyElementLeftToCopy
+	if howManyElementLeftToCopy <= 0 {
+		return
+	}
+
+	// if necessary perform a second
+	// copy(res[howManyAlreadyCopied:], r.v[:howManyElementLeftToCopy])
+	for i := 0; i < howManyElementLeftToCopy; i++ {
+		s[howManyAlreadyCopied+i] = r.v.Regular[i]
+	}
+	return
 }

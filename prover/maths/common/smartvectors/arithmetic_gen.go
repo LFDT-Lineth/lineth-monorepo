@@ -129,7 +129,7 @@ func processOperator(op operator, coeffs []int, svecs []SmartVector, p ...mempoo
 
 		// In this case, the constant is already accumulated into the windowed.
 		// Thus, we just have to merge the windowed one into the regular one.
-		interval := windowRes.interval()
+		interval := windowRes.Interval()
 		regvec := regularRes.Regular
 		length := len(regvec)
 

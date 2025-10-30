@@ -106,7 +106,7 @@ func Interpolate(v SmartVector, x field.Element, oncoset ...bool) field.Element 
 }
 
 // Batch-evaluate polynomials in Lagrange basis
-func BatchInterpolate(vs []SmartVector, x field.Element, oncoset ...bool) []field.Element {
+func BatchInterpolate(vs []SmartVector, x field.Element) []field.Element {
 
 	var (
 		polys         = make([][]field.Element, len(vs))
@@ -136,13 +136,13 @@ func BatchInterpolate(vs []SmartVector, x field.Element, oncoset ...bool) []fiel
 		return results
 	}
 
-	return batchInterpolateSV(results, computed, polys, x, oncoset...)
+	return batchInterpolateSV(results, computed, polys, x)
 }
 
 // Optimized batch interpolate for smart vectors.
 // This reduces the number of computation by pre-processing
 // constant vectors in advance in BatchInterpolate()
-func batchInterpolateSV(results []field.Element, computed []bool, polys [][]field.Element, x field.Element, oncoset ...bool) []field.Element {
+func batchInterpolateSV(results []field.Element, computed []bool, polys [][]field.Element, x field.Element) []field.Element {
 
 	n := 0
 	for i := range polys {
@@ -165,12 +165,6 @@ func batchInterpolateSV(results []field.Element, computed []bool, polys [][]fiel
 	domain := fft.NewDomain(n)
 	denominator := make([]field.Element, n)
 
-	one := field.One()
-
-	if len(oncoset) > 0 && oncoset[0] {
-		x.Mul(&x, &domain.FrMultiplicativeGenInv)
-	}
-
 	/*
 		First, we compute the denominator,
 
@@ -183,20 +177,22 @@ func batchInterpolateSV(results []field.Element, computed []bool, polys [][]fiel
 		denominator[i].Mul(&denominator[i-1], &domain.GeneratorInv)
 	}
 
+	parallel.Execute(n, func(start, stop int) {
+		one := field.One()
+		for i := start; i < stop; i++ {
+			denominator[i].Sub(&denominator[i], &one)
+		}
+	})
 	for i := 0; i < n; i++ {
-		denominator[i].Sub(&denominator[i], &one)
-
 		if denominator[i].IsZero() {
 			// edge-case : x is a root of unity of the domain. In this case, we can just return
 			// the associated value for poly
-
 			for k := range polys {
 				if computed[k] {
 					continue
 				}
 				results[k] = polys[k][i]
 			}
-
 			return results
 		}
 	}
@@ -216,6 +212,7 @@ func batchInterpolateSV(results []field.Element, computed []bool, polys [][]fiel
 	cardinalityInv := &domain.CardinalityInv
 
 	// Compute factor as (x^n - 1) * (1 / domain.Cardinality).
+	one := field.One()
 	factor := new(field.Element).Sub(xN, &one)
 	factor.Mul(factor, cardinalityInv)
 

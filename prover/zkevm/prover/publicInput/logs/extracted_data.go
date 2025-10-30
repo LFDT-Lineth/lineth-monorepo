@@ -185,6 +185,16 @@ func AssignExtractedData(run *wizard.ProverRuntime, lCols LogColumns, sel Select
 	run.AssignColumn(fetched.Hi.GetColID(), smartvectors.NewRegular(Hi))
 	run.AssignColumn(fetched.Lo.GetColID(), smartvectors.NewRegular(Lo))
 	// assign filters for original log columns and fetched ExtractedData
-	run.AssignColumn(fetched.FilterArith.GetColID(), smartvectors.NewRegular(filterLogs))      // filter on LogColumns
+
+	// As the columns filterLogs is co-located with arithmetization loginfo
+	// columns, it is important that the column is assigned as a left-padded
+	// column. Otherwise, it will drive the segmentation to create an insane
+	// number of segments. Another solution would be to tag the column with a
+	// pragma but this would change the setup and this is implemented as a patch
+	// on mainnet and we don't want to break the setup as we are adding the
+	// patch.
+	var filterLogsSV smartvectors.SmartVector = smartvectors.NewRegular(filterLogs)
+	filterLogsSV, _ = smartvectors.TryReduceSizeLeft(filterLogsSV)
+	run.AssignColumn(fetched.FilterArith.GetColID(), filterLogsSV)                             // filter on LogColumns
 	run.AssignColumn(fetched.FilterFetched.GetColID(), smartvectors.NewRegular(filterFetched)) // filter on fetched data
 }

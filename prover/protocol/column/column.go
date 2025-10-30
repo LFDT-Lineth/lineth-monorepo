@@ -309,8 +309,7 @@ func StatusOf(c ifaces.Column) Status {
 func IsPublicExpression(expr *symbolic.Expression) bool {
 
 	var (
-		board        = expr.Board()
-		meta         = board.ListVariableMetadata()
+		meta         = expr.BoardListVariableMetadata()
 		numPublic    = 0
 		numNonPublic = 0
 		statusMap    = map[ifaces.ColID]string{}
@@ -340,8 +339,7 @@ func IsPublicExpression(expr *symbolic.Expression) bool {
 func ColumnsOfExpression(expr *symbolic.Expression) []ifaces.Column {
 
 	var (
-		board    = expr.Board()
-		metadata = board.ListVariableMetadata()
+		metadata = expr.BoardListVariableMetadata()
 		res      []ifaces.Column
 	)
 

@@ -7,7 +7,6 @@ import (
 	"reflect"
 
 	"github.com/consensys/gnark/frontend"
-	"github.com/consensys/linea-monorepo/prover/maths/common/mempool"
 	sv "github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/utils"
@@ -136,8 +135,8 @@ func (prod Product) Degree(inputDegrees []int) int {
 }
 
 // Evaluate implements the [Operator] interface.
-func (prod Product) Evaluate(inputs []sv.SmartVector, p ...mempool.MemPool) sv.SmartVector {
-	return sv.Product(prod.Exponents, inputs, p...)
+func (prod Product) Evaluate(inputs []sv.SmartVector) sv.SmartVector {
+	return sv.Product(prod.Exponents, inputs)
 }
 
 // Validate implements the [Operator] interface.

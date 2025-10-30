@@ -469,12 +469,16 @@ func GetScaledUpBootstrapper(cfg *config.Config, disc *distributed.StandardModul
 }
 
 // RunStatRecords runs only the bootstrapper and returns a list of stat records
-func (lz *LimitlessZkEVM) RunStatRecords(witness *Witness) []distributed.QueryBasedAssignmentStatsRecord {
+func (lz *LimitlessZkEVM) RunStatRecords(cfg *config.Config, witness *Witness) []distributed.QueryBasedAssignmentStatsRecord {
 
 	var (
-		runtimeBoot = wizard.RunProver(
+		runtimeBoot = runBootstrapperWithRescaling(
+			cfg,
 			lz.DistWizard.Bootstrapper,
-			lz.Zkevm.GetMainProverStep(witness),
+			lz.Zkevm,
+			lz.DistWizard.Disc,
+			witness,
+			true,
 		)
 
 		res  = []distributed.QueryBasedAssignmentStatsRecord{}

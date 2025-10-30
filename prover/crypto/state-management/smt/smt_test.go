@@ -136,3 +136,21 @@ func TestBuildFromScratch(t *testing.T) {
 	require.Equal(t, oneByoneTree.Root.Hex(), tree.Root.Hex())
 
 }
+
+func BenchmarkBuildComplete(b *testing.B) {
+	config := &smt.Config{
+		HashFunc: hashtypes.MiMC,
+		Depth:    20,
+	}
+
+	// Generate random field elements and cast them into Bytes32es
+	leavesFr := vector.Rand(1 << config.Depth)
+	leaves := make([]Bytes32, len(leavesFr))
+	for i := range leaves {
+		leaves[i] = Bytes32(leavesFr[i].Bytes())
+	}
+
+	for b.Loop() {
+		_ = smt.BuildComplete(leaves, config.HashFunc)
+	}
+}

@@ -145,7 +145,8 @@ func (qa QuotientAccumulation) Run(run *wizard.ProverRuntime) {
 				}
 
 				var (
-					paramsI  = run.GetUnivariateParams(qa.Queries[i].Name())
+					paramsI = run.GetUnivariateParams(qa.Queries[i].Name())
+					// TODO @gbotrel this slows thing down, build a smart lookup or improve search.
 					posOfYik = getPositionOfPolyInQueryYs(qa.Queries[i], qa.Polys[k])
 					yik      = paramsI.Ys[posOfYik]
 				)
@@ -274,6 +275,7 @@ func _ldeOf(v []field.Element, sizeSmall, sizeLarge int) {
 }
 
 func getPositionOfPolyInQueryYs(q query.UnivariateEval, poly ifaces.Column) int {
+	// TODO @gbotrel this appears on the traces quite a lot -- lot of string comparisons
 	toFind := poly.GetColID()
 	for i, p := range q.Pols {
 		if p.GetColID() == toFind {

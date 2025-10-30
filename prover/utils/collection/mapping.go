@@ -19,6 +19,12 @@ func NewMapping[K comparable, V any]() Mapping[K, V] {
 	}
 }
 
+func NewMappingWithCapacity[K comparable, V any](capacity int) Mapping[K, V] {
+	return Mapping[K, V]{
+		InnerMap: make(map[K]V, capacity),
+	}
+}
+
 // Attempts to retrieve a value from a given key. Panics
 // if it fails
 func (kv *Mapping[K, V]) MustGet(key K) V {

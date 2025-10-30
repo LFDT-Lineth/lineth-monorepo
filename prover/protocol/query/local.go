@@ -43,8 +43,7 @@ func NewLocalConstraint(id ifaces.QueryID, expr *symbolic.Expression) LocalConst
 		Upon construct, checks that all the offsets are compatible with
 		the domain size and sizes
 	*/
-	board := expr.Board()
-	metadatas := board.ListVariableMetadata()
+	metadatas := expr.BoardListVariableMetadata()
 	var firstColumn ifaces.Column
 	for _, metadataInterface := range metadatas {
 		if metadata, ok := metadataInterface.(ifaces.Column); ok {
@@ -82,7 +81,7 @@ func (r LocalConstraint) Name() ifaces.QueryID {
 // Test the polynomial identity
 func (cs LocalConstraint) Check(run ifaces.Runtime) error {
 	board := cs.Board()
-	metadatas := board.ListVariableMetadata()
+	metadatas := cs.BoardListVariableMetadata()
 	/*
 		Collects the relevant datas into a slice for the evaluation
 	*/

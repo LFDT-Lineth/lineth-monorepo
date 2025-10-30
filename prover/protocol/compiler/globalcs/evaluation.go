@@ -96,6 +96,8 @@ func declareUnivariateQueries(
 // [wizard.ProverAction] interface.
 func (pa EvaluationProver) Run(run *wizard.ProverRuntime) {
 
+	// TODO @gbotrel this use a lot of memory, investigate why.
+
 	var (
 		stoptimer = profiling.LogTimer("Evaluate the queries for the global constraints")
 		r         = run.GetRandomCoinField(pa.EvalCoin.Name)
@@ -201,7 +203,7 @@ func (ctx *EvaluationVerifier) Run(run wizard.Runtime) error {
 
 	for i, ratio := range ctx.Ratios {
 
-		board := ctx.AggregateExpressionsBoard[i]
+		board := ctx.AggregateExpressions[i].Board()
 		metadatas := board.ListVariableMetadata()
 
 		evalInputs := make([]sv.SmartVector, len(metadatas))
@@ -263,7 +265,7 @@ func (ctx *EvaluationVerifier) RunGnark(api frontend.API, c wizard.GnarkRuntime)
 
 	for i, ratio := range ctx.Ratios {
 
-		board := ctx.AggregateExpressionsBoard[i]
+		board := ctx.AggregateExpressions[i].Board()
 		metadatas := board.ListVariableMetadata()
 
 		evalInputs := make([]frontend.Variable, len(metadatas))

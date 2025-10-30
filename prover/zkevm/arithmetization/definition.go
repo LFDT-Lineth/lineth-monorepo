@@ -205,10 +205,9 @@ func (s *schemaScanner) addConstraintInComp(name string, corsetCS schema.Constra
 	case air.VanishingConstraint[bls12_377.Element]:
 
 		var (
-			vc     = cs.Unwrap()
-			wExpr  = s.castExpression(vc.Context, vc.Constraint.Term)
-			wBoard = wExpr.Board()
-			wMeta  = wBoard.ListVariableMetadata()
+			vc    = cs.Unwrap()
+			wExpr = s.castExpression(vc.Context, vc.Constraint.Term)
+			wMeta = wExpr.BoardListVariableMetadata()
 		)
 
 		if len(wMeta) == 0 {

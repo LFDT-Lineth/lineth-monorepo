@@ -95,10 +95,7 @@ func (comp *CompiledIOP) checkExpressionInStore(expr *symbolic.Expression) {
 		return
 	}
 
-	var (
-		board = expr.Board()
-		meta  = board.ListVariableMetadata()
-	)
+	meta := expr.BoardListVariableMetadata()
 
 	for _, m := range meta {
 		if col, ok := m.(ifaces.Column); ok {

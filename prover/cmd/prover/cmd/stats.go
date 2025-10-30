@@ -41,7 +41,7 @@ func LogStats(_ context.Context, args LogStatsArgs) error {
 		out          = execution.CraftProverOutput(cfg, req)
 		witness      = execution.NewWitness(cfg, req, &out)
 		lz           = zkevm.NewLimitlessRawZkEVM(cfg)
-		stats        = lz.RunStatRecords(witness.ZkEVM)
+		stats        = lz.RunStatRecords(cfg, witness.ZkEVM)
 		shortReqName = path.Base(args.Input)
 	)
 

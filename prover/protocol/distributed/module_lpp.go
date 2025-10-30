@@ -377,10 +377,7 @@ func (m *ModuleLPP) addCoinFromExpression(exprs ...*symbolic.Expression) {
 
 	for _, expr := range exprs {
 
-		var (
-			board    = expr.Board()
-			metadata = board.ListVariableMetadata()
-		)
+		metadata := expr.BoardListVariableMetadata()
 
 		for i := range metadata {
 

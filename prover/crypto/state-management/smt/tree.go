@@ -2,10 +2,11 @@ package smt
 
 import (
 	"fmt"
+	"runtime"
+	"sync"
 
 	"github.com/consensys/linea-monorepo/prover/crypto/state-management/hashtypes"
 	"github.com/consensys/linea-monorepo/prover/utils"
-	"github.com/consensys/linea-monorepo/prover/utils/parallel"
 	"github.com/consensys/linea-monorepo/prover/utils/types"
 )
 
@@ -50,8 +51,8 @@ func EmptyLeaf() types.Bytes32 {
 
 // hashLR is used for hashing the leaf-right children. It returns H(nodeL, nodeR)
 // taking H as the HashFunc of the config.
-func hashLR(config *Config, nodeL, nodeR types.Bytes32) types.Bytes32 {
-	hasher := config.HashFunc()
+func hashLR(hasher hashtypes.Hasher, nodeL, nodeR types.Bytes32) types.Bytes32 {
+	hasher.Reset()
 	nodeL.WriteTo(hasher)
 	nodeR.WriteTo(hasher)
 	d := types.AsBytes32(hasher.Sum(nil))
@@ -64,14 +65,16 @@ func NewEmptyTree(conf *Config) *Tree {
 	emptyNodes := make([]types.Bytes32, conf.Depth-1)
 	prevNode := EmptyLeaf()
 
+	hasher := conf.HashFunc()
+
 	for i := range emptyNodes {
-		newNode := hashLR(conf, prevNode, prevNode)
+		newNode := hashLR(hasher, prevNode, prevNode)
 		emptyNodes[i] = newNode
 		prevNode = newNode
 	}
 
 	// Stores the initial root separately
-	root := hashLR(conf, prevNode, prevNode)
+	root := hashLR(hasher, prevNode, prevNode)
 
 	return &Tree{
 		Config:         conf,
@@ -264,6 +267,9 @@ func (t *Tree) reserveLevel(level, newSize int) {
 //
 // It panics if the number of leaves is a non-power of 2.
 func BuildComplete(leaves []types.Bytes32, hashFunc func() hashtypes.Hasher) *Tree {
+	// TODO @gbotrel this accumulates to 50sec of runtime for proof creation
+	// plenty of innefficenies to optimize for.
+	// it also stores a lot of data in memory, investigate why.
 
 	numLeaves := len(leaves)
 
@@ -279,19 +285,77 @@ func BuildComplete(leaves []types.Bytes32, hashFunc func() hashtypes.Hasher) *Tr
 	tree := NewEmptyTree(config)
 	tree.OccupiedLeaves = leaves
 
-	// Builds the tree bottom-up
-	currLevels := leaves
-
-	for i := 0; i < depth-1; i++ {
-		nextLevel := make([]types.Bytes32, len(currLevels)/2)
-		parallel.Execute(len(nextLevel), func(start, stop int) {
-			for k := start; k < stop; k++ {
-				nextLevel[k] = hashLR(config, currLevels[2*k], currLevels[2*k+1])
-			}
-		})
-		tree.OccupiedNodes[i] = nextLevel
-		currLevels = nextLevel
+	// pre-allocate the memory for all levels
+	nbTotalNodes := 0
+	for d := 1; d < depth; d++ {
+		nbTotalNodes += 1 << (depth - d)
 	}
+	arena := make([]types.Bytes32, nbTotalNodes)
+	offset := 0
+
+	// start a worker pool that will parallelize the hashing at each level
+	type workerTask struct {
+		curr  []types.Bytes32
+		next  []types.Bytes32
+		start int
+		stop  int
+		wg    *sync.WaitGroup
+	}
+
+	workerCount := runtime.GOMAXPROCS(0)
+	if workerCount < 1 {
+		workerCount = 1
+	}
+
+	tasks := make(chan workerTask)
+	var workersWG sync.WaitGroup
+	workersWG.Add(workerCount)
+	for i := 0; i < workerCount; i++ {
+		go func() {
+			hasher := config.HashFunc()
+			for task := range tasks {
+				for k := task.start; k < task.stop; k++ {
+					task.next[k] = hashLR(hasher, task.curr[2*k], task.curr[2*k+1])
+				}
+				task.wg.Done()
+			}
+			workersWG.Done()
+		}()
+	}
+
+	// build the tree bottom up
+	currLevels := leaves
+	for d := 1; d < depth; d++ {
+		levelSize := 1 << (depth - d)
+		nextLevel := arena[offset : offset+levelSize]
+
+		activeWorkers := workerCount
+		if levelSize < activeWorkers {
+			activeWorkers = levelSize
+		}
+
+		var levelWG sync.WaitGroup
+		levelWG.Add(activeWorkers)
+		for i := 0; i < activeWorkers; i++ {
+			start := i * levelSize / activeWorkers
+			stop := (i + 1) * levelSize / activeWorkers
+			tasks <- workerTask{
+				curr:  currLevels,
+				next:  nextLevel,
+				start: start,
+				stop:  stop,
+				wg:    &levelWG,
+			}
+		}
+		levelWG.Wait()
+
+		tree.OccupiedNodes[d-1] = nextLevel
+		currLevels = nextLevel
+		offset += levelSize
+	}
+
+	close(tasks)
+	workersWG.Wait()
 
 	// sanity-check : len(currLevels) == 2 is an invariant
 	if len(currLevels) != 2 {
@@ -299,6 +363,7 @@ func BuildComplete(leaves []types.Bytes32, hashFunc func() hashtypes.Hasher) *Tr
 	}
 
 	// And overwrite the root
-	tree.Root = hashLR(config, currLevels[0], currLevels[1])
+	hasher := config.HashFunc()
+	tree.Root = hashLR(hasher, currLevels[0], currLevels[1])
 	return tree
 }

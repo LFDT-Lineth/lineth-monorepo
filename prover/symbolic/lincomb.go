@@ -5,7 +5,6 @@ import (
 	"reflect"
 
 	"github.com/consensys/gnark/frontend"
-	"github.com/consensys/linea-monorepo/prover/maths/common/mempool"
 	sv "github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/utils"
@@ -96,8 +95,8 @@ func (LinComb) Degree(inputDegrees []int) int {
 }
 
 // Evaluate implements the [Operator] interface.
-func (lc LinComb) Evaluate(inputs []sv.SmartVector, p ...mempool.MemPool) sv.SmartVector {
-	return sv.LinComb(lc.Coeffs, inputs, p...)
+func (lc LinComb) Evaluate(inputs []sv.SmartVector) sv.SmartVector {
+	return sv.LinComb(lc.Coeffs, inputs)
 }
 
 // Validate implements the [Operator] interface

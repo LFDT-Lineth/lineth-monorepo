@@ -102,19 +102,18 @@ func (linCombOp) constIntoConst(res, x *field.Element, coeff int) {
 func (linCombOp) vecIntoVec(res, x []field.Element, coeff int) {
 	// Sanity-check
 	assertHasLength(len(res), len(x))
+	vRes := field.Vector(res)
 	switch coeff {
 	case 1:
-		vector.Add(res, res, x)
+		vRes.Add(vRes, x)
 	case -1:
-		vector.Sub(res, res, x)
+		vRes.Sub(vRes, x)
 	case 2:
-		for i := range res {
-			res[i].Add(&res[i], &x[i]).Add(&res[i], &x[i])
-		}
+		vRes.Add(vRes, x)
+		vRes.Add(vRes, x)
 	case -2:
-		for i := range res {
-			res[i].Sub(&res[i], &x[i]).Sub(&res[i], &x[i])
-		}
+		vRes.Sub(vRes, x)
+		vRes.Sub(vRes, x)
 	default:
 		var c, tmp field.Element
 		c.SetInt64(int64(coeff))
@@ -220,16 +219,14 @@ func (productOp) vecIntoVec(res, x []field.Element, coeff int) {
 	case 1:
 		vector.MulElementWise(res, res, x)
 	case 2:
-		for i := range res {
-			res[i].Mul(&res[i], &x[i]).Mul(&res[i], &x[i])
-		}
+		vRes := field.Vector(res)
+		vRes.Mul(vRes, x)
+		vRes.Mul(vRes, x)
 	case 3:
-		for i := range res {
-			var tmp field.Element
-			tmp.Square(&x[i])
-			tmp.Mul(&tmp, &x[i])
-			res[i].Mul(&res[i], &tmp)
-		}
+		vRes := field.Vector(res)
+		vRes.Mul(vRes, x)
+		vRes.Mul(vRes, x)
+		vRes.Mul(vRes, x)
 	default:
 		var tmp field.Element
 		for i := range res {
@@ -271,20 +268,8 @@ func (productOp) vecIntoTerm(res, x []field.Element, coeff int) {
 		vector.Fill(res, field.One())
 	case 1:
 		copy(res, x)
-	case 2:
-		vector.MulElementWise(res, x, x)
-	case 3:
-		for i := range res {
-			// Creating a new variable for the case where res and x are the same variable
-			var tmp field.Element
-			tmp.Square(&x[i])
-			res[i].Mul(&tmp, &x[i])
-		}
 	default:
-		c := big.NewInt(int64(coeff))
-		for i := range res {
-			res[i].Exp(x[i], c)
-		}
+		field.ExpVec(res, x, int64(coeff))
 	}
 }
 
