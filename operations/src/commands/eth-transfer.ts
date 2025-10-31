@@ -1,84 +1,71 @@
-import { ethers, TransactionLike } from "ethers";
 import { Command, Flags } from "@oclif/core";
-import { validateEthereumAddress, validateHexString, validateUrl, get1559Fees } from "../utils/common/index.js";
-import {
-  validateETHThreshold,
-  calculateRewards,
-  validateConfig,
-  estimateTransactionGas,
-  executeTransaction,
-  getWeb3SignerSignature,
-  DEFAULT_GAS_ESTIMATION_PERCENTILE,
-  DEFAULT_MAX_FEE_PER_GAS,
-  WEB3_SIGNER_PUBLIC_KEY_LENGTH,
-  getWeb3SignerHttpsAgent,
-} from "../utils/eth-transfer/index.js";
 import { Agent } from "https";
+import { address, hexString } from "../utils/common/custom-flags.js";
+import { validateUrl } from "../utils/common/validation.js";
+import {
+  Client,
+  createPublicClient,
+  formatEther,
+  Hex,
+  http,
+  parseEther,
+  parseSignature,
+  serializeTransaction,
+  TransactionSerializable,
+} from "viem";
+import { linea } from "viem/chains";
+import { Result } from "neverthrow";
+import { calculateRewards } from "../utils/eth-transfer/rewards.js";
+import { validateETHThreshold } from "../utils/eth-transfer/validation.js";
+import { buildHttpsAgent } from "../utils/common/https-agent.js";
+import { getWeb3SignerSignature } from "../utils/common/signature.js";
+import { estimateTransactionGas, sendTransaction } from "../utils/common/transactions.js";
 
 export default class EthTransfer extends Command {
   static examples = [
     // Example 1: Basic usage with required flags
     `<%= config.bin %> <%= command.id %> 
-      --sender-address=0xYourSenderAddress
-      --destination-address=0xYourDestinationAddress
-      --threshold=10
-      --blockchain-rpc-url=https://mainnet.infura.io/v3/YOUR-PROJECT-ID
-      --web3-signer-url=http://localhost:8545
-      --web3-signer-public-key=0xYourWeb3SignerPublicKey
-      --tls
-      --web3-signer-keystore-path=/path/to/keystore.p12
-      --web3-signer-keystore-passphrase=yourPassphrase
-      --web3-signer-trusted-store-path=/path/to/ca.p12
-      --web3-signer-trusted-store-passphrase=yourTrustedStorePassphrase
-      `,
-
-    // Example 2: Including optional flags with custom values
-    `<%= config.bin %> <%= command.id %>
-      --sender-address=0xYourSenderAddress
-      --destination-address=0xYourDestinationAddress
-      --threshold=5
-      --blockchain-rpc-url=https://mainnet.infura.io/v3/YOUR-PROJECT-ID
-      --web3-signer-url=http://localhost:8545
-      --web3-signer-public-key=0xYourWeb3SignerPublicKey
-      --max-fee-per-gas=150000000000
-      --gas-estimation-percentile=20
-      --tls
-      --web3-signer-keystore-path=/path/to/keystore.p12
-      --web3-signer-keystore-passphrase=yourPassphrase
-      --web3-signer-trusted-store-path=/path/to/ca.p12
-      --web3-signer-trusted-store-passphrase=yourTrustedStorePassphrase
-      `,
-
-    // Example 3: Using the dry-run flag to simulate the transaction
-    `<%= config.bin %> <%= command.id %>
-      --sender-address=0xYourSenderAddress
-      --destination-address=0xYourDestinationAddress
+      --senderAddress=0xYourSenderAddress
+      --destinationAddress=0xYourDestinationAddress
       --threshold=1.5
-      --blockchain-rpc-url=http://127.0.0.1:8545
-      --web3-signer-url=http://127.0.0.1:8546
-      --web3-signer-public-key=0xYourWeb3SignerPublicKey
-      --dry-run
+      --blockchainRpcUrl=http://127.0.0.1:8545
+      --web3SignerUrl=http://127.0.0.1:8546
+      --web3SignerPublicKey=0xYourWeb3SignerPublicKey
       --tls
-      --web3-signer-keystore-path=/path/to/keystore.p12
-      --web3-signer-keystore-passphrase=yourPassphrase
-      --web3-signer-trusted-store-path=/path/to/ca.p12
-      --web3-signer-trusted-store-passphrase=yourTrustedStorePassphrase
+      --web3SignerKeystorePath=/path/to/keystore.p12
+      --web3SignerKeystorePassphrase=yourPassphrase
+      --web3SignerTrustedStorePath=/path/to/ca.p12
+      --web3SignerTrustedStorePassphrase=yourTrustedStorePassphrase
+      `,
+
+    // Example 2: Using the dry-run flag to simulate the transaction
+    `<%= config.bin %> <%= command.id %>
+      --senderAddress=0xYourSenderAddress
+      --destinationAddress=0xYourDestinationAddress
+      --threshold=1.5
+      --blockchainRpcUrl=http://127.0.0.1:8545
+      --web3SignerUrl=http://127.0.0.1:8546
+      --web3SignerPublicKey=0xYourWeb3SignerPublicKey
+      --dryRun
+      --tls
+      --web3SignerKeystorePath=/path/to/keystore.p12
+      --web3SignerKeystorePassphrase=yourPassphrase
+      --web3SignerTrustedStorePath=/path/to/ca.p12
+      --web3SignerTrustedStorePassphrase=yourTrustedStorePassphrase
       `,
   ];
 
   static flags = {
-    "sender-address": Flags.string({
+    senderAddress: address({
       char: "s",
       description: "Sender address",
       required: true,
-      parse: async (input) => validateEthereumAddress("sender-address", input),
       env: "ETH_TRANSFER_SENDER_ADDRESS",
     }),
-    "destination-address": Flags.string({
+    destinationAddress: address({
       char: "d",
       description: "Destination address",
       required: true,
-      parse: async (input) => validateEthereumAddress("destination-address", input),
       env: "ETH_TRANSFER_DESTINATION_ADDRESS",
     }),
     threshold: Flags.string({
@@ -88,64 +75,62 @@ export default class EthTransfer extends Command {
       parse: async (input) => validateETHThreshold(input),
       env: "ETH_TRANSFER_THRESHOLD",
     }),
-    "blockchain-rpc-url": Flags.string({
+    blockchainRpcUrl: Flags.string({
       description: "Blockchain RPC URL",
       required: true,
       parse: async (input) => validateUrl("blockchain-rpc-url", input, ["http:", "https:"]),
       env: "ETH_TRANSFER_BLOCKCHAIN_RPC_URL",
     }),
-    "web3-signer-url": Flags.string({
+    web3SignerUrl: Flags.string({
       description: "Web3 Signer URL",
       required: true,
       parse: async (input) => validateUrl("web3-signer-url", input, ["http:", "https:"]),
       env: "ETH_TRANSFER_WEB3_SIGNER_URL",
     }),
-    "web3-signer-public-key": Flags.string({
+    web3SignerPublicKey: hexString({
       description: "Web3 Signer Public Key",
       required: true,
-      parse: async (input) => validateHexString("web3-signer-public-key", input, WEB3_SIGNER_PUBLIC_KEY_LENGTH),
       env: "ETH_TRANSFER_WEB3_SIGNER_PUBLIC_KEY",
     }),
-    "dry-run": Flags.boolean({
+    dryRun: Flags.boolean({
       description: "Dry run flag",
       required: false,
       default: false,
       env: "ETH_TRANSFER_DRY_RUN",
-    }),
-    "max-fee-per-gas": Flags.string({
-      description: "MaxFeePerGas in wei",
-      required: false,
-      default: DEFAULT_MAX_FEE_PER_GAS,
-      env: "ETH_TRANSFER_MAX_FEE_PER_GAS",
-    }),
-    "gas-estimation-percentile": Flags.integer({
-      description: "Gas estimation percentile (0-100)",
-      required: false,
-      default: DEFAULT_GAS_ESTIMATION_PERCENTILE,
-      env: "ETH_TRANSFER_GAS_ESTIMATION_PERCENTILE",
     }),
     tls: Flags.boolean({
       description: "Enable TLS",
       required: false,
       default: false,
       env: "ETH_TRANSFER_TLS",
+      relationships: [
+        {
+          type: "all",
+          flags: [
+            { name: "web3SignerKeystorePath", when: async (flags) => flags["tls"] === true },
+            { name: "web3SignerKeystorePassphrase", when: async (flags) => flags["tls"] === true },
+            { name: "web3SignerTrustedStorePath", when: async (flags) => flags["tls"] === true },
+            { name: "web3SignerTrustedStorePassphrase", when: async (flags) => flags["tls"] === true },
+          ],
+        },
+      ],
     }),
-    "web3-signer-keystore-path": Flags.string({
+    web3SignerKeystorePath: Flags.string({
       description: "Path to the web3 signer keystore file",
       required: false,
       env: "ETH_TRANSFER_WEB3_SIGNER_KEYSTORE_PATH",
     }),
-    "web3-signer-keystore-passphrase": Flags.string({
+    web3SignerKeystorePassphrase: Flags.string({
       description: "Passphrase for the web3 signer keystore",
       required: false,
       env: "ETH_TRANSFER_WEB3_SIGNER_KEYSTORE_PASSPHRASE",
     }),
-    "web3-signer-trusted-store-path": Flags.string({
+    web3SignerTrustedStorePath: Flags.string({
       description: "Path to the web3 signer trusted store file",
       required: false,
       env: "ETH_TRANSFER_WEB3_SIGNER_TRUSTED_STORE_PATH",
     }),
-    "web3-signer-trusted-store-passphrase": Flags.string({
+    web3SignerTrustedStorePassphrase: Flags.string({
       description: "Passphrase for the web3 signer trusted store file",
       required: false,
       env: "ETH_TRANSFER_WEB3_SIGNER_TRUSTED_STORE_PASSPHRASE",
@@ -162,27 +147,26 @@ export default class EthTransfer extends Command {
       blockchainRpcUrl,
       web3SignerUrl,
       web3SignerPublicKey,
-      maxFeePerGas,
-      gasEstimationPercentile,
       dryRun,
       tls,
       web3SignerKeystorePath,
       web3SignerKeystorePassphrase,
       web3SignerTrustedStorePath,
       web3SignerTrustedStorePassphrase,
-    } = validateConfig(flags);
+    } = flags;
 
-    const provider = new ethers.JsonRpcProvider(blockchainRpcUrl);
+    const client = createPublicClient({
+      chain: linea,
+      transport: http(blockchainRpcUrl, { batch: true, retryCount: 3 }),
+    });
 
-    const [{ chainId }, senderBalance, fees, nonce] = await Promise.all([
-      provider.getNetwork(),
-      provider.getBalance(senderAddress),
-      get1559Fees(provider, maxFeePerGas, gasEstimationPercentile),
-      provider.getTransactionCount(senderAddress),
+    const [senderBalance, nonce] = await Promise.all([
+      client.getBalance({ address: senderAddress }),
+      client.getTransactionCount({ address: senderAddress }),
     ]);
 
-    if (senderBalance <= ethers.parseEther(threshold)) {
-      this.log(`Sender balance (${ethers.formatEther(senderBalance)} ETH) is less than threshold. No action needed.`);
+    if (senderBalance <= parseEther(threshold)) {
+      this.log(`Sender balance (${formatEther(senderBalance)} ETH) is less than threshold. No action needed.`);
       return;
     }
 
@@ -193,61 +177,136 @@ export default class EthTransfer extends Command {
       return;
     }
 
-    const transactionRequest: TransactionLike = {
+    const { gasLimit, baseFeePerGas, priorityFeePerGas } = this.unwrapOrError(
+      await estimateTransactionGas(client, {
+        to: destinationAddress,
+        account: senderAddress,
+        value: rewards,
+        nonce,
+      }),
+      "Failed to estimate gas",
+    );
+
+    this.log(
+      `Gas estimation: gasLimit=${gasLimit} baseFeePerGas=${baseFeePerGas} priorityFeePerGas=${priorityFeePerGas}`,
+    );
+
+    const httpsAgent = this.buildHttpsAgentIfNeeded({
+      tls,
+      web3SignerKeystorePath,
+      web3SignerKeystorePassphrase,
+      web3SignerTrustedStorePath,
+      web3SignerTrustedStorePassphrase,
+    });
+
+    const transactionToSerialize: TransactionSerializable = {
       to: destinationAddress,
+      type: "eip1559",
       value: rewards,
-      type: 2,
-      chainId,
-      maxFeePerGas: fees.maxFeePerGas,
-      maxPriorityFeePerGas: fees.maxPriorityFeePerGas ?? null,
-      nonce: nonce,
+      chainId: linea.id,
+      gas: gasLimit,
+      maxFeePerGas: baseFeePerGas + priorityFeePerGas,
+      maxPriorityFeePerGas: priorityFeePerGas,
     };
 
-    const transactionGasLimit = await estimateTransactionGas(provider, {
-      ...transactionRequest,
-      from: senderAddress,
-    } as ethers.TransactionRequest);
-
-    const transaction: TransactionLike = {
-      ...transactionRequest,
-      gasLimit: transactionGasLimit,
-    };
-
-    let httpsAgent: Agent | undefined;
-    if (tls) {
-      this.log(`Using TLS for secure communication with Web3 Signer.`);
-      httpsAgent = getWeb3SignerHttpsAgent(
-        web3SignerKeystorePath,
-        web3SignerKeystorePassphrase,
-        web3SignerTrustedStorePath,
-        web3SignerTrustedStorePassphrase,
-      );
-    }
-
-    const signature = await getWeb3SignerSignature(web3SignerUrl, web3SignerPublicKey, transaction, httpsAgent);
+    const signature = await this.signTransaction(
+      web3SignerUrl,
+      web3SignerPublicKey,
+      transactionToSerialize,
+      httpsAgent,
+    );
 
     if (dryRun) {
       this.log("Dry run enabled: Skipping transaction submission to blockchain.");
-      this.log(`Here is the expected rewards: ${ethers.formatEther(rewards)} ETH`);
+      this.log(`Here is the expected rewards: ${formatEther(rewards)} ETH`);
       return;
     }
 
-    const receipt = await executeTransaction(provider, {
-      ...transaction,
-      signature,
-    });
+    await this.broadcastTransaction(client, transactionToSerialize, signature);
+  }
 
-    if (!receipt) {
-      throw new Error(`Transaction receipt not found for this transaction ${JSON.stringify(transaction)}`);
+  /**
+   * Build https agent if TLS is enabled and all required parameters are provided.
+   * @param params Parameters for building the HTTPS agent.
+   * @returns The built HTTPS agent or undefined if not needed.
+   */
+  private buildHttpsAgentIfNeeded(params: {
+    tls: boolean;
+    web3SignerKeystorePath?: string | undefined;
+    web3SignerKeystorePassphrase?: string | undefined;
+    web3SignerTrustedStorePath?: string | undefined;
+    web3SignerTrustedStorePassphrase?: string | undefined;
+  }): Agent | undefined {
+    if (
+      params.tls &&
+      params.web3SignerKeystorePath &&
+      params.web3SignerKeystorePassphrase &&
+      params.web3SignerTrustedStorePath &&
+      params.web3SignerTrustedStorePassphrase
+    ) {
+      this.log("Using TLS for Web3 Signer communication.");
+      return buildHttpsAgent(
+        params.web3SignerKeystorePath,
+        params.web3SignerKeystorePassphrase,
+        params.web3SignerTrustedStorePath,
+        params.web3SignerTrustedStorePassphrase,
+      );
     }
+    return undefined;
+  }
 
-    if (receipt.status === 0) {
-      throw new Error(`Transaction reverted. Receipt: ${JSON.stringify(receipt)}`);
+  /**
+   * Sign the transaction using Web3 Signer.
+   * @param web3SignerUrl Web3 Signer URL.
+   * @param web3SignerPublicKey Web3 Signer Public Key.
+   * @param transactionToSerialize Transaction to be serialized and signed.
+   * @param httpsAgent Optional HTTPS Agent for secure communication.
+   * @returns The signature as a hex string.
+   */
+  public async signTransaction(
+    web3SignerUrl: string,
+    web3SignerPublicKey: string,
+    transactionToSerialize: TransactionSerializable,
+    httpsAgent?: Agent,
+  ): Promise<Hex> {
+    return this.unwrapOrError(
+      await getWeb3SignerSignature(web3SignerUrl, web3SignerPublicKey, transactionToSerialize, httpsAgent),
+      "Failed to get signature from Web3 Signer",
+    );
+  }
+
+  /**
+   * Broadcast the signed transaction to the network.
+   * @param client Viem Client.
+   * @param tx Transaction to be broadcasted.
+   * @param signature Signature of the transaction.
+   */
+  private async broadcastTransaction(client: Client, tx: TransactionSerializable, signature: Hex) {
+    const signed = serializeTransaction(tx, parseSignature(signature));
+
+    this.log(`Broadcasting submitInvoice transaction to the network...`);
+
+    const receipt = this.unwrapOrError(await sendTransaction(client, signed), "Failed to send transaction");
+
+    if (receipt.status === "reverted") {
+      this.error(`Transaction failed. transactionHash=${receipt.transactionHash}`);
     }
 
     this.log(
-      `Transaction succeeded. Rewards sent: ${ethers.formatEther(rewards)} ETH. Receipt: ${JSON.stringify(receipt)}`,
+      `Transaction succeed: transactionHash=${receipt.transactionHash} rewards=${formatEther(tx.value ?? 0n)} ETH`,
     );
-    this.log(`Rewards sent: ${ethers.formatEther(rewards)} ETH`);
+  }
+
+  /**
+   * Unwrap a Result or throw an error with a custom message.
+   * @param result The Result to unwrap.
+   * @param message The error message to use if unwrapping fails.
+   * @returns The unwrapped value.
+   */
+  private unwrapOrError<T, E extends Error = Error>(result: Result<T, E>, message: string): T {
+    return result.match(
+      (value) => value,
+      (error) => this.error(`${message}. message=${error.message}`),
+    );
   }
 }

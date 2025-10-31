@@ -1,7 +1,7 @@
-import { ethers } from "ethers";
+import { parseEther } from "viem";
 
 export function calculateRewards(balance: bigint): bigint {
-  const oneEth = ethers.parseEther("1");
+  const oneEth = parseEther("1");
 
   if (balance < oneEth) {
     return 0n;
