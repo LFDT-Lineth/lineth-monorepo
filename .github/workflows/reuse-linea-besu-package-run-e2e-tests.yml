@@ -55,7 +55,7 @@ jobs:
     outputs:
       tests_outcome: ${{ steps.run_e2e_tests.outcome }}
     # xl saves ~0 mins
-    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-large
+    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-xl
     steps:
       - name: Setup upterm session
         if: ${{ inputs.e2e-tests-with-ssh }}

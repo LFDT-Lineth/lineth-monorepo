@@ -23,7 +23,7 @@ on:
 jobs:
   run-e2e-tests:
     if: github.event.pull_request.head.repo.fork == false
-    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-large
+    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-xl
     steps:
       - name: Checkout
         uses: actions/checkout@v4
