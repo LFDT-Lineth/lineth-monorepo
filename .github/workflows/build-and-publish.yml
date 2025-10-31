@@ -30,7 +30,7 @@ on:
       transaction_exclusion_api_changed:
         required: true
         type: string
-      linea_besu_package_changed:
+      build_linea_besu_package:
         required: true
         type: string
       coordinator_image_tagged:
@@ -99,7 +99,7 @@ jobs:
 
   linea_besu_package:
     uses: ./.github/workflows/linea-besu-package-build-and-upload.yml
-    if: ${{ always() && (inputs.linea_besu_package_changed == 'true') }}
+    if: ${{ always() && (inputs.build_linea_besu_package == 'true') }}
     with:
       release_tag_prefix: ''
       with_besu_fleet_plugin: false

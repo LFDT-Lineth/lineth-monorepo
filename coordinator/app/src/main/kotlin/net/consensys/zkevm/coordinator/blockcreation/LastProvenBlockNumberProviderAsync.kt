@@ -19,9 +19,10 @@ interface LatestL1FinalizedBlockProviderSync {
 
 class BatchesRepoBasedLastProvenBlockNumberProvider(
   startingBlockNumberExclusive: Long,
+  latestL1FinalizedBlock: Long,
   private val batchesRepository: BatchesRepository,
 ) : LastProvenBlockNumberProviderAsync, LastProvenBlockNumberProviderSync, LatestL1FinalizedBlockProviderSync {
-  private var latestL1FinalizedBlock: AtomicLong = AtomicLong(startingBlockNumberExclusive)
+  private var latestL1FinalizedBlock: AtomicLong = AtomicLong(latestL1FinalizedBlock)
   private var lastProvenBlock: AtomicLong = AtomicLong(startingBlockNumberExclusive)
 
   fun updateLatestL1FinalizedBlock(blockNumber: Long): SafeFuture<Unit> {

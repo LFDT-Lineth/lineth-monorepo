@@ -391,6 +391,7 @@ class ConflationApp(
   private val lastProvenBlockNumberProvider = run {
     val lastProvenConsecutiveBatchBlockNumberProvider = BatchesRepoBasedLastProvenBlockNumberProvider(
       lastProcessedBlockNumber.toLong(),
+      lastFinalizedBlock.toLong(),
       batchesRepository,
     )
     metricsFacade.createGauge(
