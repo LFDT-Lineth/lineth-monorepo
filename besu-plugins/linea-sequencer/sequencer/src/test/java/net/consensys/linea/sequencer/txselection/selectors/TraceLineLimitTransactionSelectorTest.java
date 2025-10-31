@@ -274,7 +274,7 @@ public class TraceLineLimitTransactionSelectorTest {
           blockchainService,
           LineaL1L2BridgeSharedConfiguration.builder()
               .contract(Address.fromHexString("0xDEADBEEF"))
-              .topic(Bytes.fromHexString("0x012345"))
+              .topic(Bytes32.fromHexString("0x012345"))
               .build(),
           lineaTracerConfiguration,
           invalidTransactionByLineCountCache);

@@ -102,7 +102,7 @@ public class TraceLineLimitCacheIntegrationTest {
             blockchainService,
             LineaL1L2BridgeSharedConfiguration.builder()
                 .contract(Address.fromHexString("0xdeadbeef"))
-                .topic(Bytes.fromHexString("0xc0ffee"))
+                .topic(Bytes32.fromHexString("0xc0ffee"))
                 .build(),
             tracerConfiguration,
             sharedCache);

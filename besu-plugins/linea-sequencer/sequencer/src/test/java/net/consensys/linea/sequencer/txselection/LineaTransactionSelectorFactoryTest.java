@@ -35,7 +35,6 @@ import net.consensys.linea.config.LineaTransactionSelectorConfiguration;
 import net.consensys.linea.plugins.config.LineaL1L2BridgeSharedConfiguration;
 import net.consensys.linea.sequencer.modulelimit.ModuleLineCountValidator;
 import net.consensys.linea.sequencer.txselection.selectors.TraceLineLimitTransactionSelectorTest;
-import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
 import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.datatypes.HardforkId;
@@ -62,8 +61,8 @@ class LineaTransactionSelectorFactoryTest {
 
   private static final Address BRIDGE_CONTRACT =
       Address.fromHexString("0x508Ca82Df566dCD1B0DE8296e70a96332cD644ec");
-  private static final Bytes BRIDGE_LOG_TOPIC =
-      Bytes.fromHexString("e856c2b8bd4eb0027ce32eeaf595c21b0b6b4644b326e5b7bd80a1cf8db72e6c");
+  private static final Bytes32 BRIDGE_LOG_TOPIC =
+      Bytes32.fromHexString("e856c2b8bd4eb0027ce32eeaf595c21b0b6b4644b326e5b7bd80a1cf8db72e6c");
 
   private BlockchainService mockBlockchainService;
   private LineaTransactionSelectorConfiguration mockTxSelectorConfiguration;
