@@ -9,7 +9,6 @@
 package linea.plugin.acc.test;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.IOException;
 import java.math.BigInteger;
@@ -19,11 +18,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.List;
 import linea.plugin.acc.test.tests.web3j.generated.LogEmitter;
-import net.consensys.linea.sequencer.txselection.selectors.TransactionEventFilter;
 import org.apache.tuweni.bytes.Bytes32;
-import org.awaitility.core.ConditionTimeoutException;
-import org.hyperledger.besu.datatypes.Address;
-import org.hyperledger.besu.evm.log.LogTopic;
 import org.hyperledger.besu.tests.acceptance.dsl.account.Accounts;
 import org.hyperledger.besu.tests.acceptance.dsl.transaction.NodeRequests;
 import org.hyperledger.besu.tests.acceptance.dsl.transaction.Transaction;
@@ -68,26 +63,41 @@ public class TransactionEventDenialTest extends LineaPluginTestBase {
     Web3j web3j = minerNode.nodeRequests().eth();
     TransactionManager txManager = createTransactionManager(web3j);
 
-    Bytes32 blockedTopic = Bytes32.fromHexStringLenient("0xaa");
+    String blockedTopic = "0xaa";
     byte[] payload = "data".getBytes(StandardCharsets.UTF_8);
 
     addDenyListFilterAndReload(logEmitter.getContractAddress(), blockedTopic);
 
-    String txData = logEmitter.log1(blockedTopic.toArray(), payload).encodeFunctionCall();
+    String txData =
+        logEmitter
+            .log1(Bytes32.fromHexString(blockedTopic).toArray(), payload)
+            .encodeFunctionCall();
     var transaction =
         txManager.sendTransaction(
             GAS_PRICE, GAS_LIMIT, logEmitter.getContractAddress(), txData, VALUE);
 
-    // Transaction should not be mined
-    assertThrows(
-        ConditionTimeoutException.class,
-        () ->
-            minerNode.verify(
-                eth.expectSuccessfulTransactionReceipt(transaction.getTransactionHash())));
+    // transfer used as canary to ensure a new block is mined without the invalid txs
+    final var transferTxHash =
+        accountTransactions
+            .createTransfer(accounts.getSecondaryBenefactor(), accounts.getSecondaryBenefactor(), 1)
+            .execute(minerNode.nodeRequests());
 
-    // Because the transaction is denied based on its emitted event, it should not even be in the
-    // pool
+    // Canary should be mined
+    minerNode.verify(eth.expectSuccessfulTransactionReceipt(transferTxHash.toHexString()));
+
+    // Denied transaction should not be mined
+    minerNode.verify(eth.expectNoTransactionReceipt(transaction.getTransactionHash()));
+
+    // Because the transaction is denied based on its emitted event,
+    // it should not even be in the pool
     assertTransactionNotInThePool(transaction.getTransactionHash());
+
+    // Assert that the target string is contained in the block creation log
+    final String blockLog = getAndResetLog();
+    assertThat(blockLog)
+        .contains(
+            "Transaction %s is blocked due to contract address and event logs appearing on SDN or other legally prohibited list"
+                .formatted(transaction.getTransactionHash()));
   }
 
   /** Test that a transaction emitting denied topics, with a wildcard, is rejected. */
@@ -97,10 +107,10 @@ public class TransactionEventDenialTest extends LineaPluginTestBase {
     Web3j web3j = minerNode.nodeRequests().eth();
     TransactionManager txManager = createTransactionManager(web3j);
 
-    Bytes32 blockedTopic1 = Bytes32.fromHexStringLenient("0xaa");
-    Bytes32 blockedByWildcardTopic = Bytes32.fromHexStringLenient("0xbb");
-    Bytes32 blockedTopic3 = Bytes32.fromHexStringLenient("0xcc");
-    Bytes32 blockedTopic4 = Bytes32.fromHexStringLenient("0xdd");
+    String blockedTopic1 = "0xaa";
+    String blockedByWildcardTopic = "0xbb";
+    String blockedTopic3 = "0xcc";
+    String blockedTopic4 = "0xdd";
     byte[] payload = "data".getBytes(StandardCharsets.UTF_8);
 
     addDenyListFilterAndReload(
@@ -109,26 +119,38 @@ public class TransactionEventDenialTest extends LineaPluginTestBase {
     String txData =
         logEmitter
             .log4(
-                blockedTopic1.toArray(),
-                blockedByWildcardTopic.toArray(),
-                blockedTopic3.toArray(),
-                blockedTopic4.toArray(),
+                Bytes32.fromHexString(blockedTopic1).toArray(),
+                Bytes32.fromHexString(blockedByWildcardTopic).toArray(),
+                Bytes32.fromHexString(blockedTopic3).toArray(),
+                Bytes32.fromHexString(blockedTopic4).toArray(),
                 payload)
             .encodeFunctionCall();
     var transaction =
         txManager.sendTransaction(
             GAS_PRICE, GAS_LIMIT, logEmitter.getContractAddress(), txData, VALUE);
 
-    // Transaction should not be mined
-    assertThrows(
-        ConditionTimeoutException.class,
-        () ->
-            minerNode.verify(
-                eth.expectSuccessfulTransactionReceipt(transaction.getTransactionHash())));
+    // transfer used as canary to ensure a new block is mined without the invalid txs
+    final var transferTxHash =
+        accountTransactions
+            .createTransfer(accounts.getSecondaryBenefactor(), accounts.getSecondaryBenefactor(), 1)
+            .execute(minerNode.nodeRequests());
 
-    // Because the transaction is denied based on its emitted event, it should not even be in the
-    // pool
+    // Canary should be mined
+    minerNode.verify(eth.expectSuccessfulTransactionReceipt(transferTxHash.toHexString()));
+
+    // Denied transaction should not be mined
+    minerNode.verify(eth.expectNoTransactionReceipt(transaction.getTransactionHash()));
+
+    // Because the transaction is denied based on its emitted event,
+    // it should not even be in the pool
     assertTransactionNotInThePool(transaction.getTransactionHash());
+
+    // Assert that the target string is contained in the block creation log
+    final String blockLog = getAndResetLog();
+    assertThat(blockLog)
+        .contains(
+            "Transaction %s is blocked due to contract address and event logs appearing on SDN or other legally prohibited list"
+                .formatted(transaction.getTransactionHash()));
   }
 
   /** Test that a transaction emitting denied topics, with a wildcard, is rejected. */
@@ -138,14 +160,14 @@ public class TransactionEventDenialTest extends LineaPluginTestBase {
     Web3j web3j = minerNode.nodeRequests().eth();
     TransactionManager txManager = createTransactionManager(web3j);
 
-    Bytes32 blockedTopic1 = Bytes32.fromHexStringLenient("0xaa");
-    Bytes32 blockedTopic2 = null;
-    Bytes32 blockedTopic3 = Bytes32.fromHexStringLenient("0xcc");
-    Bytes32 blockedTopic4 = Bytes32.fromHexStringLenient("0xdd");
-    Bytes32 allowedTopic1 = Bytes32.fromHexStringLenient("0x11");
-    Bytes32 allowedTopic2 = Bytes32.fromHexStringLenient("0x22");
-    Bytes32 allowedTopic3 = Bytes32.fromHexStringLenient("0x33");
-    Bytes32 allowedTopic4 = Bytes32.fromHexStringLenient("0x44");
+    String blockedTopic1 = "0xaa";
+    String blockedTopic2 = null;
+    String blockedTopic3 = "0xcc";
+    String blockedTopic4 = "0xdd";
+    String allowedTopic1 = "0x11";
+    String allowedTopic2 = "0x22";
+    String allowedTopic3 = "0x33";
+    String allowedTopic4 = "0x44";
     byte[] payload = "data".getBytes(StandardCharsets.UTF_8);
 
     addDenyListFilterAndReload(
@@ -158,10 +180,10 @@ public class TransactionEventDenialTest extends LineaPluginTestBase {
     String txData =
         logEmitter
             .log4(
-                allowedTopic1.toArray(),
-                allowedTopic2.toArray(),
-                allowedTopic3.toArray(),
-                allowedTopic4.toArray(),
+                Bytes32.fromHexString(allowedTopic1).toArray(),
+                Bytes32.fromHexString(allowedTopic2).toArray(),
+                Bytes32.fromHexString(allowedTopic3).toArray(),
+                Bytes32.fromHexString(allowedTopic4).toArray(),
                 payload)
             .encodeFunctionCall();
     var transaction =
@@ -178,30 +200,22 @@ public class TransactionEventDenialTest extends LineaPluginTestBase {
   }
 
   // Helper method to add a filter to the deny list and reload configuration
-  private void addDenyListFilterAndReload(String address, Bytes32... blockedTopics)
+  private void addDenyListFilterAndReload(String address, String... blockedTopics)
       throws IOException {
     // Add filter to deny list
-    addFilterToDenyList(
-        new TransactionEventFilter(
-            Address.fromHexString(address),
-            blockedTopics.length >= 1 ? LogTopic.wrap(blockedTopics[0]) : null,
-            blockedTopics.length >= 2 && blockedTopics[1] != null
-                ? LogTopic.wrap(blockedTopics[1])
-                : null,
-            blockedTopics.length >= 3 ? LogTopic.wrap(blockedTopics[2]) : null,
-            blockedTopics.length >= 4 ? LogTopic.wrap(blockedTopics[3]) : null));
+    addFilterToDenyList(address, blockedTopics);
     reloadPluginConfiguration();
   }
 
-  private void addFilterToDenyList(TransactionEventFilter filter) throws IOException {
+  private void addFilterToDenyList(String address, String... blockedTopics) throws IOException {
     String entry =
         String.format(
             "%s,%s,%s,%s,%s",
-            filter.contractAddress(),
-            filter.topic0() != null ? filter.topic0() : "",
-            filter.topic1() != null ? filter.topic1() : "",
-            filter.topic2() != null ? filter.topic2() : "",
-            filter.topic3() != null ? filter.topic3() : "");
+            address,
+            blockedTopics.length > 0 && blockedTopics[0] != null ? blockedTopics[0] : "",
+            blockedTopics.length > 1 && blockedTopics[1] != null ? blockedTopics[1] : "",
+            blockedTopics.length > 2 && blockedTopics[2] != null ? blockedTopics[2] : "",
+            blockedTopics.length > 3 && blockedTopics[3] != null ? blockedTopics[3] : "");
     Files.writeString(denyEventListPath, entry + "\n", StandardOpenOption.APPEND);
   }
 

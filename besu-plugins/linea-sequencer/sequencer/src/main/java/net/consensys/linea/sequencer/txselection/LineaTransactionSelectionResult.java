@@ -21,9 +21,9 @@ public class LineaTransactionSelectionResult extends TransactionSelectionResult 
     TX_MODULE_LINE_INVALID_COUNT(false, true, true),
     TX_UNPROFITABLE(false, false, true),
     TX_UNPROFITABLE_UPFRONT(false, false, true),
-    TX_UNPROFITABLE_RETRY_LIMIT(false, false, false),
     BUNDLE_GAS_EXCEEDS_MAX_BUNDLE_BLOCK_GAS(false, true, true),
-    BUNDLE_TOO_LARGE_FOR_REMAINING_BUNDLE_BLOCK_GAS(false, false, false);
+    BUNDLE_TOO_LARGE_FOR_REMAINING_BUNDLE_BLOCK_GAS(false, false, false),
+    DENIED_LOG_TOPIC(false, true, true);
 
     private final boolean stop;
     private final boolean discard;
@@ -73,11 +73,11 @@ public class LineaTransactionSelectionResult extends TransactionSelectionResult 
       new LineaTransactionSelectionResult(LineaStatus.TX_UNPROFITABLE);
   public static final TransactionSelectionResult TX_UNPROFITABLE_UPFRONT =
       new LineaTransactionSelectionResult(LineaStatus.TX_UNPROFITABLE_UPFRONT);
-  public static final TransactionSelectionResult TX_UNPROFITABLE_RETRY_LIMIT =
-      new LineaTransactionSelectionResult(LineaStatus.TX_UNPROFITABLE_RETRY_LIMIT);
   public static final TransactionSelectionResult BUNDLE_GAS_EXCEEDS_MAX_BUNDLE_BLOCK_GAS =
       new LineaTransactionSelectionResult(LineaStatus.BUNDLE_GAS_EXCEEDS_MAX_BUNDLE_BLOCK_GAS);
   public static final TransactionSelectionResult BUNDLE_TOO_LARGE_FOR_REMAINING_BUNDLE_BLOCK_GAS =
       new LineaTransactionSelectionResult(
           LineaStatus.BUNDLE_TOO_LARGE_FOR_REMAINING_BUNDLE_BLOCK_GAS);
+  public static final TransactionSelectionResult DENIED_LOG_TOPIC =
+      new LineaTransactionSelectionResult(LineaStatus.DENIED_LOG_TOPIC);
 }

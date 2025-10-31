@@ -1,5 +1,7 @@
 package net.consensys.linea.sequencer.txselection.selectors;
 
+import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectionResult.DENIED_LOG_TOPIC;
+
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -114,16 +116,13 @@ public class TransactionEventSelectorTest {
     TransactionSelectionResult actualResult =
         selector.evaluateTransactionPostProcessing(evaluationContext, processingResult);
 
-    Mockito.verify(evaluationContext, Mockito.times(2)).getPendingTransaction();
+    Mockito.verify(evaluationContext).getPendingTransaction();
     Mockito.verify(processingResult).getLogs();
     Mockito.verify(transactionEventFilter)
         .matches(Mockito.eq(address), Mockito.any(LogTopic[].class));
     Mockito.verifyNoMoreInteractions(evaluationContext, processingResult, transactionEventFilter);
 
-    Assertions.assertEquals(
-        TransactionSelectionResult.invalid(
-            "Transaction 0xdeadbeefdeadbeefdeadbeefdeadbeef is blocked due to contract address and event logs appearing on SDN or other legally prohibited list"),
-        actualResult);
+    Assertions.assertEquals(DENIED_LOG_TOPIC, actualResult);
   }
 
   @Test
@@ -199,16 +198,13 @@ public class TransactionEventSelectorTest {
     TransactionSelectionResult actualResult =
         selector.evaluateTransactionPostProcessing(evaluationContext, processingResult);
 
-    Mockito.verify(evaluationContext, Mockito.times(2)).getPendingTransaction();
+    Mockito.verify(evaluationContext).getPendingTransaction();
     Mockito.verify(processingResult).getLogs();
     Mockito.verify(transactionEventFilter)
         .matches(Mockito.eq(address), Mockito.any(LogTopic[].class));
     Mockito.verifyNoMoreInteractions(evaluationContext, processingResult, transactionEventFilter);
 
-    Assertions.assertEquals(
-        TransactionSelectionResult.invalid(
-            "Transaction 0xdeadbeefdeadbeefdeadbeefdeadbeef is blocked due to contract address and event logs appearing on SDN or other legally prohibited list"),
-        actualResult);
+    Assertions.assertEquals(DENIED_LOG_TOPIC, actualResult);
   }
 
   private void mockTransactionType(
