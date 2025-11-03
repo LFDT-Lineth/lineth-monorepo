@@ -83,6 +83,7 @@ export class ErrorParser {
     if (isError(error, "CALL_EXCEPTION")) {
       if (
         error.shortMessage.includes("execution reverted") ||
+        error.info?.error?.message?.includes("execution reverted") ||
         error.info?.error?.code === 4001 || //The user rejected the request (EIP-1193)
         error.info?.error?.code === -32603 //Internal JSON-RPC error (EIP-1474)
       ) {
