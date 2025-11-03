@@ -327,6 +327,8 @@ export default class SubmitInvoice extends Command {
           SIGNING TRANSACTION
      ******************************/
 
+    const senderAddressNonce = await client.getTransactionCount({ address: senderAddress });
+
     const transactionToSerialize: TransactionSerializable = {
       to: contractAddress,
       type: "eip1559",
@@ -336,6 +338,7 @@ export default class SubmitInvoice extends Command {
       gas: gasLimit,
       maxFeePerGas: baseFeePerGas + priorityFeePerGas,
       maxPriorityFeePerGas: priorityFeePerGas,
+      nonce: senderAddressNonce,
     };
 
     const httpsAgent = this.buildHttpsAgentIfNeeded({

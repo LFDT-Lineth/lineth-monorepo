@@ -281,6 +281,8 @@ export default class BurnAndBridge extends Command {
       web3SignerTrustedStorePassphrase,
     });
 
+    const senderAddressNonce = await client.getTransactionCount({ address: senderAddress });
+
     const transactionToSerialize: TransactionSerializable = {
       to: rollupRevenueVaultContractAddress,
       type: "eip1559",
@@ -290,6 +292,7 @@ export default class BurnAndBridge extends Command {
       gas: gasLimit,
       maxFeePerGas: baseFeePerGas + priorityFeePerGas,
       maxPriorityFeePerGas: priorityFeePerGas,
+      nonce: senderAddressNonce,
     };
 
     const signature = await this.signBurnAndBridgeTransaction(
