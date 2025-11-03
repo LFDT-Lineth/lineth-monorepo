@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"runtime/debug"
 	"strconv"
 
 	"github.com/consensys/linea-monorepo/prover/backend/execution"
@@ -11,7 +12,6 @@ import (
 	execCirc "github.com/consensys/linea-monorepo/prover/circuits/execution"
 	"github.com/consensys/linea-monorepo/prover/config"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
-	"github.com/consensys/linea-monorepo/prover/protocol/compiler/recursion"
 	"github.com/consensys/linea-monorepo/prover/protocol/distributed"
 	"github.com/consensys/linea-monorepo/prover/protocol/serialization"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
@@ -40,8 +40,7 @@ func Prove(cfg *config.Config, req *execution.Request) (*execution.Response, err
 	// Set MonitorParams before any proving happens
 	profiling.SetMonitorParams(cfg)
 
-	// Setting the issue handler to exit on unsatisfied constraint but not limit
-	// overflow.
+	// Setting the issue handler to exit on unsatisfied constraint but not limit overflow.
 	exit.SetIssueHandlingMode(exit.ExitOnUnsatisfiedConstraint)
 
 	// Clean up witness directory to be sure it is empty when we start the
@@ -52,9 +51,8 @@ func Prove(cfg *config.Config, req *execution.Request) (*execution.Response, err
 
 	// Setup execution witness and output response
 	var (
-		out           = execution.CraftProverOutput(cfg, req)
-		witness       = execution.NewWitness(cfg, req, &out)
-		numGL, numLPP int
+		out     = execution.CraftProverOutput(cfg, req)
+		witness = execution.NewWitness(cfg, req, &out)
 	)
 
 	if cfg.Execution.LimitlessWithDebug {
@@ -64,34 +62,74 @@ func Prove(cfg *config.Config, req *execution.Request) (*execution.Response, err
 		return &out, nil
 	}
 
+	// -- 1. Launch bootstrapper
 	logrus.Info("Starting to run the bootstrapper")
 
-	numGL, numLPP = RunBootstrapper(cfg, witness.ZkEVM)
-
-	logrus.Infof("Finished running the bootstrapper, generated %d GL modules and %d LPP modules", numGL, numLPP)
+	mt, err := zkevm.LoadVerificationKeyMerkleTree(cfg)
+	if err != nil {
+		return nil, fmt.Errorf("could not load verification key merkle tree: %w", err)
+	}
 
 	var (
-		proofGLs            = make([]recursion.Witness, numGL)
-		proofLPPs           = make([]recursion.Witness, numGL)
-		lppCommitments      = make([]field.Element, numGL)
-		errGroup            = &errgroup.Group{}
-		contextGL, cancelGL = context.WithCancel(context.Background())
+		numGL, numLPP = RunBootstrapper(cfg, witness.ZkEVM, mt.GetRoot())
+	)
+	logrus.Infof("Finished running the bootstrapper, generated %d GL modules and %d LPP modules", numGL, numLPP)
+
+	// Use a parent context for the whole proving flow
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Final Conglomeration outcome
+	type congResult struct {
+		proof *distributed.SegmentProof
+		err   error
+	}
+
+	var (
+		totalProofs = numGL + numLPP
+
+		proofGLs   = make([]*distributed.SegmentProof, numGL)
+		glErrGroup = &errgroup.Group{}
+
+		lppErrGroup = &errgroup.Group{}
+
+		// Conglomeration proof pipeline setup: have a buffered channel proofStream
+		// with capacity large enough so producers won't block
+		proofStream = make(chan *distributed.SegmentProof, totalProofs)
+		resultCh    = make(chan congResult, 1)
+
+		cong *distributed.RecursedSegmentCompilation
 	)
 
-	errGroup.SetLimit(numConcurrentSubProverJobs)
+	// -- 2. Launch background hierarchical reduction pipeline to recursively conglomerate as 2 or more
+	// proofs come in. It will exit when it collects `totalProofs` or when ctx is cancelled.
+	go func() {
+		var err error
+		cong, err = zkevm.LoadCompiledConglomeration(cfg)
+		if err != nil || cong == nil {
+			panic(fmt.Errorf("could not load compiled conglomeration: %w", err))
+		}
+		logrus.Infoln("Succesfully loaded the compiled conglomeration and starting to run hierarchical conglomeration")
+		proof, err := RunConglomerationHierarchical(ctx, mt, cong, proofStream, totalProofs)
+		resultCh <- congResult{proof: proof, err: err}
+	}()
+
+	// -- 3. Launch GL proof jobs, sending each result to proofStream
+	glErrGroup.SetLimit(numConcurrentSubProverJobs)
 
 	for i := 0; i < numGL; i++ {
-
-		errGroup.Go(func() error {
-
-			if contextGL.Err() != nil {
-				return nil
+		i := i // local copy for closure
+		glErrGroup.Go(func() error {
+			// If the overall context is done, exit early
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			default:
 			}
 
 			var (
-				jobErr        error
-				proofGL       *recursion.Witness
-				lppCommitment field.Element
+				jobErr  error
+				proofGL *distributed.SegmentProof
 			)
 
 			// RunGL may panic and therefore exit the goroutine without returning
@@ -100,55 +138,72 @@ func Prove(cfg *config.Config, req *execution.Request) (*execution.Response, err
 			// it is assigned to jobErr so that we can check it once the wrapper
 			// function returns.
 			func() {
-
 				defer func() {
-					if err := recover(); err != nil {
-						jobErr = fmt.Errorf("GL prover for witness index=%v panicked: %v", i, err)
+					if r := recover(); r != nil {
+						jobErr = fmt.Errorf("GL prover for witness index=%v panicked: %v", i, r)
+						logrus.Error(jobErr)
+						debug.PrintStack()
+						return
 					}
 				}()
 
 				var err error
-				proofGL, lppCommitment, err = RunGL(cfg, i)
+				proofGL, err = RunGL(cfg, i)
 				if err != nil {
 					jobErr = fmt.Errorf("could not run GL prover for witness index=%v: %w", i, err)
 				}
 			}()
 
 			if jobErr != nil {
-				cancelGL()
+				// Return error to errgroup; caller (main) will cancel ctx
 				return jobErr
 			}
 
-			proofGLs[i] = *proofGL
-			lppCommitments[i] = lppCommitment
-			return nil
+			// Store local copy for shared randomness computation
+			proofGLs[i] = proofGL
+
+			// Safe send: if ctx cancelled, abort send
+			select {
+			case proofStream <- proofGL:
+				return nil
+			case <-ctx.Done():
+				return ctx.Err()
+			}
 		})
 	}
 
-	err := errGroup.Wait()
-	// This context cancellation is here to ensure the context is wiped-out in
-	// every branches.
-	cancelGL()
-	if err != nil {
-		return nil, err
+	// Wait for GLs
+	if err := glErrGroup.Wait(); err != nil {
+		// Cancel overall flow (aggregator will observe ctx.Done)
+		cancel()
+		// Wait for aggregator to finish (so resultCh gets something)
+		res := <-resultCh
+		if res.err != nil {
+			// aggregator returned an error (likely due to cancel); return original error
+			return nil, fmt.Errorf("GL error: %w (aggregator error: %v)", err, res.err)
+		}
+		return nil, fmt.Errorf("GL error: %w", err)
 	}
 
 	var (
-		sharedRandomness      = distributed.GetSharedRandomness(lppCommitments)
-		contextLPP, cancelLPP = context.WithCancel(context.Background())
+		//--4. Compute shared randomness after GL proofs succeeded
+		sharedRandomness = distributed.GetSharedRandomnessFromSegmentProofs(proofGLs)
 	)
 
+	// -- 5. Launch LPP proof jobs, streaming each proof to pipeline
+	lppErrGroup.SetLimit(numConcurrentSubProverJobs)
 	for i := 0; i < numLPP; i++ {
-
-		errGroup.Go(func() error {
-
-			if contextLPP.Err() != nil {
-				return nil
+		i := i
+		lppErrGroup.Go(func() error {
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			default:
 			}
 
 			var (
 				jobErr   error
-				proofLPP *recursion.Witness
+				proofLPP *distributed.SegmentProof
 			)
 
 			// RunLPP may panic and therefore exit the goroutine without returning
@@ -157,10 +212,12 @@ func Prove(cfg *config.Config, req *execution.Request) (*execution.Response, err
 			// it is assigned to jobErr so that we can check it once the wrapper
 			// function returns.
 			func() {
-
 				defer func() {
-					if err := recover(); err != nil {
-						jobErr = fmt.Errorf("LPP prover for witness index=%v panicked: %v", i, err)
+					if r := recover(); r != nil {
+						jobErr = fmt.Errorf("LPP prover for witness index=%v panicked: %v", i, r)
+						logrus.Error(jobErr)
+						debug.PrintStack()
+						return
 					}
 				}()
 
@@ -172,44 +229,54 @@ func Prove(cfg *config.Config, req *execution.Request) (*execution.Response, err
 			}()
 
 			if jobErr != nil {
-				cancelLPP()
-				return fmt.Errorf("could not run LPP prover for witness index=%v: %w", i, jobErr)
+				return jobErr
 			}
 
-			proofLPPs[i] = *proofLPP
-			return nil
+			select {
+			case proofStream <- proofLPP:
+				return nil
+			case <-ctx.Done():
+				return ctx.Err()
+			}
 		})
 	}
 
-	err = errGroup.Wait()
-	// This context cancellation is here to ensure the context is wiped-out in
-	// every branches.
-	cancelLPP()
-	if err != nil {
-		return nil, err
+	// Wait for LPPs
+	if err := lppErrGroup.Wait(); err != nil {
+		cancel()
+		res := <-resultCh
+		if res.err != nil {
+			return nil, fmt.Errorf("LPP error: %w (aggregator error: %v)", err, res.err)
+		}
+		return nil, fmt.Errorf("LPP error: %w", err)
 	}
 
+	// All producers finished successfully: close the proofStream so aggregator can finish
+	close(proofStream)
+
+	// Wait for final conglomeration proof
+	res := <-resultCh
+	if res.err != nil {
+		return nil, fmt.Errorf("conglomeration failed: %w", res.err)
+	}
+
+	logrus.Infof("HIERARCHICAL CONGLOMERATION SUCCESSFUL!!!")
+
+	congFinalproof := res.proof
+
+	// -- 5. Load setup (in background started earlier maybe)
 	var (
 		setup       circuits.Setup
 		errSetup    error
 		chSetupDone = make(chan struct{})
 	)
-
-	// Start loading the setup before starting the conglomeration so that it is
-	// ready when we need it.
 	go func() {
 		logrus.Infof("Loading setup - circuitID: %s", circuits.ExecutionLimitlessCircuitID)
 		setup, errSetup = circuits.LoadSetup(cfg, circuits.ExecutionLimitlessCircuitID)
 		close(chSetupDone)
 	}()
 
-	proofConglo, congloWIOP, err := RunConglomeration(cfg, proofGLs, proofLPPs)
-	if err != nil {
-		return nil, fmt.Errorf("could not run conglomeration prover: %w", err)
-	}
-
-	// wait for setup to be loaded. It should already be loaded normally so we
-	// do not expect to actually wait here.
+	// Wait for setup to finish loading
 	<-chSetupDone
 	if errSetup != nil {
 		utils.Panic("could not load setup: %v", errSetup)
@@ -218,8 +285,8 @@ func Prove(cfg *config.Config, req *execution.Request) (*execution.Response, err
 	out.Proof = execCirc.MakeProof(
 		&cfg.TracesLimits,
 		setup,
-		congloWIOP,
-		proofConglo,
+		cong.RecursionComp,
+		congFinalproof.GetOuterProofInput(),
 		*witness.FuncInp,
 	)
 
@@ -231,8 +298,7 @@ func Prove(cfg *config.Config, req *execution.Request) (*execution.Response, err
 // RunBootstrapper loads the assets required to run the bootstrapper and runs it,
 // the function then performs the module segmentation and saves each module
 // witness in the /tmp directory.
-func RunBootstrapper(cfg *config.Config, zkevmWitness *zkevm.Witness,
-) (numWitnessGL, numWitnessLPP int) {
+func RunBootstrapper(cfg *config.Config, zkevmWitness *zkevm.Witness, merkleTreeRoot field.Element) (int, int) {
 
 	logrus.Infof("Loading bootstrapper and zkevm")
 	assets := &zkevm.LimitlessZkEVM{}
@@ -321,6 +387,7 @@ func RunBootstrapper(cfg *config.Config, zkevmWitness *zkevm.Witness,
 		assets.DistWizard.Disc,
 		assets.DistWizard.BlueprintGLs,
 		assets.DistWizard.BlueprintLPPs,
+		merkleTreeRoot,
 	)
 
 	logrus.Info("Saving the witnesses")
@@ -374,38 +441,34 @@ func RunBootstrapper(cfg *config.Config, zkevmWitness *zkevm.Witness,
 }
 
 // RunGL runs the GL prover for the provided witness index
-func RunGL(cfg *config.Config, witnessIndex int) (proofGL *recursion.Witness, lppCommitments field.Element, err error) {
+func RunGL(cfg *config.Config, witnessIndex int) (proofGL *distributed.SegmentProof, err error) {
 
 	logrus.Infof("Running the GL-prover for witness index=%v", witnessIndex)
 
 	witness := &distributed.ModuleWitnessGL{}
 	witnessFilePath := witnessDir + "/witness-GL-" + strconv.Itoa(witnessIndex)
 	if err := serialization.LoadFromDisk(witnessFilePath, witness, true); err != nil {
-		return nil, field.Element{}, err
+		return nil, err
 	}
 
 	logrus.Infof("Loaded the witness for witness index=%v, module=%v", witnessIndex, witness.ModuleName)
 
 	compiledGL, err := zkevm.LoadCompiledGL(cfg, witness.ModuleName)
 	if err != nil {
-		return nil, field.Element{}, fmt.Errorf("could not load compiled GL: %w", err)
+		return nil, fmt.Errorf("could not load compiled GL: %w", err)
 	}
 
 	logrus.Infof("Loaded the compiled GL for witness index=%v, module=%v", witnessIndex, witness.ModuleName)
 
-	run := compiledGL.ProveSegment(witness)
+	_proofGL := compiledGL.ProveSegment(witness).ClearRuntime()
 
 	logrus.Infof("Finished running the GL-prover for witness index=%v, module=%v", witnessIndex, witness.ModuleName)
 
-	_proofGL := recursion.ExtractWitness(run)
-
-	logrus.Infof("Extracted the witness for witness index=%v, module=%v", witnessIndex, witness.ModuleName)
-
-	return &_proofGL, distributed.GetLppCommitmentFromRuntime(run), nil
+	return _proofGL, nil
 }
 
 // RunLPP runs the LPP prover for the provided witness index
-func RunLPP(cfg *config.Config, witnessIndex int, sharedRandomness field.Element) (proofLPP *recursion.Witness, err error) {
+func RunLPP(cfg *config.Config, witnessIndex int, sharedRandomness field.Element) (proofLPP *distributed.SegmentProof, err error) {
 
 	logrus.Infof("Running the LPP-prover for witness index=%v", witnessIndex)
 
@@ -426,39 +489,75 @@ func RunLPP(cfg *config.Config, witnessIndex int, sharedRandomness field.Element
 
 	logrus.Infof("Loaded the compiled LPP for witness index=%v, module=%v", witnessIndex, witness.ModuleName)
 
-	run := compiledLPP.ProveSegment(witness)
+	_proofLPP := compiledLPP.ProveSegment(witness).ClearRuntime()
 
 	logrus.Infof("Finished running the LPP-prover for witness index=%v, module=%v", witnessIndex, witness.ModuleName)
 
-	_proofLPP := recursion.ExtractWitness(run)
-
-	logrus.Infof("Extracted the witness for witness index=%v, module=%v", witnessIndex, witness.ModuleName)
-
-	return &_proofLPP, nil
+	return _proofLPP, nil
 }
 
-// RunConglomeration runs the conglomeration prover for the provided subproofs
-func RunConglomeration(cfg *config.Config, proofGLs, proofLPPs []recursion.Witness) (proof wizard.Proof, congloWIOP *wizard.CompiledIOP, err error) {
+// RunConglomerationHierarchical aggregates segment proofs into a single proof.
+// It returns the final proof or an error. It respects the passed context for cancellation.
+func RunConglomerationHierarchical(ctx context.Context,
+	mt *distributed.VerificationKeyMerkleTree,
+	cong *distributed.RecursedSegmentCompilation,
+	proofStream <-chan *distributed.SegmentProof, totalProofs int,
+) (*distributed.SegmentProof, error) {
 
-	logrus.Infof("Running the conglomeration-prover")
+	// Stack is a slice for channel-based pairing logic
+	var stack []*distributed.SegmentProof
+	proofsReceived := 0
 
-	cong, err := zkevm.LoadConglomeration(cfg)
-	if err != nil {
-		return wizard.Proof{}, nil, fmt.Errorf("could not load compiled conglomeration: %w", err)
+	// Main loop: block on either new proof, or cancellation.
+	for {
+		// First, aggregate while we have at least 2 items
+		for len(stack) >= 2 {
+
+			// _proof2 normally has already its runtime cleared
+			_proof1 := stack[len(stack)-1].ClearRuntime()
+			_proof2 := stack[len(stack)-2]
+			stack = stack[:len(stack)-2]
+
+			logrus.Infof("Conglomerating sub-proofs for (proofType, moduleIdx, segmentIdx) = (%d, %d, %d) and (%d, %d, %d)",
+				_proof1.ProofType, _proof1.ModuleIndex, _proof1.SegmentIndex,
+				_proof2.ProofType, _proof2.ModuleIndex, _proof2.SegmentIndex)
+			aggregated := cong.ProveSegment(&distributed.ModuleWitnessConglo{
+				SegmentProofs:             []distributed.SegmentProof{*_proof1, *_proof2},
+				VerificationKeyMerkleTree: *mt,
+			})
+			stack = append(stack, aggregated)
+		}
+
+		// If we've received all proofs and have exactly one on the stack -> done
+		if proofsReceived >= totalProofs {
+			// Last item is the final proof
+			if len(stack) == 1 {
+				logrus.Infoln("Successfully finished running conglomeration prover.")
+				finalProof := stack[0]
+				// Clear stack
+				stack = nil
+				return finalProof, nil
+			}
+			return nil, fmt.Errorf("conglomeration finished but stack size=%d (expected 1)", len(stack))
+		}
+
+		// Wait for next proof or cancellation
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+
+		// Receive new proof from main proof stream
+		case p, ok := <-proofStream:
+			if !ok {
+				// sender closed channel prematurely
+				if len(stack) == 1 {
+					return stack[0], nil
+				}
+				return nil, fmt.Errorf("proof stream closed prematurely; stack size=%d, proofsReceived=%d, totalProofs=%d", len(stack), proofsReceived, totalProofs)
+			}
+			logrus.Infof("Received proof (proofType, moduleIdx, segmentIdx) = (%d, %d, %d) for conglomeration", p.ProofType, p.ModuleIndex, p.SegmentIndex)
+			stack = append(stack, p)
+			proofsReceived++
+		}
 	}
-
-	logrus.Infof("Loaded the compiled conglomeration")
-
-	proof = cong.Prove(proofGLs, proofLPPs)
-
-	logrus.Infof("Finished running the conglomeration-prover")
-	run, err := wizard.VerifyWithRuntime(cong.Wiop, proof)
-	if err != nil {
-		zkevm.LogPublicInputs(run)
-		exit.OnUnsatisfiedConstraints(err)
-	}
-
-	logrus.Infof("Successfully sanity-checked the conglomerator")
-
-	return proof, cong.Wiop, nil
 }

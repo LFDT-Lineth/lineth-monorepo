@@ -84,3 +84,12 @@ func HashVec(v []field.Element) (h field.Element) {
 	h.SetBytes(state.Sum(nil))
 	return
 }
+
+// GnarkHashVec is the gnark equivalent of [HashVec]
+func GnarkHashVec(api frontend.API, v []frontend.Variable) (h frontend.Variable) {
+	state := frontend.Variable(0)
+	for i := range v {
+		state = GnarkBlockCompression(api, state, v[i])
+	}
+	return state
+}

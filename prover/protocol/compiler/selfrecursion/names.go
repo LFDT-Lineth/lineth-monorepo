@@ -41,6 +41,12 @@ func (ctx *SelfRecursionCtx) uAlphaQName() ifaces.ColID {
 	return maybePrefix(ctx, name)
 }
 
+// Name of the UalphaQFilter column
+func (ctx *SelfRecursionCtx) uAlphaQFilterName() ifaces.ColID {
+	name := ifaces.ColIDf("SELFRECURSION_U_ALPHA_Q_FILTER_%v", ctx.SelfRecursionCnt)
+	return maybePrefix(ctx, name)
+}
+
 // Name of the self-recursed inclusion query
 func (ctx *SelfRecursionCtx) selectQInclusion() ifaces.QueryID {
 	name := ifaces.QueryIDf("SELFRECURSION_SELECT_Q_INCLUSION_%v", ctx.SelfRecursionCnt)

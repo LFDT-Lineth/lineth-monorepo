@@ -684,7 +684,15 @@ func (c *VerifierCircuit) GetPublicInput(api frontend.API, name string) frontend
 			return allPubs[i].Acc.GetFrontendVariable(api, c)
 		}
 	}
-	utils.Panic("could not find public input nb %v", name)
+
+	// At this point, the public input has not been found so we will panic, but
+	// before that we consolidate the list of the public input names.
+	allPubNames := []string{}
+	for i := range c.Spec.PublicInputs {
+		allPubNames = append(allPubNames, c.Spec.PublicInputs[i].Name)
+	}
+
+	utils.Panic("could not find public input nb %v, list of public inputs: %v", name, allPubNames)
 	return field.Element{}
 }
 

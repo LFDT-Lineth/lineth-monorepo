@@ -7,6 +7,7 @@ import (
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/linea-monorepo/prover/crypto/mimc"
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
+	"github.com/consensys/linea-monorepo/prover/maths/common/vector"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/accessors"
 	"github.com/consensys/linea-monorepo/prover/protocol/coin"
@@ -18,15 +19,6 @@ import (
 	"github.com/consensys/linea-monorepo/prover/protocol/wizardutils"
 	sym "github.com/consensys/linea-monorepo/prover/symbolic"
 	"github.com/consensys/linea-monorepo/prover/utils"
-)
-
-const (
-	ModuleGLReceiveGlobalKey  = "RECEIVE_GLOBAL"
-	ModuleGLSendGlobalKey     = "SEND_GLOBAL"
-	GlobalSenderPublicInput   = "GLOBAL_PROVIDER"
-	GlobalReceiverPublicInput = "GLOBAL_RECEIVER"
-	IsFirstPublicInput        = "IS_FIRST"
-	IsLastPublicInput         = "IS_LAST"
 )
 
 // ModuleGL is a compilation structure holding the central informations
@@ -41,6 +33,11 @@ type ModuleGL struct {
 	// DefinitionInput stores the [FilteredModuleInputs] that was used
 	// to generate the module.
 	DefinitionInput *FilteredModuleInputs
+
+	// SegmentModuleIndex is the index of the module in the segment. The value
+	// is used to assign a column and check that "isFirst" and "isLast" are
+	// right-fully computed.
+	SegmentModuleIndex ifaces.Column
 
 	// IsFirst is a column of length one storing a binary value indicating
 	// if the current (vertical) instance of the module is the first one.
@@ -94,6 +91,9 @@ type ModuleGL struct {
 	// to check if a value has already been added to [SentValuesGlobal]. The
 	// key string are formatted as "<column-name>/<position>".
 	ReceivedValuesGlobalMap map[string]int
+
+	// PublicInputs contains the public inputs of the module.
+	PublicInputs LimitlessPublicInput[wizard.PublicInput]
 }
 
 // ModuleGLAssignSendReceiveGlobal is an implementation of the [wizard.ProverRuntime]
@@ -148,8 +148,6 @@ func NewModuleGL(builder *wizard.Builder, moduleInput *FilteredModuleInputs) *Mo
 			Disc: moduleInput.Disc,
 		},
 		DefinitionInput:         moduleInput,
-		IsFirst:                 builder.InsertProof(0, "GL_IS_FIRST", 1),
-		IsLast:                  builder.InsertProof(0, "GL_IS_LAST", 1),
 		SentValuesGlobalMap:     map[string]int{},
 		ReceivedValuesGlobalMap: map[string]int{},
 	}
@@ -184,6 +182,9 @@ func NewModuleGL(builder *wizard.Builder, moduleInput *FilteredModuleInputs) *Mo
 	// the columns and the queries but not for the coins.
 	_ = moduleGL.Wiop.InsertCoin(1, "DUMMY_GL_COIN", coin.Field)
 
+	moduleGL.IsFirst = moduleGL.Wiop.InsertProof(0, "IS_FIRST", 1)
+	moduleGL.IsLast = moduleGL.Wiop.InsertProof(0, "IS_LAST", 1)
+
 	for _, globalCs := range moduleInput.GlobalConstraints {
 		moduleGL.InsertGlobal(*globalCs)
 	}
@@ -216,45 +217,7 @@ func NewModuleGL(builder *wizard.Builder, moduleInput *FilteredModuleInputs) *Mo
 		moduleGL.CompleteGlobalCs(newGlobalCs)
 	}
 
-	for i := range moduleInput.PublicInputs {
-
-		pubInputAcc := accessors.NewConstant(field.Zero())
-
-		if moduleInput.PublicInputs[i].Acc != nil {
-			pubInputAcc = moduleGL.TranslateAccessor(moduleInput.PublicInputs[i].Acc)
-		}
-
-		moduleGL.Wiop.InsertPublicInput(
-			moduleInput.PublicInputs[i].Name,
-			pubInputAcc,
-		)
-	}
-
-	moduleGL.Wiop.InsertPublicInput(InitialRandomnessPublicInput, accessors.NewConstant(field.Zero()))
-	moduleGL.Wiop.InsertPublicInput(IsFirstPublicInput, accessors.NewFromPublicColumn(moduleGL.IsFirst, 0))
-	moduleGL.Wiop.InsertPublicInput(IsLastPublicInput, accessors.NewFromPublicColumn(moduleGL.IsLast, 0))
-
-	if len(moduleGL.ReceivedValuesGlobalMap) > 0 {
-		moduleGL.Wiop.InsertPublicInput(GlobalSenderPublicInput, accessors.NewFromPublicColumn(moduleGL.SentValuesGlobalHash, 0))
-		moduleGL.Wiop.InsertPublicInput(GlobalReceiverPublicInput, accessors.NewFromPublicColumn(moduleGL.ReceivedValuesGlobalHash, 0))
-	} else {
-		moduleGL.Wiop.InsertPublicInput(GlobalSenderPublicInput, accessors.NewConstant(field.Zero()))
-		moduleGL.Wiop.InsertPublicInput(GlobalReceiverPublicInput, accessors.NewConstant(field.Zero()))
-	}
-
-	// These public-inputs are the "dummy" ones and are only here so that the
-	// LPP and GL modules have exactly the same set of public inputs. The
-	// public-inputs are reordered a posteriori to ensure that the order
-	// match between GL and LPP.
-	moduleGL.Wiop.InsertPublicInput(LogDerivativeSumPublicInput, accessors.NewConstant(field.Zero()))
-	moduleGL.Wiop.InsertPublicInput(GrandProductPublicInput, accessors.NewConstant(field.One()))
-	moduleGL.Wiop.InsertPublicInput(HornerPublicInput, accessors.NewConstant(field.Zero()))
-	moduleGL.Wiop.InsertPublicInput(HornerN0HashPublicInput, accessors.NewConstant(field.Zero()))
-	moduleGL.Wiop.InsertPublicInput(HornerN1HashPublicInput, accessors.NewConstant(field.Zero()))
-
-	moduleGL.Wiop.InsertPublicInput(IsGlPublicInput, accessors.NewConstant(field.One()))
-	moduleGL.Wiop.InsertPublicInput(IsLppPublicInput, accessors.NewConstant(field.Zero()))
-	moduleGL.Wiop.InsertPublicInput(NbActualLppPublicInput, accessors.NewConstant(field.Zero()))
+	moduleGL.declarePublicInput()
 
 	moduleGL.Wiop.RegisterProverAction(1, &ModuleGLAssignGL{ModuleGL: moduleGL})
 	moduleGL.Wiop.RegisterProverAction(1, &ModuleGLAssignSendReceiveGlobal{ModuleGL: moduleGL})
@@ -262,15 +225,6 @@ func NewModuleGL(builder *wizard.Builder, moduleInput *FilteredModuleInputs) *Mo
 
 	return moduleGL
 }
-
-// func (m *ModuleGL) GetModuleTranslator() moduleTranslator {
-// 	return m.moduleTranslator
-// }
-
-// func (m *ModuleGL) SetModuleTranslator(comp *wizard.CompiledIOP, disc *StandardModuleDiscoverer) {
-// 	m.moduleTranslator.Wiop = comp
-// 	m.moduleTranslator.Disc = disc
-// }
 
 // GetMainProverStep returns a [wizard.ProverStep] running [Assign] passing
 // the provided [ModuleWitness] argument.
@@ -332,16 +286,18 @@ func (m *ModuleGL) Assign(run *wizard.ProverRuntime, witness *ModuleWitnessGL) {
 
 	isFirst, isLast := field.Element{}, field.Element{}
 
-	if witness.IsFirst {
+	if witness.SegmentModuleIndex == 0 {
 		isFirst = field.One()
 	}
 
-	if witness.IsLast {
+	if witness.SegmentModuleIndex == witness.TotalSegmentCount[witness.ModuleIndex]-1 {
 		isLast = field.One()
 	}
 
 	run.AssignColumn(m.IsFirst.GetColID(), smartvectors.NewConstant(isFirst, 1))
 	run.AssignColumn(m.IsLast.GetColID(), smartvectors.NewConstant(isLast, 1))
+
+	m.assignPublicInput(run, witness)
 }
 
 // InsertGlobal inserts a global constraint in the target compiled IOP and
@@ -501,6 +457,8 @@ func (m *ModuleGL) CompleteGlobalCs(newGlobal query.GlobalConstraint) {
 			},
 		)
 
+		// TODO @alex: we actually need a cancellator criterion for the local
+		// constraints.
 		localExpr = sym.Mul(localExpr, sym.Sub(1, accessors.NewFromPublicColumn(m.IsFirst, 0)))
 		m.Wiop.InsertLocal(
 			newExprRound,
@@ -612,46 +570,47 @@ func (m *ModuleGL) processSendAndReceiveGlobal() {
 // The function also assigns the [SentValueGlobal] local openings.
 func (a *ModuleGLAssignSendReceiveGlobal) Run(run *wizard.ProverRuntime) {
 
-	if len(a.ReceivedValuesGlobalMap) == 0 {
-		return
+	if len(a.ReceivedValuesGlobalMap) > 0 {
+
+		hashSend := field.Element{}
+
+		for i := range a.SentValuesGlobal {
+			lo := a.SentValuesGlobal[i]
+			v := lo.Pol.GetColAssignmentAt(run, 0)
+			run.AssignLocalPoint(lo.ID, v)
+			hashSend = mimc.BlockCompression(hashSend, v)
+		}
+
+		run.AssignColumn(
+			a.SentValuesGlobalHash.GetColID(),
+			smartvectors.NewConstant(hashSend, 1),
+		)
+
+		witness := run.State.MustGet(moduleWitnessKey).(*ModuleWitnessGL)
+		rcvData := witness.ReceivedValuesGlobal
+
+		if len(rcvData) != len(a.ReceivedValuesGlobalAccs) {
+			utils.Panic("len(rcvData: %v) != len(a.ReceivedValuesGlobalAccs: %v)", len(rcvData), len(a.ReceivedValuesGlobalAccs))
+		}
+
+		run.AssignColumn(
+			a.ReceivedValuesGlobal.GetColID(),
+			smartvectors.RightZeroPadded(rcvData, a.ReceivedValuesGlobal.Size()),
+		)
+
+		hashRcv := field.Element{}
+		for i := range rcvData {
+			v := rcvData[i]
+			hashRcv = mimc.BlockCompression(hashRcv, v)
+		}
+
+		run.AssignColumn(
+			a.ReceivedValuesGlobalHash.GetColID(),
+			smartvectors.NewConstant(hashRcv, 1),
+		)
 	}
 
-	hashSend := field.Element{}
-
-	for i := range a.SentValuesGlobal {
-		lo := a.SentValuesGlobal[i]
-		v := lo.Pol.GetColAssignmentAt(run, 0)
-		run.AssignLocalPoint(lo.ID, v)
-		hashSend = mimc.BlockCompression(hashSend, v)
-	}
-
-	run.AssignColumn(
-		a.SentValuesGlobalHash.GetColID(),
-		smartvectors.NewConstant(hashSend, 1),
-	)
-
-	witness := run.State.MustGet(moduleWitnessKey).(*ModuleWitnessGL)
-	rcvData := witness.ReceivedValuesGlobal
-
-	if len(rcvData) != len(a.ReceivedValuesGlobalAccs) {
-		utils.Panic("len(rcvData: %v) != len(a.ReceivedValuesGlobalAccs: %v)", len(rcvData), len(a.ReceivedValuesGlobalAccs))
-	}
-
-	run.AssignColumn(
-		a.ReceivedValuesGlobal.GetColID(),
-		smartvectors.RightZeroPadded(rcvData, a.ReceivedValuesGlobal.Size()),
-	)
-
-	hashRcv := field.Element{}
-	for i := range rcvData {
-		v := rcvData[i]
-		hashRcv = mimc.BlockCompression(hashRcv, v)
-	}
-
-	run.AssignColumn(
-		a.ReceivedValuesGlobalHash.GetColID(),
-		smartvectors.NewConstant(hashRcv, 1),
-	)
+	a.ModuleGL.assignMultiSetHash(run)
 }
 
 // Run implements the [wizard.VerifierAction] interface and recomputes and
@@ -709,6 +668,8 @@ func (a *ModuleGLCheckSendReceiveGlobal) Run(run wizard.Runtime) error {
 		)
 	}
 
+	a.ModuleGL.checkMultiSetHash(run)
+
 	return nil
 }
 
@@ -748,6 +709,8 @@ func (a *ModuleGLCheckSendReceiveGlobal) RunGnark(api frontend.API, run wizard.G
 	}
 
 	api.AssertIsEqual(hsh.Sum(), rcvGlobalHash)
+
+	a.ModuleGL.checkGnarkMultiSetHash(api, run)
 }
 
 func (a *ModuleGLCheckSendReceiveGlobal) Skip() {
@@ -804,4 +767,273 @@ func (a *ModuleGLAssignGL) Run(run *wizard.ProverRuntime) {
 		y := newLo.Pol.GetColAssignmentAt(run, 0)
 		run.AssignLocalPoint(a.DefinitionInput.LocalOpenings[i].ID, y)
 	}
+}
+
+func (modGl *ModuleGL) declarePublicInput() {
+
+	var (
+		nbModules = len(modGl.DefinitionInput.Disc.Modules)
+		// segmenCountGL is an array of zero with a one at the position
+		// corresponding to the current module.
+		segmentCountGl = make([]field.Element, nbModules)
+		// segmentCountLpp is an array of zero.
+		segmentCountLpp = make([]field.Element, nbModules)
+		defInp          = modGl.DefinitionInput
+	)
+
+	modGl.SegmentModuleIndex = modGl.Wiop.InsertProof(0, "SEGMENT_MODULE_INDEX", 1)
+
+	segmentCountGl[modGl.Disc.IndexOf(modGl.DefinitionInput.ModuleName)] = field.One()
+
+	modGl.PublicInputs = LimitlessPublicInput[wizard.PublicInput]{
+		VKeyMerkleRoot:               declarePiColumn(modGl.Wiop, VerifyingKeyMerkleRootPublicInput),
+		TargetNbSegments:             declareListOfPiColumns(modGl.Wiop, 0, TargetNbSegmentPublicInputBase, nbModules),
+		SegmentCountGL:               declareListOfConstantPi(modGl.Wiop, SegmentCountGLPublicInputBase, segmentCountGl),
+		SegmentCountLPP:              declareListOfConstantPi(modGl.Wiop, SegmentCountLPPPublicInputBase, segmentCountLpp),
+		GeneralMultiSetHash:          declareListOfPiColumns(modGl.Wiop, 1, GeneralMultiSetPublicInputBase, mimc.MSetHashSize),
+		SharedRandomnessMultiSetHash: declareListOfPiColumns(modGl.Wiop, 1, SharedRandomnessMultiSetPublicInputBase, mimc.MSetHashSize),
+		SharedRandomness:             modGl.Wiop.InsertPublicInput(InitialRandomnessPublicInput, accessors.NewConstant(field.Zero())),
+	}
+
+	// This adds the functional inputs by multiplying them with the value of
+	// isFirst.
+	for i := range defInp.PublicInputs {
+
+		pubInputAcc := accessors.NewConstant(field.Zero())
+
+		if defInp.PublicInputs[i].Acc != nil {
+			pubInputAcc = modGl.TranslateAccessor(defInp.PublicInputs[i].Acc)
+			pubInputAcc = accessors.NewFromExpression(sym.Mul(
+				pubInputAcc,
+				accessors.NewFromPublicColumn(modGl.IsFirst, 0),
+			), "IS_FIRST_MULT_"+defInp.PublicInputs[i].Name)
+		}
+
+		modGl.Wiop.InsertPublicInput(
+			defInp.PublicInputs[i].Name,
+			pubInputAcc,
+		)
+	}
+
+	// This section adds the dummy public inputs for the log-derivative, grand-product
+	// horner-sum.
+
+	modGl.PublicInputs.HornerSum = modGl.Wiop.InsertPublicInput(
+		HornerPublicInput,
+		accessors.NewConstant(field.Zero()),
+	)
+
+	modGl.PublicInputs.LogDerivativeSum = modGl.Wiop.InsertPublicInput(
+		LogDerivativeSumPublicInput,
+		accessors.NewConstant(field.Zero()),
+	)
+
+	modGl.PublicInputs.GrandProduct = modGl.Wiop.InsertPublicInput(
+		GrandProductPublicInput,
+		accessors.NewConstant(field.One()),
+	)
+
+}
+
+func (modGL *ModuleGL) assignPublicInput(run *wizard.ProverRuntime, witness *ModuleWitnessGL) {
+
+	// This assigns the segment module index proof column
+	run.AssignColumn(
+		modGL.SegmentModuleIndex.GetColID(),
+		smartvectors.NewConstant(field.NewElement(uint64(witness.SegmentModuleIndex)), 1),
+	)
+
+	// This assigns the VKeyMerkleRoot
+	assignPiColumn(run, modGL.PublicInputs.VKeyMerkleRoot.Name, witness.VkMerkleRoot)
+
+	// This assigns the columns corresponding to the public input indicating
+	// the number of segments
+	assignListOfPiColumns(run, TargetNbSegmentPublicInputBase, vector.ForTest(witness.TotalSegmentCount...))
+}
+
+// assignLPPCommitmentMSetGL assigns the LPP commitment MSet. It is meant to be
+// run as part of a prover action. It also adds the "sent" and "received" values
+// to the MSet.
+func (modGL *ModuleGL) assignMultiSetHash(run *wizard.ProverRuntime) {
+
+	var lppCommitments field.Element
+	if run.HasPublicInput(lppMerkleRootPublicInput + "_0") {
+		lppCommitments = run.GetPublicInput(lppMerkleRootPublicInput + "_0")
+	}
+
+	var (
+		segmentIndex             = modGL.SegmentModuleIndex.GetColAssignmentAt(run, 0)
+		typeOfProof              = field.NewElement(uint64(proofTypeGL))
+		hasSentOrReceive         = len(modGL.ReceivedValuesGlobalMap) > 0
+		multiSetGeneral          = mimc.MSetHash{}
+		multiSetSharedRandomness = mimc.MSetHash{}
+		defInp                   = modGL.DefinitionInput
+		moduleIndex              = field.NewElement(uint64(defInp.ModuleIndex))
+		segmentIndexInt          = segmentIndex.Uint64()
+		numSegmentModule         = modGL.PublicInputs.TargetNbSegments[defInp.ModuleIndex].Acc.GetVal(run)
+	)
+
+	multiSetSharedRandomness.Insert(moduleIndex, segmentIndex, lppCommitments)
+	multiSetGeneral.Add(multiSetSharedRandomness)
+
+	// If the segment is not the last one of its module we add the "sent" value
+	// in the multiset.
+	if hasSentOrReceive && segmentIndexInt < numSegmentModule.Uint64()-1 {
+		globalSentHash := modGL.SentValuesGlobalHash.GetColAssignmentAt(run, 0)
+		multiSetGeneral.Insert(moduleIndex, segmentIndex, typeOfProof, globalSentHash)
+	}
+
+	// If the segment is not the first one of its module, we add the received
+	// value in the multiset
+	if hasSentOrReceive && !segmentIndex.IsZero() {
+
+		var (
+			prevSegmentIndex field.Element
+			one              = field.One()
+			globalRcvdHash   = modGL.ReceivedValuesGlobalHash.GetColAssignmentAt(run, 0)
+		)
+
+		prevSegmentIndex.Sub(&segmentIndex, &one)
+		multiSetGeneral.Remove(moduleIndex, prevSegmentIndex, typeOfProof, globalRcvdHash)
+	}
+
+	assignListOfPiColumns(run, GeneralMultiSetPublicInputBase, multiSetGeneral[:])
+	assignListOfPiColumns(run, SharedRandomnessMultiSetPublicInputBase, multiSetSharedRandomness[:])
+}
+
+// checkMultiSetHash checks that the LPP commitment MSet is correctly
+// assigned. It is meant to be run as part of a verifier action. The function
+// also checks that isFirst and isLast are correctly assigned.
+func (modGL *ModuleGL) checkMultiSetHash(run wizard.Runtime) error {
+
+	var (
+		targetMSetGeneral          = GetPublicInputList(run, GeneralMultiSetPublicInputBase, mimc.MSetHashSize)
+		targetMSetSharedRandomness = GetPublicInputList(run, SharedRandomnessMultiSetPublicInputBase, mimc.MSetHashSize)
+		lppCommitments             = run.GetPublicInput(lppMerkleRootPublicInput + "_0")
+		segmentIndex               = modGL.SegmentModuleIndex.GetColAssignmentAt(run, 0)
+		typeOfProof                = field.NewElement(uint64(proofTypeGL))
+		hasSentOrReceive           = len(modGL.ReceivedValuesGlobalMap) > 0
+		multiSetGeneral            = mimc.MSetHash{}
+		multiSetSharedRandomness   = mimc.MSetHash{}
+		defInp                     = modGL.DefinitionInput
+		moduleIndex                = field.NewElement(uint64(defInp.ModuleIndex))
+		segmentIndexInt            = segmentIndex.Uint64()
+		numSegmentOfCurrModule     = modGL.PublicInputs.TargetNbSegments[segmentIndexInt].Acc.GetVal(run)
+		isFirst                    = modGL.IsFirst.GetColAssignmentAt(run, 0)
+		isLast                     = modGL.IsLast.GetColAssignmentAt(run, 0)
+	)
+
+	multiSetSharedRandomness.Insert(moduleIndex, segmentIndex, lppCommitments)
+	multiSetGeneral.Add(multiSetSharedRandomness)
+
+	if !isFirst.IsZero() && !isFirst.IsOne() {
+		return fmt.Errorf("isFirst is not 0 or 1")
+	}
+
+	if !isLast.IsZero() && !isLast.IsOne() {
+		return fmt.Errorf("isLast is not 0 or 1")
+	}
+
+	// This checks that isFirst and isLast are well assigned wrt to the segment
+	// index
+	if (segmentIndexInt == 0) != isFirst.IsOne() {
+		return fmt.Errorf("isFirst does not match the segment index")
+	}
+
+	if (segmentIndexInt == numSegmentOfCurrModule.Uint64()-1) != isLast.IsOne() {
+		return fmt.Errorf("isLast does not match the segment index")
+	}
+
+	// If the segment is not the last one of its module we add the "sent" value
+	// in the multiset.
+	if hasSentOrReceive && segmentIndexInt < numSegmentOfCurrModule.Uint64()-1 {
+		globalSentHash := modGL.SentValuesGlobalHash.GetColAssignmentAt(run, 0)
+		// This is a local module
+		multiSetGeneral.Insert(moduleIndex, segmentIndex, typeOfProof, globalSentHash)
+	}
+
+	// If the segment is not the first one of its module, we add the received
+	// value in the multiset
+	if hasSentOrReceive && !segmentIndex.IsZero() {
+
+		var (
+			prevSegmentIndex field.Element
+			one              = field.One()
+			globalRcvdHash   = modGL.ReceivedValuesGlobalHash.GetColAssignmentAt(run, 0)
+		)
+
+		prevSegmentIndex.Sub(&segmentIndex, &one)
+		multiSetGeneral.Remove(moduleIndex, prevSegmentIndex, typeOfProof, globalRcvdHash)
+	}
+
+	if !vector.Equal(targetMSetGeneral, multiSetGeneral[:]) {
+		return fmt.Errorf("LPP commitment MSet mismatch, expected: %v, got: %v", targetMSetGeneral, multiSetGeneral[:])
+	}
+
+	if !vector.Equal(targetMSetSharedRandomness, multiSetSharedRandomness[:]) {
+		return fmt.Errorf("shared randomness MSet mismatch, expected: %v, got: %v", targetMSetSharedRandomness, multiSetSharedRandomness[:])
+	}
+
+	return nil
+}
+
+// checkGnarkMultiSetHash checks that the LPP commitment MSet is correctly
+// assigned. It is meant to be run as part of a verifier action.
+func (modGL *ModuleGL) checkGnarkMultiSetHash(api frontend.API, run wizard.GnarkRuntime) error {
+
+	var (
+		targetMSetGeneral          = GetPublicInputListGnark(api, run, GeneralMultiSetPublicInputBase, mimc.MSetHashSize)
+		targetMSetSharedRandomness = GetPublicInputListGnark(api, run, SharedRandomnessMultiSetPublicInputBase, mimc.MSetHashSize)
+		lppCommitments             = run.GetPublicInput(api, lppMerkleRootPublicInput+"_0")
+		segmentIndex               = modGL.SegmentModuleIndex.GetColAssignmentGnarkAt(run, 0)
+		typeOfProof                = field.NewElement(uint64(proofTypeGL))
+		hasSentOrReceive           = len(modGL.ReceivedValuesGlobalMap) > 0
+		hasher                     = run.GetHasherFactory().NewHasher()
+		multiSetGeneral            = mimc.EmptyMSetHashGnark(hasher)
+		multiSetSharedRandomness   = mimc.EmptyMSetHashGnark(hasher)
+		defInp                     = modGL.DefinitionInput
+		moduleIndex                = frontend.Variable(defInp.ModuleIndex)
+		numSegmentOfCurrModule     = modGL.PublicInputs.TargetNbSegments[defInp.ModuleIndex].Acc.GetFrontendVariable(api, run)
+		isFirst                    = modGL.IsFirst.GetColAssignmentGnarkAt(run, 0)
+		isLast                     = modGL.IsLast.GetColAssignmentGnarkAt(run, 0)
+	)
+
+	multiSetSharedRandomness.Insert(api, moduleIndex, segmentIndex, lppCommitments)
+	multiSetGeneral.Add(api, multiSetSharedRandomness)
+
+	api.AssertIsBoolean(isFirst)
+	api.AssertIsBoolean(isLast)
+
+	// This checks that isFirst and isLast are well assigned wrt to the segment
+	// index
+	api.AssertIsEqual(isFirst, api.IsZero(segmentIndex))
+	api.AssertIsEqual(isLast, api.IsZero(api.Sub(numSegmentOfCurrModule, segmentIndex, 1)))
+
+	// If the segment is not the last one of its module we add the "sent" value
+	// in the multiset.
+	if hasSentOrReceive {
+		globalSentHash := modGL.SentValuesGlobalHash.GetColAssignmentGnarkAt(run, 0)
+		mSetOfSentGlobal := mimc.MsetOfSingletonGnark(api, hasher, moduleIndex, segmentIndex, typeOfProof, globalSentHash)
+		for i := range mSetOfSentGlobal.Inner {
+			mSetOfSentGlobal.Inner[i] = api.Mul(mSetOfSentGlobal.Inner[i], api.Sub(1, isLast))
+			multiSetGeneral.Inner[i] = api.Add(multiSetGeneral.Inner[i], mSetOfSentGlobal.Inner[i])
+		}
+
+		// If the segment is not the first one of its module, we add the received
+		// value in the multiset. If the segment index is zero, the singleton hash
+		// will be zero-ed out by the "1 - isFirst" term
+		globalRcvdHash := modGL.ReceivedValuesGlobalHash.GetColAssignmentGnarkAt(run, 0)
+		mSetOfReceivedGlobal := mimc.MsetOfSingletonGnark(api, hasher, moduleIndex, api.Sub(segmentIndex, 1), typeOfProof, globalRcvdHash)
+		for i := range mSetOfReceivedGlobal.Inner {
+			mSetOfReceivedGlobal.Inner[i] = api.Mul(mSetOfReceivedGlobal.Inner[i], api.Sub(1, isFirst))
+			multiSetGeneral.Inner[i] = api.Sub(multiSetGeneral.Inner[i], mSetOfReceivedGlobal.Inner[i])
+		}
+	}
+
+	for i := range multiSetGeneral.Inner {
+		api.AssertIsEqual(multiSetGeneral.Inner[i], targetMSetGeneral[i])
+		api.AssertIsEqual(multiSetSharedRandomness.Inner[i], targetMSetSharedRandomness[i])
+	}
+
+	return nil
 }

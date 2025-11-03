@@ -1,10 +1,12 @@
 package profiling
 
 import (
+	"encoding/csv"
 	"os"
 	"path"
 	"runtime"
 	"runtime/pprof"
+	"strconv"
 	"time"
 
 	"github.com/consensys/linea-monorepo/prover/config"
@@ -204,4 +206,54 @@ func (pl *PerformanceLog) PrintMetrics() {
 		pl.MemoryInUseStatsGiB[0], pl.MemoryInUseStatsGiB[1], pl.MemoryInUseStatsGiB[2])
 	logrus.Printf("Memory GC Not Deallocated Stats: min=%.2f GiB, avg=%.2f GiB, max=%.2f GiB\n",
 		pl.MemoryGCNotDeallocatedStatsGiB[0], pl.MemoryGCNotDeallocatedStatsGiB[1], pl.MemoryGCNotDeallocatedStatsGiB[2])
+}
+
+type PerfLogs []*PerformanceLog
+
+func (pl PerfLogs) WritePerformanceLogsToCSV(path string) error {
+	file, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
+
+	startTime := time.Now()
+	logrus.Infof("Writing the runtime performance logs to csv file located at path%s", path)
+
+	// Define CSV headers
+	headers := []string{
+		"Description", "Runtime (s)",
+		"CPU_Usage_Min", "CPU_Usage_Avg", "CPU_Usage_Max",
+		"Mem_Allocated_Min (GiB)", "Mem_Allocated_Avg (GiB)", "Mem_Allocated_Max (GiB)",
+		"Mem_InUse_Min (GiB)", "Mem_InUse_Avg (GiB)", "Mem_InUse_Max (GiB)",
+		"Mem_GC_NotDeallocated_Min (GiB)", "Mem_GC_NotDeallocated_Avg (GiB)", "Mem_GC_NotDeallocated_Max (GiB)",
+	}
+	writer.Write(headers)
+
+	// Write performance logs to CSV
+	for _, log := range pl {
+		record := []string{
+			log.Description,
+			strconv.FormatFloat(log.StopTime.Sub(log.StartTime).Seconds(), 'f', -1, 64),
+			strconv.FormatFloat(log.CpuUsageStats[0], 'f', 2, 64),
+			strconv.FormatFloat(log.CpuUsageStats[1], 'f', 2, 64),
+			strconv.FormatFloat(log.CpuUsageStats[2], 'f', 2, 64),
+			strconv.FormatFloat(log.MemoryAllocatedStatsGiB[0], 'f', 2, 64),
+			strconv.FormatFloat(log.MemoryAllocatedStatsGiB[1], 'f', 2, 64),
+			strconv.FormatFloat(log.MemoryAllocatedStatsGiB[2], 'f', 2, 64),
+			strconv.FormatFloat(log.MemoryInUseStatsGiB[0], 'f', 2, 64),
+			strconv.FormatFloat(log.MemoryInUseStatsGiB[1], 'f', 2, 64),
+			strconv.FormatFloat(log.MemoryInUseStatsGiB[2], 'f', 2, 64),
+			strconv.FormatFloat(log.MemoryGCNotDeallocatedStatsGiB[0], 'f', 2, 64),
+			strconv.FormatFloat(log.MemoryGCNotDeallocatedStatsGiB[1], 'f', 2, 64),
+			strconv.FormatFloat(log.MemoryGCNotDeallocatedStatsGiB[2], 'f', 2, 64),
+		}
+		writer.Write(record)
+	}
+
+	logrus.Infof("Finished writing to the csv file. Took %s", time.Since(startTime).String())
+	return nil
 }

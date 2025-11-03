@@ -5,7 +5,6 @@ import (
 	"math/rand/v2"
 	"os"
 	"path"
-	"reflect"
 	"strings"
 
 	"github.com/consensys/linea-monorepo/prover/config"
@@ -23,25 +22,43 @@ import (
 )
 
 var (
-	bootstrapperFile       = "dw-bootstrapper.bin"
-	discFile               = "disc.bin"
-	zkevmFile              = "zkevm-wiop.bin"
-	compiledDefaultFile    = "dw-compiled-default.bin"
-	blueprintGLPrefix      = "dw-blueprint-gl"
-	blueprintLppPrefix     = "dw-blueprint-lpp"
-	blueprintGLTemplate    = blueprintGLPrefix + "-%d.bin"
-	blueprintLppTemplate   = blueprintLppPrefix + "-%d.bin"
-	compileLppTemplate     = "dw-compiled-lpp-%v.bin"
-	compileGlTemplate      = "dw-compiled-gl-%v.bin"
-	debugLppTemplate       = "dw-debug-lpp-%v.bin"
-	debugGlTemplate        = "dw-debug-gl-%v.bin"
-	conglomerationFile     = "dw-compiled-conglomeration.bin"
-	executionLimitlessPath = "execution-limitless"
+	bootstrapperFile              = "dw-bootstrapper.bin"
+	discFile                      = "disc.bin"
+	zkevmFile                     = "zkevm-wiop.bin"
+	blueprintGLPrefix             = "dw-blueprint-gl"
+	blueprintLppPrefix            = "dw-blueprint-lpp"
+	blueprintGLTemplate           = blueprintGLPrefix + "-%d.bin"
+	blueprintLppTemplate          = blueprintLppPrefix + "-%d.bin"
+	compileLppTemplate            = "dw-compiled-lpp-%v.bin"
+	compileGlTemplate             = "dw-compiled-gl-%v.bin"
+	debugLppTemplate              = "dw-debug-lpp-%v.bin"
+	debugGlTemplate               = "dw-debug-gl-%v.bin"
+	conglomerationFile            = "dw-compiled-conglomeration.bin"
+	executionLimitlessPath        = "execution-limitless"
+	verificationKeyMerkleTreeFile = "verification-key-merkle-tree.bin"
 )
+
+var LimitlessCompilationParams = distributed.CompilationParams{
+	FixedNbRowPlonkCircuit:       1 << 18,
+	FixedNbRowExternalHasher:     1 << 14,
+	FixedNbPublicInput:           1 << 10,
+	InitialCompilerSize:          1 << 18,
+	InitialCompilerSizeConglo:    1 << 13,
+	ColumnProfileMPTS:            []int{17, 330, 36, 3, 3, 15, 0, 1},
+	ColumnProfileMPTSPrecomputed: 21,
+}
 
 // GetTestZkEVM returns a ZkEVM object configured for testing.
 func GetTestZkEVM() *ZkEvm {
-	return FullZKEVMWithSuite(config.GetTestTracesLimits(), CompilationSuite{}, &config.Config{})
+	return FullZKEVMWithSuite(
+		config.GetTestTracesLimits(),
+		CompilationSuite{},
+		&config.Config{
+			Execution: config.Execution{
+				IgnoreCompatibilityCheck: true,
+			},
+		},
+	)
 }
 
 // LimitlessZkEVM defines the wizard responsible for proving execution of the EVM
@@ -97,18 +114,15 @@ var DiscoveryAdvices = []distributed.ModuleDiscoveryAdvice{
 
 	{BaseSize: 16384, Cluster: "STATIC", Column: "LOOKUP_BaseBDirty"},
 	{BaseSize: 65536, Cluster: "STATIC", Column: "LOOKUP_BaseA"},
-
-	{BaseSize: 512, Cluster: "MODEXP_256", Column: "MODEXP_INPUT_IS_MODEXP"},
-	{BaseSize: 1024, Cluster: "MODEXP_256", Column: "MODEXP_IS_ACTIVE"},
+	{BaseSize: 4096, Cluster: "MODEXP_256", Column: "MODEXP_INPUT_IS_MODEXP"},
+	{BaseSize: 8192, Cluster: "MODEXP_256", Column: "MODEXP_IS_ACTIVE"},
 	{BaseSize: 256, Cluster: "MODEXP_256", Column: "MODEXP_256_BITS_IS_ACTIVE"},
-
-	{BaseSize: 512, Cluster: "ELLIPTIC_CURVES", Column: "TABLE_ecdata.ID,ecdata.INDEX,ecdata.LIMB,ecdata.PHASE,ecdata.SUCCESS_BIT,ecdata.TOTAL_SIZE_0_LOGDERIVATIVE_M"},
+	{BaseSize: 4096, Cluster: "ELLIPTIC_CURVES", Column: "TABLE_ecdata.ID,ecdata.INDEX,ecdata.LIMB,ecdata.PHASE,ecdata.SUCCESS_BIT,ecdata.TOTAL_SIZE_0_LOGDERIVATIVE_M"},
 	{BaseSize: 1024, Cluster: "ELLIPTIC_CURVES", Column: "ECADD_INTEGRATION_ALIGNMENT_PI"},
 	{BaseSize: 256, Cluster: "ELLIPTIC_CURVES", Column: "ECMUL_INTEGRATION_ALIGNMENT_IS_ACTIVE"},
-	{BaseSize: 128, Cluster: "ELLIPTIC_CURVES", Column: "ECPAIR_IS_ACTIVE"},
-	{BaseSize: 128, Cluster: "ELLIPTIC_CURVES", Column: "ECPAIR_ALIGNMENT_ML_PI"},
-	{BaseSize: 128, Cluster: "ELLIPTIC_CURVES", Column: "ECPAIR_ALIGNMENT_FINALEXP_IS_ACTIVE"},
-
+	{BaseSize: 256, Cluster: "ECPAIRING", Column: "ECPAIR_IS_ACTIVE"},
+	{BaseSize: 256, Cluster: "ECPAIRING", Column: "ECPAIR_ALIGNMENT_ML_PI"},
+	{BaseSize: 256, Cluster: "ECPAIRING", Column: "ECPAIR_ALIGNMENT_FINALEXP_IS_ACTIVE"},
 	{BaseSize: 256, Cluster: "SHA2", Column: "CLEANING_SHA2_CleanLimb"},
 	{BaseSize: 256, Cluster: "SHA2", Column: "SHA2_TAGS_SPAGHETTI"},
 	{BaseSize: 256, Cluster: "SHA2", Column: "BLOCK_SHA2_AccNumLane"},
@@ -387,7 +401,7 @@ func NewLimitlessZkEVM(cfg *config.Config) *LimitlessZkEVM {
 		traceLimits = cfg.TracesLimits
 		zkevm       = FullZKEVMWithSuite(&traceLimits, CompilationSuite{}, cfg)
 		disc        = &distributed.StandardModuleDiscoverer{
-			TargetWeight: 1 << 29,
+			TargetWeight: 1 << 28,
 			Predivision:  1,
 			Advices:      DiscoveryAdvices,
 		}
@@ -395,9 +409,7 @@ func NewLimitlessZkEVM(cfg *config.Config) *LimitlessZkEVM {
 	)
 
 	// These are the slow and expensive operations.
-	dw.CompileSegments().Conglomerate(100)
-
-	decorateWithPublicInputs(dw.CompiledConglomeration)
+	dw.CompileSegments(LimitlessCompilationParams).Conglomerate(LimitlessCompilationParams)
 
 	return &LimitlessZkEVM{
 		Zkevm:      zkevm,
@@ -512,6 +524,9 @@ func (lz *LimitlessZkEVM) RunDebug(cfg *config.Config, witness *Witness) {
 		lz.DistWizard.Disc,
 		lz.DistWizard.BlueprintGLs,
 		lz.DistWizard.BlueprintLPPs,
+		// The verification key merkle tree does not exists in debug mode. So
+		// we can get the value here. It is not needed anyway.
+		field.Element{},
 	)
 
 	logrus.Infof("Segmented %v GL segments and %v LPP segments", len(witnessGLs), len(witnessLPPs))
@@ -523,22 +538,7 @@ func (lz *LimitlessZkEVM) RunDebug(cfg *config.Config, witness *Witness) {
 		logrus.Infof("Checking GL witness %v, module=%v", i, witness.ModuleName)
 
 		var (
-			moduleToFind = witness.ModuleName
-			debugGL      *distributed.ModuleGL
-		)
-
-		for i := range lz.DistWizard.DebugGLs {
-			if lz.DistWizard.DebugGLs[i].DefinitionInput.ModuleName == moduleToFind {
-				debugGL = lz.DistWizard.DebugGLs[i]
-				break
-			}
-		}
-
-		if debugGL == nil {
-			utils.Panic("debugGL not found")
-		}
-
-		var (
+			debugGL        = lz.DistWizard.DebugGLs[witness.ModuleIndex]
 			mainProverStep = debugGL.GetMainProverStep(witness)
 			compiledIOP    = debugGL.Wiop
 		)
@@ -564,15 +564,16 @@ func (lz *LimitlessZkEVM) RunDebug(cfg *config.Config, witness *Witness) {
 		logrus.Infof("Checking LPP witness %v, module=%v", i, witness.ModuleName)
 
 		var (
-			moduleToFind = witness.ModuleName
-			debugLPP     *distributed.ModuleLPP
+			// moduleToFind = witness.ModuleName
+			debugLPP *distributed.ModuleLPP
 		)
 
-		for i := range lz.DistWizard.DebugLPPs {
-			if reflect.DeepEqual(lz.DistWizard.DebugLPPs[i].ModuleNames(), moduleToFind) {
-				debugLPP = lz.DistWizard.DebugLPPs[i]
-				break
-			}
+		for range lz.DistWizard.DebugLPPs {
+			panic("uncomment me")
+			// if reflect.DeepEqual(lz.DistWizard.DebugLPPs[i].ModuleNames(), moduleToFind) {
+			// 	debugLPP = lz.DistWizard.DebugLPPs[i]
+			// 	break
+			// }
 		}
 
 		if debugLPP == nil {
@@ -593,14 +594,6 @@ func (lz *LimitlessZkEVM) RunDebug(cfg *config.Config, witness *Witness) {
 
 		runtimes = append(runtimes, rt)
 	}
-
-	logrus.Infof("Running SanityCheckPublicInputsForConglo")
-
-	if err := distributed.SanityCheckPublicInputsForConglo(runtimes); err != nil {
-		utils.Panic("Sanity-check for conglo failed: %v", err)
-	}
-
-	logrus.Infof("Done running SanityCheckPublicInputsForConglo")
 }
 
 // runBootstrapperWithRescaling runs the bootstrapper and returns the resulting
@@ -706,8 +699,12 @@ func (lz *LimitlessZkEVM) Store(cfg *config.Config) error {
 			Object: lz.DistWizard.Bootstrapper,
 		},
 		{
-			Name:   compiledDefaultFile,
-			Object: lz.DistWizard.CompiledDefault,
+			Name:   conglomerationFile,
+			Object: *lz.DistWizard.CompiledConglomeration,
+		},
+		{
+			Name:   verificationKeyMerkleTreeFile,
+			Object: lz.DistWizard.VerificationKeyMerkleTree,
 		},
 	}
 
@@ -734,7 +731,7 @@ func (lz *LimitlessZkEVM) Store(cfg *config.Config) error {
 
 	for _, modLpp := range lz.DistWizard.CompiledLPPs {
 		assets = append(assets, asset{
-			Name:   fmt.Sprintf(compileLppTemplate, modLpp.ModuleLPP.ModuleNames()),
+			Name:   fmt.Sprintf(compileLppTemplate, modLpp.ModuleLPP.ModuleName()),
 			Object: *modLpp,
 		})
 	}
@@ -748,18 +745,10 @@ func (lz *LimitlessZkEVM) Store(cfg *config.Config) error {
 
 	for _, debugLPP := range lz.DistWizard.DebugLPPs {
 		assets = append(assets, asset{
-			Name:   fmt.Sprintf(debugLppTemplate, debugLPP.ModuleNames()),
+			Name:   fmt.Sprintf(debugLppTemplate, debugLPP.ModuleName()),
 			Object: debugLPP,
 		})
 	}
-
-	assets = append(assets, struct {
-		Name   string
-		Object any
-	}{
-		Name:   conglomerationFile,
-		Object: *lz.DistWizard.CompiledConglomeration,
-	})
 
 	for _, asset := range assets {
 		logrus.Infof("writing %s to disk", asset.Name)
@@ -887,7 +876,7 @@ func LoadCompiledGL(cfg *config.Config, moduleName distributed.ModuleName) (*dis
 }
 
 // LoadCompiledLPP loads the compiled LPP from disk
-func LoadCompiledLPP(cfg *config.Config, moduleNames []distributed.ModuleName) (*distributed.RecursedSegmentCompilation, error) {
+func LoadCompiledLPP(cfg *config.Config, moduleNames distributed.ModuleName) (*distributed.RecursedSegmentCompilation, error) {
 
 	var (
 		assetDir = cfg.PathForSetup(executionLimitlessPath)
@@ -934,20 +923,35 @@ func LoadDebugLPP(cfg *config.Config, moduleName []distributed.ModuleName) (*dis
 	return res, nil
 }
 
-// LoadConglomeration loads the conglomeration assets from disk
-func LoadConglomeration(cfg *config.Config) (*distributed.ConglomeratorCompilation, error) {
+// LoadCompiledConglomeration loads the conglomeration assets from disk
+func LoadCompiledConglomeration(cfg *config.Config) (*distributed.RecursedSegmentCompilation, error) {
 
 	var (
 		assetDir = cfg.PathForSetup(executionLimitlessPath)
 		filePath = path.Join(assetDir, conglomerationFile)
-		res      = &distributed.ConglomeratorCompilation{}
+		conglo   = &distributed.RecursedSegmentCompilation{}
 	)
 
-	if err := serialization.LoadFromDisk(filePath, res, true); err != nil {
+	if err := serialization.LoadFromDisk(filePath, conglo, true); err != nil {
 		return nil, err
 	}
 
-	return res, nil
+	return conglo, nil
+}
+
+func LoadVerificationKeyMerkleTree(cfg *config.Config) (*distributed.VerificationKeyMerkleTree, error) {
+
+	var (
+		assetDir = cfg.PathForSetup(executionLimitlessPath)
+		filePath = path.Join(assetDir, verificationKeyMerkleTreeFile)
+		mt       = &distributed.VerificationKeyMerkleTree{}
+	)
+
+	if err := serialization.LoadFromDisk(filePath, mt, true); err != nil {
+		return nil, err
+	}
+
+	return mt, nil
 }
 
 // GetAffinities returns a list of affinities for the following modules. This
@@ -1028,13 +1032,5 @@ func LogPublicInputs(vr wizard.Runtime) {
 	for _, name := range publicInputNames {
 		x := vr.GetPublicInput(name)
 		fmt.Printf("[public input] %s: %v\n", name, x)
-	}
-}
-
-// decorateWithPublicInputs decorates the [LimitlessZkEVM] with the public inputs from
-// the initial zkevm.
-func decorateWithPublicInputs(cong *distributed.ConglomeratorCompilation) {
-	for _, name := range publicInputNames {
-		cong.BubbleUpPublicInput(name)
 	}
 }

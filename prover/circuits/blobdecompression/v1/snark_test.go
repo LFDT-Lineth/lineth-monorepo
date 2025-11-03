@@ -307,8 +307,8 @@ func TestBlobChecksum(t *testing.T) { // aka "snark hash"
 			DataBytes: make([]frontend.Variable, nPadded),
 		}
 
-		dataPadded[n-1] = data[n-1]
-		dataVarsPadded[n-1] = data[n-1]
+		dataPadded[n-1] = data[n-1]     // #nosec G602 -- the slice is an array and not a slice
+		dataVarsPadded[n-1] = data[n-1] // #nosec G602 -- the slice is an array and not a slice
 
 		assignment := testDataChecksumCircuit{
 			DataBytes: dataVarsPadded[:nPadded],

@@ -99,9 +99,6 @@ func ModuleOfColumn(disc *StandardModuleDiscoverer, col ifaces.Column) ModuleNam
 	case verifiercol.FromAccessors:
 		return ModuleOfList(disc, c.Accessors...)
 
-	case verifiercol.ExpandedVerifCol:
-		return ModuleOfColumn(disc, c.Verifiercol)
-
 	default:
 		utils.Panic("unexpected type of column: %T", col)
 	}

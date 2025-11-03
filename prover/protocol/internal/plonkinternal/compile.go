@@ -122,8 +122,8 @@ func (ctx *compilationCtx) commitGateColumns() {
 
 		// First Round, for the committed value and the PI
 		for i := 0; i < ctx.MaxNbInstances; i++ {
-			if tinyPISize(ctx.Plonk.SPR) > 0 {
-				ctx.Columns.TinyPI[i] = ctx.comp.InsertProof(ctx.Round, ctx.colIDf("PI_%v", i), tinyPISize(ctx.Plonk.SPR))
+			if ctx.tinyPISize() > 0 {
+				ctx.Columns.TinyPI[i] = ctx.comp.InsertProof(ctx.Round, ctx.colIDf("PI_%v", i), ctx.tinyPISize())
 				ctx.Columns.PI[i] = verifiercol.NewConcatTinyColumns(ctx.comp, nbRow, field.Zero(), ctx.Columns.TinyPI[i])
 			} else {
 				ctx.Columns.PI[i] = verifiercol.NewConstantCol(field.Zero(), nbRow, "")
@@ -144,8 +144,8 @@ func (ctx *compilationCtx) commitGateColumns() {
 	} else {
 		// Else no additional selector, and just commit to LRO + PI at the same Round
 		for i := 0; i < ctx.MaxNbInstances; i++ {
-			if tinyPISize(ctx.Plonk.SPR) > 0 {
-				ctx.Columns.TinyPI[i] = ctx.comp.InsertProof(ctx.Round, ctx.colIDf("PI_%v", i), tinyPISize(ctx.Plonk.SPR))
+			if ctx.tinyPISize() > 0 {
+				ctx.Columns.TinyPI[i] = ctx.comp.InsertProof(ctx.Round, ctx.colIDf("PI_%v", i), ctx.tinyPISize())
 				ctx.Columns.PI[i] = verifiercol.NewConcatTinyColumns(ctx.comp, nbRow, field.Zero(), ctx.Columns.TinyPI[i])
 			} else {
 				ctx.Columns.PI[i] = verifiercol.NewConstantCol(field.Zero(), nbRow, "")

@@ -5,6 +5,7 @@ import (
 	"github.com/consensys/linea-monorepo/prover/maths/field"
 	"github.com/consensys/linea-monorepo/prover/protocol/column/verifiercol"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/vortex"
+	"github.com/consensys/linea-monorepo/prover/protocol/dedicated"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/utils"
 )
@@ -147,9 +148,8 @@ func (ctx *SelfRecursionCtx) RootHashGlue() {
 	)
 }
 
-// Ensures that openedColumns are the same as the one given in the Merkle proofs
-func (ctx SelfRecursionCtx) GluePositions() {
-
+// GluePositions using stackColumn
+func (ctx SelfRecursionCtx) GluePositionsStacked() {
 	// The vector that the verifier trusts
 	positionVec := verifiercol.NewFromIntVecCoin(
 		ctx.Comp,
@@ -159,84 +159,72 @@ func (ctx SelfRecursionCtx) GluePositions() {
 
 	// The vector that the verifier wants to audit w.r.t. position vec
 	merklePos := ctx.Columns.MerkleProofPositions
-
-	sizeSmallPos := ctx.Coins.Q.Size // =nbOpenCols
-	sizePositionVec := positionVec.Size()
+	round := merklePos.Round()
+	// Indicates the number of repetitions of the position vector
+	// in the merklePos column
 	numCommittedRound := ctx.VortexCtx.NumCommittedRounds()
 	// numCommittedRound increses by 1 if we commit to the precomputeds
 	if ctx.VortexCtx.IsNonEmptyPrecomputed() {
 		numCommittedRound += 1
 	}
-	numActive := sizeSmallPos * numCommittedRound
-	totalSize := merklePos.Size()
-
-	// repeat positionVec as many time as need to equal the length
-	// of merklePos (otherwise, we can't do the fixed permutation
-	// check).
-	positionVec = verifiercol.NewFromAccessors(
-		utils.RepeatSlice(
-			positionVec.(verifiercol.FromAccessors).Accessors,
-			merklePos.Size()/sizePositionVec,
-		),
-		field.Zero(),
-		merklePos.Size(),
+	// The source position columns
+	var cleanPosCols []ifaces.Column
+	for i := 0; i < numCommittedRound; i++ {
+		cleanPosCols = append(cleanPosCols, positionVec)
+	}
+	stackedPosCols := dedicated.StackColumn(
+		ctx.Comp,
+		cleanPosCols,
+		dedicated.HandleSourcePaddedColumns(ctx.VortexCtx.NbColsToOpen()),
 	)
-
-	// If MerkleRoots is correct, then there is a permutation we can
-	// make to audit it.
-	s := make([]field.Element, 2*totalSize)
-
-	// Group all the indexes for each distinct value. The last one is
-	// for the padding.
-	groups := make([][]int, sizeSmallPos+1)
-	for i := range groups {
-		groups[i] = make([]int, 0, 2*totalSize)
+	// Register the prover action for the stacked columns
+	if stackedPosCols.IsSourceColsArePadded {
+		ctx.Comp.RegisterProverAction(
+			round,
+			&dedicated.StackedColumn{
+				Column:                stackedPosCols.Column,
+				Source:                cleanPosCols,
+				UnpaddedColumn:        stackedPosCols.UnpaddedColumn,
+				ColumnFilter:          stackedPosCols.ColumnFilter,
+				UnpaddedColumnFilter:  stackedPosCols.UnpaddedColumnFilter,
+				UnpaddedSize:          stackedPosCols.UnpaddedSize,
+				IsSourceColsArePadded: stackedPosCols.IsSourceColsArePadded,
+			},
+		)
+	} else {
+		ctx.Comp.RegisterProverAction(
+			round,
+			&dedicated.StackedColumn{
+				Column: stackedPosCols.Column,
+				Source: cleanPosCols,
+			},
+		)
 	}
-	groupPadding := len(groups) - 1
-
-	for i := 0; i < totalSize; i++ {
-		// the corresponding element in rootHashVec is an actual root
-		if i%sizePositionVec < sizeSmallPos {
-			groups[i%sizePositionVec] = append(groups[i%sizePositionVec], i)
-		} else {
-			// else, the corresponding element in rootHashVec is padded
-			groups[groupPadding] = append(groups[groupPadding], i)
-		}
-
-		// The corresponding element in MerkleRoots is an actual root
-		if i < numActive {
-			groups[i%sizeSmallPos] = append(groups[i%sizeSmallPos], i+totalSize)
-		} else {
-			// else, the corresponding element in MerkleRoots is padded
-			groups[groupPadding] = append(groups[groupPadding], i+totalSize)
-		}
+	// Next we compute the identity permutation
+	s := make([]field.Element, stackedPosCols.Column.Size())
+	if stackedPosCols.IsSourceColsArePadded {
+		s = make([]field.Element, stackedPosCols.UnpaddedColumn.Size())
 	}
-
-	// Allocate the cycles
-	for _, grp := range groups {
-		// We make each element point to the next one
-		for i := 0; i < len(grp); i++ {
-			s[grp[i]].SetUint64(uint64(grp[(i+1)%len(grp)]))
-		}
+	for i := range s {
+		s[i].SetInt64(int64(i))
 	}
-
-	// And from that, we get s1 and s2 and declare the corresponding
-	// copy constraint.
-	ctx.Comp.InsertFixedPermutation(
-		ctx.Columns.MerkleProofPositions.Round(),
-		ctx.positionGlue(),
-		[]smartvectors.SmartVector{
-			smartvectors.NewRegular(s[:totalSize]),
-			smartvectors.NewRegular(s[totalSize:]),
-		},
-		[]ifaces.Column{
-			positionVec,
-			ctx.Columns.MerkleProofPositions,
-		},
-		[]ifaces.Column{
-			positionVec,
-			ctx.Columns.MerkleProofPositions,
-		},
-	)
-
+	s_smart := smartvectors.NewRegular(s)
+	// Insert the fixed permutation constraint.
+	if stackedPosCols.IsSourceColsArePadded {
+		ctx.Comp.InsertFixedPermutation(
+			round,
+			ctx.positionGlue(),
+			[]smartvectors.SmartVector{s_smart},
+			[]ifaces.Column{*stackedPosCols.UnpaddedColumn},
+			[]ifaces.Column{merklePos},
+		)
+	} else {
+		ctx.Comp.InsertFixedPermutation(
+			round,
+			ctx.positionGlue(),
+			[]smartvectors.SmartVector{s_smart},
+			[]ifaces.Column{stackedPosCols.Column},
+			[]ifaces.Column{merklePos},
+		)
+	}
 }

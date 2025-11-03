@@ -9,13 +9,10 @@ spot_instance_reclaim_time_seconds = 120
 termination_grace_period_seconds = 1800
 
 [execution]
-prover_mode = "full"
+prover_mode = "limitless"
 conflated_traces_dir = "/home/ubuntu/test_mainnet/traces/conflated"
 requests_root_dir = "/home/ubuntu/test_mainnet/prover-execution"
-limitless_with_debug = true
 ignore_compatibility_check = false
-
-
 
 
 [blob_decompression]

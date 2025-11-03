@@ -12,6 +12,7 @@ import (
 	"github.com/consensys/linea-monorepo/prover/protocol/query"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	"github.com/consensys/linea-monorepo/prover/utils"
+	"github.com/sirupsen/logrus"
 )
 
 // MultiPointToSinglePointCompilation holds the compilation context of the
@@ -122,6 +123,11 @@ func compileMultipointToSinglepoint(comp *wizard.CompiledIOP, options []Option) 
 
 	if ctx.NumColumnProfileOpt != nil {
 
+		var (
+			profile            = []int{}
+			profilePrecomputed = len(polyPrecomputed)
+		)
+
 		// startingRound is the first round that is not empty in polyRound
 		// ignoring precomputed columns.
 		startingRound := getStartingRound(comp, polysByRound)
@@ -132,6 +138,8 @@ func compileMultipointToSinglepoint(comp *wizard.CompiledIOP, options []Option) 
 		err = errors.Join(err, errLocal)
 
 		for round := startingRound; round < len(polysByRound); round++ {
+
+			profile = append(profile, len(polysByRound[round]))
 
 			// This panic routine is useful as it gives all the informations for
 			// the dev to fix the value of the mpts profile in use if needs be.
@@ -148,6 +156,12 @@ func compileMultipointToSinglepoint(comp *wizard.CompiledIOP, options []Option) 
 
 			err = errors.Join(err, errLocal)
 		}
+
+		logrus.Infof(
+			"[MPTS] extending number of rows, precomputed: %v -> %v, profile: %v -> %v",
+			profilePrecomputed, ctx.NumColumnProfilePrecomputed,
+			profile, ctx.NumColumnProfileOpt,
+		)
 	}
 
 	if err != nil {

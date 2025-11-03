@@ -367,6 +367,16 @@ func TestSerdeValue(t *testing.T) {
 			Name: "mutex",
 			V:    []*sync.Mutex{{}, {}},
 		},
+		{
+			Name: "nil-horner-query",
+			V:    (*query.Horner)(nil),
+		},
+		{
+			Name: "nil-horner-query-in-a-struct",
+			V: struct {
+				G *query.Horner // G is left as a nil by default
+			}{},
+		},
 	}
 
 	for i := range testCases {

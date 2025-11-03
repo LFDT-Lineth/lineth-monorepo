@@ -119,6 +119,10 @@ type Parameters struct {
 	// be built with a fixed number of rows.
 	FixedNbRowPlonkCircuit int
 
+	// FixedNbPublicInput is a flag indicating that the Plonk circuit should
+	// be built with a fixed number of public inputs.
+	FixedNbPublicInput int
+
 	// ExternalHasherNbRows is a flag indicating that the MiMC circuit should
 	// be built with a fixed number of rows.
 	ExternalHasherNbRows int
@@ -126,6 +130,22 @@ type Parameters struct {
 	// WithExternalHasherOpts is a flag indicating that the recursion circuit should
 	// be built using the external hasher builder.
 	WithExternalHasherOpts bool
+
+	// SkipRecursionPrefix indicates that the compilation of the recursion
+	// should not add a prefix to the recursed public-inputs. When set to true,
+	// the public inputs will be named exactly as in the input IOP. Otherwise,
+	// the public input are prefixed with `[Parameters.Name]_[i : the ID of the
+	// instance]`. If SkipRecursionPrefix is set to true, then
+	// [DefinedRecursionOf] will assert that [Parameters.MaxNumProof] is 1;
+	// otherwise, there would be a naming conflict.
+	SkipRecursionPrefix bool
+
+	// RestrictPublicInputs specifies the list of the public inputs from the
+	// initial IOP to be re-exposed as public inputs in the recursion circuit.
+	//
+	// /!\ : Passing []string{} will expose NO public inputs. But passing 'nil'
+	// will expose ALL the public inputs.
+	RestrictPublicInputs []string
 }
 
 // DefineRecursionOf builds a recursion sub-circuit into 'comp' for verifying
@@ -151,6 +171,10 @@ func DefineRecursionOf(comp, inputComp *wizard.CompiledIOP, params Parameters) *
 		plonkOpts = append(plonkOpts, plonkinternal.WithSubscript(params.Subscript))
 	}
 
+	if params.FixedNbPublicInput > 0 {
+		plonkOpts = append(plonkOpts, plonkinternal.WithFixedNbPublicInput(params.FixedNbPublicInput))
+	}
+
 	if !params.WithoutGkr && params.WithExternalHasherOpts {
 		utils.Panic("inconsistent choice, cannot use GKR and external hasher together")
 	}
@@ -164,8 +188,13 @@ func DefineRecursionOf(comp, inputComp *wizard.CompiledIOP, params Parameters) *
 		// pubInputOffset corresponds to the positions of the public inputs
 		// in the plonk-in-wizard public witness. They are at
 		// 		pubInputOffset:pubInputOffset+numPubs
-		pubInputOffset = 1 + numYs + numComs
+		pubInputOffset           = 1 + numYs + numComs
+		restrictedPublicInputSet = map[string]struct{}{}
 	)
+
+	for k := range params.RestrictPublicInputs {
+		restrictedPublicInputSet[params.RestrictPublicInputs[k]] = struct{}{}
+	}
 
 	for i := 0; i < params.MaxNumProof; i++ {
 
@@ -177,10 +206,37 @@ func DefineRecursionOf(comp, inputComp *wizard.CompiledIOP, params Parameters) *
 		dstVortexCtx := createNewPcsCtx(translator, inputComp)
 		vortexCtxs[i] = dstVortexCtx
 
+		if params.RestrictPublicInputs != nil {
+
+			for k := range inputComp.PublicInputs {
+
+				name := inputComp.PublicInputs[k].Name
+				if _, ok := restrictedPublicInputSet[name]; !ok {
+					continue
+				}
+
+				if !params.SkipRecursionPrefix {
+					name = addPrefixToID(translator.Prefix, name)
+				}
+
+				comp.InsertPublicInput(
+					name,
+					accessors.NewFromPublicColumn(plonkCtx.Columns.PI[i], pubInputOffset+k),
+				)
+			}
+
+			continue
+		}
+
 		for k := range inputComp.PublicInputs {
 
+			name := inputComp.PublicInputs[k].Name
+			if !params.SkipRecursionPrefix {
+				name = addPrefixToID(translator.Prefix, name)
+			}
+
 			comp.InsertPublicInput(
-				addPrefixToID(translator.Prefix, inputComp.PublicInputs[k].Name),
+				name,
 				accessors.NewFromPublicColumn(plonkCtx.Columns.PI[i], pubInputOffset+k),
 			)
 		}

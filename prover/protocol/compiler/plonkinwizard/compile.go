@@ -112,7 +112,7 @@ func compileQuery(comp *wizard.CompiledIOP, q *query.PlonkInWizard, minimalRound
 		}
 	)
 
-	ctx.StackedCircuitData = dedicated.StackColumn(comp, ctx.TinyPIs)
+	ctx.StackedCircuitData = *dedicated.StackColumn(comp, ctx.TinyPIs)
 
 	checkActivators(comp, ctx)
 	checkPublicInputs(comp, ctx)

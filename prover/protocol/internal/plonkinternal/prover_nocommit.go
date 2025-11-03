@@ -68,12 +68,12 @@ func (pa PlonkNoCommitProverAction) Run(run *wizard.ProverRuntime, fullWitnesses
 				utils.Panic("[witness.Public] returned an error: %v", err)
 			}
 
-			if tinyPISize(pa.SPR) > 0 {
+			if pa.NbPublicInputs > 0 {
 
 				// Converts it as a smart-vector
 				pubWitSV := smartvectors.RightZeroPadded(
 					[]field.Element(pubWitness.Vector().(fr.Vector)),
-					tinyPISize(pa.SPR),
+					pa.NbPublicInputs,
 				)
 
 				// Assign the public witness

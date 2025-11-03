@@ -5,6 +5,8 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/consensys/linea-monorepo/prover/backend/files"
@@ -90,65 +92,99 @@ func LoadFromDisk(filePath string, assetPtr any, withCompression bool) error {
 }
 
 // StoreToDisk writes the provided assets to disk using the [Serialize] function.
+// It first writes to a temporary file in the same directory and then atomically renames it
+// to the target path, ensuring readers never see a partially written file.
 func StoreToDisk(filePath string, asset any, withCompression bool) error {
-
-	f := files.MustOverwrite(filePath)
-	defer f.Close()
-
 	var (
 		buf     []byte
 		serr    error
-		werr    error
 		compErr error
+		tSer    time.Duration
 		tComp   time.Duration
+		tW      time.Duration
 	)
 
-	tSer := profiling.TimeIt(func() {
+	// --- Serialize phase ---
+	tSer = profiling.TimeIt(func() {
 		buf, serr = Serialize(asset)
 	})
-
 	if serr != nil {
 		return fmt.Errorf("could not serialize %s: %w", filePath, serr)
 	}
 
+	// --- Optional compression ---
 	if withCompression {
-
 		tComp = profiling.TimeIt(func() {
-
 			var (
 				b = bytes.NewBuffer(nil)
 				w = lz4.NewWriter(b)
 			)
-
 			if _, compErr = w.Write(buf); compErr != nil {
 				return
 			}
-
 			if compErr = w.Flush(); compErr != nil {
 				return
 			}
-
 			buf = b.Bytes()
 		})
-
 		if compErr != nil {
-			return fmt.Errorf("could not compress file %s: %w", filePath, compErr)
+			return fmt.Errorf("could not compress %s: %w", filePath, compErr)
 		}
 	}
 
+	// --- Atomic write via temp + rename ---
+	dir := filepath.Dir(filePath)
+	_ = os.MkdirAll(dir, 0755)
+	base := filepath.Base(filePath)
+
+	tmpF, err := os.CreateTemp(dir, base+".tmp.*")
+	if err != nil {
+		return fmt.Errorf("could not create temp file in %s: %w", dir, err)
+	}
+	tmpName := tmpF.Name()
+
+	defer func() {
+		_ = tmpF.Close()
+		if tmpName != "" {
+			_ = os.Remove(tmpName) // cleanup on error
+		}
+	}()
+
 	diskWriteSemaphore.Acquire(context.Background(), 1)
-
-	tW := profiling.TimeIt(func() {
-		_, werr = f.Write(buf)
+	tW = profiling.TimeIt(func() {
+		_, err = tmpF.Write(buf)
 	})
-
 	diskWriteSemaphore.Release(1)
 
-	if werr != nil {
-		return fmt.Errorf("could not write to file %s: %w", filePath, werr)
+	if err != nil {
+		return fmt.Errorf("could not write temp file %s: %w", tmpName, err)
 	}
 
-	logrus.Infof("Wrote %s in %s, serialized in %s, compressed in %s, size: %dB", filePath, tW, tSer, tComp, len(buf))
+	// --- Ensure durability before rename ---
+	if err := tmpF.Sync(); err != nil {
+		return fmt.Errorf("could not fsync temp file %s: %w", tmpName, err)
+	}
+	if err := tmpF.Close(); err != nil {
+		return fmt.Errorf("could not close temp file %s: %w", tmpName, err)
+	}
+
+	// --- Atomic rename to final path ---
+	if err := os.Rename(tmpName, filePath); err != nil {
+		return fmt.Errorf("could not rename %s -> %s: %w", tmpName, filePath, err)
+	}
+	tmpName = "" // prevent deferred removal
+
+	// --- Best-effort fsync parent dir ---
+	if dirFd, err := os.Open(dir); err == nil {
+		_ = dirFd.Sync()
+		_ = dirFd.Close()
+	}
+
+	// --- Final log ---
+	logrus.Infof(
+		"Wrote %s in %s (serialize=%s, compress=%s, size=%dB)",
+		filePath, tW, tSer, tComp, len(buf),
+	)
 
 	return nil
 }

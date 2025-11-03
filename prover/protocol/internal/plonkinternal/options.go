@@ -39,6 +39,17 @@ func WithFixedNbRows(nbRow int) Option {
 	}
 }
 
+// WithFixedNbPublicInput fixes the size of the public input column. By default,
+// the compiler uses the next power of two of the number of public inputs. This
+// options allows overriding this value with a custom one. The provided value
+// should be larger than the number of public inputs.
+func WithFixedNbPublicInput(nbPublicInput int) Option {
+	return func(c *compilationCtx) {
+		c.FixedNbPublicInputOption.Enabled = true
+		c.FixedNbPublicInputOption.NbPI = nbPublicInput
+	}
+}
+
 // WithExternalHasher allows using an external hasher for the witness
 // commitment. The hash function is MiMC.
 func WithExternalHasher(fixedNbRow int) Option {

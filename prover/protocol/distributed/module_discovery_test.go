@@ -17,7 +17,7 @@ func TestStandardDiscoveryOnZkEVM(t *testing.T) {
 		z    = zkevm.GetTestZkEVM()
 		disc = &distributed.StandardModuleDiscoverer{
 			TargetWeight: 1 << 28,
-			Affinities:   zkevm.GetAffinities(z),
+			Advices:      zkevm.DiscoveryAdvices,
 			Predivision:  16,
 		}
 	)
@@ -26,8 +26,6 @@ func TestStandardDiscoveryOnZkEVM(t *testing.T) {
 
 	// The test is to make sure that this function returns
 	disc.Analyze(z.WizardIOP)
-
-	fmt.Printf("%++v\n", disc)
 
 	allCols := z.WizardIOP.Columns.AllKeys()
 	for _, colName := range allCols {

@@ -181,6 +181,7 @@ func hashReadReset(r io.Reader) {
 	if _, err := r.Read(ls[:]); err != nil {
 		panic(err)
 	}
+	//#nosec G602
 	if ls[0] != 255 || ls[1] != 255 {
 		panic(fmt.Errorf("ReaderHash.Reset: unexpected %x", ls))
 	}

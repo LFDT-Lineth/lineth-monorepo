@@ -96,6 +96,8 @@ func Repeat(x field.Element, n int) []field.Element {
 }
 
 // ForTest returns a vector instantiated from a list of integers.
+// @alex: it would be nicer to create a function "IntsToFr" or "FrFromInts" as
+// it would make the name more explicit and more generic.
 func ForTest(xs ...int) []field.Element {
 	res := make([]field.Element, len(xs))
 	for i, x := range xs {

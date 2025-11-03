@@ -70,7 +70,7 @@ type Operator interface {
 func (e *Expression) Board() ExpressionBoard {
 	board := emptyBoard()
 	e.anchor(&board)
-	board.esHashesToPos = nil // free the map, we don't need it anymore
+	board.EsHashesToPos = nil // free the map, we don't need it anymore
 	return board
 }
 
@@ -101,7 +101,7 @@ func (e *Expression) BoardListVariableMetadata() []Metadata {
 // anchor pins down the Expression onto an ExpressionBoard.
 func (e *Expression) anchor(b *ExpressionBoard) nodeID {
 	// recursion base case: the node was already anchored
-	if id, ok := b.esHashesToPos[e.ESHash]; ok {
+	if id, ok := b.EsHashesToPos[e.ESHash]; ok {
 		return id
 	}
 
@@ -140,7 +140,7 @@ func (e *Expression) anchor(b *ExpressionBoard) nodeID {
 		Also, add it to the list of nodes at the position corresponding to
 		its new NodeID
 	*/
-	b.esHashesToPos[e.ESHash] = id
+	b.EsHashesToPos[e.ESHash] = id
 	b.Nodes[id.level()] = append(b.Nodes[id.level()], newNode)
 
 	return id

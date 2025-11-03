@@ -18,6 +18,9 @@ import (
 // CompiledIOP and not the distributed ones.
 type FilteredModuleInputs struct {
 
+	// ModuleIndex is the integer index of the module
+	ModuleIndex int
+
 	// ModuleName is the name of the current module.
 	ModuleName ModuleName
 
@@ -118,6 +121,14 @@ func (mf moduleFilter) FilterCompiledIOP(comp *wizard.CompiledIOP) FilteredModul
 		queryParamsName   = comp.QueriesParams.AllUnignoredKeys()
 		queryNoParamsName = comp.QueriesNoParams.AllUnignoredKeys()
 	)
+
+	// This sets the correct module index
+	for i, name := range mf.Disc.ModuleList() {
+		if name == mf.Module {
+			fmi.ModuleIndex = i
+			break
+		}
+	}
 
 	for _, columnName := range columnNames {
 

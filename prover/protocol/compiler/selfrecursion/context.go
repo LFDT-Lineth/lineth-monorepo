@@ -102,6 +102,11 @@ type Columns struct {
 	// by Q
 	UalphaQ ifaces.Column
 
+	// (Commitment, to compute)
+	//
+	// Represents the filter for the inclusion check on UalphaQ
+	UalphaQFilter ifaces.Column
+
 	// (Auto-computed)
 	//
 	// The linear combination of the sis preimages by rCollapse

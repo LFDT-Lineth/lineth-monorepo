@@ -8,24 +8,67 @@ import (
 	"github.com/consensys/linea-monorepo/prover/protocol/column"
 	"github.com/consensys/linea-monorepo/prover/protocol/column/verifiercol"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
+	"github.com/consensys/linea-monorepo/prover/protocol/query"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
+	sym "github.com/consensys/linea-monorepo/prover/symbolic"
 	"github.com/consensys/linea-monorepo/prover/utils"
 )
 
 // StackedColumn is a dedicated wizard computing a column by stacking other
 // columns on top of each others.
+// When source columns are padded with zeros, the Column field gives the
+// stacked column with the padding included. Whereas UnpaddedColumn gives
+// the stacking of the source columns without the padding. For example,
+// if we have two source columns A and B, with A being [1, 2, 3, 0] and B
+// being [4, 5, 6, 0], the stacked column will be [1, 2, 3, 0, 4, 5, 6, 0],
+// while the unpadded column will be [1, 2, 3, 4, 5, 6, 0, 0]. Notice that
+// stacking sometimes needs zero padding to make the stacked column size a power of two.
 type StackedColumn struct {
 	// Column is the built column
 	Column column.Natural
 	// Source is the list of columns to stack. All of them should have the
-	// same number of rows. If after stacking all the rows, the total number of
-	// rows is not a power of two, then
-	// we pad with zeros up to the next power of two.
+	// same number of rows.
 	Source []ifaces.Column
+	// UnpaddedColumn is the column that is built using the unpadded portions
+	// of the source columns. This is useful for stacking the zero padded source
+	// columns
+	//
+	// @alex: We store a pointer to Natural because having empty Natural causes
+	// issues with the serializer. In principle, we could have fixed the
+	// serializer but it's simpler to just use a pointer as it circumvent the
+	// issue. However, we take dedicated care to ensure that the pointer is
+	// never propagated and is always dereferenced when passed as ifaces.Column.
+	UnpaddedColumn *column.Natural
+	// ColumnFilter is the filter used for the projection query between
+	// Column and UnpaddedColumn.
+	//
+	// @alex: We store a pointer to Natural because having empty Natural causes
+	// issues with the serializer. In principle, we could have fixed the
+	// serializer but it's simpler to just use a pointer as it circumvent the
+	// issue. However, we take dedicated care to ensure that the pointer is
+	// never propagated and is always dereferenced when passed as ifaces.Column.
+	ColumnFilter *column.Natural
+	// UnpaddedColumnFilter is the filter used for the projection query
+	// between Column and UnpaddedColumn.
+	//
+	// @alex: We store a pointer to Natural because having empty Natural causes
+	// issues with the serializer. In principle, we could have fixed the
+	// serializer but it's simpler to just use a pointer as it circumvent the
+	// issue. However, we take dedicated care to ensure that the pointer is
+	// never propagated and is always dereferenced when passed as ifaces.Column.
+	UnpaddedColumnFilter *column.Natural
+	// UnpaddedSize is the size of the non zero portions of the source columns.
+	UnpaddedSize int
+	// IsSourceColsArePadded indicates whether the source columns are padded or not.
+	// We assume the padding size is the same for all source columns.
+	IsSourceColsArePadded bool
 }
 
+// Options for the StackedColumn
+type StackColumnOp func(stkCol *StackedColumn)
+
 // StackColumn defines and constrains a [StackedColumn] wizard element.
-func StackColumn(comp *wizard.CompiledIOP, srcs []ifaces.Column) StackedColumn {
+func StackColumn(comp *wizard.CompiledIOP, srcs []ifaces.Column, opts ...StackColumnOp) *StackedColumn {
 
 	var (
 		srcs_length = srcs[0].Size()
@@ -90,26 +133,138 @@ func StackColumn(comp *wizard.CompiledIOP, srcs []ifaces.Column) StackedColumn {
 
 	comp.InsertFixedPermutation(
 		round,
-		ifaces.QueryID(name)+"_CHECK",
+		ifaces.QueryID(name)+"PERMUTATION_CHECK",
 		s_padded,
 		[]ifaces.Column{col},
 		srcs_padded,
 	)
 
-	return StackedColumn{
+	stkCol := &StackedColumn{
 		Column: col.(column.Natural),
 		Source: srcs,
+	}
+	for _, op := range opts {
+		op(stkCol)
+	}
+
+	// Handle the padding of the source columns
+	if stkCol.IsSourceColsArePadded {
+
+		unpaddedColumn := comp.InsertCommit(
+			round,
+			ifaces.ColID(name+"_UNPADDED"),
+			utils.NextPowerOfTwo(stkCol.UnpaddedSize*len(stkCol.Source)),
+		).(column.Natural)
+		stkCol.UnpaddedColumn = &unpaddedColumn
+
+		columnFilter := comp.InsertCommit(
+			round,
+			ifaces.ColID(name+"_COLUMN_FILTER"),
+			stkCol.Column.Size(),
+		).(column.Natural)
+		stkCol.ColumnFilter = &columnFilter
+
+		unpaddedColumnFilter := comp.InsertCommit(
+			round,
+			ifaces.ColID(name+"_UNPADDED_COLUMN_FILTER"),
+			stkCol.UnpaddedColumn.Size(),
+		).(column.Natural)
+		stkCol.UnpaddedColumnFilter = &unpaddedColumnFilter
+
+		// Insert a projection query on the
+		// stacked and unpadded stacked columns
+		comp.InsertProjection(
+			ifaces.QueryID(name)+"_PROJECTION",
+			query.ProjectionInput{
+				ColumnA: []ifaces.Column{stkCol.Column},
+				ColumnB: []ifaces.Column{*stkCol.UnpaddedColumn},
+				FilterA: *stkCol.ColumnFilter,
+				FilterB: *stkCol.UnpaddedColumnFilter,
+			},
+		)
+		// Insert a binarity constraint for ColumnFilter and
+		// UnpaddedColumnFilter
+		MustBeBinary(comp, *stkCol.ColumnFilter, round)
+		MustBeBinary(comp, *stkCol.UnpaddedColumnFilter, round)
+		return stkCol
+	} else {
+		return stkCol
 	}
 }
 
 // Assigns assigns the stack column
-func (s StackedColumn) Run(run *wizard.ProverRuntime) {
+func (s *StackedColumn) Run(run *wizard.ProverRuntime) {
+	var (
+		column = make([]field.Element, 0, s.Column.Size())
+	)
+	// Variables needed only when IsPadded is true
+	var (
+		unpadded_column        []field.Element
+		column_filter          []field.Element
+		unpadded_column_filter []field.Element
+		filterElemNonPadding   []field.Element
+		filterElemPadding      []field.Element
+	)
 
-	res := make([]field.Element, 0, s.Column.Size())
-	for i := range s.Source {
-		a := s.Source[i].GetColAssignment(run).IntoRegVecSaveAlloc()
-		res = append(res, a...)
+	if s.IsSourceColsArePadded {
+		// Only declare and use these variables if IsPadded is true
+		filterElemNonPadding = make([]field.Element, 0, s.UnpaddedSize)
+		filterElemPadding = make([]field.Element, 0, s.Source[0].Size()-s.UnpaddedSize)
+		unpadded_column = make([]field.Element, 0, s.UnpaddedColumn.Size())
+		column_filter = make([]field.Element, 0, s.ColumnFilter.Size())
+		unpadded_column_filter = make([]field.Element, 0, s.UnpaddedColumnFilter.Size())
+
+		for i := 0; i < s.UnpaddedSize; i++ {
+			filterElemNonPadding = append(filterElemNonPadding, field.One())
+		}
+		for i := 0; i < s.Source[0].Size()-s.UnpaddedSize; i++ {
+			filterElemPadding = append(filterElemPadding, field.Zero())
+		}
 	}
 
-	run.AssignColumn(s.Column.ID, smartvectors.RightZeroPadded(res, s.Column.Size()))
+	// Assign the columns
+	for i := range s.Source {
+		source_assignment := s.Source[i].GetColAssignment(run).IntoRegVecSaveAlloc()
+		column = append(column, source_assignment...)
+		if s.IsSourceColsArePadded {
+			source_assignment_unpadded := source_assignment[:s.UnpaddedSize]
+			unpadded_column = append(unpadded_column, source_assignment_unpadded...)
+			column_filter = append(column_filter, filterElemNonPadding...)
+			column_filter = append(column_filter, filterElemPadding...)
+			unpadded_column_filter = append(unpadded_column_filter, filterElemNonPadding...)
+		}
+	}
+	run.AssignColumn(s.Column.ID, smartvectors.RightZeroPadded(column, s.Column.Size()))
+	if s.IsSourceColsArePadded {
+		run.AssignColumn(s.UnpaddedColumn.ID, smartvectors.RightZeroPadded(unpadded_column, s.UnpaddedColumn.Size()))
+		run.AssignColumn(s.ColumnFilter.ID, smartvectors.RightZeroPadded(column_filter, s.Column.Size()))
+		run.AssignColumn(s.UnpaddedColumnFilter.ID, smartvectors.RightZeroPadded(unpadded_column_filter, s.UnpaddedColumnFilter.Size()))
+	}
+}
+
+// Handles the padded source columns for the stacked column
+func HandleSourcePaddedColumns(unpaddedSourceColSize int) StackColumnOp {
+	return func(stkCol *StackedColumn) {
+		// Sanity check: the source column size should be the next power of two
+		// of the unpaddedSourceColSize
+		if stkCol.Source[0].Size() != utils.NextPowerOfTwo(unpaddedSourceColSize) {
+			utils.Panic("source size %v is not the next power of two of the unpaddedSourceColSize %v", stkCol.Source[0].Size(), unpaddedSourceColSize)
+		}
+		// If the unpaddedSourceColSize is already a power of two, we dont need anything special
+		if utils.IsPowerOfTwo(unpaddedSourceColSize) {
+			stkCol.IsSourceColsArePadded = false
+		} else {
+			stkCol.UnpaddedSize = unpaddedSourceColSize
+			stkCol.IsSourceColsArePadded = true
+		}
+	}
+}
+
+// MustBeBinary constraints c to be binary
+func MustBeBinary(comp *wizard.CompiledIOP, c ifaces.Column, round int) {
+	comp.InsertGlobal(
+		round,
+		ifaces.QueryIDf("%v_IS_BINARY", c.GetColID()),
+		sym.Mul(c, sym.Sub(c, 1)),
+	)
 }

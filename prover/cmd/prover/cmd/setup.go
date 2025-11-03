@@ -271,10 +271,11 @@ func createCircuitBuilder(c circuits.CircuitID, cfg *config.Config, args SetupAr
 			return nil, nil, fmt.Errorf("failed to write limitless prover assets: %w", err)
 		}
 		compCong := asset.DistWizard.CompiledConglomeration
+		vkMerkleRoot := asset.DistWizard.VerificationKeyMerkleTree.GetRoot()
 		asset = nil
 		runtime.GC()
 
-		return execution.NewBuilderLimitless(compCong.Wiop, &limits), extraFlags, nil
+		return execution.NewBuilderLimitless(compCong, vkMerkleRoot, &limits), extraFlags, nil
 
 	case circuits.BlobDecompressionV0CircuitID:
 		dict, err := os.ReadFile(args.DictPath)

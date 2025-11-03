@@ -212,6 +212,15 @@ func (ctx *MultipointToSinglepointCompilation) cptEvaluationMapGnark(api fronten
 			continue
 		}
 
+		// When encountering a verifiercol.RepeatCol, the optimization is to
+		// represent the column not to its full length but as a length 1 column
+		// which will yield the same result in the end.
+		if repeatCol, isRepeatCol := c.(verifiercol.RepeatedAccessor); isRepeatCol {
+			y := repeatCol.Accessor.GetFrontendVariable(api, run)
+			polys = append(polys, []frontend.Variable{y})
+			continue
+		}
+
 		poly := c.GetColAssignmentGnark(run)
 		polys = append(polys, poly)
 	}

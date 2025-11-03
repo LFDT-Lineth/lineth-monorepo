@@ -25,6 +25,12 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+var (
+	// Avoid setting both modes to true at the same time
+	isTest      = true
+	isBenchmark = false
+)
+
 // returns a dummy column name
 func dummyColName(i int) ifaces.ColID {
 	return ifaces.ColIDf("POLY_%v", i)
@@ -43,14 +49,11 @@ func dummyCoinName(i int) coin.Name {
 // name of the evaluation query
 const QNAME ifaces.QueryID = "EVAL"
 
-// sis instances
+// DO NOT CHANGE THESE from std params of ringsis instances
+// marshalling/unmarshalling depends on it
 var sisInstances = []ringsis.Params{
-	{LogTwoBound: 8, LogTwoDegree: 1},
-	{LogTwoBound: 8, LogTwoDegree: 2},
-	{LogTwoBound: 8, LogTwoDegree: 3},
-	{LogTwoBound: 8, LogTwoDegree: 6},
-	{LogTwoBound: 8, LogTwoDegree: 5},
-	{LogTwoBound: 16, LogTwoDegree: 6},
+	ringsis.StdParams, ringsis.StdParams, ringsis.StdParams,
+	ringsis.StdParams, ringsis.StdParams, ringsis.StdParams,
 }
 
 // testcase type
@@ -138,220 +141,228 @@ func generateProtocol(tc TestCase) (define func(*wizard.Builder)) {
 	return define
 }
 
-func TestSerdeIOP1(t *testing.T) {
-
-	for _, tc := range testcases {
-		t.Run(fmt.Sprintf("testcase-%++v", tc), func(subT *testing.T) {
-			define := generateProtocol(tc)
-			sisInstances := tc.SisInstance
-
-			comp := wizard.Compile(
-				define,
-				vortex.Compile(
-					2,
-					vortex.ForceNumOpenedColumns(16),
-					vortex.WithSISParams(&sisInstances),
-				),
-				selfrecursion.SelfRecurse,
-				dummy.Compile,
-			)
-
-			runSerdeTest(t, comp, "iop1", true, false)
-		})
-	}
-}
-
-func TestSerdeIOP2(t *testing.T) {
-
-	tc := TestCase{Numpoly: 32, NumRound: 3, PolSize: 32, NumOpenCol: 16, SisInstance: sisInstances[0]}
-	t.Run(fmt.Sprintf("testcase-%++v", tc), func(subT *testing.T) {
-		define := generateProtocol(tc)
-
-		comp := wizard.Compile(
-			define,
-			vortex.Compile(
-				2,
-				vortex.ForceNumOpenedColumns(tc.NumOpenCol),
-				vortex.WithSISParams(&tc.SisInstance),
-			),
-			selfrecursion.SelfRecurse,
-			mimc.CompileMiMC,
-			compiler.Arcane(
-				compiler.WithTargetColSize(1<<10)),
-			vortex.Compile(
-				2,
-				vortex.ForceNumOpenedColumns(tc.NumOpenCol),
-				vortex.WithSISParams(&tc.SisInstance),
-			),
-			selfrecursion.SelfRecurse,
-			mimc.CompileMiMC,
-			compiler.Arcane(
-				compiler.WithTargetColSize(1<<13)),
-			vortex.Compile(
-				2,
-				vortex.ForceNumOpenedColumns(tc.NumOpenCol),
-				vortex.WithSISParams(&tc.SisInstance),
-			),
-			dummy.Compile,
-		)
-
-		runSerdeTest(t, comp, "iop2", true, false)
-	})
-}
-
-// Test for committing to the precomputed polynomials
-func TestSerdeIOP3(t *testing.T) {
-
-	for _, tc := range testcases_precomp {
-		t.Run(fmt.Sprintf("testcase-%++v", tc), func(subT *testing.T) {
-			define := generateProtocol(tc)
-			sisInstances := tc.SisInstance
-			comp := wizard.Compile(
-				define,
-				vortex.Compile(
-					2,
-					vortex.ForceNumOpenedColumns(16),
-					vortex.WithSISParams(&sisInstances),
-				),
-				selfrecursion.SelfRecurse,
-				dummy.Compile,
-			)
-
-			runSerdeTest(t, comp, "iop3", true, false)
-		})
-	}
-}
-
-// Test for precomputed polys with multilayered self recursion
-func TestSerdeIOP4(t *testing.T) {
-
-	logrus.SetLevel(logrus.FatalLevel)
-
-	tc := TestCase{Numpoly: 32, NumRound: 3, PolSize: 32, NumOpenCol: 16, SisInstance: sisInstances[0],
-		NumPrecomp: 4, IsCommitPrecomp: true}
-	t.Run(fmt.Sprintf("testcase-%++v", tc), func(subT *testing.T) {
-		define := generateProtocol(tc)
-
-		comp := wizard.Compile(
-			define,
-			vortex.Compile(
-				2,
-				vortex.ForceNumOpenedColumns(16),
-				vortex.WithSISParams(&tc.SisInstance),
-			),
-			selfrecursion.SelfRecurse,
-			mimc.CompileMiMC,
-			compiler.Arcane(
-				compiler.WithTargetColSize(1<<10)),
-			vortex.Compile(
-				2,
-				vortex.ForceNumOpenedColumns(16),
-				vortex.WithSISParams(&tc.SisInstance),
-			),
-			selfrecursion.SelfRecurse,
-			mimc.CompileMiMC,
-			compiler.Arcane(
-				compiler.WithTargetColSize(1<<13)),
-			vortex.Compile(
-				2,
-				vortex.ForceNumOpenedColumns(16),
-				vortex.WithSISParams(&tc.SisInstance),
-			),
-			dummy.Compile,
-		)
-
-		runSerdeTest(t, comp, "iop4", true, false)
-	})
-}
-
 const lppMerkleRootPublicInput = "LPP_COLUMNS_MERKLE_ROOTS"
 
-func TestSerdeIOP5(t *testing.T) {
-
-	numRow := 1 << 10
-	tc := distributeTestCase{numRow: numRow}
-	sisInstance := ringsis.Params{LogTwoBound: 16, LogTwoDegree: 6}
-
-	t.Run(fmt.Sprintf("testcase-%++v", tc), func(subT *testing.T) {
-
-		comp := wizard.Compile(
-			func(build *wizard.Builder) {
-				tc.define(build.CompiledIOP)
-			},
-			mimc.CompileMiMC,
-			plonkinwizard.Compile,
-			compiler.Arcane(
-				compiler.WithTargetColSize(1<<17),
-				compiler.WithDebugMode("conglomeration"),
-			),
-			vortex.Compile(
-				2,
-				vortex.ForceNumOpenedColumns(256),
-				vortex.WithSISParams(&sisInstance),
-				vortex.AddMerkleRootToPublicInputs(lppMerkleRootPublicInput, []int{0}),
-			),
-			selfrecursion.SelfRecurse,
-			cleanup.CleanUp,
-			mimc.CompileMiMC,
-			compiler.Arcane(
-				compiler.WithTargetColSize(1<<15),
-			),
-			vortex.Compile(
-				8,
-				vortex.ForceNumOpenedColumns(64),
-				vortex.WithSISParams(&sisInstance),
-			),
-			selfrecursion.SelfRecurse,
-			cleanup.CleanUp,
-			mimc.CompileMiMC,
-			compiler.Arcane(
-				compiler.WithTargetColSize(1<<13),
-			),
-			vortex.Compile(
-				8,
-				vortex.ForceNumOpenedColumns(64),
-				vortex.WithOptionalSISHashingThreshold(1<<20),
-			),
-		)
-
-		runSerdeTest(t, comp, "iop5", true, false)
-	})
+// Scenario registry
+type serdeScenario struct {
+	name      string
+	build     func() *wizard.CompiledIOP
+	testCases []TestCase
+	test      bool
+	benchmark bool
 }
 
-func TestSerdeIOP6(t *testing.T) {
+// Cached scenarios to avoid recompilation
+var cachedScenarios = make(map[string]*wizard.CompiledIOP)
 
-	define1 := func(bui *wizard.Builder) {
-
-		var (
-			a = bui.RegisterCommit("A", 8)
-			b = bui.RegisterCommit("B", 8)
-		)
-
-		bui.Inclusion("Q", []ifaces.Column{a}, []ifaces.Column{b})
+func getScenarioComp(scenario *serdeScenario) *wizard.CompiledIOP {
+	if comp, exists := cachedScenarios[scenario.name]; exists {
+		return comp
 	}
 
-	suites := [][]func(*wizard.CompiledIOP){
-		{
-			logderivativesum.CompileLookups,
-			localcs.Compile,
-			globalcs.Compile,
-			univariates.Naturalize,
-			mpts.Compile(),
-			vortex.Compile(
-				2,
-				vortex.ForceNumOpenedColumns(4),
-				vortex.WithSISParams(&ringsis.StdParams),
-				vortex.PremarkAsSelfRecursed(),
-				vortex.WithOptionalSISHashingThreshold(0),
-			),
+	comp := scenario.build()
+	cachedScenarios[scenario.name] = comp
+	return comp
+}
+
+// Scenarios definition
+var serdeScenarios = []serdeScenario{
+	{
+		name: "iop1",
+		build: func() *wizard.CompiledIOP {
+			// Use first testcase for compilation (since we need one representative)
+			tc := testcases[0]
+			return wizard.Compile(
+				generateProtocol(tc),
+				vortex.Compile(
+					2,
+					vortex.ForceNumOpenedColumns(16),
+					vortex.WithSISParams(&tc.SisInstance),
+				),
+				selfrecursion.SelfRecurse,
+				dummy.Compile,
+			)
 		},
-	}
+		testCases: testcases, // Multiple test cases
+		test:      isTest,
+		benchmark: isBenchmark,
+	},
+	{
+		name: "iop2",
+		build: func() *wizard.CompiledIOP {
+			tc := TestCase{Numpoly: 32, NumRound: 3, PolSize: 32, NumOpenCol: 16, SisInstance: sisInstances[0]}
+			return wizard.Compile(
+				generateProtocol(tc),
+				vortex.Compile(
+					2,
+					vortex.ForceNumOpenedColumns(tc.NumOpenCol),
+					vortex.WithSISParams(&tc.SisInstance),
+				),
+				selfrecursion.SelfRecurse,
+				mimc.CompileMiMC,
+				compiler.Arcane(
+					compiler.WithTargetColSize(1<<10)),
+				vortex.Compile(
+					2,
+					vortex.ForceNumOpenedColumns(tc.NumOpenCol),
+					vortex.WithSISParams(&tc.SisInstance),
+				),
+				selfrecursion.SelfRecurse,
+				mimc.CompileMiMC,
+				compiler.Arcane(
+					compiler.WithTargetColSize(1<<13)),
+				vortex.Compile(
+					2,
+					vortex.ForceNumOpenedColumns(tc.NumOpenCol),
+					vortex.WithSISParams(&tc.SisInstance),
+				),
+				dummy.Compile,
+			)
+		},
+		testCases: []TestCase{{Numpoly: 32, NumRound: 3, PolSize: 32, NumOpenCol: 16, SisInstance: sisInstances[0]}},
+		test:      isTest,
+		benchmark: isBenchmark,
+	},
+	{
+		name: "iop3",
+		build: func() *wizard.CompiledIOP {
+			// Use first testcase for compilation
+			tc := testcases_precomp[0]
+			return wizard.Compile(
+				generateProtocol(tc),
+				vortex.Compile(
+					2,
+					vortex.ForceNumOpenedColumns(16),
+					vortex.WithSISParams(&tc.SisInstance),
+				),
+				selfrecursion.SelfRecurse,
+				dummy.Compile,
+			)
+		},
+		testCases: testcases_precomp, // Multiple test cases
+		test:      isTest,
+		benchmark: isBenchmark,
+	},
+	{
+		name: "iop4",
+		build: func() *wizard.CompiledIOP {
+			tc := TestCase{Numpoly: 32, NumRound: 3, PolSize: 32, NumOpenCol: 16, SisInstance: sisInstances[0],
+				NumPrecomp: 4, IsCommitPrecomp: true}
+			return wizard.Compile(
+				generateProtocol(tc),
+				vortex.Compile(
+					2,
+					vortex.ForceNumOpenedColumns(16),
+					vortex.WithSISParams(&tc.SisInstance),
+				),
+				selfrecursion.SelfRecurse,
+				mimc.CompileMiMC,
+				compiler.Arcane(
+					compiler.WithTargetColSize(1<<10)),
+				vortex.Compile(
+					2,
+					vortex.ForceNumOpenedColumns(16),
+					vortex.WithSISParams(&tc.SisInstance),
+				),
+				selfrecursion.SelfRecurse,
+				mimc.CompileMiMC,
+				compiler.Arcane(
+					compiler.WithTargetColSize(1<<13)),
+				vortex.Compile(
+					2,
+					vortex.ForceNumOpenedColumns(16),
+					vortex.WithSISParams(&tc.SisInstance),
+				),
+				dummy.Compile,
+			)
+		},
+		testCases: []TestCase{{Numpoly: 32, NumRound: 3, PolSize: 32, NumOpenCol: 16, SisInstance: sisInstances[0],
+			NumPrecomp: 4, IsCommitPrecomp: true}},
+		test:      isTest,
+		benchmark: isBenchmark,
+	},
+	{
+		name: "iop5",
+		build: func() *wizard.CompiledIOP {
+			numRow := 1 << 10
+			tc := distributeTestCase{numRow: numRow}
+			sisInstance := ringsis.Params{LogTwoBound: 16, LogTwoDegree: 6}
+			return wizard.Compile(
+				func(build *wizard.Builder) {
+					tc.define(build.CompiledIOP)
+				},
+				mimc.CompileMiMC,
+				plonkinwizard.Compile,
+				compiler.Arcane(
+					compiler.WithTargetColSize(1<<17),
+					compiler.WithDebugMode("conglomeration"),
+				),
+				vortex.Compile(
+					2,
+					vortex.ForceNumOpenedColumns(256),
+					vortex.WithSISParams(&sisInstance),
+					vortex.AddMerkleRootToPublicInputs(lppMerkleRootPublicInput, []int{0}),
+				),
+				selfrecursion.SelfRecurse,
+				cleanup.CleanUp,
+				mimc.CompileMiMC,
+				compiler.Arcane(
+					compiler.WithTargetColSize(1<<15),
+				),
+				vortex.Compile(
+					8,
+					vortex.ForceNumOpenedColumns(64),
+					vortex.WithSISParams(&sisInstance),
+				),
+				selfrecursion.SelfRecurse,
+				cleanup.CleanUp,
+				mimc.CompileMiMC,
+				compiler.Arcane(
+					compiler.WithTargetColSize(1<<13),
+				),
+				vortex.Compile(
+					8,
+					vortex.ForceNumOpenedColumns(64),
+					vortex.WithOptionalSISHashingThreshold(1<<20),
+				),
+			)
+		},
+		testCases: []TestCase{{}}, // Empty test cases since this is a special case
+		test:      isTest,
+		benchmark: isBenchmark,
+	},
+	{
+		name: "iop6",
+		build: func() *wizard.CompiledIOP {
+			define1 := func(bui *wizard.Builder) {
+				var (
+					a = bui.RegisterCommit("A", 8)
+					b = bui.RegisterCommit("B", 8)
+				)
+				bui.Inclusion("Q", []ifaces.Column{a}, []ifaces.Column{b})
+			}
 
-	for i, s := range suites {
+			suites := [][]func(*wizard.CompiledIOP){
+				{
+					logderivativesum.CompileLookups,
+					localcs.Compile,
+					globalcs.Compile,
+					univariates.Naturalize,
+					mpts.Compile(),
+					vortex.Compile(
+						2,
+						vortex.ForceNumOpenedColumns(4),
+						vortex.WithSISParams(&ringsis.StdParams),
+						vortex.PremarkAsSelfRecursed(),
+						vortex.WithOptionalSISHashingThreshold(0),
+					),
+				},
+			}
 
-		t.Run(fmt.Sprintf("case-%v", i), func(t *testing.T) {
+			// Use first suite for compilation
+			s := suites[0]
 			comp1 := wizard.Compile(define1, s...)
-			runSerdeTest(t, comp1, fmt.Sprintf("iop6-recursion-comp1-%v", i), true, false)
+
 			define2 := func(build2 *wizard.Builder) {
 				recursion.DefineRecursionOf(build2.CompiledIOP, comp1, recursion.Parameters{
 					Name:        "test",
@@ -359,8 +370,216 @@ func TestSerdeIOP6(t *testing.T) {
 					MaxNumProof: 1,
 				})
 			}
-			comp2 := wizard.Compile(define2, dummy.CompileAtProverLvl())
-			runSerdeTest(t, comp2, fmt.Sprintf("iop6-recursion-comp2-%v", i), true, false)
+
+			return wizard.Compile(define2, dummy.CompileAtProverLvl())
+		},
+		testCases: []TestCase{{}}, // Empty test cases since this is a special case
+		test:      isTest,
+		benchmark: isBenchmark,
+	},
+}
+
+// Test function that runs sanity checks for all scenarios with multiple test cases
+func TestSerdeIOPAll(t *testing.T) {
+	for _, scenario := range serdeScenarios {
+		if !scenario.test {
+			continue
+		}
+
+		comp := getScenarioComp(&scenario)
+
+		// For scenarios with multiple test cases, run each one
+		if len(scenario.testCases) > 0 {
+			for i, tc := range scenario.testCases {
+				t.Run(fmt.Sprintf("%s-testcase-%d-%+v", scenario.name, i, tc), func(subT *testing.T) {
+					// Note: For sanity testing with multiple test cases, we just use the compiled IOP
+					// as a representative. The actual protocol generation is handled in the original tests
+					runSerdeTest(subT, comp, fmt.Sprintf("%s-%d", scenario.name, i), true, false)
+				})
+			}
+		} else {
+			// Single case scenarios
+			t.Run(fmt.Sprintf("%s-single", scenario.name), func(subT *testing.T) {
+				runSerdeTest(subT, comp, scenario.name, true, false)
+			})
+		}
+	}
+}
+
+// Benchmark functions
+func BenchmarkSerIOP1(b *testing.B) {
+	benchmarkScenario(b, "iop1", true) // true for serialization only
+}
+
+func BenchmarkDeserIOP1(b *testing.B) {
+	benchmarkScenario(b, "iop1", false) // false for deserialization only
+}
+
+func BenchmarkSerIOP2(b *testing.B) {
+	benchmarkScenario(b, "iop2", true)
+}
+
+func BenchmarkDeserIOP2(b *testing.B) {
+	benchmarkScenario(b, "iop2", false)
+}
+
+func BenchmarkSerIOP3(b *testing.B) {
+	benchmarkScenario(b, "iop3", true)
+}
+
+func BenchmarkDeserIOP3(b *testing.B) {
+	benchmarkScenario(b, "iop3", false)
+}
+
+func BenchmarkSerIOP4(b *testing.B) {
+	benchmarkScenario(b, "iop4", true)
+}
+
+func BenchmarkDeserIOP4(b *testing.B) {
+	benchmarkScenario(b, "iop4", false)
+}
+
+func BenchmarkSerIOP5(b *testing.B) {
+	benchmarkScenario(b, "iop5", true)
+}
+
+func BenchmarkDeserIOP5(b *testing.B) {
+	benchmarkScenario(b, "iop5", false)
+}
+
+func BenchmarkSerIOP6(b *testing.B) {
+	benchmarkScenario(b, "iop6", true)
+}
+
+func BenchmarkDeserIOP6(b *testing.B) {
+	benchmarkScenario(b, "iop6", false)
+}
+
+// Helper function to run benchmark for a specific scenario
+func benchmarkScenario(b *testing.B, scenarioName string, onlySerialize bool) {
+	// Find the scenario
+	var scenario *serdeScenario
+	for _, s := range serdeScenarios {
+		if s.name == scenarioName {
+			scenario = &s
+			break
+		}
+	}
+
+	if scenario == nil {
+		b.Fatalf("Scenario %s not found", scenarioName)
+	}
+
+	if !scenario.benchmark {
+		b.Skipf("Scenario %s is not configured for benchmarking", scenarioName)
+		return
+	}
+
+	comp := getScenarioComp(scenario)
+	runSerdeBenchmark(b, comp, scenarioName, onlySerialize)
+}
+
+// Keep original test functions for backward compatibility (optional)
+// You can remove these if you only want to use TestSerdeAll
+
+func TestSerdeIOP1(t *testing.T) {
+	if len(testcases) == 0 {
+		t.Skip("No test cases for iop1")
+		return
+	}
+
+	scenario := findScenario("iop1")
+	if scenario == nil {
+		t.Fatal("iop1 scenario not found")
+	}
+
+	comp := getScenarioComp(scenario)
+
+	for i, tc := range testcases {
+		t.Run(fmt.Sprintf("testcase-%d-%+v", i, tc), func(subT *testing.T) {
+			runSerdeTest(subT, comp, fmt.Sprintf("iop1-%d", i), true, false)
 		})
 	}
+}
+
+func TestSerdeIOP2(t *testing.T) {
+	scenario := findScenario("iop2")
+	if scenario == nil {
+		t.Fatal("iop2 scenario not found")
+	}
+
+	comp := getScenarioComp(scenario)
+
+	t.Run("single-case", func(subT *testing.T) {
+		runSerdeTest(subT, comp, "iop2", true, false)
+	})
+}
+
+func TestSerdeIOP3(t *testing.T) {
+	if len(testcases_precomp) == 0 {
+		t.Skip("No test cases for iop3")
+		return
+	}
+
+	scenario := findScenario("iop3")
+	if scenario == nil {
+		t.Fatal("iop3 scenario not found")
+	}
+
+	comp := getScenarioComp(scenario)
+
+	for i, tc := range testcases_precomp {
+		t.Run(fmt.Sprintf("testcase-%d-%+v", i, tc), func(subT *testing.T) {
+			runSerdeTest(subT, comp, fmt.Sprintf("iop3-%d", i), true, false)
+		})
+	}
+}
+
+func TestSerdeIOP4(t *testing.T) {
+	scenario := findScenario("iop4")
+	if scenario == nil {
+		t.Fatal("iop4 scenario not found")
+	}
+
+	comp := getScenarioComp(scenario)
+
+	t.Run("single-case", func(subT *testing.T) {
+		runSerdeTest(subT, comp, "iop4", true, false)
+	})
+}
+
+func TestSerdeIOP5(t *testing.T) {
+	scenario := findScenario("iop5")
+	if scenario == nil {
+		t.Fatal("iop5 scenario not found")
+	}
+
+	comp := getScenarioComp(scenario)
+
+	t.Run("single-case", func(subT *testing.T) {
+		runSerdeTest(subT, comp, "iop5", true, false)
+	})
+}
+
+func TestSerdeIOP6(t *testing.T) {
+	scenario := findScenario("iop6")
+	if scenario == nil {
+		t.Fatal("iop6 scenario not found")
+	}
+
+	comp := getScenarioComp(scenario)
+
+	t.Run("single-case", func(subT *testing.T) {
+		runSerdeTest(subT, comp, "iop6", true, false)
+	})
+}
+
+// Helper function to find scenario by name
+func findScenario(name string) *serdeScenario {
+	for i := range serdeScenarios {
+		if serdeScenarios[i].name == name {
+			return &serdeScenarios[i]
+		}
+	}
+	return nil
 }

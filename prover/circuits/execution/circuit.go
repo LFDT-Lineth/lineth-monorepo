@@ -6,6 +6,7 @@ import (
 	"github.com/consensys/linea-monorepo/prover/config"
 	"github.com/consensys/linea-monorepo/prover/crypto/fiatshamir"
 	"github.com/consensys/linea-monorepo/prover/crypto/mimc/gkrmimc"
+	"github.com/consensys/linea-monorepo/prover/maths/field"
 	public_input "github.com/consensys/linea-monorepo/prover/public-input"
 
 	"github.com/consensys/gnark-crypto/ecc"
@@ -21,6 +22,16 @@ import (
 
 // CircuitExecution for the outer-proof
 type CircuitExecution struct {
+	// LimitlessMode is set to true if the outer proof is generated for the
+	// limitless prover mode.
+	LimitlessMode bool `gnark:"-"`
+	// CongloVK is used when the [LimitlessMode] is on and is helps checking
+	// the validity of the inner-proofs verification-key public input.
+	CongloVK [2]field.Element
+	// VKMerkleRoot is used when the [LimitlessMode] is on and is helps checking
+	// the validity of the inner-proofs verification-key merkle root public
+	// input.
+	VKMerkleRoot field.Element
 	// The wizard verifier circuit
 	WizardVerifier wizard.VerifierCircuit `gnark:",secret"`
 	// The functional public inputs are the "actual" statement made by the
@@ -42,31 +53,6 @@ func Allocate(zkevm *zkevm.ZkEvm) CircuitExecution {
 			FunctionalPublicInputQSnark: FunctionalPublicInputQSnark{
 				L2MessageHashes: L2MessageHashes{
 					Values: make([][32]frontend.Variable, zkevm.Limits().BlockL2L1Logs),
-					Length: nil,
-				},
-			},
-		},
-	}
-}
-
-// AllocateLimitless allocates the outer-proof circuit in the context of a
-// limitless execution. It works as [Allocate] but takes the conglomeration
-// wizard as input and uses it to allocate the outer circuit. The trace-limits
-// file is used to derive the maximal number of L2L1 logs.
-//
-// The proof generation can be done using the [MakeProof] function as we would
-// do for the non-limitless execution proof.
-func AllocateLimitless(congWiop *wizard.CompiledIOP, limits *config.TracesLimits) CircuitExecution {
-	logrus.Infof("Allocating the outer circuit with params: no_of_cong_wiop_rounds=%d "+
-		"limits_block_l2l1_logs=%d", congWiop.NumRounds(), limits.BlockL2L1Logs)
-
-	wverifier := wizard.AllocateWizardCircuit(congWiop, congWiop.NumRounds())
-	return CircuitExecution{
-		WizardVerifier: *wverifier,
-		FuncInputs: FunctionalPublicInputSnark{
-			FunctionalPublicInputQSnark: FunctionalPublicInputQSnark{
-				L2MessageHashes: L2MessageHashes{
-					Values: make([][32]frontend.Variable, limits.BlockL2L1Logs),
 					Length: nil,
 				},
 			},
@@ -112,7 +98,12 @@ func (c *CircuitExecution) Define(api frontend.API) error {
 		api,
 		&c.WizardVerifier,
 		c.FuncInputs,
+		c.LimitlessMode, // limitlessMode = false
 	)
+
+	if c.LimitlessMode {
+		c.checkLimitlessConglomerationCompletion(api)
+	}
 
 	// Add missing public input check
 	mimcHasher, _ := mimc.NewMiMC(api)

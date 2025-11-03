@@ -202,6 +202,12 @@ func getExprRatio(expr *symbolic.Expression) int {
 	return utils.NextPowerOfTwo(max(1, ratio))
 }
 
+func getDegreeSimple() func(any) int {
+	return func(any) int {
+		return 1
+	}
+}
+
 // GetDegree is a generator returning a DegreeGetter that can be passed to
 // [symbolic.ExpressionBoard.Degree]. The generator takes the domain size as
 // input.

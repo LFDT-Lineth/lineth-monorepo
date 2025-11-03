@@ -22,14 +22,14 @@ type ExpressionBoard struct {
 	// Maps nodes to their level in the DAG structure. The 32 MSB bits
 	// of the ID indicates the level and the LSB bits indicates the position
 	// in the level.
-	esHashesToPos map[field.Element]nodeID
+	EsHashesToPos map[field.Element]nodeID
 }
 
 // emptyBoard initializes a board with no Node in it.
 func emptyBoard() ExpressionBoard {
 	return ExpressionBoard{
 		Nodes:         [][]Node{},
-		esHashesToPos: map[field.Element]nodeID{},
+		EsHashesToPos: map[field.Element]nodeID{},
 	}
 }
 

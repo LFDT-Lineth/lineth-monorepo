@@ -12,7 +12,6 @@ import (
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/logderivativesum"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/mimc"
 	"github.com/consensys/linea-monorepo/prover/protocol/compiler/permutation"
-	"github.com/consensys/linea-monorepo/prover/protocol/compiler/recursion"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/protocol/query"
 	"github.com/consensys/linea-monorepo/prover/protocol/serialization"
@@ -20,11 +19,6 @@ import (
 	"github.com/consensys/linea-monorepo/prover/utils"
 	"github.com/sirupsen/logrus"
 )
-
-// lppGroupingArity indicates how many GL modules an LPP module relates to. The
-// value is fixed to 1 not for efficiency concern but putting it to a higher
-// value creates edge-cases for the FS security that are not fully-addressed yet.
-const lppGroupingArity = 1
 
 // DistributedWizard represents a wizard protocol that has undergone a
 // distributed compilation process.
@@ -54,11 +48,6 @@ type DistributedWizard struct {
 	// BlueprintLPPs is the list of the blueprints for each LPP module
 	BlueprintLPPs []ModuleSegmentationBlueprint
 
-	// DefaultModule is the module used for filling when the number of
-	// effective segment is smaller than the maximum number of segment to
-	// conglomerate.
-	DefaultModule *DefaultModule
-
 	// Bootstrapper is the original compiledIOP precompiled with a few
 	// preparation steps.
 	Bootstrapper *wizard.CompiledIOP
@@ -66,10 +55,6 @@ type DistributedWizard struct {
 	// Disc is the [*StandardModuleDiscoverer] used to delimitate the scope for
 	// each module.
 	Disc *StandardModuleDiscoverer
-
-	// CompiledDefault stores the compiled default module and is set by calling
-	// [DistributedWizard.Compile]
-	CompiledDefault *RecursedSegmentCompilation
 
 	// CompiledGLs stores the compiled GL modules and is set by calling
 	// [DistributedWizard.Compile]
@@ -81,7 +66,10 @@ type DistributedWizard struct {
 
 	// CompiledConglomeration stores the compilation context of the
 	// conglomeration wizard.
-	CompiledConglomeration *ConglomeratorCompilation
+	CompiledConglomeration *RecursedSegmentCompilation
+
+	// VerificationKeyMerkleTree
+	VerificationKeyMerkleTree VerificationKeyMerkleTree
 }
 
 func init() {
@@ -95,8 +83,7 @@ func init() {
 	serialization.RegisterImplementation(ModuleGLAssignSendReceiveGlobal{})
 	serialization.RegisterImplementation(ModuleGLCheckSendReceiveGlobal{})
 	serialization.RegisterImplementation(LPPSegmentBoundaryCalculator{})
-	serialization.RegisterImplementation(ConglomerateHolisticCheck{})
-	serialization.RegisterImplementation(ConglomerationAssignHolisticCheckColumn{})
+	serialization.RegisterImplementation(ConglomerationHierarchicalVerifierAction{})
 }
 
 // DistributeWizard returns a [DistributedWizard] from a [wizard.CompiledIOP]. It
@@ -128,8 +115,6 @@ func DistributeWizard(comp *wizard.CompiledIOP, disc *StandardModuleDiscoverer) 
 		filteredModuleInputs := moduleFilter.FilterCompiledIOP(
 			distributedWizard.Bootstrapper,
 		)
-
-		logrus.Infof("Compiling GL module %v", moduleName)
 
 		var (
 			moduleGL         = BuildModuleGL(&filteredModuleInputs)
@@ -168,22 +153,18 @@ func DistributeWizard(comp *wizard.CompiledIOP, disc *StandardModuleDiscoverer) 
 		nbLPP = len(distributedWizard.ModuleNames)
 	)
 
-	for i := 0; i < nbLPP; i += lppGroupingArity {
-
-		stop := min(len(distributedWizard.ModuleNames), i+lppGroupingArity)
-
-		logrus.Infof("Compiling LPP modules [%d .. %d]", i, stop)
+	for i := 0; i < nbLPP; i++ {
 
 		var (
-			moduleLPP         = BuildModuleLPP(allFilteredModuleInputs[i:stop])
-			moduleLPPForDebug = BuildModuleLPP(allFilteredModuleInputs[i:stop])
+			moduleLPP         = BuildModuleLPP(allFilteredModuleInputs[i])
+			moduleLPPForDebug = BuildModuleLPP(allFilteredModuleInputs[i])
 		)
 
 		// This add sanity-checking the module initial assignment. Without
 		// this compilation, the module would not check anything.
 		wizard.ContinueCompilation(
 			moduleLPPForDebug.Wiop,
-			dummy.CompileAtProverLvl(dummy.WithMsg(fmt.Sprintf("LPP module (debug) [%d .. %d]", i, stop))),
+			dummy.CompileAtProverLvl(dummy.WithMsg(fmt.Sprintf("LPP module (debug) %d", i))),
 		)
 
 		distributedWizard.DebugLPPs = append(
@@ -202,82 +183,67 @@ func DistributeWizard(comp *wizard.CompiledIOP, disc *StandardModuleDiscoverer) 
 		)
 	}
 
-	distributedWizard.DefaultModule = BuildDefaultModule(&allFilteredModuleInputs[0])
-
 	return distributedWizard
 }
 
-// CompileSegments applies the compilation steps to each segment identically.
-func (dist *DistributedWizard) CompileSegments() *DistributedWizard {
+// CompileModules applies the compilation steps to each modules identically.
+func (dist *DistributedWizard) CompileSegments(params CompilationParams) *DistributedWizard {
 	logrus.Infoln("Compiling distributed wizard default module")
-	dist.CompiledDefault = CompileSegment(dist.DefaultModule)
 
 	logrus.Infof("Number of GL modules to compile:%d\n", len(dist.GLs))
 	dist.CompiledGLs = make([]*RecursedSegmentCompilation, len(dist.GLs))
 	for i := range dist.GLs {
+
 		logrus.
 			WithField("module-name", dist.GLs[i].DefinitionInput.ModuleName).
 			WithField("module-type", "GL").
 			Info("compiling module")
 
-		dist.CompiledGLs[i] = CompileSegment(dist.GLs[i])
+		dist.CompiledGLs[i] = CompileSegment(dist.GLs[i], params)
 	}
 
 	logrus.Infof("Number of LPP modules to compile:%d\n", len(dist.LPPs))
 	dist.CompiledLPPs = make([]*RecursedSegmentCompilation, len(dist.LPPs))
 	for i := range dist.LPPs {
 		logrus.
-			WithField("module-name", dist.LPPs[i].ModuleNames()).
+			WithField("module-name", dist.LPPs[i].ModuleName()).
 			WithField("module-type", "LPP").
 			Info("compiling module")
 
-		dist.CompiledLPPs[i] = CompileSegment(dist.LPPs[i])
+		dist.CompiledLPPs[i] = CompileSegment(dist.LPPs[i], params)
 	}
 
 	return dist
 }
 
-// Conglomerate registers the conglomeration wizard and compiles it.
-func (dist *DistributedWizard) Conglomerate(maxNumSegment int) *DistributedWizard {
-	dist.CompiledConglomeration = conglomerate(
-		maxNumSegment,
-		dist.CompiledGLs,
-		dist.CompiledLPPs,
-		dist.CompiledDefault,
-	)
-	return dist
-}
-
-// GetSharedRandomness returns the shared randomness used by the protocol
-// to generate the LPP proofs. The LPP commitments are supposed to be the
-// one extractable from the [recursion.Witness] of the LPPs.
+// GetSharedRandomnessFromSegmentProofs returns the shared randomness used by
+// the protocol to generate the LPP proofs. The LPP commitments are supposed to
+// be the one extractable from the [recursion.Witness] of the LPPs.
 //
 // The result of this function is to be used as the shared randomness for
 // the LPP provers.
-func GetSharedRandomness(lppCommitments []field.Element) field.Element {
-	return cmimc.HashVec(lppCommitments)
-}
+func GetSharedRandomnessFromSegmentProofs(gLWitnesses []*SegmentProof) field.Element {
 
-// GetSharedRandomnessFromWitnesses returns the shared randomness used by the protocol
-// to generate the LPP proofs. The LPP commitments are supposed to be the
-// one extractable from the [recursion.Witness] of the LPPs.
-//
-// The result of this function is to be used as the shared randomness for
-// the LPP provers.
-func GetSharedRandomnessFromWitnesses(comp []*wizard.CompiledIOP, gLWitnesses []recursion.Witness) field.Element {
-	lppCommitments := []field.Element{}
+	mset := cmimc.MSetHash{}
+
 	for i := range gLWitnesses {
-		name := fmt.Sprintf("%v_%v", lppMerkleRootPublicInput, 0)
-		lpp := gLWitnesses[i].Proof.GetPublicInput(comp[i], preRecursionPrefix+name)
-		lppCommitments = append(lppCommitments, lpp)
+
+		var (
+			moduleIndex, _  = new(field.Element).SetInterface(gLWitnesses[i].ModuleIndex)
+			segmentIndex, _ = new(field.Element).SetInterface(gLWitnesses[i].SegmentIndex)
+			lppCommitment   = gLWitnesses[i].LppCommitment
+		)
+
+		mset.Insert(*moduleIndex, *segmentIndex, lppCommitment)
 	}
-	return GetSharedRandomness(lppCommitments)
+
+	return cmimc.HashVec(mset[:])
 }
 
-// GetLppCommitmentFromRuntime returns the LPP commitment from the runtime
-func GetLppCommitmentFromRuntime(runtime *wizard.ProverRuntime) field.Element {
+// getLppCommitmentFromRuntime returns the LPP commitment from the runtime
+func getLppCommitmentFromRuntime(runtime *wizard.ProverRuntime) field.Element {
 	name := fmt.Sprintf("%v_%v", lppMerkleRootPublicInput, 0)
-	return runtime.GetPublicInput(preRecursionPrefix + name)
+	return runtime.GetPublicInput(name)
 }
 
 // PrecompileInitialWizard pre-compiles the initial wizard protocol by applying all the
@@ -285,18 +251,19 @@ func GetLppCommitmentFromRuntime(runtime *wizard.ProverRuntime) field.Element {
 // ensure that all of the queries that cannot be processed by the splitting phase
 // are removed from the compiled IOP.
 func PrecompileInitialWizard(comp *wizard.CompiledIOP, disc *StandardModuleDiscoverer) *wizard.CompiledIOP {
-	mimc.CompileMiMC(comp)
-	// specialqueries.RangeProof(comp)
-	// specialqueries.CompileFixedPermutations(comp)
-	logderivativesum.LookupIntoLogDerivativeSumWithSegmenter(
-		&LPPSegmentBoundaryCalculator{
-			Disc:     disc,
-			LPPArity: lppGroupingArity,
-		},
-	)(comp)
-	permutation.CompileIntoGdProduct(comp)
-	horner.ProjectionToHorner(comp)
-	return comp
+
+	return wizard.ContinueCompilation(
+		comp,
+		mimc.CompileMiMC,
+		logderivativesum.LookupIntoLogDerivativeSumWithSegmenter(
+			&LPPSegmentBoundaryCalculator{
+				Disc: disc,
+			},
+		),
+		permutation.CompileIntoGdProduct,
+		horner.ProjectionToHorner,
+		tagFunctionalInputs,
+	)
 }
 
 // auditInitialWizard scans the initial compiled-IOP and checks if the provided
@@ -364,4 +331,12 @@ func auditInitialWizard(comp *wizard.CompiledIOP) error {
 	}
 
 	return err
+}
+
+// tagFunctionalInputs takes the public inputs of the original wizard and
+// changes their name to "functional". This is meant to help us recognize them
+func tagFunctionalInputs(comp *wizard.CompiledIOP) {
+	for i := range comp.PublicInputs {
+		comp.PublicInputs[i].Name = "functional." + comp.PublicInputs[i].Name
+	}
 }

@@ -18,7 +18,6 @@ type StitchingContext struct {
 	// All columns under the minSize are ignored.
 	// No stitching goes beyond MaxSize.
 	MinSize, MaxSize int
-
 	// It collects the information about subColumns and their stitchings.
 	// The index of Stitchings is over the rounds.
 	Stitchings []SummerizedAlliances

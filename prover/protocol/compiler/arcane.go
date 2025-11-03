@@ -33,6 +33,15 @@ type arcaneParamSet struct {
 	genCSVAfterExpansion     string
 }
 
+// MaybeWith allows conditionally activating an option if the condition is true.
+func MaybeWith(condition bool, option ArcaneParams) ArcaneParams {
+	return func(set *arcaneParamSet) {
+		if condition {
+			option(set)
+		}
+	}
+}
+
 // WithStitcherMinSize sets the minimum size for the stitcher. All columns
 // under this size are moved to public columns.
 func WithStitcherMinSize(minStickSize int) ArcaneParams {

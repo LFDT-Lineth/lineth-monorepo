@@ -188,9 +188,9 @@ func (c *piChiIota) assign(
 	for x := 0; x < 5; x++ {
 		for y := 0; y < 5; y++ {
 			for k := 0; k < numSlice; k++ {
-				aPiOut[x][y] = aRho[x][y].GetColAssignment(run).
-					SubVector(0, effNumRows).
-					IntoRegVecSaveAlloc()
+				aPiOut[x][y] = aRho[x][y].GetColAssignment(run). // #nosec G602 -- the slice is an array and not a slice
+											SubVector(0, effNumRows).
+											IntoRegVecSaveAlloc()
 			}
 		}
 	}

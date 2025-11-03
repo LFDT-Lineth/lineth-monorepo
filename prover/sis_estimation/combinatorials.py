@@ -16,7 +16,7 @@ import math
 # log2_beta: log2 of the norm bound
 # m_0: input size
 def cpw_bit_security(log2_q, n, log2_beta, m_0, verbose=False):
-    if n < 60:
+    if n < -1:
         # Runs an exhaustive search
         sec = math.inf
         min_ls = []
@@ -54,15 +54,13 @@ def cpw_bit_security(log2_q, n, log2_beta, m_0, verbose=False):
 # log2_q: log2 of the modulus
 # log2_beta: log2 of the norm bound
 def cpw_bit_security_pessimistic(log2_q, n, log2_beta, m_0):
-    #
-    log_range_size = math.log2(log2_beta)
-    
-    if m_0 <= 2:
-        # Just brute-force it
-        return n * log2_q
         
     # Density of solutions
-    rhs = (m_0 * log_range_size) / (n * log2_q)
+    rhs = (m_0 * log2_beta) / (n * log2_q)
+
+    if rhs < 1:
+        # m_0 is too small to guarantee the existence of at least one solution
+        return math.inf
 
     # Find the optimal k : we can use bisection here as `f` is a convex function
     f = lambda k : (2 ** k) / (k + 1) - rhs
@@ -74,22 +72,27 @@ def cpw_bit_security_pessimistic(log2_q, n, log2_beta, m_0):
 
     # Early test, if even the largest value of `k` 
     # does not allow for a solution, return `inf`
-    if f(max_k) < 0:
+    if f(max_k) <= 0:
         # Instance is unbreakable using the CPW attack
         k = max_k
+    elif f(0) >= 0:
+        # Instance can only be attacked with direct birthday attack? This may 
+        # happen if the density of solutions is 1. In which case, splitting the 
+        # input domain is not possible.
+        k = 0
     else:
         k = bisect(f, 0, max_k)
         k = math.floor(k)
          
     # Reduce m, as much as it can help
-    f = lambda m : (m * log_range_size) / (n * log2_q) - (2 ** k) / (k + 1)
+    f = lambda m : (m * log2_beta) / (n * log2_q) - (2 ** k) / (k + 1)
     # 
     m = m_0
     if f(0) * f(m_0) < 0:
         m = bisect(f, 0, m_0)
         m = math.ceil(m)
         
-    return k + log_range_size * (m / (2**k))
+    return k + log2_beta * (m / (2**k))
 
 # Estimate HNF security with parameters
 def estimate_cpw_with_hnf_and_parameters(log2_q, ls, log2_beta, m_0):

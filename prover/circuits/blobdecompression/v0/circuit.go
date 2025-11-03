@@ -142,9 +142,9 @@ func (c *Circuit) Define(api frontend.API) error {
 	xBytes := utils.ToBytes(api, c.X[1])
 	rc := rangecheck.New(api)
 	const nbBitsLower = (fr377.Bits - 1) % 8
-	rc.Check(xBytes[0], nbBitsLower)
+	rc.Check(xBytes[0], nbBitsLower) // #nosec G602 -- the slice is an array and not a slice
 	rc.Check(c.X[0], fr381.Bits-fr377.Bits+1)
-	xBytes[0] = api.Add(api.Mul(c.X[0], 1<<nbBitsLower), xBytes[0])
+	xBytes[0] = api.Add(api.Mul(c.X[0], 1<<nbBitsLower), xBytes[0]) // #nosec G602 -- the slice is an array and not a slice
 
 	y, err := public_input.VerifyBlobConsistency(api, blobCrumbsPadded381, xBytes, c.Eip4844Enabled)
 	if err != nil {
