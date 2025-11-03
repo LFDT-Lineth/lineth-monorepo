@@ -12,7 +12,7 @@ import {
   serializeTransaction,
   TransactionSerializable,
 } from "viem";
-import { linea } from "viem/chains";
+import { linea, lineaSepolia } from "viem/chains";
 import { getBlock } from "viem/actions";
 import { Agent } from "https";
 import { GetCostAndUsageCommandInput } from "@aws-sdk/client-cost-explorer";
@@ -192,6 +192,12 @@ export default class SubmitInvoice extends Command {
       required: true,
       env: "SUBMIT_INVOICE_COINGECKO_API_KEY",
     }),
+    isTestnet: Flags.boolean({
+      description: "Whether to use the testnet chain (Linea Sepolia)",
+      required: false,
+      default: false,
+      env: "SUBMIT_INVOICE_IS_TESTNET",
+    }),
   };
 
   public async run(): Promise<void> {
@@ -215,10 +221,13 @@ export default class SubmitInvoice extends Command {
       duneQueryId,
       coingeckoApiBaseUrl,
       coingeckoApiKey,
+      isTestnet,
     } = flags;
 
+    const chain = isTestnet ? lineaSepolia : linea;
+
     const client = createPublicClient({
-      chain: linea,
+      chain,
       transport: http(rpcUrl, { batch: true, retryCount: 3 }),
     });
 
@@ -323,7 +332,7 @@ export default class SubmitInvoice extends Command {
       type: "eip1559",
       value: 0n,
       data: submitInvoiceCalldata,
-      chainId: linea.id,
+      chainId: chain.id,
       gas: gasLimit,
       maxFeePerGas: baseFeePerGas + priorityFeePerGas,
       maxPriorityFeePerGas: priorityFeePerGas,
