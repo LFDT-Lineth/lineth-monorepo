@@ -1,21 +1,14 @@
 "use client";
 
-import { useAccount, useConnect, useConnectors, useDisconnect } from "wagmi";
+import { useAccount } from "wagmi";
 import Button from "@/components/ui/button";
 import styles from "./header-connect.module.scss";
+import { useWeb3AuthConnect, useWeb3AuthDisconnect } from "@web3auth/modal/react";
 
 export default function Connect() {
   const { address, isConnected } = useAccount();
-  const { connectAsync } = useConnect();
-  const { disconnect } = useDisconnect();
-  const connectors = useConnectors();
-
-  const handleConnect = async () => {
-    const web3authConnector = connectors.find((c) => c.id === "web3auth");
-    if (web3authConnector) {
-      await connectAsync({ connector: web3authConnector });
-    }
-  };
+  const { connect } = useWeb3AuthConnect();
+  const { disconnect } = useWeb3AuthDisconnect();
 
   if (isConnected && address) {
     return (
@@ -28,7 +21,7 @@ export default function Connect() {
   }
 
   return (
-    <Button className={styles.connectButton} onClick={handleConnect}>
+    <Button className={styles.connectButton} onClick={connect}>
       Connect
     </Button>
   );

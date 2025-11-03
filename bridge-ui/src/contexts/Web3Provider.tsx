@@ -1,17 +1,17 @@
 "use client";
 
-import { ReactNode, useEffect, useMemo, useState } from "react";
-import { createConfig, fallback, http, useReconnect, WagmiProvider } from "wagmi";
+import { ReactNode, useEffect } from "react";
 import { useWalletDetection } from "./WalletDetectionProvider";
 import { useWeb3Auth, Web3AuthContextConfig, Web3AuthProvider } from "@web3auth/modal/react";
+import { WagmiProvider } from "@web3auth/modal/react/wagmi";
 import { WEB3AUTH_NETWORK } from "@web3auth/modal";
 import { ADAPTER_EVENTS } from "@web3auth/base";
 import useGTM from "@/hooks/useGtm";
 import { useCachedIdentityToken } from "@/hooks/useCachedIdentityToken";
 import { isProd } from "../../next.config.mjs";
-import { web3auth } from "@/lib/web3AuthConnector";
-import { CHAINS, CHAINS_IDS, CHAINS_RPC_URLS, E2E_TEST_CHAINS, localL1Network, localL2Network } from "@/constants";
 import { config as appConfig } from "@/config";
+import { localL1Network, localL2Network } from "@/constants";
+import { toHex } from "viem";
 
 interface DynamicProviderProps {
   children: ReactNode;
@@ -28,6 +28,32 @@ const web3AuthContextConfig: Web3AuthContextConfig = {
       appUrl: "https://linea.build/hub/bridge",
       displayErrorsOnModal: true,
     },
+    ...(appConfig.e2eTestMode === true
+      ? {
+          chains: [
+            {
+              chainNamespace: "eip155",
+              logo: "https://images.web3auth.io/chains/1.svg",
+              displayName: localL1Network.name,
+              tickerName: localL1Network.nativeCurrency.name,
+              ticker: localL1Network.nativeCurrency.symbol,
+              chainId: toHex(localL1Network.id),
+              rpcTarget: localL1Network.rpcUrls.default.http[0],
+              blockExplorerUrl: localL1Network.blockExplorers?.default.url,
+            },
+            {
+              chainNamespace: "eip155",
+              logo: "https://images.web3auth.io/chains/59144.svg",
+              displayName: localL2Network.name,
+              tickerName: localL2Network.nativeCurrency.name,
+              ticker: localL2Network.nativeCurrency.symbol,
+              chainId: toHex(localL2Network.id),
+              rpcTarget: localL2Network.rpcUrls.default.http[0],
+              blockExplorerUrl: localL2Network.blockExplorers?.default.url,
+            },
+          ],
+        }
+      : {}),
     modalConfig: {
       connectors: {
         auth: {
@@ -107,137 +133,11 @@ function Web3AuthEventBridge() {
   return null;
 }
 
-// Component that handles wagmi reconnection after mount
-// This prevents setState-in-render errors by deferring reconnection
-function WagmiReconnectHandler() {
-  const { reconnect } = useReconnect();
-  const [hasReconnected, setHasReconnected] = useState(false);
-
-  useEffect(() => {
-    if (hasReconnected) return;
-
-    // Delay reconnect to ensure all components are mounted
-    // This prevents React error: "Cannot update a component while rendering a different component"
-    const timer = setTimeout(() => {
-      reconnect();
-      setHasReconnected(true);
-    }, 100);
-
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [reconnect, hasReconnected]);
-
-  return null;
-}
-
-function WagmiConfigProvider({ children }: { children: ReactNode }) {
-  const { web3Auth } = useWeb3Auth();
-  const [mounted, setMounted] = useState(false);
-  const [isCheckingSession, setIsCheckingSession] = useState(true);
-
-  // Wait for Web3Auth to be fully ready before mounting Wagmi
-  useEffect(() => {
-    if (!web3Auth) {
-      return;
-    }
-
-    // If already connected, we're good to go
-    if (web3Auth.connected && web3Auth.provider) {
-      setIsCheckingSession(false);
-      return;
-    }
-
-    // Otherwise, wait for Web3Auth to finish connecting (session restoration)
-    let hasConnected = false;
-
-    const handleConnected = () => {
-      hasConnected = true;
-      setIsCheckingSession(false);
-    };
-
-    // Listen for connection event
-    web3Auth.on(ADAPTER_EVENTS.CONNECTED, handleConnected);
-
-    // Set a timeout to avoid blocking forever if no session exists
-    const timeout = setTimeout(() => {
-      if (!hasConnected) {
-        setIsCheckingSession(false);
-      }
-    }, 1500);
-
-    return () => {
-      web3Auth.off(ADAPTER_EVENTS.CONNECTED, handleConnected);
-      clearTimeout(timeout);
-    };
-  }, [web3Auth]);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  const wagmiConfig = useMemo(() => {
-    if (!web3Auth) return null;
-
-    return appConfig.e2eTestMode
-      ? createConfig({
-          chains: E2E_TEST_CHAINS,
-          multiInjectedProviderDiscovery: false,
-          connectors: [
-            web3auth({
-              web3AuthInstance: web3Auth,
-            }),
-          ],
-          transports: {
-            [localL1Network.id]: http(localL1Network.rpcUrls.default.http[0], { batch: true }),
-            [localL2Network.id]: http(localL2Network.rpcUrls.default.http[0], { batch: true }),
-          },
-        })
-      : createConfig({
-          chains: CHAINS,
-          multiInjectedProviderDiscovery: false,
-          connectors: [
-            web3auth({
-              web3AuthInstance: web3Auth,
-            }),
-          ],
-          transports: generateWagmiTransports(CHAINS_IDS),
-        });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [web3Auth]);
-
-  function generateWagmiTransports(chainIds: (typeof CHAINS_IDS)[number][]) {
-    return chainIds.reduce(
-      (acc, chainId) => {
-        acc[chainId] = generateWagmiTransport(chainId);
-        return acc;
-      },
-      {} as Record<(typeof CHAINS_IDS)[number], ReturnType<typeof fallback>>,
-    );
-  }
-
-  function generateWagmiTransport(chainId: (typeof CHAINS_IDS)[number]) {
-    return fallback(CHAINS_RPC_URLS[chainId].map((url) => http(url, { batch: true })).filter(Boolean));
-  }
-
-  // Wait for Web3Auth initialization, mounting, and wagmi config
-  if (!mounted || isCheckingSession || !wagmiConfig) {
-    return null;
-  }
-
-  return (
-    <WagmiProvider config={wagmiConfig} reconnectOnMount={false}>
-      <WagmiReconnectHandler />
-      {children}
-    </WagmiProvider>
-  );
-}
-
 export function Web3Provider({ children }: DynamicProviderProps) {
   return (
     <Web3AuthProvider config={web3AuthContextConfig}>
       <Web3AuthEventBridge />
-      <WagmiConfigProvider>{children}</WagmiConfigProvider>
+      <WagmiProvider>{children}</WagmiProvider>
     </Web3AuthProvider>
   );
 }

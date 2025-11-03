@@ -1,9 +1,9 @@
 "use client";
 
 import clsx from "clsx";
+import { useWeb3AuthConnect } from "@web3auth/modal/react";
 import styles from "./connect-button.module.scss";
 import Button from "@/components/ui/button";
-import { useConnect, useConnectors } from "wagmi";
 
 type ConnectButtonProps = {
   text: string;
@@ -11,22 +11,14 @@ type ConnectButtonProps = {
 };
 
 export default function ConnectButton({ text, fullWidth }: ConnectButtonProps) {
-  const connectors = useConnectors();
-  const { connectAsync } = useConnect();
-
-  const handleConnect = async () => {
-    const web3authConnector = connectors.find((c) => c.id === "web3auth");
-    if (web3authConnector) {
-      await connectAsync({ connector: web3authConnector });
-    }
-  };
+  const { connect } = useWeb3AuthConnect();
 
   return (
     <Button
       className={clsx(styles["connect-btn"], {
         [styles["full-width"]]: fullWidth,
       })}
-      onClick={handleConnect}
+      onClick={connect}
     >
       {text}
     </Button>

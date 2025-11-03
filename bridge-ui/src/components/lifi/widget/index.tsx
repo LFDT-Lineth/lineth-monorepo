@@ -4,8 +4,8 @@ import dynamic from "next/dynamic";
 import { ChainId, WidgetConfig, WidgetSkeleton } from "@lifi/widget";
 import atypTextFont from "@/assets/fonts/atypText";
 import { CHAINS_RPC_URLS, ETH_SYMBOL } from "@/constants";
-import { config } from "@/config";
-import { useConnect, useConnectors } from "wagmi";
+import { config as appConfig } from "@/config";
+import { useWeb3AuthConnect } from "@web3auth/modal/react";
 
 const widgetConfig: Partial<WidgetConfig> = {
   variant: "compact",
@@ -161,7 +161,7 @@ const widgetConfig: Partial<WidgetConfig> = {
   bridges: {
     allow: ["mayanMCTP", "stargateV2", "stargateV2Bus", "across", "hop", "squid", "relay", "symbiosis"],
   },
-  apiKey: config.lifiApiKey,
+  apiKey: appConfig.lifiApiKey,
 };
 
 const LiFiWidget = dynamic(() => import("@lifi/widget").then((mod) => mod.LiFiWidget), {
@@ -170,25 +170,17 @@ const LiFiWidget = dynamic(() => import("@lifi/widget").then((mod) => mod.LiFiWi
 });
 
 export function Widget() {
-  const { connectAsync } = useConnect();
-  const connectors = useConnectors();
-
-  const handleConnect = async () => {
-    const web3authConnector = connectors.find((c) => c.id === "web3auth");
-    if (web3authConnector) {
-      await connectAsync({ connector: web3authConnector });
-    }
-  };
+  const { connect } = useWeb3AuthConnect();
 
   return (
     <LiFiWidget
       config={{
         ...widgetConfig,
         walletConfig: {
-          onConnect: handleConnect,
+          onConnect: connect,
         },
       }}
-      integrator={config.lifiIntegrator}
+      integrator={appConfig.lifiIntegrator}
     />
   );
 }

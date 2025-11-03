@@ -1,4 +1,4 @@
-import { useAccount, useConnect, useDisconnect, useConnectors } from "wagmi";
+import { useAccount, useConnectors } from "wagmi";
 import { useCallback, useMemo } from "react";
 import {
   WalletProvider,
@@ -8,6 +8,7 @@ import {
   NetworkWithTokens,
   NetworkType,
 } from "@layerswap/widget";
+import { useWeb3AuthConnect, useWeb3AuthDisconnect } from "@web3auth/modal/react";
 
 export default function useEVM(): WalletProvider {
   const name = "EVM";
@@ -15,8 +16,8 @@ export default function useEVM(): WalletProvider {
 
   // wagmi
   const { connector: activeConnector, address: activeAddress, isConnected } = useAccount();
-  const { connectAsync } = useConnect();
-  const { disconnect } = useDisconnect();
+  const { connect } = useWeb3AuthConnect();
+  const { disconnect } = useWeb3AuthDisconnect();
   const connectors = useConnectors();
 
   // Layerswap settings
@@ -53,16 +54,16 @@ export default function useEVM(): WalletProvider {
       }
 
       // Connect
-      const result = await connectAsync({ connector: web3authConnector });
+      await connect();
 
-      if (!result.accounts[0]) {
+      if (!activeAddress) {
         return undefined;
       }
 
       return resolveWallet({
         connectorId: web3authConnector.id,
         connectorName: web3authConnector.name,
-        address: result.accounts[0],
+        address: activeAddress,
         isActive: true,
         networks,
         supportedNetworks,
@@ -73,7 +74,7 @@ export default function useEVM(): WalletProvider {
       console.error("Failed to connect wallet:", error);
       return undefined;
     }
-  }, [isConnected, disconnect, connectors, connectAsync, networks, supportedNetworks]);
+  }, [isConnected, connectors, connect, activeAddress, networks, supportedNetworks, disconnect]);
 
   // Logout
   const disconnectWallets = useCallback(async () => {
