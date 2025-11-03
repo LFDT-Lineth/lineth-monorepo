@@ -176,56 +176,34 @@ func (e *Executor) buildCmd(job *Job, large bool) (cmd string, err error) {
 
 // Run a command and returns the status. Retry gives an indication on whether
 // this is a local retry or not.
-func runCmd(ctx context.Context, cmd string, job *Job, retry bool) Status {
+func runCmd(ctx context.Context, cmdStr string, job *Job, retry bool) Status {
+	logrus.Infof("The executor is about to run the command: %s", cmdStr)
 
-	// Split the command into a list of argvs that can be passed to the os
-	// package.
-	logrus.Infof("The executor is about to run the command: %s", cmd)
+	// Build exec.Command so we can set process group
+	cmd := exec.Command("sh", "-c", cmdStr)
 
-	// The command is run through shell, that way it sparses us the requirement
-	// to tokenize the quoted string if the command contains any.
-	var err error
-	argvs := []string{"sh", "-c", cmd}
-	argvs[0], err = exec.LookPath(argvs[0])
-	if err != nil {
-		return Status{
-			ExitCode: CodeCantRunCommand,
-			Err:      err,
-			What: fmt.Sprintf(
-				"Could not find `%v` on the system. We need it to run the command",
-				argvs[0],
-			),
-		}
-	}
+	// Setpgid sets the process group ID of the child to Pgid, or, if Pgid == 0, to the new child's process ID.
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 
-	pname := processName(job, cmd)
+	// Pipe the child process's stdin/stdout/stderr into the current process
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
 
+	pname := processName(job, cmdStr)
 	metrics.CollectPreProcess(job.Def.Name, job.Start, job.End, false)
 
-	// Starts a new process from our command
 	startTime := time.Now()
-	curProcess, err := os.StartProcess(
-		argvs[0], argvs,
-		// Pipe the child process's stdin/stdout/stderr into the current process
-		&os.ProcAttr{
-			Files: []*os.File{
-				os.Stdin,
-				os.Stdout,
-				os.Stderr,
-			},
-		},
-	)
-
-	if err != nil {
+	if err := cmd.Start(); err != nil {
 		// Failing to start the process can happen for various different
 		// reasons. It can be that the commands contains invalid characters
 		// like "\0". In practice, some of theses errors might be retryable
 		// and remains to see which one can. Until then, they will need to
 		// be manually retried.
-		logrus.Errorf("unexpected : failed to start process %v with error", pname)
+		logrus.Errorf("unexpected: failed to start process %v: %v", pname, err)
 		return Status{
 			ExitCode: CodeFatal,
-			What:     "got an error starting the process",
+			What:     "could not start process",
 			Err:      err,
 		}
 	}
@@ -238,39 +216,22 @@ func runCmd(ctx context.Context, cmd string, job *Job, retry bool) Status {
 		// goroutine, we can safely close it.
 		defer close(done)
 
-		// Lock on the process until it finishes
-		pstate, err := curProcess.Wait()
-		if err != nil {
-			// Here it means, the "os" package could not "wait" the process. It
-			// can happen for many different reasons essentially pertaining to
-			// the initialization of the process. It may be that some of theses
-			// errors are retryables but it remains to see which one. Until then
-			// we exited with a fatal code and the files will need to be
-			// manually reprocessed.
-			logrus.Errorf("unexpected : got an error trying to lock on %v : %v", pname, err)
-			done <- Status{
-				ExitCode: CodeFatal,
-				What:     "got an error waiting for the process",
-				Err:      err,
-			}
-			return
-		}
-
+		// Wait until the process finishes
+		_ = cmd.Wait()
 		processingTime := time.Since(startTime)
-		exitCode, err := unixExitCode(pstate)
-		if err != nil {
-			// NB: this would be only possible if we did not wait for the process
-			// to finish trying to read the exit code.
-			utils.Panic("unexpectedly got an error while trying to read the exit code of the process: %v", err)
+		exitcode, codeErr := unixExitCode(cmd.ProcessState)
+		if codeErr != nil {
+			logrus.Errorf("error getting unix exit code for %v: %v", pname, codeErr)
+			exitcode = CodeFatal
 		}
 
 		logrus.Infof(
-			"The processing of file `%s` (process=%v) took %v seconds to complete and returned exit code %v",
-			job.OriginalFile, pname, processingTime.Seconds(), exitCode,
+			"The processing of file `%s` (process=%v) took %v seconds and returned exit code %v",
+			job.OriginalFile, pname, processingTime.Seconds(), exitcode,
 		)
 
 		// Build the  response status
-		status := Status{ExitCode: exitCode}
+		status := Status{ExitCode: exitcode}
 		switch status.ExitCode {
 		case CodeSuccess:
 			status.What = "success"
@@ -278,24 +239,38 @@ func runCmd(ctx context.Context, cmd string, job *Job, retry bool) Status {
 			status.What = "out of memory error"
 		case CodeTraceLimit:
 			status.What = "trace limit overflow"
+		case CodeKilledByUs:
+			status.What = "received kill signal from controller"
+		default:
+			status.What = fmt.Sprintf("exit code %d", exitcode)
 		}
 
 		metrics.CollectPostProcess(job.Def.Name, status.ExitCode, processingTime, retry)
-
 		done <- status
 	}()
 
 	select {
-	case <-ctx.Done():
-		logrus.Infof("The process %v is being killed by the controller", pname)
-		_ = curProcess.Kill()
 
-		// Not that we exit without providing post-execution metrics to
-		// prometheus as these would not be relevant anyway.
+	case <-ctx.Done():
+		logrus.Infof("The process %v is being terminated by the controller", pname)
+		if cmd.Process != nil {
+			pgid := cmd.Process.Pid
+
+			// Set negative id to kill the whole process group and attempt to terminate process gracefully first
+			// by sending SIGTERM
+			err := syscall.Kill(-pgid, syscall.SIGTERM)
+			if err != nil {
+				logrus.Warnf("failed to send SIGTERM to process group %v: %v. KILLING it immediately", pgid, err)
+				_ = cmd.Process.Kill()
+			}
+		} else {
+			logrus.Warnf("cmd.Process is nil, nothing to kill for %v", pname)
+		}
 		return Status{
 			ExitCode: CodeKilledByUs,
-			What:     "the process was killed by the controller",
+			What:     "the process was requested to be killed by the controller (process may not have started)",
 		}
+
 	case status := <-done:
 		return status
 	}

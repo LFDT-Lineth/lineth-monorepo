@@ -5,13 +5,17 @@ log_level = 4                                  # TODO @gbotrel will be refactore
 
 [controller]
 retry_delays = [0, 1]
+spot_instance_reclaim_time_seconds = 120
+termination_grace_period_seconds = 1800
 
 [execution]
 prover_mode = "full"
-conflated_traces_dir = "/home/ubuntu/linea-prover-integration-test/download/traces"
-requests_root_dir = "/home/ubuntu/mainnet-test-2/v2/execution"
+conflated_traces_dir = "/home/ubuntu/test_mainnet/traces/conflated"
+requests_root_dir = "/home/ubuntu/test_mainnet/prover-execution"
 limitless_with_debug = true
 ignore_compatibility_check = false
+
+
 
 
 [blob_decompression]

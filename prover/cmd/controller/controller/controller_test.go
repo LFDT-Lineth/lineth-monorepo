@@ -359,39 +359,6 @@ exit $CODE
 	confL.Controller.WorkerCmdLarge = cmdLarge
 	confL.Execution.CanRunFullLarge = true
 
-	// confL = &config.GlobalConfig{
-	// 	Version: "0.2.4",
-
-	// 	Controller: config.Controller{
-	// 		EnableExecution:            true,
-	// 		EnableBlobDecompression:    false,
-	// 		EnableAggregation:          false,
-	// 		LocalID:                    proverL,
-	// 		Prometheus:                 config.Prometheus{Enabled: false},
-	// 		RetryDelays:                []int{0, 1},
-	// 		WorkerCmd:                  cmdLarge,
-	// 		WorkerCmdLarge:             cmdLarge,
-	// 		DeferToOtherLargeCodes:     []int{12, 137},
-	// 		RetryLocallyWithLargeCodes: []int{10, 77},
-	// 	},
-	// 	Execution: config.Execution{
-	// 		WithRequestDir: config.WithRequestDir{
-	// 			RequestsRootDir: path.Join(testDir, proverM, execution),
-	// 		},
-	// 		CanRunFullLarge: true,
-	// 	},
-	// 	BlobDecompression: config.BlobDecompression{
-	// 		WithRequestDir: config.WithRequestDir{
-	// 			RequestsRootDir: path.Join(testDir, proverM, compression),
-	// 		},
-	// 	},
-	// 	Aggregation: config.Aggregation{
-	// 		WithRequestDir: config.WithRequestDir{
-	// 			RequestsRootDir: path.Join(testDir, proverM, aggregation),
-	// 		},
-	// 	},
-	// }
-
 	// ensure the template are parsed
 	confM.Controller.WorkerCmdTmpl = template.Must(template.New("worker").Parse(confM.Controller.WorkerCmd))
 	confM.Controller.WorkerCmdLargeTmpl = template.Must(template.New("worker-large").Parse(confM.Controller.WorkerCmdLarge))
@@ -465,13 +432,14 @@ func createTestInputFile(
 }
 
 func TestSpotInstanceMode(t *testing.T) {
-
 	t.Skipf("this breaks the CI pipeline")
 
 	var (
 		cfg    = setupFsTestSpotInstance(t)
 		nbTest = 5
 	)
+
+	cfg.Controller.SpotInstanceReclaimTime = 5 // Ensure sleep after SIGUSR1 to receive SIGTERM
 
 	for i := 0; i < nbTest; i++ {
 		// Create the input file
@@ -485,14 +453,31 @@ func TestSpotInstanceMode(t *testing.T) {
 		panic("could not find the current process")
 	}
 
-	go runController(context.Background(), cfg)
+	done := make(chan struct{})
+	go func() {
+		runController(context.Background(), cfg)
+		close(done)
+	}()
 
 	// Wait for the controller to process 2 jobs and be in the middle of the
-	// 3rd job.
+	// 3rd job. Adjust based on ~2s per job.
 	time.Sleep(5 * time.Second)
+
+	if err := p.Signal(os.Signal(syscall.SIGUSR1)); err != nil {
+		panic("panic could not self-send a SIGUSR1")
+	}
+
+	time.Sleep(500 * time.Millisecond)
 
 	if err := p.Signal(os.Signal(syscall.SIGTERM)); err != nil {
 		panic("panic could not self-send a SIGTERM")
+	}
+
+	// Wait for controller to exit
+	select {
+	case <-done:
+	case <-time.After(10 * time.Second):
+		t.Fatalf("controller did not exit within timeout")
 	}
 
 	var (
@@ -517,12 +502,11 @@ func setupFsTestSpotInstance(t *testing.T) (cfg *config.Config) {
 		Version: "0.2.4",
 
 		Controller: config.Controller{
-			SpotInstanceMode: true,
-			EnableExecution:  true,
-			LocalID:          "test-prover-id",
-			Prometheus:       config.Prometheus{Enabled: false},
-			RetryDelays:      []int{0, 1},
-			WorkerCmdTmpl:    template.Must(template.New("test-cmd").Parse("sleep 2")),
+			EnableExecution: true,
+			LocalID:         "test-prover-id",
+			Prometheus:      config.Prometheus{Enabled: false},
+			RetryDelays:     []int{0, 1},
+			WorkerCmdTmpl:   template.Must(template.New("test-cmd").Parse("sleep 2")),
 		},
 
 		Execution: config.Execution{
@@ -546,4 +530,90 @@ func setupFsTestSpotInstance(t *testing.T) (cfg *config.Config) {
 	}
 
 	return cfg
+}
+
+// Helper: poll until condition() is true or timeout elapses
+func waitFor(t *testing.T, timeout time.Duration, interval time.Duration, condition func() bool) {
+	t.Helper()
+	deadline := time.Now().Add(timeout)
+	for {
+		if condition() {
+			return
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("timeout waiting for condition after %s", timeout)
+		}
+		time.Sleep(interval)
+	}
+}
+
+// Test that on SIGTERM (graceful) the controller lets the job finish and the result is in the done folder.
+func TestSIGTERMGracefulShutdown(t *testing.T) {
+
+	t.Skipf("this breaks the CI pipeline")
+
+	confM, _ := setupFsTest(t)
+
+	// Create a single input file. This file contains a short script that exits 0 and touches the out file.
+	fname := createTestInputFile(confM.Execution.DirFrom(), 0, 1, execJob, 0)
+
+	// Start controller in goroutine
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	done := make(chan struct{})
+	go func() {
+		runController(ctx, confM)
+		close(done)
+	}()
+
+	// wait for the controller to pick up the job (moved out of requests dir)
+	waitFor(t, 3*time.Second, 50*time.Millisecond, func() bool {
+		entries, _ := os.ReadDir(confM.Execution.DirFrom())
+		for _, e := range entries {
+			if e.Name() == fname {
+				return false // still in requests -> not yet picked
+			}
+		}
+		return true // picked (inprogress) or finished
+	})
+
+	// Send SIGTERM to ourselves (graceful shutdown)
+	p, err := os.FindProcess(os.Getpid())
+	require.NoError(t, err)
+	require.NoError(t, p.Signal(syscall.SIGTERM))
+
+	// Wait for controller to exit
+	select {
+	case <-done:
+	case <-time.After(10 * time.Second):
+		t.Fatalf("controller did not exit within timeout after SIGTERM")
+	}
+
+	// After graceful shutdown, the job should have been completed and moved to done directory
+	doneDir := confM.Execution.DirDone()
+
+	// Poll for a done file that contains the job's base name and success suffix
+	found := false
+	waitFor(t, 5*time.Second, 50*time.Millisecond, func() bool {
+		entries, err := os.ReadDir(doneDir)
+		if err != nil {
+			return false
+		}
+		for _, d := range entries {
+			name := d.Name()
+			// your DoneFile uses patterns like "<orig>.success" or ".<something>.success"
+			if name == fname+".success" || name == fname+"."+config.SuccessSuffix {
+				found = true
+				return true
+			}
+			// some tests/templates produce different filename forms; allow prefix matching
+			if len(name) > 0 && (path.Base(name) == fname+".success" || path.Base(name) == fname+"."+config.SuccessSuffix) {
+				found = true
+				return true
+			}
+		}
+		return false
+	})
+	assert.True(t, found, "expected job to be finished and moved to done directory")
 }

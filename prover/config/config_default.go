@@ -30,6 +30,9 @@ func setDefaultValues() {
 	viper.SetDefault("controller.defer_to_other_large_codes", DefaultDeferToOtherLargeCodes)
 	viper.SetDefault("controller.retry_locally_with_large_codes", DefaultRetryLocallyWithLargeCodes)
 
+	viper.SetDefault("controller.spot_instance_reclaim_time_seconds", 120)
+	viper.SetDefault("controller.termination_grace_period_seconds", 2700)
+
 	// Set default for cmdTmpl and cmdLargeTmpl
 	// TODO @gbotrel binary to run prover is hardcoded here.
 	viper.SetDefault("controller.worker_cmd_tmpl", "prover prove --config {{.ConfFile}} --in {{.InFile}} --out {{.OutFile}}")
