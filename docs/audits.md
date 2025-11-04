@@ -25,6 +25,9 @@
 **Diligence**
 - Linea Burn Mechanism - [https://diligence.consensys.io/audits/2025/10/linea-burn-mechanism/](https://diligence.consensys.io/audits/2025/10/linea-burn-mechanism/)
 
+**OpenZeppelin**
+- Linea Burn Mechanism - [https://www.openzeppelin.com/news/linea-burn-mechanism-audit](https://www.openzeppelin.com/news/linea-burn-mechanism-audit)
+
 **Cyfrin**
 - Linea Burn Mechanism - [https://github.com/Cyfrin/cyfrin-audit-reports/blob/2e780ec0c4c8401ff97a7e0cd509ece52ab35cb3/reports/2025-11-03-cyfrin-linea-burn-v2.2.pdf](https://github.com/Cyfrin/cyfrin-audit-reports/blob/2e780ec0c4c8401ff97a7e0cd509ece52ab35cb3/reports/2025-11-03-cyfrin-linea-burn-v2.2.pdf)
 
