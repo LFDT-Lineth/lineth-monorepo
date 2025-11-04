@@ -266,7 +266,7 @@ func runController(ctx context.Context, cfg *config.Config) {
 				// associated trace file to save costs on EFS. This steps won't
 				// alter the controller flow if it fail as it is meant as an
 				// optimization.
-				if job.Def.Name == jobNameExecution {
+				if job.Def.Name == jobNameExecution && job.End > cfg.Execution.KeepTracesUntilBlock {
 					tryDeleteExecution(cLog, job, cfg)
 				}
 

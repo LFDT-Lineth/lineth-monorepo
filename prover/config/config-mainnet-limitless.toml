@@ -13,6 +13,7 @@ prover_mode = "limitless"
 conflated_traces_dir = "/home/ubuntu/test_mainnet/traces/conflated"
 requests_root_dir = "/home/ubuntu/test_mainnet/prover-execution"
 ignore_compatibility_check = false
+keep_traces_until_block = 0
 
 
 [blob_decompression]

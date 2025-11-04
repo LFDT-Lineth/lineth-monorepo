@@ -11,6 +11,7 @@ prover_mode = "full"
 conflated_traces_dir = "./"
 requests_root_dir = "./"
 ignore_compatibility_check=false
+keep_traces_until_block = 0
 
 [blob_decompression]
 prover_mode = "full"

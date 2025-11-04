@@ -238,6 +238,12 @@ type Execution struct {
 	// bugs in the limitless prover. The field is optional and defaults to
 	// false.
 	LimitlessWithDebug bool `mapstructure:"limitless_with_debug"`
+
+	// KeepTraceUntil is an optional parameter (default to 0) that indicates a
+	// maximum block height under which the prover will *not* delete the
+	// execution traces from EFS. The block height that is compared to this
+	// value is the "end" block of the request range.
+	KeepTracesUntilBlock int `mapstructure:"keep_traces_until_block"`
 }
 
 type BlobDecompression struct {
