@@ -28,6 +28,7 @@ CONSTANTS := constants/constants.lisp
 CONSTANTS_LONDON := constants/london/constants.zkasm
 CONSTANTS_CANCUN := constants/cancun/constants.zkasm
 CONSTANTS_PRAGUE := constants/prague/constants.zkasm
+CONSTANTS_OSAKA := constants/osaka/constants.zkasm
 
 EC_DATA_LONDON := ecdata/london
 
@@ -97,7 +98,8 @@ TABLES_LONDON := reftables/london/*.lisp
 TABLES_CANCUN := reftables/cancun/*.lisp
 TABLES_PRAGUE := reftables/prague/*.lisp
 
-TRM := trm/trm.zkasm
+TRM_LONDON := trm/trm_london.zkasm
+TRM_OSAKA := trm/trm_osaka.zkasm
 
 TXN_DATA_LONDON := txndata/london
 TXN_DATA_SHANGHAI := txndata/shanghai
@@ -129,7 +131,6 @@ ZKEVM_MODULES_COMMON := ${CONSTANTS} \
 		 ${SHAKIRA_DATA} \
 		 ${SHIFT} \
 		 ${STP} \
-		 ${TRM} \
 		 ${WCP}
 
 ZKEVM_MODULES_LONDON := ${ZKEVM_MODULES_COMMON} \
@@ -145,6 +146,7 @@ ZKEVM_MODULES_LONDON := ${ZKEVM_MODULES_COMMON} \
 		 ${OOB_LONDON} \
 		 ${RLP_TXN_LONDON} \
 		 ${RLP_TXN_RCPT_LONDON} \
+		 ${TRM_LONDON} \
 		 ${TXN_DATA_LONDON}
 
 
@@ -163,6 +165,7 @@ ZKEVM_MODULES_SHANGHAI := ${ZKEVM_MODULES_COMMON} \
 		 ${OOB_SHANGHAI} \
 		 ${RLP_TXN_LONDON} \
 		 ${RLP_TXN_RCPT_LONDON} \
+		 ${TRM_LONDON} \
 		 ${TXN_DATA_SHANGHAI}
 
 ZKEVM_MODULES_CANCUN := ${ZKEVM_MODULES_COMMON} \
@@ -180,6 +183,7 @@ ZKEVM_MODULES_CANCUN := ${ZKEVM_MODULES_COMMON} \
 		 ${RLP_TXN_CANCUN} \
 		 ${RLP_TXN_RCPT_LONDON} \
 		 ${RLP_UTILS_CANCUN} \
+		 ${TRM_LONDON} \
 		 ${TXN_DATA_CANCUN}
 
 ZKEVM_MODULES_PRAGUE := ${ZKEVM_MODULES_COMMON} \
@@ -197,10 +201,11 @@ ZKEVM_MODULES_PRAGUE := ${ZKEVM_MODULES_COMMON} \
 		 ${RLP_TXN_PRAGUE} \
 		 ${RLP_TXN_RCPT_LONDON} \
 		 ${RLP_UTILS_CANCUN} \
+		 ${TRM_LONDON} \
 		 ${TXN_DATA_PRAGUE}
 
 ZKEVM_MODULES_OSAKA := ${ZKEVM_MODULES_COMMON} \
-		 ${CONSTANTS_PRAGUE} \
+		 ${CONSTANTS_OSAKA} \
 		 ${TABLES_PRAGUE} \
 		 ${BLOCKDATA_CANCUN} \
 		 ${BLS_PRAGUE} \
@@ -214,6 +219,7 @@ ZKEVM_MODULES_OSAKA := ${ZKEVM_MODULES_COMMON} \
 		 ${RLP_TXN_PRAGUE} \
 		 ${RLP_TXN_RCPT_OSAKA} \
 		 ${RLP_UTILS_CANCUN} \
+		 ${TRM_OSAKA} \
 		 ${TXN_DATA_OSAKA}
 
 all: zkevm_london.bin zkevm_paris.bin zkevm_shanghai.bin zkevm_cancun.bin zkevm_prague.bin zkevm_osaka.bin
