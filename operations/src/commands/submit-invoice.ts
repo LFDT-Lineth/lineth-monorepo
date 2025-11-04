@@ -21,7 +21,7 @@ import { addDays, subDays } from "date-fns";
 import { Result } from "neverthrow";
 import { computeInvoicePeriod, InvoicePeriod } from "../utils/submit-invoice/time.js";
 import { generateQueryParameters, getDuneClient, runDuneQuery } from "../utils/common/dune.js";
-import { estimateTransactionGas, sendTransaction } from "../utils/common/transactions.js";
+import { estimateTransactionGas, sendRawTransaction } from "../utils/common/transactions.js";
 import { getWeb3SignerSignature } from "../utils/common/signature.js";
 import { INVOICE_PROCESSED_EVENT_ABI } from "../utils/submit-invoice/abi.js";
 import { buildHttpsAgent } from "../utils/common/https-agent.js";
@@ -538,7 +538,7 @@ export default class SubmitInvoice extends Command {
     this.log(`Broadcasting submitInvoice transaction to the network...`);
 
     const startTxDate = fromZonedTime(new Date(), "UTC");
-    const receipt = this.unwrapOrError(await sendTransaction(client, signed), "Failed to send transaction");
+    const receipt = this.unwrapOrError(await sendRawTransaction(client, signed), "Failed to send transaction");
 
     const block = await getBlock(client, { blockNumber: receipt.blockNumber });
 

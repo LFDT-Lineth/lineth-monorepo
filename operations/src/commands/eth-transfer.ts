@@ -19,7 +19,7 @@ import { calculateRewards } from "../utils/eth-transfer/rewards.js";
 import { validateETHThreshold } from "../utils/eth-transfer/validation.js";
 import { buildHttpsAgent } from "../utils/common/https-agent.js";
 import { getWeb3SignerSignature } from "../utils/common/signature.js";
-import { estimateTransactionGas, sendTransaction } from "../utils/common/transactions.js";
+import { estimateTransactionGas, sendRawTransaction } from "../utils/common/transactions.js";
 
 export default class EthTransfer extends Command {
   static examples = [
@@ -286,7 +286,7 @@ export default class EthTransfer extends Command {
 
     this.log(`Broadcasting submitInvoice transaction to the network...`);
 
-    const receipt = this.unwrapOrError(await sendTransaction(client, signed), "Failed to send transaction");
+    const receipt = this.unwrapOrError(await sendRawTransaction(client, signed), "Failed to send transaction");
 
     if (receipt.status === "reverted") {
       this.error(`Transaction failed. transactionHash=${receipt.transactionHash}`);

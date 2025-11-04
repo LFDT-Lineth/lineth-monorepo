@@ -1,7 +1,11 @@
-import { BaseError, Client, Hex, TransactionReceipt } from "viem";
+import { BaseError, Client, Hex, SendTransactionParameters, TransactionReceipt } from "viem";
 import { estimateGas, EstimateGasParameters, EstimateGasReturnType } from "viem/linea";
 import { err, ok, Result } from "neverthrow";
-import { sendRawTransaction, waitForTransactionReceipt } from "viem/actions";
+import {
+  sendRawTransaction as viemSendRawTransaction,
+  waitForTransactionReceipt,
+  sendTransaction as viemSendTransaction,
+} from "viem/actions";
 
 export async function estimateTransactionGas(
   client: Client,
@@ -19,17 +23,34 @@ export async function estimateTransactionGas(
   }
 }
 
-export async function sendTransaction(
+export async function sendRawTransaction(
   client: Client,
   serializedTransaction: Hex,
 ): Promise<Result<TransactionReceipt, BaseError>> {
   try {
-    const txHash = await sendRawTransaction(client, { serializedTransaction });
+    const txHash = await viemSendRawTransaction(client, { serializedTransaction });
     const receipt = await waitForTransactionReceipt(client, { hash: txHash });
     return ok(receipt);
   } catch (error) {
     if (error instanceof BaseError) {
-      const decodedError = error.walk();
+      const decodedError = (error.walk((err) => "data" in (err as BaseError)) || error.walk()) as BaseError;
+      return err(decodedError as BaseError);
+    }
+    return err(error as BaseError);
+  }
+}
+
+export async function sendTransaction(
+  client: Client,
+  params: SendTransactionParameters,
+): Promise<Result<TransactionReceipt, BaseError>> {
+  try {
+    const txHash = await viemSendTransaction(client, params);
+    const receipt = await waitForTransactionReceipt(client, { hash: txHash });
+    return ok(receipt);
+  } catch (error) {
+    if (error instanceof BaseError) {
+      const decodedError = (error.walk((err) => "data" in (err as BaseError)) || error.walk()) as BaseError;
       return err(decodedError as BaseError);
     }
     return err(error as BaseError);

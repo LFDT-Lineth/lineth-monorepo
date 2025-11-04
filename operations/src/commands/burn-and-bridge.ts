@@ -3,24 +3,19 @@ import {
   Address,
   Client,
   createPublicClient,
+  createWalletClient,
   formatEther,
   formatUnits,
-  Hex,
   http,
   parseEventLogs,
-  parseSignature,
-  serializeTransaction,
-  TransactionSerializable,
+  SendTransactionParameters,
 } from "viem";
 import { linea, lineaSepolia } from "viem/chains";
-import { Agent } from "https";
 import { fromZonedTime } from "date-fns-tz";
 import { Result } from "neverthrow";
 import { addSeconds } from "date-fns";
 import { getBalance } from "viem/actions";
 import { estimateTransactionGas, sendTransaction } from "../utils/common/transactions.js";
-import { getWeb3SignerSignature } from "../utils/common/signature.js";
-import { buildHttpsAgent } from "../utils/common/https-agent.js";
 import { validateUrl } from "../utils/common/validation.js";
 import { address, hexString } from "../utils/common/custom-flags.js";
 import {
@@ -32,38 +27,27 @@ import {
 } from "../utils/burn-and-bridge/contract.js";
 import { LINEA_TOKEN_ADDRESS, WETH_TOKEN_ADDRESS } from "../utils/burn-and-bridge/constants.js";
 import { ETH_BURNT_SWAPPED_AND_BRIDGED_EVENT_ABI } from "../utils/burn-and-bridge/abi.js";
+import { privateKeyToAccount, privateKeyToAddress } from "viem/accounts";
 
 export default class BurnAndBridge extends Command {
   static examples = [
     `<%= config.bin %> <%= command.id %> 
-      --senderAddress=0xYourSenderAddress
+      --signerPrivateKey=0xYourSignerPrivateKey
       --rollupRevenueVaultContractAddress=0xYourContractAddress
+      --l2MessageServiceContractAddress=0xYourL2MessageServiceContractAddress
       --quoteContractAddress=0xYourQuoteContractAddress
       --rpcUrl=https://mainnet.infura.io/v3/YOUR-PROJECT-ID
-      --web3SignerUrl=http://localhost:8545
-      --web3SignerPublicKey=0xYourWeb3SignerPublicKey
-      --tls
-      --web3SignerKeystorePath=/path/to/keystore.p12
-      --web3SignerKeystorePassphrase=yourPassphrase
-      --web3SignerTrustedStorePath=/path/to/ca.p12
-      --web3SignerTrustedStorePassphrase=yourTrustedStorePassphrase
       --swapAmountSlippageBps=50
       --swapDeadlineInSeconds=300
       --poolTickSpacing=50
     `,
     // Dry run
     `<%= config.bin %> <%= command.id %>
-      --senderAddress=0xYourSenderAddress
+      --signerPrivateKey=0xYourSignerPrivateKey
       --rollupRevenueVaultContractAddress=0xYourContractAddress
+      --l2MessageServiceContractAddress=0xYourL2MessageServiceContractAddress
       --quoteContractAddress=0xYourQuoteContractAddress
       --rpcUrl=https://mainnet.infura.io/v3/YOUR-PROJECT-ID
-      --web3SignerUrl=http://localhost:8545
-      --web3SignerPublicKey=0xYourWeb3SignerPublicKey
-      --tls
-      --web3SignerKeystorePath=/path/to/keystore.p12
-      --web3SignerKeystorePassphrase=yourPassphrase
-      --web3SignerTrustedStorePath=/path/to/ca.p12
-      --web3SignerTrustedStorePassphrase=yourTrustedStorePassphrase
       --swapAmountSlippageBps=50
       --swapDeadlineInSeconds=300
       --poolTickSpacing=50
@@ -74,11 +58,11 @@ export default class BurnAndBridge extends Command {
   static strict = true;
 
   static flags = {
-    senderAddress: address({
+    signerPrivateKey: hexString({
       char: "s",
-      description: "Sender address",
+      description: "Signer private key",
       required: true,
-      env: "BURN_AND_BRIDGE_SENDER_ADDRESS",
+      env: "BURN_AND_BRIDGE_SIGNER_PRIVATE_KEY",
     }),
     rollupRevenueVaultContractAddress: address({
       description: "Rollup Revenue Vault Contract address",
@@ -101,60 +85,6 @@ export default class BurnAndBridge extends Command {
       parse: async (input) => validateUrl("blockchain-rpc-url", input, ["http:", "https:"]),
       env: "BURN_AND_BRIDGE_BLOCKCHAIN_RPC_URL",
     }),
-    web3SignerUrl: Flags.string({
-      description: "Web3 Signer URL",
-      required: true,
-      parse: async (input) => validateUrl("web3-signer-url", input, ["http:", "https:"]),
-      env: "BURN_AND_BRIDGE_WEB3_SIGNER_URL",
-    }),
-    web3SignerPublicKey: hexString({
-      description: "Web3 Signer Public Key",
-      required: true,
-      env: "BURN_AND_BRIDGE_WEB3_SIGNER_PUBLIC_KEY",
-    }),
-    dryRun: Flags.boolean({
-      description: "Dry run flag",
-      required: false,
-      default: false,
-      env: "BURN_AND_BRIDGE_DRY_RUN",
-    }),
-    tls: Flags.boolean({
-      description: "Enable TLS",
-      required: false,
-      default: false,
-      env: "BURN_AND_BRIDGE_TLS",
-      relationships: [
-        {
-          type: "all",
-          flags: [
-            { name: "web3SignerKeystorePath", when: async (flags) => flags["tls"] === true },
-            { name: "web3SignerKeystorePassphrase", when: async (flags) => flags["tls"] === true },
-            { name: "web3SignerTrustedStorePath", when: async (flags) => flags["tls"] === true },
-            { name: "web3SignerTrustedStorePassphrase", when: async (flags) => flags["tls"] === true },
-          ],
-        },
-      ],
-    }),
-    web3SignerKeystorePath: Flags.string({
-      description: "Path to the web3 signer keystore file",
-      required: false,
-      env: "BURN_AND_BRIDGE_WEB3_SIGNER_KEYSTORE_PATH",
-    }),
-    web3SignerKeystorePassphrase: Flags.string({
-      description: "Passphrase for the web3 signer keystore",
-      required: false,
-      env: "BURN_AND_BRIDGE_WEB3_SIGNER_KEYSTORE_PASSPHRASE",
-    }),
-    web3SignerTrustedStorePath: Flags.string({
-      description: "Path to the web3 signer trusted store file",
-      required: false,
-      env: "BURN_AND_BRIDGE_WEB3_SIGNER_TRUSTED_STORE_PATH",
-    }),
-    web3SignerTrustedStorePassphrase: Flags.string({
-      description: "Passphrase for the web3 signer trusted store file",
-      required: false,
-      env: "BURN_AND_BRIDGE_WEB3_SIGNER_TRUSTED_STORE_PASSPHRASE",
-    }),
     swapAmountSlippageBps: Flags.integer({
       description: "Allowed slippage in basis points for the swap",
       required: true,
@@ -176,23 +106,22 @@ export default class BurnAndBridge extends Command {
       default: false,
       env: "BURN_AND_BRIDGE_IS_TESTNET",
     }),
+    dryRun: Flags.boolean({
+      description: "Dry run flag",
+      required: false,
+      default: false,
+      env: "BURN_AND_BRIDGE_DRY_RUN",
+    }),
   };
 
   public async run(): Promise<void> {
     const { flags } = await this.parse(BurnAndBridge);
     const {
-      senderAddress,
+      signerPrivateKey,
       rpcUrl,
       rollupRevenueVaultContractAddress,
       l2MessageServiceContractAddress,
       quoteContractAddress,
-      web3SignerUrl,
-      web3SignerPublicKey,
-      web3SignerKeystorePath,
-      web3SignerKeystorePassphrase,
-      web3SignerTrustedStorePath,
-      web3SignerTrustedStorePassphrase,
-      tls,
       dryRun,
       swapAmountSlippageBps,
       swapDeadlineInSeconds,
@@ -206,6 +135,9 @@ export default class BurnAndBridge extends Command {
       chain,
       transport: http(rpcUrl, { batch: true, retryCount: 3 }),
     });
+
+    const signerAddress = privateKeyToAddress(signerPrivateKey);
+    this.log(`Using signer address. address=${signerAddress}`);
 
     /******************************
           FETCH CHAIN DATA
@@ -262,7 +194,7 @@ export default class BurnAndBridge extends Command {
     const { gasLimit, baseFeePerGas, priorityFeePerGas } = this.unwrapOrError(
       await estimateTransactionGas(client, {
         to: rollupRevenueVaultContractAddress,
-        account: senderAddress,
+        account: privateKeyToAddress(signerPrivateKey),
         value: 0n,
         data: burnAndBridgeCalldata,
       }),
@@ -273,35 +205,6 @@ export default class BurnAndBridge extends Command {
       `Gas estimation for burnAndBridge transaction: gasLimit=${gasLimit} baseFeePerGas=${baseFeePerGas} priorityFeePerGas=${priorityFeePerGas}`,
     );
 
-    const httpsAgent = this.buildHttpsAgentIfNeeded({
-      tls,
-      web3SignerKeystorePath,
-      web3SignerKeystorePassphrase,
-      web3SignerTrustedStorePath,
-      web3SignerTrustedStorePassphrase,
-    });
-
-    const senderAddressNonce = await client.getTransactionCount({ address: senderAddress });
-
-    const transactionToSerialize: TransactionSerializable = {
-      to: rollupRevenueVaultContractAddress,
-      type: "eip1559",
-      value: 0n,
-      data: burnAndBridgeCalldata,
-      chainId: chain.id,
-      gas: gasLimit,
-      maxFeePerGas: baseFeePerGas + priorityFeePerGas,
-      maxPriorityFeePerGas: priorityFeePerGas,
-      nonce: senderAddressNonce,
-    };
-
-    const signature = await this.signBurnAndBridgeTransaction(
-      web3SignerUrl,
-      web3SignerPublicKey,
-      transactionToSerialize,
-      httpsAgent,
-    );
-
     if (dryRun) {
       this.log(`Dry run mode - transaction not submitted.`);
       return;
@@ -309,28 +212,25 @@ export default class BurnAndBridge extends Command {
     /******************************
           BROADCAST TRANSACTION
      ******************************/
+    const walletClient = createWalletClient({
+      chain,
+      transport: http(rpcUrl, { batch: true, retryCount: 3 }),
+    });
 
-    await this.broadcastTransaction(client, transactionToSerialize, signature);
-  }
+    const signerAddressNonce = await client.getTransactionCount({ address: signerAddress });
 
-  /**
-   * Sign the burn and bridge transaction using Web3 Signer.
-   * @param web3SignerUrl Web3 Signer URL.
-   * @param web3SignerPublicKey Web3 Signer Public Key.
-   * @param transactionToSerialize Transaction to be serialized and signed.
-   * @param httpsAgent Optional HTTPS Agent for secure communication.
-   * @returns The signature as a hex string.
-   */
-  private async signBurnAndBridgeTransaction(
-    web3SignerUrl: string,
-    web3SignerPublicKey: string,
-    transactionToSerialize: TransactionSerializable,
-    httpsAgent?: Agent,
-  ): Promise<Hex> {
-    return this.unwrapOrError(
-      await getWeb3SignerSignature(web3SignerUrl, web3SignerPublicKey, transactionToSerialize, httpsAgent),
-      "Failed to get signature from Web3 Signer",
-    );
+    await this.broadcastTransaction(walletClient, {
+      account: privateKeyToAccount(signerPrivateKey),
+      to: rollupRevenueVaultContractAddress,
+      type: "eip1559",
+      value: 0n,
+      data: burnAndBridgeCalldata,
+      chain,
+      gas: gasLimit,
+      maxFeePerGas: baseFeePerGas + priorityFeePerGas,
+      maxPriorityFeePerGas: priorityFeePerGas,
+      nonce: signerAddressNonce,
+    });
   }
 
   /**
@@ -431,45 +331,13 @@ export default class BurnAndBridge extends Command {
   }
 
   /**
-   * Build https agent if TLS is enabled and all required parameters are provided.
-   * @param params Parameters for building the HTTPS agent.
-   * @returns The built HTTPS agent or undefined if not needed.
-   */
-  private buildHttpsAgentIfNeeded(params: {
-    tls: boolean;
-    web3SignerKeystorePath?: string | undefined;
-    web3SignerKeystorePassphrase?: string | undefined;
-    web3SignerTrustedStorePath?: string | undefined;
-    web3SignerTrustedStorePassphrase?: string | undefined;
-  }): Agent | undefined {
-    if (
-      params.tls &&
-      params.web3SignerKeystorePath &&
-      params.web3SignerKeystorePassphrase &&
-      params.web3SignerTrustedStorePath &&
-      params.web3SignerTrustedStorePassphrase
-    ) {
-      this.log("Using TLS for Web3 Signer communication.");
-      return buildHttpsAgent(
-        params.web3SignerKeystorePath,
-        params.web3SignerKeystorePassphrase,
-        params.web3SignerTrustedStorePath,
-        params.web3SignerTrustedStorePassphrase,
-      );
-    }
-    return undefined;
-  }
-
-  /**
    * Broadcast the signed transaction to the network.
    * @param client Viem Client.
    * @param tx Transaction to be broadcasted.
-   * @param signature Signature of the transaction.
    */
-  private async broadcastTransaction(client: Client, tx: TransactionSerializable, signature: Hex) {
-    const signed = serializeTransaction(tx, parseSignature(signature));
+  private async broadcastTransaction(client: Client, tx: SendTransactionParameters) {
     this.log("Broadcasting transaction...");
-    const receipt = this.unwrapOrError(await sendTransaction(client, signed), "Failed to send transaction");
+    const receipt = this.unwrapOrError(await sendTransaction(client, tx), "Failed to send transaction");
 
     if (receipt.status === "reverted") {
       this.error(`Burn and bridge failed. transactionHash=${receipt.transactionHash}`);
