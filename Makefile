@@ -29,7 +29,9 @@ CONSTANTS_LONDON := constants/london/constants.zkasm
 CONSTANTS_CANCUN := constants/cancun/constants.zkasm
 CONSTANTS_PRAGUE := constants/prague/constants.zkasm
 
-EC_DATA := ecdata
+EC_DATA_LONDON := ecdata/london
+
+EC_DATA_OSAKA := ecdata/osaka
 
 EUC := euc
 
@@ -116,7 +118,6 @@ ZKEVM_MODULES_COMMON := ${CONSTANTS} \
 		 ${BIN} \
 		 ${BLAKE2f_MODEXP_DATA} \
 		 ${BLOCKHASH} \
-		 ${EC_DATA} \
 		 ${EUC} \
 		 ${EXP} \
 		 ${GAS} \
@@ -135,6 +136,7 @@ ZKEVM_MODULES_LONDON := ${ZKEVM_MODULES_COMMON} \
 		 ${CONSTANTS_LONDON} \
 		 ${TABLES_LONDON} \
 		 ${BLOCKDATA_LONDON} \
+		 ${EC_DATA_LONDON} \
 		 ${HUB_LONDON} \
 		 ${LOG_INFO_LONDON} \
 		 ${MMIO_LONDON} \
@@ -152,6 +154,7 @@ ZKEVM_MODULES_SHANGHAI := ${ZKEVM_MODULES_COMMON} \
 		 ${CONSTANTS_LONDON} \
 		 ${TABLES_LONDON} \
 		 ${BLOCKDATA_PARIS} \
+		 ${EC_DATA_LONDON} \
 		 ${HUB_SHANGHAI} \
 		 ${LOG_INFO_LONDON} \
 		 ${MMIO_LONDON} \
@@ -167,6 +170,7 @@ ZKEVM_MODULES_CANCUN := ${ZKEVM_MODULES_COMMON} \
 		 ${TABLES_CANCUN} \
 		 ${BLOCKDATA_CANCUN} \
 		 ${BLS_CANCUN} \
+		 ${EC_DATA_LONDON} \
 		 ${HUB_CANCUN} \
 		 ${LOG_INFO_CANCUN} \
 		 ${MMIO_CANCUN} \
@@ -183,6 +187,7 @@ ZKEVM_MODULES_PRAGUE := ${ZKEVM_MODULES_COMMON} \
 		 ${TABLES_PRAGUE} \
 		 ${BLOCKDATA_CANCUN} \
 		 ${BLS_PRAGUE} \
+		 ${EC_DATA_LONDON} \
 		 ${HUB_PRAGUE} \
 		 ${LOG_INFO_CANCUN} \
 		 ${MMIO_CANCUN} \
@@ -199,6 +204,7 @@ ZKEVM_MODULES_OSAKA := ${ZKEVM_MODULES_COMMON} \
 		 ${TABLES_PRAGUE} \
 		 ${BLOCKDATA_CANCUN} \
 		 ${BLS_PRAGUE} \
+		 ${EC_DATA_OSAKA} \
 		 ${HUB_OSAKA} \
 		 ${LOG_INFO_CANCUN} \
 		 ${MMIO_CANCUN} \
