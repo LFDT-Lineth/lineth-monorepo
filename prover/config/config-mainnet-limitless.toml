@@ -1,5 +1,5 @@
 environment = "mainnet"
-version = "6.0.8"                              # TODO @gbotrel hunt all version definitions.
+version = "6.1.0"                              # TODO @gbotrel hunt all version definitions.
 assets_dir = "./prover-assets"
 log_level = 4                                  # TODO @gbotrel will be refactored with new logger.
 
@@ -10,7 +10,7 @@ termination_grace_period_seconds = 1800
 
 [execution]
 prover_mode = "limitless"
-conflated_traces_dir = "/home/ubuntu/test_mainnet/traces/conflated"
+conflated_traces_dir = "/home/ubuntu/20251104-hierarchical-conglo-testing"
 requests_root_dir = "/home/ubuntu/test_mainnet/prover-execution"
 ignore_compatibility_check = false
 keep_traces_until_block = 0
