@@ -17,7 +17,7 @@ import { getBlock } from "viem/actions";
 import { Agent } from "https";
 import { GetCostAndUsageCommandInput } from "@aws-sdk/client-cost-explorer";
 import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
-import { addDays, subDays } from "date-fns";
+import { addDays } from "date-fns";
 import { Result } from "neverthrow";
 import { computeInvoicePeriod, InvoicePeriod } from "../utils/submit-invoice/time.js";
 import { generateQueryParameters, getDuneClient, runDuneQuery } from "../utils/common/dune.js";
@@ -253,6 +253,11 @@ export default class SubmitInvoice extends Command {
 
     const awsCostsInUsd = await this.getAWSCosts(invoicePeriod, awsCostsApiFilters);
 
+    if (awsCostsInUsd === undefined) {
+      this.warn("AWS costs are undefined, likely due to data still being estimated. Stopping invoice processing.");
+      return;
+    }
+
     this.log(
       `Total AWS costs costsInUsd=${awsCostsInUsd} for the period: startDate=${invoicePeriodStartDateStr} endDate=${invoicePeriodEndDateStr}`,
     );
@@ -395,6 +400,7 @@ export default class SubmitInvoice extends Command {
 
   /**
    * Fetch AWS costs for the given invoice period using the provided AWS Costs API filters.
+   * Returns undefined if the data is still being estimated.
    * @param invoicePeriod Invoice period with start and end dates.
    * @param awsCostsApiFilters AWS Costs API filters to apply.
    * @returns The total AWS costs for the specified invoice period.
@@ -402,14 +408,13 @@ export default class SubmitInvoice extends Command {
   private async getAWSCosts(
     invoicePeriod: InvoicePeriod,
     awsCostsApiFilters: GetCostAndUsageCommandInput,
-  ): Promise<number> {
+  ): Promise<number | undefined> {
     const awsClient = createAwsCostExplorerClient({ region: "us-east-1" });
     const startDateStr = formatInTimeZone(invoicePeriod.startDate, "UTC", "yyyy-MM-dd");
-    const endDateStr = formatInTimeZone(addDays(invoicePeriod.endDate, 1), "UTC", "yyyy-MM-dd");
+    const endDateStr = formatInTimeZone(invoicePeriod.endDate, "UTC", "yyyy-MM-dd");
+    const awsEndDateStr = formatInTimeZone(addDays(invoicePeriod.endDate, 1), "UTC", "yyyy-MM-dd");
 
-    this.log(
-      `Fetching AWS costs for the invoice period startDate=${startDateStr} endDate=${formatInTimeZone(subDays(endDateStr, 1), "UTC", "yyyy-MM-dd")}`,
-    );
+    this.log(`Fetching AWS costs for the invoice period startDate=${startDateStr} endDate=${endDateStr}`);
 
     if (!awsCostsApiFilters.Metrics || awsCostsApiFilters.Metrics.length !== 1) {
       this.error("AWS Costs API Filters must specify one metric.");
@@ -420,7 +425,7 @@ export default class SubmitInvoice extends Command {
         ...awsCostsApiFilters,
         TimePeriod: {
           Start: startDateStr,
-          End: endDateStr,
+          End: awsEndDateStr,
         },
       }),
       "Failed to fetch AWS costs",
@@ -428,6 +433,14 @@ export default class SubmitInvoice extends Command {
 
     if (!Array.isArray(ResultsByTime) || ResultsByTime.length === 0) {
       this.error(`No AWS cost data returned for the specified period. startDate=${startDateStr} endDate=${endDateStr}`);
+    }
+
+    const estimated = ResultsByTime[0]?.Estimated;
+    if (estimated === undefined || estimated === true) {
+      this.warn(
+        `AWS cost data for the specified period is still under estimation. startDate=${startDateStr} endDate=${endDateStr}`,
+      );
+      return;
     }
 
     const metric = awsCostsApiFilters.Metrics[0];
