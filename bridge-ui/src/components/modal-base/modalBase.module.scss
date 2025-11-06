@@ -1,0 +1,103 @@
+.dialog {
+  position: fixed;
+  z-index: 100;
+  border: none;
+  background: transparent;
+}
+
+.panel {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  z-index: 30;
+  width: 100%;
+  opacity: 0;
+  transition: all 0.3s ease-out;
+  transition-delay: 1s;
+  display: grid;
+  place-content: center;
+  pointer-events: none;
+
+  &.open {
+    animation: open 0.4s forwards ease;
+  }
+
+  &.drawer {
+    @include bp-max(mobile) {
+      left: 0;
+      top: auto;
+      bottom: 0;
+      width: 100%;
+      max-width: 100%;
+      border-radius: 16px 16px 0 0;
+      transform: translateY(100%);
+      height: auto;
+      max-height: 90vh;
+      overflow-y: auto;
+
+      &.open {
+        animation: drawerOpen 0.4s forwards ease;
+      }
+    }
+  }
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  background: rgba(0, 0, 0, 0.25);
+  opacity: 0;
+  backdrop-filter: blur(6px);
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+
+  &.open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+@keyframes open {
+  from {
+    opacity: 0;
+    transform: translate(-50%, calc(-50% + 40px));
+  }
+  to {
+    transform: translate(-50%, -50%);
+    opacity: 1;
+  }
+}
+
+@keyframes close {
+  from {
+    transform: translate(-50%, -50%);
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, calc(-50% + 40px));
+  }
+}
+
+@keyframes drawerOpen {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes drawerClose {
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+}

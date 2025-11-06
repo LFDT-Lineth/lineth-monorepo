@@ -7,6 +7,7 @@ import { Layout } from "@/components/layouts/Layout";
 import atypFont from "@/assets/fonts/atyp";
 import atypTextFont from "@/assets/fonts/atypText";
 import FirstVisitModal from "@/components/modal/first-time-visit";
+import { ModalBase } from "@/components/modal-base";
 import { getNavData } from "@/services";
 import { headers } from "next/headers";
 import "../scss/app.scss";
@@ -32,7 +33,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <noscript dangerouslySetInnerHTML={{ __html: gtmNoScript }} />
 
         <Providers>
-          <Layout navData={navData}>{children}</Layout>
+          <Layout navData={navData}>
+            {children}
+            <ModalBase />
+          </Layout>
         </Providers>
         <FirstVisitModal />
       </body>

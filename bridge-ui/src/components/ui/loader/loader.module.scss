@@ -1,0 +1,24 @@
+.loader {
+  width: 16px;
+  height: 16px;
+  animation: loaderSpin 1s infinite linear;
+
+  svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  &--large {
+    width: 24px;
+    height: 24px;
+  }
+}
+
+@keyframes loaderSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

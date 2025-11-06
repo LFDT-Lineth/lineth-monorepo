@@ -73,7 +73,8 @@ export function middleware(request: NextRequest) {
       https://*.walletconnect.org
       https://newassets.hcaptcha.com
       https://buy.onramper.com/
-      https://*.web3auth.io;
+      https://*.web3auth.io
+      https://in.sumsub.com;
     object-src 'none';
     base-uri 'self';
     form-action 'self';
