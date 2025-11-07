@@ -122,11 +122,15 @@ describe("MessageServiceBase", () => {
     });
 
     it("Should succeed if original sender is allowed", async () => {
-      const messageServiceBase = (await deployUpgradableFromFactory("TestMessageServiceBase", [
-        await messageService.getAddress(),
-        "0x00000000000000000000000000000000075BCd15",
-      ])) as unknown as TestMessageServiceBase;
-      await expect(messageServiceBase.withOnlyAuthorizedRemoteSender()).to.not.be.reverted;
+      // Construct a call A from `remoteSender` to `messageService`
+      // Call A will created a nested call from `messageService` to `messageServiceBase`, invoking onlyAuthorizedRemoteSender modifier
+      const call = messageService.claimMessageWithoutChecks(
+        remoteSender,
+        messageServiceBase,
+        0,
+        "0xfcd38105", // keccak256("withOnlyAuthorizedRemoteSender()")
+      );
+      await expect(call).to.not.be.reverted;
     });
   });
 });

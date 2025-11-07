@@ -8,6 +8,27 @@ contract TestL2MessageService is L2MessageService {
   address public originalSender;
   bool private reentryDone;
 
+  function claimMessageWithoutChecks(
+    address _from,
+    address _to,
+    uint256 _value,
+    bytes calldata _calldata
+  ) external payable {
+    TRANSIENT_MESSAGE_SENDER = _from;
+    (bool callSuccess, bytes memory returnData) = _to.call{ value: _value }(_calldata);
+    if (!callSuccess) {
+      if (returnData.length > 0) {
+        assembly {
+          let data_size := mload(returnData)
+          revert(add(32, returnData), data_size)
+        }
+      } else {
+        revert MessageSendingFailed(_to);
+      }
+    }
+    TRANSIENT_MESSAGE_SENDER = DEFAULT_MESSAGE_SENDER_TRANSIENT_VALUE;
+  }
+
   function setLastAnchoredL1MessageNumber(uint256 _messageNumber) external {
     lastAnchoredL1MessageNumber = _messageNumber;
   }

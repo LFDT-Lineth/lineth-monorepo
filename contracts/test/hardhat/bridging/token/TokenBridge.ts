@@ -975,9 +975,10 @@ describe("TokenBridge", function () {
 
       await reentrancyContract.setToken(maliciousERC777.getAddress());
 
-      await expectRevertWithReason(
+      await expectRevertWithCustomError(
+        l1TokenBridge,
         l1TokenBridge.bridgeToken(await maliciousERC777.getAddress(), 1, owner.address),
-        "ReentrancyGuard: reentrant call",
+        "ReentrantCall",
       );
     });
   });
