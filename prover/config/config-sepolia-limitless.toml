@@ -1,5 +1,5 @@
 environment = "sepolia"
-version = "6.1.0"                              # TODO @gbotrel hunt all version definitions.
+version = "6.1.1"                              # TODO @gbotrel hunt all version definitions.
 assets_dir = "./prover-assets"
 log_level = 4                                  # TODO @gbotrel will be refactored with new logger.
 
@@ -7,21 +7,21 @@ log_level = 4                                  # TODO @gbotrel will be refactore
 retry_delays = [0, 1]
 
 [execution]
-prover_mode = "full"
-conflated_traces_dir = "./"
-requests_root_dir = "./"
+prover_mode = "limitless"
+conflated_traces_dir = "/home/ubuntu"
+requests_root_dir = "/home/ubuntu/mainnet-beta-v2-5.1.3/prover-execution"
 limitless_with_debug = false
 ignore_compatibility_check = false
 keep_traces_until_block = 0
 
 [blob_decompression]
 prover_mode = "full"
-requests_root_dir = "/home/ubuntu/mainnet-test-2/v1/prover-compression"
+requests_root_dir = "/home/ubuntu/mainnet-beta-v2-5.1.3/prover-compression"
 dict_paths = ["lib/compressor/compressor_dict.bin", "lib/compressor/dict/25-04-21.bin"]
 
 [aggregation]
 prover_mode = "full"
-requests_root_dir = "/home/ubuntu/mainnet-test-2/v1/prover-aggregation"
+requests_root_dir = "/home/ubuntu/mainnet-beta-v2-5.1.3/prover-aggregation"
 num_proofs = [10, 20, 50, 100, 200, 400]
 allowed_inputs = ["execution-dummy", "execution", "execution-large", "execution-limitless", "blob-decompression-dummy", "blob-decompression-v0", "blob-decompression-v1"]
 verifier_id = 1

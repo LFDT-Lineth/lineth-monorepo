@@ -183,7 +183,13 @@ func getStitchingCol(ctx StitchingContext, col ifaces.Column, option ...int) ifa
 
 	// case: constant column. The column may directly be expanded
 	case verifiercol.ConstCol:
-		return verifiercol.NewConstantCol(m.F, ctx.MaxSize, m.Name+"_STITCHED")
+		// Sometime, we may want to shift a constant column by a non-zero offset
+		// to cancel the constraint at the first or last positions.
+		res := verifiercol.NewConstantCol(m.F, ctx.MaxSize, m.Name+"_STITCHED")
+		if len(option) != 0 {
+			res = column.Shift(res, option[0])
+		}
+		return res
 
 	// case: verifier columns without shift
 	case verifiercol.VerifierCol:
