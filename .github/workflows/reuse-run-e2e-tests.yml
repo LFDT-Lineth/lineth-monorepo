@@ -181,8 +181,8 @@ jobs:
           docker logs transaction-exclusion-api --since 1h &>> docker_logs/transaction-exclusion-api.txt || true
           docker logs sequencer --since 1h &>> docker_logs/sequencer.txt || true
           docker logs l1-el-node --since 1h &>> docker_logs/l1-el-node.txt || true
-          docker logs maru --since 1h &>> docker_logs/maru.txt || true
           docker logs l1-cl-node --since 1h &>> docker_logs/l1-cl-node.txt || true
+          docker logs maru --since 1h &>> docker_logs/maru.txt || true
       - name: Archive debug logs
         uses: actions/upload-artifact@v4
         if: ${{ failure() && inputs.e2e-tests-logs-dump }}
