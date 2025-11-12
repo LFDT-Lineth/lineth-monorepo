@@ -1,6 +1,6 @@
 (defun (mxp-into-instruction-decoder-selector) mxp.DECODER) ;; ""
 
-(defclookup hub-into-instdecoder
+(defclookup mxp-into-instdecoder
   ;; target columns
   (
    instdecoder.MXP_FLAG

@@ -11,12 +11,6 @@
 (defun (curr-BLOBBASEFEE-hi)      (curr-data-hi))
 (defun (curr-BLOBBASEFEE-lo)      (curr-data-lo))
 
-(defconstraint   blobbasefee-value
-                 (:guard (blobbasefee-precondition))
-                 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-                 (begin (eq!  (curr-BLOBBASEFEE-hi)  0)
-                        (eq!  (curr-BLOBBASEFEE-lo)  LINEA_BLOB_BASE_FEE)))    ;;TODO: surely this won't work for blockchain ref tests
-
 (defconstraint   blobbasefee-bound
                  (:guard (blobbasefee-precondition))
                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

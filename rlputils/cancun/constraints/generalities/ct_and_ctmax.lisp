@@ -1,6 +1,6 @@
 (module rlputils)
 
-(defproperty      macro-is-ct-constant
+(defproperty ct-max-is-ct-constant
 	(counter-constant CT_MAX   CT))
 
 (defconstraint ct-vanishes-outside-compt ()

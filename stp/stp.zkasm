@@ -128,7 +128,7 @@ exit_oogx:
 
 ;; compute minimum of two values of different widths
 fn min256_64(gas u256, L_gas_diff u64) -> (res u64) {
-   var tmp1 u257
+   var tmp1 u256
    var tmp2 u192
    var b u1
    ;;

@@ -134,11 +134,13 @@ fn bit_shr256_u1(word u256, n u1) -> (res u256) {
   return
 apply:
   ;; >>> START: workaround #1176
-  var hi u127
-  var lo u127
-  var mid u1
-  hi, mid, lo, lsw = word
-  res = (hi * 2^128) + (mid * 2^127) + lo
+  var hi u248
+  var lo u7
+  var b u1
+  ;;
+  hi, lo, b = word
+  ;;
+  res = (hi * 2^7) + lo
   ;; <<< END
   return
 }

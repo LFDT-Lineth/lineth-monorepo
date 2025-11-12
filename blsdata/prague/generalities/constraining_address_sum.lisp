@@ -10,5 +10,5 @@
        (* 16 (is_map_fp_to_g1))
        (* 17 (is_map_fp2_to_g2))))
 
-(defconstraint stamp-constancy ()
+(defconstraint stamp-constancy-address-sum ()
     (stamp-constancy STAMP (address_sum)))

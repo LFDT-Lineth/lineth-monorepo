@@ -15,7 +15,7 @@
        (* INDEX_MAX_RSLT_MAP_FP_TO_G1 RSLT_BLS_MAP_FP_TO_G1_FLAG)
        (* INDEX_MAX_RSLT_MAP_FP2_TO_G2 RSLT_BLS_MAP_FP2_TO_G2_FLAG)))
 
-(defconstraint index-constancy ()
+(defconstraint index-constancy-index-max ()
     (counter-constancy INDEX INDEX_MAX))
     
 (defconstraint set-index-max ()

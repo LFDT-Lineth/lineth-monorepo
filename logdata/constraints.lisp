@@ -89,7 +89,7 @@
 ;;                                     ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defun    (normalized-SIZE_LIMB)
+(defun    ((normalized-SIZE_LIMB :i5 :force))
   (* LOGS_DATA (- SIZE_LIMB 1)))
 
 ;; this constraint enforces in particular that the final value of SIZE_LIMB is in the range [1 , 16]

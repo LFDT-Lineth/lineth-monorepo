@@ -1,6 +1,6 @@
 (module blsdata)
 
-(defconstraint vanishing-values ()
+(defconstraint vanishing-values-ct ()
   (if-zero (flag_sum)
            (begin (vanishes! CT_MAX)
                   (vanishes! CT)

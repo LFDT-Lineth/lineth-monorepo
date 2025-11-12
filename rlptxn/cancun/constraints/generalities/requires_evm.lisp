@@ -1,3 +1,4 @@
 (module rlptxn)
 
-(defconstraint transaction-constancies () (transaction-constant REQUIRES_EVM_EXECUTION))
+(defconstraint transaction-constancies-requires-evm ()
+  (transaction-constant REQUIRES_EVM_EXECUTION))

@@ -18,7 +18,7 @@
 (defun (will_switch_from_second_to_first)
     (* IS_SECOND_INPUT (next IS_FIRST_INPUT)))
 
-(defconstraint counter-constancy ()
+(defconstraint counter-constancy-first-and-second ()
      (begin (counter-constancy CT IS_FIRST_INPUT)
             (counter-constancy CT IS_SECOND_INPUT))) ;; TODO: add to constancy conditions in both lisp and specs
 
