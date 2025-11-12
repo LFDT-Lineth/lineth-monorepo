@@ -20,12 +20,6 @@ data class ProofsToAggregate(
   override val startBlockNumber = compressionProofIndexes.first().startBlockNumber
   override val endBlockNumber = compressionProofIndexes.last().endBlockNumber
 
-  fun getStartEndBlockInterval(): BlockInterval {
-    val startBlockNumber = compressionProofIndexes.first().startBlockNumber
-    val endBlockNumber = compressionProofIndexes.last().endBlockNumber
-    return BlockInterval.between(startBlockNumber, endBlockNumber)
-  }
-
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
     if (javaClass != other?.javaClass) return false

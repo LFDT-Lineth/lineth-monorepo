@@ -296,7 +296,7 @@ class AsyncRetryerTest {
         SafeFuture.failedFuture<Unit>(Exception("Upss"))
       }
     assertThrows<ExecutionException> { result.get() }
-    assertThat(delays.first()).isGreaterThan(100)
+    assertThat(delays.first()).isGreaterThanOrEqualTo(100)
     assertThat(delays.subList(1, delays.size)).allMatch { it >= 300 }
     assertThat(callCount).isEqualTo(4)
   }

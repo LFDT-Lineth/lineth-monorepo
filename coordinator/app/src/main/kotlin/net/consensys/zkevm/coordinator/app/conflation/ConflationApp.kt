@@ -284,7 +284,9 @@ class ConflationApp(
           smartContractErrors = configs.smartContractErrors,
           smartContractDeploymentBlockNumber = configs.protocol.l2.contractDeploymentBlockNumber?.getNumber(),
         ),
-        aggregationDeadlineDelay = configs.conflation.conflationDeadlineLastBlockConfirmationDelay,
+        noL2ActivityTimeout = configs.conflation.conflationDeadlineLastBlockConfirmationDelay,
+        waitForNoL2ActivityToTriggerAggregation =
+        configs.conflation.proofAggregation.waitForNoL2ActivityToTriggerAggregation,
         targetEndBlockNumbers = configs.conflation.proofAggregation.targetEndBlocks ?: emptyList(),
         metricsFacade = metricsFacade,
         provenAggregationEndBlockNumberConsumer = { aggEndBlockNumber -> highestAggregationTracker(aggEndBlockNumber) },

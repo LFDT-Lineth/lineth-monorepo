@@ -4,6 +4,7 @@ import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 import linea.domain.BlockHeaderSummary
 import linea.kotlin.ByteArrayExt
+import net.consensys.FakeFixedClock
 import net.consensys.zkevm.domain.BlobCounters
 import net.consensys.zkevm.domain.BlobsToAggregate
 import net.consensys.zkevm.ethereum.coordination.blockcreation.SafeBlockProvider
@@ -13,9 +14,66 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import kotlin.random.Random
+import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.minutes
 
 class AggregationTriggerCalculatorByDeadlineTest {
+
+  @Test
+  fun `trigger aggregation when past deadline with activity on l2`() {
+    val fakeClock = FakeFixedClock(Instant.parse("2025-01-01T00:00:00.000Z"))
+    val mockLatestSafeBlockProvider = mock<SafeBlockProvider>()
+    val aggregationDeadline = 10.days
+
+    var aggregationTrigger: AggregationTriggerType? = null
+    val aggregationTriggerTypeHandler = AggregationTriggerHandler {
+      aggregationTrigger = it.aggregationTriggerType
+      SafeFuture.completedFuture(Unit)
+    }
+
+    val aggregationTriggerByDeadline = AggregationTriggerCalculatorByDeadline(
+      AggregationTriggerCalculatorByDeadline.Config(
+        aggregationDeadline,
+        noL2ActivityTimeout = 5.minutes,
+        waitForNoL2ActivityToTriggerAggregation = false,
+      ),
+      fakeClock,
+      mockLatestSafeBlockProvider,
+    ).apply {
+      onAggregationTrigger(aggregationTriggerTypeHandler)
+    }
+
+    aggregationTriggerByDeadline.checkAggregation().get()
+    assertThat(aggregationTrigger).isNull()
+
+    aggregationTriggerByDeadline.newBlob(
+      BlobCounters(
+        numberOfBatches = 3u,
+        startBlockNumber = 100UL,
+        endBlockNumber = 110UL,
+        startBlockTimestamp = fakeClock.now().minus(5.days),
+        endBlockTimestamp = fakeClock.now().minus(3.days),
+        expectedShnarf = Random.nextBytes(32),
+      ),
+    )
+    aggregationTriggerByDeadline.checkAggregation().get()
+    assertThat(aggregationTrigger).isNull()
+
+    aggregationTriggerByDeadline.newBlob(
+      BlobCounters(
+        numberOfBatches = 3u,
+        startBlockNumber = 111UL,
+        endBlockNumber = 120UL,
+        startBlockTimestamp = fakeClock.now().minus(3.days),
+        endBlockTimestamp = fakeClock.now().minus(1.days),
+        expectedShnarf = Random.nextBytes(32),
+      ),
+    )
+    fakeClock.advanceBy(10.days)
+    aggregationTriggerByDeadline.checkAggregation().get()
+    assertThat(aggregationTrigger).isEqualTo(AggregationTriggerType.TIME_LIMIT)
+  }
 
   @Test
   fun `trigger aggregation when past deadline, latest block match and no activity on l2`() {
@@ -53,7 +111,7 @@ class AggregationTriggerCalculatorByDeadlineTest {
     }
 
     val aggregationTriggerByDeadline = AggregationTriggerCalculatorByDeadline(
-      AggregationTriggerCalculatorByDeadline.Config(aggregationDeadline, aggregationDeadlineDelay),
+      AggregationTriggerCalculatorByDeadline.Config(aggregationDeadline, aggregationDeadlineDelay, true),
       mockClock,
       mockLatestSafeBlockProvider,
     )
@@ -124,7 +182,7 @@ class AggregationTriggerCalculatorByDeadlineTest {
     val aggregationDeadlineDelay = 100.milliseconds
 
     val aggregationTriggerByDeadline = AggregationTriggerCalculatorByDeadline(
-      AggregationTriggerCalculatorByDeadline.Config(deadline, aggregationDeadlineDelay),
+      AggregationTriggerCalculatorByDeadline.Config(deadline, aggregationDeadlineDelay, true),
       mockClock,
       mockLatestSafeBlockProvider,
     )
@@ -234,7 +292,7 @@ class AggregationTriggerCalculatorByDeadlineTest {
     }
 
     val aggregationTriggerByDeadline = AggregationTriggerCalculatorByDeadline(
-      AggregationTriggerCalculatorByDeadline.Config(aggregationDeadline, aggregationDeadlineDelay),
+      AggregationTriggerCalculatorByDeadline.Config(aggregationDeadline, aggregationDeadlineDelay, true),
       mockClock,
       mockLatestSafeBlockProvider,
     )

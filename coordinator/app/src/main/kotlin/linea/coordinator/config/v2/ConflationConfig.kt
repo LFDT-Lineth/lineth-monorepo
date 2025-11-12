@@ -44,5 +44,6 @@ data class ConflationConfig(
     val targetEndBlocks: List<ULong>? = null,
     val aggregationSizeMultipleOf: UInt = 1u,
     val timestampBasedHardForks: List<Instant> = emptyList(),
+    val waitForNoL2ActivityToTriggerAggregation: Boolean = false,
   )
 }

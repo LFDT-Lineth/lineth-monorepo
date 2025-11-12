@@ -283,7 +283,8 @@ class ProofAggregationCoordinatorService(
       proofAggregationClient: ProofAggregationProverClientV2,
       l2EthApiClient: EthApiClient,
       l2MessageService: L2MessageServiceSmartContractClientReadOnly,
-      aggregationDeadlineDelay: Duration,
+      noL2ActivityTimeout: Duration,
+      waitForNoL2ActivityToTriggerAggregation: Boolean,
       targetEndBlockNumbers: List<ULong>,
       metricsFacade: MetricsFacade,
       provenAggregationEndBlockNumberConsumer: Consumer<ULong>,
@@ -297,7 +298,8 @@ class ProofAggregationCoordinatorService(
         AggregationTriggerCalculatorByDeadline(
           config = AggregationTriggerCalculatorByDeadline.Config(
             aggregationDeadline = aggregationDeadline,
-            aggregationDeadlineDelay = aggregationDeadlineDelay,
+            noL2ActivityTimeout = noL2ActivityTimeout,
+            waitForNoL2ActivityToTriggerAggregation = waitForNoL2ActivityToTriggerAggregation,
           ),
           clock = Clock.System,
           latestBlockProvider = latestBlockProvider,

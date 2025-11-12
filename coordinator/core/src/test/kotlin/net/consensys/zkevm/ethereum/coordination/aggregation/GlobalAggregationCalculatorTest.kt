@@ -81,7 +81,8 @@ class GlobalAggregationCalculatorTest {
         aggregationTriggerCalculatorByDeadline = AggregationTriggerCalculatorByDeadline(
           AggregationTriggerCalculatorByDeadline.Config(
             aggregationDeadline = aggregationDeadline,
-            aggregationDeadlineDelay = aggregationDeadlineDelay!!,
+            noL2ActivityTimeout = aggregationDeadlineDelay!!,
+            waitForNoL2ActivityToTriggerAggregation = true,
           ),
           fixedClock,
           safeBlockProvider,

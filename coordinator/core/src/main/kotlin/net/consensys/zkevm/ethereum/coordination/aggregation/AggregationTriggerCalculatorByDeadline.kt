@@ -20,18 +20,45 @@ class AggregationTriggerCalculatorByDeadline(
   private val clock: Clock = Clock.System,
   private val latestBlockProvider: SafeBlockProvider,
 ) : DeferredAggregationTriggerCalculator {
-  data class Config(val aggregationDeadline: Duration, val aggregationDeadlineDelay: Duration)
+  data class Config(
+    val aggregationDeadline: Duration,
+    val noL2ActivityTimeout: Duration,
+    val waitForNoL2ActivityToTriggerAggregation: Boolean,
+  )
 
   data class InFlightAggregation(
     val aggregationStartTimeStamp: Instant,
     val blobsToAggregate: BlobsToAggregate,
+    val lastBlobEndTimestamp: Instant,
   )
 
   private var inFlightAggregation: InFlightAggregation? = null
   private var aggregationTriggerHandler = AggregationTriggerHandler.NOOP_HANDLER
   private val log: Logger = LogManager.getLogger(this::class.java)
 
-  private fun checkDeadlineTriggerCriteria(blobsToAggregate: BlobsToAggregate): SafeFuture<Unit> {
+  private fun checkDeadlineTriggerCriteria(inFlightAggregation: InFlightAggregation?): SafeFuture<Boolean> {
+    val now = clock.now()
+    log.trace(
+      "checking deadline: inflightAggregation={} timeElapsed={} deadline={}",
+      inFlightAggregation,
+      inFlightAggregation?.aggregationStartTimeStamp?.let { now.minus(it) } ?: 0.seconds,
+      config.aggregationDeadline,
+    )
+    if (inFlightAggregation == null) {
+      return SafeFuture.completedFuture(false)
+    }
+
+    val deadlineReached = now > inFlightAggregation.aggregationStartTimeStamp.plus(config.aggregationDeadline)
+
+    if (!deadlineReached) {
+      return SafeFuture.completedFuture(false)
+    }
+
+    if (!config.waitForNoL2ActivityToTriggerAggregation) {
+      return SafeFuture.completedFuture(true)
+    }
+
+    // we need to check for NO L2 activity
     return latestBlockProvider.getLatestSafeBlockHeader().whenException { th ->
       log.warn(
         "SafeBlock request failed. Will retry aggregation deadline on next tick errorMessage={}",
@@ -39,44 +66,38 @@ class AggregationTriggerCalculatorByDeadline(
         th,
       )
     }.thenApply {
-      val noActivityOnL2 = clock.now().minus(config.aggregationDeadlineDelay) > it.timestamp
+      val noActivityOnL2 = clock.now().minus(config.noL2ActivityTimeout) > it.timestamp
       log.debug(
         "Aggregation deadline checking trigger criteria lastBlockNumber={} latestL2SafeBlock={} noActivityOnL2={}",
-        blobsToAggregate.endBlockNumber,
+        inFlightAggregation.blobsToAggregate.endBlockNumber,
         it.number,
         noActivityOnL2,
       )
-      if (it.number == blobsToAggregate.endBlockNumber && noActivityOnL2) {
-        log.info("Aggregation Deadline reached at block {}", blobsToAggregate.endBlockNumber)
-        aggregationTriggerHandler.onAggregationTrigger(
-          AggregationTrigger(
-            aggregationTriggerType = AggregationTriggerType.TIME_LIMIT,
-            aggregation = blobsToAggregate,
-          ),
-        )
+      if (it.number == inFlightAggregation.blobsToAggregate.endBlockNumber && noActivityOnL2) {
+        true
+      } else {
+        false
       }
     }
   }
 
   @Synchronized
   fun checkAggregation(): SafeFuture<Unit> {
-    val now = clock.now()
-    log.trace(
-      "Checking deadline: inflightAggregation={} timeElapsed={} deadline={}",
-      inFlightAggregation,
-      inFlightAggregation?.aggregationStartTimeStamp?.let { now.minus(it) } ?: 0.seconds,
-      config.aggregationDeadline,
-    )
-
-    val deadlineReached =
-      inFlightAggregation != null && now > inFlightAggregation!!.aggregationStartTimeStamp.plus(
-        config.aggregationDeadline,
-      )
-
-    if (!deadlineReached) {
-      return SafeFuture.completedFuture(Unit)
-    }
-    return checkDeadlineTriggerCriteria(inFlightAggregation!!.blobsToAggregate)
+    val inFlightAggregationBeforeCheck = this.inFlightAggregation
+    return checkDeadlineTriggerCriteria(inFlightAggregationBeforeCheck)
+      .thenApply { deadlineTigger ->
+        // inFlightAggregation can be updated while we were waiting for the latest safe block
+        // trigger blob/proof limiting if criteria met
+        if (deadlineTigger && this.inFlightAggregation == inFlightAggregationBeforeCheck) {
+          log.info("aggregation deadline reached at block={}", inFlightAggregation!!.blobsToAggregate.endBlockNumber)
+          aggregationTriggerHandler.onAggregationTrigger(
+            AggregationTrigger(
+              aggregationTriggerType = AggregationTriggerType.TIME_LIMIT,
+              aggregation = inFlightAggregation!!.blobsToAggregate,
+            ),
+          )
+        }
+      }
   }
 
   @Synchronized
@@ -85,6 +106,7 @@ class AggregationTriggerCalculatorByDeadline(
       inFlightAggregation = InFlightAggregation(
         aggregationStartTimeStamp = blobCounters.startBlockTimestamp,
         blobsToAggregate = BlobsToAggregate(blobCounters.startBlockNumber, blobCounters.endBlockNumber),
+        lastBlobEndTimestamp = blobCounters.endBlockTimestamp,
       )
     } else {
       inFlightAggregation = InFlightAggregation(
@@ -93,6 +115,7 @@ class AggregationTriggerCalculatorByDeadline(
           inFlightAggregation!!.blobsToAggregate.startBlockNumber,
           blobCounters.endBlockNumber,
         ),
+        lastBlobEndTimestamp = blobCounters.endBlockTimestamp,
       )
     }
   }
