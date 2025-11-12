@@ -1,14 +1,10 @@
-import { ethers, network } from "hardhat";
+import { ethers } from "hardhat";
 import { DeployFunction } from "hardhat-deploy/types";
-import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { deployUpgradableFromFactory } from "../scripts/hardhat/utils";
-import { tryVerifyContract, getDeployedContractAddress, tryStoreAddress, getRequiredEnvVar } from "../common/helpers";
+import { tryVerifyContract, getRequiredEnvVar } from "../common/helpers";
 
-const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
-  const { deployments } = hre;
-
+const func: DeployFunction = async function () {
   const contractName = "CustomBridgedToken";
-  const existingContractAddress = await getDeployedContractAddress(contractName, deployments);
 
   const CustomTokenBridge_name = getRequiredEnvVar("CUSTOMTOKENBRIDGE_NAME");
   const CustomTokenBridge_symbol = getRequiredEnvVar("CUSTOMTOKENBRIDGE_SYMBOL");
@@ -17,12 +13,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const chainId = (await ethers.provider.getNetwork()).chainId;
   console.log(`Current network's chainId is ${chainId}`);
-
-  if (existingContractAddress === undefined) {
-    console.log(`Deploying initial version, NB: the address will be saved if env SAVE_ADDRESS=true.`);
-  } else {
-    console.log(`Deploying new version, NB: ${existingContractAddress} will be overwritten if env SAVE_ADDRESS=true.`);
-  }
 
   // Deploy proxy for custom bridged token
   const customBridgedToken = await deployUpgradableFromFactory(
@@ -45,7 +35,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     `contract=${contractName} deployed: address=${contractAddress} blockNumber=${txReceipt.blockNumber} chainId=${chainId}`,
   );
 
-  await tryStoreAddress(network.name, contractName, contractAddress, txReceipt.hash);
   await tryVerifyContract(contractAddress);
 };
 

@@ -1,12 +1,6 @@
 import { ethers, upgrades } from "hardhat";
 import { DeployFunction } from "hardhat-deploy/types";
-import { HardhatRuntimeEnvironment } from "hardhat/types";
-import {
-  tryVerifyContract,
-  getDeployedContractAddress,
-  getRequiredEnvVar,
-  generateRoleAssignments,
-} from "../common/helpers";
+import { tryVerifyContract, getRequiredEnvVar, generateRoleAssignments } from "../common/helpers";
 import { TokenBridge__factory } from "contracts/typechain-types";
 import {
   PAUSE_ALL_ROLE,
@@ -24,7 +18,7 @@ import {
   UNPAUSE_INITIATE_TOKEN_BRIDGING_ROLE,
 } from "contracts/common/constants";
 
-const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
+const func: DeployFunction = async function () {
   let securityCouncilAddress;
 
   if (process.env.TOKEN_BRIDGE_L1 === "true") {
@@ -50,19 +44,11 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const newRoleAddresses = generateRoleAssignments(newRoles, securityCouncilAddress, []);
   console.log("New role addresses", newRoleAddresses);
 
-  const { deployments } = hre;
   const contractName = "TokenBridge";
-  const existingContractAddress = await getDeployedContractAddress(contractName, deployments);
 
   const proxyAddress = getRequiredEnvVar("TOKEN_BRIDGE_ADDRESS");
 
   const factory = await ethers.getContractFactory(contractName);
-
-  if (existingContractAddress === undefined) {
-    console.log(`Deploying initial version, NB: the address will be saved if env SAVE_ADDRESS=true.`);
-  } else {
-    console.log(`Deploying new version, NB: ${existingContractAddress} will be overwritten if env SAVE_ADDRESS=true.`);
-  }
 
   console.log("Deploying Contract...");
   const newContract = await upgrades.deployImplementation(factory, {

@@ -6,6 +6,5 @@ export * from "./auditedDeployVerifier";
 export * from "./deployments";
 export * from "./environmentHelper";
 export * from "./readAddress";
-export * from "./storeAddress";
 export * from "./verifyContract";
 export * from "./general";

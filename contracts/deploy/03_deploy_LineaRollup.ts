@@ -1,13 +1,10 @@
 import { DeployFunction } from "hardhat-deploy/types";
-import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { deployUpgradableFromFactory } from "../scripts/hardhat/utils";
 import {
   generateRoleAssignments,
   getEnvVarOrDefault,
   getRequiredEnvVar,
   tryVerifyContract,
-  getDeployedContractAddress,
-  tryStoreAddress,
   LogContractDeployment,
 } from "../common/helpers";
 import {
@@ -18,20 +15,11 @@ import {
   OPERATOR_ROLE,
 } from "../common/constants";
 
-const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
-  const { deployments } = hre;
-
+const func: DeployFunction = async function () {
   const contractName = "LineaRollup";
-  const verifierName = "PlonkVerifier";
-  const existingContractAddress = await getDeployedContractAddress(contractName, deployments);
-  let verifierAddress = await getDeployedContractAddress(verifierName, deployments);
-  if (!verifierAddress) {
-    verifierAddress = getRequiredEnvVar("PLONKVERIFIER_ADDRESS");
-  } else {
-    console.log(`Using deployed variable for PlonkVerifier , ${verifierAddress}`);
-  }
 
   // LineaRollup DEPLOYED AS UPGRADEABLE PROXY
+  const verifierAddress = getRequiredEnvVar("PLONKVERIFIER_ADDRESS");
   const lineaRollupInitialStateRootHash = getRequiredEnvVar("LINEA_ROLLUP_INITIAL_STATE_ROOT_HASH");
   const lineaRollupInitialL2BlockNumber = getRequiredEnvVar("LINEA_ROLLUP_INITIAL_L2_BLOCK_NUMBER");
   const lineaRollupSecurityCouncil = getRequiredEnvVar("LINEA_ROLLUP_SECURITY_COUNCIL");
@@ -47,12 +35,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     { role: OPERATOR_ROLE, addresses: lineaRollupOperators },
   ]);
   const roleAddresses = getEnvVarOrDefault("LINEA_ROLLUP_ROLE_ADDRESSES", defaultRoleAddresses);
-
-  if (!existingContractAddress) {
-    console.log(`Deploying initial version, NB: the address will be saved if env SAVE_ADDRESS=true.`);
-  } else {
-    console.log(`Deploying new version, NB: ${existingContractAddress} will be overwritten if env SAVE_ADDRESS=true.`);
-  }
 
   const contract = await deployUpgradableFromFactory(
     "LineaRollup",
@@ -79,8 +61,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   await LogContractDeployment(contractName, contract);
   const contractAddress = await contract.getAddress();
-
-  await tryStoreAddress(hre.network.name, contractName, contractAddress, contract.deploymentTransaction()!.hash);
 
   await tryVerifyContract(contractAddress);
 };

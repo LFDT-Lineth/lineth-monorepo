@@ -1,15 +1,9 @@
 import { ethers } from "hardhat";
 import { DeployFunction } from "hardhat-deploy/types";
 import { deployFromFactory } from "../scripts/hardhat/utils";
-import {
-  LogContractDeployment,
-  getRequiredEnvVar,
-  tryStoreAddress,
-  tryVerifyContractWithConstructorArgs,
-} from "../common/helpers";
-import { HardhatRuntimeEnvironment } from "hardhat/types";
+import { LogContractDeployment, getRequiredEnvVar, tryVerifyContractWithConstructorArgs } from "../common/helpers";
 
-const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
+const func: DeployFunction = async function () {
   const contractName = "CallForwardingProxy";
 
   const provider = ethers.provider;
@@ -21,8 +15,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   await LogContractDeployment(contractName, contract);
   const contractAddress = await contract.getAddress();
-
-  await tryStoreAddress(hre.network.name, contractName, contractAddress, contract.deploymentTransaction()!.hash);
 
   const args = [targetAddress];
 
