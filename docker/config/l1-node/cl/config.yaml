@@ -42,3 +42,5 @@ Xlog-wire-gossip-enabled: true
 p2p-private-key-file: /config/keys/teku.key
 Xstartup-target-peer-count: 0
 Xstartup-timeout-seconds: 0
+
+Xnetwork-async-beaconchain-max-threads: 5

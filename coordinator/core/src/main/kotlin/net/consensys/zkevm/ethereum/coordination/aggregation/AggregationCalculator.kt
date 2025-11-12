@@ -12,6 +12,7 @@ fun interface AggregationHandler {
 enum class AggregationTriggerType {
   TIME_LIMIT,
   PROOF_LIMIT,
+  BLOB_LIMIT,
 
   /**
    * Aggregation trigger by target block numbers specified in the configuration.

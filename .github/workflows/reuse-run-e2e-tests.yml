@@ -138,7 +138,7 @@ jobs:
           echo "EXPECTED_TRACES_API_VERSION=${{ env.EXPECTED_TRACES_API_VERSION }}"
           echo "BESU_PACKAGE_TAG=${{ env.BESU_PACKAGE_TAG }}"
           echo "$(grep expected-traces-api-version config/coordinator/coordinator-config-v2.toml)"
-      - name: Spin up fresh environment with besu tracing with retry
+      - name: Spin up fresh environment with retry
         uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 #v3.0.2
         with:
           max_attempts: 10

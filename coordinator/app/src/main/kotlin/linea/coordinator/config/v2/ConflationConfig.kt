@@ -38,6 +38,7 @@ data class ConflationConfig(
 
   data class ProofAggregation(
     val proofsLimit: UInt = 300u,
+    val blobsLimit: UInt? = null,
     val deadline: Duration = Duration.INFINITE,
     val deadlineCheckInterval: Duration = 30.seconds,
     val coordinatorPollingInterval: Duration = 3.seconds,

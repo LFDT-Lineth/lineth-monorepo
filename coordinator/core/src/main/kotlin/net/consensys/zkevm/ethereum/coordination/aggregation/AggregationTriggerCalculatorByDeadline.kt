@@ -29,7 +29,6 @@ class AggregationTriggerCalculatorByDeadline(
   data class InFlightAggregation(
     val aggregationStartTimeStamp: Instant,
     val blobsToAggregate: BlobsToAggregate,
-    val lastBlobEndTimestamp: Instant,
   )
 
   private var inFlightAggregation: InFlightAggregation? = null
@@ -106,7 +105,6 @@ class AggregationTriggerCalculatorByDeadline(
       inFlightAggregation = InFlightAggregation(
         aggregationStartTimeStamp = blobCounters.startBlockTimestamp,
         blobsToAggregate = BlobsToAggregate(blobCounters.startBlockNumber, blobCounters.endBlockNumber),
-        lastBlobEndTimestamp = blobCounters.endBlockTimestamp,
       )
     } else {
       inFlightAggregation = InFlightAggregation(
@@ -115,7 +113,6 @@ class AggregationTriggerCalculatorByDeadline(
           inFlightAggregation!!.blobsToAggregate.startBlockNumber,
           blobCounters.endBlockNumber,
         ),
-        lastBlobEndTimestamp = blobCounters.endBlockTimestamp,
       )
     }
   }

@@ -266,6 +266,7 @@ class ConflationApp(
           config = GethCliqueSafeBlockProvider.Config(0),
         ),
         maxProofsPerAggregation = configs.conflation.proofAggregation.proofsLimit,
+        maxBlobsPerAggregation = configs.conflation.proofAggregation.blobsLimit,
         startBlockNumberInclusive = lastConsecutiveAggregatedBlockNumber + 1u,
         aggregationsRepository = aggregationsRepository,
         consecutiveProvenBlobsProvider = maxBlobEndBlockNumberTracker,

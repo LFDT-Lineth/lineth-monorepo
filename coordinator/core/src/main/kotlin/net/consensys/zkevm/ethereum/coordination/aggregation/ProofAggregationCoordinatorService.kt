@@ -277,6 +277,7 @@ class ProofAggregationCoordinatorService(
       aggregationDeadline: Duration,
       latestBlockProvider: SafeBlockProvider,
       maxProofsPerAggregation: UInt,
+      maxBlobsPerAggregation: UInt?,
       startBlockNumberInclusive: ULong,
       aggregationsRepository: AggregationsRepository,
       consecutiveProvenBlobsProvider: ConsecutiveProvenBlobsProvider,
@@ -310,6 +311,10 @@ class ProofAggregationCoordinatorService(
       if (targetEndBlockNumbers.isNotEmpty()) {
         syncAggregationTriggerCalculators
           .add(AggregationTriggerCalculatorByTargetBlockNumbers(targetEndBlockNumbers = targetEndBlockNumbers))
+      }
+      if (maxBlobsPerAggregation != null) {
+        syncAggregationTriggerCalculators
+          .add(AggregationTriggerCalculatorByBlobLimit(maxBlobsPerAggregation = maxBlobsPerAggregation))
       }
 
       if (hardForkTimestamps.isNotEmpty()) {

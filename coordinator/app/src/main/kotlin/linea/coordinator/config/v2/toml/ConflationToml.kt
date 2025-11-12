@@ -45,6 +45,7 @@ data class ConflationToml(
 
   data class ProofAggregationToml(
     val proofsLimit: UInt = 300u,
+    val blobsLimit: UInt? = null,
     val deadline: Duration? = null,
     val deadlineCheckInterval: Duration = 30.seconds,
     val coordinatorPollingInterval: Duration = 3.seconds,
@@ -62,6 +63,7 @@ data class ConflationToml(
     fun reified(): ConflationConfig.ProofAggregation {
       return ConflationConfig.ProofAggregation(
         proofsLimit = this.proofsLimit,
+        blobsLimit = this.blobsLimit,
         deadline = this.deadline ?: Duration.INFINITE,
         deadlineCheckInterval = this.deadlineCheckInterval,
         coordinatorPollingInterval = this.coordinatorPollingInterval,

@@ -30,7 +30,8 @@ class ConflationParsingTest {
       batches-limit = 1
 
       [conflation.proof-aggregation]
-      proofs-limit = 3
+      proofs-limit = 4
+      blobs-limit = 2
       deadline = "PT1M"
       coordinator-polling-interval = "PT2S"
       deadline-check-interval = "PT8S"
@@ -54,7 +55,8 @@ class ConflationParsingTest {
         batchesLimit = 1u,
       ),
       proofAggregation = ConflationToml.ProofAggregationToml(
-        proofsLimit = 3u,
+        proofsLimit = 4u,
+        blobsLimit = 2u,
         deadline = 60.seconds,
         coordinatorPollingInterval = 2.seconds,
         deadlineCheckInterval = 8.seconds,

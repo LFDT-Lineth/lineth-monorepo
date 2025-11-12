@@ -35,6 +35,7 @@ start-env:
 	COMPOSE_PROFILES=$(COMPOSE_PROFILES) docker compose -f $(COMPOSE_FILE) up -d; \
 	while [ "$(SKIP_L1_L2_NODE_HEALTH_CHECK)" = "false" ] && \
 			{ [ "$$(docker compose -f $(COMPOSE_FILE) ps -q l1-el-node | xargs docker inspect -f '{{.State.Health.Status}}')" != "healthy" ] || \
+				[ "$$(docker compose -f $(COMPOSE_FILE) ps -q l1-cl-node | xargs docker inspect -f '{{.State.Health.Status}}')" != "healthy" ] || \
   			[ "$$(docker compose -f $(COMPOSE_FILE) ps -q sequencer | xargs docker inspect -f '{{.State.Health.Status}}')" != "healthy" ]; }; do \
   			sleep 2; \
   			echo "Checking health status of l1-el-node and sequencer..."; \
