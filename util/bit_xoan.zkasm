@@ -1,6 +1,8 @@
-;; Bit_xoan is doing intermediate functions calls to split a u256 down to u1
+;; Bit_xoan is doing intermediate functions calls to split a u256 down
+;; to u1.
+;;
 ;; bit_xoan_u2 has the logic to discriminate between the instructions
-;; Used for Xor, Or, And, Not
+;; XOR, OR, AND, NOT
 
 const BIT_XOR = 0
 const BIT_OR  = 1

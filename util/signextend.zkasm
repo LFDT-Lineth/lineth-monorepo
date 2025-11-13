@@ -2,15 +2,20 @@
 ;;
 ;; n = ( 31 - size )
 ;; Extend the sign of the nth byte on the range [0:n[ with n excluded
-;; if size == 0, sign of the 31th byte is extended from byte 0 to 30
+;; if size == 0, sign of the 31st byte is extended from byte 0 to 30
 ;; if size == 31, word stays unchanged
 ;;
 ;; Examples :
-;; size = 0, word = 0x80FF, res = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff (byte 30 is overridden)
-;; size = 1, word = 0x80FF, res = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80ff
-;; size = 2, word = 0x80FF, res = 0x80FF
-;;
-;; note : this function does not handle the case where size > 31, as it's handled at the module level
+;; (1)
+;; size = 0, word = 0x80FF
+;; res = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+;; note : (byte 30 is overridden)
+;; (2)
+;; size = 1, word = 0x80FF
+;; res = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80ff
+;; (3)
+;; size = 2, word = 0x80FF
+;; res = 0x80FF
 
 include "byte.zkasm"
 include "fill_bytes.zkasm"

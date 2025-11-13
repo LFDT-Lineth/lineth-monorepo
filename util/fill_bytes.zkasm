@@ -18,7 +18,6 @@ include "set_byte.zkasm"
 ;; end.  The key is that all other bytes remain unchanged.
 fn fill_bytes_between(word u256, start u6, end u6, value u8) -> (res u256) {
    var nword u256
-   var noffset u6
    var offset u5
    var s u1
    ;; check termination
@@ -29,10 +28,8 @@ fn fill_bytes_between(word u256, start u6, end u6, value u8) -> (res u256) {
    if s == 1 goto exit
    ;; set given byte
    nword = set_byte256(word, offset, value)
-   ;; increment offset
-   noffset = offset + 1
    ;; recurse
-   res = fill_bytes_between(nword, noffset, end, value)
+   res = fill_bytes_between(nword, offset+1, end, value)
    ;; done
    return
 exit:

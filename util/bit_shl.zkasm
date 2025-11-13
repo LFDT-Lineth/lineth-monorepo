@@ -2,7 +2,6 @@
 ;; implementation performs a decomposition on the shift, starting with
 ;; the most significant bit.
 fn bit_shl256(word u256, n u8) -> (res u256) {
-  var nword u256
   var lsw u128
   var msw u128
   var b u1
@@ -15,13 +14,11 @@ fn bit_shl256(word u256, n u8) -> (res u256) {
   return
 apply:
   msw, lsw = word
-  nword = lsw * 2^128
-  res = bit_shl256_u7(nword,m)
+  res = bit_shl256_u7(lsw * 2^128, m)
   return
 }
 
 fn bit_shl256_u7(word u256, n u7) -> (res u256) {
-  var nword u256
   var lsw u192
   var msw u64
   var b u1
@@ -34,13 +31,11 @@ fn bit_shl256_u7(word u256, n u7) -> (res u256) {
   return
 apply:
   msw, lsw = word
-  nword = lsw * 2^64
-  res = bit_shl256_u6(nword,m)
+  res = bit_shl256_u6(lsw * 2^64, m)
   return
 }
 
 fn bit_shl256_u6(word u256, n u6) -> (res u256) {
-  var nword u256
   var lsw u224
   var msw u32
   var b u1
@@ -53,13 +48,11 @@ fn bit_shl256_u6(word u256, n u6) -> (res u256) {
   return
 apply:
   msw, lsw = word
-  nword = lsw * 2^32
-  res = bit_shl256_u5(nword,m)
+  res = bit_shl256_u5(lsw * 2^32, m)
   return
 }
 
 fn bit_shl256_u5(word u256, n u5) -> (res u256) {
-  var nword u256
   var lsw u240
   var msw u16
   var b u1
@@ -72,13 +65,11 @@ fn bit_shl256_u5(word u256, n u5) -> (res u256) {
   return
 apply:
   msw, lsw = word
-  nword = lsw * 2^16
-  res = bit_shl256_u4(nword,m)
+  res = bit_shl256_u4(lsw * 2^16, m)
   return
 }
 
 fn bit_shl256_u4(word u256, n u4) -> (res u256) {
-  var nword u256
   var lsw u248
   var msw u8
   var b u1
@@ -91,13 +82,11 @@ fn bit_shl256_u4(word u256, n u4) -> (res u256) {
   return
 apply:
   msw, lsw = word
-  nword = lsw * 2^8
-  res = bit_shl256_u3(nword,m)
+  res = bit_shl256_u3(lsw * 2^8, m)
   return
 }
 
 fn bit_shl256_u3(word u256, n u3) -> (res u256) {
-  var nword u256
   var lsw u252
   var msw u4
   var b u1
@@ -110,13 +99,11 @@ fn bit_shl256_u3(word u256, n u3) -> (res u256) {
   return
 apply:
   msw, lsw = word
-  nword = lsw * 2^4
-  res = bit_shl256_u2(nword,m)
+  res = bit_shl256_u2(lsw * 2^4, m)
   return
 }
 
 fn bit_shl256_u2(word u256, n u2) -> (res u256) {
-  var nword u256
   var lsw u254
   var msw u2
   var b u1
@@ -129,8 +116,7 @@ fn bit_shl256_u2(word u256, n u2) -> (res u256) {
   return
 apply:
   msw, lsw = word
-  nword = lsw * 2^2
-  res = bit_shl256_u1(nword,m)
+  res = bit_shl256_u1(lsw * 2^2, m)
   return
 }
 

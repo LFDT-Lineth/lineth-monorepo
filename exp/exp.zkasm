@@ -25,7 +25,7 @@ pub fn exp(INST=0xEE0A u16, ARG u256, CDS u6, EBS u6) -> (RES=0 u128)
 {
    var s, b u1
    var tmp u5
-   var log_word, zero, shift u8
+   var shift u8
    var shifted_word, filled_word u256
    ;;
    if INST == EXP_INST_EXPLOG goto explog
@@ -43,8 +43,7 @@ explog2:
    return
 modexplog:
    ;; fill as necessary
-   zero = 0
-   filled_word = fill_bytes_between(ARG, CDS, EBS, zero)
+   filled_word = fill_bytes_between(ARG, CDS, EBS, 0)
    ;; determine shift amount (in bits)
    s, b, shift = (32 - EBS) * 8
    ;; check precondition
@@ -53,9 +52,7 @@ modexplog:
    ;; shift right
    shifted_word = bit_shr256(filled_word,shift)
    ;; compute log
-   log_word = log2(shifted_word)
-   ;; cast
-   RES = log_word
+   RES = log2(shifted_word)
    ;;
    return
 failed_pre:
