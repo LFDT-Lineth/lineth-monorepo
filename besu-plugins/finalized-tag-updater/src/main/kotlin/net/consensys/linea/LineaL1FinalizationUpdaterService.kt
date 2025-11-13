@@ -1,12 +1,12 @@
 package net.consensys.linea
 
 import io.vertx.core.Vertx
+import linea.LongRunningService
 import linea.consensus.EngineBlockTagUpdater
 import linea.consensus.HardForkIdProvider
 import linea.contract.l1.Web3JLineaRollupSmartContractClientReadOnly
 import linea.domain.BlockParameter
 import linea.web3j.okhttp.okHttpClientBuilder
-import net.consensys.zkevm.LongRunningService
 import net.consensys.zkevm.ethereum.finalization.FinalizationUpdatePoller
 import net.consensys.zkevm.ethereum.finalization.FinalizationUpdatePollerConfig
 import org.apache.logging.log4j.LogManager

@@ -1,13 +1,13 @@
 package net.consensys.zkevm.coordinator.app
 
 import io.vertx.core.Vertx
+import linea.LongRunningService
 import linea.anchoring.MessageAnchoringApp
 import linea.contract.l2.Web3JL2MessageServiceSmartContractClient
 import linea.coordinator.config.v2.CoordinatorConfig
 import linea.coordinator.config.v2.isDisabled
 import linea.web3j.createWeb3jHttpClient
 import linea.web3j.ethapi.createEthApiClient
-import net.consensys.zkevm.LongRunningService
 import org.apache.logging.log4j.LogManager
 
 object MessageAnchoringAppConfigurator {

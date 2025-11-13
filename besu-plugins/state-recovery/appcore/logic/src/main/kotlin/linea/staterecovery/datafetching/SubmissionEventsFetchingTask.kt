@@ -7,7 +7,8 @@ import linea.domain.EthLogEvent
 import linea.staterecovery.DataFinalizedV3
 import linea.staterecovery.FinalizationAndDataEventsV3
 import linea.staterecovery.LineaRollupSubmissionEventsClient
-import net.consensys.zkevm.PeriodicPollingService
+import linea.timer.TimerSchedule
+import linea.timer.VertxPeriodicPollingService
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture
@@ -25,10 +26,12 @@ internal class SubmissionEventsFetchingTask(
   private val queueLimit: Int,
   private val debugForceSyncStopBlockNumber: ULong?,
   private val log: Logger = LogManager.getLogger(SubmissionEventsFetchingTask::class.java),
-) : PeriodicPollingService(
+) : VertxPeriodicPollingService(
   vertx = vertx,
   pollingIntervalMs = l1PollingInterval.inWholeMilliseconds,
   log = log,
+  name = "SubmissionEventsFetchingTask",
+  timerSchedule = TimerSchedule.FIXED_DELAY,
 ) {
   val latestFetchedFinalization: AtomicReference<EthLogEvent<DataFinalizedV3>> = AtomicReference(null)
 

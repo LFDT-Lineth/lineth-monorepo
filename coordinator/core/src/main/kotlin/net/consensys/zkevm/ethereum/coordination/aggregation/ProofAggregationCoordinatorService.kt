@@ -3,15 +3,16 @@ package net.consensys.zkevm.ethereum.coordination.aggregation
 import io.vertx.core.Vertx
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
+import linea.LongRunningService
 import linea.contract.l2.L2MessageServiceSmartContractClientReadOnly
 import linea.domain.BlockIntervals
 import linea.domain.toBlockIntervalsString
 import linea.ethapi.EthApiClient
+import linea.timer.TimerSchedule
+import linea.timer.VertxPeriodicPollingService
 import net.consensys.linea.async.AsyncRetryer
 import net.consensys.linea.metrics.LineaMetricsCategory
 import net.consensys.linea.metrics.MetricsFacade
-import net.consensys.zkevm.LongRunningService
-import net.consensys.zkevm.PeriodicPollingService
 import net.consensys.zkevm.coordinator.clients.ProofAggregationProverClientV2
 import net.consensys.zkevm.domain.Aggregation
 import net.consensys.zkevm.domain.BlobAndBatchCounters
@@ -44,10 +45,12 @@ class ProofAggregationCoordinatorService(
   private val provenConsecutiveAggregationEndBlockNumberConsumer: Consumer<ULong> = Consumer<ULong> { },
   private val lastFinalizedBlockNumberSupplier: Supplier<ULong> = Supplier<ULong> { 0UL },
   private val log: Logger = LogManager.getLogger(ProofAggregationCoordinatorService::class.java),
-) : AggregationHandler, PeriodicPollingService(
+) : AggregationHandler, VertxPeriodicPollingService(
   vertx = vertx,
   pollingIntervalMs = config.pollingInterval.inWholeMilliseconds,
   log = log,
+  name = "ProofAggregationCoordinatorService",
+  timerSchedule = TimerSchedule.FIXED_DELAY,
 ) {
   data class Config(
     val pollingInterval: Duration,

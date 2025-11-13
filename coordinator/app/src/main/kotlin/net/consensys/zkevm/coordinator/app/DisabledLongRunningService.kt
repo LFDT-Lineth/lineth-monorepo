@@ -1,6 +1,6 @@
 package net.consensys.zkevm.coordinator.app
 
-import net.consensys.zkevm.LongRunningService
+import linea.LongRunningService
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.CompletableFuture
 

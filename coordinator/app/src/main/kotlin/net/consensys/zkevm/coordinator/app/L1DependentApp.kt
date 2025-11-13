@@ -3,6 +3,7 @@ package net.consensys.zkevm.coordinator.app
 import io.vertx.core.Vertx
 import io.vertx.sqlclient.SqlClient
 import kotlinx.datetime.Clock
+import linea.LongRunningService
 import linea.contract.l1.LineaRollupSmartContractClientReadOnly
 import linea.contract.l1.Web3JLineaRollupSmartContractClientReadOnly
 import linea.coordinator.config.toJsonRpcRetry
@@ -41,7 +42,6 @@ import net.consensys.linea.ethereum.gaspricing.staticcap.VariableFeesCalculator
 import net.consensys.linea.jsonrpc.client.VertxHttpJsonRpcClientFactory
 import net.consensys.linea.metrics.LineaMetricsCategory
 import net.consensys.linea.metrics.MetricsFacade
-import net.consensys.zkevm.LongRunningService
 import net.consensys.zkevm.coordinator.app.conflation.ConflationApp
 import net.consensys.zkevm.coordinator.app.conflation.ConflationAppHelper.resumeConflationFrom
 import net.consensys.zkevm.coordinator.clients.ShomeiClient

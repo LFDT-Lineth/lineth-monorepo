@@ -8,7 +8,8 @@ import linea.staterecovery.BlockFromL1RecoveredData
 import linea.staterecovery.FinalizationAndDataEventsV3
 import linea.staterecovery.LineaRollupSubmissionEventsClient
 import linea.staterecovery.TransactionDetailsClient
-import net.consensys.zkevm.PeriodicPollingService
+import linea.timer.TimerSchedule
+import linea.timer.VertxPeriodicPollingService
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture
@@ -45,10 +46,12 @@ class SubmissionsFetchingTask(
   private val targetDecompressedBlobsQueueLimit: Int,
   private val debugForceSyncStopBlockNumber: ULong?,
   private val log: Logger = LogManager.getLogger(SubmissionsFetchingTask::class.java),
-) : PeriodicPollingService(
+) : VertxPeriodicPollingService(
   vertx = vertx,
   pollingIntervalMs = l1PollingInterval.inWholeMilliseconds,
   log = log,
+  name = "SubmissionsFetchingTask",
+  timerSchedule = TimerSchedule.FIXED_DELAY,
 ) {
   init {
     require(submissionEventsQueueLimit >= 1) {

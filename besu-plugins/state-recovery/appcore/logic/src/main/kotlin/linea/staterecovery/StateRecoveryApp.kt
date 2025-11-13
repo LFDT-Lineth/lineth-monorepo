@@ -3,13 +3,13 @@ package linea.staterecovery
 import build.linea.clients.StateManagerClientV1
 import io.vertx.core.Vertx
 import linea.EthLogsSearcher
+import linea.LongRunningService
 import linea.contract.l1.LineaRollupSmartContractClientReadOnly
 import linea.domain.BlockParameter
 import linea.domain.BlockParameter.Companion.toBlockParameter
 import net.consensys.linea.async.AsyncRetryer
 import net.consensys.linea.blob.BlobDecompressorVersion
 import net.consensys.linea.blob.GoNativeBlobDecompressorFactory
-import net.consensys.zkevm.LongRunningService
 import org.apache.logging.log4j.LogManager
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.CompletableFuture

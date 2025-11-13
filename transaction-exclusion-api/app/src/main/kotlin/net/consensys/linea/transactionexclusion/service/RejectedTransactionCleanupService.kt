@@ -2,7 +2,8 @@ package net.consensys.linea.transactionexclusion.service
 
 import io.vertx.core.Vertx
 import kotlinx.datetime.Clock
-import net.consensys.zkevm.PeriodicPollingService
+import linea.timer.TimerSchedule
+import linea.timer.VertxPeriodicPollingService
 import net.consensys.zkevm.persistence.dao.rejectedtransaction.RejectedTransactionsDao
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
@@ -15,10 +16,12 @@ class RejectedTransactionCleanupService(
   private val repository: RejectedTransactionsDao,
   private val clock: Clock = Clock.System,
   private val log: Logger = LogManager.getLogger(RejectedTransactionCleanupService::class.java),
-) : PeriodicPollingService(
+) : VertxPeriodicPollingService(
   vertx = vertx,
   pollingIntervalMs = config.pollingInterval.inWholeMilliseconds,
   log = log,
+  name = "RejectedTransactionCleanupService",
+  timerSchedule = TimerSchedule.FIXED_DELAY,
 ) {
   data class Config(
     val pollingInterval: Duration,

@@ -2,7 +2,7 @@ package net.consensys.zkevm.ethereum.coordination.conflation
 
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
-import net.consensys.zkevm.LongRunningService
+import linea.LongRunningService
 import net.consensys.zkevm.domain.BlockCounters
 import net.consensys.zkevm.domain.ConflationTrigger
 import net.consensys.zkevm.ethereum.coordination.blockcreation.SafeBlockProvider

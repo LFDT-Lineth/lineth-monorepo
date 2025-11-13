@@ -3,8 +3,9 @@ package net.consensys.zkevm.ethereum.finalization
 import io.vertx.core.Vertx
 import kotlinx.datetime.Clock
 import linea.kotlin.trimToMinutePrecision
+import linea.timer.TimerSchedule
+import linea.timer.VertxPeriodicPollingService
 import net.consensys.linea.async.AsyncFilter
-import net.consensys.zkevm.PeriodicPollingService
 import net.consensys.zkevm.coordinator.clients.smartcontract.LineaRollupSmartContractClient
 import net.consensys.zkevm.domain.BlobRecord
 import net.consensys.zkevm.domain.ProofToFinalize
@@ -26,10 +27,12 @@ class AggregationFinalizationCoordinator(
   private val vertx: Vertx,
   private val clock: Clock,
   private val log: Logger = LogManager.getLogger(AggregationFinalizationCoordinator::class.java),
-) : PeriodicPollingService(
+) : VertxPeriodicPollingService(
   vertx = vertx,
   pollingIntervalMs = config.pollingInterval.inWholeMilliseconds,
   log = log,
+  name = "AggregationFinalizationCoordinator",
+  timerSchedule = TimerSchedule.FIXED_DELAY,
 ) {
   class Config(
     val pollingInterval: Duration,

@@ -5,7 +5,8 @@ import linea.domain.BlockParameter
 import linea.domain.CommonDomainFunctions
 import linea.kotlin.encodeHex
 import linea.staterecovery.datafetching.SubmissionsFetchingTask
-import net.consensys.zkevm.PeriodicPollingService
+import linea.timer.TimerSchedule
+import linea.timer.VertxPeriodicPollingService
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture
@@ -23,10 +24,12 @@ class StateSynchronizerService(
   private val pollingInterval: Duration,
   private val debugForceSyncStopBlockNumber: ULong?,
   private val log: Logger = LogManager.getLogger(StateSynchronizerService::class.java),
-) : PeriodicPollingService(
+) : VertxPeriodicPollingService(
   vertx = vertx,
-  log = log,
   pollingIntervalMs = pollingInterval.inWholeMilliseconds,
+  log = log,
+  name = "StateSynchronizerService",
+  timerSchedule = TimerSchedule.FIXED_DELAY,
 ) {
   @get:Synchronized
   @set:Synchronized

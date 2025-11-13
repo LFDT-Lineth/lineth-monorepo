@@ -4,9 +4,10 @@ import io.vertx.core.Vertx
 import linea.consensus.HardForkIdProvider
 import linea.contract.l1.Web3JLineaRollupSmartContractClientReadOnly
 import linea.domain.BlockParameter
+import linea.timer.TimerSchedule
+import linea.timer.VertxPeriodicPollingService
 import net.consensys.linea.async.AsyncRetryer
 import net.consensys.linea.async.toSafeFuture
-import net.consensys.zkevm.PeriodicPollingService
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import org.hyperledger.besu.datatypes.HardforkId
@@ -35,10 +36,12 @@ class FinalizationUpdatePoller(
   private val hardForkIdProvider: HardForkIdProvider,
   private val finalizationHandler: (ULong) -> CompletableFuture<*>,
   private val log: Logger = LogManager.getLogger(FinalizationUpdatePoller::class.java),
-) : PeriodicPollingService(
+) : VertxPeriodicPollingService(
   vertx = vertx,
   pollingIntervalMs = config.pollingInterval.inWholeMilliseconds,
   log = log,
+  name = "FinalizationUpdatePoller",
+  timerSchedule = TimerSchedule.FIXED_DELAY,
 ) {
   private val lastFinalizationRef: AtomicReference<ULong> = AtomicReference(null)
 

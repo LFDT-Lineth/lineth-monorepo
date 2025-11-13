@@ -4,7 +4,7 @@ import io.vertx.core.Handler
 import io.vertx.core.Vertx
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
-import net.consensys.zkevm.LongRunningService
+import linea.LongRunningService
 import net.consensys.zkevm.domain.BlobCounters
 import net.consensys.zkevm.domain.BlobsToAggregate
 import net.consensys.zkevm.ethereum.coordination.blockcreation.SafeBlockProvider

@@ -1,7 +1,8 @@
 package net.consensys.linea.ethereum.gaspricing.dynamiccap
 
 import io.vertx.core.Vertx
-import net.consensys.zkevm.PeriodicPollingService
+import linea.timer.TimerSchedule
+import linea.timer.VertxPeriodicPollingService
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import org.web3j.protocol.Web3j
@@ -15,10 +16,12 @@ class FeeHistoryCachingService(
   private val feeHistoryFetcher: GasPriceCapFeeHistoryFetcher,
   private val feeHistoriesRepository: FeeHistoriesRepositoryWithCache,
   private val log: Logger = LogManager.getLogger(FeeHistoryCachingService::class.java),
-) : PeriodicPollingService(
+) : VertxPeriodicPollingService(
   vertx = vertx,
   pollingIntervalMs = config.pollingInterval.inWholeMilliseconds,
   log = log,
+  name = "FeeHistoryCachingService",
+  timerSchedule = TimerSchedule.FIXED_DELAY,
 ) {
   data class Config(
     val pollingInterval: Duration,

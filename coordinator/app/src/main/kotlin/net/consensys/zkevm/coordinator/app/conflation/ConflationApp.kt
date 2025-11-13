@@ -5,6 +5,7 @@ import build.linea.clients.StateManagerV1JsonRpcClient
 import io.vertx.core.Vertx
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
+import linea.LongRunningService
 import linea.blob.ShnarfCalculatorVersion
 import linea.contract.l2.Web3JL2MessageServiceSmartContractClient
 import linea.coordinator.config.toJsonRpcRetry
@@ -21,7 +22,6 @@ import net.consensys.linea.jsonrpc.client.VertxHttpJsonRpcClientFactory
 import net.consensys.linea.metrics.LineaMetricsCategory
 import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.linea.traces.TracesCountersV2
-import net.consensys.zkevm.LongRunningService
 import net.consensys.zkevm.coordinator.app.conflation.ConflationAppHelper.cleanupDbDataAfterBlockNumbers
 import net.consensys.zkevm.coordinator.app.conflation.ConflationAppHelper.resumeAggregationFrom
 import net.consensys.zkevm.coordinator.app.conflation.ConflationAppHelper.resumeConflationFrom
