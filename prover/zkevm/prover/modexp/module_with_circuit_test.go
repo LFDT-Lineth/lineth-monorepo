@@ -14,15 +14,26 @@ import (
 func TestModexpWithCircuit(t *testing.T) {
 
 	testCases := []struct {
-		InputFName, ModuleFName string
+		InputFName, ModuleFName            string
+		NbSmallInstances, NbLargeInstances int
 	}{
 		{
-			InputFName:  "testdata/single_256_bits_input.csv",
-			ModuleFName: "testdata/single_256_bits_module.csv",
+			InputFName:       "testdata/single_256_bits_input.csv",
+			ModuleFName:      "testdata/single_256_bits_module.csv",
+			NbSmallInstances: 1,
+			NbLargeInstances: 0,
 		},
 		{
-			InputFName:  "testdata/single_4096_bits_input.csv",
-			ModuleFName: "testdata/single_4096_bits_module.csv",
+			InputFName:       "testdata/single_4096_bits_input.csv",
+			ModuleFName:      "testdata/single_4096_bits_module.csv",
+			NbSmallInstances: 1, // not used but include anyway
+			NbLargeInstances: 1,
+		},
+		{
+			InputFName:       "testdata/single_8192_bits_input.csv",
+			ModuleFName:      "testdata/single_8192_bits_module.csv",
+			NbSmallInstances: 1, // not used but include anyway
+			NbLargeInstances: 1,
 		},
 	}
 
@@ -42,7 +53,7 @@ func TestModexpWithCircuit(t *testing.T) {
 					IsModExpModulus:  inpCt.GetCommit(build, "IS_MODEXP_MODULUS"),
 					IsModExpResult:   inpCt.GetCommit(build, "IS_MODEXP_RESULT"),
 					Limbs:            inpCt.GetCommit(build, "LIMBS"),
-					Settings:         Settings{MaxNbInstance256: 1, MaxNbInstance4096: 1, NbInstancesPerCircuitModexp256: 1, NbInstancesPerCircuitModexp4096: 1},
+					Settings:         Settings{MaxNbInstance256: tc.NbSmallInstances, MaxNbInstanceLarge: tc.NbLargeInstances, NbInstancesPerCircuitModexp256: 1, NbInstancesPerCircuitModexpLarge: 1},
 				}
 
 				mod = newModule(build.CompiledIOP, inp).
