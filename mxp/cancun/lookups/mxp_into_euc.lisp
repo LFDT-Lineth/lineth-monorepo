@@ -11,7 +11,6 @@
     euc.DIVISOR
     euc.QUOTIENT
     euc.CEIL
-    euc.DONE
   )
   ;; source selector
   (mxp-to-euc-selector)
@@ -21,5 +20,4 @@
     mxp.computation/ARG_2_LO
     mxp.computation/RES_A
     mxp.computation/RES_B
-    1
   ))

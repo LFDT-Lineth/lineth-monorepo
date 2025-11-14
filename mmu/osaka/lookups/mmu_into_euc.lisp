@@ -10,7 +10,6 @@
     euc.QUOTIENT
     euc.REMAINDER
     euc.CEIL
-    euc.DONE
   )
   ;; source selector
   (mmu-to-euc-selector)
@@ -21,7 +20,6 @@
     mmu.prprc/EUC_QUOT
     mmu.prprc/EUC_REM
     mmu.prprc/EUC_CEIL
-    1
   ))
 
 

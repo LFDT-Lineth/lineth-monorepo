@@ -4,7 +4,6 @@
   (blockdata-into-euc :unchecked)
   ;; target columns
   (
-    euc.IOMF
     euc.DIVIDEND
     euc.DIVISOR
     euc.QUOTIENT
@@ -13,7 +12,6 @@
   (blockdata-into-euc-selector)
   ;; source columns
   (
-    1
     blockdata.ARG_1_LO
     blockdata.ARG_2_LO
     blockdata.RES

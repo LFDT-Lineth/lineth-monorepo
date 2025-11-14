@@ -34,7 +34,7 @@ EC_DATA_LONDON := ecdata/london
 
 EC_DATA_OSAKA := ecdata/osaka
 
-EUC := euc
+EUC := euc/euc.zkasm
 
 EXP := exp/exp.zkasm
 

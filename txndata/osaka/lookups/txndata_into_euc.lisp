@@ -4,7 +4,6 @@
   (txndata-into-euc :unchecked)
   ; target columns
   (
-   euc.DONE
    euc.DIVIDEND
    euc.DIVISOR
    euc.QUOTIENT
@@ -14,7 +13,6 @@
   (txn-data-into-euc-selector)
   ; source columns
   (
-   1
    txndata.computation/ARG_1_LO
    txndata.computation/ARG_2_LO
    txndata.computation/EUC_QUOTIENT
