@@ -24,6 +24,9 @@ class VertxTimer(
   init {
     require(period.inWholeMilliseconds >= 1L) { "Vertx Timer period must be at least 1 ms" }
   }
+  init {
+    require(initialDelay.inWholeMilliseconds >= 1L) { "Vertx Timer initial delay must be at least 1 ms" }
+  }
   private var timerId: Long? = null
   private val invocationCounter = AtomicInteger(0)
   private var firstInvocationTime: AtomicReference<Instant?> = AtomicReference(null)

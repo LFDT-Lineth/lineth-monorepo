@@ -4,11 +4,13 @@ import linea.LongRunningService
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
 
 abstract class PeriodicPollingService(
   private val timerFactory: TimerFactory,
   private val timerSchedule: TimerSchedule,
   private val pollingInterval: Duration,
+  private val initialDelay: Duration = if (timerFactory is VertxTimerFactory) 1.milliseconds else Duration.ZERO,
   private val log: Logger,
   private val name: String,
 ) : LongRunningService {
@@ -31,7 +33,7 @@ abstract class PeriodicPollingService(
       timer = timerFactory.createTimer(
         name = name,
         task = { action().get() },
-        initialDelay = pollingInterval,
+        initialDelay = initialDelay,
         period = pollingInterval,
         timerSchedule = timerSchedule,
         errorHandler = this::handleError,
