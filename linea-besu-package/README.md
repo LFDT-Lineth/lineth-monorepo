@@ -38,7 +38,7 @@ docker run -e BESU_PROFILE=basic-mainnet consensys/linea-besu-package:2.1.0-2025
 ## Run with a binary distribution
 
 ### Step 1. Install Linea Besu from packaged binaries
-*  Download the [linea-besu-package-&lt;release&gt;.tar.gz](https://github.com/Consensys/linea-monorepo/releases?q=linea-besu-package&expanded=true)
+* Download the [linea-besu-package-&lt;release&gt;.tar.gz](https://github.com/Consensys/linea-monorepo/releases?q=linea-besu-package&expanded=true)
 from the assets.
 * Unpack the downloaded files and change directory into the `linea-besu/besu`
 directory.
@@ -71,7 +71,17 @@ To build with specific platform (e.g. linux/amd64) and image tag (e.g. xxx), do 
 make clean && PLATFORM=linux/amd64 TAG=xxx make build
 ```
 
-To run the e2e test locally with the locally-built `linea-besu-package` image (e.g. tagged as xxx), do the following:
+To run the e2e test locally with the locally-built `linea-besu-package` image (e.g. tagged as xxx):
+
+- Pre-requisites:
+    - pnpm installed
+    - docker version 27.x.x
+
+- The following only needed for first run or e2e failures that require npm package update, on your_repo_root_folder:
+    ```
+    pnpm i -F contracts -F e2e --frozen-lockfile --prefer-offline
+    ```
+To run the test locally:
 ```
 TAG=xxx make run-e2e-test
 ```

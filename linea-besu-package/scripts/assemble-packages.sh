@@ -25,10 +25,6 @@ wget -nv https://github.com/Consensys/linea-monorepo/releases/download/linea-seq
 unzip -j -o linea-sequencer-v$LINEA_SEQUENCER_PLUGIN_VERSION.zip
 rm linea-sequencer-v$LINEA_SEQUENCER_PLUGIN_VERSION.zip
 
-# This would be removed soon as now Maru controls EL "finalized" tag
-echo "getting linea_finalized_tag_updater_plugin_version: $LINEA_FINALIZED_TAG_UPDATER_PLUGIN_VERSION"
-wget -nv https://github.com/Consensys/linea-monorepo/releases/download/linea-finalized-tag-updater-v$LINEA_FINALIZED_TAG_UPDATER_PLUGIN_VERSION/linea-finalized-tag-updater-v$LINEA_FINALIZED_TAG_UPDATER_PLUGIN_VERSION.jar
-
 echo "getting linea_staterecovery_plugin_version: $LINEA_STATERECOVERY_PLUGIN_VERSION"
 wget -nv https://github.com/Consensys/linea-monorepo/releases/download/linea-staterecovery-v$LINEA_STATERECOVERY_PLUGIN_VERSION/linea-staterecovery-besu-plugin-v$LINEA_STATERECOVERY_PLUGIN_VERSION.jar
 
