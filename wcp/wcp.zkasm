@@ -1,0 +1,88 @@
+include "../constants/evm.zkasm"
+
+;; The Word Comparison Module (WCP) deals with six word comparison
+;; instructions of the EVM as well as two word comparison instructions
+;; that the zkEVM may use but which aren’t part of the EVM proper.
+;; For any call to wcp, the "inst" argument indicates which of these
+;; instructions is being computed:
+;;
+;; GEQ    (ARG_1 >= ARG_2; not EVM)                 0x0E
+;; LEQ    (ARG_1 <= ARG_2; not EVM)                 0x0F
+;; LT     (ARG_1 < ARG_2)                           0x10
+;; GT     (ARG_1 > ARG_2)                           0x11
+;; SLT    (ARG_1 < ARG_2; signed arithmetic)        0x12
+;; SGT    (ARG_1 > ARG_2; signed arithmetic)        0x13
+;; EQ     (ARG_1 == ARG_2)                          0x14
+;; ISZERO (ARG_1 == 0)                              0x15
+;;
+;; As in most machine architectures, comparisons are implemented by
+;; checking the borrow flag after a subtraction.  For example, to
+;; check X < Y it suffices to check whether (Y - X) underflows.
+;;
+;; Signed comparisons follow two's-complement arithmetic where the
+;; most significant bit of a word indicates (when set) that it is
+;; negative or (when unset) that it is positive.
+;;
+;; NOTE: a subtle aspect of the WCP module is that it is often used by
+;; other modules to additionally ensure that the given arguments are
+;; "small" (i.e. within their designated bitwidths).
+pub fn wcp(INST=16 u8, ARG_1 u256, ARG_2 u256) -> (RES u1) {
+   var delta u256
+   var arg1bits, arg2bits u255
+   var borrow,arg1sign,arg2sign u1
+   ;;
+   if INST == WCP_INST_GEQ goto geq
+   if INST == WCP_INST_LEQ goto leq
+   if INST == EVM_INST_LT goto lt
+   if INST == EVM_INST_GT goto gt
+   if INST == EVM_INST_SLT goto slt
+   if INST == EVM_INST_SGT goto sgt
+   if INST == EVM_INST_EQ goto eq
+   if INST == EVM_INST_ISZERO goto isz
+   fail
+leq:
+   borrow,delta = ARG_2 - ARG_1
+   if borrow==0 goto exit_1
+   goto exit_0
+geq:
+   borrow,delta = ARG_1 - ARG_2
+   if borrow==0 goto exit_1
+   goto exit_0
+lt:
+   borrow,delta = ARG_1 - ARG_2
+   if borrow!=0 goto exit_1
+   goto exit_0
+gt:
+   borrow,delta = ARG_2 - ARG_1
+   if borrow!=0 goto exit_1
+   goto exit_0
+slt:
+   arg1sign,arg1bits = ARG_1
+   arg2sign,arg2bits = ARG_2
+   ;; pos/pos or neg/neg?
+   if arg1sign==arg2sign goto lt
+   ;; pos/neg?
+   if arg2sign==1 goto exit_0
+   ;; neg/pos
+   goto exit_1
+sgt:
+   arg1sign,arg1bits = ARG_1
+   arg2sign,arg2bits = ARG_2
+   ;; pos/pos or neg/neg?
+   if arg1sign==arg2sign goto gt
+   ;; pos/neg?
+   if arg2sign==1 goto exit_1
+   ;; neg/pos
+   goto exit_0
+eq:
+   if ARG_1==ARG_2 goto exit_1
+   goto exit_0
+isz:
+   if ARG_1==0 goto exit_1
+exit_0:
+   RES = 0
+   return
+exit_1:
+   RES = 1
+   return
+}

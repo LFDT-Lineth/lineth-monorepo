@@ -1,0 +1,26 @@
+;; Determine the maximum of three values.
+fn max3_u128(arg1 u128, arg2 u128, arg3 u128) -> (res u128) {
+   var b1,b2 u1
+   var tmp1, tmp2 u128
+   ;; check arg1 >= arg2   
+   b1,tmp1 = arg1 - arg2
+   if b1!=0 goto arg2_3
+   ;; have arg1 >= arg2.
+   ;; check arg1 >= Arg3
+   b2,tmp2 = arg1 - arg3
+   if b2!=0 goto exit_3
+   ;; arg1 wins
+   res = arg1
+   return   
+arg2_3:
+   ;; check arg2 >= Arg3
+   b2,tmp2 = arg2 - arg3
+   if b2!=0 goto exit_3
+   ;; arg2 wins
+   res = arg2
+   return   
+exit_3:
+   ;; arg3 wins
+   res = arg3
+   return
+}

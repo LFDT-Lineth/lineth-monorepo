@@ -10,20 +10,16 @@
   ;; target columns
   (
     wcp.INST
-    wcp.ARG_1_HI
-    wcp.ARG_1_LO
-    wcp.ARG_2_HI
-    wcp.ARG_2_LO
-    wcp.RESULT
+    wcp.ARG_1
+    wcp.ARG_2
+    wcp.RES
   )
   ;; source selector
   (hub-into-wcp-for-sox-activation-flag)
   ;; source columns
   (
     EVM_INST_GT
-    0
     (projected-height)
-    0
     1024
     hub.stack/SOX
  ))

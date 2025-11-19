@@ -6,10 +6,8 @@
   blake2fmodexpdata-into-wcp
   ;; target colums (in WCP)
   (
-    wcp.ARG_1_HI
-    wcp.ARG_1_LO
-    wcp.ARG_2_HI
-    wcp.ARG_2_LO
+    wcp.ARG_1
+    wcp.ARG_2
     wcp.RES
     wcp.INST
   )
@@ -17,9 +15,7 @@
   (blake2fmodexpdata-into-wcp-oob-into-wcp-activation-flag)
   ;; source columns
   (
-    0
     (prev blake2fmodexpdata.ID)
-    0
     blake2fmodexpdata.ID
     1
     EVM_INST_LT

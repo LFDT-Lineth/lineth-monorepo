@@ -5,6 +5,12 @@
 const EVM_INST_ADD                              = 0x01
 const EVM_INST_SUB                              = 0x03
 const EVM_INST_SIGNEXTEND                       = 0x0b
+const EVM_INST_LT                               = 0x10
+const EVM_INST_GT                               = 0x11
+const EVM_INST_SLT                              = 0x12
+const EVM_INST_SGT                              = 0x13
+const EVM_INST_EQ                               = 0x14
+const EVM_INST_ISZERO                           = 0x15
 const EVM_INST_AND                              = 0x16
 const EVM_INST_OR                               = 0x17
 const EVM_INST_XOR                              = 0x18
@@ -18,6 +24,13 @@ const EVM_INST_CREATE                           = 0xF0
 const EVM_INST_CALL                             = 0xF1
 const EVM_INST_CALLCODE                         = 0xF2
 const EVM_INST_CREATE2                          = 0xF5
+
+;; =============================================================================
+;; Wcp
+;; =============================================================================
+
+const WCP_INST_GEQ = 0x0E
+const WCP_INST_LEQ = 0x0F
 
 ;; =============================================================================
 ;; Gas

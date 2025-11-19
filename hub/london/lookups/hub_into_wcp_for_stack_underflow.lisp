@@ -4,20 +4,16 @@
     ;; target columns
     (
         wcp.INST
-        wcp.ARG_1_HI
-        wcp.ARG_1_LO
-        wcp.ARG_2_HI
-        wcp.ARG_2_LO
-        wcp.RESULT
+        wcp.ARG_1
+        wcp.ARG_2
+        wcp.RES
     )
     ;; source selector
     (hub-into-wcp-for-sux-activation-flag)
     ;; source columns
     (
         EVM_INST_LT
-        0
         hub.HEIGHT
-        0
         hub.stack/DELTA
         hub.stack/SUX
     )

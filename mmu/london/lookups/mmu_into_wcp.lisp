@@ -5,10 +5,8 @@
   mmu-into-wcp
   ;; target columns
   (
-    wcp.ARG_1_HI
-    wcp.ARG_1_LO
-    wcp.ARG_2_HI
-    wcp.ARG_2_LO
+    wcp.ARG_1
+    wcp.ARG_2
     wcp.RES
     wcp.INST
   )
@@ -16,9 +14,7 @@
   (mmu-to-wcp-selector)
   ;; source columns
   (
-    mmu.prprc/WCP_ARG_1_HI
-    mmu.prprc/WCP_ARG_1_LO
-    0
+    (:: mmu.prprc/WCP_ARG_1_HI mmu.prprc/WCP_ARG_1_LO)
     mmu.prprc/WCP_ARG_2_LO
     mmu.prprc/WCP_RES
     mmu.prprc/WCP_INST

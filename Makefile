@@ -82,7 +82,7 @@ RLP_TXN_RCPT_OSAKA := rlptxrcpt/osaka
 
 RLP_TXRCPT := rlptxrcpt			
 
-RLP_UTILS_CANCUN := rlputils/cancun
+RLP_UTILS_CANCUN := rlputils/cancun rlputils/cancun/maxlog.zkasm
 
 ROM := rom
 
@@ -107,7 +107,7 @@ TXN_DATA_CANCUN := txndata/cancun
 TXN_DATA_PRAGUE := txndata/prague
 TXN_DATA_OSAKA := txndata/osaka
 
-WCP := wcp
+WCP := wcp/wcp.zkasm
 
 LISPX := $(shell find * -name "*.lispX")
 # Warn about any lispX files

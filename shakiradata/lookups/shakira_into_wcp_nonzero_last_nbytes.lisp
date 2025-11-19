@@ -13,10 +13,8 @@
   shakiradata-into-wcp-nonzero-last-nbytes
   ; target colums (in WCP)
   (
-    wcp.ARG_1_HI
-    wcp.ARG_1_LO
-    wcp.ARG_2_HI
-    wcp.ARG_2_LO
+    wcp.ARG_1
+    wcp.ARG_2
     wcp.RES
     wcp.INST
   )
@@ -24,9 +22,7 @@
   (is-final-data-row)
   ; source columns
   (
-    0
     shakiradata.nBYTES
-    0
     0
     1
     EVM_INST_GT
