@@ -132,14 +132,14 @@ class FakeEthApiClientTest {
       ),
     ).also { client ->
       client.setFinalizedBlockTag(500UL)
-      assertThat(client.getBlockByNumber(BlockParameter.Tag.LATEST).get().number).isEqualTo(500UL)
-      assertThat(client.getBlockByNumber(BlockParameter.Tag.SAFE).get().number).isEqualTo(500UL)
-      assertThat(client.getBlockByNumber(BlockParameter.Tag.FINALIZED).get().number).isEqualTo(500UL)
+      assertThat(client.ethGetBlockByNumberFullTxs(BlockParameter.Tag.LATEST).get().number).isEqualTo(500UL)
+      assertThat(client.ethGetBlockByNumberFullTxs(BlockParameter.Tag.SAFE).get().number).isEqualTo(500UL)
+      assertThat(client.ethGetBlockByNumberFullTxs(BlockParameter.Tag.FINALIZED).get().number).isEqualTo(500UL)
 
       client.setFinalizedBlockTag(20UL)
-      assertThat(client.getBlockByNumber(BlockParameter.Tag.LATEST).get().number).isEqualTo(500UL)
-      assertThat(client.getBlockByNumber(BlockParameter.Tag.SAFE).get().number).isEqualTo(500UL)
-      assertThat(client.getBlockByNumber(BlockParameter.Tag.FINALIZED).get().number).isEqualTo(20UL)
+      assertThat(client.ethGetBlockByNumberFullTxs(BlockParameter.Tag.LATEST).get().number).isEqualTo(500UL)
+      assertThat(client.ethGetBlockByNumberFullTxs(BlockParameter.Tag.SAFE).get().number).isEqualTo(500UL)
+      assertThat(client.ethGetBlockByNumberFullTxs(BlockParameter.Tag.FINALIZED).get().number).isEqualTo(20UL)
     }
   }
 
@@ -155,15 +155,15 @@ class FakeEthApiClientTest {
       ),
     ).also { client ->
       client.setSafeBlockTag(500UL)
-      assertThat(client.getBlockByNumber(BlockParameter.Tag.LATEST).get().number).isEqualTo(500UL)
-      assertThat(client.getBlockByNumber(BlockParameter.Tag.SAFE).get().number).isEqualTo(500UL)
-      assertThat(client.getBlockByNumber(BlockParameter.Tag.FINALIZED).get().number).isEqualTo(100UL)
+      assertThat(client.ethGetBlockByNumberFullTxs(BlockParameter.Tag.LATEST).get().number).isEqualTo(500UL)
+      assertThat(client.ethGetBlockByNumberFullTxs(BlockParameter.Tag.SAFE).get().number).isEqualTo(500UL)
+      assertThat(client.ethGetBlockByNumberFullTxs(BlockParameter.Tag.FINALIZED).get().number).isEqualTo(100UL)
 
       // set SAFE back, should not affect FINALIZED ONLY
       client.setSafeBlockTag(20UL)
-      assertThat(client.getBlockByNumber(BlockParameter.Tag.LATEST).get().number).isEqualTo(500UL)
-      assertThat(client.getBlockByNumber(BlockParameter.Tag.SAFE).get().number).isEqualTo(20UL)
-      assertThat(client.getBlockByNumber(BlockParameter.Tag.FINALIZED).get().number).isEqualTo(20UL)
+      assertThat(client.ethGetBlockByNumberFullTxs(BlockParameter.Tag.LATEST).get().number).isEqualTo(500UL)
+      assertThat(client.ethGetBlockByNumberFullTxs(BlockParameter.Tag.SAFE).get().number).isEqualTo(20UL)
+      assertThat(client.ethGetBlockByNumberFullTxs(BlockParameter.Tag.FINALIZED).get().number).isEqualTo(20UL)
     }
   }
 
@@ -179,15 +179,15 @@ class FakeEthApiClientTest {
       ),
     ).also { client ->
       client.setLatestBlockTag(500UL)
-      assertThat(client.getBlockByNumber(BlockParameter.Tag.LATEST).get().number).isEqualTo(500UL)
-      assertThat(client.getBlockByNumber(BlockParameter.Tag.SAFE).get().number).isEqualTo(110UL)
-      assertThat(client.getBlockByNumber(BlockParameter.Tag.FINALIZED).get().number).isEqualTo(100UL)
+      assertThat(client.ethGetBlockByNumberFullTxs(BlockParameter.Tag.LATEST).get().number).isEqualTo(500UL)
+      assertThat(client.ethGetBlockByNumberFullTxs(BlockParameter.Tag.SAFE).get().number).isEqualTo(110UL)
+      assertThat(client.ethGetBlockByNumberFullTxs(BlockParameter.Tag.FINALIZED).get().number).isEqualTo(100UL)
 
       // set Latest back, should not affect SAFE and FINALIZED
       client.setLatestBlockTag(20UL)
-      assertThat(client.getBlockByNumber(BlockParameter.Tag.LATEST).get().number).isEqualTo(20UL)
-      assertThat(client.getBlockByNumber(BlockParameter.Tag.SAFE).get().number).isEqualTo(20UL)
-      assertThat(client.getBlockByNumber(BlockParameter.Tag.FINALIZED).get().number).isEqualTo(20UL)
+      assertThat(client.ethGetBlockByNumberFullTxs(BlockParameter.Tag.LATEST).get().number).isEqualTo(20UL)
+      assertThat(client.ethGetBlockByNumberFullTxs(BlockParameter.Tag.SAFE).get().number).isEqualTo(20UL)
+      assertThat(client.ethGetBlockByNumberFullTxs(BlockParameter.Tag.FINALIZED).get().number).isEqualTo(20UL)
     }
   }
 }

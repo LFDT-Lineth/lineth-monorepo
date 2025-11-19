@@ -37,7 +37,7 @@ class Web3jEthApiClientWithRetriesTest {
     jsonRpcServer.handle("eth_getBlockByNumber") { request ->
       throw JsonRpcErrorResponseException(rpcErrorCode = -123, rpcErrorMessage = "Internal error")
     }
-    runCatching { client.getBlockByNumberWithoutTransactionsData(BlockParameter.Tag.FINALIZED).get() }
+    runCatching { client.ethGetBlockByNumberTxHashes(BlockParameter.Tag.FINALIZED).get() }
     assertThat(jsonRpcServer.recordedRequests()).hasSize(3)
   }
 
@@ -59,7 +59,7 @@ class Web3jEthApiClientWithRetriesTest {
         }
       },
     )
-    runCatching { client.getBlockByNumberWithoutTransactionsData(BlockParameter.Tag.FINALIZED).get() }
+    runCatching { client.ethGetBlockByNumberTxHashes(BlockParameter.Tag.FINALIZED).get() }
     assertThat(jsonRpcServer.recordedRequests()).hasSize(1)
   }
 
@@ -68,27 +68,27 @@ class Web3jEthApiClientWithRetriesTest {
     jsonRpcServer.handle("eth_getBlockByNumber") { request ->
       throw JsonRpcErrorResponseException(rpcErrorCode = -39001, rpcErrorMessage = "Unknown block")
     }
-    runCatching { client.getBlockByNumberWithoutTransactionsData(BlockParameter.Tag.FINALIZED).get() }
+    runCatching { client.ethGetBlockByNumberTxHashes(BlockParameter.Tag.FINALIZED).get() }
     assertThat(jsonRpcServer.recordedRequests()).hasSize(1)
     jsonRpcServer.cleanRecordedRequests()
 
-    runCatching { client.getBlockByNumber(BlockParameter.Tag.FINALIZED).get() }
+    runCatching { client.ethGetBlockByNumberFullTxs(BlockParameter.Tag.FINALIZED).get() }
     assertThat(jsonRpcServer.recordedRequests()).hasSize(1)
     jsonRpcServer.cleanRecordedRequests()
 
-    runCatching { client.getBlockByNumberWithoutTransactionsData(BlockParameter.Tag.SAFE).get() }
+    runCatching { client.ethGetBlockByNumberTxHashes(BlockParameter.Tag.SAFE).get() }
     assertThat(jsonRpcServer.recordedRequests()).hasSize(1)
     jsonRpcServer.cleanRecordedRequests()
 
-    runCatching { client.getBlockByNumber(BlockParameter.Tag.SAFE).get() }
+    runCatching { client.ethGetBlockByNumberFullTxs(BlockParameter.Tag.SAFE).get() }
     assertThat(jsonRpcServer.recordedRequests()).hasSize(1)
 
     jsonRpcServer.cleanRecordedRequests()
-    runCatching { client.getBlockByNumber(BlockParameter.Tag.LATEST).get() }
+    runCatching { client.ethGetBlockByNumberFullTxs(BlockParameter.Tag.LATEST).get() }
     assertThat(jsonRpcServer.recordedRequests()).hasSize(3)
 
     jsonRpcServer.cleanRecordedRequests()
-    runCatching { client.getBlockByNumber(2.toBlockParameter()).get() }
+    runCatching { client.ethGetBlockByNumberFullTxs(2.toBlockParameter()).get() }
     assertThat(jsonRpcServer.recordedRequests()).hasSize(3)
   }
 }

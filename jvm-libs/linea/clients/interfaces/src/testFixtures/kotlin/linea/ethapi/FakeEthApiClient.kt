@@ -5,12 +5,17 @@ import linea.domain.Block
 import linea.domain.BlockParameter
 import linea.domain.BlockWithTxHashes
 import linea.domain.EthLog
+import linea.domain.FeeHistory
+import linea.domain.Transaction
+import linea.domain.TransactionForEthCall
+import linea.domain.TransactionReceipt
 import linea.domain.createBlock
 import linea.domain.toBlockWithRandomTxHashes
 import linea.kotlin.decodeHex
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture
+import java.math.BigInteger
 import kotlin.random.Random
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
@@ -122,15 +127,55 @@ class FakeEthApiClient(
     }
   }
 
-  override fun getChainId(): SafeFuture<ULong> {
+  override fun ethChainId(): SafeFuture<ULong> {
     return SafeFuture.completedFuture(chainId)
   }
 
-  override fun blockNumber(): SafeFuture<ULong> {
+  override fun ethBlockNumber(): SafeFuture<ULong> {
     return SafeFuture.completedFuture(blockTags[BlockParameter.Tag.LATEST]!!)
   }
 
-  override fun findBlockByNumber(blockParameter: BlockParameter): SafeFuture<Block?> {
+  override fun ethProtocolVersion(): SafeFuture<Int> = SafeFuture.completedFuture(67)
+
+  override fun ethCoinbase(): SafeFuture<ByteArray> {
+    TODO("Not yet implemented")
+  }
+
+  override fun ethMining(): SafeFuture<Boolean> {
+    TODO("Not yet implemented")
+  }
+
+  override fun ethGasPrice(): SafeFuture<BigInteger> {
+    TODO("Not yet implemented")
+  }
+
+  override fun ethMaxPriorityFeePerGas(): SafeFuture<BigInteger> {
+    TODO("Not yet implemented")
+  }
+
+  override fun ethFeeHistory(
+    blockCount: Int,
+    newestBlock: BlockParameter,
+    rewardPercentiles: List<Double>,
+  ): SafeFuture<FeeHistory> {
+    TODO("Not yet implemented")
+  }
+
+  override fun ethGetBalance(
+    address: ByteArray,
+    blockParameter: BlockParameter,
+  ): SafeFuture<BigInteger> {
+    TODO("Not yet implemented")
+  }
+
+  override fun ethGetTransactionCount(
+    address: ByteArray,
+    blockParameter: BlockParameter,
+  ): SafeFuture<ULong> {
+    TODO("Not yet implemented")
+  }
+
+  override fun ethFindBlockByNumberFullTxs(blockParameter: BlockParameter): SafeFuture<Block?> {
     val blockNumber = blockParameterToBlockNumber(blockParameter)
     if (isAfterHead(blockNumber)) {
       return SafeFuture.completedFuture(null)
@@ -143,10 +188,32 @@ class FakeEthApiClient(
     return SafeFuture.completedFuture(block)
   }
 
-  override fun findBlockByNumberWithoutTransactionsData(
+  override fun ethFindBlockByNumberTxHashes(blockParameter: BlockParameter): SafeFuture<BlockWithTxHashes?> {
+    return this.ethFindBlockByNumberFullTxs(blockParameter).thenApply { block -> block?.toBlockWithRandomTxHashes() }
+  }
+
+  override fun ethGetTransactionByHash(transactionHash: ByteArray): SafeFuture<Transaction?> {
+    TODO("Not yet implemented")
+  }
+
+  override fun ethGetTransactionReceipt(transactionHash: ByteArray): SafeFuture<TransactionReceipt?> {
+    TODO("Not yet implemented")
+  }
+
+  override fun ethSendRawTransaction(signedTransactionData: ByteArray): SafeFuture<ByteArray> {
+    TODO("Not yet implemented")
+  }
+
+  override fun ethCall(
+    transaction: TransactionForEthCall,
     blockParameter: BlockParameter,
-  ): SafeFuture<BlockWithTxHashes?> {
-    return findBlockByNumber(blockParameter).thenApply { block -> block?.toBlockWithRandomTxHashes() }
+    stateOverride: StateOverride?,
+  ): SafeFuture<ByteArray> {
+    TODO("Not yet implemented")
+  }
+
+  override fun ethEstimateGas(transaction: TransactionForEthCall): SafeFuture<ULong> {
+    TODO("Not yet implemented")
   }
 
   private fun isAfterHead(blockNumber: ULong): Boolean {

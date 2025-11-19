@@ -112,7 +112,7 @@ class L1DependentApp(
         backoffDelay = 1.seconds,
         failuresWarningThreshold = 3u,
       ),
-    ).getChainId().get()
+    ).ethChainId().get()
   }
 
   private val finalizationTransactionManager = createTransactionManager(

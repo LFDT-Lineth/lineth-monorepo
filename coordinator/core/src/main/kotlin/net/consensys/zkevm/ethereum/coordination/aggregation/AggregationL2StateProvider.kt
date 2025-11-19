@@ -46,7 +46,7 @@ class AggregationL2StateProviderImpl(
     val blockParameter = blockNumber.toBlockParameter()
     return getLastAnchoredMessage(blockNumber.toULong())
       .thenCombine(
-        ethApiClient.getBlockByNumberWithoutTransactionsData(blockParameter),
+        ethApiClient.ethGetBlockByNumberTxHashes(blockParameter),
       ) { (messageNumber, rollingHash), block ->
         AggregationL2State(
           parentAggregationLastBlockTimestamp = Instant.fromEpochSeconds(block.timestamp.toLong()),

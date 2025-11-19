@@ -262,7 +262,7 @@ class EthLogsSearcherImpl(
     } else if (blockParameter == BlockParameter.Tag.EARLIEST) {
       SafeFuture.completedFuture(0UL)
     } else {
-      ethApiClient.getBlockByNumberWithoutTransactionsData(blockParameter)
+      ethApiClient.ethGetBlockByNumberTxHashes(blockParameter)
         .thenApply { block -> block.number }
     }
   }

@@ -29,7 +29,7 @@ class ZkProofCreationCoordinatorImpl(
 
   private fun getBlockStateRootHash(blockNumber: ULong): SafeFuture<ByteArray> {
     return l2EthApiClient
-      .getBlockByNumberWithoutTransactionsData(blockNumber.toBlockParameter())
+      .ethGetBlockByNumberTxHashes(blockNumber.toBlockParameter())
       .thenApply { block -> block.stateRoot }
   }
 
