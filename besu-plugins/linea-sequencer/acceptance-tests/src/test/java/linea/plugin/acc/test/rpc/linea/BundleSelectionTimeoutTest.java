@@ -63,7 +63,7 @@ public class BundleSelectionTimeoutTest extends AbstractSendBundleTest {
     final var mulmodExecutor = deployMulmodExecutor();
 
     final var calls =
-        IntStream.rangeClosed(1, 6)
+        IntStream.rangeClosed(1, 10)
             .mapToObj(
                 nonce ->
                     mulmodOperation(

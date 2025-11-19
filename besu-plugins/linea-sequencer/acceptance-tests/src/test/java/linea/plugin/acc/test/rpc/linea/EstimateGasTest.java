@@ -395,7 +395,7 @@ public class EstimateGasTest extends LineaPluginTestBase {
                 null,
                 null));
     final var respLinea = reqLinea.execute(minerNode.nodeRequests());
-    assertThat(respLinea.getCode()).isEqualTo(-32000);
+    assertThat(respLinea.getCode()).isEqualTo(3);
     assertThat(respLinea.getMessage()).isEqualTo("Execution reverted");
     assertThat(respLinea.getData()).isEqualTo("\"0x\"");
   }
