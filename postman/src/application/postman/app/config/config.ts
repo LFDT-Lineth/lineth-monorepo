@@ -101,6 +101,7 @@ export type ClaimingConfig = Omit<Required<ClaimingOptions>, "feeRecipientAddres
  */
 export type ListenerOptions = {
   pollingInterval?: number;
+  receiptPollingInterval?: number;
   initialFromBlock?: number;
   blockConfirmation?: number;
   maxFetchMessagesFromDb?: number;

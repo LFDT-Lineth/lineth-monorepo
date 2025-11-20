@@ -10,6 +10,7 @@ import { DBOptions } from "./config/types";
 import { MessageEntity } from "./entities/Message.entity";
 import { AddCompressedTxSizeColumn1718026260629 } from "./migrations/1718026260629-AddCompressedTxSizeColumn";
 import { AddSponsorshipMetrics1745569276097 } from "./migrations/1745569276097-AddSponsorshipMetrics";
+
 export class DB {
   public static create(config: DBOptions): DataSource {
     return new DataSource({

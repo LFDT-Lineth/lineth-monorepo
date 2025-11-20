@@ -340,6 +340,7 @@ describe("TestMessageClaimingPersister ", () => {
         claimTxGasLimit: Number(retryTxResponse.gasLimit),
         claimNumberOfRetry: 1,
         claimLastRetriedAt: mockedDate,
+        claimTxCreationDate: expect.any(Date),
       });
       const { loggerWarnSpy, messageRepositoryUpdateSpy, l2QuerierGetReceiptSpy } = testFixtureFactory({
         firstPendingMessage: testPendingMessageLocal,
@@ -394,6 +395,7 @@ describe("TestMessageClaimingPersister ", () => {
         claimTxGasLimit: Number(retryTxResponse.gasLimit),
         claimNumberOfRetry: 1,
         claimLastRetriedAt: mockedDate,
+        claimTxCreationDate: expect.any(Date),
       });
       const { loggerWarnSpy, messageRepositoryUpdateSpy, l2QuerierGetReceiptSpy } = testFixtureFactory({
         firstPendingMessage: testPendingMessageLocal,

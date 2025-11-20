@@ -208,6 +208,7 @@ export const testL1NetworkConfig: L1NetworkConfig = {
   },
   listener: {
     pollingInterval: 4000,
+    receiptPollingInterval: 4000,
     maxFetchMessagesFromDb: 3,
     initialFromBlock: DEFAULT_INITIAL_FROM_BLOCK,
     blockConfirmation: DEFAULT_LISTENER_BLOCK_CONFIRMATIONS,
@@ -237,6 +238,7 @@ export const testL2NetworkConfig: L2NetworkConfig = {
   },
   listener: {
     pollingInterval: 100,
+    receiptPollingInterval: 100,
     maxFetchMessagesFromDb: 3,
     initialFromBlock: 10,
     blockConfirmation: DEFAULT_LISTENER_BLOCK_CONFIRMATIONS,

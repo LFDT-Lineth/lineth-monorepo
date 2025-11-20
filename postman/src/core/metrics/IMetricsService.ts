@@ -21,6 +21,7 @@ export enum LineaPostmanMetrics {
   SponsorshipFeesGwei = "linea_postman_sponsorship_fees_gwei_total", // Represent up to ~9_007_199 ETH
 
   TransactionProcessingTime = "linea_postman_l2_transaction_tx_processing_time",
+  TransactionInfuraConfirmationTime = "linea_postman_l2_transaction_tx_infura_confirmation_time",
 }
 
 export interface IMetricsService {

@@ -242,7 +242,7 @@ export class PostmanServiceClient {
       l2MessageClaimingPersister,
       {
         direction: Direction.L1_TO_L2,
-        pollingInterval: config.l2Config.listener.pollingInterval,
+        pollingInterval: config.l2Config.listener.receiptPollingInterval,
       },
       new WinstonLogger(`L2${MessagePersistingPoller.name}`, config.loggerOptions),
     );
@@ -369,7 +369,7 @@ export class PostmanServiceClient {
       l1MessageClaimingPersister,
       {
         direction: Direction.L2_TO_L1,
-        pollingInterval: config.l1Config.listener.pollingInterval,
+        pollingInterval: config.l1Config.listener.receiptPollingInterval,
       },
       new WinstonLogger(`L1${MessagePersistingPoller.name}`, config.loggerOptions),
     );

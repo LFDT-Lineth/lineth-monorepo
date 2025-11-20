@@ -13,6 +13,9 @@ async function main() {
       isCalldataEnabled: process.env.L1_L2_CALLDATA_ENABLED === "true",
       listener: {
         pollingInterval: process.env.L1_LISTENER_INTERVAL ? parseInt(process.env.L1_LISTENER_INTERVAL) : undefined,
+        receiptPollingInterval: process.env.L1_LISTENER_RECEIPT_POLLING_INTERVAL
+          ? parseInt(process.env.L1_LISTENER_RECEIPT_POLLING_INTERVAL)
+          : undefined,
         maxFetchMessagesFromDb: process.env.MAX_FETCH_MESSAGES_FROM_DB
           ? parseInt(process.env.MAX_FETCH_MESSAGES_FROM_DB)
           : undefined,
@@ -76,6 +79,9 @@ async function main() {
       isCalldataEnabled: process.env.L2_L1_CALLDATA_ENABLED === "true",
       listener: {
         pollingInterval: process.env.L2_LISTENER_INTERVAL ? parseInt(process.env.L2_LISTENER_INTERVAL) : undefined,
+        receiptPollingInterval: process.env.L2_LISTENER_RECEIPT_POLLING_INTERVAL
+          ? parseInt(process.env.L2_LISTENER_RECEIPT_POLLING_INTERVAL)
+          : undefined,
         maxFetchMessagesFromDb: process.env.MAX_FETCH_MESSAGES_FROM_DB
           ? parseInt(process.env.MAX_FETCH_MESSAGES_FROM_DB)
           : undefined,

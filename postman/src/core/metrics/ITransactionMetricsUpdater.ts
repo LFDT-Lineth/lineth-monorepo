@@ -1,3 +1,4 @@
 export interface ITransactionMetricsUpdater {
-  addTransactionProcessingTime(transactionProcessingTimeInSeconds: number): void;
+  addTransactionProcessingTime(direction: string, transactionProcessingTimeInSeconds: number): void;
+  addTransactionInfuraConfirmationTime(direction: string, transactionBroadcastTimeInSeconds: number): void;
 }
