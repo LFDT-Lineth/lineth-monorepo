@@ -63,7 +63,7 @@ public class BundleSelectionTimeoutTest extends AbstractSendBundleTest {
     final var mulmodExecutor = deployMulmodExecutor();
 
     final var calls =
-        IntStream.rangeClosed(1, 10)
+        IntStream.rangeClosed(1, 11)
             .mapToObj(
                 nonce ->
                     mulmodOperation(
@@ -74,16 +74,23 @@ public class BundleSelectionTimeoutTest extends AbstractSendBundleTest {
                         BigInteger.valueOf(MAX_TX_GAS_LIMIT / 10)))
             .toArray(MulmodCall[]::new);
 
+    final var rawTxs = Arrays.stream(calls).map(MulmodCall::rawTx).toArray(String[]::new);
     final var sendBundleRequestSmall =
         new SendBundleRequest(
-            new BundleParams(new String[] {calls[0].rawTx()}, Integer.toHexString(2)));
+            new BundleParams(Arrays.copyOfRange(rawTxs, 0, 1), Integer.toHexString(2)));
+
+    final var sendBundleRequestBig1 =
+        new SendBundleRequest(
+            new BundleParams(Arrays.copyOfRange(rawTxs, 1, 10), Integer.toHexString(2)));
+    // second bundle contains one tx only to be fast to execute,
+    // and ensure timeout occurs on the 2nd bundle and 3rd is not event considered
+    final var sendBundleRequestBig2 =
+        new SendBundleRequest(
+            new BundleParams(Arrays.copyOfRange(rawTxs, 1, 2), Integer.toHexString(2)));
+
     final var sendBundleResponseSmall = sendBundleRequestSmall.execute(minerNode.nodeRequests());
-
-    final var rawTxs = Arrays.stream(calls).skip(1).map(MulmodCall::rawTx).toArray(String[]::new);
-
-    final var sendBundleRequestBig =
-        new SendBundleRequest(new BundleParams(rawTxs, Integer.toHexString(2)));
-    final var sendBundleResponseBig = sendBundleRequestBig.execute(minerNode.nodeRequests());
+    final var sendBundleResponseBig1 = sendBundleRequestBig1.execute(minerNode.nodeRequests());
+    final var sendBundleResponseBig2 = sendBundleRequestBig2.execute(minerNode.nodeRequests());
 
     final var transferTxHash =
         accountTransactions
@@ -93,15 +100,18 @@ public class BundleSelectionTimeoutTest extends AbstractSendBundleTest {
     assertThat(sendBundleResponseSmall.hasError()).isFalse();
     assertThat(sendBundleResponseSmall.getResult().bundleHash()).isNotBlank();
 
-    assertThat(sendBundleResponseBig.hasError()).isFalse();
-    assertThat(sendBundleResponseBig.getResult().bundleHash()).isNotBlank();
+    assertThat(sendBundleResponseBig1.hasError()).isFalse();
+    assertThat(sendBundleResponseBig1.getResult().bundleHash()).isNotBlank();
+
+    assertThat(sendBundleResponseBig2.hasError()).isFalse();
+    assertThat(sendBundleResponseBig2.getResult().bundleHash()).isNotBlank();
 
     minerNode.verify(eth.expectSuccessfulTransactionReceipt(transferTxHash.toHexString()));
 
     // first bundle is successful
     minerNode.verify(eth.expectSuccessfulTransactionReceipt(calls[0].txHash()));
 
-    // second bundle is not
+    // following bundles are not selected
     Arrays.stream(calls)
         .skip(1)
         .map(MulmodCall::txHash)
