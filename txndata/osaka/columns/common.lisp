@@ -22,8 +22,8 @@
   ( HUB             :binary@prove )
   ( RLP             :binary@prove )
   ;; heartbeat
-  ( CT              :i4           )
-  ( CT_MAX          :i4           )
+  ( CT              :i5           )
+  ( CT_MAX          :i5           )
   ( GAS_CUMULATIVE  :i128         )
   )
 

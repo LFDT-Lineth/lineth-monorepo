@@ -44,9 +44,9 @@
 (defconstraint    precompile-processing---MODEXP---success-case---base-extraction-row---setting-the-OOB-instruction-which-decides-which-actual-parameters-to-extract      (:guard    (precompile-processing---MODEXP---success-case))
                   (set-OOB-instruction---modexp-extract    precompile-processing---MODEXP---misc-row-offset---base-extraction    ;; offset
                                                          (precompile-processing---dup-cds)                                     ;; call data size
-                                                         (precompile-processing---MODEXP---bbs-lo)                             ;; low part of bbs (base     byte size)
-                                                         (precompile-processing---MODEXP---ebs-lo)                             ;; low part of ebs (exponent byte size)
-                                                         (precompile-processing---MODEXP---mbs-lo)                             ;; low part of mbs (modulus  byte size)
+                                                         (precompile-processing---MODEXP---bbs-normalized)                     ;; low part of bbs (base     byte size)
+                                                         (precompile-processing---MODEXP---ebs-normalized)                     ;; low part of ebs (exponent byte size)
+                                                         (precompile-processing---MODEXP---mbs-normalized)                     ;; low part of mbs (modulus  byte size)
                                                          ))
 
 ;; Note: we deduce some shorthands AT THE END OF THE FILE.
@@ -79,7 +79,7 @@
                                                                                   ;; src_offset_hi                                                          ;; source offset high
                                                                                   96                                                                     ;; source offset low
                                                                                   ;; tgt_offset_lo                                                          ;; target offset low
-                                                                                  (precompile-processing---MODEXP---bbs-lo)                              ;; size
+                                                                                  (precompile-processing---MODEXP---bbs-normalized)                      ;; size
                                                                                   (precompile-processing---dup-cdo)                                      ;; reference offset
                                                                                   (precompile-processing---dup-cds)                                      ;; reference size
                                                                                   ;; success_bit                                                            ;; success bit
@@ -127,9 +127,9 @@
                                                                                   (+    1    HUB_STAMP)                                                      ;; target ID
                                                                                   ;; aux_id                                                                     ;; auxiliary ID
                                                                                   ;; src_offset_hi                                                              ;; source offset high
-                                                                                  (+    96    (precompile-processing---MODEXP---bbs-lo))                     ;; source offset low
+                                                                                  (+    96    (precompile-processing---MODEXP---bbs-normalized))             ;; source offset low
                                                                                   ;; tgt_offset_lo                                                              ;; target offset low
-                                                                                  (precompile-processing---MODEXP---ebs-lo)                                  ;; size
+                                                                                  (precompile-processing---MODEXP---ebs-normalized)                          ;; size
                                                                                   (precompile-processing---dup-cdo)                                          ;; reference offset
                                                                                   (precompile-processing---dup-cds)                                          ;; reference size
                                                                                   ;; success_bit                                                                ;; success bit
@@ -157,12 +157,14 @@
                                   ;; extract_modulus == 1 case:
                                   (set-MMU-instruction---modexp-data    precompile-processing---MODEXP---misc-row-offset---modulus-extraction                               ;; offset
                                                                         CONTEXT_NUMBER                                                                                      ;; source ID
-                                                                        (+    1    HUB_STAMP)                                                                               ;; target ID
+                                                                        (+   1   HUB_STAMP)                                                                                 ;; target ID
                                                                         ;; aux_id                                                                                              ;; auxiliary ID
                                                                         ;; src_offset_hi                                                                                       ;; source offset high
-                                                                        (+    96    (precompile-processing---MODEXP---bbs-lo)    (precompile-processing---MODEXP---ebs-lo)) ;; source offset low
+                                                                        (+   96
+                                                                             (precompile-processing---MODEXP---bbs-normalized)
+                                                                             (precompile-processing---MODEXP---ebs-normalized))                                             ;; source offset low
                                                                         ;; tgt_offset_lo                                                                                       ;; target offset low
-                                                                        (precompile-processing---MODEXP---mbs-lo)                                                           ;; size
+                                                                        (precompile-processing---MODEXP---mbs-normalized)                                                   ;; size
                                                                         (precompile-processing---dup-cdo)                                                                   ;; reference offset
                                                                         (precompile-processing---dup-cds)                                                                   ;; reference size
                                                                         ;; success_bit                                                                                         ;; success bit
@@ -194,7 +196,7 @@
                                                                                    ;; src_offset_hi                                                                ;; source offset high
                                                                                    ;; src_offset_lo                                                                ;; source offset low
                                                                                    ;; tgt_offset_lo                                                                ;; target offset low
-                                                                                   512                                                                          ;; size
+                                                                                   EIP_7823_MODEXP_UPPER_BYTE_SIZE_BOUND                                        ;; size
                                                                                    ;; ref_offset                                                                   ;; reference offset
                                                                                    ;; ref_size                                                                     ;; reference size
                                                                                    ;; success_bit                                                                  ;; success bit
@@ -225,9 +227,10 @@
                                                                                     CONTEXT_NUMBER                                                                ;; target ID
                                                                                     ;; aux_id                                                                        ;; auxiliary ID
                                                                                     ;; src_offset_hi                                                                 ;; source offset high
-                                                                                    (-    512    (precompile-processing---MODEXP---mbs-lo))                       ;; source offset low
+                                                                                    (-    EIP_7823_MODEXP_UPPER_BYTE_SIZE_BOUND
+                                                                                          (precompile-processing---MODEXP---mbs-normalized))               ;; source offset low
                                                                                     ;; tgt_offset_lo                                                                 ;; target offset low
-                                                                                    (precompile-processing---MODEXP---mbs-lo)                                     ;; size
+                                                                                    (precompile-processing---MODEXP---mbs-normalized)                             ;; size
                                                                                     (precompile-processing---dup-r@o)                                             ;; reference offset
                                                                                     (precompile-processing---dup-r@c)                                             ;; reference size
                                                                                     ;; success_bit                                                                   ;; success bit
@@ -248,8 +251,9 @@
                   (provide-return-data     precompile-processing---MODEXP---context-row-offset---success   ;; row offset
                                            CONTEXT_NUMBER                                                  ;; receiver context
                                            (+    1    HUB_STAMP)                                           ;; provider context
-                                           (-    512    (precompile-processing---MODEXP---mbs-lo))         ;; rdo
-                                           (precompile-processing---MODEXP---mbs-lo)                       ;; rds
+                                           (-    EIP_7823_MODEXP_UPPER_BYTE_SIZE_BOUND
+                                                 (precompile-processing---MODEXP---mbs-normalized))        ;; rdo
+                                           (precompile-processing---MODEXP---mbs-normalized)               ;; rds
                                            ))
 
 

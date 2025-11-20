@@ -14,7 +14,7 @@
 (defun (prc-modexp-xbs---compute-max)              [DATA 4])
 (defun (prc-modexp-xbs---max-xbs-ybs)              [DATA 7])
 (defun (prc-modexp-xbs---xbs-nonzero)              [DATA 8])
-(defun (prc-modexp-xbs---compo-to_512)             OUTGOING_RES_LO)
+(defun (prc-modexp-xbs---comparison-to-512)        OUTGOING_RES_LO)
 (defun (prc-modexp-xbs---comp)                     (next OUTGOING_RES_LO))
 
 (defconstraint prc-modexp-xbs---compare-xbs-hi-against-513 (:guard (* (assumption---fresh-new-stamp) (prc-modexp-xbs---standard-precondition)))
@@ -28,7 +28,7 @@
 
 (defconstraint additional-prc-modexp-xbs (:guard (* (assumption---fresh-new-stamp) (prc-modexp-xbs---standard-precondition)))
   (begin (or! (eq! 0 (prc-modexp-xbs---compute-max)) (eq! 1 (prc-modexp-xbs---compute-max)))
-         (eq! (prc-modexp-xbs---compo-to_512) 1)))
+         (eq! (prc-modexp-xbs---comparison-to-512) 1)))
 
 (defconstraint prc-modexp-xbs---justify-hub-predictions (:guard (* (assumption---fresh-new-stamp) (prc-modexp-xbs---standard-precondition)))
   (if-zero (prc-modexp-xbs---compute-max)

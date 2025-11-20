@@ -53,8 +53,8 @@
   ;;NB_MICRO_ROWS_TOT_RAM_TO_RAM_SANS_PADDING              variable
   ;;NB_MICRO_ROWS_TOT_ANY_TO_RAM_WITH_PADDING_PURE_PADDING variable
   ;;NB_MICRO_ROWS_TOT_ANY_TO_RAM_WITH_PADDING_SOME_DATA    variable
-  NB_MICRO_ROWS_TOT_MODEXP_ZERO                      32
-  NB_MICRO_ROWS_TOT_MODEXP_DATA                      32
+  NB_MICRO_ROWS_TOT_MODEXP_ZERO                      64
+  NB_MICRO_ROWS_TOT_MODEXP_DATA                      64
   NB_MICRO_ROWS_TOT_BLAKE                            2)
 
 

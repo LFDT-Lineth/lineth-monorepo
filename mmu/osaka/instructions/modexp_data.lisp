@@ -30,9 +30,9 @@
 (defun    (modexp-data---exo-sum)                        macro/EXO_SUM)
 (defun    (modexp-data---phase)                          macro/PHASE)
 (defun    (modexp-data---param-byte-size)                (modexp-data---size))
-(defun    (modexp-data---param-offset)                   (+ (modexp-data---cdo) (modexp-data---src-offset)))
-(defun    (modexp-data---leftover-data-size)             (- (modexp-data---cds) (modexp-data---src-offset)))
-(defun    (modexp-data---num-left-padding-bytes)         (- 512 (modexp-data---param-byte-size)))
+(defun    (modexp-data---param-offset)                   (+   (modexp-data---cdo)                     (modexp-data---src-offset)))
+(defun    (modexp-data---leftover-data-size)             (-   (modexp-data---cds)                     (modexp-data---src-offset)))
+(defun    (modexp-data---num-left-padding-bytes)         (-   EIP_7823_MODEXP_UPPER_BYTE_SIZE_BOUND   (modexp-data---param-byte-size)))
 (defun    (modexp-data---data-runs-out)                  (shift prprc/WCP_RES 2))
 (defun    (modexp-data---num-right-padding-bytes)        (* (- (modexp-data---param-byte-size) (modexp-data---leftover-data-size)) (modexp-data---data-runs-out)))
 (defun    (modexp-data---right-padding-remainder)        (shift prprc/EUC_REM 2))
@@ -40,9 +40,10 @@
 (defun    (modexp-data---middle-sbo)                     (shift prprc/EUC_REM 6)) ;; ""
 
 
-(defconstraint modexp-data---setting-TOT (:guard (* MACRO IS_MODEXP_DATA))
-                 ;; Setting total number of mmio inst
-                 (eq! TOT NB_MICRO_ROWS_TOT_MODEXP_DATA))
+(defconstraint modexp-data---number-of-preprocessing-rows-ie-setting-TOT (:guard (* MACRO IS_MODEXP_DATA))
+               ;; Setting total number of mmio inst
+               (eq!   TOT
+                      NB_MICRO_ROWS_TOT_MODEXP_DATA))
 
 (defconstraint modexp-data---1st-preprocessing-row (:guard (* MACRO IS_MODEXP_DATA))
                (begin
@@ -64,7 +65,8 @@
                               (modexp-data---num-right-padding-bytes)
                               LLARGE)
                  (eq! TOTRZ (shift prprc/EUC_QUOT 2))
-                 (debug (eq! TOTNT (- 32 (+ TOTLZ TOTRZ))))))
+                 (debug (eq! TOTNT (-  NB_MICRO_ROWS_TOT_MODEXP_DATA
+                                       (+ TOTLZ TOTRZ))))))
 
 (defconstraint modexp-data---3rd-preprocessing-row (:guard (* MACRO IS_MODEXP_DATA))
                (begin

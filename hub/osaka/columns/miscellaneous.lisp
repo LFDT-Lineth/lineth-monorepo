@@ -14,7 +14,7 @@
 
 		 ;; EXP columns (DONE)
 		 ( EXP_INST                :i16 )
-		 ( EXP_DATA                :array [5] :i128 )
+		 ( EXP_DATA                :array [5] :i128 ) ;;""
 
 		 ;; MMU columns (DONE)
 		 ( MMU_INST                :i16   :display :hex)
@@ -52,7 +52,7 @@
 
 		 ;; OOB columns
 		 (OOB_INST                 :i16  )
-		 (OOB_DATA                 :array[1:10] :i128 )
+		 (OOB_DATA                 :array[1:10] :i128 ) ;;""
 
 		 ;; STP columns
 		 ( STP_INSTRUCTION               :byte )

@@ -16,7 +16,7 @@
 (defconstraint    modexp-zero---setting-the-TOTs (:guard (* MACRO IS_MODEXP_ZERO))
                   (begin
                     (vanishes! TOTLZ)
-                    (eq!       TOTNT NB_MICRO_ROWS_TOT_MODEXP_ZERO)
+                    (eq!       TOTNT   NB_MICRO_ROWS_TOT_MODEXP_ZERO)
                     (vanishes! TOTRZ)))
 
 (defconstraint    modexp-zero---setting-micro-instruction-constant-values (:guard (* MACRO IS_MODEXP_ZERO))

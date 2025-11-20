@@ -228,6 +228,7 @@
   GAS_CONST_IDENTITY                        15
   GAS_CONST_IDENTITY_WORD                   3
   GAS_CONST_MODEXP                          200
+  GAS_CONST_MODEXP_EIP_7823                 500
   GAS_CONST_ECADD                           150
   GAS_CONST_ECMUL                           6000
   GAS_CONST_ECPAIRING                       45000
@@ -270,6 +271,7 @@
   HISTORY_STORAGE_ADDRESS_HI                0x0000f908
   HISTORY_STORAGE_ADDRESS_LO                0x27f1c53a10cb7a02335b175320002935
   EIP_7825_TRANSACTION_GAS_LIMIT_CAP        0x1000000 ;; 2^24 == 16777216 appears in OSAKA 
+  EIP_7823_MODEXP_UPPER_BYTE_SIZE_BOUND     1024
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;             ;;
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  LINEA MISC ;;
