@@ -115,7 +115,7 @@ deploy-contracts:
 	export L2_NONCE=$$(npx ts-node local-deployments-artifacts/get-wallet-nonce.ts --wallet-priv-key 0x1dd171cec7e2995408b5513004e8207fe88d6820aeff0d82463b3e41df251aae --rpc-url http://localhost:8545) && \
 	cd .. && \
 	if [ "$(LINEA_PROTOCOL_CONTRACTS_ONLY)" = "false" ]; then \
-		$(MAKE) -j6 deploy-linea-rollup-v$(L1_CONTRACT_VERSION) deploy-token-bridge-l1 deploy-l1-test-erc20 deploy-l2messageservice deploy-token-bridge-l2 deploy-l2-test-erc20; \
+		$(MAKE) -j7 deploy-linea-rollup-v$(L1_CONTRACT_VERSION) deploy-token-bridge-l1 deploy-l1-test-erc20 deploy-l2messageservice deploy-token-bridge-l2 deploy-l2-test-erc20 deploy-l2-evm-opcode-tester; \
 	else \
 		$(MAKE) -j6 deploy-linea-rollup-v$(L1_CONTRACT_VERSION) deploy-l2messageservice; \
 	fi

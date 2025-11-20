@@ -38,7 +38,7 @@ start-env:
 				[ "$$(docker compose -f $(COMPOSE_FILE) ps -q l1-cl-node | xargs docker inspect -f '{{.State.Health.Status}}')" != "healthy" ] || \
   			[ "$$(docker compose -f $(COMPOSE_FILE) ps -q sequencer | xargs docker inspect -f '{{.State.Health.Status}}')" != "healthy" ]; }; do \
   			sleep 2; \
-  			echo "Checking health status of l1-el-node and sequencer..."; \
+  			echo "Checking health status of: l1-el-node, l1-cl-node and l2 sequencer..."; \
   	done
 	if [ "$(SKIP_CONTRACTS_DEPLOYMENT)" = "true" ]; then \
 		echo "Skipping contracts deployment"; \

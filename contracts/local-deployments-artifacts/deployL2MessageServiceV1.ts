@@ -53,10 +53,14 @@ async function main() {
       wallet,
       {
         nonce: walletNonce,
+        maxFeePerGas: 7_200_000_000_000n,
+        maxPriorityFeePerGas: 7_000_000_000_000n,
       },
     ),
     deployContractFromArtifacts(ProxyAdminContractName, ProxyAdminAbi, ProxyAdminBytecode, wallet, {
       nonce: walletNonce + 1,
+      maxFeePerGas: 7_200_000_000_000n,
+      maxPriorityFeePerGas: 7_000_000_000_000n,
     }),
   ]);
 
