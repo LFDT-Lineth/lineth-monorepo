@@ -4,6 +4,7 @@ allow-empty-blocks = false
 contract-address = "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9"
 l1-eth-api = { endpoint = "http://l1-el-node:8545" }
 l1-polling-interval = "1 seconds"
+l2-eth-api-endpoint = { endpoint = "http://sequencer:8545" }
 
 [persistence]
 data-path="/tmp/maru-db"
@@ -29,11 +30,15 @@ ban-period = "30 seconds"
 [payload-validator]
 engine-api-endpoint = { endpoint = "http://sequencer:8550" }
 eth-api-endpoint = { endpoint = "http://sequencer:8545" }
+payload-validation-enabled = false
 
 [follower-engine-apis]
 follower-besu = { endpoint = "http://l2-node-besu:8550" }
 follower-tracer = { endpoint = "http://traces-node:8550" }
 follower-shomei = { endpoint = "http://zkbesu-shomei:8550" }
+
+[fork-transition]
+l2-eth-api-endpoint = { endpoint = "http://sequencer:8545" }
 
 [observability]
 port = 9090
