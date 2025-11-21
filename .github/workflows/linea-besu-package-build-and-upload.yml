@@ -1,4 +1,4 @@
-name: Reusable linea-besu-package build and upload
+name: linea-besu-package-build-and-upload
 
 permissions:
   contents: read

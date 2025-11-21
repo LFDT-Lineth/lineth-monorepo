@@ -1,4 +1,4 @@
-name: Prover testing CI
+name: prover-testing
 
 permissions:
   contents: read

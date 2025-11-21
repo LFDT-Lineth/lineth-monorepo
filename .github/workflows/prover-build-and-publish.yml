@@ -1,4 +1,4 @@
-name: Prover build and publish CI
+name: prover-build-and-publish
 
 permissions:
   contents: read

@@ -1,4 +1,4 @@
-name: Smart contracts test
+name: smart-contracts-testing
 
 permissions:
   contents: read

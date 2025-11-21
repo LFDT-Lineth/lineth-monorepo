@@ -141,10 +141,10 @@ jobs:
           # Means that ALL (and not just one) filter patterns must match. In other words applies the 'AND' operator to filter patterns.
           # The default is 'some', which requires just one filter pattern match and applies the 'OR' operator.
           # For 'has-changes-requiring-build', it means we have an exclusion list that we can append to.
-          predicate-quantifier: 'every'
+          predicate-quantifier: "every"
 
   check-and-tag-images:
-    needs: [ filter-commit-changes ]
+    needs: [filter-commit-changes]
     uses: ./.github/workflows/reuse-check-images-tags-and-push.yml
     with:
       has-changes-requiring-build: ${{ needs.filter-commit-changes.outputs.has-changes-requiring-build }}
@@ -158,7 +158,7 @@ jobs:
     uses: ./.github/workflows/codeql.yml
 
   testing:
-    needs: [ filter-commit-changes, check-and-tag-images ]
+    needs: [filter-commit-changes, check-and-tag-images]
     if: ${{ always() && needs.filter-commit-changes.outputs.has-changes-requiring-build == 'true' }}
     uses: ./.github/workflows/testing.yml
     with:
@@ -173,7 +173,7 @@ jobs:
     secrets: inherit
 
   get-has-changes-requiring-e2e-testing:
-    needs: [ filter-commit-changes ]
+    needs: [filter-commit-changes]
     uses: ./.github/workflows/get-has-changes-requiring-e2e-testing.yml
     with:
       has_changes_requiring_build: ${{ needs.filter-commit-changes.outputs.has-changes-requiring-build }}
@@ -183,7 +183,7 @@ jobs:
 
   manual-docker-build-and-e2e-tests:
     runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
-    needs: [ check-and-tag-images, get-has-changes-requiring-e2e-testing ]
+    needs: [check-and-tag-images, get-has-changes-requiring-e2e-testing]
     if: ${{ needs.get-has-changes-requiring-e2e-testing.outputs.has-changes-requiring-e2e-testing == 'true' }}
     environment: ${{ github.ref != 'refs/heads/main' && 'docker-build-and-e2e' || '' }}
     concurrency:
@@ -195,7 +195,12 @@ jobs:
           echo "Build and e2e test environment deployed"
 
   docker-build:
-    needs: [ filter-commit-changes, check-and-tag-images, manual-docker-build-and-e2e-tests ]
+    needs:
+      [
+        filter-commit-changes,
+        check-and-tag-images,
+        manual-docker-build-and-e2e-tests,
+      ]
     uses: ./.github/workflows/build-and-publish.yml
     with:
       commit_tag: ${{ needs.check-and-tag-images.outputs.commit_tag }}
@@ -212,7 +217,12 @@ jobs:
     secrets: inherit
 
   run-e2e-tests:
-    needs: [ docker-build, get-has-changes-requiring-e2e-testing, manual-docker-build-and-e2e-tests ]
+    needs:
+      [
+        docker-build,
+        get-has-changes-requiring-e2e-testing,
+        manual-docker-build-and-e2e-tests,
+      ]
     # Make this execute for has-changes-requiring-e2e-testing == 'false' so that we can get to the required job @ which is in reuse-run-e2e-tests.yml
     if: ${{ always() && needs.get-has-changes-requiring-e2e-testing.outputs.has-changes-requiring-e2e-testing == 'false' || needs.docker-build.result == 'success' }}
     concurrency:
@@ -228,7 +238,7 @@ jobs:
     secrets: inherit
 
   publish-images-after-run-tests-success-on-main:
-    needs: [ filter-commit-changes, check-and-tag-images, testing, run-e2e-tests ]
+    needs: [filter-commit-changes, check-and-tag-images, testing, run-e2e-tests]
     if: ${{ always() && github.ref == 'refs/heads/main' && needs.testing.result == 'success' && needs.run-e2e-tests.outputs.tests_outcome == 'success' }}
     uses: ./.github/workflows/build-and-publish.yml
     with:
@@ -247,7 +257,7 @@ jobs:
     secrets: inherit
 
   cleanup-deployments:
-    needs: [ run-e2e-tests ]
+    needs: [run-e2e-tests]
     if: ${{ always() && github.event.pull_request.head.repo.fork == false }}
     runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
     permissions:
@@ -262,3 +272,24 @@ jobs:
           # head_ref is correct for PR trigger, but only available for PR trigger
           ref: ${{ github.head_ref != '' && github.head_ref || github.ref_name }}
           onlyRemoveDeployments: true
+
+  notify:
+    needs:
+      [
+        filter-commit-changes,
+        check-and-tag-images,
+        code-analysis,
+        testing,
+        get-has-changes-requiring-e2e-testing,
+        manual-docker-build-and-e2e-tests,
+        docker-build,
+        run-e2e-tests,
+        publish-images-after-run-tests-success-on-main,
+        cleanup-deployments,
+      ]
+    if: ${{ always() && github.ref == 'refs/heads/main' && (needs.filter-commit-changes.result == 'failure' || needs.check-and-tag-images.result == 'failure' || needs.code-analysis.result == 'failure' || needs.testing.result == 'failure' || needs.get-has-changes-requiring-e2e-testing.result == 'failure' || needs.manual-docker-build-and-e2e-tests.result == 'failure' || needs.docker-build.result == 'failure' || needs.run-e2e-tests.result == 'failure' || needs.publish-images-after-run-tests-success-on-main.result == 'failure' || needs.cleanup-deployments.result == 'failure') }}
+    uses: ./.github/workflows/slack-notify-failed-jobs.yml
+    with:
+      title: "Main workflow Failed"
+      run_id: ${{ github.run_id }}
+    secrets: inherit

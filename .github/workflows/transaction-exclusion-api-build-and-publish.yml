@@ -1,4 +1,4 @@
-name: Transaction-Exclusion-Api build and publish CI
+name: transaction-exclusion-api-build-and-publish
 
 permissions:
   contents: read

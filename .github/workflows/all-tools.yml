@@ -1,4 +1,4 @@
-name: All tools CI
+name: all-tools
 
 permissions:
   contents: read
@@ -10,14 +10,14 @@ on:
     branches:
       - main
     paths:
-      - 'operations/**'
-      - '.github/workflows/all-tools.yml'
+      - "operations/**"
+      - ".github/workflows/all-tools.yml"
   pull_request:
     branches:
       - main
     paths:
-      - 'operations/**'
-      - '.github/workflows/all-tools.yml'
+      - "operations/**"
+      - ".github/workflows/all-tools.yml"
 
 jobs:
   changes:
@@ -46,7 +46,7 @@ jobs:
   check_image_tags_exist:
     runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
     name: Check image tags exist
-    needs: [ changes, store_image_name_and_tags ]
+    needs: [changes, store_image_name_and_tags]
     if: ${{ needs.changes.outputs['all-tools'] == 'false' }}
     steps:
       - name: Checkout
@@ -60,7 +60,7 @@ jobs:
   all-tools-tag-only:
     runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
     name: All tools tag only
-    needs: [ changes, store_image_name_and_tags, check_image_tags_exist ]
+    needs: [changes, store_image_name_and_tags, check_image_tags_exist]
     if: ${{ github.event_name != 'pull_request' && needs.changes.outputs['all-tools'] == 'false' }}
     outputs:
       image_tagged: ${{ steps.image_tag_push.outputs.image_tagged }}
@@ -80,7 +80,7 @@ jobs:
           docker_password: ${{ secrets.DOCKERHUB_TOKEN }}
 
   build-and-publish:
-    needs: [ changes, store_image_name_and_tags, all-tools-tag-only ]
+    needs: [changes, store_image_name_and_tags, all-tools-tag-only]
     if: ${{ always() && (needs.changes.outputs['all-tools'] == 'true' || needs.all-tools-tag-only.result != 'success' || needs.all-tools-tag-only.outputs.image_tagged != 'true') }}
     # ~0.5 mins saved vs small
     runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-med
@@ -122,9 +122,25 @@ jobs:
         with:
           context: .
           file: ./operations/Dockerfile
-          platforms: linux/amd64  # Note: Build amd64 image only
+          platforms: linux/amd64 # Note: Build amd64 image only
           push: ${{ github.event_name != 'pull_request' }}
           tags: |
             ${{ env.IMAGE_NAME }}:${{ env.COMMIT_TAG }}
           cache-from: type=registry,ref=${{ env.IMAGE_NAME }}:buildcache
           cache-to: type=registry,ref=${{ env.IMAGE_NAME }}:buildcache,mode=max
+
+  notify:
+    needs:
+      [
+        changes,
+        store_image_name_and_tags,
+        check_image_tags_exist,
+        all-tools-tag-only,
+        build-and-publish,
+      ]
+    if: ${{ always() && github.ref == 'refs/heads/main' && (needs.changes.result == 'failure' || needs.store_image_name_and_tags.result == 'failure' || needs.check_image_tags_exist.result == 'failure' || needs.all-tools-tag-only.result == 'failure' || needs.build-and-publish.result == 'failure') }}
+    uses: ./.github/workflows/slack-notify-failed-jobs.yml
+    with:
+      title: "All tools workflow failed"
+      run_id: ${{ github.run_id }}
+    secrets: inherit

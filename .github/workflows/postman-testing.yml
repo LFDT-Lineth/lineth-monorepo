@@ -1,4 +1,4 @@
-name: postman-and-SDK-testing
+name: postman-testing
 
 permissions:
   contents: read

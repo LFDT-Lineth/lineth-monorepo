@@ -56,7 +56,7 @@ class JsonRpcV2ClientImplTest {
   private lateinit var wiremock: WireMockServer
   private val path = "/api/v1?appKey=1234"
   private lateinit var meterRegistry: SimpleMeterRegistry
-  private val defaultRetryConfig = retryConfig(maxRetries = 2u, timeout = 8.seconds, backoffDelay = 5.milliseconds)
+  private val defaultRetryConfig = retryConfig(maxRetries = 2u, timeout = 20.seconds, backoffDelay = 5.milliseconds)
 
   private val defaultObjectMapper = jacksonObjectMapper()
   private val objectMapperBytesAsHex = jacksonObjectMapper()
