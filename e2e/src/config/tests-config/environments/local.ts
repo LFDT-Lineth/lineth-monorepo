@@ -52,6 +52,7 @@ const config: Config = {
     shomeiFrontendEndpoint: SHOMEI_FRONTEND_ENDPOINT,
     sequencerEndpoint: SEQUENCER_ENDPOINT,
     transactionExclusionEndpoint: TRANSACTION_EXCLUSION_ENDPOINT,
+    opcodeTesterAddress: "0xa50a51c09a5c451C52BB714527E1974b686D8e77",
   },
 };
 

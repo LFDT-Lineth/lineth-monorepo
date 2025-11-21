@@ -11,6 +11,8 @@ import {
   LineaRollupV6__factory,
   LineaSequencerUptimeFeed,
   LineaSequencerUptimeFeed__factory,
+  OpcodeTester,
+  OpcodeTester__factory,
   ProxyAdmin,
   ProxyAdmin__factory,
   SparseMerkleProof,
@@ -267,13 +269,27 @@ export default class TestSetup {
     return this.config.L1.dummyContractAddress;
   }
 
+  public getL2OpcodeTesterContract(signer?: Wallet): OpcodeTester {
+    const opcodeTester: OpcodeTester = OpcodeTester__factory.connect(
+      this.config.L2.opcodeTesterAddress,
+      this.getL2Provider(),
+    );
+
+    if (signer) {
+      return opcodeTester.connect(signer);
+    }
+
+    return opcodeTester;
+  }
+
   private isLocalL2Config(config: L2Config): config is LocalL2Config {
     return (
       (config as LocalL2Config).besuNodeRpcUrl !== undefined &&
       (config as LocalL2Config).sequencerEndpoint !== undefined &&
       (config as LocalL2Config).shomeiEndpoint !== undefined &&
       (config as LocalL2Config).shomeiFrontendEndpoint !== undefined &&
-      (config as LocalL2Config).transactionExclusionEndpoint !== undefined
+      (config as LocalL2Config).transactionExclusionEndpoint !== undefined &&
+      (config as LocalL2Config).opcodeTesterAddress !== undefined
     );
   }
 }
