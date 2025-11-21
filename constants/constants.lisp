@@ -10,6 +10,7 @@
   EVM_CANCUN                             19
   EVM_PRAGUE                             20
   EVM_OSAKA                              21
+  EVM_AMSTERDAM                          22
   ;; Default fork
   (EVM_FORK :i8 :extern)         EVM_LONDON
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

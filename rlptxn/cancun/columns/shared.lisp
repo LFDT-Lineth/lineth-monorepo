@@ -34,8 +34,8 @@
   ( IS_R                          :binary@prove )
   ( IS_S                          :binary@prove )
   ;; ( PHASE_END                     :binary ) ;; defcomputed column
-  ( CT                            :i16          ) ;; Linea call data is capped at 120kB < 2**17 limbs = 2**13 bytes
-  ( CT_MAX                        :i16          )
+  ( CT                            :i32          ) ;; Linea call data is capped at 120kB < 2**17 limbs = 2**13 bytes
+  ( CT_MAX                        :i32          ) ;; i16 is not enough for ref tests
   ;; ( DONE                          :binary ) ;; defcomputed column
   ( REPLAY_PROTECTION             :binary@prove )
   ( Y_PARITY                      :binary@prove )
