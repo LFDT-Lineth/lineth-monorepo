@@ -8,7 +8,7 @@ import {
   JsonRpcProvider,
   ErrorDescription,
 } from "ethers";
-import { OnChainMessageStatus } from "@consensys/linea-sdk";
+import { Direction, OnChainMessageStatus } from "@consensys/linea-sdk";
 import { BaseError } from "../../core/errors";
 import { MessageStatus } from "../../core/enums";
 import { ILogger } from "../../core/utils/logging/ILogger";
@@ -211,7 +211,7 @@ export class MessageClaimingPersister implements IMessageClaimingPersister {
     let processingTimeInSeconds: number | undefined;
     let infuraConfirmationTimeInSeconds: number | undefined;
 
-    if (message.claimTxCreationDate) {
+    if (this.config.direction === Direction.L1_TO_L2 && message.claimTxCreationDate) {
       const block = await this.provider.getBlock(receipt.blockNumber);
       if (block) {
         processingTimeInSeconds = block.timestamp - message.claimTxCreationDate.getTime() / 1_000;
