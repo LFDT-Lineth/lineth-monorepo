@@ -10,14 +10,16 @@
   (INDEX_MAX    :i16)
   (SUCCESS_BIT  :binary@prove)
 
-  (IS_ECRECOVER_DATA    :binary@prove)
-  (IS_ECRECOVER_RESULT  :binary@prove)
-  (IS_ECADD_DATA        :binary@prove)
-  (IS_ECADD_RESULT      :binary@prove)
-  (IS_ECMUL_DATA        :binary@prove)
-  (IS_ECMUL_RESULT      :binary@prove)
-  (IS_ECPAIRING_DATA    :binary@prove)
-  (IS_ECPAIRING_RESULT  :binary@prove)
+  (IS_ECRECOVER_DATA     :binary@prove)
+  (IS_ECRECOVER_RESULT   :binary@prove)
+  (IS_ECADD_DATA         :binary@prove)
+  (IS_ECADD_RESULT       :binary@prove)
+  (IS_ECMUL_DATA         :binary@prove)
+  (IS_ECMUL_RESULT       :binary@prove)
+  (IS_ECPAIRING_DATA     :binary@prove)
+  (IS_ECPAIRING_RESULT   :binary@prove)
+  (IS_P256_VERIFY_DATA   :binary@prove)
+  (IS_P256_VERIFY_RESULT :binary@prove)
 
   (TOTAL_PAIRINGS                                :i16)
   (ACC_PAIRINGS                                  :i16)
@@ -35,12 +37,6 @@
   (OVERALL_TRIVIAL_PAIRING                       :binary@prove)
   (G2_MEMBERSHIP_TEST_REQUIRED                   :binary@prove)
   (ACCEPTABLE_PAIR_OF_POINTS_FOR_PAIRING_CIRCUIT :binary@prove)
-
-  (CIRCUIT_SELECTOR_ECRECOVER      :binary@prove)
-  (CIRCUIT_SELECTOR_ECADD          :binary@prove)
-  (CIRCUIT_SELECTOR_ECMUL          :binary@prove)
-  (CIRCUIT_SELECTOR_ECPAIRING      :binary@prove)
-  (CIRCUIT_SELECTOR_G2_MEMBERSHIP  :binary@prove)
 
   (WCP_FLAG     :binary@prove)
   (WCP_ARG1_HI  :i128)
@@ -71,6 +67,7 @@
   CS_ECADD         CIRCUIT_SELECTOR_ECADD
   CS_ECMUL         CIRCUIT_SELECTOR_ECMUL
   CS_ECPAIRING     CIRCUIT_SELECTOR_ECPAIRING
+  CS_P256_VERIFY   CIRCUIT_SELECTOR_P256_VERIFY
   CS_G2_MEMBERSHIP CIRCUIT_SELECTOR_G2_MEMBERSHIP)
 
 

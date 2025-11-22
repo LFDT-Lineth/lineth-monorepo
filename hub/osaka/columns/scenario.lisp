@@ -66,6 +66,8 @@
    (PRC_BLS_PAIRING_CHECK                            :binary@prove)
    (PRC_BLS_MAP_FP_TO_G1                             :binary@prove)
    (PRC_BLS_MAP_FP2_TO_G2                            :binary@prove)
+   ;; Osaka precompiles
+   (PRC_P256_VERIFY                                  :binary@prove)
    ;; execution paths
    (PRC_SUCCESS_CALLER_WILL_REVERT                   :binary@prove)
    (PRC_SUCCESS_CALLER_WONT_REVERT                   :binary@prove)

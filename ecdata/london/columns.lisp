@@ -36,12 +36,6 @@
   (G2_MEMBERSHIP_TEST_REQUIRED                   :binary@prove)
   (ACCEPTABLE_PAIR_OF_POINTS_FOR_PAIRING_CIRCUIT :binary@prove)
 
-  (CIRCUIT_SELECTOR_ECRECOVER      :binary@prove)
-  (CIRCUIT_SELECTOR_ECADD          :binary@prove)
-  (CIRCUIT_SELECTOR_ECMUL          :binary@prove)
-  (CIRCUIT_SELECTOR_ECPAIRING      :binary@prove)
-  (CIRCUIT_SELECTOR_G2_MEMBERSHIP  :binary@prove)
-
   (WCP_FLAG     :binary@prove)
   (WCP_ARG1_HI  :i128)
   (WCP_ARG1_LO  :i128)

@@ -30,14 +30,20 @@
 (defun (is_ecpairing)
   (force-bin (+ IS_ECPAIRING_DATA IS_ECPAIRING_RESULT)))
 
+(defun (is_p256_verify)
+  (force-bin (+ IS_P256_VERIFY_DATA IS_P256_VERIFY_RESULT)))
+
 (defun (flag_sum)
-  (force-bin (+ (is_ecrecover) (is_ecadd) (is_ecmul) (is_ecpairing))))
+  (force-bin (+ (is_ecrecover) (is_ecadd) (is_ecmul) (is_ecpairing) (is_p256_verify))))
 
 (defun (address_sum)
   (+ (* ECRECOVER (is_ecrecover))
      (* ECADD (is_ecadd))
      (* ECMUL (is_ecmul))
-     (* ECPAIRING (is_ecpairing))))
+     (* ECPAIRING (is_ecpairing))
+     (* P256_VERIFY (is_p256_verify))))
+
+;; TODO: rename constants
 
 (defun (phase_sum)
   (+ (* PHASE_ECRECOVER_DATA IS_ECRECOVER_DATA)
@@ -47,13 +53,15 @@
      (* PHASE_ECMUL_DATA IS_ECMUL_DATA)
      (* PHASE_ECMUL_RESULT IS_ECMUL_RESULT)
      (* PHASE_ECPAIRING_DATA IS_ECPAIRING_DATA)
-     (* PHASE_ECPAIRING_RESULT IS_ECPAIRING_RESULT)))
+     (* PHASE_ECPAIRING_RESULT IS_ECPAIRING_RESULT)
+     (* PHASE_P256_VERIFY_DATA IS_P256_VERIFY_DATA)
+     (* PHASE_P256_VERIFY_RESULT IS_P256_VERIFY_RESULT)))
 
 (defun (is_data)
-  (force-bin (+ IS_ECRECOVER_DATA IS_ECADD_DATA IS_ECMUL_DATA IS_ECPAIRING_DATA)))
+  (force-bin (+ IS_ECRECOVER_DATA IS_ECADD_DATA IS_ECMUL_DATA IS_ECPAIRING_DATA IS_P256_VERIFY_DATA)))
 
 (defun (is_result)
-  (force-bin (+ IS_ECRECOVER_RESULT IS_ECADD_RESULT IS_ECMUL_RESULT IS_ECPAIRING_RESULT)))
+  (force-bin (+ IS_ECRECOVER_RESULT IS_ECADD_RESULT IS_ECMUL_RESULT IS_ECPAIRING_RESULT IS_P256_VERIFY_RESULT)))
 
 (defun (transition_to_data)
   (force-bin (* (- 1 (is_data)) (next (is_data)))))
@@ -110,11 +118,13 @@
   (+ (* INDEX_MAX_ECRECOVER_DATA IS_ECRECOVER_DATA)
      (* INDEX_MAX_ECADD_DATA IS_ECADD_DATA)
      (* INDEX_MAX_ECMUL_DATA IS_ECMUL_DATA)
+     (* INDEX_MAX_P256_VERIFY_DATA IS_P256_VERIFY_DATA)
      ;;
      (* INDEX_MAX_ECRECOVER_RESULT IS_ECRECOVER_RESULT)
      (* INDEX_MAX_ECADD_RESULT IS_ECADD_RESULT)
      (* INDEX_MAX_ECMUL_RESULT IS_ECMUL_RESULT)
-     (* INDEX_MAX_ECPAIRING_RESULT IS_ECPAIRING_RESULT)))
+     (* INDEX_MAX_ECPAIRING_RESULT IS_ECPAIRING_RESULT)
+     (* INDEX_MAX_P256_VERIFY_RESULT IS_P256_VERIFY_RESULT)))
 
 (defconstraint set-index-max ()
   (eq! (* 16 INDEX_MAX)
@@ -132,10 +142,12 @@
           (* IS_ECADD_DATA TOTAL_SIZE_ECADD_DATA)
           (* IS_ECMUL_DATA TOTAL_SIZE_ECMUL_DATA)
           (* IS_ECPAIRING_DATA TOTAL_SIZE_ECPAIRING_DATA_MIN TOTAL_PAIRINGS)
+          (* IS_P256_VERIFY_DATA TOTAL_SIZE_P256_VERIFY_DATA)
           (* IS_ECRECOVER_RESULT TOTAL_SIZE_ECRECOVER_RESULT SUCCESS_BIT)
           (* IS_ECADD_RESULT TOTAL_SIZE_ECADD_RESULT SUCCESS_BIT)
           (* IS_ECMUL_RESULT TOTAL_SIZE_ECMUL_RESULT SUCCESS_BIT)
-          (* IS_ECPAIRING_RESULT TOTAL_SIZE_ECPAIRING_RESULT SUCCESS_BIT))))
+          (* IS_ECPAIRING_RESULT TOTAL_SIZE_ECPAIRING_RESULT SUCCESS_BIT)
+          (* IS_P256_VERIFY_RESULT TOTAL_SIZE_P256_VERIFY_RESULT SUCCESS_BIT))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                                    ;;
@@ -204,9 +216,9 @@
            (vanishes! ICP)))
 
 (defconstraint set-icp ()
-  (let ((internal_checks_passed HURDLE))
+  (let ((icp_at_transition_to_result HURDLE))
        (if-not-zero (transition_to_result)
-                    (eq! ICP internal_checks_passed))))
+                    (eq! ICP icp_at_transition_to_result))))
 
 (defconstraint icp-necessary-condition-success-bit ()
   (debug (if-not-zero SUCCESS_BIT
@@ -301,10 +313,12 @@
                        (* IS_ECADD_DATA (next (is_ecadd)))
                        (* IS_ECMUL_DATA (next (is_ecmul)))
                        (* IS_ECPAIRING_DATA (next (is_ecpairing)))
+                       (* IS_P256_VERIFY_DATA (next (is_p256_verify)))
                        (* IS_ECRECOVER_RESULT (next IS_ECRECOVER_RESULT))
                        (* IS_ECADD_RESULT (next IS_ECADD_RESULT))
                        (* IS_ECMUL_RESULT (next IS_ECMUL_RESULT))
                        (* IS_ECPAIRING_RESULT (next IS_ECPAIRING_RESULT))
+                       (* IS_P256_VERIFY_RESULT (next IS_P256_VERIFY_RESULT))
                        (transition_to_data))
                     1)))
 
@@ -478,7 +492,6 @@
                                 (eq! P_is_point_at_infinity 1)
                                 (vanishes! P_is_point_at_infinity))))))
 
-;; Note: in the specs for simplicity we omit the last four arguments
 (defun (callToC1MembershipWCP k
                               _P_x_hi
                               _P_x_lo
@@ -492,7 +505,6 @@
          (callToLT (+ k 1) _P_y_hi _P_y_lo P_BN_HI P_BN_LO)
          (callToEQ (+ k 2) _P_y_square_hi _P_y_square_lo _P_x_cube_plus_three_hi _P_x_cube_plus_three_lo)))
 
-;; Note: in the specs for simplicity we omit the last four arguments
 (defun (callToC1MembershipEXT k
                               _P_x_hi
                               _P_x_lo
@@ -506,6 +518,95 @@
          (callToMULMOD (+ k 1) _P_x_hi _P_x_lo _P_x_hi _P_x_lo P_BN_HI P_BN_LO)
          (callToMULMOD (+ k 2) _P_x_square_hi _P_x_square_lo _P_x_hi _P_x_lo P_BN_HI P_BN_LO)
          (callToADDMOD (+ k 3) _P_x_cube_hi _P_x_cube_lo 0 3 P_BN_HI P_BN_LO)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                     ;;
+;; 3.4.5 R1 membership ;;
+;;       utilities     ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;
+(defun (callToR1Membership k P_x_hi P_x_lo P_y_hi P_y_lo)
+  (let ((P_x_is_in_range (shift WCP_RES k))
+        (P_y_is_in_range (shift WCP_RES (+ k 1)))
+        (P_satisfies_cubic (shift WCP_RES (+ k 2)))
+        (P_y_square_hi (shift EXT_RES_HI k))
+        (P_y_square_lo (shift EXT_RES_LO k))
+        (P_x_square_hi (shift EXT_RES_HI (+ k 1)))
+        (P_x_square_lo (shift EXT_RES_LO (+ k 1)))
+        (P_x_cube_hi (shift EXT_RES_HI (+ k 2)))
+        (P_x_cube_lo (shift EXT_RES_LO (+ k 2)))
+        (a_times_P_x_hi (shift EXT_RES_HI (+ k 3)))
+        (a_times_P_x_lo (shift EXT_RES_LO (+ k 3)))
+        (P_x_cube_plus_a_times_P_x_hi (shift EXT_RES_HI (+ k 4)))
+        (P_x_cube_plus_a_times_P_x_lo (shift EXT_RES_LO (+ k 4)))
+        (P_x_cube_plus_a_times_P_x_plus_b_hi (shift EXT_RES_HI (+ k 5)))
+        (P_x_cube_plus_a_times_P_x_plus_b_lo (shift EXT_RES_LO (+ k 5)))
+        (P_is_in_range (shift HURDLE (+ k 1)))
+        (R1_membership (shift HURDLE k))
+        (large_sum (+ P_x_hi P_x_lo P_y_hi P_y_lo))
+        (P_is_point_at_infinity (shift IS_INFINITY k)))
+       (begin (callToR1MembershipWCP k
+                                     P_x_hi
+                                     P_x_lo
+                                     P_y_hi
+                                     P_y_lo
+                                     P_y_square_hi
+                                     P_y_square_lo
+                                     P_x_cube_plus_a_times_P_x_plus_b_hi
+                                     P_x_cube_plus_a_times_P_x_plus_b_lo)
+              (callToR1MembershipEXT k
+                                     P_x_hi
+                                     P_x_lo
+                                     P_y_hi
+                                     P_y_lo
+                                     P_x_square_hi
+                                     P_x_square_lo
+                                     P_x_cube_hi
+                                     P_x_cube_lo
+                                     a_times_P_x_hi
+                                     a_times_P_x_lo
+                                     P_x_cube_plus_a_times_P_x_hi
+                                     P_x_cube_plus_a_times_P_x_lo)
+              (eq! P_is_in_range (* P_x_is_in_range P_y_is_in_range))
+              (eq! R1_membership
+                   (* P_is_in_range (- 1 P_is_point_at_infinity) P_satisfies_cubic))
+              (if-zero P_is_in_range
+                       (vanishes! P_is_point_at_infinity)
+                       (if-zero large_sum
+                                (eq! P_is_point_at_infinity 1)
+                                (vanishes! P_is_point_at_infinity))))))
+
+(defun (callToR1MembershipWCP k
+                              P_x_hi
+                              P_x_lo
+                              P_y_hi
+                              P_y_lo
+                              P_y_square_hi
+                              P_y_square_lo
+                              P_x_cube_plus_a_times_P_x_plus_b_hi
+                              P_x_cube_plus_a_times_P_x_plus_b_lo)
+  (begin (callToLT k P_x_hi P_x_lo P_R1_HI P_R1_LO)
+         (callToLT (+ k 1) P_y_hi P_y_lo P_R1_HI P_R1_LO)
+         (callToEQ (+ k 2) P_y_square_hi P_y_square_lo P_x_cube_plus_a_times_P_x_plus_b_hi P_x_cube_plus_a_times_P_x_plus_b_lo)))
+
+(defun (callToR1MembershipEXT k
+                              P_x_hi
+                              P_x_lo
+                              P_y_hi
+                              P_y_lo
+                              P_x_square_hi
+                              P_x_square_lo
+                              P_x_cube_hi
+                              P_x_cube_lo
+                              a_times_P_x_hi
+                              a_times_P_x_lo
+                              P_x_cube_plus_a_times_P_x_hi
+                              P_x_cube_plus_a_times_P_x_lo)
+  (begin (callToMULMOD k P_y_hi P_y_lo P_y_hi P_y_lo P_R1_HI P_R1_LO)
+         (callToMULMOD (+ k 1) P_x_hi P_x_lo P_x_hi P_x_lo P_R1_HI P_R1_LO)
+         (callToMULMOD (+ k 2) P_x_square_hi P_x_square_lo P_x_hi P_x_lo P_R1_HI P_R1_LO)
+         (callToMULMOD (+ k 3) A_COEFF_R1_HI A_COEFF_R1_LO P_x_hi P_x_lo P_R1_HI P_R1_LO)
+         (callToADDMOD (+ k 4) P_x_cube_hi P_x_cube_lo a_times_P_x_hi a_times_P_x_lo P_R1_HI P_R1_LO)
+         (callToADDMOD (+ k 5) P_x_cube_plus_a_times_P_x_hi P_x_cube_plus_a_times_P_x_lo B_COEFF_R1_HI B_COEFF_R1_LO P_R1_HI P_R1_LO)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                     ;;
@@ -568,17 +669,17 @@
         (s_hi (shift LIMB 6))
         (s_lo (shift LIMB 7)))
        (begin (callToLT 0 r_hi r_lo SECP256K1N_HI SECP256K1N_LO)
-              (callToLT 1 0 0 r_hi r_lo)
+              (callToISZERO 1 r_hi r_lo)
               (callToLT 2 s_hi s_lo SECP256K1N_HI SECP256K1N_LO)
-              (callToLT 3 0 0 s_hi s_lo)
+              (callToISZERO 3 s_hi s_lo)
               (callToEQ 4 v_hi v_lo 0 27)
               (callToEQ 5 v_hi v_lo 0 28))))
 
 (defconstraint justify-success-bit-ecrecover (:guard (ecrecover-hypothesis))
   (let ((r_is_in_range WCP_RES)
-        (r_is_positive (next WCP_RES))
+        (r_is_positive (- 1 (next WCP_RES)))
         (s_is_in_range (shift WCP_RES 2))
-        (s_is_positive (shift WCP_RES 3))
+        (s_is_positive (- 1 (shift WCP_RES 3)))
         (v_is_27 (shift WCP_RES 4))
         (v_is_28 (shift WCP_RES 5))
         (internal_checks_passed (shift HURDLE INDEX_MAX_ECRECOVER_DATA)))
@@ -692,6 +793,55 @@
            (vanishes! SUCCESS_BIT)
            (eq! SUCCESS_BIT (- 1 NOT_ON_G2_ACC_MAX))))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                       ;;
+;; 3.6.5 The P256_VERIFY ;;
+;;       case            ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defun (p256-verify-hypothesis)
+  (* IS_P256_VERIFY_DATA
+     (~ (- ID (prev ID)))))
+
+(defconstraint internal-checks-p256-verify (:guard (p256-verify-hypothesis))
+  (let ((h_hi LIMB)
+        (h_lo (next LIMB))
+        (r_hi (shift LIMB 2))
+        (r_lo (shift LIMB 3))
+        (s_hi (shift LIMB 4))
+        (s_lo (shift LIMB 5))
+        (Q_x_hi (shift LIMB 6))
+        (Q_x_lo (shift LIMB 7))
+        (Q_y_hi (shift LIMB 8))
+        (Q_y_lo (shift LIMB 9)))
+       (begin (callToLT 0 r_hi r_lo SECP256R1N_HI SECP256R1N_LO)
+              (callToISZERO 1 r_hi r_lo)
+              (callToLT 2 s_hi s_lo SECP256R1N_HI SECP256R1N_LO)
+              (callToISZERO 3 s_hi s_lo)
+              (callToR1Membership 4 Q_x_hi Q_x_lo Q_y_hi Q_y_lo))))
+
+(defconstraint justify-success-bit-p256-verify (:guard (p256-verify-hypothesis))
+  (let ((r_is_in_range WCP_RES)
+        (r_is_positive (- 1 (next WCP_RES)))
+        (s_is_in_range (shift WCP_RES 2))
+        (s_is_positive (- 1 (shift WCP_RES 3)))
+        (R1_membership (shift HURDLE 4))
+        (internal_checks_passed (shift HURDLE INDEX_MAX_P256_VERIFY_DATA)))
+       (begin (eq! HURDLE (* r_is_in_range r_is_positive))
+              (eq! (next HURDLE) (* s_is_in_range s_is_positive))
+              (eq! (shift HURDLE 2)
+                   (* HURDLE (next HURDLE)))
+              (eq! internal_checks_passed
+                   (* R1_membership (shift HURDLE 2)))
+              (if-zero internal_checks_passed
+                       (vanishes! SUCCESS_BIT)))))
+
+(defconstraint setting-result-p256-verify (:guard (p256-verify-hypothesis))
+  (let (
+        (p256_verify_result_hi (shift LIMB (+ INDEX_MAX_P256_VERIFY_DATA 1)))
+        (p256_verify_result_lo (shift LIMB (+ INDEX_MAX_P256_VERIFY_DATA 2)))
+        )
+       (begin (vanishes! p256_verify_result_hi)
+              (eq! p256_verify_result_lo SUCCESS_BIT))))
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                     ;;
 ;; 3.7 Elliptic curve  ;;
@@ -729,27 +879,31 @@
 ;; 3.7.3 Interface for ;;
 ;;       Gnark         ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;
-(defconstraint ecrecover-circuit-selector ()
-  (eq! CS_ECRECOVER (* ICP (is_ecrecover))))
+(defcomputedcolumn (CIRCUIT_SELECTOR_ECRECOVER :binary@prove) 
+  (* ICP (is_ecrecover)))
 
-(defconstraint ecadd-circuit-selector ()
-  (eq! CS_ECADD (* ICP (is_ecadd))))
+(defcomputedcolumn (CIRCUIT_SELECTOR_ECADD :binary@prove) 
+  (* ICP (is_ecadd)))
 
-(defconstraint ecmul-circuit-selector ()
-  (eq! CS_ECMUL (* ICP (is_ecmul))))
+(defcomputedcolumn (CIRCUIT_SELECTOR_ECMUL :binary@prove) 
+  (* ICP (is_ecmul)))
 
-(defconstraint ecpairing-circuit-selector ()
-  (begin 
-    (if-not-zero IS_ECPAIRING_DATA (eq! CS_ECPAIRING ACCPC))
-    (if-not-zero IS_ECPAIRING_RESULT (eq! CS_ECPAIRING (* SUCCESS_BIT (- 1 TRIVIAL_PAIRING))))
-    (if-zero (is_ecpairing) (vanishes! CS_ECPAIRING))
-  )
-)
+(defcomputedcolumn (CIRCUIT_SELECTOR_ECPAIRING :binary@prove) 
+  (+ (* IS_ECPAIRING_DATA ACCPC) (* IS_ECPAIRING_RESULT (* SUCCESS_BIT (- 1 TRIVIAL_PAIRING)))))
 
-(defconstraint g2-membership-circuit-selector ()
-  (eq! CS_G2_MEMBERSHIP G2MTR))
+(defcomputedcolumn (CIRCUIT_SELECTOR_P256_VERIFY :binary@prove) 
+  (* ICP (is_p256_verify)))
 
-(defconstraint circuit-selectors-sum-binary ()
-  (debug (is-binary (+ CS_ECRECOVER CS_ECADD CS_ECMUL CS_ECPAIRING CS_G2_MEMBERSHIP))))
+(defcomputedcolumn (CIRCUIT_SELECTOR_G2_MEMBERSHIP :binary@prove)
+  G2MTR)
+
+(defproperty   at-most-one-circuit-selector-is-active-at-any-point-in-time
+               (is-binary   (+   CS_ECRECOVER
+                                 CS_ECADD
+                                 CS_ECMUL
+                                 CS_ECPAIRING
+                                 CS_G2_MEMBERSHIP
+                                 CS_P256_VERIFY
+                                 )))
 
 

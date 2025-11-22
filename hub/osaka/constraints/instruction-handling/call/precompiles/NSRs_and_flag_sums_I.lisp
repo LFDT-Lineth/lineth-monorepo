@@ -20,8 +20,7 @@
         (*    CALL___first_half_nsr___prc_success_will_revert    scenario/PRC_SUCCESS_CALLER_WILL_REVERT)
         (*    CALL___first_half_nsr___prc_success_wont_revert    scenario/PRC_SUCCESS_CALLER_WONT_REVERT)
         ))
-
-
+    
 (defun        (precompile-processing---2nd-half-NSR)
   (+
     (*    (precompile-processing---2nd-half-NSR-for-ECRECOVER)             scenario/PRC_ECRECOVER)
@@ -34,6 +33,7 @@
     (*    (precompile-processing---2nd-half-NSR-for-ECPAIRING)             scenario/PRC_ECPAIRING)
     (*    (precompile-processing---2nd-half-NSR-for-BLAKE2f)               scenario/PRC_BLAKE2f)
     (*    (precompile-processing---2nd-half-NSR-for-all-BLS-precompiles)  (scenario-shorthand---PRC---common-BLS-address-bit-sum))
+    (*    (precompile-processing---2nd-half-NSR-for-P256-VERIFY)           scenario/PRC_P256_VERIFY)
     ))
 
 (defun        (precompile-processing---2nd-half-flag-sum)
@@ -48,6 +48,7 @@
     (*    (precompile-processing---2nd-half-flag-sum-for-ECPAIRING)             scenario/PRC_ECPAIRING)
     (*    (precompile-processing---2nd-half-flag-sum-for-BLAKE2f)               scenario/PRC_BLAKE2f)
     (*    (precompile-processing---2nd-half-flag-sum-for-all-BLS-precompiles)  (scenario-shorthand---PRC---common-BLS-address-bit-sum))
+    (*    (precompile-processing---2nd-half-flag-sum-for-P256-VERIFY)           scenario/PRC_P256_VERIFY)
     ))
 
 ;; Stand failure / success shorthands

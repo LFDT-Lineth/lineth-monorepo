@@ -33,6 +33,7 @@
   CT_MAX_BLS_PAIRING_CHECK     4
   CT_MAX_BLS_MAP_FP_TO_G1      3
   CT_MAX_BLS_MAP_FP2_TO_G2     3
+  CT_MAX_P256_VERIFY           3
   G_QUADDIVISOR                3)
 
 

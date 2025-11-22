@@ -23,7 +23,7 @@
           (vanishes! CT)))
 
 (defconstraint ct-max ()
-  (eq! CT_MAX (maxct-sum)))
+  (eq! CT_MAX (ct-max-sum)))
 
 (defconstraint non-trivial-instruction-counter-cycle ()
   (if-not-zero STAMP

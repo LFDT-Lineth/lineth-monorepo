@@ -38,6 +38,7 @@
   (IS_BLS_PAIRING_CHECK :binary@prove) 
   (IS_BLS_MAP_FP_TO_G1 :binary@prove)
   (IS_BLS_MAP_FP2_TO_G2 :binary@prove)
+  (IS_P256_VERIFY :binary@prove)
   (WCP_FLAG :binary@prove)
   (ADD_FLAG :binary@prove)
   (MOD_FLAG :binary@prove)

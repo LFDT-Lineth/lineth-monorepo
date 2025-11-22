@@ -478,7 +478,6 @@
                                 (eq! P_is_point_at_infinity 1)
                                 (vanishes! P_is_point_at_infinity))))))
 
-;; Note: in the specs for simplicity we omit the last four arguments
 (defun (callToC1MembershipWCP k
                               _P_x_hi
                               _P_x_lo
@@ -492,7 +491,6 @@
          (callToLT (+ k 1) _P_y_hi _P_y_lo P_BN_HI P_BN_LO)
          (callToEQ (+ k 2) _P_y_square_hi _P_y_square_lo _P_x_cube_plus_three_hi _P_x_cube_plus_three_lo)))
 
-;; Note: in the specs for simplicity we omit the last four arguments
 (defun (callToC1MembershipEXT k
                               _P_x_hi
                               _P_x_lo
@@ -568,17 +566,17 @@
         (s_hi (shift LIMB 6))
         (s_lo (shift LIMB 7)))
        (begin (callToLT 0 r_hi r_lo SECP256K1N_HI SECP256K1N_LO)
-              (callToLT 1 0 0 r_hi r_lo)
+              (callToISZERO 1 r_hi r_lo)
               (callToLT 2 s_hi s_lo SECP256K1N_HI SECP256K1N_LO)
-              (callToLT 3 0 0 s_hi s_lo)
+              (callToISZERO 3 s_hi s_lo)
               (callToEQ 4 v_hi v_lo 0 27)
               (callToEQ 5 v_hi v_lo 0 28))))
 
 (defconstraint justify-success-bit-ecrecover (:guard (ecrecover-hypothesis))
   (let ((r_is_in_range WCP_RES)
-        (r_is_positive (next WCP_RES))
+        (r_is_positive (- 1 (next WCP_RES)))
         (s_is_in_range (shift WCP_RES 2))
-        (s_is_positive (shift WCP_RES 3))
+        (s_is_positive (- 1 (shift WCP_RES 3)))
         (v_is_27 (shift WCP_RES 4))
         (v_is_28 (shift WCP_RES 5))
         (internal_checks_passed (shift HURDLE INDEX_MAX_ECRECOVER_DATA)))
@@ -729,25 +727,20 @@
 ;; 3.7.3 Interface for ;;
 ;;       Gnark         ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;
-(defconstraint ecrecover-circuit-selector ()
-  (eq! CS_ECRECOVER (* ICP (is_ecrecover))))
+(defcomputedcolumn (CIRCUIT_SELECTOR_ECRECOVER :binary@prove) 
+  (* ICP (is_ecrecover)))
 
-(defconstraint ecadd-circuit-selector ()
-  (eq! CS_ECADD (* ICP (is_ecadd))))
+(defcomputedcolumn (CIRCUIT_SELECTOR_ECADD :binary@prove) 
+  (* ICP (is_ecadd)))
 
-(defconstraint ecmul-circuit-selector ()
-  (eq! CS_ECMUL (* ICP (is_ecmul))))
+(defcomputedcolumn (CIRCUIT_SELECTOR_ECMUL :binary@prove) 
+  (* ICP (is_ecmul)))
 
-(defconstraint ecpairing-circuit-selector ()
-  (begin 
-    (if-not-zero IS_ECPAIRING_DATA (eq! CS_ECPAIRING ACCPC))
-    (if-not-zero IS_ECPAIRING_RESULT (eq! CS_ECPAIRING (* SUCCESS_BIT (- 1 TRIVIAL_PAIRING))))
-    (if-zero (is_ecpairing) (vanishes! CS_ECPAIRING))
-  )
-)
+(defcomputedcolumn (CIRCUIT_SELECTOR_ECPAIRING :binary@prove) 
+  (+ (* IS_ECPAIRING_DATA ACCPC) (* IS_ECPAIRING_RESULT (* SUCCESS_BIT (- 1 TRIVIAL_PAIRING)))))
 
-(defconstraint g2-membership-circuit-selector ()
-  (eq! CS_G2_MEMBERSHIP G2MTR))
+(defcomputedcolumn (CIRCUIT_SELECTOR_G2_MEMBERSHIP :binary@prove)
+  G2MTR)
 
 (defconstraint circuit-selectors-sum-binary ()
   (debug (is-binary (+ CS_ECRECOVER CS_ECADD CS_ECMUL CS_ECPAIRING CS_G2_MEMBERSHIP))))
