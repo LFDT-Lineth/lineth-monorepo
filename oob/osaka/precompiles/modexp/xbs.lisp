@@ -50,6 +50,9 @@
 (defun (prc-modexp-xbs---xbs-is-LE-the-EIP-7823-upper-bound)   (shift   OUTGOING_RES_LO   ROFF___MODEXP_XBS___XBS_VS_EIP_7823_UPPER_BOUND ))
 (defun (prc-modexp-xbs---xbs-is-GT-the-EIP-7823-upper-bound)   (-  1  (prc-modexp-xbs---xbs-is-LE-the-EIP-7823-upper-bound)))
 
+(defun (prc-modexp-xbs---xbs-normalized)   (*   (prc-modexp-xbs---xbs-lo)   (prc-modexp-xbs---xbs-is-LE-the-EIP-7823-upper-bound)))
+(defun (prc-modexp-xbs---ybs-normalized)   (*   (prc-modexp-xbs---ybs-lo)   (prc-modexp-xbs---xbs-is-LE-the-EIP-7823-upper-bound)))
+
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -64,9 +67,9 @@
                   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                   (call-to-LT   ROFF___MODEXP_XBS___XBS_VS_YBS
                                 0
-                                (prc-modexp-xbs---xbs-lo)
+                                (prc-modexp-xbs---xbs-normalized)
                                 0
-                                (prc-modexp-xbs---ybs-lo)
+                                (prc-modexp-xbs---ybs-normalized)
                                 ))
 
 (defun (prc-modexp-xbs---xbs-is-LT-ybs)   (shift   OUTGOING_RES_LO   ROFF___MODEXP_XBS___XBS_VS_YBS ))
@@ -85,7 +88,7 @@
                   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                   (call-to-ISZERO    ROFF___MODEXP_XBS___XBS_ISZERO_CHECK
                                      0
-                                     (prc-modexp-xbs---xbs-lo)
+                                     (prc-modexp-xbs---xbs-normalized)
                                      ))
 
 (defun (prc-modexp-xbs---xbs-is-zero)    (shift   OUTGOING_RES_LO   ROFF___MODEXP_XBS___XBS_ISZERO_CHECK ))
@@ -141,8 +144,8 @@
                                           (if-zero     (prc-modexp-xbs---xbs-is-LT-ybs)
                                                        ;; false case
                                                        (eq!   (prc-modexp-xbs---max-xbs-ybs)
-                                                              (prc-modexp-xbs---xbs-lo))
+                                                              (prc-modexp-xbs---xbs-normalized))
                                                        ;; true case
                                                        (eq!   (prc-modexp-xbs---max-xbs-ybs)
-                                                              (prc-modexp-xbs---ybs-lo))
+                                                              (prc-modexp-xbs---ybs-normalized))
                                                        ))))
