@@ -90,7 +90,7 @@
           ))
 ;; non stack rows shorthands
 (defun    (precompile-processing---nsr-RIPEMD-160-FKTH)       precompile-processing---nsr-standard-failure)
-(defun    (precompile-processing---nsr-RIPEMD-160-success)    precompile-processing---nsr-standard-success) ;; ""
+(defun    (precompile-processing---nsr-RIPEMD-160-success)    precompile-processing---nsr-standard-success)
 ;; flag sum shorthands
 (defun    (precompile-processing---flag-sum-RIPEMD-160-FKTH)       (precompile-processing---flag-sum-standard-failure))
 (defun    (precompile-processing---flag-sum-RIPEMD-160-success)    (precompile-processing---flag-sum-standard-success))
@@ -214,7 +214,7 @@
 ;; ECADD non stack rows shorthands
 (defun    (precompile-processing---nsr-ECADD-FKTH)       precompile-processing---nsr-standard-failure)
 (defun    (precompile-processing---nsr-ECADD-FKTR)       precompile-processing---nsr-standard-failure)
-(defun    (precompile-processing---nsr-ECADD-success)    precompile-processing---nsr-standard-success) ;; ""
+(defun    (precompile-processing---nsr-ECADD-success)    precompile-processing---nsr-standard-success)
 ;; ECADD flag sum shorthands
 (defun    (precompile-processing---flag-sum-ECADD-FKTH)       (precompile-processing---flag-sum-standard-failure))
 (defun    (precompile-processing---flag-sum-ECADD-FKTR)       (precompile-processing---flag-sum-standard-failure))
@@ -379,7 +379,7 @@
 ;; P256_VERIFY non stack rows shorthands
 (defun    (precompile-processing---nsr-P256-VERIFY-FKTH)       precompile-processing---nsr-standard-failure)
 (defun    (precompile-processing---nsr-P256-VERIFY-FKTR)       precompile-processing---nsr-standard-failure)
-(defun    (precompile-processing---nsr-P256-VERIFY-success)    precompile-processing---nsr-standard-success) ;; ""
+(defun    (precompile-processing---nsr-P256-VERIFY-success)    precompile-processing---nsr-standard-success)
 ;; P256_VERIFY flag sum shorthands
 (defun    (precompile-processing---flag-sum-P256-VERIFY-FKTH)       (precompile-processing---flag-sum-standard-failure))
 (defun    (precompile-processing---flag-sum-P256-VERIFY-FKTR)       (precompile-processing---flag-sum-standard-failure))
