@@ -7,7 +7,11 @@ enum class LineaContractVersion : Comparable<LineaContractVersion> {
   V6, // more efficient data submission and new events for state recovery
 }
 
-interface LineaRollupSmartContractClientReadOnly : ContractVersionProvider<LineaContractVersion> {
+enum class LineaValidiumContractVersion : Comparable<LineaValidiumContractVersion> {
+  V1,
+}
+
+interface LineaSmartContractClientReadOnly {
 
   fun getAddress(): String
 
@@ -44,3 +48,10 @@ interface LineaRollupSmartContractClientReadOnly : ContractVersionProvider<Linea
     lineaL2BlockNumber: ULong,
   ): SafeFuture<ByteArray>
 }
+
+interface LineaRollupSmartContractClientReadOnly :
+  LineaSmartContractClientReadOnly,
+  ContractVersionProvider<LineaContractVersion>
+interface LineaValidiumSmartContractClientReadOnly :
+  LineaSmartContractClientReadOnly,
+  ContractVersionProvider<LineaValidiumContractVersion>
