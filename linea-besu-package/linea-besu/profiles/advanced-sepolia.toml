@@ -15,7 +15,7 @@ max-peers=50
 
 # For node to be a sequencer, this key has to match the key used in genesis file
 node-private-key-file="/data/key"
-genesis-file="genesis/genesis.sepolia.json" # Path to the custom genesis file
+network="linea_sepolia"
 sync-mode="SNAP"
 Xbonsai-full-flat-db-enabled=true
 

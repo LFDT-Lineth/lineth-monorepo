@@ -41,4 +41,4 @@ popd
 
 echo "placing the packages, config, profiles together for preparing docker image build"
 cd ./linea-besu
-cp -r config genesis profiles ../tmp/besu/
+cp -r config profiles ../tmp/besu/

@@ -1,5 +1,5 @@
 # Chain
-genesis-file="genesis/genesis.sepolia.json" # Path to the custom genesis file
+network="linea_sepolia"
 
 # data
 data-path="/data"
