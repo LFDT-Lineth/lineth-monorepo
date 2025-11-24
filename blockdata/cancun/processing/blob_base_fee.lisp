@@ -14,4 +14,9 @@
 (defconstraint   blobbasefee-bound
                  (:guard (blobbasefee-precondition))
                  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-                 (wcp-call-to-GEQ 0 DATA_HI DATA_LO 0 0))
+                 (wcp-call-to-GEQ   0
+                                    (curr-BLOBBASEFEE-hi)
+                                    (curr-BLOBBASEFEE-lo)
+                                    0
+                                    0
+                                    ))

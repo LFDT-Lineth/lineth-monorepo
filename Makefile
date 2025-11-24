@@ -75,8 +75,7 @@ RLP_TXN_CANCUN := rlptxn/cancun
 RLP_TXN_PRAGUE := rlptxn/cancun
 # TODO: update for Prague v2 + add RLP_AUTH
 
-RLP_TXN_RCPT_LONDON := rlptxrcpt/london
-RLP_TXN_RCPT_OSAKA := rlptxrcpt/osaka
+RLP_TXN_RCPT := rlptxrcpt
 
 RLP_TXRCPT := rlptxrcpt			
 
@@ -123,6 +122,7 @@ ZKEVM_MODULES_COMMON := ${CONSTANTS} \
 		 ${LIBRARY} \
 		 ${LOG_DATA} \
 		 ${RLP_ADDR} \
+		 ${RLP_TXN_RCPT} \
 		 ${ROM} \
 		 ${ROM_LEX} \
 		 ${SHAKIRA_DATA} \
@@ -143,7 +143,6 @@ ZKEVM_MODULES_LONDON := ${ZKEVM_MODULES_COMMON} \
 		 ${MXP_LONDON} \
 		 ${OOB_LONDON} \
 		 ${RLP_TXN_LONDON} \
-		 ${RLP_TXN_RCPT_LONDON} \
 		 ${TRM_LONDON} \
 		 ${TXN_DATA_LONDON}
 
@@ -163,7 +162,6 @@ ZKEVM_MODULES_SHANGHAI := ${ZKEVM_MODULES_COMMON} \
 		 ${MXP_LONDON} \
 		 ${OOB_SHANGHAI} \
 		 ${RLP_TXN_LONDON} \
-		 ${RLP_TXN_RCPT_LONDON} \
 		 ${TRM_LONDON} \
 		 ${TXN_DATA_SHANGHAI}
 
@@ -181,7 +179,6 @@ ZKEVM_MODULES_CANCUN := ${ZKEVM_MODULES_COMMON} \
 		 ${MXP_CANCUN} \
 		 ${OOB_CANCUN} \
 		 ${RLP_TXN_CANCUN} \
-		 ${RLP_TXN_RCPT_LONDON} \
 		 ${RLP_UTILS_CANCUN} \
 		 ${TRM_LONDON} \
 		 ${TXN_DATA_CANCUN}
@@ -200,7 +197,6 @@ ZKEVM_MODULES_PRAGUE := ${ZKEVM_MODULES_COMMON} \
 		 ${MXP_CANCUN} \
 		 ${OOB_PRAGUE} \
 		 ${RLP_TXN_PRAGUE} \
-		 ${RLP_TXN_RCPT_LONDON} \
 		 ${RLP_UTILS_CANCUN} \
 		 ${TRM_LONDON} \
 		 ${TXN_DATA_PRAGUE}
@@ -219,7 +215,6 @@ ZKEVM_MODULES_OSAKA := ${ZKEVM_MODULES_COMMON} \
 		 ${MXP_CANCUN} \
 		 ${OOB_OSAKA} \
 		 ${RLP_TXN_PRAGUE} \
-		 ${RLP_TXN_RCPT_OSAKA} \
 		 ${RLP_UTILS_CANCUN} \
 		 ${TRM_OSAKA} \
 		 ${TXN_DATA_OSAKA}
