@@ -1,5 +1,5 @@
 export * from "./IMessageMetricsUpdater";
-export * from "./IMetricsService";
+export * from "./LineaPostmanMetrics";
 export * from "./ISponsorshipMetricsUpdater";
 export * from "./MessageMetricsAttributes";
 export * from "./ITransactionMetricsUpdater";

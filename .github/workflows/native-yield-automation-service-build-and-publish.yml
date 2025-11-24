@@ -1,0 +1,130 @@
+name: native-yield-automation-service-build
+
+permissions:
+  contents: read
+  actions: read
+  packages: write
+
+on:
+  workflow_call:
+    inputs:
+      commit_tag:
+        required: true
+        type: string
+      develop_tag:
+        required: true
+        type: string
+      image_name:
+        required: true
+        type: string
+      push_image:
+        required: false
+        type: boolean
+        default: false
+    secrets:
+      DOCKERHUB_USERNAME:
+        required: false
+      DOCKERHUB_TOKEN:
+        required: false
+  workflow_dispatch:
+    inputs:
+      commit_tag:
+        description: 'Image tag'
+        required: true
+        type: string
+      develop_tag:
+        description: 'Image tag will be "develop" if target branch is main'
+        required: true
+        type: choice
+        options:
+          - develop
+        default: 'develop'
+      image_name:
+        description: 'Image name'
+        required: true
+        type: string
+        default: 'consensys/linea-native-yield-automation-service'
+      push_image:
+        description: 'Toggle whether to push image to docker registry'
+        required: false
+        type: boolean
+        default: true
+
+concurrency:
+  group: native-yield-automation-service-build-and-publish-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  build-and-publish:
+    # ~1 min saved vs small
+    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-med
+    name: native-yield-automation-service
+    env:
+      COMMIT_TAG: ${{ inputs.commit_tag }}
+      DEVELOP_TAG: ${{ inputs.develop_tag }}
+      IMAGE_NAME: ${{ inputs.image_name }}
+      PUSH_IMAGE: ${{ inputs.push_image }}
+      TAGS: ${{ inputs.image_name }}:${{ inputs.commit_tag }}
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+    steps:
+      - name: Set develop tag if main branch
+        if: ${{ github.ref == 'refs/heads/main' }}
+        run: |
+          echo "TAGS=${{ env.IMAGE_NAME }}:${{ env.COMMIT_TAG }},${{ env.IMAGE_NAME }}:${{ env.DEVELOP_TAG }}" >> $GITHUB_ENV
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+      - name: Login to Docker Hub
+        if: ${{ env.DOCKERHUB_USERNAME != '' && env.DOCKERHUB_TOKEN != '' }}
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 #v3.4.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@29109295f81e9208d7d86ff1c6c12d2833863392 #v3.6.0
+        with:
+          platforms: 'arm64,arm'
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 #v3.11.1
+      - name: Show the "version" build argument
+        run: |
+          echo "We inject the commit tag in the docker image ${{ env.COMMIT_TAG }}"
+          echo COMMIT_TAG=${{ env.COMMIT_TAG }} >> $GITHUB_ENV
+      - name: Build native-yield-automation-service image for testing
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 #v6.18.0
+        if: ${{ env.PUSH_IMAGE == 'false' }}
+        with:
+          context: ./
+          file: ./native-yield-operations/automation-service/Dockerfile
+          platforms: linux/amd64
+          load: true
+          push: false
+          tags: ${{ env.IMAGE_NAME }}:${{ env.COMMIT_TAG }}
+      - name: Save Docker image as artifact
+        if: ${{ env.PUSH_IMAGE == 'false' }}
+        run: |
+          docker save ${{ env.IMAGE_NAME }}:${{ env.COMMIT_TAG }} | gzip > linea-native-yield-automation-service-docker-image.tar.gz
+        shell: bash
+      - name: Upload Docker image artifact
+        if: ${{ env.PUSH_IMAGE == 'false' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: linea-native-yield-automation-service
+          path: linea-native-yield-automation-service-docker-image.tar.gz
+      - name: Build and push native-yield-automation-service image
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 #v6.18.0
+        if: ${{ env.PUSH_IMAGE == 'true' || github.event_name == 'workflow_dispatch' }}
+        with:
+          context: ./
+          file: ./native-yield-operations/automation-service/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ env.TAGS }}
+          cache-from: |
+            type=registry,ref=${{ env.IMAGE_NAME }}:buildcache-amd64,platform=linux/amd64
+            type=registry,ref=${{ env.IMAGE_NAME }}:buildcache-arm64,platform=linux/arm64
+          cache-to: |
+            type=registry,ref=${{ env.IMAGE_NAME }}:buildcache-amd64,mode=max,platform=linux/amd64
+            type=registry,ref=${{ env.IMAGE_NAME }}:buildcache-arm64,mode=max,platform=linux/arm64

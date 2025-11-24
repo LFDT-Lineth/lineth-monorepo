@@ -13,8 +13,8 @@ import {
   IMessageClaimingProcessor,
   MessageClaimingProcessorConfig,
 } from "../../core/services/processors/IMessageClaimingProcessor";
-import { ILogger } from "../../core/utils/logging/ILogger";
 import { IMessageServiceContract } from "../../core/services/contracts/IMessageServiceContract";
+import { IPostmanLogger } from "../../utils/IPostmanLogger";
 import { Message } from "../../core/entities/Message";
 import { IMessageDBService } from "../../core/persistence/IMessageDBService";
 import { ITransactionValidationService } from "../../core/services/ITransactionValidationService";
@@ -30,7 +30,7 @@ export class MessageClaimingProcessor implements IMessageClaimingProcessor {
    * @param {IMessageDBService} databaseService - An instance of a class implementing the `IMessageDBService` interface, used for storing and retrieving message data.
    * @param {ITransactionValidationService} transactionValidationService - An instance of a class implementing the `ITransactionValidationService` interface, used for validating transactions.
    * @param {MessageClaimingProcessorConfig} config - Configuration for network-specific settings, including transaction submission timeout, maximum transaction retries, and gas limit.
-   * @param {ILogger} logger - An instance of a class implementing the `ILogger` interface, used for logging messages.
+   * @param {IPostmanLogger} logger - An instance of a class implementing the `IPostmanLogger` interface, used for logging messages.
    */
   constructor(
     private readonly messageServiceContract: IMessageServiceContract<
@@ -44,7 +44,7 @@ export class MessageClaimingProcessor implements IMessageClaimingProcessor {
     private readonly databaseService: IMessageDBService<TransactionResponse>,
     private readonly transactionValidationService: ITransactionValidationService,
     private readonly config: MessageClaimingProcessorConfig,
-    private readonly logger: ILogger,
+    private readonly logger: IPostmanLogger,
   ) {
     this.maxNonceDiff = Math.max(config.maxNonceDiff, 0);
   }

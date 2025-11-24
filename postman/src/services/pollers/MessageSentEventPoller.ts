@@ -7,8 +7,8 @@ import {
   TransactionResponse,
 } from "ethers";
 import { Direction, wait } from "@consensys/linea-sdk";
-import { ILogger } from "../../core/utils/logging/ILogger";
 import { DEFAULT_INITIAL_FROM_BLOCK } from "../../core/constants";
+import { IPostmanLogger } from "../../utils/IPostmanLogger";
 import { IMessageSentEventProcessor } from "../../core/services/processors/IMessageSentEventProcessor";
 import { Message } from "../../core/entities/Message";
 import { DatabaseAccessError } from "../../core/errors/DatabaseErrors";
@@ -33,7 +33,7 @@ export class MessageSentEventPoller implements IPoller {
    * @param {IProvider} provider - An instance of a class implementing the `IProvider` interface, used to query blockchain data.
    * @param {IMessageDBService} databaseService - An instance of a class implementing the `IMessageDBService` interface, used for storing and retrieving message data.
    * @param {MessageSentEventPollerConfig} config - Configuration settings for the poller, including the direction of message flow, the polling interval, and the initial block number to start listening from.
-   * @param {ILogger} logger - An instance of a class implementing the `ILogger` interface, used for logging messages related to the polling process.
+   * @param {IPostmanLogger} logger - An instance of a class implementing the `IPostmanLogger` interface, used for logging messages related to the polling process.
    */
   constructor(
     private readonly eventProcessor: IMessageSentEventProcessor,
@@ -46,7 +46,7 @@ export class MessageSentEventPoller implements IPoller {
     >,
     private readonly databaseService: IMessageDBService<ContractTransactionResponse>,
     private readonly config: MessageSentEventPollerConfig,
-    private readonly logger: ILogger,
+    private readonly logger: IPostmanLogger,
   ) {}
 
   /**

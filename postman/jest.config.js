@@ -13,7 +13,7 @@ module.exports = {
     "src/application/postman/persistence/repositories/",
     "src/application/postman/persistence/subscribers/",
     "src/index.ts",
-    "src/utils/WinstonLogger.ts",
+    "src/utils/PostmanWinstonLogger.ts",
   ],
   coveragePathIgnorePatterns: [
     "src/clients/blockchain/typechain",
@@ -21,7 +21,7 @@ module.exports = {
     "src/application/postman/persistence/repositories/",
     "src/application/postman/persistence/subscribers/",
     "src/index.ts",
-    "src/utils/WinstonLogger.ts",
+    "src/utils/PostmanWinstonLogger.ts",
     "src/utils/testing/",
   ],
 };

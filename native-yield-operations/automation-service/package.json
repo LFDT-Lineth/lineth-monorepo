@@ -1,0 +1,41 @@
+{
+  "name": "@consensys/linea-native-yield-automation-service",
+  "version": "1.0.0",
+  "author": "Consensys Software Inc.",
+  "license": "(MIT OR Apache-2.0)",
+  "description": "",
+  "main": "dist/src/index.js",
+  "types": "dist/src/index.d.ts",
+  "scripts": {
+    "lint:ts": "npx eslint '**/*.ts'",
+    "lint:ts:fix": "npx eslint --fix '**/*.ts'",
+    "prettier": "prettier -c '**/*.ts'",
+    "prettier:fix": "prettier -w '**/*.ts'",
+    "clean": "rimraf dist node_modules coverage tsconfig.build.tsbuildinfo",
+    "build": "tsc -p tsconfig.build.json",
+    "build:runSdk": "tsc ./scripts/runSdk.ts",
+    "test": "npx jest --bail --detectOpenHandles --forceExit",
+    "lint:fix": "pnpm run lint:ts:fix && pnpm run prettier:fix"
+  },
+  "dependencies": {
+    "@apollo/client": "4.0.7",
+    "@consensys/linea-shared-utils": "workspace:*",
+    "@lidofinance/lsv-cli": "1.0.0-alpha.62",
+    "dotenv": "catalog:",
+    "neverthrow": "catalog:",
+    "winston": "catalog:",
+    "viem": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@jest/globals": "catalog:",
+    "@types/jest": "catalog:",
+    "jest": "catalog:",
+    "jest-mock-extended": "catalog:",
+    "ts-jest": "catalog:"
+  },
+  "files": [
+    "dist/**/*"
+  ],
+  "type": "module"
+}

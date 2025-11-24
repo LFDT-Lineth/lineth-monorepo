@@ -56,7 +56,7 @@
     "sharp": "0.33.5",
     "viem": "catalog:",
     "wagmi": "2.16.9",
-    "zod": "3.24.2",
+    "zod": "catalog:",
     "zustand": "4.5.4"
   },
   "devDependencies": {

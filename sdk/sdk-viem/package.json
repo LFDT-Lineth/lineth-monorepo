@@ -31,7 +31,7 @@
     "@types/jest": "catalog:",
     "jest": "catalog:",
     "ts-jest": "catalog:",
-    "tsup": "8.5.0",
+    "tsup": "catalog:",
     "viem": "catalog:"
   },
   "peerDependencies": {

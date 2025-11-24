@@ -1,8 +1,9 @@
-import { IMetricsService, ISponsorshipMetricsUpdater, LineaPostmanMetrics } from "../../../../core/metrics";
+import { ISponsorshipMetricsUpdater, LineaPostmanMetrics } from "../../../../core/metrics";
 import { Direction } from "@consensys/linea-sdk";
+import { IMetricsService } from "@consensys/linea-shared-utils";
 
 export class SponsorshipMetricsUpdater implements ISponsorshipMetricsUpdater {
-  constructor(private readonly metricsService: IMetricsService) {
+  constructor(private readonly metricsService: IMetricsService<LineaPostmanMetrics>) {
     this.metricsService.createCounter(
       LineaPostmanMetrics.SponsorshipFeesGwei,
       "Gwei component of tx fees paid for sponsored messages by direction",

@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "composite": true,
+    "removeComments": false,
+    "isolatedModules": false,
+    "strictPropertyInitialization": false,
+    "exactOptionalPropertyTypes": false
+  }
+}

@@ -15,7 +15,7 @@ import {
 } from "../../core/services/processors/IMessageAnchoringProcessor";
 import { IProvider } from "../../core/clients/blockchain/IProvider";
 import { MessageStatus } from "../../core/enums";
-import { ILogger } from "../../core/utils/logging/ILogger";
+import { ILogger } from "@consensys/linea-shared-utils";
 import { IMessageServiceContract } from "../../core/services/contracts/IMessageServiceContract";
 import { IMessageDBService } from "../../core/persistence/IMessageDBService";
 import { ErrorParser } from "../../utils/ErrorParser";

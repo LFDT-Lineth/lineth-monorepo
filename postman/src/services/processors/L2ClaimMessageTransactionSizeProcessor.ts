@@ -7,8 +7,8 @@ import {
   TransactionResponse,
 } from "ethers";
 import { MessageStatus } from "../../core/enums";
-import { ILogger } from "../../core/utils/logging/ILogger";
 import { IMessageDBService } from "../../core/persistence/IMessageDBService";
+import { IPostmanLogger } from "../../utils/IPostmanLogger";
 import { IL2MessageServiceClient } from "../../core/clients/blockchain/linea/IL2MessageServiceClient";
 import {
   IL2ClaimMessageTransactionSizeProcessor,
@@ -26,7 +26,7 @@ export class L2ClaimMessageTransactionSizeProcessor implements IL2ClaimMessageTr
    * @param {IL2MessageServiceClient} l2MessageServiceClient - The L2 message service client for estimating gas fees.
    * @param {IL2ClaimTransactionSizeCalculator} transactionSizeCalculator - The calculator for determining the transaction size.
    * @param {L2ClaimMessageTransactionSizeProcessorConfig} config - Configuration settings for the processor, including the direction and origin contract address.
-   * @param {ILogger} logger - The logger for logging information and errors.
+   * @param {IPostmanLogger} logger - The logger for logging information and errors.
    */
   constructor(
     private readonly databaseService: IMessageDBService<ContractTransactionResponse>,
@@ -40,7 +40,7 @@ export class L2ClaimMessageTransactionSizeProcessor implements IL2ClaimMessageTr
     >,
     private readonly transactionSizeCalculator: IL2ClaimTransactionSizeCalculator,
     private readonly config: L2ClaimMessageTransactionSizeProcessorConfig,
-    private readonly logger: ILogger,
+    private readonly logger: IPostmanLogger,
   ) {}
 
   /**

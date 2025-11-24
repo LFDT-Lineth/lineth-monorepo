@@ -35,7 +35,7 @@
     "jest": "catalog:",
     "jest-it-up": "4.0.1",
     "ts-jest": "catalog:",
-    "tsup": "8.5.0",
+    "tsup": "catalog:",
     "unzipper": "0.12.3",
     "viem": "2.29.1"
   },

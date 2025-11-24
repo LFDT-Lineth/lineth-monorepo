@@ -2,7 +2,7 @@ import { describe, it, beforeEach } from "@jest/globals";
 import { mock } from "jest-mock-extended";
 import { ContractTransactionResponse } from "ethers";
 import { DatabaseCleaner } from "../DatabaseCleaner";
-import { ILogger } from "../../../core/utils/logging/ILogger";
+import { ILogger } from "@consensys/linea-shared-utils";
 import { DatabaseAccessError } from "../../../core/errors/DatabaseErrors";
 import { DatabaseErrorType, DatabaseRepoName } from "../../../core/enums";
 import { IMessageDBService } from "../../../core/persistence/IMessageDBService";

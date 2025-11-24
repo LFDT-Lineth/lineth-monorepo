@@ -23,6 +23,9 @@ on:
       transaction_exclusion_api_changed:
         required: true
         type: string
+      native_yield_automation_service_changed:
+        required: true
+        type: string
     outputs:
       commit_tag:
         value: ${{ jobs.check_image_tags_exist.outputs.commit_tag }}
@@ -36,6 +39,8 @@ on:
         value: ${{ jobs.image_tag_push.outputs.image_tagged_prover }}
       image_tagged_postman:
         value: ${{ jobs.image_tag_push.outputs.image_tagged_postman }}
+      image_tagged_native_yield_automation_service:
+        value: ${{ jobs.image_tag_push.outputs.image_tagged_native_yield_automation_service }}
       image_tagged_transaction_exclusion_api:
         value: ${{ jobs.image_tag_push.outputs.image_tagged_transaction_exclusion_api }}
     secrets:
@@ -57,6 +62,7 @@ jobs:
       EVENT_BEFORE: ${{ github.event.before }}
     outputs:
       last_commit_tag_exists_coordinator: ${{ steps.check_image_tags_exist_coordinator.outputs.last_commit_tag_exists }}
+      last_commit_tag_exists_native_yield_automation_service: ${{ steps.check_image_tags_exist_native_yield_automation_service.outputs.last_commit_tag_exists }}
       last_commit_tag_exists_postman: ${{ steps.check_image_tags_exist_postman.outputs.last_commit_tag_exists }}
       last_commit_tag_exists_prover: ${{ steps.check_image_tags_exist_prover.outputs.last_commit_tag_exists }}
       last_commit_tag_exists_transaction_exclusion_api: ${{ steps.check_image_tags_exist_transaction_exclusion_api.outputs.last_commit_tag_exists }}
@@ -102,6 +108,14 @@ jobs:
           last_commit_tag: ${{ steps.compute-version-tags.outputs.LAST_COMMIT_TAG }}
           image_name: consensys/linea-postman
 
+      - name: Check image tags exist for native-yield-automation-service
+        uses: ./.github/actions/check-image-tags-exist
+        if: ${{ inputs.native_yield_automation_service_changed == 'false' }}
+        id: check_image_tags_exist_native_yield_automation_service
+        with:
+          last_commit_tag: ${{ steps.compute-version-tags.outputs.LAST_COMMIT_TAG }}
+          image_name: consensys/linea-native-yield-automation-service
+
       - name: Check image tags exist for prover
         uses: ./.github/actions/check-image-tags-exist
         if: ${{ inputs.prover_changed == 'false' }}
@@ -125,6 +139,7 @@ jobs:
     needs: [ check_image_tags_exist ]
     outputs:
       image_tagged_coordinator: ${{ steps.image_tag_push_coordinator.outputs.image_tagged }}
+      image_tagged_native_yield_automation_service: ${{ steps.image_tag_push_native_yield_automation_service.outputs.image_tagged }}
       image_tagged_prover: ${{ steps.image_tag_push_prover.outputs.image_tagged }}
       image_tagged_postman: ${{ steps.image_tag_push_postman.outputs.image_tagged }}
       image_tagged_transaction_exclusion_api: ${{ steps.image_tag_push_transaction_exclusion_api.outputs.image_tagged }}
@@ -155,6 +170,19 @@ jobs:
           develop_tag: ${{ needs.check_image_tags_exist.outputs.develop_tag }}
           image_name: consensys/linea-postman
           last_commit_tag_exists: ${{ needs.check_image_tags_exist.outputs.last_commit_tag_exists_postman }}
+          docker_username: ${{ secrets.DOCKERHUB_USERNAME }}
+          docker_password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Tag and push native-yield-automation-service image
+        id: image_tag_push_native_yield_automation_service
+        uses: ./.github/actions/image-tag-and-push
+        if: ${{ inputs.native_yield_automation_service_changed == 'false' }}
+        with:
+          commit_tag: ${{ needs.check_image_tags_exist.outputs.commit_tag }}
+          last_commit_tag: ${{ needs.check_image_tags_exist.outputs.last_commit_tag }}
+          develop_tag: ${{ needs.check_image_tags_exist.outputs.develop_tag }}
+          image_name: consensys/linea-native-yield-automation-service
+          last_commit_tag_exists: ${{ needs.check_image_tags_exist.outputs.last_commit_tag_exists_native_yield_automation_service }}
           docker_username: ${{ secrets.DOCKERHUB_USERNAME }}
           docker_password: ${{ secrets.DOCKERHUB_TOKEN }}
 

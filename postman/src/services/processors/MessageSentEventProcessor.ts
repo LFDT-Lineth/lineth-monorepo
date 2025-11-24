@@ -13,7 +13,7 @@ import { serialize, isEmptyBytes, MessageSent } from "@consensys/linea-sdk";
 import { ILineaRollupLogClient } from "../../core/clients/blockchain/ethereum/ILineaRollupLogClient";
 import { IProvider } from "../../core/clients/blockchain/IProvider";
 import { MessageFactory } from "../../core/entities/MessageFactory";
-import { ILogger } from "../../core/utils/logging/ILogger";
+import { ILogger } from "@consensys/linea-shared-utils";
 import { MessageStatus } from "../../core/enums";
 import { IL2MessageServiceLogClient } from "../../core/clients/blockchain/linea/IL2MessageServiceLogClient";
 import {

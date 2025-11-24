@@ -9,7 +9,7 @@ import {
 import { Direction } from "@consensys/linea-sdk";
 import { MessageEntity } from "../entities/Message.entity";
 import { type IMessageMetricsUpdater, MessagesMetricsAttributes } from "../../../../core/metrics";
-import { type ILogger } from "../../../../core/utils/logging/ILogger";
+import { type ILogger } from "@consensys/linea-shared-utils";
 import { MessageStatus } from "../../../../core/enums";
 
 @EventSubscriber()

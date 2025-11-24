@@ -29,6 +29,7 @@ jobs:
       contracts-excluding-local-deployment-artifacts-count: ${{ steps.exclusion-filter.outputs.contracts-excluding-local-deployment-artifacts_count }}
       smart-contracts: ${{ steps.filter.outputs.smart-contracts }}
       linea-sequencer-plugin: ${{ steps.filter.outputs.linea-sequencer-plugin }}
+      native-yield-automation-service: ${{ steps.filter.outputs.native-yield-automation-service }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -120,6 +121,10 @@ jobs:
             linea-besu-package:
               - 'linea-besu-package/versions.env'
               - 'linea-besu-package/scripts/assemble-packages.sh'
+            native-yield-automation-service:
+              - 'native-yield-operations/automation-service/**'
+              - 'ts-libs/linea-shared-utils/**'
+              - '.github/workflows/native-yield-automation-service-*.yml'
 
       - name: Filter out commit changes
         uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 #v3.0.2
@@ -152,6 +157,7 @@ jobs:
       postman_changed: ${{ needs.filter-commit-changes.outputs.postman }}
       prover_changed: ${{ needs.filter-commit-changes.outputs.prover }}
       transaction_exclusion_api_changed: ${{ needs.filter-commit-changes.outputs.transaction-exclusion-api }}
+      native_yield_automation_service_changed: ${{ needs.filter-commit-changes.outputs.native-yield-automation-service }}
     secrets: inherit
 
   code-analysis:
@@ -170,6 +176,7 @@ jobs:
       smart_contracts_changed: ${{ needs.filter-commit-changes.outputs.smart-contracts }}
       staterecovery_changed: false # disable until we have time to address it ${{ needs.filter-commit-changes.outputs.staterecovery }}
       transaction_exclusion_api_changed: ${{ needs.filter-commit-changes.outputs.transaction-exclusion-api }}
+      native_yield_automation_service_changed: ${{ needs.filter-commit-changes.outputs.native-yield-automation-service }}
     secrets: inherit
 
   get-has-changes-requiring-e2e-testing:
@@ -209,11 +216,13 @@ jobs:
       postman_changed: ${{ needs.filter-commit-changes.outputs.postman }}
       prover_changed: ${{ needs.filter-commit-changes.outputs.prover }}
       transaction_exclusion_api_changed: ${{ needs.filter-commit-changes.outputs.transaction-exclusion-api }}
+      native_yield_automation_service_changed: ${{ needs.filter-commit-changes.outputs.native-yield-automation-service }}
       build_linea_besu_package: ${{ needs.filter-commit-changes.outputs.linea-besu-package }}
       coordinator_image_tagged: ${{ needs.check-and-tag-images.outputs.image_tagged_coordinator }}
       postman_image_tagged: ${{ needs.check-and-tag-images.outputs.image_tagged_postman }}
       prover_image_tagged: ${{ needs.check-and-tag-images.outputs.image_tagged_prover }}
       transaction_exclusion_api_image_tagged: ${{ needs.check-and-tag-images.outputs.image_tagged_transaction_exclusion_api }}
+      native_yield_automation_service_image_tagged: ${{ needs.check-and-tag-images.outputs.image_tagged_native_yield_automation_service }}
     secrets: inherit
 
   run-e2e-tests:
@@ -249,11 +258,13 @@ jobs:
       postman_changed: ${{ needs.filter-commit-changes.outputs.postman }}
       prover_changed: ${{ needs.filter-commit-changes.outputs.prover }}
       transaction_exclusion_api_changed: ${{ needs.filter-commit-changes.outputs.transaction-exclusion-api }}
+      native_yield_automation_service_changed: ${{ needs.filter-commit-changes.outputs.native-yield-automation-service }}
       build_linea_besu_package: "false" # dockerhub image build and push will be on linea-besu-package-release when push to main
       coordinator_image_tagged: ${{ needs.check-and-tag-images.outputs.image_tagged_coordinator }}
       postman_image_tagged: ${{ needs.check-and-tag-images.outputs.image_tagged_postman }}
       prover_image_tagged: ${{ needs.check-and-tag-images.outputs.image_tagged_prover }}
       transaction_exclusion_api_image_tagged: ${{ needs.check-and-tag-images.outputs.image_tagged_transaction_exclusion_api }}
+      native_yield_automation_service_image_tagged: ${{ needs.check-and-tag-images.outputs.image_tagged_native_yield_automation_service }}
     secrets: inherit
 
   cleanup-deployments:

@@ -1,12 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Direction } from "@consensys/linea-sdk";
-import { ILogger } from "../../core/utils/logging/ILogger";
 import { TEST_ADDRESS_1, TEST_CONTRACT_ADDRESS_1, TEST_CONTRACT_ADDRESS_2, TEST_MESSAGE_HASH } from "./constants";
 import { MessageStatus } from "../../core/enums";
 import { Message, MessageProps } from "../../core/entities/Message";
 import { MessageEntity } from "../../application/postman/persistence/entities/Message.entity";
+import { IPostmanLogger } from "../IPostmanLogger";
 
-export class TestLogger implements ILogger {
+export class TestLogger implements IPostmanLogger {
   public readonly name: string;
 
   constructor(loggerName: string) {

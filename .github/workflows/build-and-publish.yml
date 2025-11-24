@@ -21,6 +21,9 @@ on:
       coordinator_changed:
         required: true
         type: string
+      native_yield_automation_service_changed:
+        required: true
+        type: string
       postman_changed:
         required: true
         type: string
@@ -34,6 +37,9 @@ on:
         required: true
         type: string
       coordinator_image_tagged:
+        required: true
+        type: string
+      native_yield_automation_service_image_tagged:
         required: true
         type: string
       prover_image_tagged:
@@ -64,6 +70,16 @@ jobs:
       commit_tag: ${{ inputs.commit_tag }}
       develop_tag: ${{ inputs.develop_tag }}
       image_name: consensys/linea-coordinator
+      push_image: ${{ inputs.push_image }}
+    secrets: inherit
+
+  native_yield_automation_service:
+    uses: ./.github/workflows/native-yield-automation-service-build-and-publish.yml
+    if: ${{ always() && (inputs.native_yield_automation_service_changed == 'true' || inputs.native_yield_automation_service_image_tagged != 'true') }}
+    with:
+      commit_tag: ${{ inputs.commit_tag }}
+      develop_tag: ${{ inputs.develop_tag }}
+      image_name: consensys/linea-native-yield-automation-service
       push_image: ${{ inputs.push_image }}
     secrets: inherit
 

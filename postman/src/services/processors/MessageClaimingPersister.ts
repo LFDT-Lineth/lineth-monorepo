@@ -11,7 +11,7 @@ import {
 import { Direction, OnChainMessageStatus } from "@consensys/linea-sdk";
 import { BaseError } from "../../core/errors";
 import { MessageStatus } from "../../core/enums";
-import { ILogger } from "../../core/utils/logging/ILogger";
+import { ILogger } from "@consensys/linea-shared-utils";
 import { IMessageServiceContract } from "../../core/services/contracts/IMessageServiceContract";
 import { IProvider } from "../../core/clients/blockchain/IProvider";
 import { Message } from "../../core/entities/Message";

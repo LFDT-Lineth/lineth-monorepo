@@ -1,7 +1,8 @@
-import { IMetricsService, LineaPostmanMetrics, ITransactionMetricsUpdater } from "../../../../core/metrics";
+import { LineaPostmanMetrics, ITransactionMetricsUpdater } from "../../../../core/metrics";
+import { IMetricsService } from "@consensys/linea-shared-utils";
 
 export class TransactionMetricsUpdater implements ITransactionMetricsUpdater {
-  constructor(private readonly metricsService: IMetricsService) {
+  constructor(private readonly metricsService: IMetricsService<LineaPostmanMetrics>) {
     this.metricsService.createHistogram(
       LineaPostmanMetrics.TransactionProcessingTime,
       [0.1, 0.5, 1, 2, 3, 5, 7, 10],
