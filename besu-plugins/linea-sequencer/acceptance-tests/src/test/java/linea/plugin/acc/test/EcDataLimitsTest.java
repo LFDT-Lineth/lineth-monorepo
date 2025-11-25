@@ -34,7 +34,7 @@ import org.web3j.protocol.Web3j;
 import org.web3j.protocol.core.methods.response.EthSendTransaction;
 import org.web3j.utils.Numeric;
 
-public class EcDataLimitsTest extends LineaPluginTestBase {
+public class EcDataLimitsTest extends LineaPluginTestBasePrague {
 
   @Override
   public List<String> getTestCliOptions() {
@@ -49,7 +49,7 @@ public class EcDataLimitsTest extends LineaPluginTestBase {
   @Override
   protected GenesisConfigurationFactory.CliqueOptions getCliqueOptions() {
     return new GenesisConfigurationFactory.CliqueOptions(
-        BLOCK_PERIOD_SECONDS * 2,
+        BLOCK_PERIOD_SECONDS,
         GenesisConfigurationFactory.CliqueOptions.DEFAULT.epochLength(),
         false);
   }

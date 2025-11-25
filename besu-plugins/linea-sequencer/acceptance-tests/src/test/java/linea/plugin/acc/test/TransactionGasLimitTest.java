@@ -24,7 +24,7 @@ import org.web3j.tx.RawTransactionManager;
 import org.web3j.tx.TransactionManager;
 import org.web3j.tx.gas.DefaultGasProvider;
 
-public class TransactionGasLimitTest extends LineaPluginTestBase {
+public class TransactionGasLimitTest extends LineaPluginTestBasePrague {
 
   public static final int MAX_TX_GAS_LIMIT = DefaultGasProvider.GAS_LIMIT.intValue();
   private static final BigInteger GAS_PRICE = DefaultGasProvider.GAS_PRICE;

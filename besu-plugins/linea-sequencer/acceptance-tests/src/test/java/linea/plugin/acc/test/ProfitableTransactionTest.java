@@ -22,7 +22,7 @@ import org.web3j.protocol.Web3j;
 import org.web3j.tx.RawTransactionManager;
 import org.web3j.tx.TransactionManager;
 
-public class ProfitableTransactionTest extends LineaPluginTestBase {
+public class ProfitableTransactionTest extends LineaPluginTestBasePrague {
   private static final double MIN_MARGIN = 1.5;
   private static final Wei MIN_GAS_PRICE = Wei.of(1_000_000_000);
 

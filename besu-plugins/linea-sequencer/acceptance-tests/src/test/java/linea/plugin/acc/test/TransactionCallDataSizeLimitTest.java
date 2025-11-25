@@ -24,7 +24,7 @@ import org.web3j.tx.RawTransactionManager;
 import org.web3j.tx.TransactionManager;
 import org.web3j.tx.gas.DefaultGasProvider;
 
-public class TransactionCallDataSizeLimitTest extends LineaPluginTestBase {
+public class TransactionCallDataSizeLimitTest extends LineaPluginTestBasePrague {
 
   public static final int MAX_CALLDATA_SIZE = 1188; // contract has a call data size of 1160
   private static final BigInteger GAS_PRICE = DefaultGasProvider.GAS_PRICE;

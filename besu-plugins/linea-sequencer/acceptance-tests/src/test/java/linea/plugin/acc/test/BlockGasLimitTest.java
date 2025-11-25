@@ -19,7 +19,7 @@ import org.web3j.tx.RawTransactionManager;
 import org.web3j.tx.TransactionManager;
 
 /** This class tests the block gas limit functionality of the plugin. */
-public class BlockGasLimitTest extends LineaPluginTestBase {
+public class BlockGasLimitTest extends LineaPluginTestBasePrague {
 
   private static final BigInteger GAS_PRICE = BigInteger.TEN.pow(9);
   private static final BigInteger VALUE = BigInteger.TWO;

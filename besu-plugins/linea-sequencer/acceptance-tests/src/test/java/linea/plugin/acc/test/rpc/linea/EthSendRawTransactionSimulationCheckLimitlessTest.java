@@ -17,7 +17,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.IntStream;
-import linea.plugin.acc.test.LineaPluginTestBase;
+import linea.plugin.acc.test.LineaPluginTestBasePrague;
 import linea.plugin.acc.test.TestCommandLineOptionsBuilder;
 import linea.plugin.acc.test.tests.web3j.generated.ExcludedPrecompiles;
 import linea.plugin.acc.test.tests.web3j.generated.RevertExample;
@@ -36,7 +36,7 @@ import org.web3j.protocol.core.methods.response.EthSendTransaction;
 import org.web3j.tx.gas.DefaultGasProvider;
 import org.web3j.utils.Numeric;
 
-public class EthSendRawTransactionSimulationCheckLimitlessTest extends LineaPluginTestBase {
+public class EthSendRawTransactionSimulationCheckLimitlessTest extends LineaPluginTestBasePrague {
   private static final BigInteger GAS_LIMIT = DefaultGasProvider.GAS_LIMIT;
   private static final BigInteger VALUE = BigInteger.ZERO;
   private static final BigInteger GAS_PRICE = BigInteger.TEN.pow(9);

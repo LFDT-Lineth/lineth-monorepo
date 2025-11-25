@@ -12,14 +12,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.math.BigInteger;
 import java.util.List;
-import linea.plugin.acc.test.LineaPluginTestBase;
+import linea.plugin.acc.test.LineaPluginTestBasePrague;
 import linea.plugin.acc.test.TestCommandLineOptionsBuilder;
 import linea.plugin.acc.test.tests.web3j.generated.DummyAdder;
 import org.hyperledger.besu.tests.acceptance.dsl.account.Account;
 import org.junit.jupiter.api.Test;
 import org.web3j.tx.gas.DefaultGasProvider;
 
-public class EstimateGasModuleLimitOverflowTest extends LineaPluginTestBase {
+public class EstimateGasModuleLimitOverflowTest extends LineaPluginTestBasePrague {
   @Override
   public List<String> getTestCliOptions() {
     return new TestCommandLineOptionsBuilder()
@@ -54,6 +54,6 @@ public class EstimateGasModuleLimitOverflowTest extends LineaPluginTestBase {
     final var respLinea = reqLinea.execute(minerNode.nodeRequests());
     assertThat(respLinea.getCode()).isEqualTo(-32000);
     assertThat(respLinea.getMessage())
-        .isEqualTo("Transaction line count for module HUB=208 is above the limit 52");
+        .isEqualTo("Transaction line count for module HUB=216 is above the limit 52");
   }
 }

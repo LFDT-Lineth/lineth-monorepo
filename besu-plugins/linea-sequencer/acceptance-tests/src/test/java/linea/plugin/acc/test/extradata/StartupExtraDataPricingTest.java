@@ -12,7 +12,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
 import java.util.Optional;
-import linea.plugin.acc.test.LineaPluginTestBase;
+import linea.plugin.acc.test.LineaPluginTestBasePrague;
 import linea.plugin.acc.test.TestCommandLineOptionsBuilder;
 import org.apache.tuweni.bytes.Bytes32;
 import org.hyperledger.besu.datatypes.Wei;
@@ -20,7 +20,7 @@ import org.hyperledger.besu.tests.acceptance.dsl.account.Account;
 import org.hyperledger.besu.tests.acceptance.dsl.transaction.account.TransferTransaction;
 import org.junit.jupiter.api.Test;
 
-public class StartupExtraDataPricingTest extends LineaPluginTestBase {
+public class StartupExtraDataPricingTest extends LineaPluginTestBasePrague {
   private static final Wei VARIABLE_GAS_COST = Wei.of(1_200_300_000);
   private static final Wei MIN_GAS_PRICE = VARIABLE_GAS_COST.divide(2);
   private static final int WEI_IN_KWEI = 1000;

@@ -15,7 +15,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.util.List;
-import linea.plugin.acc.test.LineaPluginTestBase;
+import linea.plugin.acc.test.LineaPluginTestBasePrague;
 import linea.plugin.acc.test.TestCommandLineOptionsBuilder;
 import org.apache.tuweni.bytes.Bytes32;
 import org.hyperledger.besu.datatypes.Wei;
@@ -33,7 +33,7 @@ import org.web3j.protocol.core.Request;
 import org.web3j.protocol.core.methods.response.EthSendTransaction;
 import org.web3j.utils.Numeric;
 
-public class ExtraDataPricingTest extends LineaPluginTestBase {
+public class ExtraDataPricingTest extends LineaPluginTestBasePrague {
   protected static final Wei MIN_GAS_PRICE = Wei.of(1_000_000_000);
   protected static final int WEI_IN_KWEI = 1000;
 

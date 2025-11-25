@@ -13,7 +13,7 @@ import static org.web3j.crypto.Hash.sha3;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.util.Arrays;
-import linea.plugin.acc.test.LineaPluginTestBase;
+import linea.plugin.acc.test.LineaPluginTestBasePrague;
 import linea.plugin.acc.test.tests.web3j.generated.AcceptanceTestToken;
 import linea.plugin.acc.test.tests.web3j.generated.MulmodExecutor;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +25,7 @@ import org.web3j.crypto.TransactionEncoder;
 import org.web3j.protocol.core.Request;
 import org.web3j.utils.Numeric;
 
-public class AbstractSendBundleTest extends LineaPluginTestBase {
+public class AbstractSendBundleTest extends LineaPluginTestBasePrague {
   protected static final BigInteger TRANSFER_GAS_LIMIT = BigInteger.valueOf(100_000L);
   protected static final BigInteger MULMOD_GAS_LIMIT = BigInteger.valueOf(9_000_000L);
   protected static final BigInteger GAS_PRICE = BigInteger.TEN.pow(9);

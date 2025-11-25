@@ -13,9 +13,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.stream.IntStream;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.web3j.protocol.core.methods.response.TransactionReceipt;
 
+@Disabled(
+    "Temporarily disabled while investigating bunlde timeout logic and is disabled in production")
 public class BundleSelectionTimeoutTest extends AbstractSendBundleTest {
 
   @Test
