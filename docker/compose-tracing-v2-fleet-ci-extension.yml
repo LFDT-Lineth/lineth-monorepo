@@ -26,7 +26,7 @@ services:
     extends:
       file: compose-spec-l2-services.yml
       service: l2-node-besu
-    image: consensys/${BESU_PACKAGE_IMAGE_NAME:-linea-besu-package-with-fleet}:${BESU_PACKAGE_TAG:-beta-v4.0-rc23-20251119090742-c91c2df}
+    image: consensys/${BESU_PACKAGE_IMAGE_NAME:-linea-besu-package-with-fleet}:${BESU_PACKAGE_TAG:-beta-v4.0-rc23-20251124115424-754adda}
     command:
       - --config-file=/var/lib/besu/l2-node-besu.config.toml
       - --genesis-file=/initialization/genesis-besu.json
@@ -41,7 +41,7 @@ services:
     extends:
       file: compose-spec-l2-services.yml
       service: l2-node-besu-follower
-    image: consensys/${BESU_PACKAGE_IMAGE_NAME:-linea-besu-package-with-fleet}:${BESU_PACKAGE_TAG:-beta-v4.0-rc23-20251119090742-c91c2df}
+    image: consensys/${BESU_PACKAGE_IMAGE_NAME:-linea-besu-package-with-fleet}:${BESU_PACKAGE_TAG:-beta-v4.0-rc23-20251124115424-754adda}
     command:
       - --config-file=/var/lib/besu/l2-node-besu.config.toml
       - --genesis-file=/initialization/genesis-besu.json

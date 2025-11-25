@@ -1,5 +1,5 @@
 # data
-genesis-file="/var/lib/besu/genesis.json"
+network="linea"
 #logging="INFO" log is managed via log4j config file
 data-path="/opt/besu/data"
 
