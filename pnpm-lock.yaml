@@ -316,8 +316,8 @@ importers:
         specifier: 'catalog:'
         version: 17.0.33
       c-kzg:
-        specifier: 2.1.2
-        version: 2.1.2
+        specifier: 4.1.0
+        version: 4.1.0
       chai:
         specifier: 4.1.1
         version: 4.1.1
@@ -6970,8 +6970,8 @@ packages:
     resolution: {integrity: sha512-/Nf7TyzTx6S3yRJObOAV7956r8cr2+Oj8AC5dt8wSP3BQAoeX58NoHyCU8P8zGkNXStjTSi6fzO6F0pBdcYbEg==}
     engines: {node: '>= 0.8'}
 
-  c-kzg@2.1.2:
-    resolution: {integrity: sha512-QmP4vTp5H2hN4mkKXF9VXtZ7k7oH1kmBxLiFT/7LcyE78RgX32zvPGfwtRAsrq/b3T6RZFIsHZvQEN7JdzoNOg==}
+  c-kzg@4.1.0:
+    resolution: {integrity: sha512-eliOBB2GKoT5Nk4LwN418O8kWfXCwepHj3kd6z0zKrzIdJbry0Y8IDPYzE5Dxw/fs386PGO6zQRqy8LSVtR5tQ==}
 
   cac@6.7.14:
     resolution: {integrity: sha512-b6Ilus+c3RrdDk+JhLKUAQfzzgLEPy6wcXqS7f/xe1EETvsDP6GORG7SFuOs6cID5YkqchW/LXZbX5bc8j7ZcQ==}
@@ -10518,6 +10518,10 @@ packages:
 
   node-addon-api@7.1.1:
     resolution: {integrity: sha512-5m3bsyrjFWE1xf7nz7YXdN4udnVtXK6/Yfgn5qnahL6bCkf2yKt4k3nuTKAtT4r3IG8JNR2ncsIMdZuAzJjHQQ==}
+
+  node-addon-api@8.5.0:
+    resolution: {integrity: sha512-/bRZty2mXUIFY/xU5HLvveNHlswNJej+RnxBjOMkidWfwZzgTbPG1E3K5TOxRLOR+5hX7bSofy8yf1hZevMS8A==}
+    engines: {node: ^18 || ^20 || >= 21}
 
   node-dir@0.1.17:
     resolution: {integrity: sha512-tmPX422rYgofd4epzrNoOXiE8XFZYOcCq1vD7MAXCDO+O+zndlA2ztdKKMa+EeuBG5tHETpr4ml4RGgpqDCCAg==}
@@ -23600,10 +23604,10 @@ snapshots:
 
   bytes@3.1.2: {}
 
-  c-kzg@2.1.2:
+  c-kzg@4.1.0:
     dependencies:
       bindings: 1.5.0
-      node-addon-api: 5.1.0
+      node-addon-api: 8.5.0
 
   cac@6.7.14: {}
 
@@ -28143,6 +28147,8 @@ snapshots:
 
   node-addon-api@7.1.1: {}
 
+  node-addon-api@8.5.0: {}
+
   node-dir@0.1.17:
     dependencies:
       minimatch: 3.1.2
@@ -31217,9 +31223,9 @@ snapshots:
       '@noble/hashes': 1.7.2
       '@scure/bip32': 1.6.2
       '@scure/bip39': 1.5.4
-      abitype: 1.0.8(typescript@5.4.5)(zod@3.25.76)
+      abitype: 1.0.8(typescript@5.4.5)(zod@3.24.2)
       isows: 1.0.6(ws@8.18.1(bufferutil@4.0.8)(utf-8-validate@5.0.10))
-      ox: 0.6.9(typescript@5.4.5)(zod@3.25.76)
+      ox: 0.6.9(typescript@5.4.5)(zod@3.24.2)
       ws: 8.18.1(bufferutil@4.0.8)(utf-8-validate@5.0.10)
     optionalDependencies:
       typescript: 5.4.5

@@ -13,7 +13,7 @@ cp $original_cl_network_config_path $modified_cl_network_config_path
 
 # Although this adds 0s, it is here for flexibility in the event of extension and syntax issues.
 OS=$(uname);
-prague_time=$(    
+osaka_time=$(    
     if [ $OS = "Linux" ]; then
         date -d "+0 seconds" +%s;
     elif [ $OS = "Darwin" ]; then
@@ -21,5 +21,5 @@ prague_time=$(
     fi
 )
 
-sed -i -E 's/"timestamp": "[0-9]+"/"timestamp": "'"$prague_time"'"/' $modified_el_genesis_json_path
-sed -i 's/\$GENESIS_TIME/'"$prague_time"'/g' $modified_cl_network_config_path
+sed -i -E 's/"timestamp": "[0-9]+"/"timestamp": "'"$osaka_time"'"/' $modified_el_genesis_json_path
+sed -i 's/\$GENESIS_TIME/'"$osaka_time"'/g' $modified_cl_network_config_path

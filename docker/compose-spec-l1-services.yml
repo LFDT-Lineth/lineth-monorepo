@@ -72,14 +72,14 @@ services:
         ipv4_address: 10.10.10.202
 
   l1-node-genesis-generator:
-    image: ethpandaops/ethereum-genesis-generator:4.0.0
+    image: ethpandaops/ethereum-genesis-generator:5.1.0
     profiles: [ "l1", "debug", "external-to-monorepo" ]
     entrypoint:
       - /bin/bash
       - -c
       - |
         bash /generate-genesis.sh
-        /usr/local/bin/eth-beacon-genesis devnet \
+        /usr/local/bin/eth-genesis-state-generator devnet \
         --config /data/l1-node-config/network-config.yml \${L1_GENESIS_TIME:+--timestamp ${L1_GENESIS_TIME:-} \}
         --mnemonics /config/mnemonics.yaml \
         --state-output /data/l1-node-config/genesis.ssz \

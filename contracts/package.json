@@ -39,7 +39,7 @@
     "@typechain/hardhat": "9.1.0",
     "@types/diff": "5.2.0",
     "@types/yargs": "catalog:",
-    "c-kzg": "2.1.2",
+    "c-kzg": "4.1.0",
     "chai": "4.1.1",
     "colors": "1.4.0",
     "csv-parser": "3.0.0",

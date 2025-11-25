@@ -55,7 +55,7 @@ import {
 } from "../common/helpers";
 import { CalldataSubmissionData } from "../common/types";
 
-kzg.loadTrustedSetup(`${__dirname}/../_testData/trusted_setup.txt`);
+kzg.loadTrustedSetup(0, `${__dirname}/../_testData/trusted_setup.txt`);
 
 describe("Linea Rollup contract", () => {
   let lineaRollup: TestLineaRollup;

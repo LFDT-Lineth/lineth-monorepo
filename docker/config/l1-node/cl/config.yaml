@@ -4,9 +4,10 @@ network: "/data/l1-node-config/network-config.yml"
 data-storage-mode: "PRUNE"
 initial-state: "/data/l1-node-config/genesis.ssz"
 
-p2p-enabled: false
-p2p-discovery-enabled: false
-#p2p-subscribe-all-subnets-enabled: false
+p2p-enabled: true
+p2p-discovery-enabled: true
+p2p-subscribe-all-subnets-enabled: true
+p2p-subscribe-all-custody-subnets-enabled: true
 #p2p-peer-lower-bound: 1
 #p2p-advertised-ip: "10.10.10.202"
 #p2p-port: 9000
