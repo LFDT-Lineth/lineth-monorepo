@@ -1,11 +1,14 @@
 package arithmetization
 
 import (
+	"compress/gzip"
 	_ "embed"
 	"encoding/gob"
 	"errors"
 	"fmt"
 	"io"
+	"os"
+	"strings"
 
 	"github.com/consensys/go-corset/pkg/asm"
 	"github.com/consensys/go-corset/pkg/binfile"
@@ -16,6 +19,8 @@ import (
 	"github.com/consensys/go-corset/pkg/trace/lt"
 	"github.com/consensys/go-corset/pkg/util/collection/typed"
 	"github.com/consensys/go-corset/pkg/util/field/bls12_377"
+	"github.com/consensys/linea-monorepo/prover/utils"
+	"github.com/sirupsen/logrus"
 )
 
 // Embed the whole constraint system at compile time, so no
@@ -85,6 +90,59 @@ func CompileZkevmBin(binf *binfile.BinaryFile, optConfig *mir.OptimisationConfig
 	airSchema := mir.LowerToAir(mirSchema, *optConfig)
 	// This performs the corset compilation
 	return &airSchema, mapping
+}
+
+type readCloserChain struct {
+	io.Reader
+	closers []io.Closer
+}
+
+func (r *readCloserChain) Close() error {
+	var firstErr error
+	for _, c := range r.closers {
+		if err := c.Close(); err != nil && firstErr == nil {
+			firstErr = err
+		}
+	}
+	return firstErr
+}
+
+// readTraceFile returns a reader over the trace data.
+// If the file ends with .gz, it transparently decompresses it.
+// The caller (See ReadLtTraces below) MUST close the returned io.ReadCloser.
+func readTraceFile(path string) io.ReadCloser {
+	// Case 1: normal file
+	if !strings.HasSuffix(path, ".gz") {
+		f, err := os.Open(path)
+		if err != nil {
+			utils.Panic("failed opening trace file %q: %s", path, err)
+		}
+		return f
+	}
+
+	// Case 2: gzipped file
+	f, err := os.Open(path)
+	if err != nil {
+		utils.Panic("unable to open gzipped trace file %q: %s", path, err)
+	}
+
+	gzr, err := gzip.NewReader(f)
+	if err != nil {
+		f.Close()
+		utils.Panic("failed to create gzip.Reader for %q: %s", path, err)
+	}
+
+	// Wrap so closing the reader also closes the underlying file
+	rc := &readCloserChain{
+		Reader: gzr,
+		closers: []io.Closer{
+			gzr,
+			f,
+		},
+	}
+
+	logrus.Infof("Streaming decompression of traceFile:%q", path)
+	return rc
 }
 
 // ReadLtTraces reads a given LT trace file which contains (unexpanded) column

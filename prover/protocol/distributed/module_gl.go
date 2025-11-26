@@ -918,7 +918,7 @@ func (modGL *ModuleGL) checkMultiSetHash(run wizard.Runtime) error {
 		defInp                     = modGL.DefinitionInput
 		moduleIndex                = field.NewElement(uint64(defInp.ModuleIndex))
 		segmentIndexInt            = segmentIndex.Uint64()
-		numSegmentOfCurrModule     = modGL.PublicInputs.TargetNbSegments[segmentIndexInt].Acc.GetVal(run)
+		numSegmentOfCurrModule     = modGL.PublicInputs.TargetNbSegments[defInp.ModuleIndex].Acc.GetVal(run)
 		isFirst                    = modGL.IsFirst.GetColAssignmentAt(run, 0)
 		isLast                     = modGL.IsLast.GetColAssignmentAt(run, 0)
 	)
