@@ -30,7 +30,7 @@ wget -nv https://github.com/Consensys/linea-monorepo/releases/download/linea-sta
 
 echo "getting linea_tracer_plugin_version: $LINEA_TRACER_PLUGIN_VERSION"
 wget -nv https://github.com/Consensys/linea-tracer/releases/download/$LINEA_TRACER_PLUGIN_VERSION/linea-tracer-$LINEA_TRACER_PLUGIN_VERSION.zip
-unzip -o linea-tracer-$LINEA_TRACER_PLUGIN_VERSION.zip
+unzip -j -o linea-tracer-$LINEA_TRACER_PLUGIN_VERSION.zip
 rm linea-tracer-$LINEA_TRACER_PLUGIN_VERSION.zip
 
 echo "getting shomei_plugin_version: $SHOMEI_PLUGIN_VERSION"
