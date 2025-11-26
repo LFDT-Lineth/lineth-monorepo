@@ -33,6 +33,8 @@ const createValidEnv = () => ({
   WEB3SIGNER_TLS_ENABLED: "true",
   API_PORT: "3000",
   SHOULD_SUBMIT_VAULT_REPORT: "true",
+  MIN_POSITIVE_YIELD_TO_REPORT_WEI: "1000000000000000000",
+  MIN_UNPAID_LIDO_PROTOCOL_FEES_TO_REPORT_YIELD_WEI: "500000000000000000",
 });
 
 describe("toClientConfig", () => {
@@ -74,7 +76,11 @@ describe("toClientConfig", () => {
       rebalanceToleranceBps: env.REBALANCE_TOLERANCE_BPS,
       maxValidatorWithdrawalRequestsPerTransaction: env.MAX_VALIDATOR_WITHDRAWAL_REQUESTS_PER_TRANSACTION,
       minWithdrawalThresholdEth: env.MIN_WITHDRAWAL_THRESHOLD_ETH,
-      shouldSubmitVaultReport: env.SHOULD_SUBMIT_VAULT_REPORT,
+      reporting: {
+        shouldSubmitVaultReport: env.SHOULD_SUBMIT_VAULT_REPORT,
+        minPositiveYieldToReportWei: env.MIN_POSITIVE_YIELD_TO_REPORT_WEI,
+        minUnpaidLidoProtocolFeesToReportYieldWei: env.MIN_UNPAID_LIDO_PROTOCOL_FEES_TO_REPORT_YIELD_WEI,
+      },
       web3signer: {
         url: env.WEB3SIGNER_URL,
         publicKey: env.WEB3SIGNER_PUBLIC_KEY,

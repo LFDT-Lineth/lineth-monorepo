@@ -48,6 +48,7 @@ import { IVaultHub } from "../../core/clients/contracts/IVaultHub.js";
 import { VaultHubContractClient } from "../../clients/contracts/VaultHubContractClient.js";
 import { IOperationModeMetricsRecorder } from "../../core/metrics/IOperationModeMetricsRecorder.js";
 import { OperationModeMetricsRecorder } from "../metrics/OperationModeMetricsRecorder.js";
+import { DashboardContractClient } from "../../clients/contracts/DashboardContractClient.js";
 
 /**
  * Bootstrap class for the Native Yield Automation Service.
@@ -132,6 +133,10 @@ export class NativeYieldAutomationServiceBootstrap {
       getChain(config.dataSources.chainId),
       this.web3SignerClient,
     );
+    DashboardContractClient.initialize(
+      this.viemBlockchainClientAdapter,
+      new WinstonLogger(DashboardContractClient.name, config.loggerOptions),
+    );
     this.yieldManagerContractClient = new YieldManagerContractClient(
       new WinstonLogger(YieldManagerContractClient.name, config.loggerOptions),
       this.viemBlockchainClientAdapter,
@@ -213,7 +218,9 @@ export class NativeYieldAutomationServiceBootstrap {
       this.beaconChainStakingClient,
       config.contractAddresses.lidoYieldProviderAddress,
       config.contractAddresses.l2YieldRecipientAddress,
-      config.shouldSubmitVaultReport,
+      config.reporting.shouldSubmitVaultReport,
+      config.reporting.minPositiveYieldToReportWei,
+      config.reporting.minUnpaidLidoProtocolFeesToReportYieldWei,
     );
 
     this.ossificationPendingOperationModeProcessor = new OssificationPendingProcessor(
@@ -225,7 +232,7 @@ export class NativeYieldAutomationServiceBootstrap {
       this.lidoAccountingReportClient,
       this.beaconChainStakingClient,
       config.contractAddresses.lidoYieldProviderAddress,
-      config.shouldSubmitVaultReport,
+      config.reporting.shouldSubmitVaultReport,
     );
 
     this.ossificationCompleteOperationModeProcessor = new OssificationCompleteProcessor(

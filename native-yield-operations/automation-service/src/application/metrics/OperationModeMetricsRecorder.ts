@@ -7,7 +7,7 @@ import { IYieldManager } from "../../core/clients/contracts/IYieldManager.js";
 import { ILogger, weiToGweiNumber } from "@consensys/linea-shared-utils";
 import { INativeYieldAutomationMetricsUpdater } from "../../core/metrics/INativeYieldAutomationMetricsUpdater.js";
 import { IVaultHub } from "../../core/clients/contracts/IVaultHub.js";
-import { getNodeOperatorFeesPaidFromTxReceipt } from "../../clients/contracts/getNodeOperatorFeesPaidFromTxReceipt.js";
+import { DashboardContractClient } from "../../clients/contracts/DashboardContractClient.js";
 import { RebalanceDirection } from "../../core/entities/RebalanceRequirement.js";
 
 /**
@@ -55,7 +55,8 @@ export class OperationModeMetricsRecorder implements IOperationModeMetricsRecord
       this.yieldManagerClient.getLidoDashboardAddress(yieldProvider),
     ]);
 
-    const nodeOperatorFeesDisbursed = getNodeOperatorFeesPaidFromTxReceipt(receipt, dashboard);
+    const dashboardClient = DashboardContractClient.getOrCreate(dashboard);
+    const nodeOperatorFeesDisbursed = dashboardClient.getNodeOperatorFeesPaidFromTxReceipt(receipt);
     if (nodeOperatorFeesDisbursed != 0n) {
       this.metricsUpdater.addNodeOperatorFeesPaid(vault, weiToGweiNumber(nodeOperatorFeesDisbursed));
     }
@@ -98,9 +99,9 @@ export class OperationModeMetricsRecorder implements IOperationModeMetricsRecord
 
     this.metricsUpdater.incrementReportYield(vault);
     this.metricsUpdater.addReportedYieldAmount(vault, weiToGweiNumber(yieldReport.yieldAmount));
-    this.metricsUpdater.setCurrentNegativeYieldLastReport(vault, weiToGweiNumber(yieldReport.outstandingNegativeYield));
 
-    const nodeOperatorFeesDisbursed = getNodeOperatorFeesPaidFromTxReceipt(receipt, dashboard);
+    const dashboardClient = DashboardContractClient.getOrCreate(dashboard);
+    const nodeOperatorFeesDisbursed = dashboardClient.getNodeOperatorFeesPaidFromTxReceipt(receipt);
     if (nodeOperatorFeesDisbursed != 0n) {
       this.metricsUpdater.addNodeOperatorFeesPaid(vault, weiToGweiNumber(nodeOperatorFeesDisbursed));
     }

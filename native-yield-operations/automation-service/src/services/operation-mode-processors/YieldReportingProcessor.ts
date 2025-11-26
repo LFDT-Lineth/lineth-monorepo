@@ -10,6 +10,7 @@ import { IBeaconChainStakingClient } from "../../core/clients/IBeaconChainStakin
 import { INativeYieldAutomationMetricsUpdater } from "../../core/metrics/INativeYieldAutomationMetricsUpdater.js";
 import { OperationMode } from "../../core/enums/OperationModeEnums.js";
 import { IOperationModeMetricsRecorder } from "../../core/metrics/IOperationModeMetricsRecorder.js";
+import { DashboardContractClient } from "../../clients/contracts/DashboardContractClient.js";
 
 /**
  * Processor for YIELD_REPORTING_MODE operations.
@@ -32,6 +33,8 @@ export class YieldReportingProcessor implements IOperationModeProcessor {
    * @param {Address} yieldProvider - The yield provider address to process.
    * @param {Address} l2YieldRecipient - The L2 yield recipient address for yield reporting.
    * @param {boolean} shouldSubmitVaultReport - Whether to submit the vault accounting report. Can be set to false if other actors are expected to submit.
+   * @param {bigint} minPositiveYieldToReportWei - Minimum positive yield amount (in wei) required before triggering a yield report.
+   * @param {bigint} minUnpaidLidoProtocolFeesToReportYieldWei - Minimum unpaid Lido protocol fees amount (in wei) required before triggering a fee settlement.
    */
   constructor(
     private readonly logger: ILogger,
@@ -45,6 +48,8 @@ export class YieldReportingProcessor implements IOperationModeProcessor {
     private readonly yieldProvider: Address,
     private readonly l2YieldRecipient: Address,
     private readonly shouldSubmitVaultReport: boolean,
+    private readonly minPositiveYieldToReportWei: bigint,
+    private readonly minUnpaidLidoProtocolFeesToReportYieldWei: bigint,
   ) {}
 
   /**
@@ -269,18 +274,68 @@ export class YieldReportingProcessor implements IOperationModeProcessor {
         this.metricsUpdater.incrementLidoVaultAccountingReport(this.vault);
       }
     } else {
-      this.logger.info("_handleSubmitLatestVaultReport: skipping vault report submission (SHOULD_SUBMIT_VAULT_REPORT=false)");
+      this.logger.info(
+        "_handleSubmitLatestVaultReport: skipping vault report submission (SHOULD_SUBMIT_VAULT_REPORT=false)",
+      );
     }
 
     // Second call: report yield
-    const yieldResult = await attempt(
-      this.logger,
-      () => this.yieldManagerContractClient.reportYield(this.yieldProvider, this.l2YieldRecipient),
-      "_handleSubmitLatestVaultReport - reportYield failed",
-    );
-    if (yieldResult.isOk()) {
-      this.logger.info("_handleSubmitLatestVaultReport: yield report succeeded");
-      await this.operationModeMetricsRecorder.recordReportYieldMetrics(this.yieldProvider, yieldResult);
+    if (await this._shouldReportYield()) {
+      const yieldResult = await attempt(
+        this.logger,
+        () => this.yieldManagerContractClient.reportYield(this.yieldProvider, this.l2YieldRecipient),
+        "_handleSubmitLatestVaultReport - reportYield failed",
+      );
+      if (yieldResult.isOk()) {
+        this.logger.info("_handleSubmitLatestVaultReport: yield report succeeded");
+        await this.operationModeMetricsRecorder.recordReportYieldMetrics(this.yieldProvider, yieldResult);
+      }
     }
+  }
+
+  /**
+   * Determines whether yield should be reported based on configurable thresholds.
+   * Checks both the yield amount and unpaid Lido protocol fees against their respective thresholds.
+   * Returns true if either threshold is met or exceeded.
+   * Sets gauge metrics for peeked values when reads are successful.
+   *
+   * @returns {Promise<boolean>} True if yield should be reported (either threshold met), false otherwise.
+   */
+  async _shouldReportYield(): Promise<boolean> {
+    // Get dashboard address
+    const dashboardAddress = await this.yieldManagerContractClient.getLidoDashboardAddress(this.yieldProvider);
+    const dashboardClient = DashboardContractClient.getOrCreate(dashboardAddress);
+
+    // Use Promise.all to concurrently fetch both values
+    const [unpaidLidoProtocolFees, yieldReport] = await Promise.all([
+      dashboardClient.peekUnpaidLidoProtocolFees(),
+      this.yieldManagerContractClient.peekYieldReport(this.yieldProvider, this.l2YieldRecipient),
+    ]);
+
+    // Log both results
+    this.logger.info(
+      `_shouldReportYield - unpaidLidoProtocolFees=${JSON.stringify(unpaidLidoProtocolFees, bigintReplacer)}, yieldReport=${JSON.stringify(yieldReport, bigintReplacer)}`,
+    );
+
+    let yieldThresholdMet = false;
+    let feesThresholdMet = false;
+
+    if (yieldReport !== undefined) {
+      const outstandingNegativeYield = yieldReport?.outstandingNegativeYield;
+      const yieldAmount = yieldReport?.yieldAmount;
+      await Promise.all([
+        this.metricsUpdater.setLastPeekedNegativeYieldReport(this.vault, weiToGweiNumber(outstandingNegativeYield)),
+        this.metricsUpdater.setLastPeekedPositiveYieldReport(this.vault, weiToGweiNumber(yieldAmount)),
+      ]);
+      yieldThresholdMet = yieldAmount >= this.minPositiveYieldToReportWei;
+    }
+
+    if (unpaidLidoProtocolFees !== undefined) {
+      await this.metricsUpdater.setLastPeekUnpaidLidoProtocolFees(this.vault, weiToGweiNumber(unpaidLidoProtocolFees));
+      feesThresholdMet = unpaidLidoProtocolFees >= this.minUnpaidLidoProtocolFeesToReportYieldWei;
+    }
+
+    // Return true if either threshold is met
+    return feesThresholdMet || yieldThresholdMet;
   }
 }

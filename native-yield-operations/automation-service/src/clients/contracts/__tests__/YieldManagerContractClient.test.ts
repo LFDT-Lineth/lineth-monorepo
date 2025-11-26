@@ -104,6 +104,7 @@ describe("YieldManagerContractClient", () => {
       },
       simulate: {
         withdrawableValue: jest.fn(),
+        reportYield: jest.fn(),
       },
     };
 
@@ -173,6 +174,38 @@ describe("YieldManagerContractClient", () => {
 
     expect(contractStub.simulate.withdrawableValue).toHaveBeenCalledWith([yieldProvider]);
     expect(result).toBe(withdrawable);
+  });
+
+  it("peeks yield report via simulate and returns mapped YieldReport", async () => {
+    const newReportedYield = 100n;
+    const outstandingNegativeYield = 25n;
+    contractStub.simulate.reportYield.mockResolvedValueOnce({
+      result: [newReportedYield, outstandingNegativeYield],
+    });
+
+    const client = createClient();
+    const result = await client.peekYieldReport(yieldProvider, l2Recipient);
+
+    expect(contractStub.simulate.reportYield).toHaveBeenCalledWith([yieldProvider, l2Recipient]);
+    expect(result).toEqual({
+      yieldAmount: newReportedYield,
+      outstandingNegativeYield,
+      yieldProvider,
+    });
+  });
+
+  it("returns undefined when peekYieldReport simulation fails", async () => {
+    contractStub.simulate.reportYield.mockRejectedValueOnce(new Error("Simulation failed"));
+
+    const client = createClient();
+    const result = await client.peekYieldReport(yieldProvider, l2Recipient);
+
+    expect(contractStub.simulate.reportYield).toHaveBeenCalledWith([yieldProvider, l2Recipient]);
+    expect(result).toBeUndefined();
+    expect(logger.debug).toHaveBeenCalledWith(
+      `peekYieldReport failed, yieldProvider=${yieldProvider}, l2YieldRecipient=${l2Recipient}`,
+      { error: expect.any(Error) },
+    );
   });
 
   it("encodes calldata and sends fundYieldProvider transactions", async () => {

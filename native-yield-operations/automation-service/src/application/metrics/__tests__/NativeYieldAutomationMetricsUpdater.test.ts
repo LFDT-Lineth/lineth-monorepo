@@ -66,8 +66,18 @@ describe("NativeYieldAutomationMetricsUpdater", () => {
       ["vault_address"],
     );
     expect(metricsService.createGauge).toHaveBeenCalledWith(
-      LineaNativeYieldAutomationServiceMetrics.CurrentNegativeYieldLastReport,
-      "Outstanding negative yield as of the latest report",
+      LineaNativeYieldAutomationServiceMetrics.LastPeekedNegativeYieldReport,
+      "Outstanding negative yield from the last peeked yield report",
+      ["vault_address"],
+    );
+    expect(metricsService.createGauge).toHaveBeenCalledWith(
+      LineaNativeYieldAutomationServiceMetrics.LastPeekedPositiveYieldReport,
+      "Positive yield amount from the last peeked yield report",
+      ["vault_address"],
+    );
+    expect(metricsService.createGauge).toHaveBeenCalledWith(
+      LineaNativeYieldAutomationServiceMetrics.LastPeekUnpaidLidoProtocolFees,
+      "Unpaid Lido protocol fees from the last peek",
       ["vault_address"],
     );
     expect(metricsService.createCounter).toHaveBeenCalledWith(
@@ -228,16 +238,16 @@ describe("NativeYieldAutomationMetricsUpdater", () => {
     });
   });
 
-  describe("setCurrentNegativeYieldLastReport", () => {
+  describe("setLastPeekedNegativeYieldReport", () => {
     it("sets gauge when value is non-negative", async () => {
       const metricsService = createMetricsServiceMock();
       const updater = new NativeYieldAutomationMetricsUpdater(metricsService);
       jest.clearAllMocks();
 
-      await updater.setCurrentNegativeYieldLastReport(vaultAddress, 123);
+      await updater.setLastPeekedNegativeYieldReport(vaultAddress, 123);
 
       expect(metricsService.setGauge).toHaveBeenCalledWith(
-        LineaNativeYieldAutomationServiceMetrics.CurrentNegativeYieldLastReport,
+        LineaNativeYieldAutomationServiceMetrics.LastPeekedNegativeYieldReport,
         { vault_address: vaultAddress },
         123,
       );
@@ -248,7 +258,59 @@ describe("NativeYieldAutomationMetricsUpdater", () => {
       const updater = new NativeYieldAutomationMetricsUpdater(metricsService);
       jest.clearAllMocks();
 
-      await updater.setCurrentNegativeYieldLastReport(vaultAddress, -1);
+      await updater.setLastPeekedNegativeYieldReport(vaultAddress, -1);
+
+      expect(metricsService.setGauge).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("setLastPeekedPositiveYieldReport", () => {
+    it("sets gauge when value is non-negative", async () => {
+      const metricsService = createMetricsServiceMock();
+      const updater = new NativeYieldAutomationMetricsUpdater(metricsService);
+      jest.clearAllMocks();
+
+      await updater.setLastPeekedPositiveYieldReport(vaultAddress, 456);
+
+      expect(metricsService.setGauge).toHaveBeenCalledWith(
+        LineaNativeYieldAutomationServiceMetrics.LastPeekedPositiveYieldReport,
+        { vault_address: vaultAddress },
+        456,
+      );
+    });
+
+    it("does not set gauge when value is negative", async () => {
+      const metricsService = createMetricsServiceMock();
+      const updater = new NativeYieldAutomationMetricsUpdater(metricsService);
+      jest.clearAllMocks();
+
+      await updater.setLastPeekedPositiveYieldReport(vaultAddress, -1);
+
+      expect(metricsService.setGauge).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("setLastPeekUnpaidLidoProtocolFees", () => {
+    it("sets gauge when value is non-negative", async () => {
+      const metricsService = createMetricsServiceMock();
+      const updater = new NativeYieldAutomationMetricsUpdater(metricsService);
+      jest.clearAllMocks();
+
+      await updater.setLastPeekUnpaidLidoProtocolFees(vaultAddress, 789);
+
+      expect(metricsService.setGauge).toHaveBeenCalledWith(
+        LineaNativeYieldAutomationServiceMetrics.LastPeekUnpaidLidoProtocolFees,
+        { vault_address: vaultAddress },
+        789,
+      );
+    });
+
+    it("does not set gauge when value is negative", async () => {
+      const metricsService = createMetricsServiceMock();
+      const updater = new NativeYieldAutomationMetricsUpdater(metricsService);
+      jest.clearAllMocks();
+
+      await updater.setLastPeekUnpaidLidoProtocolFees(vaultAddress, -1);
 
       expect(metricsService.setGauge).not.toHaveBeenCalled();
     });

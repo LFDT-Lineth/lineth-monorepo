@@ -32,6 +32,8 @@ const createValidEnv = () => ({
   WEB3SIGNER_TLS_ENABLED: "true",
   API_PORT: "3000",
   SHOULD_SUBMIT_VAULT_REPORT: "true",
+  MIN_POSITIVE_YIELD_TO_REPORT_WEI: "1000000000000000000",
+  MIN_UNPAID_LIDO_PROTOCOL_FEES_TO_REPORT_YIELD_WEI: "500000000000000000",
 });
 
 describe("configSchema", () => {
@@ -44,6 +46,8 @@ describe("configSchema", () => {
     expect(parsed.TRIGGER_EVENT_POLL_INTERVAL_MS).toBe(1000);
     expect(parsed.API_PORT).toBe(3000);
     expect(parsed.MIN_WITHDRAWAL_THRESHOLD_ETH).toBe(42n);
+    expect(parsed.MIN_POSITIVE_YIELD_TO_REPORT_WEI).toBe(1000000000000000000n);
+    expect(parsed.MIN_UNPAID_LIDO_PROTOCOL_FEES_TO_REPORT_YIELD_WEI).toBe(500000000000000000n);
     expect(parsed.WEB3SIGNER_TLS_ENABLED).toBe(true);
     expect(parsed.SHOULD_SUBMIT_VAULT_REPORT).toBe(true);
     expect(parsed.LINEA_ROLLUP_ADDRESS).toBe(getAddress(env.LINEA_ROLLUP_ADDRESS));
@@ -78,5 +82,125 @@ describe("configSchema", () => {
     if (!result.success) {
       expect(result.error.issues.some((issue) => issue.path.join(".") === "WEB3SIGNER_PUBLIC_KEY")).toBe(true);
     }
+  });
+
+  describe("MIN_POSITIVE_YIELD_TO_REPORT_WEI", () => {
+    it("parses string values to bigint", () => {
+      const env = {
+        ...createValidEnv(),
+        MIN_POSITIVE_YIELD_TO_REPORT_WEI: "1000000000000000000",
+      };
+
+      const parsed = configSchema.parse(env);
+
+      expect(parsed.MIN_POSITIVE_YIELD_TO_REPORT_WEI).toBe(1000000000000000000n);
+    });
+
+    it("parses number values to bigint", () => {
+      const env = {
+        ...createValidEnv(),
+        MIN_POSITIVE_YIELD_TO_REPORT_WEI: 2000000000000000000,
+      };
+
+      const parsed = configSchema.parse(env);
+
+      expect(parsed.MIN_POSITIVE_YIELD_TO_REPORT_WEI).toBe(2000000000000000000n);
+    });
+
+    it("parses bigint values", () => {
+      const env = {
+        ...createValidEnv(),
+        MIN_POSITIVE_YIELD_TO_REPORT_WEI: 3000000000000000000n,
+      };
+
+      const parsed = configSchema.parse(env);
+
+      expect(parsed.MIN_POSITIVE_YIELD_TO_REPORT_WEI).toBe(3000000000000000000n);
+    });
+
+    it("accepts zero value", () => {
+      const env = {
+        ...createValidEnv(),
+        MIN_POSITIVE_YIELD_TO_REPORT_WEI: "0",
+      };
+
+      const parsed = configSchema.parse(env);
+
+      expect(parsed.MIN_POSITIVE_YIELD_TO_REPORT_WEI).toBe(0n);
+    });
+
+    it("rejects negative values", () => {
+      const env = {
+        ...createValidEnv(),
+        MIN_POSITIVE_YIELD_TO_REPORT_WEI: "-1",
+      };
+
+      const result = configSchema.safeParse(env);
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues.some((issue) => issue.path.join(".") === "MIN_POSITIVE_YIELD_TO_REPORT_WEI")).toBe(true);
+      }
+    });
+  });
+
+  describe("MIN_UNPAID_LIDO_PROTOCOL_FEES_TO_REPORT_YIELD_WEI", () => {
+    it("parses string values to bigint", () => {
+      const env = {
+        ...createValidEnv(),
+        MIN_UNPAID_LIDO_PROTOCOL_FEES_TO_REPORT_YIELD_WEI: "500000000000000000",
+      };
+
+      const parsed = configSchema.parse(env);
+
+      expect(parsed.MIN_UNPAID_LIDO_PROTOCOL_FEES_TO_REPORT_YIELD_WEI).toBe(500000000000000000n);
+    });
+
+    it("parses number values to bigint", () => {
+      const env = {
+        ...createValidEnv(),
+        MIN_UNPAID_LIDO_PROTOCOL_FEES_TO_REPORT_YIELD_WEI: 1000000000000000000,
+      };
+
+      const parsed = configSchema.parse(env);
+
+      expect(parsed.MIN_UNPAID_LIDO_PROTOCOL_FEES_TO_REPORT_YIELD_WEI).toBe(1000000000000000000n);
+    });
+
+    it("parses bigint values", () => {
+      const env = {
+        ...createValidEnv(),
+        MIN_UNPAID_LIDO_PROTOCOL_FEES_TO_REPORT_YIELD_WEI: 1500000000000000000n,
+      };
+
+      const parsed = configSchema.parse(env);
+
+      expect(parsed.MIN_UNPAID_LIDO_PROTOCOL_FEES_TO_REPORT_YIELD_WEI).toBe(1500000000000000000n);
+    });
+
+    it("accepts zero value", () => {
+      const env = {
+        ...createValidEnv(),
+        MIN_UNPAID_LIDO_PROTOCOL_FEES_TO_REPORT_YIELD_WEI: "0",
+      };
+
+      const parsed = configSchema.parse(env);
+
+      expect(parsed.MIN_UNPAID_LIDO_PROTOCOL_FEES_TO_REPORT_YIELD_WEI).toBe(0n);
+    });
+
+    it("rejects negative values", () => {
+      const env = {
+        ...createValidEnv(),
+        MIN_UNPAID_LIDO_PROTOCOL_FEES_TO_REPORT_YIELD_WEI: "-1",
+      };
+
+      const result = configSchema.safeParse(env);
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues.some((issue) => issue.path.join(".") === "MIN_UNPAID_LIDO_PROTOCOL_FEES_TO_REPORT_YIELD_WEI")).toBe(true);
+      }
+    });
   });
 });

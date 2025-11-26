@@ -38,6 +38,7 @@ export interface IYieldManager<TTransactionReceipt> extends IBaseContractClient 
   safeMaxAddToWithdrawalReserve(yieldProvider: Address): Promise<TTransactionReceipt | undefined>;
   getWithdrawalEventFromTxReceipt(txReceipt: TTransactionReceipt): WithdrawalEvent | undefined;
   getYieldReportFromTxReceipt(txReceipt: TTransactionReceipt): YieldReport | undefined;
+  peekYieldReport(yieldProvider: Address, l2YieldRecipient: Address): Promise<YieldReport | undefined>;
 }
 
 export interface YieldProviderData {

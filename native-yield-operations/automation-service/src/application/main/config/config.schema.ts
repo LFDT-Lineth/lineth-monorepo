@@ -55,10 +55,26 @@ export const configSchema = z
     TRIGGER_EVENT_POLL_INTERVAL_MS: z.coerce.number().int().positive(),
     // Maximum idle duration (in milliseconds) before automatically executing pending operations.
     TRIGGER_MAX_INACTION_MS: z.coerce.number().int().positive(),
-    // Whether to submit the vault accounting report. Can set to false if we expect other actors to submit.
-    SHOULD_SUBMIT_VAULT_REPORT: z.coerce.boolean(),
     // Retry delay in milliseconds between contract read attempts after failures.
     CONTRACT_READ_RETRY_TIME_MS: z.coerce.number().int().positive(),
+    // Whether to submit the vault accounting report. Can set to false if we expect other actors to submit.
+    SHOULD_SUBMIT_VAULT_REPORT: z.coerce.boolean(),
+    /** Minimum positive yield amount (in wei) required before triggering a yield report.
+     * Yield reporting will proceed if either this threshold OR MIN_UNPAID_LIDO_PROTOCOL_FEES_TO_REPORT_YIELD_WEI is met.
+     * This prevents gas-inefficient transactions for very small yield amounts.
+     */
+    MIN_POSITIVE_YIELD_TO_REPORT_WEI: z
+      .union([z.string(), z.number(), z.bigint()])
+      .transform((val) => BigInt(val))
+      .refine((v) => v >= 0n, { message: "Must be nonnegative" }),
+    /** Minimum unpaid Lido protocol fees amount (in wei) required before triggering a yield report.
+     * Yield reporting will proceed if either this threshold OR MIN_POSITIVE_YIELD_TO_REPORT_WEI is met.
+     * This prevents gas-inefficient transactions for very small fee amounts.
+     */
+    MIN_UNPAID_LIDO_PROTOCOL_FEES_TO_REPORT_YIELD_WEI: z
+      .union([z.string(), z.number(), z.bigint()])
+      .transform((val) => BigInt(val))
+      .refine((v) => v >= 0n, { message: "Must be nonnegative" }),
     /** Rebalance tolerance in basis points (1 bps = 0.01%, max 10000 bps = 100%).
      * Used to calculate tolerance band for rebalancing decisions.
      * The tolerance band is calculated as: `(totalSystemBalance * REBALANCE_TOLERANCE_BPS) / 10000`.
@@ -78,7 +94,7 @@ export const configSchema = z
       .transform((val) => BigInt(val))
       .refine((v) => v >= 0n, { message: "Must be nonnegative" }),
     /** Web3Signer service URL for transaction signing.
-     * The service signs transactions using the key specified by WEB3SIGNER_PUBLIC_KEY. 
+     * The service signs transactions using the key specified by WEB3SIGNER_PUBLIC_KEY.
      * Must be a valid HTTPS (not HTTP) URL.
      */
     WEB3SIGNER_URL: z.string().url(),

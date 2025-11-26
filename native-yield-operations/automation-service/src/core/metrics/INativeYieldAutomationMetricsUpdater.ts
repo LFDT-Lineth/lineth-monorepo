@@ -16,7 +16,11 @@ export interface INativeYieldAutomationMetricsUpdater {
 
   addReportedYieldAmount(vaultAddress: Address, amountGwei: number): void;
 
-  setCurrentNegativeYieldLastReport(vaultAddress: Address, negativeYield: number): Promise<void>;
+  setLastPeekedNegativeYieldReport(vaultAddress: Address, negativeYield: number): Promise<void>;
+
+  setLastPeekedPositiveYieldReport(vaultAddress: Address, yieldAmount: number): Promise<void>;
+
+  setLastPeekUnpaidLidoProtocolFees(vaultAddress: Address, feesAmount: number): Promise<void>;
 
   addNodeOperatorFeesPaid(vaultAddress: Address, amountGwei: number): void;
 

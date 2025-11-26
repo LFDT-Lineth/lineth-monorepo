@@ -27,9 +27,17 @@ export enum LineaNativeYieldAutomationServiceMetrics {
   // Single label `vault_address`
   ReportYieldAmountTotal = "linea_native_yield_automation_service_report_yield_amount_total",
 
-  // Gauge representing outstanding negative yield as of the last yield report
+  // Gauge representing outstanding negative yield from the last peeked yield report
   // Single label `vault_address`
-  CurrentNegativeYieldLastReport = "linea_native_yield_automation_service_current_negative_yield",
+  LastPeekedNegativeYieldReport = "linea_native_yield_automation_service_last_peeked_negative_yield_report",
+
+  // Gauge representing positive yield amount from the last peeked yield report
+  // Single label `vault_address`
+  LastPeekedPositiveYieldReport = "linea_native_yield_automation_service_last_peeked_positive_yield_report",
+
+  // Gauge representing unpaid Lido protocol fees from the last peek
+  // Single label `vault_address`
+  LastPeekUnpaidLidoProtocolFees = "linea_native_yield_automation_service_last_peek_unpaid_lido_protocol_fees",
 
   // Counter that increments by the node operator fees paid
   // Single label `vault_address`

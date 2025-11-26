@@ -61,8 +61,20 @@ export class NativeYieldAutomationMetricsUpdater implements INativeYieldAutomati
     );
 
     this.metricsService.createGauge(
-      LineaNativeYieldAutomationServiceMetrics.CurrentNegativeYieldLastReport,
-      "Outstanding negative yield as of the latest report",
+      LineaNativeYieldAutomationServiceMetrics.LastPeekedNegativeYieldReport,
+      "Outstanding negative yield from the last peeked yield report",
+      ["vault_address"],
+    );
+
+    this.metricsService.createGauge(
+      LineaNativeYieldAutomationServiceMetrics.LastPeekedPositiveYieldReport,
+      "Positive yield amount from the last peeked yield report",
+      ["vault_address"],
+    );
+
+    this.metricsService.createGauge(
+      LineaNativeYieldAutomationServiceMetrics.LastPeekUnpaidLidoProtocolFees,
+      "Unpaid Lido protocol fees from the last peek",
       ["vault_address"],
     );
 
@@ -189,18 +201,50 @@ export class NativeYieldAutomationMetricsUpdater implements INativeYieldAutomati
   }
 
   /**
-   * Sets the current outstanding negative yield as of the latest report for a specific vault.
+   * Sets the outstanding negative yield from the last peeked yield report for a specific vault.
    *
    * @param {Address} vaultAddress - The address of the vault.
    * @param {number} negativeYield - The negative yield amount. Must be non-negative to be recorded.
    * @returns {Promise<void>} A promise that resolves when the gauge is set.
    */
-  public async setCurrentNegativeYieldLastReport(vaultAddress: Address, negativeYield: number): Promise<void> {
+  public async setLastPeekedNegativeYieldReport(vaultAddress: Address, negativeYield: number): Promise<void> {
     if (negativeYield < 0) return;
     this.metricsService.setGauge(
-      LineaNativeYieldAutomationServiceMetrics.CurrentNegativeYieldLastReport,
+      LineaNativeYieldAutomationServiceMetrics.LastPeekedNegativeYieldReport,
       { vault_address: vaultAddress },
       negativeYield,
+    );
+  }
+
+  /**
+   * Sets the positive yield amount from the last peeked yield report for a specific vault.
+   *
+   * @param {Address} vaultAddress - The address of the vault.
+   * @param {number} yieldAmount - The yield amount. Must be non-negative to be recorded.
+   * @returns {Promise<void>} A promise that resolves when the gauge is set.
+   */
+  public async setLastPeekedPositiveYieldReport(vaultAddress: Address, yieldAmount: number): Promise<void> {
+    if (yieldAmount < 0) return;
+    this.metricsService.setGauge(
+      LineaNativeYieldAutomationServiceMetrics.LastPeekedPositiveYieldReport,
+      { vault_address: vaultAddress },
+      yieldAmount,
+    );
+  }
+
+  /**
+   * Sets the unpaid Lido protocol fees from the last peek for a specific vault.
+   *
+   * @param {Address} vaultAddress - The address of the vault.
+   * @param {number} feesAmount - The unpaid fees amount. Must be non-negative to be recorded.
+   * @returns {Promise<void>} A promise that resolves when the gauge is set.
+   */
+  public async setLastPeekUnpaidLidoProtocolFees(vaultAddress: Address, feesAmount: number): Promise<void> {
+    if (feesAmount < 0) return;
+    this.metricsService.setGauge(
+      LineaNativeYieldAutomationServiceMetrics.LastPeekUnpaidLidoProtocolFees,
+      { vault_address: vaultAddress },
+      feesAmount,
     );
   }
 
