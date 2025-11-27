@@ -14,7 +14,7 @@ BIN                 = 262144
 BLAKE_MODEXP_DATA   = 16384
 BLOCK_DATA          = 4096
 BLOCK_HASH          = 2048
-BLS                 = 1
+BLS_DATA            = 4096
 EC_DATA             = 262144
 EUC                 = 65536
 EXP                 = 8192
@@ -29,10 +29,10 @@ MOD                 = 131072
 MUL                 = 65536
 MXP                 = 524288
 OOB                 = 262144
-POINT_EVAL          = 1
 RLP_ADDR            = 4096
 RLP_TXN             = 131072
 RLP_TXN_RCPT        = 65536
+RLP_UTILS           = 131072
 ROM                 = 4194304
 ROM_LEX             = 1024
 SHAKIRA_DATA        = 32768
@@ -41,10 +41,6 @@ STP                 = 16384
 TRM                 = 32768
 TXN_DATA            = 8192
 WCP                 = 262144
-
-# NOTE: in the original file the limits were just shy of powers of 2, e.g. ADD = 524286
-# Question: this seemed deliberate; it could be related to spillings; if so we may want
-# to reduce all limits above by the corresponding spillings value (or 16 for simplicity)
 
 #
 # Block-specific limits
@@ -58,9 +54,6 @@ BLOCK_TRANSACTIONS = 200 # max number of tx in an L2 block
 # Precompiles limits
 # compare with https://github.com/Consensys/linea-arithmetization/issues/257
 #
-
-
-
 PRECOMPILE_ECRECOVER_EFFECTIVE_CALLS        = 128
 PRECOMPILE_SHA2_BLOCKS                      = 671
 PRECOMPILE_RIPEMD_BLOCKS                    = 671
@@ -83,16 +76,8 @@ PRECOMPILE_BLS_PAIRING_CHECK_MILLER_LOOPS = 0
 PRECOMPILE_BLS_FINAL_EXPONENTIATIONS = 0
 PRECOMPILE_BLS_MAP_FP_TO_G1_EFFECTIVE_CALLS = 0
 PRECOMPILE_BLS_MAP_FP2_TO_G2_EFFECTIVE_CALLS = 0
-PRECOMPILE_BLS_C1_MEMBERSHIP_CHECKS = 0
+PRECOMPILE_BLS_C1_MEMBERSHIP_CALLS = 0
 PRECOMPILE_BLS_C2_MEMBERSHIP_CALLS = 0
 PRECOMPILE_BLS_G1_MEMBERSHIP_CALLS = 0
 PRECOMPILE_BLS_G2_MEMBERSHIP_CALLS = 0
-# # Notes:
-# - there are no IDENTITY related limits
-# - we used to have the following limits
-#      * PRECOMPILE_SHA2_EFFECTIVE_CALLS      = 1000000
-#      * PRECOMPILE_RIPEMD_EFFECTIVE_CALLS    = 1000000
-#   (the values are nonsensical);
-#   as per Alex they are not required by the prover;
-BLS_DATA = 4096
-RLP_UTILS = 131072
+PRECOMPILE_P256_VERIFY_EFFECTIVE_CALLS = 0

@@ -12,14 +12,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.math.BigInteger;
 import java.util.List;
-import linea.plugin.acc.test.LineaPluginTestBasePrague;
+import linea.plugin.acc.test.LineaPluginPoSTestBase;
 import linea.plugin.acc.test.TestCommandLineOptionsBuilder;
 import linea.plugin.acc.test.tests.web3j.generated.DummyAdder;
 import org.hyperledger.besu.tests.acceptance.dsl.account.Account;
 import org.junit.jupiter.api.Test;
 import org.web3j.tx.gas.DefaultGasProvider;
 
-public class EstimateGasModuleLimitOverflowTest extends LineaPluginTestBasePrague {
+public class EstimateGasModuleLimitOverflowTest extends LineaPluginPoSTestBase {
   @Override
   public List<String> getTestCliOptions() {
     return new TestCommandLineOptionsBuilder()

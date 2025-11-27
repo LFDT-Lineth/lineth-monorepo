@@ -195,12 +195,14 @@ func setDefaultTracesLimit() {
 	viper.SetDefault("traces_limits.PRECOMPILE_BLS_FINAL_EXPONENTIATIONS", 0)
 	viper.SetDefault("traces_limits.PRECOMPILE_BLS_MAP_FP_TO_G1_EFFECTIVE_CALLS", 0)
 	viper.SetDefault("traces_limits.PRECOMPILE_BLS_MAP_FP2_TO_G2_EFFECTIVE_CALLS", 0)
-	viper.SetDefault("traces_limits.PRECOMPILE_BLS_C1_MEMBERSHIP_CHECKS", 0)
+	//	viper.SetDefault("traces_limits.PRECOMPILE_BLS_C1_MEMBERSHIP_CALLS", 0) // to add with 4.4
+	viper.SetDefault("traces_limits.PRECOMPILE_BLS_C1_MEMBERSHIP_CHECKS", 0) // to rm with 4.4
 	viper.SetDefault("traces_limits.PRECOMPILE_BLS_C2_MEMBERSHIP_CALLS", 0)
 	viper.SetDefault("traces_limits.PRECOMPILE_BLS_G1_MEMBERSHIP_CALLS", 0)
 	viper.SetDefault("traces_limits.PRECOMPILE_BLS_G2_MEMBERSHIP_CALLS", 0)
-	viper.SetDefault("traces_limits.BLS", 0)
-	viper.SetDefault("traces_limits.POINT_EVAL", 0)
+	// viper.SetDefault("traces_limits.PRECOMPILE_P256_VERIFY_EFFECTIVE_CALLS", 128) // to add with 4.4
+	viper.SetDefault("traces_limits.BLS", 0)        // to rm with 4.4
+	viper.SetDefault("traces_limits.POINT_EVAL", 0) // to rm with 4.4
 	viper.SetDefault("traces_limits.BLS_DATA", 4096)
 	viper.SetDefault("traces_limits.RLP_UTILS", 131072)
 	viper.SetDefault("traces_limits.POWER_REFERENCE_TABLE", 32)
@@ -345,12 +347,14 @@ func setDefaultTracesLimit() {
 	viper.SetDefault("traces_limits_large.PRECOMPILE_BLS_FINAL_EXPONENTIATIONS", 0)
 	viper.SetDefault("traces_limits_large.PRECOMPILE_BLS_MAP_FP_TO_G1_EFFECTIVE_CALLS", 0)
 	viper.SetDefault("traces_limits_large.PRECOMPILE_BLS_MAP_FP2_TO_G2_EFFECTIVE_CALLS", 0)
-	viper.SetDefault("traces_limits_large.PRECOMPILE_BLS_C1_MEMBERSHIP_CHECKS", 0)
+	// viper.SetDefault("traces_limits_large.PRECOMPILE_BLS_C1_MEMBERSHIP_CALLS", 0) // to add with 4.4
+	viper.SetDefault("traces_limits_large.PRECOMPILE_BLS_C1_MEMBERSHIP_CHECKS", 0) // to rm with 4.4
 	viper.SetDefault("traces_limits_large.PRECOMPILE_BLS_C2_MEMBERSHIP_CALLS", 0)
 	viper.SetDefault("traces_limits_large.PRECOMPILE_BLS_G1_MEMBERSHIP_CALLS", 0)
 	viper.SetDefault("traces_limits_large.PRECOMPILE_BLS_G2_MEMBERSHIP_CALLS", 0)
-	viper.SetDefault("traces_limits_large.BLS", 0)
-	viper.SetDefault("traces_limits_large.POINT_EVAL", 0)
+	// viper.SetDefault("traces_limits_large.PRECOMPILE_P256_VERIFY_EFFECTIVE_CALLS", 256) // to add with 4.4
+	viper.SetDefault("traces_limits_large.BLS", 0)        // to rm with 4.4
+	viper.SetDefault("traces_limits_large.POINT_EVAL", 0) // to rm with 4.4
 	viper.SetDefault("traces_limits_large.BLS_DATA", 8192)
 	viper.SetDefault("traces_limits_large.RLP_UTILS", 262144)
 	viper.SetDefault("traces_limits_large.POWER_REFERENCE_TABLE", 32)

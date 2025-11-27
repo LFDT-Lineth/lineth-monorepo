@@ -28,7 +28,7 @@ import org.web3j.protocol.Web3j;
  * Tests that verify the LineaTransactionValidationPlugin correctly rejects EIP7702 DELEGATE_CODE
  * transactions from being executed
  */
-public class EIP7702TransactionDenialTest extends LineaPluginTestBasePrague {
+public class EIP7702TransactionDenialTest extends LineaPluginPoSTestBase {
   private Web3j web3j;
   private Credentials credentials;
   private String recipient;

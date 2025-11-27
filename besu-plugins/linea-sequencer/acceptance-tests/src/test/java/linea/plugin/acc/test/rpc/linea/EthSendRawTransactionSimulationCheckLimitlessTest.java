@@ -17,7 +17,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.IntStream;
-import linea.plugin.acc.test.LineaPluginTestBasePrague;
+import linea.plugin.acc.test.LineaPluginPoSTestBase;
 import linea.plugin.acc.test.TestCommandLineOptionsBuilder;
 import linea.plugin.acc.test.tests.web3j.generated.ExcludedPrecompiles;
 import linea.plugin.acc.test.tests.web3j.generated.RevertExample;
@@ -36,7 +36,7 @@ import org.web3j.protocol.core.methods.response.EthSendTransaction;
 import org.web3j.tx.gas.DefaultGasProvider;
 import org.web3j.utils.Numeric;
 
-public class EthSendRawTransactionSimulationCheckLimitlessTest extends LineaPluginTestBasePrague {
+public class EthSendRawTransactionSimulationCheckLimitlessTest extends LineaPluginPoSTestBase {
   private static final BigInteger GAS_LIMIT = DefaultGasProvider.GAS_LIMIT;
   private static final BigInteger VALUE = BigInteger.ZERO;
   private static final BigInteger GAS_PRICE = BigInteger.TEN.pow(9);
@@ -128,10 +128,10 @@ public class EthSendRawTransactionSimulationCheckLimitlessTest extends LineaPlug
           excludedPrecompiles
               .callRIPEMD160("I am not allowed here".getBytes(StandardCharsets.UTF_8))
               .encodeFunctionCall(),
-          "Transaction 0x35451c83b480b45df19105a30f22704df8750b7e328e1ebc646e6442f2f426f9 line count for module PRECOMPILE_RIPEMD_BLOCKS=2147483647 is above the limit 671"),
+          "Transaction 0x35451c83b480b45df19105a30f22704df8750b7e328e1ebc646e6442f2f426f9 line count for module PRECOMPILE_RIPEMD_BLOCKS=21 is above the limit 0"),
       new InvalidCall(
           encodedCallBlake2F(excludedPrecompiles),
-          "Transaction 0xfd447b2b688f7448c875f68d9c85ffcb976e1cc722b70dae53e4f2e30d871be8 line count for module PRECOMPILE_BLAKE_EFFECTIVE_CALLS=2147483647 is above the limit 0")
+          "Transaction 0xfd447b2b688f7448c875f68d9c85ffcb976e1cc722b70dae53e4f2e30d871be8 line count for module PRECOMPILE_BLAKE_EFFECTIVE_CALLS=1 is above the limit 0")
     };
 
     Arrays.stream(invalidCalls)

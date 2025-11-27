@@ -21,7 +21,6 @@ import net.consensys.linea.contract.l1.GenesisStateProvider
 import net.consensys.linea.jsonrpc.client.VertxHttpJsonRpcClientFactory
 import net.consensys.linea.metrics.LineaMetricsCategory
 import net.consensys.linea.metrics.MetricsFacade
-import net.consensys.linea.traces.TracesCountersV2
 import net.consensys.zkevm.coordinator.app.conflation.ConflationAppHelper.cleanupDbDataAfterBlockNumbers
 import net.consensys.zkevm.coordinator.app.conflation.ConflationAppHelper.resumeAggregationFrom
 import net.consensys.zkevm.coordinator.app.conflation.ConflationAppHelper.resumeConflationFrom
@@ -134,7 +133,7 @@ class ConflationApp(
       lastBlockNumber = lastProcessedBlockNumber,
       syncCalculators = createCalculatorsForBlobsAndConflation(logger, compressedBlobCalculator),
       deferredTriggerConflationCalculators = listOfNotNull(deadlineConflationCalculatorRunner),
-      emptyTracesCounters = TracesCountersV2.Companion.EMPTY_TRACES_COUNT,
+      emptyTracesCounters = configs.conflation.tracesLimits.emptyTracesCounters,
       log = logger,
     )
 
@@ -305,6 +304,7 @@ class ConflationApp(
       vertx = vertx,
       rpcClientFactory = httpJsonRpcClientFactory,
       configs = configs.traces,
+      fallBackTracesCounters = configs.conflation.tracesLimits.emptyTracesCounters,
     )
 
     val blobsConflationHandler: (BlocksConflation) -> SafeFuture<*> = run {
@@ -530,8 +530,8 @@ class ConflationApp(
     val calculators: MutableList<ConflationCalculator> =
       mutableListOf(
         ConflationCalculatorByExecutionTraces(
-          tracesCountersLimit = configs.conflation.tracesLimitsV2,
-          emptyTracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT,
+          tracesCountersLimit = configs.conflation.tracesLimits,
+          emptyTracesCounters = configs.conflation.tracesLimits.emptyTracesCounters,
           metricsFacade = metricsFacade,
           log = logger,
         ),

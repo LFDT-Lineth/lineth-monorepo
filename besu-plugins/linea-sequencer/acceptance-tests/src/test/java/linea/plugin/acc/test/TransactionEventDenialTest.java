@@ -30,7 +30,7 @@ import org.web3j.protocol.core.Request;
 import org.web3j.tx.RawTransactionManager;
 import org.web3j.tx.TransactionManager;
 
-public class TransactionEventDenialTest extends LineaPluginTestBasePrague {
+public class TransactionEventDenialTest extends LineaPluginPoSTestBase {
 
   private static final BigInteger GAS_PRICE = BigInteger.TEN.pow(9);
   private static final BigInteger GAS_LIMIT = BigInteger.valueOf(210_000);

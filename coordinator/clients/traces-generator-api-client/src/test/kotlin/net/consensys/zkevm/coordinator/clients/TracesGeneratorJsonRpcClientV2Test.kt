@@ -35,7 +35,6 @@ import org.junit.jupiter.api.extension.ExtendWith
 import java.net.URI
 import java.net.URL
 import java.util.concurrent.ExecutionException
-import kotlin.collections.set
 import kotlin.random.Random
 import kotlin.random.nextUInt
 import kotlin.time.Duration.Companion.milliseconds
@@ -86,6 +85,7 @@ class TracesGeneratorJsonRpcClientV2Test {
       vertxHttpJsonRpcClient,
       TracesGeneratorJsonRpcClientV2.Config(
         expectedTracesApiVersion = expectedTracesApiVersion,
+        fallBackTracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT,
       ),
     )
   }
@@ -433,6 +433,7 @@ class TracesGeneratorJsonRpcClientV2Test {
       vertxHttpJsonRpcClient,
       TracesGeneratorJsonRpcClientV2.Config(
         expectedTracesApiVersion = expectedTracesApiVersion,
+        fallBackTracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT,
       ),
     )
 
@@ -477,6 +478,7 @@ class TracesGeneratorJsonRpcClientV2Test {
       TracesGeneratorJsonRpcClientV2.Config(
         expectedTracesApiVersion = expectedTracesApiVersion,
         ignoreTracesGeneratorErrors = true,
+        fallBackTracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT,
       ),
     )
 

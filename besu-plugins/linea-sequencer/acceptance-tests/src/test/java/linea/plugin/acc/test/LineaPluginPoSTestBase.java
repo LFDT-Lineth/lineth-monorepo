@@ -73,7 +73,7 @@ import org.web3j.utils.Numeric;
 // This file initializes a Besu node configured for the Prague fork and makes it available to
 // acceptance tests.
 @Slf4j
-public abstract class LineaPluginTestBasePrague extends LineaPluginTestBase {
+public abstract class LineaPluginPoSTestBase extends LineaPluginTestBase {
   private EngineAPIService engineApiService;
   protected ObjectMapper mapper;
 
@@ -89,7 +89,7 @@ public abstract class LineaPluginTestBasePrague extends LineaPluginTestBase {
 
   // Override this in subclasses to use a different genesis file template
   protected String getGenesisFileTemplatePath() {
-    return "/clique/clique-prague-no-blobs.json.tpl";
+    return "/clique/clique-to-pos.json.tpl";
   }
 
   @BeforeEach

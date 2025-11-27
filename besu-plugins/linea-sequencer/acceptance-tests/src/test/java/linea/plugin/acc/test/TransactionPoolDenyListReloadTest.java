@@ -28,7 +28,7 @@ import org.web3j.protocol.core.methods.response.EthSendTransaction;
 import org.web3j.tx.RawTransactionManager;
 import org.web3j.utils.Convert;
 
-public class TransactionPoolDenyListReloadTest extends LineaPluginTestBasePrague {
+public class TransactionPoolDenyListReloadTest extends LineaPluginPoSTestBase {
 
   private static final BigInteger GAS_PRICE = Convert.toWei("20", Convert.Unit.GWEI).toBigInteger();
   private static final BigInteger GAS_LIMIT = BigInteger.valueOf(210000);

@@ -15,7 +15,9 @@ import net.consensys.linea.jsonrpc.client.JsonRpcClient
 import net.consensys.linea.jsonrpc.client.JsonRpcRequestRetryer
 import net.consensys.linea.jsonrpc.client.RequestRetryConfig
 import net.consensys.linea.jsonrpc.isSuccess
+import net.consensys.linea.traces.TracesCounters
 import net.consensys.linea.traces.TracesCountersV2
+import net.consensys.linea.traces.TracesCountersV4
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture
@@ -48,6 +50,7 @@ class TracesGeneratorJsonRpcClientV2(
   data class Config(
     val expectedTracesApiVersion: String,
     val ignoreTracesGeneratorErrors: Boolean = false,
+    val fallBackTracesCounters: TracesCounters,
   )
 
   private var requestBuilder = RequestBuilder(config.expectedTracesApiVersion)
@@ -59,7 +62,11 @@ class TracesGeneratorJsonRpcClientV2(
 
     return executeWithFallback(
       jsonRequest,
-      TracesClientResponsesParser::parseTracesCounterResponseV2,
+      when (config.fallBackTracesCounters) {
+        is TracesCountersV2 -> TracesClientResponsesParser::parseTracesCounterResponseV2
+        is TracesCountersV4 -> TracesClientResponsesParser::parseTracesCounterResponseV4
+        else -> throw IllegalStateException("Unsupported TracesCounters version")
+      },
     ) { createFallbackTracesCountersResponse() }
   }
 
@@ -79,7 +86,7 @@ class TracesGeneratorJsonRpcClientV2(
 
   private fun createFallbackTracesCountersResponse(): GetTracesCountersResponse {
     return GetTracesCountersResponse(
-      tracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT,
+      tracesCounters = config.fallBackTracesCounters,
       tracesEngineVersion = config.expectedTracesApiVersion,
     )
   }
@@ -105,7 +112,7 @@ class TracesGeneratorJsonRpcClientV2(
         .thenApply { responseResult ->
           val result = responseResult.mapEither(
             responseParser,
-            TracesClientResponsesParser::mapErrorResponseV2,
+            TracesClientResponsesParser::mapErrorResponse,
           )
           if (config.ignoreTracesGeneratorErrors && !result.isSuccess()) {
             Ok(fallbackResponseProvider())

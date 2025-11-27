@@ -16,9 +16,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 import linea.plugin.acc.test.tests.web3j.generated.ExcludedPrecompiles;
-import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
-import org.hyperledger.besu.tests.acceptance.dsl.account.Account;
 import org.hyperledger.besu.tests.acceptance.dsl.account.Accounts;
 import org.junit.jupiter.api.Test;
 import org.web3j.abi.datatypes.generated.Bytes8;
@@ -31,7 +29,7 @@ import org.web3j.protocol.core.methods.response.EthSendTransaction;
 import org.web3j.tx.gas.DefaultGasProvider;
 import org.web3j.utils.Numeric;
 
-public class ExcludedPrecompilesLimitlessTest extends LineaPluginTestBasePrague {
+public class ExcludedPrecompilesLimitlessTest extends LineaPluginPoSTestBase {
   private static final BigInteger GAS_LIMIT = DefaultGasProvider.GAS_LIMIT;
   private static final BigInteger GAS_PRICE = DefaultGasProvider.GAS_PRICE;
 
@@ -73,12 +71,12 @@ public class ExcludedPrecompilesLimitlessTest extends LineaPluginTestBasePrague 
           excludedPrecompiles
               .callRIPEMD160("I am not allowed here".getBytes(StandardCharsets.UTF_8))
               .encodeFunctionCall(),
-          "Tx 0xe4648fd59d4289e59b112bf60931336440d306c85c2aac5a8b0c64ab35bc55b7 line count for module PRECOMPILE_RIPEMD_BLOCKS=2147483647 is above the limit 671"),
+          "Tx 0xe4648fd59d4289e59b112bf60931336440d306c85c2aac5a8b0c64ab35bc55b7 line count for module PRECOMPILE_RIPEMD_BLOCKS=21 is above the limit 0"),
       new InvalidCall(
           Accounts.GENESIS_ACCOUNT_TWO_PRIVATE_KEY,
           0,
           encodedCallBlake2F(excludedPrecompiles),
-          "Tx 0x9f457b1b5244b03c54234f7f9e8225d4253135dd3c99a46dc527d115e7ea5dac line count for module PRECOMPILE_BLAKE_EFFECTIVE_CALLS=2147483647 is above the limit 0")
+          "Tx 0x9f457b1b5244b03c54234f7f9e8225d4253135dd3c99a46dc527d115e7ea5dac line count for module PRECOMPILE_BLAKE_EFFECTIVE_CALLS=1 is above the limit 0")
     };
 
     final var invalidTxHashes =
@@ -134,78 +132,6 @@ public class ExcludedPrecompilesLimitlessTest extends LineaPluginTestBasePrague 
     // verify trace log contains the exclusion cause
     Arrays.stream(invalidCalls)
         .forEach(invalidCall -> assertThat(log).contains(invalidCall.expectedTraceLog));
-  }
-
-  @Test
-  public void invalidModExpCallsAreNotMined() throws Exception {
-    final var modExp = deployModExp();
-
-    final var modExpSenders = new Account[3];
-    final var foundTxHashes = new String[3];
-    for (int i = 0; i < 3; i++) {
-      modExpSenders[i] = accounts.createAccount("sender" + i);
-      foundTxHashes[i] =
-          accountTransactions
-              .createTransfer(
-                  accounts.getSecondaryBenefactor(), modExpSenders[i], 1, BigInteger.valueOf(i))
-              .execute(minerNode.nodeRequests())
-              .toHexString();
-    }
-    Arrays.stream(foundTxHashes)
-        .forEach(
-            fundTxHash -> minerNode.verify(eth.expectSuccessfulTransactionReceipt(fundTxHash)));
-
-    final Bytes[][] invalidInputs = {
-      {Bytes.fromHexString("0000000000000000000000000000000000000000000000000000000000000201")},
-      {
-        Bytes.fromHexString("00000000000000000000000000000000000000000000000000000000000003"),
-        Bytes.fromHexString("ff")
-      },
-      {
-        Bytes.fromHexString("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
-        Bytes.fromHexString("00000000000000000000000000000000000000000000000000000000000003"),
-        Bytes.fromHexString("ff")
-      }
-    };
-
-    for (int i = 0; i < invalidInputs.length; i++) {
-      final var invalidCallTxHashes = new String[invalidInputs[i].length];
-      for (int j = 0; j < invalidInputs[i].length; j++) {
-
-        // use always the same nonce since we expect this tx not to be mined
-        final var mulmodOverflow =
-            encodedCallModExp(modExp, modExpSenders[j], 0, invalidInputs[i][j]);
-
-        final Web3j web3j = minerNode.nodeRequests().eth();
-        final EthSendTransaction resp =
-            web3j.ethSendRawTransaction(Numeric.toHexString(mulmodOverflow)).send();
-        invalidCallTxHashes[j] = resp.getTransactionHash();
-      }
-
-      // transfer used as sentry to ensure a new block is mined without the invalid modexp call
-      final var transferTxHash =
-          accountTransactions
-              .createTransfer(
-                  accounts.getPrimaryBenefactor(),
-                  accounts.getSecondaryBenefactor(),
-                  1,
-                  BigInteger.valueOf(i + 1))
-              .execute(minerNode.nodeRequests());
-
-      // sentry is mined and the invalid modexp txs are not
-      minerNode.verify(eth.expectSuccessfulTransactionReceipt(transferTxHash.toHexString()));
-      final var blockLog = getAndResetLog();
-      Arrays.stream(invalidCallTxHashes)
-          .forEach(
-              invalidCallTxHash -> {
-                minerNode.verify(eth.expectNoTransactionReceipt(invalidCallTxHash));
-                assertThat(blockLog)
-                    .contains(
-                        "Tx "
-                            + invalidCallTxHash
-                            + " line count for module PRECOMPILE_MODEXP_EFFECTIVE_CALLS=2147483647 is above the limit 4, removing from the txpool");
-              });
-    }
   }
 
   private String encodedCallBlake2F(final ExcludedPrecompiles excludedPrecompiles) {

@@ -28,17 +28,10 @@ import org.web3j.protocol.core.methods.response.EthSendTransaction;
  * Tests that verify the LineaTransactionValidationPlugin correctly rejects BLOB transactions from
  * being executed
  */
-public class BlobTransactionDenialTest extends LineaPluginTestBasePrague {
+public class BlobTransactionDenialTest extends LineaPluginPoSTestBase {
   private Web3j web3j;
   private Credentials credentials;
   private String recipient;
-
-  @Override
-  protected String getGenesisFileTemplatePath() {
-    // We cannot use clique-prague-zero-blobs because `config.blobSchedule.prague.max = 0` will
-    // block all blob txs
-    return "/clique/clique-prague-one-blob.json.tpl";
-  }
 
   @Override
   @BeforeEach

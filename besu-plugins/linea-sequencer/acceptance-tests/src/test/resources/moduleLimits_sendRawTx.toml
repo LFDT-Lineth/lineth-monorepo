@@ -14,8 +14,7 @@ ADD                 = 247
 BIN                 = 262144
 BLAKE_MODEXP_DATA   = 262144
 BLOCK_DATA          = 28
-BLOCK_HASH          = 6
-BLS                 = 1
+BLOCK_HASH          = 2048
 EC_DATA             = 4096
 EUC                 = 16384 # can probably be lower
 EXP                 = 32760
@@ -27,7 +26,6 @@ MMU                 = 524288
 MOD                 = 23
 MUL                 = 20
 MXP                 = 2000
-PHONEY_RLP          = 65536 # can probably get lower
 ROM                 = 3009
 ROM_LEX             = 20
 SHF                 = 63
@@ -43,7 +41,6 @@ TXN_DATA            = 30
 SHAKIRA_DATA        = 262144
 STP                 = 20
 OOB                 = 262144
-POINT_EVAL          = 1
 
 #
 # Block-specific limits
@@ -79,10 +76,11 @@ PRECOMPILE_BLS_PAIRING_CHECK_MILLER_LOOPS = 0
 PRECOMPILE_BLS_FINAL_EXPONENTIATIONS = 0
 PRECOMPILE_BLS_MAP_FP_TO_G1_EFFECTIVE_CALLS = 0
 PRECOMPILE_BLS_MAP_FP2_TO_G2_EFFECTIVE_CALLS = 0
-PRECOMPILE_BLS_C1_MEMBERSHIP_CHECKS = 0
+PRECOMPILE_BLS_C1_MEMBERSHIP_CALLS = 0
 PRECOMPILE_BLS_C2_MEMBERSHIP_CALLS = 0
 PRECOMPILE_BLS_G1_MEMBERSHIP_CALLS = 0
 PRECOMPILE_BLS_G2_MEMBERSHIP_CALLS = 0
+PRECOMPILE_P256_VERIFY_EFFECTIVE_CALLS = 0
 
 BLS_DATA = 8192
 RLP_UTILS = 1800

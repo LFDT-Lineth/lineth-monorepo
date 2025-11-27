@@ -5,6 +5,7 @@ import linea.coordinator.config.v2.toml.loadConfigs
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import picocli.CommandLine
+import picocli.CommandLine.ArgGroup
 import picocli.CommandLine.Command
 import picocli.CommandLine.Parameters
 import java.io.File
@@ -29,13 +30,26 @@ internal constructor(private val errorWriter: PrintWriter, private val startActi
   @Parameters(paramLabel = "CONFIG.toml", description = ["Configuration files"])
   private val configFiles: List<File>? = null
 
-  @CommandLine.Option(
-    names = ["--traces-limits-v2"],
-    paramLabel = "<FILE>",
-    description = ["Prover traces limits for linea besu"],
-    arity = "1",
-  )
-  private val tracesLimitsV2File: File? = null
+  @ArgGroup(multiplicity = "1", exclusive = true, validate = true)
+  private var tracesLimitsFiles: TracesLimitsFiles? = null
+
+  class TracesLimitsFiles {
+    @CommandLine.Option(
+      names = ["--traces-limits-v2"],
+      paramLabel = "<FILE>",
+      description = ["Prover traces limits V2 for linea besu"],
+      required = false,
+    )
+    var tracesLimitsV2File: File? = null
+
+    @CommandLine.Option(
+      names = ["--traces-limits-v4"],
+      paramLabel = "<FILE>",
+      description = ["Prover traces limits V4 for linea besu"],
+      required = false,
+    )
+    var tracesLimitsV4File: File? = null
+  }
 
   @CommandLine.Option(
     names = ["--smart-contract-errors"],
@@ -68,8 +82,8 @@ internal constructor(private val errorWriter: PrintWriter, private val startActi
         printUsage(errorWriter)
         return 1
       }
-      if (tracesLimitsV2File == null) {
-        errorWriter.println("Please provide traces-limits-v2 file!")
+      if (tracesLimitsFiles!!.tracesLimitsV2File == null && tracesLimitsFiles!!.tracesLimitsV4File == null) {
+        errorWriter.println("Please provide a traces-limits file!")
         printUsage(errorWriter)
         return 1
       }
@@ -92,7 +106,8 @@ internal constructor(private val errorWriter: PrintWriter, private val startActi
 
       val configs = loadConfigs(
         coordinatorConfigFiles = configFiles.map { it.toPath() },
-        tracesLimitsFileV2 = tracesLimitsV2File.toPath(),
+        tracesLimitsFileV2 = tracesLimitsFiles!!.tracesLimitsV2File?.toPath(),
+        tracesLimitsFileV4 = tracesLimitsFiles!!.tracesLimitsV4File?.toPath(),
         smartContractErrorsFile = smartContractErrorsFile.toPath(),
         gasPriceCapTimeOfDayMultipliersFile = gasPriceCapTimeOfDayMultipliersFile.toPath(),
         logger = logger,

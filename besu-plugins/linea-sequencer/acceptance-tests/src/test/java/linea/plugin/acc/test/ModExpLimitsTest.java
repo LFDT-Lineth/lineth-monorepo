@@ -24,7 +24,7 @@ import org.web3j.protocol.Web3j;
 import org.web3j.protocol.core.methods.response.EthSendTransaction;
 import org.web3j.utils.Numeric;
 
-public class ModExpLimitsTest extends LineaPluginTestBasePrague {
+public class ModExpLimitsTest extends LineaPluginPoSTestBase {
 
   @Override
   public List<String> getTestCliOptions() {

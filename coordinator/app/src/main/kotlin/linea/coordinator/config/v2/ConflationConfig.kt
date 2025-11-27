@@ -3,7 +3,7 @@ package linea.coordinator.config.v2
 import kotlinx.datetime.Instant
 import linea.blob.BlobCompressorVersion
 import linea.domain.RetryConfig
-import net.consensys.linea.traces.TracesCountersV2
+import net.consensys.linea.traces.TracesCounters
 import java.net.URL
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
@@ -27,7 +27,7 @@ data class ConflationConfig(
   val l2GetLogsEndpoint: URL,
   val blobCompression: BlobCompression = BlobCompression(),
   val proofAggregation: ProofAggregation = ProofAggregation(),
-  val tracesLimitsV2: TracesCountersV2,
+  val tracesLimits: TracesCounters,
 ) : FeatureToggle {
   data class BlobCompression(
     val blobSizeLimit: UInt = 102400u,

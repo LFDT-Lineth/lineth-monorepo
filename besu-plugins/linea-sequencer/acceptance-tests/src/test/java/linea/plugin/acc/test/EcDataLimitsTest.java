@@ -34,7 +34,7 @@ import org.web3j.protocol.Web3j;
 import org.web3j.protocol.core.methods.response.EthSendTransaction;
 import org.web3j.utils.Numeric;
 
-public class EcDataLimitsTest extends LineaPluginTestBasePrague {
+public class EcDataLimitsTest extends LineaPluginPoSTestBase {
 
   @Override
   public List<String> getTestCliOptions() {
