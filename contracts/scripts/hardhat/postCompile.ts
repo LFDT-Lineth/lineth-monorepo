@@ -7,11 +7,12 @@ import Diff from "diff";
 const UNCHANGED_COLOR = "grey";
 const MAX_UNCHANGED_PART_LEN = 100;
 
-const EXPOSED_CONTRACTS = ["L2MessageService", "LineaRollup", "TimeLock"];
+const EXPOSED_CONTRACTS = ["L2MessageService", "LineaRollup", "TimeLock", "Validium"];
 const CONTRACT_OUPUT_ABIS: { [contractName: string]: string } = {
   L2MessageService: "L2MessageServiceV1.0.abi",
   LineaRollup: "LineaRollupV6.0.abi", // next version
   TimeLock: "TimeLock.abi",
+  Validium: "ValidiumV1.0.abi",
 };
 
 async function main() {

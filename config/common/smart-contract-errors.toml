@@ -42,6 +42,10 @@
 "5e3fd6ad" = "ProofLengthDifferentThanMerkleDepth"
 "37ed32e8" = "ReentrantCall"
 "6dfcc650" = "SafeCastOverflowedUintDowncast"
+"c77b964c" = "ParentShnarfNotSubmitted"
+"e69adeca" = "ShnarfAlreadySubmitted"
+"87fb99b3" = "ShnarfSubmissionIsZeroHash"
+"f9069dd8" = "FinalStateRootHashIsZeroHash"
 
 # L2 Message Service
 # Generated from `npx ts-node contracts/scripts/operational/getSmartContractErrorsFromABI.ts contracts/local-deployments-artifacts/deployed-artifacts/L2MessageServiceV1-Deployed-2024-12-03.json`

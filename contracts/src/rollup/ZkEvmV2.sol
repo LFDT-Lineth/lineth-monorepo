@@ -2,7 +2,7 @@
 pragma solidity ^0.8.30;
 
 import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import { L1MessageServiceV1 } from "../messaging/l1/v1/L1MessageServiceV1.sol";
+import { L1MessageServiceBase } from "../messaging/l1/L1MessageServiceBase.sol";
 import { IZkEvmV2 } from "./interfaces/IZkEvmV2.sol";
 import { IPlonkVerifier } from "../verifiers/interfaces/IPlonkVerifier.sol";
 /**
@@ -10,7 +10,7 @@ import { IPlonkVerifier } from "../verifiers/interfaces/IPlonkVerifier.sol";
  * @author ConsenSys Software Inc.
  * @custom:security-contact security-report@linea.build
  */
-abstract contract ZkEvmV2 is AccessControlUpgradeable, L1MessageServiceV1, IZkEvmV2 {
+abstract contract ZkEvmV2 is AccessControlUpgradeable, L1MessageServiceBase, IZkEvmV2 {
   uint256 internal constant MODULO_R = 21888242871839275222246405745257275088548364400416034343698204186575808495617;
   bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
 

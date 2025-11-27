@@ -2,7 +2,7 @@
 pragma solidity ^0.8.30;
 
 import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import { L1MessageServiceV1 } from "./v1/L1MessageServiceV1.sol";
+import { L1MessageServiceBase } from "./L1MessageServiceBase.sol";
 import { L1MessageManager } from "./L1MessageManager.sol";
 import { IL1MessageService } from "./interfaces/IL1MessageService.sol";
 import { IGenericErrors } from "../../interfaces/IGenericErrors.sol";
@@ -16,7 +16,7 @@ import { MessageHashing } from "../libraries/MessageHashing.sol";
  */
 abstract contract L1MessageService is
   AccessControlUpgradeable,
-  L1MessageServiceV1,
+  L1MessageServiceBase,
   L1MessageManager,
   IL1MessageService,
   IGenericErrors
