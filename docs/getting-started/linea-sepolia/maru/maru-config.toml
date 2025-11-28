@@ -1,9 +1,10 @@
 # Uncomment the below [linea] section for finalized L2 block tag
 # [linea]
 # contract-address = "0xB218f8A4Bc926cF1cA7b3423c154a0D627Bdb7E5"
-# l1-eth-api = { endpoint = "please provide an L1 RPC endpoint here" }
+# l1-eth-api = { endpoint = "please_provide_an_L1_RPC_endpoint_here" }
 # l1-polling-interval = "6 seconds"
 # l1-highest-block-tag = "finalized"
+# l2-eth-api-endpoint = { endpoint = "please_provide_an_L2_RPC_endpoint_here" }
 
 [persistence]
 data-path = "/opt/maru/data"

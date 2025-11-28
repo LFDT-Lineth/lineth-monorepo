@@ -1,7 +1,7 @@
 # Uncomment the below [linea] section for finalized L2 block tag
 # [linea]
 # contract-address = "0xd19d4B5d358258f05D7B411E21A1460D11B0876F"
-# l1-eth-api = { endpoint = "please provide an L1 RPC endpoint here" }
+# l1-eth-api = { endpoint = "please_provide_an_L1_RPC_endpoint_here" }
 # l1-polling-interval = "6 seconds"
 # l1-highest-block-tag = "finalized"
 
