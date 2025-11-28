@@ -1,11 +1,11 @@
 package linea.coordinator.config.v2
 
+import kotlinx.datetime.Instant
 import linea.coordinator.config.v2.toml.ConflationToml
 import linea.coordinator.config.v2.toml.parseConfig
 import linea.kotlin.toURL
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import java.time.Instant
 import kotlin.time.Duration.Companion.seconds
 
 class ConflationParsingTest {
@@ -21,6 +21,9 @@ class ConflationParsingTest {
       l2-endpoint = "http://l2-node-1:8545"
       l2-logs-endpoint = "http://l2-node-2:8545"
       consistent-number-of-blocks-on-l1-to-wait = 1
+      force-stop-conflation-at-block-inclusive = 5000
+      force-stop-conflation-at-block-timestamp-inclusive= 1758083130
+
 
       [conflation.blob-compression]
       blob-size-limit = 102_400 # 100KB
@@ -49,6 +52,8 @@ class ConflationParsingTest {
       l2Endpoint = "http://l2-node-1:8545".toURL(),
       l2LogsEndpoint = "http://l2-node-2:8545".toURL(),
       consistentNumberOfBlocksOnL1ToWait = 1u,
+      forceStopConflationAtBlockInclusive = 5000u,
+      forceStopConflationAtBlockTimestampInclusive = Instant.fromEpochSeconds(1758083130),
       blobCompression = ConflationToml.BlobCompressionToml(
         blobSizeLimit = 102_400U,
         handlerPollingInterval = 1.seconds,
@@ -64,7 +69,7 @@ class ConflationParsingTest {
         timestampBasedHardForks = listOf(
           Instant.parse("2024-01-15T12:00:00Z"),
           Instant.parse("2024-06-01T16:00:00Z"),
-          Instant.ofEpochMilli(1758083127L),
+          Instant.fromEpochSeconds(1758083127L),
         ),
         waitForNoL2ActivityToTriggerAggregation = true,
       ),

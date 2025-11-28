@@ -3,17 +3,18 @@ package net.consensys.zkevm.coordinator.blockcreation
 import build.linea.s11n.jackson.ethApiObjectMapper
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
+import kotlinx.datetime.Clock
+import kotlinx.datetime.Instant
 import linea.domain.Block
 import linea.domain.createBlock
 import linea.domain.toEthGetBlockResponse
+import linea.ethapi.EthApiClient
 import linea.jsonrpc.TestingJsonRpcServer
 import linea.kotlin.ByteArrayExt
 import linea.kotlin.toHexString
 import linea.kotlin.toULongFromHex
 import linea.log4j.configureLoggers
-import linea.web3j.ExtendedWeb3J
-import linea.web3j.ExtendedWeb3JImpl
-import linea.web3j.createWeb3jHttpClient
+import linea.web3j.ethapi.createEthApiClient
 import net.consensys.linea.async.get
 import net.consensys.zkevm.ethereum.coordination.blockcreation.BlockCreated
 import net.consensys.zkevm.ethereum.coordination.blockcreation.BlockCreationListener
@@ -31,6 +32,7 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toJavaDuration
@@ -38,7 +40,7 @@ import kotlin.time.toJavaDuration
 @ExtendWith(VertxExtension::class)
 class BlockCreationMonitorTest {
   private lateinit var log: Logger
-  private lateinit var web3jClient: ExtendedWeb3J
+  private lateinit var ethApiClient: EthApiClient
   private lateinit var blockCreationListener: BlockCreationListenerDouble
   private var config: BlockCreationMonitor.Config =
     BlockCreationMonitor.Config(
@@ -78,7 +80,7 @@ class BlockCreationMonitorTest {
   ): BlockCreationMonitor {
     return BlockCreationMonitor(
       this.vertx,
-      web3jClient,
+      ethApiClient,
       startingBlockNumberExclusive = startingBlockNumberExclusive,
       blockCreationListener,
       lastProvenBlockNumberProvider,
@@ -98,11 +100,10 @@ class BlockCreationMonitorTest {
       responseObjectMapper = ethApiObjectMapper,
     )
     blockCreationListener = BlockCreationListenerDouble()
-    web3jClient = ExtendedWeb3JImpl(
-      createWeb3jHttpClient(
-        rpcUrl = "http://localhost:${fakeL2RpcNode.boundPort}",
-        log = LogManager.getLogger("test.client.l2.web3j"),
-      ),
+
+    ethApiClient = createEthApiClient(
+      rpcUrl = "http://localhost:${fakeL2RpcNode.boundPort}",
+      log = LogManager.getLogger("test.client.l2.web3j"),
     )
     lastProvenBlockNumberProvider = LastProvenBlockNumberProviderDouble(99u)
   }
@@ -118,17 +119,22 @@ class BlockCreationMonitorTest {
     numberOfBlocks: Int,
     startBlockHash: ByteArray = ByteArrayExt.random32(),
     startBlockParentHash: ByteArray = ByteArrayExt.random32(),
+    startTime: Instant = Clock.System.now(),
+    blockTime: Duration = 1.seconds,
   ): List<Block> {
     var blockHash = startBlockHash
     var parentHash = startBlockParentHash
+    var timestamp = startTime
     return (0..numberOfBlocks).map { i ->
       createBlock(
         number = startBlockNumber + i.toULong(),
         hash = blockHash,
         parentHash = parentHash,
+        timestamp = timestamp,
       ).also {
         blockHash = ByteArrayExt.random32()
         parentHash = it.hash
+        timestamp = timestamp.plus(blockTime)
       }
     }
   }
@@ -165,6 +171,35 @@ class BlockCreationMonitorTest {
     await().atLeast(config.pollingInterval.times(3).toJavaDuration())
 
     assertThat(blockCreationListener.blocksReceived.last().number).isEqualTo(103UL)
+  }
+
+  @Test
+  fun `should stop fetching blocks after lastL2BlockTimestampToProcessInclusive`() {
+    val startTime = Instant.parse("2025-01-01T00:00:00.00Z")
+    val lastL2BlockTimestampToProcessInclusive = startTime.plus(20.seconds)
+    monitor = createBlockCreationMonitor(
+      startingBlockNumberExclusive = 0,
+      config = config.copy(
+        lastL2BlockTimestampToProcessInclusive = lastL2BlockTimestampToProcessInclusive,
+      ),
+    )
+    val fakeBlocks =
+      createBlocks(startBlockNumber = 0u, numberOfBlocks = 100, startTime = startTime, blockTime = 1.seconds)
+
+    setupFakeExecutionLayerWithBlocks(fakeBlocks)
+
+    monitor.start()
+    await()
+      .atMost(20.seconds.toJavaDuration())
+      .untilAsserted {
+        assertThat(blockCreationListener.blocksReceived).isNotEmpty
+        assertThat(blockCreationListener.blocksReceived.last().number).isGreaterThanOrEqualTo(20UL)
+      }
+
+    // Wait for a while to make sure no more blocks are fetched
+    await().atLeast(config.pollingInterval.times(10).toJavaDuration())
+
+    assertThat(blockCreationListener.blocksReceived.last().number).isEqualTo(20UL)
   }
 
   @Test

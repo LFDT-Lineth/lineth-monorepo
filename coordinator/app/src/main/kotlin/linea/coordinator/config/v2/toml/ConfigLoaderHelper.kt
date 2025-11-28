@@ -17,6 +17,7 @@ import linea.coordinator.config.v2.toml.decoders.BlockParameterNumberDecoder
 import linea.coordinator.config.v2.toml.decoders.BlockParameterTagDecoder
 import linea.coordinator.config.v2.toml.decoders.TomlByteArrayHexDecoder
 import linea.coordinator.config.v2.toml.decoders.TomlKotlinDurationDecoder
+import linea.coordinator.config.v2.toml.decoders.TomlKotlinInstantDecoder
 import linea.coordinator.config.v2.toml.decoders.TomlSignerTypeDecoder
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
@@ -30,6 +31,7 @@ fun ConfigLoaderBuilder.addCoordinatorTomlDecoders(strict: Boolean): ConfigLoade
     .addDecoder(BlockParameterDecoder())
     .addDecoder(TomlByteArrayHexDecoder())
     .addDecoder(TomlKotlinDurationDecoder())
+    .addDecoder(TomlKotlinInstantDecoder())
     .addDecoder(TomlSignerTypeDecoder())
     .apply { if (strict) this.strict() }
 }

@@ -14,6 +14,7 @@ import linea.coordinator.config.v2.isDisabled
 import linea.domain.BlockParameter
 import linea.domain.RetryConfig
 import linea.encoding.BlockRLPEncoder
+import linea.ethapi.EthApiClient
 import linea.web3j.ExtendedWeb3JImpl
 import linea.web3j.createWeb3jHttpClient
 import linea.web3j.ethapi.createEthApiClient
@@ -99,6 +100,11 @@ class ConflationApp(
   val l2Web3jClient: Web3j = createWeb3jHttpClient(
     rpcUrl = configs.conflation.l2Endpoint.toString(),
     log = LogManager.getLogger("clients.l2.eth.conflation"),
+  )
+  val l2EthClient: EthApiClient = createEthApiClient(
+    l2Web3jClient,
+    requestRetryConfig = configs.conflation.l2RequestRetries,
+    vertx = vertx,
   )
 
   private val extendedWeb3J = ExtendedWeb3JImpl(l2Web3jClient)
@@ -410,7 +416,7 @@ class ConflationApp(
     log.info("Resuming conflation from block={} inclusive", lastProcessedBlockNumber + 1UL)
     val blockCreationMonitor = BlockCreationMonitor(
       vertx = vertx,
-      web3j = extendedWeb3J,
+      ethApi = l2EthClient,
       startingBlockNumberExclusive = lastProcessedBlockNumber.toLong(),
       blockCreationListener = block2BatchCoordinator,
       lastProvenBlockNumberProviderAsync = lastProvenBlockNumberProvider,
@@ -422,6 +428,7 @@ class ConflationApp(
         // block_number = forceStopConflationAtBlockInclusive + 1 to trigger conflation at
         // forceStopConflationAtBlockInclusive
         lastL2BlockNumberToProcessInclusive = configs.conflation.forceStopConflationAtBlockInclusive?.inc(),
+        lastL2BlockTimestampToProcessInclusive = configs.conflation.forceStopConflationAtBlockTimestampInclusive,
       ),
     )
     blockCreationMonitor

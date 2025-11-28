@@ -1,12 +1,11 @@
 package linea.coordinator.config.v2.toml
 
-import kotlinx.datetime.toKotlinInstant
+import kotlinx.datetime.Instant
 import linea.blob.BlobCompressorVersion
 import linea.coordinator.config.v2.ConflationConfig
 import net.consensys.linea.traces.TracesCountersV2
 import net.consensys.linea.traces.TracesCountersV4
 import java.net.URL
-import java.time.Instant
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
@@ -14,6 +13,7 @@ data class ConflationToml(
   val disabled: Boolean = false,
   val blocksLimit: UInt? = null,
   val forceStopConflationAtBlockInclusive: ULong? = null,
+  val forceStopConflationAtBlockTimestampInclusive: Instant? = null,
   val conflationDeadline: Duration? = null,
   val conflationDeadlineCheckInterval: Duration = 30.seconds,
   val conflationDeadlineLastBlockConfirmationDelay: Duration = 30.seconds,
@@ -69,7 +69,7 @@ data class ConflationToml(
         coordinatorPollingInterval = this.coordinatorPollingInterval,
         targetEndBlocks = this.targetEndBlocks,
         aggregationSizeMultipleOf = this.aggregationSizeMultipleOf,
-        timestampBasedHardForks = timestampBasedHardForks.map { it.toKotlinInstant() },
+        timestampBasedHardForks = timestampBasedHardForks,
         waitForNoL2ActivityToTriggerAggregation = this.waitForNoL2ActivityToTriggerAggregation,
       )
     }
@@ -84,6 +84,7 @@ data class ConflationToml(
       disabled = this.disabled,
       blocksLimit = this.blocksLimit,
       forceStopConflationAtBlockInclusive = this.forceStopConflationAtBlockInclusive,
+      forceStopConflationAtBlockTimestampInclusive = this.forceStopConflationAtBlockTimestampInclusive,
       blocksPollingInterval = this.newBlocksPollingInterval,
       conflationDeadline = this.conflationDeadline,
       conflationDeadlineCheckInterval = this.conflationDeadlineCheckInterval,

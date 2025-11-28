@@ -12,6 +12,7 @@ data class ConflationConfig(
   override val disabled: Boolean = false,
   val blocksLimit: UInt? = null,
   val forceStopConflationAtBlockInclusive: ULong? = null,
+  val forceStopConflationAtBlockTimestampInclusive: Instant? = null,
   val blocksPollingInterval: Duration = 1.seconds,
   val conflationDeadline: Duration? = null, // disabled by default
   val conflationDeadlineCheckInterval: Duration = 10.seconds,

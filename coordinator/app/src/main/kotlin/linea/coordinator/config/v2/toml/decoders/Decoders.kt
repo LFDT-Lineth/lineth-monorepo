@@ -3,11 +3,13 @@ package linea.coordinator.config.v2.toml.decoders
 import com.sksamuel.hoplite.ConfigFailure
 import com.sksamuel.hoplite.ConfigResult
 import com.sksamuel.hoplite.DecoderContext
+import com.sksamuel.hoplite.LongNode
 import com.sksamuel.hoplite.Node
 import com.sksamuel.hoplite.StringNode
 import com.sksamuel.hoplite.decoder.Decoder
 import com.sksamuel.hoplite.fp.invalid
 import com.sksamuel.hoplite.fp.valid
+import kotlinx.datetime.Instant
 import linea.coordinator.config.v2.toml.SignerConfigToml
 import linea.kotlin.decodeHex
 import kotlin.reflect.KType
@@ -56,6 +58,35 @@ class TomlKotlinDurationDecoder : Decoder<Duration> {
 
   override fun supports(type: KType): Boolean {
     return type.classifier == Duration::class
+  }
+}
+
+class TomlKotlinInstantDecoder : Decoder<Instant> {
+  override fun decode(
+    node: Node,
+    type: KType,
+    context: DecoderContext,
+  ): ConfigResult<Instant> {
+    return when (node) {
+      is StringNode -> runCatching {
+        Instant.parse(node.value)
+      }.fold(
+        { it.valid() },
+        { ConfigFailure.DecodeError(node, type).invalid() },
+      )
+      is LongNode -> runCatching {
+        Instant.fromEpochSeconds(node.value)
+      }.fold(
+        { it.valid() },
+        { ConfigFailure.DecodeError(node, type).invalid() },
+      )
+
+      else -> { ConfigFailure.DecodeError(node, type).invalid() }
+    }
+  }
+
+  override fun supports(type: KType): Boolean {
+    return type.classifier == Instant::class
   }
 }
 
