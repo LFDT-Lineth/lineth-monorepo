@@ -75,7 +75,9 @@ jobs:
 
   native_yield_automation_service:
     uses: ./.github/workflows/native-yield-automation-service-build-and-publish.yml
-    if: ${{ always() && (inputs.native_yield_automation_service_changed == 'true' || inputs.native_yield_automation_service_image_tagged != 'true') }}
+    if: ${{ inputs.native_yield_automation_service_changed == 'true' }}
+    # Uncomment below later when E2E test cases include native yield functionality.
+    # if: ${{ always() && (inputs.native_yield_automation_service_changed == 'true' || inputs.native_yield_automation_service_image_tagged != 'true') }}
     with:
       commit_tag: ${{ inputs.commit_tag }}
       develop_tag: ${{ inputs.develop_tag }}
