@@ -1,5 +1,5 @@
 # Chain
-network="linea_sepolia"
+network="linea-sepolia"
 
 # data
 data-path="/data"

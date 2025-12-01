@@ -1,5 +1,5 @@
 # Chain
-network="linea"
+network="linea-mainnet"
 
 # data
 data-path="/data"
