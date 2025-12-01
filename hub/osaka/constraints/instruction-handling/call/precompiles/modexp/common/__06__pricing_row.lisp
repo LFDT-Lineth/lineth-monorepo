@@ -41,7 +41,7 @@
                   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
                   (if-not-zero   (precompile-processing---MODEXP---call-OOB-on-pricing-row)
                                  (set-OOB-instruction---modexp-pricing    precompile-processing---MODEXP---misc-row-offset---pricing   ;; offset
-                                                                          (precompile-processing---dup-call-gas)                       ;; call gas i.e. gas provided to the precompile
+                                                                          (precompile-processing---dup-callee-gas)                     ;; call gas i.e. gas provided to the precompile
                                                                           (precompile-processing---dup-r@c)                            ;; return at capacity
                                                                           (precompile-processing---MODEXP---modexp-full-log)           ;; leading (≤) word log of exponent
                                                                           (precompile-processing---MODEXP---max-mbs-bbs)               ;; call data size

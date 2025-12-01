@@ -20,7 +20,7 @@
 
 
 (defun    (precompile-processing---dup-caller-gas)    scenario/PRC_CALLER_GAS)
-(defun    (precompile-processing---dup-call-gas)      scenario/PRC_CALLEE_GAS)
+(defun    (precompile-processing---dup-callee-gas)    scenario/PRC_CALLEE_GAS)
 (defun    (precompile-processing---prd-return-gas)    scenario/PRC_RETURN_GAS)
 (defun    (precompile-processing---dup-cdo)           scenario/PRC_CDO)
 (defun    (precompile-processing---dup-cds)           scenario/PRC_CDS)

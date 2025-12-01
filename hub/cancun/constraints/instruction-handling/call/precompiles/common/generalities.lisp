@@ -33,7 +33,7 @@
 (defconstraint    precompile-processing---common---setting-OOB-instruction    (:guard    (precompile-processing---common---precondition))
                   (set-OOB-instruction---common    precompile-processing---common---1st-misc-row---row-offset  ;; offset
                                                    (precompile-processing---common---OOB-instruction)          ;; relevant OOB instruction
-                                                   (precompile-processing---dup-call-gas)                      ;; call gas i.e. gas provided to the precompile
+                                                   (precompile-processing---dup-callee-gas)                    ;; call gas i.e. gas provided to the precompile
                                                    (precompile-processing---dup-cds)                           ;; call data size
                                                    (precompile-processing---dup-r@c)                           ;; return at capacity
                                                    )
