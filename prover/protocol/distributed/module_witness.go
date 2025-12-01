@@ -149,7 +149,7 @@ func SegmentRuntime(
 			}
 		}
 
-		logger = logger.WithField(string(blueprintGLs[i].ModuleName[0]), map[string]any{
+		logger = logger.WithField(string(blueprintGLs[i].ModuleName), map[string]any{
 			"qbm-stats":   loggableQbmStats,
 			"nb-segments": len(wGL),
 		})

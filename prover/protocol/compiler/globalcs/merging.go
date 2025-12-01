@@ -78,7 +78,7 @@ func accumulateConstraints(comp *wizard.CompiledIOP) (mergingCtx, bool) {
 		// This enforces the precondition that all the global constraint must
 		// share the same domain.
 		if cs.DomainSize != ctx.DomainSize {
-			utils.Panic("At this point in the compilation process, we expect all constraints to have the same domain")
+			utils.Panic("At this point in the compilation process, we expect all constraints to have the same domain, cs.DomainSize=%d, ctx.DomainSize=%d, cs.Name=%v", cs.DomainSize, ctx.DomainSize, cs.Name())
 		}
 
 		// Mark the constraint as ignored, so that it does not get compiled a

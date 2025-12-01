@@ -74,7 +74,7 @@ func (c *Circuit) Define(api frontend.API) error {
 	}
 
 	// create a lookup table of actual public inputs
-	actualPI := make([]*logderivlookup.Table, (emFr{}).NbLimbs())
+	actualPI := make([]logderivlookup.Table, (emFr{}).NbLimbs())
 	for i := range actualPI {
 		actualPI[i] = logderivlookup.New(api)
 	}

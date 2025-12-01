@@ -48,7 +48,7 @@ type externalRangeChecker struct {
 // storeCommitBuilder implements [frontend.Builder], [frontend.Committer] and
 // [kvstore.Store].
 type storeCommitBuilder interface {
-	frontend.Builder
+	frontend.Builder[constraint.U64]
 	frontend.Committer
 	SetKeyValue(key, value any)
 	GetKeyValue(key any) (value any)
@@ -77,8 +77,8 @@ type storeCommitBuilder interface {
 //	```
 func newExternalRangeChecker(addGateForRangeCheck bool) (frontend.NewBuilder, func() [][2]int) {
 	rcCols := make(chan [][2]int)
-	return func(field *big.Int, config frontend.CompileConfig) (frontend.Builder, error) {
-			b, err := scs.NewBuilder(field, config)
+	return func(field *big.Int, config frontend.CompileConfig) (frontend.Builder[constraint.U64], error) {
+			b, err := scs.NewBuilder[constraint.U64](field, config)
 			if err != nil {
 				return nil, fmt.Errorf("could not create new native builder: %w", err)
 			}

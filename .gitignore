@@ -107,7 +107,9 @@ __pycache__/
 /jvm-libs/**/darwin-x86-64
 
 /prover/**/*.csv
-/prover/**/testdata/
+# Exclude files in testdata directories, but not the directories themselves to allow
+# add exceptions (gitignore doesn't permit exceptions when root dir is excluded)
+/prover/**/testdata/*
 # Testdata, otherwise that's 400MB of data downloaded
 /prover/**/integration-testing/testdata/prover-requests/
 /prover/**/vendor/
@@ -149,3 +151,5 @@ __pycache__/
 !prover/**/utils/profiling
 !prover/**/verifying_key.bin
 !/sdk/src/lib/compressor/bin
+# Allow BLS glue testdata generators
+!prover/zkevm/prover/bls/testdata/*.go

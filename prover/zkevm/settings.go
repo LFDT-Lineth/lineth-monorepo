@@ -3,12 +3,14 @@ package zkevm
 import (
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
 	"github.com/consensys/linea-monorepo/prover/zkevm/arithmetization"
+	"github.com/consensys/linea-monorepo/prover/zkevm/prover/bls"
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/ecarith"
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/ecdsa"
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/ecpair"
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/hash/keccak"
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/hash/sha2"
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/modexp"
+	"github.com/consensys/linea-monorepo/prover/zkevm/prover/p256verify"
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/publicInput"
 	"github.com/consensys/linea-monorepo/prover/zkevm/prover/statemanager"
 )
@@ -27,6 +29,8 @@ type Settings struct {
 	Ecadd, Ecmul     ecarith.Limits
 	Ecpair           ecpair.Limits
 	Sha2             sha2.Settings
+	Bls              bls.Limits
+	P256Verify       p256verify.Limits
 	PublicInput      publicInput.Settings
 	CompilationSuite CompilationSuite
 	Metadata         wizard.VersionMetadata

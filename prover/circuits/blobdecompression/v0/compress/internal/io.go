@@ -15,11 +15,11 @@ import (
 // TODO Use std/rangecheck instead
 type RangeChecker struct {
 	api    frontend.API
-	tables map[uint]*logderivlookup.Table
+	tables map[uint]logderivlookup.Table
 }
 
 func NewRangeChecker(api frontend.API) *RangeChecker {
-	return &RangeChecker{api: api, tables: make(map[uint]*logderivlookup.Table)}
+	return &RangeChecker{api: api, tables: make(map[uint]logderivlookup.Table)}
 }
 
 func (r *RangeChecker) AssertLessThan(bound uint, c ...frontend.Variable) {
@@ -35,7 +35,8 @@ func (r *RangeChecker) AssertLessThan(bound uint, c ...frontend.Variable) {
 	default:
 		cRangeTable, ok := r.tables[bound]
 		if !ok {
-			cRangeTable := logderivlookup.New(r.api)
+			cRangeTable = logderivlookup.New(r.api)
+			r.tables[bound] = cRangeTable
 			for i := uint(0); i < bound; i++ {
 				cRangeTable.Insert(0)
 			}

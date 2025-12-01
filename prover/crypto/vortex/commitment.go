@@ -154,7 +154,7 @@ func (p *Params) hashSisHash(colHashes []field.Element) (leaves []types.Bytes32)
 	leaves = make([]types.Bytes32, numChunks)
 
 	parallel.Execute(numChunks, func(start, stop int) {
-		hasher := mimc.NewMiMC()
+		hasher := mimc.NewFieldHasher()
 		for chunkID := start; chunkID < stop; chunkID++ {
 			startChunk := chunkID * chunkSize
 			hasher.Reset()

@@ -51,7 +51,7 @@ var ListOfRepeatedPatternTestcase = []*RepeatedPatternTestcase{
 
 func (rp *RepeatedPatternTestcase) Define(comp *wizard.CompiledIOP) {
 	isActive := comp.InsertCommit(0, ifaces.ColID(rp.name)+"_ACTIVE", rp.IsActive.Len())
-	rp.rp = NewRepeatedPattern(comp, 0, rp.Pattern, isActive)
+	rp.rp = NewRepeatedPattern(comp, 0, rp.Pattern, isActive, "TESTING")
 }
 
 func (rp *RepeatedPatternTestcase) Assign(run *wizard.ProverRuntime) {

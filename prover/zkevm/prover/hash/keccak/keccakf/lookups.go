@@ -73,7 +73,9 @@ func newLookUpTables(comp *wizard.CompiledIOP, maxNumKeccakf int) lookUpTables {
 			field.One(),
 			numRows(maxNumKeccakf),
 			"keccak-rc-pattern",
-		))
+		),
+		"KECCAK_RC_PATTERN",
+	)
 
 	// tables to indicate when to use the output of the previous round as
 	// input for the next round.

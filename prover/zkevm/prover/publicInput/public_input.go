@@ -63,6 +63,7 @@ type AuxiliaryModules struct {
 	BlockTxnMetadata                                   fetch.BlockTxnMetadata
 	TxnDataFetcher                                     fetch.TxnDataFetcher
 	RlpTxnFetcher                                      fetch.RlpTxnFetcher
+	ChainIDFetcher                                     fetch.ChainIDFetcher
 	ExecDataCollector                                  *edc.ExecutionDataCollector
 	ExecDataCollectorPadding                           wizard.ProverAction
 	ExecDataCollectorPacking                           pack.Packing
@@ -199,6 +200,10 @@ func newPublicInput(
 	execDataCollector := edc.NewExecutionDataCollector(comp, "EXECUTION_DATA_COLLECTOR", limbColSize)
 	edc.DefineExecutionDataCollector(comp, execDataCollector, "EXECUTION_DATA_COLLECTOR", timestampFetcher, blockTxnMeta, txnDataFetcher, rlpFetcher)
 
+	// ChainIDFetcher
+	chainIDFetcher := fetch.NewChainIDFetcher(comp, "PUBLIC_INPUT_CHAIN_ID_FETCHER", inp.BlockData)
+	fetch.DefineChainIDFetcher(comp, &chainIDFetcher, "PUBLIC_INPUT_CHAIN_ID_FETCHER", inp.BlockData)
+
 	// ExecutionDataCollector: Padding
 	importInp := importpad.ImportAndPadInputs{
 		Name: settings.Name,
@@ -238,8 +243,8 @@ func newPublicInput(
 		LogHasher:          logHasherL2l1,
 		ExecMiMCHasher:     *mimcHasher,
 		DataNbBytes:        execDataCollector.FinalTotalBytesCounter,
-		ChainID:            rlpFetcher.ChainID,
-		ChainIDNBytes:      rlpFetcher.NBytesChainID,
+		ChainID:            chainIDFetcher.ChainID,
+		ChainIDNBytes:      chainIDFetcher.NBytesChainID,
 		Inputs:             *inp,
 		Aux: AuxiliaryModules{
 			FetchedL2L1:              fetchedL2L1,
@@ -249,6 +254,7 @@ func newPublicInput(
 			BlockTxnMetadata:         blockTxnMeta,
 			TxnDataFetcher:           txnDataFetcher,
 			RlpTxnFetcher:            rlpFetcher,
+			ChainIDFetcher:           chainIDFetcher,
 			ExecDataCollector:        execDataCollector,
 			ExecDataCollectorPadding: padding,
 			ExecDataCollectorPacking: *packingMod,
@@ -284,6 +290,7 @@ func (pub *PublicInput) Assign(run *wizard.ProverRuntime, l2BridgeAddress common
 	fetch.AssignBlockTxnMetadata(run, aux.BlockTxnMetadata, inp.TxnData)
 	fetch.AssignTxnDataFetcher(run, aux.TxnDataFetcher, inp.TxnData)
 	fetch.AssignRlpTxnFetcher(run, &aux.RlpTxnFetcher, inp.RlpTxn)
+	fetch.AssignChainIDFetcher(run, &aux.ChainIDFetcher, inp.BlockData)
 	// assign the ExecutionDataCollector
 	edc.AssignExecutionDataCollector(run, aux.ExecDataCollector, pub.TimestampFetcher, aux.BlockTxnMetadata, aux.TxnDataFetcher, aux.RlpTxnFetcher, blockHashList)
 	aux.ExecDataCollectorPadding.Run(run)

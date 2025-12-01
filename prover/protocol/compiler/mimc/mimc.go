@@ -4,6 +4,7 @@ import (
 	"github.com/consensys/linea-monorepo/prover/crypto/mimc"
 	"github.com/consensys/linea-monorepo/prover/maths/common/smartvectors"
 	"github.com/consensys/linea-monorepo/prover/maths/field"
+	"github.com/consensys/linea-monorepo/prover/protocol/distributed/pragmas"
 	"github.com/consensys/linea-monorepo/prover/protocol/ifaces"
 	"github.com/consensys/linea-monorepo/prover/protocol/query"
 	"github.com/consensys/linea-monorepo/prover/protocol/wizard"
@@ -87,6 +88,8 @@ func defineContext(comp *wizard.CompiledIOP) *MimcContext {
 		ifaces.ColIDf("MIMC_STACKED_OLD_STATES_%v_%v", comp.SelfRecursionCount, uniqueID(comp)),
 		totalSize)
 
+	pragmas.AddModuleRef(ctx.StackedOldStates, "MIMC_COMPILER")
+
 	ctx.StackedBlocks = comp.InsertCommit(round,
 		ifaces.ColIDf("MIMC_STACKED_BLOCKS_%v_%v", comp.SelfRecursionCount, uniqueID(comp)),
 		totalSize)
@@ -109,6 +112,8 @@ func defineContext(comp *wizard.CompiledIOP) *MimcContext {
 		sp4 := comp.InsertCommit(round,
 			ifaces.ColIDf("MIMC_ROUND_%v_SUM_POW4_%v_%v", i, comp.SelfRecursionCount, uniqueID(comp)),
 			totalSize)
+
+		pragmas.AddModuleRef(sp4, "MIMC_COMPILER")
 
 		ctx.SumPow4s = append(ctx.SumPow4s, sp4)
 

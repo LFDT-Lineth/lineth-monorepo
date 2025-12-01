@@ -5,6 +5,7 @@ import (
 
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/frontend/schema"
+	"github.com/consensys/linea-monorepo/prover/maths/field"
 )
 
 // CountVariables count the variables of a circuit without compiling it. It returns
@@ -16,7 +17,7 @@ func CountVariables(circ any) (nbPublic, nbSecret int) {
 		tVar = reflect.ValueOf(struct{ A frontend.Variable }{}).FieldByName("A").Type()
 	)
 
-	s, err := schema.Walk(circ, tVar, nil)
+	s, err := schema.Walk(field.Modulus(), circ, tVar, nil)
 	if err != nil {
 		panic(err)
 	}

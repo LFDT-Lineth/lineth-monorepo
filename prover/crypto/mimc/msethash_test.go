@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/consensys/gnark-crypto/ecc"
+	"github.com/consensys/gnark/constraint"
 	cs "github.com/consensys/gnark/constraint/bls12-377"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/frontend/cs/scs"
@@ -28,7 +29,7 @@ func TestMSetHash(t *testing.T) {
 		circuit  = &MsetOfSingletonGnarkTestCircuit{}
 		assigned = &MsetOfSingletonGnarkTestCircuit{}
 		blsField = ecc.BLS12_377.ScalarField()
-		builder  = scs.NewBuilder
+		builder  = scs.NewBuilder[constraint.U64]
 		msg      = [12]uint64{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}
 		msgField = []field.Element{}
 		mset     = mimc.MSetHash{}

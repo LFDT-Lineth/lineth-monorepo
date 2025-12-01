@@ -86,7 +86,8 @@ func ProveCheck(setup *Setup, assignment frontend.Circuit, opts ...any) (plonk.P
 			assignment,
 			assignment,
 			setup.Circuit.Field(),
-			test.WithBackendProverOptions(proverOpts...),
+			// this test engine prover option was no-op before and it was removed
+			// test.WithBackendProverOptions(proverOpts...),
 		)
 		return nil, fmt.Errorf("while running the plonk prover: %w", errDetail)
 	}

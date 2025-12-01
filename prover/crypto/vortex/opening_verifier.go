@@ -214,7 +214,7 @@ func (v *VerifierInputs) checkColumnInclusion() error {
 			} else {
 				// We assume that HashFunc (to be used for Merkle Tree) and NoSisHashFunc()
 				// (to be used for in place of SIS hash) are the same i.e. the MiMC hash function
-				hasher := mimc.NewMiMC()
+				hasher := mimc.NewFieldHasher()
 				hasher.Reset()
 				s := hasher.SumElements(selectedSubCol)
 				leaf = s.Bytes()

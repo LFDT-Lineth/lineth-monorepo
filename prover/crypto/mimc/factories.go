@@ -65,7 +65,7 @@ type externalHashBuilderIFace interface {
 // storeCommitBuilder implements [frontend.Builder], [frontend.Committer] and
 // other methods useful to define a custom external hasher.
 type storeCommitBuilder interface {
-	frontend.Builder
+	frontend.Builder[constraint.U64]
 	frontend.Committer
 	SetKeyValue(key, value any)
 	GetKeyValue(key any) (value any)
@@ -168,8 +168,8 @@ func (h *ExternalHasher) compress(state, block frontend.Variable) frontend.Varia
 // taking part in each claim.
 func NewExternalHasherBuilder(addGateForHashCheck bool) (frontend.NewBuilder, func() [][3][2]int) {
 	rcCols := make(chan [][3][2]int)
-	return func(field *big.Int, config frontend.CompileConfig) (frontend.Builder, error) {
-			b, err := scs.NewBuilder(field, config)
+	return func(field *big.Int, config frontend.CompileConfig) (frontend.Builder[constraint.U64], error) {
+			b, err := scs.NewBuilder[constraint.U64](field, config)
 			if err != nil {
 				return nil, fmt.Errorf("could not create new native builder: %w", err)
 			}

@@ -26,6 +26,10 @@ const (
 	// only regardless of the default heuristic (which is to pad using the first
 	// or the last value).
 	PadWithZeroes Pragma = "pad-with-zeroes-pragma"
+
+	// ModuleAdviceRef is used to attach a module name to a column. The module
+	// name can be used to provide a module advice.
+	ModuleAdviceRef Pragma = "module-advice-ref-pragma"
 )
 
 // MarkFullColumn marks a column as full-column.
@@ -65,6 +69,27 @@ func MarkRightPadded(col ifaces.Column) {
 func MarkLeftPadded(col ifaces.Column) {
 	nat := col.(column.Natural)
 	nat.SetPragma(LeftPadded, true)
+}
+
+// AddModuleRef adds a module reference to a column. When a reference is added
+// to a column it can be used to provide a module advice instead of using the
+// column name. It is useful if the column name is not stable.
+//
+// If the module ref is specified for a column then the module discoverer will
+// *require* an advice to provided for the reference.
+func AddModuleRef(col ifaces.Column, moduleName string) {
+	nat := col.(column.Natural)
+	nat.SetPragma(ModuleAdviceRef, moduleName)
+}
+
+// TryGetModuleRef returns the module reference for a column.
+func TryGetModuleRef(col ifaces.Column) (string, bool) {
+	nat := col.(column.Natural)
+	moduleName, ok := nat.GetPragma(ModuleAdviceRef)
+	if ok {
+		return moduleName.(string), true
+	}
+	return "", false
 }
 
 // IsZeroPadded checks if a column is zero-padded.

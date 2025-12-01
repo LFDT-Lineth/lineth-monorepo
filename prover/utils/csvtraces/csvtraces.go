@@ -211,7 +211,11 @@ func (c *CsvTrace) Assign(run *wizard.ProverRuntime, names ...string) {
 	length := utils.NextPowerOfTwo(c.nbRows)
 	for _, k := range names {
 		if v, ok := c.mapped[k]; ok {
-			sv := smartvectors.RightZeroPadded(v, length)
+			colLength := run.Spec.Columns.GetSize(ifaces.ColID(k))
+			if colLength < length {
+				utils.Panic("column %s has size %d, but trace has %d (padded to %d) rows", k, colLength, c.nbRows, length)
+			}
+			sv := smartvectors.RightZeroPadded(v, colLength)
 			run.AssignColumn(ifaces.ColID(k), sv)
 		} else {
 			utils.Panic("column not found %s", k)
