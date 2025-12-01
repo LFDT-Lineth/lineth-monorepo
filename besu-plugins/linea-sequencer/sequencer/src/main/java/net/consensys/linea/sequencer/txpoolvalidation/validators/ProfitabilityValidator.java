@@ -8,6 +8,8 @@
  */
 package net.consensys.linea.sequencer.txpoolvalidation.validators;
 
+import static net.consensys.linea.bl.TransactionProfitabilityCalculator.getCompressedTxSize;
+
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.bl.TransactionProfitabilityCalculator;
@@ -54,6 +56,7 @@ public class ProfitabilityValidator implements PluginTransactionPoolValidator {
               .getNextBlockBaseFee()
               .orElseThrow(() -> new RuntimeException("We only support a base fee market"));
 
+      int compressedTxSize = getCompressedTxSize(transaction);
       return profitabilityCalculator.isProfitable(
               "Txpool",
               transaction,
@@ -61,7 +64,8 @@ public class ProfitabilityValidator implements PluginTransactionPoolValidator {
               baseFee,
               calculateUpfrontGasPrice(transaction, baseFee),
               transaction.getGasLimit(),
-              besuConfiguration.getMinGasPrice())
+              besuConfiguration.getMinGasPrice(),
+              compressedTxSize)
           ? Optional.empty()
           : Optional.of("Gas price too low");
     }

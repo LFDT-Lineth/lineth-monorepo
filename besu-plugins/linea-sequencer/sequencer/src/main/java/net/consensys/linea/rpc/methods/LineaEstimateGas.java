@@ -9,6 +9,7 @@
 
 package net.consensys.linea.rpc.methods;
 
+import static net.consensys.linea.bl.TransactionProfitabilityCalculator.getCompressedTxSize;
 import static net.consensys.linea.sequencer.modulelimit.ModuleLineCountValidator.ModuleLineCountResult.MODULE_NOT_DEFINED;
 import static net.consensys.linea.sequencer.modulelimit.ModuleLineCountValidator.ModuleLineCountResult.TX_MODULE_LINE_COUNT_OVERFLOW;
 import static net.consensys.linea.zktracer.Fork.fromMainnetHardforkIdToTracerFork;
@@ -250,8 +251,13 @@ public class LineaEstimateGas {
               .toBigInteger());
     }
 
+    int compressedSize = getCompressedTxSize(transaction);
     return txProfitabilityCalculator.profitablePriorityFeePerGas(
-        transaction, profitabilityConf.estimateGasMinMargin(), estimatedGasUsed, minGasPrice);
+        transaction,
+        profitabilityConf.estimateGasMinMargin(),
+        estimatedGasUsed,
+        minGasPrice,
+        compressedSize);
   }
 
   private void validateLineCounts(

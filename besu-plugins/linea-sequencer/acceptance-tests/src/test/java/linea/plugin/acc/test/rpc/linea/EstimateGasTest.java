@@ -9,6 +9,7 @@
 package linea.plugin.acc.test.rpc.linea;
 
 import static com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL;
+import static net.consensys.linea.bl.TransactionProfitabilityCalculator.getCompressedTxSize;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -346,6 +347,7 @@ public class EstimateGasTest extends LineaPluginPoSTestBase {
 
     final var profitabilityCalculator = new TransactionProfitabilityCalculator(profitabilityConf);
 
+    final int compressedSize = getCompressedTxSize(tx);
     assertThat(
             profitabilityCalculator.isProfitable(
                 "Test",
@@ -354,7 +356,8 @@ public class EstimateGasTest extends LineaPluginPoSTestBase {
                 baseFee,
                 estimatedMaxGasPrice,
                 estimatedGasLimit,
-                minGasPrice))
+                minGasPrice,
+                compressedSize))
         .isTrue();
   }
 

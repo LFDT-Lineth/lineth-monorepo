@@ -8,19 +8,25 @@
  */
 package net.consensys.linea.sequencer.txselection.selectors;
 
+import static net.consensys.linea.bl.TransactionProfitabilityCalculator.getCompressedTxSize;
 import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectionResult.TX_UNPROFITABLE;
 import static net.consensys.linea.sequencer.txselection.LineaTransactionSelectionResult.TX_UNPROFITABLE_UPFRONT;
 import static org.hyperledger.besu.plugin.data.TransactionSelectionResult.SELECTED;
 
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 import java.util.EnumMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.bl.TransactionProfitabilityCalculator;
 import net.consensys.linea.config.LineaProfitabilityConfiguration;
 import net.consensys.linea.metrics.HistogramMetrics;
 import net.consensys.linea.metrics.HistogramMetrics.LabelValue;
+import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.datatypes.Transaction;
 import org.hyperledger.besu.datatypes.Wei;
 import org.hyperledger.besu.plugin.data.TransactionProcessingResult;
@@ -38,6 +44,9 @@ import org.hyperledger.besu.plugin.services.txselection.TransactionEvaluationCon
  */
 @Slf4j
 public class ProfitableTransactionSelector implements PluginTransactionSelector {
+  private static final Cache<Hash, Integer> compressedSizeCache =
+      CacheBuilder.newBuilder().maximumSize(10000).expireAfterWrite(30, TimeUnit.MINUTES).build();
+
   public enum Phase implements LabelValue {
     PRE_PROCESSING,
     POST_PROCESSING;
@@ -123,10 +132,11 @@ public class ProfitableTransactionSelector implements PluginTransactionSelector 
     if (!evaluationContext.getPendingTransaction().hasPriority()) {
       final Transaction transaction = evaluationContext.getPendingTransaction().getTransaction();
       final long gasLimit = transaction.getGasLimit();
+      final int compressedSize = getOrCalculateCompressedSize(transaction);
 
       final var profitablePriorityFeePerGas =
           transactionProfitabilityCalculator.profitablePriorityFeePerGas(
-              transaction, profitabilityConf.minMargin(), gasLimit, minGasPrice);
+              transaction, profitabilityConf.minMargin(), gasLimit, minGasPrice, compressedSize);
 
       updateMetric(
           Phase.PRE_PROCESSING, evaluationContext, transaction, profitablePriorityFeePerGas);
@@ -149,6 +159,27 @@ public class ProfitableTransactionSelector implements PluginTransactionSelector 
   }
 
   /**
+   * Get from the cache the compressed size of the transaction from the cache if available otherwise
+   * calculate it
+   *
+   * @param transaction the transaction for which we want to get the compressed size
+   * @return the compressed size
+   */
+  private int getOrCalculateCompressedSize(final Transaction transaction) {
+    try {
+      return compressedSizeCache.get(transaction.getHash(), () -> getCompressedTxSize(transaction));
+    } catch (ExecutionException e) {
+      log.atWarn()
+          .setMessage(
+              "Failed to calculate compressed size for transaction {}, calculating directly")
+          .addArgument(transaction::getHash)
+          .setCause(e)
+          .log();
+      return getCompressedTxSize(transaction);
+    }
+  }
+
+  /**
    * Evaluates a transaction post-processing. Checks if it is profitable according to its gas used.
    * If unprofitable, the transaction is penalized, but can still be retried in the future, since
    * gas price market fluctuations can make it profitable again.
@@ -165,17 +196,20 @@ public class ProfitableTransactionSelector implements PluginTransactionSelector 
     if (!evaluationContext.getPendingTransaction().hasPriority()) {
       final Transaction transaction = evaluationContext.getPendingTransaction().getTransaction();
       final long gasUsed = processingResult.getEstimateGasUsedByTransaction();
+      final int compressedSize = getOrCalculateCompressedSize(transaction);
 
       final var profitablePriorityFeePerGas =
           transactionProfitabilityCalculator.profitablePriorityFeePerGas(
               transaction,
               profitabilityConf.minMargin(),
               gasUsed,
-              evaluationContext.getMinGasPrice());
+              evaluationContext.getMinGasPrice(),
+              compressedSize);
 
       updateMetric(
           Phase.POST_PROCESSING, evaluationContext, transaction, profitablePriorityFeePerGas);
 
+      TransactionSelectionResult result = SELECTED;
       if (!transactionProfitabilityCalculator.isProfitable(
           "PostProcessing",
           profitablePriorityFeePerGas,
@@ -185,8 +219,9 @@ public class ProfitableTransactionSelector implements PluginTransactionSelector 
           evaluationContext.getTransactionGasPrice(),
           gasUsed,
           evaluationContext.getMinGasPrice())) {
-        return TX_UNPROFITABLE;
+        result = TX_UNPROFITABLE;
       }
+      return result;
     }
     return SELECTED;
   }

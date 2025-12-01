@@ -8,6 +8,7 @@
  */
 package net.consensys.linea.sequencer.txpoolvalidation.metrics;
 
+import static net.consensys.linea.bl.TransactionProfitabilityCalculator.getCompressedTxSize;
 import static net.consensys.linea.metrics.LineaMetricCategory.TX_POOL_PROFITABILITY;
 
 import java.util.stream.Collectors;
@@ -103,12 +104,14 @@ public class TransactionPoolProfitabilityMetrics {
               Wei.fromQuantity(transaction.getMaxFeePerGas().orElseThrow()));
     }
 
+    int compressedTxSize = getCompressedTxSize(transaction);
     final Wei profitablePriorityFeePerGas =
         profitabilityCalculator.profitablePriorityFeePerGas(
             transaction,
             profitabilityConf.txPoolMinMargin(),
             transaction.getGasLimit(),
-            besuConfiguration.getMinGasPrice());
+            besuConfiguration.getMinGasPrice(),
+            compressedTxSize);
 
     final double ratio =
         actualPriorityFeePerGas.toBigInteger().doubleValue()

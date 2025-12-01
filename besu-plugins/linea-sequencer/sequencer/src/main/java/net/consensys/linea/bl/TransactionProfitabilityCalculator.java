@@ -46,14 +46,15 @@ public class TransactionProfitabilityCalculator {
    *     processed/simulated, otherwise the gasLimit of the tx
    * @param minGasPriceWei the current minGasPrice, only used in place of the variable cost from the
    *     config, in case the extra data pricing is disabled
+   * @param compressedTxSize the compressed size of the transaction
    * @return the estimation of priorityFeePerGas that is considered profitable for the given tx
    */
   public Wei profitablePriorityFeePerGas(
       final Transaction transaction,
       final double minMargin,
       final long gas,
-      final Wei minGasPriceWei) {
-    final int compressedTxSize = getCompressedTxSize(transaction);
+      final Wei minGasPriceWei,
+      final int compressedTxSize) {
 
     final long variableCostWei =
         profitabilityConf.extraDataPricingEnabled()
@@ -93,6 +94,7 @@ public class TransactionProfitabilityCalculator {
    *     processed/simulated, otherwise the gasLimit of the tx
    * @param minGasPriceWei the current minGasPrice, only used in place of the variable cost from the
    *     config, in case the extra data pricing is disabled
+   * @param compressedTxSize the compressed size of the transaction
    * @return true if the tx is priced enough to be profitable, false otherwise
    */
   public boolean isProfitable(
@@ -102,10 +104,11 @@ public class TransactionProfitabilityCalculator {
       final Wei baseFee,
       final Wei payingGasPrice,
       final long gas,
-      final Wei minGasPriceWei) {
+      final Wei minGasPriceWei,
+      final int compressedTxSize) {
 
     final Wei profitablePriorityFee =
-        profitablePriorityFeePerGas(transaction, minMargin, gas, minGasPriceWei);
+        profitablePriorityFeePerGas(transaction, minMargin, gas, minGasPriceWei, compressedTxSize);
 
     return isProfitable(
         context,
@@ -165,7 +168,7 @@ public class TransactionProfitabilityCalculator {
    * @param transaction the tx
    * @return the compressed size
    */
-  private int getCompressedTxSize(final Transaction transaction) {
+  public static int getCompressedTxSize(final Transaction transaction) {
     final byte[] bytes = transaction.encoded().toArrayUnsafe();
     return Compressor.instance.compressedSize(bytes);
   }
