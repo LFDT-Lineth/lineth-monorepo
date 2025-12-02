@@ -28,7 +28,7 @@ logcaptor = "2.11.0"
 
 # Runtime
 arithmetization="beta-v4.4-rc7"
-besu = "25.11.0-linea4.1"
+besu = "25.11.0-linea4.2"
 blobCompressor = "2.1.0-rc1"
 blobShnarfCalculator = "1.2.0"
 bouncycastle = "1.79"
