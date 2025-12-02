@@ -2,7 +2,7 @@ services:
   l1-el-node:
     container_name: l1-el-node
     hostname: l1-el-node
-    image: hyperledger/besu:25.9.0
+    image: consensys/linea-besu-package:beta-v4.4-rc7-20251202165721-14b8f4c
     profiles: [ "l1", "debug", "external-to-monorepo" ]
     depends_on:
       l1-node-genesis-generator:
