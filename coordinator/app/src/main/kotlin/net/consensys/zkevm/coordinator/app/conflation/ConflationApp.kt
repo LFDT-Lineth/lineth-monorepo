@@ -266,7 +266,7 @@ class ConflationApp(
         deadlineCheckInterval = configs.conflation.proofAggregation.deadlineCheckInterval,
         aggregationDeadline = configs.conflation.proofAggregation.deadline,
         latestBlockProvider = GethCliqueSafeBlockProvider(
-          web3j = l2Web3jClient,
+          ethApiBlockClient = l2EthClient,
           config = GethCliqueSafeBlockProvider.Config(0),
         ),
         maxProofsPerAggregation = configs.conflation.proofAggregation.proofsLimit,
@@ -484,8 +484,8 @@ class ConflationApp(
         lastBlockNumber = lastProcessedBlockNumber,
         clock = Clock.System,
         latestBlockProvider = GethCliqueSafeBlockProvider(
-          l2Web3jClient,
-          GethCliqueSafeBlockProvider.Config(blocksToFinalization = 0),
+          ethApiBlockClient = l2EthClient,
+          config = GethCliqueSafeBlockProvider.Config(blocksToFinalization = 0),
         ),
       ),
     )
