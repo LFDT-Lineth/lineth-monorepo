@@ -53,7 +53,7 @@ services:
       - ./besu/log4j.xml:/var/lib/besu/log4j.xml
       - ./execution-layer-static-nodes.json:/var/lib/besu/static-nodes.json:ro
       - ./engine-jwt:/var/lib/besu/jwt:ro
-      - linea-mainnet-besu:/opt/besu
+      - linea-mainnet-besu:/data
 
   # Maru Consensus Layer
   maru-node:
