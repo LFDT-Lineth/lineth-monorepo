@@ -25,7 +25,7 @@ import { estimateTransactionGas, sendRawTransaction } from "../utils/common/tran
 import { getWeb3SignerSignature } from "../utils/common/signature.js";
 import { INVOICE_PROCESSED_EVENT_ABI } from "../utils/submit-invoice/abi.js";
 import { buildHttpsAgent } from "../utils/common/https-agent.js";
-import { createAwsCostExplorerClient, getDailyAwsCosts } from "../utils/common/aws.js";
+import { createAwsCostExplorerClient, flattenResultsByTime, getDailyAwsCosts } from "../utils/common/aws.js";
 import { computeSubmitInvoiceCalldata, getLastInvoiceDate } from "../utils/submit-invoice/contract.js";
 import { validateUrl } from "../utils/common/validation.js";
 import { address, hexString } from "../utils/common/custom-flags.js";
@@ -246,6 +246,12 @@ export default class SubmitInvoice extends Command {
     const invoicePeriodEndDateStr = invoicePeriod.endDate.toISOString();
 
     this.log(`Invoice period to process: startDate=${invoicePeriodStartDateStr} endDate=${invoicePeriodEndDateStr}`);
+
+    /******************************
+      AWS HISTORICAL COSTS FETCHING
+     ******************************/
+
+    await this.getAWSCostsHistoricalData(invoicePeriod.startDate, awsCostsApiFilters);
 
     /******************************
             AWS COSTS FETCHING
@@ -570,6 +576,54 @@ export default class SubmitInvoice extends Command {
     this.log(
       `Invoice successfully submitted: transactionHash=${receipt.transactionHash} transactionConfirmationTimeInSeconds=${transactionConfirmationTime} eventName=${event.eventName} receiver=${event.args.receiver} startTimestamp=${event.args.startTimestamp} endTimestamp=${event.args.endTimestamp} amountPaid=${event.args.amountPaid} amountRequested=${event.args.amountRequested}`,
     );
+  }
+
+  /**
+   * Fetch AWS costs historical data for the specified invoice period.
+   * @param startDate Invoice period start date.
+   * @param awsCostsApiFilters AWS Costs API filters to apply.
+   */
+  private async getAWSCostsHistoricalData(
+    startDate: Date,
+    awsCostsApiFilters: GetCostAndUsageCommandInput,
+  ): Promise<void> {
+    const currentDate = new Date();
+    const awsClient = createAwsCostExplorerClient({ region: "us-east-1" });
+    const startDateStr = formatInTimeZone(startDate, "UTC", "yyyy-MM-dd");
+    const endDateStr = formatInTimeZone(currentDate, "UTC", "yyyy-MM-dd");
+    const awsEndDateStr = formatInTimeZone(addDays(currentDate, 1), "UTC", "yyyy-MM-dd");
+
+    this.log(`Fetching AWS costs historical data. startDate=${startDateStr} endDate=${endDateStr}`);
+
+    if (!awsCostsApiFilters.Metrics || awsCostsApiFilters.Metrics.length !== 1) {
+      this.error("AWS Costs API Filters must specify one metric.");
+    }
+
+    const { ResultsByTime } = this.unwrapOrError(
+      await getDailyAwsCosts(awsClient, {
+        ...awsCostsApiFilters,
+        TimePeriod: {
+          Start: startDateStr,
+          End: awsEndDateStr,
+        },
+      }),
+      "Failed to fetch AWS costs historical data",
+    );
+
+    if (!Array.isArray(ResultsByTime) || ResultsByTime.length === 0) {
+      this.error(
+        `No AWS cost historical data returned for the specified period. startDate=${startDateStr} endDate=${endDateStr}`,
+      );
+    }
+
+    const formattedResultsByTime = flattenResultsByTime(ResultsByTime, awsCostsApiFilters.Metrics[0]);
+
+    this.log(`AWS Historical Costs Data:`);
+    for (const dailyData of formattedResultsByTime) {
+      this.log(
+        `type=aws_historical_data_costs fetchAt=${endDateStr} date=${dailyData.date} amount=${dailyData.amount} estimated=${dailyData.estimated}`,
+      );
+    }
   }
 
   /**
