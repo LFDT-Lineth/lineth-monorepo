@@ -102,7 +102,7 @@ services:
     image: prom/prometheus:v2.26.0
     profiles: [ "observability" ]
     ports:
-      - "9090:9090"
+      - "9091:9090"
     volumes:
       - ./config/observability/prometheus-config.yaml:/etc/prometheus/prometheus-config.yaml
     command:

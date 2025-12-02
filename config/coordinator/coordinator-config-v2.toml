@@ -26,6 +26,7 @@ conflation-deadline-check-interval = "PT3S"
 conflation-deadline-last-block-confirmation-delay = "PT2S" # recommended: at least 2 * blockInterval
 l2-fetch-blocks-limit = 4000
 force-stop-conflation-at-block-inclusive=100_000_000
+#force-stop-conflation-at-block-timestamp-inclusive=2000000000
 
 # This is to prevent inflight trasactions that may change Smart contract state while coordinator is restarted.
 # Queries SMC for last finalised block, and keeps polling until this number of blocks observe the same state.
@@ -78,7 +79,7 @@ fs-responses-directory = "/data/prover/v3/aggregation/responses"
 #fs-responses-directory = "/data/prover/v3/aggregation/responses"
 
 [traces]
-expected-traces-api-version = "beta-v4.4-rc5"
+expected-traces-api-version = "beta-v4.4-rc7"
 [traces.counters]
 endpoints = ["http://traces-node:8545/"]
 request-limit-per-endpoint = 1

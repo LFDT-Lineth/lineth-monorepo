@@ -5,13 +5,13 @@
       "type": "qbft",
       "blockTimeSeconds": 1,
       "validatorSet": ["0x083e11f14b68d5ebeb4be3e3e0237ebbc5675ab5"],
-      "elFork": "Cancun"
+      "elFork": "Prague"
     },
-    "%PRAGUE_TIME%": {
+    "%FORK_TIME%": {
       "type": "qbft",
       "validatorSet": ["0x083e11f14b68d5ebeb4be3e3e0237ebbc5675ab5"],
       "blockTimeSeconds": 1,
-      "elFork": "Prague"
+      "elFork": "Osaka"
     }
   }
 }

@@ -24,7 +24,7 @@ services:
   besu-node:
     hostname: el-client
     container_name: linea-besu
-    image: consensys/linea-besu-package:beta-v4.4-rc5-20251128003548-a3bfee7
+    image: consensys/linea-besu-package:beta-v4.4-rc7-20251201181632-1fefac9
     healthcheck:
       test: ["CMD-SHELL", "bash -c '[ -f /tmp/pid ]'"]
       interval: 1s
@@ -57,7 +57,7 @@ services:
   maru-node:
     hostname: linea-maru
     container_name: linea-maru
-    image: consensys/maru:95cab28
+    image: consensys/maru:9737a45
     restart: unless-stopped
     ports:
       - "8080:8080" # Beacon/REST API

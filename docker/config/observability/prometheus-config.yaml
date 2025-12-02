@@ -14,7 +14,12 @@ scrape_configs:
   - job_name: 'coordinator-local'
     metrics_path: '/metrics'
     static_configs:
-      - targets: [ 'host.docker.internal:9546' ]
+      - targets: [ 'host.docker.internal:9545' ]
+
+  - job_name: 'sequencer'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: [ 'sequencer:9545' ]
 
   - job_name: 'prover'
     static_configs:
