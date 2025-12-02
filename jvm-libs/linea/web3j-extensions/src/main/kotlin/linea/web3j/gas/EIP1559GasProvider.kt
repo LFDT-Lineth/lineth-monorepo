@@ -1,18 +1,16 @@
 package linea.web3j.gas
 
+import linea.domain.BlockParameter
+import linea.ethapi.EthApiClient
 import linea.kotlin.toBigInteger
 import linea.kotlin.toIntervalString
 import linea.web3j.domain.blocksRange
-import linea.web3j.domain.toLineaDomain
-import linea.web3j.requestAsync
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
-import org.web3j.protocol.Web3j
-import org.web3j.protocol.core.DefaultBlockParameterName
 import java.math.BigInteger
 import kotlin.math.min
 
-class EIP1559GasProvider(private val web3jClient: Web3j, private val config: Config) :
+class EIP1559GasProvider(private val ethApiClient: EthApiClient, private val config: Config) :
   AtomicContractEIP1559GasProvider {
   private val log: Logger = LogManager.getLogger(this::class.java)
 
@@ -29,22 +27,21 @@ class EIP1559GasProvider(private val web3jClient: Web3j, private val config: Con
     }
   }
 
-  private val chainId: Long = web3jClient.ethChainId().send().chainId.toLong()
+  private val chainId: Long = ethApiClient.ethChainId().get().toLong()
   private var cacheIsValidForBlockNumber: BigInteger = BigInteger.ZERO
   private var feesCache: EIP1559GasFees = getRecentFees()
   private var gasLimitOverride = BigInteger.valueOf(Long.MAX_VALUE)
 
   private fun getRecentFees(): EIP1559GasFees {
-    val currentBlockNumber = web3jClient.ethBlockNumber().send().blockNumber
+    val currentBlockNumber = ethApiClient.ethBlockNumber().get().toBigInteger()
     if (currentBlockNumber > cacheIsValidForBlockNumber) {
-      web3jClient
+      ethApiClient
         .ethFeeHistory(
           config.feeHistoryBlockCount.toInt(),
-          DefaultBlockParameterName.LATEST,
+          BlockParameter.Tag.LATEST,
           listOf(config.feeHistoryRewardPercentile),
         )
-        .requestAsync { feeHistoryResponse ->
-          val feeHistory = feeHistoryResponse.feeHistory.toLineaDomain()
+        .thenApply { feeHistory ->
           var maxPriorityFeePerGas = feeHistory.reward.sumOf { it[0] } / feeHistory.reward.size.toUInt()
 
           if (maxPriorityFeePerGas > config.maxFeePerGasCap) {
@@ -66,7 +63,7 @@ class EIP1559GasProvider(private val web3jClient: Web3j, private val config: Con
             )
             log.debug(
               "New fees estimation: fees={} l2Blocks={}",
-              feeHistoryResponse.feeHistory.blocksRange().toIntervalString(),
+              feeHistory.blocksRange().toIntervalString(),
               feesCache,
             )
           } else {

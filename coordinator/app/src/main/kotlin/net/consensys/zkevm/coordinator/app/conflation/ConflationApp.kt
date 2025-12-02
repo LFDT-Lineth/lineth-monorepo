@@ -259,7 +259,6 @@ class ConflationApp(
       description = "Highest consecutive proven aggregation block number",
       measurementSupplier = highestConsecutiveAggregationTracker,
     )
-
     ProofAggregationCoordinatorService.Companion
       .create(
         vertx = vertx,
@@ -286,6 +285,7 @@ class ConflationApp(
         ),
         l2MessageService = Web3JL2MessageServiceSmartContractClient.createReadOnly(
           web3jClient = l2Web3jClient,
+          ethApiClient = createEthApiClient(web3jClient = l2Web3jClient, requestRetryConfig = null, vertx = vertx),
           contractAddress = configs.protocol.l2.contractAddress,
           smartContractErrors = configs.smartContractErrors,
           smartContractDeploymentBlockNumber = configs.protocol.l2.contractDeploymentBlockNumber?.getNumber(),

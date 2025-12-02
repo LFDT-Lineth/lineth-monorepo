@@ -4,6 +4,7 @@ import linea.contract.ContractDeploymentBlockNumberProvider
 import linea.contract.EventBasedContractDeploymentBlockNumberProvider
 import linea.contract.StaticContractDeploymentBlockNumberProvider
 import linea.domain.BlockParameter
+import linea.ethapi.EthApiClient
 import linea.kotlin.encodeHex
 import linea.kotlin.toBigInteger
 import linea.kotlin.toULong
@@ -36,6 +37,7 @@ class Web3JL2MessageServiceSmartContractClient(
   companion object {
     fun create(
       web3jClient: Web3j,
+      ethApiClient: EthApiClient,
       contractAddress: String,
       gasLimit: ULong,
       maxFeePerGasCap: ULong,
@@ -46,7 +48,7 @@ class Web3JL2MessageServiceSmartContractClient(
       smartContractDeploymentBlockNumber: ULong?,
     ): Web3JL2MessageServiceSmartContractClient {
       val gasProvider = EIP1559GasProvider(
-        web3jClient = web3jClient,
+        ethApiClient = ethApiClient,
         config = EIP1559GasProvider.Config(
           gasLimit = gasLimit,
           maxFeePerGasCap = maxFeePerGasCap,
@@ -80,6 +82,7 @@ class Web3JL2MessageServiceSmartContractClient(
 
     fun createReadOnly(
       web3jClient: Web3j,
+      ethApiClient: EthApiClient,
       contractAddress: String,
       smartContractErrors: SmartContractErrors,
       smartContractDeploymentBlockNumber: ULong?,
@@ -91,6 +94,7 @@ class Web3JL2MessageServiceSmartContractClient(
       )
       return create(
         web3jClient = web3jClient,
+        ethApiClient = ethApiClient,
         contractAddress = contractAddress,
         gasLimit = 0UL,
         maxFeePerGasCap = 0UL,

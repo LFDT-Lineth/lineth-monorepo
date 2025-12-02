@@ -56,6 +56,7 @@ object MessageAnchoringAppConfigurator {
       ),
       l2MessageService = Web3JL2MessageServiceSmartContractClient.create(
         web3jClient = l2Web3jClient,
+        ethApiClient = createEthApiClient(web3jClient = l2Web3jClient, requestRetryConfig = null, vertx = vertx),
         contractAddress = configs.protocol.l2.contractAddress,
         gasLimit = configs.messageAnchoring.gas.gasLimit,
         maxFeePerGasCap = configs.messageAnchoring.gas.maxFeePerGasCap,
