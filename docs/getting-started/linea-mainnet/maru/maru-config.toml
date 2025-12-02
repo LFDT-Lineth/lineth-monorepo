@@ -4,6 +4,7 @@
 # l1-eth-api = { endpoint = "please_provide_an_L1_RPC_endpoint_here" }
 # l1-polling-interval = "6 seconds"
 # l1-highest-block-tag = "finalized"
+# l2-eth-api-endpoint = { endpoint = "please_provide_an_L2_RPC_endpoint_here" }
 
 [persistence]
 data-path = "/opt/maru/data"

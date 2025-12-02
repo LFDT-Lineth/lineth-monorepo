@@ -57,3 +57,4 @@ metrics-port=9545
 ### Plugin Configuration ###
 # Disable external plugins
 Xplugins-external-enabled=false
+Xeth-capability-max=68
