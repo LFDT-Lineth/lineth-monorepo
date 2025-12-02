@@ -13,6 +13,7 @@ import {
   LINEA_ROLLUP_V8_UNPAUSE_TYPES_ROLES,
   LINEA_ROLLUP_V8_ROLES,
   OPERATOR_ROLE,
+  ADDRESS_ZERO,
 } from "../common/constants";
 
 const func: DeployFunction = async function () {
@@ -50,6 +51,7 @@ const func: DeployFunction = async function () {
         pauseTypeRoles,
         unpauseTypeRoles,
         defaultAdmin: lineaRollupSecurityCouncil,
+        shnarfProvider: ADDRESS_ZERO,
       },
       MultiCallAddress,
     ],

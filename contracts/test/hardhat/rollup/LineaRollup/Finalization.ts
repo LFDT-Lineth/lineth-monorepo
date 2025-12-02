@@ -231,7 +231,7 @@ describe("Linea Rollup contract: Finalization", () => {
           .connect(operator)
           .finalizeBlocks(calldataAggregatedProof1To155.aggregatedProof, TEST_PUBLIC_VERIFIER_INDEX, finalizationData);
 
-        await expectRevertWithCustomError(lineaRollup, finalizeCompressedCall, "FinalBlobNotSubmitted", [
+        await expectRevertWithCustomError(lineaRollup, finalizeCompressedCall, "FinalShnarfNotSubmitted", [
           expectedMissingBlobShnarf,
         ]);
       });

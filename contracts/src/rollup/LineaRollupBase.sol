@@ -315,7 +315,7 @@ abstract contract LineaRollupBase is
     );
 
     if (shnarfProvider.blobShnarfExists(finalShnarf) == 0) {
-      revert FinalBlobNotSubmitted(finalShnarf);
+      revert FinalShnarfNotSubmitted(finalShnarf);
     }
 
     _addL2MerkleRoots(_finalizationData.l2MerkleRoots, _finalizationData.l2MerkleTreesDepth);

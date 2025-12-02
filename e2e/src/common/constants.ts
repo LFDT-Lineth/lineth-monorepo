@@ -19,8 +19,16 @@ export const PAUSE_L2_L1_ROLE = generateKeccak256(["string"], ["PAUSE_L2_L1_ROLE
 export const UNPAUSE_L2_L1_ROLE = generateKeccak256(["string"], ["UNPAUSE_L2_L1_ROLE"], true);
 export const PAUSE_BLOB_SUBMISSION_ROLE = generateKeccak256(["string"], ["PAUSE_BLOB_SUBMISSION_ROLE"], true);
 export const UNPAUSE_BLOB_SUBMISSION_ROLE = generateKeccak256(["string"], ["UNPAUSE_BLOB_SUBMISSION_ROLE"], true);
-export const PAUSE_STATE_DATA_SUBMISSION_ROLE = generateKeccak256(["string"], ["PAUSE_STATE_DATA_SUBMISSION_ROLE"], true);
-export const UNPAUSE_STATE_DATA_SUBMISSION_ROLE = generateKeccak256(["string"], ["UNPAUSE_STATE_DATA_SUBMISSION_ROLE"], true);
+export const PAUSE_STATE_DATA_SUBMISSION_ROLE = generateKeccak256(
+  ["string"],
+  ["PAUSE_STATE_DATA_SUBMISSION_ROLE"],
+  true,
+);
+export const UNPAUSE_STATE_DATA_SUBMISSION_ROLE = generateKeccak256(
+  ["string"],
+  ["UNPAUSE_STATE_DATA_SUBMISSION_ROLE"],
+  true,
+);
 export const PAUSE_FINALIZATION_ROLE = generateKeccak256(["string"], ["PAUSE_FINALIZATION_ROLE"], true);
 export const UNPAUSE_FINALIZATION_ROLE = generateKeccak256(["string"], ["UNPAUSE_FINALIZATION_ROLE"], true);
 export const USED_RATE_LIMIT_RESETTER_ROLE = generateKeccak256(["string"], ["USED_RATE_LIMIT_RESETTER_ROLE"], true);

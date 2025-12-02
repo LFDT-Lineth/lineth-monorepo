@@ -13,6 +13,7 @@ import {
   VALIDIUM_ROLES,
   VALIDIUM_UNPAUSE_TYPES_ROLES,
   OPERATOR_ROLE,
+  ADDRESS_ZERO,
 } from "../common/constants";
 
 const func: DeployFunction = async function () {
@@ -49,6 +50,7 @@ const func: DeployFunction = async function () {
         pauseTypeRoles,
         unpauseTypeRoles,
         defaultAdmin: validiumSecurityCouncil,
+        shnarfProvider: ADDRESS_ZERO,
       },
     ],
     {
