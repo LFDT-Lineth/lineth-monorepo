@@ -1,6 +1,10 @@
 # 3 days
 minimumReleaseAge: 4320
 
+minimumReleaseAgeExclude:
+  - '@next/third-parties'
+  - 'next'
+
 packages:
   - 'contracts/**'
   - 'e2e/**'
