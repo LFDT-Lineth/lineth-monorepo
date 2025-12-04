@@ -2,10 +2,10 @@
 
 import dynamic from "next/dynamic";
 import { ChainId, WidgetConfig, WidgetSkeleton } from "@lifi/widget";
+import { useWeb3AuthConnect } from "@web3auth/modal/react";
 import atypTextFont from "@/assets/fonts/atypText";
 import { CHAINS_RPC_URLS, ETH_SYMBOL } from "@/constants";
 import { config as appConfig } from "@/config";
-import { useWeb3AuthConnect } from "@web3auth/modal/react";
 
 const widgetConfig: Partial<WidgetConfig> = {
   variant: "compact",

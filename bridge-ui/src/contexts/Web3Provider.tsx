@@ -1,17 +1,17 @@
 "use client";
 
 import { ReactNode, useEffect } from "react";
-import { useWalletDetection } from "./WalletDetectionProvider";
+import { toHex } from "viem";
 import { useWeb3Auth, Web3AuthContextConfig, Web3AuthProvider } from "@web3auth/modal/react";
+import { coinbaseConnector } from "@web3auth/modal/connectors/coinbase-connector";
 import { WagmiProvider } from "@web3auth/modal/react/wagmi";
-import { WEB3AUTH_NETWORK } from "@web3auth/modal";
-import { ADAPTER_EVENTS } from "@web3auth/base";
+import { WEB3AUTH_NETWORK, CONNECTOR_EVENTS } from "@web3auth/modal";
 import useGTM from "@/hooks/useGtm";
 import { useCachedIdentityToken } from "@/hooks/useCachedIdentityToken";
+import { useWalletDetection } from "./WalletDetectionProvider";
 import { isProd } from "../../next.config.mjs";
 import { config as appConfig } from "@/config";
 import { localL1Network, localL2Network } from "@/constants";
-import { toHex } from "viem";
 
 interface DynamicProviderProps {
   children: ReactNode;
@@ -54,6 +54,9 @@ const web3AuthContextConfig: Web3AuthContextConfig = {
           ],
         }
       : {}),
+    // coinbase connector supports linea chain only for eoa wallets
+    // if we try to use it with smartWallets, switch chain throws an error.
+    connectors: [coinbaseConnector({ options: "eoaOnly" })],
     modalConfig: {
       connectors: {
         auth: {
@@ -117,16 +120,16 @@ function Web3AuthEventBridge() {
       });
     };
 
-    web3Auth.on(ADAPTER_EVENTS.CONNECTING, onConnecting);
-    web3Auth.on(ADAPTER_EVENTS.CONNECTED, onConnected);
-    web3Auth.on(ADAPTER_EVENTS.DISCONNECTED, onDisconnected);
-    web3Auth.on(ADAPTER_EVENTS.ERRORED, onErrored);
+    web3Auth.on(CONNECTOR_EVENTS.CONNECTING, onConnecting);
+    web3Auth.on(CONNECTOR_EVENTS.CONNECTED, onConnected);
+    web3Auth.on(CONNECTOR_EVENTS.DISCONNECTED, onDisconnected);
+    web3Auth.on(CONNECTOR_EVENTS.ERRORED, onErrored);
 
     return () => {
-      web3Auth.off(ADAPTER_EVENTS.CONNECTING, onConnecting);
-      web3Auth.off(ADAPTER_EVENTS.CONNECTED, onConnected);
-      web3Auth.off(ADAPTER_EVENTS.DISCONNECTED, onDisconnected);
-      web3Auth.off(ADAPTER_EVENTS.ERRORED, onErrored);
+      web3Auth.off(CONNECTOR_EVENTS.CONNECTING, onConnecting);
+      web3Auth.off(CONNECTOR_EVENTS.CONNECTED, onConnected);
+      web3Auth.off(CONNECTOR_EVENTS.DISCONNECTED, onDisconnected);
+      web3Auth.off(CONNECTOR_EVENTS.ERRORED, onErrored);
     };
   }, [web3Auth, trackEvent, walletsInstalled, clearTokenCache]);
 

@@ -8,7 +8,7 @@ import {
   InternalConnector,
 } from "@layerswap/widget/types";
 import { useWeb3Auth, useWeb3AuthConnect, useWeb3AuthDisconnect } from "@web3auth/modal/react";
-import { ADAPTER_EVENTS } from "@web3auth/base";
+import { CONNECTOR_EVENTS } from "@web3auth/modal";
 
 export default function useEVM({ networks }: WalletConnectionProviderProps): WalletConnectionProvider {
   const name = "EVM";
@@ -248,12 +248,12 @@ function waitForWeb3AuthConnection(
     };
 
     // Listen to Web3Auth events
-    web3Auth.on(ADAPTER_EVENTS.CONNECTED, onConnected);
-    web3Auth.on(ADAPTER_EVENTS.ERRORED, onErrored);
+    web3Auth.on(CONNECTOR_EVENTS.CONNECTED, onConnected);
+    web3Auth.on(CONNECTOR_EVENTS.ERRORED, onErrored);
 
     web3AuthUnsubscribe = () => {
-      web3Auth.off(ADAPTER_EVENTS.CONNECTED, onConnected);
-      web3Auth.off(ADAPTER_EVENTS.ERRORED, onErrored);
+      web3Auth.off(CONNECTOR_EVENTS.CONNECTED, onConnected);
+      web3Auth.off(CONNECTOR_EVENTS.ERRORED, onErrored);
     };
 
     // Check if already connected
