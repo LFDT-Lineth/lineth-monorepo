@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, type JSX } from "react";
 import { formatUnits } from "viem";
 
 export function useFormattedDigit(value: bigint, decimals: number = 18): JSX.Element {

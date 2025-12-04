@@ -15,7 +15,7 @@ export interface TokenStoreProviderProps {
 }
 
 export function TokenStoreProvider({ children, initialState }: TokenStoreProviderProps) {
-  const storeRef = useRef<TokenStoreApi>();
+  const storeRef = useRef<TokenStoreApi | undefined>(undefined);
   if (isUndefined(storeRef.current)) {
     storeRef.current = createTokenStore(initialState);
   }
