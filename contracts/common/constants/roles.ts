@@ -89,7 +89,11 @@ export const SET_MESSAGE_SERVICE_ROLE = generateKeccak256(["string"], ["SET_MESS
   encodePacked: true,
 });
 
-export const BASE_ROLES = [PAUSE_ALL_ROLE, UNPAUSE_ALL_ROLE];
+export const SECURITY_COUNCIL_ROLE = generateKeccak256(["string"], ["SECURITY_COUNCIL_ROLE"], {
+  encodePacked: true,
+});
+
+export const BASE_ROLES = [PAUSE_ALL_ROLE, UNPAUSE_ALL_ROLE, SECURITY_COUNCIL_ROLE];
 
 export const VALIDIUM_ROLES = [
   ...BASE_ROLES,
