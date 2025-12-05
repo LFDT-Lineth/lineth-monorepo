@@ -89,7 +89,7 @@ class BlobSubmissionCoordinatorTest {
         ),
         blobsRepository = blobsRepository,
         aggregationsRepository = aggregationsRepository,
-        lineaRollup = lineaRollupSmartContractClient,
+        lineaSmartContractClient = lineaRollupSmartContractClient,
         blobSubmitter = blobSubmitter,
         vertx = vertx,
         clock = fakeClock,

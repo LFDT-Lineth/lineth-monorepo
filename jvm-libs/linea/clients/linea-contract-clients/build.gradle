@@ -12,6 +12,7 @@ dependencies {
   api project(':jvm-libs:generic:extensions:kotlin')
   api 'build.linea:l1-rollup-contract-client:6.0.0-rc2'
   api 'build.linea:l2-message-service-contract-client:0.1.0'
+  api project(':jvm-libs:linea:linea-contracts:l1-validium')
 
   implementation project(':jvm-libs:linea:web3j-extensions')
   api("org.web3j:core:${libs.versions.web3j.get()}") {

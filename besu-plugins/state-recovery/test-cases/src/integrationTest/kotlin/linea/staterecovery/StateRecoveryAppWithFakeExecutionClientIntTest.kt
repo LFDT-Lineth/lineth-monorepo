@@ -2,7 +2,7 @@ package linea.staterecovery
 
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
-import linea.contract.l1.LineaContractVersion
+import linea.contract.l1.LineaRollupContractVersion
 import linea.domain.BlockNumberAndHash
 import linea.domain.BlockParameter
 import linea.domain.RetryConfig
@@ -76,7 +76,7 @@ class StateRecoveryAppWithFakeExecutionClientIntTest {
       FakeStateManagerClientBasedOnBlobsRecords(blobRecords = aggregationsAndBlobs.flatMap { it.blobs })
 
     val rollupDeploymentResult = ContractsManager.get()
-      .deployLineaRollup(numberOfOperators = 2, contractVersion = LineaContractVersion.V6).get()
+      .deployLineaRollup(numberOfOperators = 2, contractVersion = LineaRollupContractVersion.V6).get()
 
     this.appConfigs = StateRecoveryApp.Config(
       l1EarliestSearchBlock = BlockParameter.Tag.EARLIEST,

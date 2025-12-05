@@ -41,7 +41,7 @@ data class FinalizedBlock(
 class FakeLineaRollupSmartContractClient(
   val contractAddress: String = Random.nextBytes(20).encodeHex(),
   @get:Synchronized @set:Synchronized
-  var contractVersion: LineaContractVersion = LineaContractVersion.V6,
+  var contractVersion: LineaRollupContractVersion = LineaRollupContractVersion.V6,
   _finalizedBlocks: List<FinalizedBlock> = listOf(FinalizedBlock(0uL, Clock.System.now(), Random.nextBytes(32))),
   _messageRollingHashes: Map<ULong, ByteArray> = emptyMap(),
 ) : LineaRollupSmartContractClientReadOnly {
@@ -77,13 +77,10 @@ class FakeLineaRollupSmartContractClient(
 
   override fun getAddress(): String = contractAddress
 
-  override fun getVersion(): SafeFuture<LineaContractVersion> = SafeFuture.completedFuture(contractVersion)
+  override fun getVersion(): SafeFuture<LineaRollupContractVersion> = SafeFuture.completedFuture(contractVersion)
 
   override fun finalizedL2BlockNumber(blockParameter: BlockParameter): SafeFuture<ULong> =
     SafeFuture.completedFuture(lastFinalizedBlock().number)
-
-  override fun finalizedL2BlockTimestamp(blockParameter: BlockParameter): SafeFuture<ULong> =
-    SafeFuture.completedFuture(lastFinalizedBlock().timestamp.epochSeconds.toULong())
 
   override fun getMessageRollingHash(
     blockParameter: BlockParameter,

@@ -3,7 +3,7 @@ package linea.contract.l1
 import linea.domain.BlockParameter
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
-enum class LineaContractVersion : Comparable<LineaContractVersion> {
+enum class LineaRollupContractVersion : Comparable<LineaRollupContractVersion> {
   V6, // more efficient data submission and new events for state recovery
 }
 
@@ -19,11 +19,6 @@ interface LineaSmartContractClientReadOnly {
    * Get the current L2 block number
    */
   fun finalizedL2BlockNumber(blockParameter: BlockParameter = BlockParameter.Tag.LATEST): SafeFuture<ULong>
-
-  /**
-   * Get the current L2 block timestamp
-   */
-  fun finalizedL2BlockTimestamp(blockParameter: BlockParameter = BlockParameter.Tag.LATEST): SafeFuture<ULong>
 
   fun getMessageRollingHash(
     blockParameter: BlockParameter = BlockParameter.Tag.LATEST,
@@ -51,7 +46,8 @@ interface LineaSmartContractClientReadOnly {
 
 interface LineaRollupSmartContractClientReadOnly :
   LineaSmartContractClientReadOnly,
-  ContractVersionProvider<LineaContractVersion>
+  ContractVersionProvider<LineaRollupContractVersion>
+
 interface LineaValidiumSmartContractClientReadOnly :
   LineaSmartContractClientReadOnly,
   ContractVersionProvider<LineaValidiumContractVersion>

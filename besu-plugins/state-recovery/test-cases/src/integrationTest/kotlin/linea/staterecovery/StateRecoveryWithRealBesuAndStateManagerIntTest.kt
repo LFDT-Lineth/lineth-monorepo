@@ -5,7 +5,7 @@ import build.linea.clients.StateManagerV1JsonRpcClient
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
-import linea.contract.l1.LineaContractVersion
+import linea.contract.l1.LineaRollupContractVersion
 import linea.log4j.configureLoggers
 import linea.staterecovery.test.assertBesuAndShomeiRecoveredAsExpected
 import linea.staterecovery.test.execCommandAndAssertSuccess
@@ -82,7 +82,7 @@ class StateRecoveryWithRealBesuAndStateManagerIntTest {
   @Order(1)
   fun `should recover status from genesis - seed data replay`() {
     this.rollupDeploymentResult = ContractsManager.get()
-      .deployLineaRollup(numberOfOperators = 2, contractVersion = LineaContractVersion.V6)
+      .deployLineaRollup(numberOfOperators = 2, contractVersion = LineaRollupContractVersion.V6)
       .get()
     log.info("LineaRollup address={}", rollupDeploymentResult.contractAddress)
     contractClientForBlobSubmission = rollupDeploymentResult.rollupOperatorClient

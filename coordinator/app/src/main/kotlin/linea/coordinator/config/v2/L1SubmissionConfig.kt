@@ -9,7 +9,12 @@ data class L1SubmissionConfig(
   val fallbackGasPrice: FallbackGasPriceConfig,
   val blob: BlobSubmissionConfig,
   val aggregation: AggregationSubmissionConfig,
+  val dataAvailability: DataAvailability,
 ) : FeatureToggle {
+  enum class DataAvailability {
+    ROLLUP,
+    VALIDIUM,
+  }
   override val disabled: Boolean
     get() = blob.disabled && aggregation.disabled
 
@@ -51,7 +56,7 @@ data class L1SubmissionConfig(
     val gasLimit: ULong,
     val maxFeePerGasCap: ULong,
     val maxPriorityFeePerGasCap: ULong,
-    val maxFeePerBlobGasCap: ULong? = null,
+    val maxFeePerBlobGasCap: ULong = 0UL,
     val fallback: FallbackGasConfig,
   ) {
     data class FallbackGasConfig(

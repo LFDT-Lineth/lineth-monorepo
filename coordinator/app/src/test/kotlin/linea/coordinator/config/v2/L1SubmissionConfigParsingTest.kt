@@ -19,6 +19,7 @@ class L1SubmissionConfigParsingTest {
     val toml = """
     [l1-submission]
     disabled = true
+    data-availability = "VALIDIUM"
     [l1-submission.dynamic-gas-price-cap]
     disabled = true
     [l1-submission.dynamic-gas-price-cap.gas-price-cap-calculation]
@@ -118,6 +119,7 @@ class L1SubmissionConfigParsingTest {
     val config =
       L1SubmissionConfigToml(
         disabled = true,
+        dataAvailability = L1SubmissionConfigToml.DataAvailability.VALIDIUM,
         dynamicGasPriceCap = L1SubmissionConfigToml.DynamicGasPriceCapToml(
           disabled = true,
           gasPriceCapCalculation = L1SubmissionConfigToml.DynamicGasPriceCapToml.GasPriceCapCalculationToml(
@@ -193,7 +195,6 @@ class L1SubmissionConfigParsingTest {
           gas = L1SubmissionConfigToml.GasConfigToml(
             gasLimit = 10_000_001u,
             maxFeePerGasCap = 100_000_000_001u,
-            maxFeePerBlobGasCap = null,
             maxPriorityFeePerGasCap = 10_000_000_001u,
             fallback = L1SubmissionConfigToml.GasConfigToml.FallbackGasConfig(
               priorityFeePerGasUpperBound = 20_000_000_001u,
@@ -340,7 +341,6 @@ class L1SubmissionConfigParsingTest {
           gas = L1SubmissionConfigToml.GasConfigToml(
             gasLimit = 10_000_001u,
             maxFeePerGasCap = 100_000_000_011u,
-            maxFeePerBlobGasCap = null,
             maxPriorityFeePerGasCap = 10_000_000_010u,
             fallback = L1SubmissionConfigToml.GasConfigToml.FallbackGasConfig(
               priorityFeePerGasUpperBound = 20_000_000_001u,
@@ -377,6 +377,7 @@ class L1SubmissionConfigParsingTest {
 
   @Test
   fun `should parse l1 submission minimal config`() {
-    assertThat(parseConfig<WrapperConfig>(tomlMinimal).l1Submission).isEqualTo(configMinimal)
+    val config = parseConfig<WrapperConfig>(tomlMinimal)
+    assertThat(config.l1Submission).isEqualTo(configMinimal)
   }
 }

@@ -2,7 +2,7 @@ package linea.staterecovery.datafetching
 
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
-import linea.contract.l1.LineaContractVersion
+import linea.contract.l1.LineaRollupContractVersion
 import linea.domain.BlockParameter
 import linea.domain.RetryConfig
 import linea.log4j.configureLoggers
@@ -69,7 +69,7 @@ class SubmissionsFetchingTaskIntTest {
       extraBlobsWithoutAggregation = 0,
     )
     val rollupDeploymentResult = ContractsManager.get()
-      .deployLineaRollup(numberOfOperators = 2, contractVersion = LineaContractVersion.V6).get()
+      .deployLineaRollup(numberOfOperators = 2, contractVersion = LineaRollupContractVersion.V6).get()
 
     appClients = createAppClients(
       vertx = vertx,

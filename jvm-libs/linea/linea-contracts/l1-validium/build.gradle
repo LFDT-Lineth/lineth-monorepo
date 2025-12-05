@@ -1,0 +1,28 @@
+plugins {
+  id 'java-library'
+  id 'linea.web3j-codegen'
+}
+java {
+  toolchain {
+    languageVersion = JavaLanguageVersion.of(21)
+  }
+}
+description = 'Web3J Java client for Linea L1 Validium Smart Contract'
+ext.artifactId = 'l1-validium-contract-client'
+
+dependencies {
+  // this shall be very lightweight dependency, just export the generated sources
+  compileOnly("org.web3j:core:${libs.versions.web3j.get()}") {
+    exclude group: 'org.slf4j', module: 'slf4j-nop'
+  }
+}
+
+web3jContractWrappers {
+  def contractsDir = layout.buildDirectory.dir("${rootProject.projectDir}/contracts/abi").get()
+  def validiumV1Abi = contractsDir.file("ValidiumV1.0.abi").asFile.absolutePath
+
+  contractsPackage = "build.linea.contract"
+  contracts = [
+    "$validiumV1Abi": "ValidiumV1"
+  ]
+}

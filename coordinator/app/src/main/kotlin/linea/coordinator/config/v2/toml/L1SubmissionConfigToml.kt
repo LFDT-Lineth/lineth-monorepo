@@ -15,7 +15,21 @@ data class L1SubmissionConfigToml(
   val fallbackGasPrice: FallbackGasPriceToml,
   val blob: BlobSubmissionConfigToml,
   val aggregation: AggregationSubmissionToml,
+  val dataAvailability: DataAvailability = DataAvailability.ROLLUP,
 ) {
+
+  enum class DataAvailability() {
+    ROLLUP,
+    VALIDIUM,
+    ;
+
+    fun reified(): L1SubmissionConfig.DataAvailability {
+      return when (this) {
+        ROLLUP -> L1SubmissionConfig.DataAvailability.ROLLUP
+        VALIDIUM -> L1SubmissionConfig.DataAvailability.VALIDIUM
+      }
+    }
+  }
 
   data class DynamicGasPriceCapToml(
     val disabled: Boolean = false,
@@ -83,7 +97,7 @@ data class L1SubmissionConfigToml(
   data class GasConfigToml(
     val gasLimit: ULong,
     val maxFeePerGasCap: ULong,
-    val maxFeePerBlobGasCap: ULong? = null,
+    val maxFeePerBlobGasCap: ULong = 0UL,
     val maxPriorityFeePerGasCap: ULong,
     val fallback: FallbackGasConfig,
   ) {
@@ -167,6 +181,7 @@ data class L1SubmissionConfigToml(
         gas = this.aggregation.gas.reified(),
         signer = this.aggregation.signer.reified(),
       ),
+      dataAvailability = this.dataAvailability.reified(),
     )
   }
 }

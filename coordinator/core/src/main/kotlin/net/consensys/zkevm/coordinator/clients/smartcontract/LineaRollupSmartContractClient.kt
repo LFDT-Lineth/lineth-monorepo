@@ -73,7 +73,7 @@ interface LineaValidiumSmartContractClient :
   /**
    *  Simulates the sending of a list of blobs to the smart contract, with EIP4844 transaction.
    */
-  fun acceptShnarfsEthCall(
+  fun acceptShnarfDataEthCall(
     blobs: List<BlobRecord>,
     gasPriceCaps: GasPriceCaps?,
   ): SafeFuture<String?>
@@ -81,7 +81,7 @@ interface LineaValidiumSmartContractClient :
   /**
    * Submit a list of blobs to the smart contract, with EIP4844 transaction
    */
-  fun acceptShnarfs(
+  fun acceptShnarfData(
     blobs: List<BlobRecord>,
     gasPriceCaps: GasPriceCaps?,
   ): SafeFuture<String>

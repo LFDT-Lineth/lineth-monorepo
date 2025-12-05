@@ -2,7 +2,7 @@ package linea.staterecovery
 
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
-import linea.contract.l1.LineaContractVersion
+import linea.contract.l1.LineaRollupContractVersion
 import linea.domain.BlockParameter
 import linea.domain.RetryConfig
 import linea.ethapi.EthLogsSearcherImpl
@@ -51,7 +51,7 @@ class LineaSubmissionEventsClientIntTest {
     )
 
     val rollupDeploymentFuture = ContractsManager.get()
-      .deployLineaRollup(numberOfOperators = 2, contractVersion = LineaContractVersion.V6)
+      .deployLineaRollup(numberOfOperators = 2, contractVersion = LineaRollupContractVersion.V6)
     // load files from FS while smc deploy
     aggregationsAndBlobs = loadBlobsAndAggregationsSortedAndGrouped(
       blobsResponsesDir = "$testDataDir/compression/responses",

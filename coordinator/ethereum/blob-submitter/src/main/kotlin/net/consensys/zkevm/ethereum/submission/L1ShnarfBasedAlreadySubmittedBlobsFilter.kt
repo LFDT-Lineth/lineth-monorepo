@@ -1,13 +1,13 @@
 package net.consensys.zkevm.ethereum.submission
 
+import linea.contract.l1.LineaSmartContractClientReadOnly
 import net.consensys.linea.async.AsyncFilter
-import net.consensys.zkevm.coordinator.clients.smartcontract.LineaRollupSmartContractClient
 import net.consensys.zkevm.domain.BlobRecord
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.function.Consumer
 
 class L1ShnarfBasedAlreadySubmittedBlobsFilter(
-  private val lineaRollup: LineaRollupSmartContractClient,
+  private val lineaSmartContractClientReadOnly: LineaSmartContractClientReadOnly,
   private val acceptedBlobEndBlockNumberConsumer: Consumer<ULong> = Consumer<ULong> { },
 ) : AsyncFilter<BlobRecord> {
 
@@ -22,7 +22,7 @@ class L1ShnarfBasedAlreadySubmittedBlobsFilter(
     items: List<BlobRecord>,
   ): SafeFuture<List<BlobRecord>> {
     val blockByShnarfQueryFutures = items.map { blobRecord ->
-      lineaRollup
+      lineaSmartContractClientReadOnly
         .isBlobShnarfPresent(shnarf = blobRecord.expectedShnarf)
         .thenApply { isShnarfPresent ->
           if (isShnarfPresent) {

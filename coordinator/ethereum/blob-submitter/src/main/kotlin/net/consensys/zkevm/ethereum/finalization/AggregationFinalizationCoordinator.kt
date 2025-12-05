@@ -6,7 +6,7 @@ import linea.kotlin.trimToMinutePrecision
 import linea.timer.TimerSchedule
 import linea.timer.VertxPeriodicPollingService
 import net.consensys.linea.async.AsyncFilter
-import net.consensys.zkevm.coordinator.clients.smartcontract.LineaRollupSmartContractClient
+import net.consensys.zkevm.coordinator.clients.smartcontract.LineaSmartContractClient
 import net.consensys.zkevm.domain.BlobRecord
 import net.consensys.zkevm.domain.ProofToFinalize
 import net.consensys.zkevm.ethereum.submission.logUnhandledError
@@ -19,7 +19,7 @@ import kotlin.time.Duration
 
 class AggregationFinalizationCoordinator(
   private val config: Config,
-  private val lineaRollup: LineaRollupSmartContractClient,
+  private val lineaSmartContractClient: LineaSmartContractClient,
   private val aggregationsRepository: AggregationsRepository,
   private val blobsRepository: BlobsRepository,
   private val alreadySubmittedBlobsFilter: AsyncFilter<BlobRecord>,
@@ -40,8 +40,8 @@ class AggregationFinalizationCoordinator(
   )
 
   override fun action(): SafeFuture<Unit> {
-    return lineaRollup.updateNonceAndReferenceBlockToLastL1Block()
-      .thenComposeCombined(lineaRollup.finalizedL2BlockNumber()) { _, lastFinalizedBlock ->
+    return lineaSmartContractClient.updateNonceAndReferenceBlockToLastL1Block()
+      .thenComposeCombined(lineaSmartContractClient.finalizedL2BlockNumber()) { _, lastFinalizedBlock ->
         log.debug("fetching aggregation proofs for finalization: lastFinalizedBlock={}", lastFinalizedBlock)
         val endBlockCreatedBefore = clock.now().minus(config.proofSubmissionDelay).trimToMinutePrecision()
         fetchAggregationData(lastFinalizedBlock)
@@ -206,7 +206,7 @@ class AggregationFinalizationCoordinator(
       config: Config,
       aggregationsRepository: AggregationsRepository,
       blobsRepository: BlobsRepository,
-      lineaRollup: LineaRollupSmartContractClient,
+      lineaSmartContractClient: LineaSmartContractClient,
       alreadySubmittedBlobFilter: AsyncFilter<BlobRecord>,
       aggregationSubmitter: AggregationSubmitter,
       vertx: Vertx,
@@ -214,7 +214,7 @@ class AggregationFinalizationCoordinator(
     ): AggregationFinalizationCoordinator {
       return AggregationFinalizationCoordinator(
         config = config,
-        lineaRollup = lineaRollup,
+        lineaSmartContractClient = lineaSmartContractClient,
         aggregationsRepository = aggregationsRepository,
         blobsRepository = blobsRepository,
         aggregationSubmitter = aggregationSubmitter,

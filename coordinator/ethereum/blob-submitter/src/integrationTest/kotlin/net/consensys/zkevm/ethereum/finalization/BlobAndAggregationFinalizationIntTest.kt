@@ -4,7 +4,7 @@ import io.vertx.core.Vertx
 import io.vertx.junit5.Timeout
 import io.vertx.junit5.VertxExtension
 import io.vertx.junit5.VertxTestContext
-import linea.contract.l1.LineaContractVersion
+import linea.contract.l1.LineaRollupContractVersion
 import net.consensys.FakeFixedClock
 import net.consensys.linea.ethereum.gaspricing.FakeGasPriceCapProvider
 import net.consensys.linea.testing.submission.loadBlobsAndAggregations
@@ -65,10 +65,10 @@ class BlobAndAggregationFinalizationIntTest : CleanDbTestSuiteParallel() {
 
   private fun setupTest(
     vertx: Vertx,
-    smartContractVersion: LineaContractVersion,
+    smartContractVersion: LineaRollupContractVersion,
   ) {
     // V6 is always used, this is left for when V7 is implemented.
-    if (listOf(LineaContractVersion.V6).contains(smartContractVersion).not()) {
+    if (listOf(LineaRollupContractVersion.V6).contains(smartContractVersion).not()) {
       throw IllegalArgumentException("unsupported contract version=$smartContractVersion!")
     }
     val rollupDeploymentFuture = ContractsManager.get()
@@ -102,7 +102,7 @@ class BlobAndAggregationFinalizationIntTest : CleanDbTestSuiteParallel() {
 
     @Suppress("DEPRECATION")
     val alreadySubmittedBlobFilter = L1ShnarfBasedAlreadySubmittedBlobsFilter(
-      lineaRollup = lineaRollupContractForDataSubmissionV6,
+      lineaSmartContractClientReadOnly = lineaRollupContractForDataSubmissionV6,
       acceptedBlobEndBlockNumberConsumer = acceptedBlobEndBlockNumberConsumer,
     )
     val blobSubmittedEventConsumers = mapOf(
@@ -144,7 +144,7 @@ class BlobAndAggregationFinalizationIntTest : CleanDbTestSuiteParallel() {
       )
 
       val aggregationSubmitter = AggregationSubmitterImpl(
-        lineaRollup = lineaRollupContractForAggregationSubmission,
+        lineaSmartContractClient = lineaRollupContractForAggregationSubmission,
         gasPriceCapProvider = FakeGasPriceCapProvider(),
         aggregationSubmittedEventConsumer = EventDispatcher(submittedFinalizationConsumers),
         clock = fakeClock,
@@ -158,7 +158,7 @@ class BlobAndAggregationFinalizationIntTest : CleanDbTestSuiteParallel() {
         aggregationSubmitter = aggregationSubmitter,
         aggregationsRepository = aggregationsRepository,
         blobsRepository = blobsRepository,
-        lineaRollup = lineaRollupContractForAggregationSubmission,
+        lineaSmartContractClient = lineaRollupContractForAggregationSubmission,
         alreadySubmittedBlobsFilter = alreadySubmittedBlobFilter,
         vertx = vertx,
         clock = fakeClock,
@@ -169,7 +169,7 @@ class BlobAndAggregationFinalizationIntTest : CleanDbTestSuiteParallel() {
   private fun testSubmission(
     vertx: Vertx,
     testContext: VertxTestContext,
-    smartContractVersion: LineaContractVersion,
+    smartContractVersion: LineaRollupContractVersion,
   ) {
     setupTest(vertx, smartContractVersion)
 
@@ -211,6 +211,6 @@ class BlobAndAggregationFinalizationIntTest : CleanDbTestSuiteParallel() {
     vertx: Vertx,
     testContext: VertxTestContext,
   ) {
-    testSubmission(vertx, testContext, LineaContractVersion.V6)
+    testSubmission(vertx, testContext, LineaRollupContractVersion.V6)
   }
 }

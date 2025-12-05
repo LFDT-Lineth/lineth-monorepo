@@ -3,7 +3,7 @@ package net.consensys.zkevm.ethereum
 import com.sksamuel.hoplite.ConfigLoaderBuilder
 import com.sksamuel.hoplite.ExperimentalHoplite
 import com.sksamuel.hoplite.addFileSource
-import linea.contract.l1.LineaContractVersion
+import linea.contract.l1.LineaRollupContractVersion
 import linea.kotlin.gwei
 import linea.web3j.SmartContractErrors
 import linea.web3j.gas.StaticGasProvider
@@ -44,7 +44,7 @@ interface ContractsManager {
    */
   fun deployLineaRollup(
     numberOfOperators: Int = 1,
-    contractVersion: LineaContractVersion,
+    contractVersion: LineaRollupContractVersion,
   ): SafeFuture<LineaRollupDeploymentResult>
 
   fun deployL2MessageService(): SafeFuture<L2MessageServiceDeploymentResult>
@@ -52,7 +52,7 @@ interface ContractsManager {
   fun deployRollupAndL2MessageService(
     dataCompressionAndProofAggregationMigrationBlock: ULong = 1000UL,
     numberOfOperators: Int = 1,
-    l1ContractVersion: LineaContractVersion = LineaContractVersion.V6,
+    l1ContractVersion: LineaRollupContractVersion = LineaRollupContractVersion.V6,
   ): SafeFuture<ContactsDeploymentResult>
 
   fun connectToLineaRollupContract(
@@ -92,7 +92,7 @@ object MakeFileDelegatedContractsManager : ContractsManager {
 
   override fun deployLineaRollup(
     numberOfOperators: Int,
-    contractVersion: LineaContractVersion,
+    contractVersion: LineaRollupContractVersion,
   ): SafeFuture<LineaRollupDeploymentResult> {
     val newAccounts = L1AccountManager.generateAccounts(numberOfOperators)
     val contractDeploymentAccount = newAccounts.first()
@@ -157,7 +157,7 @@ object MakeFileDelegatedContractsManager : ContractsManager {
   override fun deployRollupAndL2MessageService(
     dataCompressionAndProofAggregationMigrationBlock: ULong,
     numberOfOperators: Int,
-    l1ContractVersion: LineaContractVersion,
+    l1ContractVersion: LineaRollupContractVersion,
   ): SafeFuture<ContactsDeploymentResult> {
     return deployLineaRollup(numberOfOperators, l1ContractVersion)
       .thenCombine(deployL2MessageService()) { lineaRollupDeploymentResult, l2MessageServiceDeploymentResult ->

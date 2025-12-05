@@ -1,7 +1,7 @@
 package net.consensys.zkevm.ethereum.finalization
 
 import kotlinx.datetime.Clock
-import net.consensys.zkevm.coordinator.clients.smartcontract.LineaRollupSmartContractClient
+import net.consensys.zkevm.coordinator.clients.smartcontract.LineaSmartContractClient
 import net.consensys.zkevm.domain.BlobRecord
 import net.consensys.zkevm.domain.FinalizationSubmittedEvent
 import net.consensys.zkevm.domain.ProofToFinalize
@@ -28,7 +28,7 @@ interface AggregationSubmitter {
 }
 
 class AggregationSubmitterImpl(
-  private val lineaRollup: LineaRollupSmartContractClient,
+  private val lineaSmartContractClient: LineaSmartContractClient,
   private val gasPriceCapProvider: GasPriceCapProvider?,
   private val aggregationSubmittedEventConsumer: Consumer<FinalizationSubmittedEvent> =
     Consumer<FinalizationSubmittedEvent> { },
@@ -48,8 +48,8 @@ class AggregationSubmitterImpl(
       gasPriceCapProvider?.getGasPriceCaps(aggregationProof.firstBlockNumber)
         ?: SafeFuture.completedFuture(null)
       ).thenCompose { gasPriceCaps ->
-      val nonce = lineaRollup.currentNonce()
-      lineaRollup.finalizeBlocksAfterEthCall(
+      val nonce = lineaSmartContractClient.currentNonce()
+      lineaSmartContractClient.finalizeBlocksAfterEthCall(
         aggregation = aggregationProof,
         aggregationLastBlob = aggregationEndBlob,
         parentL1RollingHash = parentL1RollingHash,
