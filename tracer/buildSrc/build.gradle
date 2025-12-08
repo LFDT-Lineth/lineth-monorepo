@@ -1,0 +1,42 @@
+/*
+ * Copyright Consensys Software Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+plugins {
+  id 'groovy-gradle-plugin'
+}
+
+repositories {
+  gradlePluginPortal() // so that external plugins can be resolved in dependencies section
+}
+
+dependencies {
+  implementation 'io.freefair.gradle:lombok-plugin:8.6'
+  implementation 'com.diffplug.spotless:spotless-plugin-gradle:6.25.0'
+  implementation 'com.github.ben-manes:gradle-versions-plugin:0.51.0'
+  implementation 'com.github.hierynomus.license:com.github.hierynomus.license.gradle.plugin:0.16.1'
+  implementation 'io.spring.dependency-management:io.spring.dependency-management.gradle.plugin:1.1.5'
+  implementation 'de.undercouch.download:de.undercouch.download.gradle.plugin:5.6.0'
+  implementation 'com.adarshr:gradle-test-logger-plugin:4.0.0'
+  implementation 'org.web3j:web3j-sokt:0.4.0'
+}
+
+gradlePlugin {
+  plugins {
+    create ("YulPlugin") {
+      id = "linea.yul-plugin"
+      implementationClass = "YulPlugin"
+    }
+  }
+}

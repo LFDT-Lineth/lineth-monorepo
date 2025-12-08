@@ -1,0 +1,185 @@
+# The purpose of this workflow is to upload the necessary assets when
+# a release is made manually on github.
+name: Manual Release Assets
+permissions:
+  contents: write
+  packages: write
+
+on:
+  release:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Specify tag where assets should be added.
+        required: true
+        type: string
+        default: "v1.2.3"
+
+jobs:
+  # ==================================================================
+  # Build - for release and for tests
+  # ==================================================================
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          submodules: false
+
+      - name: Setup Environment
+        # setup go-corset
+        uses: ./.github/actions/setup-environment
+
+      - name: Configure Tag
+        id: config
+        # set tag to use in subsequent steps.
+        run: echo "TAG=$tag_name" >> $GITHUB_OUTPUT
+        env:
+          tag_name: ${{ inputs.release_tag || github.event.release.tag_name }}
+
+      - name: Build Assets
+        run: ./gradlew artifacts -PreleaseVersion=${{ steps.config.outputs.TAG }}
+        env:
+          JAVA_OPTS: -Xmx2g -Dorg.gradle.daemon=false
+
+      - name: Upload Assets
+        run: |
+          gh release upload ${{ steps.config.outputs.TAG }} $jar_asset
+          gh release upload ${{ steps.config.outputs.TAG }} $zip_asset
+        env:
+          jar_asset: ${{ github.workspace }}/plugins/build/libs/linea-tracer-${{ steps.config.outputs.TAG }}.jar
+          zip_asset: ${{ github.workspace }}/plugins/build/distributions/linea-tracer-${{ steps.config.outputs.TAG }}.zip
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Set up GCC
+        uses: egor-tensin/setup-gcc@eaa888eb19115a521fa72b65cd94fe1f25bbcaac #v1.3
+
+      - name: Build without tests
+        run: ./gradlew build -x test -x spotlessCheck
+        env:
+          JAVA_OPTS: -Xmx2g -Dorg.gradle.daemon=false
+
+      - name: Store distribution artifacts
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: distributions
+          path: arithmetization/build/libs
+
+      - name: Run spotless
+        run: ./gradlew --no-daemon --parallel clean spotlessCheck
+
+  # ==================================================================
+  # Unit Tests
+  # ==================================================================
+  unit-tests-london:
+    needs: [ build ]
+    uses: ./.github/workflows/reusable-unit-tests.yml
+    with:
+      zkevm_fork: LONDON
+      tests-with-ssh: false
+
+  unit-tests-paris:
+    needs: [ build ]
+    uses: ./.github/workflows/reusable-unit-tests.yml
+    with:
+      zkevm_fork: PARIS
+      tests-with-ssh: false
+
+  unit-tests-shanghai:
+    needs: [ build ]
+    uses: ./.github/workflows/reusable-unit-tests.yml
+    with:
+      zkevm_fork: SHANGHAI
+      tests-with-ssh: false
+
+  unit-tests-cancun:
+    needs: [ build ]
+    uses: ./.github/workflows/reusable-unit-tests.yml
+    with:
+      zkevm_fork: CANCUN
+      tests-with-ssh: false
+
+  unit-tests-prague:
+    needs: [ build ]
+    uses: ./.github/workflows/reusable-unit-tests.yml
+    with:
+      zkevm_fork: PRAGUE
+      tests-with-ssh: false
+
+  unit-tests-osaka:
+    needs: [ build ]
+    uses: ./.github/workflows/reusable-unit-tests.yml
+    with:
+      zkevm_fork: OSAKA
+      tests-with-ssh: false
+
+  # ==================================================================
+  # Fast Replay Tests
+  # ==================================================================
+  replay-tests:
+    needs: [ build ]
+    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-xxl
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          submodules: false
+
+      - name: Setup Environment
+        uses: ./.github/actions/setup-environment
+        with:
+          enable-ssh: false
+
+      - name: Run replay tests
+        run: GOMEMLIMIT=26GiB ./gradlew :arithmetization:fastReplayTests
+        env:
+          JAVA_OPTS: -Dorg.gradle.daemon=false
+          JUNIT_TESTS_PARALLELISM: 4
+          GOCORSET_FLAGS: -b1024 -v --ansi-escapes=false --report --air
+          ZKEVM_FORK: LONDON
+
+      - name: Upload test report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: replay-tests-report
+          path: arithmetization/build/reports/tests/**/*
+
+      - name: Upload jacoco fast replay tests coverage report
+        if: always()
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: jacoco-fast-replay-tests-coverage-report
+          path: arithmetization/build/reports/jacoco/jacocoFastReplayTestsReport/**/*
+
+      - name: Upload jacoco fast replay tests exec file
+        if: always()
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: jacoco-fast-replay-tests-exec-file
+          path: arithmetization/build/jacoco/fastReplayTests.exec
+
+  # ==================================================================
+  # Publish release post tests
+  # ==================================================================
+  publish:
+    needs: [ build ]
+    if: github.event_name != 'pull_request'
+    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-med
+    env:
+      architecture: "amd64"
+      GRADLE_OPTS: "-Xmx6g -Dorg.gradle.parallel=true -Dorg.gradle.workers.max=4"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+      - name: Setup Environment
+        uses: ./.github/actions/setup-environment
+
+      - name: Publish Java artifacts
+        run: ./gradlew publish
+        env:
+          CLOUDSMITH_USER: ${{ secrets.CLOUDSMITH_USER }}
+          CLOUDSMITH_API_KEY: ${{ secrets.CLOUDSMITH_API_KEY }}

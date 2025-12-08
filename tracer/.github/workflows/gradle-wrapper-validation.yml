@@ -1,0 +1,17 @@
+name: "Validate Gradle Wrapper"
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+    branches:
+      - '**'
+jobs:
+  validation:
+    if: github.event.pull_request.draft == false && github.base_ref != 'main'
+    name: "Validation"
+    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-med
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: gradle/actions/wrapper-validation@017a9effdb900e5b5b2fddfb590a105619dca3c3 #v4.4.2

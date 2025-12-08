@@ -1,0 +1,108 @@
+/*
+ * Copyright Consensys Software Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+import de.undercouch.gradle.tasks.download.Download
+
+plugins {
+  id "common-plugins"
+  id 'jacoco'
+  id 'net.consensys.besu-plugin-library'
+}
+jacoco {
+  toolVersion = '0.8.12'
+}
+
+apply from: rootProject.file("gradle/java.gradle")
+apply from: rootProject.file("gradle/dependency-management.gradle")
+apply from: rootProject.file("gradle/lint.gradle")
+
+configurations.configureEach {
+  exclude module: 'log4j-api'
+  exclude module: 'log4j-core'
+  exclude module: 'log4j-slf4j2-impl'
+}
+
+tasks.register("downloadExecutionSpecFixtures", Download) {
+  src "https://github.com/ethereum/execution-spec-tests/releases/download/v5.3.0/fixtures_develop.tar.gz"
+  dest "./build/fixtures_develop.tar.gz"
+  overwrite false
+}
+
+tasks.register("copyExecutionSpecFixtures", Copy) {
+    dependsOn "downloadExecutionSpecFixtures"
+    //
+    from tarTree("./build/fixtures_develop.tar.gz")
+    into "./build/execution-spec-tests"
+}
+
+
+tasks.register("generateExecutionSpecBlockchainTests", RefTestGenerationTask) {
+    dependsOn "copyExecutionSpecFixtures"
+  // Configure task
+  refTestTemplateFilePath = "src/test/resources/templates/BlockchainReferenceTest.java.template"
+  refTests = "./build/execution-spec-tests/fixtures/blockchain_tests"
+  refTestsSrcPath = "./build/execution-spec-tests/"
+  refTestJsonParamsDirectory = "fixtures"
+  refTestJsonParamsExcludedPath = "blockchain_tests_engine_x" // exclude test for test filling tool
+  refTestNamePrefix = "BlockchainReferenceTest"
+  generatedRefTestsOutput = "src/test/java/net/consensys/linea/generated/blockchain"
+  failedTestsFilePath = System.getenv('FAILED_TEST_JSON_DIRECTORY') ?: "../tmp/local/"
+  failedModule = System.getenv('FAILED_MODULE') ?: ""
+  failedConstraint = System.getenv('FAILED_CONSTRAINT') ?: ""
+}
+
+tasks.register('referenceExecutionSpecBlockchainTests', Test) {
+  finalizedBy(jacocoReferenceExecutionSpecBlockchainTestsReport)
+  description = 'Runs ETH reference blockchain tests.'
+  dependsOn generateExecutionSpecBlockchainTests
+  environment.put("REFERENCE_TEST_OUTCOME_OUTPUT_FILE", "BlockchainReferenceTestOutcome.json")
+
+  it.configure {
+    // Configure resource limits
+    boolean isCiServer = System.getenv().containsKey("CI")
+    minHeapSize = "256m"
+    maxHeapSize = isCiServer ? "32g" : "8g"
+    // Configure parallelism
+    environment.put("blockchain", System.getenv("blockchain") ?: "Ethereum")
+    systemProperty("junit.jupiter.execution.timeout.default", "15 m")
+    systemProperty("junit.jupiter.execution.parallel.enabled", "true")
+    systemProperty("junit.jupiter.execution.parallel.mode.default", "concurrent")
+    systemProperty("junit.jupiter.execution.parallel.mode.classes.default", "concurrent")
+    systemProperty("junit.jupiter.execution.parallel.config.strategy", "fixed")
+    systemProperty("junit.jupiter.execution.parallel.config.fixed.parallelism",
+            System.getenv().getOrDefault("JUNIT_TESTS_PARALLELISM", "1").toInteger())
+  }
+
+  useJUnitPlatform {
+    includeTags("BlockchainReferenceTest")
+  }
+}
+
+tasks.register("jacocoReferenceExecutionSpecBlockchainTestsReport", JacocoReport) {
+  reports {
+    xml.required = true
+  }
+
+  sourceSets project(":arithmetization").sourceSets.main
+  executionData(referenceExecutionSpecBlockchainTests)
+}
+
+dependencies {
+  implementation project(':arithmetization')
+  implementation project(':testing')
+  implementation 'org.junit.platform:junit-platform-launcher'
+
+  testImplementation 'org.assertj:assertj-core'
+  testImplementation 'org.junit.jupiter:junit-jupiter-params'
+}
