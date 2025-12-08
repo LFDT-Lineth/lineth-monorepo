@@ -43,7 +43,7 @@ def OSAKA_TRACE_FILE = "arithmetization/src/main/java/net/consensys/linea/zktrac
 def TRACE_PKG = "net.consensys.linea.zktracer"
 
 tasks.register('buildZkevmBins', Exec) {
-    workingDir "${project.rootDir}/linea-constraints/"
+    workingDir "${project.rootDir}/tracer/linea-constraints/"
     // Specify input files so gradle knows when to rebuild.
     inputs.files(fileTree(workingDir).include('**/*.lisp'))
     // Specify output file so gradle knows when out-of-date.
@@ -67,25 +67,27 @@ tasks.register('buildZkevmBins', Exec) {
     commandLine 'make'
 }
 
+def lineaTracerProject = project(lineaTracerProjectPath)
+
 // Task which generates the Trace.java interface using go-corset.
 tasks.register('buildAllTracers', Exec) {
     group "Trace file(s) generation"
     dependsOn 'buildZkevmBins'
     // Locate target files
-    def traceJava = getRootProject().file(TRACE_FILE)
-    def traceLondonJava = getRootProject().file(LONDON_TRACE_FILE)
-    def traceParisJava = getRootProject().file(PARIS_TRACE_FILE)
-    def traceShanghaiJava = getRootProject().file(SHANGHAI_TRACE_FILE)
-    def traceCancunJava = getRootProject().file(CANCUN_TRACE_FILE)
-    def tracePragueJava = getRootProject().file(PRAGUE_TRACE_FILE)
-    def traceOsakaJava = getRootProject().file(OSAKA_TRACE_FILE)
+    def traceJava = lineaTracerProject.file(TRACE_FILE)
+    def traceLondonJava = lineaTracerProject.file(LONDON_TRACE_FILE)
+    def traceParisJava = lineaTracerProject.file(PARIS_TRACE_FILE)
+    def traceShanghaiJava = lineaTracerProject.file(SHANGHAI_TRACE_FILE)
+    def traceCancunJava = lineaTracerProject.file(CANCUN_TRACE_FILE)
+    def tracePragueJava = lineaTracerProject.file(PRAGUE_TRACE_FILE)
+    def traceOsakaJava = lineaTracerProject.file(OSAKA_TRACE_FILE)
     // Configure full paths for zkevm.bin files
-    def zkevmLondonBin = getRootProject().file('linea-constraints/' + ZKEVM_LONDON_BIN)
-    def zkevmParisBin = getRootProject().file('linea-constraints/' + ZKEVM_PARIS_BIN)
-    def zkevmShanghaiBin = getRootProject().file('linea-constraints/' + ZKEVM_SHANGHAI_BIN)
-    def zkevmCancunBin = getRootProject().file('linea-constraints/' + ZKEVM_CANCUN_BIN)
-    def zkevmPragueBin = getRootProject().file('linea-constraints/' + ZKEVM_PRAGUE_BIN)
-    def zkevmOsakaBin = getRootProject().file('linea-constraints/' + ZKEVM_OSAKA_BIN)
+    def zkevmLondonBin = lineaTracerProject.file('linea-constraints/' + ZKEVM_LONDON_BIN)
+    def zkevmParisBin = lineaTracerProject.file('linea-constraints/' + ZKEVM_PARIS_BIN)
+    def zkevmShanghaiBin = lineaTracerProject.file('linea-constraints/' + ZKEVM_SHANGHAI_BIN)
+    def zkevmCancunBin = lineaTracerProject.file('linea-constraints/' + ZKEVM_CANCUN_BIN)
+    def zkevmPragueBin = lineaTracerProject.file('linea-constraints/' + ZKEVM_PRAGUE_BIN)
+    def zkevmOsakaBin = lineaTracerProject.file('linea-constraints/' + ZKEVM_OSAKA_BIN)
     // Generate trace interface and implementing classes
     commandLine 'go-corset','generate','-p',TRACE_PKG,'-i',traceJava,
             '-o',traceLondonJava,zkevmLondonBin,

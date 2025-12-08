@@ -34,32 +34,6 @@
 //  exclude("**/generated/*.java")
 //}
 
-apply plugin: 'com.diffplug.spotless'
-spotless {
-  version "6.25.0"
-  java {
-    // This path needs to be relative to each project
-    target 'src/**/*.java'
-    targetExclude '**/zktracer/Trace*.java', '**/GlobalConstants.java', '**/BlockchainReferenceTest_*.java', '**/GeneralStateReferenceTest_*'
-        
-    removeUnusedImports()
-    googleJavaFormat('1.17.0')
-    importOrder '\\#', 'java', 'javax', ''
-    trimTrailingWhitespace()
-    endWithNewline()
-  }
-  groovyGradle {
-    target '*.gradle'
-    // Temporarily disabled as was reporting XZFormatException
-    //    greclipse('4.21').configFile(rootProject.file('gradle/formatter.properties'))
-    endWithNewline()
-  }
-  // Below this line are currently only license header tasks
-  format 'groovy', { target '**/src/*/grovy/**/*.groovy' }
-  format 'bash', { target '**/*.sh' }
-  format 'sol', { target '**/*.sol' }
-}
-
 javadoc {
   options.addStringOption('Xdoclint:all', '-quiet')
   options.addStringOption('Xwerror', '-html5')

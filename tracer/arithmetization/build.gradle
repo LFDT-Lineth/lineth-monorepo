@@ -15,25 +15,26 @@
 
 plugins {
   id 'java-library'
-  id 'common-plugins'
-  id 'com.github.hierynomus.license'
-  id 'net.consensys.besu-plugin-library'
+  alias(libs.plugins.besuPluginLibrary)
+  alias(libs.plugins.hierynomusLicense)
+  alias(libs.plugins.lombok)
 }
 
 group = 'net.consensys.linea.besu.plugin'
 version = rootProject.version
 
-apply from: rootProject.file("gradle/java.gradle")
-apply from: rootProject.file("gradle/dependency-management.gradle")
-apply from: rootProject.file("gradle/corset.gradle")
-apply from: rootProject.file("gradle/tests.gradle")
-apply from: rootProject.file("gradle/build-aliases.gradle")
-apply from: rootProject.file("gradle/check-licenses.gradle")
-apply from: rootProject.file("gradle/lint.gradle")
+def lineaTracerProject = project(lineaTracerProjectPath)
+apply from: lineaTracerProject.file("gradle/java.gradle")
+apply from: lineaTracerProject.file("gradle/dependency-management.gradle")
+apply from: lineaTracerProject.file("gradle/corset.gradle")
+apply from: lineaTracerProject.file("gradle/tests.gradle")
+apply from: lineaTracerProject.file("gradle/build-aliases.gradle")
+apply from: lineaTracerProject.file("gradle/check-licenses.gradle")
+apply from: lineaTracerProject.file("gradle/lint.gradle")
 
 dependencies {
   implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml'
-  testImplementation project(':testing')
+  testImplementation project(':tracer:testing')
   testImplementation 'org.assertj:assertj-core'
   testImplementation 'org.junit.platform:junit-platform-launcher'
   testImplementation 'org.junit.jupiter:junit-jupiter-api'
@@ -46,12 +47,12 @@ jar {
 
   manifest {
     attributes(
-            'Specification-Title': archiveBaseName.get(),
-            'Specification-Version': calculateVersion(),
-            'Implementation-Title': archiveBaseName.get(),
-            'Implementation-Version': calculateVersion()
-    )
+        'Specification-Title': archiveBaseName.get(),
+        'Specification-Version': calculateVersion(),
+        'Implementation-Title': archiveBaseName.get(),
+        'Implementation-Version': calculateVersion()
+        )
   }
 }
 
-apply from: rootProject.file("gradle/publishing.gradle")
+apply from: lineaTracerProject.file("gradle/publishing.gradle")

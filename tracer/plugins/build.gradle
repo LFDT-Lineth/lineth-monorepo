@@ -15,21 +15,22 @@
 
 plugins {
   id 'java'
-  id 'common-plugins'
-  id 'com.github.hierynomus.license'
-  id 'net.consensys.besu-plugin-distribution'
+  alias(libs.plugins.besuPluginDistribution)
+  alias(libs.plugins.lombok)
+  alias(libs.plugins.hierynomusLicense)
 }
 
 group = 'net.consensys.linea.besu.plugin'
 version = rootProject.version
 
-apply from: rootProject.file("gradle/java.gradle")
-apply from: rootProject.file("gradle/dependency-management.gradle")
-apply from: rootProject.file("gradle/check-licenses.gradle")
-apply from: rootProject.file("gradle/lint.gradle")
+def lineaTracerProject = project(lineaTracerProjectPath)
+apply from: lineaTracerProject.file("gradle/java.gradle")
+apply from: lineaTracerProject.file("gradle/dependency-management.gradle")
+apply from: lineaTracerProject.file("gradle/check-licenses.gradle")
+apply from: lineaTracerProject.file("gradle/lint.gradle")
 
 dependencies {
-  implementation project(path: ':arithmetization')
+  implementation project(path: ':tracer:arithmetization')
 }
 
 jar {
@@ -53,4 +54,4 @@ distributions {
 }
 
 
-apply from: rootProject.file("gradle/publishing.gradle")
+apply from: lineaTracerProject.file("gradle/publishing.gradle")

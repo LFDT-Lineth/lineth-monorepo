@@ -1,0 +1,57 @@
+name: "Reusable unit tests workflow"
+
+on:
+  workflow_call:
+    inputs:
+      zkevm_fork:
+        required: true
+        type: string
+      tests-with-ssh:
+        required: true
+        type: boolean
+
+jobs:
+  # ==================================================================
+  # Unit Tests
+  # ==================================================================
+  unit-tests:
+    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-xxl
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          submodules: false
+
+      - name: Setup Test Environment
+        uses: ./.github/actions/setup-tracer-environment
+        with:
+          enable-ssh: ${{ inputs.tests-with-ssh }}
+
+      - name: Run unit tests
+        run: GOMEMLIMIT=26GiB ./gradlew :tracer:arithmetization:test
+        env:
+          JAVA_OPTS: -Dorg.gradle.daemon=false
+          GOCORSET_FLAGS: -b1024 -v --ansi-escapes=false --report --air
+          JUNIT_TESTS_PARALLELISM: 4
+          ZKEVM_FORK: ${{ inputs.zkevm_fork }}
+
+      - name: Upload test report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: unit-tests-report-${{ inputs.zkevm_fork }}
+          path: arithmetization/build/reports/tests/**/*
+
+      - name: Upload jacoco unit tests coverage report
+        if: always()
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: jacoco-unit-tests-coverage-report-${{ inputs.zkevm_fork }}
+          path: arithmetization/build/reports/jacoco/test/**/*
+
+      - name: Upload jacoco unit tests exec file
+        if: always()
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: jacoco-unit-tests-exec-file-${{ inputs.zkevm_fork }}
+          path: arithmetization/build/jacoco/test.exec

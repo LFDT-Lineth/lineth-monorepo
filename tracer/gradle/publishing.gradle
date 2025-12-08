@@ -15,8 +15,8 @@
 
 apply plugin: "maven-publish"
 
-def cloudsmithUser = project.hasProperty('cloudsmithUser') ? rootProject.property('cloudsmithUser') : System.getenv('CLOUDSMITH_USER')
-def cloudsmithKey = project.hasProperty('cloudsmithApiKey') ? rootProject.property('cloudsmithApiKey') : System.getenv('CLOUDSMITH_API_KEY')
+def cloudsmithUser = project.hasProperty('cloudsmithUser') ? project.property('cloudsmithUser') : System.getenv('CLOUDSMITH_USER')
+def cloudsmithKey = project.hasProperty('cloudsmithApiKey') ? project.property('cloudsmithApiKey') : System.getenv('CLOUDSMITH_API_KEY')
 
 tasks.register('sourcesJar', Jar) {
   dependsOn classes

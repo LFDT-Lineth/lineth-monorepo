@@ -15,17 +15,18 @@
 import de.undercouch.gradle.tasks.download.Download
 
 plugins {
-  id "common-plugins"
   id 'jacoco'
-  id 'net.consensys.besu-plugin-library'
+  alias(libs.plugins.besuPluginLibrary)
+  alias(libs.plugins.lombok)
 }
 jacoco {
   toolVersion = '0.8.12'
 }
 
-apply from: rootProject.file("gradle/java.gradle")
-apply from: rootProject.file("gradle/dependency-management.gradle")
-apply from: rootProject.file("gradle/lint.gradle")
+def lineaTracerProject = project(lineaTracerProjectPath)
+apply from: lineaTracerProject.file("gradle/java.gradle")
+apply from: lineaTracerProject.file("gradle/dependency-management.gradle")
+apply from: lineaTracerProject.file("gradle/lint.gradle")
 
 configurations.configureEach {
   exclude module: 'log4j-api'
@@ -94,13 +95,13 @@ tasks.register("jacocoReferenceExecutionSpecBlockchainTestsReport", JacocoReport
     xml.required = true
   }
 
-  sourceSets project(":arithmetization").sourceSets.main
+  sourceSets project(":tracer:arithmetization").sourceSets.main
   executionData(referenceExecutionSpecBlockchainTests)
 }
 
 dependencies {
-  implementation project(':arithmetization')
-  implementation project(':testing')
+  implementation project(':tracer:arithmetization')
+  implementation project(':tracer:testing')
   implementation 'org.junit.platform:junit-platform-launcher'
 
   testImplementation 'org.assertj:assertj-core'

@@ -1,19 +1,26 @@
 import org.web3j.solidity.gradle.plugin.EVMVersion
 import org.web3j.gradle.plugin.GenerateContractWrappers
 
-plugins {
-  id "common-plugins"
-  id "org.web3j" version "4.12.2"
-  id "linea.yul-plugin"
-  id 'net.consensys.besu-plugin-library'
+buildscript {
+  ext {
+    shomeiVersion = "${libs.versions.shomei.get()}"
+  }
 }
 
-apply from: rootProject.file("gradle/java.gradle")
-apply from: rootProject.file("gradle/dependency-management.gradle")
-apply from: rootProject.file("gradle/lint.gradle")
+plugins {
+  id "linea.yul-plugin"
+  alias(libs.plugins.besuPluginLibrary)
+  alias(libs.plugins.web3j)
+  alias(libs.plugins.lombok)
+}
+
+def lineaTracerProject = project(lineaTracerProjectPath)
+apply from: lineaTracerProject.file("gradle/java.gradle")
+apply from: lineaTracerProject.file("gradle/dependency-management.gradle")
+apply from: lineaTracerProject.file("gradle/lint.gradle")
 
 dependencies {
-  implementation project(path: ':arithmetization')
+  implementation project(path: ':tracer:arithmetization')
 
   implementation "io.consensys.protocols.shomei:shomei:${shomeiVersion}"
   implementation "io.consensys.protocols.shomei:shomei-server:${shomeiVersion}"

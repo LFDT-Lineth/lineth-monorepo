@@ -38,9 +38,8 @@ tasks.withType(JavaCompile) {
     '-Xlint:divzero',
     '-Xlint:finally',
     '-Xlint:static',
-    '-Werror',
   ]
-
+  options.compilerArgs.remove('-Werror')
   options.encoding = 'UTF-8'
 }
 

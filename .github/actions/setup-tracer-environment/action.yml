@@ -1,0 +1,41 @@
+name: 'Setup Testing Environment'
+description: 'Checkout repository and install what is needed for building / testing'
+inputs:
+  enable-ssh:
+    description: 'Enable ability to ssh into session'
+    required: false
+    default: false
+  go-corset:
+    description: 'Setup Go Corset'
+    required: false
+    default: true
+  github-token:
+    description: 'Github token (needed for downloading corset)'
+    required: false
+
+runs:
+  using: 'composite'
+  steps:
+      - name: Setup upterm session
+        if: ${{ inputs.enable-ssh == 'true' }}
+        uses: lhotari/action-upterm@b0357f23233f5ea6d58947c0c402e0631bab7334 #v1
+
+      - name: Install Go
+        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version: '1.23.5'
+          cache-dependency-path: "**/*.sum"
+
+      - name: Get Submodules
+        shell: bash
+        run: git submodule update --init --recursive linea-constraints
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
+        with:
+          java-version: 21
+          distribution: temurin
+
+      - name: Setup Go Corset
+        if: ${{ inputs.go-corset == 'true' }}
+        uses: ./.github/actions/setup-go-corset
