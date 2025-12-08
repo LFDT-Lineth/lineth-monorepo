@@ -30,6 +30,7 @@ jobs:
       smart-contracts: ${{ steps.filter.outputs.smart-contracts }}
       linea-sequencer-plugin: ${{ steps.filter.outputs.linea-sequencer-plugin }}
       native-yield-automation-service: ${{ steps.filter.outputs.native-yield-automation-service }}
+      tracer: ${{ steps.filter.outputs.tracer }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
