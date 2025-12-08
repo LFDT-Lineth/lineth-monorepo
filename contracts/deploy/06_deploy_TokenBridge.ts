@@ -12,6 +12,7 @@ import {
   getRequiredEnvVar,
   LogContractDeployment,
 } from "../common/helpers";
+import { get1559Fees } from "../scripts/utils";
 
 const func: DeployFunction = async function () {
   const contractName = "TokenBridge";
@@ -21,6 +22,7 @@ const func: DeployFunction = async function () {
   const remoteChainId = getRequiredEnvVar("REMOTE_CHAIN_ID");
   const pauseTypeRoles = getEnvVarOrDefault("TOKEN_BRIDGE_PAUSE_TYPES_ROLES", TOKEN_BRIDGE_PAUSE_TYPES_ROLES);
   const unpauseTypeRoles = getEnvVarOrDefault("TOKEN_BRIDGE_UNPAUSE_TYPES_ROLES", TOKEN_BRIDGE_UNPAUSE_TYPES_ROLES);
+  const remoteSender = getRequiredEnvVar("REMOTE_SENDER_ADDRESS");
 
   let securityCouncilAddress;
 
@@ -57,19 +59,26 @@ const func: DeployFunction = async function () {
   // Deploying TokenBridge
   const TokenBridgeFactory = await ethers.getContractFactory(contractName);
 
-  const tokenBridge = await upgrades.deployProxy(TokenBridgeFactory, [
-    {
-      defaultAdmin: securityCouncilAddress,
-      messageService: deployingChainMessageService,
-      tokenBeacon: bridgedTokenAddress,
-      sourceChainId: chainId,
-      targetChainId: remoteChainId,
-      reservedTokens: reservedAddresses,
-      roleAddresses,
-      pauseTypeRoles,
-      unpauseTypeRoles,
-    },
-  ]);
+  const { maxPriorityFeePerGas, maxFeePerGas } = await get1559Fees(ethers.provider);
+
+  const tokenBridge = await upgrades.deployProxy(
+    TokenBridgeFactory,
+    [
+      {
+        defaultAdmin: securityCouncilAddress,
+        messageService: deployingChainMessageService,
+        tokenBeacon: bridgedTokenAddress,
+        sourceChainId: chainId,
+        targetChainId: remoteChainId,
+        remoteSender,
+        reservedTokens: reservedAddresses,
+        roleAddresses,
+        pauseTypeRoles,
+        unpauseTypeRoles,
+      },
+    ],
+    { txOverrides: { maxPriorityFeePerGas: maxPriorityFeePerGas!, maxFeePerGas: maxFeePerGas! } },
+  );
 
   await LogContractDeployment(contractName, tokenBridge);
 

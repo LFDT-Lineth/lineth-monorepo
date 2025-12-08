@@ -35,11 +35,7 @@ const func: DeployFunction = async function () {
 
   const args = [minDelay, timeLockProposers?.split(","), timelockExecutors?.split(","), adminAddress];
 
-  await tryVerifyContractWithConstructorArgs(
-    contractAddress,
-    "contracts/messageService/lib/TimeLock.sol:TimeLock",
-    args,
-  );
+  await tryVerifyContractWithConstructorArgs(contractAddress, "src/governance/TimeLock.sol:TimeLock", args);
 };
 export default func;
 func.tags = ["Timelock"];
