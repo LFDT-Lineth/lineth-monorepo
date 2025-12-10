@@ -1,7 +1,7 @@
 (module ecdata)
 
 (defcolumns
-  (STAMP        :i32)
+  (STAMP        :i16)
   (ID           :i32)
   (INDEX        :i16)
   (LIMB         :i128)

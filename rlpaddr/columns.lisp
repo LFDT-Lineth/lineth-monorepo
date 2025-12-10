@@ -21,7 +21,7 @@
   (nBYTES :byte)      ;; the number of bytes to read
   (INDEX :byte)
   ;; Register columns
-  (STAMP :i24)
+  (STAMP :i16)
   (COUNTER :byte)
   (BYTE1 :byte@prove)
   (ACC :i64)

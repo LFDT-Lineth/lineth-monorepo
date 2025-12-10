@@ -1,7 +1,7 @@
 (module shakiradata)
 
 (defcolumns
-  (SHAKIRA_STAMP          :i32)
+  (SHAKIRA_STAMP          :i16)
   (ID                     :i32)
   (PHASE                  :byte)
   (INDEX                  :i32)

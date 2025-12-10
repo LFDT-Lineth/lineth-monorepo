@@ -1,7 +1,7 @@
 (module blsdata)
 
 (defcolumns
-  (STAMP        :i32)
+  (STAMP        :i16)
   (ID           :i32)
   (TOTAL_SIZE   :i24)
   (INDEX        :i16)
