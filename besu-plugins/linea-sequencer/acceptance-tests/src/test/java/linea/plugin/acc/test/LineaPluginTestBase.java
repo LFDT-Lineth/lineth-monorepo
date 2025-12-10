@@ -32,6 +32,7 @@ import org.apache.tuweni.bytes.Bytes32;
 import org.apache.tuweni.units.bigints.UInt32;
 import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.datatypes.Hash;
+import org.hyperledger.besu.ethereum.core.ImmutableMiningConfiguration;
 import org.hyperledger.besu.ethereum.eth.transactions.ImmutableTransactionPoolConfiguration;
 import org.hyperledger.besu.ethereum.eth.transactions.TransactionPoolConfiguration;
 import org.hyperledger.besu.metrics.prometheus.MetricsConfiguration;
@@ -47,6 +48,7 @@ import org.hyperledger.besu.tests.acceptance.dsl.node.configuration.NodeConfigur
 import org.hyperledger.besu.tests.acceptance.dsl.node.configuration.genesis.GenesisConfigurationFactory;
 import org.hyperledger.besu.tests.acceptance.dsl.node.configuration.genesis.GenesisConfigurationFactory.CliqueOptions;
 import org.hyperledger.besu.tests.acceptance.dsl.transaction.txpool.TxPoolTransactions;
+import org.hyperledger.besu.util.number.PositiveNumber;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.web3j.crypto.Credentials;
@@ -135,7 +137,19 @@ public abstract class LineaPluginTestBase extends AcceptanceTestBase {
     final var nodeConfBuilder =
         new BesuNodeConfigurationBuilder()
             .name(name)
-            .miningEnabled()
+            .miningConfiguration(
+                // enable mining
+                // allow for a single iteration to take all the slot time
+                // set plugin max selection time to 5% of slot time
+                ImmutableMiningConfiguration.builder()
+                    .poaBlockTxsSelectionMaxTime(
+                        PositiveNumber.fromInt(BLOCK_PERIOD_SECONDS * 1000))
+                    .pluginBlockTxsSelectionMaxTime(PositiveNumber.fromInt(5))
+                    .mutableInitValues(
+                        ImmutableMiningConfiguration.MutableInitValues.builder()
+                            .isMiningEnabled(true)
+                            .build())
+                    .build())
             .jsonRpcConfiguration(node.createJsonRpcWithCliqueEnabledConfig(extraRpcApis))
             .webSocketConfiguration(node.createWebSocketEnabledConfig())
             .inProcessRpcConfiguration(node.createInProcessRpcConfiguration(extraRpcApis))

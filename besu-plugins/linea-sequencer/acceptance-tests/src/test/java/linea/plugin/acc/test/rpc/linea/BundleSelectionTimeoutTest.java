@@ -12,14 +12,25 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.math.BigInteger;
 import java.util.Arrays;
+import java.util.List;
 import java.util.stream.IntStream;
-import org.junit.jupiter.api.Disabled;
+import linea.plugin.acc.test.TestCommandLineOptionsBuilder;
 import org.junit.jupiter.api.Test;
 import org.web3j.protocol.core.methods.response.TransactionReceipt;
 
-@Disabled(
-    "Temporarily disabled while investigating bunlde timeout logic and is disabled in production")
 public class BundleSelectionTimeoutTest extends AbstractSendBundleTest {
+
+  @Override
+  public List<String> getTestCliOptions() {
+    return new TestCommandLineOptionsBuilder()
+        // set the module limits file
+        .set(
+            "--plugin-linea-module-limit-file-path=",
+            getResourcePath("/moduleLimitsLimitless.toml"))
+        // enabled the ZkCounter
+        .set("--plugin-linea-limitless-enabled=", "true")
+        .build();
+  }
 
   @Test
   public void singleBundleSelectionTimeout() throws Exception {
@@ -56,10 +67,13 @@ public class BundleSelectionTimeoutTest extends AbstractSendBundleTest {
     // none of the bundle txs must be included in a block
     Arrays.stream(calls)
         .map(MulmodCall::txHash)
-        .forEach(
-            txHash -> {
-              minerNode.verify(eth.expectNoTransactionReceipt(txHash));
-            });
+        .forEach(txHash -> minerNode.verify(eth.expectNoTransactionReceipt(txHash)));
+    final var log = getLog();
+    assertThat(log).contains("PLUGIN_SELECTION_TIMEOUT");
+    assertThat(log)
+        .contains(
+            "Bundle selection interrupted while processing bundle %s"
+                .formatted(sendBundleResponse.getResult().bundleHash()));
   }
 
   @Test
@@ -67,7 +81,7 @@ public class BundleSelectionTimeoutTest extends AbstractSendBundleTest {
     final var mulmodExecutor = deployMulmodExecutor();
 
     final var calls =
-        IntStream.rangeClosed(1, 30)
+        IntStream.rangeClosed(1, 10)
             .mapToObj(
                 nonce ->
                     mulmodOperation(
@@ -87,14 +101,14 @@ public class BundleSelectionTimeoutTest extends AbstractSendBundleTest {
     // this bundle is meant to go in timeout during its selection
     final var sendBundleRequestBig1 =
         new SendBundleRequest(
-            new BundleParams(Arrays.copyOfRange(rawTxs, 1, 30), Integer.toHexString(2)));
+            new BundleParams(Arrays.copyOfRange(rawTxs, 1, 10), Integer.toHexString(2)));
 
     // second bundle contains one tx only to be fast to execute,
     // and ensure timeout occurs on the 2nd bundle and following are not event considered.
     // We are sending a bunch of bundles instead of just one to reproduce what happened in
     // production, where each following bundle where not skipped and would take ~200ms
-    // to the not selected, due to the fact the first tx in the bundle was executed.
-    final int followingBundleCount = 20;
+    // to be not selected, due to the fact the first tx in the bundle was executed.
+    final int followingBundleCount = 5;
     final var followingSendBundleRequests = new SendBundleRequest[followingBundleCount];
     for (int i = 0; i < followingSendBundleRequests.length; i++) {
       followingSendBundleRequests[i] =
@@ -140,9 +154,12 @@ public class BundleSelectionTimeoutTest extends AbstractSendBundleTest {
     Arrays.stream(calls)
         .skip(1)
         .map(MulmodCall::txHash)
-        .forEach(
-            txHash -> {
-              minerNode.verify(eth.expectNoTransactionReceipt(txHash));
-            });
+        .forEach(txHash -> minerNode.verify(eth.expectNoTransactionReceipt(txHash)));
+    final var log = getLog();
+    assertThat(log).contains("PLUGIN_SELECTION_TIMEOUT");
+    assertThat(log)
+        .contains(
+            "Bundle selection interrupted while processing bundle %s"
+                .formatted(sendBundleResponseBig1.getResult().bundleHash()));
   }
 }
