@@ -10,6 +10,7 @@
 package linea.plugin.acc.test;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -31,6 +32,7 @@ import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.Response;
@@ -66,6 +68,7 @@ import org.web3j.crypto.RawTransaction;
 import org.web3j.crypto.TransactionEncoder;
 import org.web3j.protocol.Web3j;
 import org.web3j.protocol.core.DefaultBlockParameterName;
+import org.web3j.protocol.core.methods.response.EthBlock;
 import org.web3j.protocol.core.methods.response.EthSendTransaction;
 import org.web3j.tx.gas.DefaultGasProvider;
 import org.web3j.utils.Numeric;
@@ -84,7 +87,7 @@ public abstract class LineaPluginPoSTestBase extends LineaPluginTestBase {
   private static final SECP256K1 secp256k1 = new SECP256K1();
   private final ScheduledExecutorService consensusScheduler =
       Executors.newSingleThreadScheduledExecutor();
-  private Long blockTimeSeconds = null;
+  protected Long blockTimeSeconds = null;
   protected Boolean buildBlocksInBackground = true;
 
   // Override this in subclasses to use a different genesis file template
@@ -155,9 +158,12 @@ public abstract class LineaPluginPoSTestBase extends LineaPluginTestBase {
         () -> {
           try {
             if (buildBlocksInBackground) {
-              buildNewBlock(Instant.now().getEpochSecond(), blockTimeSeconds * 1000 - 200);
+              buildNewBlock(
+                  Instant.now().getEpochSecond(),
+                  blockTimeSeconds * 1000 - 200,
+                  () -> !buildBlocksInBackground);
             }
-          } catch (IOException | InterruptedException e) {
+          } catch (Exception e) {
             throw new RuntimeException(e);
           }
         },
@@ -167,7 +173,7 @@ public abstract class LineaPluginPoSTestBase extends LineaPluginTestBase {
   }
 
   // No-arg override for simple test cases, we take sensible defaults from the genesis config
-  protected void buildNewBlock() throws IOException, InterruptedException {
+  protected void buildNewBlock() throws Exception {
     var latestTimestamp = this.minerNode.execute(ethTransactions.block()).getTimestamp();
     this.engineApiService.buildNewBlock(
         latestTimestamp.longValue() + blockTimeSeconds, blockTimeSeconds * 1000);
@@ -189,9 +195,20 @@ public abstract class LineaPluginPoSTestBase extends LineaPluginTestBase {
   // @param blockTimestampSeconds    The Unix timestamp (in seconds) to assign to the new block.
   // @param blockBuildingTimeMs      The duration (in milliseconds) allocated for the Besu node to
   // build the block.
-  protected void buildNewBlock(long blockTimestampSeconds, long blockBuildingTimeMs)
-      throws IOException, InterruptedException {
-    this.engineApiService.buildNewBlock(blockTimestampSeconds, blockBuildingTimeMs);
+  protected void buildNewBlock(
+      long blockTimestampSeconds, long blockBuildingTimeMs, Supplier<Boolean> stopBlockProduction)
+      throws Exception {
+    this.engineApiService.buildNewBlock(
+        blockTimestampSeconds, blockBuildingTimeMs, stopBlockProduction);
+  }
+
+  protected void buildNewBlockAndWait() throws Exception {
+    long initialBlockNumber = getLatestBlockNumber();
+    buildNewBlock();
+    await()
+        .atMost(3 * blockTimeSeconds, TimeUnit.SECONDS)
+        .pollInterval(500, TimeUnit.MILLISECONDS)
+        .untilAsserted(() -> assertThat(getLatestBlockNumber()).isGreaterThan(initialBlockNumber));
   }
 
   /**
@@ -315,6 +332,15 @@ public abstract class LineaPluginPoSTestBase extends LineaPluginTestBase {
       String parentBeaconBlockRoot,
       ArrayNode executionRequests) {}
 
+  protected EthBlock.Block getLatestBlock() throws Exception {
+    return minerNode
+        .nodeRequests()
+        .eth()
+        .ethGetBlockByNumber(org.web3j.protocol.core.DefaultBlockParameterName.LATEST, false)
+        .send()
+        .getBlock();
+  }
+
   /**
    * Retrieves the hash of the latest block from the test node.
    *
@@ -322,13 +348,11 @@ public abstract class LineaPluginPoSTestBase extends LineaPluginTestBase {
    * @throws Exception if the RPC call to the node fails or returns invalid data
    */
   protected String getLatestBlockHash() throws Exception {
-    return minerNode
-        .nodeRequests()
-        .eth()
-        .ethGetBlockByNumber(org.web3j.protocol.core.DefaultBlockParameterName.LATEST, false)
-        .send()
-        .getBlock()
-        .getHash();
+    return getLatestBlock().getHash();
+  }
+
+  protected Long getLatestBlockNumber() throws Exception {
+    return minerNode.nodeRequests().eth().ethBlockNumber().send().getBlockNumber().longValue();
   }
 
   /**

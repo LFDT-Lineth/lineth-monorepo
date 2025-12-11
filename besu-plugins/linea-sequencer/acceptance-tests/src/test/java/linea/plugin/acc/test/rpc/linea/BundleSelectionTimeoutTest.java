@@ -15,6 +15,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.IntStream;
 import linea.plugin.acc.test.TestCommandLineOptionsBuilder;
+import linea.plugin.acc.test.tests.web3j.generated.MulmodExecutor;
+import org.hyperledger.besu.tests.acceptance.dsl.account.Account;
 import org.junit.jupiter.api.Test;
 import org.web3j.protocol.core.methods.response.TransactionReceipt;
 
@@ -32,48 +34,89 @@ public class BundleSelectionTimeoutTest extends AbstractSendBundleTest {
         .build();
   }
 
+  private MulmodCall[] generateMulmodCalls(
+      Account account,
+      MulmodExecutor mulmodExecutor,
+      int startNonce,
+      int endNonce,
+      int numberOfMulmodIterations,
+      int gasLimit)
+      throws Exception {
+    return IntStream.rangeClosed(startNonce, endNonce)
+        .mapToObj(
+            nonce ->
+                mulmodOperation(
+                    mulmodExecutor,
+                    account,
+                    nonce,
+                    numberOfMulmodIterations,
+                    BigInteger.valueOf(gasLimit)))
+        .toArray(MulmodCall[]::new);
+  }
+
+  private SendBundleRequest createSendBundleRequest(MulmodCall[] calls, long blockNumber) {
+    final var rawTxs = Arrays.stream(calls).map(MulmodCall::rawTx).toArray(String[]::new);
+    return new SendBundleRequest(
+        new BundleParams(rawTxs, /*blockNumber*/ Long.toHexString(blockNumber)));
+  }
+
   @Test
   public void singleBundleSelectionTimeout() throws Exception {
     final var mulmodExecutor = deployMulmodExecutor();
+    final var newAccounts = createAccounts(4, 5);
+    // // stop automatic block production to
+    // // ensure bundle and transfers are evaluated in the same block
+    super.buildBlocksInBackground = false;
 
-    final var calls =
-        IntStream.rangeClosed(1, 10)
-            .mapToObj(
-                nonce ->
-                    mulmodOperation(
-                        mulmodExecutor,
-                        accounts.getPrimaryBenefactor(),
-                        nonce,
-                        2_000,
-                        BigInteger.valueOf(MAX_TX_GAS_LIMIT / 10)))
-            .toArray(MulmodCall[]::new);
+    final var callsBigBundle =
+        generateMulmodCalls(
+            newAccounts.get(0), mulmodExecutor, 0, 30, 2_000, MAX_TX_GAS_LIMIT / 10);
+    final var callsSmallBundle =
+        generateMulmodCalls(newAccounts.get(1), mulmodExecutor, 0, 3, 2, MAX_TX_GAS_LIMIT / 10);
 
-    final var rawTxs = Arrays.stream(calls).map(MulmodCall::rawTx).toArray(String[]::new);
-
+    final var previousHeadBlockNumber = getLatestBlockNumber();
     final var sendBundleRequest =
-        new SendBundleRequest(new BundleParams(rawTxs, Integer.toHexString(2)));
+        createSendBundleRequest(callsBigBundle, previousHeadBlockNumber + 1L);
+    final var sendSmallBundleRequest =
+        createSendBundleRequest(callsSmallBundle, previousHeadBlockNumber + 2L);
+
     final var sendBundleResponse = sendBundleRequest.execute(minerNode.nodeRequests());
+    assertThat(sendBundleResponse.hasError()).isFalse();
+    assertThat(sendBundleResponse.getResult().bundleHash()).isNotBlank();
+    final var sendSmallBundleResponse = sendSmallBundleRequest.execute(minerNode.nodeRequests());
+    assertThat(sendSmallBundleResponse.hasError()).isFalse();
+    assertThat(sendSmallBundleResponse.getResult().bundleHash()).isNotBlank();
 
     final var transferTxHash =
         accountTransactions
-            .createTransfer(accounts.getSecondaryBenefactor(), accounts.getPrimaryBenefactor(), 1)
+            .createTransfer(newAccounts.get(2), accounts.getPrimaryBenefactor(), 1)
             .execute(minerNode.nodeRequests());
 
-    assertThat(sendBundleResponse.hasError()).isFalse();
-    assertThat(sendBundleResponse.getResult().bundleHash()).isNotBlank();
-
+    super.buildNewBlockAndWait();
     minerNode.verify(eth.expectSuccessfulTransactionReceipt(transferTxHash.toHexString()));
 
-    // none of the bundle txs must be included in a block
-    Arrays.stream(calls)
+    // none of the big bundle txs must be included in a block
+    Arrays.stream(callsBigBundle)
         .map(MulmodCall::txHash)
-        .forEach(txHash -> minerNode.verify(eth.expectNoTransactionReceipt(txHash)));
-    final var log = getLog();
-    assertThat(log).contains("PLUGIN_SELECTION_TIMEOUT");
-    assertThat(log)
-        .contains(
-            "Bundle selection interrupted while processing bundle %s"
-                .formatted(sendBundleResponse.getResult().bundleHash()));
+        .forEach(
+            txHash -> {
+              minerNode.verify(eth.expectNoTransactionReceipt(txHash));
+            });
+
+    final var transfer2TxHash =
+        accountTransactions
+            .createTransfer(newAccounts.get(3), accounts.getPrimaryBenefactor(), 1)
+            .execute(minerNode.nodeRequests());
+
+    super.buildNewBlockAndWait();
+    minerNode.verify(eth.expectSuccessfulTransactionReceipt(transfer2TxHash.toHexString()));
+    // all tx in small bundle where included in a block
+    Arrays.stream(callsSmallBundle)
+        .map(MulmodCall::txHash)
+        .forEach(
+            txHash -> {
+              minerNode.verify(eth.expectSuccessfulTransactionReceipt(txHash));
+            });
   }
 
   @Test
@@ -81,16 +124,8 @@ public class BundleSelectionTimeoutTest extends AbstractSendBundleTest {
     final var mulmodExecutor = deployMulmodExecutor();
 
     final var calls =
-        IntStream.rangeClosed(1, 10)
-            .mapToObj(
-                nonce ->
-                    mulmodOperation(
-                        mulmodExecutor,
-                        accounts.getPrimaryBenefactor(),
-                        nonce,
-                        2_000,
-                        BigInteger.valueOf(MAX_TX_GAS_LIMIT / 10)))
-            .toArray(MulmodCall[]::new);
+        generateMulmodCalls(
+            accounts.getPrimaryBenefactor(), mulmodExecutor, 1, 10, 2_000, MAX_TX_GAS_LIMIT / 10);
 
     final var rawTxs = Arrays.stream(calls).map(MulmodCall::rawTx).toArray(String[]::new);
 
