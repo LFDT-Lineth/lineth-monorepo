@@ -64,7 +64,7 @@ jobs:
         run: mv ${{ github.workspace }}/tmp/${{ steps.extract_branch.outputs.branch }}/failedBlockchainReferenceTests.json ${{ github.workspace }}/tmp/${{ steps.extract_branch.outputs.branch }}/failedBlockchainReferenceTests-input.json
 
       - name: Run reference execution spec blockchain tests
-        run: GOMAXPROCS=10 GOMEMLIMIT=20GiB ./gradlew referenceExecutionSpecBlockchainTests -x spotlessCheck --tests "${{ inputs.test_filter || 'BlockchainReferenceTest_*' }}"
+        run: GOMAXPROCS=10 GOMEMLIMIT=20GiB ./gradlew :tracer:reference-tests:referenceExecutionSpecBlockchainTests -x spotlessCheck --tests "${{ inputs.test_filter || 'BlockchainReferenceTest_*' }}"
         timeout-minutes: 360
         env:
           JUNIT_TESTS_PARALLELISM: 2
