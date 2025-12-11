@@ -190,44 +190,45 @@ public class LineaTransactionSelectorFactory implements PluginTransactionSelecto
 
   private void checkAndSendLivenessBundle(
       BlockTransactionSelectionService bts, long pendingBlockNumber) {
+    if (livenessService.isEmpty()) {
+      return;
+    }
+    final var livenessService = this.livenessService.get();
     final long headBlockTimestamp = blockchainService.getChainHeadHeader().getTimestamp();
 
     Optional<TransactionBundle> livenessBundle =
-        livenessService.isPresent()
-            ? livenessService
-                .get()
-                .checkBlockTimestampAndBuildBundle(
-                    Instant.now().getEpochSecond(), headBlockTimestamp, pendingBlockNumber)
-            : Optional.empty();
+        livenessService.checkBlockTimestampAndBuildBundle(
+            Instant.now().getEpochSecond(), headBlockTimestamp, pendingBlockNumber);
 
-    if (livenessBundle.isPresent()) {
-      log.trace("Starting evaluation of liveness bundle {}", livenessBundle.get());
-      var badBundleRes =
-          livenessBundle.get().pendingTransactions().stream()
-              .map(bts::evaluatePendingTransaction)
-              .filter(evalRes -> !evalRes.selected())
-              .findFirst();
+    if (livenessBundle.isEmpty()) {
+      return;
+    }
 
-      if (badBundleRes.isPresent()) {
-        final var notSelectedReason = badBundleRes.get();
+    log.trace("Starting evaluation of liveness bundle {}", livenessBundle.get());
+    var badBundleRes =
+        livenessBundle.get().pendingTransactions().stream()
+            .map(bts::evaluatePendingTransaction)
+            .filter(evalRes -> !evalRes.selected())
+            .findFirst();
 
-        if (isSelectionInterrupted(notSelectedReason)) {
-          isSelectionInterrupted.set(true);
-          log.debug(
-              "Bundle selection interrupted while processing liveness bundle {}, reason {}",
-              livenessBundle.get(),
-              notSelectedReason);
-        } else {
-          log.debug(
-              "Failed liveness bundle {}, reason {}", livenessBundle.get(), notSelectedReason);
-        }
-        livenessService.get().updateUptimeMetrics(false, headBlockTimestamp);
-        rollback(bts);
+    if (badBundleRes.isPresent()) {
+      final var notSelectedReason = badBundleRes.get();
+
+      if (isSelectionInterrupted(notSelectedReason)) {
+        isSelectionInterrupted.set(true);
+        log.debug(
+            "Bundle selection interrupted while processing liveness bundle {}, reason {}",
+            livenessBundle.get(),
+            notSelectedReason);
       } else {
-        log.debug("Selected liveness bundle {}", livenessBundle.get());
-        livenessService.get().updateUptimeMetrics(true, headBlockTimestamp);
-        commit(bts);
+        log.debug("Failed liveness bundle {}, reason {}", livenessBundle.get(), notSelectedReason);
       }
+      livenessService.updateUptimeMetrics(false, headBlockTimestamp);
+      rollback(bts);
+    } else {
+      log.debug("Selected liveness bundle {}", livenessBundle.get());
+      livenessService.updateUptimeMetrics(true, headBlockTimestamp);
+      commit(bts);
     }
   }
 
