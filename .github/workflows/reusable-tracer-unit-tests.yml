@@ -40,18 +40,18 @@ jobs:
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
           name: unit-tests-report-${{ inputs.zkevm_fork }}
-          path: arithmetization/build/reports/tests/**/*
+          path: tracer/arithmetization/build/reports/tests/**/*
 
       - name: Upload jacoco unit tests coverage report
         if: always()
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
           name: jacoco-unit-tests-coverage-report-${{ inputs.zkevm_fork }}
-          path: arithmetization/build/reports/jacoco/test/**/*
+          path: tracer/arithmetization/build/reports/jacoco/test/**/*
 
       - name: Upload jacoco unit tests exec file
         if: always()
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
           name: jacoco-unit-tests-exec-file-${{ inputs.zkevm_fork }}
-          path: arithmetization/build/jacoco/test.exec
+          path: tracer/arithmetization/build/jacoco/test.exec
