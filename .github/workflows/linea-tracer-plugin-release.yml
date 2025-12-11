@@ -34,7 +34,7 @@ jobs:
       - name: Configure Tag
         id: config
         # set tag to use in subsequent steps.
-        run: echo "TAG=$tag_name" >> $GITHUB_OUTPUT
+        run: echo "TAG=${tag_name#linea-tracer-}" >> $GITHUB_OUTPUT
         env:
           tag_name: ${{ inputs.release_tag || github.event.release.tag_name }}
 
