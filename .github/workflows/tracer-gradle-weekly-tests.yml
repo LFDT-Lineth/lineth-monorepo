@@ -2,8 +2,11 @@ permissions: read-all
 name: Weekly Tracer Tests
 
 on:
-  schedule:
-    - cron: "0 4 * * 1"
+  # schedule:
+  #   - cron: "0 4 * * 1"
+  push:
+    branches:
+      - 'feat/linea-tracer-migration-as-subfolder'
   workflow_dispatch:
 
 

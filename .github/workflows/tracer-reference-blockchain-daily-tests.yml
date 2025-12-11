@@ -2,8 +2,11 @@ permissions: read-all
 name: Daily Tracer Blockchain Tests
 
 on:
-  schedule:
-    - cron: 0 21 * * 1-5
+  # schedule:
+  #   - cron: 0 21 * * 1-5
+  push:
+    branches:
+      - 'feat/linea-tracer-migration-as-subfolder'
   workflow_dispatch:
     inputs:
       test_filter:

@@ -3,8 +3,11 @@ permissions:
   contents: read
 
 on:
-  schedule:
-    - cron: "0 22 * * 1-5"
+  # schedule:
+  #   - cron: "0 22 * * 1-5"
+  push:
+    branches:
+      - 'feat/linea-tracer-migration-as-subfolder'
   workflow_dispatch:
 
 concurrency:
@@ -17,14 +20,14 @@ jobs:
     secrets: inherit
     with:
       zkevm_fork: PRAGUE
-      tests-with-ssh: ${{ inputs.tests-with-ssh || false }}
+      tests-with-ssh: false
 
   nightly-tests-osaka:
     uses: ./.github/workflows/reusable-tracer-nightly-tests.yml
     secrets: inherit
     with:
       zkevm_fork: OSAKA
-      tests-with-ssh: ${{ inputs.tests-with-ssh || false }}
+      tests-with-ssh: false
 
   # ==================================================================
   # Replay Tests
