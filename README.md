@@ -13,6 +13,8 @@ the [Apache 2.0 license](LICENSE).
 
 [Linea](https://linea.build) is a developer-ready layer 2 network scaling Ethereum. It's secured with a zero-knowledge rollup, built on lattice-based cryptography, and powered by [Consensys](https://consensys.io).
 
+Linea is compatible with the execution clients [Besu](https://github.com/hyperledger/besu/) or [Geth](https://github.com/ethereum/go-ethereum). To run a full node, an execution client is paired with [Maru](https://github.com/Consensys/maru).
+
 <!-- ## Get started
 
 tbd -->
@@ -22,9 +24,8 @@ tbd -->
 Linea's stack is made up of multiple repositories, these include:
 
 - This repo, [linea-constraints](https://github.com/Consensys/linea-constraints): Implementation of the constraint system from the specification
-- [linea-monorepo](https://github.com/Consensys/linea-monorepo): The main repository for the Linea stack & network 
-- [linea-besu](https://github.com/Consensys/linea-besu): Fork of Besu to implement the Linea-Besu client
-- [linea-sequencer](https://github.com/Consensys/linea-sequencer): A set of Linea-Besu plugins for the sequencer and RPC nodes
+- [linea-monorepo](https://github.com/Consensys/linea-monorepo): The main repository for the Linea stack & network
+> Also maintains a set of Linea-Besu plugins for the sequencer, tracer, and RPC nodes.
 - [linea-tracer](https://github.com/Consensys/linea-tracer): Linea-Besu plugin which produces the traces that the constraint system applies and that serve as inputs to the prover
 - [linea-specification](https://github.com/Consensys/linea-specification): Specification of the constraint system defining Linea's zkEVM
 
@@ -40,7 +41,8 @@ Linea abstracts away the complexity of this technical architecture to allow deve
 
 Contributions are welcome!
 
-### Guidelines for Non-Code and other Trivial Contributions
+### Guidelines for non-code and other trivial contributions
+
 Please keep in mind that we do not accept non-code contributions like fixing comments, typos or some other trivial fixes. Although we appreciate the extra help, managing lots of these small contributions is unfeasible, and puts extra pressure in our continuous delivery systems (running all tests, etc). Feel free to open an issue pointing to any of those errors, and we will batch them into a single change.
 
 1. [Create an issue](https://github.com/Consensys/linea-constraints/issues).
@@ -60,7 +62,7 @@ Before contributing, ensure you're familiar with:
 
 ### Useful links
 
-- [Linea docs](https://docs.linea.build)
+- [Linea docs](https://docs.linea.build) managed from a [public repo](https://github.com/Consensys/doc.linea)
 - [Linea blog](https://linea.mirror.xyz)
 - [Support](https://support.linea.build)
 - [Discord](https://discord.gg/linea)
