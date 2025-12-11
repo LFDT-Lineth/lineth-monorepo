@@ -2,9 +2,11 @@
 buildscript {
   ext {
     besuPluginDir = File.createTempDir("plugins")
-    releaseVersion = "beta-v4.4-rc6" // "${libs.versions.arithmetization.get()}"
+    targetReleaseVersion = "beta-v4.4-rc6"
+    releaseVersion = findProperty('releaseVersion') ?: targetReleaseVersion
     besuVersion = "${libs.versions.besu.get()}"
     distributionIdentifier = "linea-tracer"
+    distibutionBaseName = "linea-arithmetization"
     besuRepo = "https://artifacts.consensys.net/public/linea-besu/maven/"
   }
 }
@@ -68,3 +70,13 @@ sonar {
 }
 
 version = project.hasProperty('releaseVersion') ? project.getProperty('releaseVersion') : 'snapshot'
+
+jar {
+  archiveBaseName = distibutionBaseName
+}
+
+distributions {
+  main {
+    distributionBaseName = distibutionBaseName
+  }
+}

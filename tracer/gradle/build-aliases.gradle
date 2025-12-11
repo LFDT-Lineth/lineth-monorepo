@@ -17,15 +17,18 @@
 defaultTasks 'build', 'checkLicenses', 'javadoc', 'artifacts'
 
 def buildAliases = [
-  'dev': [
+  ':tracer:dev': [
     'spotlessApply',
     'build',
     'checkLicenses'
   ],
-  'artifacts' : [
+  ':tracer:artifacts' : [
     'jar',
     'distZip'
-  ]
+  ],
+  ':tracer:clean' : [
+    'clean'
+  ],
 ]
 
 def expandedTaskList = []

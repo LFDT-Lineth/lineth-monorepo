@@ -21,7 +21,6 @@ plugins {
 }
 
 group = 'net.consensys.linea.besu.plugin'
-version = rootProject.version
 
 def lineaTracerProject = project(lineaTracerProjectPath)
 apply from: lineaTracerProject.file("gradle/java.gradle")
