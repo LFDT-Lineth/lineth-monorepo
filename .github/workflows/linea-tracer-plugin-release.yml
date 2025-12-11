@@ -34,22 +34,24 @@ jobs:
       - name: Configure Tag
         id: config
         # set tag to use in subsequent steps.
-        run: echo "TAG=${tag_name#linea-tracer-}" >> $GITHUB_OUTPUT
+        run: |
+          echo "VERSION_TAG=${tag_name#linea-tracer-}" >> $GITHUB_OUTPUT
+          echo "RELEASE_TAG=${tag_name}" >> $GITHUB_OUTPUT
         env:
           tag_name: ${{ inputs.release_tag || github.event.release.tag_name }}
 
       - name: Build Assets
-        run: ./gradlew :tracer:artifacts -PreleaseVersion=${{ steps.config.outputs.TAG }}
+        run: ./gradlew :tracer:artifacts -PreleaseVersion=${{ steps.config.outputs.VERSION_TAG }}
         env:
           JAVA_OPTS: -Xmx2g -Dorg.gradle.daemon=false
 
       - name: Upload Assets
         run: |
-          gh release upload ${{ steps.config.outputs.TAG }} $jar_asset
-          gh release upload ${{ steps.config.outputs.TAG }} $zip_asset
+          gh release upload ${{ steps.config.outputs.RELEASE_TAG }} $jar_asset
+          gh release upload ${{ steps.config.outputs.RELEASE_TAG }} $zip_asset
         env:
-          jar_asset: ${{ github.workspace }}/tracer/plugins/build/libs/linea-tracer-${{ steps.config.outputs.TAG }}.jar
-          zip_asset: ${{ github.workspace }}/tracer/plugins/build/distributions/linea-tracer-${{ steps.config.outputs.TAG }}.zip
+          jar_asset: ${{ github.workspace }}/tracer/plugins/build/libs/linea-tracer-${{ steps.config.outputs.VERSION_TAG }}.jar
+          zip_asset: ${{ github.workspace }}/tracer/plugins/build/distributions/linea-tracer-${{ steps.config.outputs.VERSION_TAG }}.zip
           GH_TOKEN: ${{ github.token }}
 
       - name: Set up GCC
