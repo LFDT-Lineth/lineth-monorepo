@@ -7,13 +7,15 @@ permissions:
 
 on:
   release:
-  workflow_dispatch:
-    inputs:
-      release_tag:
-        description: Specify tag where assets should be added.
-        required: true
-        type: string
-        default: "v1.2.3"
+  push:
+    branches:
+      - 'feat/linea-tracer-migration-as-subfolder'
+    # inputs:
+    #   release_tag:
+    #     description: Specify tag where assets should be added.
+    #     required: true
+    #     type: string
+    #     default: "v1.2.3"
 
 jobs:
   # ==================================================================
@@ -36,7 +38,8 @@ jobs:
         # set tag to use in subsequent steps.
         run: echo "TAG=$tag_name" >> $GITHUB_OUTPUT
         env:
-          tag_name: ${{ inputs.release_tag || github.event.release.tag_name }}
+          tag_name: test-v0.0.0
+          # tag_name: ${{ inputs.release_tag || github.event.release.tag_name }}
 
       - name: Build Assets
         run: ./gradlew :tracer:artifacts -PreleaseVersion=${{ steps.config.outputs.TAG }}
