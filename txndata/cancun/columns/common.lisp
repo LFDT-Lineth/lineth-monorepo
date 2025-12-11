@@ -24,6 +24,6 @@
   ;; heartbeat
   ( CT              :i4           )
   ( CT_MAX          :i4           )
-  ( GAS_CUMULATIVE  :i128         )
+  ( GAS_CUMULATIVE  :i64          )
   )
 

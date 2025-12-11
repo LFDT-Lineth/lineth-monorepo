@@ -23,8 +23,8 @@
                 ( IS_TYPE2                     :binary )
 
                 ;; gas related
-                ( GAS_LIMIT                    :i64 )
-                ( GAS_INITIALLY_AVAILABLE      :i64 )
+                ( GAS_LIMIT                    :i25 )
+                ( GAS_INITIALLY_AVAILABLE      :i25 )
                 ( GAS_PRICE                    :i64 )
                 ( PRIORITY_FEE_PER_GAS         :i64 )
                 ( BASEFEE                      :i64 ) ;; in Linea London this is hard-coded to 7 ... but in the reference tests this may be much larger
@@ -35,9 +35,9 @@
 
                 ;; end of transaction predictions
                 ( STATUS_CODE                  :binary)
-                ( GAS_LEFTOVER                 :i64 )
-                ( REFUND_COUNTER_INFINITY      :i64 )
-                ( REFUND_EFFECTIVE             :i64 )
+                ( GAS_LEFTOVER                 :i25 )
+                ( REFUND_COUNTER_INFINITY      :i25 )
+                ( REFUND_EFFECTIVE             :i25 )
 
                 ;; coinbase related
                 ( COINBASE_ADDRESS_HI          :i32  )
