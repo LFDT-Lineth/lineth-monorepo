@@ -47,7 +47,7 @@ jobs:
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
           name: distributions
-          path: arithmetization/build/libs
+          path: tracer/arithmetization/build/libs
 
       - name: Run spotless
         run: ./gradlew --no-daemon --parallel :tracer:clean :tracer:spotlessCheck
@@ -101,18 +101,18 @@ jobs:
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
           name: replay-tests-report
-          path: arithmetization/build/reports/tests/**/*
+          path: tracer/arithmetization/build/reports/tests/**/*
 
       - name: Upload jacoco fast replay tests coverage report
         if: always()
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
           name: jacoco-fast-replay-tests-coverage-report
-          path: arithmetization/build/reports/jacoco/jacocoFastReplayTestsReport/**/*
+          path: tracer/arithmetization/build/reports/jacoco/jacocoFastReplayTestsReport/**/*
 
       - name: Upload jacoco fast replay tests exec file
         if: always()
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
           name: jacoco-fast-replay-tests-exec-file
-          path: arithmetization/build/jacoco/fastReplayTests.exec
+          path: tracer/arithmetization/build/jacoco/fastReplayTests.exec
