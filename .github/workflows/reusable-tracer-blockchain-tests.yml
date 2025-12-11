@@ -88,21 +88,21 @@ jobs:
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
           name: blockchain-reference-tests-report-${{ inputs.zkevm_fork }}
-          path: reference-tests/build/reports/tests/**/*
+          path: tracer/reference-tests/build/reports/tests/**/*
 
       - name: Upload jacoco exec spec blockchain tests coverage report
         if: always()
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
           name: jacoco-blockchain-tests-coverage-report-${{ inputs.zkevm_fork }}
-          path: reference-tests/build/reports/jacoco/jacocoReferenceExecutionSpecBlockchainTestsReport/**/*
+          path: tracer/reference-tests/build/reports/jacoco/jacocoReferenceExecutionSpecBlockchainTestsReport/**/*
 
       - name: Upload jacoco blockchain tests exec file
         if: always()
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
           name: jacoco-blockchain-tests-exec-file-${{ inputs.zkevm_fork }}
-          path: reference-tests/build/jacoco/referenceExecutionSpecBlockchainTests.exec
+          path: tracer/reference-tests/build/jacoco/referenceExecutionSpecBlockchainTests.exec
 
       - name: Extract Metrics
         if: ${{ failure() || cancelled() }}
