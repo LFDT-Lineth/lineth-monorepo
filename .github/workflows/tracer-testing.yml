@@ -1,4 +1,4 @@
-name: tracer-testing
+name: "Unit & Fast Replay Tests & Blockchain Ref Tests"
 
 permissions:
   contents: read
