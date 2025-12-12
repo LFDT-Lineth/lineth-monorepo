@@ -111,7 +111,6 @@ class BlockCreationMonitor(
             _nexBlockNumberToFetch.get() - lastProvenBlockNumber,
             config.blocksFetchLimit,
           )
-          this.stop()
           SafeFuture.COMPLETE
         } else if (config.lastL2BlockNumberToProcessInclusive != null &&
           nexBlockNumberToFetch.toULong() > config.lastL2BlockNumberToProcessInclusive

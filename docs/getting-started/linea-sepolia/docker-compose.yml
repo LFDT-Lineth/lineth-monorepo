@@ -81,16 +81,6 @@ services:
       - "--config"
       - "/opt/consensys/maru/configs/maru-config.toml"
 
-  # Geth initialization
-  geth-init:
-    image: ethereum/client-go:v1.16.7
-    command:
-      - init
-      - /genesis.json
-    volumes:
-      - ./geth/geth-genesis.json:/genesis.json:ro
-      - linea-sepolia-geth:/root/.ethereum
-
   # Geth node
   geth-node:
     hostname: el-client
@@ -99,11 +89,7 @@ services:
     pull_policy: always
     restart: unless-stopped
     stop_grace_period: 30s
-    depends_on:
-      geth-init:
-        condition: service_completed_successfully
     command:
-      - --networkid=59141
       - --syncmode=snap
       - --http
       - --http.addr=0.0.0.0
@@ -118,6 +104,7 @@ services:
       - --authrpc.port=8550
       - --authrpc.vhosts=*
       - --authrpc.jwtsecret=/root/.ethereum/jwt
+      - --override.genesis=/genesis.json
     ports:
       - 30303:30303
       - 30303:30303/udp

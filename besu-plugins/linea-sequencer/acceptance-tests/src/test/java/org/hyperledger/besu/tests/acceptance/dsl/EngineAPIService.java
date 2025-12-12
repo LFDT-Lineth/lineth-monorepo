@@ -17,6 +17,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.io.IOException;
 import java.util.Optional;
+import java.util.function.Supplier;
 import okhttp3.Call;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
@@ -73,8 +74,13 @@ public class EngineAPIService {
    * @param blockTimestampSeconds    The Unix timestamp (in seconds) to assign to the new block.
    * @param blockBuildingTimeMs      The duration (in milliseconds) allocated for the Besu node to build the block.
    */
-  public void buildNewBlock(long blockTimestampSeconds, long blockBuildingTimeMs)
-      throws IOException, InterruptedException {
+  public void buildNewBlock(long blockTimestampSeconds, long blockBuildingTimeMs) throws Exception {
+    buildNewBlock(blockTimestampSeconds, blockBuildingTimeMs, () -> false);
+  }
+
+  public void buildNewBlock(
+      long blockTimestampSeconds, long blockBuildingTimeMs, Supplier<Boolean> stopBlockBuilding)
+      throws Exception {
     final EthBlock.Block latestBlock = node.execute(ethTransactions.block());
 
     final Call buildBlockRequest =
@@ -144,7 +150,10 @@ public class EngineAPIService {
     }
 
     final Call moveChainAheadRequest = createForkChoiceRequest(newBlockHash);
-
+    if (stopBlockBuilding.get()) {
+      // if stopBlockBuilding is true, we exit before moving the chain ahead
+      return;
+    }
     try (final Response moveChainAheadResponse = moveChainAheadRequest.execute()) {
       assertThat(moveChainAheadResponse.code()).isEqualTo(200);
     }

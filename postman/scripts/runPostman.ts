@@ -153,6 +153,14 @@ async function main() {
       username: process.env.POSTGRES_USER ?? "postgres",
       password: process.env.POSTGRES_PASSWORD ?? "postgres",
       database: process.env.POSTGRES_DB ?? "postman_db",
+      ...(process.env.POSTGRES_SSL === "true"
+        ? {
+            ssl: {
+              rejectUnauthorized: process.env.POSTGRES_SSL_REJECT_UNAUTHORIZED === "true",
+              ca: process.env.POSTGRES_SSL_CA_PATH ?? undefined,
+            },
+          }
+        : {}),
     },
     databaseCleanerOptions: {
       enabled: process.env.DB_CLEANER_ENABLED === "true",
