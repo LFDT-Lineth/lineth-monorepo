@@ -133,7 +133,7 @@ allprojects {
         }
 
         // Below this line are currently only license header tasks
-        format 'groovy', { target '**/src/*/grovy/**/*.groovy' }
+        format 'groovy', { target '**/src/*/groovy/**/*.groovy' }
         format 'bash', { target '**/*.sh' }
         format 'sol', { target '**/*.sol' }
       }
