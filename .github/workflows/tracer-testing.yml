@@ -1,4 +1,4 @@
-name: "Unit & Fast Replay Tests & Blockchain Ref Tests"
+name: "Tracer Unit & Fast Replay Tests & Blockchain Ref Tests"
 
 permissions:
   contents: read
