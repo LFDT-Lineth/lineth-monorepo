@@ -52,9 +52,8 @@ public final class UserTransactionFragment implements TraceFragment {
         .pTransactionCopyTxcd(transactionProcessingMetadata.copyTransactionCallData())
         .pTransactionIsDeployment(tx.getTo().isEmpty())
         .pTransactionIsType2(tx.getType() == TransactionType.EIP1559)
-        .pTransactionGasLimit(Bytes.minimalBytes(tx.getGasLimit()))
-        .pTransactionGasInitiallyAvailable(
-            Bytes.minimalBytes(transactionProcessingMetadata.getInitiallyAvailableGas()))
+        .pTransactionGasLimit(tx.getGasLimit())
+        .pTransactionGasInitiallyAvailable(transactionProcessingMetadata.getInitiallyAvailableGas())
         .pTransactionGasPrice(
             Bytes.minimalBytes(transactionProcessingMetadata.getEffectiveGasPrice()))
         .pTransactionPriorityFeePerGas(
@@ -63,11 +62,9 @@ public final class UserTransactionFragment implements TraceFragment {
         .pTransactionCallDataSize(tx.getData().map(Bytes::size).orElse(0))
         .pTransactionInitCodeSize(tx.getInit().map(Bytes::size).orElse(0))
         .pTransactionStatusCode(transactionProcessingMetadata.statusCode())
-        .pTransactionGasLeftover(Bytes.minimalBytes(transactionProcessingMetadata.getLeftoverGas()))
-        .pTransactionRefundCounterInfinity(
-            Bytes.minimalBytes(transactionProcessingMetadata.getRefundCounterMax()))
-        .pTransactionRefundEffective(
-            Bytes.minimalBytes(transactionProcessingMetadata.getGasRefunded()))
+        .pTransactionGasLeftover(transactionProcessingMetadata.getLeftoverGas())
+        .pTransactionRefundCounterInfinity(transactionProcessingMetadata.getRefundCounterMax())
+        .pTransactionRefundEffective(transactionProcessingMetadata.getGasRefunded())
         .pTransactionCoinbaseAddressHi(highPart(transactionProcessingMetadata.getCoinbaseAddress()))
         .pTransactionCoinbaseAddressLo(lowPart(transactionProcessingMetadata.getCoinbaseAddress()));
   }

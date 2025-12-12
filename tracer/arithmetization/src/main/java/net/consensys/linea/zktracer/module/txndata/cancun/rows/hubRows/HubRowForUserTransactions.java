@@ -44,9 +44,9 @@ public class HubRowForUserTransactions extends HubRow {
         .pHubIsDeployment(txn.isDeployment())
         .pHubNonce(Bytes.ofUnsignedLong(txn.getBesuTransaction().getNonce()))
         .pHubValue(bigIntegerToBytes(txn.getBesuTransaction().getValue().getAsBigInteger()))
-        .pHubGasLimit(Bytes.ofUnsignedLong(txn.getBesuTransaction().getGasLimit()))
+        .pHubGasLimit(txn.getBesuTransaction().getGasLimit())
         .pHubGasPrice(Bytes.ofUnsignedLong(txn.getEffectiveGasPrice()))
-        .pHubGasInitiallyAvailable(Bytes.ofUnsignedLong(txn.getInitiallyAvailableGas()))
+        .pHubGasInitiallyAvailable(txn.getInitiallyAvailableGas())
         .pHubCallDataSize(txn.isMessageCall() ? txn.getBesuTransaction().getPayload().size() : 0)
         .pHubInitCodeSize(txn.isDeployment() ? txn.getBesuTransaction().getPayload().size() : 0)
         .pHubHasEip1559GasSemantics(txn.getBesuTransaction().getType().supports1559FeeMarket())
@@ -55,9 +55,9 @@ public class HubRowForUserTransactions extends HubRow {
         .pHubCfi(txn.getCodeFragmentIndex())
         .pHubInitBalance(bigIntegerToBytes(txn.getInitialBalance()))
         .pHubStatusCode(txn.statusCode())
-        .pHubGasLeftover(Bytes.ofUnsignedLong(txn.getLeftoverGas()))
-        .pHubRefundCounterFinal(Bytes.ofUnsignedLong(txn.getRefundCounterMax()))
-        .pHubRefundEffective(Bytes.ofUnsignedLong(txn.computeRefunded()))
+        .pHubGasLeftover(txn.getLeftoverGas())
+        .pHubRefundCounterFinal(txn.getRefundCounterMax())
+        .pHubRefundEffective(txn.computeRefunded())
     // EIP-4844, EIP-2935, NOOP flags aswell as SYST_TXN_DATA_k not set for USER transactions
     ;
   }

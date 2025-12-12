@@ -51,7 +51,7 @@ public class RlpRow extends TxnDataRow {
         .pRlpNumberOfZeroBytes(txn.numberOfZeroBytesInPayload())
         .pRlpNumberOfNonzeroBytes(txn.numberOfNonzeroBytesInPayload())
         .pRlpDataSize(besuTxn.getPayload().size())
-        .pRlpGasLimit(Bytes.ofUnsignedLong(besuTxn.getGasLimit()))
+        .pRlpGasLimit(besuTxn.getGasLimit())
         .pRlpGasPrice(
             besuTxn.getType().supports1559FeeMarket()
                 ? Bytes.EMPTY
@@ -66,7 +66,7 @@ public class RlpRow extends TxnDataRow {
                 : Bytes.EMPTY)
         .pRlpNumberOfAccessListAddresses(txn.numberOfWarmedAddresses())
         .pRlpNumberOfAccessListStorageKeys(txn.numberOfWarmedStorageKeys())
-        .pRlpChainId(txn.chainId().toLong())
+        .pRlpChainId(txn.chainId())
         .pRlpCfi(txn.getCodeFragmentIndex())
         .pRlpRequiresEvmExecution(txn.requiresEvmExecution());
   }
