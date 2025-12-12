@@ -1,5 +1,8 @@
 name: "Reusable tracer nightly tests workflow"
 
+permissions:
+  contents: read
+
 on:
   workflow_call:
     inputs:

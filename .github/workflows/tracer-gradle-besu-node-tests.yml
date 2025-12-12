@@ -1,5 +1,8 @@
 name: Tracer Hub-Shomei-Besu-Integration
 
+permissions:
+  contents: read
+
 on:
   workflow_dispatch:
     inputs:

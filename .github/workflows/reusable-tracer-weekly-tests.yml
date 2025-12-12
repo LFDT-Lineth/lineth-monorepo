@@ -1,5 +1,8 @@
 name: "Reusable tracer weekly tests workflow"
 
+permissions:
+  contents: read
+
 on:
   workflow_call:
     inputs:

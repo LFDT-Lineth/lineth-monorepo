@@ -138,7 +138,7 @@ jobs:
           enable-ssh: false
 
       - name: Run replay tests
-        run: GOMEMLIMIT=26GiB ./gradlew :arithmetization:fastReplayTests
+        run: GOMEMLIMIT=26GiB ./gradlew :tracer:arithmetization:fastReplayTests
         env:
           JAVA_OPTS: -Dorg.gradle.daemon=false
           JUNIT_TESTS_PARALLELISM: 4
