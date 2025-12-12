@@ -143,7 +143,12 @@ allprojects {
 
 task jacocoRootReport(type: JacocoReport) {
   // Define a project list will all subprojects excluding 'tracer' (TODO: fix to include tracer)
-  def reportProjects = subprojects.findAll { it.name != 'tracer' }
+  def reportProjects = subprojects.findAll { subproject ->
+    // Get the path of the subproject relative to the root dir (e.g., "tracer/lib-a")
+    def relativePath = rootProject.relativePath(subproject.projectDir)
+    // Include only if the path does NOT start with "tracer"
+    return !relativePath.startsWith('tracer')
+  }
 
   additionalSourceDirs.from files(reportProjects.sourceSets.main.allSource.srcDirs)
   sourceDirectories.from files(reportProjects.sourceSets.main.allSource.srcDirs)
