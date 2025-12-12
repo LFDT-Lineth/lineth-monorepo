@@ -35,6 +35,10 @@ jobs:
         id: config
         # set tag to use in subsequent steps.
         run: |
+          if [[ "$tag_name" != "linea-tracer-"* ]]; then
+            echo "Error: The given 'inputs.release_tag' or 'release.tag_name' ($tag_name) does not start with 'linea-tracer-'"
+            exit 1
+          fi
           echo "VERSION_TAG=${tag_name#linea-tracer-}" >> $GITHUB_OUTPUT
           echo "RELEASE_TAG=${tag_name}" >> $GITHUB_OUTPUT
         env:
