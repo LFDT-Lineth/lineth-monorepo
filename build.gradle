@@ -124,7 +124,7 @@ allprojects {
 
         java {
           target 'src/**/*.java'
-          targetExclude 'src/*/java/net/consensys/linea/**/*.java', '**/zktracer/Trace*.java', '**/GlobalConstants.java', '**/BlockchainReferenceTest_*.java', '**/GeneralStateReferenceTest_*'
+          targetExclude 'src/*/java/net/consensys/linea/**/*.java', '**/zktracer/Trace*.java', '**/GlobalConstants.java', '**/BlockchainReferenceTest_*.java', '**/GeneralStateReferenceTest_*.java'
           // Do not use 'targetExclude' with wildcard patterns, it will add minutes to the build
           removeUnusedImports()
           trimTrailingWhitespace()
