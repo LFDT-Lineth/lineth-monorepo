@@ -1,0 +1,343 @@
+import java.time.LocalTime
+
+/*
+ * Copyright Consensys Software Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+import de.undercouch.gradle.tasks.download.Download
+
+buildscript {
+  ext {
+    besuShomeiPluginVersion = "${libs.versions.besuShomeiPluginVersion.get()}"
+    besuShomeiPluginBaseUrl = "https://github.com/Consensys/besu-shomei-plugin/releases/download/"
+  }
+}
+
+apply plugin: 'jacoco'
+jacoco {
+  toolVersion = '0.8.12'
+}
+
+/*
+  * Pass some system properties provided on the gradle command line to test executions for
+  * convenience.
+  *
+  * The properties passed are:
+  * - 'test.ethereum.include': allows to run a single Ethereum reference tests. For instance,
+  *   running a single general state test can be done with:
+  *    ./gradlew :ethereum:tech.pegasys.ethsigner.ethereum.vm:test -Dtest.single=GeneralStateTest -Dtest.ethereum.include=callcodecallcallcode_101-Frontier
+  *   The meaning being that will be run only the tests for which the value passed as "include"
+  *   (which can be a java pattern) matches parts of the test name. Knowing that tests names for
+  *   reference tests are of the form:
+  *     <name>(-<milestone>([<variant>])?)?
+  *   where <name> is the test name as defined in the json file (usually the name of the json file
+  *   as well), <milestone> is the Ethereum milestone tested (not all test use it) and <variant>
+  *   is only use in some general state tests where for the same json file and same milestone,
+  *   multiple variant of that test are run. The variant is a simple number.
+  * - 'root.log.level' and 'evm.log.level': allow to control the log level used during the tests.
+  */
+tasks.withType(Test).configureEach {
+  minHeapSize = "256m"
+  // Determine heap limit based on whether CI machine, or not.
+  if(System.getenv().containsKey("CI")) {
+      maxHeapSize = "32g"
+  } else {
+      maxHeapSize = "8g"
+  }
+
+  jvmArgs = [
+//    '-XX:-UseGCOverheadLimit',
+//    '-Xlog:gc',
+    // Mockito and jackson-databind do some strange reflection during tests.
+    // This suppresses an illegal access warning.
+    '--add-opens',
+    'java.base/java.util=ALL-UNNAMED',
+    '--add-opens',
+    'java.base/java.util.concurrent=ALL-UNNAMED'
+  ]
+
+  Set toImport = [
+    'root.log.level',
+    'evm.log.level'
+  ]
+  for (String name : toImport) {
+    if (System.getProperty(name) != null) {
+      systemProperty name, System.getProperty(name)
+    }
+  }
+  // Configure default parallelism
+  if (System.getenv().containsKey("JUNIT_TESTS_PARALLELISM")) {
+    systemProperty("junit.jupiter.execution.parallel.enabled", true)
+    systemProperty("junit.jupiter.execution.parallel.mode.default", "concurrent")
+    systemProperty("junit.jupiter.execution.parallel.mode.classes.default", "concurrent")
+    systemProperty("junit.jupiter.execution.parallel.config.strategy", "fixed")
+    systemProperty("junit.jupiter.execution.parallel.config.fixed.parallelism",
+      System.getenv().getOrDefault("JUNIT_TESTS_PARALLELISM", "4").toInteger())
+  }
+  // Configure BESU-related paths
+  delete("${project.getLayout().getBuildDirectory().get()}/besu/traces")
+  mkdir("${project.getLayout().getBuildDirectory().get()}/besu/traces")
+  mkdir("${project.getLayout().getBuildDirectory().get()}/besu/traces/prague")
+  mkdir("${project.getLayout().getBuildDirectory().get()}/besu/plugins")
+  System.setProperty("besu.plugins.dir",
+          System.getenv().getOrDefault("besu.plugins.dir",
+                  "${project.getLayout().getBuildDirectory().get().toString()}/besu/plugins/"
+          )
+  )
+  System.setProperty("besu.traces.dir",
+          System.getenv().getOrDefault("besu.traces.dir",
+                  "${project.getLayout().getBuildDirectory().get().toString()}/besu/traces/"
+          )
+  )
+  systemProperty("besu.traces.dir", System.getProperty("besu.traces.dir"))
+  systemProperty("besu.plugins.dir", System.getProperty("besu.plugins.dir"))
+  //
+  testlogger {
+    // pick a theme - mocha, standard, plain, mocha-parallel, standard-parallel or plain-parallel
+    theme 'plain-parallel'
+
+    // set to false to disable detailed failure logs
+    showExceptions true
+
+    // set to false to hide stack traces
+    showStackTraces true
+
+    // set to true to remove any filtering applied to stack traces
+    showFullStackTraces true
+
+    // set to false to hide exception causes
+    showCauses true
+
+    // set threshold in milliseconds to highlight slow tests
+    slowThreshold 2000
+
+    // displays a breakdown of passes, failures and skips along with total duration
+    showSummary true
+
+    // set to true to see simple class names
+    showSimpleNames false
+
+    // set to false to hide passed tests
+    showPassed false
+
+    // set to false to hide skipped tests
+    showSkipped false
+
+    // set to false to hide failed tests
+    showFailed true
+
+    // enable to see standard out and error streams inline with the test results
+    showStandardStreams false
+
+    // set to false to hide passed standard out and error streams
+    showPassedStandardStreams false
+
+    // set to false to hide skipped standard out and error streams
+    showSkippedStandardStreams false
+
+    // set to false to hide failed standard out and error streams
+    showFailedStandardStreams true
+  }
+
+  useJUnitPlatform()
+}
+
+// =============================================================================
+// Test Tasks
+// =============================================================================
+
+tasks.test.configure {
+  // Following required as some unit tests run BESU checks
+  dependsOn("copyTracerPlugin", "extractShomeiBesuPlugin")
+  //
+  useJUnitPlatform {
+    excludeTags("nightly | replay | weekly")
+    excludeTags("prc-calltests")
+  }
+  finalizedBy(jacocoTestReport)
+}
+
+tasks.register("fastReplayTests", Test) {
+  useJUnitPlatform {
+    includeTags("replay")
+    excludeTags("nightly | weekly")
+  }
+  finalizedBy(jacocoFastReplayTestsReport)
+}
+
+tasks.register("nightlyReplayTests", Test) {
+  useJUnitPlatform {
+    includeTags("nightly & replay")
+  }
+}
+
+tasks.register("nightlyTests", Test) {
+  useJUnitPlatform {
+    includeTags("nightly")
+    excludeTags("replay")
+  }
+  finalizedBy(jacocoNightlyTestsReport)
+}
+
+tasks.register("weeklyTests", Test) {
+  useJUnitPlatform {
+        includeTags("weekly")
+        excludeTags("replay")
+  }
+  finalizedBy(jacocoWeeklyTestsReport)
+}
+
+tasks.register("weeklyReplayTests", Test) {
+  useJUnitPlatform {
+        includeTags("weekly & replay")
+  }
+  finalizedBy(jacocoWeeklyTestsReport)
+}
+
+tasks.register("prcCallTests", Test) {
+  useJUnitPlatform {
+    includeTags("prc-calltests")
+  }
+  finalizedBy(jacocoPrcCallTestsReport)
+}
+
+// =============================================================================
+// Besu Test Tasks
+// =============================================================================
+
+tasks.register("besuNodeTests", Test) {
+  dependsOn("copyTracerPlugin", "extractShomeiBesuPlugin")
+  //
+  forkEvery = 1
+  maxParallelForks = 3
+  environment("RUN_WITH_BESU_NODE", true)
+  //
+  useJUnitPlatform {
+    excludeTags("nightly")
+    excludeTags("replay")
+    excludeTags("weekly")
+    excludeTags("prc-calltests")
+  }
+  finalizedBy(jacocoTestReport)
+}
+
+tasks.register("besuNodeFastReplayTests", Test) {
+  dependsOn("copyTracerPlugin", "extractShomeiBesuPlugin")
+  //
+  forkEvery = 1
+  maxParallelForks = 3
+  environment("RUN_WITH_BESU_NODE", true)
+  //
+  useJUnitPlatform {
+    includeTags("replay")
+    excludeTags("nightly")
+    excludeTags("weekly")
+  }
+  finalizedBy(jacocoTestReport)
+}
+
+// =============================================================================
+// Jacoco Reports
+// =============================================================================
+
+tasks.register("jacocoFastReplayTestsReport", JacocoReport) {
+  reports {
+    xml.required = true
+  }
+
+  sourceSets project(":tracer:arithmetization").sourceSets.main
+  executionData(fastReplayTests)
+}
+
+tasks.register("jacocoNightlyTestsReport", JacocoReport) {
+  reports {
+    xml.required = true
+  }
+
+  sourceSets project(":tracer:arithmetization").sourceSets.main
+  executionData(nightlyTests)
+}
+
+tasks.register("jacocoWeeklyTestsReport", JacocoReport) {
+  reports {
+    xml.required = true
+  }
+
+  sourceSets project(":tracer:arithmetization").sourceSets.main
+  executionData(weeklyTests)
+}
+
+tasks.register("jacocoPrcCallTestsReport", JacocoReport) {
+  reports {
+    xml.required = true
+  }
+
+  sourceSets project(":tracer:arithmetization").sourceSets.main
+  executionData(prcCallTests)
+}
+
+jacocoTestReport {
+  reports {
+    xml.required = true
+  }
+}
+
+// Gradle task to concatenate Unit, FastReplay, Nightly, Weekly and Reference Blockchain and State tests exec files
+tasks.register("jacocoUnitFastReplayWeeklyNightlyReferenceBlockchainAndStateTestsReport", JacocoReport) {
+  reports {
+    xml.required = true
+    html.outputLocation = layout.buildDirectory.dir('reports/jacocoConcatenate/html')
+    xml.outputLocation = layout.buildDirectory.file('reports/jacocoConcatenate/jacocoUnitAndReferenceTestsReport.xml')
+  }
+
+  sourceSets project(":tracer:arithmetization").sourceSets.main
+  executionData fileTree(project.rootDir.absolutePath).include("**/build/jacoco/*.exec")
+}
+
+// =============================================================================
+// Helpers
+// =============================================================================
+
+tasks.register("copyTracerPlugin", Copy) {
+  dependsOn(project(":tracer:plugins").tasks.findByPath("distZip"))
+  from zipTree(project(":tracer:plugins").tasks.findByPath("distZip").outputs.files.singleFile)
+  into "${System.getProperty("besu.plugins.dir")}"
+  eachFile { fcp ->
+    fcp.relativePath = new RelativePath(true, fcp.file.name)
+  }
+  includeEmptyDirs = false
+  duplicatesStrategy = DuplicatesStrategy.FAIL
+}
+
+tasks.register("downloadShomeiBesuPlugin", Download) {
+  src "${besuShomeiPluginBaseUrl}${besuShomeiPluginVersion}/besu-shomei-plugin-${besuShomeiPluginVersion}.zip"
+  dest project.buildDir
+  overwrite false
+}
+
+tasks.register("extractShomeiBesuPlugin", Copy) {
+    dependsOn "downloadShomeiBesuPlugin"
+    //
+    from zipTree("${project.buildDir}/besu-shomei-plugin-${besuShomeiPluginVersion}.zip")
+    into "${System.getProperty("besu.plugins.dir")}"
+    eachFile { fcp ->
+        fcp.relativePath = new RelativePath(true, fcp.file.name)
+    }
+    includeEmptyDirs = false
+    duplicatesStrategy = DuplicatesStrategy.FAIL
+}
+
+
+// Configure default build task to require the tracer is built first.
+// This only makes sense for projects which need the tracer.
+compileJava.dependsOn 'buildAllTracers'

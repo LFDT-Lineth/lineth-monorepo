@@ -1,0 +1,42 @@
+name: "Tracer Unit & Fast Replay Tests & Blockchain Ref Tests"
+
+permissions:
+  contents: read
+  actions: read
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'tracer/**'
+      - '.github/actions/setup-tracer-environment/**'
+      - '.github/actions/setup-go-corset/**'
+      - '.github/workflows/tracer-*.yml'
+      - '.github/workflows/reusable-tracer-*.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'tracer/**'
+      - '.github/actions/setup-tracer-environment/**'
+      - '.github/actions/setup-go-corset/**'
+      - '.github/workflows/tracer-*.yml'
+      - '.github/workflows/reusable-tracer-*.yml'
+
+jobs:
+  run-tracer-tests:
+    if: github.event.pull_request.head.repo.fork == false
+    uses: ./.github/workflows/tracer-gradle-tests.yml
+    secrets: inherit
+
+  validation-reference-test-flow:
+    if: github.event.pull_request.head.repo.fork == false
+    uses: ./.github/workflows/reusable-tracer-blockchain-tests.yml
+    secrets: inherit
+    with:
+      zkevm_fork: PRAGUE
+      test_filter: 'BlockchainReferenceTest_10'
+      failed_module: ''
+      failed_constraint: ''
+      commit: ''
