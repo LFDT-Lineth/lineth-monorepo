@@ -79,12 +79,12 @@ class BlockCreationMonitorTest {
     config: BlockCreationMonitor.Config = this.config,
   ): BlockCreationMonitor {
     return BlockCreationMonitor(
-      this.vertx,
-      ethApiClient,
+      vertx = this.vertx,
+      ethApi = ethApiClient,
       startingBlockNumberExclusive = startingBlockNumberExclusive,
-      blockCreationListener,
-      lastProvenBlockNumberProvider,
-      config,
+      blockCreationListener = blockCreationListener,
+      lastProvenBlockNumberProviderAsync = lastProvenBlockNumberProvider,
+      config = config,
     )
   }
 
@@ -394,6 +394,9 @@ class BlockCreationMonitorTest {
     assertThat(blockCreationListener.blocksReceived.last().number).isEqualTo(110UL)
 
     // simulate prover catchup
+    // wait a bit to ensure next monitor tick happens
+    // and it was not stopped
+    Thread.sleep(1000)
     lastProvenBlockNumberProvider.lastProvenBlock.set(120)
 
     // assert it resumes conflation
