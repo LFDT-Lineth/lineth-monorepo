@@ -22,15 +22,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
-        with:
-          submodules: false
-
-      - name: Setup Tracer Environment
-        # setup go-corset
-        uses: ./.github/actions/setup-tracer-environment
-
       - name: Configure Tag
         id: config
         # set tag to use in subsequent steps.
@@ -43,6 +34,15 @@ jobs:
           echo "RELEASE_TAG=${tag_name}" >> $GITHUB_OUTPUT
         env:
           tag_name: ${{ inputs.release_tag || github.event.release.tag_name }}
+
+      - name: Checkout repository
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          submodules: false
+
+      - name: Setup Tracer Environment
+        # setup go-corset
+        uses: ./.github/actions/setup-tracer-environment
 
       - name: Build Assets
         run: ./gradlew :tracer:artifacts -PreleaseVersion=${{ steps.config.outputs.VERSION_TAG }}
