@@ -3,11 +3,8 @@ permissions:
   contents: read
 
 on:
-  # schedule:
-  #   - cron: "0 22 * * 1-5"
-  push:
-    branches:
-      - 'feat/linea-tracer-migration-as-subfolder'
+  schedule:
+    - cron: "0 22 * * 1-5"
   workflow_dispatch:
 
 concurrency:
