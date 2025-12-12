@@ -142,11 +142,15 @@ allprojects {
 }
 
 task jacocoRootReport(type: JacocoReport) {
-  additionalSourceDirs.from files(subprojects.sourceSets.main.allSource.srcDirs)
-  sourceDirectories.from files(subprojects.sourceSets.main.allSource.srcDirs)
-  classDirectories.from files(subprojects.sourceSets.main.output)
+  // Define a project list will all subprojects excluding 'tracer' (TODO: fix to include tracer)
+  def reportProjects = subprojects.findAll { it.name != 'tracer' }
 
-  executionData.from fileTree(dir: '.', includes: ['**/jacoco/*.exec'])
+  additionalSourceDirs.from files(reportProjects.sourceSets.main.allSource.srcDirs)
+  sourceDirectories.from files(reportProjects.sourceSets.main.allSource.srcDirs)
+  classDirectories.from files(reportProjects.sourceSets.main.output)
+
+  // Exclude the tracer folder from the execution data scan (TODO: fix to include tracer)
+  executionData.from fileTree(dir: '.', includes: ['**/jacoco/*.exec'], excludes: ['tracer/**'])
   reports {
     xml.required = true
     // xml.enabled = true FIXME: deprecated, breaking latest versions of gradle.
