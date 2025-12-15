@@ -21,9 +21,13 @@ export interface ILineaRollupClient<
   getMessageSiblings(messageHash: string, messageHashes: string[], treeDepth: number): string[];
   getMessageProof(messageHash: string): Promise<Proof>;
   getMessageStatusUsingMessageHash(messageHash: string, overrides: Overrides): Promise<OnChainMessageStatus>;
-  getMessageStatusUsingMerkleTree(messageHash: string, overrides: Overrides): Promise<OnChainMessageStatus>;
+  getMessageStatusUsingMerkleTree(params: {
+    messageHash: string;
+    messageBlockNumber?: number;
+    overrides?: Overrides;
+  }): Promise<OnChainMessageStatus>;
   estimateClaimGas(
-    message: (MessageSent | MessageProps) & { feeRecipient?: string },
+    message: (MessageSent | MessageProps) & { feeRecipient?: string; messageBlockNumber?: number },
     opts?: {
       claimViaAddress?: string;
       overrides?: Overrides;

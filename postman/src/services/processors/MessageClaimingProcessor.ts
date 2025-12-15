@@ -77,7 +77,10 @@ export class MessageClaimingProcessor implements IMessageClaimingProcessor {
         return;
       }
 
-      const messageStatus = await this.messageServiceContract.getMessageStatus(nextMessageToClaim.messageHash);
+      const messageStatus = await this.messageServiceContract.getMessageStatus({
+        messageHash: nextMessageToClaim.messageHash,
+        messageBlockNumber: nextMessageToClaim.sentBlockNumber,
+      });
 
       if (messageStatus === OnChainMessageStatus.CLAIMED) {
         this.logger.info("Found already claimed message: messageHash=%s", nextMessageToClaim.messageHash);
@@ -173,6 +176,7 @@ export class MessageClaimingProcessor implements IMessageClaimingProcessor {
         {
           ...message,
           feeRecipient: this.config.feeRecipientAddress,
+          messageBlockNumber: message.sentBlockNumber,
         },
         {
           claimViaAddress: this.config.claimViaAddress,

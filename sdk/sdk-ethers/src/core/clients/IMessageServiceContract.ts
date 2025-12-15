@@ -1,4 +1,3 @@
-import { OnChainMessageStatus } from "../enums";
 import { Message, MessageSent } from "../types";
 
 export interface IMessageServiceContract<
@@ -8,7 +7,6 @@ export interface IMessageServiceContract<
   ContractTransactionResponse,
   ErrorDescription,
 > {
-  getMessageStatus(messageHash: string, overrides?: Overrides): Promise<OnChainMessageStatus>;
   getMessageByMessageHash(messageHash: string): Promise<MessageSent | null>;
   getMessagesByTransactionHash(transactionHash: string): Promise<MessageSent[] | null>;
   getTransactionReceiptByMessageHash(messageHash: string): Promise<TransactionReceipt | null>;

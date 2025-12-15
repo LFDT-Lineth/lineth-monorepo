@@ -16,7 +16,7 @@ export type Proof = {
 };
 
 export interface IMerkleTreeService {
-  getMessageProof(messageHash: string): Promise<Proof>;
+  getMessageProof(messageHash: string, messageBlockNumber?: number): Promise<Proof>;
   getFinalizationMessagingInfo(transactionHash: string): Promise<FinalizationMessagingInfo>;
   getL2MessageHashesInBlockRange(fromBlock: number, toBlock: number): Promise<string[]>;
   getMessageSiblings(messageHash: string, messageHashes: string[], treeDepth: number): string[];

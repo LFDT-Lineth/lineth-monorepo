@@ -59,7 +59,7 @@ export class MessageAnchoringProcessor implements IMessageAnchoringProcessor {
    *
    * @returns {Promise<void>} A promise that resolves when the processing is complete.
    */
-  public async process() {
+  public async process(): Promise<void> {
     try {
       const messages = await this.databaseService.getNFirstMessagesSent(
         this.maxFetchMessagesFromDb,
@@ -77,8 +77,10 @@ export class MessageAnchoringProcessor implements IMessageAnchoringProcessor {
       const latestBlockNumber = await this.provider.getBlockNumber();
 
       for (const message of messages) {
-        const messageStatus = await this.contractClient.getMessageStatus(message.messageHash, {
-          blockTag: latestBlockNumber,
+        const messageStatus = await this.contractClient.getMessageStatus({
+          messageHash: message.messageHash,
+          messageBlockNumber: message.sentBlockNumber,
+          overrides: { blockTag: latestBlockNumber },
         });
 
         if (messageStatus === OnChainMessageStatus.CLAIMABLE) {
