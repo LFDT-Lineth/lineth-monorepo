@@ -10,9 +10,6 @@ gradleVersions = { id = "com.github.ben-manes.versions", version = "0.51.0" }
 dependencyManagement = { id = "io.spring.dependency-management", version = "1.1.5" }
 besuPluginLibrary = { id = "net.consensys.besu-plugin-library", version = "0.1.4" }
 besuPluginDistribution = { id = "net.consensys.besu-plugin-distribution", version = "0.1.4" }
-hierynomusLicense = { id = "com.github.hierynomus.license", version = "0.16.1" }
-testLogger = { id = "com.adarshr.test-logger", version = "4.0.0" }
-sonarQube = { id = "org.sonarqube", version = "4.3.1.3277" }
 
 [libraries]
 jreleaser = { group = "org.jreleaser", name = "jreleaser-gradle-plugin", version = "1.15.0" }
@@ -28,9 +25,6 @@ mockitoKotlin = "5.4.0"
 restassured = "5.3.0"
 wiremock = "3.13.0"
 logcaptor = "2.11.0"
-shomei = "2.4-develop"
-besuShomeiPluginVersion = "v0.8.4"
-undercouchDownload = "5.6.0"
 
 # Runtime
 arithmetization="beta-v4.4-rc7"
@@ -60,4 +54,3 @@ web3j = "4.12.2"
 # Other
 googleJavaFormat = "1.27.0"
 dependencyLicenseReport = "2.9"
-web3jSokt = "0.4.0"

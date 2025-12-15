@@ -124,38 +124,23 @@ allprojects {
 
         java {
           target 'src/**/*.java'
-          targetExclude 'src/*/java/net/consensys/linea/**/*.java', '**/zktracer/Trace*.java', '**/GlobalConstants.java', '**/BlockchainReferenceTest_*.java', '**/GeneralStateReferenceTest_*.java'
           // Do not use 'targetExclude' with wildcard patterns, it will add minutes to the build
           removeUnusedImports()
           trimTrailingWhitespace()
           endWithNewline()
           googleJavaFormat(libs.versions.googleJavaFormat.get())
         }
-
-        // Below this line are currently only license header tasks
-        format 'groovy', { target '**/src/*/groovy/**/*.groovy' }
-        format 'bash', { target '**/*.sh' }
-        format 'sol', { target '**/*.sol' }
       }
     }
   }
 }
 
 task jacocoRootReport(type: JacocoReport) {
-  // Define a project list will all subprojects excluding 'tracer' (TODO: fix to include tracer)
-  def reportProjects = subprojects.findAll { subproject ->
-    // Get the path of the subproject relative to the root dir (e.g., "tracer/lib-a")
-    def relativePath = rootProject.relativePath(subproject.projectDir)
-    // Include only if the path does NOT start with "tracer"
-    return !relativePath.startsWith('tracer')
-  }
+  additionalSourceDirs.from files(subprojects.sourceSets.main.allSource.srcDirs)
+  sourceDirectories.from files(subprojects.sourceSets.main.allSource.srcDirs)
+  classDirectories.from files(subprojects.sourceSets.main.output)
 
-  additionalSourceDirs.from files(reportProjects.sourceSets.main.allSource.srcDirs)
-  sourceDirectories.from files(reportProjects.sourceSets.main.allSource.srcDirs)
-  classDirectories.from files(reportProjects.sourceSets.main.output)
-
-  // Exclude the tracer folder from the execution data scan (TODO: fix to include tracer)
-  executionData.from fileTree(dir: '.', includes: ['**/jacoco/*.exec'], excludes: ['tracer/**'])
+  executionData.from fileTree(dir: '.', includes: ['**/jacoco/*.exec'])
   reports {
     xml.required = true
     // xml.enabled = true FIXME: deprecated, breaking latest versions of gradle.

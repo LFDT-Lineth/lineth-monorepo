@@ -100,10 +100,6 @@ jobs:
         with:
           distribution: temurin
           java-version: 21
-      
-      - name: Setup Tracer Environment
-        if: matrix.language == 'java-kotlin'
-        uses: ./.github/actions/setup-tracer-environment
 
       - name: Autobuild
         if: matrix.language != 'actions'
