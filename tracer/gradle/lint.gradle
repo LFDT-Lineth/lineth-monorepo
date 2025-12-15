@@ -1,0 +1,58 @@
+/*
+ * Copyright Consensys Software Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+// TODO: Checkstyle currently breaks the build. Needs to be fixed.
+//apply plugin: "checkstyle"
+//checkstyle {
+//  toolVersion = '10.17.0'
+//  // Following settings will be activated once the entire project complies with the checkstyle rules
+//  // and once achieved all future code that does not comply with the rules will fail the build of the project.
+//  //    maxWarnings = 0
+//  //    ignoreFailures = false
+//}
+//
+//tasks.withType(Checkstyle) {
+//  reports {
+//    xml.required = true
+//    html.required = true
+//  }
+//}
+//
+//tasks.named("checkstyleTest", Checkstyle) {
+//  exclude("**/generated/*.java")
+//}
+
+javadoc {
+  options.addStringOption('Xdoclint:all', '-quiet')
+  options.addStringOption('Xwerror', '-html5')
+  options.encoding = 'UTF-8'
+}
+
+task checkSpdxHeader(type: CheckSpdxHeader) {
+  apply plugin: 'groovy'
+
+  rootPath = "${projectDir}"
+  spdxHeader = "* SPDX-License-Identifier: Apache-2.0"
+  filesRegex = "(.*.java)|(.*.groovy)"
+  excludeRegex = [
+    "(.*/.gradle/.*)",
+    "(.*/.idea/.*)",
+    "(.*/out/.*)",
+    "(.*/build/.*)",
+    "(.*/src/[^/]+/generated/.*)",
+  ].join("|")
+}
+
+tasks.check.dependsOn(checkSpdxHeader)

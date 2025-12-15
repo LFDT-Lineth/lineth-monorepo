@@ -1,0 +1,99 @@
+/*
+ * Copyright ConsenSys Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+package net.consensys.linea.zktracer.module;
+
+public enum ModuleName {
+  // tracing Modules
+  ADD,
+  BIN,
+  BLAKE_MODEXP_DATA,
+  BLOCK_DATA,
+  BLOCK_HASH,
+  BLS_DATA,
+  EC_DATA,
+  EUC,
+  EXP,
+  EXT,
+  GAS,
+  HUB,
+  LOG_DATA,
+  LOG_INFO,
+  MMIO,
+  MMU,
+  MOD,
+  MUL,
+  MXP,
+  OOB,
+  RLP_ADDR,
+  RLP_TXN,
+  RLP_TXN_RCPT,
+  RLP_UTILS,
+  ROM,
+  ROM_LEX,
+  SHAKIRA_DATA,
+  SHF,
+  STP,
+  TRM,
+  TXN_DATA,
+  WCP,
+
+  // precompiles
+  // ecdata:
+  PRECOMPILE_ECRECOVER_EFFECTIVE_CALLS,
+  PRECOMPILE_ECMUL_EFFECTIVE_CALLS,
+  PRECOMPILE_ECADD_EFFECTIVE_CALLS,
+  PRECOMPILE_ECPAIRING_MILLER_LOOPS,
+  PRECOMPILE_ECPAIRING_FINAL_EXPONENTIATIONS,
+  PRECOMPILE_ECPAIRING_G2_MEMBERSHIP_CALLS,
+  PRECOMPILE_P256_VERIFY_EFFECTIVE_CALLS,
+
+  // blakemodexp:
+  PRECOMPILE_BLAKE_EFFECTIVE_CALLS,
+  PRECOMPILE_BLAKE_ROUNDS,
+  PRECOMPILE_MODEXP_EFFECTIVE_CALLS,
+  PRECOMPILE_LARGE_MODEXP_EFFECTIVE_CALLS,
+
+  // shakira:
+  PRECOMPILE_SHA2_BLOCKS,
+  PRECOMPILE_RIPEMD_BLOCKS,
+
+  // bls:
+  PRECOMPILE_POINT_EVALUATION_FAILURE_EFFECTIVE_CALLS,
+  PRECOMPILE_BLS_POINT_EVALUATION_EFFECTIVE_CALLS,
+  PRECOMPILE_BLS_G1_ADD_EFFECTIVE_CALLS,
+  PRECOMPILE_BLS_G1_MSM_EFFECTIVE_CALLS,
+  PRECOMPILE_BLS_G2_ADD_EFFECTIVE_CALLS,
+  PRECOMPILE_BLS_G2_MSM_EFFECTIVE_CALLS,
+  PRECOMPILE_BLS_PAIRING_CHECK_MILLER_LOOPS,
+  PRECOMPILE_BLS_FINAL_EXPONENTIATIONS,
+  PRECOMPILE_BLS_MAP_FP_TO_G1_EFFECTIVE_CALLS,
+  PRECOMPILE_BLS_MAP_FP2_TO_G2_EFFECTIVE_CALLS,
+  PRECOMPILE_BLS_C1_MEMBERSHIP_CALLS,
+  PRECOMPILE_BLS_C2_MEMBERSHIP_CALLS,
+  PRECOMPILE_BLS_G1_MEMBERSHIP_CALLS,
+  PRECOMPILE_BLS_G2_MEMBERSHIP_CALLS,
+
+  // other limits modules
+  BLOCK_L1_SIZE,
+  BLOCK_L2_L1_LOGS,
+  BLOCK_TRANSACTIONS,
+  BLOCK_KECCAK,
+
+  // reference tables
+  BLS_REFERENCE_TABLE,
+  INSTRUCTION_DECODER,
+  POWER_REFERENCE_TABLE
+}

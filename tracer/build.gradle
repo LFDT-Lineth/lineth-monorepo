@@ -1,0 +1,82 @@
+
+buildscript {
+  ext {
+    besuPluginDir = File.createTempDir("plugins")
+    targetReleaseVersion = "beta-v4.4-rc7"
+    releaseVersion = findProperty('releaseVersion') ?: targetReleaseVersion
+    besuVersion = "${libs.versions.besu.get()}"
+    distributionIdentifier = "linea-tracer"
+    distibutionBaseName = "linea-arithmetization"
+    besuRepo = "https://artifacts.consensys.net/public/linea-besu/maven/"
+  }
+}
+
+plugins {
+  id 'java-library'
+  alias(libs.plugins.besuPluginLibrary)
+  alias(libs.plugins.besuPluginDistribution)
+  alias(libs.plugins.sonarQube)
+  alias(libs.plugins.testLogger)
+}
+
+sonar {
+  def tests = System.getProperty("tests")
+  def xmlTestReport = ""
+  // Conditional xmlReportPaths based on tests property
+  // Default is unit tests, we account only for the Unit tests jacoco coverage report
+  if(tests == null || tests=="Unit") {
+    print("Executing Sonarqube scanner Unit tests coverage report...\n")
+    xmlTestReport = "${project.projectDir}/arithmetization/build/reports/jacoco/test/jacocoTestReport.xml"
+    // If set to FastReplay, we account only for the Nightly tests coverage report
+  } else if(tests == "FastReplay") {
+    print("Executing Sonarqube scanner for FastReplay tests coverage report...\n")
+    xmlTestReport  =  "${project.projectDir}/arithmetization/build/reports/jacoco/jacocoFastReplayTestsReport/jacocoFastReplayTestsReport.xml"
+    // If set to Nightly, we account only for the Nightly tests coverage report
+  } else if(tests == "Nightly") {
+    print("Executing Sonarqube scanner for Nightly tests coverage report...\n")
+    xmlTestReport  =  "${project.projectDir}/arithmetization/build/reports/jacoco/jacocoNightlyTestsReport/jacocoNightlyTestsReport.xml"
+    // If set to Weekly, we account only for the Weekly tests coverage report
+  } else if(tests == "Weekly") {
+    print("Executing Sonarqube scanner for Weekly tests coverage report...\n")
+    xmlTestReport  =  "${project.projectDir}/arithmetization/build/reports/jacoco/jacocoWeeklyTestsReport/jacocoWeeklyTestsReport.xml"
+    // If set to PrcWeekly, we account only for the Weekly Prc Call tests coverage report
+  } else if(tests == "PrcWeekly") {
+    print("Executing Sonarqube scanner for Weekly Prc Call tests coverage report...\n")
+    xmlTestReport  =  "${project.projectDir}/arithmetization/build/reports/jacoco/jacocoWeeklyTestsReport/jacocoPrcCallTestsReport.xml"
+    // If set to ReferenceBlockchain, we account only for the Reference Blockchain tests coverage report
+  } else if(tests == "ReferenceBlockchain") {
+    print("Executing Sonarqube scanner for Reference Blockchain tests coverage report...\n")
+    xmlTestReport  =  "${project.projectDir}/reference-tests/build/reports/jacoco/jacocoReferenceBlockchainTestsReport/jacocoReferenceBlockchainTestsReport.xml"
+    // If set to ReferenceState, we account only for the Reference State tests coverage report
+  } else if(tests == "ReferenceState") {
+    print("Executing Sonarqube scanner for Reference State tests coverage report...\n")
+    xmlTestReport  =  "${project.projectDir}/reference-tests/build/reports/jacoco/jacocoReferenceGeneralStateTestsReport/jacocoReferenceGeneralStateTestsReport.xml"
+  } else if(tests == "All") {
+    print("Executing Sonarqube scanner for Unit, FastReplay, Nightly, Weekly, Reference Blockchain and State tests coverage report...\n")
+    xmlTestReport  =  "${project.projectDir}/arithmetization/build/reports/jacocoConcatenate/test/jacocoTestReport.xml"
+  } else {
+    // Force build failure if unknown concatenate value.
+    println("*** unknown tests property.  Try '-Dconcatenate=Unit', '-Dconcatenate=FastReplay', '-Dconcatenate=Nightly', '-Dconcatenate=Weekly', '-Dconcatenate=ReferenceBlockchain','-Dconcatenate=ReferenceState' or '-Dconcatenate=All'\n\n")
+    assert false
+  }
+
+  properties {
+    property "sonar.projectKey", "linea-tracer"
+    property "sonar.host.url", "localhost:80"
+    property "sonar.token", "your_token"
+    property "sonar.coverage.exclusions", "reference-tests/**/*, testing/**/*, **/*/Trace.java"
+    property "sonar.coverage.jacoco.xmlReportPaths", "${xmlTestReport}"
+  }
+}
+
+version = project.hasProperty('releaseVersion') ? project.getProperty('releaseVersion') : 'snapshot'
+
+jar {
+  archiveBaseName = distibutionBaseName
+}
+
+distributions {
+  main {
+    distributionBaseName = distibutionBaseName
+  }
+}

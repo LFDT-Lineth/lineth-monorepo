@@ -1,0 +1,48 @@
+name: Tracer Hub-Shomei-Besu-Integration
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+    inputs:
+      tests-with-ssh:
+        description: Run tests with ability to ssh into environment
+        required: false
+        type: boolean
+        default: false
+
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unit-tests-with-besu-node:
+    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-xxl
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          submodules: false
+
+      - name: Setup Tracer Test Environment
+        uses: ./.github/actions/setup-tracer-environment
+        with:
+          enable-ssh: ${{ inputs.tests-with-ssh }}
+
+      - name: Run unit tests
+        run: GOMEMLIMIT=26GiB ./gradlew :tracer:arithmetization:besuNodeTests
+        env:
+          JAVA_OPTS: -Dorg.gradle.daemon=false
+          GOCORSET_FLAGS: -b1024 -v --ansi-escapes=false --report --air
+
+
+      - name: Upload proof request and conflation files
+        if: always()
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: traces-proof-requests-${{ github.sha }}
+          path: tracer/arithmetization/build/besu/traces/**/*
+          compression-level: 9
+          if-no-files-found: 'error'

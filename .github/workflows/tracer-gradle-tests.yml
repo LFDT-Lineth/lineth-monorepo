@@ -1,0 +1,125 @@
+name: "Tracer Unit & Fast Replay Tests"
+
+permissions:
+  contents: read
+  actions: read
+
+on:
+  workflow_call:
+  workflow_dispatch:
+    inputs:
+      tests-with-ssh:
+        description: Run tests with ability to ssh into environment
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: tracer-testing-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  # ==================================================================
+  # Build
+  # ==================================================================
+  build:
+    # if: github.event.pull_request.draft == false && github.base_ref != 'main'
+    # if: ${{ github.ref != 'refs/heads/main' }}
+    if: ${{ github.event.pull_request.draft == false }}
+    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-med
+    steps:
+      - name: Show metadata
+        run: |
+          echo "github.event.pull_request.draft: ${{ github.event.pull_request.draft }}"
+          echo "github.base_ref: ${{ github.base_ref }}"
+          echo "github.ref: ${{ github.ref }}"
+
+      - name: Checkout repository
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          submodules: false
+
+      - name: Setup Environment
+        uses: ./.github/actions/setup-tracer-environment
+
+      - name: Set up GCC
+        uses: egor-tensin/setup-gcc@eaa888eb19115a521fa72b65cd94fe1f25bbcaac #v1.3
+
+      - name: Build without tests
+        run: ./gradlew :tracer:build -x test -x spotlessCheck
+        env:
+          JAVA_OPTS: -Xmx2g -Dorg.gradle.daemon=false
+
+      - name: Store distribution artifacts
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: distributions
+          path: tracer/arithmetization/build/libs
+
+      - name: Run spotless
+        run: ./gradlew --no-daemon --parallel :tracer:clean :tracer:spotlessCheck
+
+  # ==================================================================
+  # Unit Tests
+  # ==================================================================
+  unit-tests-prague:
+    needs: [ build ]
+    uses: ./.github/workflows/reusable-tracer-unit-tests.yml
+    with:
+      zkevm_fork: PRAGUE
+      tests-with-ssh: ${{ inputs.tests-with-ssh || false}}
+
+  unit-tests-osaka:
+    needs: [ build ]
+    uses: ./.github/workflows/reusable-tracer-unit-tests.yml
+    with:
+      zkevm_fork: OSAKA
+      tests-with-ssh: ${{ inputs.tests-with-ssh || false}}
+
+  # ==================================================================
+  # Fast Replay Tests
+  # ==================================================================
+  replay-tests:
+    # if: github.event.pull_request.draft == false && github.base_ref != 'main'
+    # if: ${{ github.ref != 'refs/heads/main' }}
+    if: ${{ github.event.pull_request.draft == false }}
+    needs: [ build ]
+    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-xxl
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          submodules: false
+
+      - name: Setup Environment
+        uses: ./.github/actions/setup-tracer-environment
+        with:
+          enable-ssh: ${{ inputs.tests-with-ssh }}
+
+      - name: Run replay tests
+        run: GOMEMLIMIT=26GiB ./gradlew :tracer:arithmetization:fastReplayTests
+        env:
+          JAVA_OPTS: -Dorg.gradle.daemon=false
+          JUNIT_TESTS_PARALLELISM: 4
+          GOCORSET_FLAGS: -b1024 -v --ansi-escapes=false --report --air
+
+      - name: Upload test report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: replay-tests-report
+          path: tracer/arithmetization/build/reports/tests/**/*
+
+      - name: Upload jacoco fast replay tests coverage report
+        if: always()
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: jacoco-fast-replay-tests-coverage-report
+          path: tracer/arithmetization/build/reports/jacoco/jacocoFastReplayTestsReport/**/*
+
+      - name: Upload jacoco fast replay tests exec file
+        if: always()
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: jacoco-fast-replay-tests-exec-file
+          path: tracer/arithmetization/build/jacoco/fastReplayTests.exec

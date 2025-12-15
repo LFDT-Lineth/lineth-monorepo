@@ -1,0 +1,68 @@
+name: "Reusable tracer nightly tests workflow"
+
+permissions:
+  contents: read
+
+on:
+  workflow_call:
+    inputs:
+      zkevm_fork:
+        required: true
+        type: string
+      tests-with-ssh:
+        required: true
+        type: boolean
+
+jobs:
+  # ==================================================================
+  # Nightly Tests
+  # ==================================================================
+  nightly-tests:
+    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-xxl
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          submodules: recursive
+
+      - name: Setup Tracer Test Environment
+        uses: ./.github/actions/setup-tracer-environment
+
+      - name: Run Nightly tests
+        run: GOMAXPROCS=10 GOMEMLIMIT=20GiB ./gradlew :tracer:arithmetization:nightlyTests
+        env:
+          JAVA_OPTS: -Dorg.gradle.daemon=false
+          GOCORSET_FLAGS: -v --ansi-escapes=false --report --mir
+          JUNIT_TESTS_PARALLELISM: 2
+          ZKEVM_FORK: ${{ inputs.zkevm_fork }}
+
+      - name: Upload test report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: nightly-tests-report-${{ inputs.zkevm_fork }}
+          path: tracer/arithmetization/build/reports/tests/**/*
+
+      - name: Upload jacoco nightly tests coverage report
+        if: always()
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: jacoco-nightly-tests-coverage-report-${{ inputs.zkevm_fork }}
+          path: tracer/arithmetization/build/reports/jacoco/jacocoNightlyTestsReport/**/*
+
+      - name: Upload jacoco nightly tests exec file
+        if: always()
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: jacoco-nightly-tests-exec-file-${{ inputs.zkevm_fork }}
+          path: tracer/arithmetization/build/jacoco/nightlyTests.exec
+
+      # - name: Failure Notification
+      #   if: github.ref == 'refs/heads/arith-dev' && (failure() || cancelled())
+      #   uses: slackapi/slack-github-action@91efab103c0de0a537f72a35f6b8cda0ee76bf0a # v2.1.1
+      #   with:
+      #     webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+      #     webhook-type: webhook-trigger
+      #     payload: |
+      #       name: "Nightly"
+      #       status: "${{ job.status }}"
