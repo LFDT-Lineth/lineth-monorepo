@@ -1,4 +1,6 @@
 name: "Reusable blockchain ref tests workflow"
+permissions:
+  contents: read
 
 on:
   workflow_call:
