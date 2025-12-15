@@ -196,7 +196,7 @@ export class L1ClaimingService {
     messageHash: string,
     overrides: Overrides = {},
   ): Promise<OnChainMessageStatus> {
-    return this.l1ContractClient.getMessageStatusUsingMerkleTree(messageHash, overrides);
+    return this.l1ContractClient.getMessageStatusUsingMerkleTree({ messageHash, overrides });
   }
 
   /**

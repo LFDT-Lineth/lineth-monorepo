@@ -64,7 +64,7 @@ describe("TestL2MessageServiceClient", () => {
     it("should return UNKNOWN when on chain message status === 0", async () => {
       jest.spyOn(l2MessageServiceMock, "inboxL1L2MessageStatus").mockResolvedValue(0n);
 
-      const messageStatus = await l2MessageServiceClient.getMessageStatus(TEST_MESSAGE_HASH);
+      const messageStatus = await l2MessageServiceClient.getMessageStatus({ messageHash: TEST_MESSAGE_HASH });
 
       expect(messageStatus).toStrictEqual(OnChainMessageStatus.UNKNOWN);
     });
@@ -72,7 +72,7 @@ describe("TestL2MessageServiceClient", () => {
     it("should return CLAIMABLE when on chain message status === 1", async () => {
       jest.spyOn(l2MessageServiceMock, "inboxL1L2MessageStatus").mockResolvedValue(1n);
 
-      const messageStatus = await l2MessageServiceClient.getMessageStatus(TEST_MESSAGE_HASH);
+      const messageStatus = await l2MessageServiceClient.getMessageStatus({ messageHash: TEST_MESSAGE_HASH });
 
       expect(messageStatus).toStrictEqual(OnChainMessageStatus.CLAIMABLE);
     });
@@ -80,7 +80,7 @@ describe("TestL2MessageServiceClient", () => {
     it("should return CLAIMED when on chain message status === 2", async () => {
       jest.spyOn(l2MessageServiceMock, "inboxL1L2MessageStatus").mockResolvedValue(2n);
 
-      const messageStatus = await l2MessageServiceClient.getMessageStatus(TEST_MESSAGE_HASH);
+      const messageStatus = await l2MessageServiceClient.getMessageStatus({ messageHash: TEST_MESSAGE_HASH });
 
       expect(messageStatus).toStrictEqual(OnChainMessageStatus.CLAIMED);
     });

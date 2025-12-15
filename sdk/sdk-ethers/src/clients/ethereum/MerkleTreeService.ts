@@ -50,8 +50,12 @@ export class MerkleTreeService implements IMerkleTreeService {
    * @param {string} messageHash - The message hash.
    * @returns {Promise<Proof>} The merkle root, the merkle proof and the message leaf index.
    */
-  public async getMessageProof(messageHash: string): Promise<Proof> {
-    const [messageEvent] = await this.l2MessageServiceLogClient.getMessageSentEventsByMessageHash({ messageHash });
+  public async getMessageProof(messageHash: string, messageBlockNumber?: number): Promise<Proof> {
+    const [messageEvent] = await this.l2MessageServiceLogClient.getMessageSentEventsByMessageHash({
+      messageHash,
+      fromBlock: messageBlockNumber,
+      toBlock: messageBlockNumber,
+    });
 
     if (!messageEvent) {
       throw makeBaseError(`Message hash does not exist on L2. Message hash: ${messageHash}`);

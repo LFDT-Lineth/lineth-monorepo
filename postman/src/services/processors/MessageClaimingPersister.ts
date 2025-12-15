@@ -107,6 +107,7 @@ export class MessageClaimingPersister implements IMessageClaimingPersister {
         const retryTransactionReceipt = await this.retryTransaction(
           firstPendingMessage.claimTxHash,
           firstPendingMessage.messageHash,
+          firstPendingMessage.sentBlockNumber,
         );
         if (!retryTransactionReceipt) return;
         const receiptReceivedAt = new Date();
@@ -135,10 +136,16 @@ export class MessageClaimingPersister implements IMessageClaimingPersister {
    * @param {string} messageHash - The hash of the message associated with the transaction.
    * @returns {Promise<TransactionReceipt | null>} The receipt of the retried transaction, or null if the retry was unsuccessful.
    */
-  private async retryTransaction(transactionHash: string, messageHash: string): Promise<TransactionReceipt | null> {
+  private async retryTransaction(
+    transactionHash: string,
+    messageHash: string,
+    messageBlockNumber: number,
+  ): Promise<TransactionReceipt | null> {
     try {
-      const messageStatus = await this.messageServiceContract.getMessageStatus(messageHash, {
-        blockTag: "latest",
+      const messageStatus = await this.messageServiceContract.getMessageStatus({
+        messageHash,
+        messageBlockNumber,
+        overrides: { blockTag: "latest" },
       });
 
       if (messageStatus === OnChainMessageStatus.CLAIMED) {

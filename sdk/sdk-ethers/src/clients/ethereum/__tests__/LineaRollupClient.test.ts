@@ -129,7 +129,7 @@ describe("TestLineaRollupClient", () => {
       jest.spyOn(lineaRollupLogClient, "getL2MessagingBlockAnchoredEvents").mockResolvedValue([]);
       jest.spyOn(lineaRollupMock, "isMessageClaimed").mockResolvedValue(false);
 
-      const messageStatus = await lineaRollupClient.getMessageStatus(TEST_MESSAGE_HASH);
+      const messageStatus = await lineaRollupClient.getMessageStatus({ messageHash: TEST_MESSAGE_HASH });
 
       expect(messageStatus).toStrictEqual(OnChainMessageStatus.UNKNOWN);
     });
@@ -143,7 +143,7 @@ describe("TestLineaRollupClient", () => {
         .mockResolvedValue([testL2MessagingBlockAnchoredEvent]);
       jest.spyOn(lineaRollupMock, "isMessageClaimed").mockResolvedValue(false);
 
-      const messageStatus = await lineaRollupClient.getMessageStatus(TEST_MESSAGE_HASH);
+      const messageStatus = await lineaRollupClient.getMessageStatus({ messageHash: TEST_MESSAGE_HASH });
 
       expect(messageStatus).toStrictEqual(OnChainMessageStatus.CLAIMABLE);
     });
@@ -155,7 +155,7 @@ describe("TestLineaRollupClient", () => {
       jest.spyOn(lineaRollupLogClient, "getL2MessagingBlockAnchoredEvents").mockResolvedValue([]);
       jest.spyOn(lineaRollupMock, "isMessageClaimed").mockResolvedValue(true);
 
-      const messageStatus = await lineaRollupClient.getMessageStatus(TEST_MESSAGE_HASH);
+      const messageStatus = await lineaRollupClient.getMessageStatus({ messageHash: TEST_MESSAGE_HASH });
 
       expect(messageStatus).toStrictEqual(OnChainMessageStatus.CLAIMED);
     });
@@ -165,9 +165,9 @@ describe("TestLineaRollupClient", () => {
     it("should throw error when the corresponding message sent event was not found on L2", async () => {
       jest.spyOn(l2MessageServiceLogClient, "getMessageSentEventsByMessageHash").mockResolvedValue([]);
 
-      await expect(lineaRollupClient.getMessageStatusUsingMerkleTree(TEST_MESSAGE_HASH)).rejects.toThrow(
-        new BaseError(`Message hash does not exist on L2. Message hash: ${TEST_MESSAGE_HASH}`),
-      );
+      await expect(
+        lineaRollupClient.getMessageStatusUsingMerkleTree({ messageHash: TEST_MESSAGE_HASH }),
+      ).rejects.toThrow(new BaseError(`Message hash does not exist on L2. Message hash: ${TEST_MESSAGE_HASH}`));
     });
 
     it("should return UNKNOWN when l2MessagingBlockAnchoredEvent is absent and isMeessageClaimed return false", async () => {
@@ -177,7 +177,7 @@ describe("TestLineaRollupClient", () => {
       jest.spyOn(lineaRollupLogClient, "getL2MessagingBlockAnchoredEvents").mockResolvedValue([]);
       jest.spyOn(lineaRollupMock, "isMessageClaimed").mockResolvedValue(false);
 
-      const messageStatus = await lineaRollupClient.getMessageStatusUsingMerkleTree(TEST_MESSAGE_HASH);
+      const messageStatus = await lineaRollupClient.getMessageStatusUsingMerkleTree({ messageHash: TEST_MESSAGE_HASH });
 
       expect(messageStatus).toStrictEqual(OnChainMessageStatus.UNKNOWN);
     });
@@ -191,7 +191,7 @@ describe("TestLineaRollupClient", () => {
         .mockResolvedValue([testL2MessagingBlockAnchoredEvent]);
       jest.spyOn(lineaRollupMock, "isMessageClaimed").mockResolvedValue(false);
 
-      const messageStatus = await lineaRollupClient.getMessageStatusUsingMerkleTree(TEST_MESSAGE_HASH);
+      const messageStatus = await lineaRollupClient.getMessageStatusUsingMerkleTree({ messageHash: TEST_MESSAGE_HASH });
 
       expect(messageStatus).toStrictEqual(OnChainMessageStatus.CLAIMABLE);
     });
@@ -203,7 +203,7 @@ describe("TestLineaRollupClient", () => {
       jest.spyOn(lineaRollupLogClient, "getL2MessagingBlockAnchoredEvents").mockResolvedValue([]);
       jest.spyOn(lineaRollupMock, "isMessageClaimed").mockResolvedValue(true);
 
-      const messageStatus = await lineaRollupClient.getMessageStatusUsingMerkleTree(TEST_MESSAGE_HASH);
+      const messageStatus = await lineaRollupClient.getMessageStatusUsingMerkleTree({ messageHash: TEST_MESSAGE_HASH });
 
       expect(messageStatus).toStrictEqual(OnChainMessageStatus.CLAIMED);
     });

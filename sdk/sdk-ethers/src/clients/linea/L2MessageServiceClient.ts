@@ -120,11 +120,13 @@ export class L2MessageServiceClient
   /**
    * Retrieves the L1 message status on L2.
    *
-   * @param {string} messageHash - The hash of the message sent on L1.
-   * @param {Overrides} [overrides={}] - Ethers call overrides. Defaults to `{}` if not specified.
+   * @param {Object} params - The parameters for retrieving the message status.
+   * @param {string} params.messageHash - The hash of the L1 message.
+   * @param {Overrides} [params.overrides={}] - Ethers call overrides. Defaults to `{}` if not specified.
    * @returns {Promise<OnChainMessageStatus>} Message status (CLAIMED, CLAIMABLE, UNKNOWN).
    */
-  public async getMessageStatus(messageHash: string, overrides: Overrides = {}): Promise<OnChainMessageStatus> {
+  public async getMessageStatus(params: { messageHash: string; overrides?: Overrides }): Promise<OnChainMessageStatus> {
+    const { messageHash, overrides = {} } = params;
     const status = await this.contract.inboxL1L2MessageStatus(messageHash, overrides);
     return formatMessageStatus(status);
   }

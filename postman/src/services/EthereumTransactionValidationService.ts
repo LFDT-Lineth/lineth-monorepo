@@ -71,6 +71,7 @@ export class EthereumTransactionValidationService implements ITransactionValidat
         {
           ...message,
           feeRecipient,
+          messageBlockNumber: message.sentBlockNumber,
         },
         { claimViaAddress },
       ),
