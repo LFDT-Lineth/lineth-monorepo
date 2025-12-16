@@ -15,9 +15,8 @@
 
 package net.consensys.linea.zktracer.container.module;
 
-import java.util.List;
-
 import com.google.common.base.Preconditions;
+import java.util.List;
 import net.consensys.linea.zktracer.Trace;
 import net.consensys.linea.zktracer.container.stacked.CountOnlyOperation;
 import net.consensys.linea.zktracer.module.ModuleName;

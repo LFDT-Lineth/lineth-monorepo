@@ -21,7 +21,6 @@ import static net.consensys.linea.zktracer.opcode.OpCode.*;
 import static net.consensys.linea.zktracer.types.AddressUtils.getDeploymentAddress;
 
 import java.util.Optional;
-
 import lombok.Getter;
 import net.consensys.linea.zktracer.module.hub.AccountSnapshot;
 import net.consensys.linea.zktracer.module.hub.Hub;
@@ -336,8 +335,9 @@ public abstract class CreateSection extends TraceSection
 
         this.addFragments(undoCreatorAfterFailedDeployment, undoCreateeAfterFailedDeployment);
       }
-      default -> throw new IllegalStateException(
-          scenario.name() + " not allowed when resolving at context re-entry");
+      default ->
+          throw new IllegalStateException(
+              scenario.name() + " not allowed when resolving at context re-entry");
     }
   }
 
@@ -497,8 +497,9 @@ public abstract class CreateSection extends TraceSection
         // we capture revert information about the child context: CCSR and CCRS
         hub.defers().scheduleForContextReEntry(imcFragment, hub.currentFrame());
       }
-      default -> throw new IllegalStateException(
-          scenario.name() + " not allowed when defining the schedule");
+      default ->
+          throw new IllegalStateException(
+              scenario.name() + " not allowed when defining the schedule");
     }
   }
 

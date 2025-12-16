@@ -1,4 +1,3 @@
-import java.time.LocalTime
 
 /*
  * Copyright Consensys Software Inc.
@@ -172,7 +171,7 @@ tasks.register("fastReplayTests", Test) {
     includeTags("replay")
     excludeTags("nightly | weekly")
   }
-  finalizedBy(jacocoFastReplayTestsReport)
+  finalizedBy("jacocoFastReplayTestsReport")
 }
 
 tasks.register("nightlyReplayTests", Test) {
@@ -186,7 +185,7 @@ tasks.register("nightlyTests", Test) {
     includeTags("nightly")
     excludeTags("replay")
   }
-  finalizedBy(jacocoNightlyTestsReport)
+  finalizedBy("jacocoNightlyTestsReport")
 }
 
 tasks.register("weeklyTests", Test) {
@@ -194,21 +193,21 @@ tasks.register("weeklyTests", Test) {
         includeTags("weekly")
         excludeTags("replay")
   }
-  finalizedBy(jacocoWeeklyTestsReport)
+  finalizedBy("jacocoWeeklyTestsReport")
 }
 
 tasks.register("weeklyReplayTests", Test) {
   useJUnitPlatform {
         includeTags("weekly & replay")
   }
-  finalizedBy(jacocoWeeklyTestsReport)
+  finalizedBy("jacocoWeeklyTestsReport")
 }
 
 tasks.register("prcCallTests", Test) {
   useJUnitPlatform {
     includeTags("prc-calltests")
   }
-  finalizedBy(jacocoPrcCallTestsReport)
+  finalizedBy("jacocoPrcCallTestsReport")
 }
 
 // =============================================================================
@@ -309,8 +308,10 @@ tasks.register("jacocoUnitFastReplayWeeklyNightlyReferenceBlockchainAndStateTest
 // =============================================================================
 
 tasks.register("copyTracerPlugin", Copy) {
-  dependsOn(project(":tracer:plugins").tasks.findByPath("distZip"))
-  from zipTree(project(":tracer:plugins").tasks.findByPath("distZip").outputs.files.singleFile)
+  dependsOn(":tracer:plugins:distZip")
+  from {
+    zipTree(project(":tracer:plugins").tasks.named("distZip").get().outputs.files.singleFile)
+  }
   into "${System.getProperty("besu.plugins.dir")}"
   eachFile { fcp ->
     fcp.relativePath = new RelativePath(true, fcp.file.name)
@@ -321,14 +322,14 @@ tasks.register("copyTracerPlugin", Copy) {
 
 tasks.register("downloadShomeiBesuPlugin", Download) {
   src "${besuShomeiPluginBaseUrl}${besuShomeiPluginVersion}/besu-shomei-plugin-${besuShomeiPluginVersion}.zip"
-  dest project.buildDir
+  dest project.layout.buildDirectory.get()
   overwrite false
 }
 
 tasks.register("extractShomeiBesuPlugin", Copy) {
     dependsOn "downloadShomeiBesuPlugin"
     //
-    from zipTree("${project.buildDir}/besu-shomei-plugin-${besuShomeiPluginVersion}.zip")
+    from zipTree("${project.layout.buildDirectory.get()}/besu-shomei-plugin-${besuShomeiPluginVersion}.zip")
     into "${System.getProperty("besu.plugins.dir")}"
     eachFile { fcp ->
         fcp.relativePath = new RelativePath(true, fcp.file.name)

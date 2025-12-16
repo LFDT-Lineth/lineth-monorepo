@@ -25,7 +25,6 @@ import static net.consensys.linea.zktracer.module.txndata.cancun.rows.hubRows.Ty
 import static net.consensys.linea.zktracer.types.Conversions.longToUnsignedBigInteger;
 
 import java.math.BigInteger;
-
 import net.consensys.linea.zktracer.Trace;
 import net.consensys.linea.zktracer.module.txndata.cancun.CancunTxnData;
 import net.consensys.linea.zktracer.module.txndata.cancun.CancunTxnDataOperation;

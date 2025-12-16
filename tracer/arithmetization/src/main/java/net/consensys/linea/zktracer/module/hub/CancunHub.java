@@ -20,7 +20,6 @@ import static net.consensys.linea.zktracer.module.hub.TransactionProcessingType.
 import static net.consensys.linea.zktracer.module.hub.TransactionProcessingType.SYSI;
 
 import java.util.Map;
-
 import net.consensys.linea.zktracer.ChainConfig;
 import net.consensys.linea.zktracer.module.blockdata.module.BlockData;
 import net.consensys.linea.zktracer.module.blockdata.module.CancunBlockData;
@@ -133,8 +132,8 @@ public class CancunHub extends ShanghaiHub {
     switch (hub.opCode()) {
       case TLOAD -> new TLoadSection(hub);
       case TSTORE -> new TStoreSection(hub);
-      default -> throw new IllegalStateException(
-          "invalid operation in family TRANSIENT: " + hub.opCode());
+      default ->
+          throw new IllegalStateException("invalid operation in family TRANSIENT: " + hub.opCode());
     }
   }
 

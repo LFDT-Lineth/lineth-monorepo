@@ -24,7 +24,6 @@ import static net.consensys.linea.zktracer.Trace.RLP_RCPT_SUBPHASE_ID_TOPIC_DELT
 import static net.consensys.linea.zktracer.module.ModuleName.LOG_INFO;
 
 import java.util.List;
-
 import lombok.RequiredArgsConstructor;
 import net.consensys.linea.zktracer.Trace;
 import net.consensys.linea.zktracer.container.module.Module;
@@ -232,8 +231,8 @@ public class LogInfo implements Module {
               .dataLo(topic4.slice(16, 16))
               .validateRow();
         }
-        default -> throw new IllegalArgumentException(
-            "ct = " + ct + " greater than ctMax =" + ctMax);
+        default ->
+            throw new IllegalArgumentException("ct = " + ct + " greater than ctMax =" + ctMax);
       }
     }
   }

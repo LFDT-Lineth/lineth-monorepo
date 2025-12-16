@@ -22,7 +22,6 @@ import static net.consensys.linea.zktracer.TraceLondon.Mmu.NB_MICRO_ROWS_TOT_MOD
 
 import java.util.ArrayList;
 import java.util.List;
-
 import net.consensys.linea.zktracer.Fork;
 import net.consensys.linea.zktracer.module.mmu.MmuData;
 import net.consensys.linea.zktracer.module.mmu.values.HubToMmuValues;

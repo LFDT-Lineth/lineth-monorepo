@@ -225,8 +225,9 @@ public record Encoding(int encoding, byte[] data) {
               case 8 -> encodeU8Sparse8(numberOfBlocks, buffer);
               case 16 -> encodeU16Sparse8(numberOfBlocks, buffer);
               case 32 -> encodeU32Sparse8(numberOfBlocks, buffer);
-              default -> throw new IllegalArgumentException(
-                  "invalid entry width (u" + entryBitwidth + ")");
+              default ->
+                  throw new IllegalArgumentException(
+                      "invalid entry width (u" + entryBitwidth + ")");
             };
         break;
       case 16:
@@ -235,8 +236,9 @@ public record Encoding(int encoding, byte[] data) {
               case 8 -> encodeU8Sparse16(numberOfBlocks, buffer);
               case 16 -> encodeU16Sparse16(numberOfBlocks, buffer);
               case 32 -> encodeU32Sparse16(numberOfBlocks, buffer);
-              default -> throw new IllegalArgumentException(
-                  "invalid entry width (u" + entryBitwidth + ")");
+              default ->
+                  throw new IllegalArgumentException(
+                      "invalid entry width (u" + entryBitwidth + ")");
             };
         break;
       case 32:
@@ -245,8 +247,9 @@ public record Encoding(int encoding, byte[] data) {
               case 8 -> encodeU8Sparse32(numberOfBlocks, buffer);
               case 16 -> encodeU16Sparse32(numberOfBlocks, buffer);
               case 32 -> encodeU32Sparse32(numberOfBlocks, buffer);
-              default -> throw new IllegalArgumentException(
-                  "invalid entry width (u" + entryBitwidth + ")");
+              default ->
+                  throw new IllegalArgumentException(
+                      "invalid entry width (u" + entryBitwidth + ")");
             };
         break;
       default:
@@ -268,8 +271,8 @@ public record Encoding(int encoding, byte[] data) {
           case 8 -> encodeU8Dense(buffer);
           case 16 -> encodeU16Dense(buffer);
           case 32 -> encodeU32Dense(buffer);
-          default -> throw new IllegalArgumentException(
-              "invalid entry width (u" + entryBitwidth + ")");
+          default ->
+              throw new IllegalArgumentException("invalid entry width (u" + entryBitwidth + ")");
         };
     //
     return new Encoding(pooled, entryBitwidth, bitwidth, data);

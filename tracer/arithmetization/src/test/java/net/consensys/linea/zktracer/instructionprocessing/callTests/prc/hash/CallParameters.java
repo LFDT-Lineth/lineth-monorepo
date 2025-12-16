@@ -90,8 +90,8 @@ public class CallParameters implements PrecompileCallParameters {
 
     switch (rao) {
       case ALIGNED -> program.push((relPos == OVERLAP ? 0 : 2 * WORD_SIZE) + prc.smallOffset1());
-      case MISALIGNED -> program.push(
-          (relPos == OVERLAP ? 0 : 2 * WORD_SIZE) + 4 + prc.smallOffset1());
+      case MISALIGNED ->
+          program.push((relPos == OVERLAP ? 0 : 2 * WORD_SIZE) + 4 + prc.smallOffset1());
       case INFINITY -> program.push("ff".repeat(32));
     }
 

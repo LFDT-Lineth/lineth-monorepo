@@ -20,6 +20,7 @@ import static net.consensys.linea.testing.ToyExecutionTools.runSystemInitialTran
 import static net.consensys.linea.zktracer.ChainConfig.OLD_MAINNET_TESTCONFIG;
 import static net.consensys.linea.zktracer.ChainConfig.OLD_SEPOLIA_TESTCONFIG;
 
+import com.google.gson.Gson;
 import java.io.File;
 import java.io.IOException;
 import java.io.Reader;
@@ -27,8 +28,6 @@ import java.math.BigInteger;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
-
-import com.google.gson.Gson;
 import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.blockcapture.BlockCapturer;

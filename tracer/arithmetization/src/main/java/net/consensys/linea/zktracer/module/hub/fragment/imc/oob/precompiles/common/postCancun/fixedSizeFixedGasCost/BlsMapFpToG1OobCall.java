@@ -21,7 +21,6 @@ import static net.consensys.linea.zktracer.Trace.PRECOMPILE_CALL_DATA_SIZE___FP_
 import static net.consensys.linea.zktracer.TraceCancun.Oob.CT_MAX_BLS_MAP_FP_TO_G1;
 
 import java.math.BigInteger;
-
 import net.consensys.linea.zktracer.Trace;
 
 public class BlsMapFpToG1OobCall extends FixedSizeFixedGasCostOobCall {

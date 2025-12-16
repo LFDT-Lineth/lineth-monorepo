@@ -21,7 +21,6 @@ import static net.consensys.linea.zktracer.Trace.PRECOMPILE_CALL_DATA_SIZE___POI
 import static net.consensys.linea.zktracer.TraceCancun.Oob.CT_MAX_POINT_EVALUATION;
 
 import java.math.BigInteger;
-
 import net.consensys.linea.zktracer.Trace;
 
 public class BlsPointEvaluationOobCall extends FixedSizeFixedGasCostOobCall {

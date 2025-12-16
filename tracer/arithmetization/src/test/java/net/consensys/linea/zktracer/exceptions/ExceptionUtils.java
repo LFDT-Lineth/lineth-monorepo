@@ -136,54 +136,62 @@ public class ExceptionUtils extends TracerTestBase {
             ? getPgPushInitCodeToMem()
             : BytecodeCompiler.newProgram(chainConfig);
     switch (opCode) {
-      case LOG0 -> program
-          .push(32) // size
-          .push(1) //  offset
-          .op(OpCode.LOG0);
-      case LOG1 -> program
-          .push(topic1) // Topic 1
-          .push(32) // size
-          .push(1) // offset to trigger mem expansion
-          .op(OpCode.LOG1);
-      case LOG2 -> program
-          .push(topic2) // Topic 2
-          .push(topic1) // Topic 1
-          .push(32) // size
-          .push(1) // offset to trigger mem expansion
-          .op(OpCode.LOG2);
-      case LOG3 -> program
-          .push(topic3) // Topic 3
-          .push(topic2) // Topic 2
-          .push(topic1) // Topic 1
-          .push(32) // size
-          .push(1) // offset to trigger mem expansion
-          .op(OpCode.LOG3);
-      case LOG4 -> program
-          .push(topic4) // Topic 4
-          .push(topic3) // Topic 3
-          .push(topic2) // Topic 2
-          .push(topic1) // Topic 1
-          .push(32) // size
-          .push(1) // offset to trigger mem expansion
-          .op(OpCode.LOG4);
-      case SSTORE, TSTORE -> program
-          .push(2) // value
-          .push(1) // key
-          .op(opCode);
+      case LOG0 ->
+          program
+              .push(32) // size
+              .push(1) //  offset
+              .op(OpCode.LOG0);
+      case LOG1 ->
+          program
+              .push(topic1) // Topic 1
+              .push(32) // size
+              .push(1) // offset to trigger mem expansion
+              .op(OpCode.LOG1);
+      case LOG2 ->
+          program
+              .push(topic2) // Topic 2
+              .push(topic1) // Topic 1
+              .push(32) // size
+              .push(1) // offset to trigger mem expansion
+              .op(OpCode.LOG2);
+      case LOG3 ->
+          program
+              .push(topic3) // Topic 3
+              .push(topic2) // Topic 2
+              .push(topic1) // Topic 1
+              .push(32) // size
+              .push(1) // offset to trigger mem expansion
+              .op(OpCode.LOG3);
+      case LOG4 ->
+          program
+              .push(topic4) // Topic 4
+              .push(topic3) // Topic 3
+              .push(topic2) // Topic 2
+              .push(topic1) // Topic 1
+              .push(32) // size
+              .push(1) // offset to trigger mem expansion
+              .op(OpCode.LOG4);
+      case SSTORE, TSTORE ->
+          program
+              .push(2) // value
+              .push(1) // key
+              .op(opCode);
       case SELFDESTRUCT -> program.push(0).op(OpCode.SELFDESTRUCT);
-      case CREATE -> program
-          // Create the contract
-          .push(41)
-          .push(0)
-          .push(0)
-          .op(OpCode.CREATE);
-      case CREATE2 -> program
-          // Create the contract
-          .push(salt) // salt
-          .push(41)
-          .push(0)
-          .push(0)
-          .op(OpCode.CREATE2);
+      case CREATE ->
+          program
+              // Create the contract
+              .push(41)
+              .push(0)
+              .push(0)
+              .op(OpCode.CREATE);
+      case CREATE2 ->
+          program
+              // Create the contract
+              .push(salt) // salt
+              .push(41)
+              .push(0)
+              .push(0)
+              .op(OpCode.CREATE2);
       default -> {}
     }
 

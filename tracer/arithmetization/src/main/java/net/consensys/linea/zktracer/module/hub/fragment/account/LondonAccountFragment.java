@@ -16,7 +16,6 @@
 package net.consensys.linea.zktracer.module.hub.fragment.account;
 
 import java.util.Optional;
-
 import net.consensys.linea.zktracer.Trace;
 import net.consensys.linea.zktracer.module.hub.AccountSnapshot;
 import net.consensys.linea.zktracer.module.hub.Hub;

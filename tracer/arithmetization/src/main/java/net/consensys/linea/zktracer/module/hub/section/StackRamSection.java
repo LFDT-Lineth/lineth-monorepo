@@ -23,7 +23,6 @@ import static net.consensys.linea.zktracer.Trace.WORD_SIZE;
 import static net.consensys.linea.zktracer.runtime.callstack.CallFrame.extractContiguousLimbsFromMemory;
 
 import java.util.Optional;
-
 import net.consensys.linea.zktracer.module.hub.Hub;
 import net.consensys.linea.zktracer.module.hub.fragment.imc.ImcFragment;
 import net.consensys.linea.zktracer.module.hub.fragment.imc.MxpCall;
@@ -84,24 +83,27 @@ public class StackRamSection extends TraceSection {
 
     final MmuCall mmuCall =
         switch (instruction) {
-          case MSTORE -> new MmuCall(hub, MMU_INST_MSTORE)
-              .targetId(currentContextNumber)
-              .targetOffset(offset)
-              .limb1(value.hi())
-              .limb2(value.lo())
-              .targetRamBytes(Optional.of(currentRam));
-          case MSTORE8 -> new MmuCall(hub, MMU_INST_MSTORE8)
-              .targetId(currentContextNumber)
-              .targetOffset(offset)
-              .limb1(value.hi())
-              .limb2(value.lo())
-              .targetRamBytes(Optional.of(currentRam));
-          case MLOAD -> new MmuCall(hub, MMU_INST_MLOAD)
-              .sourceId(currentContextNumber)
-              .sourceOffset(offset)
-              .limb1(value.hi())
-              .limb2(value.lo())
-              .sourceRamBytes(Optional.of(currentRam));
+          case MSTORE ->
+              new MmuCall(hub, MMU_INST_MSTORE)
+                  .targetId(currentContextNumber)
+                  .targetOffset(offset)
+                  .limb1(value.hi())
+                  .limb2(value.lo())
+                  .targetRamBytes(Optional.of(currentRam));
+          case MSTORE8 ->
+              new MmuCall(hub, MMU_INST_MSTORE8)
+                  .targetId(currentContextNumber)
+                  .targetOffset(offset)
+                  .limb1(value.hi())
+                  .limb2(value.lo())
+                  .targetRamBytes(Optional.of(currentRam));
+          case MLOAD ->
+              new MmuCall(hub, MMU_INST_MLOAD)
+                  .sourceId(currentContextNumber)
+                  .sourceOffset(offset)
+                  .limb1(value.hi())
+                  .limb2(value.lo())
+                  .sourceRamBytes(Optional.of(currentRam));
           default -> throw new IllegalStateException("Not a STACK_RAM instruction");
         };
 

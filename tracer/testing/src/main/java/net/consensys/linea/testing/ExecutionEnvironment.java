@@ -27,7 +27,6 @@ import java.math.BigInteger;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
-
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.corset.CorsetValidator;
 import net.consensys.linea.zktracer.ChainConfig;
@@ -69,10 +68,10 @@ public class ExecutionEnvironment {
 
   private static GenesisConfig getGenesisConfig(Fork fork) {
     return switch (fork) {
-      case LONDON, PARIS, SHANGHAI, CANCUN -> GenesisConfig.fromSource(
-          ExecutionEnvironment.class.getResource("/Linea_LONDON.json"));
-      case PRAGUE, OSAKA -> GenesisConfig.fromSource(
-          ExecutionEnvironment.class.getResource("/Linea_PRAGUE.json"));
+      case LONDON, PARIS, SHANGHAI, CANCUN ->
+          GenesisConfig.fromSource(ExecutionEnvironment.class.getResource("/Linea_LONDON.json"));
+      case PRAGUE, OSAKA ->
+          GenesisConfig.fromSource(ExecutionEnvironment.class.getResource("/Linea_PRAGUE.json"));
       default -> throw new IllegalArgumentException("Unexpected fork value: " + fork);
     };
   }
@@ -188,15 +187,12 @@ public class ExecutionEnvironment {
           case LONDON -> protocol.londonDefinition();
           case PARIS -> protocol.parisDefinition();
           case SHANGHAI -> protocol.shanghaiDefinition();
-          case CANCUN -> protocol
-              .cancunDefinition()
-              .preExecutionProcessor(new CancunPreExecutionProcessor());
-          case PRAGUE -> protocol
-              .pragueDefinition()
-              .preExecutionProcessor(new PraguePreExecutionProcessor());
-          case OSAKA -> protocol
-              .osakaDefinition()
-              .preExecutionProcessor(new PraguePreExecutionProcessor());
+          case CANCUN ->
+              protocol.cancunDefinition().preExecutionProcessor(new CancunPreExecutionProcessor());
+          case PRAGUE ->
+              protocol.pragueDefinition().preExecutionProcessor(new PraguePreExecutionProcessor());
+          case OSAKA ->
+              protocol.osakaDefinition().preExecutionProcessor(new PraguePreExecutionProcessor());
           default -> throw new IllegalArgumentException("Unexpected fork value: " + fork);
         };
 

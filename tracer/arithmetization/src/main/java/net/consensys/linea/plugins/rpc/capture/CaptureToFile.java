@@ -18,9 +18,8 @@ package net.consensys.linea.plugins.rpc.capture;
 import static net.consensys.linea.zktracer.Fork.getForkFromBesuBlockchainService;
 import static net.consensys.linea.zktracer.types.PublicInputs.retrieveHistoricalBlockHashes;
 
-import java.util.Map;
-
 import com.google.common.base.Stopwatch;
+import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.blockcapture.BlockCapturer;
 import net.consensys.linea.plugins.BesuServiceProvider;

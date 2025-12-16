@@ -57,7 +57,6 @@ import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.Accessors;
 import net.consensys.linea.zktracer.Trace;
@@ -143,10 +142,10 @@ public class LondonRlpTxn extends RlpTxn {
     switch (traceValue.txType) {
       case 0 -> traceValue.rlpLxByteSize = innerRlpSize(besuRlpLx.size());
       case 1, 2 ->
-      // the innerRlp method already concatenate with the first byte "transaction  type"
-      traceValue.rlpLxByteSize = innerRlpSize(besuRlpLx.size() - 1);
-      default -> throw new IllegalStateException(
-          "Transaction Type not supported: " + traceValue.txType);
+          // the innerRlp method already concatenate with the first byte "transaction  type"
+          traceValue.rlpLxByteSize = innerRlpSize(besuRlpLx.size() - 1);
+      default ->
+          throw new IllegalStateException("Transaction Type not supported: " + traceValue.txType);
     }
 
     // Phase Global RLP prefix

@@ -18,7 +18,6 @@ package net.consensys.linea.zktracer.module.limits;
 import static net.consensys.linea.zktracer.module.ModuleName.BLOCK_L1_SIZE;
 
 import java.util.List;
-
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.Accessors;

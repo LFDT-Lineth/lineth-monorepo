@@ -19,7 +19,6 @@ import static net.consensys.linea.zktracer.module.oob.OobExoCall.callToLT;
 import static net.consensys.linea.zktracer.types.Conversions.bytesToBoolean;
 
 import java.math.BigInteger;
-
 import net.consensys.linea.zktracer.module.add.Add;
 import net.consensys.linea.zktracer.module.hub.fragment.imc.oob.precompiles.common.CommonPrecompileOobCall;
 import net.consensys.linea.zktracer.module.mod.Mod;

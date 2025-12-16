@@ -21,7 +21,6 @@ import static net.consensys.linea.zktracer.Trace.LINEA_BLOB_BASE_FEE;
 
 import java.util.HashMap;
 import java.util.Map;
-
 import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.tuweni.bytes.Bytes;

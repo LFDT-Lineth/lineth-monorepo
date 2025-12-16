@@ -17,7 +17,6 @@ package net.consensys.linea.zktracer.module.mod;
 
 import java.util.List;
 import java.util.stream.Stream;
-
 import net.consensys.linea.reporting.TracerTestBase;
 import net.consensys.linea.testing.DynamicTests;
 import net.consensys.linea.testing.OpcodeCall;

@@ -30,7 +30,6 @@ import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
-
 import net.consensys.linea.reporting.TracerTestBase;
 import net.consensys.linea.testing.BytecodeCompiler;
 import net.consensys.linea.testing.BytecodeRunner;
@@ -98,24 +97,26 @@ public class MxpxThresholdTests extends TracerTestBase {
     BytecodeCompiler program = BytecodeCompiler.newProgram(chainConfig);
 
     switch (opCode) {
-        // 1 offset
-      case MSTORE, MSTORE8 -> program
-          .push(0) // value
-          .push(offset1)
-          .op(opCode);
-        // 1 offset, 1 size
+      // 1 offset
+      case MSTORE, MSTORE8 ->
+          program
+              .push(0) // value
+              .push(offset1)
+              .op(opCode);
+      // 1 offset, 1 size
       case CODECOPY -> program.push(size1).push(0).push(offset1).op(opCode);
-        // Note that CODECOPY has 2 offsets, but only one is relevant from the MXP perspective
-        // 2 offsets, 2 sizes
-      case CALL -> program
-          .push(size2)
-          .push(offset2)
-          .push(size1)
-          .push(offset1)
-          .push(0) // value
-          .push(0) // address
-          .push(Bytes.fromHexStringLenient("0xFFFFFFFF")) // gas
-          .op(opCode);
+      // Note that CODECOPY has 2 offsets, but only one is relevant from the MXP perspective
+      // 2 offsets, 2 sizes
+      case CALL ->
+          program
+              .push(size2)
+              .push(offset2)
+              .push(size1)
+              .push(offset1)
+              .push(0) // value
+              .push(0) // address
+              .push(Bytes.fromHexStringLenient("0xFFFFFFFF")) // gas
+              .op(opCode);
       default -> throw new IllegalArgumentException("Unsupported opCode: " + opCode);
     }
 

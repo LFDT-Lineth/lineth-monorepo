@@ -22,7 +22,6 @@ import static net.consensys.linea.zktracer.module.hub.section.systemTransaction.
 import static net.consensys.linea.zktracer.types.Conversions.bigIntegerToBytes;
 
 import java.math.BigInteger;
-
 import net.consensys.linea.zktracer.Trace;
 import org.apache.tuweni.bytes.Bytes32;
 

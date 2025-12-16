@@ -17,7 +17,6 @@ package net.consensys.linea.testing;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import lombok.Builder;
 import net.consensys.linea.testing.ToyTransaction.ToyTransactionBuilder;
 import org.hyperledger.besu.ethereum.core.Transaction;

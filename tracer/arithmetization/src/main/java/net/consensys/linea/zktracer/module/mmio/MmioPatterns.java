@@ -19,7 +19,6 @@ import static net.consensys.linea.zktracer.Trace.LLARGE;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import net.consensys.linea.zktracer.module.mmu.MmuData;
 import net.consensys.linea.zktracer.types.Bytes16;
 import org.apache.tuweni.bytes.Bytes;

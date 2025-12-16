@@ -18,7 +18,6 @@ package net.consensys.linea.zktracer.module.hub.fragment.imc.mmu.opcode;
 import static net.consensys.linea.zktracer.Trace.MMU_INST_ANY_TO_RAM_WITH_PADDING;
 
 import java.util.Optional;
-
 import net.consensys.linea.zktracer.module.hub.Hub;
 import net.consensys.linea.zktracer.module.hub.defer.PostConflationDefer;
 import net.consensys.linea.zktracer.module.hub.fragment.imc.mmu.MmuCall;

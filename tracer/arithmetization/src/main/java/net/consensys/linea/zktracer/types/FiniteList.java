@@ -17,7 +17,6 @@ package net.consensys.linea.zktracer.types;
 
 import java.util.ArrayList;
 import java.util.Collection;
-
 import lombok.RequiredArgsConstructor;
 
 /** An {@link ArrayList} with an upper bound on the number of element it can store. */

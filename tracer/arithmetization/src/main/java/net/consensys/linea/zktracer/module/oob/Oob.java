@@ -18,7 +18,6 @@ package net.consensys.linea.zktracer.module.oob;
 import static net.consensys.linea.zktracer.module.ModuleName.OOB;
 
 import java.util.List;
-
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.Accessors;

@@ -31,11 +31,10 @@ import static net.consensys.linea.zktracer.precompiles.PrecompileUtils.prepareSh
 import static net.consensys.linea.zktracer.precompiles.PrecompileUtils.writeInMemoryByteCodeOfCodeOwner;
 import static org.hyperledger.besu.datatypes.Address.*;
 
+import com.google.common.base.Preconditions;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
-
-import com.google.common.base.Preconditions;
 import net.consensys.linea.reporting.TracerTestBase;
 import net.consensys.linea.testing.BytecodeCompiler;
 import net.consensys.linea.testing.BytecodeRunner;

@@ -19,7 +19,6 @@ import static net.consensys.linea.zktracer.module.hub.TransactionProcessingType.
 import static net.consensys.linea.zktracer.module.hub.TransactionProcessingType.isUserTransaction;
 
 import java.util.*;
-
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;

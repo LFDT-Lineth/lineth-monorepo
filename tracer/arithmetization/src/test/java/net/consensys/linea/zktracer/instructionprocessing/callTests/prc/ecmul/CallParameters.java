@@ -76,10 +76,10 @@ public class CallParameters implements PrecompileCallParameters {
     // push the cds onto the stack
     switch (cds) {
       case EMPTY -> program.push(0);
-        // partial words
+      // partial words
       case NONEMPTY_1f -> program.push(0x1f);
       case NONEMPTY_3f -> program.push(0x3f);
-        // full words
+      // full words
       case NONEMPTY_20 -> program.push(0x20);
       case NONEMPTY_40 -> program.push(0x40);
       case NONEMPTY_60 -> program.push(0x60);

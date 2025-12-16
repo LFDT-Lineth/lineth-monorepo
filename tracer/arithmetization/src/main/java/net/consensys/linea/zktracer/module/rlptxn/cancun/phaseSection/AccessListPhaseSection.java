@@ -21,11 +21,9 @@ import static net.consensys.linea.zktracer.module.rlpUtils.RlpUtils.BYTES16_PREF
 import static net.consensys.linea.zktracer.module.rlputilsOld.Pattern.outerRlpSize;
 import static net.consensys.linea.zktracer.types.AddressUtils.highPart;
 import static net.consensys.linea.zktracer.types.AddressUtils.lowPart;
-import static net.consensys.linea.zktracer.types.Conversions.bytesToInt;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import net.consensys.linea.zktracer.Trace;
 import net.consensys.linea.zktracer.module.rlpUtils.InstructionByteStringPrefix;
 import net.consensys.linea.zktracer.module.rlpUtils.InstructionBytes32;

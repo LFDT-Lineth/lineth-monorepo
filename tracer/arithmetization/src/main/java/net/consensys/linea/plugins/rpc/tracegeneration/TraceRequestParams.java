@@ -16,7 +16,6 @@
 package net.consensys.linea.plugins.rpc.tracegeneration;
 
 import java.security.InvalidParameterException;
-
 import net.consensys.linea.zktracer.ZkTracer;
 import org.hyperledger.besu.evm.EVM;
 

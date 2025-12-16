@@ -17,7 +17,6 @@ package net.consensys.linea.zktracer.module.rlpcommon;
 
 import java.math.BigInteger;
 import java.util.Random;
-
 import net.consensys.linea.UnitTestWatcher;
 import net.consensys.linea.reporting.TracerTestBase;
 import org.apache.tuweni.bytes.Bytes;

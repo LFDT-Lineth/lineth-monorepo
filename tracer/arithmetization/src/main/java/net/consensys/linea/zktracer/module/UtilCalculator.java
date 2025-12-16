@@ -16,7 +16,6 @@
 package net.consensys.linea.zktracer.module;
 
 import java.math.BigInteger;
-
 import net.consensys.linea.zktracer.bytestheta.BaseTheta;
 import org.apache.tuweni.bytes.Bytes32;
 import org.apache.tuweni.units.bigints.UInt256;

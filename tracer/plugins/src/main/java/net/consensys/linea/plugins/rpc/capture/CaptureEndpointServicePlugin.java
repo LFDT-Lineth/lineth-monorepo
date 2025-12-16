@@ -15,9 +15,8 @@
 
 package net.consensys.linea.plugins.rpc.capture;
 
-import java.util.Map;
-
 import com.google.auto.service.AutoService;
+import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.plugins.AbstractLineaRequiredPlugin;
 import net.consensys.linea.plugins.BesuServiceProvider;

@@ -16,7 +16,6 @@
 package net.consensys.linea.plugins;
 
 import java.util.function.Supplier;
-
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.Accessors;

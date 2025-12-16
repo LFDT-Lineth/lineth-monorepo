@@ -19,6 +19,9 @@ import static net.consensys.linea.zktracer.ChainConfig.MAINNET_LONDON_TESTCONFIG
 import static net.consensys.linea.zktracer.Fork.toCamelCase;
 import static net.consensys.linea.zktracer.Trace.*;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -31,10 +34,6 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectWriter;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.zktracer.ChainConfig;

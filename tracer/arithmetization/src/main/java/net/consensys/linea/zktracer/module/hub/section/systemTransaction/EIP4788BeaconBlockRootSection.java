@@ -23,7 +23,6 @@ import static net.consensys.linea.zktracer.types.Conversions.bigIntegerToBytes16
 import static net.consensys.linea.zktracer.types.Conversions.longToUnsignedBigInteger;
 
 import java.math.BigInteger;
-
 import net.consensys.linea.zktracer.module.hub.AccountSnapshot;
 import net.consensys.linea.zktracer.module.hub.Hub;
 import net.consensys.linea.zktracer.module.hub.fragment.ContextFragment;

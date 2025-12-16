@@ -15,7 +15,6 @@
 package net.consensys.linea;
 
 import java.util.*;
-
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j

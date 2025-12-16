@@ -17,7 +17,6 @@ package net.consensys.linea.zktracer.container.stacked;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import lombok.Getter;
 import lombok.experimental.Accessors;
 

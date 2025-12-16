@@ -18,7 +18,6 @@ package net.consensys.linea.zktracer.module.gas;
 import static net.consensys.linea.zktracer.types.Conversions.bigIntegerToBytes;
 
 import java.util.Comparator;
-
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.experimental.Accessors;

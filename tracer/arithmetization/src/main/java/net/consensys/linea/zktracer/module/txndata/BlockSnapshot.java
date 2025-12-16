@@ -16,7 +16,6 @@
 package net.consensys.linea.zktracer.module.txndata;
 
 import java.util.Optional;
-
 import lombok.Getter;
 import lombok.Setter;
 import org.apache.tuweni.bytes.Bytes;

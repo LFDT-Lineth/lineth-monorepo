@@ -24,7 +24,6 @@ import static net.consensys.linea.zktracer.module.Util.getOverflow;
 import java.lang.reflect.Array;
 import java.math.BigInteger;
 import java.util.Arrays;
-
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.experimental.Accessors;

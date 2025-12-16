@@ -32,7 +32,6 @@ import static net.consensys.linea.zktracer.types.Utils.leftPadTo;
 import static org.hyperledger.besu.evm.internal.Words.clampedToLong;
 
 import java.util.Optional;
-
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;

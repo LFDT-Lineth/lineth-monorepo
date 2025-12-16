@@ -19,7 +19,6 @@ import static net.consensys.linea.BlockchainReferenceTestTools.PARAMS;
 
 import java.util.Collection;
 import java.util.List;
-
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 

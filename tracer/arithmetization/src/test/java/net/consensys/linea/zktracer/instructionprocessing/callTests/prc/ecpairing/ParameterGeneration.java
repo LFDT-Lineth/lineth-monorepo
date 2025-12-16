@@ -23,7 +23,6 @@ import static net.consensys.linea.zktracer.opcode.OpCode.STATICCALL;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import net.consensys.linea.zktracer.instructionprocessing.callTests.prc.GasParameter;
 import net.consensys.linea.zktracer.instructionprocessing.callTests.prc.ReturnAtParameter;
 import net.consensys.linea.zktracer.opcode.OpCode;

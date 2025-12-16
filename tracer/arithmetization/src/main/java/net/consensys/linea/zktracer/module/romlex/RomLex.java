@@ -22,9 +22,8 @@ import static net.consensys.linea.zktracer.types.AddressUtils.getDeploymentAddre
 import static net.consensys.linea.zktracer.types.AddressUtils.highPart;
 import static net.consensys.linea.zktracer.types.AddressUtils.lowPart;
 
-import java.util.*;
-
 import com.google.common.base.Preconditions;
+import java.util.*;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.Accessors;
@@ -243,8 +242,9 @@ public class RomLex implements OperationSetModule<RomOperation>, ContextEntryDef
                 });
       }
 
-      default -> throw new RuntimeException(
-          String.format("%s does not trigger the creation of ROM_LEX", opCode.mnemonic()));
+      default ->
+          throw new RuntimeException(
+              String.format("%s does not trigger the creation of ROM_LEX", opCode.mnemonic()));
     }
   }
 

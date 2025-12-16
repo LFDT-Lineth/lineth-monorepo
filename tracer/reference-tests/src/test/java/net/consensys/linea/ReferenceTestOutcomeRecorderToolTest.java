@@ -24,7 +24,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListSet;
-
 import net.consensys.linea.reporting.TestOutcome;
 import net.consensys.linea.reporting.TestOutcomeWriterTool;
 import net.consensys.linea.reporting.TestState;

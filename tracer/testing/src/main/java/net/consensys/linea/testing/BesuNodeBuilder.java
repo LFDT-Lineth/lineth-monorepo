@@ -20,7 +20,6 @@ import static net.consensys.linea.zktracer.Trace.LINEA_BLOCK_GAS_LIMIT;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
-
 import net.consensys.linea.plugins.config.LineaL1L2BridgeSharedConfiguration;
 import org.hyperledger.besu.consensus.clique.CliqueExtraData;
 import org.hyperledger.besu.datatypes.Address;

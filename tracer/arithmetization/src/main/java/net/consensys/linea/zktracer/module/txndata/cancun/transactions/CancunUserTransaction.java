@@ -21,7 +21,6 @@ import static net.consensys.linea.zktracer.module.txndata.shanghai.ShanghaiTxnda
 import static net.consensys.linea.zktracer.types.Conversions.bigIntegerToBytes;
 
 import java.math.BigInteger;
-
 import lombok.Getter;
 import net.consensys.linea.zktracer.module.txndata.cancun.CancunTxnData;
 import net.consensys.linea.zktracer.module.txndata.cancun.CancunTxnDataOperation;

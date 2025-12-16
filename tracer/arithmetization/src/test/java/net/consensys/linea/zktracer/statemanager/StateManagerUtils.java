@@ -18,7 +18,6 @@ package net.consensys.linea.zktracer.statemanager;
 import static com.google.common.primitives.UnsignedInts.toLong;
 
 import java.util.*;
-
 import net.consensys.linea.zktracer.module.hub.Hub;
 import net.consensys.linea.zktracer.module.hub.fragment.TraceFragment;
 import net.consensys.linea.zktracer.module.hub.fragment.account.AccountFragment;

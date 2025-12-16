@@ -31,8 +31,8 @@ public class TransactionUtils {
         }
         return (V - 35) / 2;
       }
-      default -> throw new IllegalArgumentException(
-          "Transaction type not supported: " + tx.getType());
+      default ->
+          throw new IllegalArgumentException("Transaction type not supported: " + tx.getType());
     }
   }
 

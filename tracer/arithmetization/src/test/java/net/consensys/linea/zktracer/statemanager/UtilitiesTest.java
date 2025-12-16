@@ -17,7 +17,6 @@ package net.consensys.linea.zktracer.statemanager;
 
 import java.math.BigInteger;
 import java.util.List;
-
 import net.consensys.linea.reporting.TracerTestBase;
 import net.consensys.linea.testing.MultiBlockExecutionEnvironment;
 import net.consensys.linea.testing.TransactionProcessingResultValidator;

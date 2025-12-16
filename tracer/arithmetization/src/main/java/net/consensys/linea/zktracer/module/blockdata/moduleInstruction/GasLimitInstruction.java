@@ -18,7 +18,6 @@ import static net.consensys.linea.zktracer.Trace.Blockdata.nROWS_GL;
 import static net.consensys.linea.zktracer.Trace.GAS_LIMIT_ADJUSTMENT_FACTOR;
 
 import java.math.BigInteger;
-
 import net.consensys.linea.zktracer.ChainConfig;
 import net.consensys.linea.zktracer.Trace;
 import net.consensys.linea.zktracer.module.blockdata.BlockDataExoCall;

@@ -28,7 +28,6 @@ import static net.consensys.linea.zktracer.Trace.PHASE_MODEXP_RESULT;
 import static net.consensys.linea.zktracer.types.Utils.leftPadTo;
 
 import java.util.Optional;
-
 import lombok.Getter;
 import lombok.experimental.Accessors;
 import net.consensys.linea.zktracer.Fork;

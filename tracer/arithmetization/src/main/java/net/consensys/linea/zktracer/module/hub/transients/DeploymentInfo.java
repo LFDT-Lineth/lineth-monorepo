@@ -17,7 +17,6 @@ package net.consensys.linea.zktracer.module.hub.transients;
 
 import java.util.HashMap;
 import java.util.Map;
-
 import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.datatypes.Address;
 

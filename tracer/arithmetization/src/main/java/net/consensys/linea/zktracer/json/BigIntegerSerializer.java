@@ -15,12 +15,11 @@
 
 package net.consensys.linea.zktracer.json;
 
-import java.io.IOException;
-import java.math.BigInteger;
-
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
+import java.io.IOException;
+import java.math.BigInteger;
 
 /** Custom JSON serializer for {@link BigInteger} type. */
 public class BigIntegerSerializer extends StdSerializer<BigInteger> {

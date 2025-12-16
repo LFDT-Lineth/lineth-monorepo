@@ -16,7 +16,6 @@
 package net.consensys.linea.plugins.rpc.linecounts;
 
 import java.security.InvalidParameterException;
-
 import net.consensys.linea.zktracer.ZkTracer;
 
 /** Holds needed parameters for sending an execution trace generation request. */

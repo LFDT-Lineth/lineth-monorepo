@@ -15,9 +15,8 @@
 
 package net.consensys.linea.zktracer.types;
 
-import javax.annotation.Nullable;
-
 import com.google.errorprone.annotations.FormatMethod;
+import javax.annotation.Nullable;
 
 class Checks {
   static void checkNotNull(@Nullable Object object) {

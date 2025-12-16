@@ -18,7 +18,6 @@ package net.consensys.linea.zktracer.module.rlptxn;
 import static net.consensys.linea.zktracer.module.ModuleName.RLP_TXN;
 
 import java.util.List;
-
 import lombok.Getter;
 import lombok.experimental.Accessors;
 import net.consensys.linea.zktracer.Trace;

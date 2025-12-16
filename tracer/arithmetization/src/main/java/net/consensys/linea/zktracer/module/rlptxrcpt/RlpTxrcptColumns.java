@@ -23,7 +23,6 @@ import static net.consensys.linea.zktracer.Trace.Rlptxrcpt.SUBPHASE_ID_WEIGHT_IS
 import static net.consensys.linea.zktracer.types.Conversions.booleanToInt;
 
 import java.math.BigInteger;
-
 import org.apache.tuweni.bytes.Bytes;
 
 class RlpTxrcptColumns {

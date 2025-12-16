@@ -18,7 +18,6 @@ package net.consensys.linea.zktracer.runtime.stack;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-
 import lombok.Getter;
 import lombok.experimental.Accessors;
 import net.consensys.linea.zktracer.module.hub.Hub;

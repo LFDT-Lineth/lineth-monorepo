@@ -19,7 +19,6 @@ import static net.consensys.linea.zktracer.Trace.OOB_INST_SHA2;
 import static net.consensys.linea.zktracer.Trace.Oob.CT_MAX_SHA2;
 
 import java.math.BigInteger;
-
 import net.consensys.linea.zktracer.Trace;
 
 public class Sha2OobCall extends ShaRipIdOobCall {

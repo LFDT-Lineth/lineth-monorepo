@@ -17,7 +17,6 @@ package net.consensys.linea.zktracer;
 
 import java.util.List;
 import java.util.Map;
-
 import net.consensys.linea.zktracer.container.module.Module;
 
 public interface LineCountingTracer extends ConflationAwareOperationTracer {

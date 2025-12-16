@@ -33,7 +33,6 @@ import static org.hyperledger.besu.evm.frame.MessageFrame.Type.*;
 
 import java.util.*;
 import java.util.stream.Stream;
-
 import lombok.Getter;
 import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
@@ -459,9 +458,7 @@ public abstract class Hub implements Module {
     blockhash = new Blockhash(this, wcp, publicInputs.historicalBlockhashes());
 
     refTableModules =
-        Stream.of(setBlsRt(), setInstructionDecoder())
-            .filter(Objects::nonNull)
-            .toList();
+        Stream.of(setBlsRt(), setInstructionDecoder()).filter(Objects::nonNull).toList();
 
     modules =
         Stream.concat(
@@ -1031,8 +1028,8 @@ public abstract class Hub implements Module {
   void traceOpcode(MessageFrame frame) {
     final OpCodeData op = opCodeData();
     switch (op.instructionFamily()) {
-      case ADD, BIN, MOD, SHF, WCP, EXT, BATCH, PUSH_POP, DUP, SWAP -> new StackOnlySection(
-          this, op);
+      case ADD, BIN, MOD, SHF, WCP, EXT, BATCH, PUSH_POP, DUP, SWAP ->
+          new StackOnlySection(this, op);
       case MACHINE_STATE -> {
         switch (op.mnemonic()) {
           case MSIZE -> new MsizeSection(this);
@@ -1043,8 +1040,9 @@ public abstract class Hub implements Module {
         switch (op.mnemonic()) {
           case EXP -> new ExpSection(this);
           case MUL -> new StackOnlySection(this, op);
-          default -> throw new IllegalStateException(
-              String.format("opcode %s not part of the MUL instruction family", this.opCode()));
+          default ->
+              throw new IllegalStateException(
+                  String.format("opcode %s not part of the MUL instruction family", this.opCode()));
         }
       }
       case HALT -> {
@@ -1074,8 +1072,9 @@ public abstract class Hub implements Module {
           case RETURNDATACOPY -> new ReturnDataCopySection(this);
           case CODECOPY -> new CodeCopySection(this);
           case EXTCODECOPY -> new ExtCodeCopySection(this, frame);
-          default -> throw new RuntimeException(
-              "Invalid instruction: " + this.opCode().toString() + " not in the COPY family");
+          default ->
+              throw new RuntimeException(
+                  "Invalid instruction: " + this.opCode().toString() + " not in the COPY family");
         }
       }
       case MCOPY -> setMcopySection(this);

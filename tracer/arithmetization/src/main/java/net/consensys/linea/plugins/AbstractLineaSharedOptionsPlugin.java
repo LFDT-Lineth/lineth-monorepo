@@ -16,7 +16,6 @@
 package net.consensys.linea.plugins;
 
 import java.util.Map;
-
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.plugins.config.LineaL1L2BridgeSharedCliOptions;
 import net.consensys.linea.plugins.config.LineaL1L2BridgeSharedConfiguration;

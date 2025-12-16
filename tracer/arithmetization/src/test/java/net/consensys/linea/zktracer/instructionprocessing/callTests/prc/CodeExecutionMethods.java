@@ -21,7 +21,6 @@ import static net.consensys.linea.zktracer.opcode.OpCode.GAS;
 import static org.hyperledger.besu.datatypes.TransactionType.FRONTIER;
 
 import java.util.List;
-
 import net.consensys.linea.testing.BytecodeCompiler;
 import net.consensys.linea.testing.ToyAccount;
 import net.consensys.linea.testing.ToyExecutionEnvironmentV2;

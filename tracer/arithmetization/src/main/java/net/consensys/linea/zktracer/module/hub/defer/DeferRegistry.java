@@ -16,7 +16,6 @@
 package net.consensys.linea.zktracer.module.hub.defer;
 
 import java.util.*;
-
 import net.consensys.linea.zktracer.module.hub.Hub;
 import net.consensys.linea.zktracer.runtime.callstack.CallFrame;
 import net.consensys.linea.zktracer.runtime.callstack.CallStack;

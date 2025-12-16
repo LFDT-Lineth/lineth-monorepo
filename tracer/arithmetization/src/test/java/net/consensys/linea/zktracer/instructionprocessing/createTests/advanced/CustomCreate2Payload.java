@@ -19,7 +19,6 @@ import static net.consensys.linea.testing.generated.CustomCreate2.FUNC_ADVANCEDC
 
 import java.util.Arrays;
 import java.util.Collections;
-
 import net.consensys.linea.testing.generated.CustomCreate2;
 import org.apache.tuweni.bytes.Bytes;
 import org.web3j.abi.FunctionEncoder;

@@ -15,9 +15,8 @@
 
 package net.consensys.linea.testing;
 
-import java.nio.file.Path;
-
 import com.fasterxml.jackson.databind.node.ArrayNode;
+import java.nio.file.Path;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.shomei.Runner;
 import net.consensys.shomei.cli.option.DataStorageOption;

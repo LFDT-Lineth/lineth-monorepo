@@ -23,7 +23,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
-
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
@@ -237,18 +236,21 @@ public final class BytecodeRunner {
 
     final ToyAccount receiverAccount =
         switch (collision) {
-          case SENDER_IS_RECIPIENT, TRIPLE_COLLISION -> ToyAccount.builder()
-              // Accounts update are already made in the TX_SKIP section
-              // .balance(senderBalance.subtract(transactionValue + gasPrice * selectedGasLimit))
-              // .nonce(senderNonce + 1)
-              .address(senderAddress)
-              .build();
-          default -> ToyAccount.builder()
-              .balance(Wei.fromEth(1))
-              .nonce(23)
-              .address(recipientAddress)
-              .code(byteCode)
-              .build();
+          case SENDER_IS_RECIPIENT, TRIPLE_COLLISION ->
+              ToyAccount.builder()
+                  // Accounts update are already made in the TX_SKIP section
+                  // .balance(senderBalance.subtract(transactionValue + gasPrice *
+                  // selectedGasLimit))
+                  // .nonce(senderNonce + 1)
+                  .address(senderAddress)
+                  .build();
+          default ->
+              ToyAccount.builder()
+                  .balance(Wei.fromEth(1))
+                  .nonce(23)
+                  .address(recipientAddress)
+                  .code(byteCode)
+                  .build();
         };
 
     final ToyTransaction.ToyTransactionBuilder txBuilder =

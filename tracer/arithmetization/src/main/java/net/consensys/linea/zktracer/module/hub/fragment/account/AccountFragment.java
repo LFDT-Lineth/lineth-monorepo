@@ -23,7 +23,6 @@ import static net.consensys.linea.zktracer.types.AddressUtils.*;
 
 import java.util.Map;
 import java.util.Optional;
-
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -77,10 +76,22 @@ public abstract class AccountFragment
         DomSubStampsSubFragment domSubStampsSubFragment,
         TransactionProcessingType txProcessingType) {
       return switch (hub.fork) {
-        case LONDON, PARIS, SHANGHAI -> new LondonAccountFragment(
-            hub, oldState, newState, Optional.empty(), domSubStampsSubFragment, txProcessingType);
-        case CANCUN, PRAGUE, OSAKA -> new CancunAccountFragment(
-            hub, oldState, newState, Optional.empty(), domSubStampsSubFragment, txProcessingType);
+        case LONDON, PARIS, SHANGHAI ->
+            new LondonAccountFragment(
+                hub,
+                oldState,
+                newState,
+                Optional.empty(),
+                domSubStampsSubFragment,
+                txProcessingType);
+        case CANCUN, PRAGUE, OSAKA ->
+            new CancunAccountFragment(
+                hub,
+                oldState,
+                newState,
+                Optional.empty(),
+                domSubStampsSubFragment,
+                txProcessingType);
         default -> throw new IllegalArgumentException("Unknown fork: " + hub.fork);
       };
     }
@@ -93,20 +104,22 @@ public abstract class AccountFragment
         TransactionProcessingType txProcessingType) {
       hub.trm().callTrimming(toTrim);
       return switch (hub.fork) {
-        case LONDON, PARIS, SHANGHAI -> new LondonAccountFragment(
-            hub,
-            oldState,
-            newState,
-            Optional.of(toTrim),
-            domSubStampsSubFragment,
-            txProcessingType);
-        case CANCUN, PRAGUE, OSAKA -> new CancunAccountFragment(
-            hub,
-            oldState,
-            newState,
-            Optional.of(toTrim),
-            domSubStampsSubFragment,
-            txProcessingType);
+        case LONDON, PARIS, SHANGHAI ->
+            new LondonAccountFragment(
+                hub,
+                oldState,
+                newState,
+                Optional.of(toTrim),
+                domSubStampsSubFragment,
+                txProcessingType);
+        case CANCUN, PRAGUE, OSAKA ->
+            new CancunAccountFragment(
+                hub,
+                oldState,
+                newState,
+                Optional.of(toTrim),
+                domSubStampsSubFragment,
+                txProcessingType);
         default -> throw new IllegalArgumentException("Unknown fork: " + hub.fork);
       };
     }

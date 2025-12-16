@@ -15,10 +15,9 @@
 
 package net.consensys.linea.zktracer.module.hub.state;
 
+import com.google.common.base.Preconditions;
 import java.util.ArrayList;
 import java.util.List;
-
-import com.google.common.base.Preconditions;
 import lombok.Getter;
 import lombok.experimental.Accessors;
 import net.consensys.linea.zktracer.Trace;

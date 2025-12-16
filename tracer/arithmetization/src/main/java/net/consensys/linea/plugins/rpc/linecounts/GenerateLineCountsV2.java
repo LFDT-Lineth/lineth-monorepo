@@ -17,12 +17,11 @@ package net.consensys.linea.plugins.rpc.linecounts;
 
 import static net.consensys.linea.plugins.rpc.LineCounterGenerator.createLineCountingTracer;
 
-import java.util.Map;
-import java.util.Optional;
-
 import com.google.common.base.Stopwatch;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import java.util.Map;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.plugins.BesuServiceProvider;

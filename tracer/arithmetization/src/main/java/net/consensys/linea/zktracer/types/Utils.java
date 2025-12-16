@@ -20,7 +20,6 @@ import static net.consensys.linea.zktracer.Trace.LLARGE;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
-
 import org.apache.tuweni.bytes.Bytes;
 
 public class Utils {

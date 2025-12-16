@@ -21,7 +21,6 @@ import static net.consensys.linea.zktracer.Trace.PRECOMPILE_CALL_DATA_SIZE___G2_
 import static net.consensys.linea.zktracer.TraceCancun.Oob.CT_MAX_BLS_G2_ADD;
 
 import java.math.BigInteger;
-
 import net.consensys.linea.zktracer.Trace;
 
 public class BlsG2AddOobCall extends FixedSizeFixedGasCostOobCall {

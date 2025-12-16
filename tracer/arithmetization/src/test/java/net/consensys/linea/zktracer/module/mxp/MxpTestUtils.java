@@ -26,7 +26,6 @@ import java.util.List;
 import java.util.Random;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
 import net.consensys.linea.UnitTestWatcher;
 import net.consensys.linea.testing.BytecodeCompiler;
 import net.consensys.linea.zktracer.Fork;
@@ -153,31 +152,35 @@ public class MxpTestUtils {
           SHA3,
           RETURN,
           REVERT -> // RETURN and REVERT are selected only when isHalting is true
-      appendOpCodeCall(List.of(size1, offset1), opCode, program);
-      case LOG1 -> appendOpCodeCall(
-          Stream.concat(getRandomUpTo32BytesBigIntegers(1).stream(), Stream.of(size1, offset1))
-              .collect(Collectors.toList()),
-          opCode,
-          program);
-      case LOG2 -> appendOpCodeCall(
-          Stream.concat(getRandomUpTo32BytesBigIntegers(2).stream(), Stream.of(size1, offset1))
-              .collect(Collectors.toList()),
-          opCode,
-          program);
-      case LOG3 -> appendOpCodeCall(
-          Stream.concat(getRandomUpTo32BytesBigIntegers(3).stream(), Stream.of(size1, offset1))
-              .collect(Collectors.toList()),
-          opCode,
-          program);
-      case LOG4 -> appendOpCodeCall(
-          Stream.concat(getRandomUpTo32BytesBigIntegers(4).stream(), Stream.of(size1, offset1))
-              .collect(Collectors.toList()),
-          opCode,
-          program);
-      case CODECOPY, CALLDATACOPY -> appendOpCodeCall(
-          List.of(size1, offset2, offset1), opCode, program);
-      case EXTCODECOPY -> appendOpCodeCall(
-          List.of(size1, offset2, offset1, EWord.of(address)), opCode, program);
+          appendOpCodeCall(List.of(size1, offset1), opCode, program);
+      case LOG1 ->
+          appendOpCodeCall(
+              Stream.concat(getRandomUpTo32BytesBigIntegers(1).stream(), Stream.of(size1, offset1))
+                  .collect(Collectors.toList()),
+              opCode,
+              program);
+      case LOG2 ->
+          appendOpCodeCall(
+              Stream.concat(getRandomUpTo32BytesBigIntegers(2).stream(), Stream.of(size1, offset1))
+                  .collect(Collectors.toList()),
+              opCode,
+              program);
+      case LOG3 ->
+          appendOpCodeCall(
+              Stream.concat(getRandomUpTo32BytesBigIntegers(3).stream(), Stream.of(size1, offset1))
+                  .collect(Collectors.toList()),
+              opCode,
+              program);
+      case LOG4 ->
+          appendOpCodeCall(
+              Stream.concat(getRandomUpTo32BytesBigIntegers(4).stream(), Stream.of(size1, offset1))
+                  .collect(Collectors.toList()),
+              opCode,
+              program);
+      case CODECOPY, CALLDATACOPY ->
+          appendOpCodeCall(List.of(size1, offset2, offset1), opCode, program);
+      case EXTCODECOPY ->
+          appendOpCodeCall(List.of(size1, offset2, offset1, EWord.of(address)), opCode, program);
       case CREATE, CREATE2 -> {
         if (opCode == OpCode.CREATE) {
           // CREATE
@@ -187,10 +190,11 @@ public class MxpTestUtils {
           appendOpCodeCall(List.of(salt, size1, offset1, value), opCode, program);
         }
       }
-      case STATICCALL, DELEGATECALL -> appendOpCodeCall(
-          List.of(size2, offset2, size1, offset1, address, gas), opCode, program);
-      case CALL, CALLCODE -> appendOpCodeCall(
-          List.of(size2, offset2, size1, offset1, value, address, gas), opCode, program);
+      case STATICCALL, DELEGATECALL ->
+          appendOpCodeCall(List.of(size2, offset2, size1, offset1, address, gas), opCode, program);
+      case CALL, CALLCODE ->
+          appendOpCodeCall(
+              List.of(size2, offset2, size1, offset1, value, address, gas), opCode, program);
       default -> {}
     }
   }
@@ -217,10 +221,11 @@ public class MxpTestUtils {
     return switch (randomMxpType) {
       case TYPE_2, TYPE_3 -> offset1.compareTo(TWO_POW_128) >= 0;
       case TYPE_4 -> size1.compareTo(TWO_POW_128) >= 0 || offsetIsEnormousAndSizeIsNonZero1;
-      case TYPE_5 -> size1.compareTo(TWO_POW_128) >= 0
-          || offsetIsEnormousAndSizeIsNonZero1
-          || size2.compareTo(TWO_POW_128) >= 0
-          || offsetIsEnormousAndSizeIsNonZero2;
+      case TYPE_5 ->
+          size1.compareTo(TWO_POW_128) >= 0
+              || offsetIsEnormousAndSizeIsNonZero1
+              || size2.compareTo(TWO_POW_128) >= 0
+              || offsetIsEnormousAndSizeIsNonZero2;
       default -> false;
     };
   }
@@ -247,11 +252,13 @@ public class MxpTestUtils {
           CALLDATACOPY,
           CODECOPY,
           EXTCODECOPY,
-          RETURNDATACOPY -> size1.compareTo(TWO_POW_128) >= 0 || offsetIsEnormousAndSizeIsNonZero1;
-      case CALL, CALLCODE, DELEGATECALL, STATICCALL -> size1.compareTo(TWO_POW_128) >= 0
-          || offsetIsEnormousAndSizeIsNonZero1
-          || size2.compareTo(TWO_POW_128) >= 0
-          || offsetIsEnormousAndSizeIsNonZero2;
+          RETURNDATACOPY ->
+          size1.compareTo(TWO_POW_128) >= 0 || offsetIsEnormousAndSizeIsNonZero1;
+      case CALL, CALLCODE, DELEGATECALL, STATICCALL ->
+          size1.compareTo(TWO_POW_128) >= 0
+              || offsetIsEnormousAndSizeIsNonZero1
+              || size2.compareTo(TWO_POW_128) >= 0
+              || offsetIsEnormousAndSizeIsNonZero2;
       default -> false;
     };
   }

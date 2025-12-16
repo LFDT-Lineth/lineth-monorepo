@@ -159,20 +159,22 @@ public class ShakiraDataOperation extends ModuleOperation {
           .totalSize(WORD_SIZE);
 
       switch (ct) {
-        case 0 -> trace
-            .limb(result.slice(0, LLARGE))
-            .nBytesAcc(LLARGE)
-            .selectorKeccakResHi(hashType == KECCAK)
-            .selectorSha2ResHi(hashType == SHA256)
-            .selectorRipemdResHi(hashType == RIPEMD)
-            .validateRow();
-        case 1 -> trace
-            .limb(result.slice(LLARGE, LLARGE))
-            .nBytesAcc(WORD_SIZE)
-            .selectorKeccakResHi(false)
-            .selectorSha2ResHi(false)
-            .selectorRipemdResHi(false)
-            .validateRow();
+        case 0 ->
+            trace
+                .limb(result.slice(0, LLARGE))
+                .nBytesAcc(LLARGE)
+                .selectorKeccakResHi(hashType == KECCAK)
+                .selectorSha2ResHi(hashType == SHA256)
+                .selectorRipemdResHi(hashType == RIPEMD)
+                .validateRow();
+        case 1 ->
+            trace
+                .limb(result.slice(LLARGE, LLARGE))
+                .nBytesAcc(WORD_SIZE)
+                .selectorKeccakResHi(false)
+                .selectorSha2ResHi(false)
+                .selectorRipemdResHi(false)
+                .validateRow();
       }
     }
   }

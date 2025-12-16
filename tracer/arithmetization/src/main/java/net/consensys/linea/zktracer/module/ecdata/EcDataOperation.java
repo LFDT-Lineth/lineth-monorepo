@@ -68,7 +68,6 @@ import static net.consensys.linea.zktracer.types.EWord.ZERO;
 import static net.consensys.linea.zktracer.types.Utils.leftPadTo;
 
 import java.util.List;
-
 import lombok.Getter;
 import lombok.experimental.Accessors;
 import net.consensys.linea.zktracer.Trace;
@@ -177,9 +176,10 @@ public class EcDataOperation extends ModuleOperation {
             yield callDataSize;
           }
           case PRC_P256_VERIFY -> TOTAL_SIZE_P256_VERIFY_DATA;
-          default -> throw new IllegalArgumentException(
-              "EcDataOperation expects to be called on an elliptic curve precompile, not on "
-                  + precompileFlag.name());
+          default ->
+              throw new IllegalArgumentException(
+                  "EcDataOperation expects to be called on an elliptic curve precompile, not on "
+                      + precompileFlag.name());
         };
 
     rightPaddedCallData = rightPaddedSlice(callData, 0, paddedCallDataLength);

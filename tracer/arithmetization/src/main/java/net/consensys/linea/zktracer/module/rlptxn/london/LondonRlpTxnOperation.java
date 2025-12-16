@@ -19,7 +19,6 @@ import static net.consensys.linea.zktracer.Trace.LLARGE;
 import static net.consensys.linea.zktracer.module.Util.getTxTypeAsInt;
 
 import java.math.BigInteger;
-
 import lombok.Getter;
 import lombok.experimental.Accessors;
 import net.consensys.linea.zktracer.module.rlptxn.RlpTxnOperation;

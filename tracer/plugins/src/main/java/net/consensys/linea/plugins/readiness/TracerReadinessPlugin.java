@@ -15,16 +15,15 @@
 
 package net.consensys.linea.plugins.readiness;
 
-import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.atomic.AtomicBoolean;
-
 import com.google.auto.service.AutoService;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerOptions;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.plugins.AbstractLineaOptionsPlugin;
 import net.consensys.linea.plugins.BesuServiceProvider;

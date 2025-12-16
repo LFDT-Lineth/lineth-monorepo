@@ -17,7 +17,6 @@ package net.consensys.linea.zktracer.types;
 
 import java.security.SecureRandom;
 import java.util.Random;
-
 import org.apache.tuweni.bytes.Bytes;
 
 /** A {@link Bytes} value that is guaranteed to contain exactly 16 bytes. */

@@ -15,11 +15,10 @@
 
 package net.consensys.linea.zktracer.container.stacked;
 
+import com.google.common.base.Preconditions;
 import java.util.Collection;
 import java.util.List;
 import java.util.stream.Stream;
-
-import com.google.common.base.Preconditions;
 import lombok.experimental.Accessors;
 import net.consensys.linea.zktracer.container.ModuleOperation;
 import org.jetbrains.annotations.NotNull;

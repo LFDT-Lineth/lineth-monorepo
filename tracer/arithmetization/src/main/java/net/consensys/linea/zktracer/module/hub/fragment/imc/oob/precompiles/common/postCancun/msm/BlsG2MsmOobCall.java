@@ -22,7 +22,6 @@ import static net.consensys.linea.zktracer.Trace.PRECOMPILE_CALL_DATA_UNIT_SIZE_
 import static net.consensys.linea.zktracer.TraceCancun.Oob.CT_MAX_BLS_G2_MSM;
 
 import java.math.BigInteger;
-
 import net.consensys.linea.zktracer.Trace;
 
 public class BlsG2MsmOobCall extends BlsMsmOobCall {

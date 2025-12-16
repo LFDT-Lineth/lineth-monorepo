@@ -22,7 +22,6 @@ import static net.consensys.linea.zktracer.instructionprocessing.callTests.prc.R
 import static net.consensys.linea.zktracer.opcode.OpCode.*;
 
 import java.util.stream.Stream;
-
 import net.consensys.linea.testing.*;
 import net.consensys.linea.zktracer.instructionprocessing.callTests.prc.*;
 import net.consensys.linea.zktracer.instructionprocessing.callTests.prc.framework.PrecompileCallTests;

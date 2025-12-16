@@ -18,7 +18,6 @@ import static com.google.common.base.Preconditions.checkState;
 import static net.consensys.linea.zktracer.Trace.WORD_SIZE;
 
 import java.math.BigInteger;
-
 import net.consensys.linea.testing.BytecodeCompiler;
 import net.consensys.linea.zktracer.ChainConfig;
 import net.consensys.linea.zktracer.instructionprocessing.callTests.prc.framework.PrecompileCallMemoryContents;

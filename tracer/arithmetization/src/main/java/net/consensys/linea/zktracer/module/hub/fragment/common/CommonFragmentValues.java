@@ -25,7 +25,6 @@ import static net.consensys.linea.zktracer.module.hub.signals.TracedException.MA
 import static net.consensys.linea.zktracer.opcode.InstructionFamily.*;
 
 import java.math.BigInteger;
-
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;

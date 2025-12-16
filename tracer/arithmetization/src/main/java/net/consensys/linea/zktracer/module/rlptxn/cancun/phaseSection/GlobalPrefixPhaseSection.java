@@ -48,8 +48,10 @@ public class GlobalPrefixPhaseSection extends PhaseSection {
         tracedValues.rlpLtByteSize(innerRlpSize(besuRlpLt.size() - 1));
         tracedValues.rlpLxByteSize(innerRlpSize(besuRlpLx.size() - 1));
       }
-      default -> throw new IllegalStateException(
-          "Transaction Type not supported: " + tracedValues.tx().getBesuTransaction().getType());
+      default ->
+          throw new IllegalStateException(
+              "Transaction Type not supported: "
+                  + tracedValues.tx().getBesuTransaction().getType());
     }
 
     final RlpUtilsCall rlpLtCall =

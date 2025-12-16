@@ -16,7 +16,6 @@
 package net.consensys.linea.zktracer.module.hub.transients;
 
 import java.util.*;
-
 import lombok.Getter;
 import lombok.experimental.Accessors;
 import net.consensys.linea.zktracer.container.stacked.StackedSet;

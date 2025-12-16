@@ -17,7 +17,6 @@ package net.consensys.linea.zktracer.container.stacked;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
-
 import lombok.Getter;
 import lombok.experimental.Accessors;
 

@@ -16,7 +16,6 @@
 package net.consensys.linea.zktracer.containers;
 
 import java.math.BigInteger;
-
 import net.consensys.linea.UnitTestWatcher;
 import net.consensys.linea.reporting.TracerTestBase;
 import net.consensys.linea.zktracer.container.stacked.ModuleOperationStackedSet;

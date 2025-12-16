@@ -19,7 +19,6 @@ import static net.consensys.linea.zktracer.Trace.OOB_INST_ECADD;
 import static net.consensys.linea.zktracer.Trace.Oob.CT_MAX_ECADD;
 
 import java.math.BigInteger;
-
 import net.consensys.linea.zktracer.Trace;
 
 public class EcAddOobCall extends EcRecEcAddEcMulOobCall {

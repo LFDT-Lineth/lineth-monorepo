@@ -18,7 +18,6 @@ package net.consensys.linea.zktracer.module.romlex;
 import static com.google.common.base.Preconditions.checkArgument;
 
 import java.util.List;
-
 import net.consensys.linea.reporting.TracerTestBase;
 import net.consensys.linea.testing.BytecodeCompiler;
 import net.consensys.linea.testing.ToyAccount;

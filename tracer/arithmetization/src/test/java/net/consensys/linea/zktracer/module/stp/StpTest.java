@@ -22,7 +22,6 @@ import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
-
 import net.consensys.linea.UnitTestWatcher;
 import net.consensys.linea.reporting.TracerTestBase;
 import net.consensys.linea.testing.BytecodeCompiler;
@@ -181,25 +180,27 @@ public class StpTest extends TracerTestBase {
 
   private Bytes codeCall(OpCode opcode, Address calleeAddress, BigInteger value, long gasCall) {
     return switch (opcode) {
-      case CALL, CALLCODE -> BytecodeCompiler.newProgram(chainConfig)
-          .push(Bytes.minimalBytes(6)) // retLength
-          .push(Bytes.minimalBytes(5)) // terOffset
-          .push(Bytes.minimalBytes(4)) // argsLength
-          .push(Bytes.minimalBytes(3)) // argsOffset
-          .push(bigIntegerToBytes(value)) // value
-          .push(calleeAddress) // address
-          .push(longToBytes(gasCall)) // gas
-          .op(opcode)
-          .compile();
-      case DELEGATECALL, STATICCALL -> BytecodeCompiler.newProgram(chainConfig)
-          .push(Bytes.minimalBytes(5)) // retLength
-          .push(Bytes.minimalBytes(4)) // terOffset
-          .push(Bytes.minimalBytes(3)) // argsLength
-          .push(Bytes.minimalBytes(2)) // argsOffset
-          .push(calleeAddress) // address
-          .push(longToBytes(gasCall)) // gas
-          .op(opcode)
-          .compile();
+      case CALL, CALLCODE ->
+          BytecodeCompiler.newProgram(chainConfig)
+              .push(Bytes.minimalBytes(6)) // retLength
+              .push(Bytes.minimalBytes(5)) // terOffset
+              .push(Bytes.minimalBytes(4)) // argsLength
+              .push(Bytes.minimalBytes(3)) // argsOffset
+              .push(bigIntegerToBytes(value)) // value
+              .push(calleeAddress) // address
+              .push(longToBytes(gasCall)) // gas
+              .op(opcode)
+              .compile();
+      case DELEGATECALL, STATICCALL ->
+          BytecodeCompiler.newProgram(chainConfig)
+              .push(Bytes.minimalBytes(5)) // retLength
+              .push(Bytes.minimalBytes(4)) // terOffset
+              .push(Bytes.minimalBytes(3)) // argsLength
+              .push(Bytes.minimalBytes(2)) // argsOffset
+              .push(calleeAddress) // address
+              .push(longToBytes(gasCall)) // gas
+              .op(opcode)
+              .compile();
 
       default -> throw new IllegalStateException("Unexpected value: " + opcode);
     };

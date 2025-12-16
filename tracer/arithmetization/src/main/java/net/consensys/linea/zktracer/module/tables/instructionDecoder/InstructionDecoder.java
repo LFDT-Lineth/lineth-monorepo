@@ -18,7 +18,6 @@ package net.consensys.linea.zktracer.module.tables.instructionDecoder;
 import static net.consensys.linea.zktracer.module.ModuleName.INSTRUCTION_DECODER;
 
 import java.util.List;
-
 import net.consensys.linea.zktracer.Trace;
 import net.consensys.linea.zktracer.container.module.Module;
 import net.consensys.linea.zktracer.module.ModuleName;

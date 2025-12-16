@@ -124,7 +124,6 @@ allprojects {
 
         java {
           target 'src/**/*.java'
-          targetExclude 'src/*/java/net/consensys/linea/**/*.java', '**/zktracer/Trace*.java', '**/GlobalConstants.java', '**/BlockchainReferenceTest_*.java', '**/GeneralStateReferenceTest_*.java'
           // Do not use 'targetExclude' with wildcard patterns, it will add minutes to the build
           removeUnusedImports()
           trimTrailingWhitespace()
@@ -133,9 +132,9 @@ allprojects {
         }
 
         // Below this line are currently only license header tasks
-        format 'groovy', { target '**/src/*/groovy/**/*.groovy' }
-        format 'bash', { target '**/*.sh' }
-        format 'sol', { target '**/*.sol' }
+        // format 'groovy', { target '**/src/*/groovy/**/*.groovy' }
+        // format 'bash', { target '**/*.sh' }
+        // format 'sol', { target '**/*.sol' }
       }
     }
   }

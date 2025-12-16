@@ -22,7 +22,6 @@ import static net.consensys.linea.zktracer.instructionprocessing.utilities.MonoO
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import net.consensys.linea.reporting.TracerTestBase;
 import net.consensys.linea.testing.ToyExecutionEnvironmentV2;
 import net.consensys.linea.testing.TransactionProcessingResultValidator;

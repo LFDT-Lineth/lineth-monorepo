@@ -39,7 +39,6 @@ import static net.consensys.linea.zktracer.module.hub.fragment.scenario.Precompi
 import static net.consensys.linea.zktracer.module.mod.ModOperation.NB_ROWS_MOD;
 
 import java.util.Map;
-
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
@@ -215,11 +214,12 @@ public class PrecompileScenarioFragment implements TraceFragment {
         case PRC_SHA2_256 -> 1 + CT_MAX_SHA2;
         case PRC_RIPEMD_160 -> 1 + CT_MAX_RIPEMD;
         case PRC_IDENTITY -> 1 + CT_MAX_IDENTITY;
-        case PRC_MODEXP -> NB_ROWS_OOB_MODEXP_CDS
-            + 3 * NB_ROWS_OOB_MODEXP_XBS
-            + NB_ROWS_OOB_MODEXP_LEAD
-            + NB_ROWS_OOB_MODEXP_PRICING
-            + NB_ROWS_OOB_MODEXP_EXTRACT;
+        case PRC_MODEXP ->
+            NB_ROWS_OOB_MODEXP_CDS
+                + 3 * NB_ROWS_OOB_MODEXP_XBS
+                + NB_ROWS_OOB_MODEXP_LEAD
+                + NB_ROWS_OOB_MODEXP_PRICING
+                + NB_ROWS_OOB_MODEXP_EXTRACT;
         case PRC_ECADD -> CT_MAX_ECADD + 1;
         case PRC_ECMUL -> CT_MAX_ECMUL + 1;
         case PRC_ECPAIRING -> CT_MAX_ECPAIRING + 1;
@@ -245,8 +245,8 @@ public class PrecompileScenarioFragment implements TraceFragment {
         case PRC_BLS_G1_MSM -> cds != 0 && cds % PRECOMPILE_CALL_DATA_UNIT_SIZE___BLS_G1_MSM == 0;
         case PRC_BLS_G2_ADD -> cds == PRECOMPILE_CALL_DATA_SIZE___G2_ADD;
         case PRC_BLS_G2_MSM -> cds != 0 && cds % PRECOMPILE_CALL_DATA_UNIT_SIZE___BLS_G2_MSM == 0;
-        case PRC_BLS_PAIRING_CHECK -> cds != 0
-            && cds % PRECOMPILE_CALL_DATA_UNIT_SIZE___BLS_PAIRING_CHECK == 0;
+        case PRC_BLS_PAIRING_CHECK ->
+            cds != 0 && cds % PRECOMPILE_CALL_DATA_UNIT_SIZE___BLS_PAIRING_CHECK == 0;
         case PRC_BLS_MAP_FP_TO_G1 -> cds == PRECOMPILE_CALL_DATA_SIZE___FP_TO_G1;
         case PRC_BLS_MAP_FP2_TO_G2 -> cds == PRECOMPILE_CALL_DATA_SIZE___FP2_TO_G2;
         case PRC_P256_VERIFY -> cds == PRECOMPILE_CALL_DATA_SIZE___P256_VERIFY;
@@ -256,11 +256,8 @@ public class PrecompileScenarioFragment implements TraceFragment {
 
     public static short modLinesComingFromOobCall(PrecompileScenarioFragment.PrecompileFlag prc) {
       return switch (prc) {
-        case PRC_SHA2_256,
-            PRC_RIPEMD_160,
-            PRC_IDENTITY,
-            PRC_BLS_PAIRING_CHECK,
-            PRC_ECPAIRING -> NB_ROWS_MOD;
+        case PRC_SHA2_256, PRC_RIPEMD_160, PRC_IDENTITY, PRC_BLS_PAIRING_CHECK, PRC_ECPAIRING ->
+            NB_ROWS_MOD;
         case PRC_MODEXP, PRC_BLS_G1_MSM, PRC_BLS_G2_MSM -> (short) (NB_ROWS_MOD * 2);
         default -> 0;
       };

@@ -20,7 +20,6 @@ import static net.consensys.linea.zktracer.Trace.LINEA_BLOCK_GAS_LIMIT;
 import static net.consensys.linea.zktracer.Trace.LINEA_DIFFICULTY;
 
 import java.util.Optional;
-
 import lombok.Builder;
 import lombok.RequiredArgsConstructor;
 import org.apache.tuweni.bytes.Bytes;

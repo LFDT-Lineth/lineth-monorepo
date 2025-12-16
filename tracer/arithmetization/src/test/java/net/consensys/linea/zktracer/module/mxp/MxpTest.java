@@ -27,7 +27,6 @@ import static net.consensys.linea.zktracer.module.mxp.MxpTestUtils.opCodesType4H
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
 import net.consensys.linea.UnitTestWatcher;
 import net.consensys.linea.reporting.TracerTestBase;
 import net.consensys.linea.testing.BytecodeCompiler;
@@ -487,8 +486,8 @@ public class MxpTest extends TracerTestBase {
       case TYPE_1 -> opCodesType1[util.nextRandomInt(opCodesType1.length)];
       case TYPE_2 -> opCodesType2[util.nextRandomInt(opCodesType2.length)];
       case TYPE_3 -> opCodesType3[util.nextRandomInt(opCodesType3.length)];
-      case TYPE_4 -> opCodesType4ExcludingHalting[
-          util.nextRandomInt(opCodesType4ExcludingHalting.length)];
+      case TYPE_4 ->
+          opCodesType4ExcludingHalting[util.nextRandomInt(opCodesType4ExcludingHalting.length)];
       default -> OpCode.MSIZE; // We never enter the default case since we skip MxpType.NONE
     };
   }

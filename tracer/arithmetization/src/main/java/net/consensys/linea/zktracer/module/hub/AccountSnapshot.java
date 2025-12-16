@@ -20,7 +20,6 @@ import static com.google.common.base.Preconditions.checkState;
 import static net.consensys.linea.zktracer.types.AddressUtils.isAddressWarm;
 
 import java.util.Optional;
-
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;

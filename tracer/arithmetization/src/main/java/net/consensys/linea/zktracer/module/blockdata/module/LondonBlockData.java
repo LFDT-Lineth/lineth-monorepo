@@ -19,7 +19,6 @@ import static net.consensys.linea.zktracer.TraceLondon.Blockdata.*;
 import static net.consensys.linea.zktracer.opcode.OpCode.*;
 
 import java.util.Map;
-
 import net.consensys.linea.zktracer.ChainConfig;
 import net.consensys.linea.zktracer.module.euc.Euc;
 import net.consensys.linea.zktracer.module.hub.Hub;

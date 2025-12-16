@@ -21,7 +21,6 @@ import static net.consensys.linea.zktracer.module.Util.byteBits;
 
 import java.math.BigInteger;
 import java.util.Arrays;
-
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.experimental.Accessors;

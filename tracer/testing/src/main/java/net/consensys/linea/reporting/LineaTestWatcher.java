@@ -22,7 +22,6 @@ import static net.consensys.linea.reporting.TestState.ABORTED;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.TestWatcher;

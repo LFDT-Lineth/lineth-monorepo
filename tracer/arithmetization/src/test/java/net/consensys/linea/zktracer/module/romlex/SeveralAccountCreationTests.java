@@ -18,7 +18,6 @@ package net.consensys.linea.zktracer.module.romlex;
 import static net.consensys.linea.zktracer.Utils.*;
 
 import java.util.List;
-
 import net.consensys.linea.reporting.TracerTestBase;
 import net.consensys.linea.testing.BytecodeCompiler;
 import net.consensys.linea.testing.ToyAccount;

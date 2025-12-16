@@ -22,7 +22,6 @@ import static net.consensys.linea.zktracer.module.hub.section.systemTransaction.
 import static net.consensys.linea.zktracer.types.PublicInputs.LINEA_BLOB_BASE_FEE_BYTES;
 
 import java.util.*;
-
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.blockcapture.snapshots.AccountSnapshot;
 import net.consensys.linea.blockcapture.snapshots.BlockSnapshot;

@@ -17,10 +17,9 @@ package net.consensys.linea.zktracer.runtime.callstack;
 
 import static net.consensys.linea.zktracer.Trace.EVM_INST_STOP;
 
+import com.google.common.base.Preconditions;
 import java.util.ArrayList;
 import java.util.List;
-
-import com.google.common.base.Preconditions;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;

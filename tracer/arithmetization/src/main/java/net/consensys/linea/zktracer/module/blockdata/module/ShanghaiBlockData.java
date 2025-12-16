@@ -16,7 +16,6 @@
 package net.consensys.linea.zktracer.module.blockdata.module;
 
 import java.util.Map;
-
 import net.consensys.linea.zktracer.ChainConfig;
 import net.consensys.linea.zktracer.module.euc.Euc;
 import net.consensys.linea.zktracer.module.hub.Hub;

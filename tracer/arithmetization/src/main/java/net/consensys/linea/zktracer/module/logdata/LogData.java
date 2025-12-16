@@ -20,7 +20,6 @@ import static net.consensys.linea.zktracer.types.Utils.fromDataSizeToLimbCtMax;
 import static net.consensys.linea.zktracer.types.Utils.rightPadTo;
 
 import java.util.List;
-
 import lombok.RequiredArgsConstructor;
 import net.consensys.linea.zktracer.Trace;
 import net.consensys.linea.zktracer.container.module.Module;

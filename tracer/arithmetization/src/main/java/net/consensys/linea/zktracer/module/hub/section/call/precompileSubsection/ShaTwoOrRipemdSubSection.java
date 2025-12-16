@@ -22,7 +22,6 @@ import static net.consensys.linea.zktracer.module.shakiradata.HashFunction.RIPEM
 import static net.consensys.linea.zktracer.module.shakiradata.HashFunction.SHA256;
 
 import java.math.BigInteger;
-
 import net.consensys.linea.zktracer.module.hub.Hub;
 import net.consensys.linea.zktracer.module.hub.fragment.imc.ImcFragment;
 import net.consensys.linea.zktracer.module.hub.fragment.imc.mmu.MmuCall;
@@ -47,9 +46,11 @@ public class ShaTwoOrRipemdSubSection extends PrecompileSubsection {
         switch (flag()) {
           case PRC_SHA2_256 -> new Sha2OobCall(BigInteger.valueOf(calleeGas));
           case PRC_RIPEMD_160 -> new RipOobCall(BigInteger.valueOf(calleeGas));
-          default -> throw new IllegalArgumentException(
-              String.format(
-                  "Precompile address %s not supported by constructor", this.flag().toString()));
+          default ->
+              throw new IllegalArgumentException(
+                  String.format(
+                      "Precompile address %s not supported by constructor",
+                      this.flag().toString()));
         };
     oobCall = (CommonPrecompileOobCall) firstImcFragment.callOob(call);
 

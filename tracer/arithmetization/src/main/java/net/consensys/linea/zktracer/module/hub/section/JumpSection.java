@@ -77,8 +77,9 @@ public class JumpSection extends TraceSection {
             (JumpiOobCall) miscellaneousRow.callOob(new JumpiOobCall());
         mustAttemptJump = jumpiOobCall.isJumpMustBeAttempted();
       }
-      default -> throw new IllegalStateException(
-          hub.opCode().name() + " not part of the JUMP instruction family");
+      default ->
+          throw new IllegalStateException(
+              hub.opCode().name() + " not part of the JUMP instruction family");
     }
 
     // CONTEXT, ACCOUNT, MISCELLANEOUS

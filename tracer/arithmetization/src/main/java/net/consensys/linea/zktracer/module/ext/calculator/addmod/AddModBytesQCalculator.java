@@ -19,7 +19,6 @@ import static net.consensys.linea.zktracer.module.Util.uInt64ToBytes;
 import static net.consensys.linea.zktracer.module.ext.BigIntegerConverter.fromLongArray;
 
 import java.math.BigInteger;
-
 import net.consensys.linea.zktracer.bytestheta.BaseTheta;
 import net.consensys.linea.zktracer.bytestheta.BytesArray;
 import net.consensys.linea.zktracer.module.UtilCalculator;

@@ -16,6 +16,7 @@ package net.consensys.linea.reporting;
 
 import static net.consensys.linea.testing.ExecutionEnvironment.CORSET_VALIDATION_RESULT;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -27,8 +28,6 @@ import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.zktracer.json.JsonConverter;
 import org.opentest4j.AssertionFailedError;

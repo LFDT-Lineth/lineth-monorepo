@@ -24,7 +24,6 @@ import static net.consensys.linea.zktracer.types.Conversions.*;
 import static org.hyperledger.besu.evm.internal.Words.clampedToLong;
 
 import java.math.BigInteger;
-
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;

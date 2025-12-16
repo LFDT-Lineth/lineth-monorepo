@@ -17,6 +17,7 @@ package net.consensys.linea.zktracer.precompiles.modexp;
 import static net.consensys.linea.zktracer.types.Conversions.bytesToBoolean;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import com.google.common.base.Preconditions;
 import java.math.BigInteger;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -26,8 +27,6 @@ import java.util.Map;
 import java.util.Random;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
-import com.google.common.base.Preconditions;
 import net.consensys.linea.reporting.TracerTestBase;
 import net.consensys.linea.testing.BytecodeCompiler;
 import net.consensys.linea.testing.BytecodeRunner;

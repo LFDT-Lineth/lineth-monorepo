@@ -28,7 +28,6 @@ import static net.consensys.linea.zktracer.types.Conversions.reallyToSignedBigIn
 
 import java.math.BigInteger;
 import java.security.InvalidParameterException;
-
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.experimental.Accessors;

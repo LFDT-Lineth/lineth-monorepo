@@ -18,7 +18,6 @@ package net.consensys.linea.zktracer.module.hub.state;
 import static com.google.common.base.Preconditions.checkState;
 
 import java.util.*;
-
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.Accessors;

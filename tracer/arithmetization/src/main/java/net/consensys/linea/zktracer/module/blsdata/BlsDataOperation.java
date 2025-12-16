@@ -59,9 +59,8 @@ import static net.consensys.linea.zktracer.types.Conversions.ZERO;
 import static net.consensys.linea.zktracer.types.Conversions.bigIntegerToBytes;
 import static net.consensys.linea.zktracer.types.Utils.leftPadTo;
 
-import java.util.List;
-
 import com.google.common.base.Preconditions;
+import java.util.List;
 import lombok.Getter;
 import lombok.experimental.Accessors;
 import net.consensys.linea.zktracer.Trace;
@@ -208,8 +207,10 @@ public class BlsDataOperation extends ModuleOperation {
       case PRC_BLS_PAIRING_CHECK -> blsDataOperation.handleBlsPairingCheck();
       case PRC_BLS_MAP_FP_TO_G1 -> blsDataOperation.handleBlsMapFpToG1();
       case PRC_BLS_MAP_FP2_TO_G2 -> blsDataOperation.handleBlsMapFp2ToG2();
-      default -> throw new IllegalArgumentException(
-          "BlsOperation expects to be called on a bls precompile, not on " + precompileFlag.name());
+      default ->
+          throw new IllegalArgumentException(
+              "BlsOperation expects to be called on a bls precompile, not on "
+                  + precompileFlag.name());
     }
     blsDataOperation.handleGlobalColumns();
     return blsDataOperation;
@@ -642,13 +643,13 @@ public class BlsDataOperation extends ModuleOperation {
           switch (precompileFlag) {
             case PRC_POINT_EVALUATION -> i <= CT_MAX_POINT_EVALUATION;
             case PRC_BLS_G1_ADD -> i <= CT_MAX_SMALL_POINT;
-            case PRC_BLS_G1_MSM -> (i % (CT_MAX_SMALL_POINT + CT_MAX_SCALAR + 2))
-                <= CT_MAX_SMALL_POINT;
+            case PRC_BLS_G1_MSM ->
+                (i % (CT_MAX_SMALL_POINT + CT_MAX_SCALAR + 2)) <= CT_MAX_SMALL_POINT;
             case PRC_BLS_G2_ADD -> i <= CT_MAX_LARGE_POINT;
-            case PRC_BLS_G2_MSM -> (i % (CT_MAX_LARGE_POINT + CT_MAX_SCALAR + 2))
-                <= CT_MAX_LARGE_POINT;
-            case PRC_BLS_PAIRING_CHECK -> (i % (CT_MAX_SMALL_POINT + CT_MAX_LARGE_POINT + 2))
-                <= CT_MAX_SMALL_POINT;
+            case PRC_BLS_G2_MSM ->
+                (i % (CT_MAX_LARGE_POINT + CT_MAX_SCALAR + 2)) <= CT_MAX_LARGE_POINT;
+            case PRC_BLS_PAIRING_CHECK ->
+                (i % (CT_MAX_SMALL_POINT + CT_MAX_LARGE_POINT + 2)) <= CT_MAX_SMALL_POINT;
             case PRC_BLS_MAP_FP_TO_G1 -> i <= CT_MAX_MAP_FP_TO_G1;
             case PRC_BLS_MAP_FP2_TO_G2 -> i <= CT_MAX_MAP_FP2_TO_G2;
             default -> throw new IllegalStateException("invalid BLS type");

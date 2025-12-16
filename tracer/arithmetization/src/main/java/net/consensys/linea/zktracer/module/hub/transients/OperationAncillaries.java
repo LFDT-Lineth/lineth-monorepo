@@ -66,8 +66,9 @@ public class OperationAncillaries {
         long length = Words.clampedToLong(frame.getStackItem(3));
         return Range.fromOffsetAndSize(offset, length);
       }
-      default -> throw new IllegalArgumentException(
-          "callDataSegment called outside of a CALL-type instruction");
+      default ->
+          throw new IllegalArgumentException(
+              "callDataSegment called outside of a CALL-type instruction");
     }
   }
 
@@ -78,8 +79,8 @@ public class OperationAncillaries {
         long length = Words.clampedToLong(frame.getStackItem(2));
         return Range.fromOffsetAndSize(offset, length);
       }
-      default -> throw new IllegalArgumentException(
-          "callDataSegment called outside of a CREATE(2)");
+      default ->
+          throw new IllegalArgumentException("callDataSegment called outside of a CREATE(2)");
     }
   }
 
@@ -142,8 +143,9 @@ public class OperationAncillaries {
         long length = Words.clampedToLong(frame.getStackItem(5));
         return Range.fromOffsetAndSize(offset, length);
       }
-      default -> throw new IllegalArgumentException(
-          "returnDataRequestedSegment called outside of a *CALL");
+      default ->
+          throw new IllegalArgumentException(
+              "returnDataRequestedSegment called outside of a *CALL");
     }
   }
 }

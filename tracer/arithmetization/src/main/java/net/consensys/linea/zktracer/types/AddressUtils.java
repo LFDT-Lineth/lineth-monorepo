@@ -27,7 +27,6 @@ import static org.hyperledger.besu.evm.internal.Words.clampedToLong;
 
 import java.util.List;
 import java.util.stream.Stream;
-
 import net.consensys.linea.zktracer.Fork;
 import net.consensys.linea.zktracer.module.hub.transients.OperationAncillaries;
 import net.consensys.linea.zktracer.opcode.OpCode;

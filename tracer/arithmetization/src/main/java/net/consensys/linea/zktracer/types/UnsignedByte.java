@@ -15,9 +15,8 @@
 
 package net.consensys.linea.zktracer.types;
 
-import java.math.BigInteger;
-
 import com.fasterxml.jackson.annotation.JsonValue;
+import java.math.BigInteger;
 
 /** Represents an unsigned byte type. */
 public class UnsignedByte {

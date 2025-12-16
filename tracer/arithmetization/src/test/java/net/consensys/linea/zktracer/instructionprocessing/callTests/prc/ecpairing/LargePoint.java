@@ -47,7 +47,7 @@ public enum LargePoint {
         switch (this) {
           case INFINITY -> LARGE_POINT_AT_INFINITY;
           case VALID_LARGE_POINT -> G2_POINT_5;
-            // case RAND -> RANDOM_HEX_STRING.substring(31, 31 + 4 * WORD_HEX_SIZE);
+          // case RAND -> RANDOM_HEX_STRING.substring(31, 31 + 4 * WORD_HEX_SIZE);
           case RE_X_NOT_IN_FIELD -> IN_RANGE_SAVE_FOR_LARGE_RE_X;
           case IM_X_NOT_IN_FIELD -> IN_RANGE_SAVE_FOR_LARGE_IM_X;
           case RE_Y_NOT_IN_FIELD -> IN_RANGE_SAVE_FOR_LARGE_RE_Y;

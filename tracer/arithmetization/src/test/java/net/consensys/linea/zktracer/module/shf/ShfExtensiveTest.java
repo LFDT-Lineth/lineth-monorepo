@@ -22,7 +22,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
-
 import lombok.Getter;
 import lombok.experimental.Accessors;
 import net.consensys.linea.UnitTestWatcher;

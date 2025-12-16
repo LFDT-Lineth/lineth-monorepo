@@ -31,7 +31,6 @@ import static org.hyperledger.besu.datatypes.TransactionType.*;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
-
 import lombok.Getter;
 import net.consensys.linea.zktracer.Trace;
 import net.consensys.linea.zktracer.module.euc.Euc;
@@ -301,8 +300,9 @@ public class LondonTxnDataOperation extends TxnDataOperation {
     return switch (tx.getBesuTransaction().getType()) {
       case FRONTIER, ACCESS_LIST -> tx.getBesuTransaction().getGasPrice().get().getAsBigInteger();
       case EIP1559 -> tx.getBesuTransaction().getMaxFeePerGas().get().getAsBigInteger();
-      default -> throw new RuntimeException(
-          "Transaction type not supported:" + tx.getBesuTransaction().getType());
+      default ->
+          throw new RuntimeException(
+              "Transaction type not supported:" + tx.getBesuTransaction().getType());
     };
   }
 
@@ -404,8 +404,9 @@ public class LondonTxnDataOperation extends TxnDataOperation {
       case FRONTIER -> NB_ROWS_TYPE_0;
       case ACCESS_LIST -> NB_ROWS_TYPE_1;
       case EIP1559 -> NB_ROWS_TYPE_2;
-      default -> throw new RuntimeException(
-          "Transaction type not supported:" + tx.getBesuTransaction().getType());
+      default ->
+          throw new RuntimeException(
+              "Transaction type not supported:" + tx.getBesuTransaction().getType());
     };
   }
 }

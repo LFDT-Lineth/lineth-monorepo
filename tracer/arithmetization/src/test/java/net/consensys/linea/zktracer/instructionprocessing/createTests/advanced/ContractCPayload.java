@@ -16,7 +16,6 @@ package net.consensys.linea.zktracer.instructionprocessing.createTests.advanced;
 
 import java.util.Arrays;
 import java.util.Collections;
-
 import net.consensys.linea.testing.generated.ContractC;
 import org.apache.tuweni.bytes.Bytes;
 import org.web3j.abi.FunctionEncoder;

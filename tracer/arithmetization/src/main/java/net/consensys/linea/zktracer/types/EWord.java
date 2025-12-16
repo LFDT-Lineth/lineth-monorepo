@@ -18,7 +18,6 @@ package net.consensys.linea.zktracer.types;
 import static net.consensys.linea.zktracer.types.Conversions.bigIntegerToBytes;
 
 import java.math.BigInteger;
-
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.units.bigints.BaseUInt256Value;
 import org.apache.tuweni.units.bigints.UInt256;

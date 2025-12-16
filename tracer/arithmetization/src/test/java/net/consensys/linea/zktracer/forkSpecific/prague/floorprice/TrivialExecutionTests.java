@@ -17,11 +17,10 @@ package net.consensys.linea.zktracer.forkSpecific.prague.floorprice;
 
 import static net.consensys.linea.zktracer.Fork.isPostPrague;
 
+import com.google.common.base.Preconditions;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
-
-import com.google.common.base.Preconditions;
 import net.consensys.linea.UnitTestWatcher;
 import net.consensys.linea.reporting.TracerTestBase;
 import net.consensys.linea.testing.AddressCollisions;
@@ -203,12 +202,13 @@ public class TrivialExecutionTests extends TracerTestBase {
         "length must be at least 2");
     return switch (callDataSetting) {
       case ALL_ZEROS -> Bytes.fromHexString("00".repeat(length));
-      case ZEROS_AND_NON_ZEROS -> Bytes.fromHexString(
-          (startsWithZero ? "0000" : "0100")
-              + "ff00".repeat((length - 2) / 2)
-              + (length % 2 == 0 ? "" : "ff"));
-      case ALL_NON_ZEROS_EXCEPT_FOR_FIRST -> Bytes.fromHexString(
-          (startsWithZero ? "00" : "01") + "ff".repeat(length - 1));
+      case ZEROS_AND_NON_ZEROS ->
+          Bytes.fromHexString(
+              (startsWithZero ? "0000" : "0100")
+                  + "ff00".repeat((length - 2) / 2)
+                  + (length % 2 == 0 ? "" : "ff"));
+      case ALL_NON_ZEROS_EXCEPT_FOR_FIRST ->
+          Bytes.fromHexString((startsWithZero ? "00" : "01") + "ff".repeat(length - 1));
     };
   }
 

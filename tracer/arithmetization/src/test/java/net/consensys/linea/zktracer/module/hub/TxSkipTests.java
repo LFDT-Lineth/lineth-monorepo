@@ -19,7 +19,6 @@ import static net.consensys.linea.testing.ToyExecutionEnvironmentV2.DEFAULT_COIN
 import static net.consensys.linea.zktracer.types.AddressUtils.getCreateRawAddress;
 
 import java.util.List;
-
 import net.consensys.linea.UnitTestWatcher;
 import net.consensys.linea.reporting.TracerTestBase;
 import net.consensys.linea.testing.ToyAccount;

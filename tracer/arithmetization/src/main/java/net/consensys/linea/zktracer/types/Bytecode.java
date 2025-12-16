@@ -17,7 +17,6 @@ package net.consensys.linea.zktracer.types;
 
 import java.util.Objects;
 import java.util.concurrent.*;
-
 import lombok.Getter;
 import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;

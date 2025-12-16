@@ -36,9 +36,7 @@ public class InstructionBytes32 extends RlpUtilsCall {
   }
 
   @Override
-  protected void compute() {
-
-  }
+  protected void compute() {}
 
   @Override
   public void traceRlpTxn(
@@ -52,13 +50,14 @@ public class InstructionBytes32 extends RlpUtilsCall {
     tracedValues.decrementLtAndLxSizeBy(ct == 0 ? 1 : LLARGE);
     trace.limbConstructed(true).lt(true).lx(true).ct(ct).ctMax(RLP_TXN_CT_MAX_BYTES32);
     switch (ct) {
-      case 0 -> trace
-          .pCmpRlputilsFlag(true)
-          .pCmpRlputilsInst(RLP_UTILS_INST_BYTES32)
-          .pCmpExoData1(data1())
-          .pCmpExoData2(data2())
-          .pCmpLimb(BYTES16_PREFIX_BYTES32)
-          .pCmpLimbSize(1);
+      case 0 ->
+          trace
+              .pCmpRlputilsFlag(true)
+              .pCmpRlputilsInst(RLP_UTILS_INST_BYTES32)
+              .pCmpExoData1(data1())
+              .pCmpExoData2(data2())
+              .pCmpLimb(BYTES16_PREFIX_BYTES32)
+              .pCmpLimbSize(1);
       case 1 -> trace.pCmpLimb(data1()).pCmpLimbSize(LLARGE);
       case 2 -> trace.pCmpLimb(data2()).pCmpLimbSize(LLARGE);
       default -> throw new IllegalArgumentException("Invalid counter: " + ct);
@@ -67,11 +66,7 @@ public class InstructionBytes32 extends RlpUtilsCall {
 
   @Override
   protected void traceMacro(Trace.Rlputils trace) {
-    trace
-        .inst(RLP_UTILS_INST_BYTES32)
-        .data1(data1())
-        .data2(data2())
-        .fillAndValidateRow();
+    trace.inst(RLP_UTILS_INST_BYTES32).data1(data1()).data2(data2()).fillAndValidateRow();
   }
 
   @Override

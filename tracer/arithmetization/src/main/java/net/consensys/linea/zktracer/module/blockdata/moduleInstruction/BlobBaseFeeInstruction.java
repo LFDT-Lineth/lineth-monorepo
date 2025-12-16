@@ -18,7 +18,6 @@ import static net.consensys.linea.zktracer.TraceCancun.Blockdata.nROWS_BL;
 import static net.consensys.linea.zktracer.types.PublicInputs.LINEA_BLOB_BASE_FEE_BYTES;
 
 import java.util.Map;
-
 import net.consensys.linea.zktracer.ChainConfig;
 import net.consensys.linea.zktracer.Trace;
 import net.consensys.linea.zktracer.module.blockdata.BlockDataExoCall;

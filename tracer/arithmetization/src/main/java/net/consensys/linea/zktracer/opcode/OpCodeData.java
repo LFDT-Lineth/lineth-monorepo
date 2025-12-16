@@ -21,7 +21,6 @@ import static net.consensys.linea.zktracer.opcode.InstructionFamily.*;
 import static net.consensys.linea.zktracer.opcode.OpCode.MSIZE;
 
 import java.util.Objects;
-
 import net.consensys.linea.zktracer.Fork;
 import net.consensys.linea.zktracer.opcode.gas.Billing;
 import net.consensys.linea.zktracer.opcode.gas.MxpType;

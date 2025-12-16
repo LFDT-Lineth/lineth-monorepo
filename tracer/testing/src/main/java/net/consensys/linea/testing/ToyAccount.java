@@ -18,13 +18,12 @@ package net.consensys.linea.testing;
 
 import static com.google.common.base.Preconditions.*;
 
+import com.google.common.base.Suppliers;
 import java.security.KeyPair;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.function.Supplier;
-
-import com.google.common.base.Suppliers;
 import lombok.Builder;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;

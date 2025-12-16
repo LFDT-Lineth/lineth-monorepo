@@ -20,7 +20,6 @@ import static net.consensys.linea.zktracer.opcode.OpCode.*;
 import static net.consensys.linea.zktracer.opcode.OpCode.SELFDESTRUCT;
 
 import java.util.Optional;
-
 import net.consensys.linea.testing.BytecodeCompiler;
 import net.consensys.linea.testing.ToyAccount;
 import net.consensys.linea.zktracer.ChainConfig;

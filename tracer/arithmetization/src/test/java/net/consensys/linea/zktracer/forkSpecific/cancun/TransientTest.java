@@ -18,7 +18,6 @@ package net.consensys.linea.zktracer.forkSpecific.cancun;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
-
 import net.consensys.linea.reporting.TracerTestBase;
 import net.consensys.linea.testing.*;
 import net.consensys.linea.zktracer.opcode.OpCode;

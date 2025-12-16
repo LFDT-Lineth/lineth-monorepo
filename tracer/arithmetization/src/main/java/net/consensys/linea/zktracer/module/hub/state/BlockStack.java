@@ -17,7 +17,6 @@ package net.consensys.linea.zktracer.module.hub.state;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import lombok.Getter;
 import lombok.experimental.Accessors;
 import org.hyperledger.besu.datatypes.Address;

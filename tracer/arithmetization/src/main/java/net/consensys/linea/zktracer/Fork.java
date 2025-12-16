@@ -56,7 +56,7 @@ public enum Fork {
       case CANCUN -> "cancun";
       case PRAGUE -> "prague";
       case OSAKA -> "osaka";
-        // case AMSTERDAM -> "amsterdam";
+      // case AMSTERDAM -> "amsterdam";
       default -> throw new IllegalArgumentException("Unknown fork: " + fork);
     };
   }
@@ -128,9 +128,9 @@ public enum Fork {
       case MainnetHardforkId.CANCUN -> CANCUN;
       case MainnetHardforkId.PRAGUE -> PRAGUE;
       case MainnetHardforkId.OSAKA -> OSAKA;
-        // case MainnetHardforkId.AMSTERDAM -> AMSTERDAM;
-      default -> throw new IllegalArgumentException(
-          "Fork not supported by the tracer: " + hardForkId);
+      // case MainnetHardforkId.AMSTERDAM -> AMSTERDAM;
+      default ->
+          throw new IllegalArgumentException("Fork not supported by the tracer: " + hardForkId);
     };
   }
 

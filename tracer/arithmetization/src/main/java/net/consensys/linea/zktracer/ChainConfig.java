@@ -24,7 +24,6 @@ import static net.consensys.linea.zktracer.Trace.LINEA_GAS_LIMIT_MINIMUM;
 import static net.consensys.linea.zktracer.Trace.LINEA_SEPOLIA_CHAIN_ID;
 
 import java.math.BigInteger;
-
 import net.consensys.linea.plugins.config.LineaL1L2BridgeSharedConfiguration;
 
 /**

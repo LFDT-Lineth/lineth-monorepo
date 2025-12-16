@@ -18,13 +18,12 @@ package net.consensys.linea.plugins.rpc.tracegeneration;
 import static net.consensys.linea.zktracer.Fork.getForkFromBesuBlockchainService;
 import static net.consensys.linea.zktracer.types.PublicInputs.*;
 
+import com.google.common.base.Stopwatch;
 import java.math.BigInteger;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Optional;
-
-import com.google.common.base.Stopwatch;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.plugins.BesuServiceProvider;
 import net.consensys.linea.plugins.config.LineaL1L2BridgeSharedConfiguration;

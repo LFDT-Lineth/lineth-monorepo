@@ -15,9 +15,8 @@
 
 package net.consensys.linea.testing;
 
-import java.util.List;
-
 import com.fasterxml.jackson.databind.node.ArrayNode;
+import java.util.List;
 
 public final class ExecutionProof {
 

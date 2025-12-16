@@ -21,7 +21,6 @@ import static net.consensys.linea.zktracer.types.Utils.leftPadTo;
 import static org.junit.jupiter.api.parallel.ExecutionMode.SAME_THREAD;
 
 import java.util.List;
-
 import net.consensys.linea.reporting.TracerTestBase;
 import net.consensys.linea.testing.BytecodeCompiler;
 import net.consensys.linea.testing.MultiBlockExecutionEnvironment;

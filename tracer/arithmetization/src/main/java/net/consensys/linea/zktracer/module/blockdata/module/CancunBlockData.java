@@ -23,7 +23,6 @@ import static net.consensys.linea.zktracer.opcode.OpCode.GASLIMIT;
 import static net.consensys.linea.zktracer.opcode.OpCode.PREVRANDAO;
 
 import java.util.Map;
-
 import net.consensys.linea.zktracer.ChainConfig;
 import net.consensys.linea.zktracer.module.euc.Euc;
 import net.consensys.linea.zktracer.module.hub.Hub;

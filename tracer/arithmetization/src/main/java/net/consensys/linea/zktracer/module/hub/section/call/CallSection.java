@@ -25,7 +25,6 @@ import static net.consensys.linea.zktracer.types.AddressUtils.*;
 import static net.consensys.linea.zktracer.types.Conversions.bytesToBoolean;
 
 import java.util.Optional;
-
 import lombok.Getter;
 import lombok.Setter;
 import net.consensys.linea.zktracer.module.hub.AccountSnapshot;
@@ -371,7 +370,8 @@ public class CallSection extends TraceSection
           PRC_ECADD,
           PRC_ECMUL,
           PRC_ECPAIRING,
-          PRC_P256_VERIFY -> new EllipticCurvePrecompileSubsection(hub, this);
+          PRC_P256_VERIFY ->
+          new EllipticCurvePrecompileSubsection(hub, this);
       case PRC_SHA2_256, PRC_RIPEMD_160 -> new ShaTwoOrRipemdSubSection(hub, this);
       case PRC_IDENTITY -> new IdentitySubsection(hub, this);
       case PRC_MODEXP -> {
@@ -581,8 +581,8 @@ public class CallSection extends TraceSection
       case CALL_ABORT_WONT_REVERT -> completeAbortWillRevert(hub);
       case CALL_EOA_SUCCESS_WONT_REVERT -> completeEoaSuccessWillRevert(hub);
       case CALL_SMC_FAILURE_WONT_REVERT -> completeSmcFailureWillRevert(hub);
-      case CALL_SMC_SUCCESS_WONT_REVERT,
-          CALL_PRC_SUCCESS_WONT_REVERT -> completeSmcOrPrcSuccessWillRevert(hub);
+      case CALL_SMC_SUCCESS_WONT_REVERT, CALL_PRC_SUCCESS_WONT_REVERT ->
+          completeSmcOrPrcSuccessWillRevert(hub);
       case CALL_PRC_FAILURE -> {
         // Note: no undoing required
         //  - account snapshots were taken with value transfers undone

@@ -25,7 +25,6 @@ import static net.consensys.linea.zktracer.types.Conversions.bigIntegerToBytes;
 
 import java.math.BigInteger;
 import java.util.Arrays;
-
 import lombok.Getter;
 import net.consensys.linea.zktracer.Trace;
 import net.consensys.linea.zktracer.module.hub.Hub;
@@ -155,20 +154,23 @@ public class LondonMxpOperation extends MxpOperation {
   protected void setRoob() {
     roob =
         switch (typeMxp) {
-          case TYPE_2, TYPE_3 -> londonMxpCall
-                  .getOffset1()
-                  .toUnsignedBigInteger()
-                  .compareTo(TWO_POW_128)
-              >= 0;
-          case TYPE_4 -> londonMxpCall.getSize1().toUnsignedBigInteger().compareTo(TWO_POW_128) >= 0
-              || (londonMxpCall.getOffset1().toUnsignedBigInteger().compareTo(TWO_POW_128) >= 0
-                  && !londonMxpCall.getSize1().toUnsignedBigInteger().equals(BigInteger.ZERO));
-          case TYPE_5 -> londonMxpCall.getSize1().toUnsignedBigInteger().compareTo(TWO_POW_128) >= 0
-              || (londonMxpCall.getOffset1().toUnsignedBigInteger().compareTo(TWO_POW_128) >= 0
-                  && !londonMxpCall.getSize1().toUnsignedBigInteger().equals(BigInteger.ZERO))
-              || (londonMxpCall.getSize2().toUnsignedBigInteger().compareTo(TWO_POW_128) >= 0
-                  || (londonMxpCall.getOffset2().toUnsignedBigInteger().compareTo(TWO_POW_128) >= 0
-                      && !londonMxpCall.getSize2().toUnsignedBigInteger().equals(BigInteger.ZERO)));
+          case TYPE_2, TYPE_3 ->
+              londonMxpCall.getOffset1().toUnsignedBigInteger().compareTo(TWO_POW_128) >= 0;
+          case TYPE_4 ->
+              londonMxpCall.getSize1().toUnsignedBigInteger().compareTo(TWO_POW_128) >= 0
+                  || (londonMxpCall.getOffset1().toUnsignedBigInteger().compareTo(TWO_POW_128) >= 0
+                      && !londonMxpCall.getSize1().toUnsignedBigInteger().equals(BigInteger.ZERO));
+          case TYPE_5 ->
+              londonMxpCall.getSize1().toUnsignedBigInteger().compareTo(TWO_POW_128) >= 0
+                  || (londonMxpCall.getOffset1().toUnsignedBigInteger().compareTo(TWO_POW_128) >= 0
+                      && !londonMxpCall.getSize1().toUnsignedBigInteger().equals(BigInteger.ZERO))
+                  || (londonMxpCall.getSize2().toUnsignedBigInteger().compareTo(TWO_POW_128) >= 0
+                      || (londonMxpCall.getOffset2().toUnsignedBigInteger().compareTo(TWO_POW_128)
+                              >= 0
+                          && !londonMxpCall
+                              .getSize2()
+                              .toUnsignedBigInteger()
+                              .equals(BigInteger.ZERO)));
           default -> false;
         };
   }
@@ -195,8 +197,9 @@ public class LondonMxpOperation extends MxpOperation {
   protected void setMaxOffset1and2() {
     if (getMxpExecutionPath() != mxpExecutionPath.TRIVIAL) {
       switch (typeMxp) {
-        case TYPE_2 -> maxOffset1 =
-            londonMxpCall.getOffset1().toUnsignedBigInteger().add(BigInteger.valueOf(31));
+        case TYPE_2 ->
+            maxOffset1 =
+                londonMxpCall.getOffset1().toUnsignedBigInteger().add(BigInteger.valueOf(31));
         case TYPE_3 -> maxOffset1 = londonMxpCall.getOffset1().toUnsignedBigInteger();
         case TYPE_4 -> {
           if (!londonMxpCall.getSize1().toUnsignedBigInteger().equals(BigInteger.ZERO)) {
@@ -422,16 +425,20 @@ public class LondonMxpOperation extends MxpOperation {
   private void setWordsNew(final MessageFrame frame) {
     if (getMxpExecutionPath() == LondonMxpOperation.mxpExecutionPath.NON_TRIVIAL && expands) {
       switch (getTypeMxp()) {
-        case TYPE_1 -> wordsNew =
-            frame.calculateMemoryExpansion(Words.clampedToLong(londonMxpCall.getOffset1()), 0);
-        case TYPE_2 -> wordsNew =
-            frame.calculateMemoryExpansion(Words.clampedToLong(londonMxpCall.getOffset1()), 32);
-        case TYPE_3 -> wordsNew =
-            frame.calculateMemoryExpansion(Words.clampedToLong(londonMxpCall.getOffset1()), 1);
-        case TYPE_4 -> wordsNew =
-            frame.calculateMemoryExpansion(
-                Words.clampedToLong(londonMxpCall.getOffset1()),
-                Words.clampedToLong(londonMxpCall.getSize1()));
+        case TYPE_1 ->
+            wordsNew =
+                frame.calculateMemoryExpansion(Words.clampedToLong(londonMxpCall.getOffset1()), 0);
+        case TYPE_2 ->
+            wordsNew =
+                frame.calculateMemoryExpansion(Words.clampedToLong(londonMxpCall.getOffset1()), 32);
+        case TYPE_3 ->
+            wordsNew =
+                frame.calculateMemoryExpansion(Words.clampedToLong(londonMxpCall.getOffset1()), 1);
+        case TYPE_4 ->
+            wordsNew =
+                frame.calculateMemoryExpansion(
+                    Words.clampedToLong(londonMxpCall.getOffset1()),
+                    Words.clampedToLong(londonMxpCall.getSize1()));
         case TYPE_5 -> {
           long wordsNew1 =
               frame.calculateMemoryExpansion(

@@ -21,7 +21,6 @@ import static net.consensys.linea.zktracer.module.hub.signals.Exceptions.OUT_OF_
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-
 import lombok.Getter;
 import net.consensys.linea.zktracer.module.hub.AccountSnapshot;
 import net.consensys.linea.zktracer.module.hub.Hub;

@@ -86,8 +86,8 @@ public class OsakaModexpXbsOobCall extends LondonModexpXbsOobCall {
   protected boolean computeMax() {
     return switch (modexpXbsCase) {
       case MODEXP_XBS_CASE_BBS, MODEXP_XBS_CASE_EBS -> false;
-      case MODEXP_XBS_CASE_MBS -> getForkAppropriateModexpMetadata()
-          .tracedIsWithinBounds(MODEXP_XBS_CASE_BBS);
+      case MODEXP_XBS_CASE_MBS ->
+          getForkAppropriateModexpMetadata().tracedIsWithinBounds(MODEXP_XBS_CASE_BBS);
     };
   }
 }

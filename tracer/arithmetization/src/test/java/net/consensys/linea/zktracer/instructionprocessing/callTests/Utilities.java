@@ -22,7 +22,6 @@ import java.util.Calendar;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
-
 import net.consensys.linea.UnitTestWatcher;
 import net.consensys.linea.testing.BytecodeCompiler;
 import net.consensys.linea.zktracer.opcode.OpCode;

@@ -20,7 +20,6 @@ import static net.consensys.linea.zktracer.module.hub.signals.TracedException.RE
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.List;
-
 import net.consensys.linea.UnitTestWatcher;
 import net.consensys.linea.reporting.TracerTestBase;
 import net.consensys.linea.testing.BytecodeCompiler;

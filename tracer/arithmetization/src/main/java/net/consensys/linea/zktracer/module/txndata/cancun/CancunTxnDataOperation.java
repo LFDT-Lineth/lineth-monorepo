@@ -18,7 +18,6 @@ import static net.consensys.linea.zktracer.module.hub.TransactionProcessingType.
 
 import java.util.ArrayList;
 import java.util.List;
-
 import net.consensys.linea.zktracer.Trace;
 import net.consensys.linea.zktracer.module.euc.Euc;
 import net.consensys.linea.zktracer.module.hub.Hub;

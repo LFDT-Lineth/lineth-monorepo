@@ -19,7 +19,6 @@ import static com.google.common.base.Preconditions.*;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
-
 import org.apache.tuweni.bytes.Bytes;
 
 public class Pattern {

@@ -16,7 +16,6 @@
 package net.consensys.linea.zktracer.module.rlptxn.london;
 
 import java.math.BigInteger;
-
 import org.apache.tuweni.bytes.Bytes;
 
 class RlpTxnColumnsValue {

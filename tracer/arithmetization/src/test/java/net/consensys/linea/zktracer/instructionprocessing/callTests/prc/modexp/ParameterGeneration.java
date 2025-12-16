@@ -19,7 +19,6 @@ import static net.consensys.linea.zktracer.opcode.OpCode.STATICCALL;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import net.consensys.linea.zktracer.instructionprocessing.callTests.prc.*;
 import net.consensys.linea.zktracer.opcode.OpCode;
 import org.junit.jupiter.params.provider.Arguments;

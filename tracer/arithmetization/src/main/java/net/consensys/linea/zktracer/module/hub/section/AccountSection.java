@@ -17,9 +17,8 @@ package net.consensys.linea.zktracer.module.hub.section;
 
 import static net.consensys.linea.zktracer.opcode.OpCode.*;
 
-import java.util.List;
-
 import com.google.common.base.Preconditions;
+import java.util.List;
 import net.consensys.linea.zktracer.module.hub.AccountSnapshot;
 import net.consensys.linea.zktracer.module.hub.Hub;
 import net.consensys.linea.zktracer.module.hub.TransactionProcessingType;
@@ -100,21 +99,23 @@ public class AccountSection extends TraceSection implements PostRollbackDefer {
 
     final AccountFragment doingAccountFragment =
         switch (hub.opCode()) {
-          case BALANCE, EXTCODESIZE, EXTCODEHASH -> hub.factories()
-              .accountFragment()
-              .makeWithTrm(
-                  firstAccountSnapshot,
-                  firstAccountSnapshotNew,
-                  rawTargetAddress,
-                  doingDomSubStamps,
-                  TransactionProcessingType.USER);
-          case SELFBALANCE, CODESIZE -> hub.factories()
-              .accountFragment()
-              .make(
-                  firstAccountSnapshot,
-                  firstAccountSnapshotNew,
-                  doingDomSubStamps,
-                  TransactionProcessingType.USER);
+          case BALANCE, EXTCODESIZE, EXTCODEHASH ->
+              hub.factories()
+                  .accountFragment()
+                  .makeWithTrm(
+                      firstAccountSnapshot,
+                      firstAccountSnapshotNew,
+                      rawTargetAddress,
+                      doingDomSubStamps,
+                      TransactionProcessingType.USER);
+          case SELFBALANCE, CODESIZE ->
+              hub.factories()
+                  .accountFragment()
+                  .make(
+                      firstAccountSnapshot,
+                      firstAccountSnapshotNew,
+                      doingDomSubStamps,
+                      TransactionProcessingType.USER);
           default -> throw new IllegalStateException("Not an ACCOUNT instruction");
         };
     this.addFragment(doingAccountFragment);

@@ -24,7 +24,6 @@ import static net.consensys.linea.zktracer.types.Conversions.longToBytes32;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import lombok.Getter;
 import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;

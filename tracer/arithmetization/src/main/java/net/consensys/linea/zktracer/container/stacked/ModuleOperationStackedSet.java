@@ -18,10 +18,9 @@ package net.consensys.linea.zktracer.container.stacked;
 import static net.consensys.linea.zktracer.container.stacked.ModuleOperationAdder.existingOperation;
 import static net.consensys.linea.zktracer.container.stacked.ModuleOperationAdder.newOperation;
 
+import com.google.common.base.Preconditions;
 import java.util.*;
 import java.util.stream.Stream;
-
-import com.google.common.base.Preconditions;
 import lombok.Getter;
 import lombok.experimental.Accessors;
 import net.consensys.linea.zktracer.container.ModuleOperation;

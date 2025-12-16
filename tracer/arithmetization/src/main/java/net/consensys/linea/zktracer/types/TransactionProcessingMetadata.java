@@ -25,7 +25,6 @@ import static org.hyperledger.besu.datatypes.TransactionType.FRONTIER;
 
 import java.math.BigInteger;
 import java.util.*;
-
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
@@ -356,8 +355,8 @@ public class TransactionProcessingMetadata {
         final long maxFeePerGas = tx.getMaxFeePerGas().get().getAsBigInteger().longValueExact();
         return Math.min(baseFee + maxPriorityFee, maxFeePerGas);
       }
-      default -> throw new IllegalArgumentException(
-          "Transaction type not supported: " + tx.getType());
+      default ->
+          throw new IllegalArgumentException("Transaction type not supported: " + tx.getType());
     }
   }
 
@@ -396,8 +395,9 @@ public class TransactionProcessingMetadata {
   public long feeRateForCoinbase() {
     return switch (besuTransaction.getType()) {
       case FRONTIER, ACCESS_LIST, EIP1559 -> effectiveGasPrice - baseFee;
-      default -> throw new IllegalStateException(
-          "Transaction Type not supported: " + besuTransaction.getType());
+      default ->
+          throw new IllegalStateException(
+              "Transaction Type not supported: " + besuTransaction.getType());
     };
   }
 

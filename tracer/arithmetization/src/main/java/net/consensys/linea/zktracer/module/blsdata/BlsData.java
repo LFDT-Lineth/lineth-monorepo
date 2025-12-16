@@ -18,7 +18,6 @@ package net.consensys.linea.zktracer.module.blsdata;
 import static net.consensys.linea.zktracer.module.ModuleName.BLS_DATA;
 
 import java.util.List;
-
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.Accessors;
@@ -135,10 +134,10 @@ public class BlsData implements OperationListModule<BlsDataOperation> {
             blsG2MembershipCalls.updateTally(!blsDataOperation.firstPointNotInSubgroupIsSmall());
           }
         }
-        case PRC_BLS_MAP_FP_TO_G1 -> blsG1MapFpToG1EffectiveCall.updateTally(
-            blsDataOperation.wellformedDataNonTrivial());
-        case PRC_BLS_MAP_FP2_TO_G2 -> blsG1MapFp2ToG2EffectiveCall.updateTally(
-            blsDataOperation.wellformedDataNonTrivial());
+        case PRC_BLS_MAP_FP_TO_G1 ->
+            blsG1MapFpToG1EffectiveCall.updateTally(blsDataOperation.wellformedDataNonTrivial());
+        case PRC_BLS_MAP_FP2_TO_G2 ->
+            blsG1MapFp2ToG2EffectiveCall.updateTally(blsDataOperation.wellformedDataNonTrivial());
       }
     }
   }

@@ -18,7 +18,6 @@ package net.consensys.linea.zktracer.module.mmu;
 import static net.consensys.linea.testing.BytecodeCompiler.newProgram;
 
 import java.util.Random;
-
 import net.consensys.linea.reporting.TracerTestBase;
 import net.consensys.linea.testing.BytecodeCompiler;
 import net.consensys.linea.testing.BytecodeRunner;

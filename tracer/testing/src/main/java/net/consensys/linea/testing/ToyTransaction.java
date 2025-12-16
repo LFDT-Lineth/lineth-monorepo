@@ -23,7 +23,6 @@ import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-
 import lombok.Builder;
 import org.apache.tuweni.bytes.Bytes;
 import org.bouncycastle.math.ec.custom.sec.SecP256K1Curve;

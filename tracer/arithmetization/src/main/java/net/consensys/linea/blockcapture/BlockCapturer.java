@@ -15,11 +15,10 @@
 
 package net.consensys.linea.blockcapture;
 
+import com.google.gson.Gson;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
-import com.google.gson.Gson;
 import net.consensys.linea.blockcapture.reapers.Reaper;
 import net.consensys.linea.zktracer.ConflationAwareOperationTracer;
 import net.consensys.linea.zktracer.Fork;
@@ -128,7 +127,7 @@ public class BlockCapturer implements ConflationAwareOperationTracer {
     final OpCodeData opCode = opcodes.of(frame.getCurrentOperation().getOpcode());
 
     switch (opCode.mnemonic()) {
-        // These access contracts potentially existing before the conflation played out.
+      // These access contracts potentially existing before the conflation played out.
       case EXTCODESIZE, EXTCODECOPY, EXTCODEHASH -> {
         if (frame.stackSize() > 0) {
           final Address target = Words.toAddress(frame.getStackItem(0));
@@ -136,7 +135,7 @@ public class BlockCapturer implements ConflationAwareOperationTracer {
         }
       }
 
-        // SLOAD may access storage cells whose value was set before the conflation execution.
+      // SLOAD may access storage cells whose value was set before the conflation execution.
       case SLOAD -> {
         if (frame.stackSize() > 0) {
           final Account account = frame.getWorldUpdater().get(frame.getRecipientAddress());
@@ -146,7 +145,7 @@ public class BlockCapturer implements ConflationAwareOperationTracer {
         }
       }
 
-        // SSTORE needs to know the previous storage value for correct gas computation
+      // SSTORE needs to know the previous storage value for correct gas computation
       case SSTORE -> {
         if (frame.stackSize() > 1) {
           final Account account = frame.getWorldUpdater().get(frame.getRecipientAddress());
@@ -156,7 +155,7 @@ public class BlockCapturer implements ConflationAwareOperationTracer {
         }
       }
 
-        // These access contracts potentially existing before the conflation played out.
+      // These access contracts potentially existing before the conflation played out.
       case CALL, CALLCODE, DELEGATECALL, STATICCALL -> {
         if (frame.stackSize() > 1) {
           final Address target = Words.toAddress(frame.getStackItem(1));
@@ -171,7 +170,7 @@ public class BlockCapturer implements ConflationAwareOperationTracer {
         }
       }
 
-        // Failure condition if created address already exists
+      // Failure condition if created address already exists
       case CREATE, CREATE2 -> {
         if (frame.stackSize() > 0) {
           final Address target = AddressUtils.getDeploymentAddress(frame, opCode);
@@ -179,7 +178,7 @@ public class BlockCapturer implements ConflationAwareOperationTracer {
         }
       }
 
-        // Funds of the selfdestruct account are sent to the target account
+      // Funds of the selfdestruct account are sent to the target account
       case SELFDESTRUCT -> {
         if (frame.stackSize() > 0) {
           final Address target = Words.toAddress(frame.getStackItem(0));

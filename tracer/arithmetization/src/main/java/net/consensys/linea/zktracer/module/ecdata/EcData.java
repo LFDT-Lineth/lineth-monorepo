@@ -18,7 +18,6 @@ package net.consensys.linea.zktracer.module.ecdata;
 import static net.consensys.linea.zktracer.module.ModuleName.EC_DATA;
 
 import java.util.List;
-
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.Accessors;
@@ -91,8 +90,8 @@ public class EcData implements OperationListModule<EcDataOperation> {
     switch (ecDataOperation.precompileFlag()) {
       case PRC_ECADD -> ecAddEffectiveCall.updateTally(ecDataOperation.internalChecksPassed());
       case PRC_ECMUL -> ecMulEffectiveCall.updateTally(ecDataOperation.internalChecksPassed());
-      case PRC_ECRECOVER -> ecRecoverEffectiveCall.updateTally(
-          ecDataOperation.internalChecksPassed());
+      case PRC_ECRECOVER ->
+          ecRecoverEffectiveCall.updateTally(ecDataOperation.internalChecksPassed());
       case PRC_ECPAIRING -> {
         // ecPairingG2MembershipCalls case
         // NOTE: the other precompile limits are managed below

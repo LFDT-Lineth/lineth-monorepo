@@ -16,7 +16,6 @@
 package net.consensys.linea.blockcapture.snapshots;
 
 import java.util.List;
-
 import org.hyperledger.besu.ethereum.core.BlockHeader;
 import org.hyperledger.besu.ethereum.core.Transaction;
 import org.hyperledger.besu.plugin.data.BlockBody;

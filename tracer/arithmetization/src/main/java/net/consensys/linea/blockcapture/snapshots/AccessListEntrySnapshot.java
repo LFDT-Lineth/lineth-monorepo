@@ -16,7 +16,6 @@
 package net.consensys.linea.blockcapture.snapshots;
 
 import java.util.List;
-
 import org.hyperledger.besu.datatypes.AccessListEntry;
 
 public record AccessListEntrySnapshot(String address, List<String> storageKeys) {

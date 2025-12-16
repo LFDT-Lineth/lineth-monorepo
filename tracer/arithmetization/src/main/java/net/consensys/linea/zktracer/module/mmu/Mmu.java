@@ -19,7 +19,6 @@ import static com.google.common.base.Preconditions.checkState;
 import static net.consensys.linea.zktracer.module.ModuleName.MMU;
 
 import java.util.List;
-
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.Accessors;

@@ -129,8 +129,9 @@ class MmuInstructions {
         mmuData = blake.preProcess(mmuData);
         yield blake.setMicroInstructions(mmuData);
       }
-      default -> throw new IllegalArgumentException(
-          "Unexpected MMU instruction: %d".formatted(mmuInstruction));
+      default ->
+          throw new IllegalArgumentException(
+              "Unexpected MMU instruction: %d".formatted(mmuInstruction));
     };
   }
 }

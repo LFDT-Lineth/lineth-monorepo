@@ -25,7 +25,6 @@ import static org.hyperledger.besu.crypto.Hash.keccak256;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
-
 import net.consensys.linea.reporting.TracerTestBase;
 import net.consensys.linea.testing.AddressCollisions;
 import net.consensys.linea.testing.BytecodeCompiler;
@@ -212,8 +211,8 @@ public class AddressCollisionWarmingAndDeploymentTests extends TracerTestBase {
       switch (scenario) {
         case NO_WARMING -> {}
         case WARMING_SENDER -> accessList.add(new AccessListEntry(senderAddress, List.of()));
-        case WARMING_EFFECTIVE_RECIPIENT -> accessList.add(
-            new AccessListEntry(effectiveToAddress, List.of()));
+        case WARMING_EFFECTIVE_RECIPIENT ->
+            accessList.add(new AccessListEntry(effectiveToAddress, List.of()));
         case WARMING_COINBASE -> accessList.add(new AccessListEntry(coinbaseAddress, List.of()));
         case WARMING_PRECOMPILE -> {
           accessList.add(new AccessListEntry(Address.MODEXP, List.of()));

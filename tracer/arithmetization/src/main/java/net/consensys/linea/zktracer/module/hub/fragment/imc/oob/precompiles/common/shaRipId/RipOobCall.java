@@ -19,7 +19,6 @@ import static net.consensys.linea.zktracer.Trace.OOB_INST_RIPEMD;
 import static net.consensys.linea.zktracer.Trace.Oob.CT_MAX_RIPEMD;
 
 import java.math.BigInteger;
-
 import net.consensys.linea.zktracer.Trace;
 
 public class RipOobCall extends ShaRipIdOobCall {

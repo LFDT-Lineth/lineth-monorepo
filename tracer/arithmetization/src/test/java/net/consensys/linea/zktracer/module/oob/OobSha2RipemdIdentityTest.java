@@ -17,13 +17,12 @@ package net.consensys.linea.zktracer.module.oob;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import com.google.common.io.BaseEncoding;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Random;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-
-import com.google.common.io.BaseEncoding;
 import net.consensys.linea.UnitTestWatcher;
 import net.consensys.linea.reporting.TracerTestBase;
 import net.consensys.linea.testing.BytecodeCompiler;

@@ -17,13 +17,12 @@ package net.consensys.linea;
 
 import static org.junit.jupiter.api.Assertions.fail;
 
+import com.google.gson.Gson;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.zip.GZIPInputStream;
-
-import com.google.gson.Gson;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.blockcapture.snapshots.ConflationSnapshot;
 import net.consensys.linea.testing.ReplayExecutionEnvironment;

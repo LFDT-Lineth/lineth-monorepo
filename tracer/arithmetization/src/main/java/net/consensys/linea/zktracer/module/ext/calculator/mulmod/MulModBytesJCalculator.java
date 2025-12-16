@@ -18,7 +18,6 @@ package net.consensys.linea.zktracer.module.ext.calculator.mulmod;
 import static net.consensys.linea.zktracer.module.Util.uInt64ToBytes;
 
 import java.math.BigInteger;
-
 import net.consensys.linea.zktracer.bytestheta.BytesArray;
 import net.consensys.linea.zktracer.module.ext.BigIntegerConverter;
 import org.apache.tuweni.bytes.Bytes32;

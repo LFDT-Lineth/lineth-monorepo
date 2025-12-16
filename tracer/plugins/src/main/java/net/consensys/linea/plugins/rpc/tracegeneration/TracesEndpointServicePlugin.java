@@ -15,6 +15,7 @@
 
 package net.consensys.linea.plugins.rpc.tracegeneration;
 
+import com.google.auto.service.AutoService;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -22,8 +23,6 @@ import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
-
-import com.google.auto.service.AutoService;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.plugins.AbstractLineaPrivateOptionsPlugin;
 import net.consensys.linea.plugins.BesuServiceProvider;

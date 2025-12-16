@@ -63,8 +63,8 @@ public class CallParameters implements PrecompileCallParameters {
     // push r@c onto the stack
     switch (returnAt) {
       case EMPTY -> program.push(0);
-      case PARTIAL -> program.push(
-          12 + 6); // the first 12 bytes are zeros for successful ECRECOVER calls
+      case PARTIAL ->
+          program.push(12 + 6); // the first 12 bytes are zeros for successful ECRECOVER calls
       case FULL -> program.push(WORD_SIZE);
     }
 

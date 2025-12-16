@@ -22,7 +22,6 @@ import static net.consensys.linea.zktracer.types.Conversions.booleanToBytes;
 import static org.hyperledger.besu.evm.internal.Words.clampedToInt;
 
 import java.math.BigInteger;
-
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;

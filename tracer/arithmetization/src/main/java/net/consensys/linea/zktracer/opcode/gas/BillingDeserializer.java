@@ -15,12 +15,11 @@
 
 package net.consensys.linea.zktracer.opcode.gas;
 
-import java.util.Optional;
-
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
+import java.util.Optional;
 import lombok.SneakyThrows;
 
 /** Custom Jackson deserializer for handling {@link Billing} properties. */

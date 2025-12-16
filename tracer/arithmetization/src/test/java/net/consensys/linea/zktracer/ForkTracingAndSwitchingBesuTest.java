@@ -18,7 +18,6 @@ package net.consensys.linea.zktracer;
 import static org.junit.jupiter.api.parallel.ExecutionMode.SAME_THREAD;
 
 import java.util.List;
-
 import net.consensys.linea.reporting.TracerTestBase;
 import net.consensys.linea.testing.*;
 import net.consensys.linea.zktracer.opcode.OpCode;
@@ -55,14 +54,15 @@ public class ForkTracingAndSwitchingBesuTest extends TracerTestBase {
         BytecodeCompiler.newProgram(chainConfig).push(32, 0xbeef).push(32, 0xdead).op(OpCode.ADD);
 
     switch (fork) {
-      case PRAGUE -> compiler
-          .push(Bytes.fromHexString("0x7F")) // value
-          .push(32) // offset
-          .op(OpCode.MSTORE)
-          .push(32) // size
-          .push(32) // offset to trigger mem expansion
-          .push(0) // dest offset
-          .op(OpCode.MCOPY);
+      case PRAGUE ->
+          compiler
+              .push(Bytes.fromHexString("0x7F")) // value
+              .push(32) // offset
+              .op(OpCode.MSTORE)
+              .push(32) // size
+              .push(32) // offset to trigger mem expansion
+              .push(0) // dest offset
+              .op(OpCode.MCOPY);
       case OSAKA -> compiler.push(Bytes.fromHexString("0x07acaa")).op(OpCode.CLZ);
       default -> throw new IllegalArgumentException("Unsupported fork: " + fork);
     }

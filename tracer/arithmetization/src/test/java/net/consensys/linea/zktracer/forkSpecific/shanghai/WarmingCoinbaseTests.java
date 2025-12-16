@@ -20,7 +20,6 @@ import static net.consensys.linea.zktracer.module.rlpaddr.RlpAddr.CREATE2_SHIFT;
 import static org.hyperledger.besu.crypto.Hash.keccak256;
 
 import java.util.List;
-
 import net.consensys.linea.reporting.TracerTestBase;
 import net.consensys.linea.testing.BytecodeCompiler;
 import net.consensys.linea.testing.ToyAccount;

@@ -14,10 +14,9 @@
  */
 package net.consensys.linea.testing;
 
-import java.math.BigInteger;
-
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import java.math.BigInteger;
 import org.hyperledger.besu.config.GenesisAccount;
 import org.hyperledger.besu.config.GenesisConfig;
 import org.hyperledger.besu.config.JsonUtil;

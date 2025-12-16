@@ -19,9 +19,8 @@ import static java.lang.Integer.MAX_VALUE;
 import static net.consensys.linea.zktracer.module.ModuleName.PRECOMPILE_BLAKE_ROUNDS;
 import static net.consensys.linea.zktracer.module.blake2fmodexpdata.BlakeModexpDataOperation.BLAKE2f_R_SIZE;
 
-import java.math.BigInteger;
-
 import com.google.common.base.Preconditions;
+import java.math.BigInteger;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;

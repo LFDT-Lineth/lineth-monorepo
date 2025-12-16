@@ -16,7 +16,6 @@
 package net.consensys.linea.blockcapture.snapshots;
 
 import java.util.Optional;
-
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
 import org.hyperledger.besu.datatypes.Address;

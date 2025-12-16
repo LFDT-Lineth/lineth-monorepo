@@ -90,9 +90,10 @@ public enum MemoryContents implements PrecompileCallMemoryContents {
         switch (this) {
           case ZEROS -> ZERO_WORD.repeat(4);
           case WELL_FORMED_POINTS -> variant ? A_X + A_Y + B_X + B_Y : C_X + C_Y + D_X + D_Y;
-          case MIXED -> variant
-              ? A_X + A_Y + RND.substring(13, 13 + 2 * WORD_HEX_SIZE)
-              : C_X + C_Y + RND.substring(99, 99 + 2 * WORD_HEX_SIZE);
+          case MIXED ->
+              variant
+                  ? A_X + A_Y + RND.substring(13, 13 + 2 * WORD_HEX_SIZE)
+                  : C_X + C_Y + RND.substring(99, 99 + 2 * WORD_HEX_SIZE);
           case MALFORMED_AT_1f -> MAX_BYTE + (variant ? A_Y + B_X + B_Y : C_Y + D_X + D_Y);
           case MALFORMED_AT_3f -> ZERO_WORD + MAX_BYTE + (variant ? B_X + B_Y : D_X + D_Y);
           case MALFORMED_AT_5f -> ZERO_WORD.repeat(2) + MAX_BYTE + (variant ? B_Y : D_Y);

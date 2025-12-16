@@ -21,7 +21,6 @@ import static net.consensys.linea.zktracer.Utils.delegateCall;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.List;
-
 import net.consensys.linea.reporting.TracerTestBase;
 import net.consensys.linea.testing.*;
 import net.consensys.linea.zktracer.container.module.IncrementingModule;

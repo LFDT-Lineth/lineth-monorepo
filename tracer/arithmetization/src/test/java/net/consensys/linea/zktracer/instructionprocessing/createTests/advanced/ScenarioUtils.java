@@ -20,7 +20,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import net.consensys.linea.testing.*;
 import net.consensys.linea.testing.generated.ContractC;
 import net.consensys.linea.testing.generated.CustomCreate2;

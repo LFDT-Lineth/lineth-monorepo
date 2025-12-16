@@ -18,7 +18,6 @@ package net.consensys.linea.zktracer.module.rlptxrcpt;
 import static net.consensys.linea.zktracer.types.Utils.fromDataSizeToLimbNbRows;
 
 import java.util.List;
-
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.Accessors;

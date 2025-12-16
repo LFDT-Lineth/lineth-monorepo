@@ -18,7 +18,6 @@ package net.consensys.linea.zktracer.module.hub.fragment.imc.mmu.opcode;
 import static net.consensys.linea.zktracer.Trace.MMU_INST_RAM_TO_EXO_WITH_PADDING;
 
 import java.util.Optional;
-
 import net.consensys.linea.zktracer.module.hub.Hub;
 import net.consensys.linea.zktracer.module.hub.fragment.imc.mmu.MmuCall;
 import net.consensys.linea.zktracer.module.romlex.ContractMetadata;

@@ -48,8 +48,9 @@ public class ShanghaiTxndataOperation extends LondonTxnDataOperation {
       case FRONTIER -> NB_ROWS_TYPE_0;
       case ACCESS_LIST -> NB_ROWS_TYPE_1;
       case EIP1559 -> NB_ROWS_TYPE_2;
-      default -> throw new RuntimeException(
-          "Transaction type not supported:" + tx.getBesuTransaction().getType());
+      default ->
+          throw new RuntimeException(
+              "Transaction type not supported:" + tx.getBesuTransaction().getType());
     };
   }
 

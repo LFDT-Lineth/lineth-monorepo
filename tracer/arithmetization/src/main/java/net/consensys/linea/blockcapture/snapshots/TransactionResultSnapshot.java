@@ -16,7 +16,6 @@ package net.consensys.linea.blockcapture.snapshots;
 
 import java.util.List;
 import java.util.Set;
-
 import net.consensys.linea.zktracer.ConflationAwareOperationTracer;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.units.bigints.UInt256;

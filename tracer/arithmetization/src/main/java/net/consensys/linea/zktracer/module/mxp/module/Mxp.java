@@ -18,7 +18,6 @@ package net.consensys.linea.zktracer.module.mxp.module;
 import static net.consensys.linea.zktracer.module.ModuleName.MXP;
 
 import java.util.List;
-
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.Accessors;

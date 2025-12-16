@@ -45,7 +45,7 @@ public enum SmallPoint {
           case X_NOT_IN_FIELD -> IN_RANGE_SAVE_FOR_LARGE_X;
           case Y_NOT_IN_FIELD -> IN_RANGE_SAVE_FOR_LARGE_Y;
           case NOT_ON_CURVE -> IN_RANGE_BUT_NOT_ON_CURVE;
-            // case RAND -> RANDOM_HEX_STRING.substring(131, 131 + 2 * WORD_HEX_SIZE);
+          // case RAND -> RANDOM_HEX_STRING.substring(131, 131 + 2 * WORD_HEX_SIZE);
           default -> throw new IllegalArgumentException("Invalid point candidate");
         };
     checkState(result.length() == 2 * WORD_HEX_SIZE, "Invalid hex string length");

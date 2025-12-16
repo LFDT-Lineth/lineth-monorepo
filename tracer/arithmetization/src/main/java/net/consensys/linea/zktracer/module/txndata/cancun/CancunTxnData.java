@@ -16,7 +16,6 @@ package net.consensys.linea.zktracer.module.txndata.cancun;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import lombok.Getter;
 import net.consensys.linea.zktracer.Trace;
 import net.consensys.linea.zktracer.module.euc.Euc;
@@ -75,8 +74,8 @@ public class CancunTxnData extends TxnData {
       case SYSI_EIP_4788_BEACON_BLOCK_ROOT -> operations().add(new SysiEip4788Transaction(this));
       case SYSI_EIP_2935_HISTORICAL_HASH -> operations().add(new SysiEip2935Transaction(this));
       case SYSF_NOOP -> operations().add(new SysfNoopTransaction(this));
-      case SYSI_NOOP -> throw new IllegalArgumentException(
-          "Unsupported system transaction type: " + type);
+      case SYSI_NOOP ->
+          throw new IllegalArgumentException("Unsupported system transaction type: " + type);
     }
   }
 

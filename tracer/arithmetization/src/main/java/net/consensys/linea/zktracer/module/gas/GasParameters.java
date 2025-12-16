@@ -16,7 +16,6 @@
 package net.consensys.linea.zktracer.module.gas;
 
 import java.math.BigInteger;
-
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;

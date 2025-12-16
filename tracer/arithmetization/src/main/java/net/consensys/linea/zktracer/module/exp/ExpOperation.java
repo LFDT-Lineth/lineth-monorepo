@@ -24,7 +24,6 @@ import static net.consensys.linea.zktracer.types.Conversions.bigIntegerToBytes;
 
 import java.math.BigInteger;
 import java.math.RoundingMode;
-
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.experimental.Accessors;
@@ -71,8 +70,9 @@ public class ExpOperation extends ModuleOperation {
         modexplogExpCall.setEbsCutoff(ebsCutoff);
         modexplogExpCall.setLeadLog(leadLog);
       }
-      default -> throw new IllegalArgumentException(
-          "invalid EXP instruction: " + expCall.expInstruction());
+      default ->
+          throw new IllegalArgumentException(
+              "invalid EXP instruction: " + expCall.expInstruction());
     }
   }
 
@@ -99,8 +99,9 @@ public class ExpOperation extends ModuleOperation {
             .res(bigIntegerToBytes(call.getLeadLog()))
             .validateRow();
       }
-      default -> throw new IllegalArgumentException(
-          "invalid EXP instruction: " + expCall.expInstruction());
+      default ->
+          throw new IllegalArgumentException(
+              "invalid EXP instruction: " + expCall.expInstruction());
     }
   }
 

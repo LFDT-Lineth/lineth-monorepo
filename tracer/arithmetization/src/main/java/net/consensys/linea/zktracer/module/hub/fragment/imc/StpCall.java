@@ -26,7 +26,6 @@ import static net.consensys.linea.zktracer.types.AddressUtils.isAddressWarm;
 import static net.consensys.linea.zktracer.types.EWord.ZERO;
 
 import java.math.BigInteger;
-
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
@@ -90,8 +89,9 @@ public class StpCall implements TraceSubFragment {
         switch (opCode) {
           case CALL -> toAccount != null && !toAccount.isEmpty();
           case CALLCODE, DELEGATECALL, STATICCALL -> false;
-          default -> throw new IllegalArgumentException(
-              "STP module triggered for a non CALL-type instruction");
+          default ->
+              throw new IllegalArgumentException(
+                  "STP module triggered for a non CALL-type instruction");
         };
     this.warm = isAddressWarm(hub.fork, frame, to);
     this.upfrontGasCost = upfrontGasCostForCalls();

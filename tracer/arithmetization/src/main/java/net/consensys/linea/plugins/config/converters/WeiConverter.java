@@ -15,7 +15,6 @@
 package net.consensys.linea.plugins.config.converters;
 
 import java.math.BigInteger;
-
 import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.datatypes.Wei;
 import picocli.CommandLine;

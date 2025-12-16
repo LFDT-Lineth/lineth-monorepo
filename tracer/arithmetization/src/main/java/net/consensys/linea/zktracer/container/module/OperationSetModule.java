@@ -17,7 +17,6 @@ package net.consensys.linea.zktracer.container.module;
 
 import java.util.Comparator;
 import java.util.List;
-
 import net.consensys.linea.zktracer.container.ModuleOperation;
 import net.consensys.linea.zktracer.container.stacked.ModuleOperationStackedSet;
 import org.hyperledger.besu.evm.worldstate.WorldView;

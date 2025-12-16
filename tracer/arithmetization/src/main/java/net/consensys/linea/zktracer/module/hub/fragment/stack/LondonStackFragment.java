@@ -16,7 +16,6 @@
 package net.consensys.linea.zktracer.module.hub.fragment.stack;
 
 import java.util.List;
-
 import net.consensys.linea.zktracer.Trace;
 import net.consensys.linea.zktracer.module.hub.Hub;
 import net.consensys.linea.zktracer.module.hub.fragment.common.CommonFragmentValues;

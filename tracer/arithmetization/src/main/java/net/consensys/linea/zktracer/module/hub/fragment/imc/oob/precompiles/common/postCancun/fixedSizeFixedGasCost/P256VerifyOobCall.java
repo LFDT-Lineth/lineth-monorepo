@@ -21,7 +21,6 @@ import static net.consensys.linea.zktracer.Trace.PRECOMPILE_CALL_DATA_SIZE___P25
 import static net.consensys.linea.zktracer.TraceOsaka.Oob.CT_MAX_P256_VERIFY;
 
 import java.math.BigInteger;
-
 import net.consensys.linea.zktracer.Trace;
 
 public class P256VerifyOobCall extends FixedSizeFixedGasCostOobCall {

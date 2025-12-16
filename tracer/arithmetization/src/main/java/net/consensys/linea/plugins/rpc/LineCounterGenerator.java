@@ -19,7 +19,6 @@ import static net.consensys.linea.zktracer.Fork.getForkFromBesuBlockchainService
 import static net.consensys.linea.zktracer.types.PublicInputs.generatePublicInputs;
 
 import java.math.BigInteger;
-
 import net.consensys.linea.plugins.BesuServiceProvider;
 import net.consensys.linea.plugins.config.LineaL1L2BridgeSharedConfiguration;
 import net.consensys.linea.plugins.config.LineaTracerSharedConfiguration;

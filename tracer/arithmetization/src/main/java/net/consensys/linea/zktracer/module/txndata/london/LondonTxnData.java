@@ -22,7 +22,6 @@ import static net.consensys.linea.zktracer.TraceLondon.Txndata.NB_ROWS_TYPE_2;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import net.consensys.linea.zktracer.Trace;
 import net.consensys.linea.zktracer.module.euc.Euc;
 import net.consensys.linea.zktracer.module.hub.Hub;

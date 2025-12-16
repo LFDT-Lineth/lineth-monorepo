@@ -21,7 +21,6 @@ import static net.consensys.linea.zktracer.instructionprocessing.utilities.MonoO
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.UnitTestWatcher;
 import net.consensys.linea.reporting.TracerTestBase;

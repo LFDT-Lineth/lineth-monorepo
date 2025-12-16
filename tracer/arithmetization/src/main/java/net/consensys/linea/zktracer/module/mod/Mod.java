@@ -19,7 +19,6 @@ import static net.consensys.linea.zktracer.opcode.OpCode.*;
 
 import java.math.BigInteger;
 import java.util.List;
-
 import lombok.Getter;
 import lombok.experimental.Accessors;
 import net.consensys.linea.zktracer.Trace;

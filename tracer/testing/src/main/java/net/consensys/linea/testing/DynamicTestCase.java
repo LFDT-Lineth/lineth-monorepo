@@ -17,7 +17,6 @@ package net.consensys.linea.testing;
 
 import java.util.List;
 import java.util.function.BiConsumer;
-
 import net.consensys.linea.zktracer.opcode.OpCode;
 import org.apache.tuweni.bytes.Bytes32;
 

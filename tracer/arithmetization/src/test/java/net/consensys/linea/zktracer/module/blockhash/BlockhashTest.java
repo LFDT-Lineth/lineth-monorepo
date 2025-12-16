@@ -19,7 +19,6 @@ import static net.consensys.linea.zktracer.Trace.BLOCKHASH_MAX_HISTORY;
 import static org.junit.jupiter.api.parallel.ExecutionMode.SAME_THREAD;
 
 import java.util.List;
-
 import net.consensys.linea.UnitTestWatcher;
 import net.consensys.linea.reporting.TracerTestBase;
 import net.consensys.linea.testing.*;

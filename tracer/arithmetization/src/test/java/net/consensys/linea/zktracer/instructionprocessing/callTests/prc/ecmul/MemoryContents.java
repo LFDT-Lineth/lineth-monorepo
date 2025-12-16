@@ -67,16 +67,17 @@ public enum MemoryContents implements PrecompileCallMemoryContents {
     String pointData =
         switch (this) {
           case ZEROS -> ZERO_WORD.repeat(3);
-          case POINT_AT_INFINITY_RANDOM_MULTIPLIER -> ZERO_WORD.repeat(2)
-              + RND.substring(17, 17 + WORD_HEX_SIZE);
+          case POINT_AT_INFINITY_RANDOM_MULTIPLIER ->
+              ZERO_WORD.repeat(2) + RND.substring(17, 17 + WORD_HEX_SIZE);
           case CURVE_POINT_ZERO_MULTIPLIER -> (variant ? A_X + A_Y : B_X + B_Y) + ZERO_WORD;
           case MALFORMED_AT_1f -> MAX_BYTE + RND.substring(61, 61 + 2 * WORD_HEX_SIZE);
           case MALFORMED_AT_3f -> ZERO_WORD + MAX_BYTE + RND.substring(129, 129 + WORD_HEX_SIZE);
-          case FIRST_FEW_BYTES_OF_MULTIPLIER_ARE_ZERO -> (variant ? B_X + B_Y : C_X + C_Y)
-              + "00".repeat(nBytes)
-              + RND.substring(99, 99 + 2 * (WORD_SIZE - nBytes));
-          case WELL_FORMED_POINT_AND_NONTRIVIAL_MULTIPLIER -> (variant ? C_X + C_Y : D_X + D_Y)
-              + RND.substring(71, 71 + WORD_HEX_SIZE);
+          case FIRST_FEW_BYTES_OF_MULTIPLIER_ARE_ZERO ->
+              (variant ? B_X + B_Y : C_X + C_Y)
+                  + "00".repeat(nBytes)
+                  + RND.substring(99, 99 + 2 * (WORD_SIZE - nBytes));
+          case WELL_FORMED_POINT_AND_NONTRIVIAL_MULTIPLIER ->
+              (variant ? C_X + C_Y : D_X + D_Y) + RND.substring(71, 71 + WORD_HEX_SIZE);
           case RANDOM -> RND.substring(36, 36 + 3 * WORD_HEX_SIZE);
         };
 

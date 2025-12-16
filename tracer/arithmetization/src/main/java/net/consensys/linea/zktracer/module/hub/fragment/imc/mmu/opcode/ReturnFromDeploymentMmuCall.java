@@ -21,7 +21,6 @@ import static net.consensys.linea.zktracer.runtime.callstack.CallFrame.extractCo
 import static org.hyperledger.besu.evm.internal.Words.clampedToLong;
 
 import java.util.Optional;
-
 import lombok.Getter;
 import lombok.experimental.Accessors;
 import net.consensys.linea.zktracer.module.hub.Hub;

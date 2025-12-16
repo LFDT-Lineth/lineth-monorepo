@@ -14,14 +14,13 @@
  */
 package net.consensys.linea.zktracer.lt;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectWriter;
 import net.consensys.linea.zktracer.Trace;
 import net.consensys.linea.zktracer.container.module.Module;
 
@@ -61,12 +60,13 @@ public abstract class LtFile {
         switch (header.majorVersion()) {
           case 1 -> new LtFileV1(header, trace, modules);
           case 2 -> new LtFileV2(header, trace, modules);
-          default -> throw new IllegalArgumentException(
-              "unsupported lt trace file version (v"
-                  + header.majorVersion()
-                  + "."
-                  + header.minorVersion()
-                  + ")");
+          default ->
+              throw new IllegalArgumentException(
+                  "unsupported lt trace file version (v"
+                      + header.majorVersion()
+                      + "."
+                      + header.minorVersion()
+                      + ")");
         };
     // Open trace for writing
     trace.open(ltf.columns());

@@ -17,13 +17,12 @@ package net.consensys.linea.testing;
 import static net.consensys.linea.zktracer.Fork.*;
 import static org.assertj.core.api.Assertions.*;
 
-import java.io.IOException;
-import java.util.Optional;
-
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import java.io.IOException;
+import java.util.Optional;
 import net.consensys.linea.zktracer.Fork;
 import okhttp3.Call;
 import okhttp3.MediaType;
@@ -177,8 +176,9 @@ public class EngineAPIService {
       case PARIS -> createEngineCall("engine_forkchoiceUpdatedV1", params);
       case SHANGHAI -> createEngineCall("engine_forkchoiceUpdatedV2", params);
       case CANCUN, PRAGUE, OSAKA -> createEngineCall("engine_forkchoiceUpdatedV3", params);
-      default -> throw new IllegalArgumentException(
-          "Unsupported fork for createForkChoiceRequest: " + fork);
+      default ->
+          throw new IllegalArgumentException(
+              "Unsupported fork for createForkChoiceRequest: " + fork);
     };
   }
 
@@ -220,8 +220,9 @@ public class EngineAPIService {
       case CANCUN -> createEngineCall("engine_getPayloadV3", params);
       case PRAGUE -> createEngineCall("engine_getPayloadV4", params);
       case OSAKA -> createEngineCall("engine_getPayloadV5", params);
-      default -> throw new IllegalArgumentException(
-          "Unsupported fork for createGetPayloadRequest: " + fork);
+      default ->
+          throw new IllegalArgumentException(
+              "Unsupported fork for createGetPayloadRequest: " + fork);
     };
   }
 
@@ -245,8 +246,9 @@ public class EngineAPIService {
       case SHANGHAI -> createEngineCall("engine_newPayloadV2", params);
       case CANCUN -> createEngineCall("engine_newPayloadV3", params);
       case PRAGUE, OSAKA -> createEngineCall("engine_newPayloadV4", params);
-      default -> throw new IllegalArgumentException(
-          "Unsupported fork for createNewPayloadRequest: " + fork);
+      default ->
+          throw new IllegalArgumentException(
+              "Unsupported fork for createNewPayloadRequest: " + fork);
     };
   }
 

@@ -59,7 +59,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
 import net.consensys.linea.UnitTestWatcher;
 import net.consensys.linea.reporting.TracerTestBase;
 import net.consensys.linea.testing.BytecodeCompiler;
@@ -407,11 +406,11 @@ public class SixtyThreeSixtyFourthsPrecompileTests extends TracerTestBase {
         // Filling memory for actual call happening in the test
         .immediate(
             switch (precompileFlag) {
-              case PRC_MODEXP -> writeInMemoryByteCodeOfCodeOwner(
-                  modexpInputAsByteCodeOwnerAddress, 0);
+              case PRC_MODEXP ->
+                  writeInMemoryByteCodeOfCodeOwner(modexpInputAsByteCodeOwnerAddress, 0);
               case PRC_BLAKE2F -> prepareBlake2F(rLeadingByte, 2);
-              case PRC_POINT_EVALUATION -> writeInMemoryByteCodeOfCodeOwner(
-                  pointEvaluationInputAsByteCodeOwnerAddress, 0);
+              case PRC_POINT_EVALUATION ->
+                  writeInMemoryByteCodeOfCodeOwner(pointEvaluationInputAsByteCodeOwnerAddress, 0);
               default -> Bytes.EMPTY;
             })
         // TODO: we should be able to re-use the input of the first call if we do not overwrite it
@@ -542,20 +541,20 @@ public class SixtyThreeSixtyFourthsPrecompileTests extends TracerTestBase {
 
   static int getMeaningfulCallDataSize(PrecompileScenarioFragment.PrecompileFlag precompileFlag) {
     return switch (precompileFlag) {
-      case PRC_SHA2_256, PRC_RIPEMD_160, PRC_IDENTITY -> 1024
-          * WORD_SIZE; // Ensures cost is greater than stipend
-      case PRC_MODEXP -> 96 + bbs + ebs
-          + mbs; // Ensures cost is greater than stipend with non-zero non-trivial
+      case PRC_SHA2_256, PRC_RIPEMD_160, PRC_IDENTITY ->
+          1024 * WORD_SIZE; // Ensures cost is greater than stipend
+      case PRC_MODEXP ->
+          96 + bbs + ebs + mbs; // Ensures cost is greater than stipend with non-zero non-trivial
       case PRC_BLAKE2F -> PRECOMPILE_CALL_DATA_SIZE___BLAKE2F; // Ensures cost is greater than
-        // stipend with non-zero non-trivial
-        // input
+      // stipend with non-zero non-trivial
+      // input
       case PRC_POINT_EVALUATION -> PRECOMPILE_CALL_DATA_SIZE___POINT_EVALUATION;
       case PRC_BLS_G1_ADD -> PRECOMPILE_CALL_DATA_SIZE___G1_ADD;
       case PRC_BLS_G1_MSM -> PRECOMPILE_CALL_DATA_UNIT_SIZE___BLS_G1_MSM; // 1 unit only
       case PRC_BLS_G2_ADD -> PRECOMPILE_CALL_DATA_SIZE___G2_ADD;
       case PRC_BLS_G2_MSM -> PRECOMPILE_CALL_DATA_UNIT_SIZE___BLS_G2_MSM; // 1 unit only
       case PRC_BLS_PAIRING_CHECK -> PRECOMPILE_CALL_DATA_UNIT_SIZE___BLS_PAIRING_CHECK; // 1 unit
-        // only
+      // only
       case PRC_BLS_MAP_FP_TO_G1 -> PRECOMPILE_CALL_DATA_SIZE___FP_TO_G1;
       case PRC_BLS_MAP_FP2_TO_G2 -> PRECOMPILE_CALL_DATA_SIZE___FP2_TO_G2;
       case PRC_P256_VERIFY -> PRECOMPILE_CALL_DATA_SIZE___P256_VERIFY; // Any size works

@@ -18,7 +18,6 @@ import static com.google.common.base.Preconditions.*;
 import static net.consensys.linea.testing.BytecodeRunner.MAX_GAS_LIMIT;
 
 import java.util.List;
-
 import net.consensys.linea.UnitTestWatcher;
 import net.consensys.linea.reporting.TracerTestBase;
 import net.consensys.linea.testing.ToyAccount;

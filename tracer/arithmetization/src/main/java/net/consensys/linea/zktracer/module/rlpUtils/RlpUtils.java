@@ -20,7 +20,6 @@ import static net.consensys.linea.zktracer.module.ModuleName.RLP_UTILS;
 
 import java.math.BigInteger;
 import java.util.List;
-
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.Accessors;

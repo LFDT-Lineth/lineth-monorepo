@@ -19,7 +19,6 @@ import static net.consensys.linea.zktracer.module.limits.Keccak.numberOfKeccakBl
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.List;
-
 import net.consensys.linea.reporting.TracerTestBase;
 import net.consensys.linea.testing.BytecodeCompiler;
 import net.consensys.linea.testing.ToyAccount;

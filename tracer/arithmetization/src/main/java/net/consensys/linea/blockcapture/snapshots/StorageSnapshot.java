@@ -16,7 +16,6 @@
 package net.consensys.linea.blockcapture.snapshots;
 
 import java.util.Optional;
-
 import org.apache.tuweni.units.bigints.UInt256;
 import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.evm.account.Account;

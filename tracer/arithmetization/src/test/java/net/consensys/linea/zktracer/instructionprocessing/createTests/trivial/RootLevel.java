@@ -21,7 +21,6 @@ import static net.consensys.linea.zktracer.opcode.OpCode.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
-
 import net.consensys.linea.UnitTestWatcher;
 import net.consensys.linea.reporting.TracerTestBase;
 import net.consensys.linea.testing.BytecodeCompiler;
@@ -152,8 +151,8 @@ public class RootLevel extends TracerTestBase {
       case o_THREE -> program.push(0);
       case o_SIXTEEN -> program.push(0x10);
       case o_SIXTEEN_BYTE_INT -> program.push("abe1245ffff123a87000a543eff12aaa");
-      case o_THIRTY_TWO_BYTE_INT -> program.push(
-          "abe1245ffff123a87000a543eff12aaa09987582714266effffefaabc76aa758");
+      case o_THIRTY_TWO_BYTE_INT ->
+          program.push("abe1245ffff123a87000a543eff12aaa09987582714266effffefaabc76aa758");
       case o_MAX -> program.push("ff".repeat(32));
     }
     switch (valueParameter) {

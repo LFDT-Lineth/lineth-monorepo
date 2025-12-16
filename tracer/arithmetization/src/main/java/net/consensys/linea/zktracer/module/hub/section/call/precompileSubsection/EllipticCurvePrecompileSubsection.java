@@ -21,9 +21,8 @@ import static net.consensys.linea.zktracer.module.hub.fragment.scenario.Precompi
 import static net.consensys.linea.zktracer.module.hub.fragment.scenario.PrecompileScenarioFragment.PrecompileScenario.PRC_FAILURE_KNOWN_TO_HUB;
 import static net.consensys.linea.zktracer.module.hub.fragment.scenario.PrecompileScenarioFragment.PrecompileScenario.PRC_FAILURE_KNOWN_TO_RAM;
 
-import java.math.BigInteger;
-
 import com.google.common.base.Preconditions;
+import java.math.BigInteger;
 import net.consensys.linea.zktracer.module.blsdata.BlsData;
 import net.consensys.linea.zktracer.module.hub.Hub;
 import net.consensys.linea.zktracer.module.hub.fragment.imc.ImcFragment;
@@ -73,9 +72,11 @@ public class EllipticCurvePrecompileSubsection extends PrecompileSubsection {
           case PRC_BLS_MAP_FP_TO_G1 -> new BlsMapFpToG1OobCall(calleeGas);
           case PRC_BLS_MAP_FP2_TO_G2 -> new BlsMapFp2ToG2OobCall(calleeGas);
           case PRC_P256_VERIFY -> new P256VerifyOobCall(calleeGas);
-          default -> throw new IllegalArgumentException(
-              String.format(
-                  "Precompile address %s not supported by constructor", this.flag().toString()));
+          default ->
+              throw new IllegalArgumentException(
+                  String.format(
+                      "Precompile address %s not supported by constructor",
+                      this.flag().toString()));
         };
 
     oobCall = (CommonPrecompileOobCall) firstImcFragment.callOob(call);
@@ -102,13 +103,15 @@ public class EllipticCurvePrecompileSubsection extends PrecompileSubsection {
                 : returnData == Bytes.EMPTY,
             "ECRECOVER return data size mismatch");
       }
-      case PRC_ECPAIRING -> checkArgument(
-          returnDataRange.extract().size() == (callSuccess ? WORD_SIZE : 0),
-          "ECPAIRING return data size mismatch");
-      case PRC_ECADD, PRC_ECMUL -> checkArgument(
-          returnDataRange.extract().size() == (callSuccess ? 2 * WORD_SIZE : 0),
-          "%s return data size mismatch",
-          flag());
+      case PRC_ECPAIRING ->
+          checkArgument(
+              returnDataRange.extract().size() == (callSuccess ? WORD_SIZE : 0),
+              "ECPAIRING return data size mismatch");
+      case PRC_ECADD, PRC_ECMUL ->
+          checkArgument(
+              returnDataRange.extract().size() == (callSuccess ? 2 * WORD_SIZE : 0),
+              "%s return data size mismatch",
+              flag());
       case PRC_POINT_EVALUATION,
           PRC_BLS_G1_ADD,
           PRC_BLS_G1_MSM,
@@ -119,17 +122,17 @@ public class EllipticCurvePrecompileSubsection extends PrecompileSubsection {
           PRC_BLS_MAP_FP2_TO_G2 -> {
         // Note that BLS sanity checks are computed in BlsOperation
       }
-        // For PRC_P256_VERIFY, the return data is either empty:
-        // - callSuccess = false
-        //    * Insufficient gas (the only scenario where the underlying call fails, callSuccess =
-        // false)
-        // - callSuccess = true
-        //    * Invalid input length (not exactly 160 bytes)
-        //    * Invalid field element encoding (≥ field modulus)
-        //    * Invalid signature component bounds (r or s not in range (0, n))
-        //    * Invalid public key (point at infinity or not on curve)
-        //    * Signature verification failure
-        // or non-empty, of size 32 bytes when none of the failure conditions above hold.
+      // For PRC_P256_VERIFY, the return data is either empty:
+      // - callSuccess = false
+      //    * Insufficient gas (the only scenario where the underlying call fails, callSuccess =
+      // false)
+      // - callSuccess = true
+      //    * Invalid input length (not exactly 160 bytes)
+      //    * Invalid field element encoding (≥ field modulus)
+      //    * Invalid signature component bounds (r or s not in range (0, n))
+      //    * Invalid public key (point at infinity or not on curve)
+      //    * Signature verification failure
+      // or non-empty, of size 32 bytes when none of the failure conditions above hold.
       case PRC_P256_VERIFY -> {
         checkArgument(
             returnData == Bytes.EMPTY || returnData.size() == WORD_SIZE,
@@ -186,14 +189,14 @@ public class EllipticCurvePrecompileSubsection extends PrecompileSubsection {
 
     if (triggerCallDataExtraction) {
       switch (flag()) {
-        case PRC_ECRECOVER -> firstMmuCall =
-            MmuCall.callDataExtractionForEcrecover(hub, this, successBitMmuCall);
-        case PRC_ECADD -> firstMmuCall =
-            MmuCall.callDataExtractionForEcadd(hub, this, successBitMmuCall);
-        case PRC_ECMUL -> firstMmuCall =
-            MmuCall.callDataExtractionForEcmul(hub, this, successBitMmuCall);
-        case PRC_ECPAIRING -> firstMmuCall =
-            MmuCall.callDataExtractionForEcpairing(hub, this, successBitMmuCall);
+        case PRC_ECRECOVER ->
+            firstMmuCall = MmuCall.callDataExtractionForEcrecover(hub, this, successBitMmuCall);
+        case PRC_ECADD ->
+            firstMmuCall = MmuCall.callDataExtractionForEcadd(hub, this, successBitMmuCall);
+        case PRC_ECMUL ->
+            firstMmuCall = MmuCall.callDataExtractionForEcmul(hub, this, successBitMmuCall);
+        case PRC_ECPAIRING ->
+            firstMmuCall = MmuCall.callDataExtractionForEcpairing(hub, this, successBitMmuCall);
         case PRC_POINT_EVALUATION,
             PRC_BLS_G1_ADD,
             PRC_BLS_G1_MSM,
@@ -202,8 +205,9 @@ public class EllipticCurvePrecompileSubsection extends PrecompileSubsection {
             PRC_BLS_PAIRING_CHECK,
             PRC_BLS_MAP_FP_TO_G1,
             PRC_BLS_MAP_FP2_TO_G2,
-            PRC_P256_VERIFY -> firstMmuCall =
-            MmuCall.callDataExtractionForPostCancunPrecompiles(hub, this, successBitMmuCall);
+            PRC_P256_VERIFY ->
+            firstMmuCall =
+                MmuCall.callDataExtractionForPostCancunPrecompiles(hub, this, successBitMmuCall);
         default -> throw new IllegalArgumentException("Not an elliptic curve precompile");
       }
       firstImcFragment.callMmu(firstMmuCall);

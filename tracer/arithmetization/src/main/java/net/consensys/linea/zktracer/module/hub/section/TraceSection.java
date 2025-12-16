@@ -24,7 +24,6 @@ import static net.consensys.linea.zktracer.module.hub.HubProcessingPhase.TX_WARM
 
 import java.util.ArrayList;
 import java.util.List;
-
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
@@ -236,18 +235,20 @@ public class TraceSection {
       specificFragment.trace(hubTrace);
       final CommonFragment commonFragment =
           switch (commonValues.hub.fork) {
-            case LONDON, PARIS, SHANGHAI -> new LondonCommonFragment(
-                commonValues,
-                stackLineCounter,
-                nonStackLineCounter,
-                hub().state.mmuStamp(),
-                hub().state.mxpStamp());
-            case CANCUN, PRAGUE, OSAKA -> new CancunCommonFragment(
-                commonValues,
-                stackLineCounter,
-                nonStackLineCounter,
-                hub().state.mmuStamp(),
-                hub().state.mxpStamp());
+            case LONDON, PARIS, SHANGHAI ->
+                new LondonCommonFragment(
+                    commonValues,
+                    stackLineCounter,
+                    nonStackLineCounter,
+                    hub().state.mmuStamp(),
+                    hub().state.mxpStamp());
+            case CANCUN, PRAGUE, OSAKA ->
+                new CancunCommonFragment(
+                    commonValues,
+                    stackLineCounter,
+                    nonStackLineCounter,
+                    hub().state.mmuStamp(),
+                    hub().state.mxpStamp());
             default -> throw new IllegalArgumentException("Unknown fork: " + commonValues.hub.fork);
           };
       commonFragment.trace(hubTrace);

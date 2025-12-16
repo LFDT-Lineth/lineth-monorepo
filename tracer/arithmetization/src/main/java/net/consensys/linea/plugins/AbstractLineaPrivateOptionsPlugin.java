@@ -17,7 +17,6 @@ package net.consensys.linea.plugins;
 
 import java.util.HashMap;
 import java.util.Map;
-
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.plugins.rpc.RpcCliOptions;
 import net.consensys.linea.plugins.rpc.RpcConfiguration;

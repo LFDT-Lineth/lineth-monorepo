@@ -25,7 +25,6 @@ import static net.consensys.linea.zktracer.types.Conversions.safeLongToInt;
 import static net.consensys.linea.zktracer.types.Utils.rightPadTo;
 
 import java.math.BigInteger;
-
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;

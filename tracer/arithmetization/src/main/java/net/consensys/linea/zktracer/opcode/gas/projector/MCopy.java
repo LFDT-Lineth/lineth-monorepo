@@ -58,11 +58,10 @@ public final class MCopy extends GasProjection {
   @Override
   public long mxpxOffset(Fork fork) {
     return switch (fork) {
-      case LONDON, PARIS, SHANGHAI -> throw new IllegalStateException(
-          "MCOPY doesn't exist in fork: " + fork);
-      case CANCUN, PRAGUE, OSAKA -> size == 0
-          ? 0
-          : Math.max(size, Math.max(targetOffset, sourceOffset));
+      case LONDON, PARIS, SHANGHAI ->
+          throw new IllegalStateException("MCOPY doesn't exist in fork: " + fork);
+      case CANCUN, PRAGUE, OSAKA ->
+          size == 0 ? 0 : Math.max(size, Math.max(targetOffset, sourceOffset));
       default -> throw new IllegalArgumentException("Unknown fork: " + fork);
     };
   }

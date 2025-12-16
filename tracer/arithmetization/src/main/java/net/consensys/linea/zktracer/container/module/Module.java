@@ -16,7 +16,6 @@
 package net.consensys.linea.zktracer.container.module;
 
 import java.util.List;
-
 import net.consensys.linea.zktracer.Trace;
 import net.consensys.linea.zktracer.module.ModuleName;
 import net.consensys.linea.zktracer.types.TransactionProcessingMetadata;

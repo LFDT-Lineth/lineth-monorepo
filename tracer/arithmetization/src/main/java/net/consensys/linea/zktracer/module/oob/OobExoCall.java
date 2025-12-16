@@ -20,7 +20,6 @@ import static net.consensys.linea.zktracer.opcode.OpCode.ADD;
 import static net.consensys.linea.zktracer.types.Conversions.*;
 
 import java.math.BigInteger;
-
 import lombok.Builder;
 import lombok.Getter;
 import lombok.experimental.Accessors;

@@ -33,7 +33,6 @@ import static net.consensys.linea.zktracer.module.mmio.MmioData.isFastOperation;
 import static net.consensys.linea.zktracer.module.mmio.MmioData.lineCountOfMmioInstruction;
 
 import java.util.List;
-
 import lombok.RequiredArgsConstructor;
 import net.consensys.linea.zktracer.Trace;
 import net.consensys.linea.zktracer.container.module.Module;

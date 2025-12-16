@@ -15,11 +15,10 @@
 
 package net.consensys.linea.zktracer.types;
 
+import io.vertx.core.buffer.Buffer;
 import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.util.Arrays;
-
-import io.vertx.core.buffer.Buffer;
 import org.apache.tuweni.bytes.AbstractBytes;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.MutableBytes;

@@ -16,7 +16,6 @@
 package net.consensys.linea.zktracer.module;
 
 import java.util.List;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.zktracer.module.hub.Hub;
@@ -321,29 +320,39 @@ public class DebugMode {
           AND,
           OR,
           XOR,
-          BYTE -> "%s %s %s".formatted(opCode, maybeStackItem(frame, 0), maybeStackItem(frame, 1));
-      case ADDMOD, MULMOD -> "%s %s %s %s"
-          .formatted(
-              opCode, maybeStackItem(frame, 0), maybeStackItem(frame, 1), maybeStackItem(frame, 2));
-      case ISZERO, NOT, CALLDATALOAD, BLOCKHASH, MLOAD, SLOAD -> "%s %s"
-          .formatted(opCode, maybeStackItem(frame, 0));
+          BYTE ->
+          "%s %s %s".formatted(opCode, maybeStackItem(frame, 0), maybeStackItem(frame, 1));
+      case ADDMOD, MULMOD ->
+          "%s %s %s %s"
+              .formatted(
+                  opCode,
+                  maybeStackItem(frame, 0),
+                  maybeStackItem(frame, 1),
+                  maybeStackItem(frame, 2));
+      case ISZERO, NOT, CALLDATALOAD, BLOCKHASH, MLOAD, SLOAD ->
+          "%s %s".formatted(opCode, maybeStackItem(frame, 0));
       case SHL -> "SHL %s << %s".formatted(maybeStackItem(frame, 1), maybeStackItem(frame, 0));
       case SHR -> "SHR %s >> %s".formatted(maybeStackItem(frame, 1), maybeStackItem(frame, 0));
       case SAR -> "SAR %s >> %s".formatted(maybeStackItem(frame, 1), maybeStackItem(frame, 0));
       case BALANCE, EXTCODESIZE -> "%s @ %s".formatted(opCode, maybeStackItem(frame, 0));
-      case CALLDATACOPY, CODECOPY, RETURNDATACOPY -> "%s [%s ..+ %s] --> %s"
-          .formatted(
-              opCode, maybeStackItem(frame, 1), maybeStackItem(frame, 2), maybeStackItem(frame, 0));
-      case EXTCODECOPY -> "%s [%s ..+ %s] @ %s --> %s"
-          .formatted(
-              opCode,
-              maybeStackItem(frame, 2),
-              maybeStackItem(frame, 3),
-              maybeStackItem(frame, 0),
-              maybeStackItem(frame, 1));
+      case CALLDATACOPY, CODECOPY, RETURNDATACOPY ->
+          "%s [%s ..+ %s] --> %s"
+              .formatted(
+                  opCode,
+                  maybeStackItem(frame, 1),
+                  maybeStackItem(frame, 2),
+                  maybeStackItem(frame, 0));
+      case EXTCODECOPY ->
+          "%s [%s ..+ %s] @ %s --> %s"
+              .formatted(
+                  opCode,
+                  maybeStackItem(frame, 2),
+                  maybeStackItem(frame, 3),
+                  maybeStackItem(frame, 0),
+                  maybeStackItem(frame, 1));
       case EXTCODEHASH -> "EXTCODEHASH @ %s".formatted(maybeStackItem(frame, 0));
-      case MSTORE, SSTORE -> "%s %s --> %s"
-          .formatted(opCode, maybeStackItem(frame, 1), maybeStackItem(frame, 0));
+      case MSTORE, SSTORE ->
+          "%s %s --> %s".formatted(opCode, maybeStackItem(frame, 1), maybeStackItem(frame, 0));
       case JUMP -> "JUMP %s".formatted(maybeStackItem(frame, 0));
       case JUMPI -> "JUMPI %s ? %s".formatted(maybeStackItem(frame, 1), maybeStackItem(frame, 0));
       case PUSH1,
@@ -439,35 +448,40 @@ public class DebugMode {
         }
         yield s.toString();
       }
-      case CALL, CALLCODE -> "%s @%s gas: %s value: %s IN [%s ..+ %s]  OUT [%s ..+ %s]"
-          .formatted(
-              opCode,
-              maybeStackItem(frame, 1),
-              maybeStackItem(frame, 0),
-              maybeStackItem(frame, 2),
-              maybeStackItem(frame, 3),
-              maybeStackItem(frame, 4),
-              maybeStackItem(frame, 5),
-              maybeStackItem(frame, 6));
-      case RETURN, REVERT, SHA3 -> "RETURN [%s ..+ %s]"
-          .formatted(maybeStackItem(frame, 0), maybeStackItem(frame, 1));
-      case DELEGATECALL, STATICCALL -> "%s @%s gas: %s  IN [%s ..+ %s]  OUT [%s ..+ %s]"
-          .formatted(
-              opCode,
-              maybeStackItem(frame, 1),
-              maybeStackItem(frame, 0),
-              maybeStackItem(frame, 2),
-              maybeStackItem(frame, 3),
-              maybeStackItem(frame, 4),
-              maybeStackItem(frame, 5));
-      case CREATE -> "CREATE [%s ..+ %s] value: %s"
-          .formatted(maybeStackItem(frame, 1), maybeStackItem(frame, 2), maybeStackItem(frame, 0));
-      case CREATE2 -> "CREATE [%s ..+ %s] value: %s salt: %s"
-          .formatted(
-              maybeStackItem(frame, 1),
-              maybeStackItem(frame, 2),
-              maybeStackItem(frame, 0),
-              maybeStackItem(frame, 3));
+      case CALL, CALLCODE ->
+          "%s @%s gas: %s value: %s IN [%s ..+ %s]  OUT [%s ..+ %s]"
+              .formatted(
+                  opCode,
+                  maybeStackItem(frame, 1),
+                  maybeStackItem(frame, 0),
+                  maybeStackItem(frame, 2),
+                  maybeStackItem(frame, 3),
+                  maybeStackItem(frame, 4),
+                  maybeStackItem(frame, 5),
+                  maybeStackItem(frame, 6));
+      case RETURN, REVERT, SHA3 ->
+          "RETURN [%s ..+ %s]".formatted(maybeStackItem(frame, 0), maybeStackItem(frame, 1));
+      case DELEGATECALL, STATICCALL ->
+          "%s @%s gas: %s  IN [%s ..+ %s]  OUT [%s ..+ %s]"
+              .formatted(
+                  opCode,
+                  maybeStackItem(frame, 1),
+                  maybeStackItem(frame, 0),
+                  maybeStackItem(frame, 2),
+                  maybeStackItem(frame, 3),
+                  maybeStackItem(frame, 4),
+                  maybeStackItem(frame, 5));
+      case CREATE ->
+          "CREATE [%s ..+ %s] value: %s"
+              .formatted(
+                  maybeStackItem(frame, 1), maybeStackItem(frame, 2), maybeStackItem(frame, 0));
+      case CREATE2 ->
+          "CREATE [%s ..+ %s] value: %s salt: %s"
+              .formatted(
+                  maybeStackItem(frame, 1),
+                  maybeStackItem(frame, 2),
+                  maybeStackItem(frame, 0),
+                  maybeStackItem(frame, 3));
       default -> opCode.toString();
     };
   }

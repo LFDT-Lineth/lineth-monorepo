@@ -17,7 +17,6 @@ package net.consensys.linea.zktracer.module.hub.fragment.imc.oob;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import net.consensys.linea.zktracer.Trace;
 import net.consensys.linea.zktracer.module.add.Add;
 import net.consensys.linea.zktracer.module.hub.Hub;

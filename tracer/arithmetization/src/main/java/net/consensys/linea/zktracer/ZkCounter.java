@@ -81,7 +81,6 @@ import static org.hyperledger.besu.evm.frame.MessageFrame.State.COMPLETED_SUCCES
 
 import java.util.*;
 import java.util.stream.Stream;
-
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.plugins.config.LineaL1L2BridgeSharedConfiguration;
 import net.consensys.linea.zktracer.container.module.CountingOnlyModule;
@@ -451,8 +450,9 @@ public class ZkCounter implements LineCountingTracer {
           keccak.updateTally(MAX_SIZE_RLP_HASH_CREATE);
         }
       }
-      case BLOB, DELEGATE_CODE -> throw new IllegalStateException(
-          "Arithmetization doesn't support tx type: " + tx.getType());
+      case BLOB, DELEGATE_CODE ->
+          throw new IllegalStateException(
+              "Arithmetization doesn't support tx type: " + tx.getType());
       default -> throw new IllegalArgumentException("tx type unknown: " + tx.getType());
     }
   }
@@ -563,10 +563,11 @@ public class ZkCounter implements LineCountingTracer {
             mxp.updateTally(NB_ROWS_MXP_UPDT_W);
             // MMU
           }
-          case STOP -> hub.updateTally(
-              frame.getType() == MessageFrame.Type.MESSAGE_CALL
-                  ? NB_ROWS_HUB_STOP_MSG_CALL
-                  : NB_ROWS_HUB_STOP_DEPLOYMENT);
+          case STOP ->
+              hub.updateTally(
+                  frame.getType() == MessageFrame.Type.MESSAGE_CALL
+                      ? NB_ROWS_HUB_STOP_MSG_CALL
+                      : NB_ROWS_HUB_STOP_DEPLOYMENT);
           case SELFDESTRUCT -> hub.updateTally(NB_ROWS_HUB_SELFDESTRUCT);
         }
       }

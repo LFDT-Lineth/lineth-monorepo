@@ -23,7 +23,6 @@ import static net.consensys.linea.zktracer.types.Utils.rightPadTo;
 
 import java.math.BigInteger;
 import java.math.RoundingMode;
-
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;

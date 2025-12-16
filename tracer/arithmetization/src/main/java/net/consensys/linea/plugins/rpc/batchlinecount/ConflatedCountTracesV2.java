@@ -17,11 +17,10 @@ package net.consensys.linea.plugins.rpc.batchlinecount;
 
 import static net.consensys.linea.plugins.rpc.LineCounterGenerator.createLineCountingTracer;
 
+import com.google.common.base.Stopwatch;
 import java.util.Map;
 import java.util.Optional;
 import java.util.TreeMap;
-
-import com.google.common.base.Stopwatch;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.plugins.BesuServiceProvider;

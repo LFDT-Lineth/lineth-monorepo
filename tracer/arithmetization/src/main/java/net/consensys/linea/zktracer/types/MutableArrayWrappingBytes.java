@@ -16,7 +16,6 @@
 package net.consensys.linea.zktracer.types;
 
 import java.util.Arrays;
-
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.MutableBytes;
 

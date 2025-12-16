@@ -17,11 +17,10 @@ package net.consensys.linea.zktracer.forkSpecific.prague.floorprice;
 
 import static net.consensys.linea.zktracer.Fork.isPostPrague;
 
+import com.google.common.base.Preconditions;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
-
-import com.google.common.base.Preconditions;
 import net.consensys.linea.UnitTestWatcher;
 import net.consensys.linea.reporting.TracerTestBase;
 import net.consensys.linea.testing.BytecodeCompiler;

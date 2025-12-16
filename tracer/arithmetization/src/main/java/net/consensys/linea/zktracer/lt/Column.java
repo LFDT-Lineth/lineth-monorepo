@@ -15,7 +15,6 @@
 package net.consensys.linea.zktracer.lt;
 
 import java.nio.ByteBuffer;
-
 import net.consensys.linea.zktracer.Trace;
 
 public interface Column extends Trace.Column {

@@ -21,7 +21,6 @@ import static net.consensys.linea.zktracer.Trace.Mmu.NB_PP_ROWS_EXO_TO_RAM_TRANS
 
 import java.util.ArrayList;
 import java.util.List;
-
 import net.consensys.linea.zktracer.module.euc.Euc;
 import net.consensys.linea.zktracer.module.euc.EucOperation;
 import net.consensys.linea.zktracer.module.mmu.MmuData;

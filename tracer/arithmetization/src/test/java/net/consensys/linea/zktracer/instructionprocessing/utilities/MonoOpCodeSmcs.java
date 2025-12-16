@@ -15,7 +15,6 @@
 package net.consensys.linea.zktracer.instructionprocessing.utilities;
 
 import java.util.List;
-
 import net.consensys.linea.testing.ToyAccount;
 import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.crypto.KeyPair;

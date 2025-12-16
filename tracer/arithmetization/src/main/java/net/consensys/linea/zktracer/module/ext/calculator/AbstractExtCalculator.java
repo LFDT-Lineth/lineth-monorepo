@@ -160,8 +160,9 @@ public abstract class AbstractExtCalculator {
     return switch (opCode) {
       case MULMOD -> new MulModCalculator();
       case ADDMOD -> new AddModCalculator();
-      default -> throw new RuntimeException(
-          "Incompatible instruction for extended modular arithmetic module");
+      default ->
+          throw new RuntimeException(
+              "Incompatible instruction for extended modular arithmetic module");
     };
   }
 }

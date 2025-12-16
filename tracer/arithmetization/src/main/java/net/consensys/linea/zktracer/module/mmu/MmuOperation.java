@@ -27,7 +27,6 @@ import static net.consensys.linea.zktracer.types.Conversions.*;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.Accessors;

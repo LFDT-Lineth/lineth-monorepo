@@ -21,7 +21,6 @@ import static org.hyperledger.besu.datatypes.TransactionType.FRONTIER;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import net.consensys.linea.zktracer.Trace;
 import net.consensys.linea.zktracer.module.rlpUtils.RlpUtils;
 import net.consensys.linea.zktracer.module.rlptxn.RlpTxnOperation;

@@ -18,7 +18,6 @@ package net.consensys.linea.plugins.rpc;
 import java.util.Optional;
 import java.util.concurrent.Semaphore;
 import java.util.function.Function;
-
 import lombok.Builder;
 import org.hyperledger.besu.ethereum.api.jsonrpc.internal.response.RpcErrorType;
 import org.hyperledger.besu.plugin.services.exception.PluginRpcEndpointException;

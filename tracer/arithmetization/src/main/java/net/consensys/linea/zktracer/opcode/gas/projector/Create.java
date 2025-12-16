@@ -56,12 +56,10 @@ public final class Create extends GasProjection {
   @Override
   public long mxpxOffset(Fork fork) {
     return switch (fork) {
-      case LONDON, PARIS, SHANGHAI -> initCodeLength == 0
-          ? 0
-          : clampedAdd(initCodeOffset, initCodeLength - 1);
-      case CANCUN, PRAGUE, OSAKA -> initCodeLength == 0
-          ? 0
-          : Math.max(initCodeOffset, initCodeLength);
+      case LONDON, PARIS, SHANGHAI ->
+          initCodeLength == 0 ? 0 : clampedAdd(initCodeOffset, initCodeLength - 1);
+      case CANCUN, PRAGUE, OSAKA ->
+          initCodeLength == 0 ? 0 : Math.max(initCodeOffset, initCodeLength);
       default -> throw new IllegalArgumentException("Unknown fork: " + fork);
     };
   }

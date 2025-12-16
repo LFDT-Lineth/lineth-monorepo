@@ -20,7 +20,6 @@ import static net.consensys.linea.zktracer.module.mxp.moduleOperation.CancunMxpO
 import static net.consensys.linea.zktracer.types.Conversions.unsignedIntToBytes;
 
 import java.math.BigInteger;
-
 import net.consensys.linea.zktracer.module.euc.Euc;
 import net.consensys.linea.zktracer.module.hub.Hub;
 import net.consensys.linea.zktracer.module.mxp.MxpExoCall;

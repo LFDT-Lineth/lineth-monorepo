@@ -17,7 +17,6 @@ package net.consensys.linea.zktracer;
 
 import java.math.BigInteger;
 import java.util.Optional;
-
 import net.consensys.linea.zktracer.types.EWord;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;

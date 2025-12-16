@@ -19,7 +19,6 @@ import static net.consensys.linea.zktracer.Trace.EXP_INST_MODEXPLOG;
 import static net.consensys.linea.zktracer.types.Conversions.bigIntegerToBytes;
 
 import java.math.BigInteger;
-
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;

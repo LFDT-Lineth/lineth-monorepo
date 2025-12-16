@@ -18,7 +18,6 @@ package net.consensys.linea.zktracer.module.hub;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
-
 import net.consensys.linea.UnitTestWatcher;
 import net.consensys.linea.reporting.TracerTestBase;
 import net.consensys.linea.testing.BytecodeCompiler;
