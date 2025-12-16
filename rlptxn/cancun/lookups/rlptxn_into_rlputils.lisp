@@ -4,22 +4,20 @@
   rlptxn-into-rlputils
   ;; target columns
   (
-    rlputils.MACRO
-    rlputils.macro/INST  
-    rlputils.macro/DATA_1
-    rlputils.macro/DATA_2
-    rlputils.macro/DATA_3
-    rlputils.macro/DATA_4
-    rlputils.macro/DATA_5
-    rlputils.macro/DATA_6
-    rlputils.macro/DATA_7
-    rlputils.macro/DATA_8
+    rlputils.INST  
+    rlputils.DATA_1
+    rlputils.DATA_2
+    rlputils.DATA_3
+    rlputils.DATA_4
+    rlputils.DATA_5
+    rlputils.DATA_6
+    rlputils.DATA_7
+    rlputils.DATA_8
   )
   ;; source selector
   (sel-rlptxn-to-rlputils)
   ;; source columns
   (
-    1
     rlptxn.cmp/RLPUTILS_INST
     rlptxn.cmp/EXO_DATA_1   
     rlptxn.cmp/EXO_DATA_2   

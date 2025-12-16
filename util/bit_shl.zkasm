@@ -6,7 +6,7 @@ fn bit_shl256(word u256, n u8) -> (res u256) {
   var msw u128
   var b u1
   var m u7
-  ;; decompoise shift
+  ;; decompose shift
   b,m = n
   ;;
   if b!=0 goto apply
@@ -23,7 +23,7 @@ fn bit_shl256_u7(word u256, n u7) -> (res u256) {
   var msw u64
   var b u1
   var m u6
-  ;; decompoise shift
+  ;; decompose shift
   b,m = n
   ;;
   if b!=0 goto apply
@@ -40,7 +40,7 @@ fn bit_shl256_u6(word u256, n u6) -> (res u256) {
   var msw u32
   var b u1
   var m u5
-  ;; decompoise shift
+  ;; decompose shift
   b,m = n
   ;;
   if b!=0 goto apply
@@ -57,7 +57,7 @@ fn bit_shl256_u5(word u256, n u5) -> (res u256) {
   var msw u16
   var b u1
   var m u4
-  ;; decompoise shift
+  ;; decompose shift
   b,m = n
   ;;
   if b!=0 goto apply
@@ -74,7 +74,7 @@ fn bit_shl256_u4(word u256, n u4) -> (res u256) {
   var msw u8
   var b u1
   var m u3
-  ;; decompoise shift
+  ;; decompose shift
   b,m = n
   ;;
   if b!=0 goto apply
@@ -91,7 +91,7 @@ fn bit_shl256_u3(word u256, n u3) -> (res u256) {
   var msw u4
   var b u1
   var m u2
-  ;; decompoise shift
+  ;; decompose shift
   b,m = n
   ;;
   if b!=0 goto apply
@@ -108,7 +108,7 @@ fn bit_shl256_u2(word u256, n u2) -> (res u256) {
   var msw u2
   var b u1
   var m u1
-  ;; decompoise shift
+  ;; decompose shift
   b,m = n
   ;;
   if b!=0 goto apply

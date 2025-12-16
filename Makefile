@@ -79,7 +79,7 @@ RLP_TXN_RCPT := rlptxrcpt
 
 RLP_TXRCPT := rlptxrcpt			
 
-RLP_UTILS_CANCUN := rlputils/cancun rlputils/cancun/maxlog.zkasm
+RLP_UTILS_CANCUN := rlputils/rlputils.zkasm
 
 ROM := rom
 
