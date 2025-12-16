@@ -40,8 +40,17 @@ dependencies {
   testImplementation 'org.junit.jupiter:junit-jupiter-params'
 }
 
-jar {
+def generatedClassesDir = "${project.layout.getBuildDirectory().get()}/generated/gocorset/main/java"
 
+sourceSets {
+  main {
+    java {
+      srcDir generatedClassesDir
+    }
+  }
+}
+
+jar {
   version = calculateVersion()
 
   manifest {
@@ -53,5 +62,7 @@ jar {
         )
   }
 }
+
+compileJava.dependsOn 'buildAllTracers'
 
 apply from: lineaTracerProject.file("gradle/publishing.gradle")

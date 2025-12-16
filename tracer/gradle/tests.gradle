@@ -337,8 +337,3 @@ tasks.register("extractShomeiBesuPlugin", Copy) {
     includeEmptyDirs = false
     duplicatesStrategy = DuplicatesStrategy.FAIL
 }
-
-
-// Configure default build task to require the tracer is built first.
-// This only makes sense for projects which need the tracer.
-compileJava.dependsOn 'buildAllTracers'

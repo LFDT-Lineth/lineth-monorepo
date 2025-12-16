@@ -13,15 +13,15 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 tasks.register('corsetExists') {
-    doLast {
-        def result = exec{
-            ignoreExitValue = true
-            commandLine "go-corset", "--version"
-        }
-        if (result.getExitValue() != 0){
-            throw new GradleException('go-corset not found!')
-        }
+  doLast {
+    def result = exec {
+      ignoreExitValue = true
+      commandLine "go-corset", "--version"
     }
+    if (result.getExitValue() != 0) {
+      throw new GradleException('go-corset not found!')
+    }
+  }
 }
 
 // Allowing overriding the default zkevm.bin files.
@@ -31,69 +31,75 @@ def ZKEVM_SHANGHAI_BIN = System.getenv("ZKEVM_SHANGHAI_BIN") ?: "zkevm_shanghai.
 def ZKEVM_CANCUN_BIN = System.getenv("ZKEVM_CANCUN_BIN") ?: "zkevm_cancun.bin"
 def ZKEVM_PRAGUE_BIN = System.getenv("ZKEVM_PRAGUE_BIN") ?: "zkevm_prague.bin"
 def ZKEVM_OSAKA_BIN = System.getenv("ZKEVM_OSAKA_BIN") ?: "zkevm_osaka.bin"
-// Specify where the trace files should be generated.
-def TRACE_FILE = "arithmetization/src/main/java/net/consensys/linea/zktracer/Trace.java"
-def LONDON_TRACE_FILE = "arithmetization/src/main/java/net/consensys/linea/zktracer/TraceLondon.java"
-def PARIS_TRACE_FILE = "arithmetization/src/main/java/net/consensys/linea/zktracer/TraceParis.java"
-def SHANGHAI_TRACE_FILE = "arithmetization/src/main/java/net/consensys/linea/zktracer/TraceShanghai.java"
-def CANCUN_TRACE_FILE = "arithmetization/src/main/java/net/consensys/linea/zktracer/TraceCancun.java"
-def PRAGUE_TRACE_FILE = "arithmetization/src/main/java/net/consensys/linea/zktracer/TracePrague.java"
-def OSAKA_TRACE_FILE = "arithmetization/src/main/java/net/consensys/linea/zktracer/TraceOsaka.java"
+
 // Specify package to use for trace file
 def TRACE_PKG = "net.consensys.linea.zktracer"
 
 tasks.register('buildZkevmBins', Exec) {
-    workingDir "${project.rootDir}/tracer/linea-constraints/"
-    // Specify input files so gradle knows when to rebuild.
-    inputs.files(fileTree(workingDir).include('**/*.lisp'))
-    // Specify output file so gradle knows when out-of-date.
-    outputs.files(fileTree(workingDir).include(ZKEVM_LONDON_BIN))
-    outputs.files(fileTree(workingDir).include(ZKEVM_PARIS_BIN))
-    outputs.files(fileTree(workingDir).include(ZKEVM_SHANGHAI_BIN))
-    outputs.files(fileTree(workingDir).include(ZKEVM_CANCUN_BIN))
-    outputs.files(fileTree(workingDir).include(ZKEVM_PRAGUE_BIN))
-    outputs.files(fileTree(workingDir).include(ZKEVM_OSAKA_BIN))
-    // Sanity check executing this makes sense.
-    doFirst {
-        // sanity check target chain
-        def chain = System.getProperty('blockchain')
-        // note: null indicates the default (which is Linea).
-        if(chain != null && chain != "Linea") {
-            println("*** incorrect target chain (expected 'Linea' was '" + chain + "')\n\n")
-            assert false
-        }
+  workingDir "${project.rootDir}/tracer/linea-constraints/"
+  // Specify input files so gradle knows when to rebuild.
+  inputs.files(fileTree(workingDir).include('**/*.lisp'))
+  // Specify output file so gradle knows when out-of-date.
+  outputs.files(fileTree(workingDir).include(ZKEVM_LONDON_BIN))
+  outputs.files(fileTree(workingDir).include(ZKEVM_PARIS_BIN))
+  outputs.files(fileTree(workingDir).include(ZKEVM_SHANGHAI_BIN))
+  outputs.files(fileTree(workingDir).include(ZKEVM_CANCUN_BIN))
+  outputs.files(fileTree(workingDir).include(ZKEVM_PRAGUE_BIN))
+  outputs.files(fileTree(workingDir).include(ZKEVM_OSAKA_BIN))
+  // Sanity check executing this makes sense.
+  doFirst {
+    // sanity check target chain
+    def chain = System.getProperty('blockchain')
+    // note: null indicates the default (which is Linea).
+    if (chain != null && chain != "Linea") {
+      println("*** incorrect target chain (expected 'Linea' was '" + chain + "')\n\n")
+      assert false
     }
-    // Make all forks
-    commandLine 'make'
+  }
+  // Make all forks
+  commandLine 'make'
 }
 
 def lineaTracerProject = project(lineaTracerProjectPath)
 
 // Task which generates the Trace.java interface using go-corset.
 tasks.register('buildAllTracers', Exec) {
-    group "Trace file(s) generation"
-    dependsOn 'buildZkevmBins'
-    // Locate target files
-    def traceJava = lineaTracerProject.file(TRACE_FILE)
-    def traceLondonJava = lineaTracerProject.file(LONDON_TRACE_FILE)
-    def traceParisJava = lineaTracerProject.file(PARIS_TRACE_FILE)
-    def traceShanghaiJava = lineaTracerProject.file(SHANGHAI_TRACE_FILE)
-    def traceCancunJava = lineaTracerProject.file(CANCUN_TRACE_FILE)
-    def tracePragueJava = lineaTracerProject.file(PRAGUE_TRACE_FILE)
-    def traceOsakaJava = lineaTracerProject.file(OSAKA_TRACE_FILE)
-    // Configure full paths for zkevm.bin files
-    def zkevmLondonBin = lineaTracerProject.file('linea-constraints/' + ZKEVM_LONDON_BIN)
-    def zkevmParisBin = lineaTracerProject.file('linea-constraints/' + ZKEVM_PARIS_BIN)
-    def zkevmShanghaiBin = lineaTracerProject.file('linea-constraints/' + ZKEVM_SHANGHAI_BIN)
-    def zkevmCancunBin = lineaTracerProject.file('linea-constraints/' + ZKEVM_CANCUN_BIN)
-    def zkevmPragueBin = lineaTracerProject.file('linea-constraints/' + ZKEVM_PRAGUE_BIN)
-    def zkevmOsakaBin = lineaTracerProject.file('linea-constraints/' + ZKEVM_OSAKA_BIN)
-    // Generate trace interface and implementing classes
-    commandLine 'go-corset','generate','-p',TRACE_PKG,'-i',traceJava,
-            '-o',traceLondonJava,zkevmLondonBin,
-            '-o',traceParisJava,zkevmParisBin,
-            '-o',traceShanghaiJava,zkevmShanghaiBin,
-            '-o',traceCancunJava,zkevmCancunBin,
-            '-o',tracePragueJava,zkevmPragueBin,
-            '-o',traceOsakaJava,zkevmOsakaBin
+  group "Trace file(s) generation"
+  dependsOn 'buildZkevmBins'
+  // Specify where the trace files should be generated.
+  def GENERATED_SRC_DIR = "${project.layout.buildDirectory.get()}/generated/gocorset/main/java/net/consensys/linea/zktracer"
+  def TRACE_FILE = "$GENERATED_SRC_DIR/Trace.java"
+  def LONDON_TRACE_FILE = "$GENERATED_SRC_DIR/TraceLondon.java"
+  def PARIS_TRACE_FILE = "$GENERATED_SRC_DIR/TraceParis.java"
+  def SHANGHAI_TRACE_FILE = "$GENERATED_SRC_DIR/TraceShanghai.java"
+  def CANCUN_TRACE_FILE = "$GENERATED_SRC_DIR/TraceCancun.java"
+  def PRAGUE_TRACE_FILE = "$GENERATED_SRC_DIR/TracePrague.java"
+  def OSAKA_TRACE_FILE = "$GENERATED_SRC_DIR/TraceOsaka.java"
+
+  // Locate target files
+  def traceJava = lineaTracerProject.file(TRACE_FILE)
+  def traceLondonJava = lineaTracerProject.file(LONDON_TRACE_FILE)
+  def traceParisJava = lineaTracerProject.file(PARIS_TRACE_FILE)
+  def traceShanghaiJava = lineaTracerProject.file(SHANGHAI_TRACE_FILE)
+  def traceCancunJava = lineaTracerProject.file(CANCUN_TRACE_FILE)
+  def tracePragueJava = lineaTracerProject.file(PRAGUE_TRACE_FILE)
+  def traceOsakaJava = lineaTracerProject.file(OSAKA_TRACE_FILE)
+  // Configure full paths for zkevm.bin files
+  def zkevmLondonBin = lineaTracerProject.file('linea-constraints/' + ZKEVM_LONDON_BIN)
+  def zkevmParisBin = lineaTracerProject.file('linea-constraints/' + ZKEVM_PARIS_BIN)
+  def zkevmShanghaiBin = lineaTracerProject.file('linea-constraints/' + ZKEVM_SHANGHAI_BIN)
+  def zkevmCancunBin = lineaTracerProject.file('linea-constraints/' + ZKEVM_CANCUN_BIN)
+  def zkevmPragueBin = lineaTracerProject.file('linea-constraints/' + ZKEVM_PRAGUE_BIN)
+  def zkevmOsakaBin = lineaTracerProject.file('linea-constraints/' + ZKEVM_OSAKA_BIN)
+  // Generate trace interface and implementing classes
+  doFirst {
+    traceJava.parentFile.mkdirs()
+  }
+  commandLine 'go-corset', 'generate', '-p', TRACE_PKG, '-i', traceJava,
+    '-o', traceLondonJava, zkevmLondonBin,
+    '-o', traceParisJava, zkevmParisBin,
+    '-o', traceShanghaiJava, zkevmShanghaiBin,
+    '-o', traceCancunJava, zkevmCancunBin,
+    '-o', tracePragueJava, zkevmPragueBin,
+    '-o', traceOsakaJava, zkevmOsakaBin
 }
