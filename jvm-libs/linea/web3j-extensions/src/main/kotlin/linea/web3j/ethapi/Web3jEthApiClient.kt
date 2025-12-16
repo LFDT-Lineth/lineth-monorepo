@@ -13,6 +13,7 @@ import linea.ethapi.StateOverride
 import linea.kotlin.decodeHex
 import linea.kotlin.encodeHex
 import linea.kotlin.toULong
+import linea.web3j.EthFeeHistoryBlobExtended
 import linea.web3j.domain.toDomain
 import linea.web3j.domain.toLineaDomain
 import linea.web3j.domain.toWeb3j
@@ -21,8 +22,11 @@ import linea.web3j.mappers.toDomain
 import linea.web3j.mappers.toWeb3j
 import linea.web3j.requestAsync
 import org.web3j.protocol.Web3j
+import org.web3j.protocol.Web3jService
+import org.web3j.protocol.core.Request
 import org.web3j.protocol.core.methods.request.EthFilter
 import org.web3j.protocol.core.methods.response.Log
+import org.web3j.utils.Numeric
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.math.BigInteger
 import kotlin.jvm.optionals.getOrNull
@@ -33,6 +37,7 @@ import kotlin.jvm.optionals.getOrNull
  */
 class Web3jEthApiClient(
   val web3jClient: Web3j,
+  val web3jService: Web3jService,
 ) : EthApiClient {
   override fun getLogs(
     fromBlock: BlockParameter,
@@ -82,9 +87,20 @@ class Web3jEthApiClient(
     blockCount: Int,
     newestBlock: BlockParameter,
     rewardPercentiles: List<Double>,
-  ): SafeFuture<FeeHistory> = web3jClient
-    .ethFeeHistory(blockCount, newestBlock.toWeb3j(), rewardPercentiles)
-    .requestAsync { it.feeHistory.toLineaDomain() }
+  ): SafeFuture<FeeHistory> {
+    return Request(
+      "eth_feeHistory",
+      listOf(
+        Numeric.encodeQuantity(BigInteger.valueOf(blockCount.toLong())),
+        newestBlock.toWeb3j().value,
+        rewardPercentiles,
+      ),
+      this.web3jService,
+      EthFeeHistoryBlobExtended::class.java,
+    ).requestAsync {
+      it.feeHistory.toLineaDomain()
+    }
+  }
 
   override fun ethBlockNumber(): SafeFuture<ULong> =
     web3jClient.ethBlockNumber().requestAsync {

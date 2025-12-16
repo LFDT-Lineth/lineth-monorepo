@@ -4,9 +4,12 @@ import io.vertx.core.Vertx
 import linea.domain.RetryConfig
 import linea.ethapi.EthApiClient
 import linea.web3j.createWeb3jHttpClient
+import linea.web3j.createWeb3jHttpService
 import org.apache.logging.log4j.Level
+import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import org.web3j.protocol.Web3j
+import org.web3j.protocol.Web3jService
 import org.web3j.utils.Async
 import java.util.concurrent.ScheduledExecutorService
 import java.util.function.Predicate
@@ -23,6 +26,7 @@ import kotlin.time.Duration.Companion.milliseconds
  */
 fun createEthApiClient(
   web3jClient: Web3j,
+  web3jService: Web3jService,
   requestRetryConfig: RetryConfig? = null,
   vertx: Vertx? = null,
   stopRetriesOnErrorPredicate: Predicate<Throwable> = Predicate { _ -> false },
@@ -31,7 +35,7 @@ fun createEthApiClient(
     throw IllegalArgumentException("Vertx instance is required when request retry is enabled")
   }
 
-  val ethApiClient = Web3jEthApiClient(web3jClient)
+  val ethApiClient = Web3jEthApiClient(web3jClient, web3jService)
   return if (requestRetryConfig?.isRetryEnabled == true) {
     Web3jEthApiClientWithRetries(
       vertx = vertx!!,
@@ -40,7 +44,7 @@ fun createEthApiClient(
       stopRetriesOnErrorPredicate = stopRetriesOnErrorPredicate,
     )
   } else {
-    Web3jEthApiClient(web3jClient)
+    ethApiClient
   }
 }
 
@@ -59,7 +63,7 @@ fun createEthApiClient(
  */
 fun createEthApiClient(
   rpcUrl: String,
-  log: Logger = org.apache.logging.log4j.LogManager.getLogger(Web3j::class.java),
+  log: Logger = LogManager.getLogger(Web3j::class.java),
   pollingInterval: Duration = 500.milliseconds,
   executorService: ScheduledExecutorService = Async.defaultExecutorService(),
   requestResponseLogLevel: Level = Level.TRACE,
@@ -68,15 +72,19 @@ fun createEthApiClient(
   vertx: Vertx? = null,
   stopRetriesOnErrorPredicate: Predicate<Throwable> = Predicate { _ -> false },
 ): EthApiClient {
+  val web3jService = createWeb3jHttpService(
+    rpcUrl = rpcUrl,
+    log = log,
+    requestResponseLogLevel = requestResponseLogLevel,
+    failuresLogLevel = failuresLogLevel,
+  )
+
   val web3jClient =
     createWeb3jHttpClient(
-      rpcUrl,
-      log,
-      pollingInterval,
-      executorService,
-      requestResponseLogLevel,
-      failuresLogLevel,
+      httpService = web3jService,
+      pollingInterval = pollingInterval,
+      executorService = executorService,
     )
 
-  return createEthApiClient(web3jClient, requestRetryConfig, vertx, stopRetriesOnErrorPredicate)
+  return createEthApiClient(web3jClient, web3jService, requestRetryConfig, vertx, stopRetriesOnErrorPredicate)
 }

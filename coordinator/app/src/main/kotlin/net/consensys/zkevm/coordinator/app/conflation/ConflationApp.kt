@@ -12,7 +12,6 @@ import linea.coordinator.config.toJsonRpcRetry
 import linea.coordinator.config.v2.CoordinatorConfig
 import linea.coordinator.config.v2.isDisabled
 import linea.domain.BlockParameter
-import linea.domain.RetryConfig
 import linea.encoding.BlockRLPEncoder
 import linea.ethapi.EthApiClient
 import linea.web3j.ExtendedWeb3JImpl
@@ -102,7 +101,8 @@ class ConflationApp(
     log = LogManager.getLogger("clients.l2.eth.conflation"),
   )
   val l2EthClient: EthApiClient = createEthApiClient(
-    l2Web3jClient,
+    rpcUrl = configs.conflation.l2Endpoint.toString(),
+    log = LogManager.getLogger("clients.l2.eth.conflation"),
     requestRetryConfig = configs.conflation.l2RequestRetries,
     vertx = vertx,
   )
@@ -275,17 +275,10 @@ class ConflationApp(
         aggregationsRepository = aggregationsRepository,
         consecutiveProvenBlobsProvider = maxBlobEndBlockNumberTracker,
         proofAggregationClient = proverClientFactory.proofAggregationProverClient(),
-        l2EthApiClient = createEthApiClient(
-          l2Web3jClient,
-          requestRetryConfig = RetryConfig(
-            backoffDelay = 1.seconds,
-            failuresWarningThreshold = 3u,
-          ),
-          vertx = vertx,
-        ),
+        l2EthApiClient = l2EthClient,
         l2MessageService = Web3JL2MessageServiceSmartContractClient.createReadOnly(
           web3jClient = l2Web3jClient,
-          ethApiClient = createEthApiClient(web3jClient = l2Web3jClient, requestRetryConfig = null, vertx = vertx),
+          ethApiClient = l2EthClient,
           contractAddress = configs.protocol.l2.contractAddress,
           smartContractErrors = configs.smartContractErrors,
           smartContractDeploymentBlockNumber = configs.protocol.l2.contractDeploymentBlockNumber?.getNumber(),

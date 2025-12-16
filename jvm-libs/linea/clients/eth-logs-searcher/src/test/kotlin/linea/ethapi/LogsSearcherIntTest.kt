@@ -27,8 +27,6 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.web3j.protocol.Web3j
-import org.web3j.protocol.http.HttpService
 import java.net.URI
 import kotlin.random.Random
 import kotlin.time.Duration.Companion.milliseconds
@@ -41,7 +39,6 @@ internal data class EthGetLogsRequest(
 )
 
 class EthLogsSearcherImplIntTest {
-  private lateinit var web3jClient: Web3j
   private lateinit var logsClient: EthLogsSearcherImpl
   private lateinit var vertx: Vertx
   private lateinit var wireMockServer: WireMockServer
@@ -70,12 +67,11 @@ class EthLogsSearcherImplIntTest {
     wireMockServer = WireMockServer(WireMockConfiguration.options().dynamicPort())
     wireMockServer.start()
 
-    web3jClient = Web3j.build(HttpService(URI("http://127.0.0.1:" + wireMockServer.port()).toURL().toString()))
     vertx = Vertx.vertx()
     logsClient = EthLogsSearcherImpl(
       vertx,
       ethApiClient = createEthApiClient(
-        web3jClient = web3jClient,
+        rpcUrl = URI("http://127.0.0.1:" + wireMockServer.port()).toURL().toString(),
         requestRetryConfig = retryConfig,
         vertx = vertx,
       ),
@@ -99,7 +95,7 @@ class EthLogsSearcherImplIntTest {
       vertx = vertx,
       ethApiClient = createEthApiClient(
         vertx = vertx,
-        web3jClient = Web3j.build(HttpService(URI("http://127.0.0.1:" + TestingJsonRpcServer.boundPort).toString())),
+        rpcUrl = URI("http://127.0.0.1:" + TestingJsonRpcServer.boundPort).toString(),
         requestRetryConfig = retryConfig,
       ),
       config = EthLogsSearcherImpl.Config(
@@ -240,12 +236,11 @@ class EthLogsSearcherImplIntTest {
   @Test
   fun `when eth_getLogs gets a DNS error shall return failed promise`() {
     val randomHostname = "nowhere-${Random.nextBytes(20).encodeHex()}.local"
-    web3jClient = Web3j.build(HttpService("http://$randomHostname:1234"))
     vertx = Vertx.vertx()
     logsClient = EthLogsSearcherImpl(
       vertx,
       createEthApiClient(
-        web3jClient,
+        rpcUrl = URI("http://$randomHostname:1234").toURL().toString(),
         requestRetryConfig = RetryConfig.noRetries,
         vertx = null,
       ),

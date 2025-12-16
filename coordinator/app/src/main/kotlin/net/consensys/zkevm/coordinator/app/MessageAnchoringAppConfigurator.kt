@@ -21,11 +21,15 @@ object MessageAnchoringAppConfigurator {
     }
     configs.messageAnchoring!!
 
-    val l1Web3jClient = createWeb3jHttpClient(
+    val l1EthApiClient = createEthApiClient(
       rpcUrl = configs.messageAnchoring.l1Endpoint.toString(),
       log = LogManager.getLogger("clients.l1.eth.message-anchoring"),
     )
     val l2Web3jClient = createWeb3jHttpClient(
+      rpcUrl = configs.messageAnchoring.l2Endpoint.toString(),
+      log = LogManager.getLogger("clients.l2.eth.message-anchoring"),
+    )
+    val l2EthApiClient = createEthApiClient(
       rpcUrl = configs.messageAnchoring.l2Endpoint.toString(),
       log = LogManager.getLogger("clients.l2.eth.message-anchoring"),
     )
@@ -49,14 +53,10 @@ object MessageAnchoringAppConfigurator {
         messageQueueCapacity = configs.messageAnchoring.messageQueueCapacity,
         maxMessagesToAnchorPerL2Transaction = configs.messageAnchoring.maxMessagesToAnchorPerL2Transaction,
       ),
-      l1EthApiClient = createEthApiClient(
-        web3jClient = l1Web3jClient,
-        requestRetryConfig = null,
-        vertx = vertx,
-      ),
+      l1EthApiClient = l1EthApiClient,
       l2MessageService = Web3JL2MessageServiceSmartContractClient.create(
         web3jClient = l2Web3jClient,
-        ethApiClient = createEthApiClient(web3jClient = l2Web3jClient, requestRetryConfig = null, vertx = vertx),
+        ethApiClient = l2EthApiClient,
         contractAddress = configs.protocol.l2.contractAddress,
         gasLimit = configs.messageAnchoring.gas.gasLimit,
         maxFeePerGasCap = configs.messageAnchoring.gas.maxFeePerGasCap,
