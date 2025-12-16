@@ -41,15 +41,15 @@ tasks.register("downloadExecutionSpecFixtures", Download) {
 }
 
 tasks.register("copyExecutionSpecFixtures", Copy) {
-    dependsOn "downloadExecutionSpecFixtures"
-    //
-    from tarTree("./build/fixtures_develop.tar.gz")
-    into "./build/execution-spec-tests"
+  dependsOn "downloadExecutionSpecFixtures"
+  //
+  from tarTree("./build/fixtures_develop.tar.gz")
+  into "./build/execution-spec-tests"
 }
 
 
 tasks.register("generateExecutionSpecBlockchainTests", RefTestGenerationTask) {
-    dependsOn "copyExecutionSpecFixtures"
+  dependsOn "copyExecutionSpecFixtures"
   // Configure task
   refTestTemplateFilePath = "src/test/resources/templates/BlockchainReferenceTest.java.template"
   refTests = "./build/execution-spec-tests/fixtures/blockchain_tests"
@@ -82,7 +82,7 @@ tasks.register('referenceExecutionSpecBlockchainTests', Test) {
     systemProperty("junit.jupiter.execution.parallel.mode.classes.default", "concurrent")
     systemProperty("junit.jupiter.execution.parallel.config.strategy", "fixed")
     systemProperty("junit.jupiter.execution.parallel.config.fixed.parallelism",
-            System.getenv().getOrDefault("JUNIT_TESTS_PARALLELISM", "1").toInteger())
+        System.getenv().getOrDefault("JUNIT_TESTS_PARALLELISM", "1").toInteger())
   }
 
   useJUnitPlatform {

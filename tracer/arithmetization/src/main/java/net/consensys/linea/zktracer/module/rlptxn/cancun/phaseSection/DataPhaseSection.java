@@ -77,8 +77,8 @@ public class DataPhaseSection extends PhaseSection {
       traceTransactionConstantValues(trace, tracedValues);
       trace.ctMax(ctMax);
       currentLimb.traceRlpTxn(trace, tracedValues, true, true, true, ct);
-      zeros -= currentLimb.zerosCount();
-      nonZeros -= currentLimb.nonZerosCount();
+      zeros -= currentLimb.zeros();
+      nonZeros -= currentLimb.nonZeros();
       trace.pCmpAux1(zeros).pCmpAux2(nonZeros);
       tracePostValues(trace, tracedValues);
     }

@@ -38,7 +38,6 @@ import net.consensys.linea.zktracer.module.mxp.module.LondonMxp;
 import net.consensys.linea.zktracer.module.mxp.module.Mxp;
 import net.consensys.linea.zktracer.module.rlptxn.RlpTxn;
 import net.consensys.linea.zktracer.module.rlptxn.london.LondonRlpTxn;
-import net.consensys.linea.zktracer.module.tables.PowerRt;
 import net.consensys.linea.zktracer.module.tables.bls.BlsRt;
 import net.consensys.linea.zktracer.module.tables.instructionDecoder.InstructionDecoder;
 import net.consensys.linea.zktracer.module.tables.instructionDecoder.LondonInstructionDecoder;
@@ -86,7 +85,7 @@ public class LondonHub extends Hub {
   }
 
   @Override
-  protected Module setRlpUtils(Wcp wcp) {
+  protected Module setRlpUtils() {
     // RlpUtils is not used in London, it is only used in Cancun
     return new CountingOnlyModule(RLP_UTILS);
   }
@@ -99,12 +98,6 @@ public class LondonHub extends Hub {
   @Override
   protected InstructionDecoder setInstructionDecoder() {
     return new LondonInstructionDecoder(this.opCodes());
-  }
-
-  @Override
-  protected PowerRt setPower() {
-    // PowerRt is not used in London, it is only used in Cancun
-    return null;
   }
 
   @Override

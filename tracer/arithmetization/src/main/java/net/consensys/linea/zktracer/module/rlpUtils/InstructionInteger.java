@@ -16,19 +16,18 @@
 package net.consensys.linea.zktracer.module.rlpUtils;
 
 import static net.consensys.linea.zktracer.Trace.*;
-import static net.consensys.linea.zktracer.Trace.Rlputils.CT_MAX_INST_INTEGER;
 import static net.consensys.linea.zktracer.TraceCancun.Rlptxn.RLP_TXN_CT_MAX_INTEGER;
-import static net.consensys.linea.zktracer.module.rlpUtils.RlpUtils.BYTES32_PREFIX_SHORT_INT;
+import static net.consensys.linea.zktracer.module.rlpUtils.RlpUtils.BI_PREFIX_SHORT_INT;
 
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.experimental.Accessors;
 import net.consensys.linea.zktracer.Trace;
 import net.consensys.linea.zktracer.module.rlptxn.cancun.GenericTracedValue;
-import net.consensys.linea.zktracer.module.wcp.Wcp;
 import net.consensys.linea.zktracer.types.Bytes16;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
+
 
 @Accessors(fluent = true)
 @EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = false)
@@ -39,24 +38,16 @@ public class InstructionInteger extends RlpUtilsCall {
   private boolean rlpPrefixRequired;
 
   public InstructionInteger(Bytes32 integer) {
-    super(CT_MAX_INST_INTEGER);
+    super();
     this.integer = integer;
   }
 
   @Override
-  protected void compute(Wcp wcp) {
-    final WcpExoCall firstCall = WcpExoCall.callToIsZero(wcp, integer);
-    wcpCalls.add(firstCall);
-    integerIsZero = firstCall.result;
-
-    final WcpExoCall secondCall = WcpExoCall.callToGt(wcp, Bytes32.leftPad(intHi()), Bytes32.ZERO);
-    wcpCalls.add(secondCall);
-    integerHiIsNonZero = secondCall.result;
-
-    final WcpExoCall thirdCall =
-        WcpExoCall.callToLt(wcp, Bytes32.leftPad(intLo()), BYTES32_PREFIX_SHORT_INT);
-    wcpCalls.add(thirdCall);
-    rlpPrefixRequired = integerIsZero || integerHiIsNonZero || !thirdCall.result;
+  protected void compute() {
+    integerIsZero = integer.isZero();
+    integerHiIsNonZero = integer.numberOfLeadingZeroBytes() < LLARGE;
+    final boolean intLoGeq128 = intLo().toUnsignedBigInteger().compareTo(BI_PREFIX_SHORT_INT) >= 0;
+    rlpPrefixRequired = integerIsZero || integerHiIsNonZero || intLoGeq128;
   }
 
   @Override
@@ -132,32 +123,16 @@ public class InstructionInteger extends RlpUtilsCall {
   @Override
   protected void traceMacro(Trace.Rlputils trace) {
     trace
-        .macro(true)
-        .pMacroInst(RLP_UTILS_INST_INTEGER)
-        .isInteger(true)
-        .pMacroData1(intHi())
-        .pMacroData2(intLo())
-        .pMacroData3(!integerIsZero)
-        .pMacroData4(integerHiIsNonZero)
-        .pMacroData5(rlpPrefixRequired)
-        .pMacroData6(rlpPrefix())
-        .pMacroData7(leadingLimbShifted())
-        .pMacroData8(leadingLimbByteSize())
-        .fillAndValidateRow();
-  }
-
-  @Override
-  protected void traceCompt(Trace.Rlputils trace, short ct) {
-    final boolean callPower = (ct == CT_MAX_INST_INTEGER) && !integerIsZero;
-    trace.compt(true).isInteger(true).ct(ct).ctMax(CT_MAX_INST_INTEGER);
-    // related to WCP call
-    wcpCalls.get(ct).traceWcpCall(trace);
-    // call to POWER ref table for the last row
-    trace
-        .pComptShfFlag(callPower)
-        .pComptShfArg(callPower ? LLARGE - leadingLimbByteSize() : 0)
-        .pComptShfPower(callPower ? power(leadingLimbByteSize()) : Bytes.EMPTY)
-        .fillAndValidateRow();
+        .inst(RLP_UTILS_INST_INTEGER)
+        .data1(intHi())
+        .data2(intLo())
+        .data3(!integerIsZero)
+        .data4(integerHiIsNonZero)
+        .data5(rlpPrefixRequired)
+        .data6(rlpPrefix())
+        .data7(leadingLimbShifted())
+        .data8(leadingLimbByteSize())
+        .validateRow();
   }
 
   @Override
@@ -171,11 +146,6 @@ public class InstructionInteger extends RlpUtilsCall {
         this.integer
             .toUnsignedBigInteger()
             .compareTo(((InstructionInteger) other).integer.toUnsignedBigInteger());
-  }
-
-  @Override
-  protected int computeLineCount() {
-    return 1 + CT_MAX_INST_INTEGER + 1;
   }
 
   private Bytes intHi() {

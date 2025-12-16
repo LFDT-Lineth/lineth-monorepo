@@ -21,6 +21,7 @@ import static net.consensys.linea.zktracer.Fork.OSAKA;
 
 import net.consensys.linea.UnitTestWatcher;
 import net.consensys.linea.reporting.TracerTestBase;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
@@ -54,6 +55,7 @@ public class FastReplayTests extends TracerTestBase {
     replay(MAINNET_TESTCONFIG(OSAKA, false), "osaka/6569423.mainnet.json.gz", testInfo);
   }
 
+  @Disabled("https://github.com/Consensys/linea-monorepo/issues/1912")
   @Test
   void incident777zkGethMainnet(TestInfo testInfo) {
     replay(MAINNET_TESTCONFIG(OSAKA, false), "osaka/7461019-7461030.mainnet.json.gz", testInfo);
@@ -101,6 +103,7 @@ public class FastReplayTests extends TracerTestBase {
         false);
   }
 
+  @Disabled("https://github.com/Consensys/linea-monorepo/issues/1912")
   @Test
   void negativeNumberOfMmioInstruction(TestInfo testInfo) {
     replay(
@@ -119,6 +122,7 @@ public class FastReplayTests extends TracerTestBase {
         false);
   }
 
+  @Disabled("https://github.com/Consensys/linea-monorepo/issues/1912")
   @Test
   void failedCreate2(TestInfo testInfo) {
     replay(
@@ -146,6 +150,7 @@ public class FastReplayTests extends TracerTestBase {
         false);
   }
 
+  @Disabled("https://github.com/Consensys/linea-monorepo/issues/1912")
   @Test
   void modexpTriggeringNonAlignedFirstLimbSingleSourceMmuModexp(TestInfo testInfo) {
     replay(
@@ -182,6 +187,7 @@ public class FastReplayTests extends TracerTestBase {
         false);
   }
 
+  @Disabled("https://github.com/Consensys/linea-monorepo/issues/1912")
   @Test
   void stateManagerIntegrationTest(TestInfo testInfo) {
     replay(

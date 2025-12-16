@@ -17,15 +17,12 @@ package net.consensys.linea.zktracer.module.rlpUtils;
 
 import static net.consensys.linea.zktracer.Trace.LLARGE;
 import static net.consensys.linea.zktracer.Trace.RLP_UTILS_INST_BYTES32;
-import static net.consensys.linea.zktracer.Trace.Rlputils.CT_MAX_INST_BYTES32;
 import static net.consensys.linea.zktracer.TraceCancun.Rlptxn.RLP_TXN_CT_MAX_BYTES32;
 import static net.consensys.linea.zktracer.module.rlpUtils.RlpUtils.BYTES16_PREFIX_BYTES32;
-import static net.consensys.linea.zktracer.module.rlpUtils.WcpExoCall.callToGeq;
 
 import lombok.EqualsAndHashCode;
 import net.consensys.linea.zktracer.Trace;
 import net.consensys.linea.zktracer.module.rlptxn.cancun.GenericTracedValue;
-import net.consensys.linea.zktracer.module.wcp.Wcp;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
 
@@ -34,13 +31,13 @@ public class InstructionBytes32 extends RlpUtilsCall {
   @EqualsAndHashCode.Include private final Bytes32 input1;
 
   public InstructionBytes32(Bytes32 input1) {
-    super(CT_MAX_INST_BYTES32);
+    super();
     this.input1 = input1;
   }
 
   @Override
-  protected void compute(Wcp wcp) {
-    wcpCalls.add(callToGeq(wcp, input1, Bytes32.ZERO));
+  protected void compute() {
+
   }
 
   @Override
@@ -71,19 +68,10 @@ public class InstructionBytes32 extends RlpUtilsCall {
   @Override
   protected void traceMacro(Trace.Rlputils trace) {
     trace
-        .macro(true)
-        .pMacroInst(RLP_UTILS_INST_BYTES32)
-        .isByte32(true)
-        .pMacroData1(data1())
-        .pMacroData2(data2())
+        .inst(RLP_UTILS_INST_BYTES32)
+        .data1(data1())
+        .data2(data2())
         .fillAndValidateRow();
-  }
-
-  @Override
-  protected void traceCompt(Trace.Rlputils trace, short ct) {
-    trace.compt(true).isByte32(true);
-    wcpCalls.getFirst().traceWcpCall(trace);
-    trace.fillAndValidateRow();
   }
 
   @Override
@@ -97,11 +85,6 @@ public class InstructionBytes32 extends RlpUtilsCall {
         input1
             .toUnsignedBigInteger()
             .compareTo(((InstructionBytes32) other).input1.toUnsignedBigInteger());
-  }
-
-  @Override
-  protected int computeLineCount() {
-    return 1 + CT_MAX_INST_BYTES32 + 1;
   }
 
   private Bytes data1() {
