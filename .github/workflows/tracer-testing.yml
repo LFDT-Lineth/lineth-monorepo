@@ -1,4 +1,4 @@
-name: "Tracer Unit & Fast Replay Tests & Blockchain Ref Tests"
+name: "Tracer Unit & Fast Replay Tests & One Blockchain Ref Test validation flow"
 
 permissions:
   contents: read
@@ -35,7 +35,7 @@ jobs:
     uses: ./.github/workflows/reusable-tracer-blockchain-tests.yml
     secrets: inherit
     with:
-      zkevm_fork: PRAGUE
+      zkevm_fork: OSAKA
       test_filter: 'BlockchainReferenceTest_10'
       failed_module: ''
       failed_constraint: ''

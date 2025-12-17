@@ -12,13 +12,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  nightly-tests-prague:
-    uses: ./.github/workflows/reusable-tracer-nightly-tests.yml
-    secrets: inherit
-    with:
-      zkevm_fork: PRAGUE
-      tests-with-ssh: false
-
   nightly-tests-osaka:
     uses: ./.github/workflows/reusable-tracer-nightly-tests.yml
     secrets: inherit

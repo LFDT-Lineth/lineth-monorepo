@@ -29,17 +29,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # For Prague, we run blockchain tests coming from the execution spec tests
-  blockchain-reference-tests-prague:
-    uses: ./.github/workflows/reusable-tracer-blockchain-tests.yml
-    secrets: inherit
-    with:
-      zkevm_fork: PRAGUE
-      test_filter: ${{ inputs.test_filter || 'BlockchainReferenceTest_*' }}
-      failed_module: ${{ inputs.failed_module || '' }}
-      failed_constraint: ${{ inputs.failed_constraint || '' }}
-      commit: ${{ inputs.commit || '' }}
-
+  # We run blockchain tests coming from the execution spec tests
   blockchain-reference-tests-osaka:
     uses: ./.github/workflows/reusable-tracer-blockchain-tests.yml
     secrets: inherit

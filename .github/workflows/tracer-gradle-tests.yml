@@ -62,13 +62,6 @@ jobs:
   # ==================================================================
   # Unit Tests
   # ==================================================================
-  unit-tests-prague:
-    needs: [ build ]
-    uses: ./.github/workflows/reusable-tracer-unit-tests.yml
-    with:
-      zkevm_fork: PRAGUE
-      tests-with-ssh: ${{ inputs.tests-with-ssh || false}}
-
   unit-tests-osaka:
     needs: [ build ]
     uses: ./.github/workflows/reusable-tracer-unit-tests.yml
