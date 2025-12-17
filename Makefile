@@ -25,6 +25,7 @@ start-env: L1_CONTRACT_VERSION:=6
 start-env: SKIP_CONTRACTS_DEPLOYMENT:=false
 start-env: SKIP_L1_L2_NODE_HEALTH_CHECK:=false
 start-env: LINEA_PROTOCOL_CONTRACTS_ONLY:=false
+start-env: LINEA_L1_CONTRACT_DEPLOYMENT_TARGET:=deploy-linea-rollup-v$(L1_CONTRACT_VERSION)
 start-env:
 	@if [ "$(CLEAN_PREVIOUS_ENV)" = "true" ]; then \
 		$(MAKE) clean-environment; \
@@ -43,8 +44,11 @@ start-env:
 	if [ "$(SKIP_CONTRACTS_DEPLOYMENT)" = "true" ]; then \
 		echo "Skipping contracts deployment"; \
 	else \
-		$(MAKE) deploy-contracts L1_CONTRACT_VERSION=$(L1_CONTRACT_VERSION) LINEA_PROTOCOL_CONTRACTS_ONLY=$(LINEA_PROTOCOL_CONTRACTS_ONLY); \
+		$(MAKE) deploy-contracts L1_CONTRACT_VERSION=$(L1_CONTRACT_VERSION) LINEA_PROTOCOL_CONTRACTS_ONLY=$(LINEA_PROTOCOL_CONTRACTS_ONLY) LINEA_L1_CONTRACT_DEPLOYMENT_TARGET=$(LINEA_L1_CONTRACT_DEPLOYMENT_TARGET); \
 	fi
+
+start-env-with-validium:
+	$(MAKE) start-env L1_CONTRACT_VERSION=1 LINEA_COORDINATOR_DATA_AVAILABILITY=VALIDIUM LINEA_L1_CONTRACT_DEPLOYMENT_TARGET=deploy-validium
 
 start-l1:
 	make start-env COMPOSE_PROFILES:=l1 COMPOSE_FILE:=docker/compose-tracing-v2.yml SKIP_CONTRACTS_DEPLOYMENT:=true SKIP_L1_L2_NODE_HEALTH_CHECK:=true
@@ -72,6 +76,9 @@ start-env-with-tracing-v2-extra:
 
 start-env-with-tracing-v2-ci:
 	make start-env COMPOSE_FILE=docker/compose-tracing-v2-ci-extension.yml LINEA_COORDINATOR_DISABLE_TYPE2_STATE_PROOF_PROVIDER=false LINEA_COORDINATOR_SIGNER_TYPE=web3signer
+
+start-env-with-validium-and-tracing-v2-ci:
+	make start-env-with-validium COMPOSE_FILE=docker/compose-tracing-v2-ci-extension.yml LINEA_COORDINATOR_DISABLE_TYPE2_STATE_PROOF_PROVIDER=false LINEA_COORDINATOR_SIGNER_TYPE=web3signer
 
 ## Enable Fleet leader and follower besu nodes
 start-env-with-tracing-v2-fleet-ci:

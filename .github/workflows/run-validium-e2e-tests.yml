@@ -1,0 +1,111 @@
+name: run-validium-e2e-tests
+
+permissions:
+  contents: read
+  actions: read
+
+on:
+  workflow_dispatch:
+    inputs:
+      e2e-tests-with-ssh:
+        description: Run end to end tests with ability to ssh into environment
+        required: false
+        type: boolean
+        default: false
+      e2e-tests-logs-dump:
+        description: Dump logs after running end to end tests
+        required: false
+        type: boolean
+        default: false
+      e2e-tests-containers-list:
+        description: List containers before starting end to end tests
+        required: false
+        type: boolean
+        default: true
+
+jobs:
+  run-validium-e2e-tests:
+    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-xl
+    steps:
+      - name: Setup upterm session
+        if: ${{ inputs.e2e-tests-with-ssh }}
+        uses: lhotari/action-upterm@b0357f23233f5ea6d58947c0c402e0631bab7334 #v1
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup nodejs environment
+        uses: ./.github/actions/setup-nodejs
+        with:
+          pnpm-install-options: '-F contracts -F e2e --frozen-lockfile --prefer-offline'
+
+      - name: Create directory for conflated traces
+        run: |
+          mkdir -p tmp/local/traces/v2/conflated
+          chmod -R a+rw tmp/local/
+
+      - name: Pull all external-to-monorepo images with retry
+        uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 #v3.0.2
+        with:
+          max_attempts: 10
+          retry_on: error
+          retry_wait_seconds: 30
+          timeout_minutes: 10
+          command: |
+            make docker-pull-images-external-to-monorepo
+
+      - name: Spin up fresh environment with retry
+        uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 #v3.0.2
+        with:
+          max_attempts: 10
+          retry_on: error
+          retry_wait_seconds: 30
+          timeout_minutes: 10
+          command: |
+            make start-env-with-validium-and-tracing-v2-ci CLEAN_PREVIOUS_ENV=false
+          on_retry_command: |
+            make clean-environment
+
+      - name: List docker containers/images
+        if: ${{ always() && inputs.e2e-tests-containers-list }}
+        continue-on-error: true
+        run: |
+          docker ps -la && docker images
+          docker container ls -a
+
+      - name: Run e2e tests
+        id: run_e2e_tests
+        timeout-minutes: 6
+        run: |
+          pnpm run -F e2e test:e2e:local
+
+      - name: Dump logs
+        if: ${{ failure() && inputs.e2e-tests-logs-dump }}
+        run: |
+          mkdir -p docker_logs
+          find tmp/local/ >> docker_logs/files_in_shared_dir.txt || true
+          docker ps -a >> docker_logs/docker_ps.txt || true
+          docker logs coordinator --since 1h &>> docker_logs/coordinator.txt || true
+          docker logs prover-v3 --since 1h &>> docker_logs/prover-v3.txt || true
+          docker logs shomei --since 1h &>> docker_logs/shomei.txt || true
+          docker logs zkbesu-shomei --since 1h &>> docker_logs/zkbesu-shomei.txt || true
+          docker logs shomei-frontend --since 1h &>> docker_logs/shomei-frontend.txt || true
+          docker logs postman --since 1h &>> docker_logs/postman.txt || true
+          docker logs traces-node --since 1h &>> docker_logs/traces-node.txt || true
+          docker logs l2-node-besu --since 1h &>> docker_logs/l2-node-besu.txt || true
+          docker logs transaction-exclusion-api --since 1h &>> docker_logs/transaction-exclusion-api.txt || true
+          docker logs sequencer --since 1h &>> docker_logs/sequencer.txt || true
+          docker logs l1-el-node --since 1h &>> docker_logs/l1-el-node.txt || true
+          docker logs l1-cl-node --since 1h &>> docker_logs/l1-cl-node.txt || true
+          docker logs maru --since 1h &>> docker_logs/maru.txt || true
+
+      - name: Archive debug logs
+        uses: actions/upload-artifact@v4
+        if: ${{ failure() && inputs.e2e-tests-logs-dump }}
+        with:
+          name: end-2-end-debug-logs
+          if-no-files-found: error
+          path: |
+            docker_logs/**/*
