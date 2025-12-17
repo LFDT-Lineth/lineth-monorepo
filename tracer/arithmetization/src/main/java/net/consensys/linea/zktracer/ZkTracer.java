@@ -379,6 +379,8 @@ public class ZkTracer implements LineCountingTracer {
   /** When called, erase all tracing related to the bundle of all transactions since the last. */
   @Override
   public void popTransactionBundle() {
+    log.info(
+        "[ZkTracer] Transaction bundle has been popped, assuming block building. Tracing might fail.");
     hub.popTransactionBundle();
   }
 

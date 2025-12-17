@@ -516,6 +516,7 @@ public abstract class Hub implements Module {
     state.popTransactionBundle();
     transients.conflation().stackHeightChecksForStackUnderflows().popTransactionBundle();
     transients.conflation().stackHeightChecksForStackOverflows().popTransactionBundle();
+    defers.clearAll();
     for (Module m : modules) {
       m.popTransactionBundle();
     }

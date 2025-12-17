@@ -262,4 +262,16 @@ public class DeferRegistry
   public void unscheduleForPostTransaction(EndTransactionDefer defer) {
     endTransactionDefers.remove(defer);
   }
+
+  public void clearAll() {
+    postOpcodeDefers.clear();
+    contextEntryDefers.clear();
+    contextExitDefers.clear();
+    contextReEntryDefers.clear();
+    endTransactionDefers.clear();
+    afterTransactionFinalizationDefers.clear();
+    rollbackDefers.clear();
+    postBlockDefers.clear();
+    postConflationDefers.clear();
+  }
 }
