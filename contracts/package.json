@@ -2,8 +2,8 @@
   "name": "contracts",
   "license": "(MIT OR Apache-2.0)",
   "engines": {
-    "node": ">=20",
-    "pnpm": ">=9"
+    "node": ">=22.21.1",
+    "pnpm": ">=10.26.0"
   },
   "scripts": {
     "build": "TS_NODE_TRANSPILE_ONLY=1 npx hardhat compile",

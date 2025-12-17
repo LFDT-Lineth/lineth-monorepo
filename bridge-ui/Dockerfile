@@ -1,4 +1,4 @@
-FROM node:lts-alpine AS base
+FROM node:22.21.1-alpine AS base
 
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
@@ -49,7 +49,7 @@ RUN --mount=type=secret,id=revalidate_secret,env=REVALIDATE_SECRET \
 
 RUN apk del build-dependencies
 
-FROM node:lts-alpine AS runner
+FROM node:22.21.1-alpine AS runner
 
 WORKDIR /app
 

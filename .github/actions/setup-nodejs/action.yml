@@ -2,14 +2,6 @@ name: 'Setup nodes'
 description: 'Setup nodejs'
 
 inputs:
-  node-version:
-    description: 'The version of node to use'
-    required: true
-    default: '20.17.0'
-  pnpm-version:
-    description: 'The version of pnpm to use'
-    required: true
-    default: '10.18.3'
   pnpm-install-options:
     description: 'The options to pass to pnpm install'
     required: true
@@ -19,12 +11,10 @@ runs:
   using: 'composite'
   steps:
     - uses: pnpm/action-setup@v4
-      with:
-        version: ${{ inputs.pnpm-version }}
 
     - uses: actions/setup-node@v4
       with:
-        node-version: ${{ inputs.node-version }}
+        node-version-file: .nvmrc
         cache: 'pnpm'
 
     - name: pnpm install

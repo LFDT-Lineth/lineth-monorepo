@@ -48,7 +48,6 @@ jobs:
       - name: Setup nodejs environment
         uses: ./.github/actions/setup-nodejs
         with:
-          node-version: 20.17.0
           pnpm-install-options: '--frozen-lockfile --prefer-offline'
 
       - name: Install Playwright
