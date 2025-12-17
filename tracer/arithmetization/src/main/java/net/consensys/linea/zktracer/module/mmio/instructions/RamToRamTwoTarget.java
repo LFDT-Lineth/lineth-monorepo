@@ -20,10 +20,10 @@ import static net.consensys.linea.zktracer.module.mmio.MmioPatterns.onePartialTo
 import static net.consensys.linea.zktracer.module.mmio.MmioPatterns.onePartialToTwoOutputTwo;
 import static net.consensys.linea.zktracer.module.mmio.MmioPatterns.updateTemporaryTargetRam;
 import static net.consensys.linea.zktracer.types.Bytecodes.readLimb;
+import static net.consensys.linea.zktracer.types.Utils.BYTES16_ZERO;
 
 import net.consensys.linea.zktracer.module.mmio.MmioData;
 import net.consensys.linea.zktracer.module.mmu.MmuData;
-import net.consensys.linea.zktracer.types.Bytes16;
 
 public class RamToRamTwoTarget extends MmioInstruction {
 
@@ -51,7 +51,7 @@ public class RamToRamTwoTarget extends MmioInstruction {
     mmioData.valA(readLimb(mmuData.sourceRamBytes(), mmioData.indexA()));
     mmioData.valB(readLimb(mmuData.targetRamBytes(), mmioData.indexB()));
     mmioData.valC(readLimb(mmuData.targetRamBytes(), mmioData.indexC()));
-    mmioData.limb(Bytes16.ZERO);
+    mmioData.limb(BYTES16_ZERO);
 
     mmioData.valANew(mmioData.valA());
     mmioData.valBNew(

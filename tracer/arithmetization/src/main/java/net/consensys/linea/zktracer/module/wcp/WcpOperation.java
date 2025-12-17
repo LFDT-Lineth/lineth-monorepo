@@ -23,10 +23,8 @@ import static net.consensys.linea.zktracer.Trace.EVM_INST_SGT;
 import static net.consensys.linea.zktracer.Trace.EVM_INST_SLT;
 import static net.consensys.linea.zktracer.Trace.WCP_INST_GEQ;
 import static net.consensys.linea.zktracer.Trace.WCP_INST_LEQ;
-import static net.consensys.linea.zktracer.types.Conversions.bigIntegerToBytes;
 import static net.consensys.linea.zktracer.types.Conversions.reallyToSignedBigInteger;
 
-import java.math.BigInteger;
 import java.security.InvalidParameterException;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -34,7 +32,6 @@ import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.zktracer.Trace;
 import net.consensys.linea.zktracer.container.ModuleOperation;
-import net.consensys.linea.zktracer.types.Bytes16;
 import net.consensys.linea.zktracer.types.UnsignedByte;
 import org.apache.tuweni.bytes.Bytes32;
 
@@ -75,13 +72,7 @@ public class WcpOperation extends ModuleOperation {
     };
   }
 
-  private Bytes16 calculateAdj(boolean cmp, BigInteger arg1, BigInteger arg2) {
-    return cmp
-        ? Bytes16.leftPad(bigIntegerToBytes(arg1.subtract(arg2).subtract(BigInteger.ONE)))
-        : Bytes16.leftPad(bigIntegerToBytes(arg2.subtract(arg1)));
-  }
-
-  void trace(Trace.Wcp trace, int stamp) {
+  void trace(Trace.Wcp trace) {
     // Calculate result
     final boolean res = calculateResult(wcpInst, arg1, arg2);
     final UnsignedByte inst = UnsignedByte.of(wcpInst);

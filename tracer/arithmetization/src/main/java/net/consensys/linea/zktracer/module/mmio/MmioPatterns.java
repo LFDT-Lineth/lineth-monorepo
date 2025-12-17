@@ -15,17 +15,18 @@
 
 package net.consensys.linea.zktracer.module.mmio;
 
+import static graphql.com.google.common.base.Preconditions.checkArgument;
 import static net.consensys.linea.zktracer.Trace.LLARGE;
 
 import java.util.ArrayList;
 import java.util.List;
 import net.consensys.linea.zktracer.module.mmu.MmuData;
-import net.consensys.linea.zktracer.types.Bytes16;
 import org.apache.tuweni.bytes.Bytes;
 
 public class MmioPatterns {
 
-  static List<Bytes> isolateSuffix(final Bytes16 input, final List<Boolean> flag) {
+  static List<Bytes> isolateSuffix(final Bytes input, final List<Boolean> flag) {
+    checkArgument(input.size() == LLARGE, "input should be of size 16");
     final List<Bytes> output = new ArrayList<>(LLARGE);
 
     output.addFirst(flag.getFirst() ? Bytes.of(input.get(0)) : Bytes.EMPTY);
@@ -41,7 +42,8 @@ public class MmioPatterns {
     return output;
   }
 
-  static List<Bytes> isolatePrefix(final Bytes16 input, final List<Boolean> flag) {
+  static List<Bytes> isolatePrefix(final Bytes input, final List<Boolean> flag) {
+    checkArgument(input.size() == LLARGE, "input should be of size 16");
     final List<Bytes> output = new ArrayList<>(LLARGE);
 
     output.addFirst(flag.getFirst() ? Bytes.EMPTY : Bytes.of(input.get(0)));
@@ -58,7 +60,8 @@ public class MmioPatterns {
   }
 
   static List<Bytes> isolateChunk(
-      final Bytes16 input, final List<Boolean> startFlag, final List<Boolean> endFlag) {
+      final Bytes input, final List<Boolean> startFlag, final List<Boolean> endFlag) {
+    checkArgument(input.size() == LLARGE, "input should be of size 16");
     final List<Bytes> output = new ArrayList<>(LLARGE);
 
     output.addFirst(startFlag.getFirst() ? Bytes.of(input.get(0)) : Bytes.EMPTY);
@@ -110,77 +113,97 @@ public class MmioPatterns {
     return counter >= m;
   }
 
-  public static Bytes16 onePartialToOne(
-      final Bytes16 source,
-      final Bytes16 target,
+  public static Bytes onePartialToOne(
+      final Bytes source,
+      final Bytes target,
       final short sourceByteOffset,
       final short targetByteOffset,
       final short size) {
-    return Bytes16.wrap(
+    checkArgument(source.size() == LLARGE, "source should be of size 16");
+    checkArgument(target.size() == LLARGE, "target should be of size 16");
+    final Bytes output =
         Bytes.concatenate(
             target.slice(0, targetByteOffset),
             source.slice(sourceByteOffset, size),
-            target.slice(targetByteOffset + size, LLARGE - targetByteOffset - size)));
+            target.slice(targetByteOffset + size, LLARGE - targetByteOffset - size));
+    checkArgument(output.size() == LLARGE, "output should be of size 16");
+    return output;
   }
 
-  public static Bytes16 onePartialToTwoOutputOne(
-      final Bytes16 source,
-      final Bytes16 target1,
+  public static Bytes onePartialToTwoOutputOne(
+      final Bytes source,
+      final Bytes target1,
       final short sourceByteOffset,
       final short targetByteOffset) {
-    return Bytes16.wrap(
+    checkArgument(source.size() == LLARGE, "source should be of size 16");
+    checkArgument(target1.size() == LLARGE, "target1 should be of size 16");
+    final Bytes output =
         Bytes.concatenate(
             target1.slice(0, targetByteOffset),
-            source.slice(sourceByteOffset, LLARGE - targetByteOffset)));
+            source.slice(sourceByteOffset, LLARGE - targetByteOffset));
+    checkArgument(output.size() == LLARGE, "output should be of size 16");
+    return output;
   }
 
-  public static Bytes16 onePartialToTwoOutputTwo(
-      final Bytes16 source,
-      final Bytes16 target2,
+  public static Bytes onePartialToTwoOutputTwo(
+      final Bytes source,
+      final Bytes target2,
       final short sourceByteOffset,
       final short targetByteOffset,
       final short size) {
+    checkArgument(source.size() == LLARGE, "source should be of size 16");
+    checkArgument(target2.size() == LLARGE, "target2 should be of size 16");
     final short numberOfBytesFromSourceToFirstTarget = (short) (LLARGE - targetByteOffset);
     final short numberOfBytesFromSourceToSecondTarget =
         (short) (size - numberOfBytesFromSourceToFirstTarget);
-    return Bytes16.wrap(
+    final Bytes output =
         Bytes.concatenate(
             source.slice(
                 sourceByteOffset + numberOfBytesFromSourceToFirstTarget,
                 numberOfBytesFromSourceToSecondTarget),
             target2.slice(
                 numberOfBytesFromSourceToSecondTarget,
-                LLARGE - numberOfBytesFromSourceToSecondTarget)));
+                LLARGE - numberOfBytesFromSourceToSecondTarget));
+    checkArgument(output.size() == LLARGE, "output should be of size 16");
+    return output;
   }
 
-  public static Bytes16 twoPartialToOne(
-      final Bytes16 source1,
-      final Bytes16 source2,
-      final Bytes16 target,
+  public static Bytes twoPartialToOne(
+      final Bytes source1,
+      final Bytes source2,
+      final Bytes target,
       final short sourceByteOffset,
       final short targetByteOffset,
       final short size) {
+    checkArgument(source1.size() == LLARGE, "source1 should be of size 16");
+    checkArgument(source2.size() == LLARGE, "source2 should be of size 16");
+    checkArgument(target.size() == LLARGE, "target should be of size 16");
     final short numberByteFromFirstSource = (short) (LLARGE - sourceByteOffset);
     final short numberByteFromSecondSource = (short) (size - numberByteFromFirstSource);
-    return Bytes16.wrap(
+    final Bytes output =
         Bytes.concatenate(
             target.slice(0, targetByteOffset),
             source1.slice(sourceByteOffset, numberByteFromFirstSource),
             source2.slice(0, numberByteFromSecondSource),
-            target.slice(targetByteOffset + size)));
+            target.slice(targetByteOffset + size));
+    checkArgument(output.size() == LLARGE, "output should be of size 16");
+    return output;
   }
 
-  public static Bytes16 excision(
-      final Bytes16 target, final short targetByteOffset, final short size) {
-    return Bytes16.wrap(
+  public static Bytes excision(final Bytes target, final short targetByteOffset, final short size) {
+    checkArgument(target.size() == LLARGE, "target should be of size 16");
+    final Bytes output =
         Bytes.concatenate(
             target.slice(0, targetByteOffset),
             Bytes.repeat((byte) 0, size),
-            target.slice(targetByteOffset + size)));
+            target.slice(targetByteOffset + size));
+    checkArgument(output.size() == LLARGE, "output should be of size 16");
+    return output;
   }
 
   public static void updateTemporaryTargetRam(
-      MmuData mmuData, final long targetLimbOffsetToUpdate, final Bytes16 newLimb) {
+      MmuData mmuData, final long targetLimbOffsetToUpdate, final Bytes newLimb) {
+    checkArgument(newLimb.size() == LLARGE, "newLimb should be of size 16");
     final Bytes bytesPreLimb =
         Bytes.repeat(
             (byte) 0,

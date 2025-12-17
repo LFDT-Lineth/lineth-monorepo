@@ -21,6 +21,7 @@ import static net.consensys.linea.zktracer.module.rlpUtils.RlpUtils.BYTES16_PREF
 import static net.consensys.linea.zktracer.module.rlputilsOld.Pattern.outerRlpSize;
 import static net.consensys.linea.zktracer.types.AddressUtils.highPart;
 import static net.consensys.linea.zktracer.types.AddressUtils.lowPart;
+import static net.consensys.linea.zktracer.types.Utils.rightPadToBytes16;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -31,7 +32,6 @@ import net.consensys.linea.zktracer.module.rlpUtils.RlpUtils;
 import net.consensys.linea.zktracer.module.rlptxn.cancun.GenericTracedValue;
 import net.consensys.linea.zktracer.module.rlputilsOld.Pattern;
 import net.consensys.linea.zktracer.module.trm.Trm;
-import net.consensys.linea.zktracer.types.Bytes16;
 import net.consensys.linea.zktracer.types.TransactionProcessingMetadata;
 import org.apache.tuweni.bytes.Bytes32;
 import org.hyperledger.besu.datatypes.AccessListEntry;
@@ -189,7 +189,7 @@ public class AccessListPhaseSection extends PhaseSection {
           .limbConstructed(true)
           .lt(true)
           .lx(true)
-          .pCmpLimb(Bytes16.rightPad(address.slice(0, 4)))
+          .pCmpLimb(rightPadToBytes16(address.slice(0, 4)))
           .pCmpLimbSize(4);
       phaseSize -= 4;
       tupleSize -= 4;

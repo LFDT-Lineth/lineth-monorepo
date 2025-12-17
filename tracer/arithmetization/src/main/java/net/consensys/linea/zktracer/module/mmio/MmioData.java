@@ -33,6 +33,7 @@ import static net.consensys.linea.zktracer.module.mmio.MmioPatterns.isolatePrefi
 import static net.consensys.linea.zktracer.module.mmio.MmioPatterns.isolateSuffix;
 import static net.consensys.linea.zktracer.module.mmio.MmioPatterns.plateau;
 import static net.consensys.linea.zktracer.module.mmio.MmioPatterns.power;
+import static net.consensys.linea.zktracer.types.Utils.BYTES16_ZERO;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -43,7 +44,6 @@ import lombok.experimental.Accessors;
 import net.consensys.linea.zktracer.module.mmu.values.HubToMmuValues;
 import net.consensys.linea.zktracer.module.mmu.values.MmuToMmioConstantValues;
 import net.consensys.linea.zktracer.module.mmu.values.MmuToMmioInstruction;
-import net.consensys.linea.zktracer.types.Bytes16;
 import org.apache.tuweni.bytes.Bytes;
 
 @Getter
@@ -59,13 +59,13 @@ public class MmioData {
   private long indexB;
   private long indexC;
 
-  private Bytes16 valA;
-  private Bytes16 valB;
-  private Bytes16 valC;
+  private Bytes valA;
+  private Bytes valB;
+  private Bytes valC;
 
-  private Bytes16 valANew;
-  private Bytes16 valBNew;
-  private Bytes16 valCNew;
+  private Bytes valANew;
+  private Bytes valBNew;
+  private Bytes valCNew;
 
   // imported from the mmu
   private final int instruction;
@@ -76,7 +76,7 @@ public class MmioData {
   private final short sourceByteOffset;
   private final short targetByteOffset;
   private final short size;
-  private Bytes16 limb;
+  private Bytes limb;
   private final long totalSize;
   private final int exoSum;
   private final boolean exoIsRom;
@@ -120,12 +120,12 @@ public class MmioData {
         0,
         0,
         0,
-        Bytes16.ZERO,
-        Bytes16.ZERO,
-        Bytes16.ZERO,
-        Bytes16.ZERO,
-        Bytes16.ZERO,
-        Bytes16.ZERO,
+        BYTES16_ZERO,
+        BYTES16_ZERO,
+        BYTES16_ZERO,
+        BYTES16_ZERO,
+        BYTES16_ZERO,
+        BYTES16_ZERO,
         mmuToMmioInstruction.mmioInstruction(),
         mmuToMmioConstantValues.sourceContextNumber(),
         mmuToMmioConstantValues.targetContextNumber(),
@@ -177,8 +177,8 @@ public class MmioData {
   }
 
   public void onePartialToOne(
-      final Bytes16 sourceBytes,
-      final Bytes16 targetBytes,
+      final Bytes sourceBytes,
+      final Bytes targetBytes,
       final short sourceOffsetTrigger,
       final short targetOffsetTrigger,
       final short size) {
@@ -194,12 +194,15 @@ public class MmioData {
   }
 
   public void onePartialToTwo(
-      final Bytes16 sourceBytes,
-      final Bytes16 target1Bytes,
-      final Bytes16 target2Bytes,
+      final Bytes sourceBytes,
+      final Bytes target1Bytes,
+      final Bytes target2Bytes,
       final short sourceOffsetTrigger,
       final short target1OffsetTrigger,
       final short size) {
+    checkArgument(sourceBytes.size() == LLARGE, "sourceBytes should be of size 16");
+    checkArgument(target1Bytes.size() == LLARGE, "target1Bytes should be of size 16");
+    checkArgument(target2Bytes.size() == LLARGE, "target2Bytes should be of size 16");
     for (short ct = 0; ct < LLARGE; ct++) {
       bit1.add(ct, plateau(target1OffsetTrigger, ct));
       bit2.add(ct, plateau(target1OffsetTrigger + size - LLARGE, ct));
@@ -215,11 +218,11 @@ public class MmioData {
   }
 
   public void oneToOnePadded(
-      final Bytes16 sourceBytes,
+      final Bytes sourceBytes,
       final short sourceByteOffset,
       final short targetByteOffset,
       final short size) {
-
+    checkArgument(sourceBytes.size() == LLARGE, "sourceBytes should be of size 16");
     checkArgument(
         0 <= sourceByteOffset && sourceByteOffset <= LLARGEMO,
         "sourceByteOffset has value %s.",
@@ -247,7 +250,8 @@ public class MmioData {
     pow2561 = power(bit3);
   }
 
-  public void excision(final Bytes16 target, final short targetOffsetTrigger, final short size) {
+  public void excision(final Bytes target, final short targetOffsetTrigger, final short size) {
+    checkArgument(target.size() == LLARGE, "target should be of size 16");
 
     for (short ct = 0; ct < LLARGE; ct++) {
       bit1.add(ct, plateau(targetOffsetTrigger, ct));
@@ -259,12 +263,13 @@ public class MmioData {
   }
 
   public void twoToOnePadded(
-      final Bytes16 sourceBytes1,
-      final Bytes16 sourceBytes2,
+      final Bytes sourceBytes1,
+      final Bytes sourceBytes2,
       final short sourceByteOffset,
       final short targetByteOffset,
       final short size) {
-
+    checkArgument(sourceBytes1.size() == LLARGE, "sourceBytes1 should be of size 16");
+    checkArgument(sourceBytes2.size() == LLARGE, "sourceBytes2 should be of size 16");
     checkArgument(
         0 <= sourceByteOffset && sourceByteOffset <= LLARGEMO,
         "sourceByteOffset has value %s.",
@@ -294,12 +299,15 @@ public class MmioData {
   }
 
   public void twoPartialToOne(
-      final Bytes16 source1,
-      final Bytes16 source2,
-      final Bytes16 target,
+      final Bytes source1,
+      final Bytes source2,
+      final Bytes target,
       final short sourceByteOffset,
       final short targetByteOffset,
       final short size) {
+    checkArgument(source1.size() == LLARGE, "source1 should be of size 16");
+    checkArgument(source2.size() == LLARGE, "source2 should be of size 16");
+    checkArgument(target.size() == LLARGE, "target should be of size 16");
 
     for (short ct = 0; ct < LLARGE; ct++) {
       bit1.add(ct, plateau(sourceByteOffset, ct));

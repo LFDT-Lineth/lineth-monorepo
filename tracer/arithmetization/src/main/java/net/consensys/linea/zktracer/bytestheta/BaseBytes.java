@@ -15,11 +15,13 @@
 
 package net.consensys.linea.zktracer.bytestheta;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static net.consensys.linea.zktracer.Trace.LLARGE;
 import static net.consensys.linea.zktracer.types.Conversions.longToBytes32;
 
 import lombok.EqualsAndHashCode;
-import net.consensys.linea.zktracer.types.Bytes16;
 import net.consensys.linea.zktracer.types.UnsignedByte;
+import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
 import org.apache.tuweni.bytes.MutableBytes32;
 
@@ -67,23 +69,23 @@ public class BaseBytes implements HighLowBytes {
   /**
    * Returns a new `Bytes16` object that is the high section (first 16 bytes) of the bytes32`
    * instance variable.
-   *
-   * @return a wrapped {@link Bytes16} instance.
    */
   @Override
-  public Bytes16 getHigh() {
-    return Bytes16.wrap(bytes32.slice(0, LOW_HIGH_SIZE));
+  public Bytes getHigh() {
+    final Bytes output = bytes32.slice(0, LOW_HIGH_SIZE);
+    checkArgument(output.size() == LLARGE, "output should be of size 16");
+    return output;
   }
 
   /**
    * Returns a new `Bytes16` object that is the low section (last 16 bytes) of the `bytes32`
    * instance variable.
-   *
-   * @return a wrapped {@link Bytes16} instance.
    */
   @Override
-  public Bytes16 getLow() {
-    return Bytes16.wrap(bytes32.slice(LOW_HIGH_SIZE));
+  public Bytes getLow() {
+    final Bytes output = bytes32.slice(LOW_HIGH_SIZE);
+    checkArgument(output.size() == LLARGE, "output should be of size 16");
+    return output;
   }
 
   /**

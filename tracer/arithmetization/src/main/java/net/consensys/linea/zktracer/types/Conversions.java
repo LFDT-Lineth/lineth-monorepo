@@ -17,6 +17,7 @@ package net.consensys.linea.zktracer.types;
 
 import static net.consensys.linea.zktracer.Trace.LLARGE;
 import static net.consensys.linea.zktracer.types.Checks.checkArgument;
+import static net.consensys.linea.zktracer.types.Utils.leftPadToBytes16;
 
 import java.math.BigInteger;
 import org.apache.tuweni.bytes.Bytes;
@@ -49,8 +50,8 @@ public class Conversions {
     return Bytes32.leftPad(bigIntegerToBytes(input));
   }
 
-  public static Bytes16 bigIntegerToBytes16(final BigInteger input) {
-    return Bytes16.leftPad(bigIntegerToBytes(input));
+  public static Bytes bigIntegerToBytes16(final BigInteger input) {
+    return leftPadToBytes16(bigIntegerToBytes(input));
   }
 
   public static BigInteger booleanToBigInteger(final boolean input) {

@@ -15,9 +15,10 @@
 
 package net.consensys.linea.zktracer.module.mmio.instructions;
 
+import static net.consensys.linea.zktracer.types.Utils.BYTES16_ZERO;
+
 import net.consensys.linea.zktracer.module.mmio.MmioData;
 import net.consensys.linea.zktracer.module.mmu.MmuData;
-import net.consensys.linea.zktracer.types.Bytes16;
 
 public class LimbVanishes extends MmioInstruction {
 
@@ -33,7 +34,7 @@ public class LimbVanishes extends MmioInstruction {
     mmioData.cnB(0);
     mmioData.cnC(0);
 
-    mmioData.limb(Bytes16.ZERO);
+    mmioData.limb(BYTES16_ZERO);
 
     mmioData.indexX(mmioData.targetLimbOffset());
 

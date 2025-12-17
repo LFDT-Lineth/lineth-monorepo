@@ -16,26 +16,26 @@
 package net.consensys.linea.zktracer.types;
 
 import static net.consensys.linea.zktracer.Trace.LLARGE;
-import static net.consensys.linea.zktracer.types.Utils.rightPadTo;
+import static net.consensys.linea.zktracer.types.Utils.*;
 
 import org.apache.tuweni.bytes.Bytes;
 
 public class Bytecodes {
 
-  public static Bytes16 readBytes(
+  public static Bytes readBytes(
       final Bytes data, final long sourceOffset, final int size, final int exoByteOffset) {
     if (sourceOffset >= data.size()) {
-      return Bytes16.ZERO;
+      return BYTES16_ZERO;
     }
 
     final long dataLengthToExtract = Math.min(size, data.size() - sourceOffset);
 
-    return Bytes16.leftPad(
+    return leftPadToBytes16(
         rightPadTo(
             data.slice((int) sourceOffset, (int) dataLengthToExtract), LLARGE - exoByteOffset));
   }
 
-  public static Bytes16 readLimb(final Bytes data, final long limbOffset) {
+  public static Bytes readLimb(final Bytes data, final long limbOffset) {
     return readBytes(data, LLARGE * limbOffset, LLARGE, 0);
   }
 }

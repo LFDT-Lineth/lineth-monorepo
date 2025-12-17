@@ -17,10 +17,10 @@ package net.consensys.linea.zktracer.module.mmio.instructions;
 
 import static net.consensys.linea.zktracer.module.mmio.MmioPatterns.excision;
 import static net.consensys.linea.zktracer.types.Bytecodes.readLimb;
+import static net.consensys.linea.zktracer.types.Utils.BYTES16_ZERO;
 
 import net.consensys.linea.zktracer.module.mmio.MmioData;
 import net.consensys.linea.zktracer.module.mmu.MmuData;
-import net.consensys.linea.zktracer.types.Bytes16;
 
 public class RamExcision extends MmioInstruction {
 
@@ -42,13 +42,13 @@ public class RamExcision extends MmioInstruction {
     mmioData.indexX(0);
 
     mmioData.valA(readLimb(mmuData.targetRamBytes(), mmioData.indexA()));
-    mmioData.valB(Bytes16.ZERO);
-    mmioData.valC(Bytes16.ZERO);
-    mmioData.limb(Bytes16.ZERO);
+    mmioData.valB(BYTES16_ZERO);
+    mmioData.valC(BYTES16_ZERO);
+    mmioData.limb(BYTES16_ZERO);
 
     mmioData.valANew(excision(mmioData.valA(), mmioData.targetByteOffset(), mmioData.size()));
-    mmioData.valBNew(Bytes16.ZERO);
-    mmioData.valCNew(Bytes16.ZERO);
+    mmioData.valBNew(BYTES16_ZERO);
+    mmioData.valCNew(BYTES16_ZERO);
 
     mmioData.excision(mmioData.valA(), mmioData.targetByteOffset(), mmioData.size());
 

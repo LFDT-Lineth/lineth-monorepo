@@ -15,11 +15,13 @@
 
 package net.consensys.linea.zktracer.module.mmu.values;
 
+import static net.consensys.linea.zktracer.types.Utils.BYTES16_ZERO;
+
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import net.consensys.linea.zktracer.types.Bytes16;
+import org.apache.tuweni.bytes.Bytes;
 
 @Builder
 @Getter
@@ -32,6 +34,6 @@ public class MmuToMmioInstruction {
   private short sourceByteOffset;
   private long targetLimbOffset;
   private short targetByteOffset;
-  @Builder.Default private Bytes16 limb = Bytes16.ZERO;
+  @Builder.Default private Bytes limb = BYTES16_ZERO;
   private boolean targetLimbIsTouchedTwice;
 }

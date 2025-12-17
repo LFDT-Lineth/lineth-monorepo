@@ -19,7 +19,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import net.consensys.linea.UnitTestWatcher;
 import net.consensys.linea.reporting.TracerTestBase;
-import net.consensys.linea.zktracer.types.Bytes16;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
 import org.apache.tuweni.units.bigints.UInt256;
@@ -46,8 +45,8 @@ public class BaseThetaTest extends TracerTestBase {
 
     assertThat(baseTheta.getBytes32()).isEqualTo(expectedBytes32);
 
-    Bytes16 expectedLow = Bytes16.wrap(Bytes.concatenate(thirdByte, fourthByte));
-    Bytes16 expectedHigh = Bytes16.wrap(Bytes.concatenate(firstByte, secondByte));
+    Bytes expectedLow = Bytes.concatenate(thirdByte, fourthByte);
+    Bytes expectedHigh = Bytes.concatenate(firstByte, secondByte);
 
     assertThat(baseTheta.getLow()).isEqualTo(expectedLow);
     assertThat(baseTheta.getHigh()).isEqualTo(expectedHigh);
@@ -63,8 +62,8 @@ public class BaseThetaTest extends TracerTestBase {
     Bytes32 bytes32 =
         Bytes32.fromHexString("0x000000000000000a000000000000000b000000000000000c000000000000000d");
     BaseBytes baseBytes = BaseBytes.fromBytes32(bytes32);
-    Bytes16 expectedHigh = Bytes16.fromHexString("0x000000000000000a000000000000000b");
-    Bytes16 expectedLow = Bytes16.fromHexString("0x000000000000000c000000000000000d");
+    Bytes expectedHigh = Bytes.fromHexString("0x000000000000000a000000000000000b");
+    Bytes expectedLow = Bytes.fromHexString("0x000000000000000c000000000000000d");
 
     assertThat(baseBytes.getBytes32()).isEqualTo(bytes32);
     assertThat(baseBytes.getLow()).isEqualTo(expectedLow);

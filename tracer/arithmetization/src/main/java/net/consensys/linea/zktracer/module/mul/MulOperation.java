@@ -15,6 +15,7 @@
 
 package net.consensys.linea.zktracer.module.mul;
 
+import static net.consensys.linea.zktracer.Trace.LLARGE;
 import static net.consensys.linea.zktracer.Trace.MMEDIUM;
 import static net.consensys.linea.zktracer.module.Util.boolToByte;
 import static net.consensys.linea.zktracer.module.Util.byteBits;
@@ -32,7 +33,6 @@ import net.consensys.linea.zktracer.bytestheta.BaseBytes;
 import net.consensys.linea.zktracer.bytestheta.BaseTheta;
 import net.consensys.linea.zktracer.container.ModuleOperation;
 import net.consensys.linea.zktracer.opcode.OpCode;
-import net.consensys.linea.zktracer.types.Bytes16;
 import net.consensys.linea.zktracer.types.Conversions;
 import net.consensys.linea.zktracer.types.UnsignedByte;
 import org.apache.tuweni.bytes.Bytes;
@@ -47,10 +47,10 @@ public class MulOperation extends ModuleOperation {
   @EqualsAndHashCode.Include @Getter private final Bytes32 arg1;
   @EqualsAndHashCode.Include @Getter private final Bytes32 arg2;
 
-  @Getter private final Bytes16 arg1Hi;
-  @Getter private final Bytes16 arg1Lo;
-  @Getter private final Bytes16 arg2Hi;
-  @Getter private final Bytes16 arg2Lo;
+  @Getter private final Bytes arg1Hi;
+  @Getter private final Bytes arg1Lo;
+  @Getter private final Bytes arg2Hi;
+  @Getter private final Bytes arg2Lo;
 
   @Getter private final boolean tinyBase;
   @Getter private final boolean tinyExponent;
@@ -78,10 +78,10 @@ public class MulOperation extends ModuleOperation {
     this.aBytes = BaseTheta.fromBytes32(arg1);
     this.bBytes = BaseTheta.fromBytes32(arg2);
 
-    arg1Hi = Bytes16.wrap(arg1.slice(0, 16));
-    arg1Lo = Bytes16.wrap(arg1.slice(16));
-    arg2Hi = Bytes16.wrap(arg2.slice(0, 16));
-    arg2Lo = Bytes16.wrap(arg2.slice(16));
+    arg1Hi = arg1.slice(0, LLARGE);
+    arg1Lo = arg1.slice(LLARGE);
+    arg2Hi = arg2.slice(0, LLARGE);
+    arg2Lo = arg2.slice(LLARGE);
 
     this.res = getRes(opCode, arg1, arg2);
 

@@ -18,10 +18,10 @@ package net.consensys.linea.zktracer.module.mmio.instructions;
 import static net.consensys.linea.zktracer.module.mmio.MmioPatterns.onePartialToOne;
 import static net.consensys.linea.zktracer.module.mmio.MmioPatterns.updateTemporaryTargetRam;
 import static net.consensys.linea.zktracer.types.Bytecodes.readLimb;
+import static net.consensys.linea.zktracer.types.Utils.BYTES16_ZERO;
 
 import net.consensys.linea.zktracer.module.mmio.MmioData;
 import net.consensys.linea.zktracer.module.mmu.MmuData;
-import net.consensys.linea.zktracer.types.Bytes16;
 
 public class RamToRamPartial extends MmioInstruction {
 
@@ -44,8 +44,8 @@ public class RamToRamPartial extends MmioInstruction {
 
     mmioData.valA(readLimb(mmuData.sourceRamBytes(), mmioData.indexA()));
     mmioData.valB(readLimb(mmuData.targetRamBytes(), mmioData.indexB()));
-    mmioData.valC(Bytes16.ZERO);
-    mmioData.limb(Bytes16.ZERO);
+    mmioData.valC(BYTES16_ZERO);
+    mmioData.limb(BYTES16_ZERO);
 
     mmioData.valANew(mmioData.valA());
     mmioData.valBNew(
@@ -55,7 +55,7 @@ public class RamToRamPartial extends MmioInstruction {
             mmioData.sourceByteOffset(),
             mmioData.targetByteOffset(),
             mmioData.size()));
-    mmioData.valCNew(Bytes16.ZERO);
+    mmioData.valCNew(BYTES16_ZERO);
 
     mmioData.onePartialToOne(
         mmioData.valA(),

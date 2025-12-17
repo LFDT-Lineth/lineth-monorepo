@@ -17,12 +17,12 @@ package net.consensys.linea.zktracer.module.rlptxn.cancun.phaseSection;
 
 import static net.consensys.linea.zktracer.module.rlpUtils.RlpUtils.BYTES_PREFIX_SHORT_INT;
 import static net.consensys.linea.zktracer.types.Conversions.bigIntegerToBytes32;
+import static net.consensys.linea.zktracer.types.Utils.rightPadToBytes16;
 
 import net.consensys.linea.zktracer.Trace;
 import net.consensys.linea.zktracer.module.rlpUtils.InstructionInteger;
 import net.consensys.linea.zktracer.module.rlpUtils.RlpUtils;
 import net.consensys.linea.zktracer.module.rlptxn.cancun.GenericTracedValue;
-import net.consensys.linea.zktracer.types.Bytes16;
 import net.consensys.linea.zktracer.types.TransactionProcessingMetadata;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
@@ -71,7 +71,7 @@ public class BetaPhaseSection extends PhaseSection {
           .lx(true)
           .limbConstructed(true)
           .pCmpLimb(
-              Bytes16.rightPad(Bytes.concatenate(BYTES_PREFIX_SHORT_INT, BYTES_PREFIX_SHORT_INT)))
+              rightPadToBytes16(Bytes.concatenate(BYTES_PREFIX_SHORT_INT, BYTES_PREFIX_SHORT_INT)))
           .pCmpLimbSize(2);
       tracedValues.decrementLxSizeBy(2);
       tracePostValues(trace, tracedValues);

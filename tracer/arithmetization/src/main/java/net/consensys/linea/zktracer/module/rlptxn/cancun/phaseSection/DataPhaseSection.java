@@ -17,6 +17,7 @@ package net.consensys.linea.zktracer.module.rlptxn.cancun.phaseSection;
 
 import static net.consensys.linea.zktracer.Trace.LLARGE;
 import static net.consensys.linea.zktracer.Trace.LLARGEMO;
+import static net.consensys.linea.zktracer.types.Utils.rightPadToBytes16;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -25,7 +26,6 @@ import net.consensys.linea.zktracer.module.rlpUtils.InstructionByteStringPrefix;
 import net.consensys.linea.zktracer.module.rlpUtils.InstructionDataPricing;
 import net.consensys.linea.zktracer.module.rlpUtils.RlpUtils;
 import net.consensys.linea.zktracer.module.rlptxn.cancun.GenericTracedValue;
-import net.consensys.linea.zktracer.types.Bytes16;
 import net.consensys.linea.zktracer.types.TransactionProcessingMetadata;
 import org.apache.tuweni.bytes.Bytes;
 
@@ -50,8 +50,8 @@ public class DataPhaseSection extends PhaseSection {
 
     for (int i = 0; i < numberOfLimbs; i++) {
       final boolean lastLimb = i == numberOfLimbs - 1;
-      final Bytes16 limbData =
-          Bytes16.rightPad(data.slice(i * LLARGE, lastLimb ? nBytesLastLimb : LLARGE));
+      final Bytes limbData =
+          rightPadToBytes16(data.slice(i * LLARGE, lastLimb ? nBytesLastLimb : LLARGE));
       final InstructionDataPricing limbCall =
           new InstructionDataPricing(limbData, lastLimb ? (short) nBytesLastLimb : LLARGE);
       limbs.add((InstructionDataPricing) rlpUtils.call(limbCall));

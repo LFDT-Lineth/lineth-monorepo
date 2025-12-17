@@ -42,6 +42,16 @@ public class Utils {
     return Bytes.concatenate(input, Bytes.repeat((byte) 0, wantedSize - input.size()));
   }
 
+  public static Bytes leftPadToBytes16(Bytes input) {
+    return leftPadTo(input, LLARGE);
+  }
+
+  public static Bytes BYTES16_ZERO = Bytes.repeat((byte) 0, LLARGE);
+
+  public static Bytes rightPadToBytes16(Bytes input) {
+    return rightPadTo(input, LLARGE);
+  }
+
   public static int fromDataSizeToLimbNbRows(int dataSize) {
     checkArgument(dataSize >= 0, "Data size must be non-negative");
     if (dataSize == 0) {

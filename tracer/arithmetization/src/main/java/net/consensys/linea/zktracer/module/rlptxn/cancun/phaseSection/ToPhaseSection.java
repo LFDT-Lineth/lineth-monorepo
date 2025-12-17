@@ -20,10 +20,10 @@ import static net.consensys.linea.zktracer.TraceCancun.Rlptxn.RLP_TXN_CT_MAX_ADD
 import static net.consensys.linea.zktracer.module.rlpUtils.RlpUtils.BYTES16_PREFIX_ADDRESS;
 import static net.consensys.linea.zktracer.module.rlpUtils.RlpUtils.BYTES_PREFIX_SHORT_INT;
 import static net.consensys.linea.zktracer.types.AddressUtils.lowPart;
+import static net.consensys.linea.zktracer.types.Utils.rightPadToBytes16;
 
 import net.consensys.linea.zktracer.Trace;
 import net.consensys.linea.zktracer.module.rlptxn.cancun.GenericTracedValue;
-import net.consensys.linea.zktracer.types.Bytes16;
 import net.consensys.linea.zktracer.types.TransactionProcessingMetadata;
 import org.hyperledger.besu.datatypes.Address;
 
@@ -44,7 +44,7 @@ public class ToPhaseSection extends PhaseSection {
           .limbConstructed(true)
           .lt(true)
           .lx(true)
-          .pCmpLimb(Bytes16.rightPad(BYTES_PREFIX_SHORT_INT))
+          .pCmpLimb(rightPadToBytes16(BYTES_PREFIX_SHORT_INT))
           .pCmpLimbSize(1);
       tracedValues.decrementLtAndLxSizeBy(1);
       tracePostValues(trace, tracedValues);
@@ -78,7 +78,7 @@ public class ToPhaseSection extends PhaseSection {
           .limbConstructed(true)
           .lt(true)
           .lx(true)
-          .pCmpLimb(Bytes16.rightPad(to.slice(0, 4)))
+          .pCmpLimb(rightPadToBytes16(to.slice(0, 4)))
           .pCmpLimbSize(4);
       tracedValues.decrementLtAndLxSizeBy(4);
       tracePostValues(trace, tracedValues);

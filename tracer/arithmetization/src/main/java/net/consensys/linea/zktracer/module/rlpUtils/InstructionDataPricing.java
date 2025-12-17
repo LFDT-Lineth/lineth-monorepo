@@ -15,6 +15,8 @@
 
 package net.consensys.linea.zktracer.module.rlpUtils;
 
+import static graphql.com.google.common.base.Preconditions.checkArgument;
+import static net.consensys.linea.zktracer.Trace.LLARGE;
 import static net.consensys.linea.zktracer.Trace.RLP_UTILS_INST_DATA_PRICING;
 
 import lombok.EqualsAndHashCode;
@@ -22,19 +24,19 @@ import lombok.Getter;
 import lombok.experimental.Accessors;
 import net.consensys.linea.zktracer.Trace;
 import net.consensys.linea.zktracer.module.rlptxn.cancun.GenericTracedValue;
-import net.consensys.linea.zktracer.types.Bytes16;
 import org.apache.tuweni.bytes.Bytes;
 
 @Accessors(fluent = true)
 @EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = false)
 public class InstructionDataPricing extends RlpUtilsCall {
-  @EqualsAndHashCode.Include @Getter private final Bytes16 limb;
+  @EqualsAndHashCode.Include @Getter private final Bytes limb;
   @EqualsAndHashCode.Include @Getter private final short nBytes;
   @Getter private Short zeros;
   @Getter private Short nonZeros;
 
-  public InstructionDataPricing(Bytes16 limb, short nBytes) {
+  public InstructionDataPricing(Bytes limb, short nBytes) {
     super();
+    checkArgument(limb.size() == LLARGE, "limb should be a Bytes16");
     this.limb = limb;
     this.nBytes = nBytes;
   }

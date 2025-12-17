@@ -21,6 +21,7 @@ import static net.consensys.linea.zktracer.Trace.LLARGEMO;
 import static net.consensys.linea.zktracer.Trace.MMIO_INST_RAM_TO_LIMB_ONE_SOURCE;
 import static net.consensys.linea.zktracer.Trace.Mmu.NB_MICRO_ROWS_TOT_INVALID_CODE_PREFIX;
 import static net.consensys.linea.zktracer.Trace.Mmu.NB_PP_ROWS_INVALID_CODE_PREFIX;
+import static net.consensys.linea.zktracer.types.Utils.leftPadToBytes16;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -34,7 +35,6 @@ import net.consensys.linea.zktracer.module.mmu.values.MmuToMmioConstantValues;
 import net.consensys.linea.zktracer.module.mmu.values.MmuToMmioInstruction;
 import net.consensys.linea.zktracer.module.mmu.values.MmuWcpCallRecord;
 import net.consensys.linea.zktracer.module.wcp.Wcp;
-import net.consensys.linea.zktracer.types.Bytes16;
 import org.apache.tuweni.bytes.Bytes;
 
 public class InvalidCodePrefix implements MmuInstruction {
@@ -116,7 +116,7 @@ public class InvalidCodePrefix implements MmuInstruction {
             .sourceLimbOffset(initialSourceLimbOffset)
             .sourceByteOffset(initialSourceByteOffset)
             .targetByteOffset((short) LLARGEMO)
-            .limb(Bytes16.leftPad(microLimb))
+            .limb(leftPadToBytes16(microLimb))
             .build());
 
     return mmuData;

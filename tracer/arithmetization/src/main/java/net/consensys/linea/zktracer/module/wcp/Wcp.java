@@ -131,11 +131,10 @@ public class Wcp implements Module {
 
   @Override
   public void commit(Trace trace) {
-    int stamp = 0;
     final WcpOperationComparator comparator = new WcpOperationComparator();
     for (ModuleOperationStackedSet<WcpOperation> operationsSet : operations) {
       for (WcpOperation operation : operationsSet.sortOperations(comparator)) {
-        operation.trace(trace.wcp(), ++stamp);
+        operation.trace(trace.wcp());
       }
     }
   }

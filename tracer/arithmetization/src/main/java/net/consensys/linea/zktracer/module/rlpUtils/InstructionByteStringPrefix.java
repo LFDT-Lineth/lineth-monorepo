@@ -17,13 +17,14 @@ package net.consensys.linea.zktracer.module.rlpUtils;
 
 import static net.consensys.linea.zktracer.Trace.*;
 import static net.consensys.linea.zktracer.module.rlpUtils.RlpUtils.*;
+import static net.consensys.linea.zktracer.types.Utils.BYTES16_ZERO;
+import static net.consensys.linea.zktracer.types.Utils.rightPadToBytes16;
 
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.experimental.Accessors;
 import net.consensys.linea.zktracer.Trace;
 import net.consensys.linea.zktracer.module.rlptxn.cancun.GenericTracedValue;
-import net.consensys.linea.zktracer.types.Bytes16;
 import org.apache.tuweni.bytes.Bytes;
 
 @Accessors(fluent = true)
@@ -38,7 +39,7 @@ public class InstructionByteStringPrefix extends RlpUtilsCall {
   // outputs
   @Getter private boolean rlpPrefixRequired;
   private boolean byteStringIsNonEmpty;
-  @Getter private Bytes16 rlpPrefix;
+  @Getter private Bytes rlpPrefix;
   @Getter private short rlpPrefixByteSize;
 
   public InstructionByteStringPrefix(int byteStringLength, byte firstByte, boolean isList) {
@@ -57,7 +58,7 @@ public class InstructionByteStringPrefix extends RlpUtilsCall {
     if (!byteStringIsNonEmpty) {
       // setting output values
       rlpPrefixRequired = true;
-      rlpPrefix = Bytes16.rightPad(isList ? BYTES_PREFIX_SHORT_LIST : BYTES_PREFIX_SHORT_INT);
+      rlpPrefix = rightPadToBytes16(isList ? BYTES_PREFIX_SHORT_LIST : BYTES_PREFIX_SHORT_INT);
       rlpPrefixByteSize = 1;
     }
 
@@ -65,12 +66,12 @@ public class InstructionByteStringPrefix extends RlpUtilsCall {
       final boolean firstBytesLtPrefixShortInt = firstByte >= 0; // ie unsigned value is >= 128
       if (firstBytesLtPrefixShortInt) {
         rlpPrefixRequired = false;
-        rlpPrefix = Bytes16.ZERO;
+        rlpPrefix = BYTES16_ZERO;
         rlpPrefixByteSize = 0;
       } else {
         rlpPrefixRequired = true;
         rlpPrefix =
-            Bytes16.rightPad(
+            rightPadToBytes16(
                 Bytes.minimalBytes(1 + (isList ? RLP_PREFIX_LIST_SHORT : RLP_PREFIX_INT_SHORT)));
         rlpPrefixByteSize = 1;
       }
@@ -84,14 +85,14 @@ public class InstructionByteStringPrefix extends RlpUtilsCall {
       rlpPrefixRequired = true;
       if (!byteStringLengthGeq56) {
         rlpPrefix =
-            Bytes16.rightPad(
+            rightPadToBytes16(
                 Bytes.minimalBytes(
                     byteStringLength + (isList ? RLP_PREFIX_LIST_SHORT : RLP_PREFIX_INT_SHORT)));
         rlpPrefixByteSize = 1;
       } else {
         final int bslByteSize = Bytes.minimalBytes(byteStringLength).size();
         rlpPrefix =
-            Bytes16.rightPad(
+            rightPadToBytes16(
                 Bytes.concatenate(
                     Bytes.minimalBytes(
                         bslByteSize + (isList ? RLP_PREFIX_LIST_LONG : RLP_PREFIX_INT_LONG)),

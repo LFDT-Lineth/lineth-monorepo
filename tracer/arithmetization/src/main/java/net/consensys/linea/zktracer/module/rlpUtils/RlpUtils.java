@@ -17,6 +17,7 @@ package net.consensys.linea.zktracer.module.rlpUtils;
 
 import static net.consensys.linea.zktracer.Trace.*;
 import static net.consensys.linea.zktracer.module.ModuleName.RLP_UTILS;
+import static net.consensys.linea.zktracer.types.Utils.rightPadToBytes16;
 
 import java.math.BigInteger;
 import java.util.List;
@@ -28,7 +29,6 @@ import net.consensys.linea.zktracer.container.module.OperationSetModule;
 import net.consensys.linea.zktracer.container.stacked.ModuleOperationAdder;
 import net.consensys.linea.zktracer.container.stacked.ModuleOperationStackedSet;
 import net.consensys.linea.zktracer.module.ModuleName;
-import net.consensys.linea.zktracer.types.Bytes16;
 import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.datatypes.Address;
 
@@ -38,10 +38,10 @@ public class RlpUtils implements OperationSetModule<RlpUtilsCall> {
   public static final Bytes BYTES_PREFIX_SHORT_INT = Bytes.minimalBytes(RLP_PREFIX_INT_SHORT);
   public static final Bytes BYTES_PREFIX_SHORT_LIST = Bytes.minimalBytes(RLP_PREFIX_LIST_SHORT);
   public static final BigInteger BI_PREFIX_SHORT_INT = BigInteger.valueOf(RLP_PREFIX_INT_SHORT);
-  public static final Bytes16 BYTES16_PREFIX_ADDRESS =
-      Bytes16.rightPad(Bytes.minimalBytes(RLP_PREFIX_INT_SHORT + Address.SIZE));
-  public static final Bytes16 BYTES16_PREFIX_BYTES32 =
-      Bytes16.rightPad(Bytes.minimalBytes(RLP_PREFIX_INT_SHORT + WORD_SIZE));
+  public static final Bytes BYTES16_PREFIX_ADDRESS =
+      rightPadToBytes16(Bytes.minimalBytes(RLP_PREFIX_INT_SHORT + Address.SIZE));
+  public static final Bytes BYTES16_PREFIX_BYTES32 =
+      rightPadToBytes16(Bytes.minimalBytes(RLP_PREFIX_INT_SHORT + WORD_SIZE));
 
   @Getter
   private final ModuleOperationStackedSet<RlpUtilsCall> operations =

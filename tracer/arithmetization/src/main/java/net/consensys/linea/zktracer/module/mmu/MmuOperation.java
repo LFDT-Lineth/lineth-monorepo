@@ -39,7 +39,6 @@ import net.consensys.linea.zktracer.module.mmu.values.MmuToMmioConstantValues;
 import net.consensys.linea.zktracer.module.mmu.values.MmuToMmioInstruction;
 import net.consensys.linea.zktracer.module.mmu.values.MmuWcpCallRecord;
 import net.consensys.linea.zktracer.module.mmu.values.RowTypeRecord;
-import net.consensys.linea.zktracer.types.Bytes16;
 import net.consensys.linea.zktracer.types.UnsignedByte;
 import org.apache.tuweni.bytes.Bytes;
 
@@ -155,7 +154,7 @@ public class MmuOperation extends ModuleOperation {
                 (int) mmioInst.targetLimbOffset() * LLARGE + mmioInst.targetByteOffset();
             final int sizeToExtract = mmioInst.size() == 0 ? LLARGE : mmioInst.size();
             final int exoByteOffset = mmioInst.targetByteOffset();
-            final Bytes16 exoLimb =
+            final Bytes exoLimb =
                 readBytes(mmuData.exoBytes(), offset, sizeToExtract, exoByteOffset);
             mmioInst.limb(exoLimb);
           }
