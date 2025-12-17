@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
+import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
@@ -182,7 +183,7 @@ class TimerTest {
   @OptIn(ExperimentalTime::class)
   @Test
   fun `Fixed rate timer executes tasks quickly if one is delayed more than polling interval`() {
-    val invocationTimestamps = mutableListOf<Instant>()
+    val invocationTimestamps = CopyOnWriteArrayList<Instant>()
     val pollingInterval = 50.milliseconds
     val timer = createTimer(
       timerType = VertxTimer::class,
@@ -193,11 +194,12 @@ class TimerTest {
           Thread.sleep(pollingInterval.inWholeMilliseconds * 3)
         }
       },
+      period = pollingInterval,
       errorHandler = { },
     )
     timer.start()
     Awaitility.await()
-      .pollInterval(30.milliseconds.toJavaDuration())
+      .pollInterval(10.milliseconds.toJavaDuration())
       .until { invocationTimestamps.size >= 5 }
     timer.stop()
 
