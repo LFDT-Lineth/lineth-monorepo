@@ -2,8 +2,8 @@ package net.consensys.zkevm.coordinator.app
 
 import io.vertx.core.Vertx
 import linea.LongRunningService
+import linea.ethapi.EthApiClient
 import linea.web3j.ExtendedWeb3J
-import linea.web3j.Web3jBlobExtended
 import net.consensys.linea.ethereum.gaspricing.BoundableFeeCalculator
 import net.consensys.linea.ethereum.gaspricing.FeesFetcher
 import net.consensys.linea.ethereum.gaspricing.GasPriceUpdater
@@ -22,7 +22,6 @@ import net.consensys.linea.ethereum.gaspricing.staticcap.VariableFeesCalculator
 import net.consensys.linea.jsonrpc.client.VertxHttpJsonRpcClientFactory
 import net.consensys.linea.metrics.MetricsFacade
 import org.apache.logging.log4j.LogManager
-import org.web3j.protocol.Web3j
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.CompletableFuture
 import kotlin.time.Duration
@@ -31,8 +30,7 @@ class L2NetworkGasPricingService(
   vertx: Vertx,
   metricsFacade: MetricsFacade,
   httpJsonRpcClientFactory: VertxHttpJsonRpcClientFactory,
-  l1Web3jClient: Web3j,
-  l1Web3jService: Web3jBlobExtended,
+  l1EthApiClient: EthApiClient,
   l2Web3jClient: ExtendedWeb3J,
   config: Config,
 ) : LongRunningService {
@@ -62,9 +60,8 @@ class L2NetworkGasPricingService(
   private val log = LogManager.getLogger(this::class.java)
 
   private val gasPricingFeesFetcher: FeesFetcher = FeeHistoryFetcherImpl(
-    l1Web3jClient,
-    l1Web3jService,
-    config.feeHistoryFetcherConfig,
+    ethApiClient = l1EthApiClient,
+    config = config.feeHistoryFetcherConfig,
   )
 
   private fun isL2CalldataBasedVariableFeesEnabled(config: Config): Boolean {
