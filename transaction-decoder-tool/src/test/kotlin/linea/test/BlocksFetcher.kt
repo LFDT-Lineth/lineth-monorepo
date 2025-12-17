@@ -5,8 +5,8 @@ import linea.domain.Block
 import linea.domain.BlockParameter.Companion.toBlockParameter
 import linea.web3j.domain.toWeb3j
 import linea.web3j.mappers.toDomain
+import linea.web3j.requestAsync
 import net.consensys.linea.async.AsyncRetryer
-import net.consensys.linea.async.toSafeFuture
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import org.web3j.protocol.Web3j
@@ -27,12 +27,7 @@ class BlocksFetcher(
     return (startBlockNumber..endBlockNumber).toList()
       .map { blockNumber ->
         web3j.ethGetBlockByNumber(blockNumber.toBlockParameter().toWeb3j(), true)
-          .sendAsync()
-          .toSafeFuture()
-          .thenApply {
-            if (it.hasError()) {
-              log.error("Error fetching block={} errorMessage={}", blockNumber, it.error.message)
-            }
+          .requestAsync {
             runCatching {
               it.block.toDomain()
             }

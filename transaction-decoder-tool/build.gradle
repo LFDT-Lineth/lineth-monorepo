@@ -9,5 +9,6 @@ dependencies {
   implementation project(':jvm-libs:linea:web3j-extensions')
   implementation project(':jvm-libs:linea:blob-compressor')
   implementation project(':jvm-libs:linea:blob-decompressor')
+  implementation "net.java.dev.jna:jna:${libs.versions.jna.get()}"
   implementation project(':jvm-libs:linea:besu-rlp-and-mappers')
 }
