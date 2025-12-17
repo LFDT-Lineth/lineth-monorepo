@@ -8,7 +8,6 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
 class ProofGeneratingConflationHandlerImplTest {
-
   @Test fun `assertConsecutiveBlocksRange return error when empty`() {
     assertConsecutiveBlocksRange(emptyList()).let { result ->
       assertThat(result).isInstanceOf(Err::class.java)
@@ -18,14 +17,15 @@ class ProofGeneratingConflationHandlerImplTest {
   }
 
   @Test fun `assertConsecutiveBlocksRange return error when there is gap in block numbers`() {
-    val blocks = listOf(
-      createBlock(15UL),
-      createBlock(14UL),
-      // // gap on 13
-      createBlock(12UL),
-      createBlock(11UL),
-      createBlock(10UL),
-    )
+    val blocks =
+      listOf(
+        createBlock(15UL),
+        createBlock(14UL),
+        // // gap on 13
+        createBlock(12UL),
+        createBlock(11UL),
+        createBlock(10UL),
+      )
     assertConsecutiveBlocksRange(blocks).let { result ->
       assertThat(result).isInstanceOf(Err::class.java)
       assertThat(result.getError()).isInstanceOf(IllegalArgumentException::class.java)
@@ -34,12 +34,13 @@ class ProofGeneratingConflationHandlerImplTest {
   }
 
   @Test fun `assertConsecutiveBlocksRange returns sorted list when all blocks are consecutive`() {
-    val blocks = listOf(
-      createBlock(13UL),
-      createBlock(12UL),
-      createBlock(11UL),
-      createBlock(10UL),
-    )
+    val blocks =
+      listOf(
+        createBlock(13UL),
+        createBlock(12UL),
+        createBlock(11UL),
+        createBlock(10UL),
+      )
 
     assertThat(assertConsecutiveBlocksRange(blocks)).isEqualTo(Ok(10UL..13UL))
     assertThat(assertConsecutiveBlocksRange(listOf(blocks[0]))).isEqualTo(Ok(13UL..13UL))

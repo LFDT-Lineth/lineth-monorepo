@@ -37,9 +37,7 @@ class JsonRpcMessageProcessorTest {
   }
 
   @Test
-  fun `handleMessage should catch exceptions and return internal error`(
-    testContext: VertxTestContext,
-  ) {
+  fun `handleMessage should catch exceptions and return internal error`(testContext: VertxTestContext) {
     val request = buildJsonRpcRequest(method = "eth_blockNumber")
     val processor = JsonRpcMessageProcessor(
       { _, _, _ -> throw RuntimeException("Something went wrong") },
@@ -59,9 +57,7 @@ class JsonRpcMessageProcessorTest {
   }
 
   @Test
-  fun `handleMessage should return error when message can't be deserialized`(
-    testContext: VertxTestContext,
-  ) {
+  fun `handleMessage should return error when message can't be deserialized`(testContext: VertxTestContext) {
     val jsonStr = "{ bad json }"
     val future = processor(null, jsonStr)
     val expectedError = JsonObject.mapFrom(JsonRpcErrorCode.PARSE_ERROR.toErrorObject())
@@ -170,9 +166,7 @@ class JsonRpcMessageProcessorTest {
     }
 
   @Test
-  fun `handleMessage should return error when any of the requests fail`(
-    testContext: VertxTestContext,
-  ) {
+  fun `handleMessage should return error when any of the requests fail`(testContext: VertxTestContext) {
     val requests =
       listOf(
         buildJsonRpcRequest(id = 1, "read_value"),
@@ -304,11 +298,7 @@ class JsonRpcMessageProcessorTest {
     assertThat(meterRegistry.timer("jsonrpc.serialization.response.bulk").count()).isEqualTo(2)
   }
 
-  private fun buildJsonRpcRequest(
-    id: Int = 1,
-    method: String = "eth_blockNumber",
-    vararg params: Any,
-  ): JsonObject {
+  private fun buildJsonRpcRequest(id: Int = 1, method: String = "eth_blockNumber", vararg params: Any): JsonObject {
     return JsonObject()
       .put("jsonrpc", "2.0")
       .put("id", id)
@@ -316,22 +306,14 @@ class JsonRpcMessageProcessorTest {
       .put("params", JsonArray.of(*params))
   }
 
-  private fun assertResult(
-    responseStr: String,
-    expectedResult: JsonObject,
-    originalRequest: JsonObject,
-  ) {
+  private fun assertResult(responseStr: String, expectedResult: JsonObject, originalRequest: JsonObject) {
     val response = JsonObject(responseStr)
     assertThat(response.getValue("id")).isEqualTo(originalRequest.getValue("id"))
     assertThat(response.getValue("result")).isEqualTo(expectedResult)
     assertThat(response.getValue("error")).isNull()
   }
 
-  private fun assertError(
-    responseStr: String,
-    expectedError: Any,
-    originalRequest: JsonObject? = null,
-  ) {
+  private fun assertError(responseStr: String, expectedError: Any, originalRequest: JsonObject? = null) {
     val response = JsonObject(responseStr)
     originalRequest?.let {
       assertThat(response.getValue("id")).isEqualTo(originalRequest.getValue("id"))

@@ -43,8 +43,7 @@ fun ULong.toHexStringPaddedToBitSize(targetBitSize: Int, hexPrefix: Boolean = tr
 fun ULong.toHexStringPaddedToByteSize(targetByteSize: Int, hexPrefix: Boolean = true): String =
   this.toHexStringPaddedToBitSize(targetByteSize * 8, hexPrefix)
 
-fun ULong.toHexStringUInt256(hexPrefix: Boolean = true): String =
-  this.toHexStringPaddedToBitSize(256, hexPrefix)
+fun ULong.toHexStringUInt256(hexPrefix: Boolean = true): String = this.toHexStringPaddedToBitSize(256, hexPrefix)
 
 fun List<ULong>.hasSequentialElements(): Boolean {
   if (this.size < 2) return true // A list with less than 2 elements is trivially continuous

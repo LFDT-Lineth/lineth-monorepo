@@ -14,7 +14,6 @@ data class ProtocolToml(
     val genesisStateRootHash: ByteArray,
     val genesisShnarf: ByteArray,
   ) {
-
     override fun equals(other: Any?): Boolean {
       if (this === other) return true
       if (javaClass != other?.javaClass) return false
@@ -47,17 +46,21 @@ data class ProtocolToml(
 
   fun reified(): ProtocolConfig {
     return ProtocolConfig(
-      genesis = ProtocolConfig.Genesis(
+      genesis =
+      ProtocolConfig.Genesis(
         genesisStateRootHash = this.genesis.genesisStateRootHash,
         genesisShnarf = this.genesis.genesisShnarf,
       ),
-      l1 = ProtocolConfig.Layer1Config(
+      l1 =
+      ProtocolConfig.Layer1Config(
         contractAddress = this.l1.contractAddress,
         blockTime = this.l1.blockTime,
       ),
-      l2 = ProtocolConfig.Layer2Config(
+      l2 =
+      ProtocolConfig.Layer2Config(
         contractAddress = this.l2.contractAddress,
-        contractDeploymentBlockNumber = this.l2.contractDeploymentBlockNumber
+        contractDeploymentBlockNumber =
+        this.l2.contractDeploymentBlockNumber
           ?.let { BlockParameter.BlockNumber(it) },
       ),
     )

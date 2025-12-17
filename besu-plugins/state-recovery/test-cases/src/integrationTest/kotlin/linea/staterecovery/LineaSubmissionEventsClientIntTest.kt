@@ -38,9 +38,7 @@ class LineaSubmissionEventsClientIntTest {
   private lateinit var aggregationsAndBlobs: List<AggregationAndBlobs>
   private lateinit var submissionEventsFetcher: LineaRollupSubmissionEventsClient
 
-  private fun setupTest(
-    vertx: Vertx,
-  ) {
+  private fun setupTest(vertx: Vertx) {
     configureLoggers(
       rootLevel = Level.INFO,
       "net.consensys.linea.contract.Web3JContractAsyncHelper" to Level.WARN, // silence noisy gasPrice Caps logs
@@ -80,10 +78,7 @@ class LineaSubmissionEventsClientIntTest {
     )
   }
 
-  private fun createSubmissionEventsClient(
-    vertx: Vertx,
-    contractAddress: String,
-  ): LineaRollupSubmissionEventsClient {
+  private fun createSubmissionEventsClient(vertx: Vertx, contractAddress: String): LineaRollupSubmissionEventsClient {
     val log = LogManager.getLogger("test.clients.l1.events-fetcher")
     val eventsFetcherWeb3jClient = Web3jClientManager.buildL1Client(
       log = log,

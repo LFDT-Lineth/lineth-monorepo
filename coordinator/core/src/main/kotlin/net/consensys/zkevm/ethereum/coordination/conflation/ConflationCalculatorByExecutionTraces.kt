@@ -20,22 +20,25 @@ class ConflationCalculatorByExecutionTraces(
   metricsFacade: MetricsFacade,
   private val log: Logger = LogManager.getLogger(ConflationCalculatorByExecutionTraces::class.java),
 ) : ConflationCalculator {
-  private val overflownTracesMetricsCounters = HashMap<TracingModule, Counter>().also {
-    tracesCountersLimit.entries()
-      .forEach { (module, _) ->
-        it[module] = metricsFacade.createCounter(
-          category = LineaMetricsCategory.CONFLATION,
-          name = "overflow.evm",
-          description = "Number of times ${module.name} traces counter has overflown",
-          tags = listOf(
-            Tag(
-              key = "module",
-              value = module.name,
-            ),
-          ),
-        )
-      }
-  }
+  private val overflownTracesMetricsCounters =
+    HashMap<TracingModule, Counter>().also {
+      tracesCountersLimit.entries()
+        .forEach { (module, _) ->
+          it[module] =
+            metricsFacade.createCounter(
+              category = LineaMetricsCategory.CONFLATION,
+              name = "overflow.evm",
+              description = "Number of times ${module.name} traces counter has overflown",
+              tags =
+              listOf(
+                Tag(
+                  key = "module",
+                  value = module.name,
+                ),
+              ),
+            )
+        }
+    }
 
   override val id: String = ConflationTrigger.TRACES_LIMIT.name
   private var inprogressTracesCounters: TracesCounters = emptyTracesCounters
@@ -66,9 +69,7 @@ class ConflationCalculatorByExecutionTraces(
     }
   }
 
-  private fun isOversizedBlockOnTopOfNonEmptyConflation(
-    countersAfterConflation: TracesCounters,
-  ): Boolean {
+  private fun isOversizedBlockOnTopOfNonEmptyConflation(countersAfterConflation: TracesCounters): Boolean {
     return !countersAfterConflation.allTracesWithinLimits(tracesCountersLimit) &&
       inprogressTracesCounters != emptyTracesCounters
   }
@@ -81,22 +82,21 @@ class ConflationCalculatorByExecutionTraces(
     this.inprogressTracesCounters = emptyTracesCounters
   }
 
-  override fun copyCountersTo(
-    counters: ConflationCounters,
-  ) {
+  override fun copyCountersTo(counters: ConflationCounters) {
     counters.tracesCounters = inprogressTracesCounters
   }
 
   private fun checkTracesAreWithinCaps(blockNumber: ULong, tracesCounters: TracesCounters): Result<Unit, String> {
     val overSizeTraces = tracesCounters.oversizedTraces(tracesCountersLimit)
     return if (overSizeTraces.isNotEmpty()) {
-      val errorMessage = overSizeTraces.joinToString(
-        separator = ", ",
-        prefix = "oversized block: block=$blockNumber, oversize traces TRACE(count, limit, overflow): [",
-        postfix = "]",
-      ) { (moduleName, count, limit) ->
-        "$moduleName($count, $limit, ${count - limit})"
-      }
+      val errorMessage =
+        overSizeTraces.joinToString(
+          separator = ", ",
+          prefix = "oversized block: block=$blockNumber, oversize traces TRACE(count, limit, overflow): [",
+          postfix = "]",
+        ) { (moduleName, count, limit) ->
+          "$moduleName($count, $limit, ${count - limit})"
+        }
       countOverflownTraces(tracesCounters)
       Err(errorMessage)
     } else {

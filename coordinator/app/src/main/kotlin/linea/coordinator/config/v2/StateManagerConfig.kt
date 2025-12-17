@@ -10,8 +10,9 @@ data class StateManagerConfig(
   val endpoints: List<URL>,
   val requestLimitPerEndpoint: UInt = UInt.MAX_VALUE,
   val requestTimeout: Duration? = null,
-  val requestRetries: RetryConfig = RetryConfig.endlessRetry(
-    backoffDelay = 1.seconds,
-    failuresWarningThreshold = 3u,
-  ),
+  val requestRetries: RetryConfig =
+    RetryConfig.endlessRetry(
+      backoffDelay = 1.seconds,
+      failuresWarningThreshold = 3u,
+    ),
 )

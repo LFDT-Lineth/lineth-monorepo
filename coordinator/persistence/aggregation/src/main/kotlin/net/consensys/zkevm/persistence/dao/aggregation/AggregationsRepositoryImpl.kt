@@ -11,9 +11,7 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 class AggregationsRepositoryImpl(
   private val aggregationsPostgresDao: AggregationsDao,
 ) : AggregationsRepository {
-  override fun findConsecutiveProvenBlobs(
-    fromBlockNumber: Long,
-  ): SafeFuture<List<BlobAndBatchCounters>> {
+  override fun findConsecutiveProvenBlobs(fromBlockNumber: Long): SafeFuture<List<BlobAndBatchCounters>> {
     return aggregationsPostgresDao.findConsecutiveProvenBlobs(fromBlockNumber)
   }
 
@@ -40,9 +38,7 @@ class AggregationsRepositoryImpl(
     )
   }
 
-  override fun findHighestConsecutiveEndBlockNumber(
-    fromBlockNumber: Long?,
-  ): SafeFuture<Long?> {
+  override fun findHighestConsecutiveEndBlockNumber(fromBlockNumber: Long?): SafeFuture<Long?> {
     return aggregationsPostgresDao.findHighestConsecutiveEndBlockNumber(fromBlockNumber)
   }
 

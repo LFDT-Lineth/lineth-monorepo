@@ -17,7 +17,6 @@ data class L1SubmissionConfigToml(
   val aggregation: AggregationSubmissionToml,
   val dataAvailability: DataAvailability = DataAvailability.ROLLUP,
 ) {
-
   enum class DataAvailability() {
     ROLLUP,
     VALIDIUM,
@@ -47,9 +46,7 @@ data class L1SubmissionConfigToml(
       val historicBaseFeePerBlobGasLowerBound: ULong,
       val historicAvgRewardConstant: ULong,
     ) {
-      fun reified(
-        timeOfTheDayMultipliers: TimeOfDayMultipliers,
-      ): GasPriceCapCalculationConfig {
+      fun reified(timeOfTheDayMultipliers: TimeOfDayMultipliers): GasPriceCapCalculationConfig {
         return GasPriceCapCalculationConfig(
           adjustmentConstant = this.adjustmentConstant,
           blobAdjustmentConstant = this.blobAdjustmentConstant,
@@ -73,11 +70,10 @@ data class L1SubmissionConfigToml(
       val numOfBlocksBeforeLatest: UInt = 4u,
       val storagePeriod: Duration = 10.days,
     ) {
-      fun reified(
-        defaultL1Endpoint: URL?,
-      ): L1SubmissionConfig.DynamicGasPriceCapConfig.FeeHistoryFetcherConfig {
+      fun reified(defaultL1Endpoint: URL?): L1SubmissionConfig.DynamicGasPriceCapConfig.FeeHistoryFetcherConfig {
         return L1SubmissionConfig.DynamicGasPriceCapConfig.FeeHistoryFetcherConfig(
-          l1Endpoint = this.l1Endpoint ?: defaultL1Endpoint
+          l1Endpoint =
+          this.l1Endpoint ?: defaultL1Endpoint
             ?: throw AssertionError("l1Endpoint config missing"),
           fetchInterval = this.fetchInterval,
           maxBlockCount = this.maxBlockCount,
@@ -112,7 +108,8 @@ data class L1SubmissionConfigToml(
         maxFeePerGasCap = this.maxFeePerGasCap,
         maxPriorityFeePerGasCap = this.maxPriorityFeePerGasCap,
         maxFeePerBlobGasCap = this.maxFeePerBlobGasCap,
-        fallback = L1SubmissionConfig.GasConfig.FallbackGasConfig(
+        fallback =
+        L1SubmissionConfig.GasConfig.FallbackGasConfig(
           priorityFeePerGasLowerBound = this.fallback.priorityFeePerGasLowerBound,
           priorityFeePerGasUpperBound = this.fallback.priorityFeePerGasUpperBound,
         ),
@@ -144,24 +141,25 @@ data class L1SubmissionConfigToml(
     val signer: SignerConfigToml,
   )
 
-  fun reified(
-    l1DefaultEndpoint: URL?,
-    timeOfDayMultipliers: TimeOfDayMultipliers,
-  ): L1SubmissionConfig {
+  fun reified(l1DefaultEndpoint: URL?, timeOfDayMultipliers: TimeOfDayMultipliers): L1SubmissionConfig {
     return L1SubmissionConfig(
-      dynamicGasPriceCap = L1SubmissionConfig.DynamicGasPriceCapConfig(
+      dynamicGasPriceCap =
+      L1SubmissionConfig.DynamicGasPriceCapConfig(
         disabled = this.dynamicGasPriceCap.disabled,
         gasPriceCapCalculation = this.dynamicGasPriceCap.gasPriceCapCalculation.reified(timeOfDayMultipliers),
         feeHistoryFetcher = this.dynamicGasPriceCap.feeHistoryFetcher.reified(l1DefaultEndpoint),
         timeOfDayMultipliers = timeOfDayMultipliers,
       ),
-      fallbackGasPrice = L1SubmissionConfig.FallbackGasPriceConfig(
+      fallbackGasPrice =
+      L1SubmissionConfig.FallbackGasPriceConfig(
         feeHistoryBlockCount = this.fallbackGasPrice.feeHistoryBlockCount,
         feeHistoryRewardPercentile = this.fallbackGasPrice.feeHistoryRewardPercentile,
       ),
-      blob = L1SubmissionConfig.BlobSubmissionConfig(
+      blob =
+      L1SubmissionConfig.BlobSubmissionConfig(
         disabled = this.blob.disabled,
-        l1Endpoint = this.blob.l1Endpoint ?: l1DefaultEndpoint
+        l1Endpoint =
+        this.blob.l1Endpoint ?: l1DefaultEndpoint
           ?: throw AssertionError("l1Endpoint config missing"),
         submissionDelay = this.blob.submissionDelay,
         submissionTickInterval = this.blob.submissionTickInterval,
@@ -171,9 +169,11 @@ data class L1SubmissionConfigToml(
         gas = this.blob.gas.reified(),
         signer = this.blob.signer.reified(),
       ),
-      aggregation = L1SubmissionConfig.AggregationSubmissionConfig(
+      aggregation =
+      L1SubmissionConfig.AggregationSubmissionConfig(
         disabled = this.aggregation.disabled,
-        l1Endpoint = this.aggregation.l1Endpoint ?: l1DefaultEndpoint
+        l1Endpoint =
+        this.aggregation.l1Endpoint ?: l1DefaultEndpoint
           ?: throw AssertionError("l1Endpoint config missing"),
         submissionDelay = this.aggregation.submissionDelay,
         submissionTickInterval = this.aggregation.submissionTickInterval,

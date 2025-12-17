@@ -45,9 +45,7 @@ class FakeExecutionLayerClient(
   }
 
   @Synchronized
-  override fun lineaEngineImportBlocksFromBlob(
-    blocks: List<BlockFromL1RecoveredData>,
-  ): SafeFuture<Unit> {
+  override fun lineaEngineImportBlocksFromBlob(blocks: List<BlockFromL1RecoveredData>): SafeFuture<Unit> {
     if (log.isTraceEnabled) {
       log.trace("lineaEngineImportBlocksFromBlob($blocks)")
     } else {
@@ -63,9 +61,7 @@ class FakeExecutionLayerClient(
   }
 
   @Synchronized
-  override fun getBlockNumberAndHash(
-    blockParameter: BlockParameter,
-  ): SafeFuture<BlockNumberAndHash> {
+  override fun getBlockNumberAndHash(blockParameter: BlockParameter): SafeFuture<BlockNumberAndHash> {
     log.trace("getBlockNumberAndHash($blockParameter): $headBlock")
     return SafeFuture.completedFuture(headBlock)
   }
@@ -77,9 +73,7 @@ class FakeExecutionLayerClient(
   }
 
   @Synchronized
-  override fun lineaEnableStateRecovery(
-    stateRecoverStartBlockNumber: ULong,
-  ): SafeFuture<StateRecoveryStatus> {
+  override fun lineaEnableStateRecovery(stateRecoverStartBlockNumber: ULong): SafeFuture<StateRecoveryStatus> {
     this.stateRecoverStartBlockNumber = stateRecoverStartBlockNumber
     log.debug("lineaEnableStateRecovery($stateRecoverStartBlockNumber) = $stateRecoverStatus")
     return SafeFuture.completedFuture(stateRecoverStatus)

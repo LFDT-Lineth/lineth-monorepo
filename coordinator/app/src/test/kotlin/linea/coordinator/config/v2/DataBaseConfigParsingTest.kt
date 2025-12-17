@@ -11,7 +11,8 @@ import kotlin.time.Duration.Companion.seconds
 
 class DataBaseConfigParsingTest {
   companion object {
-    val toml = """
+    val toml =
+      """
       [database]
       hostname = "localhost"
       port = "5432"
@@ -26,48 +27,53 @@ class DataBaseConfigParsingTest {
       backoff-delay = "PT1S"
       timeout = "PT40S"
       failures-warning-threshold = 2
-    """.trimIndent()
+      """.trimIndent()
 
-    val config = DatabaseToml(
-      hostname = "localhost",
-      username = "someuser",
-      password = Masked("somepassword"),
-      schema = "linea_coordinator",
-      readPoolSize = 10,
-      readPipeliningLimit = 11,
-      transactionalPoolSize = 12,
-      port = 5432u,
-      persistenceRetries = RequestRetriesToml(
-        maxRetries = 3u,
-        backoffDelay = 1.seconds,
-        timeout = 40.seconds,
-        failuresWarningThreshold = 2u,
-      ),
-    )
+    val config =
+      DatabaseToml(
+        hostname = "localhost",
+        username = "someuser",
+        password = Masked("somepassword"),
+        schema = "linea_coordinator",
+        readPoolSize = 10,
+        readPipeliningLimit = 11,
+        transactionalPoolSize = 12,
+        port = 5432u,
+        persistenceRetries =
+        RequestRetriesToml(
+          maxRetries = 3u,
+          backoffDelay = 1.seconds,
+          timeout = 40.seconds,
+          failuresWarningThreshold = 2u,
+        ),
+      )
 
-    val tomlMinimal = """
+    val tomlMinimal =
+      """
       [database]
       hostname = "localhost"
       username = "someuser"
       password = "somepassword"
-    """.trimIndent()
+      """.trimIndent()
 
-    val configMinimal = DatabaseToml(
-      hostname = "localhost",
-      username = "someuser",
-      password = Masked("somepassword"),
-      schema = "linea_coordinator",
-      readPoolSize = 10,
-      readPipeliningLimit = 10,
-      transactionalPoolSize = 10,
-      port = 5432u,
-      persistenceRetries = RequestRetriesToml(
-        maxRetries = null,
-        backoffDelay = 1.seconds,
-        timeout = 10.minutes,
-        failuresWarningThreshold = 3u,
-      ),
-    )
+    val configMinimal =
+      DatabaseToml(
+        hostname = "localhost",
+        username = "someuser",
+        password = Masked("somepassword"),
+        schema = "linea_coordinator",
+        readPoolSize = 10,
+        readPipeliningLimit = 10,
+        transactionalPoolSize = 10,
+        port = 5432u,
+        persistenceRetries =
+        RequestRetriesToml(
+          maxRetries = null,
+          backoffDelay = 1.seconds,
+          timeout = 10.minutes,
+          failuresWarningThreshold = 3u,
+        ),
+      )
   }
 
   data class WrapperConfig(

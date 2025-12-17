@@ -5,7 +5,6 @@ import net.consensys.zkevm.domain.BlobsToAggregate
 
 class AggregationTriggerCalculatorByProofLimit(private val maxProofsPerAggregation: UInt) :
   SyncAggregationTriggerCalculator {
-
   data class InFlightAggregation(
     val proofsCount: UInt,
     val blobsToAggregate: BlobsToAggregate,
@@ -37,7 +36,8 @@ class AggregationTriggerCalculatorByProofLimit(private val maxProofsPerAggregati
       } else if (newProofsCount == maxProofsPerAggregation) {
         AggregationTrigger(
           aggregationTriggerType = AggregationTriggerType.PROOF_LIMIT,
-          aggregation = BlobsToAggregate(
+          aggregation =
+          BlobsToAggregate(
             inFlightAggregation!!.blobsToAggregate.startBlockNumber,
             blobCounters.endBlockNumber,
           ),
@@ -49,7 +49,8 @@ class AggregationTriggerCalculatorByProofLimit(private val maxProofsPerAggregati
       if (blobProofCount == maxProofsPerAggregation) {
         AggregationTrigger(
           aggregationTriggerType = AggregationTriggerType.PROOF_LIMIT,
-          aggregation = BlobsToAggregate(
+          aggregation =
+          BlobsToAggregate(
             blobCounters.startBlockNumber,
             blobCounters.endBlockNumber,
           ),
@@ -73,13 +74,15 @@ class AggregationTriggerCalculatorByProofLimit(private val maxProofsPerAggregati
     if (newProofsCount > maxProofsPerAggregation) {
       throw IllegalStateException("Proof count already overflowed, should have been reset before this new blob")
     } else {
-      inFlightAggregation = InFlightAggregation(
-        proofsCount = newProofsCount,
-        blobsToAggregate = BlobsToAggregate(
-          inFlightAggregation?.blobsToAggregate?.startBlockNumber ?: blobCounters.startBlockNumber,
-          blobCounters.endBlockNumber,
-        ),
-      )
+      inFlightAggregation =
+        InFlightAggregation(
+          proofsCount = newProofsCount,
+          blobsToAggregate =
+          BlobsToAggregate(
+            inFlightAggregation?.blobsToAggregate?.startBlockNumber ?: blobCounters.startBlockNumber,
+            blobCounters.endBlockNumber,
+          ),
+        )
     }
   }
 

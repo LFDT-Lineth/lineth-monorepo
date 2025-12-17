@@ -19,9 +19,8 @@ class TracesConflationCoordinatorImpl(
   private val zkStateClient: StateManagerClientV1,
 ) : TracesConflationCoordinator {
   private val log: Logger = LogManager.getLogger(this::class.java)
-  private fun requestConflatedTraces(
-    blockRange: ULongRange,
-  ): SafeFuture<GenerateTracesResponse> {
+
+  private fun requestConflatedTraces(blockRange: ULongRange): SafeFuture<GenerateTracesResponse> {
     return tracesConflationClient
       .generateConflatedTracesToFile(
         startBlockNumber = blockRange.first(),
@@ -39,17 +38,13 @@ class TracesConflationCoordinatorImpl(
       }
   }
 
-  private fun requestStateMerkleProof(
-    blockRange: ULongRange,
-  ): SafeFuture<GetZkEVMStateMerkleProofResponse> {
+  private fun requestStateMerkleProof(blockRange: ULongRange): SafeFuture<GetZkEVMStateMerkleProofResponse> {
     return zkStateClient.makeRequest(
       GetStateMerkleProofRequest(BlockInterval(blockRange.first(), blockRange.last())),
     )
   }
 
-  override fun conflateExecutionTraces(
-    blockRange: ULongRange,
-  ): SafeFuture<BlocksTracesConflated> {
+  override fun conflateExecutionTraces(blockRange: ULongRange): SafeFuture<BlocksTracesConflated> {
     return requestConflatedTraces(blockRange).thenCompose { tracesConflationResult: GenerateTracesResponse ->
       // these 2 requests can be done in parallel, but traces-api is much slower to respond so
       // requesting stateManger after traces-API because

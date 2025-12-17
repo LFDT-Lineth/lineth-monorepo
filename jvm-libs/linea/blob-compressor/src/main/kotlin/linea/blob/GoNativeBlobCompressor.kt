@@ -116,9 +116,7 @@ class GoNativeBlobCompressorFactory {
     private val loadedVersions = mutableMapOf<BlobCompressorVersion, GoNativeBlobCompressor>()
 
     @JvmStatic
-    fun getInstance(
-      version: BlobCompressorVersion,
-    ): GoNativeBlobCompressor {
+    fun getInstance(version: BlobCompressorVersion): GoNativeBlobCompressor {
       synchronized(loadedVersions) {
         return loadedVersions[version]
           ?: loadLib(version)

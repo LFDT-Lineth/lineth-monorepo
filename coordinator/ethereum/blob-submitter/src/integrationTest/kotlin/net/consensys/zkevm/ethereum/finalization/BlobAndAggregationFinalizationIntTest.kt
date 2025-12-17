@@ -63,10 +63,7 @@ class BlobAndAggregationFinalizationIntTest : CleanDbTestSuiteParallel() {
   private lateinit var aggregations: List<Aggregation>
   private lateinit var blobs: List<BlobRecord>
 
-  private fun setupTest(
-    vertx: Vertx,
-    smartContractVersion: LineaRollupContractVersion,
-  ) {
+  private fun setupTest(vertx: Vertx, smartContractVersion: LineaRollupContractVersion) {
     // V6 is always used, this is left for when V7 is implemented.
     if (listOf(LineaRollupContractVersion.V6).contains(smartContractVersion).not()) {
       throw IllegalArgumentException("unsupported contract version=$smartContractVersion!")
@@ -207,10 +204,7 @@ class BlobAndAggregationFinalizationIntTest : CleanDbTestSuiteParallel() {
 
   @Test
   @Timeout(3, timeUnit = TimeUnit.MINUTES)
-  fun `submission works with contract V6`(
-    vertx: Vertx,
-    testContext: VertxTestContext,
-  ) {
+  fun `submission works with contract V6`(vertx: Vertx, testContext: VertxTestContext) {
     testSubmission(vertx, testContext, LineaRollupContractVersion.V6)
   }
 }

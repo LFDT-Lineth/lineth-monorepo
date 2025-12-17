@@ -253,10 +253,7 @@ class SubmissionsFetchingTaskIntTest {
       .isEqualTo(sotAggregationData.blobs.last().endBlockNumber)
   }
 
-  fun assertEventMatchesAggregation(
-    event: DataFinalizedV3,
-    aggregation: Aggregation,
-  ) {
+  fun assertEventMatchesAggregation(event: DataFinalizedV3, aggregation: Aggregation) {
     assertThat(event.startBlockNumber).isEqualTo(aggregation.startBlockNumber)
     assertThat(event.endBlockNumber).isEqualTo(aggregation.endBlockNumber)
   }

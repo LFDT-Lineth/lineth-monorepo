@@ -31,43 +31,50 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 class CoordinatorApp(private val configs: CoordinatorConfig) {
   private val log: Logger = LogManager.getLogger(this::class.java)
-  private val vertx: Vertx = run {
-    log.trace("System properties: {}", System.getProperties())
-    val vertxConfig = loadVertxConfig()
-    log.debug("Vertx full configs: {}", vertxConfig)
-    log.info("App configs: {}", configs)
+  private val vertx: Vertx =
+    run {
+      log.trace("System properties: {}", System.getProperties())
+      val vertxConfig = loadVertxConfig()
+      log.debug("Vertx full configs: {}", vertxConfig)
+      log.info("App configs: {}", configs)
 
-    Vertx.vertx(vertxConfig)
-  }
+      Vertx.vertx(vertxConfig)
+    }
   private val meterRegistry: MeterRegistry = BackendRegistries.getDefaultNow()
   private val micrometerMetricsFacade = MicrometerMetricsFacade(meterRegistry, "linea")
-  private val httpJsonRpcClientFactory = VertxHttpJsonRpcClientFactory(
-    vertx = vertx,
-    metricsFacade = MicrometerMetricsFacade(meterRegistry),
-    requestResponseLogLevel = Level.TRACE,
-    failuresLogLevel = Level.WARN,
-  )
-  private val api = Api(
-    Api.Config(
-      configs.api.observabilityPort,
-    ),
-    vertx,
-  )
+  private val httpJsonRpcClientFactory =
+    VertxHttpJsonRpcClientFactory(
+      vertx = vertx,
+      metricsFacade = MicrometerMetricsFacade(meterRegistry),
+      requestResponseLogLevel = Level.TRACE,
+      failuresLogLevel = Level.WARN,
+    )
+  private val api =
+    Api(
+      Api.Config(
+        configs.api.observabilityPort,
+      ),
+      vertx,
+    )
 
-  private val persistenceRetryer = PersistenceRetryer(
-    vertx = vertx,
-    config = PersistenceRetryer.Config(
-      backoffDelay = configs.database.persistenceRetries.backoffDelay,
-      maxRetries = configs.database.persistenceRetries.maxRetries?.toInt(),
-      timeout = configs.database.persistenceRetries.timeout,
-    ),
-  )
+  private val persistenceRetryer =
+    PersistenceRetryer(
+      vertx = vertx,
+      config =
+      PersistenceRetryer.Config(
+        backoffDelay = configs.database.persistenceRetries.backoffDelay,
+        maxRetries = configs.database.persistenceRetries.maxRetries?.toInt(),
+        timeout = configs.database.persistenceRetries.timeout,
+      ),
+    )
 
   private val sqlClient: SqlClient = initDb(configs.database)
   private val batchesRepository =
     PostgresBatchesRepository(
-      batchesDao = RetryingBatchesPostgresDao(
-        delegate = BatchesPostgresDao(
+      batchesDao =
+      RetryingBatchesPostgresDao(
+        delegate =
+        BatchesPostgresDao(
           connection = sqlClient,
         ),
         persistenceRetryer = persistenceRetryer,
@@ -76,9 +83,12 @@ class CoordinatorApp(private val configs: CoordinatorConfig) {
 
   private val blobsRepository =
     BlobsRepositoryImpl(
-      blobsDao = RetryingBlobsPostgresDao(
-        delegate = BlobsPostgresDao(
-          config = BlobsPostgresDao.Config(
+      blobsDao =
+      RetryingBlobsPostgresDao(
+        delegate =
+        BlobsPostgresDao(
+          config =
+          BlobsPostgresDao.Config(
             maxBlobsToReturn = configs.l1Submission?.blob?.dbMaxBlobsToReturn ?: 50u,
           ),
           connection = sqlClient,
@@ -87,53 +97,61 @@ class CoordinatorApp(private val configs: CoordinatorConfig) {
       ),
     )
 
-  private val aggregationsRepository = AggregationsRepositoryImpl(
-    aggregationsPostgresDao = RetryingPostgresAggregationsDao(
-      delegate = PostgresAggregationsDao(
-        connection = sqlClient,
+  private val aggregationsRepository =
+    AggregationsRepositoryImpl(
+      aggregationsPostgresDao =
+      RetryingPostgresAggregationsDao(
+        delegate =
+        PostgresAggregationsDao(
+          connection = sqlClient,
+        ),
+        persistenceRetryer = persistenceRetryer,
       ),
-      persistenceRetryer = persistenceRetryer,
-    ),
-  )
+    )
 
-  private val l1App = L1DependentApp(
-    configs = configs,
-    vertx = vertx,
-    httpJsonRpcClientFactory = httpJsonRpcClientFactory,
-    batchesRepository = batchesRepository,
-    blobsRepository = blobsRepository,
-    aggregationsRepository = aggregationsRepository,
-    sqlClient = sqlClient,
-    smartContractErrors = configs.smartContractErrors,
-    metricsFacade = micrometerMetricsFacade,
-  )
+  private val l1App =
+    L1DependentApp(
+      configs = configs,
+      vertx = vertx,
+      httpJsonRpcClientFactory = httpJsonRpcClientFactory,
+      batchesRepository = batchesRepository,
+      blobsRepository = blobsRepository,
+      aggregationsRepository = aggregationsRepository,
+      sqlClient = sqlClient,
+      smartContractErrors = configs.smartContractErrors,
+      metricsFacade = micrometerMetricsFacade,
+    )
 
-  private val requestFileCleanup = DirectoryCleaner(
-    vertx = vertx,
-    directories = listOfNotNull(
-      configs.proversConfig.proverA.execution.requestsDirectory,
-      configs.proversConfig.proverA.blobCompression.requestsDirectory,
-      configs.proversConfig.proverA.proofAggregation.requestsDirectory,
-      configs.proversConfig.proverB?.execution?.requestsDirectory,
-      configs.proversConfig.proverB?.blobCompression?.requestsDirectory,
-      configs.proversConfig.proverB?.proofAggregation?.requestsDirectory,
-    ),
-    fileFilters = DirectoryCleaner.getSuffixFileFilters(
+  private val requestFileCleanup =
+    DirectoryCleaner(
+      vertx = vertx,
+      directories =
       listOfNotNull(
-        configs.proversConfig.proverA.execution.inprogressRequestWritingSuffix,
-        configs.proversConfig.proverA.blobCompression.inprogressRequestWritingSuffix,
-        configs.proversConfig.proverA.proofAggregation.inprogressRequestWritingSuffix,
-        configs.proversConfig.proverB?.execution?.inprogressRequestWritingSuffix,
-        configs.proversConfig.proverB?.blobCompression?.inprogressRequestWritingSuffix,
-        configs.proversConfig.proverB?.proofAggregation?.inprogressRequestWritingSuffix,
+        configs.proversConfig.proverA.execution.requestsDirectory,
+        configs.proversConfig.proverA.blobCompression.requestsDirectory,
+        configs.proversConfig.proverA.proofAggregation.requestsDirectory,
+        configs.proversConfig.proverB?.execution?.requestsDirectory,
+        configs.proversConfig.proverB?.blobCompression?.requestsDirectory,
+        configs.proversConfig.proverB?.proofAggregation?.requestsDirectory,
       ),
-    ) + if (configs.proversConfig.enableRequestFilesCleanup) {
-      // Will delete prover request .json files from all the directories
-      listOf(DirectoryCleaner.JSON_FILE_FILTER)
-    } else {
-      emptyList()
-    },
-  )
+      fileFilters =
+      DirectoryCleaner.getSuffixFileFilters(
+        listOfNotNull(
+          configs.proversConfig.proverA.execution.inprogressRequestWritingSuffix,
+          configs.proversConfig.proverA.blobCompression.inprogressRequestWritingSuffix,
+          configs.proversConfig.proverA.proofAggregation.inprogressRequestWritingSuffix,
+          configs.proversConfig.proverB?.execution?.inprogressRequestWritingSuffix,
+          configs.proversConfig.proverB?.blobCompression?.inprogressRequestWritingSuffix,
+          configs.proversConfig.proverB?.proofAggregation?.inprogressRequestWritingSuffix,
+        ),
+      ) +
+        if (configs.proversConfig.enableRequestFilesCleanup) {
+          // Will delete prover request .json files from all the directories
+          listOf(DirectoryCleaner.JSON_FILE_FILTER)
+        } else {
+          emptyList()
+        },
+    )
 
   init {
     log.info("Coordinator app instantiated")

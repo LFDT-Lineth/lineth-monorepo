@@ -10,10 +10,11 @@ data class StateManagerToml(
   val endpoints: List<URL>,
   val requestLimitPerEndpoint: UInt = UInt.MAX_VALUE,
   val requestTimeout: Duration? = null,
-  val requestRetries: RequestRetriesToml = RequestRetriesToml.endlessRetry(
-    backoffDelay = 1.seconds,
-    failuresWarningThreshold = 3u,
-  ),
+  val requestRetries: RequestRetriesToml =
+    RequestRetriesToml.endlessRetry(
+      backoffDelay = 1.seconds,
+      failuresWarningThreshold = 3u,
+    ),
 ) {
   fun reified(): StateManagerConfig {
     return StateManagerConfig(

@@ -102,24 +102,18 @@ class Web3jEthApiClient(
     }
   }
 
-  override fun ethBlockNumber(): SafeFuture<ULong> =
-    web3jClient.ethBlockNumber().requestAsync {
-      it.blockNumber?.toULong() ?: throw IllegalStateException("Block number not found in response")
-    }
+  override fun ethBlockNumber(): SafeFuture<ULong> = web3jClient.ethBlockNumber().requestAsync {
+    it.blockNumber?.toULong() ?: throw IllegalStateException("Block number not found in response")
+  }
 
-  override fun ethGetBalance(
-    address: ByteArray,
-    blockParameter: BlockParameter,
-  ): SafeFuture<BigInteger> = web3jClient
+  override fun ethGetBalance(address: ByteArray, blockParameter: BlockParameter): SafeFuture<BigInteger> = web3jClient
     .ethGetBalance(address.encodeHex(), blockParameter.toWeb3j())
     .requestAsync { it.balance }
 
-  override fun ethGetTransactionCount(
-    address: ByteArray,
-    blockParameter: BlockParameter,
-  ): SafeFuture<ULong> = web3jClient
-    .ethGetTransactionCount(address.encodeHex(), blockParameter.toWeb3j())
-    .requestAsync { it.transactionCount.toULong() }
+  override fun ethGetTransactionCount(address: ByteArray, blockParameter: BlockParameter): SafeFuture<ULong> =
+    web3jClient
+      .ethGetTransactionCount(address.encodeHex(), blockParameter.toWeb3j())
+      .requestAsync { it.transactionCount.toULong() }
 
   override fun ethFindBlockByNumberFullTxs(blockParameter: BlockParameter): SafeFuture<Block?> {
     return web3jClient
@@ -162,9 +156,7 @@ class Web3jEthApiClient(
       .requestAsync { resp -> resp.value.decodeHex() }
   }
 
-  override fun ethEstimateGas(
-    transaction: TransactionForEthCall,
-  ): SafeFuture<ULong> {
+  override fun ethEstimateGas(transaction: TransactionForEthCall): SafeFuture<ULong> {
     return web3jClient
       .ethEstimateGas(transaction.toWeb3j())
       .requestAsync { resp -> resp.amountUsed.toULong() }

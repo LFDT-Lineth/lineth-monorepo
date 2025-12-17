@@ -29,14 +29,16 @@ class ConflationServiceImplTest {
 
   @BeforeEach
   fun beforeEach() {
-    conflationCalculator = GlobalBlockConflationCalculator(
-      lastBlockNumber = 0u,
-      syncCalculators = listOf(
-        ConflationCalculatorByBlockLimit(conflationBlockLimit),
-      ),
-      deferredTriggerConflationCalculators = emptyList(),
-      emptyTracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT,
-    )
+    conflationCalculator =
+      GlobalBlockConflationCalculator(
+        lastBlockNumber = 0u,
+        syncCalculators =
+        listOf(
+          ConflationCalculatorByBlockLimit(conflationBlockLimit),
+        ),
+        deferredTriggerConflationCalculators = emptyList(),
+        emptyTracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT,
+      )
     conflationService = ConflationServiceImpl(conflationCalculator, mock(defaultAnswer = RETURNS_DEEP_STUBS))
   }
 
@@ -46,24 +48,27 @@ class ConflationServiceImplTest {
     val payload2 = createBlock(number = 2UL, gasLimit = 20_000_000UL)
     val payload3 = createBlock(number = 3UL, gasLimit = 20_000_000UL)
     val payload1Time = Instant.parse("2021-01-01T00:00:00Z")
-    val payloadCounters1 = BlockCounters(
-      blockNumber = 1UL,
-      payload1Time.plus(0.seconds),
-      tracesCounters = fakeTracesCountersV2(40u),
-      blockRLPEncoded = ByteArray(0),
-    )
-    val payloadCounters2 = BlockCounters(
-      blockNumber = 2UL,
-      payload1Time.plus(2.seconds),
-      tracesCounters = fakeTracesCountersV2(40u),
-      blockRLPEncoded = ByteArray(0),
-    )
-    val payloadCounters3 = BlockCounters(
-      blockNumber = 3UL,
-      payload1Time.plus(4.seconds),
-      tracesCounters = fakeTracesCountersV2(100u),
-      blockRLPEncoded = ByteArray(0),
-    )
+    val payloadCounters1 =
+      BlockCounters(
+        blockNumber = 1UL,
+        payload1Time.plus(0.seconds),
+        tracesCounters = fakeTracesCountersV2(40u),
+        blockRLPEncoded = ByteArray(0),
+      )
+    val payloadCounters2 =
+      BlockCounters(
+        blockNumber = 2UL,
+        payload1Time.plus(2.seconds),
+        tracesCounters = fakeTracesCountersV2(40u),
+        blockRLPEncoded = ByteArray(0),
+      )
+    val payloadCounters3 =
+      BlockCounters(
+        blockNumber = 3UL,
+        payload1Time.plus(4.seconds),
+        tracesCounters = fakeTracesCountersV2(100u),
+        blockRLPEncoded = ByteArray(0),
+      )
 
     val conflationEvents = mutableListOf<BlocksConflation>()
     conflationService.onConflatedBatch { conflationEvent: BlocksConflation ->

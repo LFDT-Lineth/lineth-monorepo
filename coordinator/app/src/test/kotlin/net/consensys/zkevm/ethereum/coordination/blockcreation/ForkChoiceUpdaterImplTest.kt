@@ -17,7 +17,6 @@ import org.mockito.kotlin.whenever
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 class ForkChoiceUpdaterImplTest {
-
   @Test
   fun dispatchFinalizedBlockNotification_allClientsSuccess() {
     val mockClient1 = mock<RollupForkChoiceUpdatedClient>()

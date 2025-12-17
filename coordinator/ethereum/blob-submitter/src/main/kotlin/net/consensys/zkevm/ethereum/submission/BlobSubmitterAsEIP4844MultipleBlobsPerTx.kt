@@ -20,9 +20,7 @@ class BlobSubmitterAsEIP4844MultipleBlobsPerTx(
 ) : BlobSubmitter {
   private val log: Logger = LogManager.getLogger(this::class.java)
 
-  override fun submitBlobs(
-    blobsChunks: List<List<BlobRecord>>,
-  ): SafeFuture<List<String>> {
+  override fun submitBlobs(blobsChunks: List<List<BlobRecord>>): SafeFuture<List<String>> {
     return blobsChunks
       .fold(SafeFuture.completedFuture(emptyList())) { chainOfFutures, blobs ->
         val newChainOfFutures = chainOfFutures
@@ -34,9 +32,7 @@ class BlobSubmitterAsEIP4844MultipleBlobsPerTx(
       }
   }
 
-  private fun submitBlobsInSingleTx(
-    blobs: List<BlobRecord>,
-  ): SafeFuture<String> {
+  private fun submitBlobsInSingleTx(blobs: List<BlobRecord>): SafeFuture<String> {
     return (
       gasPriceCapProvider?.getGasPriceCaps(blobs.first().startBlockNumber.toLong())
         ?: SafeFuture.completedFuture(null)
@@ -78,9 +74,7 @@ class BlobSubmitterAsEIP4844MultipleBlobsPerTx(
       }
   }
 
-  override fun submitBlobCall(
-    blobRecords: List<BlobRecord>,
-  ): SafeFuture<*> {
+  override fun submitBlobCall(blobRecords: List<BlobRecord>): SafeFuture<*> {
     return (
       gasPriceCapProvider?.getGasPriceCapsWithCoefficient(blobRecords.first().startBlockNumber.toLong())
         ?: SafeFuture.completedFuture(null)

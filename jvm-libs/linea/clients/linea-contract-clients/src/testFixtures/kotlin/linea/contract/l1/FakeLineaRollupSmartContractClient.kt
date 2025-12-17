@@ -56,9 +56,8 @@ class FakeLineaRollupSmartContractClient(
     }
   }
 
-  private fun lastFinalizedBlock(): FinalizedBlock =
-    finalizedBlocks.values.maxByOrNull { it.number }
-      ?: throw IllegalStateException("No finalized blocks available")
+  private fun lastFinalizedBlock(): FinalizedBlock = finalizedBlocks.values.maxByOrNull { it.number }
+    ?: throw IllegalStateException("No finalized blocks available")
 
   @Synchronized
   fun setFinalizedBlock(
@@ -82,20 +81,13 @@ class FakeLineaRollupSmartContractClient(
   override fun finalizedL2BlockNumber(blockParameter: BlockParameter): SafeFuture<ULong> =
     SafeFuture.completedFuture(lastFinalizedBlock().number)
 
-  override fun getMessageRollingHash(
-    blockParameter: BlockParameter,
-    messageNumber: Long,
-  ): SafeFuture<ByteArray> = SafeFuture.completedFuture(messageRollingHashes[messageNumber.toULong()] ?: ByteArray(32))
+  override fun getMessageRollingHash(blockParameter: BlockParameter, messageNumber: Long): SafeFuture<ByteArray> =
+    SafeFuture.completedFuture(messageRollingHashes[messageNumber.toULong()] ?: ByteArray(32))
 
-  override fun isBlobShnarfPresent(
-    blockParameter: BlockParameter,
-    shnarf: ByteArray,
-  ): SafeFuture<Boolean> = SafeFuture.completedFuture(false)
+  override fun isBlobShnarfPresent(blockParameter: BlockParameter, shnarf: ByteArray): SafeFuture<Boolean> =
+    SafeFuture.completedFuture(false)
 
-  override fun blockStateRootHash(
-    blockParameter: BlockParameter,
-    lineaL2BlockNumber: ULong,
-  ): SafeFuture<ByteArray> {
+  override fun blockStateRootHash(blockParameter: BlockParameter, lineaL2BlockNumber: ULong): SafeFuture<ByteArray> {
     val stateRootHash = finalizedBlocks[lineaL2BlockNumber]?.stateRootHash ?: ByteArray(32)
     return SafeFuture.completedFuture(stateRootHash)
   }

@@ -106,11 +106,7 @@ class ExtraDataV1UpdaterImplTest {
     )
   }
 
-  private fun verifyRequest(
-    wiremock: WireMockServer,
-    requestOriginEndpoint: URL,
-    request: JsonObject,
-  ) {
+  private fun verifyRequest(wiremock: WireMockServer, requestOriginEndpoint: URL, request: JsonObject) {
     wiremock.verify(
       RequestPatternBuilder.newRequestPattern()
         .withPort(wiremock.port())

@@ -47,9 +47,7 @@ class GoNativeBlobShnarfCalculatorTest {
     }
   }
 
-  fun testCalculateShnarfEip4844Disabled(
-    calculator: GoNativeBlobShnarfCalculator,
-  ) {
+  fun testCalculateShnarfEip4844Disabled(calculator: GoNativeBlobShnarfCalculator) {
     testCalculate(calculator, eip4844Enabled = false) { result ->
       Assertions.assertNotNull(result.commitment)
       org.assertj.core.api.Assertions.assertThat(result.commitment.decodeHex()).hasSize(0)
@@ -60,9 +58,7 @@ class GoNativeBlobShnarfCalculatorTest {
     }
   }
 
-  fun testCalculateShnarfEip4844Enabled(
-    calculator: GoNativeBlobShnarfCalculator,
-  ) {
+  fun testCalculateShnarfEip4844Enabled(calculator: GoNativeBlobShnarfCalculator) {
     testCalculate(calculator, eip4844Enabled = true) { result ->
       Assertions.assertNotNull(result.commitment)
       org.assertj.core.api.Assertions.assertThat(result.commitment.decodeHex()).hasSize(48)

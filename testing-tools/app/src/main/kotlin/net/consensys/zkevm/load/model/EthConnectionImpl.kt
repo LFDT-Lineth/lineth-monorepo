@@ -121,8 +121,8 @@ class EthConnectionImpl(url: String?) : EthConnection {
     return transactions.entries.parallelStream().collect(
       Collectors.toMap(
         { (key): Map.Entry<Wallet, List<TransactionDetail>> -> key },
-        Function<Map.Entry<Wallet, List<TransactionDetail>>, BigInteger> { (key, value):
-        Map.Entry<Wallet, List<TransactionDetail>>,
+        Function<Map.Entry<Wallet, List<TransactionDetail>>, BigInteger> {
+            (key, value): Map.Entry<Wallet, List<TransactionDetail>>,
           ->
           val sorted =
             value.stream().sorted { s: TransactionDetail, t: TransactionDetail -> 1 * s.nonce.compareTo(t.nonce) }

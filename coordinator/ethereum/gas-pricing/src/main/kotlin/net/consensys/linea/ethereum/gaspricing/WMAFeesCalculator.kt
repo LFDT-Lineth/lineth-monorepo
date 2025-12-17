@@ -24,21 +24,24 @@ class WMAFeesCalculator(
     val lastBlockBaseFeePerGas =
       feeHistory.baseFeePerGas[feeHistory.baseFeePerGas.lastIndex]
     val scaledBaseFee = this.config.baseFeeCoefficient * lastBlockBaseFeePerGas.toDouble()
-    val weightedSumOfRewards = feeHistory.reward
-      .mapIndexed { index, rewards ->
-        feeHistory.gasUsedRatio[index] * (index + 1).toDouble() * rewards[0].toDouble()
-      }
-      .sum()
+    val weightedSumOfRewards =
+      feeHistory.reward
+        .mapIndexed { index, rewards ->
+          feeHistory.gasUsedRatio[index] * (index + 1).toDouble() * rewards[0].toDouble()
+        }
+        .sum()
 
-    val weightedRatiosSum = feeHistory.gasUsedRatio
-      .mapIndexed { index, gasUsedRatio -> gasUsedRatio * (index + 1).toDouble() }
-      .sum()
+    val weightedRatiosSum =
+      feeHistory.gasUsedRatio
+        .mapIndexed { index, gasUsedRatio -> gasUsedRatio * (index + 1).toDouble() }
+        .sum()
 
     try {
-      val weightedPriorityFee = when {
-        weightedSumOfRewards == 0.0 || weightedRatiosSum == 0.0 -> 0.0
-        else -> (weightedSumOfRewards * this.config.priorityFeeWmaCoefficient) / weightedRatiosSum
-      }
+      val weightedPriorityFee =
+        when {
+          weightedSumOfRewards == 0.0 || weightedRatiosSum == 0.0 -> 0.0
+          else -> (weightedSumOfRewards * this.config.priorityFeeWmaCoefficient) / weightedRatiosSum
+        }
 
       val calculatedGasPrice = scaledBaseFee + weightedPriorityFee
 

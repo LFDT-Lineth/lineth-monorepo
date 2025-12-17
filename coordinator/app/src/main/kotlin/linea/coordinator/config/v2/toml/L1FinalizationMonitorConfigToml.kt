@@ -12,9 +12,7 @@ data class L1FinalizationMonitorConfigToml(
   val l1PollingInterval: Duration = 6.seconds,
   val l1QueryBlockTag: BlockParameter.Tag = BlockParameter.Tag.FINALIZED,
 ) {
-  fun reified(
-    defaults: DefaultsToml,
-  ): L1FinalizationMonitorConfig {
+  fun reified(defaults: DefaultsToml): L1FinalizationMonitorConfig {
     return L1FinalizationMonitorConfig(
       l1Endpoint = this.l1Endpoint ?: defaults.l1Endpoint ?: throw AssertionError("l1Endpoint missing"),
       l2Endpoint = this.l2Endpoint ?: defaults.l2Endpoint ?: throw AssertionError("l2Endpoint missing"),

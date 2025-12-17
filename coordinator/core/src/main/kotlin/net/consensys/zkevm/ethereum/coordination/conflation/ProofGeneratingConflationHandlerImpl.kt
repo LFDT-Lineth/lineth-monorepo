@@ -115,9 +115,7 @@ class ProofGeneratingConflationHandlerImpl(
   }
 }
 
-internal fun assertConsecutiveBlocksRange(
-  blocks: List<Block>,
-): Result<ULongRange, IllegalArgumentException> {
+internal fun assertConsecutiveBlocksRange(blocks: List<Block>): Result<ULongRange, IllegalArgumentException> {
   if (blocks.isEmpty()) {
     return Err(IllegalArgumentException("Empty list of blocks"))
   }
@@ -127,9 +125,10 @@ internal fun assertConsecutiveBlocksRange(
   }
 
   val sortedByNumber = blocks.sortedBy { it.number }
-  val gapFound = sortedByNumber
-    .zipWithNext { a, b -> b.number - a.number }
-    .any { it != 1UL }
+  val gapFound =
+    sortedByNumber
+      .zipWithNext { a, b -> b.number - a.number }
+      .any { it != 1UL }
 
   if (gapFound) {
     return Err(IllegalArgumentException("Conflated blocks list has non consecutive blocks!"))

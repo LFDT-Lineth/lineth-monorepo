@@ -18,13 +18,14 @@ class ConflationCalculatorByDataCompressed(
 
   override fun checkOverflow(blockCounters: BlockCounters): ConflationCalculator.OverflowTrigger? {
     lastValidatedBlock = blockCounters.blockRLPEncoded
-    val overflowResult = if (blobCompressor.canAppendBlock(blockCounters.blockRLPEncoded)) {
-      null
-    } else {
-      // if single block cannot fill in blob, then it is oversized and we are in trouble!
-      val blockOverSized = dataSize == 0u
-      ConflationCalculator.OverflowTrigger(ConflationTrigger.DATA_LIMIT, blockOverSized)
-    }
+    val overflowResult =
+      if (blobCompressor.canAppendBlock(blockCounters.blockRLPEncoded)) {
+        null
+      } else {
+        // if single block cannot fill in blob, then it is oversized and we are in trouble!
+        val blockOverSized = dataSize == 0u
+        ConflationCalculator.OverflowTrigger(ConflationTrigger.DATA_LIMIT, blockOverSized)
+      }
     log.trace(
       "checkOverflow: blockNumber={} blobSize={} dataSizeUpToLastBatch={} overflowResult={}",
       blockCounters.blockNumber,
@@ -69,9 +70,7 @@ class ConflationCalculatorByDataCompressed(
     }
   }
 
-  override fun copyCountersTo(
-    counters: ConflationCounters,
-  ) {
+  override fun copyCountersTo(counters: ConflationCounters) {
     counters.dataSize = dataSize - dataSizeUpToLastBatch
   }
 

@@ -61,9 +61,7 @@ class EthLogsSearcherImplIntTest {
     vertx.close()
   }
 
-  private fun setupClientWithWireMockServer(
-    retryConfig: RetryConfig = RetryConfig.noRetries,
-  ) {
+  private fun setupClientWithWireMockServer(retryConfig: RetryConfig = RetryConfig.noRetries) {
     wireMockServer = WireMockServer(WireMockConfiguration.options().dynamicPort())
     wireMockServer.start()
 
@@ -262,10 +260,7 @@ class EthLogsSearcherImplIntTest {
     vertx.close()
   }
 
-  private fun shallContinueToSearch(
-    ethLog: EthLog,
-    targetNumber: ULong,
-  ): SearchDirection? {
+  private fun shallContinueToSearch(ethLog: EthLog, targetNumber: ULong): SearchDirection? {
     val number = ULong.fromHexString(ethLog.topics[1].encodeHex())
     val direction = when {
       number < targetNumber -> SearchDirection.FORWARD
@@ -444,10 +439,7 @@ class EthLogsSearcherImplIntTest {
       )
     }
 
-    internal fun generateLogs(
-      blocksWithLogs: List<ULongRange>,
-      filter: EthGetLogsRequest,
-    ): List<Map<String, Any>> {
+    internal fun generateLogs(blocksWithLogs: List<ULongRange>, filter: EthGetLogsRequest): List<Map<String, Any>> {
       return generateEffectiveIntervals(blocksWithLogs, filter.fromBlock, filter.toBlock)
         // .also {
         // println(

@@ -193,11 +193,7 @@ object TransactionFactory {
       .signature
   }
 
-  fun calcV(
-    transactionType: TransactionType,
-    signature: SECPSignature,
-    chainId: ULong?,
-  ): ULong? {
+  fun calcV(transactionType: TransactionType, signature: SECPSignature, chainId: ULong?): ULong? {
     if (transactionType != TransactionType.FRONTIER) {
       // EIP-2718 typed transaction, use yParity:
       return null

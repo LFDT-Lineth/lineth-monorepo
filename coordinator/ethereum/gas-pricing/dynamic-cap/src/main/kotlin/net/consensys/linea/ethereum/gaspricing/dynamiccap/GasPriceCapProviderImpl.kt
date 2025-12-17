@@ -81,9 +81,7 @@ class GasPriceCapProviderImpl(
     return timeOfDayMultipliers[tdmKey]!!
   }
 
-  private fun calculateGasPriceCapsHelper(
-    targetL2BlockNumber: Long,
-  ): SafeFuture<GasPriceCaps?> {
+  private fun calculateGasPriceCapsHelper(targetL2BlockNumber: Long): SafeFuture<GasPriceCaps?> {
     return if (isEnoughDataForGasPriceCapCalculation()) {
       l2ExtendedWeb3JClient.ethGetBlockTimestampByNumber(targetL2BlockNumber).thenApply {
         val targetL2BlockTimestamp = Instant.fromEpochSeconds(it.toLong())

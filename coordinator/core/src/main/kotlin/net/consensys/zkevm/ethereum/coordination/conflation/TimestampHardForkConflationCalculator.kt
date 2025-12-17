@@ -16,7 +16,6 @@ class TimestampHardForkConflationCalculator(
   initialTimestamp: Instant,
   private val log: Logger = LogManager.getLogger(TimestampHardForkConflationCalculator::class.java),
 ) : ConflationCalculator {
-
   override val id: String = "TIMESTAMP_HARD_FORK"
 
   private var lastProcessedTimestamp: Instant = initialTimestamp
@@ -37,10 +36,11 @@ class TimestampHardForkConflationCalculator(
     val blockTimestamp = blockCounters.blockTimestamp
 
     // Check if this block crosses any hard fork timestamp boundary
-    val applicableTimestamp = hardForkTimestamps.find { timestamp ->
-      // If the last processed block was before the timestamp and this block is at or after the timestamp
-      lastProcessedTimestamp < timestamp && blockTimestamp >= timestamp
-    }
+    val applicableTimestamp =
+      hardForkTimestamps.find { timestamp ->
+        // If the last processed block was before the timestamp and this block is at or after the timestamp
+        lastProcessedTimestamp < timestamp && blockTimestamp >= timestamp
+      }
 
     if (applicableTimestamp != null) {
       log.info(

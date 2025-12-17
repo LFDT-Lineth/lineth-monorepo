@@ -14,18 +14,13 @@ import org.web3j.abi.datatypes.generated.Uint256
 import java.util.Arrays
 
 internal object Web3JLineaValidiumFunctionBuilders {
-  fun buildAcceptShnarfDataFunction(
-    version: LineaValidiumContractVersion,
-    blobs: List<BlobRecord>,
-  ): Function {
+  fun buildAcceptShnarfDataFunction(version: LineaValidiumContractVersion, blobs: List<BlobRecord>): Function {
     return when (version) {
       LineaValidiumContractVersion.V1 -> buildAcceptShnarfDataFunctionV1(blobs)
     }
   }
 
-  fun buildAcceptShnarfDataFunctionV1(
-    blobs: List<BlobRecord>,
-  ): Function {
+  fun buildAcceptShnarfDataFunctionV1(blobs: List<BlobRecord>): Function {
     /**
      function acceptShnarfData(
      bytes32 _parentShnarf,
@@ -69,45 +64,47 @@ internal object Web3JLineaValidiumFunctionBuilders {
     parentL1RollingHash: ByteArray,
     parentL1RollingHashMessageNumber: Long,
   ): Function {
-    val aggregationEndBlobInfo = ValidiumV1.ShnarfData(
-      /*parentShnarf*/
-      aggregationLastBlob.blobCompressionProof!!.prevShnarf,
-      /*snarkHash*/
-      aggregationLastBlob.blobCompressionProof!!.snarkHash,
-      /*finalStateRootHash*/
-      aggregationLastBlob.blobCompressionProof!!.finalStateRootHash,
-      /*dataEvaluationPoint*/
-      aggregationLastBlob.blobCompressionProof!!.expectedX,
-      /*dataEvaluationClaim*/
-      aggregationLastBlob.blobCompressionProof!!.expectedY,
-    )
+    val aggregationEndBlobInfo =
+      ValidiumV1.ShnarfData(
+        // parentShnarf
+        aggregationLastBlob.blobCompressionProof!!.prevShnarf,
+        // snarkHash
+        aggregationLastBlob.blobCompressionProof!!.snarkHash,
+        // finalStateRootHash
+        aggregationLastBlob.blobCompressionProof!!.finalStateRootHash,
+        // dataEvaluationPoint
+        aggregationLastBlob.blobCompressionProof!!.expectedX,
+        // dataEvaluationClaim
+        aggregationLastBlob.blobCompressionProof!!.expectedY,
+      )
 
-    val finalizationData = ValidiumV1.FinalizationDataV3(
-      /*parentStateRootHash*/
-      aggregationProof.parentStateRootHash,
-      /*endBlockNumber*/
-      aggregationProof.endBlockNumber.toBigInteger(),
-      /*shnarfData*/
-      aggregationEndBlobInfo,
-      /*lastFinalizedTimestamp*/
-      aggregationProof.parentAggregationLastBlockTimestamp.epochSeconds.toBigInteger(),
-      /*finalTimestamp*/
-      aggregationProof.finalTimestamp.epochSeconds.toBigInteger(),
-      /*lastFinalizedL1RollingHash*/
-      parentL1RollingHash,
-      /*l1RollingHash*/
-      aggregationProof.l1RollingHash,
-      /*lastFinalizedL1RollingHashMessageNumber*/
-      parentL1RollingHashMessageNumber.toBigInteger(),
-      /*l1RollingHashMessageNumber*/
-      aggregationProof.l1RollingHashMessageNumber.toBigInteger(),
-      /*l2MerkleTreesDepth*/
-      aggregationProof.l2MerkleTreesDepth.toBigInteger(),
-      /*l2MerkleRoots*/
-      aggregationProof.l2MerkleRoots,
-      /*l2MessagingBlocksOffsets*/
-      aggregationProof.l2MessagingBlocksOffsets,
-    )
+    val finalizationData =
+      ValidiumV1.FinalizationDataV3(
+        // parentStateRootHash
+        aggregationProof.parentStateRootHash,
+        // endBlockNumber
+        aggregationProof.endBlockNumber.toBigInteger(),
+        // shnarfData
+        aggregationEndBlobInfo,
+        // lastFinalizedTimestamp
+        aggregationProof.parentAggregationLastBlockTimestamp.epochSeconds.toBigInteger(),
+        // finalTimestamp
+        aggregationProof.finalTimestamp.epochSeconds.toBigInteger(),
+        // lastFinalizedL1RollingHash
+        parentL1RollingHash,
+        // l1RollingHash
+        aggregationProof.l1RollingHash,
+        // lastFinalizedL1RollingHashMessageNumber
+        parentL1RollingHashMessageNumber.toBigInteger(),
+        // l1RollingHashMessageNumber
+        aggregationProof.l1RollingHashMessageNumber.toBigInteger(),
+        // l2MerkleTreesDepth
+        aggregationProof.l2MerkleTreesDepth.toBigInteger(),
+        // l2MerkleRoots
+        aggregationProof.l2MerkleRoots,
+        // l2MessagingBlocksOffsets
+        aggregationProof.l2MessagingBlocksOffsets,
+      )
 
     /**
      *  function finalizeBlocks(
@@ -116,15 +113,16 @@ internal object Web3JLineaValidiumFunctionBuilders {
      *     FinalizationDataV3 calldata _finalizationData
      *   )
      */
-    val function = Function(
-      ValidiumV1.FUNC_FINALIZEBLOCKS,
-      Arrays.asList<Type<*>>(
-        DynamicBytes(aggregationProof.aggregatedProof),
-        Uint256(aggregationProof.aggregatedVerifierIndex.toLong()),
-        finalizationData,
-      ),
-      emptyList<TypeReference<*>>(),
-    )
+    val function =
+      Function(
+        ValidiumV1.FUNC_FINALIZEBLOCKS,
+        Arrays.asList<Type<*>>(
+          DynamicBytes(aggregationProof.aggregatedProof),
+          Uint256(aggregationProof.aggregatedVerifierIndex.toLong()),
+          finalizationData,
+        ),
+        emptyList<TypeReference<*>>(),
+      )
     return function
   }
 }

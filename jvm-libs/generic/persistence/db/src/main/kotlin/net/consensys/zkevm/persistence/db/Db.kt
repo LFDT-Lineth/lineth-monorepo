@@ -46,11 +46,7 @@ object Db {
    *
    * @param dataSource datasource
    */
-  fun applyDbMigrations(
-    dataSource: DataSource,
-    target: String,
-    migrationLocations: String = "classpath:db/",
-  ) {
+  fun applyDbMigrations(dataSource: DataSource, target: String, migrationLocations: String = "classpath:db/") {
     LOG.info("Migrating coordinator database")
     Flyway.configure()
       .dataSource(dataSource)

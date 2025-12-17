@@ -9,5 +9,6 @@ data class BlockContextData(
   private val blockBody: BlockBody,
 ) : BlockContext {
   override fun getBlockHeader(): BlockHeader = blockHeader
+
   override fun getBlockBody(): BlockBody = blockBody
 }

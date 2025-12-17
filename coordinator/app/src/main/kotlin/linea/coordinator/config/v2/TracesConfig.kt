@@ -20,13 +20,15 @@ data class TracesConfig(
         (common == null && counters !== null && conflation !== null),
     ) { "traces endpoints are invalid. either common, counters or conflation must be set" }
   }
+
   data class ClientApiConfig(
     val endpoints: List<URL>,
     val requestLimitPerEndpoint: UInt = 100u,
     val requestTimeout: Duration? = null,
-    val requestRetries: RetryConfig = RetryConfig.endlessRetry(
-      backoffDelay = 1.seconds,
-      failuresWarningThreshold = 3u,
-    ),
+    val requestRetries: RetryConfig =
+      RetryConfig.endlessRetry(
+        backoffDelay = 1.seconds,
+        failuresWarningThreshold = 3u,
+      ),
   )
 }

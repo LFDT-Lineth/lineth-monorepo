@@ -16,7 +16,7 @@ import io.micrometer.core.instrument.Timer as MicrometerTimer
  * nanosecond-level measurements. Related issue:
  * https://github.com/micrometer-metrics/micrometer/issues/535
  */
-class DynamicTagTimerImpl<T> (
+class DynamicTagTimerImpl<T>(
   private val meterRegistry: MeterRegistry,
   name: String,
   description: String,

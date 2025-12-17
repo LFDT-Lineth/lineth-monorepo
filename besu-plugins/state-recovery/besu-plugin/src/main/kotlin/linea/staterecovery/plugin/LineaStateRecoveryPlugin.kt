@@ -30,14 +30,15 @@ fun <T : BesuService> ServiceManager.getServiceOrThrow(clazz: Class<T>): T {
 
 open class LineaStateRecoveryPlugin : BesuPlugin {
   private val log: Logger = LogManager.getLogger(LineaStateRecoveryPlugin::class.java)
-  private val vertx = createVertx(
-    maxEventLoopExecuteTime = 3.minutes,
-    maxWorkerExecuteTime = 3.minutes,
-    warningExceptionTime = 5.minutes,
-    jvmMetricsEnabled = false,
-    prometheusMetricsEnabled = false,
-    preferNativeTransport = false,
-  )
+  private val vertx =
+    createVertx(
+      maxEventLoopExecuteTime = 3.minutes,
+      maxWorkerExecuteTime = 3.minutes,
+      warningExceptionTime = 5.minutes,
+      jvmMetricsEnabled = false,
+      prometheusMetricsEnabled = false,
+      preferNativeTransport = false,
+    )
   private val cliOptions = PluginCliOptions()
   private lateinit var serviceManager: ServiceManager
   private lateinit var recoveryModeManager: RecoveryModeManager
@@ -56,16 +57,18 @@ open class LineaStateRecoveryPlugin : BesuPlugin {
   override fun start() {
     val config = cliOptions.getConfig()
     val blockchainService = serviceManager.getServiceOrThrow(BlockchainService::class.java)
-    val blockHeaderStaticFields = BlockHeaderStaticFields(
-      coinbase = config.lineaSequencerBeneficiaryAddress.toArray(),
-      gasLimit = config.lineaBlockGasLimit,
-      difficulty = config.lineaBlockDifficulty,
-    )
-    this.recoveryStatusPersistence = FileBasedRecoveryStatusPersistence(
-      serviceManager.getServiceOrThrow(BesuConfiguration::class.java)
-        .dataPath
-        .resolve("plugin-staterecovery-status.json"),
-    )
+    val blockHeaderStaticFields =
+      BlockHeaderStaticFields(
+        coinbase = config.lineaSequencerBeneficiaryAddress.toArray(),
+        gasLimit = config.lineaBlockGasLimit,
+        difficulty = config.lineaBlockDifficulty,
+      )
+    this.recoveryStatusPersistence =
+      FileBasedRecoveryStatusPersistence(
+        serviceManager.getServiceOrThrow(BesuConfiguration::class.java)
+          .dataPath
+          .resolve("plugin-staterecovery-status.json"),
+      )
     log.info(
       "starting: config={} blockHeaderStaticFields={} previousRecoveryStartBlockNumber={}",
       config,
@@ -74,48 +77,52 @@ open class LineaStateRecoveryPlugin : BesuPlugin {
     )
 
     val synchronizationService = serviceManager.getServiceOrThrow(SynchronizationService::class.java)
-    this.recoveryModeManager = RecoveryModeManager(
-      p2pService = serviceManager.getServiceOrThrow(P2PService::class.java),
-      miningService = serviceManager.getServiceOrThrow(MiningService::class.java),
-      recoveryStatePersistence = this.recoveryStatusPersistence,
-      synchronizationService = synchronizationService,
-      headBlockNumber = blockchainService.chainHeadHeader.number.toULong(),
-      debugForceSyncStopBlockNumber = config.debugForceSyncStopBlockNumber,
-    )
-    val simulatorService = serviceManager.getServiceOrThrow(BlockSimulationService::class.java)
-    val executionLayerClient = ExecutionLayerInProcessClient.create(
-      blockchainService = blockchainService,
-      stateRecoveryModeManager = this.recoveryModeManager,
-      stateRecoveryStatusPersistence = this.recoveryStatusPersistence,
-      simulatorService = simulatorService,
-      synchronizationService = synchronizationService,
-    )
-
-    this.stateRecoverApp = run {
-      createAppAllInProcess(
-        vertx = vertx,
-        // Metrics won't be exposed. Needs proper integration with Besu Metrics, not priority now.
-        meterRegistry = SimpleMeterRegistry(),
-        elClient = executionLayerClient,
-        stateManagerClientEndpoint = config.shomeiEndpoint,
-        l1Endpoint = config.l1Endpoint,
-        l1SuccessBackoffDelay = config.l1RequestSuccessBackoffDelay,
-        l1RequestRetryConfig = config.l1RequestRetryConfig,
-        blobScanEndpoint = config.blobscanEndpoint,
-        blobScanRequestRetryConfig = config.blobScanRequestRetryConfig,
-        blobscanRequestRatelimitBackoffDelay = config.blobscanRequestRatelimitBackoffDelay,
-        blockHeaderStaticFields = blockHeaderStaticFields,
-        appConfig = StateRecoveryApp.Config(
-          smartContractAddress = config.l1SmartContractAddress.toString(),
-          l1getLogsChunkSize = config.l1GetLogsChunkSize,
-          l1EarliestSearchBlock = config.l1EarliestSearchBlock,
-          l1LatestSearchBlock = config.l1HighestSearchBlock,
-          l1PollingInterval = config.l1PollingInterval,
-          overridingRecoveryStartBlockNumber = config.overridingRecoveryStartBlockNumber,
-          debugForceSyncStopBlockNumber = config.debugForceSyncStopBlockNumber,
-        ),
+    this.recoveryModeManager =
+      RecoveryModeManager(
+        p2pService = serviceManager.getServiceOrThrow(P2PService::class.java),
+        miningService = serviceManager.getServiceOrThrow(MiningService::class.java),
+        recoveryStatePersistence = this.recoveryStatusPersistence,
+        synchronizationService = synchronizationService,
+        headBlockNumber = blockchainService.chainHeadHeader.number.toULong(),
+        debugForceSyncStopBlockNumber = config.debugForceSyncStopBlockNumber,
       )
-    }
+    val simulatorService = serviceManager.getServiceOrThrow(BlockSimulationService::class.java)
+    val executionLayerClient =
+      ExecutionLayerInProcessClient.create(
+        blockchainService = blockchainService,
+        stateRecoveryModeManager = this.recoveryModeManager,
+        stateRecoveryStatusPersistence = this.recoveryStatusPersistence,
+        simulatorService = simulatorService,
+        synchronizationService = synchronizationService,
+      )
+
+    this.stateRecoverApp =
+      run {
+        createAppAllInProcess(
+          vertx = vertx,
+          // Metrics won't be exposed. Needs proper integration with Besu Metrics, not priority now.
+          meterRegistry = SimpleMeterRegistry(),
+          elClient = executionLayerClient,
+          stateManagerClientEndpoint = config.shomeiEndpoint,
+          l1Endpoint = config.l1Endpoint,
+          l1SuccessBackoffDelay = config.l1RequestSuccessBackoffDelay,
+          l1RequestRetryConfig = config.l1RequestRetryConfig,
+          blobScanEndpoint = config.blobscanEndpoint,
+          blobScanRequestRetryConfig = config.blobScanRequestRetryConfig,
+          blobscanRequestRatelimitBackoffDelay = config.blobscanRequestRatelimitBackoffDelay,
+          blockHeaderStaticFields = blockHeaderStaticFields,
+          appConfig =
+          StateRecoveryApp.Config(
+            smartContractAddress = config.l1SmartContractAddress.toString(),
+            l1getLogsChunkSize = config.l1GetLogsChunkSize,
+            l1EarliestSearchBlock = config.l1EarliestSearchBlock,
+            l1LatestSearchBlock = config.l1HighestSearchBlock,
+            l1PollingInterval = config.l1PollingInterval,
+            overridingRecoveryStartBlockNumber = config.overridingRecoveryStartBlockNumber,
+            debugForceSyncStopBlockNumber = config.debugForceSyncStopBlockNumber,
+          ),
+        )
+      }
     // add recoverty mode manager as listener to block added events
     // so it stops P2P sync when it got target block
     serviceManager

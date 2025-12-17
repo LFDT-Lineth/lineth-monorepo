@@ -90,9 +90,7 @@ open class TestRunner(
     )
   }
 
-  fun run(
-    timeout: kotlin.time.Duration = 10.minutes,
-  ) {
+  fun run(timeout: kotlin.time.Duration = 10.minutes) {
     log.info("Running test case")
     stateRecoverApp.start().get()
     await()

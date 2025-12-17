@@ -38,7 +38,6 @@ class BlockEncodingValidator(
   name = "BlockEncodingValidator",
   timerSchedule = TimerSchedule.FIXED_DELAY,
 ) {
-
   val compressor = GoBackedBlobCompressor.getInstance(compressorVersion, blobSizeLimitBytes.toInt())
   val decompressor = GoNativeBlobDecompressorFactory.getInstance(decompressorVersion)
   val rlpEncoder = BesuRlpMainnetEncoderAsyncVertxImpl(vertx)
@@ -158,7 +157,6 @@ fun assertBlock(
       index,
       originalTx,
       decompressedTx,
-
       originalTx.encoded(),
     )
     runCatching {

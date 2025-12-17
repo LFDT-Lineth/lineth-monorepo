@@ -28,21 +28,24 @@ import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toJavaDuration
 
 class ConflationCalculatorByTimeDeadlineTest {
-  private val config = ConflationCalculatorByTimeDeadline.Config(
-    conflationDeadline = 20.seconds,
-    conflationDeadlineLastBlockConfirmationDelay = 4.seconds,
-  )
+  private val config =
+    ConflationCalculatorByTimeDeadline.Config(
+      conflationDeadline = 20.seconds,
+      conflationDeadlineLastBlockConfirmationDelay = 4.seconds,
+    )
   private val blockTimestamp = Instant.parse("2021-01-01T00:00:00Z")
   private val clock: Clock = mock { on { now() } doReturn blockTimestamp }
-  private val latestBlockProvider: SafeBlockProvider = mock<SafeBlockProvider>() {
-    on { getLatestSafeBlockHeader() } doReturn SafeFuture.completedFuture(
-      BlockHeaderSummary(
-        number = 1u,
-        timestamp = blockTimestamp,
-        hash = ByteArrayExt.random32(),
-      ),
-    )
-  }
+  private val latestBlockProvider: SafeBlockProvider =
+    mock<SafeBlockProvider> {
+      on { getLatestSafeBlockHeader() } doReturn
+        SafeFuture.completedFuture(
+          BlockHeaderSummary(
+            number = 1u,
+            timestamp = blockTimestamp,
+            hash = ByteArrayExt.random32(),
+          ),
+        )
+    }
   private lateinit var conflationTiggers: MutableList<Instant>
   private lateinit var conflationCalculatorByTimeDeadline: ConflationCalculatorByTimeDeadline
   private lateinit var log: Logger
@@ -51,19 +54,20 @@ class ConflationCalculatorByTimeDeadlineTest {
   fun beforeEach() {
     conflationTiggers = mutableListOf<Instant>()
     log = mock()
-    conflationCalculatorByTimeDeadline = spy(
-      ConflationCalculatorByTimeDeadline(
-        config = config,
-        lastBlockNumber = 0u,
-        clock = clock,
-        latestBlockProvider = latestBlockProvider,
-        log = log,
-      ),
-    ).also {
-      it.setConflationTriggerConsumer {
-        conflationTiggers.add(clock.now())
+    conflationCalculatorByTimeDeadline =
+      spy(
+        ConflationCalculatorByTimeDeadline(
+          config = config,
+          lastBlockNumber = 0u,
+          clock = clock,
+          latestBlockProvider = latestBlockProvider,
+          log = log,
+        ),
+      ).also {
+        it.setConflationTriggerConsumer {
+          conflationTiggers.add(clock.now())
+        }
       }
-    }
   }
 
   private fun checkDeadlineWasCalled(): Boolean {
@@ -202,10 +206,11 @@ class ConflationCalculatorByTimeDeadlineRunnerTest {
 
   @Test
   fun `should call calculator every interval`() {
-    val runner = DeadlineConflationCalculatorRunner(
-      10.milliseconds,
-      mockCalculator,
-    )
+    val runner =
+      DeadlineConflationCalculatorRunner(
+        10.milliseconds,
+        mockCalculator,
+      )
     // it should be idempotent
     runner.start()
     runner.start()

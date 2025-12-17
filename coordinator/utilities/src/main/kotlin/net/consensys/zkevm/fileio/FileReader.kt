@@ -13,12 +13,11 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.nio.file.Path
 import java.util.concurrent.Callable
 
-class FileReader<T> (
+class FileReader<T>(
   private val vertx: Vertx,
   private val mapper: ObjectMapper,
   private val classOfT: Class<T>,
 ) {
-
   enum class ErrorType {
     PARSING_ERROR,
   }

@@ -31,32 +31,33 @@ class BoundableFeeCalculator(
   override fun calculateFees(feeHistory: FeeHistory): Double {
     val blockRange = feeHistory.blocksRange()
     val fee = feesCalculator.calculateFees(feeHistory) + config.feeMargin
-    val gasPriceToUpdate = if (fee.compareTo(config.feeUpperBound) == 1) {
-      log.debug(
-        "Gas fee update: fee={}GWei, l1Blocks={}. fee is higher than feeUpperBound={}GWei." +
-          " Will default to the upper bound value",
-        fee.toGWei(),
-        blockRange.toIntervalString(),
-        config.feeUpperBound.toGWei(),
-      )
-      config.feeUpperBound
-    } else if (fee.compareTo(config.feeLowerBound) == -1) {
-      log.debug(
-        "Gas fee update: fee={}GWei, l1Blocks={}. fee is lower than feeLowerBound={}GWei." +
-          " Will default to the lower bound value",
-        fee.toGWei(),
-        blockRange.toIntervalString(),
-        config.feeLowerBound.toGWei(),
-      )
-      config.feeLowerBound
-    } else {
-      log.debug(
-        "Gas fee update: gasPrice={}GWei, l1Blocks={}.",
-        fee.toGWei(),
-        blockRange.toIntervalString(),
-      )
-      fee
-    }
+    val gasPriceToUpdate =
+      if (fee.compareTo(config.feeUpperBound) == 1) {
+        log.debug(
+          "Gas fee update: fee={}GWei, l1Blocks={}. fee is higher than feeUpperBound={}GWei." +
+            " Will default to the upper bound value",
+          fee.toGWei(),
+          blockRange.toIntervalString(),
+          config.feeUpperBound.toGWei(),
+        )
+        config.feeUpperBound
+      } else if (fee.compareTo(config.feeLowerBound) == -1) {
+        log.debug(
+          "Gas fee update: fee={}GWei, l1Blocks={}. fee is lower than feeLowerBound={}GWei." +
+            " Will default to the lower bound value",
+          fee.toGWei(),
+          blockRange.toIntervalString(),
+          config.feeLowerBound.toGWei(),
+        )
+        config.feeLowerBound
+      } else {
+        log.debug(
+          "Gas fee update: gasPrice={}GWei, l1Blocks={}.",
+          fee.toGWei(),
+          blockRange.toIntervalString(),
+        )
+        fee
+      }
     return gasPriceToUpdate
   }
 }

@@ -14,11 +14,12 @@ data class DatabaseToml(
   val readPoolSize: Int = 10,
   val readPipeliningLimit: Int = 10,
   val transactionalPoolSize: Int = 10,
-  val persistenceRetries: RequestRetriesToml = RequestRetriesToml(
-    backoffDelay = 1.seconds,
-    timeout = 10.minutes,
-    failuresWarningThreshold = 3u,
-  ),
+  val persistenceRetries: RequestRetriesToml =
+    RequestRetriesToml(
+      backoffDelay = 1.seconds,
+      timeout = 10.minutes,
+      failuresWarningThreshold = 3u,
+    ),
 ) {
   fun reified(): DatabaseConfig {
     return DatabaseConfig(

@@ -25,9 +25,7 @@ class ProofToFinalizeJsonResponseTest {
 
   @ParameterizedTest(name = "when_deserialize_{0}_properties_match_proof_to_finalize_json_response")
   @MethodSource("aggregationProofResponseFiles")
-  fun when_deserialize_test_data_json_properties_match_proof_to_finalize_json_response(
-    filePath: Path,
-  ) {
+  fun when_deserialize_test_data_json_properties_match_proof_to_finalize_json_response(filePath: Path) {
     val proofToFinalizeJsonResponseProperties = ProofToFinalizeJsonResponse::class
       .declaredMemberProperties
       .map { it.name }

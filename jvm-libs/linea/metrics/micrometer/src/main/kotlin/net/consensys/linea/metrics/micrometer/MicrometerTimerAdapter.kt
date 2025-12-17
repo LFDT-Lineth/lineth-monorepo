@@ -16,9 +16,7 @@ class TimerAdapter(val adaptee: MicrometerTimer, val clock: Clock) : Timer {
     return f
   }
 
-  override fun <T> captureTime(
-    action: Callable<T>,
-  ): T {
+  override fun <T> captureTime(action: Callable<T>): T {
     val timerSample = MicrometerTimer.start(clock)
     try {
       return action.call()

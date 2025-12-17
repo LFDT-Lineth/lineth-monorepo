@@ -176,10 +176,7 @@ class TestExecutor(request: String, pk: String) {
   }
 
   @Throws(IOException::class, InterruptedException::class)
-  private fun prepareContracts(
-    contracts: List<CreateContract>?,
-    chainId: Int,
-  ): Map<String, String> {
+  private fun prepareContracts(contracts: List<CreateContract>?, chainId: Int): Map<String, String> {
     val contractAdresses: MutableMap<String, String> = HashMap()
     for (contract in contracts!!) {
       contractAdresses[contract.name] =

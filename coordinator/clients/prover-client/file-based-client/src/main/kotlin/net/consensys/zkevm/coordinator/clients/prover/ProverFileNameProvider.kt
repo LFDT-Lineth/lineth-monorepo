@@ -5,12 +5,7 @@ import net.consensys.zkevm.domain.ProofIndex
 
 open class ProverFileNameProvider(protected val fileNameSuffix: String) {
   protected fun encodeHash(hash: ByteArray): String = hash.encodeHex(prefix = false)
-  private fun fileName(
-    startBlockNumber: ULong,
-    endBlockNumber: ULong,
-    fileNameSuffix: String,
-    hash: ByteArray?,
-  ) =
+  private fun fileName(startBlockNumber: ULong, endBlockNumber: ULong, fileNameSuffix: String, hash: ByteArray?) =
     if (hash == null || hash.isEmpty()) {
       "$startBlockNumber-$endBlockNumber-$fileNameSuffix"
     } else {

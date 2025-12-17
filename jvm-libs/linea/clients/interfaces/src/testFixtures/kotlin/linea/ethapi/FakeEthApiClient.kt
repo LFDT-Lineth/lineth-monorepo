@@ -161,17 +161,11 @@ class FakeEthApiClient(
     TODO("Not yet implemented")
   }
 
-  override fun ethGetBalance(
-    address: ByteArray,
-    blockParameter: BlockParameter,
-  ): SafeFuture<BigInteger> {
+  override fun ethGetBalance(address: ByteArray, blockParameter: BlockParameter): SafeFuture<BigInteger> {
     TODO("Not yet implemented")
   }
 
-  override fun ethGetTransactionCount(
-    address: ByteArray,
-    blockParameter: BlockParameter,
-  ): SafeFuture<ULong> {
+  override fun ethGetTransactionCount(address: ByteArray, blockParameter: BlockParameter): SafeFuture<ULong> {
     TODO("Not yet implemented")
   }
 
@@ -220,9 +214,7 @@ class FakeEthApiClient(
     return blockNumber > blockTags[BlockParameter.Tag.LATEST]!!
   }
 
-  private fun generateFakeBlock(
-    blockNumber: ULong,
-  ): Block {
+  private fun generateFakeBlock(blockNumber: ULong): Block {
     val parentBlock = blocksDb[blockNumber - 1UL]
     val timestamp = genesisTimestamp + (blockTime * blockNumber.toInt())
     return createBlock(
@@ -275,10 +267,7 @@ class FakeEthApiClient(
       }
   }
 
-  private fun findLogsInRange(
-    fromBlock: BlockParameter,
-    toBlock: BlockParameter,
-  ): List<EthLog> {
+  private fun findLogsInRange(fromBlock: BlockParameter, toBlock: BlockParameter): List<EthLog> {
     return logsDb.filter { isInRange(it.blockNumber, fromBlock, toBlock) }
   }
 
@@ -296,20 +285,14 @@ class FakeEthApiClient(
     return shouldThrow
   }
 
-  private fun isInRange(
-    blockNumber: ULong,
-    fromBlock: BlockParameter,
-    toBlock: BlockParameter,
-  ): Boolean {
+  private fun isInRange(blockNumber: ULong, fromBlock: BlockParameter, toBlock: BlockParameter): Boolean {
     val fromBlockNumber: ULong = blockParameterToBlockNumber(fromBlock)
     val toBlockNumber: ULong = blockParameterToBlockNumber(toBlock)
 
     return blockNumber in fromBlockNumber..toBlockNumber
   }
 
-  private fun blockParameterToBlockNumber(
-    blockParameter: BlockParameter,
-  ): ULong {
+  private fun blockParameterToBlockNumber(blockParameter: BlockParameter): ULong {
     return when (blockParameter) {
       is BlockParameter.Tag -> blockTags[blockParameter]
         ?: throw IllegalArgumentException("Invalid blockParameter=$blockParameter")
@@ -319,10 +302,7 @@ class FakeEthApiClient(
   }
 
   companion object {
-    fun matchesTopicFilter(
-      logTopics: List<ByteArray>,
-      topicsFilter: List<ByteArray?>,
-    ): Boolean {
+    fun matchesTopicFilter(logTopics: List<ByteArray>, topicsFilter: List<ByteArray?>): Boolean {
       if (topicsFilter.size > logTopics.size) return false
 
       return logTopics

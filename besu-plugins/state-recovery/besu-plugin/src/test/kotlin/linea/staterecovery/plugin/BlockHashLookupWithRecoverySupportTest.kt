@@ -8,7 +8,6 @@ import org.hyperledger.besu.datatypes.Hash
 import org.junit.jupiter.api.Test
 
 class BlockHashLookupWithRecoverySupportTest {
-
   @Test
   fun `addLookbackHashes should validate items are sequential`() {
     val lookback = BlockHashLookupWithRecoverySupport(lookbackWindow = 3UL)
@@ -33,9 +32,10 @@ class BlockHashLookupWithRecoverySupportTest {
 
   @Test
   fun `addHeadBlockHash should update and prune the lookback hashes outside the lookback window`() {
-    val lookback = BlockHashLookupWithRecoverySupport(
-      lookbackWindow = 3UL,
-    )
+    val lookback =
+      BlockHashLookupWithRecoverySupport(
+        lookbackWindow = 3UL,
+      )
 
     lookback.addHeadBlockHash(0UL, hashOf(123UL))
     lookback.addHeadBlockHash(1UL, hashOf(1UL))
@@ -59,5 +59,6 @@ class BlockHashLookupWithRecoverySupportTest {
   }
 
   private fun hashOf(number: ULong): ByteArray = number.toHexStringUInt256().decodeHex()
+
   private fun hashOfBesuType(number: ULong): Hash = Hash.fromHexString(number.toHexStringUInt256())
 }

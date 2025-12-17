@@ -67,7 +67,7 @@ class JsonRpcRequestRetryerTest {
       timeout = 20.seconds,
       initialDelay = null,
     )
-    delegate = mock() {
+    delegate = mock {
       on { makeRequest(any(), anyOrNull()) }
         .doReturn(Future.failedFuture(networkError1))
         .doReturn(Future.succeededFuture(Err(JsonRpcErrorResponse("1", JsonRpcError.internalError("Forced error 2")))))
@@ -122,7 +122,7 @@ class JsonRpcRequestRetryerTest {
   @Test
   fun `when max retries are elapsed shall return last error - promise rejected`() {
     val methodsToRetry = setOf(ethBlockNumberRequest.method)
-    val alwaysDownEndpoint = mock<JsonRpcClient>() {
+    val alwaysDownEndpoint = mock<JsonRpcClient> {
       on { makeRequest(any(), anyOrNull()) }
         .doReturn(Future.failedFuture(networkError1))
         .doReturn(Future.failedFuture(networkError2))
@@ -139,7 +139,7 @@ class JsonRpcRequestRetryerTest {
   @Test
   fun `when max retries are elapsed shall return last error - JsonRpcErrorResponse`() {
     val methodsToRetry = setOf(ethBlockNumberRequest.method)
-    val alwaysDownEndpoint = mock<JsonRpcClient>() {
+    val alwaysDownEndpoint = mock<JsonRpcClient> {
       on { makeRequest(any(), anyOrNull()) }
         .doReturn(Future.succeededFuture(Err(JsonRpcErrorResponse("1", JsonRpcError.internalError("Forced error 1")))))
         .doReturn(Future.succeededFuture(Err(JsonRpcErrorResponse("1", JsonRpcError.internalError("Forced error 2")))))
@@ -173,7 +173,7 @@ class JsonRpcRequestRetryerTest {
   @Test
   fun `should log warning message every threshold failures`() {
     val methodsToRetry = setOf(ethBlockNumberRequest.method)
-    val alwaysDownEndpoint = mock<JsonRpcClient>() {
+    val alwaysDownEndpoint = mock<JsonRpcClient> {
       on { makeRequest(any(), anyOrNull()) }.doReturn(Future.failedFuture(networkError1))
     }
     val log: Logger = spy(LogManager.getLogger("unit-test-logger"))
@@ -211,7 +211,7 @@ class JsonRpcRequestRetryerTest {
   @Test
   fun `should not log warning message when retriesWarningThreshold=0`() {
     val methodsToRetry = setOf(ethBlockNumberRequest.method)
-    val alwaysDownEndpoint = mock<JsonRpcClient>() {
+    val alwaysDownEndpoint = mock<JsonRpcClient> {
       on { makeRequest(any(), anyOrNull()) }.doReturn(Future.failedFuture(networkError1))
     }
     val log: Logger = spy(LogManager.getLogger("unit-test-logger"))

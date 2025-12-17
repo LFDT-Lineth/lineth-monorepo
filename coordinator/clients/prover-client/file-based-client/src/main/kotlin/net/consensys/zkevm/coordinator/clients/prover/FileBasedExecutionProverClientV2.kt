@@ -129,10 +129,7 @@ class FileBasedExecutionProverClientV2(
   ),
   ExecutionProverClientV2 {
 
-  override fun parseResponse(
-    responseFilePath: Path,
-    proofIndex: ProofIndex,
-  ): SafeFuture<BatchExecutionProofResponse> {
+  override fun parseResponse(responseFilePath: Path, proofIndex: ProofIndex): SafeFuture<BatchExecutionProofResponse> {
     return SafeFuture.completedFuture(
       BatchExecutionProofResponse(
         startBlockNumber = proofIndex.startBlockNumber,

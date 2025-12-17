@@ -38,9 +38,7 @@ class BlobsRepositoryImpl(
     return blobsDao.findBlobByEndBlockNumber(endBlockNumber.toULong())
   }
 
-  override fun deleteBlobsUpToEndBlockNumber(
-    endBlockNumberInclusive: ULong,
-  ): SafeFuture<Int> {
+  override fun deleteBlobsUpToEndBlockNumber(endBlockNumberInclusive: ULong): SafeFuture<Int> {
     return blobsDao.deleteBlobsUpToEndBlockNumber(endBlockNumberInclusive)
   }
 

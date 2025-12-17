@@ -68,12 +68,7 @@ private fun inconsistentBlobAggregationMessage(
     "aggregations=${aggregationsIntervals.toBlockIntervalsString()}"
 }
 
-internal fun logSubmissionError(
-  log: Logger,
-  intervalString: String,
-  error: Throwable,
-  isEthCall: Boolean = false,
-) {
+internal fun logSubmissionError(log: Logger, intervalString: String, error: Throwable, isEthCall: Boolean = false) {
   logSubmissionError(
     log,
     "{} for blob submission failed: blob={} errorMessage={}",

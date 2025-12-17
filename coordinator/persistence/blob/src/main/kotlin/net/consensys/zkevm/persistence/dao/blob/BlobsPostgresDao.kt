@@ -169,9 +169,7 @@ class BlobsPostgresDao(
       .toSafeFuture()
   }
 
-  private fun getConsecutiveBlobsFromBlockNumber(
-    startingBlockNumberInclusive: ULong,
-  ): SafeFuture<List<BlobRecord>> {
+  private fun getConsecutiveBlobsFromBlockNumber(startingBlockNumberInclusive: ULong): SafeFuture<List<BlobRecord>> {
     return selectQuery
       .execute(
         Tuple.of(
@@ -205,9 +203,7 @@ class BlobsPostgresDao(
       .thenApply { blobRecords -> blobRecords.firstOrNull() }
   }
 
-  override fun findBlobByEndBlockNumber(
-    endBlockNumber: ULong,
-  ): SafeFuture<BlobRecord?> {
+  override fun findBlobByEndBlockNumber(endBlockNumber: ULong): SafeFuture<BlobRecord?> {
     return selectBlobByEndBlockNumberQuery
       .execute(Tuple.of(endBlockNumber.toLong()))
       .toSafeFuture()
@@ -215,9 +211,7 @@ class BlobsPostgresDao(
       .thenApply { blobRecords -> blobRecords.firstOrNull() }
   }
 
-  override fun deleteBlobsUpToEndBlockNumber(
-    endBlockNumberInclusive: ULong,
-  ): SafeFuture<Int> {
+  override fun deleteBlobsUpToEndBlockNumber(endBlockNumberInclusive: ULong): SafeFuture<Int> {
     return deleteUptoQuery
       .execute(Tuple.of(endBlockNumberInclusive.toLong()))
       .map { rowSet -> rowSet.rowCount() }

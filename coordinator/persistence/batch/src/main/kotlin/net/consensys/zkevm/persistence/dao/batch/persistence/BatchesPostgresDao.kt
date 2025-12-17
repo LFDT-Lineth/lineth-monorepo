@@ -132,9 +132,7 @@ class BatchesPostgresDao(
       }
   }
 
-  override fun deleteBatchesUpToEndBlockNumber(
-    endBlockNumberInclusive: Long,
-  ): SafeFuture<Int> {
+  override fun deleteBatchesUpToEndBlockNumber(endBlockNumberInclusive: Long): SafeFuture<Int> {
     return deleteUptoQuery
       .execute(
         Tuple.of(

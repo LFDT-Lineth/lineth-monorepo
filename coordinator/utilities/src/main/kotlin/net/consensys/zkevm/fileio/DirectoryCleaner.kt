@@ -14,7 +14,6 @@ class DirectoryCleaner(
   val directories: List<Path>,
   val fileFilters: List<FileFilter>,
 ) {
-
   private val log = LogManager.getLogger(this::class.java)
 
   fun cleanup(): SafeFuture<Unit> {
@@ -37,13 +36,14 @@ class DirectoryCleaner(
         filePaths.forEach { filePath ->
           val file = File(filePath)
           if (file.isFile && fileFilters.any { it.accept(file) }) {
-            val deletion = vertx.fileSystem()
-              .delete(filePath)
-              .toSafeFuture()
-              .whenComplete { _, deleteException ->
-                deleteException?.also { log.warn("Failed to delete $filePath", it) }
-              }
-              .thenApply { }
+            val deletion =
+              vertx.fileSystem()
+                .delete(filePath)
+                .toSafeFuture()
+                .whenComplete { _, deleteException ->
+                  deleteException?.also { log.warn("Failed to delete $filePath", it) }
+                }
+                .thenApply { }
             deletions.add(deletion)
           }
         }
@@ -52,9 +52,11 @@ class DirectoryCleaner(
   }
 
   companion object {
-    val JSON_FILE_FILTER = FileFilter { fileName: File ->
-      fileName.extension.compareTo(other = "json", ignoreCase = true) == 0
-    }
+    val JSON_FILE_FILTER =
+      FileFilter { fileName: File ->
+        fileName.extension.compareTo(other = "json", ignoreCase = true) == 0
+      }
+
     fun getSuffixFileFilters(suffixes: List<String>): List<FileFilter> {
       return suffixes.map { suffix ->
         FileFilter { fileName: File ->

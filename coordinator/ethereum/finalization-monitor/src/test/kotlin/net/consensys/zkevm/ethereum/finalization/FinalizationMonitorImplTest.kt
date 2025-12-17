@@ -148,10 +148,7 @@ class FinalizationMonitorImplTest {
   }
 
   @Test
-  fun finalizationUpdatesDontCrashTheWholeMonitorInCaseOfErrors(
-    vertx: Vertx,
-    testContext: VertxTestContext,
-  ) {
+  fun finalizationUpdatesDontCrashTheWholeMonitorInCaseOfErrors(vertx: Vertx, testContext: VertxTestContext) {
     var blockNumber = 0
     whenever(contractMock.finalizedL2BlockNumber(any())).thenAnswer {
       blockNumber += 1
@@ -294,26 +291,29 @@ class FinalizationMonitorImplTest {
 
     val handlerName1 = "handler1"
     finalizationMonitorImpl.addFinalizationHandler(handlerName1) { finalizationUpdate ->
-      val result = SafeFuture.runAsync {
-        simulateRandomWork(3, 7)
-        updatesReceived.add(finalizationUpdate to handlerName1)
-      }
+      val result =
+        SafeFuture.runAsync {
+          simulateRandomWork(3, 7)
+          updatesReceived.add(finalizationUpdate to handlerName1)
+        }
       SafeFuture.of(result)
     }
     val handlerName2 = "handler2"
     finalizationMonitorImpl.addFinalizationHandler(handlerName2) { finalizationUpdate ->
-      val result = SafeFuture.COMPLETE.thenApply {
-        simulateRandomWork(2, 6)
-        updatesReceived.add(finalizationUpdate to handlerName2)
-      }
+      val result =
+        SafeFuture.COMPLETE.thenApply {
+          simulateRandomWork(2, 6)
+          updatesReceived.add(finalizationUpdate to handlerName2)
+        }
       SafeFuture.of(result)
     }
     val handlerName3 = "handler3"
     finalizationMonitorImpl.addFinalizationHandler(handlerName3) { finalizationUpdate ->
-      val result = SafeFuture.COMPLETE.thenApply {
-        simulateRandomWork(0, 4)
-        updatesReceived.add(finalizationUpdate to handlerName3)
-      }
+      val result =
+        SafeFuture.COMPLETE.thenApply {
+          simulateRandomWork(0, 4)
+          updatesReceived.add(finalizationUpdate to handlerName3)
+        }
       SafeFuture.of(result)
     }
 

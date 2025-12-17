@@ -6,10 +6,8 @@ import org.junit.jupiter.api.Test
 import org.web3j.crypto.Keys
 import java.math.BigInteger
 
-private const val DEFAULT_ADDRESS = "0x1d80c1698946ee65b6A6B78F468B47f6bd4516f0"
-
 class SmartContractCallsTest {
-
+  private val DEFAULT_ADDRESS = "0x1d80c1698946ee65b6A6B78F468B47f6bd4516f0"
   private val MINT_ENCODED =
     "0x40c10f190000000000000000000000001d80c1698946ee65b6a6b78f468b47f6bd4516f" +
       "00000000000000000000000000000000000000000000000000000000000000001"

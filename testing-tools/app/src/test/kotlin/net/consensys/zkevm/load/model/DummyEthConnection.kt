@@ -98,8 +98,10 @@ class DummyWeb3jService : Web3jService {
     return mock(responseType)
   }
 
-  override fun <T : Response<*>?> sendAsync(request: Request<*, out Response<*>>?, responseType: Class<T>?):
-    CompletableFuture<T> {
+  override fun <T : Response<*>?> sendAsync(
+    request: Request<*, out Response<*>>?,
+    responseType: Class<T>?,
+  ): CompletableFuture<T> {
     TODO("Not yet implemented")
   }
 

@@ -60,11 +60,12 @@ class BlockToBatchSubmissionCoordinatorTest {
     val expectedException = RuntimeException("Conflation service failed!")
     whenever(failingConflationService.newBlock(any(), any())).thenThrow(expectedException)
     val testLogger: Logger = mock()
-    val blockToBatchSubmissionCoordinator = createBlockToBatchSubmissionCoordinator(
-      vertx = vertx,
-      conflationService = failingConflationService,
-      log = testLogger,
-    )
+    val blockToBatchSubmissionCoordinator =
+      createBlockToBatchSubmissionCoordinator(
+        vertx = vertx,
+        conflationService = failingConflationService,
+        log = testLogger,
+      )
 
     val captor = argumentCaptor<Throwable>()
     Assertions.assertThat(blockToBatchSubmissionCoordinator.acceptBlock(baseBlock)).isCompleted

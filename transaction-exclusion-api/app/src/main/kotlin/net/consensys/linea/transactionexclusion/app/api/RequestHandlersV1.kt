@@ -188,7 +188,9 @@ class GetTransactionExclusionStatusRequestHandlerV1(
       .getTransactionExclusionStatus(txHash)
       .thenApply { result ->
         result.map {
-          val rpcResult = if (it == null) { null } else {
+          val rpcResult = if (it == null) {
+            null
+          } else {
             JsonObject()
               .put("txHash", it.transactionInfo.hash.encodeHex())
               .put("from", it.transactionInfo.from.encodeHex())

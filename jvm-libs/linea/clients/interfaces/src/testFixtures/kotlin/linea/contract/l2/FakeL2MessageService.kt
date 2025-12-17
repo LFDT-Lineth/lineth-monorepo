@@ -27,10 +27,7 @@ class FakeL2MessageService(
     SafeFuture.completedFuture(contractVersion)
 
   @Synchronized
-  fun setLastAnchoredL1Message(
-    l1MessageNumber: ULong,
-    rollingHash: ByteArray,
-  ) {
+  fun setLastAnchoredL1Message(l1MessageNumber: ULong, rollingHash: ByteArray) {
     this.anchoredMessageRollingHashes[l1MessageNumber] = rollingHash
     this.lastAnchoredL1MessageNumber = l1MessageNumber
     this.lastAnchoredRollingHash = rollingHash

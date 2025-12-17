@@ -46,8 +46,9 @@ object ConflationAppHelper {
     val blockNumberInclusiveToDeleteFrom = lastProcessedBlockNumber + 1u
     val cleanupBatches = batchesRepository.deleteBatchesAfterBlockNumber(blockNumberInclusiveToDeleteFrom.toLong())
     val cleanupBlobs = blobsRepository.deleteBlobsAfterBlockNumber(blockNumberInclusiveToDeleteFrom)
-    val cleanupAggregations = aggregationsRepository
-      .deleteAggregationsAfterBlockNumber((lastConsecutiveAggregatedBlockNumber + 1u).toLong())
+    val cleanupAggregations =
+      aggregationsRepository
+        .deleteAggregationsAfterBlockNumber((lastConsecutiveAggregatedBlockNumber + 1u).toLong())
 
     return SafeFuture.allOf(cleanupBatches, cleanupBlobs, cleanupAggregations)
   }

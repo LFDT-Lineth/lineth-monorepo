@@ -12,10 +12,7 @@ interface L2MessageServiceSmartContractClientReadOnly : ContractVersionProvider<
   fun getAddress(): String
   fun getDeploymentBlock(): SafeFuture<ULong>
   fun getLastAnchoredL1MessageNumber(block: BlockParameter): SafeFuture<ULong>
-  fun getRollingHashByL1MessageNumber(
-    block: BlockParameter,
-    l1MessageNumber: ULong,
-  ): SafeFuture<ByteArray>
+  fun getRollingHashByL1MessageNumber(block: BlockParameter, l1MessageNumber: ULong): SafeFuture<ByteArray>
 }
 
 interface L2MessageServiceSmartContractClient : L2MessageServiceSmartContractClientReadOnly {

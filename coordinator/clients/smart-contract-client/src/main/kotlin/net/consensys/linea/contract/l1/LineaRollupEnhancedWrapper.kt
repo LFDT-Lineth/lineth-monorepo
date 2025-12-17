@@ -29,10 +29,9 @@ internal class LineaRollupEnhancedWrapper(
   ): RemoteFunctionCall<TransactionReceipt> = web3jContractHelper.executeRemoteCallTransaction(function, weiValue)
 
   @Synchronized
-  override fun executeRemoteCallTransaction(
-    function: Function,
-  ): RemoteFunctionCall<TransactionReceipt> = web3jContractHelper.executeRemoteCallTransaction(
-    function,
-    BigInteger.ZERO,
-  )
+  override fun executeRemoteCallTransaction(function: Function): RemoteFunctionCall<TransactionReceipt> =
+    web3jContractHelper.executeRemoteCallTransaction(
+      function,
+      BigInteger.ZERO,
+    )
 }

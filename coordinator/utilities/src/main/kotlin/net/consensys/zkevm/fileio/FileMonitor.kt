@@ -15,12 +15,12 @@ class FileMonitor(
   private val vertx: Vertx,
   config: Config,
 ) {
-
-  private val asyncRetryer = AsyncRetryer.retryer<List<Boolean>>(
-    vertx = vertx,
-    backoffDelay = config.pollingInterval,
-    timeout = config.timeout,
-  )
+  private val asyncRetryer =
+    AsyncRetryer.retryer<List<Boolean>>(
+      vertx = vertx,
+      backoffDelay = config.pollingInterval,
+      timeout = config.timeout,
+    )
 
   data class Config(
     val pollingInterval: Duration,

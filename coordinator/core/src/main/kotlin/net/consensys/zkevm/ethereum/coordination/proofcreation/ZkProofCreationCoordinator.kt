@@ -6,8 +6,5 @@ import net.consensys.zkevm.ethereum.coordination.conflation.BlocksTracesConflate
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 interface ZkProofCreationCoordinator {
-  fun createZkProof(
-    blocksConflation: BlocksConflation,
-    traces: BlocksTracesConflated,
-  ): SafeFuture<Batch>
+  fun createZkProof(blocksConflation: BlocksConflation, traces: BlocksTracesConflated): SafeFuture<Batch>
 }

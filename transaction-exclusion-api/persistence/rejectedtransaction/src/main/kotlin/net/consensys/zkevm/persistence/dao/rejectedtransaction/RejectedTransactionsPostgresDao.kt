@@ -182,9 +182,7 @@ class RejectedTransactionsPostgresDao(
       .thenApply { rejectedTxRecords -> rejectedTxRecords.firstOrNull() }
   }
 
-  override fun deleteRejectedTransactions(
-    createdBefore: Instant,
-  ): SafeFuture<Int> {
+  override fun deleteRejectedTransactions(createdBefore: Instant): SafeFuture<Int> {
     return deleteRejectedTransactionsSqlQuery
       .execute(Tuple.of(createdBefore.toEpochMilliseconds()))
       .map { rowSet -> rowSet.rowCount() }

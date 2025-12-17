@@ -14,7 +14,6 @@ data class BlockAndNonce(
 )
 
 interface LineaSmartContractClient : LineaSmartContractClientReadOnly {
-
   fun currentNonce(): ULong
 
   /**
@@ -53,18 +52,12 @@ interface LineaRollupSmartContractClient :
   /**
    *  Simulates the sending of a list of blobs to the smart contract, with EIP4844 transaction.
    */
-  fun submitBlobsEthCall(
-    blobs: List<BlobRecord>,
-    gasPriceCaps: GasPriceCaps?,
-  ): SafeFuture<String?>
+  fun submitBlobsEthCall(blobs: List<BlobRecord>, gasPriceCaps: GasPriceCaps?): SafeFuture<String?>
 
   /**
    * Submit a list of blobs to the smart contract, with EIP4844 transaction
    */
-  fun submitBlobs(
-    blobs: List<BlobRecord>,
-    gasPriceCaps: GasPriceCaps?,
-  ): SafeFuture<String>
+  fun submitBlobs(blobs: List<BlobRecord>, gasPriceCaps: GasPriceCaps?): SafeFuture<String>
 }
 
 interface LineaValidiumSmartContractClient :
@@ -73,18 +66,12 @@ interface LineaValidiumSmartContractClient :
   /**
    *  Simulates the sending of a list of blobs to the smart contract, with EIP4844 transaction.
    */
-  fun acceptShnarfDataEthCall(
-    blobs: List<BlobRecord>,
-    gasPriceCaps: GasPriceCaps?,
-  ): SafeFuture<String?>
+  fun acceptShnarfDataEthCall(blobs: List<BlobRecord>, gasPriceCaps: GasPriceCaps?): SafeFuture<String?>
 
   /**
    * Submit a list of blobs to the smart contract, with EIP4844 transaction
    */
-  fun acceptShnarfData(
-    blobs: List<BlobRecord>,
-    gasPriceCaps: GasPriceCaps?,
-  ): SafeFuture<String>
+  fun acceptShnarfData(blobs: List<BlobRecord>, gasPriceCaps: GasPriceCaps?): SafeFuture<String>
 }
 
 interface LineaGenesisStateProvider {

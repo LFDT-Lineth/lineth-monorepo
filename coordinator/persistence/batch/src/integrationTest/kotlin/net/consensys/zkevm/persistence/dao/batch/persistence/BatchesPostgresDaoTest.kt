@@ -78,9 +78,7 @@ class BatchesPostgresDaoTest : CleanDbTestSuiteParallel() {
     assertThat(dbContent2).size().isEqualTo(2)
   }
 
-  private fun performInsertTest(
-    batch: Batch,
-  ): RowSet<Row>? {
+  private fun performInsertTest(batch: Batch): RowSet<Row>? {
     batchesDao.saveNewBatch(batch).get()
     val dbContent = batchesContentQuery().execute().get()
     val newlyInsertedRow =

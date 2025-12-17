@@ -8,6 +8,7 @@ fun interface HashFunction {
 
 class Sha256HashFunction : HashFunction {
   private val digest: MessageDigest = MessageDigest.getInstance("SHA-256")
+
   override fun hash(bytes: ByteArray): ByteArray {
     return digest.digest(bytes)
   }

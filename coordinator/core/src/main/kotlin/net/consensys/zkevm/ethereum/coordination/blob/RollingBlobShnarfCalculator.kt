@@ -109,10 +109,11 @@ class RollingBlobShnarfCalculator(
     finalStateRootHash: ByteArray,
     conflationOrder: BlockIntervals,
   ): SafeFuture<RollingBlobShnarfResult> {
-    val blobBlockRange = BlockInterval.between(
-      conflationOrder.startingBlockNumber,
-      conflationOrder.upperBoundaries.last(),
-    )
+    val blobBlockRange =
+      BlockInterval.between(
+        conflationOrder.startingBlockNumber,
+        conflationOrder.upperBoundaries.last(),
+      )
     return getParentBlobData(blobBlockRange).thenCompose { parentBlobData ->
       runCatching {
         blobShnarfCalculator.calculateShnarf(

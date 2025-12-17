@@ -40,21 +40,24 @@ class BlobCompressionProofCoordinator(
   private var timerId: Long? = null
   private lateinit var blobPollingAction: Handler<Long>
 
-  private val blobsCounter = metricsFacade.createCounter(
-    category = LineaMetricsCategory.BLOB,
-    name = "counter",
-    description = "New blobs arriving to blob compression proof coordinator",
-  )
-  private val blobSizeInBlocksHistogram = metricsFacade.createHistogram(
-    category = LineaMetricsCategory.BLOB,
-    name = "blocks.size",
-    description = "Number of blocks in each blob",
-  )
-  private val blobSizeInBatchesHistogram = metricsFacade.createHistogram(
-    category = LineaMetricsCategory.BLOB,
-    name = "batches.size",
-    description = "Number of batches in each blob",
-  )
+  private val blobsCounter =
+    metricsFacade.createCounter(
+      category = LineaMetricsCategory.BLOB,
+      name = "counter",
+      description = "New blobs arriving to blob compression proof coordinator",
+    )
+  private val blobSizeInBlocksHistogram =
+    metricsFacade.createHistogram(
+      category = LineaMetricsCategory.BLOB,
+      name = "blocks.size",
+      description = "Number of blocks in each blob",
+    )
+  private val blobSizeInBatchesHistogram =
+    metricsFacade.createHistogram(
+      category = LineaMetricsCategory.BLOB,
+      name = "batches.size",
+      description = "Number of batches in each blob",
+    )
 
   init {
     metricsFacade.createGauge(
@@ -73,21 +76,23 @@ class BlobCompressionProofCoordinator(
   private fun sendBlobToCompressionProver(blob: Blob): SafeFuture<Unit> {
     log.debug("Preparing compression proof request for blob={}", blob.intervalString())
 
-    val blobZkSateAndRollingShnarfFuture = blobZkStateProvider
-      .getBlobZKState(blob.blocksRange)
-      .thenCompose { blobZkState ->
-        rollingBlobShnarfCalculator.calculateShnarf(
-          compressedData = blob.compressedData,
-          parentStateRootHash = blobZkState.parentStateRootHash,
-          finalStateRootHash = blobZkState.finalStateRootHash,
-          conflationOrder = BlockIntervals(
-            startingBlockNumber = blob.conflations.first().startBlockNumber,
-            upperBoundaries = blob.conflations.map { it.endBlockNumber },
-          ),
-        ).thenApply { rollingBlobShnarfResult ->
-          Pair(blobZkState, rollingBlobShnarfResult)
+    val blobZkSateAndRollingShnarfFuture =
+      blobZkStateProvider
+        .getBlobZKState(blob.blocksRange)
+        .thenCompose { blobZkState ->
+          rollingBlobShnarfCalculator.calculateShnarf(
+            compressedData = blob.compressedData,
+            parentStateRootHash = blobZkState.parentStateRootHash,
+            finalStateRootHash = blobZkState.finalStateRootHash,
+            conflationOrder =
+            BlockIntervals(
+              startingBlockNumber = blob.conflations.first().startBlockNumber,
+              upperBoundaries = blob.conflations.map { it.endBlockNumber },
+            ),
+          ).thenApply { rollingBlobShnarfResult ->
+            Pair(blobZkState, rollingBlobShnarfResult)
+          }
         }
-      }
 
     blobZkSateAndRollingShnarfFuture.thenCompose { (blobZkState, rollingBlobShnarfResult) ->
       requestBlobCompressionProof(
@@ -131,18 +136,19 @@ class BlobCompressionProofCoordinator(
     blobStartBlockTime: Instant,
     blobEndBlockTime: Instant,
   ): SafeFuture<Unit> {
-    val proofRequest = BlobCompressionProofRequest(
-      compressedData = compressedData,
-      conflations = conflations,
-      parentStateRootHash = parentStateRootHash,
-      finalStateRootHash = finalStateRootHash,
-      parentDataHash = parentDataHash,
-      prevShnarf = prevShnarf,
-      expectedShnarfResult = expectedShnarfResult,
-      commitment = commitment,
-      kzgProofContract = kzgProofContract,
-      kzgProofSideCar = kzgProofSideCar,
-    )
+    val proofRequest =
+      BlobCompressionProofRequest(
+        compressedData = compressedData,
+        conflations = conflations,
+        parentStateRootHash = parentStateRootHash,
+        finalStateRootHash = finalStateRootHash,
+        parentDataHash = parentDataHash,
+        prevShnarf = prevShnarf,
+        expectedShnarfResult = expectedShnarfResult,
+        commitment = commitment,
+        kzgProofContract = kzgProofContract,
+        kzgProofSideCar = kzgProofSideCar,
+      )
     return blobCompressionProverClient.requestProof(proofRequest)
       .thenPeek {
         log.info(
@@ -151,21 +157,23 @@ class BlobCompressionProofCoordinator(
         )
       }
       .thenCompose { blobCompressionProof ->
-        val blobRecord = BlobRecord(
-          startBlockNumber = conflations.first().startBlockNumber,
-          endBlockNumber = conflations.last().endBlockNumber,
-          blobHash = expectedShnarfResult.dataHash,
-          startBlockTime = blobStartBlockTime,
-          endBlockTime = blobEndBlockTime,
-          batchesCount = conflations.size.toUInt(),
-          expectedShnarf = expectedShnarfResult.expectedShnarf,
-          blobCompressionProof = blobCompressionProof,
-        )
+        val blobRecord =
+          BlobRecord(
+            startBlockNumber = conflations.first().startBlockNumber,
+            endBlockNumber = conflations.last().endBlockNumber,
+            blobHash = expectedShnarfResult.dataHash,
+            startBlockTime = blobStartBlockTime,
+            endBlockTime = blobEndBlockTime,
+            batchesCount = conflations.size.toUInt(),
+            expectedShnarf = expectedShnarfResult.expectedShnarf,
+            blobCompressionProof = blobCompressionProof,
+          )
         SafeFuture.allOf(
           blobsRepository.saveNewBlob(blobRecord),
           blobCompressionProofHandler.acceptNewBlobCompressionProof(
             BlobCompressionProofUpdate(
-              blockInterval = BlockInterval.between(
+              blockInterval =
+              BlockInterval.between(
                 startBlockNumber = blobRecord.startBlockNumber,
                 endBlockNumber = blobRecord.endBlockNumber,
               ),
@@ -194,11 +202,12 @@ class BlobCompressionProofCoordinator(
 
   override fun start(): CompletableFuture<Unit> {
     if (timerId == null) {
-      blobPollingAction = Handler<Long> {
-        handleBlobFromTheQueue().whenComplete { _, _ ->
-          timerId = vertx.setTimer(config.pollingInterval.inWholeMilliseconds, blobPollingAction)
+      blobPollingAction =
+        Handler<Long> {
+          handleBlobFromTheQueue().whenComplete { _, _ ->
+            timerId = vertx.setTimer(config.pollingInterval.inWholeMilliseconds, blobPollingAction)
+          }
         }
-      }
       timerId = vertx.setTimer(config.pollingInterval.inWholeMilliseconds, blobPollingAction)
     }
     return SafeFuture.completedFuture(Unit)

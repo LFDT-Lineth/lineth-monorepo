@@ -18,9 +18,7 @@ class L1ShnarfBasedAlreadySubmittedBlobsFilter(
    *
    * if blobRecords=[b1, b2, b3, b4, b5, b6] the result will be [b4, b5, b6]
    */
-  override fun invoke(
-    items: List<BlobRecord>,
-  ): SafeFuture<List<BlobRecord>> {
+  override fun invoke(items: List<BlobRecord>): SafeFuture<List<BlobRecord>> {
     val blockByShnarfQueryFutures = items.map { blobRecord ->
       lineaSmartContractClientReadOnly
         .isBlobShnarfPresent(shnarf = blobRecord.expectedShnarf)

@@ -43,11 +43,7 @@ class VertxRestRequestLogger(
     logRequest(request, requestResponseLogLevel)
   }
 
-  override fun logResponse(
-    request: HttpRequest<Buffer>,
-    response: HttpResponse<Buffer>?,
-    failureCause: Throwable?,
-  ) {
+  override fun logResponse(request: HttpRequest<Buffer>, response: HttpResponse<Buffer>?, failureCause: Throwable?) {
     val isError = response?.statusCode()?.let(::isNotSuccessStatusCode) ?: true
     val logLevel = if (isError) failuresLogLevel else requestResponseLogLevel
     if (isError && log.level != requestResponseLogLevel) {

@@ -12,9 +12,10 @@ import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
-internal val NOOP_BLOB_HANDLER: BlobCreationHandler = BlobCreationHandler { _: Blob ->
-  SafeFuture.completedFuture(Unit)
-}
+internal val NOOP_BLOB_HANDLER: BlobCreationHandler =
+  BlobCreationHandler { _: Blob ->
+    SafeFuture.completedFuture(Unit)
+  }
 
 /**
  * Blob calculator is special because it can contain multiple batches.
@@ -35,46 +36,54 @@ class GlobalBlobAwareConflationCalculator(
   override val lastBlockNumber: ULong
     get() = conflationCalculator.lastBlockNumber
 
-  private val gasUsedInBlobHistogram = metricsFacade.createHistogram(
-    category = LineaMetricsCategory.BLOB,
-    name = "gas",
-    description = "Total gas in each blob",
-  )
-  private val compressedDataSizeInBlobHistogram = metricsFacade.createHistogram(
-    category = LineaMetricsCategory.BLOB,
-    name = "compressed.data.size",
-    description = "Compressed L2 data size in bytes of each blob",
-  )
-  private val uncompressedDataSizeInBlobHistogram = metricsFacade.createHistogram(
-    category = LineaMetricsCategory.BLOB,
-    name = "uncompressed.data.size",
-    description = "Uncompressed L2 data size in bytes of each blob",
-  )
-  private val gasUsedInBatchHistogram = metricsFacade.createHistogram(
-    category = LineaMetricsCategory.BATCH,
-    name = "gas",
-    description = "Total gas in each batch",
-  )
-  private val compressedDataSizeInBatchHistogram = metricsFacade.createHistogram(
-    category = LineaMetricsCategory.BATCH,
-    name = "compressed.data.size",
-    description = "Compressed L2 data size in bytes of each batch",
-  )
-  private val uncompressedDataSizeInBatchHistogram = metricsFacade.createHistogram(
-    category = LineaMetricsCategory.BATCH,
-    name = "uncompressed.data.size",
-    description = "Uncompressed L2 data size in bytes of each batch",
-  )
-  private val avgCompressedTxDataSizeInBatchHistogram = metricsFacade.createHistogram(
-    category = LineaMetricsCategory.BATCH,
-    name = "avg.compressed.tx.data.size",
-    description = "Average compressed transaction data size in bytes of each batch",
-  )
-  private val avgUncompressedTxDataSizeInBatchHistogram = metricsFacade.createHistogram(
-    category = LineaMetricsCategory.BATCH,
-    name = "avg.uncompressed.tx.data.size",
-    description = "Average uncompressed transaction data size in bytes of each batch",
-  )
+  private val gasUsedInBlobHistogram =
+    metricsFacade.createHistogram(
+      category = LineaMetricsCategory.BLOB,
+      name = "gas",
+      description = "Total gas in each blob",
+    )
+  private val compressedDataSizeInBlobHistogram =
+    metricsFacade.createHistogram(
+      category = LineaMetricsCategory.BLOB,
+      name = "compressed.data.size",
+      description = "Compressed L2 data size in bytes of each blob",
+    )
+  private val uncompressedDataSizeInBlobHistogram =
+    metricsFacade.createHistogram(
+      category = LineaMetricsCategory.BLOB,
+      name = "uncompressed.data.size",
+      description = "Uncompressed L2 data size in bytes of each blob",
+    )
+  private val gasUsedInBatchHistogram =
+    metricsFacade.createHistogram(
+      category = LineaMetricsCategory.BATCH,
+      name = "gas",
+      description = "Total gas in each batch",
+    )
+  private val compressedDataSizeInBatchHistogram =
+    metricsFacade.createHistogram(
+      category = LineaMetricsCategory.BATCH,
+      name = "compressed.data.size",
+      description = "Compressed L2 data size in bytes of each batch",
+    )
+  private val uncompressedDataSizeInBatchHistogram =
+    metricsFacade.createHistogram(
+      category = LineaMetricsCategory.BATCH,
+      name = "uncompressed.data.size",
+      description = "Uncompressed L2 data size in bytes of each batch",
+    )
+  private val avgCompressedTxDataSizeInBatchHistogram =
+    metricsFacade.createHistogram(
+      category = LineaMetricsCategory.BATCH,
+      name = "avg.compressed.tx.data.size",
+      description = "Average compressed transaction data size in bytes of each batch",
+    )
+  private val avgUncompressedTxDataSizeInBatchHistogram =
+    metricsFacade.createHistogram(
+      category = LineaMetricsCategory.BATCH,
+      name = "avg.uncompressed.tx.data.size",
+      description = "Average uncompressed transaction data size in bytes of each batch",
+    )
 
   init {
     conflationCalculator.onConflatedBatch(this::handleBatchTrigger)
@@ -82,8 +91,9 @@ class GlobalBlobAwareConflationCalculator(
 
   private fun recordBatchMetrics(conflation: ConflationCalculationResult) {
     runCatching {
-      val filteredBlockCounters = blobBlockCounters
-        .filter { conflation.blocksRange.contains(it.blockNumber) }
+      val filteredBlockCounters =
+        blobBlockCounters
+          .filter { conflation.blocksRange.contains(it.blockNumber) }
       val gasUsedInBatch = filteredBlockCounters.sumOf { it.gasUsed }
       val uncompressedDataSizeInBatch = filteredBlockCounters.sumOf { it.blockRLPEncoded.size }
       val numOfTransactionsInBatch = filteredBlockCounters.sumOf { it.numOfTransactions }
@@ -112,8 +122,9 @@ class GlobalBlobAwareConflationCalculator(
 
   private fun recordBlobMetrics(blobInterval: BlockInterval, blobCompressedDataSize: Int) {
     runCatching {
-      val filteredBlockCounters = blobBlockCounters
-        .filter { blobInterval.blocksRange.contains(it.blockNumber) }
+      val filteredBlockCounters =
+        blobBlockCounters
+          .filter { blobInterval.blocksRange.contains(it.blockNumber) }
       gasUsedInBlobHistogram.record(
         filteredBlockCounters.sumOf { it.gasUsed }.toDouble(),
       )
@@ -161,26 +172,31 @@ class GlobalBlobAwareConflationCalculator(
 
   private fun fireBlobTriggerAndResetState(trigger: ConflationTrigger) {
     val compressedData = blobCalculator.getCompressedData()
-    val blobInterval = BlockInterval(
-      blobBatches.first().startBlockNumber,
-      blobBatches.last().endBlockNumber,
-    )
-    val blob = Blob(
-      conflations = blobBatches,
-      compressedData = compressedData,
-      startBlockTime = blobBlockCounters
-        .find { it.blockNumber == blobInterval.startBlockNumber }!!.blockTimestamp,
-      endBlockTime = blobBlockCounters
-        .find { it.blockNumber == blobInterval.endBlockNumber }!!.blockTimestamp,
-    )
-    val triggerName = if (numberOfBatches >= batchesLimit) {
-      // we must trigger an alert when BATCHES_LIMIT is reached because blobs
-      // won't be used to max capacity and affects Linea profitability
-      // please do not change the name of this trigger, it is used in the log's based alert
-      "BATCHES_LIMIT"
-    } else {
-      trigger.name
-    }
+    val blobInterval =
+      BlockInterval(
+        blobBatches.first().startBlockNumber,
+        blobBatches.last().endBlockNumber,
+      )
+    val blob =
+      Blob(
+        conflations = blobBatches,
+        compressedData = compressedData,
+        startBlockTime =
+        blobBlockCounters
+          .find { it.blockNumber == blobInterval.startBlockNumber }!!.blockTimestamp,
+        endBlockTime =
+        blobBlockCounters
+          .find { it.blockNumber == blobInterval.endBlockNumber }!!.blockTimestamp,
+      )
+    val triggerName =
+      if (numberOfBatches >= batchesLimit) {
+        // we must trigger an alert when BATCHES_LIMIT is reached because blobs
+        // won't be used to max capacity and affects Linea profitability
+        // please do not change the name of this trigger, it is used in the log's based alert
+        "BATCHES_LIMIT"
+      } else {
+        trigger.name
+      }
 
     log.info(
       "new blob: blob={} trigger={} blobSizeBytes={} blobBatchesCount={} blobBatchesLimit={} blobBatchesList={}",
@@ -196,12 +212,13 @@ class GlobalBlobAwareConflationCalculator(
     // Record the blob metrics
     recordBlobMetrics(blobInterval, compressedData.size)
 
-    blobBatches = run {
-      blobBatches.forEach { conflation ->
-        blobBlockCounters.removeIf { conflation.blocksRange.contains(it.blockNumber) }
+    blobBatches =
+      run {
+        blobBatches.forEach { conflation ->
+          blobBlockCounters.removeIf { conflation.blocksRange.contains(it.blockNumber) }
+        }
+        mutableListOf()
       }
-      mutableListOf()
-    }
     blobCalculator.reset()
     numberOfBatches = 0U
   }

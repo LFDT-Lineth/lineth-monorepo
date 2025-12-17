@@ -12,19 +12,11 @@ interface BlobsDao {
     endBlockCreatedBefore: Instant,
   ): SafeFuture<List<BlobRecord>>
 
-  fun findBlobByStartBlockNumber(
-    startBlockNumber: ULong,
-  ): SafeFuture<BlobRecord?>
+  fun findBlobByStartBlockNumber(startBlockNumber: ULong): SafeFuture<BlobRecord?>
 
-  fun findBlobByEndBlockNumber(
-    endBlockNumber: ULong,
-  ): SafeFuture<BlobRecord?>
+  fun findBlobByEndBlockNumber(endBlockNumber: ULong): SafeFuture<BlobRecord?>
 
-  fun deleteBlobsUpToEndBlockNumber(
-    endBlockNumberInclusive: ULong,
-  ): SafeFuture<Int>
+  fun deleteBlobsUpToEndBlockNumber(endBlockNumberInclusive: ULong): SafeFuture<Int>
 
-  fun deleteBlobsAfterBlockNumber(
-    startingBlockNumberInclusive: ULong,
-  ): SafeFuture<Int>
+  fun deleteBlobsAfterBlockNumber(startingBlockNumberInclusive: ULong): SafeFuture<Int>
 }

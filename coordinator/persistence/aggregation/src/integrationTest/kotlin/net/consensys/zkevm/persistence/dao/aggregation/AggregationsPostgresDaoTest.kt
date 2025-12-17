@@ -709,9 +709,7 @@ class AggregationsPostgresDaoTest : CleanDbTestSuiteParallel() {
       .isEqualTo(null)
   }
 
-  private fun performInsertTest(
-    aggregation: Aggregation,
-  ): RowSet<Row>? {
+  private fun performInsertTest(aggregation: Aggregation): RowSet<Row>? {
     aggregationsPostgresDaoImpl.saveNewAggregation(aggregation).get()
     val dbContent = DbQueries.getTableContent(sqlClient, DbQueries.aggregationsTable).execute().get()
     val newlyInsertedRow =
@@ -731,9 +729,7 @@ class AggregationsPostgresDaoTest : CleanDbTestSuiteParallel() {
     return dbContent
   }
 
-  private fun insertBatch(
-    batch: Batch,
-  ): SafeFuture<Unit> {
+  private fun insertBatch(batch: Batch): SafeFuture<Unit> {
     return batchesPostgresDaoImpl.saveNewBatch(batch)
   }
 

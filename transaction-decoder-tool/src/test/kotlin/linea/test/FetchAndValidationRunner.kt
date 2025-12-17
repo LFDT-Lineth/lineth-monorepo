@@ -15,13 +15,14 @@ class FetchAndValidationRunner(
   val rpcUrl: String,
   val log: Logger = LogManager.getLogger(FetchAndValidationRunner::class.java),
 ) {
-  val web3j: Web3j = createWeb3jHttpClient(
-    rpcUrl = rpcUrl,
+  val web3j: Web3j =
+    createWeb3jHttpClient(
+      rpcUrl = rpcUrl,
 //    executorService = vertx.nettyEventLoopGroup(),
-    log = LogManager.getLogger("test.client.web3j"),
-    requestResponseLogLevel = Level.DEBUG,
-    failuresLogLevel = Level.ERROR,
-  )
+      log = LogManager.getLogger("test.client.web3j"),
+      requestResponseLogLevel = Level.DEBUG,
+      failuresLogLevel = Level.ERROR,
+    )
   val validator = BlockEncodingValidator(vertx = vertx, log = log).also { it.start() }
   val blocksFetcher = BlocksFetcher(web3j, log = log)
   val targetEndBlockNumber = AtomicReference<ULong?>()

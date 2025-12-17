@@ -97,9 +97,7 @@ class StateRecoveryE2ETest {
   }
 
   @Test
-  fun `should recover from middle of chain and be resilient to node restarts`(
-    vertx: Vertx,
-  ) {
+  fun `should recover from middle of chain and be resilient to node restarts`(vertx: Vertx) {
     // Part A:
     // we shall have multiple finalizations on L1
     // restart FRESH (empty state) Besu & Shomei with recovery block somewhere in the middle of those finalizations
@@ -243,9 +241,7 @@ class StateRecoveryE2ETest {
     assertThat(getBesuErrorLogs()).isEmpty()
   }
 
-  private fun sendTxToL2(
-    keepSendingPredicate: () -> Boolean,
-  ) {
+  private fun sendTxToL2(keepSendingPredicate: () -> Boolean) {
     val account = L2AccountManager.generateAccount()
     val txManager = L2AccountManager.getTransactionManager(account)
     Thread {

@@ -66,10 +66,9 @@ interface StateManagerClientV1 : AsyncClient<StateManagerRequest<*>> {
    * @return GetZkEVMStateMerkleProofResponse
    * @throws ClientException with errorType StateManagerErrorType when know error occurs
    */
-  fun rollupGetStateMerkleProof(
-    blockInterval: BlockInterval,
-  ): SafeFuture<GetZkEVMStateMerkleProofResponse> = rollupGetStateMerkleProofWithTypedError(blockInterval)
-    .unwrapResultMonad()
+  fun rollupGetStateMerkleProof(blockInterval: BlockInterval): SafeFuture<GetZkEVMStateMerkleProofResponse> =
+    rollupGetStateMerkleProofWithTypedError(blockInterval)
+      .unwrapResultMonad()
 
   /**
    * This is for backward compatibility with the old version in the coordinator side.

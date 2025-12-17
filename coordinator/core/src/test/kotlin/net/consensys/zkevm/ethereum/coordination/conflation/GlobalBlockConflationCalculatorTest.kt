@@ -26,18 +26,20 @@ class GlobalBlockConflationCalculatorTest {
   private val lastBlockNumber: ULong = 0uL
   private val fakeCountersAfterConflation = fakeTracesCountersV2(123u)
   private val fakeDataSizeAfterConflation = 123u
-  val block1Counters = BlockCounters(
-    blockNumber = 1uL,
-    blockTimestamp = Instant.parse("2023-12-11T00:00:00.000Z"),
-    tracesCounters = fakeTracesCountersV2(10u),
-    blockRLPEncoded = ByteArray(0),
-  )
-  val block2Counters = BlockCounters(
-    blockNumber = 2uL,
-    blockTimestamp = Instant.parse("2023-12-11T00:00:02.000Z"),
-    tracesCounters = fakeTracesCountersV2(20u),
-    blockRLPEncoded = ByteArray(0),
-  )
+  val block1Counters =
+    BlockCounters(
+      blockNumber = 1uL,
+      blockTimestamp = Instant.parse("2023-12-11T00:00:00.000Z"),
+      tracesCounters = fakeTracesCountersV2(10u),
+      blockRLPEncoded = ByteArray(0),
+    )
+  val block2Counters =
+    BlockCounters(
+      blockNumber = 2uL,
+      blockTimestamp = Instant.parse("2023-12-11T00:00:02.000Z"),
+      tracesCounters = fakeTracesCountersV2(20u),
+      blockRLPEncoded = ByteArray(0),
+    )
 
   private lateinit var conflations: MutableList<ConflationCalculationResult>
 
@@ -50,28 +52,32 @@ class GlobalBlockConflationCalculatorTest {
       inflightCounters.dataSize = fakeDataSizeAfterConflation
       Unit
     }
-    calculatorByDealine = mock<DeferredTriggerConflationCalculator>() {
-      on { id }.thenAnswer { "TIME_LIMIT" }
-      on { copyCountersTo(any<ConflationCounters>()) }
-        .thenAnswer(fakeUpdater)
-    }
-    calculatorByTraces = mock<ConflationCalculator>() {
-      on { id }.thenAnswer { "TRACES_LIMIT" }
-      on { copyCountersTo(any<ConflationCounters>()) }
-        .thenAnswer(fakeUpdater)
-    }
-    calculatorByData = mock<ConflationCalculator>() {
-      on { id }.thenAnswer { "DATA_LIMIT" }
-      on { copyCountersTo(any<ConflationCounters>()) }
-        .thenAnswer(fakeUpdater)
-    }
+    calculatorByDealine =
+      mock<DeferredTriggerConflationCalculator> {
+        on { id }.thenAnswer { "TIME_LIMIT" }
+        on { copyCountersTo(any<ConflationCounters>()) }
+          .thenAnswer(fakeUpdater)
+      }
+    calculatorByTraces =
+      mock<ConflationCalculator> {
+        on { id }.thenAnswer { "TRACES_LIMIT" }
+        on { copyCountersTo(any<ConflationCounters>()) }
+          .thenAnswer(fakeUpdater)
+      }
+    calculatorByData =
+      mock<ConflationCalculator> {
+        on { id }.thenAnswer { "DATA_LIMIT" }
+        on { copyCountersTo(any<ConflationCounters>()) }
+          .thenAnswer(fakeUpdater)
+      }
 
-    globalCalculator = GlobalBlockConflationCalculator(
-      lastBlockNumber = lastBlockNumber,
-      syncCalculators = listOf(calculatorByTraces, calculatorByData),
-      deferredTriggerConflationCalculators = listOf(calculatorByDealine),
-      emptyTracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT,
-    )
+    globalCalculator =
+      GlobalBlockConflationCalculator(
+        lastBlockNumber = lastBlockNumber,
+        syncCalculators = listOf(calculatorByTraces, calculatorByData),
+        deferredTriggerConflationCalculators = listOf(calculatorByDealine),
+        emptyTracesCounters = TracesCountersV2.EMPTY_TRACES_COUNT,
+      )
     conflations = mutableListOf<ConflationCalculationResult>()
     globalCalculator.onConflatedBatch { trigger ->
       conflations.add(trigger)

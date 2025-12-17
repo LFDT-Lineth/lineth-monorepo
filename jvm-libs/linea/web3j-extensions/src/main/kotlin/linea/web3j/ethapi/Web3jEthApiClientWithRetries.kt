@@ -106,19 +106,13 @@ class Web3jEthApiClientWithRetries(
     return retry { ethApiClient.ethBlockNumber() }
   }
 
-  override fun ethGetBalance(
-    address: ByteArray,
-    blockParameter: BlockParameter,
-  ): SafeFuture<BigInteger> {
+  override fun ethGetBalance(address: ByteArray, blockParameter: BlockParameter): SafeFuture<BigInteger> {
     return retry(stopRetriesPredicateForTag(blockParameter)) {
       ethApiClient.ethGetBalance(address, blockParameter)
     }
   }
 
-  override fun ethGetTransactionCount(
-    address: ByteArray,
-    blockParameter: BlockParameter,
-  ): SafeFuture<ULong> {
+  override fun ethGetTransactionCount(address: ByteArray, blockParameter: BlockParameter): SafeFuture<ULong> {
     return retry(stopRetriesPredicateForTag(blockParameter)) {
       ethApiClient.ethGetTransactionCount(address, blockParameter)
     }
@@ -172,9 +166,7 @@ class Web3jEthApiClientWithRetries(
     }
   }
 
-  override fun ethEstimateGas(
-    transaction: TransactionForEthCall,
-  ): SafeFuture<ULong> {
+  override fun ethEstimateGas(transaction: TransactionForEthCall): SafeFuture<ULong> {
     return retry { ethApiClient.ethEstimateGas(transaction) }
   }
 }

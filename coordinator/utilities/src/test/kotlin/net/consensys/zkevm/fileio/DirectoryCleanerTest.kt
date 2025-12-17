@@ -19,20 +19,21 @@ import kotlin.io.path.nameWithoutExtension
 
 @ExtendWith(VertxExtension::class)
 class DirectoryCleanerTest {
-
   @Test
   fun test_tmp_directory_cleanup(vertx: Vertx) {
-    val tmpDirectory = Files.createTempDirectory(
-      DirectoryCleanerTest::class.simpleName + "-test_tmp_directory_cleanup",
-    )
+    val tmpDirectory =
+      Files.createTempDirectory(
+        DirectoryCleanerTest::class.simpleName + "-test_tmp_directory_cleanup",
+      )
     for (i in 1..9) {
-      val fileExtension = (i % 3).run {
-        when (this) {
-          0 -> ".json"
-          1 -> ".json.inprogress"
-          else -> ".json.inprogress_coordinator_writing"
+      val fileExtension =
+        (i % 3).run {
+          when (this) {
+            0 -> ".json"
+            1 -> ".json.inprogress"
+            else -> ".json.inprogress_coordinator_writing"
+          }
         }
-      }
       Files.createTempFile(
         tmpDirectory,
         "directory_cleaner_test-request-$i",
@@ -40,12 +41,13 @@ class DirectoryCleanerTest {
       )
     }
     assertThat(vertx.fileSystem().readDir(tmpDirectory.absolutePathString()).get().size).isEqualTo(9)
-    val directoryCleaner = DirectoryCleaner(
-      vertx,
-      listOf(tmpDirectory),
-      DirectoryCleaner.getSuffixFileFilters(listOf(".inprogress_coordinator_writing")) +
-        DirectoryCleaner.JSON_FILE_FILTER,
-    )
+    val directoryCleaner =
+      DirectoryCleaner(
+        vertx,
+        listOf(tmpDirectory),
+        DirectoryCleaner.getSuffixFileFilters(listOf(".inprogress_coordinator_writing")) +
+          DirectoryCleaner.JSON_FILE_FILTER,
+      )
     directoryCleaner.cleanup().get()
     var remainingFiles = 0
     vertx.fileSystem().readDir(tmpDirectory.absolutePathString()).toSafeFuture().thenApply { filePaths ->
@@ -60,14 +62,16 @@ class DirectoryCleanerTest {
 
   @Test
   fun test_deletion_of_absent_file_does_not_throw_exception(vertx: Vertx) {
-    val tmpDirectory = Files.createTempDirectory(
-      DirectoryCleanerTest::class.simpleName + "-test_deletion_of_absent_file_throws_exception",
-    )
-    val fileToBeMovedDuringCleanup = Files.createTempFile(
-      tmpDirectory,
-      "absent_file",
-      ".json",
-    )
+    val tmpDirectory =
+      Files.createTempDirectory(
+        DirectoryCleanerTest::class.simpleName + "-test_deletion_of_absent_file_throws_exception",
+      )
+    val fileToBeMovedDuringCleanup =
+      Files.createTempFile(
+        tmpDirectory,
+        "absent_file",
+        ".json",
+      )
 
     Files.createTempFile(
       tmpDirectory,
@@ -75,11 +79,12 @@ class DirectoryCleanerTest {
       ".json",
     )
 
-    val inProgressFile = Files.createTempFile(
-      tmpDirectory,
-      "directory_cleaner_test-request-2",
-      ".json.inprogress",
-    )
+    val inProgressFile =
+      Files.createTempFile(
+        tmpDirectory,
+        "directory_cleaner_test-request-2",
+        ".json.inprogress",
+      )
 
     val mockFileFilter = mock<FileFilter> {}
     whenever(mockFileFilter.accept(any())).thenAnswer {

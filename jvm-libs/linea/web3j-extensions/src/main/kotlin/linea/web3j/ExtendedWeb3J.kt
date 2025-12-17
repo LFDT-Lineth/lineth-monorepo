@@ -25,8 +25,7 @@ interface ExtendedWeb3J {
 
 class ExtendedWeb3JImpl(override val web3jClient: Web3j) : ExtendedWeb3J {
 
-  private fun buildException(error: Response.Error): Exception =
-    RuntimeException("${error.code}: ${error.message}")
+  private fun buildException(error: Response.Error): Exception = RuntimeException("${error.code}: ${error.message}")
 
   override fun ethBlockNumber(): SafeFuture<BigInteger> {
     return SafeFuture.of(web3jClient.ethBlockNumber().sendAsync()).thenCompose { response ->
@@ -57,9 +56,7 @@ class ExtendedWeb3JImpl(override val web3jClient: Web3j) : ExtendedWeb3J {
       }
   }
 
-  override fun ethGetBlockTimestampByNumber(
-    blockNumber: Long,
-  ): SafeFuture<BigInteger> {
+  override fun ethGetBlockTimestampByNumber(blockNumber: Long): SafeFuture<BigInteger> {
     return SafeFuture.of(
       web3jClient
         .ethGetBlockByNumber(
@@ -79,9 +76,7 @@ class ExtendedWeb3JImpl(override val web3jClient: Web3j) : ExtendedWeb3J {
       }
   }
 
-  override fun ethGetBlockSizeByNumber(
-    blockNumber: Long,
-  ): SafeFuture<BigInteger> {
+  override fun ethGetBlockSizeByNumber(blockNumber: Long): SafeFuture<BigInteger> {
     return SafeFuture.of(
       web3jClient
         .ethGetBlockByNumber(

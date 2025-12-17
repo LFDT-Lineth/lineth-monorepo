@@ -15,6 +15,7 @@ data class L1SubmissionConfig(
     ROLLUP,
     VALIDIUM,
   }
+
   override val disabled: Boolean
     get() = blob.disabled && aggregation.disabled
 

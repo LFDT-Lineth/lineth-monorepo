@@ -72,27 +72,28 @@ class BlockCreationMonitor(
   fun awaitStartingBlockToBePresent(): SafeFuture<*> {
     if (statingBlockAvailabilityFuture == null) {
       log.info("Awaiting for block {} to be present", startingBlockNumberExclusive)
-      statingBlockAvailabilityFuture = AsyncRetryer.retry(
-        vertx,
-        backoffDelay = config.pollingInterval,
-        timeout = config.startingBlockWaitTimeout,
-        stopRetriesPredicate = { block: Block? ->
-          if (block == null) {
-            log.warn(
-              "block={} not found yet. Retrying in {}",
-              startingBlockNumberExclusive,
-              config.pollingInterval,
-            )
-            false
-          } else {
-            log.info("Block {} found. Resuming block monitor", startingBlockNumberExclusive)
-            expectedParentBlockHash.set(block.hash)
-            true
-          }
-        },
-      ) {
-        ethApi.ethGetBlockByNumberFullTxs(startingBlockNumberExclusive.toBlockParameter())
-      }
+      statingBlockAvailabilityFuture =
+        AsyncRetryer.retry(
+          vertx,
+          backoffDelay = config.pollingInterval,
+          timeout = config.startingBlockWaitTimeout,
+          stopRetriesPredicate = { block: Block? ->
+            if (block == null) {
+              log.warn(
+                "block={} not found yet. Retrying in {}",
+                startingBlockNumberExclusive,
+                config.pollingInterval,
+              )
+              false
+            } else {
+              log.info("Block {} found. Resuming block monitor", startingBlockNumberExclusive)
+              expectedParentBlockHash.set(block.hash)
+              true
+            }
+          },
+        ) {
+          ethApi.ethGetBlockByNumberFullTxs(startingBlockNumberExclusive.toBlockParameter())
+        }
     }
 
     return statingBlockAvailabilityFuture!!
@@ -137,7 +138,6 @@ class BlockCreationMonitor(
                       block.number,
                       block.timestamp,
                       Instant.fromEpochSeconds(block.timestamp.toLong()),
-
                     )
                     this.stop()
                   }

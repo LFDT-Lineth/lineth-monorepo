@@ -25,8 +25,9 @@ class WMAGasProvider(
   private fun getRecentFees(): EIP4844GasFees {
     return feesFetcher.getL1EthGasPriceData().thenApply {
         feesData ->
-      val maxPriorityFeePerGas = priorityFeeCalculator.calculateFees(feesData)
-        .coerceAtMost(config.maxPriorityFeePerGasCap.toDouble())
+      val maxPriorityFeePerGas =
+        priorityFeeCalculator.calculateFees(feesData)
+          .coerceAtMost(config.maxPriorityFeePerGasCap.toDouble())
       val maxFeePerGas = (feesData.baseFeePerGas.last().toDouble() * 2) + maxPriorityFeePerGas
       val maxFeePerBlobGas = config.maxFeePerBlobGasCap
       EIP4844GasFees(
@@ -87,12 +88,15 @@ class WMAGasProvider(
   override fun getEIP4844GasFees(): EIP4844GasFees {
     return getRecentFees().run {
       EIP4844GasFees(
-        eip1559GasFees = EIP1559GasFees(
-          maxPriorityFeePerGas = min(
+        eip1559GasFees =
+        EIP1559GasFees(
+          maxPriorityFeePerGas =
+          min(
             this.eip1559GasFees.maxPriorityFeePerGas,
             config.maxFeePerGasCap,
           ),
-          maxFeePerGas = min(
+          maxFeePerGas =
+          min(
             this.eip1559GasFees.maxFeePerGas,
             config.maxFeePerGasCap,
           ),

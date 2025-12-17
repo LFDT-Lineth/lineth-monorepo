@@ -80,10 +80,7 @@ class GenericFileBasedProverClientTest {
   }
 
   @BeforeEach
-  fun beforeEach(
-    vertx: Vertx,
-    @TempDir tempDir: Path,
-  ) {
+  fun beforeEach(vertx: Vertx, @TempDir tempDir: Path) {
     proverConfig = FileBasedProverConfig(
       requestsDirectory = tempDir.resolve("requests"),
       responsesDirectory = tempDir.resolve("responses"),
@@ -115,9 +112,7 @@ class GenericFileBasedProverClientTest {
   }
 
   @Test
-  fun `when it cannot create request and response directories shall fail`(
-    vertx: Vertx,
-  ) {
+  fun `when it cannot create request and response directories shall fail`(vertx: Vertx) {
     val dirWithoutWritePermissions = Path.of("/invalid/path")
     val invalidConfig = proverConfig.copy(
       requestsDirectory = dirWithoutWritePermissions.resolve("requests"),

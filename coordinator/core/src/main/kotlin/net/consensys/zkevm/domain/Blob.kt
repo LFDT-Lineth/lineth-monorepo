@@ -12,7 +12,6 @@ data class Blob(
   val startBlockTime: Instant,
   val endBlockTime: Instant,
 ) : BlockInterval {
-
   override val startBlockNumber: ULong
     get() = conflations.first().startBlockNumber
   override val endBlockNumber: ULong
@@ -72,6 +71,7 @@ data class BlobAndBatchCounters(
   val blobCounters: BlobCounters,
   val executionProofs: BlockIntervals,
 )
+
 data class BlobCounters(
   val numberOfBatches: UInt,
   override val startBlockNumber: ULong,

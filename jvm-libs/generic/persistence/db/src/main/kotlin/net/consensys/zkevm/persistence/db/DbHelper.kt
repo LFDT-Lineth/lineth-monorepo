@@ -11,10 +11,7 @@ object DbHelper {
   private const val POSTGRES_MAX_DB_NAME_LENGTH = 63
   private var formatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMddHHmmss")
 
-  fun generateUniqueDbName(
-    prefix: String = "test",
-    clock: Clock = Clock.systemUTC(),
-  ): String {
+  fun generateUniqueDbName(prefix: String = "test", clock: Clock = Clock.systemUTC()): String {
     // Just time is not enough, as we can have multiple tests running in parallel
     val dateStr = formatter.format(clock.instant().atZone(ZoneId.of("UTC")))
     val randomSuffix = java.util.UUID.randomUUID().toString().take(8)
@@ -54,18 +51,12 @@ object DbHelper {
     dataSource.connection.use { con -> con.prepareStatement(sql).execute() }
   }
 
-  fun createDataBase(
-    dataSource: DataSource,
-    databaseName: String,
-  ) {
+  fun createDataBase(dataSource: DataSource, databaseName: String) {
     dataSource.connection
       .use { con -> con.prepareStatement("CREATE DATABASE $databaseName;").execute() }
   }
 
-  fun dropAndCreateDataBase(
-    dataSource: DataSource,
-    databaseName: String,
-  ) {
+  fun dropAndCreateDataBase(dataSource: DataSource, databaseName: String) {
     resetAllConnections(dataSource, databaseName)
     dataSource.connection
       .use { con ->

@@ -27,11 +27,7 @@ fun ByteArray.padLeft(targetSize: Int, padding: Byte = 0x0): ByteArray {
 /**
  * Slices the ByteArray into sliceSize bytes chunks and returns the sliceNumber-th chunk.
  */
-fun ByteArray.sliceOf(
-  sliceSize: Int,
-  sliceNumber: Int,
-  allowIncompleteLastSlice: Boolean = false,
-): ByteArray {
+fun ByteArray.sliceOf(sliceSize: Int, sliceNumber: Int, allowIncompleteLastSlice: Boolean = false): ByteArray {
   assert(sliceSize > 0) {
     "sliceSize=$sliceSize should be greater than 0"
   }

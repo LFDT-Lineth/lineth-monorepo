@@ -17,7 +17,6 @@ import kotlin.time.toDuration
 
 @ExtendWith(VertxExtension::class)
 class FileMonitorTest {
-
   lateinit var tmpDirectory: Path
 
   @BeforeEach
@@ -34,10 +33,11 @@ class FileMonitorTest {
 
   @Test
   fun test_fileExists_exists(vertx: Vertx) {
-    val config = FileMonitor.Config(
-      pollingInterval = 50.toDuration(DurationUnit.MILLISECONDS),
-      timeout = 1.toDuration(DurationUnit.SECONDS),
-    )
+    val config =
+      FileMonitor.Config(
+        pollingInterval = 50.toDuration(DurationUnit.MILLISECONDS),
+        timeout = 1.toDuration(DurationUnit.SECONDS),
+      )
     val fileMonitor = FileMonitor(vertx, config)
 
     val testFile = tmpDirectory.resolve("test_fileExists_exists").toFile()
@@ -47,10 +47,11 @@ class FileMonitorTest {
 
   @Test
   fun test_fileExists_doesNotExist(vertx: Vertx) {
-    val config = FileMonitor.Config(
-      pollingInterval = 50.toDuration(DurationUnit.MILLISECONDS),
-      timeout = 1.toDuration(DurationUnit.SECONDS),
-    )
+    val config =
+      FileMonitor.Config(
+        pollingInterval = 50.toDuration(DurationUnit.MILLISECONDS),
+        timeout = 1.toDuration(DurationUnit.SECONDS),
+      )
     val fileMonitor = FileMonitor(vertx, config)
     val testFilePath = tmpDirectory.resolve("test_fileExists_doesNotExist")
     Assertions.assertFalse(fileMonitor.fileExists(testFilePath).get())
@@ -58,10 +59,11 @@ class FileMonitorTest {
 
   @Test
   fun test_fileExists_patternExists(vertx: Vertx) {
-    val config = FileMonitor.Config(
-      pollingInterval = 50.toDuration(DurationUnit.MILLISECONDS),
-      timeout = 1.toDuration(DurationUnit.SECONDS),
-    )
+    val config =
+      FileMonitor.Config(
+        pollingInterval = 50.toDuration(DurationUnit.MILLISECONDS),
+        timeout = 1.toDuration(DurationUnit.SECONDS),
+      )
     val fileMonitor = FileMonitor(vertx, config)
     val testFile = tmpDirectory.resolve("file-monitor-test-1").toFile()
     testFile.createNewFile()
@@ -70,10 +72,11 @@ class FileMonitorTest {
 
   @Test
   fun test_fileExists_patternDoesNotExists(vertx: Vertx) {
-    val config = FileMonitor.Config(
-      pollingInterval = 50.toDuration(DurationUnit.MILLISECONDS),
-      timeout = 1.toDuration(DurationUnit.SECONDS),
-    )
+    val config =
+      FileMonitor.Config(
+        pollingInterval = 50.toDuration(DurationUnit.MILLISECONDS),
+        timeout = 1.toDuration(DurationUnit.SECONDS),
+      )
     val fileMonitor = FileMonitor(vertx, config)
     Assertions.assertFalse(fileMonitor.fileExists(tmpDirectory, "file-monitor-test-.*").get())
   }
@@ -82,10 +85,11 @@ class FileMonitorTest {
   fun test_monitor_fileAlreadyExists(vertx: Vertx) {
     val testFile = tmpDirectory.resolve("test_monitor_fileAlreadyExists").toFile()
     testFile.createNewFile()
-    val config = FileMonitor.Config(
-      pollingInterval = 50.toDuration(DurationUnit.MILLISECONDS),
-      timeout = 1.toDuration(DurationUnit.SECONDS),
-    )
+    val config =
+      FileMonitor.Config(
+        pollingInterval = 50.toDuration(DurationUnit.MILLISECONDS),
+        timeout = 1.toDuration(DurationUnit.SECONDS),
+      )
     val fileMonitor = FileMonitor(vertx, config)
     val result = fileMonitor.monitor(testFile.toPath()).get()
     Assertions.assertTrue(result is Ok)
@@ -97,10 +101,11 @@ class FileMonitorTest {
 
   @Test
   fun test_monitor_timeOut(vertx: Vertx) {
-    val config = FileMonitor.Config(
-      pollingInterval = 50.toDuration(DurationUnit.MILLISECONDS),
-      timeout = 1.toDuration(DurationUnit.SECONDS),
-    )
+    val config =
+      FileMonitor.Config(
+        pollingInterval = 50.toDuration(DurationUnit.MILLISECONDS),
+        timeout = 1.toDuration(DurationUnit.SECONDS),
+      )
     val fileMonitor = FileMonitor(vertx, config)
     val testFilePath = tmpDirectory.resolve("test_monitor_timeOut")
     val result = fileMonitor.monitor(testFilePath).get()
@@ -114,10 +119,11 @@ class FileMonitorTest {
   @Test
   fun test_monitor_fileCreatedInTime(vertx: Vertx) {
     val tempFilePath = tmpDirectory.resolve("test_monitor_fileCreatedInTime")
-    val config = FileMonitor.Config(
-      pollingInterval = 50.toDuration(DurationUnit.MILLISECONDS),
-      timeout = 1.toDuration(DurationUnit.SECONDS),
-    )
+    val config =
+      FileMonitor.Config(
+        pollingInterval = 50.toDuration(DurationUnit.MILLISECONDS),
+        timeout = 1.toDuration(DurationUnit.SECONDS),
+      )
     val fileMonitor = FileMonitor(vertx, config)
     Assertions.assertFalse(fileMonitor.fileExists(tempFilePath).get())
     vertx.setTimer(500) {
@@ -135,10 +141,11 @@ class FileMonitorTest {
   fun test_monitor_multipleFiles_fileCreatedInTime(vertx: Vertx) {
     val tempFilePath1 = tmpDirectory.resolve("test_monitor_fileCreatedInTime1")
     val tempFilePath2 = tmpDirectory.resolve("test_monitor_fileCreatedInTime2")
-    val config = FileMonitor.Config(
-      pollingInterval = 50.toDuration(DurationUnit.MILLISECONDS),
-      timeout = 1.toDuration(DurationUnit.SECONDS),
-    )
+    val config =
+      FileMonitor.Config(
+        pollingInterval = 50.toDuration(DurationUnit.MILLISECONDS),
+        timeout = 1.toDuration(DurationUnit.SECONDS),
+      )
     val fileMonitor = FileMonitor(vertx, config)
     Assertions.assertFalse(fileMonitor.fileExists(tempFilePath1).get())
     Assertions.assertFalse(fileMonitor.fileExists(tempFilePath2).get())

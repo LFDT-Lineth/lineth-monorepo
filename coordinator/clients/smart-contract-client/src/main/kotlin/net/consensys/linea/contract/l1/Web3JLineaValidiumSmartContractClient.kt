@@ -25,7 +25,6 @@ class Web3JLineaValidiumSmartContractClient(
   private val web3jContractHelper: Web3JContractAsyncHelper,
   private val web3jLineaClient: ValidiumV1,
 ) : Web3JLineaValidiumSmartContractClientReadOnly(web3j, contractAddress), LineaValidiumSmartContractClient {
-
   companion object {
     fun load(
       contractAddress: String,
@@ -35,21 +34,23 @@ class Web3JLineaValidiumSmartContractClient(
       smartContractErrors: SmartContractErrors,
       useEthEstimateGas: Boolean,
     ): Web3JLineaValidiumSmartContractClient {
-      val web3JContractAsyncHelper = Web3JContractAsyncHelper(
-        contractAddress = contractAddress,
-        web3j = web3j,
-        transactionManager = transactionManager,
-        contractGasProvider = contractGasProvider,
-        smartContractErrors = smartContractErrors,
-        useEthEstimateGas = useEthEstimateGas,
-      )
-      val lineaValidiumEnhancedWrapper = LineaValidiumEnhancedWrapper(
-        contractAddress = contractAddress,
-        web3j = web3j,
-        transactionManager = transactionManager,
-        contractGasProvider = contractGasProvider,
-        web3jContractHelper = web3JContractAsyncHelper,
-      )
+      val web3JContractAsyncHelper =
+        Web3JContractAsyncHelper(
+          contractAddress = contractAddress,
+          web3j = web3j,
+          transactionManager = transactionManager,
+          contractGasProvider = contractGasProvider,
+          smartContractErrors = smartContractErrors,
+          useEthEstimateGas = useEthEstimateGas,
+        )
+      val lineaValidiumEnhancedWrapper =
+        LineaValidiumEnhancedWrapper(
+          contractAddress = contractAddress,
+          web3j = web3j,
+          transactionManager = transactionManager,
+          contractGasProvider = contractGasProvider,
+          web3jContractHelper = web3JContractAsyncHelper,
+        )
       return Web3JLineaValidiumSmartContractClient(
         contractAddress = contractAddress,
         web3j = web3j,
@@ -59,6 +60,7 @@ class Web3JLineaValidiumSmartContractClient(
       )
     }
   }
+
   override fun currentNonce(): ULong {
     return transactionManager.currentNonce().toULong()
   }
@@ -78,10 +80,7 @@ class Web3JLineaValidiumSmartContractClient(
       }
   }
 
-  override fun acceptShnarfData(
-    blobs: List<BlobRecord>,
-    gasPriceCaps: GasPriceCaps?,
-  ): SafeFuture<String> {
+  override fun acceptShnarfData(blobs: List<BlobRecord>, gasPriceCaps: GasPriceCaps?): SafeFuture<String> {
     return getVersion()
       .thenCompose { version ->
         val function = Web3JLineaValidiumFunctionBuilders.buildAcceptShnarfDataFunction(version, blobs)
@@ -92,10 +91,7 @@ class Web3JLineaValidiumSmartContractClient(
       }
   }
 
-  override fun acceptShnarfDataEthCall(
-    blobs: List<BlobRecord>,
-    gasPriceCaps: GasPriceCaps?,
-  ): SafeFuture<String?> {
+  override fun acceptShnarfDataEthCall(blobs: List<BlobRecord>, gasPriceCaps: GasPriceCaps?): SafeFuture<String?> {
     return getVersion()
       .thenCompose { version ->
         val function = Web3JLineaValidiumFunctionBuilders.buildAcceptShnarfDataFunction(version, blobs)
@@ -115,13 +111,14 @@ class Web3JLineaValidiumSmartContractClient(
   ): SafeFuture<String> {
     return getVersion()
       .thenCompose { version ->
-        val function = Web3JLineaValidiumFunctionBuilders.buildFinalizeBlocksFunction(
-          version = version,
-          aggregationProof = aggregation,
-          aggregationLastBlob = aggregationLastBlob,
-          parentL1RollingHash = parentL1RollingHash,
-          parentL1RollingHashMessageNumber = parentL1RollingHashMessageNumber,
-        )
+        val function =
+          Web3JLineaValidiumFunctionBuilders.buildFinalizeBlocksFunction(
+            version = version,
+            aggregationProof = aggregation,
+            aggregationLastBlob = aggregationLastBlob,
+            parentL1RollingHash = parentL1RollingHash,
+            parentL1RollingHashMessageNumber = parentL1RollingHashMessageNumber,
+          )
         web3jContractHelper
           .sendTransactionAsync(function, BigInteger.ZERO, gasPriceCaps)
           .thenApply { result -> result.transactionHash }
@@ -136,13 +133,14 @@ class Web3JLineaValidiumSmartContractClient(
   ): SafeFuture<String?> {
     return getVersion()
       .thenCompose { version ->
-        val function = Web3JLineaValidiumFunctionBuilders.buildFinalizeBlocksFunction(
-          version,
-          aggregation,
-          aggregationLastBlob,
-          parentL1RollingHash,
-          parentL1RollingHashMessageNumber,
-        )
+        val function =
+          Web3JLineaValidiumFunctionBuilders.buildFinalizeBlocksFunction(
+            version,
+            aggregation,
+            aggregationLastBlob,
+            parentL1RollingHash,
+            parentL1RollingHashMessageNumber,
+          )
         web3jContractHelper.executeEthCall(function)
       }
   }
@@ -156,13 +154,14 @@ class Web3JLineaValidiumSmartContractClient(
   ): SafeFuture<String> {
     return getVersion()
       .thenCompose { version ->
-        val function = Web3JLineaValidiumFunctionBuilders.buildFinalizeBlocksFunction(
-          version,
-          aggregation,
-          aggregationLastBlob,
-          parentL1RollingHash,
-          parentL1RollingHashMessageNumber,
-        )
+        val function =
+          Web3JLineaValidiumFunctionBuilders.buildFinalizeBlocksFunction(
+            version,
+            aggregation,
+            aggregationLastBlob,
+            parentL1RollingHash,
+            parentL1RollingHashMessageNumber,
+          )
         web3jContractHelper.sendTransactionAfterEthCallAsync(function, BigInteger.ZERO, gasPriceCaps)
           .thenApply { result -> result.transactionHash }
       }

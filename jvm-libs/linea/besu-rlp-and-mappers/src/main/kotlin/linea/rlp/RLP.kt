@@ -28,9 +28,7 @@ object RLP {
     return encoder.encoded().toArray()
   }
 
-  fun decodeList(
-    bytes: ByteArray,
-  ): List<ByteArray> {
+  fun decodeList(bytes: ByteArray): List<ByteArray> {
     val items = mutableListOf<ByteArray>()
     val rlpInput = RLP.input(Bytes.wrap(bytes), false)
     rlpInput.enterList()

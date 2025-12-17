@@ -48,7 +48,8 @@ data class CoordinatorConfigToml(
   fun reified(): CoordinatorConfig {
     return CoordinatorConfig(
       protocol = configs.protocol.reified(),
-      conflation = configs.conflation.reified(
+      conflation =
+      configs.conflation.reified(
         defaults = configs.defaults,
         tracesCountersLimitsV2 = tracesLimitsV2?.let { TracesCountersV2(it.tracesLimits) },
         tracesCountersLimitsV4 = tracesLimitsV4?.let { TracesCountersV4(it.tracesLimits) },
@@ -57,20 +58,25 @@ data class CoordinatorConfigToml(
       traces = this.configs.traces.reified(),
       stateManager = this.configs.stateManager.reified(),
       type2StateProofProvider = this.configs.type2StateProofProvider.reified(),
-      l1FinalizationMonitor = this.configs.l1FinalizationMonitor.reified(
+      l1FinalizationMonitor =
+      this.configs.l1FinalizationMonitor.reified(
         defaults = this.configs.defaults,
       ),
-      l1Submission = this.configs.l1Submission.reified(
+      l1Submission =
+      this.configs.l1Submission.reified(
         l1DefaultEndpoint = this.configs.defaults.l1Endpoint,
-        timeOfDayMultipliers = l1DynamicGasPriceCapTimeOfDayMultipliers
+        timeOfDayMultipliers =
+        l1DynamicGasPriceCapTimeOfDayMultipliers
           ?.gasPriceCapTimeOfDayMultipliers
           ?: emptyMap(),
       ),
-      messageAnchoring = this.configs.messageAnchoring.reified(
+      messageAnchoring =
+      this.configs.messageAnchoring.reified(
         l1DefaultEndpoint = this.configs.defaults.l1Endpoint,
         l2DefaultEndpoint = this.configs.defaults.l2Endpoint,
       ),
-      l2NetworkGasPricing = this.configs.l2NetworkGasPricing.reified(
+      l2NetworkGasPricing =
+      this.configs.l2NetworkGasPricing.reified(
         l1DefaultEndpoint = this.configs.defaults.l1Endpoint,
         l2DefaultEndpoint = this.configs.defaults.l2Endpoint,
       ),

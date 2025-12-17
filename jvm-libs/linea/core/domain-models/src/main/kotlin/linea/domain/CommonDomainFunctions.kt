@@ -5,10 +5,7 @@ import linea.kotlin.decodeHex
 import java.math.BigInteger
 
 object CommonDomainFunctions {
-  fun blockIntervalString(
-    startBlockNumber: ULong,
-    endBlockNumber: ULong,
-  ): String {
+  fun blockIntervalString(startBlockNumber: ULong, endBlockNumber: ULong): String {
     return "[$startBlockNumber..$endBlockNumber]${endBlockNumber - startBlockNumber + 1uL}"
   }
 }

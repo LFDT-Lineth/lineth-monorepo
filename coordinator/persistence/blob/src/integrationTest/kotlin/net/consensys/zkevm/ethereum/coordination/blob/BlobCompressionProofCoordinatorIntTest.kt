@@ -205,9 +205,7 @@ class BlobCompressionProofCoordinatorIntTest : CleanDbTestSuiteParallel() {
   }
 
   @Test
-  fun `handle blob event and update blob record with blob compression proof`(
-    testContext: VertxTestContext,
-  ) {
+  fun `handle blob event and update blob record with blob compression proof`(testContext: VertxTestContext) {
     val prevBlobRecord = createBlobRecord(
       startBlockNumber = expectedStartBlock,
       endBlockNumber = expectedEndBlock,
@@ -359,9 +357,7 @@ class BlobCompressionProofCoordinatorIntTest : CleanDbTestSuiteParallel() {
   }
 
   @Test
-  fun `test blob handle failures re-queue's the blob`(
-    testContext: VertxTestContext,
-  ) {
+  fun `test blob handle failures re-queue's the blob`(testContext: VertxTestContext) {
     val prevBlobRecord = createBlobRecord(
       startBlockNumber = expectedStartBlock,
       endBlockNumber = expectedEndBlock,

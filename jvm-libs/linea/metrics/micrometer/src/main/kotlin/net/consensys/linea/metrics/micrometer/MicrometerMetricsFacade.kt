@@ -60,12 +60,8 @@ class MicrometerMetricsFacade(
     builder.register(registry)
   }
 
-  override fun createCounter(
-    category: MetricsCategory,
-    name: String,
-    description: String,
-    tags: List<Tag>,
-  ): Counter = createCounterFactory(category, name, description, tags).create()
+  override fun createCounter(category: MetricsCategory, name: String, description: String, tags: List<Tag>): Counter =
+    createCounterFactory(category, name, description, tags).create()
 
   override fun createHistogram(
     category: MetricsCategory,
@@ -91,12 +87,8 @@ class MicrometerMetricsFacade(
     return MicrometerHistogramAdapter(distributionSummaryBuilder.register(registry))
   }
 
-  override fun createTimer(
-    category: MetricsCategory,
-    name: String,
-    description: String,
-    tags: List<Tag>,
-  ): Timer = createTimerFactory(category, name, description, tags).create()
+  override fun createTimer(category: MetricsCategory, name: String, description: String, tags: List<Tag>): Timer =
+    createTimerFactory(category, name, description, tags).create()
 
   override fun <T> createDynamicTagTimer(
     category: MetricsCategory,

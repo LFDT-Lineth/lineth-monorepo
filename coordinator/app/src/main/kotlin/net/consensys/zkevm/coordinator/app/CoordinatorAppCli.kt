@@ -104,14 +104,15 @@ internal constructor(private val errorWriter: PrintWriter, private val startActi
         }
       }
 
-      val configs = loadConfigs(
-        coordinatorConfigFiles = configFiles.map { it.toPath() },
-        tracesLimitsFileV2 = tracesLimitsFiles!!.tracesLimitsV2File?.toPath(),
-        tracesLimitsFileV4 = tracesLimitsFiles!!.tracesLimitsV4File?.toPath(),
-        smartContractErrorsFile = smartContractErrorsFile.toPath(),
-        gasPriceCapTimeOfDayMultipliersFile = gasPriceCapTimeOfDayMultipliersFile.toPath(),
-        logger = logger,
-      )
+      val configs =
+        loadConfigs(
+          coordinatorConfigFiles = configFiles.map { it.toPath() },
+          tracesLimitsFileV2 = tracesLimitsFiles!!.tracesLimitsV2File?.toPath(),
+          tracesLimitsFileV4 = tracesLimitsFiles!!.tracesLimitsV4File?.toPath(),
+          smartContractErrorsFile = smartContractErrorsFile.toPath(),
+          gasPriceCapTimeOfDayMultipliersFile = gasPriceCapTimeOfDayMultipliersFile.toPath(),
+          logger = logger,
+        )
 
       if (checkConfigsOnly) {
         logger.info("All configs are valid. Final configs: {}", configs)
@@ -162,6 +163,7 @@ internal constructor(private val errorWriter: PrintWriter, private val startActi
 
   companion object {
     const val COMMAND_NAME = "coordinator"
+
     fun withAction(startAction: StartAction): CoordinatorAppCli {
       val errorWriter = PrintWriter(System.err, true, Charset.defaultCharset())
       return CoordinatorAppCli(errorWriter, startAction)

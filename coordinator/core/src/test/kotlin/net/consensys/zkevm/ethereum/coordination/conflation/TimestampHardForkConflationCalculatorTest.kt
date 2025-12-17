@@ -240,10 +240,7 @@ class TimestampHardForkConflationCalculatorTest {
     assertThat(counters.blockCount).isEqualTo(originalBlockCount)
   }
 
-  private fun blockCounters(
-    blockNumber: Int,
-    timestamp: Instant,
-  ): BlockCounters {
+  private fun blockCounters(blockNumber: Int, timestamp: Instant): BlockCounters {
     return BlockCounters(
       blockNumber = blockNumber.toULong(),
       blockTimestamp = timestamp,

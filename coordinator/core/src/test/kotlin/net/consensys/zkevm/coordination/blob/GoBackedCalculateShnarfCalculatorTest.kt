@@ -32,27 +32,29 @@ class GoBackedCalculateShnarfCalculatorTest {
   private val parentStateRootHash = Bytes32.random().toArray()
   private val finalStateRootHash = Bytes32.random().toArray()
   private val prevShnarf = Bytes32.random().toArray()
-  private val fakeCalculationResult = CalculateShnarfResult(
-    commitment = Bytes48.random().toArray().encodeHex(),
-    kzgProofContract = Bytes48.random().toArray().encodeHex(),
-    kzgProofSideCar = Bytes48.random().toArray().encodeHex(),
-    dataHash = Bytes32.random().toArray().encodeHex(),
-    snarkHash = Bytes32.random().toArray().encodeHex(),
-    expectedX = Bytes32.random().toArray().encodeHex(),
-    expectedY = Bytes32.random().toArray().encodeHex(),
-    expectedShnarf = Bytes32.random().toArray().encodeHex(),
-    errorMessage = "",
-  )
-  private val expectedShnarfParsedResult = ShnarfResult(
-    dataHash = fakeCalculationResult.dataHash.decodeHex(),
-    snarkHash = fakeCalculationResult.snarkHash.decodeHex(),
-    expectedX = fakeCalculationResult.expectedX.decodeHex(),
-    expectedY = fakeCalculationResult.expectedY.decodeHex(),
-    expectedShnarf = fakeCalculationResult.expectedShnarf.decodeHex(),
-    commitment = fakeCalculationResult.commitment.decodeHex(),
-    kzgProofSideCar = fakeCalculationResult.kzgProofSideCar.decodeHex(),
-    kzgProofContract = fakeCalculationResult.kzgProofContract.decodeHex(),
-  )
+  private val fakeCalculationResult =
+    CalculateShnarfResult(
+      commitment = Bytes48.random().toArray().encodeHex(),
+      kzgProofContract = Bytes48.random().toArray().encodeHex(),
+      kzgProofSideCar = Bytes48.random().toArray().encodeHex(),
+      dataHash = Bytes32.random().toArray().encodeHex(),
+      snarkHash = Bytes32.random().toArray().encodeHex(),
+      expectedX = Bytes32.random().toArray().encodeHex(),
+      expectedY = Bytes32.random().toArray().encodeHex(),
+      expectedShnarf = Bytes32.random().toArray().encodeHex(),
+      errorMessage = "",
+    )
+  private val expectedShnarfParsedResult =
+    ShnarfResult(
+      dataHash = fakeCalculationResult.dataHash.decodeHex(),
+      snarkHash = fakeCalculationResult.snarkHash.decodeHex(),
+      expectedX = fakeCalculationResult.expectedX.decodeHex(),
+      expectedY = fakeCalculationResult.expectedY.decodeHex(),
+      expectedShnarf = fakeCalculationResult.expectedShnarf.decodeHex(),
+      commitment = fakeCalculationResult.commitment.decodeHex(),
+      kzgProofSideCar = fakeCalculationResult.kzgProofSideCar.decodeHex(),
+      kzgProofContract = fakeCalculationResult.kzgProofContract.decodeHex(),
+    )
 
   @BeforeEach
   fun beforeEach() {
@@ -65,13 +67,14 @@ class GoBackedCalculateShnarfCalculatorTest {
     whenever(delegate.CalculateShnarf(eq(true), any(), any(), any(), any(), any(), any(), any()))
       .thenReturn(fakeCalculationResult, null)
 
-    val result = calculator.calculateShnarf(
-      compressedData = compressedData,
-      parentStateRootHash = parentStateRootHash,
-      finalStateRootHash = finalStateRootHash,
-      prevShnarf = prevShnarf,
-      conflationOrder = BlockIntervals(1UL, listOf(5UL, 10UL)),
-    )
+    val result =
+      calculator.calculateShnarf(
+        compressedData = compressedData,
+        parentStateRootHash = parentStateRootHash,
+        finalStateRootHash = finalStateRootHash,
+        prevShnarf = prevShnarf,
+        conflationOrder = BlockIntervals(1UL, listOf(5UL, 10UL)),
+      )
 
     verify(delegate).CalculateShnarf(
       eq(true),
@@ -91,13 +94,14 @@ class GoBackedCalculateShnarfCalculatorTest {
     whenever(delegate.CalculateShnarf(eq(true), any(), any(), any(), any(), any(), any(), any()))
       .thenReturn(fakeCalculationResult, null)
 
-    val result = calculator.calculateShnarf(
-      compressedData = compressedData,
-      parentStateRootHash = parentStateRootHash,
-      finalStateRootHash = finalStateRootHash,
-      prevShnarf = prevShnarf,
-      conflationOrder = BlockIntervals(Long.MAX_VALUE.toULong(), listOf(5UL, Long.MAX_VALUE.toULong())),
-    )
+    val result =
+      calculator.calculateShnarf(
+        compressedData = compressedData,
+        parentStateRootHash = parentStateRootHash,
+        finalStateRootHash = finalStateRootHash,
+        prevShnarf = prevShnarf,
+        conflationOrder = BlockIntervals(Long.MAX_VALUE.toULong(), listOf(5UL, Long.MAX_VALUE.toULong())),
+      )
 
     verify(delegate).CalculateShnarf(
       eq(true),

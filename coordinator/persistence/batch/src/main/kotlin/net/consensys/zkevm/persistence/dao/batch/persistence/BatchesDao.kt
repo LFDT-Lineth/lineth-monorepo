@@ -6,15 +6,9 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 interface BatchesDao {
   fun saveNewBatch(batch: Batch): SafeFuture<Unit>
 
-  fun findHighestConsecutiveEndBlockNumberFromBlockNumber(
-    startingBlockNumberInclusive: Long,
-  ): SafeFuture<Long?>
+  fun findHighestConsecutiveEndBlockNumberFromBlockNumber(startingBlockNumberInclusive: Long): SafeFuture<Long?>
 
-  fun deleteBatchesUpToEndBlockNumber(
-    endBlockNumberInclusive: Long,
-  ): SafeFuture<Int>
+  fun deleteBatchesUpToEndBlockNumber(endBlockNumberInclusive: Long): SafeFuture<Int>
 
-  fun deleteBatchesAfterBlockNumber(
-    startingBlockNumberInclusive: Long,
-  ): SafeFuture<Int>
+  fun deleteBatchesAfterBlockNumber(startingBlockNumberInclusive: Long): SafeFuture<Int>
 }

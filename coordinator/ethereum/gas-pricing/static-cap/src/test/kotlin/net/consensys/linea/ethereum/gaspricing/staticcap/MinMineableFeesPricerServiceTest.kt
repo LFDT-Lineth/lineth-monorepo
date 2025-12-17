@@ -104,7 +104,7 @@ class MinMineableFeesPricerServiceTest {
     val gasPriceFixedCost = 0.0
     val calculatedL2GasPrice = gasPriceUpperBound + 1.0
 
-    val mockFeesFetcher = mock<FeesFetcher>() {
+    val mockFeesFetcher = mock<FeesFetcher> {
       on { getL1EthGasPriceData() } doReturn SafeFuture.completedFuture(feeHistory)
     }
     val mockFeesCalculator = mock<FeesCalculator> {

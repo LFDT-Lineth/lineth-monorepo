@@ -18,7 +18,9 @@ data class ProofIndex(
     if (hash != null) {
       if (other.hash == null) return false
       if (!hash.contentEquals(other.hash)) return false
-    } else if (other.hash != null) return false
+    } else if (other.hash != null) {
+      return false
+    }
 
     return true
   }

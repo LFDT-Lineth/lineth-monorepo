@@ -138,10 +138,7 @@ class BlobScanClientTest {
     assertThat(blobScanClient.getBlobById(blobId).get().encodeHex()).isEqualTo(blobData)
   }
 
-  private fun successResponseBody(
-    blobId: String,
-    blobData: String,
-  ): String {
+  private fun successResponseBody(blobId: String, blobData: String): String {
     return """
       {
         "commitment": "0x86cddad176d1db92ac521c5dada895e1cca048a86618f131f271f54f07130daddd51af1f416be7ede789f6305d00d670",

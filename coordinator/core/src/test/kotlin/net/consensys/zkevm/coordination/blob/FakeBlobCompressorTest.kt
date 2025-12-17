@@ -8,7 +8,6 @@ import org.junit.jupiter.api.Test
 import kotlin.random.Random
 
 class FakeBlobCompressorTest {
-
   @Test
   fun `test appendBlock with data within limit`() {
     val compressor = FakeBlobCompressor(100, 0.5)

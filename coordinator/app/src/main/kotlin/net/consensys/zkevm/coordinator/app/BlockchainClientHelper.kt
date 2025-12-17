@@ -80,39 +80,40 @@ fun createTransactionManager(
       .setVerifyHost(true)
   }
 
-  val transactionSignService = when (signerConfig.type) {
-    SignerConfig.SignerType.WEB3J -> {
-      TxSignServiceImpl(Credentials.create(signerConfig.web3j!!.privateKey.encodeHex()))
-    }
+  val transactionSignService =
+    when (signerConfig.type) {
+      SignerConfig.SignerType.WEB3J -> {
+        TxSignServiceImpl(Credentials.create(signerConfig.web3j!!.privateKey.encodeHex()))
+      }
 
-    SignerConfig.SignerType.WEB3SIGNER -> {
-      val web3SignerConfig = signerConfig.web3signer!!
-      val endpoint = web3SignerConfig.endpoint
-      val webClientOptions: WebClientOptions =
-        WebClientOptions()
-          .setKeepAlive(web3SignerConfig.keepAlive)
-          .setProtocolVersion(HttpVersion.HTTP_1_1)
-          .setMaxPoolSize(web3SignerConfig.maxPoolSize)
-          .setDefaultHost(endpoint.host)
-          .setDefaultPort(endpoint.port)
-          .also {
-            if (signerConfig.web3signer.tls != null) {
-              loadKeyAndTrustStoreFromFiles(
-                webClientOptions = it,
-                clientKeystorePath = signerConfig.web3signer.tls.keyStorePath,
-                clientKeystorePassword = signerConfig.web3signer.tls.keyStorePassword.value,
-                trustStorePath = signerConfig.web3signer.tls.trustStorePath,
-                trustStorePassword = signerConfig.web3signer.tls.trustStorePassword.value,
-              )
+      SignerConfig.SignerType.WEB3SIGNER -> {
+        val web3SignerConfig = signerConfig.web3signer!!
+        val endpoint = web3SignerConfig.endpoint
+        val webClientOptions: WebClientOptions =
+          WebClientOptions()
+            .setKeepAlive(web3SignerConfig.keepAlive)
+            .setProtocolVersion(HttpVersion.HTTP_1_1)
+            .setMaxPoolSize(web3SignerConfig.maxPoolSize)
+            .setDefaultHost(endpoint.host)
+            .setDefaultPort(endpoint.port)
+            .also {
+              if (signerConfig.web3signer.tls != null) {
+                loadKeyAndTrustStoreFromFiles(
+                  webClientOptions = it,
+                  clientKeystorePath = signerConfig.web3signer.tls.keyStorePath,
+                  clientKeystorePassword = signerConfig.web3signer.tls.keyStorePassword.value,
+                  trustStorePath = signerConfig.web3signer.tls.trustStorePath,
+                  trustStorePassword = signerConfig.web3signer.tls.trustStorePassword.value,
+                )
+              }
             }
-          }
-      val httpRestClient = VertxHttpRestClient(webClientOptions, vertx)
-      val signer = Web3SignerRestClient(httpRestClient, signerConfig.web3signer.publicKey.encodeHex())
-      val signerAdapter = ECKeypairSignerAdapter(signer, Numeric.toBigInt(signerConfig.web3signer.publicKey))
-      val web3SignerCredentials = Credentials.create(signerAdapter)
-      Web3SignerTxSignService(web3SignerCredentials)
+        val httpRestClient = VertxHttpRestClient(webClientOptions, vertx)
+        val signer = Web3SignerRestClient(httpRestClient, signerConfig.web3signer.publicKey.encodeHex())
+        val signerAdapter = ECKeypairSignerAdapter(signer, Numeric.toBigInt(signerConfig.web3signer.publicKey))
+        val web3SignerCredentials = Credentials.create(signerAdapter)
+        Web3SignerTxSignService(web3SignerCredentials)
+      }
     }
-  }
 
   return AsyncFriendlyTransactionManager(client, transactionSignService, -1L)
 }
@@ -145,5 +146,6 @@ fun createLineaContractClient(
         contractGasProvider = contractGasProvider,
         smartContractErrors = smartContractErrors,
         useEthEstimateGas = useEthEstimateGas,
-      ) }
+      )
+  }
 }

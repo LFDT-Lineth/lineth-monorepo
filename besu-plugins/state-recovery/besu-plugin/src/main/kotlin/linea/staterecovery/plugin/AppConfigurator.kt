@@ -51,17 +51,18 @@ fun createAppAllInProcess(
     blobScanRequestRetryConfig = blobScanRequestRetryConfig,
     blobscanRequestRateLimitBackoffDelay = blobscanRequestRatelimitBackoffDelay,
   ).let { clients ->
-    val app = StateRecoveryApp(
-      vertx = vertx,
-      lineaContractClient = clients.lineaContractClient,
-      ethLogsSearcher = clients.ethLogsSearcher,
-      blobFetcher = clients.blobScanClient,
-      elClient = elClient,
-      stateManagerClient = clients.stateManagerClient,
-      transactionDetailsClient = clients.transactionDetailsClient,
-      blockHeaderStaticFields = blockHeaderStaticFields,
-      config = appConfig,
-    )
+    val app =
+      StateRecoveryApp(
+        vertx = vertx,
+        lineaContractClient = clients.lineaContractClient,
+        ethLogsSearcher = clients.ethLogsSearcher,
+        blobFetcher = clients.blobScanClient,
+        elClient = elClient,
+        stateManagerClient = clients.stateManagerClient,
+        transactionDetailsClient = clients.transactionDetailsClient,
+        blockHeaderStaticFields = blockHeaderStaticFields,
+        config = appConfig,
+      )
     app
   }
 }
@@ -97,52 +98,60 @@ fun createAppClients(
   stateManagerRequestRetry: RetryConfig = RetryConfig(backoffDelay = 1.seconds),
   zkStateManagerVersion: String = "2.3.0",
 ): AppClients {
-  val lineaContractClient = Web3JLineaRollupSmartContractClientReadOnly(
-    contractAddress = smartContractAddress,
-    web3j = createWeb3jHttpClient(
-      rpcUrl = l1RpcEndpoint.toString(),
-      log = LogManager.getLogger("linea.plugin.staterecovery.clients.l1.smart-contract"),
-    ),
-  )
-  val ethLogsSearcher = run {
-    val log = LogManager.getLogger("linea.plugin.staterecovery.clients.l1.logs-searcher")
-    val web3jEthApiClient = createEthApiClient(
-      vertx = vertx,
-      rpcUrl = l1RpcEndpoint.toString(),
-      requestRetryConfig = l1RequestRetryConfig,
-      log = log,
-    )
-    EthLogsSearcherImpl(
-      vertx = vertx,
-      ethApiClient = web3jEthApiClient,
-      config = EthLogsSearcherImpl.Config(
-        loopSuccessBackoffDelay = l1SuccessBackoffDelay,
+  val lineaContractClient =
+    Web3JLineaRollupSmartContractClientReadOnly(
+      contractAddress = smartContractAddress,
+      web3j =
+      createWeb3jHttpClient(
+        rpcUrl = l1RpcEndpoint.toString(),
+        log = LogManager.getLogger("linea.plugin.staterecovery.clients.l1.smart-contract"),
       ),
-      log = log,
     )
-  }
-  val blobScanClient = BlobScanClient.create(
-    vertx = vertx,
-    endpoint = blobScanEndpoint,
-    requestRetryConfig = blobScanRequestRetryConfig,
-    logger = LogManager.getLogger("linea.plugin.staterecovery.clients.l1.blob-scan"),
-    rateLimitBackoffDelay = blobscanRequestRateLimitBackoffDelay,
-  )
+  val ethLogsSearcher =
+    run {
+      val log = LogManager.getLogger("linea.plugin.staterecovery.clients.l1.logs-searcher")
+      val web3jEthApiClient =
+        createEthApiClient(
+          vertx = vertx,
+          rpcUrl = l1RpcEndpoint.toString(),
+          requestRetryConfig = l1RequestRetryConfig,
+          log = log,
+        )
+      EthLogsSearcherImpl(
+        vertx = vertx,
+        ethApiClient = web3jEthApiClient,
+        config =
+        EthLogsSearcherImpl.Config(
+          loopSuccessBackoffDelay = l1SuccessBackoffDelay,
+        ),
+        log = log,
+      )
+    }
+  val blobScanClient =
+    BlobScanClient.create(
+      vertx = vertx,
+      endpoint = blobScanEndpoint,
+      requestRetryConfig = blobScanRequestRetryConfig,
+      logger = LogManager.getLogger("linea.plugin.staterecovery.clients.l1.blob-scan"),
+      rateLimitBackoffDelay = blobscanRequestRateLimitBackoffDelay,
+    )
   val jsonRpcClientFactory = VertxHttpJsonRpcClientFactory(vertx, MicrometerMetricsFacade(meterRegistry))
-  val stateManagerClient: StateManagerClientV1 = StateManagerV1JsonRpcClient.create(
-    rpcClientFactory = jsonRpcClientFactory,
-    endpoints = listOf(stateManagerClientEndpoint),
-    maxInflightRequestsPerClient = 10u,
-    requestRetry = stateManagerRequestRetry.toRequestRetryConfig(),
-    zkStateManagerVersion = zkStateManagerVersion,
-    logger = LogManager.getLogger("linea.plugin.staterecovery.clients.state-manager"),
-  )
-  val transactionDetailsClient: TransactionDetailsClient = VertxTransactionDetailsClient.create(
-    jsonRpcClientFactory = jsonRpcClientFactory,
-    endpoint = l1RpcEndpoint,
-    retryConfig = l1RequestRetryConfig.toRequestRetryConfig(),
-    logger = LogManager.getLogger("linea.plugin.staterecovery.clients.l1.transaction-details"),
-  )
+  val stateManagerClient: StateManagerClientV1 =
+    StateManagerV1JsonRpcClient.create(
+      rpcClientFactory = jsonRpcClientFactory,
+      endpoints = listOf(stateManagerClientEndpoint),
+      maxInflightRequestsPerClient = 10u,
+      requestRetry = stateManagerRequestRetry.toRequestRetryConfig(),
+      zkStateManagerVersion = zkStateManagerVersion,
+      logger = LogManager.getLogger("linea.plugin.staterecovery.clients.state-manager"),
+    )
+  val transactionDetailsClient: TransactionDetailsClient =
+    VertxTransactionDetailsClient.create(
+      jsonRpcClientFactory = jsonRpcClientFactory,
+      endpoint = l1RpcEndpoint,
+      retryConfig = l1RequestRetryConfig.toRequestRetryConfig(),
+      logger = LogManager.getLogger("linea.plugin.staterecovery.clients.l1.transaction-details"),
+    )
   return AppClients(
     lineaContractClient = lineaContractClient,
     ethLogsSearcher = ethLogsSearcher,

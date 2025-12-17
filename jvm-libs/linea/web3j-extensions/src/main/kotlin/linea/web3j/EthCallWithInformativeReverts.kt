@@ -11,10 +11,7 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 typealias SmartContractErrors = Map<String, String>
 
-fun getRevertReason(
-  error: Response.Error?,
-  smartContractErrors: SmartContractErrors,
-): String? {
+fun getRevertReason(error: Response.Error?, smartContractErrors: SmartContractErrors): String? {
   val errorDataString = error?.data ?: ""
   return if (errorDataString.length > 11) {
     // execution client can return empty data: "0x", so we need to check the length
@@ -25,20 +22,14 @@ fun getRevertReason(
   }
 }
 
-private fun getErrorMessage(
-  ethCall: EthCall,
-  smartContractErrors: SmartContractErrors,
-): String {
+private fun getErrorMessage(ethCall: EthCall, smartContractErrors: SmartContractErrors): String {
   val revertReason = getRevertReason(ethCall.error, smartContractErrors)
 
   return String.format(TransactionManager.REVERT_ERR_STR, ethCall.revertReason) +
     " revertReason=$revertReason errorData=${ethCall.error?.data}"
 }
 
-fun Web3j.informativeEthCall(
-  tx: Transaction,
-  smartContractErrors: SmartContractErrors,
-): SafeFuture<String?> {
+fun Web3j.informativeEthCall(tx: Transaction, smartContractErrors: SmartContractErrors): SafeFuture<String?> {
   return SafeFuture
     .of(this.ethCall(tx, DefaultBlockParameterName.LATEST).sendAsync())
     .thenApply { ethCall ->

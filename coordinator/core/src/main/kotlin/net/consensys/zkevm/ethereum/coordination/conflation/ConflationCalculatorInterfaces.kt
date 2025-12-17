@@ -18,6 +18,7 @@ data class ConflationCounters(
 
 interface ConflationCalculator {
   val id: String
+
   data class OverflowTrigger(
     val trigger: ConflationTrigger,
     val singleBlockOverSized: Boolean,
@@ -34,6 +35,7 @@ interface ConflationCalculator {
    * If block would overflow the limits, it will throw an exception.
    */
   fun appendBlock(blockCounters: BlockCounters)
+
   fun reset()
 
   fun copyCountersTo(counters: ConflationCounters)
@@ -48,8 +50,9 @@ fun interface ConflationTriggerConsumer {
   fun handleConflationTrigger(trigger: ConflationTrigger)
 
   companion object {
-    internal val noopConsumer: ConflationTriggerConsumer = object : ConflationTriggerConsumer {
-      override fun handleConflationTrigger(trigger: ConflationTrigger) {}
-    }
+    internal val noopConsumer: ConflationTriggerConsumer =
+      object : ConflationTriggerConsumer {
+        override fun handleConflationTrigger(trigger: ConflationTrigger) {}
+      }
   }
 }

@@ -17,7 +17,6 @@ internal data class InflightConflation(
   var startBlockNumber: ULong?,
   var counters: ConflationCounters,
 ) {
-
   fun toConflationResult(endBlockNumber: ULong, trigger: ConflationTrigger): ConflationCalculationResult {
     return ConflationCalculationResult(
       startBlockNumber = startBlockNumber!!,
@@ -73,11 +72,12 @@ class GlobalBlockConflationCalculator(
       inflightConflation.startBlockNumber,
       inflightConflation.counters,
     )
-    val triggers = calculators.mapNotNull {
-      val overflowTrigger = it.checkOverflow(blockCounters)
-      log.trace("CHECK: calculator={}, blockNumber={}, trigger={}", it.id, blockCounters.blockNumber, overflowTrigger)
-      overflowTrigger
-    }.sortedBy { it.trigger.triggerPriority }
+    val triggers =
+      calculators.mapNotNull {
+        val overflowTrigger = it.checkOverflow(blockCounters)
+        log.trace("CHECK: calculator={}, blockNumber={}, trigger={}", it.id, blockCounters.blockNumber, overflowTrigger)
+        overflowTrigger
+      }.sortedBy { it.trigger.triggerPriority }
 
     if (triggers.isNotEmpty()) {
       // we have at least one trigger. Need to flush current conflation and start new one
@@ -110,10 +110,11 @@ class GlobalBlockConflationCalculator(
 
   private fun fireConflationAndResetState(endBlockNumber: ULong, conflationTrigger: ConflationTrigger) {
     calculators.forEach { it.copyCountersTo(inflightConflation.counters) }
-    val conflationResult = inflightConflation.toConflationResult(
-      endBlockNumber = endBlockNumber,
-      trigger = conflationTrigger,
-    )
+    val conflationResult =
+      inflightConflation.toConflationResult(
+        endBlockNumber = endBlockNumber,
+        trigger = conflationTrigger,
+      )
     log.trace("conflationTrigger: trigger={}, result={}", conflationTrigger, conflationResult)
     conflationConsumer.invoke(conflationResult)
     reset()
@@ -148,9 +149,10 @@ class GlobalBlockConflationCalculator(
 
   private fun ensureBlockIsInOrder(blockNumber: ULong) {
     if (blockNumber != (lastBlockNumber + 1u)) {
-      val error = IllegalArgumentException(
-        "Blocks to conflate must be sequential: lastBlockNumber=$lastBlockNumber, new blockNumber=$blockNumber",
-      )
+      val error =
+        IllegalArgumentException(
+          "Blocks to conflate must be sequential: lastBlockNumber=$lastBlockNumber, new blockNumber=$blockNumber",
+        )
       log.error(error.message)
       throw error
     }

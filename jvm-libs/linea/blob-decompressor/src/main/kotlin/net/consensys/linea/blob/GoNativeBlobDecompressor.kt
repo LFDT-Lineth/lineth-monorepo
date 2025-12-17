@@ -97,9 +97,7 @@ class GoNativeBlobDecompressorFactory {
 
     private fun getLibFileName(version: String) = "blob_decompressor_jna_$version"
 
-    fun getInstance(
-      version: BlobDecompressorVersion,
-    ): BlobDecompressor {
+    fun getInstance(version: BlobDecompressorVersion): BlobDecompressor {
       val libFile = Native.extractFromResourcePath(
         getLibFileName(version.version),
         GoNativeBlobDecompressorFactory::class.java.classLoader,

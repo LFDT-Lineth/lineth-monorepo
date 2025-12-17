@@ -53,14 +53,15 @@ class ShomeiClientTest {
   @Test
   fun success_all_ok() {
     val shomeiClient = ShomeiClient(jsonRpcClient)
-    val successResponse = JsonObject.of(
-      "jsonrpc",
-      "2.0",
-      "id",
-      "1",
-      "result",
-      "success",
-    )
+    val successResponse =
+      JsonObject.of(
+        "jsonrpc",
+        "2.0",
+        "id",
+        "1",
+        "result",
+        "success",
+      )
     wiremock.stubFor(
       WireMock.post("/")
         .withHeader("Content-Type", WireMock.containing("application/json"))
@@ -75,21 +76,22 @@ class ShomeiClientTest {
       .isCompleted()
     Assertions.assertThat(result is Ok)
 
-    val expectedJsonRequest = JsonObject.of(
-      "jsonrpc",
-      "2.0",
-      "id",
-      1,
-      "method",
-      "rollup_forkChoiceUpdated",
-      "params",
-      listOf(
-        mapOf(
-          "finalizedBlockNumber" to blockNumberAndHash.number.toString(),
-          "finalizedBlockHash" to blockNumberAndHash.hash.encodeHex(),
+    val expectedJsonRequest =
+      JsonObject.of(
+        "jsonrpc",
+        "2.0",
+        "id",
+        1,
+        "method",
+        "rollup_forkChoiceUpdated",
+        "params",
+        listOf(
+          mapOf(
+            "finalizedBlockNumber" to blockNumberAndHash.number.toString(),
+            "finalizedBlockHash" to blockNumberAndHash.hash.encodeHex(),
+          ),
         ),
-      ),
-    )
+      )
     wiremock.verify(
       WireMock.postRequestedFor(WireMock.urlEqualTo("/"))
         .withHeader("Content-Type", WireMock.equalTo("application/json"))
@@ -100,14 +102,15 @@ class ShomeiClientTest {
   @Test
   fun internal_error_shomei() {
     val shomeiClient = ShomeiClient(jsonRpcClient)
-    val jsonRpcErrorResponse = JsonObject.of(
-      "jsonrpc",
-      "2.0",
-      "id",
-      "1",
-      "error",
-      mapOf("code" to "1", "message" to "Internal Error"),
-    )
+    val jsonRpcErrorResponse =
+      JsonObject.of(
+        "jsonrpc",
+        "2.0",
+        "id",
+        "1",
+        "error",
+        mapOf("code" to "1", "message" to "Internal Error"),
+      )
 
     wiremock.stubFor(
       WireMock.post("/")
@@ -125,21 +128,22 @@ class ShomeiClientTest {
       .isCompleted()
     Assertions.assertThat(result is Err)
 
-    val expectedJsonRequest = JsonObject.of(
-      "jsonrpc",
-      "2.0",
-      "id",
-      1,
-      "method",
-      "rollup_forkChoiceUpdated",
-      "params",
-      listOf(
-        mapOf(
-          "finalizedBlockNumber" to blockNumberAndHash.number.toString(),
-          "finalizedBlockHash" to blockNumberAndHash.hash.encodeHex(),
+    val expectedJsonRequest =
+      JsonObject.of(
+        "jsonrpc",
+        "2.0",
+        "id",
+        1,
+        "method",
+        "rollup_forkChoiceUpdated",
+        "params",
+        listOf(
+          mapOf(
+            "finalizedBlockNumber" to blockNumberAndHash.number.toString(),
+            "finalizedBlockHash" to blockNumberAndHash.hash.encodeHex(),
+          ),
         ),
-      ),
-    )
+      )
     wiremock.verify(
       WireMock.postRequestedFor(WireMock.urlEqualTo("/"))
         .withHeader("Content-Type", WireMock.equalTo("application/json"))

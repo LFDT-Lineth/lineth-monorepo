@@ -112,10 +112,7 @@ class FinalizationMonitorImpl(
     return lastFinalizationUpdate.get()
   }
 
-  override fun addFinalizationHandler(
-    handlerName: String,
-    handler: FinalizationHandler,
-  ) {
+  override fun addFinalizationHandler(handlerName: String, handler: FinalizationHandler) {
     synchronized(finalizationHandlers) {
       finalizationHandlers[handlerName] = handler
     }

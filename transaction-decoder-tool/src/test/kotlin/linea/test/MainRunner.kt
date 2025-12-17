@@ -14,10 +14,11 @@ fun configureLoggers(loggerConfigs: List<Pair<String, Level>>) {
 }
 
 fun main() {
-  val rpcUrl = run {
-    "https://linea-sepolia.infura.io/v3/${System.getenv("INFURA_PROJECT_ID")}"
+  val rpcUrl =
+    run {
+      "https://linea-sepolia.infura.io/v3/${System.getenv("INFURA_PROJECT_ID")}"
 //    "https://linea-mainnet.infura.io/v3/${System.getenv("INFURA_PROJECT_ID")}"
-  }
+    }
   val vertx = Vertx.vertx()
   vertx.exceptionHandler { error ->
     println("Unhandled exception: message=${error.message}")

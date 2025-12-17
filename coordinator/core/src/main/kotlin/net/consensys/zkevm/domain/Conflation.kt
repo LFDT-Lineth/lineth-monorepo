@@ -36,8 +36,7 @@ data class Batch(
     Proven, // Batch is ready to be sent to L1 to be finalized
   }
 
-  fun intervalString(): String =
-    CommonDomainFunctions.blockIntervalString(startBlockNumber, endBlockNumber)
+  fun intervalString(): String = CommonDomainFunctions.blockIntervalString(startBlockNumber, endBlockNumber)
 
   fun toStringSummary(): String {
     return "Batch(startBlockNumber=$startBlockNumber, endBlockNumber=$endBlockNumber)"

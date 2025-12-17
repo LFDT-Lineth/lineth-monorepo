@@ -15,5 +15,7 @@ class TransactionDetail(
 
 enum class ExpectedOutcome {
   // TODO: NOT_EXECUTED should be used for non profitable or underpriced transactions.
-  FAILED, SUCCESS, NOT_EXECUTED
+  FAILED,
+  SUCCESS,
+  NOT_EXECUTED,
 }

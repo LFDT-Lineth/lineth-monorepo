@@ -58,7 +58,7 @@ class RequestHandlersTest {
   }
 
   @Test
-  fun SaveRejectedTransactionRequestHandlerV1_rejectsEmptyMap() {
+  fun saveRejectedTransactionRequestHandlerV1_rejectsEmptyMap() {
     val request = JsonRpcRequestMapParams("", "", "", emptyMap<String, Any>())
 
     val saveRequestHandlerV1 = SaveRejectedTransactionRequestHandlerV1(
@@ -84,7 +84,7 @@ class RequestHandlersTest {
   }
 
   @Test
-  fun SaveRejectedTransactionRequestHandlerV1_rejectsEmptyList() {
+  fun saveRejectedTransactionRequestHandlerV1_rejectsEmptyList() {
     val request = JsonRpcRequestListParams("", "", "", emptyList())
 
     val saveRequestHandlerV1 = SaveRejectedTransactionRequestHandlerV1(
@@ -109,7 +109,7 @@ class RequestHandlersTest {
   }
 
   @Test
-  fun SaveRejectedTransactionRequestHandlerV1_rejectsListWithInvalidArgument() {
+  fun saveRejectedTransactionRequestHandlerV1_rejectsListWithInvalidArgument() {
     val request = JsonRpcRequestListParams("", "", "", listOf("invalid_argument"))
 
     val saveRequestHandlerV1 = SaveRejectedTransactionRequestHandlerV1(
@@ -134,7 +134,7 @@ class RequestHandlersTest {
   }
 
   @Test
-  fun SaveRejectedTransactionRequestHandlerV1_invoke_acceptsValidRequestMap() {
+  fun saveRejectedTransactionRequestHandlerV1_invoke_acceptsValidRequestMap() {
     whenever(transactionExclusionServiceMock.saveRejectedTransaction(any()))
       .thenReturn(
         SafeFuture.completedFuture(
@@ -163,7 +163,7 @@ class RequestHandlersTest {
   }
 
   @Test
-  fun SaveRejectedTransactionRequestHandlerV1_invoke_acceptsValidRequestList() {
+  fun saveRejectedTransactionRequestHandlerV1_invoke_acceptsValidRequestList() {
     whenever(transactionExclusionServiceMock.saveRejectedTransaction(any()))
       .thenReturn(
         SafeFuture.completedFuture(
@@ -192,7 +192,7 @@ class RequestHandlersTest {
   }
 
   @Test
-  fun SaveRejectedTransactionRequestHandlerV1_invoke_acceptsValidRequestMap_without_blockNumber() {
+  fun saveRejectedTransactionRequestHandlerV1_invoke_acceptsValidRequestMap_without_blockNumber() {
     whenever(transactionExclusionServiceMock.saveRejectedTransaction(any()))
       .thenReturn(
         SafeFuture.completedFuture(
@@ -221,7 +221,7 @@ class RequestHandlersTest {
   }
 
   @Test
-  fun SaveRejectedTransactionRequestHandlerV1_invoke_return_success_result_with_duplicate_status() {
+  fun saveRejectedTransactionRequestHandlerV1_invoke_return_success_result_with_duplicate_status() {
     whenever(transactionExclusionServiceMock.saveRejectedTransaction(any()))
       .thenReturn(
         SafeFuture.completedFuture(
@@ -250,7 +250,7 @@ class RequestHandlersTest {
   }
 
   @Test
-  fun SaveRejectedTransactionRequestHandlerV1_invoke_return_failure_result() {
+  fun saveRejectedTransactionRequestHandlerV1_invoke_return_failure_result() {
     whenever(transactionExclusionServiceMock.saveRejectedTransaction(any()))
       .thenReturn(
         SafeFuture.completedFuture(
@@ -287,7 +287,7 @@ class RequestHandlersTest {
   }
 
   @Test
-  fun GetTransactionExclusionStatusRequestHandlerV1_rejectsEmptyList() {
+  fun getTransactionExclusionStatusRequestHandlerV1_rejectsEmptyList() {
     val request = JsonRpcRequestListParams("", "", "", emptyList())
 
     val getRequestHandlerV1 = GetTransactionExclusionStatusRequestHandlerV1(
@@ -312,7 +312,7 @@ class RequestHandlersTest {
   }
 
   @Test
-  fun GetTransactionExclusionStatusRequestHandlerV1_rejectsListWithInvalidArgument() {
+  fun getTransactionExclusionStatusRequestHandlerV1_rejectsListWithInvalidArgument() {
     val request = JsonRpcRequestListParams("", "", "", listOf("0x123"))
 
     val getRequestHandlerV1 = GetTransactionExclusionStatusRequestHandlerV1(
@@ -337,7 +337,7 @@ class RequestHandlersTest {
   }
 
   @Test
-  fun GetTransactionExclusionStatusRequestHandlerV1_invoke_acceptsValidRequestList() {
+  fun getTransactionExclusionStatusRequestHandlerV1_invoke_acceptsValidRequestList() {
     whenever(transactionExclusionServiceMock.getTransactionExclusionStatus(any()))
       .thenReturn(
         SafeFuture.completedFuture(
@@ -380,7 +380,7 @@ class RequestHandlersTest {
   }
 
   @Test
-  fun GetTransactionExclusionStatusRequestHandlerV1_invoke_return_null_result() {
+  fun getTransactionExclusionStatusRequestHandlerV1_invoke_return_null_result() {
     whenever(transactionExclusionServiceMock.getTransactionExclusionStatus(any()))
       .thenReturn(SafeFuture.completedFuture(Ok(null)))
 
@@ -409,7 +409,7 @@ class RequestHandlersTest {
   }
 
   @Test
-  fun GetTransactionExclusionStatusRequestHandlerV1_invoke_return_failure_result() {
+  fun getTransactionExclusionStatusRequestHandlerV1_invoke_return_failure_result() {
     whenever(transactionExclusionServiceMock.getTransactionExclusionStatus(any()))
       .thenReturn(
         SafeFuture.completedFuture(

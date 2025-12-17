@@ -11,7 +11,8 @@ class LocalStackConfigsParsingTest {
     // Just assert that Files have been loaded and parsed correctly
     // This is to prevent Code changes in coordinator and forgetting to update config files used in the local stack
     loadConfigs(
-      coordinatorConfigFiles = listOf(
+      coordinatorConfigFiles =
+      listOf(
         Path.of("../../config/coordinator/coordinator-config-v2.toml"),
         Path.of("../../config/coordinator/coordinator-config-v2-override-local-dev.toml"),
       ),

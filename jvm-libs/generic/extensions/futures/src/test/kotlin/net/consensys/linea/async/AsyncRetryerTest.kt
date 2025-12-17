@@ -60,9 +60,7 @@ class AsyncRetryerTest {
   }
 
   @Test
-  fun `Retryer should retry endlessly until predicate is met when both timeout and maxRetries are null`(
-    vertx: Vertx,
-  ) {
+  fun `Retryer should retry endlessly until predicate is met when both timeout and maxRetries are null`(vertx: Vertx) {
     val callCount = AtomicInteger(0)
     val expectedResult = "6"
     val result =
@@ -79,9 +77,7 @@ class AsyncRetryerTest {
   }
 
   @Test
-  fun `Retryer should retry endlessly until stopRetriesOnErrorPredicate returns true`(
-    vertx: Vertx,
-  ) {
+  fun `Retryer should retry endlessly until stopRetriesOnErrorPredicate returns true`(vertx: Vertx) {
     val callCount = AtomicInteger(0)
 
     val future = AsyncRetryer.retry(

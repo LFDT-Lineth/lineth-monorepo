@@ -16,11 +16,7 @@ private fun rewriteInsufficientGasFeeErrorMessage(errorMessage: String): String?
     ?.replace(maxFeePerBlobGasRegex, "maxFeePerBlobGas")
 }
 
-fun logUnhandledError(
-  log: Logger,
-  errorOrigin: String,
-  error: Throwable,
-) {
+fun logUnhandledError(log: Logger, errorOrigin: String, error: Throwable) {
   if (error.message != null) {
     log.error(
       "Error from {}: errorMessage={}",

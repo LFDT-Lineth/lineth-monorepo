@@ -131,9 +131,7 @@ open class GenericFileBasedProverClient<Request, Response, RequestDto, ResponseD
       }
   }
 
-  private fun waitForResponse(
-    responseFilePath: Path,
-  ): SafeFuture<Path> {
+  private fun waitForResponse(responseFilePath: Path): SafeFuture<Path> {
     return fileMonitor.monitor(responseFilePath).thenCompose {
       if (it is Err) {
         when (it.error) {
@@ -150,19 +148,14 @@ open class GenericFileBasedProverClient<Request, Response, RequestDto, ResponseD
     }
   }
 
-  private fun findRequestFileIfAlreadyInFileSystem(
-    requestFileName: String,
-  ): SafeFuture<String?> {
+  private fun findRequestFileIfAlreadyInFileSystem(requestFileName: String): SafeFuture<String?> {
     return fileMonitor.findFile(
       directory = config.requestsDirectory,
       pattern = inProgressFilePattern(requestFileName, config.inprogressProvingSuffixPattern),
     )
   }
 
-  protected open fun parseResponse(
-    responseFilePath: Path,
-    proofIndex: ProofIndex,
-  ): SafeFuture<Response> {
+  protected open fun parseResponse(responseFilePath: Path, proofIndex: ProofIndex): SafeFuture<Response> {
     return fileReader.read(responseFilePath)
       .thenCompose { result ->
         result

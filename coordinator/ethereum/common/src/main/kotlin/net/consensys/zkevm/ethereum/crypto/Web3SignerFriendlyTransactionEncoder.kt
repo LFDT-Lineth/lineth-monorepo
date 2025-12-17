@@ -10,11 +10,12 @@ import org.web3j.crypto.TransactionEncoder.encode4844
 
 object Web3SignerFriendlyTransactionEncoder {
   fun signMessage(rawTransaction: RawTransaction, credentials: Credentials): ByteArray {
-    val encodedTransaction = if (rawTransaction.transaction.type.isEip4844) {
-      encode4844(rawTransaction)
-    } else {
-      TransactionEncoder.encode(rawTransaction)
-    }
+    val encodedTransaction =
+      if (rawTransaction.transaction.type.isEip4844) {
+        encode4844(rawTransaction)
+      } else {
+        TransactionEncoder.encode(rawTransaction)
+      }
     val signatureData = signMessage(encodedTransaction, credentials.ecKeyPair)
 
     return TransactionEncoder.encode(rawTransaction, signatureData)

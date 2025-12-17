@@ -5,7 +5,6 @@ import net.consensys.zkevm.domain.BlobsToAggregate
 
 class AggregationTriggerCalculatorByBlobLimit(private val maxBlobsPerAggregation: UInt) :
   SyncAggregationTriggerCalculator {
-
   data class InFlightAggregation(
     val blobsCount: UInt,
     val blobsToAggregate: BlobsToAggregate,
@@ -23,7 +22,8 @@ class AggregationTriggerCalculatorByBlobLimit(private val maxBlobsPerAggregation
     return if (willReachBlobLimitWithOneMoreBlob()) {
       AggregationTrigger(
         aggregationTriggerType = AggregationTriggerType.BLOB_LIMIT,
-        aggregation = BlobsToAggregate(
+        aggregation =
+        BlobsToAggregate(
           inFlightAggregation?.blobsToAggregate?.startBlockNumber
             ?: blobCounters.startBlockNumber,
           blobCounters.endBlockNumber,
@@ -44,14 +44,16 @@ class AggregationTriggerCalculatorByBlobLimit(private val maxBlobsPerAggregation
           "blob=${blobCounters.intervalString()}",
       )
     }
-    inFlightAggregation = InFlightAggregation(
-      blobsCount = blobCount,
-      blobsToAggregate = BlobsToAggregate(
-        inFlightAggregation?.blobsToAggregate?.startBlockNumber
-          ?: blobCounters.startBlockNumber,
-        blobCounters.endBlockNumber,
-      ),
-    )
+    inFlightAggregation =
+      InFlightAggregation(
+        blobsCount = blobCount,
+        blobsToAggregate =
+        BlobsToAggregate(
+          inFlightAggregation?.blobsToAggregate?.startBlockNumber
+            ?: blobCounters.startBlockNumber,
+          blobCounters.endBlockNumber,
+        ),
+      )
   }
 
   @Synchronized

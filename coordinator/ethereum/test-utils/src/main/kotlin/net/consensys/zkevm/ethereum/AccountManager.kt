@@ -122,8 +122,7 @@ private open class WhaleBasedAccountManager(
     return selectWhaleAccount().first
   }
 
-  override fun generateAccount(initialBalanceWei: BigInteger): Account =
-    generateAccounts(1, initialBalanceWei).first()
+  override fun generateAccount(initialBalanceWei: BigInteger): Account = generateAccounts(1, initialBalanceWei).first()
 
   override fun generateAccounts(numberOfAccounts: Int, initialBalanceWei: BigInteger): List<Account> {
     val (whaleAccount, whaleTxManager) = selectWhaleAccount()

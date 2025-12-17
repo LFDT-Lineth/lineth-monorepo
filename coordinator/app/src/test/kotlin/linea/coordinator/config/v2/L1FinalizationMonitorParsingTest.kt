@@ -10,33 +10,37 @@ import kotlin.time.Duration.Companion.seconds
 
 class L1FinalizationMonitorParsingTest {
   companion object {
-    val toml = """
-    [l1-finalization-monitor]
-    l1-endpoint = "http://l1-el-node:8545"
-    l2-endpoint = "http://sequencer:8545"
-    l1-polling-interval = "PT1S"
-    l1-query-block-tag="FINALIZED"
-    """.trimIndent()
+    val toml =
+      """
+      [l1-finalization-monitor]
+      l1-endpoint = "http://l1-el-node:8545"
+      l2-endpoint = "http://sequencer:8545"
+      l1-polling-interval = "PT1S"
+      l1-query-block-tag="FINALIZED"
+      """.trimIndent()
 
-    val config = L1FinalizationMonitorConfigToml(
-      l1Endpoint = "http://l1-el-node:8545".toURL(),
-      l2Endpoint = "http://sequencer:8545".toURL(),
-      l1PollingInterval = 1.seconds,
-      l1QueryBlockTag = BlockParameter.Tag.FINALIZED,
-    )
+    val config =
+      L1FinalizationMonitorConfigToml(
+        l1Endpoint = "http://l1-el-node:8545".toURL(),
+        l2Endpoint = "http://sequencer:8545".toURL(),
+        l1PollingInterval = 1.seconds,
+        l1QueryBlockTag = BlockParameter.Tag.FINALIZED,
+      )
 
-    val tomlMinimal = """
-    [l1-finalization-monitor]
-    l1-endpoint = "http://l1-el-node:8545"
-    l2-endpoint = "http://sequencer:8545"
-    """.trimIndent()
+    val tomlMinimal =
+      """
+      [l1-finalization-monitor]
+      l1-endpoint = "http://l1-el-node:8545"
+      l2-endpoint = "http://sequencer:8545"
+      """.trimIndent()
 
-    val configMinimal = L1FinalizationMonitorConfigToml(
-      l1Endpoint = "http://l1-el-node:8545".toURL(),
-      l2Endpoint = "http://sequencer:8545".toURL(),
-      l1PollingInterval = 6.seconds,
-      l1QueryBlockTag = BlockParameter.Tag.FINALIZED,
-    )
+    val configMinimal =
+      L1FinalizationMonitorConfigToml(
+        l1Endpoint = "http://l1-el-node:8545".toURL(),
+        l2Endpoint = "http://sequencer:8545".toURL(),
+        l1PollingInterval = 6.seconds,
+        l1QueryBlockTag = BlockParameter.Tag.FINALIZED,
+      )
   }
 
   data class WrapperConfig(

@@ -169,10 +169,7 @@ class Web3JL2MessageServiceSmartContractClient(
       .requestAsync { it.toULong() }
   }
 
-  override fun getRollingHashByL1MessageNumber(
-    block: BlockParameter,
-    l1MessageNumber: ULong,
-  ): SafeFuture<ByteArray> {
+  override fun getRollingHashByL1MessageNumber(block: BlockParameter, l1MessageNumber: ULong): SafeFuture<ByteArray> {
     return contractClientAtBlock(block, L2MessageService::class.java)
       .l1RollingHashes(l1MessageNumber.toBigInteger())
       .requestAsync { it }

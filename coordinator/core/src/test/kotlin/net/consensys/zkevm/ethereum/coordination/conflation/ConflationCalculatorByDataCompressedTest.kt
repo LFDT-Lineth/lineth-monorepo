@@ -22,20 +22,22 @@ class ConflationCalculatorByDataCompressedTest {
 
   @BeforeEach
   fun beforeEach() {
-    blobCompressor = mock {
-      on { canAppendBlock(any<ByteArray>()) }.thenReturn(true)
-      on { appendBlock(any<ByteArray>()) }.thenAnswer { invocation ->
-        val block = invocation.arguments[0] as ByteArray
-        BlobCompressor.AppendResult(
-          blockAppended = true,
-          compressedSizeBefore = 0,
-          compressedSizeAfter = block.size,
-        )
+    blobCompressor =
+      mock {
+        on { canAppendBlock(any<ByteArray>()) }.thenReturn(true)
+        on { appendBlock(any<ByteArray>()) }.thenAnswer { invocation ->
+          val block = invocation.arguments[0] as ByteArray
+          BlobCompressor.AppendResult(
+            blockAppended = true,
+            compressedSizeBefore = 0,
+            compressedSizeAfter = block.size,
+          )
+        }
       }
-    }
-    calculator = ConflationCalculatorByDataCompressed(
-      blobCompressor,
-    )
+    calculator =
+      ConflationCalculatorByDataCompressed(
+        blobCompressor,
+      )
   }
 
   @Test

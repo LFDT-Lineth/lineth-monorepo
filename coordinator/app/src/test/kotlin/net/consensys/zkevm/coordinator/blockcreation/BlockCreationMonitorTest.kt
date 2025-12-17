@@ -68,6 +68,7 @@ class BlockCreationMonitorTest {
     initialValue: ULong,
   ) : LastProvenBlockNumberProviderAsync {
     var lastProvenBlock: AtomicLong = AtomicLong(initialValue.toLong())
+
     override fun getLastProvenBlockNumber(): SafeFuture<Long> {
       return SafeFuture.completedFuture(lastProvenBlock.get())
     }
@@ -94,17 +95,19 @@ class BlockCreationMonitorTest {
     this.vertx = vertx
     log = mock()
 
-    fakeL2RpcNode = TestingJsonRpcServer(
-      vertx = vertx,
-      recordRequestsResponses = true,
-      responseObjectMapper = ethApiObjectMapper,
-    )
+    fakeL2RpcNode =
+      TestingJsonRpcServer(
+        vertx = vertx,
+        recordRequestsResponses = true,
+        responseObjectMapper = ethApiObjectMapper,
+      )
     blockCreationListener = BlockCreationListenerDouble()
 
-    ethApiClient = createEthApiClient(
-      rpcUrl = "http://localhost:${fakeL2RpcNode.boundPort}",
-      log = LogManager.getLogger("test.client.l2.web3j"),
-    )
+    ethApiClient =
+      createEthApiClient(
+        rpcUrl = "http://localhost:${fakeL2RpcNode.boundPort}",
+        log = LogManager.getLogger("test.client.l2.web3j"),
+      )
     lastProvenBlockNumberProvider = LastProvenBlockNumberProviderDouble(99u)
   }
 
@@ -152,10 +155,11 @@ class BlockCreationMonitorTest {
 
   @Test
   fun `should stop fetching blocks after lastBlockNumberInclusiveToProcess`() {
-    monitor = createBlockCreationMonitor(
-      startingBlockNumberExclusive = 99,
-      config = config.copy(lastL2BlockNumberToProcessInclusive = 103u),
-    )
+    monitor =
+      createBlockCreationMonitor(
+        startingBlockNumberExclusive = 99,
+        config = config.copy(lastL2BlockNumberToProcessInclusive = 103u),
+      )
 
     setupFakeExecutionLayerWithBlocks(createBlocks(startBlockNumber = 99u, numberOfBlocks = 20))
 
@@ -177,12 +181,14 @@ class BlockCreationMonitorTest {
   fun `should stop fetching blocks after lastL2BlockTimestampToProcessInclusive`() {
     val startTime = Instant.parse("2025-01-01T00:00:00.00Z")
     val lastL2BlockTimestampToProcessInclusive = startTime.plus(20.seconds)
-    monitor = createBlockCreationMonitor(
-      startingBlockNumberExclusive = 0,
-      config = config.copy(
-        lastL2BlockTimestampToProcessInclusive = lastL2BlockTimestampToProcessInclusive,
-      ),
-    )
+    monitor =
+      createBlockCreationMonitor(
+        startingBlockNumberExclusive = 0,
+        config =
+        config.copy(
+          lastL2BlockTimestampToProcessInclusive = lastL2BlockTimestampToProcessInclusive,
+        ),
+      )
     val fakeBlocks =
       createBlocks(startBlockNumber = 0u, numberOfBlocks = 100, startTime = startTime, blockTime = 1.seconds)
 
@@ -204,10 +210,11 @@ class BlockCreationMonitorTest {
 
   @Test
   fun `should notify lister only after block is considered final on L2`() {
-    monitor = createBlockCreationMonitor(
-      startingBlockNumberExclusive = 99,
-      config = config.copy(blocksToFinalization = 2, blocksFetchLimit = 500),
-    )
+    monitor =
+      createBlockCreationMonitor(
+        startingBlockNumberExclusive = 99,
+        config = config.copy(blocksToFinalization = 2, blocksFetchLimit = 500),
+      )
 
     setupFakeExecutionLayerWithBlocks(createBlocks(startBlockNumber = 99u, numberOfBlocks = 200))
     fakeL2RpcNode.handle("eth_blockNumber") { _ -> 105UL.toHexString() }
@@ -238,23 +245,26 @@ class BlockCreationMonitorTest {
 
   @Test
   fun `shall retry notify the listener when it throws and keeps block order`() {
-    val fakeBuggyLister = object : BlockCreationListener {
-      var errorCount = 0
-      override fun acceptBlock(blockEvent: BlockCreated): SafeFuture<Unit> {
-        return if (blockEvent.block.number == 105UL && errorCount < 3) {
-          errorCount++
-          throw RuntimeException("Error on block 105")
-        } else {
-          blockCreationListener.acceptBlock(blockEvent)
+    val fakeBuggyLister =
+      object : BlockCreationListener {
+        var errorCount = 0
+
+        override fun acceptBlock(blockEvent: BlockCreated): SafeFuture<Unit> {
+          return if (blockEvent.block.number == 105UL && errorCount < 3) {
+            errorCount++
+            throw RuntimeException("Error on block 105")
+          } else {
+            blockCreationListener.acceptBlock(blockEvent)
+          }
         }
       }
-    }
 
-    monitor = createBlockCreationMonitor(
-      startingBlockNumberExclusive = 99,
-      blockCreationListener = fakeBuggyLister,
-      config = config.copy(blocksToFinalization = 2, lastL2BlockNumberToProcessInclusive = 112u),
-    )
+    monitor =
+      createBlockCreationMonitor(
+        startingBlockNumberExclusive = 99,
+        blockCreationListener = fakeBuggyLister,
+        config = config.copy(blocksToFinalization = 2, lastL2BlockNumberToProcessInclusive = 112u),
+      )
 
     setupFakeExecutionLayerWithBlocks(createBlocks(startBlockNumber = 99u, numberOfBlocks = 20))
 
@@ -274,9 +284,10 @@ class BlockCreationMonitorTest {
 
   @Test
   fun `should be resilient to connection failures`() {
-    monitor = createBlockCreationMonitor(
-      startingBlockNumberExclusive = 99,
-    )
+    monitor =
+      createBlockCreationMonitor(
+        startingBlockNumberExclusive = 99,
+      )
 
     setupFakeExecutionLayerWithBlocks(createBlocks(startBlockNumber = 99u, numberOfBlocks = 200))
 
@@ -303,18 +314,20 @@ class BlockCreationMonitorTest {
 
   @Test
   fun `should stop when reorg is detected above blocksToFinalization limit - manual intervention necessary`() {
-    monitor = createBlockCreationMonitor(
-      startingBlockNumberExclusive = 99,
-    )
+    monitor =
+      createBlockCreationMonitor(
+        startingBlockNumberExclusive = 99,
+      )
 
     // simulate reorg by changing parent hash of block 105
-    val blocks = createBlocks(startBlockNumber = 99u, numberOfBlocks = 20).map { block: Block ->
-      if (block.number == 105UL) {
-        block.copy(parentHash = ByteArrayExt.random32())
-      } else {
-        block
+    val blocks =
+      createBlocks(startBlockNumber = 99u, numberOfBlocks = 20).map { block: Block ->
+        if (block.number == 105UL) {
+          block.copy(parentHash = ByteArrayExt.random32())
+        } else {
+          block
+        }
       }
-    }
 
     setupFakeExecutionLayerWithBlocks(blocks)
 
@@ -334,10 +347,11 @@ class BlockCreationMonitorTest {
 
   @Test
   fun `should poll in order when response takes longer that polling interval`() {
-    monitor = createBlockCreationMonitor(
-      startingBlockNumberExclusive = 99,
-      config = config.copy(pollingInterval = 100.milliseconds),
-    )
+    monitor =
+      createBlockCreationMonitor(
+        startingBlockNumberExclusive = 99,
+        config = config.copy(pollingInterval = 100.milliseconds),
+      )
 
     val blocks = createBlocks(startBlockNumber = 99u, numberOfBlocks = 20)
     setupFakeExecutionLayerWithBlocks(blocks)
@@ -361,9 +375,10 @@ class BlockCreationMonitorTest {
 
   @Test
   fun `start allow 2nd call when already started`() {
-    monitor = createBlockCreationMonitor(
-      startingBlockNumberExclusive = 99,
-    )
+    monitor =
+      createBlockCreationMonitor(
+        startingBlockNumberExclusive = 99,
+      )
     setupFakeExecutionLayerWithBlocks(createBlocks(startBlockNumber = 99u, numberOfBlocks = 5))
     monitor.start().get(10, TimeUnit.SECONDS)
     monitor.start().get(10, TimeUnit.SECONDS)
@@ -371,10 +386,11 @@ class BlockCreationMonitorTest {
 
   @Test
   fun `should stop fetching blocks when gap is greater than fetch limit and resume upon catchup`() {
-    monitor = createBlockCreationMonitor(
-      startingBlockNumberExclusive = 99,
-      config = config.copy(blocksToFinalization = 0, blocksFetchLimit = 5),
-    )
+    monitor =
+      createBlockCreationMonitor(
+        startingBlockNumberExclusive = 99,
+        config = config.copy(blocksToFinalization = 0, blocksFetchLimit = 5),
+      )
 
     setupFakeExecutionLayerWithBlocks(createBlocks(startBlockNumber = 99u, numberOfBlocks = 30))
     lastProvenBlockNumberProvider.lastProvenBlock.set(105)

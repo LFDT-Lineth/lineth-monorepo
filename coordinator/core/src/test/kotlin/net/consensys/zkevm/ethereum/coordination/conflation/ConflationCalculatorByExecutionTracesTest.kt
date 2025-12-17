@@ -18,11 +18,12 @@ import org.mockito.kotlin.mock
 class ConflationCalculatorByExecutionTracesTest {
   private val tracesLimit = fakeTracesCountersV2(100u)
   private val testMeterRegistry = SimpleMeterRegistry()
-  private val calculator = ConflationCalculatorByExecutionTraces(
-    tracesLimit,
-    TracesCountersV2.EMPTY_TRACES_COUNT,
-    metricsFacade = MicrometerMetricsFacade(testMeterRegistry, "test"),
-  )
+  private val calculator =
+    ConflationCalculatorByExecutionTraces(
+      tracesLimit,
+      TracesCountersV2.EMPTY_TRACES_COUNT,
+      metricsFacade = MicrometerMetricsFacade(testMeterRegistry, "test"),
+    )
   private lateinit var conflationTriggerConsumer: ConflationTriggerConsumer
 
   @BeforeEach
@@ -105,24 +106,27 @@ class ConflationCalculatorByExecutionTracesTest {
 
   @Test
   fun `module counters incremented when traces overflow`() {
-    val overflowingTraces = listOf(
-      TracingModuleV2.MMU,
-      TracingModuleV2.ADD,
-      TracingModuleV2.RLP_TXN,
-    )
-    val oversizedTraceCounters = TracesCountersV2(
-      TracingModuleV2.entries.associate {
-        if (overflowingTraces.contains(it)) {
-          it to 101u
-        } else {
-          it to 0u
-        }
-      },
-    )
+    val overflowingTraces =
+      listOf(
+        TracingModuleV2.MMU,
+        TracingModuleV2.ADD,
+        TracingModuleV2.RLP_TXN,
+      )
+    val oversizedTraceCounters =
+      TracesCountersV2(
+        TracingModuleV2.entries.associate {
+          if (overflowingTraces.contains(it)) {
+            it to 101u
+          } else {
+            it to 0u
+          }
+        },
+      )
 
     TracingModuleV2.entries.forEach { module ->
-      val moduleOverflowCounter = testMeterRegistry.get("test.conflation.overflow.evm")
-        .tag("module", module.name).counter()
+      val moduleOverflowCounter =
+        testMeterRegistry.get("test.conflation.overflow.evm")
+          .tag("module", module.name).counter()
       assertThat(moduleOverflowCounter.count()).isEqualTo(0.0)
     }
     assertThat(calculator.checkOverflow(blockCounters(fakeTracesCountersV2(100u)))).isNull()
@@ -130,8 +134,9 @@ class ConflationCalculatorByExecutionTracesTest {
       .isEqualTo(ConflationCalculator.OverflowTrigger(ConflationTrigger.TRACES_LIMIT, true))
 
     TracingModuleV2.entries.forEach { module ->
-      val moduleOverflowCounter = testMeterRegistry.get("test.conflation.overflow.evm")
-        .tag("module", module.name).counter()
+      val moduleOverflowCounter =
+        testMeterRegistry.get("test.conflation.overflow.evm")
+          .tag("module", module.name).counter()
 
       if (overflowingTraces.contains(module)) {
         assertThat(moduleOverflowCounter.count()).isEqualTo(1.0)
@@ -140,23 +145,25 @@ class ConflationCalculatorByExecutionTracesTest {
       }
     }
 
-    val overflowCounters = TracesCountersV2(
-      TracingModuleV2.entries.associate {
-        if (overflowingTraces.contains(it)) {
-          it to 99u
-        } else {
-          it to 0u
-        }
-      },
-    )
+    val overflowCounters =
+      TracesCountersV2(
+        TracingModuleV2.entries.associate {
+          if (overflowingTraces.contains(it)) {
+            it to 99u
+          } else {
+            it to 0u
+          }
+        },
+      )
 
     calculator.appendBlock(blockCounters(fakeTracesCountersV2(10u)))
     assertThat(calculator.checkOverflow(blockCounters(overflowCounters)))
       .isEqualTo(ConflationCalculator.OverflowTrigger(ConflationTrigger.TRACES_LIMIT, false))
 
     TracingModuleV2.entries.forEach { module ->
-      val moduleOverflowCounter = testMeterRegistry.get("test.conflation.overflow.evm")
-        .tag("module", module.name).counter()
+      val moduleOverflowCounter =
+        testMeterRegistry.get("test.conflation.overflow.evm")
+          .tag("module", module.name).counter()
 
       if (overflowingTraces.contains(module)) {
         assertThat(moduleOverflowCounter.count()).isEqualTo(2.0)
@@ -166,10 +173,7 @@ class ConflationCalculatorByExecutionTracesTest {
     }
   }
 
-  private fun blockCounters(
-    tracesCounters: TracesCounters,
-    blockNumber: ULong = 1uL,
-  ): BlockCounters {
+  private fun blockCounters(tracesCounters: TracesCounters, blockNumber: ULong = 1uL): BlockCounters {
     return BlockCounters(
       blockNumber = blockNumber,
       blockTimestamp = Instant.parse("2021-01-01T00:00:00Z"),

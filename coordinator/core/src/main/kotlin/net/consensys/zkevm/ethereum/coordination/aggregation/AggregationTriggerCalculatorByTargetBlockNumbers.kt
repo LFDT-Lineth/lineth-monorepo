@@ -34,8 +34,9 @@ class AggregationTriggerCalculatorByTargetBlockNumbers(
       return null
     }
 
-    val overlapedTargetAggregation = endBlockNumbers
-      .firstOrNull { it >= blob.startBlockNumber && it < blob.endBlockNumber }
+    val overlapedTargetAggregation =
+      endBlockNumbers
+        .firstOrNull { it >= blob.startBlockNumber && it < blob.endBlockNumber }
 
     return when {
       overlapedTargetAggregation != null -> {
@@ -50,7 +51,8 @@ class AggregationTriggerCalculatorByTargetBlockNumbers(
       endBlockNumbers.contains(blob.endBlockNumber) -> {
         AggregationTrigger(
           aggregationTriggerType = AggregationTriggerType.TARGET_BLOCK_NUMBER,
-          aggregation = BlobsToAggregate(
+          aggregation =
+          BlobsToAggregate(
             startBlockNumber = inFlightAggregation?.startBlockNumber ?: blob.startBlockNumber,
             endBlockNumber = blob.endBlockNumber,
           ),
@@ -69,11 +71,12 @@ class AggregationTriggerCalculatorByTargetBlockNumbers(
 
   @Synchronized
   override fun newBlob(blobCounters: BlobCounters) {
-    inFlightAggregation = if (inFlightAggregation == null) {
-      BlobsToAggregate(blobCounters.startBlockNumber, blobCounters.endBlockNumber)
-    } else {
-      BlobsToAggregate(inFlightAggregation!!.startBlockNumber, blobCounters.endBlockNumber)
-    }
+    inFlightAggregation =
+      if (inFlightAggregation == null) {
+        BlobsToAggregate(blobCounters.startBlockNumber, blobCounters.endBlockNumber)
+      } else {
+        BlobsToAggregate(inFlightAggregation!!.startBlockNumber, blobCounters.endBlockNumber)
+      }
   }
 
   @Synchronized

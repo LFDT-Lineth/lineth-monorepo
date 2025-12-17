@@ -9,25 +9,28 @@ import org.mockito.kotlin.mock
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 class WMAGasProviderTest {
-  private val feeHistory = FeeHistory(
-    oldestBlock = 100uL,
-    baseFeePerGas = listOf(100, 110, 120, 130, 140).map { it.toULong() },
-    reward = listOf(1000, 1100, 1200, 1300).map { listOf(it.toULong()) },
-    gasUsedRatio = listOf(0.25, 0.5, 0.75, 0.9),
-    baseFeePerBlobGas = listOf(100, 110, 120, 130, 140).map { it.toULong() },
-    blobGasUsedRatio = listOf(0.25, 0.5, 0.75, 0.9),
-  )
+  private val feeHistory =
+    FeeHistory(
+      oldestBlock = 100uL,
+      baseFeePerGas = listOf(100, 110, 120, 130, 140).map { it.toULong() },
+      reward = listOf(1000, 1100, 1200, 1300).map { listOf(it.toULong()) },
+      gasUsedRatio = listOf(0.25, 0.5, 0.75, 0.9),
+      baseFeePerBlobGas = listOf(100, 110, 120, 130, 140).map { it.toULong() },
+      blobGasUsedRatio = listOf(0.25, 0.5, 0.75, 0.9),
+    )
   private val chainId = 999
   private val gasLimit = 100000uL
-  private val mockFeesFetcher = mock<FeesFetcher> {
-    on { getL1EthGasPriceData() } doReturn SafeFuture.completedFuture(feeHistory)
-  }
-  private val l1PriorityFeeCalculator: FeesCalculator = WMAFeesCalculator(
-    WMAFeesCalculator.Config(
-      baseFeeCoefficient = 0.0,
-      priorityFeeWmaCoefficient = 1.0,
-    ),
-  )
+  private val mockFeesFetcher =
+    mock<FeesFetcher> {
+      on { getL1EthGasPriceData() } doReturn SafeFuture.completedFuture(feeHistory)
+    }
+  private val l1PriorityFeeCalculator: FeesCalculator =
+    WMAFeesCalculator(
+      WMAFeesCalculator.Config(
+        baseFeeCoefficient = 0.0,
+        priorityFeeWmaCoefficient = 1.0,
+      ),
+    )
 
   @Test
   fun `getMaxFeePerGas should return correct value based on baseFeePerGas and WMA of priority fee`() {

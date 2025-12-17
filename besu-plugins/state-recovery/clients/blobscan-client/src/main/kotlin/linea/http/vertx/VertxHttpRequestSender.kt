@@ -7,8 +7,7 @@ import net.consensys.linea.async.toSafeFuture
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 interface VertxHttpRequestSender {
-  fun makeRequest(request: HttpRequest<Buffer>): SafeFuture<HttpResponse<Buffer>> =
-    request.send().toSafeFuture()
+  fun makeRequest(request: HttpRequest<Buffer>): SafeFuture<HttpResponse<Buffer>> = request.send().toSafeFuture()
 }
 
 /**

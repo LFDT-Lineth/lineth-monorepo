@@ -76,10 +76,7 @@ class GasUsageRatioWeightedAverageFeesCalculator(
     return weightedFeesSum / gasUsageRatiosSum
   }
 
-  private fun calculateWeightedBlobGasPrice(
-    feeHistory: FeeHistory,
-    baseFeePerBlobGasList: List<ULong>,
-  ): Double {
+  private fun calculateWeightedBlobGasPrice(feeHistory: FeeHistory, baseFeePerBlobGasList: List<ULong>): Double {
     val blobGasUsageRatio = if (feeHistory.blobGasUsedRatio.sumOf { it }.compareTo(0.0) == 0) {
       log.warn(
         "BlobGasUsedRatio is zero for all l1Blocks={}. Will fallback to Simple Average.",

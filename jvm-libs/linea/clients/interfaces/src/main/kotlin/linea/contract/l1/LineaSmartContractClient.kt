@@ -38,10 +38,7 @@ interface LineaSmartContractClientReadOnly {
   /**
    * Gets Type 2 StateRootHash for Linea Block
    */
-  fun blockStateRootHash(
-    blockParameter: BlockParameter,
-    lineaL2BlockNumber: ULong,
-  ): SafeFuture<ByteArray>
+  fun blockStateRootHash(blockParameter: BlockParameter, lineaL2BlockNumber: ULong): SafeFuture<ByteArray>
 }
 
 interface LineaRollupSmartContractClientReadOnly :

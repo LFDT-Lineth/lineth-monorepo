@@ -102,18 +102,21 @@ class AggregationTriggerCalculatorByDeadline(
   @Synchronized
   override fun newBlob(blobCounters: BlobCounters) {
     if (inFlightAggregation == null) {
-      inFlightAggregation = InFlightAggregation(
-        aggregationStartTimeStamp = blobCounters.startBlockTimestamp,
-        blobsToAggregate = BlobsToAggregate(blobCounters.startBlockNumber, blobCounters.endBlockNumber),
-      )
+      inFlightAggregation =
+        InFlightAggregation(
+          aggregationStartTimeStamp = blobCounters.startBlockTimestamp,
+          blobsToAggregate = BlobsToAggregate(blobCounters.startBlockNumber, blobCounters.endBlockNumber),
+        )
     } else {
-      inFlightAggregation = InFlightAggregation(
-        aggregationStartTimeStamp = inFlightAggregation!!.aggregationStartTimeStamp,
-        blobsToAggregate = BlobsToAggregate(
-          inFlightAggregation!!.blobsToAggregate.startBlockNumber,
-          blobCounters.endBlockNumber,
-        ),
-      )
+      inFlightAggregation =
+        InFlightAggregation(
+          aggregationStartTimeStamp = inFlightAggregation!!.aggregationStartTimeStamp,
+          blobsToAggregate =
+          BlobsToAggregate(
+            inFlightAggregation!!.blobsToAggregate.startBlockNumber,
+            blobCounters.endBlockNumber,
+          ),
+        )
     }
   }
 
@@ -142,17 +145,19 @@ class AggregationTriggerCalculatorByDeadlineRunner(
 
   override fun start(): CompletableFuture<Unit> {
     if (deadlineCheckerTimerId == null) {
-      deadlineCheckerAction = Handler<Long> {
-        aggregationTriggerByDeadline.checkAggregation().whenComplete { _, error ->
-          error?.let {
-            log.error("Error in checking for aggregation deadline: errorMessage={}", error.message, error)
+      deadlineCheckerAction =
+        Handler<Long> {
+          aggregationTriggerByDeadline.checkAggregation().whenComplete { _, error ->
+            error?.let {
+              log.error("Error in checking for aggregation deadline: errorMessage={}", error.message, error)
+            }
+            deadlineCheckerTimerId =
+              vertx.setTimer(
+                config.deadlineCheckInterval.inWholeMilliseconds,
+                deadlineCheckerAction,
+              )
           }
-          deadlineCheckerTimerId = vertx.setTimer(
-            config.deadlineCheckInterval.inWholeMilliseconds,
-            deadlineCheckerAction,
-          )
         }
-      }
       deadlineCheckerTimerId = vertx.setTimer(config.deadlineCheckInterval.inWholeMilliseconds, deadlineCheckerAction)
     }
     return SafeFuture.completedFuture(Unit)

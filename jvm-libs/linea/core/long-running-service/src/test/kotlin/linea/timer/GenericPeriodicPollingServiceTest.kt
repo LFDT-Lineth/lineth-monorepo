@@ -262,9 +262,7 @@ class GenericPeriodicPollingServiceTest {
 
   @Test
   @Timeout(3, timeUnit = TimeUnit.SECONDS)
-  fun `periodicPollingService start should be idempotent`(
-    testContext: VertxTestContext,
-  ) {
+  fun `periodicPollingService start should be idempotent`(testContext: VertxTestContext) {
     val pollingInterval = 60.milliseconds
     val mockTimerFactory = mock<TimerFactory>()
     val pollingService = spy(

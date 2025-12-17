@@ -75,11 +75,12 @@ class GoBackedBlobShnarfCalculator(
   constructor(version: ShnarfCalculatorVersion, metricsFacade: MetricsFacade) :
     this(GoNativeShnarfCalculatorFactory.getInstance(version), metricsFacade)
 
-  private val calculateShnarfTimer: Timer = metricsFacade.createTimer(
-    category = LineaMetricsCategory.BLOB,
-    name = "shnarf.calculation",
-    description = "Time taken to calculate the shnarf hash of the given blob",
-  )
+  private val calculateShnarfTimer: Timer =
+    metricsFacade.createTimer(
+      category = LineaMetricsCategory.BLOB,
+      name = "shnarf.calculation",
+      description = "Time taken to calculate the shnarf hash of the given blob",
+    )
 
   private val log: Logger = LogManager.getLogger(GoBackedBlobShnarfCalculator::class.java)
 
@@ -108,38 +109,40 @@ class GoBackedBlobShnarfCalculator(
       conflationOrder,
     )
 
-    val result = calculateShnarfTimer.captureTime {
-      delegate.CalculateShnarf(
-        eip4844Enabled = true,
-        compressedData = compressedDataB64,
-        parentStateRootHash = parentStateRootHash.encodeHex(),
-        finalStateRootHash = finalStateRootHash.encodeHex(),
-        prevShnarf = prevShnarf.encodeHex(),
-        conflationOrderStartingBlockNumber = conflationOrder.startingBlockNumber.toLong(),
-        conflationOrderUpperBoundariesLen = conflationOrder.upperBoundaries.size,
-        conflationOrderUpperBoundaries = conflationOrder.upperBoundaries.map { it.toLong() }.toLongArray(),
-      )
-    }
+    val result =
+      calculateShnarfTimer.captureTime {
+        delegate.CalculateShnarf(
+          eip4844Enabled = true,
+          compressedData = compressedDataB64,
+          parentStateRootHash = parentStateRootHash.encodeHex(),
+          finalStateRootHash = finalStateRootHash.encodeHex(),
+          prevShnarf = prevShnarf.encodeHex(),
+          conflationOrderStartingBlockNumber = conflationOrder.startingBlockNumber.toLong(),
+          conflationOrderUpperBoundariesLen = conflationOrder.upperBoundaries.size,
+          conflationOrderUpperBoundaries = conflationOrder.upperBoundaries.map { it.toLong() }.toLongArray(),
+        )
+      }
 
     if (result.errorMessage.isNotEmpty()) {
       val errorMessage = "Error while calculating Shnarf. error=${result.errorMessage}"
       throw RuntimeException(errorMessage)
     }
 
-    val domainResult = try {
-      ShnarfResult(
-        dataHash = result.dataHash.decodeHex(),
-        snarkHash = result.snarkHash.decodeHex(),
-        expectedX = result.expectedX.decodeHex(),
-        expectedY = result.expectedY.decodeHex(),
-        expectedShnarf = result.expectedShnarf.decodeHex(),
-        commitment = result.commitment.decodeHex(),
-        kzgProofContract = result.kzgProofContract.decodeHex(),
-        kzgProofSideCar = result.kzgProofSideCar.decodeHex(),
-      )
-    } catch (it: Exception) {
-      throw RuntimeException("Error while decoding Shnarf calculation response from Go: ${it.message}")
-    }
+    val domainResult =
+      try {
+        ShnarfResult(
+          dataHash = result.dataHash.decodeHex(),
+          snarkHash = result.snarkHash.decodeHex(),
+          expectedX = result.expectedX.decodeHex(),
+          expectedY = result.expectedY.decodeHex(),
+          expectedShnarf = result.expectedShnarf.decodeHex(),
+          commitment = result.commitment.decodeHex(),
+          kzgProofContract = result.kzgProofContract.decodeHex(),
+          kzgProofSideCar = result.kzgProofSideCar.decodeHex(),
+        )
+      } catch (it: Exception) {
+        throw RuntimeException("Error while decoding Shnarf calculation response from Go: ${it.message}")
+      }
 
     return domainResult
   }

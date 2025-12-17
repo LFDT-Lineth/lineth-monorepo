@@ -235,9 +235,7 @@ class PostgresAggregationsDao(
     }
   }
 
-  override fun findConsecutiveProvenBlobs(
-    fromBlockNumber: Long,
-  ): SafeFuture<List<BlobAndBatchCounters>> {
+  override fun findConsecutiveProvenBlobs(fromBlockNumber: Long): SafeFuture<List<BlobAndBatchCounters>> {
     return selectBatchesAndBlobsForAggregation
       .execute(Tuple.of(fromBlockNumber))
       .toSafeFuture()
@@ -333,9 +331,7 @@ class PostgresAggregationsDao(
       }
   }
 
-  override fun findHighestConsecutiveEndBlockNumber(
-    fromBlockNumber: Long?,
-  ): SafeFuture<Long?> {
+  override fun findHighestConsecutiveEndBlockNumber(fromBlockNumber: Long?): SafeFuture<Long?> {
     return if (fromBlockNumber != null) {
       SafeFuture.completedFuture(fromBlockNumber)
     } else {

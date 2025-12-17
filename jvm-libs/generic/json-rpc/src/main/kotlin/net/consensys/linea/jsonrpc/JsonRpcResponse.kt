@@ -83,11 +83,10 @@ data class JsonRpcError(
 
   companion object {
     @JvmStatic
-    fun invalidMethodParameter(message: String?): JsonRpcError =
-      JsonRpcError(
-        JsonRpcErrorCode.INVALID_PARAMS.code,
-        message ?: JsonRpcErrorCode.INVALID_PARAMS.message,
-      )
+    fun invalidMethodParameter(message: String?): JsonRpcError = JsonRpcError(
+      JsonRpcErrorCode.INVALID_PARAMS.code,
+      message ?: JsonRpcErrorCode.INVALID_PARAMS.message,
+    )
 
     @JvmStatic
     fun invalidMethodParameter(message: String, data: Any): JsonRpcError =
@@ -97,8 +96,7 @@ data class JsonRpcError(
     fun internalError(): JsonRpcError = JsonRpcErrorCode.INTERNAL_ERROR.toErrorObject()
 
     @JvmStatic
-    fun internalError(data: Any?): JsonRpcError =
-      JsonRpcErrorCode.INTERNAL_ERROR.toErrorObject(data)
+    fun internalError(data: Any?): JsonRpcError = JsonRpcErrorCode.INTERNAL_ERROR.toErrorObject(data)
 
     @JvmStatic
     fun unauthorized(): JsonRpcError = JsonRpcErrorCode.UNAUTHORIZED.toErrorObject()

@@ -111,14 +111,21 @@ allprojects {
           kotlin {
             // by default the target is every '.kt' and '.kts` file in the java sourcesets
             //ktfmt()
-            ktlint(libs.versions.ktlint.get().toString()).setEditorConfigPath("$rootDir/.editorconfig")
+            ktlint(libs.versions.ktlint.get().toString())
+                .editorConfigOverride([
+                  'ktlint_standard_discouraged-comment-location': 'disabled',
+                  'ktlint_standard_property-naming': 'disabled',
+                  'ktlint_standard_function-naming': 'disabled',
+                  'ktlint_standard_function-signature': 'disabled',
+                  //                  'ktlint_function_signature_rule_force_multiline_when_parameter_count_greater_or_equal_than': '1'
+                ])
           }
         }
         // spotless check applied to build.gradle (groovy) files
         groovyGradle {
           target '*.gradle'
           greclipse()
-          indentWithSpaces(2)
+          leadingTabsToSpaces(2)
           endWithNewline()
         }
 

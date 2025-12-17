@@ -16,20 +16,19 @@ import kotlin.reflect.KType
 import kotlin.time.Duration
 
 class TomlByteArrayHexDecoder : Decoder<ByteArray> {
-  override fun decode(
-    node: Node,
-    type: KType,
-    context: DecoderContext,
-  ): ConfigResult<ByteArray> {
+  override fun decode(node: Node, type: KType, context: DecoderContext): ConfigResult<ByteArray> {
     return when (node) {
-      is StringNode -> runCatching {
-        node.value.decodeHex()
-      }.fold(
-        { it.valid() },
-        { ConfigFailure.DecodeError(node, type).invalid() },
-      )
+      is StringNode ->
+        runCatching {
+          node.value.decodeHex()
+        }.fold(
+          { it.valid() },
+          { ConfigFailure.DecodeError(node, type).invalid() },
+        )
 
-      else -> { ConfigFailure.DecodeError(node, type).invalid() }
+      else -> {
+        ConfigFailure.DecodeError(node, type).invalid()
+      }
     }
   }
 
@@ -39,20 +38,19 @@ class TomlByteArrayHexDecoder : Decoder<ByteArray> {
 }
 
 class TomlKotlinDurationDecoder : Decoder<Duration> {
-  override fun decode(
-    node: Node,
-    type: KType,
-    context: DecoderContext,
-  ): ConfigResult<Duration> {
+  override fun decode(node: Node, type: KType, context: DecoderContext): ConfigResult<Duration> {
     return when (node) {
-      is StringNode -> runCatching {
-        Duration.parse(node.value)
-      }.fold(
-        { it.valid() },
-        { ConfigFailure.DecodeError(node, type).invalid() },
-      )
+      is StringNode ->
+        runCatching {
+          Duration.parse(node.value)
+        }.fold(
+          { it.valid() },
+          { ConfigFailure.DecodeError(node, type).invalid() },
+        )
 
-      else -> { ConfigFailure.DecodeError(node, type).invalid() }
+      else -> {
+        ConfigFailure.DecodeError(node, type).invalid()
+      }
     }
   }
 
@@ -62,26 +60,26 @@ class TomlKotlinDurationDecoder : Decoder<Duration> {
 }
 
 class TomlKotlinInstantDecoder : Decoder<Instant> {
-  override fun decode(
-    node: Node,
-    type: KType,
-    context: DecoderContext,
-  ): ConfigResult<Instant> {
+  override fun decode(node: Node, type: KType, context: DecoderContext): ConfigResult<Instant> {
     return when (node) {
-      is StringNode -> runCatching {
-        Instant.parse(node.value)
-      }.fold(
-        { it.valid() },
-        { ConfigFailure.DecodeError(node, type).invalid() },
-      )
-      is LongNode -> runCatching {
-        Instant.fromEpochSeconds(node.value)
-      }.fold(
-        { it.valid() },
-        { ConfigFailure.DecodeError(node, type).invalid() },
-      )
+      is StringNode ->
+        runCatching {
+          Instant.parse(node.value)
+        }.fold(
+          { it.valid() },
+          { ConfigFailure.DecodeError(node, type).invalid() },
+        )
+      is LongNode ->
+        runCatching {
+          Instant.fromEpochSeconds(node.value)
+        }.fold(
+          { it.valid() },
+          { ConfigFailure.DecodeError(node, type).invalid() },
+        )
 
-      else -> { ConfigFailure.DecodeError(node, type).invalid() }
+      else -> {
+        ConfigFailure.DecodeError(node, type).invalid()
+      }
     }
   }
 
@@ -91,20 +89,19 @@ class TomlKotlinInstantDecoder : Decoder<Instant> {
 }
 
 class TomlSignerTypeDecoder : Decoder<SignerConfigToml.SignerType> {
-  override fun decode(
-    node: Node,
-    type: KType,
-    context: DecoderContext,
-  ): ConfigResult<SignerConfigToml.SignerType> {
+  override fun decode(node: Node, type: KType, context: DecoderContext): ConfigResult<SignerConfigToml.SignerType> {
     return when (node) {
-      is StringNode -> runCatching {
-        SignerConfigToml.SignerType.valueOfIgnoreCase(node.value.lowercase())
-      }.fold(
-        { it.valid() },
-        { ConfigFailure.DecodeError(node, type).invalid() },
-      )
+      is StringNode ->
+        runCatching {
+          SignerConfigToml.SignerType.valueOfIgnoreCase(node.value.lowercase())
+        }.fold(
+          { it.valid() },
+          { ConfigFailure.DecodeError(node, type).invalid() },
+        )
 
-      else -> { ConfigFailure.DecodeError(node, type).invalid() }
+      else -> {
+        ConfigFailure.DecodeError(node, type).invalid()
+      }
     }
   }
 

@@ -138,9 +138,7 @@ class SubmissionsFetchingTask(
   fun finalizationsReadyToImport(): Int = decompressedBlocksQueue.size
 
   @Synchronized
-  fun pruneQueueForElementsUpToInclusive(
-    elHeadBlockNumber: ULong,
-  ) {
+  fun pruneQueueForElementsUpToInclusive(elHeadBlockNumber: ULong) {
     decompressedBlocksQueue.removeIf {
       it.submissionEvents.dataFinalizedEvent.event.endBlockNumber <= elHeadBlockNumber
     }

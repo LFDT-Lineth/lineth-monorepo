@@ -73,10 +73,7 @@ data class MessageAnchoringConfigToml(
     val feeHistoryRewardPercentile: UInt = 15u,
   )
 
-  fun reified(
-    l1DefaultEndpoint: URL?,
-    l2DefaultEndpoint: URL?,
-  ): MessageAnchoringConfig {
+  fun reified(l1DefaultEndpoint: URL?, l2DefaultEndpoint: URL?): MessageAnchoringConfig {
     return MessageAnchoringConfig(
       disabled = disabled,
       l1Endpoint = l1Endpoint ?: l1DefaultEndpoint ?: throw AssertionError("l1Endpoint must be set"),

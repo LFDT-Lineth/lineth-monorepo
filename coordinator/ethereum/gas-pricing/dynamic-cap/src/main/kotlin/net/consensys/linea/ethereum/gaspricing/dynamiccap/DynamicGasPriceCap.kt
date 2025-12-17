@@ -53,17 +53,11 @@ interface GasPriceCapCalculator {
 interface GasPriceCapFeeHistoryCache {
   fun getCachedNumOfFeeHistoriesFromBlockNumber(): Int
 
-  fun cacheNumOfFeeHistoriesFromBlockNumber(
-    rewardPercentile: Double,
-    fromBlockNumber: Long,
-  ): SafeFuture<Int>
+  fun cacheNumOfFeeHistoriesFromBlockNumber(rewardPercentile: Double, fromBlockNumber: Long): SafeFuture<Int>
 
   fun getCachedPercentileGasFees(): PercentileGasFees
 
-  fun cachePercentileGasFees(
-    percentile: Double,
-    fromBlockNumber: Long,
-  ): SafeFuture<Unit>
+  fun cachePercentileGasFees(percentile: Double, fromBlockNumber: Long): SafeFuture<Unit>
 }
 
 interface FeeHistoriesRepositoryWithCache : FeeHistoriesRepository, GasPriceCapFeeHistoryCache

@@ -41,10 +41,7 @@ class ProverClientFactory(
     )
   }
 
-  fun executionProverClient(
-    tracesVersion: String,
-    stateManagerVersion: String,
-  ): ExecutionProverClientV2 {
+  fun executionProverClient(tracesVersion: String, stateManagerVersion: String): ExecutionProverClientV2 {
     return createClient(
       proverAConfig = config.proverA.execution,
       proverBConfig = config.proverB?.execution,

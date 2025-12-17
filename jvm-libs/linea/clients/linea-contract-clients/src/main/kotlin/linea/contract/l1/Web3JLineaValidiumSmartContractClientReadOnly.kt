@@ -42,28 +42,19 @@ open class Web3JLineaValidiumSmartContractClientReadOnly(
       .toSafeFuture()
   }
 
-  override fun getMessageRollingHash(
-    blockParameter: BlockParameter,
-    messageNumber: Long,
-  ): SafeFuture<ByteArray> {
+  override fun getMessageRollingHash(blockParameter: BlockParameter, messageNumber: Long): SafeFuture<ByteArray> {
     require(messageNumber >= 0) { "messageNumber must be greater than or equal to 0" }
     return contractClientAtBlock(blockParameter).rollingHashes(messageNumber.toBigInteger()).sendAsync().toSafeFuture()
   }
 
-  override fun isBlobShnarfPresent(
-    blockParameter: BlockParameter,
-    shnarf: ByteArray,
-  ): SafeFuture<Boolean> {
+  override fun isBlobShnarfPresent(blockParameter: BlockParameter, shnarf: ByteArray): SafeFuture<Boolean> {
     return contractClientAtBlock(blockParameter)
       .blobShnarfExists(shnarf).sendAsync()
       .thenApply { it != BigInteger.ZERO }
       .toSafeFuture()
   }
 
-  override fun blockStateRootHash(
-    blockParameter: BlockParameter,
-    lineaL2BlockNumber: ULong,
-  ): SafeFuture<ByteArray> {
+  override fun blockStateRootHash(blockParameter: BlockParameter, lineaL2BlockNumber: ULong): SafeFuture<ByteArray> {
     return contractClientAtBlock(blockParameter)
       .stateRootHashes(lineaL2BlockNumber.toBigInteger()).sendAsync()
       .toSafeFuture()

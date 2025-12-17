@@ -2,11 +2,7 @@ package linea.ethapi.cursor
 
 import linea.SearchDirection
 
-internal fun rangeChunks(
-  start: ULong,
-  end: ULong,
-  chunkSize: Int,
-): List<ULongRange> {
+internal fun rangeChunks(start: ULong, end: ULong, chunkSize: Int): List<ULongRange> {
   return (start..end step chunkSize.toLong())
     .map { chunkStart ->
       val chunkEnd = (chunkStart + chunkSize.toUInt() - 1u).coerceAtMost(end)

@@ -34,6 +34,7 @@ data class SignerConfigToml(
           ?: throw IllegalArgumentException("Unknown signer type: $name")
       }
     }
+
     fun reified(): SignerConfig.SignerType {
       return when (this) {
         WEB3J -> SignerConfig.SignerType.WEB3J
@@ -143,13 +144,15 @@ data class SignerConfigToml(
     return SignerConfig(
       type = type.reified(),
       web3j = web3j?.let { SignerConfig.Web3jConfig(it.privateKey.value.decodeHex()) },
-      web3signer = web3signer?.let {
+      web3signer =
+      web3signer?.let {
         SignerConfig.Web3SignerConfig(
           endpoint = it.endpoint,
           publicKey = it.publicKey,
           maxPoolSize = it.maxPoolSize,
           keepAlive = it.keepAlive,
-          tls = it.tls?.let { tls ->
+          tls =
+          it.tls?.let { tls ->
             SignerConfig.Web3SignerConfig.TlsConfig(
               keyStorePath = tls.keyStorePath,
               keyStorePassword = tls.keyStorePassword,

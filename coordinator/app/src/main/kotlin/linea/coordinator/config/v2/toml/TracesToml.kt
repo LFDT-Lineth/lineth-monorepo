@@ -10,10 +10,11 @@ data class TracesToml(
   val endpoints: List<URL>? = null,
   val requestLimitPerEndpoint: UInt = UInt.MAX_VALUE,
   val requestTimeout: Duration? = null,
-  val requestRetries: RequestRetriesToml = RequestRetriesToml.endlessRetry(
-    backoffDelay = 1.seconds,
-    failuresWarningThreshold = 3u,
-  ),
+  val requestRetries: RequestRetriesToml =
+    RequestRetriesToml.endlessRetry(
+      backoffDelay = 1.seconds,
+      failuresWarningThreshold = 3u,
+    ),
   val counters: ClientApiConfigToml? = null,
   val conflation: ClientApiConfigToml? = null,
   val ignoreTracesGeneratorErrors: Boolean = false,
@@ -53,17 +54,18 @@ data class TracesToml(
   }
 
   fun reified(): TracesConfig {
-    val common = if (counters !== null || conflation != null) {
-      // when specific counters or conflation are set, common must be null
-      null
-    } else {
-      TracesConfig.ClientApiConfig(
-        endpoints = endpoints!!,
-        requestLimitPerEndpoint = requestLimitPerEndpoint,
-        requestTimeout = requestTimeout,
-        requestRetries = requestRetries.asDomain,
-      )
-    }
+    val common =
+      if (counters !== null || conflation != null) {
+        // when specific counters or conflation are set, common must be null
+        null
+      } else {
+        TracesConfig.ClientApiConfig(
+          endpoints = endpoints!!,
+          requestLimitPerEndpoint = requestLimitPerEndpoint,
+          requestTimeout = requestTimeout,
+          requestRetries = requestRetries.asDomain,
+        )
+      }
 
     return TracesConfig(
       expectedTracesApiVersion = expectedTracesApiVersion,

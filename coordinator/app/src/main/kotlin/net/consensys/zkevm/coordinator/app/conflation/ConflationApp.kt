@@ -458,9 +458,7 @@ class ConflationApp(
     return lastProvenBlockNumberProvider.updateLatestL1FinalizedBlock(blockNumber)
   }
 
-  private fun createDeadlineConflationCalculatorRunner(
-    l2Web3jClient: Web3j,
-  ): DeadlineConflationCalculatorRunner? {
+  private fun createDeadlineConflationCalculatorRunner(l2Web3jClient: Web3j): DeadlineConflationCalculatorRunner? {
     if (configs.conflation.isDisabled() || configs.conflation.conflationDeadline == null) {
       log.info("Conflation deadline calculator is disabled")
       return null
@@ -504,9 +502,7 @@ class ConflationApp(
     }
   }
 
-  private fun addTimestampHardForkCalculatorIfDefined(
-    calculators: MutableList<ConflationCalculator>,
-  ) {
+  private fun addTimestampHardForkCalculatorIfDefined(calculators: MutableList<ConflationCalculator>) {
     if (configs.conflation.proofAggregation.timestampBasedHardForks.isNotEmpty()) {
       calculators.add(
         TimestampHardForkConflationCalculator(

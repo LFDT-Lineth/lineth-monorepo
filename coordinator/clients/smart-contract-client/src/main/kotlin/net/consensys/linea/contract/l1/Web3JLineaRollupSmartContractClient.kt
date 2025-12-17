@@ -34,7 +34,6 @@ class Web3JLineaRollupSmartContractClient internal constructor(
   log = log,
 ),
   LineaRollupSmartContractClient {
-
   companion object {
     fun load(
       contractAddress: String,
@@ -44,21 +43,23 @@ class Web3JLineaRollupSmartContractClient internal constructor(
       smartContractErrors: SmartContractErrors,
       useEthEstimateGas: Boolean = false,
     ): Web3JLineaRollupSmartContractClient {
-      val web3JContractAsyncHelper = Web3JContractAsyncHelper(
-        contractAddress = contractAddress,
-        web3j = web3j,
-        transactionManager = transactionManager,
-        contractGasProvider = contractGasProvider,
-        smartContractErrors = smartContractErrors,
-        useEthEstimateGas = useEthEstimateGas,
-      )
-      val lineaRollupEnhancedWrapper = LineaRollupEnhancedWrapper(
-        contractAddress = contractAddress,
-        web3j = web3j,
-        transactionManager = transactionManager,
-        contractGasProvider = contractGasProvider,
-        web3jContractHelper = web3JContractAsyncHelper,
-      )
+      val web3JContractAsyncHelper =
+        Web3JContractAsyncHelper(
+          contractAddress = contractAddress,
+          web3j = web3j,
+          transactionManager = transactionManager,
+          contractGasProvider = contractGasProvider,
+          smartContractErrors = smartContractErrors,
+          useEthEstimateGas = useEthEstimateGas,
+        )
+      val lineaRollupEnhancedWrapper =
+        LineaRollupEnhancedWrapper(
+          contractAddress = contractAddress,
+          web3j = web3j,
+          transactionManager = transactionManager,
+          contractGasProvider = contractGasProvider,
+          web3jContractHelper = web3JContractAsyncHelper,
+        )
       return Web3JLineaRollupSmartContractClient(
         contractAddress = contractAddress,
         web3j = web3j,
@@ -111,10 +112,7 @@ class Web3JLineaRollupSmartContractClient internal constructor(
    * Sends EIP4844 blob carrying transaction to the smart contract.
    * Uses SMC `submitBlobs` function that supports multiple blobs per call.
    */
-  override fun submitBlobs(
-    blobs: List<BlobRecord>,
-    gasPriceCaps: GasPriceCaps?,
-  ): SafeFuture<String> {
+  override fun submitBlobs(blobs: List<BlobRecord>, gasPriceCaps: GasPriceCaps?): SafeFuture<String> {
     return getVersion()
       .thenCompose { version ->
         val function = Web3JLineaRollupFunctionBuilders.buildSubmitBlobsFunction(version, blobs)
@@ -126,10 +124,7 @@ class Web3JLineaRollupSmartContractClient internal constructor(
       }
   }
 
-  override fun submitBlobsEthCall(
-    blobs: List<BlobRecord>,
-    gasPriceCaps: GasPriceCaps?,
-  ): SafeFuture<String?> {
+  override fun submitBlobsEthCall(blobs: List<BlobRecord>, gasPriceCaps: GasPriceCaps?): SafeFuture<String?> {
     return getVersion()
       .thenCompose { version ->
         val function = Web3JLineaRollupFunctionBuilders.buildSubmitBlobsFunction(version, blobs)
@@ -150,13 +145,14 @@ class Web3JLineaRollupSmartContractClient internal constructor(
   ): SafeFuture<String> {
     return getVersion()
       .thenCompose { version ->
-        val function = Web3JLineaRollupFunctionBuilders.buildFinalizeBlocksFunction(
-          version,
-          aggregation,
-          aggregationLastBlob,
-          parentL1RollingHash,
-          parentL1RollingHashMessageNumber,
-        )
+        val function =
+          Web3JLineaRollupFunctionBuilders.buildFinalizeBlocksFunction(
+            version,
+            aggregation,
+            aggregationLastBlob,
+            parentL1RollingHash,
+            parentL1RollingHashMessageNumber,
+          )
         web3jContractHelper
           .sendTransactionAsync(function, BigInteger.ZERO, gasPriceCaps)
           .thenApply { result -> result.transactionHash }
@@ -171,13 +167,14 @@ class Web3JLineaRollupSmartContractClient internal constructor(
   ): SafeFuture<String?> {
     return getVersion()
       .thenCompose { version ->
-        val function = Web3JLineaRollupFunctionBuilders.buildFinalizeBlocksFunction(
-          version,
-          aggregation,
-          aggregationLastBlob,
-          parentL1RollingHash,
-          parentL1RollingHashMessageNumber,
-        )
+        val function =
+          Web3JLineaRollupFunctionBuilders.buildFinalizeBlocksFunction(
+            version,
+            aggregation,
+            aggregationLastBlob,
+            parentL1RollingHash,
+            parentL1RollingHashMessageNumber,
+          )
         web3jContractHelper.executeEthCall(function)
       }
   }
@@ -191,13 +188,14 @@ class Web3JLineaRollupSmartContractClient internal constructor(
   ): SafeFuture<String> {
     return getVersion()
       .thenCompose { version ->
-        val function = Web3JLineaRollupFunctionBuilders.buildFinalizeBlocksFunction(
-          version,
-          aggregation,
-          aggregationLastBlob,
-          parentL1RollingHash,
-          parentL1RollingHashMessageNumber,
-        )
+        val function =
+          Web3JLineaRollupFunctionBuilders.buildFinalizeBlocksFunction(
+            version,
+            aggregation,
+            aggregationLastBlob,
+            parentL1RollingHash,
+            parentL1RollingHashMessageNumber,
+          )
         web3jContractHelper.sendTransactionAfterEthCallAsync(function, BigInteger.ZERO, gasPriceCaps)
           .thenApply { result -> result.transactionHash }
       }

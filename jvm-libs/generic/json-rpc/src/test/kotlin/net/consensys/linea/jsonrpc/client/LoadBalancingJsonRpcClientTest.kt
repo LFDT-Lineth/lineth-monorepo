@@ -51,9 +51,7 @@ class LoadBalancingJsonRpcClientTest {
   /**
    * {"jsonrpc":"2.0","id":34923,"method":"linea_getBlockTracesCountersV2","params":[{"blockNumber":22644557,"expectedTracesEngineVersion":"beta-v2.1-rc16.2"}]}
    */
-  private fun tracesCountersRequest(
-    blockNumber: Int,
-  ): JsonRpcRequestListParams = rpcRequest(
+  private fun tracesCountersRequest(blockNumber: Int): JsonRpcRequestListParams = rpcRequest(
     "linea_getBlockTracesCountersV2",
     listOf(mapOf("blockNumber" to blockNumber)),
   )
@@ -162,10 +160,7 @@ class LoadBalancingJsonRpcClientTest {
       rpcClients = listOf(client1, client2),
       requestLimitPerEndpoint = 1u,
       requestPriorityComparator = object : Comparator<JsonRpcRequest> {
-        override fun compare(
-          o1: JsonRpcRequest,
-          o2: JsonRpcRequest,
-        ): Int {
+        override fun compare(o1: JsonRpcRequest, o2: JsonRpcRequest): Int {
           throw RuntimeException("Ups, cant parse this request")
         }
       },

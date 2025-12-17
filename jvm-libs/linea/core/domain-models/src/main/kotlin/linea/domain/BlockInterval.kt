@@ -17,17 +17,11 @@ interface BlockInterval {
   fun contains(blockNumber: ULong): Boolean = blockNumber >= startBlockNumber && blockNumber <= endBlockNumber
 
   companion object {
-    operator fun invoke(
-      startBlockNumber: ULong,
-      endBlockNumber: ULong,
-    ): BlockInterval {
+    operator fun invoke(startBlockNumber: ULong, endBlockNumber: ULong): BlockInterval {
       return BlockIntervalData(startBlockNumber, endBlockNumber)
     }
 
-    operator fun invoke(
-      startBlockNumber: Number,
-      endBlockNumber: Number,
-    ): BlockInterval {
+    operator fun invoke(startBlockNumber: Number, endBlockNumber: Number): BlockInterval {
       assert(startBlockNumber.toLong() >= 0 && endBlockNumber.toLong() >= 0) {
         "startBlockNumber=${startBlockNumber.toLong()} and " +
           "endBlockNumber=${endBlockNumber.toLong()} must be non-negative!"
@@ -39,10 +33,7 @@ interface BlockInterval {
     /**
      * Please use BlockInterval(startBlockNumber, endBlockNumber) instead
      */
-    fun between(
-      startBlockNumber: ULong,
-      endBlockNumber: ULong,
-    ): BlockInterval {
+    fun between(startBlockNumber: ULong, endBlockNumber: ULong): BlockInterval {
       return BlockIntervalData(startBlockNumber, endBlockNumber)
     }
   }
@@ -73,9 +64,7 @@ fun List<BlockInterval>.toBlockIntervalsString(): String {
   )
 }
 
-fun <T : BlockInterval> List<T>.filterOutWithEndBlockNumberBefore(
-  endBlockNumberInclusive: ULong,
-): List<T> {
+fun <T : BlockInterval> List<T>.filterOutWithEndBlockNumberBefore(endBlockNumberInclusive: ULong): List<T> {
   return this.filter { int -> int.endBlockNumber > endBlockNumberInclusive }
 }
 

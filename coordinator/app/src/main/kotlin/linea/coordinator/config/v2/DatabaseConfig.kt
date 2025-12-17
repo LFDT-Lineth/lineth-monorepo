@@ -14,9 +14,10 @@ data class DatabaseConfig(
   val readPoolSize: Int = 10,
   val readPipeliningLimit: Int = 10,
   val transactionalPoolSize: Int = 10,
-  val persistenceRetries: RetryConfig = RetryConfig(
-    backoffDelay = 1.seconds,
-    timeout = 10.minutes,
-    failuresWarningThreshold = 3u,
-  ),
+  val persistenceRetries: RetryConfig =
+    RetryConfig(
+      backoffDelay = 1.seconds,
+      timeout = 10.minutes,
+      failuresWarningThreshold = 3u,
+    ),
 )

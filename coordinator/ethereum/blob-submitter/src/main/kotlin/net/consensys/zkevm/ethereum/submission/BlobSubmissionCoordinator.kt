@@ -158,17 +158,12 @@ class BlobSubmissionCoordinator(
     }
   }
 
-  private fun blobBelongsToAnyAggregation(
-    blobRecord: BlobRecord,
-    proofsToFinalize: List<ProofToFinalize>,
-  ): Boolean {
+  private fun blobBelongsToAnyAggregation(blobRecord: BlobRecord, proofsToFinalize: List<ProofToFinalize>): Boolean {
     return proofsToFinalize
       .any { blobRecord.startBlockNumber in it.startBlockNumber..it.endBlockNumber }
   }
 
-  private fun submitBlobsAfterEthCall(
-    blobsChunks: List<List<BlobRecord>>,
-  ): SafeFuture<Unit> {
+  private fun submitBlobsAfterEthCall(blobsChunks: List<List<BlobRecord>>): SafeFuture<Unit> {
     return blobSubmitter
       .submitBlobCall(blobsChunks.first())
       .thenApply { true }

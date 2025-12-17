@@ -2,21 +2,11 @@ package net.consensys.linea.jsonrpc.argument
 
 import kotlin.reflect.KClass
 
-fun <T : Any> getArgument(
-  clazz: KClass<T>,
-  arguments: List<*>,
-  argPosition: Int,
-  argumentName: String,
-): T {
+fun <T : Any> getArgument(clazz: KClass<T>, arguments: List<*>, argPosition: Int, argumentName: String): T {
   return getArgument(clazz, arguments, argPosition, argumentName, nullable = false)!!
 }
 
-fun <T : Any> getOptionalArgument(
-  clazz: KClass<T>,
-  arguments: List<*>,
-  argPosition: Int,
-  argumentName: String,
-): T? {
+fun <T : Any> getOptionalArgument(clazz: KClass<T>, arguments: List<*>, argPosition: Int, argumentName: String): T? {
   return getArgument(clazz, arguments, argPosition, argumentName, nullable = true)
 }
 

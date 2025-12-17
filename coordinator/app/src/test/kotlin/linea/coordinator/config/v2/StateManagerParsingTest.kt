@@ -10,7 +10,8 @@ import kotlin.time.Duration.Companion.seconds
 
 class StateManagerParsingTest {
   companion object {
-    val toml = """
+    val toml =
+      """
       [state-manager]
       version = "2.2.0"
       endpoints = ["http://shomei:8888/"]
@@ -20,37 +21,42 @@ class StateManagerParsingTest {
       max-retries = 5
       backoff-delay = "PT2S"
       failures-warning-threshold = 2
-    """.trimIndent()
+      """.trimIndent()
 
-    val config = StateManagerToml(
-      version = "2.2.0",
-      endpoints = listOf("http://shomei:8888/".toURL()),
-      requestLimitPerEndpoint = 3u,
-      requestTimeout = 30.seconds,
-      requestRetries = RequestRetriesToml(
-        maxRetries = 5u,
-        backoffDelay = 2.seconds,
-        failuresWarningThreshold = 2u,
-      ),
-    )
+    val config =
+      StateManagerToml(
+        version = "2.2.0",
+        endpoints = listOf("http://shomei:8888/".toURL()),
+        requestLimitPerEndpoint = 3u,
+        requestTimeout = 30.seconds,
+        requestRetries =
+        RequestRetriesToml(
+          maxRetries = 5u,
+          backoffDelay = 2.seconds,
+          failuresWarningThreshold = 2u,
+        ),
+      )
 
-    val tomlMinimal = """
+    val tomlMinimal =
+      """
       [state-manager]
       version = "2.2.0"
       endpoints = ["http://shomei:8888/"]
-    """.trimIndent()
+      """.trimIndent()
 
-    val configMinimal = StateManagerToml(
-      version = "2.2.0",
-      endpoints = listOf("http://shomei:8888/".toURL()),
-      requestLimitPerEndpoint = UInt.MAX_VALUE,
-      requestTimeout = null,
-      requestRetries = RequestRetriesToml(
-        maxRetries = null,
-        backoffDelay = 1.seconds,
-        failuresWarningThreshold = 3u,
-      ),
-    )
+    val configMinimal =
+      StateManagerToml(
+        version = "2.2.0",
+        endpoints = listOf("http://shomei:8888/".toURL()),
+        requestLimitPerEndpoint = UInt.MAX_VALUE,
+        requestTimeout = null,
+        requestRetries =
+        RequestRetriesToml(
+          maxRetries = null,
+          backoffDelay = 1.seconds,
+          failuresWarningThreshold = 3u,
+        ),
+      )
   }
 
   data class WrapperConfig(

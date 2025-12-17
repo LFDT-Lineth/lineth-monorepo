@@ -55,30 +55,21 @@ class FeeHistoriesRepositoryImpl(
       }
   }
 
-  override fun findBaseFeePerGasAtPercentile(
-    percentile: Double,
-    fromBlockNumber: Long,
-  ): SafeFuture<ULong?> {
+  override fun findBaseFeePerGasAtPercentile(percentile: Double, fromBlockNumber: Long): SafeFuture<ULong?> {
     return feeHistoriesDao.findBaseFeePerGasAtPercentile(
       percentile,
       fromBlockNumber,
     )
   }
 
-  override fun findBaseFeePerBlobGasAtPercentile(
-    percentile: Double,
-    fromBlockNumber: Long,
-  ): SafeFuture<ULong?> {
+  override fun findBaseFeePerBlobGasAtPercentile(percentile: Double, fromBlockNumber: Long): SafeFuture<ULong?> {
     return feeHistoriesDao.findBaseFeePerBlobGasAtPercentile(
       percentile,
       fromBlockNumber,
     )
   }
 
-  override fun findAverageRewardAtPercentile(
-    rewardPercentile: Double,
-    fromBlockNumber: Long,
-  ): SafeFuture<ULong?> {
+  override fun findAverageRewardAtPercentile(rewardPercentile: Double, fromBlockNumber: Long): SafeFuture<ULong?> {
     return feeHistoriesDao.findAverageRewardAtPercentile(
       rewardPercentile,
       fromBlockNumber,
@@ -89,10 +80,7 @@ class FeeHistoriesRepositoryImpl(
     return feeHistoriesDao.findHighestBlockNumberWithPercentile(rewardPercentile)
   }
 
-  override fun getNumOfFeeHistoriesFromBlockNumber(
-    rewardPercentile: Double,
-    fromBlockNumber: Long,
-  ): SafeFuture<Int> {
+  override fun getNumOfFeeHistoriesFromBlockNumber(rewardPercentile: Double, fromBlockNumber: Long): SafeFuture<Int> {
     return feeHistoriesDao.getNumOfFeeHistoriesFromBlockNumber(
       rewardPercentile,
       fromBlockNumber,
@@ -119,10 +107,7 @@ class FeeHistoriesRepositoryImpl(
     return lastPercentileGasFees.get()
   }
 
-  override fun cachePercentileGasFees(
-    percentile: Double,
-    fromBlockNumber: Long,
-  ): SafeFuture<Unit> {
+  override fun cachePercentileGasFees(percentile: Double, fromBlockNumber: Long): SafeFuture<Unit> {
     return findBaseFeePerGasAtPercentile(
       percentile,
       fromBlockNumber,
@@ -151,9 +136,7 @@ class FeeHistoriesRepositoryImpl(
     }
   }
 
-  override fun deleteFeeHistoriesUpToBlockNumber(
-    blockNumberInclusive: Long,
-  ): SafeFuture<Int> {
+  override fun deleteFeeHistoriesUpToBlockNumber(blockNumberInclusive: Long): SafeFuture<Int> {
     return feeHistoriesDao.deleteFeeHistoriesUpToBlockNumber(blockNumberInclusive)
   }
 }

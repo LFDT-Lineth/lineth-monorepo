@@ -19,7 +19,6 @@ import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
 
 class AggregationTriggerCalculatorByDeadlineTest {
-
   @Test
   fun `trigger aggregation when past deadline with activity on l2`() {
     val fakeClock = FakeFixedClock(Instant.parse("2025-01-01T00:00:00.000Z"))
@@ -27,22 +26,24 @@ class AggregationTriggerCalculatorByDeadlineTest {
     val aggregationDeadline = 10.days
 
     var aggregationTrigger: AggregationTriggerType? = null
-    val aggregationTriggerTypeHandler = AggregationTriggerHandler {
-      aggregationTrigger = it.aggregationTriggerType
-      SafeFuture.completedFuture(Unit)
-    }
+    val aggregationTriggerTypeHandler =
+      AggregationTriggerHandler {
+        aggregationTrigger = it.aggregationTriggerType
+        SafeFuture.completedFuture(Unit)
+      }
 
-    val aggregationTriggerByDeadline = AggregationTriggerCalculatorByDeadline(
-      AggregationTriggerCalculatorByDeadline.Config(
-        aggregationDeadline,
-        noL2ActivityTimeout = 5.minutes,
-        waitForNoL2ActivityToTriggerAggregation = false,
-      ),
-      fakeClock,
-      mockLatestSafeBlockProvider,
-    ).apply {
-      onAggregationTrigger(aggregationTriggerTypeHandler)
-    }
+    val aggregationTriggerByDeadline =
+      AggregationTriggerCalculatorByDeadline(
+        AggregationTriggerCalculatorByDeadline.Config(
+          aggregationDeadline,
+          noL2ActivityTimeout = 5.minutes,
+          waitForNoL2ActivityToTriggerAggregation = false,
+        ),
+        fakeClock,
+        mockLatestSafeBlockProvider,
+      ).apply {
+        onAggregationTrigger(aggregationTriggerTypeHandler)
+      }
 
     aggregationTriggerByDeadline.checkAggregation().get()
     assertThat(aggregationTrigger).isNull()
@@ -101,20 +102,22 @@ class AggregationTriggerCalculatorByDeadlineTest {
       )
 
     val deadlineTriggered = SafeFuture<AggregationTrigger?>()
-    val aggregationTriggerTypeHandler = AggregationTriggerHandler {
-      if (it.aggregationTriggerType == AggregationTriggerType.TIME_LIMIT) {
-        deadlineTriggered.complete(it)
-      } else {
-        deadlineTriggered.complete(null)
+    val aggregationTriggerTypeHandler =
+      AggregationTriggerHandler {
+        if (it.aggregationTriggerType == AggregationTriggerType.TIME_LIMIT) {
+          deadlineTriggered.complete(it)
+        } else {
+          deadlineTriggered.complete(null)
+        }
+        SafeFuture.completedFuture(Unit)
       }
-      SafeFuture.completedFuture(Unit)
-    }
 
-    val aggregationTriggerByDeadline = AggregationTriggerCalculatorByDeadline(
-      AggregationTriggerCalculatorByDeadline.Config(aggregationDeadline, aggregationDeadlineDelay, true),
-      mockClock,
-      mockLatestSafeBlockProvider,
-    )
+    val aggregationTriggerByDeadline =
+      AggregationTriggerCalculatorByDeadline(
+        AggregationTriggerCalculatorByDeadline.Config(aggregationDeadline, aggregationDeadlineDelay, true),
+        mockClock,
+        mockLatestSafeBlockProvider,
+      )
 
     aggregationTriggerByDeadline.onAggregationTrigger(aggregationTriggerTypeHandler)
 
@@ -169,23 +172,25 @@ class AggregationTriggerCalculatorByDeadlineTest {
     val mockLatestSafeBlockProvider = mock<SafeBlockProvider>()
 
     val deadlineTriggered = SafeFuture<AggregationTrigger?>()
-    val aggregationTriggerTypeHandler = AggregationTriggerHandler {
-      if (it.aggregationTriggerType == AggregationTriggerType.TIME_LIMIT) {
-        deadlineTriggered.complete(it)
-      } else {
-        deadlineTriggered.complete(null)
+    val aggregationTriggerTypeHandler =
+      AggregationTriggerHandler {
+        if (it.aggregationTriggerType == AggregationTriggerType.TIME_LIMIT) {
+          deadlineTriggered.complete(it)
+        } else {
+          deadlineTriggered.complete(null)
+        }
+        SafeFuture.completedFuture(Unit)
       }
-      SafeFuture.completedFuture(Unit)
-    }
 
     val deadline = 200.milliseconds
     val aggregationDeadlineDelay = 100.milliseconds
 
-    val aggregationTriggerByDeadline = AggregationTriggerCalculatorByDeadline(
-      AggregationTriggerCalculatorByDeadline.Config(deadline, aggregationDeadlineDelay, true),
-      mockClock,
-      mockLatestSafeBlockProvider,
-    )
+    val aggregationTriggerByDeadline =
+      AggregationTriggerCalculatorByDeadline(
+        AggregationTriggerCalculatorByDeadline.Config(deadline, aggregationDeadlineDelay, true),
+        mockClock,
+        mockLatestSafeBlockProvider,
+      )
     aggregationTriggerByDeadline.onAggregationTrigger(aggregationTriggerTypeHandler)
 
     whenever(mockClock.now()).thenReturn(Instant.fromEpochMilliseconds(50))
@@ -282,20 +287,22 @@ class AggregationTriggerCalculatorByDeadlineTest {
       )
 
     val deadlineTriggered = SafeFuture<AggregationTrigger?>()
-    val aggregationTriggerTypeHandler = AggregationTriggerHandler {
-      if (it.aggregationTriggerType == AggregationTriggerType.TIME_LIMIT) {
-        deadlineTriggered.complete(it)
-      } else {
-        deadlineTriggered.complete(null)
+    val aggregationTriggerTypeHandler =
+      AggregationTriggerHandler {
+        if (it.aggregationTriggerType == AggregationTriggerType.TIME_LIMIT) {
+          deadlineTriggered.complete(it)
+        } else {
+          deadlineTriggered.complete(null)
+        }
+        SafeFuture.completedFuture(Unit)
       }
-      SafeFuture.completedFuture(Unit)
-    }
 
-    val aggregationTriggerByDeadline = AggregationTriggerCalculatorByDeadline(
-      AggregationTriggerCalculatorByDeadline.Config(aggregationDeadline, aggregationDeadlineDelay, true),
-      mockClock,
-      mockLatestSafeBlockProvider,
-    )
+    val aggregationTriggerByDeadline =
+      AggregationTriggerCalculatorByDeadline(
+        AggregationTriggerCalculatorByDeadline.Config(aggregationDeadline, aggregationDeadlineDelay, true),
+        mockClock,
+        mockLatestSafeBlockProvider,
+      )
 
     aggregationTriggerByDeadline.onAggregationTrigger(aggregationTriggerTypeHandler)
 

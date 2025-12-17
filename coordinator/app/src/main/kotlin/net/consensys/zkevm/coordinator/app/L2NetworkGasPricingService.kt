@@ -39,6 +39,7 @@ class L2NetworkGasPricingService(
     val naiveGasPricingCalculatorConfig: GasUsageRatioWeightedAverageFeesCalculator.Config?,
     val legacyGasPricingCalculatorBounds: BoundableFeeCalculator.Config,
   )
+
   data class L2CalldataPricingConfig(
     val l2CalldataSizeAccumulatorConfig: L2CalldataSizeAccumulatorImpl.Config,
     val l2CalldataBasedVariableFeesCalculatorConfig: L2CalldataBasedVariableFeesCalculator.Config,
@@ -57,72 +58,82 @@ class L2NetworkGasPricingService(
     val extraDataUpdaterConfig: ExtraDataV1UpdaterImpl.Config,
     val l2CalldataPricingCalculatorConfig: L2CalldataPricingConfig?,
   )
+
   private val log = LogManager.getLogger(this::class.java)
 
-  private val gasPricingFeesFetcher: FeesFetcher = FeeHistoryFetcherImpl(
-    ethApiClient = l1EthApiClient,
-    config = config.feeHistoryFetcherConfig,
-  )
+  private val gasPricingFeesFetcher: FeesFetcher =
+    FeeHistoryFetcherImpl(
+      ethApiClient = l1EthApiClient,
+      config = config.feeHistoryFetcherConfig,
+    )
 
   private fun isL2CalldataBasedVariableFeesEnabled(config: Config): Boolean {
     return config.l2CalldataPricingCalculatorConfig != null
   }
 
-  private val variableCostCalculator = run {
-    val boundedVariableCostCalculator = run {
-      val variableCostCalculator = VariableFeesCalculator(
-        config.variableFeesCalculatorConfig,
-      )
-      BoundableFeeCalculator(
-        config = config.variableFeesCalculatorBounds,
-        feesCalculator = variableCostCalculator,
-      )
+  private val variableCostCalculator =
+    run {
+      val boundedVariableCostCalculator =
+        run {
+          val variableCostCalculator =
+            VariableFeesCalculator(
+              config.variableFeesCalculatorConfig,
+            )
+          BoundableFeeCalculator(
+            config = config.variableFeesCalculatorBounds,
+            feesCalculator = variableCostCalculator,
+          )
+        }
+
+      if (isL2CalldataBasedVariableFeesEnabled(config)) {
+        val l2CalldataSizeAccumulator =
+          L2CalldataSizeAccumulatorImpl(
+            web3jClient = l2Web3jClient,
+            config = config.l2CalldataPricingCalculatorConfig!!.l2CalldataSizeAccumulatorConfig,
+          )
+        val historicVariableCostProvider =
+          HistoricVariableCostProviderImpl(
+            web3jClient = l2Web3jClient,
+          )
+        L2CalldataBasedVariableFeesCalculator(
+          web3jClient = l2Web3jClient,
+          variableFeesCalculator = boundedVariableCostCalculator,
+          l2CalldataSizeAccumulator = l2CalldataSizeAccumulator,
+          historicVariableCostProvider = historicVariableCostProvider,
+          config = config.l2CalldataPricingCalculatorConfig.l2CalldataBasedVariableFeesCalculatorConfig,
+        )
+      } else {
+        boundedVariableCostCalculator
+      }
     }
 
-    if (isL2CalldataBasedVariableFeesEnabled(config)) {
-      val l2CalldataSizeAccumulator = L2CalldataSizeAccumulatorImpl(
-        web3jClient = l2Web3jClient,
-        config = config.l2CalldataPricingCalculatorConfig!!.l2CalldataSizeAccumulatorConfig,
-      )
-      val historicVariableCostProvider = HistoricVariableCostProviderImpl(
-        web3jClient = l2Web3jClient,
-      )
-      L2CalldataBasedVariableFeesCalculator(
-        web3jClient = l2Web3jClient,
-        variableFeesCalculator = boundedVariableCostCalculator,
-        l2CalldataSizeAccumulator = l2CalldataSizeAccumulator,
-        historicVariableCostProvider = historicVariableCostProvider,
-        config = config.l2CalldataPricingCalculatorConfig.l2CalldataBasedVariableFeesCalculatorConfig,
-      )
-    } else {
-      boundedVariableCostCalculator
+  private val legacyGasPricingCalculator =
+    run {
+      val baseCalculator =
+        if (config.legacy.transactionCostCalculatorConfig != null) {
+          TransactionCostCalculator(variableCostCalculator, config.legacy.transactionCostCalculatorConfig)
+        } else {
+          GasUsageRatioWeightedAverageFeesCalculator(
+            config.legacy.naiveGasPricingCalculatorConfig!!,
+          )
+        }
+      if (isL2CalldataBasedVariableFeesEnabled(config)) {
+        baseCalculator
+      } else {
+        BoundableFeeCalculator(
+          config.legacy.legacyGasPricingCalculatorBounds,
+          baseCalculator,
+        )
+      }
     }
-  }
-
-  private val legacyGasPricingCalculator = run {
-    val baseCalculator = if (config.legacy.transactionCostCalculatorConfig != null) {
-      TransactionCostCalculator(variableCostCalculator, config.legacy.transactionCostCalculatorConfig)
-    } else {
-      GasUsageRatioWeightedAverageFeesCalculator(
-        config.legacy.naiveGasPricingCalculatorConfig!!,
-      )
-    }
-    if (isL2CalldataBasedVariableFeesEnabled(config)) {
-      baseCalculator
-    } else {
-      BoundableFeeCalculator(
-        config.legacy.legacyGasPricingCalculatorBounds,
-        baseCalculator,
-      )
-    }
-  }
 
   private val minMineableFeesPricerService: MinMineableFeesPricerService? =
     if (config.jsonRpcGasPriceUpdaterConfig != null) {
-      val l2SetGasPriceUpdater: GasPriceUpdater = GasPriceUpdaterImpl(
-        httpJsonRpcClientFactory = httpJsonRpcClientFactory,
-        config = config.jsonRpcGasPriceUpdaterConfig,
-      )
+      val l2SetGasPriceUpdater: GasPriceUpdater =
+        GasPriceUpdaterImpl(
+          httpJsonRpcClientFactory = httpJsonRpcClientFactory,
+          config = config.jsonRpcGasPriceUpdaterConfig,
+        )
 
       MinMineableFeesPricerService(
         pollingInterval = config.jsonRpcPriceUpdateInterval,
@@ -135,25 +146,28 @@ class L2NetworkGasPricingService(
       null
     }
 
-  private val extraDataPricerService: ExtraDataV1PricerService? = if (config.extraDataPricingPropagationEnabled) {
-    ExtraDataV1PricerService(
-      pollingInterval = config.extraDataUpdateInterval,
-      vertx = vertx,
-      feesFetcher = gasPricingFeesFetcher,
-      minerExtraDataCalculator = MinerExtraDataV1CalculatorImpl(
-        config = config.extraDataCalculatorConfig,
-        variableFeesCalculator = variableCostCalculator,
-        legacyFeesCalculator = legacyGasPricingCalculator,
-      ),
-      extraDataUpdater = ExtraDataV1UpdaterImpl(
-        httpJsonRpcClientFactory = httpJsonRpcClientFactory,
-        config = config.extraDataUpdaterConfig,
-      ),
-      metricsFacade = metricsFacade,
-    )
-  } else {
-    null
-  }
+  private val extraDataPricerService: ExtraDataV1PricerService? =
+    if (config.extraDataPricingPropagationEnabled) {
+      ExtraDataV1PricerService(
+        pollingInterval = config.extraDataUpdateInterval,
+        vertx = vertx,
+        feesFetcher = gasPricingFeesFetcher,
+        minerExtraDataCalculator =
+        MinerExtraDataV1CalculatorImpl(
+          config = config.extraDataCalculatorConfig,
+          variableFeesCalculator = variableCostCalculator,
+          legacyFeesCalculator = legacyGasPricingCalculator,
+        ),
+        extraDataUpdater =
+        ExtraDataV1UpdaterImpl(
+          httpJsonRpcClientFactory = httpJsonRpcClientFactory,
+          config = config.extraDataUpdaterConfig,
+        ),
+        metricsFacade = metricsFacade,
+      )
+    } else {
+      null
+    }
 
   override fun start(): CompletableFuture<Unit> {
     return (minMineableFeesPricerService?.start() ?: SafeFuture.completedFuture(Unit))

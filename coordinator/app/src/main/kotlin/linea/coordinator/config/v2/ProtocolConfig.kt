@@ -13,7 +13,6 @@ data class ProtocolConfig(
     val genesisStateRootHash: ByteArray,
     val genesisShnarf: ByteArray,
   ) {
-
     override fun equals(other: Any?): Boolean {
       if (this === other) return true
       if (javaClass != other?.javaClass) return false
