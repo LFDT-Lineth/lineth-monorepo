@@ -13,6 +13,7 @@ import linea.coordinator.config.v2.isDisabled
 import linea.coordinator.config.v2.isEnabled
 import linea.domain.BlockNumberAndHash
 import linea.domain.RetryConfig
+import linea.ethapi.EthApiClient
 import linea.kotlin.toKWeiUInt
 import linea.web3j.ExtendedWeb3JImpl
 import linea.web3j.SmartContractErrors
@@ -181,7 +182,7 @@ class L1DependentApp(
         l1QueryBlockTag = configs.l1FinalizationMonitor.l1QueryBlockTag,
       ),
       contract = lineaRollupClientForFinalizationMonitor,
-      l2Client = createWeb3jHttpClient(
+      l2EthApiClient = createEthApiClient(
         rpcUrl = configs.l1FinalizationMonitor.l2Endpoint.toString(),
         log = LogManager.getLogger("clients.l2.eth.finalization-monitor"),
       ),
@@ -190,7 +191,7 @@ class L1DependentApp(
   }
 
   private val l1FinalizationHandlerForShomeiRpc: LongRunningService = run {
-    val l2Web3jClient: Web3j = createWeb3jHttpClient(
+    val l2EthApiClient: EthApiClient = createEthApiClient(
       rpcUrl = configs.l1FinalizationMonitor.l2Endpoint.toString(),
       log = LogManager.getLogger("clients.l2.eth.shomei-frontend"),
     )
@@ -198,7 +199,7 @@ class L1DependentApp(
       type2StateProofProviderConfig = configs.type2StateProofProvider,
       httpJsonRpcClientFactory = httpJsonRpcClientFactory,
       lineaRollupClient = lineaRollupClientForFinalizationMonitor,
-      l2Web3jClient = l2Web3jClient,
+      l2EthApiClient = l2EthApiClient,
       vertx = vertx,
     )
   }
@@ -700,7 +701,7 @@ class L1DependentApp(
       type2StateProofProviderConfig: Type2StateProofManagerConfig,
       httpJsonRpcClientFactory: VertxHttpJsonRpcClientFactory,
       lineaRollupClient: LineaRollupSmartContractClientReadOnly,
-      l2Web3jClient: Web3j,
+      l2EthApiClient: EthApiClient,
       vertx: Vertx,
     ): LongRunningService {
       if (type2StateProofProviderConfig.isDisabled()) {
@@ -729,7 +730,7 @@ class L1DependentApp(
             l1QueryBlockTag = type2StateProofProviderConfig.l1QueryBlockTag,
           ),
           contract = lineaRollupClient,
-          l2Client = l2Web3jClient,
+          l2EthApiClient = l2EthApiClient,
           vertx = vertx,
         )
 
