@@ -24,7 +24,6 @@ group = 'net.consensys.linea.besu.plugin'
 
 def lineaTracerProject = project(lineaTracerProjectPath)
 apply from: lineaTracerProject.file("gradle/java.gradle")
-apply from: lineaTracerProject.file("gradle/dependency-management.gradle")
 apply from: lineaTracerProject.file("gradle/corset.gradle")
 apply from: lineaTracerProject.file("gradle/tests.gradle")
 apply from: lineaTracerProject.file("gradle/build-aliases.gradle")

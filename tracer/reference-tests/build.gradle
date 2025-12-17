@@ -25,7 +25,6 @@ jacoco {
 
 def lineaTracerProject = project(lineaTracerProjectPath)
 apply from: lineaTracerProject.file("gradle/java.gradle")
-apply from: lineaTracerProject.file("gradle/dependency-management.gradle")
 apply from: lineaTracerProject.file("gradle/lint.gradle")
 
 configurations.configureEach {
