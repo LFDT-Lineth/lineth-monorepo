@@ -613,7 +613,7 @@ class L1DependentApp(
         ),
       )
 
-      val l1Web3jClient = createWeb3jHttpClient(
+      val l1EthApiClient = createEthApiClient(
         rpcUrl = configs.l1Submission.dynamicGasPriceCap.feeHistoryFetcher.l1Endpoint.toString(),
         log = LogManager.getLogger("clients.l1.eth.feehistory-cache"),
       )
@@ -632,7 +632,7 @@ class L1DependentApp(
           configs.l1Submission.dynamicGasPriceCap.feeHistoryFetcher.numOfBlocksBeforeLatest,
         ),
         vertx = vertx,
-        web3jClient = l1Web3jClient,
+        ethApiBlockClient = l1EthApiClient,
         feeHistoryFetcher = l1FeeHistoryFetcher,
         feeHistoriesRepository = l1FeeHistoriesRepository,
       )

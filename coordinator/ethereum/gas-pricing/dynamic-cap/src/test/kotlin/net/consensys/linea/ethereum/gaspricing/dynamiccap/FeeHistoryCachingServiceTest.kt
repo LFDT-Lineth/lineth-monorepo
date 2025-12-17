@@ -5,6 +5,7 @@ import io.vertx.junit5.Timeout
 import io.vertx.junit5.VertxExtension
 import io.vertx.junit5.VertxTestContext
 import linea.domain.FeeHistory
+import linea.ethapi.EthApiBlockClient
 import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -18,11 +19,7 @@ import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import org.web3j.protocol.Web3j
-import org.web3j.protocol.core.methods.response.EthBlockNumber
 import tech.pegasys.teku.infrastructure.async.SafeFuture
-import java.math.BigInteger
-import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.toJavaDuration
@@ -50,7 +47,7 @@ class FeeHistoryCachingServiceTest {
   private val numOfBlocksBeforeLatest = 0U
   private val deletedFeeHistoriesNum = 2
   private val storedFeeHistoriesNum = 100
-  private lateinit var mockedL1Web3jClient: Web3j
+  private lateinit var mockedL1EthApiBlockClient: EthApiBlockClient
   private lateinit var mockedL1FeeHistoryFetcher: GasPriceCapFeeHistoryFetcher
   private lateinit var mockedL1FeeHistoriesRepository: FeeHistoriesRepositoryWithCache
 
@@ -68,7 +65,7 @@ class FeeHistoryCachingServiceTest {
         numOfBlocksBeforeLatest = numOfBlocksBeforeLatest,
       ),
       vertx = vertx,
-      web3jClient = mockedL1Web3jClient,
+      ethApiBlockClient = mockedL1EthApiBlockClient,
       feeHistoryFetcher = mockedL1FeeHistoryFetcher,
       feeHistoriesRepository = mockedL1FeeHistoriesRepository,
     )
@@ -76,11 +73,9 @@ class FeeHistoryCachingServiceTest {
 
   @BeforeEach
   fun beforeEach() {
-    mockedL1Web3jClient = mock<Web3j>(defaultAnswer = RETURNS_DEEP_STUBS)
-    val mockBlockNumberReturn = mock<EthBlockNumber>()
-    whenever(mockBlockNumberReturn.blockNumber).thenReturn(BigInteger.valueOf(latestL1BlockNumber))
-    whenever(mockedL1Web3jClient.ethBlockNumber().sendAsync())
-      .thenReturn(CompletableFuture.completedFuture(mockBlockNumberReturn))
+    mockedL1EthApiBlockClient = mock<EthApiBlockClient>(defaultAnswer = RETURNS_DEEP_STUBS)
+    whenever(mockedL1EthApiBlockClient.ethBlockNumber())
+      .thenReturn(SafeFuture.completedFuture(latestL1BlockNumber.toULong()))
 
     mockedL1FeeHistoryFetcher = mock<GasPriceCapFeeHistoryFetcher>(defaultAnswer = RETURNS_DEEP_STUBS) {
       on { getEthFeeHistoryData(any(), any()) } doReturn SafeFuture.completedFuture(feeHistory)
@@ -105,7 +100,7 @@ class FeeHistoryCachingServiceTest {
         await()
           .pollInterval(50.milliseconds.toJavaDuration())
           .untilAsserted {
-            verify(mockedL1Web3jClient, atLeast(2)).ethBlockNumber()
+            verify(mockedL1EthApiBlockClient, atLeast(2)).ethBlockNumber()
             verify(mockedL1FeeHistoriesRepository, atLeastOnce()).findHighestBlockNumberWithPercentile(
               gasFeePercentile,
             )
@@ -151,7 +146,7 @@ class FeeHistoryCachingServiceTest {
         await()
           .pollInterval(50.milliseconds.toJavaDuration())
           .untilAsserted {
-            verify(mockedL1Web3jClient, atLeast(2)).ethBlockNumber()
+            verify(mockedL1EthApiBlockClient, atLeast(2)).ethBlockNumber()
             verify(mockedL1FeeHistoriesRepository, atLeast(2))
               .deleteFeeHistoriesUpToBlockNumber(
                 latestL1BlockNumber - feeHistoryStoragePeriodInBlocks.toLong(),

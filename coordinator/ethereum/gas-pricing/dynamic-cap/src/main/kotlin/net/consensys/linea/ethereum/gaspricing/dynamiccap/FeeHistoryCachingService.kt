@@ -1,18 +1,18 @@
 package net.consensys.linea.ethereum.gaspricing.dynamiccap
 
 import io.vertx.core.Vertx
+import linea.ethapi.EthApiBlockClient
 import linea.timer.TimerSchedule
 import linea.timer.VertxPeriodicPollingService
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
-import org.web3j.protocol.Web3j
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import kotlin.time.Duration
 
 class FeeHistoryCachingService(
   private val config: Config,
   vertx: Vertx,
-  private val web3jClient: Web3j,
+  private val ethApiBlockClient: EthApiBlockClient,
   private val feeHistoryFetcher: GasPriceCapFeeHistoryFetcher,
   private val feeHistoriesRepository: FeeHistoriesRepositoryWithCache,
   private val log: Logger = LogManager.getLogger(FeeHistoryCachingService::class.java),
@@ -88,13 +88,13 @@ class FeeHistoryCachingService(
   }
 
   override fun action(): SafeFuture<Unit> {
-    return SafeFuture.of(web3jClient.ethBlockNumber().sendAsync())
+    return ethApiBlockClient.ethBlockNumber()
       .thenCompose { latestL1BlockNumber ->
         fetchAndSaveFeeHistories(
           // subtracting the latest L1 block number with a predefined number
           // (default as 4) to avoid requesting fee history of the head block
           // from nodes that were not catching up with the head yet
-          maxL1BlockNumberToFetch = latestL1BlockNumber.blockNumber.toLong()
+          maxL1BlockNumberToFetch = latestL1BlockNumber.toLong()
             .minus(config.numOfBlocksBeforeLatest.toLong())
             .coerceAtLeast(1L),
         )
