@@ -17,23 +17,23 @@ package net.consensys.linea.zktracer.module.hub.fragment.scenario;
 
 import static java.util.Map.entry;
 import static net.consensys.linea.zktracer.Trace.*;
-import static net.consensys.linea.zktracer.TraceCancun.Oob.CT_MAX_IDENTITY;
-import static net.consensys.linea.zktracer.TraceCancun.Oob.CT_MAX_RIPEMD;
+import static net.consensys.linea.zktracer.Trace.Blsdata.CT_MAX_POINT_EVALUATION;
+import static net.consensys.linea.zktracer.Trace.Oob.*;
+import static net.consensys.linea.zktracer.Trace.Oob.CT_MAX_BLAKE2F_CDS;
+import static net.consensys.linea.zktracer.Trace.Oob.CT_MAX_BLAKE2F_PARAMS;
+import static net.consensys.linea.zktracer.Trace.Oob.CT_MAX_ECADD;
+import static net.consensys.linea.zktracer.Trace.Oob.CT_MAX_ECMUL;
+import static net.consensys.linea.zktracer.Trace.Oob.CT_MAX_ECPAIRING;
+import static net.consensys.linea.zktracer.Trace.Oob.CT_MAX_ECRECOVER;
+import static net.consensys.linea.zktracer.Trace.Oob.CT_MAX_IDENTITY;
+import static net.consensys.linea.zktracer.Trace.Oob.CT_MAX_RIPEMD;
+import static net.consensys.linea.zktracer.Trace.Oob.CT_MAX_SHA2;
 import static net.consensys.linea.zktracer.TraceOsaka.Oob.CT_MAX_P256_VERIFY;
-import static net.consensys.linea.zktracer.TracePrague.Blsdata.CT_MAX_POINT_EVALUATION;
-import static net.consensys.linea.zktracer.TracePrague.Oob.*;
-import static net.consensys.linea.zktracer.TracePrague.Oob.CT_MAX_BLAKE2F_CDS;
-import static net.consensys.linea.zktracer.TracePrague.Oob.CT_MAX_BLAKE2F_PARAMS;
-import static net.consensys.linea.zktracer.TracePrague.Oob.CT_MAX_ECADD;
-import static net.consensys.linea.zktracer.TracePrague.Oob.CT_MAX_ECMUL;
-import static net.consensys.linea.zktracer.TracePrague.Oob.CT_MAX_ECPAIRING;
-import static net.consensys.linea.zktracer.TracePrague.Oob.CT_MAX_ECRECOVER;
-import static net.consensys.linea.zktracer.TracePrague.Oob.CT_MAX_SHA2;
 import static net.consensys.linea.zktracer.module.hub.fragment.imc.oob.precompiles.modexp.ModexpCallDataSizeOobCall.NB_ROWS_OOB_MODEXP_CDS;
 import static net.consensys.linea.zktracer.module.hub.fragment.imc.oob.precompiles.modexp.ModexpExtractOobCall.NB_ROWS_OOB_MODEXP_EXTRACT;
 import static net.consensys.linea.zktracer.module.hub.fragment.imc.oob.precompiles.modexp.ModexpLeadOobCall.NB_ROWS_OOB_MODEXP_LEAD;
-import static net.consensys.linea.zktracer.module.hub.fragment.imc.oob.precompiles.modexp.pricingOobCall.LondonModexpPricingOobCall.NB_ROWS_OOB_MODEXP_PRICING;
-import static net.consensys.linea.zktracer.module.hub.fragment.imc.oob.precompiles.modexp.xbsOobCall.LondonModexpXbsOobCall.NB_ROWS_OOB_MODEXP_XBS;
+import static net.consensys.linea.zktracer.module.hub.fragment.imc.oob.precompiles.modexp.ModexpPricingOobCall.NB_ROWS_OOB_MODEXP_PRICING;
+import static net.consensys.linea.zktracer.module.hub.fragment.imc.oob.precompiles.modexp.ModexpXbsOobCall.NB_ROWS_OOB_MODEXP_XBS;
 import static net.consensys.linea.zktracer.module.hub.fragment.scenario.PrecompileScenarioFragment.PrecompileFlag.*;
 import static net.consensys.linea.zktracer.module.hub.fragment.scenario.PrecompileScenarioFragment.PrecompileScenario.*;
 import static net.consensys.linea.zktracer.module.mod.ModOperation.NB_ROWS_MOD;
@@ -285,8 +285,6 @@ public class PrecompileScenarioFragment implements TraceFragment {
   public Trace.Hub trace(Trace.Hub trace) {
     trace
         .peekAtScenario(true)
-        // // Precompile scenarios
-        ////////////////////
         .pScenarioPrcEcrecover(flag == PRC_ECRECOVER)
         .pScenarioPrcSha2256(flag == PRC_SHA2_256)
         .pScenarioPrcRipemd160(flag == PRC_RIPEMD_160)
@@ -306,30 +304,16 @@ public class PrecompileScenarioFragment implements TraceFragment {
         .pScenarioPrcCdo(precompileSubSection.callDataOffset())
         .pScenarioPrcCds(precompileSubSection.callDataSize())
         .pScenarioPrcRao(precompileSubSection.returnAtOffset())
-        .pScenarioPrcRac(precompileSubSection.returnAtCapacity());
-
-    // Cancun
-    if (flag == PRC_POINT_EVALUATION) {
-      trace.pScenarioPrcPointEvaluation(true);
-    }
-
-    // Prague
-    if (flag.isBlsPrecompile() && flag != PRC_POINT_EVALUATION) {
-      trace
-          .pScenarioPrcBlsG1Add(flag == PRC_BLS_G1_ADD)
-          .pScenarioPrcBlsG1Msm(flag == PRC_BLS_G1_MSM)
-          .pScenarioPrcBlsG2Add(flag == PRC_BLS_G2_ADD)
-          .pScenarioPrcBlsG2Msm(flag == PRC_BLS_G2_MSM)
-          .pScenarioPrcBlsPairingCheck(flag == PRC_BLS_PAIRING_CHECK)
-          .pScenarioPrcBlsMapFpToG1(flag == PRC_BLS_MAP_FP_TO_G1)
-          .pScenarioPrcBlsMapFp2ToG2(flag == PRC_BLS_MAP_FP2_TO_G2);
-    }
-
-    // Osaka
-    if (flag == PRC_P256_VERIFY) {
-      trace.pScenarioPrcP256Verify(true);
-    }
-
+        .pScenarioPrcRac(precompileSubSection.returnAtCapacity())
+        .pScenarioPrcPointEvaluation(flag == PRC_POINT_EVALUATION)
+        .pScenarioPrcBlsG1Add(flag == PRC_BLS_G1_ADD)
+        .pScenarioPrcBlsG1Msm(flag == PRC_BLS_G1_MSM)
+        .pScenarioPrcBlsG2Add(flag == PRC_BLS_G2_ADD)
+        .pScenarioPrcBlsG2Msm(flag == PRC_BLS_G2_MSM)
+        .pScenarioPrcBlsPairingCheck(flag == PRC_BLS_PAIRING_CHECK)
+        .pScenarioPrcBlsMapFpToG1(flag == PRC_BLS_MAP_FP_TO_G1)
+        .pScenarioPrcBlsMapFp2ToG2(flag == PRC_BLS_MAP_FP2_TO_G2)
+        .pScenarioPrcP256Verify(flag == PRC_P256_VERIFY);
     return trace;
   }
 }

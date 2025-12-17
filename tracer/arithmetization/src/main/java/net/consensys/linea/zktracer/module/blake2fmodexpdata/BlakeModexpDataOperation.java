@@ -15,7 +15,6 @@
 
 package net.consensys.linea.zktracer.module.blake2fmodexpdata;
 
-import static net.consensys.linea.zktracer.Fork.forkPredatesOsaka;
 import static net.consensys.linea.zktracer.Trace.Blake2fmodexpdata.*;
 import static net.consensys.linea.zktracer.Trace.LLARGE;
 import static net.consensys.linea.zktracer.Trace.PHASE_BLAKE_DATA;
@@ -25,21 +24,24 @@ import static net.consensys.linea.zktracer.Trace.PHASE_MODEXP_BASE;
 import static net.consensys.linea.zktracer.Trace.PHASE_MODEXP_EXPONENT;
 import static net.consensys.linea.zktracer.Trace.PHASE_MODEXP_MODULUS;
 import static net.consensys.linea.zktracer.Trace.PHASE_MODEXP_RESULT;
+import static net.consensys.linea.zktracer.TraceOsaka.Blake2fmodexpdata.INDEX_MAX_MODEXP_BASE;
+import static net.consensys.linea.zktracer.TraceOsaka.Blake2fmodexpdata.INDEX_MAX_MODEXP_EXPONENT;
+import static net.consensys.linea.zktracer.TraceOsaka.Blake2fmodexpdata.INDEX_MAX_MODEXP_MODULUS;
+import static net.consensys.linea.zktracer.TraceOsaka.Blake2fmodexpdata.INDEX_MAX_MODEXP_RESULT;
 import static net.consensys.linea.zktracer.types.Utils.leftPadTo;
 
 import java.util.Optional;
 import lombok.Getter;
 import lombok.experimental.Accessors;
-import net.consensys.linea.zktracer.Fork;
 import net.consensys.linea.zktracer.Trace;
 import net.consensys.linea.zktracer.container.ModuleOperation;
-import net.consensys.linea.zktracer.module.hub.precompiles.modexpMetadata.ModexpMetadata;
+import net.consensys.linea.zktracer.module.hub.precompiles.ModexpMetadata;
 import net.consensys.linea.zktracer.types.UnsignedByte;
 import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.crypto.Hash;
 
 @Accessors(fluent = true)
-public abstract class BlakeModexpDataOperation extends ModuleOperation {
+public final class BlakeModexpDataOperation extends ModuleOperation {
   public static final short BLAKE2f_R_SIZE = 4;
   public static final short BLAKE2f_HASH_INPUT_OFFSET = BLAKE2f_R_SIZE;
   public static final short BLAKE2f_HASH_INPUT_SIZE = LLARGE * (INDEX_MAX_BLAKE_DATA + 1);
@@ -49,13 +51,21 @@ public abstract class BlakeModexpDataOperation extends ModuleOperation {
     return (INDEX_MAX_BLAKE_DATA + 1) + (INDEX_MAX_BLAKE_PARAMS + 1) + (INDEX_MAX_BLAKE_RESULT + 1);
   }
 
-  public abstract short getIndexMaxModexpBase();
+  private short getIndexMaxModexpBase() {
+    return INDEX_MAX_MODEXP_BASE;
+  }
 
-  public abstract short getIndexMaxModexpExponent();
+  private short getIndexMaxModexpExponent() {
+    return INDEX_MAX_MODEXP_EXPONENT;
+  }
 
-  public abstract short getIndexMaxModexpModulus();
+  private short getIndexMaxModexpModulus() {
+    return INDEX_MAX_MODEXP_MODULUS;
+  }
 
-  public abstract short getIndexMaxModexpResult();
+  short getIndexMaxModexpResult() {
+    return INDEX_MAX_MODEXP_RESULT;
+  }
 
   public short numberOfRowsModexp() {
     return (short)
@@ -195,39 +205,5 @@ public abstract class BlakeModexpDataOperation extends ModuleOperation {
 
   public boolean isBlakeOperation() {
     return blake2fComponents.isPresent();
-  }
-
-  /**
-   * {@link #legalModexpComponentByteSize} is used either
-   *
-   * <ul>
-   *   <li><b>pre-Osaka:</b> to detect (and ultimately reject) <b>large, Linea-unprovable</b> MODEXP
-   *       calls
-   *   <li><b>post-Osaka:</b> to highlight <b>large, EVM-unsupported</b> MODEXP calls
-   * </ul>
-   *
-   * <p>The London to Prague Linea zkEVM (L2P-Linea) had Linea-specific (and EVM extraneous)
-   * restrictions on <b>MODEXP</b>. In essence, L2P-Linea could not prove the full breadth of
-   * EVM-legal inputs of <b>MODEXP</b> precompile calls: it flagged <b>MODEXP</b> calls where any
-   * one of bbs / ebs / mbs was > 512. The underlying transaction was labeled as "unprovable" and
-   * necessarily rejected from block inclusion.
-   *
-   * <p>Up to and including the Prague hard fork, the EVM accepted essentially unbounded
-   * <b>MODEXP</b> calls i.e. there were no limits on the component byte sizes bbs / ebs / mbs
-   * beyond fitting into 32 Byte integers. Osaka, and specifically <a
-   * href="https://eips.ethereum.org/EIPS/eip-7823">EIP-7823</a>, greatly reduced the range of
-   * EVM-acceptable MODEXP arguments: all xbs ≡ bbs / ebs / mbs are required to be ≤ 1024, otherwise
-   * the <b>MODEXP</b> precompile call is necessarily unsuccessful.
-   *
-   * <p>Starting with the Osaka hardfork, Linea proves the full breadth of Osaka-EVM-legal
-   * <b>MODEXP</b> calls.
-   *
-   * @param fork
-   * @return
-   */
-  public static int legalModexpComponentByteSize(Fork fork) {
-    return forkPredatesOsaka(fork)
-        ? LondonBlakeModexpDataOperation.modexpComponentByteSize()
-        : OsakaBlakeModexpDataOperation.modexpComponentByteSize();
   }
 }

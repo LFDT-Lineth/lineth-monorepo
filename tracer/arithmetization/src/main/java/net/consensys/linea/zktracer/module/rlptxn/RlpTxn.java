@@ -19,22 +19,34 @@ import static net.consensys.linea.zktracer.module.ModuleName.RLP_TXN;
 
 import java.util.List;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import lombok.experimental.Accessors;
 import net.consensys.linea.zktracer.Trace;
 import net.consensys.linea.zktracer.container.module.OperationListModule;
 import net.consensys.linea.zktracer.container.stacked.ModuleOperationStackedList;
 import net.consensys.linea.zktracer.module.ModuleName;
+import net.consensys.linea.zktracer.module.rlpUtils.RlpUtils;
+import net.consensys.linea.zktracer.module.trm.Trm;
+import net.consensys.linea.zktracer.types.TransactionProcessingMetadata;
 
+@RequiredArgsConstructor
 @Accessors(fluent = true)
-public abstract class RlpTxn implements OperationListModule<RlpTxnOperation> {
+public final class RlpTxn implements OperationListModule<RlpTxnOperation> {
+  private final RlpUtils rlpUtils;
+  private final Trm trm;
 
   @Getter
-  protected final ModuleOperationStackedList<RlpTxnOperation> operations =
+  private final ModuleOperationStackedList<RlpTxnOperation> operations =
       new ModuleOperationStackedList<>();
 
   @Override
   public ModuleName moduleKey() {
     return RLP_TXN;
+  }
+
+  @Override
+  public void traceEndTx(TransactionProcessingMetadata tx) {
+    operations.add(new RlpTxnOperation(rlpUtils, trm, tx));
   }
 
   @Override
@@ -49,11 +61,8 @@ public abstract class RlpTxn implements OperationListModule<RlpTxnOperation> {
 
   @Override
   public void commit(Trace trace) {
-    int absTxNum = 0;
     for (RlpTxnOperation op : operations.getAll()) {
-      traceOperation(op, ++absTxNum, trace.rlptxn());
+      op.trace(trace.rlptxn(), operations.size());
     }
   }
-
-  protected abstract void traceOperation(RlpTxnOperation op, int i, Trace.Rlptxn rlptxn);
 }

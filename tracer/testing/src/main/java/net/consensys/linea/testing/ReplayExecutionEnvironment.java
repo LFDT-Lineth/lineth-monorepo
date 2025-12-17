@@ -17,8 +17,8 @@ package net.consensys.linea.testing;
 
 import static net.consensys.linea.testing.ToyExecutionTools.addSystemAccountsIfRequired;
 import static net.consensys.linea.testing.ToyExecutionTools.runSystemInitialTransactions;
-import static net.consensys.linea.zktracer.ChainConfig.OLD_MAINNET_TESTCONFIG;
-import static net.consensys.linea.zktracer.ChainConfig.OLD_SEPOLIA_TESTCONFIG;
+import static net.consensys.linea.zktracer.Trace.LINEA_CHAIN_ID;
+import static net.consensys.linea.zktracer.Trace.LINEA_SEPOLIA_CHAIN_ID;
 
 import com.google.gson.Gson;
 import java.io.File;
@@ -170,7 +170,6 @@ public class ReplayExecutionEnvironment {
         conflation,
         tracer,
         this.txResultChecking,
-        this.useCoinbaseAddressFromBlockHeader,
         this.transactionProcessingResultValidator,
         systemContractDeployedPriorToConflation);
     //
@@ -236,7 +235,6 @@ public class ReplayExecutionEnvironment {
       final ConflationSnapshot conflation,
       final ConflationAwareOperationTracer tracer,
       final boolean txResultChecking,
-      final boolean useCoinbaseAddressFromBlockHeader,
       final TransactionProcessingResultValidator resultValidator,
       boolean systemContractDeployedPriorToTheConflation) {
     final BlockHashLookup blockHashLookup = conflation.toBlockHashLookup();
@@ -245,7 +243,7 @@ public class ReplayExecutionEnvironment {
 
     // Add system accounts if the fork requires it and not already present in the state.
     if (systemContractDeployedPriorToTheConflation) {
-      addSystemAccountsIfRequired(world.updater(), chain.fork);
+      addSystemAccountsIfRequired(world.updater());
     }
     world.persist(null);
     // Construct the processor
@@ -263,13 +261,10 @@ public class ReplayExecutionEnvironment {
               blockSnapshot.txs().stream().map(TransactionSnapshot::toTransaction).toList(),
               new ArrayList<>());
       // Determine mining beneficiay
-      final Address miningBeneficiary =
-          useCoinbaseAddressFromBlockHeader
-              ? header.getCoinbase()
-              : determineMiningBeneficiary(header, chain.fork);
+      final Address miningBeneficiary = header.getCoinbase();
 
       tracer.traceStartBlock(world.updater(), header, body, miningBeneficiary);
-      runSystemInitialTransactions(protocolSpec, chain.fork, world, header, tracer);
+      runSystemInitialTransactions(protocolSpec, world, header, tracer);
 
       for (TransactionSnapshot txs : blockSnapshot.txs()) {
         final Transaction tx = txs.toTransaction();
@@ -298,12 +293,7 @@ public class ReplayExecutionEnvironment {
   }
 
   private static Address determineMiningBeneficiary(BlockHeader header, Fork fork) {
-    // Clique was only used on forks prior to Shanghai
-    if (Fork.isPostShanghai(fork)) {
-      return header.getCoinbase();
-    } else {
-      return CliqueHelpers.getProposerOfBlock(header);
-    }
+    return header.getCoinbase();
   }
 
   /**
@@ -411,9 +401,9 @@ public class ReplayExecutionEnvironment {
    * @return
    */
   private static String getChainName(BigInteger chainId) {
-    if (chainId.equals(OLD_MAINNET_TESTCONFIG.id)) {
+    if (chainId.equals(BigInteger.valueOf(LINEA_CHAIN_ID))) {
       return "mainnet";
-    } else if (chainId.equals(OLD_SEPOLIA_TESTCONFIG.id)) {
+    } else if (chainId.equals(BigInteger.valueOf(LINEA_SEPOLIA_CHAIN_ID))) {
       return "sepolia";
     } else {
       return String.format("chain%s", chainId.toString());

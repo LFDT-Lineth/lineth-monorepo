@@ -21,7 +21,6 @@ import static net.consensys.linea.zktracer.opcode.InstructionFamily.*;
 import static net.consensys.linea.zktracer.opcode.OpCode.MSIZE;
 
 import java.util.Objects;
-import net.consensys.linea.zktracer.Fork;
 import net.consensys.linea.zktracer.opcode.gas.Billing;
 import net.consensys.linea.zktracer.opcode.gas.MxpType;
 import net.consensys.linea.zktracer.opcode.stack.StackSettings;
@@ -223,12 +222,8 @@ public record OpCodeData(
     return this.stackSettings().forbiddenInStatic();
   }
 
-  public boolean mayTriggerMemoryExpansionException(Fork fork) {
-    return switch (fork) {
-      case LONDON, PARIS, SHANGHAI -> this.mnemonic != MSIZE && this.isMxpLondon();
-      case CANCUN, PRAGUE, OSAKA -> this.mnemonic != MSIZE && this.isMxp();
-      default -> throw new IllegalArgumentException("Unknown fork: " + fork);
-    };
+  public boolean mayTriggerMemoryExpansionException() {
+    return mnemonic != MSIZE && this.isMxp();
   }
 
   @Override

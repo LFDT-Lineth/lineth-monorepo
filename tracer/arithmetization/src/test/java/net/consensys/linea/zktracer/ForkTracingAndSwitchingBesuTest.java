@@ -28,6 +28,7 @@ import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.datatypes.Hash;
 import org.hyperledger.besu.datatypes.Wei;
 import org.hyperledger.besu.ethereum.core.Transaction;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.parallel.Execution;
@@ -44,30 +45,22 @@ public class ForkTracingAndSwitchingBesuTest extends TracerTestBase {
   */
   @Test
   void testPerFork(TestInfo testInfo) {
-    KeyPair keyPair = new SECP256K1().generateKeyPair();
-    Address senderAddress = Address.extract(Hash.hash(keyPair.getPublicKey().getEncodedBytes()));
+    final KeyPair keyPair = new SECP256K1().generateKeyPair();
+    final Address senderAddress =
+        Address.extract(Hash.hash(keyPair.getPublicKey().getEncodedBytes()));
 
-    ToyAccount senderAccount =
+    final ToyAccount senderAccount =
         ToyAccount.builder().balance(Wei.fromEth(1)).nonce(5).address(senderAddress).build();
 
-    BytecodeCompiler compiler =
+    final BytecodeCompiler compiler =
         BytecodeCompiler.newProgram(chainConfig).push(32, 0xbeef).push(32, 0xdead).op(OpCode.ADD);
 
     switch (fork) {
-      case PRAGUE ->
-          compiler
-              .push(Bytes.fromHexString("0x7F")) // value
-              .push(32) // offset
-              .op(OpCode.MSTORE)
-              .push(32) // size
-              .push(32) // offset to trigger mem expansion
-              .push(0) // dest offset
-              .op(OpCode.MCOPY);
       case OSAKA -> compiler.push(Bytes.fromHexString("0x07acaa")).op(OpCode.CLZ);
       default -> throw new IllegalArgumentException("Unsupported fork: " + fork);
     }
 
-    ToyAccount receiverAccount =
+    final ToyAccount receiverAccount =
         ToyAccount.builder()
             .balance(Wei.ONE)
             .nonce(6)
@@ -75,7 +68,7 @@ public class ForkTracingAndSwitchingBesuTest extends TracerTestBase {
             .code(compiler.compile())
             .build();
 
-    Transaction tx =
+    final Transaction tx =
         ToyTransaction.builder().sender(senderAccount).to(receiverAccount).keyPair(keyPair).build();
 
     ToyExecutionEnvironmentV2.builder(chainConfig, testInfo)
@@ -86,6 +79,7 @@ public class ForkTracingAndSwitchingBesuTest extends TracerTestBase {
         .run();
   }
 
+  @Disabled("update and reenable when tracer supports OSAKA and AMSTERDAM")
   @Test
   void testForkSwitchPragueToOsaka(TestInfo testInfo) {
     KeyPair keyPair = new SECP256K1().generateKeyPair();

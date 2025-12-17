@@ -19,7 +19,6 @@ import static net.consensys.linea.zktracer.Trace.GAS_CONST_G_COPY;
 import static net.consensys.linea.zktracer.Trace.WORD_SIZE;
 import static org.hyperledger.besu.evm.internal.Words.clampedToLong;
 
-import net.consensys.linea.zktracer.Fork;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.gascalculator.GasCalculator;
 
@@ -56,13 +55,7 @@ public final class MCopy extends GasProjection {
   }
 
   @Override
-  public long mxpxOffset(Fork fork) {
-    return switch (fork) {
-      case LONDON, PARIS, SHANGHAI ->
-          throw new IllegalStateException("MCOPY doesn't exist in fork: " + fork);
-      case CANCUN, PRAGUE, OSAKA ->
-          size == 0 ? 0 : Math.max(size, Math.max(targetOffset, sourceOffset));
-      default -> throw new IllegalArgumentException("Unknown fork: " + fork);
-    };
+  public long mxpxOffset() {
+    return size == 0 ? 0 : Math.max(size, Math.max(targetOffset, sourceOffset));
   }
 }

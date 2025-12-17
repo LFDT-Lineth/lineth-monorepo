@@ -15,10 +15,8 @@
 
 package net.consensys.linea.zktracer.opcode.gas.projector;
 
-import static org.hyperledger.besu.evm.internal.Words.clampedAdd;
 import static org.hyperledger.besu.evm.internal.Words.clampedToLong;
 
-import net.consensys.linea.zktracer.Fork;
 import net.consensys.linea.zktracer.Trace;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.gascalculator.GasCalculator;
@@ -68,12 +66,8 @@ public final class Log extends GasProjection {
   }
 
   @Override
-  public long mxpxOffset(Fork fork) {
-    return switch (fork) {
-      case LONDON, PARIS, SHANGHAI -> size == 0 ? 0 : clampedAdd(offset, size - 1);
-      case CANCUN, PRAGUE, OSAKA -> size == 0 ? 0 : Math.max(offset, size);
-      default -> throw new IllegalArgumentException("Unknown fork: " + fork);
-    };
+  public long mxpxOffset() {
+    return size == 0 ? 0 : Math.max(offset, size);
   }
 
   @Override

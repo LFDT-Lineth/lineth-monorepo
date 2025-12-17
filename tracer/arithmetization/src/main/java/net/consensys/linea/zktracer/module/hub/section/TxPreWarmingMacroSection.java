@@ -52,15 +52,7 @@ public class TxPreWarmingMacroSection {
         .ifPresent(
             accessList -> {
               if (!accessList.isEmpty()) {
-                List<Address> precompileAddress =
-                    switch (hub.fork) {
-                      case LONDON, PARIS, SHANGHAI -> precompileAddressLondon;
-                      case CANCUN -> precompileAddressCancun;
-                      case PRAGUE -> precompileAddressPrague;
-                      case OSAKA -> precompileAddressOsaka;
-                      default -> throw new IllegalArgumentException("Unknown fork: " + hub.fork);
-                    };
-                final Set<Address> seenAddresses = new HashSet<>(precompileAddress);
+                final Set<Address> seenAddresses = new HashSet<>(precompileAddressOsaka);
                 final HashMap<Address, Set<Bytes32>> seenKeys = new HashMap<>();
 
                 for (AccessListEntry entry : accessList) {

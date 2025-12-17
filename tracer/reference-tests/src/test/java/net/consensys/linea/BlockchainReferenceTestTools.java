@@ -573,7 +573,7 @@ public class BlockchainReferenceTestTools {
     final MutableBlockchain blockchain = spec.getBlockchain();
 
     // Add system accounts if the fork requires it.
-    addSystemAccountsIfRequired(worldState.updater(), chain.fork);
+    addSystemAccountsIfRequired(worldState.updater());
 
     final CorsetValidator corsetValidator = new CorsetValidator(chain);
     final ZkTracer zkTracer = new ZkTracer(chain);

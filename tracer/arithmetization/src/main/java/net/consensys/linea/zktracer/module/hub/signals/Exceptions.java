@@ -15,10 +15,8 @@
 
 package net.consensys.linea.zktracer.module.hub.signals;
 
-import static net.consensys.linea.zktracer.Fork.isPostShanghai;
 import static net.consensys.linea.zktracer.Trace.*;
-import static net.consensys.linea.zktracer.TraceCancun.Mxp.CANCUN_MXPX_THRESHOLD;
-import static net.consensys.linea.zktracer.TraceLondon.Mxp.LONDON_MXPX_THRESHOLD;
+import static net.consensys.linea.zktracer.TraceOsaka.Mxp.CANCUN_MXPX_THRESHOLD;
 import static net.consensys.linea.zktracer.opcode.OpCode.RETURN;
 import static org.hyperledger.besu.evm.internal.Words.clampedToInt;
 import static org.hyperledger.besu.evm.internal.Words.clampedToLong;
@@ -127,12 +125,8 @@ public class Exceptions {
         > 1024;
   }
 
-  private static boolean isMemoryExpansionFault(Fork fork, GasProjection op) {
-    return switch (fork) {
-      case LONDON, PARIS, SHANGHAI -> op.mxpxOffset(fork) >= LONDON_MXPX_THRESHOLD;
-      case CANCUN, PRAGUE, OSAKA -> op.mxpxOffset(fork) > CANCUN_MXPX_THRESHOLD;
-      default -> throw new IllegalArgumentException("Unknown fork: " + fork);
-    };
+  private static boolean isMemoryExpansionFault(GasProjection op) {
+    return op.mxpxOffset() > CANCUN_MXPX_THRESHOLD;
   }
 
   private static boolean isOutOfGas(GasProjection op, MessageFrame frame) {
@@ -232,9 +226,6 @@ public class Exceptions {
         return codeSize > MAX_CODE_SIZE;
       }
       case CREATE, CREATE2 -> {
-        if (!isPostShanghai(fork)) {
-          return false;
-        }
         final long initCodeSize = clampedToLong(frame.getStackItem(2));
         return initCodeSize > MAX_INIT_CODE_SIZE;
       }
@@ -291,7 +282,7 @@ public class Exceptions {
           MLOAD,
           MSTORE,
           MSTORE8 -> {
-        if (isMemoryExpansionFault(hub.fork, op)) {
+        if (isMemoryExpansionFault(op)) {
           return MEMORY_EXPANSION_EXCEPTION;
         }
         if (isOutOfGas(op, frame)) {
@@ -303,7 +294,7 @@ public class Exceptions {
         if (isReturnDataCopyFault(frame, opCodeData)) {
           return RETURN_DATA_COPY_FAULT;
         }
-        if (isMemoryExpansionFault(hub.fork, op)) {
+        if (isMemoryExpansionFault(op)) {
           return MEMORY_EXPANSION_EXCEPTION;
         }
         if (isOutOfGas(op, frame)) {

@@ -15,7 +15,7 @@
 
 package net.consensys.linea.zktracer.module.hub.fragment.imc.oob.opcodes.create;
 
-import static net.consensys.linea.zktracer.TraceLondon.Oob.CT_MAX_CREATE;
+import static net.consensys.linea.zktracer.Trace.Oob.CT_MAX_CREATE;
 
 import net.consensys.linea.zktracer.Trace;
 import net.consensys.linea.zktracer.module.oob.OobExoCall;

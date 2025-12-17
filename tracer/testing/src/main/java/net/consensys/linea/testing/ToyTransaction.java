@@ -20,7 +20,6 @@ import static net.consensys.linea.zktracer.Trace.LINEA_CHAIN_ID;
 import static org.hyperledger.besu.crypto.SECPSignature.BYTES_REQUIRED;
 
 import java.math.BigInteger;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import lombok.Builder;

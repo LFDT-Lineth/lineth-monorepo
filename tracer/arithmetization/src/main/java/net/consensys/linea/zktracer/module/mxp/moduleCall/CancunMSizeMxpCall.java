@@ -15,8 +15,8 @@
 
 package net.consensys.linea.zktracer.module.mxp.moduleCall;
 
-import static net.consensys.linea.zktracer.TraceCancun.Mxp.CT_MAX_MSIZE;
-import static net.consensys.linea.zktracer.module.mxp.moduleOperation.CancunMxpOperation.MXP_FROM_CTMAX_TO_LINECOUNT;
+import static net.consensys.linea.zktracer.Trace.Mxp.CT_MAX_MSIZE;
+import static net.consensys.linea.zktracer.module.mxp.MxpOperation.MXP_FROM_CTMAX_TO_LINECOUNT;
 
 import net.consensys.linea.zktracer.module.hub.Hub;
 import net.consensys.linea.zktracer.module.mxp.MxpExoCall;

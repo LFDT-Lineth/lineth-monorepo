@@ -95,11 +95,11 @@ public abstract class GasProjection {
   }
 
   /**
-   * Returns the (fork-dependent) value that will be checked against MXPX_THRESHOLD: that is: - For
-   * legacy MXP (London, Paris, Shanghai): size == 0 ? 0 : offset + (size - 1) - For Cancun and
-   * after: size == 0 ? 0 : Max(size, offset)
+   * Returns the value that will be checked against MXPX_THRESHOLD: that is: - For legacy MXP
+   * (London, Paris, Shanghai): size == 0 ? 0 : offset + (size - 1) - For Cancun and after: size ==
+   * 0 ? 0 : Max(size, offset)
    */
-  public long mxpxOffset(Fork fork) {
+  public long mxpxOffset() {
     return 0;
   }
 

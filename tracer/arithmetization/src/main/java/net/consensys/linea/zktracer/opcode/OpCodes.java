@@ -161,17 +161,7 @@ public class OpCodes {
         TypeFactory.defaultInstance().constructCollectionType(List.class, OpCodeData.class);
 
     SimpleModule module = new SimpleModule();
-    switch (fork) {
-      case LONDON, PARIS, SHANGHAI -> {
-        // Before Cancun, we deserialize Billing with a type (TYPE_1, TYPE_2, TYPE_3, TYPE_4).
-        module.addDeserializer(Billing.class, new BillingDeserializer(true));
-      }
-      case CANCUN, PRAGUE, OSAKA -> {
-        // From Cancun and on, we deserialize Billing without a type.
-        module.addDeserializer(Billing.class, new BillingDeserializer(false));
-      }
-      default -> throw new IllegalArgumentException("Unsupported fork: " + fork);
-    }
+    module.addDeserializer(Billing.class, new BillingDeserializer(false));
     yamlConverter.getObjectMapper().registerModule(module);
 
     return yamlConverter.getObjectMapper().treeToValue(rootNode, typeReference);

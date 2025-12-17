@@ -19,7 +19,6 @@ import static com.google.common.base.Preconditions.checkState;
 import static java.lang.Long.parseLong;
 import static net.consensys.linea.testing.ShomeiNode.MerkelProofResponse;
 import static net.consensys.linea.zktracer.Fork.OSAKA;
-import static net.consensys.linea.zktracer.Fork.isPostParis;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hyperledger.besu.tests.acceptance.dsl.WaitUtils.waitFor;
 
@@ -223,9 +222,8 @@ public class BesuExecutionTools {
         // We use EngineAPIService to mimick the consensus layer steps and build a new block
         Block blockInfo = this.besuNode.execute(ethTransactions.block());
         nextFork = nextBlockFork(blockInfo);
-        if (isPostParis(nextFork)) {
-          callEngineAPIToBuildNewBlock(besuNode, ethTransactions, genesisConfigBuilder, nextFork);
-        }
+        callEngineAPIToBuildNewBlock(besuNode, ethTransactions, genesisConfigBuilder, nextFork);
+
         // We check that the transactions are included in a block
         waitForTxReceipts(besuNode, ethTransactions, txHashes, txReceiptProcessed, blockNumbers);
         currentFork = nextFork;

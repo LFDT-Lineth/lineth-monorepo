@@ -78,9 +78,8 @@ public class LineCountingTracerTest extends TracerTestBase {
         counter.getModulesToCount().stream().map(module -> module.moduleKey().toString()).toList();
 
     for (Fork fork : Fork.values()) {
-      // London, Paris and Shanghai are not supported by ZkTracer since refactoring Blockdata and
-      // Hub
-      if (!isPostCancun(fork)) {
+      // The tracer doesn't support Prague and before now
+      if (forkPredatesOsaka(fork)) {
         continue;
       }
       // TODO: reenable me when Amsterdam is supported

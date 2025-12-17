@@ -17,6 +17,7 @@ package net.consensys.linea.zktracer.module.txndata;
 
 import static net.consensys.linea.zktracer.module.ModuleName.TXN_DATA;
 
+import java.util.ArrayList;
 import java.util.List;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -28,12 +29,21 @@ import net.consensys.linea.zktracer.module.ModuleName;
 import net.consensys.linea.zktracer.module.euc.Euc;
 import net.consensys.linea.zktracer.module.hub.Hub;
 import net.consensys.linea.zktracer.module.hub.fragment.transaction.system.SystemTransactionType;
+import net.consensys.linea.zktracer.module.txndata.transactions.SysfNoopTransaction;
+import net.consensys.linea.zktracer.module.txndata.transactions.SysiEip2935Transaction;
+import net.consensys.linea.zktracer.module.txndata.transactions.SysiEip4788Transaction;
+import net.consensys.linea.zktracer.module.txndata.transactions.UserTransaction;
 import net.consensys.linea.zktracer.module.wcp.Wcp;
 import net.consensys.linea.zktracer.types.TransactionProcessingMetadata;
+import org.hyperledger.besu.datatypes.Address;
+import org.hyperledger.besu.evm.worldstate.WorldView;
+import org.hyperledger.besu.plugin.data.BlockBody;
+import org.hyperledger.besu.plugin.data.BlockHeader;
+import org.hyperledger.besu.plugin.data.ProcessableBlockHeader;
 
 @RequiredArgsConstructor
 @Accessors(fluent = true)
-public abstract class TxnData implements OperationListModule<TxnDataOperation> {
+public final class TxnData implements OperationListModule<TxnDataOperation> {
   @Getter
   private final ModuleOperationStackedList<TxnDataOperation> operations =
       new ModuleOperationStackedList<>();
@@ -42,13 +52,37 @@ public abstract class TxnData implements OperationListModule<TxnDataOperation> {
   @Getter private final Wcp wcp;
   @Getter private final Euc euc;
 
+  @Getter private final List<BlockSnapshot> blocks = new ArrayList<>();
+  @Getter private ProcessableBlockHeader currentBlockHeader;
+
   @Override
   public ModuleName moduleKey() {
     return TXN_DATA;
   }
 
   @Override
-  public abstract void traceEndTx(TransactionProcessingMetadata tx);
+  public void traceStartBlock(
+      WorldView world,
+      final ProcessableBlockHeader processableBlockHeader,
+      final Address miningBeneficiary) {
+    blocks.add(new BlockSnapshot(processableBlockHeader));
+    currentBlockHeader = processableBlockHeader;
+  }
+
+  @Override
+  public void traceEndBlock(final BlockHeader blockHeader, final BlockBody blockBody) {
+    blocks.getLast().setNbOfTxsInBlock(blockBody.getTransactions().size());
+  }
+
+  public void callTxnDataForSystemTransaction(final SystemTransactionType type) {
+    switch (type) {
+      case SYSI_EIP_4788_BEACON_BLOCK_ROOT -> operations().add(new SysiEip4788Transaction(this));
+      case SYSI_EIP_2935_HISTORICAL_HASH -> operations().add(new SysiEip2935Transaction(this));
+      case SYSF_NOOP -> operations().add(new SysfNoopTransaction(this));
+      case SYSI_NOOP ->
+          throw new IllegalArgumentException("Unsupported system transaction type: " + type);
+    }
+  }
 
   @Override
   public int spillage(Trace trace) {
@@ -60,7 +94,25 @@ public abstract class TxnData implements OperationListModule<TxnDataOperation> {
     return trace.txndata().headers(this.lineCount());
   }
 
-  public abstract int numberOfUserTransactionsInCurrentBlock();
+  @Override
+  public void commit(Trace trace) {
+    final int totUserFinal = totalNumberOfUserTransactions();
+    for (TxnDataOperation tx : operations().getAll()) {
+      tx.traceTransaction(trace.txndata(), totUserFinal);
+    }
+  }
 
-  public abstract void callTxnDataForSystemTransaction(final SystemTransactionType type);
+  @Override
+  public void traceEndTx(TransactionProcessingMetadata tx) {
+    operations().add(new UserTransaction(this, tx));
+  }
+
+  public int numberOfUserTransactionsInCurrentBlock() {
+    return blocks.getLast().getNbOfTxsInBlock();
+  }
+
+  public int totalNumberOfUserTransactions() {
+    return Math.toIntExact(
+        operations().stream().filter(op -> op instanceof UserTransaction).count());
+  }
 }

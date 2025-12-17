@@ -60,32 +60,19 @@ public abstract class MxpCall implements TraceSubFragment {
 
   public MxpCall(Hub hub) {
     this.hub = hub;
-    final MessageFrame frame = this.hub.messageFrame();
-    // set opCodeData
-    this.opCodeData = this.hub.opCodeData();
-    // set deploys
-    this.deploys =
-        this.opCodeData.mnemonic() == OpCode.RETURN & this.hub.currentFrame().isDeployment();
-    // set memorySizeInWords
-    this.memorySizeInWords = this.hub.messageFrame().memoryWordSize();
-    // set sizes and offsets
-    final EWord[] sizesAndOffsets = getSizesAndOffsets(frame, this.opCodeData);
-    this.size1 = sizesAndOffsets[0];
-    this.offset1 = sizesAndOffsets[1];
-    this.size2 = sizesAndOffsets[2];
-    this.offset2 = sizesAndOffsets[3];
+    final MessageFrame frame = hub.messageFrame();
+    opCodeData = this.hub.opCodeData();
+    deploys = opCodeData.mnemonic() == OpCode.RETURN && hub.currentFrame().isDeployment();
+    memorySizeInWords = hub.messageFrame().memoryWordSize();
+    final EWord[] sizesAndOffsets = getSizesAndOffsets(frame, opCodeData);
+    size1 = sizesAndOffsets[0];
+    offset1 = sizesAndOffsets[1];
+    size2 = sizesAndOffsets[2];
+    offset2 = sizesAndOffsets[3];
   }
 
   public static MxpCall newMxpCall(Hub hub) {
-    switch (hub.fork) {
-      case LONDON, PARIS, SHANGHAI -> {
-        return new LondonMxpCall(hub);
-      }
-      case CANCUN, PRAGUE, OSAKA -> {
-        return getCancunMxpCall(hub);
-      }
-      default -> throw new IllegalArgumentException("Unsupported fork: " + hub.fork);
-    }
+    return generateMxpCall(hub);
   }
 
   /**
@@ -95,7 +82,7 @@ public abstract class MxpCall implements TraceSubFragment {
    * @param hub instance of Hub used to create the CancunMxpCall
    * @return CancunMxpCall instance corresponding to the Mxp scenario
    */
-  public static CancunMxpCall getCancunMxpCall(Hub hub) {
+  public static CancunMxpCall generateMxpCall(Hub hub) {
     final OpCodeData opCodeData = hub.opCodeData();
     if (opCodeData.isMSize()) {
       return new CancunMSizeMxpCall(hub);
@@ -134,33 +121,25 @@ public abstract class MxpCall implements TraceSubFragment {
 
   protected void setMayTriggerNontrivialMmuOperation() {}
 
-  // Method only filled for LondonMxpCall
-  public abstract void traceMayTriggerNonTrivialMmuOperationFromMxpx(Trace.Hub trace);
-
-  // Method only filled for LondonMxpCall
-  public abstract void traceMxpWords(Trace.Hub trace);
-
   public Trace.Hub trace(Trace.Hub trace, State hubState) {
     hubState.incrementMxpStamp();
-    // Legacy for LondonMxpCall
-    traceMayTriggerNonTrivialMmuOperationFromMxpx(trace);
-    // Conditional from Cancun
-    traceMxpWords(trace);
     return trace
         .pMiscMxpFlag(true)
-        .pMiscMxpInst(this.opCodeData.value())
-        .pMiscMxpDeploys(this.deploys)
-        .pMiscMxpOffset1Hi(this.offset1.hi())
-        .pMiscMxpOffset1Lo(this.offset1.lo())
-        .pMiscMxpSize1Hi(this.size1.hi())
-        .pMiscMxpSize1Lo(this.size1.lo())
-        .pMiscMxpOffset2Hi(this.offset2.hi())
-        .pMiscMxpOffset2Lo(this.offset2.lo())
-        .pMiscMxpSize2Hi(this.size2.hi())
-        .pMiscMxpSize2Lo(this.size2.lo())
-        .pMiscMxpSize1NonzeroNoMxpx(this.getSize1NonZeroNoMxpx())
-        .pMiscMxpSize2NonzeroNoMxpx(this.getSize2NonZeroNoMxpx())
-        .pMiscMxpMxpx(this.mxpx)
-        .pMiscMxpGasMxp(Bytes.ofUnsignedLong(this.gasMxp));
+        .pMiscMxpInst(opCodeData.value())
+        .pMiscMxpDeploys(deploys)
+        .pMiscMxpOffset1Hi(offset1.hi())
+        .pMiscMxpOffset1Lo(offset1.lo())
+        .pMiscMxpSize1Hi(size1.hi())
+        .pMiscMxpSize1Lo(size1.lo())
+        .pMiscMxpOffset2Hi(offset2.hi())
+        .pMiscMxpOffset2Lo(offset2.lo())
+        .pMiscMxpSize2Hi(size2.hi())
+        .pMiscMxpSize2Lo(size2.lo())
+        .pMiscMxpSize1NonzeroNoMxpx(getSize1NonZeroNoMxpx())
+        .pMiscMxpSize2NonzeroNoMxpx(getSize2NonZeroNoMxpx())
+        .pMiscMxpMxpx(mxpx)
+        .pMiscMxpGasMxp(Bytes.ofUnsignedLong(gasMxp))
+        .pMiscMxpWords(
+            opCodeData.isMSize() ? Bytes.ofUnsignedLong(memorySizeInWords) : Bytes.EMPTY);
   }
 }

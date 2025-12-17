@@ -17,6 +17,7 @@ package net.consensys.linea.zktracer.module.hub.fragment.common;
 
 import static net.consensys.linea.zktracer.module.hub.HubProcessingPhase.*;
 import static net.consensys.linea.zktracer.module.hub.HubProcessingPhase.TX_EXEC;
+import static net.consensys.linea.zktracer.module.hub.TransactionProcessingType.*;
 
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.Accessors;
@@ -29,7 +30,7 @@ import org.apache.tuweni.bytes.Bytes;
 
 @Accessors(fluent = true, chain = false)
 @RequiredArgsConstructor
-public abstract class CommonFragment implements TraceFragment {
+public final class CommonFragment implements TraceFragment {
 
   final CommonFragmentValues commonFragmentValues;
   private final int nonStackRowsCounter;
@@ -57,9 +58,14 @@ public abstract class CommonFragment implements TraceFragment {
   public Trace.Hub trace(Trace.Hub trace) {
     final CallFrame frame = commonFragmentValues.callFrame;
     final boolean isExec = commonFragmentValues.hubProcessingPhase == TX_EXEC;
-    traceTransactionsAndBlockNumbers(trace);
-    traceTransactionProcessingType(trace);
     trace
+        .sysiTxnNumber(commonFragmentValues.sysiTransactionNumber)
+        .userTxnNumber(commonFragmentValues.userTransactionNumber)
+        .sysfTxnNumber(commonFragmentValues.sysfTransactionNumber)
+        .blkNumber(commonFragmentValues.relBlockNumber)
+        .sysi(commonFragmentValues.transactionProcessingType == SYSI)
+        .user(commonFragmentValues.transactionProcessingType == USER)
+        .sysf(commonFragmentValues.transactionProcessingType == SYSF)
         .txSkip(commonFragmentValues.hubProcessingPhase == TX_SKIP)
         .txWarm(commonFragmentValues.hubProcessingPhase == TX_WARM)
         .txInit(commonFragmentValues.hubProcessingPhase == TX_INIT)
@@ -104,11 +110,7 @@ public abstract class CommonFragment implements TraceFragment {
     return trace;
   }
 
-  protected TransactionProcessingMetadata tx() {
+  private TransactionProcessingMetadata tx() {
     return commonFragmentValues.txMetadata;
   }
-
-  protected abstract void traceTransactionsAndBlockNumbers(Trace.Hub trace);
-
-  protected abstract void traceTransactionProcessingType(Trace.Hub trace);
 }

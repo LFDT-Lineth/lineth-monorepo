@@ -26,7 +26,6 @@ import org.hyperledger.besu.datatypes.Wei;
 import org.hyperledger.besu.evm.account.Account;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.gascalculator.GasCalculator;
-import org.hyperledger.besu.evm.internal.Words;
 
 @RequiredArgsConstructor
 public class Call extends GasProjection {
@@ -59,28 +58,13 @@ public class Call extends GasProjection {
   }
 
   @Override
-  public long mxpxOffset(Fork fork) {
+  public long mxpxOffset() {
     if (this.isInvalid()) {
       return 0;
     }
-
-    switch (fork) {
-      case LONDON, PARIS, SHANGHAI -> {
-        return Math.max(
-            callDataRange.isEmpty()
-                ? 0
-                : Words.clampedAdd(callDataRange.offset(), callDataRange.size() - 1),
-            returnAtRange.isEmpty()
-                ? 0
-                : Words.clampedAdd(returnAtRange.offset(), returnAtRange.size() - 1));
-      }
-      case CANCUN, PRAGUE, OSAKA -> {
-        return Math.max(
-            callDataRange.isEmpty() ? 0 : Math.max(callDataRange.offset(), callDataRange.size()),
-            returnAtRange.isEmpty() ? 0 : Math.max(returnAtRange.offset(), returnAtRange.size()));
-      }
-      default -> throw new IllegalArgumentException("Unknown fork: " + fork);
-    }
+    return Math.max(
+        callDataRange.isEmpty() ? 0 : Math.max(callDataRange.offset(), callDataRange.size()),
+        returnAtRange.isEmpty() ? 0 : Math.max(returnAtRange.offset(), returnAtRange.size()));
   }
 
   @Override

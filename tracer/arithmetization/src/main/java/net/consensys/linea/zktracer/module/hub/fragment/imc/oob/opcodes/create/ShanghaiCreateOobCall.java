@@ -15,9 +15,9 @@
 
 package net.consensys.linea.zktracer.module.hub.fragment.imc.oob.opcodes.create;
 
-import static net.consensys.linea.zktracer.TraceShanghai.Oob.CT_MAX_CREATE;
+import static net.consensys.linea.zktracer.Trace.Oob.CT_MAX_CREATE;
 import static net.consensys.linea.zktracer.module.oob.OobExoCall.callToLT;
-import static net.consensys.linea.zktracer.module.txndata.shanghai.ShanghaiTxndataOperation.MAX_INIT_CODE_SIZE_BYTES;
+import static net.consensys.linea.zktracer.module.txndata.transactions.UserTransaction.MAX_INIT_CODE_SIZE_BYTES;
 import static org.hyperledger.besu.evm.internal.Words.clampedToLong;
 
 import net.consensys.linea.zktracer.Trace;

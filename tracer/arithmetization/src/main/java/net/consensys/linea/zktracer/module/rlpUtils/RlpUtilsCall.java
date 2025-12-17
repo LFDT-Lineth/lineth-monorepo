@@ -18,7 +18,7 @@ package net.consensys.linea.zktracer.module.rlpUtils;
 import lombok.EqualsAndHashCode;
 import net.consensys.linea.zktracer.Trace;
 import net.consensys.linea.zktracer.container.ModuleOperation;
-import net.consensys.linea.zktracer.module.rlptxn.cancun.GenericTracedValue;
+import net.consensys.linea.zktracer.module.rlptxn.GenericTracedValue;
 
 @EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = false)
 public abstract class RlpUtilsCall extends ModuleOperation {

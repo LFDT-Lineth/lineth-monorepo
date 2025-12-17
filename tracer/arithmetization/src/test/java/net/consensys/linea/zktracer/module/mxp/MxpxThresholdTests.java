@@ -19,9 +19,9 @@ import static net.consensys.linea.zktracer.Fork.isPostCancun;
 import static net.consensys.linea.zktracer.Trace.LLARGE;
 import static net.consensys.linea.zktracer.Trace.LLARGEMO;
 import static net.consensys.linea.zktracer.Trace.LLARGEPO;
+import static net.consensys.linea.zktracer.Trace.Mxp.CANCUN_MXPX_THRESHOLD;
 import static net.consensys.linea.zktracer.Trace.WORD_SIZE;
 import static net.consensys.linea.zktracer.Trace.WORD_SIZE_MO;
-import static net.consensys.linea.zktracer.TraceCancun.Mxp.CANCUN_MXPX_THRESHOLD;
 import static net.consensys.linea.zktracer.opcode.OpCode.MLOAD;
 import static net.consensys.linea.zktracer.opcode.OpCode.MSTORE;
 import static net.consensys.linea.zktracer.opcode.OpCode.POP;
@@ -34,8 +34,6 @@ import net.consensys.linea.reporting.TracerTestBase;
 import net.consensys.linea.testing.BytecodeCompiler;
 import net.consensys.linea.testing.BytecodeRunner;
 import net.consensys.linea.testing.ToyAccount;
-import net.consensys.linea.zktracer.TraceCancun;
-import net.consensys.linea.zktracer.TraceLondon;
 import net.consensys.linea.zktracer.opcode.OpCode;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
@@ -46,16 +44,12 @@ import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.junit.jupiter.params.provider.ValueSource;
 
 public class MxpxThresholdTests extends TracerTestBase {
 
   static final BigInteger MAX_UINT256 =
       BigInteger.TWO.pow(256).subtract(BigInteger.ONE); // 2^256 - 1
-  static final BigInteger LONDON_MXPX_THRESHOLD =
-      BigInteger.valueOf(TraceLondon.Mxp.LONDON_MXPX_THRESHOLD);
-  static final BigInteger CANCUN_MXPX_THRESHOLD =
-      BigInteger.valueOf(TraceCancun.Mxp.CANCUN_MXPX_THRESHOLD);
+  static final BigInteger CANCUN_MXPX_THRESHOLD_BI = BigInteger.valueOf(CANCUN_MXPX_THRESHOLD);
   static final BigInteger SMALL = BigInteger.valueOf(32);
 
   static final List<OpCode> oneOffsetOpCodes = List.of(OpCode.MSTORE, OpCode.MSTORE8);
@@ -205,26 +199,7 @@ public class MxpxThresholdTests extends TracerTestBase {
   }
 
   static BigInteger mxpxThreshold() {
-    if (isPostCancun(chainConfig.fork)) {
-      return CANCUN_MXPX_THRESHOLD;
-    } else {
-      return LONDON_MXPX_THRESHOLD;
-    }
-  }
-
-  @ParameterizedTest
-  @ValueSource(ints = {16, 17, 18, 19, 20, 21})
-  void testCodeCopyForDifferentSizes(int size, TestInfo testInfo) {
-    BytecodeCompiler program = BytecodeCompiler.newProgram(chainConfig);
-    program
-        .push(size)
-        .push(0) // offset (arbitrary value)
-        .push(
-            BigInteger.valueOf(13)
-                .add(LONDON_MXPX_THRESHOLD)
-                .subtract(BigInteger.valueOf(32))) // destOffset
-        .op(OpCode.CODECOPY);
-    BytecodeRunner.of(program.compile()).run(chainConfig, testInfo);
+    return CANCUN_MXPX_THRESHOLD_BI;
   }
 
   @ParameterizedTest
@@ -248,7 +223,7 @@ public class MxpxThresholdTests extends TracerTestBase {
     List<BigInteger> aValues =
         List.of(BigInteger.valueOf(16), BigInteger.valueOf(17), BigInteger.valueOf(18));
     BigInteger b =
-        LONDON_MXPX_THRESHOLD.subtract(BigInteger.valueOf(32)).add(BigInteger.valueOf(15));
+        CANCUN_MXPX_THRESHOLD_BI.subtract(BigInteger.valueOf(32)).add(BigInteger.valueOf(15));
     for (BigInteger a : aValues) {
       arguments.add(Arguments.of(a, b));
       arguments.add(Arguments.of(b, a));
@@ -275,9 +250,9 @@ public class MxpxThresholdTests extends TracerTestBase {
     List<Arguments> arguments = new ArrayList<>();
     List<BigInteger> values =
         List.of(
-            LONDON_MXPX_THRESHOLD,
-            LONDON_MXPX_THRESHOLD.subtract(BigInteger.valueOf(1)),
-            LONDON_MXPX_THRESHOLD.add(BigInteger.valueOf(1)));
+            CANCUN_MXPX_THRESHOLD_BI,
+            CANCUN_MXPX_THRESHOLD_BI.subtract(BigInteger.valueOf(1)),
+            CANCUN_MXPX_THRESHOLD_BI.add(BigInteger.valueOf(1)));
     for (BigInteger a : values) {
       for (BigInteger b : values) {
         arguments.add(Arguments.of(a, b));
@@ -324,8 +299,8 @@ public class MxpxThresholdTests extends TracerTestBase {
       List.of(
           Bytes32.ZERO,
           Bytes32.leftPad(Bytes.ofUnsignedInt(1)),
-          Bytes32.leftPad(Bytes.ofUnsignedLong(TraceCancun.Mxp.CANCUN_MXPX_THRESHOLD - 1)),
-          Bytes32.leftPad(Bytes.ofUnsignedLong(TraceCancun.Mxp.CANCUN_MXPX_THRESHOLD)),
+          Bytes32.leftPad(Bytes.ofUnsignedLong(CANCUN_MXPX_THRESHOLD - 1)),
+          Bytes32.leftPad(Bytes.ofUnsignedLong(CANCUN_MXPX_THRESHOLD)),
           Bytes32.repeat((byte) 0xff));
 
   private static final List<Bytes32> inputsValuesNightly =
@@ -339,7 +314,7 @@ public class MxpxThresholdTests extends TracerTestBase {
                   Bytes32.leftPad(Bytes.ofUnsignedInt(WORD_SIZE)),
                   Bytes32.leftPad(Bytes.ofUnsignedInt(33)),
                   Bytes32.leftPad(Bytes.ofUnsignedLong(Long.MAX_VALUE)),
-                  Bytes32.leftPad(Bytes.ofUnsignedLong(TraceCancun.Mxp.CANCUN_MXPX_THRESHOLD + 1))))
+                  Bytes32.leftPad(Bytes.ofUnsignedLong(CANCUN_MXPX_THRESHOLD + 1))))
           .toList();
 
   // Main test

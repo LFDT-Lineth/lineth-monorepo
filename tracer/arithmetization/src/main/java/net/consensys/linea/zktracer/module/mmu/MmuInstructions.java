@@ -30,7 +30,6 @@ import static net.consensys.linea.zktracer.Trace.MMU_INST_RIGHT_PADDED_WORD_EXTR
 
 import lombok.Getter;
 import lombok.experimental.Accessors;
-import net.consensys.linea.zktracer.Fork;
 import net.consensys.linea.zktracer.module.euc.Euc;
 import net.consensys.linea.zktracer.module.mmu.instructions.AnyToRamWithPadding;
 import net.consensys.linea.zktracer.module.mmu.instructions.Blake;
@@ -62,7 +61,7 @@ class MmuInstructions {
   private final ModexpData modexpData;
   private final Blake blake;
 
-  MmuInstructions(Euc euc, Wcp wcp, Fork fork) {
+  MmuInstructions(Euc euc, Wcp wcp) {
     this.mLoadPreComputation = new MLoad(euc, wcp);
     this.mStorePreComputation = new MStore(euc, wcp);
     this.mStore8PreComputation = new MStore8(euc);
@@ -72,8 +71,8 @@ class MmuInstructions {
     this.exoToRamTransplants = new ExoToRamTransplants(euc);
     this.ramToRamSansPadding = new RamToRamSansPadding(euc, wcp);
     this.anyToRamWithPadding = new AnyToRamWithPadding(euc, wcp);
-    this.modexpZero = new ModexpZero(fork);
-    this.modexpData = new ModexpData(euc, wcp, fork);
+    this.modexpZero = new ModexpZero();
+    this.modexpData = new ModexpData(euc, wcp);
     this.blake = new Blake(euc, wcp);
   }
 

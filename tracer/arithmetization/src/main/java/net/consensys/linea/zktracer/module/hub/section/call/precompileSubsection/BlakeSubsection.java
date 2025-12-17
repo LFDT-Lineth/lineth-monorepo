@@ -21,7 +21,7 @@ import static net.consensys.linea.zktracer.module.hub.fragment.scenario.Precompi
 import static net.consensys.linea.zktracer.module.hub.fragment.scenario.PrecompileScenarioFragment.PrecompileScenario.PRC_FAILURE_KNOWN_TO_RAM;
 
 import net.consensys.linea.zktracer.module.blake2fmodexpdata.BlakeComponents;
-import net.consensys.linea.zktracer.module.blake2fmodexpdata.LondonBlakeModexpDataOperation;
+import net.consensys.linea.zktracer.module.blake2fmodexpdata.BlakeModexpDataOperation;
 import net.consensys.linea.zktracer.module.hub.Hub;
 import net.consensys.linea.zktracer.module.hub.fragment.imc.ImcFragment;
 import net.consensys.linea.zktracer.module.hub.fragment.imc.mmu.MmuCall;
@@ -125,7 +125,7 @@ public class BlakeSubsection extends PrecompileSubsection {
             callData.slice(212, 1),
             extractReturnData());
     hub.blakeModexpData()
-        .callBlake(new LondonBlakeModexpDataOperation(blake2f, this.exoModuleOperationId()));
+        .callBlake(new BlakeModexpDataOperation(blake2f, this.exoModuleOperationId()));
   }
 
   @Override

@@ -15,21 +15,18 @@
 
 package net.consensys.linea.zktracer.module.mmu.instructions;
 
-import static net.consensys.linea.zktracer.Fork.forkPredatesOsaka;
+import static net.consensys.linea.zktracer.Trace.Blake2fmodexpdata.MODEXP_MAX_BYTE_SIZE;
 import static net.consensys.linea.zktracer.Trace.LLARGE;
 import static net.consensys.linea.zktracer.Trace.MMIO_INST_LIMB_VANISHES;
 import static net.consensys.linea.zktracer.Trace.MMIO_INST_RAM_TO_LIMB_ONE_SOURCE;
 import static net.consensys.linea.zktracer.Trace.MMIO_INST_RAM_TO_LIMB_TRANSPLANT;
 import static net.consensys.linea.zktracer.Trace.MMIO_INST_RAM_TO_LIMB_TWO_SOURCE;
-import static net.consensys.linea.zktracer.Trace.Mmu.NB_PP_ROWS_MODEXP_DATA;
-import static net.consensys.linea.zktracer.TraceLondon.Mmu.NB_MICRO_ROWS_TOT_MODEXP_DATA;
+import static net.consensys.linea.zktracer.Trace.Mmu.*;
+import static net.consensys.linea.zktracer.TraceOsaka.Blake2fmodexpdata.INDEX_MAX_MODEXP;
 import static net.consensys.linea.zktracer.types.Conversions.longToBytes;
 
 import java.util.ArrayList;
 import java.util.List;
-import net.consensys.linea.zktracer.Fork;
-import net.consensys.linea.zktracer.module.blake2fmodexpdata.LondonBlakeModexpDataOperation;
-import net.consensys.linea.zktracer.module.blake2fmodexpdata.OsakaBlakeModexpDataOperation;
 import net.consensys.linea.zktracer.module.euc.Euc;
 import net.consensys.linea.zktracer.module.euc.EucOperation;
 import net.consensys.linea.zktracer.module.mmu.MmuData;
@@ -45,7 +42,6 @@ import org.apache.tuweni.bytes.Bytes;
 public class ModexpData implements MmuInstruction {
   private final Euc euc;
   private final Wcp wcp;
-  private final Fork fork;
   private final List<MmuEucCallRecord> eucCallRecords;
   private final List<MmuWcpCallRecord> wcpCallRecords;
   private int initialTotalLeftZeroes;
@@ -68,24 +64,15 @@ public class ModexpData implements MmuInstruction {
   private long middleFirstSourceLimbOffset;
   private int middleMicroInst;
 
-  public ModexpData(Euc euc, Wcp wcp, Fork fork) {
+  public ModexpData(Euc euc, Wcp wcp) {
     this.euc = euc;
     this.wcp = wcp;
-    this.fork = fork;
     this.eucCallRecords = new ArrayList<>(NB_PP_ROWS_MODEXP_DATA);
     this.wcpCallRecords = new ArrayList<>(NB_PP_ROWS_MODEXP_DATA);
   }
 
-  private final int getForkAppropriateModexpInputSize() {
-    return forkPredatesOsaka(fork)
-        ? LondonBlakeModexpDataOperation.modexpComponentByteSize()
-        : OsakaBlakeModexpDataOperation.modexpComponentByteSize();
-  }
-
-  private final int getForkAppropriateTotalNumberOfMicroRows() {
-    return forkPredatesOsaka(fork)
-        ? NB_MICRO_ROWS_TOT_MODEXP_DATA
-        : 2 * NB_MICRO_ROWS_TOT_MODEXP_DATA;
+  private int getForkAppropriateModexpInputSize() {
+    return LLARGE * (INDEX_MAX_MODEXP + 1);
   }
 
   @Override
@@ -128,7 +115,7 @@ public class ModexpData implements MmuInstruction {
         (int) (hubToMmuValues.referenceOffset() + hubToMmuValues.sourceOffsetLo().longValueExact());
     leftoverDataSize =
         (int) (hubToMmuValues.referenceSize() - hubToMmuValues.sourceOffsetLo().longValueExact());
-    final int numberLeftPaddingBytes = getForkAppropriateModexpInputSize() - parameterByteSize;
+    final int numberLeftPaddingBytes = MODEXP_MAX_BYTE_SIZE - parameterByteSize;
 
     final EucOperation eucOp = euc.callEUC(longToBytes(numberLeftPaddingBytes), Bytes.of(LLARGE));
 
@@ -159,9 +146,7 @@ public class ModexpData implements MmuInstruction {
     final EucOperation eucOp = euc.callEUC(longToBytes(numberRightPaddingBytes), Bytes.of(LLARGE));
     initialTotalRightZeroes = eucOp.quotient().toInt();
     initialTotalNonTrivial =
-        getForkAppropriateTotalNumberOfMicroRows()
-            - initialTotalLeftZeroes
-            - initialTotalRightZeroes;
+        NB_MICRO_ROWS_TOT_MODEXP_ZERO - initialTotalLeftZeroes - initialTotalRightZeroes;
     rightPaddingRemainder = eucOp.remainder().toInt();
     eucCallRecords.add(
         MmuEucCallRecord.builder()

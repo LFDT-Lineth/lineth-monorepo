@@ -19,7 +19,6 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static net.consensys.linea.testing.MultiBlockExecutionEnvironment.DEFAULT_DELTA_TIMESTAMP_BETWEEN_BLOCKS;
 import static net.consensys.linea.testing.ToyExecutionEnvironmentV2.DEFAULT_BLOCK_NUMBER;
 import static net.consensys.linea.testing.ToyExecutionEnvironmentV2.DEFAULT_TIME_STAMP;
-import static net.consensys.linea.zktracer.Fork.isPostShanghai;
 import static net.consensys.linea.zktracer.forkSpecific.systemTransaction.DeployerScenario.*;
 import static net.consensys.linea.zktracer.forkSpecific.systemTransaction.SystemSmartContractScenario.EXISTS_PRIOR_TO_CONFLATION;
 import static net.consensys.linea.zktracer.forkSpecific.systemTransaction.SystemTransactionTestUtils.byteCodeCallingSystemSmartContract;
@@ -226,14 +225,6 @@ public class SystemTransactionTests extends TracerTestBase {
       DeployerScenario deployerScenario4788,
       boolean transferValueTo4788priorToDeployment,
       TestInfo testInfo) {
-
-    // Note: this test uses a PUSH0 in the deployment code of the system contract. Therefore, the
-    // deployment fails if not in Shanghai or after, and our test framework doesn't allow failing
-    // transaction:
-    // org.opentest4j.AssertionFailedError: Transaction not successful:
-    if (!isPostShanghai(chainConfig.fork)) {
-      return;
-    }
 
     // Note: do not modify me: value coming from https://eips.ethereum.org/EIPS/eip-2935
     final ToyAccount deployerOf2935 =

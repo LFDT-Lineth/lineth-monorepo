@@ -15,7 +15,7 @@
 
 package net.consensys.linea.corset;
 
-import static net.consensys.linea.zktracer.ChainConfig.MAINNET_LONDON_TESTCONFIG;
+import static net.consensys.linea.zktracer.ChainConfig.MAINNET_OSAKA_TESTCONFIG;
 import static net.consensys.linea.zktracer.Fork.toCamelCase;
 import static net.consensys.linea.zktracer.Trace.*;
 
@@ -160,16 +160,11 @@ public class CorsetValidator extends AbstractExecutable {
   private void setChainConstants(List<String> options) {
     final int fork =
         switch (chain.fork) {
-          case LONDON -> EVM_LONDON;
-          case PARIS -> EVM_PARIS;
-          case SHANGHAI -> EVM_SHANGHAI;
-          case CANCUN -> EVM_CANCUN;
-          case PRAGUE -> EVM_PRAGUE;
           case OSAKA -> EVM_OSAKA;
           default -> throw new IllegalArgumentException("unknown fork \"" + chain.fork + "\"");
         };
     options.add("-SEVM_FORK=" + fork);
-    if (chain != MAINNET_LONDON_TESTCONFIG) {
+    if (chain != MAINNET_OSAKA_TESTCONFIG) {
       options.add("-Sblockdata.GAS_LIMIT_MINIMUM=" + chain.gasLimitMinimum.toString());
       options.add("-Sblockdata.GAS_LIMIT_MAXIMUM=" + chain.gasLimitMaximum.toString());
       if (chain.fixedGasLimitEnabled) {

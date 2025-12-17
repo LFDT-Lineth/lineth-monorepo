@@ -35,7 +35,7 @@ public enum Fork {
   SHANGHAI(EVM_SHANGHAI),
   CANCUN(EVM_CANCUN),
   PRAGUE(EVM_PRAGUE),
-  OSAKA(EVM_OSAKA), // live on L1 2025/12/03
+  OSAKA(EVM_OSAKA), // live on L1&L2 2025/12/03
   AMSTERDAM(EVM_AMSTERDAM) // for Q? 2026
 ;
   private final int releaseNumber;
@@ -50,13 +50,10 @@ public enum Fork {
 
   public static String toCamelCase(Fork fork) {
     return switch (fork) {
-      case LONDON -> "london";
-      case PARIS -> "paris";
-      case SHANGHAI -> "shanghai";
-      case CANCUN -> "cancun";
-      case PRAGUE -> "prague";
       case OSAKA -> "osaka";
       // case AMSTERDAM -> "amsterdam";
+      case LONDON, PARIS, SHANGHAI, CANCUN, PRAGUE ->
+          throw new IllegalArgumentException("Fork no more supported by the tracer: " + fork);
       default -> throw new IllegalArgumentException("Unknown fork: " + fork);
     };
   }
@@ -75,10 +72,6 @@ public enum Fork {
 
   private static boolean forkIsAtLeast(Fork fork, Fork threshold) {
     return fork.getReleaseNumber() >= threshold.getReleaseNumber();
-  }
-
-  public static boolean isPostParis(Fork fork) {
-    return forkIsAtLeast(fork, PARIS);
   }
 
   public static boolean isPostShanghai(Fork fork) {
@@ -122,15 +115,15 @@ public enum Fork {
   public static Fork fromMainnetHardforkIdToTracerFork(MainnetHardforkId hardForkId) {
     // equivalent to return Fork.valueOf(hardForkId.name());
     return switch (hardForkId) {
-      case MainnetHardforkId.LONDON -> LONDON;
-      case MainnetHardforkId.PARIS -> PARIS;
-      case MainnetHardforkId.SHANGHAI -> SHANGHAI;
-      case MainnetHardforkId.CANCUN -> CANCUN;
-      case MainnetHardforkId.PRAGUE -> PRAGUE;
       case MainnetHardforkId.OSAKA -> OSAKA;
       // case MainnetHardforkId.AMSTERDAM -> AMSTERDAM;
-      default ->
-          throw new IllegalArgumentException("Fork not supported by the tracer: " + hardForkId);
+      case MainnetHardforkId.LONDON,
+          MainnetHardforkId.PARIS,
+          MainnetHardforkId.SHANGHAI,
+          MainnetHardforkId.CANCUN,
+          MainnetHardforkId.PRAGUE ->
+          throw new IllegalArgumentException("Fork no more supported by the tracer: " + hardForkId);
+      default -> throw new IllegalArgumentException("Unknown fork: " + hardForkId);
     };
   }
 
@@ -182,11 +175,6 @@ public enum Fork {
 
   public static Trace getTraceFromFork(Fork fork) {
     return switch (fork) {
-      case LONDON -> new TraceLondon();
-      case PARIS -> new TraceParis();
-      case SHANGHAI -> new TraceShanghai();
-      case CANCUN -> new TraceCancun();
-      case PRAGUE -> new TracePrague();
       case OSAKA -> new TraceOsaka();
       default -> throw new IllegalArgumentException("Unknown fork: " + fork);
     };
@@ -194,11 +182,9 @@ public enum Fork {
 
   public static GasCalculator getGasCalculatorFromFork(Fork fork) {
     return switch (fork) {
-      case LONDON, PARIS -> new LondonGasCalculator();
-      case SHANGHAI -> new ShanghaiGasCalculator();
-      case CANCUN -> new CancunGasCalculator();
-      case PRAGUE -> new PragueGasCalculator();
       case OSAKA -> new OsakaGasCalculator();
+      case LONDON, PARIS, SHANGHAI, CANCUN, PRAGUE ->
+          throw new IllegalArgumentException("Fork no more supported by the tracer: " + fork);
       default -> throw new IllegalArgumentException("Unknown fork: " + fork);
     };
   }
@@ -212,9 +198,9 @@ public enum Fork {
    */
   public static int numberOfAddressesSeenBySystemTransaction(Fork fork) {
     return switch (fork) {
-      case LONDON, PARIS, SHANGHAI -> 0;
-      case CANCUN -> 1;
-      case PRAGUE, OSAKA -> 2;
+      case OSAKA -> 2;
+      case LONDON, PARIS, SHANGHAI, CANCUN, PRAGUE ->
+          throw new IllegalArgumentException("Fork no more supported by the tracer: " + fork);
       default -> throw new IllegalArgumentException("Unknown fork: " + fork);
     };
   }
@@ -222,12 +208,9 @@ public enum Fork {
   // Used for blockchain ref tests with the Paris exception of "Merge"
   public static String toPascalCase(Fork fork) {
     return switch (fork) {
-      case LONDON -> "London";
-      case PARIS -> "Merge";
-      case SHANGHAI -> "Shanghai";
-      case CANCUN -> "Cancun";
-      case PRAGUE -> "Prague";
       case OSAKA -> "Osaka";
+      case LONDON, PARIS, SHANGHAI, CANCUN, PRAGUE ->
+          throw new IllegalArgumentException("Fork no more supported by the tracer: " + fork);
       default -> throw new IllegalArgumentException("Unknown fork: " + fork);
     };
   }

@@ -19,6 +19,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static net.consensys.linea.zktracer.Trace.Hub.MULTIPLIER___DOM_SUB_STAMPS;
 import static net.consensys.linea.zktracer.module.hub.TransactionProcessingType.USER;
+import static net.consensys.linea.zktracer.module.hub.TransactionProcessingType.isUserTransaction;
 import static net.consensys.linea.zktracer.types.AddressUtils.*;
 
 import java.util.Map;
@@ -46,10 +47,11 @@ import org.hyperledger.besu.datatypes.Transaction;
 import org.hyperledger.besu.evm.worldstate.WorldView;
 
 @Accessors(fluent = true)
-public abstract class AccountFragment
+public final class AccountFragment
     implements TraceFragment, EndTransactionDefer, PostBlockDefer, PostConflationDefer {
-
   private final Fork fork;
+  private final TransactionProcessingMetadata tx;
+  private final TransactionProcessingType txType;
   @Getter private final AccountSnapshot oldState;
   @Getter private final AccountSnapshot newState;
   @Setter private boolean requiresRomlex;
@@ -75,25 +77,8 @@ public abstract class AccountFragment
         AccountSnapshot newState,
         DomSubStampsSubFragment domSubStampsSubFragment,
         TransactionProcessingType txProcessingType) {
-      return switch (hub.fork) {
-        case LONDON, PARIS, SHANGHAI ->
-            new LondonAccountFragment(
-                hub,
-                oldState,
-                newState,
-                Optional.empty(),
-                domSubStampsSubFragment,
-                txProcessingType);
-        case CANCUN, PRAGUE, OSAKA ->
-            new CancunAccountFragment(
-                hub,
-                oldState,
-                newState,
-                Optional.empty(),
-                domSubStampsSubFragment,
-                txProcessingType);
-        default -> throw new IllegalArgumentException("Unknown fork: " + hub.fork);
-      };
+      return new AccountFragment(
+          hub, oldState, newState, Optional.empty(), domSubStampsSubFragment, txProcessingType);
     }
 
     public AccountFragment makeWithTrm(
@@ -103,25 +88,8 @@ public abstract class AccountFragment
         DomSubStampsSubFragment domSubStampsSubFragment,
         TransactionProcessingType txProcessingType) {
       hub.trm().callTrimming(toTrim);
-      return switch (hub.fork) {
-        case LONDON, PARIS, SHANGHAI ->
-            new LondonAccountFragment(
-                hub,
-                oldState,
-                newState,
-                Optional.of(toTrim),
-                domSubStampsSubFragment,
-                txProcessingType);
-        case CANCUN, PRAGUE, OSAKA ->
-            new CancunAccountFragment(
-                hub,
-                oldState,
-                newState,
-                Optional.of(toTrim),
-                domSubStampsSubFragment,
-                txProcessingType);
-        default -> throw new IllegalArgumentException("Unknown fork: " + hub.fork);
-      };
+      return new AccountFragment(
+          hub, oldState, newState, Optional.of(toTrim), domSubStampsSubFragment, txProcessingType);
     }
   }
 
@@ -135,15 +103,24 @@ public abstract class AccountFragment
     checkArgument(
         oldState.address().equals(newState.address()),
         "AccountFragment: address mismatch in constructor");
-
+    fork = hub.fork;
     transactionProcessingMetadata = txProcessingType == USER ? hub.txStack().current() : null;
     hubStamp = hub.stamp();
-
-    this.fork = hub.fork;
     this.oldState = oldState;
     this.newState = newState;
     this.addressToTrim = addressToTrim;
     this.domSubStampsSubFragment = domSubStampsSubFragment;
+    txType = txProcessingType;
+    if (isUserTransaction(txType)) {
+      tx = hub.txStack().current();
+      tx.updateHadCodeInitially(
+          oldState.address(),
+          domSubStampsSubFragment.domStamp(),
+          domSubStampsSubFragment.subStamp(),
+          oldState().tracedHasCode());
+    } else {
+      tx = null;
+    }
 
     // This allows us to properly fill EXISTS_INFTY, DEPLOYMENT_NUMBER_INFTY and CODE_FRAGMENT_INDEX
     hub.defers().scheduleForPostConflation(this);
@@ -198,21 +175,24 @@ public abstract class AccountFragment
         .pAccountDeploymentStatusNew(newState.deploymentStatus())
         .pAccountTrmFlag(addressToTrim.isPresent())
         .pAccountTrmRawAddressHi(addressToTrim.map(a -> EWord.of(a).hi()).orElse(Bytes.EMPTY))
-        .pAccountIsPrecompile(isPrecompile(fork, oldState().address()));
-    traceMarkedForSelfDestruct(trace);
-    traceMarkedForDeletion(trace);
+        .pAccountIsPrecompile(isPrecompile(fork, oldState().address()))
+        .pAccountMarkedForDeletion(markedForDeletion)
+        .pAccountMarkedForDeletionNew(markedForDeletionNew);
     traceHadCodeInitially(trace);
 
     return trace;
   }
 
-  abstract void traceHadCodeInitially(Trace.Hub trace);
+  private void traceHadCodeInitially(Trace.Hub trace) {
+    trace.pAccountHadCodeInitially(
+        isUserTransaction(txType)
+            ? tx.hadCodeInitiallyMap().get(oldState().address()).hadCode()
+            : oldState().tracedHasCode());
+  }
 
-  abstract void traceMarkedForDeletion(Trace.Hub trace);
-
-  abstract void traceMarkedForSelfDestruct(Trace.Hub trace);
-
-  abstract boolean shouldBeMarkedForDeletion();
+  private boolean shouldBeMarkedForDeletion() {
+    return !transactionProcessingMetadata.hadCodeInitiallyMap().get(oldState().address()).hadCode();
+  }
 
   @Override
   public void resolveAtEndTransaction(

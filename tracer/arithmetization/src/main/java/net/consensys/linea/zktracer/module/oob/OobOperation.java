@@ -18,7 +18,7 @@ package net.consensys.linea.zktracer.module.oob;
 import static com.google.common.math.BigIntegerMath.log2;
 import static java.lang.Math.min;
 import static net.consensys.linea.zktracer.Trace.WORD_SIZE;
-import static net.consensys.linea.zktracer.module.hub.precompiles.modexpMetadata.ModexpMetadata.BASE_MIN_OFFSET;
+import static net.consensys.linea.zktracer.module.hub.precompiles.ModexpMetadata.BASE_MIN_OFFSET;
 import static net.consensys.linea.zktracer.types.Utils.rightPadTo;
 
 import java.math.BigInteger;
@@ -30,7 +30,7 @@ import lombok.experimental.Accessors;
 import net.consensys.linea.zktracer.container.ModuleOperation;
 import net.consensys.linea.zktracer.module.hub.Hub;
 import net.consensys.linea.zktracer.module.hub.fragment.imc.oob.OobCall;
-import net.consensys.linea.zktracer.module.hub.precompiles.modexpMetadata.ModexpMetadata;
+import net.consensys.linea.zktracer.module.hub.precompiles.ModexpMetadata;
 import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 
@@ -61,8 +61,7 @@ public class OobOperation extends ModuleOperation {
   }
 
   public static int computeExponentLog(ModexpMetadata modexpMetadata, int cds, int bbs, int ebs) {
-    return computeExponentLog(
-        modexpMetadata.callData(), modexpMetadata.getLeadLogByteMultiplier(), cds, bbs, ebs);
+    return computeExponentLog(modexpMetadata.callData(), 16, cds, bbs, ebs);
   }
 
   public static int computeExponentLog(Bytes callData, int multiplier, int cds, int bbs, int ebs) {

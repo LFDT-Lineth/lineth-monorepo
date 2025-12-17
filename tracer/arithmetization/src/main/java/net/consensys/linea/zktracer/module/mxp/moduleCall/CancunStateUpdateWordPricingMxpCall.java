@@ -15,8 +15,8 @@
 
 package net.consensys.linea.zktracer.module.mxp.moduleCall;
 
-import static net.consensys.linea.zktracer.TraceCancun.Mxp.CT_MAX_UPDT_W;
-import static net.consensys.linea.zktracer.module.mxp.moduleOperation.CancunMxpOperation.MXP_FROM_CTMAX_TO_LINECOUNT;
+import static net.consensys.linea.zktracer.TraceOsaka.Mxp.CT_MAX_UPDT_W;
+import static net.consensys.linea.zktracer.module.mxp.MxpOperation.MXP_FROM_CTMAX_TO_LINECOUNT;
 import static net.consensys.linea.zktracer.types.Conversions.unsignedIntToBytes;
 
 import java.math.BigInteger;

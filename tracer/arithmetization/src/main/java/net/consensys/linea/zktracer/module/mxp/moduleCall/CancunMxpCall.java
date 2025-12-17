@@ -15,11 +15,10 @@
 
 package net.consensys.linea.zktracer.module.mxp.moduleCall;
 
-import static net.consensys.linea.zktracer.TraceCancun.Mxp.CANCUN_MXPX_THRESHOLD;
+import static net.consensys.linea.zktracer.Trace.Mxp.CANCUN_MXPX_THRESHOLD;
 import static net.consensys.linea.zktracer.module.mxp.MxpUtils.memoryCost;
 import static net.consensys.linea.zktracer.types.Conversions.*;
 
-import net.consensys.linea.zktracer.Trace;
 import net.consensys.linea.zktracer.module.hub.Hub;
 import net.consensys.linea.zktracer.module.hub.fragment.imc.MxpCall;
 import net.consensys.linea.zktracer.module.mxp.MxpExoCall;
@@ -198,14 +197,5 @@ public class CancunMxpCall extends MxpCall {
         booleanToInt(size2IsLarge) + booleanToInt(size2IsNonZero) * booleanToInt(offset2IsLarge);
 
     this.mxpxExpression = mxpxExpression1 + mxpxExpression2;
-  }
-
-  public void traceMayTriggerNonTrivialMmuOperationFromMxpx(Trace.Hub trace) {
-    // From Cancun and on, we don't trace mayTriggerNonTrivialMmuOperationFromMxpx anymore
-  }
-
-  public void traceMxpWords(Trace.Hub trace) {
-    trace.pMiscMxpWords(
-        this.opCodeData.isMSize() ? Bytes.ofUnsignedLong(this.memorySizeInWords) : Bytes.EMPTY);
   }
 }

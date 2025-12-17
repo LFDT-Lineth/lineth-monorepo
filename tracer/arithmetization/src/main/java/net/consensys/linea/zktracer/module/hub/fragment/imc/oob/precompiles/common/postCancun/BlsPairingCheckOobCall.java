@@ -18,8 +18,8 @@ package net.consensys.linea.zktracer.module.hub.fragment.imc.oob.precompiles.com
 import static net.consensys.linea.zktracer.Trace.GAS_CONST_BLS_PAIRING_CHECK;
 import static net.consensys.linea.zktracer.Trace.GAS_CONST_BLS_PAIRING_CHECK_PAIR;
 import static net.consensys.linea.zktracer.Trace.OOB_INST_BLS_PAIRING_CHECK;
+import static net.consensys.linea.zktracer.Trace.Oob.CT_MAX_BLS_PAIRING_CHECK;
 import static net.consensys.linea.zktracer.Trace.PRECOMPILE_CALL_DATA_UNIT_SIZE___BLS_PAIRING_CHECK;
-import static net.consensys.linea.zktracer.TraceCancun.Oob.CT_MAX_BLS_PAIRING_CHECK;
 import static net.consensys.linea.zktracer.module.oob.OobExoCall.callToIsZero;
 import static net.consensys.linea.zktracer.module.oob.OobExoCall.callToLT;
 import static net.consensys.linea.zktracer.module.oob.OobExoCall.callToMOD;

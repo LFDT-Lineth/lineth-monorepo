@@ -15,8 +15,6 @@
 
 package net.consensys.linea.testing;
 
-import static net.consensys.linea.reporting.TracerTestBase.chainConfig;
-import static net.consensys.linea.reporting.TracerTestBase.fork;
 import static net.consensys.linea.zktracer.Fork.*;
 import static net.consensys.linea.zktracer.Trace.LINEA_BLOCK_GAS_LIMIT;
 import static net.consensys.linea.zktracer.module.hub.section.systemTransaction.EIP2935HistoricalHash.EIP2935_HISTORY_STORAGE_ADDRESS;
@@ -102,7 +100,7 @@ public class ToyExecutionTools {
     final Fork fork =
         fromMainnetHardforkIdToTracerFork(
             (HardforkId.MainnetHardforkId) protocolSpec.getHardforkId());
-    addSystemAccountsIfRequired(worldStateUpdater, fork);
+    addSystemAccountsIfRequired(worldStateUpdater);
 
     final MainnetTransactionProcessor processor = protocolSpec.getTransactionProcessor();
     final ReferenceTestBlockchain blockchain = new ReferenceTestBlockchain(blockHeader.getNumber());
@@ -113,7 +111,7 @@ public class ToyExecutionTools {
 
     tracer.traceStartConflation(1);
     tracer.traceStartBlock(worldStateUpdater, blockHeader, blockBody, blockHeader.getCoinbase());
-    runSystemInitialTransactions(protocolSpec, fork, initialWorldState, blockHeader, tracer);
+    runSystemInitialTransactions(protocolSpec, initialWorldState, blockHeader, tracer);
 
     TransactionProcessingResult result = null;
     for (Transaction transaction : blockBody.getTransactions()) {
@@ -240,30 +238,26 @@ public class ToyExecutionTools {
     return blockHeader;
   }
 
-  public static void addSystemAccountsIfRequired(WorldUpdater worldStateUpdater, Fork fork) {
-    if (isPostCancun(fork)) {
-      if (worldStateUpdater.getAccount(EIP4788_BEACONROOT_ADDRESS) == null) {
-        worldStateUpdater.createAccount(EIP4788_BEACONROOT_ADDRESS);
-        // bytecode is taken from
-        // https://etherscan.io/address/0x000F3df6D732807Ef1319fB7B8bB8522d0Beac02#code
-        worldStateUpdater
-            .getAccount(EIP4788_BEACONROOT_ADDRESS)
-            .setCode(
-                Bytes.fromHexString(
-                    "0x3373fffffffffffffffffffffffffffffffffffffffe14604d57602036146024575f5ffd5b5f35801560495762001fff810690815414603c575f5ffd5b62001fff01545f5260205ff35b5f5ffd5b62001fff42064281555f359062001fff015500"));
-      }
+  public static void addSystemAccountsIfRequired(WorldUpdater worldStateUpdater) {
+    if (worldStateUpdater.getAccount(EIP4788_BEACONROOT_ADDRESS) == null) {
+      worldStateUpdater.createAccount(EIP4788_BEACONROOT_ADDRESS);
+      // bytecode is taken from
+      // https://etherscan.io/address/0x000F3df6D732807Ef1319fB7B8bB8522d0Beac02#code
+      worldStateUpdater
+          .getAccount(EIP4788_BEACONROOT_ADDRESS)
+          .setCode(
+              Bytes.fromHexString(
+                  "0x3373fffffffffffffffffffffffffffffffffffffffe14604d57602036146024575f5ffd5b5f35801560495762001fff810690815414603c575f5ffd5b62001fff01545f5260205ff35b5f5ffd5b62001fff42064281555f359062001fff015500"));
     }
-    if (isPostPrague(fork)) {
-      if (worldStateUpdater.getAccount(EIP2935_HISTORY_STORAGE_ADDRESS) == null) {
-        worldStateUpdater.createAccount(EIP2935_HISTORY_STORAGE_ADDRESS);
-        // bytecode is taken from
-        // https://etherscan.io/address/0x0000F90827F1C53a10cb7A02335B175320002935#code
-        worldStateUpdater
-            .getAccount(EIP2935_HISTORY_STORAGE_ADDRESS)
-            .setCode(
-                Bytes.fromHexString(
-                    "0x3373fffffffffffffffffffffffffffffffffffffffe14604657602036036042575f35600143038111604257611fff81430311604257611fff9006545f5260205ff35b5f5ffd5b5f35611fff60014303065500"));
-      }
+    if (worldStateUpdater.getAccount(EIP2935_HISTORY_STORAGE_ADDRESS) == null) {
+      worldStateUpdater.createAccount(EIP2935_HISTORY_STORAGE_ADDRESS);
+      // bytecode is taken from
+      // https://etherscan.io/address/0x0000F90827F1C53a10cb7A02335B175320002935#code
+      worldStateUpdater
+          .getAccount(EIP2935_HISTORY_STORAGE_ADDRESS)
+          .setCode(
+              Bytes.fromHexString(
+                  "0x3373fffffffffffffffffffffffffffffffffffffffe14604657602036036042575f35600143038111604257611fff81430311604257611fff9006545f5260205ff35b5f5ffd5b5f35611fff60014303065500"));
     }
     worldStateUpdater.commit();
   }
@@ -328,23 +322,20 @@ public class ToyExecutionTools {
 
   public static void runSystemInitialTransactions(
       ProtocolSpec spec,
-      Fork fork,
       MutableWorldState world,
       BlockHeader header,
       ConflationAwareOperationTracer tracer) {
-    if (isPostCancun(fork)) {
-      final PreExecutionProcessor preExecutionProcessor = spec.getPreExecutionProcessor();
-      final ReferenceTestBlockchain blockchain = new ReferenceTestBlockchain(header.getNumber());
+    final PreExecutionProcessor preExecutionProcessor = spec.getPreExecutionProcessor();
+    final ReferenceTestBlockchain blockchain = new ReferenceTestBlockchain(header.getNumber());
 
-      final BlockProcessingContext context =
-          new BlockProcessingContext(
-              header,
-              world,
-              spec,
-              preExecutionProcessor.createBlockHashLookup(blockchain, header),
-              tracer,
-              Optional.empty());
-      preExecutionProcessor.process(context, Optional.empty());
-    }
+    final BlockProcessingContext context =
+        new BlockProcessingContext(
+            header,
+            world,
+            spec,
+            preExecutionProcessor.createBlockHashLookup(blockchain, header),
+            tracer,
+            Optional.empty());
+    preExecutionProcessor.process(context, Optional.empty());
   }
 }

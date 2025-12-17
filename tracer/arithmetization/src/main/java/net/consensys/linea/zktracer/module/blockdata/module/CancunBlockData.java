@@ -15,7 +15,7 @@
 
 package net.consensys.linea.zktracer.module.blockdata.module;
 
-import static net.consensys.linea.zktracer.TraceCancun.Blockdata.*;
+import static net.consensys.linea.zktracer.Trace.Blockdata.nROWS_DEPTH;
 import static net.consensys.linea.zktracer.opcode.OpCode.*;
 import static net.consensys.linea.zktracer.opcode.OpCode.BASEFEE;
 import static net.consensys.linea.zktracer.opcode.OpCode.CHAINID;

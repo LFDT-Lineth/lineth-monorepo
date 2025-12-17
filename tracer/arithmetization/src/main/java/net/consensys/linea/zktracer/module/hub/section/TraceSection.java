@@ -31,12 +31,10 @@ import net.consensys.linea.zktracer.Trace;
 import net.consensys.linea.zktracer.module.hub.Hub;
 import net.consensys.linea.zktracer.module.hub.HubProcessingPhase;
 import net.consensys.linea.zktracer.module.hub.fragment.ContextFragment;
+import net.consensys.linea.zktracer.module.hub.fragment.StackFragment;
 import net.consensys.linea.zktracer.module.hub.fragment.TraceFragment;
-import net.consensys.linea.zktracer.module.hub.fragment.common.CancunCommonFragment;
 import net.consensys.linea.zktracer.module.hub.fragment.common.CommonFragment;
 import net.consensys.linea.zktracer.module.hub.fragment.common.CommonFragmentValues;
-import net.consensys.linea.zktracer.module.hub.fragment.common.LondonCommonFragment;
-import net.consensys.linea.zktracer.module.hub.fragment.stack.StackFragment;
 import net.consensys.linea.zktracer.runtime.callstack.CallFrame;
 import net.consensys.linea.zktracer.runtime.stack.Stack;
 import net.consensys.linea.zktracer.runtime.stack.StackLine;
@@ -234,23 +232,12 @@ public class TraceSection {
 
       specificFragment.trace(hubTrace);
       final CommonFragment commonFragment =
-          switch (commonValues.hub.fork) {
-            case LONDON, PARIS, SHANGHAI ->
-                new LondonCommonFragment(
-                    commonValues,
-                    stackLineCounter,
-                    nonStackLineCounter,
-                    hub().state.mmuStamp(),
-                    hub().state.mxpStamp());
-            case CANCUN, PRAGUE, OSAKA ->
-                new CancunCommonFragment(
-                    commonValues,
-                    stackLineCounter,
-                    nonStackLineCounter,
-                    hub().state.mmuStamp(),
-                    hub().state.mxpStamp());
-            default -> throw new IllegalArgumentException("Unknown fork: " + commonValues.hub.fork);
-          };
+          new CommonFragment(
+              commonValues,
+              stackLineCounter,
+              nonStackLineCounter,
+              hub().state.mmuStamp(),
+              hub().state.mxpStamp());
       commonFragment.trace(hubTrace);
       hubTrace.fillAndValidateRow();
     }

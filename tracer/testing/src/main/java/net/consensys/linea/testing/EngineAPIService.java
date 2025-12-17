@@ -200,12 +200,10 @@ public class EngineAPIService {
       payloadAttributes.put("timestamp", blockTimestamp);
       payloadAttributes.put("prevRandao", Hash.ZERO.toString());
       payloadAttributes.put("suggestedFeeRecipient", Address.ZERO.toString());
-      if (isPostShanghai(fork)) {
-        payloadAttributes.set("withdrawals", mapper.createArrayNode());
-      }
-      if (isPostCancun(fork)) {
-        payloadAttributes.put("parentBeaconBlockRoot", Hash.ZERO.toString());
-      }
+      // post Shanghai
+      payloadAttributes.set("withdrawals", mapper.createArrayNode());
+      // post Cancun
+      payloadAttributes.put("parentBeaconBlockRoot", Hash.ZERO.toString());
       params.add(payloadAttributes);
     }
     return params;
@@ -242,10 +240,7 @@ public class EngineAPIService {
       }
     }
     return switch (fork) {
-      case PARIS -> createEngineCall("engine_newPayloadV1", params);
-      case SHANGHAI -> createEngineCall("engine_newPayloadV2", params);
-      case CANCUN -> createEngineCall("engine_newPayloadV3", params);
-      case PRAGUE, OSAKA -> createEngineCall("engine_newPayloadV4", params);
+      case OSAKA -> createEngineCall("engine_newPayloadV4", params);
       default ->
           throw new IllegalArgumentException(
               "Unsupported fork for createNewPayloadRequest: " + fork);

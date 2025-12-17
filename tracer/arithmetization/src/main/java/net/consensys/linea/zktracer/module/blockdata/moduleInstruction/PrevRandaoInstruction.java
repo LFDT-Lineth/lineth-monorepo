@@ -14,7 +14,7 @@
  */
 package net.consensys.linea.zktracer.module.blockdata.moduleInstruction;
 
-import static net.consensys.linea.zktracer.TraceShanghai.Blockdata.nROWS_PV;
+import static net.consensys.linea.zktracer.Trace.Blockdata.nROWS_PV;
 
 import net.consensys.linea.zktracer.ChainConfig;
 import net.consensys.linea.zktracer.Trace;

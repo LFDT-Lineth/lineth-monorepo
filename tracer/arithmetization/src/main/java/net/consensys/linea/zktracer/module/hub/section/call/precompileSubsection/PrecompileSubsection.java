@@ -155,9 +155,9 @@ public abstract class PrecompileSubsection
     }
 
     // successful PRC_CALL to MODEXP
-    final LondonModexpSubsection modexpSubsection = (LondonModexpSubsection) this;
-    final int mbs = modexpSubsection.getForkAppropriateModexpMetadata().mbsInt();
-    final int maxInputSize = modexpSubsection.getForkAppropriateModexpMetadata().getMaxInputSize();
+    final ModexpSubsection modexpSubsection = (ModexpSubsection) this;
+    final int mbs = modexpSubsection.modexpMetadata.mbsInt();
+    final int maxInputSize = modexpSubsection.modexpMetadata.getMaxInputSize();
     final Bytes returnData = frame.getReturnData();
     checkState(
         0 <= mbs && mbs <= maxInputSize,

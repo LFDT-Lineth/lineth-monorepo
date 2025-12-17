@@ -17,7 +17,6 @@ package net.consensys.linea.zktracer.opcode.gas.projector;
 
 import static org.hyperledger.besu.evm.internal.Words.clampedToLong;
 
-import net.consensys.linea.zktracer.Fork;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 import org.hyperledger.besu.evm.gascalculator.GasCalculator;
 
@@ -45,7 +44,7 @@ public final class MStore8 extends GasProjection {
   }
 
   @Override
-  public long mxpxOffset(Fork fork) {
-    return this.offset;
+  public long mxpxOffset() {
+    return offset;
   }
 }

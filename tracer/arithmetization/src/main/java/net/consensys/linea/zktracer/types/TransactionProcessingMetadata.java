@@ -111,10 +111,6 @@ public class TransactionProcessingMetadata {
   @Setter
   boolean isCoinbasePreWarmed = false;
 
-  @Accessors(fluent = true)
-  @Setter
-  boolean coinbaseWarmAtTransactionEnd = false;
-
   @Setter List<Log> logs;
 
   @Setter int codeFragmentIndex = -1;
@@ -277,8 +273,7 @@ public class TransactionProcessingMetadata {
   public void setPreFinalisationValues(
       final long leftOverGas,
       final long refundCounterMax,
-      final long accumulatedGasUsedInBlockAtStartTx,
-      final boolean coinbaseWarmAtTransactionEnd) {
+      final long accumulatedGasUsedInBlockAtStartTx) {
 
     this.refundCounterMax = refundCounterMax;
     setLeftoverGas(leftOverGas);
@@ -287,7 +282,6 @@ public class TransactionProcessingMetadata {
     gasRefunded = computeRefunded();
     totalGasUsed = computeTotalGasUsed();
     accumulatedGasUsedInBlock = accumulatedGasUsedInBlockAtStartTx + totalGasUsed;
-    this.coinbaseWarmAtTransactionEnd = coinbaseWarmAtTransactionEnd;
   }
 
   public void completeLineaTransaction(

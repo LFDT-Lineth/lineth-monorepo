@@ -18,12 +18,11 @@ package net.consensys.linea.zktracer.precompiles;
 import static net.consensys.linea.zktracer.Trace.*;
 import static net.consensys.linea.zktracer.Trace.Oob.G_QUADDIVISOR;
 import static net.consensys.linea.zktracer.instructionprocessing.callTests.Utilities.populateMemory;
-import static org.hyperledger.besu.datatypes.Address.*;
 
 import net.consensys.linea.reporting.TracerTestBase;
 import net.consensys.linea.testing.BytecodeCompiler;
 import net.consensys.linea.zktracer.module.hub.fragment.scenario.PrecompileScenarioFragment.PrecompileFlag;
-import net.consensys.linea.zktracer.module.tables.bls.BlsRt;
+import net.consensys.linea.zktracer.module.tables.BlsRt;
 import net.consensys.linea.zktracer.opcode.OpCode;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;

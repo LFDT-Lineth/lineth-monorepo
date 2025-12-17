@@ -30,7 +30,6 @@ import net.consensys.linea.zktracer.module.blockdata.moduleInstruction.BlobBaseF
 import net.consensys.linea.zktracer.module.blockdata.moduleInstruction.BlockDataInstruction;
 import net.consensys.linea.zktracer.module.blockdata.moduleInstruction.ChainIdInstruction;
 import net.consensys.linea.zktracer.module.blockdata.moduleInstruction.CoinbaseInstruction;
-import net.consensys.linea.zktracer.module.blockdata.moduleInstruction.DifficultyInstruction;
 import net.consensys.linea.zktracer.module.blockdata.moduleInstruction.GasLimitInstruction;
 import net.consensys.linea.zktracer.module.blockdata.moduleInstruction.NumberInstruction;
 import net.consensys.linea.zktracer.module.blockdata.moduleInstruction.PrevRandaoInstruction;
@@ -163,9 +162,6 @@ public abstract class BlockData implements Module {
               chain, hub, wcp, euc, blockHeader, prevBlockHeader, firstBlockNumber);
       case NUMBER ->
           new NumberInstruction(
-              chain, hub, wcp, euc, blockHeader, prevBlockHeader, firstBlockNumber);
-      case DIFFICULTY ->
-          new DifficultyInstruction(
               chain, hub, wcp, euc, blockHeader, prevBlockHeader, firstBlockNumber);
       case PREVRANDAO ->
           new PrevRandaoInstruction(

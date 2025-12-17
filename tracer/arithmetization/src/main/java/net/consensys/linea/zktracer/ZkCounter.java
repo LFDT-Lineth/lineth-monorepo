@@ -29,35 +29,35 @@ import static net.consensys.linea.zktracer.module.gas.GasOperation.NB_ROWS_GAS;
 import static net.consensys.linea.zktracer.module.hub.fragment.scenario.PrecompileScenarioFragment.PrecompileFlag.*;
 import static net.consensys.linea.zktracer.module.hub.section.AccountSection.NB_ROWS_HUB_ACCOUNT;
 import static net.consensys.linea.zktracer.module.hub.section.CallDataLoadSection.NB_ROWS_HUB_CALLDATALOAD;
+import static net.consensys.linea.zktracer.module.hub.section.CreateSection.NB_ROWS_HUB_CREATE;
 import static net.consensys.linea.zktracer.module.hub.section.JumpSection.NB_ROWS_HUB_JUMP;
 import static net.consensys.linea.zktracer.module.hub.section.McopySection.NB_ROWS_HUB_MCOPY;
 import static net.consensys.linea.zktracer.module.hub.section.MsizeSection.NB_ROWS_HUB_MSIZE;
 import static net.consensys.linea.zktracer.module.hub.section.SstoreSection.NB_ROWS_HUB_STORAGE;
 import static net.consensys.linea.zktracer.module.hub.section.StackOnlySection.NB_ROWS_HUB_SIMPLE_STACK_OP;
 import static net.consensys.linea.zktracer.module.hub.section.StackRamSection.NB_ROWS_HUB_STACKRAM;
+import static net.consensys.linea.zktracer.module.hub.section.TxFinalizationSection.NB_ROWS_HUB_FINL;
+import static net.consensys.linea.zktracer.module.hub.section.TxInitializationSection.NB_ROWS_HUB_INIT;
+import static net.consensys.linea.zktracer.module.hub.section.TxSkipSection.NB_ROWS_HUB_SKIP;
 import static net.consensys.linea.zktracer.module.hub.section.call.CallSection.NB_ROWS_HUB_CALL;
 import static net.consensys.linea.zktracer.module.hub.section.call.precompileSubsection.BlakeSubsection.NB_ROWS_HUB_PRC_BLAKE;
 import static net.consensys.linea.zktracer.module.hub.section.call.precompileSubsection.EllipticCurvePrecompileSubsection.NB_ROWS_HUB_PRC_ELLIPTIC_CURVE;
 import static net.consensys.linea.zktracer.module.hub.section.call.precompileSubsection.IdentitySubsection.NB_ROWS_HUB_PRC_IDENTITY;
-import static net.consensys.linea.zktracer.module.hub.section.call.precompileSubsection.LondonModexpSubsection.NB_ROWS_HUB_PRC_MODEXP;
+import static net.consensys.linea.zktracer.module.hub.section.call.precompileSubsection.ModexpSubsection.NB_ROWS_HUB_PRC_MODEXP;
 import static net.consensys.linea.zktracer.module.hub.section.call.precompileSubsection.ShaTwoOrRipemdSubSection.NB_ROWS_HUB_PRC_SHARIP;
 import static net.consensys.linea.zktracer.module.hub.section.copy.CallDataCopySection.NB_ROWS_HUB_CALL_DATA_COPY;
 import static net.consensys.linea.zktracer.module.hub.section.copy.CodeCopySection.NB_ROWS_HUB_CODE_COPY;
 import static net.consensys.linea.zktracer.module.hub.section.copy.ExtCodeCopySection.NB_ROWS_HUB_EXT_CODE_COPY;
 import static net.consensys.linea.zktracer.module.hub.section.copy.ReturnDataCopySection.NB_ROWS_HUB_RETURN_DATA_COPY;
-import static net.consensys.linea.zktracer.module.hub.section.create.CreateSection.NB_ROWS_HUB_CREATE;
-import static net.consensys.linea.zktracer.module.hub.section.finalization.TxFinalizationSection.NB_ROWS_HUB_FINL;
 import static net.consensys.linea.zktracer.module.hub.section.halt.RevertSection.NB_ROWS_HUB_REVERT;
+import static net.consensys.linea.zktracer.module.hub.section.halt.SelfdestructSection.NB_ROWS_HUB_SELFDESTRUCT;
 import static net.consensys.linea.zktracer.module.hub.section.halt.StopSection.NB_ROWS_HUB_STOP_DEPLOYMENT;
 import static net.consensys.linea.zktracer.module.hub.section.halt.StopSection.NB_ROWS_HUB_STOP_MSG_CALL;
-import static net.consensys.linea.zktracer.module.hub.section.halt.selfdestruct.SelfdestructSection.NB_ROWS_HUB_SELFDESTRUCT;
-import static net.consensys.linea.zktracer.module.hub.section.skip.TxSkipSection.NB_ROWS_HUB_SKIP;
 import static net.consensys.linea.zktracer.module.hub.section.systemTransaction.EIP2935HistoricalHash.NB_ROWS_HUB_SYSI_EIP2935;
 import static net.consensys.linea.zktracer.module.hub.section.systemTransaction.EIP4788BeaconBlockRootSection.NB_ROWS_HUB_SYSI_EIP4788;
 import static net.consensys.linea.zktracer.module.hub.section.systemTransaction.SysfNoopSection.NB_ROWS_HUB_SYSF_NOOP;
 import static net.consensys.linea.zktracer.module.hub.section.transients.TLoadSection.NB_ROWS_HUB_TLOAD;
 import static net.consensys.linea.zktracer.module.hub.section.transients.TStoreSection.NB_ROWS_HUB_TSTORE;
-import static net.consensys.linea.zktracer.module.hub.section.txInitializationSection.TxInitializationSection.NB_ROWS_HUB_INIT;
 import static net.consensys.linea.zktracer.module.logdata.LogData.lineCountForLogData;
 import static net.consensys.linea.zktracer.module.loginfo.LogInfo.lineCountForLogInfo;
 import static net.consensys.linea.zktracer.module.mxp.moduleCall.CancunMSizeMxpCall.NB_ROWS_MXP_MSIZE;
@@ -67,11 +67,11 @@ import static net.consensys.linea.zktracer.module.rlpaddr.RlpAddrOperation.*;
 import static net.consensys.linea.zktracer.module.rlptxrcpt.RlpTxrcptOperation.lineCountForRlpTxnRcpt;
 import static net.consensys.linea.zktracer.module.shakiradata.ShakiraDataOperation.NB_ROWS_SHAKIRA_RESULT;
 import static net.consensys.linea.zktracer.module.stp.StpOperation.NB_ROWS_STP;
-import static net.consensys.linea.zktracer.module.txndata.cancun.transactions.SysfNoopTransaction.NB_ROWS_TXN_DATA_SYSF_NOOP;
-import static net.consensys.linea.zktracer.module.txndata.cancun.transactions.SysiEip2935Transaction.NB_ROWS_TXN_DATA_SYSI_EIP2935;
-import static net.consensys.linea.zktracer.module.txndata.cancun.transactions.SysiEip4788Transaction.NB_ROWS_TXN_DATA_SYSI_EIP4788;
-import static net.consensys.linea.zktracer.module.txndata.osaka.OsakaUserTransaction.NB_ROWS_TXN_DATA_OSAKA_USER_1559_SEMANTIC;
-import static net.consensys.linea.zktracer.module.txndata.osaka.OsakaUserTransaction.NB_ROWS_TXN_DATA_OSAKA_USER_NO_1559_SEMANTIC;
+import static net.consensys.linea.zktracer.module.txndata.transactions.SysfNoopTransaction.NB_ROWS_TXN_DATA_SYSF_NOOP;
+import static net.consensys.linea.zktracer.module.txndata.transactions.SysiEip2935Transaction.NB_ROWS_TXN_DATA_SYSI_EIP2935;
+import static net.consensys.linea.zktracer.module.txndata.transactions.SysiEip4788Transaction.NB_ROWS_TXN_DATA_SYSI_EIP4788;
+import static net.consensys.linea.zktracer.module.txndata.transactions.UserTransaction.NB_ROWS_TXN_DATA_OSAKA_USER_1559_SEMANTIC;
+import static net.consensys.linea.zktracer.module.txndata.transactions.UserTransaction.NB_ROWS_TXN_DATA_OSAKA_USER_NO_1559_SEMANTIC;
 import static net.consensys.linea.zktracer.opcode.OpCode.*;
 import static net.consensys.linea.zktracer.runtime.stack.Stack.MAX_STACK_SIZE;
 import static net.consensys.linea.zktracer.types.TransactionProcessingMetadata.computeRequiresEvmExecution;
@@ -98,9 +98,7 @@ import net.consensys.linea.zktracer.module.hub.fragment.imc.exp.ExpCall;
 import net.consensys.linea.zktracer.module.hub.fragment.imc.exp.ExplogExpCall;
 import net.consensys.linea.zktracer.module.hub.fragment.imc.exp.ModexpLogExpCall;
 import net.consensys.linea.zktracer.module.hub.fragment.scenario.PrecompileScenarioFragment;
-import net.consensys.linea.zktracer.module.hub.precompiles.modexpMetadata.LondonModexpMetadata;
-import net.consensys.linea.zktracer.module.hub.precompiles.modexpMetadata.ModexpMetadata;
-import net.consensys.linea.zktracer.module.hub.precompiles.modexpMetadata.OsakaModexpMetadata;
+import net.consensys.linea.zktracer.module.hub.precompiles.ModexpMetadata;
 import net.consensys.linea.zktracer.module.limits.BlockTransactions;
 import net.consensys.linea.zktracer.module.limits.Keccak;
 import net.consensys.linea.zktracer.module.limits.L1BlockSize;
@@ -325,29 +323,31 @@ public class ZkCounter implements LineCountingTracer {
       Fork fork,
       boolean countHistoricalBlockHashes) {
     this.fork = fork;
+    if (forkPredatesOsaka(fork)) {
+      throw new IllegalArgumentException("Fork no more supported by the tracer: " + fork);
+    }
     this.countHistoricalBlockHashes = countHistoricalBlockHashes;
-    this.opCodes = OpCodes.load(fork);
-    this.trace = getTraceFromFork(fork);
-    this.blakemodexp =
-        new CountingOnlyModule(BLAKE_MODEXP_DATA, trace.blake2fmodexpdata().spillage());
-    this.blockData = new CountingOnlyModule(BLOCK_DATA, trace.blockdata().spillage());
-    this.blockHash = new CountingOnlyModule(BLOCK_HASH, trace.blockhash().spillage());
-    this.gas = new CountingOnlyModule(GAS, trace.gas().spillage());
-    this.hub = new CountingOnlyModule(HUB, trace.hub().spillage());
-    this.logData = new CountingOnlyModule(LOG_DATA, trace.logdata().spillage());
-    this.logInfo = new CountingOnlyModule(LOG_INFO, trace.loginfo().spillage());
-    this.mmio = new CountingOnlyModule(MMIO, trace.mmio().spillage());
-    this.mmu = new CountingOnlyModule(MMU, trace.mmu().spillage());
-    this.mxp = new CountingOnlyModule(MXP, trace.mxp().spillage());
-    this.rlpAddr = new CountingOnlyModule(RLP_ADDR, trace.rlpaddr().spillage());
-    this.rlpTxn = new CountingOnlyModule(RLP_TXN, trace.rlptxn().spillage());
-    this.rlpTxnRcpt = new CountingOnlyModule(RLP_TXN_RCPT, trace.rlptxrcpt().spillage());
-    this.rlpUtils = new CountingOnlyModule(RLP_UTILS, trace.rlputils().spillage());
-    this.rom = new CountingOnlyModule(ROM, trace.rom().spillage());
-    this.romlex = new CountingOnlyModule(ROM_LEX, trace.romlex().spillage());
-    this.shakiradata = new CountingOnlyModule(SHAKIRA_DATA, trace.shakiradata().spillage());
-    this.trm = new CountingOnlyModule(TRM, trace.trm().spillage());
-    this.txnData = new CountingOnlyModule(TXN_DATA, trace.txndata().spillage());
+    opCodes = OpCodes.load(fork);
+    trace = getTraceFromFork(fork);
+    blakemodexp = new CountingOnlyModule(BLAKE_MODEXP_DATA, trace.blake2fmodexpdata().spillage());
+    blockData = new CountingOnlyModule(BLOCK_DATA, trace.blockdata().spillage());
+    blockHash = new CountingOnlyModule(BLOCK_HASH, trace.blockhash().spillage());
+    gas = new CountingOnlyModule(GAS, trace.gas().spillage());
+    hub = new CountingOnlyModule(HUB, trace.hub().spillage());
+    logData = new CountingOnlyModule(LOG_DATA, trace.logdata().spillage());
+    logInfo = new CountingOnlyModule(LOG_INFO, trace.loginfo().spillage());
+    mmio = new CountingOnlyModule(MMIO, trace.mmio().spillage());
+    mmu = new CountingOnlyModule(MMU, trace.mmu().spillage());
+    mxp = new CountingOnlyModule(MXP, trace.mxp().spillage());
+    rlpAddr = new CountingOnlyModule(RLP_ADDR, trace.rlpaddr().spillage());
+    rlpTxn = new CountingOnlyModule(RLP_TXN, trace.rlptxn().spillage());
+    rlpTxnRcpt = new CountingOnlyModule(RLP_TXN_RCPT, trace.rlptxrcpt().spillage());
+    rlpUtils = new CountingOnlyModule(RLP_UTILS, trace.rlputils().spillage());
+    rom = new CountingOnlyModule(ROM, trace.rom().spillage());
+    romlex = new CountingOnlyModule(ROM_LEX, trace.romlex().spillage());
+    shakiradata = new CountingOnlyModule(SHAKIRA_DATA, trace.shakiradata().spillage());
+    trm = new CountingOnlyModule(TRM, trace.trm().spillage());
+    txnData = new CountingOnlyModule(TXN_DATA, trace.txndata().spillage());
     keccak = new Keccak(ecRecoverEffectiveCall, blockTransactions);
     ecdata =
         new EcData(
@@ -755,14 +755,7 @@ public class ZkCounter implements LineCountingTracer {
       case PRC_MODEXP -> {
         hub.updateTally(NB_ROWS_HUB_PRC_MODEXP);
         final MemoryRange memoryRange = new MemoryRange(0, 0, callData.size(), callData);
-        final ModexpMetadata modexpMetadata =
-            forkPredatesOsaka(fork)
-                ? new LondonModexpMetadata(memoryRange)
-                : new OsakaModexpMetadata(memoryRange);
-        if (modexpMetadata.unprovableModexp()) {
-          modexpEffectiveCall.detectEvent();
-          return;
-        }
+        final ModexpMetadata modexpMetadata = new ModexpMetadata(memoryRange);
         blakemodexp.updateTally(modexpMetadata.getNumberOfRowsForModexp());
         modexpEffectiveCall.updateTally(prcSuccess);
         modexpLargeCall.updateTally(modexpMetadata.largeModexp());

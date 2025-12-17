@@ -15,7 +15,6 @@
 package net.consensys.linea.zktracer;
 
 import static net.consensys.linea.zktracer.Fork.*;
-import static net.consensys.linea.zktracer.Fork.LONDON;
 import static net.consensys.linea.zktracer.Trace.ETHEREUM_GAS_LIMIT_MAXIMUM;
 import static net.consensys.linea.zktracer.Trace.ETHEREUM_GAS_LIMIT_MINIMUM;
 import static net.consensys.linea.zktracer.Trace.LINEA_CHAIN_ID;
@@ -35,9 +34,7 @@ public class ChainConfig {
    * Represents Linea mainnet as it stands today which enforces the block gas limit (currently two
    * billion). As the name suggest, this is only intended for testing purposes.
    */
-  public static final ChainConfig MAINNET_LONDON_TESTCONFIG = MAINNET_TESTCONFIG(LONDON);
-
-  public static final ChainConfig SEPOLIA_PRAGUE_TESTCONFIG = SEPOLIA_TESTCONFIG(PRAGUE);
+  public static final ChainConfig MAINNET_OSAKA_TESTCONFIG = MAINNET_TESTCONFIG(OSAKA);
 
   public static final int DEVNET_CHAIN_ID = 59139;
 
@@ -78,32 +75,6 @@ public class ChainConfig {
         BigInteger.valueOf(LINEA_GAS_LIMIT_MAXIMUM),
         LineaL1L2BridgeSharedConfiguration.TEST_DEFAULT);
   }
-
-  /**
-   * Represents Linea mainnet prior to the block gas limit being enforced for the purposes of
-   * running existing replay tests. As the name suggest, this is only intended for testing purposes.
-   */
-  public static final ChainConfig OLD_MAINNET_TESTCONFIG =
-      new ChainConfig(
-          LONDON,
-          LINEA_CHAIN_ID,
-          false,
-          BigInteger.valueOf(LINEA_GAS_LIMIT_MINIMUM),
-          BigInteger.valueOf(LINEA_GAS_LIMIT_MAXIMUM),
-          LineaL1L2BridgeSharedConfiguration.TEST_DEFAULT);
-
-  /**
-   * Represents Linea sepolia prior to the block gas limit being enforced for the purposes of
-   * running existing replay tests. As the name suggest, this is only intended for testing purposes.
-   */
-  public static final ChainConfig OLD_SEPOLIA_TESTCONFIG =
-      new ChainConfig(
-          LONDON,
-          LINEA_SEPOLIA_CHAIN_ID,
-          false,
-          BigInteger.valueOf(LINEA_GAS_LIMIT_MINIMUM),
-          BigInteger.valueOf(LINEA_GAS_LIMIT_MAXIMUM),
-          LineaL1L2BridgeSharedConfiguration.TEST_DEFAULT);
 
   public final Fork fork;
 
@@ -156,25 +127,6 @@ public class ChainConfig {
     this.gasLimitMinimum = gasLimitMinimum;
     this.gasLimitMaximum = gasLimitMaximum;
     this.bridgeConfiguration = bridgeConfig;
-  }
-
-  /**
-   * Construct a Linea chain configuration with a given chain ID. This constructor is used, for
-   * example, to create an appropriate configuration when running in production, depending on
-   * whether we are running e.g. on mainnet or sepolia.
-   *
-   * @param chainId
-   * @return
-   */
-  public static ChainConfig LONDON_LINEA_CHAIN(
-      LineaL1L2BridgeSharedConfiguration bridgeConfig, BigInteger chainId) {
-    return new ChainConfig(
-        LONDON,
-        chainId,
-        true,
-        BigInteger.valueOf(LINEA_GAS_LIMIT_MINIMUM),
-        BigInteger.valueOf(LINEA_GAS_LIMIT_MAXIMUM),
-        bridgeConfig);
   }
 
   public static ChainConfig FORK_LINEA_CHAIN(

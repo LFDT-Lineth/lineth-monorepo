@@ -255,14 +255,6 @@ public class DeferRegistry
     }
   }
 
-  public void unscheduleForContextReEntry(ContextReEntryDefer defer, CallFrame callFrame) {
-    contextReEntryDefers.get(callFrame).remove(defer);
-  }
-
-  public void unscheduleForPostTransaction(EndTransactionDefer defer) {
-    endTransactionDefers.remove(defer);
-  }
-
   public void clearAll() {
     postOpcodeDefers.clear();
     contextEntryDefers.clear();
