@@ -12,27 +12,19 @@ ALU := alu/add/add.zkasm alu/ext alu/mod alu/mul
 
 BIN := bin/bin.zkasm
 
-BLAKE2f_MODEXP_DATA_LONDON := blake2fmodexpdata/london
-BLAKE2f_MODEXP_DATA_OSAKA  := blake2fmodexpdata/osaka
+BLAKE2f_MODEXP_DATA  := blake2fmodexpdata
 
 # constraints used in prod for LINEA, with linea block gas limit
-BLOCKDATA_LONDON := blockdata/london
-BLOCKDATA_PARIS := blockdata/paris
-BLOCKDATA_CANCUN := blockdata/cancun
+BLOCKDATA := blockdata
 
 BLOCKHASH := blockhash
 
-BLS_CANCUN := blsdata/cancun
-BLS_PRAGUE := blsdata/prague
+BLS := blsdata
 
 CONSTANTS := constants/constants.lisp
-CONSTANTS_LONDON := constants/london/constants.zkasm
-CONSTANTS_CANCUN := constants/cancun/constants.zkasm
-CONSTANTS_PRAGUE := constants/prague/constants.zkasm
 CONSTANTS_OSAKA := constants/osaka/constants.zkasm
 
-EC_DATA_LONDON := ecdata/london
-EC_DATA_OSAKA := ecdata/osaka
+EC_DATA := ecdata
 
 EUC := euc/euc.zkasm
 
@@ -40,46 +32,31 @@ EXP := exp/exp.zkasm
 
 GAS := gas/gas.zkasm
 
-HUB_LONDON :=  hub/london
-HUB_SHANGHAI :=  hub/shanghai
-HUB_CANCUN :=  hub/cancun
-HUB_PRAGUE :=  hub/prague
 HUB_OSAKA :=  hub/osaka
 
 LIBRARY := library
 
 LOG_DATA := logdata
 
-LOG_INFO_LONDON := loginfo/london
-LOG_INFO_CANCUN := loginfo/cancun
+LOG_INFO := loginfo
 
-MMIO_LONDON := mmio/london
-MMIO_CANCUN := mmio/cancun
+MMIO := mmio
 
-MMU_LONDON := mmu/london
-MMU_OSAKA := mmu/osaka
+MMU := mmu
 
-MXP_LONDON := mxp/london
-MXP_CANCUN := mxp/cancun
+MXP := mxp
 
-OOB_LONDON := oob/london
-OOB_SHANGHAI := oob/shanghai
-OOB_CANCUN := oob/cancun
-OOB_PRAGUE := oob/prague
-OOB_OSAKA := oob/osaka
+OOB := oob
 
 RLP_ADDR := rlpaddr
 
-RLP_TXN_LONDON := rlptxn/london
-RLP_TXN_CANCUN := rlptxn/cancun
-RLP_TXN_PRAGUE := rlptxn/cancun
-# TODO: update for Prague v2 + add RLP_AUTH
+RLP_TXN := rlptxn
 
 RLP_TXN_RCPT := rlptxrcpt
 
 RLP_TXRCPT := rlptxrcpt			
 
-RLP_UTILS_CANCUN := rlputils/rlputils.zkasm
+RLP_UTILS := rlputils/rlputils.zkasm
 
 ROM := rom
 
@@ -91,18 +68,11 @@ SHIFT :=  shf/shf.zkasm
 
 STP := stp/stp.zkasm
 
-TABLES_LONDON := reftables/london/*.lisp
-TABLES_CANCUN := reftables/cancun/*.lisp
-TABLES_PRAGUE := reftables/prague/*.lisp
+TABLES := reftables
 
-TRM_LONDON := trm/trm_london.zkasm
-TRM_OSAKA := trm/trm_osaka.zkasm
+TRM := trm/trm.zkasm
 
-TXN_DATA_LONDON := txndata/london
-TXN_DATA_SHANGHAI := txndata/shanghai
-TXN_DATA_CANCUN := txndata/cancun
-TXN_DATA_PRAGUE := txndata/prague
-TXN_DATA_OSAKA := txndata/osaka
+TXN_DATA := txndata
 
 WCP := wcp/wcp.zkasm
 
@@ -113,134 +83,42 @@ define warn_lispX
 endef
 
 ZKEVM_MODULES_COMMON := ${CONSTANTS} \
+		 ${TABLES} \
 		 ${ALU} \
 		 ${BIN} \
+		 ${BLAKE2f_MODEXP_DATA} \
+		 ${BLOCKDATA} \
 		 ${BLOCKHASH} \
+		 ${BLS} \
+		 ${EC_DATA} \
 		 ${EUC} \
 		 ${EXP} \
 		 ${GAS} \
 		 ${LIBRARY} \
 		 ${LOG_DATA} \
+		 ${LOG_INFO} \
+		 ${MMIO} \
+		 ${MMU} \
+		 ${MXP} \
+		 ${OOB} \
 		 ${RLP_ADDR} \
+		 ${RLP_TXN} \
 		 ${RLP_TXN_RCPT} \
+		 ${RLP_UTILS} \
 		 ${ROM} \
 		 ${ROM_LEX} \
 		 ${SHAKIRA_DATA} \
 		 ${SHIFT} \
 		 ${STP} \
+		 ${TRM} \
+		 ${TXN_DATA} \
 		 ${WCP}
-
-ZKEVM_MODULES_LONDON := ${ZKEVM_MODULES_COMMON} \
-		 ${CONSTANTS_LONDON} \
-		 ${TABLES_LONDON} \
-		 ${BLAKE2f_MODEXP_DATA_LONDON} \
-		 ${BLOCKDATA_LONDON} \
-		 ${EC_DATA_LONDON} \
-		 ${HUB_LONDON} \
-		 ${LOG_INFO_LONDON} \
-		 ${MMIO_LONDON} \
-		 ${MMU_LONDON} \
-		 ${MXP_LONDON} \
-		 ${OOB_LONDON} \
-		 ${RLP_TXN_LONDON} \
-		 ${TRM_LONDON} \
-		 ${TXN_DATA_LONDON}
-
-
-# ZKEVM_MODULES_PARIS := ZKEVM_MODULES_LONDON
-
-ZKEVM_MODULES_SHANGHAI := ${ZKEVM_MODULES_COMMON} \
-		 ${CONSTANTS_LONDON} \
-		 ${TABLES_LONDON} \
-		 ${BLAKE2f_MODEXP_DATA_LONDON} \
-		 ${BLOCKDATA_PARIS} \
-		 ${EC_DATA_LONDON} \
-		 ${HUB_SHANGHAI} \
-		 ${LOG_INFO_LONDON} \
-		 ${MMIO_LONDON} \
-		 ${MMU_LONDON} \
-		 ${MXP_LONDON} \
-		 ${OOB_SHANGHAI} \
-		 ${RLP_TXN_LONDON} \
-		 ${TRM_LONDON} \
-		 ${TXN_DATA_SHANGHAI}
-
-ZKEVM_MODULES_CANCUN := ${ZKEVM_MODULES_COMMON} \
-		 ${CONSTANTS_CANCUN} \
-		 ${TABLES_CANCUN} \
-		 ${BLAKE2f_MODEXP_DATA_LONDON} \
-		 ${BLOCKDATA_CANCUN} \
-		 ${BLS_CANCUN} \
-		 ${EC_DATA_LONDON} \
-		 ${HUB_CANCUN} \
-		 ${LOG_INFO_CANCUN} \
-		 ${MMIO_CANCUN} \
-		 ${MMU_LONDON} \
-		 ${MXP_CANCUN} \
-		 ${OOB_CANCUN} \
-		 ${RLP_TXN_CANCUN} \
-		 ${RLP_UTILS_CANCUN} \
-		 ${TRM_LONDON} \
-		 ${TXN_DATA_CANCUN}
-
-ZKEVM_MODULES_PRAGUE := ${ZKEVM_MODULES_COMMON} \
-		 ${CONSTANTS_PRAGUE} \
-		 ${TABLES_PRAGUE} \
-		 ${BLAKE2f_MODEXP_DATA_LONDON} \
-		 ${BLOCKDATA_CANCUN} \
-		 ${BLS_PRAGUE} \
-		 ${EC_DATA_LONDON} \
-		 ${HUB_PRAGUE} \
-		 ${LOG_INFO_CANCUN} \
-		 ${MMIO_CANCUN} \
-		 ${MMU_LONDON} \
-		 ${MXP_CANCUN} \
-		 ${OOB_PRAGUE} \
-		 ${RLP_TXN_PRAGUE} \
-		 ${RLP_UTILS_CANCUN} \
-		 ${TRM_LONDON} \
-		 ${TXN_DATA_PRAGUE}
 
 ZKEVM_MODULES_OSAKA := ${ZKEVM_MODULES_COMMON} \
 		 ${CONSTANTS_OSAKA} \
-		 ${TABLES_PRAGUE} \
-		 ${BLAKE2f_MODEXP_DATA_OSAKA} \
-		 ${BLOCKDATA_CANCUN} \
-		 ${BLS_PRAGUE} \
-		 ${EC_DATA_OSAKA} \
-		 ${HUB_OSAKA} \
-		 ${LOG_INFO_CANCUN} \
-		 ${MMIO_CANCUN} \
-		 ${MMU_OSAKA} \
-		 ${MXP_CANCUN} \
-		 ${OOB_OSAKA} \
-		 ${RLP_TXN_PRAGUE} \
-		 ${RLP_UTILS_CANCUN} \
-		 ${TRM_OSAKA} \
-		 ${TXN_DATA_OSAKA}
+		 ${HUB_OSAKA} 
 
-all: zkevm_london.bin zkevm_paris.bin zkevm_shanghai.bin zkevm_cancun.bin zkevm_prague.bin zkevm_osaka.bin
-
-zkevm_london.bin: ${ZKEVM_MODULES_LONDON}
-	${GO_CORSET_COMPILE} -o $@ ${ZKEVM_MODULES_LONDON}
-	@$(call warn_lispX)
-
- #This is not a typo:
- # only a column name change between Paris and London n BLOCK_DATA that blocks us to have a conflation with London and Paris blocks
-zkevm_paris.bin: ${ZKEVM_MODULES_LONDON}
-	${GO_CORSET_COMPILE} -o $@ ${ZKEVM_MODULES_LONDON}
-	@$(call warn_lispX)
-
-zkevm_shanghai.bin: ${ZKEVM_MODULES_SHANGHAI}
-	${GO_CORSET_COMPILE} -o $@ ${ZKEVM_MODULES_SHANGHAI}
-
-zkevm_cancun.bin: ${ZKEVM_MODULES_CANCUN}
-	${GO_CORSET_COMPILE} -o $@ ${ZKEVM_MODULES_CANCUN}
-	@$(call warn_lispX)
-
-zkevm_prague.bin: ${ZKEVM_MODULES_PRAGUE}
-	${GO_CORSET_COMPILE} -o $@ ${ZKEVM_MODULES_PRAGUE}
-	@$(call warn_lispX)
+all: zkevm_osaka.bin
 
 zkevm_osaka.bin: ${ZKEVM_MODULES_OSAKA}
 	${GO_CORSET_COMPILE} -o $@ ${ZKEVM_MODULES_OSAKA}
