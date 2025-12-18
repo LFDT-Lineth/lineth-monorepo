@@ -18,6 +18,7 @@ import (
 	"github.com/consensys/linea-monorepo/prover/circuits"
 	"github.com/consensys/linea-monorepo/prover/circuits/dummy"
 	"github.com/consensys/linea-monorepo/prover/config"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/spf13/cobra"
 )
 
@@ -43,6 +44,7 @@ var cfg = &config.Config{
 		VerifierID: 1,
 	},
 	AssetsDir: "./prover-assets", // TODO @gbotrel untested
+	// Layer2 fields will be populated from the DCC spec in aggregation spec files
 }
 
 func init() {
@@ -113,6 +115,9 @@ func genFiles(cmd *cobra.Command, args []string) {
 				printlnAndExit("more than one aggregation spec is not allowed")
 			}
 
+			// Apply DCC from the aggregation spec to the global config
+			applyDCCToConfig(&spec.DynamicChainConfigurationSpec)
+
 			resp := ProcessAggregationSpec(
 				rng,
 				blobSubmissionResponses[0],
@@ -133,6 +138,9 @@ func genFiles(cmd *cobra.Command, args []string) {
 				spec.BlobSubmissionSpec,
 			)
 			blobSubmissionResponses = append(blobSubmissionResponses, respA)
+
+			// Apply DCC from the aggregation spec to the global config
+			applyDCCToConfig(&spec.DynamicChainConfigurationSpec)
 
 			resp := ProcessAggregationSpec(
 				rng,
@@ -193,7 +201,22 @@ func genFiles(cmd *cobra.Command, args []string) {
 		// and dump the circuit id
 		dumpVerifierContract(odir, circuits.MockCircuitIDEmulation)
 	}
+}
 
+// applyDCCToConfig applies the Dynamic Chain Configuration (DCC) from the aggregation spec
+// to the global config. DCC contains chain-specific parameters (chainID, baseFee, coinBase,
+// L2MessageServiceAddr) that are used when computing the aggregation public input hash.
+// These values must match between the prover and the on-chain verifier contract.
+func applyDCCToConfig(dccSpec *DynamicChainConfigurationSpec) {
+	if dccSpec == nil {
+		printlnAndExit("aggregation spec must include dynamicChainConfigurationSpec")
+	}
+	cfg.Layer2.ChainID = uint(dccSpec.ChainID)
+	cfg.Layer2.BaseFee = uint(dccSpec.BaseFee)
+	cfg.Layer2.CoinBaseStr = dccSpec.CoinBase
+	cfg.Layer2.CoinBase = common.HexToAddress(dccSpec.CoinBase)
+	cfg.Layer2.MsgSvcContractStr = dccSpec.L2MessageServiceAddr
+	cfg.Layer2.MsgSvcContract = common.HexToAddress(dccSpec.L2MessageServiceAddr)
 }
 
 func printlnAndExit(msg string, args ...any) {

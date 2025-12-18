@@ -16,6 +16,10 @@ contract RevertingVerifier is IPlonkVerifier {
     scenario = _scenario;
   }
 
+  function getChainConfiguration() external pure returns (bytes32) {
+    return bytes32(0);
+  }
+
   function Verify(bytes calldata, uint256[] calldata) external returns (bool) {
     _executeScenario(scenario, type(uint256).max);
 

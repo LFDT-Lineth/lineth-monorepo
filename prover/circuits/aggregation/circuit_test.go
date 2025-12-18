@@ -24,6 +24,8 @@ import (
 	"github.com/consensys/linea-monorepo/prover/config"
 	public_input "github.com/consensys/linea-monorepo/prover/public-input"
 	"github.com/consensys/linea-monorepo/prover/utils"
+	"github.com/consensys/linea-monorepo/prover/utils/types"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -46,6 +48,11 @@ func TestPublicInput(t *testing.T) {
 			L1RollingHashMessageNumber:              549263,
 			L2MsgRootHashes:                         []string{"0xfb7ce9c89be905d39bfa2f6ecdf312f127f8984cf313cbea91bca882fca340cd"},
 			L2MsgMerkleTreeDepth:                    5,
+			// Chain configuration
+			ChainID:              59144,
+			BaseFee:              7,
+			CoinBase:             types.EthAddress(common.HexToAddress("0x8F81e2E3F8b46467523463835F965fFE476E1c9E")),
+			L2MessageServiceAddr: types.EthAddress(common.HexToAddress("0x508Ca82Df566dCD1B0DE8296e70a96332cD644ec")),
 		},
 	}
 
@@ -58,8 +65,6 @@ func TestPublicInput(t *testing.T) {
 		// TODO incorporate into public input hash or decide not to
 		sfpi.NbDecompression = -1
 		sfpi.InitialStateRootHash = -2
-		sfpi.ChainID = -3
-		sfpi.L2MessageServiceAddr = -4
 		sfpi.NbL2Messages = -5
 
 		var res [32]frontend.Variable

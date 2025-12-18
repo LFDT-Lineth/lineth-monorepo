@@ -13,7 +13,6 @@ import (
 	"github.com/consensys/linea-monorepo/prover/circuits"
 	"github.com/consensys/linea-monorepo/prover/config"
 	public_input "github.com/consensys/linea-monorepo/prover/public-input"
-	"github.com/consensys/linea-monorepo/prover/utils/types"
 
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/std/compress"
@@ -54,10 +53,6 @@ type Circuit struct {
 	L2MessageMerkleDepth int
 	L2MessageMaxNbMerkle int
 
-	// TODO @Tabaie @alexandre.belling remove hard coded values once these are included in aggregation PI sum
-	L2MessageServiceAddr types.EthAddress
-	ChainID              uint64
-
 	MaxNbCircuits int // possibly useless TODO consider removing
 	UseGkrMimc    bool
 }
@@ -67,9 +62,6 @@ type Circuit struct {
 type compilationSuite = []func(*wizard.CompiledIOP)
 
 func (c *Circuit) Define(api frontend.API) error {
-	// TODO @Tabaie @alexandre.belling remove hard coded values once these are included in aggregation PI sum
-	api.AssertIsEqual(c.ChainID, c.AggregationFPIQSnark.ChainID)
-	api.AssertIsEqual(c.L2MessageServiceAddr[:], c.AggregationFPIQSnark.L2MessageServiceAddr)
 
 	maxNbDecompression, maxNbExecution := len(c.DecompressionPublicInput), len(c.ExecutionPublicInput)
 	if len(c.DecompressionFPIQ) != maxNbDecompression || len(c.ExecutionFPIQ) != maxNbExecution {
@@ -176,10 +168,11 @@ func (c *Circuit) Define(api frontend.API) error {
 
 		pi := execution.FunctionalPublicInputSnark{
 			FunctionalPublicInputQSnark: piq,
-			InitialStateRootHash:        finalState,                // implicit CHECK_STATE_CONSEC
-			InitialBlockNumber:          api.Add(finalBlockNum, 1), // implicit CHECK_NUM_CONSEC
-			ChainID:                     c.ChainID,                 // implicit CHECK_CHAIN_ID
-			L2MessageServiceAddr:        c.L2MessageServiceAddr[:], // implicit CHECK_SVC_ADDR
+			InitialStateRootHash:        finalState,                                           // implicit CHECK_STATE_CONSEC
+			InitialBlockNumber:          api.Add(finalBlockNum, 1),                            // implicit CHECK_NUM_CONSEC
+			ChainID:                     c.ChainConfigurationFPISnark.ChainID,                 // implicit CHECK_CHAIN_ID // the one in aggregation
+			L2MessageServiceAddr:        c.ChainConfigurationFPISnark.L2MessageServiceAddress, // implicit CHECK_SVC_ADDR// the one in aggregation
+			// Do we want to add BaseFee?
 		}
 
 		comparator.AssertIsLessEq(pi.InitialBlockTimestamp, pi.FinalBlockTimestamp)                // CHECK_TIME_NODECREASE
@@ -324,6 +317,7 @@ func (c *Compiled) getConfig() (config.PublicInput, error) {
 }
 
 func allocateCircuit(cfg config.PublicInput) Circuit {
+
 	res := Circuit{
 		DecompressionPublicInput: make([]frontend.Variable, cfg.MaxNbDecompression),
 		ExecutionPublicInput:     make([]frontend.Variable, cfg.MaxNbExecution),
@@ -332,8 +326,6 @@ func allocateCircuit(cfg config.PublicInput) Circuit {
 		L2MessageMerkleDepth:     cfg.L2MsgMerkleDepth,
 		L2MessageMaxNbMerkle:     cfg.L2MsgMaxNbMerkle,
 		MaxNbCircuits:            cfg.MaxNbCircuits,
-		L2MessageServiceAddr:     types.EthAddress(cfg.L2MsgServiceAddr),
-		ChainID:                  cfg.ChainID,
 		UseGkrMimc:               true,
 	}
 
@@ -358,8 +350,7 @@ func newKeccakCompiler(c config.PublicInput) *keccak.StrictHasherCompiler {
 
 	// aggregation PI opening
 	res.WithFlexibleHashLengths(32 * c.L2MsgMaxNbMerkle)
-	res.WithStrictHashLengths(384)
-
+	res.WithStrictHashLengths(416) // 416 (13 × 32 bytes)
 	return &res
 }
 

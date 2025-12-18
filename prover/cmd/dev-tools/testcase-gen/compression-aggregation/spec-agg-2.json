@@ -1,17 +1,20 @@
 {
+    "dynamicChainConfigurationSpec": {
+        "chainID": 59144,
+        "baseFee": 7,
+        "coinBase": "0x8f81e2e3f8b46467523463835f965ffe476e1c9e",
+        "l2MessageServiceAddr": "0x508Ca82Df566dCD1B0DE8296e70a96332cD644ec"
+    },
     "aggregationSpec": {
         "dataParentHash": "0x82694a9670032c50548d42dbf6f0d9d09febc4f2454796997ec9a4edc7f87106",
         "lastFinalizedTimestamp": 1683335137,
         "finalTimestamp": 1683355137,
         "lastFinalizedl1RollingHash": "0xdc8e70637c1048e1e0406c4ed6fab51a7489ccb52f37ddd2c135cb1aa18ec697",
-        "lastFinalizedl1RollingHashMessageNumber": 1,        
+        "lastFinalizedl1RollingHashMessageNumber": 1,
         "l1RollingHash": "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
         "l1RollingHashMessageNumber": 14,
         "howManyL2Msgs": 30,
         "treeDepth": 5,
-        "l2MessagingBlocksOffsets": "0x00000000000000000000000fffff",
-        "verProofForCircuitID": 0,
-        "genProofForCircuitID": 0,
-        "verifierContractID": 0
+        "l2MessagingBlocksOffsets": "0x00000000000000000000000fffff"
     }
 }

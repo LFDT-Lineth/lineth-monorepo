@@ -47,7 +47,7 @@ export function expectEventDirectFromReceiptData(
   contract: BaseContract,
   transactionReceipt: TransactionReceipt,
   expectedEventName: string,
-  expectedEventArgs: undefined[] = [],
+  expectedEventArgs: unknown[] = [],
   logIndex: number = 0,
 ) {
   const logSnippet = {

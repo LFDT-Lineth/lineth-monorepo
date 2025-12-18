@@ -7,6 +7,8 @@ import { ZkEvmV2 } from "./ZkEvmV2.sol";
 import { ILineaRollupBase } from "./interfaces/ILineaRollupBase.sol";
 import { IProvideShnarf } from "./dataAvailability/interfaces/IProvideShnarf.sol";
 import { PermissionsManager } from "../security/access/PermissionsManager.sol";
+import { IPlonkVerifier } from "../verifiers/interfaces/IPlonkVerifier.sol";
+
 import { EfficientLeftRightKeccak } from "../libraries/EfficientLeftRightKeccak.sol";
 /**
  * @title Contract to manage cross-chain messaging on L1, L2 data submission, and rollup proof verification.
@@ -257,16 +259,23 @@ abstract contract LineaRollupBase is
     /// @dev currentFinalizedShnarf is updated in _finalizeBlocks and lastFinalizedShnarf MUST be set beforehand for the transition.
     bytes32 lastFinalizedShnarf = currentFinalizedShnarf;
 
-    bytes32 finalShnarf = _finalizeBlocks(_finalizationData, lastFinalizedBlockNumber);
+    address verifier = verifiers[_proofType];
 
-    uint256 publicInput = _computePublicInput(
-      _finalizationData,
-      lastFinalizedShnarf,
-      finalShnarf,
-      lastFinalizedBlockNumber
+    if (verifier == address(0)) {
+      revert InvalidProofType();
+    }
+
+    _verifyProof(
+      _computePublicInput(
+        _finalizationData,
+        lastFinalizedShnarf,
+        _finalizeBlocks(_finalizationData, lastFinalizedBlockNumber),
+        lastFinalizedBlockNumber,
+        IPlonkVerifier(verifier).getChainConfiguration()
+      ),
+      verifier,
+      _aggregatedProof
     );
-
-    _verifyProof(publicInput, _proofType, _aggregatedProof);
   }
 
   /**
@@ -382,7 +391,8 @@ abstract contract LineaRollupBase is
    *     _finalizationData.l2MerkleTreesDepth,
    *     keccak256(
    *         abi.encodePacked(_finalizationData.l2MerkleRoots)
-   *     )
+   *     ),
+   *     _verifierChainConfiguration
    *   )
    * )
    * Data is found at the following offsets:
@@ -409,12 +419,14 @@ abstract contract LineaRollupBase is
    * @param _finalizationData The full finalization data.
    * @param _finalShnarf The final shnarf in the finalization.
    * @param _lastFinalizedBlockNumber The last finalized block number.
+   * @param _verifierChainConfiguration The verifier chain configuration.
    */
   function _computePublicInput(
     FinalizationDataV3 calldata _finalizationData,
     bytes32 _lastFinalizedShnarf,
     bytes32 _finalShnarf,
-    uint256 _lastFinalizedBlockNumber
+    uint256 _lastFinalizedBlockNumber,
+    bytes32 _verifierChainConfiguration
   ) private pure returns (uint256 publicInput) {
     assembly {
       let mPtr := mload(0x40)
@@ -452,8 +464,52 @@ abstract contract LineaRollupBase is
       calldatacopy(mPtrMerkleRoot, add(merkleRootsLengthLocation, 0x20), mul(merkleRootsLen, 0x20))
       let l2MerkleRootsHash := keccak256(mPtrMerkleRoot, mul(merkleRootsLen, 0x20))
       mstore(add(mPtr, 0x160), l2MerkleRootsHash)
+      mstore(add(mPtr, 0x180), _verifierChainConfiguration)
 
-      publicInput := mod(keccak256(mPtr, 0x180), MODULO_R)
+      publicInput := mod(keccak256(mPtr, 0x1A0), MODULO_R)
+    }
+  }
+
+  /**
+   * @notice Verifies the proof with locally computed public inputs.
+   * @dev If the verifier based on proof type is not found, it reverts with InvalidProofType.
+   * @param _publicInput The computed public input hash cast as uint256.
+   * @param _veriferAddress The address of the proof type verifier contract.
+   * @param _proof The proof to be verified with the proof type verifier contract.
+   */
+  function _verifyProof(uint256 _publicInput, address _veriferAddress, bytes calldata _proof) internal {
+    uint256[] memory publicInput = new uint256[](1);
+    publicInput[0] = _publicInput;
+
+    (bool callSuccess, bytes memory result) = _veriferAddress.call(
+      abi.encodeCall(IPlonkVerifier.Verify, (_proof, publicInput))
+    );
+
+    if (!callSuccess) {
+      if (result.length > 0) {
+        assembly {
+          let dataOffset := add(result, 0x20)
+
+          // Store the modified first 32 bytes back into memory overwriting the location after having swapped out the selector.
+          mstore(
+            dataOffset,
+            or(
+              // InvalidProofOrProofVerificationRanOutOfGas(string) = 0xca389c44bf373a5a506ab5a7d8a53cb0ea12ba7c5872fd2bc4a0e31614c00a85.
+              shl(224, 0xca389c44),
+              and(mload(dataOffset), 0x00000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffff)
+            )
+          )
+
+          revert(dataOffset, mload(result))
+        }
+      } else {
+        revert InvalidProofOrProofVerificationRanOutOfGas("Unknown");
+      }
+    }
+
+    bool proofSucceeded = abi.decode(result, (bool));
+    if (!proofSucceeded) {
+      revert InvalidProof();
     }
   }
 }

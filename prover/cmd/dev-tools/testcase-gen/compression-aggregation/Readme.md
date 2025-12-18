@@ -57,10 +57,7 @@ Specs files are settings that can be passed to the data generator to control how
       "l1RollingHashMessageNumber": 12,
       "howManyL2Msgs": 30,
       "treeDepth": 5,
-      "l2MessagingBlocksOffsets": "0x0000000000000000000000000fffff",
-      "verProofForCircuitID": 0,
-      "genProofForCircuitID": 0,
-      "verifierContractID": 0
+      "l2MessagingBlocksOffsets": "0x0000000000000000000000000fffff"
     }
 }
 

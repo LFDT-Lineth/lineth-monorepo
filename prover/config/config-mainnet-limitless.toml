@@ -38,6 +38,8 @@ l2_msg_max_nb_merkle = 200
 
 [layer2]
 chain_id = 59144
+base_fee = 7
+coin_base = "0x8F81e2E3F8b46467523463835F965fFE476E1c9E"
 message_service_contract = "0x508Ca82Df566dCD1B0DE8296e70a96332cD644ec"
 
 [traces_limits]
