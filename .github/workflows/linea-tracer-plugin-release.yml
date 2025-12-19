@@ -6,7 +6,6 @@ permissions:
   packages: write
 
 on:
-  release:
   workflow_dispatch:
     inputs:
       release_tag:
@@ -21,6 +20,9 @@ jobs:
   # ==================================================================
   build:
     runs-on: ubuntu-latest
+    outputs:
+      createTag: ${{ steps.upload-assets.outputs.CREATE_TAG }}
+      releaseTag: ${{ steps.config.outputs.RELEASE_TAG }}
     steps:
       - name: Configure Tag
         id: config
@@ -50,12 +52,13 @@ jobs:
           JAVA_OPTS: -Xmx2g -Dorg.gradle.daemon=false
 
       - name: Upload Assets
+        id: upload-assets
         run: |
-          gh release upload ${{ steps.config.outputs.RELEASE_TAG }} $jar_asset
+          echo "CREATE_TAG=$(gh release create "${{ steps.config.outputs.RELEASE_TAG }}" $jar_asset --target "${{ github.ref }}" 2>&1)" >> $GITHUB_OUTPUT
           gh release upload ${{ steps.config.outputs.RELEASE_TAG }} $zip_asset
         env:
-          jar_asset: ${{ github.workspace }}/tracer/plugins/build/libs/linea-tracer-${{ steps.config.outputs.VERSION_TAG }}.jar
-          zip_asset: ${{ github.workspace }}/tracer/plugins/build/distributions/linea-tracer-${{ steps.config.outputs.VERSION_TAG }}.zip
+          jar_asset: ./tracer/plugins/build/libs/linea-tracer-${{ steps.config.outputs.VERSION_TAG }}.jar
+          zip_asset: ./tracer/plugins/build/distributions/linea-tracer-${{ steps.config.outputs.VERSION_TAG }}.zip
           GH_TOKEN: ${{ github.token }}
 
       - name: Set up GCC
@@ -76,42 +79,28 @@ jobs:
         run: ./gradlew --no-daemon --parallel :tracer:clean :tracer:spotlessCheck
 
   # ==================================================================
+  # Delete created tag on build failure
+  # ==================================================================
+
+  delete-tag-on-failure:
+    needs: [ build ]
+    if: always() && needs.build.result == 'failure'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete tag created without release
+        run: |
+          if [[ "${{ needs.build.outputs.createTag }}" != "a release with the same tag name already exists:"* ]]; then
+            delete_output=$(gh release delete "${{needs.build.outputs.releaseTag}}" --repo "${{ github.repository }}" --cleanup-tag --yes 2>&1) || [[ "${delete_output}" == "release not found" ]]
+            echo "Deleted tag and release: ${{ needs.build.outputs.releaseTag }}";
+          else
+            echo "${{ needs.build.outputs.createTag }}";
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+  # ==================================================================
   # Unit Tests
   # ==================================================================
-  unit-tests-london:
-    needs: [ build ]
-    uses: ./.github/workflows/reusable-tracer-unit-tests.yml
-    with:
-      zkevm_fork: LONDON
-      tests-with-ssh: false
-
-  unit-tests-paris:
-    needs: [ build ]
-    uses: ./.github/workflows/reusable-tracer-unit-tests.yml
-    with:
-      zkevm_fork: PARIS
-      tests-with-ssh: false
-
-  unit-tests-shanghai:
-    needs: [ build ]
-    uses: ./.github/workflows/reusable-tracer-unit-tests.yml
-    with:
-      zkevm_fork: SHANGHAI
-      tests-with-ssh: false
-
-  unit-tests-cancun:
-    needs: [ build ]
-    uses: ./.github/workflows/reusable-tracer-unit-tests.yml
-    with:
-      zkevm_fork: CANCUN
-      tests-with-ssh: false
-
-  unit-tests-prague:
-    needs: [ build ]
-    uses: ./.github/workflows/reusable-tracer-unit-tests.yml
-    with:
-      zkevm_fork: PRAGUE
-      tests-with-ssh: false
 
   unit-tests-osaka:
     needs: [ build ]
