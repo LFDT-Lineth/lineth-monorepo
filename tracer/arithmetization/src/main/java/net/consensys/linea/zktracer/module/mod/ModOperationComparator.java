@@ -26,11 +26,11 @@ public class ModOperationComparator implements Comparator<ModOperation> {
       return opCodeComp;
     }
     // Second sort by Arg1
-    final int arg1Comp = op1.rawArg1().compareTo(op2.rawArg1());
+    final int arg1Comp = op1.arg1().compareTo(op2.arg1());
     if (arg1Comp != 0) {
       return arg1Comp;
     }
     // Third, sort by Arg2
-    return op1.rawArg2().compareTo(op2.rawArg2());
+    return op1.arg2().compareTo(op2.arg2());
   }
 }

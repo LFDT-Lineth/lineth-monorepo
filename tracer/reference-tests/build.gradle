@@ -82,6 +82,7 @@ tasks.register('referenceExecutionSpecBlockchainTests', Test) {
     systemProperty("junit.jupiter.execution.parallel.config.strategy", "fixed")
     systemProperty("junit.jupiter.execution.parallel.config.fixed.parallelism",
         System.getenv().getOrDefault("JUNIT_TESTS_PARALLELISM", "1").toInteger())
+    // override set number of forks
     maxParallelForks = 1
   }
 

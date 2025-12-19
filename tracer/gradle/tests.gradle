@@ -74,6 +74,10 @@ tasks.withType(Test).configureEach {
       systemProperty name, System.getProperty(name)
     }
   }
+  // Override default timeout
+  systemProperty("junit.jupiter.execution.timeout.default", "15 m")
+  // override set number of forks
+  maxParallelForks = 1
   // Configure default parallelism
   if (System.getenv().containsKey("JUNIT_TESTS_PARALLELISM")) {
     systemProperty("junit.jupiter.execution.parallel.enabled", true)
@@ -81,7 +85,7 @@ tasks.withType(Test).configureEach {
     systemProperty("junit.jupiter.execution.parallel.mode.classes.default", "concurrent")
     systemProperty("junit.jupiter.execution.parallel.config.strategy", "fixed")
     systemProperty("junit.jupiter.execution.parallel.config.fixed.parallelism",
-      System.getenv().getOrDefault("JUNIT_TESTS_PARALLELISM", "4").toInteger())
+                   System.getenv().getOrDefault("JUNIT_TESTS_PARALLELISM", "4").toInteger())
   }
   // Configure BESU-related paths
   delete("${project.getLayout().getBuildDirectory().get()}/besu/traces")
