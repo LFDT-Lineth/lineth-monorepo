@@ -5,20 +5,6 @@ permissions:
 
 on:
   workflow_call:
-    inputs:
-      has_changes_requiring_build:
-        required: true
-        type: string
-      # Next 3 variables are required to determine if the only file changes that have occurred are in `/contracts` but not `/contracts/local-deployment-artifacts`
-      contracts_excluding_local_deployment_artifacts:
-        required: true
-        type: string
-      changed_file_count:
-        required: false
-        type: string
-      contracts_excluding_local_deployment_artifacts_count:
-        required: false
-        type: string
     outputs:
       has-changes-requiring-e2e-testing:
         value: ${{ jobs.get-has-changes-requiring-e2e-testing.outputs.has_changes_requiring_e2e_testing }}
@@ -27,23 +13,79 @@ jobs:
   get-has-changes-requiring-e2e-testing:
     runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
     outputs:
-      has_changes_requiring_e2e_testing: ${{ steps.eval.outputs.has_changes_requiring_e2e_testing }}
+      has_changes_requiring_e2e_testing: ${{ steps.evaluate.outputs.result }}
     steps:
-      - name: Evaluate Toggle State
-        id: eval
-        shell: bash
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Filter for e2e-relevant paths
+        uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 #v3.0.2
+        id: filter
+        with:
+          base: ${{ github.ref }}
+          list-files: json
+          filters: |
+            e2e-paths:
+              - 'coordinator/**/src/main/**'
+              - 'jvm-libs/**/src/main/**'
+              - 'transaction-exclusion-api/**/src/main/**'
+              - 'config/**/*.toml'
+              - 'linea-besu-package/versions.env'
+              - 'linea-besu-package/scripts/assemble-packages.sh'
+              - 'postman/src/**'
+              - 'postman/package.json'
+              - 'prover/**/*.go'
+              - 'prover/**/*.mod'
+              - 'contracts/local-deployments-artifacts/**'
+              - 'docker/**'
+              - 'e2e/src/**'
+              - 'e2e/package.json'
+              - 'sdk/**/src/**'
+              - 'sdk/**/package.json'
+              - 'ts-libs/**/src/**'
+              - 'ts-libs/**/package.json'
+              - '.github/workflows/reuse-run-e2e-tests.yml'
+
+      - name: Evaluate excluding test/doc files
+        id: evaluate
+        env:
+          E2E_PATHS_MATCHED: ${{ steps.filter.outputs.e2e-paths }}
+          E2E_PATHS_FILES: ${{ steps.filter.outputs.e2e-paths_files }}
         run: |
-          has_changes_requiring_build=${{ inputs.has_changes_requiring_build }}
-          contracts_excluding_local_deployment_artifacts=${{ inputs.contracts_excluding_local_deployment_artifacts }}
-          changed_file_count=${{ inputs.changed_file_count }}
-          contracts_excluding_local_deployment_artifacts_count=${{ inputs.contracts_excluding_local_deployment_artifacts_count }}
-          HAS_CHANGES_REQUIRING_E2E_TESTING="true"
-
-          if [[ "$has_changes_requiring_build" == "false" ]]; then
-            HAS_CHANGES_REQUIRING_E2E_TESTING="false"
-          elif [[ "$contracts_excluding_local_deployment_artifacts" == "true" && "$changed_file_count" == "$contracts_excluding_local_deployment_artifacts_count" ]]; then
-            HAS_CHANGES_REQUIRING_E2E_TESTING="false"
+          if [[ "$E2E_PATHS_MATCHED" != "true" ]]; then
+            echo "No e2e-relevant paths matched"
+            echo "result=false" >> $GITHUB_OUTPUT
+            exit 0
           fi
-
-          echo "has_changes_requiring_e2e_testing=$HAS_CHANGES_REQUIRING_E2E_TESTING"
-          echo "has_changes_requiring_e2e_testing=$HAS_CHANGES_REQUIRING_E2E_TESTING" >> $GITHUB_OUTPUT
+          
+          echo "Matched files: $E2E_PATHS_FILES"
+          
+          # Parse JSON array safely using jq
+          mapfile -t FILES < <(echo "$E2E_PATHS_FILES" | jq -r '.[]')
+          
+          for file in "${FILES[@]}"; do
+            # Skip unit test files EXCEPT those in e2e/src/ (e2e tests themselves)
+            if [[ "$file" =~ \.test\.ts$ ]] && [[ ! "$file" =~ ^e2e/src/ ]]; then
+              continue
+            fi
+            
+            if [[ "$file" =~ \.spec\.ts$ ]] && [[ ! "$file" =~ ^e2e/src/ ]]; then
+              continue
+            fi
+            
+            if [[ "$file" =~ _test\.go$ ]]; then
+              continue
+            fi
+            
+            # Skip doc files
+            if [[ "$file" =~ \.(md|mdx)$ ]]; then
+              continue
+            fi
+            
+            echo "✓ e2e-relevant file: $file"
+            echo "result=true" >> $GITHUB_OUTPUT
+            exit 0
+          done
+          
+          echo "Only test/doc files changed"
+          echo "result=false" >> $GITHUB_OUTPUT

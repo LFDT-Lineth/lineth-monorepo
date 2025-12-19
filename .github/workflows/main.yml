@@ -25,8 +25,6 @@ jobs:
       transaction-exclusion-api: ${{ steps.filter.outputs.transaction-exclusion-api }}
       linea-besu-package: ${{ steps.filter.outputs.linea-besu-package }}
       has-changes-requiring-build: ${{ steps.exclusion-filter.outputs.has-changes-requiring-build }}
-      contracts-excluding-local-deployment-artifacts: ${{ steps.exclusion-filter.outputs.contracts-excluding-local-deployment-artifacts }}
-      contracts-excluding-local-deployment-artifacts-count: ${{ steps.exclusion-filter.outputs.contracts-excluding-local-deployment-artifacts_count }}
       smart-contracts: ${{ steps.filter.outputs.smart-contracts }}
       linea-sequencer-plugin: ${{ steps.filter.outputs.linea-sequencer-plugin }}
       native-yield-automation-service: ${{ steps.filter.outputs.native-yield-automation-service }}
@@ -75,6 +73,7 @@ jobs:
               - 'postman/**'
               - 'sdk/**'
               - 'ts-libs/linea-native-libs/**'
+              - 'ts-libs/linea-shared-utils/**'
               - '.github/workflows/postman-*.yml'
               - '.github/workflows/build-and-publish.yml'
               - '.github/workflows/main.yml'
@@ -143,9 +142,6 @@ jobs:
               - '!docs/**'
               - '!contracts-tge/**'
               - '!.github/workflows/codeql.yml'
-            contracts-excluding-local-deployment-artifacts:
-              - 'contracts/**'
-              - '!contracts/local-deployments-artifacts/**'
           # Means that ALL (and not just one) filter patterns must match. In other words applies the 'AND' operator to filter patterns.
           # The default is 'some', which requires just one filter pattern match and applies the 'OR' operator.
           # For 'has-changes-requiring-build', it means we have an exclusion list that we can append to.
@@ -186,11 +182,6 @@ jobs:
   get-has-changes-requiring-e2e-testing:
     needs: [filter-commit-changes]
     uses: ./.github/workflows/get-has-changes-requiring-e2e-testing.yml
-    with:
-      has_changes_requiring_build: ${{ needs.filter-commit-changes.outputs.has-changes-requiring-build }}
-      contracts_excluding_local_deployment_artifacts: ${{ needs.filter-commit-changes.outputs.contracts-excluding-local-deployment-artifacts }}
-      changed_file_count: ${{ needs.filter-commit-changes.outputs.changed-file-count }}
-      contracts_excluding_local_deployment_artifacts_count: ${{ needs.filter-commit-changes.outputs.contracts-excluding-local-deployment-artifacts-count }}
 
   manual-docker-build-and-e2e-tests:
     runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
