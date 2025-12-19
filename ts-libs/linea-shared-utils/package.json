@@ -37,9 +37,9 @@
     "axios": "catalog:",
     "express": "catalog:",
     "neverthrow": "catalog:",
-    "node-forge": "1.3.1",
+    "node-forge": "1.3.3",
     "prom-client": "catalog:",
-    "winston": "catalog:",
-    "viem": "catalog:"
+    "viem": "catalog:",
+    "winston": "catalog:"
   }
 }
