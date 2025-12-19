@@ -7,15 +7,32 @@ inputs:
     required: true
     default: '--frozen-lockfile --prefer-offline --ignore-scripts'
 
+outputs:
+  node-version:
+    description: 'Resolved Node.js version'
+    value: ${{ steps.versions.outputs.node }}
+  pnpm-version:
+    description: 'Resolved pnpm version'
+    value: ${{ steps.versions.outputs.pnpm }}
+
 runs:
   using: 'composite'
   steps:
     - uses: pnpm/action-setup@v4
+      name: setup-pnpm
 
     - uses: actions/setup-node@v4
+      name: setup-nodejs
       with:
         node-version-file: .nvmrc
         cache: 'pnpm'
+    
+    - id: versions
+      name: Capture versions
+      shell: bash
+      run: |
+        echo "node=$(node -v | sed 's/^v//')" >> "$GITHUB_OUTPUT"
+        echo "pnpm=$(pnpm -v)" >> "$GITHUB_OUTPUT"
 
     - name: pnpm install
       run: pnpm i ${{ inputs.pnpm-install-options }}

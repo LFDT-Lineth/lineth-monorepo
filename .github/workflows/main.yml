@@ -78,6 +78,7 @@ jobs:
               - '.github/workflows/build-and-publish.yml'
               - '.github/workflows/main.yml'
               - '.github/workflows/reuse-*.yml'
+              - '.nvmrc'
             prover:
               - 'prover/**'
               - '.github/workflows/prover-*.yml'
@@ -125,6 +126,7 @@ jobs:
               - 'native-yield-operations/automation-service/**'
               - 'ts-libs/linea-shared-utils/**'
               - '.github/workflows/native-yield-automation-service-*.yml'
+              - '.nvmrc'
             tracer:
               - 'tracer/**'
 

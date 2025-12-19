@@ -92,6 +92,11 @@ jobs:
         run: |
           echo "We inject the commit tag in the docker image ${{ env.COMMIT_TAG }}"
           echo COMMIT_TAG=${{ env.COMMIT_TAG }} >> $GITHUB_ENV
+      
+      - name: "Get Node.js version"
+        id: get-node-version
+        uses: ./.github/actions/get-node-version
+
       - name: Build postman image for testing
         uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 #v6.18.0
         if: ${{ env.PUSH_IMAGE == 'false' }}
@@ -104,6 +109,7 @@ jobs:
           tags: ${{ env.IMAGE_NAME }}:${{ env.COMMIT_TAG }}
           build-args: |
             NATIVE_LIBS_RELEASE_TAG=blob-libs-v1.2.0
+            NODE_VERSION=${{ steps.get-node-version.outputs.node-version }}
       - name: Save Docker image as artifact
         if: ${{ env.PUSH_IMAGE == 'false' }}
         run: |
@@ -132,3 +138,4 @@ jobs:
             type=registry,ref=${{ env.IMAGE_NAME }}:buildcache-arm64,mode=max,platform=linux/arm64
           build-args: |
             NATIVE_LIBS_RELEASE_TAG=blob-libs-v1.2.0
+            NODE_VERSION=${{ steps.get-node-version.outputs.node-version }}

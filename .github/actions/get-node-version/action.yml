@@ -1,0 +1,18 @@
+name: 'Get node version'
+description: 'Get node version'
+
+outputs:
+  node-version:
+    description: 'Resolved Node.js version'
+    value: ${{ steps.read.outputs.node-version }}
+
+runs:
+  using: 'composite'
+  steps:
+    - id: read
+      name: Read Node.js version
+      shell: bash
+      run: |
+        echo "node-version=$(tr -d '[:space:]' < .nvmrc)" >> "$GITHUB_OUTPUT"
+
+   

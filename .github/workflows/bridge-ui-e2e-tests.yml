@@ -12,6 +12,7 @@ on:
       - 'bridge-ui/**'
       - '.github/workflows/bridge-ui-e2e-tests.yml'
       - '!bridge-ui/**/*.md'
+      - '.nvmrc'
   push:
     branches:
       - main
@@ -19,6 +20,7 @@ on:
       - 'bridge-ui/**'
       - '.github/workflows/bridge-ui-e2e-tests.yml'
       - '!bridge-ui/**/*.md'
+      - '.nvmrc'
 
 jobs:
   run-e2e-tests:

@@ -68,6 +68,7 @@
     "dotenv": "catalog:",
     "eslint-config-next": "14.2.15",
     "nock": "14.0.1",
+    "playwright-core": "1.53.2",
     "postcss": "8.5.3",
     "sass": "1.86.0"
   }

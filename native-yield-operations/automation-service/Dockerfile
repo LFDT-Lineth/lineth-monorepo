@@ -1,4 +1,6 @@
-FROM node:22.21.1-slim AS base
+ARG NODE_VERSION=lts
+
+FROM node:${NODE_VERSION}-slim AS base
 
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
@@ -30,7 +32,7 @@ COPY ts-libs/linea-shared-utils ./ts-libs/linea-shared-utils
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm run build \
     && pnpm deploy --legacy --filter=./native-yield-operations/automation-service --prod ./prod/native-yield-operations/automation-service
 
-FROM node:22.21.1-slim AS production
+FROM node:${NODE_VERSION}-slim AS production
 
 ENV NODE_ENV=production
 

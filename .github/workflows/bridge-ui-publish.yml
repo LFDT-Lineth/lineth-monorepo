@@ -13,6 +13,7 @@ on:
       - '.github/workflows/bridge-ui-publish.yml'
       - 'bridge-ui/**'
       - '!bridge-ui/**/*.md'
+      - '.nvmrc'
   push:
     branches:
       - main
@@ -20,6 +21,7 @@ on:
       - '.github/workflows/bridge-ui-publish.yml'
       - 'bridge-ui/**'
       - '!bridge-ui/**/*.md'
+      - '.nvmrc'
 
 jobs:
   publish:
@@ -55,6 +57,10 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 #v3.11.1
 
+      - name: "Get Node.js version"
+        id: get-node-version
+        uses: ./.github/actions/get-node-version
+
       - name: Docker Image Build and Publish
         id: docker-build-publish
         uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 #v6.18.0
@@ -76,6 +82,7 @@ jobs:
             NEXT_PUBLIC_LIFI_INTEGRATOR_NAME=${{ env.NEXT_PUBLIC_LIFI_INTEGRATOR_NAME }}
             NEXT_PUBLIC_ONRAMPER_API_KEY=${{ env.NEXT_PUBLIC_ONRAMPER_API_KEY }}
             NEXT_PUBLIC_LAYERSWAP_API_KEY=${{ env.NEXT_PUBLIC_LAYERSWAP_API_KEY }}
+            NODE_VERSION=${{ steps.get-node-version.outputs.node-version }}
           cache-from: type=registry,ref=consensys/linea-bridge-ui:buildcache
           cache-to: type=registry,ref=consensys/linea-bridge-ui:buildcache,mode=max
           secrets: |

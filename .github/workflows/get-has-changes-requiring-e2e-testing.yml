@@ -46,6 +46,8 @@ jobs:
               - 'ts-libs/**/src/**'
               - 'ts-libs/**/package.json'
               - '.github/workflows/reuse-run-e2e-tests.yml'
+              - '.nvmrc'
+              - 'package.json'
 
       - name: Evaluate excluding test/doc files
         id: evaluate
