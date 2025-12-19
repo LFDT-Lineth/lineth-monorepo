@@ -1,0 +1,92 @@
+include "../constants/evm.zkasm"
+include "../util/i256.zkasm"
+
+;; The modular arithmetic module (MOD) deals with four
+;; division-related arithmetic instructions of the EVM.  For any call
+;; to mod, the "inst" argument indicates which of these instructions
+;; is being computed:
+;;
+;;  DIV      ARG_1  /  ARG_2                               0x04
+;;  MOD      ARG_1  %  ARG_2                               0x06
+;; SDIV*   (|ARG_1| / |ARG_2|) * sign(ARG_1) * sign(ARG2)  0x05
+;; SMOD    (|ARG_1| % |ARG_2|) * sign(ARG_1)               0x07
+;;
+;; NOTES: the division "/" and remainder "%" operators used above both
+;; return zero when the divisor is zero.  The absolute function "|X|"
+;; returns the absolute value of X (i.e. |-1| == 1, |1| == 1, etc).
+;; The sign(X) function returns 1 for positively signed values, and -1
+;; for negatively signed values (i.e. when the most significant bit is
+;; 1).  Finally, a special case is noted for SDIV (indicated by * above)
+;; where SDIV(-2^255,-1)=-2^255.
+;;
+pub fn mod(INST=0x4 u8, ARG_1 u256, ARG_2=1 u256) -> (RES u256) {
+  var tmp u256
+  ;;
+  if INST==EVM_INST_DIV goto div
+  if INST==EVM_INST_MOD goto mod
+  if INST==EVM_INST_SDIV goto sdiv
+  if INST==EVM_INST_SMOD goto smod
+  fail
+div:
+  RES, tmp = divide(ARG_1, ARG_2)
+  return
+mod:
+  tmp, RES = divide(ARG_1, ARG_2)
+  return
+sdiv:
+  RES, tmp = signed_divide(ARG_1, ARG_2)
+  return
+smod:
+  tmp, RES = signed_divide(ARG_1, ARG_2)
+  return
+}
+
+;; Perform signed division as per the semantics of the Yellow Paper
+;; (see above for handling of signs).
+fn signed_divide(num u256, den=1 u256) -> (quot u256, rem u256) {
+  var num_s, den_s u1
+  var abs_num, abs_den u256
+  var abs_quot, abs_rem u256
+  ;;
+  abs_num, num_s = abs(num)
+  abs_den, den_s = abs(den)
+  ;; unsigned division
+  abs_quot, abs_rem = divide(abs_num,abs_den)
+  ;; decide if output positive or negative
+  if num_s != den_s goto neg_quotient
+  ;; positive quotient
+  quot = abs_quot
+  goto remainder
+  ;;
+neg_quotient:
+  ;; negative result
+  quot = negate(abs_quot)
+  ;; fall thru
+remainder:
+  if num_s == 1 goto neg_remainder
+  ;; positive remainder
+  rem = abs_rem
+  return
+neg_remainder:
+  ;; negative remainder
+  rem = negate(abs_rem)
+  return
+}
+
+;; Divide numerator by denominator, where divizion by zero evaluates
+;; to 0 (as per the Yellow Paper).
+fn divide(num u256, den=1 u256) -> (quot u256, rem u256) {
+  var sum u512
+  var witsum u257
+  var witness u256
+  ;; handle division by 0
+  if den == 0 goto exit_0
+  ;;
+  quot, rem, witness, sum, witsum = num / den
+  ;;
+  return
+exit_0:
+  quot = 0
+  rem = 0
+  return
+}

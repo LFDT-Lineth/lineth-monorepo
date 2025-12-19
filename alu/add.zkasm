@@ -1,4 +1,4 @@
-include "../../constants/evm.zkasm"
+include "../constants/evm.zkasm"
 
 ;; The Adder Module (ADD) deals with two arithmetic instructions of
 ;; the EVM.  For any call to add, the "inst" argument indicates which

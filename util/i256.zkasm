@@ -1,0 +1,32 @@
+include "bit_xoan.zkasm"
+
+;; Compute the absolute value of a u256 word assuming twos complement
+;; notation.  This returns signed==1 if the value was negative,
+;; otherwise signed==0.
+fn abs(val u256) -> (abs_val u256, signed u1) {
+  var tmp u255
+  ;;
+  signed, tmp = val
+  ;; check if val < 0
+  if signed != 0 goto negative
+  ;; positive case
+  abs_val = val
+  return
+  ;; negative case
+negative:
+  abs_val = negate(val)
+  return
+}
+
+;; Determine the two's complement negation of a given value.  This is
+;; done following the standard recipe of inverting all bits and then
+;; adding one.
+fn negate(val u256) -> (neg_val u256) {
+  var inv_val u256
+  var c u1
+  ;; invert then add one
+  inv_val = bit_xoan_u256(BIT_NOT,val,0)
+  ;;
+  c,neg_val = inv_val + 1
+  return
+}

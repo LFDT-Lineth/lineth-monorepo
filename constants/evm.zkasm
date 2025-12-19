@@ -3,7 +3,13 @@
 ;; =============================================================================
 
 const EVM_INST_ADD                              = 0x01
+const EVM_INST_MUL                              = 0x02
 const EVM_INST_SUB                              = 0x03
+const EVM_INST_DIV                              = 0x04
+const EVM_INST_SDIV                             = 0x05
+const EVM_INST_MOD                              = 0x06
+const EVM_INST_SMOD                             = 0x07
+const EVM_INST_EXP                              = 0x0a
 const EVM_INST_SIGNEXTEND                       = 0x0b
 const EVM_INST_LT                               = 0x10
 const EVM_INST_GT                               = 0x11
