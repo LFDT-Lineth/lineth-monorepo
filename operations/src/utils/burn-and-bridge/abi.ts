@@ -102,3 +102,25 @@ export const ETH_BURNT_SWAPPED_AND_BRIDGED_EVENT_ABI = [
     type: "event",
   },
 ] as const;
+
+export const ARREARS_PAID_EVENT_ABI = [
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "amount",
+        type: "uint256",
+      },
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "remainingArrears",
+        type: "uint256",
+      },
+    ],
+    name: "ArrearsPaid",
+    type: "event",
+  },
+] as const;
