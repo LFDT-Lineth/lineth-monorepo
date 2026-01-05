@@ -1,0 +1,30 @@
+;; Determine the maximum of two values.
+fn max_u128(arg1 u128, arg2 u128) -> (res u128) {
+   var b1,b2 u1
+   var tmp1, tmp2 u128
+   ;; check arg1 >= arg2
+   b1,tmp1 = arg1 - arg2
+   if b1!=0 goto arg2
+   ;; arg1 wins
+   res = arg1
+   return
+arg2:
+   ;; arg2 wins
+   res = arg2
+   return
+}
+
+fn max_u64(arg1 u64, arg2 u64) -> (res u64) {
+   var b1,b2 u1
+   var tmp1, tmp2 u128
+   ;; check arg1 >= arg2
+   b1,tmp1 = arg1 - arg2
+   if b1!=0 goto arg2
+   ;; arg1 wins
+   res = arg1
+   return
+arg2:
+   ;; arg2 wins
+   res = arg2
+   return
+}

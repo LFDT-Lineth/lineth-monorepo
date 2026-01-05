@@ -5,17 +5,17 @@
 (defclookup hub-into-oob
   ;; target columns
   (
-   oob.OOB_INST
-   [oob.DATA  1]
-   [oob.DATA  2]
-   [oob.DATA  3]
-   [oob.DATA  4]
-   [oob.DATA  5]
-   [oob.DATA  6]
-   [oob.DATA  7]
-   [oob.DATA  8]
-   [oob.DATA  9]
-   [oob.DATA 10]
+   oob.INST
+   oob.DATA_1
+   oob.DATA_2
+   oob.DATA_3
+   oob.DATA_4
+   oob.DATA_5
+   oob.DATA_6
+   oob.DATA_7
+   oob.DATA_8
+   oob.DATA_9
+   oob.DATA_10
   )
   ;; source selector
   (hub-into-oob-trigger)
