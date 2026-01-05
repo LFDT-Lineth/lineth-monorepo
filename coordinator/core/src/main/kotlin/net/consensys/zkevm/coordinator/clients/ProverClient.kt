@@ -12,8 +12,12 @@ interface ProverProofResponseChecker<ProofResponse> {
     findProofResponse(proofRequestId).thenApply { it != null }
 }
 
+interface ProverProofRequestCreator<ProofRequest> {
+  fun createProofRequest(proofRequest: ProofRequest): SafeFuture<ProofIndex>
+}
+
 interface ProverClient<ProofRequest, ProofResponse> :
-  ProverProofResponseChecker<ProofResponse> {
+  ProverProofResponseChecker<ProofResponse>, ProverProofRequestCreator<ProofRequest> {
   fun requestProof(proofRequest: ProofRequest): SafeFuture<ProofResponse>
 }
 

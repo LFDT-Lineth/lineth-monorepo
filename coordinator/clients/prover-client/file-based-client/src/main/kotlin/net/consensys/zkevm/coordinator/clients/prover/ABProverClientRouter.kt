@@ -16,19 +16,23 @@ class ABProverClientRouter<ProofRequest, ProofResponse>(
   private val proverB: ProverClient<ProofRequest, ProofResponse>,
   private val switchToProverBPredicate: (BlockInterval) -> Boolean,
 ) : ProverClient<ProofRequest, ProofResponse> where ProofRequest : BlockInterval {
-  override fun findProofResponse(proofRequestId: ProofIndex): SafeFuture<ProofResponse?> {
-    return if (switchToProverBPredicate(proofRequestId)) {
-      proverB.findProofResponse(proofRequestId)
+
+  private fun getProver(blockInterval: BlockInterval): ProverClient<ProofRequest, ProofResponse> {
+    if (switchToProverBPredicate(blockInterval)) {
+      return proverB
     } else {
-      proverA.findProofResponse(proofRequestId)
+      return proverA
     }
+  }
+  override fun findProofResponse(proofRequestId: ProofIndex): SafeFuture<ProofResponse?> {
+    return getProver(proofRequestId).findProofResponse(proofRequestId)
   }
 
   override fun requestProof(proofRequest: ProofRequest): SafeFuture<ProofResponse> {
-    return if (switchToProverBPredicate(proofRequest)) {
-      proverB.requestProof(proofRequest)
-    } else {
-      proverA.requestProof(proofRequest)
-    }
+    return getProver(proofRequest).requestProof(proofRequest)
+  }
+
+  override fun createProofRequest(proofRequest: ProofRequest): SafeFuture<ProofIndex> {
+    return getProver(proofRequest).createProofRequest(proofRequest)
   }
 }
