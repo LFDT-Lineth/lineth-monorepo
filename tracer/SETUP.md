@@ -13,22 +13,13 @@ brew install openjdk@17
 
 ### Install the Go toolchain
 
-### Install Rust
-
-```
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-
-# Use local git executable to fetch from repos (needed for private repos)
-echo "net.git-fetch-with-cli=true" >> .cargo/config.toml
-```
-
-### Install Corset
+### Install Go-Corset
 
 ```shell
-cargo install --git ssh://git@github.com/ConsenSys/corset --locked --force
+go install github.com/consensys/go-corset/cmd/go-corset@latest
 ```
 
-### Update Constraints [Submodule](https://github.com/Consensys/zkevm-constraints/)
+### Update Constraints [Submodule](https://github.com/Consensys/linea-constraints/)
 
 ```shell
 git submodule update --init --recursive
@@ -59,49 +50,18 @@ ______________________________________________________________________
 ### Run tests
 
 ```shell
-# Run all tests
-./gradlew clean test
+# Run unit tests
+./gradlew tracer:arithmetization:test
 
-# Run only unit tests
-./gradlew clean unitTests
-
-# Run only acceptance tests
-./gradlew clean acceptanceTests
+# Run replay tests
+./gradlew tracer:arithmetization:fastReplayTests
 
 # Run EVM test suite BlockchainTests
-./gradlew clean referenceBlockchainTests
-
-# Run EVM test suite GeneralStateTests
-./gradlew clean referenceGeneralStateTests
-
-# Run all EVM test suite reference tests
-./gradlew clean referenceTests
+./gradlew tracer:reference-tests:referenceBlockchainTests
 
 # Run single reference test via gradle, e.g for net.consensys.linea.generated.blockchain.BlockchainReferenceTest_339
 ./gradlew referenceBlockchainTests -Dblockchain=Ethereum --tests "net.consensys.linea.generated.blockchain.BlockchainReferenceTest_339"
 ```
-
-______________________________________________________________________
-
-NOTE
-
-> Please be aware if the reference test code generation tasks `blockchainReferenceTests` and
-> `generalStateReferenceTests` do not generate any java code, than probably you are missing the Ethereum tests
-> submodule which you can clone via `git submodule update --init --recursive`.
-
-______________________________________________________________________
-
-### Capturing a replay
-
-For debugging and inspection purposes, it is possible to capture a _replay_, _i.e._ all the minimal information required to replay a series of blocks as they played on the blockchain, which is done with `scripts/capture.pl`.
-
-A typical invocation would be:
-
-```
-scripts/capture.pl --start 1300923
-```
-
-which would capture a replay of block #1300923 and store it in `arithmetization/src/test/resources/replays`. More options are available, refer to `scripts/capture.pl -h`.
 
 ## IntelliJ IDEA Setup
 
@@ -152,8 +112,10 @@ ______________________________________________________________________
 - JSON files can be debugged with the following command:
 
 ```shell
-corset check -T <JSON_FILE> -v zkevm-constraints/zkevm.bin
+go-corset check --report <LT/JSON FILE> tracer/linea-constraints/zkevm_osaka.bin
 ```
+
+See [here](https://github.com/Consensys/go-corset) for more options when running `go-corset` directly.
 
 ## Plugins
 
