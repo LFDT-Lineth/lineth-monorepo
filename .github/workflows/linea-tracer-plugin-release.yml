@@ -132,7 +132,6 @@ jobs:
           JAVA_OPTS: -Dorg.gradle.daemon=false
           JUNIT_TESTS_PARALLELISM: 4
           GOCORSET_FLAGS: -b1024 -v --ansi-escapes=false --report --air
-          ZKEVM_FORK: LONDON
 
       - name: Upload test report
         if: ${{ always() }}

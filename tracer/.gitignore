@@ -37,4 +37,3 @@ reference-tests/src/test/java/net/consensys/linea/generated/*
 arithmetization/bin/
 acceptance-tests/bin/
 reference-tests/bin/
-**/Trace*.java
