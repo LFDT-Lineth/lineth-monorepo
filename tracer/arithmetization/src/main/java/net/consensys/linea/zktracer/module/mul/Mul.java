@@ -50,7 +50,9 @@ public class Mul implements OperationSetModule<MulOperation> {
   }
 
   @Override
-  public int lineCount() { return operations.lineCount(); }
+  public int lineCount() {
+    return operations.lineCount();
+  }
 
   @Override
   public int spillage(Trace trace) {

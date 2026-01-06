@@ -60,7 +60,7 @@ public class Mod implements OperationSetWithAdditionalRowsModule<ModOperation> {
 
   @Override
   public void commit(Trace trace) {
-     for (ModOperation op : operations.sortOperations(new ModOperationComparator())) {
+    for (ModOperation op : operations.sortOperations(new ModOperationComparator())) {
       op.trace(trace.mod());
     }
   }
