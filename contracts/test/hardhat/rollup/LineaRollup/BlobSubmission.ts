@@ -1,16 +1,9 @@
 import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
-import * as fs from "fs";
 import * as kzg from "c-kzg";
 import { expect } from "chai";
 import { BaseContract, Transaction } from "ethers";
 import { ethers } from "hardhat";
-
-import hierarchical_conglomeration_BlobData_Sepolia from "../../_testData/hierarchical_conglomeration/sepolia/20106872-20107472-bcv0.0-ccv0.0-d27541dec7352a8bb7067b2e061e9d2de9af04502a915f5f69a456aebe2ae8f0-getZkBlobCompressionProof.json";
-import hierarchical_conglomeration_FinalizationData_Sepolia from "../../_testData/hierarchical_conglomeration/sepolia/proof/20106872-20107472-da29c954a5734a97a851964dc88ec7034f5f3ebd569d3f88b43acc00c9263124-getZkAggregatedProof.json";
-
-import hierarchical_conglomeration_BlobData_Mainnet from "../../_testData/hierarchical_conglomeration/mainnet/25472845-25473115-bcv0.0-ccv0.0-81da22585f32b849b1d3ec3dd1aa0c027b517112f3b3bcc4aad086d59967af30-getZkBlobCompressionProof.json";
-import hierarchical_conglomeration_FinalizationData_Mainnet from "../../_testData/hierarchical_conglomeration/mainnet/proof/25472845-25473115-e76c58a6fad553315848a4e8f1793bfef5667a5434de1fdbc45d4a324c3301d6-getZkAggregatedProof.json";
 
 import blobAggregatedProof1To155 from "../../_testData/compressedDataEip4844/aggregatedProof-1-155.json";
 import blobMultipleAggregatedProof1To81 from "../../_testData/compressedDataEip4844/multipleProofs/aggregatedProof-1-81.json";
@@ -18,37 +11,26 @@ import firstCompressedDataContent from "../../_testData/compressedData/blocks-1-
 import secondCompressedDataContent from "../../_testData/compressedData/blocks-47-81.json";
 import fourthCompressedDataContent from "../../_testData/compressedData/blocks-115-155.json";
 
-import { LINEA_ROLLUP_V8_PAUSE_TYPES_ROLES, LINEA_ROLLUP_V8_UNPAUSE_TYPES_ROLES } from "contracts/common/constants";
 import { TestLineaRollup } from "contracts/typechain-types";
 import {
   deployLineaRollupFixture,
   deployRevertingVerifier,
   expectSuccessfulFinalize,
   getAccountsFixture,
-  getVersionedBlobFiles,
-  getRoleAddressesFixture,
   getWalletForIndex,
   sendBlobTransaction,
-  sendVersionedBlobTransactionFromFile,
 } from "../helpers";
 import {
-  FALLBACK_OPERATOR_ADDRESS,
   GENERAL_PAUSE_TYPE,
   HASH_ZERO,
-  INITIAL_WITHDRAW_LIMIT,
-  ONE_DAY_IN_SECONDS,
   OPERATOR_ROLE,
   TEST_PUBLIC_VERIFIER_INDEX,
-  LINEA_ROLLUP_INITIALIZE_SIGNATURE,
-  ADDRESS_ZERO,
   STATE_DATA_SUBMISSION_PAUSE_TYPE,
 } from "../../common/constants";
-import { deployUpgradableFromFactory } from "../../common/deployment";
 import {
   generateFinalizationData,
   generateRandomBytes,
   generateKeccak256,
-  expectEvent,
   buildAccessErrorMessage,
   expectRevertWithCustomError,
   expectRevertWithReason,
@@ -65,12 +47,10 @@ describe("Linea Rollup contract: EIP-4844 Blob submission tests", () => {
   let securityCouncil: SignerWithAddress;
   let operator: SignerWithAddress;
   let nonAuthorizedAccount: SignerWithAddress;
-  let roleAddresses: { addressWithRole: string; role: string }[];
   const { prevShnarf } = firstCompressedDataContent;
 
   before(async () => {
     ({ securityCouncil, operator, nonAuthorizedAccount } = await loadFixture(getAccountsFixture));
-    roleAddresses = await loadFixture(getRoleAddressesFixture);
   });
 
   beforeEach(async () => {
@@ -736,302 +716,5 @@ describe("Linea Rollup contract: EIP-4844 Blob submission tests", () => {
         .finalizeBlocks(blobAggregatedProof1To155.aggregatedProof, TEST_PUBLIC_VERIFIER_INDEX, finalizationData),
       "InvalidProof",
     );
-  });
-
-  // Skipped as they need regenerating.
-  describe.skip("Hierarchical Conglomeration Prover", () => {
-    it("Can submit blobs and finalize with hierarchical conglomeration Prover Beta on Sepolia", async () => {
-      // *** ARRANGE ***
-      // custom verifier deploy.
-
-      const sepoliaFullVerifierFactory = await ethers.getContractFactory(
-        "src/verifiers/hierarchical_conglomeration/PlonkVerifierSepolia.sol:PlonkVerifierSepoliaFull",
-      );
-      const verifier = await sepoliaFullVerifierFactory.deploy();
-      await verifier.waitForDeployment();
-      const mainnetFullVerifier = await verifier.getAddress();
-
-      // Deploy and initialize LineaRollup
-      const initializationData = {
-        initialStateRootHash: hierarchical_conglomeration_FinalizationData_Sepolia.parentStateRootHash,
-        initialL2BlockNumber: hierarchical_conglomeration_FinalizationData_Sepolia.lastFinalizedBlockNumber,
-        genesisTimestamp: hierarchical_conglomeration_FinalizationData_Sepolia.parentAggregationLastBlockTimestamp,
-        defaultVerifier: mainnetFullVerifier,
-        rateLimitPeriodInSeconds: ONE_DAY_IN_SECONDS,
-        rateLimitAmountInWei: INITIAL_WITHDRAW_LIMIT,
-        roleAddresses,
-        pauseTypeRoles: LINEA_ROLLUP_V8_PAUSE_TYPES_ROLES,
-        unpauseTypeRoles: LINEA_ROLLUP_V8_UNPAUSE_TYPES_ROLES,
-        defaultAdmin: securityCouncil.address,
-        shnarfProvider: ADDRESS_ZERO,
-      };
-
-      const hierarchical_conglomeration_LineaRollup = (await deployUpgradableFromFactory(
-        "TestLineaRollup",
-        [initializationData, FALLBACK_OPERATOR_ADDRESS],
-        {
-          initializer: LINEA_ROLLUP_INITIALIZE_SIGNATURE,
-          unsafeAllow: ["constructor", "incorrect-initializer-order"],
-        },
-      )) as unknown as TestLineaRollup;
-
-      await hierarchical_conglomeration_LineaRollup.setupParentShnarf(
-        hierarchical_conglomeration_FinalizationData_Sepolia.parentAggregationFinalShnarf,
-      );
-
-      // Send blobs
-      const blobFiles = getVersionedBlobFiles("hierarchical_conglomeration/sepolia");
-
-      await hierarchical_conglomeration_LineaRollup.setupParentShnarf(
-        hierarchical_conglomeration_BlobData_Sepolia.prevShnarf,
-      );
-
-      for (let i = 0; i < blobFiles.length; i++) {
-        await sendVersionedBlobTransactionFromFile(
-          lineaRollup,
-          blobFiles[i],
-          hierarchical_conglomeration_LineaRollup,
-          "hierarchical_conglomeration/sepolia",
-        );
-      }
-
-      const finalBlobFile = JSON.parse(
-        fs.readFileSync(
-          `${__dirname}/../../_testData/hierarchical_conglomeration/sepolia/${blobFiles.slice(-1)[0]}`,
-          "utf-8",
-        ),
-      );
-
-      // Setup finalize call
-      const finalizationData = await generateFinalizationData({
-        l1RollingHash: hierarchical_conglomeration_FinalizationData_Sepolia.l1RollingHash,
-        l1RollingHashMessageNumber: BigInt(
-          hierarchical_conglomeration_FinalizationData_Sepolia.l1RollingHashMessageNumber,
-        ),
-        lastFinalizedTimestamp: BigInt(
-          hierarchical_conglomeration_FinalizationData_Sepolia.parentAggregationLastBlockTimestamp,
-        ),
-        endBlockNumber: BigInt(hierarchical_conglomeration_FinalizationData_Sepolia.finalBlockNumber),
-        parentStateRootHash: hierarchical_conglomeration_FinalizationData_Sepolia.parentStateRootHash,
-        finalTimestamp: BigInt(hierarchical_conglomeration_FinalizationData_Sepolia.finalTimestamp),
-        l2MerkleRoots: hierarchical_conglomeration_FinalizationData_Sepolia.l2MerkleRoots,
-        l2MerkleTreesDepth: BigInt(hierarchical_conglomeration_FinalizationData_Sepolia.l2MerkleTreesDepth),
-        l2MessagingBlocksOffsets: hierarchical_conglomeration_FinalizationData_Sepolia.l2MessagingBlocksOffsets,
-        aggregatedProof: hierarchical_conglomeration_FinalizationData_Sepolia.aggregatedProof,
-        shnarfData: {
-          parentShnarf: finalBlobFile.prevShnarf,
-          snarkHash: finalBlobFile.snarkHash,
-          finalStateRootHash: finalBlobFile.finalStateRootHash,
-          dataEvaluationPoint: finalBlobFile.expectedX,
-          dataEvaluationClaim: finalBlobFile.expectedY,
-        },
-      });
-
-      finalizationData.lastFinalizedL1RollingHash =
-        hierarchical_conglomeration_FinalizationData_Sepolia.parentAggregationLastL1RollingHash;
-      finalizationData.lastFinalizedL1RollingHashMessageNumber = BigInt(
-        hierarchical_conglomeration_FinalizationData_Sepolia.parentAggregationLastL1RollingHashMessageNumber,
-      );
-
-      // Setup LineaRollup state so that its references to past state, mirror the references in the finalization proof
-      await hierarchical_conglomeration_LineaRollup.setLastFinalizedShnarf(
-        hierarchical_conglomeration_FinalizationData_Sepolia.parentAggregationFinalShnarf,
-      );
-      await hierarchical_conglomeration_LineaRollup.setLastFinalizedState(
-        hierarchical_conglomeration_FinalizationData_Sepolia.parentAggregationLastL1RollingHashMessageNumber,
-        hierarchical_conglomeration_FinalizationData_Sepolia.parentAggregationLastL1RollingHash,
-        hierarchical_conglomeration_FinalizationData_Sepolia.parentAggregationLastBlockTimestamp,
-      );
-      await hierarchical_conglomeration_LineaRollup.setRollingHash(
-        hierarchical_conglomeration_FinalizationData_Sepolia.l1RollingHashMessageNumber,
-        hierarchical_conglomeration_FinalizationData_Sepolia.l1RollingHash,
-      );
-
-      // *** ACT ***
-      const finalizeCompressedCall = hierarchical_conglomeration_LineaRollup
-        .connect(operator)
-        .finalizeBlocks(
-          hierarchical_conglomeration_FinalizationData_Sepolia.aggregatedProof,
-          TEST_PUBLIC_VERIFIER_INDEX,
-          finalizationData,
-        );
-
-      // *** ASSERT ***
-      const eventArgs = [
-        BigInt(hierarchical_conglomeration_FinalizationData_Sepolia.lastFinalizedBlockNumber) + 1n,
-        finalizationData.endBlockNumber,
-        hierarchical_conglomeration_FinalizationData_Sepolia.finalShnarf,
-        finalizationData.parentStateRootHash,
-        finalBlobFile.finalStateRootHash,
-      ];
-
-      await expectEvent(hierarchical_conglomeration_LineaRollup, finalizeCompressedCall, "DataFinalizedV3", eventArgs);
-
-      const [expectedFinalStateRootHash, lastFinalizedBlockNumber, lastFinalizedState] = await Promise.all([
-        hierarchical_conglomeration_LineaRollup.stateRootHashes(finalizationData.endBlockNumber),
-        hierarchical_conglomeration_LineaRollup.currentL2BlockNumber(),
-        hierarchical_conglomeration_LineaRollup.currentFinalizedState(),
-      ]);
-
-      expect(expectedFinalStateRootHash).to.equal(finalizationData.shnarfData.finalStateRootHash);
-      expect(lastFinalizedBlockNumber).to.equal(finalizationData.endBlockNumber);
-      expect(lastFinalizedState).to.equal(
-        generateKeccak256(
-          ["uint256", "bytes32", "uint256"],
-          [
-            finalizationData.l1RollingHashMessageNumber,
-            finalizationData.l1RollingHash,
-            finalizationData.finalTimestamp,
-          ],
-        ),
-      );
-    });
-
-    it("Can submit blobs and finalize with hierarchical conglomeration Prover on Mainnet", async () => {
-      // *** ARRANGE ***
-      // custom verifier deploy.
-
-      const mainnetFullVerifierFactory = await ethers.getContractFactory(
-        "src/verifiers/hierarchical_conglomeration/PlonkVerifierMainnet.sol:PlonkVerifierMainnetFull",
-      );
-      const verifier = await mainnetFullVerifierFactory.deploy();
-      await verifier.waitForDeployment();
-      const mainnetFullVerifier = await verifier.getAddress();
-
-      // Deploy and initialize LineaRollup
-      const initializationData = {
-        initialStateRootHash: hierarchical_conglomeration_FinalizationData_Mainnet.parentStateRootHash,
-        initialL2BlockNumber: hierarchical_conglomeration_FinalizationData_Mainnet.lastFinalizedBlockNumber,
-        genesisTimestamp: hierarchical_conglomeration_FinalizationData_Mainnet.parentAggregationLastBlockTimestamp,
-        defaultVerifier: mainnetFullVerifier,
-        rateLimitPeriodInSeconds: ONE_DAY_IN_SECONDS,
-        rateLimitAmountInWei: INITIAL_WITHDRAW_LIMIT,
-        roleAddresses,
-        pauseTypeRoles: LINEA_ROLLUP_V8_PAUSE_TYPES_ROLES,
-        unpauseTypeRoles: LINEA_ROLLUP_V8_UNPAUSE_TYPES_ROLES,
-        defaultAdmin: securityCouncil.address,
-        shnarfProvider: ADDRESS_ZERO,
-      };
-
-      const hierarchical_conglomeration_LineaRollup = (await deployUpgradableFromFactory(
-        "TestLineaRollup",
-        [initializationData, FALLBACK_OPERATOR_ADDRESS],
-        {
-          initializer: LINEA_ROLLUP_INITIALIZE_SIGNATURE,
-          unsafeAllow: ["constructor", "incorrect-initializer-order"],
-        },
-      )) as unknown as TestLineaRollup;
-
-      await hierarchical_conglomeration_LineaRollup.setupParentShnarf(
-        hierarchical_conglomeration_FinalizationData_Mainnet.parentAggregationFinalShnarf,
-      );
-
-      // Send blobs
-      const blobFiles = getVersionedBlobFiles("hierarchical_conglomeration/mainnet");
-
-      await hierarchical_conglomeration_LineaRollup.setupParentShnarf(
-        hierarchical_conglomeration_BlobData_Mainnet.prevShnarf,
-      );
-
-      for (let i = 0; i < blobFiles.length; i++) {
-        await sendVersionedBlobTransactionFromFile(
-          lineaRollup,
-          blobFiles[i],
-          hierarchical_conglomeration_LineaRollup,
-          "hierarchical_conglomeration/mainnet",
-        );
-      }
-
-      const finalBlobFile = JSON.parse(
-        fs.readFileSync(
-          `${__dirname}/../../_testData/hierarchical_conglomeration/mainnet/${blobFiles.slice(-1)[0]}`,
-          "utf-8",
-        ),
-      );
-
-      // Setup finalize call
-      const finalizationData = await generateFinalizationData({
-        l1RollingHash: hierarchical_conglomeration_FinalizationData_Mainnet.l1RollingHash,
-        l1RollingHashMessageNumber: BigInt(
-          hierarchical_conglomeration_FinalizationData_Mainnet.l1RollingHashMessageNumber,
-        ),
-        lastFinalizedTimestamp: BigInt(
-          hierarchical_conglomeration_FinalizationData_Mainnet.parentAggregationLastBlockTimestamp,
-        ),
-        endBlockNumber: BigInt(hierarchical_conglomeration_FinalizationData_Mainnet.finalBlockNumber),
-        parentStateRootHash: hierarchical_conglomeration_FinalizationData_Mainnet.parentStateRootHash,
-        finalTimestamp: BigInt(hierarchical_conglomeration_FinalizationData_Mainnet.finalTimestamp),
-        l2MerkleRoots: hierarchical_conglomeration_FinalizationData_Mainnet.l2MerkleRoots,
-        l2MerkleTreesDepth: BigInt(hierarchical_conglomeration_FinalizationData_Mainnet.l2MerkleTreesDepth),
-        l2MessagingBlocksOffsets: hierarchical_conglomeration_FinalizationData_Mainnet.l2MessagingBlocksOffsets,
-        aggregatedProof: hierarchical_conglomeration_FinalizationData_Mainnet.aggregatedProof,
-        shnarfData: {
-          parentShnarf: finalBlobFile.prevShnarf,
-          snarkHash: finalBlobFile.snarkHash,
-          finalStateRootHash: finalBlobFile.finalStateRootHash,
-          dataEvaluationPoint: finalBlobFile.expectedX,
-          dataEvaluationClaim: finalBlobFile.expectedY,
-        },
-      });
-
-      finalizationData.lastFinalizedL1RollingHash =
-        hierarchical_conglomeration_FinalizationData_Mainnet.parentAggregationLastL1RollingHash;
-      finalizationData.lastFinalizedL1RollingHashMessageNumber = BigInt(
-        hierarchical_conglomeration_FinalizationData_Mainnet.parentAggregationLastL1RollingHashMessageNumber,
-      );
-
-      // Setup LineaRollup state so that its references to past state, mirror the references in the finalization proof
-      await hierarchical_conglomeration_LineaRollup.setLastFinalizedShnarf(
-        hierarchical_conglomeration_FinalizationData_Mainnet.parentAggregationFinalShnarf,
-      );
-      await hierarchical_conglomeration_LineaRollup.setLastFinalizedState(
-        hierarchical_conglomeration_FinalizationData_Mainnet.parentAggregationLastL1RollingHashMessageNumber,
-        hierarchical_conglomeration_FinalizationData_Mainnet.parentAggregationLastL1RollingHash,
-        hierarchical_conglomeration_FinalizationData_Mainnet.parentAggregationLastBlockTimestamp,
-      );
-      await hierarchical_conglomeration_LineaRollup.setRollingHash(
-        hierarchical_conglomeration_FinalizationData_Mainnet.l1RollingHashMessageNumber,
-        hierarchical_conglomeration_FinalizationData_Mainnet.l1RollingHash,
-      );
-
-      // *** ACT ***
-      const finalizeCompressedCall = hierarchical_conglomeration_LineaRollup
-        .connect(operator)
-        .finalizeBlocks(
-          hierarchical_conglomeration_FinalizationData_Mainnet.aggregatedProof,
-          TEST_PUBLIC_VERIFIER_INDEX,
-          finalizationData,
-        );
-
-      // *** ASSERT ***
-      const eventArgs = [
-        BigInt(hierarchical_conglomeration_FinalizationData_Mainnet.lastFinalizedBlockNumber) + 1n,
-        finalizationData.endBlockNumber,
-        hierarchical_conglomeration_FinalizationData_Mainnet.finalShnarf,
-        finalizationData.parentStateRootHash,
-        finalBlobFile.finalStateRootHash,
-      ];
-
-      await expectEvent(hierarchical_conglomeration_LineaRollup, finalizeCompressedCall, "DataFinalizedV3", eventArgs);
-
-      const [expectedFinalStateRootHash, lastFinalizedBlockNumber, lastFinalizedState] = await Promise.all([
-        hierarchical_conglomeration_LineaRollup.stateRootHashes(finalizationData.endBlockNumber),
-        hierarchical_conglomeration_LineaRollup.currentL2BlockNumber(),
-        hierarchical_conglomeration_LineaRollup.currentFinalizedState(),
-      ]);
-
-      expect(expectedFinalStateRootHash).to.equal(finalizationData.shnarfData.finalStateRootHash);
-      expect(lastFinalizedBlockNumber).to.equal(finalizationData.endBlockNumber);
-      expect(lastFinalizedState).to.equal(
-        generateKeccak256(
-          ["uint256", "bytes32", "uint256"],
-          [
-            finalizationData.l1RollingHashMessageNumber,
-            finalizationData.l1RollingHash,
-            finalizationData.finalTimestamp,
-          ],
-        ),
-      );
-    });
   });
 });
