@@ -10,18 +10,28 @@ import java.time.LocalTime
  */
 
 plugins {
+  id 'net.consensys.zkevm.kotlin-library-minimal-conventions'
   alias(libs.plugins.besuPluginLibrary)
   alias(libs.plugins.web3j)
   alias(libs.plugins.web3jSolidity)
   alias(libs.plugins.lombok)
   alias(libs.plugins.gradleVersions)
   alias(libs.plugins.dependencyManagement)
+  id "org.jetbrains.kotlin.kapt"
 }
 
 def lineaSequencerProject = project(lineaSequencerProjectPath)
 apply from: lineaSequencerProject.file("gradle/java.gradle")
 apply from: lineaSequencerProject.file("gradle/dependency-management.gradle")
 apply from: lineaSequencerProject.file("gradle/lint.gradle")
+
+kapt {
+  arguments {
+    arg("log4j.graalvm.groupId", project.group.toString())
+    arg("log4j.graalvm.artifactId", project.name)
+  }
+  correctErrorTypes = true
+}
 
 compileJava {
   options.annotationProcessorGeneratedSourcesDirectory = file("$buildDir/generated/sources/annotationProcessor/java/main")
@@ -42,6 +52,13 @@ solidity {
   version '0.8.19'
 }
 
+tasks.matching { it.name == "kaptGenerateStubsKotlin" || it.name == "kaptGenerateStubsTestKotlin" }.configureEach {
+  dependsOn("${lineaSequencerProjectPath}:acceptance-tests:generateContractWrappers")
+  dependsOn("${lineaSequencerProjectPath}:acceptance-tests:generateTestContractWrappers")
+}
+
+compileKotlin.dependsOn("${lineaSequencerProjectPath}:acceptance-tests:generateContractWrappers")
+compileTestKotlin.dependsOn("${lineaSequencerProjectPath}:acceptance-tests:generateTestContractWrappers")
 processTestResources.dependsOn("${lineaSequencerProjectPath}:acceptance-tests:generateTestContractWrappers")
 
 tasks.register('acceptanceTests', Test) {
@@ -60,8 +77,10 @@ tasks.register('acceptanceTests', Test) {
 }
 
 dependencies {
-  annotationProcessor 'org.apache.logging.log4j:log4j-core'
-  implementation 'org.apache.logging.log4j:log4j-core'
+  kapt("org.apache.logging.log4j:log4j-core:${libs.versions.log4j.get()}")
+  annotationProcessor "org.apache.logging.log4j:log4j-core:${libs.versions.log4j.get()}"
+  implementation "org.apache.logging.log4j:log4j-core:${libs.versions.log4j.get()}"
+  testImplementation project(":jvm-libs:generic:serialization:jackson")
 
   testImplementation project("${lineaSequencerProjectPath}:sequencer")
 

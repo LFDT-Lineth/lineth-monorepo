@@ -31,8 +31,7 @@ public abstract class AbstractLineaRequiredPlugin extends AbstractLineaSharedPri
       doRegister(serviceManager);
 
     } catch (Exception e) {
-      log.error("Halting Besu startup: exception in plugin registration: ", e);
-      e.printStackTrace();
+      log.error("Halting Besu startup: exception in plugin registration: {}", e.getMessage(), e);
       // System.exit will cause besu to exit
       System.exit(1);
     }
@@ -54,8 +53,7 @@ public abstract class AbstractLineaRequiredPlugin extends AbstractLineaSharedPri
       doStart();
 
     } catch (Exception e) {
-      log.error("Halting Besu startup: exception in plugin startup: ", e);
-      e.printStackTrace();
+      log.error("Halting Besu startup: exception in plugin startup: {}", e.getMessage(), e);
       // System.exit will cause besu to exit
       System.exit(1);
     }
