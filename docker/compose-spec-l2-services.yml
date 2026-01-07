@@ -233,7 +233,7 @@ services:
   prover-v3: # prover compatible with the traces from zkbesu
     container_name: prover-v3
     hostname: prover-v3
-    image: consensys/linea-prover:${PROVER_TAG:-56c4809}
+    image: consensys/linea-prover:${PROVER_TAG:-5f458b5}
     platform: linux/amd64
     # to avoid spinning up on CI for now
     profiles: [ "l2" ]
@@ -254,7 +254,7 @@ services:
   postman:
     container_name: postman
     hostname: postman
-    image: consensys/linea-postman:${POSTMAN_TAG:-19735ce}
+    image: consensys/linea-postman:${POSTMAN_TAG:-5f458b5}
     profiles: [ "l2", "debug" ]
     restart: on-failure
     ports:
