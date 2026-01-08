@@ -13,6 +13,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 tasks.register('corsetExists') {
+  dependsOn('installGoCorset')
   doLast {
     def result = exec {
       ignoreExitValue = true
@@ -24,6 +25,76 @@ tasks.register('corsetExists') {
   }
 }
 
+ext {
+  corsetVersion = project.hasProperty('corsetVersion')
+    ? project.property('corsetVersion')
+    : System.getenv().getOrDefault('CORSET_VERSION', "v1.1.31")
+}
+
+tasks.register('installGoCorset') {
+  description = 'Install go-corset'
+  group = 'build'
+
+  doLast {
+    def corsetVersion = project.ext.corsetVersion
+    def isWindows = System.getProperty('os.name').toLowerCase().contains('win')
+    logger.lifecycle("Target version: $corsetVersion")
+    if (corsetVersion.isEmpty()) {
+      throw new GradleException("corsetVersion property is not set")
+    }
+
+    // Helper function to execute commands
+    def runCommand = { String cmd, Boolean throwOnFailure = true ->
+      def process
+      if (isWindows) {
+        process = ["cmd", "/c", cmd].execute()
+      } else {
+        process = cmd.execute()
+      }
+      def out = new StringBuilder()
+      def err = new StringBuilder()
+      process.consumeProcessOutput(out, err)
+      def exitCode = process.waitFor()
+      if (exitCode != 0 && throwOnFailure) {
+        throw new GradleException("Command '$cmd' failed with exitCode=$exitCode error=$err")
+      }
+      return [exitCode, out.toString(), err.toString()]
+    }
+
+    // Check if go-corset exists
+    def goCorsetExists = false
+    try {
+      def checkCmd = isWindows ? "where go-corset" : "which go-corset"
+      def (exitCode, out, err) = runCommand(checkCmd, false)
+      goCorsetExists = (exitCode == 0)
+    } catch (Exception e) {
+      logger.warn("Check command failed: ${e.message}")
+      goCorsetExists = false
+    }
+
+    def installRequired = true
+
+    if (goCorsetExists) {
+      logger.lifecycle("go-corset found. Checking version...")
+      def (exitCode, out, err) = runCommand("go-corset --version")
+      def versionOutput = out.replace("go-corset", "").trim()
+      if (versionOutput == corsetVersion) {
+        logger.lifecycle("✓ go-corset $corsetVersion already installed")
+        installRequired = false
+      } else {
+        logger.lifecycle("⚠ go-corset version mismatch: installed=$versionOutput expected=$corsetVersion")
+      }
+    } else {
+      logger.lifecycle("go-corset not found in PATH")
+    }
+
+    if (installRequired) {
+      logger.lifecycle("Installing go-corset@$corsetVersion...")
+      runCommand("go install github.com/consensys/go-corset/cmd/go-corset@${corsetVersion}")
+    }
+  }
+}
+
 // Allowing overriding the default zkevm.bin files.
 def ZKEVM_OSAKA_BIN = System.getenv("ZKEVM_OSAKA_BIN") ?: "zkevm_osaka.bin"
 
@@ -31,6 +102,7 @@ def ZKEVM_OSAKA_BIN = System.getenv("ZKEVM_OSAKA_BIN") ?: "zkevm_osaka.bin"
 def TRACE_PKG = "net.consensys.linea.zktracer"
 
 tasks.register('buildZkevmBins', Exec) {
+  dependsOn('corsetExists')
   workingDir "${project.rootDir}/tracer/linea-constraints/"
   // Specify input files so gradle knows when to rebuild.
   inputs.files(fileTree(workingDir).include('**/*.lisp'))
