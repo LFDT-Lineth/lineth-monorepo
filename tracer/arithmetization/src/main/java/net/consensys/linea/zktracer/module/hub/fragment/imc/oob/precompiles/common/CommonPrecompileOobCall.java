@@ -15,7 +15,6 @@
 
 package net.consensys.linea.zktracer.module.hub.fragment.imc.oob.precompiles.common;
 
-import static net.consensys.linea.zktracer.module.oob.OobExoCall.callToIsZero;
 import static net.consensys.linea.zktracer.types.Conversions.*;
 
 import java.math.BigInteger;
@@ -23,12 +22,8 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 import net.consensys.linea.zktracer.Trace;
-import net.consensys.linea.zktracer.module.add.Add;
 import net.consensys.linea.zktracer.module.hub.Hub;
 import net.consensys.linea.zktracer.module.hub.fragment.imc.oob.OobCall;
-import net.consensys.linea.zktracer.module.mod.Mod;
-import net.consensys.linea.zktracer.module.oob.OobExoCall;
-import net.consensys.linea.zktracer.module.wcp.Wcp;
 import net.consensys.linea.zktracer.opcode.OpCodeData;
 import net.consensys.linea.zktracer.types.EWord;
 import org.apache.tuweni.bytes.Bytes;
@@ -42,7 +37,7 @@ public abstract class CommonPrecompileOobCall extends OobCall {
   @EqualsAndHashCode.Include final int oobInst;
 
   // Inputs
-  @EqualsAndHashCode.Include final Bytes calleeGas;
+  @EqualsAndHashCode.Include final EWord calleeGas;
   @EqualsAndHashCode.Include EWord cds;
   @EqualsAndHashCode.Include EWord returnAtCapacity;
 
@@ -53,12 +48,12 @@ public abstract class CommonPrecompileOobCall extends OobCall {
   boolean cdsIsZero; // Necessary to compute extractCallData and emptyCallData
 
   protected CommonPrecompileOobCall(final BigInteger calleeGas, final int oobInst) {
-    this.calleeGas = bigIntegerToBytes(calleeGas);
+    this.calleeGas = EWord.of(calleeGas);
     this.oobInst = oobInst;
   }
 
   @Override
-  public void setInputData(MessageFrame frame, Hub hub) {
+  public void setInputs(Hub hub, MessageFrame frame) {
     final OpCodeData opCode = hub.opCodeData(frame);
 
     final EWord callDataSize = EWord.of(frame.getStackItem(opCode.callCdsStackIndex()));
@@ -70,19 +65,9 @@ public abstract class CommonPrecompileOobCall extends OobCall {
   }
 
   @Override
-  public void callExoModulesAndSetOutputs(Add add, Mod mod, Wcp wcp) {
-    // row i
-    final OobExoCall cdsIsZeroCall = callToIsZero(wcp, cds);
-    exoCalls.add(cdsIsZeroCall);
-    final boolean cdsIsZero = bytesToBoolean(cdsIsZeroCall.result());
-
-    // row i + 1
-    final OobExoCall returnAtCapacityCall = callToIsZero(wcp, returnAtCapacity);
-    exoCalls.add(returnAtCapacityCall);
-    final boolean returnAtCapacityIsZero = bytesToBoolean(returnAtCapacityCall.result());
-
-    setCdsIsZero(cdsIsZero);
-    setReturnAtCapacityNonZero(!returnAtCapacityIsZero);
+  public void setOutputs() {
+    setCdsIsZero(cds.isZero());
+    setReturnAtCapacityNonZero(!returnAtCapacity.isZero());
   }
 
   public boolean getExtractCallData() {
@@ -99,34 +84,35 @@ public abstract class CommonPrecompileOobCall extends OobCall {
   }
 
   @Override
-  public Trace.Oob trace(Trace.Oob trace) {
+  public Trace.Oob traceOob(Trace.Oob trace) {
     traceOobInstructionInOob(trace);
     return trace
         .data1(calleeGas)
         .data2(cds.trimLeadingZeros())
         .data3(returnAtCapacity.trimLeadingZeros())
-        .data4(booleanToBytes(hubSuccess)) // Set after the constructor
-        .data5(bigIntegerToBytes(returnGas)) // Set after the constructor
-        .data6(booleanToBytes(getExtractCallData())) // Derived from other parameters
-        .data7(booleanToBytes(getCallDataIsEmpty())) // Derived from other parameters
-        .data8(booleanToBytes(returnAtCapacityNonZero)); // Set after the constructor
+        .data4(booleanToBytes(hubSuccess))
+        .data5(bigIntegerToBytes(returnGas))
+        .data6(booleanToBytes(getExtractCallData()))
+        .data7(booleanToBytes(getCallDataIsEmpty()))
+        .data8(booleanToBytes(returnAtCapacityNonZero))
+        .fillAndValidateRow();
   }
 
   protected abstract void traceOobInstructionInOob(Trace.Oob trace);
 
   @Override
-  public Trace.Hub trace(Trace.Hub trace) {
+  public Trace.Hub traceHub(Trace.Hub trace) {
     traceOobInstructionInHub(trace);
     return trace
         .pMiscOobFlag(true)
         .pMiscOobData1(calleeGas)
         .pMiscOobData2(cds.trimLeadingZeros())
         .pMiscOobData3(returnAtCapacity.trimLeadingZeros())
-        .pMiscOobData4(booleanToBytes(hubSuccess)) // Set after the constructor
-        .pMiscOobData5(bigIntegerToBytes(returnGas)) // Set after the constructor
-        .pMiscOobData6(booleanToBytes(getExtractCallData())) // Derived from other parameters
-        .pMiscOobData7(booleanToBytes(getCallDataIsEmpty())) // Derived from other parameters
-        .pMiscOobData8(booleanToBytes(returnAtCapacityNonZero)); // Set after the constructor
+        .pMiscOobData4(booleanToBytes(hubSuccess))
+        .pMiscOobData5(bigIntegerToBytes(returnGas))
+        .pMiscOobData6(booleanToBytes(getExtractCallData()))
+        .pMiscOobData7(booleanToBytes(getCallDataIsEmpty()))
+        .pMiscOobData8(booleanToBytes(returnAtCapacityNonZero));
   }
 
   protected abstract void traceOobInstructionInHub(Trace.Hub trace);

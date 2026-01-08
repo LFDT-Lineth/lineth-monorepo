@@ -16,7 +16,6 @@
 package net.consensys.linea.zktracer.module.hub.fragment.imc.oob.precompiles.common.shaRipId;
 
 import static net.consensys.linea.zktracer.Trace.OOB_INST_SHA2;
-import static net.consensys.linea.zktracer.Trace.Oob.CT_MAX_SHA2;
 
 import java.math.BigInteger;
 import net.consensys.linea.zktracer.Trace;
@@ -34,16 +33,11 @@ public class Sha2OobCall extends ShaRipIdOobCall {
 
   @Override
   protected void traceOobInstructionInOob(Trace.Oob trace) {
-    trace.isSha2(true).oobInst(OOB_INST_SHA2);
+    trace.inst(OOB_INST_SHA2);
   }
 
   @Override
   protected void traceOobInstructionInHub(Trace.Hub trace) {
     trace.pMiscOobInst(OOB_INST_SHA2);
-  }
-
-  @Override
-  public int ctMax() {
-    return CT_MAX_SHA2;
   }
 }

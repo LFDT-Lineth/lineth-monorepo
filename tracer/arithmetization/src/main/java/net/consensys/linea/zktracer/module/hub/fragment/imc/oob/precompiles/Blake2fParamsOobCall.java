@@ -17,9 +17,6 @@ package net.consensys.linea.zktracer.module.hub.fragment.imc.oob.precompiles;
 
 import static java.lang.Byte.toUnsignedInt;
 import static net.consensys.linea.zktracer.Trace.OOB_INST_BLAKE_PARAMS;
-import static net.consensys.linea.zktracer.Trace.Oob.CT_MAX_BLAKE2F_PARAMS;
-import static net.consensys.linea.zktracer.module.oob.OobExoCall.callToEQ;
-import static net.consensys.linea.zktracer.module.oob.OobExoCall.callToLT;
 import static net.consensys.linea.zktracer.types.Conversions.*;
 import static org.hyperledger.besu.evm.internal.Words.clampedToLong;
 
@@ -28,12 +25,8 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 import net.consensys.linea.zktracer.Trace;
-import net.consensys.linea.zktracer.module.add.Add;
 import net.consensys.linea.zktracer.module.hub.Hub;
 import net.consensys.linea.zktracer.module.hub.fragment.imc.oob.OobCall;
-import net.consensys.linea.zktracer.module.mod.Mod;
-import net.consensys.linea.zktracer.module.oob.OobExoCall;
-import net.consensys.linea.zktracer.module.wcp.Wcp;
 import net.consensys.linea.zktracer.opcode.OpCodeData;
 import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.evm.frame.MessageFrame;
@@ -46,7 +39,7 @@ public class Blake2fParamsOobCall extends OobCall {
   // Inputs
   @EqualsAndHashCode.Include final BigInteger calleeGas;
   @EqualsAndHashCode.Include BigInteger blakeR;
-  @EqualsAndHashCode.Include BigInteger blakeF;
+  @EqualsAndHashCode.Include short blakeF;
 
   // Outputs
   boolean ramSuccess;
@@ -58,7 +51,7 @@ public class Blake2fParamsOobCall extends OobCall {
   }
 
   @Override
-  public void setInputData(MessageFrame frame, Hub hub) {
+  public void setInputs(Hub hub, MessageFrame frame) {
     final OpCodeData opCode = hub.opCodeData(frame);
     final long argsOffset =
         clampedToLong(
@@ -68,28 +61,16 @@ public class Blake2fParamsOobCall extends OobCall {
 
     final Bytes callData = frame.shadowReadMemory(argsOffset, 213);
     final BigInteger blakeR = callData.slice(0, 4).toUnsignedBigInteger();
-    final BigInteger blakeF = BigInteger.valueOf(toUnsignedInt(callData.get(212)));
 
     setBlakeR(blakeR);
-    setBlakeF(blakeF);
+    setBlakeF((short) toUnsignedInt(callData.get(212)));
   }
 
   @Override
-  public void callExoModulesAndSetOutputs(Add add, Mod mod, Wcp wcp) {
-    // row i
-    final OobExoCall sufficientGasCall =
-        callToLT(wcp, bigIntegerToBytes(calleeGas), bigIntegerToBytes(blakeR));
-    exoCalls.add(sufficientGasCall);
-
-    // row i + 1
-    final OobExoCall fIsABitCall =
-        callToEQ(wcp, bigIntegerToBytes(blakeF), bigIntegerToBytes(blakeF.multiply(blakeF)));
-    exoCalls.add(fIsABitCall);
-
-    // Set ramSuccess
-    final boolean ramSuccess =
-        !bytesToBoolean(sufficientGasCall.result()) && bytesToBoolean(fIsABitCall.result());
-    setRamSuccess(ramSuccess);
+  public void setOutputs() {
+    final boolean sufficientGas = calleeGas.compareTo(blakeR) >= 0;
+    final boolean fIsABit = blakeF == 0 || blakeF == 1;
+    setRamSuccess(sufficientGas && fIsABit);
 
     // Set returnGas
     final BigInteger returnGas = ramSuccess ? (getCalleeGas().subtract(blakeR)) : BigInteger.ZERO;
@@ -97,31 +78,26 @@ public class Blake2fParamsOobCall extends OobCall {
   }
 
   @Override
-  public int ctMax() {
-    return CT_MAX_BLAKE2F_PARAMS;
-  }
-
-  @Override
-  public Trace.Oob trace(Trace.Oob trace) {
+  public Trace.Oob traceOob(Trace.Oob trace) {
     return trace
-        .isBlake2FParams(true)
-        .oobInst(OOB_INST_BLAKE_PARAMS)
+        .inst(OOB_INST_BLAKE_PARAMS)
         .data1(bigIntegerToBytes(calleeGas))
-        .data4(booleanToBytes(ramSuccess)) // Set after the constructor
-        .data5(bigIntegerToBytes(returnGas)) // Set after the constructor
+        .data4(booleanToBytes(ramSuccess))
+        .data5(bigIntegerToBytes(returnGas))
         .data6(bigIntegerToBytes(blakeR))
-        .data7(bigIntegerToBytes(blakeF));
+        .data7(Bytes.minimalBytes(blakeF))
+        .fillAndValidateRow();
   }
 
   @Override
-  public Trace.Hub trace(Trace.Hub trace) {
+  public Trace.Hub traceHub(Trace.Hub trace) {
     return trace
         .pMiscOobFlag(true)
         .pMiscOobInst(OOB_INST_BLAKE_PARAMS)
         .pMiscOobData1(bigIntegerToBytes(calleeGas))
-        .pMiscOobData4(booleanToBytes(ramSuccess)) // Set after the constructor
-        .pMiscOobData5(bigIntegerToBytes(returnGas)) // Set after the constructor
+        .pMiscOobData4(booleanToBytes(ramSuccess))
+        .pMiscOobData5(bigIntegerToBytes(returnGas))
         .pMiscOobData6(bigIntegerToBytes(blakeR))
-        .pMiscOobData7(bigIntegerToBytes(blakeF));
+        .pMiscOobData7(Bytes.minimalBytes(blakeF));
   }
 }

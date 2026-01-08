@@ -83,7 +83,7 @@ public class ImcFragment implements TraceFragment, ContextReEntryDefer, ContextE
   public OobCall callOob(OobCall f) {
     checkState(!oobIsSet, "OOB already called");
     oobIsSet = true;
-    final OobCall oobCall = hub.oob().call(f);
+    final OobCall oobCall = hub.oob().call(f, hub);
     moduleCalls.add(oobCall);
     return oobCall;
   }
@@ -127,10 +127,10 @@ public class ImcFragment implements TraceFragment, ContextReEntryDefer, ContextE
       if (subFragment instanceof MmuCall) {
         final MmuCall mmuCall = (MmuCall) subFragment;
         if (mmuCall.traceMe()) {
-          subFragment.trace(trace, hub.state);
+          subFragment.traceHub(trace, hub.state);
         }
       } else {
-        subFragment.trace(trace, hub.state);
+        subFragment.traceHub(trace, hub.state);
       }
     }
 

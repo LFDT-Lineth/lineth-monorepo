@@ -16,20 +16,14 @@
 package net.consensys.linea.zktracer.module.hub.fragment.imc.oob.opcodes;
 
 import static net.consensys.linea.zktracer.Trace.OOB_INST_XCALL;
-import static net.consensys.linea.zktracer.Trace.Oob.CT_MAX_XCALL;
-import static net.consensys.linea.zktracer.module.oob.OobExoCall.callToIsZero;
 import static net.consensys.linea.zktracer.types.Conversions.*;
 
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 import net.consensys.linea.zktracer.Trace;
-import net.consensys.linea.zktracer.module.add.Add;
 import net.consensys.linea.zktracer.module.hub.Hub;
 import net.consensys.linea.zktracer.module.hub.fragment.imc.oob.OobCall;
-import net.consensys.linea.zktracer.module.mod.Mod;
-import net.consensys.linea.zktracer.module.oob.OobExoCall;
-import net.consensys.linea.zktracer.module.wcp.Wcp;
 import net.consensys.linea.zktracer.types.EWord;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 
@@ -49,39 +43,31 @@ public class XCallOobCall extends OobCall {
   }
 
   @Override
-  public void setInputData(MessageFrame frame, Hub hub) {
+  public void setInputs(Hub hub, MessageFrame frame) {
     setValue(EWord.of(frame.getStackItem(2)));
   }
 
   @Override
-  public void callExoModulesAndSetOutputs(Add add, Mod mod, Wcp wcp) {
-    // row i
-    final OobExoCall valueIsZeroCall = callToIsZero(wcp, value);
-    exoCalls.add(valueIsZeroCall);
-    final boolean valueIsZero = bytesToBoolean(valueIsZeroCall.result());
+  public void setOutputs() {
+    final boolean valueIsZero = value.isZero();
 
     setValueIsNonzero(!valueIsZero);
     setValueIsZero(valueIsZero);
   }
 
   @Override
-  public int ctMax() {
-    return CT_MAX_XCALL;
-  }
-
-  @Override
-  public Trace.Oob trace(Trace.Oob trace) {
+  public Trace.Oob traceOob(Trace.Oob trace) {
     return trace
-        .isXcall(true)
-        .oobInst(OOB_INST_XCALL)
+        .inst(OOB_INST_XCALL)
         .data1(value.hi())
         .data2(value.lo())
         .data7(booleanToBytes(valueIsNonzero))
-        .data8(booleanToBytes(valueIsZero));
+        .data8(booleanToBytes(valueIsZero))
+        .fillAndValidateRow();
   }
 
   @Override
-  public Trace.Hub trace(Trace.Hub trace) {
+  public Trace.Hub traceHub(Trace.Hub trace) {
     return trace
         .pMiscOobFlag(true)
         .pMiscOobInst(OOB_INST_XCALL)

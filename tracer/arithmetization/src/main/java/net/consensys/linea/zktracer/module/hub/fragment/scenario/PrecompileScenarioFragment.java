@@ -17,23 +17,7 @@ package net.consensys.linea.zktracer.module.hub.fragment.scenario;
 
 import static java.util.Map.entry;
 import static net.consensys.linea.zktracer.Trace.*;
-import static net.consensys.linea.zktracer.Trace.Blsdata.CT_MAX_POINT_EVALUATION;
 import static net.consensys.linea.zktracer.Trace.Oob.*;
-import static net.consensys.linea.zktracer.Trace.Oob.CT_MAX_BLAKE2F_CDS;
-import static net.consensys.linea.zktracer.Trace.Oob.CT_MAX_BLAKE2F_PARAMS;
-import static net.consensys.linea.zktracer.Trace.Oob.CT_MAX_ECADD;
-import static net.consensys.linea.zktracer.Trace.Oob.CT_MAX_ECMUL;
-import static net.consensys.linea.zktracer.Trace.Oob.CT_MAX_ECPAIRING;
-import static net.consensys.linea.zktracer.Trace.Oob.CT_MAX_ECRECOVER;
-import static net.consensys.linea.zktracer.Trace.Oob.CT_MAX_IDENTITY;
-import static net.consensys.linea.zktracer.Trace.Oob.CT_MAX_RIPEMD;
-import static net.consensys.linea.zktracer.Trace.Oob.CT_MAX_SHA2;
-import static net.consensys.linea.zktracer.TraceOsaka.Oob.CT_MAX_P256_VERIFY;
-import static net.consensys.linea.zktracer.module.hub.fragment.imc.oob.precompiles.modexp.ModexpCallDataSizeOobCall.NB_ROWS_OOB_MODEXP_CDS;
-import static net.consensys.linea.zktracer.module.hub.fragment.imc.oob.precompiles.modexp.ModexpExtractOobCall.NB_ROWS_OOB_MODEXP_EXTRACT;
-import static net.consensys.linea.zktracer.module.hub.fragment.imc.oob.precompiles.modexp.ModexpLeadOobCall.NB_ROWS_OOB_MODEXP_LEAD;
-import static net.consensys.linea.zktracer.module.hub.fragment.imc.oob.precompiles.modexp.ModexpPricingOobCall.NB_ROWS_OOB_MODEXP_PRICING;
-import static net.consensys.linea.zktracer.module.hub.fragment.imc.oob.precompiles.modexp.ModexpXbsOobCall.NB_ROWS_OOB_MODEXP_XBS;
 import static net.consensys.linea.zktracer.module.hub.fragment.scenario.PrecompileScenarioFragment.PrecompileFlag.*;
 import static net.consensys.linea.zktracer.module.hub.fragment.scenario.PrecompileScenarioFragment.PrecompileScenario.*;
 import static net.consensys.linea.zktracer.module.mod.ModOperation.NB_ROWS_MOD;
@@ -206,35 +190,6 @@ public class PrecompileScenarioFragment implements TraceFragment {
         }
       }
       return false;
-    }
-
-    public static short oobLineCountForPrc(PrecompileFlag prc) {
-      return switch (prc) {
-        case PRC_ECRECOVER -> 1 + CT_MAX_ECRECOVER;
-        case PRC_SHA2_256 -> 1 + CT_MAX_SHA2;
-        case PRC_RIPEMD_160 -> 1 + CT_MAX_RIPEMD;
-        case PRC_IDENTITY -> 1 + CT_MAX_IDENTITY;
-        case PRC_MODEXP ->
-            NB_ROWS_OOB_MODEXP_CDS
-                + 3 * NB_ROWS_OOB_MODEXP_XBS
-                + NB_ROWS_OOB_MODEXP_LEAD
-                + NB_ROWS_OOB_MODEXP_PRICING
-                + NB_ROWS_OOB_MODEXP_EXTRACT;
-        case PRC_ECADD -> CT_MAX_ECADD + 1;
-        case PRC_ECMUL -> CT_MAX_ECMUL + 1;
-        case PRC_ECPAIRING -> CT_MAX_ECPAIRING + 1;
-        case PRC_BLAKE2F -> 1 + CT_MAX_BLAKE2F_CDS + 1 + CT_MAX_BLAKE2F_PARAMS;
-        case PRC_POINT_EVALUATION -> 1 + CT_MAX_POINT_EVALUATION;
-        case PRC_BLS_G1_ADD -> 1 + CT_MAX_BLS_G1_ADD;
-        case PRC_BLS_G1_MSM -> 1 + CT_MAX_BLS_G1_MSM;
-        case PRC_BLS_G2_ADD -> 1 + CT_MAX_BLS_G2_ADD;
-        case PRC_BLS_G2_MSM -> 1 + CT_MAX_BLS_G2_MSM;
-        case PRC_BLS_PAIRING_CHECK -> 1 + CT_MAX_BLS_PAIRING_CHECK;
-        case PRC_BLS_MAP_FP_TO_G1 -> 1 + CT_MAX_BLS_MAP_FP_TO_G1;
-        case PRC_BLS_MAP_FP2_TO_G2 -> 1 + CT_MAX_BLS_MAP_FP2_TO_G2;
-        case PRC_P256_VERIFY -> 1 + CT_MAX_P256_VERIFY;
-        default -> throw new IllegalArgumentException("Precompile not supported:" + prc);
-      };
     }
 
     public static boolean validCallDataSize(

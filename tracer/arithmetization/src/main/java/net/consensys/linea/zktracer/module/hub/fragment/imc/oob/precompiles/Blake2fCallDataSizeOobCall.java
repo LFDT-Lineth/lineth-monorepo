@@ -16,30 +16,24 @@
 package net.consensys.linea.zktracer.module.hub.fragment.imc.oob.precompiles;
 
 import static net.consensys.linea.zktracer.Trace.OOB_INST_BLAKE_CDS;
-import static net.consensys.linea.zktracer.Trace.Oob.CT_MAX_BLAKE2F_CDS;
-import static net.consensys.linea.zktracer.module.oob.OobExoCall.callToEQ;
-import static net.consensys.linea.zktracer.module.oob.OobExoCall.callToIsZero;
 import static net.consensys.linea.zktracer.types.Conversions.*;
 
+import java.math.BigInteger;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 import net.consensys.linea.zktracer.Trace;
-import net.consensys.linea.zktracer.module.add.Add;
 import net.consensys.linea.zktracer.module.hub.Hub;
 import net.consensys.linea.zktracer.module.hub.fragment.imc.oob.OobCall;
-import net.consensys.linea.zktracer.module.mod.Mod;
-import net.consensys.linea.zktracer.module.oob.OobExoCall;
-import net.consensys.linea.zktracer.module.wcp.Wcp;
 import net.consensys.linea.zktracer.opcode.OpCodeData;
 import net.consensys.linea.zktracer.types.EWord;
-import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 
 @Getter
 @Setter
 @EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = false)
 public class Blake2fCallDataSizeOobCall extends OobCall {
+  public static final BigInteger BLAKE_VALID_CDS_BI = BigInteger.valueOf(213);
   // Inputs
   @EqualsAndHashCode.Include EWord cds;
   @EqualsAndHashCode.Include EWord returnAtCapacity;
@@ -53,7 +47,7 @@ public class Blake2fCallDataSizeOobCall extends OobCall {
   }
 
   @Override
-  public void setInputData(MessageFrame frame, Hub hub) {
+  public void setInputs(Hub hub, MessageFrame frame) {
     final OpCodeData opCode = hub.opCodeData(frame);
     final EWord cds = EWord.of(frame.getStackItem(opCode.callCdsStackIndex()));
     final EWord returnAtCapacity =
@@ -63,42 +57,30 @@ public class Blake2fCallDataSizeOobCall extends OobCall {
   }
 
   @Override
-  public void callExoModulesAndSetOutputs(Add add, Mod mod, Wcp wcp) {
-    // row i
-    final OobExoCall validCdsCall = callToEQ(wcp, cds, Bytes.of(213));
-    exoCalls.add(validCdsCall);
-    setHubSuccess(bytesToBoolean(validCdsCall.result()));
-
-    // row i + 1
-    final OobExoCall racIsZeroCall = callToIsZero(wcp, returnAtCapacity);
-    exoCalls.add(racIsZeroCall);
-    setReturnAtCapacityNonZero(!bytesToBoolean(racIsZeroCall.result()));
+  public void setOutputs() {
+    setHubSuccess(cds.toUnsignedBigInteger().equals(BLAKE_VALID_CDS_BI));
+    setReturnAtCapacityNonZero(!returnAtCapacity.isZero());
   }
 
   @Override
-  public int ctMax() {
-    return CT_MAX_BLAKE2F_CDS;
-  }
-
-  @Override
-  public Trace.Oob trace(Trace.Oob trace) {
+  public Trace.Oob traceOob(Trace.Oob trace) {
     return trace
-        .isBlake2FCds(true)
-        .oobInst(OOB_INST_BLAKE_CDS)
+        .inst(OOB_INST_BLAKE_CDS)
         .data2(cds.trimLeadingZeros())
         .data3(returnAtCapacity.trimLeadingZeros())
-        .data4(booleanToBytes(hubSuccess)) // Set after the constructor
-        .data8(booleanToBytes(returnAtCapacityNonZero)); // Set after the constructor
+        .data4(booleanToBytes(hubSuccess))
+        .data8(booleanToBytes(returnAtCapacityNonZero))
+        .fillAndValidateRow();
   }
 
   @Override
-  public Trace.Hub trace(Trace.Hub trace) {
+  public Trace.Hub traceHub(Trace.Hub trace) {
     return trace
         .pMiscOobFlag(true)
         .pMiscOobInst(OOB_INST_BLAKE_CDS)
         .pMiscOobData2(cds.trimLeadingZeros())
         .pMiscOobData3(returnAtCapacity.trimLeadingZeros())
-        .pMiscOobData4(booleanToBytes(hubSuccess)) // Set after the constructor
-        .pMiscOobData8(booleanToBytes(returnAtCapacityNonZero)); // Set after the constructor
+        .pMiscOobData4(booleanToBytes(hubSuccess))
+        .pMiscOobData8(booleanToBytes(returnAtCapacityNonZero));
   }
 }

@@ -34,9 +34,8 @@ import net.consensys.linea.zktracer.module.hub.fragment.imc.ImcFragment;
 import net.consensys.linea.zktracer.module.hub.fragment.imc.MxpCall;
 import net.consensys.linea.zktracer.module.hub.fragment.imc.StpCall;
 import net.consensys.linea.zktracer.module.hub.fragment.imc.mmu.MmuCall;
-import net.consensys.linea.zktracer.module.hub.fragment.imc.oob.opcodes.create.CreateOobCall;
-import net.consensys.linea.zktracer.module.hub.fragment.imc.oob.opcodes.create.ShanghaiCreateOobCall;
-import net.consensys.linea.zktracer.module.hub.fragment.imc.oob.opcodes.create.XCreateOobCall;
+import net.consensys.linea.zktracer.module.hub.fragment.imc.oob.opcodes.CreateOobCall;
+import net.consensys.linea.zktracer.module.hub.fragment.imc.oob.opcodes.XCreateOobCall;
 import net.consensys.linea.zktracer.module.hub.fragment.scenario.CreateScenarioFragment;
 import net.consensys.linea.zktracer.module.hub.fragment.scenario.CreateScenarioFragment.CreateScenario;
 import net.consensys.linea.zktracer.module.hub.signals.AbortingConditions;
@@ -130,8 +129,8 @@ public final class CreateSection extends TraceSection
     }
 
     // MAXCSX case: EIP-3860 in Shanghai
-    final boolean endOfCreateSection = maxCodeSizeExceptionalCreate(exceptions);
-    if (endOfCreateSection) {
+    if (Exceptions.maxCodeSizeException(exceptions)) {
+      imcFragment.callOob(new XCreateOobCall());
       return;
     }
 
@@ -159,7 +158,7 @@ public final class CreateSection extends TraceSection
     checkArgument(Exceptions.none(exceptions), "CREATE(2): unexpectedly exceptional");
     hub.currentFrame().childSpanningSection(this);
 
-    final CreateOobCall oobCall = (CreateOobCall) imcFragment.callOob(new ShanghaiCreateOobCall());
+    final CreateOobCall oobCall = (CreateOobCall) imcFragment.callOob(new CreateOobCall());
 
     firstCreator = AccountSnapshot.canonical(hub, frame.getWorldUpdater(), creatorAddress);
     firstCreatee = AccountSnapshot.canonical(hub, frame.getWorldUpdater(), createeAddress);
@@ -536,13 +535,5 @@ public final class CreateSection extends TraceSection
 
   private boolean nontrivialCreate2(OpCode opCode, long size) {
     return (opCode == CREATE2 && size != 0);
-  }
-
-  private boolean maxCodeSizeExceptionalCreate(final short exceptions) {
-    final boolean haltCreateSection = Exceptions.maxCodeSizeException(exceptions);
-    if (haltCreateSection) {
-      imcFragment.callOob(new XCreateOobCall());
-    }
-    return haltCreateSection;
   }
 }

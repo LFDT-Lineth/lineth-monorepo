@@ -13,22 +13,16 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.consensys.linea.zktracer.module.hub.fragment.imc.oob.opcodes.create;
+package net.consensys.linea.zktracer.module.hub.fragment.imc.oob.opcodes;
 
-import static net.consensys.linea.zktracer.Trace.*;
-import static net.consensys.linea.zktracer.Trace.Oob.CT_MAX_XCREATE;
-import static net.consensys.linea.zktracer.module.oob.OobExoCall.callToLT;
-import static net.consensys.linea.zktracer.module.txndata.transactions.UserTransaction.MAX_INIT_CODE_SIZE_BYTES;
+import static net.consensys.linea.zktracer.Trace.OOB_INST_XCREATE;
 
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 import net.consensys.linea.zktracer.Trace;
-import net.consensys.linea.zktracer.module.add.Add;
 import net.consensys.linea.zktracer.module.hub.Hub;
 import net.consensys.linea.zktracer.module.hub.fragment.imc.oob.OobCall;
-import net.consensys.linea.zktracer.module.mod.Mod;
-import net.consensys.linea.zktracer.module.wcp.Wcp;
 import net.consensys.linea.zktracer.types.EWord;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 
@@ -44,31 +38,24 @@ public class XCreateOobCall extends OobCall {
   }
 
   @Override
-  public void setInputData(MessageFrame frame, Hub hub) {
+  public void setInputs(Hub hub, MessageFrame frame) {
     setCodeSize(EWord.of(frame.getStackItem(2)));
   }
 
   @Override
-  public void callExoModulesAndSetOutputs(Add add, Mod mod, Wcp wcp) {
-    exoCalls.add(callToLT(wcp, MAX_INIT_CODE_SIZE_BYTES, codeSize));
-  }
+  public void setOutputs() {}
 
   @Override
-  public int ctMax() {
-    return CT_MAX_XCREATE;
-  }
-
-  @Override
-  public Trace.Oob trace(Trace.Oob trace) {
+  public Trace.Oob traceOob(Trace.Oob trace) {
     return trace
-        .isXcreate(true)
-        .oobInst(OOB_INST_XCREATE)
+        .inst(OOB_INST_XCREATE)
         .data1(codeSize.hi())
-        .data2(codeSize.lo());
+        .data2(codeSize.lo())
+        .fillAndValidateRow();
   }
 
   @Override
-  public Trace.Hub trace(Trace.Hub trace) {
+  public Trace.Hub traceHub(Trace.Hub trace) {
     return trace
         .pMiscOobFlag(true)
         .pMiscOobInst(OOB_INST_XCREATE)

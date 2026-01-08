@@ -61,7 +61,7 @@ public final class TransientFragment implements TraceFragment {
 
   @Override
   public Trace.Hub trace(Trace.Hub trace) {
-    domSubStampsSubFragment.trace(trace);
+    domSubStampsSubFragment.traceHub(trace);
 
     return trace
         .peekAtTransient(true)

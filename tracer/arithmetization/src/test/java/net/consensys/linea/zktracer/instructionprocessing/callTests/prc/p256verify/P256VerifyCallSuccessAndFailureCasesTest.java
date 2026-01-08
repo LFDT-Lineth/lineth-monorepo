@@ -56,7 +56,7 @@ public class P256VerifyCallSuccessAndFailureCasesTest extends TracerTestBase {
     if (isPostOsaka(fork)) {
       P256VerifyOobCall p256VerifyOobCall =
           (P256VerifyOobCall)
-              bytecodeRunner.getHub().oob().operations().stream().toList().getLast().oobCall();
+              bytecodeRunner.getHub().oob().operations().stream().toList().getLast();
       assertFalse(p256VerifyOobCall.isHubSuccess());
       final Bytes returnDataSize = bytecodeRunner.getHub().currentFrame().frame().getStackItem(0);
       assertTrue(returnDataSize.isZero());
@@ -81,7 +81,7 @@ public class P256VerifyCallSuccessAndFailureCasesTest extends TracerTestBase {
     if (isPostOsaka(fork)) {
       P256VerifyOobCall p256VerifyOobCall =
           (P256VerifyOobCall)
-              bytecodeRunner.getHub().oob().operations().stream().toList().getLast().oobCall();
+              bytecodeRunner.getHub().oob().operations().stream().toList().getLast();
       assertTrue(p256VerifyOobCall.isHubSuccess());
     }
   }
@@ -104,7 +104,7 @@ public class P256VerifyCallSuccessAndFailureCasesTest extends TracerTestBase {
     if (isPostOsaka(fork)) {
       P256VerifyOobCall p256VerifyOobCall =
           (P256VerifyOobCall)
-              bytecodeRunner.getHub().oob().operations().stream().toList().getLast().oobCall();
+              bytecodeRunner.getHub().oob().operations().stream().toList().getLast();
       assertTrue(p256VerifyOobCall.isHubSuccess());
     }
   }
@@ -127,7 +127,7 @@ public class P256VerifyCallSuccessAndFailureCasesTest extends TracerTestBase {
     if (isPostOsaka(fork)) {
       P256VerifyOobCall p256VerifyOobCall =
           (P256VerifyOobCall)
-              bytecodeRunner.getHub().oob().operations().stream().toList().getLast().oobCall();
+              bytecodeRunner.getHub().oob().operations().stream().toList().getLast();
       assertTrue(p256VerifyOobCall.isHubSuccess());
     }
   }

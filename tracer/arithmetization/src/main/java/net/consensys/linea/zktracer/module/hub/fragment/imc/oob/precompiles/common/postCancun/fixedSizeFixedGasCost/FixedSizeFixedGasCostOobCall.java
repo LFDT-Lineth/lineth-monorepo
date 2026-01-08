@@ -15,16 +15,9 @@
 
 package net.consensys.linea.zktracer.module.hub.fragment.imc.oob.precompiles.common.postCancun.fixedSizeFixedGasCost;
 
-import static net.consensys.linea.zktracer.module.oob.OobExoCall.callToEQ;
-import static net.consensys.linea.zktracer.module.oob.OobExoCall.callToLT;
-import static net.consensys.linea.zktracer.types.Conversions.bytesToBoolean;
-
 import java.math.BigInteger;
-import net.consensys.linea.zktracer.module.add.Add;
 import net.consensys.linea.zktracer.module.hub.fragment.imc.oob.precompiles.common.CommonPrecompileOobCall;
-import net.consensys.linea.zktracer.module.mod.Mod;
-import net.consensys.linea.zktracer.module.oob.OobExoCall;
-import net.consensys.linea.zktracer.module.wcp.Wcp;
+import net.consensys.linea.zktracer.types.EWord;
 import org.apache.tuweni.bytes.Bytes;
 
 public abstract class FixedSizeFixedGasCostOobCall extends CommonPrecompileOobCall {
@@ -37,20 +30,12 @@ public abstract class FixedSizeFixedGasCostOobCall extends CommonPrecompileOobCa
   abstract long precompileLongCost();
 
   @Override
-  public void callExoModulesAndSetOutputs(Add add, Mod mod, Wcp wcp) {
-    super.callExoModulesAndSetOutputs(add, mod, wcp);
+  public void setOutputs() {
+    super.setOutputs();
 
-    // row i + 2
-    final OobExoCall validCdsCall =
-        callToEQ(wcp, getCds().toBytes(), Bytes.ofUnsignedLong(precompileExpectedCds()));
-    exoCalls.add(validCdsCall);
-    final boolean validCds = bytesToBoolean(validCdsCall.result());
-
-    // row i + 3
-    final OobExoCall insufficientGasCall =
-        callToLT(wcp, getCalleeGas(), Bytes.ofUnsignedLong(precompileLongCost()));
-    exoCalls.add(insufficientGasCall);
-    final boolean sufficientGas = !bytesToBoolean(insufficientGasCall.result());
+    final boolean validCds = getCds().compareTo(EWord.of(precompileExpectedCds())) == 0;
+    final boolean sufficientGas =
+        getCalleeGas().compareTo(EWord.of(precompileLongCost())) >= 0;
 
     // Set hubSuccess
     final boolean hubSuccess = hubSuccess(sufficientGas, validCds);

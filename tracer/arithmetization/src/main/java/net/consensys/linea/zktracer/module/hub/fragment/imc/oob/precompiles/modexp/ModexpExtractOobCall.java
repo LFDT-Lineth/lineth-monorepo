@@ -16,34 +16,27 @@
 package net.consensys.linea.zktracer.module.hub.fragment.imc.oob.precompiles.modexp;
 
 import static net.consensys.linea.zktracer.Trace.OOB_INST_MODEXP_EXTRACT;
-import static net.consensys.linea.zktracer.Trace.Oob.CT_MAX_MODEXP_EXTRACT;
 import static net.consensys.linea.zktracer.module.hub.precompiles.ModexpMetadata.BASE_MIN_OFFSET;
-import static net.consensys.linea.zktracer.module.oob.OobExoCall.callToIsZero;
-import static net.consensys.linea.zktracer.module.oob.OobExoCall.callToLT;
 import static net.consensys.linea.zktracer.types.Conversions.*;
 
+import java.math.BigInteger;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.zktracer.Trace;
-import net.consensys.linea.zktracer.module.add.Add;
 import net.consensys.linea.zktracer.module.hub.Hub;
 import net.consensys.linea.zktracer.module.hub.fragment.imc.oob.OobCall;
 import net.consensys.linea.zktracer.module.hub.precompiles.ModexpMetadata;
-import net.consensys.linea.zktracer.module.mod.Mod;
-import net.consensys.linea.zktracer.module.oob.OobExoCall;
-import net.consensys.linea.zktracer.module.wcp.Wcp;
 import net.consensys.linea.zktracer.opcode.OpCodeData;
 import net.consensys.linea.zktracer.types.EWord;
-import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 
+@Slf4j
 @Getter
 @Setter
 @EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = false)
 public class ModexpExtractOobCall extends OobCall {
-
-  public static final short NB_ROWS_OOB_MODEXP_EXTRACT = CT_MAX_MODEXP_EXTRACT + 1;
 
   // Inputs
   @EqualsAndHashCode.Include final ModexpMetadata metadata;
@@ -60,37 +53,20 @@ public class ModexpExtractOobCall extends OobCall {
   }
 
   @Override
-  public void setInputData(MessageFrame frame, Hub hub) {
+  public void setInputs(Hub hub, MessageFrame frame) {
     final OpCodeData opCode = hub.opCodeData(frame);
     setCds(EWord.of(frame.getStackItem(opCode.callCdsStackIndex())));
   }
 
   @Override
-  public void callExoModulesAndSetOutputs(Add add, Mod mod, Wcp wcp) {
-    // row i
-    final OobExoCall bbsIsZeroCall = callToIsZero(wcp, metadata.bbs());
-    exoCalls.add(bbsIsZeroCall);
-    final boolean bbsIsZero = bytesToBoolean(bbsIsZeroCall.result());
-
-    // row i + 1
-    final OobExoCall ebsIsZeroCall = callToIsZero(wcp, metadata.ebs());
-    exoCalls.add(ebsIsZeroCall);
-    final boolean ebsIsZero = bytesToBoolean(ebsIsZeroCall.result());
-
-    // row i + 2
-    final OobExoCall mbsIsZeroCall = callToIsZero(wcp, metadata.mbs());
-    exoCalls.add(mbsIsZeroCall);
-    final boolean mbsIsZero = bytesToBoolean(mbsIsZeroCall.result());
-
-    // row i + 3
-    final OobExoCall callDataExtendsBeyondExponentCall =
-        callToLT(
-            wcp,
-            Bytes.ofUnsignedLong(BASE_MIN_OFFSET + metadata.bbsInt() + metadata.ebsInt()),
-            cds);
-    exoCalls.add(callDataExtendsBeyondExponentCall);
+  public void setOutputs() {
+    final boolean bbsIsZero = metadata.bbs().isZero();
+    final boolean ebsIsZero = metadata.ebs().isZero();
+    final boolean mbsIsZero = metadata.mbs().isZero();
     final boolean callDataExtendsBeyondExponent =
-        bytesToBoolean(callDataExtendsBeyondExponentCall.result());
+        BigInteger.valueOf(BASE_MIN_OFFSET + metadata.bbsInt() + metadata.ebsInt())
+                .compareTo(cds.toUnsignedBigInteger())
+            < 0;
 
     setExtractModulus(callDataExtendsBeyondExponent && !mbsIsZero);
     setExtractBase(extractModulus && !bbsIsZero);
@@ -98,26 +74,21 @@ public class ModexpExtractOobCall extends OobCall {
   }
 
   @Override
-  public int ctMax() {
-    return CT_MAX_MODEXP_EXTRACT;
-  }
-
-  @Override
-  public Trace.Oob trace(Trace.Oob trace) {
+  public Trace.Oob traceOob(Trace.Oob trace) {
     return trace
-        .isModexpExtract(true)
-        .oobInst(OOB_INST_MODEXP_EXTRACT)
+        .inst(OOB_INST_MODEXP_EXTRACT)
         .data2(cds.trimLeadingZeros())
         .data3(metadata.bbs().trimLeadingZeros())
         .data4(metadata.ebs().trimLeadingZeros())
         .data5(metadata.mbs().trimLeadingZeros())
         .data6(booleanToBytes(extractBase))
         .data7(booleanToBytes(extractExponent))
-        .data8(booleanToBytes(extractModulus));
+        .data8(booleanToBytes(extractModulus))
+        .fillAndValidateRow();
   }
 
   @Override
-  public Trace.Hub trace(Trace.Hub trace) {
+  public Trace.Hub traceHub(Trace.Hub trace) {
     return trace
         .pMiscOobFlag(true)
         .pMiscOobInst(OOB_INST_MODEXP_EXTRACT)

@@ -87,7 +87,7 @@ public final class StorageFragment implements TraceFragment, PostBlockDefer {
   }
 
   public Trace.Hub trace(Trace.Hub trace) {
-    domSubStampsSubFragment.trace(trace);
+    domSubStampsSubFragment.traceHub(trace);
 
     return trace
         .peekAtStorage(true)

@@ -15,18 +15,13 @@
 
 package net.consensys.linea.zktracer.module.hub.fragment.imc.oob.precompiles.common;
 
+import static net.consensys.linea.zktracer.Trace.Ecdata.TOTAL_SIZE_ECPAIRING_DATA_MIN;
 import static net.consensys.linea.zktracer.Trace.OOB_INST_ECPAIRING;
-import static net.consensys.linea.zktracer.Trace.Oob.CT_MAX_ECPAIRING;
-import static net.consensys.linea.zktracer.module.oob.OobExoCall.*;
 import static net.consensys.linea.zktracer.types.Conversions.bigIntegerToBytes;
-import static net.consensys.linea.zktracer.types.Conversions.bytesToBoolean;
 
 import java.math.BigInteger;
 import net.consensys.linea.zktracer.Trace;
-import net.consensys.linea.zktracer.module.add.Add;
-import net.consensys.linea.zktracer.module.mod.Mod;
-import net.consensys.linea.zktracer.module.oob.OobExoCall;
-import net.consensys.linea.zktracer.module.wcp.Wcp;
+import net.consensys.linea.zktracer.types.EWord;
 import org.apache.tuweni.bytes.Bytes;
 
 public class EcPairingOobCall extends CommonPrecompileOobCall {
@@ -35,58 +30,42 @@ public class EcPairingOobCall extends CommonPrecompileOobCall {
   }
 
   @Override
-  public void callExoModulesAndSetOutputs(Add add, Mod mod, Wcp wcp) {
-    super.callExoModulesAndSetOutputs(add, mod, wcp);
+  public void setOutputs() {
+    super.setOutputs();
 
-    // row i + 2
-    final OobExoCall remainderCall = callToMOD(mod, cds, Bytes.ofUnsignedLong(192));
-    exoCalls.add(remainderCall);
-    final Bytes remainder = remainderCall.result();
+    final Bytes remainder = cds.mod(TOTAL_SIZE_ECPAIRING_DATA_MIN);
+    final boolean isMultipleOf192 = remainder.isZero();
 
-    // row i + 3
-    final OobExoCall isMultipleOf192Call = callToIsZero(wcp, remainder);
-    exoCalls.add(isMultipleOf192Call);
-    final boolean isMultipleOf192 = bytesToBoolean(isMultipleOf192Call.result());
+    if (!isMultipleOf192) {
+      setHubSuccess(false);
+      setReturnGas(BigInteger.ZERO);
+    } else {
+      final Bytes precompileCost =
+         EWord.of(
+              BigInteger.valueOf(45000)
+                  .add(
+                      BigInteger.valueOf(34000)
+                          .multiply(
+                              cds.toUnsignedBigInteger()
+                                  .divide(BigInteger.valueOf(TOTAL_SIZE_ECPAIRING_DATA_MIN)))));
 
-    final Bytes precompileCost =
-        isMultipleOf192
-            ? bigIntegerToBytes(
-                BigInteger.valueOf(45000)
-                    .add(
-                        BigInteger.valueOf(34000)
-                            .multiply(cds.toUnsignedBigInteger().divide(BigInteger.valueOf(192)))))
-            : Bytes.of(0);
+      setHubSuccess(calleeGas.compareTo(precompileCost) >= 0);
 
-    // row i + 4
-    final OobExoCall insufficientGasCall =
-        isMultipleOf192 ? callToLT(wcp, calleeGas, precompileCost) : noCall();
-    exoCalls.add(insufficientGasCall);
-    final boolean insufficientGas = bytesToBoolean(insufficientGasCall.result());
-
-    // Set hubSuccess
-    final boolean hubSuccess = isMultipleOf192 && !insufficientGas;
-    setHubSuccess(hubSuccess);
-
-    // Set returnGas
-    final BigInteger returnGas =
-        hubSuccess
-            ? calleeGas.toUnsignedBigInteger().subtract(precompileCost.toUnsignedBigInteger())
-            : BigInteger.ZERO;
-    setReturnGas(returnGas);
+      final BigInteger returnGas =
+          hubSuccess
+              ? calleeGas.toUnsignedBigInteger().subtract(precompileCost.toUnsignedBigInteger())
+              : BigInteger.ZERO;
+      setReturnGas(returnGas);
+    }
   }
 
   @Override
   protected void traceOobInstructionInOob(Trace.Oob trace) {
-    trace.isEcpairing(true).oobInst(OOB_INST_ECPAIRING);
+    trace.inst(OOB_INST_ECPAIRING);
   }
 
   @Override
   protected void traceOobInstructionInHub(Trace.Hub trace) {
     trace.pMiscOobInst(OOB_INST_ECPAIRING);
-  }
-
-  @Override
-  public int ctMax() {
-    return CT_MAX_ECPAIRING;
   }
 }

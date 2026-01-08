@@ -13,26 +13,23 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-package net.consensys.linea.zktracer.module.hub.fragment.imc.oob.opcodes.create;
+package net.consensys.linea.zktracer.module.hub.fragment.imc.oob.opcodes;
 
-import static net.consensys.linea.zktracer.Trace.*;
+import static net.consensys.linea.zktracer.Trace.EIP2681_MAX_NONCE;
+import static net.consensys.linea.zktracer.Trace.OOB_INST_CREATE;
 import static net.consensys.linea.zktracer.module.hub.fragment.imc.oob.opcodes.CallOobCall.MAX_CALL_STACK_DEPTH_BYTES;
-import static net.consensys.linea.zktracer.module.oob.OobExoCall.callToIsZero;
-import static net.consensys.linea.zktracer.module.oob.OobExoCall.callToLT;
 import static net.consensys.linea.zktracer.types.AddressUtils.getDeploymentAddress;
 import static net.consensys.linea.zktracer.types.Conversions.*;
+import static org.hyperledger.besu.evm.internal.Words.clampedToLong;
 
 import java.math.BigInteger;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 import net.consensys.linea.zktracer.Trace;
-import net.consensys.linea.zktracer.module.add.Add;
 import net.consensys.linea.zktracer.module.hub.Hub;
 import net.consensys.linea.zktracer.module.hub.fragment.imc.oob.OobCall;
-import net.consensys.linea.zktracer.module.mod.Mod;
-import net.consensys.linea.zktracer.module.oob.OobExoCall;
-import net.consensys.linea.zktracer.module.wcp.Wcp;
+import net.consensys.linea.zktracer.opcode.OpCodeData;
 import net.consensys.linea.zktracer.types.EWord;
 import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.datatypes.Address;
@@ -42,17 +39,17 @@ import org.hyperledger.besu.evm.frame.MessageFrame;
 @Getter
 @Setter
 @EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = false)
-public abstract class CreateOobCall extends OobCall {
+public final class CreateOobCall extends OobCall {
 
   private static final Bytes EIP2681_MAX_NONCE_BYTES = bigIntegerToBytes(EIP2681_MAX_NONCE);
 
   // Inputs
   @EqualsAndHashCode.Include EWord value;
-  @EqualsAndHashCode.Include Bytes balance;
-  @EqualsAndHashCode.Include Bytes nonce;
+  @EqualsAndHashCode.Include EWord balance;
+  @EqualsAndHashCode.Include EWord nonce;
   @EqualsAndHashCode.Include boolean hasCode;
-  @EqualsAndHashCode.Include Bytes callStackDepth;
-  @EqualsAndHashCode.Include Bytes creatorNonce;
+  @EqualsAndHashCode.Include EWord callStackDepth;
+  @EqualsAndHashCode.Include EWord creatorNonce;
   @EqualsAndHashCode.Include long codeSize;
 
   // Outputs
@@ -64,9 +61,10 @@ public abstract class CreateOobCall extends OobCall {
   }
 
   @Override
-  public void setInputData(MessageFrame frame, Hub hub) {
+  public void setInputs(Hub hub, MessageFrame frame) {
+    final OpCodeData opcode = hub.opCodeData();
     final Account creatorAccount = frame.getWorldUpdater().get(frame.getRecipientAddress());
-    final Address deploymentAddress = getDeploymentAddress(frame, hub.opCodeData(frame));
+    final Address deploymentAddress = getDeploymentAddress(frame, opcode);
     final Account deployedAccount = frame.getWorldUpdater().get(deploymentAddress);
 
     final boolean unaborted = hub.pch().abortingConditions().snapshot().none();
@@ -77,59 +75,29 @@ public abstract class CreateOobCall extends OobCall {
     final boolean hasCode = unabortedCreateAndDeploymentAccountExists && deployedAccount.hasCode();
 
     setValue(EWord.of(frame.getStackItem(0)));
-    setBalance(bigIntegerToBytes(creatorAccount.getBalance().toUnsignedBigInteger()));
-    setNonce(Bytes.minimalBytes(nonce));
+    setBalance(EWord.of(creatorAccount.getBalance().toUnsignedBigInteger()));
+    setNonce(EWord.of(nonce));
     setHasCode(hasCode);
-    setCallStackDepth(bigIntegerToBytes(BigInteger.valueOf(frame.getDepth())));
-    setCreatorNonce(Bytes.minimalBytes(creatorAccount.getNonce()));
-
-    codeSizeSnapshot(frame);
+    setCallStackDepth(EWord.of(BigInteger.valueOf(frame.getDepth())));
+    setCreatorNonce(EWord.of(Bytes.minimalBytes(creatorAccount.getNonce())));
+    setCodeSize(clampedToLong(frame.getStackItem(2)));
   }
 
-  protected abstract void codeSizeSnapshot(final MessageFrame frame);
-
   @Override
-  public void callExoModulesAndSetOutputs(Add add, Mod mod, Wcp wcp) {
-    // row i
-    final OobExoCall insufficientBalanceCall = callToLT(wcp, balance, value);
-    exoCalls.add(insufficientBalanceCall);
-    final boolean insufficientBalanceAbort = bytesToBoolean(insufficientBalanceCall.result());
+  public void setOutputs() {
+    final boolean insufficientBalanceAbort = EWord.of(balance).compareTo(value) < 0;
+    final boolean callStackDepthAbort = callStackDepth.compareTo(EWord.of(MAX_CALL_STACK_DEPTH_BYTES)) >= 0;
+    final boolean nonzeroNonce = !nonce.isZero();
+    final boolean creatorNonceAbort = creatorNonce.compareTo(EWord.of(EIP2681_MAX_NONCE_BYTES)) >= 0;
 
-    // row i + 1
-    final OobExoCall callStackDepthAbortCall =
-        callToLT(wcp, callStackDepth, MAX_CALL_STACK_DEPTH_BYTES);
-    exoCalls.add(callStackDepthAbortCall);
-    final boolean callStackDepthAbort = !bytesToBoolean(callStackDepthAbortCall.result());
-
-    // row i + 2
-    final OobExoCall nonzeroNonceCall = callToIsZero(wcp, nonce);
-    exoCalls.add(nonzeroNonceCall);
-    final boolean nonzeroNonce = !bytesToBoolean(nonzeroNonceCall.result());
-
-    // row i + 3
-    final OobExoCall creatorNonceAbortCall = callToLT(wcp, creatorNonce, EIP2681_MAX_NONCE_BYTES);
-    exoCalls.add(creatorNonceAbortCall);
-    final boolean creatorNonceAbort = !bytesToBoolean(creatorNonceAbortCall.result());
-
-    // row i +  4
-    exoCalls.add(exceedsMaxInitCodeSize(wcp));
-
-    // Set aborting condition
     setAbortingCondition(insufficientBalanceAbort || callStackDepthAbort || creatorNonceAbort);
-
-    // Set failureCondition
     setFailureCondition(!isAbortingCondition() && (isHasCode() || nonzeroNonce));
   }
 
-  protected abstract OobExoCall exceedsMaxInitCodeSize(Wcp wcp);
-
   @Override
-  public Trace.Oob trace(Trace.Oob trace) {
-    traceOobData10column(trace, codeSize);
-
+  public Trace.Oob traceOob(Trace.Oob trace) {
     return trace
-        .isCreate(true)
-        .oobInst(OOB_INST_CREATE)
+        .inst(OOB_INST_CREATE)
         .data1(value.hi())
         .data2(value.lo())
         .data3(balance)
@@ -138,15 +106,13 @@ public abstract class CreateOobCall extends OobCall {
         .data6(callStackDepth)
         .data7(booleanToBytes(abortingCondition))
         .data8(booleanToBytes(failureCondition))
-        .data9(creatorNonce);
+        .data9(creatorNonce)
+        .data10(Bytes.ofUnsignedLong(codeSize))
+        .validateRow();
   }
 
-  protected abstract void traceOobData10column(Trace.Oob trace, long codeSize);
-
   @Override
-  public Trace.Hub trace(Trace.Hub trace) {
-    traceHubData10column(trace, codeSize);
-
+  public Trace.Hub traceHub(Trace.Hub trace) {
     return trace
         .pMiscOobFlag(true)
         .pMiscOobInst(OOB_INST_CREATE)
@@ -158,8 +124,7 @@ public abstract class CreateOobCall extends OobCall {
         .pMiscOobData6(callStackDepth)
         .pMiscOobData7(booleanToBytes(abortingCondition))
         .pMiscOobData8(booleanToBytes(failureCondition))
-        .pMiscOobData9(creatorNonce);
+        .pMiscOobData9(creatorNonce)
+        .pMiscOobData10(Bytes.ofUnsignedLong(codeSize));
   }
-
-  protected abstract void traceHubData10column(Trace.Hub trace, long codeSize);
 }

@@ -18,7 +18,7 @@ package net.consensys.linea.zktracer.precompiles;
 import static net.consensys.linea.testing.BytecodeRunner.MAX_GAS_LIMIT;
 import static net.consensys.linea.zktracer.Fork.forkPredatesOsaka;
 import static net.consensys.linea.zktracer.Trace.*;
-import static net.consensys.linea.zktracer.module.oob.OobOperation.computeExponentLog;
+import static net.consensys.linea.zktracer.module.hub.fragment.imc.oob.precompiles.modexp.ModexpPricingOobCall.computeExponentLog;
 import static net.consensys.linea.zktracer.opcode.OpCode.CALL;
 import static net.consensys.linea.zktracer.opcode.OpCode.JUMPDEST;
 import static net.consensys.linea.zktracer.precompiles.LowGasStipendPrecompileCallTests.GasCase.COST;

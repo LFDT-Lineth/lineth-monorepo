@@ -904,7 +904,7 @@ public class MmuCall implements TraceSubFragment, EndTransactionDefer {
   }
 
   @Override
-  public Trace.Hub trace(Trace.Hub trace, State hubState) {
+  public Trace.Hub traceHub(Trace.Hub trace, State hubState) {
     hubState.incrementMmuStamp();
     return trace
         .pMiscMmuFlag(true)

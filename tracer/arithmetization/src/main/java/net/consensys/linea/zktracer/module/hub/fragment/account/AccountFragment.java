@@ -139,9 +139,9 @@ public final class AccountFragment
   public Trace.Hub trace(Trace.Hub trace) {
 
     // tracing
-    domSubStampsSubFragment.trace(trace);
+    domSubStampsSubFragment.traceHub(trace);
     if (rlpAddrSubFragment != null) {
-      rlpAddrSubFragment.trace(trace);
+      rlpAddrSubFragment.traceHub(trace);
     }
 
     final boolean hasCode = oldState.tracedHasCode();

@@ -238,7 +238,7 @@ public final class Hub implements Module {
 
   // modules triggered by sub-fragments of the MISCELLANEOUS / IMC perspective
   private final Mxp mxp = new Mxp();
-  private final Oob oob = new Oob(this, add, mod, wcp);
+  private final Oob oob = new Oob();
   private final Mmu mmu;
   private final Stp stp = new Stp();
   private final Exp exp = new Exp();

@@ -16,7 +16,6 @@
 package net.consensys.linea.zktracer.module.hub.fragment.imc.oob.precompiles.common.ecAddMulRecover;
 
 import static net.consensys.linea.zktracer.Trace.OOB_INST_ECRECOVER;
-import static net.consensys.linea.zktracer.Trace.Oob.CT_MAX_ECRECOVER;
 
 import java.math.BigInteger;
 import net.consensys.linea.zktracer.Trace;
@@ -34,16 +33,11 @@ public class EcRecoverOobCall extends EcRecEcAddEcMulOobCall {
 
   @Override
   protected void traceOobInstructionInOob(Trace.Oob trace) {
-    trace.isEcrecover(true).oobInst(OOB_INST_ECRECOVER);
+    trace.inst(OOB_INST_ECRECOVER);
   }
 
   @Override
   protected void traceOobInstructionInHub(Trace.Hub trace) {
     trace.pMiscOobInst(OOB_INST_ECRECOVER);
-  }
-
-  @Override
-  public int ctMax() {
-    return CT_MAX_ECRECOVER;
   }
 }

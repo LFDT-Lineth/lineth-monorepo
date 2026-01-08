@@ -16,32 +16,24 @@
 package net.consensys.linea.zktracer.module.hub.fragment.imc.oob.precompiles.modexp;
 
 import static net.consensys.linea.zktracer.Trace.OOB_INST_MODEXP_CDS;
-import static net.consensys.linea.zktracer.Trace.Oob.CT_MAX_MODEXP_CDS;
 import static net.consensys.linea.zktracer.module.hub.precompiles.ModexpMetadata.*;
-import static net.consensys.linea.zktracer.module.oob.OobExoCall.callToLT;
 import static net.consensys.linea.zktracer.types.Conversions.*;
 
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 import net.consensys.linea.zktracer.Trace;
-import net.consensys.linea.zktracer.module.add.Add;
 import net.consensys.linea.zktracer.module.hub.Hub;
 import net.consensys.linea.zktracer.module.hub.fragment.imc.oob.OobCall;
 import net.consensys.linea.zktracer.module.hub.precompiles.ModexpMetadata;
-import net.consensys.linea.zktracer.module.mod.Mod;
-import net.consensys.linea.zktracer.module.wcp.Wcp;
 import net.consensys.linea.zktracer.opcode.OpCodeData;
 import net.consensys.linea.zktracer.types.EWord;
-import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 
 @Getter
 @Setter
 @EqualsAndHashCode(onlyExplicitlyIncluded = true, callSuper = false)
 public class ModexpCallDataSizeOobCall extends OobCall {
-
-  public static final short NB_ROWS_OOB_MODEXP_CDS = CT_MAX_MODEXP_CDS + 1;
 
   // Inputs
   @EqualsAndHashCode.Include final ModexpMetadata modexpMetadata;
@@ -53,41 +45,27 @@ public class ModexpCallDataSizeOobCall extends OobCall {
   }
 
   @Override
-  public void setInputData(MessageFrame frame, Hub hub) {
+  public void setInputs(Hub hub, MessageFrame frame) {
     final OpCodeData opCode = hub.opCodeData(frame);
     cds = EWord.of(frame.getStackItem(opCode.callCdsStackIndex()));
   }
 
   @Override
-  public void callExoModulesAndSetOutputs(Add add, Mod mod, Wcp wcp) {
-    // row i
-    exoCalls.add(callToLT(wcp, Bytes.of(BBS_MIN_OFFSET), cds));
-
-    // row i + 1
-    exoCalls.add(callToLT(wcp, Bytes.of(EBS_MIN_OFFSET), cds));
-
-    // row i + 2
-    exoCalls.add(callToLT(wcp, Bytes.of(MBS_MIN_OFFSET), cds));
-  }
+  public void setOutputs() {}
 
   @Override
-  public int ctMax() {
-    return CT_MAX_MODEXP_CDS;
-  }
-
-  @Override
-  public Trace.Oob trace(Trace.Oob trace) {
+  public Trace.Oob traceOob(Trace.Oob trace) {
     return trace
-        .isModexpCds(true)
-        .oobInst(OOB_INST_MODEXP_CDS)
+        .inst(OOB_INST_MODEXP_CDS)
         .data2(cds.trimLeadingZeros())
         .data3(booleanToBytes(modexpMetadata.extractBbs()))
         .data4(booleanToBytes(modexpMetadata.extractEbs()))
-        .data5(booleanToBytes(modexpMetadata.extractMbs()));
+        .data5(booleanToBytes(modexpMetadata.extractMbs()))
+        .fillAndValidateRow();
   }
 
   @Override
-  public Trace.Hub trace(Trace.Hub trace) {
+  public Trace.Hub traceHub(Trace.Hub trace) {
     return trace
         .pMiscOobFlag(true)
         .pMiscOobInst(OOB_INST_MODEXP_CDS)

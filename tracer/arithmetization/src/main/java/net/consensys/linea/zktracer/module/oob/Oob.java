@@ -26,56 +26,30 @@ import net.consensys.linea.zktracer.container.module.OperationSetModule;
 import net.consensys.linea.zktracer.container.stacked.ModuleOperationAdder;
 import net.consensys.linea.zktracer.container.stacked.ModuleOperationStackedSet;
 import net.consensys.linea.zktracer.module.ModuleName;
-import net.consensys.linea.zktracer.module.add.Add;
 import net.consensys.linea.zktracer.module.hub.Hub;
 import net.consensys.linea.zktracer.module.hub.fragment.imc.oob.OobCall;
-import net.consensys.linea.zktracer.module.mod.Mod;
-import net.consensys.linea.zktracer.module.wcp.Wcp;
 
 /** Implementation of a {@link Module} for out of bounds. */
 @RequiredArgsConstructor
 @Accessors(fluent = true)
-public class Oob implements OperationSetModule<OobOperation> {
-
-  private final Hub hub;
-  private final Add add;
-  private final Mod mod;
-  private final Wcp wcp;
+public class Oob implements OperationSetModule<OobCall> {
 
   @Getter
-  private final ModuleOperationStackedSet<OobOperation> operations =
-      new ModuleOperationStackedSet<>();
+  private final ModuleOperationStackedSet<OobCall> operations = new ModuleOperationStackedSet<>();
 
   @Override
   public ModuleName moduleKey() {
     return OOB;
   }
 
-  public OobCall call(OobCall oobCall) {
-    final OobOperation oobOperation = new OobOperation(oobCall, hub, hub.messageFrame());
-    final ModuleOperationAdder addedOperation = operations.addAndGet(oobOperation);
-    final OobOperation op = (OobOperation) addedOperation.op();
+  public OobCall call(OobCall oobCall, Hub hub) {
+    oobCall.setInputs(hub, hub.messageFrame());
+    final ModuleOperationAdder addedOperation = operations.addAndGet(oobCall);
+    final OobCall op = (OobCall) addedOperation.op();
     if (addedOperation.isNew()) {
-      op.oobCall.callExoModulesAndSetOutputs(add, mod, wcp);
+      op.setOutputs();
     }
-    return op.oobCall;
-  }
-
-  final void traceOperation(final OobOperation oobOperation, int stamp, Trace.Oob trace) {
-    final int nRows = oobOperation.nRows();
-    final OobCall oobCall = oobOperation.oobCall();
-
-    for (int ct = 0; ct < nRows; ct++) {
-      trace.stamp(stamp).ct((short) ct).ctMax((short) oobOperation.ctMax());
-
-      // Trace the OOB instruction
-      trace = oobCall.trace(trace);
-
-      // Trace the exo calls to ADD, MOD and WCP
-      oobCall.exoCalls.get(ct).trace(trace);
-
-      trace.fillAndValidateRow();
-    }
+    return op;
   }
 
   @Override
@@ -90,9 +64,8 @@ public class Oob implements OperationSetModule<OobOperation> {
 
   @Override
   public void commit(Trace trace) {
-    int stamp = 0;
-    for (OobOperation op : operations.getAll()) {
-      traceOperation(op, ++stamp, trace.oob());
+    for (OobCall op : operations.getAll()) {
+      op.traceOob(trace.oob());
     }
   }
 }

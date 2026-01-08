@@ -19,11 +19,11 @@ import net.consensys.linea.zktracer.Trace;
 import net.consensys.linea.zktracer.module.hub.state.State;
 
 public interface TraceSubFragment {
-  default Trace.Hub trace(Trace.Hub trace) {
+  default Trace.Hub traceHub(Trace.Hub trace) {
     return trace;
   }
 
-  default Trace.Hub trace(Trace.Hub trace, State hubState) {
-    return trace(trace);
+  default Trace.Hub traceHub(Trace.Hub trace, State hubState) {
+    return traceHub(trace);
   }
 }

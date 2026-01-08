@@ -16,21 +16,14 @@
 package net.consensys.linea.zktracer.module.hub.fragment.imc.oob.opcodes;
 
 import static net.consensys.linea.zktracer.Trace.OOB_INST_CALL;
-import static net.consensys.linea.zktracer.Trace.Oob.CT_MAX_CALL;
-import static net.consensys.linea.zktracer.module.oob.OobExoCall.callToIsZero;
-import static net.consensys.linea.zktracer.module.oob.OobExoCall.callToLT;
 import static net.consensys.linea.zktracer.types.Conversions.*;
 
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 import net.consensys.linea.zktracer.Trace;
-import net.consensys.linea.zktracer.module.add.Add;
 import net.consensys.linea.zktracer.module.hub.Hub;
 import net.consensys.linea.zktracer.module.hub.fragment.imc.oob.OobCall;
-import net.consensys.linea.zktracer.module.mod.Mod;
-import net.consensys.linea.zktracer.module.oob.OobExoCall;
-import net.consensys.linea.zktracer.module.wcp.Wcp;
 import net.consensys.linea.zktracer.opcode.OpCodeData;
 import net.consensys.linea.zktracer.types.EWord;
 import org.apache.tuweni.bytes.Bytes;
@@ -45,8 +38,8 @@ public class CallOobCall extends OobCall {
 
   // Inputs
   @EqualsAndHashCode.Include public EWord value;
-  @EqualsAndHashCode.Include Bytes balance;
-  @EqualsAndHashCode.Include Bytes callStackDepth;
+  @EqualsAndHashCode.Include EWord balance;
+  @EqualsAndHashCode.Include EWord callStackDepth;
 
   // Outputs
   boolean abortingCondition;
@@ -56,58 +49,41 @@ public class CallOobCall extends OobCall {
   }
 
   @Override
-  public void setInputData(MessageFrame frame, Hub hub) {
+  public void setInputs(Hub hub, MessageFrame frame) {
+    final OpCodeData opcode = hub.opCodeData();
     final Account callerAccount = frame.getWorldUpdater().get(frame.getRecipientAddress());
-    final OpCodeData opCode = hub.opCodeData(frame);
 
     // DELEGATECALL, STATICCALL can't trasfer value,
     // CALL, CALLCODE may transfer value
     final EWord value =
-        opCode.callHasValueArgument() ? EWord.of(frame.getStackItem(2)) : EWord.ZERO;
+        opcode.callHasValueArgument() ? EWord.of(frame.getStackItem(2)) : EWord.ZERO;
     setValue(value);
-    setBalance(bigIntegerToBytes(callerAccount.getBalance().toUnsignedBigInteger()));
-    setCallStackDepth(Bytes.ofUnsignedInt(frame.getDepth()));
+    setBalance(EWord.of(callerAccount.getBalance().toUnsignedBigInteger()));
+    setCallStackDepth(EWord.of(frame.getDepth()));
   }
 
   @Override
-  public void callExoModulesAndSetOutputs(Add add, Mod mod, Wcp wcp) {
-    // row i
-    final OobExoCall insufficientBalanceAbortCall = callToLT(wcp, balance, value);
-    exoCalls.add(insufficientBalanceAbortCall);
-    final boolean insufficientBalanceAbort = bytesToBoolean(insufficientBalanceAbortCall.result());
-
-    // row i + 1
-    final OobExoCall callStackDepthAbortCall =
-        callToLT(wcp, callStackDepth, MAX_CALL_STACK_DEPTH_BYTES);
-    exoCalls.add(callStackDepthAbortCall);
-    final boolean callStackDepthAbort = !bytesToBoolean(callStackDepthAbortCall.result());
-
-    // row i + 2
-    exoCalls.add(callToIsZero(wcp, value));
-
+  public void setOutputs() {
+    final boolean insufficientBalanceAbort = balance.compareTo(value) < 0;
+    final boolean callStackDepthAbort = callStackDepth.compareTo(EWord.of(MAX_CALL_STACK_DEPTH_BYTES)) >= 0;
     setAbortingCondition(insufficientBalanceAbort || callStackDepthAbort);
   }
 
   @Override
-  public int ctMax() {
-    return CT_MAX_CALL;
-  }
-
-  @Override
-  public Trace.Oob trace(Trace.Oob trace) {
+  public Trace.Oob traceOob(Trace.Oob trace) {
     return trace
-        .isCall(true)
-        .oobInst(OOB_INST_CALL)
+        .inst(OOB_INST_CALL)
         .data1(value.hi())
         .data2(value.lo())
         .data3(balance)
         .data6(callStackDepth)
         .data7(booleanToBytes(!value.isZero()))
-        .data8(booleanToBytes(abortingCondition));
+        .data8(booleanToBytes(abortingCondition))
+        .fillAndValidateRow();
   }
 
   @Override
-  public Trace.Hub trace(Trace.Hub trace) {
+  public Trace.Hub traceHub(Trace.Hub trace) {
     return trace
         .pMiscOobFlag(true)
         .pMiscOobInst(OOB_INST_CALL)

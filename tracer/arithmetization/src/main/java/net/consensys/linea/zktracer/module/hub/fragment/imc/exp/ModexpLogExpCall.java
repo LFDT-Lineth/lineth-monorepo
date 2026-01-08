@@ -65,7 +65,7 @@ public class ModexpLogExpCall implements ExpCall {
   }
 
   @Override
-  public Trace.Hub trace(Trace.Hub trace) {
+  public Trace.Hub traceHub(Trace.Hub trace) {
     return trace
         .pMiscExpFlag(true)
         .pMiscExpInst(EXP_INST_MODEXPLOG)

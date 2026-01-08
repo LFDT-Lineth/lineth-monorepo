@@ -157,7 +157,7 @@ public class StpCall implements TraceSubFragment {
   }
 
   @Override
-  public Trace.Hub trace(Trace.Hub trace) {
+  public Trace.Hub traceHub(Trace.Hub trace) {
     return trace
         .pMiscStpFlag(true)
         .pMiscStpInstruction(opCode.unsignedByteValue())

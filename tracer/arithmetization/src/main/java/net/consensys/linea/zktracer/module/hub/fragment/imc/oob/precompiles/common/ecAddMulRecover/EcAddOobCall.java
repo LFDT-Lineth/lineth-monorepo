@@ -16,7 +16,6 @@
 package net.consensys.linea.zktracer.module.hub.fragment.imc.oob.precompiles.common.ecAddMulRecover;
 
 import static net.consensys.linea.zktracer.Trace.OOB_INST_ECADD;
-import static net.consensys.linea.zktracer.Trace.Oob.CT_MAX_ECADD;
 
 import java.math.BigInteger;
 import net.consensys.linea.zktracer.Trace;
@@ -33,16 +32,11 @@ public class EcAddOobCall extends EcRecEcAddEcMulOobCall {
 
   @Override
   protected void traceOobInstructionInOob(Trace.Oob trace) {
-    trace.isEcadd(true).oobInst(OOB_INST_ECADD);
+    trace.inst(OOB_INST_ECADD);
   }
 
   @Override
   protected void traceOobInstructionInHub(Trace.Hub trace) {
     trace.pMiscOobInst(OOB_INST_ECADD);
-  }
-
-  @Override
-  public int ctMax() {
-    return CT_MAX_ECADD;
   }
 }
