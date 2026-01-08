@@ -61,8 +61,6 @@ jobs:
         timeout-minutes: 15
         run: |
           ./gradlew coordinator:app:integrationTestAllNeeded
-      - name: Setup Tracer Environment
-        uses: ./.github/actions/setup-tracer-environment
       - name: Run Jacoco
         run: |
           ./gradlew jacocoRootReport
