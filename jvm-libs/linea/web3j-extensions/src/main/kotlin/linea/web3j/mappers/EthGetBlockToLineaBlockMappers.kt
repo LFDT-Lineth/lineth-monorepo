@@ -58,6 +58,7 @@ fun <TxData> mapToDomain(web3jBlock: EthBlock.Block, txsMapper: (EthBlock.Block)
     baseFeePerGas = web3jBlock.baseFeePerGas?.toULong(), // Optional field for EIP-1559 blocks
     ommers = web3jBlock.uncles.map { it.decodeHex() }, // List of uncle block hashes
     transactions = txsMapper(web3jBlock), // List of transactions
+    size = web3jBlock.size.toULong(),
   )
   return block
 }

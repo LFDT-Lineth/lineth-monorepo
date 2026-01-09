@@ -3,8 +3,8 @@ package net.consensys.linea.ethereum.gaspricing.staticcap
 import linea.OneKWei
 import linea.domain.BlockParameter
 import linea.domain.BlockParameter.Companion.toBlockParameter
+import linea.ethapi.EthApiBlockClient
 import linea.kotlin.encodeHex
-import linea.web3j.ExtendedWeb3J
 import net.consensys.linea.ethereum.gaspricing.HistoricVariableCostProvider
 import net.consensys.linea.ethereum.gaspricing.MinerExtraDataV1
 import org.apache.logging.log4j.LogManager
@@ -13,14 +13,14 @@ import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.atomic.AtomicReference
 
 class HistoricVariableCostProviderImpl(
-  private val web3jClient: ExtendedWeb3J,
+  private val ethApiBlockClient: EthApiBlockClient,
 ) : HistoricVariableCostProvider {
   private val log: Logger = LogManager.getLogger(this::class.java)
   private var lastVariableCost: AtomicReference<Pair<ULong, Double>> =
     AtomicReference(0UL to 0.0)
 
   private fun getHistoricVariableCostInWei(blockParameter: BlockParameter): SafeFuture<Double> {
-    return web3jClient.ethGetBlock(blockParameter)
+    return ethApiBlockClient.ethFindBlockByNumberTxHashes(blockParameter)
       .thenApply { block ->
         if (block == null) {
           log.warn(
@@ -30,7 +30,7 @@ class HistoricVariableCostProviderImpl(
           throw IllegalStateException("Block $blockParameter not found")
         } else {
           try {
-            MinerExtraDataV1.decodeV1(block!!.extraData.encodeHex())
+            MinerExtraDataV1.decodeV1(block.extraData.encodeHex())
               .variableCostInKWei.toDouble() * OneKWei
           } catch (th: Throwable) {
             log.debug(

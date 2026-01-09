@@ -1,11 +1,12 @@
 package net.consensys.linea.ethereum.gaspricing.staticcap
 
 import linea.OneKWei
-import linea.domain.Block
 import linea.domain.BlockParameter.Companion.toBlockParameter
+import linea.domain.BlockWithTxHashes
 import linea.domain.createBlock
+import linea.domain.toBlockWithRandomTxHashes
+import linea.ethapi.EthApiBlockClient
 import linea.kotlin.decodeHex
-import linea.web3j.ExtendedWeb3J
 import net.consensys.linea.ethereum.gaspricing.MinerExtraDataV1
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -18,27 +19,26 @@ import org.mockito.kotlin.verify
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 class HistoricVariableCostProviderImplTest {
-  val targetBlockNumber = 100UL
+  val targetBlockNumber = 100UL.toBlockParameter()
   val fakeBlock = createBlock(
-    number = targetBlockNumber,
+    number = targetBlockNumber.getNumber(),
     extraData = MinerExtraDataV1(
       fixedCostInKWei = 1000U,
       variableCostInKWei = 10000U,
       ethGasPriceInKWei = 12000U,
     ).encode().decodeHex(),
-  )
-  val mockWeb3jClient = mock<ExtendedWeb3J> {
-    on { ethGetBlock(eq(targetBlockNumber.toBlockParameter())) } doReturn
-      SafeFuture.completedFuture(fakeBlock)
+  ).toBlockWithRandomTxHashes()
+  val mockEthApiBlockClient = mock<EthApiBlockClient> {
+    on { ethFindBlockByNumberTxHashes(eq(targetBlockNumber)) } doReturn SafeFuture.completedFuture(fakeBlock)
   }
 
   @Test
   fun test_getVariableCost() {
     val historicVariableCostProvider = HistoricVariableCostProviderImpl(
-      web3jClient = mockWeb3jClient,
+      ethApiBlockClient = mockEthApiBlockClient,
     )
 
-    val latestVariableCost = historicVariableCostProvider.getVariableCost(targetBlockNumber).get()
+    val latestVariableCost = historicVariableCostProvider.getVariableCost(targetBlockNumber.getNumber()).get()
 
     val expectedVariableCost = 10000.0 * OneKWei
     assertThat(latestVariableCost).isEqualTo(expectedVariableCost)
@@ -47,74 +47,74 @@ class HistoricVariableCostProviderImplTest {
   @Test
   fun test_getVariableCost_return_cached_variable_cost() {
     val historicVariableCostProvider = HistoricVariableCostProviderImpl(
-      web3jClient = mockWeb3jClient,
+      ethApiBlockClient = mockEthApiBlockClient,
     )
 
     // initialize the cache
     val expectedVariableCost = 10000.0 * OneKWei
     assertThat(
-      historicVariableCostProvider.getVariableCost(targetBlockNumber).get(),
+      historicVariableCostProvider.getVariableCost(targetBlockNumber.getNumber()).get(),
     ).isEqualTo(expectedVariableCost)
 
     // subsequent calls with the same block #100 should return the same value by the cache
     repeat(5) {
       assertThat(
-        historicVariableCostProvider.getVariableCost(targetBlockNumber).get(),
+        historicVariableCostProvider.getVariableCost(targetBlockNumber.getNumber()).get(),
       ).isEqualTo(expectedVariableCost)
     }
 
     // verified it only called ethGetBlock once
-    verify(mockWeb3jClient, times(1))
-      .ethGetBlock(eq(targetBlockNumber.toBlockParameter()))
+    verify(mockEthApiBlockClient, times(1))
+      .ethFindBlockByNumberTxHashes(eq(targetBlockNumber))
   }
 
   @Test
   fun test_getVariableCost_throws_error_when_ethGetBlock_returns_null() {
-    val mockWeb3jClient = mock<ExtendedWeb3J> {
-      on { ethGetBlock(eq(targetBlockNumber.toBlockParameter())) } doReturn
+    val mockEthApiBlockClient = mock<EthApiBlockClient> {
+      on { ethFindBlockByNumberTxHashes(eq(targetBlockNumber)) } doReturn
         SafeFuture.completedFuture(null)
     }
     val historicVariableCostProvider = HistoricVariableCostProviderImpl(
-      web3jClient = mockWeb3jClient,
+      ethApiBlockClient = mockEthApiBlockClient,
     )
 
     assertThatThrownBy {
-      historicVariableCostProvider.getVariableCost(targetBlockNumber).get()
+      historicVariableCostProvider.getVariableCost(targetBlockNumber.getNumber()).get()
     }.hasCause(IllegalStateException("Block $targetBlockNumber not found"))
   }
 
   @Test
   fun test_getVariableCost_throws_error_when_ethGetBlock_throws_error() {
     val expectedException = RuntimeException("Error from ethGetBlock")
-    val mockWeb3jClient = mock<ExtendedWeb3J> {
-      on { ethGetBlock(eq(targetBlockNumber.toBlockParameter())) } doReturn
+    val mockEthApiBlockClient = mock<EthApiBlockClient> {
+      on { ethFindBlockByNumberTxHashes(eq(targetBlockNumber)) } doReturn
         SafeFuture.failedFuture(expectedException)
     }
     val historicVariableCostProvider = HistoricVariableCostProviderImpl(
-      web3jClient = mockWeb3jClient,
+      ethApiBlockClient = mockEthApiBlockClient,
     )
 
     assertThatThrownBy {
-      historicVariableCostProvider.getVariableCost(targetBlockNumber).get()
+      historicVariableCostProvider.getVariableCost(targetBlockNumber.getNumber()).get()
     }.hasCause(expectedException)
   }
 
   @Test
   fun test_getVariableCost_returns_zero_when_MinerExtraData_decode_throws_error() {
-    val mockEthBlock = mock<Block> {
+    val mockEthBlock = mock<BlockWithTxHashes> {
       // extra data hex string with unsupported version 0xFF
       on { extraData } doReturn "0xff000003e80000271000002ee000000000000000000000000000000000000000".decodeHex()
     }
-    val mockWeb3jClient = mock<ExtendedWeb3J> {
-      on { ethGetBlock(eq(targetBlockNumber.toBlockParameter())) } doReturn
+    val mockEthApiBlockClient = mock<EthApiBlockClient> {
+      on { ethFindBlockByNumberTxHashes(eq(targetBlockNumber)) } doReturn
         SafeFuture.completedFuture(mockEthBlock)
     }
     val historicVariableCostProvider = HistoricVariableCostProviderImpl(
-      web3jClient = mockWeb3jClient,
+      ethApiBlockClient = mockEthApiBlockClient,
     )
 
     assertThat(
-      historicVariableCostProvider.getVariableCost(targetBlockNumber).get(),
+      historicVariableCostProvider.getVariableCost(targetBlockNumber.getNumber()).get(),
     ).isEqualTo(0.0)
   }
 }

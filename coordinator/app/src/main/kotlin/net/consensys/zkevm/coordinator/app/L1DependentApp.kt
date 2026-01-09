@@ -15,11 +15,8 @@ import linea.domain.BlockNumberAndHash
 import linea.domain.RetryConfig
 import linea.ethapi.EthApiClient
 import linea.kotlin.toKWeiUInt
-import linea.web3j.ExtendedWeb3JImpl
 import linea.web3j.SmartContractErrors
-import linea.web3j.Web3jBlobExtended
 import linea.web3j.createWeb3jHttpClient
-import linea.web3j.createWeb3jHttpService
 import linea.web3j.ethapi.createEthApiClient
 import net.consensys.linea.ethereum.gaspricing.BoundableFeeCalculator
 import net.consensys.linea.ethereum.gaspricing.FeesCalculator
@@ -68,7 +65,6 @@ import net.consensys.zkevm.persistence.dao.aggregation.RecordsCleanupFinalizatio
 import net.consensys.zkevm.persistence.dao.feehistory.FeeHistoriesPostgresDao
 import net.consensys.zkevm.persistence.dao.feehistory.FeeHistoriesRepositoryImpl
 import org.apache.logging.log4j.LogManager
-import org.web3j.protocol.Web3j
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.CompletableFuture
 import java.util.function.Consumer
@@ -229,8 +225,8 @@ class L1DependentApp(
         configs.l1Submission.dynamicGasPriceCap.gasPriceCapCalculation.baseFeePerGasPercentileWindowLeeway
           .div(configs.protocol.l1.blockTime).toUInt()
 
-      val l2Web3jClient: Web3j =
-        createWeb3jHttpClient(
+      val l2EthApiClient: EthApiClient =
+        createEthApiClient(
           rpcUrl = configs.l1FinalizationMonitor.l2Endpoint.toString(),
           log = LogManager.getLogger("clients.l2.eth.gascap-provider"),
         )
@@ -253,7 +249,7 @@ class L1DependentApp(
           gasPriceCapsCoefficient =
           configs.l1Submission.dynamicGasPriceCap.gasPriceCapCalculation.gasPriceCapsCheckCoefficient,
         ),
-        l2ExtendedWeb3JClient = ExtendedWeb3JImpl(l2Web3jClient),
+        l2EthApiBlockClient = l2EthApiClient,
         feeHistoriesRepository = l1FeeHistoriesRepository,
         gasPriceCapCalculator = GasPriceCapCalculatorImpl(),
       )
@@ -401,10 +397,6 @@ class L1DependentApp(
     } else {
       configs.l1Submission!!
 
-      val l1Web3jClient = createWeb3jHttpClient(
-        rpcUrl = configs.l1FinalizationMonitor.l1Endpoint.toString(),
-        log = LogManager.getLogger("clients.l1.eth.finalization"),
-      )
       // The below gas provider will act as the primary gas provider if L1
       // dynamic gas pricing is disabled and will act as a fallback gas provider
       // if L1 dynamic gas pricing is enabled
@@ -424,7 +416,10 @@ class L1DependentApp(
         contractAddress = configs.protocol.l1.contractAddress,
         transactionManager = finalizationTransactionManager,
         contractGasProvider = primaryOrFallbackGasProvider,
-        web3jClient = l1Web3jClient,
+        web3jClient = createWeb3jHttpClient(
+          rpcUrl = configs.l1FinalizationMonitor.l1Endpoint.toString(),
+          log = LogManager.getLogger("clients.l1.eth.finalization"),
+        ),
         smartContractErrors = smartContractErrors,
         useEthEstimateGas = true,
       )
@@ -568,7 +563,7 @@ class L1DependentApp(
           }
         },
       )
-      val l2Web3jClient = createWeb3jHttpClient(
+      val l2EthApiClient = createEthApiClient(
         rpcUrl = configs.l2NetworkGasPricing.l2Endpoint.toString(),
         log = LogManager.getLogger("clients.l2.eth.l2pricing"),
       )
@@ -581,7 +576,7 @@ class L1DependentApp(
         metricsFacade = metricsFacade,
         httpJsonRpcClientFactory = httpJsonRpcClientFactory,
         l1EthApiClient = l1EthApiClient,
-        l2Web3jClient = ExtendedWeb3JImpl(l2Web3jClient),
+        l2EthApiBlockClient = l2EthApiClient,
         config = config,
       )
     } else {
@@ -597,25 +592,18 @@ class L1DependentApp(
         configs.l1Submission.dynamicGasPriceCap.feeHistoryFetcher.storagePeriod
           .div(configs.protocol.l1.blockTime).toUInt()
 
-      val l1FeeHistoryWeb3jBlobExtClient = Web3jBlobExtended(
-        createWeb3jHttpService(
-          rpcUrl = configs.l1Submission.aggregation.l1Endpoint.toString(),
-          log = LogManager.getLogger("clients.l1.eth.feehistory-cache"),
-        ),
+      val l1EthApiClient = createEthApiClient(
+        rpcUrl = configs.l1Submission.dynamicGasPriceCap.feeHistoryFetcher.l1Endpoint.toString(),
+        log = LogManager.getLogger("clients.l1.eth.feehistory-cache"),
       )
 
       val l1FeeHistoryFetcher: GasPriceCapFeeHistoryFetcher = GasPriceCapFeeHistoryFetcherImpl(
-        web3jService = l1FeeHistoryWeb3jBlobExtClient,
+        ethApiFeeClient = l1EthApiClient,
         config = GasPriceCapFeeHistoryFetcherImpl.Config(
           maxBlockCount = configs.l1Submission.dynamicGasPriceCap.feeHistoryFetcher.maxBlockCount,
           rewardPercentiles = configs.l1Submission.dynamicGasPriceCap.feeHistoryFetcher.rewardPercentiles
             .map { it.toDouble() },
         ),
-      )
-
-      val l1EthApiClient = createEthApiClient(
-        rpcUrl = configs.l1Submission.dynamicGasPriceCap.feeHistoryFetcher.l1Endpoint.toString(),
-        log = LogManager.getLogger("clients.l1.eth.feehistory-cache"),
       )
 
       FeeHistoryCachingService(

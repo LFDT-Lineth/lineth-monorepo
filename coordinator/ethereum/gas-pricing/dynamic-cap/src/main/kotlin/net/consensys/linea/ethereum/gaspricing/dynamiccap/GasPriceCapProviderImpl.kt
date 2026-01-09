@@ -4,10 +4,11 @@ import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import linea.domain.BlockParameter.Companion.toBlockParameter
 import linea.domain.gas.GasPriceCaps
+import linea.ethapi.EthApiBlockClient
 import linea.kotlin.toGWei
 import linea.kotlin.toULong
-import linea.web3j.ExtendedWeb3J
 import net.consensys.zkevm.ethereum.gaspricing.GasPriceCapProvider
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
@@ -17,7 +18,7 @@ import kotlin.time.Duration
 
 class GasPriceCapProviderImpl(
   private val config: Config,
-  private val l2ExtendedWeb3JClient: ExtendedWeb3J,
+  private val l2EthApiBlockClient: EthApiBlockClient,
   private val feeHistoriesRepository: FeeHistoriesRepositoryWithCache,
   private val gasPriceCapCalculator: GasPriceCapCalculator,
   private val clock: Clock = Clock.System,
@@ -83,56 +84,58 @@ class GasPriceCapProviderImpl(
 
   private fun calculateGasPriceCapsHelper(targetL2BlockNumber: Long): SafeFuture<GasPriceCaps?> {
     return if (isEnoughDataForGasPriceCapCalculation()) {
-      l2ExtendedWeb3JClient.ethGetBlockTimestampByNumber(targetL2BlockNumber).thenApply {
-        val targetL2BlockTimestamp = Instant.fromEpochSeconds(it.toLong())
-        val elapsedTimeSinceBlockTimestamp = getElapsedTimeSinceBlockTimestamp(targetL2BlockTimestamp)
-        val percentileGasFees = feeHistoriesRepository.getCachedPercentileGasFees()
-        val maxPriorityFeePerGasCap = gasPriceCapCalculator.calculateGasPriceCap(
-          adjustmentConstant = config.adjustmentConstant,
-          finalizationTargetMaxDelay = config.finalizationTargetMaxDelay,
-          historicGasPriceCap = percentileGasFees.percentileAvgReward,
-          elapsedTimeSinceBlockTimestamp = elapsedTimeSinceBlockTimestamp,
-          timeOfDayMultiplier = getTimeOfDayMultiplierForNow(config.timeOfDayMultipliers),
-        )
-        val maxBaseFeePerGasCap = gasPriceCapCalculator.calculateGasPriceCap(
-          adjustmentConstant = config.adjustmentConstant,
-          finalizationTargetMaxDelay = config.finalizationTargetMaxDelay,
-          historicGasPriceCap = percentileGasFees.percentileBaseFeePerGas,
-          elapsedTimeSinceBlockTimestamp = elapsedTimeSinceBlockTimestamp,
-          timeOfDayMultiplier = getTimeOfDayMultiplierForNow(config.timeOfDayMultipliers),
-        )
-        val maxFeePerBlobGasCap = gasPriceCapCalculator.calculateGasPriceCap(
-          adjustmentConstant = config.blobAdjustmentConstant,
-          finalizationTargetMaxDelay = config.finalizationTargetMaxDelay,
-          historicGasPriceCap = percentileGasFees.percentileBaseFeePerBlobGas,
-          elapsedTimeSinceBlockTimestamp = elapsedTimeSinceBlockTimestamp,
-        )
-        GasPriceCaps(
-          maxBaseFeePerGasCap = maxBaseFeePerGasCap,
-          maxPriorityFeePerGasCap = maxPriorityFeePerGasCap,
-          maxFeePerGasCap = maxPriorityFeePerGasCap + maxBaseFeePerGasCap,
-          maxFeePerBlobGasCap = maxFeePerBlobGasCap,
-        )
-      }.thenPeek { gasPriceCaps ->
-        log.debug(
-          "Calculated raw gas price caps: " +
-            "maxBaseFeePerGasCap={} GWei, maxPriorityFeePerGasCap={} GWei, " +
-            "maxFeePerGasCap={} GWei, maxFeePerBlobGasCap={} GWei, percentile={}",
-          gasPriceCaps.maxBaseFeePerGasCap?.toGWei(),
-          gasPriceCaps.maxPriorityFeePerGasCap.toGWei(),
-          gasPriceCaps.maxFeePerGasCap.toGWei(),
-          gasPriceCaps.maxFeePerBlobGasCap.toGWei(),
-          config.gasFeePercentile,
-        )
-      }.exceptionallyCompose { th ->
-        log.error(
-          "Gas price caps returned as null due to failure occurred: " +
-            "errorMessage={}",
-          th.message,
-          th,
-        )
-        SafeFuture.completedFuture(null)
-      }
+      l2EthApiBlockClient.ethGetBlockByNumberTxHashes(targetL2BlockNumber.toBlockParameter())
+        .thenApply { it.timestamp }
+        .thenApply {
+          val targetL2BlockTimestamp = Instant.fromEpochSeconds(it.toLong())
+          val elapsedTimeSinceBlockTimestamp = getElapsedTimeSinceBlockTimestamp(targetL2BlockTimestamp)
+          val percentileGasFees = feeHistoriesRepository.getCachedPercentileGasFees()
+          val maxPriorityFeePerGasCap = gasPriceCapCalculator.calculateGasPriceCap(
+            adjustmentConstant = config.adjustmentConstant,
+            finalizationTargetMaxDelay = config.finalizationTargetMaxDelay,
+            historicGasPriceCap = percentileGasFees.percentileAvgReward,
+            elapsedTimeSinceBlockTimestamp = elapsedTimeSinceBlockTimestamp,
+            timeOfDayMultiplier = getTimeOfDayMultiplierForNow(config.timeOfDayMultipliers),
+          )
+          val maxBaseFeePerGasCap = gasPriceCapCalculator.calculateGasPriceCap(
+            adjustmentConstant = config.adjustmentConstant,
+            finalizationTargetMaxDelay = config.finalizationTargetMaxDelay,
+            historicGasPriceCap = percentileGasFees.percentileBaseFeePerGas,
+            elapsedTimeSinceBlockTimestamp = elapsedTimeSinceBlockTimestamp,
+            timeOfDayMultiplier = getTimeOfDayMultiplierForNow(config.timeOfDayMultipliers),
+          )
+          val maxFeePerBlobGasCap = gasPriceCapCalculator.calculateGasPriceCap(
+            adjustmentConstant = config.blobAdjustmentConstant,
+            finalizationTargetMaxDelay = config.finalizationTargetMaxDelay,
+            historicGasPriceCap = percentileGasFees.percentileBaseFeePerBlobGas,
+            elapsedTimeSinceBlockTimestamp = elapsedTimeSinceBlockTimestamp,
+          )
+          GasPriceCaps(
+            maxBaseFeePerGasCap = maxBaseFeePerGasCap,
+            maxPriorityFeePerGasCap = maxPriorityFeePerGasCap,
+            maxFeePerGasCap = maxPriorityFeePerGasCap + maxBaseFeePerGasCap,
+            maxFeePerBlobGasCap = maxFeePerBlobGasCap,
+          )
+        }.thenPeek { gasPriceCaps ->
+          log.debug(
+            "Calculated raw gas price caps: " +
+              "maxBaseFeePerGasCap={} GWei, maxPriorityFeePerGasCap={} GWei, " +
+              "maxFeePerGasCap={} GWei, maxFeePerBlobGasCap={} GWei, percentile={}",
+            gasPriceCaps.maxBaseFeePerGasCap?.toGWei(),
+            gasPriceCaps.maxPriorityFeePerGasCap.toGWei(),
+            gasPriceCaps.maxFeePerGasCap.toGWei(),
+            gasPriceCaps.maxFeePerBlobGasCap.toGWei(),
+            config.gasFeePercentile,
+          )
+        }.exceptionallyCompose { th ->
+          log.error(
+            "Gas price caps returned as null due to failure occurred: " +
+              "errorMessage={}",
+            th.message,
+            th,
+          )
+          SafeFuture.completedFuture(null)
+        }
     } else {
       SafeFuture.completedFuture(null)
     }

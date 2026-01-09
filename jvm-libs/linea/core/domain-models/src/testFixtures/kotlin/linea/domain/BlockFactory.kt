@@ -24,6 +24,7 @@ fun createBlock(
   baseFeePerGas: ULong = 7UL,
   transactionsRoot: ByteArray = ByteArrayExt.random32(),
   transactions: List<Transaction> = emptyList(),
+  size: ULong = 1024uL,
 ): Block {
   return Block(
     number = number,
@@ -45,6 +46,7 @@ fun createBlock(
     baseFeePerGas = baseFeePerGas,
     transactions = transactions,
     ommers = emptyList(),
+    size = size,
   )
 }
 
@@ -129,5 +131,6 @@ fun Block.toBlockWithRandomTxHashes(): BlockWithTxHashes {
     baseFeePerGas = baseFeePerGas,
     transactions = transactions.map { Random.nextBytes(32) },
     ommers = emptyList(),
+    size = size,
   )
 }

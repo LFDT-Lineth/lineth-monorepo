@@ -1,15 +1,15 @@
 package net.consensys.linea.ethereum.gaspricing.dynamiccap
 
+import linea.domain.BlockParameter
+import linea.domain.BlockParameter.Companion.toBlockParameter
 import linea.domain.FeeHistory
-import linea.web3j.Web3jBlobExtended
+import linea.ethapi.EthApiFeeClient
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
-import org.web3j.protocol.core.DefaultBlockParameter
-import org.web3j.protocol.core.DefaultBlockParameterNumber
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
 class GasPriceCapFeeHistoryFetcherImpl(
-  private val web3jService: Web3jBlobExtended,
+  private val ethApiFeeClient: EthApiFeeClient,
   private val config: Config,
 ) : GasPriceCapFeeHistoryFetcher {
   private val log: Logger = LogManager.getLogger(this::class.java)
@@ -32,20 +32,14 @@ class GasPriceCapFeeHistoryFetcherImpl(
     }
   }
 
-  private fun getFeeHistory(newestBlock: DefaultBlockParameter, blockCount: Int): SafeFuture<FeeHistory> {
+  private fun getFeeHistory(newestBlock: BlockParameter, blockCount: Int): SafeFuture<FeeHistory> {
     return SafeFuture.of(
-      web3jService.ethFeeHistoryWithBlob(
+      ethApiFeeClient.ethFeeHistory(
         blockCount,
         newestBlock,
         config.rewardPercentiles,
-      ).sendAsync(),
-    ).thenApply {
-      if (it.hasError()) {
-        throw Exception(it.error.message)
-      } else {
-        it.feeHistory.toLineaDomain()
-      }
-    }
+      ),
+    )
   }
 
   override fun getEthFeeHistoryData(
@@ -63,7 +57,7 @@ class GasPriceCapFeeHistoryFetcherImpl(
         "than maxBlockCount=${config.maxBlockCount}"
     }
 
-    val newestBlock = DefaultBlockParameterNumber(endBlockNumberInclusive)
+    val newestBlock = endBlockNumberInclusive.toBlockParameter()
     val blockCount = (endBlockNumberInclusive - startBlockNumberInclusive).inc().toInt()
 
     log.debug(
@@ -71,7 +65,7 @@ class GasPriceCapFeeHistoryFetcherImpl(
         "endBlockNumberInclusive={} newestBlock={} blockCount={}",
       startBlockNumberInclusive,
       endBlockNumberInclusive,
-      newestBlock.blockNumber,
+      newestBlock.getNumber(),
       blockCount,
     )
 

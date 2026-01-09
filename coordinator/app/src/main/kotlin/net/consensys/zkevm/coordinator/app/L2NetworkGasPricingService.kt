@@ -2,8 +2,8 @@ package net.consensys.zkevm.coordinator.app
 
 import io.vertx.core.Vertx
 import linea.LongRunningService
+import linea.ethapi.EthApiBlockClient
 import linea.ethapi.EthApiClient
-import linea.web3j.ExtendedWeb3J
 import net.consensys.linea.ethereum.gaspricing.BoundableFeeCalculator
 import net.consensys.linea.ethereum.gaspricing.FeesFetcher
 import net.consensys.linea.ethereum.gaspricing.GasPriceUpdater
@@ -31,7 +31,7 @@ class L2NetworkGasPricingService(
   metricsFacade: MetricsFacade,
   httpJsonRpcClientFactory: VertxHttpJsonRpcClientFactory,
   l1EthApiClient: EthApiClient,
-  l2Web3jClient: ExtendedWeb3J,
+  l2EthApiBlockClient: EthApiBlockClient,
   config: Config,
 ) : LongRunningService {
   data class LegacyGasPricingCalculatorConfig(
@@ -88,15 +88,15 @@ class L2NetworkGasPricingService(
       if (isL2CalldataBasedVariableFeesEnabled(config)) {
         val l2CalldataSizeAccumulator =
           L2CalldataSizeAccumulatorImpl(
-            web3jClient = l2Web3jClient,
+            ethApiBlockClient = l2EthApiBlockClient,
             config = config.l2CalldataPricingCalculatorConfig!!.l2CalldataSizeAccumulatorConfig,
           )
         val historicVariableCostProvider =
           HistoricVariableCostProviderImpl(
-            web3jClient = l2Web3jClient,
+            ethApiBlockClient = l2EthApiBlockClient,
           )
         L2CalldataBasedVariableFeesCalculator(
-          web3jClient = l2Web3jClient,
+          ethApiBlockClient = l2EthApiBlockClient,
           variableFeesCalculator = boundedVariableCostCalculator,
           l2CalldataSizeAccumulator = l2CalldataSizeAccumulator,
           historicVariableCostProvider = historicVariableCostProvider,
