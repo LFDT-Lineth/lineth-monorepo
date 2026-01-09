@@ -103,7 +103,7 @@ class LineaTransactionSelectorFactoryTest {
     when(mockBlockchainService.getNextBlockBaseFee()).thenReturn(Optional.of(Wei.of(7)));
     when(mockBlockchainService.getChainHeadHeader().getTimestamp()).thenReturn(1753867173L);
     when(mockBlockchainService.getNextBlockHardforkId(any(), anyLong()))
-        .thenReturn(HardforkId.MainnetHardforkId.LONDON);
+        .thenReturn(HardforkId.MainnetHardforkId.OSAKA);
 
     mockTxSelectorConfiguration = mock(LineaTransactionSelectorConfiguration.class);
     l1L2BridgeConfiguration =

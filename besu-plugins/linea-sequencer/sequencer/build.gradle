@@ -21,7 +21,7 @@ apply from: lineaSequencerProject.file("gradle/dependency-management.gradle")
 apply from: lineaSequencerProject.file("gradle/lint.gradle")
 
 dependencies {
-  implementation "net.consensys.linea.zktracer:arithmetization:${libs.versions.arithmetization.get()}"
+  implementation project(":tracer:arithmetization")
   implementation "build.linea:blob-compressor:${libs.versions.blobCompressor.get()}"
   implementation "build.linea.internal:kotlin:${libs.versions.lineaKotlin.get()}"
 

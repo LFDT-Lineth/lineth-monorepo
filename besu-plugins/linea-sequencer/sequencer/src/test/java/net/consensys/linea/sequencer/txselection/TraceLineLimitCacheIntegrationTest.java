@@ -78,7 +78,7 @@ public class TraceLineLimitCacheIntegrationTest {
     blockchainService = mock(BlockchainService.class);
     when(blockchainService.getChainId()).thenReturn(Optional.of(BigInteger.ONE));
     when(blockchainService.getNextBlockHardforkId(any(), anyLong()))
-        .thenReturn(HardforkId.MainnetHardforkId.LONDON);
+        .thenReturn(HardforkId.MainnetHardforkId.OSAKA);
     // Create shared cache that both components will use
     sharedCache = new InvalidTransactionByLineCountCache(CACHE_SIZE);
 

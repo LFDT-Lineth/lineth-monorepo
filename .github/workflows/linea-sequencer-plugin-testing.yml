@@ -13,22 +13,16 @@ concurrency:
 
 jobs:
   run-linea-sequencer-plugins-unit-tests:
-    name: "Linea Sequencer Plugin Unit Tests"
+    name: "Sequencer Plugin Unit Tests"
     runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-small
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Java
-        uses: actions/setup-java@8df1039502a15bceb9433410b1a100fbe190c53b #v4.5.0
+      - name: Setup Tracer Environment # configures Go, Java, Gradle, and gets submodules
+        uses: ./.github/actions/setup-tracer-environment
         with:
-          distribution: temurin
-          java-version: 21
-
-      - name: Setup Gradle
-        # Configure Gradle for optimal use in GiHub Actions, including caching of downloaded dependencies.
-        # See: https://github.com/gradle/actions/blob/main/setup-gradle/README.md
-        uses: gradle/actions/setup-gradle@8379f6a1328ee0e06e2bb424dadb7b159856a326 # 4.4.0
+          enable-ssh: false
 
       - name: spotless
         run: ./gradlew --parallel besu-plugins:linea-sequencer:spotlessCheck
@@ -53,22 +47,16 @@ jobs:
           path: besu-plugins/linea-sequencer/sequencer/build/reports/tests/test/
 
   run-linea-sequencer-plugins-acceptance-tests:
-    name: "Linea Sequencer Plugin Acceptance Tests"
+    name: "Sequencer Plugin Acceptance Tests"
     runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-large
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up JDK 21
-        uses: actions/setup-java@8df1039502a15bceb9433410b1a100fbe190c53b #v4.5.0
+      - name: Setup Tracer Environment
+        uses: ./.github/actions/setup-tracer-environment
         with:
-          java-version: 21
-          distribution: temurin
-
-      - name: Setup Gradle
-        # Configure Gradle for optimal use in GiHub Actions, including caching of downloaded dependencies.
-        # See: https://github.com/gradle/actions/blob/main/setup-gradle/README.md
-        uses: gradle/actions/setup-gradle@8379f6a1328ee0e06e2bb424dadb7b159856a326 # 4.4.0
+          enable-ssh: false
 
       - name: Run acceptance tests
         run: ./gradlew besu-plugins:linea-sequencer:acceptance-tests:acceptanceTests

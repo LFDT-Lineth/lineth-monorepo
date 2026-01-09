@@ -8,6 +8,8 @@ import com.fasterxml.jackson.databind.ObjectReader
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import linea.plugin.acc.test.rpc.linea.AbstractSendBundleTest.BundleParams
+import linea.plugin.acc.test.utils.toLogString
+import org.assertj.core.api.Assertions.assertThat
 import org.hyperledger.besu.tests.acceptance.dsl.transaction.NodeRequests
 import org.hyperledger.besu.tests.acceptance.dsl.transaction.Transaction
 import org.web3j.protocol.core.Request
@@ -54,4 +56,11 @@ class SendBundleResponseDeserializer : JsonDeserializer<SendBundleResponse.SendB
       null
     }
   }
+}
+
+fun SendBundleResponse.assertSuccessResponse() {
+  assertThat(this.error)
+    .withFailMessage { this.error?.toLogString() ?: "no error" }
+    .isNull()
+  assertThat(this.result.bundleHash).isNotBlank()
 }

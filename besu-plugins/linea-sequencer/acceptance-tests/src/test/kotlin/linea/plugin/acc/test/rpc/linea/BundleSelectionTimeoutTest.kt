@@ -10,6 +10,7 @@ package linea.plugin.acc.test.rpc.linea
 
 import linea.plugin.acc.test.TestCommandLineOptionsBuilder
 import linea.plugin.acc.test.rpc.SendBundleRequest
+import linea.plugin.acc.test.rpc.assertSuccessResponse
 import linea.plugin.acc.test.tests.web3j.generated.MulmodExecutor
 import org.assertj.core.api.Assertions.assertThat
 import org.hyperledger.besu.tests.acceptance.dsl.account.Account
@@ -87,11 +88,10 @@ class BundleSelectionTimeoutTest : AbstractSendBundleTest() {
     val sendSmallBundleRequest = createSendBundleRequest(callsSmallBundle, previousHeadBlockNumber + 2L)
 
     val sendBundleResponse = sendBundleRequest.execute(minerNode.nodeRequests())
-    assertThat(sendBundleResponse.hasError()).isFalse()
-    assertThat(sendBundleResponse.result.bundleHash).isNotBlank()
+    sendBundleResponse.assertSuccessResponse()
+
     val sendSmallBundleResponse = sendSmallBundleRequest.execute(minerNode.nodeRequests())
-    assertThat(sendSmallBundleResponse.hasError()).isFalse()
-    assertThat(sendSmallBundleResponse.result.bundleHash).isNotBlank()
+    sendSmallBundleResponse.assertSuccessResponse()
 
     val transferTxHash = accountTransactions
       .createTransfer(newAccounts[2], accounts.primaryBenefactor, 1)
@@ -146,7 +146,7 @@ class BundleSelectionTimeoutTest : AbstractSendBundleTest() {
     )
 
     // second bundle contains one tx only to be fast to execute,
-    // and ensure timeout occurs on the 2nd bundle and following are not event considered.
+    // and ensure timeout occurs on the 2nd bundle and following are not even considered.
     // We are sending a bunch of bundles instead of just one to reproduce what happened in
     // production, where each following bundle where not skipped and would take ~200ms
     // to be not selected, due to the fact the first tx in the bundle was executed.
@@ -166,16 +166,9 @@ class BundleSelectionTimeoutTest : AbstractSendBundleTest() {
       .createTransfer(accounts.secondaryBenefactor, accounts.primaryBenefactor, 1)
       .execute(minerNode.nodeRequests())
 
-    assertThat(sendBundleResponseSmall.hasError()).isFalse()
-    assertThat(sendBundleResponseSmall.result.bundleHash).isNotBlank()
-
-    assertThat(sendBundleResponseBig1.hasError()).isFalse()
-    assertThat(sendBundleResponseBig1.result.bundleHash).isNotBlank()
-
-    followingBundleResponses.forEach { resp ->
-      assertThat(resp.hasError()).isFalse()
-      assertThat(resp.result.bundleHash).isNotBlank()
-    }
+    sendBundleResponseSmall.assertSuccessResponse()
+    sendBundleResponseBig1.assertSuccessResponse()
+    followingBundleResponses.forEach { resp -> resp.assertSuccessResponse() }
 
     minerNode.verify(eth.expectSuccessfulTransactionReceipt(transferTxHash.toHexString()))
     val transferReceipt = ethTransactions.getTransactionReceipt(transferTxHash.toHexString())
@@ -193,7 +186,12 @@ class BundleSelectionTimeoutTest : AbstractSendBundleTest() {
       .map { it.txHash }
       .forEach { txHash -> minerNode.verify(eth.expectNoTransactionReceipt(txHash)) }
     val log = getLog()
-    assertThat(log).contains("PLUGIN_SELECTION_TIMEOUT")
+    assertThat(log)
+      .withFailMessage {
+        "Expected to find PLUGIN_SELECTION_TIMEOUT in logs, " +
+          "but bundle ${sendBundleResponseBig1.result.bundleHash} was not included for some other reason"
+      }
+      .contains("PLUGIN_SELECTION_TIMEOUT")
     assertThat(log)
       .contains(
         "Bundle selection interrupted while processing bundle ${sendBundleResponseBig1.result.bundleHash}",

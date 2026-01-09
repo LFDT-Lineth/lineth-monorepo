@@ -71,7 +71,7 @@ public class TraceLineLimitTransactionSelectorTest {
     blockchainService = mock(BlockchainService.class);
     when(blockchainService.getChainId()).thenReturn(Optional.of(BigInteger.ONE));
     when(blockchainService.getNextBlockHardforkId(any(), anyLong()))
-        .thenReturn(HardforkId.MainnetHardforkId.LONDON);
+        .thenReturn(HardforkId.MainnetHardforkId.OSAKA);
     tracerConfiguration =
         LineaTracerConfiguration.builder()
             .moduleLimitsFilePath(lineLimitsConfPath.toString())

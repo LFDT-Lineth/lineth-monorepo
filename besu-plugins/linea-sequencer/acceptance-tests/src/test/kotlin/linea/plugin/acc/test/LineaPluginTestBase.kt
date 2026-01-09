@@ -161,7 +161,7 @@ abstract class LineaPluginTestBase : AcceptanceTestBase() {
           .poaBlockTxsSelectionMaxTime(
             PositiveNumber.fromInt(BLOCK_PERIOD_SECONDS * 1000),
           )
-          .pluginBlockTxsSelectionMaxTime(PositiveNumber.fromInt(5))
+          .pluginBlockTxsSelectionMaxTime(PositiveNumber.fromInt(2))
           .mutableInitValues(
             ImmutableMiningConfiguration.MutableInitValues.builder()
               .isMiningEnabled(true)
