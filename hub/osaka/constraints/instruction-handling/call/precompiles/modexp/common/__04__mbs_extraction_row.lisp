@@ -70,9 +70,9 @@
 
 
 (defun    (precompile-processing---MODEXP---max-mbs-bbs)          (shift    [misc/OOB_DATA   7]    precompile-processing---MODEXP---misc-row-offset---mbs-extraction-and-analysis)) ;; ""
-(defun    (precompile-processing---MODEXP---mbs-nonzero)          (shift    [misc/OOB_DATA   8]    precompile-processing---MODEXP---misc-row-offset---mbs-extraction-and-analysis)) ;; ""
-(defun    (precompile-processing---MODEXP---mbs-within-bounds)    (shift    [misc/OOB_DATA   9]    precompile-processing---MODEXP---misc-row-offset---mbs-extraction-and-analysis)) ;; ""
-(defun    (precompile-processing---MODEXP---mbs-out-of-bounds)    (shift    [misc/OOB_DATA  10]    precompile-processing---MODEXP---misc-row-offset---mbs-extraction-and-analysis)) ;; ""
+(defun    (precompile-processing---MODEXP---mbs-nonzero)          (i1 (shift    [misc/OOB_DATA   8]    precompile-processing---MODEXP---misc-row-offset---mbs-extraction-and-analysis))) ;; ""
+(defun    (precompile-processing---MODEXP---mbs-within-bounds)    (i1 (shift    [misc/OOB_DATA   9]    precompile-processing---MODEXP---misc-row-offset---mbs-extraction-and-analysis))) ;; ""
+(defun    (precompile-processing---MODEXP---mbs-out-of-bounds)    (i1 (shift    [misc/OOB_DATA  10]    precompile-processing---MODEXP---misc-row-offset---mbs-extraction-and-analysis))) ;; ""
 (defun    (precompile-processing---MODEXP---mbs-normalized)       (*   (precompile-processing---MODEXP---mbs-lo)
                                                                        (precompile-processing---MODEXP---mbs-within-bounds)))
 

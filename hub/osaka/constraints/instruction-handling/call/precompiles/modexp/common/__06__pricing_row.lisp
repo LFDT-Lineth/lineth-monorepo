@@ -47,6 +47,6 @@
                                                                           (precompile-processing---MODEXP---max-mbs-bbs)               ;; call data size
                                                                           )))
 
-(defun    (precompile-processing---MODEXP---ram-success)    (shift    [misc/OOB_DATA   4]    precompile-processing---MODEXP---misc-row-offset---pricing))
+(defun    (precompile-processing---MODEXP---ram-success)    (i1 (shift    [misc/OOB_DATA   4]    precompile-processing---MODEXP---misc-row-offset---pricing)))
 (defun    (precompile-processing---MODEXP---return-gas)     (shift    [misc/OOB_DATA   5]    precompile-processing---MODEXP---misc-row-offset---pricing))
-(defun    (precompile-processing---MODEXP---r@c-nonzero)    (shift    [misc/OOB_DATA   8]    precompile-processing---MODEXP---misc-row-offset---pricing)) ;; ""
+(defun    (precompile-processing---MODEXP---r@c-nonzero)    (i1 (shift    [misc/OOB_DATA   8]    precompile-processing---MODEXP---misc-row-offset---pricing)))

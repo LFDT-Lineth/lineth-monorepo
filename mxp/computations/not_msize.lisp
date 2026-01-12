@@ -15,10 +15,10 @@
 				      (mxp-shorthand---size-2-lo)
 				      ))
 
-(defun   (mxp-shorthand---size-1-is-zero)      (shift computation/RES_A ROW_OFFSET___1ST_SIZE___ZERONESS_TEST))
-(defun   (mxp-shorthand---size-2-is-zero)      (shift computation/RES_A ROW_OFFSET___2ND_SIZE___ZERONESS_TEST))
-(defun   (mxp-shorthand---size-1-is-nonzero)   (-  1  (mxp-shorthand---size-1-is-zero)))
-(defun   (mxp-shorthand---size-2-is-nonzero)   (-  1  (mxp-shorthand---size-2-is-zero)))
+(defun   ((mxp-shorthand---size-1-is-zero :binary :force))      (shift computation/RES_A ROW_OFFSET___1ST_SIZE___ZERONESS_TEST))
+(defun   ((mxp-shorthand---size-2-is-zero :binary :force))      (shift computation/RES_A ROW_OFFSET___2ND_SIZE___ZERONESS_TEST))
+(defun   ((mxp-shorthand---size-1-is-nonzero :binary))   (-  1  (mxp-shorthand---size-1-is-zero)))
+(defun   ((mxp-shorthand---size-2-is-nonzero :binary))   (-  1  (mxp-shorthand---size-2-is-zero)))
 
 (defconstraint  computations---not-msize---setting-the-TRIVIAL-scenario-flag
 		(:guard   (mxp-guard---not-msize))

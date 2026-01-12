@@ -69,7 +69,7 @@
                                                        ))
 
 
-(defun    (precompile-processing---MODEXP---ebs-within-bounds)    (shift    [misc/OOB_DATA   9]    precompile-processing---MODEXP---misc-row-offset---ebs-extraction-and-analysis))
-(defun    (precompile-processing---MODEXP---ebs-out-of-bounds)    (shift    [misc/OOB_DATA  10]    precompile-processing---MODEXP---misc-row-offset---ebs-extraction-and-analysis)) ;; ""
+(defun    (precompile-processing---MODEXP---ebs-within-bounds)    (i1 (shift    [misc/OOB_DATA   9]    precompile-processing---MODEXP---misc-row-offset---ebs-extraction-and-analysis)))
+(defun    (precompile-processing---MODEXP---ebs-out-of-bounds)    (i1 (shift    [misc/OOB_DATA  10]    precompile-processing---MODEXP---misc-row-offset---ebs-extraction-and-analysis))) ;; ""
 (defun    (precompile-processing---MODEXP---ebs-normalized)       (*   (precompile-processing---MODEXP---ebs-lo)
                                                                        (precompile-processing---MODEXP---ebs-within-bounds)))

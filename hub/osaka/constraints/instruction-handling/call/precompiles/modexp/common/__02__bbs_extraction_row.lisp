@@ -22,7 +22,6 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;                                       ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-
 (defconstraint    precompile-processing---MODEXP---bbs-extraction-and-analysis---setting-misc-module-flags
                   (:guard    (precompile-processing---MODEXP---standard-precondition))
                   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -68,7 +67,7 @@
                                                        ))
 
 
-(defun    (precompile-processing---MODEXP---bbs-within-bounds)    (shift    [misc/OOB_DATA   9]    precompile-processing---MODEXP---misc-row-offset---bbs-extraction-and-analysis)) ;; ""
-(defun    (precompile-processing---MODEXP---bbs-out-of-bounds)    (shift    [misc/OOB_DATA  10]    precompile-processing---MODEXP---misc-row-offset---bbs-extraction-and-analysis)) ;; ""
+(defun    (precompile-processing---MODEXP---bbs-within-bounds)    (i1 (shift    [misc/OOB_DATA   9]    precompile-processing---MODEXP---misc-row-offset---bbs-extraction-and-analysis)))
+(defun    (precompile-processing---MODEXP---bbs-out-of-bounds)    (i1 (shift    [misc/OOB_DATA  10]    precompile-processing---MODEXP---misc-row-offset---bbs-extraction-and-analysis)))
 (defun    (precompile-processing---MODEXP---bbs-normalized)       (*   (precompile-processing---MODEXP---bbs-lo)
                                                                        (precompile-processing---MODEXP---bbs-within-bounds)))
