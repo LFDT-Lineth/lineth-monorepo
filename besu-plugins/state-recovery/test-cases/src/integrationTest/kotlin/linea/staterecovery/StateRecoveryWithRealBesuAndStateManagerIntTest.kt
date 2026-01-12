@@ -10,7 +10,7 @@ import linea.log4j.configureLoggers
 import linea.staterecovery.test.assertBesuAndShomeiRecoveredAsExpected
 import linea.staterecovery.test.execCommandAndAssertSuccess
 import linea.staterecovery.test.waitExecutionLayerToBeUpAndRunning
-import linea.web3j.createWeb3jHttpClient
+import linea.web3j.ethapi.createEthApiClient
 import net.consensys.linea.jsonrpc.client.RequestRetryConfig
 import net.consensys.linea.jsonrpc.client.VertxHttpJsonRpcClientFactory
 import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
@@ -19,10 +19,10 @@ import net.consensys.linea.testing.submission.loadBlobsAndAggregationsSortedAndG
 import net.consensys.linea.testing.submission.submitBlobsAndAggregationsAndWaitExecution
 import net.consensys.zkevm.coordinator.clients.smartcontract.LineaRollupSmartContractClient
 import net.consensys.zkevm.ethereum.ContractsManager
+import net.consensys.zkevm.ethereum.EthApiClientManager
 import net.consensys.zkevm.ethereum.LineaRollupDeploymentResult
 import net.consensys.zkevm.ethereum.MakeFileDelegatedContractsManager.connectToLineaRollupContract
 import net.consensys.zkevm.ethereum.MakeFileDelegatedContractsManager.lineaRollupContractErrors
-import net.consensys.zkevm.ethereum.Web3jClientManager
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
 import org.junit.jupiter.api.BeforeEach
@@ -112,7 +112,7 @@ class StateRecoveryWithRealBesuAndStateManagerIntTest {
         contractClientForAggregationSubmission = contractClientForAggregationSubmission,
         aggregationsAndBlobs = aggregationsAndBlobs,
         blobChunksMaxSize = 9,
-        l1Web3jClient = Web3jClientManager.l1Client,
+        l1EthApiClient = EthApiClientManager.l1Client,
         waitTimeout = 4.minutes,
         log = log,
       )
@@ -137,7 +137,7 @@ class StateRecoveryWithRealBesuAndStateManagerIntTest {
     val expectedZkEndStateRootHash = targetAggregationAndBlobs.blobs.last().blobCompressionProof!!.finalStateRootHash
 
     assertBesuAndShomeiRecoveredAsExpected(
-      createWeb3jHttpClient(executionLayerUrl),
+      createEthApiClient(rpcUrl = executionLayerUrl),
       stateManagerClient = stateManagerClient,
       targetAggregation.endBlockNumber,
       expectedZkEndStateRootHash,

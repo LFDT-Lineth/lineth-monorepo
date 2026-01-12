@@ -2,14 +2,13 @@ package linea.staterecovery.test
 
 import build.linea.clients.StateManagerClientV1
 import linea.domain.BlockInterval
-import linea.kotlin.toULong
+import linea.ethapi.EthApiBlockClient
 import linea.testing.CommandResult
 import linea.testing.Runner
-import linea.web3j.createWeb3jHttpClient
+import linea.web3j.ethapi.createEthApiClient
 import org.apache.logging.log4j.Logger
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.Awaitility.await
-import org.web3j.protocol.Web3j
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
@@ -31,7 +30,7 @@ fun execCommandAndAssertSuccess(
 }
 
 fun assertBesuAndShomeiRecoveredAsExpected(
-  web3jElClient: Web3j,
+  ethApiBlockClient: EthApiBlockClient,
   stateManagerClient: StateManagerClientV1,
   expectedBlockNumber: ULong,
   expectedZkEndStateRootHash: ByteArray,
@@ -41,7 +40,7 @@ fun assertBesuAndShomeiRecoveredAsExpected(
     .pollInterval(1.seconds.toJavaDuration())
     .atMost(timeout.toJavaDuration())
     .untilAsserted {
-      assertThat(web3jElClient.ethBlockNumber().send().blockNumber.toULong())
+      assertThat(ethApiBlockClient.ethBlockNumber().get())
         .isGreaterThanOrEqualTo(expectedBlockNumber)
       val blockInterval = BlockInterval(expectedBlockNumber, expectedBlockNumber)
       assertThat(stateManagerClient.rollupGetStateMerkleProof(blockInterval).get().zkEndStateRootHash)
@@ -55,13 +54,13 @@ fun waitExecutionLayerToBeUpAndRunning(
   log: Logger,
   timeout: Duration = 2.minutes,
 ) {
-  val web3jElClient = createWeb3jHttpClient(executionLayerUrl)
+  val ethApiClient = createEthApiClient(rpcUrl = executionLayerUrl)
   await()
     .pollInterval(1.seconds.toJavaDuration())
     .atMost(timeout.toJavaDuration())
     .untilAsserted {
       runCatching {
-        assertThat(web3jElClient.ethBlockNumber().send().blockNumber.toULong())
+        assertThat(ethApiClient.ethBlockNumber().get())
           .isGreaterThanOrEqualTo(expectedHeadBlockNumber)
       }.getOrElse {
         log.info("waiting for Besu to start, trying to connect to $executionLayerUrl")

@@ -12,7 +12,7 @@ import linea.staterecovery.plugin.createAppClients
 import linea.staterecovery.test.FakeExecutionLayerClient
 import linea.staterecovery.test.FakeStateManagerClient
 import linea.staterecovery.test.FakeStateManagerClientBasedOnBlobsRecords
-import linea.web3j.createWeb3jHttpClient
+import linea.web3j.ethapi.createEthApiClient
 import net.consensys.linea.testing.submission.AggregationAndBlobs
 import net.consensys.linea.testing.submission.loadBlobsAndAggregationsSortedAndGrouped
 import net.consensys.linea.testing.submission.submitBlobsAndAggregationsAndWaitExecution
@@ -144,7 +144,7 @@ class StateRecoveryAppWithFakeExecutionClientIntTest {
       aggregationsAndBlobs = aggregationsAndBlobs,
       blobChunksMaxSize = blobChunksSize,
       waitTimeout = waitTimeout,
-      l1Web3jClient = createWeb3jHttpClient(
+      l1EthApiClient = createEthApiClient(
         rpcUrl = l1RpcUrl,
         log = LogManager.getLogger("test.clients.l1.web3j.receipt-poller"),
       ),

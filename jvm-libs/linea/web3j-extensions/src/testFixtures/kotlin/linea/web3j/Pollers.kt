@@ -1,10 +1,10 @@
 package linea.web3j
 
+import linea.domain.TransactionReceipt
+import linea.ethapi.EthApiClient
+import linea.kotlin.encodeHex
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
-import org.web3j.protocol.Web3j
-import org.web3j.protocol.core.methods.response.TransactionReceipt
-import kotlin.jvm.optionals.getOrNull
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
@@ -16,19 +16,19 @@ import kotlin.time.Duration.Companion.seconds
  * @param txHash The transaction hash to wait for.
  * @param timeout The maximum time to wait for the transaction receipt.
  */
-fun Web3j.waitForTxReceipt(
-  txHash: String,
-  expectedStatus: String? = null,
+fun EthApiClient.waitForTxReceipt(
+  txHash: ByteArray,
+  expectedStatus: ULong? = null,
   timeout: Duration = 5.seconds,
   pollingInterval: Duration = 500.milliseconds,
   log: Logger = LogManager.getLogger("linea.web3j.waitForTxReceipt"),
 ): TransactionReceipt {
   val waitLimit = System.currentTimeMillis() + timeout.inWholeMilliseconds
-  log.debug("polling tx receipt txHash=$txHash")
+  log.debug("polling tx receipt txHash=${txHash.encodeHex()}")
   while (System.currentTimeMillis() < waitLimit) {
-    log.trace("polling tx receipt txHash=$txHash")
+    log.trace("polling tx receipt txHash=${txHash.encodeHex()}")
     val receipt = runCatching<TransactionReceipt?> {
-      this.ethGetTransactionReceipt(txHash).send().transactionReceipt.getOrNull()
+      this.ethGetTransactionReceipt(txHash).get()
     }.onFailure {
       log.error("polling tx receipt txHash={}", txHash, it)
     }.getOrNull()
@@ -38,7 +38,7 @@ fun Web3j.waitForTxReceipt(
       if (expectedStatus != null && receipt.status != expectedStatus) {
         throw RuntimeException(
           "Transaction status does not match expected status: " +
-            "txHash=$txHash, expected=$expectedStatus, actual=${receipt.status}",
+            "txHash=${txHash.encodeHex()}, expected=$expectedStatus, actual=${receipt.status}",
         )
       }
       return receipt
@@ -47,5 +47,5 @@ fun Web3j.waitForTxReceipt(
     Thread.sleep(pollingInterval.inWholeMilliseconds)
   }
 
-  throw RuntimeException("Timed out waiting $timeout for transaction receipt for tx $txHash")
+  throw RuntimeException("Timed out waiting $timeout for transaction receipt for tx ${txHash.encodeHex()}")
 }
