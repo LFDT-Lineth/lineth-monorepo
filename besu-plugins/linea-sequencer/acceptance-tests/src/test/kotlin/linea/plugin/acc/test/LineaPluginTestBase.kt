@@ -632,4 +632,13 @@ abstract class LineaPluginTestBase : AcceptanceTestBase() {
 
     return TransactionEncoder.signMessage(ecRecoverCall, sender.web3jCredentialsOrThrow())
   }
+
+  fun asserLogsContain(
+    target: String,
+    logs: String = getAndResetLog(),
+  ) {
+    assertThat(logs)
+      .withFailMessage { "Expected Besu logs to contain '$target'" }
+      .contains(target)
+  }
 }

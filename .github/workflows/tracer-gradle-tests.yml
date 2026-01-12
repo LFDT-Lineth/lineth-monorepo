@@ -56,8 +56,13 @@ jobs:
           name: distributions
           path: tracer/arithmetization/build/libs
 
-      - name: Run spotless
+      - name: Run Spotless Check
         run: ./gradlew --no-daemon --parallel :tracer:clean :tracer:spotlessCheck
+
+      - name: Compile all Java/Kotlin code in tracer module
+        run: ./gradlew :tracer:classes :tracer:testClasses
+        env:
+          JAVA_OPTS: -Xmx2g -Dorg.gradle.daemon=false
 
   # ==================================================================
   # Unit Tests

@@ -221,13 +221,12 @@ open class EstimateGasTest : LineaPluginPoSTestBase() {
     val reqLinea = LineaEstimateGasRequest(callParams, stateOverrides)
     val respLinea = reqLinea.execute(minerNode.nodeRequests())
     assertThat(respLinea.hasError()).isTrue()
-    // 0x1234000001 ~= 0x1234 * 16_777_216 (tx gas limit as of Osaka https://eips.ethereum.org/EIPS/eip-7825)
+    assertThat(respLinea.error.code).isEqualTo(-32000)
+    // 0x5d539a1 ~= (0x1234 * 21_000 gas) + 1 value (since the tx is a simple transfer)
     assertThat(respLinea.error.message)
       .isEqualTo(
-        "Upfront cost exceeds account balance " +
-          "(transaction up-front cost 0x1234000001 exceeds transaction sender account balance 0x0)",
+        "transaction up-front cost 0x5d539a1 exceeds transaction sender account balance 0x0",
       )
-    assertThat(respLinea.error.code).isEqualTo(-32004)
   }
 
   @Test

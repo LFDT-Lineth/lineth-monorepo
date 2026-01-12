@@ -10,7 +10,6 @@ package linea.plugin.acc.test
 
 import net.consensys.linea.sequencer.modulelimit.ModuleLineCountValidator
 import org.apache.tuweni.bytes.Bytes
-import org.assertj.core.api.Assertions.assertThat
 import org.hyperledger.besu.tests.acceptance.dsl.node.configuration.genesis.GenesisConfigurationFactory
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -119,9 +118,7 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
       listOf(txHashes[0]!!, txHashes[nTransactions - 1]!!),
     )
 
-    // Assert that the target string is contained in the blocks log
-    val blockLog = getAndResetLog()
-    assertThat(blockLog).contains(target)
+    asserLogsContain(target)
   }
 
   /**
@@ -133,16 +130,16 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
     val moduleLimits = ModuleLineCountValidator.createLimitModules(getResourcePath("/moduleLimits.toml"))
     val PRECOMPILE_ECADD_EFFECTIVE_CALLS = moduleLimits["PRECOMPILE_ECADD_EFFECTIVE_CALLS"]!!
 
-        /*
-         * nTransactions: the number of transactions to try to include in the same block.
-         *     The last one is not supposed to fit as it exceeds the limit, thus it is
-         *     included in the next block. Note that in this specific test more than one
-         *     call to the ECADD precompile is executed within the same transaction to
-         *     reach the limit with a smaller number of transaction
-         *
-         * input: input data for each transaction
-         * target: the expected string to be found in the blocks log
-         */
+    /*
+     * nTransactions: the number of transactions to try to include in the same block.
+     *     The last one is not supposed to fit as it exceeds the limit, thus it is
+     *     included in the next block. Note that in this specific test more than one
+     *     call to the ECADD precompile is executed within the same transaction to
+     *     reach the limit with a smaller number of transaction
+     *
+     * input: input data for each transaction
+     * target: the expected string to be found in the blocks log
+     */
     val callsPerTransaction = 32
     val nTransactions = PRECOMPILE_ECADD_EFFECTIVE_CALLS / callsPerTransaction + 1
     val input =
@@ -214,9 +211,7 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
       listOf(txHashes[0]!!, txHashes[nTransactions - 1]!!),
     )
 
-    // Assert that the target string is contained in the blocks log
-    val blockLog = getAndResetLog()
-    assertThat(blockLog).contains(target)
+    asserLogsContain(target)
   }
 
   /**
@@ -228,13 +223,13 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
     val moduleLimits = ModuleLineCountValidator.createLimitModules(getResourcePath("/moduleLimits.toml"))
     val PRECOMPILE_ECMUL_EFFECTIVE_CALLS = moduleLimits["PRECOMPILE_ECMUL_EFFECTIVE_CALLS"]!!
 
-        /*
-         * nTransactions: the number of transactions to try to include in the same block.
-         *     The last one is not supposed to fit as it exceeds the limit, thus it is
-         *     included in the next block
-         * input: input data for each transaction
-         * target: the expected string to be found in the blocks log
-         */
+    /*
+     * nTransactions: the number of transactions to try to include in the same block.
+     *     The last one is not supposed to fit as it exceeds the limit, thus it is
+     *     included in the next block
+     * input: input data for each transaction
+     * target: the expected string to be found in the blocks log
+     */
     val nTransactions = PRECOMPILE_ECMUL_EFFECTIVE_CALLS + 1
     val input =
       "030644e72e131a029b85045b68181585d97816a916871ca8d3c208c16d87cfd3" +
@@ -304,9 +299,7 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
       listOf(txHashes[0]!!, txHashes[nTransactions - 1]!!),
     )
 
-    // Assert that the target string is contained in the blocks log
-    val blockLog = getAndResetLog()
-    assertThat(blockLog).contains(target)
+    asserLogsContain(target)
   }
 
   /**
@@ -318,19 +311,21 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
     val moduleLimits = ModuleLineCountValidator.createLimitModules(getResourcePath("/moduleLimits.toml"))
     val PRECOMPILE_ECRECOVER_EFFECTIVE_CALLS = moduleLimits["PRECOMPILE_ECRECOVER_EFFECTIVE_CALLS"]!!
 
-        /*
-         * nTransactions: the number of transactions to try to include in the same block.
-         *     The last one is not supposed to fit as it exceeds the limit, thus it is
-         *     included in the next block
-         * input: input data for each transaction
-         * target: the expected string to be found in the blocks log
-         */
+    /*
+     * nTransactions: the number of transactions to try to include in the same block.
+     *     The last one is not supposed to fit as it exceeds the limit, thus it is
+     *     included in the next block
+     * input: input data for each transaction
+     * target: the expected string to be found in the blocks log
+     */
     val nTransactions = PRECOMPILE_ECRECOVER_EFFECTIVE_CALLS + 1
     val input =
-      "279d94621558f755796898fc4bd36b6d407cae77537865afe523b79c74cc680b" +
-        "000000000000000000000000000000000000000000000000000000000000001b" +
-        "c2ff96feed8749a5ad1c0714f950b5ac939d8acedbedcbc2949614ab8af06312" +
-        "1feecd50adc6273fdd5d11c6da18c8cfe14e2787f5a90af7c7c1328e7d0a2c42"
+      Bytes.fromHexString(
+        "279d94621558f755796898fc4bd36b6d407cae77537865afe523b79c74cc680b" +
+          "000000000000000000000000000000000000000000000000000000000000001b" +
+          "c2ff96feed8749a5ad1c0714f950b5ac939d8acedbedcbc2949614ab8af06312" +
+          "1feecd50adc6273fdd5d11c6da18c8cfe14e2787f5a90af7c7c1328e7d0a2c42",
+      )
     val target =
       "Cumulated line count for module PRECOMPILE_ECRECOVER_EFFECTIVE_CALLS=" +
         (PRECOMPILE_ECRECOVER_EFFECTIVE_CALLS + 1) +
@@ -343,7 +338,6 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
 
     // Create an account to send the transactions
     val ecRecoverSender = accounts.createAccount("ecRecoverSender")
-
     // Fund the account using secondary benefactor
     val fundTxHash = accountTransactions
       .createTransfer(accounts.secondaryBenefactor, ecRecoverSender, 1, BigInteger.ZERO)
@@ -351,29 +345,24 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
       .toHexString()
     // Verify that the transaction for transferring funds was successful
     minerNode.verify(eth.expectSuccessfulTransactionReceipt(fundTxHash))
-
-    val txHashes = Array<String?>(nTransactions) { null }
-    for (i in 0 until nTransactions) {
-      // With decreasing nonce we force the transactions to be included in the same block
-      // i     = 0                , 1                , ..., nTransactions - 1
-      // nonce = nTransactions - 1, nTransactions - 2, ..., 0
-      val nonce = nTransactions - 1 - i
-
+    // send first tx (nonce=0) last one, so they will stay ready in the pool,
+    // but will not be included in a block due to the nonce gap, doing this before
+    // to avoid timing issues caused by slow tx sending calls that could cause flakiness
+    val txHashes = (nTransactions downTo 0).map { nonce ->
       // Craft the transaction data
       val encodedCallEcRecover = encodedCallEcRecover(
         ecRecover,
         ecRecoverSender,
         nonce,
-        Bytes.fromHexString(input),
+        input,
       )
 
       // Send the transaction
       val web3j = minerNode.nodeRequests().eth()
       val resp = web3j.ethSendRawTransaction(Numeric.toHexString(encodedCallEcRecover)).send()
-
-      // Store the transaction hash
-      txHashes[nonce] = resp.transactionHash
+      resp.transactionHash
     }
+      .reversed()
 
     // Transfer used as sentry to ensure a new block is mined
     val transferTxHash = accountTransactions
@@ -400,9 +389,7 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
       listOf(txHashes[0]!!, txHashes[nTransactions - 1]!!),
     )
 
-    // Assert that the target string is contained in the blocks log
-    val blockLog = getAndResetLog()
-    assertThat(blockLog).contains(target)
+    asserLogsContain(target)
   }
 
   companion object {
@@ -413,12 +400,12 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
       val PRECOMPILE_ECPAIRING_MILLER_LOOPS = moduleLimits["PRECOMPILE_ECPAIRING_MILLER_LOOPS"]!!
       val PRECOMPILE_ECPAIRING_G2_MEMBERSHIP_CALLS = moduleLimits["PRECOMPILE_ECPAIRING_G2_MEMBERSHIP_CALLS"]!!
 
-            /*
-            Structure of the input:
-            Ax + Ay
-            BxIm + BxRe
-            ByIm + ByRe
-             */
+      /*
+      Structure of the input:
+      Ax + Ay
+      BxIm + BxRe
+      ByIm + ByRe
+       */
 
       // Valid pair requiring 1 Miller Loop and 1 final exponentiation
       val nonTrivial =
@@ -440,22 +427,22 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
 
       val arguments = mutableListOf<Arguments>()
 
-            /*
-            This test case produces PRECOMPILE_ECPAIRING_FINAL_EXPONENTIATIONS + 1 transactions performing one ECPAIRING.
-            All ECPAIRING are well-formed and none of the points is ever the point at infinity,
-            leading in total to:
-            - 1 Miller loops
-            - 0 G2 membership tests
-            - 1 final exponentiations
-            per pairing.
+      /*
+      This test case produces PRECOMPILE_ECPAIRING_FINAL_EXPONENTIATIONS + 1 transactions performing one ECPAIRING.
+      All ECPAIRING are well-formed and none of the points is ever the point at infinity,
+      leading in total to:
+      - 1 Miller loops
+      - 0 G2 membership tests
+      - 1 final exponentiations
+      per pairing.
 
-            In total:
-            - PRECOMPILE_ECPAIRING_FINAL_EXPONENTIATIONS + 1 Miller loops (< PRECOMPILE_ECPAIRING_MILLER_LOOPS)
-            - 0 G2 membership tests
-            - PRECOMPILE_ECPAIRING_FINAL_EXPONENTIATIONS + 1 final exponentiations
+      In total:
+      - PRECOMPILE_ECPAIRING_FINAL_EXPONENTIATIONS + 1 Miller loops (< PRECOMPILE_ECPAIRING_MILLER_LOOPS)
+      - 0 G2 membership tests
+      - PRECOMPILE_ECPAIRING_FINAL_EXPONENTIATIONS + 1 final exponentiations
 
-            This final transaction exceeds the PRECOMPILE_ECPAIRING_FINAL_EXPONENTIATIONS and must be included in the next block.
-             */
+      This final transaction exceeds the PRECOMPILE_ECPAIRING_FINAL_EXPONENTIATIONS and must be included in the next block.
+       */
       arguments.add(
         Arguments.of(
           PRECOMPILE_ECPAIRING_FINAL_EXPONENTIATIONS + 1, // 1 final exponentiation per transaction
@@ -470,24 +457,24 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
 
       val nPairsPerTransaction = 8
 
-            /*
-            This test case produces PRECOMPILE_ECPAIRING_MILLER_LOOPS / nPairsPerTransaction + 1
-            transactions each performing nPairsPerTransaction ECPAIRING's
-            except the last transaction which requires only 1.
-            All ECPAIRING are well-formed and none of the points is ever the point at infinity,
-            leading in total to:
-            - 1 Miller loops
-            - 0 G2 membership tests
-            - 1 final exponentiations
-            per pairing.
+      /*
+      This test case produces PRECOMPILE_ECPAIRING_MILLER_LOOPS / nPairsPerTransaction + 1
+      transactions each performing nPairsPerTransaction ECPAIRING's
+      except the last transaction which requires only 1.
+      All ECPAIRING are well-formed and none of the points is ever the point at infinity,
+      leading in total to:
+      - 1 Miller loops
+      - 0 G2 membership tests
+      - 1 final exponentiations
+      per pairing.
 
-            In total:
-            - PRECOMPILE_ECPAIRING_MILLER_LOOPS + 1 Miller loops
-            - 0 G2 membership tests
-            - PRECOMPILE_ECPAIRING_MILLER_LOOPS / nPairsPerTransaction + 1 final exponentiations (< PRECOMPILE_ECPAIRING_FINAL_EXPONENTIATIONS)
+      In total:
+      - PRECOMPILE_ECPAIRING_MILLER_LOOPS + 1 Miller loops
+      - 0 G2 membership tests
+      - PRECOMPILE_ECPAIRING_MILLER_LOOPS / nPairsPerTransaction + 1 final exponentiations (< PRECOMPILE_ECPAIRING_FINAL_EXPONENTIATIONS)
 
-            This final transaction exceeds the PRECOMPILE_ECPAIRING_MILLER_LOOPS and must be included in the next block.
-             */
+      This final transaction exceeds the PRECOMPILE_ECPAIRING_MILLER_LOOPS and must be included in the next block.
+       */
       arguments.add(
         Arguments.of(
           PRECOMPILE_ECPAIRING_MILLER_LOOPS / nPairsPerTransaction + 1,
@@ -504,24 +491,24 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
         ),
       )
 
-            /*
-            This test case produces PRECOMPILE_ECPAIRING_G2_MEMBERSHIP_CALLS / nPairsPerTransaction + 1
-            transactions each performing nPairsPerTransaction ECPAIRING's
-            except the last transaction which requires only 1.
-            All ECPAIRING are well-formed and the small point is always the point at infinity
-            leading to:
-            - 0 Miller loops
-            - 1 G2 membership tests
-            - 0 final exponentiations
-            per pairing.
+      /*
+      This test case produces PRECOMPILE_ECPAIRING_G2_MEMBERSHIP_CALLS / nPairsPerTransaction + 1
+      transactions each performing nPairsPerTransaction ECPAIRING's
+      except the last transaction which requires only 1.
+      All ECPAIRING are well-formed and the small point is always the point at infinity
+      leading to:
+      - 0 Miller loops
+      - 1 G2 membership tests
+      - 0 final exponentiations
+      per pairing.
 
-            In total:
-            - 0 Miller loops
-            - PRECOMPILE_ECPAIRING_G2_MEMBERSHIP_CALLS + 1 G2 membership tests
-            - 0 final exponentiations
+      In total:
+      - 0 Miller loops
+      - PRECOMPILE_ECPAIRING_G2_MEMBERSHIP_CALLS + 1 G2 membership tests
+      - 0 final exponentiations
 
-            This final transaction exceeds the PRECOMPILE_ECPAIRING_G2_MEMBERSHIP_CALLS and must be included in the next block.
-             */
+      This final transaction exceeds the PRECOMPILE_ECPAIRING_G2_MEMBERSHIP_CALLS and must be included in the next block.
+       */
       arguments.add(
         Arguments.of(
           PRECOMPILE_ECPAIRING_G2_MEMBERSHIP_CALLS / nPairsPerTransaction + 1,
@@ -539,24 +526,24 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
         ),
       )
 
-            /*
-            Description of the test cases:
+      /*
+      Description of the test cases:
 
-            - This method defines 3 test cases.
-            - Each test case is defined by a tuple (nTransactions, input, target). See the test method signature for more details.
-            - Each test case goal is crossing a limit independently. Specifically:
-             * The first test case crosses the limit of final exponentiations.
-             * The second test case crosses the limit of Miller loops.
-             * The third test case crosses the limit of G2 membership tests.
-              Note that while the first two test cases requires 2 circuits, the limits are crossed independently.
-            - Each test cases generates at least two blocks, one for the transactions that fit in the limit and another for the
-              transaction that exceeds the limit.
-            - Due to how the corresponding test is structured, we observe exactly 4 blocks:
-             * 1 including 1 transaction to deploy the EcPairing contract calling the precompile
-             * 1 including 1 transaction to fund ecPairing sender
-             * 1 including all the transactions that fit in the limit and the sentry transaction
-             * 1 including the transaction that exceeds the limit
-             */
+      - This method defines 3 test cases.
+      - Each test case is defined by a tuple (nTransactions, input, target). See the test method signature for more details.
+      - Each test case goal is crossing a limit independently. Specifically:
+       * The first test case crosses the limit of final exponentiations.
+       * The second test case crosses the limit of Miller loops.
+       * The third test case crosses the limit of G2 membership tests.
+        Note that while the first two test cases requires 2 circuits, the limits are crossed independently.
+      - Each test cases generates at least two blocks, one for the transactions that fit in the limit and another for the
+        transaction that exceeds the limit.
+      - Due to how the corresponding test is structured, we observe exactly 4 blocks:
+       * 1 including 1 transaction to deploy the EcPairing contract calling the precompile
+       * 1 including 1 transaction to fund ecPairing sender
+       * 1 including all the transactions that fit in the limit and the sentry transaction
+       * 1 including the transaction that exceeds the limit
+       */
       return arguments.stream()
     }
   }
