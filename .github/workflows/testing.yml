@@ -92,6 +92,91 @@ jobs:
   #   if: ${{ inputs.tracer_changed == 'true' }}
   #   secrets: inherit
 
+  # Run Jacoco report after all JVM tests complete
+  jacoco-report:
+    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-med
+    name: Generate Jacoco Coverage Report
+    # Run if at least one JVM test job completed (whether passed, failed, or cancelled)
+    # Don't run if all test jobs were skipped due to no changes
+    if: |
+      always() && (
+        needs.coordinator.result != 'skipped' ||
+        needs.linea-sequencer.result != 'skipped' ||
+        needs.staterecovery.result != 'skipped' ||
+        needs.transaction-exclusion-api.result != 'skipped'
+      )
+    needs:
+      - coordinator
+      - linea-sequencer
+      - staterecovery
+      - transaction-exclusion-api
+    env:
+      COMMIT_TAG: ${{ inputs.commit_tag }}
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Tracer Environment # configures Go, Java, Gradle, and gets submodules
+        uses: ./.github/actions/setup-tracer-environment
+        with:
+          enable-ssh: false
+
+      - name: Download Jacoco execution data from coordinator
+        if: needs.coordinator.result != 'skipped'
+        uses: actions/download-artifact@v4
+        with:
+          name: jacoco-coordinator-exec
+          path: .
+      - name: Download Jacoco execution data from linea-sequencer unit tests
+        if: needs.linea-sequencer.result != 'skipped'
+        uses: actions/download-artifact@v4
+        with:
+          name: jacoco-linea-sequencer-unit-exec
+          path: .
+      - name: Download Jacoco execution data from linea-sequencer acceptance tests
+        if: needs.linea-sequencer.result != 'skipped'
+        uses: actions/download-artifact@v4
+        with:
+          name: jacoco-linea-sequencer-acceptance-exec
+          path: .
+      - name: Download Jacoco execution data from staterecovery
+        if: needs.staterecovery.result != 'skipped'
+        uses: actions/download-artifact@v4
+        with:
+          name: jacoco-staterecovery-exec
+          path: .
+      - name: Download Jacoco execution data from transaction-exclusion-api
+        if: needs.transaction-exclusion-api.result != 'skipped'
+        uses: actions/download-artifact@v4
+        with:
+          name: jacoco-transaction-exclusion-api-exec
+          path: .
+
+      - name: Run Jacoco Root Report
+        run: |
+          ./gradlew jacocoRootReport
+      - name: Upload Jacoco test coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacocoRootReport-${{ env.COMMIT_TAG }}.xml
+          if-no-files-found: error
+          path: |
+            ${{ github.workspace }}/build/reports/jacoco/jacocoRootReport/jacocoRootReport.xml
+      - name: Upload coverage to Codecov
+        if: ${{ env.CODECOV_TOKEN != '' }}
+        uses: codecov/codecov-action@18283e04ce6e62d37312384ff67231eb8fd56d24 #v5.4.3
+        with:
+          fail_ci_if_error: true
+          files: ${{ github.workspace }}/build/reports/jacoco/jacocoRootReport/jacocoRootReport.xml
+          flags: kotlin
+          os: linux
+          name: codecov-jvm-tests
+          verbose: true
+          token: ${{ secrets.CODECOV_TOKEN }}
+
   # If all jobs are skipped, the workflow will still succeed.
   always_succeed:
     runs-on: ubuntu-24.04

@@ -63,6 +63,14 @@ jobs:
         timeout-minutes: 15
         run: |
           ./gradlew besu-plugins:state-recovery:test-cases:integrationTest
+      - name: Upload Jacoco execution data
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-staterecovery-exec
+          path: |
+            **/build/jacoco/*.exec
+          if-no-files-found: ignore
 #      - name: Setup upterm session
 #        if: ${{ inputs.e2e-tests-with-ssh }}
 #        uses: lhotari/action-upterm@b0357f23233f5ea6d58947c0c402e0631bab7334 #v1

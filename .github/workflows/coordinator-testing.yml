@@ -35,14 +35,10 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: recursive
-      - uses: actions/setup-java@8df1039502a15bceb9433410b1a100fbe190c53b #v4.5.0
+      - name: Setup Java and Gradle
+        uses: ./.github/actions/setup-java-and-gradle
         with:
-          distribution: temurin
-          java-version: 21
-      - name: Setup Gradle
-        # Configure Gradle for optimal use in GiHub Actions, including caching of downloaded dependencies.
-        # See: https://github.com/gradle/actions/blob/main/setup-gradle/README.md
-        uses: gradle/actions/setup-gradle@8379f6a1328ee0e06e2bb424dadb7b159856a326 # 4.4.0
+          java-version: '21'
       # Install pnpm to compile smart contracts
       - name: Setup nodejs environment
         uses: ./.github/actions/setup-nodejs
@@ -61,24 +57,11 @@ jobs:
         timeout-minutes: 15
         run: |
           ./gradlew coordinator:app:integrationTestAllNeeded
-      - name: Run Jacoco
-        run: |
-          ./gradlew jacocoRootReport
-      - name: Upload Jacoco test coverage report
+      - name: Upload Jacoco execution data
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: jacocoRootReport-${{ env.COMMIT_TAG }}.xml
-          if-no-files-found: error
+          name: jacoco-coordinator-exec
           path: |
-            ${{ github.workspace }}/build/reports/jacoco/jacocoRootReport/jacocoRootReport.xml
-      - name: Upload coverage to Codecov
-        if: ${{ env.CODECOV_TOKEN != '' }}
-        uses: codecov/codecov-action@18283e04ce6e62d37312384ff67231eb8fd56d24 #v5.4.3
-        with:
-          fail_ci_if_error: true
-          files: ${{ github.workspace }}/build/reports/jacoco/jacocoRootReport/jacocoRootReport.xml
-          flags: kotlin
-          os: linux
-          name: codecov-coordinator
-          verbose: true
-          token: ${{ secrets.CODECOV_TOKEN }}
+            **/build/jacoco/*.exec
+          if-no-files-found: ignore

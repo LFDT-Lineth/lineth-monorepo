@@ -57,3 +57,11 @@ jobs:
       - name: Run integration tests
         run: |
           ./gradlew transaction-exclusion-api:app:integrationTestAllNeeded
+      - name: Upload Jacoco execution data
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-transaction-exclusion-api-exec
+          path: |
+            **/build/jacoco/*.exec
+          if-no-files-found: ignore

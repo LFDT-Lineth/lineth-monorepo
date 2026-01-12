@@ -45,6 +45,14 @@ jobs:
         with:
           name: unit-test-report
           path: besu-plugins/linea-sequencer/sequencer/build/reports/tests/test/
+      - name: Upload Jacoco execution data
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-linea-sequencer-unit-exec
+          path: |
+            **/build/jacoco/*.exec
+          if-no-files-found: ignore
 
   run-linea-sequencer-plugins-acceptance-tests:
     name: "Sequencer Plugin Acceptance Tests"
@@ -69,3 +77,11 @@ jobs:
         with:
           name: acceptance-test-report
           path: besu-plugins/linea-sequencer/acceptance-tests/build/reports/tests/
+      - name: Upload Jacoco execution data
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-linea-sequencer-acceptance-exec
+          path: |
+            **/build/jacoco/*.exec
+          if-no-files-found: ignore
