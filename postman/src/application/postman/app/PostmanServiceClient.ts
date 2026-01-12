@@ -194,6 +194,7 @@ export class PostmanServiceClient {
       },
       l2Provider,
       l2MessageServiceClient,
+      new PostmanWinstonLogger(`${LineaTransactionValidationService.name}`, config.loggerOptions),
     );
 
     const l2MessageClaimingProcessor = new MessageClaimingProcessor(
@@ -316,12 +317,17 @@ export class PostmanServiceClient {
       new PostmanWinstonLogger(`L1${MessageAnchoringPoller.name}`, config.loggerOptions),
     );
 
-    const l1TransactionValidationService = new EthereumTransactionValidationService(lineaRollupClient, l1GasProvider, {
-      profitMargin: config.l1Config.claiming.profitMargin,
-      maxClaimGasLimit: BigInt(config.l1Config.claiming.maxClaimGasLimit),
-      isPostmanSponsorshipEnabled: config.l1Config.claiming.isPostmanSponsorshipEnabled,
-      maxPostmanSponsorGasLimit: config.l1Config.claiming.maxPostmanSponsorGasLimit,
-    });
+    const l1TransactionValidationService = new EthereumTransactionValidationService(
+      lineaRollupClient,
+      l1GasProvider,
+      {
+        profitMargin: config.l1Config.claiming.profitMargin,
+        maxClaimGasLimit: BigInt(config.l1Config.claiming.maxClaimGasLimit),
+        isPostmanSponsorshipEnabled: config.l1Config.claiming.isPostmanSponsorshipEnabled,
+        maxPostmanSponsorGasLimit: config.l1Config.claiming.maxPostmanSponsorGasLimit,
+      },
+      new PostmanWinstonLogger(`${EthereumTransactionValidationService.name}`, config.loggerOptions),
+    );
 
     const l1MessageClaimingProcessor = new MessageClaimingProcessor(
       lineaRollupClient,

@@ -26,6 +26,7 @@ import {
 } from "../../../core/constants";
 import { EthereumTransactionValidationService } from "../../EthereumTransactionValidationService";
 import { ILineaRollupClient } from "../../../core/clients/blockchain/ethereum/ILineaRollupClient";
+import { TestLogger } from "../../../../src/utils/testing/helpers";
 
 describe("EthereumTransactionValidationService", () => {
   let lineaTransactionValidationService: EthereumTransactionValidationService;
@@ -38,6 +39,8 @@ describe("EthereumTransactionValidationService", () => {
     ContractTransactionResponse,
     ErrorDescription
   >;
+
+  const logger = new TestLogger(EthereumTransactionValidationService.name);
 
   beforeEach(() => {
     const clients = testingHelpers.generateLineaRollupClient(
@@ -56,12 +59,17 @@ describe("EthereumTransactionValidationService", () => {
     lineaRollupClient = clients.lineaRollupClient;
     gasProvider = clients.gasProvider;
 
-    lineaTransactionValidationService = new EthereumTransactionValidationService(lineaRollupClient, gasProvider, {
-      profitMargin: DEFAULT_PROFIT_MARGIN,
-      maxClaimGasLimit: DEFAULT_MAX_CLAIM_GAS_LIMIT,
-      isPostmanSponsorshipEnabled: DEFAULT_ENABLE_POSTMAN_SPONSORING,
-      maxPostmanSponsorGasLimit: DEFAULT_MAX_POSTMAN_SPONSOR_GAS_LIMIT,
-    });
+    lineaTransactionValidationService = new EthereumTransactionValidationService(
+      lineaRollupClient,
+      gasProvider,
+      {
+        profitMargin: DEFAULT_PROFIT_MARGIN,
+        maxClaimGasLimit: DEFAULT_MAX_CLAIM_GAS_LIMIT,
+        isPostmanSponsorshipEnabled: DEFAULT_ENABLE_POSTMAN_SPONSORING,
+        maxPostmanSponsorGasLimit: DEFAULT_MAX_POSTMAN_SPONSOR_GAS_LIMIT,
+      },
+      logger,
+    );
 
     jest.spyOn(gasProvider, "getGasFees").mockResolvedValueOnce({
       maxPriorityFeePerGas: DEFAULT_MAX_FEE_PER_GAS,
@@ -185,12 +193,17 @@ describe("EthereumTransactionValidationService", () => {
 
     describe("isPostmanSponsorshipEnabled is true", () => {
       beforeEach(() => {
-        lineaTransactionValidationService = new EthereumTransactionValidationService(lineaRollupClient, gasProvider, {
-          profitMargin: DEFAULT_PROFIT_MARGIN,
-          maxClaimGasLimit: DEFAULT_MAX_CLAIM_GAS_LIMIT,
-          isPostmanSponsorshipEnabled: true,
-          maxPostmanSponsorGasLimit: DEFAULT_MAX_POSTMAN_SPONSOR_GAS_LIMIT,
-        });
+        lineaTransactionValidationService = new EthereumTransactionValidationService(
+          lineaRollupClient,
+          gasProvider,
+          {
+            profitMargin: DEFAULT_PROFIT_MARGIN,
+            maxClaimGasLimit: DEFAULT_MAX_CLAIM_GAS_LIMIT,
+            isPostmanSponsorshipEnabled: true,
+            maxPostmanSponsorGasLimit: DEFAULT_MAX_POSTMAN_SPONSOR_GAS_LIMIT,
+          },
+          logger,
+        );
       });
 
       it("When gas limit < sponsor threshold, should return transaction evaluation criteria with isForSponsorship = true", async () => {

@@ -18,6 +18,7 @@ import {
 import { MINIMUM_MARGIN, PROFIT_MARGIN_MULTIPLIER } from "../core/constants";
 import { IL2MessageServiceClient } from "../core/clients/blockchain/linea/IL2MessageServiceClient";
 import { ILineaProvider } from "../core/clients/blockchain/linea/ILineaProvider";
+import { IPostmanLogger } from "../utils/IPostmanLogger";
 
 export class LineaTransactionValidationService implements ITransactionValidationService {
   /**
@@ -44,6 +45,7 @@ export class LineaTransactionValidationService implements ITransactionValidation
       Signer,
       ErrorDescription
     >,
+    private readonly logger: IPostmanLogger,
   ) {}
 
   /**
@@ -85,12 +87,20 @@ export class LineaTransactionValidationService implements ITransactionValidation
       { claimViaAddress },
     );
 
+    this.logger.debug(
+      `Estimated gas fees for message claiming. messageHash=${message.messageHash} gasLimit=${gasLimit} maxPriorityFeePerGas=${maxPriorityFeePerGas} maxFeePerGas=${maxFeePerGas}`,
+    );
+
     const threshold = this.calculateGasEstimationThreshold(message.fee, gasLimit);
     const estimatedGasLimit = this.getGasLimit(gasLimit);
     const isUnderPriced = await this.isUnderPriced(gasLimit, message.fee, message.compressedTransactionSize!);
     const hasZeroFee = this.hasZeroFee(message);
     const isRateLimitExceeded = await this.isRateLimitExceeded(message.fee, message.value);
     const isForSponsorship = this.isForSponsorship(gasLimit, hasZeroFee, isUnderPriced);
+
+    this.logger.debug(
+      `Transaction evaluation results. messageHash=${message.messageHash} hasZeroFee=${hasZeroFee} isUnderPriced=${isUnderPriced} isRateLimitExceeded=${isRateLimitExceeded} isForSponsorship=${isForSponsorship} estimatedGasLimit=${estimatedGasLimit} threshold=${threshold}`,
+    );
 
     return {
       hasZeroFee,

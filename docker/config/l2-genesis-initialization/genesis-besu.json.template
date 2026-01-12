@@ -39,8 +39,8 @@
     "0x1b9abeec3215d8ade8a33607f2cf0f4f60e5f0d0": {
       "balance": "90000000000000000000000",
       "@WARNING": "FOR LOCAL DEV ONLY - DO NOT REUSE THESE KEYS ELSEWHERE",
-      "@privateKey": "0x1dd171cec7e2995408b5513004e8207fe88d6820aeff0d82463b3e41df251aae",
-      "@comment": "Contract deployer account"
+      "privateKey": "0x1dd171cec7e2995408b5513004e8207fe88d6820aeff0d82463b3e41df251aae",
+      "comment": "Contract deployer account"
     },
     "0xa05b21E5186Ce93d2a226722b85D6e550Ac7D6E3": {
       "privateKey": "3a4ff6d22d7502ef2452368165422861c01a0f72f851793b372b87888dc3c453",

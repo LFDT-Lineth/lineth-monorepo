@@ -71,6 +71,7 @@ export class MessageAnchoringProcessor implements IMessageAnchoringProcessor {
       }
 
       if (messages.length === 0) {
+        this.logger.info("No messages to process for anchoring.");
         return;
       }
 

@@ -45,7 +45,7 @@ const config: Config = {
       new ethers.JsonRpcProvider(L2_RPC_URL.toString()),
       path.resolve(
         process.env.LOCAL_L2_GENESIS ||
-          path.resolve(__dirname, "../../../../..", "docker/config", "linea-local-dev-genesis-PoA-besu.json"),
+          path.resolve(__dirname, "../../../../..", "docker/config/l2-genesis-initialization", "genesis-besu.json"),
       ),
     ),
     shomeiEndpoint: SHOMEI_ENDPOINT,

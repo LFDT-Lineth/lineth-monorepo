@@ -14,6 +14,7 @@ import {
 import { PROFIT_MARGIN_MULTIPLIER } from "../core/constants";
 import { ILineaRollupClient } from "../core/clients/blockchain/ethereum/ILineaRollupClient";
 import { IEthereumGasProvider } from "../core/clients/blockchain/IGasProvider";
+import { IPostmanLogger } from "../utils/IPostmanLogger";
 
 export class EthereumTransactionValidationService implements ITransactionValidationService {
   /**
@@ -33,6 +34,7 @@ export class EthereumTransactionValidationService implements ITransactionValidat
     >,
     private readonly gasProvider: IEthereumGasProvider<TransactionRequest>,
     private readonly config: TransactionValidationServiceConfig,
+    private readonly logger: IPostmanLogger,
   ) {}
 
   /**
@@ -78,12 +80,20 @@ export class EthereumTransactionValidationService implements ITransactionValidat
       this.gasProvider.getGasFees(),
     ]);
 
+    this.logger.debug(
+      `Estimated gas fees for message claiming. messageHash=${message.messageHash} gasLimit=${gasLimit} maxPriorityFeePerGas=${maxPriorityFeePerGas} maxFeePerGas=${maxFeePerGas}`,
+    );
+
     const threshold = this.calculateGasEstimationThreshold(message.fee, gasLimit);
     const estimatedGasLimit = this.getGasLimit(gasLimit);
     const isUnderPriced = this.isUnderPriced(gasLimit, message.fee, maxFeePerGas);
     const hasZeroFee = this.hasZeroFee(message);
     const isRateLimitExceeded = await this.isRateLimitExceeded(message.fee, message.value);
     const isForSponsorship = this.isForSponsorship(gasLimit, hasZeroFee, isUnderPriced);
+
+    this.logger.debug(
+      `Transaction evaluation results. messageHash=${message.messageHash} hasZeroFee=${hasZeroFee} isUnderPriced=${isUnderPriced} isRateLimitExceeded=${isRateLimitExceeded} isForSponsorship=${isForSponsorship} estimatedGasLimit=${estimatedGasLimit} threshold=${threshold}`,
+    );
 
     return {
       hasZeroFee,

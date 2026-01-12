@@ -77,6 +77,8 @@ export class MessageClaimingProcessor implements IMessageClaimingProcessor {
         return;
       }
 
+      this.logger.info("Found message to claim: messageHash=%s", nextMessageToClaim.messageHash);
+
       const messageStatus = await this.messageServiceContract.getMessageStatus({
         messageHash: nextMessageToClaim.messageHash,
         messageBlockNumber: nextMessageToClaim.sentBlockNumber,
@@ -136,22 +138,26 @@ export class MessageClaimingProcessor implements IMessageClaimingProcessor {
    * @returns {Promise<number | null>} The nonce to use for the next transaction, or null if the nonce difference exceeds the configured maximum.
    */
   private async getNonce(): Promise<number | null> {
-    const lastTxNonce = await this.databaseService.getLastClaimTxNonce(this.config.direction);
+    const [lastTxNonce, onChainNonce] = await Promise.all([
+      this.databaseService.getLastClaimTxNonce(this.config.direction),
+      this.signer.getNonce(),
+    ]);
 
-    let nonce = await this.signer.getNonce();
-    if (lastTxNonce) {
-      if (lastTxNonce - nonce > this.maxNonceDiff) {
-        this.logger.warn(
-          "Last recorded nonce in db is higher than the latest nonce from blockchain and exceeds the diff limit, paused the claim message process now: nonceInDb=%s nonceOnChain=%s maxAllowedNonceDiff=%s",
-          lastTxNonce,
-          nonce,
-          this.maxNonceDiff,
-        );
-        return null;
-      }
-      nonce = Math.max(nonce, lastTxNonce + 1);
+    if (lastTxNonce === null) {
+      return onChainNonce;
     }
-    return nonce;
+
+    if (lastTxNonce - onChainNonce > this.maxNonceDiff) {
+      this.logger.warn(
+        "Last recorded nonce in db is higher than the latest nonce from blockchain and exceeds the diff limit, paused the claim message process now: nonceInDb=%s nonceOnChain=%s maxAllowedNonceDiff=%s",
+        lastTxNonce,
+        onChainNonce,
+        this.maxNonceDiff,
+      );
+      return null;
+    }
+
+    return Math.max(onChainNonce, lastTxNonce + 1);
   }
 
   /**
@@ -172,7 +178,7 @@ export class MessageClaimingProcessor implements IMessageClaimingProcessor {
     maxFeePerGas: bigint,
   ): Promise<void> {
     const claimTxFn = async () =>
-      this.messageServiceContract.claim(
+      await this.messageServiceContract.claim(
         {
           ...message,
           feeRecipient: this.config.feeRecipientAddress,
@@ -255,6 +261,8 @@ export class MessageClaimingProcessor implements IMessageClaimingProcessor {
         );
         message.edit({ status: MessageStatus.FEE_UNDERPRICED });
         await this.databaseService.updateMessage(message);
+      } else {
+        this.logger.warn("Message is underpriced, will retry later: messageHash=%s", message.messageHash);
       }
       return true;
     }

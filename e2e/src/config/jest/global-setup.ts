@@ -36,7 +36,8 @@ export default async (): Promise<void> => {
 async function configureOnceOffPrerequisities() {
   const account = config.getL1AccountManager().whaleAccount(0);
   const l2Account = config.getL2AccountManager().whaleAccount(0).connect(config.getL2SequencerProvider()!);
-  const livenessSignerAccount = config.getL2AccountManager().whaleAccount(18).connect(config.getL2SequencerProvider()!);
+  // Account index 19 is reserved for liveness testing to avoid nonce conflicts with other concurrent e2e tests"
+  const livenessSignerAccount = config.getL2AccountManager().whaleAccount(19).connect(config.getL2SequencerProvider()!);
 
   const lineaRollup = config.getLineaRollupContract(account);
 
