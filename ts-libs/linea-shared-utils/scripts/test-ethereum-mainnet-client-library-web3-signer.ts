@@ -13,7 +13,7 @@ docker run --rm \
   -p 9000:9000 \
   -v "$(pwd)/docker/web3signer/key-files:/key-files" \
   -v "$(pwd)/docker/web3signer/tls-files:/tls-files" \
-  consensys/web3signer:25.2 \
+  consensys/web3signer:25.12.0 \
   --key-store-path=/key-files/ \
   --tls-keystore-file=/tls-files/web3signer-keystore.p12 \
   --tls-keystore-password-file=/tls-files/web3signer-keystore-password.txt \
