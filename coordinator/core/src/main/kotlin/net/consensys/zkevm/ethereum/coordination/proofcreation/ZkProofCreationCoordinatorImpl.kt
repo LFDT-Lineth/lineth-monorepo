@@ -8,8 +8,8 @@ import linea.domain.EthLog
 import linea.ethapi.EthApiClient
 import net.consensys.zkevm.coordinator.clients.BatchExecutionProofRequestV1
 import net.consensys.zkevm.coordinator.clients.ExecutionProverClientV2
-import net.consensys.zkevm.domain.Batch
 import net.consensys.zkevm.domain.BlocksConflation
+import net.consensys.zkevm.domain.ProofIndex
 import net.consensys.zkevm.ethereum.coordination.conflation.BlocksTracesConflated
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
@@ -48,7 +48,10 @@ class ZkProofCreationCoordinatorImpl(
       }
   }
 
-  override fun createZkProof(blocksConflation: BlocksConflation, traces: BlocksTracesConflated): SafeFuture<Batch> {
+  override fun createZkProofRequest(
+    blocksConflation: BlocksConflation,
+    traces: BlocksTracesConflated,
+  ): SafeFuture<ProofIndex> {
     val startBlockNumber = blocksConflation.blocks.first().number
     val endBlockNumber = blocksConflation.blocks.last().number
     val blocksConflationInterval = blocksConflation.intervalString()
@@ -61,7 +64,7 @@ class ZkProofCreationCoordinatorImpl(
       .thenCompose { previousKeccakStateRootHash ->
         SafeFuture.collectAll(bridgeLogsListFutures.stream())
           .thenCompose { bridgeLogsList ->
-            executionProverClient.requestProof(
+            executionProverClient.createProofRequest(
               BatchExecutionProofRequestV1(
                 blocks = blocksConflation.blocks,
                 bridgeLogs = bridgeLogsList.flatten(),
@@ -69,15 +72,18 @@ class ZkProofCreationCoordinatorImpl(
                 type2StateData = traces.zkStateTraces,
                 keccakParentStateRootHash = previousKeccakStateRootHash,
               ),
-            ).thenApply {
-              Batch(
-                startBlockNumber = startBlockNumber,
-                endBlockNumber = endBlockNumber,
+            ).whenException {
+              log.error(
+                "Prover request creation failed for batch={} errorMessage={}",
+                blocksConflationInterval,
+                it.message,
+                it,
               )
-            }.whenException {
-              log.error("Prover returned for batch={} errorMessage={}", blocksConflationInterval, it.message, it)
             }
           }
       }
   }
+
+  override fun isZkProofRequestProven(proofIndex: ProofIndex): SafeFuture<Boolean> =
+    executionProverClient.isProofAlreadyDone(proofIndex)
 }

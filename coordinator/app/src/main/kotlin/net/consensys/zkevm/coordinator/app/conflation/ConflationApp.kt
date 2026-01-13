@@ -29,9 +29,7 @@ import net.consensys.zkevm.coordinator.blockcreation.BlockCreationMonitor
 import net.consensys.zkevm.coordinator.blockcreation.GethCliqueSafeBlockProvider
 import net.consensys.zkevm.coordinator.clients.ExecutionProverClientV2
 import net.consensys.zkevm.coordinator.clients.prover.ProverClientFactory
-import net.consensys.zkevm.domain.Batch
 import net.consensys.zkevm.domain.BlocksConflation
-import net.consensys.zkevm.domain.ProofIndex
 import net.consensys.zkevm.ethereum.coordination.HighestConflationTracker
 import net.consensys.zkevm.ethereum.coordination.HighestProvenBatchTracker
 import net.consensys.zkevm.ethereum.coordination.HighestProvenBlobTracker
@@ -71,6 +69,7 @@ import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.concurrent.CompletableFuture
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 class ConflationApp(
@@ -293,64 +292,62 @@ class ConflationApp(
         initialTimestamp = lastProcessedTimestamp,
       )
   }
-
-  private val block2BatchCoordinator = run {
-    val (tracesCountersClient, tracesConflationClient) = createTracesClients(
+  val tracesClients =
+    createTracesClients(
       vertx = vertx,
       rpcClientFactory = httpJsonRpcClientFactory,
       configs = configs.traces,
       fallBackTracesCounters = configs.conflation.tracesLimits.emptyTracesCounters,
     )
+  val proofGeneratingConflationHandlerImpl = run {
+    val maxProvenBatchCache = run {
+      val highestProvenBatchTracker = HighestProvenBatchTracker(lastProcessedBlockNumber)
+      metricsFacade.createGauge(
+        category = LineaMetricsCategory.BATCH,
+        name = "proven.highest.block.number",
+        description = "Highest proven batch execution block number",
+        measurementSupplier = highestProvenBatchTracker,
+      )
+      highestProvenBatchTracker
+    }
 
+    val batchProofHandler = SimpleCompositeSafeFutureHandler(
+      listOf(
+        maxProvenBatchCache,
+        BatchProofHandlerImpl(batchesRepository)::acceptNewBatch,
+      ),
+    )
+    val executionProverClient: ExecutionProverClientV2 = proverClientFactory.executionProverClient(
+      // we cannot use configs.traces.expectedTracesApiVersion because it breaks prover expected version pattern
+      tracesVersion = "2.1.0",
+      stateManagerVersion = configs.stateManager.version,
+    )
+    ProofGeneratingConflationHandlerImpl(
+      tracesProductionCoordinator = TracesConflationCoordinatorImpl(
+        tracesClients.tracesConflationClient,
+        zkStateClient,
+      ),
+      zkProofProductionCoordinator = ZkProofCreationCoordinatorImpl(
+        executionProverClient = executionProverClient,
+        l2EthApiClient = createEthApiClient(
+          rpcUrl = configs.conflation.l2Endpoint.toString(),
+          log = LogManager.getLogger("clients.l2.eth.conflation"),
+          requestRetryConfig = configs.conflation.l2RequestRetries,
+          vertx = vertx,
+        ),
+        messageServiceAddress = configs.protocol.l2.contractAddress,
+      ),
+      batchProofHandler = batchProofHandler,
+      vertx = vertx,
+      config = ProofGeneratingConflationHandlerImpl.Config(
+        conflationAndProofGenerationRetryBackoffDelay = 5.seconds,
+        executionProofPollingInterval = 100.milliseconds,
+      ),
+    )
+  }
+
+  private val block2BatchCoordinator = run {
     val blobsConflationHandler: (BlocksConflation) -> SafeFuture<*> = run {
-      val maxProvenBatchCache = run {
-        val highestProvenBatchTracker = HighestProvenBatchTracker(lastProcessedBlockNumber)
-        metricsFacade.createGauge(
-          category = LineaMetricsCategory.BATCH,
-          name = "proven.highest.block.number",
-          description = "Highest proven batch execution block number",
-          measurementSupplier = highestProvenBatchTracker,
-        )
-        highestProvenBatchTracker
-      }
-
-      val batchProofHandler = SimpleCompositeSafeFutureHandler(
-        listOf(
-          maxProvenBatchCache,
-          BatchProofHandlerImpl(batchesRepository)::acceptNewBatch,
-        ),
-      )
-      val executionProverClient: ExecutionProverClientV2 = proverClientFactory.executionProverClient(
-        // we cannot use configs.traces.expectedTracesApiVersion because it breaks prover expected version pattern
-        tracesVersion = "2.1.0",
-        stateManagerVersion = configs.stateManager.version,
-      )
-
-      val proofGeneratingConflationHandlerImpl = ProofGeneratingConflationHandlerImpl(
-        tracesProductionCoordinator = TracesConflationCoordinatorImpl(tracesConflationClient, zkStateClient),
-        zkProofProductionCoordinator = ZkProofCreationCoordinatorImpl(
-          executionProverClient = executionProverClient,
-          l2EthApiClient = createEthApiClient(
-            rpcUrl = configs.conflation.l2Endpoint.toString(),
-            log = LogManager.getLogger("clients.l2.eth.conflation"),
-            requestRetryConfig = configs.conflation.l2RequestRetries,
-            vertx = vertx,
-          ),
-          messageServiceAddress = configs.protocol.l2.contractAddress,
-        ),
-        batchProofHandler = batchProofHandler,
-        vertx = vertx,
-        batchAlreadyProvenSupplier = { batch: Batch ->
-          executionProverClient.isProofAlreadyDone(
-            proofRequestId = ProofIndex(
-              batch.startBlockNumber,
-              batch.endBlockNumber,
-            ),
-          )
-        },
-        config = ProofGeneratingConflationHandlerImpl.Config(5.seconds),
-      )
-
       val highestConflationTracker = HighestConflationTracker(lastProcessedBlockNumber)
       metricsFacade.createGauge(
         category = LineaMetricsCategory.CONFLATION,
@@ -380,7 +377,7 @@ class ConflationApp(
 
     BlockToBatchSubmissionCoordinator(
       conflationService = conflationService,
-      tracesCountersClient = tracesCountersClient,
+      tracesCountersClient = tracesClients.tracesCountersClient,
       vertx = vertx,
       encoder = BlockRLPEncoder,
     )
@@ -431,6 +428,7 @@ class ConflationApp(
       blobsRepository = blobsRepository,
       aggregationsRepository = aggregationsRepository,
     )
+      .thenCompose { proofGeneratingConflationHandlerImpl.start() }
       .thenCompose { proofAggregationCoordinatorService.start() }
       .thenCompose { deadlineConflationCalculatorRunner?.start() ?: SafeFuture.completedFuture(Unit) }
       .thenCompose { blockCreationMonitor.start() }
@@ -442,6 +440,7 @@ class ConflationApp(
 
   override fun stop(): CompletableFuture<Unit> {
     return SafeFuture.allOf(
+      proofGeneratingConflationHandlerImpl.stop(),
       proofAggregationCoordinatorService.stop(),
       blockCreationMonitor.stop(),
       deadlineConflationCalculatorRunner?.stop() ?: SafeFuture.completedFuture(Unit),
