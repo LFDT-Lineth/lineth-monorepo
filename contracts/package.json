@@ -9,7 +9,7 @@
     "build": "TS_NODE_TRANSPILE_ONLY=1 npx hardhat compile",
     "test": "npm run autoupdate && npx hardhat test",
     "test:reportgas": "REPORT_GAS=true npx hardhat test",
-    "coverage": "npm run autoupdate && npx hardhat coverage --solcoverjs ./.solcover.js",
+    "coverage": "npm run autoupdate && SOLIDITY_COVERAGE=true npx hardhat coverage --solcoverjs ./.solcover.js",
     "autoupdate": "cd ../prover && cmd/dev-tools/testcase-gen/compression-aggregation/autoupdate.sh && cd ../contracts",
     "balance": "ts-node scripts/balanceOf.ts",
     "prettier": "prettier -c '**/*.{js,ts,sol}'",
