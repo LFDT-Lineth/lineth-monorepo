@@ -3,20 +3,32 @@ import {
   Address,
   BaseError,
   Chain,
+  ChainNotFoundError,
+  ChainNotFoundErrorType,
   Client,
+  ClientChainNotConfiguredError,
+  ClientChainNotConfiguredErrorType,
   DeriveChain,
   encodeAbiParameters,
+  EncodeAbiParametersErrorType,
   encodeFunctionData,
+  EncodeFunctionDataErrorType,
   erc20Abi,
+  EstimateContractGasErrorType,
   EstimateContractGasParameters,
+  EstimateFeesPerGasErrorType,
   FormattedTransactionRequest,
+  GetBlockErrorType,
   GetChainParameter,
   Hex,
   keccak256,
+  MulticallErrorType,
+  SendTransactionErrorType,
   SendTransactionParameters,
   SendTransactionReturnType,
   StateOverride,
   Transport,
+  WaitForTransactionReceiptErrorType,
   zeroAddress,
 } from "viem";
 import { GetAccountParameter } from "../types/account";
@@ -26,11 +38,13 @@ import {
   estimateFeesPerGas,
   getBlock,
   multicall,
-  readContract,
   sendTransaction,
   waitForTransactionReceipt,
 } from "viem/actions";
 import { getContractsAddressesByChainId } from "@consensys/linea-sdk-core";
+import { computeMessageHash } from "../utils/computeMessageHash";
+import { AccountNotFoundError, AccountNotFoundErrorType } from "../errors/account";
+import { getNextMessageNonce, GetNextMessageNonceErrorType } from "../utils/getNextMessageNonce";
 
 export type DepositParameters<
   chain extends Chain | undefined = Chain | undefined,
@@ -59,6 +73,20 @@ export type DepositParameters<
   };
 
 export type DepositReturnType = SendTransactionReturnType;
+
+export type DepositErrorType =
+  | SendTransactionErrorType
+  | EstimateContractGasErrorType
+  | EstimateFeesPerGasErrorType
+  | GetNextMessageNonceErrorType
+  | MulticallErrorType
+  | WaitForTransactionReceiptErrorType
+  | GetBlockErrorType
+  | EncodeFunctionDataErrorType
+  | EncodeAbiParametersErrorType
+  | ChainNotFoundErrorType
+  | ClientChainNotConfiguredErrorType
+  | AccountNotFoundErrorType;
 
 /**
  * Deposits tokens from L1 to L2 or ETH if `token` is set to `zeroAddress`.
@@ -135,15 +163,21 @@ export async function deposit<
 
   const account = account_ ? parseAccount(account_) : client.account;
   if (!account) {
-    throw new BaseError("Account is required to send a transaction");
+    throw new AccountNotFoundError({
+      docsPath: "/docs/actions/wallet/sendTransaction",
+    });
   }
 
-  const l1ChainId = client.chain?.id;
-  const l2ChainId = l2Client.chain?.id;
-
-  if (!l1ChainId || !l2ChainId) {
-    throw new BaseError("No chain id found in l1 or l2 client");
+  if (!client.chain) {
+    throw new ChainNotFoundError();
   }
+
+  if (!l2Client.chain) {
+    throw new ClientChainNotConfiguredError();
+  }
+
+  const l1ChainId = client.chain.id;
+  const l2ChainId = l2Client.chain.id;
 
   const lineaRollupAddress = parameters.lineaRollupAddress ?? getContractsAddressesByChainId(l1ChainId).messageService;
   const l2MessageServiceAddress =
@@ -188,12 +222,19 @@ async function estimateEthBridgingGasUsed<chain extends Chain | undefined, _acco
     account: Address;
     recipient: Address;
     amount: bigint;
-    nextMessageNumber: bigint;
+    nextMessageNonce: bigint;
     l2MessageServiceAddress: Address; // Optional, defaults to the message service address for the chain
   },
 ) {
-  const { account, recipient, amount, nextMessageNumber, l2MessageServiceAddress } = parameters;
-  const messageHash = computeMessageHash(account, recipient, 0n, amount, nextMessageNumber, "0x");
+  const { account, recipient, amount, nextMessageNonce, l2MessageServiceAddress } = parameters;
+  const messageHash = computeMessageHash({
+    from: account,
+    to: recipient,
+    fee: 0n,
+    value: amount,
+    nonce: nextMessageNonce,
+    calldata: "0x",
+  });
 
   const storageSlot = computeMessageStorageSlot(messageHash);
   const stateOverride = createStateOverride(l2MessageServiceAddress, storageSlot);
@@ -219,7 +260,7 @@ async function estimateEthBridgingGasUsed<chain extends Chain | undefined, _acco
     ] as const,
     functionName: "claimMessage",
     account: account as `0x${string}`,
-    args: [account, recipient, 0n, amount, zeroAddress as `0x${string}`, "0x" as `0x${string}`, nextMessageNumber],
+    args: [account, recipient, 0n, amount, zeroAddress as `0x${string}`, "0x" as `0x${string}`, nextMessageNonce],
     stateOverride,
   } as EstimateContractGasParameters);
 }
@@ -239,7 +280,7 @@ async function estimateERC20BridgingGasUsed<
     l2ChainId: number;
     amount: bigint;
     recipient: Address;
-    nextMessageNumber: bigint;
+    nextMessageNonce: bigint;
     l2MessageServiceAddress: Address;
     l1TokenBridgeAddress: Address;
     l2TokenBridgeAddress: Address;
@@ -252,7 +293,7 @@ async function estimateERC20BridgingGasUsed<
     l2ChainId,
     amount,
     recipient,
-    nextMessageNumber,
+    nextMessageNonce,
     account,
     l2MessageServiceAddress,
     l1TokenBridgeAddress,
@@ -305,14 +346,14 @@ async function estimateERC20BridgingGasUsed<
     args: [tokenAddress, amount, recipient, BigInt(chainId), tokenMetadata],
   });
 
-  const messageHash = computeMessageHash(
-    l1TokenBridgeAddress,
-    l2TokenBridgeAddress,
-    0n,
-    0n,
-    nextMessageNumber,
-    encodedData,
-  );
+  const messageHash = computeMessageHash({
+    from: l1TokenBridgeAddress,
+    to: l2TokenBridgeAddress,
+    fee: 0n,
+    value: 0n,
+    nonce: nextMessageNonce,
+    calldata: encodedData,
+  });
 
   const storageSlot = computeMessageStorageSlot(messageHash);
   const stateOverride = createStateOverride(l2MessageServiceAddress, storageSlot);
@@ -338,7 +379,7 @@ async function estimateERC20BridgingGasUsed<
     ] as const,
     functionName: "claimMessage",
     account: account,
-    args: [l1TokenBridgeAddress, l2TokenBridgeAddress, 0n, 0n, zeroAddress, encodedData, nextMessageNumber],
+    args: [l1TokenBridgeAddress, l2TokenBridgeAddress, 0n, 0n, zeroAddress, encodedData, nextMessageNonce],
     stateOverride,
   } as EstimateContractGasParameters);
 }
@@ -432,29 +473,6 @@ async function prepareERC20TokenParams<chain extends Chain | undefined, _account
   return { tokenAddress, chainId, tokenMetadata };
 }
 
-export function computeMessageHash(
-  from: Address,
-  to: Address,
-  fee: bigint,
-  value: bigint,
-  nonce: bigint,
-  calldata: `0x${string}` = "0x",
-) {
-  return keccak256(
-    encodeAbiParameters(
-      [
-        { name: "from", type: "address" },
-        { name: "to", type: "address" },
-        { name: "fee", type: "uint256" },
-        { name: "value", type: "uint256" },
-        { name: "nonce", type: "uint256" },
-        { name: "calldata", type: "bytes" },
-      ],
-      [from, to, fee, value, nonce, calldata],
-    ),
-  );
-}
-
 export function computeMessageStorageSlot(messageHash: `0x${string}`) {
   return keccak256(
     encodeAbiParameters(
@@ -479,33 +497,6 @@ export function createStateOverride(messageServiceAddress: Address, storageSlot:
       ],
     },
   ];
-}
-
-async function getNextMessageNumber<chain extends Chain | undefined, _account extends Account | undefined>(
-  client: Client<Transport, chain, _account>,
-  parameters: { lineaRollupAddress: Address },
-): Promise<bigint> {
-  const { lineaRollupAddress } = parameters;
-
-  return readContract(client, {
-    address: lineaRollupAddress,
-    abi: [
-      {
-        inputs: [],
-        name: "nextMessageNumber",
-        outputs: [
-          {
-            internalType: "uint256",
-            name: "",
-            type: "uint256",
-          },
-        ],
-        stateMutability: "view",
-        type: "function",
-      },
-    ],
-    functionName: "nextMessageNumber",
-  });
 }
 
 async function depositETH<
@@ -547,8 +538,8 @@ async function depositETH<
   let bridgingFee = fee ?? 0n;
 
   if (fee === undefined) {
-    const [nextMessageNumber, { baseFeePerGas }, { maxPriorityFeePerGas }] = await Promise.all([
-      getNextMessageNumber(client, {
+    const [nextMessageNonce, { baseFeePerGas }, { maxPriorityFeePerGas }] = await Promise.all([
+      getNextMessageNonce(client, {
         lineaRollupAddress,
       }),
       getBlock(l2Client, { blockTag: "latest" }),
@@ -559,7 +550,7 @@ async function depositETH<
       account: account_.address,
       recipient: to as Address,
       amount,
-      nextMessageNumber,
+      nextMessageNonce,
       l2MessageServiceAddress,
     });
     bridgingFee = (baseFeePerGas + maxPriorityFeePerGas) * (l2ClaimingTxGasLimit + 6_000n);
@@ -637,8 +628,8 @@ async function depositERC20<
   let bridgingFee = fee ?? 0n;
 
   if (fee === undefined) {
-    const [nextMessageNumber, { baseFeePerGas }, { maxPriorityFeePerGas }] = await Promise.all([
-      getNextMessageNumber(client, {
+    const [nextMessageNonce, { baseFeePerGas }, { maxPriorityFeePerGas }] = await Promise.all([
+      getNextMessageNonce(client, {
         lineaRollupAddress,
       }),
       getBlock(l2Client, { blockTag: "latest" }),
@@ -653,7 +644,7 @@ async function depositERC20<
       l2ChainId,
       amount,
       recipient: to,
-      nextMessageNumber,
+      nextMessageNonce,
       l2MessageServiceAddress,
       l1TokenBridgeAddress,
       l2TokenBridgeAddress,

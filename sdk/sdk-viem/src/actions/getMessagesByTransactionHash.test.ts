@@ -1,5 +1,5 @@
 import { getMessagesByTransactionHash } from "./getMessagesByTransactionHash";
-import { Client, Transport, Chain, Account, Hex, BaseError } from "viem";
+import { Client, Transport, Chain, Account, Hex, ChainNotFoundError } from "viem";
 import { getTransactionReceipt } from "viem/actions";
 import { linea } from "viem/chains";
 import { getContractsAddressesByChainId } from "@consensys/linea-sdk-core";
@@ -32,7 +32,7 @@ describe("getMessagesByTransactionHash", () => {
 
   it("throws if client.chain is not set", async () => {
     const client = mockClient();
-    await expect(getMessagesByTransactionHash(client, { transactionHash })).rejects.toThrow(BaseError);
+    await expect(getMessagesByTransactionHash(client, { transactionHash })).rejects.toThrow(ChainNotFoundError);
   });
 
   it("returns empty array if no logs match", async () => {

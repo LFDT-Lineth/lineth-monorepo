@@ -7,6 +7,7 @@ import {
   Chain,
   Client,
   ContractEventName,
+  GetContractEventsErrorType,
   GetContractEventsParameters,
   Hash,
   Hex,
@@ -43,6 +44,8 @@ export type GetMessageSentEventsParameters<
   GetContractEventsParameters<abi, eventName, strict, fromBlock, toBlock>,
   "args" | "fromBlock" | "toBlock" | "address"
 >;
+
+export type GetMessageSentEventsErrorType = GetContractEventsErrorType;
 
 export async function getMessageSentEvents<
   chain extends Chain | undefined,

@@ -1,4 +1,14 @@
-import { Account, Address, Chain, Client, Hex, Transport } from "viem";
+import {
+  Account,
+  Address,
+  Chain,
+  ChainNotFoundError,
+  ChainNotFoundErrorType,
+  Client,
+  Hex,
+  ReadContractErrorType,
+  Transport,
+} from "viem";
 import { readContract } from "viem/actions";
 import { formatMessageStatus, getContractsAddressesByChainId, OnChainMessageStatus } from "@consensys/linea-sdk-core";
 
@@ -9,6 +19,8 @@ export type GetL1ToL2MessageStatusParameters = {
   // Defaults to the message service address for the L2 chain
   l2MessageServiceAddress?: Address;
 };
+
+export type GetL1ToL2MessageStatusErrorType = ReadContractErrorType | ChainNotFoundErrorType;
 
 /**
  * Returns the status of an L1 to L2 message on Linea.
@@ -38,7 +50,7 @@ export async function getL1ToL2MessageStatus<chain extends Chain | undefined, ac
   const { messageHash, l2MessageServiceAddress } = parameters;
 
   if (!client.chain) {
-    throw new Error("Client chain is required to get L1 to L2 message status.");
+    throw new ChainNotFoundError();
   }
 
   const l2MessageService = l2MessageServiceAddress ?? getContractsAddressesByChainId(client.chain.id).messageService;

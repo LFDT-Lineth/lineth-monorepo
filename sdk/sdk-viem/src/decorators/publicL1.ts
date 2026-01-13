@@ -187,9 +187,11 @@ export function publicActionsL1(parameters?: PublicActionsL1Parameters) {
   return <
     chain extends Chain | undefined = Chain | undefined,
     account extends Account | undefined = Account | undefined,
+    chainL2 extends Chain | undefined = Chain | undefined,
+    accountL2 extends Account | undefined = Account | undefined,
   >(
     client: Client<Transport, chain, account>,
-  ): PublicActionsL1<chain, account> => ({
+  ): PublicActionsL1<chainL2, accountL2> => ({
     getMessageProof: (args) =>
       getMessageProof(client, {
         ...args,

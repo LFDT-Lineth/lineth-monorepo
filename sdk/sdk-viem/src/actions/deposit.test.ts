@@ -1,17 +1,18 @@
-import { deposit, computeMessageHash, computeMessageStorageSlot, createStateOverride } from "./deposit";
+import { deposit, computeMessageStorageSlot, createStateOverride } from "./deposit";
 import {
   Client,
   Transport,
   Chain,
   Account,
   Address,
-  BaseError,
   zeroAddress,
   Hex,
   SendTransactionParameters,
   encodeFunctionData,
   toFunctionSelector,
   erc20Abi,
+  ChainNotFoundError,
+  ClientChainNotConfiguredError,
 } from "viem";
 import {
   readContract,
@@ -26,6 +27,8 @@ import { getContractsAddressesByChainId } from "@consensys/linea-sdk-core";
 import { linea, mainnet } from "viem/chains";
 import { TEST_ADDRESS_1, TEST_ADDRESS_2, TEST_TRANSACTION_HASH } from "../../tests/constants";
 import { generateBlock, generateTransactionReceipt } from "../../tests/utils";
+import { computeMessageHash } from "../utils/computeMessageHash";
+import { AccountNotFoundError } from "../errors/account";
 
 jest.mock("viem/actions", () => ({
   readContract: jest.fn(),
@@ -93,13 +96,25 @@ describe("deposit", () => {
 
   it("throws if no account is provided", async () => {
     const client = mockClient(l1ChainId, undefined);
-    await expect(deposit(client, { l2Client: mockL2Client(l2ChainId), token, to, amount })).rejects.toThrow(BaseError);
+    await expect(deposit(client, { l2Client: mockL2Client(l2ChainId), token, to, amount })).rejects.toThrow(
+      AccountNotFoundError,
+    );
   });
 
-  it("throws if no L1 or L2 chain id is found", async () => {
+  it("throws if no L1 chain id is found", async () => {
     const client = mockClient(undefined, mockAccount);
+    const l2Client = mockL2Client(l2ChainId, mockAccount);
+    await expect(deposit(client, { l2Client, token, to, amount, account: mockAccount })).rejects.toThrow(
+      ChainNotFoundError,
+    );
+  });
+
+  it("throws if no L2 chain id is found", async () => {
+    const client = mockClient(l1ChainId, mockAccount);
     const l2Client = mockL2Client(undefined, mockAccount);
-    await expect(deposit(client, { l2Client, token, to, amount, account: mockAccount })).rejects.toThrow(BaseError);
+    await expect(deposit(client, { l2Client, token, to, amount, account: mockAccount })).rejects.toThrow(
+      ClientChainNotConfiguredError,
+    );
   });
 
   it("sends ETH deposit transaction when token is zeroAddress", async () => {
@@ -699,7 +714,7 @@ describe("deposit utility functions", () => {
     const nonce = 3n;
     const calldata = "0x" as Hex;
 
-    const hash = computeMessageHash(from, to, fee, value, nonce, calldata);
+    const hash = computeMessageHash({ from, to, fee, value, nonce, calldata });
     expect(hash).toBe("0x1ebd3a6c6d29012c12e2e6cc8c9cc3346ccd756b4b997e2c435b1a8b4c7c00e7");
   });
 
@@ -710,8 +725,8 @@ describe("deposit utility functions", () => {
     const value = 2n;
     const nonce = 3n;
 
-    const hash = computeMessageHash(from, toAddr, fee, value, nonce);
-    const hashWithCalldata = computeMessageHash(from, toAddr, fee, value, nonce, "0x");
+    const hash = computeMessageHash({ from, to: toAddr, fee, value, nonce });
+    const hashWithCalldata = computeMessageHash({ from, to: toAddr, fee, value, nonce, calldata: "0x" });
 
     expect(hash).toBe(hashWithCalldata);
   });

@@ -1,9 +1,20 @@
 import { claimOnL2 } from "./claimOnL2";
-import { Client, Transport, Chain, Account, Address, BaseError, zeroAddress, encodeFunctionData, Hex } from "viem";
+import {
+  Client,
+  Transport,
+  Chain,
+  Account,
+  Address,
+  zeroAddress,
+  encodeFunctionData,
+  Hex,
+  ChainNotFoundError,
+} from "viem";
 import { sendTransaction } from "viem/actions";
 import { getContractsAddressesByChainId } from "@consensys/linea-sdk-core";
 import { linea } from "viem/chains";
 import { TEST_ADDRESS_1, TEST_ADDRESS_2, TEST_TRANSACTION_HASH } from "../../tests/constants";
+import { AccountNotFoundError } from "../errors/account";
 
 jest.mock("viem/actions", () => ({
   sendTransaction: jest.fn(),
@@ -44,14 +55,16 @@ describe("claimOnL2", () => {
 
   it("throws if no account is provided", async () => {
     const client = mockClient(chainId, undefined);
-    await expect(claimOnL2(client, { from, to, fee, value, calldata, messageNonce })).rejects.toThrow(BaseError);
+    await expect(claimOnL2(client, { from, to, fee, value, calldata, messageNonce })).rejects.toThrow(
+      AccountNotFoundError,
+    );
   });
 
   it("throws if no chain id is found", async () => {
     const client = mockClient(undefined, mockAccount);
     await expect(
       claimOnL2(client, { from, to, fee, value, calldata, messageNonce, account: mockAccount }),
-    ).rejects.toThrow(BaseError);
+    ).rejects.toThrow(ChainNotFoundError);
   });
 
   it("sends claimMessage transaction with all parameters", async () => {

@@ -1,13 +1,15 @@
 import {
   Account,
   Address,
-  BaseError,
   Chain,
+  ChainNotFoundError,
+  ChainNotFoundErrorType,
   Client,
   DeriveChain,
   encodeFunctionData,
   FormattedTransactionRequest,
   GetChainParameter,
+  SendTransactionErrorType,
   SendTransactionParameters,
   SendTransactionReturnType,
   Transport,
@@ -17,6 +19,7 @@ import { GetAccountParameter } from "../types/account";
 import { parseAccount } from "viem/utils";
 import { sendTransaction } from "viem/actions";
 import { getContractsAddressesByChainId, Message } from "@consensys/linea-sdk-core";
+import { AccountNotFoundError, AccountNotFoundErrorType } from "../errors/account";
 
 export type ClaimOnL2Parameters<
   chain extends Chain | undefined = Chain | undefined,
@@ -34,6 +37,8 @@ export type ClaimOnL2Parameters<
   };
 
 export type ClaimOnL2ReturnType = SendTransactionReturnType;
+
+export type ClaimOnL2ErrorType = SendTransactionErrorType | ChainNotFoundErrorType | AccountNotFoundErrorType;
 
 /**
  * Claim a message on L2.
@@ -117,17 +122,17 @@ export async function claimOnL2<
 
   const account = account_ ? parseAccount(account_) : client.account;
   if (!account) {
-    throw new BaseError("Account is required to send a transaction");
+    throw new AccountNotFoundError({
+      docsPath: "/docs/actions/wallet/sendTransaction",
+    });
   }
 
-  const chainId = client.chain?.id;
-
-  if (!chainId) {
-    throw new BaseError("No chain id found in l2 client");
+  if (!client.chain) {
+    throw new ChainNotFoundError();
   }
 
   const l2MessageServiceAddress =
-    parameters.l2MessageServiceAddress ?? getContractsAddressesByChainId(chainId).messageService;
+    parameters.l2MessageServiceAddress ?? getContractsAddressesByChainId(client.chain.id).messageService;
 
   return sendTransaction(client, {
     to: l2MessageServiceAddress,

@@ -1,9 +1,20 @@
 import { withdraw } from "./withdraw";
-import { Client, Transport, Chain, Account, Address, Hex, BaseError, zeroAddress, encodeFunctionData } from "viem";
+import {
+  Client,
+  Transport,
+  Chain,
+  Account,
+  Address,
+  Hex,
+  zeroAddress,
+  encodeFunctionData,
+  ChainNotFoundError,
+} from "viem";
 import { readContract, sendTransaction } from "viem/actions";
 import { linea } from "viem/chains";
 import { getContractsAddressesByChainId } from "@consensys/linea-sdk-core";
 import { TEST_TRANSACTION_HASH } from "../../tests/constants";
+import { AccountNotFoundError } from "../errors/account";
 
 jest.mock("viem/actions", () => ({
   readContract: jest.fn(),
@@ -46,12 +57,12 @@ describe("withdraw", () => {
 
   it("throws if no account is provided", async () => {
     const client = mockClient(chainId, undefined);
-    await expect(withdraw(client, { token, to, amount })).rejects.toThrow(BaseError);
+    await expect(withdraw(client, { token, to, amount })).rejects.toThrow(AccountNotFoundError);
   });
 
   it("throws if no chain id is found", async () => {
     const client = mockClient(undefined, mockAccount);
-    await expect(withdraw(client, { token, to, amount, account: mockAccount })).rejects.toThrow(BaseError);
+    await expect(withdraw(client, { token, to, amount, account: mockAccount })).rejects.toThrow(ChainNotFoundError);
   });
 
   it("sends ETH withdrawal transaction when token is zeroAddress", async () => {
