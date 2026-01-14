@@ -100,6 +100,7 @@
                                             [BIT 3]
                                             CT)))
 
+
 (defconstraint ram-to-limb-two-source (:guard IS_RAM_TO_LIMB_TWO_SOURCE)
                (begin (eq! CN_A CNS)
                       (eq! CN_B CNS)
@@ -187,6 +188,10 @@
                                              [BIT 5]
                                              CT)))
 
+;; This is just a way to cast an intermediate result, as the current constraint were creating a i354 which makes the splitting huge.
+
+(defcomputedcolumn (CAST_INTERMEDIATE_RESULT :i128 :fwd) (* IS_RAM_TO_RAM_TWO_SOURCE [ACC 1] [POW_256 2]))
+
 (defconstraint ram-to-ram-two-source (:guard IS_RAM_TO_RAM_TWO_SOURCE)
                (begin (eq! CN_A CNS)
                       (eq! CN_B CNS)
@@ -213,7 +218,38 @@
                                              [BIT 2]
                                              [BIT 3]
                                              [BIT 4]
-                                             CT)))
+                                             CT
+                                             CAST_INTERMEDIATE_RESULT)))
+
+;; original constraint:                                                      
+;; 
+;; (defconstraint ram-to-ram-two-source (:guard IS_RAM_TO_RAM_TWO_SOURCE)
+;;                (begin (eq! CN_A CNS)
+;;                       (eq! CN_B CNS)
+;;                       (eq! CN_C CNT)
+;;                       (eq! INDEX_A SLO)
+;;                       (eq! INDEX_B (+ SLO 1))
+;;                       (eq! INDEX_C TLO)
+;;                       (eq! VAL_A_NEW VAL_A)
+;;                       (eq! VAL_B_NEW VAL_B)
+;;                       (two-partial-to-one    VAL_C
+;;                                              VAL_C_NEW
+;;                                              BYTE_A
+;;                                              BYTE_B
+;;                                              BYTE_C
+;;                                              [ACC 1]
+;;                                              [ACC 2]
+;;                                              [ACC 3]
+;;                                              [POW_256 1]
+;;                                              [POW_256 2]
+;;                                              SBO
+;;                                              TBO
+;;                                              SIZE
+;;                                              [BIT 1]
+;;                                              [BIT 2]
+;;                                              [BIT 3]
+;;                                              [BIT 4]
+;;                                              CT)))
 
 (defconstraint ram-excision (:guard IS_RAM_EXCISION)
                (begin (eq! CN_A CNT)

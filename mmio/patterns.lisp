@@ -150,6 +150,9 @@
                                          (* (- accumulator4 accumulator2) pow)))))))
 
 ;; [2 Partial => 1]
+
+;; This is just a way to cast an intermediate result, as the current constraint were creating a i354 which makes the splitting huge.
+
 (defpurefun (two-partial-to-one target
                                 target_new
                                 source1_byte
@@ -167,7 +170,8 @@
                                 bit2
                                 bit3
                                 bit4
-                                counter)
+                                counter
+                                cast_interemediate_result)
             (begin (plateau bit1 source_marker counter)
                    (plateau bit2
                             (- (+ source_marker size) LLARGE)
@@ -182,6 +186,43 @@
                    (if-eq counter LLARGEMO
                             (eq! target_new
                                  (+ target
-                                    (* (- (+ (* accumulator1 pow2) accumulator2)
+                                    (* (- (+ cast_interemediate_result accumulator2)
                                           accumulator3)
                                        pow1))))))
+
+;; original constraint:
+;; (defpurefun (two-partial-to-one target
+;;                                 target_new
+;;                                 source1_byte
+;;                                 source2_byte
+;;                                 target_byte
+;;                                 accumulator1
+;;                                 accumulator2
+;;                                 accumulator3
+;;                                 pow1
+;;                                 pow2
+;;                                 source_marker
+;;                                 target_marker
+;;                                 size
+;;                                 bit1
+;;                                 bit2
+;;                                 bit3
+;;                                 bit4
+;;                                 counter)
+;;             (begin (plateau bit1 source_marker counter)
+;;                    (plateau bit2
+;;                             (- (+ source_marker size) LLARGE)
+;;                             counter)
+;;                    (plateau bit3 target_marker counter)
+;;                    (plateau bit4 (+ target_marker size) counter)
+;;                    (isolate-suffix accumulator1 source1_byte bit1 counter)
+;;                    (isolate-prefix accumulator2 source2_byte bit2 counter)
+;;                    (isolate-chunk accumulator3 target_byte bit3 bit4 counter)
+;;                    (power pow1 bit4 counter)
+;;                    (antipower pow2 bit2 counter)
+;;                    (if-eq counter LLARGEMO
+;;                             (eq! target_new
+;;                                  (+ target
+;;                                     (* (- (+ (* accumulator1 pow2) accumulator2)
+;;                                           accumulator3)
+;;                                        pow1))))))
