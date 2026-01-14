@@ -1,0 +1,38 @@
+include "set_byte.zkasm"
+
+
+;; Replace all bytes betweem offsets start and (upto but not
+;; including) end in the given word with a given value, where
+;; offset==0 represents the most significant byte.  For example,
+;; consider this word:
+;;
+;; 0xffeeddccbbaa99887766554433221100
+;;
+;; Filling this word with 0s between 27..30 gives the
+;; following:
+;;
+;; 0xffeeddccbbaa99887766550000001100
+;;                         ^^--->
+;;
+;; Here, we see the cursor starts at offset 28 and keeps going to the
+;; end.  The key is that all other bytes remain unchanged.
+fn fill_bytes_between(word u256, start u6, end u6, value u8) -> (res u256) {
+   var nword u256
+   var offset u5
+   var s u1
+   ;; check termination
+   if start == end goto exit
+   ;; split offset
+   s, offset = start
+   ;; check termination (again)
+   if s == 1 goto exit
+   ;; set given byte
+   nword = set_byte256(word, offset, value)
+   ;; recurse
+   res = fill_bytes_between(nword, offset+1, end, value)
+   ;; done
+   return
+exit:
+   res = word
+   return
+}

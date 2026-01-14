@@ -1,0 +1,133 @@
+;; Compute log2 of word
+fn log2(arg u256) -> (res u8) {
+  var hi, lo u128
+  var tmp u7
+  ;; split argument
+  hi,lo = arg
+  ;; check hi or lo
+  if hi == 0 goto low
+  ;; hi mode
+  tmp = log2_u128(hi)
+  res = tmp + 128
+  return
+low:
+  tmp = log2_u128(lo)
+  res = tmp
+  return
+}
+
+fn log2_u128(arg u128) -> (res u7) {
+  var hi, lo u64
+  var tmp u6
+  ;; split argument
+  hi,lo = arg
+  ;; check hi or lo
+  if hi == 0 goto low
+  ;; hi mode
+  tmp = log2_u64(hi)
+  res = tmp + 64
+  return
+low:
+  tmp = log2_u64(lo)
+  res = tmp
+  return
+}
+
+fn log2_u64(arg u64) -> (res u6) {
+  var hi, lo u32
+  var tmp u5
+  ;; split argument
+  hi,lo = arg
+  ;; check hi or lo
+  if hi == 0 goto low
+  ;; hi mode
+  tmp = log2_u32(hi)
+  res = tmp + 32
+  return
+low:
+  tmp = log2_u32(lo)
+  res = tmp
+  return
+}
+
+fn log2_u32(arg u32) -> (res u5) {
+  var hi, lo u16
+  var tmp u4
+  ;; split argument
+  hi,lo = arg
+  ;; check hi or lo
+  if hi == 0 goto low
+  ;; hi mode
+  tmp = log2_u16(hi)
+  res = tmp + 16
+  return
+low:
+  tmp = log2_u16(lo)
+  res = tmp
+  return
+}
+
+fn log2_u16(arg u16) -> (res u4) {
+  var hi, lo u8
+  var tmp u3
+  ;; split argument
+  hi,lo = arg
+  ;; check hi or lo
+  if hi == 0 goto low
+  ;; hi mode
+  tmp = log2_u8(hi)
+  res = tmp + 8
+  return
+low:
+  tmp = log2_u8(lo)
+  res = tmp
+  return
+}
+
+fn log2_u8(arg u8) -> (res u3) {
+  var hi, lo u4
+  var tmp u2
+  ;; split argument
+  hi,lo = arg
+  ;; check hi or lo
+  if hi == 0 goto low
+  ;; hi mode
+  tmp = log2_u4(hi)
+  res = tmp + 4
+  return
+low:
+  tmp = log2_u4(lo)
+  res = tmp
+  return
+}
+
+fn log2_u4(arg u4) -> (res u2) {
+  var hi, lo u2
+  var tmp u1
+  ;; split argument
+  hi,lo = arg
+  ;; check hi or lo
+  if hi == 0 goto low
+  ;; hi mode
+  tmp = log2_u2(hi)
+  res = tmp + 2
+  return
+low:
+  tmp = log2_u2(lo)
+  res = tmp
+  return
+}
+
+fn log2_u2(arg u2) -> (res u1) {
+  var hi, lo u1
+  ;; split argument
+  hi,lo = arg
+  ;; check hi or lo
+  if hi == 0 goto low
+  ;; hi
+  res = 1
+  return
+low:
+  res = 0
+  return
+}

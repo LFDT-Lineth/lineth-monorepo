@@ -1,0 +1,40 @@
+;; Sign extend given a size
+;;
+;; n = ( 31 - size )
+;; Extend the sign of the nth byte on the range [0:n[ with n excluded
+;; if size == 0, sign of the 31st byte is extended from byte 0 to 30
+;; if size == 31, word stays unchanged
+;;
+;; Examples :
+;; (1)
+;; size = 0, word = 0x80FF
+;; res = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+;; note : (byte 30 is overridden)
+;; (2)
+;; size = 1, word = 0x80FF
+;; res = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80ff
+;; (3)
+;; size = 2, word = 0x80FF
+;; res = 0x80FF
+
+include "byte.zkasm"
+include "fill_bytes.zkasm"
+
+fn signextend(size u5, word u256) -> (res u256) {
+    var t_byte u8
+    var t u5
+    t = 31 - size
+    t_byte  = byte256(word, t)
+    ;; take the most significant bit of t_byte
+    var msb u1
+    var rest u7
+    msb, rest = t_byte
+    ;; if msb is 0, then we fill with 0s from 0 to t
+    if msb  == 0 goto exit_fill_0
+    ;; if msb is 1, then we fill with 1s from 0 to t
+    res = fill_bytes_between(word, 0, t, 255)
+    return
+exit_fill_0:
+    res = fill_bytes_between(word, 0, t, 0)
+    return
+}

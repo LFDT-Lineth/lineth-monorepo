@@ -1,0 +1,61 @@
+include "../constants/evm.zkasm"
+include "../util/bit_shr.zkasm"
+include "../util/fill_bytes.zkasm"
+include "../util/log2.zkasm"
+include "../util/log256.zkasm"
+
+const EXP_INST_EXPLOG    = 0xEE0A
+const EXP_INST_MODEXPLOG = 0xEE05
+
+;; The Exponentiation Module (EXP) is a small module which carries out
+;; intermediate computations (e.g. logarithms) required for the gas
+;; pricing of the EXP opcode and the MODEXP precompile. Despite its
+;; name it neither carries out the EXP instruction nor the modular
+;; exponentiation of MODEXP.  For any call to exo, the "inst" argument
+;; indicates one of two psuedo-instructions:
+;;
+;; EXPLOG       0xee0a
+;; MODEXPLOG    0xee05
+;;
+;; The interpretation of the argument ARG depends upon the
+;; instruction, whilst CDS and EBS are only used for the MODEXPLOG
+;; case.
+pub fn exp(INST=0xEE0A u16, ARG u256, CDS u6, EBS u6) -> (RES=0 u128)
+;; PRE: 1<=CDS<=32 && 1<=EBS<=32
+{
+   var s, b u1
+   var tmp u5
+   var shift u8
+   var shifted_word, filled_word u256
+   ;;
+   if INST == EXP_INST_EXPLOG goto explog
+   if INST == EXP_INST_MODEXPLOG goto modexplog
+   fail
+explog:
+   if ARG != 0 goto explog2
+   RES = 0
+   return
+explog2:
+   ;; calculate log
+   tmp = log256(ARG)
+   ;; increment
+   RES = (tmp + 1) * G_EXPBYTE
+   return
+modexplog:
+   ;; fill as necessary
+   filled_word = fill_bytes_between(ARG, CDS, EBS, 0)
+   ;; determine shift amount (in bits)
+   s, b, shift = (32 - EBS) * 8
+   ;; check precondition
+   if b != 0 goto failed_pre
+   if s != 0 goto failed_pre
+   ;; shift right
+   shifted_word = bit_shr256(filled_word,shift)
+   ;; compute log
+   RES = log2(shifted_word)
+   ;;
+   return
+failed_pre:
+   ;; precondition 1<=EBS<=32 does not hold.
+   fail
+}

@@ -1,0 +1,134 @@
+;; Shift a u256 word a given number of bits to the left.  The
+;; implementation performs a decomposition on the shift, starting with
+;; the most significant bit.
+fn bit_shl256(word u256, n u8) -> (res u256) {
+  var lsw u128
+  var msw u128
+  var b u1
+  var m u7
+  ;; decompose shift
+  b,m = n
+  ;;
+  if b!=0 goto apply
+  res = bit_shl256_u7(word,m)
+  return
+apply:
+  msw, lsw = word
+  res = bit_shl256_u7(lsw * 2^128, m)
+  return
+}
+
+fn bit_shl256_u7(word u256, n u7) -> (res u256) {
+  var lsw u192
+  var msw u64
+  var b u1
+  var m u6
+  ;; decompose shift
+  b,m = n
+  ;;
+  if b!=0 goto apply
+  res = bit_shl256_u6(word,m)
+  return
+apply:
+  msw, lsw = word
+  res = bit_shl256_u6(lsw * 2^64, m)
+  return
+}
+
+fn bit_shl256_u6(word u256, n u6) -> (res u256) {
+  var lsw u224
+  var msw u32
+  var b u1
+  var m u5
+  ;; decompose shift
+  b,m = n
+  ;;
+  if b!=0 goto apply
+  res = bit_shl256_u5(word,m)
+  return
+apply:
+  msw, lsw = word
+  res = bit_shl256_u5(lsw * 2^32, m)
+  return
+}
+
+fn bit_shl256_u5(word u256, n u5) -> (res u256) {
+  var lsw u240
+  var msw u16
+  var b u1
+  var m u4
+  ;; decompose shift
+  b,m = n
+  ;;
+  if b!=0 goto apply
+  res = bit_shl256_u4(word,m)
+  return
+apply:
+  msw, lsw = word
+  res = bit_shl256_u4(lsw * 2^16, m)
+  return
+}
+
+fn bit_shl256_u4(word u256, n u4) -> (res u256) {
+  var lsw u248
+  var msw u8
+  var b u1
+  var m u3
+  ;; decompose shift
+  b,m = n
+  ;;
+  if b!=0 goto apply
+  res = bit_shl256_u3(word,m)
+  return
+apply:
+  msw, lsw = word
+  res = bit_shl256_u3(lsw * 2^8, m)
+  return
+}
+
+fn bit_shl256_u3(word u256, n u3) -> (res u256) {
+  var lsw u252
+  var msw u4
+  var b u1
+  var m u2
+  ;; decompose shift
+  b,m = n
+  ;;
+  if b!=0 goto apply
+  res = bit_shl256_u2(word,m)
+  return
+apply:
+  msw, lsw = word
+  res = bit_shl256_u2(lsw * 2^4, m)
+  return
+}
+
+fn bit_shl256_u2(word u256, n u2) -> (res u256) {
+  var lsw u254
+  var msw u2
+  var b u1
+  var m u1
+  ;; decompose shift
+  b,m = n
+  ;;
+  if b!=0 goto apply
+  res = bit_shl256_u1(word,m)
+  return
+apply:
+  msw, lsw = word
+  res = bit_shl256_u1(lsw * 2^2, m)
+  return
+}
+
+fn bit_shl256_u1(word u256, n u1) -> (res u256) {
+  var lsw u255
+  var msw u1
+  ;;
+  if n!=0 goto apply
+  res = word
+  return
+apply:
+  msw, lsw = word
+  res = lsw * 2
+  return
+}

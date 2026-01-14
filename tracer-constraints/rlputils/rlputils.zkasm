@@ -1,0 +1,190 @@
+;; RLP_UTILS module
+
+include "../constants/evm.zkasm"
+include "../util/padding.zkasm"
+include "../util/byte_counting.zkasm"
+include "../util/byte_size.zkasm"
+
+;; The interface with RLP* modules is described in the spec, and here for each instruction
+
+;; The RLP_UTILS module is a helper module to compute some RLP-ifications:
+pub fn rlputils(INST=0x04 u8, DATA_1 u128, DATA_2 u128, DATA_3 u1, DATA_4 u1, DATA_5 u1) -> (DATA_6 u128, DATA_7 u128, DATA_8 u8) {
+
+   ;; used in integer_one_limb_non_zero && bytestring_non_empty_case so factorized here
+    var data_2_lt_128 u1
+    var data_2_minus_128_tmp u128
+    data_2_lt_128, data_2_minus_128_tmp = DATA_2 - 128
+
+   if INST==RLP_UTILS_INST_INTEGER              goto integer
+   if INST==RLP_UTILS_INST_BYTE_STRING_PREFIX   goto bytestring
+   if INST==RLP_UTILS_INST_BYTES32              goto eword
+   if INST==RLP_UTILS_INST_DATA_PRICING         goto data_pricing
+   goto exit_fail
+
+exit_fail:
+   fail
+
+exit_trivial:
+   DATA_6 = 0
+   DATA_7 = 0
+   DATA_8 = 0
+   return
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; This instruction computes the RLP prefix of a integer.
+;; Input: 
+;; DATA_1 = integer_hi
+;; DATA_2 = integer_lo
+;; Input bis: 
+;; DATA_3 = integer != 0
+;; DATA_4 = integer_hi != 0 
+;; DATA_5 = rlp_prefix_required == integer = 0 or integer > 128
+;; Output : 
+;; DATA_6 = rlp_prefix
+;; DATA_7 = leading_limb_left_shifted
+;; DATA_8 = leading_limb_byte_size
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+integer:
+   if DATA_1 != 0 goto integer_two_limbs
+   if DATA_4 != 0 goto exit_fail ;; sanity check that integer_hi != 0
+
+   if DATA_2 != 0 goto integer_one_limb_non_zero
+   ;; case integer == 0
+   if DATA_3 != 0 goto exit_fail ;; sanity check that integer != 0
+   if DATA_5 == 0 goto exit_fail ;; sanity check that rlp_prefix_required == 1
+   DATA_6 = 0x80000000000000000000000000000000
+   DATA_7 = 0
+   DATA_8 = 0
+   return
+
+integer_one_limb_non_zero:
+   if DATA_3 != 1 goto exit_fail ;; sanity check that integer_is_non_zero == 1
+   if data_2_lt_128 != 0 goto integer_very_low
+
+   ;; case 128 <= integer <= 2 ^128
+   if DATA_5 != 1 goto exit_fail ;; sanity check that rlp_prefix_required = true
+   DATA_8 = byte_size(DATA_2)
+   var c1 u1
+   c1, DATA_6 = (RLP_PREFIX_INT_SHORT + DATA_8) * TWO_FIVE_SIX_POWER_FIFTEEN
+   DATA_7 = rpad_128(DATA_2)
+   return
+
+integer_very_low:
+   if DATA_5 != 0 goto exit_fail ;; sanity check that rlp_prefix_required = false
+   DATA_6 = 0
+   DATA_7 = rpad_128(DATA_2)
+   DATA_8 = 1
+   return
+
+integer_two_limbs: 
+   if DATA_4 == 0 goto exit_fail ;; sanity check that integer_hi != 0
+   if DATA_5 != 1 goto exit_fail ;; sanity check that rlp_prefix_required = true
+   DATA_8 = byte_size(DATA_1)
+   var c2 u1
+   c2, DATA_6 = (RLP_PREFIX_INT_SHORT + 16 + DATA_8) * TWO_FIVE_SIX_POWER_FIFTEEN
+   DATA_7 = rpad_128(DATA_1)
+   return
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; This instruction computes the RLP prefix of a bytestring.
+;; Input: 
+;; DATA_1 == byte_string_length
+;; DATA_2 = byte_string_first_first_byte
+;; DATA_3 = byte_string_is_list
+;; Input bis: 
+;; DATA_4 = empty_byte_string = DATA_1 == 0, 
+;; DATA_5 = rlp_prefix_required == DATA_1 > 1 or (DATA_1 == 1 && DATA_2 < 128)
+;; Output : 
+;; DATA_6 = rlp_prefix
+;; DATA_8 = rlp_prefix_byte_size
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+bytestring:
+   ;; check for empty bytestring:
+   if DATA_4 != 0 goto bytestring_non_empty_case
+   if DATA_1 !=0 goto exit_fail
+   ;; empty case:
+   if DATA_5 != 1 goto exit_fail ;; there is a RLP prefix for the empty case
+   DATA_6 = (128 + (DATA_3 * RLP_FROM_INT_TO_LIST)) * TWO_FIVE_SIX_POWER_FIFTEEN
+   DATA_7 = 0
+   DATA_8 = 1
+   return
+
+bytestring_non_empty_case:
+   if DATA_5 != 0 goto bytestring_prefix_required
+   ;; prefix is not required => DATA_1 == 1 ...
+   if DATA_1 != 1 goto exit_fail
+   ;; ... and that DATA_2 < 128
+   if data_2_lt_128 != 1 goto exit_fail
+   goto exit_trivial
+
+bytestring_prefix_required:
+   DATA_7 = 0 ;; DATA_7 is not used for this instruction
+   var input_size_lt56 u1
+   var tmp2 u128
+   input_size_lt56, tmp2 = DATA_1 - 56
+   var rlp_prefix_tmp u128
+   var b3 u1
+   if input_size_lt56 != 0 goto bytestring_short_input
+   goto bytestring_long_input
+
+bytestring_long_input:
+   var size u6
+   size = byte_size(DATA_1)
+   DATA_8 = size + 1
+   rlp_prefix_tmp = rpad_128(RLP_PREFIX_INT_LONG + (DATA_3 * RLP_FROM_INT_TO_LIST) + size)
+   var rlp_prefix_suffix u120
+   rlp_prefix_suffix = rpad_128_120(DATA_1)
+   b3, DATA_6 = rlp_prefix_tmp + rlp_prefix_suffix ;; We must have equality
+   if b3 !=0 goto exit_fail ;; TODO not sure it's needed ?
+   return
+
+bytestring_short_input:
+   DATA_8 = 1
+   b3, rlp_prefix_tmp = RLP_PREFIX_INT_SHORT + (DATA_3 * RLP_FROM_INT_TO_LIST) + DATA_1
+   if b3 !=0 goto exit_fail ;; TODO not sure it's needed ?
+   DATA_6 = rpad_128(rlp_prefix_tmp)
+   return
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; This instruction does only a range check of DATA1, DATA2, a uint256
+;; Input: 
+;; DATA_1 = limb high
+;; DATA_2 = limb low
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+eword:
+   ;; Input: DATA_1:DATA_2
+   ;; proof that DATA_1:DATA_2 is a u256 is automatic
+   goto exit_trivial
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; This instruction counts the number of zeros / non zeros of a limb
+;; Input: 
+;; DATA_1 == limb (right padded)
+;; DATA_2 = nBytes
+;; Output : 
+;; DATA_6 = nb of zero
+;; DATA_7 = nb of nonzero
+;; DATA_8 = first_byte
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+data_pricing:
+   ;; 0 < DATA_2 <= 16
+   var zero123 u123
+   var data2_trm u5
+   zero123, data2_trm = DATA_2
+   if zero123 != 0 goto exit_fail
+   if data2_trm == 0 goto exit_fail
+   var b4 u1
+   var tmp_u5 u5
+   b4, tmp_u5 = 16 - data2_trm
+   if b4 != 0 goto exit_fail
+
+   var remaining u120
+   DATA_8, remaining = DATA_1
+
+   DATA_7 = counts_nz_128(DATA_1, data2_trm)
+   var b u1
+   b, DATA_6 = DATA_2 - DATA_7
+   if b != 0 goto exit_fail ;; sanity check that z + nz = nBytes
+   return
+}

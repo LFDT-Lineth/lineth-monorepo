@@ -1,0 +1,133 @@
+;; =============================================================================
+;; Bytecodes
+;; =============================================================================
+
+const EVM_INST_ADD                              = 0x01
+const EVM_INST_MUL                              = 0x02
+const EVM_INST_SUB                              = 0x03
+const EVM_INST_DIV                              = 0x04
+const EVM_INST_SDIV                             = 0x05
+const EVM_INST_MOD                              = 0x06
+const EVM_INST_SMOD                             = 0x07
+const EVM_INST_EXP                              = 0x0a
+const EVM_INST_SIGNEXTEND                       = 0x0b
+const EVM_INST_LT                               = 0x10
+const EVM_INST_GT                               = 0x11
+const EVM_INST_SLT                              = 0x12
+const EVM_INST_SGT                              = 0x13
+const EVM_INST_EQ                               = 0x14
+const EVM_INST_ISZERO                           = 0x15
+const EVM_INST_AND                              = 0x16
+const EVM_INST_OR                               = 0x17
+const EVM_INST_XOR                              = 0x18
+const EVM_INST_NOT                              = 0x19
+const EVM_INST_BYTE                             = 0x1a
+const EVM_INST_SHL                              = 0x1b
+const EVM_INST_SHR                              = 0x1c
+const EVM_INST_SAR                              = 0x1d
+const EVM_INST_CLZ                              = 0x1e
+const EVM_INST_CREATE                           = 0xF0
+const EVM_INST_CALL                             = 0xF1
+const EVM_INST_CALLCODE                         = 0xF2
+const EVM_INST_CREATE2                          = 0xF5
+
+;; =============================================================================
+;; OOB
+;; =============================================================================
+const OOB_INST_CDL                              = 0x35
+const OOB_INST_RDC                              = 0x3E
+const OOB_INST_SSTORE                           = 0x55
+const OOB_INST_JUMP                             = 0x56
+const OOB_INST_JUMPI                            = 0x57
+const OOB_INST_CALL                             = 0xCA
+const OOB_INST_XCALL                            = 0xCC
+const OOB_INST_XCREATE                          = 0xCD
+const OOB_INST_CREATE                           = 0xCE
+const OOB_INST_DEPLOYMENT                       = 0xF3
+;; type 1
+const OOB_INST_ECRECOVER                        = 0xFF01
+const OOB_INST_SHA2                             = 0xFF02
+const OOB_INST_RIPEMD                           = 0xFF03
+const OOB_INST_IDENTITY                         = 0xFF04
+const OOB_INST_ECADD                            = 0xFF06
+const OOB_INST_ECMUL                            = 0xFF07
+;; type 2
+const OOB_INST_ECPAIRING                        = 0xFF08
+const OOB_INST_POINT_EVALUATION                 = 0xFF0A
+const OOB_INST_BLS_G1_ADD                       = 0xFF0B
+const OOB_INST_BLS_G1_MSM                       = 0xFF0C
+const OOB_INST_BLS_G2_ADD                       = 0xFF0D
+const OOB_INST_BLS_G2_MSM                       = 0xFF0E
+const OOB_INST_BLS_PAIRING_CHECK                = 0xFF0F
+const OOB_INST_BLS_MAP_FP_TO_G1                 = 0xFF10
+const OOB_INST_BLS_MAP_FP2_TO_G2                = 0xFF11
+const OOB_INST_P256_VERIFY                      = 0xF100
+;; blake
+const OOB_INST_BLAKE_CDS                        = 0xFA09
+const OOB_INST_BLAKE_PARAMS                     = 0xFB09
+;; modexp
+const OOB_INST_MODEXP_CDS                       = 0xFA05
+const OOB_INST_MODEXP_XBS                       = 0xFB05
+const OOB_INST_MODEXP_LEAD                      = 0xFC05
+const OOB_INST_MODEXP_PRICING                   = 0xFD05
+const OOB_INST_MODEXP_EXTRACT                   = 0xFE05
+
+;; =============================================================================
+;; RLP*
+;; =============================================================================
+const RLP_UTILS_INST_INTEGER                    = 0x01
+const RLP_UTILS_INST_BYTE_STRING_PREFIX         = 0x02
+const RLP_UTILS_INST_BYTES32                    = 0x04
+const RLP_UTILS_INST_DATA_PRICING               = 0x08
+const RLP_PREFIX_INT_SHORT                      = 0x80     ;; RLP prefix of a short integer (< 56 bytes), defined in the EYP = 128
+const RLP_PREFIX_INT_LONG                       = 0xB7     ;; RLP prefix of a long integer  (≥ 56 bytes), defined in the EYP = 183
+const RLP_PREFIX_LIST_SHORT                     = 0xC0     ;; RLP prefix of a short list    (< 56 bytes), defined in the EYP = 192
+const RLP_PREFIX_LIST_LONG                      = 0xF7     ;; RLP prefix of a long list     (≥ 56 bytes), defined in the EYP = 247
+const RLP_PREFIX_FROM_LONG_TO_SHORT             = 0x37     ;; diff between short and long prefix = 55
+const RLP_FROM_INT_TO_LIST                      = 0x40     ;; diff between int and list prefix = 64
+const TWO_FIVE_SIX_POWER_FIFTEEN                = 0x01000000000000000000000000000000 ;; 
+
+;; =============================================================================
+;; Wcp
+;; =============================================================================
+
+const WCP_INST_GEQ = 0x0E
+const WCP_INST_LEQ = 0x0F
+
+;; =============================================================================
+;; Gas
+;; =============================================================================
+const G_CALLVALUE = 9000
+const G_CALLSTIPEND = 2300
+const G_COLDACCOUNTACCESS = 2600
+const G_EXPBYTE = 50
+const G_NEWACCOUNT = 25000
+const G_TXCREATE = 32000
+const G_WARMACCESS = 100
+;; precompiles
+const G_ECDSA = 3000
+const G_BNADD = 150
+const G_BNMUL = 6000
+const G_POINT_EVALUATION = 50000
+const G_BLS_G1_ADD = 375
+const G_BLS_G2_ADD = 600
+const G_BLS_G1_MSM_MAX_DISCOUNT = 519
+const G_BLS_G2_MSM_MAX_DISCOUNT = 524
+const G_BLS_G1_MSM_MULTIPLICATION_COST = 12000
+const G_BLS_G2_MSM_MULTIPLICATION_COST = 22500
+const G_BLS_MAP_FP_TO_G1 = 5500
+const G_BLS_MAP_FP2_TO_G2 = 23800
+const G_BLS_PAIRING_CHECK = 37700
+const G_BLS_PAIRING_CHECK_PAIR = 32600
+const G_P256_VERIFY = 6900
+const G_QUADDIVISOR = 3
+const G_MODEXP_MIN = 500
+
+;; =============================================================================
+;; Misc
+;; =============================================================================
+const MAX_CODE_SIZE = 24576
+const MAX_INIT_CODE_SIZE = 49152
+;; 2^64 - 1
+const EIP2681_MAX_NONCE=18446744073709551615
+const EIP_7823_MODEXP_UPPER_BYTE_SIZE_BOUND=1024

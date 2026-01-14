@@ -1,0 +1,30 @@
+;; The Tiny Euclidean Division Module (EUC) is used for checking small
+;; (64-bit) divisions are correct.  In addition, the function computes
+;; a ceiling for the quotient.  NOTE: the function does not permit a
+;; zero divisor
+pub fn euc(DIVIDEND u64, DIVISOR=1 u64, QUOTIENT u64, REMAINDER u64) -> (CEIL u64)
+;; PRE: DIVISOR!=0
+{
+   var val_hi, val_lo u64
+   var tmp u64
+   var b, c u1
+   ;; assert divisor is non-zero
+   if DIVISOR == 0 goto exit_f
+   ;; reconstruct value from quotient / remainder
+   val_hi,val_lo = (QUOTIENT * DIVISOR) + REMAINDER
+   ;; assert value is consistent
+   if val_hi != 0 goto exit_f
+   if val_lo != DIVIDEND goto exit_f
+   ;; assert remainder < divisor
+   b, tmp = DIVISOR - REMAINDER - 1
+   if b == 1 goto exit_f
+   ;; Compute ceiling
+   if REMAINDER == 0 goto exit_0
+   c, CEIL = QUOTIENT + 1
+   return
+exit_0:
+   CEIL = QUOTIENT
+   return
+exit_f:
+   fail
+}

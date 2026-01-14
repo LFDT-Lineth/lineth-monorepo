@@ -1,0 +1,24 @@
+
+;; XAHOY stands for "Exceptions Ahoy".  When XAHOY==1, the
+;; corresponding instruction generated an exception.  OOGX stands for
+;; "Out Of Gas Exception".  When OOGX==1, it means the corresponding
+;; instruction generated an out-of-gas exception (rather than some
+;; other exception kind).
+pub fn gas(GAS_COST u64, GAS_ACTUAL u64, XAHOY u1, OOGX u1) {
+  var tmp u64
+  var b u1
+  ;;
+  b, tmp = GAS_ACTUAL - GAS_COST
+  ;;
+  if XAHOY == 1 goto check_oogx
+  ;; no exception, so check was enough gas
+  if b == 0 goto exit
+  fail
+check_oogx:
+  ;;  exception, so check was out-of-gas
+  if OOGX == 0 goto exit
+  if b == 1 goto exit
+  fail
+exit:
+  return
+}

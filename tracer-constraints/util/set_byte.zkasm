@@ -1,0 +1,115 @@
+;; Set the nth most-significant byte with a given value, whilst
+;; leavning all other bytes untouched.  Thus, n==0 sets the most
+;; significant byte.  For example, for the following word:
+;;
+;; 0x966C1A5D4013D055D0ECE7C3FD424750A2FF5ECDA6CFC4EC4341E933301990CB
+;;
+;; Setting the second byte (i.e. n==1) to FF gives:
+;;
+;; 0x96FF1A5D4013D055D0ECE7C3FD424750A2FF5ECDA6CFC4EC4341E933301990CB
+;;
+;; Where all other bytes are unchanged.
+fn set_byte256(word u256, n u5, value u8) -> (res u256) {
+  var lo, hi, v u128
+  var m u4
+  var b u1
+  ;; split word
+  hi,lo = word
+  ;; compare against pivot
+  b,m = n - 16
+  ;;
+  if b == 0 goto exit_lo
+  ;; update hi word
+  v = set_byte128(hi, m, value)
+  ;; Recombine
+  res = (v * 2^128) + lo
+  return
+exit_lo:
+  ;; update lo word
+  v = set_byte128(lo, m, value)
+  ;; Recombine
+  res = (hi * 2^128) + v
+  return
+}
+
+fn set_byte128(word u128, n u4, value u8) -> (res u128) {
+  var lo, hi, v u64
+  var m u3
+  var b u1
+  ;; split word
+  hi,lo = word
+  ;; compare against pivot
+  b,m = n - 8
+  ;;
+  if b == 0 goto exit_lo
+  ;; update hi word
+  v = set_byte64(hi, m, value)
+  ;; Recombine
+  res = (v * 2^64) + lo
+  return
+exit_lo:
+  ;; update lo word
+  v = set_byte64(lo, m, value)
+  ;; Recombine
+  res = (hi * 2^64) + v
+  return
+}
+
+fn set_byte64(word u64, n u3, value u8) -> (res u64) {
+  var lo, hi, v u32
+  var m u2
+  var b u1
+  ;; split word
+  hi,lo = word
+  ;; compare against pivot
+  b,m = n - 4
+  ;;
+  if b == 0 goto exit_lo
+  ;; update hi word
+  v = set_byte32(hi, m, value)
+  ;; Recombine
+  res = (v * 2^32) + lo
+  return
+exit_lo:
+  ;; update lo word
+  v = set_byte32(lo, m, value)
+  ;; Recombine
+  res = (hi * 2^32) + v
+  return
+}
+
+fn set_byte32(word u32, n u2, value u8) -> (res u32) {
+  var lo, hi, v u16
+  var m, b u1
+  ;; split word
+  hi,lo = word
+  ;; compare against pivot
+  b,m = n - 2
+  ;;
+  if b == 0 goto exit_lo
+  ;; update hi word
+  v = set_byte16(hi, m, value)
+  ;; Recombine
+  res = (v * 2^16) + lo
+  return
+exit_lo:
+  ;; update lo word
+  v = set_byte16(lo, m, value)
+  ;; Recombine
+  res = (hi * 2^16) + v
+  return
+}
+
+fn set_byte16(word u16, n u1, value u8) -> (res u16) {
+  var lo, hi u8
+  ;; split word
+  hi,lo = word
+  ;;
+  if n == 1 goto exit_lo
+  res = (value * 2^8) + lo
+  return
+exit_lo:
+  ;; Recombine
+  res = (hi * 2^8) + value
+  return
+}

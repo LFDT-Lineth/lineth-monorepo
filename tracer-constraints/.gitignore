@@ -1,0 +1,13 @@
+zkevm.bin
+zkevm_london.bin
+zkevm_paris.bin
+zkevm_shanghai.bin
+zkevm_cancun.bin
+zkevm_prague.bin
+zkevm_osaka.bin
+zkevm.go.bin
+zkevm_for_reference_tests.bin
+zkevm_for_old_replay_tests.bin
+zkevm.go
+*.swp
+settings.json

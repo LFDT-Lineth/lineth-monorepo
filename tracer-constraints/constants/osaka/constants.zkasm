@@ -1,0 +1,3 @@
+const MAX_PRC_CONTIGUOUS_ADDRESS = 0x11
+;; this constant will be used once issue in go-corset is fixed https://github.com/Consensys/go-corset/issues/1284
+const P256_VERIFY_ADDRESS = 0x100
