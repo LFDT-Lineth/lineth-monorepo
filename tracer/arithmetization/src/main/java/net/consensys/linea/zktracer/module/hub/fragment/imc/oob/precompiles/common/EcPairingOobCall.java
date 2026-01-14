@@ -17,7 +17,6 @@ package net.consensys.linea.zktracer.module.hub.fragment.imc.oob.precompiles.com
 
 import static net.consensys.linea.zktracer.Trace.Ecdata.TOTAL_SIZE_ECPAIRING_DATA_MIN;
 import static net.consensys.linea.zktracer.Trace.OOB_INST_ECPAIRING;
-import static net.consensys.linea.zktracer.types.Conversions.bigIntegerToBytes;
 
 import java.math.BigInteger;
 import net.consensys.linea.zktracer.Trace;
@@ -41,7 +40,7 @@ public class EcPairingOobCall extends CommonPrecompileOobCall {
       setReturnGas(BigInteger.ZERO);
     } else {
       final Bytes precompileCost =
-         EWord.of(
+          EWord.of(
               BigInteger.valueOf(45000)
                   .add(
                       BigInteger.valueOf(34000)

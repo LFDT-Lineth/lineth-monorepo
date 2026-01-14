@@ -25,7 +25,6 @@ import net.consensys.linea.zktracer.Trace;
 import net.consensys.linea.zktracer.module.hub.Hub;
 import net.consensys.linea.zktracer.module.hub.fragment.imc.oob.OobCall;
 import net.consensys.linea.zktracer.types.EWord;
-import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 
 @Getter

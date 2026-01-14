@@ -62,10 +62,10 @@ class Web3JContractAsyncHelper(
         blobs,
         blobVersionedHashes,
       ).thenApply {
-        it ?: contractGasProvider.getGasLimit(function.name)
+        it ?: contractGasProvider.gasLimit
       }
     } else {
-      SafeFuture.completedFuture(contractGasProvider.getGasLimit(function.name))
+      SafeFuture.completedFuture(contractGasProvider.gasLimit)
     }
   }
 
@@ -164,15 +164,15 @@ class Web3JContractAsyncHelper(
   }
 
   private fun isGasProviderSupportedEIP1559(): Boolean {
-    return contractGasProvider is ContractEIP1559GasProvider && contractGasProvider.isEIP1559Enabled
+    return contractGasProvider is ContractEIP1559GasProvider
   }
 
-  private fun getEip1559GasFees(functionName: String): EIP1559GasFees {
+  private fun getEip1559GasFees(): EIP1559GasFees {
     return when (contractGasProvider) {
       is AtomicContractEIP1559GasProvider -> contractGasProvider.getEIP1559GasFees()
       is ContractEIP1559GasProvider -> EIP1559GasFees(
-        maxPriorityFeePerGas = contractGasProvider.getMaxPriorityFeePerGas(functionName).toULong(),
-        maxFeePerGas = contractGasProvider.getMaxFeePerGas(functionName).toULong(),
+        maxPriorityFeePerGas = contractGasProvider.maxPriorityFeePerGas.toULong(),
+        maxFeePerGas = contractGasProvider.maxFeePerGas.toULong(),
       )
 
       else -> throw UnsupportedOperationException("GasProvider does not support EIP1559!")
@@ -191,12 +191,12 @@ class Web3JContractAsyncHelper(
     val encodedData = FunctionEncoder.encode(function)
     val sendRawTransactionResult: EthSendTransaction =
       if (isGasProviderSupportedEIP1559()) {
-        val (maxPriorityFeePerGas, maxFeePerGas) = getEip1559GasFees(function.name)
+        val (maxPriorityFeePerGas, maxFeePerGas) = getEip1559GasFees()
         transactionManager.sendEIP1559Transaction(
           (contractGasProvider as ContractEIP1559GasProvider).chainId,
           maxPriorityFeePerGas.toBigInteger(),
           maxFeePerGas.toBigInteger(),
-          contractGasProvider.getGasLimit(function.name),
+          contractGasProvider.gasLimit,
           contractAddress,
           encodedData,
           weiValue,
@@ -204,8 +204,8 @@ class Web3JContractAsyncHelper(
         )
       } else {
         transactionManager.sendTransaction(
-          contractGasProvider.getGasPrice(function.name),
-          contractGasProvider.getGasLimit(function.name),
+          contractGasProvider.gasPrice,
+          contractGasProvider.gasLimit,
           contractAddress,
           encodedData,
           weiValue,
@@ -223,7 +223,7 @@ class Web3JContractAsyncHelper(
     gasLimit: BigInteger,
   ): CompletableFuture<EthSendTransaction> {
     val transaction = if (isGasProviderSupportedEIP1559()) {
-      val (maxPriorityFeePerGas, maxFeePerGas) = getEip1559GasFees(function.name)
+      val (maxPriorityFeePerGas, maxFeePerGas) = getEip1559GasFees()
 
       logGasPriceCapsInfo(
         logMessagePrefix = function.name,
@@ -245,7 +245,7 @@ class Web3JContractAsyncHelper(
       )
     } else {
       transactionManager.createRawTransaction(
-        gasPrice = contractGasProvider.getGasPrice(function.name),
+        gasPrice = contractGasProvider.gasPrice,
         gasLimit = gasLimit,
         to = contractAddress,
         value = weiValue,

@@ -86,9 +86,11 @@ public final class CreateOobCall extends OobCall {
   @Override
   public void setOutputs() {
     final boolean insufficientBalanceAbort = EWord.of(balance).compareTo(value) < 0;
-    final boolean callStackDepthAbort = callStackDepth.compareTo(EWord.of(MAX_CALL_STACK_DEPTH_BYTES)) >= 0;
+    final boolean callStackDepthAbort =
+        callStackDepth.compareTo(EWord.of(MAX_CALL_STACK_DEPTH_BYTES)) >= 0;
     final boolean nonzeroNonce = !nonce.isZero();
-    final boolean creatorNonceAbort = creatorNonce.compareTo(EWord.of(EIP2681_MAX_NONCE_BYTES)) >= 0;
+    final boolean creatorNonceAbort =
+        creatorNonce.compareTo(EWord.of(EIP2681_MAX_NONCE_BYTES)) >= 0;
 
     setAbortingCondition(insufficientBalanceAbort || callStackDepthAbort || creatorNonceAbort);
     setFailureCondition(!isAbortingCondition() && (isHasCode() || nonzeroNonce));

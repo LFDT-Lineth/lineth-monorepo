@@ -2,6 +2,7 @@ package linea.web3j.gas
 
 import linea.kotlin.gwei
 import linea.kotlin.toBigInteger
+import org.web3j.protocol.core.methods.request.Transaction
 import java.math.BigInteger
 
 // this class is mainly intended to be used for testing purposes
@@ -18,16 +19,12 @@ class StaticGasProvider(
     return EIP1559GasFees(maxPriorityFeePerGas, maxFeePerGas)
   }
 
-  override fun getGasPrice(p0: String?): BigInteger {
-    return maxFeePerGas.toBigInteger()
-  }
-
   @Deprecated("Deprecated in Java")
   override fun getGasPrice(): BigInteger {
     return maxFeePerGas.toBigInteger()
   }
 
-  override fun getGasLimit(p0: String?): BigInteger {
+  override fun getGasLimit(transaction: Transaction): BigInteger {
     return gasLimit.toBigInteger()
   }
 
@@ -36,19 +33,15 @@ class StaticGasProvider(
     return gasLimit.toBigInteger()
   }
 
-  override fun isEIP1559Enabled(): Boolean {
-    return true
-  }
-
   override fun getChainId(): Long {
     return _chainId
   }
 
-  override fun getMaxFeePerGas(p0: String?): BigInteger {
+  override fun getMaxFeePerGas(): BigInteger {
     return maxFeePerGas.toBigInteger()
   }
 
-  override fun getMaxPriorityFeePerGas(p0: String?): BigInteger {
+  override fun getMaxPriorityFeePerGas(): BigInteger {
     return maxPriorityFeePerGas.toBigInteger()
   }
 

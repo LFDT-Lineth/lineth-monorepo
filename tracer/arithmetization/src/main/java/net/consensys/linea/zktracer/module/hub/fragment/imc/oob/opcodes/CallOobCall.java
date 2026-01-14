@@ -65,7 +65,8 @@ public class CallOobCall extends OobCall {
   @Override
   public void setOutputs() {
     final boolean insufficientBalanceAbort = balance.compareTo(value) < 0;
-    final boolean callStackDepthAbort = callStackDepth.compareTo(EWord.of(MAX_CALL_STACK_DEPTH_BYTES)) >= 0;
+    final boolean callStackDepthAbort =
+        callStackDepth.compareTo(EWord.of(MAX_CALL_STACK_DEPTH_BYTES)) >= 0;
     setAbortingCondition(insufficientBalanceAbort || callStackDepthAbort);
   }
 

@@ -255,9 +255,9 @@ class EthGetBlockToLineaBlockMapperTest {
       Assertions.assertThat(besuTx.maxPriorityFeePerGas).isEmpty()
       val accessList = besuTx.accessList.getOrElse { Assertions.fail("AccessList is empty") }
 
-      Assertions.assertThat(accessList.get(0).address)
+      Assertions.assertThat(accessList[0].address)
         .isEqualTo(Address.fromHexString("0x8d97689c9818892b700e27f316cc3e41e17fbeb9"))
-      Assertions.assertThat(accessList.get(0).storageKeys)
+      Assertions.assertThat(accessList[0].storageKeys)
         .containsExactly(
           Bytes32.fromHexString("0x0000000000000000000000000000000000000000000000000000000000000000"),
           Bytes32.fromHexString("0x0000000000000000000000000000000000000000000000000000000000000001"),

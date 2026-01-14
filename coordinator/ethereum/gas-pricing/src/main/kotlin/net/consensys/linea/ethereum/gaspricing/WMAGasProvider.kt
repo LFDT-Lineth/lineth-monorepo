@@ -5,6 +5,7 @@ import linea.web3j.gas.AtomicContractEIP1559GasProvider
 import linea.web3j.gas.EIP1559GasFees
 import linea.web3j.gas.EIP4844GasFees
 import linea.web3j.gas.EIP4844GasProvider
+import org.web3j.protocol.core.methods.request.Transaction
 import java.math.BigInteger
 import kotlin.math.min
 
@@ -23,8 +24,7 @@ class WMAGasProvider(
   )
 
   private fun getRecentFees(): EIP4844GasFees {
-    return feesFetcher.getL1EthGasPriceData().thenApply {
-        feesData ->
+    return feesFetcher.getL1EthGasPriceData().thenApply { feesData ->
       val maxPriorityFeePerGas =
         priorityFeeCalculator.calculateFees(feesData)
           .coerceAtMost(config.maxPriorityFeePerGasCap.toDouble())
@@ -40,19 +40,13 @@ class WMAGasProvider(
     }.get()
   }
 
-  @Suppress("Deprecation")
-  override fun getGasPrice(contractFunc: String?): BigInteger {
-    return gasPrice
-  }
-
   @Deprecated("Deprecated in Java")
   override fun getGasPrice(): BigInteger {
     throw NotImplementedError("EIP1559GasProvider only implements EIP1559 specific methods")
   }
 
-  @Suppress("Deprecation")
-  override fun getGasLimit(contractFunc: String?): BigInteger {
-    return gasLimit
+  override fun getGasLimit(transaction: Transaction?): BigInteger {
+    return config.gasLimit.toBigInteger()
   }
 
   @Deprecated("Deprecated in Java")
@@ -60,19 +54,15 @@ class WMAGasProvider(
     return config.gasLimit.toBigInteger()
   }
 
-  override fun isEIP1559Enabled(): Boolean {
-    return true
-  }
-
   override fun getChainId(): Long {
     return chainId
   }
 
-  override fun getMaxFeePerGas(contractFunc: String?): BigInteger {
+  override fun getMaxFeePerGas(): BigInteger {
     return min(getRecentFees().eip1559GasFees.maxFeePerGas, config.maxFeePerGasCap).toBigInteger()
   }
 
-  override fun getMaxPriorityFeePerGas(contractFunc: String?): BigInteger {
+  override fun getMaxPriorityFeePerGas(): BigInteger {
     return min(getRecentFees().eip1559GasFees.maxPriorityFeePerGas, config.maxFeePerGasCap).toBigInteger()
   }
 

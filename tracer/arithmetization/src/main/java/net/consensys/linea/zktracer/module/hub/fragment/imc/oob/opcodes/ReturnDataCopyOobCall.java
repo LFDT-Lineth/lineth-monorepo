@@ -18,7 +18,6 @@ package net.consensys.linea.zktracer.module.hub.fragment.imc.oob.opcodes;
 import static net.consensys.linea.zktracer.Trace.OOB_INST_RDC;
 import static net.consensys.linea.zktracer.types.Conversions.*;
 
-import java.math.BigInteger;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
@@ -26,7 +25,6 @@ import net.consensys.linea.zktracer.Trace;
 import net.consensys.linea.zktracer.module.hub.Hub;
 import net.consensys.linea.zktracer.module.hub.fragment.imc.oob.OobCall;
 import net.consensys.linea.zktracer.types.EWord;
-import org.apache.tuweni.bytes.Bytes;
 import org.hyperledger.besu.evm.frame.MessageFrame;
 
 @Getter

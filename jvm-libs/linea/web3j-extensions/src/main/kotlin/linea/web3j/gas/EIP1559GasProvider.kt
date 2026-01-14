@@ -4,9 +4,9 @@ import linea.domain.BlockParameter
 import linea.ethapi.EthApiClient
 import linea.kotlin.toBigInteger
 import linea.kotlin.toIntervalString
-import linea.web3j.domain.blocksRange
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
+import org.web3j.protocol.core.methods.request.Transaction
 import java.math.BigInteger
 import kotlin.math.min
 
@@ -30,7 +30,6 @@ class EIP1559GasProvider(private val ethApiClient: EthApiClient, private val con
   private val chainId: Long = ethApiClient.ethChainId().get().toLong()
   private var cacheIsValidForBlockNumber: BigInteger = BigInteger.ZERO
   private var feesCache: EIP1559GasFees = getRecentFees()
-  private var gasLimitOverride = BigInteger.valueOf(Long.MAX_VALUE)
 
   private fun getRecentFees(): EIP1559GasFees {
     val currentBlockNumber = ethApiClient.ethBlockNumber().get().toBigInteger()
@@ -78,28 +77,13 @@ class EIP1559GasProvider(private val ethApiClient: EthApiClient, private val con
     return feesCache
   }
 
-  override fun getGasPrice(contractFunc: String?): BigInteger {
-    throw NotImplementedError("EIP1559GasProvider only implements EIP1559 specific methods")
-  }
-
   @Deprecated("Deprecated in Java")
   override fun getGasPrice(): BigInteger {
     throw NotImplementedError("EIP1559GasProvider only implements EIP1559 specific methods")
   }
 
-  fun overrideNextGasLimit(gasLimit: BigInteger) {
-    gasLimitOverride = gasLimit
-  }
-
-  private fun resetGasLimitOverride() {
-    gasLimitOverride = BigInteger.valueOf(Long.MAX_VALUE)
-  }
-
-  override fun getGasLimit(contractFunc: String?): BigInteger {
-    val gasLimit = gasLimitOverride.min(config.gasLimit.toBigInteger())
-    resetGasLimitOverride()
-
-    return gasLimit
+  override fun getGasLimit(transaction: Transaction): BigInteger {
+    return config.gasLimit.toBigInteger()
   }
 
   @Deprecated("Deprecated in Java")
@@ -107,19 +91,15 @@ class EIP1559GasProvider(private val ethApiClient: EthApiClient, private val con
     return config.gasLimit.toBigInteger()
   }
 
-  override fun isEIP1559Enabled(): Boolean {
-    return true
-  }
-
   override fun getChainId(): Long {
     return chainId
   }
 
-  override fun getMaxFeePerGas(contractFunc: String?): BigInteger {
+  override fun getMaxFeePerGas(): BigInteger {
     return getRecentFees().maxFeePerGas.toBigInteger()
   }
 
-  override fun getMaxPriorityFeePerGas(contractFunc: String?): BigInteger {
+  override fun getMaxPriorityFeePerGas(): BigInteger {
     return getRecentFees().maxPriorityFeePerGas.toBigInteger()
   }
 

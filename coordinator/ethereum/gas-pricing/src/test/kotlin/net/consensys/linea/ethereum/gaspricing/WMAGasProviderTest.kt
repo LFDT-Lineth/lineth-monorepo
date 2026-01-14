@@ -52,7 +52,7 @@ class WMAGasProviderTest {
 
     // WMA = (140*0.0) + ((1000*0.25*1 + 1100*0.5*2 + 1200*0.75*3 + 1300*0.9*4) / (0.25*1 + 0.5*2 + 0.75*3 + 0.9*4)) * 1.0 = 1229.57746
     // MaxFeePerGas = min(140*2 + 1229.57746, 100000000) = 1509.57
-    val calculatedMaxFeePerGas = wmaGasProvider.getMaxFeePerGas(null).toULong()
+    val calculatedMaxFeePerGas = wmaGasProvider.getMaxFeePerGas().toULong()
     assertThat(calculatedMaxFeePerGas).isEqualTo(1509uL) // 1509.57 rounded down
   }
 
@@ -74,7 +74,7 @@ class WMAGasProviderTest {
         ),
       )
 
-    val calculatedMaxPriorityFeePerGas = wmaGasProvider.getMaxPriorityFeePerGas(null).toULong()
+    val calculatedMaxPriorityFeePerGas = wmaGasProvider.getMaxPriorityFeePerGas().toULong()
     assertThat(calculatedMaxPriorityFeePerGas).isEqualTo(1229uL) // 1229.57 rounded down
   }
 
@@ -96,7 +96,7 @@ class WMAGasProviderTest {
         ),
       )
 
-    val calculatedMaxFeePerGas = wmaGasProvider.getMaxFeePerGas(null).toULong()
+    val calculatedMaxFeePerGas = wmaGasProvider.getMaxFeePerGas().toULong()
     assertThat(calculatedMaxFeePerGas).isEqualTo(maxFeePerGasCap)
   }
 
@@ -118,7 +118,7 @@ class WMAGasProviderTest {
         ),
       )
 
-    val calculatedMaxPriorityFeePerGas = wmaGasProvider.getMaxPriorityFeePerGas(null).toULong()
+    val calculatedMaxPriorityFeePerGas = wmaGasProvider.getMaxPriorityFeePerGas().toULong()
     assertThat(calculatedMaxPriorityFeePerGas).isEqualTo(maxPriorityFeePerGasCap)
   }
 

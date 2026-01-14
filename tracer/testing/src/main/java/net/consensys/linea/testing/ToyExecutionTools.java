@@ -300,7 +300,9 @@ public class ToyExecutionTools {
             // For gas cost purposes, we don't care about the Type of the message frame
             .type(MessageFrame.Type.MESSAGE_CALL)
             .initialGas(LINEA_BLOCK_GAS_LIMIT)
-            .code(evm.getOrCreateCachedJumpDest(receiverAccount.getCodeHash(), receiverAccount.getCode()))
+            .code(
+                evm.getOrCreateCachedJumpDest(
+                    receiverAccount.getCodeHash(), receiverAccount.getCode()))
             .build();
 
     Deque<MessageFrame> messageFrameStack = initialMessageFrame.getMessageFrameStack();

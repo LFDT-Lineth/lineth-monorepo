@@ -19,7 +19,6 @@ import static net.consensys.linea.zktracer.Trace.GAS_CONST_BLS_PAIRING_CHECK;
 import static net.consensys.linea.zktracer.Trace.GAS_CONST_BLS_PAIRING_CHECK_PAIR;
 import static net.consensys.linea.zktracer.Trace.OOB_INST_BLS_PAIRING_CHECK;
 import static net.consensys.linea.zktracer.Trace.PRECOMPILE_CALL_DATA_UNIT_SIZE___BLS_PAIRING_CHECK;
-import static net.consensys.linea.zktracer.types.Conversions.bigIntegerToBytes;
 
 import java.math.BigInteger;
 import net.consensys.linea.zktracer.Trace;
