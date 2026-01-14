@@ -1,12 +1,6 @@
-[submodule "constraints"]
-	path = constraints
-	url = git@github.com:ConsenSys/zkevm-constraints.git
 [submodule "go-corset"]
 	path = go-corset
 	url = git@github.com:Consensys/go-corset.git
 [submodule "contracts/lib/forge-std"]
 	path = contracts/lib/forge-std
 	url = https://github.com/foundry-rs/forge-std
-[submodule "linea-constraints"]
-	path = tracer/linea-constraints
-	url = https://github.com/Consensys/linea-constraints
