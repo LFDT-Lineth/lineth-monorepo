@@ -183,6 +183,7 @@ jobs:
           docker logs l1-el-node --since 1h &>> docker_logs/l1-el-node.txt || true
           docker logs l1-cl-node --since 1h &>> docker_logs/l1-cl-node.txt || true
           docker logs maru --since 1h &>> docker_logs/maru.txt || true
+          docker exec -i -e PGPASSWORD=${POSTGRES_PASSWORD:-postgres} postgres pg_dumpall -U ${POSTGRES_USER:-postgres} > docker_logs/db_dump.sql || true
       - name: Archive debug logs
         uses: actions/upload-artifact@v4
         if: ${{ failure() && inputs.e2e-tests-logs-dump }}

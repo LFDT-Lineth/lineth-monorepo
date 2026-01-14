@@ -127,7 +127,7 @@
     <!--    <Logger name="clients" level="DEBUG" additivity="false">-->
     <!--      <appender-ref ref="console"/>-->
     <!--    </Logger>-->
-    <Root level="INFO" additivity="true">
+    <Root level="DEBUG" additivity="true">
       <appender-ref ref="console"/>
       <!-- <appender-ref ref="consoleJSON"/>-->
       <!-- <appender-ref ref="consoleJSONCustom"/>-->
