@@ -1,0 +1,15 @@
+(module blsdata)
+
+(defun (pairing-check-first-input-hypothesis)
+  (* DATA_BLS_PAIRING_CHECK_FLAG (first_row_of_new_first_input)))
+
+(defconstraint internal-checks-pairing-check-first-input (:guard (pairing-check-first-input-hypothesis))
+  (let ((A_x_3 LIMB)
+        (A_x_2 (shift LIMB 1))
+        (A_x_1 (shift LIMB 2))
+        (A_x_0 (shift LIMB 3))
+        (A_y_3 (shift LIMB 4))
+        (A_y_2 (shift LIMB 5))
+        (A_y_1 (shift LIMB 6))
+        (A_y_0 (shift LIMB 7)))
+    (wellFormedFpCoordinatesAndInfinityCheck 0 A_x_3 A_x_2 A_x_1 A_x_0 A_y_3 A_y_2 A_y_1 A_y_0)))

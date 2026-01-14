@@ -1,0 +1,1358 @@
+include "../constants/evm.zkasm"
+include "oob_modexp.zkasm"
+
+;; The Out-Of-Bounds Precompiles (OOBPRC) module performs various "out
+;; of bounds" and related checks for the various precompile calls.  A
+;; key aspect of what this function does is dispatch based on the
+;; instruction to the relevant set of checks.
+;;
+fn oob_prc(INST=0xFF01 u16, DATA_1 u128, DATA_2 u128, DATA_3 u128, DATA_4 u128, DATA_5 u128, DATA_6 u128, DATA_7 u128, DATA_8 u128, DATA_9 u128, DATA_10 u128) -> (dummy=1 u1) {
+  var return_gas u128
+  var tmp u96
+  var cds u32
+  var inst_hi, inst_lo u8
+  var success, extract_cd, empty_cd, rc_nz u1
+  ;; split instruction
+  inst_hi, inst_lo = INST
+  ;; type 1 & 2 checks
+  if inst_hi == 0xFF goto oob_type12
+  if inst_hi == 0xF1 goto oob_type12
+  ;; blake
+  if INST == OOB_INST_BLAKE_CDS goto oob_blake_cds
+  if INST == OOB_INST_BLAKE_PARAMS goto oob_blake_pricing
+  ;; modexp
+  dummy = oob_modexp(INST,DATA_1,DATA_2,DATA_3,DATA_4,DATA_5,DATA_6,DATA_7,DATA_8,DATA_9,DATA_10)
+  return
+
+;; -------------------------------------------------------------------
+;; ECRECOVER / SHA2 / RIPEMD / IDENT / ECADD / ECMUL (type 1)
+;; --
+;; ECPAIRING / POINTEVAL / BLS_XXX (type 2)
+;; -------------------------------------------------------------------
+;; Check: (a) success <==> (gas_cost <= callee_gas && valid_cds); (b)
+;; if success then return_gas == callee_gas - gas_cost else return_gas
+;; == 0; (c) extract_call_data <==> (success && cds != 0); (d)
+;; r@c_nonzero <==> r@c != 0.
+;;
+;; [in]           DATA_1 = callee_gas
+;; [in]           DATA_2 = call_data_size (cds)
+;; [in,binary?]   DATA_3 = return_at_capacity (r@c)
+;; --
+;; [out,binary]   DATA_4 = success
+;; [out]          DATA_5 = return_gas
+;; [out,binary]   DATA_6 = extract_call_data [binary]
+;; [out,binary]   DATA_7 = empty_call_data [binary]
+;; [out,binary]   DATA_8 = r@c_non_zero
+;;
+;; NOTE: the call_data_size for type 1 instructions is always valid;
+;; for type 2 instructions, there are restrictions depending on the
+;; case (e.g. POINTEVAL requires cds == 192).
+oob_type12:
+  ;; cast call_data_size
+  tmp,cds = DATA_2
+  if tmp != 0 goto exit_f
+  ;;
+  success, return_gas, extract_cd, empty_cd, rc_nz = oob_prc_pricing(INST, DATA_1, cds, DATA_3)
+  ;; check predictions
+  if success != DATA_4 goto exit_f
+  if return_gas != DATA_5 goto exit_f
+  if extract_cd != DATA_6 goto exit_f
+  if empty_cd != DATA_7 goto exit_f
+  if rc_nz != DATA_8 goto exit_f
+  ;; passed
+  goto exit_s
+
+;; -------------------------------------------------------------------
+;; BLAKE_CDS
+;; -------------------------------------------------------------------
+;; Check: (a) success <==> (cds == 213); (b) r@c_nonzero <==>
+;; r@c != 0.
+;;
+;; [in]          DATA_2 = call_data_size (cds)
+;; [in,binary?]  DATA_3 = return_at_capacity (r@c)
+;; --
+;; [out,binary]  DATA_4 = success
+;; [out,binary]  DATA_8 = r@c_non_zero
+;;
+;; NOTES: see EIP-152.
+oob_blake_cds:
+  success, return_gas, rc_nz = oob_prc_blake(INST, 0, DATA_2, DATA_3)
+  ;; check predictions
+  if success != DATA_4 goto exit_f
+  if rc_nz != DATA_8 goto exit_f
+  ;; passed
+  goto exit_s
+
+;; ECPAIRING / POINTEVAL / BLS_XXX (type 2)
+;; -------------------------------------------------------------------
+;; Check: (a) success <==> (r <= callee_gas && f is u1); (b) if
+;; success then return_gas == callee_gas - r else return_gas == 0.
+;;
+;; [in]          DATA_1 = callee_gas
+;; [in]          DATA_6 = rounds (r)
+;; [in]          DATA_7 = indicator flag (f)
+;; --
+;; [out,binary]  DATA_4 = success
+;; [out]         DATA_5 = return_gas
+;;
+;; NOTES: see EIP-152.  The gas_cost for BLAKE is the number of
+;; rounds.
+oob_blake_pricing:
+  success, return_gas, rc_nz = oob_prc_blake(INST, DATA_1, DATA_6, DATA_7)
+  ;; check predictions
+  if success != DATA_4 goto exit_f
+  if return_gas != DATA_5 goto exit_f
+  ;; fall thru
+exit_s:
+  dummy = 1
+  return
+exit_f:
+  fail
+}
+
+fn oob_prc_blake(inst=0xFA09 u16, callee_gas u128, cds_rounds u128, rc_f u128) -> (success u1, return_gas u128, rc_nz u1) {
+   var delta u128
+   var b u1
+   ;;
+   if inst == OOB_INST_BLAKE_CDS goto blake_cds
+   if inst == OOB_INST_BLAKE_PARAMS goto blake_params
+   fail
+
+blake_cds:
+  ;; calculate r@c != 0
+  rc_nz = rc_f != 0 ? 1 : 0
+  ;; check cds==213
+  success = cds_rounds == 213 ? 1 : 0
+  return_gas = 0
+  return
+
+blake_params:
+  rc_nz = 0
+  ;; check gas_cost <= rounds
+  b, delta = callee_gas - cds_rounds
+  if b != 0 goto exit_f
+  if rc_f == 0 goto exit_s
+  if rc_f == 1 goto exit_s
+exit_f:
+  success = 0
+  return_gas = 0
+  return
+exit_s:
+  success = 1
+  return_gas = delta
+  return
+}
+
+;; Perform required gas cost calculations and checks for precompiles (except modexp)
+fn oob_prc_pricing(inst=0xFF01 u16, callee_gas u128, cds u32, r_c u128) -> (success u1, return_gas u128, extract_call_data u1, empty_call_data u1, rc_nz u1) {
+  var delta u128
+  var gas_cost u34
+  var cds_valid u1
+  var b u1
+  ;; calculate r@c != 0
+  rc_nz = r_c != 0 ? 1 : 0
+  ;; calculate gas_cost
+  gas_cost = oob_gas_cost(inst, cds)
+  ;; check gas_cost <= callee_gas
+  b, delta = callee_gas - gas_cost
+  if b != 0 goto exit_f
+  ;; cds validity
+  cds_valid = oob_cds_valid(inst,cds)
+  if inst == OOB_INST_P256_VERIFY goto p256verify
+  if cds_valid == 0 goto exit_f  
+  success = 1
+  return_gas = delta
+  extract_call_data = cds != 0 ? 1 : 0
+  empty_call_data = 1 - extract_call_data
+  return
+p256verify:
+  success = 1
+  return_gas = delta
+  extract_call_data = cds == 160 ? 1 : 0
+  empty_call_data = 0
+  return  
+exit_f:
+  success = 0
+  return_gas = 0
+  extract_call_data = 0
+  empty_call_data = 0
+  return
+}
+
+;; Perform call_data_size (cds) validity checking as needed for the
+;; instruction.  Observe that only a few instructions have
+;; validity checks (e.g. for example, the ECPAIRING precompile
+;; requires that cds%192==0.
+fn oob_cds_valid(INST=0xFF01 u16, call_data_size u32) -> (cds_valid=1 u1) {
+  var quot, rem, wit u32
+  var witsum u33
+  var sum u64
+  var divisor u16
+  ;;
+  if INST == OOB_INST_ECPAIRING goto cds_mod192
+  if INST == OOB_INST_BLAKE_CDS goto cds_213
+  if INST == OOB_INST_POINT_EVALUATION goto cds_192
+  if INST == OOB_INST_BLS_G1_ADD goto cds_256
+  if INST == OOB_INST_BLS_G2_ADD goto cds_512
+  if INST == OOB_INST_BLS_MAP_FP_TO_G1 goto cds_64
+  if INST == OOB_INST_BLS_MAP_FP2_TO_G2 goto cds_128
+  if INST == OOB_INST_BLS_G1_MSM goto cds_mod160nz
+  if INST == OOB_INST_BLS_G2_MSM goto cds_mod288nz
+  if INST == OOB_INST_BLS_PAIRING_CHECK goto cds_mod384nz
+  ;; default case
+  goto exit_s
+cds_64:
+  if call_data_size == 64 goto exit_s
+  goto exit_f
+cds_128:
+  if call_data_size == 128 goto exit_s
+  goto exit_f
+cds_192:
+  if call_data_size == 192 goto exit_s
+  goto exit_f
+cds_213:
+  if call_data_size == 213 goto exit_s
+  goto exit_f
+cds_256:
+  if call_data_size == 256 goto exit_s
+  goto exit_f
+cds_512:
+  if call_data_size == 512 goto exit_s
+  goto exit_f
+cds_mod160nz:
+  ;; check cds%160==0 ∧ cds!=0
+  divisor = 160
+  goto cds_mod_nz
+cds_mod192:
+  ;; check cds%192==0
+  divisor = 192
+  goto cds_mod
+cds_mod288nz:
+  ;; check cds%288==0 ∧ cds!=0
+  divisor = 288
+  goto cds_mod_nz
+cds_mod384nz:
+  ;; check cds%384==0 ∧ cds!=0
+  divisor = 384
+  goto cds_mod_nz
+cds_mod_nz:
+  ;; ensure cds != 0
+  if call_data_size == 0 goto exit_f
+cds_mod:
+  ;; compute cds%288
+  quot,rem,wit,sum,witsum = call_data_size / divisor
+  ;; check cds%288==0
+  if rem==0 goto exit_s
+  goto exit_f
+exit_f:
+  cds_valid = 0
+  return
+exit_s:
+  cds_valid = 1
+  return
+}
+
+;; Compute the gas cost for a given precompile
+fn oob_gas_cost(INST=0xFF01 u16, call_data_size u32) -> (gas_cost=3000 u34) {
+  var d u32
+  var k,r,w,w2,c,tmp1,tmp2 u32
+  var s, s2 u64
+  var ws, ws2 u33
+  var discount u16
+  ;;
+  if INST == OOB_INST_ECRECOVER goto ecrecover
+  if INST == OOB_INST_SHA2 goto sha2
+  if INST == OOB_INST_RIPEMD goto ripemd
+  if INST == OOB_INST_IDENTITY goto identity
+  if INST == OOB_INST_ECADD goto ecadd
+  if INST == OOB_INST_ECMUL goto ecmul
+  if INST == OOB_INST_ECPAIRING goto ecpairing
+  if INST == OOB_INST_BLAKE_CDS goto blake_cds
+  if INST == OOB_INST_MODEXP_PRICING goto modexp
+  if INST == OOB_INST_POINT_EVALUATION goto pointeval
+  if INST == OOB_INST_BLS_G1_ADD goto bls_g1add
+  if INST == OOB_INST_BLS_G2_ADD goto bls_g2add
+  if INST == OOB_INST_BLS_MAP_FP_TO_G1 goto bls_mapfpg1
+  if INST == OOB_INST_BLS_MAP_FP2_TO_G2 goto bls_mapfp2g2
+  if INST == OOB_INST_BLS_G1_MSM goto bls_g1msm
+  if INST == OOB_INST_BLS_G2_MSM goto bls_g2msm
+  if INST == OOB_INST_BLS_PAIRING_CHECK goto bls_pairing
+  if INST == OOB_INST_P256_VERIFY goto p256_verify
+  fail
+ecrecover:
+  gas_cost = G_ECDSA
+  return
+sha2:
+  d = ceil_div(call_data_size,32)
+  c,gas_cost = 60 + (12 * d)
+  return
+ripemd:
+  d = ceil_div(call_data_size,32)
+  c,gas_cost = 600 + (120 * d)
+  return
+identity:
+  d = ceil_div(call_data_size,32)
+  gas_cost = 15 + (3 * d)
+  return
+ecadd:
+  gas_cost = G_BNADD
+  return
+ecmul:
+  gas_cost = G_BNMUL
+  return
+ecpairing:
+  d,r,w,s,ws = call_data_size / 192
+  c,gas_cost = (d * 34000) + 45000
+  return
+blake_cds:
+  gas_cost = 0
+  return
+modexp:
+  fail
+pointeval:
+  gas_cost = G_POINT_EVALUATION
+  return
+bls_g1add:
+  gas_cost = G_BLS_G1_ADD
+  return
+bls_g2add:
+  gas_cost = G_BLS_G2_ADD
+  return
+bls_mapfpg1:
+  gas_cost = G_BLS_MAP_FP_TO_G1
+  return
+bls_mapfp2g2:
+  gas_cost = G_BLS_MAP_FP2_TO_G2
+  return
+bls_g1msm:
+  k,r,w,s,ws = call_data_size / 160
+  discount = g1_discount(k)
+  tmp1, tmp2 = k * G_BLS_G1_MSM_MULTIPLICATION_COST * discount
+  if tmp1 != 0 goto exit_f
+  gas_cost,c,w2,s2,ws2 = tmp2 / 1000
+  return
+bls_g2msm:
+  k,r,w,s,ws = call_data_size / 288
+  discount = g2_discount(k)
+  tmp1, tmp2 = k * G_BLS_G2_MSM_MULTIPLICATION_COST * discount
+  if tmp1 != 0 goto exit_f
+  gas_cost,c,w2,s2,ws2 = tmp2 / 1000
+  return
+bls_pairing:
+  k,r,w,s,ws = call_data_size / 384
+  c,gas_cost = (k * 32600) + 37700
+  return
+p256_verify:
+  gas_cost = G_P256_VERIFY
+  return
+exit_f:
+  fail
+}
+
+;; compute ⌈x / y⌉ for y==8 or y==32
+fn ceil_div(x u32, y=32 u6) -> (res u30) {
+  var hi u29
+  var lo8 u3
+  var lo32 u5
+  ;; check which type
+  if y == 8 goto div8
+  if y == 32 goto div32
+  fail
+div8:
+  hi,lo8 = x
+  ;; apply ceil
+  if lo8 != 0 goto round_up
+  goto exact
+div32:
+  hi,lo32 = x
+  ;; apply ceil
+  if lo32 != 0 goto round_up
+exact:
+  res = hi
+  return
+round_up:
+  res = hi + 1
+  return
+}
+
+;; TODO: this is only a temporary solution for now. Eventually, it
+;; should be replaced with a static reference table.
+;;
+;; NOTES: see EIP-2537.
+fn g1_discount(k=1 u32) -> (discount=1000 u16) {
+  if k==1 goto discount_1000
+  if k==2 goto discount_949
+  if k==3 goto discount_848
+  if k==4 goto discount_797
+  if k==5 goto discount_764
+  if k==6 goto discount_750
+  if k==7 goto discount_738
+  if k==8 goto discount_728
+  if k==9 goto discount_719
+  if k==10 goto discount_712
+  if k==11 goto discount_705
+  if k==12 goto discount_698
+  if k==13 goto discount_692
+  if k==14 goto discount_687
+  if k==15 goto discount_682
+  if k==16 goto discount_677
+  if k==17 goto discount_673
+  if k==18 goto discount_669
+  if k==19 goto discount_665
+  if k==20 goto discount_661
+  if k==21 goto discount_658
+  if k==22 goto discount_654
+  if k==23 goto discount_651
+  if k==24 goto discount_648
+  if k==25 goto discount_645
+  if k==26 goto discount_642
+  if k==27 goto discount_640
+  if k==28 goto discount_637
+  if k==29 goto discount_635
+  if k==30 goto discount_632
+  if k==31 goto discount_630
+  if k==32 goto discount_627
+  if k==33 goto discount_625
+  if k==34 goto discount_623
+  if k==35 goto discount_621
+  if k==36 goto discount_619
+  if k==37 goto discount_617
+  if k==38 goto discount_615
+  if k==39 goto discount_613
+  if k==40 goto discount_611
+  if k==41 goto discount_609
+  if k==42 goto discount_608
+  if k==43 goto discount_606
+  if k==44 goto discount_604
+  if k==45 goto discount_603
+  if k==46 goto discount_601
+  if k==47 goto discount_599
+  if k==48 goto discount_598
+  if k==49 goto discount_596
+  if k==50 goto discount_595
+  if k==51 goto discount_593
+  if k==52 goto discount_592
+  if k==53 goto discount_591
+  if k==54 goto discount_589
+  if k==55 goto discount_588
+  if k==56 goto discount_586
+  if k==57 goto discount_585
+  if k==58 goto discount_584
+  if k==59 goto discount_582
+  if k==60 goto discount_581
+  if k==61 goto discount_580
+  if k==62 goto discount_579
+  if k==63 goto discount_577
+  if k==64 goto discount_576
+  if k==65 goto discount_575
+  if k==66 goto discount_574
+  if k==67 goto discount_573
+  if k==68 goto discount_572
+  if k==69 goto discount_570
+  if k==70 goto discount_569
+  if k==71 goto discount_568
+  if k==72 goto discount_567
+  if k==73 goto discount_566
+  if k==74 goto discount_565
+  if k==75 goto discount_564
+  if k==76 goto discount_563
+  if k==77 goto discount_562
+  if k==78 goto discount_561
+  if k==79 goto discount_560
+  if k==80 goto discount_559
+  if k==81 goto discount_558
+  if k==82 goto discount_557
+  if k==83 goto discount_556
+  if k==84 goto discount_555
+  if k==85 goto discount_554
+  if k==86 goto discount_553
+  if k==87 goto discount_552
+  if k==88 goto discount_551
+  if k==89 goto discount_550
+  if k==90 goto discount_549
+  if k==91 goto discount_548
+  if k==92 goto discount_547
+  if k==93 goto discount_547
+  if k==94 goto discount_546
+  if k==95 goto discount_545
+  if k==96 goto discount_544
+  if k==97 goto discount_543
+  if k==98 goto discount_542
+  if k==99 goto discount_541
+  if k==100 goto discount_540
+  if k==101 goto discount_540
+  if k==102 goto discount_539
+  if k==103 goto discount_538
+  if k==104 goto discount_537
+  if k==105 goto discount_536
+  if k==106 goto discount_536
+  if k==107 goto discount_535
+  if k==108 goto discount_534
+  if k==109 goto discount_533
+  if k==110 goto discount_532
+  if k==111 goto discount_532
+  if k==112 goto discount_531
+  if k==113 goto discount_530
+  if k==114 goto discount_529
+  if k==115 goto discount_528
+  if k==116 goto discount_528
+  if k==117 goto discount_527
+  if k==118 goto discount_526
+  if k==119 goto discount_525
+  if k==120 goto discount_525
+  if k==121 goto discount_524
+  if k==122 goto discount_523
+  if k==123 goto discount_522
+  if k==124 goto discount_522
+  if k==125 goto discount_521
+  if k==126 goto discount_520
+  if k==127 goto discount_520
+  ;; default
+  discount = G_BLS_G1_MSM_MAX_DISCOUNT
+  return
+discount_623:
+  discount = 623
+  return
+discount_611:
+  discount = 611
+  return
+discount_581:
+  discount = 581
+  return
+discount_547:
+  discount = 547
+  return
+discount_546:
+  discount = 546
+  return
+discount_1000:
+  discount = 1000
+  return
+discount_692:
+  discount = 692
+  return
+discount_566:
+  discount = 566
+  return
+discount_548:
+  discount = 548
+  return
+discount_544:
+  discount = 544
+  return
+discount_527:
+  discount = 527
+  return
+discount_523:
+  discount = 523
+  return
+discount_521:
+  discount = 521
+  return
+discount_642:
+  discount = 642
+  return
+discount_619:
+  discount = 619
+  return
+discount_595:
+  discount = 595
+  return
+discount_592:
+  discount = 592
+  return
+discount_589:
+  discount = 589
+  return
+discount_585:
+  discount = 585
+  return
+discount_568:
+  discount = 568
+  return
+discount_535:
+  discount = 535
+  return
+discount_574:
+  discount = 574
+  return
+discount_738:
+  discount = 738
+  return
+discount_705:
+  discount = 705
+  return
+discount_577:
+  discount = 577
+  return
+discount_564:
+  discount = 564
+  return
+discount_728:
+  discount = 728
+  return
+discount_627:
+  discount = 627
+  return
+discount_542:
+  discount = 542
+  return
+discount_687:
+  discount = 687
+  return
+discount_580:
+  discount = 580
+  return
+discount_540:
+  discount = 540
+  return
+discount_557:
+  discount = 557
+  return
+discount_645:
+  discount = 645
+  return
+discount_661:
+  discount = 661
+  return
+discount_613:
+  discount = 613
+  return
+discount_604:
+  discount = 604
+  return
+discount_572:
+  discount = 572
+  return
+discount_658:
+  discount = 658
+  return
+discount_848:
+  discount = 848
+  return
+discount_539:
+  discount = 539
+  return
+discount_526:
+  discount = 526
+  return
+discount_582:
+  discount = 582
+  return
+discount_562:
+  discount = 562
+  return
+discount_534:
+  discount = 534
+  return
+discount_651:
+  discount = 651
+  return
+discount_606:
+  discount = 606
+  return
+discount_520:
+  discount = 520
+  return
+discount_719:
+  discount = 719
+  return
+discount_608:
+  discount = 608
+  return
+discount_599:
+  discount = 599
+  return
+discount_537:
+  discount = 537
+  return
+discount_533:
+  discount = 533
+  return
+discount_797:
+  discount = 797
+  return
+discount_712:
+  discount = 712
+  return
+discount_603:
+  discount = 603
+  return
+discount_528:
+  discount = 528
+  return
+discount_538:
+  discount = 538
+  return
+discount_591:
+  discount = 591
+  return
+discount_698:
+  discount = 698
+  return
+discount_551:
+  discount = 551
+  return
+discount_654:
+  discount = 654
+  return
+discount_640:
+  discount = 640
+  return
+discount_556:
+  discount = 556
+  return
+discount_524:
+  discount = 524
+  return
+discount_621:
+  discount = 621
+  return
+discount_593:
+  discount = 593
+  return
+discount_584:
+  discount = 584
+  return
+discount_565:
+  discount = 565
+  return
+discount_549:
+  discount = 549
+  return
+discount_522:
+  discount = 522
+  return
+discount_569:
+  discount = 569
+  return
+discount_554:
+  discount = 554
+  return
+discount_543:
+  discount = 543
+  return
+discount_665:
+  discount = 665
+  return
+discount_630:
+  discount = 630
+  return
+discount_625:
+  discount = 625
+  return
+discount_525:
+  discount = 525
+  return
+discount_529:
+  discount = 529
+  return
+discount_949:
+  discount = 949
+  return
+discount_615:
+  discount = 615
+  return
+discount_601:
+  discount = 601
+  return
+discount_545:
+  discount = 545
+  return
+discount_541:
+  discount = 541
+  return
+discount_588:
+  discount = 588
+  return
+discount_552:
+  discount = 552
+  return
+discount_673:
+  discount = 673
+  return
+discount_637:
+  discount = 637
+  return
+discount_579:
+  discount = 579
+  return
+discount_570:
+  discount = 570
+  return
+discount_567:
+  discount = 567
+  return
+discount_563:
+  discount = 563
+  return
+discount_560:
+  discount = 560
+  return
+discount_632:
+  discount = 632
+  return
+discount_536:
+  discount = 536
+  return
+discount_531:
+  discount = 531
+  return
+discount_764:
+  discount = 764
+  return
+discount_617:
+  discount = 617
+  return
+discount_573:
+  discount = 573
+  return
+discount_559:
+  discount = 559
+  return
+discount_558:
+  discount = 558
+  return
+discount_532:
+  discount = 532
+  return
+discount_750:
+  discount = 750
+  return
+discount_635:
+  discount = 635
+  return
+discount_609:
+  discount = 609
+  return
+discount_576:
+  discount = 576
+  return
+discount_561:
+  discount = 561
+  return
+discount_598:
+  discount = 598
+  return
+discount_586:
+  discount = 586
+  return
+discount_555:
+  discount = 555
+  return
+discount_550:
+  discount = 550
+  return
+discount_553:
+  discount = 553
+  return
+discount_682:
+  discount = 682
+  return
+discount_677:
+  discount = 677
+  return
+discount_596:
+  discount = 596
+  return
+discount_575:
+  discount = 575
+  return
+discount_530:
+  discount = 530
+  return
+discount_669:
+  discount = 669
+  return
+discount_648:
+  discount = 648
+  return
+}
+
+;; TODO: this is only a temporary solution for now. Eventually, it
+;; should be replaced with a static reference table.
+;;
+;; NOTES: see EIP-2537.
+fn g2_discount(k=1 u32) -> (discount=1000 u16) {
+  if k==1 goto discount_1000
+  if k==2 goto discount_1000
+  if k==3 goto discount_923
+  if k==4 goto discount_884
+  if k==5 goto discount_855
+  if k==6 goto discount_832
+  if k==7 goto discount_812
+  if k==8 goto discount_796
+  if k==9 goto discount_782
+  if k==10 goto discount_770
+  if k==11 goto discount_759
+  if k==12 goto discount_749
+  if k==13 goto discount_740
+  if k==14 goto discount_732
+  if k==15 goto discount_724
+  if k==16 goto discount_717
+  if k==17 goto discount_711
+  if k==18 goto discount_704
+  if k==19 goto discount_699
+  if k==20 goto discount_693
+  if k==21 goto discount_688
+  if k==22 goto discount_683
+  if k==23 goto discount_679
+  if k==24 goto discount_674
+  if k==25 goto discount_670
+  if k==26 goto discount_666
+  if k==27 goto discount_663
+  if k==28 goto discount_659
+  if k==29 goto discount_655
+  if k==30 goto discount_652
+  if k==31 goto discount_649
+  if k==32 goto discount_646
+  if k==33 goto discount_643
+  if k==34 goto discount_640
+  if k==35 goto discount_637
+  if k==36 goto discount_634
+  if k==37 goto discount_632
+  if k==38 goto discount_629
+  if k==39 goto discount_627
+  if k==40 goto discount_624
+  if k==41 goto discount_622
+  if k==42 goto discount_620
+  if k==43 goto discount_618
+  if k==44 goto discount_615
+  if k==45 goto discount_613
+  if k==46 goto discount_611
+  if k==47 goto discount_609
+  if k==48 goto discount_607
+  if k==49 goto discount_606
+  if k==50 goto discount_604
+  if k==51 goto discount_602
+  if k==52 goto discount_600
+  if k==53 goto discount_598
+  if k==54 goto discount_597
+  if k==55 goto discount_595
+  if k==56 goto discount_593
+  if k==57 goto discount_592
+  if k==58 goto discount_590
+  if k==59 goto discount_589
+  if k==60 goto discount_587
+  if k==61 goto discount_586
+  if k==62 goto discount_584
+  if k==63 goto discount_583
+  if k==64 goto discount_582
+  if k==65 goto discount_580
+  if k==66 goto discount_579
+  if k==67 goto discount_578
+  if k==68 goto discount_576
+  if k==69 goto discount_575
+  if k==70 goto discount_574
+  if k==71 goto discount_573
+  if k==72 goto discount_571
+  if k==73 goto discount_570
+  if k==74 goto discount_569
+  if k==75 goto discount_568
+  if k==76 goto discount_567
+  if k==77 goto discount_566
+  if k==78 goto discount_565
+  if k==79 goto discount_563
+  if k==80 goto discount_562
+  if k==81 goto discount_561
+  if k==82 goto discount_560
+  if k==83 goto discount_559
+  if k==84 goto discount_558
+  if k==85 goto discount_557
+  if k==86 goto discount_556
+  if k==87 goto discount_555
+  if k==88 goto discount_554
+  if k==89 goto discount_553
+  if k==90 goto discount_552
+  if k==91 goto discount_552
+  if k==92 goto discount_551
+  if k==93 goto discount_550
+  if k==94 goto discount_549
+  if k==95 goto discount_548
+  if k==96 goto discount_547
+  if k==97 goto discount_546
+  if k==98 goto discount_545
+  if k==99 goto discount_545
+  if k==100 goto discount_544
+  if k==101 goto discount_543
+  if k==102 goto discount_542
+  if k==103 goto discount_541
+  if k==104 goto discount_541
+  if k==105 goto discount_540
+  if k==106 goto discount_539
+  if k==107 goto discount_538
+  if k==108 goto discount_537
+  if k==109 goto discount_537
+  if k==110 goto discount_536
+  if k==111 goto discount_535
+  if k==112 goto discount_535
+  if k==113 goto discount_534
+  if k==114 goto discount_533
+  if k==115 goto discount_532
+  if k==116 goto discount_532
+  if k==117 goto discount_531
+  if k==118 goto discount_530
+  if k==119 goto discount_530
+  if k==120 goto discount_529
+  if k==121 goto discount_528
+  if k==122 goto discount_528
+  if k==123 goto discount_527
+  if k==124 goto discount_526
+  if k==125 goto discount_526
+  if k==126 goto discount_525
+  if k==127 goto discount_524
+  ;; default
+  discount = G_BLS_G2_MSM_MAX_DISCOUNT
+  return
+discount_649:
+  discount = 649
+  return
+discount_632:
+  discount = 632
+  return
+discount_565:
+  discount = 565
+  return
+discount_688:
+  discount = 688
+  return
+discount_679:
+  discount = 679
+  return
+discount_571:
+  discount = 571
+  return
+discount_551:
+  discount = 551
+  return
+discount_796:
+  discount = 796
+  return
+discount_699:
+  discount = 699
+  return
+discount_613:
+  discount = 613
+  return
+discount_582:
+  discount = 582
+  return
+discount_558:
+  discount = 558
+  return
+discount_556:
+  discount = 556
+  return
+discount_711:
+  discount = 711
+  return
+discount_666:
+  discount = 666
+  return
+discount_609:
+  discount = 609
+  return
+discount_573:
+  discount = 573
+  return
+discount_574:
+  discount = 574
+  return
+discount_537:
+  discount = 537
+  return
+discount_607:
+  discount = 607
+  return
+discount_595:
+  discount = 595
+  return
+discount_583:
+  discount = 583
+  return
+discount_578:
+  discount = 578
+  return
+discount_557:
+  discount = 557
+  return
+discount_552:
+  discount = 552
+  return
+discount_548:
+  discount = 548
+  return
+discount_640:
+  discount = 640
+  return
+discount_611:
+  discount = 611
+  return
+discount_529:
+  discount = 529
+  return
+discount_717:
+  discount = 717
+  return
+discount_587:
+  discount = 587
+  return
+discount_566:
+  discount = 566
+  return
+discount_539:
+  discount = 539
+  return
+discount_535:
+  discount = 535
+  return
+discount_759:
+  discount = 759
+  return
+discount_618:
+  discount = 618
+  return
+discount_570:
+  discount = 570
+  return
+discount_538:
+  discount = 538
+  return
+discount_524:
+  discount = 524
+  return
+discount_724:
+  discount = 724
+  return
+discount_693:
+  discount = 693
+  return
+discount_576:
+  discount = 576
+  return
+discount_534:
+  discount = 534
+  return
+discount_655:
+  discount = 655
+  return
+discount_1000:
+  discount = 1000
+  return
+discount_550:
+  discount = 550
+  return
+discount_532:
+  discount = 532
+  return
+discount_624:
+  discount = 624
+  return
+discount_620:
+  discount = 620
+  return
+discount_563:
+  discount = 563
+  return
+discount_545:
+  discount = 545
+  return
+discount_604:
+  discount = 604
+  return
+discount_832:
+  discount = 832
+  return
+discount_704:
+  discount = 704
+  return
+discount_606:
+  discount = 606
+  return
+discount_561:
+  discount = 561
+  return
+discount_547:
+  discount = 547
+  return
+discount_541:
+  discount = 541
+  return
+discount_592:
+  discount = 592
+  return
+discount_923:
+  discount = 923
+  return
+discount_590:
+  discount = 590
+  return
+discount_580:
+  discount = 580
+  return
+discount_569:
+  discount = 569
+  return
+discount_546:
+  discount = 546
+  return
+discount_543:
+  discount = 543
+  return
+discount_646:
+  discount = 646
+  return
+discount_629:
+  discount = 629
+  return
+discount_589:
+  discount = 589
+  return
+discount_544:
+  discount = 544
+  return
+discount_659:
+  discount = 659
+  return
+discount_584:
+  discount = 584
+  return
+discount_560:
+  discount = 560
+  return
+discount_533:
+  discount = 533
+  return
+discount_530:
+  discount = 530
+  return
+discount_627:
+  discount = 627
+  return
+discount_559:
+  discount = 559
+  return
+discount_740:
+  discount = 740
+  return
+discount_542:
+  discount = 542
+  return
+discount_568:
+  discount = 568
+  return
+discount_567:
+  discount = 567
+  return
+discount_528:
+  discount = 528
+  return
+discount_527:
+  discount = 527
+  return
+discount_525:
+  discount = 525
+  return
+discount_670:
+  discount = 670
+  return
+discount_634:
+  discount = 634
+  return
+discount_615:
+  discount = 615
+  return
+discount_652:
+  discount = 652
+  return
+discount_674:
+  discount = 674
+  return
+discount_597:
+  discount = 597
+  return
+discount_855:
+  discount = 855
+  return
+discount_531:
+  discount = 531
+  return
+discount_637:
+  discount = 637
+  return
+discount_549:
+  discount = 549
+  return
+discount_812:
+  discount = 812
+  return
+discount_782:
+  discount = 782
+  return
+discount_749:
+  discount = 749
+  return
+discount_683:
+  discount = 683
+  return
+discount_602:
+  discount = 602
+  return
+discount_579:
+  discount = 579
+  return
+discount_526:
+  discount = 526
+  return
+discount_622:
+  discount = 622
+  return
+discount_593:
+  discount = 593
+  return
+discount_553:
+  discount = 553
+  return
+discount_536:
+  discount = 536
+  return
+discount_770:
+  discount = 770
+  return
+discount_732:
+  discount = 732
+  return
+discount_586:
+  discount = 586
+  return
+discount_555:
+  discount = 555
+  return
+discount_540:
+  discount = 540
+  return
+discount_598:
+  discount = 598
+  return
+discount_663:
+  discount = 663
+  return
+discount_643:
+  discount = 643
+  return
+discount_600:
+  discount = 600
+  return
+discount_575:
+  discount = 575
+  return
+discount_562:
+  discount = 562
+  return
+discount_554:
+  discount = 554
+  return
+discount_884:
+  discount = 884
+  return
+}

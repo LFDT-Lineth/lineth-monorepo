@@ -1,0 +1,49 @@
+;; The address trimming module does two things: (i) reduce 256bit
+;; addresses into u160 addresses (i.e. modulo 2^160); (b) identify
+;; addresses of precompiles : {0x1, 0x2 ... 0x11} U {0x100}
+;;
+;; The need for this function arises as some EVM opcodes take an u256
+;; stack argument requires trimming to be interpreted as an address.
+;; Likewise, when computing a deployment address associated with an
+;; invocation of a CREATE-type, the raw KECCAK hash must be trimmed.
+;;
+;; The following opcodes may trigger it:
+;;
+;; * BALANCE
+;; * EXTCODESIZE / EXTCODECOPY / EXTCODEHASH
+;; * CALL / CALLCODE / STATICCALL
+;; * SELFDESTRUCT
+;; * DELEGATECALL
+;;
+;; NOTE: the function currently only returns the high word of the
+;; trimmed address, since the low word is unchanged.
+;; NOTE2: once issue is fixed in go-corset, we will be able to
+;; recombine trm_london and trm_osaka by adding a
+;; P256_VERIFY_ADDRESS constant on all forks prior to Osaka
+;; whose value will be an already verified prc address
+;; https://github.com/Consensys/go-corset/issues/1284
+pub fn trm(RAW_ADDRESS u256) -> (ADDRESS_HI u32, IS_PRECOMPILE u1) {
+  var low, tmp u128
+  var high u96
+  var b1 u1
+  ;; trim off most significant 96 bytes
+  high,ADDRESS_HI,low = RAW_ADDRESS
+  ;; if hi word not zero, cannot be precompile.
+  if ADDRESS_HI != 0 goto exit_0
+  ;; discount address 0
+  if low == 0 goto exit_0
+  ;; determine low <= MAX_PRC_CONTIGUOUS_ADDRESS
+  b1,tmp = low - MAX_PRC_CONTIGUOUS_ADDRESS - 1
+  ;; if not, check low is P256_VERIFY_ADDRESS
+  if b1 == 0 goto check_p256_verify
+  ;; done
+  IS_PRECOMPILE=1
+  return
+check_p256_verify:
+   IS_PRECOMPILE = low == 0x100 ? 1 : 0
+   return
+exit_0:
+  ;; no, not precompile
+  IS_PRECOMPILE=0
+  return
+}

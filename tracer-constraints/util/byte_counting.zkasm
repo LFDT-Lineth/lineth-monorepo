@@ -1,0 +1,104 @@
+;; Counts the number of zero and nonzero bytes of a right-padded limb
+fn counts_nz_128(limb u128, size u5) -> (non_zeros u5) {
+  var high, low u64
+  var tmp, low_useless u1
+  var size_next u4
+  high, low = limb
+  low_useless, tmp, size_next = size - 8
+  if low_useless != 0 goto return_high
+  var nz_high u4
+  var nz_low u4
+  nz_high = counts_nz_64(high, 8)
+  nz_low = counts_nz_64(low, size_next)
+  non_zeros = nz_high + nz_low
+  return
+
+  return_high:
+  var b u1
+  var size_trm u4
+  b, size_trm = size
+  non_zeros =  counts_nz_64(high, size_trm)
+  return
+}
+
+fn counts_nz_64(limb u64, size u4) -> (non_zeros u4) {
+  var high, low u32
+  var tmp, low_useless u1
+  var size_next u3
+  high, low = limb
+  low_useless, tmp, size_next = size - 4
+  if low_useless != 0 goto return_high
+  var nz_high u3
+  var nz_low u3
+  nz_high = counts_nz_32(high, 4)
+  nz_low = counts_nz_32(low, size_next)
+  non_zeros = nz_high + nz_low
+  return
+
+  return_high:
+  var b u1
+  var size_trm u3
+  b, size_trm = size
+  non_zeros =  counts_nz_32(high, size_trm)
+  return
+}
+
+fn counts_nz_32(limb u32, size u3) -> (non_zeros u3) {
+  var high, low u16
+  var tmp, low_useless u1
+  var size_next u2
+  high, low = limb
+  low_useless, tmp, size_next = size - 2
+  if low_useless != 0 goto return_high
+
+  var nz_high u2
+  var nz_low u2
+  nz_high = counts_nz_16(high, 2)
+  nz_low = counts_nz_16(low, size_next)
+  non_zeros = nz_high + nz_low
+  return
+
+  return_high:
+  var b u1
+  var size_trm u2
+  b, size_trm = size
+  non_zeros =  counts_nz_16(high, size_trm)
+  return
+}
+
+fn counts_nz_16(limb u16, size u2) -> (non_zeros u2) {
+  var high, low u8
+  var tmp, low_useless u1
+  var size_next u1
+  high, low = limb
+  low_useless, tmp, size_next = size - 1
+  if low_useless != 0 goto return_high
+
+  var nz_high u1
+  var nz_low u1
+  nz_high = counts_nz_8(high, 1)
+  nz_low = counts_nz_8(low, size_next)
+  non_zeros = nz_high + nz_low
+  return
+
+  return_high:
+  var b u1
+  var size_trm u1
+  b, size_trm = size
+  non_zeros =  counts_nz_8(high, size_trm)
+  return
+}
+
+fn counts_nz_8(limb u8, size u1) -> (non_zeros u1) {
+  if size == 0 goto return_z
+  if limb != 0 goto return_nz
+  goto return_z
+
+  return_nz:
+  non_zeros = 1
+  return
+
+  return_z:
+  non_zeros = 0
+  return
+}

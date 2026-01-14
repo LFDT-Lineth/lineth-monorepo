@@ -1,0 +1,76 @@
+;; BIN module
+include "../constants/evm.zkasm"
+include "../util/bit_xoan.zkasm"
+include "../util/byte.zkasm"
+include "../util/signextend.zkasm"
+include "../util/log2.zkasm"
+
+;; The bin module (BIN) handles the following EVM instructions :
+;; 1. AND       2. OR        3. XOR
+;; 4. NOT       5. BYTE      6. SIGNEXTEND
+;; 7. CLZ
+;; The first four correspond to the bitwise operations.
+;; BYTE and SIGNEXTEND need to extract a byte from ARGUMENT_2.
+
+pub fn bin(INST=0x16 u8, ARGUMENT_1 u256, ARGUMENT_2 u256) -> (RES u256) {
+
+   if INST==EVM_INST_XOR        goto xor_call
+   if INST==EVM_INST_OR         goto or_call
+   if INST==EVM_INST_AND        goto and_call
+   if INST==EVM_INST_NOT        goto not_call
+   if INST==EVM_INST_BYTE       goto byte_call
+   if INST==EVM_INST_SIGNEXTEND goto signextend_call
+   if INST==EVM_INST_CLZ        goto clz_call
+   fail
+   var inst u2
+
+xor_call:
+   inst = 0
+   RES = bit_xoan_u256(inst, ARGUMENT_1, ARGUMENT_2)
+   return
+or_call:
+   inst = 1
+   RES = bit_xoan_u256(inst, ARGUMENT_1, ARGUMENT_2)
+   return
+and_call:
+   inst = 2
+   RES = bit_xoan_u256(inst, ARGUMENT_1, ARGUMENT_2)
+   return
+not_call:
+   inst = 3
+   RES = bit_xoan_u256(inst, ARGUMENT_1, ARGUMENT_2)
+   return
+byte_call:
+   var n u5
+   var c0 u251
+   c0, n = ARGUMENT_1
+   if c0 != 0 goto exit_0
+   RES = byte256(ARGUMENT_2, n)
+   return
+signextend_call:
+   var size u5
+   var c1 u251
+   c1, size = ARGUMENT_1
+   if c1 != 0 goto exit_unchanged
+   RES = signextend(size, ARGUMENT_2)
+   return
+clz_call:
+  ;; special case for 0
+  if ARGUMENT_1 == 0 goto exit_256
+  var lg2 u8
+  var tmp u8
+  ;; TODO: we shouldn't those intermediate result ...
+  lg2 = log2(ARGUMENT_1)
+  tmp = 255 - lg2
+  RES = tmp
+  return
+exit_0:
+   RES = 0
+   return
+exit_256:
+   RES = 256
+   return
+exit_unchanged:
+   RES = ARGUMENT_2
+   return
+}

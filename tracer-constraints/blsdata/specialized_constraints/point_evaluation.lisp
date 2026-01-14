@@ -1,0 +1,17 @@
+(module blsdata)
+
+(defun (point-evaluation-hypothesis)
+  (* DATA_POINT_EVALUATION_FLAG (first_row_of_new_input)))
+
+(defconstraint internal-checks-point-evaluation (:guard (point-evaluation-hypothesis))
+  (let ((z_hi (shift LIMB 2))
+        (z_lo (shift LIMB 3))
+        (y_hi (shift LIMB 4))
+        (y_lo (shift LIMB 5))
+        (z_is_in_range WCP_RES)
+        (y_is_in_range (shift WCP_RES 1))
+        (internal_checks_passed (- 1 MINT_BIT)))
+       (begin (wcpCallToLT 0 z_hi z_lo POINT_EVALUATION_PRIME_HI POINT_EVALUATION_PRIME_LO)
+              (wcpCallToLT 1 y_hi y_lo POINT_EVALUATION_PRIME_HI POINT_EVALUATION_PRIME_LO)
+              (eq! internal_checks_passed (* z_is_in_range y_is_in_range))
+       )))

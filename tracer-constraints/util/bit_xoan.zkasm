@@ -1,0 +1,118 @@
+;; Bit_xoan is doing intermediate functions calls to split a u256 down
+;; to u1.
+;;
+;; bit_xoan_u2 has the logic to discriminate between the instructions
+;; XOR, OR, AND, NOT
+
+const BIT_XOR = 0
+const BIT_OR  = 1
+const BIT_AND = 2
+const BIT_NOT = 3
+
+fn bit_xoan_u256(INST u2, ARG_1 u256, ARG_2 u256) -> (RES u256) {
+  var arg1_lo, arg1_hi, arg2_lo, arg2_hi, res_hi, res_lo u128
+  arg1_hi, arg1_lo = ARG_1
+  arg2_hi, arg2_lo = ARG_2
+  res_hi = bit_xoan_u128(INST, arg1_hi, arg2_hi)
+  res_lo = bit_xoan_u128(INST, arg1_lo, arg2_lo)
+  RES = ( res_hi * 2^128 ) + res_lo
+  return
+}
+
+fn bit_xoan_u128(INST u2, ARG_1 u128, ARG_2 u128) -> (RES u128) {
+  var arg1_lo, arg1_hi, arg2_lo, arg2_hi, res_hi, res_lo u64
+  arg1_hi, arg1_lo = ARG_1
+  arg2_hi, arg2_lo = ARG_2
+  res_hi = bit_xoan_u64(INST, arg1_hi, arg2_hi)
+  res_lo = bit_xoan_u64(INST, arg1_lo, arg2_lo)
+  RES = ( res_hi * 2^64 ) + res_lo
+  return
+}
+
+fn bit_xoan_u64(INST u2, ARG_1 u64, ARG_2 u64) -> (RES u64) {
+  var arg1_lo, arg1_hi, arg2_lo, arg2_hi, res_hi, res_lo u32
+  arg1_hi, arg1_lo = ARG_1
+  arg2_hi, arg2_lo = ARG_2
+  res_hi = bit_xoan_u32(INST, arg1_hi, arg2_hi)
+  res_lo = bit_xoan_u32(INST, arg1_lo, arg2_lo)
+  RES = ( res_hi * 2^32 ) + res_lo
+  return
+}
+
+fn bit_xoan_u32(INST u2, ARG_1 u32, ARG_2 u32) -> (RES u32) {
+  var arg1_lo, arg1_hi, arg2_lo, arg2_hi, res_hi, res_lo u16
+  arg1_hi, arg1_lo = ARG_1
+  arg2_hi, arg2_lo = ARG_2
+  res_hi = bit_xoan_u16(INST, arg1_hi, arg2_hi)
+  res_lo = bit_xoan_u16(INST, arg1_lo, arg2_lo)
+  RES = ( res_hi * 2^16 ) + res_lo
+  return
+}
+
+fn bit_xoan_u16(INST u2, ARG_1 u16, ARG_2 u16) -> (RES u16) {
+  var arg1_lo, arg1_hi, arg2_lo, arg2_hi, res_hi, res_lo u8
+  arg1_hi, arg1_lo = ARG_1
+  arg2_hi, arg2_lo = ARG_2
+  res_hi = bit_xoan_u8(INST, arg1_hi, arg2_hi)
+  res_lo = bit_xoan_u8(INST, arg1_lo, arg2_lo)
+  RES = ( res_hi * 2^8 ) + res_lo
+  return
+}
+
+fn bit_xoan_u8(INST u2, ARG_1 u8, ARG_2 u8) -> (RES u8) {
+  var arg1_lo, arg1_hi, arg2_lo, arg2_hi, res_hi, res_lo u4
+  arg1_hi, arg1_lo = ARG_1
+  arg2_hi, arg2_lo = ARG_2
+  res_hi = bit_xoan_u4(INST, arg1_hi, arg2_hi)
+  res_lo = bit_xoan_u4(INST, arg1_lo, arg2_lo)
+  RES = ( res_hi * 2^4 ) + res_lo
+  return
+}
+
+fn bit_xoan_u4(INST u2, ARG_1 u4, ARG_2 u4) -> (RES u4) {
+  var arg1_lo, arg1_hi, arg2_lo, arg2_hi, res_hi, res_lo u2
+  arg1_hi, arg1_lo = ARG_1
+  arg2_hi, arg2_lo = ARG_2
+  res_hi = bit_xoan_u2(INST, arg1_hi, arg2_hi)
+  res_lo = bit_xoan_u2(INST, arg1_lo, arg2_lo)
+  RES =  ( res_hi * 2^2 ) + res_lo
+  return
+}
+
+fn bit_xoan_u2(INST u2, ARG_1 u2, ARG_2 u2) -> (RES u2) {
+    var arg1_lo, arg1_hi, arg2_lo, arg2_hi, res_hi, res_lo, c0 u1
+    arg1_hi, arg1_lo = ARG_1
+    arg2_hi, arg2_lo = ARG_2
+
+    if INST == BIT_XOR  goto xor_call
+    if INST == BIT_OR   goto or_call
+    if INST == BIT_AND  goto and_call
+    if INST == BIT_NOT  goto not_call
+    fail
+
+xor_call:
+    var sum_arg_hi, sum_arg_lo u2
+    sum_arg_hi = ( arg1_hi + arg2_hi )
+    sum_arg_lo = ( arg1_lo + arg2_lo )
+    res_hi = sum_arg_hi == 1 ? 1 : 0
+    res_lo = sum_arg_lo == 1 ? 1 : 0
+    RES = ( res_hi * 2 ) + res_lo
+    return
+or_call:
+    var c0_lo, c1_lo, c0_hi, c1_hi u1
+    c0_hi, c1_hi, res_hi = ( arg1_hi + arg2_hi ) - ( arg1_hi * arg2_hi )
+    c0_lo, c1_lo, res_lo = ( arg1_lo + arg2_lo ) - ( arg1_lo * arg2_lo )
+    RES =  ( res_hi * 2 ) + res_lo
+    return
+and_call:
+    res_hi = arg1_hi * arg2_hi
+    res_lo = arg1_lo * arg2_lo
+    RES =  ( res_hi * 2 ) + res_lo
+    return
+not_call:
+    ;; we only use ARGUMENT_1
+    res_hi = 1 - arg1_hi
+    res_lo = 1 - arg1_lo
+    RES = ( res_hi * 2 ) + res_lo
+    return
+}

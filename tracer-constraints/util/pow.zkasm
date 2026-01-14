@@ -1,0 +1,25 @@
+;; compute n^k using the squaring algorithm.
+fn pow(n u256, k u256) -> (res=1 u256) {
+  var tmp1, tmp2, val u256
+  var nk2 u256
+  var i u255
+  var b u1
+  ;;
+  if k == 0 goto one
+  ;; divide by 2
+  i,b = k
+  ;;
+  nk2 = pow(n,i)
+  ;; square
+  tmp1, val = nk2 * nk2
+  ;; check if even
+  if b == 0 goto done
+  tmp2,res = val * n
+  return
+done:
+  res = val
+  return
+one:
+  res = 1
+  return
+}

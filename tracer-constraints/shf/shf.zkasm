@@ -1,0 +1,56 @@
+include "../constants/evm.zkasm"
+include "../util/bit_shl.zkasm"
+include "../util/bit_shr.zkasm"
+include "../util/bit_sar.zkasm"
+
+;; The Shift Module (SHF) deals with bitwise shifting of 256bit words
+;; (signed or unsigned).  For any call to shf, the "inst" argument
+;; indicates which of these instructions is being computed:
+;;
+;; SHL    ARG2 <<  ARG_1                   0x1b
+;; SHR    ARG2 >>> ARG_1 (unsigned)        0x1c
+;; SAR    ARG2 >>  ARG_1 (signed)          0x1d
+;;
+;; Observe that when ARG_1 >= 256, the result is always 0 for SHL and
+;; SHR.  For SAR, the result in this case is 0 (when sign bit unset)
+;; and -1 (when sign bit set).
+pub fn shf(INST=0x1b u8, ARG_1 u256, ARG_2 u256) -> (RES u256) {
+  var tmp u248
+  var n u8
+  ;; split shift
+  tmp, n = ARG_1
+  ;;
+  if tmp != 0 goto exit_01
+  if INST == EVM_INST_SHL goto insn_shl
+  if INST == EVM_INST_SHR goto insn_shr
+  if INST == EVM_INST_SAR goto insn_sar
+  fail
+insn_shl:
+  ;; bitwise shift left
+  RES = bit_shl256(ARG_2, n)
+  return
+insn_shr:
+  ;; bitwise shift right
+  RES = bit_shr256(ARG_2, n)
+  return
+insn_sar:
+  ;; bitwise (signed) shift right
+  RES = bit_sar256(ARG_2, n)
+  return
+exit_01:
+  ;; SAR requires special handling
+  if INST != 0x1d goto exit_0
+  ;; sign bit needed to determine result
+  var sign u1
+  var tmp3 u255
+  ;; Split out sign bit
+  sign,tmp3 = ARG_2
+  ;; check for sign extension
+  if sign == 0 goto exit_0
+  ;; yes, sign extension so return -1
+  RES = 0xFFFFFFFFFFFFFFFF_FFFFFFFFFFFFFFFF_FFFFFFFFFFFFFFFF_FFFFFFFFFFFFFFFF
+  return
+exit_0:
+  RES = 0
+  return
+}

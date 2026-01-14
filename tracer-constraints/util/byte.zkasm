@@ -1,0 +1,90 @@
+;; Extract the nth byte from a u256 value, where n==0 returns the most
+;; significant byte.
+fn byte256(word u256, n u5) -> (res u8) {
+  var msb u1
+  var m u4
+  var high, low u128
+  ;; Break down index
+  msb, m = n
+  ;; Break down word
+  high,low = word
+  ;;
+  if msb == 0 goto high_lab
+  res = byte128(low,m)
+  return
+high_lab:
+  res = byte128(high,m)
+  return
+}
+
+;; Extract the nth byte from a u128 value, where n==0 returns the most
+;; significant byte.
+fn byte128(word u128, n u4) -> (res u8) {
+  var msb u1
+  var m u3
+  var high, low u64
+  ;; Break down index
+  msb, m = n
+  ;; Break down word
+  high,low = word
+  ;;
+  if msb == 0 goto high_lab
+  res = byte64(low,m)
+  return
+high_lab:
+  res = byte64(high,m)
+  return
+}
+
+;; Extract the nth byte from a u64 value, where n==0 returns the most
+;; significant byte.
+fn byte64(word u64, n u3) -> (res u8) {
+  var msb u1
+  var m u2
+  var high, low u32
+  ;; Break down index
+  msb, m = n
+  ;; Break down word
+  high,low = word
+  ;;
+  if msb == 0 goto high_lab
+  res = byte32(low,m)
+  return
+high_lab:
+  res = byte32(high,m)
+  return
+}
+
+;; Extract the nth byte from a u32 value, where n==0 returns the most
+;; significant byte.
+fn byte32(word u32, n u2) -> (res u8) {
+  var msb u1
+  var m u1
+  var high, low u16
+  ;; Break down index
+  msb, m = n
+  ;; Break down word
+  high,low = word
+  ;;
+  if msb == 0 goto high_lab
+  res = byte16(low,m)
+  return
+high_lab:
+  res = byte16(high,m)
+  return
+}
+
+;; Extract the nth byte from a u16 value, where n==0 returns the most
+;; significant byte.
+fn byte16(word u16, n u1) -> (res u8) {
+  var high, low u8
+  ;; Break down word
+  high,low = word
+  ;; Selector high or low
+  if n == 0 goto high_lab
+  res = low
+  return
+high_lab:
+  res = high
+  return
+}

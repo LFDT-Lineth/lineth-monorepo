@@ -1,0 +1,25 @@
+include "../constants/evm.zkasm"
+include "../util/pow.zkasm"
+
+;; The Multiplier Module (MUL) deals with two arithmetic instructions
+;; of the EVM.  For any call to mul, the "inst" argument indicates
+;; which of these instructions is being computed:
+;;
+;; MUL    (ARG_1 * ARG_2) % 2^256                   0x02
+;; EXP    (ARG_1 ^ ARG_2) % 2^256                   0x0a
+;;
+;; Here, "^" represents exponentiation (i.e. "power of" where
+;; e.g. 2^16=65536).  Both of these operate on u256 words with "wrap
+;; around" semantics.
+pub fn mul(INST=0x2 u8, ARG_1 u256, ARG_2 u256) -> (RES u256) {
+  if INST==EVM_INST_MUL goto mul
+  if INST==EVM_INST_EXP goto exp
+  fail
+mul:
+  var tmp u256
+  tmp,RES = ARG_1 * ARG_2
+  return
+exp:
+  RES = pow(ARG_1,ARG_2)
+  return
+}

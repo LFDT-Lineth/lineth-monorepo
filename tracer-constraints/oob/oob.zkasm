@@ -1,0 +1,345 @@
+include "../constants/evm.zkasm"
+include "oob_prc.zkasm"
+
+;; The Out-Of-Bounds (OOB) module performs various "out of bounds" and
+;; related checks.  Unfortunately, it is a hodge-podge of different
+;; checks for different instructions, and a key aspect of what this
+;; function does is dispatch based on the instruction to the relevant
+;; set of checks.
+;;
+pub fn oob(INST=0x56 u16, DATA_1 u128, DATA_2 u128, DATA_3 u128, DATA_4 u128, DATA_5 u128, DATA_6 u128, DATA_7=0x1 u128, DATA_8 u128, DATA_9 u128, DATA_10 u128) {
+   var oobx, icx, csox, nox, z, nz, jox, njox u1
+   ;; NOTE: dummy flag should be removed once functions with no
+   ;; returns are permitted.
+   var dummy u1
+   ;;
+   if INST == OOB_INST_JUMP goto oob_jump
+   if INST == OOB_INST_JUMPI goto oob_jumpi
+   if INST == OOB_INST_RDC goto oob_rdc
+   if INST == OOB_INST_CDL goto oob_cdl
+   if INST == OOB_INST_SSTORE goto oob_sstore
+   if INST == OOB_INST_DEPLOYMENT goto oob_deployment
+   if INST == OOB_INST_XCALL goto oob_xcall
+   if INST == OOB_INST_CALL goto oob_call
+   if INST == OOB_INST_XCREATE goto oob_xcreate
+   if INST == OOB_INST_CREATE goto oob_create
+   ;; run precompile checks
+   dummy = oob_prc(INST,DATA_1,DATA_2,DATA_3,DATA_4,DATA_5,DATA_6,DATA_7,DATA_8,DATA_9,DATA_10)
+   return
+
+;; -------------------------------------------------------------------
+;; JUMPI
+;; -------------------------------------------------------------------
+;; [in]    DATA_1::DATA_2 = pc_new
+;; [in]    DATA_3::DATA_4 = jump_condition
+;; [in]            DATA_5 = code_size
+;; --
+;; [out,binary]    DATA_6 = jump_not_attempted
+;; [out,binary]    DATA_7 = jump_guaranteed_exception
+;; [out,binary]    DATA_8 = jump_must_be_attempted
+;;
+oob_jumpi:
+   ;; check whether condition == 0
+   if DATA_3 != 0 goto oob_jumpi_attempted
+   if DATA_4 != 0 goto oob_jumpi_attempted
+   ;; yes, so jump not attempted
+   if DATA_6 != 1 goto exit_f
+   if DATA_7 != 0 goto exit_f
+   if DATA_8 != 0 goto exit_f
+   ;; success
+   return
+oob_jumpi_attempted:
+   if DATA_6 != 0 goto exit_f
+;; -------------------------------------------------------------------
+;; JUMP
+;; -------------------------------------------------------------------
+;; [in]   DATA_1::DATA_2 = pc_new
+;; [in]           DATA_5 = code_size
+;; --
+;; [out,binary]   DATA_7 = jump_guaranteed_exception
+;; [out,binary]   DATA_8 = jump_must_be_attempted
+;;
+oob_jump:
+   jox, njox = jump_target_check(DATA_1, DATA_2, DATA_5)
+   ;;
+   if jox != DATA_7 goto exit_f
+   if njox != DATA_8 goto exit_f
+   return
+
+;; -------------------------------------------------------------------
+;; RETURN DATA COPY (RDC)
+;; -------------------------------------------------------------------
+;; For RDC must: (a) establish that neither the offset nor size (as
+;; read off the stack) are grossly out of bounds (i.e. ≥ 2128 );
+;; (b) check (offset + size) <= rds and that rdcx==0 (if it holds)
+;; or that rdcx==1 (otherwise).
+;;
+;; [in]   DATA_1::DATA_2 = offset
+;; [in]   DATA_3::DATA_4 = size
+;; [in]           DATA_5 = return_data_size (rds)
+;; --
+;; [out,binary]   DATA_7 = return_data_copy_exception (rdcx)
+;;
+oob_rdc:
+   oobx = out_of_bounds_check(DATA_1, DATA_2, DATA_3, DATA_4, DATA_5)
+   ;;
+   if DATA_7 != oobx goto exit_f
+   ;; success
+   return
+
+;; -------------------------------------------------------------------
+;; CALL DATA LOAD (CDL)
+;; -------------------------------------------------------------------
+;; For CDL must: (a) check offset < cds and that cdloob == 0 (if it
+;; holds) or cdloob==1 (otherwise).
+;;
+;; [in]   DATA_1::DATA_2 = offset
+;; [in]           DATA_5 = call_data_size (cds)
+;; --
+;; [out,binary]   DATA_7 = call_data_load_oob (cdloob)
+;;
+oob_cdl:
+   oobx = out_of_bounds_check(DATA_1, DATA_2, 0, 1, DATA_5)
+   ;;
+   if DATA_7 != oobx goto exit_f
+   ;; success
+   return
+
+;; -------------------------------------------------------------------
+;; SSTORE
+;; -------------------------------------------------------------------
+;; For SSTORE must: check G_callstipend < gas_actual and that
+;; sstorex==0 (if it holds) or sstorex==1 (otherwise)
+;;
+;; [in]           DATA_5 = gas_actual
+;; --
+;; [out,binary]   DATA_7 = sstore_exception (sstorex)
+;;
+oob_sstore:
+   oobx = out_of_bounds_check(0, G_CALLSTIPEND, 0, 1, DATA_5)
+   ;;
+   if DATA_7 != oobx goto exit_f
+   ;; success
+   return
+
+;; -------------------------------------------------------------------
+;; DEPLOYMENT
+;; -------------------------------------------------------------------
+;; For DEPLOYMENT must: (a) check size <= MAX_CODE_SIZE and that
+;; maxcodex == 0 (if it holds) or maxcodex==1 (otherwise).
+;;
+;; [in]           DATA_1::DATA_2 = size
+;; --
+;; [out,binary]   DATA_7         = maxcodex
+;;
+oob_deployment:
+   oobx = out_of_bounds_check(DATA_1, DATA_2, 0, 0, MAX_CODE_SIZE)
+   ;;
+   if DATA_7 != oobx goto exit_f
+   ;; success
+   return
+
+;; -------------------------------------------------------------------
+;; EXCEPTION CALL (XCALL)
+;; -------------------------------------------------------------------
+;; For XCALL must check: check if value != 0 then value_isz==0 else
+;; value_isz==1.  Furthermore, that value_isnz == (1 - value_isz)
+;;
+;; [in]   DATA_1::DATA_2 = value
+;; --
+;; [out,binary]   DATA_7 = value_isnz
+;; [out,binary]   DATA_8 = value_isz
+;;
+oob_xcall:
+   nz, z = zero_check(DATA_1, DATA_2)
+   ;;
+   if DATA_7 != nz goto exit_f
+   if DATA_8 != z goto exit_f
+   ;; success
+   return
+
+;; -------------------------------------------------------------------
+;; CALL
+;; -------------------------------------------------------------------
+;; For CALL must check: (a) value!=0<==>value_isnz; (b) value <=
+;; balance (else abort); (c) call_stack_depth < 1024 (else abort).  If
+;; either of the aborting conditions hold then abort_condition==1 else
+;; abort_condition==0.
+;;
+;; [in]   DATA_1::DATA_2 = value
+;; [in]           DATA_3 = balance
+;; [in]           DATA_6 = call_stack_depth
+;; --
+;; [out,binary]   DATA_7 = value_isnz
+;; [out,binary]   DATA_8 = aborting_condition
+;;
+oob_call:
+   nz, z = zero_check(DATA_1, DATA_2)
+   ;; (a) value!=0 <==> value_isnz
+   if DATA_7 != nz goto exit_f
+   ;; (b) value <= balance
+   oobx = out_of_bounds_check(DATA_1, DATA_2, 0, 0, DATA_3)
+   ;; (c) call_stack_depth <= 1023
+   csox = out_of_bounds_check(0, DATA_6, 0, 0, 1023)
+   ;; check (b) + (c)
+   dummy = abort_check(DATA_8, oobx, csox, 0)
+   ;;
+   return
+
+;; -------------------------------------------------------------------
+;; EXCEPTION CREATE (XCREATE)
+;; -------------------------------------------------------------------
+;; For XCALL must enforce: init_code_size > MAX_INIT_CODE_SIZE.
+;;
+;; [in] DATA_1::DATA_2 = init_code_size
+;;
+oob_xcreate:
+   oobx = out_of_bounds_check(DATA_1, DATA_2, 0, 0, MAX_INIT_CODE_SIZE)
+   ;; expect exception
+   if oobx != 1 goto exit_f
+   return
+
+;; -------------------------------------------------------------------
+;; CREATE
+;; -------------------------------------------------------------------
+;; For CREATE must check: (a) init_code_size <= MAX_INIT_CODE_SIZE;
+;; (b) value <= balance (else abort); (c) call_stack_depth < 1024
+;; (else abort); (d) creator nonce < EIP2681_MAX_NONCE (else abort)
+;; (e) the createe has non-zero nonce (else fail); (f) the createe has
+;; empty bytecode (else fail).
+;;
+;; NOTES: If aborting then abort_condition==1 else abort_condition==0;
+;; if failing then abort_condition==0 && fail_condition==1 else
+;; fail_condition==0.
+;;
+;; [in]   DATA_1::DATA_2  = value
+;; [in]           DATA_3  = balance
+;; [in]           DATA_4  = createe_nonce
+;; [in]           DATA_5  = createe_has_code
+;; [in]           DATA_6  = call_stack_depth
+;; [in]           DATA_9  = creater_nonce
+;; [in]           DATA_10 = init_code_size
+;; --
+;; [out,binary]   DATA_7  = aborting_condition
+;; [out,binary]   DATA_8  = failing_condition
+;;
+oob_create:
+   ;; (a) init_code_size <= NAX_INIT_CODE_SIZE
+   icx = out_of_bounds_check(0, DATA_10, 0, 0, MAX_INIT_CODE_SIZE)
+   ;; don't expect exception
+   if icx != 0 goto exit_f
+   ;; (b) value <= balance
+   oobx = out_of_bounds_check(DATA_1, DATA_2, 0, 0, DATA_3)
+   ;; (c) call_stack_depth < 1024
+   csox = out_of_bounds_check(0, DATA_6, 0, 1, 1024)
+   ;; (d) creater_nonce < EIP2681_MAX_NONCE
+   nox = out_of_bounds_check(0, DATA_9, 0, 1, EIP2681_MAX_NONCE)
+   ;; check (b)+(c)+(d)
+   dummy = abort_check(DATA_7, oobx, csox, nox)
+   ;; check whether aborting
+   if DATA_7==1 goto oob_create_abort
+   ;; check (e) createe nonce != 0
+   if DATA_4!=0 goto oob_create_failure
+   ;; check (f) createe has empty bytecode
+   if DATA_5!=0 goto oob_create_failure
+   ;; check no failure claimed
+   if DATA_8 != 0 goto exit_f
+   ;; success
+   return
+oob_create_abort:
+   if DATA_8 != 0 goto exit_f
+   ;; success
+   return
+oob_create_failure:
+   if DATA_8 != 1 goto exit_f
+   ;; success
+   return
+
+exit_f:
+   fail
+}
+
+;; Check whether or not a jump target is within bounds pc_hi::pc_lo <
+;; code_size.  If not, then a jump exception (jmp_ex) should be
+;; indicated.  Additionally, jmp_mba = !jmp_ex.
+fn jump_target_check(pc_hi u128, pc_lo u128, code_size u128) -> (jmp_ex=0x1 u1, jmp_mba u1) {
+  var b u1
+  var tmp u128
+  ;; high word must be 0
+  if pc_hi != 0 goto exit_f
+  ;; compare low word
+  b, tmp = code_size - pc_lo - 1
+  ;; pc_lo >= code_size ?
+  if b != 0 goto exit_f
+  ;; must attempt
+  jmp_ex = 0
+  jmp_mba = 1
+  return
+exit_f:
+  ;; exception
+  jmp_ex = 1
+  jmp_mba = 0
+  return
+}
+
+;; Check whether (offset+size) <= max_size, returning 0 (if it holds) or 1
+;; (to signal an exception)
+fn out_of_bounds_check(offset_hi u128, offset_lo u128, size_hi u128, size_lo u128, max_size u128) -> (memx u1) {
+   var sum, tmp u128
+   var c, b u1
+   ;; Check offset < 2^128
+   if offset_hi != 0 goto exit_1
+   ;; Check size < 2^128
+   if size_hi != 0 goto exit_1
+   ;; Compute offset + size
+   c,sum = offset_lo + size_lo
+   ;; Check (offset+size) <= max_size (high word)
+   if c != 0 goto exit_1
+   ;; Check (offset+size) <= max_size (low word)
+   b, tmp = max_size - sum
+   ;; check for exception
+   memx = b == 0 ? 0 : 1
+   ;; success
+   return
+exit_1:
+   ;; memory exception
+   memx = 1
+   return
+}
+
+;; Check whether or not a given value is zero (or not).
+fn zero_check(val_hi u128, val_lo u128) -> (is_nonzero u1, is_zero=1 u1) {
+  if val_hi != 0 goto exit_nz
+  if val_lo != 0 goto exit_nz
+  is_nonzero = 0
+  is_zero = 1
+  return
+exit_nz:
+  is_nonzero = 1
+  is_zero = 0
+  return
+}
+
+;; Check whether a given abort flag is consistent with three abort
+;; condition.  For example, if the abort flag holds then at least one
+;; of the aborting conditions must be true.
+fn abort_check(abort u128, cond_1 u128, cond_2 u128, cond_3 u128) -> (dummy u1) {
+   if abort==0 goto not_aborting
+   ;; conditions cannot all be false
+   if cond_1 != 0 goto exit_s
+   if cond_2 != 0 goto exit_s
+   if cond_3 != 0 goto exit_s
+   goto exit_f
+not_aborting:
+   ;; conditions must all be false
+   if cond_1 != 0 goto exit_f
+   if cond_2 != 0 goto exit_f
+   if cond_3 != 0 goto exit_f
+exit_s:
+   ;; NOTE: dummy is only needed because go-corset does not (currently) allow
+   ;; function calls without returns.
+   dummy=0
+   return
+exit_f:
+   fail
+}

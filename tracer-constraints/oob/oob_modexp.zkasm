@@ -1,0 +1,339 @@
+include "../constants/evm.zkasm"
+include "../util/max2.zkasm"
+
+;; The Out-Of-Bounds ModExp (OOBMODEXP) module performs various "out
+;; of bounds" and related checks specifically for the modexp
+;; precompile call.
+fn oob_modexp(INST=0xFA05 u16, DATA_1 u128, DATA_2 u128, DATA_3 u128, DATA_4 u128, DATA_5 u128, DATA_6 u128, DATA_7 u128, DATA_8 u128, DATA_9 u128, DATA_10 u128) -> (dummy=1 u1) {
+  var b, c u1
+  var cds u32
+  var tmp u96
+  var tmp112a, tmp112b, tmp112c u112
+  var tmp1, tmp2 u128
+  ;;
+  if INST==OOB_INST_MODEXP_CDS goto modexp_cds
+  if INST==OOB_INST_MODEXP_XBS goto modexp_xbs
+  if INST==OOB_INST_MODEXP_LEAD goto modexp_lead
+  if INST==OOB_INST_MODEXP_PRICING goto modexp_pricing
+  if INST==OOB_INST_MODEXP_EXTRACT goto modexp_extract
+  fail
+
+;; -------------------------------------------------------------------
+;; MODEXP_CDS
+;; -------------------------------------------------------------------
+;; Check: (a) extract_bbs <==> 0 < cds; (b) extract_ebs <==> 32 < cds;
+;; (c) extract_mbs == 64 < cds.
+;;
+;; [in]           DATA_2 = call_data_size (cds)
+;; --
+;; [out,binary]   DATA_3 = extract_bbs
+;; [out,binary]   DATA_4 = extract_ebs
+;; [out,binary]   DATA_5 = extract_mbs
+;;
+modexp_cds:
+  var cds0, cds32, cds64 u1
+  var tmp32, tmp64 u32
+  ;; cast call_data_size
+  tmp,cds = DATA_2
+  if tmp != 0 goto exit_f
+  ;; check 0 < cds
+  cds0 = cds != 0 ? 1 : 0
+  if cds0 != DATA_3 goto exit_f
+  ;; check 32 < cds
+  cds32, tmp32 = 32 - cds
+  if cds32 != DATA_4 goto exit_f
+  ;; check 64 < cds
+  cds64, tmp64 = 64 - cds
+  if cds64 != DATA_5 goto exit_f
+  ;; success
+  goto exit_s
+
+;; -------------------------------------------------------------------
+;; MODEXP_XBS
+;; -------------------------------------------------------------------
+
+;; Check: (a) xbs_within_bounds <==> (xbs_hi == 0 and xbs_lo <= 1024);
+;; (b) xbs_out_of_bounds == 1 - xbs_within_bounds); (c) if
+;; do_compute_max and xbs_out_of_bounds then max==0, otherwise if
+;; do_compute_max then max=max(xbs_norm, ybs_norm); (d) if
+;; do_compute_max then xbs_non_zero <==> xbs_norm != 0.  Here,
+;; xbs_norm == xbs_lo if xbs_within_bounds else xbs_norm == 0
+;; (likewise for ybs_norm).
+;;
+;; [in]           DATA_1 = xbs_hi
+;; [in]           DATA_2 = xbs_lo
+;; [in]           DATA_3 = ybs_lo
+;; [in,binary]    DATA_4 = do_compute_max
+;; --
+;; [out]          DATA_7 = max (if do_compute_max)
+;; [out,binary]   DATA_8 = xbs_non_zero (if do_compute_max)
+;; [out.binary]   DATA_9 = xbs_within_bounds
+;; [out,binary]   DATA_10 = xbs_out_of_bounds
+;;
+modexp_xbs:
+  var xbsInBounds, xbsOutOfBounds, xbsNonZero u1
+  var xbsNormalised, ybsNormalised u128
+  ;; calc xbs_lo <= 1024
+  b,tmp1 = DATA_2 - (EIP_7823_MODEXP_UPPER_BYTE_SIZE_BOUND + 1)
+  ;; calc xbs <= 1024
+  xbsInBounds = DATA_1 != 0 ? 0 : b
+  xbsOutOfBounds = 1 - xbsInBounds
+  ;; check xbs <= 1025
+  if xbsInBounds != DATA_9 goto exit_f
+  if xbsOutOfBounds != DATA_10 goto exit_f
+  ;; normalise xbs / ybs
+  xbsNormalised = xbsInBounds * DATA_2
+  ybsNormalised = xbsInBounds * DATA_3
+  ;; short-circuit rest when !do_compute_max
+  if DATA_4 == 0 goto exit_s
+  ;; compute max(xbsNormalised,ybsNormalised)
+  tmp2 = max_u128(xbsNormalised,ybsNormalised)
+  ;; check max
+  if tmp2 != DATA_7 goto exit_f
+  ;; check non-zero
+  xbsNonZero = xbsNormalised != 0 ? 1 : 0
+  if xbsNonZero != DATA_8 goto exit_f
+  ;; success
+  goto exit_s
+
+;; -------------------------------------------------------------------
+;; MODEXP_LEAD
+;; -------------------------------------------------------------------
+;; Check: (a) cds > 96+bbs_lo and ebs_lo != 0; (b) if cds > 96+bbs_lo
+;; then lcb == min(32,cds-96-bbs) else lcb == 0; (c) leb ==
+;; min(32,ebs_lo); if (ebs_lo >= 32) then (ebs_sub_32 == ebs_lo - 32)
+;; else (ebs_sub_32 == 0).
+;;
+;; [in]           DATA_1 = bbs_lo
+;; [in]           DATA_2 = call_data_size (cds)
+;; [in]           DATA_3 = ebs_lo
+;; --
+;; [out,binary]   DATA_4 = load_lead [binary]
+;; [out]          DATA_6 = lead_calldata_bytes (lcb)
+;; [out]          DATA_7 = lead_exponent_bytes (leb)
+;; [out]          DATA_8 = ebs_sub_32
+;;
+modexp_lead:
+  var lead u1
+  var lcb, leb u8
+  var ebsSub32 u128
+  ;; cast call_data_size
+  tmp,cds = DATA_2
+  if tmp != 0 goto exit_f
+  ;; do calculations
+  lead, lcb, leb, ebsSub32 = oob_modexp_lead(cds,DATA_1,DATA_3)
+  ;; do checks
+  if lead != DATA_4 goto exit_f
+  if lcb != DATA_6 goto exit_f
+  if leb != DATA_7 goto exit_f
+  if ebsSub32 != DATA_8 goto exit_f
+  goto exit_s
+
+;; -------------------------------------------------------------------
+;; MODEXP_PRICING
+;; -------------------------------------------------------------------
+;; Check: (a) success <==> gas_cost <= callee_gas; (b) if success then
+;; return_gas == (callee_gas - gas_cost), otherwise return_gas == 0;
+;; (c) r@c_non_zero <==> r@c != 0.
+;;
+;; NOTE: the major challenge with this case lies in determining the
+;; gas_cost for a modexp call.
+;;
+;; [in]           DATA_1 = callee_gas
+;; [in]           DATA_3 = return_at_capacity (r@c)
+;; [in]           DATA_6 = exponent_log
+;; [in]           DATA_7 = max_mbs_bbs
+;; --
+;; [out,binary]   DATA_4 = success
+;; [out]          DATA_5 = return_gas
+;; [out,binary]   DATA_8 = r@c_non_zero
+;;
+modexp_pricing:
+  var return_gas u128
+  var lE, max_lB_lM u16
+  var success, rc_nz u1
+  ;; cast exponent_log & max_lB_lM
+  tmp112a, lE = DATA_6
+  tmp112b, max_lB_lM = DATA_7
+  ;; sanity check
+  if tmp112a != 0 goto exit_f
+  if tmp112b != 0 goto exit_f
+  ;;
+  success, return_gas, rc_nz = oob_modexp_pricing(DATA_1, DATA_3, lE, max_lB_lM)
+  ;; sanity checks
+  if success != DATA_4 goto exit_f
+  if return_gas != DATA_5 goto exit_f
+  if rc_nz != DATA_8 goto exit_f
+  ;; success
+  goto exit_s
+
+;; -------------------------------------------------------------------
+;; MODEXP_EXTRACT
+;; -------------------------------------------------------------------
+;; [in]           DATA_2 = call_data_size (cds)
+;; [in]           DATA_3 = bbs_lo
+;; [in]           DATA_4 = ebs_lo
+;; [in]           DATA_5 = mbs_lo
+;; --
+;; [out,binary]   DATA_6 = base_extraction
+;; [out,binary]   DATA_7 = exponent_extraction
+;; [out,binary]   DATA_8 = modulus_extraction
+;;
+modexp_extract:
+  var base, exponent, modulus u1
+  var bbs, ebs, mbs u16
+  ;; cast call_data_size, bbs, ebs, mbs
+  tmp, cds = DATA_2
+  tmp112a, bbs = DATA_3
+  tmp112b, ebs = DATA_4
+  tmp112c, mbs = DATA_5
+  ;; sanity check
+  if tmp != 0 goto exit_f
+  if tmp112a != 0 goto exit_f
+  if tmp112b != 0 goto exit_f
+  if tmp112c != 0 goto exit_f
+  ;;
+  base, exponent, modulus = oob_modexp_extract(cds, bbs, ebs, mbs)
+  ;; sanity checks
+  if base != DATA_6 goto exit_f
+  if exponent  != DATA_7 goto exit_f
+  if modulus != DATA_8 goto exit_f
+  ;; success
+exit_s:
+  dummy=1
+  ;;
+  return
+exit_f:
+  fail
+}
+
+;; MODEXP lead calculation which computes:
+;;
+;; (a) lead == 1 <==> (cds > 96+bbs ∧ ebs != 0)
+;; (b) cds > 96+bbs ==> lcb == cds - 96 - bbs
+;; (c) cds <= 96+bbs ==> lcb == 0
+;; (d) leb == min(32,ebs)
+;; (e) ebs < 32 ==> ebsSub32 == 0
+;; (f) ebs >= 32 ==> ebsSub32 == ebs - 32
+fn oob_modexp_lead(cds u32, bbs u128, ebs u128) -> (lead u1, lcb u8, leb u8, ebsSub32 u128) {
+  var c, cdsLt96Bbs, ebsLt32, ebsNz u1
+  var delta u128
+  var tmp u128
+  ;;
+  ;; (i) LEB/EBS calculations first
+  leb = cap32(ebs)
+  ;; is ebs < 32?
+  ebsLt32,tmp = ebs - 32
+  ebsSub32 = ebsLt32 == 0 ? tmp : 0
+  ;; determine ebs != 0
+  ebsNz = ebs != 0 ? 1 : 0
+  ;;
+  ;; (ii) LEAD/LCB calculations
+  cdsLt96Bbs, c, delta = cds - (96 + bbs)
+  if cdsLt96Bbs == 1 goto lcb_0
+  ;; assert: cds >= 96 + bbs
+  lead = delta == 0 ? 0 : ebsNz
+  lcb = cap32(delta)
+  return
+  ;;
+lcb_0:
+  ;; assert: cds < 96 + bbs
+  lead = 0
+  lcb = 0
+  ;;
+  return
+}
+
+;; Perform required gas cost calculations and checks for modexp precompile.
+fn oob_modexp_pricing(callee_gas u128, r_c u128, lE u16, max_lB_lM u16) -> (success u1, return_gas u128, rc_nz u1) {
+  var delta, gas_cost u128
+  var b u1
+  ;; calculate r@c != 0
+  rc_nz = r_c != 0 ? 1 : 0
+  ;; calculate gas_cost
+  gas_cost = oob_modexp_gas_cost(lE, max_lB_lM)
+  ;; check gas_cost <= callee_gas
+  b, delta = callee_gas - gas_cost
+  if b != 0 goto exit_f
+  success = 1
+  return_gas = delta
+  return
+exit_f:
+  success = 0
+  return_gas = 0
+  return
+}
+
+;; Compute the gas cost for the modexp precompile following the yellow
+;; paper.  See also updates for EIP7883.
+fn oob_modexp_gas_cost(lE u16, max_lB_lM u16) -> (gas_cost=500 u64) {
+   var tmp u44
+   var f_of_max u28
+   var coeff u16
+   ;; apply function f
+   f_of_max = oob_modexp_f(max_lB_lM)
+   ;; determine coefficient to use
+   coeff = lE == 0 ? 1 : lE
+   ;; compute the product
+   tmp = f_of_max * coeff
+   ;; ensure minimal gas requirement
+   gas_cost = max_u64(tmp,G_MODEXP_MIN)
+   ;;
+   return
+}
+
+;; Function "f" originally from the yellow paper and updated in
+;; EIP-7883.  This computes returns 16 when max_len <= 32 or returns
+;; 2*(⌈max_len / 8⌉)²) otherwise.
+fn oob_modexp_f(max_len u16) -> (res=16 u28) {
+  var b u1
+  var tmp u16
+  ;; check whether max_len <= 32
+  b, tmp = 32 - max_len
+  if b != 0 goto big_length
+  res = 16
+  return
+  ;;
+big_length:
+  var hi u13
+  var lo u3
+  ;; divide max_len / 8
+  hi,lo = max_len
+  ;; check whether to round up
+  if lo == 0 goto exact
+  ;; rounding required
+  res = 2 * (hi + 1) * (hi + 1)
+  return
+exact:
+  ;; no rounding required
+  res = 2 * hi * hi
+  return
+}
+
+fn oob_modexp_extract(cds u32, bbs u16, ebs u16, mbs u16) -> (base u1, exponent u1, modulus u1) {
+  var b u1
+  var tmp u32
+  ;; determine if cds > 96 + bbs + ebs
+  b, tmp = (96 + bbs + ebs) - cds
+  ;; determine extractions
+  modulus = mbs != 0 ? b : 0
+  exponent = ebs != 0 ? modulus : 0
+  base = bbs != 0 ? modulus : 0
+  return
+}
+
+;; return min(32,value) as a u8 value.
+fn cap32(value u128) -> (cap u8) {
+   var hi u123
+   var lo u5
+   ;;
+   hi,lo = value
+   if hi != 0 goto exit_32
+   ;; value < 32
+   cap = lo
+   return
+exit_32:
+   ;; value >= 32
+   cap = 32
+   return
+}

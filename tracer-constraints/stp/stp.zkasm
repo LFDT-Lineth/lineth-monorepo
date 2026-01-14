@@ -1,0 +1,146 @@
+include "../constants/evm.zkasm"
+
+;; The STP module performs upfront gas calculations for CALL and
+;; CREATE instructions.  The logic of this module is tricky in places,
+;; and is largely determined by the Yellow Paper.  For any call to
+;; stp, the "inst" argument indicates which of these instructions is
+;; being computed:
+;;
+;; CREATE                           0xF0 (240)
+;; CALL                             0xF1 (241)
+;; CALLCODE                         0xF2 (242)
+;; DELEGATECALL                     0xF4 (244)
+;; CREATE2                          0xF5 (245)
+;; STATICCALL                       0xFA (250)
+;;
+;; Here, GAS_ACTUAL holds the amount of gas available to the execution
+;; context just prior to the instruction.  GAS_MXP holds the gas cost
+;; for any memory expansion which maybe required for holding the call
+;; / return data, etc.  GAS holds the amount of gas provided on the
+;; stack as parameters to the call, whilst VALUE holds the amount in
+;; wei provided as a parameter to the CALL/CALLCODE instruction.
+;; Finally, EXISTS indicates for a CALL instruction whether target
+;; account exists already, and WARM indicates whether the target
+;; account for a call instruction is warm (or not).
+pub fn stp(INST=0xf0 u8, GAS_ACTUAL u64, GAS_MXP u64, GAS u256, VALUE u256, EXISTS u1, WARM u1) -> (OOGX=1 u1, GAS_UPFRONT=32000 u64, GAS_OOP u64, GAS_STIPEND u64)
+;; PRE: GAS_UPFRONT calculation does not overflow.
+{
+  var L_gas_diff u64
+  var stipend, gas_extra u64
+  var c u1
+  ;;
+  if INST == EVM_INST_CREATE goto create
+  if INST == EVM_INST_CREATE2 goto create
+  ;; ===========================================================================
+  ;; CALL / CALLCODE / DELEGATECALL / STATICCALL
+  ;; ===========================================================================
+  gas_extra, stipend = call_gas_extra(INST, VALUE, WARM, EXISTS)
+  ;; determine upfront cost for call
+  c, GAS_UPFRONT = GAS_MXP + gas_extra
+  ;; sanity check precondition
+  if c == 1 goto failed_pre
+  ;; check for out-of-gas (oogx)
+  L_gas_diff, OOGX = gas_out_of_pocket(GAS_ACTUAL,GAS_UPFRONT)
+  ;; calculate gas_minc
+  GAS_OOP = min256_64(GAS,L_gas_diff)
+  ;; handle oogx case
+  if OOGX == 1 goto call_oogx
+  GAS_STIPEND = stipend
+  return
+call_oogx:
+  GAS_STIPEND=0
+  return
+  ;; ===========================================================================
+  ;; CREATE / CREATE2
+  ;; ===========================================================================
+create:
+  ;; determine upfront cost for create
+  c, GAS_UPFRONT = GAS_MXP + G_TXCREATE
+  ;; sanity check precondition
+  if c == 1 goto failed_pre
+  ;; calculate out-of-pocket cost
+  GAS_OOP, OOGX = gas_out_of_pocket(GAS_ACTUAL,GAS_UPFRONT)
+  GAS_STIPEND = 0
+  return
+failed_pre:
+  ;; precondition failure
+  fail
+}
+
+;; Determines extra gas costs for a call instruction (such as for
+;; transfering value) and computes the gas stipend for the caller
+;; context.  The logic of this function is essentially determined by
+;; the yellow paper.
+fn call_gas_extra(inst=0xf1 u8, value u256, warm u1, exists u1) -> (gas_extra=2600 u64, stipend u64)
+;; PRE: inst in {0xf1,0xf2,0xf4,0xf5]
+{
+  var gas_access u16
+  var notWarm, notExists u1
+  ;; inversions
+  notWarm = 1 - warm
+  notExists = 1 - exists
+  ;; calculate gas access cost
+  gas_access = (warm * G_WARMACCESS) + (notWarm * G_COLDACCOUNTACCESS)
+  ;;
+  if value == 0 goto call_no_transfer
+  if inst == EVM_INST_CALL goto call
+  if inst == EVM_INST_CALLCODE goto callcode
+  goto call_no_transfer
+call:
+  stipend = G_CALLSTIPEND
+  gas_extra = gas_access + G_CALLVALUE + (notExists * G_NEWACCOUNT)
+  return
+callcode:
+  stipend = G_CALLSTIPEND
+  gas_extra = gas_access + G_CALLVALUE
+  return
+call_no_transfer:
+  ;; staticcall / delegatecall
+  stipend=0
+  gas_extra = gas_access
+  return
+}
+
+;; Determine either: (a) the gas taken immediately when a call /
+;; create executes; or (b) that an out-of-gas exception occurred.
+;; Here, gas_actual is the actual amount of gas available prior to the
+;; call, whilst gas_upfront is the computed upfront cost in gas
+;; required for the call to proceed.
+fn gas_out_of_pocket(gas_actual u64, gas_upfront u64) -> (oop u64, oogx u1) {
+  var diff u64
+  var one_64th u58
+  var tmp u6
+  var z u1
+  ;; check for out-of-gas (oogx)
+  oogx, diff = gas_actual - gas_upfront
+  ;; split cases for oogx
+  if oogx == 1 goto exit_oogx
+  ;; calculate 1/64 of diff
+  one_64th, tmp = diff
+  ;; NOTE: z==0 by construction
+  z, oop = diff - one_64th
+  ;; done
+  return
+exit_oogx:
+  oop = 0
+  return
+}
+
+;; compute minimum of two values of different widths
+fn min256_64(gas u256, L_gas_diff u64) -> (res u64) {
+   var tmp1 u256
+   var tmp2 u192
+   var b u1
+   ;;
+   b,tmp1 = gas - L_gas_diff
+   ;; check case
+   if b == 0 goto lt
+   ;; harder case: split gas
+   tmp2, res = gas
+   ;; NOTE: tmp2==0 as (gas < L_gas_diff)
+   return
+lt:
+   ;; easy case
+   res = L_gas_diff
+   return
+}
