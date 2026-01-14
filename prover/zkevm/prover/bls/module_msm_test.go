@@ -77,8 +77,8 @@ func TestBlsG1MsmNoCircuit(t *testing.T) {
 	limits := &Limits{
 		NbG1MulInputInstances:        8,
 		NbG1MembershipInputInstances: 8,
-		LimitG1MsmCalls:              64,
-		LimitG1MembershipCalls:       64,
+		LimitG1MsmCalls:              128,
+		LimitG1MembershipCalls:       128,
 	}
 	testBlsMsm(t, false, G1, "testdata/bls_g1_msm_inputs-[0-9]*.csv", limits)
 }
@@ -87,8 +87,8 @@ func TestBlsG1MsmWithCircuit(t *testing.T) {
 	limits := &Limits{
 		NbG1MulInputInstances:        6,
 		NbG1MembershipInputInstances: 6,
-		LimitG1MsmCalls:              64,
-		LimitG1MembershipCalls:       64,
+		LimitG1MsmCalls:              128,
+		LimitG1MembershipCalls:       128,
 	}
 	testBlsMsm(t, true, G1, "testdata/bls_g1_msm_inputs-[0-9]*.csv", limits)
 }

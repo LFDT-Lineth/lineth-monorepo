@@ -618,6 +618,8 @@ func (d *UnalignedPairData) assignUnaligned(run *wizard.ProverRuntime) {
 					dstCurrentAccumulator[i].PushZero()
 				}
 				ptr += 2
+			} else {
+				utils.Panic("unexpected state in BlsPair assignUnaligned")
 			}
 		}
 	}

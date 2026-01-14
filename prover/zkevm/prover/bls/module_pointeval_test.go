@@ -15,6 +15,8 @@ func testPointEval(t *testing.T, withCircuit bool) {
 	limits := &Limits{
 		NbPointEvalInputInstances:        2,
 		NbPointEvalFailureInputInstances: 2,
+		LimitPointEvalCalls:              50,
+		LimitPointEvalFailureCalls:       50,
 	}
 	files, err := filepath.Glob("testdata/bls_pointeval_inputs-[0-9]*.csv")
 	if err != nil {

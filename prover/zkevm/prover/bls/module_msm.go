@@ -406,6 +406,8 @@ func (d *UnalignedMsmData) assignUnaligned(run *wizard.ProverRuntime) {
 				dstIsLastLine.Pop()
 				dstIsLastLine.PushOne()
 				ptr += nbL
+			default:
+				utils.Panic("unexpected state in BlsMsm assignUnaligned")
 			}
 		}
 	}
