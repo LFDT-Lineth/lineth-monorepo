@@ -24,6 +24,11 @@ jobs:
           distribution: temurin
           cache: 'gradle'
 
+      - name: Setup Tracer Environment # configures Go, Java, Gradle, and gets submodules
+        uses: ./.github/actions/setup-tracer-environment
+        with:
+          enable-ssh: false
+
       - name: Build artifacts
         run: ./gradlew besu-plugins:linea-sequencer:sequencer:artifacts -PreleaseVersion=${{ github.event.inputs.version }}
         env:

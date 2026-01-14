@@ -1,4 +1,4 @@
-name: 'Setup Testing Environment'
+name: 'Setup Tracer Environment'
 description: 'Checkout repository and install what is needed for building / testing'
 inputs:
   enable-ssh:
