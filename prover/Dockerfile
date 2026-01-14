@@ -15,7 +15,6 @@ COPY --from=prover go.mod .
 COPY --from=prover go.sum .
 RUN go mod download
 
-COPY --from=constraints . ./constraints
 COPY --from=prover . ./prover
 
 WORKDIR /usr/src/prover/

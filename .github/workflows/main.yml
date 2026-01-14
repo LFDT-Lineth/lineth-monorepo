@@ -29,6 +29,7 @@ jobs:
       linea-sequencer-plugin: ${{ steps.filter.outputs.linea-sequencer-plugin }}
       native-yield-automation-service: ${{ steps.filter.outputs.native-yield-automation-service }}
       tracer: ${{ steps.filter.outputs.tracer }}
+      tracer-constraints: ${{ steps.filter.outputs.tracer-constraints }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -85,7 +86,6 @@ jobs:
               - '.github/workflows/build-and-publish.yml'
               - '.github/workflows/main.yml'
               - '.github/workflows/reuse-*.yml'
-              - 'constraints'
             transaction-exclusion-api:
               - 'transaction-exclusion-api/**'
               - 'jvm-libs/generic/extensions/futures/**'
@@ -129,6 +129,10 @@ jobs:
               - '.nvmrc'
             tracer:
               - 'tracer/**'
+            tracer-constraints:
+              - 'tracer-constraints/**'
+              - '.github/workflows/tracer-constraints-*.yml'
+              - 'tracer/gradle/corset.gradle'
 
       - name: Filter out commit changes
         uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 #v3.0.2
@@ -179,6 +183,7 @@ jobs:
       transaction_exclusion_api_changed: ${{ needs.filter-commit-changes.outputs.transaction-exclusion-api }}
       native_yield_automation_service_changed: ${{ needs.filter-commit-changes.outputs.native-yield-automation-service }}
       tracer_changed: ${{ needs.filter-commit-changes.outputs.tracer }}
+      constraints_changed: ${{ needs.filter-commit-changes.outputs.tracer-constraints }}
     secrets: inherit
 
   get-has-changes-requiring-e2e-testing:

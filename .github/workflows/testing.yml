@@ -37,6 +37,9 @@ on:
       tracer_changed:
         required: true
         type: string
+      constraints_changed:
+        required: true
+        type: string
 
 jobs:
   # Cache for pulling Docker images is disabled as we empirically found that this
@@ -91,6 +94,11 @@ jobs:
   #   uses: ./.github/workflows/tracer-gradle-tests.yml
   #   if: ${{ inputs.tracer_changed == 'true' }}
   #   secrets: inherit
+
+  constraints:
+    uses: ./.github/workflows/tracer-constraints-check-compilation.yml
+    if: ${{ inputs.constraints_changed == 'true' }}
+    secrets: inherit
 
   # Run Jacoco report after all JVM tests complete
   jacoco-report:
@@ -180,7 +188,7 @@ jobs:
   # If all jobs are skipped, the workflow will still succeed.
   always_succeed:
     runs-on: ubuntu-24.04
-    if: ${{ inputs.coordinator_changed == 'false' && inputs.prover_changed == 'false' && inputs.native_yield_automation_service_changed == 'false' && inputs.postman_changed == 'false' && inputs.transaction_exclusion_api_changed == 'false' && inputs.staterecovery_changed == 'false' && inputs.smart_contracts_changed == 'false' && inputs.linea_sequencer_changed == 'false' }}
+    if: ${{ inputs.coordinator_changed == 'false' && inputs.prover_changed == 'false' && inputs.native_yield_automation_service_changed == 'false' && inputs.postman_changed == 'false' && inputs.transaction_exclusion_api_changed == 'false' && inputs.staterecovery_changed == 'false' && inputs.smart_contracts_changed == 'false' && inputs.linea_sequencer_changed == 'false' && inputs.constraints_changed == 'false' }}
     steps:
       - name: Ensure Workflow Success
         run: echo "All jobs were skipped, but workflow succeeds."

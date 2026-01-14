@@ -51,7 +51,7 @@ import net.consensys.linea.zktracer.ChainConfig;
 public class CorsetValidator extends AbstractExecutable {
   public record Result(boolean isValid, File traceFile, String corsetOutput) {}
 
-  private static final String ZKEVM_BIN_PREFIX = "../linea-constraints/zkevm_";
+  private static final String ZKEVM_BIN_PREFIX = "../../tracer-constraints/zkevm_";
   private static final String ZKEVM_BIN_SUFFIX = ".bin";
 
   /** Indicates whether or not this validator is active (i.e. we located the go-corset binary). */

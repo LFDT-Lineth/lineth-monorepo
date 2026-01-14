@@ -1,0 +1,23 @@
+name: Tracer constraints check compilation
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: gha-runner-scale-set-ubuntu-22.04-amd64-med
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          submodules: false
+
+      - name: Setup Environment
+        uses: ./.github/actions/setup-tracer-environment
+
+      - name: Run Tracer buildZkevmBins
+        run: ./gradlew :tracer:arithmetization:buildZkevmBins

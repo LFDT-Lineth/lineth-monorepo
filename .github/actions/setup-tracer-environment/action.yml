@@ -22,10 +22,6 @@ runs:
           go-version: '1.24.6'
           cache-dependency-path: "**/*.sum"
 
-      - name: Get Submodules
-        shell: bash
-        run: git submodule update --init --recursive tracer/linea-constraints
-
       - name: Setup Java and Gradle
         uses: ./.github/actions/setup-java-and-gradle
         with:
