@@ -3,7 +3,7 @@ services:
     platform: linux/amd64
     image: consensys/linea-besu-package:latest
     command: 
-      - --profile=advanced-sepolia 
+      - --profile=advanced-sepolia
       - --p2p-host=YOUR_IP_ADDRESS
       # - --engine-jwt-disabled=false  # Uncomment if engine-api jwt is enabled
       # - --engine-jwt-secret=/var/lib/besu/jwt  # Uncomment if engine-api jwt is enabled

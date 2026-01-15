@@ -2,7 +2,7 @@ services:
   linea-besu-basic-mainnet-node:
     image: consensys/linea-besu-package:latest
     command: 
-      - --profile=basic-mainnet 
+      - --profile=basic-mainnet
       - --p2p-host=YOUR_IP_ADDRESS
       # - --engine-jwt-disabled=false  # Uncomment if engine-api jwt is enabled
       # - --engine-jwt-secret=/var/lib/besu/jwt  # Uncomment if engine-api jwt is enabled

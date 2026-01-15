@@ -680,3 +680,4 @@ services:
       - --trace-start-block-number=0
     volumes:
       - ./config/shomei/log4j.xml:/log4j.xml:ro
+
