@@ -48,9 +48,9 @@ open class Web3JLineaRollupSmartContractClientReadOnly(
   private val smartContractVersionCache = AtomicReference<LineaRollupContractVersion>(null)
 
   private fun getSmartContractVersion(): SafeFuture<LineaRollupContractVersion> {
-    return if (smartContractVersionCache.get() == LineaRollupContractVersion.V6) {
+    return if (smartContractVersionCache.get() == LineaRollupContractVersion.V7) {
       // once upgraded, it's not downgraded
-      SafeFuture.completedFuture(LineaRollupContractVersion.V6)
+      SafeFuture.completedFuture(LineaRollupContractVersion.V7)
     } else {
       fetchSmartContractVersion()
         .thenPeek { contractLatestVersion ->
@@ -76,6 +76,7 @@ open class Web3JLineaRollupSmartContractClientReadOnly(
       .thenApply { version ->
         when {
           version.startsWith("6") -> LineaRollupContractVersion.V6
+          version.startsWith("7") -> LineaRollupContractVersion.V7
           else -> throw IllegalStateException("Unsupported contract version: $version")
         }
       }
@@ -111,7 +112,9 @@ open class Web3JLineaRollupSmartContractClientReadOnly(
     return getVersion()
       .thenCompose { version ->
         when (version!!) {
-          LineaRollupContractVersion.V6 -> contractClientAtBlock(
+          LineaRollupContractVersion.V6,
+          LineaRollupContractVersion.V7,
+          -> contractClientAtBlock(
             blockParameter,
             LineaRollupV6::class.java,
           ).blobShnarfExists(

@@ -18,7 +18,9 @@ import java.util.Arrays
 internal object Web3JLineaRollupFunctionBuilders {
   fun buildSubmitBlobsFunction(version: LineaRollupContractVersion, blobs: List<BlobRecord>): Function {
     return when (version) {
-      LineaRollupContractVersion.V6 -> buildSubmitBlobsFunctionV6(blobs)
+      LineaRollupContractVersion.V6,
+      LineaRollupContractVersion.V7,
+      -> buildSubmitBlobsFunctionV6(blobs)
     }
   }
 
@@ -68,7 +70,9 @@ internal object Web3JLineaRollupFunctionBuilders {
     parentL1RollingHashMessageNumber: Long,
   ): Function {
     when (version) {
-      LineaRollupContractVersion.V6 -> {
+      LineaRollupContractVersion.V6,
+      LineaRollupContractVersion.V7,
+      -> {
         return buildFinalizeBlockFunctionV6(
           aggregationProof,
           aggregationLastBlob,

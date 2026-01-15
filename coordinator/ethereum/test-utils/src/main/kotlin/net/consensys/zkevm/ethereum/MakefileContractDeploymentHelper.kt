@@ -79,6 +79,7 @@ fun makeDeployLineaRollup(
   deploymentPrivateKey?.let { env["DEPLOYMENT_PRIVATE_KEY"] = it }
   val command = when (contractVersion) {
     LineaRollupContractVersion.V6 -> "make deploy-linea-rollup-v6"
+    LineaRollupContractVersion.V7 -> "make deploy-linea-rollup-v7"
     // else -> throw IllegalArgumentException("Unsupported contract version: $contractVersion")
   }
 

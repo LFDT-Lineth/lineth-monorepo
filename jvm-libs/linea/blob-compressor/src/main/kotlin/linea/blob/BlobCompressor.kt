@@ -65,10 +65,6 @@ class GoBackedBlobCompressor private constructor(
     return goNativeBlobCompressor.CanWrite(blockRLPEncoded, blockRLPEncoded.size)
   }
 
-  fun inflightBlobSize(): Int {
-    return goNativeBlobCompressor.Len()
-  }
-
   override fun appendBlock(blockRLPEncoded: ByteArray): BlobCompressor.AppendResult {
     val compressionSizeBefore = goNativeBlobCompressor.Len()
     val appended = goNativeBlobCompressor.Write(blockRLPEncoded, blockRLPEncoded.size)
