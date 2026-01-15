@@ -1,12 +1,12 @@
-# Linea constraints 
+# Tracer constraints
 
-This repository hosts the implementation of the constraint system specified in the [linea-specification repo](https://github.com/Consensys/linea-specification). 
+This folder hosts the implementation of the constraint system specified in the [linea-specification repo](https://github.com/Consensys/linea-specification).
 
-Linea’s constraint system applies to so-called traces which are large matrices of fixed width (i.e. fixed number of columns or ‘registries’) and variable depth (correlating with the complexity of the EVM execution). The production of such traces is the job of the [linea-tracer repo](https://github.com/Consensys/linea-tracer).
+Linea’s constraint system applies to so-called traces which are large matrices of fixed width (i.e. fixed number of columns or ‘registries’) and variable depth (correlating with the complexity of the EVM execution). The production of such traces is the job of the `tracer` component.
 
 Constraints and traces are two of the inputs to the prover.
 
-It serves developers by making the Linea tech stack open source under 
+It serves developers by making the Linea tech stack open source under
 the [Apache 2.0 license](LICENSE).
 
 ## What is Linea?
@@ -21,13 +21,13 @@ tbd -->
 
 ## Looking for the Linea code?
 
-Linea's stack is made up of multiple repositories, these include:
+Linea's stack is made up of multiple components, these include:
 
-- This repo, [linea-constraints](https://github.com/Consensys/linea-constraints): Implementation of the constraint system from the specification
 - [linea-monorepo](https://github.com/Consensys/linea-monorepo): The main repository for the Linea stack & network
+- In which, this folder, [tracer-constraints](../tracer-constraints): Implementation of the constraint system from the specification
 > Also maintains a set of Linea-Besu plugins for the sequencer, tracer, and RPC nodes.
-- [linea-tracer](https://github.com/Consensys/linea-tracer): Linea-Besu plugin which produces the traces that the constraint system applies and that serve as inputs to the prover
-- [linea-specification](https://github.com/Consensys/linea-specification): Specification of the constraint system defining Linea's zkEVM
+- In which, the [tracer](../tracer) component: Linea-Besu plugin which produces the traces that the constraint system applies and that serve as inputs to the prover
+- [linea-specification](https://github.com/Consensys/linea-specification): Specification repo of the constraint system defining Linea's zkEVM
 
 Linea abstracts away the complexity of this technical architecture to allow developers to:
 
@@ -47,7 +47,7 @@ Please keep in mind that we do not accept non-code contributions like fixing com
 
 1. [Create an issue](https://github.com/Consensys/linea-constraints/issues).
 > If the proposed update requires input, also tag us for discussion.
-2. Submit the update as a pull request from your [fork of this repo](https://github.com/Consensys/linea-constraints/fork), and tag us for review. 
+2. Submit the update as a pull request from your [fork of this repo](https://github.com/Consensys/linea-monorepo/fork), and tag us for review.
 > Include the issue number in the pull request description and (optionally) in the branch name.
 
 Consider starting with a ["good first issue"](https://github.com/ConsenSys/linea-constraints/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22).

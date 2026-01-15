@@ -19,12 +19,6 @@ brew install openjdk@17
 go install github.com/consensys/go-corset/cmd/go-corset@latest
 ```
 
-### Update Constraints [Submodule](https://github.com/Consensys/linea-constraints/)
-
-```shell
-git submodule update --init --recursive
-```
-
 ### Install [pre-commit](https://pre-commit.com/)
 
 ```shell
@@ -60,7 +54,7 @@ ______________________________________________________________________
 ./gradlew tracer:reference-tests:referenceBlockchainTests
 
 # Run single reference test via gradle, e.g for net.consensys.linea.generated.blockchain.BlockchainReferenceTest_339
-./gradlew referenceBlockchainTests -Dblockchain=Ethereum --tests "net.consensys.linea.generated.blockchain.BlockchainReferenceTest_339"
+./gradlew tracer:reference-tests:referenceBlockchainTests --tests "net.consensys.linea.generated.blockchain.BlockchainReferenceTest_339"
 ```
 
 ## IntelliJ IDEA Setup
@@ -125,9 +119,8 @@ Plugins are documented [here](PLUGINS.md).
 
 Here are the steps for releasing a new version of the plugins:
 
-1. Create a tag with the release version number in the format vX.Y.Z (e.g., v0.2.0 creates a release version 0.2.0).
-1. Push the tag to the repository.
-1. GitHub Actions will automatically create a draft release for the release tag.
-1. Once the release workflow completes, update the release notes, uncheck "Draft", and publish the release.
+1. Update [tracer/build.gradle](../tracer/build.gradle) property `targetReleaseVersion`with the release version number's expected tag in the format vX.Y.Z (e.g., v0.2.0 creates a release version 0.2.0).
+2. Launch [Linea tracer release Github action](https://github.com/Consensys/linea-monorepo/actions/workflows/linea-tracer-plugin-release.yml) with the chosen tag
+3. Once the release workflow completes, check and update the release notes.
 
 Note: Release tags (of the form v\*) are protected and can only be pushed by organization and/or repository owners.

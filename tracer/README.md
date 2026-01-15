@@ -1,10 +1,10 @@
 # Linea tracer (zkEVM)
 
-This repository hosts a Linea tracing implementation for
+This folder hosts a Linea tracing implementation for
 [Besu](https://github.com/hyperledger/besu) based on an
 implementation in Go.
 
-Tracing refers to the process of extracting data from the execution of an EVM client in order to construct large matrices known as execution traces. Execution traces are subject to the constraint system specified in the [linea-specification](https://github.com/Consensys/linea-specification) repo and implemented in the [linea-constraints](https://github.com/Consensys/linea-constraints) repo.
+Tracing refers to the process of extracting data from the execution of an EVM client in order to construct large matrices known as execution traces. Execution traces are subject to the constraint system specified in the [linea-specification](https://github.com/Consensys/linea-specification) repo and implemented in the [tracer-constraints](../tracer-constraints) folder.
 
 It serves developers by making the Linea tech stack open source under
 the [Apache 2.0 license](LICENSE).
@@ -23,16 +23,16 @@ Discover [existing plugins](docs/plugins.md) and understand the [plugin release 
 
 ## Looking for the Linea code?
 
-Linea's stack is made up of multiple repositories, these include:
+Linea's stack is made up of multiple components, these include:
 
-- This repo, [linea-tracer](https://github.com/Consensys/linea-tracer): Linea-Besu plugin which produces the traces that the constraint system applies and that serve as inputs to the prover
+- This folder, [tracer](../tracer): Linea-Besu plugin which produces the traces that the constraint system applies and that serve as inputs to the prover
 
 > This repository contains the elements of the Linea stack responsible for this process.
 
-- [linea-monorepo](https://github.com/Consensys/linea-monorepo): The main repository for the Linea stack & network
+- [linea-monorepo](https://github.com/Consensys/linea-monorepo): The main repository for the Linea stack & network in which this folder lives
 - [besu](https://github.com/hyperledger/besu): Besu client
 - [linea-sequencer](https://github.com/Consensys/linea-sequencer): A set of Linea-Besu plugins for the sequencer and RPC nodes
-- [linea-constraints](https://github.com/Consensys/linea-constraints): Implementation of the constraint system from the specification
+- [tracer-constraints](../tracer-constraints) folder: Implementation of the constraint system from the specification
 - [linea-specification](https://github.com/Consensys/linea-specification): Specification of the constraint system defining Linea's zkEVM
 
 Linea abstracts away the complexity of this technical architecture to allow developers to:
@@ -55,7 +55,7 @@ Please keep in mind that we do not accept non-code contributions like fixing com
 
 > If the proposed update requires input, also tag us for discussion.
 
-2. Submit the update as a pull request from your [fork of this repo](https://github.com/Consensys/linea-tracer/fork), and tag us for review.
+2. Submit the update as a pull request from your [fork of this repo](https://github.com/Consensys/linea-monorepo/fork), and tag us for review.
 
 > Include the issue number in the pull request description and (optionally) in the branch name.
 
@@ -78,16 +78,21 @@ Before contributing, ensure you're familiar with:
 
 ### Update reference tests
 
-To update the reference tests, run the following commands:
+To update the reference tests, follow the steps below:
 
-```shell
-cd reference-tests/src/test/resources/ethereum-tests
-git fetch
-git checkout <branch or commit>
-# update LegacyTests submodule of new commit
-git submodule update --init --recursive
-# go back to project root
-cd ../../../../..
-git add reference-tests/src/test/resources/ethereum-tests/
-git commit -m "<commit message>"
-```
+- In [tracer/reference-tests/build.gradle](../tracer/reference-tests/build.gradle) : update the `src` from `downloadExecutionSpecFixtures` task with the `ethereum-spec-tests` repo's new fixtures version you would like to update to
+- At the root, launch
+  - ```shell
+    ./gradlew tracer:reference-tests:downloadExecutionSpecFixtures
+    ```
+  - ```shell
+    ./gradlew tracer:reference-tests:copyExecutionSpecFixtures
+    ```
+  - ```shell
+    ./gradlew tracer:reference-tests:generateExecutionSpecBlockchainTests
+    ```
+- Commit the changes
+- You can launch all tests to ensure everything is passing locally with the command line below or on the CI with this [GitHub Action](https://github.com/Consensys/linea-monorepo/actions/workflows/tracer-reference-blockchain-daily-tests.yml)
+  - ```shell
+    ./gradlew tracer:reference-tests:referenceExecutionSpecBlockchainTests
+    ```
