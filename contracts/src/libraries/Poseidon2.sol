@@ -2,9 +2,16 @@
 pragma solidity ^0.8.30;
 
 /**
- * @title Library to perform Poseidon2 hashing.
+ * @title Library to perform Poseidon2 hashing with lazy reductions.
  * @author ConsenSys Software Inc.
  * @custom:security-contact security-report@linea.build
+ * @notice Optimized version using lazy modular reduction to minimize addmod operations.
+ *
+ * Key optimizations:
+ * - computeSum: Use regular add for 15 additions, single mod at end (saves ~78 gas × 21 rounds)
+ * - matMulM4: Use regular add internally, mod only on outputs (saves ~47 gas × 28 calls)
+ * - addRoundKey: Skip reduction, let sbox handle it via mulmod (saves ~40 gas × 12 calls)
+ * - sumColumns: Accumulate with add, single mod per column
  */
 library Poseidon2 {
   /// Thrown when the data is not purely in 32 byte chunks.
@@ -12,15 +19,8 @@ library Poseidon2 {
 
   uint32 private constant R_MOD = 2130706433;
   uint256 private constant DATA_IS_NOT_MOD32_SELECTOR =
-    0xc2cab26c00000000000000000000000000000000000000000000000000000000; // bytes4(keccak256("DataIsNotMod32()"))
+    0xc2cab26c00000000000000000000000000000000000000000000000000000000;
 
-  /**
-   * @dev Round constants for Poseidon2 permutation.
-   *
-   * - RK_0_* .. RK_2_* : full rounds (both state elements affected)
-   * - RK_3 .. RK_23   : partial rounds (first state element only)
-   * - RK_24_* .. RK_26_* : final full rounds
-   */
   uint256 private constant RK_0_0 = 52691802021506155758914962750280372212207119203515444126415105344946620971042;
   uint256 private constant RK_0_1 = 32207471970256316655474490955553459742787419335289228299095903266455798739660;
   uint256 private constant RK_1_0 = 22163791677048831312463448776400028385347383911100916908889018061663075177430;
@@ -79,7 +79,7 @@ library Poseidon2 {
         let a := poseidon2Hash
         let b := tmp
         a, b := permutation(a, b)
-        poseidon2Hash := addRoundKeyUint256(tmp, b)
+        poseidon2Hash := addRoundKeyUint256Reduced(tmp, b)
         ptrMsg := add(ptrMsg, 0x20)
       }
 
@@ -100,6 +100,7 @@ library Poseidon2 {
        * @return rb Updated second state element
        */
       function permutation(a, b) -> ra, rb {
+        
         /*-------------------------------------------------------------*
         | Initial external MDS                                         |
         |                                                              |
@@ -115,22 +116,16 @@ library Poseidon2 {
         |   2. Apply S-box (x ↦ x³) to ALL limbs                        |
         |   3. Apply external MDS                                       |
         *--------------------------------------------------------------*/
-        ra := addRoundKeyUint256(ra, RK_0_0)
-        rb := addRoundKeyUint256(rb, RK_0_1)
-        ra := sboxUint256(ra)
-        rb := sboxUint256(rb)
+        ra := addRoundKeyUint256UnreducedAndSbox(ra, RK_0_0)
+        rb := addRoundKeyUint256UnreducedAndSbox(rb, RK_0_1)
         ra, rb := matMulExternalInPlace(ra, rb)
 
-        ra := addRoundKeyUint256(ra, RK_1_0)
-        rb := addRoundKeyUint256(rb, RK_1_1)
-        ra := sboxUint256(ra)
-        rb := sboxUint256(rb)
+        ra := addRoundKeyUint256UnreducedAndSbox(ra, RK_1_0)
+        rb := addRoundKeyUint256UnreducedAndSbox(rb, RK_1_1)
         ra, rb := matMulExternalInPlace(ra, rb)
 
-        ra := addRoundKeyUint256(ra, RK_2_0)
-        rb := addRoundKeyUint256(rb, RK_2_1)
-        ra := sboxUint256(ra)
-        rb := sboxUint256(rb)
+        ra := addRoundKeyUint256UnreducedAndSbox(ra, RK_2_0)
+        rb := addRoundKeyUint256UnreducedAndSbox(rb, RK_2_1)
         ra, rb := matMulExternalInPlace(ra, rb)
 
         /*--------------------------------------------------------------*
@@ -148,224 +143,189 @@ library Poseidon2 {
         |   4. Apply internal MDS using that sum                        |
         |                                                               | 
         *--------------------------------------------------------------*/
-
-        ra := addRoundKeyFirstEntry(ra, RK_3)
-        ra := sboxFirstEntry(ra)
+        ra := addRoundKeyFirstEntryUnreducedAndSbox(ra, RK_3)
         {
-          let s := computeSum(ra, rb)
+          let s := computeSumLazy(ra, rb)
           ra := matMulInternalInPlaceFirstHalf(ra, s)
           rb := matMulInternalInPlaceSecondHalf(rb, s)
         }
 
-        ra := addRoundKeyFirstEntry(ra, RK_4)
-        ra := sboxFirstEntry(ra)
+        ra := addRoundKeyFirstEntryUnreducedAndSbox(ra, RK_4)
         {
-          let s := computeSum(ra, rb)
+          let s := computeSumLazy(ra, rb)
           ra := matMulInternalInPlaceFirstHalf(ra, s)
           rb := matMulInternalInPlaceSecondHalf(rb, s)
         }
 
-        ra := addRoundKeyFirstEntry(ra, RK_5)
-        ra := sboxFirstEntry(ra)
+        ra := addRoundKeyFirstEntryUnreducedAndSbox(ra, RK_5)
         {
-          let s := computeSum(ra, rb)
+          let s := computeSumLazy(ra, rb)
           ra := matMulInternalInPlaceFirstHalf(ra, s)
           rb := matMulInternalInPlaceSecondHalf(rb, s)
         }
 
-        ra := addRoundKeyFirstEntry(ra, RK_6)
-        ra := sboxFirstEntry(ra)
+        ra := addRoundKeyFirstEntryUnreducedAndSbox(ra, RK_6)
         {
-          let s := computeSum(ra, rb)
+          let s := computeSumLazy(ra, rb)
           ra := matMulInternalInPlaceFirstHalf(ra, s)
           rb := matMulInternalInPlaceSecondHalf(rb, s)
         }
 
-        ra := addRoundKeyFirstEntry(ra, RK_7)
-        ra := sboxFirstEntry(ra)
+        ra := addRoundKeyFirstEntryUnreducedAndSbox(ra, RK_7)
         {
-          let s := computeSum(ra, rb)
+          let s := computeSumLazy(ra, rb)
           ra := matMulInternalInPlaceFirstHalf(ra, s)
           rb := matMulInternalInPlaceSecondHalf(rb, s)
         }
 
-        ra := addRoundKeyFirstEntry(ra, RK_8)
-        ra := sboxFirstEntry(ra)
+        ra := addRoundKeyFirstEntryUnreducedAndSbox(ra, RK_8)
         {
-          let s := computeSum(ra, rb)
+          let s := computeSumLazy(ra, rb)
           ra := matMulInternalInPlaceFirstHalf(ra, s)
           rb := matMulInternalInPlaceSecondHalf(rb, s)
         }
 
-        ra := addRoundKeyFirstEntry(ra, RK_9)
-        ra := sboxFirstEntry(ra)
+        ra := addRoundKeyFirstEntryUnreducedAndSbox(ra, RK_9)
         {
-          let s := computeSum(ra, rb)
+          let s := computeSumLazy(ra, rb)
           ra := matMulInternalInPlaceFirstHalf(ra, s)
           rb := matMulInternalInPlaceSecondHalf(rb, s)
         }
 
-        ra := addRoundKeyFirstEntry(ra, RK_10)
-        ra := sboxFirstEntry(ra)
+        ra := addRoundKeyFirstEntryUnreducedAndSbox(ra, RK_10)
         {
-          let s := computeSum(ra, rb)
+          let s := computeSumLazy(ra, rb)
           ra := matMulInternalInPlaceFirstHalf(ra, s)
           rb := matMulInternalInPlaceSecondHalf(rb, s)
         }
 
-        ra := addRoundKeyFirstEntry(ra, RK_11)
-        ra := sboxFirstEntry(ra)
+        ra := addRoundKeyFirstEntryUnreducedAndSbox(ra, RK_11)
         {
-          let s := computeSum(ra, rb)
+          let s := computeSumLazy(ra, rb)
           ra := matMulInternalInPlaceFirstHalf(ra, s)
           rb := matMulInternalInPlaceSecondHalf(rb, s)
         }
 
-        ra := addRoundKeyFirstEntry(ra, RK_12)
-        ra := sboxFirstEntry(ra)
+        ra := addRoundKeyFirstEntryUnreducedAndSbox(ra, RK_12)
         {
-          let s := computeSum(ra, rb)
+          let s := computeSumLazy(ra, rb)
           ra := matMulInternalInPlaceFirstHalf(ra, s)
           rb := matMulInternalInPlaceSecondHalf(rb, s)
         }
 
-        ra := addRoundKeyFirstEntry(ra, RK_13)
-        ra := sboxFirstEntry(ra)
+        ra := addRoundKeyFirstEntryUnreducedAndSbox(ra, RK_13)
         {
-          let s := computeSum(ra, rb)
+          let s := computeSumLazy(ra, rb)
           ra := matMulInternalInPlaceFirstHalf(ra, s)
           rb := matMulInternalInPlaceSecondHalf(rb, s)
         }
 
-        ra := addRoundKeyFirstEntry(ra, RK_14)
-        ra := sboxFirstEntry(ra)
+        ra := addRoundKeyFirstEntryUnreducedAndSbox(ra, RK_14)
         {
-          let s := computeSum(ra, rb)
+          let s := computeSumLazy(ra, rb)
           ra := matMulInternalInPlaceFirstHalf(ra, s)
           rb := matMulInternalInPlaceSecondHalf(rb, s)
         }
 
-        ra := addRoundKeyFirstEntry(ra, RK_15)
-        ra := sboxFirstEntry(ra)
+        ra := addRoundKeyFirstEntryUnreducedAndSbox(ra, RK_15)
         {
-          let s := computeSum(ra, rb)
+          let s := computeSumLazy(ra, rb)
           ra := matMulInternalInPlaceFirstHalf(ra, s)
           rb := matMulInternalInPlaceSecondHalf(rb, s)
         }
 
-        ra := addRoundKeyFirstEntry(ra, RK_16)
-        ra := sboxFirstEntry(ra)
+        ra := addRoundKeyFirstEntryUnreducedAndSbox(ra, RK_16)
         {
-          let s := computeSum(ra, rb)
+          let s := computeSumLazy(ra, rb)
           ra := matMulInternalInPlaceFirstHalf(ra, s)
           rb := matMulInternalInPlaceSecondHalf(rb, s)
         }
 
-        ra := addRoundKeyFirstEntry(ra, RK_17)
-        ra := sboxFirstEntry(ra)
+        ra := addRoundKeyFirstEntryUnreducedAndSbox(ra, RK_17)
         {
-          let s := computeSum(ra, rb)
+          let s := computeSumLazy(ra, rb)
           ra := matMulInternalInPlaceFirstHalf(ra, s)
           rb := matMulInternalInPlaceSecondHalf(rb, s)
         }
 
-        ra := addRoundKeyFirstEntry(ra, RK_18)
-        ra := sboxFirstEntry(ra)
+        ra := addRoundKeyFirstEntryUnreducedAndSbox(ra, RK_18)
         {
-          let s := computeSum(ra, rb)
+          let s := computeSumLazy(ra, rb)
           ra := matMulInternalInPlaceFirstHalf(ra, s)
           rb := matMulInternalInPlaceSecondHalf(rb, s)
         }
 
-        ra := addRoundKeyFirstEntry(ra, RK_19)
-        ra := sboxFirstEntry(ra)
+        ra := addRoundKeyFirstEntryUnreducedAndSbox(ra, RK_19)
         {
-          let s := computeSum(ra, rb)
+          let s := computeSumLazy(ra, rb)
           ra := matMulInternalInPlaceFirstHalf(ra, s)
           rb := matMulInternalInPlaceSecondHalf(rb, s)
         }
 
-        ra := addRoundKeyFirstEntry(ra, RK_20)
-        ra := sboxFirstEntry(ra)
+        ra := addRoundKeyFirstEntryUnreducedAndSbox(ra, RK_20)
         {
-          let s := computeSum(ra, rb)
+          let s := computeSumLazy(ra, rb)
           ra := matMulInternalInPlaceFirstHalf(ra, s)
           rb := matMulInternalInPlaceSecondHalf(rb, s)
         }
 
-        ra := addRoundKeyFirstEntry(ra, RK_21)
-        ra := sboxFirstEntry(ra)
+        ra := addRoundKeyFirstEntryUnreducedAndSbox(ra, RK_21)
         {
-          let s := computeSum(ra, rb)
+          let s := computeSumLazy(ra, rb)
           ra := matMulInternalInPlaceFirstHalf(ra, s)
           rb := matMulInternalInPlaceSecondHalf(rb, s)
         }
 
-        ra := addRoundKeyFirstEntry(ra, RK_22)
-        ra := sboxFirstEntry(ra)
+        ra := addRoundKeyFirstEntryUnreducedAndSbox(ra, RK_22)
         {
-          let s := computeSum(ra, rb)
+          let s := computeSumLazy(ra, rb)
           ra := matMulInternalInPlaceFirstHalf(ra, s)
           rb := matMulInternalInPlaceSecondHalf(rb, s)
         }
 
-        ra := addRoundKeyFirstEntry(ra, RK_23)
-        ra := sboxFirstEntry(ra)
+        ra := addRoundKeyFirstEntryUnreducedAndSbox(ra, RK_23)
         {
-          let s := computeSum(ra, rb)
+          let s := computeSumLazy(ra, rb)
           ra := matMulInternalInPlaceFirstHalf(ra, s)
           rb := matMulInternalInPlaceSecondHalf(rb, s)
         }
 
-        // full rounds (3)
-        ra := addRoundKeyUint256(ra, RK_24_0)
-        rb := addRoundKeyUint256(rb, RK_24_1)
-        ra := sboxUint256(ra)
-        rb := sboxUint256(rb)
-
+        // Final full rounds (3)
+        ra := addRoundKeyUint256UnreducedAndSbox(ra, RK_24_0)
+        rb := addRoundKeyUint256UnreducedAndSbox(rb, RK_24_1)
         ra, rb := matMulExternalInPlace(ra, rb)
 
-        ra := addRoundKeyUint256(ra, RK_25_0)
-        rb := addRoundKeyUint256(rb, RK_25_1)
-        ra := sboxUint256(ra)
-        rb := sboxUint256(rb)
-
+        ra := addRoundKeyUint256UnreducedAndSbox(ra, RK_25_0)
+        rb := addRoundKeyUint256UnreducedAndSbox(rb, RK_25_1)
         ra, rb := matMulExternalInPlace(ra, rb)
 
-        ra := addRoundKeyUint256(ra, RK_26_0)
-        rb := addRoundKeyUint256(rb, RK_26_1)
-        ra := sboxUint256(ra)
-        rb := sboxUint256(rb)
-
+        ra := addRoundKeyUint256UnreducedAndSbox(ra, RK_26_0)
+        rb := addRoundKeyUint256UnreducedAndSbox(rb, RK_26_1)
         ra, rb := matMulExternalInPlace(ra, rb)
       }
 
       /**
-       * @dev Computes the column-wise sum of two packed state elements.
-       *
-       * For each limb i:
-       *   s += a[i] + b[i]   (mod R_MOD)
-       *
-       * @notice
-       * This produces a scalar used by the INTERNAL MDS matrix,
-       * which relies on a sum-based mixing strategy.
-       *
-       * This is a Poseidon2-specific optimization that avoids
-       * full matrix multiplication during partial rounds.
+       * @dev Computes sum of all 16 limbs using lazy reduction.
+       * Uses regular add for accumulation, single mod at end.
+       * Each limb < P < 2^31, sum of 16 limbs < 16P < 2^35.
+       * Saves: 15 addmod (120 gas) -> 15 add + 1 mod (50 gas) = 70 gas per call
        */
-      function computeSum(a, b) -> s {
+      function computeSumLazy(a, b) -> s {
         let M := 0xFFFFFFFF
-        s := addmod(s, addmod(shr(224, a), shr(224, b), R_MOD), R_MOD)
-        s := addmod(s, addmod(and(shr(192, a), M), and(shr(192, b), M), R_MOD), R_MOD)
-        s := addmod(s, addmod(and(shr(160, a), M), and(shr(160, b), M), R_MOD), R_MOD)
-        s := addmod(s, addmod(and(shr(128, a), M), and(shr(128, b), M), R_MOD), R_MOD)
-        s := addmod(s, addmod(and(shr(96, a), M), and(shr(96, b), M), R_MOD), R_MOD)
-        s := addmod(s, addmod(and(shr(64, a), M), and(shr(64, b), M), R_MOD), R_MOD)
-        s := addmod(s, addmod(and(shr(32, a), M), and(shr(32, b), M), R_MOD), R_MOD)
-        s := addmod(s, addmod(and(a, M), and(b, M), R_MOD), R_MOD)
+        // Accumulate with regular add - no overflow risk in 256-bit arithmetic
+        s := add(shr(224, a), shr(224, b))
+        s := add(s, add(and(shr(192, a), M), and(shr(192, b), M)))
+        s := add(s, add(and(shr(160, a), M), and(shr(160, b), M)))
+        s := add(s, add(and(shr(128, a), M), and(shr(128, b), M)))
+        s := add(s, add(and(shr(96, a), M), and(shr(96, b), M)))
+        s := add(s, add(and(shr(64, a), M), and(shr(64, b), M)))
+        s := add(s, add(and(shr(32, a), M), and(shr(32, b), M)))
+        s := add(s, add(and(a, M), and(b, M)))
+        // Single reduction at end
+        s := mod(s, R_MOD)
       }
 
-      /**
+     /**
        * @dev Applies INTERNAL MDS mixing to the first state element.
        *
        * @notice
@@ -394,11 +354,8 @@ library Poseidon2 {
       }
 
       /**
-       * @dev Applies INTERNAL MDS mixing to the second state element.
-       *
-       * Uses a different set of constants than the first half,
-       * ensuring full diffusion across both state elements.
-       * The full matrix is filled with 1s, and the diagonal is [-2, 1, 2, 1/2, 3, 4, -1/2, -3, -4, 1/2^8, 1/8, 1/2^24, -1/2^8, -1/8, -1/16, -1/2^24]
+       * @dev Internal MDS for second state element.
+       * Diagonal: [-4, 1/2^8, 1/8, 1/2^24, -1/2^8, -1/8, -1/16, -1/2^24]
        */
       function matMulInternalInPlaceSecondHalf(b, sum) -> mb {
         let M := 0xFFFFFFFF
@@ -412,7 +369,7 @@ library Poseidon2 {
         mb := or(mb, addmod(sum, mulmod(and(b, M), 127, R_MOD), R_MOD))
       }
 
-      /**
+       /**
        * @dev Applies the FULL (external) Poseidon2 MDS matrix.
        *
        * In the following, M4 = 
@@ -428,10 +385,10 @@ library Poseidon2 {
        * This ensures complete diffusion across the entire state.
        */
       function matMulExternalInPlace(a, b) -> ra, rb {
-        ra := matMulM4uint256(a)
-        rb := matMulM4uint256(b)
+        ra := matMulM4uint256Lazy(a)
+        rb := matMulM4uint256Lazy(b)
 
-        let t0, t1, t2, t3 := sumColumns(ra, rb)
+        let t0, t1, t2, t3 := sumColumnsLazy(ra, rb)
 
         ra := matMulExternalInPlaceFirstHalf(ra, t0, t1, t2, t3)
         rb := matMulExternalInPlaceSecondHalf(rb, t0, t1, t2, t3)
@@ -476,8 +433,9 @@ library Poseidon2 {
         rb := or(rb, addmod(t3, and(b, M), R_MOD))
       }
 
-      /**
-       * @dev Computes column sums for EXTERNAL MDS mixing.
+       /**
+       * @dev Computes column sums for EXTERNAL MDS mixing with lazy reduction.
+       * Each column sums 4 limbs < P, so sum < 4P < 2^33.
        *
        * Groups limbs into columns:
        *   column 0: limbs 0 + 4
@@ -488,32 +446,29 @@ library Poseidon2 {
        * This prepares shared values reused across both state elements,
        * reducing duplicated computation.
        */
-      function sumColumns(a, b) -> t0, t1, t2, t3 {
+      function sumColumnsLazy(a, b) -> t0, t1, t2, t3 {
         let M := 0xFFFFFFFF
-        t0 := addmod(
-          addmod(shr(224, a), and(shr(96, a), M), R_MOD),
-          addmod(shr(224, b), and(shr(96, b), M), R_MOD),
+        // t0 = a[0] + a[4] + b[0] + b[4], all < P, so sum < 4P
+        t0 := mod(
+          add(add(shr(224, a), and(shr(96, a), M)), add(shr(224, b), and(shr(96, b), M))),
           R_MOD
         )
-        t1 := addmod(
-          addmod(and(shr(192, a), M), and(shr(64, a), M), R_MOD),
-          addmod(and(shr(192, b), M), and(shr(64, b), M), R_MOD),
+        t1 := mod(
+          add(add(and(shr(192, a), M), and(shr(64, a), M)), add(and(shr(192, b), M), and(shr(64, b), M))),
           R_MOD
         )
-        t2 := addmod(
-          addmod(and(shr(160, a), M), and(shr(32, a), M), R_MOD),
-          addmod(and(shr(160, b), M), and(shr(32, b), M), R_MOD),
+        t2 := mod(
+          add(add(and(shr(160, a), M), and(shr(32, a), M)), add(and(shr(160, b), M), and(shr(32, b), M))),
           R_MOD
         )
-        t3 := addmod(
-          addmod(and(shr(128, a), M), and(a, M), R_MOD),
-          addmod(and(shr(128, b), M), and(b, M), R_MOD),
+        t3 := mod(
+          add(add(and(shr(128, a), M), and(a, M)), add(and(shr(128, b), M), and(b, M))),
           R_MOD
         )
       }
 
-      /**
-       * @dev Applies the 4×4 MDS matrix twice to a packed uint256.
+       /**
+       * @dev Applies the 4×4 MDS matrix twice to a packed uint256 with lazy reduction in matMulM4.
        *
        * Layout:
        *   uint256 = [v0 v1 v2 v3 | v4 v5 v6 v7]
@@ -525,26 +480,24 @@ library Poseidon2 {
        * This preserves Poseidon2’s structured MDS design while
        * keeping operations word-local and gas-efficient.
        */
-      function matMulM4uint256(a) -> b {
+      function matMulM4uint256Lazy(a) -> b {
         let M := 0xFFFFFFFF
-        // Upper 4 limbs
         {
           let v0 := shr(224, a)
           let v1 := and(shr(192, a), M)
           let v2 := and(shr(160, a), M)
           let v3 := and(shr(128, a), M)
-          let s0, s1, s2, s3 := matMulM4(v0, v1, v2, v3)
+          let s0, s1, s2, s3 := matMulM4Lazy(v0, v1, v2, v3)
           b := or(shl(224, s0), shl(192, s1))
           b := or(b, shl(160, s2))
           b := or(b, shl(128, s3))
         }
-        // Lower 4 limbs
         {
           let v0 := and(shr(96, a), M)
           let v1 := and(shr(64, a), M)
           let v2 := and(shr(32, a), M)
           let v3 := and(a, M)
-          let s4, s5, s6, s7 := matMulM4(v0, v1, v2, v3)
+          let s4, s5, s6, s7 := matMulM4Lazy(v0, v1, v2, v3)
           b := or(b, shl(96, s4))
           b := or(b, shl(64, s5))
           b := or(b, shl(32, s6))
@@ -553,156 +506,80 @@ library Poseidon2 {
       }
 
       /**
-       * @dev Multiplies a 4-element vector by the fixed 4×4 Poseidon2 MDS sub-matrix.
-       * The matrix is
+       * @dev 4x4 MDS matrix multiply with lazy reduction.
+       * Inputs a,b,c,d < P. Intermediate sums < 7P < 2^34.
+       * Uses regular add internally, mod only on outputs.
+       * Saves: 11 addmod (88 gas) -> 7 add + 4 mod (41 gas) = 47 gas per call
+       *
+      * The MDS matrix is
        * (2 3 1 1)
        * (1 2 3 1)
        * (1 1 2 3)
        * (3 1 1 2)
-       *
-       * Input:
-       *   (a, b, c, d) ∈ F^4
-       *
-       * Output:
-       *   (u, v, w, x) = MDS4 × (a, b, c, d)
-       *
-       * @notice
-       * This is a hand-optimized implementation that:
-       * - Avoids explicit matrix constants
-       * - Uses algebraic reuse to minimize mul/add operations
-       *
-       * This function is used as a building block for 8-limb MDS multiplication.
        */
-      function matMulM4(a, b, c, d) -> u, v, w, x {
-        let t01 := addmod(a, b, R_MOD)
-        let t23 := addmod(c, d, R_MOD)
-        let t0123 := addmod(t01, t23, R_MOD)
-        let t01123 := addmod(t0123, b, R_MOD)
-        let t01233 := addmod(t0123, d, R_MOD)
-        x := addmod(addmod(a, a, R_MOD), t01233, R_MOD)
-        v := addmod(addmod(c, c, R_MOD), t01123, R_MOD)
-        u := addmod(t01, t01123, R_MOD)
-        w := addmod(t23, t01233, R_MOD)
+      function matMulM4Lazy(a, b, c, d) -> u, v, w, x {
+        // All intermediate values fit in 256 bits
+        let t01 := add(a, b)           // < 2P
+        let t23 := add(c, d)           // < 2P
+        let t0123 := add(t01, t23)     // < 4P
+        let t01123 := add(t0123, b)    // < 5P
+        let t01233 := add(t0123, d)    // < 5P
+        // Outputs need reduction for correct packing into 32-bit limbs
+        x := mod(add(add(a, a), t01233), R_MOD)  // 2a + t01233 < 7P
+        v := mod(add(add(c, c), t01123), R_MOD)  // 2c + t01123 < 7P
+        u := mod(add(t01, t01123), R_MOD)        // < 7P
+        w := mod(add(t23, t01233), R_MOD)        // < 7P
       }
 
       /**
-       * @dev Adds a round key ONLY to the first limb (limb 0).
-       *
-       * This function is used during PARTIAL rounds, where:
-       * - Only the first state element is non-linear
-       * - Only the first limb receives a round key
-       *
-       * All other limbs remain unchanged.
+       * @dev Add round key WITHOUT reduction - sbox will reduce via mulmod.
+       * Since x[i] < P and k[i] < P, sum < 2P < 2^32, fits in 32-bit limb.
+       * Saves: 8 addmod (64 gas) -> 8 add (24 gas) = 40 gas per call
        */
-      function addRoundKeyFirstEntry(x, k) -> rx {
-        // Extract first limb (bits 255..224)
-        let a0 := shr(224, x)
-        let t0 := addmod(k, a0, R_MOD)
-        rx := sub(x, shl(224, a0))
-        rx := add(rx, shl(224, t0))
-      }
-
-      /**
-       * @dev Adds a full 256-bit round key to a state element.
-       *
-       * This function interprets both `x` and `k` as vectors of
-       * eight 32-bit field elements packed into a single uint256.
-       *
-       * For each 32-bit limb:
-       *   out[i] = (x[i] + k[i]) mod R_MOD
-       *
-       * This is used during FULL rounds, where round keys are
-       * applied to *all* limbs of the state.
-       *
-       * Layout (big-endian):
-       *   limb 0 : bits [255..224]
-       *   limb 7 : bits [31..0]
-       */
-      function addRoundKeyUint256(x, k) -> rx {
-        // Mask for extracting a single 32-bit limb
+      function addRoundKeyUint256UnreducedAndSbox(x, k) -> rx {
         let M := 0xFFFFFFFF
-        // Limb 0 (highest 32 bits)
+        rx := shl(224, sboxSingleLimb(add(shr(224, x), shr(224, k))))
+        rx := or(rx, shl(192, sboxSingleLimb(add(and(shr(192, x), M), and(shr(192, k), M)))))
+        rx := or(rx, shl(160, sboxSingleLimb(add(and(shr(160, x), M), and(shr(160, k), M)))))
+        rx := or(rx, shl(128, sboxSingleLimb(add(and(shr(128, x), M), and(shr(128, k), M)))))
+        rx := or(rx, shl(96, sboxSingleLimb(add(and(shr(96, x), M), and(shr(96, k), M)))))
+        rx := or(rx, shl(64, sboxSingleLimb(add(and(shr(64, x), M), and(shr(64, k), M)))))
+        rx := or(rx, shl(32, sboxSingleLimb(add(and(shr(32, x), M), and(shr(32, k), M)))))
+        rx := or(rx, sboxSingleLimb(add(and(x, M), and(k, M))))
+      }
+
+      /**
+       * @dev Add round key WITH reduction - used for final output.
+       */
+      function addRoundKeyUint256Reduced(x, k) -> rx {
+        let M := 0xFFFFFFFF
         rx := shl(224, addmod(shr(224, x), shr(224, k), R_MOD))
-        // Limb 1
         rx := or(rx, shl(192, addmod(and(shr(192, x), M), and(shr(192, k), M), R_MOD)))
-        // Limb 2
         rx := or(rx, shl(160, addmod(and(shr(160, x), M), and(shr(160, k), M), R_MOD)))
-        // Limb 3
         rx := or(rx, shl(128, addmod(and(shr(128, x), M), and(shr(128, k), M), R_MOD)))
-        // Limb 4
         rx := or(rx, shl(96, addmod(and(shr(96, x), M), and(shr(96, k), M), R_MOD)))
-        // Limb 5
         rx := or(rx, shl(64, addmod(and(shr(64, x), M), and(shr(64, k), M), R_MOD)))
-        // Limb 6
         rx := or(rx, shl(32, addmod(and(shr(32, x), M), and(shr(32, k), M), R_MOD)))
-        // Limb 7 (lowest 32 bits)
         rx := or(rx, addmod(and(x, M), and(k, M), R_MOD))
       }
 
       /**
-       * @dev Applies the Poseidon S-box (x ↦ x³ mod R_MOD)
-       * to ALL eight 32-bit limbs of a packed uint256.
-       *
-       * Used during FULL rounds.
+       * @dev Add round key to first entry WITHOUT reduction.
        */
-      function sboxUint256(x) -> rx {
-        let M := 0xFFFFFFFF
-        {
-          let t := shr(224, x)
-          t := mulmod(t, mulmod(t, t, R_MOD), R_MOD)
-          rx := shl(224, t)
-        }
-        {
-          let t := and(shr(192, x), M)
-          t := mulmod(t, mulmod(t, t, R_MOD), R_MOD)
-          rx := or(rx, shl(192, t))
-        }
-        {
-          let t := and(shr(160, x), M)
-          t := mulmod(t, mulmod(t, t, R_MOD), R_MOD)
-          rx := or(rx, shl(160, t))
-        }
-        {
-          let t := and(shr(128, x), M)
-          t := mulmod(t, mulmod(t, t, R_MOD), R_MOD)
-          rx := or(rx, shl(128, t))
-        }
-        {
-          let t := and(shr(96, x), M)
-          t := mulmod(t, mulmod(t, t, R_MOD), R_MOD)
-          rx := or(rx, shl(96, t))
-        }
-        {
-          let t := and(shr(64, x), M)
-          t := mulmod(t, mulmod(t, t, R_MOD), R_MOD)
-          rx := or(rx, shl(64, t))
-        }
-        {
-          let t := and(shr(32, x), M)
-          t := mulmod(t, mulmod(t, t, R_MOD), R_MOD)
-          rx := or(rx, shl(32, t))
-        }
-        {
-          let t := and(x, M)
-          t := mulmod(t, mulmod(t, t, R_MOD), R_MOD)
-          rx := or(rx, t)
-        }
-      }
-
-      /**
-       * @dev Applies the Poseidon S-box ONLY to the first limb.
-       *
-       * This is the key optimization of Poseidon2:
-       * - Only one limb is non-linear in partial rounds
-       * - Saves significant gas
-       */
-      function sboxFirstEntry(x) -> rx {
-        // Extract first limb (bits 255..224)
+      function addRoundKeyFirstEntryUnreducedAndSbox(x, k) -> rx {
         let a0 := shr(224, x)
-        let t0 := mulmod(a0, mulmod(a0, a0, R_MOD), R_MOD)
+        let t0 := sboxSingleLimb(add(k, a0))  // < 2P, fits in 32 bits
         rx := sub(x, shl(224, a0))
         rx := add(rx, shl(224, t0))
       }
+
+      /**
+       * @dev S-box on a single limb. mulmod naturally reduces unreduced inputs.
+       * Input limb can be < 2P (unreduced), output is always < P.
+       */
+       function sboxSingleLimb(x) -> rx {
+        rx := mulmod(x, mulmod(x, x, R_MOD), R_MOD)
+       }
 
       function error_size_data() {
         let ptr := mload(0x40)
