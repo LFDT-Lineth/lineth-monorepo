@@ -161,14 +161,13 @@ class BlobCompressionProofCoordinatorIntTest : CleanDbTestSuiteParallel() {
 
     blobCompressionProofCoordinator = BlobCompressionProofCoordinator(
       vertx = vertx,
-      blobsRepository = blobsRepositorySpy,
       blobCompressionProverClient = blobCompressionProverClientMock,
       rollingBlobShnarfCalculator = rollingBlobShnarfCalculator,
       blobZkStateProvider = blobZkStateProvider,
       config = BlobCompressionProofCoordinator.Config(
         pollingInterval = blobHandlerPollingInterval,
       ),
-      blobCompressionProofHandler = { _ -> SafeFuture.completedFuture(Unit) },
+      blobCompressionProofHandler = { blobRecord -> blobsRepositorySpy.saveNewBlob(blobRecord) },
       metricsFacade = mock(defaultAnswer = Mockito.RETURNS_DEEP_STUBS),
     )
     blobCompressionProofCoordinator.start()

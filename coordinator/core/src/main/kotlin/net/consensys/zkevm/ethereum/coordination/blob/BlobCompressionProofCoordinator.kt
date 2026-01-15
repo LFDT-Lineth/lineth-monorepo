@@ -4,7 +4,6 @@ import io.vertx.core.Handler
 import io.vertx.core.Vertx
 import kotlinx.datetime.Instant
 import linea.LongRunningService
-import linea.domain.BlockInterval
 import linea.domain.BlockIntervals
 import linea.domain.toBlockIntervals
 import linea.domain.toBlockIntervalsString
@@ -16,7 +15,6 @@ import net.consensys.zkevm.domain.Blob
 import net.consensys.zkevm.domain.BlobRecord
 import net.consensys.zkevm.domain.ConflationCalculationResult
 import net.consensys.zkevm.ethereum.coordination.conflation.BlobCreationHandler
-import net.consensys.zkevm.persistence.BlobsRepository
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import tech.pegasys.teku.infrastructure.async.SafeFuture
@@ -26,7 +24,6 @@ import kotlin.time.Duration
 
 class BlobCompressionProofCoordinator(
   private val vertx: Vertx,
-  private val blobsRepository: BlobsRepository,
   private val blobCompressionProverClient: BlobCompressionProverClientV2,
   private val rollingBlobShnarfCalculator: RollingBlobShnarfCalculator,
   private val blobZkStateProvider: BlobZkStateProvider,
@@ -168,19 +165,7 @@ class BlobCompressionProofCoordinator(
             expectedShnarf = expectedShnarfResult.expectedShnarf,
             blobCompressionProof = blobCompressionProof,
           )
-        SafeFuture.allOf(
-          blobsRepository.saveNewBlob(blobRecord),
-          blobCompressionProofHandler.acceptNewBlobCompressionProof(
-            BlobCompressionProofUpdate(
-              blockInterval =
-              BlockInterval.between(
-                startBlockNumber = blobRecord.startBlockNumber,
-                endBlockNumber = blobRecord.endBlockNumber,
-              ),
-              blobCompressionProof = blobCompressionProof,
-            ),
-          ),
-        ).thenApply {}
+        blobCompressionProofHandler.acceptNewBlobCompressionProof(blobRecord).thenApply {}
       }
   }
 

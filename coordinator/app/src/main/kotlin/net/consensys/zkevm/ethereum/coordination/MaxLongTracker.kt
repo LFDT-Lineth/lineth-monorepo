@@ -2,10 +2,10 @@ package net.consensys.zkevm.ethereum.coordination
 
 import net.consensys.zkevm.domain.Batch
 import net.consensys.zkevm.domain.Blob
+import net.consensys.zkevm.domain.BlobRecord
 import net.consensys.zkevm.domain.BlobSubmittedEvent
 import net.consensys.zkevm.domain.BlocksConflation
 import net.consensys.zkevm.domain.FinalizationSubmittedEvent
-import net.consensys.zkevm.ethereum.coordination.blob.BlobCompressionProofUpdate
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import java.util.function.Supplier
 
@@ -39,9 +39,9 @@ class HighestConflationTracker(initialProvenBlockNumber: ULong) :
 }
 
 class HighestProvenBlobTracker(initialProvenBlockNumber: ULong) :
-  MaxLongTracker<BlobCompressionProofUpdate>(initialProvenBlockNumber.toLong()) {
-  override fun convertToLong(trackable: BlobCompressionProofUpdate): Long {
-    return trackable.blockInterval.endBlockNumber.toLong()
+  MaxLongTracker<BlobRecord>(initialProvenBlockNumber.toLong()) {
+  override fun convertToLong(trackable: BlobRecord): Long {
+    return trackable.endBlockNumber.toLong()
   }
 }
 

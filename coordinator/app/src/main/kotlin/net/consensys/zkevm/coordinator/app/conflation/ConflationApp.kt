@@ -29,6 +29,7 @@ import net.consensys.zkevm.coordinator.blockcreation.BlockCreationMonitor
 import net.consensys.zkevm.coordinator.blockcreation.GethCliqueSafeBlockProvider
 import net.consensys.zkevm.coordinator.clients.ExecutionProverClientV2
 import net.consensys.zkevm.coordinator.clients.prover.ProverClientFactory
+import net.consensys.zkevm.domain.BlobRecord
 import net.consensys.zkevm.domain.BlocksConflation
 import net.consensys.zkevm.ethereum.coordination.HighestConflationTracker
 import net.consensys.zkevm.ethereum.coordination.HighestProvenBatchTracker
@@ -39,7 +40,6 @@ import net.consensys.zkevm.ethereum.coordination.SimpleCompositeSafeFutureHandle
 import net.consensys.zkevm.ethereum.coordination.aggregation.ConsecutiveProvenBlobsProviderWithLastEndBlockNumberTracker
 import net.consensys.zkevm.ethereum.coordination.aggregation.ProofAggregationCoordinatorService
 import net.consensys.zkevm.ethereum.coordination.blob.BlobCompressionProofCoordinator
-import net.consensys.zkevm.ethereum.coordination.blob.BlobCompressionProofUpdate
 import net.consensys.zkevm.ethereum.coordination.blob.BlobZkStateProviderImpl
 import net.consensys.zkevm.ethereum.coordination.blob.GoBackedBlobCompressor
 import net.consensys.zkevm.ethereum.coordination.blob.GoBackedBlobShnarfCalculator
@@ -174,8 +174,9 @@ class ConflationApp(
       )
       highestProvenBlobTracker
     }
-    val blobCompressionProofHandler: (BlobCompressionProofUpdate) -> SafeFuture<*> = SimpleCompositeSafeFutureHandler(
+    val blobCompressionProofHandler: (BlobRecord) -> SafeFuture<*> = SimpleCompositeSafeFutureHandler(
       listOf(
+        blobsRepository::saveNewBlob,
         maxProvenBlobCache,
       ),
     )
@@ -186,7 +187,6 @@ class ConflationApp(
 
     val blobCompressionProofCoordinator = BlobCompressionProofCoordinator(
       vertx = vertx,
-      blobsRepository = blobsRepository,
       blobCompressionProverClient = proverClientFactory.blobCompressionProverClient(),
       rollingBlobShnarfCalculator = RollingBlobShnarfCalculator(
         blobShnarfCalculator = GoBackedBlobShnarfCalculator(
