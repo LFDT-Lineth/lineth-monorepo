@@ -38,6 +38,7 @@ public class LineaProfitabilityConfiguration implements LineaOptionsConfiguratio
   private boolean extraDataPricingEnabled;
   private boolean extraDataSetMinGasPriceEnabled;
   private double[] profitabilityMetricsBuckets;
+  private long compressedTxCacheSize;
 
   /**
    * These 2 parameters must be atomically updated

@@ -24,9 +24,11 @@ import java.nio.file.Path;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
+import net.consensys.linea.bl.TransactionProfitabilityCalculator;
 import net.consensys.linea.bundles.LineaLimitedBundlePool;
 import net.consensys.linea.bundles.TransactionBundle;
 import net.consensys.linea.config.LineaProfitabilityConfiguration;
@@ -35,6 +37,7 @@ import net.consensys.linea.config.LineaTransactionSelectorConfiguration;
 import net.consensys.linea.plugins.config.LineaL1L2BridgeSharedConfiguration;
 import net.consensys.linea.sequencer.modulelimit.ModuleLineCountValidator;
 import net.consensys.linea.sequencer.txselection.selectors.TraceLineLimitTransactionSelectorTest;
+import net.consensys.linea.utils.CachingTransactionCompressor;
 import org.apache.tuweni.bytes.Bytes32;
 import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.datatypes.HardforkId;
@@ -64,15 +67,8 @@ class LineaTransactionSelectorFactoryTest {
   private static final Bytes32 BRIDGE_LOG_TOPIC =
       Bytes32.fromHexString("e856c2b8bd4eb0027ce32eeaf595c21b0b6b4644b326e5b7bd80a1cf8db72e6c");
 
-  private BlockchainService mockBlockchainService;
-  private LineaTransactionSelectorConfiguration mockTxSelectorConfiguration;
-  private LineaL1L2BridgeSharedConfiguration l1L2BridgeConfiguration;
-  private LineaProfitabilityConfiguration mockProfitabilityConfiguration;
-  private BesuEvents mockEvents;
   private LineaLimitedBundlePool bundlePool;
-  private LineaTracerConfiguration lineaTracerConfiguration;
   private LineaTransactionSelectorFactory factory;
-  private InvalidTransactionByLineCountCache invalidTransactionByLineCountCache;
 
   @TempDir static Path tempDir;
   @TempDir Path dataDir;
@@ -82,14 +78,15 @@ class LineaTransactionSelectorFactoryTest {
   public static void beforeAll() throws IOException {
     lineLimitsConfPath = tempDir.resolve("line-limits.toml");
     Files.copy(
-        TraceLineLimitTransactionSelectorTest.class.getResourceAsStream(
-            MODULE_LINE_LIMITS_RESOURCE_NAME),
+        Objects.requireNonNull(
+            TraceLineLimitTransactionSelectorTest.class.getResourceAsStream(
+                MODULE_LINE_LIMITS_RESOURCE_NAME)),
         lineLimitsConfPath);
   }
 
   @BeforeEach
   void setUp() {
-    lineaTracerConfiguration =
+    LineaTracerConfiguration lineaTracerConfiguration =
         LineaTracerConfiguration.builder()
             .moduleLimitsFilePath(lineLimitsConfPath.toString())
             .moduleLimitsMap(
@@ -98,20 +95,27 @@ class LineaTransactionSelectorFactoryTest {
             .isLimitless(false)
             .build();
 
-    mockBlockchainService = mock(BlockchainService.class, RETURNS_DEEP_STUBS);
+    BlockchainService mockBlockchainService = mock(BlockchainService.class, RETURNS_DEEP_STUBS);
     when(mockBlockchainService.getChainId()).thenReturn(Optional.of(BigInteger.ONE));
     when(mockBlockchainService.getNextBlockBaseFee()).thenReturn(Optional.of(Wei.of(7)));
     when(mockBlockchainService.getChainHeadHeader().getTimestamp()).thenReturn(1753867173L);
     when(mockBlockchainService.getNextBlockHardforkId(any(), anyLong()))
         .thenReturn(HardforkId.MainnetHardforkId.OSAKA);
 
-    mockTxSelectorConfiguration = mock(LineaTransactionSelectorConfiguration.class);
-    l1L2BridgeConfiguration =
+    LineaTransactionSelectorConfiguration mockTxSelectorConfiguration =
+        mock(LineaTransactionSelectorConfiguration.class);
+    LineaL1L2BridgeSharedConfiguration l1L2BridgeConfiguration =
         new LineaL1L2BridgeSharedConfiguration(BRIDGE_CONTRACT, BRIDGE_LOG_TOPIC);
-    mockProfitabilityConfiguration = mock(LineaProfitabilityConfiguration.class);
-    mockEvents = mock(BesuEvents.class);
+    LineaProfitabilityConfiguration mockProfitabilityConfiguration =
+        mock(LineaProfitabilityConfiguration.class);
+    BesuEvents mockEvents = mock(BesuEvents.class);
     bundlePool = spy(new LineaLimitedBundlePool(dataDir, 4096, mockEvents, mockBlockchainService));
-    invalidTransactionByLineCountCache = new InvalidTransactionByLineCountCache(10);
+    InvalidTransactionByLineCountCache invalidTransactionByLineCountCache =
+        new InvalidTransactionByLineCountCache(10);
+    final var transactionCompressor = new CachingTransactionCompressor();
+    TransactionProfitabilityCalculator transactionProfitabilityCalculator =
+        new TransactionProfitabilityCalculator(
+            mockProfitabilityConfiguration, transactionCompressor);
 
     factory =
         new LineaTransactionSelectorFactory(
@@ -126,7 +130,8 @@ class LineaTransactionSelectorFactoryTest {
             bundlePool,
             invalidTransactionByLineCountCache,
             new AtomicReference<>(Collections.emptyMap()),
-            new AtomicReference<>(Collections.emptyMap()));
+            new AtomicReference<>(Collections.emptyMap()),
+            transactionProfitabilityCalculator);
     factory.create(new SelectorsStateManager());
   }
 

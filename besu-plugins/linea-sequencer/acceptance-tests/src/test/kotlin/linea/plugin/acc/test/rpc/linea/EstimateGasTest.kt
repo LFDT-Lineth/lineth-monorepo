@@ -20,10 +20,9 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import linea.plugin.acc.test.LineaPluginPoSTestBase
 import linea.plugin.acc.test.TestCommandLineOptionsBuilder
 import net.consensys.linea.bl.TransactionProfitabilityCalculator
-import net.consensys.linea.bl.TransactionProfitabilityCalculator.getCompressedTxSize
 import net.consensys.linea.config.LineaProfitabilityCliOptions
-import net.consensys.linea.config.LineaProfitabilityConfiguration
 import net.consensys.linea.rpc.methods.LineaEstimateGas
+import net.consensys.linea.utils.CachingTransactionCompressor
 import org.apache.tuweni.bytes.Bytes
 import org.apache.tuweni.units.bigints.UInt64
 import org.assertj.core.api.Assertions.assertThat
@@ -48,7 +47,7 @@ import java.net.http.HttpResponse
 import java.nio.charset.StandardCharsets
 
 open class EstimateGasTest : LineaPluginPoSTestBase() {
-  protected lateinit var profitabilityConf: LineaProfitabilityConfiguration
+  protected lateinit var profitabilityCalculator: TransactionProfitabilityCalculator
 
   override fun getTestCliOptions(): List<String> {
     return testCommandLineOptionsBuilder.build()
@@ -69,12 +68,14 @@ open class EstimateGasTest : LineaPluginPoSTestBase() {
 
   @BeforeEach
   fun createDefaultConfigurations() {
-    profitabilityConf = LineaProfitabilityCliOptions.create().toDomainObject().toBuilder()
-      .fixedCostWei(FIXED_GAS_COST_WEI.toLong())
-      .variableCostWei(VARIABLE_GAS_COST_WEI.toLong())
-      .minMargin(MIN_MARGIN)
-      .estimateGasMinMargin(ESTIMATE_GAS_MIN_MARGIN)
-      .build()
+    val profitabilityConf =
+      LineaProfitabilityCliOptions.create().toDomainObject().toBuilder()
+        .fixedCostWei(FIXED_GAS_COST_WEI.toLong())
+        .variableCostWei(VARIABLE_GAS_COST_WEI.toLong())
+        .minMargin(MIN_MARGIN)
+        .estimateGasMinMargin(ESTIMATE_GAS_MIN_MARGIN)
+        .build()
+    profitabilityCalculator = TransactionProfitabilityCalculator(profitabilityConf, CachingTransactionCompressor())
   }
 
   @Test
@@ -329,14 +330,12 @@ open class EstimateGasTest : LineaPluginPoSTestBase() {
   ) {
     val minGasPrice = minerNode.miningParameters.minTransactionGasPrice
 
-    val profitabilityCalculator = TransactionProfitabilityCalculator(profitabilityConf)
-
-    val compressedSize = getCompressedTxSize(tx)
+    val compressedSize = profitabilityCalculator.getCompressedTxSize(tx)
     assertThat(
       profitabilityCalculator.isProfitable(
         "Test",
         tx,
-        profitabilityConf.minMargin(),
+        MIN_MARGIN,
         baseFee,
         estimatedMaxGasPrice,
         estimatedGasLimit,

@@ -16,7 +16,9 @@ import java.math.BigInteger;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.consensys.linea.bl.TransactionProfitabilityCalculator;
 import net.consensys.linea.config.LineaProfitabilityCliOptions;
+import net.consensys.linea.utils.CachingTransactionCompressor;
 import org.apache.tuweni.bytes.Bytes;
 import org.bouncycastle.asn1.sec.SECNamedCurves;
 import org.bouncycastle.asn1.x9.X9ECParameters;
@@ -40,8 +42,9 @@ public class ProfitabilityValidatorTest {
       Address.fromHexString("0x0000000000000000000000000000000000001000");
   public static final Address RECIPIENT =
       Address.fromHexString("0x0000000000000000000000000000000000001001");
-  private static Wei PROFITABLE_GAS_PRICE = Wei.of(11_000_000);
-  private static Wei UNPROFITABLE_GAS_PRICE = Wei.of(200_000);
+  private static final Wei PROFITABLE_GAS_PRICE = Wei.of(11_000_000);
+  private static final Wei UNPROFITABLE_GAS_PRICE = Wei.of(200_000);
+  public static final double TX_POOL_MIN_MARGIN = 0.5;
   private static final SECPSignature FAKE_SIGNATURE;
 
   static {
@@ -58,7 +61,6 @@ public class ProfitabilityValidatorTest {
             curve.getN());
   }
 
-  public static final double TX_POOL_MIN_MARGIN = 0.5;
   private ProfitabilityValidator profitabilityValidatorAlways;
   private ProfitabilityValidator profitabilityValidatorOnlyApi;
   private ProfitabilityValidator profitabilityValidatorOnlyP2p;
@@ -72,7 +74,15 @@ public class ProfitabilityValidatorTest {
     final var profitabilityConfBuilder =
         LineaProfitabilityCliOptions.create().toDomainObject().toBuilder()
             .txPoolMinMargin(TX_POOL_MIN_MARGIN);
+    final var transactionCompressor = new CachingTransactionCompressor();
 
+    final var profitabilityCalculatorAlways =
+        new TransactionProfitabilityCalculator(
+            profitabilityConfBuilder
+                .txPoolCheckP2pEnabled(true)
+                .txPoolCheckApiEnabled(true)
+                .build(),
+            transactionCompressor);
     profitabilityValidatorAlways =
         new ProfitabilityValidator(
             besuConfiguration,
@@ -80,8 +90,16 @@ public class ProfitabilityValidatorTest {
             profitabilityConfBuilder
                 .txPoolCheckP2pEnabled(true)
                 .txPoolCheckApiEnabled(true)
-                .build());
+                .build(),
+            profitabilityCalculatorAlways);
 
+    final var profitabilityCalculatorNever =
+        new TransactionProfitabilityCalculator(
+            profitabilityConfBuilder
+                .txPoolCheckP2pEnabled(false)
+                .txPoolCheckApiEnabled(false)
+                .build(),
+            transactionCompressor);
     profitabilityValidatorNever =
         new ProfitabilityValidator(
             besuConfiguration,
@@ -89,8 +107,16 @@ public class ProfitabilityValidatorTest {
             profitabilityConfBuilder
                 .txPoolCheckP2pEnabled(false)
                 .txPoolCheckApiEnabled(false)
-                .build());
+                .build(),
+            profitabilityCalculatorNever);
 
+    final var profitabilityCalculatorOnlyApi =
+        new TransactionProfitabilityCalculator(
+            profitabilityConfBuilder
+                .txPoolCheckP2pEnabled(false)
+                .txPoolCheckApiEnabled(true)
+                .build(),
+            transactionCompressor);
     profitabilityValidatorOnlyApi =
         new ProfitabilityValidator(
             besuConfiguration,
@@ -98,8 +124,16 @@ public class ProfitabilityValidatorTest {
             profitabilityConfBuilder
                 .txPoolCheckP2pEnabled(false)
                 .txPoolCheckApiEnabled(true)
-                .build());
+                .build(),
+            profitabilityCalculatorOnlyApi);
 
+    final var profitabilityCalculatorOnlyP2p =
+        new TransactionProfitabilityCalculator(
+            profitabilityConfBuilder
+                .txPoolCheckP2pEnabled(true)
+                .txPoolCheckApiEnabled(false)
+                .build(),
+            transactionCompressor);
     profitabilityValidatorOnlyP2p =
         new ProfitabilityValidator(
             besuConfiguration,
@@ -107,7 +141,8 @@ public class ProfitabilityValidatorTest {
             profitabilityConfBuilder
                 .txPoolCheckP2pEnabled(true)
                 .txPoolCheckApiEnabled(false)
-                .build());
+                .build(),
+            profitabilityCalculatorOnlyP2p);
   }
 
   @Test

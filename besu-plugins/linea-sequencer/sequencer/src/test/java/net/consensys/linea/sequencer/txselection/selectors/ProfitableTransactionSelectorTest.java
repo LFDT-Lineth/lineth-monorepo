@@ -16,8 +16,10 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.util.Optional;
+import net.consensys.linea.bl.TransactionProfitabilityCalculator;
 import net.consensys.linea.config.LineaProfitabilityCliOptions;
 import net.consensys.linea.config.LineaProfitabilityConfiguration;
+import net.consensys.linea.utils.CachingTransactionCompressor;
 import org.apache.tuweni.bytes.Bytes;
 import org.apache.tuweni.bytes.Bytes32;
 import org.bouncycastle.crypto.digests.KeccakDigest;
@@ -54,8 +56,11 @@ public class ProfitableTransactionSelectorTest {
   private ProfitableTransactionSelector newSelectorForNewBlock() {
     final var blockchainService = mock(BlockchainService.class);
     when(blockchainService.getNextBlockBaseFee()).thenReturn(Optional.of(BASE_FEE));
+    final var transactionCompressor = new CachingTransactionCompressor();
+    final var transactionProfitabilityCalculator =
+        new TransactionProfitabilityCalculator(profitabilityConf, transactionCompressor);
     return new ProfitableTransactionSelector(
-        blockchainService, profitabilityConf, Optional.empty());
+        blockchainService, profitabilityConf, Optional.empty(), transactionProfitabilityCalculator);
   }
 
   @Test

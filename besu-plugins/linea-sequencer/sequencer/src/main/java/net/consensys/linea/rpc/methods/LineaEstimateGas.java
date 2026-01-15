@@ -9,7 +9,6 @@
 
 package net.consensys.linea.rpc.methods;
 
-import static net.consensys.linea.bl.TransactionProfitabilityCalculator.getCompressedTxSize;
 import static net.consensys.linea.sequencer.modulelimit.ModuleLineCountValidator.ModuleLineCountResult.MODULE_NOT_DEFINED;
 import static net.consensys.linea.sequencer.modulelimit.ModuleLineCountValidator.ModuleLineCountResult.TX_MODULE_LINE_COUNT_OVERFLOW;
 import static net.consensys.linea.zktracer.Fork.fromMainnetHardforkIdToTracerFork;
@@ -117,11 +116,12 @@ public class LineaEstimateGas {
       final LineaProfitabilityConfiguration profitabilityConf,
       final LineaL1L2BridgeSharedConfiguration l1L2BridgeConfiguration,
       final LineaTracerConfiguration tracerConfiguration,
-      final WorldStateService worldStateService) {
+      final WorldStateService worldStateService,
+      final TransactionProfitabilityCalculator transactionProfitabilityCalculator) {
     this.rpcConfiguration = rpcConfiguration;
     this.txValidatorConf = transactionValidatorConfiguration;
     this.profitabilityConf = profitabilityConf;
-    this.txProfitabilityCalculator = new TransactionProfitabilityCalculator(profitabilityConf);
+    this.txProfitabilityCalculator = transactionProfitabilityCalculator;
     this.l1L2BridgeConfiguration = l1L2BridgeConfiguration;
     this.tracerConfiguration = tracerConfiguration;
     this.moduleLineCountValidator =
@@ -251,7 +251,7 @@ public class LineaEstimateGas {
               .toBigInteger());
     }
 
-    int compressedSize = getCompressedTxSize(transaction);
+    int compressedSize = txProfitabilityCalculator.getCompressedTxSize(transaction);
     return txProfitabilityCalculator.profitablePriorityFeePerGas(
         transaction,
         profitabilityConf.estimateGasMinMargin(),

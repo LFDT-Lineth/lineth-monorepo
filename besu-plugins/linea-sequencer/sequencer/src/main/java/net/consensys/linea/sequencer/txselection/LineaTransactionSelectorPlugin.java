@@ -133,7 +133,8 @@ public class LineaTransactionSelectorPlugin extends AbstractLineaRequiredPlugin 
             bundlePoolService,
             getInvalidTransactionByLineCountCache(),
             deniedEvents,
-            deniedBundleEvents));
+            deniedBundleEvents,
+            transactionProfitabilityCalculator));
   }
 
   @Override

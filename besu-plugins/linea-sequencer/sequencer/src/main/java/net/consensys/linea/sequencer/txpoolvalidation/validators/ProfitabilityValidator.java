@@ -8,8 +8,6 @@
  */
 package net.consensys.linea.sequencer.txpoolvalidation.validators;
 
-import static net.consensys.linea.bl.TransactionProfitabilityCalculator.getCompressedTxSize;
-
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import net.consensys.linea.bl.TransactionProfitabilityCalculator;
@@ -36,11 +34,12 @@ public class ProfitabilityValidator implements PluginTransactionPoolValidator {
   public ProfitabilityValidator(
       final BesuConfiguration besuConfiguration,
       final BlockchainService blockchainService,
-      final LineaProfitabilityConfiguration profitabilityConf) {
+      final LineaProfitabilityConfiguration profitabilityConf,
+      final TransactionProfitabilityCalculator profitabilityCalculator) {
     this.besuConfiguration = besuConfiguration;
     this.blockchainService = blockchainService;
     this.profitabilityConf = profitabilityConf;
-    this.profitabilityCalculator = new TransactionProfitabilityCalculator(profitabilityConf);
+    this.profitabilityCalculator = profitabilityCalculator;
   }
 
   @Override
@@ -56,7 +55,7 @@ public class ProfitabilityValidator implements PluginTransactionPoolValidator {
               .getNextBlockBaseFee()
               .orElseThrow(() -> new RuntimeException("We only support a base fee market"));
 
-      int compressedTxSize = getCompressedTxSize(transaction);
+      int compressedTxSize = profitabilityCalculator.getCompressedTxSize(transaction);
       return profitabilityCalculator.isProfitable(
               "Txpool",
               transaction,

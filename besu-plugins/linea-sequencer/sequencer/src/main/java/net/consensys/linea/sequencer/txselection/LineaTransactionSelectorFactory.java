@@ -21,6 +21,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import lombok.extern.slf4j.Slf4j;
+import net.consensys.linea.bl.TransactionProfitabilityCalculator;
 import net.consensys.linea.bundles.BundlePoolService;
 import net.consensys.linea.bundles.TransactionBundle;
 import net.consensys.linea.config.LineaProfitabilityConfiguration;
@@ -63,6 +64,7 @@ public class LineaTransactionSelectorFactory implements PluginTransactionSelecto
   private final AtomicReference<Map<Address, Set<TransactionEventFilter>>> deniedEvents;
   private final AtomicReference<Map<Address, Set<TransactionEventFilter>>> deniedBundleEvents;
   private final AtomicBoolean isSelectionInterrupted = new AtomicBoolean(false);
+  private final TransactionProfitabilityCalculator transactionProfitabilityCalculator;
 
   public LineaTransactionSelectorFactory(
       final BlockchainService blockchainService,
@@ -76,7 +78,8 @@ public class LineaTransactionSelectorFactory implements PluginTransactionSelecto
       final BundlePoolService bundlePoolService,
       final InvalidTransactionByLineCountCache invalidTransactionByLineCountCache,
       final AtomicReference<Map<Address, Set<TransactionEventFilter>>> deniedEvents,
-      final AtomicReference<Map<Address, Set<TransactionEventFilter>>> deniedBundleEvents) {
+      final AtomicReference<Map<Address, Set<TransactionEventFilter>>> deniedBundleEvents,
+      final TransactionProfitabilityCalculator transactionProfitabilityCalculator) {
     this.blockchainService = blockchainService;
     this.txSelectorConfiguration = txSelectorConfiguration;
     this.l1L2BridgeConfiguration = l1L2BridgeConfiguration;
@@ -89,6 +92,7 @@ public class LineaTransactionSelectorFactory implements PluginTransactionSelecto
     this.invalidTransactionByLineCountCache = invalidTransactionByLineCountCache;
     this.deniedEvents = deniedEvents;
     this.deniedBundleEvents = deniedBundleEvents;
+    this.transactionProfitabilityCalculator = transactionProfitabilityCalculator;
   }
 
   @Override
@@ -105,7 +109,8 @@ public class LineaTransactionSelectorFactory implements PluginTransactionSelecto
             maybeProfitabilityMetrics,
             invalidTransactionByLineCountCache,
             deniedEvents,
-            deniedBundleEvents);
+            deniedBundleEvents,
+            transactionProfitabilityCalculator);
     currSelector.set(selector);
     return selector;
   }

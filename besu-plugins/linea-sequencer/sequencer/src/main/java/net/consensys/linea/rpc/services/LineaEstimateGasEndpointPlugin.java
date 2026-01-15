@@ -23,7 +23,6 @@ import org.hyperledger.besu.plugin.services.TransactionSimulationService;
 @Slf4j
 public class LineaEstimateGasEndpointPlugin extends AbstractLineaRequiredPlugin {
 
-  private TransactionSimulationService transactionSimulationService;
   private LineaEstimateGas lineaEstimateGasMethod;
 
   /**
@@ -33,7 +32,7 @@ public class LineaEstimateGasEndpointPlugin extends AbstractLineaRequiredPlugin 
    */
   @Override
   public void doRegister(final ServiceManager serviceManager) {
-    transactionSimulationService =
+    TransactionSimulationService transactionSimulationService =
         serviceManager
             .getService(TransactionSimulationService.class)
             .orElseThrow(
@@ -62,6 +61,7 @@ public class LineaEstimateGasEndpointPlugin extends AbstractLineaRequiredPlugin 
         profitabilityConfiguration(),
         l1L2BridgeSharedConfiguration(),
         tracerConfiguration(),
-        worldStateService);
+        worldStateService,
+        transactionProfitabilityCalculator);
   }
 }

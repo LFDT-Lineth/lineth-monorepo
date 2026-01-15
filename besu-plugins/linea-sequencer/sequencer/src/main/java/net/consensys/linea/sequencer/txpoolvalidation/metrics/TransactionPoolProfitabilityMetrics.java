@@ -8,7 +8,6 @@
  */
 package net.consensys.linea.sequencer.txpoolvalidation.metrics;
 
-import static net.consensys.linea.bl.TransactionProfitabilityCalculator.getCompressedTxSize;
 import static net.consensys.linea.metrics.LineaMetricCategory.TX_POOL_PROFITABILITY;
 
 import java.util.stream.Collectors;
@@ -47,11 +46,12 @@ public class TransactionPoolProfitabilityMetrics {
       final MetricsSystem metricsSystem,
       final LineaProfitabilityConfiguration profitabilityConf,
       final TransactionPoolService transactionPoolService,
-      final BlockchainService blockchainService) {
+      final BlockchainService blockchainService,
+      final TransactionProfitabilityCalculator profitabilityCalculator) {
 
     this.besuConfiguration = besuConfiguration;
     this.profitabilityConf = profitabilityConf;
-    this.profitabilityCalculator = new TransactionProfitabilityCalculator(profitabilityConf);
+    this.profitabilityCalculator = profitabilityCalculator;
     this.transactionPoolService = transactionPoolService;
     this.blockchainService = blockchainService;
     this.histogramMetrics =
@@ -104,7 +104,7 @@ public class TransactionPoolProfitabilityMetrics {
               Wei.fromQuantity(transaction.getMaxFeePerGas().orElseThrow()));
     }
 
-    int compressedTxSize = getCompressedTxSize(transaction);
+    int compressedTxSize = profitabilityCalculator.getCompressedTxSize(transaction);
     final Wei profitablePriorityFeePerGas =
         profitabilityCalculator.profitablePriorityFeePerGas(
             transaction,

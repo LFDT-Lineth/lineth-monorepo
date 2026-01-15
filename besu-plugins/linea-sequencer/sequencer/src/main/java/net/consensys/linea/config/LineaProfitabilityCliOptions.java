@@ -56,6 +56,9 @@ public class LineaProfitabilityCliOptions implements LineaCliOptions {
     0.1, 0.3, 0.5, 0.7, 0.9, 1.0, 1.1, 1.2, 1.5, 2.0, 5.0, 10.0
   };
 
+  public static final String COMPRESSED_TX_CACHE_SIZE = "--plugin-linea-compressed-tx-cache-size";
+  public static final long DEFAULT_COMPRESSED_TX_CACHE_SIZE = 10000;
+
   @Positive
   @CommandLine.Option(
       names = {FIXED_GAS_COST_WEI},
@@ -145,6 +148,14 @@ public class LineaProfitabilityCliOptions implements LineaCliOptions {
               + "and the calculate profitable priority of the tx (default: ${DEFAULT-VALUE})")
   private double[] profitabilityMetricsBuckets = DEFAULT_PROFITABILITY_METRICS_BUCKETS;
 
+  @Positive
+  @CommandLine.Option(
+      names = {COMPRESSED_TX_CACHE_SIZE},
+      hidden = true,
+      paramLabel = "<INTEGER>",
+      description = "Variable gas cost in Wei (default: ${DEFAULT-VALUE})")
+  private long compressedTxCacheSize = DEFAULT_COMPRESSED_TX_CACHE_SIZE;
+
   private LineaProfitabilityCliOptions() {}
 
   /**
@@ -175,6 +186,7 @@ public class LineaProfitabilityCliOptions implements LineaCliOptions {
     options.extraDataPricingEnabled = config.extraDataPricingEnabled();
     options.extraDataSetMinGasPriceEnabled = config.extraDataSetMinGasPriceEnabled();
     options.profitabilityMetricsBuckets = config.profitabilityMetricsBuckets();
+    options.compressedTxCacheSize = config.compressedTxCacheSize();
     return options;
   }
 
@@ -196,6 +208,7 @@ public class LineaProfitabilityCliOptions implements LineaCliOptions {
         .extraDataPricingEnabled(extraDataPricingEnabled)
         .extraDataSetMinGasPriceEnabled(extraDataSetMinGasPriceEnabled)
         .profitabilityMetricsBuckets(profitabilityMetricsBuckets)
+        .compressedTxCacheSize(compressedTxCacheSize)
         .build();
   }
 
@@ -212,6 +225,7 @@ public class LineaProfitabilityCliOptions implements LineaCliOptions {
         .add(EXTRA_DATA_PRICING_ENABLED, extraDataPricingEnabled)
         .add(EXTRA_DATA_SET_MIN_GAS_PRICE_ENABLED, extraDataSetMinGasPriceEnabled)
         .add(PROFITABILITY_METRICS_BUCKETS, profitabilityMetricsBuckets)
+        .add(COMPRESSED_TX_CACHE_SIZE, compressedTxCacheSize)
         .toString();
   }
 }

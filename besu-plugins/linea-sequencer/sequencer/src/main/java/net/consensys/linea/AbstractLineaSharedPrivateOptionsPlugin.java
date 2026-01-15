@@ -13,6 +13,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.extern.slf4j.Slf4j;
+import net.consensys.linea.bl.TransactionProfitabilityCalculator;
 import net.consensys.linea.bundles.BundlePoolService;
 import net.consensys.linea.bundles.LineaLimitedBundlePool;
 import net.consensys.linea.config.LineaBundleCliOptions;
@@ -39,7 +40,9 @@ import net.consensys.linea.plugins.LineaOptionsPluginConfiguration;
 import net.consensys.linea.plugins.config.LineaTracerSharedCliOptions;
 import net.consensys.linea.plugins.config.LineaTracerSharedConfiguration;
 import net.consensys.linea.sequencer.txselection.InvalidTransactionByLineCountCache;
+import net.consensys.linea.utils.CachingTransactionCompressor;
 import net.consensys.linea.utils.Compressor;
+import net.consensys.linea.utils.TransactionCompressor;
 import org.hyperledger.besu.plugin.ServiceManager;
 import org.hyperledger.besu.plugin.services.BesuConfiguration;
 import org.hyperledger.besu.plugin.services.BesuEvents;
@@ -74,6 +77,7 @@ public abstract class AbstractLineaSharedPrivateOptionsPlugin
   protected static MetricCategoryRegistry metricCategoryRegistry;
   protected static RpcEndpointService rpcEndpointService;
   protected static InvalidTransactionByLineCountCache invalidTransactionByLineCountCache;
+  protected static TransactionProfitabilityCalculator transactionProfitabilityCalculator;
 
   private static final AtomicBoolean sharedRegisterTasksDone = new AtomicBoolean(false);
   private static final AtomicBoolean sharedStartTasksDone = new AtomicBoolean(false);
@@ -271,6 +275,12 @@ public abstract class AbstractLineaSharedPrivateOptionsPlugin
     invalidTransactionByLineCountCache =
         new InvalidTransactionByLineCountCache(
             transactionSelectorConfiguration().overLinesLimitCacheSize());
+
+    final LineaProfitabilityConfiguration profitabilityConfiguration = profitabilityConfiguration();
+    final TransactionCompressor transactionCompressor =
+        new CachingTransactionCompressor(profitabilityConfiguration.compressedTxCacheSize());
+    transactionProfitabilityCalculator =
+        new TransactionProfitabilityCalculator(profitabilityConfiguration, transactionCompressor);
   }
 
   @Override
