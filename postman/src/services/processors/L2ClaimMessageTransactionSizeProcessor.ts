@@ -109,13 +109,15 @@ export class L2ClaimMessageTransactionSizeProcessor implements IL2ClaimMessageTr
       message.edit({ status: MessageStatus.NON_EXECUTABLE });
       await this.databaseService.updateMessage(message);
       this.logger.warnOrError("Error occurred while processing message transaction size.", {
-        ...parsedError,
+        error: e,
+        parsedError,
         messageHash: message.messageHash,
       });
       return;
     }
 
     this.logger.warnOrError("Error occurred while processing message transaction size.", {
+      error: e,
       parsedError,
     });
   }
