@@ -16,7 +16,9 @@ describe("Layer 2 test suite", () => {
     const oversizedData = ethers.randomBytes(TRANSACTION_CALLDATA_LIMIT);
     logger.debug(`Generated oversized transaction data. dataLength=${oversizedData.length}`);
 
-    await expect(dummyContract.connect(account).setPayload(oversizedData)).rejects.toThrow(
+    // Provide explicit gasLimit to bypass estimateGas and ensure the transaction
+    // is submitted directly to the txpool where CalldataValidator rejects it.
+    await expect(dummyContract.connect(account).setPayload(oversizedData, { gasLimit: 5_000_000 })).rejects.toThrow(
       "Calldata of transaction is greater than the allowed max of 30000",
     );
     logger.debug("Transaction correctly reverted due to oversized data.");

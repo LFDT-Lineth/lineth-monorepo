@@ -157,7 +157,17 @@ export class MessageClaimingProcessor implements IMessageClaimingProcessor {
       return null;
     }
 
-    return Math.max(onChainNonce, lastTxNonce + 1);
+    const computedNonce = Math.max(onChainNonce, lastTxNonce + 1);
+
+    this.logger.debug(
+      "Nonce computation: direction=%s lastTxNonce=%s onChainNonce=%s computedNonce=%s",
+      this.config.direction,
+      lastTxNonce,
+      onChainNonce,
+      computedNonce,
+    );
+
+    return computedNonce;
   }
 
   /**

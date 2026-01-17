@@ -247,7 +247,7 @@ export class TypeOrmMessageRepository<TransactionResponse extends ContractTransa
         .where("message.direction = :direction", { direction })
         .getRawOne();
 
-      if (!message.lastTxNonce) {
+      if (message.lastTxNonce === null || message.lastTxNonce === undefined) {
         return null;
       }
 
