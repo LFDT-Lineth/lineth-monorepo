@@ -46,8 +46,10 @@ runs:
       shell: bash
       if: ${{ github.ref == 'refs/heads/main' && inputs.last_commit_tag_exists == '0' }}
       run: |
-        docker buildx imagetools create --tag ${{ inputs.image_name }}:${{ inputs.develop_tag }} ${{ inputs.image_name }}:${{ inputs.last_commit_tag }}
-        docker buildx imagetools create --tag ${{ inputs.image_name }}:${{ inputs.commit_tag }} ${{ inputs.image_name }}:${{ inputs.last_commit_tag }}
+        docker buildx imagetools create \
+          --tag ${{ inputs.image_name }}:${{ inputs.develop_tag }} \
+          --tag ${{ inputs.image_name }}:${{ inputs.commit_tag }} \
+          ${{ inputs.image_name }}:${{ inputs.last_commit_tag }}
         echo IMAGE_TAGGED=true >> $GITHUB_ENV
     - name: Split docker image name (i.e. extract "xyz" from "consensys/xyz")
       if: ${{ github.ref == 'refs/heads/main' && inputs.last_commit_tag_exists == '0' }}
