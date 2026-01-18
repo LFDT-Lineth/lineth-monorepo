@@ -254,7 +254,7 @@ services:
   postman:
     container_name: postman
     hostname: postman
-    image: consensys/linea-postman:${POSTMAN_TAG:-bbf345e}
+    image: consensys/linea-postman:${POSTMAN_TAG:-92a1974}
     profiles: [ "l2", "debug" ]
     restart: on-failure
     ports:
