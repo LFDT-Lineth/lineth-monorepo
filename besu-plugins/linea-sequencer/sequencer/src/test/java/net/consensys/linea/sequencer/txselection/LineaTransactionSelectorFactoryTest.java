@@ -147,7 +147,7 @@ class LineaTransactionSelectorFactoryTest {
 
     when(mockBts.evaluatePendingTransaction(any())).thenReturn(TransactionSelectionResult.SELECTED);
 
-    factory.selectPendingTransactions(mockBts, mockPendingBlockHeader);
+    factory.selectPendingTransactions(mockBts, mockPendingBlockHeader, Collections.emptyList());
 
     verify(mockBts).commit();
   }
@@ -165,7 +165,7 @@ class LineaTransactionSelectorFactoryTest {
 
     when(mockBts.evaluatePendingTransaction(any())).thenReturn(failStatus);
 
-    factory.selectPendingTransactions(mockBts, mockPendingBlockHeader);
+    factory.selectPendingTransactions(mockBts, mockPendingBlockHeader, Collections.emptyList());
 
     verify(mockBts).rollback();
   }
@@ -176,7 +176,7 @@ class LineaTransactionSelectorFactoryTest {
     var mockPendingBlockHeader = mock(ProcessableBlockHeader.class);
     when(mockPendingBlockHeader.getNumber()).thenReturn(1L);
 
-    factory.selectPendingTransactions(mockBts, mockPendingBlockHeader);
+    factory.selectPendingTransactions(mockBts, mockPendingBlockHeader, Collections.emptyList());
 
     verifyNoInteractions(mockBts);
   }
