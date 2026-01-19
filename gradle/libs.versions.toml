@@ -33,7 +33,7 @@ besuShomeiPluginVersion = "v0.8.4"
 undercouchDownload = "5.6.0"
 
 # Runtime
-arithmetization="beta-v4.4-rc7.3"
+arithmetization="beta-v4.4-rc7.4"
 besu = "25.12.0-linea4"
 blobCompressor = "2.1.0-rc1"
 blobShnarfCalculator = "1.2.0"
