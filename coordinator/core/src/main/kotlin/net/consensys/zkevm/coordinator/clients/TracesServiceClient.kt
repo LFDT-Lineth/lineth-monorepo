@@ -28,3 +28,10 @@ interface TracesConflationClientV2 {
     endBlockNumber: ULong,
   ): SafeFuture<Result<GenerateTracesResponse, ErrorResponse<TracesServiceErrorType>>>
 }
+
+interface TracesConflationVirtualBlockClientV1 {
+  fun generateVirtualBlockConflatedTracesToFile(
+    blockNumber: ULong,
+    transaction: ByteArray,
+  ): SafeFuture<Result<GenerateTracesResponse, ErrorResponse<TracesServiceErrorType>>>
+}
