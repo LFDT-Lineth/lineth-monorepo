@@ -3,7 +3,7 @@
 (defun (illegal-precompiles)
  (force-bin (* PEEK_AT_SCENARIO (+ scenario/PRC_RIPEMD-160 scenario/PRC_BLAKE2f))))
 
-(defcomputedcolumn (PROVER_ILLEGAL_TRANSACTION_DETECTED_ACC :i16 :fwd) 
+(defcomputedcolumn (PROVER_ILLEGAL_TRANSACTION_DETECTED_ACC :i16 :fwd)
     (* USER (+ (prev PROVER_ILLEGAL_TRANSACTION_DETECTED_ACC)
                (illegal-precompiles))))
 

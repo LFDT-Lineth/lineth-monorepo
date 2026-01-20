@@ -182,6 +182,7 @@ tasks.register("nightlyReplayTests", Test) {
   useJUnitPlatform {
     includeTags("nightly & replay")
   }
+  systemProperty("junit.jupiter.execution.timeout.default", "20 m")
 }
 
 tasks.register("nightlyTests", Test) {

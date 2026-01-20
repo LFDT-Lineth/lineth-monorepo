@@ -1,0 +1,29 @@
+;; Convert u64 input from big-endian to little-endian
+;; and reverse
+
+fn switch_endian_u64(input u64) -> (output u64) {
+    var hi, lo, sw_hi, sw_lo u32
+    hi, lo = input
+    sw_hi = switch_endian_u32(hi)
+    sw_lo = switch_endian_u32(lo)
+    output = (sw_lo * 2^32) + sw_hi
+    return
+}
+
+fn switch_endian_u32(input u32) -> (output u32) {
+    var hi, lo, sw_hi, sw_lo u16
+    hi, lo = input
+    sw_hi = switch_endian_u16(hi)
+    sw_lo = switch_endian_u16(lo)
+    output = (sw_lo * 2^16) + sw_hi
+    return
+}
+
+fn switch_endian_u16(input u16) -> (output u16) {
+    var hi, lo u8
+    hi, lo = input
+    output = (lo * 2^8) + hi
+    return
+}
+
+

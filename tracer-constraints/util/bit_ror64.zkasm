@@ -1,0 +1,112 @@
+;; Rotate right a u64 word
+;;
+;; n is in [0,63]
+;; bit_ror shifts the bits of 'word' to the right by 'n' positions
+;; bits that fall off the right end are wrapped around to the left end
+;;
+;; n=1 shifts the word by 1 bit to the right, so it places the least significant
+;; bit as the most significant one, while shifting all the other bits to the right
+;; eg : for n=1
+;; 0000000000010001001000100011001101000100010101010110011001110111 becomes
+;; 1000000000001000100100010001100110100010001010101011001100111011
+
+fn bit_ror64(word u64, n u6) -> (res u64) {
+      if n == 0  goto unchanged
+      var b u1
+      var m u5
+      var msw u32
+      var lsw u32
+      ;; decompose shift
+      b,m = n
+      ;;
+      if b!=0 goto apply
+      res = bit_ror64_u5(word,m)
+      return
+apply:
+      msw, lsw = word
+      res = bit_ror64_u5((2^32*lsw) + msw,m)
+      return
+unchanged:
+      res = word
+      return
+}
+
+fn bit_ror64_u5(word u64, n u5) -> (res u64) {
+      var b u1
+      var m u4
+      var msw u48
+      var lsw u16
+      ;; decompose shift
+      b,m = n
+      ;;
+      if b!=0 goto apply
+      res = bit_ror64_u4(word,m)
+      return
+apply:
+      msw, lsw = word
+      res = bit_ror64_u4((2^48*lsw) + msw,m)
+      return
+}
+
+fn bit_ror64_u4(word u64, n u4) -> (res u64) {
+      var b u1
+      var m u3
+      var msw u56
+      var lsw u8
+      ;; decompose shift
+      b,m = n
+      ;;
+      if b!=0 goto apply
+      res = bit_ror64_u3(word,m)
+      return
+apply:
+      msw, lsw = word
+      res = bit_ror64_u3((2^56*lsw) + msw,m)
+      return
+}
+
+fn bit_ror64_u3(word u64, n u3) -> (res u64) {
+      var b u1
+      var m u2
+      var msw u60
+      var lsw u4
+      ;; decompose shift
+      b,m = n
+      ;;
+      if b!=0 goto apply
+      res = bit_ror64_u2(word,m)
+      return
+apply:
+      msw, lsw = word
+      res = bit_ror64_u2((2^60*lsw) + msw,m)
+      return
+}
+
+fn bit_ror64_u2(word u64, n u2) -> (res u64) {
+      var b u1
+      var m u1
+      var msw u62
+      var lsw u2
+      ;; decompose shift
+      b,m = n
+      ;;
+      if b!=0 goto apply
+      res = bit_ror64_u1(word,m)
+      return
+apply:
+      msw, lsw = word
+      res = bit_ror64_u1((2^62*lsw) + msw,m)
+      return
+}
+
+fn bit_ror64_u1(word u64, n u1) -> (res u64) {
+      var lsw u1
+      if n!=0 goto apply
+      res = word
+      return
+apply:
+      var hi u63
+      hi, lsw = word
+      res = (lsw * 2^63) + hi
+      return
+}

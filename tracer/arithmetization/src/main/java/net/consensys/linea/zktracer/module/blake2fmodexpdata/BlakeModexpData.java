@@ -19,6 +19,8 @@ import static com.google.common.base.Preconditions.checkState;
 import static net.consensys.linea.zktracer.module.ModuleName.BLAKE_MODEXP_DATA;
 
 import java.util.List;
+import java.util.Optional;
+
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.Accessors;
@@ -28,8 +30,11 @@ import net.consensys.linea.zktracer.container.module.IncrementingModule;
 import net.consensys.linea.zktracer.container.module.OperationListModule;
 import net.consensys.linea.zktracer.container.stacked.ModuleOperationStackedList;
 import net.consensys.linea.zktracer.module.ModuleName;
+import net.consensys.linea.zktracer.module.blake2f.Blake2f;
+import net.consensys.linea.zktracer.module.blake2f.Blake2fOperation;
 import net.consensys.linea.zktracer.module.limits.precompiles.BlakeRounds;
 import net.consensys.linea.zktracer.module.wcp.Wcp;
+import org.hyperledger.besu.evm.worldstate.WorldView;
 
 @RequiredArgsConstructor
 @Getter
@@ -40,6 +45,7 @@ public class BlakeModexpData implements OperationListModule<BlakeModexpDataOpera
   private final IncrementingModule modexpLargeCall;
   private final IncrementingModule blakeEffectiveCall;
   private final BlakeRounds blakeRounds;
+  private Optional<Blake2f> blake2f;
 
   private final ModuleOperationStackedList<BlakeModexpDataOperation> operations =
       new ModuleOperationStackedList<>();
@@ -61,9 +67,12 @@ public class BlakeModexpData implements OperationListModule<BlakeModexpDataOpera
     callWcpForIdCheck(modexpOperation.id());
   }
 
-  public void callBlake(BlakeModexpDataOperation blakeOperation) {
+  public void callBlake(BlakeModexpDataOperation blakeOperation, Blake2f blake2f) {
     checkState(blakeOperation.isBlakeOperation(), "Operation must be a BLAKE2f operation");
     operations.add(blakeOperation);
+
+    // Call to Blake2f module
+    blake2f.call(new Blake2fOperation(blakeOperation.blake2fComponents.get()));
 
     blakeEffectiveCall.updateTally(1);
     blakeRounds.addPrecompileLimit(blakeOperation.blake2fComponents.get().r());
@@ -83,6 +92,11 @@ public class BlakeModexpData implements OperationListModule<BlakeModexpDataOpera
   @Override
   public int spillage(Trace trace) {
     return trace.blake2fmodexpdata().spillage();
+  }
+
+  @Override
+  public void traceEndConflation(final WorldView state) {
+    operations().finishConflation();
   }
 
   @Override

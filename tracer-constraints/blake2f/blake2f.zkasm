@@ -1,0 +1,335 @@
+;; BLAKE2F module implementation
+;; Implementation of BLAKE2 compression function `F` precompile (EIP-152)
+;; Inputs are given as big-endian and converted to little-endian as a first step
+
+include "../util/g1g2.zkasm"
+include "../util/bit_xoan.zkasm"
+include "../util/switch_endian.zkasm"
+
+;; Initialization vector
+const IV_0 = 0x6A09E667F3BCC908
+const IV_1 = 0xBB67AE8584CAA73B
+const IV_2 = 0x3C6EF372FE94F82B
+const IV_3 = 0xA54FF53A5F1D36F1
+const IV_4 = 0x510E527FADE682D1
+const IV_5 = 0x9B05688C2B3E6C1F
+const IV_6 = 0x1F83D9ABFB41BD6B
+const IV_7 = 0x5BE0CD19137E2179
+;; corresponds to the default value for padding h0, h1 ... h7
+;; cannot use constants for padding default for now
+
+pub fn blake2f(r u64, h0h1_be_input u128, h2h3_be_input u128, h4h5_be_input u128, h6h7_be_input u128, m0m1_be u128, m2m3_be u128, m4m5_be u128, m6m7_be u128, m8m9_be u128, m10m11_be u128, m12m13_be u128, m14m15_be u128, t0t1_be u128, f u1 ) -> (h0h1_be=0x08C9BCF367E6096A3BA7CA8485AE67BB u128, h2h3_be=0x2BF894FE72F36E3CF1361D5F3AF54FA5 u128, h4h5_be=0xD182E6AD7F520E511F6C3E2B8C68059B u128, h6h7_be=0x6BBD41FBABD9831F79217E1319CDE05B u128) {
+      ;; split inputs from u128 to u64 - inputs are given in u128 to fit the blakefmodexpdata lookup
+      var h0_be_input, h1_be_input, h2_be_input, h3_be_input, h4_be_input, h5_be_input, h6_be_input, h7_be_input u64
+      var m0_be, m1_be, m2_be, m3_be, m4_be, m5_be, m6_be, m7_be, m8_be, m9_be, m10_be, m11_be, m12_be, m13_be, m14_be, m15_be u64
+      var t0_be, t1_be u64
+      h0_be_input, h1_be_input = h0h1_be_input
+      h2_be_input, h3_be_input = h2h3_be_input
+      h4_be_input, h5_be_input = h4h5_be_input
+      h6_be_input, h7_be_input = h6h7_be_input
+      m0_be, m1_be = m0m1_be
+      m2_be, m3_be = m2m3_be
+      m4_be, m5_be = m4m5_be
+      m6_be, m7_be = m6m7_be
+      m8_be, m9_be = m8m9_be
+      m10_be, m11_be = m10m11_be
+      m12_be, m13_be = m12m13_be
+      m14_be, m15_be = m14m15_be
+      t0_be, t1_be = t0t1_be
+
+      ;; convert big-endian inputs to little-endian
+      var h0_input, h1_input, h2_input, h3_input, h4_input, h5_input, h6_input, h7_input u64
+      var m0, m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11, m12, m13, m14, m15 u64
+      var t0, t1 u64
+      h0_input, h1_input, h2_input, h3_input, h4_input, h5_input, h6_input, h7_input = switch_endian_8_args(h0_be_input, h1_be_input, h2_be_input, h3_be_input, h4_be_input, h5_be_input, h6_be_input, h7_be_input)
+      m0, m1, m2, m3, m4, m5, m6, m7 = switch_endian_8_args(m0_be, m1_be, m2_be, m3_be, m4_be, m5_be, m6_be, m7_be)
+      m8, m9, m10, m11, m12, m13, m14, m15 = switch_endian_8_args(m8_be, m9_be, m10_be, m11_be, m12_be, m13_be, m14_be, m15_be)
+      t0 = switch_endian_u64(t0_be)
+      t1 = switch_endian_u64(t1_be)
+
+      ;; v array variables and initialization
+      var v0, v1, v2, v3, v4, v5, v6, v7, v8, v9 u64
+      var v10, v11, v12, v13, v14, v15 u64
+      v0 = h0_input
+      v1 = h1_input
+      v2 = h2_input
+      v3 = h3_input
+      v4 = h4_input
+      v5 = h5_input
+      v6 = h6_input
+      v7 = h7_input
+      v8 = IV_0
+      v9 = IV_1
+      v10 = IV_2
+      v11 = IV_3
+      v12 = IV_4
+      v13 = IV_5
+      v14 = IV_6
+      v15 = IV_7
+      ;; ms array variables
+      var ms0, ms1, ms2, ms3, ms4, ms5, ms6, ms7, ms8, ms9 u64
+      var ms10, ms11, ms12, ms13, ms14, ms15 u64
+      ;; loop variables and initialization
+      var i u64
+      var i_mod_10 u4
+      var c0 u1
+      i = 0
+      i_mod_10 = 0
+
+      ;; instantiate v12, v13
+      v12 = bit_xoan_u64(BIT_XOR, v12, t0)
+      v13 = bit_xoan_u64(BIT_XOR, v13, t1)
+      ;; and v14 conditionally
+      if f==0 goto loop
+      v14 = bit_xoan_u64(BIT_NOT, v14, 0)
+loop:
+      if i==r goto xor_two_halves
+
+      ms0, ms1, ms2, ms3, ms4, ms5, ms6, ms7, ms8, ms9, ms10, ms11, ms12, ms13, ms14, ms15 = get_ms(i_mod_10, m0, m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11, m12, m13, m14, m15)
+      v0, v4, v8, v12 = g1g2(v0, v4, v8, v12, ms0, ms4)
+      v1, v5, v9, v13 = g1g2(v1, v5, v9, v13, ms1, ms5)
+      v2, v6, v10, v14 = g1g2(v2, v6, v10, v14, ms2, ms6)
+      v3, v7, v11, v15 = g1g2(v3, v7, v11, v15, ms3, ms7)
+
+      v0, v5, v10, v15 = g1g2(v0, v5, v10, v15, ms8, ms12)
+      v1, v6, v11, v12 = g1g2(v1, v6, v11, v12, ms9, ms13)
+      v2, v7, v8, v13  = g1g2(v2, v7, v8, v13, ms10, ms14)
+      v3, v4, v9, v14  = g1g2(v3, v4, v9, v14, ms11, ms15)
+
+      ;; increment index i and wrap i_mod_10
+      c0, i = i + 1
+      c0, i_mod_10 = i_mod_10 == 9 ? 0 : (i_mod_10 + 1)
+      goto loop
+xor_two_halves:
+      var h0_le, h1_le, h2_le, h3_le, h4_le, h5_le, h6_le, h7_le u64
+      var h0_be, h1_be, h2_be, h3_be, h4_be, h5_be, h6_be, h7_be u64
+      h0_le = xor_on_xor(v0, v8, h0_input)
+      h1_le = xor_on_xor(v1, v9, h1_input)
+      h2_le = xor_on_xor(v2, v10, h2_input)
+      h3_le = xor_on_xor(v3, v11, h3_input)
+      h4_le = xor_on_xor(v4, v12, h4_input)
+      h5_le = xor_on_xor(v5, v13, h5_input)
+      h6_le = xor_on_xor(v6, v14, h6_input)
+      h7_le = xor_on_xor(v7, v15, h7_input)
+      ;; convert little-endian outputs to big-endian
+      h0_be, h1_be, h2_be, h3_be, h4_be, h5_be, h6_be, h7_be = switch_endian_8_args(h0_le, h1_le, h2_le, h3_le, h4_le, h5_le, h6_le, h7_le)
+      h0h1_be = (2^64 * h0_be) + h1_be
+      h2h3_be = (2^64 * h2_be) + h3_be
+      h4h5_be = (2^64 * h4_be) + h5_be
+      h6h7_be = (2^64 * h6_be) + h7_be
+
+      return
+}
+
+fn switch_endian_8_args(arg_BE_1 u64, arg_BE_2 u64, arg_BE_3 u64, arg_BE_4 u64, arg_BE_5 u64, arg_BE_6 u64,arg_BE_7 u64, arg_BE_8 u64) -> (arg_LE_1 u64, arg_LE_2 u64, arg_LE_3 u64, arg_LE_4 u64, arg_LE_5 u64, arg_LE_6 u64,arg_LE_7 u64, arg_LE_8 u64){
+      arg_LE_1 = switch_endian_u64(arg_BE_1)
+      arg_LE_2 = switch_endian_u64(arg_BE_2)
+      arg_LE_3 = switch_endian_u64(arg_BE_3)
+      arg_LE_4 = switch_endian_u64(arg_BE_4)
+      arg_LE_5 = switch_endian_u64(arg_BE_5)
+      arg_LE_6 = switch_endian_u64(arg_BE_6)
+      arg_LE_7 = switch_endian_u64(arg_BE_7)
+      arg_LE_8 = switch_endian_u64(arg_BE_8)
+      return
+}
+
+;; (arg_1 XOR arg_2) XOR arg_3
+fn xor_on_xor(arg_1 u64, arg_2 u64, arg_3 u64) -> (res u64) {
+    var mid_res u64
+    mid_res = bit_xoan_u64(BIT_XOR, arg_1, arg_2)
+    res = bit_xoan_u64(BIT_XOR, mid_res, arg_3)
+    return
+}
+
+fn get_ms(i_mod_10 u4, m0 u64, m1 u64, m2 u64, m3 u64, m4 u64, m5 u64, m6 u64, m7 u64, m8 u64, m9 u64, m10 u64, m11 u64, m12 u64, m13 u64, m14 u64, m15 u64) -> (ms0 u64, ms1 u64, ms2 u64, ms3 u64, ms4 u64, ms5 u64, ms6 u64, ms7 u64, ms8 u64, ms9 u64, ms10 u64, ms11 u64, ms12 u64, ms13 u64, ms14 u64, ms15 u64) {
+    if i_mod_10 == 0 goto sigma_0
+    if i_mod_10 == 1 goto sigma_1
+    if i_mod_10 == 2 goto sigma_2
+    if i_mod_10 == 3 goto sigma_3
+    if i_mod_10 == 4 goto sigma_4
+    if i_mod_10 == 5 goto sigma_5
+    if i_mod_10 == 6 goto sigma_6
+    if i_mod_10 == 7 goto sigma_7
+    if i_mod_10 == 8 goto sigma_8
+    if i_mod_10 == 9 goto sigma_9
+sigma_0:
+    ms0 = m0
+    ms1 = m2
+    ms2 = m4
+    ms3 = m6
+    ms4 = m1
+    ms5 = m3
+    ms6 = m5
+    ms7 = m7
+    ms8 = m8
+    ms9 = m10
+    ms10 = m12
+    ms11 = m14
+    ms12 = m9
+    ms13 = m11
+    ms14 = m13
+    ms15 = m15
+    return
+sigma_1:
+    ms0 = m14
+    ms1 = m4
+    ms2 = m9
+    ms3 = m13
+    ms4 = m10
+    ms5 = m8
+    ms6 = m15
+    ms7 = m6
+    ms8 = m1
+    ms9 = m0
+    ms10 = m11
+    ms11 = m5
+    ms12 = m12
+    ms13 = m2
+    ms14 = m7
+    ms15 = m3
+    return
+sigma_2:
+    ms0 = m11
+    ms1 = m12
+    ms2 = m5
+    ms3 = m15
+    ms4 = m8
+    ms5 = m0
+    ms6 = m2
+    ms7 = m13
+    ms8 = m10
+    ms9 = m3
+    ms10 = m7
+    ms11 = m9
+    ms12 = m14
+    ms13 = m6
+    ms14 = m1
+    ms15 = m4
+    return
+sigma_3:
+    ms0 = m7
+    ms1 = m3
+    ms2 = m13
+    ms3 = m11
+    ms4 = m9
+    ms5 = m1
+    ms6 = m12
+    ms7 = m14
+    ms8 = m2
+    ms9 = m5
+    ms10 = m4
+    ms11 = m15
+    ms12 = m6
+    ms13 = m10
+    ms14 = m0
+    ms15 = m8
+    return
+sigma_4:
+    ms0 = m9
+    ms1 = m5
+    ms2 = m2
+    ms3 = m10
+    ms4 = m0
+    ms5 = m7
+    ms6 = m4
+    ms7 = m15
+    ms8 = m14
+    ms9 = m11
+    ms10 = m6
+    ms11 = m3
+    ms12 = m1
+    ms13 = m12
+    ms14 = m8
+    ms15 = m13
+    return
+sigma_5:
+    ms0 = m2
+    ms1 = m6
+    ms2 = m0
+    ms3 = m8
+    ms4 = m12
+    ms5 = m10
+    ms6 = m11
+    ms7 = m3
+    ms8 = m4
+    ms9 = m7
+    ms10 = m15
+    ms11 = m1
+    ms12 = m13
+    ms13 = m5
+    ms14 = m14
+    ms15 = m9
+    return
+sigma_6:
+    ms0 = m12
+    ms1 = m1
+    ms2 = m14
+    ms3 = m4
+    ms4 = m5
+    ms5 = m15
+    ms6 = m13
+    ms7 = m10
+    ms8 = m0
+    ms9 = m6
+    ms10 = m9
+    ms11 = m8
+    ms12 = m7
+    ms13 = m3
+    ms14 = m2
+    ms15 = m11
+    return
+sigma_7:
+    ms0 = m13
+    ms1 = m7
+    ms2 = m12
+    ms3 = m3
+    ms4 = m11
+    ms5 = m14
+    ms6 = m1
+    ms7 = m9
+    ms8 = m5
+    ms9 = m15
+    ms10 = m8
+    ms11 = m2
+    ms12 = m0
+    ms13 = m4
+    ms14 = m6
+    ms15 = m10
+    return
+sigma_8:
+    ms0 = m6
+    ms1 = m14
+    ms2 = m11
+    ms3 = m0
+    ms4 = m15
+    ms5 = m9
+    ms6 = m3
+    ms7 = m8
+    ms8 = m12
+    ms9 = m13
+    ms10 = m1
+    ms11 = m10
+    ms12 = m2
+    ms13 = m7
+    ms14 = m4
+    ms15 = m5
+    return
+sigma_9:
+    ms0 = m10
+    ms1 = m8
+    ms2 = m7
+    ms3 = m1
+    ms4 = m2
+    ms5 = m4
+    ms6 = m6
+    ms7 = m5
+    ms8 = m15
+    ms9 = m9
+    ms10 = m3
+    ms11 = m13
+    ms12 = m11
+    ms13 = m14
+    ms14 = m12
+    ms15 = m0
+    return
+}

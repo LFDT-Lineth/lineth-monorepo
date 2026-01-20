@@ -1,0 +1,43 @@
+;; G1G2 function used for cryptographic mixing in Blake2f algorithm
+
+include "bit_xoan.zkasm"
+include "bit_ror64.zkasm"
+
+fn g1g2(vA_input u64, vB_input u64, vC_input u64, vD_input u64, x u64, y u64) -> (vA u64, vB u64, vC u64, vD u64) {
+    vA, vB, vC, vD = g1(vA_input, vB_input, vC_input, vD_input, x)
+    vA, vB, vC, vD = g2(vA, vB, vC, vD, y)
+    return
+}
+
+
+fn g1(vA_input u64, vB_input u64, vC_input u64, vD_input u64, x u64) -> (vA u64, vB u64, vC u64, vD u64) {
+    var a0, a1, c0 u64
+    var vD_xor_vA, vB_xor_vC u64
+    ;; set vA
+    a0, a1, vA = vA_input + vB_input + x
+    ;; set vD
+    vD_xor_vA = bit_xoan_u64(BIT_XOR, vD_input, vA)
+    vD = bit_ror64(vD_xor_vA, 32)
+    ;; set vC
+    c0, vC = vC_input + vD
+    ;; set vB
+    vB_xor_vC = bit_xoan_u64(BIT_XOR, vB_input, vC)
+    vB = bit_ror64(vB_xor_vC, 24)
+    return
+}
+
+fn g2(vA_input u64, vB_input u64, vC_input u64, vD_input u64, y u64) -> (vA u64, vB u64, vC u64, vD u64) {
+    var a0, a1, c0 u64
+    var vD_xor_vA, vB_xor_vC u64
+    ;; set vA
+    a0, a1, vA = vA_input + vB_input + y
+    ;; set vD
+    vD_xor_vA = bit_xoan_u64(BIT_XOR, vD_input, vA)
+    vD = bit_ror64(vD_xor_vA, 16)
+    ;; set vC
+    c0, vC = vC_input + vD
+    ;; set vB
+    vB_xor_vC = bit_xoan_u64(BIT_XOR, vB_input, vC)
+    vB = bit_ror64(vB_xor_vC, 63)
+    return
+}
