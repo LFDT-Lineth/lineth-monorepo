@@ -187,6 +187,14 @@ func (ac *antichamber) assignAntichamber(run *wizard.ProverRuntime, nbEcRecInsta
 	var (
 		maxNbEcRecover = ac.Inputs.Settings.MaxNbEcRecover
 		maxNbTx        = ac.Inputs.Settings.MaxNbTx
+
+		// Calculate the Logical Limit (The "Contract")
+		// This is the maximum row space we claimed we would need in your config.
+		// The circuit is built to exactly this capacity.
+		configuredLimitRows = nbRowsPerEcRec*maxNbEcRecover + nbRowsPerTxSign*maxNbTx
+
+		// Calculate Actual Usage (The "Reality") - This is how many rows your trace actually demands.
+		actualUsageRows = nbRowsPerEcRec*nbEcRecInstances + nbRowsPerTxSign*nbTxInstances
 	)
 
 	if nbRowsPerEcRec*maxNbEcRecover+nbRowsPerTxSign*maxNbTx > ac.Size {
@@ -208,6 +216,17 @@ func (ac *antichamber) assignAntichamber(run *wizard.ProverRuntime, nbEcRecInsta
 			fmt.Errorf("not enough space in ECDSA antichamber to store all the data. Need %d, got %d",
 				nbTxInstances*nbRowsPerTxSign+nbEcRecInstances*nbRowsPerEcRec, ac.Size,
 			),
+		)
+	}
+
+	// This catches the case where the data fits in the physical buffer (ac.Size)
+	// but exceeds the logical capacity the circuit was built for.
+	if actualUsageRows > configuredLimitRows {
+		exit.OnLimitOverflow(
+			configuredLimitRows,
+			actualUsageRows,
+			fmt.Errorf("ECDSA antichamber row limit exceeded: trace requires %d rows (EcRec:%d, Tx:%d), but config limits to %d rows (MaxEcRec:%d, MaxTx:%d)",
+				actualUsageRows, nbEcRecInstances, nbTxInstances, configuredLimitRows, maxNbEcRecover, maxNbTx),
 		)
 	}
 
