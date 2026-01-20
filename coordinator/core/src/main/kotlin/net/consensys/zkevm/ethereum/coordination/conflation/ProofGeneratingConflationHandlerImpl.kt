@@ -11,6 +11,8 @@ import linea.domain.Block
 import linea.timer.TimerSchedule
 import linea.timer.VertxPeriodicPollingService
 import net.consensys.linea.async.AsyncRetryer
+import net.consensys.linea.metrics.LineaMetricsCategory
+import net.consensys.linea.metrics.MetricsFacade
 import net.consensys.zkevm.domain.Batch
 import net.consensys.zkevm.domain.BlocksConflation
 import net.consensys.zkevm.domain.ProofIndex
@@ -29,6 +31,7 @@ class ProofGeneratingConflationHandlerImpl(
   private val vertx: Vertx,
   private val config: Config,
   private val log: Logger = LogManager.getLogger(ProofGeneratingConflationHandlerImpl::class.java),
+  metricsFacade: MetricsFacade,
 ) : ConflationHandler,
   VertxPeriodicPollingService(
     vertx = vertx,
@@ -44,6 +47,15 @@ class ProofGeneratingConflationHandlerImpl(
   )
 
   private val proofRequestsInProgress = ConcurrentLinkedDeque<ProofIndex>()
+
+  init {
+    metricsFacade.createGauge(
+      category = LineaMetricsCategory.BATCH,
+      name = "prover.pendingproofs",
+      description = "Number of execution proof waiting responses",
+      measurementSupplier = { proofRequestsInProgress.size },
+    )
+  }
 
   override fun action(): SafeFuture<*> {
     return if (proofRequestsInProgress.isNotEmpty()) {

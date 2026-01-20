@@ -86,7 +86,6 @@ open class GenericFileBasedProverClient<Request, Response, RequestDto, ResponseD
 
     return findRequestFileIfAlreadyInFileSystem(requestFileName)
       .thenCompose { requestFileFound: String? ->
-        responsesWaiting.incrementAndGet()
         if (requestFileFound != null) {
           log.debug(
             "request already in file system: {}={} reusedRequest={}",
@@ -119,6 +118,7 @@ open class GenericFileBasedProverClient<Request, Response, RequestDto, ResponseD
         if (response != null) {
           SafeFuture.completedFuture(response)
         } else {
+          responsesWaiting.incrementAndGet()
           createProofRequest(proofRequest)
             .thenCompose { waitForResponse(responseFilePath) }
             .thenCompose {

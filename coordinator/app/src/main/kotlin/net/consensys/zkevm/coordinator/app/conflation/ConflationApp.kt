@@ -343,6 +343,7 @@ class ConflationApp(
         conflationAndProofGenerationRetryBackoffDelay = 5.seconds,
         executionProofPollingInterval = 100.milliseconds,
       ),
+      metricsFacade = metricsFacade,
     )
   }
 
