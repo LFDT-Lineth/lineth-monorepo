@@ -19,6 +19,7 @@ import {
   EMPTY_CALLDATA,
   FINALIZATION_PAUSE_TYPE,
   DEFAULT_LAST_FINALIZED_TIMESTAMP,
+  MAX_GAS_LIMIT,
 } from "../../common/constants";
 import {
   calculateRollingHash,
@@ -133,7 +134,7 @@ describe("Linea Rollup contract: Finalization", () => {
           await lineaRollup
             .connect(operator)
             .submitDataAsCalldata(data, parentAndExpectedShnarf.parentShnarf, parentAndExpectedShnarf.expectedShnarf, {
-              gasLimit: 30_000_000,
+              gasLimit: MAX_GAS_LIMIT,
             });
           index++;
         }
@@ -194,7 +195,7 @@ describe("Linea Rollup contract: Finalization", () => {
           await lineaRollup
             .connect(operator)
             .submitDataAsCalldata(data, parentAndExpectedShnarf.parentShnarf, parentAndExpectedShnarf.expectedShnarf, {
-              gasLimit: 30_000_000,
+              gasLimit: MAX_GAS_LIMIT,
             });
           index++;
         }
@@ -244,7 +245,7 @@ describe("Linea Rollup contract: Finalization", () => {
           await lineaRollup
             .connect(operator)
             .submitDataAsCalldata(data, parentAndExpectedShnarf.parentShnarf, parentAndExpectedShnarf.expectedShnarf, {
-              gasLimit: 30_000_000,
+              gasLimit: MAX_GAS_LIMIT,
             });
           index++;
         }
@@ -288,7 +289,7 @@ describe("Linea Rollup contract: Finalization", () => {
           await lineaRollup
             .connect(operator)
             .submitDataAsCalldata(data, parentAndExpectedShnarf.parentShnarf, parentAndExpectedShnarf.expectedShnarf, {
-              gasLimit: 30_000_000,
+              gasLimit: MAX_GAS_LIMIT,
             });
           index++;
         }
@@ -379,7 +380,7 @@ describe("Linea Rollup contract: Finalization", () => {
         await lineaRollup
           .connect(operator)
           .submitDataAsCalldata(data, parentAndExpectedShnarf.parentShnarf, parentAndExpectedShnarf.expectedShnarf, {
-            gasLimit: 30_000_000,
+            gasLimit: MAX_GAS_LIMIT,
           });
         index++;
       }
@@ -393,7 +394,7 @@ describe("Linea Rollup contract: Finalization", () => {
       const finalizeCall = lineaRollup
         .connect(operator)
         .finalizeBlocks(calldataAggregatedProof1To155.aggregatedProof, TEST_PUBLIC_VERIFIER_INDEX, finalizationData, {
-          gasLimit: 30_000_000,
+          gasLimit: MAX_GAS_LIMIT,
         });
       await expectRevertWithCustomError(lineaRollup, finalizeCall, "StartingRootHashDoesNotMatch");
     });
@@ -407,7 +408,7 @@ describe("Linea Rollup contract: Finalization", () => {
         await lineaRollup
           .connect(operator)
           .submitDataAsCalldata(data, parentAndExpectedShnarf.parentShnarf, parentAndExpectedShnarf.expectedShnarf, {
-            gasLimit: 30_000_000,
+            gasLimit: MAX_GAS_LIMIT,
           });
         index++;
       }
@@ -430,7 +431,7 @@ describe("Linea Rollup contract: Finalization", () => {
         await lineaRollup
           .connect(operator)
           .submitDataAsCalldata(data, parentAndExpectedShnarf.parentShnarf, parentAndExpectedShnarf.expectedShnarf, {
-            gasLimit: 30_000_000,
+            gasLimit: MAX_GAS_LIMIT,
           });
         index++;
       }
@@ -468,7 +469,7 @@ describe("Linea Rollup contract: Finalization", () => {
         await lineaRollup
           .connect(operator)
           .submitDataAsCalldata(data, parentAndExpectedShnarf.parentShnarf, parentAndExpectedShnarf.expectedShnarf, {
-            gasLimit: 30_000_000,
+            gasLimit: MAX_GAS_LIMIT,
           });
         index++;
       }
@@ -509,7 +510,7 @@ describe("Linea Rollup contract: Finalization", () => {
         await lineaRollup
           .connect(operator)
           .submitDataAsCalldata(data, parentAndExpectedShnarf.parentShnarf, parentAndExpectedShnarf.expectedShnarf, {
-            gasLimit: 30_000_000,
+            gasLimit: MAX_GAS_LIMIT,
           });
         index++;
       }
@@ -548,7 +549,7 @@ describe("Linea Rollup contract: Finalization", () => {
         await lineaRollup
           .connect(operator)
           .submitDataAsCalldata(data, parentAndExpectedShnarf.parentShnarf, parentAndExpectedShnarf.expectedShnarf, {
-            gasLimit: 30_000_000,
+            gasLimit: MAX_GAS_LIMIT,
           });
         index++;
       }
@@ -586,7 +587,7 @@ describe("Linea Rollup contract: Finalization", () => {
         await lineaRollup
           .connect(operator)
           .submitDataAsCalldata(data, parentAndExpectedShnarf.parentShnarf, parentAndExpectedShnarf.expectedShnarf, {
-            gasLimit: 30_000_000,
+            gasLimit: MAX_GAS_LIMIT,
           });
         index++;
       }
@@ -622,7 +623,7 @@ describe("Linea Rollup contract: Finalization", () => {
         await lineaRollup
           .connect(operator)
           .submitDataAsCalldata(data, parentAndExpectedShnarf.parentShnarf, parentAndExpectedShnarf.expectedShnarf, {
-            gasLimit: 30_000_000,
+            gasLimit: MAX_GAS_LIMIT,
           });
         index++;
       }
@@ -676,7 +677,7 @@ describe("Linea Rollup contract: Finalization", () => {
         await lineaRollup
           .connect(operator)
           .submitDataAsCalldata(data, parentAndExpectedShnarf.parentShnarf, parentAndExpectedShnarf.expectedShnarf, {
-            gasLimit: 30_000_000,
+            gasLimit: MAX_GAS_LIMIT,
           });
         index++;
       }
@@ -714,7 +715,7 @@ describe("Linea Rollup contract: Finalization", () => {
         await lineaRollup
           .connect(operator)
           .submitDataAsCalldata(data, parentAndExpectedShnarf.parentShnarf, parentAndExpectedShnarf.expectedShnarf, {
-            gasLimit: 30_000_000,
+            gasLimit: MAX_GAS_LIMIT,
           });
         index++;
       }

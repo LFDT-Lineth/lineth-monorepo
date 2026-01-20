@@ -1,11 +1,14 @@
+const useViaIR = process.env.ENABLE_VIA_IR === "true";
+
 const lineaOverride = {
-  version: "0.8.30",
+  version: "0.8.33",
   settings: {
-    evmVersion: "prague",
+    viaIR: useViaIR,
     optimizer: {
       enabled: true,
       runs: 10_000,
     },
+    evmVersion: "osaka",
   },
 };
 
@@ -30,4 +33,50 @@ const lineaOverridePaths = [
   "src/operational/RollupRevenueVault.sol",
 ];
 
-export const overrides = Object.fromEntries(lineaOverridePaths.map((path) => [path, lineaOverride]));
+export const overrides = {
+  ...Object.fromEntries(lineaOverridePaths.map((path) => [path, lineaOverride])),
+  "src/yield/YieldManager.sol": {
+    version: "0.8.33",
+    settings: {
+      viaIR: useViaIR,
+      optimizer: {
+        enabled: true,
+        runs: 1500,
+      },
+      evmVersion: "osaka",
+    },
+  },
+  "src/_testing/unit/yield/TestYieldManager.sol": {
+    version: "0.8.33",
+    settings: {
+      viaIR: useViaIR,
+      optimizer: {
+        enabled: true,
+        runs: 10,
+      },
+      evmVersion: "osaka",
+    },
+  },
+  "src/_testing/unit/rollup/TestLineaRollup.sol": {
+    version: "0.8.33",
+    settings: {
+      viaIR: useViaIR,
+      optimizer: {
+        enabled: true,
+        runs: 1000,
+      },
+      evmVersion: "osaka",
+    },
+  },
+  "src/rollup/LineaRollup.sol": {
+    version: "0.8.33",
+    settings: {
+      viaIR: useViaIR,
+      optimizer: {
+        enabled: true,
+        runs: 7500,
+      },
+      evmVersion: "osaka",
+    },
+  },
+};

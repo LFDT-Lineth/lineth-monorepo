@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0
-pragma solidity ^0.8.30;
+pragma solidity ^0.8.33;
 
 import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import { L1MessageServiceBase } from "./L1MessageServiceBase.sol";
@@ -155,6 +155,45 @@ abstract contract L1MessageService is
     TRANSIENT_MESSAGE_SENDER = DEFAULT_MESSAGE_SENDER_TRANSIENT_VALUE;
 
     emit MessageClaimed(messageLeafHash);
+  }
+
+  function _validateAndConsumeMessageProof(
+    ClaimMessageWithProofParams calldata _params
+  ) internal virtual returns (bytes32 messageLeafHash) {
+    _requireTypeAndGeneralNotPaused(PauseType.L2_L1);
+
+    uint256 merkleDepth = l2MerkleRootsDepths[_params.merkleRoot];
+
+    if (merkleDepth == 0) {
+      revert L2MerkleRootDoesNotExist();
+    }
+
+    if (merkleDepth != _params.proof.length) {
+      revert ProofLengthDifferentThanMerkleDepth(merkleDepth, _params.proof.length);
+    }
+
+    _setL2L1MessageToClaimed(_params.messageNumber);
+
+    _addUsedAmount(_params.fee + _params.value);
+
+    messageLeafHash = MessageHashing._hashMessage(
+      _params.from,
+      _params.to,
+      _params.fee,
+      _params.value,
+      _params.messageNumber,
+      _params.data
+    );
+    if (
+      !SparseMerkleTreeVerifier._verifyMerkleProof(
+        messageLeafHash,
+        _params.proof,
+        _params.leafIndex,
+        _params.merkleRoot
+      )
+    ) {
+      revert InvalidMerkleProof();
+    }
   }
 
   /**

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0
-pragma solidity ^0.8.30;
+pragma solidity ^0.8.33;
 
 /**
  * @title Library to hash cross-chain messages.
@@ -43,6 +43,35 @@ library MessageHashing {
 
       calldatacopy(add(mPtr, 0xe0), _calldata.offset, _calldata.length)
       messageHash := keccak256(mPtr, add(0xe0, add(_calldata.length, extra)))
+    }
+  }
+
+  /**
+   * @notice Hashes messages with empty calldata using assembly for efficiency.
+   * @dev Adding 0xc0 is to indicate the calldata offset relative to the memory being added to.
+   * @param _from The from address.
+   * @param _to The to address.
+   * @param _fee The fee paid for delivery.
+   * @param _valueSent The value to be sent when delivering.
+   * @param _messageNumber The unique message number.
+   */
+  function _hashMessageWithEmptyCalldata(
+    address _from,
+    address _to,
+    uint256 _fee,
+    uint256 _valueSent,
+    uint256 _messageNumber
+  ) internal pure returns (bytes32 messageHash) {
+    assembly {
+      let mPtr := mload(0x40)
+      mstore(mPtr, _from)
+      mstore(add(mPtr, 0x20), _to)
+      mstore(add(mPtr, 0x40), _fee)
+      mstore(add(mPtr, 0x60), _valueSent)
+      mstore(add(mPtr, 0x80), _messageNumber)
+      mstore(add(mPtr, 0xa0), 0xc0)
+      mstore(add(mPtr, 0xc0), 0x00)
+      messageHash := keccak256(mPtr, 0xe0)
     }
   }
 }

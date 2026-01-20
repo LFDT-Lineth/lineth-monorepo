@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0
-pragma solidity ^0.8.30;
+pragma solidity ^0.8.33;
 
 import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import { L1MessageServiceBase } from "../messaging/l1/L1MessageServiceBase.sol";

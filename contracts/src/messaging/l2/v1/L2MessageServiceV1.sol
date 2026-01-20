@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0
-pragma solidity ^0.8.30;
+pragma solidity ^0.8.33;
 
 import { TransientStorageReentrancyGuardUpgradeable } from "../../../security/reentrancy/TransientStorageReentrancyGuardUpgradeable.sol";
 import { IMessageService } from "../../interfaces/IMessageService.sol";

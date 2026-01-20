@@ -69,3 +69,44 @@ export const SET_RESERVED_TOKEN_ROLE = generateKeccak256(["string"], ["SET_RESER
 export const REMOVE_RESERVED_TOKEN_ROLE = generateKeccak256(["string"], ["REMOVE_RESERVED_TOKEN_ROLE"], true);
 export const SET_CUSTOM_CONTRACT_ROLE = generateKeccak256(["string"], ["SET_CUSTOM_CONTRACT_ROLE"], true);
 export const SET_MESSAGE_SERVICE_ROLE = generateKeccak256(["string"], ["SET_MESSAGE_SERVICE_ROLE"], true);
+
+export const SET_YIELD_MANAGER_ROLE = generateKeccak256(["string"], ["SET_YIELD_MANAGER_ROLE"], true);
+export const YIELD_PROVIDER_STAKING_ROLE = generateKeccak256(["string"], ["YIELD_PROVIDER_STAKING_ROLE"], true);
+
+// YieldManager related pause roles
+export const PAUSE_NATIVE_YIELD_STAKING_ROLE = generateKeccak256(["string"], ["PAUSE_NATIVE_YIELD_STAKING_ROLE"], true);
+export const UNPAUSE_NATIVE_YIELD_STAKING_ROLE = generateKeccak256(
+  ["string"],
+  ["UNPAUSE_NATIVE_YIELD_STAKING_ROLE"],
+  true,
+);
+export const PAUSE_NATIVE_YIELD_UNSTAKING_ROLE = generateKeccak256(
+  ["string"],
+  ["PAUSE_NATIVE_YIELD_UNSTAKING_ROLE"],
+  true,
+);
+export const UNPAUSE_NATIVE_YIELD_UNSTAKING_ROLE = generateKeccak256(
+  ["string"],
+  ["UNPAUSE_NATIVE_YIELD_UNSTAKING_ROLE"],
+  true,
+);
+export const PAUSE_NATIVE_YIELD_PERMISSIONLESS_ACTIONS_ROLE = generateKeccak256(
+  ["string"],
+  ["PAUSE_NATIVE_YIELD_PERMISSIONLESS_ACTIONS_ROLE"],
+  true,
+);
+export const UNPAUSE_NATIVE_YIELD_PERMISSIONLESS_ACTIONS_ROLE = generateKeccak256(
+  ["string"],
+  ["UNPAUSE_NATIVE_YIELD_PERMISSIONLESS_ACTIONS_ROLE"],
+  true,
+);
+export const PAUSE_NATIVE_YIELD_REPORTING_ROLE = generateKeccak256(
+  ["string"],
+  ["PAUSE_NATIVE_YIELD_REPORTING_ROLE"],
+  true,
+);
+export const UNPAUSE_NATIVE_YIELD_REPORTING_ROLE = generateKeccak256(
+  ["string"],
+  ["UNPAUSE_NATIVE_YIELD_REPORTING_ROLE"],
+  true,
+);

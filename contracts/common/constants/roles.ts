@@ -93,6 +93,113 @@ export const SECURITY_COUNCIL_ROLE = generateKeccak256(["string"], ["SECURITY_CO
   encodePacked: true,
 });
 
+// Roles for LineaRollup introduced with YieldManager
+export const SET_YIELD_MANAGER_ROLE = generateKeccak256(["string"], ["SET_YIELD_MANAGER_ROLE"], {
+  encodePacked: true,
+});
+export const PAUSE_NATIVE_YIELD_STAKING_ROLE = generateKeccak256(["string"], ["PAUSE_NATIVE_YIELD_STAKING_ROLE"], {
+  encodePacked: true,
+});
+export const UNPAUSE_NATIVE_YIELD_STAKING_ROLE = generateKeccak256(["string"], ["UNPAUSE_NATIVE_YIELD_STAKING_ROLE"], {
+  encodePacked: true,
+});
+// Roles for YieldManager
+export const YIELD_PROVIDER_STAKING_ROLE = generateKeccak256(["string"], ["YIELD_PROVIDER_STAKING_ROLE"], {
+  encodePacked: true,
+});
+export const YIELD_PROVIDER_UNSTAKER_ROLE = generateKeccak256(["string"], ["YIELD_PROVIDER_UNSTAKER_ROLE"], {
+  encodePacked: true,
+});
+export const YIELD_REPORTER_ROLE = generateKeccak256(["string"], ["YIELD_REPORTER_ROLE"], {
+  encodePacked: true,
+});
+export const STAKING_PAUSE_CONTROLLER_ROLE = generateKeccak256(["string"], ["STAKING_PAUSE_CONTROLLER_ROLE"], {
+  encodePacked: true,
+});
+export const OSSIFICATION_INITIATOR_ROLE = generateKeccak256(["string"], ["OSSIFICATION_INITIATOR_ROLE"], {
+  encodePacked: true,
+});
+export const OSSIFICATION_PROCESSOR_ROLE = generateKeccak256(["string"], ["OSSIFICATION_PROCESSOR_ROLE"], {
+  encodePacked: true,
+});
+export const WITHDRAWAL_RESERVE_SETTER_ROLE = generateKeccak256(["string"], ["WITHDRAWAL_RESERVE_SETTER_ROLE"], {
+  encodePacked: true,
+});
+export const SET_YIELD_PROVIDER_ROLE = generateKeccak256(["string"], ["SET_YIELD_PROVIDER_ROLE"], {
+  encodePacked: true,
+});
+export const SET_L2_YIELD_RECIPIENT_ROLE = generateKeccak256(["string"], ["SET_L2_YIELD_RECIPIENT_ROLE"], {
+  encodePacked: true,
+});
+export const PAUSE_NATIVE_YIELD_UNSTAKING_ROLE = generateKeccak256(["string"], ["PAUSE_NATIVE_YIELD_UNSTAKING_ROLE"], {
+  encodePacked: true,
+});
+export const UNPAUSE_NATIVE_YIELD_UNSTAKING_ROLE = generateKeccak256(
+  ["string"],
+  ["UNPAUSE_NATIVE_YIELD_UNSTAKING_ROLE"],
+  { encodePacked: true },
+);
+export const PAUSE_NATIVE_YIELD_PERMISSIONLESS_ACTIONS_ROLE = generateKeccak256(
+  ["string"],
+  ["PAUSE_NATIVE_YIELD_PERMISSIONLESS_ACTIONS_ROLE"],
+  { encodePacked: true },
+);
+export const UNPAUSE_NATIVE_YIELD_PERMISSIONLESS_ACTIONS_ROLE = generateKeccak256(
+  ["string"],
+  ["UNPAUSE_NATIVE_YIELD_PERMISSIONLESS_ACTIONS_ROLE"],
+  { encodePacked: true },
+);
+export const PAUSE_NATIVE_YIELD_REPORTING_ROLE = generateKeccak256(["string"], ["PAUSE_NATIVE_YIELD_REPORTING_ROLE"], {
+  encodePacked: true,
+});
+export const UNPAUSE_NATIVE_YIELD_REPORTING_ROLE = generateKeccak256(
+  ["string"],
+  ["UNPAUSE_NATIVE_YIELD_REPORTING_ROLE"],
+  { encodePacked: true },
+);
+
+const LIDO_DASHBOARD_FUND_ROLE = generateKeccak256(["string"], ["vaults.Permissions.Fund"], { encodePacked: true });
+
+const LIDO_DASHBOARD_WITHDRAW_ROLE = generateKeccak256(["string"], ["vaults.Permissions.Withdraw"], {
+  encodePacked: true,
+});
+
+const LIDO_DASHBOARD_MINT_ROLE = generateKeccak256(["string"], ["vaults.Permissions.Mint"], { encodePacked: true });
+
+const LIDO_DASHBOARD_REBALANCE_ROLE = generateKeccak256(["string"], ["vaults.Permissions.Rebalance"], {
+  encodePacked: true,
+});
+
+const LIDO_DASHBOARD_PAUSE_BEACON_CHAIN_DEPOSITS_ROLE = generateKeccak256(
+  ["string"],
+  ["vaults.Permissions.PauseDeposits"],
+  { encodePacked: true },
+);
+
+const LIDO_DASHBOARD_RESUME_BEACON_CHAIN_DEPOSITS_ROLE = generateKeccak256(
+  ["string"],
+  ["vaults.Permissions.ResumeDeposits"],
+  { encodePacked: true },
+);
+
+const LIDO_DASHBOARD_REQUEST_VALIDATOR_EXIT_ROLE = generateKeccak256(
+  ["string"],
+  ["vaults.Permissions.RequestValidatorExit"],
+  { encodePacked: true },
+);
+
+const LIDO_DASHBOARD_TRIGGER_VALIDATOR_WITHDRAWAL_ROLE = generateKeccak256(
+  ["string"],
+  ["vaults.Permissions.TriggerValidatorWithdrawal"],
+  { encodePacked: true },
+);
+
+const LIDO_DASHBOARD_VOLUNTARY_DISCONNECT_ROLE = generateKeccak256(
+  ["string"],
+  ["vaults.Permissions.VoluntaryDisconnect"],
+  { encodePacked: true },
+);
+
 export const BASE_ROLES = [PAUSE_ALL_ROLE, UNPAUSE_ALL_ROLE, SECURITY_COUNCIL_ROLE];
 
 export const VALIDIUM_ROLES = [
@@ -110,6 +217,11 @@ export const VALIDIUM_ROLES = [
   UNPAUSE_L2_L1_ROLE,
   PAUSE_FINALIZATION_ROLE,
   UNPAUSE_FINALIZATION_ROLE,
+  // New roles introduced with YieldManager
+  SET_YIELD_MANAGER_ROLE,
+  YIELD_PROVIDER_STAKING_ROLE,
+  PAUSE_NATIVE_YIELD_STAKING_ROLE,
+  UNPAUSE_NATIVE_YIELD_STAKING_ROLE,
 ];
 
 export const LINEA_ROLLUP_V8_ROLES = [
@@ -126,6 +238,11 @@ export const LINEA_ROLLUP_V8_ROLES = [
   UNPAUSE_FINALIZATION_ROLE,
   PAUSE_STATE_DATA_SUBMISSION_ROLE,
   UNPAUSE_STATE_DATA_SUBMISSION_ROLE,
+  // New roles introduced with YieldManager
+  SET_YIELD_MANAGER_ROLE,
+  YIELD_PROVIDER_STAKING_ROLE,
+  PAUSE_NATIVE_YIELD_STAKING_ROLE,
+  UNPAUSE_NATIVE_YIELD_STAKING_ROLE,
 ];
 
 export const LINEA_ROLLUP_V6_ROLES = [
@@ -142,6 +259,14 @@ export const LINEA_ROLLUP_V6_ROLES = [
   UNPAUSE_BLOB_SUBMISSION_ROLE,
   PAUSE_FINALIZATION_ROLE,
   UNPAUSE_FINALIZATION_ROLE,
+];
+
+export const LINEA_ROLLUP_V7_ROLES = [
+  ...LINEA_ROLLUP_V6_ROLES,
+  SET_YIELD_MANAGER_ROLE,
+  YIELD_PROVIDER_STAKING_ROLE,
+  PAUSE_NATIVE_YIELD_STAKING_ROLE,
+  UNPAUSE_NATIVE_YIELD_STAKING_ROLE,
 ];
 
 export const L2_MESSAGE_SERVICE_ROLES = [
@@ -167,4 +292,44 @@ export const TOKEN_BRIDGE_ROLES = [
   UNPAUSE_INITIATE_TOKEN_BRIDGING_ROLE,
   PAUSE_COMPLETE_TOKEN_BRIDGING_ROLE,
   UNPAUSE_COMPLETE_TOKEN_BRIDGING_ROLE,
+];
+
+// For NativeYieldCronJob
+export const YIELD_MANAGER_OPERATOR_ROLES = [
+  YIELD_PROVIDER_STAKING_ROLE,
+  YIELD_PROVIDER_UNSTAKER_ROLE,
+  YIELD_REPORTER_ROLE,
+  STAKING_PAUSE_CONTROLLER_ROLE,
+  OSSIFICATION_PROCESSOR_ROLE,
+];
+
+export const YIELD_MANAGER_SECURITY_COUNCIL_ROLES = [
+  ...BASE_ROLES,
+  ...YIELD_MANAGER_OPERATOR_ROLES,
+  // Operational roles unique to Security Council
+  OSSIFICATION_INITIATOR_ROLE,
+  SET_YIELD_PROVIDER_ROLE,
+  SET_L2_YIELD_RECIPIENT_ROLE,
+  WITHDRAWAL_RESERVE_SETTER_ROLE,
+  // Pause/unpause roles
+  PAUSE_NATIVE_YIELD_STAKING_ROLE,
+  UNPAUSE_NATIVE_YIELD_STAKING_ROLE,
+  PAUSE_NATIVE_YIELD_UNSTAKING_ROLE,
+  UNPAUSE_NATIVE_YIELD_UNSTAKING_ROLE,
+  PAUSE_NATIVE_YIELD_PERMISSIONLESS_ACTIONS_ROLE,
+  UNPAUSE_NATIVE_YIELD_PERMISSIONLESS_ACTIONS_ROLE,
+  PAUSE_NATIVE_YIELD_REPORTING_ROLE,
+  UNPAUSE_NATIVE_YIELD_REPORTING_ROLE,
+];
+
+export const LIDO_DASHBOARD_OPERATIONAL_ROLES = [
+  LIDO_DASHBOARD_FUND_ROLE,
+  LIDO_DASHBOARD_WITHDRAW_ROLE,
+  LIDO_DASHBOARD_MINT_ROLE,
+  LIDO_DASHBOARD_REBALANCE_ROLE,
+  LIDO_DASHBOARD_PAUSE_BEACON_CHAIN_DEPOSITS_ROLE,
+  LIDO_DASHBOARD_RESUME_BEACON_CHAIN_DEPOSITS_ROLE,
+  LIDO_DASHBOARD_REQUEST_VALIDATOR_EXIT_ROLE,
+  LIDO_DASHBOARD_TRIGGER_VALIDATOR_WITHDRAWAL_ROLE,
+  LIDO_DASHBOARD_VOLUNTARY_DISCONNECT_ROLE,
 ];

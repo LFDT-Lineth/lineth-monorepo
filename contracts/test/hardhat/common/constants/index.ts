@@ -9,3 +9,4 @@ export * from "./calldata";
 export * from "./pauseTypes";
 export * from "./roles";
 export * from "./address";
+export * from "./yield";

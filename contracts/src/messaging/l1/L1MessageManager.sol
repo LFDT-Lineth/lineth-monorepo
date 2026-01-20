@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0
-pragma solidity ^0.8.30;
+pragma solidity ^0.8.33;
 
 import { BitMaps } from "@openzeppelin/contracts/utils/structs/BitMaps.sol";
 import { L1MessageManagerV1 } from "./v1/L1MessageManagerV1.sol";

@@ -45,7 +45,7 @@
     "csv-parser": "3.0.0",
     "dotenv": "catalog:",
     "ethers": "6.14.3",
-    "hardhat": "2.25.0",
+    "hardhat": "2.28.3",
     "hardhat-deploy": "0.12.4",
     "hardhat-gas-reporter": "2.3.0",
     "hardhat-storage-layout": "0.1.7",
@@ -53,7 +53,7 @@
     "node-gyp": "10.1.0",
     "prettier-plugin-solidity": "1.4.2",
     "solhint": "5.0.5",
-    "solidity-coverage": "0.8.16",
+    "solidity-coverage": "0.8.17",
     "solidity-docgen": "0.6.0-beta.36",
     "yargs": "catalog:"
   }

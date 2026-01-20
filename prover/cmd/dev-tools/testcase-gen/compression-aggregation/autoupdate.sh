@@ -37,7 +37,7 @@ mv -f .samples-test-eip4844/* ${SOLTESTDIR_EIP4844}/test
 rm -rf .samples-simple-calldata .samples-multiproof-calldata .samples-test-calldata
 rm -rf .samples-simple-eip4844 .samples-multiproof-eip4844 .samples-test-eip4844
 
-sed -i.bak 's/pragma solidity \0.8.26;/pragma solidity 0.8.30;/g' ../contracts/test/hardhat/_testData/compressedData/Verifier1.sol
+sed -i.bak 's/pragma solidity \0.8.26;/pragma solidity 0.8.33;/g' ../contracts/test/hardhat/_testData/compressedData/Verifier1.sol
 
 sed -i.bak '/uint8 private constant EC_PAIR = 0x8;/a\
 \
@@ -93,14 +93,14 @@ bytes32 private immutable CHAIN_CONFIGURATION;\
 
 cp ../contracts/test/hardhat/_testData/compressedData/Verifier1.sol ../contracts/src/verifiers/PlonkVerifierForDataAggregation.sol
 sed -i.bak 's/contract PlonkVerifier /contract PlonkVerifierForDataAggregation is IPlonkVerifier /g' ../contracts/src/verifiers/PlonkVerifierForDataAggregation.sol
-sed -i.bak '/pragma solidity 0\.8\.30;/i\
+sed -i.bak '/pragma solidity 0\.8\.33;/i\
 import { Mimc } from "../libraries/Mimc.sol";\
 import { IPlonkVerifier } from "./interfaces/IPlonkVerifier.sol";
 ' ../contracts/src/verifiers/PlonkVerifierForDataAggregation.sol
 
 cp ../contracts/test/hardhat/_testData/compressedData/Verifier1.sol ../contracts/src/_testing/unit/verifiers/TestPlonkVerifierForDataAggregation.sol
 sed -i.bak 's/contract PlonkVerifier /contract TestPlonkVerifierForDataAggregation is IPlonkVerifier /g' ../contracts/src/_testing/unit/verifiers/TestPlonkVerifierForDataAggregation.sol
-sed -i.bak '/pragma solidity 0\.8\.30;/i\
+sed -i.bak '/pragma solidity 0\.8\.33;/i\
 import { Mimc } from "../../../libraries/Mimc.sol";\
 import { IPlonkVerifier } from "../../../verifiers/interfaces/IPlonkVerifier.sol";
 ' ../contracts/src/_testing/unit/verifiers/TestPlonkVerifierForDataAggregation.sol

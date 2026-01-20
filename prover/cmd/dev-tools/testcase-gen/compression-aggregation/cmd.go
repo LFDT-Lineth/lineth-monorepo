@@ -391,7 +391,7 @@ func dumpVerifierContract(odir string, circID circuits.MockCircuitID) {
 		printlnAndExit("could not create public parameters: %v", err)
 	}
 
-	if err := pp.VerifyingKey.ExportSolidity(f, solidity.WithPragmaVersion("0.8.26")); err != nil {
+	if err := pp.VerifyingKey.ExportSolidity(f, solidity.WithPragmaVersion("0.8.33")); err != nil {
 		printlnAndExit("could not export verifying key to solidity: %v", err)
 	}
 }

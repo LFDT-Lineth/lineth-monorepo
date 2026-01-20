@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity ^0.8.30;
+pragma solidity ^0.8.33;
 
 /**
  * @title Interface declaring pre-existing pausing functions, events and errors.
@@ -36,6 +36,10 @@ interface IPauseManager {
     FINALIZATION,
     INITIATE_TOKEN_BRIDGING,
     COMPLETE_TOKEN_BRIDGING,
+    NATIVE_YIELD_STAKING,
+    NATIVE_YIELD_UNSTAKING,
+    NATIVE_YIELD_PERMISSIONLESS_ACTIONS,
+    NATIVE_YIELD_REPORTING,
     STATE_DATA_SUBMISSION
   }
 

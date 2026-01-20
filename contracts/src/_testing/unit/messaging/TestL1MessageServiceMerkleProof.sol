@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0
-pragma solidity ^0.8.30;
+pragma solidity ^0.8.33;
 
 import { L1MessageService } from "../../../messaging/l1/L1MessageService.sol";
 import { IL1MessageService } from "../../../messaging/l1/interfaces/IL1MessageService.sol";

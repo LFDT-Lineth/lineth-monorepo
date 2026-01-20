@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0
-pragma solidity ^0.8.30;
+pragma solidity ^0.8.33;
 
 import { ClaimMessageV1 } from "../../../messaging/l1/v1/ClaimMessageV1.sol";
 import { L1MessageService } from "../../../messaging/l1/L1MessageService.sol";

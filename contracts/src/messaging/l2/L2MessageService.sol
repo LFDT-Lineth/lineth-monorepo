@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0
-pragma solidity 0.8.30;
+pragma solidity 0.8.33;
 import { L2MessageServiceBase } from "./L2MessageServiceBase.sol";
 /**
  * @title Contract to manage cross-chain messaging on L2.

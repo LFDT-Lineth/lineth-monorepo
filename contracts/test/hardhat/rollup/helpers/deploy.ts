@@ -90,12 +90,21 @@ export async function deployValidiumFixture() {
   return { verifier, validium };
 }
 
+export async function deployMockYieldManager(): Promise<string> {
+  const mockYieldManagerFactory = await ethers.getContractFactory("MockYieldManager");
+  const mockYieldManager = await mockYieldManagerFactory.deploy();
+  await mockYieldManager.waitForDeployment();
+  return await mockYieldManager.getAddress();
+}
+
 export async function deployLineaRollupFixture() {
   const { securityCouncil } = await loadFixture(getAccountsFixture);
   const roleAddresses = await loadFixture(getRoleAddressesFixture);
 
   const verifier = await deployTestPlonkVerifierForDataAggregation();
   const { parentStateRootHash } = firstCompressedDataContent;
+
+  const yieldManager = await deployMockYieldManager();
 
   const initializationData = {
     initialStateRootHash: parentStateRootHash,
@@ -113,14 +122,14 @@ export async function deployLineaRollupFixture() {
 
   const lineaRollup = (await deployUpgradableFromFactory(
     "TestLineaRollup",
-    [initializationData, FALLBACK_OPERATOR_ADDRESS],
+    [initializationData, FALLBACK_OPERATOR_ADDRESS, yieldManager],
     {
       initializer: LINEA_ROLLUP_INITIALIZE_SIGNATURE,
       unsafeAllow: ["constructor", "incorrect-initializer-order"],
     },
   )) as unknown as TestLineaRollup;
 
-  return { verifier, lineaRollup };
+  return { verifier, lineaRollup, yieldManager, roleAddresses };
 }
 
 async function deployTestPlonkVerifierForDataAggregation(): Promise<string> {

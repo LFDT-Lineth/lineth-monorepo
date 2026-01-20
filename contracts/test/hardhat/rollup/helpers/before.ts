@@ -17,9 +17,24 @@ import { OPERATOR_ROLE } from "../../common/constants";
 // Use in `loadFixture(getAccountsFixture))` and not as a standalone function.
 // This will ensure that the same return values will be retrieved across all invocations.
 export async function getAccountsFixture() {
-  const [admin, securityCouncil, operator, nonAuthorizedAccount, alternateShnarfProviderAddress] =
-    await ethers.getSigners();
-  return { admin, securityCouncil, operator, nonAuthorizedAccount, alternateShnarfProviderAddress };
+  const [
+    admin,
+    securityCouncil,
+    operator,
+    nonAuthorizedAccount,
+    alternateShnarfProviderAddress,
+    nativeYieldOperator,
+    l2YieldRecipient,
+  ] = await ethers.getSigners();
+  return {
+    admin,
+    securityCouncil,
+    operator,
+    nonAuthorizedAccount,
+    alternateShnarfProviderAddress,
+    nativeYieldOperator,
+    l2YieldRecipient,
+  };
 }
 
 export async function getRoleAddressesFixture() {

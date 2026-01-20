@@ -109,6 +109,42 @@ async function deployUpgradableWithAbiAndByteCode(
   return contract;
 }
 
+async function deployUpgradableFromFactoryWithConstructorArgs(
+  contractName: string,
+  constructorArgs: unknown[] = [],
+  initializerArgs: unknown[] = [],
+  opts: DeployProxyOptions = {},
+  factoryOpts?: FactoryOptions,
+) {
+  const startTime = performance.now();
+  const skipLog = process.env.SKIP_DEPLOY_LOG === "true" || false;
+  if (!skipLog) {
+    console.log(`Going to deploy upgradable ${contractName}`);
+  }
+  const factory = await ethers.getContractFactory(contractName, factoryOpts);
+  const contract = await upgrades.deployProxy(factory, initializerArgs, {
+    ...opts,
+    constructorArgs,
+  });
+  if (!skipLog) {
+    const deployTx = contract.deploymentTransaction();
+    console.log(`Upgradable ${contractName} deployment transaction has been sent, waiting...`, {
+      hash: deployTx?.hash,
+      gasPrice: deployTx?.gasPrice?.toString(),
+      gasLimit: deployTx?.gasLimit.toString(),
+    });
+  }
+  const afterDeploy = await contract.waitForDeployment();
+  const timeDiff = performance.now() - startTime;
+  if (!skipLog) {
+    console.log(
+      `${contractName} artifact has been deployed in ${timeDiff / 1000}s` +
+        ` tx-hash=${afterDeploy.deploymentTransaction()?.hash}`,
+    );
+  }
+  return contract;
+}
+
 function requireEnv(name: string): string {
   const envVariable = process.env[name];
   if (!envVariable) {
@@ -118,4 +154,10 @@ function requireEnv(name: string): string {
   return envVariable;
 }
 
-export { deployFromFactory, deployUpgradableFromFactory, deployUpgradableWithAbiAndByteCode, requireEnv };
+export {
+  deployFromFactory,
+  deployUpgradableFromFactory,
+  deployUpgradableWithAbiAndByteCode,
+  deployUpgradableFromFactoryWithConstructorArgs,
+  requireEnv,
+};

@@ -19,7 +19,7 @@
 import { Mimc } from "../../../libraries/Mimc.sol";
 import { IPlonkVerifier } from "../../../verifiers/interfaces/IPlonkVerifier.sol";
 
-pragma solidity 0.8.30;
+pragma solidity 0.8.33;
 
 contract TestPlonkVerifierForDataAggregation is IPlonkVerifier {
   uint256 private constant R_MOD = 21888242871839275222246405745257275088548364400416034343698204186575808495617;

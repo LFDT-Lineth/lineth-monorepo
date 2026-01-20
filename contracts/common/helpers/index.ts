@@ -8,3 +8,4 @@ export * from "./environmentHelper";
 export * from "./readAddress";
 export * from "./verifyContract";
 export * from "./general";
+export * from "./buildVendorInitializationData";

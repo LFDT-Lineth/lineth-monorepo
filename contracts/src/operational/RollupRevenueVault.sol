@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0 OR MIT
-pragma solidity 0.8.30;
+pragma solidity 0.8.33;
 
 import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
