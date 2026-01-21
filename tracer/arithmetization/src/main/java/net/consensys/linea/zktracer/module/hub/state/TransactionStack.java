@@ -89,7 +89,8 @@ public class TransactionStack {
               ? hub.getCodeFragmentIndexByMetaData(
                   tx.getEffectiveRecipient(),
                   tx.getUpdatedRecipientAddressDeploymentNumberAtTransactionStart(),
-                  tx.isUpdatedRecipientAddressDeploymentStatusAtTransactionStart())
+                  tx.isUpdatedRecipientAddressDeploymentStatusAtTransactionStart(),
+                  tx.getDelegationNumberAtTransactionStart())
               : 0;
       tx.setCodeFragmentIndex(cfi);
     }

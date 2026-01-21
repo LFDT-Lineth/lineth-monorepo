@@ -12,6 +12,7 @@
 ADD                 = 524288
 BIN                 = 262144
 BLAKE_MODEXP_DATA   = 16384
+BLAKE2F             = 3000 # not important now, BLAKE is excluded thanks to PRECOMPILE_BLAKE_ROUNDS
 BLOCK_DATA          = 4096
 BLOCK_HASH          = 2048
 BLS_DATA            = 4096

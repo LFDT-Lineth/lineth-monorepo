@@ -24,6 +24,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
+import net.consensys.linea.zktracer.module.hub.transients.Conflation;
 import net.consensys.linea.zktracer.module.hub.transients.DeploymentInfo;
 import net.consensys.linea.zktracer.types.Bytecode;
 import net.consensys.linea.zktracer.types.EWord;
@@ -46,6 +47,7 @@ public class AccountSnapshot {
   private Bytecode code;
   private int deploymentNumber;
   private boolean deploymentStatus;
+  private int delegationNumber;
 
   /**
    * Canonical way of creating an account snapshot.
@@ -58,7 +60,7 @@ public class AccountSnapshot {
     return fromArguments(
         hub.messageFrame().getWorldUpdater(),
         address,
-        hub.transients.conflation().deploymentInfo(),
+        hub.transients.conflation(),
         isAddressWarm(hub.fork, hub.messageFrame(), address));
   }
 
@@ -70,25 +72,25 @@ public class AccountSnapshot {
     return fromArguments(
         world,
         address,
-        hub.transients.conflation().deploymentInfo(),
+        hub.transients.conflation(),
         isAddressWarm(hub.fork, hub.messageFrame(), address));
   }
 
   public static AccountSnapshot canonical(
       Hub hub, WorldView world, Address address, boolean warmth) {
-    return fromArguments(world, address, hub.transients.conflation().deploymentInfo(), warmth);
+    return fromArguments(world, address, hub.transients.conflation(), warmth);
   }
 
   private static AccountSnapshot fromArguments(
       final WorldView worldView,
       final Address address,
-      final DeploymentInfo deploymentInfo,
+      final Conflation conflationInfo,
       final boolean warmth) {
 
     final Account account = worldView.get(address);
     final Bytecode bytecode =
-        deploymentInfo.getDeploymentStatus(address)
-            ? new Bytecode(deploymentInfo.getInitializationCode(address))
+        conflationInfo.deploymentInfo().getDeploymentStatus(address)
+            ? new Bytecode(conflationInfo.deploymentInfo().getInitializationCode(address))
             : (account == null) ? new Bytecode(Bytes.EMPTY) : new Bytecode(account.getCode());
     if (account != null) {
       return new AccountSnapshot(
@@ -97,8 +99,9 @@ public class AccountSnapshot {
           account.getBalance(),
           warmth,
           bytecode,
-          deploymentInfo.deploymentNumber(address),
-          deploymentInfo.getDeploymentStatus(address));
+          conflationInfo.deploymentInfo().deploymentNumber(address),
+          conflationInfo.deploymentInfo().getDeploymentStatus(address),
+          conflationInfo.getDelegationNumber(address));
     } else {
       return new AccountSnapshot(
           address,
@@ -106,30 +109,51 @@ public class AccountSnapshot {
           Wei.ZERO,
           warmth,
           bytecode,
-          deploymentInfo.deploymentNumber(address),
-          deploymentInfo.getDeploymentStatus(address));
+          conflationInfo.deploymentInfo().deploymentNumber(address),
+          conflationInfo.deploymentInfo().getDeploymentStatus(address),
+          conflationInfo.getDelegationNumber(address));
     }
   }
 
   public static AccountSnapshot fromAccount(
-      Account account, boolean isWarm, int deploymentNumber, boolean deploymentStatus) {
-    return fromAccount(Optional.ofNullable(account), isWarm, deploymentNumber, deploymentStatus);
+      Account account,
+      boolean isWarm,
+      int deploymentNumber,
+      boolean deploymentStatus,
+      int delegationNumber) {
+    return fromAccount(
+        Optional.ofNullable(account), isWarm, deploymentNumber, deploymentStatus, delegationNumber);
   }
 
   public static AccountSnapshot empty(
       boolean isWarm, int deploymentNumber, boolean deploymentStatus) {
     return new AccountSnapshot(
-        Address.ZERO, 0, Wei.ZERO, isWarm, Bytecode.EMPTY, deploymentNumber, deploymentStatus);
+        Address.ZERO, 0, Wei.ZERO, isWarm, Bytecode.EMPTY, deploymentNumber, deploymentStatus, 0);
   }
 
   public static AccountSnapshot fromAddress(
-      Address address, boolean isWarm, int deploymentNumber, boolean deploymentStatus) {
+      Address address,
+      boolean isWarm,
+      int deploymentNumber,
+      boolean deploymentStatus,
+      int delegationNumber) {
     return new AccountSnapshot(
-        address, 0, Wei.ZERO, isWarm, Bytecode.EMPTY, deploymentNumber, deploymentStatus);
+        address,
+        0,
+        Wei.ZERO,
+        isWarm,
+        Bytecode.EMPTY,
+        deploymentNumber,
+        deploymentStatus,
+        delegationNumber);
   }
 
   public static AccountSnapshot fromAccount(
-      Optional<Account> account, boolean isWarm, int deploymentNumber, boolean deploymentStatus) {
+      Optional<Account> account,
+      boolean isWarm,
+      int deploymentNumber,
+      boolean deploymentStatus,
+      int delegationNumber) {
 
     return account
         .map(
@@ -141,7 +165,8 @@ public class AccountSnapshot {
                     isWarm,
                     new Bytecode(a.getCode().copy()),
                     deploymentNumber,
-                    deploymentStatus))
+                    deploymentStatus,
+                    delegationNumber))
         .orElseGet(() -> AccountSnapshot.empty(isWarm, deploymentNumber, deploymentStatus));
   }
 
@@ -152,7 +177,14 @@ public class AccountSnapshot {
    */
   public AccountSnapshot deepCopy() {
     return new AccountSnapshot(
-        address, nonce, balance, isWarm, code, deploymentNumber, deploymentStatus);
+        address,
+        nonce,
+        balance,
+        isWarm,
+        code,
+        deploymentNumber,
+        deploymentStatus,
+        delegationNumber);
   }
 
   public void wipe(DeploymentInfo deploymentInfo) {
@@ -272,7 +304,8 @@ public class AccountSnapshot {
   public AccountSnapshot deployByteCode(Bytecode code) {
     checkState(deploymentStatus, "Deployment status should be true before deploying byte code.");
 
-    return new AccountSnapshot(address, nonce, balance, true, code, deploymentNumber, false);
+    return new AccountSnapshot(
+        address, nonce, balance, true, code, deploymentNumber, false, delegationNumber);
   }
 
   public EWord tracedCodeHash() {

@@ -16,11 +16,12 @@
 package net.consensys.linea.zktracer.module.romlex;
 
 import static com.google.common.base.Preconditions.*;
-import static net.consensys.linea.zktracer.Trace.LLARGE;
+import static net.consensys.linea.zktracer.Trace.*;
 import static net.consensys.linea.zktracer.module.ModuleName.ROM_LEX;
 import static net.consensys.linea.zktracer.types.AddressUtils.getDeploymentAddress;
 import static net.consensys.linea.zktracer.types.AddressUtils.highPart;
 import static net.consensys.linea.zktracer.types.AddressUtils.lowPart;
+import static net.consensys.linea.zktracer.types.Conversions.bytesToInt;
 
 import com.google.common.base.Preconditions;
 import java.util.*;
@@ -67,9 +68,12 @@ public class RomLex implements OperationSetModule<RomOperation>, ContextEntryDef
   }
 
   public int getCodeFragmentIndexByMetadata(
-      final Address address, final int deploymentNumber, final boolean depStatus) {
+      final Address address,
+      final int deploymentNumber,
+      final boolean depStatus,
+      final int delegationNumber) {
     return getCodeFragmentIndexByMetadata(
-        ContractMetadata.make(address, deploymentNumber, depStatus));
+        ContractMetadata.make(address, deploymentNumber, depStatus, delegationNumber));
   }
 
   public int getCodeFragmentIndexByMetadata(final ContractMetadata metadata) {
@@ -189,7 +193,10 @@ public class RomLex implements OperationSetModule<RomOperation>, ContextEntryDef
         final Address deploymentAddress = hub.currentFrame().byteCodeAddress();
         final ContractMetadata contractMetadata =
             ContractMetadata.make(
-                deploymentAddress, hub.deploymentNumberOf(deploymentAddress), false);
+                deploymentAddress,
+                hub.deploymentNumberOf(deploymentAddress),
+                false,
+                hub.delegationNumberOf(deploymentAddress));
         final RomOperation chunk = new RomOperation(contractMetadata, byteCode, hub.opCodes());
         operations.add(chunk);
       }
@@ -269,6 +276,15 @@ public class RomLex implements OperationSetModule<RomOperation>, ContextEntryDef
       Trace.Romlex trace) {
     final Hash codeHash =
         operation.metadata().underDeployment() ? Hash.EMPTY : Hash.hash(operation.byteCode());
+    final boolean couldBeDelegationCode =
+        operation.byteCode().size() == EIP_7702_DELEGATED_ACCOUNT_CODE_SIZE;
+    final int leadingThreeBytes =
+        couldBeDelegationCode ? bytesToInt(operation.byteCode().slice(0, 3)) : 0;
+    final boolean actuallyDelegationCode = leadingThreeBytes == EIP_7702_DELEGATION_INDICATOR;
+    final int potentiallyAddressHi =
+        couldBeDelegationCode ? bytesToInt(operation.byteCode().slice(3, 4)) : 0;
+    final Bytes potentiallyAddressLo =
+        couldBeDelegationCode ? operation.byteCode().slice(7, LLARGE) : Bytes.EMPTY;
     trace
         .codeFragmentIndex(cfi)
         .codeFragmentIndexInfty(codeFragmentIndexInfinity)
@@ -277,6 +293,14 @@ public class RomLex implements OperationSetModule<RomOperation>, ContextEntryDef
         .addressLo(lowPart(operation.metadata().address()))
         .deploymentNumber(operation.metadata().deploymentNumber())
         .deploymentStatus(operation.metadata().underDeployment())
+        .delegationNumber(operation.metadata().delegationNumber())
+        .couldBeDelegationCode(couldBeDelegationCode)
+        .actuallyDelegationCode(actuallyDelegationCode)
+        .leadingThreeBytes(leadingThreeBytes)
+        .leadDelegationBytes(potentiallyAddressHi)
+        .tailDelegationBytes(potentiallyAddressLo)
+        .delegationAddressHi(actuallyDelegationCode ? potentiallyAddressHi : 0)
+        .delegationAddressLo(actuallyDelegationCode ? potentiallyAddressLo : Bytes.EMPTY)
         .codeHashHi(codeHash.slice(0, LLARGE))
         .codeHashLo(codeHash.slice(LLARGE, LLARGE))
         .validateRow();

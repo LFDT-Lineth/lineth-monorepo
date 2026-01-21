@@ -224,7 +224,10 @@ public final class AccountFragment
     try {
       codeFragmentIndex =
           hub.getCodeFragmentIndexByMetaData(
-              newState.address(), newState.deploymentNumber(), newState.deploymentStatus());
+              newState.address(),
+              newState.deploymentNumber(),
+              newState.deploymentStatus(),
+              newState.delegationNumber());
     } catch (RuntimeException e) {
       // getCfi should NEVER throw en exception when requiresRomLex ≡ true
       checkState(

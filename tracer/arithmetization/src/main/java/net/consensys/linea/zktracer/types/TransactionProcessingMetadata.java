@@ -56,6 +56,7 @@ public class TransactionProcessingMetadata {
   final boolean isDeployment;
   int updatedRecipientAddressDeploymentNumberAtTransactionStart;
   boolean updatedRecipientAddressDeploymentStatusAtTransactionStart;
+  int delegationNumberAtTransactionStart;
 
   @Accessors(fluent = true)
   final boolean requiresEvmExecution;

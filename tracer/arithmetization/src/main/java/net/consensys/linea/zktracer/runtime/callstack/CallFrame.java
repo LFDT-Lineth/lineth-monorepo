@@ -52,6 +52,7 @@ public class CallFrame {
   @Getter private final int depth;
   @Getter private boolean isDeployment;
   @Getter private final CallFrameType type;
+  @Getter private int delegationNumber;
 
   public boolean isMessageCall() {
     return !isDeployment;
@@ -73,7 +74,7 @@ public class CallFrame {
     return this == CallFrame.EMPTY || type == CallFrameType.TRANSACTION_CALL_DATA_HOLDER
         ? 0
         : hub.getCodeFragmentIndexByMetaData(
-            byteCodeAddress, byteCodeDeploymentNumber, isDeployment);
+            byteCodeAddress, byteCodeDeploymentNumber, isDeployment, delegationNumber);
   }
 
   @Getter @Setter private int pc;
@@ -210,7 +211,8 @@ public class CallFrame {
    * @return the executed contract metadata
    */
   public ContractMetadata metadata() {
-    return ContractMetadata.make(byteCodeAddress, byteCodeDeploymentNumber, isDeployment);
+    return ContractMetadata.make(
+        byteCodeAddress, byteCodeDeploymentNumber, isDeployment, delegationNumber);
   }
 
   private void revertChildren(CallStack callStack, int parentRevertStamp) {

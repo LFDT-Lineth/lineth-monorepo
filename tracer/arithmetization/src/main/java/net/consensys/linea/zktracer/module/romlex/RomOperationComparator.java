@@ -33,7 +33,8 @@ class RomOperationComparator implements Comparator<RomOperation> {
       } else {
         // Third sort by Deployment Status (true greater)
         if (chunk1.metadata().underDeployment() == chunk2.metadata().underDeployment()) {
-          return 0;
+          // Fourth sort by delegation number
+          return chunk1.metadata().delegationNumber() - chunk2.metadata().delegationNumber();
         } else {
           return chunk1.metadata().underDeployment() ? -1 : 1;
         }

@@ -12,6 +12,7 @@
 ADD                 = 7000
 BIN                 = 262144
 BLAKE_MODEXP_DATA   = 262144
+BLAKE2F             = 3000 # not important now, BLAKE is excluded thanks to PRECOMPILE_BLAKE_ROUNDS
 EC_DATA             = 4096
 EUC                 = 16384 # can probably be lower
 EXP                 = 32760

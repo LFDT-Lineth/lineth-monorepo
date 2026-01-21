@@ -72,9 +72,17 @@ public class TxPreWarmingMacroSection {
                   final AccountSnapshot preWarmingAccountSnapshot =
                       world.get(address) == null
                           ? AccountSnapshot.fromAddress(
-                              address, isAccountWarm, deploymentNumber, false)
+                              address,
+                              isAccountWarm,
+                              deploymentNumber,
+                              false,
+                              hub.delegationNumberOf(address))
                           : AccountSnapshot.fromAccount(
-                              world.get(address), isAccountWarm, deploymentNumber, false);
+                              world.get(address),
+                              isAccountWarm,
+                              deploymentNumber,
+                              false,
+                              hub.delegationNumberOf(address));
 
                   final AccountSnapshot postWarmingAccountSnapshot =
                       preWarmingAccountSnapshot.deepCopy().turnOnWarmth();

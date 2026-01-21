@@ -85,7 +85,11 @@ public class ExtCodeCopySection extends TraceSection implements PostRollbackDefe
         foreignAccount != null
             ? AccountSnapshot.canonical(hub, address)
             : AccountSnapshot.fromAddress(
-                address, incomingWarmth, incomingDeploymentNumber, incomingDeploymentStatus);
+                address,
+                incomingWarmth,
+                incomingDeploymentNumber,
+                incomingDeploymentStatus,
+                hub.delegationNumberOf(address));
 
     final DomSubStampsSubFragment doingDomSubStamps =
         DomSubStampsSubFragment.standardDomSubStamps(this.hubStamp(), 0);

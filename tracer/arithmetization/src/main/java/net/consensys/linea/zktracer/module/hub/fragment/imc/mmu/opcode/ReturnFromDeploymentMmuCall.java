@@ -52,7 +52,9 @@ public class ReturnFromDeploymentMmuCall extends MmuCall {
     final CallFrame currentFrame = hub.currentFrame();
     final Address contractAddress = currentFrame.frame().getContractAddress();
     final int depNumber = hub.deploymentNumberOf(contractAddress);
-    contract = ContractMetadata.make(contractAddress, depNumber, false);
+    contract =
+        ContractMetadata.make(
+            contractAddress, depNumber, false, hub.delegationNumberOf(contractAddress));
 
     final ShakiraDataOperation shakiraDataOperation =
         new ShakiraDataOperation(hub.stamp(), hub.romLex().byteCode());

@@ -117,7 +117,8 @@ public final class TxInitializationSection extends TraceSection implements EndTr
               recipientAddress,
               recipientWarmthAtValueReception(tx),
               deploymentInfo.deploymentNumber(recipientAddress),
-              deploymentInfo.getDeploymentStatus(recipientAddress));
+              deploymentInfo.getDeploymentStatus(recipientAddress),
+              hub.delegationNumberOf(recipientAddress));
     }
 
     checkState(

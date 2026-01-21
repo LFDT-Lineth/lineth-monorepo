@@ -20,6 +20,7 @@ import lombok.Getter;
 import lombok.experimental.Accessors;
 import net.consensys.linea.zktracer.container.stacked.StackedSet;
 import net.consensys.linea.zktracer.runtime.LogData;
+import org.hyperledger.besu.datatypes.Address;
 
 /** Stores data relative to the conflation. */
 @Accessors(fluent = true)
@@ -31,4 +32,13 @@ public class Conflation {
       new StackedSet<>(256, 32);
   private final StackedSet<StackHeightCheck> stackHeightChecksForStackOverflows =
       new StackedSet<>(256, 32);
+  private final Map<Address, Integer> delegationNumber = new HashMap<>();
+
+  public int getDelegationNumber(Address address) {
+    return delegationNumber.getOrDefault(address, 0);
+  }
+
+  public void updateDelegationNumber(Address address) {
+    delegationNumber.put(address, getDelegationNumber(address) + 1);
+  }
 }
