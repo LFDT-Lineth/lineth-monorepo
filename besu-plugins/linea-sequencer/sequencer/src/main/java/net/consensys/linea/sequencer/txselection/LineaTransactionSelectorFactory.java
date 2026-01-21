@@ -119,7 +119,8 @@ public class LineaTransactionSelectorFactory implements PluginTransactionSelecto
 
   @Override
   public void selectPendingTransactions(
-      final BlockTransactionSelectionService bts, final ProcessableBlockHeader pendingBlockHeader,
+      final BlockTransactionSelectionService bts,
+      final ProcessableBlockHeader pendingBlockHeader,
       final List<? extends PendingTransaction> candidatePendingTransactions) {
     try {
       // check and send liveness bundle if any

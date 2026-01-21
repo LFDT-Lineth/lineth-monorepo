@@ -41,10 +41,10 @@ apply from: lineaSequencerProject.file("gradle/dist.gradle")
 
 distZip {
   archiveBaseName = 'linea-sequencer'
-  
+
   // Rename arithmetization jar to use arithmetization version instead of release version
   def arithmetizationVersion = libs.versions.arithmetization.get()
-  
+
   eachFile { fileCopyDetails ->
     // Match arithmetization jar files and rename to use arithmetization version
     // Pattern: arithmetization-<any-version>.jar -> arithmetization-<arithmetizationVersion>.jar

@@ -226,7 +226,8 @@ open class EstimateGasTest : LineaPluginPoSTestBase() {
     // 0x5d539a1 ~= (0x1234 * 21_000 gas) + 1 value (since the tx is a simple transfer)
     assertThat(respLinea.error.message)
       .isEqualTo(
-        "transaction up-front cost 0x5d539a1 exceeds transaction sender account balance 0x0 for sender %s".format(sender.address),
+        "transaction up-front cost 0x5d539a1 exceeds " +
+          "transaction sender account balance 0x0 for sender ${sender.address}",
       )
   }
 

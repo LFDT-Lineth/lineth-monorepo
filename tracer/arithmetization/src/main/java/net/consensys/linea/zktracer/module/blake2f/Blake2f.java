@@ -15,25 +15,16 @@ package net.consensys.linea.zktracer.module.blake2f;
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import static net.consensys.linea.zktracer.module.ModuleName.BLAKE2F;
+
+import java.util.List;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.Accessors;
 import net.consensys.linea.zktracer.Trace;
-import net.consensys.linea.zktracer.container.module.Module;
-import net.consensys.linea.zktracer.container.module.OperationListModule;
 import net.consensys.linea.zktracer.container.module.OperationSetModule;
-import net.consensys.linea.zktracer.container.stacked.ModuleOperationStackedList;
 import net.consensys.linea.zktracer.container.stacked.ModuleOperationStackedSet;
 import net.consensys.linea.zktracer.module.ModuleName;
-import net.consensys.linea.zktracer.module.blake2fmodexpdata.BlakeComponents;
-import net.consensys.linea.zktracer.module.blake2fmodexpdata.BlakeModexpDataOperation;
-import net.consensys.linea.zktracer.module.mul.MulOperation;
-import net.consensys.linea.zktracer.module.mul.MulOperationComparator;
-
-import java.util.List;
-import java.util.Optional;
-
-import static net.consensys.linea.zktracer.module.ModuleName.BLAKE2F;
 
 @RequiredArgsConstructor
 @Accessors(fluent = true)
@@ -41,7 +32,7 @@ public class Blake2f implements OperationSetModule<Blake2fOperation> {
 
   @Getter
   private final ModuleOperationStackedSet<Blake2fOperation> operations =
-    new ModuleOperationStackedSet<>();
+      new ModuleOperationStackedSet<>();
 
   @Override
   public ModuleName moduleKey() {
