@@ -212,7 +212,7 @@ describe("Messaging test suite", () => {
   );
 
   it.concurrent(
-    "Should send a transaction with with fee and calldata to L2 message service, be successfully claimed it on L1",
+    "Should send a transaction with fee and calldata to L2 message service, be successfully claimed it on L1",
     async () => {
       const [l1Account, l2Account] = await Promise.all([
         l1AccountManager.generateAccount(),

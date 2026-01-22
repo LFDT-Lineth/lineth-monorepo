@@ -24,7 +24,7 @@ services:
   besu-node:
     hostname: el-client
     container_name: linea-besu
-    image: consensys/linea-besu-package:beta-v4.4-rc7-20251202165721-14b8f4c
+    image: consensys/linea-besu-package:beta-v4.4-rc7.4-20260120101516-9c16ce3
     healthcheck:
       test: ["CMD-SHELL", "bash -c '[ -f /tmp/pid ]'"]
       interval: 1s

@@ -9,10 +9,10 @@ on:
   workflow_dispatch:
     inputs:
       release_tag:
-        description: Specify tag where assets should be added.
+        description: Specify tag where assets should be added. (Must prefix with "linea-tracer-")
         required: true
         type: string
-        default: "v1.2.3"
+        default: "linea-tracer-beta-v4.4-rc7"
 
 jobs:
   # ==================================================================
