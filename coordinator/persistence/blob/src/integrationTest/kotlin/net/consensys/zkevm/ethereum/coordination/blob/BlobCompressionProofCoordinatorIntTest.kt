@@ -170,7 +170,7 @@ class BlobCompressionProofCoordinatorIntTest : CleanDbTestSuiteParallel() {
 
     val rollingBlobShnarfCalculator = RollingBlobShnarfCalculator(
       blobShnarfCalculator = mockShnarfCalculator,
-      blobsRepository = blobsRepositorySpy,
+      parentBlobDataProvider = ParentBlobDataProviderImpl(blobsRepositorySpy),
       genesisShnarf = ByteArray(32),
     )
 

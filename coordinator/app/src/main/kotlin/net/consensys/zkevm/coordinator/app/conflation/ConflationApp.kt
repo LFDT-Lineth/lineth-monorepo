@@ -43,6 +43,7 @@ import net.consensys.zkevm.ethereum.coordination.blob.BlobCompressionProofCoordi
 import net.consensys.zkevm.ethereum.coordination.blob.BlobZkStateProviderImpl
 import net.consensys.zkevm.ethereum.coordination.blob.GoBackedBlobCompressor
 import net.consensys.zkevm.ethereum.coordination.blob.GoBackedBlobShnarfCalculator
+import net.consensys.zkevm.ethereum.coordination.blob.ParentBlobDataProviderImpl
 import net.consensys.zkevm.ethereum.coordination.blob.RollingBlobShnarfCalculator
 import net.consensys.zkevm.ethereum.coordination.conflation.BlockToBatchSubmissionCoordinator
 import net.consensys.zkevm.ethereum.coordination.conflation.ConflationCalculator
@@ -193,7 +194,7 @@ class ConflationApp(
           version = ShnarfCalculatorVersion.V1_2,
           metricsFacade = metricsFacade,
         ),
-        blobsRepository = blobsRepository,
+        parentBlobDataProvider = ParentBlobDataProviderImpl(blobsRepository),
         genesisShnarf = genesisStateProvider.shnarf,
       ),
       blobZkStateProvider = BlobZkStateProviderImpl(
