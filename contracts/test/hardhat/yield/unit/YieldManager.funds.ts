@@ -1264,7 +1264,7 @@ describe("YieldManager contract - ETH transfer operations", () => {
       const call = yieldManager.connect(nativeYieldOperator).replenishWithdrawalReserve(mockYieldProviderAddress);
 
       // Assert
-      expectRevertWithCustomError(yieldManager, call, "NoAvailableFundsToReplenishWithdrawalReserve");
+      await expectRevertWithCustomError(yieldManager, call, "NoAvailableFundsToReplenishWithdrawalReserve");
     });
 
     it("If YieldManager balance > targetDeficit, settle targetDeficit from YieldManager balance", async () => {

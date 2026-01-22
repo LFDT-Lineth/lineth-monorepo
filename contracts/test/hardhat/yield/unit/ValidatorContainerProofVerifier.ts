@@ -251,7 +251,7 @@ describe("ValidatorContainerProofVerifier", () => {
       0,
       ACTIVE_0X01_VALIDATOR_PROOF.beaconBlockHeader.proposerIndex,
     );
-    expectRevertWithCustomError(verifier, call, "RootNotFound");
+    await expectRevertWithCustomError(verifier, call, "RootNotFound");
   });
 
   it("can verify against dynamic merkle tree", async () => {

@@ -613,7 +613,7 @@ describe("LidoStVaultYieldProvider contract - basic operations", () => {
       const call = yieldManager
         .connect(securityCouncil)
         .exitVendorContracts(yieldProviderAddress, buildVendorExitData({ newVaultOwner: ZeroAddress }));
-      expectRevertWithCustomError(yieldManager, call, "ZeroAddressNotAllowed");
+      await expectRevertWithCustomError(yieldManager, call, "ZeroAddressNotAllowed");
     });
     it("When non-ossified, should succeed with call to Dashboard", async () => {
       await yieldManager.setYieldProviderIsOssified(yieldProviderAddress, false);

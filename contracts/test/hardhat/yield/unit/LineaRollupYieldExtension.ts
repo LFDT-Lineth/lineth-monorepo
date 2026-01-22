@@ -90,7 +90,7 @@ describe("Linea Rollup Yield Extension", () => {
   describe("fund() to receive funding", () => {
     it("Should revert if 0 value received", async () => {
       const fundCall = lineaRollup.connect(nonAuthorizedAccount).fund({ value: ZERO_VALUE });
-      expectRevertWithCustomError(lineaRollup, fundCall, "NoEthSent");
+      await expectRevertWithCustomError(lineaRollup, fundCall, "NoEthSent");
     });
 
     it("Should succeed with permissionless call and emit the correct event", async () => {

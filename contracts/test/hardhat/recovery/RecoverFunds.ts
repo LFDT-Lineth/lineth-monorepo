@@ -111,7 +111,7 @@ describe("RecoverFunds contract", () => {
       const functionCall = recoverFunds
         .connect(nonAuthorizedAccount)
         .executeExternalCall(nonAuthorizedAccount, EMPTY_CALLDATA, 1000n);
-      expectRevertWithReason(functionCall, buildAccessErrorMessage(nonAuthorizedAccount, FUNCTION_EXECUTOR_ROLE));
+      await expectRevertWithReason(functionCall, buildAccessErrorMessage(nonAuthorizedAccount, FUNCTION_EXECUTOR_ROLE));
     });
 
     it("Should send half of the ETH sent", async () => {
