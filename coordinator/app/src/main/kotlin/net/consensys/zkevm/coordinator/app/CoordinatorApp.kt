@@ -12,6 +12,7 @@ import net.consensys.linea.jsonrpc.client.VertxHttpJsonRpcClientFactory
 import net.consensys.linea.metrics.micrometer.MicrometerMetricsFacade
 import net.consensys.linea.vertx.loadVertxConfig
 import net.consensys.zkevm.coordinator.api.Api
+import net.consensys.zkevm.coordinator.app.conflationbacktesting.ConflationBacktestingService
 import net.consensys.zkevm.fileio.DirectoryCleaner
 import net.consensys.zkevm.persistence.dao.aggregation.AggregationsRepositoryImpl
 import net.consensys.zkevm.persistence.dao.aggregation.PostgresAggregationsDao
@@ -49,12 +50,19 @@ class CoordinatorApp(private val configs: CoordinatorConfig) {
       requestResponseLogLevel = Level.TRACE,
       failuresLogLevel = Level.WARN,
     )
+
+  private val conflationBacktestingService = ConflationBacktestingService()
   private val api =
     Api(
-      Api.Config(
-        configs.api.observabilityPort,
+      configs = Api.Config(
+        observabilityPort = configs.api.observabilityPort,
+        jsonRpcPort = configs.api.jsonRpcPort,
+        jsonRpcPath = configs.api.jsonRpcPath,
+        numberOfVerticles = configs.api.numberOfVerticles,
       ),
-      vertx,
+      vertx = vertx,
+      conflationBacktestingService = conflationBacktestingService,
+      metricsFacade = micrometerMetricsFacade,
     )
 
   private val persistenceRetryer =
@@ -160,17 +168,19 @@ class CoordinatorApp(private val configs: CoordinatorConfig) {
   fun start() {
     requestFileCleanup.cleanup()
       .thenCompose { l1App.start() }
-      .thenCompose { api.start().toSafeFuture() }
+      .thenCompose { conflationBacktestingService.start() }
+      .thenCompose { api.start() }
       .get()
 
     log.info("Started :)")
   }
 
   fun stop(): Int {
-    return kotlin.runCatching {
+    return runCatching {
       SafeFuture.allOf(
         l1App.stop(),
-        api.stop().toSafeFuture(),
+        api.stop(),
+        conflationBacktestingService.stop(),
       ).thenApply {
         LoadBalancingJsonRpcClient.stop()
       }.thenCompose {
