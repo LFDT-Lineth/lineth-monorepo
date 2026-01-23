@@ -1,5 +1,5 @@
 .wrapper {
-  z-index: 3;
+  z-index: 35;
   position: fixed;
   bottom: 0;
   left: 0;
@@ -9,7 +9,7 @@
   backdrop-filter: blur(1.25rem);
   background-color: rgba(255, 250, 255, 0.8);
 
-  @include bp("tablet") {
+  @include bp('tablet') {
     display: none;
   }
 
@@ -20,7 +20,7 @@
 }
 
 .nav-container {
-  padding: 0.625rem 1.5rem 0;
+  padding: 0.625rem 1.75rem 0;
 
   ul {
     display: flex;
@@ -61,8 +61,8 @@
 
         svg {
           color: inherit;
-          width: 1.25rem;
-          height: 1.25rem;
+          width: 1.5rem;
+          height: 1.5rem;
           transition: color 0.3s linear;
         }
       }
