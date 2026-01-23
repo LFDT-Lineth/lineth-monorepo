@@ -58,7 +58,7 @@ class CoordinatorApp(private val configs: CoordinatorConfig) {
         observabilityPort = configs.api.observabilityPort,
         jsonRpcPort = configs.api.jsonRpcPort,
         jsonRpcPath = configs.api.jsonRpcPath,
-        numberOfVerticles = configs.api.numberOfVerticles,
+        jsonRpcServerVerticles = configs.api.jsonRpcServerVerticles,
       ),
       vertx = vertx,
       conflationBacktestingService = conflationBacktestingService,

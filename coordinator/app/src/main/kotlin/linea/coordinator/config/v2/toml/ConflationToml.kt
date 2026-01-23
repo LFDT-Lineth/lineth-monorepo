@@ -26,6 +26,12 @@ data class ConflationToml(
   val blobCompression: BlobCompressionToml = BlobCompressionToml(),
   val proofAggregation: ProofAggregationToml = ProofAggregationToml(),
 ) {
+  init {
+    require(proofAggregation.proofsLimit >= (blobCompression.batchesLimit ?: 1u) + 1u) {
+      "Aggregation proofsLimit must be greater than or equal to Blobs batchesLimit + 1 or " +
+        "greater than or equal to 2 if batchesLimit is not set."
+    }
+  }
 
   data class BlobCompressionToml(
     val blobSizeLimit: UInt = 102400u,

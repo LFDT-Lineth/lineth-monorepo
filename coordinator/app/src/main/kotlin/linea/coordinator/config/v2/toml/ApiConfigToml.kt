@@ -6,14 +6,14 @@ data class ApiConfigToml(
   val observabilityPort: UInt = 9545u,
   val jsonRpcPort: UInt = 0u,
   val jsonRpcPath: String = "/",
-  val numberOfVerticles: Int = 1,
+  val jsonRpcServerVerticles: Int = 1,
 ) {
   fun reified(): ApiConfig {
     return ApiConfig(
       observabilityPort = observabilityPort,
       jsonRpcPort = jsonRpcPort,
       jsonRpcPath = jsonRpcPath,
-      numberOfVerticles = numberOfVerticles,
+      jsonRpcServerVerticles = jsonRpcServerVerticles,
     )
   }
 }

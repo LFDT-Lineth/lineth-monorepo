@@ -120,7 +120,7 @@ class FileBasedProofAggregationClientV2(
     ),
     responseMapper = ProofToFinalizeJsonResponse::toDomainObject,
     proofTypeLabel = "aggregation",
-    log = LogManager.getLogger(this::class.java),
+    log = LogManager.getLogger(FileBasedProofAggregationClientV2::class.java),
   ),
   ProofAggregationProverClientV2 {
 

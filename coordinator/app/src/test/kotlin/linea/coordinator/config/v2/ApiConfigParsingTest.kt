@@ -13,7 +13,7 @@ class ApiConfigParsingTest {
       observability-port = 9546
       json-rpc-port = 9547
       json-rpc-path = "/jsonrpc"
-      number-of-verticles = 2
+      json-rpc-server-verticles = 2
       """.trimIndent()
 
     val config =
@@ -21,7 +21,7 @@ class ApiConfigParsingTest {
         observabilityPort = 9546u,
         jsonRpcPort = 9547u,
         jsonRpcPath = "/jsonrpc",
-        numberOfVerticles = 2,
+        jsonRpcServerVerticles = 2,
       )
 
     val tomlMinimal = ""
@@ -31,7 +31,7 @@ class ApiConfigParsingTest {
         observabilityPort = 9545u,
         jsonRpcPort = 0u,
         jsonRpcPath = "/",
-        numberOfVerticles = 1,
+        jsonRpcServerVerticles = 1,
       )
   }
 

@@ -28,7 +28,7 @@ class Api(
     val observabilityPort: UInt,
     val jsonRpcPort: UInt,
     val jsonRpcPath: String,
-    val numberOfVerticles: Int,
+    val jsonRpcServerVerticles: Int,
   )
   private val log = LogManager.getLogger(Api::class.java)
 
@@ -57,8 +57,8 @@ class Api(
       ObservabilityServer(ObservabilityServer.Config("coordinator", configs.observabilityPort.toInt()))
 
     var httpServer: HttpJsonRpcServer? = null
-    val numberOfVerticles = if (configs.numberOfVerticles > 0) {
-      configs.numberOfVerticles
+    val numberOfVerticles = if (configs.jsonRpcServerVerticles > 0) {
+      configs.jsonRpcServerVerticles
     } else {
       Runtime.getRuntime().availableProcessors()
     }
