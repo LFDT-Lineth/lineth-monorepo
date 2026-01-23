@@ -31,7 +31,7 @@ type FsWatcher struct {
 func NewFsWatcher(conf *config.Config) *FsWatcher {
 	fs := &FsWatcher{
 		LocalID:    conf.Controller.LocalID,
-		InProgress: config.InProgressSufix,
+		InProgress: config.InProgressSuffix,
 		Logger:     conf.Logger().WithField("component", "filesystem-watcher"),
 	}
 

@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"os"
 	"os/signal"
+	"path/filepath"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"syscall"
@@ -170,6 +172,12 @@ func runController(ctx context.Context, cfg *config.Config) {
 			cLog.Infoln("Context done due to cancellation request.")
 		}
 	}()
+
+	// Before entering the main loop, check for any previous dangling `.inprogress` files belonging to this
+	// controller (LocalID). This usually happens if the prover pod OOMs or crashes hard abruptly without a
+	// chance to cleanup. We rename these to `.large` so they are picked up by a larger prover instance or retried
+	// with higher limits.
+	rmPrevDanglingFiles(cfg, cLog)
 
 	for {
 		select {
@@ -413,4 +421,47 @@ func tryDeleteExecution(cLog *logrus.Entry, job *Job, cfg *config.Config) {
 	}
 
 	cLog.Infof("Deleted trace file: %s after successful execution proof request", traceFile)
+}
+
+// rmPrevDanglingFiles scans the execution request directory for any prev `.inprogress` files
+// matching the current controller's LocalID. If found (meaning the previous
+// run crashed), it renames them to .large to allow reprocessing.
+func rmPrevDanglingFiles(cfg *config.Config, cLog *logrus.Entry) {
+	logrus.Infof("Checking for any dangling in-progress jobs from previous run...")
+	reqDir := cfg.Execution.DirFrom()
+	if reqDir == "" {
+		cLog.Error("Empty request directory for stale jobs cleanup")
+		return
+	}
+
+	entries, err := os.ReadDir(reqDir)
+	if err != nil {
+		cLog.Errorf("Failed to read directory for stale jobs cleanup: %v", err)
+		return
+	}
+
+	// Suffix format: .inprogress.<LocalID>
+	suffix := "." + config.InProgressSuffix + "." + cfg.Controller.LocalID
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+
+		name := entry.Name()
+		if strings.HasSuffix(name, suffix) {
+			oldPath := filepath.Join(reqDir, name)
+
+			// Remove the .inprogress.<ID> suffix and append .large
+			// Example: req.json.inprogress.ID -> req.json.large
+			baseName := strings.TrimSuffix(name, suffix)
+			newName := baseName + "." + config.LargeSuffix
+			newPath := filepath.Join(reqDir, newName)
+
+			cLog.Warnf("Found dangling in-progress job under this controller's local-id from previous run (possibly OOM/Crash): %s. Recovering by renaming to %s", name, newName)
+			if err := os.Rename(oldPath, newPath); err != nil {
+				cLog.Errorf("Failed to recover stale job %s: %v", name, err)
+			}
+		}
+	}
 }
