@@ -197,6 +197,7 @@ class ProofAggregationCoordinatorService(
         )
       },
     ) {
+      log.debug("requesting aggregation proof: aggregation={}", blobsToAggregate.intervalString())
       aggregationProofCreation(blockIntervals, compressionProofIndexes)
     }
       .thenPeek {
