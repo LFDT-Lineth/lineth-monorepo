@@ -4,8 +4,6 @@ buildscript {
   ext {
     distributionIdentifier = "linea-sequencer"
     releaseVersion = "${libs.versions.arithmetization.get()}-SNAPSHOT"
-    besuVersion = "${libs.versions.besu.get()}"
-    besuRepo = "https://artifacts.consensys.net/public/linea-besu/maven/"
   }
 }
 
@@ -13,6 +11,15 @@ plugins {
   alias(libs.plugins.besuPluginLibrary)
   alias(libs.plugins.besuPluginDistribution)
   alias(libs.plugins.dependencyLicenseReport)
+}
+
+allprojects {
+  plugins.withId('net.consensys.besu-plugin-library') {
+    besuPlugin {
+      besuVersion = "${libs.versions.besu.get()}"
+      besuRepo = "https://artifacts.consensys.net/public/linea-besu/maven/"
+    }
+  }
 }
 
 licenseReport {

@@ -32,8 +32,11 @@ class EcDataLimitsTest : LineaPluginPoSTestBase() {
   }
 
   override fun getCliqueOptions(): GenesisConfigurationFactory.CliqueOptions {
+    // adding 1 more second to the block period, in order to avoid flakiness on the CI
+    // due to EcParing sometime taking all the selection time before all pending txs
+    // have been evaluated
     return GenesisConfigurationFactory.CliqueOptions(
-      BLOCK_PERIOD_SECONDS,
+      BLOCK_PERIOD_SECONDS+1,
       GenesisConfigurationFactory.CliqueOptions.DEFAULT.epochLength(),
       false,
     )

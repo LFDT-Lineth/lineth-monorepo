@@ -4,10 +4,8 @@ buildscript {
     besuPluginDir = File.createTempDir("plugins")
     targetReleaseVersion = "beta-v4.4-rc7"
     releaseVersion = findProperty('releaseVersion') ?: targetReleaseVersion
-    besuVersion = "${libs.versions.besu.get()}"
     distributionIdentifier = "linea-tracer"
     distibutionBaseName = "linea-arithmetization"
-    besuRepo = "https://artifacts.consensys.net/public/linea-besu/maven/"
   }
 }
 
@@ -17,6 +15,15 @@ plugins {
   alias(libs.plugins.besuPluginDistribution)
   alias(libs.plugins.sonarQube)
   alias(libs.plugins.testLogger)
+}
+
+allprojects {
+  plugins.withId('net.consensys.besu-plugin-library') {
+    besuPlugin {
+      besuVersion = "${libs.versions.besu.get()}"
+      besuRepo = "https://artifacts.consensys.net/public/linea-besu/maven/"
+    }
+  }
 }
 
 sonar {

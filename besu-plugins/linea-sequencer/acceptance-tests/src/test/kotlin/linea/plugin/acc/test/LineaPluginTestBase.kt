@@ -159,7 +159,7 @@ abstract class LineaPluginTestBase : AcceptanceTestBase() {
         // set plugin max selection time to 5% of slot time
         ImmutableMiningConfiguration.builder()
           .poaBlockTxsSelectionMaxTime(
-            PositiveNumber.fromInt(BLOCK_PERIOD_SECONDS * 1000),
+            PositiveNumber.fromInt(cliqueOptions.blockPeriodSeconds() * 1000),
           )
           .pluginBlockTxsSelectionMaxTime(PositiveNumber.fromInt(2))
           .mutableInitValues(
