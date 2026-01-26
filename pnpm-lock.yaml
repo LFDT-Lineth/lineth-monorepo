@@ -264,6 +264,65 @@ importers:
         specifier: 1.86.0
         version: 1.86.0
 
+  contract-integrity-verifier/verifier-core:
+    devDependencies:
+      '@types/jest':
+        specifier: 'catalog:'
+        version: 29.5.14
+      jest:
+        specifier: 'catalog:'
+        version: 29.7.0(@types/node@22.19.3)(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@types/node@22.19.3)(typescript@5.4.5))
+      ts-jest:
+        specifier: 'catalog:'
+        version: 29.3.4(@babel/core@7.25.7)(@jest/transform@29.7.0)(@jest/types@29.6.3)(babel-jest@29.7.0(@babel/core@7.25.7))(esbuild@0.25.5)(jest@29.7.0(@types/node@22.19.3)(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@types/node@22.19.3)(typescript@5.4.5)))(typescript@5.4.5)
+      tsup:
+        specifier: 'catalog:'
+        version: 8.5.0(jiti@2.3.3)(postcss@8.5.3)(typescript@5.4.5)(yaml@2.8.0)
+
+  contract-integrity-verifier/verifier-ethers:
+    dependencies:
+      '@consensys/linea-contract-integrity-verifier':
+        specifier: workspace:*
+        version: link:../verifier-core
+    devDependencies:
+      '@types/jest':
+        specifier: 'catalog:'
+        version: 29.5.14
+      ethers:
+        specifier: 'catalog:'
+        version: 6.13.7(bufferutil@4.0.8)(utf-8-validate@5.0.10)
+      jest:
+        specifier: 'catalog:'
+        version: 29.7.0(@types/node@22.19.3)(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@types/node@22.19.3)(typescript@5.4.5))
+      ts-jest:
+        specifier: 'catalog:'
+        version: 29.3.4(@babel/core@7.25.7)(@jest/transform@29.7.0)(@jest/types@29.6.3)(babel-jest@29.7.0(@babel/core@7.25.7))(esbuild@0.25.5)(jest@29.7.0(@types/node@22.19.3)(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@types/node@22.19.3)(typescript@5.4.5)))(typescript@5.4.5)
+      tsup:
+        specifier: 'catalog:'
+        version: 8.5.0(jiti@2.3.3)(postcss@8.5.3)(typescript@5.4.5)(yaml@2.8.0)
+
+  contract-integrity-verifier/verifier-viem:
+    dependencies:
+      '@consensys/linea-contract-integrity-verifier':
+        specifier: workspace:*
+        version: link:../verifier-core
+    devDependencies:
+      '@types/jest':
+        specifier: 'catalog:'
+        version: 29.5.14
+      jest:
+        specifier: 'catalog:'
+        version: 29.7.0(@types/node@22.19.3)(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@types/node@22.19.3)(typescript@5.4.5))
+      ts-jest:
+        specifier: 'catalog:'
+        version: 29.3.4(@babel/core@7.25.7)(@jest/transform@29.7.0)(@jest/types@29.6.3)(babel-jest@29.7.0(@babel/core@7.25.7))(esbuild@0.25.5)(jest@29.7.0(@types/node@22.19.3)(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@types/node@22.19.3)(typescript@5.4.5)))(typescript@5.4.5)
+      tsup:
+        specifier: 'catalog:'
+        version: 8.5.0(jiti@2.3.3)(postcss@8.5.3)(typescript@5.4.5)(yaml@2.8.0)
+      viem:
+        specifier: 'catalog:'
+        version: 2.31.3(bufferutil@4.0.8)(typescript@5.4.5)(utf-8-validate@5.0.10)(zod@3.25.76)
+
   contracts:
     devDependencies:
       '@chainlink/contracts':
@@ -7476,14 +7535,6 @@ packages:
   decompress-response@6.0.0:
     resolution: {integrity: sha512-aW35yZM6Bb/4oJlZncMH2LCoZtJXTRxES17vE3hoRiowU2kWHaJKFkSBDnDR+cm9J+9QhXmREyIfv0pji9ejCQ==}
     engines: {node: '>=10'}
-
-  dedent@1.6.0:
-    resolution: {integrity: sha512-F1Z+5UCFpmQUzJa11agbyPVMbpgT/qA3/SKyJ1jyBgm7dUcUEa8v9JwDkerSQXfakBwFljIxhOJqGkjUwZ9FSA==}
-    peerDependencies:
-      babel-plugin-macros: ^3.1.0
-    peerDependenciesMeta:
-      babel-plugin-macros:
-        optional: true
 
   dedent@1.7.0:
     resolution: {integrity: sha512-HGFtf8yhuhGhqO07SV79tRp+br4MnbdjeVxotpn1QBl30pcLLCQjX5b2295ll0fv8RKDKsmWYrl05usHM9CewQ==}
@@ -23745,10 +23796,6 @@ snapshots:
     dependencies:
       mimic-response: 3.1.0
 
-  dedent@1.6.0(babel-plugin-macros@3.1.0):
-    optionalDependencies:
-      babel-plugin-macros: 3.1.0
-
   dedent@1.7.0(babel-plugin-macros@3.1.0):
     optionalDependencies:
       babel-plugin-macros: 3.1.0
@@ -26192,7 +26239,7 @@ snapshots:
       '@types/node': 22.19.3
       chalk: 4.1.2
       co: 4.6.0
-      dedent: 1.6.0(babel-plugin-macros@3.1.0)
+      dedent: 1.7.0(babel-plugin-macros@3.1.0)
       is-generator-fn: 2.1.0
       jest-each: 29.7.0
       jest-matcher-utils: 29.7.0
@@ -29674,7 +29721,7 @@ snapshots:
     dependencies:
       '@jridgewell/gen-mapping': 0.3.8
       commander: 4.1.1
-      glob: 10.4.5
+      glob: 10.5.0
       lines-and-columns: 1.2.4
       mz: 2.7.0
       pirates: 4.0.7
@@ -30486,9 +30533,9 @@ snapshots:
       '@noble/hashes': 1.7.2
       '@scure/bip32': 1.6.2
       '@scure/bip39': 1.5.4
-      abitype: 1.0.8(typescript@5.4.5)(zod@3.22.4)
+      abitype: 1.0.8(typescript@5.4.5)(zod@3.25.76)
       isows: 1.0.6(ws@8.18.1(bufferutil@4.0.8)(utf-8-validate@5.0.10))
-      ox: 0.6.9(typescript@5.4.5)(zod@3.22.4)
+      ox: 0.6.9(typescript@5.4.5)(zod@3.25.76)
       ws: 8.18.1(bufferutil@4.0.8)(utf-8-validate@5.0.10)
     optionalDependencies:
       typescript: 5.4.5

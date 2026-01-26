@@ -1,0 +1,82 @@
+{
+  "$comment": "Test configuration using mock artifacts for integration testing",
+  "chains": {
+    "test-chain": {
+      "chainId": 31337,
+      "rpcUrl": "http://localhost:8545",
+      "explorerUrl": "https://localhost/explorer"
+    }
+  },
+  "contracts": [
+    {
+      "name": "TestYieldManager-Proxy",
+      "chain": "test-chain",
+      "address": "0x73bF00aD18c7c0871EBA03Bcbef8C98225f9CEaA",
+      "artifactFile": "./artifacts/YieldManager.json",
+      "isProxy": true,
+      "stateVerification": {
+        "schemaFile": "../../examples/schemas/yield-manager.json",
+        "ozVersion": "v4",
+        "viewCalls": [
+          {
+            "function": "hasRole",
+            "params": ["0x0000000000000000000000000000000000000000000000000000000000000000", "0xaC83Ca663356e8C8cca7AdA5a60C01f98c383430"],
+            "expected": true
+          },
+          {
+            "function": "L1_MESSAGE_SERVICE",
+            "params": [],
+            "expected": "0x24B0E20c3Cec999C8A6723FCfC06d5c88fB4a056"
+          }
+        ],
+        "slots": [
+          { "slot": "0x0", "type": "uint8", "name": "_initialized", "expected": "1" }
+        ],
+        "storagePaths": [
+          {
+            "path": "YieldManagerStorage:targetWithdrawalReservePercentageBps",
+            "expected": "8000"
+          }
+        ]
+      }
+    },
+    {
+      "name": "TestLineaRollup-Proxy",
+      "chain": "test-chain",
+      "address": "0x2A5CDCfc38856e2590E9Bd32F54Fa348e5De5f48",
+      "artifactFile": "./artifacts/LineaRollup.json",
+      "isProxy": true,
+      "stateVerification": {
+        "ozVersion": "v4",
+        "schemaFile": "../../examples/schemas/linea-rollup.json",
+        "viewCalls": [
+          { "function": "CONTRACT_VERSION", "expected": "7.0" },
+          {
+            "function": "hasRole",
+            "params": [
+              "0x76ef52a5344b10ed112c1d48c7c06f51e919518ea6fb005f9b25b359b955e3be",
+              "0xe6Ec44e651B6d961c15f1A8df9eA7DFaDb986eA1"
+            ],
+            "expected": true
+          }
+        ],
+        "slots": [
+          { "slot": "0x0", "type": "uint8", "name": "_initialized", "expected": "7" }
+        ],
+        "storagePaths": [
+          {
+            "path": "LineaRollupYieldExtensionStorage:_yieldManager",
+            "expected": "0xafeB487DD3E3Cb0342e8CF0215987FfDc9b72c9b"
+          }
+        ]
+      }
+    },
+    {
+      "name": "TestLineaRollup-Implementation",
+      "chain": "test-chain",
+      "address": "0xCaAa421FfCF701bEFd676a2F5d0A161CCFA5a07E",
+      "artifactFile": "./artifacts/LineaRollup.json",
+      "isProxy": false
+    }
+  ]
+}

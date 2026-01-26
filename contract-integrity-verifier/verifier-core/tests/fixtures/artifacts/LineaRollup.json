@@ -1,0 +1,157 @@
+{
+  "$comment": "Mock Foundry artifact for LineaRollup contract - used for integration testing",
+  "abi": [
+    {
+      "type": "function",
+      "name": "CONTRACT_VERSION",
+      "inputs": [],
+      "outputs": [{ "name": "", "type": "string", "internalType": "string" }],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "hasRole",
+      "inputs": [
+        { "name": "role", "type": "bytes32", "internalType": "bytes32" },
+        { "name": "account", "type": "address", "internalType": "address" }
+      ],
+      "outputs": [{ "name": "", "type": "bool", "internalType": "bool" }],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "grantRole",
+      "inputs": [
+        { "name": "role", "type": "bytes32", "internalType": "bytes32" },
+        { "name": "account", "type": "address", "internalType": "address" }
+      ],
+      "outputs": [],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "type": "function",
+      "name": "revokeRole",
+      "inputs": [
+        { "name": "role", "type": "bytes32", "internalType": "bytes32" },
+        { "name": "account", "type": "address", "internalType": "address" }
+      ],
+      "outputs": [],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "type": "function",
+      "name": "submitData",
+      "inputs": [
+        { "name": "data", "type": "bytes", "internalType": "bytes" },
+        { "name": "dataEvaluationClaim", "type": "bytes32", "internalType": "bytes32" },
+        { "name": "kzgCommitment", "type": "bytes", "internalType": "bytes" },
+        { "name": "kzgProof", "type": "bytes", "internalType": "bytes" }
+      ],
+      "outputs": [],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "type": "function",
+      "name": "finalizeBlocks",
+      "inputs": [
+        { "name": "proof", "type": "bytes", "internalType": "bytes" },
+        { "name": "proofType", "type": "uint256", "internalType": "uint256" },
+        {
+          "name": "finalizationData",
+          "type": "tuple",
+          "internalType": "struct ILineaRollup.FinalizationDataV3",
+          "components": [
+            { "name": "aggregatedProof", "type": "bytes", "internalType": "bytes" },
+            { "name": "parentStateRootHash", "type": "bytes32", "internalType": "bytes32" },
+            { "name": "lastFinalizedShnarf", "type": "bytes32", "internalType": "bytes32" },
+            { "name": "finalBlockNumber", "type": "uint256", "internalType": "uint256" }
+          ]
+        }
+      ],
+      "outputs": [],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "type": "function",
+      "name": "setVerifierAddress",
+      "inputs": [
+        { "name": "newVerifierAddress", "type": "address", "internalType": "address" },
+        { "name": "proofType", "type": "uint256", "internalType": "uint256" }
+      ],
+      "outputs": [],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "type": "function",
+      "name": "reinitializeLineaRollupV7",
+      "inputs": [
+        { "name": "_yieldManager", "type": "address", "internalType": "address" },
+        { "name": "_operators", "type": "address[]", "internalType": "address[]" },
+        { "name": "_verifierSetters", "type": "address[]", "internalType": "address[]" }
+      ],
+      "outputs": [],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "type": "event",
+      "name": "DataSubmitted",
+      "inputs": [
+        { "name": "dataHash", "type": "bytes32", "indexed": true },
+        { "name": "dataEvaluationClaim", "type": "bytes32", "indexed": false }
+      ]
+    },
+    {
+      "type": "event",
+      "name": "BlocksFinalized",
+      "inputs": [
+        { "name": "lastFinalizedBlockNumber", "type": "uint256", "indexed": true },
+        { "name": "parentStateRootHash", "type": "bytes32", "indexed": false }
+      ]
+    },
+    {
+      "type": "event",
+      "name": "RoleGranted",
+      "inputs": [
+        { "name": "role", "type": "bytes32", "indexed": true },
+        { "name": "account", "type": "address", "indexed": true },
+        { "name": "sender", "type": "address", "indexed": true }
+      ]
+    },
+    {
+      "type": "error",
+      "name": "InvalidProof",
+      "inputs": []
+    },
+    {
+      "type": "error",
+      "name": "UnauthorizedCaller",
+      "inputs": []
+    }
+  ],
+  "bytecode": {
+    "object": "0x608060405234801561001057600080fd5b506104006000908155600019600155600080547f00000000000000000000000000000000000000000000000000000000000000076001600160a01b031660601b6bffffffffffffffffffffffff1916179055610100604052600360c08190526247454d60e81b60e05261007761008c565b50348015610001576000636329a8e0526001600052602052005b",
+    "sourceMap": "1:1:1:-:0;;;;;;",
+    "linkReferences": {}
+  },
+  "deployedBytecode": {
+    "object": "0x6080604052631c9b1ba7600435146100a4576391d148541461010f576331d148541461012f5763d547741f1461014f5763a217fddf1461016f5763f5a5b0a81461018f5763f5c5ad8314610250575b600080fd5b6100b360006100c4575b60405180910390f35b6040518060400160405280600381526020016203372e360ec1b8152508282527f392e30000000000000000000000000000000000000000000000000000000000060208301526040830152805190602001906100c0929190610300565b6100b36100c4366004610350565b600091825260209081526040808320938352929052205460ff1690565b6100b36100ee366004610380565b73ffffffffffffffffffffffffffffffffffffffff1660009081526020819052604090205460ff1690565b610198610126366004610350565b73ffffffffffffffffffffffffffffffffffffffff82166000908152600160205260409020805461010083900a900461ffff169061016890610100900461ffff1661039a565b1561018157506000610194565b506001610194565b8015158152602001610198565b604051908152602001610198565b6101a8610390565b60408051600181528151918291829160208084019190610230565b60008054905090565b6000806101f56103b8565b9050806101ff5750600090565b6001600052600080fd5b6101f8565b61020d6103b8565b8051600052806020015260205160405290565b600080fd5b600080fd5b60008060408385031215610240576000fd5b823591506020830135600060ff82168114610257575b600080fd5b60208284031215610266576000fd5b50919291505056",
+    "sourceMap": "1:1:1:-:0;;;;;;",
+    "linkReferences": {},
+    "immutableReferences": {
+      "VERSION_SLOT": [{ "start": 56, "length": 32 }],
+      "YIELD_MANAGER_SLOT": [{ "start": 120, "length": 32 }]
+    }
+  },
+  "methodIdentifiers": {
+    "CONTRACT_VERSION()": "1c9b1ba7",
+    "hasRole(bytes32,address)": "91d14854",
+    "grantRole(bytes32,address)": "2f2ff15d",
+    "revokeRole(bytes32,address)": "d547741f",
+    "submitData(bytes,bytes32,bytes,bytes)": "f5a5b0a8",
+    "finalizeBlocks(bytes,uint256,(bytes,bytes32,bytes32,uint256))": "f5c5ad83",
+    "setVerifierAddress(address,uint256)": "8f9a8f0e",
+    "reinitializeLineaRollupV7(address,address[],address[])": "a1b4c8f5"
+  },
+  "ast": {},
+  "metadata": "{}"
+}

@@ -35,6 +35,7 @@
 .openzeppelin
 .pnp
 .pnp.js
+.pnpm-store
 .prefs
 .project
 .settings

@@ -100,7 +100,6 @@ library Poseidon2 {
        * @return rb Updated second state element
        */
       function permutation(a, b) -> ra, rb {
-        
         /*-------------------------------------------------------------*
         | Initial external MDS                                         |
         |                                                              |
@@ -325,7 +324,7 @@ library Poseidon2 {
         s := mod(s, R_MOD)
       }
 
-     /**
+      /**
        * @dev Applies INTERNAL MDS mixing to the first state element.
        *
        * @notice
@@ -369,10 +368,10 @@ library Poseidon2 {
         mb := or(mb, addmod(sum, mulmod(and(b, M), 127, R_MOD), R_MOD))
       }
 
-       /**
+      /**
        * @dev Applies the FULL (external) Poseidon2 MDS matrix.
        *
-       * In the following, M4 = 
+       * In the following, M4 =
        * (2 3 1 1)
        * (1 2 3 1)
        * (1 1 2 3)
@@ -396,7 +395,7 @@ library Poseidon2 {
 
       /**
        * @dev Final redistribution step of EXTERNAL MDS for first state element.
-       * 
+       *
        * Here:
        * [t0, t1, t2, t3] = M4*a_hi+M4*a_lo+M4*b_hi+M4*b_lo (computed with matMulM4uint256 followed by sumColumns, see matMulExternalInPlace)
        * a = diag(M4, M4)*[a_hi, a_lo]
@@ -433,7 +432,7 @@ library Poseidon2 {
         rb := or(rb, addmod(t3, and(b, M), R_MOD))
       }
 
-       /**
+      /**
        * @dev Computes column sums for EXTERNAL MDS mixing with lazy reduction.
        * Each column sums 4 limbs < P, so sum < 4P < 2^33.
        *
@@ -449,10 +448,7 @@ library Poseidon2 {
       function sumColumnsLazy(a, b) -> t0, t1, t2, t3 {
         let M := 0xFFFFFFFF
         // t0 = a[0] + a[4] + b[0] + b[4], all < P, so sum < 4P
-        t0 := mod(
-          add(add(shr(224, a), and(shr(96, a), M)), add(shr(224, b), and(shr(96, b), M))),
-          R_MOD
-        )
+        t0 := mod(add(add(shr(224, a), and(shr(96, a), M)), add(shr(224, b), and(shr(96, b), M))), R_MOD)
         t1 := mod(
           add(add(and(shr(192, a), M), and(shr(64, a), M)), add(and(shr(192, b), M), and(shr(64, b), M))),
           R_MOD
@@ -461,13 +457,10 @@ library Poseidon2 {
           add(add(and(shr(160, a), M), and(shr(32, a), M)), add(and(shr(160, b), M), and(shr(32, b), M))),
           R_MOD
         )
-        t3 := mod(
-          add(add(and(shr(128, a), M), and(a, M)), add(and(shr(128, b), M), and(b, M))),
-          R_MOD
-        )
+        t3 := mod(add(add(and(shr(128, a), M), and(a, M)), add(and(shr(128, b), M), and(b, M))), R_MOD)
       }
 
-       /**
+      /**
        * @dev Applies the 4×4 MDS matrix twice to a packed uint256 with lazy reduction in matMulM4.
        *
        * Layout:
@@ -511,7 +504,7 @@ library Poseidon2 {
        * Uses regular add internally, mod only on outputs.
        * Saves: 11 addmod (88 gas) -> 7 add + 4 mod (41 gas) = 47 gas per call
        *
-      * The MDS matrix is
+       * The MDS matrix is
        * (2 3 1 1)
        * (1 2 3 1)
        * (1 1 2 3)
@@ -519,16 +512,16 @@ library Poseidon2 {
        */
       function matMulM4Lazy(a, b, c, d) -> u, v, w, x {
         // All intermediate values fit in 256 bits
-        let t01 := add(a, b)           // < 2P
-        let t23 := add(c, d)           // < 2P
-        let t0123 := add(t01, t23)     // < 4P
-        let t01123 := add(t0123, b)    // < 5P
-        let t01233 := add(t0123, d)    // < 5P
+        let t01 := add(a, b) // < 2P
+        let t23 := add(c, d) // < 2P
+        let t0123 := add(t01, t23) // < 4P
+        let t01123 := add(t0123, b) // < 5P
+        let t01233 := add(t0123, d) // < 5P
         // Outputs need reduction for correct packing into 32-bit limbs
-        x := mod(add(add(a, a), t01233), R_MOD)  // 2a + t01233 < 7P
-        v := mod(add(add(c, c), t01123), R_MOD)  // 2c + t01123 < 7P
-        u := mod(add(t01, t01123), R_MOD)        // < 7P
-        w := mod(add(t23, t01233), R_MOD)        // < 7P
+        x := mod(add(add(a, a), t01233), R_MOD) // 2a + t01233 < 7P
+        v := mod(add(add(c, c), t01123), R_MOD) // 2c + t01123 < 7P
+        u := mod(add(t01, t01123), R_MOD) // < 7P
+        w := mod(add(t23, t01233), R_MOD) // < 7P
       }
 
       /**
@@ -568,7 +561,7 @@ library Poseidon2 {
        */
       function addRoundKeyFirstEntryUnreducedAndSbox(x, k) -> rx {
         let a0 := shr(224, x)
-        let t0 := sboxSingleLimb(add(k, a0))  // < 2P, fits in 32 bits
+        let t0 := sboxSingleLimb(add(k, a0)) // < 2P, fits in 32 bits
         rx := sub(x, shl(224, a0))
         rx := add(rx, shl(224, t0))
       }
@@ -577,9 +570,9 @@ library Poseidon2 {
        * @dev S-box on a single limb. mulmod naturally reduces unreduced inputs.
        * Input limb can be < 2P (unreduced), output is always < P.
        */
-       function sboxSingleLimb(x) -> rx {
+      function sboxSingleLimb(x) -> rx {
         rx := mulmod(x, mulmod(x, x, R_MOD), R_MOD)
-       }
+      }
 
       function error_size_data() {
         let ptr := mload(0x40)

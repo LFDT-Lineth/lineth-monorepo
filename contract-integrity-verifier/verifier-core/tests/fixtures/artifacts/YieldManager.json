@@ -1,0 +1,111 @@
+{
+  "$comment": "Mock Foundry artifact for YieldManager contract - used for integration testing",
+  "abi": [
+    {
+      "type": "function",
+      "name": "hasRole",
+      "inputs": [
+        { "name": "role", "type": "bytes32", "internalType": "bytes32" },
+        { "name": "account", "type": "address", "internalType": "address" }
+      ],
+      "outputs": [{ "name": "", "type": "bool", "internalType": "bool" }],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "L1_MESSAGE_SERVICE",
+      "inputs": [],
+      "outputs": [{ "name": "", "type": "address", "internalType": "address" }],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "getMinimumWithdrawalReserve",
+      "inputs": [],
+      "outputs": [{ "name": "", "type": "uint256", "internalType": "uint256" }],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "getTargetWithdrawalReserve",
+      "inputs": [],
+      "outputs": [{ "name": "", "type": "uint256", "internalType": "uint256" }],
+      "stateMutability": "view"
+    },
+    {
+      "type": "function",
+      "name": "stake",
+      "inputs": [
+        { "name": "yieldProvider", "type": "address", "internalType": "address" },
+        { "name": "amount", "type": "uint256", "internalType": "uint256" }
+      ],
+      "outputs": [],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "type": "function",
+      "name": "unstake",
+      "inputs": [
+        { "name": "yieldProvider", "type": "address", "internalType": "address" },
+        { "name": "amount", "type": "uint256", "internalType": "uint256" }
+      ],
+      "outputs": [],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "type": "function",
+      "name": "initialize",
+      "inputs": [
+        { "name": "_l1MessageService", "type": "address", "internalType": "address" },
+        { "name": "_admin", "type": "address", "internalType": "address" }
+      ],
+      "outputs": [],
+      "stateMutability": "nonpayable"
+    },
+    {
+      "type": "event",
+      "name": "Staked",
+      "inputs": [
+        { "name": "yieldProvider", "type": "address", "indexed": true },
+        { "name": "amount", "type": "uint256", "indexed": false }
+      ]
+    },
+    {
+      "type": "event",
+      "name": "Unstaked",
+      "inputs": [
+        { "name": "yieldProvider", "type": "address", "indexed": true },
+        { "name": "amount", "type": "uint256", "indexed": false }
+      ]
+    },
+    {
+      "type": "error",
+      "name": "InvalidAmount",
+      "inputs": []
+    }
+  ],
+  "bytecode": {
+    "object": "0x608060405234801561001057600080fd5b506104006000908155600019600155600080547f00000000000000000000000024b0e20c3cec999c8a6723fcfc06d5c88fb4a05660601b6bffffffffffffffffffffffff1916179055610100604052600360c08190526247454d60e81b60e052610077916002919061008c565b50348015610001576000636329a8e0526001600052602052005b",
+    "sourceMap": "1:1:1:-:0;;;;;;",
+    "linkReferences": {}
+  },
+  "deployedBytecode": {
+    "object": "0x6080604052636329a8e0600435146100a4576391d148541461010f57635e1dc3eb146101a0576328cf2fae146101c05763a217fddf146101e0575b600080fd5b6100b3610250565b60405180910390f35b6100b36100c4366004610350565b600091825260209081526040808320938352929052205460ff1690565b6100b36100ee366004610380565b73ffffffffffffffffffffffffffffffffffffffff1660009081526020819052604090205460ff1690565b610198610126366004610350565b73ffffffffffffffffffffffffffffffffffffffff82166000908152600160205260409020805461010083900a900461ffff169061016890610100900461ffff1661039a565b1561018157506000610194565b506001610194565b8015158152602001610198565b604051908152602001610198565b6101a8610390565b60408051600181528151918291829160208084019190610230565b60008054905090565b6000806101f56103b8565b9050806101ff5750600090565b6001600052600080fd5b6101f8565b61020d6103b8565b8051600052806020015260205160405290565b600080fd5b600080fd5b60008060408385031215610240576000fd5b823591506020830135600060ff82168114610257575b600080fd5b60208284031215610266576000fd5b50919291505056",
+    "sourceMap": "1:1:1:-:0;;;;;;",
+    "linkReferences": {},
+    "immutableReferences": {
+      "1": [{ "start": 42, "length": 32 }]
+    }
+  },
+  "methodIdentifiers": {
+    "hasRole(bytes32,address)": "91d14854",
+    "L1_MESSAGE_SERVICE()": "5e1dc3eb",
+    "getMinimumWithdrawalReserve()": "28cf2fae",
+    "getTargetWithdrawalReserve()": "636329a8e0",
+    "stake(address,uint256)": "adc9772e",
+    "unstake(address,uint256)": "6e2f2e41",
+    "initialize(address,address)": "485cc955"
+  },
+  "ast": {},
+  "metadata": "{}"
+}

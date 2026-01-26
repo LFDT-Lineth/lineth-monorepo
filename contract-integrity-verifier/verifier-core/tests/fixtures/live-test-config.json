@@ -1,0 +1,45 @@
+{
+  "$comment": "Live integration test config - requires ETHEREUM_SEPOLIA_RPC_URL environment variable",
+  "chains": {
+    "ethereum-sepolia": {
+      "chainId": 11155111,
+      "rpcUrl": "${ETHEREUM_SEPOLIA_RPC_URL}",
+      "explorerUrl": "https://sepolia.etherscan.io"
+    }
+  },
+  "contracts": [
+    {
+      "$comment": "LineaRollup proxy on Sepolia",
+      "name": "LineaRollup-Proxy",
+      "chain": "ethereum-sepolia",
+      "address": "0x2A5CDCfc38856e2590E9Bd32F54Fa348e5De5f48",
+      "artifactFile": "../../../../../contracts/deployments/bytecode/2026-01-14/LineaRollup.json",
+      "isProxy": true,
+      "stateVerification": {
+        "ozVersion": "v4",
+        "viewCalls": [
+          {
+            "function": "CONTRACT_VERSION",
+            "expected": "7.0"
+          }
+        ],
+        "slots": [
+          {
+            "slot": "0x0",
+            "type": "uint8",
+            "name": "_initialized",
+            "expected": "7"
+          }
+        ]
+      }
+    },
+    {
+      "$comment": "LineaRollup implementation on Sepolia",
+      "name": "LineaRollup-Implementation",
+      "chain": "ethereum-sepolia",
+      "address": "0xCaAa421FfCF701bEFd676a2F5d0A161CCFA5a07E",
+      "artifactFile": "../../../../../contracts/deployments/bytecode/2026-01-14/LineaRollup.json",
+      "isProxy": false
+    }
+  ]
+}

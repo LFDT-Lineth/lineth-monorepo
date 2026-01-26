@@ -1,0 +1,105 @@
+{
+  "$comment": "Auto-generated storage schema",
+  "structs": {
+    "YieldManagerStorage": {
+      "fields": {
+        "minimumWithdrawalReservePercentageBps": {
+          "slot": 0,
+          "type": "uint16"
+        },
+        "targetWithdrawalReservePercentageBps": {
+          "slot": 0,
+          "type": "uint16",
+          "byteOffset": 2
+        },
+        "minimumWithdrawalReserveAmount": {
+          "slot": 1,
+          "type": "uint256"
+        },
+        "targetWithdrawalReserveAmount": {
+          "slot": 2,
+          "type": "uint256"
+        },
+        "userFundsInYieldProvidersTotal": {
+          "slot": 3,
+          "type": "uint256"
+        },
+        "pendingPermissionlessUnstake": {
+          "slot": 4,
+          "type": "uint256"
+        },
+        "yieldProviders": {
+          "slot": 5,
+          "type": "address[]"
+        },
+        "isL2YieldRecipientKnown": {
+          "slot": 6,
+          "type": "mapping(address => bool)"
+        },
+        "yieldProviderStorage": {
+          "slot": 7,
+          "type": "mapping(address => uint8)"
+        },
+        "lastProvenSlot": {
+          "slot": 8,
+          "type": "mapping(uint64 => uint64 lastProvenSlot)"
+        }
+      },
+      "namespace": "linea.storage.YieldManagerStorage",
+      "baseSlot": "0xdc1272075efdca0b85fb2d76cbb5f26d954dc18e040d6d0b67071bd5cbd04300"
+    },
+    "YieldProviderStorage": {
+      "fields": {
+        "yieldProviderVendor": {
+          "slot": 0,
+          "type": "uint8"
+        },
+        "isStakingPaused": {
+          "slot": 0,
+          "type": "bool",
+          "byteOffset": 1
+        },
+        "isOssificationInitiated": {
+          "slot": 0,
+          "type": "bool",
+          "byteOffset": 2
+        },
+        "isOssified": {
+          "slot": 0,
+          "type": "bool",
+          "byteOffset": 3
+        },
+        "primaryEntrypoint": {
+          "slot": 0,
+          "type": "address",
+          "byteOffset": 4
+        },
+        "ossifiedEntrypoint": {
+          "slot": 1,
+          "type": "address"
+        },
+        "yieldProviderIndex": {
+          "slot": 1,
+          "type": "uint96",
+          "byteOffset": 20
+        },
+        "userFunds": {
+          "slot": 2,
+          "type": "uint256"
+        },
+        "yieldReportedCumulative": {
+          "slot": 3,
+          "type": "uint256"
+        },
+        "lstLiabilityPrincipal": {
+          "slot": 4,
+          "type": "uint256"
+        },
+        "lastReportedNegativeYield": {
+          "slot": 5,
+          "type": "uint256"
+        }
+      }
+    }
+  }
+}

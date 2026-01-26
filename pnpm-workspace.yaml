@@ -12,6 +12,7 @@ minimumReleaseAgeExclude:
 
 packages:
   - 'contracts/**'
+  - 'contract-integrity-verifier/**'
   - 'e2e/**'
   - 'sdk/**'
   - 'postman/**'

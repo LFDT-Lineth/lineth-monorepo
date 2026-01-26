@@ -1,0 +1,39 @@
+{
+  "$comment": "Storage schema for LineaRollup contracts (ERC-7201)",
+  "structs": {
+    "LineaRollupYieldExtensionStorage": {
+      "namespace": "linea.storage.LineaRollupYieldExtensionStorage",
+      "fields": {
+        "_yieldManager": { "slot": 0, "type": "address" }
+      }
+    },
+    "YieldManagerStorage": {
+      "namespace": "linea.storage.YieldManagerStorage",
+      "baseSlot": "0xdc1272075efdca0b85fb2d76cbb5f26d954dc18e040d6d0b67071bd5cbd04300",
+      "fields": {
+        "minimumWithdrawalReservePercentageBps": { "slot": 0, "type": "uint16", "byteOffset": 0 },
+        "targetWithdrawalReservePercentageBps": { "slot": 0, "type": "uint16", "byteOffset": 2 },
+        "minimumWithdrawalReserveAmount": { "slot": 1, "type": "uint256" },
+        "targetWithdrawalReserveAmount": { "slot": 2, "type": "uint256" },
+        "userFundsInYieldProvidersTotal": { "slot": 3, "type": "uint256" },
+        "pendingPermissionlessUnstake": { "slot": 4, "type": "uint256" },
+        "yieldProviders": { "slot": 5, "type": "address[]" }
+      }
+    },
+    "YieldProviderStorage": {
+      "fields": {
+        "yieldProviderVendor": { "slot": 0, "type": "uint8", "byteOffset": 0 },
+        "isStakingPaused": { "slot": 0, "type": "bool", "byteOffset": 1 },
+        "isOssificationInitiated": { "slot": 0, "type": "bool", "byteOffset": 2 },
+        "isOssified": { "slot": 0, "type": "bool", "byteOffset": 3 },
+        "primaryEntrypoint": { "slot": 0, "type": "address", "byteOffset": 4 },
+        "ossifiedEntrypoint": { "slot": 1, "type": "address", "byteOffset": 0 },
+        "yieldProviderIndex": { "slot": 1, "type": "uint96", "byteOffset": 20 },
+        "userFunds": { "slot": 2, "type": "uint256" },
+        "yieldReportedCumulative": { "slot": 3, "type": "uint256" },
+        "lstLiabilityPrincipal": { "slot": 4, "type": "uint256" },
+        "lastReportedNegativeYield": { "slot": 5, "type": "uint256" }
+      }
+    }
+  }
+}

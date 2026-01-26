@@ -1,0 +1,55 @@
+{
+  "name": "@consensys/linea-contract-integrity-verifier-viem",
+  "version": "1.0.0",
+  "description": "Viem adapter for @consensys/linea-contract-integrity-verifier",
+  "author": "Consensys Software Inc.",
+  "license": "Apache-2.0",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "verify-contract-viem": "./dist/cli.mjs"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsup --tsconfig tsconfig.build.json",
+    "test": "npx jest --bail --detectOpenHandles",
+    "test:integration": "npx ts-node tests/integration.test.ts",
+    "test:live": "npx ts-node tests/live.test.ts",
+    "lint:ts": "npx eslint 'src/**/*.ts'",
+    "lint:ts:fix": "npx eslint --fix 'src/**/*.ts'",
+    "prettier": "prettier -c 'src/**/*.ts'",
+    "prettier:fix": "prettier -w 'src/**/*.ts'",
+    "lint:fix": "pnpm run lint:ts:fix && pnpm run prettier:fix",
+    "clean": "rimraf dist node_modules coverage"
+  },
+  "keywords": [
+    "ethereum",
+    "viem",
+    "smart-contracts",
+    "verification",
+    "linea"
+  ],
+  "dependencies": {
+    "@consensys/linea-contract-integrity-verifier": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/jest": "catalog:",
+    "jest": "catalog:",
+    "ts-jest": "catalog:",
+    "tsup": "catalog:",
+    "viem": "catalog:"
+  },
+  "peerDependencies": {
+    "viem": ">=2.22.0"
+  }
+}
