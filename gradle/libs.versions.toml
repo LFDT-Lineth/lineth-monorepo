@@ -18,6 +18,9 @@ sonarQube = { id = "org.sonarqube", version = "4.3.1.3277" }
 jreleaser = { group = "org.jreleaser", name = "jreleaser-gradle-plugin", version = "1.15.0" }
 
 [versions]
+# Build
+kotlin = "2.1.21"
+
 # Testing
 assertj = "3.27.3"
 awaitility = "4.3.0"

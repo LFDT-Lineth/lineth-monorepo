@@ -10,7 +10,7 @@ dependencies {
   compileOnly("info.picocli:picocli:${libs.versions.picoli.get()}") {
     because 'Required for command line parsing. Provided by Besu at runtime.'
   }
-  implementation "org.jetbrains.kotlin:kotlin-reflect:${kotlinVersion}"
+  implementation "org.jetbrains.kotlin:kotlin-reflect:${libs.versions.kotlin.get()}"
   api(project(":jvm-libs:generic:vertx-helper"))
   api(project(":jvm-libs:generic:serialization:jackson"))
   api(project(":jvm-libs:linea:metrics:micrometer"))
