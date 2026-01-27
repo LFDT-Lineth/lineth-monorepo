@@ -1,6 +1,11 @@
 package linea.contract.events
 
+import linea.domain.EthLog
+import linea.domain.EthLogEvent
 import linea.kotlin.encodeHex
+import linea.kotlin.sliceOf32
+import linea.kotlin.toULongFromLast8Bytes
+import java.math.BigInteger
 
 /**
  * @notice Emitted when a forced transaction is added.
@@ -17,6 +22,35 @@ data class ForcedTransactionAddedEvent(
   val forcedTransactionRollingHash: ByteArray,
   val rlpEncodedSignedTransaction: ByteArray,
 ) {
+  companion object {
+    const val topic = "0x8fbc8fbd65675eb32c567d4a559963c7d002c2be67b5b266fb13d85b4375fce5"
+
+    fun fromEthLog(ethLog: EthLog): EthLogEvent<ForcedTransactionAddedEvent> {
+      /**event ForcedTransactionAdded(
+       uint256 indexed forcedTransactionNumber,
+       address indexed from,
+       uint256 blockNumberDeadline,
+       bytes32 forcedTransactionRollingHash,
+       bytes rlpEncodedSignedTransaction
+       );*/
+      val dataBytes = ethLog.data
+      // ABI encoding: [blockNumberDeadline 32][forcedTransactionRollingHash 32][offset 32][length 32][data...]
+      val offset = BigInteger(dataBytes.sliceOf32(sliceNumber = 2)).toInt()
+      val length = BigInteger(dataBytes.sliceArray(offset until offset + 32)).toInt()
+
+      return EthLogEvent(
+        event = ForcedTransactionAddedEvent(
+          forcedTransactionNumber = ethLog.topics[1].toULongFromLast8Bytes(),
+          from = ethLog.topics[2].sliceArray(12..31), // Address is 20 bytes, padded to 32 in topics
+          blockNumberDeadline = dataBytes.sliceOf32(sliceNumber = 0).toULongFromLast8Bytes(),
+          forcedTransactionRollingHash = dataBytes.sliceOf32(sliceNumber = 1),
+          rlpEncodedSignedTransaction = dataBytes.sliceArray(offset + 32 until offset + 32 + length),
+        ),
+        log = ethLog,
+      )
+    }
+  }
+
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
     if (javaClass != other?.javaClass) return false

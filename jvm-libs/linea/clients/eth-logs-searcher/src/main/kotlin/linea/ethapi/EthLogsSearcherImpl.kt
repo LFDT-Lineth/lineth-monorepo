@@ -10,6 +10,7 @@ import linea.domain.CommonDomainFunctions
 import linea.domain.EthLog
 import linea.ethapi.cursor.BinarySearchCursor
 import linea.ethapi.cursor.ConsecutiveSearchCursor
+import linea.ethapi.extensions.getAbsoluteBlockNumbers
 import net.consensys.linea.async.AsyncRetryer
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
@@ -46,7 +47,7 @@ class EthLogsSearcherImpl(
   ): SafeFuture<EthLog?> {
     require(chunkSize > 0) { "chunkSize=$chunkSize must be greater than 0" }
 
-    return getAbsoluteBlockNumbers(fromBlock, toBlock)
+    return ethApiClient.getAbsoluteBlockNumbers(fromBlock, toBlock)
       .thenCompose { (start, end) ->
         if (start > end) {
           // this is to prevent edge case when fromBlock number is after toBlock=LATEST/FINALIZED
@@ -77,7 +78,7 @@ class EthLogsSearcherImpl(
   ): SafeFuture<EthLogsSearcher.LogSearchResult> {
     require(chunkSize > 0u) { "chunkSize=$chunkSize must be greater than 0" }
 
-    return getAbsoluteBlockNumbers(fromBlock, toBlock)
+    return ethApiClient.getAbsoluteBlockNumbers(fromBlock, toBlock)
       .thenCompose { (start, end) ->
         if (start > end) {
           // this is to prevent edge case when fromBlock number is after toBlock=LATEST/FINALIZED
@@ -242,28 +243,5 @@ class EthLogsSearcherImpl(
           }
         }
       }
-  }
-
-  private fun getAbsoluteBlockNumbers(
-    fromBlock: BlockParameter,
-    toBlock: BlockParameter,
-  ): SafeFuture<Pair<ULong, ULong>> {
-    return SafeFuture.collectAll(
-      getBlockParameterNumber(fromBlock),
-      getBlockParameterNumber(toBlock),
-    ).thenApply { (start, end) ->
-      start to end
-    }
-  }
-
-  private fun getBlockParameterNumber(blockParameter: BlockParameter): SafeFuture<ULong> {
-    return if (blockParameter is BlockParameter.BlockNumber) {
-      SafeFuture.completedFuture(blockParameter.getNumber())
-    } else if (blockParameter == BlockParameter.Tag.EARLIEST) {
-      SafeFuture.completedFuture(0UL)
-    } else {
-      ethApiClient.ethGetBlockByNumberTxHashes(blockParameter)
-        .thenApply { block -> block.number }
-    }
   }
 }

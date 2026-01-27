@@ -47,14 +47,14 @@ data class EthLog(
 
   override fun toString(): String {
     return "EthLog(" +
-      "removed=$removed, " +
-      "logIndex=$logIndex, " +
-      "transactionIndex=$transactionIndex, " +
-      "transactionHash=${transactionHash.encodeHex()}, " +
-      "blockHash=${blockHash.encodeHex()}, " +
       "blockNumber=$blockNumber, " +
+      "logIndex=$logIndex, " +
+      "removed=$removed, " +
+      "transactionIndex=$transactionIndex, " +
       "address=${address.encodeHex()}, " +
       "topics=${topics.map { it.encodeHex() }}, " +
+      "transactionHash=${transactionHash.encodeHex()}, " +
+      "blockHash=${blockHash.encodeHex()}, " +
       "data=${data.encodeHex()}"
   }
 }

@@ -2,6 +2,8 @@ package linea.staterecovery
 
 import linea.EthLogsSearcher
 import linea.SearchDirection
+import linea.contract.events.DataFinalizedV3
+import linea.contract.events.DataSubmittedV3
 import linea.domain.BlockParameter
 import linea.domain.BlockParameter.Companion.toBlockParameter
 import linea.domain.EthLogEvent

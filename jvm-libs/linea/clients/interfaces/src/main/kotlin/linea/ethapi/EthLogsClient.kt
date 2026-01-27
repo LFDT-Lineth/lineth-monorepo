@@ -4,7 +4,7 @@ import linea.domain.BlockParameter
 import linea.domain.EthLog
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 
-data class FilterOptions(
+data class EthLogsFilterOptions(
   val fromBlock: BlockParameter,
   val toBlock: BlockParameter,
   val address: String,
@@ -19,7 +19,7 @@ interface EthLogsClient {
     topics: List<String?>,
   ): SafeFuture<List<EthLog>>
 
-  fun ethGetLogs(filterOptions: FilterOptions): SafeFuture<List<EthLog>> = getLogs(
+  fun ethGetLogs(filterOptions: EthLogsFilterOptions): SafeFuture<List<EthLog>> = getLogs(
     filterOptions.fromBlock,
     filterOptions.toBlock,
     filterOptions.address,

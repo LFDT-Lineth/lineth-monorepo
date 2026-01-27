@@ -2,6 +2,7 @@ package linea.staterecovery.datafetching
 
 import io.vertx.core.Vertx
 import io.vertx.junit5.VertxExtension
+import linea.contract.events.DataFinalizedV3
 import linea.contract.l1.LineaRollupContractVersion
 import linea.domain.BlockParameter
 import linea.domain.RetryConfig
@@ -10,7 +11,6 @@ import linea.staterecovery.BlobDecompressorAndDeserializer
 import linea.staterecovery.BlobDecompressorToDomainV1
 import linea.staterecovery.BlockFromL1RecoveredData
 import linea.staterecovery.BlockHeaderStaticFields
-import linea.staterecovery.DataFinalizedV3
 import linea.staterecovery.LineaSubmissionEventsClientImpl
 import linea.staterecovery.plugin.AppClients
 import linea.staterecovery.plugin.createAppClients

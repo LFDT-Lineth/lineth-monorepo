@@ -1,6 +1,7 @@
 package linea.staterecovery
 
 import io.vertx.core.Vertx
+import linea.contract.events.DataFinalizedV3
 import linea.domain.BlockParameter
 import linea.domain.CommonDomainFunctions
 import linea.kotlin.encodeHex

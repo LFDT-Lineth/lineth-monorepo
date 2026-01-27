@@ -1,10 +1,10 @@
 package linea.staterecovery.datafetching
 
 import io.vertx.core.Vertx
+import linea.contract.events.DataFinalizedV3
 import linea.domain.BlockParameter
 import linea.domain.BlockParameter.Companion.toBlockParameter
 import linea.domain.EthLogEvent
-import linea.staterecovery.DataFinalizedV3
 import linea.staterecovery.FinalizationAndDataEventsV3
 import linea.staterecovery.LineaRollupSubmissionEventsClient
 import linea.timer.TimerSchedule

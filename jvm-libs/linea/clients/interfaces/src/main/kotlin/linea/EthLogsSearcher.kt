@@ -4,6 +4,7 @@ import linea.domain.BlockInterval
 import linea.domain.BlockParameter
 import linea.domain.EthLog
 import linea.ethapi.EthLogsClient
+import linea.ethapi.EthLogsFilterOptions
 import tech.pegasys.teku.infrastructure.async.SafeFuture
 import kotlin.time.Duration
 
@@ -48,4 +49,19 @@ interface EthLogsSearcher : EthLogsClient {
     searchTimeout: Duration,
     stopAfterTargetLogsCount: UInt? = null,
   ): SafeFuture<LogSearchResult>
+
+  fun getLogsRollingForward(
+    filter: EthLogsFilterOptions,
+    chunkSize: UInt = 1000u,
+    searchTimeout: Duration,
+    stopAfterTargetLogsCount: UInt? = null,
+  ): SafeFuture<LogSearchResult> = getLogsRollingForward(
+    fromBlock = filter.fromBlock,
+    toBlock = filter.toBlock,
+    address = filter.address,
+    topics = filter.topics,
+    chunkSize = chunkSize,
+    searchTimeout = searchTimeout,
+    stopAfterTargetLogsCount = stopAfterTargetLogsCount,
+  )
 }
