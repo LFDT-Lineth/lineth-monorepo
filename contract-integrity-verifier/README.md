@@ -206,13 +206,16 @@ Read raw storage slots directly. **Best for:** internal state not exposed via ge
 | `offset` | number | | Byte offset for packed storage (0-31, default 0) |
 
 **Common Slot Locations:**
-| Pattern | Slot | Description |
-|---------|------|-------------|
-| OZ Initializable (v4) | `0x0` | `_initialized` (uint8) and `_initializing` (bool) packed |
-| OZ Ownable (v4) | `0x33` | `_owner` address |
-| OZ AccessControl | varies | Role mappings |
-| EIP-1967 Implementation | `0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc` | Proxy implementation |
-| EIP-1967 Admin | `0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103` | Proxy admin |
+| Pattern | Slot | Type | Description |
+|---------|------|------|-------------|
+| OZ Initializable (v4) | `0x0` | `uint8` | `_initialized` and `_initializing` (bool at offset 1) packed |
+| OZ Initializable (v5) | `0xf0c57e16840df040f15088dc2f81fe391c3923bec73e23a9662efc9c229c6a00` | `uint64` | ERC-7201 namespaced (`openzeppelin.storage.Initializable`) |
+| OZ Ownable (v4) | `0x33` | `address` | `_owner` address |
+| OZ Ownable (v5) | ERC-7201 | `address` | Namespace: `openzeppelin.storage.Ownable` |
+| EIP-1967 Implementation | `0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc` | `address` | Proxy implementation |
+| EIP-1967 Admin | `0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103` | `address` | Proxy admin |
+
+> **Note:** OpenZeppelin v5 uses ERC-7201 namespaced storage. The `_initialized` type changed from `uint8` (v4) to `uint64` (v5). When verifying, use the correct slot and type for your OZ version.
 
 ### 3. Storage Paths (`storagePaths`)
 
@@ -292,10 +295,69 @@ Verify multiple variables within an ERC-7201 namespace. **Best for:** batch veri
 |----------|--------|---------|
 | Contract version string | `viewCalls` | `CONTRACT_VERSION()` |
 | Access control roles | `viewCalls` | `hasRole(ADMIN_ROLE, addr)` |
-| OZ initialized flag | `slots` | Slot `0x0`, type `uint8` |
+| OZ v4 initialized flag | `slots` | Slot `0x0`, type `uint8` |
+| OZ v5 initialized flag | `slots` | Slot `0xf0c57e16840df040f15088dc2f81fe391c3923bec73e23a9662efc9c229c6a00`, type `uint64` |
 | ERC-7201 struct field | `storagePaths` | `MyStorage:myField` |
 | Mapping value | `storagePaths` | `MyStorage:balances[addr]` |
 | Multiple related vars | `namespaces` | Batch verify namespace |
+
+### OpenZeppelin Version Support
+
+OpenZeppelin Contracts v4 and v5 use different storage layouts for upgradeable contracts:
+
+**OpenZeppelin v4** uses traditional slot-based storage:
+```json
+{
+  "slots": [
+    { "slot": "0x0", "type": "uint8", "name": "_initialized", "expected": "1" }
+  ]
+}
+```
+
+**OpenZeppelin v5** uses ERC-7201 namespaced storage:
+```json
+{
+  "slots": [
+    {
+      "slot": "0xf0c57e16840df040f15088dc2f81fe391c3923bec73e23a9662efc9c229c6a00",
+      "type": "uint64",
+      "name": "_initialized",
+      "expected": "1"
+    }
+  ]
+}
+```
+
+**Key differences:**
+
+| Aspect | OpenZeppelin v4 | OpenZeppelin v5 |
+|--------|-----------------|-----------------|
+| Storage pattern | Sequential from slot 0 | ERC-7201 namespaced |
+| `_initialized` slot | `0x0` | `0xf0c57e16840df040f15088dc2f81fe391c3923bec73e23a9662efc9c229c6a00` |
+| `_initialized` type | `uint8` | `uint64` |
+| Namespace ID | N/A | `openzeppelin.storage.Initializable` |
+
+**OZ v5 namespace IDs** (use with `namespaces` verification):
+- `openzeppelin.storage.Initializable`
+- `openzeppelin.storage.AccessControl`
+- `openzeppelin.storage.Ownable`
+- `openzeppelin.storage.Pausable`
+- `openzeppelin.storage.ReentrancyGuard`
+
+These namespace IDs are available as constants:
+```typescript
+import { KNOWN_NAMESPACES } from "@consensys/linea-contract-integrity-verifier";
+
+// Use in namespace verification
+const config = {
+  namespaces: [{
+    id: KNOWN_NAMESPACES.OZ_INITIALIZABLE,
+    variables: [
+      { offset: 0, type: "uint64", name: "_initialized", expected: "1" }
+    ]
+  }]
+};
+```
 
 ### Markdown Table Format
 

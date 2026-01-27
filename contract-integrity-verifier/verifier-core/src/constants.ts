@@ -32,10 +32,47 @@ export const EIP1967_BEACON_SLOT = "0xa3f0ad74e5423aebfd80d3ef4346578335a9a72aea
 // ============================================================================
 
 /**
- * OZ Initializable._initialized slot (v4 and v5).
- * Slot 0 for upgradeable contracts.
+ * OpenZeppelin v4 Initializable storage.
+ * _initialized (uint8) and _initializing (bool) are packed at slot 0.
+ *
+ * Layout at slot 0x0:
+ * - bytes 0-0: _initialized (uint8)
+ * - byte 1: _initializing (bool)
  */
-export const OZ_INITIALIZED_SLOT = "0x0";
+export const OZ_V4_INITIALIZABLE = {
+  /** Storage slot for v4 Initializable */
+  SLOT: "0x0",
+  /** Type of _initialized in v4 */
+  INITIALIZED_TYPE: "uint8" as const,
+  /** Byte offset of _initializing in the packed slot */
+  INITIALIZING_OFFSET: 1,
+} as const;
+
+/**
+ * OpenZeppelin v5 Initializable storage (ERC-7201 namespaced).
+ * Uses namespace "openzeppelin.storage.Initializable".
+ *
+ * Formula: keccak256(abi.encode(uint256(keccak256("openzeppelin.storage.Initializable")) - 1)) & ~bytes32(uint256(0xff))
+ *
+ * Layout at base slot:
+ * - slot+0, bytes 0-7: _initialized (uint64)
+ * - slot+0, byte 8: _initializing (bool)
+ */
+export const OZ_V5_INITIALIZABLE = {
+  /** ERC-7201 namespace ID */
+  NAMESPACE: "openzeppelin.storage.Initializable",
+  /** Pre-computed ERC-7201 base slot */
+  SLOT: "0xf0c57e16840df040f15088dc2f81fe391c3923bec73e23a9662efc9c229c6a00",
+  /** Type of _initialized in v5 (upgraded from uint8) */
+  INITIALIZED_TYPE: "uint64" as const,
+  /** Byte offset of _initializing in the packed slot */
+  INITIALIZING_OFFSET: 8,
+} as const;
+
+/**
+ * @deprecated Use OZ_V4_INITIALIZABLE.SLOT instead. Kept for backward compatibility.
+ */
+export const OZ_INITIALIZED_SLOT = OZ_V4_INITIALIZABLE.SLOT;
 
 // ============================================================================
 // ERC-7201 Namespaces
@@ -50,8 +87,15 @@ export const ERC7201_NAMESPACE_PREFIX = "linea.storage.";
  * Known storage namespaces.
  */
 export const KNOWN_NAMESPACES = {
+  // Linea namespaces
   YIELD_MANAGER: "linea.storage.YieldManagerStorage",
   LINEA_ROLLUP_YIELD_EXTENSION: "linea.storage.LineaRollupYieldExtensionStorage",
+  // OpenZeppelin v5 namespaces
+  OZ_INITIALIZABLE: "openzeppelin.storage.Initializable",
+  OZ_ACCESS_CONTROL: "openzeppelin.storage.AccessControl",
+  OZ_OWNABLE: "openzeppelin.storage.Ownable",
+  OZ_PAUSABLE: "openzeppelin.storage.Pausable",
+  OZ_REENTRANCY_GUARD: "openzeppelin.storage.ReentrancyGuard",
 } as const;
 
 // ============================================================================
