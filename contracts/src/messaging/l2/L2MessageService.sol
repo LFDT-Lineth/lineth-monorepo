@@ -42,4 +42,19 @@ contract L2MessageService is L2MessageServiceBase {
       _unpauseTypeRoleAssignments
     );
   }
+
+  /**
+   * @notice Reinitializes the L2MessageService and clears the old reentry slot value.
+   */
+  function reinitializeV3() external reinitializer(3) {
+    address proxyAdmin;
+    assembly {
+      proxyAdmin := sload(PROXY_ADMIN_SLOT)
+    }
+    require(msg.sender == proxyAdmin, CallerNotProxyAdmin());
+
+    assembly {
+      sstore(177, 0)
+    }
+  }
 }

@@ -33,4 +33,19 @@ contract TokenBridge is TokenBridgeBase {
   {
     __TokenBridge_init(_initializationData);
   }
+
+  /**
+   * @notice Reinitializes TokenBridge and clears the old reentry slot value.
+   */
+  function reinitializeV2() external reinitializer(2) {
+    address proxyAdmin;
+    assembly {
+      proxyAdmin := sload(PROXY_ADMIN_SLOT)
+    }
+    require(msg.sender == proxyAdmin, CallerNotProxyAdmin());
+
+    assembly {
+      sstore(1, 0)
+    }
+  }
 }

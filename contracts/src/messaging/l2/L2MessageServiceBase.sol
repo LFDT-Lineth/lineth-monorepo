@@ -17,6 +17,13 @@ abstract contract L2MessageServiceBase is
   L2MessageManager,
   PermissionsManager
 {
+  /**
+   * @dev Storage slot with the admin of the contract.
+   * This is the keccak-256 hash of "eip1967.proxy.admin" subtracted by 1, and is
+   * used to validate on the proxy admin can reinitialize the contract.
+   */
+  bytes32 internal constant PROXY_ADMIN_SLOT = 0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103;
+
   /// @dev This is the ABI version and not the reinitialize version.
   string private constant _CONTRACT_VERSION = "1.0";
 
@@ -45,7 +52,7 @@ abstract contract L2MessageServiceBase is
     RoleAddress[] calldata _roleAddresses,
     PauseTypeRole[] calldata _pauseTypeRoleAssignments,
     PauseTypeRole[] calldata _unpauseTypeRoleAssignments
-  ) internal virtual {
+  ) internal virtual onlyInitializing {
     __ERC165_init();
     __Context_init();
     __AccessControl_init();

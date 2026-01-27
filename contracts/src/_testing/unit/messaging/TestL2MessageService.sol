@@ -92,4 +92,16 @@ contract TestL2MessageService is L2MessageService {
   function makeItRevert() external payable {
     revert();
   }
+
+  function setSlotValue(uint256 _slot, uint256 _value) external {
+    assembly {
+      sstore(_slot, _value)
+    }
+  }
+
+  function getSlotValue(uint256 _slot) external view returns (uint256 slotValue) {
+    assembly {
+      slotValue := sload(_slot)
+    }
+  }
 }

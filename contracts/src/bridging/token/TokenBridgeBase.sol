@@ -15,11 +15,13 @@ import { BridgedToken } from "./BridgedToken.sol";
 import { MessageServiceBase } from "../../messaging/MessageServiceBase.sol";
 
 import { TokenBridgePauseManager } from "../../security/pausing/TokenBridgePauseManager.sol";
-import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+
 import { StorageFiller39 } from "./utils/StorageFiller39.sol";
 import { PermissionsManager } from "../../security/access/PermissionsManager.sol";
-
+import { AccessControlUpgradeable } from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { EfficientLeftRightKeccak } from "../../libraries/EfficientLeftRightKeccak.sol";
+
 /**
  * @title Linea Canonical Token Bridge
  * @notice Contract to manage cross-chain ERC-20 bridging.
@@ -28,6 +30,7 @@ import { EfficientLeftRightKeccak } from "../../libraries/EfficientLeftRightKecc
  */
 abstract contract TokenBridgeBase is
   ITokenBridge,
+  Initializable,
   TransientStorageReentrancyGuardUpgradeable,
   AccessControlUpgradeable,
   MessageServiceBase,
@@ -37,6 +40,13 @@ abstract contract TokenBridgeBase is
 {
   using EfficientLeftRightKeccak for *;
   using SafeERC20Upgradeable for IERC20Upgradeable;
+
+  /**
+   * @dev Storage slot with the admin of the contract.
+   * This is the keccak-256 hash of "eip1967.proxy.admin" subtracted by 1, and is
+   * used to validate on the proxy admin can reinitialize the contract.
+   */
+  bytes32 internal constant PROXY_ADMIN_SLOT = 0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103;
 
   /// @notice Role used for setting the message service address.
   bytes32 public constant SET_MESSAGE_SERVICE_ROLE = keccak256("SET_MESSAGE_SERVICE_ROLE");
@@ -139,7 +149,7 @@ abstract contract TokenBridgeBase is
    * @notice Initializes TokenBridge and underlying service dependencies - used for new networks only.
    * @param _initializationData The initial data used for initializing the TokenBridge contract.
    */
-  function __TokenBridge_init(InitializationData calldata _initializationData) internal virtual {
+  function __TokenBridge_init(InitializationData calldata _initializationData) internal virtual onlyInitializing {
     __MessageServiceBase_init(_initializationData.messageService);
     __PauseManager_init(_initializationData.pauseTypeRoles, _initializationData.unpauseTypeRoles);
 

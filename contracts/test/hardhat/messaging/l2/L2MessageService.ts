@@ -1,7 +1,7 @@
 import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
-import { ethers } from "hardhat";
+import { ethers, upgrades } from "hardhat";
 import { TestL2MessageService, TestReceivingContract } from "../../../../typechain-types";
 import {
   ADDRESS_ZERO,
@@ -1409,10 +1409,39 @@ describe("L2MessageService", () => {
     });
   });
 
-  describe.skip("L2MessageService Upgradeable Tests", () => {
-    it.skip("Should deploy and upgrade the L2MessageService contract", async () => {
-      // Deploy V1 from artifact
-      // Deploy V-next when we have it
+  describe("L2MessageService Upgradeable Tests", () => {
+    it("Should deploy and manually upgrade the L2MessageService contract", async function () {
+      const testL2MessageService = await deployL2MessageServiceFixture();
+
+      let slotValue = await testL2MessageService.getSlotValue(177);
+      expect(slotValue).equal(0);
+      await testL2MessageService.setSlotValue(177, 1);
+
+      // simulating reentry value at slot 1
+      slotValue = await testL2MessageService.getSlotValue(177);
+      expect(slotValue).equal(1);
+
+      // Deploy new TokenBridge implementation
+      const newTokenBridgeFactory = await ethers.getContractFactory(
+        "src/_testing/unit/messaging/TestL2MessageService.sol:TestL2MessageService",
+      );
+
+      const newTokenBridge = await upgrades.upgradeProxy(testL2MessageService, newTokenBridgeFactory, {
+        call: { fn: "reinitializeV3" },
+        kind: "transparent",
+        unsafeAllowRenames: true,
+        unsafeAllow: ["incorrect-initializer-order"],
+      });
+
+      await newTokenBridge.waitForDeployment();
+
+      // reentry slot cleared
+      slotValue = await testL2MessageService.getSlotValue(177);
+      expect(slotValue).equal(0);
+
+      // version changed
+      slotValue = await testL2MessageService.getSlotValue(0);
+      expect(slotValue).equal(3);
     });
   });
 });

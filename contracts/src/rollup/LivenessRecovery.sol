@@ -49,8 +49,10 @@ abstract contract LivenessRecovery is LineaRollupBase, ILivenessRecovery {
 
     address livenessRecoveryOperatorAddress = livenessRecoveryOperator;
 
-    _grantRole(OPERATOR_ROLE, livenessRecoveryOperatorAddress);
-    emit LivenessRecoveryOperatorRoleGranted(msg.sender, livenessRecoveryOperatorAddress);
+    if (!hasRole(OPERATOR_ROLE, livenessRecoveryOperatorAddress)) {
+      _grantRole(OPERATOR_ROLE, livenessRecoveryOperatorAddress);
+      emit LivenessRecoveryOperatorRoleGranted(msg.sender, livenessRecoveryOperatorAddress);
+    }
   }
 
   /**

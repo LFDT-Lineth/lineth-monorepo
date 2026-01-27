@@ -111,7 +111,7 @@ abstract contract LineaRollupBase is
   function __LineaRollup_init(
     BaseInitializationData calldata _initializationData,
     bytes32 _genesisShnarf
-  ) internal virtual {
+  ) internal virtual onlyInitializing {
     if (_initializationData.defaultVerifier == address(0)) {
       revert ZeroAddressNotAllowed();
     }

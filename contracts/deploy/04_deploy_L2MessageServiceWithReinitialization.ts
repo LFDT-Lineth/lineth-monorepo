@@ -1,35 +1,9 @@
 import { ethers, upgrades } from "hardhat";
 import { DeployFunction } from "hardhat-deploy/types";
-import { tryVerifyContract, getRequiredEnvVar, generateRoleAssignments } from "../common/helpers";
+import { tryVerifyContract, getRequiredEnvVar } from "../common/helpers";
 import { L2MessageService__factory } from "contracts/typechain-types";
-import {
-  L2_MESSAGE_SERVICE_PAUSE_TYPES_ROLES,
-  L2_MESSAGE_SERVICE_UNPAUSE_TYPES_ROLES,
-  PAUSE_ALL_ROLE,
-  PAUSE_L1_L2_ROLE,
-  PAUSE_L2_L1_ROLE,
-  UNPAUSE_ALL_ROLE,
-  UNPAUSE_L1_L2_ROLE,
-  UNPAUSE_L2_L1_ROLE,
-  USED_RATE_LIMIT_RESETTER_ROLE,
-} from "contracts/common/constants";
 
 const func: DeployFunction = async function () {
-  const securityCouncilAddress = getRequiredEnvVar("L2MSGSERVICE_SECURITY_COUNCIL");
-
-  const newRoles = [
-    USED_RATE_LIMIT_RESETTER_ROLE,
-    PAUSE_ALL_ROLE,
-    PAUSE_L1_L2_ROLE,
-    PAUSE_L2_L1_ROLE,
-    UNPAUSE_ALL_ROLE,
-    UNPAUSE_L1_L2_ROLE,
-    UNPAUSE_L2_L1_ROLE,
-  ];
-
-  const newRoleAddresses = generateRoleAssignments(newRoles, securityCouncilAddress, []);
-  console.log("New role addresses", newRoleAddresses);
-
   const contractName = "L2MessageService";
 
   const proxyAddress = getRequiredEnvVar("L2MESSAGESERVICE_ADDRESS");
@@ -52,15 +26,7 @@ const func: DeployFunction = async function () {
     "0x9623609d",
     ethers.AbiCoder.defaultAbiCoder().encode(
       ["address", "address", "bytes"],
-      [
-        proxyAddress,
-        newContract,
-        L2MessageService__factory.createInterface().encodeFunctionData("reinitializePauseTypesAndPermissions", [
-          newRoleAddresses,
-          L2_MESSAGE_SERVICE_PAUSE_TYPES_ROLES,
-          L2_MESSAGE_SERVICE_UNPAUSE_TYPES_ROLES,
-        ]),
-      ],
+      [proxyAddress, newContract, L2MessageService__factory.createInterface().encodeFunctionData("reinitializeV3")],
     ),
   ]);
 

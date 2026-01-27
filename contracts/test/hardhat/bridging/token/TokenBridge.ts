@@ -1010,9 +1010,56 @@ describe("TokenBridge", function () {
   });
 
   describe("TokenBridge Upgradeable Tests", function () {
-    it.skip("Should deploy and manually upgrade the TokenBridge contract", async function () {
-      // Deploy V1 from artifact
-      // Deploy V-next when we have it
+    it("Should deploy and manually upgrade the TokenBridge contract", async function () {
+      const TestTokenBridgeFactory = await ethers.getContractFactory("TestTokenBridge");
+
+      const initData = {
+        defaultAdmin: PLACEHOLDER_ADDRESS,
+        messageService: PLACEHOLDER_ADDRESS,
+        tokenBeacon: PLACEHOLDER_ADDRESS,
+        sourceChainId: SupportedChainIds.SEPOLIA,
+        targetChainId: SupportedChainIds.LINEA_TESTNET,
+        remoteSender: PLACEHOLDER_ADDRESS,
+        reservedTokens: [],
+        roleAddresses: [],
+        pauseTypeRoles: [],
+        unpauseTypeRoles: [],
+      };
+
+      const testTokenBridge = (await upgrades.deployProxy(TestTokenBridgeFactory, [
+        initData,
+      ])) as unknown as TestTokenBridge;
+      await testTokenBridge.waitForDeployment();
+
+      let slotValue = await testTokenBridge.getSlotValue(1);
+      expect(slotValue).equal(0);
+      await testTokenBridge.setSlotValue(1, 1);
+
+      // simulating reentry value at slot 1
+      slotValue = await testTokenBridge.getSlotValue(1);
+      expect(slotValue).equal(1);
+
+      // Deploy new TokenBridge implementation
+      const newTokenBridgeFactory = await ethers.getContractFactory(
+        "src/_testing/mocks/bridging/TestTokenBridge.sol:TestTokenBridge",
+      );
+
+      const newTokenBridge = await upgrades.upgradeProxy(testTokenBridge, newTokenBridgeFactory, {
+        call: { fn: "reinitializeV2" },
+        kind: "transparent",
+        unsafeAllowRenames: true,
+        unsafeAllow: ["incorrect-initializer-order"],
+      });
+
+      await newTokenBridge.waitForDeployment();
+
+      // reentry slot cleared
+      slotValue = await testTokenBridge.getSlotValue(1);
+      expect(slotValue).equal(0);
+
+      // version changed
+      slotValue = await testTokenBridge.getSlotValue(0);
+      expect(slotValue).equal(2);
     });
   });
 });

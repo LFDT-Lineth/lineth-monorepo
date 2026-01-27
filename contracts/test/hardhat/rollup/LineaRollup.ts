@@ -59,6 +59,7 @@ import {
   generateBlobParentShnarfData,
   calculateLastFinalizedState,
   generateKeccak256,
+  expectNoEvent,
 } from "../common/helpers";
 import { CalldataSubmissionData } from "../common/types";
 import { IPauseManager } from "contracts/typechain-types/src/_testing/unit/rollup/TestLineaRollup";
@@ -827,6 +828,25 @@ describe("Linea Rollup contract", () => {
       );
 
       expect(await lineaRollup.hasRole(OPERATOR_ROLE, FALLBACK_OPERATOR_ADDRESS)).to.be.true;
+    });
+
+    it("Should not expect a second event with liveness operator setting", async () => {
+      await networkTime.increase(SIX_MONTHS_IN_SECONDS);
+
+      await expectEvent(
+        lineaRollup,
+        lineaRollup.setLivenessRecoveryOperator(0n, HASH_ZERO, DEFAULT_LAST_FINALIZED_TIMESTAMP),
+        "LivenessRecoveryOperatorRoleGranted",
+        [admin.address, FALLBACK_OPERATOR_ADDRESS],
+      );
+
+      expect(await lineaRollup.hasRole(OPERATOR_ROLE, FALLBACK_OPERATOR_ADDRESS)).to.be.true;
+
+      await expectNoEvent(
+        lineaRollup,
+        lineaRollup.setLivenessRecoveryOperator(0n, HASH_ZERO, DEFAULT_LAST_FINALIZED_TIMESTAMP),
+        "LivenessRecoveryOperatorRoleGranted",
+      );
     });
 
     it("Should revert if trying to renounce role as liveness recovery operator", async () => {
