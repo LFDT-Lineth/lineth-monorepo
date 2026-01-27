@@ -1,3 +1,5 @@
+import { Direction, OnChainMessageStatus } from "@consensys/linea-sdk";
+import { ILogger } from "@consensys/linea-shared-utils";
 import {
   Overrides,
   TransactionResponse,
@@ -8,20 +10,19 @@ import {
   JsonRpcProvider,
   ErrorDescription,
 } from "ethers";
-import { Direction, OnChainMessageStatus } from "@consensys/linea-sdk";
-import { BaseError } from "../../core/errors";
-import { MessageStatus } from "../../core/enums";
-import { ILogger } from "@consensys/linea-shared-utils";
-import { IMessageServiceContract } from "../../core/services/contracts/IMessageServiceContract";
+
 import { IProvider } from "../../core/clients/blockchain/IProvider";
 import { Message } from "../../core/entities/Message";
+import { MessageStatus } from "../../core/enums";
+import { BaseError } from "../../core/errors";
+import { ISponsorshipMetricsUpdater, ITransactionMetricsUpdater } from "../../core/metrics";
+import { IMessageDBService } from "../../core/persistence/IMessageDBService";
+import { IMessageServiceContract } from "../../core/services/contracts/IMessageServiceContract";
 import {
   IMessageClaimingPersister,
   MessageClaimingPersisterConfig,
 } from "../../core/services/processors/IMessageClaimingPersister";
-import { IMessageDBService } from "../../core/persistence/IMessageDBService";
 import { ErrorParser } from "../../utils/ErrorParser";
-import { ISponsorshipMetricsUpdater, ITransactionMetricsUpdater } from "../../core/metrics";
 
 export class MessageClaimingPersister implements IMessageClaimingPersister {
   private messageBeingRetry: { message: Message | null; retries: number };

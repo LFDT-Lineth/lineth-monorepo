@@ -1,5 +1,6 @@
-import { Address } from "viem";
 import { MessageProof } from "@consensys/linea-sdk-viem";
+import { Address } from "viem";
+
 import { Chain, Token, TransactionStatus, CCTPMode } from "@/types";
 
 export type NativeBridgeMessage = {

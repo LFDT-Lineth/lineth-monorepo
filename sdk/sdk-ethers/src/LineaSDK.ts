@@ -1,4 +1,5 @@
 import { Eip1193Provider, Signer, Wallet } from "ethers";
+
 import {
   LineaRollupClient,
   EthersLineaRollupLogClient,
@@ -6,12 +7,12 @@ import {
   LineaRollupMessageRetriever,
   MerkleTreeService,
 } from "./clients/ethereum";
+import { DefaultGasProvider, GasProvider } from "./clients/gas";
 import {
   L2MessageServiceClient,
   EthersL2MessageServiceLogClient,
   L2MessageServiceMessageRetriever,
 } from "./clients/linea";
-import { DefaultGasProvider, GasProvider } from "./clients/gas";
 import { Provider, LineaProvider, BrowserProvider, LineaBrowserProvider } from "./clients/providers";
 import {
   DEFAULT_ENABLE_LINEA_ESTIMATE_GAS,
@@ -20,11 +21,11 @@ import {
   DEFAULT_L2_MESSAGE_TREE_DEPTH,
   DEFAULT_MAX_FEE_PER_GAS_CAP,
 } from "./core/constants";
-import { L1FeeEstimatorOptions, L2FeeEstimatorOptions, LineaSDKOptions, Network, SDKMode } from "./core/types";
 import { NETWORKS } from "./core/constants";
-import { isString } from "./core/utils";
 import { Direction } from "./core/enums";
 import { makeBaseError } from "./core/errors/utils";
+import { L1FeeEstimatorOptions, L2FeeEstimatorOptions, LineaSDKOptions, Network, SDKMode } from "./core/types";
+import { isString } from "./core/utils";
 
 export class LineaSDK {
   private network: Network;

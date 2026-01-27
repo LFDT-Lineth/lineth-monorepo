@@ -1,3 +1,4 @@
+import { Direction, wait } from "@consensys/linea-sdk";
 import {
   Block,
   ContractTransactionResponse,
@@ -6,15 +7,15 @@ import {
   TransactionRequest,
   TransactionResponse,
 } from "ethers";
-import { Direction, wait } from "@consensys/linea-sdk";
+
+import { IProvider } from "../../core/clients/blockchain/IProvider";
 import { DEFAULT_INITIAL_FROM_BLOCK } from "../../core/constants";
-import { IPostmanLogger } from "../../utils/IPostmanLogger";
-import { IMessageSentEventProcessor } from "../../core/services/processors/IMessageSentEventProcessor";
 import { Message } from "../../core/entities/Message";
 import { DatabaseAccessError } from "../../core/errors/DatabaseErrors";
-import { IProvider } from "../../core/clients/blockchain/IProvider";
-import { IPoller } from "../../core/services/pollers/IPoller";
 import { IMessageDBService } from "../../core/persistence/IMessageDBService";
+import { IPoller } from "../../core/services/pollers/IPoller";
+import { IMessageSentEventProcessor } from "../../core/services/processors/IMessageSentEventProcessor";
+import { IPostmanLogger } from "../../utils/IPostmanLogger";
 
 type MessageSentEventPollerConfig = {
   direction: Direction;

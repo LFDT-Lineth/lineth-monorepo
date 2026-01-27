@@ -1,3 +1,4 @@
+import { getContractsAddressesByChainId, OnChainMessageStatus } from "@consensys/linea-sdk-core";
 import {
   Abi,
   Account,
@@ -18,7 +19,7 @@ import {
   Transport,
 } from "viem";
 import { getContractEvents, readContract } from "viem/actions";
-import { getContractsAddressesByChainId, OnChainMessageStatus } from "@consensys/linea-sdk-core";
+
 import { getMessageSentEvents, GetMessageSentEventsErrorType } from "./getMessageSentEvents";
 import { MessageNotFoundError, MessageNotFoundErrorType } from "../errors/bridge";
 

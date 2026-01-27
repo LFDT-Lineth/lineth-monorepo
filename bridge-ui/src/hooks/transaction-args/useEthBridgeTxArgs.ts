@@ -1,10 +1,12 @@
 import { useMemo } from "react";
+
 import { encodeFunctionData } from "viem";
-import { useFormStore, useChainStore } from "@/stores";
+
 import MessageService from "@/abis/MessageService.json";
-import { isEth, isUndefinedOrNull, isZero, isUndefinedOrEmptyString } from "@/utils";
-import { BridgeProvider, ChainLayer, ClaimType } from "@/types";
 import { DEFAULT_ADDRESS_FOR_NON_CONNECTED_USER } from "@/constants";
+import { useFormStore, useChainStore } from "@/stores";
+import { BridgeProvider, ChainLayer, ClaimType } from "@/types";
+import { isEth, isUndefinedOrNull, isZero, isUndefinedOrEmptyString } from "@/utils";
 
 type UseEthBridgeTxArgsProps = {
   isConnected: boolean;

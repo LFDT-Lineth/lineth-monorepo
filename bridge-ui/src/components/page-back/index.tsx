@@ -1,6 +1,8 @@
-import { useRouter } from "next/navigation";
-import ArrowLeftIcon from "@/assets/icons/arrow-left.svg";
 import clsx from "clsx";
+import { useRouter } from "next/navigation";
+
+import ArrowLeftIcon from "@/assets/icons/arrow-left.svg";
+
 import styles from "./page-back.module.scss";
 
 type Props = {

@@ -1,4 +1,5 @@
 import clsx from "clsx";
+
 import styles from "./skeleton.module.scss";
 
 export default function Skeleton() {

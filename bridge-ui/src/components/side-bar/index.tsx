@@ -1,11 +1,13 @@
-import AppIcon from "@/assets/icons/app.svg";
-import LineaFullLogo from "@/assets/logos/linea-full.svg";
-import LineaIcon from "@/assets/logos/linea.svg";
-import RewardsIcon from "@/assets/icons/reward.svg";
-import TokensIcon from "@/assets/icons/tokens.svg";
-import ListYourApp from "@/components/list-your-app";
 import clsx from "clsx";
 import Link from "next/link";
+
+import AppIcon from "@/assets/icons/app.svg";
+import RewardsIcon from "@/assets/icons/reward.svg";
+import TokensIcon from "@/assets/icons/tokens.svg";
+import LineaFullLogo from "@/assets/logos/linea-full.svg";
+import LineaIcon from "@/assets/logos/linea.svg";
+import ListYourApp from "@/components/list-your-app";
+
 import styles from "./side-bar.module.scss";
 
 const navItems = [

@@ -8,13 +8,14 @@
  *   npx @consensys/linea-contract-integrity-verifier-viem -c config.json -v
  */
 
-import { resolve, dirname } from "path";
 import {
   loadConfig,
   Verifier,
   printSummary,
   type ContractVerificationResult,
 } from "@consensys/linea-contract-integrity-verifier";
+import { resolve, dirname } from "path";
+
 import { ViemAdapter } from "./index";
 
 // ============================================================================

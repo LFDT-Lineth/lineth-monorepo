@@ -1,4 +1,5 @@
 import { Direction } from "@consensys/linea-sdk";
+
 import { Message } from "../entities/Message";
 import { MessageStatus } from "../enums";
 

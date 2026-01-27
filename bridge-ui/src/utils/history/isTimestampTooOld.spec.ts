@@ -1,6 +1,8 @@
 import { test } from "@playwright/test";
-import { isTimestampTooOld } from "./isTimestampTooOld";
+
 import { MESSAGE_TOO_OLD_THRESHOLD_DAYS } from "@/constants/message";
+
+import { isTimestampTooOld } from "./isTimestampTooOld";
 
 const { expect, describe } = test;
 

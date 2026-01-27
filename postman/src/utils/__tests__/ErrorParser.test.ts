@@ -1,9 +1,10 @@
+import { makeBaseError } from "@consensys/linea-sdk";
 import { describe, it, expect } from "@jest/globals";
 import { ErrorCode, makeError } from "ethers";
-import { makeBaseError } from "@consensys/linea-sdk";
-import { ErrorParser } from "../ErrorParser";
-import { DatabaseAccessError } from "../../core/errors";
+
 import { DatabaseErrorType, DatabaseRepoName } from "../../core/enums";
+import { DatabaseAccessError } from "../../core/errors";
+import { ErrorParser } from "../ErrorParser";
 import { generateMessage } from "../testing/helpers";
 
 describe("ErrorParser", () => {

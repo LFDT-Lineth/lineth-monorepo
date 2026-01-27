@@ -3,7 +3,7 @@ import { defineConfig } from "eslint/config";
 
 import tseslint from "typescript-eslint";
 import eslintConfigPrettier from "eslint-config-prettier";
-// import importPlugin from "eslint-plugin-import";
+import importPlugin from "eslint-plugin-import";
 import prettierPlugin from "eslint-plugin-prettier";
 
 /**
@@ -19,37 +19,36 @@ export const base = defineConfig(
       sourceType: "module",
     },
     plugins: {
-        // TODO: this plugin is disabled for now to avoid a lot of files changes
-        // import: importPlugin,
-        prettier: prettierPlugin
+      import: importPlugin,
+      prettier: prettierPlugin
     },
     rules: {
         "prettier/prettier": "error",
-        // "import/order": [
-        //     "error",
-        //     {
-        //         groups: [
-        //             ["builtin", "external"],
-        //             ["internal"],
-        //             ["parent", "sibling", "index"],
-        //             ["type"],
-        //         ],
-        //         pathGroups: [
-        //             {
-        //                 pattern: "react",
-        //                 group: "external",
-        //                 position: "before", 
-        //             },
-        //             {
-        //                 pattern: "@/**",
-        //                 group: "internal",
-        //             },
-        //         ],
-        //         pathGroupsExcludedImportTypes: ["react"],
-        //         "newlines-between": "always",
-        //         alphabetize: { order: "asc", caseInsensitive: true },
-        //     },
-        // ]
+        "import/order": [
+          "error",
+          {
+            groups: [
+              ["builtin", "external"],
+              ["internal"],
+              ["parent", "sibling", "index"],
+              ["type"],
+            ],
+            pathGroups: [
+              {
+                pattern: "react",
+                group: "external",
+                position: "before", 
+              },
+              {
+                pattern: "@/**",
+                group: "internal",
+              },
+            ],
+            pathGroupsExcludedImportTypes: ["react"],
+            "newlines-between": "always",
+            alphabetize: { order: "asc", caseInsensitive: true },
+          },
+        ]
     },
   },
 );

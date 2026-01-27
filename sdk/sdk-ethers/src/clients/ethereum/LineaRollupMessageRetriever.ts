@@ -1,11 +1,12 @@
 import { Block, TransactionReceipt, TransactionRequest, TransactionResponse } from "ethers";
-import { ILineaRollupLogClient } from "../../core/clients/ethereum";
-import { MessageSent } from "../../core/types";
-import { MESSAGE_SENT_EVENT_SIGNATURE } from "../../core/constants";
-import { isNull } from "../../core/utils";
+
 import { LineaRollup, LineaRollup__factory } from "../../contracts/typechain";
+import { ILineaRollupLogClient } from "../../core/clients/ethereum";
 import { IMessageRetriever } from "../../core/clients/IMessageRetriever";
 import { IProvider } from "../../core/clients/IProvider";
+import { MESSAGE_SENT_EVENT_SIGNATURE } from "../../core/constants";
+import { MessageSent } from "../../core/types";
+import { isNull } from "../../core/utils";
 import { BrowserProvider, Provider } from "../providers";
 
 export class LineaRollupMessageRetriever implements IMessageRetriever<TransactionReceipt> {

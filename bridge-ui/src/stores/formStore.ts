@@ -1,8 +1,10 @@
 import { Address } from "viem";
-import { defaultTokensConfig } from "./tokenStore";
 import { createWithEqualityFn } from "zustand/traditional";
 import { shallow } from "zustand/vanilla/shallow";
+
 import { Token, ClaimType, CCTPMode } from "@/types";
+
+import { defaultTokensConfig } from "./tokenStore";
 
 export type FormState = {
   token: Token;

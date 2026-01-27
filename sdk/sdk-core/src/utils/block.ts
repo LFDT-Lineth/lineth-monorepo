@@ -1,5 +1,5 @@
-import { Hex } from "../types/misc";
 import { hexToNumber, slice } from "./misc";
+import { Hex } from "../types/misc";
 
 export type ParseBlockExtraDataReturnType = {
   version: number;

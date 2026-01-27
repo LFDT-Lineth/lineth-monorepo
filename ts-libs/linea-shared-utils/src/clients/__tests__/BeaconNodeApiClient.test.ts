@@ -1,9 +1,10 @@
 import axios from "axios";
 import { mock } from "jest-mock-extended";
-import { BeaconNodeApiClient } from "../BeaconNodeApiClient";
-import { ILogger } from "../../logging/ILogger";
-import { IRetryService } from "../../core/services/IRetryService";
+
 import { PendingPartialWithdrawal } from "../../core/client/IBeaconNodeApiClient";
+import { IRetryService } from "../../core/services/IRetryService";
+import { ILogger } from "../../logging/ILogger";
+import { BeaconNodeApiClient } from "../BeaconNodeApiClient";
 
 jest.mock("axios");
 

@@ -1,4 +1,5 @@
 import { Address } from "abitype";
+
 import { Hex } from "./misc";
 
 export type Log<TUnit = bigint> = {

@@ -1,6 +1,5 @@
-import { describe, it, beforeEach } from "@jest/globals";
-import { mock } from "jest-mock-extended";
 import { DefaultGasProvider, Provider, Direction, OnChainMessageStatus } from "@consensys/linea-sdk";
+import { describe, it, beforeEach } from "@jest/globals";
 import {
   Block,
   ContractTransactionResponse,
@@ -12,24 +11,10 @@ import {
   TransactionRequest,
   TransactionResponse,
 } from "ethers";
-import { TestLogger } from "../../../utils/testing/helpers";
-import { MessageStatus } from "../../../core/enums";
-import {
-  DEFAULT_MAX_FEE_PER_GAS,
-  TEST_ADDRESS_2,
-  TEST_CONTRACT_ADDRESS_2,
-  testAnchoredMessage,
-  testClaimedMessage,
-  testL2NetworkConfig,
-  testUnderpricedAnchoredMessage,
-  testZeroFeeAnchoredMessage,
-} from "../../../utils/testing/constants";
-import { IMessageRepository } from "../../../core/persistence/IMessageRepository";
-import { IMessageClaimingProcessor } from "../../../core/services/processors/IMessageClaimingProcessor";
-import { MessageClaimingProcessor } from "../MessageClaimingProcessor";
-import { Message } from "../../../core/entities/Message";
-import { ErrorParser } from "../../../utils/ErrorParser";
-import { EthereumMessageDBService } from "../../persistence/EthereumMessageDBService";
+import { mock } from "jest-mock-extended";
+
+import { ILineaRollupClient } from "../../../core/clients/blockchain/ethereum/ILineaRollupClient";
+import { IProvider } from "../../../core/clients/blockchain/IProvider";
 import {
   DEFAULT_ENABLE_POSTMAN_SPONSORING,
   DEFAULT_GAS_ESTIMATION_PERCENTILE,
@@ -40,9 +25,25 @@ import {
   DEFAULT_PROFIT_MARGIN,
   DEFAULT_RETRY_DELAY_IN_SECONDS,
 } from "../../../core/constants";
+import { Message } from "../../../core/entities/Message";
+import { MessageStatus } from "../../../core/enums";
+import { IMessageRepository } from "../../../core/persistence/IMessageRepository";
+import { IMessageClaimingProcessor } from "../../../core/services/processors/IMessageClaimingProcessor";
+import { ErrorParser } from "../../../utils/ErrorParser";
+import {
+  DEFAULT_MAX_FEE_PER_GAS,
+  TEST_ADDRESS_2,
+  TEST_CONTRACT_ADDRESS_2,
+  testAnchoredMessage,
+  testClaimedMessage,
+  testL2NetworkConfig,
+  testUnderpricedAnchoredMessage,
+  testZeroFeeAnchoredMessage,
+} from "../../../utils/testing/constants";
+import { TestLogger } from "../../../utils/testing/helpers";
 import { EthereumTransactionValidationService } from "../../EthereumTransactionValidationService";
-import { ILineaRollupClient } from "../../../core/clients/blockchain/ethereum/ILineaRollupClient";
-import { IProvider } from "../../../core/clients/blockchain/IProvider";
+import { EthereumMessageDBService } from "../../persistence/EthereumMessageDBService";
+import { MessageClaimingProcessor } from "../MessageClaimingProcessor";
 
 describe("TestMessageClaimingProcessor", () => {
   let messageClaimingProcessor: IMessageClaimingProcessor;

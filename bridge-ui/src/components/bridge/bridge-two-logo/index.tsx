@@ -1,4 +1,5 @@
 import Image from "next/image";
+
 import styles from "./bridge-two-logo.module.scss";
 
 type Props = {

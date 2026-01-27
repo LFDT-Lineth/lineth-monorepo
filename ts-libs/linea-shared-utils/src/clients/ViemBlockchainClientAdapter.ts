@@ -1,4 +1,3 @@
-import { IBlockchainClient } from "../core/client/IBlockchainClient";
 import {
   Hex,
   createPublicClient,
@@ -15,9 +14,11 @@ import {
   BaseError,
 } from "viem";
 import { sendRawTransaction, waitForTransactionReceipt } from "viem/actions";
+
+import { IBlockchainClient } from "../core/client/IBlockchainClient";
 import { IContractSignerClient } from "../core/client/IContractSignerClient";
-import { ILogger } from "../logging/ILogger";
 import { MAX_BPS } from "../core/constants/maths";
+import { ILogger } from "../logging/ILogger";
 
 /**
  * Adapter that wraps viem's PublicClient to provide blockchain interaction functionality.

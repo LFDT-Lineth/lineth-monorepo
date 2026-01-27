@@ -1,11 +1,12 @@
-import path from "path";
 import axios from "axios";
-import { Agent } from "https";
-import { Hex, serializeTransaction } from "viem";
 import { readFileSync } from "fs";
+import { Agent } from "https";
 import forge from "node-forge";
-import { Web3SignerClientAdapter } from "../Web3SignerClientAdapter";
+import path from "path";
+import { Hex, serializeTransaction } from "viem";
+
 import { ILogger } from "../../logging/ILogger";
+import { Web3SignerClientAdapter } from "../Web3SignerClientAdapter";
 
 // Mock getModuleDir to avoid Jest parsing issues with import.meta.url in file.ts
 jest.mock("../../utils/file", () => ({

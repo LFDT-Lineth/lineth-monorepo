@@ -1,6 +1,7 @@
 import { describe, it, expect } from "@jest/globals";
-import { formatMessageStatus } from "../message";
+
 import { OnChainMessageStatus } from "../../enums/message";
+import { formatMessageStatus } from "../message";
 
 describe("Message utils", () => {
   describe("formatMessageStatus", () => {

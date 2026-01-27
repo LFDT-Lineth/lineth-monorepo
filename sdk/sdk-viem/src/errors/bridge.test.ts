@@ -1,5 +1,5 @@
 import { setErrorConfig } from "viem";
-import { TEST_MERKLE_ROOT, TEST_MESSAGE_HASH, TEST_TRANSACTION_HASH } from "../../tests/constants";
+
 import {
   EventNotFoundInFinalizationDataError,
   L2BlockNotFinalizedError,
@@ -8,6 +8,7 @@ import {
   MessagesNotFoundInBlockRangeError,
   MissingMessageProofOrClientForClaimingOnL1Error,
 } from "./bridge";
+import { TEST_MERKLE_ROOT, TEST_MESSAGE_HASH, TEST_TRANSACTION_HASH } from "../../tests/constants";
 
 describe("Bridge Errors", () => {
   beforeAll(() => {

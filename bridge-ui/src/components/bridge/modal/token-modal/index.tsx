@@ -1,16 +1,19 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
+
 import { isAddress, getAddress, Address, zeroAddress } from "viem";
-import Modal from "@/components/modal";
+import { useAccount } from "wagmi";
+
 import SearchIcon from "@/assets/icons/search.svg";
-import styles from "./token-modal.module.scss";
-import TokenDetails from "./token-details";
+import Modal from "@/components/modal";
 import { useDevice, useTokenPrices, useTokens } from "@/hooks";
 import { useTokenStore, useChainStore, useConfigStore, useFormStore } from "@/stores";
 import { ChainLayer, ClaimType, Token } from "@/types";
 import { safeGetAddress, isEmptyObject, isEth, isCctp } from "@/utils";
-import { useAccount } from "wagmi";
+
+import TokenDetails from "./token-details";
+import styles from "./token-modal.module.scss";
 
 interface TokenModalProps {
   isModalOpen: boolean;

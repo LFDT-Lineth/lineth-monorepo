@@ -1,12 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
+
 import SearchIcon from "@/assets/icons/search.svg";
 import Modal from "@/components/modal";
 import { useDevice } from "@/hooks";
+import { Chain } from "@/types";
+
 import NetworkDetails from "./network-details";
 import styles from "./select-network.module.scss";
-import { Chain } from "@/types";
 
 interface Props {
   networks: Chain[];

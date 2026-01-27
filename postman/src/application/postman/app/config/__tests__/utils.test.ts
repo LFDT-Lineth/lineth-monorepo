@@ -1,14 +1,5 @@
 import { describe } from "@jest/globals";
-import { getConfig, validateEventsFiltersConfig } from "../utils";
-import {
-  TEST_ADDRESS_1,
-  TEST_ADDRESS_2,
-  TEST_CONTRACT_ADDRESS_1,
-  TEST_CONTRACT_ADDRESS_2,
-  TEST_L1_SIGNER_PRIVATE_KEY,
-  TEST_L2_SIGNER_PRIVATE_KEY,
-  TEST_RPC_URL,
-} from "../../../../../utils/testing/constants";
+
 import {
   DEFAULT_CALLDATA_ENABLED,
   DEFAULT_DB_CLEANER_ENABLED,
@@ -34,6 +25,16 @@ import {
   DEFAULT_PROFIT_MARGIN,
   DEFAULT_RETRY_DELAY_IN_SECONDS,
 } from "../../../../../core/constants";
+import {
+  TEST_ADDRESS_1,
+  TEST_ADDRESS_2,
+  TEST_CONTRACT_ADDRESS_1,
+  TEST_CONTRACT_ADDRESS_2,
+  TEST_L1_SIGNER_PRIVATE_KEY,
+  TEST_L2_SIGNER_PRIVATE_KEY,
+  TEST_RPC_URL,
+} from "../../../../../utils/testing/constants";
+import { getConfig, validateEventsFiltersConfig } from "../utils";
 
 describe("Config utils", () => {
   describe("getConfig", () => {

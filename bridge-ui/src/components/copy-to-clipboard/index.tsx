@@ -1,7 +1,9 @@
 import { useState } from "react";
-import Tooltip from "@/components/ui/tooltip";
-import Copy from "@/assets/icons/copy.svg";
+
 import Check from "@/assets/icons/check.svg";
+import Copy from "@/assets/icons/copy.svg";
+import Tooltip from "@/components/ui/tooltip";
+
 import styles from "./copy-to-clipboard.module.scss";
 
 type Props = {

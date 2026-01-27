@@ -1,3 +1,4 @@
+import { getContractsAddressesByChainId } from "@consensys/linea-sdk-core";
 import {
   Account,
   Address,
@@ -10,7 +11,7 @@ import {
   Transport,
 } from "viem";
 import { getContractEvents } from "viem/actions";
-import { getContractsAddressesByChainId } from "@consensys/linea-sdk-core";
+
 import { MessageNotFoundError, MessageNotFoundErrorType } from "../errors/bridge";
 
 export type GetMessageByMessageHashParameters = {

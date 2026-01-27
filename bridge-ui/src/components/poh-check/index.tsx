@@ -1,13 +1,16 @@
-import clsx from "clsx";
-import { useAccount, useSignMessage } from "wagmi";
-import { Loader } from "@/components/ui/loader";
 import { Dispatch, SetStateAction, useEffect, useRef, useState } from "react";
-import { PohStep } from "@/components/modal-base/user-wallet";
-import CloudCheck from "@/assets/icons/cloud-check.svg";
-import CloudCheckOutline from "@/assets/icons/cloud-check-outline.svg";
-import styles from "./poh-check.module.scss";
+
+import clsx from "clsx";
 import { getAddress } from "viem";
 import { linea } from "viem/chains";
+import { useAccount, useSignMessage } from "wagmi";
+
+import CloudCheckOutline from "@/assets/icons/cloud-check-outline.svg";
+import CloudCheck from "@/assets/icons/cloud-check.svg";
+import { PohStep } from "@/components/modal-base/user-wallet";
+import { Loader } from "@/components/ui/loader";
+
+import styles from "./poh-check.module.scss";
 
 type Props = {
   isHuman: boolean;

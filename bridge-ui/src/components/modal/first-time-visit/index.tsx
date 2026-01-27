@@ -1,13 +1,16 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
-import { useConfigStore } from "@/stores";
-import Modal from "@/components/modal";
-import styles from "./first-time-visit.module.scss";
-import Button from "@/components/ui/button";
+
 import Image from "next/image";
-import LineaIcon from "@/assets/logos/linea.svg";
+import { usePathname } from "next/navigation";
+
 import CloseIcon from "@/assets/icons/close.svg";
+import LineaIcon from "@/assets/logos/linea.svg";
+import Modal from "@/components/modal";
+import Button from "@/components/ui/button";
+import { useConfigStore } from "@/stores";
+
+import styles from "./first-time-visit.module.scss";
 
 export type VisitedModalType = "all-bridges" | "native-bridge" | "buy";
 

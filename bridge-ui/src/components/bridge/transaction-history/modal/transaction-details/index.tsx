@@ -1,15 +1,18 @@
 import { useEffect, useMemo } from "react";
-import Link from "next/link";
-import { useAccount, useSwitchChain, useTransactionReceipt } from "wagmi";
-import { formatEther } from "viem";
+
 import { useQueryClient } from "@tanstack/react-query";
-import Modal from "@/components/modal";
-import styles from "./transaction-details.module.scss";
-import Button from "@/components/ui/button";
+import Link from "next/link";
+import { formatEther } from "viem";
+import { useAccount, useSwitchChain, useTransactionReceipt } from "wagmi";
+
 import ArrowRightIcon from "@/assets/icons/arrow-right.svg";
+import Modal from "@/components/modal";
+import Button from "@/components/ui/button";
 import { useClaim, useClaimingTx, useBridgeTransactionMessage } from "@/hooks";
 import { BridgeTransaction, TransactionStatus } from "@/types";
 import { formatBalance, formatHex, formatTimestamp } from "@/utils";
+
+import styles from "./transaction-details.module.scss";
 
 type Props = {
   transaction: BridgeTransaction | undefined;

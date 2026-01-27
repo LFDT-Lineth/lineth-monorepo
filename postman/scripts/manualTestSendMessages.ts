@@ -36,14 +36,15 @@ npx ts-node postman/scripts/manualTestSendMessages.ts \
  * Should be auto-claimed on L2
  */
 
+import { LineaRollup, LineaRollup__factory } from "@consensys/linea-sdk";
 import { config } from "dotenv";
+import { Wallet, JsonRpcProvider, ContractTransactionResponse } from "ethers";
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
+
 import { sanitizePrivKey } from "./cli";
-import { Wallet, JsonRpcProvider, ContractTransactionResponse } from "ethers";
-import { LineaRollup, LineaRollup__factory } from "@consensys/linea-sdk";
-import { SendMessageArgs } from "./types";
 import { encodeSendMessage } from "./helpers";
+import { SendMessageArgs } from "./types";
 
 // CONFIG INPUT
 config();

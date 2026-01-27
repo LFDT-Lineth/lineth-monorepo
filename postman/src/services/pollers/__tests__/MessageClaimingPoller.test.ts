@@ -1,11 +1,12 @@
+import { Direction } from "@consensys/linea-sdk";
 import { describe, it, beforeEach } from "@jest/globals";
 import { mock } from "jest-mock-extended";
-import { Direction } from "@consensys/linea-sdk";
-import { MessageClaimingPoller } from "../MessageClaimingPoller";
-import { TestLogger } from "../../../utils/testing/helpers";
+
+import { IPoller } from "../../../core/services/pollers/IPoller";
 import { IMessageClaimingProcessor } from "../../../core/services/processors/IMessageClaimingProcessor";
 import { testL2NetworkConfig } from "../../../utils/testing/constants";
-import { IPoller } from "../../../core/services/pollers/IPoller";
+import { TestLogger } from "../../../utils/testing/helpers";
+import { MessageClaimingPoller } from "../MessageClaimingPoller";
 
 describe("TestMessageClaimingPoller", () => {
   let testClaimingPoller: IPoller;

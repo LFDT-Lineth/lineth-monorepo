@@ -1,6 +1,7 @@
 import { useMemo } from "react";
-import { useConfigStore, useChainStore } from "@/stores";
+
 import { config } from "@/config";
+import { useConfigStore, useChainStore } from "@/stores";
 
 const useChains = () => {
   const chains = useChainStore.useChains();

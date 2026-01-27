@@ -1,8 +1,9 @@
 import { useMemo } from "react";
-import { useChainStore, useTokenStore } from "@/stores";
-import { ChainLayer, Token } from "@/types";
+
 import { config } from "@/config";
 import { USDC_SYMBOL } from "@/constants";
+import { useChainStore, useTokenStore } from "@/stores";
+import { ChainLayer, Token } from "@/types";
 import { isUndefined } from "@/utils";
 
 const useTokens = (): Token[] => {

@@ -1,7 +1,6 @@
 import { Command, Flags } from "@oclif/core";
 import { Agent } from "https";
-import { address, hexString } from "../utils/common/custom-flags.js";
-import { validateUrl } from "../utils/common/validation.js";
+import { Result } from "neverthrow";
 import {
   Client,
   createPublicClient,
@@ -14,12 +13,14 @@ import {
   TransactionSerializable,
 } from "viem";
 import { linea } from "viem/chains";
-import { Result } from "neverthrow";
-import { calculateRewards } from "../utils/eth-transfer/rewards.js";
-import { validateETHThreshold } from "../utils/eth-transfer/validation.js";
+
+import { address, hexString } from "../utils/common/custom-flags.js";
 import { buildHttpsAgent } from "../utils/common/https-agent.js";
 import { getWeb3SignerSignature } from "../utils/common/signature.js";
 import { estimateTransactionGas, sendRawTransaction } from "../utils/common/transactions.js";
+import { validateUrl } from "../utils/common/validation.js";
+import { calculateRewards } from "../utils/eth-transfer/rewards.js";
+import { validateETHThreshold } from "../utils/eth-transfer/validation.js";
 
 export default class EthTransfer extends Command {
   static examples = [

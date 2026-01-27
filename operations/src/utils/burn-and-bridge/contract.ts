@@ -1,6 +1,7 @@
 import { err, ok, Result } from "neverthrow";
 import { Address, BaseError, Client, encodeFunctionData, Hex } from "viem";
 import { readContract, simulateContract } from "viem/actions";
+
 import { BURN_AND_BRIDGE_ABI, QUOTE_EXACT_INPUT_SINGLE_ABI, SWAP_ABI } from "./abi.js";
 
 export async function getInvoiceArrears(client: Client, contractAddress: Address): Promise<Result<bigint, BaseError>> {

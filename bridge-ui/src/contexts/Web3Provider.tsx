@@ -1,17 +1,20 @@
 "use client";
 
 import { ReactNode, useEffect } from "react";
-import { toHex } from "viem";
-import { useWeb3Auth, Web3AuthContextConfig, Web3AuthProvider } from "@web3auth/modal/react";
-import { coinbaseConnector } from "@web3auth/modal/connectors/coinbase-connector";
-import { WagmiProvider } from "@web3auth/modal/react/wagmi";
+
 import { WEB3AUTH_NETWORK, CONNECTOR_EVENTS } from "@web3auth/modal";
-import useGTM from "@/hooks/useGtm";
-import { useCachedIdentityToken } from "@/hooks/useCachedIdentityToken";
-import { useWalletDetection } from "./WalletDetectionProvider";
-import { isProd } from "../../next.config.mjs";
+import { coinbaseConnector } from "@web3auth/modal/connectors/coinbase-connector";
+import { useWeb3Auth, Web3AuthContextConfig, Web3AuthProvider } from "@web3auth/modal/react";
+import { WagmiProvider } from "@web3auth/modal/react/wagmi";
+import { toHex } from "viem";
+
 import { config as appConfig } from "@/config";
 import { localL1Network, localL2Network } from "@/constants";
+import { useCachedIdentityToken } from "@/hooks/useCachedIdentityToken";
+import useGTM from "@/hooks/useGtm";
+
+import { useWalletDetection } from "./WalletDetectionProvider";
+import { isProd } from "../../next.config.mjs";
 
 interface DynamicProviderProps {
   children: ReactNode;

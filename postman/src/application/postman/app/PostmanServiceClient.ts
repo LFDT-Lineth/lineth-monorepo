@@ -1,17 +1,21 @@
-import { DataSource } from "typeorm";
 import { LineaSDK, Direction } from "@consensys/linea-sdk";
 import { ExpressApiApplication, ILogger } from "@consensys/linea-shared-utils";
-import { TypeOrmMessageRepository } from "../persistence/repositories/TypeOrmMessageRepository";
-import { IPoller } from "../../../core/services/pollers/IPoller";
-import {
-  MessageAnchoringProcessor,
-  MessageClaimingProcessor,
-  MessageClaimingPersister,
-  MessageSentEventProcessor,
-  L2ClaimMessageTransactionSizeProcessor,
-} from "../../../services/processors";
+import { IMetricsService, IApplication } from "@consensys/linea-shared-utils";
+import { DataSource } from "typeorm";
+
 import { PostmanConfig, PostmanOptions } from "./config/config";
-import { DB } from "../persistence/dataSource";
+import { getConfig } from "./config/utils";
+import {
+  IMessageMetricsUpdater,
+  ISponsorshipMetricsUpdater,
+  ITransactionMetricsUpdater,
+  LineaPostmanMetrics,
+} from "../../../../src/core/metrics";
+import { IPoller } from "../../../core/services/pollers/IPoller";
+import { EthereumTransactionValidationService } from "../../../services/EthereumTransactionValidationService";
+import { L2ClaimTransactionSizeCalculator } from "../../../services/L2ClaimTransactionSizeCalculator";
+import { LineaTransactionValidationService } from "../../../services/LineaTransactionValidationService";
+import { DatabaseCleaner, LineaMessageDBService, EthereumMessageDBService } from "../../../services/persistence";
 import {
   MessageSentEventPoller,
   MessageAnchoringPoller,
@@ -20,24 +24,21 @@ import {
   DatabaseCleaningPoller,
   L2ClaimMessageTransactionSizePoller,
 } from "../../../services/pollers";
-import { DatabaseCleaner, LineaMessageDBService, EthereumMessageDBService } from "../../../services/persistence";
-import { L2ClaimTransactionSizeCalculator } from "../../../services/L2ClaimTransactionSizeCalculator";
-import { LineaTransactionValidationService } from "../../../services/LineaTransactionValidationService";
-import { EthereumTransactionValidationService } from "../../../services/EthereumTransactionValidationService";
-import { getConfig } from "./config/utils";
-import { MessageStatusSubscriber } from "../persistence/subscribers/MessageStatusSubscriber";
-import { PostmanWinstonLogger } from "../../../utils/PostmanWinstonLogger";
-import { PostmanMetricsService } from "../api/metrics/PostmanMetricsService";
-import { MessageMetricsUpdater } from "../api/metrics/MessageMetricsUpdater";
 import {
-  IMessageMetricsUpdater,
-  ISponsorshipMetricsUpdater,
-  ITransactionMetricsUpdater,
-  LineaPostmanMetrics,
-} from "../../../../src/core/metrics";
+  MessageAnchoringProcessor,
+  MessageClaimingProcessor,
+  MessageClaimingPersister,
+  MessageSentEventProcessor,
+  L2ClaimMessageTransactionSizeProcessor,
+} from "../../../services/processors";
+import { PostmanWinstonLogger } from "../../../utils/PostmanWinstonLogger";
+import { MessageMetricsUpdater } from "../api/metrics/MessageMetricsUpdater";
+import { PostmanMetricsService } from "../api/metrics/PostmanMetricsService";
 import { SponsorshipMetricsUpdater } from "../api/metrics/SponsorshipMetricsUpdater";
 import { TransactionMetricsUpdater } from "../api/metrics/TransactionMetricsUpdater";
-import { IMetricsService, IApplication } from "@consensys/linea-shared-utils";
+import { DB } from "../persistence/dataSource";
+import { TypeOrmMessageRepository } from "../persistence/repositories/TypeOrmMessageRepository";
+import { MessageStatusSubscriber } from "../persistence/subscribers/MessageStatusSubscriber";
 
 export class PostmanServiceClient {
   // Metrics services

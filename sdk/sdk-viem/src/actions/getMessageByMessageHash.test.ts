@@ -1,8 +1,9 @@
-import { getMessageByMessageHash } from "./getMessageByMessageHash";
+import { getContractsAddressesByChainId } from "@consensys/linea-sdk-core";
 import { Client, Transport, Chain, Account, Hex, ChainNotFoundError } from "viem";
 import { getContractEvents } from "viem/actions";
 import { linea } from "viem/chains";
-import { getContractsAddressesByChainId } from "@consensys/linea-sdk-core";
+
+import { getMessageByMessageHash } from "./getMessageByMessageHash";
 import { TEST_ADDRESS_1, TEST_ADDRESS_2, TEST_MESSAGE_HASH, TEST_TRANSACTION_HASH } from "../../tests/constants";
 import { generateMessageSentLog } from "../../tests/utils";
 

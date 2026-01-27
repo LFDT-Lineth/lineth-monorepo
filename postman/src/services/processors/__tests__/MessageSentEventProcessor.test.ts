@@ -1,20 +1,6 @@
-import { describe, it, beforeEach } from "@jest/globals";
-import { mock } from "jest-mock-extended";
-import { TestLogger } from "../../../utils/testing/helpers";
 import { Direction, MessageSent } from "@consensys/linea-sdk";
-import { MessageStatus } from "../../../core/enums";
-import {
-  TEST_ADDRESS_1,
-  TEST_ADDRESS_2,
-  testL1NetworkConfig,
-  testMessageSentEvent,
-  testMessageSentEventWithCallData,
-} from "../../../utils/testing/constants";
-import { IProvider } from "../../../core/clients/blockchain/IProvider";
-import { MessageSentEventProcessorConfig } from "../../../core/services/processors/IMessageSentEventProcessor";
-import { MessageSentEventProcessor } from "../MessageSentEventProcessor";
-import { ILineaRollupLogClient } from "../../../core/clients/blockchain/ethereum/ILineaRollupLogClient";
-import { MessageFactory } from "../../../core/entities/MessageFactory";
+import { ILogger } from "@consensys/linea-shared-utils";
+import { describe, it, beforeEach } from "@jest/globals";
 import {
   Block,
   ContractTransactionResponse,
@@ -24,10 +10,25 @@ import {
   TransactionRequest,
   TransactionResponse,
 } from "ethers";
-import { EthereumMessageDBService } from "../../persistence/EthereumMessageDBService";
-import { IMessageDBService } from "../../../core/persistence/IMessageDBService";
-import { ILogger } from "@consensys/linea-shared-utils";
+import { mock } from "jest-mock-extended";
+
+import { ILineaRollupLogClient } from "../../../core/clients/blockchain/ethereum/ILineaRollupLogClient";
+import { IProvider } from "../../../core/clients/blockchain/IProvider";
 import { IL2MessageServiceLogClient } from "../../../core/clients/blockchain/linea/IL2MessageServiceLogClient";
+import { MessageFactory } from "../../../core/entities/MessageFactory";
+import { MessageStatus } from "../../../core/enums";
+import { IMessageDBService } from "../../../core/persistence/IMessageDBService";
+import { MessageSentEventProcessorConfig } from "../../../core/services/processors/IMessageSentEventProcessor";
+import {
+  TEST_ADDRESS_1,
+  TEST_ADDRESS_2,
+  testL1NetworkConfig,
+  testMessageSentEvent,
+  testMessageSentEventWithCallData,
+} from "../../../utils/testing/constants";
+import { TestLogger } from "../../../utils/testing/helpers";
+import { EthereumMessageDBService } from "../../persistence/EthereumMessageDBService";
+import { MessageSentEventProcessor } from "../MessageSentEventProcessor";
 
 class TestMessageSentEventProcessor extends MessageSentEventProcessor {
   constructor(

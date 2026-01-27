@@ -1,8 +1,9 @@
-import { Account, Address, Chain, Client, DeriveChain, Transport } from "viem";
 import { L1WalletClient } from "@consensys/linea-sdk-core";
+import { Account, Address, Chain, Client, DeriveChain, Transport } from "viem";
+
+import { claimOnL1, ClaimOnL1Parameters, ClaimOnL1ReturnType } from "../actions/claimOnL1";
 import { deposit, DepositParameters, DepositReturnType } from "../actions/deposit";
 import { StrictFunctionOnly } from "../types/misc";
-import { claimOnL1, ClaimOnL1Parameters, ClaimOnL1ReturnType } from "../actions/claimOnL1";
 
 export type WalletActionsL1<
   chain extends Chain | undefined = Chain | undefined,

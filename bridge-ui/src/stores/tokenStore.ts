@@ -1,5 +1,6 @@
 import { createWithEqualityFn } from "zustand/traditional";
 import { shallow } from "zustand/vanilla/shallow";
+
 import { BridgeProvider, NetworkTokens, Token } from "@/types";
 
 export const defaultTokensConfig: NetworkTokens = {

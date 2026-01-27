@@ -1,4 +1,4 @@
-import { claimOnL1, ClaimOnL1Parameters } from "./claimOnL1";
+import { getContractsAddressesByChainId } from "@consensys/linea-sdk-core";
 import {
   Client,
   Transport,
@@ -12,8 +12,10 @@ import {
   ClientChainNotConfiguredError,
 } from "viem";
 import { sendTransaction } from "viem/actions";
-import { getContractsAddressesByChainId } from "@consensys/linea-sdk-core";
 import { mainnet } from "viem/chains";
+
+import { claimOnL1, ClaimOnL1Parameters } from "./claimOnL1";
+import { getMessageProof } from "./getMessageProof";
 import {
   TEST_ADDRESS_1,
   TEST_ADDRESS_2,
@@ -23,7 +25,6 @@ import {
   TEST_TRANSACTION_HASH,
 } from "../../tests/constants";
 import { AccountNotFoundError } from "../errors/account";
-import { getMessageProof } from "./getMessageProof";
 import { computeMessageHash } from "../utils/computeMessageHash";
 
 jest.mock("viem/actions", () => ({

@@ -1,23 +1,24 @@
-import { describe, it, beforeEach } from "@jest/globals";
-import { mock } from "jest-mock-extended";
-import { Block, TransactionReceipt, TransactionRequest, TransactionResponse } from "ethers";
 import { Provider, DefaultGasProvider, Direction, wait } from "@consensys/linea-sdk";
-import { TestLogger } from "../../../utils/testing/helpers";
-import { rejectedMessageProps, testL1NetworkConfig, testMessage } from "../../../utils/testing/constants";
-import { IPoller } from "../../../core/services/pollers/IPoller";
-import { MessageSentEventPoller } from "../MessageSentEventPoller";
-import { IMessageSentEventProcessor } from "../../../core/services/processors/IMessageSentEventProcessor";
+import { describe, it, beforeEach } from "@jest/globals";
+import { Block, TransactionReceipt, TransactionRequest, TransactionResponse } from "ethers";
+import { mock } from "jest-mock-extended";
+
 import { IProvider } from "../../../core/clients/blockchain/IProvider";
-import { IMessageRepository } from "../../../core/persistence/IMessageRepository";
-import { DatabaseAccessError } from "../../../core/errors";
-import { DatabaseErrorType, DatabaseRepoName } from "../../../core/enums";
-import { EthereumMessageDBService } from "../../persistence/EthereumMessageDBService";
 import {
   DEFAULT_GAS_ESTIMATION_PERCENTILE,
   DEFAULT_INITIAL_FROM_BLOCK,
   DEFAULT_LISTENER_INTERVAL,
   DEFAULT_MAX_FEE_PER_GAS_CAP,
 } from "../../../core/constants";
+import { DatabaseErrorType, DatabaseRepoName } from "../../../core/enums";
+import { DatabaseAccessError } from "../../../core/errors";
+import { IMessageRepository } from "../../../core/persistence/IMessageRepository";
+import { IPoller } from "../../../core/services/pollers/IPoller";
+import { IMessageSentEventProcessor } from "../../../core/services/processors/IMessageSentEventProcessor";
+import { rejectedMessageProps, testL1NetworkConfig, testMessage } from "../../../utils/testing/constants";
+import { TestLogger } from "../../../utils/testing/helpers";
+import { EthereumMessageDBService } from "../../persistence/EthereumMessageDBService";
+import { MessageSentEventPoller } from "../MessageSentEventPoller";
 
 describe("TestMessageSentEventPoller", () => {
   let testMessageSentEventPoller: IPoller;

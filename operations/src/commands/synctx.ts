@@ -1,6 +1,7 @@
 import { Command, Flags } from "@oclif/core";
 import { ethers } from "ethers";
 import { readFileSync } from "fs";
+
 import {
   getPendingTransactions,
   isLocalPort,

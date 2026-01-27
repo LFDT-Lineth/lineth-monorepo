@@ -1,13 +1,16 @@
 "use client";
 
 import React, { useCallback, useMemo } from "react";
+
 import Image from "next/image";
-import styles from "./token-details.module.scss";
+import { formatUnits } from "viem";
+
 import { useTokenBalance } from "@/hooks";
 import { useFormStore, useTokenStore, useChainStore, CurrencyOption } from "@/stores";
-import { formatUnits } from "viem";
 import { CCTPMode, Token } from "@/types";
 import { formatBalance, isEth } from "@/utils";
+
+import styles from "./token-details.module.scss";
 
 interface TokenDetailsProps {
   isConnected: boolean;

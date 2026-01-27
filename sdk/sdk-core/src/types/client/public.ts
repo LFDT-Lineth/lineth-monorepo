@@ -1,4 +1,3 @@
-import { BlockTag } from "../block";
 import { GetBlockExtraDataParameters, GetBlockExtraDataReturnType } from "../actions/getBlockExtraData";
 import { GetL1ToL2MessageStatusParameters, GetL1ToL2MessageStatusReturnType } from "../actions/getL1ToL2MessageStatus";
 import { GetL2ToL1MessageStatusParameters, GetL2ToL1MessageStatusReturnType } from "../actions/getL2ToL1MessageStatus";
@@ -15,6 +14,7 @@ import {
   GetTransactionReceiptByMessageHashParameters,
   GetTransactionReceiptByMessageHashReturnType,
 } from "../actions/getTransactionReceiptByMessageHash";
+import { BlockTag } from "../block";
 
 export interface PublicClient {
   getMessageByMessageHash<T = bigint>(

@@ -1,13 +1,16 @@
 import { MouseEventHandler, useEffect, useMemo, useState } from "react";
-import { useAccount, useChainId, useSwitchChain } from "wagmi";
+
 import clsx from "clsx";
 import dynamic from "next/dynamic";
-import Button from "@/components/ui/button";
+import { useAccount, useChainId, useSwitchChain } from "wagmi";
+
 import WalletIcon from "@/assets/icons/wallet.svg";
-import styles from "./submit.module.scss";
-import { useFormStore, useChainStore } from "@/stores";
-import { useBridge } from "@/hooks";
 import ConnectButton from "@/components/connect-button";
+import Button from "@/components/ui/button";
+import { useBridge } from "@/hooks";
+import { useFormStore, useChainStore } from "@/stores";
+
+import styles from "./submit.module.scss";
 
 type Props = {
   isDestinationAddressOpen: boolean;

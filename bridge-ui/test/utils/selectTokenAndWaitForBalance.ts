@@ -1,4 +1,5 @@
 import { Page } from "@playwright/test";
+
 import { POLLING_INTERVAL, PAGE_TIMEOUT } from "../constants";
 
 export async function selectTokenAndWaitForBalance(tokenSymbol: string, page: Page, waitForBalance = true) {

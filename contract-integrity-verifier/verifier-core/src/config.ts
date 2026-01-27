@@ -8,6 +8,7 @@
 
 import { readFileSync, existsSync } from "fs";
 import { resolve, dirname, extname } from "path";
+
 import { VerifierConfig, ChainConfig, ContractConfig } from "./types";
 import { parseMarkdownConfig } from "./utils/markdown-config";
 

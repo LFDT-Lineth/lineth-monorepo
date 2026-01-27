@@ -1,6 +1,8 @@
 import { ChangeEvent, useEffect, useState } from "react";
-import styles from "./toggle-switch.module.scss";
+
 import clsx from "clsx";
+
+import styles from "./toggle-switch.module.scss";
 
 type Props = {
   checked?: boolean;

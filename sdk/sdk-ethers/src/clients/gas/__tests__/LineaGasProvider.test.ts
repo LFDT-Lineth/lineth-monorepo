@@ -1,9 +1,10 @@
 import { describe, afterEach, jest, it, expect, beforeEach } from "@jest/globals";
-import { MockProxy, mock, mockClear } from "jest-mock-extended";
-import { LineaGasProvider } from "../LineaGasProvider";
-import { generateTransactionRequest } from "../../../utils/testing/helpers";
 import { toBeHex } from "ethers";
+import { MockProxy, mock, mockClear } from "jest-mock-extended";
+
+import { generateTransactionRequest } from "../../../utils/testing/helpers";
 import { LineaProvider } from "../../providers";
+import { LineaGasProvider } from "../LineaGasProvider";
 
 const MAX_FEE_PER_GAS = 100_000_000n;
 

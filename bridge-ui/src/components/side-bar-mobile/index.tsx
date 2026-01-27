@@ -1,9 +1,11 @@
-import AppIcon from "@/assets/icons/app.svg";
-import LineaIcon from "@/assets/logos/linea.svg";
-import RewardsIcon from "@/assets/icons/reward.svg";
-import TokensIcon from "@/assets/icons/tokens.svg";
 import clsx from "clsx";
 import Link from "next/link";
+
+import AppIcon from "@/assets/icons/app.svg";
+import RewardsIcon from "@/assets/icons/reward.svg";
+import TokensIcon from "@/assets/icons/tokens.svg";
+import LineaIcon from "@/assets/logos/linea.svg";
+
 import styles from "./side-bar-mobile.module.scss";
 
 export default function SideBarMobile() {

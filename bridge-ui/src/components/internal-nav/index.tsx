@@ -1,17 +1,20 @@
 "use client";
 
-import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { motion, AnimatePresence } from "motion/react";
-import { useDevice } from "@/hooks";
+
 import clsx from "clsx";
+import { motion, AnimatePresence } from "motion/react";
+import { usePathname } from "next/navigation";
+
 import BridgeAggregatorIcon from "@/assets/icons/bridge-aggregator.svg";
-import NativeBridgeIcon from "@/assets/icons/native-bridge.svg";
 import BuyIcon from "@/assets/icons/buy.svg";
 import CentralizedExchangeIcon from "@/assets/icons/centralized-exchange.svg";
+import NativeBridgeIcon from "@/assets/icons/native-bridge.svg";
 import Modal from "@/components/modal";
-import NavItem, { NavItemProps } from "./item";
+import { useDevice } from "@/hooks";
+
 import styles from "./internal-nav.module.scss";
+import NavItem, { NavItemProps } from "./item";
 
 export const navList: NavItemProps[] = [
   {

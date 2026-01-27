@@ -1,9 +1,10 @@
-import { BridgeTransaction, BridgeTransactionType, CctpMessageReceivedAbiEvent, TransactionStatus } from "@/types";
-import { getPublicClient } from "@wagmi/core";
-import { isCctpV2BridgeMessage, isNativeBridgeMessage } from "@/utils/message";
 import { useQuery } from "@tanstack/react-query";
-import { getNativeBridgeMessageClaimedTxHash, isUndefined, isUndefinedOrEmptyString } from "@/utils";
+import { getPublicClient } from "@wagmi/core";
 import { Config, useConfig } from "wagmi";
+
+import { BridgeTransaction, BridgeTransactionType, CctpMessageReceivedAbiEvent, TransactionStatus } from "@/types";
+import { getNativeBridgeMessageClaimedTxHash, isUndefined, isUndefinedOrEmptyString } from "@/utils";
+import { isCctpV2BridgeMessage, isNativeBridgeMessage } from "@/utils/message";
 
 const useClaimingTx = (transaction: BridgeTransaction | undefined): string | undefined => {
   const wagmiConfig = useConfig();

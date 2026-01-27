@@ -1,5 +1,7 @@
 import clsx from "clsx";
+
 import Image from "@/components/ui/image";
+
 import styles from "./user-avatar.module.scss";
 
 type Props = {

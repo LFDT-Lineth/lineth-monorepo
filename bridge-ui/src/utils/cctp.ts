@@ -1,15 +1,16 @@
-import MessageTransmitterV2 from "@/abis/MessageTransmitterV2.json" assert { type: "json" };
-import { CctpAttestationMessage, CctpAttestationMessageStatus, CCTPMode, Chain, TransactionStatus } from "@/types";
 import { getPublicClient, GetPublicClientReturnType } from "@wagmi/core";
-import { fetchCctpAttestationByTxHash, reattestCctpV2PreFinalityMessage } from "@/services/cctp";
+import { Config } from "wagmi";
+
+import MessageTransmitterV2 from "@/abis/MessageTransmitterV2.json" assert { type: "json" };
 import {
   CCTP_MAX_FINALITY_THRESHOLD,
   CCTP_V2_EXPIRATION_BLOCK_LENGTH,
   CCTP_V2_EXPIRATION_BLOCK_OFFSET,
   CCTP_V2_MESSAGE_HEADER_LENGTH,
 } from "@/constants";
+import { fetchCctpAttestationByTxHash, reattestCctpV2PreFinalityMessage } from "@/services/cctp";
+import { CctpAttestationMessage, CctpAttestationMessageStatus, CCTPMode, Chain, TransactionStatus } from "@/types";
 import { isUndefined } from "@/utils/utils";
-import { Config } from "wagmi";
 
 const isCctpNonceUsed = async (
   client: GetPublicClientReturnType,

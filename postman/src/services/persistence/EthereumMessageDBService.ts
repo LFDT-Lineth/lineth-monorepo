@@ -1,11 +1,12 @@
-import { ContractTransactionResponse, TransactionRequest } from "ethers";
 import { Direction } from "@consensys/linea-sdk";
+import { ContractTransactionResponse, TransactionRequest } from "ethers";
+
+import { MessageDBService } from "./MessageDBService";
+import { IGasProvider } from "../../core/clients/blockchain/IGasProvider";
 import { Message } from "../../core/entities/Message";
 import { MessageStatus } from "../../core/enums";
-import { IMessageRepository } from "../../core/persistence/IMessageRepository";
 import { IMessageDBService } from "../../core/persistence/IMessageDBService";
-import { IGasProvider } from "../../core/clients/blockchain/IGasProvider";
-import { MessageDBService } from "./MessageDBService";
+import { IMessageRepository } from "../../core/persistence/IMessageRepository";
 
 export class EthereumMessageDBService
   extends MessageDBService

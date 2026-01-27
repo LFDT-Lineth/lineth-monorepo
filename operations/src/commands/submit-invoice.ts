@@ -1,4 +1,9 @@
+import { GetCostAndUsageCommandInput } from "@aws-sdk/client-cost-explorer";
 import { Command, Flags } from "@oclif/core";
+import { addDays } from "date-fns";
+import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
+import { Agent } from "https";
+import { Result } from "neverthrow";
 import {
   Address,
   Client,
@@ -12,25 +17,21 @@ import {
   serializeTransaction,
   TransactionSerializable,
 } from "viem";
-import { linea, lineaSepolia } from "viem/chains";
 import { getBlock } from "viem/actions";
-import { Agent } from "https";
-import { GetCostAndUsageCommandInput } from "@aws-sdk/client-cost-explorer";
-import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
-import { addDays } from "date-fns";
-import { Result } from "neverthrow";
-import { computeInvoicePeriod, InvoicePeriod } from "../utils/submit-invoice/time.js";
-import { generateQueryParameters, getDuneClient, runDuneQuery } from "../utils/common/dune.js";
-import { estimateTransactionGas, sendRawTransaction } from "../utils/common/transactions.js";
-import { getWeb3SignerSignature } from "../utils/common/signature.js";
-import { INVOICE_PROCESSED_EVENT_ABI } from "../utils/submit-invoice/abi.js";
-import { buildHttpsAgent } from "../utils/common/https-agent.js";
+import { linea, lineaSepolia } from "viem/chains";
+
 import { createAwsCostExplorerClient, flattenResultsByTime, getDailyAwsCosts } from "../utils/common/aws.js";
-import { computeSubmitInvoiceCalldata, getLastInvoiceDate } from "../utils/submit-invoice/contract.js";
-import { validateUrl } from "../utils/common/validation.js";
-import { address, hexString } from "../utils/common/custom-flags.js";
-import { awsCostsApiFilters } from "../utils/submit-invoice/custom-flags.js";
 import { fetchEthereumPrice } from "../utils/common/coingecko.js";
+import { address, hexString } from "../utils/common/custom-flags.js";
+import { generateQueryParameters, getDuneClient, runDuneQuery } from "../utils/common/dune.js";
+import { buildHttpsAgent } from "../utils/common/https-agent.js";
+import { getWeb3SignerSignature } from "../utils/common/signature.js";
+import { estimateTransactionGas, sendRawTransaction } from "../utils/common/transactions.js";
+import { validateUrl } from "../utils/common/validation.js";
+import { INVOICE_PROCESSED_EVENT_ABI } from "../utils/submit-invoice/abi.js";
+import { computeSubmitInvoiceCalldata, getLastInvoiceDate } from "../utils/submit-invoice/contract.js";
+import { awsCostsApiFilters } from "../utils/submit-invoice/custom-flags.js";
+import { computeInvoicePeriod, InvoicePeriod } from "../utils/submit-invoice/time.js";
 
 export default class SubmitInvoice extends Command {
   static examples = [

@@ -1,6 +1,7 @@
-import Link from "next/link";
-import styles from "./faq-help.module.scss";
 import clsx from "clsx";
+import Link from "next/link";
+
+import styles from "./faq-help.module.scss";
 
 export default function FaqHelp() {
   return (

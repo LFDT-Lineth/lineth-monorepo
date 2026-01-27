@@ -1,11 +1,12 @@
+import axios from "axios";
+
 import {
   IBeaconNodeAPIClient,
   PendingPartialWithdrawal,
   PendingPartialWithdrawalResponse,
 } from "../core/client/IBeaconNodeApiClient";
-import axios from "axios";
-import { ILogger } from "../logging/ILogger";
 import { IRetryService } from "../core/services/IRetryService";
+import { ILogger } from "../logging/ILogger";
 
 /**
  * Client for interacting with a Beacon Node API.

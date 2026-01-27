@@ -1,8 +1,9 @@
-import { ContractTransactionResponse } from "ethers";
 import { Direction } from "@consensys/linea-sdk";
+import { ContractTransactionResponse } from "ethers";
+
 import { Message } from "../../core/entities/Message";
-import { IMessageRepository } from "../../core/persistence/IMessageRepository";
 import { MessageStatus } from "../../core/enums";
+import { IMessageRepository } from "../../core/persistence/IMessageRepository";
 
 export abstract class MessageDBService {
   /**

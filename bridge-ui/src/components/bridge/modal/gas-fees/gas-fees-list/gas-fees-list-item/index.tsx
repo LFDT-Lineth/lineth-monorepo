@@ -1,7 +1,9 @@
 import { useMemo } from "react";
-import styles from "./gas-fees-list-item.module.scss";
-import { CurrencyOption } from "@/stores";
+
 import { useFormattedDigit } from "@/hooks/useFormattedDigit";
+import { CurrencyOption } from "@/stores";
+
+import styles from "./gas-fees-list-item.module.scss";
 
 type Props = {
   name: string;

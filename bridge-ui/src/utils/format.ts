@@ -1,6 +1,7 @@
-import { fromUnixTime } from "date-fns/fromUnixTime";
 import { formatDate } from "date-fns/format";
+import { fromUnixTime } from "date-fns/fromUnixTime";
 import { Address, getAddress } from "viem";
+
 import { isUndefinedOrEmptyString } from "@/utils";
 
 /**

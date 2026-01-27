@@ -1,7 +1,10 @@
 import { useState } from "react";
+
 import dynamic from "next/dynamic";
-import styles from "./manual-claim.module.scss";
+
 import AttentionIcon from "@/assets/icons/attention.svg";
+
+import styles from "./manual-claim.module.scss";
 
 const ManualClaimModal = dynamic(() => import("@/components/bridge/modal/manual-claim"), {
   ssr: false,

@@ -1,5 +1,6 @@
+import { L1PublicClient } from "@consensys/linea-sdk-core";
 import { Abi, Account, Address, BlockNumber, BlockTag, Chain, Client, ContractEventName, Transport } from "viem";
-import { getMessageProof, GetMessageProofParameters, GetMessageProofReturnType } from "../actions/getMessageProof";
+
 import {
   getL2ToL1MessageStatus,
   GetL2ToL1MessageStatusParameters,
@@ -10,6 +11,7 @@ import {
   GetMessageByMessageHashParameters,
   GetMessageByMessageHashReturnType,
 } from "../actions/getMessageByMessageHash";
+import { getMessageProof, GetMessageProofParameters, GetMessageProofReturnType } from "../actions/getMessageProof";
 import {
   getMessagesByTransactionHash,
   GetMessagesByTransactionHashParameters,
@@ -20,7 +22,6 @@ import {
   GetTransactionReceiptByMessageHashParameters,
   GetTransactionReceiptByMessageHashReturnType,
 } from "../actions/getTransactionReceiptByMessageHash";
-import { L1PublicClient } from "@consensys/linea-sdk-core";
 import { StrictFunctionOnly } from "../types/misc";
 
 export type PublicActionsL1<

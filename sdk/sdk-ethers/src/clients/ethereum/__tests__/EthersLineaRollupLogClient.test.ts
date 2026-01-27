@@ -1,6 +1,7 @@
 import { describe, afterEach, it, expect, beforeEach } from "@jest/globals";
 import { MockProxy, mock, mockClear } from "jest-mock-extended";
-import { EthersLineaRollupLogClient } from "../EthersLineaRollupLogClient";
+
+import { LineaRollup, LineaRollup__factory } from "../../../contracts/typechain";
 import { TEST_CONTRACT_ADDRESS_1 } from "../../../utils/testing/constants/common";
 import {
   testL2MessagingBlockAnchoredEvent,
@@ -10,9 +11,9 @@ import {
   testMessageSentEvent,
   testMessageSentEventLog,
 } from "../../../utils/testing/constants/events";
-import { LineaRollup, LineaRollup__factory } from "../../../contracts/typechain";
 import { mockProperty } from "../../../utils/testing/helpers";
 import { Provider } from "../../providers";
+import { EthersLineaRollupLogClient } from "../EthersLineaRollupLogClient";
 
 describe("TestEthersLineaRollupLogClient", () => {
   let providerMock: MockProxy<Provider>;

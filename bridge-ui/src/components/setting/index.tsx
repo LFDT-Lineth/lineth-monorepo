@@ -1,14 +1,17 @@
 "use client";
-import styles from "./setting.module.scss";
-import clsx from "clsx";
-import SettingIcon from "@/assets/icons/setting.svg";
-import ToggleSwitch from "@/components/ui/toggle-switch";
 import { HTMLAttributes, useEffect, useRef, useState } from "react";
+
+import clsx from "clsx";
+
+import SettingIcon from "@/assets/icons/setting.svg";
 import CurrencyDropdown from "@/components/bridge/currency-dropdown";
-import { useConfigStore, useChainStore, useFormStore } from "@/stores";
-import { useChains } from "@/hooks";
-import { ChainLayer } from "@/types";
+import ToggleSwitch from "@/components/ui/toggle-switch";
 import { config } from "@/config";
+import { useChains } from "@/hooks";
+import { useConfigStore, useChainStore, useFormStore } from "@/stores";
+import { ChainLayer } from "@/types";
+
+import styles from "./setting.module.scss";
 
 interface SettingProps extends HTMLAttributes<HTMLDivElement> {
   "data-testid": string;

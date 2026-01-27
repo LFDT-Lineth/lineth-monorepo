@@ -1,5 +1,5 @@
+import { OnChainMessageStatus } from "@consensys/linea-sdk";
 import { describe, it, beforeEach } from "@jest/globals";
-import { mock } from "jest-mock-extended";
 import {
   Block,
   ContractTransactionResponse,
@@ -10,15 +10,16 @@ import {
   TransactionRequest,
   TransactionResponse,
 } from "ethers";
-import { OnChainMessageStatus } from "@consensys/linea-sdk";
-import { TestLogger } from "../../../utils/testing/helpers";
-import { IMessageAnchoringProcessor } from "../../../core/services/processors/IMessageAnchoringProcessor";
-import { MessageStatus } from "../../../core/enums";
-import { testL1NetworkConfig, testL2NetworkConfig, testMessage } from "../../../utils/testing/constants";
-import { MessageAnchoringProcessor } from "../MessageAnchoringProcessor";
-import { IMessageServiceContract } from "../../../core/services/contracts/IMessageServiceContract";
-import { EthereumMessageDBService } from "../../persistence/EthereumMessageDBService";
+import { mock } from "jest-mock-extended";
+
 import { IProvider } from "../../../core/clients/blockchain/IProvider";
+import { MessageStatus } from "../../../core/enums";
+import { IMessageServiceContract } from "../../../core/services/contracts/IMessageServiceContract";
+import { IMessageAnchoringProcessor } from "../../../core/services/processors/IMessageAnchoringProcessor";
+import { testL1NetworkConfig, testL2NetworkConfig, testMessage } from "../../../utils/testing/constants";
+import { TestLogger } from "../../../utils/testing/helpers";
+import { EthereumMessageDBService } from "../../persistence/EthereumMessageDBService";
+import { MessageAnchoringProcessor } from "../MessageAnchoringProcessor";
 
 describe("TestMessageAnchoringProcessor", () => {
   let anchoringProcessor: IMessageAnchoringProcessor;

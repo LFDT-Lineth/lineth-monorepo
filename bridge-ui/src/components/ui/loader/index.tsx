@@ -1,4 +1,5 @@
 import { ComponentPropsWithoutRef } from "react";
+
 import clsx from "clsx";
 
 import styles from "./loader.module.scss";

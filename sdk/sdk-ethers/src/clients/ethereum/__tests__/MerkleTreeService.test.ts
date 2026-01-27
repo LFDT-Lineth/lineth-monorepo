@@ -1,6 +1,8 @@
 import { describe, beforeEach } from "@jest/globals";
 import { Wallet } from "ethers";
 import { MockProxy, mock } from "jest-mock-extended";
+
+import { LineaRollup, LineaRollup__factory } from "../../../contracts/typechain";
 import {
   TEST_CONTRACT_ADDRESS_1,
   TEST_CONTRACT_ADDRESS_2,
@@ -15,11 +17,10 @@ import {
   generateLineaRollupClient,
   generateTransactionReceiptWithLogs,
 } from "../../../utils/testing/helpers";
-import { LineaRollup, LineaRollup__factory } from "../../../contracts/typechain";
 import { EthersL2MessageServiceLogClient } from "../../linea/EthersL2MessageServiceLogClient";
+import { LineaProvider, Provider } from "../../providers";
 import { EthersLineaRollupLogClient } from "../EthersLineaRollupLogClient";
 import { MerkleTreeService } from "../MerkleTreeService";
-import { LineaProvider, Provider } from "../../providers";
 
 describe("MerkleTreeService", () => {
   let providerMock: MockProxy<Provider>;

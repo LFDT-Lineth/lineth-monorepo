@@ -1,7 +1,8 @@
-import { PostmanMetricsService } from "../PostmanMetricsService";
-import { ITransactionMetricsUpdater, LineaPostmanMetrics } from "../../../../../core/metrics";
-import { TransactionMetricsUpdater } from "../TransactionMetricsUpdater";
 import { IMetricsService } from "@consensys/linea-shared-utils";
+
+import { ITransactionMetricsUpdater, LineaPostmanMetrics } from "../../../../../core/metrics";
+import { PostmanMetricsService } from "../PostmanMetricsService";
+import { TransactionMetricsUpdater } from "../TransactionMetricsUpdater";
 
 describe("TransactionMetricsUpdater", () => {
   let transactionMetricsUpdater: ITransactionMetricsUpdater;

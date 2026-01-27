@@ -1,6 +1,7 @@
+import { createJSONStorage, persist } from "zustand/middleware";
 import { createWithEqualityFn } from "zustand/traditional";
 import { shallow } from "zustand/vanilla/shallow";
-import { createJSONStorage, persist } from "zustand/middleware";
+
 import { config } from "@/config";
 import { BridgeTransaction, TransactionStatus } from "@/types";
 import { getCompleteTxStoreKeyForTx } from "@/utils/history";

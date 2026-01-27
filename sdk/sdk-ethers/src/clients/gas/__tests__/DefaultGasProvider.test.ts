@@ -1,9 +1,10 @@
 import { describe, afterEach, jest, it, expect, beforeEach } from "@jest/globals";
 import { MockProxy, mock, mockClear } from "jest-mock-extended";
-import { DefaultGasProvider } from "../DefaultGasProvider";
-import { Provider } from "../../providers/provider";
+
 import { DEFAULT_GAS_ESTIMATION_PERCENTILE } from "../../../core/constants";
 import { makeBaseError } from "../../../core/errors";
+import { Provider } from "../../providers/provider";
+import { DefaultGasProvider } from "../DefaultGasProvider";
 
 const MAX_FEE_PER_GAS = 100_000_000n;
 

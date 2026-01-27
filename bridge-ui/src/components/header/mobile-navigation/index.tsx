@@ -1,13 +1,16 @@
 "use client";
-import Link from "next/link";
-import { LinkBlock } from "@/types/index";
 import { useEffect, useState } from "react";
-import Image from "@/components/ui/image";
+
 import clsx from "clsx";
-import styles from "./mobile-navigation.module.scss";
+import Link from "next/link";
+
 import UnionIcon from "@/assets/icons/union.svg";
 import LineaLogo from "@/assets/logos/linea.svg";
 import ListYourApp from "@/components/list-your-app";
+import Image from "@/components/ui/image";
+import { LinkBlock } from "@/types/index";
+
+import styles from "./mobile-navigation.module.scss";
 
 type Props = {
   menus: LinkBlock[];

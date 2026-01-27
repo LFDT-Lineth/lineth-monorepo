@@ -1,5 +1,5 @@
-import { create } from "zustand";
 import { createSelectorHooks, ZustandHookSelectors } from "auto-zustand-selectors-hook";
+import { create } from "zustand";
 
 export type NativeBridgeNavigationState = {
   isBridgeOpen: boolean;

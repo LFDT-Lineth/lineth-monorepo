@@ -6,14 +6,15 @@ import {
   TransactionRequest,
   TransactionResponse,
 } from "ethers";
+
+import { ILineaRollupClient } from "../core/clients/blockchain/ethereum/ILineaRollupClient";
+import { IEthereumGasProvider } from "../core/clients/blockchain/IGasProvider";
+import { PROFIT_MARGIN_MULTIPLIER } from "../core/constants";
 import { Message } from "../core/entities/Message";
 import {
   ITransactionValidationService,
   TransactionValidationServiceConfig,
 } from "../core/services/ITransactionValidationService";
-import { PROFIT_MARGIN_MULTIPLIER } from "../core/constants";
-import { ILineaRollupClient } from "../core/clients/blockchain/ethereum/ILineaRollupClient";
-import { IEthereumGasProvider } from "../core/clients/blockchain/IGasProvider";
 import { IPostmanLogger } from "../utils/IPostmanLogger";
 
 export class EthereumTransactionValidationService implements ITransactionValidationService {

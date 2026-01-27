@@ -1,8 +1,9 @@
-import { walletActionsL2 } from "./walletL2";
 import { Client, Transport, Chain, Account, Address, Hex } from "viem";
-import { withdraw } from "../actions/withdraw";
-import { claimOnL2 } from "../actions/claimOnL2";
+
+import { walletActionsL2 } from "./walletL2";
 import { TEST_ADDRESS_2, TEST_CONTRACT_ADDRESS_2 } from "../../tests/constants";
+import { claimOnL2 } from "../actions/claimOnL2";
+import { withdraw } from "../actions/withdraw";
 
 jest.mock("../actions/withdraw", () => ({ withdraw: jest.fn() }));
 jest.mock("../actions/claimOnL2", () => ({ claimOnL2: jest.fn() }));

@@ -9,15 +9,16 @@ import {
   TransactionRequest,
   TransactionResponse,
 } from "ethers";
-import { BaseError } from "../core/errors";
+
+import { IL2MessageServiceClient } from "../core/clients/blockchain/linea/IL2MessageServiceClient";
+import { ILineaProvider } from "../core/clients/blockchain/linea/ILineaProvider";
+import { MINIMUM_MARGIN, PROFIT_MARGIN_MULTIPLIER } from "../core/constants";
 import { Message } from "../core/entities/Message";
+import { BaseError } from "../core/errors";
 import {
   ITransactionValidationService,
   TransactionValidationServiceConfig,
 } from "../core/services/ITransactionValidationService";
-import { MINIMUM_MARGIN, PROFIT_MARGIN_MULTIPLIER } from "../core/constants";
-import { IL2MessageServiceClient } from "../core/clients/blockchain/linea/IL2MessageServiceClient";
-import { ILineaProvider } from "../core/clients/blockchain/linea/ILineaProvider";
 import { IPostmanLogger } from "../utils/IPostmanLogger";
 
 export class LineaTransactionValidationService implements ITransactionValidationService {

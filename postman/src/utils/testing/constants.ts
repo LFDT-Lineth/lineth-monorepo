@@ -1,7 +1,6 @@
 import { Direction, MessageSent } from "@consensys/linea-sdk";
+
 import { L1NetworkConfig, L2NetworkConfig } from "../../application/postman/app/config/config";
-import { Message, MessageProps } from "../../core/entities/Message";
-import { MessageStatus } from "../../core/enums";
 import {
   DEFAULT_ENABLE_POSTMAN_SPONSORING,
   DEFAULT_MAX_POSTMAN_SPONSOR_GAS_LIMIT,
@@ -18,6 +17,8 @@ import {
   ZERO_ADDRESS,
   ZERO_HASH,
 } from "../../core/constants";
+import { Message, MessageProps } from "../../core/entities/Message";
+import { MessageStatus } from "../../core/enums";
 
 export const TEST_L1_SIGNER_PRIVATE_KEY = "0x0000000000000000000000000000000000000000000000000000000000000001";
 export const TEST_L2_SIGNER_PRIVATE_KEY = "0x0000000000000000000000000000000000000000000000000000000000000002";

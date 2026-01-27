@@ -1,4 +1,5 @@
 import { getAddress, zeroAddress } from "viem";
+
 import { configSchema, Config } from "./config.schema";
 
 export const config: Config = {

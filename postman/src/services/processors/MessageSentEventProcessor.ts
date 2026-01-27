@@ -1,3 +1,5 @@
+import { serialize, isEmptyBytes, MessageSent } from "@consensys/linea-sdk";
+import { ILogger } from "@consensys/linea-shared-utils";
 import {
   Block,
   ContractTransactionResponse,
@@ -9,18 +11,17 @@ import {
   TransactionResponse,
 } from "ethers";
 import { compileExpression, useDotAccessOperator } from "filtrex";
-import { serialize, isEmptyBytes, MessageSent } from "@consensys/linea-sdk";
+
 import { ILineaRollupLogClient } from "../../core/clients/blockchain/ethereum/ILineaRollupLogClient";
 import { IProvider } from "../../core/clients/blockchain/IProvider";
-import { MessageFactory } from "../../core/entities/MessageFactory";
-import { ILogger } from "@consensys/linea-shared-utils";
-import { MessageStatus } from "../../core/enums";
 import { IL2MessageServiceLogClient } from "../../core/clients/blockchain/linea/IL2MessageServiceLogClient";
+import { MessageFactory } from "../../core/entities/MessageFactory";
+import { MessageStatus } from "../../core/enums";
+import { IMessageDBService } from "../../core/persistence/IMessageDBService";
 import {
   IMessageSentEventProcessor,
   MessageSentEventProcessorConfig,
 } from "../../core/services/processors/IMessageSentEventProcessor";
-import { IMessageDBService } from "../../core/persistence/IMessageDBService";
 
 export class MessageSentEventProcessor implements IMessageSentEventProcessor {
   private readonly maxBlocksToFetchLogs: number;

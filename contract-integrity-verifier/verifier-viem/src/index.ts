@@ -21,6 +21,7 @@ import {
   type Hex,
   type Chain,
 } from "viem";
+
 import type { Web3Adapter, Web3AdapterOptions, AbiElement } from "@consensys/linea-contract-integrity-verifier";
 
 /**

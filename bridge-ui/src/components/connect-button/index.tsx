@@ -1,9 +1,11 @@
 "use client";
 
-import clsx from "clsx";
 import { useWeb3Auth, useWeb3AuthConnect } from "@web3auth/modal/react";
-import styles from "./connect-button.module.scss";
+import clsx from "clsx";
+
 import Button from "@/components/ui/button";
+
+import styles from "./connect-button.module.scss";
 
 type ConnectButtonProps = {
   text: string;

@@ -1,9 +1,10 @@
-import { getL2ToL1MessageStatus } from "./getL2ToL1MessageStatus";
+import { OnChainMessageStatus } from "@consensys/linea-sdk-core";
 import { Client, Transport, Chain, Account } from "viem";
 import { getContractEvents, readContract } from "viem/actions";
-import { getMessageSentEvents } from "./getMessageSentEvents";
 import { linea, mainnet } from "viem/chains";
-import { OnChainMessageStatus } from "@consensys/linea-sdk-core";
+
+import { getL2ToL1MessageStatus } from "./getL2ToL1MessageStatus";
+import { getMessageSentEvents } from "./getMessageSentEvents";
 import { TEST_MESSAGE_HASH } from "../../tests/constants";
 import { generateL2MessagingBlockAnchoredLog, generateMessageSentLog } from "../../tests/utils";
 

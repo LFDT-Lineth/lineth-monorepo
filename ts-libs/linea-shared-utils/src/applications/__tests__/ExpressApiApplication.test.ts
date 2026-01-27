@@ -1,8 +1,9 @@
-import { mock, MockProxy } from "jest-mock-extended";
-import { ExpressApiApplication } from "../ExpressApiApplication";
-import { Request, Response } from "express";
 import { ILogger, IMetricsService } from "@consensys/linea-shared-utils";
+import { Request, Response } from "express";
+import { mock, MockProxy } from "jest-mock-extended";
 import { Registry } from "prom-client";
+
+import { ExpressApiApplication } from "../ExpressApiApplication";
 
 enum ExampleMetrics {
   ExampleMetrics = "ExampleMetrics",

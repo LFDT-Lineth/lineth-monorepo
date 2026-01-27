@@ -1,6 +1,7 @@
-import { Hex } from "../types/misc";
-import { SparseMerkleTree } from "./smt";
 import { encodePacked, keccak256 } from "viem";
+
+import { SparseMerkleTree } from "./smt";
+import { Hex } from "../types/misc";
 
 const hash = (left: Hex, right: Hex): Hex => keccak256(encodePacked(["bytes32", "bytes32"], [left, right]));
 

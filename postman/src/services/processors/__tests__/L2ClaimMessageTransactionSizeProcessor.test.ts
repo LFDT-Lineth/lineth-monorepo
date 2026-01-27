@@ -1,5 +1,5 @@
+import { Direction, makeBaseError } from "@consensys/linea-sdk";
 import { describe, it, beforeEach } from "@jest/globals";
-import { mock } from "jest-mock-extended";
 import {
   ContractTransactionResponse,
   ErrorDescription,
@@ -9,14 +9,15 @@ import {
   TransactionReceipt,
   TransactionResponse,
 } from "ethers";
-import { Direction, makeBaseError } from "@consensys/linea-sdk";
-import { TestLogger } from "../../../utils/testing/helpers";
+import { mock } from "jest-mock-extended";
+
+import { IL2MessageServiceClient } from "../../../core/clients/blockchain/linea/IL2MessageServiceClient";
 import { MessageStatus } from "../../../core/enums";
 import { testL1NetworkConfig, testMessage, DEFAULT_MAX_FEE_PER_GAS } from "../../../utils/testing/constants";
+import { TestLogger } from "../../../utils/testing/helpers";
+import { L2ClaimTransactionSizeCalculator } from "../../L2ClaimTransactionSizeCalculator";
 import { EthereumMessageDBService } from "../../persistence/EthereumMessageDBService";
 import { L2ClaimMessageTransactionSizeProcessor } from "../L2ClaimMessageTransactionSizeProcessor";
-import { L2ClaimTransactionSizeCalculator } from "../../L2ClaimTransactionSizeCalculator";
-import { IL2MessageServiceClient } from "../../../core/clients/blockchain/linea/IL2MessageServiceClient";
 
 describe("L2ClaimMessageTransactionSizeProcessor", () => {
   let transactionSizeProcessor: L2ClaimMessageTransactionSizeProcessor;

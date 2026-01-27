@@ -1,4 +1,5 @@
 import { testWithSynpress } from "@synthetixio/synpress";
+
 import { test as advancedFixtures } from "../advancedFixtures";
 import { TEST_URL, WEI_AMOUNT, ETH_SYMBOL, LOCAL_L2_NETWORK, L1_ACCOUNT_METAMASK_NAME } from "../constants";
 

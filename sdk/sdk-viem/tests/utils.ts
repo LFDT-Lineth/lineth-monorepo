@@ -1,5 +1,6 @@
-import { Block, Hex, Log, padHex, toHex, TransactionReceipt } from "viem";
 import { Message } from "@consensys/linea-sdk-core";
+import { Block, Hex, Log, padHex, toHex, TransactionReceipt } from "viem";
+
 import {
   L2_MERKLE_TREE_ADDED_EVENT_SIGNATURE,
   L2_MESSAGING_BLOCK_ANCHORED_EVENT_SIGNATURE,

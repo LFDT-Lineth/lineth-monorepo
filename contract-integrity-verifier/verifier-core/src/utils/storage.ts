@@ -7,7 +7,7 @@
 
 import { readFileSync } from "fs";
 import { resolve } from "path";
-import type { Web3Adapter } from "../adapter";
+
 import {
   StorageSchema,
   StorageStructDef,
@@ -20,6 +20,8 @@ import {
   NamespaceConfig,
   NamespaceResult,
 } from "../types";
+
+import type { Web3Adapter } from "../adapter";
 
 // ============================================================================
 // ERC-7201 Slot Calculation

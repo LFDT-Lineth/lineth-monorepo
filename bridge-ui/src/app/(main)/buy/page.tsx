@@ -1,8 +1,9 @@
 "use client";
 
-import OnRamperWidget from "@/components/onramper";
-import styles from "./page.module.scss";
 import FaqHelp from "@/components/bridge/faq-help";
+import OnRamperWidget from "@/components/onramper";
+
+import styles from "./page.module.scss";
 
 export default function Page() {
   return (

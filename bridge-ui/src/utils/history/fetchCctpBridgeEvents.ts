@@ -1,6 +1,10 @@
-import { Address } from "viem";
 import { getPublicClient } from "@wagmi/core";
+import { Address } from "viem";
+import { Config } from "wagmi";
+
+import { HistoryActionsForCompleteTxCaching } from "@/stores";
 import { BridgeTransaction, BridgeTransactionType, CctpDepositForBurnAbiEvent, Chain, Token } from "@/types";
+import { DepositForBurnLogEvent } from "@/types/events";
 import {
   getCctpMessageByTxHash,
   getCctpModeFromFinalityThreshold,
@@ -8,12 +12,10 @@ import {
   isCctp,
   isUndefined,
 } from "@/utils";
-import { DepositForBurnLogEvent } from "@/types/events";
-import { HistoryActionsForCompleteTxCaching } from "@/stores";
+
 import { isBlockTooOld } from "./isBlockTooOld";
 import { restoreFromTransactionCache } from "./restoreFromTransactionCache";
 import { saveToTransactionCache } from "./saveToTransactionCache";
-import { Config } from "wagmi";
 
 export async function fetchCctpBridgeEvents(
   historyStoreActions: HistoryActionsForCompleteTxCaching,

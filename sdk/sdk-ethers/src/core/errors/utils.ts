@@ -1,4 +1,5 @@
 import { isNativeError } from "util/types";
+
 import { BaseError, InferErrorType } from "./BaseError";
 
 /**

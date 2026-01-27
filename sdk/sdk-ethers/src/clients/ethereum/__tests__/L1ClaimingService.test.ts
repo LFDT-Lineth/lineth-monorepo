@@ -1,19 +1,8 @@
 import { describe, it } from "@jest/globals";
 import { ContractTransactionResponse, ethers } from "ethers";
 import { MockProxy, mock, mockClear } from "jest-mock-extended";
-import { L1ClaimingService } from "../L1ClaimingService";
-import { LineaRollupClient } from "../LineaRollupClient";
-import { L2MessageServiceClient } from "../../linea";
-import {
-  generateHexString,
-  generateL2MerkleTreeAddedLog,
-  generateL2MessageServiceClient,
-  generateL2MessagingBlockAnchoredLog,
-  generateLineaRollupClient,
-  generateMessage,
-  generateTransactionReceipt,
-  generateTransactionResponse,
-} from "../../../utils/testing/helpers";
+
+import { ZERO_ADDRESS } from "../../../core/constants";
 import {
   TEST_CONTRACT_ADDRESS_1,
   TEST_CONTRACT_ADDRESS_2,
@@ -26,10 +15,22 @@ import {
   testMessageSentEvent,
   testServiceVersionMigratedEvent,
 } from "../../../utils/testing/constants/events";
+import {
+  generateHexString,
+  generateL2MerkleTreeAddedLog,
+  generateL2MessageServiceClient,
+  generateL2MessagingBlockAnchoredLog,
+  generateLineaRollupClient,
+  generateMessage,
+  generateTransactionReceipt,
+  generateTransactionResponse,
+} from "../../../utils/testing/helpers";
+import { L2MessageServiceClient } from "../../linea";
 import { EthersL2MessageServiceLogClient } from "../../linea/EthersL2MessageServiceLogClient";
-import { EthersLineaRollupLogClient } from "../EthersLineaRollupLogClient";
-import { ZERO_ADDRESS } from "../../../core/constants";
 import { LineaProvider, Provider } from "../../providers";
+import { EthersLineaRollupLogClient } from "../EthersLineaRollupLogClient";
+import { L1ClaimingService } from "../L1ClaimingService";
+import { LineaRollupClient } from "../LineaRollupClient";
 
 describe("L1ClaimingService", () => {
   let l1Provider: MockProxy<Provider>;

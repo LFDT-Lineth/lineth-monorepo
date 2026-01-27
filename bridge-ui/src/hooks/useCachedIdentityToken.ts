@@ -1,5 +1,6 @@
-import { useIdentityToken } from "@web3auth/modal/react";
 import { useCallback } from "react";
+
+import { useIdentityToken } from "@web3auth/modal/react";
 
 /**
  * Global cache for Web3Auth identity token (shared across all components)

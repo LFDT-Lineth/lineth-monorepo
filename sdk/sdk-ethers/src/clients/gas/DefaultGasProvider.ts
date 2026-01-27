@@ -1,8 +1,9 @@
 import { Block, TransactionReceipt, TransactionRequest, TransactionResponse } from "ethers";
+
 import { DefaultGasProviderConfig, FeeHistory, GasFees, IEthereumGasProvider } from "../../core/clients/IGasProvider";
 import { IProvider } from "../../core/clients/IProvider";
-import { BrowserProvider, LineaBrowserProvider, LineaProvider, Provider } from "../providers";
 import { makeBaseError } from "../../core/errors/utils";
+import { BrowserProvider, LineaBrowserProvider, LineaProvider, Provider } from "../providers";
 
 export class DefaultGasProvider implements IEthereumGasProvider<TransactionRequest> {
   private gasFeesCache: GasFees;

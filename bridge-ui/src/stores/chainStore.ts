@@ -1,10 +1,11 @@
-import { create } from "zustand";
 import { createSelectorHooks, ZustandHookSelectors } from "auto-zustand-selectors-hook";
 import { linea, lineaSepolia, mainnet, sepolia } from "viem/chains";
+import { create } from "zustand";
+
+import { config } from "@/config";
+import { localL1Network, localL2Network } from "@/constants";
 import { Chain } from "@/types";
 import { generateChain, generateChains } from "@/utils";
-import { localL1Network, localL2Network } from "@/constants";
-import { config } from "@/config";
 
 export type ChainState = {
   chains: Chain[];

@@ -5,11 +5,12 @@ PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 \
 pnpm --filter @consensys/linea-shared-utils exec tsx scripts/test-ethereum-mainnet-client-library-viem-signer.ts
 
  */
+import { Hex } from "viem";
+import { anvil } from "viem/chains";
+
 import { ViemBlockchainClientAdapter } from "../src/clients/ViemBlockchainClientAdapter";
 import { ViemWalletSignerClientAdapter } from "../src/clients/ViemWalletSignerClientAdapter";
 import { WinstonLogger } from "../src/logging/WinstonLogger";
-import { Hex } from "viem";
-import { anvil } from "viem/chains";
 
 async function main() {
   const requiredEnvVars = ["RPC_URL", "PRIVATE_KEY"];

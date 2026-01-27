@@ -1,10 +1,5 @@
-import { describe, it, beforeEach } from "@jest/globals";
-import { mock } from "jest-mock-extended";
 import { Direction, OnChainMessageStatus, testingHelpers } from "@consensys/linea-sdk";
-import { TestLogger } from "../../../utils/testing/helpers";
-import { MessageStatus } from "../../../core/enums";
-import { testL2NetworkConfig, testPendingMessage, testPendingMessage2 } from "../../../utils/testing/constants";
-import { IMessageServiceContract } from "../../../core/services/contracts/IMessageServiceContract";
+import { describe, it, beforeEach } from "@jest/globals";
 import {
   Block,
   ContractTransactionResponse,
@@ -15,13 +10,19 @@ import {
   TransactionRequest,
   TransactionResponse,
 } from "ethers";
-import { IGasProvider } from "../../../core/clients/blockchain/IGasProvider";
-import { Message } from "../../../core/entities/Message";
-import { IMessageClaimingPersister } from "../../../core/services/processors/IMessageClaimingPersister";
-import { MessageClaimingPersister } from "../MessageClaimingPersister";
-import { EthereumMessageDBService } from "../../persistence/EthereumMessageDBService";
-import { IProvider } from "../../../core/clients/blockchain/IProvider";
+import { mock } from "jest-mock-extended";
+
 import { ISponsorshipMetricsUpdater, ITransactionMetricsUpdater } from "../../../../src/core/metrics";
+import { IGasProvider } from "../../../core/clients/blockchain/IGasProvider";
+import { IProvider } from "../../../core/clients/blockchain/IProvider";
+import { Message } from "../../../core/entities/Message";
+import { MessageStatus } from "../../../core/enums";
+import { IMessageServiceContract } from "../../../core/services/contracts/IMessageServiceContract";
+import { IMessageClaimingPersister } from "../../../core/services/processors/IMessageClaimingPersister";
+import { testL2NetworkConfig, testPendingMessage, testPendingMessage2 } from "../../../utils/testing/constants";
+import { TestLogger } from "../../../utils/testing/helpers";
+import { EthereumMessageDBService } from "../../persistence/EthereumMessageDBService";
+import { MessageClaimingPersister } from "../MessageClaimingPersister";
 
 describe("TestMessageClaimingPersister ", () => {
   let messageClaimingPersister: IMessageClaimingPersister;

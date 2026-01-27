@@ -5,7 +5,7 @@
  * against local artifact files.
  */
 
-import type { Web3Adapter } from "./adapter";
+import { EIP1967_IMPLEMENTATION_SLOT } from "./constants";
 import {
   VerifierConfig,
   ContractConfig,
@@ -17,8 +17,8 @@ import {
   ViewCallResult,
   AbiElement,
 } from "./types";
-import { compareBytecode, extractSelectorsFromBytecode, validateImmutablesAgainstArgs } from "./utils/bytecode";
 import { loadArtifact, extractSelectorsFromArtifact, compareSelectors } from "./utils/abi";
+import { compareBytecode, extractSelectorsFromBytecode, validateImmutablesAgainstArgs } from "./utils/bytecode";
 import {
   calculateErc7201BaseSlot,
   verifySlot,
@@ -26,7 +26,8 @@ import {
   verifyStoragePath,
   loadStorageSchema,
 } from "./utils/storage";
-import { EIP1967_IMPLEMENTATION_SLOT } from "./constants";
+
+import type { Web3Adapter } from "./adapter";
 
 /**
  * Options for verification operations.

@@ -38,9 +38,10 @@ pnpm --filter @consensys/linea-shared-utils exec tsx scripts/test-web3-signer-cl
 //   TX_DATA=0x
  */
 
+import { Address, Hex, TransactionSerializableEIP1559, serializeTransaction } from "viem";
+
 import { Web3SignerClientAdapter } from "../src/clients/Web3SignerClientAdapter";
 import { WinstonLogger } from "../src/logging/WinstonLogger";
-import { Address, Hex, TransactionSerializableEIP1559, serializeTransaction } from "viem";
 
 const REQUIRED_ENV_VARS = [
   "WEB3_SIGNER_URL",

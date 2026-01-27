@@ -1,4 +1,4 @@
-import { deposit, computeMessageStorageSlot, createStateOverride } from "./deposit";
+import { getContractsAddressesByChainId } from "@consensys/linea-sdk-core";
 import {
   Client,
   Transport,
@@ -23,12 +23,13 @@ import {
   waitForTransactionReceipt,
   getBlock,
 } from "viem/actions";
-import { getContractsAddressesByChainId } from "@consensys/linea-sdk-core";
 import { linea, mainnet } from "viem/chains";
+
+import { deposit, computeMessageStorageSlot, createStateOverride } from "./deposit";
 import { TEST_ADDRESS_1, TEST_ADDRESS_2, TEST_TRANSACTION_HASH } from "../../tests/constants";
 import { generateBlock, generateTransactionReceipt } from "../../tests/utils";
-import { computeMessageHash } from "../utils/computeMessageHash";
 import { AccountNotFoundError } from "../errors/account";
+import { computeMessageHash } from "../utils/computeMessageHash";
 
 jest.mock("viem/actions", () => ({
   readContract: jest.fn(),

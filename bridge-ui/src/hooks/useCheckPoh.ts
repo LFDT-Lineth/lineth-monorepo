@@ -1,6 +1,8 @@
-import { checkPoh } from "@/lib/linea-poh/api";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
+
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+
+import { checkPoh } from "@/lib/linea-poh/api";
 
 export const useCheckPoh = (address: string) => {
   const { data, isLoading, refetch } = useQuery({

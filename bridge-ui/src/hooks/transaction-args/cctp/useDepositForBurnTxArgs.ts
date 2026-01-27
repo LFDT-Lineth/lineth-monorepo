@@ -1,11 +1,14 @@
 import { useMemo } from "react";
+
 import { encodeFunctionData, padHex, zeroHash } from "viem";
-import { useFormStore, useChainStore } from "@/stores";
-import { isCctp } from "@/utils/tokens";
-import { useCctpFee, useCctpDestinationDomain } from "./useCctpUtilHooks";
+
 import { CCTP_MAX_FINALITY_THRESHOLD, CCTP_MIN_FINALITY_THRESHOLD } from "@/constants";
-import { isNull, isUndefined, isUndefinedOrEmptyString } from "@/utils";
+import { useFormStore, useChainStore } from "@/stores";
 import { CCTPMode } from "@/types";
+import { isNull, isUndefined, isUndefinedOrEmptyString } from "@/utils";
+import { isCctp } from "@/utils/tokens";
+
+import { useCctpFee, useCctpDestinationDomain } from "./useCctpUtilHooks";
 
 type UseDepositForBurnTxArgs = {
   allowance?: bigint;

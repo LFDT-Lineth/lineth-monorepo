@@ -1,5 +1,6 @@
-import { useAccount, useReadContract } from "wagmi";
 import { erc20Abi } from "viem";
+import { useAccount, useReadContract } from "wagmi";
+
 import { useFormStore, useChainStore } from "@/stores";
 import { isEth } from "@/utils";
 import { isCctp } from "@/utils/tokens";

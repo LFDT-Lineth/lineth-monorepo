@@ -1,4 +1,4 @@
-import { claimOnL2 } from "./claimOnL2";
+import { getContractsAddressesByChainId } from "@consensys/linea-sdk-core";
 import {
   Client,
   Transport,
@@ -11,8 +11,9 @@ import {
   ChainNotFoundError,
 } from "viem";
 import { sendTransaction } from "viem/actions";
-import { getContractsAddressesByChainId } from "@consensys/linea-sdk-core";
 import { linea } from "viem/chains";
+
+import { claimOnL2 } from "./claimOnL2";
 import { TEST_ADDRESS_1, TEST_ADDRESS_2, TEST_TRANSACTION_HASH } from "../../tests/constants";
 import { AccountNotFoundError } from "../errors/account";
 

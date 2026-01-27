@@ -1,3 +1,4 @@
+import { formatMessageStatus, getContractsAddressesByChainId, OnChainMessageStatus } from "@consensys/linea-sdk-core";
 import {
   Account,
   Address,
@@ -10,7 +11,6 @@ import {
   Transport,
 } from "viem";
 import { readContract } from "viem/actions";
-import { formatMessageStatus, getContractsAddressesByChainId, OnChainMessageStatus } from "@consensys/linea-sdk-core";
 
 export type GetL1ToL2MessageStatusReturnType = OnChainMessageStatus;
 

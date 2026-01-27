@@ -1,6 +1,7 @@
 import { describe, beforeEach } from "@jest/globals";
 import { Wallet } from "ethers";
 import { MockProxy, mock } from "jest-mock-extended";
+
 import {
   TEST_CONTRACT_ADDRESS_1,
   TEST_MESSAGE_HASH,
@@ -8,9 +9,9 @@ import {
 } from "../../../utils/testing/constants/common";
 import { testMessageSentEvent } from "../../../utils/testing/constants/events";
 import { generateL2MessageServiceClient, generateTransactionReceipt } from "../../../utils/testing/helpers";
-import { L2MessageServiceMessageRetriever } from "../L2MessageServiceMessageRetriever";
-import { EthersL2MessageServiceLogClient } from "../EthersL2MessageServiceLogClient";
 import { LineaProvider } from "../../providers";
+import { EthersL2MessageServiceLogClient } from "../EthersL2MessageServiceLogClient";
+import { L2MessageServiceMessageRetriever } from "../L2MessageServiceMessageRetriever";
 
 describe("L2MessageServiceMessageRetriever", () => {
   let providerMock: MockProxy<LineaProvider>;

@@ -1,5 +1,6 @@
-import { Account, Address, BlockTag, Chain, Client, Transport } from "viem";
 import { L2PublicClient } from "@consensys/linea-sdk-core";
+import { Account, Address, BlockTag, Chain, Client, Transport } from "viem";
+
 import {
   getBlockExtraData,
   GetBlockExtraDataParameters,

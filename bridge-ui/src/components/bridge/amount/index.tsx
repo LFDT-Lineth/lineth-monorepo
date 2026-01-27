@@ -1,7 +1,10 @@
 import { ChangeEvent, useEffect, useState } from "react";
+
 import { formatUnits, parseUnits } from "viem";
+
 import { useTokenPrices } from "@/hooks";
 import { useChainStore, useConfigStore, useFormStore } from "@/stores";
+
 import styles from "./amount.module.scss";
 
 const AMOUNT_REGEX = /^[0-9]*[.,]?[0-9]*$/;

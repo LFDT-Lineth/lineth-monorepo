@@ -1,5 +1,6 @@
-import { describe, it } from "@jest/globals";
 import { serialize } from "@consensys/linea-sdk";
+import { describe, it } from "@jest/globals";
+
 import { BaseError } from "../BaseError";
 
 describe("BaseError", () => {

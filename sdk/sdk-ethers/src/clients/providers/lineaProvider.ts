@@ -1,6 +1,7 @@
 import { BlockTag, dataSlice, ethers, toNumber } from "ethers";
-import { BlockExtraData } from "../../core/clients/linea";
+
 import { GasFees } from "../../core/clients/IGasProvider";
+import { BlockExtraData } from "../../core/clients/linea";
 import { makeBaseError } from "../../core/errors/utils";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

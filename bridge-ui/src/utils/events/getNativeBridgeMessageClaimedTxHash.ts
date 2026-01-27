@@ -1,4 +1,5 @@
 import { PublicClient } from "viem";
+
 import { MessageClaimedABIEvent } from "@/types";
 
 export const getNativeBridgeMessageClaimedTxHash = async (

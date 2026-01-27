@@ -1,6 +1,11 @@
 import { describe, afterEach, it, expect, beforeEach } from "@jest/globals";
-import { MockProxy, mock, mockClear, mockDeep } from "jest-mock-extended";
 import { ContractTransactionResponse, Wallet } from "ethers";
+import { MockProxy, mock, mockClear, mockDeep } from "jest-mock-extended";
+
+import { LineaRollup, LineaRollup__factory } from "../../../contracts/typechain";
+import { ZERO_ADDRESS } from "../../../core/constants";
+import { OnChainMessageStatus } from "../../../core/enums/message";
+import { BaseError, makeBaseError } from "../../../core/errors";
 import {
   TEST_MESSAGE_HASH,
   TEST_CONTRACT_ADDRESS_1,
@@ -16,7 +21,6 @@ import {
   testMessageClaimedEvent,
   testL2MessagingBlockAnchoredEvent,
 } from "../../../utils/testing/constants/events";
-import { LineaRollup, LineaRollup__factory } from "../../../contracts/typechain";
 import {
   generateL2MerkleTreeAddedLog,
   generateL2MessagingBlockAnchoredLog,
@@ -27,14 +31,11 @@ import {
   generateTransactionResponse,
   mockProperty,
 } from "../../../utils/testing/helpers";
-import { LineaRollupClient } from "../LineaRollupClient";
-import { ZERO_ADDRESS } from "../../../core/constants";
-import { OnChainMessageStatus } from "../../../core/enums/message";
-import { BaseError, makeBaseError } from "../../../core/errors";
-import { EthersL2MessageServiceLogClient } from "../../linea/EthersL2MessageServiceLogClient";
-import { EthersLineaRollupLogClient } from "../EthersLineaRollupLogClient";
 import { DefaultGasProvider } from "../../gas/DefaultGasProvider";
+import { EthersL2MessageServiceLogClient } from "../../linea/EthersL2MessageServiceLogClient";
 import { LineaProvider, Provider } from "../../providers";
+import { EthersLineaRollupLogClient } from "../EthersLineaRollupLogClient";
+import { LineaRollupClient } from "../LineaRollupClient";
 
 describe("TestLineaRollupClient", () => {
   let providerMock: MockProxy<Provider>;

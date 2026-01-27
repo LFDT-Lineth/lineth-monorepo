@@ -1,12 +1,15 @@
+import { useState } from "react";
+
 import dynamic from "next/dynamic";
 import Image from "next/image";
-import styles from "./with-fees.module.scss";
-import { useState } from "react";
-import { useFees } from "@/hooks";
-import { useConfigStore, useFormStore } from "@/stores";
-import { useFormattedDigit } from "@/hooks/useFormattedDigit";
-import { useCctpFee } from "@/hooks/transaction-args/cctp/useCctpUtilHooks";
 import { formatUnits } from "viem";
+
+import { useFees } from "@/hooks";
+import { useCctpFee } from "@/hooks/transaction-args/cctp/useCctpUtilHooks";
+import { useFormattedDigit } from "@/hooks/useFormattedDigit";
+import { useConfigStore, useFormStore } from "@/stores";
+
+import styles from "./with-fees.module.scss";
 
 const GasFees = dynamic(() => import("../../../modal/gas-fees"), {
   ssr: false,

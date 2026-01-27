@@ -1,6 +1,6 @@
+import { readFileSync } from "fs";
 import { Agent } from "https";
 import forge from "node-forge";
-import { readFileSync } from "fs";
 import path from "path";
 
 function convertToPem(p12base64: string | forge.util.ByteStringBuffer, password: string) {

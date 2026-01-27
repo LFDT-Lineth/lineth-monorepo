@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { EthersError } from "ethers";
 import { WinstonLogger } from "@consensys/linea-shared-utils";
+import { EthersError } from "ethers";
+
 import { IPostmanLogger } from "./IPostmanLogger";
 
 export class PostmanWinstonLogger extends WinstonLogger implements IPostmanLogger {

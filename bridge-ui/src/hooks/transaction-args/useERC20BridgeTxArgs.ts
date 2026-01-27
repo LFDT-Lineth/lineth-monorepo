@@ -1,10 +1,12 @@
 import { useMemo } from "react";
+
 import { encodeFunctionData } from "viem";
-import { useFormStore, useChainStore } from "@/stores";
+
 import TokenBridge from "@/abis/TokenBridge.json";
-import { isEth, isNull, isUndefined, isUndefinedOrNull, isZero, isUndefinedOrEmptyString } from "@/utils";
-import { BridgeProvider, ChainLayer, ClaimType } from "@/types";
 import { DEFAULT_ADDRESS_FOR_NON_CONNECTED_USER } from "@/constants";
+import { useFormStore, useChainStore } from "@/stores";
+import { BridgeProvider, ChainLayer, ClaimType } from "@/types";
+import { isEth, isNull, isUndefined, isUndefinedOrNull, isZero, isUndefinedOrEmptyString } from "@/utils";
 
 type UseERC20BridgeTxArgsProps = {
   isConnected: boolean;

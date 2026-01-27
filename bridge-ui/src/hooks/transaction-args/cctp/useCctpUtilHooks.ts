@@ -1,12 +1,14 @@
 // Break pattern of 1 hook-1 file because TypeScript and CI were going nuts on filenames such as useCctpDestinationDomain.ts
 
 import { useMemo } from "react";
-import { useChainStore, useFormStore } from "@/stores";
-import { getCctpFee } from "@/services/cctp";
+
 import { useQuery } from "@tanstack/react-query";
+
 import { CCTP_MAX_FINALITY_THRESHOLD, CCTP_MIN_FINALITY_THRESHOLD, USDC_DECIMALS } from "@/constants";
-import { isUndefined } from "@/utils";
+import { getCctpFee } from "@/services/cctp";
+import { useChainStore, useFormStore } from "@/stores";
 import { CCTPMode } from "@/types";
+import { isUndefined } from "@/utils";
 
 const useCctpSrcDomain = () => {
   const fromChain = useChainStore.useFromChain();

@@ -1,7 +1,10 @@
 "use client";
 import { useState } from "react";
+
 import { motion } from "motion/react";
+
 import PlusIcon from "@/assets/icons/plus.svg";
+
 import styles from "./page.module.scss";
 
 const faqList = [

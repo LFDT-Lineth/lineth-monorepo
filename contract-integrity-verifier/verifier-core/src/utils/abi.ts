@@ -9,7 +9,7 @@
 
 import { readFileSync } from "fs";
 import { basename } from "path";
-import type { Web3Adapter } from "../adapter";
+
 import {
   AbiElement,
   AbiInput,
@@ -20,6 +20,8 @@ import {
   FoundryArtifact,
   ImmutableReference,
 } from "../types";
+
+import type { Web3Adapter } from "../adapter";
 
 // ============================================================================
 // Artifact Format Detection

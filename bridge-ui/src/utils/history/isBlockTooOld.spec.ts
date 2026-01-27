@@ -1,7 +1,9 @@
 import { test } from "@playwright/test";
 import { GetBlockReturnType } from "viem";
-import { isBlockTooOld } from "./isBlockTooOld";
+
 import { MESSAGE_TOO_OLD_THRESHOLD_DAYS } from "@/constants/message";
+
+import { isBlockTooOld } from "./isBlockTooOld";
 
 const { expect, describe } = test;
 

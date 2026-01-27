@@ -1,4 +1,3 @@
-import { localL1Network, localL2Network } from "@/constants";
 import { test as setup } from "@playwright/test";
 import {
   createPublicClient,
@@ -11,7 +10,10 @@ import {
 } from "viem";
 import { mnemonicToAccount, privateKeyToAccount } from "viem/accounts";
 import { waitForTransactionReceipt } from "viem/actions";
-import { sendTransactionsToGenerateTrafficWithInterval } from "./utils/utils";
+import { estimateGas } from "viem/linea";
+
+import { localL1Network, localL2Network } from "@/constants";
+
 import {
   L1_TEST_ERC2O_CONTRACT_ADDRESS,
   L2_ACCOUNT_PRIVATE_KEY,
@@ -19,7 +21,7 @@ import {
   LOCAL_L1_NETWORK,
   LOCAL_L2_NETWORK,
 } from "./constants";
-import { estimateGas } from "viem/linea";
+import { sendTransactionsToGenerateTrafficWithInterval } from "./utils/utils";
 
 setup.setTimeout(200_000);
 

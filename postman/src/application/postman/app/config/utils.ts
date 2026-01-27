@@ -1,5 +1,7 @@
 import { Interface, isAddress } from "ethers";
 import { compileExpression, useDotAccessOperator } from "filtrex";
+
+import { ListenerConfig, PostmanConfig, PostmanOptions } from "./config";
 import {
   DEFAULT_CALLDATA_ENABLED,
   DEFAULT_ENABLE_POSTMAN_SPONSORING,
@@ -21,7 +23,6 @@ import {
   DEFAULT_PROFIT_MARGIN,
   DEFAULT_RETRY_DELAY_IN_SECONDS,
 } from "../../../../core/constants";
-import { ListenerConfig, PostmanConfig, PostmanOptions } from "./config";
 
 /**
  * @notice Generates the configuration for the Postman service based on provided options.

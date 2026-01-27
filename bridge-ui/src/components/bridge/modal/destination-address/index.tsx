@@ -1,12 +1,15 @@
 import { ChangeEvent, useEffect, useState } from "react";
-import { useAccount } from "wagmi";
-import { isAddress } from "viem";
+
 import clsx from "clsx";
-import Modal from "@/components/modal";
-import styles from "./destination-address.module.scss";
-import Button from "@/components/ui/button";
+import { isAddress } from "viem";
+import { useAccount } from "wagmi";
+
 import XCircleIcon from "@/assets/icons/x-circle.svg";
+import Modal from "@/components/modal";
+import Button from "@/components/ui/button";
 import { useFormStore } from "@/stores";
+
+import styles from "./destination-address.module.scss";
 
 type Props = {
   isModalOpen: boolean;

@@ -1,9 +1,12 @@
 "use client";
 
 import { useState } from "react";
+
 import clsx from "clsx";
-import styles from "./tooltip.module.scss";
+
 import { useDevice } from "@/hooks";
+
+import styles from "./tooltip.module.scss";
 
 type TooltipProps = {
   children: React.ReactNode;

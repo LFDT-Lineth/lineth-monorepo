@@ -1,5 +1,10 @@
+import { getMessageProof } from "@consensys/linea-sdk-viem";
 import { useQuery } from "@tanstack/react-query";
 import { getPublicClient } from "@wagmi/core";
+import { Address, Client, Hex } from "viem";
+import { useConfig } from "wagmi";
+
+import { config } from "@/config";
 import {
   BridgeTransaction,
   BridgeTransactionType,
@@ -8,12 +13,8 @@ import {
   NativeBridgeMessage,
   TransactionStatus,
 } from "@/types";
-import { isNativeBridgeMessage } from "@/utils/message";
 import { isUndefined, isUndefinedOrEmptyString } from "@/utils";
-import { config } from "@/config";
-import { getMessageProof } from "@consensys/linea-sdk-viem";
-import { Address, Client, Hex } from "viem";
-import { useConfig } from "wagmi";
+import { isNativeBridgeMessage } from "@/utils/message";
 
 const useBridgeTransactionMessage = (
   transaction: BridgeTransaction | undefined,

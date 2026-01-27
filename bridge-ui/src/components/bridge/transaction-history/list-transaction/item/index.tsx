@@ -1,11 +1,13 @@
 import clsx from "clsx";
 import { formatUnits } from "viem";
-import styles from "./item.module.scss";
+
 import CheckIcon from "@/assets/icons/check.svg";
 import ClockIcon from "@/assets/icons/clock.svg";
 import BridgeTwoLogo from "@/components/bridge/bridge-two-logo";
-import { getChainLogoPath, formatHex, formatTimestamp, getEstimatedTimeText } from "@/utils";
 import { BridgeTransaction, CCTPMode, TransactionStatus } from "@/types";
+import { getChainLogoPath, formatHex, formatTimestamp, getEstimatedTimeText } from "@/utils";
+
+import styles from "./item.module.scss";
 
 type Props = BridgeTransaction & {
   onClick: (code: string) => void;

@@ -1,5 +1,7 @@
 import Link from "next/link";
+
 import PlusIcon from "@/assets/icons/plus-square.svg";
+
 import styles from "./list-your-app.module.scss";
 
 export default function ListYourApp() {

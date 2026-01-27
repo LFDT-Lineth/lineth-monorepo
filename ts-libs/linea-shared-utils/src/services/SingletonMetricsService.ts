@@ -7,6 +7,7 @@ import {
   MetricValueWithName,
   Registry,
 } from "prom-client";
+
 import { IMetricsService } from "../core/services/IMetricsService";
 
 /**

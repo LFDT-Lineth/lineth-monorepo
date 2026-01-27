@@ -8,15 +8,8 @@ import {
   Block,
   ErrorDescription,
 } from "ethers";
+
 import { LineaRollup, LineaRollup__factory } from "../../contracts/typechain";
-import { Message, SDKMode, MessageSent } from "../../core/types";
-import { OnChainMessageStatus } from "../../core/enums";
-import {
-  MESSAGE_UNKNOWN_STATUS,
-  MESSAGE_CLAIMED_STATUS,
-  ZERO_ADDRESS,
-  DEFAULT_RATE_LIMIT_MARGIN,
-} from "../../core/constants";
 import {
   ILineaRollupClient,
   ILineaRollupLogClient,
@@ -24,13 +17,21 @@ import {
   IMerkleTreeService,
   Proof,
 } from "../../core/clients/ethereum";
-import { IL2MessageServiceLogClient } from "../../core/clients/linea";
-import { formatMessageStatus, isString } from "../../core/utils";
 import { GasFees, IEthereumGasProvider } from "../../core/clients/IGasProvider";
 import { IMessageRetriever } from "../../core/clients/IMessageRetriever";
 import { IProvider } from "../../core/clients/IProvider";
-import { BrowserProvider, Provider } from "../providers";
+import { IL2MessageServiceLogClient } from "../../core/clients/linea";
+import {
+  MESSAGE_UNKNOWN_STATUS,
+  MESSAGE_CLAIMED_STATUS,
+  ZERO_ADDRESS,
+  DEFAULT_RATE_LIMIT_MARGIN,
+} from "../../core/constants";
+import { OnChainMessageStatus } from "../../core/enums";
 import { makeBaseError } from "../../core/errors/utils";
+import { Message, SDKMode, MessageSent } from "../../core/types";
+import { formatMessageStatus, isString } from "../../core/utils";
+import { BrowserProvider, Provider } from "../providers";
 
 export class LineaRollupClient implements ILineaRollupClient<
   Overrides,

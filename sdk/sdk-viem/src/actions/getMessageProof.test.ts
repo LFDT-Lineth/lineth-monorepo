@@ -1,15 +1,16 @@
-import { getMessageProof } from "./getMessageProof";
-import { Client, Transport, Chain, Account, Hex, ClientChainNotConfiguredError, ChainNotFoundError } from "viem";
-import { getMessageSentEvents } from "./getMessageSentEvents";
-import { getContractEvents, getTransactionReceipt } from "viem/actions";
 import { getContractsAddressesByChainId } from "@consensys/linea-sdk-core";
+import { Client, Transport, Chain, Account, Hex, ClientChainNotConfiguredError, ChainNotFoundError } from "viem";
+import { getContractEvents, getTransactionReceipt } from "viem/actions";
+
+import { getMessageProof } from "./getMessageProof";
+import { getMessageSentEvents } from "./getMessageSentEvents";
+import { TEST_MERKLE_ROOT, TEST_MERKLE_ROOT_2, TEST_MESSAGE_HASH, TEST_TRANSACTION_HASH } from "../../tests/constants";
 import {
   generateL2MerkleTreeAddedLog,
   generateL2MessagingBlockAnchoredLog,
   generateMessageSentLog,
   generateTransactionReceipt,
 } from "../../tests/utils";
-import { TEST_MERKLE_ROOT, TEST_MERKLE_ROOT_2, TEST_MESSAGE_HASH, TEST_TRANSACTION_HASH } from "../../tests/constants";
 
 jest.mock("./getMessageSentEvents");
 jest.mock("viem/actions", () => ({

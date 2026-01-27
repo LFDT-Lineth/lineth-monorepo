@@ -1,7 +1,8 @@
 import { Direction } from "@consensys/linea-sdk";
-import { SponsorshipMetricsUpdater } from "../SponsorshipMetricsUpdater";
-import { PostmanMetricsService } from "../PostmanMetricsService";
+
 import { ISponsorshipMetricsUpdater } from "../../../../../core/metrics";
+import { PostmanMetricsService } from "../PostmanMetricsService";
+import { SponsorshipMetricsUpdater } from "../SponsorshipMetricsUpdater";
 
 describe("SponsorshipMetricsUpdater", () => {
   let sponsorshipMetricsUpdater: ISponsorshipMetricsUpdater;

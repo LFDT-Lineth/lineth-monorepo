@@ -1,3 +1,4 @@
+import { getContractsAddressesByChainId, MessageProof, Message } from "@consensys/linea-sdk-core";
 import {
   Account,
   Address,
@@ -18,17 +19,17 @@ import {
   Transport,
   zeroAddress,
 } from "viem";
-import { GetAccountParameter } from "../types/account";
-import { parseAccount } from "viem/utils";
 import { sendTransaction } from "viem/actions";
-import { getContractsAddressesByChainId, MessageProof, Message } from "@consensys/linea-sdk-core";
+import { parseAccount } from "viem/utils";
+
 import { getMessageProof } from "./getMessageProof";
-import { computeMessageHash, ComputeMessageHashErrorType } from "../utils/computeMessageHash";
 import { AccountNotFoundError, AccountNotFoundErrorType } from "../errors/account";
 import {
   MissingMessageProofOrClientForClaimingOnL1Error,
   MissingMessageProofOrClientForClaimingOnL1ErrorType,
 } from "../errors/bridge";
+import { GetAccountParameter } from "../types/account";
+import { computeMessageHash, ComputeMessageHashErrorType } from "../utils/computeMessageHash";
 
 export type ClaimOnL1Parameters<
   chain extends Chain | undefined = Chain | undefined,

@@ -1,5 +1,5 @@
-import { useAccount } from "wagmi";
 import { useCallback, useMemo } from "react";
+
 import { resolveWalletConnectorIcon, NetworkWithTokens, NetworkType } from "@layerswap/widget";
 import {
   WalletConnectionProvider,
@@ -7,8 +7,9 @@ import {
   WalletConnectionProviderProps,
   InternalConnector,
 } from "@layerswap/widget/types";
-import { useWeb3Auth, useWeb3AuthConnect, useWeb3AuthDisconnect } from "@web3auth/modal/react";
 import { CONNECTOR_EVENTS } from "@web3auth/modal";
+import { useWeb3Auth, useWeb3AuthConnect, useWeb3AuthDisconnect } from "@web3auth/modal/react";
+import { useAccount } from "wagmi";
 
 export default function useEVM({ networks }: WalletConnectionProviderProps): WalletConnectionProvider {
   const name = "EVM";

@@ -1,11 +1,13 @@
 import { Address } from "viem";
-import { config } from "@/config";
-import { BridgeTransaction, Chain, Token } from "@/types";
-import { fetchETHBridgeEvents } from "./fetchETHBridgeEvents";
-import { fetchERC20BridgeEvents } from "./fetchERC20BridgeEvents";
-import { fetchCctpBridgeEvents } from "./fetchCctpBridgeEvents";
-import { HistoryActionsForCompleteTxCaching } from "@/stores";
 import { Config } from "wagmi";
+
+import { config } from "@/config";
+import { HistoryActionsForCompleteTxCaching } from "@/stores";
+import { BridgeTransaction, Chain, Token } from "@/types";
+
+import { fetchCctpBridgeEvents } from "./fetchCctpBridgeEvents";
+import { fetchERC20BridgeEvents } from "./fetchERC20BridgeEvents";
+import { fetchETHBridgeEvents } from "./fetchETHBridgeEvents";
 
 type TransactionHistoryParams = {
   historyStoreActions: HistoryActionsForCompleteTxCaching;

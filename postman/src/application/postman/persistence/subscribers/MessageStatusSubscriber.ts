@@ -1,3 +1,5 @@
+import { Direction } from "@consensys/linea-sdk";
+import { type ILogger } from "@consensys/linea-shared-utils";
 import {
   EventSubscriber,
   EntitySubscriberInterface,
@@ -6,11 +8,10 @@ import {
   RemoveEvent,
   TransactionCommitEvent,
 } from "typeorm";
-import { Direction } from "@consensys/linea-sdk";
-import { MessageEntity } from "../entities/Message.entity";
-import { type IMessageMetricsUpdater, MessagesMetricsAttributes } from "../../../../core/metrics";
-import { type ILogger } from "@consensys/linea-shared-utils";
+
 import { MessageStatus } from "../../../../core/enums";
+import { type IMessageMetricsUpdater, MessagesMetricsAttributes } from "../../../../core/metrics";
+import { MessageEntity } from "../entities/Message.entity";
 
 @EventSubscriber()
 export class MessageStatusSubscriber implements EntitySubscriberInterface<MessageEntity> {

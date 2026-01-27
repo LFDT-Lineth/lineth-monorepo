@@ -1,3 +1,4 @@
+import { getContractsAddressesByChainId } from "@consensys/linea-sdk-core";
 import {
   Account,
   Address,
@@ -31,8 +32,6 @@ import {
   WaitForTransactionReceiptErrorType,
   zeroAddress,
 } from "viem";
-import { GetAccountParameter } from "../types/account";
-import { parseAccount } from "viem/utils";
 import {
   estimateContractGas,
   estimateFeesPerGas,
@@ -41,9 +40,11 @@ import {
   sendTransaction,
   waitForTransactionReceipt,
 } from "viem/actions";
-import { getContractsAddressesByChainId } from "@consensys/linea-sdk-core";
-import { computeMessageHash } from "../utils/computeMessageHash";
+import { parseAccount } from "viem/utils";
+
 import { AccountNotFoundError, AccountNotFoundErrorType } from "../errors/account";
+import { GetAccountParameter } from "../types/account";
+import { computeMessageHash } from "../utils/computeMessageHash";
 import { getNextMessageNonce, GetNextMessageNonceErrorType } from "../utils/getNextMessageNonce";
 
 export type DepositParameters<

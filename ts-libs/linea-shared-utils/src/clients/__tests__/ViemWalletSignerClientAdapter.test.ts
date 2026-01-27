@@ -1,7 +1,8 @@
 import { createWalletClient, http, parseTransaction, serializeSignature } from "viem";
 import { privateKeyToAccount, privateKeyToAddress } from "viem/accounts";
-import { ViemWalletSignerClientAdapter } from "../ViemWalletSignerClientAdapter";
+
 import { ILogger } from "../../logging/ILogger";
+import { ViemWalletSignerClientAdapter } from "../ViemWalletSignerClientAdapter";
 
 jest.mock("viem", () => {
   const actual = jest.requireActual("viem");

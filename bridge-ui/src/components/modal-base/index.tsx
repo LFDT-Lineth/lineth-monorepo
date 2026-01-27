@@ -1,10 +1,13 @@
 "use client";
 
 import { useEffect } from "react";
+
 import clsx from "clsx";
-import styles from "./modalBase.module.scss";
-import { useModal } from "@/contexts/ModalProvider";
+
 import { UserWallet } from "@/components/modal-base/user-wallet";
+import { useModal } from "@/contexts/ModalProvider";
+
+import styles from "./modalBase.module.scss";
 
 export function ModalBase() {
   const { isModalOpen, isModalType, modalData, updateModal } = useModal();

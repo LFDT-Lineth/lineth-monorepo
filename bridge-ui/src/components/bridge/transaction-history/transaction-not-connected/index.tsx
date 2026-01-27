@@ -1,6 +1,7 @@
-import styles from "./transaction-not-connected.module.scss";
 import TransactionCircleIcon from "@/assets/icons/transaction-circle.svg";
 import ConnectButton from "@/components/connect-button";
+
+import styles from "./transaction-not-connected.module.scss";
 
 export default function TransactionNotConnected() {
   return (

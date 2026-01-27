@@ -1,8 +1,9 @@
 import { wait } from "@consensys/linea-sdk";
 import { ILogger } from "@consensys/linea-shared-utils";
-import { IPoller } from "../../core/services/pollers/IPoller";
-import { IDatabaseCleaner } from "../../core/persistence/IDatabaseCleaner";
+
 import { DBCleanerConfig } from "../../application/postman/persistence/config/types";
+import { IDatabaseCleaner } from "../../core/persistence/IDatabaseCleaner";
+import { IPoller } from "../../core/services/pollers/IPoller";
 
 export class DatabaseCleaningPoller implements IPoller {
   private isPolling = false;

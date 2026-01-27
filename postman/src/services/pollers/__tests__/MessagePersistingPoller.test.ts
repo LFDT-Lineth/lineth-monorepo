@@ -1,11 +1,12 @@
+import { Direction } from "@consensys/linea-sdk";
 import { describe, it, beforeEach } from "@jest/globals";
 import { mock } from "jest-mock-extended";
-import { Direction } from "@consensys/linea-sdk";
-import { MessagePersistingPoller } from "../MessagePersistingPoller";
-import { TestLogger } from "../../../utils/testing/helpers";
+
+import { IPoller } from "../../../core/services/pollers/IPoller";
 import { IMessageClaimingPersister } from "../../../core/services/processors/IMessageClaimingPersister";
 import { testL2NetworkConfig } from "../../../utils/testing/constants";
-import { IPoller } from "../../../core/services/pollers/IPoller";
+import { TestLogger } from "../../../utils/testing/helpers";
+import { MessagePersistingPoller } from "../MessagePersistingPoller";
 
 describe("TestMessagePersistingPoller", () => {
   let testPersistingPoller: IPoller;

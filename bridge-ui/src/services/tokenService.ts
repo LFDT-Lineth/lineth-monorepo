@@ -1,10 +1,12 @@
 import { cache } from "react";
+
 import log from "loglevel";
 import { Address } from "viem";
+
 import { config } from "@/config";
+import { PRIORITY_SYMBOLS, USDC_SYMBOL } from "@/constants";
 import { defaultTokensConfig, SupportedCurrencies } from "@/stores";
 import { BridgeProvider, GithubTokenListToken, NetworkTokens, Token } from "@/types";
-import { PRIORITY_SYMBOLS, USDC_SYMBOL } from "@/constants";
 import { isUndefined } from "@/utils";
 
 enum NetworkTypes {

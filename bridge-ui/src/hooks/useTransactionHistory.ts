@@ -1,8 +1,10 @@
-import { useAccount, useConfig } from "wagmi";
 import { useQuery } from "@tanstack/react-query";
+import { useAccount, useConfig } from "wagmi";
+
 import { HistoryActionsForCompleteTxCaching, useChainStore, useHistoryStore } from "@/stores";
-import useTokens from "./useTokens";
 import { fetchTransactionsHistory } from "@/utils";
+
+import useTokens from "./useTokens";
 
 const useTransactionHistory = () => {
   const { address } = useAccount();

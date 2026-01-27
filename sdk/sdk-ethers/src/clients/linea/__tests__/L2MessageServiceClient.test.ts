@@ -1,6 +1,11 @@
 import { describe, afterEach, it, expect, beforeEach } from "@jest/globals";
-import { MockProxy, mock, mockClear, mockDeep } from "jest-mock-extended";
 import { ContractTransactionResponse, Wallet } from "ethers";
+import { MockProxy, mock, mockClear, mockDeep } from "jest-mock-extended";
+
+import { L2MessageService, L2MessageService__factory } from "../../../contracts/typechain";
+import { ZERO_ADDRESS } from "../../../core/constants";
+import { OnChainMessageStatus } from "../../../core/enums/message";
+import { BaseError, makeBaseError } from "../../../core/errors";
 import {
   TEST_MESSAGE_HASH,
   TEST_CONTRACT_ADDRESS_1,
@@ -9,19 +14,15 @@ import {
   TEST_ADDRESS_1,
   DEFAULT_MAX_FEE_PER_GAS,
 } from "../../../utils/testing/constants/common";
-import { L2MessageService, L2MessageService__factory } from "../../../contracts/typechain";
 import {
   generateL2MessageServiceClient,
   generateMessage,
   generateTransactionResponse,
   mockProperty,
 } from "../../../utils/testing/helpers";
-import { L2MessageServiceClient } from "../L2MessageServiceClient";
-import { ZERO_ADDRESS } from "../../../core/constants";
-import { OnChainMessageStatus } from "../../../core/enums/message";
-import { BaseError, makeBaseError } from "../../../core/errors";
-import { LineaProvider } from "../../providers";
 import { GasProvider } from "../../gas";
+import { LineaProvider } from "../../providers";
+import { L2MessageServiceClient } from "../L2MessageServiceClient";
 
 describe("TestL2MessageServiceClient", () => {
   let providerMock: MockProxy<LineaProvider>;

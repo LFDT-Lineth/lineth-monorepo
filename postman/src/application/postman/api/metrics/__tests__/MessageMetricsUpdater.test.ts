@@ -1,10 +1,11 @@
-import { EntityManager, SelectQueryBuilder } from "typeorm";
 import { Direction } from "@consensys/linea-sdk";
-import { MessageMetricsUpdater } from "../MessageMetricsUpdater";
 import { mock, MockProxy } from "jest-mock-extended";
+import { EntityManager, SelectQueryBuilder } from "typeorm";
+
 import { MessageStatus } from "../../../../../core/enums";
-import { PostmanMetricsService } from "../PostmanMetricsService";
 import { IMessageMetricsUpdater } from "../../../../../core/metrics";
+import { MessageMetricsUpdater } from "../MessageMetricsUpdater";
+import { PostmanMetricsService } from "../PostmanMetricsService";
 
 describe("MessageMetricsUpdater", () => {
   let messageMetricsUpdater: IMessageMetricsUpdater;

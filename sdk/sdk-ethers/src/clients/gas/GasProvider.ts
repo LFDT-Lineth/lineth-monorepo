@@ -1,11 +1,12 @@
 import { Block, TransactionReceipt, TransactionRequest, TransactionResponse } from "ethers";
+
 import { DefaultGasProvider } from "./DefaultGasProvider";
 import { LineaGasProvider } from "./LineaGasProvider";
-import { IProvider } from "../../core/clients/IProvider";
 import { GasFees, GasProviderConfig, IGasProvider, LineaGasFees } from "../../core/clients/IGasProvider";
+import { IProvider } from "../../core/clients/IProvider";
 import { Direction } from "../../core/enums";
-import { BrowserProvider, LineaBrowserProvider, LineaProvider, Provider } from "../providers";
 import { makeBaseError } from "../../core/errors/utils";
+import { BrowserProvider, LineaBrowserProvider, LineaProvider, Provider } from "../providers";
 
 export class GasProvider implements IGasProvider<TransactionRequest> {
   private defaultGasProvider: DefaultGasProvider;

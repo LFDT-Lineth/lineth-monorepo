@@ -1,4 +1,5 @@
 import { Address } from "viem";
+
 import { BridgeProvider } from "./providers";
 
 export interface GithubTokenListTokenExtension {

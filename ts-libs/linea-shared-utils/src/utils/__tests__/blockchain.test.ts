@@ -1,5 +1,5 @@
-import { gweiToWei, weiToGwei, weiToGweiNumber } from "../blockchain";
 import { WEI_PER_GWEI } from "../../core/constants/blockchain";
+import { gweiToWei, weiToGwei, weiToGweiNumber } from "../blockchain";
 
 describe("weiToGwei", () => {
   it("returns zero when converting zero wei", () => {

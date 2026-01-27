@@ -1,4 +1,5 @@
 import { describe, it } from "@jest/globals";
+
 import { makeBaseError } from "../utils";
 
 describe("BaseError", () => {

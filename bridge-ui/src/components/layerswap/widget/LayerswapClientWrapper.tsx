@@ -1,9 +1,11 @@
 "use client";
 
-import { Swap, LayerswapProvider, LayerSwapSettings, ThemeData } from "@layerswap/widget";
 import { EVMProvider } from "@layerswap/wallet-evm";
-import useEVM from "./useCustomEvm";
+import { Swap, LayerswapProvider, LayerSwapSettings, ThemeData } from "@layerswap/widget";
+
 import { config } from "@/config";
+
+import useEVM from "./useCustomEvm";
 
 interface LayerswapClientWrapperProps {
   settings: LayerSwapSettings | undefined;

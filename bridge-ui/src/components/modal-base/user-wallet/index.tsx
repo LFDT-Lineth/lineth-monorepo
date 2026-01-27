@@ -1,16 +1,19 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+
+import clsx from "clsx";
+import { usePathname } from "next/navigation";
+import { useAccount, useDisconnect } from "wagmi";
+
 import Close from "@/assets/icons/close.svg";
+import UserWalletInfo from "@/components/modal-base/user-wallet/user-wallet-info";
+import PohCheck from "@/components/poh-check";
+import SideBarMobile from "@/components/side-bar-mobile";
 import Button from "@/components/ui/button";
 import { useModal } from "@/contexts/ModalProvider";
-import { useAccount, useDisconnect } from "wagmi";
 import { useCheckPoh } from "@/hooks/useCheckPoh";
-import clsx from "clsx";
-import PohCheck from "@/components/poh-check";
-import UserWalletInfo from "@/components/modal-base/user-wallet/user-wallet-info";
-import SideBarMobile from "@/components/side-bar-mobile";
-import { usePathname } from "next/navigation";
+
 import styles from "./user-wallet.module.scss";
 
 export enum PohStep {

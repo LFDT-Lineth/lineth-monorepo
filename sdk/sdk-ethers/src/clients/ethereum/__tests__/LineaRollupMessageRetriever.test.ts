@@ -1,6 +1,7 @@
 import { describe, beforeEach } from "@jest/globals";
 import { Wallet } from "ethers";
 import { MockProxy, mock } from "jest-mock-extended";
+
 import {
   TEST_CONTRACT_ADDRESS_1,
   TEST_CONTRACT_ADDRESS_2,
@@ -9,9 +10,9 @@ import {
 } from "../../../utils/testing/constants/common";
 import { testMessageSentEvent } from "../../../utils/testing/constants/events";
 import { generateLineaRollupClient, generateTransactionReceipt } from "../../../utils/testing/helpers";
+import { LineaProvider, Provider } from "../../providers";
 import { EthersLineaRollupLogClient } from "../EthersLineaRollupLogClient";
 import { LineaRollupMessageRetriever } from "../LineaRollupMessageRetriever";
-import { LineaProvider, Provider } from "../../providers";
 
 describe("LineaRollupMessageRetriever", () => {
   let providerMock: MockProxy<Provider>;

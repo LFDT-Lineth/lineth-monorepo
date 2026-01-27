@@ -1,7 +1,8 @@
-import { getBlockExtraData, GetBlockExtraDataParameters } from "./getBlockExtraData";
 import { Client, Transport, Chain, Account } from "viem";
-import { linea } from "viem/chains";
 import { getBlock } from "viem/actions";
+import { linea } from "viem/chains";
+
+import { getBlockExtraData, GetBlockExtraDataParameters } from "./getBlockExtraData";
 import { generateBlock } from "../../tests/utils";
 
 jest.mock("viem/actions", () => ({

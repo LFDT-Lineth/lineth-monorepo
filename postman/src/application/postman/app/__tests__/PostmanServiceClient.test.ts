@@ -1,8 +1,17 @@
+import { ExpressApiApplication } from "@consensys/linea-shared-utils";
 import { describe, it } from "@jest/globals";
 import { mockClear } from "jest-mock-extended";
 import { DataSource } from "typeorm";
 import { SnakeNamingStrategy } from "typeorm-naming-strategies";
-import { PostmanServiceClient } from "../PostmanServiceClient";
+
+import { DEFAULT_MAX_CLAIM_GAS_LIMIT } from "../../../../core/constants";
+import { DatabaseCleaningPoller } from "../../../../services/pollers/DatabaseCleaningPoller";
+import { L2ClaimMessageTransactionSizePoller } from "../../../../services/pollers/L2ClaimMessageTransactionSizePoller";
+import { MessageAnchoringPoller } from "../../../../services/pollers/MessageAnchoringPoller";
+import { MessageClaimingPoller } from "../../../../services/pollers/MessageClaimingPoller";
+import { MessagePersistingPoller } from "../../../../services/pollers/MessagePersistingPoller";
+import { MessageSentEventPoller } from "../../../../services/pollers/MessageSentEventPoller";
+import { PostmanWinstonLogger } from "../../../../utils/PostmanWinstonLogger";
 import {
   TEST_CONTRACT_ADDRESS_1,
   TEST_CONTRACT_ADDRESS_2,
@@ -10,25 +19,17 @@ import {
   TEST_L2_SIGNER_PRIVATE_KEY,
   TEST_RPC_URL,
 } from "../../../../utils/testing/constants";
-import { PostmanWinstonLogger } from "../../../../utils/PostmanWinstonLogger";
-import { PostmanOptions } from "../config/config";
+import { MessageMetricsUpdater } from "../../api/metrics/MessageMetricsUpdater";
 import { MessageEntity } from "../../persistence/entities/Message.entity";
 import { InitialDatabaseSetup1685985945638 } from "../../persistence/migrations/1685985945638-InitialDatabaseSetup";
 import { AddNewColumns1687890326970 } from "../../persistence/migrations/1687890326970-AddNewColumns";
 import { UpdateStatusColumn1687890694496 } from "../../persistence/migrations/1687890694496-UpdateStatusColumn";
 import { RemoveUniqueConstraint1689084924789 } from "../../persistence/migrations/1689084924789-RemoveUniqueConstraint";
 import { AddNewIndexes1701265652528 } from "../../persistence/migrations/1701265652528-AddNewIndexes";
-import { MessageSentEventPoller } from "../../../../services/pollers/MessageSentEventPoller";
-import { MessageAnchoringPoller } from "../../../../services/pollers/MessageAnchoringPoller";
-import { MessageClaimingPoller } from "../../../../services/pollers/MessageClaimingPoller";
-import { MessagePersistingPoller } from "../../../../services/pollers/MessagePersistingPoller";
-import { DatabaseCleaningPoller } from "../../../../services/pollers/DatabaseCleaningPoller";
 import { TypeOrmMessageRepository } from "../../persistence/repositories/TypeOrmMessageRepository";
-import { L2ClaimMessageTransactionSizePoller } from "../../../../services/pollers/L2ClaimMessageTransactionSizePoller";
-import { DEFAULT_MAX_CLAIM_GAS_LIMIT } from "../../../../core/constants";
 import { MessageStatusSubscriber } from "../../persistence/subscribers/MessageStatusSubscriber";
-import { MessageMetricsUpdater } from "../../api/metrics/MessageMetricsUpdater";
-import { ExpressApiApplication } from "@consensys/linea-shared-utils";
+import { PostmanOptions } from "../config/config";
+import { PostmanServiceClient } from "../PostmanServiceClient";
 
 jest.mock("ethers", () => {
   const allAutoMocked = jest.createMockFromModule("ethers");

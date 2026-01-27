@@ -1,7 +1,7 @@
-import { getMessageSentEvents } from "./getMessageSentEvents";
 import { Client, Transport, Chain, Account } from "viem";
 import { getContractEvents } from "viem/actions";
-import { generateMessageSentLog } from "../../tests/utils";
+
+import { getMessageSentEvents } from "./getMessageSentEvents";
 import {
   TEST_ADDRESS_1,
   TEST_ADDRESS_2,
@@ -9,6 +9,7 @@ import {
   TEST_MESSAGE_HASH,
   TEST_TRANSACTION_HASH,
 } from "../../tests/constants";
+import { generateMessageSentLog } from "../../tests/utils";
 
 jest.mock("viem/actions", () => ({
   getContractEvents: jest.fn(),

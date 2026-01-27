@@ -1,20 +1,23 @@
 import { useEffect, useState } from "react";
+
 import { useAccount } from "wagmi";
-import FaqHelp from "@/components/bridge/faq-help";
-import TokenList from "@/components/bridge/token-list";
+
 import { Amount } from "@/components/bridge/amount";
-import SwapChain from "@/components/bridge/swap-chain";
-import FromChain from "@/components/bridge/from-chain";
-import ToChain from "@/components/bridge/to-chain";
 import Claiming from "@/components/bridge/claiming";
-import styles from "./bridge-form.module.scss";
+import FaqHelp from "@/components/bridge/faq-help";
+import FromChain from "@/components/bridge/from-chain";
 import { Submit } from "@/components/bridge/submit";
+import SwapChain from "@/components/bridge/swap-chain";
+import ToChain from "@/components/bridge/to-chain";
+import TokenList from "@/components/bridge/token-list";
 import Setting from "@/components/setting";
-import { DestinationAddress } from "../destination-address";
-import Button from "../../ui/button";
-import { useChainStore, useFormStore, useNativeBridgeNavigationStore } from "@/stores";
 import { useTokenBalance } from "@/hooks";
+import { useChainStore, useFormStore, useNativeBridgeNavigationStore } from "@/stores";
 import { ChainLayer, ClaimType } from "@/types";
+
+import styles from "./bridge-form.module.scss";
+import Button from "../../ui/button";
+import { DestinationAddress } from "../destination-address";
 
 export default function BridgeForm() {
   const [isDestinationAddressOpen, setIsDestinationAddressOpen] = useState(false);

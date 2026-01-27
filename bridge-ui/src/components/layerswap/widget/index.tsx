@@ -1,6 +1,8 @@
 import { getSettings } from "@layerswap/widget";
-import { LayerswapClientWrapper } from "./LayerswapClientWrapper";
+
 import { config } from "@/config";
+
+import { LayerswapClientWrapper } from "./LayerswapClientWrapper";
 
 export async function Widget() {
   const settings = await getSettings(config.layerswapApiKey);

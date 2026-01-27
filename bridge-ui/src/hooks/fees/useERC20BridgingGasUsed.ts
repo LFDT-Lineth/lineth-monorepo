@@ -1,8 +1,9 @@
-import { Address } from "viem";
 import { useQuery } from "@tanstack/react-query";
+import { Address } from "viem";
+import { useConfig } from "wagmi";
+
 import { BridgeProvider, Chain, ChainLayer, ClaimType, Token } from "@/types";
 import { estimateERC20BridgingGasUsed, isEth } from "@/utils";
-import { useConfig } from "wagmi";
 
 type UseERC20BridgingFeeProps = {
   account?: Address;

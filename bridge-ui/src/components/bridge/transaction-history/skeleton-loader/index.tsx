@@ -1,4 +1,5 @@
 import clsx from "clsx";
+
 import styles from "./skeleton-loader.module.scss";
 
 export default function SkeletonLoader() {

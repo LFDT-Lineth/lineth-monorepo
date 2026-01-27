@@ -1,7 +1,8 @@
 import Modal from "@/components/modal";
-import styles from "./gas-fees.module.scss";
 import Button from "@/components/ui/button";
+
 import GasFeesList from "./gas-fees-list";
+import styles from "./gas-fees.module.scss";
 
 type Props = {
   fees: {

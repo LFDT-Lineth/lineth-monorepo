@@ -1,4 +1,5 @@
 import { LoggerOptions } from "winston";
+
 import { DBOptions, DBCleanerOptions, DBCleanerConfig } from "../../persistence/config/types";
 
 type DeepRequired<T> = {

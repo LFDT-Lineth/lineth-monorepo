@@ -1,4 +1,3 @@
-import { config } from "@/config";
 import { defineChain } from "viem";
 import {
   arbitrum,
@@ -26,6 +25,8 @@ import {
   sonic,
   zksync,
 } from "viem/chains";
+
+import { config } from "@/config";
 
 // This is a local L1 network configuration for testing purposes
 export const localL1Network = defineChain({

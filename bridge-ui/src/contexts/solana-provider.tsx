@@ -1,9 +1,10 @@
 "use client";
 
 import type { PropsWithChildren } from "react";
+
 import { type Adapter, WalletAdapterNetwork } from "@solana/wallet-adapter-base";
-import { clusterApiUrl } from "@solana/web3.js";
 import { ConnectionProvider, WalletProvider } from "@solana/wallet-adapter-react";
+import { clusterApiUrl } from "@solana/web3.js";
 
 const endpoint = clusterApiUrl(WalletAdapterNetwork.Mainnet);
 

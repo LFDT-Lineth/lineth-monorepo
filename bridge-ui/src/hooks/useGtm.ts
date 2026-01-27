@@ -1,5 +1,6 @@
-import { sendGTMEvent } from "@next/third-parties/google";
 import { useCallback } from "react";
+
+import { sendGTMEvent } from "@next/third-parties/google";
 
 /**
  * Custom hook for handling Google Tag Manager events

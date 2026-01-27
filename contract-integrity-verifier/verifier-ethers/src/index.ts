@@ -7,6 +7,7 @@
  */
 
 import { ethers } from "ethers";
+
 import type { Web3Adapter, Web3AdapterOptions, AbiElement } from "@consensys/linea-contract-integrity-verifier";
 
 /**

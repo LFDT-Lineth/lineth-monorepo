@@ -1,9 +1,12 @@
 import { useState } from "react";
+
+import Image from "next/image";
 import Link from "next/link";
+
 import UnionIcon from "@/assets/icons/union.svg";
 import CloseIcon from "@/assets/icons/x-circle.svg";
+
 import styles from "./top-banner.module.scss";
-import Image from "next/image";
 
 type Props = {
   text: string;

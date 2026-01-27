@@ -1,13 +1,16 @@
 import { ChangeEvent, useEffect, useRef, useState } from "react";
-import { useAccount } from "wagmi";
-import { Address, isAddress } from "viem";
+
 import clsx from "clsx";
 import Link from "next/link";
-import styles from "./destination-address.module.scss";
+import { Address, isAddress } from "viem";
+import { useAccount } from "wagmi";
+
+import ArrowRightIcon from "@/assets/icons/arrow-right.svg";
 import XCircleIcon from "@/assets/icons/x-circle.svg";
 import { useChainStore, useFormStore } from "@/stores";
 import { ChainLayer } from "@/types";
-import ArrowRightIcon from "@/assets/icons/arrow-right.svg";
+
+import styles from "./destination-address.module.scss";
 
 function formatMessage({
   address,

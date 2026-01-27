@@ -1,5 +1,5 @@
+import { LineaProvider, serialize, testingHelpers } from "@consensys/linea-sdk";
 import { describe, it, beforeEach } from "@jest/globals";
-import { mock } from "jest-mock-extended";
 import {
   ContractTransactionResponse,
   ErrorDescription,
@@ -9,18 +9,19 @@ import {
   TransactionResponse,
   Wallet,
 } from "ethers";
-import { LineaProvider, serialize, testingHelpers } from "@consensys/linea-sdk";
+import { mock } from "jest-mock-extended";
+
+import { IL2MessageServiceClient } from "../../../core/clients/blockchain/linea/IL2MessageServiceClient";
+import { DEFAULT_MAX_FEE_PER_GAS_CAP } from "../../../core/constants";
+import { BaseError } from "../../../core/errors";
 import {
   DEFAULT_MAX_FEE_PER_GAS,
   TEST_CONTRACT_ADDRESS_2,
   TEST_L2_SIGNER_PRIVATE_KEY,
   testMessage,
 } from "../../../utils/testing/constants";
-import { EthereumMessageDBService } from "../../persistence/EthereumMessageDBService";
 import { L2ClaimTransactionSizeCalculator } from "../../L2ClaimTransactionSizeCalculator";
-import { DEFAULT_MAX_FEE_PER_GAS_CAP } from "../../../core/constants";
-import { BaseError } from "../../../core/errors";
-import { IL2MessageServiceClient } from "../../../core/clients/blockchain/linea/IL2MessageServiceClient";
+import { EthereumMessageDBService } from "../../persistence/EthereumMessageDBService";
 
 describe("L2ClaimTransactionSizeCalculator", () => {
   let transactionSizeCalculator: L2ClaimTransactionSizeCalculator;

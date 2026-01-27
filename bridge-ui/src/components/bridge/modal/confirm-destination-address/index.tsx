@@ -1,11 +1,13 @@
-import { Address } from "viem";
 import Link from "next/link";
-import Modal from "@/components/modal";
-import styles from "./confirm-destination-address.module.scss";
-import Button from "@/components/ui/button";
-import { formatAddress } from "@/utils";
+import { Address } from "viem";
+
 import UnionIcon from "@/assets/icons/union.svg";
+import Modal from "@/components/modal";
+import Button from "@/components/ui/button";
 import { useChainStore } from "@/stores";
+import { formatAddress } from "@/utils";
+
+import styles from "./confirm-destination-address.module.scss";
 
 type Props = {
   isModalOpen: boolean;

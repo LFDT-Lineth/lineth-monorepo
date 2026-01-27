@@ -1,3 +1,4 @@
+import { getContractsAddressesByChainId, MessageProof, SparseMerkleTree } from "@consensys/linea-sdk-core";
 import {
   Abi,
   Account,
@@ -22,9 +23,9 @@ import {
   Transport,
   zeroHash,
 } from "viem";
-import { getContractsAddressesByChainId, MessageProof, SparseMerkleTree } from "@consensys/linea-sdk-core";
-import { getMessageSentEvents, GetMessageSentEventsErrorType } from "./getMessageSentEvents";
 import { getContractEvents, getTransactionReceipt } from "viem/actions";
+
+import { getMessageSentEvents, GetMessageSentEventsErrorType } from "./getMessageSentEvents";
 import {
   EventNotFoundInFinalizationDataError,
   EventNotFoundInFinalizationDataErrorType,

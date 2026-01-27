@@ -1,3 +1,4 @@
+import { ExtendedMessage, getContractsAddressesByChainId } from "@consensys/linea-sdk-core";
 import {
   Account,
   Address,
@@ -13,7 +14,6 @@ import {
   Transport,
 } from "viem";
 import { getTransactionReceipt } from "viem/actions";
-import { ExtendedMessage, getContractsAddressesByChainId } from "@consensys/linea-sdk-core";
 
 export type GetMessagesByTransactionHashParameters = {
   transactionHash: Hex;

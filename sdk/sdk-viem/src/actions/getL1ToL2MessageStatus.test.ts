@@ -1,8 +1,9 @@
-import { getL1ToL2MessageStatus } from "./getL1ToL2MessageStatus";
+import { OnChainMessageStatus } from "@consensys/linea-sdk-core";
 import { Client, Transport, Chain, Account, Hex } from "viem";
 import { readContract } from "viem/actions";
 import { linea } from "viem/chains";
-import { OnChainMessageStatus } from "@consensys/linea-sdk-core";
+
+import { getL1ToL2MessageStatus } from "./getL1ToL2MessageStatus";
 import { TEST_MESSAGE_HASH } from "../../tests/constants";
 
 jest.mock("viem/actions", () => ({

@@ -1,12 +1,13 @@
-import { publicActionsL1 } from "./publicL1";
+import { ExtendedMessage, MessageProof, OnChainMessageStatus } from "@consensys/linea-sdk-core";
 import { Client, Transport, Chain, Account, Hex, TransactionReceipt } from "viem";
-import { getMessageProof } from "../actions/getMessageProof";
+
+import { publicActionsL1 } from "./publicL1";
+import { TEST_CONTRACT_ADDRESS_1, TEST_CONTRACT_ADDRESS_2 } from "../../tests/constants";
 import { getL2ToL1MessageStatus } from "../actions/getL2ToL1MessageStatus";
 import { getMessageByMessageHash } from "../actions/getMessageByMessageHash";
+import { getMessageProof } from "../actions/getMessageProof";
 import { getMessagesByTransactionHash } from "../actions/getMessagesByTransactionHash";
 import { getTransactionReceiptByMessageHash } from "../actions/getTransactionReceiptByMessageHash";
-import { ExtendedMessage, MessageProof, OnChainMessageStatus } from "@consensys/linea-sdk-core";
-import { TEST_CONTRACT_ADDRESS_1, TEST_CONTRACT_ADDRESS_2 } from "../../tests/constants";
 
 jest.mock("../actions/getMessageProof", () => ({ getMessageProof: jest.fn() }));
 jest.mock("../actions/getL2ToL1MessageStatus", () => ({ getL2ToL1MessageStatus: jest.fn() }));

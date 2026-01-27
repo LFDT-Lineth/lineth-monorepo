@@ -1,6 +1,7 @@
 "use client";
 
 import { config } from "@/config";
+
 import styles from "./onramper.module.scss";
 
 const onRamperConfig: Record<string, string | string[]> = {

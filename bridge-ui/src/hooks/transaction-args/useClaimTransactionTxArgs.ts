@@ -1,6 +1,8 @@
 import { useMemo } from "react";
-import { useAccount } from "wagmi";
+
 import { encodeFunctionData, zeroAddress } from "viem";
+import { useAccount } from "wagmi";
+
 import MessageService from "@/abis/MessageService.json";
 import MessageTransmitterV2 from "@/abis/MessageTransmitterV2.json";
 import {
@@ -11,8 +13,8 @@ import {
   NativeBridgeMessage,
   TransactionStatus,
 } from "@/types";
-import { isCctpV2BridgeMessage, isNativeBridgeMessage } from "@/utils/message";
 import { isUndefined, isUndefinedOrEmptyString } from "@/utils";
+import { isCctpV2BridgeMessage, isNativeBridgeMessage } from "@/utils/message";
 
 type UseClaimTxArgsProps = {
   status?: TransactionStatus;

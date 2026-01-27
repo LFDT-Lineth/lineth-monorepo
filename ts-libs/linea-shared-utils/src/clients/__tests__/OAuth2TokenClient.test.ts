@@ -1,8 +1,9 @@
 import axios from "axios";
-import { OAuth2TokenClient } from "../OAuth2TokenClient";
-import { ILogger } from "../../logging/ILogger";
+
 import { IRetryService } from "../../core/services/IRetryService";
+import { ILogger } from "../../logging/ILogger";
 import { getCurrentUnixTimestampSeconds } from "../../utils/time";
+import { OAuth2TokenClient } from "../OAuth2TokenClient";
 
 jest.mock("axios");
 jest.mock("../../utils/time", () => ({

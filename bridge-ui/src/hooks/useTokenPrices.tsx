@@ -1,7 +1,9 @@
 import { useMemo } from "react";
+
 import { useQuery } from "@tanstack/react-query";
-import { Address } from "viem";
 import log from "loglevel";
+import { Address } from "viem";
+
 import { fetchTokenPrices } from "@/services/tokenService";
 import { useConfigStore } from "@/stores";
 

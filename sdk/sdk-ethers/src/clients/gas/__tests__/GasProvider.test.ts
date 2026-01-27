@@ -1,12 +1,13 @@
 import { describe, afterEach, it, expect, beforeEach } from "@jest/globals";
+import { toBeHex } from "ethers";
 import { MockProxy, mock, mockClear } from "jest-mock-extended";
+
+import { DEFAULT_GAS_ESTIMATION_PERCENTILE, DEFAULT_MAX_FEE_PER_GAS_CAP } from "../../../core/constants";
+import { Direction } from "../../../core/enums/message";
+import { DEFAULT_MAX_FEE_PER_GAS } from "../../../utils/testing/constants/common";
+import { generateTransactionRequest } from "../../../utils/testing/helpers";
 import { Provider } from "../../providers/provider";
 import { GasProvider } from "../GasProvider";
-import { Direction } from "../../../core/enums/message";
-import { DEFAULT_GAS_ESTIMATION_PERCENTILE, DEFAULT_MAX_FEE_PER_GAS_CAP } from "../../../core/constants";
-import { generateTransactionRequest } from "../../../utils/testing/helpers";
-import { toBeHex } from "ethers";
-import { DEFAULT_MAX_FEE_PER_GAS } from "../../../utils/testing/constants/common";
 
 const testFeeHistory = {
   baseFeePerGas: ["0x3da8e7618", "0x3e1ba3b1b", "0x3dfd72b90", "0x3d64eee76", "0x3d4da2da0", "0x3ccbcac6b"],

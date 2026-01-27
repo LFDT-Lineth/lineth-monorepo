@@ -1,11 +1,12 @@
+import { Direction } from "@consensys/linea-sdk";
 import { describe, it, beforeEach } from "@jest/globals";
 import { MockProxy, mock } from "jest-mock-extended";
-import { Direction } from "@consensys/linea-sdk";
-import { TestLogger } from "../../../utils/testing/helpers";
-import { testL2NetworkConfig } from "../../../utils/testing/constants";
+
 import { IPoller } from "../../../core/services/pollers/IPoller";
-import { L2ClaimMessageTransactionSizePoller } from "../L2ClaimMessageTransactionSizePoller";
+import { testL2NetworkConfig } from "../../../utils/testing/constants";
+import { TestLogger } from "../../../utils/testing/helpers";
 import { L2ClaimMessageTransactionSizeProcessor } from "../../processors/L2ClaimMessageTransactionSizeProcessor";
+import { L2ClaimMessageTransactionSizePoller } from "../L2ClaimMessageTransactionSizePoller";
 
 describe("L2ClaimMessageTransactionSizePoller", () => {
   let testClaimMessageTransactionSizePoller: IPoller;

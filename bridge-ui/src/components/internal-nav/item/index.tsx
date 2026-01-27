@@ -1,7 +1,9 @@
-import Link from "next/link";
 import clsx from "clsx";
+import Link from "next/link";
+
 import ArrowRightIcon from "@/assets/icons/arrow-right.svg";
 import CaretDownIcon from "@/assets/icons/caret-down.svg";
+
 import styles from "./item.module.scss";
 
 export type NavItemProps = {

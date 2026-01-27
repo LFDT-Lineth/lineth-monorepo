@@ -1,11 +1,12 @@
-import { describe, it, beforeEach } from "@jest/globals";
-import { mock } from "jest-mock-extended";
-import { ContractTransactionResponse } from "ethers";
-import { DatabaseCleaner } from "../DatabaseCleaner";
 import { ILogger } from "@consensys/linea-shared-utils";
-import { DatabaseAccessError } from "../../../core/errors/DatabaseErrors";
+import { describe, it, beforeEach } from "@jest/globals";
+import { ContractTransactionResponse } from "ethers";
+import { mock } from "jest-mock-extended";
+
 import { DatabaseErrorType, DatabaseRepoName } from "../../../core/enums";
+import { DatabaseAccessError } from "../../../core/errors/DatabaseErrors";
 import { IMessageDBService } from "../../../core/persistence/IMessageDBService";
+import { DatabaseCleaner } from "../DatabaseCleaner";
 
 describe("TestDatabaseCleaner", () => {
   let testDatabaseCleaner: DatabaseCleaner;

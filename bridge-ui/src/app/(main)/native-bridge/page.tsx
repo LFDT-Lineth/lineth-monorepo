@@ -1,6 +1,7 @@
 "use client";
 
 import BridgeLayout from "@/components/bridge/bridge-layout";
+
 import styles from "./page.module.scss";
 
 export default function Home() {

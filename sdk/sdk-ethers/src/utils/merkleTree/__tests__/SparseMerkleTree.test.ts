@@ -1,6 +1,7 @@
 import { describe, it } from "@jest/globals";
-import { SparseMerkleTree } from "../SparseMerkleTree";
+
 import { generateHexString } from "../../testing/helpers";
+import { SparseMerkleTree } from "../SparseMerkleTree";
 
 describe("TestSparseMerkleTree", () => {
   describe("Initialization", () => {

@@ -1,10 +1,11 @@
-import { ContractTransactionReceipt, Overrides, JsonRpcProvider, Wallet } from "ethers";
+import { L2MessageService, L2MessageService__factory } from "@consensys/linea-sdk";
 import { config } from "dotenv";
+import { ContractTransactionReceipt, Overrides, JsonRpcProvider, Wallet } from "ethers";
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
-import { L2MessageService, L2MessageService__factory } from "@consensys/linea-sdk";
-import { SendMessageArgs } from "./types";
+
 import { sanitizeAddress, sanitizePrivKey } from "./cli";
+import { SendMessageArgs } from "./types";
 
 config();
 

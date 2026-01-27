@@ -1,5 +1,6 @@
 import { describe, it, expect } from "@jest/globals";
 import { ethers } from "ethers";
+
 import { isValidProtocolUrl, validateEthereumAddress, validateHexString, validateUrl } from "../validation.js";
 
 describe("Validation utils", () => {

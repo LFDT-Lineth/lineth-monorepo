@@ -1,4 +1,7 @@
 import { Command, Flags } from "@oclif/core";
+import { addSeconds } from "date-fns";
+import { fromZonedTime } from "date-fns-tz";
+import { Result } from "neverthrow";
 import {
   Address,
   Client,
@@ -10,14 +13,12 @@ import {
   parseEventLogs,
   SendTransactionParameters,
 } from "viem";
-import { linea, lineaSepolia } from "viem/chains";
-import { fromZonedTime } from "date-fns-tz";
-import { Result } from "neverthrow";
-import { addSeconds } from "date-fns";
+import { privateKeyToAccount, privateKeyToAddress } from "viem/accounts";
 import { getBalance } from "viem/actions";
-import { estimateTransactionGas, sendTransaction } from "../utils/common/transactions.js";
-import { validateUrl } from "../utils/common/validation.js";
-import { address, hexString } from "../utils/common/custom-flags.js";
+import { linea, lineaSepolia } from "viem/chains";
+
+import { ARREARS_PAID_EVENT_ABI, ETH_BURNT_SWAPPED_AND_BRIDGED_EVENT_ABI } from "../utils/burn-and-bridge/abi.js";
+import { LINEA_TOKEN_ADDRESS, WETH_TOKEN_ADDRESS } from "../utils/burn-and-bridge/constants.js";
 import {
   computeBurnAndBridgeCalldata,
   computeSwapCalldata,
@@ -25,9 +26,9 @@ import {
   getMinimumFee,
   getQuote,
 } from "../utils/burn-and-bridge/contract.js";
-import { LINEA_TOKEN_ADDRESS, WETH_TOKEN_ADDRESS } from "../utils/burn-and-bridge/constants.js";
-import { ARREARS_PAID_EVENT_ABI, ETH_BURNT_SWAPPED_AND_BRIDGED_EVENT_ABI } from "../utils/burn-and-bridge/abi.js";
-import { privateKeyToAccount, privateKeyToAddress } from "viem/accounts";
+import { address, hexString } from "../utils/common/custom-flags.js";
+import { estimateTransactionGas, sendTransaction } from "../utils/common/transactions.js";
+import { validateUrl } from "../utils/common/validation.js";
 
 export default class BurnAndBridge extends Command {
   static examples = [

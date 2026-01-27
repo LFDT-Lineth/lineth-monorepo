@@ -1,4 +1,5 @@
 import { OnChainMessageStatus } from "@consensys/linea-sdk-viem";
+
 import { TransactionStatus } from "@/types";
 
 export function formatOnChainMessageStatus(status: OnChainMessageStatus): TransactionStatus {

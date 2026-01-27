@@ -1,6 +1,8 @@
 import { test } from "@playwright/test";
 import nock from "nock";
-import { getCctpMessageExpiryBlock, getCctpTransactionStatus } from "./cctp";
+import { lineaSepolia, sepolia } from "viem/chains";
+import { createConfig, http, mock } from "wagmi";
+
 import {
   CctpAttestationMessage,
   CctpAttestationMessageStatus,
@@ -9,8 +11,8 @@ import {
   ChainLayer,
   TransactionStatus,
 } from "@/types";
-import { createConfig, http, mock } from "wagmi";
-import { lineaSepolia, sepolia } from "viem/chains";
+
+import { getCctpMessageExpiryBlock, getCctpTransactionStatus } from "./cctp";
 
 const { expect, describe } = test;
 

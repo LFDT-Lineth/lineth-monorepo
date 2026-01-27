@@ -1,7 +1,8 @@
-import styles from "./no-transaction.module.scss";
 import TransactionCircleIcon from "@/assets/icons/transaction-circle.svg";
 import Button from "@/components/ui/button";
 import { useNativeBridgeNavigationStore } from "@/stores";
+
+import styles from "./no-transaction.module.scss";
 
 export default function NoTransaction() {
   const setIsTransactionHistoryOpen = useNativeBridgeNavigationStore.useSetIsTransactionHistoryOpen();

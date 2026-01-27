@@ -1,10 +1,11 @@
 import { Block, TransactionReceipt, TransactionRequest, TransactionResponse } from "ethers";
-import { MessageSent } from "../../core/types";
-import { MESSAGE_SENT_EVENT_SIGNATURE } from "../../core/constants";
-import { isNull } from "../../core/utils";
+
 import { L2MessageService, L2MessageService__factory } from "../../contracts/typechain";
 import { IMessageRetriever } from "../../core/clients/IMessageRetriever";
 import { ILineaProvider, IL2MessageServiceLogClient } from "../../core/clients/linea";
+import { MESSAGE_SENT_EVENT_SIGNATURE } from "../../core/constants";
+import { MessageSent } from "../../core/types";
+import { isNull } from "../../core/utils";
 import { LineaBrowserProvider, LineaProvider } from "../providers";
 
 export class L2MessageServiceMessageRetriever implements IMessageRetriever<TransactionReceipt> {

@@ -10,8 +10,9 @@ import {
   TransactionSerializable,
   WalletClient,
 } from "viem";
-import { IContractSignerClient } from "../core/client/IContractSignerClient";
 import { privateKeyToAccount, privateKeyToAddress } from "viem/accounts";
+
+import { IContractSignerClient } from "../core/client/IContractSignerClient";
 import { ILogger } from "../logging/ILogger";
 
 /**

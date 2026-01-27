@@ -6,17 +6,18 @@ import {
   TransactionReceipt,
   TransactionResponse,
 } from "ethers";
+
+import { IL2MessageServiceClient } from "../../core/clients/blockchain/linea/IL2MessageServiceClient";
+import { Message } from "../../core/entities/Message";
 import { MessageStatus } from "../../core/enums";
 import { IMessageDBService } from "../../core/persistence/IMessageDBService";
-import { IPostmanLogger } from "../../utils/IPostmanLogger";
-import { IL2MessageServiceClient } from "../../core/clients/blockchain/linea/IL2MessageServiceClient";
 import {
   IL2ClaimMessageTransactionSizeProcessor,
   L2ClaimMessageTransactionSizeProcessorConfig,
 } from "../../core/services/processors/IL2ClaimMessageTransactionSizeProcessor";
 import { IL2ClaimTransactionSizeCalculator } from "../../core/services/processors/IL2ClaimTransactionSizeCalculator";
 import { ErrorParser } from "../../utils/ErrorParser";
-import { Message } from "../../core/entities/Message";
+import { IPostmanLogger } from "../../utils/IPostmanLogger";
 
 export class L2ClaimMessageTransactionSizeProcessor implements IL2ClaimMessageTransactionSizeProcessor {
   /**

@@ -1,5 +1,6 @@
 import * as dotenv from "dotenv";
 import { transports } from "winston";
+
 import { PostmanServiceClient } from "../src/application/postman/app/PostmanServiceClient";
 
 dotenv.config();

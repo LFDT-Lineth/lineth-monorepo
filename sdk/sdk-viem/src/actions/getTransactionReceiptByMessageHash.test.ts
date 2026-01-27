@@ -1,8 +1,9 @@
-import { getTransactionReceiptByMessageHash } from "./getTransactionReceiptByMessageHash";
+import { getContractsAddressesByChainId } from "@consensys/linea-sdk-core";
 import { Client, Transport, Chain, Account, ChainNotFoundError } from "viem";
 import { getContractEvents, getTransactionReceipt } from "viem/actions";
 import { linea } from "viem/chains";
-import { getContractsAddressesByChainId } from "@consensys/linea-sdk-core";
+
+import { getTransactionReceiptByMessageHash } from "./getTransactionReceiptByMessageHash";
 import { TEST_MESSAGE_HASH } from "../../tests/constants";
 import { generateMessageSentLog, generateTransactionReceipt } from "../../tests/utils";
 

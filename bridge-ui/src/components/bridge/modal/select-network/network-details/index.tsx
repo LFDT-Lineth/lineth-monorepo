@@ -1,4 +1,5 @@
 import Image from "next/image";
+
 import styles from "./network-details.module.scss";
 
 type Props = {

@@ -1,15 +1,17 @@
-import { Metadata } from "next";
-import Script from "next/script";
 import clsx from "clsx";
-import { gtmScript, gtmNoScript } from "@/scripts/gtm";
-import { Providers } from "@/components/layouts/Providers";
-import { Layout } from "@/components/layouts/Layout";
+import { Metadata } from "next";
+import { headers } from "next/headers";
+import Script from "next/script";
+
 import atypFont from "@/assets/fonts/atyp";
 import atypTextFont from "@/assets/fonts/atypText";
+import { Layout } from "@/components/layouts/Layout";
+import { Providers } from "@/components/layouts/Providers";
 import FirstVisitModal from "@/components/modal/first-time-visit";
 import { ModalBase } from "@/components/modal-base";
+import { gtmScript, gtmNoScript } from "@/scripts/gtm";
 import { getNavData } from "@/services";
-import { headers } from "next/headers";
+
 import "../scss/app.scss";
 
 const metadata: Metadata = {

@@ -1,3 +1,5 @@
+import { OnChainMessageStatus } from "@consensys/linea-sdk";
+import { ILogger } from "@consensys/linea-shared-utils";
 import {
   Overrides,
   TransactionResponse,
@@ -8,16 +10,15 @@ import {
   JsonRpcProvider,
   ErrorDescription,
 } from "ethers";
-import { OnChainMessageStatus } from "@consensys/linea-sdk";
+
+import { IProvider } from "../../core/clients/blockchain/IProvider";
+import { MessageStatus } from "../../core/enums";
+import { IMessageDBService } from "../../core/persistence/IMessageDBService";
+import { IMessageServiceContract } from "../../core/services/contracts/IMessageServiceContract";
 import {
   IMessageAnchoringProcessor,
   MessageAnchoringProcessorConfig,
 } from "../../core/services/processors/IMessageAnchoringProcessor";
-import { IProvider } from "../../core/clients/blockchain/IProvider";
-import { MessageStatus } from "../../core/enums";
-import { ILogger } from "@consensys/linea-shared-utils";
-import { IMessageServiceContract } from "../../core/services/contracts/IMessageServiceContract";
-import { IMessageDBService } from "../../core/persistence/IMessageDBService";
 import { ErrorParser } from "../../utils/ErrorParser";
 
 export class MessageAnchoringProcessor implements IMessageAnchoringProcessor {

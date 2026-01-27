@@ -1,13 +1,14 @@
-import { walletActionsL1 } from "./walletL1";
 import { Client, Transport, Chain, Account, Address, Hex } from "viem";
-import { deposit } from "../actions/deposit";
-import { claimOnL1 } from "../actions/claimOnL1";
+
+import { walletActionsL1 } from "./walletL1";
 import {
   TEST_ADDRESS_1,
   TEST_ADDRESS_2,
   TEST_CONTRACT_ADDRESS_1,
   TEST_CONTRACT_ADDRESS_2,
 } from "../../tests/constants";
+import { claimOnL1 } from "../actions/claimOnL1";
+import { deposit } from "../actions/deposit";
 
 jest.mock("../actions/deposit", () => ({ deposit: jest.fn() }));
 jest.mock("../actions/claimOnL1", () => ({ claimOnL1: jest.fn() }));

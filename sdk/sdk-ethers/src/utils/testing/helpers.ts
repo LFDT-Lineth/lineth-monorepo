@@ -8,6 +8,7 @@ import {
   ethers,
   randomBytes,
 } from "ethers";
+
 import {
   TEST_ADDRESS_1,
   TEST_BLOCK_HASH,
@@ -17,6 +18,19 @@ import {
   TEST_TRANSACTION_HASH,
 } from "./constants/common";
 import {
+  LineaRollupClient,
+  EthersLineaRollupLogClient,
+  LineaRollupMessageRetriever,
+  MerkleTreeService,
+} from "../../clients/ethereum";
+import { DefaultGasProvider, GasProvider } from "../../clients/gas";
+import {
+  L2MessageServiceClient,
+  EthersL2MessageServiceLogClient,
+  L2MessageServiceMessageRetriever,
+} from "../../clients/linea";
+import { LineaProvider, Provider } from "../../clients/providers";
+import {
   DEFAULT_ENFORCE_MAX_GAS_FEE,
   DEFAULT_GAS_ESTIMATION_PERCENTILE,
   DEFAULT_L2_MESSAGE_TREE_DEPTH,
@@ -25,21 +39,8 @@ import {
   L2_MESSAGING_BLOCK_ANCHORED_EVENT_SIGNATURE,
   MESSAGE_SENT_EVENT_SIGNATURE,
 } from "../../core/constants";
-import { Message, SDKMode } from "../../core/types";
-import {
-  LineaRollupClient,
-  EthersLineaRollupLogClient,
-  LineaRollupMessageRetriever,
-  MerkleTreeService,
-} from "../../clients/ethereum";
-import {
-  L2MessageServiceClient,
-  EthersL2MessageServiceLogClient,
-  L2MessageServiceMessageRetriever,
-} from "../../clients/linea";
-import { DefaultGasProvider, GasProvider } from "../../clients/gas";
-import { LineaProvider, Provider } from "../../clients/providers";
 import { Direction } from "../../core/enums";
+import { Message, SDKMode } from "../../core/types";
 
 export const getTestProvider = () => {
   return new JsonRpcProvider("http://localhost:8545");

@@ -1,11 +1,11 @@
-import { BaseError, Client, Hex, SendTransactionParameters, TransactionReceipt } from "viem";
-import { estimateGas, EstimateGasParameters, EstimateGasReturnType } from "viem/linea";
 import { err, ok, Result } from "neverthrow";
+import { BaseError, Client, Hex, SendTransactionParameters, TransactionReceipt } from "viem";
 import {
   sendRawTransaction as viemSendRawTransaction,
   waitForTransactionReceipt,
   sendTransaction as viemSendTransaction,
 } from "viem/actions";
+import { estimateGas, EstimateGasParameters, EstimateGasReturnType } from "viem/linea";
 
 export async function estimateTransactionGas(
   client: Client,

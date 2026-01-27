@@ -1,5 +1,6 @@
-import { clsx } from "clsx";
 import React, { forwardRef, ButtonHTMLAttributes, ReactNode } from "react";
+
+import { clsx } from "clsx";
 
 import styles from "./button.module.scss";
 

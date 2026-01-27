@@ -1,10 +1,12 @@
 import { Address, maxUint256 } from "viem";
 import { useEstimateGas } from "wagmi";
+
+import { DEFAULT_ADDRESS_FOR_NON_CONNECTED_USER } from "@/constants";
 import { Chain, Token } from "@/types";
+import { isCctp, isEth, isUndefined } from "@/utils";
+
 import useFeeData from "./useFeeData";
 import { useTransactionArgs } from "../transaction-args";
-import { isCctp, isEth, isUndefined } from "@/utils";
-import { DEFAULT_ADDRESS_FOR_NON_CONNECTED_USER } from "@/constants";
 
 type UseGasFeesProps = {
   token: Token;

@@ -10,5 +10,9 @@ export default [
         tsconfigRootDir: import.meta.dirname,
       },
     },
+    rules: {
+      // TODO: this plugin is disabled for now to avoid a lot of files changes
+      "import/order": "off",
+    }
   },
 ];

@@ -2,8 +2,8 @@ jest.mock("../../utils/time", () => ({
   wait: jest.fn(() => Promise.resolve()),
 }));
 
-import { wait } from "../../utils/time";
 import { ILogger } from "../../logging/ILogger";
+import { wait } from "../../utils/time";
 import { ExponentialBackoffRetryService } from "../ExponentialBackoffRetryService";
 
 const waitMock = wait as jest.MockedFunction<typeof wait>;

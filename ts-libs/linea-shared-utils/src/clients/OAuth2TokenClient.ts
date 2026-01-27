@@ -1,8 +1,9 @@
 import axios from "axios";
-import { ILogger } from "../logging/ILogger";
-import { getCurrentUnixTimestampSeconds } from "../utils/time";
+
 import { IOAuth2TokenClient, OAuth2TokenResponse } from "../core/client/IOAuth2TokenClient";
 import { IRetryService } from "../core/services/IRetryService";
+import { ILogger } from "../logging/ILogger";
+import { getCurrentUnixTimestampSeconds } from "../utils/time";
 
 /**
  * Client for obtaining and managing OAuth2 bearer tokens.

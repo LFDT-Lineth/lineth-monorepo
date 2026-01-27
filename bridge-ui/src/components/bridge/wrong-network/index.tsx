@@ -1,5 +1,6 @@
-import styles from "./wrong-network.module.scss";
 import TransactionCircleIcon from "@/assets/icons/transaction-circle.svg";
+
+import styles from "./wrong-network.module.scss";
 
 export default function WrongNetwork() {
   return (

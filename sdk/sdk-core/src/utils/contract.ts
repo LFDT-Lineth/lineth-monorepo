@@ -1,3 +1,4 @@
+import { isLineaMainnet, isLineaSepolia, isMainnet, isSepolia } from "./chain";
 import {
   L2_MESSAGE_SERVICE_MAINNET_ADDRESS,
   L2_MESSAGE_SERVICE_SEPOLIA_ADDRESS,
@@ -9,7 +10,6 @@ import {
   TOKEN_BRIDGE_SEPOLIA_ADDRESS,
 } from "../constants/address";
 import { Address } from "../types/misc";
-import { isLineaMainnet, isLineaSepolia, isMainnet, isSepolia } from "./chain";
 
 export function getContractsAddressesByChainId(chainId: number): {
   messageService: Address;

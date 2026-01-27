@@ -1,4 +1,4 @@
-import { withdraw } from "./withdraw";
+import { getContractsAddressesByChainId } from "@consensys/linea-sdk-core";
 import {
   Client,
   Transport,
@@ -12,7 +12,8 @@ import {
 } from "viem";
 import { readContract, sendTransaction } from "viem/actions";
 import { linea } from "viem/chains";
-import { getContractsAddressesByChainId } from "@consensys/linea-sdk-core";
+
+import { withdraw } from "./withdraw";
 import { TEST_TRANSACTION_HASH } from "../../tests/constants";
 import { AccountNotFoundError } from "../errors/account";
 

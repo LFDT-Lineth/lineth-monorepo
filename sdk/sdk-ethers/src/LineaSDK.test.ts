@@ -1,11 +1,12 @@
 import { describe, it, expect } from "@jest/globals";
 import { JsonRpcProvider, Wallet } from "ethers";
-import { LineaSDK } from "./LineaSDK";
+
 import { L1ClaimingService } from "./clients/ethereum";
-import { LineaProvider, Provider } from "./clients/providers";
 import { EthersL2MessageServiceLogClient } from "./clients/linea";
+import { LineaProvider, Provider } from "./clients/providers";
 import { NETWORKS } from "./core/constants";
 import { serialize } from "./core/utils";
+import { LineaSDK } from "./LineaSDK";
 import { TEST_L1_SIGNER_PRIVATE_KEY, TEST_L2_SIGNER_PRIVATE_KEY, TEST_RPC_URL } from "./utils/testing/constants/common";
 import { generateL2MessageServiceClient, generateLineaRollupClient } from "./utils/testing/helpers";
 

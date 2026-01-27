@@ -1,5 +1,5 @@
-import { Message } from "../../types";
 import { OnChainMessageStatus } from "../../enums";
+import { Message } from "../../types";
 import { IMessageServiceContract } from "../IMessageServiceContract";
 import { FinalizationMessagingInfo, Proof } from "./IMerkleTreeService";
 

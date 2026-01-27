@@ -1,9 +1,10 @@
 import { describe, it, beforeEach } from "@jest/globals";
 import { mock } from "jest-mock-extended";
-import { DatabaseCleaningPoller } from "../DatabaseCleaningPoller";
+
+import { DEFAULT_DB_CLEANING_INTERVAL, DEFAULT_DB_DAYS_BEFORE_NOW_TO_DELETE } from "../../../core/constants";
 import { IDatabaseCleaner } from "../../../core/persistence/IDatabaseCleaner";
 import { TestLogger } from "../../../utils/testing/helpers";
-import { DEFAULT_DB_CLEANING_INTERVAL, DEFAULT_DB_DAYS_BEFORE_NOW_TO_DELETE } from "../../../core/constants";
+import { DatabaseCleaningPoller } from "../DatabaseCleaningPoller";
 
 describe("TestDatabaseCleaningPoller", () => {
   let testDatabaseCleaningPoller: DatabaseCleaningPoller;

@@ -1,4 +1,5 @@
 import { OnChainMessageStatus, MessageSent } from "@consensys/linea-sdk";
+
 import { MessageProps } from "../../entities/Message";
 
 export interface IMessageServiceContract<

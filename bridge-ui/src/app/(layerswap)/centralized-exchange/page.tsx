@@ -1,6 +1,7 @@
-import { Widget } from "@/components/layerswap/widget";
-import styles from "./page.module.scss";
 import FaqHelp from "@/components/bridge/faq-help";
+import { Widget } from "@/components/layerswap/widget";
+
+import styles from "./page.module.scss";
 
 export default function Page() {
   return (

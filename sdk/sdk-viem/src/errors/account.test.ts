@@ -1,4 +1,5 @@
 import { setErrorConfig } from "viem";
+
 import { AccountNotFoundError } from "./account";
 
 describe("Account Errors", () => {

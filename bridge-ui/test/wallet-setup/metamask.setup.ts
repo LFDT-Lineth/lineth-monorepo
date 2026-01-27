@@ -1,4 +1,8 @@
 import { Locator, Page } from "@playwright/test";
+import { defineWalletSetup } from "@synthetixio/synpress";
+import { MetaMask, getExtensionId } from "@synthetixio/synpress/playwright";
+import { z } from "zod";
+
 import {
   L1_ACCOUNT_ADDRESS,
   L1_ACCOUNT_PRIVATE_KEY,
@@ -8,9 +12,6 @@ import {
   METAMASK_PASSWORD,
   METAMASK_SEED_PHRASE,
 } from "../constants";
-import { defineWalletSetup } from "@synthetixio/synpress";
-import { MetaMask, getExtensionId } from "@synthetixio/synpress/playwright";
-import { z } from "zod";
 
 const closeRenameAccountButtonSelector = 'button[aria-label="Close"]';
 

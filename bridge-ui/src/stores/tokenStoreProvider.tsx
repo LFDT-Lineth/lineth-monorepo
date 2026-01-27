@@ -1,9 +1,12 @@
 "use client";
 
 import { type ReactNode, createContext, useRef, useContext } from "react";
+
 import { useStore } from "zustand";
-import { TokenState, type TokenStore, createTokenStore } from "./tokenStore";
+
 import { isUndefined } from "@/utils";
+
+import { TokenState, type TokenStore, createTokenStore } from "./tokenStore";
 
 export type TokenStoreApi = ReturnType<typeof createTokenStore>;
 

@@ -1,4 +1,5 @@
 import { testWithSynpress } from "@synthetixio/synpress";
+
 import { test as advancedFixtures } from "../advancedFixtures";
 import {
   USDC_SYMBOL,

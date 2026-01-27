@@ -1,21 +1,22 @@
 import { Block, TransactionReceipt, TransactionRequest, TransactionResponse } from "ethers";
-import { SparseMerkleTreeFactory } from "../../utils/merkleTree/MerkleTreeFactory";
+
+import { LineaRollup, LineaRollup__factory } from "../../contracts/typechain";
 import {
   ILineaRollupLogClient,
   FinalizationMessagingInfo,
   IMerkleTreeService,
   Proof,
 } from "../../core/clients/ethereum";
+import { IProvider } from "../../core/clients/IProvider";
 import { IL2MessageServiceLogClient } from "../../core/clients/linea";
 import {
   L2_MERKLE_TREE_ADDED_EVENT_SIGNATURE,
   L2_MESSAGING_BLOCK_ANCHORED_EVENT_SIGNATURE,
   ZERO_HASH,
 } from "../../core/constants";
-import { LineaRollup, LineaRollup__factory } from "../../contracts/typechain";
-import { IProvider } from "../../core/clients/IProvider";
-import { BrowserProvider, Provider } from "../providers";
 import { makeBaseError } from "../../core/errors/utils";
+import { SparseMerkleTreeFactory } from "../../utils/merkleTree/MerkleTreeFactory";
+import { BrowserProvider, Provider } from "../providers";
 
 export class MerkleTreeService implements IMerkleTreeService {
   private readonly contract: LineaRollup;

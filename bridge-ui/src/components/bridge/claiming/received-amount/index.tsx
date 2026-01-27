@@ -1,12 +1,15 @@
-import { formatUnits } from "viem";
-import styles from "./received-amount.module.scss";
-import { useTokenPrices } from "@/hooks";
-import { useChainStore, useConfigStore, useFormStore } from "@/stores";
-import { formatBalance, isCctp } from "@/utils";
-import { ChainLayer, Token } from "@/types";
 import { useMemo } from "react";
-import { useCctpFee } from "@/hooks/transaction-args/cctp/useCctpUtilHooks";
+
+import { formatUnits } from "viem";
+
 import { ETH_SYMBOL } from "@/constants";
+import { useTokenPrices } from "@/hooks";
+import { useCctpFee } from "@/hooks/transaction-args/cctp/useCctpUtilHooks";
+import { useChainStore, useConfigStore, useFormStore } from "@/stores";
+import { ChainLayer, Token } from "@/types";
+import { formatBalance, isCctp } from "@/utils";
+
+import styles from "./received-amount.module.scss";
 
 function formatReceivedAmount(
   amount: bigint,

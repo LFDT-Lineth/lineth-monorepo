@@ -1,8 +1,9 @@
 "use client";
 
 import FaqHelp from "@/components/bridge/faq-help";
-import styles from "./page.module.scss";
 import { Widget } from "@/components/lifi/widget";
+
+import styles from "./page.module.scss";
 
 export default function Page() {
   return (

@@ -1,8 +1,8 @@
-import { MessageSent, ServiceVersionMigrated } from "../../core/types";
 import { L2MessageService, L2MessageService__factory } from "../../contracts/typechain";
-import { IL2MessageServiceLogClient, MessageSentEventFilters } from "../../core/clients/linea";
 import { TypedContractEvent, TypedDeferredTopicFilter, TypedEventLog } from "../../contracts/typechain/common";
 import { MessageSentEvent, ServiceVersionMigratedEvent } from "../../contracts/typechain/L2MessageService";
+import { IL2MessageServiceLogClient, MessageSentEventFilters } from "../../core/clients/linea";
+import { MessageSent, ServiceVersionMigrated } from "../../core/types";
 import { isUndefined } from "../../core/utils";
 import { LineaBrowserProvider, LineaProvider } from "../providers";
 

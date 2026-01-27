@@ -1,7 +1,8 @@
-import { EthersError, ErrorCode, isError } from "ethers";
 import { isBaseError } from "@consensys/linea-sdk";
-import { DatabaseAccessError } from "../core/errors/DatabaseErrors";
+import { EthersError, ErrorCode, isError } from "ethers";
+
 import { MessageProps } from "../core/entities/Message";
+import { DatabaseAccessError } from "../core/errors/DatabaseErrors";
 
 export type Mitigation = {
   shouldRetry: boolean;

@@ -1,7 +1,8 @@
 import express, { Express, Request, Response } from "express";
+
+import { IApplication } from "../core/applications/IApplication";
 import { IMetricsService } from "../core/services/IMetricsService";
 import { ILogger } from "../logging/ILogger";
-import { IApplication } from "../core/applications/IApplication";
 
 /**
  * Express-based API application that provides HTTP server functionality with metrics endpoint.

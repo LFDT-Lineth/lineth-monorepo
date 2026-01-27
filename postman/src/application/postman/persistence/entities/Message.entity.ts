@@ -1,6 +1,7 @@
+import { Direction } from "@consensys/linea-sdk";
 import { IsBoolean, IsDate, IsDecimal, IsEnum, IsNumber, IsString } from "class-validator";
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from "typeorm";
-import { Direction } from "@consensys/linea-sdk";
+
 import { MessageStatus } from "../../../../core/enums";
 
 @Entity({ name: "message" })

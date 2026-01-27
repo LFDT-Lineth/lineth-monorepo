@@ -1,5 +1,6 @@
-import { LineaPostmanMetrics, ITransactionMetricsUpdater } from "../../../../core/metrics";
 import { IMetricsService } from "@consensys/linea-shared-utils";
+
+import { LineaPostmanMetrics, ITransactionMetricsUpdater } from "../../../../core/metrics";
 
 export class TransactionMetricsUpdater implements ITransactionMetricsUpdater {
   constructor(private readonly metricsService: IMetricsService<LineaPostmanMetrics>) {
