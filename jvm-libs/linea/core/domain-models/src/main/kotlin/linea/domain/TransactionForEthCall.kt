@@ -59,7 +59,7 @@ data class TransactionForEthCall(
     result = 31 * result + (gasPrice?.hashCode() ?: 0)
     result = 31 * result + (maxFeePerGas?.hashCode() ?: 0)
     result = 31 * result + (maxPriorityFeePerGas?.hashCode() ?: 0)
-    result = 31 * result + (value?.hashCode() ?: 0)
+    result = 31 * result + (value.hashCode())
     result = 31 * result + (data?.contentHashCode() ?: 0)
     result = 31 * result + (accessList?.hashCode() ?: 0)
     result = 31 * result + (blobVersionedHashes?.hashCode() ?: 0)

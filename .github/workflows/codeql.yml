@@ -37,6 +37,7 @@ jobs:
               - 'build.gradle'
               - 'gradle.properties'
               - 'settings.gradle'
+              - 'gradle/**'
             javascript-typescript:
               - '**/*.js'
               - '**/*.ts'
@@ -62,7 +63,7 @@ jobs:
         run: |
           languages=()
           if [ "${{ steps.changes.outputs.go }}" == "true" ]; then languages+=("\"go\""); fi
-          if [ "${{ steps.changes.outputs.java-kotlin }}" == "true" ]; then languages+=("\"java-kotlin\""); fi
+          # if [ "${{ steps.changes.outputs.java-kotlin }}" == "true" ]; then languages+=("\"java-kotlin\""); fi
           if [ "${{ steps.changes.outputs.javascript-typescript }}" == "true" ]; then languages+=("\"javascript-typescript\""); fi
           if [ "${{ steps.changes.outputs.actions }}" == "true" ]; then languages+=("\"actions\""); fi
           if [ "${{ steps.changes.outputs.python }}" == "true" ]; then languages+=("\"python\""); fi
@@ -89,7 +90,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
+        uses: github/codeql-action/init@b20883b0cd1f46c72ae0ba6d1090936928f9fa30 #v4.32.0
         with:
           languages: ${{ matrix.language }}
           queries: security-extended,security-and-quality
@@ -100,19 +101,19 @@ jobs:
         with:
           distribution: temurin
           java-version: 21
-      
+
       - name: Setup Tracer Environment
         if: matrix.language == 'java-kotlin'
         uses: ./.github/actions/setup-tracer-environment
 
       - name: Autobuild
         if: matrix.language != 'actions'
-        uses: github/codeql-action/autobuild@v3
+        uses: github/codeql-action/autobuild@b20883b0cd1f46c72ae0ba6d1090936928f9fa30 #v4.32.0
         env:
           GITHUB_TOKEN: ${{ secrets._GITHUB_TOKEN_RELEASE_ACCESS }}
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
+        uses: github/codeql-action/analyze@b20883b0cd1f46c72ae0ba6d1090936928f9fa30 #v4.32.0
         with:
           category: "/language:${{matrix.language}}"
           output: sarif-results

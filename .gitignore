@@ -46,6 +46,7 @@
 .gocache
 .vscode
 .idea
+.claude/
 .ipynb_checkpoints
 
 atlassian-ide-plugin.xml

@@ -19,7 +19,7 @@ jreleaser = { group = "org.jreleaser", name = "jreleaser-gradle-plugin", version
 
 [versions]
 # Build
-kotlin = "2.1.21"
+kotlin = "2.3.0"
 
 # Testing
 assertj = "3.27.3"

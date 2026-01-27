@@ -65,7 +65,7 @@ class Api(
     return vertx
       .deployVerticle(
         {
-          HttpJsonRpcServer(configs.jsonRpcPort.toUInt(), configs.jsonRpcPath, HttpRequestHandler(messageHandler))
+          HttpJsonRpcServer(configs.jsonRpcPort, configs.jsonRpcPath, HttpRequestHandler(messageHandler))
             .also {
               httpServer = it
             }

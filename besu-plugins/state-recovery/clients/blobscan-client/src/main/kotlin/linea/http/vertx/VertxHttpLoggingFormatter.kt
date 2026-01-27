@@ -56,7 +56,8 @@ class VertxRestLoggingFormatter(
         failureCause.message?.let { errorMsg -> "error=$errorMsg" } ?: "",
       )
     } else {
-      val responseToLog = response?.bodyAsString()?.let { bodyStr ->
+      @Suppress("INACCESSIBLE_TYPE")
+      val responseToLog: String? = response?.bodyAsString()?.let { bodyStr ->
         if (responseLogMaxSize != null) {
           bodyStr.take(responseLogMaxSize.toInt()) + "..." + "(contentLength=${response.getHeader("Content-Length")})"
         } else {

@@ -19,6 +19,7 @@ dependencies {
   implementation(project(':jvm-libs:linea:core:long-running-service'))
   implementation(project(':besu-plugins:state-recovery:appcore:clients-interfaces'))
   implementation("io.vertx:vertx-web-client:${libs.versions.vertx}")
+  compileOnly("io.vertx:vertx-codegen:${libs.versions.vertx}")
 
   testImplementation "org.wiremock:wiremock:${libs.versions.wiremock.get()}"
   testImplementation "org.slf4j:slf4j-api:${libs.versions.slf4j.get()}"

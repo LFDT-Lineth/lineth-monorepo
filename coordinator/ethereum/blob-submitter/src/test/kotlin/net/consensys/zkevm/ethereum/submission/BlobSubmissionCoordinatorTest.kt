@@ -67,7 +67,7 @@ class BlobSubmissionCoordinatorTest {
       on { finalizedL2BlockNumber() }.thenReturn(SafeFuture.completedFuture(0u))
     }
     blobSubmitter = mock()
-    blobSubmissionFilter = spy(AsyncFilter.NoOp())
+    blobSubmissionFilter = AsyncFilter.NoOp()
     blobsGrouperForSubmission = spy(object : BlobsGrouperForSubmission {
       override fun chunkBlobs(blobsIntervals: List<BlobRecord>, aggregations: BlockIntervals): List<List<BlobRecord>> =
         chunkBlobs(blobsIntervals, aggregations, targetChunkSize = 6)

@@ -1,9 +1,9 @@
 package net.consensys.linea.jsonrpc.client
 
-import build.linea.s11n.jackson.BigIntegerToHexSerializer
 import build.linea.s11n.jackson.ByteArrayToHexSerializer
-import build.linea.s11n.jackson.JIntegerToHexSerializer
 import build.linea.s11n.jackson.ULongToHexSerializer
+import build.linea.s11n.jackson.ethByteAsHexSerialisersModule
+import build.linea.s11n.jackson.ethNumberAsHexSerialisersModule
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.module.SimpleModule
@@ -36,7 +36,6 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import tech.pegasys.teku.infrastructure.async.SafeFuture
-import java.math.BigInteger
 import java.net.ConnectException
 import java.net.URI
 import java.util.concurrent.CopyOnWriteArrayList
@@ -231,14 +230,8 @@ class JsonRpcV2ClientImplTest {
     }
 
     val objMapperWithNumbersAsHex = jacksonObjectMapper()
-      .registerModules(
-        SimpleModule().apply {
-          this.addSerializer(ByteArray::class.java, ByteArrayToHexSerializer)
-          this.addSerializer(ULong::class.java, ULongToHexSerializer)
-          this.addSerializer(Integer::class.java, JIntegerToHexSerializer)
-          this.addSerializer(BigInteger::class.java, BigIntegerToHexSerializer)
-        },
-      )
+      .registerModules(ethNumberAsHexSerialisersModule)
+      .registerModules(ethByteAsHexSerialisersModule)
 
     createClientAndSetupWireMockServer(requestObjectMapper = objMapperWithNumbersAsHex).also { client ->
       replyRequestWith(200, jsonRpcResultOk)

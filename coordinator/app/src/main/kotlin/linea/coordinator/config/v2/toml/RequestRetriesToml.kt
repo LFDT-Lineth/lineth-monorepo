@@ -28,18 +28,18 @@ data class RequestRetriesToml(
 
   internal val asJsonRpcRetryConfig =
     RequestRetryConfig(
-      maxRetries = maxRetries?.toUInt(),
+      maxRetries = maxRetries,
       timeout = timeout,
       backoffDelay = backoffDelay,
-      failuresWarningThreshold = failuresWarningThreshold?.toUInt() ?: 0u,
+      failuresWarningThreshold = failuresWarningThreshold ?: 0u,
     )
 
   internal val asDomain: linea.domain.RetryConfig =
     linea.domain.RetryConfig(
-      maxRetries = maxRetries?.toUInt(),
+      maxRetries = maxRetries,
       timeout = timeout,
       backoffDelay = backoffDelay,
-      failuresWarningThreshold = failuresWarningThreshold?.toUInt() ?: 0u,
+      failuresWarningThreshold = failuresWarningThreshold ?: 0u,
     )
 
   companion object {

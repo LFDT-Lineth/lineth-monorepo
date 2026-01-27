@@ -100,7 +100,7 @@ class JsonRpcMessageProcessor(
       }
     log.trace(json)
     val isBulkRequest: Boolean = json is JsonArray
-    val jsonArray = if (isBulkRequest) json as JsonArray else JsonArray().add(json)
+    val jsonArray = if (isBulkRequest) json else JsonArray().add(json)
     val requestParsingResults: List<Result<Pair<JsonRpcRequest, JsonObject>, JsonRpcErrorResponse>> =
       jsonArray.map(::measureRequestParsing)
 

@@ -6,6 +6,7 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import kotlinx.datetime.Instant
 import java.math.BigInteger
 
+@Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
 val ethNumberAsHexSerialisersModule = SimpleModule().apply {
   this.addSerializer(Instant::class.java, InstantISO8601Serializer)
   this.addDeserializer(Instant::class.java, InstantISO8601Deserializer)

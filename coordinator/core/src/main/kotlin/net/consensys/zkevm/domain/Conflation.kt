@@ -16,9 +16,9 @@ data class BlocksConflation(
   }
 
   override val startBlockNumber: ULong
-    get() = blocks.first().number.toULong()
+    get() = blocks.first().number
   override val endBlockNumber: ULong
-    get() = blocks.last().number.toULong()
+    get() = blocks.last().number
 }
 
 data class Batch(

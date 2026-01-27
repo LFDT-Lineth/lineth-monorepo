@@ -122,7 +122,7 @@ class ConflationServiceImplTest {
           conflationService.newBlock(
             it,
             BlockCounters(
-              blockNumber = it.number.toULong(),
+              blockNumber = it.number,
               blockTimestamp = blockTime,
               tracesCounters = fixedTracesCounters,
               blockRLPEncoded = ByteArray(0),
@@ -162,7 +162,7 @@ class ConflationServiceImplTest {
       conflationService.newBlock(
         block,
         BlockCounters(
-          blockNumber = block.number.toULong(),
+          blockNumber = block.number,
           blockTimestamp = blockTime,
           tracesCounters = fixedTracesCounters,
           blockRLPEncoded = ByteArray(0),

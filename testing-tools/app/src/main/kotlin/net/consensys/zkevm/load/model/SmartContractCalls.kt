@@ -201,6 +201,6 @@ class SmartContractCalls(private val ethConnection: EthConnection) {
       )
       sourceWallet.incrementTheoreticalNonce()
     }
-    return java.util.Map.of<Wallet?, List<TransactionDetail>>(sourceWallet, txs)
+    return mapOf<Wallet, List<TransactionDetail>>(sourceWallet to txs)
   }
 }
